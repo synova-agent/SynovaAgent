@@ -1,0 +1,36 @@
+=== task-5 / 复合态收尾：F2 + F3 修复与三套计数（机器输出）===
+复合态 = fix/d1029-ownership-a-20260927 merge origin/fix/d1029-ownership-b-20260927 (558f8552)
+
+=== F2 根因与修法 ===
+队长更正: F2 根因 = B 的键序写反（冻结合同要求 domain_defaults 在前），非 A 夹具顺序假设错误。
+$ grep -n "^domain_defaults:\|^rule_authority:" docs/synova/coordination/ownership.yaml   # 修正后
+71:domain_defaults:
+78:rule_authority:
+A 侧仍改为**与顺序无关**的按键删块（更稳，且加了夹具自检）；源 sha256=3f5f4ab5a9b4c89d22798feed81845fe0020976da87c48a3537bfa9f90ec6c91: FIXLIB delblock/setlistempty/delrule/addblock/winaddfirst/terrline/validate
+$ 夹具工具内嵌方式 = base64 + sha256 自检（避开 bash heredoc / python -c / 多层转义三个坑）
+$ bash tests/control-tower/check-ownership.test.sh | grep -E "夹具工具完整性|夹具自检"
+  ✅ F2 夹具工具完整性: 落盘 sha256 == 内嵌 sha256（3f5f4ab5a9b4…）
+  ✅ 10d 夹具自检: ownership-no-defaults.yaml 经真实解析器可解析（PARSE_OK top_keys=domain_neutral,github,owners,rule_authority,rules,version）
+  ✅ 10d 夹具自检: ownership-empty-win.yaml 经真实解析器可解析（PARSE_OK top_keys=domain_defaults,domain_neutral,github,owners,rule_authority,rules,version）
+  ✅ 10d 夹具自检: ownership-no-catchall.yaml 经真实解析器可解析（PARSE_OK top_keys=domain_defaults,domain_neutral,github,owners,rule_authority,rules,version）
+  ✅ 10d 夹具自检: no-defaults 已无 domain_defaults 顶层键（顺序无关删块生效）
+
+=== F3: 五处合成裸路径 → 真实同域路径（scripts/control-tower/** = mac）===
+$ grep -n "FILES13_REAL\|FILES12_REAL" tests/control-tower/check-pr-budget.test.sh
+31:FILES13_REAL="scripts/control-tower/alloc-task-id.sh scripts/control-tower/attach.py scripts/control-tower/baseline-check.sh scripts/control-tower/brief_parser.py scripts/control-tower/bypass-ledger.sh scripts/control-tower/check-bypass-log.sh scripts/control-tower/check-canary-drift.sh scripts/control-tower/check-ci-stale-red.sh scripts/control-tower/check-citations.py scripts/control-tower/check-dsh-anchor.py scripts/control-tower/check-gate-integrity.sh scripts/control-tower/check-gitlinks.sh scripts/control-tower/PLATFORM-CHECKLIST.md"
+32:FILES12_REAL="scripts/control-tower/alloc-task-id.sh scripts/control-tower/attach.py scripts/control-tower/baseline-check.sh scripts/control-tower/brief_parser.py scripts/control-tower/bypass-ledger.sh scripts/control-tower/check-bypass-log.sh scripts/control-tower/check-canary-drift.sh scripts/control-tower/check-ci-stale-red.sh scripts/control-tower/check-citations.py scripts/control-tower/check-dsh-anchor.py scripts/control-tower/check-gate-integrity.sh scripts/control-tower/check-gitlinks.sh"
+61:run_expect 1 "13 文件 > 默认 12" --files "$FILES13_REAL"
+64:run_expect 0 "--max-files 20 时同写集放行" --max-files 20 --files "$FILES13_REAL"
+126:run_expect 1 "13 件纯代码仍被拦（豁免不放宽真代码）" --files "$FILES13_REAL"
+
+=== 三套计数（复合态）===
+$ bash tests/control-tower/check-ownership.test.sh
+  ✅ 全部通过: 111 项（PENDING=0 项，见上方 ⏳）
+═══════════════════════════════════════════════════════════
+$ bash tests/control-tower/check-pr-budget.test.sh
+  ✅ 全部通过: 32 项
+═══════════════════════════════════════════════════════════
+$ bash tests/control-tower/scan-fullwidth-vars.test.sh
+  结果: PASS=29 FAIL=2 SKIP=1 FIRST_FAIL=--domain win 未输出可解析的文件数（接口格式漂移）
+$ python3 scripts/control-tower/check-ownership.py --emit-codeowners | diff - .github/CODEOWNERS
+diff EXIT=0（0 + 零输出 = F1 已解决）

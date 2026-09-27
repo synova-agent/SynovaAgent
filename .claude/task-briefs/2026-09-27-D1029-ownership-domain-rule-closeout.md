@@ -53,6 +53,9 @@
   新增 `--changed-from REF` 取变更集（生产走 `HEAD`）+ `--pr-body` 读 PR 描述；
   新增 `--claim-check`：变更集含 `ownership.yaml` 而 PR 描述无创始人批准凭据 ⇒ exit 1。
 - tests/control-tower/check-ownership.test.sh — 三条反例 + 判别性夹具（改坏即红）+ 旧「静默归 win」用例改写
+- tests/control-tower/check-pr-budget.test.sh — D1029 收尾增量（队长 2026-09-27 明确扩写集）：
+  「文件数」类用例的合成裸名 `a1.ts..a13.ts` → 真实且同域（`scripts/control-tower/**`）路径，件数不变；
+  两个故意越界的反例保留语义；**不改** `check-pr-budget.sh` 本体，**不改** `--max-files 20` 的期望值
 - docs/synova/coordination/ownership.yaml — 头部自我声明（改本文件须创始人批准，凭据入 PR 描述）；
   新增 `domain_defaults`（win 基线领地显式声明）+ `rule_authority`（域≠权限、规则最终权限在创始人）；
   兜底规则注释改为「未归属 ⇒ 需显式认领」

@@ -24,6 +24,13 @@ TOOL="$REPO_DIR/scripts/control-tower/check-pr-budget.sh"
 PC="$REPO_DIR/scripts/pre-commit-check.sh"
 
 TMPD="$(mktemp -d)"
+
+# D1029/F3: 「文件数」类用例改用**真实且同域**(scripts/control-tower/** = mac)的路径。
+# 旧的合成裸名 a1.ts..a13.ts 在仓库根 ⇒ 新语义判「未归属」⇒ 把「域」顺带牵连进「文件数」用例。
+# 件数保持不变（13 件 / 13 件 / 12+1 件），域为单一 mac。
+FILES13_REAL="scripts/control-tower/alloc-task-id.sh scripts/control-tower/attach.py scripts/control-tower/baseline-check.sh scripts/control-tower/brief_parser.py scripts/control-tower/bypass-ledger.sh scripts/control-tower/check-bypass-log.sh scripts/control-tower/check-canary-drift.sh scripts/control-tower/check-ci-stale-red.sh scripts/control-tower/check-citations.py scripts/control-tower/check-dsh-anchor.py scripts/control-tower/check-gate-integrity.sh scripts/control-tower/check-gitlinks.sh scripts/control-tower/PLATFORM-CHECKLIST.md"
+FILES12_REAL="scripts/control-tower/alloc-task-id.sh scripts/control-tower/attach.py scripts/control-tower/baseline-check.sh scripts/control-tower/brief_parser.py scripts/control-tower/bypass-ledger.sh scripts/control-tower/check-bypass-log.sh scripts/control-tower/check-canary-drift.sh scripts/control-tower/check-ci-stale-red.sh scripts/control-tower/check-citations.py scripts/control-tower/check-dsh-anchor.py scripts/control-tower/check-gate-integrity.sh scripts/control-tower/check-gitlinks.sh"
+
 trap 'rm -rf "$TMPD"' EXIT
 
 PASS=0; FAIL=0
@@ -51,10 +58,10 @@ if echo "$OUT" | grep -q "✅ ② 变更单域"; then pass "单域判定输出�
 
 echo ""
 echo "── 2. 超预算: 文件数 > 上限 → exit 1 ──"
-run_expect 1 "13 文件 > 默认 12" --files "a1.ts a2.ts a3.ts a4.ts a5.ts a6.ts a7.ts a8.ts a9.ts a10.ts a11.ts a12.ts a13.ts"
+run_expect 1 "13 文件 > 默认 12" --files "$FILES13_REAL"
 if echo "$OUT" | grep -q "拆 PR"; then pass "超限输出点名「拆 PR」"; else fail "超限未点名拆 PR"; fi
 if echo "$OUT" | grep -q "禁调高上限"; then pass "输出禁调高上限"; else fail "未出现禁调高上限"; fi
-run_expect 0 "--max-files 20 时同写集放行" --max-files 20 --files "a1.ts a2.ts a3.ts a4.ts a5.ts a6.ts a7.ts a8.ts a9.ts a10.ts a11.ts a12.ts a13.ts"
+run_expect 0 "--max-files 20 时同写集放行" --max-files 20 --files "$FILES13_REAL"
 
 echo ""
 echo "── 3. 跨域: 变更落两个域 → exit 1 ──"
@@ -116,10 +123,10 @@ run_expect 0 "自验证据目录豁免（docs/synova/product-lines/evidence/）"
 
 echo ""
 echo "── 10. D860 反例: 伪装成治理产物的代码必须仍被计数 ──"
-run_expect 1 "13 件纯代码仍被拦（豁免不放宽真代码）" --files "a1.ts a2.ts a3.ts a4.ts a5.ts a6.ts a7.ts a8.ts a9.ts a10.ts a11.ts a12.ts a13.ts"
-run_expect 1 "反例: task-state/evil.ts（代码伪装进治理前缀）→ 仍计数 13 > 12" --files "task-state/evil.ts a1.ts a2.ts a3.ts a4.ts a5.ts a6.ts a7.ts a8.ts a9.ts a10.ts a11.ts a12.ts"
+run_expect 1 "13 件纯代码仍被拦（豁免不放宽真代码）" --files "$FILES13_REAL"
+run_expect 1 "反例: task-state/evil.ts（代码伪装进治理前缀）→ 仍计数 13 > 12" --files "task-state/evil.ts $FILES12_REAL"
 if echo "$OUT" | grep -q "13 > 上限 12"; then pass "反例计数点名 13"; else fail "反例计数未点名"; fi
-run_expect 1 "反例: .claude/task-briefs/evil.sh 仍计数" --files ".claude/task-briefs/evil.sh a1.ts a2.ts a3.ts a4.ts a5.ts a6.ts a7.ts a8.ts a9.ts a10.ts a11.ts a12.ts"
+run_expect 1 "反例: .claude/task-briefs/evil.sh 仍计数" --files ".claude/task-briefs/evil.sh $FILES12_REAL"
 
 echo ""
 echo "── 8. 接线（铁律 0-2 WIRE CHECK）──"

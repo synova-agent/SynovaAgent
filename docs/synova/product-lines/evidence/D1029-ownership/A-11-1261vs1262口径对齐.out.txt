@@ -1,0 +1,7 @@
+=== 口径对齐: 为什么是 1261 vs 1262（本件为追加，修正 A-04 的分母口径）===
+$ 取集合方式不同 → 分母不同; UNOWNED 计数随之不同
+os.walk(排除 .git/node_modules)    文件数=5616  UNOWNED=1283
+git ls-files                     文件数=5581  UNOWNED=1262
+
+只在 git、不在 walk: ['Engineering-v1-0-20260714.md', 'docs/synova/research/权威文档15-企业循环溢出导航系统-20260714/SYNOVA-RESEARCH-第四章-溢出驱动的顶层Loop']
+只在 walk、不在 git 的条目数: 37 （.claude/.precommit-par 临时产物等）
