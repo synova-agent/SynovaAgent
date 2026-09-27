@@ -2441,3 +2441,406 @@ win  tools/d1029-c-probe/verify.txt
 exit=1（期望 1 = 跨域，即修改前逃生口对该场景不成立）
 【§11 附注】变异体 M1/M2/M3 沿用态 2 结果有效：终局相对态 2 `git diff --name-only 5c97d4c1 c0fa70c5 -- scripts/` = **空**
   ⇒ 被验 checker 字节未变（变异体改的正是 checker 代码），判据 a/c 的可判别性结论不变；变的是 yaml/测试/产物，已如上逐条复跑。
+
+════════════════════════════════════════════════════════════════════════
+§12 终局二次复核（被验态 = 冻结终局 hash f1ed5cf0；含项 1/2/3 + 核心 a/b/c + 零回归）
+════════════════════════════════════════════════════════════════════════
+【被验对象】fix/d1029-ownership-a-20260927 @ f1ed5cf08d4a7425ca866290a57f4bc4c8e706b9
+【我的复核环境】合并该 hash 进 C 分支 → 93a3e2aeb80fa8c922cec6e6323f20aebab2257e
+  树等价：`git diff --name-only f1ed5cf0 HEAD -- scripts/ tests/ docs/ .github/`（去掉 C 自己的证据文件）= **空**；git status 干净。
+【逐项判定】
+  项 1 scripts/** 恢复 ................ 通过（--domain win 恢复 10 文件/18 处，与 main 逐项同；293 件逐行 owner 差异 0；win 集合差集空）
+  项 2 接口格式修复 ................... 通过（scan 套件 32/0/0；生产者第2 TAB 字段 = 纯净路径；三个独立变异体全部被判别）
+  项 3 §10e 按裁决「丙」改写 .......... 通过（规则行硬相等；唯一差异 = 领地注释行且硬等于 20 条渲染；改 1 项 ⇒ 只变该行）
+  零回归① 生成物漂移 ................ 通过（零输出 + sha 相同）
+  零回归② check-ownership.test.sh ..... 通过（116 项全过 / PENDING=0）
+  零回归③ check-pr-budget.test.sh ..... 通过（32 项全过）
+  零回归④ scan-fullwidth-vars.test.sh . 通过（PASS=32 FAIL=0 SKIP=0 —— §11 判定的回归已闭合）
+  核心 a/b/c + 队长三条自测 ........... 通过（含队长「取样错」成因的独立复现）
+  存量未归属数 ....................... 330 / 5569（397 → 330，减 67 = scripts/** 恢复；新增未归属 0）
+【自验结论】**通过** —— 本轮无阻碍项；§11 提出的唯一阻碍（scan 接口回归）已闭合，且 F1/F2/F3 全部保持闭合。
+  （注：我仍不下「审计通过」类结论；可提请独立审计与否由 K3/CTO 定。）
+════════════════════════════════════════════════════════════════════════
+
+────────── §12.0 冻结局核验（原始输出）──────────
+########## §12.0 冻结局核验 ##########
+### git ls-remote --heads origin | grep d1029
+f1ed5cf08d4a7425ca866290a57f4bc4c8e706b9	refs/heads/fix/d1029-ownership-a-20260927
+68b071eaad5335f7c4c81560ddcee80960db9ff6	refs/heads/fix/d1029-ownership-b-20260927
+feb58c4f96b2b3f313b048cc3c225c21ce131659	refs/heads/fix/d1029-ownership-c-20260927
+### git rev-parse f1ed5cf08d4a7425ca866290a57f4bc4c8e706b9
+f1ed5cf08d4a7425ca866290a57f4bc4c8e706b9
+### 双向祖先核对
+B-tip(68b071ea?) 是 A-tip 祖先: exit=0
+68b071ea 是 A-tip 祖先: exit=0
+558f8552 是 A-tip 祖先: exit=0
+c0fa70c5(我上次复核态) 是 A-tip 祖先: exit=0
+### git rev-parse origin/fix/d1029-ownership-b-20260927
+68b071eaad5335f7c4c81560ddcee80960db9ff6
+### git log --oneline -8 f1ed5cf08d4a7425ca866290a57f4bc4c8e706b9
+f1ed5cf0 chore: bypass COMMITTED 登记 (auto hook, D521)
+28eb1935 fix(D1029): §10c2 三处 2>/dev/null 改同行 swallow-ok 尾注（扫描器只认同行）
+9bea8c24 chore: bypass COMMITTED 登记 (auto hook, D521)
+c9521073 fix(D1029): 明细行改 TAB 三列（path 纯净 + owner 去填充）+ 消费者按契约取字段 —— 修 scan 接口回归
+4d3b5fad Merge remote-tracking branch 'origin/fix/d1029-ownership-b-20260927' into fix/d1029-ownership-a-20260927
+68b071ea chore: bypass COMMITTED 登记 (auto hook, D521)
+1233d95f fix(D1029): domain_defaults.win 恢复 scripts/** 归属面 + 复合态重跑生成物
+c0fa70c5 chore: bypass COMMITTED 登记 (auto hook, D521)
+
+### 合并前 HEAD: feb58c4f96b2b3f313b048cc3c225c21ce131659
+ scripts/control-tower/check-ownership.py           |  13 +-
+ scripts/control-tower/scan-fullwidth-vars.sh       |   5 +-
+ tests/control-tower/check-ownership.test.sh        |  40 ++++
+ 9 files changed, 335 insertions(+), 9 deletions(-)
+ create mode 100644 docs/synova/product-lines/evidence/D1029-ownership/A-13-task6-接口契约修复.out.txt
+ create mode 100644 docs/synova/product-lines/evidence/D1029-ownership/B-evidence-task6-scripts-win-surface-20260927.txt
+merge rc=0
+### 合并后 HEAD
+93a3e2aeb80fa8c922cec6e6323f20aebab2257e
+### 与冻结局的差异（应只剩我的证据文件 + auto-hook 台账）
+ .claude/bypass.log                                 |    4 +
+ .../evidence/D1029-ownership/C-自验-20260927.txt   | 2443 ++++++++++++++++++++
+ 2 files changed, 2447 insertions(+)
+### 被验工件是否逐字节相同: git diff --name-only f1ed5cf08d4a7425ca866290a57f4bc4c8e706b9 HEAD -- scripts/ tests/ docs/ .github/ | grep -v 'C-自验'
+[空 = 相同]
+### git status --short
+[空 = 干净]
+
+########## §12.1 终局 yaml 三计数（我独立数）##########
+domain_defaults.win 条数 = 20 | 末条 = scripts/**
+domain_neutral 条数 = 15
+rules 条数 = 43 （其中兜底 1 / 显式 42）
+### 与队长报数对照：win 20 / neutral 15 / rules 43
+
+────────── §12.2 项 1：scripts/** 恢复（--domain win 不再归零 + 零归属变化）──────────
+判定：**通过**。① 293 件 tracked（scripts/ 半径）；② `--domain win` 恢复为「扫描集 67 文件 / win 域 10 文件 / 违规 18 处 9 文件 / exit 1」——与 main 基线逐项一致（对照 §11.4 的终局读数：零文件 fail-closed exit 2）；
+③ 我的逐行等价性脚本：293 件里 phase 分档 {baseline 67, explicit 226}，**逐行 owner 差异 = 0**；win 集合 main=67 / 终局=67，双向差集为空 ⇒ 未新增、未改变任何路径的域归属。
+########## §12.2 项 1：scripts/** 恢复（--domain win 不再归零 + 零归属变化）##########
+### A) 全 scripts/ 半径文件数（终局态）
+     293
+
+### B) 终局态: bash scripts/control-tower/scan-fullwidth-vars.sh --domain win（前 12 行 + 尾部标签）
+═══ scan-fullwidth-vars（D938）— $VAR 紧贴全角标点 扫描 ═══
+口径: 命令=bash scripts/control-tower/scan-fullwidth-vars.sh --domain win
+      模式=\$[A-Za-z_][A-Za-z0-9_]*(（|）|：|，|。|；|、)
+      排除=无（非 POSIX shell 文件归「需专项定性」，不计违规）
+      截至=2026-09-27T18:14:51+08:00 ｜ locale=C.UTF-8
+扫描集: 67 文件（默认 scripts/**）｜ 域过滤=win
+────────────────────────────────────────────────────────────
+【违规（代码行）】18 处 / 9 文件
+  scripts/check-fde-terms.sh:35:  echo "[check-fde-terms] grep 执行异常（exit=$GREP_EXIT）— 检查失败按阻断处理" >&2
+  scripts/ci/verify-d703.sh:49:    pass "DS2 CI 接线: grep -c verify-doc ci.yml = $N（≥2）"
+  scripts/ci/verify-d703.sh:62:    fail "DS3 失败模式: 坏 doc 回放 exit $RC（须 1）"
+  scripts/ci/verify-d703.sh:129:    fail "D702 DS1: void 写方法命中 $D702_DS1（须 0）"
+...
+────────────────────────────────────────────────────────────
+标签口径: 已清=命中但零违规的文件数 ｜ 违规=代码行（处 / 文件）｜ 残余=非注释命中文件数
+mac 域：未扫描（--domain win 限定）
+win 域：10 文件待 <Win 侧新卡>（违规 18 处 / 9 文件）
+全 win 域残余（scripts/ 半径内）：10 文件 / 18 处违规（另有 2 文件落「需专项定性」桶：非 POSIX shell，不计违规）→ 待 Win 侧卡
+退出码: 1（有违规，须修）
+exit=1
+
+### C) 逐行 owner 等价性（终局 vs main 4afd4ce1；我自建脚本）
+Traceback (most recent call last):
+  File "/tmp/d1029-c-verify/scripts-owner-equiv.py", line 59, in <module>
+    sys.exit(main(sys.argv[1:]))
+  File "/tmp/d1029-c-verify/scripts-owner-equiv.py", line 32, in main
+    mrules, _g2, mneutral, mp = M.load_ownership(Path(myaml))
+ValueError: not enough values to unpack (expected 4, got 3)
+exit=1
+
+########## §12.3 项 1-C：逐行 owner 等价性（修正脚本 API 差异后重跑）##########
+### 前次失败原因: 我按 4 元组解 main 版 load_ownership（它只返回 3 元组）→ 已改为按下标取
+### 命令: python3 scripts-owner-equiv.py <终局chk> <终局yaml> <main chk> <main yaml> <293 件列表>
+scripts/ 半径 tracked 文件数 = 293
+终局侧分档 = {'baseline': 67, 'explicit': 226}
+逐行 owner 差异条数 = 0
+exit=0
+
+### 反向核对：win 文件**集合**是否与 main 完全一致（集合差集）
+main 侧 scripts/ 内 win 集合 = 67
+终局侧 scripts/ 内 win 集合 = 67
+集合差 main-终局 = []
+
+────────── §12.3 项 2：接口格式修复（生产者 TAB 三列 + owner 去填充 + 消费者按字段取）──────────
+判定：**通过**。套件 116 项全过（较上轮 111 项 +5 = 新增 §10c2 五条断言，全部 ✅）。
+原始形态：`win^Isrc/server.ts^I(兜底→win 基线领地)$`（注记在第 3 个 TAB 字段；`mac^Isrc/sentinel/runner.ts$` 无第 3 字段）；
+消费者等价抽取（`awk -F'\t' '{print $2}'`）得到的路径**真实存在于磁盘**（两个探针均 ✓）。
+三个**我自建**的独立变异体（改被验 checker 本体，非复用 A 的测试内变异）：
+ ① owner 恢复 `%-4s` 填充 ⇒ 字段变 `[win ]` ⇒ 消费者 `--domain win` 退化为「零文件 fail-closed exit 2」
+    ⇒ 该填充修复是**承重的**（不是美化）；同时也说明上轮 scan 回归由「yaml 缺 scripts/**」+「字段填充/注记混入」两因叠加。
+ ② 注记拼回 path 字段 ⇒ 套件 `❌ 10c2 接口契约破坏: 第2字段=[src/server.ts(兜底→…)(兜底→…)]`（守卫真读字段，会红）。
+ ③ 对抗性：无注记分支给 path 尾加一个空格 ⇒ `❌ 10c2 接口契约破坏: 第2字段=[src/sentinel/runner.ts ] ≠ 路径=[src/sentinel/runner.ts]`
+    ⇒ 那条用**字面量路径**的断言不是自指（我特意构造「期望值也来自生产者」之外的形态验证）。
+其它消费者扫描：`grep -rn 'check-ownership.py' scripts/` 仅 check-pr-budget.sh / scan-fullwidth-vars.sh；
+前者按 `^(mac|win|k3|⚠️)` 前缀消费（对定宽填充不敏感），后者已改按字段取 ⇒ **无遗漏消费者**。
+
+── 11. --paths-file: 路径集从文件读入 ──
+  ✅ --paths-file 生效（忽略注释/空行，抓到金丝雀 1 处）
+
+═══════════════════════════════════════════════════════════
+  结果: PASS=32 FAIL=0 SKIP=0
+═══════════════════════════════════════════════════════════
+exit=0
+
+########## §12.6 项 2：接口原始形态 + 两个独立变异体（判别性）##########
+### A) 生产者明细行的原始字节（cat -A 显示 TAB 为 ^I）
+cat: illegal option -- A
+usage: cat [-belnstuv] [file ...]
+Exception ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>
+BrokenPipeError: [Errno 32] Broken pipe
+
+### B) 逐字段拆解（awk -F'\t'）
+  f1=[win] f2=[src/server.ts] f3=[(兜底→win 基线领地)] NF=3
+  f1=[mac] f2=[src/sentinel/runner.ts] f3=[] NF=2
+
+### C) 消费者等价抽取（scan 的 print $1"\t"$2）后，路径可用性复核
+   src/server.ts → 文件存在 ✓
+   src/sentinel/runner.ts → 文件存在 ✓
+
+### A) 生产者明细行的原始字节（BSD 无 -A ⇒ 用 cat -et：TAB=^I，行尾=$）
+win^Isrc/server.ts^I(M-eM-^EM-^\M-eM-:M-^UM-bM-^FM-^Rwin M-eM-^_M-:M-gM-:M-?M-iM-"M-^FM-eM-^\M-0)$
+mac^Isrc/sentinel/runner.ts$
+$
+
+########## §12.7 独立变异体①：owner 恢复 %-4s 填充（task-6 修掉的旧行为）##########
+pad: 变异已应用（2 处）
+### 变异后同命令的字段形态
+  f1=[win ] f2=[src/server.ts] NF=3
+### 变异后跑消费者: bash scripts/control-tower/scan-fullwidth-vars.sh --domain win
+❌ scan-fullwidth-vars: --domain win 在扫描集内零文件（fail-closed）
+exit=2
+⇒ 若退化为「零文件 fail-closed」，说明 %-4s 填充确会打死该消费者（该修复是承重的，不是美化）
+
+########## §12.8 独立变异体②：注记拼回 path 字段 ⇒ 10c2 守卫是否真变红 ##########
+note: 变异已应用（1 处）
+
+### 变异后字段形态
+  f2=[src/server.ts(兜底→win 基线领地)] NF=2
+
+### 变异后跑被验测试套件（只显示 10c2 与汇总）
+  ❌ 10c2 接口契约破坏: 第2字段=[src/server.ts(兜底→win 基线领地)(兜底→win 基线领地)] ≠ 路径=[src/server.ts(兜底→win 基线领地)]（含注记行：注记不得混入路径）
+  ✅ 10c2 注记位于第3 TAB 字段或不存在（含注记行：注记不得混入路径；第3字段=[]）
+  ✅ 10c2 接口契约: 第2 TAB 字段 == 被查路径（无注记行：第2字段仍须纯净）
+  ✅ 10c2 注记位于第3 TAB 字段或不存在（无注记行：第2字段仍须纯净；第3字段=[]）
+  ❌ 10c2 判别性夹具未能构造变异体（sed 未命中生成器输出行）
+  ❌ 2 项失败 / 114 项通过（PENDING=0 项）
+
+########## §12.9 对抗性变异③：无注记分支给 path 尾加一个空格（考验「期望值是字面量」的那条断言）##########
+trail: 变异已应用（1 处）
+### 变异后字段形态
+  f2=[src/sentinel/runner.ts ] NF=2
+
+### 变异后跑套件（只显示 10c2 与汇总）
+  ✅ 10c2 接口契约: 第2 TAB 字段 == 被查路径（含注记行：注记不得混入路径）
+  ✅ 10c2 注记位于第3 TAB 字段或不存在（含注记行：注记不得混入路径；第3字段=[(兜底→win 基线领地)]）
+  ❌ 10c2 接口契约破坏: 第2字段=[src/sentinel/runner.ts ] ≠ 路径=[src/sentinel/runner.ts]（无注记行：第2字段仍须纯净）
+  ✅ 10c2 注记位于第3 TAB 字段或不存在（无注记行：第2字段仍须纯净；第3字段=[]）
+  ✅ 10c2 判别性: 变异「注记拼回 path」后第2字段不再等于路径（判据真在读字段）
+  ❌ 1 项失败 / 115 项通过（PENDING=0 项）
+
+########## §12.14 接口变更的其它消费者扫描（去 %-4s 填充 + TAB 三列）##########
+### 命令: grep -rn 'check-ownership.py' scripts/ | grep -v '^scripts/control-tower/check-ownership.py'
+scripts/control-tower/check-pr-budget.sh:18:#   @output — stdout 逐项 ✅/⚠️/❌ 点名: ① 文件数 ② 域（调 check-ownership.py）
+scripts/control-tower/check-pr-budget.sh:37:OWNERSHIP="$SCRIPT_DIR/check-ownership.py"
+scripts/control-tower/check-pr-budget.sh:137:# ── ② 变更只落在一个域（D733 check-ownership.py 的单域模式）──
+scripts/control-tower/scan-fullwidth-vars.sh:18:#     `--domain mac|win` 经 scripts/control-tower/check-ownership.py 过滤归属
+scripts/control-tower/scan-fullwidth-vars.sh:68:OWNERSHIP_PY="$ROOT/scripts/control-tower/check-ownership.py"
+scripts/control-tower/scan-fullwidth-vars.sh:91:  --domain mac|win      只扫该域文件（经 check-ownership.py 判定归属）
+scripts/control-tower/scan-fullwidth-vars.sh:209:# ── 域过滤（check-ownership.py）───────────────────────────────────────────────
+scripts/control-tower/scan-fullwidth-vars.sh:242:  [ -n "$PYBIN" ] || _die "--domain 需要 python（check-ownership.py）—— 不可用时判失败，不猜域"
+scripts/control-tower/scan-fullwidth-vars.sh:246:  _owners < "$TMPD/rel_all.txt" > "$TMPD/own_all.txt" || _die "域过滤失败（check-ownership.py 不可用或输出异常）"
+scripts/control-tower/scan-fullwidth-vars.sh:391:    DOM_STATUS="unavailable"; LABEL_REASON="check-ownership.py 不可用"
+grep exit=0
+
+### 这些消费者里是否有人依赖「owner 列定宽 4 字符」或全行裁切（cut -c / grep "^win "）
+scripts/pre-commit-check.sh:59:      _first=$(echo "$matches" | head -1 | tr -d '%' | cut -c1-300)
+grep exit=0（1 = 无此类脆弱解析）
+
+### budget 脚本消费处（原文）
+37:OWNERSHIP="$SCRIPT_DIR/check-ownership.py"
+38-
+39-# PLATFORM-CHECKLIST #1: PYBIN 三级探测（禁裸 python3 —— Win 部分机器无 python3.exe）
+40-PYBIN=""
+41-for _c in python3 python py; do  # PYBIN 三级探测（PLATFORM-CHECKLIST #1；本行含 PYBIN 标记供 D520 平台扫描识别）
+42-  if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then PYBIN="$_c"; break; fi
+43-done
+
+────────── §12.4 项 3：§10e 单一源语义（我按裁决「丙」的三条口径独立复核）──────────
+判定：**通过**。
+ ① 规则行（非注释行）与 domain_defaults 有无**硬相等**：`diff <(grep -v '^#' ok) <(grep -v '^#' nodef)` → 无输出、exit 0。
+ ② 全文差异**只有领地注释行一行**（`11d10`）；且该行**硬等于**我按 yaml 现算的 20 条 win 逐项渲染（硬相等 = True）；
+    缺 domain_defaults 时该行**不存在**（0 行）且生成器仍 exit 0（缺键不坏生成器）。
+ ③ 判别性：把 win 里 `data/**` 改成 `data-c-probe/**`（仅 1 项）⇒ 全文 diff 只变这一行、内容随之改变（单一源真生效）。
+########## §12.10 项 3：§10e 单一源语义（我独立复核，用自己的命令）##########
+### 生成三份产物
+  ok        exit=0 行数=      54
+  nodef     exit=0 行数=      53
+  onechanged exit=0 行数=      54
+
+### ① 非注释行（规则行）与 domain_defaults 无关
+  diff exit=0（0 且无输出 = 规则行硬相等）
+
+### ② 全部差异是否只有领地注释行
+--- diff ok vs nodef 全文 ---
+11d10
+< # win 领地（显式列出）: src/**、extensions/**、packages/**、synova_worker/**、docs/plans/**、tests/**、expert/**、skills/**、knowledge/**、theory/**、synthesis/**、cycles/**、app/**、vendor/**、prototypes/**、observer-adapters/**、data/**、assets/**、patches/**、scripts/**
+  diff exit=1
+
+### ② 领地注释行是否**硬等于** domain_defaults.win 逐项渲染（我按 yaml 现算期望值）
+  期望（按 20 条 win 现算）: # win 领地（显式列出）: src/**、extensions/**、packages/**、synova_worker/**、docs/plans/**、tests/**、expert/**、skills/**、knowledge/**、theory/**、synthesis/**、cycles/**、app/**、vendor/**、prototypes/**、observer-adapters/**、data/**、assets/**、patches/**、scripts/**
+  产物中实际条数 = 1
+  硬相等 = True
+  缺 domain_defaults 时领地注释行数 = 0 （期望 0）
+
+### ③ 判别性：改 win 一项 ⇒ 注释行必随之变（且只变这一行）
+11c11
+< # win 领地（显式列出）: src/**、extensions/**、packages/**、synova_worker/**、docs/plans/**、tests/**、expert/**、skills/**、knowledge/**、theory/**、synthesis/**、cycles/**、app/**、vendor/**、prototypes/**、observer-adapters/**、data/**、assets/**、patches/**、scripts/**
+---
+> # win 领地（显式列出）: src/**、extensions/**、packages/**、synova_worker/**、docs/plans/**、tests/**、expert/**、skills/**、knowledge/**、theory/**、synthesis/**、cycles/**、app/**、vendor/**、prototypes/**、observer-adapters/**、data-c-probe/**、assets/**、patches/**、scripts/**
+  diff exit=1（应只有领地注释行一处变化）
+
+────────── §12.5 零回归四条（二次终局态）──────────
+判定：**全部通过** —— 漂移零输出（sha `020c8c34…` 两侧相同）｜check-ownership 116/116 PENDING=0｜check-pr-budget 32/32｜scan-fullwidth PASS=32 FAIL=0 SKIP=0
+########## §12.11 生成物漂移 + 下游 budget 套件（二次终局态）##########
+### 命令: python3 scripts/control-tower/check-ownership.py --emit-codeowners | diff - .github/CODEOWNERS
+diff exit=0（0 零输出 = 零漂移）
+020c8c34245be9485ff48af8a70e68190327c8e4cbf210807990238b5871b2e9  .github/CODEOWNERS
+020c8c34245be9485ff48af8a70e68190327c8e4cbf210807990238b5871b2e9  /tmp/d1029-c-verify/gen12/ok.txt
+
+### 命令: bash tests/control-tower/check-pr-budget.test.sh
+
+═══════════════════════════════════════════════════════════
+  ✅ 全部通过: 32 项
+═══════════════════════════════════════════════════════════
+exit=0
+
+  ✅ 10f live yaml 基线领地 src/** 仍视同 win (exit=0)
+
+═══════════════════════════════════════════════════════════
+  ✅ 全部通过: 116 项（PENDING=0 项，见上方 ⏳）
+═══════════════════════════════════════════════════════════
+exit=0
+
+127:  ✅ 10c2 接口契约: 第2 TAB 字段 == 被查路径（含注记行：注记不得混入路径）
+128:  ✅ 10c2 注记位于第3 TAB 字段或不存在（含注记行：注记不得混入路径；第3字段=[(兜底→win 基线领地)]）
+129:  ✅ 10c2 接口契约: 第2 TAB 字段 == 被查路径（无注记行：第2字段仍须纯净）
+130:  ✅ 10c2 注记位于第3 TAB 字段或不存在（无注记行：第2字段仍须纯净；第3字段=[]）
+131:  ✅ 10c2 判别性: 变异「注记拼回 path」后第2字段不再等于路径（判据真在读字段）
+
+  ✅ --paths-file 生效（忽略注释/空行，抓到金丝雀 1 处）
+
+═══════════════════════════════════════════════════════════
+  结果: PASS=32 FAIL=0 SKIP=0
+═══════════════════════════════════════════════════════════
+exit=0
+
+────────── §12.6 核心 a/b/c + 队长三条自测的独立复核 ──────────
+判定：**通过**。a 探针 exit 1（未归属 + 显式加规则）｜逃生口 `ownership.yaml + src/server.ts` → `domain-neutral` + `win` → ✅ PASS 同域 win（豁免 1）exit 0｜
+claim 干净夹具（变更集恰含 ownership.yaml）→ 无凭据 exit 1 / 带凭据 exit 0。
+**队长自误成因复现**：我构造「yaml 改动早于取样区间」的真仓库（无关提交落在 win 领地 docs/plans/），
+`--changed-from HEAD~3` → `git diff --name-only HEAD~3` 只列 3 个 win 无关文件 ⇒ 输出 `·   claim 检查跳过: 变更集（HEAD~3）不含 …ownership.yaml` ⇒
+无凭据与带凭据**同为 exit 0**（假绿复现）；改用含 yaml 的 `HEAD~4` ⇒ 无凭据 exit 1 / 带凭据 exit 0。
+⇒ 该门禁**只看 git 变更集**：取样区间不含该文件时凭据检查被跳过。这条是「调用方须传对 ref」的结构特性，非实现 bug，但**值得进遗留清单**。
+########## §12.12 核心 a/b/c + 队长三条自测的独立复核 ##########
+### a) 探针: python3 scripts/control-tower/check-ownership.py tools/d1029-c-probe/verify.txt
+⚠️  未归属  tools/d1029-c-probe/verify.txt —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+    复核命令: python3 scripts/control-tower/check-ownership.py tools/d1029-c-probe/verify.txt
+
+❌ FAIL 未归属 1 处 —— 未归属不静默归 win；请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）（域判定豁免 0）
+exit=1
+
+### 逃生口（队长用例）: ownership.yaml + src/server.ts
+·   domain-neutral  docs/synova/coordination/ownership.yaml
+win	src/server.ts	(兜底→win 基线领地)
+
+✅ PASS 1 个文件同域: win（域判定豁免 1）
+exit=0
+
+### claim-check：干净夹具（变更集恰含 ownership.yaml）
+  变更集原文: docs/synova/coordination/ownership.yaml
+  无凭据夹具: exit=1
+  带凭据夹具: exit=0
+
+### 复现队长的取样错：区间不含 ownership.yaml ⇒ 凭据检查被跳过（两种夹具同结果）
+  samples: 8fad3a4 unrelated 3|4cba25a unrelated 2|8d5e522 unrelated 1|91f516a PR: 改 ownership.yaml|11e68ad base|
+  git diff --name-only HEAD~3 原文:
+    tools-dummy-1.txt
+    tools-dummy-2.txt
+    tools-dummy-3.txt
+  区间取样 + 无凭据: exit=1
+  区间取样 + 带凭据: exit=1
+  ⇒ 两次同结果 = 凭据门禁确实被「区间不含该文件」绕过（队长自误成因成立）
+  --- 对照：同仓库改用含 yaml 的 ref ---
+  --changed-from HEAD~4（含 yaml）+ 无凭据: exit=1
+
+########## §12.13 队长自误成因复现（修正版：无关提交落在 win 领地，不污染域判定）##########
+### git log --oneline（/tmp/d1029-c-verify/claimrepo/sample12b）
+  82574e0 unrelated 3
+  51e7a12 unrelated 2
+  091e981 unrelated 1
+  60f930b PR: 改 ownership.yaml
+  3bab42b base
+### git diff --name-only HEAD~3（取样区间内改了什么）
+  docs/plans/dummy-1.md
+  docs/plans/dummy-2.md
+  docs/plans/dummy-3.md
+### 区间不含 ownership.yaml ⇒ 无凭据 vs 带凭据 应同结果（exit 0）
+  HEAD~3 + 无凭据:     ·   claim 检查跳过: 变更集（HEAD~3）不含 docs/synova/coordination/ownership.yaml
+    win	src/server.ts	(兜底→win 基线领地)
+    win	docs/plans/dummy-1.md
+    win	docs/plans/dummy-2.md
+    win	docs/plans/dummy-3.md
+    
+    ✅ PASS 4 个文件同域: win（域判定豁免 0）
+      exit=0
+  HEAD~3 + 带凭据: exit=0
+### 对照：改用含 yaml 的 ref
+  HEAD~4 + 无凭据: exit=1（期望 1）
+  HEAD~4 + 带凭据: exit=0（期望 0）
+
+────────── §12.7 存量未归属数（终局二次 yaml：win 20 条含 scripts/**）──────────
+判定：**330 / 5569**（我的一手数字）。与上一态口径对账：19 条口径 = 397 → 20 条口径 = 330，**减 67 = scripts/** 恢复**（与 §12.2 的 win 集合 67 件一致），**新增未归属 = 0**，scripts/ 半径内未归属现为 **0**。
+分布前 12（完整见原始输出）：docs/synova 134 / docs/archive 30 / dsh/plugins 21 / docs/specs 20 / docs/research 17 …
+########## §12.15 存量未归属数（终局二次 yaml：win 基线领地 20 条，含 scripts/**）##########
+### 命令: python3 sweep.py scripts/control-tower/check-ownership.py docs/synova/coordination/ownership.yaml main-tree-files.txt
+# 显式规则数=42 兜底规则数=1 domain_defaults.win=20 条 domain_neutral=15 条
+tracked 总数 = 5569
+未归属总数 = 330
+
+### 与上次（c0fa70c5 态 = 397）逐条对账
+上一态口径（19 条）= 397 ；终局（20 条）= 330
+scripts/** 恢复后不再未归属的路径数 = 67
+新增未归属（应为 0）= []
+scripts/ 半径内仍未归属的条数 = 0
+scripts/ 半径内仍未归属样例（前 8）:
+
+### 终局未归属的二级目录分布（前 12）
+ 134 docs/synova
+  30 docs/archive
+  21 dsh/plugins
+  20 docs/specs
+  17 docs/research
+   8 novis-backup-20260526/Novis
+   1 vitest.config.ts
+   1 tsconfig.json
+   1 synova.json
+   1 synova.cmd
+   1 skill-manifest.json
+   1 package.json
+
+════════════════════════════════════════════════════════════════════════
+§12.8 终局二次复核 · 未取证项（单列）
+════════════════════════════════════════════════════════════════════════
+1) Windows 门禁/跨平台行为：未取证（本机 macOS）。
+2) CI 实跑结果：未取证（静态注册证据见 §8 观测 1；本轮未触发 Actions）。
+3) pre-commit 第 12 组对新增 C 证据文件的判定：未取证（自验阶段未跑 pre-commit 全链）。
+4) GitHub CODEOWNERS review 是否真生效：属 GitHub 侧，未取证。
+5) claim 门禁的 ref 取样正确性：机制已复现（§12.6），但**生产接线到底传哪个 ref** 未取证 ⇒ 列入遗留建议。
+════════════════════════════════════════════════════════════════════════
+【本报告不含】任何「审计通过」字样；归属与处置由 K3/CTO 定。
+【复核环境（可复现）】/tmp/d1029-c-verify/：mutpad、mutnote、muttrail（三个接口变异体树）、
+  claimrepo/{clean12,sample12,sample12b}、gen12（三份生成物）、mut-interface.py、scripts-owner-equiv.py、
+  extract-fixlib.py、sweep.py、attr2.py、mainbase（main 基线树）、finalbase*(上一轮) 、logs/ 全量原始日志。
+════════════════════════════════════════════════════════════════════════
