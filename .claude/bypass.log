@@ -1853,3 +1853,7 @@ Binary file .claude/bypass.log matches
 2026-09-27T17:24:25+08:00 | BLOCKED | pre-commit FAIL (exit 1) | TASK_ID=D1029 | AGENT=ownership-checker-dev
 2026-09-27T17:24:57+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=0fca8e5f897fabc8e37f7f397869725f056d75e9
 2026-09-27T18:01:21+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=fea3843b4785692cad4517eea1ff2218eb5c67a7
+2026-09-27T18:06:09+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=1233d95fa14dfde0351f65f04a096dd18d99fb90
+2026-09-27T18:10:34+08:00 | BLOCKED | pre-commit FAIL (exit 1) | TASK_ID=D1029 | AGENT=ownership-checker-dev
+2026-09-27T18:11:44+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=c9521073711e8515a2b8cb43e4c056013c6a2c11
+2026-09-27T18:12:33+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=28eb193567c59339e96c2e427ecde75dff154419

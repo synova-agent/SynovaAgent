@@ -30,7 +30,8 @@ D1029 语义变更（兜底不再静默归 win）:
                  --changed-from REF     取变更集（`git diff --name-only REF`）并与位置参数取并集
                  --claim-check          变更集含 ownership.yaml 时必须从 PR 描述匹配创始人批准凭据
                  --pr-body FILE         PR 描述文件；未给且需要时读 stdin
-  @output — stdout 明细行 "<owner>\t<path>" / 未归属行「⚠️  未归属 …」+ 可复制复核命令；
+  @output — stdout 明细行 "<owner>\t<path>[\t<注记>]"（path **恰为第 2 个 TAB 字段**，注记不得混入 path；
+            未归属行「⚠️  未归属 …」+ 可复制复核命令）；
             越域/跨域逐行点名「期望 X 实际 Y」；--emit-codeowners → CODEOWNERS 全文
             （UTF-8 + LF，与 .github/CODEOWNERS 逐字节可比）
   @exit   — 0 = 通过（全部同域且无未归属；声明 owner 时全部一致）
@@ -462,8 +463,14 @@ def main(argv) -> int:
     if not args.quiet:
         for path, owner, reason in rows:
             if owner is not None:
-                mark = "  (兜底→win 基线领地)" if reason == "baseline" else ""
-                print("%-4s %s%s" % (owner, path, mark))
+                # 接口契约: 明细行 = "<owner>\t<path>[\t<注记>]" —— path 必须是**纯净**的第 2 个 TAB 字段
+                # （消费方 scan-fullwidth-vars.sh 以 awk -F'\t' 取 $2 当路径；注记曾拼进 path 字段
+                #   导致该消费者把整行余部当路径 ⇒ grep 报 "No such file or directory" ⇒ 正确 fail-closed 假红。D1029/task-6）
+                mark = "(兜底→win 基线领地)" if reason == "baseline" else ""
+                if mark:
+                    print("%s\t%s\t%s" % (owner, path, mark))
+                else:
+                    print("%s\t%s" % (owner, path))
     for path in unowned:
         # 未归属逐条点名（quiet 模式下只出这一行 + 复核命令；不静默、不截断）
         print("⚠️  未归属  %s —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）"

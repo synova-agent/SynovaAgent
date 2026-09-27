@@ -1,0 +1,202 @@
+# D1029 · 成员 B（task-6）机器输出留档 —— 恢复 scripts/** win 归属面（纯命令输出，无散文）
+# 任务 task-6 | 成员 ownership-authority-dev | 分支 fix/d1029-ownership-b-20260927 | 2026-09-27
+# 配套: B-evidence-20260927.txt / B-evidence-task4-escape-hatch-20260927.txt
+
+── Y1 前提实测: scan-fullwidth-vars 改前（不满足卡面预期 32/0/0）
+$ bash tests/control-tower/scan-fullwidth-vars.test.sh | grep -E '结果: PASS=|本测试有'; echo rc=${PIPESTATUS[0]}
+  结果: PASS=29 FAIL=2 SKIP=1 FIRST_FAIL=--domain win 未输出可解析的文件数（接口格式漂移）
+  ⚠️  本测试有 1 项 SKIP（平台能力缺失，非通过）—— 计数已进入结果行
+rc=1
+[exit=0]
+
+── Y2 前提实测: main 版规则下 scripts/** 判 win = 67 件（main 版检查器 + main 版 yaml）
+$ git show 4afd4ce1:scripts/control-tower/check-ownership.py > /tmp/b3-repro/own-main.py; rm -rf /tmp/b3-mainroot; mkdir -p /tmp/b3-mainroot/scripts/control-tower /tmp/b3-mainroot/scripts/product-lines; cp /tmp/b3-repro/own-main.py /tmp/b3-mainroot/scripts/control-tower/check-ownership.py; cp scripts/product-lines/*.py /tmp/b3-mainroot/scripts/product-lines/; git show 4afd4ce1:docs/synova/coordination/ownership.yaml > /tmp/b3-repro/main-own.yaml; git ls-files scripts > /tmp/b3-repro/scripts.txt; wc -l < /tmp/b3-repro/scripts.txt; python3 /tmp/b3-mainroot/scripts/control-tower/check-ownership.py --yaml /tmp/b3-repro/main-own.yaml $(cat /tmp/b3-repro/scripts.txt | tr '\n' ' ') 2>/dev/null | grep -E '^(mac|win|k3) ' | awk '{print $1}' | sort | uniq -c
+     293
+   9 k3
+ 217 mac
+  67 win
+[exit=0]
+
+── Y3 卡面前提检验: 队长给的 12 条 glob 实测漏 8 件（根级 .py/.ts/.js）
+$ python3 - <<'PY'
+import fnmatch
+def gm(g,p):
+    if g=='**': return True
+    if g.endswith('/**'):
+        pre=g[:-3]; return p==pre or p.startswith(pre+'/')
+    return fnmatch.fnmatchcase(p,g)
+props=['scripts/*.sh','scripts/*.ps1','scripts/*.bat','scripts/archive/**','scripts/checks/**','scripts/ci/**','scripts/cron/**','scripts/deploy/**','scripts/desktop/**','scripts/feishu-bridge/**','scripts/lock/**','scripts/setup/**']
+win=[l.strip() for l in open('/tmp/b3-scripts-win.txt') if l.strip()]
+missed=[f for f in win if not any(gm(g,f) for g in props)]
+print('67 件中被 12 glob 漏掉 =', len(missed))
+for f in missed: print('  ', f)
+PY
+67 件中被 12 glob 漏掉 = 8
+   scripts/jtbd-dedup-v2.py
+   scripts/jtbd-dedup.py
+   scripts/migrate-ontology-manifests.py
+   scripts/migrate-sog-to-ontology.py
+   scripts/run-contract-gate.ts
+   scripts/translate-research.py
+   scripts/validate-ontology.ts
+   scripts/watchdog.js
+[exit=0]
+
+── Y4 等价性证明: main 版检查器 vs 新版检查器，scripts/ 全部 293 件逐行 owner 对比
+$ python3 /tmp/b3-mainroot/scripts/control-tower/check-ownership.py --yaml /tmp/b3-repro/main-own.yaml $(cat /tmp/b3-repro/scripts.txt | tr '\n' ' ') 2>/dev/null | grep -E '^(mac|win|k3) ' | sort > /tmp/b3-repro/owner-main.txt; python3 scripts/control-tower/check-ownership.py --yaml docs/synova/coordination/ownership.yaml $(cat /tmp/b3-repro/scripts.txt | tr '\n' ' ') 2>/dev/null | sed -E 's/ *\(兜底→win 基线领地\)//' | grep -E '^(mac|win|k3) ' | sort > /tmp/b3-repro/owner-new.txt; wc -l /tmp/b3-repro/owner-main.txt /tmp/b3-repro/owner-new.txt; diff /tmp/b3-repro/owner-main.txt /tmp/b3-repro/owner-new.txt; echo "diff exit=$?"; awk '{print $1}' /tmp/b3-repro/owner-new.txt | sort | uniq -c
+     293 /tmp/b3-repro/owner-main.txt
+     293 /tmp/b3-repro/owner-new.txt
+     586 total
+diff exit=0
+   9 k3
+ 217 mac
+  67 win
+[exit=0]
+
+── Y5 落地: domain_defaults.win 19 → 20 条
+$ python3 -c "import sys; sys.path.insert(0,'scripts/product-lines'); import productline_yaml as P; w=P.load_file('docs/synova/coordination/ownership.yaml')['domain_defaults']['win']; print('len =', len(w)); print('末条 =', w[-1])"; git diff -- docs/synova/coordination/ownership.yaml | grep -E '^[-+].*(win: \[|scripts/\*\*)' | cut -c1-200
+len = 20
+末条 = scripts/**
++#   scripts/**        ← 既有归属（D1029 收尾 task-6「恢复既有行为」登记）: main 版规则
++#                        （4afd4ce1）下 `scripts/**` 落兜底的件实测判 win = **67 件**。
+-  win: ["src/**", "extensions/**", "packages/**", "synova_worker/**", "docs/plans/**", "tests/**", "expert/**", "skills/**", "knowledge/**", "theory/**", "synthesis/**", "cycles/**", "app/**", "vendo
++  win: ["src/**", "extensions/**", "packages/**", "synova_worker/**", "docs/plans/**", "tests/**", "expert/**", "skills/**", "knowledge/**", "theory/**", "synthesis/**", "cycles/**", "app/**", "vendo
+[exit=0]
+
+── Y6 验收④ drift 零输出
+$ python3 scripts/control-tower/check-ownership.py --emit-codeowners | diff - .github/CODEOWNERS
+
+[exit=0]
+
+── Y6b 规则行逐行未变（去注释/空行）
+$ diff <(python3 scripts/control-tower/check-ownership.py --emit-codeowners | grep -v '^#' | grep -v '^$') <(git show HEAD:.github/CODEOWNERS | grep -v '^#' | grep -v '^$'); echo "diff exit=$?"; echo "HEAD 规则行: $(git show HEAD:.github/CODEOWNERS | grep -v '^#' | grep -v '^$' | wc -l | tr -d ' ')"; echo "现生成规则行: $(python3 scripts/control-tower/check-ownership.py --emit-codeowners | grep -v '^#' | grep -v '^$' | wc -l | tr -d ' ')"
+diff exit=0
+HEAD 规则行: 43
+现生成规则行: 43
+[exit=0]
+
+── Y6c 生成物 diff（预期: 仅领地注释行变长，规则行不动）
+$ git diff -- .github/CODEOWNERS
+diff --git a/.github/CODEOWNERS b/.github/CODEOWNERS
+index d32254c9..567c7a4a 100644
+--- a/.github/CODEOWNERS
++++ b/.github/CODEOWNERS
+@@ -8,7 +8,7 @@
+ # （兜底 = 创始人最终把关）。建议建三个团队 @synova-dsh / @synova-claude / @synova-k3，
+ # 改 ownership.yaml 的 github: 段后重跑生成命令即可 —— 本文件不需要手改。
+ 
+-# win 领地（显式列出）: src/**、extensions/**、packages/**、synova_worker/**、docs/plans/**、tests/**、expert/**、skills/**、knowledge/**、theory/**、synthesis/**、cycles/**、app/**、vendor/**、prototypes/**、observer-adapters/**、data/**、assets/**、patches/**
++# win 领地（显式列出）: src/**、extensions/**、packages/**、synova_worker/**、docs/plans/**、tests/**、expert/**、skills/**、knowledge/**、theory/**、synthesis/**、cycles/**、app/**、vendor/**、prototypes/**、observer-adapters/**、data/**、assets/**、patches/**、scripts/**
+ *                                        @tangbaobao520
+ extensions/**                            @tangbaobao520
+ packages/**                              @tangbaobao520
+[exit=0]
+
+── Y7 验收⑤ 未归属存量复算（397 → 330，scripts/ 归零）
+$ python3 - <<'PY'
+import subprocess
+from collections import Counter
+files=[l for l in subprocess.run(['git','ls-files'],capture_output=True,text=True).stdout.split(chr(10)) if l]
+def un(y):
+    out=subprocess.run(['python3','scripts/control-tower/check-ownership.py','--yaml',y]+files,capture_output=True,text=True).stdout
+    return [l.replace('⚠️','').replace('未归属','',1).strip().split(' ')[0] for l in out.split(chr(10)) if l.startswith('⚠️  未归属')]
+b=un('/tmp/b3-repro/before.yaml'); a=un('docs/synova/coordination/ownership.yaml')
+print('改前未归属 =', len(b)); print('改后未归属 =', len(a))
+print('由未归属转已知 =', len(set(b)-set(a)), '| 其中 scripts/ =', len([p for p in set(b)-set(a) if p.startswith('scripts/')]))
+print('新增未归属 =', len(set(a)-set(b)))
+print('Top8 二级目录:', dict(Counter('/'.join(p.split('/')[:2]) for p in a).most_common(8)))
+PY
+改前未归属 = 397
+改后未归属 = 330
+由未归属转已知 = 67 | 其中 scripts/ = 67
+新增未归属 = 0
+Top8 二级目录: {'docs/synova': 134, 'docs/archive': 30, 'dsh/plugins': 21, 'docs/specs': 20, 'docs/research': 17, 'novis-backup-20260526/Novis': 8, '.claude/PRODUCT-BRIEF.md': 1, '.claude/acceptance-ci-results.json': 1}
+[exit=0]
+
+── Y8 验收① scan-fullwidth-vars 改后（仍 29/2/1，根因见 Y9）
+$ bash tests/control-tower/scan-fullwidth-vars.test.sh | grep -E '── 9|❌|⏭|结果: PASS='
+── 9. 接口: --domain win（Win 卡可直接复用；棘轮上限 10 文件）──
+  ❌ --domain win 未输出可解析的文件数（接口格式漂移）
+  ❌ 未输出「全 win 域残余：…」标签（CTO 要求的两段标签缺失）
+  ⏭ 无 python 或无违规文件 → 归属复核跳过（域判定能力缺失，非通过）
+  结果: PASS=29 FAIL=2 SKIP=1 FIRST_FAIL=--domain win 未输出可解析的文件数（接口格式漂移）
+❌ FAILED(2): --domain win 未输出可解析的文件数（接口格式漂移） ; 未输出「全 win 域残余：…」标签（CTO 要求的两段标签缺失） ; 
+[exit=0]
+
+── Y9 残余失败根因: 生产方把注记写进 path 字段（违反自身 @output 契约），消费方 awk 后把注记当文件名
+$ echo '[生产方 @output 契约]'; sed -n '33,34p' scripts/control-tower/check-ownership.py; echo '[生产方 打印注记行]'; sed -n '465p' scripts/control-tower/check-ownership.py; echo '[消费方 解析行]'; sed -n '235p' scripts/control-tower/scan-fullwidth-vars.sh; echo '[实际输出]'; python3 scripts/control-tower/check-ownership.py $(cat /tmp/b3-repro/scripts.txt | tr '\n' ' ') 2>/dev/null | grep -E '^win ' | head -3; echo '[消费方 awk 变换后]'; python3 scripts/control-tower/check-ownership.py $(cat /tmp/b3-repro/scripts.txt | tr '\n' ' ') 2>/dev/null | grep -E '^win ' | awk '/^(mac|win|k3)[[:space:]]/{o=$1; sub(/^(mac|win|k3)[[:space:]]+/,""); print o "\t" $0}' | head -3; echo '[工具因此 grep 失败]'; bash scripts/control-tower/scan-fullwidth-vars.sh --domain win 2>&1 | grep -E 'No such file|grep 执行失败' | head -3
+[生产方 @output 契约]
+  @output — stdout 明细行 "<owner>\t<path>" / 未归属行「⚠️  未归属 …」+ 可复制复核命令；
+            越域/跨域逐行点名「期望 X 实际 Y」；--emit-codeowners → CODEOWNERS 全文
+[生产方 打印注记行]
+                mark = "  (兜底→win 基线领地)" if reason == "baseline" else ""
+[消费方 解析行]
+  printf '%s\n' "$_out" | awk '/^(mac|win|k3)[[:space:]]/{o=$1; sub(/^(mac|win|k3)[[:space:]]+/,""); print o "\t" $0}'
+[实际输出]
+win  scripts/agent-start.bat  (兜底→win 基线领地)
+win  scripts/agent-start.sh  (兜底→win 基线领地)
+win  scripts/anthropic-decide.sh  (兜底→win 基线领地)
+[消费方 awk 变换后]
+win	scripts/agent-start.bat  (兜底→win 基线领地)
+win	scripts/agent-start.sh  (兜底→win 基线领地)
+win	scripts/anthropic-decide.sh  (兜底→win 基线领地)
+[工具因此 grep 失败]
+grep: /tmp/synova-wt-own2-b/scripts/agent-start.bat  (兜底→win 基线领地): No such file or directory
+grep: /tmp/synova-wt-own2-b/scripts/agent-start.sh  (兜底→win 基线领地): No such file or directory
+grep: /tmp/synova-wt-own2-b/scripts/anthropic-decide.sh  (兜底→win 基线领地): No such file or directory
+[exit=0]
+
+── Y10 验收② check-ownership 改后计数（§10e 为 A 侧待修，见 task-1 裁决丙）
+$ bash tests/control-tower/check-ownership.test.sh | grep -E '❌|全部通过|项失败' | tail -3
+  ❌ 10e emit 输出受 domain_defaults 影响（drift 风险）
+  ✅ 10c 取不到变更集（ref 不存在）⇒ exit 2 + ❌ fail-closed（不假绿）
+  ❌ 1 项失败 / 100 项通过（PENDING=0 项）
+[exit=0]
+
+── Y11 验收③ check-pr-budget 改后计数（A 侧 task-5 夹具待合）
+$ bash tests/control-tower/check-pr-budget.test.sh | grep -E '❌|全部通过|项失败' | tail -3
+  ❌ --max-files 20 时同写集放行 — 期望 exit=0 实际 exit=1
+      | ── PR 预算门禁（D734）: 基线=origin/main 上限=20 文件 / 落后阈值=20 ──
+      |   ✅ ① 变更文件数 13 ≤ 上限 20
+      |   ❌ ② 变更跨域 —— 一个 PR 只许一个域（D733 ownership.yaml）
+      |        ⚠️  未归属  a1.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a2.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a3.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a4.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a5.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a6.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a7.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a8.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a9.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a10.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a11.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a12.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |   ✅ ③ 落后检查跳过（--files 注入模式无 git 上下文）
+      | ❌ FAIL PR 超预算 —— 拆 PR，不要调高上限
+  ❌ 1 项失败 / 31 项通过
+[exit=0]
+
+── Y12 提交前状态
+$ git status --short; echo '---'; git diff --stat
+ M .github/CODEOWNERS
+ M docs/synova/coordination/ownership.yaml
+?? docs/synova/product-lines/evidence/D1029-ownership/B-evidence-task6-scripts-win-surface-20260927.txt
+---
+ .github/CODEOWNERS                      |  2 +-
+ docs/synova/coordination/ownership.yaml | 23 ++++++++++++++++++++---
+ 2 files changed, 21 insertions(+), 4 deletions(-)
+[exit=0]
+
+── Y5b 落地 diff 原文（domain_defaults.win 追加 scripts/**，19 → 20 条）
+$ git diff -- docs/synova/coordination/ownership.yaml | grep -E "^\+.*scripts/\*\*|^\+  win:"
++#   scripts/**        ← 既有归属（D1029 收尾 task-6「恢复既有行为」登记）: main 版规则
++#                        （4afd4ce1）下 `scripts/**` 落兜底的件实测判 win = **67 件**。
++  win: ["src/**", "extensions/**", "packages/**", "synova_worker/**", "docs/plans/**", "tests/**", "expert/**", "skills/**", "knowledge/**", "theory/**", "synthesis/**", "cycles/**", "app/**", "vendor/**", "prototypes/**", "observer-adapters/**", "data/**", "assets/**", "patches/**", "scripts/**"]
+[exit=0]
+
+── Y5c 落地前该行为 19 条（HEAD 原文，用于对照）
+$ git show HEAD:docs/synova/coordination/ownership.yaml | grep -n "^  win: "
+33:  win: "Win Claude Code — 诊断体系 L1-L5 / 本体 / 扩展（Codex 出 dev doc）"
+39:  win: "@tangbaobao520"
+72:  win: ["src/**", "extensions/**", "packages/**", "synova_worker/**", "docs/plans/**", "tests/**", "expert/**", "skills/**", "knowledge/**", "theory/**", "synthesis/**", "cycles/**", "app/**", "vendor/**", "prototypes/**", "observer-adapters/**", "data/**", "assets/**", "patches/**"]
+[exit=0]

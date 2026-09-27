@@ -572,6 +572,46 @@ elif printf '%s\n' "$OUT" | grep -q "fail-closed"; then pass "10c 取不到变�
 else fail "10c exit=2 但输出未点名 fail-closed（疑似静默降级）"
 fi
 
+# ── 10c2 接口契约回归（生产者/消费者）: 明细行第 2 个 TAB 字段必须恰等于被查路径 ──
+# 根因(D1029/task-6): 注记曾拼进 path 字段 ⇒ 消费者 scan-fullwidth-vars.sh 把整行余部当路径
+# ⇒ grep "No such file or directory" ⇒ 该消费者正确 fail-closed 假红。此用例是该接口的机器守卫。
+check_path_field() {  # $1=path $2=desc
+  local _p="$1" _d="$2"
+  local _raw _f2 _f3
+  _raw="$("$PYBIN" "$TOOL" "$_p" --yaml "$CFG" 2>/dev/null | awk -F'\t' '/^(mac|win|k3)[[:space:]]/{print; exit}')"  # swallow-ok: 仅吞 stderr 噪声；本函数随后断言第 2 字段，工具真失败→字段空→必红
+  _f2="$(printf '%s' "$_raw" | awk -F'\t' '{print $2}')"
+  _f3="$(printf '%s' "$_raw" | awk -F'\t' '{print $3}')"
+  if [ "$_f2" = "$_p" ]; then
+    pass "10c2 接口契约: 第2 TAB 字段 == 被查路径（${_d}）"
+  else
+    fail "10c2 接口契约破坏: 第2字段=[$_f2] ≠ 路径=[$_p]（${_d}）"
+  fi
+  case "$_f3" in
+    ""|"("*")") pass "10c2 注记位于第3 TAB 字段或不存在（${_d}；第3字段=[${_f3}]）" ;;
+    *)           fail "10c2 第3字段形态异常（${_d}）: [${_f3}]" ;;
+  esac
+}
+# 取一个真实、命中「兜底→win 基线领地」的路径（非写死清单：由配置自身解析得出）
+BASE_PATH="$(awk -F'\t' '/^(mac|win|k3)[[:space:]]/{print $2; exit}' <(
+  "$PYBIN" "$TOOL" src/server.ts src/sentinel/runner.ts --yaml "$CFG" 2>/dev/null | awk -F'\t' '/^win[[:space:]]/{print; exit}'  # swallow-ok: 仅择路探测；取不到 win 行则由 10c2 两条断言把关（BASE_PATH 回退）
+) 2>/dev/null || true)"
+[ -z "$BASE_PATH" ] && BASE_PATH="src/server.ts"
+check_path_field "$BASE_PATH" "含注记行：注记不得混入路径"
+check_path_field "src/sentinel/runner.ts" "无注记行：第2字段仍须纯净"
+# 反例（判别性）：若把注记拼回 path 字段，本判据必须变红
+MUT_TOOL="$TMPD/mut-inline-mark.py"
+sed 's|print("%s\\t%s\\t%s" % (owner, path, mark))|print("%s %s%s" % (owner, path, mark))|' "$TOOL" > "$MUT_TOOL" 2>/dev/null || true
+if grep -q 'print("%s %s%s" % (owner, path, mark))' "$MUT_TOOL" 2>/dev/null; then
+  MUT_F2="$("$PYBIN" "$MUT_TOOL" "$BASE_PATH" --yaml "$CFG" 2>/dev/null | awk -F'\t' '/^(mac|win|k3)[[:space:]]/{print $2; exit}')"  # swallow-ok: 变异体语法坏则字段空→紧随 if 判「仍等于路径」必红（不假绿）
+  if [ "$MUT_F2" != "$BASE_PATH" ]; then
+    pass "10c2 判别性: 变异「注记拼回 path」后第2字段不再等于路径（判据真在读字段）"
+  else
+    fail "10c2 判别性失效: 变异后第2字段仍等于路径（判据可能是静态的）"
+  fi
+else
+  fail "10c2 判别性夹具未能构造变异体（sed 未命中生成器输出行）"
+fi
+
 # ── 10d 判别性夹具（改坏即红）: 沙箱改坏三形态 → 必须红 ──
 # ① 删 domain_defaults 整块（顺序无关）② 清空 domain_defaults.win ③ 删首条规则 —— 均走 FIXLIB
 cp "$CONTRACT_YAML" "$TMPD/ownership-no-defaults.yaml"

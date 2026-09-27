@@ -66,10 +66,27 @@ github:
 #   data/**           ← 既有归属: 现行 `**` 兜底实测判 win（无 TASK-ROUTING 明列）
 #   assets/**         ← 既有归属: 现行 `**` 兜底实测判 win（无 TASK-ROUTING 明列）
 #   patches/**        ← 既有归属: 现行 `**` 兜底实测判 win（无 TASK-ROUTING 明列）
-#   以上 19 条一次性实测: check-ownership.py <各目录一个 tracked 样本...> --owner win
-#     → 19/19 判 win、PASS exit 0（样本与原始输出见证据文件，不在此处放一次性资源清单）。
+#   scripts/**        ← 既有归属（D1029 收尾 task-6「恢复既有行为」登记）: main 版规则
+#                        （4afd4ce1）下 `scripts/**` 落兜底的件实测判 win = **67 件**。
+#                        复算: 用 main 版 yaml 分类 `git ls-files scripts`（共 293 件）
+#                        → mac 217 / k3 9 / win 67。
+#                        为何必须补: 新语义下这 67 件变「未归属」⇒ `scan-fullwidth-vars.sh
+#                        --domain win`（**在 CI 清单内** `.github/workflows/ci.yml:361`）从
+#                        「67 文件」变「零文件 ⇒ fail-closed exit 2」= 能力回归（实测该套件
+#                        PASS=29 FAIL=2 SKIP=1 exit 1）。
+#                        与既有归属零冲突: mac/k3 的 scripts 路径由既有显式规则先行命中
+#                        （解析顺序 b 先于 c），本 glob 只把「原本落兜底」的那些恢复为 win
+#                        —— 实测 293 件逐件 owner 与 main 版检查器输出**逐行一致**。
+#                        备选（更窄，**未采用**）: 队长原给的 12 条首层 glob 实测**漏 8 件**
+#                        （scripts/jtbd-dedup.py、jtbd-dedup-v2.py、migrate-ontology-manifests.py、
+#                        migrate-sog-to-ontology.py、run-contract-gate.ts、translate-research.py、
+#                        validate-ontology.ts、watchdog.js —— 根级 .py/.ts/.js）；补 3 条
+#                        `scripts/*.py`/`*.ts`/`*.js` 可成 15 条等价集 ⇒ 若 CTO 要「窄而枚举」
+#                        而非「1 条等价」，替换为那 15 条即可（行为同日等价，差别只在未授权未来路径）。
+#   以上 20 条一次性实测: check-ownership.py <各目录一个 tracked 样本...> --owner win
+#     → 判 win、PASS exit 0（样本与原始输出见证据文件，不在此处放一次性资源清单）。
 domain_defaults:
-  win: ["src/**", "extensions/**", "packages/**", "synova_worker/**", "docs/plans/**", "tests/**", "expert/**", "skills/**", "knowledge/**", "theory/**", "synthesis/**", "cycles/**", "app/**", "vendor/**", "prototypes/**", "observer-adapters/**", "data/**", "assets/**", "patches/**"]
+  win: ["src/**", "extensions/**", "packages/**", "synova_worker/**", "docs/plans/**", "tests/**", "expert/**", "skills/**", "knowledge/**", "theory/**", "synthesis/**", "cycles/**", "app/**", "vendor/**", "prototypes/**", "observer-adapters/**", "data/**", "assets/**", "patches/**", "scripts/**"]
 
 # ═══ 规则修改权（D1029，创始人 2026-09-27 明令；机读位置 = 本键）═══
 # 依据: 创始人 2026-09-27 明令「ownership.yaml 的修改由创始人批准」+ 本文件头部自我声明。
