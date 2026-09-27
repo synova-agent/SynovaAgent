@@ -292,7 +292,17 @@ if [ -f "$CODEOWNERS" ]; then
   "$PYBIN" "$TOOL" --emit-codeowners --yaml "$CFG" > "$TMPD/CODEOWNERS.gen" 2> "$TMPD/emit.err"
   _emit_e=$?
   [ "$_emit_e" = 0 ] || fail "--emit-codeowners 执行失败 (exit=$_emit_e): $(head -3 "$TMPD/emit.err")"
+  # ⓪ 生成器头注释里的漂移门禁必须指向**真实存在**的测试文件（D939/D935 登记的失效路径缺陷；防回退）
+  if grep -qF 'tests/control-tower/ownership.test.sh' "$TMPD/CODEOWNERS.gen"; then
+    fail "drift⓪: 生成器仍发射失效路径 tests/control-tower/ownership.test.sh（应为 check-ownership.test.sh）"
+  elif grep -qF 'tests/control-tower/check-ownership.test.sh' "$TMPD/CODEOWNERS.gen"; then
+    pass "drift⓪: 生成器头注释指向真实测试文件名 check-ownership.test.sh（D939 失效路径未回退）"
+  else
+    fail "drift⓪: 生成器头注释未点名漂移门禁测试文件（口径缺失）"
+  fi
   # ① 规则行（去注释）必须逐行相同 —— 队长追加 1 口径，pre-contract/contract 两态都成立
+  # swallow-ok: 两文件的存在性已由外层 [ -f "$CODEOWNERS" ] 与 emit 的 exit 码守住；
+  #             此处不吞错则 grep 的「无匹配 exit 1」会被 set -e 语义误判（D1029 判别性夹具）
   grep -v '^#' "$TMPD/CODEOWNERS.gen" > "$TMPD/co-rule-new.txt" 2>/dev/null
   grep -v '^#' "$CODEOWNERS" > "$TMPD/co-rule-old.txt" 2>/dev/null
   if diff -q "$TMPD/co-rule-new.txt" "$TMPD/co-rule-old.txt" >/dev/null 2>&1; then
@@ -477,7 +487,7 @@ a = src.index('  - glob: "**"')
 b = src.index('  - glob: "extensions/**"')
 pathlib.Path("ownership-no-catchall.yaml").write_text(src[:a] + src[b:], encoding="utf-8")
 PYEOF
-) 2>/dev/null
+) 2>/dev/null   # swallow-ok: 夹具 yaml 生成器 stdin 无输出；失败由紧随其后的「空 win 夹具已生成」前置断言拦截
 if grep -qE '^  win: \[\]$' "$TMPD/ownership-empty-win.yaml"; then
   pass "10d 前置: 空 win 夹具已生成（win: []）"
 else
