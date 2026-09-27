@@ -1,0 +1,7 @@
+=== 契约态: bash tests/control-tower/scan-fullwidth-vars.test.sh ===
+  结果: PASS=29 FAIL=2 SKIP=1 FIRST_FAIL=--domain win 未输出可解析的文件数（接口格式漂移）
+❌ FAILED(2): --domain win 未输出可解析的文件数（接口格式漂移） ; 未输出「全 win 域残余：…」标签（CTO 要求的两段标签缺失） ; 
+
+=== 契约态: scan-fullwidth-vars.sh --domain win 原始输出 ===
+  ❌ scan-fullwidth-vars: --domain win 在扫描集内零文件（fail-closed）
+RC(scan) = 2

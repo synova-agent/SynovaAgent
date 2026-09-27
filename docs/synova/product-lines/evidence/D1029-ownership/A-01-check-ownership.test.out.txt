@@ -1,0 +1,139 @@
+  · 形态: LIVE_MODE=pre-contract
+  ✅ 合同形态夹具就绪（真 yaml 副本 + 注入合同冻结两键）
+═══════════════════════════════════════════════════════════
+  D733 ownership 机器化测试
+═══════════════════════════════════════════════════════════
+
+── 1. 正常路径: 各域正例归属一致 → exit 0 ──
+  ✅ src/sentinel/ Mac 正例 (exit=0)
+  ✅ src/cron/ Mac 正例 (exit=0)
+  ✅ src/mcp/ Mac 正例 (exit=0)
+  ✅ scripts/control-tower/ Mac (exit=0)
+  ✅ tests/control-tower/ Mac (exit=0)
+  ✅ coordination 文档 Mac (exit=0)
+  ✅ src/（非例外）= Win (exit=0)
+  ✅ src/server.ts = Win 专属 (exit=0)
+  ✅ scripts/audit/ = K3 (exit=0)
+
+── 2. 越域: 派单 §一 验收两条（必须非零）──
+  ✅ 验收① src/server.ts --owner mac (exit=1)
+  ✅ 验收② src/evidence/x.ts --owner mac (exit=1)
+  ✅ Mac 文件派给 win 也越域（对称） (exit=1)
+  ✅ K3 红线派给 mac 越域 (exit=1)
+
+── 3. 真实回归: CTO 2026-09-13 两次派错线的实写集 ──
+  ✅ D728 回归: 整写集派给 mac 必红 (exit=1)
+  ✅ D729 回归: Win 域两文件派给 mac 必红 (exit=1)
+
+── 4. 单域模式（无 --owner）──
+  ✅ 单域模式: 全 Mac → exit 0
+  ✅ 单域模式: Mac+Win 混合 → exit 1（跨域）
+  ✅ 跨域输出点名「跨域」
+
+── 4b. 域判定豁免 domain_neutral（D734 前置：各线都写的簿记不构成域信号）──
+  ✅ bypass.log 豁免: 只剩 mac → exit 0
+  ✅ 豁免路径明示 domain-neutral（不静默）
+  ✅ 豁免不掩盖真跨域（Mac+Win 仍 exit 1）
+  ✅ 豁免路径不参与 --owner 断言 (exit=0)
+  ✅ 非豁免路径仍受 --owner 断言（回归） (exit=1)
+  ✅ D758 证据目录豁免: Win 代码 + 自己的验收证据 → exit 0
+  ✅ D758 证据路径明示 domain-neutral（不静默）
+  ✅ D758 Win 证据 + Mac 控制塔脚本 → 仍单域（证据不掺域）
+  ✅ D758 豁免不掩盖真跨域（Win 代码 + Mac 脚本仍 exit 1）
+  ✅ D758 豁免路径不参与 --owner 断言 (exit=0)
+
+── 5. 反向验证: 删掉兜底规则 → 验收两条必须变绿（证明真在读 yaml）──
+  ✅ 反向验证前置: 兜底**规则行**已移除（锚定行首计数=0，非整文件 grep）
+  ✅ 删兜底 → src/server.ts 判「未归属」必红（旧语义: 变绿 ⇒ 已按新语义改写） (exit=1)
+  ✅ 删兜底 → src/evidence/x.ts 判「未归属」必红（同上） (exit=1)
+  ✅ 删兜底输出点名「未归属」（不静默、不误报越域）
+  ✅ 原 yaml 复测仍红（未污染真实文件） (exit=1)
+  ✅ 复测输出点名「越域」
+  ✅ 无兜底时明示 ⚠️「未归属」（不静默降级）
+
+── 5a2. 判别性回归: 注释里的字面 - glob: "**" 不得污染守门判据（D1029 追加 2）──
+  ✅ 5a2 前置: 注释里确含字面 glob 字符串（旧写法会误判）
+  ✅ 5a2 锚定判据: 注释+已删规则 → 规则行计数 0（不被注释误判为「未删」）
+  ✅ 5a2 注释阴影下删兜底 → 判「未归属」必红（新语义；行为与判据一致） (exit=1)
+  ✅ 5a2 注释阴影不改变真 yaml 的判定（复测仍红） (exit=1)
+
+── 5b. D935 判别性夹具: presets→mac（删该规则即红 = 判据真读数据，非 grep 型静态判据）──
+  ✅ D935 presets 根文件 = Mac (exit=0)
+  ✅ D935 presets 子目录文件 = Mac (exit=0)
+  ✅ D935 presets 派给 win 越域（对称） (exit=1)
+  ✅ D935 改坏前置: presets 规则行已删（锚定行首计数=0；注释里的同字面不再误判）
+  ✅ D935 注释回归前置: 注释里确含同字面（旧写法会误判）
+  ✅ D935 注释回归: 注释+已删规则 → 规则行计数 0（不被注释误判）
+  ✅ D935 删 presets 规则 → presets 路径派 mac 必红 (exit=1)
+  ✅ D935 删 presets 规则 → 子目录文件同样必红 (exit=1)
+  ✅ D935 原 yaml 复测仍绿（未污染真实文件） (exit=0)
+
+── 6. 降级与边界（fail-closed → exit 2）──
+  ✅ yaml 不存在 → exit 2 (exit=2)
+  ✅ yaml 语法非法 → exit 2 (exit=2)
+  ✅ rules 为空 → exit 2 (exit=2)
+  ✅ yaml 非映射 → exit 2 (exit=2)
+  ✅ 无文件参数 → exit 2
+  ✅ 未知 owner → exit 2（argparse 拒绝）
+  ✅ 尚未创建的文件路径也可判域 (exit=0)
+
+── 7. 产物契约: CODEOWNERS == --emit-codeowners（drift 门禁）──
+  ✅ drift①: 规则行逐行相同（去注释后零差异）
+  ⏳ drift② pre-contract: 差异仅在注释段（生成器头文件名订正 + 领地注释改读 domain_defaults.win）；待 B 重跑 --emit-codeowners 覆盖后逐字节归零（已登记，不静默）
+  ✅ --emit-codeowners exit 0 (exit=0)
+  ✅ CODEOWNERS 顺序: 兜底(12) 在 Mac 例外(17) 之前
+
+── 8. 结构契约: ownership.yaml 恰有一条 default 兜底规则 ──
+  ✅ default 规则恰 1 条
+  ✅ 显式规则存在: src/sentinel/**
+  ✅ 显式规则存在: src/cron/**
+  ✅ 显式规则存在: src/mcp/**
+  ✅ 显式规则存在: scripts/audit/**
+  ✅ 显式规则存在: scripts/control-tower/**
+
+── 9. 生产接线（铁律 0-2 WIRE CHECK）──
+  ✅ 接线: CODEOWNERS 头声明由 check-ownership.py 生成（产物消费成立）
+
+── 10. D1029 兜底语义收口（a/b/c 反例 + 判别性夹具 + live 契约探针）──
+  ✅ 10a 未登记新目录 → 未归属 exit 1（不再静默归 win） (exit=1)
+  ✅ 10a 输出点名「未归属」
+  ✅ 10a 输出给出「请在 ownership.yaml 显式加规则」
+  ✅ 10a 提示含可复制复核命令（路径逐字）
+  ✅ 10a 未归属在 --owner 模式下同样 exit 1 (exit=1)
+  ✅ 10a 未归属不会被判成跨域（口径不混） (exit=1)
+  ✅ 10a 未归属点名且不混为「跨域」
+  ✅ 10a 基线领地 src/** 仍视同 win (exit=0)
+  ✅ 10a 基线领地命中在输出中显式标注（不静默）
+  ✅ 10b 前置: 合同形态夹具含 domain_defaults
+  ✅ 10b 前置: 旧态夹具已剥离 domain_defaults（C1 判据可信）
+  ✅ 10b 前置: 新态夹具含 domain_defaults + 新规则
+  tests/control-tower/check-ownership.test.sh: line 416: new-line-1790500118/artifact.ts: Is a directory
+     [夹具前置] C1（未加规则 + 旧态 yaml）exit=2（期望 2 = 缺 domain_defaults，fail-closed）
+     [夹具前置] C2（同变更集内加规则）exit=0（期望 0）
+     [夹具前置] C3 变更集 = docs/synova/coordination/ownership.yaml 
+  ✅ 10b 加规则后同路径 ⇒ exit 0（规则真生效）
+  ✅ 10b 逃生口: 同批加规则后该新目录文件判 win（--owner win 通过）
+  ✅ 10b 反面对照: 同一文件声明 mac ⇒ 越域 exit 1（判据非恒真）
+  ✅ 10b 前置: 规则确已写进夹具 yaml（非空跑）
+  ✅ 10c 变更集含 ownership.yaml + 无凭据 ⇒ exit 1
+  ✅ 10c 拦下时打印所需凭据（含「创始人批准」）
+  ✅ 10c 有创始人批准凭据 ⇒ exit 0
+  ✅ 10c 未给 --pr-body 时读 stdin 且无凭据 ⇒ exit 1
+  ✅ 10c 取不到变更集（ref 不存在）⇒ exit 2 + ❌ fail-closed（不假绿）
+  ✅ 10d 前置: 空 win 夹具已生成（win: []）
+  ✅ 10d 沙箱删 domain_defaults 段 → exit 2（结构非法，不静默归 win） (exit=2)
+  ✅ 10d 删段报错点名 domain_defaults
+  ✅ 10d 删段报错说明基线领地缺失
+  ✅ 10d domain_defaults.win 置空 → exit 2（必须非空 glob 列表） (exit=2)
+  ✅ 10d 空列表报错点名 domain_defaults.win
+  ✅ 10d 删兜底规则 → 明示「未归属」+ exit 1（不再 exit 0 静默变绿） (exit=1)
+  ✅ 10d 反面对照: 合同形态夹具同路径仍 exit 0（基线领地命中） (exit=0)
+  ✅ 10e --emit-codeowners 正常态 exit 0
+  ✅ 10e --emit-codeowners 在「缺 domain_defaults」夹具上仍 exit 0（不因缺键坏生成器）
+  ✅ 10e emit 输出与 domain_defaults 段无关（逐字节一致）
+  ⏳ 10f live-yaml 契约探针: ⏳ pre-contract: 待成员 B 落地 ownership.yaml（共享任务 task-2）后本项转绿
+  ⏳ 10f live yaml 缺 domain_defaults ⇒ 归属判定 exit 2（结构性 fail-closed，符合合同 7；B 落地后本项转「真 yaml 判未归属 exit 1」）
+
+═══════════════════════════════════════════════════════════
+  ✅ 全部通过: 98 项（PENDING=3 项，见上方 ⏳）
+═══════════════════════════════════════════════════════════
