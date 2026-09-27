@@ -551,9 +551,9 @@ for s in $SCEN; do
   run_scenario "$s" "$lbl" "red"
 done
 
-# ═══ [b 面登记] b 面基线演进: 6 →（M9/#741）7 →（D945 本卡）8 ═══
+# ═══ [b 面登记] b 面基线演进: 6 →（M9/#741）7 →（D945）8 →（D1028 本卡）13 ═══
 #   判据: b 面 = 仓库内命中 $MARK 的文件数 ≤ 基线；基线外的命中 = 泄漏（判红）。
-#   b 面命中**只允许是引用该标记的文档**，实测 8 条（逐条登记）:
+#   b 面命中**只允许是引用该标记的文档**，实测 13 条（逐条登记）:
 #     1. docs/synova/product-lines/evidence/D922-phase0-verify-20260923.md
 #     2. docs/synova/product-lines/evidence/D935-20260924/self-verify.md
 #     3. docs/synova/product-lines/evidence/D935-20260924/closeout.md
@@ -564,27 +564,37 @@ done
 #     8. docs/synova/presets/synova-squad-lead/cordis.patch.yml   ← D945 本卡 bundle 迁移**新增**；
 #        该文件是"反例字样"的载体（非夹具残留）。#1–#7 已于 origin/main（`git grep -l <MARK> origin/main`
 #        核实 main 侧 = 7），故本轮 7→8 属"登记本卡自己引入的合法文档命中"，非放宽判据。
+#     9. docs/synova/product-lines/evidence/D1028-A2/03-自验结论-原样转存.md   ← D1028 本卡**新增**；
+#        #1–#8 已于 origin/main（`git grep -l <MARK> origin/main` 核实 main 侧 = 8）。
+#    10. docs/synova/product-lines/evidence/D1028-A2/03d-静态复核-原始.txt
+#    11. docs/synova/product-lines/evidence/D1028-A2/06d-判据台账v2-原始.md
+#    12. docs/synova/coordination/D1028-交付与遗留.md
+#    13. docs/synova/coordination/D1028-假绿专题-并卡材料.md
+#        #9–#13 均为 D1028 本卡的**原始输出/收尾转存件**，#9/#10/#11 逐字节转存了注入夹具
+#        的输出（其中包含该标记原文），#12/#13 为收尾与并卡材料 —— 属本注释许可的
+#        "引用该标记的文档"（非夹具残留；a 面 `residue_code=0` 亦证代码面零残留）。
+#        ⇒ 故本轮 8→13 同属"登记本卡自己引入的合法文档命中"，**非放宽判据**。
 #   ⚠️ 待办（本轮由"已知脆弱性"升级为明确 TODO；CTO 批次5 发现登记 **P2-2**）:
 #      b 面**硬编码计数随仓库文档增长漂移** —— 任何新文档引用该标记都会把 b 面推红，
-#      而红的原因并非真泄漏（本轮 6→7、7→8 两次都是这个成因）。根治 = **动态基线**
+#      而红的原因并非真泄漏（6→7、7→8、8→13 三次都是这个成因）。根治 = **动态基线**
 #      （与 base-ref 计数对比，或按面分计：docs/ 面不参与判红）。属**判据语义变更**，
 #      须过 K3，另立卡，不在本卡做。**在那之前：每新增一个引用该标记的文档，必须手动 +1 并登记。**
 # ═══ 收尾残留断言（三面）═══
 echo "── 收尾残留断言 ──"
 CODE_RESIDUE="$(grep -rl "$MARK" "$REPO_DIR/src" "$REPO_DIR/tests" "$REPO_DIR/scripts" "$REPO_DIR/.github" 2>/dev/null | wc -l | tr -d ' ')"   # swallow-ok: 收尾计数的探测型 grep，无匹配=0 正是期望（a 面期望 0），计数交由下方断言判红
-REPO_RESIDUE="$(grep -rl "$MARK" "$REPO_DIR" --exclude-dir=node_modules --exclude-dir=.git 2>/dev/null | wc -l | tr -d ' ')"   # swallow-ok: 同上探测型计数（b 面期望 = 基线 8；6→7 见 M9/#741、7→8 见 D945 本卡，逐条登记见上方 [b 面登记]）；非探测路径不可达时计数为 0 会由断言判红，不静默
+REPO_RESIDUE="$(grep -rl "$MARK" "$REPO_DIR" --exclude-dir=node_modules --exclude-dir=.git 2>/dev/null | wc -l | tr -d ' ')"   # swallow-ok: 同上探测型计数（b 面期望 = 基线 13；6→7 见 M9/#741、7→8 见 D945、8→13 见 D1028 本卡，逐条登记见上方 [b 面登记]）；非探测路径不可达时计数为 0 会由断言判红，不静默
 CLONE_POSITIVE="$(git -C "$CLONE" diff --cached | grep -c "$MARK" || true)"
 CLONE_POSITIVE="${CLONE_POSITIVE//[^0-9]/}"
 echo "a) 代码/测试/脚本/CI 面残留: $CODE_RESIDUE 个文件（期望 0）"
 echo "   命令: grep -rl \"\$MARK\" \"\$REPO_DIR/{src,tests,scripts,.github}\" | wc -l"
-echo "b) 仓库全量命中: $REPO_RESIDUE 个文件（基线 8，逐条登记见上方 [b 面登记]；逐行如下）"
+echo "b) 仓库全量命中: $REPO_RESIDUE 个文件（基线 13，逐条登记见上方 [b 面登记]；逐行如下）"
 grep -rl "$MARK" "$REPO_DIR" --exclude-dir=node_modules --exclude-dir=.git 2>/dev/null | sed 's/^/     /' || true
 echo "c) 副本内标记存在性（反向判别，最后场景应为 >0）: $CLONE_POSITIVE 行"
 RESIDUE_FAIL=0
 [ "$CODE_RESIDUE" -ne 0 ] && RESIDUE_FAIL=1
-[ "$REPO_RESIDUE" -gt 8 ] && RESIDUE_FAIL=1
+[ "$REPO_RESIDUE" -gt 13 ] && RESIDUE_FAIL=1
 [ "$CLONE_POSITIVE" -eq 0 ] && RESIDUE_FAIL=1
-[ "$RESIDUE_FAIL" -eq 0 ] && echo "✅ 残留断言满足（a=0, b<=8, c>0）" || echo "❌ 残留断言不满足（a=${CODE_RESIDUE}, b=${REPO_RESIDUE}, c=${CLONE_POSITIVE}）"
+[ "$RESIDUE_FAIL" -eq 0 ] && echo "✅ 残留断言满足（a=0, b<=13, c>0）" || echo "❌ 残留断言不满足（a=${CODE_RESIDUE}, b=${REPO_RESIDUE}, c=${CLONE_POSITIVE}）"
 
 # ═══ 汇总表 ═══
 echo ""
