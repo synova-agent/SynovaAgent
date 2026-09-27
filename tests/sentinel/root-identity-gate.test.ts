@@ -9,8 +9,14 @@
  *     · unfiltered > 0 且 filtered === 0 → 根身份不匹配: 显式 finding（severity warning，
  *        id `sentinel-<manifest.name>-root-identity`）+ result.degraded === true（触发路径）
  *     · unfiltered === 0                → 空态 ≠ 不匹配: 无 finding（边界）
- *     · store 无 queryNodes             → log.warn + 不抛 + 无 finding（降级路径）
+ *     · store 无 queryNodes             → log.warn（payload 带 degraded）+ 不抛 + 无 finding
+ *                                          + result.degraded === true（降级①，铁律 24/31）
+ *     · queryNodes 抛错                  → 同上（降级②，逐类型 catch 后仍置 degraded）
  *     · 同一夹具把 teamId 写进 props     → finding 消失（成对反例）
+ *
+ * 降级语义（队长 2026-09-27 裁定 B）: 运行期能力缺失（无 queryNodes / 查询抛错）**必置
+ *   result.degraded = true**——守卫没跑起来，调用方有权知道根身份维度不可信；
+ *   「未声明 dependsOn」是清单数据缺口（log.info），不置 degraded。
  *
  * 铁律 12（不 mock 管线）: 夹具 = 真实 :memory: SQLite + 真实 SqliteGraphStore +
  *   真实 loader 装配（registerLoadedSentinels → registry → check wrapper）+
@@ -127,7 +133,7 @@ afterEach(() => {
 
 // ═══ 五条路径 ═══
 
-describe('D1027 读侧根身份硬门禁（真实 store + 真实 loader 装配）', () => {
+describe('D1027 读侧根身份硬门禁（真实 store + 真实 loader 装配，六条路径）', () => {
   it('正常路径: unfiltered > 0 且 filtered > 0 ⇒ 无 root-identity finding（既有行为不变）', async () => {
     const store = makeRealStore(financialProps(TEAM));
     // 前提冻结: 同一身份写、同一身份读 → 两条路径都看得见
@@ -176,15 +182,35 @@ describe('D1027 读侧根身份硬门禁（真实 store + 真实 loader 装配�
     expect(result.degraded).toBeUndefined();
   });
 
-  it('降级: store 无 queryNodes ⇒ log.warn + 不抛 + 无 finding', async () => {
+  it('降级①: store 无 queryNodes ⇒ log.warn（payload 带 degraded）+ 不抛 + 无 finding + degraded === true', async () => {
     const result = await loadedMarginHealth().check(ctxOf({})); // 无 queryNodes 的 store
 
     expect(result.ok).toBe(true);
     expect(gateFindings(result)).toEqual([]);
+    // 运行期能力缺失 = 守卫没跑起来 ⇒ 调用方有权知道（铁律 24/31，队长 2026-09-27 裁定 B）
+    expect(result.degraded).toBe(true);
     // 不静默（铁律 11）：跳过必须留痕，且元数据可定位到哨兵与身份
-    const warns = warnsMatching('根身份预检跳过');
+    const warns = warnsMatching('根身份预检无法执行');
     expect(warns.length).toBeGreaterThan(0);
-    expect(warns.some(w => w.sentinel === SENTINEL_NAME && w.teamId === TEAM)).toBe(true);
+    expect(warns.some(w => w.sentinel === SENTINEL_NAME && w.teamId === TEAM && w.degraded === true)).toBe(true);
+  });
+
+  it('降级②: queryNodes 抛错 ⇒ log.warn（payload 带 degraded）+ 不抛 + 无 finding + degraded === true', async () => {
+    /** 查询即抛错的 store: 预检逐类型 catch，聚合层也 catch（真实现两条路径都走降级） */
+    const throwingStore = {
+      queryNodes(): unknown {
+        throw new Error('D1027 夹具: queryNodes 抛错');
+      },
+    };
+
+    const result = await loadedMarginHealth().check(ctxOf(throwingStore));
+
+    expect(result.ok).toBe(true);
+    expect(gateFindings(result)).toEqual([]);
+    expect(result.degraded).toBe(true);
+    const warns = warnsMatching('根身份预检查询失败');
+    expect(warns.length).toBeGreaterThan(0);
+    expect(warns.some(w => w.sentinel === SENTINEL_NAME && w.nodeType === 'Financial' && w.degraded === true)).toBe(true);
   });
 
   it('成对反例: 同一夹具把 teamId 写进 props ⇒ finding 消失（唯一差异 = teamId 一个属性）', async () => {

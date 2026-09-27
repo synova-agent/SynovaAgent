@@ -192,14 +192,12 @@ function hasQueryNodes(store: Record<string, unknown>): store is Record<string, 
   return typeof store.queryNodes === 'function';
 }
 
-/** 根身份预检结论 */
+/** 根身份预检结论（两个字段均有消费者：findings → result.findings，degraded → result.degraded） */
 interface RootIdentityPrecheck {
   /** 预检产出的 finding（仅根身份不匹配时非空；恒 ≤ 1 条以保证 finding id 唯一） */
   findings: SentinelFinding[];
-  /** 是否判定「根身份不匹配」（unfiltered > 0 且 filtered === 0） */
-  mismatched: boolean;
-  /** 是否因前提不足/查询失败跳过预检（store 无 queryNodes / 未声明 nodeTypes / 查询抛错） */
-  skipped: boolean;
+  /** 调用方须并入 result.degraded：根身份不匹配，或预检运行失败（store 无 queryNodes / 查询抛错） */
+  degraded: boolean;
 }
 
 /**
@@ -216,15 +214,15 @@ interface RootIdentityPrecheck {
  *             teamId: `ctx.teamId || 'default'`（与包装层同一身份口径，不另取来源）。
  *   @output — RootIdentityPrecheck：逐 nodeType 取 unfiltered = queryNodes(type)、
  *             filtered = queryNodes(type, { teamId })；`unfiltered > 0 && filtered === 0`
- *             ⇒ mismatched = true + 1 条 finding（id `sentinel-<manifest.name>-root-identity`、
+ *             ⇒ degraded = true + 1 条 finding（id `sentinel-<manifest.name>-root-identity`、
  *             severity warning、evidence 逐类型记 nodeType/unfiltered/filtered(=0)/teamId）。
  *             finding 每哨兵恒 1 条（log.error 逐类型），以保证 finding id 唯一。
- *   @degraded — store 无 queryNodes / 单类型查询抛错 ⇒ log.warn + 跳过（skipped = true），
- *             不抛异常；**不翻 result.degraded** —— 预检是旁路守卫，「跳过」不等于
- *             「本次检查结果降级」，且须保持既有行为逐位不变（铁律 11 靠日志可见）。
+ *   @degraded — **运行期能力缺失必置 degraded = true**（铁律 24/31：catch 必 log + 降级信号传播）:
+ *             ① store 无 queryNodes ② 任一 nodeType 查询抛错 ⇒ log.warn（payload 带 degraded: true）
+ *             + degraded = true。守卫没跑起来，调用方有权知道本次检查的根身份维度不可信。
  *   @coverage — manifest 未声明 dependsOn.nodeTypes（当前 45 哨兵中 41 个如此）⇒ log.info 记一行
- *             「覆盖缺口」，skipped = true。**用 info 而非 warn**：未声明依赖是清单数据缺口、
- *             非本次运行异常，按每次 check 打 warn 会淹没真告警（队长 2026-09-27 裁定；
+ *             「覆盖缺口」，degraded = false。**用 info 而非 warn**：未声明依赖是清单数据缺口、
+ *             非运行时故障，按每次 check 打 warn 会淹没真告警（队长 2026-09-27 已批准偏离；
  *             缺口本身进遗留清单另立卡，不在本卡修）。不可静默（X27: 预检自己不得把缺失当通过）。
  *   @error  — 不抛异常（所有失败路径降级返回，铁律 24/31）。
  */
@@ -239,14 +237,18 @@ function rootIdentityPrecheck(
       { sentinel: manifest.name, teamId },
       '根身份预检跳过 — manifest 未声明 dependsOn.nodeTypes（覆盖缺口，预检不执行）',
     );
-    return { findings: [], mismatched: false, skipped: true };
+    return { findings: [], degraded: false };
   }
   if (!hasQueryNodes(store)) {
-    log.warn({ sentinel: manifest.name, teamId, nodeTypes }, '根身份预检跳过 — store 无 queryNodes 方法（不静默）');
-    return { findings: [], mismatched: false, skipped: true };
+    log.warn(
+      { sentinel: manifest.name, teamId, nodeTypes, degraded: true },
+      '根身份预检无法执行 — store 无 queryNodes 方法（degraded，不静默）',
+    );
+    return { findings: [], degraded: true };
   }
 
   const mismatches: Array<{ nodeType: string; unfiltered: number }> = [];
+  let queryFailed = false;
   for (const nodeType of nodeTypes) {
     try {
       const unfilteredRows = store.queryNodes(nodeType);
@@ -261,25 +263,26 @@ function rootIdentityPrecheck(
         );
       }
     } catch (err: unknown) {
+      queryFailed = true;
       log.warn(
         {
           sentinel: manifest.name,
           nodeType,
           teamId,
           err: err instanceof Error ? err.message : String(err),
+          degraded: true,
         },
-        '根身份预检查询失败 — 跳过该类型（不静默）',
+        '根身份预检查询失败 — 跳过该类型（degraded，不静默）',
       );
     }
   }
 
-  if (mismatches.length === 0) return { findings: [], mismatched: false, skipped: false };
+  if (mismatches.length === 0) return { findings: [], degraded: queryFailed };
 
   const types = mismatches.map(m => m.nodeType).join('、');
   const total = mismatches.reduce((sum, m) => sum + m.unfiltered, 0);
   return {
-    mismatched: true,
-    skipped: false,
+    degraded: true,
     findings: [{
       id: `sentinel-${manifest.name}-root-identity`,
       severity: 'warning',
@@ -414,9 +417,9 @@ export async function registerLoadedSentinels(): Promise<{ registered: number; e
           // 兼容两种返回格式: SentinelFinding[] 或 { findings: SentinelFinding[] }
           const findings: SentinelFinding[] = Array.isArray(raw) ? raw : ((raw as Record<string, unknown>)?.findings as SentinelFinding[]) || [];
           // D577 缺陷 C: degraded 传播（aggregate 对象形态返回时），不再硬编码丢失（铁律 31）
-          // D1027: 根身份不匹配同样置 degraded（与既有 true 取或，不覆盖既有 true）
+          // D1027: 根身份不匹配 / 预检运行失败同样置 degraded（与既有 true 取或，不覆盖既有 true）
           const degraded = (!Array.isArray(raw) && (raw as Record<string, unknown>)?.degraded === true)
-            || rootIdentity.mismatched;
+            || rootIdentity.degraded;
           const result: SentinelCheckResult = {
             sentinelId: `sentinel-${manifest.name}`,
             ok: true,
