@@ -27,9 +27,8 @@ grep 该 skill：§〇c ① 第 6 项已要求"上一轮教训 → 派单引用"
 
 不做什么：
 - 不改派单模板（docs/synova/coordination/派单模板.md）
-- 不改任何门禁脚本（scripts/** 下，含 scripts/control-tower/**、scripts/pre-commit-check.sh）
-- 不改 .github/workflows/ci.yml
-- 不改 .claude/skills/** 与 .dsh/skills/** 下除 cto-handover 外的其他 skill 目录
+- 不改任何门禁脚本、不改 .github/**
+- 不改 skill 的其他章节
 
 ## Q3: 验收 — 入口 → 交互 → 结果
 入口：CTO 派单前读 skill（开工必读）
