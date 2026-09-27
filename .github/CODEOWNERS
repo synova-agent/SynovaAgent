@@ -1,13 +1,14 @@
 # .github/CODEOWNERS — 【生成产物，请勿手改】
 # 源: docs/synova/coordination/ownership.yaml（唯一权威；改那里再重跑下面的命令）
 # 生成: python3 scripts/control-tower/check-ownership.py --emit-codeowners > .github/CODEOWNERS
-# 漂移门禁: tests/control-tower/ownership.test.sh 逐字节断言本文件 == 生成结果（D733）
+# 漂移门禁: tests/control-tower/check-ownership.test.sh 逐字节断言本文件 == 生成结果（D733）
 # 语义: CODEOWNERS「最后匹配者胜出」→ 宽规则在前、例外在后（与 ownership.yaml 同序）。
 #
 # owner 账号体系待创始人定（2026-08-16 B1 落地）：当前全部指向主账号 @tangbaobao520
 # （兜底 = 创始人最终把关）。建议建三个团队 @synova-dsh / @synova-claude / @synova-k3，
 # 改 ownership.yaml 的 github: 段后重跑生成命令即可 —— 本文件不需要手改。
 
+# win 领地（显式列出）: src/**、extensions/**、packages/**、synova_worker/**、docs/plans/**、tests/**、expert/**、skills/**、knowledge/**、theory/**、synthesis/**、cycles/**、app/**、vendor/**、prototypes/**、observer-adapters/**、data/**、assets/**、patches/**
 *                                        @tangbaobao520
 extensions/**                            @tangbaobao520
 packages/**                              @tangbaobao520
