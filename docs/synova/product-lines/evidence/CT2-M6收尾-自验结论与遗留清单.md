@@ -30,6 +30,15 @@ $ git diff --cached --stat
 - **治理产物 = 5 文件**（D860 不计预算）：D1032 brief、`task-state/D1032.json`、2 份 `CT2-` 证据件、铁律 49 决策 Note。
 - `.claude/current-brief` 为 runtime 文件（`.gitignore:30` 命中），**未入库**（只读/写它不产生提交内容）。
 
+> ⚠️ 自指说明（防误读）：上方 963 是**追加本节之前**的暂存区快照；追加本节（+25 行）后**最终提交**的复算口径如下——
+> ```
+> $ git show --stat --format="" 4061e0e1 | tail -1
+>  13 files changed, 988 insertions(+), 18 deletions(-)
+> $ git show --name-only --format="" 4061e0e1 | grep -c .
+> 13
+> ```
+> 文件清单与上方完全一致，差值仅为本节自身行数。
+
 ---
 
 ## 1. simulate-ci 全量运行结果（唯一的两条既有重型用例的真实代价已记录）
