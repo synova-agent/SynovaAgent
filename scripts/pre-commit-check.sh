@@ -1176,7 +1176,9 @@ echo -e "${CYAN}── 组 10/13: V3 流水线健康度 ──${RESET}"
 CRITERIA_MAP="$ROOT/.codex/criteria-code-map.json"
 if [ -f "$CRITERIA_MAP" ]; then
   # V3 CP3-1: G10 条件区域检查 — 暂存的文件是否在声明的条件区域内
-  BRIEF_FILE=$(echo "$CHANGED_FILES" | grep -m1 "\.claude/task-briefs/" || true)
+  # A3 修复（2026-09-27）：原为 $CHANGED_FILES（零赋值 ⇒ 恒空 ⇒ G10 主体不可达、恒打绿勾）
+  # 真变量 = STAGED_ALL（:313，来自 GIT_CACHED_ALL_NAMES，已处理本地暂存/CI diff range 两态）
+  BRIEF_FILE=$(echo "$STAGED_ALL" | grep -m1 "\.claude/task-briefs/" || true)
   if [ -n "$BRIEF_FILE" ]; then
     BRIEF_PATH="$ROOT/$BRIEF_FILE"
     CRITERIA=$(grep -oE '#CRITERIA[[:space:]]*[:=][[:space:]]*[A-D]' "$BRIEF_PATH" 2>/dev/null | sed -E 's/.*[=:][[:space:]]*//' || true)
@@ -1200,7 +1202,7 @@ for gx in g:
       REGEX_GLOBS="${REGEX_GLOBS#|}"
       if [ -n "$REGEX_GLOBS" ]; then
         MISMATCH=""
-        for sf in $STAGED_FILES; do
+        for sf in $STAGED_ALL; do
           if ! echo "$sf" | grep -qE "($REGEX_GLOBS)"; then
             MISMATCH="${MISMATCH}  $sf (不在条件 $CRITERIA 的映射区域内)\n"
           fi
@@ -1222,12 +1224,12 @@ for gx in g:
 
   # V3 CP3-2: G11 测试覆盖检查
   HAS_E2E=0; HAS_TESTS=0
-  BRIEF_ID=$(echo "$STAGED_FILES" | grep -oE '\.claude/task-briefs/[^.]+' | sed -E 's|^\.claude/task-briefs/||' | head -1 || true)
+  BRIEF_ID=$(echo "$STAGED_ALL" | grep -oE '\.claude/task-briefs/[^.]+' | sed -E 's|^\.claude/task-briefs/||' | head -1 || true)
   if [ -n "$BRIEF_ID" ]; then
     BRIEF_PATH="$ROOT/.claude/task-briefs/${BRIEF_ID}.md"
     if [ -f "$BRIEF_PATH" ]; then
       HAS_E2E=$(grep -c "端到端\|e2e\|curl.*200\|HTTP.*200" "$BRIEF_PATH" 2>/dev/null | tr -d '\n\r' || true)
-      HAS_TESTS=$(echo "$STAGED_FILES" | grep -c "\.test\.ts" 2>/dev/null | tr -d '\n\r' || true)
+      HAS_TESTS=$(echo "$STAGED_ALL" | grep -c "\.test\.ts" 2>/dev/null | tr -d '\n\r' || true)
       if [ "$HAS_E2E" -gt 0 ] && [ "$HAS_TESTS" -eq 0 ]; then
         warn_check "G11: 声明的端到端验收但无测试文件" "$BRIEF_ID 声明了端到端验收，但暂存区无测试文件"
       else
