@@ -1181,9 +1181,15 @@ if [ -f "$CRITERIA_MAP" ]; then
   BRIEF_FILE=$(echo "$STAGED_ALL" | grep -m1 "\.claude/task-briefs/" || true)
   if [ -n "$BRIEF_FILE" ]; then
     BRIEF_PATH="$ROOT/$BRIEF_FILE"
-    # D1023 A3补修 (2026-09-27): 加 `head -1` —— 原式对**多行**匹配会产出多行值（实测：brief 里出现 3 处
-    #   `#CRITERIA:` ⇒ CRITERIA='D\nD\nD'），插进下面的 python 单引号字面量即 SyntaxError ⇒ 被 `|| true` 吞
-    #   ⇒ 映射读不到 ⇒ 打绿勾（与 ⑦ 同族：**读不到 map 却打绿**）。取首处 = 恢复"brief 声明的那个条件区域"语义。
+    # D1023 A3补修 / 验收后修正 (2026-09-27, task-3 修正A): 加 `head -1` —— 原式对**多匹配**会产出多行值，
+    #   插进下方 python 单引号字面量即 SyntaxError（`m.get('A\nA')`）被 `|| true` 吞 ⇒ 映射读不到 ⇒ 打绿勾
+    #   （与 ⑦ 同族：**读不到 map 却打绿**）。取首处 = 恢复"brief 声明的那个条件区域"的语义。
+    #   防御性（可复现，非"我记得"）: `.claude/task-briefs/*.md` 共 419 份，其中 320 份含 `#CRITERIA` 子串，
+    #   **36 份**按本模式 `#CRITERIA[[:space:]]*[:=][[:space:]]*[A-D]` 匹配 **≥2 处**。触发源 = brief 模板注释行
+    #   `<!-- #CRITERIA: A/B/C/D ... -->`（`A` 是 `A/B/C/D` 的前缀，故与真声明被同一模式一并命中）。
+    #   一条命令复现证人: grep -nE '#CRITERIA[[:space:]]*[:=][[:space:]]*[A-D]' .claude/task-briefs/2026-08-14-auto.md
+    #     → :128 `#CRITERIA: A` + :129 模板注释行 ⇒ 抽取得 $'A\nA'（多行）⇒ 上述 python 插值 SyntaxError。
+    #   计数口径勿混: 「含 `#CRITERIA` 子串 ≥2 次」的文件 = 40 份，≠ 上句的模式匹配 36 份。
     CRITERIA=$(grep -oE '#CRITERIA[[:space:]]*[:=][[:space:]]*[A-D]' "$BRIEF_PATH" 2>/dev/null | sed -E 's/.*[=:][[:space:]]*//' | head -1 || true)
     if [ -n "$CRITERIA" ]; then
       # 读取条件代码映射 —— D1023 A3补修 (2026-09-27, CTO 裁定⑦):
@@ -1232,7 +1238,30 @@ for gx in g:
         #   修复: `**/` → `(.*/)?`；`{a,b}` → `(a|b)`。其余（`*`→`.*`、`?`→`.`、非锚定）保持不动。
         #   占位符 @DSTAR@ 必须最后还原：若先展开 `(.*/)?`，后续 `s#[*]#.*#g` 会把它再变成 `(..*/)`（实测）。
         #   括号/花括号/星号/问号一律用方括号转义类（[?] 而非 \?）——BSD sed 与 GNU sed 行为一致（Windows Git Bash 同跑）。
-        REGEX=$(echo "$gx" | sed -E 's#[*][*]/#@DSTAR@#g; s#[{]([^}]*)[}]#(\1)#g; s#,#|#g; s#[*]#.*#g; s#[?]#.#g; s#@DSTAR@#(.*/)?#g')
+        #   验收后修正 (2026-09-27, task-3 修正B): 逗号→alternation **只允许发生在花括号组内**。
+        #     上一版 `s#,#|#g` 是**无条件**全局替换 ⇒ 花括号外逗号被静默改义（`src/a,b.ts` → `src/a|b.ts`），
+        #     超出 CTO 批准的最小修原文「其余不动」；当时只因 15 条现存 glob 的逗号恰都在花括号内而巧合正确。
+        #     做法：先把 `{` 标成 @LBR@，再逐轮把「@LBR@/@LGRP@ 之后、**闭合花括号之前**的最近一个逗号」转成 `|`
+        #     （@LGRP@ = "曾是含逗号的花括号组"标记），最后把 @LGRP@/@LBR@…} 统一回填为 `(…)` ——
+        #     即**除花括号外逗号这一处**外，与上一版管线在所有输入上行为一致（含 `{foo}` 这类无逗号花括号）。
+        #     三个易错点（均为实测踩过）:
+        #     · 内容类必须写 `[^@}]`（排除 `}`）：只写 `[^@]` 时循环会越过 `}` 继续吃**花括号外**的逗号
+        #       —— `src/x{1,2},y.ts` 会变 `src/x(1|2)|y.ts`（当年那条回归就是这样漏的）。
+        #     · `:dmgrp` / `t dmgrp` 必须各自独立成 `-e` 表达式：BSD sed 不接受 `;` 分隔的标签
+        #       （实测 `sed -E ':a; s#..#..#g; ta; …'` → `unused label` 报错、整条管线不执行）。
+        #     · 循环每轮只消化一个逗号 ⇒ 收敛轮数 = 花括号内逗号数（不多于 glob 字节数），无死循环面。
+        #     · 等价性已证（task-3 验收 5）: 15 条现存 glob 转换结果**逐字节相同**；回归集 10/10 MATCH；
+        #       `src/a,b.ts` 不再变形；`{html,js,css}` 仍得 `(html|js|css)`。
+        REGEX=$(echo "$gx" | sed -E \
+          -e 's#[*][*]/#@DSTAR@#g' \
+          -e 's#[{]#@LBR@#g' \
+          -e ':dmgrp' \
+          -e 's#@L(BR|GRP)@([^@}]*),#@LGRP@\2|#g' \
+          -e 't dmgrp' \
+          -e 's#@L(GRP|BR)@([^}]*)[}]#(\2)#g' \
+          -e 's#[*]#.*#g' \
+          -e 's#[?]#.#g' \
+          -e 's#@DSTAR@#(.*/)?#g')
         REGEX_GLOBS="${REGEX_GLOBS}|${REGEX}"
       done <<< "$CRITERIA_GLOBS"
       REGEX_GLOBS="${REGEX_GLOBS#|}"
