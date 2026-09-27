@@ -192,12 +192,18 @@ pattern = 'src/**'
 G12 的**消费端**用的是同一个字面匹配器（`scripts/pre-commit-check.sh:1351`：
 `re.search(r'(^|/)' + re.escape(pat) + r'\$', path)`）⇒ 换任何 `src/**` 形态的写法都无法被 G12 匹配。
 
-**结论**：归一化的真实收益 = ① 去掉散文污染（条目变成合法路径形态）② 对**glob 感知消费端**
-（`merge_writeset_gate.matches`，含 `*?[` 时走 `fnmatch`）真正生效。
-**要让 G12 也生效，必须改 `brief_parser.match_path` + `pre-commit-check.sh:1351` 两处收敛到 fnmatch**
-—— 那属 `scripts/pre-commit-check.sh`（**不在本卡写集**）与 `docs/synova/coordination/board-backlog.json`
-里已登记的独立条目（D718："G12 的 matches 收敛到 fnmatch（或两端口径统一为显式 glob 语法）"）。
-本卡**不越界**，见 §五 遗留 1。**不声称**"L-Q2 已使排除对 G12 生效"。
+**结论（按队长裁决 (a) 收口）**：
+- 条目**已归一为裸路径 `src/**`**：改后 **glob 端 True**（`merge_writeset_gate.matches`，含 `*?[` 时走 `fnmatch`）✅；
+- **G12 端因 `re.escape` 仍 False** ⇒ 这属**跨端匹配器分歧**，**不属本卡写集**，已在
+  `docs/synova/coordination/board-backlog.json:272` 登记（条目 id `PLAN-g12-writeset-glob-unify`，
+  `severity: P1`，`source: "D774 执行期实测（2026-09-15，**第三次复发**）"`；原文（**本卡自行复核，非转述**）：
+  > "同一份 brief Q2 glob 声明，CI 端 merge_writeset_gate.py 用 fnmatch 认、本地 pre-commit G12 用
+  >  brief_parser.match_path（re.escape 字面）拒 → glob 声明在 G12 永不匹配（D718 §⑥ 首记、D703 期再发、
+  >  D774 两拦后以 8 行精确文件名绕过）。修法方向：G12 的 matches 收敛到 fnmatch…"）
+- **为何不算"遗留尾巴"**：①缺陷**已登记**（`PLAN-g12-writeset-glob-unify`）②修它须改
+  `brief_parser.py` + `pre-commit-check.sh`（**均超出本卡声明写集**）③属**强判据变更**（G12 拦截面语义）。
+  队长已按"同类第二次 = 防线系统性失效"**升级 CTO**（不属本卡）。
+- ❌ **不声称**"L-Q2 已使排除对 G12 生效" —— 实测为 False，此声明会是虚假声称。
 
 ---
 
@@ -207,8 +213,8 @@ G12 的**消费端**用的是同一个字面匹配器（`scripts/pre-commit-chec
   改前 `检查 0 个文档` → exit 0（放行）；改后 `检查 1 个文档` → exit 1 且逐文件点名。
   "改坏即红"：换回改前实现 → 4 条新断言回红、既有 9 条全绿。
 - 交付 2（登记口径）：**成立**。结论 = 只豁免不登记 + 台账零改动（md5/diff/status 三证）。
-- 交付 3（L-Q2）：**部分成立**。裸路径形态 ✅；"能被 `match_path` 匹配" ❌（实测证明该半条不可达，
-  需改本卡写集外的两处，已如实上报队长）。
+- 交付 3（L-Q2）：**部分成立**。裸路径形态 ✅（glob 端 True）；"能被 `match_path` 匹配" ❌
+  （实测该半条不可达 —— 跨端匹配器分歧，已登记 `board-backlog.json:272`，队长裁决不并入本卡）。
 - 回归：`tests/doc-system/doc-registry-gate.test.sh` 18/18 绿；
   `tests/control-tower/merge_writeset_gate.test.sh` 59/0 绿；
   `tests/control-tower/check-pr-budget.test.sh` 45/45 绿；`bash -n` 通过。
@@ -219,9 +225,11 @@ G12 的**消费端**用的是同一个字面匹配器（`scripts/pre-commit-chec
 
 ## 五、遗留清单
 
-1. **G12 侧 glob 语义未收敛**（卡面 L-Q2 第二半不可达的根因）：要让 `src/**` 对 G12 生效，须改
-   `scripts/control-tower/brief_parser.py:203-205` 与 `scripts/pre-commit-check.sh:1351` 两处字面匹配器
-   → fnmatch。**两者都不在本卡写集**；`board-backlog.json` 已有同型条目（D718）。
+1. **G12 侧 glob 语义未收敛**（卡面 L-Q2 第二半不可达的根因）：须改
+   `scripts/control-tower/brief_parser.py:203-205` 与 `scripts/pre-commit-check.sh:1351`（两处同为
+   `re.escape` 字面匹配器）→ fnmatch。**均不在本卡写集**；已有登记件
+   `docs/synova/coordination/board-backlog.json:272`（`PLAN-g12-writeset-glob-unify` / P1 / 第三次复发）。
+   队长裁决：**不并入本卡、不扩写集**；按"同类第二次=防线系统性失效"**升级 CTO**。
 2. **`tests/doc-system/doc-registry-gate.test.sh` 首行带 BOM**（`b'\xef\xbb\xbf'`）⇒
    `bash tests/...` 可用但 `./tests/...` 会被 shebang 顶掉报 `No such file or directory`（本卡实测输出）。
    **未修**：D718 台账已把该文件按"文档系统域"派工给别的卡，修它可能与那张卡冲突 ⇒ 只登记，不动。
