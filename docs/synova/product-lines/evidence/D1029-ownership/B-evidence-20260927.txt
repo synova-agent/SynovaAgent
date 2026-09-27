@@ -1,0 +1,327 @@
+# D1029 · 成员 B 机器输出留档（纯命令 stdout/stderr + 计数 + diff + 退出码；无散文叙述）
+# 任务 task-2 | 成员 ownership-authority-dev | 分支 fix/d1029-ownership-b-20260927 | 基线 main 4afd4ce1 | 2026-09-27
+# 配套日志: B-logs-check-ownership-test.txt / B-logs-check-pr-budget-test.txt / B-logs-check-ownership-red-firstrun-57of58.txt
+
+── P1 前提实测: ownership.yaml 自身归属（规则自授权）
+$ python3 scripts/control-tower/check-ownership.py docs/synova/coordination/ownership.yaml
+mac  docs/synova/coordination/ownership.yaml
+
+✅ PASS 1 个文件同域: mac（无归属 0，域判定豁免 0）
+[exit=0]
+
+── P2 前提实测: CODEOWNERS 中 coordination 路径 owner
+$ grep -n 'docs/synova/coordination' .github/CODEOWNERS
+2:# 源: docs/synova/coordination/ownership.yaml（唯一权威；改那里再重跑下面的命令）
+34:docs/synova/coordination/**              @tangbaobao520
+[exit=0]
+
+── P2b 前提实测: 精确字面 coordination/ownership.yaml 命中（仅第 2 行生成来源注释）
+$ grep -n 'coordination/ownership.yaml' .github/CODEOWNERS
+2:# 源: docs/synova/coordination/ownership.yaml（唯一权威；改那里再重跑下面的命令）
+[exit=0]
+
+── P3 前提实测: ownership.test.sh 不存在（CODEOWNERS:4 失效路径）
+$ git ls-files tests/control-tower/ | grep -i own
+tests/control-tower/check-ownership.test.sh
+[exit=0]
+
+── P3b CODEOWNERS 第 4 行现状（A 未同步生成器前的中间态）
+$ sed -n '4p' .github/CODEOWNERS
+# 漂移门禁: tests/control-tower/ownership.test.sh 逐字节断言本文件 == 生成结果（D733）
+[exit=0]
+
+── P4 前提实测: 冻结合同多行 flow 序列形态 → 解析失败（fail-closed, D328 三态）
+$ python3 scripts/control-tower/check-ownership.py src/server.ts --owner win --yaml /tmp/premise-multiline.yaml
+❌ check-ownership: ownership.yaml 解析失败: line 210: 不支持的 flow 语法（仅支持单行内联列表 ["a", 1]）: ["src/**", "extensions/**", "packages/**
+[exit=2]
+
+── P4b 前提实测: 子集解析器直接自检同一文件
+$ python3 scripts/product-lines/productline_yaml.py /tmp/premise-multiline.yaml
+degraded: YAML 子集解析失败: line 210: 不支持的 flow 语法（仅支持单行内联列表 ["a", 1]）: ["src/**", "extensions/**", "packages/**
+[exit=2]
+
+── P5 结构契约: default 规则恰 1 条
+$ grep -c 'default: true' docs/synova/coordination/ownership.yaml
+1
+[exit=0]
+
+── S1 解析器自检: 改后 ownership.yaml
+$ python3 scripts/product-lines/productline_yaml.py docs/synova/coordination/ownership.yaml
+OK: docs/synova/coordination/ownership.yaml -> dict
+[exit=0]
+
+── S2 结构核对（顶层键 / rules 数 / domain_defaults / rule_authority / 兜底规则键）
+$ python3 -c "import sys,json; sys.path.insert(0,'scripts/product-lines'); import productline_yaml as P; d=P.load_file('docs/synova/coordination/ownership.yaml'); print('top-level keys:', list(d.keys())); print('rules count:', len(d['rules'])); print('domain_defaults:', json.dumps(d['domain_defaults'], ensure_ascii=False)); print('domain_defaults.win len:', len(d['domain_defaults']['win'])); print('rule_authority keys:', list(d['rule_authority'].keys())); print('fallback rule keys:', list(d['rules'][0].keys()))"
+top-level keys: ['version', 'owners', 'github', 'rule_authority', 'domain_defaults', 'rules', 'domain_neutral']
+rules count: 43
+domain_defaults: {"win": ["src/**", "extensions/**", "packages/**", "synova_worker/**", "docs/plans/**", "tests/**", "expert/**", "skills/**", "knowledge/**", "theory/**", "synthesis/**", "cycles/**", "app/**", "vendor/**", "prototypes/**", "observer-adapters/**", "data/**", "assets/**", "patches/**"]}
+domain_defaults.win len: 19
+rule_authority keys: ['domain_vs_permission', 'rule_change_authority', 'approval_credential', 'native_enforcement']
+fallback rule keys: ['glob', 'owner', 'default', 'source']
+[exit=0]
+
+── S3 归属判定零变化: HEAD vs 工作区（rule 序列 (glob,owner) 逐项 / 兜底规则键集 / github / domain_neutral）
+$ python3 -c "import subprocess,sys; sys.path.insert(0,'scripts/product-lines'); import productline_yaml as P; open('/tmp/own-head-ev.txt','w').write(subprocess.run(['git','show','HEAD:docs/synova/coordination/ownership.yaml'],capture_output=True,text=True).stdout); a=P.load_file('/tmp/own-head-ev.txt'); b=P.load_file('docs/synova/coordination/ownership.yaml'); ga=[(r['glob'],r['owner']) for r in a['rules']]; gb=[(r['glob'],r['owner']) for r in b['rules']]; print('rules 数:',len(a['rules']),'->',len(b['rules'])); print('(glob,owner) 序列逐项相同:',ga==gb); print('兜底规则 键集:',sorted(a['rules'][0].keys()),'->',sorted(b['rules'][0].keys())); print('github/domain_neutral/owners/version 相同:',a['github']==b['github'],a['domain_neutral']==b['domain_neutral'],a['owners']==b['owners'],a['version']==b['version']); print('顶层键增:',sorted(set(b)-set(a)),'| 顶层键删:',sorted(set(a)-set(b)))"
+rules 数: 43 -> 43
+(glob,owner) 序列逐项相同: True
+兜底规则 键集: ['default', 'glob', 'owner', 'source', 'territory'] -> ['default', 'glob', 'owner', 'source']
+github/domain_neutral/owners/version 相同: True True True True
+顶层键增: ['domain_defaults', 'rule_authority'] | 顶层键删: []
+[exit=0]
+
+── S3b 兜底规则字段级对照（HEAD vs 工作区）
+$ python3 -c "import subprocess,sys; sys.path.insert(0,'scripts/product-lines'); import productline_yaml as P; open('/tmp/own-head-ev.txt','w').write(subprocess.run(['git','show','HEAD:docs/synova/coordination/ownership.yaml'],capture_output=True,text=True).stdout); a=P.load_file('/tmp/own-head-ev.txt')['rules'][0]; b=P.load_file('docs/synova/coordination/ownership.yaml')['rules'][0]; [print('  %-10s HEAD=%r  NOW=%r' % (k,a.get(k),b.get(k))) for k in sorted(set(a)|set(b))]"
+  default    HEAD=True  NOW=True
+  glob       HEAD='**'  NOW='**'
+  owner      HEAD='win'  NOW='win'
+  source     HEAD='TASK-ROUTING.md L38/L39（Win 域兜底: src/ 除下列 Mac 例外 + 未列明路径）'  NOW='TASK-ROUTING.md L38/L39（Win 域兜底: src/ 除下列 Mac 例外 + 未列明路径）'
+  territory  HEAD=['src/**', 'extensions/**', 'packages/**', 'synova_worker/**', 'docs/plans/**']  NOW=None
+[exit=0]
+
+── S4 domain_defaults.win 19 条既有归属实测（19/19 判 win）
+$ python3 scripts/control-tower/check-ownership.py src/adapters/federal-adapter.ts extensions/adapters/feishu/adapter.ts packages/_archived/graph-store/ARCHIVED.md synova_worker/__init__.py docs/plans/2026-09-19-D819-改动清单.md tests/acceptance/zero-code-industry.test.ts expert/_deprecated/action/CROSS_EXPERT.md skills/action/brainstorm-okrs.md knowledge/custom/_template/business-context.md theory/CORE.md synthesis/CORE_EQUATION.md cycles/builtin/cash-cycle.cycle.json app/admin.html vendor/mcp-servers/HANDOFF.md prototypes/l4-research/diagnosis-graph-query.ts observer-adapters/claude-code-hook/hook.py data/golden/checksums/wani-baby-v1-checksums.json assets/icon.ico patches/ink+5.2.1.patch --owner win
+win  src/adapters/federal-adapter.ts
+win  extensions/adapters/feishu/adapter.ts
+win  packages/_archived/graph-store/ARCHIVED.md
+win  synova_worker/__init__.py
+win  docs/plans/2026-09-19-D819-改动清单.md
+win  tests/acceptance/zero-code-industry.test.ts
+win  expert/_deprecated/action/CROSS_EXPERT.md
+win  skills/action/brainstorm-okrs.md
+win  knowledge/custom/_template/business-context.md
+win  theory/CORE.md
+win  synthesis/CORE_EQUATION.md
+win  cycles/builtin/cash-cycle.cycle.json
+win  app/admin.html
+win  vendor/mcp-servers/HANDOFF.md
+win  prototypes/l4-research/diagnosis-graph-query.ts
+win  observer-adapters/claude-code-hook/hook.py
+win  data/golden/checksums/wani-baby-v1-checksums.json
+win  assets/icon.ico
+win  patches/ink+5.2.1.patch
+
+✅ PASS 19 个文件全部归属 owner=win（无归属 0）
+[exit=0]
+
+── S5 19 条对应目录 tracked 文件数与样本
+$ for d in src extensions packages synova_worker docs/plans tests expert skills knowledge theory synthesis cycles app vendor prototypes observer-adapters data assets patches; do n=$(git ls-files "$d" | wc -l | tr -d ' '); s=$(git ls-files "$d" | head -1); printf '%-20s tracked=%-6s sample=%s\n' "$d" "$n" "$s"; done
+src                  tracked=450    sample=src/adapters/federal-adapter.ts
+extensions           tracked=693    sample=extensions/adapters/feishu/adapter.ts
+packages             tracked=95     sample=packages/_archived/graph-store/ARCHIVED.md
+synova_worker        tracked=14     sample=synova_worker/__init__.py
+docs/plans           tracked=358    sample=docs/plans/2026-09-19-D819-改动清单.md
+tests                tracked=780    sample=tests/acceptance/zero-code-industry.test.ts
+expert               tracked=115    sample=expert/_deprecated/action/CROSS_EXPERT.md
+skills               tracked=46     sample=skills/action/brainstorm-okrs.md
+knowledge            tracked=10     sample=knowledge/custom/_template/business-context.md
+theory               tracked=5      sample=theory/CORE.md
+synthesis            tracked=4      sample=synthesis/CORE_EQUATION.md
+cycles               tracked=6      sample=cycles/builtin/cash-cycle.cycle.json
+app                  tracked=34     sample=app/admin.html
+vendor               tracked=31     sample=vendor/mcp-servers/HANDOFF.md
+prototypes           tracked=3      sample=prototypes/l4-research/diagnosis-graph-query.ts
+observer-adapters    tracked=5      sample=observer-adapters/claude-code-hook/hook.py
+data                 tracked=2      sample=data/golden/checksums/wani-baby-v1-checksums.json
+assets               tracked=1      sample=assets/icon.ico
+patches              tracked=1      sample=patches/ink+5.2.1.patch
+[exit=0]
+
+── G1 drift 门禁: emit == 工作区 CODEOWNERS
+$ python3 scripts/control-tower/check-ownership.py --emit-codeowners | diff - .github/CODEOWNERS
+
+[exit=0]
+
+── G2 规则行（去注释/空行）vs HEAD 逐行比对
+$ diff <(python3 scripts/control-tower/check-ownership.py --emit-codeowners | grep -v '^#' | grep -v '^$') <(git show HEAD:.github/CODEOWNERS | grep -v '^#' | grep -v '^$')
+
+[exit=0]
+
+── G3 规则行计数（HEAD / 现生成）
+$ echo "HEAD 规则行: $(git show HEAD:.github/CODEOWNERS | grep -v '^#' | grep -v '^$' | wc -l | tr -d ' ')"; echo "现生成规则行: $(python3 scripts/control-tower/check-ownership.py --emit-codeowners | grep -v '^#' | grep -v '^$' | wc -l | tr -d ' ')"
+HEAD 规则行: 43
+现生成规则行: 43
+[exit=0]
+
+── G4 生成物 vs HEAD 完整 diff（U1 后预期: 只少一行 territory 注释）
+$ git diff HEAD -- .github/CODEOWNERS
+diff --git a/.github/CODEOWNERS b/.github/CODEOWNERS
+index 7e38de13..5dcc0d1b 100644
+--- a/.github/CODEOWNERS
++++ b/.github/CODEOWNERS
+@@ -8,7 +8,6 @@
+ # （兜底 = 创始人最终把关）。建议建三个团队 @synova-dsh / @synova-claude / @synova-k3，
+ # 改 ownership.yaml 的 github: 段后重跑生成命令即可 —— 本文件不需要手改。
+ 
+-# win 领地（显式列出）: src/**、extensions/**、packages/**、synova_worker/**、docs/plans/**
+ *                                        @tangbaobao520
+ extensions/**                            @tangbaobao520
+ packages/**                              @tangbaobao520
+[exit=0]
+
+── C1 ci.yml vs HEAD 完整 diff（只加两行）
+$ git diff HEAD -- .github/workflows/ci.yml
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index dc681819..151a1d95 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -377,6 +377,8 @@ jobs:
+             tests/control-tower/check-k3-report.test.sh \
+             tests/control-tower/daily-cto-board-ratio.test.sh \
+             tests/control-tower/install-dsh-preset.test.sh \
++            tests/control-tower/check-ownership.test.sh \
++            tests/control-tower/check-pr-budget.test.sh \
+             tests/control-tower/d956-failmsg.test.sh; do
+             echo "── $t"
+             # D526: 测试失败输出进 ::error 注解——无 token 也能经 annotations 定位（D521 工具1 语义）
+[exit=0]
+
+── C2 ci.yml 两套件注册行号
+$ grep -n 'check-ownership.test.sh\|check-pr-budget.test.sh' .github/workflows/ci.yml
+380:            tests/control-tower/check-ownership.test.sh \
+381:            tests/control-tower/check-pr-budget.test.sh \
+[exit=0]
+
+── C3 ci.yml 的 docs-only 早退 + SYNO_CI 硬阻断接线（原文行号）
+$ grep -n 'docs_only=false\|SYNO_CI' .github/workflows/ci.yml
+42:            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+104:          SYNO_CI: "1"  # D516/K3 P0-1: CI strict——本地 V5 软提示在 CI 转硬（权威物理落地）
+144:            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+146:            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+209:      SYNO_CI: "1"  # CT-64: 与 TypeScript job 对齐——check-architecture.sh 在 CI 也走严格模式（棘轮基线内不阻断，新增才阻断）
+220:            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+222:            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+263:            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+265:            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+309:            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+311:            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+436:            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+438:            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+470:            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+472:            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+510:            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+512:            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+538:            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+540:            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+586:            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+588:            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+[exit=0]
+
+── C4 TASK-ROUTING 新增两节标题行号 + 文件行数
+$ grep -n '^## ' docs/synova/coordination/TASK-ROUTING.md | tail -3; wc -l < docs/synova/coordination/TASK-ROUTING.md
+145:## 域归属的唯一源（D943，2026-09-24）
+152:## 规则修改权（2026-09-27 创始人令）
+161:## 域 ≠ 权限
+     167
+[exit=0]
+
+── C5 TASK-ROUTING 新增段 vs HEAD diff（+19 行）
+$ git diff HEAD --stat -- docs/synova/coordination/TASK-ROUTING.md
+ docs/synova/coordination/TASK-ROUTING.md | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+[exit=0]
+
+── T1 check-ownership.test.sh 汇总
+$ bash tests/control-tower/check-ownership.test.sh | tail -4
+
+═══════════════════════════════════════════════════════════
+  ✅ 全部通过: 58 项
+═══════════════════════════════════════════════════════════
+[exit=0]
+
+── T2 check-pr-budget.test.sh 汇总
+$ bash tests/control-tower/check-pr-budget.test.sh | tail -4
+
+═══════════════════════════════════════════════════════════
+  ✅ 全部通过: 32 项
+═══════════════════════════════════════════════════════════
+[exit=0]
+
+── T3 红一手输出（首轮 57/58，注释文本被判据命中）
+$ grep -n '❌' /tmp/own-test-full.log
+44:  ❌ 反向验证前置: 兜底规则未删掉
+86:  ❌ 1 项失败 / 57 项通过
+[exit=0]
+
+── U1 删除 territory 行（唯一删除行）
+$ git diff HEAD -- docs/synova/coordination/ownership.yaml | grep -E '^[-+].*territory'
+-    territory: ["src/**", "extensions/**", "packages/**", "synova_worker/**", "docs/plans/**"]
+[exit=0]
+
+── U3 订正失效路径后的第 22 行
+$ sed -n '22p' docs/synova/coordination/ownership.yaml
+#       drift 由 tests/control-tower/check-ownership.test.sh 逐字节断言（D1029 订正失效路径）。
+[exit=0]
+
+── U8 复现 doc-registry-gate 对证据 .md 的判定（本 .md 已按裁决改为 .txt；此处临时重建同名空文件以复现门禁原始输出 + 退出码，复现后即删除）
+$ touch docs/synova/product-lines/evidence/D1029-ownership/B-ownership-authority-evidence-20260927.md; bash scripts/doc-system/doc-registry-gate.sh; printf 'gate exit=%s\n' $?; rm -f docs/synova/product-lines/evidence/D1029-ownership/B-ownership-authority-evidence-20260927.md
+  ❌ 未登记: docs/synova/product-lines/evidence/D1029-ownership/B-ownership-authority-evidence-20260927.md （请加入 docs/authority/DOCS-REGISTRY.yaml）
+── 汇总: 检查 1 个文档，1 个未登记 ──
+  ❌ 登记门禁阻断
+gate exit=1
+[exit=0]
+
+── U8b 证据目录 .txt 现状（按裁决: 证据目录只放机器输出）
+$ git ls-files docs/synova/product-lines/evidence/D1029-ownership/ | cat; ls docs/synova/product-lines/evidence/D1029-ownership/ | cat
+docs/synova/product-lines/evidence/D1029-ownership/B-logs-check-ownership-red-firstrun-57of58.txt
+docs/synova/product-lines/evidence/D1029-ownership/B-logs-check-ownership-test.txt
+docs/synova/product-lines/evidence/D1029-ownership/B-logs-check-pr-budget-test.txt
+B-evidence-20260927.txt
+B-logs-check-ownership-red-firstrun-57of58.txt
+B-logs-check-ownership-test.txt
+B-logs-check-pr-budget-test.txt
+[exit=0]
+
+── U8c DOCS-REGISTRY 台账: evidence 条目数 / product-lines 命中行 / 总条目数
+$ echo "evidence 条目: $(grep -c evidence docs/authority/DOCS-REGISTRY.yaml || true)"; echo "product-lines 命中行:"; grep -n product-lines docs/authority/DOCS-REGISTRY.yaml || true; echo "台账总条目: $(grep -c 'id: DOC-' docs/authority/DOCS-REGISTRY.yaml || true)"
+evidence 条目: 0
+product-lines 命中行:
+218:    verified-by: docs/synova/product-lines/preconditions.yaml (清单一致性)
+台账总条目: 32
+[exit=0]
+
+── W1 git status --short（本文件生成时刻快照）
+$ git status --short
+M  .github/CODEOWNERS
+M  .github/workflows/ci.yml
+M  docs/synova/coordination/TASK-ROUTING.md
+M  docs/synova/coordination/ownership.yaml
+A  docs/synova/product-lines/evidence/D1029-ownership/B-logs-check-ownership-red-firstrun-57of58.txt
+A  docs/synova/product-lines/evidence/D1029-ownership/B-logs-check-ownership-test.txt
+A  docs/synova/product-lines/evidence/D1029-ownership/B-logs-check-pr-budget-test.txt
+?? .claude/task-briefs/2026-09-27-D1029-ownership-domain-rule-closeout.md
+?? docs/synova/product-lines/evidence/D1029-ownership/B-evidence-20260927.txt
+[exit=0]
+
+── W2 git diff --cached --stat（本文件生成时刻 staged 快照）
+$ git diff --cached --stat
+ .github/CODEOWNERS                                 |  1 -
+ .github/workflows/ci.yml                           |  2 +
+ docs/synova/coordination/TASK-ROUTING.md           | 19 +++++
+ docs/synova/coordination/ownership.yaml            | 78 ++++++++++++++++---
+ .../B-logs-check-ownership-red-firstrun-57of58.txt | 87 ++++++++++++++++++++++
+ .../B-logs-check-ownership-test.txt                | 87 ++++++++++++++++++++++
+ .../B-logs-check-pr-budget-test.txt                | 59 +++++++++++++++
+ 7 files changed, 322 insertions(+), 11 deletions(-)
+[exit=0]
+
+── W3 提交前最终 staged 快照（含本 .txt；本块生成后仅再 add 本文件，不改内容）
+$ git status --short; git diff --cached --stat
+M  .github/CODEOWNERS
+M  .github/workflows/ci.yml
+M  docs/synova/coordination/TASK-ROUTING.md
+M  docs/synova/coordination/ownership.yaml
+AM docs/synova/product-lines/evidence/D1029-ownership/B-evidence-20260927.txt
+A  docs/synova/product-lines/evidence/D1029-ownership/B-logs-check-ownership-red-firstrun-57of58.txt
+A  docs/synova/product-lines/evidence/D1029-ownership/B-logs-check-ownership-test.txt
+A  docs/synova/product-lines/evidence/D1029-ownership/B-logs-check-pr-budget-test.txt
+?? .claude/task-briefs/2026-09-27-D1029-ownership-domain-rule-closeout.md
+ .github/CODEOWNERS                                 |   1 -
+ .github/workflows/ci.yml                           |   2 +
+ docs/synova/coordination/TASK-ROUTING.md           |  19 ++
+ docs/synova/coordination/ownership.yaml            |  78 +++++-
+ .../D1029-ownership/B-evidence-20260927.txt        | 305 +++++++++++++++++++++
+ .../B-logs-check-ownership-red-firstrun-57of58.txt |  87 ++++++
+ .../B-logs-check-ownership-test.txt                |  87 ++++++
+ .../B-logs-check-pr-budget-test.txt                |  59 ++++
+ 8 files changed, 627 insertions(+), 11 deletions(-)
+[exit=0]

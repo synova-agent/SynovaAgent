@@ -1,0 +1,87 @@
+═══════════════════════════════════════════════════════════
+  D733 ownership 机器化测试
+═══════════════════════════════════════════════════════════
+
+── 1. 正常路径: 各域正例归属一致 → exit 0 ──
+  ✅ src/sentinel/ Mac 正例 (exit=0)
+  ✅ src/cron/ Mac 正例 (exit=0)
+  ✅ src/mcp/ Mac 正例 (exit=0)
+  ✅ scripts/control-tower/ Mac (exit=0)
+  ✅ tests/control-tower/ Mac (exit=0)
+  ✅ coordination 文档 Mac (exit=0)
+  ✅ src/（非例外）= Win (exit=0)
+  ✅ src/server.ts = Win 专属 (exit=0)
+  ✅ scripts/audit/ = K3 (exit=0)
+
+── 2. 越域: 派单 §一 验收两条（必须非零）──
+  ✅ 验收① src/server.ts --owner mac (exit=1)
+  ✅ 验收② src/evidence/x.ts --owner mac (exit=1)
+  ✅ Mac 文件派给 win 也越域（对称） (exit=1)
+  ✅ K3 红线派给 mac 越域 (exit=1)
+
+── 3. 真实回归: CTO 2026-09-13 两次派错线的实写集 ──
+  ✅ D728 回归: 整写集派给 mac 必红 (exit=1)
+  ✅ D729 回归: Win 域两文件派给 mac 必红 (exit=1)
+
+── 4. 单域模式（无 --owner）──
+  ✅ 单域模式: 全 Mac → exit 0
+  ✅ 单域模式: Mac+Win 混合 → exit 1（跨域）
+  ✅ 跨域输出点名「跨域」
+
+── 4b. 域判定豁免 domain_neutral（D734 前置：各线都写的簿记不构成域信号）──
+  ✅ bypass.log 豁免: 只剩 mac → exit 0
+  ✅ 豁免路径明示 domain-neutral（不静默）
+  ✅ 豁免不掩盖真跨域（Mac+Win 仍 exit 1）
+  ✅ 豁免路径不参与 --owner 断言 (exit=0)
+  ✅ 非豁免路径仍受 --owner 断言（回归） (exit=1)
+  ✅ D758 证据目录豁免: Win 代码 + 自己的验收证据 → exit 0
+  ✅ D758 证据路径明示 domain-neutral（不静默）
+  ✅ D758 Win 证据 + Mac 控制塔脚本 → 仍单域（证据不掺域）
+  ✅ D758 豁免不掩盖真跨域（Win 代码 + Mac 脚本仍 exit 1）
+  ✅ D758 豁免路径不参与 --owner 断言 (exit=0)
+
+── 5. 反向验证: 删掉兜底规则 → 验收两条必须变绿（证明真在读 yaml）──
+  ❌ 反向验证前置: 兜底规则未删掉
+  ✅ 删兜底 → src/server.ts 变绿 (exit=0)
+  ✅ 删兜底 → src/evidence/x.ts 变绿 (exit=0)
+  ✅ 原 yaml 复测仍红（未污染真实文件） (exit=1)
+  ✅ 复测输出点名「越域」
+  ✅ 无归属时明示 ⚠️（不静默）
+
+── 5b. D935 判别性夹具: presets→mac（删该规则即红 = 判据真读数据，非 grep 型静态判据）──
+  ✅ D935 presets 根文件 = Mac (exit=0)
+  ✅ D935 presets 子目录文件 = Mac (exit=0)
+  ✅ D935 presets 派给 win 越域（对称） (exit=1)
+  ✅ D935 改坏前置: 沙箱副本已删 presets 规则
+  ✅ D935 删 presets 规则 → presets 路径派 mac 必红 (exit=1)
+  ✅ D935 删 presets 规则 → 子目录文件同样必红 (exit=1)
+  ✅ D935 原 yaml 复测仍绿（未污染真实文件） (exit=0)
+
+── 6. 降级与边界（fail-closed → exit 2）──
+  ✅ yaml 不存在 → exit 2 (exit=2)
+  ✅ yaml 语法非法 → exit 2 (exit=2)
+  ✅ rules 为空 → exit 2 (exit=2)
+  ✅ yaml 非映射 → exit 2 (exit=2)
+  ✅ 无文件参数 → exit 2
+  ✅ 未知 owner → exit 2（argparse 拒绝）
+  ✅ 尚未创建的文件路径也可判域 (exit=0)
+
+── 7. 产物契约: CODEOWNERS == --emit-codeowners（drift 门禁）──
+  ✅ drift: .github/CODEOWNERS 与生成结果逐字节一致
+  ✅ --emit-codeowners exit 0 (exit=0)
+  ✅ CODEOWNERS 顺序: 兜底(12) 在 Mac 例外(17) 之前
+
+── 8. 结构契约: ownership.yaml 恰有一条 default 兜底规则 ──
+  ✅ default 规则恰 1 条
+  ✅ 显式规则存在: src/sentinel/**
+  ✅ 显式规则存在: src/cron/**
+  ✅ 显式规则存在: src/mcp/**
+  ✅ 显式规则存在: scripts/audit/**
+  ✅ 显式规则存在: scripts/control-tower/**
+
+── 9. 生产接线（铁律 0-2 WIRE CHECK）──
+  ✅ 接线: CODEOWNERS 头声明由 check-ownership.py 生成（产物消费成立）
+
+═══════════════════════════════════════════════════════════
+  ❌ 1 项失败 / 57 项通过
+═══════════════════════════════════════════════════════════
