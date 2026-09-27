@@ -6,16 +6,19 @@
 #
 # ═══ 契约（铁律 47）═══
 #   @input  — 无参数。被测对象 = 本仓库 HEAD 的 scripts/pre-commit-check.sh。
-#             环境开关: SYNO_PRE_COMMIT_INJECT_FULL=1 → 跑全部 12 组；
-#                       缺省（CI 与人工默认）→ 抽检 4 组（组 1/2/7/12）+ 1 绿基线；
+#             环境开关: SYNO_PRE_COMMIT_INJECT_FULL=1 → 跑全部 12 组 + 3 条 D1023 反例；
+#                       缺省（CI 与人工默认）→ 抽检 4 组（组 1/2/7/12）+ 3 条 D1023 反例 + 1 绿基线；
 #                       SYNO_INJECT_REQUIRE_CLEAN_BASELINE=1 → 基线 HOST_STATE 也判红（严格守门）。
 #   @output — 逐组结果行 + 耗时汇总表 + 收尾残留断言 + 末行机器可读汇总:
 #             GATE_INJECTION_SUMMARY: scenarios=<n> red_confirmed=<n> structural_not_red=<n>
-#                                     not_red=<n> baseline=<ok|host_state|FAIL> probe=<状态>(rc=<n>)
+#                                     not_red=<n> green_confirmed=<n> green_fail=<n> g10region_named=<0|1>
+#                                     baseline=<ok|host_state|FAIL> probe=<状态>(rc=<n>)
+#                                     exempt_probe=<状态>(rc=<n>)
 #                                     residue_code=<n> residue_repo=<n> shim=<0|1>
 #   @exit   — 0 = 全部期望红组均 RED_CONFIRMED（structural_not_red 须带**已验证**的结构性理由），
-#                且绿基线 rc=0（或 baseline=host_state 且有因果隔离探针证据），且残留断言过；
-#             1 = 任一期望红组未红 / 基线不绿且不可归因 / 残留断言失败（业务失败）；
+#                且绿基线 rc=0（或 baseline=host_state 且有因果隔离探针证据），
+#                且期望绿场景（g10exempt）GREEN_CONFIRMED 且判别性探针 RED_CONFIRMED，且残留断言过；
+#             1 = 任一期望红组未红 / 期望绿场景未绿 / 判别性探针未红 / 基线不绿且不可归因 / 残留断言失败（业务失败）；
 #             2 = 夹具自身执行失败（不在 git 仓库 / clone 失败 / 副本 SHA 不一致，
 #                 与"门禁没红"区分开——D328 三态）
 #   @degraded — exit 2 + stderr "degraded: <原因>"（铁律 11/24）
@@ -96,9 +99,40 @@
 #   g12 组 12/13 暂存 scripts/*.sh 无任何今日 brief 认领               → Q2 范围一致性
 #   g13 组 13/13 暂存改动 .claude/skills/**（与 .dsh/skills 漂移）     → 技能同步
 #
+# ═══ D1023 A3补修新增（本批判据；抽检与全量都跑）═══
+#   g10exempt 组 10/13 暂存 **domain-neutral 路径文件**（.claude/bypass.log，已跟踪）+ brief 声明条件区域 D
+#                     → 期望**绿**（GREEN_CONFIRMED）: 组 10 区块无 ❌，且出现
+#                       `条件区域检查通过 (D; domain-neutral 豁免 N 项)`（N>0）—— 只"没红"不算过：
+#                       若 brief/CRITERIA 没被读到、或映射解析降级，G10 走"跳过/降级"分支（另一种假绿）。
+#                     → 判别性探针（删掉即报红）: 在副本里物理删除 pre-commit-check.sh 的
+#                       `D1023-DOMNEUTRAL-EXEMPT-BEGIN..END` 区间（仅豁免分支；删后 bash -n 仍 rc=0，
+#                       已实测），重跑**同一注入** ⇒ 组 10 区块必须出现 ❌（exempt_probe=RED_CONFIRMED）。
+#                       探针补丁未生效/删后语法坏/删后仍未红 ⇒ 判红（fail-closed）。
+#                       ——证明绿来自豁免分支本身，而非整条 G10 被判据放宽（禁 grep 型静态判据当验收）。
+#   g10region 组 10/13 暂存**区域外真代码** observer-adapters/claude-code-hook/hook.py（真实在库、
+#                       58 行；实测 A/B/C/D 四区全零命中，见下方 [区域实测]）+ brief 声明条件区域 D
+#                       → 期望**红**，且 ❌ 行必须**点名**该文件（只"红了"不够——红了但没点名 =
+#                       可能因其它原因红，判别性不足）。同理可用的第二个探针:
+#                       prototypes/l4-research/graph-bridge.ts（307 行，四区零命中）。
+#   g10tests  组 10/13 暂存 **tests/** 下的文件（本夹具自身路径）+ brief 声明条件区域 D
+#                       → 期望**绿**（⑥ 的回归锁）: tests/** 是 D.glob 新增项（CTO 2026-09-27 裁定）。
+#                       ⑥ 之前 tests/** 不在任何区域 ⇒ 本夹具自身进 PR 变更集必让该 PR 红。
+#   [区域实测] 用脚本真实 sed 管线回放 .codex/criteria-code-map.json（2026-09-27，本卡 base ad2cce20 + ⑥）:
+#     A: src/l3/(.*/)?.*.ts|src/agent/diagnosis-launcher.ts|src/sentinel/(.*/)?.*.ts
+#     B: src/growth/(.*/)?.*.ts|src/loops/(.*/)?.*.ts|extensions/ontology/edge-types/.*.json
+#     C: src/routes/(.*/)?.*.ts|src/middleware/(.*/)?.*.ts|app/(.*/)?.*.(html|js|css)|electron/(.*/)?.*.(cjs|js)
+#     D: src/(.*/)?.*.ts|scripts/(.*/)?.*.(sh|py)|tests/.*.*|package.json|build-synova.cjs   ← ⑥ 后
+#     四区零命中（实测）: observer-adapters/claude-code-hook/hook.py、prototypes/l4-research/graph-bridge.ts
+#     ⑥ 前 tests/** 亦四区零命中（tests/control-tower/x.test.sh、tests/foo/y.test.ts、tests/a.ts 实测）；
+#     ⑥ 后三者均落 D（tests/.*.*）。
+#   ⚠️ 前置依赖（如实声明，非静默假设）: 三个 G10 场景要求条件区域映射**可解析**（python3/python/py 之一可用）。
+#      本机无 `python`（只有 python3）时，pre-commit G10 走 :1189-1223 的**显式降级**路径（⚠️ + degraded 登记，
+#      不打绿勾），此环境下 g10exempt/g10tests 会判 GREEN_FAIL（缺 pass 行）⇒ 夹具 exit 1。
+#      CI 上本夹具所在 job `gate-integrity` 跑 ubuntu-latest（ci.yml:568，非 windows 矩阵）→ 有 python3 ⇒ 前置满足。
+#
 #   用法: bash tests/control-tower/precommit-groups-injection.test.sh
 #         SYNO_PRE_COMMIT_INJECT_FULL=1 bash tests/control-tower/precommit-groups-injection.test.sh
-#   CI:   .github/workflows/ci.yml job `gate-integrity` step 2（抽检即注册）
+#   CI:   .github/workflows/ci.yml job `gate-integrity` step 2（抽检即注册；抽检已含 g10exempt/g10region/g10tests）
 # ═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
 
@@ -131,7 +165,7 @@ echo "REPO_DIR   = $REPO_DIR"
 echo "BASE_SHA   = $BASE_SHA"
 echo "BRANCH     = $BRANCH"
 echo "TMP        = $TMP  （hermetic 副本；注入只发生在此）"
-echo "MODE       = $([ "${SYNO_PRE_COMMIT_INJECT_FULL:-0}" = "1" ] && echo FULL-12-组 || echo SAMPLED-抽检-4-组)"
+echo "MODE       = $([ "${SYNO_PRE_COMMIT_INJECT_FULL:-0}" = "1" ] && echo FULL-12-组+3反例 || echo SAMPLED-抽检-4-组+3反例)"
 echo ""
 
 # ── python shim（仅为组 9 可执行；见头部注释）──
@@ -200,6 +234,10 @@ LBL_g9="── 组 9/13: 契约门禁 ──"
 LBL_g10="── 组 10/13: V3 流水线健康度 ──"
 LBL_g12="── 组 12/13: Task Scope 一致性 ──"
 LBL_g13="── 组 13/13: 技能同步一致性 ──"
+# D1023 反例场景与组 10 同区块（G10+G11 都在「组 10/13」块内）
+LBL_g10exempt="$LBL_g10"
+LBL_g10region="$LBL_g10"
+LBL_g10tests="$LBL_g10"
 
 INJ_NOTE=""
 INJ_PREFLIGHT_FAIL=""
@@ -360,6 +398,125 @@ EOF
   fi
 }
 
+# ── D1023 A3补修反例（本批判据；抽检与全量都跑）──
+# 场景 a: domain-neutral 路径文件 + brief 声明条件区域 D ⇒ 期望**绿**（豁免生效）。
+#   用 .claude/bypass.log —— **已跟踪**（`git ls-files .claude/bypass.log` 实测；
+#   gate-hits.log 被 .gitignore 忽略，`git add` 进不了暂存区，不能作注入对象）。
+#   brief 文本**不得**含「端到端/e2e/curl.*200/HTTP.*200」——组 10 区块同时含 G10+G11，
+#   若 G11 因"有验收无测试"在同一区块报 ❌，会把本场景的判定搅红（非本场景要判的东西）。
+inj_g10exempt() {
+  printf '# %s g10exempt (domain-neutral 路径修改: 应由豁免分支跳过)\n' "$MARK" >> "$CLONE/.claude/bypass.log"
+  # ⚠️ 实测陷阱（本夹具首轮自己踩中，见下）: 夹具 brief 的标题里**不能**再出现 `#CRITERIA:D` 字样 ——
+  #   G10 用 `grep -oE '#CRITERIA[[:space:]]*[:=][[:space:]]*[A-D]'` 抽取，抽到 **多行** 时
+  #   `python -c "... m.get('$CRITERIA') ..."` 插值成跨行单引号字符串 → SyntaxError → `2>/dev/null || true`
+  #   吞掉 → CRITERIA_GLOBS 空 → G10 走「无映射区域(跳过)」= **第三种假绿**（另两种：无 brief / 无 #CRITERIA）。
+  #   首轮实测证据: 标题带 `#CRITERIA:D` + 正文 `#CRITERIA: D` ⇒ CRITERIA='D\nD' ⇒ 场景 a 判 GREEN_FAIL
+  #   （pass 行='<无>'）、场景 b 判 NOT_RED（该红的没红）。故本夹具三个 brief 各自**只保留一处**该标记。
+  #   （G10 侧已按 CTO 裁定⑦加 `head -1` 作纵深防护；夹具仍按"只留一处"写，避免依赖单一防线。）
+  cat > "$CLONE/.claude/task-briefs/${TODAY}-m9-fixture-g10exempt-dm.md" <<EOF
+# Task Brief — 夹具场景 G10exempt（domain-neutral 路径文件，期望豁免生效）
+
+#CRITERIA: D
+
+## Q0: 定位 — 项目拼图 + 文件审计
+夹具占位：domain-neutral 路径（ownership.yaml:207）不参与条件区域判定（pre-commit 组 10）。
+
+## Q1: 调研 — 业界最佳实践 / Anthropic 决策链 / memory 历史教训
+参考：第一性原理 + 注入即验证（本夹具语境，无外部最佳实践可引）。
+
+## Q2: 范围 — 正确的最简方案
+做什么（逐条精确路径）：
+- .claude/bypass.log — 夹具注入的 domain-neutral 路径修改（豁免对象）
+
+不做什么（含文件路径）：
+- 不改 scripts/pre-commit-check.sh
+
+## Q3: 验收 — 入口 → 交互 → 结果
+入口：git commit（pre-commit 组 10）
+处理：G10 取 brief 声明的条件区域 D，domain-neutral 路径走豁免分支
+结果：组 10 区块无 ❌ 且打印豁免点名行
+
+## 架构层
+N/A（治理层夹具，不触五层依赖）
+
+## Done 标准
+- [x] domain-neutral 路径不计入条件区域不匹配（verify: 组 10 区块出现豁免点名行）
+EOF
+  git -C "$CLONE" add .claude/bypass.log ".claude/task-briefs/${TODAY}-m9-fixture-g10exempt-dm.md"
+}
+
+# 场景 b（核心）: **区域外真代码** + brief 声明条件区域 D ⇒ 期望**红且点名该文件**。
+#   证明修的是「domain-neutral 路径豁免」而不是「放宽整条闸」——若 G10 因本卡改动而整体放宽，本场景不会红。
+#   探针取**真实在库**文件（派单件原举的 src/legacy/foo.js / tools/deploy.py 实测不存在，已弃用）：
+#   修改其一行即进暂存集。路径实测 A/B/C/D 四区**零命中**（见头部 [区域实测]，脚本真实 sed 管线回放判定）。
+G10REGION_FILE="observer-adapters/claude-code-hook/hook.py"   # 实测存在且 tracked，58 行
+inj_g10region() {
+  printf '\n# %s g10region (区域外真代码: 不在 A/B/C/D 任一区域)\n' "$MARK" >> "$CLONE/$G10REGION_FILE"
+  cat > "$CLONE/.claude/task-briefs/${TODAY}-m9-fixture-g10region-outside.md" <<EOF
+# Task Brief — 夹具场景 G10region（区域外真代码，期望仍红）
+
+#CRITERIA: D
+
+## Q0: 定位 — 项目拼图 + 文件审计
+夹具占位：条件区域外文件必须仍被判红。
+
+## Q1: 调研 — 业界最佳实践 / Anthropic 决策链 / memory 历史教训
+参考：第一性原理 + 注入即验证（本夹具语境，无外部最佳实践可引）。
+
+## Q2: 范围 — 正确的最简方案
+做什么（逐条精确路径）：
+- $G10REGION_FILE — 夹具修改的区域外真代码（不属 A/B/C/D 任一区域）
+
+不做什么（含文件路径）：
+- 不改 scripts/pre-commit-check.sh
+
+## Q3: 验收 — 入口 → 交互 → 结果
+入口：git commit（pre-commit 组 10）
+处理：G10 取 brief 声明的条件区域 D，逐文件比对映射区域
+结果：组 10 区块报 ❌ 并点名 $G10REGION_FILE
+
+## 架构层
+N/A（治理层夹具，不触五层依赖）
+
+## Done 标准
+- [x] 区域外文件被点名报红（verify: 组 10 区块 ❌ 明细含 $G10REGION_FILE）
+EOF
+  git -C "$CLONE" add "$G10REGION_FILE" ".claude/task-briefs/${TODAY}-m9-fixture-g10region-outside.md"
+}
+
+# 场景 c（⑥ 回归锁）: 暂存 **tests/** 下的文件 + brief 声明条件区域 D ⇒ 期望**绿**。
+#   ⑥（CTO 2026-09-27 裁定）把 `tests/**` 补进 D.glob 之前，tests/** 不在 A/B/C/D 任一区域
+#   ⇒ 本夹具自身进某 PR 变更集时，该 PR 的 G10 会因本文件报红（本 PR 实测）。本场景把该结论锁进 CI。
+#   注入对象 = 本夹具**自身路径**（最贴近真实场景：本卡第④件正是改这个文件）。
+G10TESTS_FILE="tests/control-tower/precommit-groups-injection.test.sh"
+inj_g10tests() {
+  printf '\n# %s g10tests (tests/** 区域覆盖回归锁)\n' "$MARK" >> "$CLONE/$G10TESTS_FILE"
+  cat > "$CLONE/.claude/task-briefs/${TODAY}-m9-fixture-g10tests-covered.md" <<EOF
+# Task Brief — 夹具场景 G10tests（tests/** 落 D 区，期望绿）
+
+#CRITERIA: D
+
+## Q0: 定位 — 项目拼图 + 文件审计
+夹具占位：tests/** 必须落在条件区域 D（⑥ 回归锁）。
+
+## Q1: 调研 — 业界最佳实践 / Anthropic 决策链 / memory 历史教训
+参考：第一性原理 + 判据数据须与自身描述自洽（D.description「所有源文件(兜底)」）。
+
+## Q2: 范围 — 正确的最简方案
+做什么（逐条精确路径）：
+- $G10TESTS_FILE — 夹具修改的 tests/** 文件（须落 D 区）
+
+不做什么（含文件路径）：
+- 不改 scripts/pre-commit-check.sh
+
+## Q3: 验收 — 入口 → 交互 → 结果
+入口：git commit（pre-commit 组 10）
+处理：G10 取 brief 声明的条件区域 D，逐文件比对映射区域
+结果：组 10 区块无 ❌（tests/** 落 D）
+EOF
+  git -C "$CLONE" add "$G10TESTS_FILE" ".claude/task-briefs/${TODAY}-m9-fixture-g10tests-covered.md"
+}
+
 inj_g12() {
   cat > "$CLONE/scripts/m9-fixture-g12.sh" <<EOF
 #!/bin/bash
@@ -379,16 +536,33 @@ inj_g13() {
 # 通用约定：场景名 $name 若未红，则尝试 assert_${name}_structural；不存在该函数 → NOT_RED（判失败）。
 # 每个 assert 必须**用当前脚本里的真实模式**做探针（从副本 pre-commit-check.sh 抽模式），
 # 抽出失败即返回 1（宁可判红，不得用"我记得"当理由）。
+# 组 10 结构性理由：G10/G11 是否**结构性不可达**（不可达时不得判 NOT_RED 了事）。
+# A3 补修（D1023, 2026-09-27）——**探针对象同步**:
+#   旧探针以 CHANGED_FILES/STAGED_FILES 为对象（A3 前这两个变量零赋值 ⇒ "使用存在但从未定义"
+#   ⇒ 归因成立）。A3 已把真变量改为 STAGED_ALL，旧对象**已陈旧**：其"定义=0 且使用>0"判定
+#   在 A3 后不再对应任何真实变量，若继续沿用 = 给 NOT_RED 发一张"结构性不可达"的假豁免证
+#   （误授 STRUCTURAL_NOT_RED 的地雷）。现按真变量重写，判据两条（任一成立才算结构性不可达）:
+#     (a) G10 区块引用了 $STAGED_ALL，但全脚本从未定义它（使用存在而定义缺失 → 恒空 → 恒走 soft_pass）
+#     (b) G10 区块**零引用**变更集变量（该段不读任何暂存文件 → 无论内容如何都恒绿）
+#   两条都用**副本脚本的真实文本**做探针；抽取/计数失败一律返回 1（宁可判 NOT_RED，不得口头豁免）。
 assert_g10_structural() {
   local pc="$CLONE/scripts/pre-commit-check.sh"
   local defs usages
-  # 定义数：`CHANGED_FILES=` / `STAGED_FILES=` / `export ...=` 一律算定义
-  defs="$(grep -cE '(^|[[:space:]])(export[[:space:]]+)?(CHANGED_FILES|STAGED_FILES)=' "$pc" 2>/dev/null || true)"
-  usages="$(grep -cE '\$(CHANGED_FILES|\{CHANGED_FILES\}|STAGED_FILES|\{STAGED_FILES\})' "$pc" 2>/dev/null || true)"
+  # 定义数：`STAGED_ALL=` / `export STAGED_ALL=` 一律算定义（真实变量，A3 落地于 :313）
+  defs="$(grep -cE '(^|[[:space:]])(export[[:space:]]+)?STAGED_ALL=[^=]' "$pc" 2>/dev/null || true)"
+  # G10 区块（组 10/13 行 → 组 12/13 行）内对 $STAGED_ALL / ${STAGED_ALL} 的引用数
+  usages="$(awk '
+    f && index($0, "── 组 12/13") { exit }
+    index($0, "── 组 10/13") { f = 1 }
+    f
+  ' "$pc" | grep -cE '\$\{?STAGED_ALL\}?' || true)"
   defs="${defs//[^0-9]/}"; usages="${usages//[^0-9]/}"
-  echo "    [structural g10] pre-commit-check.sh: 定义 ${defs:-0} 处 / 使用 ${usages:-0} 处"
+  echo "    [structural g10] 真变量 STAGED_ALL: 全脚本定义 ${defs:-0} 处 / 组 10 区块引用 ${usages:-0} 处"
   if [ "${defs:-0}" -eq 0 ] && [ "${usages:-0}" -gt 0 ]; then
-    return 0   # 使用存在但从未定义 → G10/G11 判定恒走 soft_pass（结构性不可达）
+    return 0   # (a) 使用存在但从未定义 → 变更集恒空 → G10/G11 判定恒走 soft_pass
+  fi
+  if [ "${usages:-0}" -eq 0 ]; then
+    return 0   # (b) G10 区块不读变更集 → 结构性不可达
   fi
   return 1
 }
@@ -430,6 +604,8 @@ assert_g9_structural() {
 # ═══ 场景执行 ═══
 NAMES=(); RCS=(); T_RUN=(); T_ALL=(); STATUS=(); DETAIL=()
 RED_N=0; STRUCT_N=0; NOTRED_N=0; BASE_STATUS="ok"; HOST_STATE=0
+# D1023: 期望绿场景（g10exempt）计数器 + 判别性探针触发位
+GREEN_N=0; GREENFAIL_N=0; EXEMPT_GREEN=0
 PROBE_RC="n/a"; PROBE_STATUS="not_run"
 
 run_scenario() {
@@ -482,6 +658,28 @@ run_scenario() {
       BASE_STATUS="FAIL"
       echo "   [BASELINE_FAIL] 全部 ❌ 行:"
       printf '%s\n' "$all_fails" | sed 's/^/     /'
+    fi
+  elif [ "$expect" = "green_g10" ]; then
+    # D1023 场景 a 专用口径: 只判「组 10/13」区块（G10+G11 同区块），且必须看到**判定真的跑了**的证据。
+    #   仅"区块无 ❌"不够 —— 无 brief / 无 #CRITERIA / 无映射区域 三条跳过路径同样是"没红"（另一种假绿）。
+    #   三条件齐备才认绿: (i) 区块无 ❌ (ii) 出现 `条件区域检查通过 (D` (iii) 豁免计数 N>0（豁免确实生效）。
+    local g10_pass g10_exempt_n g10_exempt_lines
+    g10_pass="$(block_of "$label" "$out" | strip_ansi | grep -F '条件区域检查通过' | head -1 | sed 's/^[[:space:]]*//' || true)"
+    g10_exempt_n="$(block_of "$label" "$out" | strip_ansi | grep -oE 'domain-neutral 豁免 [0-9]+ 项' | head -1 | grep -oE '[0-9]+' || true)"
+    g10_exempt_n="${g10_exempt_n//[^0-9]/}"
+    g10_exempt_lines="$(block_of "$label" "$out" | strip_ansi | grep -cF 'domain-neutral 路径豁免' || true)"
+    g10_exempt_lines="${g10_exempt_lines//[^0-9]/}"
+    if [ -z "$fails" ] && printf '%s' "$g10_pass" | grep -qF '条件区域检查通过 (D' && [ "${g10_exempt_n:-0}" -gt 0 ]; then
+      st="GREEN_CONFIRMED"
+      GREEN_N=$((GREEN_N + 1))
+      EXEMPT_GREEN=1
+      detail="组 10 区块无 ❌; ${g10_pass}; 豁免点名行=${g10_exempt_lines:-0}"
+    else
+      st="GREEN_FAIL"
+      GREENFAIL_N=$((GREENFAIL_N + 1))
+      detail="rc=$rc; 区块 ❌='${fails:-<无>}'; pass 行='${g10_pass:-<无>}'; 豁免计数='${g10_exempt_n:-<无>}'"
+      echo "   [GREEN_FAIL] 组 10 区块原文（末 12 行）:"
+      block_of "$label" "$out" | strip_ansi | tail -12 | sed 's/^/     /'
     fi
   else
     if [ "$has_fail" -eq 1 ]; then
@@ -537,20 +735,83 @@ if [ "$HOST_STATE" -eq 1 ]; then
 fi
 echo ""
 
+# 期望口径分配（单一事实源）: green_g10 = 只判「组 10/13」区块且必须看到"判定真跑了"的证据；
+#   其余 = 期望该组区块出现 ❌。SCEN 与 RC 判据都从这里取，避免两处漂移。
+expect_for() {
+  case "$1" in
+    g10exempt|g10tests) echo "green_g10" ;;
+    *) echo "red" ;;
+  esac
+}
+
 if [ "${SYNO_PRE_COMMIT_INJECT_FULL:-0}" = "1" ]; then
-  SCEN="g1 g2 g3 g4 g5 g6 g7 g8 g9 g10 g12 g13"
-  echo "[MODE] FULL：跑全部 12 组（组 11 不存在，不跑）"
+  SCEN="g1 g2 g3 g4 g5 g6 g7 g8 g9 g10 g12 g13 g10exempt g10region g10tests"
+  echo "[MODE] FULL：跑全部 12 组 + 3 条 D1023 反例（组 11 不存在，不跑）"
 else
-  SCEN="g1 g2 g7 g12"
-  echo "[MODE] SAMPLED：抽检 4 组（1/2/7/12）——全量请设 SYNO_PRE_COMMIT_INJECT_FULL=1"
+  SCEN="g1 g2 g7 g12 g10exempt g10region g10tests"
+  echo "[MODE] SAMPLED：抽检 4 组（1/2/7/12）+ 3 条 D1023 反例（g10exempt/g10region/g10tests）——全量请设 SYNO_PRE_COMMIT_INJECT_FULL=1"
 fi
+# 期望绿场景数（RC 判据用它，避免"SCEN 被改坏后判据消失"）
+GREEN_EXPECTED=0
+for _s in $SCEN; do [ "$(expect_for "$_s")" = "green_g10" ] && GREEN_EXPECTED=$((GREEN_EXPECTED + 1)); done
+echo "[D1023] 本模式期望: 红场景 $(($(echo $SCEN | wc -w | tr -d ' ') - GREEN_EXPECTED)) / 绿场景 ${GREEN_EXPECTED}"
 echo ""
 
 for s in $SCEN; do
   eval "lbl=\$LBL_$s"
-  run_scenario "$s" "$lbl" "red"
+  run_scenario "$s" "$lbl" "$(expect_for "$s")"
 done
 
+# ═══ 判别性探针（场景 g10exempt 专用）: 删掉豁免分支 ⇒ 同一注入必须转红 ═══
+#   这不是 grep 型静态判据: 探针在副本里**物理删除** pre-commit-check.sh 的
+#   D1023-DOMNEUTRAL-EXEMPT-BEGIN..END 区间（只含"domain-neutral 路径 → continue"那一段；删后 bash -n 仍 rc=0，
+#   已实测），然后重跑**完全相同的注入**。期望: 组 10 区块出现 ❌（原本绿的同一个注入转红）。
+#   fail-closed 三关（任一不过即判红）: 补丁未生效 / 删后语法坏 / 删后仍未红。
+PROBE2_RC="n/a"; PROBE2_STATUS="not_run"; EXEMPT_PROBE_OK=0
+if [ "$EXEMPT_GREEN" -eq 1 ]; then
+  echo "── 判别性探针: 删掉副本内 D1023-DOMNEUTRAL-EXEMPT 区间后重跑场景 g10exempt 同一注入 ──"
+  reset_clone
+  inj_g10exempt
+  sed -i.bak '/D1023-DOMNEUTRAL-EXEMPT-BEGIN/,/D1023-DOMNEUTRAL-EXEMPT-END/d' "$CLONE/scripts/pre-commit-check.sh"
+  if grep -qF 'domain-neutral 路径豁免，不参与条件区域判定' "$CLONE/scripts/pre-commit-check.sh"; then
+    PROBE2_STATUS="PATCH_FAILED"
+    echo "   ❌ 探针补丁未生效（豁免分支语句仍在副本里，区间哨兵或被改）→ 无法证明判别力，判红"
+  elif ! bash -n "$CLONE/scripts/pre-commit-check.sh"; then
+    PROBE2_STATUS="PATCH_BROKE_SYNTAX"
+    echo "   ❌ 删除区间后副本 pre-commit-check.sh 语法坏（bash -n 非 0）→ 探针无效，判红"
+  else
+    ( cd "$CLONE" && GITHUB_ACTIONS=true SYNO_CI=1 bash scripts/pre-commit-check.sh ) >"$TMP/out.g10exempt.nobranch.log" 2>&1
+    PROBE2_RC=$?
+    PROBE2_FAILS="$(fail_lines "$LBL_g10exempt" "$TMP/out.g10exempt.nobranch.log" 2 || true)"
+    if [ -n "$PROBE2_FAILS" ]; then
+      PROBE2_STATUS="RED_CONFIRMED"; EXEMPT_PROBE_OK=1
+      echo "   同一注入在删掉豁免分支后转红（判别力确认，rc=$PROBE2_RC）:"
+      printf '%s\n' "$PROBE2_FAILS" | sed 's/^/     /'
+    else
+      PROBE2_STATUS="NOT_RED"
+      echo "   ❌ 删掉豁免分支后组 10 区块仍未红（rc=$PROBE2_RC）→ 场景 a 的绿不是该分支造成的，判红"
+      strip_ansi < "$TMP/out.g10exempt.nobranch.log" | grep -F 'domain-neutral' | head -3 | sed 's/^/     /' || true  # swallow-ok: 诊断型探测（无命中即无输出），判定已由上方 NOT_RED 分支给出
+    fi
+  fi
+  # 刻意**不** reset_clone: 收尾残留断言的 c) 面要求副本内仍有标记暂存，本探针的注入正好满足
+  echo ""
+fi
+
+# ═══ 场景 g10region 的"点名"断言（b 的核心口径: 红了还不够，必须点名那个区域外文件）═══
+#   只判"区块有 ❌"不足以证明判别力 —— ❌ 可能来自别的文件（如夹具 brief 自己）或被别的规则命中。
+#   这里直接读该场景日志，要求 ❌ 明细里出现 `<被注入的区域外路径> (不在条件 D` 这一条。
+G10REGION_NAMED=0
+if [ -f "$TMP/out.g10region.log" ]; then
+  if block_of "$LBL_g10region" "$TMP/out.g10region.log" | strip_ansi | grep -qF "$G10REGION_FILE (不在条件 D"; then
+    G10REGION_NAMED=1
+  fi
+fi
+if [ "$G10REGION_NAMED" -eq 1 ]; then
+  echo "[D1023] g10region 点名确认: ❌ 明细含 '$G10REGION_FILE (不在条件 D'"
+else
+  echo "[D1023] ❌ g10region 未点名 $G10REGION_FILE → 判别性不足，判红"
+fi
+echo ""
 # ═══ [b 面登记] b 面基线演进: 6 →（M9/#741）7 →（D945 本卡）8 ═══
 #   判据: b 面 = 仓库内命中 $MARK 的文件数 ≤ 基线；基线外的命中 = 泄漏（判红）。
 #   b 面命中**只允许是引用该标记的文档**，实测 8 条（逐条登记）:
@@ -610,16 +871,26 @@ RC=0
 [ "$BASE_STATUS" = "FAIL" ] && RC=1
 [ "$NOTRED_N" -gt 0 ] && RC=1
 [ "$RESIDUE_FAIL" -ne 0 ] && RC=1
+# D1023: 场景 a 必须**跑到且绿**（SCEN 清单被改坏/被跳过 = 判据消失 → fail-closed 判红），
+#        且其判别性探针必须 RED_CONFIRMED（绿必须来自豁免分支本身）。
+# D1023: 期望绿场景必须**跑到且全绿**（SCEN 清单被改坏/被跳过 = 判据消失 → fail-closed 判红），
+#        且计数必须等于 expect_for 推出的期望数；判别性探针必须 RED_CONFIRMED（绿必须来自豁免分支本身）。
+[ "$GREEN_N" -eq 0 ] && { RC=1; echo "   [D1023] 无任何 GREEN_CONFIRMED 场景 → 判红（判别判据缺失）"; }
+[ "$GREEN_N" -ne "$GREEN_EXPECTED" ] && { RC=1; echo "   [D1023] 期望绿场景数 ${GREEN_EXPECTED} ≠ 实际 GREEN_CONFIRMED ${GREEN_N} → 判红"; }
+[ "$GREENFAIL_N" -gt 0 ] && RC=1
+[ "$EXEMPT_PROBE_OK" -ne 1 ] && { RC=1; echo "   [D1023] 判别性探针未确认（exempt_probe=$PROBE2_STATUS rc=$PROBE2_RC）→ 判红（无「删掉即报红」的判别力）"; }
+[ "$G10REGION_NAMED" -ne 1 ] && RC=1   # b 场景必须点名那个区域外文件（信息已在上方打印）
+[ "$G10REGION_FILE" = "" ] && { RC=1; echo "   [D1023] G10REGION_FILE 为空 → b 场景注入对象丢失，判红"; }
 if [ "${SYNO_INJECT_REQUIRE_CLEAN_BASELINE:-0}" = "1" ] && [ "$BASE_STATUS" = "host_state" ]; then
   RC=1
   echo "   [STRICT] SYNO_INJECT_REQUIRE_CLEAN_BASELINE=1 且基线=HOST_STATE → 判红（严格守门模式）"
 fi
 
-echo "GATE_INJECTION_SUMMARY: scenarios=${#NAMES[@]} red_confirmed=$RED_N structural_not_red=$STRUCT_N not_red=$NOTRED_N baseline=$BASE_STATUS probe=$PROBE_STATUS(rc=$PROBE_RC) residue_code=$CODE_RESIDUE residue_repo=$REPO_RESIDUE shim=$SHIM_USED"
+echo "GATE_INJECTION_SUMMARY: scenarios=${#NAMES[@]} red_confirmed=$RED_N structural_not_red=$STRUCT_N not_red=$NOTRED_N green_confirmed=$GREEN_N green_fail=$GREENFAIL_N baseline=$BASE_STATUS probe=$PROBE_STATUS(rc=$PROBE_RC) exempt_probe=$PROBE2_STATUS(rc=$PROBE2_RC) residue_code=$CODE_RESIDUE residue_repo=$REPO_RESIDUE shim=$SHIM_USED g10region_named=$G10REGION_NAMED"
 if [ "$RC" -eq 0 ]; then
-  echo "✅ 注入自测结果：期望红组全部 RED_CONFIRMED，残留断言满足，baseline=${BASE_STATUS}（结论归自验/独立审计，本夹具只出证据）"
+  echo "✅ 注入自测结果：期望红组全部 RED_CONFIRMED、期望绿场景（g10exempt）GREEN_CONFIRMED、判别性探针 RED_CONFIRMED，残留断言满足，baseline=${BASE_STATUS}（结论归自验/独立审计，本夹具只出证据）"
   [ "$BASE_STATUS" = "host_state" ] && echo "   ⚠️ 注意：基线非天然绿（宿主 /tmp marker 绝对路径读取，已由探针因果确认）——CI 上新 runner 应为 BASELINE_OK"
 else
-  echo "❌ 注入自测未达期望：not_red=$NOTRED_N baseline=$BASE_STATUS probe=$PROBE_STATUS residue_fail=$RESIDUE_FAIL"
+  echo "❌ 注入自测未达期望：not_red=$NOTRED_N green_fail=$GREENFAIL_N exempt_probe=$PROBE2_STATUS baseline=$BASE_STATUS probe=$PROBE_STATUS residue_fail=$RESIDUE_FAIL"
 fi
 exit "$RC"
