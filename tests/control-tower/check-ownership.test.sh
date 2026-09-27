@@ -578,8 +578,7 @@ fi
 check_path_field() {  # $1=path $2=desc
   local _p="$1" _d="$2"
   local _raw _f2 _f3
-  # swallow-ok: 仅吞 stderr（噪声）；本函数随后断言第 2 字段内容，工具真失败 → 字段为空 → 该断言必红
-  _raw="$("$PYBIN" "$TOOL" "$_p" --yaml "$CFG" 2>/dev/null | awk -F'\t' '/^(mac|win|k3)[[:space:]]/{print; exit}')"
+  _raw="$("$PYBIN" "$TOOL" "$_p" --yaml "$CFG" 2>/dev/null | awk -F'\t' '/^(mac|win|k3)[[:space:]]/{print; exit}')"  # swallow-ok: 仅吞 stderr 噪声；本函数随后断言第 2 字段，工具真失败→字段空→必红
   _f2="$(printf '%s' "$_raw" | awk -F'\t' '{print $2}')"
   _f3="$(printf '%s' "$_raw" | awk -F'\t' '{print $3}')"
   if [ "$_f2" = "$_p" ]; then
@@ -594,8 +593,7 @@ check_path_field() {  # $1=path $2=desc
 }
 # 取一个真实、命中「兜底→win 基线领地」的路径（非写死清单：由配置自身解析得出）
 BASE_PATH="$(awk -F'\t' '/^(mac|win|k3)[[:space:]]/{print $2; exit}' <(
-  # swallow-ok: 同上，仅择路用；取不到 win 行时下方 BASE_PATH 回退 src/server.ts 并由 10c2 两条断言把关
-  "$PYBIN" "$TOOL" src/server.ts src/sentinel/runner.ts --yaml "$CFG" 2>/dev/null | awk -F'\t' '/^win[[:space:]]/{print; exit}'
+  "$PYBIN" "$TOOL" src/server.ts src/sentinel/runner.ts --yaml "$CFG" 2>/dev/null | awk -F'\t' '/^win[[:space:]]/{print; exit}'  # swallow-ok: 仅择路探测；取不到 win 行则由 10c2 两条断言把关（BASE_PATH 回退）
 ) 2>/dev/null || true)"
 [ -z "$BASE_PATH" ] && BASE_PATH="src/server.ts"
 check_path_field "$BASE_PATH" "含注记行：注记不得混入路径"
@@ -604,8 +602,7 @@ check_path_field "src/sentinel/runner.ts" "无注记行：第2字段仍须纯净
 MUT_TOOL="$TMPD/mut-inline-mark.py"
 sed 's|print("%s\\t%s\\t%s" % (owner, path, mark))|print("%s %s%s" % (owner, path, mark))|' "$TOOL" > "$MUT_TOOL" 2>/dev/null || true
 if grep -q 'print("%s %s%s" % (owner, path, mark))' "$MUT_TOOL" 2>/dev/null; then
-  # swallow-ok: 变异体若语法坏则 stderr 被吞，但紧随的 if 会判「变异后字段仍等于路径」⇒ 必红（不假绿）
-  MUT_F2="$("$PYBIN" "$MUT_TOOL" "$BASE_PATH" --yaml "$CFG" 2>/dev/null | awk -F'\t' '/^(mac|win|k3)[[:space:]]/{print $2; exit}')"
+  MUT_F2="$("$PYBIN" "$MUT_TOOL" "$BASE_PATH" --yaml "$CFG" 2>/dev/null | awk -F'\t' '/^(mac|win|k3)[[:space:]]/{print $2; exit}')"  # swallow-ok: 变异体语法坏则字段空→紧随 if 判「仍等于路径」必红（不假绿）
   if [ "$MUT_F2" != "$BASE_PATH" ]; then
     pass "10c2 判别性: 变异「注记拼回 path」后第2字段不再等于路径（判据真在读字段）"
   else
