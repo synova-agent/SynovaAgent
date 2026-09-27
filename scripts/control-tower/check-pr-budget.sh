@@ -19,6 +19,30 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   旁路封堵（DS3）：**纯删除/重命名**（AM_SET 空）命中 ❌ 拒绝名单 → 直接 FAIL（exit 1）——
 #   ❌ = 绝不豁免，单人一次改名/删件即可改门禁，故不随「纯出库」放行。
 #
+# D1028-A2v2（CTO 本轮裁定，替代「一刀切硬拦」）—— `## 死代码清理声明` 逃生口:
+#   动机: 合法死代码清理 PR（删死文件 + 无其他改动）会被上一版的纯 D/R 硬拦**一刀切拦死**。
+#   裁定: 「纯 D/R 无条件 FAIL」**保留**，但开一个受控逃生口 —— brief 里写
+#         `## 死代码清理声明`（逐条路径 + 铁律 37 依据）⇒ 放行 + ⚠️ 警告 + 计数。
+#   语义（三条同时成立才生效）:
+#     a) ≥1 条条目行（段内 `- <路径> — <依据>`）；b) 声明路径集 ⊇ 本次**实际命中的 ❌ 拒绝名单
+#     （`OUTBOUND_DENY_RE`）D/R 路径集**（缺一条即不生效 —— 防「写一条洗全场」）；c) 至少一条依据
+#     非空（无理由不生效；含通配符的条目一律不作有效条目 —— 必须逐条精确路径）。
+#   **收紧（CTO 本轮裁定）**: `OUTBOUND_DENY_EXACT` 两条（ownership.yaml / AUDIT-PROTOCOL.md）
+#     **不受声明放行** —— 逃生口动机是铁律 37 死代码清理（代码域），删治理文件不是死代码清理；
+#     命中即照旧 FAIL。要动这两条须独立卡 + CTO 批复，不走「清理声明」这道门。
+#   **放行 ≠ 豁免**: 生效只解除旁路封堵，这些路径**照常计入 N_FILES**（仍受 `--max-files` 约束，
+#     13 件声明齐全照样 exit 1）—— 逃生口解的是「一刀切」，不是预算。
+#   不生效 ⇒ 维持硬拦（❌ + FAILED=1），并打印**可直接粘贴**的精确声明行 + 点名缺失路径（修复指引）。
+#   声明来源链（**脚本内自解析**；禁把 `## 出库声明` 那类 PR 正文做成硬条件 —— pre-commit 读不到 PR
+#   正文，设为硬条件 = 假接线，违铁律 0-2）:
+#     ① `--decl-file <path>` ② `$SYNO_DR_DECL_FILE` ③ brief 链（**取并**，与 pre-commit 的
+#        today_files_by_prefix 同口径）:
+#        `.claude/current-brief.$DSH_SESSION_ID`（新鲜才采用）∪ `.claude/current-brief`（新鲜才采用）
+#        ∪ `.claude/task-briefs/` 当日窗口（`^YYYY-MM-DD-` ±1 天，且 mtime 非陈旧）；
+#        全不可得 ⇒ 视为「无声明」。
+#     ①/② 是显式注入缝（测试 + CI）: 给出但不可读 ⇒ 视为「无声明」且**不回退** brief 链
+#     （保证注入缝决定性）；留空等价于未给出。
+#
 # 契约（铁律 47）:
 #   @input  — 选项:
 #               --base <ref>        对比基线（默认 origin/main）
@@ -29,6 +53,9 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #               --diff-status "<txt>" D1028 新增注入缝: 原样喂 `git diff --name-status`
 #                                   文本，每行 `X<TAB>path`（R/C 为 `R100<TAB>old<TAB>new`），
 #                                   取全量含 D → 可测纯删除/重命名豁免分支
+#               --decl-file <path>  D1028-A2v2「死代码清理声明」注入缝（测试/CI 用）。
+#                                   显式给出即权威: 文件不可读 ⇒ 视为「无声明」且**不回退**
+#                                   brief 链；留空等价于未给出
 #               --quiet             只输出结论行
 #             （--diff-status 优先于 --files）
 #   @output — stdout 逐项 ✅/⚠️/❌ 点名: ① 文件数（豁免生效时为出库豁免行） ② 域（调
@@ -75,6 +102,7 @@ MAX_BEHIND=20
 FILES_OVERRIDE=""
 DIFF_STATUS=""
 DIFF_STATUS_SET=0
+DECL_FILE=""
 QUIET=0
 
 while [ $# -gt 0 ]; do
@@ -84,6 +112,7 @@ while [ $# -gt 0 ]; do
     --max-behind)  MAX_BEHIND="${2:-}"; shift 2 ;;
     --files)       FILES_OVERRIDE="${2:-}"; shift 2 ;;
     --diff-status) DIFF_STATUS="${2:-}"; DIFF_STATUS_SET=1; shift 2 ;;
+    --decl-file)   DECL_FILE="${2:-}"; shift 2 ;;
     --quiet)       QUIET=1; shift ;;
     *) echo "❌ check-pr-budget: 未知参数 $1" >&2; exit 2 ;;
   esac
@@ -137,7 +166,11 @@ else
 fi
 
 # ── S1 派生三集合（R 记双侧 old+new；D 记 1、R 记 1 用新路径、A/M/C 各记 1）──
-ALL_PATHS=""
+# D1028-A2v2: ALL_PATHS → **状态标签集** ALL_TAGGED（`<X><TAB>path`，X = name-status 首字母）。
+#   条目数与旧 ALL_PATHS 逐条等价（R/C 双侧各记 1）；带标签是为了 S2 能区分
+#   「D/R 路径」（死代码清理声明的覆盖判据）与 A/M/C 路径（ⓐ 判据）。
+TAB=$'\t'; NL=$'\n'
+ALL_TAGGED=""
 AM_PATHS=""
 COUNT_PATHS=""
 N_DEL=0
@@ -147,41 +180,207 @@ while IFS=$'\t' read -r _st _p1 _p2; do
   [ -z "$_st" ] && continue
   if [ -z "$_p1" ]; then _p1="$_st"; _st="M"; fi   # 容错: 无 TAB 的行按 A/M 记（注入缝健壮性）
   [ -z "$_p1" ] && continue
+  _s1="${_st:0:1}"
   case "$_st" in
     D*)
-      ALL_PATHS="${ALL_PATHS}${_p1}
-"
-      COUNT_PATHS="${COUNT_PATHS}${_p1}
-"
+      ALL_TAGGED="${ALL_TAGGED}${_s1}${TAB}${_p1}${NL}"
+      COUNT_PATHS="${COUNT_PATHS}${_p1}${NL}"
       N_DEL=$((N_DEL + 1)) ;;
     R*)
-      ALL_PATHS="${ALL_PATHS}${_p1}
-${_p2}
-"
-      COUNT_PATHS="${COUNT_PATHS}${_p2}
-"
+      ALL_TAGGED="${ALL_TAGGED}${_s1}${TAB}${_p1}${NL}${_s1}${TAB}${_p2}${NL}"
+      COUNT_PATHS="${COUNT_PATHS}${_p2}${NL}"
       N_REN=$((N_REN + 1)) ;;
     C*)
-      ALL_PATHS="${ALL_PATHS}${_p1}
-${_p2}
-"
-      COUNT_PATHS="${COUNT_PATHS}${_p2}
-"
-      AM_PATHS="${AM_PATHS}${_p2}
-" ;;
+      ALL_TAGGED="${ALL_TAGGED}${_s1}${TAB}${_p1}${NL}${_s1}${TAB}${_p2}${NL}"
+      COUNT_PATHS="${COUNT_PATHS}${_p2}${NL}"
+      AM_PATHS="${AM_PATHS}${_p2}${NL}" ;;
     *)
-      ALL_PATHS="${ALL_PATHS}${_p1}
-"
-      COUNT_PATHS="${COUNT_PATHS}${_p1}
-"
-      AM_PATHS="${AM_PATHS}${_p1}
-" ;;
+      ALL_TAGGED="${ALL_TAGGED}${_s1}${TAB}${_p1}${NL}"
+      COUNT_PATHS="${COUNT_PATHS}${_p1}${NL}"
+      AM_PATHS="${AM_PATHS}${_p1}${NL}" ;;
   esac
 done < <(printf '%s\n' "$STATUS_TEXT")
-ALL_N="$(_count_lines "$ALL_PATHS")"; ALL_N="${ALL_N:-0}"
+ALL_N="$(_count_lines "$ALL_TAGGED")"; ALL_N="${ALL_N:-0}"
 AM_N="$(_count_lines "$AM_PATHS")"; AM_N="${AM_N:-0}"
 
-# ── S2 路径级出库豁免: ⓐ（AM_SET 空）∧ ⓑ（ALL_PATHS 全落 ✅ 且零命中 ❌）──
+# ═══ S1.5 D1028-A2v2 死代码清理声明: 来源链解析 + 段落解析 ═══
+# **惰性**: 只在真有 D/R 命中 ❌ 拒绝名单（S2.5，可能触发旁路封堵）时才解析 —— 正常 PR 零开销
+#   （briefs 目录数百份文件，每次 commit 都全扫 = pre-commit 预算事故，V4.5.1 教训）。
+# 来源（①/② 为显式注入缝 ⇒ 给出即权威，不可读即「无声明」且不回退；③ 为 brief 链）:
+#   ① --decl-file  ② $SYNO_DR_DECL_FILE
+#   ③ .claude/current-brief.$DSH_SESSION_ID（新鲜才采用）∪ .claude/current-brief（新鲜才采用）
+#      ∪ .claude/task-briefs/ 当日窗口（±1 天，与 pre-commit-check.sh 的 DAY_WINDOW_RE 同口径；多份取并）
+ROOT_DECL=""
+DAY_WINDOW_RE=""
+_DECL_FRESH_SET=""
+_DECL_FRESH_NOFILTER=0
+
+_decl_fresh_briefs() {  # 一次性 find（-mtime -2 = 2 天内新鲜）→ 全局 _DECL_FRESH_SET（零 per-file 子进程）
+  local _dir="$ROOT_DECL/.claude/task-briefs" _out _x
+  _DECL_FRESH_SET="|"
+  [ -d "$_dir" ] || return 0            # 无 briefs 目录 → 空集（无需 find，也不产生 stderr 噪音）
+  if ! _out="$(find "$_dir" -maxdepth 1 -name '*.md' -mtime -2)"; then
+    _DECL_FRESH_NOFILTER=1              # find 不可用 → 退化为纯日期窗口（不因环境缺工具静默关死逃生口）
+    return 0
+  fi
+  while IFS= read -r _x; do
+    [ -z "$_x" ] && continue
+    _DECL_FRESH_SET="${_DECL_FRESH_SET}${_x}|"
+  done < <(printf '%s\n' "$_out")
+  return 0
+}
+_decl_brief_in_window() {  # $1=brief 路径 → 0 = 文件名日期在当日窗口(±1 天) 且 mtime 非陈旧
+  local b
+  [ -f "$1" ] || return 1
+  b="${1##*/}"
+  [[ "$b" =~ $DAY_WINDOW_RE ]] || return 1
+  [ "$_DECL_FRESH_NOFILTER" -eq 1 ] && return 0
+  case "$_DECL_FRESH_SET" in *"|$1|"*) return 0 ;; esac
+  return 1
+}
+
+DECL_SRC_FILES=""
+DECL_SRC_DESC=""
+DECL_SRC_N=0
+_decl_add_src() {  # $1=文件 $2=来源标签（去重追加）
+  local f="$1" label="$2"
+  [ -f "$f" ] || return 1
+  if [ "$DECL_SRC_N" -gt 0 ] && printf '%s\n' "$DECL_SRC_FILES" | grep -Fxq -- "$f"; then return 0; fi
+  DECL_SRC_FILES="${DECL_SRC_FILES}${f}${NL}"
+  DECL_SRC_DESC="${DECL_SRC_DESC}${label}(${f}) "
+  DECL_SRC_N=$((DECL_SRC_N + 1))
+  return 0
+}
+
+# 段落解析: 标题 `^#{2,4}\s*死代码清理声明` 起，至下一 `^#{1,4}\s` 标题止；段内每行 `- <路径> — <依据>`。
+#   分类: P = 有效条目（有依据、精确路径） / N = 无依据（不生效） / G = 含通配符（不生效，须逐条精确路径）
+#   语义与 merge_writeset_gate.py `## 写集豁免`（scan_exempt_section）同款: 无理由不生效。
+_decl_scan_file() {
+  local f="$1" line entry kind p reason
+  [ -f "$f" ] || return 0
+  local in_sec=0
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%$'\r'}"
+    if [ "$in_sec" -eq 0 ]; then
+      if printf '%s' "$line" | grep -qE '^#{2,4}[[:space:]]*死代码清理声明'; then in_sec=1; fi
+      continue
+    fi
+    if printf '%s' "$line" | grep -qE '^#{1,4}[[:space:]]'; then break; fi
+    entry="$(printf '%s' "$line" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+    case "$entry" in
+      "- "*) entry="${entry#- }" ;;
+      *) continue ;;
+    esac
+    p=""; reason=""
+    case "$entry" in
+      *" — "*)  p="${entry%% — *}";  reason="${entry#* — }" ;;
+      *" – "*)  p="${entry%% – *}";  reason="${entry#* – }" ;;
+      *" -- "*) p="${entry%% -- *}"; reason="${entry#* -- }" ;;
+      *" - "*)  p="${entry%% - *}";  reason="${entry#* - }" ;;
+      *)        p="$entry";          reason="" ;;
+    esac
+    p="$(printf '%s' "$p" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+    reason="$(printf '%s' "$reason" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+    [ -z "$p" ] && continue
+    case "$p" in
+      *'*'*|*'?'*|*'['*) printf 'G\t%s\n' "$p" ;;
+      *) if [ -n "$reason" ]; then printf 'P\t%s\n' "$p"; else printf 'N\t%s\n' "$p"; fi ;;
+    esac
+  done < "$f"
+}
+
+DECL_ENTRY_N=0
+DECL_REASON_N=0
+DECL_GLOB_N=0
+DECL_PATHS=""
+
+# 惰性入口: 只有真要裁定旁路封堵时才解析（正常 PR 零开销）
+_decl_load() {
+  ROOT_DECL="$(git rev-parse --show-toplevel 2>/dev/null | tr -d '\r\n' || true)"
+  [ -z "$ROOT_DECL" ] && ROOT_DECL="$(cd "$SCRIPT_DIR/../.." && pwd)"
+  TODAY_DASH="$(date +%Y-%m-%d)"
+  if [ -n "$PYBIN" ]; then
+    # 与 pre-commit-check.sh:1288-1300 同口径: 今天 ±1 天（三日窗口）的 ERE
+    DAY_WINDOW_RE="$("$PYBIN" -c "
+import datetime
+t = datetime.date.today()
+print('^(' + '|'.join((t + datetime.timedelta(days=k)).isoformat() for k in (-1, 0, 1)) + ')-')" 2>/dev/null || true)"
+  fi
+  [ -z "$DAY_WINDOW_RE" ] && DAY_WINDOW_RE="^${TODAY_DASH}-"
+
+  if [ -n "${DECL_FILE:-}" ]; then
+    if [ -f "$DECL_FILE" ]; then
+      _decl_add_src "$DECL_FILE" "--decl-file"
+    else
+      echo "  ⚠️  D1028 声明来源 --decl-file=${DECL_FILE} 不可读 → 视为「无声明」（显式注入缝不回退 brief 链）"
+    fi
+  elif [ -n "${SYNO_DR_DECL_FILE:-}" ]; then
+    if [ -f "$SYNO_DR_DECL_FILE" ]; then
+      _decl_add_src "$SYNO_DR_DECL_FILE" "SYNO_DR_DECL_FILE"
+    else
+      echo "  ⚠️  D1028 声明来源 \$SYNO_DR_DECL_FILE=${SYNO_DR_DECL_FILE} 不可读 → 视为「无声明」（同上，不回退 brief 链）"
+    fi
+  else
+    _decl_fresh_briefs   # 仅 brief 链需要（一次性 find，零 per-file 子进程）
+    local _bn
+    if [ -n "${DSH_SESSION_ID:-}" ] && [ -f "$ROOT_DECL/.claude/current-brief.$DSH_SESSION_ID" ]; then
+      _bn="$(cat "$ROOT_DECL/.claude/current-brief.$DSH_SESSION_ID" 2>/dev/null | tr -d '[:space:]' || true)"
+      if [ -n "$_bn" ] && _decl_brief_in_window "$ROOT_DECL/.claude/task-briefs/$_bn"; then
+        _decl_add_src "$ROOT_DECL/.claude/task-briefs/$_bn" "brief(current-brief.\$DSH_SESSION_ID)"
+      else
+        echo "  ℹ️  D1028 声明来源: current-brief.\$DSH_SESSION_ID 指向「不存在/陈旧」brief（${_bn:-空}）→ 回退当日窗口并集"
+      fi
+    fi
+    if [ -f "$ROOT_DECL/.claude/current-brief" ]; then
+      _bn="$(cat "$ROOT_DECL/.claude/current-brief" 2>/dev/null | tr -d '[:space:]' || true)"
+      if [ -n "$_bn" ] && _decl_brief_in_window "$ROOT_DECL/.claude/task-briefs/$_bn"; then
+        _decl_add_src "$ROOT_DECL/.claude/task-briefs/$_bn" "brief(current-brief)"
+      fi
+    fi
+    local _f
+    for _f in "$ROOT_DECL"/.claude/task-briefs/*.md; do
+      [ -e "$_f" ] || continue
+      _decl_brief_in_window "$_f" && _decl_add_src "$_f" "brief(task-briefs 当日窗口)"
+    done
+  fi
+
+  if [ "$DECL_SRC_N" -gt 0 ]; then
+    local _sf kind p
+    while IFS= read -r _sf; do
+      [ -z "$_sf" ] && continue
+      while IFS="$TAB" read -r kind p; do
+        [ -z "$kind" ] && continue
+        DECL_ENTRY_N=$((DECL_ENTRY_N + 1))
+        case "$kind" in
+          P) DECL_REASON_N=$((DECL_REASON_N + 1)); DECL_PATHS="${DECL_PATHS}${p}${NL}" ;;
+          G) DECL_GLOB_N=$((DECL_GLOB_N + 1)); echo "  ⚠️  D1028 声明条目含通配符 → 不作有效条目（须逐条精确路径）: ${p}" ;;
+        esac
+      done < <(_decl_scan_file "$_sf")
+    done < <(printf '%s\n' "$DECL_SRC_FILES")
+    DECL_PATHS="$(printf '%s' "$DECL_PATHS" | sed '/^$/d' | sort -u)"
+  fi
+  return 0
+}
+
+_decl_covers() {  # $1=声明路径集 $2=需覆盖路径集 → 0 = 全覆盖（⊇）
+  local _p
+  [ -z "${2:-}" ] && return 0
+  while IFS= read -r _p; do
+    [ -z "$_p" ] && continue
+    printf '%s\n' "${1:-}" | grep -Fxq -- "$_p" || return 1
+  done < <(printf '%s\n' "$2")
+  return 0
+}
+_decl_missing_list() {  # $1=声明路径集 $2=需覆盖路径集 → 打印未覆盖项（逐条点名）
+  local _p
+  [ -z "${2:-}" ] && return 0
+  while IFS= read -r _p; do
+    [ -z "$_p" ] && continue
+    printf '%s\n' "${1:-}" | grep -Fxq -- "$_p" || printf '%s\n' "$_p"
+  done < <(printf '%s\n' "$2")
+}
+
+# ── S2 路径级出库豁免: ⓐ（AM_SET 空）∧ ⓑ（全部变更路径落 ✅ 且零命中 ❌）──
 OUTBOUND_ALLOW_RE='^(\.claude/task-briefs/|docs/plans/|docs/synova/coordination/|memory/notes/|docs/synova/archive/|docs/archive/)'
 OUTBOUND_DENY_RE='^(src/|scripts/|\.github/|tests/|extensions/|expert/)'
 OUTBOUND_DENY_EXACT_RE='^docs/synova/coordination/(ownership\.yaml|AUDIT-PROTOCOL\.md)$'
@@ -191,23 +390,40 @@ OUTSIDE_N=0
 OUTSIDE_LIST=""
 DENY_N=0
 DENY_LIST=""
-while IFS= read -r _p; do
+DR_DENY_N=0
+DR_DENY_RE_N=0
+DR_DENY_RE_LIST=""
+DR_DENY_EXACT_N=0
+DR_DENY_EXACT_LIST=""
+# D1028-A2v2: 按状态标签分流 —— D/R 命中的才可能被「死代码清理声明」放行，且其中的
+#   DENY_EXACT 命中**永不放行**（CTO 裁定），故两个集合分开记。
+while IFS="$TAB" read -r _st_t _p; do
   [ -z "$_p" ] && continue
   _in_allow=0
   _in_deny=0
+  _in_deny_exact=0
   printf '%s' "$_p" | grep -qE "$OUTBOUND_ALLOW_RE" && _in_allow=1
-  if printf '%s' "$_p" | grep -qE "$OUTBOUND_DENY_RE" || printf '%s' "$_p" | grep -qE "$OUTBOUND_DENY_EXACT_RE"; then _in_deny=1; fi
+  printf '%s' "$_p" | grep -qE "$OUTBOUND_DENY_RE" && _in_deny=1
+  printf '%s' "$_p" | grep -qE "$OUTBOUND_DENY_EXACT_RE" && _in_deny_exact=1
+  if [ "$_in_deny" -eq 0 ] && [ "$_in_deny_exact" -eq 1 ]; then _in_deny=2; fi
   if [ "$_in_allow" -eq 0 ]; then
     OUTSIDE_N=$((OUTSIDE_N + 1))
-    OUTSIDE_LIST="${OUTSIDE_LIST}${_p}
-"
+    OUTSIDE_LIST="${OUTSIDE_LIST}${_p}${NL}"
   fi
-  if [ "$_in_deny" -eq 1 ]; then
+  if [ "$_in_deny" -ne 0 ]; then
     DENY_N=$((DENY_N + 1))
-    DENY_LIST="${DENY_LIST}${_p}
-"
+    DENY_LIST="${DENY_LIST}${_p}${NL}"
+    case "$_st_t" in
+      D|R)
+        DR_DENY_N=$((DR_DENY_N + 1))
+        if [ "$_in_deny" -eq 2 ]; then
+          DR_DENY_EXACT_N=$((DR_DENY_EXACT_N + 1)); DR_DENY_EXACT_LIST="${DR_DENY_EXACT_LIST}${_p}${NL}"
+        else
+          DR_DENY_RE_N=$((DR_DENY_RE_N + 1)); DR_DENY_RE_LIST="${DR_DENY_RE_LIST}${_p}${NL}"
+        fi ;;
+    esac
   fi
-done < <(printf '%s\n' "$ALL_PATHS")
+done < <(printf '%s\n' "$ALL_TAGGED")
 
 if [ "$ALL_N" -gt 0 ]; then
   if [ "$AM_N" -eq 0 ] && [ "$OUTSIDE_N" -eq 0 ] && [ "$DENY_N" -eq 0 ]; then
@@ -226,10 +442,45 @@ if [ "$ALL_N" -gt 0 ]; then
     if [ "$DENY_N" -gt 0 ]; then
       echo "       ⓑ 不满足: 命中 ❌ 拒绝名单 ${DENY_N} 件（绝不豁免）:"
       printf '%s\n' "$DENY_LIST" | awk -v ind="         " -v cap=30 'NF { if (++i <= cap) print ind $0 } END { if (i > cap) print ind "… 其余 " (i - cap) " 件省略（共 " i " 件）" }'
-      # 旁路封堵: 纯删除/重命名命中 ❌ → 直接 FAIL（不靠文件数上限兜底）
-      if [ "$AM_N" -eq 0 ]; then OUTBOUND_DENY_HARD=1; fi
+      # 旁路封堵（DS3）的最终裁定移到 S2.5 —— 那里才知道「死代码清理声明」是否放行
     fi
   fi
+fi
+
+# ── S2.5 D1028-A2v2 死代码清理声明裁定: 硬拦保留，仅对「声明覆盖全部 DENY_RE 命中 D/R 路径」放行 ──
+# 收紧（CTO 本轮裁定）: DENY_EXACT 两条（ownership.yaml / AUDIT-PROTOCOL.md）**不受声明放行** ——
+#   逃生口动机是铁律 37 死代码清理（代码域），删治理文件不是死代码清理；要动须独立卡 + CTO 批复。
+DECL_EFFECTIVE=0
+DECL_RELEASED_N=0
+DECL_MISSING_LIST=""
+DECL_MISSING_N=0
+DECL_INEFFECTIVE=""
+if [ "$DR_DENY_N" -gt 0 ]; then
+  _decl_load   # 惰性: 仅此处需要（正常 PR 不解析 brief/声明，零开销）
+  if [ "$DECL_ENTRY_N" -eq 0 ]; then
+    DECL_INEFFECTIVE="未读到「## 死代码清理声明」段落（或段内零条目）"
+  elif [ "$DECL_REASON_N" -eq 0 ]; then
+    if [ "$DECL_GLOB_N" -gt 0 ]; then
+      DECL_INEFFECTIVE="条目全部无效（含通配符 ${DECL_GLOB_N} 条 / 或全部无依据）—— 须逐条精确路径 + 依据"
+    else
+      DECL_INEFFECTIVE="条目全部无依据（须「- <路径> — <铁律 37 依据>」，无理由不生效）"
+    fi
+  elif [ "$DR_DENY_RE_N" -eq 0 ]; then
+    DECL_INEFFECTIVE="本次无 DENY_RE 命中路径（仅 DENY_EXACT）—— 声明无从放行"
+  elif _decl_covers "$DECL_PATHS" "$DR_DENY_RE_LIST"; then
+    DECL_EFFECTIVE=1
+    DECL_RELEASED_N="$DR_DENY_RE_N"
+  else
+    DECL_MISSING_LIST="$(_decl_missing_list "$DECL_PATHS" "$DR_DENY_RE_LIST")"
+    DECL_MISSING_N="$(_count_lines "$DECL_MISSING_LIST")"; DECL_MISSING_N="${DECL_MISSING_N:-0}"
+    DECL_INEFFECTIVE="声明路径未覆盖全部命中的 ❌ D/R 路径（缺 ${DECL_MISSING_N} 条）"
+  fi
+  if [ "$DR_DENY_EXACT_N" -gt 0 ]; then   # 收紧: DENY_EXACT 绝不随声明放行
+    DECL_EFFECTIVE=0
+    DECL_RELEASED_N=0
+    DECL_INEFFECTIVE="命中 DENY_EXACT ${DR_DENY_EXACT_N} 件 —— 不受「## 死代码清理声明」放行（CTO 裁定: 删治理文件 ≠ 铁律 37 死代码清理，须独立卡 + CTO 批复）"
+  fi
+  if [ "$AM_N" -eq 0 ] && [ "$DECL_EFFECTIVE" -eq 0 ]; then OUTBOUND_DENY_HARD=1; fi
 fi
 
 # ── S3 收紧: D/R 路径默认计入预算 + 既有 D860 治理产物豁免口径（原样保留）──
@@ -273,8 +524,35 @@ else
   echo "  ❌ ① 变更文件数 $N_FILES > 上限 $MAX_FILES —— 拆 PR（禁调高上限）"
   FAILED=1
 fi
+if [ "$DECL_EFFECTIVE" -eq 1 ]; then
+  # D1028-A2v2: 声明生效 = 解除旁路封堵（**不豁免预算** —— 这批路径仍在 COUNTED/N_FILES 里）
+  echo "  ⚠️  D1028 死代码清理声明生效：${DECL_RELEASED_N} 件（逐条放行）"
+  echo "      声明来源: ${DECL_SRC_DESC:-（未标注）}"
+  echo "      → 放行 ≠ 豁免: 这 ${DECL_RELEASED_N} 件**照常计入上面 ${N_FILES} 件预算**（> ${MAX_FILES} 仍阻断）"
+  printf '%s\n' "$DR_DENY_RE_LIST" | awk -v ind="      " -v cap=30 'NF { if (++i <= cap) print ind "- " $0 } END { if (i > cap) print ind "… 其余 " (i - cap) " 件省略（共 " i " 件）" }'
+fi
 if [ "$OUTBOUND_DENY_HARD" -eq 1 ]; then
   echo "  ❌ ① D1028 旁路封堵: 纯删除/重命名命中 ❌ 拒绝名单 ${DENY_N} 件 —— 绝不豁免（exit 1）"
+  if [ "$DR_DENY_EXACT_N" -gt 0 ]; then   # 逐条点名（不受声明放行者）
+    echo "      ⛔ 其中 DENY_EXACT ${DR_DENY_EXACT_N} 件**不受「## 死代码清理声明」放行**（CTO 裁定: 删治理文件 ≠ 铁律 37 死代码清理；要动须独立卡 + CTO 批复）:"
+    printf '%s\n' "$DR_DENY_EXACT_LIST" | awk -v ind="         " -v cap=30 'NF { if (++i <= cap) print ind $0 } END { if (i > cap) print ind "… 其余 " (i - cap) " 件省略（共 " i " 件）" }'
+  fi
+  if [ "$DR_DENY_RE_N" -gt 0 ]; then
+    echo "      逃生口（CTO 本轮裁定）: 在本任务 brief 补「## 死代码清理声明」段落，逐条列出**下列全部**路径 + 铁律 37 依据（缺一条即不生效；通配不生效）:"
+    echo "      ── 可直接粘贴（逐条把「依据待补」换成真依据）──"
+    echo "      ## 死代码清理声明"
+    printf '%s\n' "$DR_DENY_RE_LIST" | awk -v ind="      " -v cap=30 'NF { if (++i <= cap) print ind "- " $0 " — 依据待补（铁律 37: grep -rn 零引用确认后删旧文件）" } END { if (i > cap) print ind "- …（其余 " (i - cap) " 件省略，共 " i " 件，须逐条列出）" }'
+  fi
+  if [ -n "$DECL_INEFFECTIVE" ]; then
+    echo "      ❌ 声明未生效原因: ${DECL_INEFFECTIVE}"
+  elif [ "$DECL_SRC_N" -eq 0 ]; then
+    echo "      ℹ️ 未读到任何声明来源（--decl-file / \$SYNO_DR_DECL_FILE / brief 链均不可得）"
+  fi
+  if [ "$DECL_MISSING_N" -gt 0 ]; then
+    echo "      ❌ 声明未覆盖的 ❌ D/R 路径 ${DECL_MISSING_N} 件（逐条点名）:"
+    printf '%s\n' "$DECL_MISSING_LIST" | awk -v ind="         " -v cap=30 'NF { if (++i <= cap) print ind $0 } END { if (i > cap) print ind "… 其余 " (i - cap) " 件省略（共 " i " 件）" }'
+  fi
+  echo "      注意: 声明生效只解除旁路封堵，**这些路径照常计入 ≤ ${MAX_FILES} 件预算**（放行 ≠ 豁免）"
   FAILED=1
 fi
 

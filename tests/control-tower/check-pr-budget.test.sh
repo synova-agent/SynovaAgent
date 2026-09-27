@@ -20,11 +20,20 @@
 #  13. D1028 DS4 三态与降级 — 豁免件 + 域校验器缺失 → 2 / python 不可用 → 2 /
 #      空变更集不误报「豁免生效」
 #  14. D1028 DS5 自过与接线 — bash -n / 冻结规格正则逐字 / 旧口径 --diff-filter=ACMR 清零 /
-#      接线 ≥1 / MAX_FILES=12 与「禁调高上限」不回归
+#      接线 ≥1 / MAX_FILES=12 与「禁调高上限」不回归 / D1028-A2v2 新缝与文案
+#  15. D1028-A2v2 死代码清理声明（CTO 本轮裁定: 硬拦保留 + 受控逃生口）—
+#      ① 无声明 → 拦 + 可粘贴声明行 + 未生效原因；② 完整声明 5 件 → 放行（⚠️ 生效行 + 计数行）；
+#      ③ 完整声明 13 件 → **仍 exit 1（计数 13 > 12，放行 ≠ 豁免）**；④ 只覆盖 4/5 → 不生效 + 点名缺失；
+#      ⑤ 无依据 → 不生效；⑥ 通配（目录 / *）→ 不生效；⑦ **DENY_EXACT 不受声明放行**（收紧 2）；
+#      ⑧ 段外条目 / --decl-file 优先 / ### 标题；⑨ brief 链: 今日/昨日命中、3 天前不命中、
+#      两份当日取并、会话指针新鲜命中、陈旧不命中、SYNO_DR_DECL_FILE 注入缝
+#  16. 变异体自检（判别性夹具: 删掉判据必须变红）— ① 去掉 ⊇ 覆盖判据 → 「只覆盖 4 件」变红；
+#      ② 把生效路径从计数剔除 → 「13 件」变红；③ 去掉「DENY_EXACT 不受声明放行」→ 该夹具变红
 #   8. 接线    — pre-commit 真调用本脚本（铁律 0-2 WIRE CHECK）+ 组数横幅未被改动
 #
 # 零真实仓库污染: 沙箱 mktemp + 沙箱 git 仓库（PLATFORM-CHECKLIST #6，git 身份用 -c 内联，禁 git config 持久写入）。
 # CT-69: 夹具**禁**用中文路径喂 --files/--diff-status（非 ASCII 入参会被 quotepath 误判跨域）。
+#   （声明文件里的中文是**文件内容**，不是喂给 --files/--diff-status 的入参，不在 CT-69 范围内。）
 # ═══════════════════════════════════════════════════════════════════════════════
 export PYTHONIOENCODING=utf-8
 export LC_ALL=C.UTF-8 2>/dev/null || true
@@ -57,6 +66,40 @@ run_expect() {
 mk_set() {
   local i
   for i in $(seq 1 "$2"); do printf '%s\t%s%03d%s\n' "$3" "$1" "$i" "${4:-}"; done
+}
+
+# D1028-A2v2: 「## 死代码清理声明」夹具文件生成器
+#   $1=目标文件  其余=路径（逐条带铁律 37 依据；末尾放下一标题 —— 顺带验「段终止」）
+decl_file() {
+  local out="$1"; shift
+  local p
+  { echo "## 死代码清理声明"
+    echo ""
+    for p in "$@"; do echo "- ${p} — 铁律 37: grep -rn 零引用确认后删旧文件"; done
+    echo ""
+    echo "## 下一节（段终止夹具）"
+  } > "$out"
+}
+
+# D1028-A2v2 变异体生成器: 精确字面替换（index/substr —— 零正则转义坑，BSD/GNU 通用）
+#   $1=源文件 $2=目标文件 $3=旧字面量 $4=新字面量 → 0 = 已替换；锚点缺失 → 非 0（防「静默未变异」假红）
+mutate() {
+  local src="$1" dst="$2" old="$3" new="$4"
+  awk -v old="$old" -v new="$new" '
+    { if (!done) { p = index($0, old); if (p > 0) { $0 = substr($0, 1, p - 1) new substr($0, p + length(old)); done = 1 } } print }
+    END { exit(done ? 0 : 1) }
+  ' "$src" > "$dst"
+}
+
+# 变异体工具镜像目录（check-ownership.py 的 REPO_ROOT = 自身 ../.. ⇒ 必须镜像仓内相对结构）
+mk_mutant() {  # $1=目录 $2=旧字面量 $3=新字面量
+  local d="$1"
+  mkdir -p "$d/scripts/control-tower" "$d/scripts/product-lines" "$d/docs/synova/coordination" || return 1
+  cp "$REPO_DIR/scripts/control-tower/check-ownership.py" "$d/scripts/control-tower/" || return 1
+  cp "$REPO_DIR/scripts/product-lines/productline_yaml.py" "$d/scripts/product-lines/" || return 1
+  cp "$REPO_DIR/docs/synova/coordination/ownership.yaml" "$d/docs/synova/coordination/" || return 1
+  mutate "$TOOL" "$d/scripts/control-tower/check-pr-budget.sh" "$2" "$3" || return 1
+  return 0
 }
 
 echo "═══════════════════════════════════════════════════════════"
@@ -292,6 +335,16 @@ if grep -q "禁调高上限" "$TOOL"; then pass "DS5 「禁调高上限」输出
 for _k in '@input' '@output' '@exit' '@degraded'; do
   if grep -q "^#   $_k" "$TOOL"; then pass "DS5 头注释契约含 $_k"; else fail "DS5 头注释契约缺 $_k"; fi
 done
+# D1028-A2v2 新缝与承重文案（改坏即红）
+if grep -qF -- '--decl-file' "$TOOL"; then pass "DS5-A2v2 --decl-file 注入缝在"; else fail "DS5-A2v2 无 --decl-file 注入缝"; fi
+if grep -qF 'DAY_WINDOW_RE' "$TOOL"; then pass "DS5-A2v2 brief 链当日窗口 DAY_WINDOW_RE 在（与 pre-commit 同口径）"; else fail "DS5-A2v2 无 DAY_WINDOW_RE"; fi
+if grep -qF '死代码清理声明生效：' "$TOOL"; then pass "DS5-A2v2 生效行文案在"; else fail "DS5-A2v2 生效行文案缺失"; fi
+if grep -qF '放行 ≠ 豁免' "$TOOL"; then pass "DS5-A2v2 「放行 ≠ 豁免」文案在（计数不剔除）"; else fail "DS5-A2v2 缺「放行 ≠ 豁免」"; fi
+if grep -qF 'DENY_EXACT 绝不随声明放行' "$TOOL"; then pass "DS5-A2v2 收紧判据锚点（DENY_EXACT 不随声明放行）在"; else fail "DS5-A2v2 DENY_EXACT 收紧判据缺失"; fi
+if grep -qF '依据待补' "$TOOL"; then pass "DS5-A2v2 可粘贴声明行（依据待补）在"; else fail "DS5-A2v2 无可粘贴声明行"; fi
+# 声明必须**脚本内自解析**（禁改 scripts/pre-commit-check.sh）—— 红线: pre-commit 侧零声明字样
+if grep -qF -- '--decl-file' "$PC"; then fail "DS5-A2v2 pre-commit 侧被改（应保持脚本内自解析）"; else pass "DS5-A2v2 pre-commit 侧未被改（声明解析在 check-pr-budget.sh 内）"; fi
+if grep -qF '死代码清理声明' "$PC"; then fail "DS5-A2v2 pre-commit 侧出现声明字样（红线: 不改 pre-commit）"; else pass "DS5-A2v2 pre-commit 侧无声明字样"; fi
 _PCN="$(grep -c "check-pr-budget.sh" "$PC" | tr -d '\r\n')"
 if [ "${_PCN:-0}" -ge 1 ]; then pass "DS5 接线: pre-commit-check.sh 命中 $_PCN 处（≥1）"; else fail "DS5 接线: pre-commit 零调用"; fi
 
@@ -301,6 +354,171 @@ if grep -q "check-pr-budget.sh" "$PC"; then pass "接线: pre-commit-check.sh �
 # 本任务不并组数：横幅语义必须保持原样（改则打破 fastlane-bypass-only.test.sh 断言）
 if grep -q "跳过 12 组" "$PC"; then pass "组数横幅未改（快速通道仍为「跳过 12 组」）"; else fail "快速通道横幅被改动 → 会打破白名单外的 fastlane 测试"; fi
 if grep -q "全部 13 组通过" "$PC"; then pass "总结横幅仍为 13 组（未并组）"; else fail "总结横幅组数被改"; fi
+
+echo ""
+echo "── 15. D1028-A2v2 死代码清理声明（硬拦保留 + 受控逃生口）──"
+DCL="$TMPD/d1028-a2v2"
+mkdir -p "$DCL"
+SET5D="$(mk_set 'src/mod' 5 D '.ts')"
+SET13D="$(mk_set 'src/mod' 13 D '.ts')"
+P5="src/mod001.ts src/mod002.ts src/mod003.ts src/mod004.ts src/mod005.ts"
+P13=""
+for _i in $(seq 1 13); do P13="$P13 src/mod$(printf '%03d' "$_i").ts"; done
+decl_file "$DCL/ok5.md" $P5
+decl_file "$DCL/ok13.md" $P13
+decl_file "$DCL/only4.md" src/mod001.ts src/mod002.ts src/mod003.ts src/mod004.ts
+decl_file "$DCL/ok5exact.md" $P5 docs/synova/coordination/ownership.yaml
+decl_file "$DCL/ok1exact.md" src/mod001.ts docs/synova/coordination/AUDIT-PROTOCOL.md
+
+# 15.1 无声明 → 拦 + 可粘贴声明行 + 未生效原因
+run_expect 1 "15.1 无声明（--decl-file 不存在）+ 纯删 src/** 5 件 → exit 1（回归）" --diff-status "$SET5D" --decl-file "$DCL/nonexistent.md"
+if echo "$OUT" | grep -q "❌ ① D1028 旁路封堵"; then pass "15.1 保留「旁路封堵」❌ 行"; else fail "15.1 旁路封堵行丢失"; fi
+if echo "$OUT" | grep -qF -- "- src/mod001.ts — 依据待补"; then pass "15.1 打印可直接粘贴的精确声明行（依据待补）"; else fail "15.1 未打印可粘贴声明行"; fi
+if echo "$OUT" | grep -q "声明未生效原因"; then pass "15.1 明示未生效原因（不静默）"; else fail "15.1 未明示未生效原因"; fi
+if echo "$OUT" | grep -q "死代码清理声明生效"; then fail "15.1 无声明却报「生效」"; else pass "15.1 无声明未误报生效"; fi
+if echo "$OUT" | grep -q "不受「## 死代码清理声明」放行"; then fail "15.1 无 DENY_EXACT 却报收紧提示"; else pass "15.1 无 DENY_EXACT 时不误报收紧提示"; fi
+
+# 15.2 完整声明 + 5 件 → 放行（⚠️ 生效行 + 计数行）
+run_expect 0 "15.2 完整声明 + 纯删 src/** 5 件 → exit 0" --diff-status "$SET5D" --decl-file "$DCL/ok5.md"
+if echo "$OUT" | grep -q "⚠️  D1028 死代码清理声明生效：5 件（逐条放行）"; then pass "15.2 ⚠️ 生效行逐字 + 件数 5"; else fail "15.2 ⚠️ 生效行缺失或件数不符"; fi
+if echo "$OUT" | grep -q "✅ ① 变更文件数 5 ≤ 上限 12"; then pass "15.2 计数行 5 ≤ 上限 12（生效路径仍计入预算）"; else fail "15.2 计数行不符"; fi
+if echo "$OUT" | grep -q "放行 ≠ 豁免"; then pass "15.2 明示「放行 ≠ 豁免」"; else fail "15.2 未明示放行≠豁免"; fi
+if echo "$OUT" | grep -q "❌ ① D1028 旁路封堵"; then fail "15.2 生效后仍触发旁路封堵"; else pass "15.2 生效后未触发旁路封堵"; fi
+
+# 15.3 完整声明 + 13 件 → **仍 exit 1**（放行 ≠ 豁免的承重夹具）
+run_expect 1 "15.3 完整声明 + 纯删 src/** 13 件 → exit 1（计数 13 > 12）" --diff-status "$SET13D" --decl-file "$DCL/ok13.md"
+if echo "$OUT" | grep -q "❌ ① 变更文件数 13 > 上限 12"; then pass "15.3 计数行 13 > 上限 12（证明放行 ≠ 豁免）"; else fail "15.3 13 件未被计数拦截"; fi
+if echo "$OUT" | grep -q "死代码清理声明生效：13 件"; then pass "15.3 声明按 13 件生效（未被剔除出计数）"; else fail "15.3 生效件数不符"; fi
+if echo "$OUT" | grep -q "❌ ① D1028 旁路封堵"; then fail "15.3 13 件被误判为旁路封堵"; else pass "15.3 13 件走了计数拦截（非旁路封堵）"; fi
+
+# 15.4 只覆盖 4/5 → 不生效 + 点名缺失
+run_expect 1 "15.4 声明只覆盖 5 件中的 4 件 → 不生效 exit 1" --diff-status "$SET5D" --decl-file "$DCL/only4.md"
+if echo "$OUT" | grep -q "声明未覆盖的 ❌ D/R 路径 1 件"; then pass "15.4 点名「未覆盖 1 件」"; else fail "15.4 未点名缺失件数"; fi
+# 判别性: 只在**缺失清单段**里找路径（否则会被上面的 ⓑ 拒绝名单列表蒙过）
+MISS_SEC="$(printf '%s\n' "$OUT" | awk '/声明未覆盖的 ❌ D\/R 路径/{f=1} f')"
+if printf '%s\n' "$MISS_SEC" | grep -q "^ *src/mod005.ts$"; then pass "15.4 缺失清单段逐条点名 src/mod005.ts"; else fail "15.4 缺失清单未点名该路径"; fi
+if echo "$OUT" | grep -q "死代码清理声明生效"; then fail "15.4 覆盖不全却放行"; else pass "15.4 覆盖不全未放行"; fi
+
+# 15.5 条目无依据 → 不生效
+{ echo "## 死代码清理声明"; for _p in $P5; do echo "- $_p"; done; } > "$DCL/noreason.md"
+run_expect 1 "15.5 条目无依据（无 — 分隔）→ 不生效 exit 1" --diff-status "$SET5D" --decl-file "$DCL/noreason.md"
+if echo "$OUT" | grep -q "条目全部无依据"; then pass "15.5 明示「条目全部无依据」"; else fail "15.5 未明示无依据"; fi
+if echo "$OUT" | grep -q "死代码清理声明生效"; then fail "15.5 无依据却放行"; else pass "15.5 无依据未放行"; fi
+
+# 15.6 通配 → 不生效（目录条目 / 星号条目）
+{ echo "## 死代码清理声明"; echo "- src/ — 全部死代码"; } > "$DCL/globdir.md"
+run_expect 1 "15.6 通配目录条目（src/）+ 实际 5 件 → 不生效 exit 1" --diff-status "$SET5D" --decl-file "$DCL/globdir.md"
+if echo "$OUT" | grep -q "声明未覆盖的 ❌ D/R 路径 5 件"; then pass "15.6 点名 5 件全未覆盖"; else fail "15.6 未点名缺失"; fi
+{ echo "## 死代码清理声明"; echo "- src/*.ts — 全部死代码"; } > "$DCL/globstar.md"
+run_expect 1 "15.6b 含 * 通配条目 → 不作有效条目 → 不生效 exit 1" --diff-status "$SET5D" --decl-file "$DCL/globstar.md"
+if echo "$OUT" | grep -q "声明条目含通配符"; then pass "15.6b 明示通配条目不作有效条目"; else fail "15.6b 未明示通配"; fi
+
+# 15.7 收紧: DENY_EXACT 不受声明放行（完整声明覆盖 src 5 件 + ownership.yaml → 仍必须出口 1）
+SET5E="$(printf 'D\tsrc/mod001.ts\nD\tsrc/mod002.ts\nD\tsrc/mod003.ts\nD\tsrc/mod004.ts\nD\tsrc/mod005.ts\nD\tdocs/synova/coordination/ownership.yaml\n')"
+run_expect 1 "15.7 完整声明覆盖 src 5 件 + DENY_EXACT 1 件（ownership.yaml）→ 仍 exit 1" --diff-status "$SET5E" --decl-file "$DCL/ok5exact.md"
+if echo "$OUT" | grep -q "⛔ 其中 DENY_EXACT 1 件"; then pass "15.7 点名 DENY_EXACT 件数"; else fail "15.7 未点名 DENY_EXACT 件数"; fi
+# 判别性: 只在 **DENY_EXACT 清单段**里找路径（不被 ⓑ 拒绝名单列表蒙过）
+EXACT_SEC="$(printf '%s\n' "$OUT" | awk '/⛔ 其中 DENY_EXACT/{f=1} f')"
+if printf '%s\n' "$EXACT_SEC" | grep -q "^ *docs/synova/coordination/ownership.yaml$"; then pass "15.7 DENY_EXACT 清单段逐条点名 ownership.yaml"; else fail "15.7 未在该段点名 ownership.yaml"; fi
+if echo "$OUT" | grep -q "不受「## 死代码清理声明」放行"; then pass "15.7 明示「不受声明放行」（收紧语义可见）"; else fail "15.7 未明示收紧"; fi
+if echo "$OUT" | grep -q "死代码清理声明生效"; then fail "15.7 DENY_EXACT 被声明放行（收紧失效）"; else pass "15.7 DENY_EXACT 未被放行"; fi
+run_expect 1 "15.7b AUDIT-PROTOCOL.md 同款: 声明覆盖它也不放行 → exit 1" --diff-status "$(printf 'D\tsrc/mod001.ts\nD\tdocs/synova/coordination/AUDIT-PROTOCOL.md\n')" --decl-file "$DCL/ok1exact.md"
+EXACT_SEC="$(printf '%s\n' "$OUT" | awk '/⛔ 其中 DENY_EXACT/{f=1} f')"
+if printf '%s\n' "$EXACT_SEC" | grep -q "^ *docs/synova/coordination/AUDIT-PROTOCOL.md$"; then pass "15.7b DENY_EXACT 清单段点名 AUDIT-PROTOCOL.md"; else fail "15.7b 未在该段点名路径"; fi
+
+# 15.8 段外条目不生效（标题必须逐字为「死代码清理声明」）
+{ echo "## 出库声明"; echo "- src/mod001.ts — 理由"; } > "$DCL/wronghead.md"
+run_expect 1 "15.8 条目写在「## 出库声明」段 → 不生效 exit 1" --diff-status "$SET5D" --decl-file "$DCL/wronghead.md"
+if echo "$OUT" | grep -q "未读到「## 死代码清理声明」段落"; then pass "15.8 明示未读到声明段"; else fail "15.8 未明示"; fi
+
+# 15.9 标题级别 3（###）也识别；--decl-file 优先于 $SYNO_DR_DECL_FILE
+{ echo "### 死代码清理声明"; for _p in $P5; do echo "- $_p — 铁律 37: 零引用"; done; echo "#### 段终止"; } > "$DCL/h3.md"
+run_expect 0 "15.9 三级标题（###）也被识别 → exit 0" --diff-status "$SET5D" --decl-file "$DCL/h3.md"
+OUT="$(SYNO_DR_DECL_FILE="$DCL/only4.md" bash "$TOOL" --diff-status "$SET5D" --decl-file "$DCL/ok5.md" 2>&1)"; _e=$?
+if [ "$_e" = 0 ]; then pass "15.9b --decl-file 优先于 \$SYNO_DR_DECL_FILE（显式注入缝权威）"; else fail "15.9b 注入缝优先级错 — 期望 0 实际 $_e"; echo "$OUT" | sed 's/^/      | /' >&2; fi
+OUT="$(SYNO_DR_DECL_FILE="$DCL/ok5.md" bash "$TOOL" --diff-status "$SET5D" 2>&1)"; _e=$?
+if [ "$_e" = 0 ]; then pass "15.9c \$SYNO_DR_DECL_FILE 单独可用 → exit 0"; else fail "15.9c 环境变量注入缝失效 — 期望 0 实际 $_e"; echo "$OUT" | sed 's/^/      | /' >&2; fi
+
+# 15.10 brief 链（沙箱 git 仓；ROOT 用 git toplevel ⇒ 不读真实仓）
+DCL_SB="$TMPD/d1028-a2v2-briefs"
+mkdir -p "$DCL_SB/.claude/task-briefs"
+git -C "$DCL_SB" init -q -b main
+DCL_D0="$(date +%Y-%m-%d)"
+if date -v-1d +%Y-%m-%d >/dev/null 2>&1; then
+  DCL_D1="$(date -v-1d +%Y-%m-%d)"; DCL_D3="$(date -v-3d +%Y-%m-%d)"; DCL_STALE="$(date -v-3d +%Y%m%d%H%M)"
+else
+  DCL_D1="$(date -d '1 day ago' +%Y-%m-%d)"; DCL_D3="$(date -d '3 days ago' +%Y-%m-%d)"; DCL_STALE="$(date -d '3 days ago' +%Y%m%d%H%M)"
+fi
+brief_run() {  # $1=期望 exit $2=描述（其余参数透传；cwd=沙箱，环境变量清空以保证夹具决定性）
+  local want="$1" desc="$2"; shift 2
+  OUT="$(cd "$DCL_SB" && DSH_SESSION_ID="" SYNO_DR_DECL_FILE="" bash "$TOOL" --diff-status "$SET5D" "$@" 2>&1)"; local got=$?
+  if [ "$got" = "$want" ]; then pass "$desc (exit=$want)"
+  else fail "$desc — 期望 exit=$want 实际 exit=$got"; echo "$OUT" | sed 's/^/      | /' >&2; fi
+}
+decl_file "$DCL_SB/.claude/task-briefs/$DCL_D0-today.md" $P5
+brief_run 0 "15.10 今日 brief 命中（±1 天窗口）→ exit 0（声明来自 brief 链）"
+rm -f "$DCL_SB/.claude/task-briefs/$DCL_D0-today.md"
+decl_file "$DCL_SB/.claude/task-briefs/$DCL_D1-yest.md" $P5
+brief_run 0 "15.10b 昨日 brief 命中（三日窗口 ±1 天）→ exit 0"
+rm -f "$DCL_SB/.claude/task-briefs/$DCL_D1-yest.md"
+decl_file "$DCL_SB/.claude/task-briefs/$DCL_D3-old.md" $P5
+brief_run 1 "15.10c 3 天前 brief（窗口外）→ 不命中 exit 1"
+rm -f "$DCL_SB/.claude/task-briefs/$DCL_D3-old.md"
+{ echo "## 死代码清理声明"; for _i in 1 2 3; do echo "- src/mod$(printf '%03d' "$_i").ts — 铁律 37: 零引用"; done; } > "$DCL_SB/.claude/task-briefs/$DCL_D0-jia.md"
+{ echo "## 死代码清理声明"; for _i in 4 5; do echo "- src/mod$(printf '%03d' "$_i").ts — 铁律 37: 零引用"; done; } > "$DCL_SB/.claude/task-briefs/$DCL_D0-yi.md"
+run_expect 1 "15.10d 甲（覆盖 1-3）单独 → 不生效 exit 1" --diff-status "$SET5D" --decl-file "$DCL_SB/.claude/task-briefs/$DCL_D0-jia.md"
+run_expect 1 "15.10e 乙（覆盖 4-5）单独 → 不生效 exit 1" --diff-status "$SET5D" --decl-file "$DCL_SB/.claude/task-briefs/$DCL_D0-yi.md"
+brief_run 0 "15.10f 两份当日 brief **取并**（甲∪乙 覆盖 5）→ exit 0（判别性: 只读一份必红）"
+if echo "$OUT" | grep -q "死代码清理声明生效：5 件"; then pass "15.10f 并集生效件数点名 5"; else fail "15.10f 并集件数不符"; fi
+rm -f "$DCL_SB/.claude/task-briefs/$DCL_D0-jia.md" "$DCL_SB/.claude/task-briefs/$DCL_D0-yi.md"
+decl_file "$DCL_SB/.claude/task-briefs/$DCL_D0-sid.md" $P5
+printf '%s\n' "$DCL_D0-sid.md" > "$DCL_SB/.claude/current-brief.SIDFIX"
+OUT="$(cd "$DCL_SB" && DSH_SESSION_ID=SIDFIX SYNO_DR_DECL_FILE="" bash "$TOOL" --diff-status "$SET5D" 2>&1)"; _e=$?
+if [ "$_e" = 0 ]; then pass "15.10g 会话指针 current-brief.\$DSH_SESSION_ID 新鲜 → 命中 exit 0"; else fail "15.10g 会话指针未命中 — 期望 0 实际 $_e"; echo "$OUT" | sed 's/^/      | /' >&2; fi
+touch -t "$DCL_STALE" "$DCL_SB/.claude/task-briefs/$DCL_D0-sid.md"
+OUT="$(cd "$DCL_SB" && DSH_SESSION_ID=SIDFIX SYNO_DR_DECL_FILE="" bash "$TOOL" --diff-status "$SET5D" 2>&1)"; _e=$?
+if [ "$_e" = 1 ]; then pass "15.10h 会话指针陈旧（mtime 3 天前）→ 不命中 exit 1"; else fail "15.10h 陈旧指针仍命中 — 期望 1 实际 $_e"; echo "$OUT" | sed 's/^/      | /' >&2; fi
+if echo "$OUT" | grep -q "指向「不存在/陈旧」brief"; then pass "15.10h 明示陈旧并回退（不静默）"; else fail "15.10h 未明示陈旧"; fi
+
+echo ""
+echo "── 16. 变异体自检（判别性夹具: 删掉判据必须变红）──"
+MUT1="$TMPD/mut1"; MUT2="$TMPD/mut2"; MUT3="$TMPD/mut3"
+OLD1='  elif _decl_covers "$DECL_PATHS" "$DR_DENY_RE_LIST"; then'
+NEW1='  elif true; then   # MUTANT-1: 去掉 ⊇ 覆盖判据'
+OLD2='N_FILES="$(_count_lines "$COUNTED")"; N_FILES="${N_FILES:-0}"'
+NEW2='if [ "$DECL_EFFECTIVE" -eq 1 ]; then COUNTED=""; fi; N_FILES="$(_count_lines "$COUNTED")"; N_FILES="${N_FILES:-0}"'
+OLD3='  if [ "$DR_DENY_EXACT_N" -gt 0 ]; then   # 收紧: DENY_EXACT 绝不随声明放行'
+NEW3='  if false; then   # MUTANT-3: 去掉「DENY_EXACT 不随声明放行」判据'
+
+if mk_mutant "$MUT1" "$OLD1" "$NEW1"; then pass "16.0 变异体1 已生成（锚点命中且被替换）"; else fail "16.0 变异体1 生成失败（锚点漂移 → 变异未生效）"; fi
+if mk_mutant "$MUT2" "$OLD2" "$NEW2"; then pass "16.0 变异体2 已生成（锚点命中且被替换）"; else fail "16.0 变异体2 生成失败（锚点漂移）"; fi
+if mk_mutant "$MUT3" "$OLD3" "$NEW3"; then pass "16.0 变异体3 已生成（锚点命中且被替换）"; else fail "16.0 变异体3 生成失败（锚点漂移）"; fi
+MT1="$MUT1/scripts/control-tower/check-pr-budget.sh"
+MT2="$MUT2/scripts/control-tower/check-pr-budget.sh"
+MT3="$MUT3/scripts/control-tower/check-pr-budget.sh"
+
+# 变异体1: 去掉 ⊇ 判据 → 「只覆盖 4 件」夹具必须变红（原工具 exit 1 → 变异体 exit 0）
+OUT="$(bash "$MT1" --diff-status "$SET5D" --decl-file "$DCL/only4.md" 2>&1)"; _e=$?
+if [ "$_e" = 0 ]; then pass "16.1 去掉 ⊇ 判据 → 「只覆盖 4 件」夹具变红（原 exit 1 → 变异 exit 0）"; else fail "16.1 变异体1 未变红 — 期望 0 实际 $_e"; echo "$OUT" | sed 's/^/      | /' >&2; fi
+if echo "$OUT" | grep -q "死代码清理声明生效"; then pass "16.1 变异体1 误放行（⚠️ 生效行出现）—— 证明 ⊇ 判据承重"; else fail "16.1 变异体1 未误放行（夹具不判别）"; fi
+OUT="$(bash "$MT1" --diff-status "$SET5D" --decl-file "$DCL/nonexistent.md" 2>&1)"; _e=$?
+if [ "$_e" = 1 ]; then pass "16.1b 变异体1 在「无声明」场景仍 exit 1（变异是外科式，非钝化）"; else fail "16.1b 变异体1 钝化 — 期望 1 实际 $_e"; fi
+
+# 变异体2: 把生效路径从计数剔除 → 「13 件」夹具必须变红（原工具 exit 1 → 变异体 exit 0）
+OUT="$(bash "$MT2" --diff-status "$SET13D" --decl-file "$DCL/ok13.md" 2>&1)"; _e=$?
+if [ "$_e" = 0 ]; then pass "16.2 把生效路径从计数剔除 → 「13 件」夹具变红（原 exit 1 → 变异 exit 0）"; else fail "16.2 变异体2 未变红 — 期望 0 实际 $_e"; echo "$OUT" | sed 's/^/      | /' >&2; fi
+if echo "$OUT" | grep -q "✅ ① 变更文件数 0 ≤ 上限 12"; then pass "16.2 变异体2 计数被清零（证明「放行 ≠ 豁免」靠计数承重）"; else fail "16.2 变异体2 计数未被清零"; fi
+OUT="$(bash "$MT2" --diff-status "$SET5D" --decl-file "$DCL/ok5.md" 2>&1)"; _e=$?
+if [ "$_e" = 0 ]; then pass "16.2b 变异体2 在 5 件场景仍 exit 0（与原工具同结论，变异非钝化）"; else fail "16.2b 变异体2 5 件场景结论变化 — 期望 0 实际 $_e"; fi
+
+# 变异体3: 去掉「DENY_EXACT 不随声明放行」 → 15.7 的「旁路封堵」行必须消失
+#   注意: 变异体3 的 exit 仍是 1 —— 该夹具的 5 个 src(win) + ownership.yaml(mac) 本来就跨域，
+#   故判别落在**输出判据**（旁路封堵行是否存在），不是退出码。原工具: 行在 + exit 1。
+OUT="$(bash "$TOOL" --diff-status "$SET5E" --decl-file "$DCL/ok5exact.md" 2>&1)"; _e=$?
+if [ "$_e" = 1 ] && echo "$OUT" | grep -q "❌ ① D1028 旁路封堵"; then pass "16.3 原工具: 15.7 夹具 exit 1 且含「旁路封堵」行"; else fail "16.3 原工具 15.7 夹具判据不成立 — exit=$_e"; fi
+OUT="$(bash "$MT3" --diff-status "$SET5E" --decl-file "$DCL/ok5exact.md" 2>&1)"; _e=$?
+if echo "$OUT" | grep -q "❌ ① D1028 旁路封堵"; then fail "16.3 变异体3 仍报旁路封堵（夹具不判别）"; else pass "16.3 去掉 DENY_EXACT 判据 → 「旁路封堵」行消失（夹具变红）"; fi
+if echo "$OUT" | grep -q "死代码清理声明生效"; then pass "16.3 变异体3 误放行 DENY_EXACT（⚠️ 生效行出现）—— 证明收紧判据承重"; else fail "16.3 变异体3 未误放行"; fi
 
 echo ""
 echo "═══════════════════════════════════════════════════════════"
