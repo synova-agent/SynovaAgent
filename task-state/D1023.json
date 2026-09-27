@@ -1,0 +1,23 @@
+{
+  "task_id": "D1023",
+  "title": "CI docs-only 白名单补全 + P1 补修（.gitattributes/.gitmodules 移出、锚定分层注释、判别性夹具）",
+  "status": "claimed",
+  "spec": ".claude/task-briefs/2026-09-26-D1023-ci-docsonly-whitelist.md",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "write_set": [
+    ".github/workflows/ci.yml",
+    ".claude/task-briefs/2026-09-26-D1023-ci-docsonly-whitelist.md",
+    ".claude/bypass.log",
+    "memory/notes/implemented/process/2026-09-27-ci-docsonly-whitelist.md",
+    "task-state/D1023.json",
+    "docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh",
+    "docs/synova/product-lines/evidence/D1023-861-夹具原始输出.md",
+    "docs/synova/product-lines/evidence/D1023-861-收尾与回执.md",
+    "docs/synova/product-lines/evidence/D1023-861-自验.md",
+    "docs/synova/product-lines/evidence/D1023-861-自验-Δ段.md"
+  ],
+  "updated_at": "2026-09-27",
+  "updated_by": "coder-ci"
+}
