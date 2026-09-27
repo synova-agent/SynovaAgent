@@ -1239,3 +1239,283 @@ grep exit=0
 【可复现】全部沙箱与工具在 /tmp/d1029-c-verify/（mk-sandbox.sh / mk-escape-repo.sh / mk-claim-repo.sh /
   mut-M1.sh / mut-M2.sh / mut-M3.sh / attr.py / attr2.py / sweep.py / count-unowned.sh / baserepo/ / fixtures/）。
 ════════════════════════════════════════════════════════════════════════
+
+════════════════════════════════════════════════════════════════════════
+§10 追加复跑（A 侧远端 tip 在我首次验证后继续前进 ⇒ 被验态 2）
+════════════════════════════════════════════════════════════════════════
+背景：§0–§9 的被验态 = 60e662e4（A 侧 6aa5f0f7 / B 侧 a508fd2c）。
+  推送后回执显示 A 的远端 tip 已前进到 08f45b64（新提交 9c00929d：给生成器头注释加机器守卫 + swallow-ok 标注 + A-10 复合态 diff 证据）。
+  ⇒ 我重新合并 A 新 tip，得**被验态 2 = 5c97d4c1fefc2356bc737c48ce409536328e1603**，并对受影响项复跑。
+  代码零差异：`git diff --name-only 60e662e4 5c97d4c1 -- scripts/` → 空。
+复跑结论：
+  · 零回归① 生成物漂移：**仍不通过**（同 2 处漂移，逐字相同）
+  · 判据 a：**仍通过**（exit 1 + 未归属 + 显式加规则）
+  · 零回归② check-ownership.test.sh：**仍不通过** —— ❌ 6 项失败 / 95 项通过（较态 1 多 1 项通过 = A 新增的 drift⓪ 守卫；
+    该守卫只守**生成器**发射的头部路径，不守磁盘产物，故 §5.1 的产物漂移依旧存在）
+  · 零回归③ check-pr-budget.test.sh：**仍不通过** —— ❌ 1 项失败 / 31 项通过（同一条）
+  ⇒ A 的新提交未触及夹具 splice 的顺序假设（rule_authority 在 domain_defaults 之前），§7.2 根因不变。
+  ⇒ 若 A/B 再次推送，本报告的两处「不通过」需在新合成态上复跑（本报告已明确钉住两个被验 hash）。
+
+### 命令: git rev-parse HEAD
+5c97d4c1fefc2356bc737c48ce409536328e1603
+### 命令: git diff --name-only 60e662e4 HEAD
+.claude/bypass.log
+docs/synova/product-lines/evidence/D1029-ownership/A-10-生成器头注释路径与复合态diff.out.txt
+docs/synova/product-lines/evidence/D1029-ownership/C-自验-20260927.txt
+tests/control-tower/check-ownership.test.sh
+### 命令: git diff --name-only 60e662e4 HEAD -- scripts/
+[空=代码零差异]
+
+########## 复跑（被验态 2 = 5c97d4c1，A 侧含 9c00929d）##########
+### git rev-parse HEAD
+5c97d4c1fefc2356bc737c48ce409536328e1603
+### git diff --name-only 60e662e4 HEAD（相对态 1 的差异）
+.claude/bypass.log
+docs/synova/product-lines/evidence/D1029-ownership/A-10-生成器头注释路径与复合态diff.out.txt
+docs/synova/product-lines/evidence/D1029-ownership/C-自验-20260927.txt
+tests/control-tower/check-ownership.test.sh
+### git diff --name-only 60e662e4 HEAD -- scripts/（代码是否有差异）
+[空=代码零差异]
+
+── ① 生成物漂移 ──
+### 命令: python3 scripts/control-tower/check-ownership.py --emit-codeowners | diff - .github/CODEOWNERS
+4c4
+< # 漂移门禁: tests/control-tower/check-ownership.test.sh 逐字节断言本文件 == 生成结果（D733）
+---
+> # 漂移门禁: tests/control-tower/ownership.test.sh 逐字节断言本文件 == 生成结果（D733）
+11d10
+< # win 领地（显式列出）: src/**、extensions/**、packages/**、synova_worker/**、docs/plans/**、tests/**、expert/**、skills/**、knowledge/**、theory/**、synthesis/**、cycles/**、app/**、vendor/**、prototypes/**、observer-adapters/**、data/**、assets/**、patches/**
+diff exit=1
+
+── 判据 a 复跑 ──
+### 命令: python3 scripts/control-tower/check-ownership.py tools/d1029-c-probe/verify.txt
+⚠️  未归属  tools/d1029-c-probe/verify.txt —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+    复核命令: python3 scripts/control-tower/check-ownership.py tools/d1029-c-probe/verify.txt
+
+❌ FAIL 未归属 1 处 —— 未归属不静默归 win；请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）（域判定豁免 0）
+exit=1
+
+── ② check-ownership.test.sh（态 2）──
+### 命令: bash tests/control-tower/check-ownership.test.sh
+  · 形态: LIVE_MODE=contract
+  ✅ 合同形态夹具就绪（真 yaml 副本 + 注入合同冻结两键）
+═══════════════════════════════════════════════════════════
+  D733 ownership 机器化测试
+═══════════════════════════════════════════════════════════
+
+── 1. 正常路径: 各域正例归属一致 → exit 0 ──
+  ✅ src/sentinel/ Mac 正例 (exit=0)
+  ✅ src/cron/ Mac 正例 (exit=0)
+  ✅ src/mcp/ Mac 正例 (exit=0)
+  ✅ scripts/control-tower/ Mac (exit=0)
+  ✅ tests/control-tower/ Mac (exit=0)
+  ✅ coordination 文档 Mac (exit=0)
+  ✅ src/（非例外）= Win (exit=0)
+  ✅ src/server.ts = Win 专属 (exit=0)
+  ✅ scripts/audit/ = K3 (exit=0)
+
+── 2. 越域: 派单 §一 验收两条（必须非零）──
+  ✅ 验收① src/server.ts --owner mac (exit=1)
+  ✅ 验收② src/evidence/x.ts --owner mac (exit=1)
+  ✅ Mac 文件派给 win 也越域（对称） (exit=1)
+  ✅ K3 红线派给 mac 越域 (exit=1)
+
+── 3. 真实回归: CTO 2026-09-13 两次派错线的实写集 ──
+  ✅ D728 回归: 整写集派给 mac 必红 (exit=1)
+  ✅ D729 回归: Win 域两文件派给 mac 必红 (exit=1)
+
+── 4. 单域模式（无 --owner）──
+  ✅ 单域模式: 全 Mac → exit 0
+  ✅ 单域模式: Mac+Win 混合 → exit 1（跨域）
+  ✅ 跨域输出点名「跨域」
+
+── 4b. 域判定豁免 domain_neutral（D734 前置：各线都写的簿记不构成域信号）──
+  ✅ bypass.log 豁免: 只剩 mac → exit 0
+  ✅ 豁免路径明示 domain-neutral（不静默）
+  ✅ 豁免不掩盖真跨域（Mac+Win 仍 exit 1）
+  ✅ 豁免路径不参与 --owner 断言 (exit=0)
+  ✅ 非豁免路径仍受 --owner 断言（回归） (exit=1)
+  ✅ D758 证据目录豁免: Win 代码 + 自己的验收证据 → exit 0
+  ✅ D758 证据路径明示 domain-neutral（不静默）
+  ✅ D758 Win 证据 + Mac 控制塔脚本 → 仍单域（证据不掺域）
+  ✅ D758 豁免不掩盖真跨域（Win 代码 + Mac 脚本仍 exit 1）
+  ✅ D758 豁免路径不参与 --owner 断言 (exit=0)
+
+── 5. 反向验证: 删掉兜底规则 → 验收两条必须变绿（证明真在读 yaml）──
+  ✅ 反向验证前置: 兜底**规则行**已移除（锚定行首计数=0，非整文件 grep）
+  ✅ 删兜底 → src/server.ts 判「未归属」必红（旧语义: 变绿 ⇒ 已按新语义改写） (exit=1)
+  ✅ 删兜底 → src/evidence/x.ts 判「未归属」必红（同上） (exit=1)
+  ✅ 删兜底输出点名「未归属」（不静默、不误报越域）
+  ✅ 原 yaml 复测仍红（未污染真实文件） (exit=1)
+  ✅ 复测输出点名「越域」
+  ✅ 无兜底时明示 ⚠️「未归属」（不静默降级）
+
+── 5a2. 判别性回归: 注释里的字面 - glob: "**" 不得污染守门判据（D1029 追加 2）──
+  ✅ 5a2 前置: 注释里确含字面 glob 字符串（旧写法会误判）
+  ✅ 5a2 锚定判据: 注释+已删规则 → 规则行计数 0（不被注释误判为「未删」）
+  ✅ 5a2 注释阴影下删兜底 → 判「未归属」必红（新语义；行为与判据一致） (exit=1)
+  ✅ 5a2 注释阴影不改变真 yaml 的判定（复测仍红） (exit=1)
+
+── 5b. D935 判别性夹具: presets→mac（删该规则即红 = 判据真读数据，非 grep 型静态判据）──
+  ✅ D935 presets 根文件 = Mac (exit=0)
+  ✅ D935 presets 子目录文件 = Mac (exit=0)
+  ✅ D935 presets 派给 win 越域（对称） (exit=1)
+  ✅ D935 改坏前置: presets 规则行已删（锚定行首计数=0；注释里的同字面不再误判）
+  ✅ D935 注释回归前置: 注释里确含同字面（旧写法会误判）
+  ✅ D935 注释回归: 注释+已删规则 → 规则行计数 0（不被注释误判）
+  ✅ D935 删 presets 规则 → presets 路径派 mac 必红 (exit=1)
+  ✅ D935 删 presets 规则 → 子目录文件同样必红 (exit=1)
+  ✅ D935 原 yaml 复测仍绿（未污染真实文件） (exit=0)
+
+── 6. 降级与边界（fail-closed → exit 2）──
+  ✅ yaml 不存在 → exit 2 (exit=2)
+  ✅ yaml 语法非法 → exit 2 (exit=2)
+  ✅ rules 为空 → exit 2 (exit=2)
+  ✅ yaml 非映射 → exit 2 (exit=2)
+  ✅ 无文件参数 → exit 2
+  ✅ 未知 owner → exit 2（argparse 拒绝）
+  ✅ 尚未创建的文件路径也可判域 (exit=0)
+
+── 7. 产物契约: CODEOWNERS == --emit-codeowners（drift 门禁）──
+  ✅ drift⓪: 生成器头注释指向真实测试文件名 check-ownership.test.sh（D939 失效路径未回退）
+  ✅ drift①: 规则行逐行相同（去注释后零差异）
+  ⏳ drift② contract: 差异仅在注释段（规则行已零差异，见 drift①）；待重跑 --emit-codeowners > .github/CODEOWNERS 覆盖后转绿 —— 该文件非 A 写集（已登记，不静默）
+  ✅ --emit-codeowners exit 0 (exit=0)
+  ✅ CODEOWNERS 顺序: 兜底(11) 在 Mac 例外(16) 之前
+
+── 8. 结构契约: ownership.yaml 恰有一条 default 兜底规则 ──
+  ✅ default 规则恰 1 条
+  ✅ 显式规则存在: src/sentinel/**
+  ✅ 显式规则存在: src/cron/**
+  ✅ 显式规则存在: src/mcp/**
+  ✅ 显式规则存在: scripts/audit/**
+  ✅ 显式规则存在: scripts/control-tower/**
+
+── 9. 生产接线（铁律 0-2 WIRE CHECK）──
+  ✅ 接线: CODEOWNERS 头声明由 check-ownership.py 生成（产物消费成立）
+
+── 10. D1029 兜底语义收口（a/b/c 反例 + 判别性夹具 + live 契约探针）──
+  ✅ 10a 未登记新目录 → 未归属 exit 1（不再静默归 win） (exit=1)
+  ✅ 10a 输出点名「未归属」
+  ✅ 10a 输出给出「请在 ownership.yaml 显式加规则」
+  ✅ 10a 提示含可复制复核命令（路径逐字）
+  ✅ 10a 未归属在 --owner 模式下同样 exit 1 (exit=1)
+  ✅ 10a 未归属不会被判成跨域（口径不混） (exit=1)
+  ✅ 10a 未归属点名且不混为「跨域」
+  ✅ 10a 基线领地 src/** 仍视同 win (exit=0)
+  ✅ 10a 基线领地命中在输出中显式标注（不静默）
+  ✅ 10b 前置: 合同形态夹具含 domain_defaults
+  ❌ 10b 前置: 旧态夹具有 domain_defaults（C1 判据不可信）
+  ✅ 10b 前置: 新态夹具含 domain_defaults + 新规则
+  tests/control-tower/check-ownership.test.sh: line 426: new-line-1790500635/artifact.ts: Is a directory
+     [夹具前置] C1（未加规则 + 旧态 yaml）exit=2（期望 2 = 缺 domain_defaults，fail-closed）
+     [夹具前置] C2（同变更集内加规则）exit=0（期望 0）
+     [夹具前置] C3 变更集 = docs/synova/coordination/ownership.yaml 
+  ✅ 10b 加规则后同路径 ⇒ exit 0（规则真生效）
+  ✅ 10b 逃生口: 同批加规则后该新目录文件判 win（--owner win 通过）
+  ✅ 10b 反面对照: 同一文件声明 mac ⇒ 越域 exit 1（判据非恒真）
+  ✅ 10b 前置: 规则确已写进夹具 yaml（非空跑）
+  ✅ 10c 变更集含 ownership.yaml + 无凭据 ⇒ exit 1
+  ✅ 10c 拦下时打印所需凭据（含「创始人批准」）
+  ✅ 10c 有创始人批准凭据 ⇒ exit 0
+  ✅ 10c 未给 --pr-body 时读 stdin 且无凭据 ⇒ exit 1
+  ✅ 10c 取不到变更集（ref 不存在）⇒ exit 2 + ❌ fail-closed（不假绿）
+  ✅ 10d 前置: 空 win 夹具已生成（win: []）
+  ✅ 10d 沙箱删 domain_defaults 段 → exit 2（结构非法，不静默归 win） (exit=2)
+  ❌ 10d 删段未点名 domain_defaults
+  ❌ 10d 删段未说明基线领地
+  ✅ 10d domain_defaults.win 置空 → exit 2（必须非空 glob 列表） (exit=2)
+  ❌ 10d 空列表未点名 domain_defaults.win
+  ✅ 10d 删兜底规则 → 明示「未归属」+ exit 1（不再 exit 0 静默变绿） (exit=1)
+  ✅ 10d 反面对照: 合同形态夹具同路径仍 exit 0（基线领地命中） (exit=0)
+  ✅ 10e --emit-codeowners 正常态 exit 0
+  ❌ 10e 缺 domain_defaults 时 emit exit=2（应为 0）
+❌ check-ownership: ownership.yaml 解析失败: line 81: 重复键: rule_authority
+  ❌ 10e emit 输出受 domain_defaults 影响（drift 风险）
+  ✅ 10f live yaml 判未登记目录为「未归属」⇒ exit 1 (exit=1)
+  ✅ 10f live yaml 基线领地 src/** 仍视同 win (exit=0)
+
+═══════════════════════════════════════════════════════════
+  ❌ 6 项失败 / 95 项通过（PENDING=1 项）
+═══════════════════════════════════════════════════════════
+exit=1
+
+── ③ check-pr-budget.test.sh（态 2）──
+### 命令: bash tests/control-tower/check-pr-budget.test.sh
+═══════════════════════════════════════════════════════════
+  D734 PR 预算门禁测试
+═══════════════════════════════════════════════════════════
+
+── 1. 正常路径: 小写集单域 → exit 0 ──
+  ✅ 2 个 Mac 文件 (exit=0)
+  ✅ 单域判定输出点名
+
+── 2. 超预算: 文件数 > 上限 → exit 1 ──
+  ✅ 13 文件 > 默认 12 (exit=1)
+  ✅ 超限输出点名「拆 PR」
+  ✅ 输出禁调高上限
+  ❌ --max-files 20 时同写集放行 — 期望 exit=0 实际 exit=1
+      | ── PR 预算门禁（D734）: 基线=origin/main 上限=20 文件 / 落后阈值=20 ──
+      |   ✅ ① 变更文件数 13 ≤ 上限 20
+      |   ❌ ② 变更跨域 —— 一个 PR 只许一个域（D733 ownership.yaml）
+      |        ⚠️  未归属  a1.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a2.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a3.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a4.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a5.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a6.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a7.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a8.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a9.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a10.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a11.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a12.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |   ✅ ③ 落后检查跳过（--files 注入模式无 git 上下文）
+      | ❌ FAIL PR 超预算 —— 拆 PR，不要调高上限
+
+── 3. 跨域: 变更落两个域 → exit 1 ──
+  ✅ Mac 脚本 + Win src 混合 (exit=1)
+  ✅ 跨域输出点名
+  ✅ bypass.log 豁免后仍单域 (exit=0)
+  ✅ D758 证据目录豁免: Win 代码 + 自己的验收证据 → 单域 (exit=0)
+  ✅ D758 豁免不掩盖真跨域（证据 + Win 代码 + Mac 脚本） (exit=1)
+
+── 4. 边界 ──
+  ✅ 0 文件（空写集） (exit=0)
+  ✅ 恰好等于上限 (exit=0)
+  ✅ 上限 1、写集 2 (exit=1)
+
+── 5. 降级: 基线全链不可解析 → 显式留痕 + exit 0（不误红）──
+  ✅ 无任何基线的仓库 → exit 0
+  ✅ 降级明示「基线不可解析」（不静默）
+  ✅ 降级说明不静默放过
+
+── 6. 检查失败: 域校验器缺失 → exit 2（fail-closed）──
+  ✅ 缺 check-ownership.py → exit 2
+  ✅ 缺口点名「域校验器缺失」
+
+── 7. 落后基线: 沙箱仓库真落后 → ⚠️ 告警但 exit 0 ──
+  ✅ 落后但未超文件/域预算 → exit 0（落后不阻断）
+  ✅ 落后告警输出点名
+
+── 9. D860 治理产物豁免: 不计入 ≤12 预算 ──
+  ✅ 12 交付文件 + brief/卡/Note/规格 各 1 → 豁免 4 件后 12 计数放行 (exit=0)
+  ✅ 豁免件数点名（可见，不静默）
+  ✅ memory/notes yaml 也豁免 (exit=0)
+  ✅ 自验证据目录豁免（docs/synova/product-lines/evidence/） (exit=0)
+
+── 10. D860 反例: 伪装成治理产物的代码必须仍被计数 ──
+  ✅ 13 件纯代码仍被拦（豁免不放宽真代码） (exit=1)
+  ✅ 反例: task-state/evil.ts（代码伪装进治理前缀）→ 仍计数 13 > 12 (exit=1)
+  ✅ 反例计数点名 13
+  ✅ 反例: .claude/task-briefs/evil.sh 仍计数 (exit=1)
+
+── 8. 接线（铁律 0-2 WIRE CHECK）──
+  ✅ 接线: pre-commit-check.sh 真调用本脚本
+  ✅ 组数横幅未改（快速通道仍为「跳过 12 组」）
+  ✅ 总结横幅仍为 13 组（未并组）
+
+═══════════════════════════════════════════════════════════
+  ❌ 1 项失败 / 31 项通过
+═══════════════════════════════════════════════════════════
+exit=1
