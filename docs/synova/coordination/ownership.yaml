@@ -39,16 +39,6 @@ github:
   win: "@tangbaobao520"
   k3: "@tangbaobao520"
 
-# ═══ 规则修改权（D1029，创始人 2026-09-27 明令；机读位置 = 本键）═══
-# 依据: 创始人 2026-09-27 明令「ownership.yaml 的修改由创始人批准」+ 本文件头部自我声明。
-# 域（mac/win/k3）只用于**协作防冲突**与 PR 单域判定；域 ≠ 权限。
-# 原生强制 = GitHub CODEOWNERS review（本表是该文件唯一生成源）——不新增自研权限门禁。
-rule_authority:
-  domain_vs_permission: "域（mac/win/k3）只用于**协作防冲突**与 PR 单域判定；域 ≠ 权限。"
-  rule_change_authority: "ownership.yaml 的最终修改权在**创始人**；规则变更须创始人批准。"
-  approval_credential: "PR 描述中一行含 `创始人批准` 且含 `ownership`（机读标记，check-ownership.py --claim-check）"
-  native_enforcement: "GitHub CODEOWNERS 原生 review（本表为该文件唯一生成源）——不新增自研权限门禁"
-
 # ═══ win 基线领地（D1029；兜底不再等于 win —— 未归属须显式认领）═══
 # 语义: 兜底规则（`**` 那条）不再把「无人认领的路径」判给 win。本键显式声明 win 的既有
 #       领地：命中本键 ⇒ 已显式认领为 win；未命中本键、也未命中任何显式规则、且不在
@@ -80,6 +70,16 @@ rule_authority:
 #     → 19/19 判 win、PASS exit 0（样本与原始输出见证据文件，不在此处放一次性资源清单）。
 domain_defaults:
   win: ["src/**", "extensions/**", "packages/**", "synova_worker/**", "docs/plans/**", "tests/**", "expert/**", "skills/**", "knowledge/**", "theory/**", "synthesis/**", "cycles/**", "app/**", "vendor/**", "prototypes/**", "observer-adapters/**", "data/**", "assets/**", "patches/**"]
+
+# ═══ 规则修改权（D1029，创始人 2026-09-27 明令；机读位置 = 本键）═══
+# 依据: 创始人 2026-09-27 明令「ownership.yaml 的修改由创始人批准」+ 本文件头部自我声明。
+# 域（mac/win/k3）只用于**协作防冲突**与 PR 单域判定；域 ≠ 权限。
+# 原生强制 = GitHub CODEOWNERS review（本表是该文件唯一生成源）——不新增自研权限门禁。
+rule_authority:
+  domain_vs_permission: "域（mac/win/k3）只用于**协作防冲突**与 PR 单域判定；域 ≠ 权限。"
+  rule_change_authority: "ownership.yaml 的最终修改权在**创始人**；规则变更须创始人批准。"
+  approval_credential: "PR 描述中一行含 `创始人批准` 且含 `ownership`（机读标记，check-ownership.py --claim-check）"
+  native_enforcement: "GitHub CODEOWNERS 原生 review（本表为该文件唯一生成源）——不新增自研权限门禁"
 
 rules:
   # ═══ Win Claude Code 领地（宽 → 窄：最后匹配者胜出，故兜底在最前）═══
@@ -260,7 +260,16 @@ rules:
 #   变化都可能要求它们同步（本次 registry v3.0 专家换代 7→6，mac 线防线启用要求文档对齐）。
 #   它们此前落 ** 兜底被判 win，但导航文档的同步需求跟着触发方走，不构成「这条 PR 属于
 #   哪条线」的信号。豁免后真跨域（win 代码 + mac 工具链）仍拦住。
+# D1029 增补（2026-09-27 实测）：本文件自身 docs/synova/coordination/ownership.yaml ——
+#   它是**每一线「认领新目录」PR 都必须改的那一份**（win 域 PR 要给新目录加规则 = 同时改本表），
+#   在 rules 里归 mac（TASK-ROUTING.md L37 coordination 文档 DSH 专属），故任何 win 域认领 PR 都被
+#   单域判定判「变更跨域」，**把本卡设计的「同一 PR 认领」逃生口堵死**（实测：本文件 + src/ 任一
+#   win 文件 → `❌ FAIL 跨域: 变更落在 2 个域 ['mac','win']` exit 1）。逻辑同 `.gitignore`（D774）：
+#   每条线都会改的那一份，不构成「这条 PR 属于哪条线」的信号。
+#   **它仍然是 mac 域规则**：rules 里 docs/synova/coordination/** → mac **保留不动**，
+#   CODEOWNERS 落 owner（@tangbaobao520）与创始人原生 review 保护不受影响；
+#   domain_neutral 只影响单域判定，且**不影响 --emit-codeowners**（生成物逐字节不变）。
 # D782 增补二: 防线产物（DRIFT-LEDGER.md / system-registry.json）——doc-system 工具链（mac）
 #   的运行产物，路径恰在 docs/authority/（兜底判 win）——同 D758 证据目录逻辑: 产物跟工具链走。
-domain_neutral: [".claude/bypass.log", ".claude/gate-hits.log", ".claude/task-briefs/**", "task-state/**", "memory/notes/**", ".codex/**", "docs/synova/product-lines/evidence/**", ".gitignore", "AGENTS.md", "CLAUDE.md", "LOOP.md", "knowledge/shared/README.md", "docs/authority/DRIFT-LEDGER.md", "docs/authority/system-registry.json"]
+domain_neutral: [".claude/bypass.log", ".claude/gate-hits.log", ".claude/task-briefs/**", "task-state/**", "memory/notes/**", ".codex/**", "docs/synova/product-lines/evidence/**", ".gitignore", "AGENTS.md", "CLAUDE.md", "LOOP.md", "knowledge/shared/README.md", "docs/authority/DRIFT-LEDGER.md", "docs/authority/system-registry.json", "docs/synova/coordination/ownership.yaml"]
 

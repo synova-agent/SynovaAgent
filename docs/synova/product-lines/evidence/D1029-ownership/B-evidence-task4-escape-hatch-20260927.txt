@@ -1,0 +1,229 @@
+# D1029 · 成员 B（task-4）机器输出留档 —— domain_neutral 修逃生口 + 复合态重跑生成物（纯命令输出，无散文）
+# 任务 task-4 | 成员 ownership-authority-dev | 分支 fix/d1029-ownership-b-20260927 | 2026-09-27
+# 配套: B-evidence-20260927.txt / B-logs-*.txt
+
+── X1 复合态：合并 A 后的提交与文件面
+$ git log --oneline -4; echo '---'; git diff --stat 4afd4ce1..HEAD | tail -6
+36387e28 Merge remote-tracking branch 'origin/fix/d1029-ownership-a-20260927' into fix/d1029-ownership-b-20260927
+6aa5f0f7 chore: bypass COMMITTED 登记 (auto hook, D521)
+a49e53ca fix(D1029): check-ownership 兜底语义改为未归属需显式认领（含 claim-check 与三条反例）
+a508fd2c chore: bypass COMMITTED 登记 (auto hook, D521)
+---
+ .../B-logs-check-ownership-red-firstrun-57of58.txt |  87 +++++
+ .../B-logs-check-ownership-test.txt                |  87 +++++
+ .../B-logs-check-pr-budget-test.txt                |  59 ++++
+ scripts/control-tower/check-ownership.py           | 346 +++++++++++++++++---
+ tests/control-tower/check-ownership.test.sh        | 363 +++++++++++++++++++--
+ 21 files changed, 1776 insertions(+), 92 deletions(-)
+[exit=0]
+
+── X1b 生成器确为 A 版（订正失效路径 + A 独有实现标记）
+$ grep -n '漂移门禁: tests/control-tower/' scripts/control-tower/check-ownership.py; echo '---'; grep -c 'claim-check\|domain_defaults_win\|territory_globs' scripts/control-tower/check-ownership.py
+281:        "# 漂移门禁: tests/control-tower/check-ownership.test.sh 逐字节断言本文件 == 生成结果（D733）",
+---
+10
+[exit=0]
+
+── X2 合并 .claude/bypass.log 并集核对（append-only 台账）
+$ echo '我这边追加:'; git show a508fd2c -- .claude/bypass.log | grep -E '^\+' | grep -v '^\+\+\+'; echo 'A 那边追加:'; git show 6aa5f0f7 -- .claude/bypass.log | grep -E '^\+' | grep -v '^\+\+\+'; echo '合并后两行均在:'; grep -c . .claude/bypass.log; grep -n 'bf24d89f\|a49e53ca' .claude/bypass.log
+我这边追加:
+grep: repetition-operator operand invalid
+A 那边追加:
+grep: repetition-operator operand invalid
+合并后两行均在:
+1844
+1845:2026-09-27T17:05:35+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=bf24d89ffa8cf0a35adb6ed6cdcab8503a4f7e73
+1846:2026-09-27T17:10:00+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=a49e53ca317c6997b22ef2cdacfd394af71aa730
+[exit=0]
+
+── X3 我树里未跟踪 brief 与 A 提交版本逐字节相同（移除前取证）
+$ git show origin/fix/d1029-ownership-a-20260927:.claude/task-briefs/2026-09-27-D1029-ownership-domain-rule-closeout.md > /tmp/brief-a-version.md; shasum -a 256 /tmp/brief-a-version.md /tmp/B-backup-brief-before-merge.md
+0d6879b87e13f1eab43bc818b058257772ffaf3dd25a0437f6846fc49b126c82  /tmp/brief-a-version.md
+0d6879b87e13f1eab43bc818b058257772ffaf3dd25a0437f6846fc49b126c82  /tmp/B-backup-brief-before-merge.md
+[exit=0]
+
+── X4 ① 重跑生成后 drift 门禁（零输出）
+$ python3 scripts/control-tower/check-ownership.py --emit-codeowners | diff - .github/CODEOWNERS
+
+[exit=0]
+
+── X4b CODEOWNERS 相对 HEAD 的变化（line4 订正 + 领地注释 19 条单一源）
+$ git diff HEAD -- .github/CODEOWNERS; echo '---'; sed -n '4p;11p' .github/CODEOWNERS
+diff --git a/.github/CODEOWNERS b/.github/CODEOWNERS
+index 5dcc0d1b..d32254c9 100644
+--- a/.github/CODEOWNERS
++++ b/.github/CODEOWNERS
+@@ -1,13 +1,14 @@
+ # .github/CODEOWNERS — 【生成产物，请勿手改】
+ # 源: docs/synova/coordination/ownership.yaml（唯一权威；改那里再重跑下面的命令）
+ # 生成: python3 scripts/control-tower/check-ownership.py --emit-codeowners > .github/CODEOWNERS
+-# 漂移门禁: tests/control-tower/ownership.test.sh 逐字节断言本文件 == 生成结果（D733）
++# 漂移门禁: tests/control-tower/check-ownership.test.sh 逐字节断言本文件 == 生成结果（D733）
+ # 语义: CODEOWNERS「最后匹配者胜出」→ 宽规则在前、例外在后（与 ownership.yaml 同序）。
+ #
+ # owner 账号体系待创始人定（2026-08-16 B1 落地）：当前全部指向主账号 @tangbaobao520
+ # （兜底 = 创始人最终把关）。建议建三个团队 @synova-dsh / @synova-claude / @synova-k3，
+ # 改 ownership.yaml 的 github: 段后重跑生成命令即可 —— 本文件不需要手改。
+ 
++# win 领地（显式列出）: src/**、extensions/**、packages/**、synova_worker/**、docs/plans/**、tests/**、expert/**、skills/**、knowledge/**、theory/**、synthesis/**、cycles/**、app/**、vendor/**、prototypes/**、observer-adapters/**、data/**、assets/**、patches/**
+ *                                        @tangbaobao520
+ extensions/**                            @tangbaobao520
+ packages/**                              @tangbaobao520
+---
+# 漂移门禁: tests/control-tower/check-ownership.test.sh 逐字节断言本文件 == 生成结果（D733）
+# win 领地（显式列出）: src/**、extensions/**、packages/**、synova_worker/**、docs/plans/**、tests/**、expert/**、skills/**、knowledge/**、theory/**、synthesis/**、cycles/**、app/**、vendor/**、prototypes/**、observer-adapters/**、data/**、assets/**、patches/**
+[exit=0]
+
+── X5 ② 逃生口 改前（= 从 domain_neutral 里去掉本文件那条的夹具）
+$ python3 - <<'PY'
+import pathlib
+src = pathlib.Path('docs/synova/coordination/ownership.yaml').read_text(encoding='utf-8')
+k = '", "docs/synova/coordination/ownership.yaml"]'
+assert k in src
+pathlib.Path('/tmp/b2-repro/noneutral.yaml').write_text(src.replace(k, '"]'), encoding='utf-8')
+print('夹具: /tmp/b2-repro/noneutral.yaml（live 去掉本文件那条 domain_neutral）')
+PY
+python3 scripts/control-tower/check-ownership.py docs/synova/coordination/ownership.yaml src/adapters/federal-adapter.ts --yaml /tmp/b2-repro/noneutral.yaml
+夹具: /tmp/b2-repro/noneutral.yaml（live 去掉本文件那条 domain_neutral）
+mac  docs/synova/coordination/ownership.yaml
+win  src/adapters/federal-adapter.ts  (兜底→win 基线领地)
+
+❌ FAIL 跨域: 变更落在 2 个域 ['mac', 'win'] —— 单个 PR 只许一个域（域判定豁免 0）
+[exit=1]
+
+── X5b ② 逃生口 改后（live yaml）
+$ python3 scripts/control-tower/check-ownership.py docs/synova/coordination/ownership.yaml src/adapters/federal-adapter.ts
+·   domain-neutral  docs/synova/coordination/ownership.yaml
+win  src/adapters/federal-adapter.ts  (兜底→win 基线领地)
+
+✅ PASS 1 个文件同域: win（域判定豁免 1）
+[exit=0]
+
+── X5c 反证：真跨域仍拦住（win 代码 + mac 工具链）
+$ python3 scripts/control-tower/check-ownership.py src/adapters/federal-adapter.ts scripts/control-tower/check-ownership.py
+win  src/adapters/federal-adapter.ts  (兜底→win 基线领地)
+mac  scripts/control-tower/check-ownership.py
+
+❌ FAIL 跨域: 变更落在 2 个域 ['mac', 'win'] —— 单个 PR 只许一个域（域判定豁免 0）
+[exit=1]
+
+── X5d rules 里 mac 判定保留不动 + domain_neutral 条目数
+$ python3 -c "import sys; sys.path.insert(0,'scripts/product-lines'); import productline_yaml as P; d=P.load_file('docs/synova/coordination/ownership.yaml'); print('rules 中 docs/synova/coordination/** 的 owner =', [r['owner'] for r in d['rules'] if r['glob']=='docs/synova/coordination/**']); print('domain_neutral len =', len(d['domain_neutral'])); print('含本文件:', 'docs/synova/coordination/ownership.yaml' in d['domain_neutral'])"
+rules 中 docs/synova/coordination/** 的 owner = ['mac']
+domain_neutral len = 15
+含本文件: True
+[exit=0]
+
+── X6 ③ A 的套件计数（复合态）
+$ bash tests/control-tower/check-ownership.test.sh | tail -4
+  ❌ 10e emit 输出受 domain_defaults 影响（drift 风险）
+
+═══════════════════════════════════════════════════════════
+  ❌ 1 项失败 / 100 项通过（PENDING=0 项）
+═══════════════════════════════════════════════════════════
+[exit=0]
+
+── X6b A 的套件 §10 全段判定行
+$ bash tests/control-tower/check-ownership.test.sh | sed -n '/── 10\. /,$p'
+  ❌ 10e emit 输出受 domain_defaults 影响（drift 风险）
+── 10. D1029 兜底语义收口（a/b/c 反例 + 判别性夹具 + live 契约探针）──
+  ✅ 10a 未登记新目录 → 未归属 exit 1（不再静默归 win） (exit=1)
+  ✅ 10a 输出点名「未归属」
+  ✅ 10a 输出给出「请在 ownership.yaml 显式加规则」
+  ✅ 10a 提示含可复制复核命令（路径逐字）
+  ✅ 10a 未归属在 --owner 模式下同样 exit 1 (exit=1)
+  ✅ 10a 未归属不会被判成跨域（口径不混） (exit=1)
+  ✅ 10a 未归属点名且不混为「跨域」
+  ✅ 10a 基线领地 src/** 仍视同 win (exit=0)
+  ✅ 10a 基线领地命中在输出中显式标注（不静默）
+  ✅ 10b 前置: 合同形态夹具含 domain_defaults
+  ✅ 10b 前置: 旧态夹具已剥离 domain_defaults（C1 判据可信）
+  ✅ 10b 前置: 新态夹具含 domain_defaults + 新规则
+  tests/control-tower/check-ownership.test.sh: line 416: new-line-1790500646/artifact.ts: Is a directory
+     [夹具前置] C1（未加规则 + 旧态 yaml）exit=2（期望 2 = 缺 domain_defaults，fail-closed）
+     [夹具前置] C2（同变更集内加规则）exit=0（期望 0）
+     [夹具前置] C3 变更集 = docs/synova/coordination/ownership.yaml 
+  ✅ 10b 加规则后同路径 ⇒ exit 0（规则真生效）
+  ✅ 10b 逃生口: 同批加规则后该新目录文件判 win（--owner win 通过）
+  ✅ 10b 反面对照: 同一文件声明 mac ⇒ 越域 exit 1（判据非恒真）
+  ✅ 10b 前置: 规则确已写进夹具 yaml（非空跑）
+  ✅ 10c 变更集含 ownership.yaml + 无凭据 ⇒ exit 1
+  ✅ 10c 拦下时打印所需凭据（含「创始人批准」）
+  ✅ 10c 有创始人批准凭据 ⇒ exit 0
+  ✅ 10c 未给 --pr-body 时读 stdin 且无凭据 ⇒ exit 1
+  ✅ 10c 取不到变更集（ref 不存在）⇒ exit 2 + ❌ fail-closed（不假绿）
+  ✅ 10d 前置: 空 win 夹具已生成（win: []）
+  ✅ 10d 沙箱删 domain_defaults 段 → exit 2（结构非法，不静默归 win） (exit=2)
+  ✅ 10d 删段报错点名 domain_defaults
+  ✅ 10d 删段报错说明基线领地缺失
+  ✅ 10d domain_defaults.win 置空 → exit 2（必须非空 glob 列表） (exit=2)
+  ✅ 10d 空列表报错点名 domain_defaults.win
+  ✅ 10d 删兜底规则 → 明示「未归属」+ exit 1（不再 exit 0 静默变绿） (exit=1)
+  ✅ 10d 反面对照: 合同形态夹具同路径仍 exit 0（基线领地命中） (exit=0)
+  ✅ 10e --emit-codeowners 正常态 exit 0
+  ✅ 10e --emit-codeowners 在「缺 domain_defaults」夹具上仍 exit 0（不因缺键坏生成器）
+  ✅ 10f live yaml 判未登记目录为「未归属」⇒ exit 1 (exit=1)
+  ✅ 10f live yaml 基线领地 src/** 仍视同 win (exit=0)
+
+═══════════════════════════════════════════════════════════
+  ❌ 1 项失败 / 100 项通过（PENDING=0 项）
+═══════════════════════════════════════════════════════════
+[exit=0]
+
+── X6c 下游套件（check-pr-budget）
+$ bash tests/control-tower/check-pr-budget.test.sh | tail -4
+  ❌ --max-files 20 时同写集放行 — 期望 exit=0 实际 exit=1
+      | ── PR 预算门禁（D734）: 基线=origin/main 上限=20 文件 / 落后阈值=20 ──
+      |   ✅ ① 变更文件数 13 ≤ 上限 20
+      |   ❌ ② 变更跨域 —— 一个 PR 只许一个域（D733 ownership.yaml）
+      |        ⚠️  未归属  a1.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a2.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a3.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a4.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a5.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a6.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a7.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a8.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a9.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a10.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a11.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |        ⚠️  未归属  a12.ts —— 请在 ownership.yaml 显式加规则（认领即改规则；同一 PR 内加规则即通过）
+      |   ✅ ③ 落后检查跳过（--files 注入模式无 git 上下文）
+      | ❌ FAIL PR 超预算 —— 拆 PR，不要调高上限
+
+═══════════════════════════════════════════════════════════
+  ❌ 1 项失败 / 31 项通过
+═══════════════════════════════════════════════════════════
+[exit=0]
+
+── X7 §10e 复现：emit(contract) vs emit(缺 domain_defaults)
+$ python3 - <<'PY'
+import pathlib
+src = pathlib.Path('docs/synova/coordination/ownership.yaml').read_text(encoding='utf-8')
+i = src.index('domain_defaults:'); j = src.index('rule_authority:')
+pathlib.Path('/tmp/b2-repro/nodef.yaml').write_text(src[:i] + src[j:], encoding='utf-8')
+print('夹具: /tmp/b2-repro/nodef.yaml（剥离 domain_defaults）')
+PY
+python3 scripts/control-tower/check-ownership.py --emit-codeowners > /tmp/b2-repro/gen-ok.txt
+python3 scripts/control-tower/check-ownership.py --emit-codeowners --yaml /tmp/b2-repro/nodef.yaml > /tmp/b2-repro/gen-nodef.txt
+diff /tmp/b2-repro/gen-ok.txt /tmp/b2-repro/gen-nodef.txt
+夹具: /tmp/b2-repro/nodef.yaml（剥离 domain_defaults）
+11d10
+< # win 领地（显式列出）: src/**、extensions/**、packages/**、synova_worker/**、docs/plans/**、tests/**、expert/**、skills/**、knowledge/**、theory/**、synthesis/**、cycles/**、app/**、vendor/**、prototypes/**、observer-adapters/**、data/**、assets/**、patches/**
+[exit=1]
+
+── X7b §10e 的差异与 task-4 改动无关（emit 不读 domain_neutral）
+$ python3 scripts/control-tower/check-ownership.py --emit-codeowners --yaml /tmp/b2-repro/noneutral.yaml > /tmp/b2-repro/gen-noneutral.txt; diff /tmp/b2-repro/gen-ok.txt /tmp/b2-repro/gen-noneutral.txt
+
+[exit=0]
+
+── X8 提交前 git status / diff --stat
+$ git status --short; echo '---'; git diff --stat HEAD
+ M .github/CODEOWNERS
+ M docs/synova/coordination/ownership.yaml
+?? docs/synova/product-lines/evidence/D1029-ownership/B-evidence-task4-escape-hatch-20260927.txt
+---
+ .github/CODEOWNERS                      |  3 ++-
+ docs/synova/coordination/ownership.yaml | 31 ++++++++++++++++++++-----------
+ 2 files changed, 22 insertions(+), 12 deletions(-)
+[exit=0]
