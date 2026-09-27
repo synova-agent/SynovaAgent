@@ -1,0 +1,43 @@
+{
+  "task_id": "D1030",
+  "title": "CT系列-门禁推断随机性根治（CT-C P0 + CT-A2 多命中 fail-closed + CT-D 豁免粒度 + CT-D2 doc-registry CI fail-open）",
+  "status": "claimed",
+  "risk": "high",
+  "domain": "mac",
+  "owner": "mac-coding",
+  "executor": "gate-fix（SynovaAgent 专职小队编码成员）",
+  "milestone": "M0 项目管理基建",
+  "depends_on": [
+    "D708",
+    "D814",
+    "D911",
+    "D954",
+    "D964"
+  ],
+  "blocked": null,
+  "target": "2026-W40",
+  "spec": ".claude/task-briefs/2026-09-28-D1030-CT系列-门禁推断随机性根治.md",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "priority": 1,
+  "base_branch": "main",
+  "base_head": "4afd4ce187575b96c0074d1db81277a8a08e4679",
+  "note": "队长派单（2026-09-27 小队 gate-fix）：CT-C（P0）= merge_writeset_gate.py 的 D# 推断随机性根治。根因实测：GitHub 对 pull_request 合成的 merge 提交主题是 `Merge <head_sha> into <base_sha>`，旧 DID_RE `[Dd]\\d+` 从 SHA 里抠出伪号 ⇒ 同一份代码不同 SHA ⇒ 不同 D#（实测 5 SHA → D54/D4/D0/D34/D34）。三层修法 + --first-parent 落地（D814）。CT-A2 = find_declaration_files 多命中静默取末位改 fail-closed。CT-D = 豁免粒度评估（写集门禁不加目录级豁免；预算门禁补逐条列举 + 数量阈值）。CT-D2（同 D# 同分支）= doc-registry-gate CI fail-open 根治 + evidence 登记口径 + D1023 brief L-Q2 归一化。write_set 为分支 base..HEAD 的真实变更清单（含后续 CT-D2 交付）。",
+  "write_set": [
+    "scripts/control-tower/merge_writeset_gate.py",
+    "scripts/control-tower/check-pr-budget.sh",
+    "tests/control-tower/merge_writeset_gate.test.sh",
+    "tests/control-tower/check-pr-budget.test.sh",
+    "scripts/doc-system/doc-registry-gate.sh",
+    "tests/doc-system/doc-registry-gate.test.sh",
+    "docs/authority/DOCS-REGISTRY.yaml",
+    ".claude/task-briefs/2026-09-26-D1023-commit-msg-decisions.md",
+    ".claude/task-briefs/2026-09-28-D1030-CT系列-门禁推断随机性根治.md",
+    "task-state/D1030.json",
+    "memory/notes/proposed/2026-09-28-d1030-ct-gate-inference-randomness.md",
+    "docs/synova/product-lines/evidence/CT1-ct-gate-inference-20260927.md",
+    "docs/synova/product-lines/evidence/CT5-*.md",
+    ".claude/bypass.log"
+  ]
+}
