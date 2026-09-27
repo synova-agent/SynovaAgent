@@ -1,0 +1,38 @@
+=== ① 生成器里 ownership.test.sh 的命中（应只剩真实路径 1 处）===
+$ grep -n "ownership.test.sh" scripts/control-tower/check-ownership.py
+281:        "# 漂移门禁: tests/control-tower/check-ownership.test.sh 逐字节断言本文件 == 生成结果（D733）",
+命中数 =1
+
+=== ② 生成器实际发射的漂移门禁行 ===
+$ python3 scripts/control-tower/check-ownership.py --emit-codeowners | grep -n "漂移门禁"
+4:# 漂移门禁: tests/control-tower/check-ownership.test.sh 逐字节断言本文件 == 生成结果（D733）
+
+=== ③ 仓库侧 .github/CODEOWNERS 第 4 行（提交基线 4afd4ce1 版，仍为失效路径）===
+$ sed -n "4p" .github/CODEOWNERS
+# 漂移门禁: tests/control-tower/ownership.test.sh 逐字节断言本文件 == 生成结果（D733）
+
+=== ④ 两者 diff（方向: < 生成器 / > 仓库文件）===
+$ python3 scripts/control-tower/check-ownership.py --emit-codeowners | diff - .github/CODEOWNERS
+4c4
+< # 漂移门禁: tests/control-tower/check-ownership.test.sh 逐字节断言本文件 == 生成结果（D733）
+---
+> # 漂移门禁: tests/control-tower/ownership.test.sh 逐字节断言本文件 == 生成结果（D733）
+diff EXIT=1
+
+=== ⑤ 对照: B 工作树（/private/tmp/synova-wt-own2-b，只读；**B 侧仍是失效路径**）===
+$ grep -n "漂移门禁" /private/tmp/synova-wt-own2-b/scripts/control-tower/check-ownership.py
+159:        "# 漂移门禁: tests/control-tower/ownership.test.sh 逐字节断言本文件 == 生成结果（D733）"
+（A 侧修正后该行在 :281，内容为真实路径 check-ownership.test.sh）
+$ sed -n "4p" /private/tmp/synova-wt-own2-b/.github/CODEOWNERS
+# 漂移门禁: tests/control-tower/ownership.test.sh 逐字节断言本文件 == 生成结果（D733）
+→ B 的生成器与 B 重跑的 CODEOWNERS 自洽（都仍是失效路径）；B 树 diff EXIT=0 是「自洽」而非「正确」
+
+=== ⑥ 新增机器守卫 + 变异验证 ===
+$ bash tests/control-tower/check-ownership.test.sh | grep "drift⓪"
+  ✅ drift⓪: 生成器头注释指向真实测试文件名 check-ownership.test.sh（D939 失效路径未回退）
+$ 变异: 把生成器头注释改回 ownership.test.sh → 必红
+  ❌ drift⓪: 生成器仍发射失效路径 tests/control-tower/ownership.test.sh（应为 check-ownership.test.sh）
+  → ❌ 1 项失败 / 99 项通过（PENDING=2 项）
+
+=== ⑦ 收口所需（该文件非 A 写集，由队长收口执行）===
+$ cd <复合树> && python3 scripts/control-tower/check-ownership.py --emit-codeowners > .github/CODEOWNERS
