@@ -11,17 +11,32 @@
 #                       SYNO_INJECT_REQUIRE_CLEAN_BASELINE=1 → 基线 HOST_STATE 也判红（严格守门）。
 #   @output — 逐组结果行 + 耗时汇总表 + 收尾残留断言 + 末行机器可读汇总:
 #             GATE_INJECTION_SUMMARY: scenarios=<n> red_confirmed=<n> structural_not_red=<n>
-#                                     not_red=<n> green_confirmed=<n> green_fail=<n> g10region_named=<0|1>
-#                                     baseline=<ok|host_state|FAIL> probe=<状态>(rc=<n>)
-#                                     exempt_probe=<状态>(rc=<n>)
+#                                     not_red=<n> green_confirmed=<n> green_fail=<n>
+#                                     g10_degraded=<n> platform_unverifiable=<n>
+#                                     py_any=<python3|python|py|none> py3_ok=<0|1>
+#                                     baseline=<ok|host_state|degraded_env|FAIL> probe=<状态>(rc=<n>)
+#                                     exempt_probe=<状态>(rc=<n>) g10region_named=<0|1>
 #                                     residue_code=<n> residue_repo=<n> shim=<0|1>
-#   @exit   — 0 = 全部期望红组均 RED_CONFIRMED（structural_not_red 须带**已验证**的结构性理由），
-#                且绿基线 rc=0（或 baseline=host_state 且有因果隔离探针证据），
-#                且期望绿场景（g10exempt）GREEN_CONFIRMED 且判别性探针 RED_CONFIRMED，且残留断言过；
+#   @exit   — 0 = **有可用 python 的平台**: 全部期望红组均 RED_CONFIRMED（structural_not_red 须带**已验证**的
+#                 结构性理由）、绿基线 rc=0（或 baseline=host_state 且有因果隔离探针证据）、期望绿场景
+#                 （g10exempt/g10tests）GREEN_CONFIRMED、判别性探针 RED_CONFIRMED、残留断言过；
+#             — 0 = **无可用 python 的平台**: 3 个 G10 场景全部 G10_DEGRADED_OK（断言 ⑦ 降级契约：可见 ⚠️ +
+#                 degraded-events.log 有本场景新增的 G10 自有条目 + 不出现绿勾/静默跳过），且"G10 判别力
+#                 未在本平台验证"已被显式打印；此时**不要求** GREEN_CONFIRMED / exempt_probe；
 #             1 = 任一期望红组未红 / 期望绿场景未绿 / 判别性探针未红 / 基线不绿且不可归因 / 残留断言失败（业务失败）；
 #             2 = 夹具自身执行失败（不在 git 仓库 / clone 失败 / 副本 SHA 不一致，
 #                 与"门禁没红"区分开——D328 三态）
 #   @degraded — exit 2 + stderr "degraded: <原因>"（铁律 11/24）
+#
+# ═══ D1023 task-5: 平台前置（两条路径；平台差异真实存在，勿假设）═══
+#   探针 = **可试运行**（`-c "import sys"`），不是只 `command -v`（Windows Store 版 python 存根能命中但运行即失败）:
+#     PYBIN_ANY（python3|python|py 之一）→ G10 场景可判定性（生产侧 G10_PYBIN 同一探测）
+#     PY3_OK   （python3 本身）        → 组 12（:1433 `python3 -c`）与 check-plan-integrity（python3）可执行性
+#   有 python: 与历史行为**逐项一致**（green/red/判别性探针/点名断言照旧）。
+#   无 python: 无可用 python 时 G10 走 ⑦ 的显式降级 ⇒ 3 个 G10 场景改为断言**降级契约**并计入 g10_degraded；
+#             组 12 记 platform_unverifiable（且若输出「所有文件均在 Q2 范围内」则当场点名其为**静默假绿**，
+#             属既有缺陷、非本卡引入）；baseline 记 degraded_env（python3 依赖检查的 fail-closed 合法红，
+#             逐行打印 ❌ 不截断）。任何"未验证"都在末行 [PLATFORM] 显式声明，**不许静默跳过**。
 #
 # ═══ 组标签映射（**冻结事实，勿假设 1..13 连续**）═══
 #   实测: `grep -c '── 组 ' scripts/pre-commit-check.sh` = 12
@@ -173,14 +188,46 @@ HOST_PATH="$PATH"   # 保存宿主原始 PATH（组 9 结构性探针要用真�
 SHIM_USED=0
 if ! command -v python >/dev/null 2>&1; then
   mkdir -p "$TMP/shim"
-  printf '#!/bin/bash\nexec python3 "$@"\n' > "$TMP/shim/python"
+  # D1023 task-5: shim 逐级回退 python3 → python → py（原为硬编码 `exec python3`：在"只有 py / 只有 python"
+  #   的平台（典型 Windows：`py` 启动器存在、`python3` 不存在）该 shim 等于坏 shim）。
+  #   `[ "$p" = "$0" ] && continue` 跳过自身，避免经 PATH 解析回 shim 造成自递归。
+  printf '#!/bin/bash\n# D1023 task-5 shim: 逐级回退 python3 → python → py（跳过自身，防自递归）\nfor c in python3 python py; do\n  p="$(command -v "$c" 2>/dev/null)" || continue\n  [ "$p" = "$0" ] && continue\n  exec "$p" "$@"\ndone\nexit 127\n' > "$TMP/shim/python"
   chmod +x "$TMP/shim/python"
   PATH="$TMP/shim:$PATH"; export PATH
   SHIM_USED=1
-  echo "[ENV] 宿主无 python → 启用 PATH shim（python→python3），使组 9 契约门禁可执行（CI runner 有 python）"
-  echo "[ENV] 无此 shim 时组 9 在本机恒假绿（pre-commit-check.sh L1099 用 python -c）—— 已单独记录为实测发现"
+  echo "[ENV] 宿主无 python → 启用 PATH shim（python→ python3/python/py 逐级回退），使组 9 契约门禁可执行"
+  echo "[ENV] 无此 shim 时组 9 在本机恒假绿（pre-commit-check.sh 用 python -c）—— 已单独记录为实测发现"
   echo ""
 fi
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# D1023 task-5 — 平台前置探针（可见；判据 = **可试运行**，不是只 `command -v`）
+#   背景: 本夹具的 G10 场景（green/red）与被测脚本 G10 的可判定性都依赖"有可用 python"。
+#     无可用 python 时，⑦ 的改动让 G10 走**显式降级**（`⚠️ 无可用 python … 既不打绿勾也不判红`）
+#     ⇒ 场景的"期望绿/红"在本平台**不可满足**；此时应断言**降级契约**，而不是判夹具失败。
+#     `command -v` 不够：Windows 的 Store 版 python 存根能被 `command -v` 命中但运行即失败。
+#   两条独立判据（平台差异真实存在：Windows Git Bash 常见 `py` 有、`python3` 无）:
+#     PYBIN_ANY — python3/python/py 之一可 `-c "import sys"` ⇒ 决定 G10 场景是否可判定（生产侧同一探测）
+#     PY3_OK    — python3 本身可运行 ⇒ 决定组 12（:1433 `python3 -c`）与 check-plan-integrity（python3）是否可执行
+#   两值都会打进 stdout 与 SUMMARY；任何"未验证"都在末行显式声明，**不静默跳过**。
+# ═══════════════════════════════════════════════════════════════════════════════
+PYBIN_ANY=""
+for _c in python3 python py; do
+  if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then PYBIN_ANY="$_c"; break; fi
+done
+PY3_OK=0
+if command -v python3 >/dev/null 2>&1 && python3 -c "import sys" >/dev/null 2>&1; then PY3_OK=1; fi
+echo "[platform] python3=$(command -v python3 2>/dev/null || echo '<无>')  python=$(command -v python 2>/dev/null || echo '<无>')  py=$(command -v py 2>/dev/null || echo '<无>')  shim=$SHIM_USED"
+echo "[platform] 可试运行解释器 PYBIN_ANY=${PYBIN_ANY:-<无>}（决定 G10 场景可判定性）  PY3_OK=$PY3_OK（决定组 12 / plan-integrity 可执行性）"
+if [ -z "$PYBIN_ANY" ]; then
+  echo "[platform] ⚠️ 无可用 python ⇒ 3 个 G10 场景改为**断言 ⑦ 的降级契约**（可见 ⚠️ + degraded-events.log 有 G10 自有条目 + 禁假绿）"
+  echo "[platform] ⚠️ 并显式声明: **G10 判别力未在本平台验证**（计入 g10_degraded，不静默跳过）"
+fi
+if [ "$PY3_OK" -eq 0 ]; then
+  echo "[platform] ⚠️ python3 不可运行 ⇒ 组 12（python3 -c 解析 Q2 范围）与 check-plan-integrity（python3）在本平台 fail-closed 或假绿"
+  echo "[platform]           ⇒ baseline 记 degraded_env（可见，不判失败）；g12 场景记 platform_unverifiable（可见，不判红/绿）"
+fi
+echo ""
 
 # ── 副本 ──
 if [ "$BRANCH" = "HEAD" ]; then
@@ -606,7 +653,23 @@ NAMES=(); RCS=(); T_RUN=(); T_ALL=(); STATUS=(); DETAIL=()
 RED_N=0; STRUCT_N=0; NOTRED_N=0; BASE_STATUS="ok"; HOST_STATE=0
 # D1023: 期望绿场景（g10exempt）计数器 + 判别性探针触发位
 GREEN_N=0; GREENFAIL_N=0; EXEMPT_GREEN=0
+# D1023 task-5: 平台前置不满足时的两类"不可判定"计数（可见，不判红/绿）
+G10_DEGRADED_N=0; PLATFORM_UNVER_N=0
 PROBE_RC="n/a"; PROBE_STATUS="not_run"
+
+# ═══ D1023 task-5: FAIL 时的可诊断性输出（完整组区块 + 环境，不截断）═══
+#   背景: Windows 那次红在日志里只剩 4 行摘要，无法定位 —— 任何 FAIL 都必须自带足够上下文。
+dump_diag() { # <label> <logfile> <原因>
+  echo "   [DIAG] 原因: $3"
+  echo "   [DIAG] env: python3=$(command -v python3 2>/dev/null || echo '<无>')  python=$(command -v python 2>/dev/null || echo '<无>')  py=$(command -v py 2>/dev/null || echo '<无>')  PYBIN_ANY=${PYBIN_ANY:-<无>}  PY3_OK=$PY3_OK  shim=$SHIM_USED"
+  echo "   [DIAG] PATH 前三段: $(printf '%s' "$PATH" | tr ':' '\n' | head -3 | tr '\n' ' ')"
+  echo "   [DIAG] 组区块全文（不截断，共 $(block_of "$1" "$2" | wc -l | tr -d ' ') 行）:"
+  block_of "$1" "$2" | strip_ansi | sed 's/^/     /'
+  echo "   [DIAG] 全量日志 ❌ 行（不截断）:"
+  strip_ansi < "$2" | grep '❌' | sed 's/^/     /' || true
+  echo "   [DIAG] 全量日志末 20 行（完整日志: $2）:"
+  strip_ansi < "$2" | tail -20 | sed 's/^/     /'
+}
 
 run_scenario() {
   local name="$1" label="$2" expect="$3"
@@ -623,6 +686,13 @@ run_scenario() {
   local staged_mark
   staged_mark="$(git -C "$CLONE" diff --cached | grep -c "$MARK" || true)"
   staged_mark="${staged_mark//[^0-9]/}"
+  # D1023 task-5: 降级契约断言要证明"本场景**新增**了 G10 自有降级条目"，故先取基线计数
+  DEG_LOG_BEFORE=0
+  if [ "$expect" = "degraded_g10" ]; then
+    DEG_LOG_BEFORE="$(grep -c 'pre-commit-group10-criteria-map' "$CLONE/.codex/control-tower/logs/degraded-events.log" 2>/dev/null || true)"
+    DEG_LOG_BEFORE="${DEG_LOG_BEFORE//[^0-9]/}"
+    DEG_LOG_BEFORE="${DEG_LOG_BEFORE:-0}"
+  fi
   t1=$SECONDS
   ( cd "$CLONE" && GITHUB_ACTIONS=true SYNO_CI=1 bash scripts/pre-commit-check.sh ) >"$out" 2>&1
   rc=$?
@@ -652,6 +722,18 @@ run_scenario() {
       echo "   [HOST-STATE] 宿主 marker 内容首行: $(head -1 /tmp/.synova-before-brief 2>/dev/null)"   # swallow-ok: 宿主 marker 可能不存在（缺失即不判 HOST_STATE，属预期状态），读失败取空串继续
       echo "   [HOST-STATE] 路径来源: $(grep -n 'BEFORE_BRIEF_EVI=' "$CLONE/scripts/pre-commit-check.sh" | head -1)"
       echo "   [HOST-STATE] remediation: 由该 marker 的属主 session 执行 rm /tmp/.synova-before-brief（本夹具不动宿主文件）"
+    elif [ "$rc" -ne 0 ] && [ "$PY3_OK" -eq 0 ]; then
+      # D1023 task-5: python3 不可运行的平台 ⇒ 组 6/plan-integrity（check-plan-integrity.sh 用 python3）
+      #   与组 12（python3 -c）会 fail-closed 报红，这是**合法红**、与注入无关。
+      #   按夹具既有 baseline=<...> 口径新增第三种状态 degraded_env（可见、不判失败，且登记在 SUMMARY）：
+      #   判据 = 平台前置探针 PY3_OK=0（可核证据），并把全部 ❌ 行**逐行不截断**打印出来供复核。
+      #   若 PY3_OK=1 仍走到这里 ⇒ 下面 else 按 BASELINE_FAIL 处理（不放宽）。
+      st="BASELINE_DEGRADED_ENV"
+      BASE_STATUS="degraded_env"
+      detail="python3 不可运行（PY3_OK=0）⇒ 组 6/plan-integrity 与组 12 的 fail-closed 合法红，非内容违规；baseline 记 degraded_env"
+      echo "   [BASELINE_DEGRADED_ENV] python3 不可运行 ⇒ 下列 ❌ 属 python3 依赖检查的 fail-closed 合法红（逐行，不截断）:"
+      strip_ansi < "$out" | grep '❌' | sed 's/^/     /' || true
+      echo "   [BASELINE_DEGRADED_ENV] 说明: 本平台**无法**获得干净基线；场景级判定不受影响（每个场景只断言自己那一组的区块）"
     else
       st="BASELINE_FAIL"
       detail="rc=$rc; 首个 ❌: $(echo "$all_fails" | head -1)"
@@ -678,8 +760,53 @@ run_scenario() {
       st="GREEN_FAIL"
       GREENFAIL_N=$((GREENFAIL_N + 1))
       detail="rc=$rc; 区块 ❌='${fails:-<无>}'; pass 行='${g10_pass:-<无>}'; 豁免计数='${g10_exempt_n:-<无>}'"
-      echo "   [GREEN_FAIL] 组 10 区块原文（末 12 行）:"
-      block_of "$label" "$out" | strip_ansi | tail -12 | sed 's/^/     /'
+      dump_diag "$label" "$out" "期望绿未达成（green_g10）"
+    fi
+  elif [ "$expect" = "degraded_g10" ]; then
+    # ═══ D1023 task-5: 前置不满足（无可用 python）时的期望口径 —— 断言 ⑦ 的**降级契约** ═══
+    #   既不判绿（禁假绿）也不判红（平台无法判定），单独计数 G10_DEGRADED_N。
+    #   四条断言缺一不可:
+    #     (i)   区块出现可见降级行 `无可用 python`
+    #     (ii)  区块出现契约说明 `既不打绿勾也不判红`
+    #     (iii) 区块**不出现**绿勾（`✅ G10:` / `条件区域检查通过`）且**不出现** `无映射区域(跳过)`（那条是静默假绿）
+    #     (iv)  副本 `.codex/control-tower/logs/degraded-events.log` 出现**本场景新增**的 G10 自有条目
+    #           （`component": "pre-commit-group10-criteria-map`，且计数 > 本场景前基线 ⇒ 不是别的场景留下的）
+    local blk deg_ok=1 deg_why=""
+    blk="$(block_of "$label" "$out" | strip_ansi)"
+    printf '%s' "$blk" | grep -qF '无可用 python' || { deg_ok=0; deg_why="(i) 区块未见可见降级行「无可用 python」"; }
+    printf '%s' "$blk" | grep -qF '既不打绿勾也不判红' || { deg_ok=0; deg_why="${deg_why:+$deg_why; }(ii) 区块未见契约说明「既不打绿勾也不判红」"; }
+    if printf '%s' "$blk" | grep -qE '✅ G10:|条件区域检查通过'; then deg_ok=0; deg_why="${deg_why:+$deg_why; }(iii) 降级态却出现 G10 绿勾（假绿）"; fi
+    if printf '%s' "$blk" | grep -qF '无映射区域(跳过)'; then deg_ok=0; deg_why="${deg_why:+$deg_why; }(iii) 走了「无映射区域(跳过)」静默绿路径"; fi
+    local dlog="$CLONE/.codex/control-tower/logs/degraded-events.log" deg_after
+    deg_after="$(grep -c 'pre-commit-group10-criteria-map' "$dlog" 2>/dev/null || true)"
+    deg_after="${deg_after//[^0-9]/}"; deg_after="${deg_after:-0}"
+    if [ "$deg_after" -le "${DEG_LOG_BEFORE:-0}" ]; then
+      deg_ok=0; deg_why="${deg_why:+$deg_why; }(iv) degraded-events.log 无本场景新增的 G10 自有条目（before=${DEG_LOG_BEFORE:-0} after=$deg_after）"
+    fi
+    if [ "$deg_ok" -eq 1 ]; then
+      st="G10_DEGRADED_OK"
+      G10_DEGRADED_N=$((G10_DEGRADED_N + 1))
+      detail="无可用 python ⇒ 断言 ⑦ 降级契约通过：(i)(ii)(iii)(iv) 全满足（degraded-events 条目 ${DEG_LOG_BEFORE:-0}→$deg_after）"
+    else
+      st="G10_DEGRADED_FAIL"
+      GREENFAIL_N=$((GREENFAIL_N + 1))
+      detail="降级契约不满足: $deg_why"
+      dump_diag "$label" "$out" "降级契约断言失败（degraded_g10）: $deg_why"
+      echo "   [DIAG] degraded-events.log 末 5 行（$dlog）:"
+      tail -5 "$dlog" 2>/dev/null | sed 's/^/     /' || true   # swallow-ok: 探测型诊断输出，文件不存在即无内容，判定已由上方 deg_ok 给出
+    fi
+  elif [ "$expect" = "platform_unverifiable" ]; then
+    # ═══ D1023 task-5: 该场景的"期望红"依赖 **python3**（组 12 :1433 用 `python3 -c` 解析 Q2 范围）═══
+    #   python3 不可运行 ⇒ 组 12 的 SCOPE_VIOLATION 恒空 ⇒ 恒 soft_pass（**静默假绿**，既有缺陷，非本卡引入）
+    #   ⇒ 本场景**不可判定**：不判红、不判绿，单独计数，并把组区块全文与"是否出现静默绿"如实打印。
+    st="PLATFORM_UNVERIFIABLE"
+    PLATFORM_UNVER_N=$((PLATFORM_UNVER_N + 1))
+    detail="python3 不可运行 ⇒ 组 12 判定不可执行；本场景不计红/绿（可见声明，未静默跳过）"
+    echo "   [PLATFORM_UNVERIFIABLE] python3 不可运行 ⇒ $name 场景**不在本平台判定**；组区块全文:"
+    block_of "$label" "$out" | strip_ansi | sed 's/^/     /'
+    if block_of "$label" "$out" | strip_ansi | grep -qF '所有文件均在 Q2 范围内'; then
+      echo "     ⚠️ 组 12 在本平台输出「所有文件均在 Q2 范围内」= **静默假绿**（python3 不可运行 ⇒ SCOPE_VIOLATION 恒空）"
+      echo "     ⚠️ 该假绿属既有缺陷（组 12 无降级契约），非本卡引入；已记入回执遗留"
     fi
   else
     if [ "$has_fail" -eq 1 ]; then
@@ -694,6 +821,7 @@ run_scenario() {
       st="NOT_RED"
       detail="rc=$rc; label_present=$has_label; 区块无 ❌ → 期望红的组未红"
       NOTRED_N=$((NOTRED_N + 1))
+      dump_diag "$label" "$out" "期望红未达成（NOT_RED）"
     fi
   fi
 
@@ -702,7 +830,6 @@ run_scenario() {
   echo "   耗时: pre-commit=$((t2 - t1))s  场景合计=$((t2 - t0))s"
   echo "   判定: $st"
   [ -n "$fails" ] && echo "$fails" | sed 's/^/     /'
-  [ "$st" = "NOT_RED" ] && { echo "     ⚠️ 未红：输出末尾 5 行（全量日志: ${out}）"; strip_ansi < "$out" | tail -5 | sed 's/^/       /'; }
   echo ""
   NAMES+=("$name"); RCS+=("$rc"); T_RUN+=("$((t2 - t1))"); T_ALL+=("$((t2 - t0))"); STATUS+=("$st"); DETAIL+=("$detail")
 }
@@ -751,15 +878,35 @@ else
   SCEN="g1 g2 g7 g12 g10exempt g10region g10tests"
   echo "[MODE] SAMPLED：抽检 4 组（1/2/7/12）+ 3 条 D1023 反例（g10exempt/g10region/g10tests）——全量请设 SYNO_PRE_COMMIT_INJECT_FULL=1"
 fi
+# ═══ D1023 task-5: 平台感知后的**实际**期望口径（单一事实源）═══
+#   在有可用 python 的平台，effective_expect == expect_for（**行为完全不变**）；
+#   在无可用 python 的平台，python 依赖的期望降级为"断言降级契约/显式不可判定"，而不是判夹具失败。
+G10_SCEN="g10exempt g10region g10tests"   # 3 个 G10 场景（期望绿/红都依赖"G10 可判定"）
+effective_expect() {
+  local name="$1" base
+  base="$(expect_for "$name")"
+  case " $G10_SCEN " in
+    *" $name "*) [ -z "$PYBIN_ANY" ] && { echo "degraded_g10"; return; } ;;
+  esac
+  if [ "$name" = "g12" ] && [ "$PY3_OK" -eq 0 ]; then echo "platform_unverifiable"; return; fi
+  echo "$base"
+}
 # 期望绿场景数（RC 判据用它，避免"SCEN 被改坏后判据消失"）
-GREEN_EXPECTED=0
-for _s in $SCEN; do [ "$(expect_for "$_s")" = "green_g10" ] && GREEN_EXPECTED=$((GREEN_EXPECTED + 1)); done
-echo "[D1023] 本模式期望: 红场景 $(($(echo $SCEN | wc -w | tr -d ' ') - GREEN_EXPECTED)) / 绿场景 ${GREEN_EXPECTED}"
+GREEN_EXPECTED=0; DEG_EXPECTED=0; PLATFORM_UNVER_EXPECTED=0; RED_EXPECTED=0
+for _s in $SCEN; do
+  case "$(effective_expect "$_s")" in
+    green_g10) GREEN_EXPECTED=$((GREEN_EXPECTED + 1)) ;;
+    degraded_g10) DEG_EXPECTED=$((DEG_EXPECTED + 1)) ;;
+    platform_unverifiable) PLATFORM_UNVER_EXPECTED=$((PLATFORM_UNVER_EXPECTED + 1)) ;;
+    *) RED_EXPECTED=$((RED_EXPECTED + 1)) ;;
+  esac
+done
+echo "[D1023] 本模式期望（平台感知后）: 红场景 ${RED_EXPECTED} / 绿场景 ${GREEN_EXPECTED} / 降级契约场景 ${DEG_EXPECTED} / 平台不可判定场景 ${PLATFORM_UNVER_EXPECTED}"
 echo ""
 
 for s in $SCEN; do
   eval "lbl=\$LBL_$s"
-  run_scenario "$s" "$lbl" "$(expect_for "$s")"
+  run_scenario "$s" "$lbl" "$(effective_expect "$s")"
 done
 
 # ═══ 判别性探针（场景 g10exempt 专用）: 删掉豁免分支 ⇒ 同一注入必须转红 ═══
@@ -878,26 +1025,51 @@ RC=0
 [ "$BASE_STATUS" = "FAIL" ] && RC=1
 [ "$NOTRED_N" -gt 0 ] && RC=1
 [ "$RESIDUE_FAIL" -ne 0 ] && RC=1
-# D1023: 场景 a 必须**跑到且绿**（SCEN 清单被改坏/被跳过 = 判据消失 → fail-closed 判红），
-#        且其判别性探针必须 RED_CONFIRMED（绿必须来自豁免分支本身）。
 # D1023: 期望绿场景必须**跑到且全绿**（SCEN 清单被改坏/被跳过 = 判据消失 → fail-closed 判红），
-#        且计数必须等于 expect_for 推出的期望数；判别性探针必须 RED_CONFIRMED（绿必须来自豁免分支本身）。
-[ "$GREEN_N" -eq 0 ] && { RC=1; echo "   [D1023] 无任何 GREEN_CONFIRMED 场景 → 判红（判别判据缺失）"; }
-[ "$GREEN_N" -ne "$GREEN_EXPECTED" ] && { RC=1; echo "   [D1023] 期望绿场景数 ${GREEN_EXPECTED} ≠ 实际 GREEN_CONFIRMED ${GREEN_N} → 判红"; }
+#        且计数必须等于 expected 推出的期望数；判别性探针必须 RED_CONFIRMED（绿必须来自豁免分支本身）。
+# D1023 task-5: 上述三条**只在有可用 python 的平台**适用；无可用 python 时改为要求"3 个场景全部走到降级契约断言"。
+if [ -n "$PYBIN_ANY" ]; then
+  [ "$GREEN_N" -eq 0 ] && { RC=1; echo "   [D1023] 无任何 GREEN_CONFIRMED 场景 → 判红（判别判据缺失）"; }
+  [ "$GREEN_N" -ne "$GREEN_EXPECTED" ] && { RC=1; echo "   [D1023] 期望绿场景数 ${GREEN_EXPECTED} ≠ 实际 GREEN_CONFIRMED ${GREEN_N} → 判红"; }
+  [ "$EXEMPT_PROBE_OK" -ne 1 ] && { RC=1; echo "   [D1023] 判别性探针未确认（exempt_probe=$PROBE2_STATUS rc=$PROBE2_RC）→ 判红（无「删掉即报红」的判别力）"; }
+else
+  # 无可用 python ⇒ G10 走 ⑦ 的显式降级（判定语义见 pre-commit-check.sh 的 G10_PYBIN 分支）
+  [ "$G10_DEGRADED_N" -ne "$DEG_EXPECTED" ] && { RC=1; echo "   [D1023 task-5] 无可用 python：期望 ${DEG_EXPECTED} 个 G10 场景全部断言降级契约，实得 G10_DEGRADED_OK=${G10_DEGRADED_N} → 判红"; }
+fi
 [ "$GREENFAIL_N" -gt 0 ] && RC=1
-[ "$EXEMPT_PROBE_OK" -ne 1 ] && { RC=1; echo "   [D1023] 判别性探针未确认（exempt_probe=$PROBE2_STATUS rc=$PROBE2_RC）→ 判红（无「删掉即报红」的判别力）"; }
-[ "$G10REGION_NAMED" -ne 1 ] && RC=1   # b 场景必须点名那个区域外文件（信息已在上方打印）
+[ "$PLATFORM_UNVER_N" -ne "$PLATFORM_UNVER_EXPECTED" ] && { RC=1; echo "   [D1023 task-5] 平台不可判定场景数 ${PLATFORM_UNVER_EXPECTED} ≠ 实际 PLATFORM_UNVERIFIABLE ${PLATFORM_UNVER_N} → 判红"; }
+if [ "$G10REGION_NAMED" -ne 1 ]; then
+  # b 场景"点名"断言只在可判定平台要求（无可用 python 时该场景走降级契约断言）
+  if [ -n "$PYBIN_ANY" ]; then RC=1; else echo "   [D1023 task-5] （无可用 python ⇒ 点名断言不适用，已由降级契约计数覆盖）"; fi
+fi
 [ "$G10REGION_FILE" = "" ] && { RC=1; echo "   [D1023] G10REGION_FILE 为空 → b 场景注入对象丢失，判红"; }
-if [ "${SYNO_INJECT_REQUIRE_CLEAN_BASELINE:-0}" = "1" ] && [ "$BASE_STATUS" = "host_state" ]; then
-  RC=1
-  echo "   [STRICT] SYNO_INJECT_REQUIRE_CLEAN_BASELINE=1 且基线=HOST_STATE → 判红（严格守门模式）"
+if [ "${SYNO_INJECT_REQUIRE_CLEAN_BASELINE:-0}" = "1" ]; then
+  case "$BASE_STATUS" in
+    host_state|degraded_env)
+      RC=1
+      echo "   [STRICT] SYNO_INJECT_REQUIRE_CLEAN_BASELINE=1 且基线=${BASE_STATUS} → 判红（严格守门模式）" ;;
+  esac
 fi
 
-echo "GATE_INJECTION_SUMMARY: scenarios=${#NAMES[@]} red_confirmed=$RED_N structural_not_red=$STRUCT_N not_red=$NOTRED_N green_confirmed=$GREEN_N green_fail=$GREENFAIL_N baseline=$BASE_STATUS probe=$PROBE_STATUS(rc=$PROBE_RC) exempt_probe=$PROBE2_STATUS(rc=$PROBE2_RC) residue_code=$CODE_RESIDUE residue_repo=$REPO_RESIDUE shim=$SHIM_USED g10region_named=$G10REGION_NAMED"
+echo "GATE_INJECTION_SUMMARY: scenarios=${#NAMES[@]} red_confirmed=$RED_N structural_not_red=$STRUCT_N not_red=$NOTRED_N green_confirmed=$GREEN_N green_fail=$GREENFAIL_N g10_degraded=$G10_DEGRADED_N platform_unverifiable=$PLATFORM_UNVER_N py_any=${PYBIN_ANY:-none} py3_ok=$PY3_OK baseline=$BASE_STATUS probe=$PROBE_STATUS(rc=$PROBE_RC) exempt_probe=$PROBE2_STATUS(rc=$PROBE2_RC) residue_code=$CODE_RESIDUE residue_repo=$REPO_RESIDUE shim=$SHIM_USED g10region_named=$G10REGION_NAMED"
+# D1023 task-5: "未验证"必须显式声明，绝不静默跳过
+if [ -z "$PYBIN_ANY" ]; then
+  echo "[PLATFORM] 因前置不满足（无可用 python），**G10 判别力未在本平台验证** —— 已断言 ⑦ 降级契约 ${G10_DEGRADED_N}/${DEG_EXPECTED} 场景；有 python 的平台请以 green_confirmed=2 + exempt_probe=RED_CONFIRMED 为准"
+fi
+if [ "$PY3_OK" -eq 0 ]; then
+  echo "[PLATFORM] python3 不可运行 ⇒ **组 12 判定力未在本平台验证**（PLATFORM_UNVERIFIABLE=${PLATFORM_UNVER_N}/${PLATFORM_UNVER_EXPECTED} 场景；baseline=${BASE_STATUS}）"
+fi
 if [ "$RC" -eq 0 ]; then
-  echo "✅ 注入自测结果：期望红组全部 RED_CONFIRMED、期望绿场景（g10exempt）GREEN_CONFIRMED、判别性探针 RED_CONFIRMED，残留断言满足，baseline=${BASE_STATUS}（结论归自验/独立审计，本夹具只出证据）"
-  [ "$BASE_STATUS" = "host_state" ] && echo "   ⚠️ 注意：基线非天然绿（宿主 /tmp marker 绝对路径读取，已由探针因果确认）——CI 上新 runner 应为 BASELINE_OK"
+  if [ -z "$PYBIN_ANY" ]; then
+    # 降级平台：不得宣称 G10/组 12 的判别力已确认（禁把"未验证"写成"通过"）
+    echo "✅ 注入自测结果（**降级平台**）：G10 场景已断言 ⑦ 降级契约 ${G10_DEGRADED_N}/${DEG_EXPECTED} 全过；组 12 记 PLATFORM_UNVERIFIABLE ${PLATFORM_UNVER_N}/${PLATFORM_UNVER_EXPECTED}；期望红组 RED_CONFIRMED=${RED_N}/${RED_EXPECTED}；残留断言满足，baseline=${BASE_STATUS}"
+    echo "   ⚠️ 本平台**G10 判别力与组 12 判定力均未验证**（无可用 python）——结论归自验/独立审计，本夹具只出证据"
+  else
+    echo "✅ 注入自测结果：期望红组全部 RED_CONFIRMED、期望绿场景（g10exempt）GREEN_CONFIRMED、判别性探针 RED_CONFIRMED，残留断言满足，baseline=${BASE_STATUS}（结论归自验/独立审计，本夹具只出证据）"
+    [ "$BASE_STATUS" = "host_state" ] && echo "   ⚠️ 注意：基线非天然绿（宿主 /tmp marker 绝对路径读取，已由探针因果确认）——CI 上新 runner 应为 BASELINE_OK"
+    [ "$BASE_STATUS" = "degraded_env" ] && echo "   ⚠️ 注意：基线记为 degraded_env（本平台 python3 不可运行 ⇒ 组 6/plan-integrity 与组 12 fail-closed 合法红）——可在该平台判定力范围内出证据"
+  fi
 else
-  echo "❌ 注入自测未达期望：not_red=$NOTRED_N green_fail=$GREENFAIL_N exempt_probe=$PROBE2_STATUS baseline=$BASE_STATUS probe=$PROBE_STATUS residue_fail=$RESIDUE_FAIL"
+  echo "❌ 注入自测未达期望：not_red=$NOTRED_N green_fail=$GREENFAIL_N g10_degraded=$G10_DEGRADED_N platform_unverifiable=$PLATFORM_UNVER_N exempt_probe=$PROBE2_STATUS baseline=$BASE_STATUS probe=$PROBE_STATUS residue_fail=$RESIDUE_FAIL"
 fi
 exit "$RC"
