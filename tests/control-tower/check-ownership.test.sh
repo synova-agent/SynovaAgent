@@ -119,6 +119,119 @@ else
 fi
 if [ "$LIVE_MODE" = "contract" ]; then CFG="$YAML"; else CFG="$CONTRACT_YAML"; fi
 
+# ── D1029/F2 夹具工具（base64 内嵌落盘）──
+# 旧夹具用 str.index(key) 的**位置切片**，隐含「domain_defaults 在 rule_authority 之前且相邻」；
+# B 的 live yaml 恰好相反(rule_authority:46 / domain_defaults:81) ⇒ 拼出重复键 ⇒ 10b/10d/10e 共 6 项假红。
+# 工具改为**与顺序无关的按键删块**，且每次改造夹具后用**仓内真实解析器**复验可解析（夹具自检）。
+# 内嵌方式: base64 —— 避开 bash heredoc / python -c / 多层转义的转义坑（本补丁链上实测 heredoc 会吞反斜杠）。
+# **单一源 = 本文件的 B64 段**（无磁盘源文件，避免两处漂移）；改工具的正确姿势:
+#   python3 -c "import re,base64,pathlib;t=pathlib.Path('tests/control-tower/check-ownership.test.sh').read_text();\
+#     b=''.join(re.findall(r'FIXLIB_B64=\$\{FIXLIB_B64\}([A-Za-z0-9+/=]+)',t));\
+#     pathlib.Path('/tmp/out.py').write_bytes(base64.b64decode(b))"  → 改 /tmp/out.py → 重新 base64 回填 + 刷新 FIXLIB_SHA_EXPECT
+FIXLIB="$TMPD/d1029-fix-lib.py"
+FIXLIB_B64=""
+FIXLIB_B64="${FIXLIB_B64}aW1wb3J0IHBhdGhsaWIsIHJlLCBzeXMKCiMg5LiO6aG65bqP5peg5YWz55qE44CM5oyJ6ZSu5Yig6Zmk5pW05Z2X44CN77ya5Yig"
+FIXLIB_B64="${FIXLIB_B64}5o6J6aG25bGC6ZSuIDxrZXk+OiDlj4rlhbblhajpg6jlkI7nu63nvKnov5vooYwv56m66KGM77yMCiMg55u05Yiw5LiL5LiA5Liq"
+FIXLIB_B64="${FIXLIB_B64}6aG25bGC6ZSu6KGM77yIXlteWzpzcGFjZTpdI13vvInmiJYgRU9G44CCCiMg6IOM5pmvKEQxMDI5L0YyKTog5pen5aS55YW355So"
+FIXLIB_B64="${FIXLIB_B64}IHNyYy5pbmRleCgiZG9tYWluX2RlZmF1bHRzIikg5LiOIHNyYy5pbmRleCgicnVsZV9hdXRob3JpdHkiKSDnmoQKIyAqKuS9jee9"
+FIXLIB_B64="${FIXLIB_B64}ruWIh+eJhyoq77yM6ZqQ5ZCr44CM5Lik6ZSu55u46YK75LiUIGRvbWFpbl9kZWZhdWx0cyDlnKjliY3jgI3igJTigJRCIOeahCBs"
+FIXLIB_B64="${FIXLIB_B64}aXZlIHlhbWwg5oGw5aW955u45Y+NCiMgKHJ1bGVfYXV0aG9yaXR5OjQ2IC8gZG9tYWluX2RlZmF1bHRzOjgxKSDih5IgaT5qIOKH"
+FIXLIB_B64="${FIXLIB_B64}kiDmi7zlh7rph43lpI3plK4g4oeSIOWkueWFt+iiq+mqjCBjaGVja2VyIOaKpQojICLph43lpI3plK4iIOKHkiAxMGIvMTBkLzEw"
+FIXLIB_B64="${FIXLIB_B64}ZSDlhbEgNiDpobnlgYfnuqLjgILmnKzohJrmnKzlr7nor6XlgYforr7pm7bkvp3otZbjgIIKbW9kZSA9IHN5cy5hcmd2WzFdCnAg"
+FIXLIB_B64="${FIXLIB_B64}PSBwYXRobGliLlBhdGgoc3lzLmFyZ3ZbMl0pCnRleHQgPSBwLnJlYWRfdGV4dChlbmNvZGluZz0idXRmLTgiKQoKaWYgbW9kZSA9"
+FIXLIB_B64="${FIXLIB_B64}PSAiZGVsYmxvY2siOgogICAga2V5ID0gc3lzLmFyZ3ZbM10KICAgIGxpbmVzID0gdGV4dC5zcGxpdCgiXG4iKQogICAgb3V0LCBz"
+FIXLIB_B64="${FIXLIB_B64}a2lwcGluZywgcmVtb3ZlZCA9IFtdLCBGYWxzZSwgMAogICAgZm9yIGxuIGluIGxpbmVzOgogICAgICAgIGlmIG5vdCBza2lwcGlu"
+FIXLIB_B64="${FIXLIB_B64}ZyBhbmQgcmUubWF0Y2gociJeJXNccyo6IiAlIHJlLmVzY2FwZShrZXkpLCBsbik6CiAgICAgICAgICAgIHNraXBwaW5nID0gVHJ1"
+FIXLIB_B64="${FIXLIB_B64}ZQogICAgICAgICAgICByZW1vdmVkICs9IDEKICAgICAgICAgICAgY29udGludWUKICAgICAgICBpZiBza2lwcGluZzoKICAgICAg"
+FIXLIB_B64="${FIXLIB_B64}ICAgICAgIyDpobblsYLplK7ooYzvvIjpnZ7nvKnov5vjgIHpnZ7ms6jph4rjgIHpnZ7nqbrvvInih5Ig5pys5Z2X57uT5p2f77yM"
+FIXLIB_B64="${FIXLIB_B64}6K+l6KGM5L+d55WZCiAgICAgICAgICAgIGlmIHJlLm1hdGNoKHIiXlteXHMjXSIsIGxuKSBhbmQgbG4uc3RyaXAoKToKICAgICAg"
+FIXLIB_B64="${FIXLIB_B64}ICAgICAgICAgIHNraXBwaW5nID0gRmFsc2UKICAgICAgICAgICAgICAgIG91dC5hcHBlbmQobG4pCiAgICAgICAgICAgICAgICBj"
+FIXLIB_B64="${FIXLIB_B64}b250aW51ZQogICAgICAgICAgICByZW1vdmVkICs9IDEKICAgICAgICAgICAgY29udGludWUKICAgICAgICBvdXQuYXBwZW5kKGxu"
+FIXLIB_B64="${FIXLIB_B64}KQogICAgcC53cml0ZV90ZXh0KCJcbiIuam9pbihvdXQpLCBlbmNvZGluZz0idXRmLTgiKQogICAgcHJpbnQoImRlbGJsb2NrICVz"
+FIXLIB_B64="${FIXLIB_B64}OiByZW1vdmVkX2xpbmVzPSVkIiAlIChrZXksIHJlbW92ZWQpKQoKZWxpZiBtb2RlID09ICJhZGRibG9jayI6CiAgICAjIOWcqCBy"
+FIXLIB_B64="${FIXLIB_B64}dWxlcyDliJfooajlhoXmj5LlhaXkuIDmnaHmmL7lvI/op4TliJnvvIjkuI3lgYforr7liJfooajpppbpobnmmK/lk6rkuKogZ2xv"
+FIXLIB_B64="${FIXLIB_B64}Yu+8iQogICAgZCA9IHN5cy5hcmd2WzNdCiAgICBsaW5lcyA9IHRleHQuc3BsaXQoIlxuIikKICAgIG91dCwgZG9uZSA9IFtdLCBG"
+FIXLIB_B64="${FIXLIB_B64}YWxzZQogICAgZm9yIGxuIGluIGxpbmVzOgogICAgICAgIGlmIG5vdCBkb25lIGFuZCByZS5tYXRjaChyJ15ccyotXHMqZ2xvYlxz"
+FIXLIB_B64="${FIXLIB_B64}KjonLCBsbik6CiAgICAgICAgICAgIGluZGVudCA9IGxuWzpsZW4obG4pIC0gbGVuKGxuLmxzdHJpcCgpKV0KICAgICAgICAgICAg"
+FIXLIB_B64="${FIXLIB_B64}b3V0LmFwcGVuZCgnJXMtIGdsb2I6ICIlcy8qKiInICUgKGluZGVudCwgZCkpCiAgICAgICAgICAgIG91dC5hcHBlbmQoJyVzICBv"
+FIXLIB_B64="${FIXLIB_B64}d25lcjogIndpbiInICUgaW5kZW50KQogICAgICAgICAgICBkb25lID0gVHJ1ZQogICAgICAgIG91dC5hcHBlbmQobG4pCiAgICBw"
+FIXLIB_B64="${FIXLIB_B64}LndyaXRlX3RleHQoIlxuIi5qb2luKG91dCksIGVuY29kaW5nPSJ1dGYtOCIpCiAgICBwcmludCgiYWRkYmxvY2s6IGluc2VydGVk"
+FIXLIB_B64="${FIXLIB_B64}PSVzIiAlIGRvbmUpCgplbGlmIG1vZGUgPT0gImRlbHJ1bGUiOgogICAgIyDliKDmjonnrKzkuIDmnaHnnJ/lrp7op4TliJnooYzv"
+FIXLIB_B64="${FIXLIB_B64}vIjlkKvlhbblkI7nu63nvKnov5vooYzvvInvvIzot7Pov4fms6jph4rooYwKICAgIGxpbmVzID0gdGV4dC5zcGxpdCgiXG4iKQog"
+FIXLIB_B64="${FIXLIB_B64}ICAgb3V0LCBza2lwcGluZywgcmVtb3ZlZCA9IFtdLCBGYWxzZSwgMAogICAgZm9yIGxuIGluIGxpbmVzOgogICAgICAgIGlmIG5v"
+FIXLIB_B64="${FIXLIB_B64}dCBza2lwcGluZyBhbmQgcmUubWF0Y2gocideXHMqLVxzKmdsb2Jccyo6JywgbG4pOgogICAgICAgICAgICBza2lwcGluZyA9IFRy"
+FIXLIB_B64="${FIXLIB_B64}dWUKICAgICAgICAgICAgcmVtb3ZlZCArPSAxCiAgICAgICAgICAgIGNvbnRpbnVlCiAgICAgICAgaWYgc2tpcHBpbmc6CiAgICAg"
+FIXLIB_B64="${FIXLIB_B64}ICAgICAgIGlmIHJlLm1hdGNoKHIiXlxzKi0iLCBsbikgb3IgKGxuLnN0cmlwKCkgYW5kIG5vdCBsbi5zdGFydHN3aXRoKCIgIikp"
+FIXLIB_B64="${FIXLIB_B64}OgogICAgICAgICAgICAgICAgc2tpcHBpbmcgPSBGYWxzZQogICAgICAgICAgICAgICAgb3V0LmFwcGVuZChsbikKICAgICAgICAg"
+FIXLIB_B64="${FIXLIB_B64}ICAgICAgIGNvbnRpbnVlCiAgICAgICAgICAgIHJlbW92ZWQgKz0gMQogICAgICAgICAgICBjb250aW51ZQogICAgICAgIG91dC5h"
+FIXLIB_B64="${FIXLIB_B64}cHBlbmQobG4pCiAgICBwLndyaXRlX3RleHQoIlxuIi5qb2luKG91dCksIGVuY29kaW5nPSJ1dGYtOCIpCiAgICBwcmludCgiZGVs"
+FIXLIB_B64="${FIXLIB_B64}cnVsZTogcmVtb3ZlZF9saW5lcz0lZCIgJSByZW1vdmVkKQoKZWxpZiBtb2RlID09ICJzZXRlbXB0eSI6CiAgICBrZXkgPSBzeXMu"
+FIXLIB_B64="${FIXLIB_B64}YXJndlszXQogICAgbGluZXMgPSB0ZXh0LnNwbGl0KCJcbiIpCiAgICBvdXQsIHNraXBwaW5nLCBkb25lID0gW10sIEZhbHNlLCBG"
+FIXLIB_B64="${FIXLIB_B64}YWxzZQogICAgZm9yIGxuIGluIGxpbmVzOgogICAgICAgIGlmIG5vdCBza2lwcGluZyBhbmQgcmUubWF0Y2gociJeJXNccyo6IiAl"
+FIXLIB_B64="${FIXLIB_B64}IHJlLmVzY2FwZShrZXkpLCBsbik6CiAgICAgICAgICAgIHNraXBwaW5nID0gVHJ1ZQogICAgICAgICAgICBvdXQuYXBwZW5kKCIl"
+FIXLIB_B64="${FIXLIB_B64}czogJXMiICUgKGtleSwgc3lzLmFyZ3ZbNF0pKQogICAgICAgICAgICBkb25lID0gVHJ1ZQogICAgICAgICAgICBjb250aW51ZQog"
+FIXLIB_B64="${FIXLIB_B64}ICAgICAgIGlmIHNraXBwaW5nOgogICAgICAgICAgICBpZiByZS5tYXRjaChyIl5bXlxzI10iLCBsbikgYW5kIGxuLnN0cmlwKCk6"
+FIXLIB_B64="${FIXLIB_B64}CiAgICAgICAgICAgICAgICBza2lwcGluZyA9IEZhbHNlCiAgICAgICAgICAgICAgICBvdXQuYXBwZW5kKGxuKQogICAgICAgICAg"
+FIXLIB_B64="${FIXLIB_B64}ICAgICAgY29udGludWUKICAgICAgICAgICAgY29udGludWUKICAgICAgICBvdXQuYXBwZW5kKGxuKQogICAgcC53cml0ZV90ZXh0"
+FIXLIB_B64="${FIXLIB_B64}KCJcbiIuam9pbihvdXQpLCBlbmNvZGluZz0idXRmLTgiKQogICAgcHJpbnQoInNldGVtcHR5ICVzOiBkb25lPSVzIiAlIChrZXks"
+FIXLIB_B64="${FIXLIB_B64}IGRvbmUpKQoKZWxpZiBtb2RlID09ICJzZXRsaXN0ZW1wdHkiOgogICAgIyDkv53nlZnplK7ooYzmnKzouqvvvIzlj6rmiorlhbbl"
+FIXLIB_B64="${FIXLIB_B64}kI4qKuabtOa3see8qei/myoq55qE5a2Q6aG55riF5o6J77yM5YaN6KGl5LiA6KGMICI8aW5kZW50PiAgPGNoaWxkPjogW10iCiAg"
+FIXLIB_B64="${FIXLIB_B64}ICBrZXksIGNoaWxkID0gc3lzLmFyZ3ZbM10sIHN5cy5hcmd2WzRdCiAgICBsaW5lcyA9IHRleHQuc3BsaXQoIlxuIikKICAgIG91"
+FIXLIB_B64="${FIXLIB_B64}dCwgaW5fa2V5LCBrZXlfaW5kZW50LCBkb25lID0gW10sIEZhbHNlLCAiIiwgRmFsc2UKICAgIGZvciBsbiBpbiBsaW5lczoKICAg"
+FIXLIB_B64="${FIXLIB_B64}ICAgICBpZiBub3QgaW5fa2V5IGFuZCByZS5tYXRjaChyIl4oXHMqKSVzXHMqOiIgJSByZS5lc2NhcGUoa2V5KSwgbG4pOgogICAg"
+FIXLIB_B64="${FIXLIB_B64}ICAgICAgICBtID0gcmUubWF0Y2gociJeKFxzKikiLCBsbikKICAgICAgICAgICAga2V5X2luZGVudCA9IG0uZ3JvdXAoMSkKICAg"
+FIXLIB_B64="${FIXLIB_B64}ICAgICAgICAgb3V0LmFwcGVuZChsbikKICAgICAgICAgICAgaW5fa2V5ID0gVHJ1ZQogICAgICAgICAgICBjb250aW51ZQogICAg"
+FIXLIB_B64="${FIXLIB_B64}ICAgIGlmIGluX2tleToKICAgICAgICAgICAgaWYgbG4uc3RyaXAoKSA9PSAiIiBvciBsbi5zdGFydHN3aXRoKGtleV9pbmRlbnQg"
+FIXLIB_B64="${FIXLIB_B64}KyAiICIpIG9yIGxuLnN0YXJ0c3dpdGgoa2V5X2luZGVudCArICJcdCIpOgogICAgICAgICAgICAgICAgY29udGludWUgICMg5a2Q"
+FIXLIB_B64="${FIXLIB_B64}6aG5L+epuuihjCDihpIg5Lii5byDCiAgICAgICAgICAgIG91dC5hcHBlbmQoIiVzICAlczogW10iICUgKGtleV9pbmRlbnQsIGNo"
+FIXLIB_B64="${FIXLIB_B64}aWxkKSk7IGRvbmUgPSBUcnVlCiAgICAgICAgICAgIGluX2tleSA9IEZhbHNlCiAgICAgICAgb3V0LmFwcGVuZChsbikKICAgIGlm"
+FIXLIB_B64="${FIXLIB_B64}IGluX2tleSBhbmQgbm90IGRvbmU6CiAgICAgICAgb3V0LmFwcGVuZCgiJXMgICVzOiBbXSIgJSAoa2V5X2luZGVudCwgY2hpbGQp"
+FIXLIB_B64="${FIXLIB_B64}KTsgZG9uZSA9IFRydWUKICAgIHAud3JpdGVfdGV4dCgiXG4iLmpvaW4ob3V0KSwgZW5jb2Rpbmc9InV0Zi04IikKICAgIHByaW50"
+FIXLIB_B64="${FIXLIB_B64}KCJzZXRsaXN0ZW1wdHkgJXMuJXM6IGRvbmU9JXMiICUgKGtleSwgY2hpbGQsIGRvbmUpKQoKZWxpZiBtb2RlID09ICJ0ZXJybGlu"
+FIXLIB_B64="${FIXLIB_B64}ZSI6CiAgICAjIOa4suafk+OAjOmihuWcsOazqOmHiuihjOOAjeeahOacn+acm+WAvO+8muS4jueUn+aIkOWZqOWQjOWPo+W+hO+8"
+FIXLIB_B64="${FIXLIB_B64}iG93bmVyPXdpbiArIGRvbWFpbl9kZWZhdWx0cy53aW4g6YCQ6aG544CB5Lul44CM44CB44CN6L+e5o6l77yJCiAgICBpbXBvcnQg"
+FIXLIB_B64="${FIXLIB_B64}b3MKICAgIG1vZF9kaXIgPSBvcy5lbnZpcm9uLmdldCgiU1lOT19PV05FUlNISVBfWUFNTF9NT0RfRElSIikgb3IgInNjcmlwdHMv"
+FIXLIB_B64="${FIXLIB_B64}cHJvZHVjdC1saW5lcyIKICAgIHN5cy5wYXRoLmluc2VydCgwLCBtb2RfZGlyKQogICAgaW1wb3J0IHByb2R1Y3RsaW5lX3lhbWwg"
+FIXLIB_B64="${FIXLIB_B64}YXMgcGFyc2VyCiAgICBkYXRhID0gcGFyc2VyLmxvYWRfZmlsZShzeXMuYXJndlsyXSkKICAgIGRkID0gKGRhdGEgb3Ige30pLmdl"
+FIXLIB_B64="${FIXLIB_B64}dCgiZG9tYWluX2RlZmF1bHRzIikgb3Ige30KICAgIHdpbiA9IGRkLmdldCgid2luIikgb3IgW10KICAgIGlmIHdpbjoKICAgICAg"
+FIXLIB_B64="${FIXLIB_B64}ICBwcmludCgiIyB3aW4g6aKG5Zyw77yI5pi+5byP5YiX5Ye677yJOiAlcyIgJSAi44CBIi5qb2luKHN0cihnKSBmb3IgZyBpbiB3"
+FIXLIB_B64="${FIXLIB_B64}aW4pKQoKZWxpZiBtb2RlID09ICJ3aW5hZGRmaXJzdCI6CiAgICAjIOWcqCBkb21haW5fZGVmYXVsdHMud2luIOWIl+ihqOmmlumh"
+FIXLIB_B64="${FIXLIB_B64}ueWJjeaPkuWFpeS4gOmhue+8m+WFvOWuuSoq5YaF6IGU5YiX6KGoKiood2luOiBbImEiLCJiIl0pIOS4jioq5Z2X5YiX6KGoKirk"
+FIXLIB_B64="${FIXLIB_B64}uKTnp43lhpnms5UKICAgIGl0ZW0gPSBzeXMuYXJndlszXQogICAgbGluZXMgPSB0ZXh0LnNwbGl0KCJcbiIpCiAgICBvdXQsIGlu"
+FIXLIB_B64="${FIXLIB_B64}X2RkLCBkb25lID0gW10sIEZhbHNlLCBGYWxzZQogICAgZm9yIGxuIGluIGxpbmVzOgogICAgICAgIGlmIG5vdCBpbl9kZCBhbmQg"
+FIXLIB_B64="${FIXLIB_B64}cmUubWF0Y2gociJeZG9tYWluX2RlZmF1bHRzXHMqOiIsIGxuKToKICAgICAgICAgICAgaW5fZGQgPSBUcnVlOyBvdXQuYXBwZW5k"
+FIXLIB_B64="${FIXLIB_B64}KGxuKTsgY29udGludWUKICAgICAgICBpZiBpbl9kZCBhbmQgbm90IGRvbmU6CiAgICAgICAgICAgIGlmIHJlLm1hdGNoKHIiXlxz"
+FIXLIB_B64="${FIXLIB_B64}KndpblxzKjpccypcWyIsIGxuKTogICAgICAgICAgIyDlhoXogZTliJfooagKICAgICAgICAgICAgICAgIHByZSwgcmVzdCA9IGxu"
+FIXLIB_B64="${FIXLIB_B64}LnNwbGl0KCJbIiwgMSkKICAgICAgICAgICAgICAgIGlubmVyID0gcmVzdC5yc3BsaXQoIl0iLCAxKVswXQogICAgICAgICAgICAg"
+FIXLIB_B64="${FIXLIB_B64}ICAgaXRlbXMgPSBbeC5zdHJpcCgpIGZvciB4IGluIGlubmVyLnNwbGl0KCIsIikgaWYgeC5zdHJpcCgpXQogICAgICAgICAgICAg"
+FIXLIB_B64="${FIXLIB_B64}ICAgb3V0LmFwcGVuZCgnJXNbIiVzIiwgJXNdJyAlIChwcmUsIGl0ZW0sICIsICIuam9pbihpdGVtcykpKQogICAgICAgICAgICAg"
+FIXLIB_B64="${FIXLIB_B64}ICAgZG9uZSA9IFRydWU7IGluX2RkID0gRmFsc2U7IGNvbnRpbnVlCiAgICAgICAgICAgIGlmIHJlLm1hdGNoKHIiXlxzKndpblxz"
+FIXLIB_B64="${FIXLIB_B64}KjoiLCBsbik6ICAgICAgICAgICAgICAgICAgIyDlnZfliJfooagKICAgICAgICAgICAgICAgIGluZGVudCA9IHJlLm1hdGNoKHIi"
+FIXLIB_B64="${FIXLIB_B64}XihccyopIiwgbG4pLmdyb3VwKDEpCiAgICAgICAgICAgICAgICBvdXQuYXBwZW5kKGxuKQogICAgICAgICAgICAgICAgb3V0LmFw"
+FIXLIB_B64="${FIXLIB_B64}cGVuZCgnJXMgIC0gIiVzIicgJSAoaW5kZW50LCBpdGVtKSkKICAgICAgICAgICAgICAgIGRvbmUgPSBUcnVlOyBpbl9kZCA9IEZh"
+FIXLIB_B64="${FIXLIB_B64}bHNlOyBjb250aW51ZQogICAgICAgICAgICBpZiByZS5tYXRjaChyIl5bXlxzI10iLCBsbikgYW5kIGxuLnN0cmlwKCk6CiAgICAg"
+FIXLIB_B64="${FIXLIB_B64}ICAgICAgICAgICBpbl9kZCA9IEZhbHNlCiAgICAgICAgb3V0LmFwcGVuZChsbikKICAgIHAud3JpdGVfdGV4dCgiXG4iLmpvaW4o"
+FIXLIB_B64="${FIXLIB_B64}b3V0KSwgZW5jb2Rpbmc9InV0Zi04IikKICAgIHByaW50KCJ3aW5hZGRmaXJzdCAlczogZG9uZT0lcyIgJSAoaXRlbSwgZG9uZSkp"
+FIXLIB_B64="${FIXLIB_B64}CmVsaWYgbW9kZSA9PSAidmFsaWRhdGUiOgogICAgIyDnlKjku5PlhoXnnJ/lrp7op6PmnpDlmajpqozor4Hkuqfnianlj6/op6Pm"
+FIXLIB_B64="${FIXLIB_B64}npDvvIjlpLnlhbfoh6rmo4DvvJrkuI3orrjpnaDjgIzlgYforr7kuKTplK7nm7jpgrvjgI3vvIkKICAgIGltcG9ydCBvcwogICAg"
+FIXLIB_B64="${FIXLIB_B64}bW9kX2RpciA9IG9zLmVudmlyb24uZ2V0KCJTWU5PX09XTkVSU0hJUF9ZQU1MX01PRF9ESVIiKSBvciAic2NyaXB0cy9wcm9kdWN0"
+FIXLIB_B64="${FIXLIB_B64}LWxpbmVzIgogICAgc3lzLnBhdGguaW5zZXJ0KDAsIG1vZF9kaXIpCiAgICBpbXBvcnQgcHJvZHVjdGxpbmVfeWFtbCBhcyBwYXJz"
+FIXLIB_B64="${FIXLIB_B64}ZXIKICAgIHRyeToKICAgICAgICBkYXRhID0gcGFyc2VyLmxvYWRfZmlsZShzeXMuYXJndlsyXSkKICAgIGV4Y2VwdCBwYXJzZXIu"
+FIXLIB_B64="${FIXLIB_B64}WWFtbFN1YnNldEVycm9yIGFzIGU6CiAgICAgICAgcHJpbnQoIlBBUlNFX0ZBSUwgJXMiICUgZSkKICAgICAgICBzeXMuZXhpdCgx"
+FIXLIB_B64="${FIXLIB_B64}KQogICAga2V5cyA9IHNvcnRlZChkYXRhLmtleXMoKSkgaWYgaXNpbnN0YW5jZShkYXRhLCBkaWN0KSBlbHNlIFtdCiAgICBwcmlu"
+FIXLIB_B64="${FIXLIB_B64}dCgiUEFSU0VfT0sgdG9wX2tleXM9JXMiICUgIiwiLmpvaW4oa2V5cykpCmVsc2U6CiAgICByYWlzZSBTeXN0ZW1FeGl0KCJ1bmtu"
+FIXLIB_B64="${FIXLIB_B64}b3duIG1vZGU6ICVzIiAlIG1vZGUpCg=="
+"$PYBIN" -c 'import base64,sys,pathlib;pathlib.Path(sys.argv[1]).write_bytes(base64.b64decode(sys.argv[2]))' "$FIXLIB" "$FIXLIB_B64"
+# 完整性自检: sha256(落盘) 必须 == sha256(内嵌)；不符即红（防 base64 段被误改而静默跑旧工具）
+FIXLIB_SHA_EXPECT="3f5f4ab5a9b4c89d22798feed81845fe0020976da87c48a3537bfa9f90ec6c91"
+FIXLIB_SHA_GOT="$(python3 -c 'import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$FIXLIB" 2>/dev/null || true)"
+if [ "$FIXLIB_SHA_GOT" = "$FIXLIB_SHA_EXPECT" ]; then
+  pass "F2 夹具工具完整性: 落盘 sha256 == 内嵌 sha256（6686a8f949ca…）"
+else
+  fail "F2 夹具工具损坏: 落盘=${FIXLIB_SHA_GOT} 期望=${FIXLIB_SHA_EXPECT}"
+fi
+
+
 # 未登记路径（只命中兜底、不在 win 基线领地）——用「新建路径」而非存量，避免写死路径清单
 UNREG_DIR="new-line-$(date +%s)/artifact.ts"
 UNREG_DIR2="new-line-$(date +%s)/other.md"
@@ -390,29 +503,19 @@ cp "$TOOL" "$FIX/scripts/control-tower/check-ownership.py"
 cp "$REPO_DIR"/scripts/product-lines/*.py "$FIX/scripts/product-lines/"
 FIXTOOL="$FIX/scripts/control-tower/check-ownership.py"
 export SYNO_OWNERSHIP_YAML_MOD_DIR="$FIX/scripts/product-lines"
-INNER_PY="$TMPD/inner-10b.py"
-cat > "$INNER_PY" <<'INNER_PY_EOF'
-import pathlib, sys
-mode = sys.argv[1]
-if mode == "strip":
-    src = pathlib.Path(sys.argv[2]).read_text(encoding="utf-8")
-    i = src.index("domain_defaults:")
-    j = src.index("rule_authority:")
-    pathlib.Path(sys.argv[3]).write_text(src[:i] + src[j:], encoding="utf-8")
-elif mode == "claim":
-    # 在 rules 列表内插入一条显式规则（追加到文件尾会落在空行后 → 解析器判非法缩进）
-    pth = pathlib.Path(sys.argv[2]); d = sys.argv[3]
-    t = pth.read_text(encoding="utf-8")
-    i = t.index('  - glob: "**"')
-    pth.write_text(t[:i] + '  - glob: "%s/**"\n    owner: "win"\n' % d + t[i:], encoding="utf-8")
-else:
-    raise SystemExit("unknown mode")
-INNER_PY_EOF
+# strip = 按键删块（顺序无关）；claim = 在 rules 列表内插入一条显式规则。均走 FIXLIB。
+strip_contract() {  # $1=源 $2=目标
+  cp "$1" "$2"
+  "$PYBIN" "$FIXLIB" delblock "$2" domain_defaults >/dev/null
+}
+add_claim_rule() {  # $1=yaml $2=目录名
+  "$PYBIN" "$FIXLIB" addblock "$1" "$2"
+}
 CF_INACTIVE="$TMPD/ownership-inactive.yaml"
 CF_ACTIVE="$TMPD/ownership-active.yaml"
-"$PYBIN" "$INNER_PY" strip "$CONTRACT_YAML" "$CF_INACTIVE" || fail "10b 前置: 旧态 yaml 生成失败"
+strip_contract "$CONTRACT_YAML" "$CF_INACTIVE" || fail "10b 前置: 旧态 yaml 生成失败"
 cp "$CONTRACT_YAML" "$CF_ACTIVE"                      # 新态从**合同形态**出发（不是剥离态 —— 否则丢 domain_defaults）
-"$PYBIN" "$INNER_PY" claim "$CF_ACTIVE" "$UNREG_DIR" || fail "10b 前置: 新规则注入失败"
+add_claim_rule "$CF_ACTIVE" "$UNREG_DIR" || fail "10b 前置: 新规则注入失败"
 # 三份夹具的形态自证（任一不成立 → 后续判据全部不可信，立即报红）
 if grep -qE '^domain_defaults:' "$CONTRACT_YAML"; then pass "10b 前置: 合同形态夹具含 domain_defaults"; else fail "10b 前置: 合同形态夹具缺 domain_defaults"; fi
 if grep -qE '^domain_defaults:' "$CF_INACTIVE"; then fail "10b 前置: 旧态夹具有 domain_defaults（C1 判据不可信）"; else pass "10b 前置: 旧态夹具已剥离 domain_defaults（C1 判据可信）"; fi
@@ -422,7 +525,7 @@ if grep -qE '^domain_defaults:' "$CF_ACTIVE" && grep -qF "glob: \"$UNREG_DIR/**\
   git init -q . >/dev/null 2>&1
   git config user.email "d1029-test@example.invalid"
   git config user.name "D1029 fixture"
-  mkdir -p "$UNREG_DIR"
+  mkdir -p "$(dirname "$UNREG_DIR")"
   printf '// unregistered new dir\n' > "$UNREG_DIR"
   cp "$CF_INACTIVE" "$OWNERSHIP_REL"                 # C1 基线: rules 与合同副本同序，仅缺 domain_defaults
   git add -A >/dev/null 2>&1
@@ -470,24 +573,26 @@ else fail "10c exit=2 但输出未点名 fail-closed（疑似静默降级）"
 fi
 
 # ── 10d 判别性夹具（改坏即红）: 沙箱改坏三形态 → 必须红 ──
-( cd "$TMPD" && "$PYBIN" - <<'PYEOF'
-import pathlib
-src = pathlib.Path("ownership-contract.yaml").read_text(encoding="utf-8")
-# ① 删掉 domain_defaults 段（连同注入的规则权注释键）
-i = src.index("domain_defaults:")
-j = src.index("rule_authority:")
-pathlib.Path("ownership-no-defaults.yaml").write_text(src[:i] + src[j:], encoding="utf-8")
-# ② domain_defaults.win 置空列表
-k = src.index("domain_defaults:")
-m = src.index("rule_authority:")
-empty = src[:k] + "domain_defaults:\n  win: []\n" + src[m:]
-pathlib.Path("ownership-empty-win.yaml").write_text(empty, encoding="utf-8")
-# ③ 删掉兜底规则
-a = src.index('  - glob: "**"')
-b = src.index('  - glob: "extensions/**"')
-pathlib.Path("ownership-no-catchall.yaml").write_text(src[:a] + src[b:], encoding="utf-8")
-PYEOF
-) 2>/dev/null   # swallow-ok: 夹具 yaml 生成器 stdin 无输出；失败由紧随其后的「空 win 夹具已生成」前置断言拦截
+# ① 删 domain_defaults 整块（顺序无关）② 清空 domain_defaults.win ③ 删首条规则 —— 均走 FIXLIB
+cp "$CONTRACT_YAML" "$TMPD/ownership-no-defaults.yaml"
+"$PYBIN" "$FIXLIB" delblock "$TMPD/ownership-no-defaults.yaml" domain_defaults >/dev/null
+cp "$CONTRACT_YAML" "$TMPD/ownership-empty-win.yaml"
+"$PYBIN" "$FIXLIB" setlistempty "$TMPD/ownership-empty-win.yaml" domain_defaults win >/dev/null
+cp "$CONTRACT_YAML" "$TMPD/ownership-no-catchall.yaml"
+"$PYBIN" "$FIXLIB" delrule "$TMPD/ownership-no-catchall.yaml" >/dev/null
+# ── 夹具自检（不许靠「假设两键相邻」）: 用仓内真实解析器复验三个产物可解析 ──
+for _fx in ownership-no-defaults ownership-empty-win ownership-no-catchall; do
+  _v="$(SYNO_OWNERSHIP_YAML_MOD_DIR="$REPO_DIR/scripts/product-lines" "$PYBIN" "$FIXLIB" validate "$TMPD/$_fx.yaml" 2>&1)"
+  case "$_v" in
+    PARSE_OK*) pass "10d 夹具自检: $_fx.yaml 经真实解析器可解析（${_v}）" ;;
+    *)         fail "10d 夹具自检: $_fx.yaml 解析失败（${_v}）—— 夹具坏了，后续判据不可信" ;;
+  esac
+done
+if ! grep -qE '^domain_defaults:' "$TMPD/ownership-no-defaults.yaml"; then
+  pass "10d 夹具自检: no-defaults 已无 domain_defaults 顶层键（顺序无关删块生效）"
+else
+  fail "10d 夹具自检: no-defaults 仍有 domain_defaults（删块未生效）"
+fi
 if grep -qE '^  win: \[\]$' "$TMPD/ownership-empty-win.yaml"; then
   pass "10d 前置: 空 win 夹具已生成（win: []）"
 else
@@ -505,14 +610,55 @@ run_expect 1 "10d 删兜底规则 → 明示「未归属」+ exit 1（不再 exi
 run_expect 0 "10d 反面对照: 合同形态夹具同路径仍 exit 0（基线领地命中）" \
   src/server.ts --owner win --yaml "$CONTRACT_YAML"
 
-# ── 10e --emit-codeowners 不读 domain_defaults（裁决 3②）: 缺段仍可生成 + 与仓库产物核对 ──
+# ── 10e 领地注释的单一源: domain_defaults.win（队长 2026-09-27 追加裁决「丙」）──
+# 判据方向修正: 本卡明确要求 domain_defaults 是领地注释的**单一源** ⇒ 输出**应当**随它变。
+# 因此不再断言「两侧逐字节一致」（那是错的），改为三条语义正确的断言:
+#   ① 规则行（去注释）与 domain_defaults 无关 ⇒ 两侧逐行相同（硬断言）
+#   ② 唯一允许差异 = 领地注释行，且其内容 == domain_defaults.win 逐项渲染（硬断言「必须相等」）
+#   ③ 判别性: 改 domain_defaults.win 一项 ⇒ 该注释行必须随之改变（证明单一源真生效）
 GEN_OK="$TMPD/CODEOWNERS.gen"; GEN_NODEF="$TMPD/CODEOWNERS.nodef"
 "$PYBIN" "$TOOL" --emit-codeowners --yaml "$CFG" > "$GEN_OK" 2>"$TMPD/emit-ok.err"; _e=$?
-[ "$_e" = 0 ] && pass "10e --emit-codeowners 正常态 exit 0" || { fail "10e emit 正常态 exit=$_e"; sed -n '1,5p' "$TMPD/emit-ok.err" >&2; }
+[ "$_e" = 0 ] && pass "10e --emit-codeowners 正常态 exit 0" || { fail "10e emit 正常态 exit=${_e}"; sed -n '1,5p' "$TMPD/emit-ok.err" >&2; }
 "$PYBIN" "$TOOL" --emit-codeowners --yaml "$TMPD/ownership-no-defaults.yaml" > "$GEN_NODEF" 2>"$TMPD/emit-nodef.err"; _e=$?
-[ "$_e" = 0 ] && pass "10e --emit-codeowners 在「缺 domain_defaults」夹具上仍 exit 0（不因缺键坏生成器）" \
+[ "$_e" = 0 ] && pass "10e --emit-codeowners 在「缺 domain_defaults」夹具上仍 exit 0（缺键不坏生成器）" \
   || { fail "10e 缺 domain_defaults 时 emit exit=${_e}（应为 0）"; sed -n '1,5p' "$TMPD/emit-nodef.err" >&2; }
-if diff -q "$GEN_OK" "$GEN_NODEF" >/dev/null 2>&1; then pass "10e emit 输出与 domain_defaults 段无关（逐字节一致）"; else fail "10e emit 输出受 domain_defaults 影响（drift 风险）"; fi
+
+# ① 规则行（去注释）与 domain_defaults 无关
+grep -v '^#' "$GEN_OK" > "$TMPD/co-nodes.txt"
+grep -v '^#' "$GEN_NODEF" > "$TMPD/co-nodef.txt"
+if diff -q "$TMPD/co-nodes.txt" "$TMPD/co-nodef.txt" >/dev/null 2>&1; then
+  pass "10e ① 规则行与 domain_defaults 无关（有/无该段两侧逐行相同）"
+else
+  fail "10e ① 规则行受 domain_defaults 影响（真漂移）"; diff "$TMPD/co-nodes.txt" "$TMPD/co-nodef.txt" | head -6 >&2
+fi
+
+# ② 唯一允许差异 = 领地注释行；且该行 == domain_defaults.win 逐项渲染
+NONCOMMENT="$(diff "$GEN_OK" "$GEN_NODEF" | grep -cE '^[<>] [^#]' | tr -d '\n\r' || true)"; NONCOMMENT="${NONCOMMENT//[^0-9]/}"
+[ "$NONCOMMENT" = "0" ] && pass "10e ② 差异仅在注释段（无非注释行差异）" \
+  || { fail "10e ② 有 ${NONCOMMENT} 处非注释行差异"; diff "$GEN_OK" "$GEN_NODEF" | head -6 >&2; }
+WANT_TERR="$("$PYBIN" "$FIXLIB" terrline "$CFG" 2>/dev/null || true)"
+HAVE_TERR_OK="$(grep -F '领地（显式列出）' "$GEN_OK" | head -1)"
+HAVE_TERR_NODEF="$(grep -F '领地（显式列出）' "$GEN_NODEF" | head -1)"
+if [ -n "$WANT_TERR" ] && [ "$HAVE_TERR_OK" = "$WANT_TERR" ]; then
+  pass "10e ② 领地注释行 == domain_defaults.win 逐项渲染（硬相等）"
+else
+  fail "10e ② 领地注释行与 domain_defaults.win 渲染不符（生成=${HAVE_TERR_OK} 期望=${WANT_TERR}）"
+fi
+if [ -z "$HAVE_TERR_NODEF" ]; then
+  pass "10e ② 缺 domain_defaults 时不输出领地注释行（不崩、不留半截）"
+else
+  fail "10e ② 缺 domain_defaults 仍输出领地注释行（=${HAVE_TERR_NODEF}）"
+fi
+
+# ③ 判别性: 改 domain_defaults.win 一项 ⇒ 注释行必须随之改变
+cp "$CFG" "$TMPD/co-tweaked.yaml"
+"$PYBIN" "$FIXLIB" winaddfirst "$TMPD/co-tweaked.yaml" "D1029-SENTINEL/**" >/dev/null
+"$PYBIN" "$TOOL" --emit-codeowners --yaml "$TMPD/co-tweaked.yaml" > "$TMPD/CODEOWNERS.tweaked" 2>/dev/null   # swallow-ok: 紧接的断言直接核产物内容；emit 失败会被下一句 grep 判红
+if grep -qF 'D1029-SENTINEL/**' "$TMPD/CODEOWNERS.tweaked" && ! diff -q "$GEN_OK" "$TMPD/CODEOWNERS.tweaked" >/dev/null 2>&1; then
+  pass "10e ③ 判别性: 改 domain_defaults.win 一项 ⇒ 领地注释行随之改变（单一源真生效）"
+else
+  fail "10e ③ 单一源未生效: 改 domain_defaults.win 后注释行未变（判据恒真）"
+fi
 # ── 10f live-yaml 契约探针（B 未落地 → PENDING 单列，不影响本套件退出码）──
 if [ "$LIVE_MODE" = "pre-contract" ]; then
   pending "10f live-yaml 契约探针: ⏳ pre-contract: 待成员 B 落地 ownership.yaml（共享任务 task-2）后本项转绿"
