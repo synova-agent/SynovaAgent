@@ -1,0 +1,186 @@
+
+════════════════════════════════════════════
+§ ST2-01 bash -n
+════════════════════════════════════════════
+exit=0
+
+════════════════════════════════════════════
+§ ST2-02 声明相关符号（原始输出全文）
+════════════════════════════════════════════
+共 35 处
+22:# D1028-A2v2（CTO 本轮裁定，替代「一刀切硬拦」）—— `## 死代码清理声明` 逃生口:
+25:#         `## 死代码清理声明`（逐条路径 + 铁律 37 依据）⇒ 放行 + ⚠️ 警告 + 计数。
+38:#     ① `--decl-file <path>` ② `$SYNO_DR_DECL_FILE` ③ brief 链（**取并**，与 pre-commit 的
+56:#               --decl-file <path>  D1028-A2v2「死代码清理声明」注入缝（测试/CI 用）。
+105:DECL_FILE=""
+115:    --decl-file)   DECL_FILE="${2:-}"; shift 2 ;;
+171:#   「D/R 路径」（死代码清理声明的覆盖判据）与 A/M/C 路径（ⓐ 判据）。
+206:# ═══ S1.5 D1028-A2v2 死代码清理声明: 来源链解析 + 段落解析 ═══
+210:#   ① --decl-file  ② $SYNO_DR_DECL_FILE
+260:# 段落解析: 标题 `^#{2,4}\s*死代码清理声明` 起，至下一 `^#{1,4}\s` 标题止；段内每行 `- <路径> — <依据>`。
+270:      if printf '%s' "$line" | grep -qE '^#{2,4}[[:space:]]*死代码清理声明'; then in_sec=1; fi
+319:  if [ -n "${DECL_FILE:-}" ]; then
+320:    if [ -f "$DECL_FILE" ]; then
+321:      _decl_try "--decl-file=${DECL_FILE}"
+322:      _decl_add_src "$DECL_FILE" "--decl-file"
+324:      _decl_try "--decl-file=${DECL_FILE}（不可读）"
+325:      echo "  ⚠️  D1028 声明来源 --decl-file=${DECL_FILE} 不可读 → 视为「无声明」（显式注入缝不回退 brief 链）"
+327:  elif [ -n "${SYNO_DR_DECL_FILE:-}" ]; then
+328:    if [ -f "$SYNO_DR_DECL_FILE" ]; then
+329:      _decl_try "\$SYNO_DR_DECL_FILE=${SYNO_DR_DECL_FILE}"
+330:      _decl_add_src "$SYNO_DR_DECL_FILE" "SYNO_DR_DECL_FILE"
+332:      _decl_try "\$SYNO_DR_DECL_FILE=${SYNO_DR_DECL_FILE}（不可读）"
+333:      echo "  ⚠️  D1028 声明来源 \$SYNO_DR_DECL_FILE=${SYNO_DR_DECL_FILE} 不可读 → 视为「无声明」（同上，不回退 brief 链）"
+421:# D1028-A2v2: 按状态标签分流 —— D/R 命中的才可能被「死代码清理声明」放行，且其中的
+468:      # 旁路封堵（DS3）的最终裁定移到 S2.5 —— 那里才知道「死代码清理声明」是否放行
+473:# ── S2.5 D1028-A2v2 死代码清理声明裁定: 硬拦保留，仅对「声明覆盖全部 DENY_RE 命中 D/R 路径」放行 ──
+484:    DECL_INEFFECTIVE="未读到「## 死代码清理声明」段落（或段内零条目）"
+504:    DECL_INEFFECTIVE="命中 DENY_EXACT ${DR_DENY_EXACT_N} 件 —— 不受「## 死代码清理声明」放行（CTO 裁定: 删治理文件 ≠ 铁律 37 死代码清理，须独立卡 + CTO 批复）"
+552:  echo "  ⚠️  D1028 死代码清理声明生效：${DECL_RELEASED_N} 件（逐条放行）"
+561:    echo "      ⛔ 其中 DENY_EXACT ${DR_DENY_EXACT_N} 件**不受「## 死代码清理声明」放行**（CTO 裁定: 删治理文件 ≠ 铁律 37 死代码清理；要动须独立卡 + CTO 批复）:"
+565:    echo "      逃生口（CTO 本轮裁定）: 在本任务 brief 补「## 死代码清理声明」段落，逐条列出**下列全部**路径 + 铁律 37 依据（缺一条即不生效；通配不生效）:"
+567:    echo "      ## 死代码清理声明"
+572:    echo "      ℹ️ 未找到声明来源（已尝试: --decl-file / \$SYNO_DR_DECL_FILE / .claude/current-brief.\$DSH_SESSION_ID / .claude/current-brief / .claude/task-briefs 当日窗口 ±1 天）"
+581:      echo "         · 声明段内零条目（须逐行「- <路径> — <铁律 37 依据>」；标题须为 ## / ### / #### 死代码清理声明）"
+592:      echo "         · 命中 DENY_EXACT ${DR_DENY_EXACT_N} 件 —— 不受「## 死代码清理声明」放行（须独立卡 + CTO 批复，逐条点名）:"
+
+════════════════════════════════════════════
+§ ST2-03 生产接线：brief 解析链符号（无 --decl-file 时真的会跑）
+════════════════════════════════════════════
+共 28 处
+40:#        `.claude/current-brief.$DSH_SESSION_ID`（新鲜才采用）∪ `.claude/current-brief`（新鲜才采用）
+41:#        ∪ `.claude/task-briefs/` 当日窗口（`^YYYY-MM-DD-` ±1 天，且 mtime 非陈旧）；
+211:#   ③ .claude/current-brief.$DSH_SESSION_ID（新鲜才采用）∪ .claude/current-brief（新鲜才采用）
+212:#      ∪ .claude/task-briefs/ 当日窗口（±1 天，与 pre-commit-check.sh 的 DAY_WINDOW_RE 同口径；多份取并）
+214:DAY_WINDOW_RE=""
+219:  local _dir="$ROOT_DECL/.claude/task-briefs" _out _x
+236:  [[ "$b" =~ $DAY_WINDOW_RE ]] || return 1
+312:    DAY_WINDOW_RE="$("$PYBIN" -c "
+317:  [ -z "$DAY_WINDOW_RE" ] && DAY_WINDOW_RE="^${TODAY_DASH}-"
+338:    if [ -n "${DSH_SESSION_ID:-}" ] && [ -f "$ROOT_DECL/.claude/current-brief.$DSH_SESSION_ID" ]; then
+339:      _bn="$(cat "$ROOT_DECL/.claude/current-brief.$DSH_SESSION_ID" 2>/dev/null | tr -d '[:space:]' || true)"
+340:      if [ -n "$_bn" ] && _decl_brief_in_window "$ROOT_DECL/.claude/task-briefs/$_bn"; then
+341:        _decl_try ".claude/current-brief.\$DSH_SESSION_ID → $_bn"
+342:        _decl_add_src "$ROOT_DECL/.claude/task-briefs/$_bn" "brief(current-brief.\$DSH_SESSION_ID)"
+344:        _decl_try ".claude/current-brief.\$DSH_SESSION_ID → ${_bn:-（空）}（不存在/陈旧，不采用）"
+345:        echo "  ℹ️  D1028 声明来源: current-brief.\$DSH_SESSION_ID 指向「不存在/陈旧」brief（${_bn:-空}）→ 回退当日窗口并集"
+348:    if [ -f "$ROOT_DECL/.claude/current-brief" ]; then
+349:      _bn="$(cat "$ROOT_DECL/.claude/current-brief" 2>/dev/null | tr -d '[:space:]' || true)"
+350:      if [ -n "$_bn" ] && _decl_brief_in_window "$ROOT_DECL/.claude/task-briefs/$_bn"; then
+351:        _decl_try ".claude/current-brief → $_bn"
+352:        _decl_add_src "$ROOT_DECL/.claude/task-briefs/$_bn" "brief(current-brief)"
+354:        _decl_try ".claude/current-brief → ${_bn:-（空）}（不存在/陈旧，不采用）"
+358:    for _f in "$ROOT_DECL"/.claude/task-briefs/*.md; do
+363:        _decl_add_src "$_f" "brief(task-briefs 当日窗口)"
+366:    _decl_try ".claude/task-briefs/ 当日窗口（±1 天）: 扫描 ${_DECL_SCAN_N} 份 .md，窗口内 ${_DECL_MATCH_N} 份"
+407:OUTBOUND_ALLOW_RE='^(\.claude/task-briefs/|docs/plans/|docs/synova/coordination/|memory/notes/|docs/synova/archive/|docs/archive/)'
+513:GOV_PREFIX_RE='^(\.claude/task-briefs/|task-state/|memory/notes/|docs/plans/|docs/synova/product-lines/evidence/)'
+572:    echo "      ℹ️ 未找到声明来源（已尝试: --decl-file / \$SYNO_DR_DECL_FILE / .claude/current-brief.\$DSH_SESSION_ID / .claude/current-brief / .claude/task-briefs 当日窗口 ±1 天）"
+--- 对照: pre-commit-check.sh 的 DAY_WINDOW_RE 真源（:1288-1300）---
+#   改用 [[ $b =~ $RE ]]：=~ 的 RHS 在 runtime 展开后按 ERE 解析，| 作为 alternation 生效
+#   （bash 3.x/5.x 一致，K3 审计实测 + CTO 本地独立复现）。
+# 一次 python3 算三天 ERE（G12 本就依赖 python3；python 不可用 → 回退单日本地 glob 行为）。
+DAY_WINDOW_RE=$(python3 -c "
+import datetime
+t = datetime.date.today()
+print('^(' + '|'.join((t + datetime.timedelta(days=k)).isoformat() for k in (-1, 0, 1)) + ')-')" 2>/dev/null || true)
+[ -z "$DAY_WINDOW_RE" ] && DAY_WINDOW_RE="^${TODAY_DASH}-"
+today_files_by_prefix() {
+  local dir="$1" f b
+  dir="${dir%/}"
+  [ -d "$dir" ] || return 0
+  for f in "$dir"/*.md; do
+    [ -e "$f" ] || continue
+    b=${f##*/}
+    if [[ "$b" =~ $DAY_WINDOW_RE ]]; then
+      echo "$f"
+    fi
+
+════════════════════════════════════════════
+§ ST2-04 接线 grep: pre-commit-check.sh 调用本脚本
+════════════════════════════════════════════
+共 4 处（要求 ≥1）
+1515:if [ -x "$ROOT/scripts/control-tower/check-pr-budget.sh" ] || [ -f "$ROOT/scripts/control-tower/check-pr-budget.sh" ]; then
+1516:  PRB_OUT=$(bash "$ROOT/scripts/control-tower/check-pr-budget.sh" --quiet 2>&1)
+1521:    soft_check "D734 PR 预算超限 (拆 PR，禁调高上限——见 scripts/control-tower/check-pr-budget.sh)" "$PRB_OUT"
+1526:  soft_check "D734 PR 预算: 检查脚本缺失 scripts/control-tower/check-pr-budget.sh" "1"
+--- 关键: 调用行是否带 --decl-file（不带=走 brief 链，是真生产路径）---
+1516:  PRB_OUT=$(bash "$ROOT/scripts/control-tower/check-pr-budget.sh" --quiet 2>&1)
+
+════════════════════════════════════════════
+§ ST2-05 未动项（②③ 语义 / MAX_FILES / D860 / 出库豁免分支）
+════════════════════════════════════════════
+--- MAX_FILES/MAX_BEHIND ---
+100:MAX_FILES=12
+101:MAX_BEHIND=20
+111:    --max-files)   MAX_FILES="${2:-}"; shift 2 ;;
+112:    --max-behind)  MAX_BEHIND="${2:-}"; shift 2 ;;
+125:MAX_FILES="$(_clean_num "$MAX_FILES")"; MAX_FILES="${MAX_FILES:-12}"
+126:MAX_BEHIND="$(_clean_num "$MAX_BEHIND")"; MAX_BEHIND="${MAX_BEHIND:-20}"
+--- 出库豁免 ⓐ∧ⓑ ---
+28:#     （`OUTBOUND_DENY_RE`）D/R 路径集**（缺一条即不生效 —— 防「写一条洗全场」）；c) 至少一条依据
+75:#   ✅ OUTBOUND_ALLOW_RE   — 出库白名单前缀（纯归档/出库批次允许）
+76:#   ❌ OUTBOUND_DENY_RE    — 拒绝名单前缀（代码/门禁/测试/扩展域，绝不豁免）
+407:OUTBOUND_ALLOW_RE='^(\.claude/task-briefs/|docs/plans/|docs/synova/coordination/|memory/notes/|docs/synova/archive/|docs/archive/)'
+408:OUTBOUND_DENY_RE='^(src/|scripts/|\.github/|tests/|extensions/|expert/)'
+409:OUTBOUND_DENY_EXACT_RE='^docs/synova/coordination/(ownership\.yaml|AUDIT-PROTOCOL\.md)$'
+410:OUTBOUND_EXEMPT=0
+411:OUTBOUND_DENY_HARD=0
+428:  printf '%s' "$_p" | grep -qE "$OUTBOUND_ALLOW_RE" && _in_allow=1
+429:  printf '%s' "$_p" | grep -qE "$OUTBOUND_DENY_RE" && _in_deny=1
+430:  printf '%s' "$_p" | grep -qE "$OUTBOUND_DENY_EXACT_RE" && _in_deny_exact=1
+453:    OUTBOUND_EXEMPT=1
+506:  if [ "$AM_N" -eq 0 ] && [ "$DECL_EFFECTIVE" -eq 0 ]; then OUTBOUND_DENY_HARD=1; fi
+527:if [ "$OUTBOUND_EXEMPT" -eq 0 ] && [ "$EXEMPT_N" -gt 0 ]; then
+531:if [ "$OUTBOUND_EXEMPT" -eq 1 ]; then
+540:if [ "$OUTBOUND_EXEMPT" -eq 1 ]; then
+558:if [ "$OUTBOUND_DENY_HARD" -eq 1 ]; then
+--- D860 ---
+509:# ── S3 收紧: D/R 路径默认计入预算 + 既有 D860 治理产物豁免口径（原样保留）──
+513:GOV_PREFIX_RE='^(\.claude/task-briefs/|task-state/|memory/notes/|docs/plans/|docs/synova/product-lines/evidence/)'
+514:GOV_EXT_RE='\.(md|json|ya?ml|txt)$'
+519:  if printf '%s' "$_f" | grep -qE "$GOV_PREFIX_RE" && printf '%s' "$_f" | grep -qE "$GOV_EXT_RE"; then
+528:  echo "  ℹ️  D860 治理产物豁免: ${EXEMPT_N} 件不计预算（brief/卡/Note/规格/自验证据，代码文件仍计入）"
+532:  # 豁免生效 → COUNT_PATHS 全不计入（含 D860 治理产物口径不再适用）
+--- ② 单域 / ③ 落后 ---
+8:# 背景（派单 §二）: D721 一个 PR 背三类门禁问题挂半天；K3 审计分支落后 main
+50:#               --max-behind <N>    落后基线提交数告警阈值（默认 20）
+62:#             check-ownership.py） ③ 落后基线提交数；❌ 行点名具体超标项。
+65:#   @exit   — 0 = 在预算内（可含 ⚠️ 落后告警，不阻断）
+91:OWNERSHIP="$SCRIPT_DIR/check-ownership.py"
+128:echo "── PR 预算门禁（D734）: 基线=$BASE 上限=${MAX_FILES} 文件 / 落后阈值=${MAX_BEHIND} ──"
+163:  # ③ 落后基线提交数（只有真 git 模式才算得出来）
+604:# ── ② 变更只落在一个域（D733 check-ownership.py 的单域模式）──
+630:# ── ③ 落后基线提交数（告警，不阻断——防「落后分支直接合」）──
+633:    echo "  ⚠️  ③ 分支落后 $BASE 共 $BEHIND 个提交（> ${MAX_BEHIND}）—— 先 rebase/merge 再开 PR"
+635:    echo "  ✅ ③ 落后 $BASE $BEHIND 个提交 ≤ $MAX_BEHIND"
+639:    echo "  ✅ ③ 落后检查跳过（注入模式 --files/--diff-status 无 git 上下文）"
+641:    echo "  ✅ ③ 落后检查跳过（无 git 上下文）"
+
+════════════════════════════════════════════
+§ ST2-06 红证不残留（三种口径）
+════════════════════════════════════════════
+口径① 全仓文件数        : 12
+口径② 仅 *.sh 脚本命中   : 0
+口径③ 本卡两文件命中行数 : scripts/control-tower/check-pr-budget.sh:0 tests/control-tower/check-pr-budget.test.sh:0 
+--- 全仓逐条命中（原始输出）---
+（以上为 *.sh 口径全部命中；无输出 = 0）
+
+════════════════════════════════════════════
+§ REG2-01 tests/control-tower/check-pr-budget.test.sh（完整输出，项数须 ≥94）
+════════════════════════════════════════════
+exit=0
+输出行数=202
+  ✅ 全部通过: 179 项
+
+════════════════════════════════════════════
+§ REG2-02 tests/control-tower/check-ownership.test.sh（须 58/58）
+════════════════════════════════════════════
+exit=0
+  ✅ 全部通过: 58 项
+
+════════════════════════════════════════════
+§ REG2-03 既有 94 项（v1 基线）套件 × 新实现（独立回归：用 v1 冻结版测试跑 v2）
+════════════════════════════════════════════
+exit=0
+  ✅ 全部通过: 94 项
