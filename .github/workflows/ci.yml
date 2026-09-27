@@ -377,6 +377,8 @@ jobs:
             tests/control-tower/check-k3-report.test.sh \
             tests/control-tower/daily-cto-board-ratio.test.sh \
             tests/control-tower/install-dsh-preset.test.sh \
+            tests/control-tower/check-ownership.test.sh \
+            tests/control-tower/check-pr-budget.test.sh \
             tests/control-tower/d956-failmsg.test.sh; do
             echo "── $t"
             # D526: 测试失败输出进 ::error 注解——无 token 也能经 annotations 定位（D521 工具1 语义）

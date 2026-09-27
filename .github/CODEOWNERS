@@ -8,7 +8,6 @@
 # （兜底 = 创始人最终把关）。建议建三个团队 @synova-dsh / @synova-claude / @synova-k3，
 # 改 ownership.yaml 的 github: 段后重跑生成命令即可 —— 本文件不需要手改。
 
-# win 领地（显式列出）: src/**、extensions/**、packages/**、synova_worker/**、docs/plans/**
 *                                        @tangbaobao520
 extensions/**                            @tangbaobao520
 packages/**                              @tangbaobao520
