@@ -217,7 +217,7 @@ _rels() {  # stdin: 绝对路径 → stdout: 仓库相对路径；域外路径�
   done
 }
 
-# 归属查询: stdin 仓库相对路径 → stdout "<owner>\t<path>"（3 态退出码，非 0/1 即失败）
+# 归属查询: stdin 仓库相对路径 → stdout "<owner>\t<path>\t<注记>"（取 $1/$2；3 态退出码，非 0/1 即失败）
 _owners() {
   [ -n "$PYBIN" ] || return 9
   local _in=() _p
@@ -232,7 +232,8 @@ _owners() {
     *)   cat "$TMPD/own.err" >&2
          return 9 ;;
   esac
-  printf '%s\n' "$_out" | awk '/^(mac|win|k3)[[:space:]]/{o=$1; sub(/^(mac|win|k3)[[:space:]]+/,""); print o "\t" $0}'
+  # 按生产者契约取字段: "<owner>\t<path>[\t<注记>]" ⇒ 只取 $1/$2（注记不得混入路径）。D1029/task-6
+  printf '%s\n' "$_out" | awk -F'\t' '/^(mac|win|k3)[[:space:]]/{print $1 "\t" $2}'
   return 0
 }
 

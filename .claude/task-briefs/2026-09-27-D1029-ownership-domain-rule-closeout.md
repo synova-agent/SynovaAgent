@@ -62,6 +62,7 @@
 - .github/CODEOWNERS — 生成物，须重跑 `--emit-codeowners` 覆盖（含订正第 4 行失效路径）
 - .github/workflows/ci.yml — 把 check-ownership.test.sh + check-pr-budget.test.sh 注册进 control-tower-tests
 - docs/synova/coordination/TASK-ROUTING.md — 新增「规则修改权」「域≠权限」两节（带 source 回溯）
+- scripts/control-tower/scan-fullwidth-vars.sh — 消费者按接口契约取 TAB 字段（$1=owner / $2=path），不吞脏路径（D1029 收尾：producer 注记移第 3 列后同步）
 
 不做什么：
 - scripts/audit/** — 禁区（K3 红线），零触碰
@@ -108,6 +109,8 @@ docs/synova/coordination/ownership.yaml
 .github/CODEOWNERS
 .github/workflows/ci.yml
 docs/synova/coordination/TASK-ROUTING.md
+tests/control-tower/check-pr-budget.test.sh
+scripts/control-tower/scan-fullwidth-vars.sh
 .claude/task-briefs/2026-09-27-D1029-ownership-domain-rule-closeout.md
 task-state/D1029.json
 memory/notes/proposed/2026-09-27-D1029-ownership-fallback-claim.md

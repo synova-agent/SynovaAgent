@@ -1,0 +1,52 @@
+=== task-6: scan-fullwidth-vars 接口回归修复（生产者/消费者 TAB 契约）===
+队长复现根因: 明细行把注记拼进 path 字段 ⇒ 消费方 scan-fullwidth-vars.sh 把整行余部当路径
+            ⇒ grep: <path>  (兜底→win 基线领地): No such file or directory ⇒ 该消费者正确 fail-closed 假红
+违反生产者自述契约 check-ownership.py @output: 明细行 "<owner>\t<path>"
+
+--- 修前（复现: 空格分隔 + 注记与 path 同字段）---
+$ python3 scripts/control-tower/check-ownership.py scripts/agent-start.bat | cat -t
+win  scripts/agent-start.bat  (兜底→win 基线领地)          ← 注记与 path 同一字段
+$ bash tests/control-tower/scan-fullwidth-vars.test.sh   → PASS=29 FAIL=2 SKIP=1
+
+--- 修后（TAB 三列；owner 无填充；path 纯净；mark 空则无尾随 TAB）---
+$ python3 scripts/control-tower/check-ownership.py scripts/agent-start.bat | cat -t
+win	scripts/agent-start.bat	(兜底→win 基线领地)
+$ python3 scripts/control-tower/check-ownership.py scripts/pre-commit-check.sh | cat -t
+mac	scripts/pre-commit-check.sh
+
+--- 生产者改动（file:line）---
+  :471  print("%s\t%s\t%s" % (owner, path, mark))
+  :473  print("%s\t%s" % (owner, path))
+契约 docstring 同步:
+  :33  @output — stdout 明细行 "<owner>\t<path>[\t<注记>]"（path **恰为第 2 个 TAB 字段**，注记不得混入 path；
+  :466  # 接口契约: 明细行 = "<owner>\t<path>[\t<注记>]" —— path 必须是**纯净**的第 2 个 TAB 字段
+
+--- 消费者改动（按字段取 $1/$2，不再 sed 猜前缀）---
+$ sed -n '235,236p' scripts/control-tower/scan-fullwidth-vars.sh
+  # 按生产者契约取字段: "<owner>\t<path>[\t<注记>]" ⇒ 只取 $1/$2（注记不得混入路径）。D1029/task-6
+  printf '%s\n' "$_out" | awk -F'\t' '/^(mac|win|k3)[[:space:]]/{print $1 "\t" $2}'
+$ awk -F'\t' '$1==win' 命中数 = 67（B 恢复后的 scripts win 面；修前因 owner 被 %-4s 填充 ⇒ $1==win 恒不命中 ⇒ --domain win 零文件）
+
+--- 接口契约回归用例（§10c2，含判别性变异）---
+  ✅ 10c2 接口契约: 第2 TAB 字段 == 被查路径（含注记行：注记不得混入路径）
+  ✅ 10c2 注记位于第3 TAB 字段或不存在（含注记行：注记不得混入路径；第3字段=[(兜底→win 基线领地)]）
+  ✅ 10c2 接口契约: 第2 TAB 字段 == 被查路径（无注记行：第2字段仍须纯净）
+  ✅ 10c2 注记位于第3 TAB 字段或不存在（无注记行：第2字段仍须纯净；第3字段=[]）
+  ✅ 10c2 判别性: 变异「注记拼回 path」后第2字段不再等于路径（判据真在读字段）
+
+=== 五项验收原始输出 ===
+$ bash tests/control-tower/scan-fullwidth-vars.test.sh
+  结果: PASS=32 FAIL=0 SKIP=0
+$ bash tests/control-tower/check-ownership.test.sh
+  ✅ 全部通过: 116 项（PENDING=0 项，见上方 ⏳）
+$ bash tests/control-tower/check-pr-budget.test.sh
+  ✅ 全部通过: 32 项
+$ python3 scripts/control-tower/check-ownership.py --emit-codeowners | diff - .github/CODEOWNERS
+（零输出）diff EXIT=0
+
+=== 附带发现（仅登记，未改）: scan-fullwidth-vars.sh 自身 3 处 D370 同型（$VAR 紧贴全角标点）===
+  :5  # 背景: bash 在 UTF-8 locale 下把全角标点当变量名字符——`$BRIEF_FILE（填写后开工）`
+  :46  #   · 单引号字符串内的 `$VAR（` **字面量**同样会被计入「违规（代码行）」（典型: 生成该形态文本
+  :320  # 纯注释命中（`# …$VAR（…`）在 shell / PowerShell 里都无害 → 不算残余。
+注: 上述 3 处经核为**注释内示例文本**（该扫描器自身在讲这个坑），非可执行语句；
+    登记口径 = 「同型文本存在」，是否需转义由后续卡定。
