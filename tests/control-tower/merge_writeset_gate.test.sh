@@ -621,6 +621,45 @@ echo "$OUT" | grep -q 'S3 brief' && ok "⑳-2 点名多命中的源（S3 brief�
 FP_N=$(grep -c -- '--first-parent' "$GATE_SRC" | tr -d '\r\n')
 [ "$FP_N" -ge 1 ] && ok "㉑ --first-parent 已落地（源码命中 $FP_N 处）" || no "㉑ --first-parent 未落地（D814 未接线）"
 
+# ── ㉒ 对抗性用例（独立反证实测 20/20；P0 漏放的新形态）──
+#   为什么与 ⑮ 分列: ⑮ 覆盖三类主干（合成 merge 主题 / hex 邻接边界 / 裸 SHA 词元）；
+#   本段钉住**边界形态**，其中 4 例是 ⑮ **未覆盖**的（由独立反证新增）:
+#     ① `Merge pull request #N from <owner>/<branch>` 且**分支名自带 D#** —— 若只挡 "Merge pull request"
+#        字面而不整条短路，别人的 D# 会从 PR 合成主题漏进来（P0 的新形态）；
+#     ② 真业务主题**内嵌**在别的主提交里（`Revert "Merge …"`）—— 防"只锚行首"的实现回退；
+#     ③ conventional 前缀 + scope（`squash! docs(D814): x`）—— 防"只认行首位置"；
+#     ④ **全大写** SHA（`Merge DEADBEEF into CAFEBABE`）—— `[0-9a-fA-F]` 两侧大小写都要挡。
+ADV=$("$PYBIN" - "$GATE_SRC" <<'PYEOF'
+import importlib.util as u, sys
+sp = u.spec_from_file_location("g", sys.argv[1]); m = u.module_from_spec(sp); sp.loader.exec_module(m)
+cases = [
+  ("Merge deadbeef into cafebabe", None, "纯 hex 词元"),
+  ("Merge d0d0d0d into 1234567", None, "短 hex 对"),
+  ("Merge D0D0D0D into 1234567", None, "短 hex 对（大写）"),
+  ("Merge cafeBABE into DEADbeef", None, "混合大小写"),
+  ("Merge DEADBEEF into CAFEBABE", None, "全大写 SHA（⑮ 未覆盖）"),
+  ("Merge pull request #123 from x/y", None, "PR 合成主题"),
+  ("Merge pull request #123 from user/fix/d702-thing", None, "PR 合成主题且分支名带 D#（⑮ 未覆盖）"),
+  ("Merge branch 'main'", None, "裸 merge 分支（无 into）"),
+  ("Merge branch 'main' into feat/foo", None, "merge 分支 into"),
+  ("docs(D814): 任务号推断修复", "D814", "真业务主题不吞"),
+  ("feat/win-d702-write-op-no-swallow", "D702", "分支名小写 d"),
+  ("fix/D708-merge-writeset-gate", "D708", "分支名大写 D"),
+  ("feat/ct-gate-inference-20260927", None, "纯日期后缀不得当号"),
+  ("chore: bypass COMMITTED 登记 (auto hook, D521)", "D521", "登记影子提交仍可取号（跳过逻辑在上层）"),
+  ("Merge 4afd4ce1 into 017bef55", None, "真实短 SHA 对"),
+  ("Merge 5836e434 into d0f6c2f2", None, "真实短 SHA 对（倒置）"),
+  ('Revert "Merge 4afd4ce1 into 017bef55"', None, "内嵌 merge 主题（⑮ 未覆盖）"),
+  ("squash! docs(D814): x", "D814", "conventional 前缀 + scope（⑮ 未覆盖）"),
+  ("D1030", "D1030", "裸号"),
+  ("d1030", "D1030", "裸号小写归一"),
+]
+bad = [f"{t!r}->{m.parse_did(t)!r}（期望 {exp!r}；{why}）" for t, exp, why in cases if m.parse_did(t) != exp]
+print("OK" if not bad else "BAD: " + " ; ".join(bad))
+PYEOF
+)
+[ "$ADV" = "OK" ] && ok "㉒ 对抗性 20 例全符合预期（含 4 例 ⑮ 未覆盖形态）" || no "㉒ $ADV"
+
 echo ""
 echo "  结果: $PASS 通过, $FAIL 失败"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1
