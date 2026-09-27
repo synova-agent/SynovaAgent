@@ -1,4 +1,4 @@
-# D1024 — cto-handover 加「派单模板 v2」（预置坑位）
+# D1034 — cto-handover 加「派单模板 v2」（预置坑位）
 
 #CRITERIA: D
 
@@ -22,7 +22,7 @@ grep 该 skill：§〇c 已引 （232 行），
 做什么：
 - .claude/skills/cto-handover/SKILL.md — 新增 §〇c' 派单模板 v2（九段结构）
 - .dsh/skills/cto-handover/SKILL.md — 同上（**逐字节一致**）
-- .claude/task-briefs/2026-09-27-D1024-dispatch-template-v2.md — 本 brief
+- .claude/task-briefs/2026-09-27-D1034-dispatch-template-v2.md — 本 brief
 - memory/notes/implemented/process/2026-09-27-dispatch-template-v2.md — 决策 Note
 - .claude/current-brief — 指向本 brief
 - .claude/bypass.log — hook 自动登记
