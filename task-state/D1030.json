@@ -37,6 +37,7 @@
     "task-state/D1030.json",
     "memory/notes/proposed/2026-09-28-d1030-ct-gate-inference-randomness.md",
     "docs/synova/product-lines/evidence/CT1-ct-gate-inference-20260927.md",
+    "docs/synova/product-lines/evidence/CT5-ct-d2-doc-registry-failopen-20260928.md",
     "docs/synova/product-lines/evidence/CT5-*.md",
     ".claude/bypass.log"
   ]
