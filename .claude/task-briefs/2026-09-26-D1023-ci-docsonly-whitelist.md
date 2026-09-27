@@ -19,6 +19,9 @@ grep 该正则：ci.yml 里出现 10 处（10 个 job 各一处，复制粘贴�
 
 做什么：
 - .github/workflows/ci.yml — 10 处 docs-only 白名单正则统一加 .gitignore / .gitattributes / .gitmodules / LICENSE / .gitkeep
+- docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh — P1 判别性夹具（改前红/改后绿）
+- docs/synova/product-lines/evidence/D1023-861-夹具原始输出.md — 夹具原始输出证据
+- docs/synova/product-lines/evidence/D1023-861-收尾与回执.md — 收尾三件与回执
 - .claude/task-briefs/2026-09-26-D1023-ci-docsonly-whitelist.md — 本 brief
 - .claude/bypass.log — post-commit hook 自动登记
 - memory/notes/implemented/process/2026-09-27-ci-docsonly-whitelist.md — 决策 Note
