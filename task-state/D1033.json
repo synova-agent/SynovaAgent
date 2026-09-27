@@ -1,0 +1,11 @@
+{
+  "task_id": "D1033",
+  "title": "CT-VERIFY 独立反向复核",
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-09-28",
+  "updated_by": "reverse-verify"
+}
