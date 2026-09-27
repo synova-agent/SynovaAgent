@@ -670,3 +670,155 @@ grep -n "基线 9\|-gt 9\|b<=9\|实测 9 条\|→（D1023 task-3）9" tests/cont
 - **本 §17 不引入任何新的引用该标记的文件**（同文件追加不改变文件计数；夹具 b 面维持 `residue_repo=9`，实跑已证）。
 - 原 §1–§16 保持原始记录**未删改**，其被测 SHA 仍为 `98485b7c`；两者差异仅为本 §17 所述两处修正。
 - **本报告不构成"审计通过"**：通过与否归 CTO 收件闸 + K3 复审。自验员为只读方，除本文件外未改仓库任何文件。
+
+---
+
+## §18 增量复核（task-5 平台健壮化后）
+
+> **三个被测 SHA 并列（务必按此读）**
+> · §1–§16（原 9 条判据）被测 SHA = **`98485b7c`**
+> · §17（task-3 修正：注释对齐 + 逗号收敛 + 夹具 b 面 8→9）被测 SHA = **`27886250`**
+>   （且实测 `27886250..5836e434` **代码零变化**，故 §17 结论对后续 HEAD 有效）
+> · §18（task-5 夹具平台健壮化）被测 SHA = **`9fe6c39b`**（手工提交 `5469243a` + auto-hook `9fe6c39b`；`git ls-remote` 与本地 HEAD 同值）
+> · 增量复核范围 = **CI `Control Tower Gate Tests (windows-latest)` 红** 的根因修复：夹具在"无可用 python 平台"改为断言 ⑦ 的**降级契约**（原为期望绿/红 ⇒ 必然失败）。**不重做全量**。
+> · 共享任务：`task-6`（owner=a3fix-verifier）。纪律：除本文件外只读；一律 `SYNO_CI=1`；沙箱 `/tmp` 副本；探针补丁只存在于 `/tmp` 副本。
+
+### §18.1 判据 1 —— delta 边界：手改件恰 1 个（夹具）
+
+```
+$ git diff --name-only 5836e434..9fe6c39b
+.claude/bypass.log                                     ← auto-hook (D521) 产物，非手改
+tests/control-tower/precommit-groups-injection.test.sh ← 手改 1
+⇒ 手改件数 = 1 （期望 1：只有夹具）✓  未超范围
+```
+改动性质（逐字 diff 已核）：① 头部 `@output/@exit` 契约注释新增"两条平台路径"语义；② `expect_for` 之外新增**平台前置探针** `PYBIN_ANY`/`PY3_OK`（含**可试运行**判据 `-c "import sys"`，非仅 `command -v`）；③ shim 由硬编码 `exec python3` 改为 `python3→python→py` 逐级回退并**跳过自身防自递归**；④ 新增 `effective_expect()` 平台感知期望（有 python 时 `effective_expect == expect_for`，行为不变）；⑤ 新增 `degraded_g10` / `platform_unverifiable` 两个期望态与其断言；⑥ 新增 `dump_diag()` 可诊断性输出；⑦ `baseline` 新增 `degraded_env` 态。**判据 1 通过。**
+
+### §18.2 判据 2 —— 有 python 路径不回归，且 3 个 G10 场景确在**真跑**
+
+命令：`bash tests/control-tower/precommit-groups-injection.test.sh`（本机真态：`python` 无 / `python3` 在，夹具自动挂 shim）
+```
+GATE_INJECTION_SUMMARY: scenarios=8 red_confirmed=5 structural_not_red=0 not_red=0 green_confirmed=2
+  green_fail=0 g10_degraded=0 platform_unverifiable=0 py_any=python3 py3_ok=1 baseline=ok
+  probe=not_run(rc=n/a) exempt_probe=RED_CONFIRMED(rc=1) residue_code=0 residue_repo=9 shim=1 g10region_named=1
+FIXTURE_EXIT=0
+```
+**"未被平台探测跳过"的证明**（能指到 G10 通过行与点名行）：
+```
+g10exempt  0  2  2  GREEN_CONFIRMED   → g10exempt: 组 10 区块无 ❌; ✅ G10: 条件区域检查通过 (D; domain-neutral 豁免 2 项); 豁免点名行=3
+g10tests   1  3  3  GREEN_CONFIRMED   → g10tests:  组 10 区块无 ❌; ✅ G10: 条件区域检查通过 (D; domain-neutral 豁免 1 项); 豁免点名行=2
+g10region  1  3  3  RED_CONFIRMED     → [D1023] g10region 点名确认: ❌ 明细含 'observer-adapters/claude-code-hook/hook.py (不在条件 D'
+```
+且全文 `无映射区域(跳过)` = **0**、`G10_DEGRADED` = **0**、`PLATFORM_UNVERIFIABLE` = **0**。
+⇒ 与编码者/队长报的"有 python 基线"逐项一致。**判据 2 通过。**
+
+### §18.3 判据 3 —— 无 python 路径：断言降级契约 + **证伪它是不是空壳**
+
+命令：`PATH=/tmp/a3fix-phase1/nopy-bin bash tests/control-tower/precommit-groups-injection.test.sh`
+（该 PATH 由自验员阶段一自建：链接 1254 个可执行，**排除 python 家族**；实测 `python`/`python3`/`py` 均 not found）
+```
+GATE_INJECTION_SUMMARY: scenarios=8 red_confirmed=3 structural_not_red=0 not_red=0 green_confirmed=0
+  green_fail=0 g10_degraded=3 platform_unverifiable=1 py_any=none py3_ok=0 baseline=degraded_env
+  exempt_probe=not_run(rc=n/a) residue_repo=9 g10region_named=0
+FIXTURE_EXIT=0
+[platform] 可试运行解释器 PYBIN_ANY=<无>（决定 G10 场景可判定性）  PY3_OK=0（决定组 12 / plan-integrity 可执行性）
+[PLATFORM] 因前置不满足（无可用 python），**G10 判别力未在本平台验证** —— 已断言 ⑦ 降级契约 3/3 场景；有 python 的平台请以 green_confirmed=2 + exempt_probe=RED_CONFIRMED 为准
+[PLATFORM] python3 不可运行 ⇒ **组 12 判定力未在本平台验证**（PLATFORM_UNVERIFIABLE=1/1 场景；baseline=degraded_env）
+✅ 注入自测结果（**降级平台**）：G10 场景已断言 ⑦ 降级契约 3/3 全过；组 12 记 PLATFORM_UNVERIFIABLE 1/1；期望红组 RED_CONFIRMED=3/3；残留断言满足，baseline=degraded_env
+```
+四条降级断言逐条命中：
+```
+g10exempt  1  2  2  G10_DEGRADED_OK  → 无可用 python ⇒ 断言 ⑦ 降级契约通过：(i)(ii)(iii)(iv) 全满足（degraded-events 条目 0→1）
+g10region  1  2  2  G10_DEGRADED_OK  → 同上（degraded-events 条目 0→1）
+g10tests   1  1  1  G10_DEGRADED_OK  → 同上（degraded-events 条目 0→1）
+(i)  可见降级行「无可用 python」出现 8 次
+(iii) 全文 '无映射区域(跳过)' = 0 ； 全文 '✅ G10:' = 0      ← 无假绿
+(iv) 每场景 degraded-events.log 的 component=pre-commit-group10-criteria-map 计数 **本场景新增** 0→1（非别场景遗留）
+```
+
+**证伪（本判据的核心要求）：把该平台的降级断言"架空"—— 在 `/tmp` 副本内把 G10 的降级分支改成旧的静默绿**
+```
+副本内 patch: 把 `echo -e "  ⚠️  G10: ${G10_UNJUDGED} …（降级登记；既不打绿勾也不判红）"` 
+               换成 `soft_pass "G10: 条件 $CRITERIA 无映射区域(跳过)"`  → 副本提交 ebb4d979
+$ PATH=/tmp/a3fix-phase1/nopy-bin bash tests/control-tower/precommit-groups-injection.test.sh
+FIXTURE_EXIT=1                                    ← **不是 0** ⇒ 降级断言有判别力，非空壳 ✓
+GATE_INJECTION_SUMMARY: … green_fail=3 g10_degraded=0 …
+g10exempt  1  2  2  G10_DEGRADED_FAIL
+g10region  1  1  1  G10_DEGRADED_FAIL
+g10tests   1  1  2  G10_DEGRADED_FAIL
+降级契约不满足: (i) 区块未见可见降级行「无可用 python」; (ii) 区块未见契约说明「既不打绿勾也不判红」;
+                (iii) 降级态却出现 G10 绿勾（假绿）; (iii) 走了「无映射区域(跳过)」静默绿路径
+```
+⇒ 假绿被夹具**逐条点名并判红**。**判据 3 通过（含证伪）。**
+
+### §18.4 判据 4 —— baseline 平台感知：`degraded_env` 合法，且**不掩盖真失败**
+
+**平台态**：无可用 python 时 `baseline=degraded_env`（§18.3 SUMMARY；`py3_ok=0`）。
+说明：task-6 正文写的是"走 `host_state`"——实测该平台走的是**第三种态 `degraded_env`**（`host_state` 是"宿主 `/tmp/.synova-before-brief` 绝对路径污染"专用态，本机无该 marker：`ls /tmp/.synova-before-brief` → No such file）；两者都是**合法非失败态**，实现以 `PY3_OK=0` 这一**可核证据**为判据，且把全部 ❌ 行逐行不截断打印（见 §18.3 的 `[BASELINE_DEGRADED_ENV]` 段）。此处按实测值记录，不按卡面文字记录。
+
+**证伪：真失败会不会被掩盖成 `degraded_env`？—— 不会**
+```
+副本内 patch: HARD_FAIL=1（强制一个**非平台原因**的硬失败），python3 仍在（PY3_OK=1）
+$ bash tests/control-tower/precommit-groups-injection.test.sh
+FIXTURE_EXIT=1
+GATE_INJECTION_SUMMARY: … py_any=python3 py3_ok=1 baseline=FAIL …      ← 记 FAIL，**不是** degraded_env ✓
+baseline   1  2  2  BASELINE_FAIL
+[BASELINE_FAIL] 全部 ❌ 行:
+     ❌ 1 组未通过 — 提交已拒绝
+     ::error title=IronLaws:提交已拒绝::1 组未通过（详见上方 ❌ 行）
+```
+判据（可核）：`degraded_env` 分支的唯一入口条件是 **`rc≠0 且 PY3_OK=0`**（`tests/control-tower/precommit-groups-injection.test.sh:725-732`）；`PY3_OK=1` 时落到 `else` → `BASELINE_FAIL`（`:737-741`）。上面两次实跑正好覆盖这两个分支。
+**判据 4 通过。**
+
+### §18.5 判据 5 —— 可诊断性：FAIL 时自带完整组区块 + 环境
+
+同 §18.3 的证伪运行（那是真实 FAIL）：`[DIAG]` 共出现 **21** 次，每个失败场景三要素齐备：
+```
+[DIAG] 原因: 降级契约断言失败（degraded_g10）: (i) … (ii) … (iii) … 
+[DIAG] env: python3=<无>  python=<…>/shim/python  py=<无>  PYBIN_ANY=<无>  PY3_OK=0  shim=1
+[DIAG] PATH 前三段: <shim dir> /tmp/a3fix-phase1/nopy-bin
+[DIAG] 组区块全文（不截断，共 N 行）: …（缩进逐行）
+[DIAG] 全量日志 ❌ 行（不截断）: …
+[DIAG] 全量日志末 20 行（完整日志: <tmp>/out.g10exempt.log）
+[DIAG] degraded-events.log 末 5 行（<clone>/…/degraded-events.log）
+```
+四要素出现次数均为 **3**（3 个失败场景各一次）：`原因` / `env:` / `PATH 前三段` / `组区块全文（不截断` / `全量日志 ❌ 行（不截断）`。
+⇒ 直接封掉本次 Windows 红"日志只剩 4 行摘要、无法定位"的缺口。**判据 5 通过。**
+
+### §18.6 红②（`merge_writeset_gate`）的处置 —— 记录，不在本任务复核范围
+
+`TypeScript + Lint + Iron Laws` 的红与夹具无关：该 job 的 pre-commit 13 组全过，红在其后的独立 step `merge_writeset_gate` 判 3 个写集外文件（`.codex/criteria-code-map.json` / `tests/control-tower/precommit-groups-injection.test.sh` / 本证据文档）。
+**据队长告知**：已在 PR 正文 `## 写集豁免` 逐条补声明并经其**本地复跑同命令**证明 `✅ pass — 无夹带`；因 `rerun-failed-jobs` 复用旧事件体，需新提交触发新 run（编码者 `5469243a` 提供之）。
+**自验员声明**：该闸为**只读方不可触达的 PR 元数据**，我**未独立复核**其 pass 结论，故不将其纳入本 §18 判定；此处仅如实记录处置归属（队长在 PR 正文完成）。
+
+### §18.7 过程诚实性：自验员本次一次探针设计失误（主动披露）
+
+首次做"非平台原因基线失败"探针时，我在门禁脚本**末尾追加** `exit 1` 并提交副本 —— **探针无效**：脚本在 `else` 分支已有 `exit 0`，追加行不可达 ⇒ 该次运行 `baseline=ok`。我据日志 `rc=0` 发现后改用 `HARD_FAIL=1` 注入并自检"副本内直接跑门禁 rc=1"，重跑方得 `baseline=FAIL`。**这类"探针自身失效"若不核对 `rc`，会被误读成"闸门漏判"**——故此处留痕。
+
+### §18.8 K3 脱离 `/tmp` 的复核命令集
+
+```bash
+cd /Users/wane/SynovaAgent/.synova-wt-a3fix && git rev-parse HEAD       # §18 被测 SHA = 9fe6c39b…
+git diff --name-only 5836e434..9fe6c39b                                 # 手改件应恰 1（夹具）
+git diff 5836e434..9fe6c39b -- tests/control-tower/precommit-groups-injection.test.sh
+# 有 python 路径（本机真态）
+bash tests/control-tower/precommit-groups-injection.test.sh ; echo "exit=$?"   # 期望 0；green_confirmed=2 / exempt_probe=RED_CONFIRMED
+# 无 python 路径（重建隔离 PATH：把 /bin:/usr/bin:/usr/sbin:/sbin 下可执行软链过去，排除 python/python2*/python3*/py）
+O=$(mktemp -d); for d in /bin /usr/bin /usr/sbin /sbin; do for f in "$d"/*; do b=${f##*/}
+  case "$b" in python|python2*|python3*|py) continue;; esac; [ -x "$f" ] && [ ! -e "$O/$b" ] && ln -s "$f" "$O/$b"; done; done
+PATH="$O" bash tests/control-tower/precommit-groups-injection.test.sh ; echo "exit=$?"  # 期望 0；g10_degraded=3 / baseline=degraded_env
+# 证伪：架空降级断言 ⇒ 必须 exit≠0（把 G10 降级分支改为 soft_pass 静默绿后重跑上面那条）
+# 证伪：非平台原因基线失败 ⇒ baseline=FAIL 而非 degraded_env（把门禁 HARD_FAIL=0 改为 1 后跑默认 PATH）
+# 可诊断性：[DIAG] 段（原因 + env + PATH 前三段 + 组区块全文 + ❌ 行不截断）
+```
+
+### §18.9 §18 后的自验结论
+
+**`可提请独立审计`**
+
+- task-6 的 **5 条判据全部通过**；其中 2 条为**证伪性**验证（降级断言非空壳：架空后 `exit=1`；真失败不被掩盖：`py3_ok=1` 且 rc≠0 ⇒ `baseline=FAIL`）。
+- task-5 的改动**仅限夹具**（手改件 1 个），未触碰门禁脚本与 map；有 python 路径**行为与历史一致**（3 个 G10 场景真跑、`green_confirmed=2`、`exempt_probe=RED_CONFIRMED`、`residue_repo=9`）。
+- 无 python 平台由"必然失败"改为"**断言 ⑦ 降级契约 + 显式声明未验证**"（`g10_degraded=3` / `platform_unverifiable=1` / `baseline=degraded_env`，exit 0），并**不宣称**判别力已确认 —— 无假绿、无静默跳过。
+- 唯一需 CTO 收件闸留意的是 **§18.4 的态名不一致**：卡面写 `host_state`，实测该平台为 `degraded_env`（两者皆合法非失败态，判据为 `PY3_OK=0`）；我按**实测**记录，未按卡面文字记录。
+- **本 §18 不引入任何新的引用该标记的文件**（同文件追加不改文件计数；夹具 b 面维持 `residue_repo=9`，两次实跑均已证）。
+- §1–§16 / §17 保持原始记录**未删改**（本次仍为纯追加，原字节未变）；三者被测 SHA 见本节开头。
+- **本报告不构成"审计通过"**：通过与否归 CTO 收件闸 + K3 复审。自验员为只读方，除本文件外未改仓库任何文件。
