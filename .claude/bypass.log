@@ -1844,3 +1844,4 @@ Binary file .claude/bypass.log matches
 2026-09-27T11:45:58+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=cf366fae2a16a1187e68d874c0fa35f5a9352daf
 2026-09-27T14:29:41+08:00 | BLOCKED | pre-commit FAIL (exit 1) | TASK_ID=D1028 | AGENT=impl-gate
 2026-09-27T14:35:29+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=1b37ccf96661c6e8ee7fa30bea8eb296079b2557
+2026-09-27T14:37:45+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=2395fa75fb4db383c99f22531f7c5bd03f5e5ce9
