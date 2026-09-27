@@ -242,15 +242,20 @@ _decl_brief_in_window() {  # $1=brief 路径 → 0 = 文件名日期在当日窗
 DECL_SRC_FILES=""
 DECL_SRC_DESC=""
 DECL_SRC_N=0
+DECL_TRIED=""            # 「已尝试」来源逐条留痕（未找到来源时必须逐条列出 —— 门禁必须给正解，D911 C5）
+_DECL_SCAN_N=0           # brief 目录扫描总数
+_DECL_MATCH_N=0          # 其中落入当日窗口（且 mtime 非陈旧）的份数
 _decl_add_src() {  # $1=文件 $2=来源标签（去重追加）
   local f="$1" label="$2"
   [ -f "$f" ] || return 1
   if [ "$DECL_SRC_N" -gt 0 ] && printf '%s\n' "$DECL_SRC_FILES" | grep -Fxq -- "$f"; then return 0; fi
   DECL_SRC_FILES="${DECL_SRC_FILES}${f}${NL}"
-  DECL_SRC_DESC="${DECL_SRC_DESC}${label}(${f}) "
+  # 「来源」必须**逐条带文件路径**（可审计；取并来源全部可见）—— 不许只写泛称「brief 链」
+  DECL_SRC_DESC="${DECL_SRC_DESC}${label} → ${f}${NL}"
   DECL_SRC_N=$((DECL_SRC_N + 1))
   return 0
 }
+_decl_try() { DECL_TRIED="${DECL_TRIED}$1${NL}"; }
 
 # 段落解析: 标题 `^#{2,4}\s*死代码清理声明` 起，至下一 `^#{1,4}\s` 标题止；段内每行 `- <路径> — <依据>`。
 #   分类: P = 有效条目（有依据、精确路径） / N = 无依据（不生效） / G = 含通配符（不生效，须逐条精确路径）
@@ -292,6 +297,9 @@ _decl_scan_file() {
 DECL_ENTRY_N=0
 DECL_REASON_N=0
 DECL_GLOB_N=0
+DECL_GLOB_LIST=""
+DECL_NOREASON_N=0
+DECL_NOREASON_LIST=""
 DECL_PATHS=""
 
 # 惰性入口: 只有真要裁定旁路封堵时才解析（正常 PR 零开销）
@@ -310,14 +318,18 @@ print('^(' + '|'.join((t + datetime.timedelta(days=k)).isoformat() for k in (-1,
 
   if [ -n "${DECL_FILE:-}" ]; then
     if [ -f "$DECL_FILE" ]; then
+      _decl_try "--decl-file=${DECL_FILE}"
       _decl_add_src "$DECL_FILE" "--decl-file"
     else
+      _decl_try "--decl-file=${DECL_FILE}（不可读）"
       echo "  ⚠️  D1028 声明来源 --decl-file=${DECL_FILE} 不可读 → 视为「无声明」（显式注入缝不回退 brief 链）"
     fi
   elif [ -n "${SYNO_DR_DECL_FILE:-}" ]; then
     if [ -f "$SYNO_DR_DECL_FILE" ]; then
+      _decl_try "\$SYNO_DR_DECL_FILE=${SYNO_DR_DECL_FILE}"
       _decl_add_src "$SYNO_DR_DECL_FILE" "SYNO_DR_DECL_FILE"
     else
+      _decl_try "\$SYNO_DR_DECL_FILE=${SYNO_DR_DECL_FILE}（不可读）"
       echo "  ⚠️  D1028 声明来源 \$SYNO_DR_DECL_FILE=${SYNO_DR_DECL_FILE} 不可读 → 视为「无声明」（同上，不回退 brief 链）"
     fi
   else
@@ -326,22 +338,32 @@ print('^(' + '|'.join((t + datetime.timedelta(days=k)).isoformat() for k in (-1,
     if [ -n "${DSH_SESSION_ID:-}" ] && [ -f "$ROOT_DECL/.claude/current-brief.$DSH_SESSION_ID" ]; then
       _bn="$(cat "$ROOT_DECL/.claude/current-brief.$DSH_SESSION_ID" 2>/dev/null | tr -d '[:space:]' || true)"
       if [ -n "$_bn" ] && _decl_brief_in_window "$ROOT_DECL/.claude/task-briefs/$_bn"; then
+        _decl_try ".claude/current-brief.\$DSH_SESSION_ID → $_bn"
         _decl_add_src "$ROOT_DECL/.claude/task-briefs/$_bn" "brief(current-brief.\$DSH_SESSION_ID)"
       else
+        _decl_try ".claude/current-brief.\$DSH_SESSION_ID → ${_bn:-（空）}（不存在/陈旧，不采用）"
         echo "  ℹ️  D1028 声明来源: current-brief.\$DSH_SESSION_ID 指向「不存在/陈旧」brief（${_bn:-空}）→ 回退当日窗口并集"
       fi
     fi
     if [ -f "$ROOT_DECL/.claude/current-brief" ]; then
       _bn="$(cat "$ROOT_DECL/.claude/current-brief" 2>/dev/null | tr -d '[:space:]' || true)"
       if [ -n "$_bn" ] && _decl_brief_in_window "$ROOT_DECL/.claude/task-briefs/$_bn"; then
+        _decl_try ".claude/current-brief → $_bn"
         _decl_add_src "$ROOT_DECL/.claude/task-briefs/$_bn" "brief(current-brief)"
+      else
+        _decl_try ".claude/current-brief → ${_bn:-（空）}（不存在/陈旧，不采用）"
       fi
     fi
     local _f
     for _f in "$ROOT_DECL"/.claude/task-briefs/*.md; do
       [ -e "$_f" ] || continue
-      _decl_brief_in_window "$_f" && _decl_add_src "$_f" "brief(task-briefs 当日窗口)"
+      _DECL_SCAN_N=$((_DECL_SCAN_N + 1))
+      if _decl_brief_in_window "$_f"; then
+        _DECL_MATCH_N=$((_DECL_MATCH_N + 1))
+        _decl_add_src "$_f" "brief(task-briefs 当日窗口)"
+      fi
     done
+    _decl_try ".claude/task-briefs/ 当日窗口（±1 天）: 扫描 ${_DECL_SCAN_N} 份 .md，窗口内 ${_DECL_MATCH_N} 份"
   fi
 
   if [ "$DECL_SRC_N" -gt 0 ]; then
@@ -353,7 +375,8 @@ print('^(' + '|'.join((t + datetime.timedelta(days=k)).isoformat() for k in (-1,
         DECL_ENTRY_N=$((DECL_ENTRY_N + 1))
         case "$kind" in
           P) DECL_REASON_N=$((DECL_REASON_N + 1)); DECL_PATHS="${DECL_PATHS}${p}${NL}" ;;
-          G) DECL_GLOB_N=$((DECL_GLOB_N + 1)); echo "  ⚠️  D1028 声明条目含通配符 → 不作有效条目（须逐条精确路径）: ${p}" ;;
+          N) DECL_NOREASON_N=$((DECL_NOREASON_N + 1)); DECL_NOREASON_LIST="${DECL_NOREASON_LIST}${p}${NL}" ;;
+          G) DECL_GLOB_N=$((DECL_GLOB_N + 1)); DECL_GLOB_LIST="${DECL_GLOB_LIST}${p}${NL}" ;;
         esac
       done < <(_decl_scan_file "$_sf")
     done < <(printf '%s\n' "$DECL_SRC_FILES")
@@ -527,7 +550,8 @@ fi
 if [ "$DECL_EFFECTIVE" -eq 1 ]; then
   # D1028-A2v2: 声明生效 = 解除旁路封堵（**不豁免预算** —— 这批路径仍在 COUNTED/N_FILES 里）
   echo "  ⚠️  D1028 死代码清理声明生效：${DECL_RELEASED_N} 件（逐条放行）"
-  echo "      声明来源: ${DECL_SRC_DESC:-（未标注）}"
+  echo "      生效来源（逐条列出实际取证的文件路径 —— 取并来源必须全部可见，可审计）:"
+  printf '%s\n' "${DECL_SRC_DESC:-（未标注）}" | awk 'NF { print "        · " $0 }'
   echo "      → 放行 ≠ 豁免: 这 ${DECL_RELEASED_N} 件**照常计入上面 ${N_FILES} 件预算**（> ${MAX_FILES} 仍阻断）"
   printf '%s\n' "$DR_DENY_RE_LIST" | awk -v ind="      " -v cap=30 'NF { if (++i <= cap) print ind "- " $0 } END { if (i > cap) print ind "… 其余 " (i - cap) " 件省略（共 " i " 件）" }'
 fi
@@ -543,13 +567,34 @@ if [ "$OUTBOUND_DENY_HARD" -eq 1 ]; then
     echo "      ## 死代码清理声明"
     printf '%s\n' "$DR_DENY_RE_LIST" | awk -v ind="      " -v cap=30 'NF { if (++i <= cap) print ind "- " $0 " — 依据待补（铁律 37: grep -rn 零引用确认后删旧文件）" } END { if (i > cap) print ind "- …（其余 " (i - cap) " 件省略，共 " i " 件，须逐条列出）" }'
   fi
-  if [ -n "$DECL_INEFFECTIVE" ]; then
-    echo "      ❌ 声明未生效原因: ${DECL_INEFFECTIVE}"
-  elif [ "$DECL_SRC_N" -eq 0 ]; then
-    echo "      ℹ️ 未读到任何声明来源（--decl-file / \$SYNO_DR_DECL_FILE / brief 链均不可得）"
+  if [ "$DECL_SRC_N" -eq 0 ]; then
+    # 原因①：根本没有声明来源 —— 必须把「已尝试」**列表填满**（悬空冒号会被读成"还有东西没显示"）
+    echo "      ℹ️ 未找到声明来源（已尝试: --decl-file / \$SYNO_DR_DECL_FILE / .claude/current-brief.\$DSH_SESSION_ID / .claude/current-brief / .claude/task-briefs 当日窗口 ±1 天）"
+    echo "         逐条留痕（实际探过的路径/来源）:"
+    printf '%s\n' "$DECL_TRIED" | awk 'NF { print "         - " $0 }'
+  else
+    # 原因②：有来源，但声明本身不成立 —— 逐条列原因（缺哪条路径 / 哪条无依据 / 命中 DENY_EXACT 不受放行）
+    echo "      ❌ 找到声明来源，但不生效:"
+    printf '%s\n' "$DECL_SRC_DESC" | awk 'NF { print "         · 来源: " $0 }'
+    printf '%s\n' "         · 汇总: ${DECL_INEFFECTIVE}"
+    if [ "$DECL_ENTRY_N" -eq 0 ]; then
+      echo "         · 声明段内零条目（须逐行「- <路径> — <铁律 37 依据>」；标题须为 ## / ### / #### 死代码清理声明）"
+    fi
+    if [ "$DECL_NOREASON_N" -gt 0 ]; then
+      echo "         · 无依据条目 ${DECL_NOREASON_N} 条（无理由不生效，逐条点名）:"
+      printf '%s\n' "$DECL_NOREASON_LIST" | awk 'NF { print "           - " $0 " （缺 — <铁律 37 依据>）" }'
+    fi
+    if [ "$DECL_GLOB_N" -gt 0 ]; then
+      echo "         · 含通配符条目 ${DECL_GLOB_N} 条（不作有效条目，须逐条精确路径）:"
+      printf '%s\n' "$DECL_GLOB_LIST" | awk 'NF { print "           - " $0 }'
+    fi
+    if [ "$DR_DENY_EXACT_N" -gt 0 ]; then
+      echo "         · 命中 DENY_EXACT ${DR_DENY_EXACT_N} 件 —— 不受「## 死代码清理声明」放行（须独立卡 + CTO 批复，逐条点名）:"
+      printf '%s\n' "$DR_DENY_EXACT_LIST" | awk 'NF { print "           - " $0 }'
+    fi
   fi
   if [ "$DECL_MISSING_N" -gt 0 ]; then
-    echo "      ❌ 声明未覆盖的 ❌ D/R 路径 ${DECL_MISSING_N} 件（逐条点名）:"
+    echo "      ❌ 声明未覆盖的 ❌ D/R 路径 ${DECL_MISSING_N} 件（缺这一条即不生效，逐条点名）:"
     printf '%s\n' "$DECL_MISSING_LIST" | awk -v ind="         " -v cap=30 'NF { if (++i <= cap) print ind $0 } END { if (i > cap) print ind "… 其余 " (i - cap) " 件省略（共 " i " 件）" }'
   fi
   echo "      注意: 声明生效只解除旁路封堵，**这些路径照常计入 ≤ ${MAX_FILES} 件预算**（放行 ≠ 豁免）"

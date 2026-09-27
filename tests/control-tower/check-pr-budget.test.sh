@@ -374,9 +374,13 @@ decl_file "$DCL/ok1exact.md" src/mod001.ts docs/synova/coordination/AUDIT-PROTOC
 run_expect 1 "15.1 无声明（--decl-file 不存在）+ 纯删 src/** 5 件 → exit 1（回归）" --diff-status "$SET5D" --decl-file "$DCL/nonexistent.md"
 if echo "$OUT" | grep -q "❌ ① D1028 旁路封堵"; then pass "15.1 保留「旁路封堵」❌ 行"; else fail "15.1 旁路封堵行丢失"; fi
 if echo "$OUT" | grep -qF -- "- src/mod001.ts — 依据待补"; then pass "15.1 打印可直接粘贴的精确声明行（依据待补）"; else fail "15.1 未打印可粘贴声明行"; fi
-if echo "$OUT" | grep -q "声明未生效原因"; then pass "15.1 明示未生效原因（不静默）"; else fail "15.1 未明示未生效原因"; fi
+if echo "$OUT" | grep -q "未找到声明来源"; then pass "15.1 明示未生效原因（不静默）"; else fail "15.1 未明示未生效原因"; fi
 if echo "$OUT" | grep -q "死代码清理声明生效"; then fail "15.1 无声明却报「生效」"; else pass "15.1 无声明未误报生效"; fi
 if echo "$OUT" | grep -q "不受「## 死代码清理声明」放行"; then fail "15.1 无 DENY_EXACT 却报收紧提示"; else pass "15.1 无 DENY_EXACT 时不误报收紧提示"; fi
+# ① 可读性（CTO 收口指令）：不得让执行方以为逃生口静默失效 —— 无来源 vs 有来源不生效必须分开说
+if echo "$OUT" | grep -qF "ℹ️ 未找到声明来源（已尝试: --decl-file / \$SYNO_DR_DECL_FILE / .claude/current-brief.\$DSH_SESSION_ID / .claude/current-brief / .claude/task-briefs 当日窗口 ±1 天）"; then pass "15.1b 无来源时给「未找到声明来源…已尝试」正解句"; else fail "15.1b 未给「未找到声明来源」正解句"; fi
+if echo "$OUT" | grep -q -- "- --decl-file=.*（不可读）"; then pass "15.1b 「已尝试」逐条列出失败来源（--decl-file 不可读）"; else fail "15.1b 「已尝试」未逐条列出"; fi
+if echo "$OUT" | grep -q "找到声明来源，但不生效"; then fail "15.1b 无来源却报「找到声明来源」"; else pass "15.1b 无来源时不误报「找到声明来源」"; fi
 
 # 15.2 完整声明 + 5 件 → 放行（⚠️ 生效行 + 计数行）
 run_expect 0 "15.2 完整声明 + 纯删 src/** 5 件 → exit 0" --diff-status "$SET5D" --decl-file "$DCL/ok5.md"
@@ -384,6 +388,9 @@ if echo "$OUT" | grep -q "⚠️  D1028 死代码清理声明生效：5 件（�
 if echo "$OUT" | grep -q "✅ ① 变更文件数 5 ≤ 上限 12"; then pass "15.2 计数行 5 ≤ 上限 12（生效路径仍计入预算）"; else fail "15.2 计数行不符"; fi
 if echo "$OUT" | grep -q "放行 ≠ 豁免"; then pass "15.2 明示「放行 ≠ 豁免」"; else fail "15.2 未明示放行≠豁免"; fi
 if echo "$OUT" | grep -q "❌ ① D1028 旁路封堵"; then fail "15.2 生效后仍触发旁路封堵"; else pass "15.2 生效后未触发旁路封堵"; fi
+# ② 收口（队长裁定）：来源必须逐条带**文件路径**，不许只写泛称「brief 链」—— 可审计
+if echo "$OUT" | grep -q -- "· --decl-file → .*ok5.md"; then pass "15.2b 生效来源逐条带文件路径（--decl-file → <path>）"; else fail "15.2b 生效来源未逐条带路径"; fi
+if echo "$OUT" | grep -q "生效来源（逐条列出实际取证的文件路径"; then pass "15.2b 输出含「生效来源（逐条列出实际取证的文件路径…）」小标题"; else fail "15.2b 缺生效来源小标题"; fi
 
 # 15.3 完整声明 + 13 件 → **仍 exit 1**（放行 ≠ 豁免的承重夹具）
 run_expect 1 "15.3 完整声明 + 纯删 src/** 13 件 → exit 1（计数 13 > 12）" --diff-status "$SET13D" --decl-file "$DCL/ok13.md"
@@ -397,12 +404,16 @@ if echo "$OUT" | grep -q "声明未覆盖的 ❌ D/R 路径 1 件"; then pass "1
 # 判别性: 只在**缺失清单段**里找路径（否则会被上面的 ⓑ 拒绝名单列表蒙过）
 MISS_SEC="$(printf '%s\n' "$OUT" | awk '/声明未覆盖的 ❌ D\/R 路径/{f=1} f')"
 if printf '%s\n' "$MISS_SEC" | grep -q "^ *src/mod005.ts$"; then pass "15.4 缺失清单段逐条点名 src/mod005.ts"; else fail "15.4 缺失清单未点名该路径"; fi
+if echo "$OUT" | grep -q "找到声明来源，但不生效"; then pass "15.4b 有来源不生效时给「找到声明来源，但不生效」正解句 + 逐条来源"; else fail "15.4b 未给「找到声明来源」正解句"; fi
+if echo "$OUT" | grep -q "· 来源: .*only4.md"; then pass "15.4b 逐条列出已解析到的来源文件"; else fail "15.4b 未逐条列来源文件"; fi
 if echo "$OUT" | grep -q "死代码清理声明生效"; then fail "15.4 覆盖不全却放行"; else pass "15.4 覆盖不全未放行"; fi
 
 # 15.5 条目无依据 → 不生效
 { echo "## 死代码清理声明"; for _p in $P5; do echo "- $_p"; done; } > "$DCL/noreason.md"
 run_expect 1 "15.5 条目无依据（无 — 分隔）→ 不生效 exit 1" --diff-status "$SET5D" --decl-file "$DCL/noreason.md"
 if echo "$OUT" | grep -q "条目全部无依据"; then pass "15.5 明示「条目全部无依据」"; else fail "15.5 未明示无依据"; fi
+if echo "$OUT" | grep -q "无依据条目 5 条"; then pass "15.5b 逐条点名「无依据条目 5 条」"; else fail "15.5b 未逐条点名无依据条目"; fi
+if echo "$OUT" | grep -q -- "- src/mod001.ts （缺 — <铁律 37 依据>）"; then pass "15.5b 点名具体无依据条目"; else fail "15.5b 未点名具体条目"; fi
 if echo "$OUT" | grep -q "死代码清理声明生效"; then fail "15.5 无依据却放行"; else pass "15.5 无依据未放行"; fi
 
 # 15.6 通配 → 不生效（目录条目 / 星号条目）
@@ -411,7 +422,8 @@ run_expect 1 "15.6 通配目录条目（src/）+ 实际 5 件 → 不生效 exit
 if echo "$OUT" | grep -q "声明未覆盖的 ❌ D/R 路径 5 件"; then pass "15.6 点名 5 件全未覆盖"; else fail "15.6 未点名缺失"; fi
 { echo "## 死代码清理声明"; echo "- src/*.ts — 全部死代码"; } > "$DCL/globstar.md"
 run_expect 1 "15.6b 含 * 通配条目 → 不作有效条目 → 不生效 exit 1" --diff-status "$SET5D" --decl-file "$DCL/globstar.md"
-if echo "$OUT" | grep -q "声明条目含通配符"; then pass "15.6b 明示通配条目不作有效条目"; else fail "15.6b 未明示通配"; fi
+if echo "$OUT" | grep -q "含通配符条目 1 条"; then pass "15.6b 明示「含通配符条目 1 条」（不作有效条目）"; else fail "15.6b 未明示通配条目"; fi
+if echo "$OUT" | grep -q -- "- src/\*.ts"; then pass "15.6b 点名具体通配条目"; else fail "15.6b 未点名通配条目"; fi
 
 # 15.7 收紧: DENY_EXACT 不受声明放行（完整声明覆盖 src 5 件 + ownership.yaml → 仍必须出口 1）
 SET5E="$(printf 'D\tsrc/mod001.ts\nD\tsrc/mod002.ts\nD\tsrc/mod003.ts\nD\tsrc/mod004.ts\nD\tsrc/mod005.ts\nD\tdocs/synova/coordination/ownership.yaml\n')"
@@ -422,6 +434,8 @@ EXACT_SEC="$(printf '%s\n' "$OUT" | awk '/⛔ 其中 DENY_EXACT/{f=1} f')"
 if printf '%s\n' "$EXACT_SEC" | grep -q "^ *docs/synova/coordination/ownership.yaml$"; then pass "15.7 DENY_EXACT 清单段逐条点名 ownership.yaml"; else fail "15.7 未在该段点名 ownership.yaml"; fi
 if echo "$OUT" | grep -q "不受「## 死代码清理声明」放行"; then pass "15.7 明示「不受声明放行」（收紧语义可见）"; else fail "15.7 未明示收紧"; fi
 if echo "$OUT" | grep -q "死代码清理声明生效"; then fail "15.7 DENY_EXACT 被声明放行（收紧失效）"; else pass "15.7 DENY_EXACT 未被放行"; fi
+if echo "$OUT" | grep -q "找到声明来源，但不生效"; then pass "15.7 有来源不生效 → 正解句（收紧原因可见）"; else fail "15.7 未给正解句"; fi
+if echo "$OUT" | grep -q "命中 DENY_EXACT 1 件 —— 不受「## 死代码清理声明」放行"; then pass "15.7 原因逐条列出「命中 DENY_EXACT 不受放行」"; else fail "15.7 原因未逐条列出"; fi
 run_expect 1 "15.7b AUDIT-PROTOCOL.md 同款: 声明覆盖它也不放行 → exit 1" --diff-status "$(printf 'D\tsrc/mod001.ts\nD\tdocs/synova/coordination/AUDIT-PROTOCOL.md\n')" --decl-file "$DCL/ok1exact.md"
 EXACT_SEC="$(printf '%s\n' "$OUT" | awk '/⛔ 其中 DENY_EXACT/{f=1} f')"
 if printf '%s\n' "$EXACT_SEC" | grep -q "^ *docs/synova/coordination/AUDIT-PROTOCOL.md$"; then pass "15.7b DENY_EXACT 清单段点名 AUDIT-PROTOCOL.md"; else fail "15.7b 未在该段点名路径"; fi
@@ -463,6 +477,8 @@ brief_run 0 "15.10b 昨日 brief 命中（三日窗口 ±1 天）→ exit 0"
 rm -f "$DCL_SB/.claude/task-briefs/$DCL_D1-yest.md"
 decl_file "$DCL_SB/.claude/task-briefs/$DCL_D3-old.md" $P5
 brief_run 1 "15.10c 3 天前 brief（窗口外）→ 不命中 exit 1"
+if echo "$OUT" | grep -qF "ℹ️ 未找到声明来源（已尝试: --decl-file / \$SYNO_DR_DECL_FILE / .claude/current-brief.\$DSH_SESSION_ID / .claude/current-brief / .claude/task-briefs 当日窗口 ±1 天）"; then pass "15.10c 无来源时给正解句（窗口外 brief 不算来源）"; else fail "15.10c 未给「未找到声明来源」正解句"; fi
+if echo "$OUT" | grep -q -- "- .claude/task-briefs/ 当日窗口（±1 天）: 扫描 1 份 .md，窗口内 0 份"; then pass "15.10c 「已尝试」逐条列出 brief 链扫描计数（1 份 / 窗口内 0 份）"; else fail "15.10c 「已尝试」未列出扫描计数"; fi
 rm -f "$DCL_SB/.claude/task-briefs/$DCL_D3-old.md"
 { echo "## 死代码清理声明"; for _i in 1 2 3; do echo "- src/mod$(printf '%03d' "$_i").ts — 铁律 37: 零引用"; done; } > "$DCL_SB/.claude/task-briefs/$DCL_D0-jia.md"
 { echo "## 死代码清理声明"; for _i in 4 5; do echo "- src/mod$(printf '%03d' "$_i").ts — 铁律 37: 零引用"; done; } > "$DCL_SB/.claude/task-briefs/$DCL_D0-yi.md"
@@ -470,6 +486,12 @@ run_expect 1 "15.10d 甲（覆盖 1-3）单独 → 不生效 exit 1" --diff-stat
 run_expect 1 "15.10e 乙（覆盖 4-5）单独 → 不生效 exit 1" --diff-status "$SET5D" --decl-file "$DCL_SB/.claude/task-briefs/$DCL_D0-yi.md"
 brief_run 0 "15.10f 两份当日 brief **取并**（甲∪乙 覆盖 5）→ exit 0（判别性: 只读一份必红）"
 if echo "$OUT" | grep -q "死代码清理声明生效：5 件"; then pass "15.10f 并集生效件数点名 5"; else fail "15.10f 并集件数不符"; fi
+# ② 收口：取并来源必须**逐条**列出实际取证的文件路径（只写泛称必红）
+SRC_SEC="$(printf '%s\n' "$OUT" | awk '/生效来源（逐条列出/{f=1} f')"
+_SRC_CNT="$(printf '%s\n' "$SRC_SEC" | grep -c '^        · ' | tr -d '\r\n')"
+if [ "${_SRC_CNT:-0}" -eq 2 ]; then pass "15.10f 生效来源逐条 2 条（取并两来源都可见，非泛称）"; else fail "15.10f 生效来源条数=${_SRC_CNT:-0} — 期望 2（泛称/漏列即红）"; fi
+if printf '%s\n' "$SRC_SEC" | grep -q -- "-jia.md$"; then pass "15.10f 来源第 1 条带文件路径（…-jia.md）"; else fail "15.10f 来源未带 -jia.md 路径"; fi
+if printf '%s\n' "$SRC_SEC" | grep -q -- "-yi.md$"; then pass "15.10f 来源第 2 条带文件路径（…-yi.md）"; else fail "15.10f 来源未带 -yi.md 路径"; fi
 rm -f "$DCL_SB/.claude/task-briefs/$DCL_D0-jia.md" "$DCL_SB/.claude/task-briefs/$DCL_D0-yi.md"
 decl_file "$DCL_SB/.claude/task-briefs/$DCL_D0-sid.md" $P5
 printf '%s\n' "$DCL_D0-sid.md" > "$DCL_SB/.claude/current-brief.SIDFIX"
