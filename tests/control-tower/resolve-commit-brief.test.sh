@@ -17,16 +17,20 @@
 #  10. 负向：无身份锚点的跨日 brief 不得劫持（防「窗口放宽」式退化，D291/D296 保护不回归）
 #  11. 共享文件同数认领（tie）→ 身份锚点 brief 胜出（修复前字典序 → 陈旧 brief 恒胜，
 #      staging_guard 判「认领 brief D# ≠ 本 session 任务」硬阻断；D718 执行期真实被拦一次）
+#  12. CT-A1: 同数认领 + **无任何身份锚点** → fail-closed（exit 2 + 点名全部并列候选）。
+#      修复前 max()+字典序 print(top[0]) 静默取首位（陈旧 brief 可恒胜且零告警）= red。
 #
 # 隔离: 临时 repo（mktemp -d + git init）— resolver 用 git rev-parse --show-toplevel
 # 定位 ROOT；brief 放临时 repo 的 .claude/task-briefs/（mtime 今日 → ALL_TODAY 候选）
+# 变异测试缝: SYNO_RESOLVER_UNDER_TEST=<路径> 可指定被测 resolver（「改坏即红」用 /tmp
+#   下的修复前副本跑同一套断言，无需改动仓库文件；不设置时测仓库内实现）。
 #
 # ═══════════════════════════════════════════════════════════════════════════════
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-RESOLVER="$REPO_DIR/scripts/workflow/resolve-commit-brief.sh"
+RESOLVER="${SYNO_RESOLVER_UNDER_TEST:-$REPO_DIR/scripts/workflow/resolve-commit-brief.sh}"
 
 PASS=0; FAIL=0
 pass() { PASS=$((PASS + 1)); echo "  ✅ $1"; }
@@ -392,6 +396,61 @@ run_resolver "$R11" "scripts/a.sh"
 assert_exit "$EC" 0 "同数认领场景解析成功"
 assert_contains "$OUT" "D900-tiebreak-current" "身份锚点（分支 D900）brief 在同数认领中胜出"
 assert_not_contains "$OUT" "D664-tiebreak-older" "陈旧共享 brief 不因字典序靠前而胜出"
+echo ""
+
+echo "── 12. CT-A1: 同数认领 + 无任何身份锚点 → fail-closed（exit 2 + 点名全部候选）──"
+# 缺陷: 同层并列时原实现 top.sort() + print(top[0]) 静默按字典序取首位——无锚点证据也照样
+#   输出一个 brief（陈旧 brief 可恒胜），且零告警（认领制失去物理依据）。
+# 判据（改坏即红）: 删除 fail-closed 逻辑（还原 print(top[0])）→ 本场景必须变红。
+R12=$(new_repo)
+# 显式确保无强锚点: 分支名不含 D#（git init 默认 master/main）
+git -C "$R12" symbolic-ref HEAD refs/heads/tie-noanchor 2>/dev/null || true
+cat > "$R12/.claude/task-briefs/${TODAY}-tie-noanchor-a.md" <<EOF
+## Q0: 定位 — 并列候选 A
+
+## Q1: 调研 — 并列候选 A
+#CRITERIA: A
+
+## Q2: 范围 — 并列候选 A
+做什么：
+- scripts/a.sh
+
+不做什么：
+- 不改 docs/other.md
+
+## Q3: 验收 — 并列候选 A
+
+## 架构层: 基础设施
+## Done 标准
+- [ ] 可验证
+EOF
+cat > "$R12/.claude/task-briefs/${TODAY}-tie-noanchor-b.md" <<EOF
+## Q0: 定位 — 并列候选 B
+
+## Q1: 调研 — 并列候选 B
+#CRITERIA: A
+
+## Q2: 范围 — 并列候选 B
+做什么：
+- scripts/a.sh
+
+不做什么：
+- 不改 docs/other.md
+
+## Q3: 验收 — 并列候选 B
+
+## 架构层: 基础设施
+## Done 标准
+- [ ] 可验证
+EOF
+run_resolver "$R12" "scripts/a.sh"
+assert_exit "$EC" 2 "同数且无锚点 → exit 2（fail-closed，不猜 brief）"
+assert_contains "$OUT" "tie-noanchor-a" "点名并列候选 A（完整路径）"
+assert_contains "$OUT" "tie-noanchor-b" "点名并列候选 B（完整路径）"
+assert_contains "$OUT" "fail-closed" "输出显式声明 fail-closed 语义"
+# 反例保护: 不得静默输出任一 brief 到 stdout（stdout 是「路径」通道）
+_STDOUT_LINES=$(cd "$R12" && bash "$RESOLVER" "scripts/a.sh" 2>/dev/null | grep -c . || true)
+[ "$_STDOUT_LINES" = "0" ] && pass "stdout 为空（并列时绝不输出任何 brief 路径）" || fail "stdout 非空: ${_STDOUT_LINES} 行"
 echo ""
 
 echo "═══════════════════════════════════════════════════════════"

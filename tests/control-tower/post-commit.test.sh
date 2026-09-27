@@ -23,7 +23,8 @@ set -uo pipefail
 # 测试内再剥 GIT_INDEX_FILE 防沙箱 commit 误用宿主 index。
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-HOOK_SRC="$REPO/scripts/hooks/post-commit.sh"
+# 变异测试缝（CT-2「改坏即红」用）: 指定被测 hook 副本，否则测仓库内实现。
+HOOK_SRC="${SYNO_HOOK_UNDER_TEST:-$REPO/scripts/hooks/post-commit.sh}"
 PASS=0; FAIL=0
 ok() { echo "  ✅ $1"; PASS=$((PASS+1)); }
 no() { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
@@ -120,6 +121,42 @@ echo "$(git -C "$SB" rev-parse HEAD)|$(date +%s)" > "$SB/.claude/last-precommit-
 git -C "$SB" add e.txt
 git -C "$SB" -c user.name='' -c user.email='' commit --no-verify -m "feat: no-identity commit E" -- e.txt >/dev/null 2>&1 || true
 git -C "$SB" status --porcelain -- e.txt | grep -q '^A' && ok "降级: 真实提交失败后沙箱状态可继续（e.txt 仍 staged）" || no "沙箱状态被破坏"
+
+# ── CT-2 (D1023 批次): 软失败被放行 → 账本记真实状态（不得记成纯 PASS）──
+# 改前实测（同一沙箱构造，原始输出见证据件 CT2-）:
+#   bypass.log      → `COMMITTED | pre-commit PASS (hook 层登记) | HASH=…`
+#   gate-soft-warnings.log → `<ts> | GATE_FAIL_SOFT | exit=1 | branch=…`（wrapper 写）  ← 真实状态
+# 判据（改坏即红）: 注释掉 post-commit.sh 的 _softfail_state 调用 → 本节第 1/3 条断言变红。
+echo ""
+echo "── CT-2: 软失败被放行 → 账本真实状态；下一干净提交恢复纯 PASS（不串标）──"
+SB2="$TMPD/sb2"; mkdir -p "$SB2/.claude" "$SB2/.git/hooks"
+git -C "$SB2" init -q; git -C "$SB2" config user.name t; git -C "$SB2" config user.email t@t
+printf '#!/bin/bash\nexec bash "%s"\n' "$HOOK_SRC" > "$SB2/.git/hooks/post-commit"
+chmod +x "$SB2/.git/hooks/post-commit"
+echo seed > "$SB2/.claude/bypass.log"; git -C "$SB2" add .claude/bypass.log
+git -C "$SB2" -c user.name=t -c user.email=t@t commit -q --no-verify -m "seed"
+# 复刻 wrapper 写入序: 先 append 软失败行（真实状态），再写 marker（同一轮 pre-commit）
+echo "2026-09-28T06:18:04+08:00 | GATE_FAIL_SOFT | exit=1 | branch=main" >> "$SB2/.claude/gate-soft-warnings.log"
+echo f1 > "$SB2/f1.txt"; git -C "$SB2" add f1.txt
+echo "$(git -C "$SB2" rev-parse HEAD)|$(date +%s)" > "$SB2/.claude/last-precommit-success"
+git -C "$SB2" -c user.name=t -c user.email=t@t commit -q --no-verify -m "chore: soft-fail allowed" 2>/dev/null
+H_SOFT=$(git -C "$SB2" rev-parse HEAD^)
+ROW_SOFT=$(grep -F "$H_SOFT" "$SB2/.claude/bypass.log" || true)
+printf '%s' "$ROW_SOFT" | grep -q "COMMITTED | pre-commit DEGRADED-PASS (soft-fail allowed ts=2026-09-28T06:18:04+08:00 exit=1)" \
+  && ok "软失败放行 → 账本记 DEGRADED-PASS + 证据 ts/exit（真实状态）" \
+  || no "账本未记真实状态: ${ROW_SOFT:-（无本 HASH 行）}"
+printf '%s' "$ROW_SOFT" | grep -q "pre-commit PASS (hook 层登记)" \
+  && no "软失败被记成纯 PASS（判据未满足）" || ok "同一 HASH 不同时存在纯 PASS 行（记录不矛盾）"
+# 防串标: 随后干净提交（只重写 marker，日志不追加）→ 必须恢复原 PASS 行文本
+sleep 1
+echo f2 > "$SB2/f2.txt"; git -C "$SB2" add f2.txt
+echo "$(git -C "$SB2" rev-parse HEAD)|$(date +%s)" > "$SB2/.claude/last-precommit-success"
+git -C "$SB2" -c user.name=t -c user.email=t@t commit -q --no-verify -m "chore: clean commit" 2>/dev/null
+H_CLEAN=$(git -C "$SB2" rev-parse HEAD^)
+ROW_CLEAN=$(grep -F "$H_CLEAN" "$SB2/.claude/bypass.log" || true)
+printf '%s' "$ROW_CLEAN" | grep -q "COMMITTED | pre-commit PASS (hook 层登记)" \
+  && ok "下一干净提交恢复纯 PASS（mtime 窗口 + 消费判定生效）" \
+  || no "干净提交被误标为软失败: ${ROW_CLEAN:-（无）}"
 
 echo ""
 echo "结果: $PASS 通过, $FAIL 失败"
