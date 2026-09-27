@@ -75,15 +75,29 @@ SQL（src/adapters/sqlite-graph-store.ts:202-207）
 
 ## 五、复现（可复制）
 
+**前置**：本目录随分支 `feat/d1027-root-identity-gate` 存在，**尚未落 main** —— 在 main 树上跑会 `ERR_MODULE_NOT_FOUND`。先在任务树内执行：
+
 ```bash
-cd /Users/wane/SynovaAgent
-NODE_PATH=$PWD/node_modules npx tsx --tsconfig $PWD/tsconfig.json \
-  docs/synova/product-lines/evidence/D1027-前提冻结与断裂探针-20260927/probe-1-teamid-handshake.ts
-NODE_PATH=$PWD/node_modules npx tsx --tsconfig $PWD/tsconfig.json \
-  docs/synova/product-lines/evidence/D1027-前提冻结与断裂探针-20260927/probe-2-what-it-says.ts
+cd /Users/wane/SynovaAgent/.synova-wt-squad-d1027   # 或任意含本目录的检出
+D=docs/synova/product-lines/evidence/D1027-前提冻结与断裂探针-20260927
+npx tsx --tsconfig tsconfig.json "$D/probe-1-teamid-handshake.ts"
+npx tsx --tsconfig tsconfig.json "$D/probe-2-what-it-says.ts"
 ```
 
-两探针**只读仓库**（不写任何产品文件），用 `:memory:` SQLite，无副作用。预期输出见 `probe-output.txt`。
+两探针**只读仓库**（不写任何产品文件），用 `:memory:` SQLite，无副作用；**必须在仓库根/任务树根执行**（probe 由 `cwd` 解析数据与 manifest 路径），两条均 `exit=0`。预期输出见 `probe-output.txt`。
+
+### §五.1 复现缺陷与修订（独立自验员实测发现，非自报）
+
+本件 v1 的归档件与复现命令**有缺陷**，由独立自验员实测指出，已修：
+
+| 症状 | 根因 | 处置 |
+|---|---|---|
+| `probe-1` 归档件跑出 `ReferenceError: require is not defined`（`probe-1:17:23`） | 仓库 `package.json` 为 `"type":"module"` ⇒ 归档进仓库的 `.ts` 按 ESM 解析，ESM 无 `require` | 改 `require('fs').readFileSync` → `import fs from 'fs'` |
+| 从任务树跑时 import 落到**主工作区**代码（不是被测代码） | v1 用绝对路径 `/Users/wane/SynovaAgent/src/...` | 改**相对本文件**解析（`../../../../../src/...`），随所在工作树走 |
+| v1 README 写 `cd /Users/wane/SynovaAgent` + 本目录相对路径 ⇒ `ERR_MODULE_NOT_FOUND` | 本目录**只在分支、未落 main**（违反「不引用未落 main 的路径」） | 复现命令改任务树 + 显式标注分支前置 |
+| `NODE_PATH=$PWD/node_modules` 对 `/tmp` 内的副本无效（`Cannot find module 'better-sqlite3'`） | 任务树 `node_modules/` 为空目录；`/tmp` 内文件解析不到仓库依赖 | 去掉 `/tmp` 运行方式，统一"在仓库根执行" |
+
+修订后两探针在任务树内 `exit=0`，逐字复现 `probe-output.txt`。**自验员测得的四段原始失败输出（A/B/C/D）保留在其自验报告中作为发现证据，不因修订而抹除。**
 
 ## 六、未核实清单（沿 `CTO-固化-II` §三.5）
 
