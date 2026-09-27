@@ -1,0 +1,8 @@
+=== 命令: --emit-codeowners --yaml <合同形态含19条 domain_defaults.win> ===
+emit rc=0
+--- 领地注释行（应 1 条、19 条 glob）---
+# win 领地（显式列出）: src/**、extensions/**、packages/**、synova_worker/**、docs/plans/**、tests/**、docs/**、expert/**、scripts/**、skills/**、app/**、vendor/**、dsh/**、.claude/**、knowledge/**、cycles/**、observer-adapters/**、theory/**、synthesis/**
+--- 领地注释行数 ---
+1
+--- 规则行（去注释）vs .github/CODEOWNERS ---
+零差异（规则行逐行相同）

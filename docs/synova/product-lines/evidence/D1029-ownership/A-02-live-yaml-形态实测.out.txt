@@ -1,0 +1,3 @@
+$ grep -cE '^domain_defaults:|^rule_authority:' docs/synova/coordination/ownership.yaml
+0
+--- 结论: A 树 live yaml 尚无这两个键（B 未落地）⇒ LIVE_MODE=pre-contract ---

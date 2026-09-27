@@ -1,0 +1,14 @@
+=== 命令: 逐文件 classify_path（合同形态 yaml）===
+文件总数 = 5569
+  win          1583
+  domain-neutral   1368
+  UNOWNED      1261
+  mac          1197
+  k3            160
+按 (归属,理由):
+  domain-neutral neutral     1368
+  UNOWNED    unowned     1261
+  mac        explicit    1197
+  win        explicit    1160
+  win        baseline     423
+  k3         explicit     160
