@@ -432,3 +432,241 @@ bash tests/control-tower/precommit-groups-injection.test.sh
 - 3 条**遗留**（§14：组 9 与 CP3 写盘仍用裸 `python`、夹具 P2-2、探针未运行）。
 
 **本报告不构成"审计通过"**：通过与否归 CTO 收件闸 + K3 复审。自验员为只读方，除本文件外未改仓库任何文件。
+
+---
+
+## §17 增量复核（task-3 修正后）
+
+> **被测 SHA 对照（务必并列读）**
+> · 原 §1–§16 的**原 9 条判据**被测 SHA = **`98485b7c`**（该节内容为原始记录，未删改，见 §17.9）
+> · 本 §17 的**增量复核**被测 SHA = **`27886250b1b5223087d8446f8cef949f825150f2`**
+>   （= 手工提交 `13520fb2` + auto-hook `27886250`；`git ls-remote` 与本地 HEAD 同值）
+> · 增量复核范围 = task-3 的**两处验收后修正**（原报告 D1 注释措辞 + 存疑2 逗号转换收敛）+ 授权扩集（夹具 b 面基线 8→9）。**不重做全量**。
+> · 共享任务：`task-4`（owner=a3fix-verifier）。纪律：除本文件外只读；一律 `SYNO_CI=1`；沙箱在 `/tmp` 副本内。
+
+### §17.1 判据 1 —— delta 边界：手改件恰 2 个
+
+```
+$ git diff --name-only 98485b7c..27886250
+.claude/bypass.log                                          ← auto-hook (D521) 产物，非手改
+docs/synova/product-lines/evidence/D1023-A3fix-selfverify.md ← 本报告，a3d5d1c9 已提交，属历史
+scripts/pre-commit-check.sh                                 ← 手改 1
+tests/control-tower/precommit-groups-injection.test.sh       ← 手改 2
+
+$ 排除上面两个非手改项后 → 手改件数 = 2 （期望 2）✓
+
+$ git diff --stat 98485b7c..27886250
+ .claude/bypass.log                                 |   2 +
+ .../evidence/D1023-A3fix-selfverify.md             | 434 +++++++++++++++++++++
+ scripts/pre-commit-check.sh                        |  37 +-
+ .../precommit-groups-injection.test.sh             |  21 +-
+ 4 files changed, 483 insertions(+), 11 deletions(-)
+```
+
+**手改件① `scripts/pre-commit-check.sh`：恰 2 处改动（其余上下文行未动）**
+1. `:1184-1193` **注释措辞**（修正 A）——原「（实测：brief 里出现 3 处 `#CRITERIA:` ⇒ `CRITERIA='D\nD\nD'`）」整段替换为可复现表述（见 §17.2）；`head -1` 代码本身**未动**。
+2. `:1240-1264` **转换管线**（修正 B）——单参数 `sed -E 'a; b; c; …'` → **9 条 `-e`**（含 `:dmgrp` / `t dmgrp` 标签循环），实现"逗号只在花括号组内转 `|`"（见 §17.3）。
+
+**手改件② `tests/control-tower/precommit-groups-injection.test.sh`：b 面基线 8→9，逐处核对（我上轮提示的 5 处全改）**
+```
+:815  [b 面登记] 演进叙述   6 →（M9/#741）7 →（D945）8 →（D1023 task-3）9     ✓
+:817  「实测 8 条」→「实测 9 条」                                            ✓
+:829  #9 docs/synova/product-lines/evidence/D1023-A3fix-selfverify.md 登记    ✓
+      （并显式写明"责任归属记在自验报告引用了该标记，不是编码者引入残留"）
+:838  REPO_RESIDUE 行尾注释「b 面期望 = 基线 9」                              ✓
+:848  b) 回显「基线 9」                                                       ✓
+:853  [ "$REPO_RESIDUE" -gt 9 ]                                               ✓
+:855  ✅ 回显「b<=9」                                                          ✓
+:836  P2-2 待办叙述补「8→9」                                                  ✓
+```
+⇒ **5 处以上全部同步**，未出现"判据=9、回显=8"的不一致。**判据 1 通过。**
+
+### §17.2 判据 2 —— 修正 A：数字逐字相符 + 证人独立复现（成立）
+
+**我重跑注释所引的四个数字（原始输出）**
+```
+① .claude/task-briefs/*.md 文件总数                     = 419
+② 含 '#CRITERIA' 子串的文件数                            = 320
+③ 按本模式 '#CRITERIA[[:space:]]*[:=][[:space:]]*[A-D]' 匹配 ≥2 处 = 36
+④ 口径A「含 '#CRITERIA' 子串 ≥2 次」                     = 40
+```
+**与注释逐字比对**（自实现抽取，防我看错）：
+```
+#   防御性（可复现，非"我记得"）: `.claude/task-briefs/*.md` 共 419 份，其中 320 份含 `#CRITERIA` 子串，
+#   **36 份**按本模式 `#CRITERIA[[:space:]]*[:=][[:space:]]*[A-D]` 匹配 **≥2 处**。触发源 = brief 模板注释行
+#   `<!-- #CRITERIA: A/B/C/D ... -->`（`A` 是 `A/B/C/D` 的前缀，故与真声明被同一模式一并命中）。
+#   一条命令复现证人: grep -nE '#CRITERIA[[:space:]]*[:=][[:space:]]*[A-D]' .claude/task-briefs/2026-08-14-auto.md
+#     → :128 `#CRITERIA: A` + :129 模板注释行 ⇒ 抽取得 $'A\nA'（多行）⇒ 上述 python 插值 SyntaxError。
+#   计数口径勿混: 「含 `#CRITERIA` 子串 ≥2 次」的文件 = 40 份，≠ 上句的模式匹配 36 份。
+```
+⇒ 419 / 320 / 36 / 40 **四个数字逐字相符**；原不可复现的「实测 3 处」残留计数 = **0**。
+
+**独立复现证人（我按注释给的那一条命令原样跑）**
+```
+$ grep -nE '#CRITERIA[[:space:]]*[:=][[:space:]]*[A-D]' .claude/task-briefs/2026-08-14-auto.md
+128:#CRITERIA: A
+129:<!-- #CRITERIA: A/B/C/D 条件归属（v3-FINAL），必填；pre-commit G10 + hook-block-write CP1 + pre-doc-audit CP2 消费 -->
+$ grep -oE … | sed -E 's/.*[=:][[:space:]]*//'
+A
+A                    ← 2 行 ⇒ CRITERIA = $'A\nA'
+```
+把该值插进**真实代码形状**的字面量后编译：
+```
+g = m.get('criteria', {}).get('A
+                               A', {}).get('glob', [])
+→ SyntaxError（证人成立）: EOL while scanning string literal (<g10-criteria-probe>, line 4)
+```
+⇒ **证人成立**：一条命令可复现、机制真实（模板注释行的 `A` 是 `A/B/C/D` 前缀，被同一模式命中）。**判据 2 通过，不退回。**
+
+### §17.3 判据 3 —— 修正 B：等价性（15/15 逐字节相同，且只改这一处行为）
+
+方法：**从两个 git 对象抽取真实 sed 管线**（`git show 98485b7c:` / `git show 27886250:`），在同一组输入上分别执行，**不重实现、不采用编码者输出**。
+```
+OLD(98485b7c) 单参数:
+  s#[*][*]/#@DSTAR@#g; s#[{]([^}]*)[}]#(\1)#g; s#,#|#g; s#[*]#.*#g; s#[?]#.#g; s#@DSTAR@#(.*/)?#g
+NEW(27886250) 9 条 -e:
+  1) s#[*][*]/#@DSTAR@#g                    6) s#@L(GRP|BR)@([^}]*)[}]#(\2)#g
+  2) s#[{]#@LBR@#g                          7) s#[*]#.*#g
+  3) :dmgrp                                 8) s#[?]#.#g
+  4) s#@L(BR|GRP)@([^@}]*),#@LGRP@\2|#g     9) s#@DSTAR@#(.*/)?#g
+  5) t dmgrp
+```
+**要求 1：全部现存 glob（15 条）OLD vs NEW 逐字节比对 → 逐字节不同数 = 0**（示例，全表见运行日志）
+```
+A src/l3/**/*.ts        OLD=src/l3/(.*/)?.*.ts          NEW=src/l3/(.*/)?.*.ts           相同
+C app/**/*.{html,js,css} OLD=app/(.*/)?.*.(html|js|css)  NEW=app/(.*/)?.*.(html|js|css)   相同
+D scripts/**/*.{sh,py}  OLD=scripts/(.*/)?.*.(sh|py)     NEW=scripts/(.*/)?.*.(sh|py)     相同
+D tests/**              OLD=tests/.*.*                   NEW=tests/.*.*                  相同
+D package.json          OLD=package.json                 NEW=package.json                相同
+…（15/15 全为「相同」）
+```
+**要求 2：花括号外逗号保持字面（自造反例 5 条，非编码者输出）**
+```
+src/a,b.ts        OLD=src/a|b.ts        NEW=src/a,b.ts        逗号保字面 ✓
+src/x{1,2},y.ts   OLD=src/x(1|2)|y.ts   NEW=src/x(1|2),y.ts   逗号保字面 ✓
+src/[a,b].ts      OLD=src/[a|b].ts      NEW=src/[a,b].ts      逗号保字面 ✓（字符类内）
+src/a,b,c.ts      OLD=src/a|b|c.ts      NEW=src/a,b,c.ts      逗号保字面 ✓
+src/*,x.ts        OLD=src/.*|x.ts       NEW=src/.*,x.ts       逗号保字面 ✓
+```
+**要求 3：`{html,js,css}` 三元素仍正确**
+```
+app/**/*.{html,js,css}   → app/(.*/)?.*.(html|js|css)    OLD=NEW ✓
+electron/**/*.{cjs,js}   → electron/(.*/)?.*.(cjs|js)    OLD=NEW ✓
+scripts/**/*.{sh,py}     → scripts/(.*/)?.*.(sh|py)      OLD=NEW ✓
+```
+**要求 4：卡面回归集 10/10 仍 MATCH**（`src/l3/x.ts`→A、`src/sentinel/y.ts`→A、`src/growth/z.ts`→B、`src/routes/r.ts`→C、`electron/main.cjs`→C、`package.json`→D、`build-synova.cjs`→D、`src/index.ts`→D、`src/deep/nested/x.ts`→D、`tests/control-tower/x.test.sh`→D）⇒ **回归失败数 = 0**。
+
+**附加：`-e` 形式的 BSD/GNU 断言（task-4 点名要求在本环境实测）—— 编码者的理由成立**
+```
+① sed -E ':a; s#x#y#; ta'          → stdout='xxx\n'  stderr="unused label 'a; s#x#y#; ta'"   ← 单参数 ';' 分隔标签：标签被整串吞掉、管线未生效
+② sed -E -e ':a' -e 's#x#y#' -e 'ta' → stdout='yyy\n'  stderr=''                            ← 分写 -e 才正确
+③ sed -E -e 's#x#y#' -e 't done; s#y#z#' → stderr="undefined label 'done; s#y#z'"            ← `-e` 内标签后裸 ';' 同样被吞
+NEW 管线在本机 BSD sed 上跑全部 15 条 glob：**无任何 stderr**
+```
+⇒ 新管线的 `:dmgrp` / `t dmgrp` **必须**各自独立成 `-e`，编码者注释所述 BSD 原因**成立且必要**。
+
+**判据 3 通过。** 唯一行为差异在**异常输入**（未闭合 `{`），见 §17.6。
+
+### §17.4 判据 4 —— 不回归（门禁 + 夹具，二者均在新 HEAD 上实跑）
+
+**门禁（CI 同口径，`/tmp` 副本内，state1 本机真态：`python` 无 / `python3` 在）**
+```
+$ GITHUB_ACTIONS=true SYNO_DIFF_BASE=ad2cce209fd556d2e71aa981c14a9b46ff430285 SYNO_CI=1 bash scripts/pre-commit-check.sh
+── 组 10/13: V3 流水线健康度 ──
+     domain-neutral 路径豁免 5 项（ownership.yaml:207）
+       .claude/bypass.log / .claude/task-briefs/2026-09-26-D1023-….md / .codex/criteria-code-map.json
+       / docs/synova/product-lines/evidence/D1023-A3fix-selfverify.md / memory/notes/implemented/process/2026-09-27-….md
+  ✅ G10: 条件区域检查通过 (D; domain-neutral 豁免 5 项)
+  ✅ G11: 测试覆盖检查通过
+  ✅ 全部 13 组通过                     exit=0
+  无映射区域(跳过) = 0
+```
+该 base 的变更集实为 **7 文件**（`.claude/bypass.log` / brief / `.codex/criteria-code-map.json` / 本证据文档 / memory Note / `scripts/pre-commit-check.sh` / 夹具），其中 **5** 落 domain-neutral 豁免面，另 2 个（脚本、夹具）落 D 区 ⇒ 与期望「豁免 **5** 项」一致。
+
+**夹具（同副本）**
+```
+$ bash tests/control-tower/precommit-groups-injection.test.sh        → exit=0
+GATE_INJECTION_SUMMARY: scenarios=8 red_confirmed=5 structural_not_red=0 not_red=0 green_confirmed=2
+  green_fail=0 baseline=ok probe=not_run(rc=n/a) exempt_probe=RED_CONFIRMED(rc=1)
+  residue_code=0 residue_repo=9 shim=1 g10region_named=1
+b) 仓库全量命中: 9 个文件（基线 9，逐条登记见上方 [b 面登记]；逐行如下）
+✅ 残留断言满足（a=0, b<=9, c>0）
+  …
+  docs/synova/product-lines/evidence/D1023-A3fix-selfverify.md      ← 第 9 条 = 本自验报告自身（已在 [b 面登记] #9）
+```
+四项期望值逐项命中：`residue_repo=9` ✓ / `exempt_probe=RED_CONFIRMED(rc=1)` ✓ / `green_fail=0` ✓ / `g10region_named=1` ✓。
+**判据 4 通过。**
+
+### §17.5 判据 5 —— 原 9 条判据逐条复核（接触面 1/2/3/4/5/7 已重跑）
+
+| # | 判据 | 结论 | 依据 |
+|---|------|------|------|
+| 1 | 反例 a：账本文件 + `#CRITERIA:D` ⇒ G10 不红 | **不变**（重跑） | `✅ 全部 13 组通过`；`✅ G10: 条件区域检查通过 (D; domain-neutral 豁免 5 项)` + 5 项点名；假绿串 0 |
+| 2 | 反例 b：区域外真代码 ⇒ G10 仍红 | **不变**（重跑） | `❌ G10: 条件区域不匹配` 点名 `observer-adapters/claude-code-hook/hook.py`；exit=1；`无 task brief 变更(跳过)`=0（另有 G12 独立红） |
+| 3 | 判别力：删豁免分支 ⇒ 转红 | **不变**（重跑） | 物理删 `:1259-1268` 后同注入 `❌ G10` 点名全部 5 个账本文件；`bash -n` OK、标记残留 0 |
+| 4 | glob 转换修复 + 回归 | **不变 + 加强**（重跑） | `scripts/**/*.{sh,py}` → `scripts/(.*/)?.*.(sh|py)` 命中 `scripts/pre-commit-check.sh`；回归 **10/10**；**新增：15 条现存 glob 修正前后逐字节相同**（§17.3） |
+| 5 | ⑥ `tests/**` 归 D 且零漂移 | **不变**（静态重跑） | task-3 **未碰** map（`git diff 98485b7c..27886250 -- .codex/criteria-code-map.json` = 0 处）；vs `ad2cce20` 仍仅 `+tests/**`，A/B/C 零漂移；`tests/*` 三个探针 + 夹具路径全 → D |
+| 6 | ⑦ 假绿闭合（三态 P1–P4） | **不变（未接触面）** | task-3 未改 python 探测（`-e` 管线与 `G10_PYBIN` 无关）；本次门禁实跑 G10 走**真判定**（非"无映射区域(跳过)"），假绿串 0 |
+| 7 | 夹具仍 exit 0 | **不变**（重跑） | `FIXTURE_EXIT=0` + SUMMARY 四项全中（§17.4） |
+| 8 | 边界/越界扫描 | **不变**（重跑） | 手改件恰 2；`.github/**` 0 处；两处手改件 `INJECTED-RED`=0；无空 blob |
+| 9 | CI 同口径 + 夹具接线 | **不变**（重跑） | 所有实跑带 `SYNO_CI=1`；`ci.yml:596` 仍登记夹具 |
+
+### §17.6 异常输入行为差异（新引入的潜在边界）—— **方向 = fail-closed（已实测）**
+
+```
+$ ERE_OLD='src/a{b.ts';    echo 'src/a{b.ts' | grep -qE "($ERE_OLD)"   → MATCH   （旧：**不**判红）
+$ ERE_NEW='src/a@LBR@b.ts'; echo 'src/a{b.ts' | grep -qE "($ERE_NEW)"  → NOMATCH （新：判 MISMATCH → 红）
+派生结果: src/a{b.ts  OLD=src/a{b.ts  NEW=src/a@LBR@b.ts
+          src/a}b.ts  OLD=src/a}b.ts  NEW=src/a}b.ts          相同
+          src/{a}.ts  OLD=src/(a).ts  NEW=src/(a).ts          相同
+```
+**机制**：新管线把 `{` 先替为占位符 `@LBR@`、靠 `}` 收口；未闭合 `{` 使占位符**未还原** ⇒ 派生 ERE 含字面 `@LBR@` ⇒ 不再匹配任何真实路径 ⇒ 判红。旧管线对非法 interval `{b` 按**字面量**处理，恰好字面命中同名文件 ⇒ 不判红。
+**定级**：当前 **15 条现存 glob 无一含未闭合 `{`** ⇒ **不触发**；且差异方向是 **fail-closed**，新管线在该路径上**比旧管线更严**，属**净安全改进**（不是放宽/假绿方向），**不构成退回理由**，也不在本卡修。
+
+### §17.7 过程诚实性：一条"队长表述经自验员实测更正"（如实记录）
+
+- 队长在裁定 `@LBR@` 泄漏条目时曾附带断言「OLD 管线对未闭合 `{` **也**判红」。**该句系队长未实测而写**（其本人已认领此误）。
+- 我实测：**OLD = MATCH（不判红）**；只有 NEW 判红 ⇒ 正确表述是「**旧 = open 侧 / 新 = closed 侧**」。
+- **本条属队长表述更正，不是编码者问题**；我按"先报后记"先报队长、经确认后写入本节。同理，我上一轮曾据**旧管线**误判「编码者的 BSD 断言是错误归因」，经队长以一手证据驳回后**已撤回**（判定改为「BSD 断言成立、`-e` 形式必要」，见 §17.3）。
+
+### §17.8 K3 脱离 `/tmp` 的复核命令集（全部可直接复制执行）
+
+```bash
+cd /Users/wane/SynovaAgent/.synova-wt-a3fix && git rev-parse HEAD   # 期望 27886250…（本 §17 的被测 SHA）
+# ① delta 边界（手改件应恰 2）
+git diff --name-only 98485b7c..27886250
+git diff --stat      98485b7c..27886250
+git diff             98485b7c..27886250 -- scripts/pre-commit-check.sh
+git diff             98485b7c..27886250 -- tests/control-tower/precommit-groups-injection.test.sh
+# ② 修正 A 的四个数字（应与注释逐字相符）
+ls .claude/task-briefs/*.md | wc -l
+grep -l '#CRITERIA' .claude/task-briefs/*.md | wc -l
+for f in .claude/task-briefs/*.md; do c=$(grep -oE '#CRITERIA[[:space:]]*[:=][[:space:]]*[A-D]' "$f" | wc -l); [ "$c" -ge 2 ] && echo "$f"; done | wc -l   # 36
+for f in .claude/task-briefs/*.md; do c=$(grep -o '#CRITERIA' "$f" | wc -l); [ "$c" -ge 2 ] && echo "$f"; done | wc -l                                        # 40
+# ② 证人（多行值 → python 插值 SyntaxError）
+grep -nE '#CRITERIA[[:space:]]*[:=][[:space:]]*[A-D]' .claude/task-briefs/2026-08-14-auto.md      # :128 + :129
+python3 -c "compile(\"g = m.get('criteria', {}).get('A\nA', {})\", '<p>', 'exec')"                 # SyntaxError
+# ③ 修正 B 等价性：从两个 git 对象抽管线后逐字节比对
+git show 98485b7c:scripts/pre-commit-check.sh | grep -n "REGEX=\$(echo" -A1
+git show 27886250:scripts/pre-commit-check.sh | grep -n "REGEX=\$(echo" -A11
+#    （抽取后对 15 条 glob 分别执行；也可直接复用 /tmp/a3fix-phase1/task4-criterion3.py 的方法自建）
+# ③ BSD 标签断言
+printf 'xxx\n' | sed -E ':a; s#x#y#; ta'                  # 无 yyy + unused label
+printf 'xxx\n' | sed -E -e ':a' -e 's#x#y#' -e 'ta'       # yyy
+# ④ 门禁（CI 同口径；沙箱请自行 mktemp -d + git clone --local 后在内执行）
+GITHUB_ACTIONS=true SYNO_DIFF_BASE=ad2cce209fd556d2e71aa981c14a9b46ff430285 SYNO_CI=1 bash scripts/pre-commit-check.sh
+bash tests/control-tower/precommit-groups-injection.test.sh
+# ⑤ b 面基线 5 处同步（应全为 9）
+grep -n "基线 9\|-gt 9\|b<=9\|实测 9 条\|→（D1023 task-3）9" tests/control-tower/precommit-groups-injection.test.sh
+```
+
+### §17.9 §17 后的自验结论
+
+**`可提请独立审计`**
+
+- 增量复核的 **5 条判据全部通过**；task-2 的 **9 条判据结论均不变**（接触面 1/2/3/4/5/7 已在本 HEAD 上重跑，见 §17.5）。
+- task-3 的两处修正**均已收口**：D1 从「措辞不实」变为「措辞可复现 + 机制有证人」；存疑2 从「无条件全局转逗号」收敛为「仅花括号组内」，且**已证明在所有现存 glob 上零行为变化**。
+- 唯一新增边界（未闭合 `{` ⇒ 占位符泄漏）方向为 **fail-closed**，当前数据不触发，不构成退回理由。
+- **本 §17 不引入任何新的引用该标记的文件**（同文件追加不改变文件计数；夹具 b 面维持 `residue_repo=9`，实跑已证）。
+- 原 §1–§16 保持原始记录**未删改**，其被测 SHA 仍为 `98485b7c`；两者差异仅为本 §17 所述两处修正。
+- **本报告不构成"审计通过"**：通过与否归 CTO 收件闸 + K3 复审。自验员为只读方，除本文件外未改仓库任何文件。
