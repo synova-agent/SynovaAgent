@@ -1,16 +1,30 @@
 # ownership.yaml — Synova 模块所有权（机器可读唯一源）· D733
 #
+# ═══ 修改权：本文件的修改需创始人批准（D1029，创始人 2026-09-27 明令）═══
+# 本文件的修改需**创始人批准**（创始人 2026-09-27 明令）；凭据 = PR 描述里一行含
+# `创始人批准` 且含 `ownership`（两者缺一即无凭据）。缺凭据的变更被
+# check-ownership.py --claim-check 拦下（exit 1）。
+# 依据（规则自授权，D1029 ①）: 本文件决定「谁能改什么」，自身却落 mac 域 —— 实测
+#   `python3 scripts/control-tower/check-ownership.py docs/synova/coordination/ownership.yaml`
+#   → `mac  docs/synova/coordination/ownership.yaml`（exit 0）⇒ 执行者可改规则。
+# 机读位置: 本文件顶层键 rule_authority（域≠权限 / 规则最终修改权在创始人 / 凭据口径 / 原生强制层）。
+# 原生强制: GitHub CODEOWNERS 的 review（.github/CODEOWNERS 是本表唯一生成物；该路径 owner
+#   已是创始人主账号）—— 复用 GitHub 原生机制，不新增自研权限门禁。
+#
 # 来源: docs/synova/coordination/TASK-ROUTING.md v4 §一 模块所有权表（L27-L40）
 #       + §串行点（L58-L65）+ §PR 审查路由（L67-L71）
 # 消费者: scripts/control-tower/check-ownership.py
 #   · 派单/PR 域校验:  python3 scripts/control-tower/check-ownership.py <文件...> --owner mac
 #   · 生成 CODEOWNERS: python3 scripts/control-tower/check-ownership.py --emit-codeowners
+#   · 改规则凭据校验:  python3 scripts/control-tower/check-ownership.py --claim-check（D1029 新增）
 # 语义: 规则**按顺序求值，最后匹配者胜出** —— 与 .github/CODEOWNERS 的官方语义一致，
 #       因此宽规则（含兜底）写在前面，例外写在后面。改完本文件必须重跑 --emit-codeowners，
-#       drift 由 tests/control-tower/ownership.test.sh 逐字节断言。
-# 注意: 无规则匹配（例如有人删掉 default 规则）→ check-ownership.py 明示「无归属」但不阻断。
-#       这是刻意设计（保证「删默认规则 → 变绿」这一反向验证可做）；结构性兜底由测试断言
-#       「default 规则必须恰有一条」来守。
+#       drift 由 tests/control-tower/check-ownership.test.sh 逐字节断言（D1029 订正失效路径）。
+# 未归属语义（D1029 改；原「无规则匹配 → 明示『无归属』但不阻断」自本行起作废）:
+#       路径未匹配任何**显式规则**、且不落 domain_defaults 基线领地、且不在 domain_neutral
+#       豁免 ⇒ 报「未归属」并 **exit 1**（fail-closed，提示「请在 ownership.yaml 显式加规则」）；
+#       逃生口 = 同一 PR 显式加规则 ⇒ exit 0。**不再静默判 win、不再阻断为 0**。
+#       结构性兜底仍由测试断言「default 规则必须恰有一条」来守（删兜底会让越域静默变绿）。
 version: 1
 
 # owner 语义（人读；机器只用 key）
@@ -25,17 +39,61 @@ github:
   win: "@tangbaobao520"
   k3: "@tangbaobao520"
 
+# ═══ 规则修改权（D1029，创始人 2026-09-27 明令；机读位置 = 本键）═══
+# 依据: 创始人 2026-09-27 明令「ownership.yaml 的修改由创始人批准」+ 本文件头部自我声明。
+# 域（mac/win/k3）只用于**协作防冲突**与 PR 单域判定；域 ≠ 权限。
+# 原生强制 = GitHub CODEOWNERS review（本表是该文件唯一生成源）——不新增自研权限门禁。
+rule_authority:
+  domain_vs_permission: "域（mac/win/k3）只用于**协作防冲突**与 PR 单域判定；域 ≠ 权限。"
+  rule_change_authority: "ownership.yaml 的最终修改权在**创始人**；规则变更须创始人批准。"
+  approval_credential: "PR 描述中一行含 `创始人批准` 且含 `ownership`（机读标记，check-ownership.py --claim-check）"
+  native_enforcement: "GitHub CODEOWNERS 原生 review（本表为该文件唯一生成源）——不新增自研权限门禁"
+
+# ═══ win 基线领地（D1029；兜底不再等于 win —— 未归属须显式认领）═══
+# 语义: 兜底规则（`**` 那条）不再把「无人认领的路径」判给 win。本键显式声明 win 的既有
+#       领地：命中本键 ⇒ 已显式认领为 win；未命中本键、也未命中任何显式规则、且不在
+#       domain_neutral 豁免 ⇒ 报「未归属」exit 1。
+# 只增不改: 本键不参与 resolve_owner() 的顺序求值，也不改任何既有规则的 glob/owner
+#       —— 既有归属判定零变化（新增键，无规则增删）。
+# 逐条 source 回溯（禁凭感觉加；原始实测输出见 docs/synova/product-lines/evidence/D1029-ownership/B-*）:
+#   src/**            ← TASK-ROUTING.md L38「src/（除 sentinel/cron/mcp 外）L1-L5」= Win Claude Code
+#   extensions/**     ← TASK-ROUTING.md L38（Win 领地原文）
+#   packages/**       ← TASK-ROUTING.md L38（Win 领地原文）
+#   synova_worker/**  ← TASK-ROUTING.md L38（Win 领地原文）
+#   docs/plans/**     ← TASK-ROUTING.md L39 计划库（Claude 线 dev doc）= Codex(Win)
+#   tests/**          ← 既有归属: 现行 `**` 兜底实测判 win（除已显式登记的 mac 例外
+#                        tests/sentinel|doc-system|control-tower|project，本键不覆盖那些规则）
+#   expert/**         ← 既有归属: 现行 `**` 兜底实测判 win（无 TASK-ROUTING 明列）
+#   skills/**         ← 既有归属: 现行 `**` 兜底实测判 win（无 TASK-ROUTING 明列）
+#   knowledge/**      ← 既有归属: 现行 `**` 兜底实测判 win（无 TASK-ROUTING 明列）
+#   theory/**         ← 既有归属: 现行 `**` 兜底实测判 win（无 TASK-ROUTING 明列）
+#   synthesis/**      ← 既有归属: 现行 `**` 兜底实测判 win（无 TASK-ROUTING 明列）
+#   cycles/**         ← 既有归属: 现行 `**` 兜底实测判 win（无 TASK-ROUTING 明列）
+#   app/**            ← 既有归属: 现行 `**` 兜底实测判 win（无 TASK-ROUTING 明列）
+#   vendor/**         ← 既有归属: 现行 `**` 兜底实测判 win（无 TASK-ROUTING 明列）
+#   prototypes/**     ← 既有归属: 现行 `**` 兜底实测判 win（无 TASK-ROUTING 明列）
+#   observer-adapters/** ← 既有归属: 现行 `**` 兜底实测判 win（无 TASK-ROUTING 明列）
+#   data/**           ← 既有归属: 现行 `**` 兜底实测判 win（无 TASK-ROUTING 明列）
+#   assets/**         ← 既有归属: 现行 `**` 兜底实测判 win（无 TASK-ROUTING 明列）
+#   patches/**        ← 既有归属: 现行 `**` 兜底实测判 win（无 TASK-ROUTING 明列）
+#   以上 19 条一次性实测: check-ownership.py <各目录一个 tracked 样本...> --owner win
+#     → 19/19 判 win、PASS exit 0（样本与原始输出见证据文件，不在此处放一次性资源清单）。
+domain_defaults:
+  win: ["src/**", "extensions/**", "packages/**", "synova_worker/**", "docs/plans/**", "tests/**", "expert/**", "skills/**", "knowledge/**", "theory/**", "synthesis/**", "cycles/**", "app/**", "vendor/**", "prototypes/**", "observer-adapters/**", "data/**", "assets/**", "patches/**"]
+
 rules:
   # ═══ Win Claude Code 领地（宽 → 窄：最后匹配者胜出，故兜底在最前）═══
-  # 兜底即 Win 域本体: TASK-ROUTING.md L38「src/（除 sentinel/cron/mcp 外）L1-L5 +
-  # extensions/ + packages/ + synova_worker/」= Win，L39 计划库 = Codex(Win)。
-  # src/** 由本兜底给出归属，**故不另设 src/** 规则**：否则删掉兜底后 src/ 仍被
-  # src/** 命中，派单 §一 的反向验证（删默认规则 → 两条验收变绿）无法成立。
-  # 显式列出: Win 的非 src 领地逐条列在下方（extensions / packages / synova_worker / docs/plans）。
+  # 兜底语义（D1029 改）: 兜底 = 「未归属 ⇒ 需显式认领」，**不再等于 win**。
+  #   命中本兜底（且不落基线领地、未在 domain_neutral 豁免）⇒ check-ownership.py 报
+  #   「未归属」并 exit 1，提示「请在 ownership.yaml 显式加规则」；逃生口 = 同 PR 加规则 ⇒ exit 0。
+  # win 的既有域由顶层键 domain_defaults.win 显式声明（本段上方的「win 基线领地」块，
+  #   19 条 glob 逐条带 source 回溯）；本规则保留 owner 键供 --emit-codeowners 取 github 账号。
+  # 历史依据（保留）: TASK-ROUTING.md L38「src/（除 sentinel/cron/mcp 外）L1-L5 + extensions/
+  #   + packages/ + synova_worker/」= Win，L39 计划库 = Codex(Win) —— 本兜底曾是这些路径的
+  #   归属来源（现状改由 domain_defaults.win 显式声明）。
   - glob: "**"
     owner: "win"
     default: true
-    territory: ["src/**", "extensions/**", "packages/**", "synova_worker/**", "docs/plans/**"]
     source: "TASK-ROUTING.md L38/L39（Win 域兜底: src/ 除下列 Mac 例外 + 未列明路径）"
 
   - glob: "extensions/**"

@@ -146,3 +146,22 @@
 
 **`docs/synova/coordination/ownership.yaml` 是「路径 → 域（mac/win/k3）」的唯一机器可读源**；本文中任何归属描述（含「Mac 域／Win 域」字样）均为导航性说明，**冲突时以该表的机器裁决为准**。
 判定命令：`python3 scripts/control-tower/check-ownership.py <文件...> --owner mac|win`。改表属**门禁语义变更**：须同批 `--emit-codeowners` + 逐字节 drift 断言 + 判别性夹具，并**必过 K3**。
+
+---
+
+## 规则修改权（2026-09-27 创始人令）
+
+**`docs/synova/coordination/ownership.yaml` 的修改权在创始人**（创始人 2026-09-27 明令）：该表的规则变更须**创始人批准**，凭据 = **PR 描述里一行同时含 `创始人批准` 与 `ownership`**（两者缺一即无凭据；机读校验 `check-ownership.py --claim-check`，缺凭据 ⇒ exit 1 拦下）。
+
+- **source 回溯**：创始人 2026-09-27 明令；机读位置 = `ownership.yaml` 顶层键 `rule_authority`（`rule_change_authority` + `approval_credential`）。
+- **起因（实测）**：规则自授权 —— 该表决定「谁能改什么」，自身却落 `mac` 域（`check-ownership.py docs/synova/coordination/ownership.yaml` → `mac`，exit 0）⇒ 执行者可改规则。
+- **原生强制** = GitHub CODEOWNERS 的 review（`.github/CODEOWNERS` 由该表唯一生成；`docs/synova/coordination/**` 行 owner = 创始人主账号）。**不新增自研权限门禁**（复用原生机制）。
+- 改表属**门禁语义变更**：须同批 `--emit-codeowners` + 逐字节 drift 断言 + 判别性夹具，并**必过 K3** —— 同上节末句（既有行，保留）。
+
+## 域 ≠ 权限
+
+**域（mac / win / k3）只用于「协作防冲突」与 PR 单域判定；域 ≠ 权限。** 最终权限在**创始人**：域归属只回答「这条 PR 属于哪条线、派给谁不越域」，**不授予任何写权限**。
+
+- **source 回溯**：创始人 2026-09-27 明令；机读位置 = `ownership.yaml` 顶层键 `rule_authority`（`domain_vs_permission`）。
+- **同批收口（兜底不再等于 win）**：未匹配任何**显式规则**、且不落 `domain_defaults`（win 基线领地，`ownership.yaml` 顶层键）、且不在 `domain_neutral` 豁免的路径 ⇒ 报「未归属」并 **exit 1**（不再静默判 win；逃生口 = 同 PR 显式加规则）。
+- 改表属**门禁语义变更**：须同批 `--emit-codeowners` + 逐字节 drift 断言 + 判别性夹具，并**必过 K3** —— 同上节末句（既有行，保留）。
