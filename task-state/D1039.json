@@ -23,8 +23,9 @@
     "docs/synova/product-lines/evidence/D1039-收尾三件-diff-自验-遗留.md",
     "docs/synova/product-lines/evidence/D1039-A4c-自验与反例-原始输出.md",
     "docs/synova/product-lines/evidence/D1039-A4v-reconcile.sh",
-    "docs/synova/product-lines/evidence/D1039-PR正文与开PR指令-给CTO.md"
+    "docs/synova/product-lines/evidence/D1039-PR正文与开PR指令-给CTO.md",
+    "tests/control-tower/d956-failmsg.test.sh"
   ],
   "updated_at": "2026-09-28",
-  "updated_by": "synova-squad-lead (D708 夹带修复)"
+  "updated_by": "synova-squad-lead (P0-2 同步夹具声明)"
 }
