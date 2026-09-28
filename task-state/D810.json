@@ -29,7 +29,13 @@
       "scripts/golden-scenarios/evidence/GS-01-2026-09-18.json"
     ]
   },
-  "audit": null,
+  "audit": {
+    "verdict": "PASS",
+    "auditor": "kimi-k3",
+    "report": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次3-镜像尾点.md",
+    "date": "2026-09-28",
+    "summary": "LLM 韧性层接线复核（K3 批次3 22-6 抽验）：callWithResilience 生产调用实证（tool-loop-executor.ts:19 + retry-projection.ts:31）+ llm-resilience 14 用例独立重跑绿（批次2/3 双批佐证）——D809 note 所判『B-02 零调用方』自 D810（2026-09-18）起已过时，22-1 的 stale 应随证据补录翻转（FIX-J，D809 型脱节第三例）"
+  },
   "fix_task_id": null,
   "updated_at": "2026-09-18",
   "updated_by": "dsh-D810",
