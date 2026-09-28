@@ -1,0 +1,124 @@
+SRC = /tmp/a2-verify/frozen/check-pr-budget.sh
+SRC sha256 = 45c6bd5edc1c150128b4ba56fc2461b02819f10c58bf232090a171b923eb8b70
+BASE_OUT = /tmp/a2-verify/out-frozen
+
+────────── 变异体 m1 ──────────
+✅ 变异 m1 已应用: 去掉 ⓐ（AM_SET 空）条件
+   变异前锚点: 'if [ "$AM_N" -eq 0 ] && [ "$OUTSIDE_N" -eq 0 ] && [ "$DENY_N" -eq 0 ]; then'
+   变异后锚点: 'if [ "$OUTSIDE_N" -eq 0 ] && [ "$DENY_N" -eq 0 ]; then'
+结果表: /tmp/a2-verify/out-m1/results.tsv
+日志目录: /tmp/a2-verify/out-m1
+SBX 保留: /tmp/a2-verify/sbx.GE6g1O
+变异后 sha256 = b5620e6f869cf9313aec159fa4a54183565d2823c4365783bc68316c31a3e3eb
+
+────────── 变异体 m2 ──────────
+✅ 变异 m2 已应用: R 只记新路径（丢弃旧侧）
+   变异前锚点: '    R*)\n      ALL_PATHS="${ALL_PATHS}${_p1}\n${_p2}\n"'
+   变异后锚点: '    R*)\n      ALL_PATHS="${ALL_PATHS}${_p2}\n"'
+结果表: /tmp/a2-verify/out-m2/results.tsv
+日志目录: /tmp/a2-verify/out-m2
+SBX 保留: /tmp/a2-verify/sbx.IZ4akE
+变异后 sha256 = a4961c76d47953efba1c7af12775ed60b90195ffa312dea936701da093d2290d
+
+────────── 变异体 m3 ──────────
+✅ 变异 m3 已应用: D 从 COUNT_PATHS 去掉（删除不计预算）
+   变异前锚点: '    D*)\n      ALL_PATHS="${ALL_PATHS}${_p1}\n"\n      COUNT_PATHS="${COUNT_PATHS}${_p1}\n"'
+   变异后锚点: '    D*)\n      ALL_PATHS="${ALL_PATHS}${_p1}\n"'
+结果表: /tmp/a2-verify/out-m3/results.tsv
+日志目录: /tmp/a2-verify/out-m3
+SBX 保留: /tmp/a2-verify/sbx.Wi8dUv
+变异后 sha256 = ca04bf8fd8cabf5902a336b7c037de15f9386d7269102f931a8ba19fb601077d
+
+────────── 变异体 m4 ──────────
+✅ 变异 m4 已应用: 去掉 ❌ 命中硬拦（OUTBOUND_DENY_HARD）
+   变异前锚点: '      if [ "$AM_N" -eq 0 ]; then OUTBOUND_DENY_HARD=1; fi'
+   变异后锚点: '      :  # MUTATED: 硬拦被移除'
+结果表: /tmp/a2-verify/out-m4/results.tsv
+日志目录: /tmp/a2-verify/out-m4
+SBX 保留: /tmp/a2-verify/sbx.kOWyzt
+变异后 sha256 = 6a4688bed295aee060ec7bb5f6b77f4b7649c6d07d3886c17fa43e059f5c67bf
+
+══════════ 逐条对比（基线 PASS → 变异后 FAIL = 该条夹具抓住了变异）══════════
+基线夹具数 = 56，基线 FAIL = ['GIT-13', 'INJ-02c']
+
+变异体 m1:
+  变红的夹具（共 6 条）: ['GIT-02', 'GIT-02b', 'GIT-03', 'INJ-02a', 'INJ-02d', 'INJ-03a']
+  转绿的夹具（共 0 条）: 无
+    GIT-02       exit=exit=0   (FAIL)
+    GIT-02b      exit=exit=0   (FAIL)
+    GIT-03       exit=exit=0   (FAIL)
+    INJ-02a      exit=exit=0   (FAIL)
+    INJ-02d      exit=exit=0   (FAIL)
+    INJ-03a      exit=exit=0   (FAIL)
+  变异后 FAIL 行列:
+    GIT-02       exit=exit=0
+    GIT-02b      exit=exit=0
+    GIT-03       exit=exit=0
+    GIT-13       exit=exit=0
+    INJ-02a      exit=exit=0
+    INJ-02c      exit=exit=0
+    INJ-02d      exit=exit=0
+    INJ-03a      exit=exit=0
+
+变异体 m2:
+  变红的夹具（共 2 条）: ['GIT-06', 'INJ-06']
+  转绿的夹具（共 0 条）: 无
+    GIT-06       exit=exit=0   (FAIL)
+    INJ-06       exit=exit=0   (FAIL)
+  变异后 FAIL 行列:
+    GIT-06       exit=exit=0
+    GIT-13       exit=exit=0
+    INJ-02c      exit=exit=0
+    INJ-06       exit=exit=0
+
+变异体 m3:
+  变红的夹具（共 9 条）: ['GIT-02', 'GIT-02b', 'GIT-10', 'GIT-12', 'INJ-02a', 'INJ-02b', 'INJ-02d', 'INJ-10', 'INJ-12']
+  转绿的夹具（共 0 条）: 无
+    GIT-02       exit=exit=0   (FAIL)
+    GIT-02b      exit=exit=0   (FAIL)
+    GIT-10       exit=exit=0   (FAIL)
+    GIT-12       exit=exit=0   (FAIL)
+    INJ-02a      exit=exit=0   (FAIL)
+    INJ-02b      exit=exit=0   (FAIL)
+    INJ-02d      exit=exit=0   (FAIL)
+    INJ-10       exit=exit=0   (FAIL)
+    INJ-12       exit=exit=0   (FAIL)
+  变异后 FAIL 行列:
+    GIT-02       exit=exit=0
+    GIT-02b      exit=exit=0
+    GIT-10       exit=exit=0
+    GIT-12       exit=exit=0
+    GIT-13       exit=exit=0
+    INJ-02a      exit=exit=0
+    INJ-02b      exit=exit=0
+    INJ-02c      exit=exit=0
+    INJ-02d      exit=exit=0
+    INJ-10       exit=exit=0
+    INJ-12       exit=exit=0
+
+变异体 m4:
+  变红的夹具（共 10 条）: ['GIT-06', 'GIT-07', 'GIT-08', 'GIT-09', 'GIT-11', 'INJ-06', 'INJ-07', 'INJ-08', 'INJ-09', 'INJ-11']
+  转绿的夹具（共 0 条）: 无
+    GIT-06       exit=exit=0   (FAIL)
+    GIT-07       exit=exit=0   (FAIL)
+    GIT-08       exit=exit=0   (FAIL)
+    GIT-09       exit=exit=0   (FAIL)
+    GIT-11       exit=exit=0   (FAIL)
+    INJ-06       exit=exit=0   (FAIL)
+    INJ-07       exit=exit=0   (FAIL)
+    INJ-08       exit=exit=0   (FAIL)
+    INJ-09       exit=exit=0   (FAIL)
+    INJ-11       exit=exit=0   (FAIL)
+  变异后 FAIL 行列:
+    GIT-06       exit=exit=0
+    GIT-07       exit=exit=0
+    GIT-08       exit=exit=0
+    GIT-09       exit=exit=0
+    GIT-11       exit=exit=0
+    GIT-13       exit=exit=0
+    INJ-02c      exit=exit=0
+    INJ-06       exit=exit=0
+    INJ-07       exit=exit=0
+    INJ-08       exit=exit=0
+    INJ-09       exit=exit=0
+    INJ-11       exit=exit=0

@@ -1,0 +1,57 @@
+{
+  "task": "D1044",
+  "step": "② 档案仓承接独立复核（不采信执行方与队长的既有结论，自基线 commit 对象独立复算）",
+  "as_of": "2026-09-28T00:36:33Z",
+  "source_side": "基线 commit ff467712 的 git 对象（git cat-file blob ff467712:<path>），非工作区",
+  "dest_side": "~/Synova-过程档案/出库-主仓/.claude/task-briefs/archive/",
+  "commands": [
+    {
+      "cmd": "cd /Users/wane/Synova-过程档案/出库-主仓 && find .claude/task-briefs/archive -name '*.md' | wc -l",
+      "exit": 0,
+      "stdout": "     294\n",
+      "stderr": ""
+    },
+    {
+      "cmd": "git ls-tree -r --name-only ff467712 .claude/task-briefs/archive/ | wc -l",
+      "exit": 0,
+      "stdout": "     294\n",
+      "stderr": ""
+    },
+    {
+      "cmd": "git ls-tree -r --name-only ff467712 .claude/task-briefs/archive/ > /tmp/b1a/base-paths.txt\nwhile IFS= read -r p; do\n  h=$(git cat-file blob \"ff467712:$p\" | shasum -a 256 | awk '{print $1}')\n  printf '%s  %s\\n' \"$h\" \"$p\"\ndone < /tmp/b1a/base-paths.txt | sort -k2 > /tmp/b1a/base.sha256\nwc -l < /tmp/b1a/base.sha256",
+      "exit": 0,
+      "stdout": "     294\n",
+      "stderr": ""
+    },
+    {
+      "cmd": "cd /Users/wane/Synova-过程档案/出库-主仓 && find .claude/task-briefs/archive -name '*.md' | sort | xargs shasum -a 256 | sort -k2 > /tmp/b1a/dst.sha256\nwc -l < /tmp/b1a/dst.sha256",
+      "exit": 0,
+      "stdout": "     294\n",
+      "stderr": ""
+    },
+    {
+      "cmd": "diff <(awk '{print $1, $2}' /tmp/b1a/base.sha256) <(awk '{print $1, $2}' /tmp/b1a/dst.sha256) && echo RECONCILE_OK_294_294",
+      "exit": 0,
+      "stdout": "RECONCILE_OK_294_294\n",
+      "stderr": ""
+    },
+    {
+      "cmd": "awk 'NR%15==1{print $2}' /tmp/b1a/base.sha256 > /tmp/b1a/cmp20.txt\nok=0; fail=0\nwhile IFS= read -r p; do\n  git -C /Users/wane/SynovaAgent/.synova-wt-b1-d1044 cat-file blob \"ff467712:$p\" > /tmp/b1a/.cmpbase\n  if cmp -s /tmp/b1a/.cmpbase \"/Users/wane/Synova-过程档案/出库-主仓/$p\"; then echo \"CMP_OK   $p\"; ok=$((ok+1)); else echo \"CMP_FAIL $p\"; fail=$((fail+1)); fi\ndone < /tmp/b1a/cmp20.txt\necho \"--- cmp summary: OK=$ok FAIL=$fail  (sample size $(wc -l < /tmp/b1a/cmp20.txt)) ---\"",
+      "exit": 0,
+      "stdout": "CMP_OK   .claude/task-briefs/archive/2026-06-05-1600----getX.md\nCMP_OK   .claude/task-briefs/archive/2026-06-06-1919-Phase-6-LLM--reasoni.md\nCMP_OK   .claude/task-briefs/archive/2026-06-15-2247-Phase-1---6-.md\nCMP_OK   .claude/task-briefs/archive/2026-06-19-1338-SkillExpertPKB.md\nCMP_OK   .claude/task-briefs/archive/2026-06-21-0106-v33v34.md\nCMP_OK   .claude/task-briefs/archive/2026-06-22-2313---.md\nCMP_OK   .claude/task-briefs/archive/2026-06-24-0416-T2--.md\nCMP_OK   .claude/task-briefs/archive/2026-06-26-0010-Task-12-data-readiness--data-silos-.md\nCMP_OK   .claude/task-briefs/archive/2026-06-27-1623-Task-32-I2-.md\nCMP_OK   .claude/task-briefs/archive/2026-06-27-2148-Task-52-O1--O2-.md\nCMP_OK   .claude/task-briefs/archive/2026-06-28-0118-fix-O4---.md\nCMP_OK   .claude/task-briefs/archive/2026-06-29-1422-Slice-1-Cron-GraphStore.md\nCMP_OK   .claude/task-briefs/archive/2026-06-30-Phase-P1-1-L3WriteAPI.md\nCMP_OK   .claude/task-briefs/archive/2026-07-01-Phase-P0-evolution-hardening.md\nCMP_OK   .claude/task-briefs/archive/2026-07-02-HOST-config-setup.md\nCMP_OK   .claude/task-briefs/archive/2026-07-03-RUNTIME-Phase5-memory-forensics-fts5.md\nCMP_OK   .claude/task-briefs/archive/2026-07-05-2158-Phase-2-Batch-3.md\nCMP_OK   .claude/task-briefs/archive/2026-07-09-T9-sentinel-accuracy-management-economics.md\nCMP_OK   .claude/task-briefs/archive/2026-07-14-D51-CI-CD黄金案例F1门禁.md\nCMP_OK   .claude/task-briefs/archive/2026-07-21-D8e-conflict-arbitration.md\n--- cmp summary: OK=20 FAIL=0  (sample size       20) ---\n",
+      "stderr": ""
+    },
+    {
+      "cmd": "A=\"/Users/wane/Synova-过程档案\"\necho \"-- files in HEAD commit --\"; git -C \"$A\" -c core.quotepath=false diff-tree --name-only -r --no-commit-id HEAD | wc -l\necho \"-- files under 出库-主仓/ prefix --\"; git -C \"$A\" -c core.quotepath=false diff-tree --name-only -r --no-commit-id HEAD | grep -c '^出库-主仓/'\necho \"-- files NOT under 出库-主仓/ prefix --\"; git -C \"$A\" -c core.quotepath=false diff-tree --name-only -r --no-commit-id HEAD | grep -vc '^出库-主仓/' || true\necho \"-- non-archive paths under prefix --\"; git -C \"$A\" -c core.quotepath=false diff-tree --name-only -r --no-commit-id HEAD | grep '^出库-主仓/' | grep -vc '^出库-主仓/\\.claude/task-briefs/archive/.*\\.md$' || true\necho \"-- archive repo status --\"; git -C \"$A\" status --short",
+      "exit": 0,
+      "stdout": "-- files in HEAD commit --\n     294\n-- files under 出库-主仓/ prefix --\n294\n-- files NOT under 出库-主仓/ prefix --\n0\n-- non-archive paths under prefix --\n0\n-- archive repo status --\n M INDEX.md\n?? \"2026-09-28-\\351\\227\\250\\347\\246\\201\\347\\272\\277-\\344\\272\\244\\344\\273\\230-A4-CI\\346\\210\\220\\346\\234\\254\\346\\224\\266\\345\\217\\243-\\350\\277\\275\\345\\212\\240\\345\\233\\236\\346\\211\\247.md\"\n?? \"2026-09-28-\\351\\227\\250\\347\\246\\201\\347\\272\\277-\\344\\272\\244\\344\\273\\230-A4-CI\\346\\210\\220\\346\\234\\254\\346\\224\\266\\345\\217\\243.md\"\n",
+      "stderr": ""
+    }
+  ],
+  "notes": {
+    "b7_测量修正": "首测（rec/b7.out）用 `git diff-tree --name-only` 默认 core.quotepath=true，非 ASCII 路径被八进制转义成 \"\\345...\"，导致 `grep -vc '^出库-主仓/'` 误判 294 为『非该前缀』。修正为 `-c core.quotepath=false` 后：前缀内 294 / 非前缀 0 / 前缀内非 archive/*.md 0。原始两版输出俱在（b7.out 误判版 + b7b.out 修正版）。",
+    "对账强度": "diff 比较的是 {sha256, path} 成对集合 ⇒ 同时证明『件数相同 + 路径集合相同 + 字节内容相同』，非仅数量相等。",
+    "档案仓残留（非本批写集，仅记录）": "档案仓工作区仍为 ` M INDEX.md` + 2 个外来未跟踪文件（`2026-09-28-门禁线-交付-A4-CI成本收口.md` 及其『追加回执』）——后者属另一条线，未被 85a55b1 纳入。"
+  },
+  "conclusion": "独立复核结论：档案仓承接与出库前基线一致 294/294。dst = 294 件、基线 = 294 件、逐件 sha256 成对集合 diff 为空（RECONCILE_OK_294_294）、20 件抽样 cmp 字节级对读 OK=20 FAIL=0（抽样口径 NR%15==1，确定性抽样，覆盖全域 1..286 行）。档案仓 HEAD = 85a55b1『docs(档案仓): 承接 B1/D1044 出库 294 件 briefs/archive』，该提交文件数 294 且全部落在 出库-主仓/.claude/task-briefs/archive/*.md 前缀内。"
+}
