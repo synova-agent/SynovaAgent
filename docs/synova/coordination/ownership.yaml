@@ -204,5 +204,15 @@ rules:
 #   哪条线」的信号。豁免后真跨域（win 代码 + mac 工具链）仍拦住。
 # D782 增补二: 防线产物（DRIFT-LEDGER.md / system-registry.json）——doc-system 工具链（mac）
 #   的运行产物，路径恰在 docs/authority/（兜底判 win）——同 D758 证据目录逻辑: 产物跟工具链走。
-domain_neutral: [".claude/bypass.log", ".claude/gate-hits.log", ".claude/task-briefs/**", "task-state/**", "memory/notes/**", ".codex/**", "docs/synova/product-lines/evidence/**", ".gitignore", "AGENTS.md", "CLAUDE.md", "LOOP.md", "knowledge/shared/README.md", "docs/authority/DRIFT-LEDGER.md", "docs/authority/system-registry.json"]
+# D1055 增补（2026-09-28 CT10 批实测跨域）: D718 首行 BOM 存量清理的**不可分对**——
+#   ① scripts/archive/gen-survey.py —— 归档一次性生成器（生成 docs/research 行业生命周期调查稿），
+#      行首带 BOM（实测 efbbbf）；无专规则 ⇒ 被 `**` 兜底判 win。
+#   ② tests/control-tower/grep-oP-regression.test.sh —— mac 控制塔可移植性回归网，其 BOM_PENDING
+#      棘轮清单语义 = 「全仓 BOM 集合必须与清单逐条一致」⇒ 清掉①的 BOM 时②的清单**必须同批删条目**
+#      （不同批 → 棘轮漂移 → 该测试转红）。二者是不可分的同一件事。
+#   实测（改前）: python3 scripts/control-tower/check-ownership.py <①> <②>
+#      → win① / mac② / ❌ FAIL 跨域 ['mac','win']  （exit 1）
+#   判定: 两条路径都不构成「这条 PR 属于哪条线」的信号（①是归档件、②是 mac 工具链自身的棘轮清单），
+#   正是 D734 域判定豁免的适用面。豁免后真跨域（win 代码 + mac 工具链）仍被拦住。
+domain_neutral: [".claude/bypass.log", ".claude/gate-hits.log", ".claude/task-briefs/**", "task-state/**", "memory/notes/**", ".codex/**", "docs/synova/product-lines/evidence/**", ".gitignore", "AGENTS.md", "CLAUDE.md", "LOOP.md", "knowledge/shared/README.md", "docs/authority/DRIFT-LEDGER.md", "docs/authority/system-registry.json", "scripts/archive/gen-survey.py", "tests/control-tower/grep-oP-regression.test.sh"]
 

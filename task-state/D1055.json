@@ -1,0 +1,31 @@
+{
+  "task_id": "D1055",
+  "title": "CT10-mac 门禁凑批（mac 域 9 卡：①ownership+2 ②A2假绿 ④F-2 ⑤diff-filter+A7 ⑥控制塔3发现 ⑦--at ⑧夹具化 ⑨D809 ⑩O-3）",
+  "status": "impl_done",
+  "risk": "high",
+  "domain": "mac",
+  "owner": "ct10-exec",
+  "executor": "ct10-exec（A）/ 独立自验待派（ct10-verify D1057）",
+  "blocked": null,
+  "spec": ".claude/task-briefs/2026-09-28-D1055-CT10-mac门禁凑批.md",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "write_set": [
+    "docs/synova/coordination/ownership.yaml",
+    "scripts/control-tower/pre-dispatch-check.sh",
+    "scripts/product-lines/aggregate-todos.py",
+    "scripts/product-lines/calc-progress.py",
+    "scripts/product-lines/evidence-writer.py",
+    "scripts/product-lines/run-machine-evidence.sh",
+    "tests/control-tower/brief-parseable.test.sh",
+    "docs/synova/product-lines/evidence/CT10-mac-gate-batch-20260928.md",
+    "task-state/D1055.json",
+    ".claude/task-briefs/2026-09-28-D1055-CT10-mac门禁凑批.md"
+  ],
+  "base_branch": "main",
+  "branch": "fix/ct10-mac-gates-20260928",
+  "note": "CT10 拆 2 PR 之 mac 件（CTO 裁定）。本批落地 6 卡：①④⑦⑧② 完整 + ⑤ 的 PYBIN 半件。未落地并附实测理由：⑤ 的 --diff-filter=A→ACMR（实测会令 :458 NEW_IMPL 把『修改过的 src/ 文件』也当新增 ⇒ 组 2『新文件须配对测试』全队误报）；⑥（三条发现的目标文件 devdoc_writeset.py / merge_writeset_gate.py / synova-commit 均不在本卡写集）；⑨⑩（需更大语义变更 + 定位，本轮未动）。逐条见证据文件 §七 遗留清单。",
+  "updated_at": "2026-09-28",
+  "updated_by": "ct10-exec"
+}

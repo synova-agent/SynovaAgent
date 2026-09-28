@@ -51,7 +51,19 @@ AUTO_END = "# AUTO:END"
 MANUAL_START = "# MANUAL:START"
 MANUAL_END = "# MANUAL:END"
 
-D_RE = re.compile(r"\bD(\d{3})\b")
+# D1055 ④ (B2 报告 F-2「D# 抽取区分大小写」) 修复:
+#   旧: r"\bD(\d{3})\b" —— 两处缺陷同族（都是"只认一种 D# 写法"）:
+#     ① 区分大小写 ⇒ 小写 `d922` 抽不到 → d_number=null → task_state_status=__no_did__
+#        ⇒ X4（task-state status ∈ {claimed,in_progress,spec_done}）永不生效，该件只靠
+#        X5「近 14 天」偶然留下。B2 报告实测当事件 = .claude/task-briefs/2026-09-24-B3-d922-fixture-registry.md
+#        （真实状态 D922 = spec_done，在飞）。
+#     ② 恰好 3 位 ⇒ `D1000+` 全数抽不到（注册表已进入 4 位号；实测仓内 8 个 4 位号 brief 名）。
+#   新: r"\b[Dd](\d{3,})\b" —— 大小写通吃 + 3 位及以上。
+#   为何用 {3,} 而非卡面建议的 \d+ : 纯 \d+ 会把 `D1`/`d2` 这类 1-2 位噪音抽成 "D001"/"D002"
+#     并写进 todos.depends ⇒ **造出一个不存在的依赖**（宁缺勿造）。仓内 task-state 实测下限
+#     = D356（B2 报告 registry_d_number_floor=356，1-2 位属注册表时代之前），故 {3,} 对真实
+#     任务号是完备的，只滤掉噪音。
+D_RE = re.compile(r"\b[Dd](\d{3,})\b")
 
 
 def read_text(path: Path):
@@ -98,7 +110,7 @@ def parse_ledger(text: str, d_override, keywords):
             continue
         # 修复列（cells[5]）或任务列中的编号 → 逐条映射（区间 D355-D360 展开）
         d_refs_raw = cells[5] if len(cells) > 5 else ""
-        range_m = re.search(r"D(\d{3})\s*-\s*D(\d{3})", d_refs_raw)
+        range_m = re.search(r"[Dd](\d{3,})\s*-\s*[Dd](\d{3,})", d_refs_raw)
         if range_m:
             d_refs = [str(n) for n in range(int(range_m.group(1)), int(range_m.group(2)) + 1)]
         else:

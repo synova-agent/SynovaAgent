@@ -8,7 +8,8 @@
 #   3. 模板输出含 #CRITERIA: [A-D]
 #   4. 手造坏 brief（无做什么段/无 #CRITERIA）→ exit 1 指明缺失项
 #   5. brief 不存在 → exit 0 + degraded（fail-open）
-#   6. 真实 D312 brief 回归：--q2-include 提取命中其路径
+#   6. Q2 写集提取回归（**自带临时夹具**；D1055 ⑧：不再依赖真实仓 D312 brief）
+#   7. legacy brief 只报真实缺失 + PYBIN（**自带临时夹具**；D1055 ⑧：不再依赖真实仓 D286 brief）
 #
 # 用法: bash tests/control-tower/brief-parseable.test.sh
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -92,26 +93,94 @@ OUT=$(bash "$CHECKER" "$TMP_DIR/bp-nonexist.md" 2>&1) || EXIT=$?
 assert_exit 0 "$EXIT" "brief 不存在 → exit 0（fail-open）"
 echo ""
 
-# ── 6. 真实 D312 brief 回归 ──
-echo "── 6. D312 真实 brief 回归 ──"
-if [ -f "$REPO_DIR/.claude/task-briefs/D312-baseline-tools.md" ]; then
-  OUT=$(python3 "$PARSER" --q2-include "$REPO_DIR/.claude/task-briefs/D312-baseline-tools.md" 2>&1) || true
-  assert_contains "$OUT" "hook-git-guard.sh" "D312 brief 提取到 hook-git-guard.sh"
-  assert_contains "$OUT" "baseline-check.sh" "D312 brief 提取到 baseline-check.sh"
+# ── 6. Q2 写集提取回归（自带临时夹具 — D1055 ⑧）──
+# 原实现拿**真实仓 brief** 当夹具（.claude/task-briefs/D312-baseline-tools.md）⇒ 该生产件被
+# 永久绑进测试：出库/归档时必须为测试让路（A-03 出库遇到的实际阻力）。改为自带临时夹具，
+# 断言**同一契约**（--q2-include 能提取 Q2 段内的脚本路径），不再耦合任何生产资产。
+echo "── 6. Q2 写集提取回归（自带夹具）──"
+FIX_A="$TMP_DIR/bp-fixture-q2.md"
+cat > "$FIX_A" <<'BRIEF_A'
+# Task Brief: D999 夹具（Q2 写集提取；自带夹具，不依赖真实仓 brief）
+
+## Q0: 定位 — 项目拼图 + 文件审计
+### a) 项目拼图
+夹具：验证 brief_parser --q2-include 的提取契约。
+### b) 文件审计
+夹具：无。
+### c) 决策
+夹具：无。
+
+## Q1: 调研 — 业界最佳实践 / Anthropic 决策链 / memory 历史教训
+参考：夹具（Anthropic 决策链占位）。
+
+## Q2: 范围 — 正确的最简方案
+做什么：
+- scripts/hooks/hook-git-guard.sh：夹具
+- scripts/control-tower/baseline-check.sh：夹具
+
+不做什么：
+- scripts/audit/**
+
+## Q3: 验收 — 入口 → 交互 → 结果
+入口：夹具
+处理：夹具
+结果：夹具
+
+## 架构层: L4
+## Done 标准
+- [ ] verify: bash scripts/hooks/hook-git-guard.sh 0
+BRIEF_A
+if [ -f "$FIX_A" ]; then
+  OUT=$(python3 "$PARSER" --q2-include "$FIX_A" 2>&1) || true
+  assert_contains "$OUT" "hook-git-guard.sh" "自带夹具提取到 hook-git-guard.sh"
+  assert_contains "$OUT" "baseline-check.sh" "自带夹具提取到 baseline-check.sh"
 else
-  fail "D312 brief 不存在"
+  fail "自带夹具未生成 ($FIX_A)"
 fi
 echo ""
 
-# ── 7. D317: legacy brief 仅报真实缺失（非 4 项假失败）+ PYBIN 断言 ──
-echo "── 7. D317 legacy brief 回归 + PYBIN ──"
-if [ -f "$REPO_DIR/.claude/task-briefs/2026-08-02-D286-GraphStore-unify.md" ]; then
-  OUT=$(bash "$CHECKER" "$REPO_DIR/.claude/task-briefs/2026-08-02-D286-GraphStore-unify.md" 2>&1) || true
-  assert_contains "$OUT" "#CRITERIA 缺失" "legacy brief 报 #CRITERIA 缺失（真实缺失项）"
-  assert_not_contains "$OUT" "Q2 不可解析" "legacy brief 不报 Q2 假失败（python 可用时）"
-  assert_not_contains "$OUT" "架构层未标注" "legacy brief 不报架构层假失败（D286 有 L4）"
+# ── 7. legacy brief 仅报真实缺失（非假失败）+ PYBIN（自带临时夹具 — D1055 ⑧）──
+# 同 ⑥：原实现依赖真实仓 .claude/task-briefs/2026-08-02-D286-GraphStore-unify.md。
+# 自带夹具复刻 legacy 形态 = 无 #CRITERIA + 有 Q2 + 有架构层 L4。
+echo "── 7. legacy brief 真缺失项 + PYBIN（自带夹具）──"
+FIX_B="$TMP_DIR/bp-fixture-legacy.md"
+cat > "$FIX_B" <<'BRIEF_B'
+# Task Brief: D998 夹具（legacy 形态：无 #CRITERIA，有 Q2 + 架构层 L4）
+
+## Q0: 定位 — 项目拼图 + 文件审计
+### a) 项目拼图
+夹具：验证 legacy brief 只报真实缺失项。
+### b) 文件审计
+夹具：无。
+### c) 决策
+夹具：无。
+
+## Q1: 调研 — 业界最佳实践 / Anthropic 决策链 / memory 历史教训
+参考：夹具（Anthropic 决策链占位）。
+
+## Q2: 范围 — 正确的最简方案
+做什么：
+- scripts/hooks/hook-git-guard.sh：夹具
+
+不做什么：
+- scripts/audit/**
+
+## Q3: 验收 — 入口 → 交互 → 结果
+入口：夹具
+处理：夹具
+结果：夹具
+
+## 架构层: L4
+## Done 标准
+- [ ] verify: bash scripts/hooks/hook-git-guard.sh 0
+BRIEF_B
+if [ -f "$FIX_B" ]; then
+  OUT=$(bash "$CHECKER" "$FIX_B" 2>&1) || true
+  assert_contains "$OUT" "#CRITERIA 缺失" "legacy 夹具报 #CRITERIA 缺失（真实缺失项）"
+  assert_not_contains "$OUT" "Q2 不可解析" "legacy 夹具不报 Q2 假失败（python 可用时）"
+  assert_not_contains "$OUT" "架构层未标注" "legacy 夹具不报架构层假失败（夹具有 L4）"
 else
-  fail "D286 brief 不存在"
+  fail "自带夹具未生成 ($FIX_B)"
 fi
 assert_contains "$(grep -m1 '^PYBIN=' "$CHECKER" || echo '')" "PYBIN=" "checker 有 PYBIN 解析（D317 跨平台回退）"
 echo ""

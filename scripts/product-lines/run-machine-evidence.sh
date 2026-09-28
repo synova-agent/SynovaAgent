@@ -72,6 +72,7 @@ QUOTE="vitest 套件全绿"
 if [ "$SKIP_VITEST" = "0" ]; then
   echo "── A2: 跑 test 绑定套件 ───────────────────────"
   TEST_FILES=""
+  UNLOCATED=""
   for s in $SUITES; do
     # 套件名 → 测试文件（按语义匹配：cron-scheduler → tests/cron/scheduler.test.ts 等）
     F=$(find "$REPO_DIR/tests" -name "*.test.ts" 2>/dev/null | xargs grep -l "$s" 2>/dev/null | head -1)  # swallow-ok: 套件定位探测，未找到=跳过该套件
@@ -83,7 +84,11 @@ if [ "$SKIP_VITEST" = "0" ]; then
       TEST_FILES="$TEST_FILES $F"
       echo "  + $s → $(basename $F)"
     else
-      echo -e "${YELLOW}  ? $s → 未找到测试文件（跳过该套件）${NC}"
+      # D1055 ② 修复（A2 假绿）: 原实现只打印一行黄字就 continue —— 未定位套件被静默丢弃，
+      #   而其对应验收点仍会被 `--points "$POINTS"` 整体写成 pass ⇒ **没跑过的点被记为通过**。
+      #   现显式登记到 UNLOCATED，由 §4 决定谁有资格进 pass 证据。
+      UNLOCATED="$UNLOCATED $s"
+      echo -e "${YELLOW}  ? $s → 未找到测试文件（登记为未覆盖，不写 pass）${NC}"
     fi
   done
 
@@ -108,6 +113,45 @@ if [ "$SKIP_VITEST" = "0" ]; then
   fi
 fi
 
+# ── 3b. D1055 ②: 验收点级覆盖门（消 A2 假绿）──
+#   契约: 只有「全部 test: 套件都定位到」的验收点才有资格写 pass 证据。
+#   未覆盖点**显式排除 + 可见**（不是静默丢弃）；全无覆盖点 → exit 2（fail-closed，对齐 :91）。
+#   为什么不能"整体 exit 2": 实测 32 个套件仅 15 个可定位 —— 一刀切会让已覆盖的 15 个也失去证据，
+#   以"诚实"之名把真阳性一起打掉；正确粒度是点级。
+EVIDENCE_POINTS="$POINTS"
+if [ -n "${UNLOCATED// /}" ]; then
+  echo -e "${YELLOW}⚠ A2: 存在未定位套件 — 其验收点排除出 pass 证据（未跑 ≠ 通过）${NC}"
+  echo -e "${YELLOW}   未定位套件:${UNLOCATED}${NC}"
+  echo "degraded: 套件未定位 → 对应验收点不写 pass 证据" >&2
+  EVIDENCE_POINTS=$(python3 - "$UNLOCATED" <<'PYEOF'
+import sys
+su = {s for s in sys.argv[1].split() if s}
+try:
+    import productline_yaml
+except ImportError:
+    sys.path.insert(0, 'scripts/product-lines')
+    import productline_yaml
+spec = productline_yaml.load_file('docs/synova/product-lines/product-lines.yaml')
+covered = []
+for line in spec.get('lines', []):
+    for p in line.get('acceptance_points', []):
+        suites = [str(e).split(':', 1)[1].strip()
+                  for e in (p.get('evidence') or []) if str(e).startswith('test:')]
+        if suites and all(s not in su for s in suites):
+            pid = str(p.get('id', ''))
+            if pid:
+                covered.append(pid)
+print(','.join(covered))
+PYEOF
+)
+  if [ -z "$EVIDENCE_POINTS" ]; then
+    echo -e "${RED}❌ A2: 无任何验收点的套件全部定位到 — 不写证据（fail-closed）${NC}"
+    echo "degraded: 零覆盖，拒绝写 pass 证据" >&2
+    exit 2
+  fi
+  echo -e "${GREEN}ℹ A2: 仅对已覆盖验收点写证据: ${EVIDENCE_POINTS}${NC}"
+fi
+
 # ── 4. 写证据（D774 两道防线）──
 #  ① SYNO_A2_SKIP_WRITE=1: rerun-evidence.sh 编排模式下跳过写入——该场景证据已由
 #     rerun-evidence 亲自写过（真实 verdict），refresh-all 内嵌的本环节是 --skip-vitest
@@ -119,7 +163,7 @@ if [ "${SYNO_A2_SKIP_WRITE:-0}" = "1" ]; then
   exit 0
 fi
 
-if python3 - "$EVIDENCE_DIR" "$TODAY" "$VERDICT" "$POINTS" <<'PYEOF'
+if python3 - "$EVIDENCE_DIR" "$TODAY" "$VERDICT" "$EVIDENCE_POINTS" <<'PYEOF'
 import json, sys, glob, os
 edir, today, verdict, points = sys.argv[1:5]
 want = [p.strip() for p in points.split(",") if p.strip()]
@@ -145,10 +189,10 @@ python3 "$EVIDENCE_WRITER" \
   --type test \
   --date "$TODAY" \
   --verdict "$VERDICT" \
-  --points "$POINTS" \
+  --points "$EVIDENCE_POINTS" \
   --source "run-machine-evidence.sh (A2)" \
   --quote "$QUOTE" \
   --out-dir "$EVIDENCE_DIR" 2>&1 | tail -2
 
-echo -e "${GREEN}✓ A2 完成: 证据 verdict=${VERDICT} 已入库（${POINTS}）${NC}"
+echo -e "${GREEN}✓ A2 完成: 证据 verdict=${VERDICT} 已入库（${EVIDENCE_POINTS}）${NC}"
 exit 0

@@ -655,7 +655,9 @@ def status_for_point(point, verdicts_by_point, line_modules, git_cmd, today, pro
         return "verified"
 
     if machine:
-        latest = max(machine, key=lambda v: v["date"])
+        # CT-62/D1055 ⑦: 与 passes 路径（:630/:645）同口径 —— 同日多份证据时用 at 决胜，
+        #   缺省回退 date-only（既有语义不回归）。
+        latest = max(machine, key=lambda v: (v["date"], v.get("at") or ""))
         if latest["verdict"] == "fail":
             return "failed"
         # 机器验证绿 → 待裁判；但先查失效（A1 + 14 天 TTL）
@@ -666,7 +668,10 @@ def status_for_point(point, verdicts_by_point, line_modules, git_cmd, today, pro
         except ValueError:
             problems.append("点 %s 证据日期格式非法: %r" % (pid, latest["date"]))
             return "pending_k3"
-        touched, err = git_touched_after(line_modules, latest["date"], git_cmd)
+        # D1055 ⑦ (欠账表「machine 路径不消费 at」) 修复: 旧实现恒用 date-only（=T00:00:00），
+        #   当日生成的机器证据会被"当日提交"判成 touched ⇒ 误判 stale。改为 at 优先，
+        #   与 :600 的 freshness_gate(evidence_at=...) 同语义；缺 at → 回退 date-only（不回归）。
+        touched, err = git_touched_after(line_modules, latest.get("at") or latest["date"], git_cmd)
         if err:
             problems.append("点 %s 失效检测降级: %s" % (pid, err))
         if touched:

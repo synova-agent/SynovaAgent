@@ -39,7 +39,7 @@ VALID_TYPES = ("ci", "scenario", "test", "founder_demo")
 VALID_VERDICTS = ("pass", "fail")
 
 
-def write_evidence(rec_type, date, verdict, points, source, quote, out_dir):
+def write_evidence(rec_type, date, verdict, points, source, quote, out_dir, at=None):
     if rec_type not in VALID_TYPES:
         log.error("非法证据类型: %r（可选 %s）", rec_type, "/".join(VALID_TYPES))
         sys.exit(2)
@@ -51,6 +51,16 @@ def write_evidence(rec_type, date, verdict, points, source, quote, out_dir):
     except ValueError:
         log.error("日期格式非法: %r（需 YYYY-MM-DD）", date)
         sys.exit(2)
+    # D1055 ⑦: --at 校验（ISO8601 datetime）。给错格式 → fail-closed（exit 2），
+    #   绝不静默丢弃 —— 丢了 at 会让该条证据退回 date-only 语义，正是本次要修的缺陷。
+    if at is None:
+        at = datetime.now().replace(microsecond=0).isoformat()
+    else:
+        try:
+            datetime.fromisoformat(at)
+        except ValueError:
+            log.error("--at 格式非法: %r（需 ISO8601，如 2026-09-28T19:30:00）", at)
+            sys.exit(2)
     pts = [p.strip() for p in points.split(",") if p.strip()]
     if not pts:
         log.error("--points 为空（至少一个验收点 id，如 7-1）")
@@ -78,6 +88,7 @@ def write_evidence(rec_type, date, verdict, points, source, quote, out_dir):
         "record_type": rec_type,
         "source": source,
         "date": date,
+        "at": at,
         "written_by": "evidence-writer.py",
         "verdicts": [
             {"acceptance_point": p, "verdict": verdict, "quote": quote} for p in pts
@@ -97,6 +108,13 @@ def main():
     ap = argparse.ArgumentParser(description="机器验证入库（A2）")
     ap.add_argument("--type", required=True, help="ci|scenario|test|founder_demo")
     ap.add_argument("--date", default=datetime.now().strftime("%Y-%m-%d"))
+    # D1055 ⑦ (欠账表「evidence-writer ... 不消费 at」) 修复: 补 --at。
+    #   语义: `at` 是**同日内的时刻**（ISO 8601，全量 datetime），与 --date（日粒度）并用——
+    #   calc-progress 的失效判定（freshness_gate/git_touched_after）在 date-only 下把证据
+    #   时间当 T00:00:00，于是"当日生成证据 + 当日有提交"被误判 stale；带 at 即可精确判定。
+    #   缺省 = 当前时刻（生成即写下真实时刻），显式给出则以其为准（重放/夹具注入用）。
+    ap.add_argument("--at", default=None,
+                    help="证据生成时刻 ISO8601（缺省=当前时刻）；同日多份证据靠它决胜")
     ap.add_argument("--verdict", required=True, choices=["pass", "fail"])
     ap.add_argument("--points", required=True, help="逗号分隔验收点 id，如 7-1,9-2")
     ap.add_argument("--source", required=True, help="来源（CI job / 场景脚本路径）")
@@ -104,7 +122,7 @@ def main():
     ap.add_argument("--out-dir", default=str(PROJECT_ROOT / "docs/synova/product-lines/evidence"))
     args = ap.parse_args()
     write_evidence(args.type, args.date, args.verdict, args.points, args.source,
-                   args.quote, args.out_dir)
+                   args.quote, args.out_dir, at=args.at)
     sys.exit(0)
 
 
