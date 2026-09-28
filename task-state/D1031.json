@@ -1,0 +1,29 @@
+{
+  "task_id": "D1031",
+  "title": "CT系列-gitattributes裸CR清理（L-CR + L-M2 工作树清理）",
+  "status": "claimed",
+  "risk": "low",
+  "domain": "win",
+  "owner": "win",
+  "executor": "gate-fix（SynovaAgent 专职小队编码成员）",
+  "milestone": "M0 项目管理基建",
+  "depends_on": [],
+  "blocked": null,
+  "target": "2026-W40",
+  "spec": ".claude/task-briefs/2026-09-28-D1031-CT系列-gitattributes裸CR清理.md",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "priority": 2,
+  "base_branch": "main",
+  "base_head": "4afd4ce187575b96c0074d1db81277a8a08e4679",
+  "note": "win 域独立 PR（D734 跨域：.gitattributes owner=win，本批其余文件全是 mac ⇒ 混在一起必跨域判红）。两件：① L-CR = .gitattributes 第 23 行行中裸 CR 清除（零逻辑变更，只删 1 字节；判据：perl 扫 CR 改前有输出/改后零输出 + diff --stat 1/1 + numstat 对称 + 无 mode change + 字节级证明只差 1 字节）。② L-M2 = 清理 /private/tmp/wt-ci 工作树登记（已兵底 /tmp/L-M2-preserve/L-M2-staged.patch md5=8782eb941b020e1e046a170a86cbe79c；远端保底分支 fix/ci-concurrency-trigger-narrowing 不删）。",
+  "write_set": [
+    ".gitattributes",
+    "docs/synova/product-lines/evidence/CT3-l-cr-gitattributes-20260927.md",
+    "docs/synova/product-lines/evidence/CT3-LM2-wt-ci-cleanup-20260928.md",
+    ".claude/task-briefs/2026-09-28-D1031-CT系列-gitattributes裸CR清理.md",
+    "task-state/D1031.json",
+    ".claude/bypass.log"
+  ]
+}
