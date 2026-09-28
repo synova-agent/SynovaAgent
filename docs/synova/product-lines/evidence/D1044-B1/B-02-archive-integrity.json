@@ -1,0 +1,206 @@
+{
+ "task": "D1044",
+ "artifact": "B-02-archive-integrity.json",
+ "producer": "squad-b1-verify（成员B · 独立复核，独立于执行方）",
+ "transcribed_by": "synova-squad-lead（原样转存，未改一字）",
+ "description": "成员B 独立复核②：档案仓完整性（294/294 字节级）+ 提交边界 + 判别性做坏实验",
+ "source_path_in_session": "/tmp/b1b/verify-02-archive-integrity.json",
+ "source_sha256": "7dec991c723e0bfe933366416515bdeca4356a88ca61cb20cd7c4b5c29aff44b",
+ "disclosure": "本文件为成员B 在 /tmp 的产出，由队长原样转存进仓库（B 只写 /tmp，不写仓库）。内容未做任何修改。",
+ "content": {
+  "task": "D1044",
+  "check": "复核② 档案仓完整性（独立口径，不采信队长 RECONCILE_OK）",
+  "role": "成员B 独立复核",
+  "as_of": "2026-09-28T08:36:13.070452+08:00",
+  "archive_repo": {
+   "root": "/Users/wane/Synova-过程档案",
+   "head": "85a55b1",
+   "pre_outbound_baseline": "ff467712 (主仓 origin/main 出库前)"
+  },
+  "kept_untouched": "档案仓全程只读：find/shasum/git log/diff-tree/status；做坏实验在 /tmp/b1b-red 副本上做",
+  "leg1_archive_count": "294",
+  "leg2_baseline_count": "294",
+  "leg2b_baseline_ls_tree": "294",
+  "leg3_main_repo_remaining": {
+   "raw_A_tree": "A 树（出库前实测）：HEAD=ff467712, archive 件数=294 → 当时第三边未成立（A 未执行③）",
+   "final": "/tmp/b1b-verify @ e5b46f17：`git ls-files '.claude/task-briefs/archive/*.md' | wc -l` = 0",
+   "verdict": "三边一致：基线 294 == 档案仓 294 == 主仓已删 0 —— 成立（终值见 verify-03 §three_way_leg3）"
+  },
+  "manifest_diff": {
+   "cmd": "diff /tmp/b1b/q2-baseline.sha256 /tmp/b1b/q2-archive.sha256",
+   "diff_stdout": "DIFF_EXIT=0",
+   "diff_lines": 0,
+   "verdict": "独立复算：294/294 字节级全等（diff 为空，DIFF_EXIT=0）；口径 = sha256 + 相对路径全串比对"
+  },
+  "byte_level_cmp_20": {
+   "cmd": "cmp -s <archive>/<f> <baseline-extract>/<f> for 20 deterministically-sampled files",
+   "result": "cmp_same=20 cmp_diff=0",
+   "verdict": "20/20 逐字节相同，0 差异"
+  },
+  "commit_boundary": {
+   "diff_tree_name_only_count": "294",
+   "entries_not_under_outbound_prefix": "0",
+   "grep_exit_note": "a03 exit=1 属预期（grep -c 无匹配 → 输出 0 且 exit 1）",
+   "verdict": "294 件且 0 件夹带 —— 无档案仓自身教训 L-015 同型项"
+  },
+  "archive_repo_worktree_state": {
+   "porcelain": " M INDEX.md\n?? \"2026-09-28-\\351\\227\\250\\347\\246\\201\\347\\272\\277-\\344\\272\\244\\344\\273\\230-A4-CI\\346\\210\\220\\346\\234\\254\\346\\224\\266\\345\\217\\243-\\350\\277\\275\\345\\212\\240\\345\\233\\236\\346\\211\\247.md\"\n?? \"2026-09-28-\\351\\227\\250\\347\\246\\201\\347\\272\\277-\\344\\272\\244\\344\\273\\230-A4-CI\\346\\210\\220\\346\\234\\254\\346\\224\\266\\345\\217\\243.md\"\n",
+   "interpretation": "含 2 项与本批无关的在制变更（M INDEX.md = 门禁线 A4 行；?? 2026-09-28-门禁线-交付-A4-CI成本收口.md）；85a55b1 未卷入它们 ⇒ 首版 git add -A 后被 reset 重做一事与最终提交边界一致；另注：INDEX.md 无 D1044 条目（承接未写 INDEX）"
+  },
+  "empty_files_archive": "0",
+  "discriminating_red_test": {
+   "A_clean_verdict": "GREEN (diff_lines=0)",
+   "B_dirty_verdict": "RED (diff_lines=4)",
+   "C_raw_red_output": "289c289\n< fa966093c2d713d3b534227928c99d253062327c5fa6bef9d90e4d26023d91f1 .claude/task-briefs/archive/2026-07-22-D201-gatekeeper-synova-commit.md\n---\n> e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 .claude/task-briefs/archive/2026-07-22-D201-gatekeeper-synova-commit.md\nDIFF_EXIT=1\n",
+   "D_restore_verdict": "GREEN (diff_lines=0)",
+   "corruption": "把 /tmp/b1b-red/dirty 副本中的 2026-07-22-D201-gatekeeper-synova-commit.md 截断为 0 字节（185→0 bytes）",
+   "conclusion": "判据具判别性：单件字节级差异被抓出（基线 fa96609… → 空串 e3b0c442…，DIFF_EXIT=1），恢复后回绿 ⇒ 非恒绿；亦证明第 ② 步的『294/294 全等』不是空判据"
+  },
+  "commands": [
+   {
+    "id": "a01",
+    "cwd": "/Users/wane/Synova-过程档案",
+    "cmd": "git rev-parse --show-toplevel; git log --oneline -3",
+    "exit": 0,
+    "stdout": "/Users/wane/Synova-过程档案\n85a55b1 docs(档案仓): 承接 B1/D1044 出库 294 件 briefs/archive\n225612e docs(档案仓): 教训库补 L-017/L-018 —— CTO 派单前提 5 处错误 + 同一元教训一天犯 6 次\ndc42393 docs(档案仓): 教训库补 L-015/L-016（顺手改公共文件被判夹带 / git log -2 判提交不可靠）\n",
+    "stderr": "",
+    "note": ""
+   },
+   {
+    "id": "a02",
+    "cwd": "/Users/wane/Synova-过程档案",
+    "cmd": "git -c core.quotepath=false diff-tree --no-commit-id --name-only -r 85a55b1 | wc -l",
+    "exit": 0,
+    "stdout": "     294\n",
+    "stderr": "",
+    "note": ""
+   },
+   {
+    "id": "a03",
+    "cwd": "/Users/wane/Synova-过程档案",
+    "cmd": "git -c core.quotepath=false diff-tree --no-commit-id --name-only -r 85a55b1 | grep -vc '^出库-主仓/\\.claude/task-briefs/archive/'",
+    "exit": 1,
+    "stdout": "0\n",
+    "stderr": "",
+    "note": ""
+   },
+   {
+    "id": "a04",
+    "cwd": "/Users/wane/Synova-过程档案",
+    "cmd": "git status --porcelain",
+    "exit": 0,
+    "stdout": " M INDEX.md\n?? \"2026-09-28-\\351\\227\\250\\347\\246\\201\\347\\272\\277-\\344\\272\\244\\344\\273\\230-A4-CI\\346\\210\\220\\346\\234\\254\\346\\224\\266\\345\\217\\243-\\350\\277\\275\\345\\212\\240\\345\\233\\236\\346\\211\\247.md\"\n?? \"2026-09-28-\\351\\227\\250\\347\\246\\201\\347\\272\\277-\\344\\272\\244\\344\\273\\230-A4-CI\\346\\210\\220\\346\\234\\254\\346\\224\\266\\345\\217\\243.md\"\n",
+    "stderr": "",
+    "note": ""
+   },
+   {
+    "id": "a05",
+    "cwd": "/Users/wane/Synova-过程档案",
+    "cmd": "find 出库-主仓/.claude/task-briefs/archive -name '*.md' | wc -l",
+    "exit": 0,
+    "stdout": "     294\n",
+    "stderr": "",
+    "note": ""
+   },
+   {
+    "id": "a06",
+    "cwd": "/Users/wane/Synova-过程档案",
+    "cmd": "find 出库-主仓/.claude/task-briefs/archive -name '*.md' -size 0 | wc -l",
+    "exit": 0,
+    "stdout": "       0\n",
+    "stderr": "",
+    "note": ""
+   },
+   {
+    "id": "b01",
+    "cwd": "/Users/wane/Synova-过程档案",
+    "cmd": "find 出库-主仓/.claude/task-briefs/archive -name '*.md' -print0 | sort -z | xargs -0 shasum -a 256 | sed 's#出库-主仓/##' | sort -k2 > /tmp/b1b/q2-archive.sha256; wc -l < /tmp/b1b/q2-archive.sha256",
+    "exit": 0,
+    "stdout": "     294\n",
+    "stderr": "",
+    "note": ""
+   },
+   {
+    "id": "b02",
+    "cwd": "/tmp/b1b-base-extract",
+    "cmd": "find .claude/task-briefs/archive -name '*.md' -print0 | sort -z | xargs -0 shasum -a 256 | sort -k2 > /tmp/b1b/q2-baseline.sha256; wc -l < /tmp/b1b/q2-baseline.sha256",
+    "exit": 0,
+    "stdout": "     294\n",
+    "stderr": "",
+    "note": ""
+   },
+   {
+    "id": "b03",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git ls-tree -r --name-only ff467712 .claude/task-briefs/archive/ | wc -l",
+    "exit": 0,
+    "stdout": "     294\n",
+    "stderr": "",
+    "note": ""
+   },
+   {
+    "id": "b04",
+    "cwd": "/Users/wane/Synova-过程档案",
+    "cmd": "diff /tmp/b1b/q2-baseline.sha256 /tmp/b1b/q2-archive.sha256; echo DIFF_EXIT=$?",
+    "exit": 0,
+    "stdout": "DIFF_EXIT=0\n",
+    "stderr": "",
+    "note": ""
+   },
+   {
+    "id": "c01",
+    "cwd": "/Users/wane/Synova-过程档案",
+    "cmd": "same=0; diffc=0; while IFS= read -r p; do rel=\"${p#出库-主仓/}\"; if cmp -s \"/Users/wane/Synova-过程档案/$p\" \"/tmp/b1b-base-extract/$rel\"; then same=$((same+1)); else diffc=$((diffc+1)); echo \"DIFF $rel\"; fi; done < /tmp/b1b/q2-sample20.txt; echo \"cmp_same=$same cmp_diff=$diffc\"",
+    "exit": 0,
+    "stdout": "cmp_same=20 cmp_diff=0\n",
+    "stderr": "",
+    "note": ""
+   },
+   {
+    "id": "d01",
+    "cwd": "/tmp/b1b",
+    "cmd": "awk '{print $1\" \"$2}' /tmp/b1b/q2-baseline.sha256 | sort -k2 > /tmp/b1b/red/base.norm; wc -l < /tmp/b1b/red/base.norm",
+    "exit": 0,
+    "stdout": "     294\n",
+    "stderr": "",
+    "note": ""
+   },
+   {
+    "id": "d02",
+    "cwd": "/tmp/b1b-red/clean",
+    "cmd": "find .claude/task-briefs/archive -name '*.md' -print0 | sort -z | xargs -0 shasum -a 256 | awk '{print $1\" \"$2}' | sort -k2 > /tmp/b1b/red/clean.sha256; diff /tmp/b1b/red/base.norm /tmp/b1b/red/clean.sha256 | wc -l",
+    "exit": 0,
+    "stdout": "       0\n",
+    "stderr": "",
+    "note": ""
+   },
+   {
+    "id": "d03",
+    "cwd": "/tmp/b1b-red/dirty",
+    "cmd": "find .claude/task-briefs/archive -name '*.md' -print0 | sort -z | xargs -0 shasum -a 256 | awk '{print $1\" \"$2}' | sort -k2 > /tmp/b1b/red/dirty.sha256; diff /tmp/b1b/red/base.norm /tmp/b1b/red/dirty.sha256 | wc -l",
+    "exit": 0,
+    "stdout": "       4\n",
+    "stderr": "",
+    "note": "d03/d04 为重新做坏后的重跑（首次 run 后我曾 rsync 复原 dirty 副本）"
+   },
+   {
+    "id": "d04",
+    "cwd": "/tmp/b1b-red/dirty",
+    "cmd": "diff /tmp/b1b/red/base.norm /tmp/b1b/red/dirty.sha256; echo DIFF_EXIT=$?",
+    "exit": 0,
+    "stdout": "289c289\n< fa966093c2d713d3b534227928c99d253062327c5fa6bef9d90e4d26023d91f1 .claude/task-briefs/archive/2026-07-22-D201-gatekeeper-synova-commit.md\n---\n> e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 .claude/task-briefs/archive/2026-07-22-D201-gatekeeper-synova-commit.md\nDIFF_EXIT=1\n",
+    "stderr": "",
+    "note": "d03/d04 为重新做坏后的重跑（首次 run 后我曾 rsync 复原 dirty 副本）"
+   },
+   {
+    "id": "e01",
+    "cwd": "/Users/wane/SynovaAgent/.synova-wt-b1-d1044",
+    "cmd": "git rev-parse HEAD; git ls-files '.claude/task-briefs/archive/*.md' | wc -l; git log --oneline -2",
+    "exit": 0,
+    "stdout": "ff4677129dce2ff068a816eed3db0687b060c64c\n     294\nff467712 docs(D1034): cto-handover 加「派单模板 v2」— 预置坑位（门禁合规六条 + 推送纪律四条）\n50f52f44 feat(D1028): D734 PR 预算门禁「纯归档/出库」路径级豁免 + 死代码清理声明逃生口（K3 CONDITIONAL PASS）\n",
+    "stderr": "",
+    "note": ""
+   }
+  ]
+ }
+}

@@ -1,0 +1,451 @@
+{
+ "task": "D1044",
+ "artifact": "B-01-nolink-independent.json",
+ "producer": "squad-b1-verify（成员B · 独立复核，独立于执行方）",
+ "transcribed_by": "synova-squad-lead（原样转存，未改一字）",
+ "description": "成员B 独立复核①：294 件零引用反向验证（三口径 + 语义抽样 + 反扫）",
+ "source_path_in_session": "/tmp/b1b/verify-01-nolink.json",
+ "source_sha256": "4157fbc20ca33deab5993c6fa6c8cada25fc220a768d31d421ceab6f08b6b4b0",
+ "disclosure": "本文件为成员B 在 /tmp 的产出，由队长原样转存进仓库（B 只写 /tmp，不写仓库）。内容未做任何修改。",
+ "content": {
+  "task": "D1044",
+  "check": "零引用反向验证（独立方法，不采信执行方A的结论）",
+  "role": "成员B 独立复核",
+  "as_of": "2026-09-28T08:20:08.298419+08:00",
+  "baseline_sha": "ff467712",
+  "independent_tree": "/tmp/b1b-base (git worktree add --detach ff467712)",
+  "universe": {
+   "paths_listed": 294,
+   "unique_stems": 294,
+   "paths_sha256_of_list": "1d49b9814db9d352324be29845a244c74091bc85b54931c30cee344b633e94ac  /tmp/b1b/paths.txt"
+  },
+  "method_1_fullpath": {
+   "cmd": "git grep -n -I --untracked -F -f /tmp/b1b/paths.txt -- . ':!.claude/task-briefs/archive/'",
+   "exit": 0,
+   "hit_lines": 1
+  },
+  "method_2_stem_loop_BRE": {
+   "cmd": "while read -r p; do s=$(basename \"$p\" .md); git grep -n -I --untracked -e \"$s\" -- . ':!.claude/task-briefs/archive/'; done < stems",
+   "stems_checked": 294,
+   "stems_with_hits": 1,
+   "hits": "stems_with_hits=1"
+  },
+  "method_2b_stem_loop_FIXED": {
+   "stems_with_hits": 1,
+   "hits": "stems_with_hits_F=1"
+  },
+  "method_agreement": {
+   "agree": true,
+   "hits_m1": 1,
+   "hits_m2": 1,
+   "hits_m2b": 1
+  },
+  "extra_directory_level": {
+   "pattern": ".claude/task-briefs/archive",
+   "hit_lines": 6
+  },
+  "extra_code_scope_task_briefs_archive": {
+   "scopes": [
+    "src/",
+    "packages/",
+    "scripts/",
+    "tests/",
+    ".github/",
+    "docs/authority/",
+    "memory/",
+    "decisions/"
+   ],
+   "hit_lines": 0
+  },
+  "extra_main_worktree_with_untracked": {
+   "cwd": "/Users/wane/SynovaAgent",
+   "hit_lines": 1
+  },
+  "registry_registration": {
+   "DOCS-REGISTRY.yaml_hits": "0\ngrep_exit=1",
+   "control-tower/doc-registry.json_hits": "0\ngrep_exit=1"
+  },
+  "recursive_enumerators": {
+   "md_under_task_briefs": "     716",
+   "md_under_archive": "     294"
+  },
+  "symlinks_into_archive": "symlink_scan_done",
+  "hits": 1,
+  "hit_detail": [
+   {
+    "file": "docs/synova/coordination/出库声明与批次模板-D1028-20260927.md",
+    "line": 651,
+    "text": "\\.claude/task-briefs/archive/2026-07-22-D200-context-injector.md:3:## Q2: 范围 — inject-context.py + doc-registry.json + context-injector.sh",
+    "classification": "文档内 fenced code block（第 645-663 行 ```text 块）中『历史 git grep 输出』的转写：非 import/调用/消费者，属引文命中（quotation），非活引用"
+   }
+  ],
+  "historical_mentions": {
+   "note": "git log -S 命中含 diff 头中的路径名，非活引用",
+   "raw": "STEM=2026-07-15-D59-me-compute-enhance  log_S_commit_count=0\nSTEM=2026-07-03-0038-Phase-22-CommandPalette--NotificationC  log_S_commit_count=3\nSTEM=2026-07-22-D201-gatekeeper-synova-commit  log_S_commit_count=0\nSTEM=2026-06-27-2153-Task-61--strategy-  log_S_commit_count=0\nSTEM=2026-06-26-2239-Task-24-E5-  log_S_commit_count=0\nSTEM=2026-06-23-1433-Q0c4  log_S_commit_count=0\nSTEM=2026-06-27-2140-Task-43-I8-  log_S_commit_count=0\nSTEM=2026-06-06-1910-Phase-4c-knowledgechunksorgid  log_S_commit_count=0\nSTEM=2026-06-14-0231-  log_S_commit_count=0\nSTEM=2026-07-09-T7a-BRAND_BUILDS  log_S_commit_count=0\n",
+   "raw2": "5df35322 feat(desktop): Phase 3.1 GA客户切换+仪表盘\n055d1475 feat(runtime): Phase 3 — 速率限制 + Schema迁移 + 上下文压缩增强\n9cb636f8 feat(desktop): Phase 2.2 CommandPalette + NotificationCenter\n",
+   "raw3": "9cb636f8 feat(desktop): Phase 2.2 CommandPalette + NotificationCenter\n",
+   "raw4": ""
+  },
+  "semantic_sample": {
+   "sample": [
+    "2026-07-15-D59-me-compute-enhance",
+    "2026-07-03-0038-Phase-22-CommandPalette--NotificationC",
+    "2026-07-22-D201-gatekeeper-synova-commit",
+    "2026-06-27-2153-Task-61--strategy-",
+    "2026-06-26-2239-Task-24-E5-",
+    "2026-06-23-1433-Q0c4",
+    "2026-06-27-2140-Task-43-I8-",
+    "2026-06-06-1910-Phase-4c-knowledgechunksorgid",
+    "2026-06-14-0231-",
+    "2026-07-09-T7a-BRAND_BUILDS"
+   ],
+   "probe_raw": {
+    "s1": "      31\n",
+    "s2": "docs/plans/codex/implementation/SYNOVA-IMPL-桌面应用-v1-20260701.md:766:| 2 | `electron-renderer/components/LeftPanel.tsx`, `RightPanel.tsx`, `CommandPalette.tsx`, `NotificationCenter.tsx`, `src/routes/notifications.ts` | — |\n",
+    "s3": "      26\n",
+    "s4": "",
+    "s5": "     108\n",
+    "s6": "",
+    "s7": "      88\n",
+    "s8": "      12\n",
+    "s9": "      26\n",
+    "s10": "SAMPLE 2026-07-15-D59-me-compute-enhance :: ## Q0: 定位 -- D59 ME Compute Enhance (7 items)\nSAMPLE 2026-07-03-0038-Phase-22-CommandPalette--NotificationC :: # Task Brief: Phase 2.2 CommandPalette + NotificationCenter\nSAMPLE 2026-07-22-D201-gatekeeper-synova-commit :: ## Q0: 定位 — 校验网守 synova-commit\nSAMPLE 2026-06-27-2153-Task-61--strategy- :: # Task Brief: Task 6.1: 更新 strategy 专家文件\nSAMPLE 2026-06-26-2239-Task-24-E5- :: # Task Brief: Task 2.4: E5 环境红利依赖性\nSAMPLE 2026-06-23-1433-Q0c4 :: # Task Brief: Q0c反向审计补救：消除4批次双数据源\nSAMPLE 2026-06-27-2140-Task-43-I8- :: # Task Brief: Task 4.3: I8 护城河依赖度\nSAMPLE 2026-06-06-1910-Phase-4c-knowledgechunksorgid :: # Task Brief: Phase 4c: knowledge_chunks表加org_id列实现多租户隔离\nSAMPLE 2026-06-14-0231- :: # Task Brief: 测试新模板\nSAMPLE 2026-07-09-T7a-BRAND_BUILDS :: # Task Brief — T7a BRAND_BUILDS 边创建\n"
+   },
+   "conclusion": "抽样 10 件的『主题词』在 docs/plans、代码、研究文档中大量出现（属同一功能的实现/计划文档，非对该 brief 文件的引用）；未发现任何文档以『文件级/语义级』方式引用这 10 件 brief。S4、S6 主题词亦 0 命中。"
+  },
+  "commands": [
+   {
+    "id": "c01",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git rev-parse HEAD",
+    "exit": 0,
+    "stdout": "ff4677129dce2ff068a816eed3db0687b060c64c\n",
+    "stderr": "",
+    "stdout_lines": 1
+   },
+   {
+    "id": "c02",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git ls-files '.claude/task-briefs/archive/' | wc -l",
+    "exit": 0,
+    "stdout": "     294\n",
+    "stderr": "",
+    "stdout_lines": 1
+   },
+   {
+    "id": "c03",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git ls-files '.claude/task-briefs/archive/*.md' | wc -l",
+    "exit": 0,
+    "stdout": "     294\n",
+    "stderr": "",
+    "stdout_lines": 1
+   },
+   {
+    "id": "c04",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git ls-files '.claude/task-briefs/archive/' | grep -vc '\\.md$'",
+    "exit": 1,
+    "stdout": "0\n",
+    "stderr": "",
+    "stdout_lines": 1
+   },
+   {
+    "id": "c05",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git ls-files '.claude/task-briefs/archive/*.md' | sed 's#.*/##' | sort -u | wc -l",
+    "exit": 0,
+    "stdout": "     294\n",
+    "stderr": "",
+    "stdout_lines": 1
+   },
+   {
+    "id": "c06",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git ls-files '.claude/task-briefs/archive/*.md' | sed 's#\\.claude/task-briefs/archive/##' | grep -c '/'",
+    "exit": 1,
+    "stdout": "0\n",
+    "stderr": "",
+    "stdout_lines": 1
+   },
+   {
+    "id": "m1",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git grep -n -I --untracked -F -f /tmp/b1b/paths.txt -- . ':!.claude/task-briefs/archive/'",
+    "exit": 0,
+    "stdout": "docs/synova/coordination/出库声明与批次模板-D1028-20260927.md:651:.claude/task-briefs/archive/2026-07-22-D200-context-injector.md:3:## Q2: 范围 — inject-context.py + doc-registry.json + context-injector.sh\n",
+    "stderr": "",
+    "stdout_lines": 1
+   },
+   {
+    "id": "m1c",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git grep -n -I --untracked -F -f /tmp/b1b/paths.txt -- . ':!.claude/task-briefs/archive/' | wc -l",
+    "exit": 0,
+    "stdout": "       1\n",
+    "stderr": "",
+    "stdout_lines": 1
+   },
+   {
+    "id": "m2",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "h=0; while IFS= read -r s; do out=$(git grep -n -I --untracked -e \"$s\" -- . ':!.claude/task-briefs/archive/' 2>/dev/null); rc=$?; if [ \"$rc\" -eq 0 ]; then h=$((h+1)); echo \"HIT_FOR_STEM: $s\"; printf '%s\\n' \"$out\"; fi; done < /tmp/b1b/stems.txt; echo \"stems_checked=$(wc -l < /tmp/b1b/stems.txt)\"; echo \"stems_with_hits=$h\"",
+    "exit": 0,
+    "stdout": "HIT_FOR_STEM: 2026-07-22-D200-context-injector\ndocs/synova/coordination/出库声明与批次模板-D1028-20260927.md:651:.claude/task-briefs/archive/2026-07-22-D200-context-injector.md:3:## Q2: 范围 — inject-context.py + doc-registry.json + context-injector.sh\nstems_checked=     294\nstems_with_hits=1\n",
+    "stderr": "",
+    "stdout_lines": 4
+   },
+   {
+    "id": "m2f",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "h=0; while IFS= read -r s; do out=$(git grep -n -I --untracked -F -e \"$s\" -- . ':!.claude/task-briefs/archive/' 2>/dev/null); rc=$?; if [ \"$rc\" -eq 0 ]; then h=$((h+1)); echo \"HIT_FOR_STEM(F): $s\"; printf '%s\\n' \"$out\"; fi; done < /tmp/b1b/stems.txt; echo \"stems_with_hits_F=$h\"",
+    "exit": 0,
+    "stdout": "HIT_FOR_STEM(F): 2026-07-22-D200-context-injector\ndocs/synova/coordination/出库声明与批次模板-D1028-20260927.md:651:.claude/task-briefs/archive/2026-07-22-D200-context-injector.md:3:## Q2: 范围 — inject-context.py + doc-registry.json + context-injector.sh\nstems_with_hits_F=1\n",
+    "stderr": "",
+    "stdout_lines": 3
+   },
+   {
+    "id": "d1",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git grep -n -I --untracked -e '.claude/task-briefs/archive' -- . ':!.claude/task-briefs/archive/'",
+    "exit": 0,
+    "stdout": ".claude/task-briefs/2026-09-25-D964-phase4-archive-batch1.md:9:归档目标 `.claude/task-briefs/archive/` —— **仍在 `.claude/task-briefs/` 前缀内**（pre-commit:901/:1126 brief 绑定依赖此前缀）。\n.claude/task-briefs/2026-09-25-D964-phase4-archive-batch1.md:18:- `.claude/task-briefs/*.md`（2026-06/07 零引用 274 份）→ `git mv .claude/task-briefs/archive/`\ndocs/synova/STATE.md:83:| **文档减负**（部分） | `.claude/task-briefs/archive` = 294；`docs/**/archive` = 431；归档批次已并单 PR（省 5/6 CI） |\ndocs/synova/coordination/K3审计请求-D964-门禁语义变更-20260925.md:13:| #767 | `chore/cto-doc-slim-phase4-archive-briefs-1` | 274 份零引用 briefs 归档到 `.claude/task-briefs/archive/` | 否（纯移动） | 建议抽检 |\ndocs/synova/coordination/出库声明与批次模板-D1028-20260927.md:651:.claude/task-briefs/archive/2026-07-22-D200-context-injector.md:3:## Q2: 范围 — inject-context.py + doc-registry.json + context-injector.sh\ndocs/synova/coordination/审计发现台账-DSH-CTO.md:326:| 2026-09-25 | 🔴 **第六批（同日·D964 归档执行期，4 项；其中 1 项按红线升级创始人）**：**① 我第二次误扫他人在制文件入提交（同类第 2 次 ⇒ 升级创始人）**——批 2 建分支时用 `git add -A docs/synova .claude/task-briefs`，把其他 session 未提交的 5 份 brief（D1003–D1007）+ `task-state/D1003-1005.json` + `docs/synova/architecture/SYNOVA-哨兵体系-最终版-v1-20260925.md` + 2 份 evidence json 一并暂存提交（CI 报「骨架 brief 占位符检测」才暴露）。**首次同型** = 本次流程早前 `git add -A` 扫入台账他人行（已自行发现并 reset 修正）。**处置**：关闭受影响 PR（#775–#779），他人文件从分支剔除、原件在 `/tmp/foreign/` 留存并在其原作者工作区仍可见；重建分支改用**显式路径暂存**（禁止 `-A`）。**自约束（新增）**：建分支/提交一律显式列路径；提交前 `git diff --cached --name-only` 人工过一遍。**为什么升级**：同一操作失误 24 小时内第二次 = 单人防线失效，需机制（建议：pre-commit 增加「暂存文件不属于本 D# 且无声明 ⇒ 警告/阻断」，与 D328 同族但覆盖 `-A` 扫描场景）。<br>**② PR 预算门禁（D734）对「批量归档」不可行 ⇒ 归档粒度必须 ≤9 份/批且同域**——实证链：`archive/**`（仓根）被判 **win 域** ⇒ 与 mac 文档混提触发「变更跨域」硬阻断（PR #772 关闭）；一批 10 份文档 + brief + task-state + bypass.log = **13 文件 > 上限 12**（PR #775–779 关闭）。**定稿配方（已验证可过）**：落点 `docs/synova/<sub>/archive/`（原域内，`/archive/` 已获登记门禁与引用门禁豁免）+ **9 份文档/批** + brief/task-state 随批 ⇒ 变更文件数 11。**残留**：`.claude/task-briefs/archive/**`（批次1）走 D860 治理产物豁免不计预算，故 274 份可单批；`docs/**` 归档无此豁免，只能小批。<br>**③ Q2 排除项「必须含扩展名」是 CI 硬阻断且文案不显眼**——本批 brief 写「不改 scripts/audit/**（K3 专属）、src/**」被判 `Q2 排除项缺少文件路径` 硬阻断（CI 上为硬阻断，本地软提示）。**修法**：排除项至少一条写明具体文件（如 `scripts/audit/audit-rules.sh`）。**建议**：把该规则写进 `brief-compose` 技能模板，防第三次。<br>**④ `merge-writeset-gate` 的 D# 推断依赖**分支名含 D#**——分支名无 D# 时 S1（`task-state/<D#>.json`）永不命中，且它会把分支名里的数字串解析为伪任务号（实测 `chore/cto-doc-slim-phase5-daily-ratio` → `D96874`）。**本次绕过方式**：PR 正文 `## 写集豁免` 逐条声明（机制有效，实测可用于 task-state/D9000.json 场景）或补齐 S1 声明源。**建议（须过 K3）**：D# 推断改为「分支名 → 若无命中再取本次变更集里 `task-state/*.json` 唯一命中」。 |\n",
+    "stderr": "",
+    "stdout_lines": 6
+   },
+   {
+    "id": "d2",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git grep -n -I --untracked -e '.claude/task-briefs/archive' -- . ':!.claude/task-briefs/archive/' | wc -l",
+    "exit": 0,
+    "stdout": "       6\n",
+    "stderr": "",
+    "stdout_lines": 1
+   },
+   {
+    "id": "d3",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git grep -n -I --untracked -e 'task-briefs/archive' -- 'src/*' 'packages/*' 'scripts/*' 'tests/*' '.github/*' 'docs/authority/*' 'memory/*' 'decisions/*'",
+    "exit": 1,
+    "stdout": "",
+    "stderr": "",
+    "stdout_lines": 0
+   },
+   {
+    "id": "u1",
+    "cwd": "/Users/wane/SynovaAgent",
+    "cmd": "git rev-parse HEAD",
+    "exit": 0,
+    "stdout": "ff4677129dce2ff068a816eed3db0687b060c64c\n",
+    "stderr": "",
+    "stdout_lines": 1
+   },
+   {
+    "id": "u2",
+    "cwd": "/Users/wane/SynovaAgent",
+    "cmd": "git grep -n -I --untracked -F -f /tmp/b1b/paths.txt -- . ':!.claude/task-briefs/archive/'",
+    "exit": 0,
+    "stdout": "docs/synova/coordination/出库声明与批次模板-D1028-20260927.md:651:.claude/task-briefs/archive/2026-07-22-D200-context-injector.md:3:## Q2: 范围 — inject-context.py + doc-registry.json + context-injector.sh\n",
+    "stderr": "",
+    "stdout_lines": 1
+   },
+   {
+    "id": "u3",
+    "cwd": "/Users/wane/SynovaAgent",
+    "cmd": "git status --short | wc -l",
+    "exit": 0,
+    "stdout": "      22\n",
+    "stderr": "",
+    "stdout_lines": 1
+   },
+   {
+    "id": "r1",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "grep -c 'task-briefs/archive' docs/authority/DOCS-REGISTRY.yaml; echo \"grep_exit=$?\"",
+    "exit": 0,
+    "stdout": "0\ngrep_exit=1\n",
+    "stderr": "",
+    "stdout_lines": 2
+   },
+   {
+    "id": "r2",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "grep -c 'task-briefs/archive' scripts/control-tower/doc-registry.json; echo \"grep_exit=$?\"",
+    "exit": 0,
+    "stdout": "0\ngrep_exit=1\n",
+    "stderr": "",
+    "stdout_lines": 2
+   },
+   {
+    "id": "e1",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git ls-files -s | awk '$1==\"120000\"{print $4}' | while read -r l; do t=$(readlink \"$l\" 2>/dev/null); case \"$t\" in *task-briefs/archive*) echo \"SYMLINK->ARCHIVE: $l -> $t\";; esac; done; echo symlink_scan_done",
+    "exit": 0,
+    "stdout": "symlink_scan_done\n",
+    "stderr": "",
+    "stdout_lines": 1
+   },
+   {
+    "id": "e2",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "grep -n 'task-briefs' .gitignore .gitattributes .github/CODEOWNERS 2>/dev/null",
+    "exit": 0,
+    "stdout": ".gitignore:65:.claude/task-briefs/*-auto.md\n.github/CODEOWNERS:47:.claude/task-briefs/**                   @tangbaobao520\n",
+    "stderr": "",
+    "stdout_lines": 2
+   },
+   {
+    "id": "e3",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "find .claude/task-briefs/ -name '*.md' | wc -l; find .claude/task-briefs/archive -name '*.md' | wc -l",
+    "exit": 0,
+    "stdout": "     716\n     294\n",
+    "stderr": "",
+    "stdout_lines": 2
+   },
+   {
+    "id": "h1",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "while IFS= read -r s; do printf 'STEM=%s  log_S_commit_count=%s\\n' \"$s\" \"$(git log --oneline -S\"$s\" -- . 2>/dev/null | wc -l | tr -d ' ')\"; done < /tmp/b1b/sample10.txt",
+    "exit": 0,
+    "stdout": "STEM=2026-07-15-D59-me-compute-enhance  log_S_commit_count=0\nSTEM=2026-07-03-0038-Phase-22-CommandPalette--NotificationC  log_S_commit_count=3\nSTEM=2026-07-22-D201-gatekeeper-synova-commit  log_S_commit_count=0\nSTEM=2026-06-27-2153-Task-61--strategy-  log_S_commit_count=0\nSTEM=2026-06-26-2239-Task-24-E5-  log_S_commit_count=0\nSTEM=2026-06-23-1433-Q0c4  log_S_commit_count=0\nSTEM=2026-06-27-2140-Task-43-I8-  log_S_commit_count=0\nSTEM=2026-06-06-1910-Phase-4c-knowledgechunksorgid  log_S_commit_count=0\nSTEM=2026-06-14-0231-  log_S_commit_count=0\nSTEM=2026-07-09-T7a-BRAND_BUILDS  log_S_commit_count=0\n",
+    "stderr": "",
+    "stdout_lines": 10
+   },
+   {
+    "id": "h2",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git log --oneline -3 -S'2026-07-03-0038-Phase-22-CommandPalette--NotificationC' -- .",
+    "exit": 0,
+    "stdout": "5df35322 feat(desktop): Phase 3.1 GA客户切换+仪表盘\n055d1475 feat(runtime): Phase 3 — 速率限制 + Schema迁移 + 上下文压缩增强\n9cb636f8 feat(desktop): Phase 2.2 CommandPalette + NotificationCenter\n",
+    "stderr": "",
+    "stdout_lines": 3
+   },
+   {
+    "id": "h3",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git show --stat --oneline -s 9cb636f8",
+    "exit": 0,
+    "stdout": "9cb636f8 feat(desktop): Phase 2.2 CommandPalette + NotificationCenter\n",
+    "stderr": "",
+    "stdout_lines": 1
+   },
+   {
+    "id": "h4",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git grep -n -I -F -e '2026-07-03-0038-Phase-22-CommandPalette--NotificationC' -- .",
+    "exit": 1,
+    "stdout": "",
+    "stderr": "",
+    "stdout_lines": 0
+   },
+   {
+    "id": "s1",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git grep -n -I -i -E -e 'economic_interpretation' -- docs/ memory/ decisions/ .claude/task-briefs/ scripts/ docs/authority/ ':!.claude/task-briefs/archive/' | wc -l",
+    "exit": 0,
+    "stdout": "      31\n",
+    "stderr": "",
+    "stdout_lines": 1
+   },
+   {
+    "id": "s2",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git grep -n -I -i -E -e 'CommandPalette.*NotificationCenter|NotificationCenter.*CommandPalette' -- docs/ memory/ decisions/ .claude/task-briefs/ scripts/ docs/authority/ ':!.claude/task-briefs/archive/'",
+    "exit": 0,
+    "stdout": "docs/plans/codex/implementation/SYNOVA-IMPL-桌面应用-v1-20260701.md:766:| 2 | `electron-renderer/components/LeftPanel.tsx`, `RightPanel.tsx`, `CommandPalette.tsx`, `NotificationCenter.tsx`, `src/routes/notifications.ts` | — |\n",
+    "stderr": "",
+    "stdout_lines": 1
+   },
+   {
+    "id": "s3",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git grep -n -I -i -E -e '校验网守' -- docs/ memory/ decisions/ .claude/task-briefs/ scripts/ docs/authority/ ':!.claude/task-briefs/archive/' | wc -l",
+    "exit": 0,
+    "stdout": "      26\n",
+    "stderr": "",
+    "stdout_lines": 1
+   },
+   {
+    "id": "s4",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git grep -n -I -i -E -e '更新 strategy 专家文件' -- docs/ memory/ decisions/ .claude/task-briefs/ scripts/ docs/authority/ ':!.claude/task-briefs/archive/'",
+    "exit": 1,
+    "stdout": "",
+    "stderr": "",
+    "stdout_lines": 0
+   },
+   {
+    "id": "s5",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git grep -n -I -i -E -e '环境红利' -- docs/ memory/ decisions/ .claude/task-briefs/ scripts/ docs/authority/ ':!.claude/task-briefs/archive/' | wc -l",
+    "exit": 0,
+    "stdout": "     108\n",
+    "stderr": "",
+    "stdout_lines": 1
+   },
+   {
+    "id": "s6",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git grep -n -I -i -E -e 'Q0c反向审计|消除4批次双数据源' -- docs/ memory/ decisions/ .claude/task-briefs/ scripts/ docs/authority/ ':!.claude/task-briefs/archive/'",
+    "exit": 1,
+    "stdout": "",
+    "stderr": "",
+    "stdout_lines": 0
+   },
+   {
+    "id": "s7",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git grep -n -I -i -E -e '护城河依赖度' -- docs/ memory/ decisions/ .claude/task-briefs/ scripts/ docs/authority/ ':!.claude/task-briefs/archive/' | wc -l",
+    "exit": 0,
+    "stdout": "      88\n",
+    "stderr": "",
+    "stdout_lines": 1
+   },
+   {
+    "id": "s8",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git grep -n -I -i -E -e 'knowledge_chunks' -- docs/ memory/ decisions/ .claude/task-briefs/ scripts/ docs/authority/ ':!.claude/task-briefs/archive/' | wc -l",
+    "exit": 0,
+    "stdout": "      12\n",
+    "stderr": "",
+    "stdout_lines": 1
+   },
+   {
+    "id": "s9",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "git grep -n -I -i -E -e 'BRAND_BUILDS' -- docs/ memory/ decisions/ .claude/task-briefs/ scripts/ docs/authority/ ':!.claude/task-briefs/archive/' | wc -l",
+    "exit": 0,
+    "stdout": "      26\n",
+    "stderr": "",
+    "stdout_lines": 1
+   },
+   {
+    "id": "s10",
+    "cwd": "/tmp/b1b-base",
+    "cmd": "for s in $(cat /tmp/b1b/sample10.txt); do f=\".claude/task-briefs/archive/$s.md\"; printf 'SAMPLE %s :: ' \"$s\"; grep -m1 -E '^#|^## Q0' \"$f\" | tr -d '\\n'; printf '\\n'; done",
+    "exit": 0,
+    "stdout": "SAMPLE 2026-07-15-D59-me-compute-enhance :: ## Q0: 定位 -- D59 ME Compute Enhance (7 items)\nSAMPLE 2026-07-03-0038-Phase-22-CommandPalette--NotificationC :: # Task Brief: Phase 2.2 CommandPalette + NotificationCenter\nSAMPLE 2026-07-22-D201-gatekeeper-synova-commit :: ## Q0: 定位 — 校验网守 synova-commit\nSAMPLE 2026-06-27-2153-Task-61--strategy- :: # Task Brief: Task 6.1: 更新 strategy 专家文件\nSAMPLE 2026-06-26-2239-Task-24-E5- :: # Task Brief: Task 2.4: E5 环境红利依赖性\nSAMPLE 2026-06-23-1433-Q0c4 :: # Task Brief: Q0c反向审计补救：消除4批次双数据源\nSAMPLE 2026-06-27-2140-Task-43-I8- :: # Task Brief: Task 4.3: I8 护城河依赖度\nSAMPLE 2026-06-06-1910-Phase-4c-knowledgechunksorgid :: # Task Brief: Phase 4c: knowledge_chunks表加org_id列实现多租户隔离\nSAMPLE 2026-06-14-0231- :: # Task Brief: 测试新模板\nSAMPLE 2026-07-09-T7a-BRAND_BUILDS :: # Task Brief — T7a BRAND_BUILDS 边创建\n",
+    "stderr": "",
+    "stdout_lines": 10
+   }
+  ],
+  "conclusion": "独立复核结论：【不成立（机械口径）／成立（语义口径）】。① 文件级「零引用」两法均为 1 命中（方法一全路径 -F -f = 1；方法二逐件词干循环 = 1；方法二' -F 逐件 = 1；主工作区含 untracked 复跑 = 1），唯一命中同址 = docs/synova/coordination/出库声明与批次模板-D1028-20260927.md:651（指向 .claude/task-briefs/archive/2026-07-22-D200-context-injector.md）。卡面「两句必须同为 0」不成立。② 该命中位于 §A.3 fenced code block（行 645–663）内的历史 git grep 输出转写，非 import/调用/门禁读取 ⇒ 语义上非活引用，「无可执行消费者」成立。③ 目录级另有 6 处文档/台账提及（非代码消费者）；注册表 0 登记；符号链接 0；递归枚举者仅 decide-next.sh 的 find（post-commit 建议输出，非门禁）。④ 抽样 10 件未发现语义引用；历史提及（git log -S）经实测为 diff 头路径名，非活引用。裁决归 CTO 收件闸 + K3；本件仅为独立复核结论。",
+  "appendix_A_tree_step1_rerun": {
+   "note": "在 A 的树 /Users/wane/SynovaAgent/.synova-wt-b1-d1044 只读复跑 A 卡面原命令（含 --untracked），测 A 实际会看到的命中数",
+   "as_of": "2026-09-28T08:20:57.144070+08:00",
+   "cmd_m1": "git grep -n -I --untracked -F -f /tmp/b1a-paths.txt -- . ':!.claude/task-briefs/archive/' | wc -l",
+   "m1_total_hits": 589,
+   "m2_total_hits": 589,
+   "per_file_histogram": {
+    ".claude/task-briefs/2026-09-28-D1044-B1-archive-294-outbound.md (A 的在制 brief，未跟踪；写集块行 70-376)": 294,
+    "task-state/D1044.json (A 的在制 task-state，未跟踪；write_set 共 300 条)": 294,
+    "docs/synova/coordination/出库声明与批次模板-D1028-20260927.md:651 (既有文档引文)": 1
+   },
+   "hits_excluding_A_own_untracked": 1,
+   "hits_excluding_A_own_untracked_raw": "docs/synova/coordination/出库声明与批次模板-D1028-20260927.md:651:.claude/task-briefs/archive/2026-07-22-D200-context-injector.md:3:## Q2: 范围 — inject-context.py + doc-registry.json + context-injector.sh\n",
+   "diagnosis": "自指冲突：控制塔『写集声明』机制把 294 条删除目标逐条写进 brief 与 task-state，而卡面检查用 --untracked ⇒ 检查自身产物被计入，589 恒非 0。去掉 A 自身在制产物后 = 1（D1028 文档引文）。",
+   "card_premise": "卡面『两遍都必须为 0』在当前状态下不可达"
+  }
+ }
+}
