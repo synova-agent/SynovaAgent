@@ -330,5 +330,91 @@
   "ci_docs_only_early_exit": true,
   "ci_docs_only_whitelist": "ci.yml:51 含 \\\\.(md|json)$",
   "impact": "CI 约 2 分钟；本地全量 13 组 exit 0。"
+ },
+ "closeout_M6": {
+  "1_diff": {
+   "cmd": "git show --stat --format='%H %s' bcf0a226  ;  git diff --name-status d8590040..97f04484",
+   "commits": [
+    "bcf0a226d8641cda268baeb24321725ed014b499 — 主出库（275 D + 7 A）",
+    "97f04484 — A-03 回执追加",
+    "82aaba61 / d1012126 — post-commit hook 自动登记 .claude/bypass.log（D521，非人工）"
+   ],
+   "composition": {
+    "D": 275,
+    "A": 7,
+    "M": 1
+   },
+   "total_paths_vs_base": 283,
+   "non_taskbriefs_paths": [
+    ".claude/bypass.log",
+    "docs/synova/product-lines/evidence/D1050-B2/A-01-nolink-recheck.json",
+    "docs/synova/product-lines/evidence/D1050-B2/A-02-archive-takeover.json",
+    "docs/synova/product-lines/evidence/D1050-B2/A-03-outbound-gates.json",
+    "docs/synova/product-lines/evidence/D1050-B2/excluded-briefs.json",
+    "memory/notes/proposed/2026-09-28-D1050-b2-task-briefs-outbound.md",
+    "task-state/D1050.json"
+   ],
+   "redline_untouched": {
+    "scripts/audit/**": 0,
+    "docs/synova/audit-reports/**": 0,
+    "scripts/** 与 .github/**": 0
+   }
+  },
+  "2_self_verification_conclusion": {
+   "statement": "本批产出**可提请独立审计**（不是「通过」——通过与否归 CTO 收件闸 + K3 终审）。",
+   "self_checks": [
+    "① 引用复核双法：出库集在 scripts//tests//.github//.claude/settings.json 精确路径命中 0 行；法1 与出库集交集空",
+    "② 活跃过滤 fail-closed：claimed/in_progress/spec_done 全排除；近14天全排除；注册表时代内无卡全排除；current-brief 指向件排除",
+    "③ 承接等价副本：档案仓 275/275 sha256 全等（B2 独立回读，非采信转述），档案仓 commit 0bec81aa",
+    "④ 逐件 git rm 275/275，越界 0，archive 命中 0，现树残留 0，排除件 7/7 抽验仍在",
+    "⑤ 四闸 exit 0（doc-registry / pre-commit 13 组 / pr-budget / 引用面）—— 原文俱在上文",
+    "⑥ Δ 精确闭合：1904 − 275 + 2 = 1631（实测）",
+    "⑦ 红线面零触碰；无红证残留（INJECTED-RED=0）；未 push（ls-remote 无匹配）"
+   ],
+   "residual_risk_not_claimed_as_verified": [
+    "impl_done 67 件已出库：队长口径授权（impl_done 属可出库），但其审计/K3 链是否仍需要这些 brief **未由本卡证明**",
+    "出库集在 docs/ 与 memory/ 中的历史引文未逐一分类（法1 命中的 356 文件中，除 5 个活候选外的均为历史记录/证据/台账）—— 判非活为分类结论，非机器判据"
+   ]
+  },
+  "3_leftovers": [
+   {
+    "id": "L1",
+    "item": "tests/control-tower/brief-parseable.test.sh:97,108 用**真实仓 brief**（D312-baseline-tools.md / 2026-08-02-D286-GraphStore-unify.md）当夹具",
+    "risk": "夹具耦合真实数据文件；删件即测试红 ⇒ 出库必须永久为这两件让路。当前 else 分支是 fail-closed（好事），但设计脆弱",
+    "suggest": "改为自带临时夹具（mktemp + heredoc），与真实仓解耦",
+    "owner": "CTO 立卡（队长已收，作「只登记不扩批」项）；B2 **未动**",
+    "status": "OPEN"
+   },
+   {
+    "id": "L2",
+    "item": "X6「无 task-state 另判」口径",
+    "risk": "属本批自建判据，非既有规则",
+    "resolution": "队长 2026-09-28 裁决：按 N=275 落，不收紧到 221；依据=注册表实测下限 D356 + G12 认领窗口为文件名日期 ±1 天",
+    "status": "CLOSED（队长裁决）"
+   },
+   {
+    "id": "L3",
+    "item": "pr-budget 的 D1028「出库豁免」对**混合批**（出库 + 本批产物）不生效；仅靠 D860 治理产物豁免放行",
+    "risk": "若某批出库件同时含代码文件，两条豁免都可能失效 ⇒ 预算误拦",
+    "suggest": "登记为控制塔域候选卡（D1028 豁免判据是否应放宽「纯删除」约束）",
+    "owner": "CTO 立案决策；B2（执行成员）不改门禁脚本",
+    "status": "OPEN"
+   },
+   {
+    "id": "L4",
+    "item": "CI 与本地对 docs 纯文档白名单口径不同（CI ci.yml:51 含 .json；本地 DOC_PREFIX_RE 不含）",
+    "risk": "读者误判 CI 成本；无功能风险",
+    "resolution": "仅登记（DEV-5）；不改门禁",
+    "status": "OPEN（登记）"
+   },
+   {
+    "id": "L5",
+    "item": "本批 **149 件排除件留在主仓**，未做二次分流",
+    "risk": "主仓 `.claude/task-briefs/` 仍保有 150 件（149 排除 + 1 本批新 brief）",
+    "suggest": "在飞卡收口后另批处理；本批不做",
+    "owner": "后续批次",
+    "status": "OPEN"
+   }
+  ]
  }
 }
