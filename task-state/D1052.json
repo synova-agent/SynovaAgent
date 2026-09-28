@@ -1,0 +1,11 @@
+{
+  "task_id": "D1052",
+  "title": "注入夹具 b 面排除 docs（系统性假红修复）",
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-09-28",
+  "updated_by": "alloc-task-id"
+}

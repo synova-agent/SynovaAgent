@@ -582,7 +582,11 @@ done
 # ═══ 收尾残留断言（三面）═══
 echo "── 收尾残留断言 ──"
 CODE_RESIDUE="$(grep -rl "$MARK" "$REPO_DIR/src" "$REPO_DIR/tests" "$REPO_DIR/scripts" "$REPO_DIR/.github" 2>/dev/null | wc -l | tr -d ' ')"   # swallow-ok: 收尾计数的探测型 grep，无匹配=0 正是期望（a 面期望 0），计数交由下方断言判红
-REPO_RESIDUE="$(grep -rl "$MARK" "$REPO_DIR" --exclude-dir=node_modules --exclude-dir=.git 2>/dev/null | wc -l | tr -d ' ')"   # swallow-ok: 同上探测型计数（b 面期望 = 基线 13；6→7 见 M9/#741、7→8 见 D945、8→13 见 D1028 本卡，逐条登记见上方 [b 面登记]）；非探测路径不可达时计数为 0 会由断言判红，不静默
+# 2026-09-28 CTO 裁定（系统性假红修复）: b 面排除 docs/ —— 证据与记录文档合法引用标记字样
+#   （如 B2 出库门禁证据 A-03 含 INJECTED-RED；线3 注入红证 20-verify-break-red.json）。
+#   原口径下"证据增长 ⇒ 顶破基线 13 ⇒ 每个基于最新 main 的 PR 被误红"（#875/#877/#872 三 PR 实证）。
+#   a 面已独立保证代码/测试/脚本/CI 面 = 0；b 面阈值待按新口径重定（另卡）。
+REPO_RESIDUE="$(grep -rl "$MARK" "$REPO_DIR" --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=docs 2>/dev/null | wc -l | tr -d ' ')"   # swallow-ok: 同上探测型计数（b 面期望 = 基线 13；6→7 见 M9/#741、7→8 见 D945、8→13 见 D1028 本卡，逐条登记见上方 [b 面登记]）；非探测路径不可达时计数为 0 会由断言判红，不静默
 CLONE_POSITIVE="$(git -C "$CLONE" diff --cached | grep -c "$MARK" || true)"
 CLONE_POSITIVE="${CLONE_POSITIVE//[^0-9]/}"
 echo "a) 代码/测试/脚本/CI 面残留: $CODE_RESIDUE 个文件（期望 0）"
