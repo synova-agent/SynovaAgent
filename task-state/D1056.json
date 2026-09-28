@@ -8,7 +8,18 @@
   "executor": "ct10-exec（A）/ 独立自验待派（ct10-verify D1057）",
   "blocked": null,
   "spec": ".claude/task-briefs/2026-09-28-D1056-CT10-win黄金门禁.md",
-  "impl": null,
+  "impl": {
+    "commit": "de54c49dff592a10bb666c8b8927d506403b9569",
+    "commit_note": "内容提交；tip 含 auto-hook 登记影子提交，以 git ls-remote 为准",
+    "by": "ct10-exec",
+    "at": "2026-09-28",
+    "files": [
+      "scripts/ci/golden-snapshot-runner.ts",
+      "scripts/ci/golden-case-checker.ts",
+      "tests/ci/golden-dataset-coverage.test.sh",
+      "docs/synova/product-lines/evidence/CT10-win-golden-coverage-20260928.md"
+    ]
+  },
   "audit": null,
   "fix_task_id": null,
   "write_set": [
