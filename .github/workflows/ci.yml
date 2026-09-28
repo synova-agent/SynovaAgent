@@ -134,22 +134,26 @@ jobs:
       # D708: 合并级写集对账 gate —— 本 PR 变更集 × **本 PR 自己的声明**（intra-PR 夹带）。
       #   与上一 step（verify-parallel: 本 PR × 已合 PR 写集，inter-PR 重叠）**正交**，不重复造。
       #   触发点 = 合并前（PR job）：出现夹带即红并逐文件点名；main/master push 自动跳过。
-      # 🔴 D1039 修复: `--head` 必须指向**本 PR 的真提交**，不能是 GitHub 的 PR merge ref。
+      # 🔴 D1039 修复（根治）: merge-commit subject 里的**全长 SHA** 被 `DID_RE` 误当任务号 ⇒ 假 D# ⇒ 判红。
+      #   **修的是门禁本体**（`scripts/control-tower/merge_writeset_gate.py`），**不是本 step 的入参** ——
+      #   本 step 保持**上游原样**（`--head HEAD`）。
       #   根因（实测，非推断）: pull_request 事件下 actions/checkout 检出的 HEAD 是合成 merge 提交，
-      #   subject 形如 `Merge <40位sha> into <40位sha>`；而 merge_writeset_gate.py 的
-      #   `DID_RE = re.compile(r"[Dd]\d+")` 把 sha 里的十六进制当任务号
-      #   （实测该 subject 上 findall = ['d63','d287','d9','d3'] ⇒ 推断成 **D63**）⇒ 派生到无关
-      #   dev doc ⇒ 声明 0 条 ⇒ fail-closed **exit 2**（本 step 红，本批 run 实见）。
-      #   ⇒ 改传 `github.event.pull_request.head.sha`（本 PR 真提交：subject 含正确 D#，且 gate 的
-      #   回退链会跳过 post-commit 的 bypass 登记影子提交）。实测: `D# 推断来源: commit-subject → D1039`，
-      #   且「变更集/声明/豁免」文件清单与 merge ref 运行**逐行一致** ⇒ 不改变对账语义。
-      #   非 PR 事件（push）无该字段 ⇒ 回退 `HEAD`。
-      #   注: 根治（让 DID_RE 不吞 sha 十六进制）在 merge_writeset_gate.py —— 门禁本体，不在本卡写集。
+      #   subject 形如 `Merge <40位sha> into <40位sha>`；旧 `DID_RE = re.compile(r"[Dd]\d+")` 无词边界
+      #   ⇒ 命中所里十六进制（实测 `b65b**d63**b68` ⇒ findall ['d63','d287','d9','d3'] ⇒ 推断 **D63**）
+      #   ⇒ 派生到无关 dev doc ⇒ 声明 0 条 ⇒ **exit 2**（本批 run 实见）。
+      #   ⇒ 已改为 `(?<![0-9A-Za-z])[Dd]\d+(?![0-9A-Za-z])`（同一 subject → findall []）
+      #   ⇒ 实测真 `refs/pull/872/merge`（d1ba4905）由 EXIT=2 → **EXIT=0**（推断回 D1039）。
+      #   ⚠️ **禁止**把本 step 的 `--head` 改成引用 PR head 的表达式（即 event 的 PR head 字段）：
+      #      那是 K3 定罪的「空转取数形态」，`tests/control-tower/check-gate-integrity.test.sh:641-643`
+      #      有**接线回退**硬断言 —— 该断言是**字面 grep**，连注释里出现该字面串都会 FAIL（本批实撞）。
+      #      且**不必要** —— 根治后 `--head HEAD`（merge ref 形态）自身即可正确推断。
+      #   回归夹具: `tests/control-tower/merge_writeset_gate.test.sh` ⑩b（真 merge subject 零误判）
+      #      与 ⑩c（还原旧正则即失效 ⇒ 判别性）。
       - name: Merge write-set reconciliation (D708)
         if: steps.docsonly.outputs.docs_only != 'true'
         run: |
           python3 scripts/control-tower/merge_writeset_gate.py \
-            --base origin/main --head "${{ github.event.pull_request.head.sha || 'HEAD' }}" --branch "${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+            --base origin/main --head HEAD --branch "${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
 
   test:
     # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-09-26T04:47:47+08:00；
