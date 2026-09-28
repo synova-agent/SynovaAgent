@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-28 19:27:17",
+  "generated_at": "2026-09-28 21:59:47",
   "version": "1.1",
   "total_lines": 29,
   "lines_v1": 28,
@@ -25,7 +25,7 @@
     },
     "denominator_note": "与 `docs/synova/project/ledger.json` 的 totals.buckets 分母不同（此处 = product-lines.yaml 验收点数；账本 = V1 断言表条数）——同名档不可跨件混读，各档自带 denominator",
     "healthy": {
-      "count": 23,
+      "count": 25,
       "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=f['buckets']['healthy']['count'];b=k['buckets']['healthy']['count'];sys.exit('MISMATCH buckets.buckets.healthy.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('healthy=' + str(a))\"",
       "cmd_kind": "source_recompute",
       "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=d['buckets']['healthy']['count'];print('healthy=' + str(v))\"",
@@ -62,7 +62,7 @@
     },
     "other_states": {
       "wired_broken": {
-        "count": 13,
+        "count": 30,
         "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=f['buckets']['other_states']['wired_broken']['count'];b=k['buckets']['other_states']['wired_broken']['count'];sys.exit('MISMATCH buckets.buckets.other_states.wired_broken.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('wired_broken=' + str(a))\"",
         "cmd_kind": "source_recompute",
         "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=d['buckets']['other_states']['wired_broken']['count'];print('wired_broken=' + str(v))\"",
@@ -74,7 +74,7 @@
         "reason": null
       },
       "live_unverified": {
-        "count": 20,
+        "count": 0,
         "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=f['buckets']['other_states']['live_unverified']['count'];b=k['buckets']['other_states']['live_unverified']['count'];sys.exit('MISMATCH buckets.buckets.other_states.live_unverified.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('live_unverified=' + str(a))\"",
         "cmd_kind": "source_recompute",
         "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=d['buckets']['other_states']['live_unverified']['count'];print('live_unverified=' + str(v))\"",
@@ -86,7 +86,7 @@
         "reason": null
       },
       "stale": {
-        "count": 30,
+        "count": 31,
         "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=f['buckets']['other_states']['stale']['count'];b=k['buckets']['other_states']['stale']['count'];sys.exit('MISMATCH buckets.buckets.other_states.stale.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('stale=' + str(a))\"",
         "cmd_kind": "source_recompute",
         "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=d['buckets']['other_states']['stale']['count'];print('stale=' + str(v))\"",
@@ -683,7 +683,7 @@
         },
         "other_states": {
           "wired_broken": {
-            "count": 0,
+            "count": 2,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '3')['buckets']['other_states']['wired_broken']['count'];b=next(l for l in k['lines'] if str(l['id']) == '3')['buckets']['other_states']['wired_broken']['count'];sys.exit('MISMATCH lines[id=3].buckets.buckets.other_states.wired_broken.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('wired_broken=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '3')['buckets']['other_states']['wired_broken']['count'];print('wired_broken=' + str(v))\"",
@@ -695,7 +695,7 @@
             "reason": null
           },
           "live_unverified": {
-            "count": 2,
+            "count": 0,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '3')['buckets']['other_states']['live_unverified']['count'];b=next(l for l in k['lines'] if str(l['id']) == '3')['buckets']['other_states']['live_unverified']['count'];sys.exit('MISMATCH lines[id=3].buckets.buckets.other_states.live_unverified.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('live_unverified=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '3')['buckets']['other_states']['live_unverified']['count'];print('live_unverified=' + str(v))\"",
@@ -758,9 +758,9 @@
       "status_counts": {
         "uncommitted": 7,
         "failed": 0,
-        "pending_k3": 2,
+        "pending_k3": 0,
         "verified": 0,
-        "rejected": 0,
+        "rejected": 2,
         "stale": 0
       },
       "points": [
@@ -816,15 +816,18 @@
         {
           "id": "3-8",
           "desc": "审计员复核报告结构与真实性",
-          "status": "pending_k3",
-          "evidence_files": [],
+          "status": "rejected",
+          "evidence_files": [
+            "docs/synova/product-lines/evidence/k3-batch3-2026-09-28.json"
+          ],
           "note": ""
         },
         {
           "id": "3-9",
           "desc": "时间窗口径可判定：报告标注数据时点与时间窗，日粒度为主 + 周/月聚合视图；同一区间的周/月聚合值必须等于其覆盖日粒度值的一致合成（可复算），聚合不得另立独立口径",
-          "status": "pending_k3",
+          "status": "rejected",
           "evidence_files": [
+            "docs/synova/product-lines/evidence/k3-batch3-2026-09-28.json",
             "docs/synova/product-lines/evidence/test-2026-09-28.json"
           ],
           "note": "③ 决定③（创始人裁定表-§6五项-20260920.md §6-5）。**依赖：D828 趋势接线引用本口径**（裁定表 §6-5 ③ 原文）——本点是 D828 的前置口径，D828 实现不得另立时间窗。fail_when：只支持日／不支持周月视图／聚合值与覆盖日值求和不一致（同区间两处口径打架）／报告未标注数据时点。M1：时点与时区语义可对齐 @deepseek-ai/dsh-time-context（**v0.1.6-alpha.2**，config.timeZone / config.refreshIntervalMs，lib/index.js:161-162）——复用语义，不抄界面（M5）。"
@@ -1131,7 +1134,7 @@
         },
         "other_states": {
           "wired_broken": {
-            "count": 0,
+            "count": 1,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '5')['buckets']['other_states']['wired_broken']['count'];b=next(l for l in k['lines'] if str(l['id']) == '5')['buckets']['other_states']['wired_broken']['count'];sys.exit('MISMATCH lines[id=5].buckets.buckets.other_states.wired_broken.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('wired_broken=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '5')['buckets']['other_states']['wired_broken']['count'];print('wired_broken=' + str(v))\"",
@@ -1143,7 +1146,7 @@
             "reason": null
           },
           "live_unverified": {
-            "count": 1,
+            "count": 0,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '5')['buckets']['other_states']['live_unverified']['count'];b=next(l for l in k['lines'] if str(l['id']) == '5')['buckets']['other_states']['live_unverified']['count'];sys.exit('MISMATCH lines[id=5].buckets.buckets.other_states.live_unverified.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('live_unverified=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '5')['buckets']['other_states']['live_unverified']['count'];print('live_unverified=' + str(v))\"",
@@ -1206,9 +1209,9 @@
       "status_counts": {
         "uncommitted": 5,
         "failed": 0,
-        "pending_k3": 1,
+        "pending_k3": 0,
         "verified": 0,
-        "rejected": 0,
+        "rejected": 1,
         "stale": 0
       },
       "points": [
@@ -1250,8 +1253,10 @@
         {
           "id": "5-6",
           "desc": "审计员复核本体收敛结果",
-          "status": "pending_k3",
-          "evidence_files": [],
+          "status": "rejected",
+          "evidence_files": [
+            "docs/synova/product-lines/evidence/k3-batch3-2026-09-28.json"
+          ],
           "note": ""
         }
       ]
@@ -1323,7 +1328,7 @@
         },
         "other_states": {
           "wired_broken": {
-            "count": 0,
+            "count": 1,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '6')['buckets']['other_states']['wired_broken']['count'];b=next(l for l in k['lines'] if str(l['id']) == '6')['buckets']['other_states']['wired_broken']['count'];sys.exit('MISMATCH lines[id=6].buckets.buckets.other_states.wired_broken.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('wired_broken=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '6')['buckets']['other_states']['wired_broken']['count'];print('wired_broken=' + str(v))\"",
@@ -1335,7 +1340,7 @@
             "reason": null
           },
           "live_unverified": {
-            "count": 1,
+            "count": 0,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '6')['buckets']['other_states']['live_unverified']['count'];b=next(l for l in k['lines'] if str(l['id']) == '6')['buckets']['other_states']['live_unverified']['count'];sys.exit('MISMATCH lines[id=6].buckets.buckets.other_states.live_unverified.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('live_unverified=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '6')['buckets']['other_states']['live_unverified']['count'];print('live_unverified=' + str(v))\"",
@@ -1398,9 +1403,9 @@
       "status_counts": {
         "uncommitted": 6,
         "failed": 0,
-        "pending_k3": 1,
+        "pending_k3": 0,
         "verified": 0,
-        "rejected": 0,
+        "rejected": 1,
         "stale": 0
       },
       "points": [
@@ -1449,8 +1454,10 @@
         {
           "id": "6-7",
           "desc": "审计员复核首诊旅程",
-          "status": "pending_k3",
-          "evidence_files": [],
+          "status": "rejected",
+          "evidence_files": [
+            "docs/synova/product-lines/evidence/k3-batch3-2026-09-28.json"
+          ],
           "note": ""
         }
       ]
@@ -1464,8 +1471,8 @@
       "baseline_note": "调度真实（K3 PASS）；告警层死代码",
       "done_definition": "装好后系统自动按周/月/季监测，异常自动发现、自动进报告；重启/断电不丢监测结果",
       "total": 8,
-      "verified": 0,
-      "progress_pct": 0,
+      "verified": 1,
+      "progress_pct": 12,
       "buckets": {
         "schema": "discrete-health-buckets/1",
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
@@ -1485,7 +1492,7 @@
         },
         "denominator_note": "与 `docs/synova/project/ledger.json` 的 totals.buckets 分母不同（此处 = product-lines.yaml 验收点数；账本 = V1 断言表条数）——同名档不可跨件混读，各档自带 denominator",
         "healthy": {
-          "count": 0,
+          "count": 1,
           "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '7')['buckets']['healthy']['count'];b=next(l for l in k['lines'] if str(l['id']) == '7')['buckets']['healthy']['count'];sys.exit('MISMATCH lines[id=7].buckets.buckets.healthy.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('healthy=' + str(a))\"",
           "cmd_kind": "source_recompute",
           "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '7')['buckets']['healthy']['count'];print('healthy=' + str(v))\"",
@@ -1522,7 +1529,7 @@
         },
         "other_states": {
           "wired_broken": {
-            "count": 0,
+            "count": 1,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '7')['buckets']['other_states']['wired_broken']['count'];b=next(l for l in k['lines'] if str(l['id']) == '7')['buckets']['other_states']['wired_broken']['count'];sys.exit('MISMATCH lines[id=7].buckets.buckets.other_states.wired_broken.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('wired_broken=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '7')['buckets']['other_states']['wired_broken']['count'];print('wired_broken=' + str(v))\"",
@@ -1534,7 +1541,7 @@
             "reason": null
           },
           "live_unverified": {
-            "count": 2,
+            "count": 0,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '7')['buckets']['other_states']['live_unverified']['count'];b=next(l for l in k['lines'] if str(l['id']) == '7')['buckets']['other_states']['live_unverified']['count'];sys.exit('MISMATCH lines[id=7].buckets.buckets.other_states.live_unverified.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('live_unverified=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '7')['buckets']['other_states']['live_unverified']['count'];print('live_unverified=' + str(v))\"",
@@ -1597,9 +1604,9 @@
       "status_counts": {
         "uncommitted": 3,
         "failed": 0,
-        "pending_k3": 2,
-        "verified": 0,
-        "rejected": 0,
+        "pending_k3": 0,
+        "verified": 1,
+        "rejected": 1,
         "stale": 3
       },
       "points": [
@@ -1657,8 +1664,9 @@
         {
           "id": "7-7",
           "desc": "定时任务容错（cron 失败有记录、可重试）",
-          "status": "pending_k3",
+          "status": "verified",
           "evidence_files": [
+            "docs/synova/product-lines/evidence/k3-batch3-2026-09-28.json",
             "docs/synova/product-lines/evidence/test-2026-08-17.json",
             "docs/synova/product-lines/evidence/test-2026-08-18-1.json",
             "docs/synova/product-lines/evidence/test-2026-08-18.json",
@@ -1678,8 +1686,10 @@
         {
           "id": "7-8",
           "desc": "审计员复核持续监测闭环",
-          "status": "pending_k3",
-          "evidence_files": [],
+          "status": "rejected",
+          "evidence_files": [
+            "docs/synova/product-lines/evidence/k3-batch3-2026-09-28.json"
+          ],
           "note": ""
         }
       ]
@@ -1974,7 +1984,7 @@
         },
         "other_states": {
           "wired_broken": {
-            "count": 0,
+            "count": 1,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '9')['buckets']['other_states']['wired_broken']['count'];b=next(l for l in k['lines'] if str(l['id']) == '9')['buckets']['other_states']['wired_broken']['count'];sys.exit('MISMATCH lines[id=9].buckets.buckets.other_states.wired_broken.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('wired_broken=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '9')['buckets']['other_states']['wired_broken']['count'];print('wired_broken=' + str(v))\"",
@@ -1986,7 +1996,7 @@
             "reason": null
           },
           "live_unverified": {
-            "count": 1,
+            "count": 0,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '9')['buckets']['other_states']['live_unverified']['count'];b=next(l for l in k['lines'] if str(l['id']) == '9')['buckets']['other_states']['live_unverified']['count'];sys.exit('MISMATCH lines[id=9].buckets.buckets.other_states.live_unverified.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('live_unverified=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '9')['buckets']['other_states']['live_unverified']['count'];print('live_unverified=' + str(v))\"",
@@ -2049,9 +2059,9 @@
       "status_counts": {
         "uncommitted": 4,
         "failed": 0,
-        "pending_k3": 1,
+        "pending_k3": 0,
         "verified": 0,
-        "rejected": 0,
+        "rejected": 1,
         "stale": 1
       },
       "points": [
@@ -2096,8 +2106,10 @@
         {
           "id": "9-6",
           "desc": "审计员复核客户循环全链路（P0-2 修复验证）",
-          "status": "pending_k3",
-          "evidence_files": [],
+          "status": "rejected",
+          "evidence_files": [
+            "docs/synova/product-lines/evidence/k3-batch3-2026-09-28.json"
+          ],
           "note": ""
         }
       ]
@@ -2111,8 +2123,8 @@
       "baseline_note": "K3 三重缺陷；建议第一条 100% 线",
       "done_definition": "老板能接财务数据，系统自动产出现金流/成本/利润的持续监测与告警，每条结论可回溯证据",
       "total": 8,
-      "verified": 0,
-      "progress_pct": 0,
+      "verified": 1,
+      "progress_pct": 12,
       "buckets": {
         "schema": "discrete-health-buckets/1",
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
@@ -2132,7 +2144,7 @@
         },
         "denominator_note": "与 `docs/synova/project/ledger.json` 的 totals.buckets 分母不同（此处 = product-lines.yaml 验收点数；账本 = V1 断言表条数）——同名档不可跨件混读，各档自带 denominator",
         "healthy": {
-          "count": 0,
+          "count": 1,
           "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '10')['buckets']['healthy']['count'];b=next(l for l in k['lines'] if str(l['id']) == '10')['buckets']['healthy']['count'];sys.exit('MISMATCH lines[id=10].buckets.buckets.healthy.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('healthy=' + str(a))\"",
           "cmd_kind": "source_recompute",
           "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '10')['buckets']['healthy']['count'];print('healthy=' + str(v))\"",
@@ -2181,7 +2193,7 @@
             "reason": null
           },
           "live_unverified": {
-            "count": 1,
+            "count": 0,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '10')['buckets']['other_states']['live_unverified']['count'];b=next(l for l in k['lines'] if str(l['id']) == '10')['buckets']['other_states']['live_unverified']['count'];sys.exit('MISMATCH lines[id=10].buckets.buckets.other_states.live_unverified.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('live_unverified=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '10')['buckets']['other_states']['live_unverified']['count'];print('live_unverified=' + str(v))\"",
@@ -2244,8 +2256,8 @@
       "status_counts": {
         "uncommitted": 5,
         "failed": 0,
-        "pending_k3": 1,
-        "verified": 0,
+        "pending_k3": 0,
+        "verified": 1,
         "rejected": 0,
         "stale": 2
       },
@@ -2260,8 +2272,9 @@
         {
           "id": "10-2",
           "desc": "属性契约对齐（cashBalance↔cash 等 snake/camel）",
-          "status": "pending_k3",
+          "status": "verified",
           "evidence_files": [
+            "docs/synova/product-lines/evidence/k3-batch3-2026-09-28.json",
             "docs/synova/product-lines/evidence/test-2026-09-17.json",
             "docs/synova/product-lines/evidence/test-2026-09-28.json"
           ],
@@ -2396,7 +2409,7 @@
         },
         "other_states": {
           "wired_broken": {
-            "count": 0,
+            "count": 1,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '11')['buckets']['other_states']['wired_broken']['count'];b=next(l for l in k['lines'] if str(l['id']) == '11')['buckets']['other_states']['wired_broken']['count'];sys.exit('MISMATCH lines[id=11].buckets.buckets.other_states.wired_broken.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('wired_broken=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '11')['buckets']['other_states']['wired_broken']['count'];print('wired_broken=' + str(v))\"",
@@ -2408,7 +2421,7 @@
             "reason": null
           },
           "live_unverified": {
-            "count": 1,
+            "count": 0,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '11')['buckets']['other_states']['live_unverified']['count'];b=next(l for l in k['lines'] if str(l['id']) == '11')['buckets']['other_states']['live_unverified']['count'];sys.exit('MISMATCH lines[id=11].buckets.buckets.other_states.live_unverified.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('live_unverified=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '11')['buckets']['other_states']['live_unverified']['count'];print('live_unverified=' + str(v))\"",
@@ -2471,9 +2484,9 @@
       "status_counts": {
         "uncommitted": 4,
         "failed": 0,
-        "pending_k3": 1,
+        "pending_k3": 0,
         "verified": 0,
-        "rejected": 0,
+        "rejected": 1,
         "stale": 2
       },
       "points": [
@@ -2528,8 +2541,10 @@
         {
           "id": "11-7",
           "desc": "审计员复核人才循环全链路",
-          "status": "pending_k3",
-          "evidence_files": [],
+          "status": "rejected",
+          "evidence_files": [
+            "docs/synova/product-lines/evidence/k3-batch3-2026-09-28.json"
+          ],
           "note": ""
         }
       ]
@@ -2601,7 +2616,7 @@
         },
         "other_states": {
           "wired_broken": {
-            "count": 0,
+            "count": 1,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '12')['buckets']['other_states']['wired_broken']['count'];b=next(l for l in k['lines'] if str(l['id']) == '12')['buckets']['other_states']['wired_broken']['count'];sys.exit('MISMATCH lines[id=12].buckets.buckets.other_states.wired_broken.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('wired_broken=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '12')['buckets']['other_states']['wired_broken']['count'];print('wired_broken=' + str(v))\"",
@@ -2613,7 +2628,7 @@
             "reason": null
           },
           "live_unverified": {
-            "count": 1,
+            "count": 0,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '12')['buckets']['other_states']['live_unverified']['count'];b=next(l for l in k['lines'] if str(l['id']) == '12')['buckets']['other_states']['live_unverified']['count'];sys.exit('MISMATCH lines[id=12].buckets.buckets.other_states.live_unverified.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('live_unverified=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '12')['buckets']['other_states']['live_unverified']['count'];print('live_unverified=' + str(v))\"",
@@ -2676,9 +2691,9 @@
       "status_counts": {
         "uncommitted": 4,
         "failed": 0,
-        "pending_k3": 1,
+        "pending_k3": 0,
         "verified": 0,
-        "rejected": 0,
+        "rejected": 1,
         "stale": 0
       },
       "points": [
@@ -2713,8 +2728,10 @@
         {
           "id": "12-5",
           "desc": "审计员复核技术维度循环",
-          "status": "pending_k3",
-          "evidence_files": [],
+          "status": "rejected",
+          "evidence_files": [
+            "docs/synova/product-lines/evidence/k3-batch3-2026-09-28.json"
+          ],
           "note": ""
         }
       ]
@@ -2786,7 +2803,7 @@
         },
         "other_states": {
           "wired_broken": {
-            "count": 0,
+            "count": 1,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '13')['buckets']['other_states']['wired_broken']['count'];b=next(l for l in k['lines'] if str(l['id']) == '13')['buckets']['other_states']['wired_broken']['count'];sys.exit('MISMATCH lines[id=13].buckets.buckets.other_states.wired_broken.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('wired_broken=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '13')['buckets']['other_states']['wired_broken']['count'];print('wired_broken=' + str(v))\"",
@@ -2798,7 +2815,7 @@
             "reason": null
           },
           "live_unverified": {
-            "count": 1,
+            "count": 0,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '13')['buckets']['other_states']['live_unverified']['count'];b=next(l for l in k['lines'] if str(l['id']) == '13')['buckets']['other_states']['live_unverified']['count'];sys.exit('MISMATCH lines[id=13].buckets.buckets.other_states.live_unverified.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('live_unverified=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '13')['buckets']['other_states']['live_unverified']['count'];print('live_unverified=' + str(v))\"",
@@ -2861,9 +2878,9 @@
       "status_counts": {
         "uncommitted": 4,
         "failed": 0,
-        "pending_k3": 1,
+        "pending_k3": 0,
         "verified": 0,
-        "rejected": 0,
+        "rejected": 1,
         "stale": 0
       },
       "points": [
@@ -2898,8 +2915,10 @@
         {
           "id": "13-5",
           "desc": "审计员复核财务结构维度循环",
-          "status": "pending_k3",
-          "evidence_files": [],
+          "status": "rejected",
+          "evidence_files": [
+            "docs/synova/product-lines/evidence/k3-batch3-2026-09-28.json"
+          ],
           "note": ""
         }
       ]
@@ -2971,7 +2990,7 @@
         },
         "other_states": {
           "wired_broken": {
-            "count": 0,
+            "count": 1,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '14')['buckets']['other_states']['wired_broken']['count'];b=next(l for l in k['lines'] if str(l['id']) == '14')['buckets']['other_states']['wired_broken']['count'];sys.exit('MISMATCH lines[id=14].buckets.buckets.other_states.wired_broken.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('wired_broken=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '14')['buckets']['other_states']['wired_broken']['count'];print('wired_broken=' + str(v))\"",
@@ -2983,7 +3002,7 @@
             "reason": null
           },
           "live_unverified": {
-            "count": 1,
+            "count": 0,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '14')['buckets']['other_states']['live_unverified']['count'];b=next(l for l in k['lines'] if str(l['id']) == '14')['buckets']['other_states']['live_unverified']['count'];sys.exit('MISMATCH lines[id=14].buckets.buckets.other_states.live_unverified.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('live_unverified=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '14')['buckets']['other_states']['live_unverified']['count'];print('live_unverified=' + str(v))\"",
@@ -3046,9 +3065,9 @@
       "status_counts": {
         "uncommitted": 4,
         "failed": 0,
-        "pending_k3": 1,
+        "pending_k3": 0,
         "verified": 0,
-        "rejected": 0,
+        "rejected": 1,
         "stale": 0
       },
       "points": [
@@ -3083,8 +3102,10 @@
         {
           "id": "14-5",
           "desc": "审计员复核竞争战略维度循环",
-          "status": "pending_k3",
-          "evidence_files": [],
+          "status": "rejected",
+          "evidence_files": [
+            "docs/synova/product-lines/evidence/k3-batch3-2026-09-28.json"
+          ],
           "note": ""
         }
       ]
@@ -3403,7 +3424,7 @@
         },
         "other_states": {
           "wired_broken": {
-            "count": 0,
+            "count": 1,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '16')['buckets']['other_states']['wired_broken']['count'];b=next(l for l in k['lines'] if str(l['id']) == '16')['buckets']['other_states']['wired_broken']['count'];sys.exit('MISMATCH lines[id=16].buckets.buckets.other_states.wired_broken.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('wired_broken=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '16')['buckets']['other_states']['wired_broken']['count'];print('wired_broken=' + str(v))\"",
@@ -3415,7 +3436,7 @@
             "reason": null
           },
           "live_unverified": {
-            "count": 1,
+            "count": 0,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '16')['buckets']['other_states']['live_unverified']['count'];b=next(l for l in k['lines'] if str(l['id']) == '16')['buckets']['other_states']['live_unverified']['count'];sys.exit('MISMATCH lines[id=16].buckets.buckets.other_states.live_unverified.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('live_unverified=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '16')['buckets']['other_states']['live_unverified']['count'];print('live_unverified=' + str(v))\"",
@@ -3478,9 +3499,9 @@
       "status_counts": {
         "uncommitted": 4,
         "failed": 0,
-        "pending_k3": 1,
+        "pending_k3": 0,
         "verified": 0,
-        "rejected": 0,
+        "rejected": 1,
         "stale": 0
       },
       "points": [
@@ -3515,8 +3536,10 @@
         {
           "id": "16-5",
           "desc": "审计员复核行动闭环",
-          "status": "pending_k3",
-          "evidence_files": [],
+          "status": "rejected",
+          "evidence_files": [
+            "docs/synova/product-lines/evidence/k3-batch3-2026-09-28.json"
+          ],
           "note": ""
         }
       ]
@@ -3600,7 +3623,7 @@
             "reason": null
           },
           "live_unverified": {
-            "count": 1,
+            "count": 0,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '17')['buckets']['other_states']['live_unverified']['count'];b=next(l for l in k['lines'] if str(l['id']) == '17')['buckets']['other_states']['live_unverified']['count'];sys.exit('MISMATCH lines[id=17].buckets.buckets.other_states.live_unverified.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('live_unverified=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '17')['buckets']['other_states']['live_unverified']['count'];print('live_unverified=' + str(v))\"",
@@ -3612,7 +3635,7 @@
             "reason": null
           },
           "stale": {
-            "count": 0,
+            "count": 1,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '17')['buckets']['other_states']['stale']['count'];b=next(l for l in k['lines'] if str(l['id']) == '17')['buckets']['other_states']['stale']['count'];sys.exit('MISMATCH lines[id=17].buckets.buckets.other_states.stale.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('stale=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '17')['buckets']['other_states']['stale']['count'];print('stale=' + str(v))\"",
@@ -3663,10 +3686,10 @@
       "status_counts": {
         "uncommitted": 2,
         "failed": 1,
-        "pending_k3": 1,
+        "pending_k3": 0,
         "verified": 0,
         "rejected": 1,
-        "stale": 0
+        "stale": 1
       },
       "points": [
         {
@@ -3702,8 +3725,10 @@
         {
           "id": "17-5",
           "desc": "审计员复核进化闭环（N13 P0 修复验证）",
-          "status": "pending_k3",
-          "evidence_files": [],
+          "status": "stale",
+          "evidence_files": [
+            "docs/synova/product-lines/evidence/k3-batch3-2026-09-28.json"
+          ],
           "note": ""
         }
       ]
@@ -3775,7 +3800,7 @@
         },
         "other_states": {
           "wired_broken": {
-            "count": 0,
+            "count": 1,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '18')['buckets']['other_states']['wired_broken']['count'];b=next(l for l in k['lines'] if str(l['id']) == '18')['buckets']['other_states']['wired_broken']['count'];sys.exit('MISMATCH lines[id=18].buckets.buckets.other_states.wired_broken.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('wired_broken=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '18')['buckets']['other_states']['wired_broken']['count'];print('wired_broken=' + str(v))\"",
@@ -3787,7 +3812,7 @@
             "reason": null
           },
           "live_unverified": {
-            "count": 1,
+            "count": 0,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '18')['buckets']['other_states']['live_unverified']['count'];b=next(l for l in k['lines'] if str(l['id']) == '18')['buckets']['other_states']['live_unverified']['count'];sys.exit('MISMATCH lines[id=18].buckets.buckets.other_states.live_unverified.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('live_unverified=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '18')['buckets']['other_states']['live_unverified']['count'];print('live_unverified=' + str(v))\"",
@@ -3850,9 +3875,9 @@
       "status_counts": {
         "uncommitted": 2,
         "failed": 0,
-        "pending_k3": 1,
+        "pending_k3": 0,
         "verified": 0,
-        "rejected": 0,
+        "rejected": 1,
         "stale": 3
       },
       "points": [
@@ -3926,8 +3951,10 @@
         {
           "id": "18-6",
           "desc": "审计员复核记忆体系",
-          "status": "pending_k3",
-          "evidence_files": [],
+          "status": "rejected",
+          "evidence_files": [
+            "docs/synova/product-lines/evidence/k3-batch3-2026-09-28.json"
+          ],
           "note": ""
         }
       ]
@@ -3999,7 +4026,7 @@
         },
         "other_states": {
           "wired_broken": {
-            "count": 1,
+            "count": 2,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '19')['buckets']['other_states']['wired_broken']['count'];b=next(l for l in k['lines'] if str(l['id']) == '19')['buckets']['other_states']['wired_broken']['count'];sys.exit('MISMATCH lines[id=19].buckets.buckets.other_states.wired_broken.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('wired_broken=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '19')['buckets']['other_states']['wired_broken']['count'];print('wired_broken=' + str(v))\"",
@@ -4011,7 +4038,7 @@
             "reason": null
           },
           "live_unverified": {
-            "count": 1,
+            "count": 0,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '19')['buckets']['other_states']['live_unverified']['count'];b=next(l for l in k['lines'] if str(l['id']) == '19')['buckets']['other_states']['live_unverified']['count'];sys.exit('MISMATCH lines[id=19].buckets.buckets.other_states.live_unverified.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('live_unverified=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '19')['buckets']['other_states']['live_unverified']['count'];print('live_unverified=' + str(v))\"",
@@ -4074,9 +4101,9 @@
       "status_counts": {
         "uncommitted": 2,
         "failed": 0,
-        "pending_k3": 1,
+        "pending_k3": 0,
         "verified": 0,
-        "rejected": 1,
+        "rejected": 2,
         "stale": 1
       },
       "points": [
@@ -4128,8 +4155,10 @@
         {
           "id": "19-5",
           "desc": "审计员复核方向监测链路",
-          "status": "pending_k3",
-          "evidence_files": [],
+          "status": "rejected",
+          "evidence_files": [
+            "docs/synova/product-lines/evidence/k3-batch3-2026-09-28.json"
+          ],
           "note": ""
         }
       ]
@@ -4640,7 +4669,7 @@
         },
         "other_states": {
           "wired_broken": {
-            "count": 0,
+            "count": 1,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '22')['buckets']['other_states']['wired_broken']['count'];b=next(l for l in k['lines'] if str(l['id']) == '22')['buckets']['other_states']['wired_broken']['count'];sys.exit('MISMATCH lines[id=22].buckets.buckets.other_states.wired_broken.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('wired_broken=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '22')['buckets']['other_states']['wired_broken']['count'];print('wired_broken=' + str(v))\"",
@@ -4652,7 +4681,7 @@
             "reason": null
           },
           "live_unverified": {
-            "count": 1,
+            "count": 0,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '22')['buckets']['other_states']['live_unverified']['count'];b=next(l for l in k['lines'] if str(l['id']) == '22')['buckets']['other_states']['live_unverified']['count'];sys.exit('MISMATCH lines[id=22].buckets.buckets.other_states.live_unverified.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('live_unverified=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '22')['buckets']['other_states']['live_unverified']['count'];print('live_unverified=' + str(v))\"",
@@ -4715,9 +4744,9 @@
       "status_counts": {
         "uncommitted": 4,
         "failed": 0,
-        "pending_k3": 1,
+        "pending_k3": 0,
         "verified": 0,
-        "rejected": 0,
+        "rejected": 1,
         "stale": 1
       },
       "points": [
@@ -4775,8 +4804,10 @@
         {
           "id": "22-6",
           "desc": "审计员复核稳定性（K3 实测）",
-          "status": "pending_k3",
-          "evidence_files": [],
+          "status": "rejected",
+          "evidence_files": [
+            "docs/synova/product-lines/evidence/k3-batch3-2026-09-28.json"
+          ],
           "note": ""
         }
       ]
@@ -4848,7 +4879,7 @@
         },
         "other_states": {
           "wired_broken": {
-            "count": 0,
+            "count": 1,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '23')['buckets']['other_states']['wired_broken']['count'];b=next(l for l in k['lines'] if str(l['id']) == '23')['buckets']['other_states']['wired_broken']['count'];sys.exit('MISMATCH lines[id=23].buckets.buckets.other_states.wired_broken.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('wired_broken=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '23')['buckets']['other_states']['wired_broken']['count'];print('wired_broken=' + str(v))\"",
@@ -4860,7 +4891,7 @@
             "reason": null
           },
           "live_unverified": {
-            "count": 1,
+            "count": 0,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '23')['buckets']['other_states']['live_unverified']['count'];b=next(l for l in k['lines'] if str(l['id']) == '23')['buckets']['other_states']['live_unverified']['count'];sys.exit('MISMATCH lines[id=23].buckets.buckets.other_states.live_unverified.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('live_unverified=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '23')['buckets']['other_states']['live_unverified']['count'];print('live_unverified=' + str(v))\"",
@@ -4923,9 +4954,9 @@
       "status_counts": {
         "uncommitted": 5,
         "failed": 0,
-        "pending_k3": 1,
+        "pending_k3": 0,
         "verified": 0,
-        "rejected": 0,
+        "rejected": 1,
         "stale": 0
       },
       "points": [
@@ -4967,8 +4998,10 @@
         {
           "id": "23-6",
           "desc": "审计员复核权限治理",
-          "status": "pending_k3",
-          "evidence_files": [],
+          "status": "rejected",
+          "evidence_files": [
+            "docs/synova/product-lines/evidence/k3-batch3-2026-09-28.json"
+          ],
           "note": ""
         }
       ]
@@ -5040,7 +5073,7 @@
         },
         "other_states": {
           "wired_broken": {
-            "count": 1,
+            "count": 2,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '24')['buckets']['other_states']['wired_broken']['count'];b=next(l for l in k['lines'] if str(l['id']) == '24')['buckets']['other_states']['wired_broken']['count'];sys.exit('MISMATCH lines[id=24].buckets.buckets.other_states.wired_broken.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('wired_broken=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '24')['buckets']['other_states']['wired_broken']['count'];print('wired_broken=' + str(v))\"",
@@ -5052,7 +5085,7 @@
             "reason": null
           },
           "live_unverified": {
-            "count": 1,
+            "count": 0,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '24')['buckets']['other_states']['live_unverified']['count'];b=next(l for l in k['lines'] if str(l['id']) == '24')['buckets']['other_states']['live_unverified']['count'];sys.exit('MISMATCH lines[id=24].buckets.buckets.other_states.live_unverified.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('live_unverified=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '24')['buckets']['other_states']['live_unverified']['count'];print('live_unverified=' + str(v))\"",
@@ -5115,9 +5148,9 @@
       "status_counts": {
         "uncommitted": 3,
         "failed": 1,
-        "pending_k3": 1,
+        "pending_k3": 0,
         "verified": 0,
-        "rejected": 0,
+        "rejected": 1,
         "stale": 1
       },
       "points": [
@@ -5175,8 +5208,10 @@
         {
           "id": "24-6",
           "desc": "审计员复核安全与信任",
-          "status": "pending_k3",
-          "evidence_files": [],
+          "status": "rejected",
+          "evidence_files": [
+            "docs/synova/product-lines/evidence/k3-batch3-2026-09-28.json"
+          ],
           "note": ""
         }
       ]
@@ -5518,7 +5553,7 @@
         },
         "other_states": {
           "wired_broken": {
-            "count": 0,
+            "count": 1,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '26')['buckets']['other_states']['wired_broken']['count'];b=next(l for l in k['lines'] if str(l['id']) == '26')['buckets']['other_states']['wired_broken']['count'];sys.exit('MISMATCH lines[id=26].buckets.buckets.other_states.wired_broken.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('wired_broken=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '26')['buckets']['other_states']['wired_broken']['count'];print('wired_broken=' + str(v))\"",
@@ -5530,7 +5565,7 @@
             "reason": null
           },
           "live_unverified": {
-            "count": 1,
+            "count": 0,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '26')['buckets']['other_states']['live_unverified']['count'];b=next(l for l in k['lines'] if str(l['id']) == '26')['buckets']['other_states']['live_unverified']['count'];sys.exit('MISMATCH lines[id=26].buckets.buckets.other_states.live_unverified.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('live_unverified=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '26')['buckets']['other_states']['live_unverified']['count'];print('live_unverified=' + str(v))\"",
@@ -5593,9 +5628,9 @@
       "status_counts": {
         "uncommitted": 5,
         "failed": 0,
-        "pending_k3": 1,
+        "pending_k3": 0,
         "verified": 1,
-        "rejected": 0,
+        "rejected": 1,
         "stale": 0
       },
       "points": [
@@ -5646,8 +5681,10 @@
         {
           "id": "26-6",
           "desc": "审计员复核 MCP 集成",
-          "status": "pending_k3",
-          "evidence_files": [],
+          "status": "rejected",
+          "evidence_files": [
+            "docs/synova/product-lines/evidence/k3-batch3-2026-09-28.json"
+          ],
           "note": ""
         }
       ]
