@@ -1,0 +1,44 @@
+########## D1053 负控取证（成员 V 自建）##########
+date(utc): 2026-09-28T12:09:15Z
+HEAD: e6f3de3eb1dbe6d6ee583e3b37df886698eaaf89
+node: v24.19.0  ABI: 137
+
+=== 第 1 段 · 旧形态（(b) 私有化后已不可执行）—— 记为 INVALID 证据，不计通过 ===
+  命令: node <tsx> -e "import('./src/config/settings-applies.ts').then(m=>m.loadSettingsSpec())"
+  exit code = 1
+  原始输出（末 6 行）:
+                                                             ^
+    
+    TypeError: m.loadSettingsSpec is not a function
+        at [eval]:23:58
+    
+    Node.js v24.19.0
+  PASS 第1段 · 判定：该 exit≠0 属“符号不存在” ⇒ INVALID（不计通过） | returncode=1, TypeError/is-not-a-function=True
+
+=== 第 2 段 · 合法形态：真进程 + 夹具 settings.yaml 含 applies:sometimes ===
+  夹具 = /tmp/d1053-bad/settings.yaml （文件名必须是 settings.yaml，否则加载器读不到）
+    bad:
+      x: { value: 1, applies: sometimes }
+
+  PID=39353  healthz 就绪=True
+  PASS 负控 · 进程未崩死（R4：degraded 不 process.exit；进程仍服务） | healthz ready=True, poll=None
+  GET /api/settings/effective → HTTP 200
+  degraded = True   code = SETTINGS_SPEC_INVALID
+  reason = SETTINGS_BOOT_FAILED settings-applies: settings.yaml 不得携带 applies（分类唯一真相源 = 代码 registry）——涉事路径: bad.x.applies
+  keys[] 路径 = []
+  counts = {"declared": 0, "live": 0, "restart": 0, "undeclared": 0}
+  PASS 负控 · HTTP 200（检查面不成为故障面） | actual=200 expected=200
+  PASS 负控 · degraded === true | actual=True expected=True
+  PASS 负控 · code === SETTINGS_SPEC_INVALID | actual='SETTINGS_SPEC_INVALID' expected='SETTINGS_SPEC_INVALID'
+  PASS 负控 · reason 非空（禁静默） | 'SETTINGS_BOOT_FAILED settings-applies: settings.yaml 不得携带 applies（分类唯一真相源 = 代码 registry）——涉事路径: bad.x.applies'
+  PASS 负控 · 涉事键 bad.x 不得出现在 keys[]（禁静默回落默认值当正常行） | keys[] paths=[]
+  PASS 负控 · 不回落默认值：无任何该键行（含 defaultValue 形态） | paths=[]
+  PASS 负控 · healthz 在规格错误下仍 200 | actual=200 expected=200
+
+  启动日志中的规格错误行（原始）:
+    {"level":40,"time":1790597355985,"pid":39354,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","err":{"code":"SETTINGS_SPEC_INVALID","phase":"spec","retryable":false,"name":"SettingsSpecError"},"code":"SETTINGS_SPEC_INVALID","msg":"SETTINGS_BOOT_FAILED 生效边界初始化失败 — degraded，服务照常起（铁律 24/31）"}
+  PASS 负控 · 启动日志显式 warn 且带 code（层级二：不 process.exit） | SETTINGS_BOOT_FAILED=True SETTINGS_SPEC_INVALID=True
+
+  进程最终退出码（如实记录，非判据）= 0
+
+########## 汇总：10 PASS / 0 FAIL（共 10）##########

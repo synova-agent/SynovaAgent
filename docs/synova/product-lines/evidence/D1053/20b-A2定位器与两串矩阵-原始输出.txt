@@ -1,0 +1,25 @@
+########## D1053 A2 定位器只读复跑 + 两串近对角矩阵 ##########
+date(utc): 2026-09-28T12:09:19Z
+HEAD: e6f3de3eb1dbe6d6ee583e3b37df886698eaaf89
+
+=== 说明：不实跑 run-machine-evidence.sh（会写 evidence 根 + 一次性给 35 点写 pass = 自造 P0-1 假绿）；只复跑其定位逻辑（:75-88 同款） ===
+
+--- 套件串: settings-applies-live ---
+  step1 内容grep -l → tests/config/settings-applies.test.ts
+  step2 文件名glob → <none>
+--- 套件串: settings-applies-restart ---
+  step1 内容grep -l → tests/config/settings-source.test.ts
+  step2 文件名glob → <none>
+
+=== 两串近对角矩阵（全局扫描 tests/）===
+FILE                                     live串    restart串
+tests/config/settings-applies.test.ts    2          0
+tests/config/settings-source.test.ts     0          2
+
+live 串命中文件数    = 1
+restart 串命中文件数 = 1
+⇒ 每串恰 1 文件、互不共现（无 A2 grep -l|head -1 误绑）
+
+=== 旧套件名残留（应为 0）===
+settings-applies.test.ts
+settings-source.test.ts

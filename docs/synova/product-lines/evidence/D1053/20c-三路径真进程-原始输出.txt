@@ -1,0 +1,104 @@
+########## D1053 路径 A/B/C 真进程独立取证（成员 V 自建 harness）##########
+date(utc): 2026-09-28T12:08:53Z
+cwd: /Users/wane/SynovaAgent/.synova-wt-squad-d1053
+HEAD: e6f3de3eb1dbe6d6ee583e3b37df886698eaaf89
+node: v24.19.0  ABI(modules): 137
+tsx cli: /Users/wane/SynovaAgent/.synova-wt-squad-d1053/node_modules/tsx/dist/cli.mjs (exists=True)
+
+=== nonce 独立性证明（自选值不得被实现/测试用过）===
+  $ grep -rn 0.7788 tests/ src/  → <空输出 = 0 命中>
+  PASS nonce 0.7788 在 tests/src 中 0 命中 | grep 输出为空
+
+=== 初始 workspace settings.yaml ===
+diagnosis:
+  gateDataCompleteness: 0.7788
+llm:
+  baseUrl: "http://old.invalid"
+  PORT=62083  ROOT=/tmp/d1053-root  HOME=/tmp/d1053-home (home/settings.yaml 不存在 ⇒ 只走 workspace 层)
+
+=== 起服 #1 ===
+  PASS 起服 #1 healthz 就绪 | http://127.0.0.1:62083/api/healthz
+  PID=39259
+  lsof: node    39261 wane   20u  IPv6 0x8145526a496b3dc3      0t0  TCP *:62083 (LISTEN)
+
+=== 路径 A · 基线（改盘前，不重启）===
+  GET /api/settings/effective → HTTP 200  bootId=e490a449-83db-47dc-aea0-fa55bc38dfc9
+    effective.keys[diagnosis.gateDataCompleteness] = {"path": "diagnosis.gateDataCompleteness", "applies": "live", "declared": true, "effective": 0.7788, "pending": null, "sourceLayer": "workspace", "defaultValue": null, "changedOnDisk": false}
+    dump.settings.keys[diagnosis.gateDataCompleteness] = {"path": "diagnosis.gateDataCompleteness", "applies": "live", "declared": true, "effective": 0.7788, "pending": null, "sourceLayer": "workspace", "defaultValue": null, "changedOnDisk": false}
+  PASS diagnosis.gateDataCompleteness.effective(基线) | actual=0.7788 expected=0.7788
+  PASS diagnosis.gateDataCompleteness.applies | actual='live' expected='live'
+  PASS diagnosis.gateDataCompleteness.pending(live 键应为 null) | actual=None expected=None
+
+=== 路径 A · 改盘 0.7788 → 0.9911（不重启）===
+  bootId(改盘后) = e490a449-83db-47dc-aea0-fa55bc38dfc9  （与基线相同 ⇒ 未重启）
+    effective.keys[diagnosis.gateDataCompleteness] = {"path": "diagnosis.gateDataCompleteness", "applies": "live", "declared": true, "effective": 0.9911, "pending": null, "sourceLayer": "workspace", "defaultValue": null, "changedOnDisk": false}
+    dump.settings.keys[diagnosis.gateDataCompleteness] = {"path": "diagnosis.gateDataCompleteness", "applies": "live", "declared": true, "effective": 0.9911, "pending": null, "sourceLayer": "workspace", "defaultValue": null, "changedOnDisk": false}
+  PASS 路径A · effective 新值 | actual=0.9911 expected=0.9911
+  PASS 路径A · dump 新值 | actual=0.9911 expected=0.9911
+  PASS 路径A · 两消费者同值（deepEqual） | effective=0.9911 vs dump=0.9911
+  PASS 路径A · bootId 未变（未重启） | actual='e490a449-83db-47dc-aea0-fa55bc38dfc9' expected='e490a449-83db-47dc-aea0-fa55bc38dfc9'
+
+=== 路径 B · 改 restart 键 http://old.invalid → http://new.invalid（不重启）===
+  bootId=e490a449-83db-47dc-aea0-fa55bc38dfc9（同 bootId）
+    effective.keys[llm.baseUrl] = {"path": "llm.baseUrl", "applies": "restart", "declared": true, "effective": "http://old.invalid", "pending": "http://new.invalid", "sourceLayer": "workspace", "defaultValue": "https://api.deepseek.com/v1", "changedOnDisk": true}
+    dump.settings.keys[llm.baseUrl] = {"path": "llm.baseUrl", "applies": "restart", "declared": true, "effective": "http://old.invalid", "pending": "http://new.invalid", "sourceLayer": "workspace", "defaultValue": "https://api.deepseek.com/v1", "changedOnDisk": true}
+  PASS 路径B · effective 仍旧值（绝不半生效） | actual='http://old.invalid' expected='http://old.invalid'
+  PASS 路径B · pending = 新值 | actual='http://new.invalid' expected='http://new.invalid'
+  PASS 路径B · applies=restart | actual='restart' expected='restart'
+  PASS 路径B · 两消费者 restarte 键同值 | actual='http://old.invalid' expected='http://old.invalid'
+  PASS 路径B · healthz = 200 | actual=200 expected=200
+  PASS 路径B · 端口不变 | actual=True expected=True
+  PASS 路径B · PID 不变 | actual=True expected=True
+
+=== 路径 B · 真实 kill + 重启（同名同内容 yaml）===
+  kill 后 returncode = 0
+  PASS 起服 #2 healthz 就绪 | http://127.0.0.1:62083/api/healthz
+  bootId(重启前)=e490a449-83db-47dc-aea0-fa55bc38dfc9  bootId(重启后)=3542f89f-d243-4a76-84c5-8903418ad205
+  PID: 39259 → 39298
+    effective.keys[llm.baseUrl] = {"path": "llm.baseUrl", "applies": "restart", "declared": true, "effective": "http://new.invalid", "pending": null, "sourceLayer": "workspace", "defaultValue": "https://api.deepseek.com/v1", "changedOnDisk": false}
+    dump.settings.keys[llm.baseUrl] = {"path": "llm.baseUrl", "applies": "restart", "declared": true, "effective": "http://new.invalid", "pending": null, "sourceLayer": "workspace", "defaultValue": "https://api.deepseek.com/v1", "changedOnDisk": false}
+  PASS 路径B · bootId 已变化（新 boot） | e490a449-83db-47dc-aea0-fa55bc38dfc9 → 3542f89f-d243-4a76-84c5-8903418ad205
+  PASS 路径B · 重启后 effective = 新值 | actual='http://new.invalid' expected='http://new.invalid'
+  PASS 路径B · 重启后两消费者同值 | actual='http://new.invalid' expected='http://new.invalid'
+  PASS 路径B · 重启后 pending 清空 | actual=None expected=None
+
+=== 路径 C · 追加未声明键 rogue.whoAmI（重启）===
+  kill 后 returncode = 0
+  当前 settings.yaml:
+    diagnosis:
+      gateDataCompleteness: 0.9911
+    llm:
+      baseUrl: "http://new.invalid"
+    rogue:
+      whoAmI: 1
+  PASS 起服 #3 healthz 就绪 | http://127.0.0.1:62083/api/healthz
+  undeclared[] = ["rogue.whoAmI"]
+  undeclaredTotal = 1
+  counts = {"declared": 9, "live": 4, "restart": 6, "undeclared": 1}
+  exceptions[] = [{"id": "llm-credential-hot-reload", "reason": "鉴权类按决定④=restart，但既有实现每请求重读凭证文件、保存后下一请求即生效（已在测已验）；登记为既存例外、不动既有路径", "anchors": ["src/config.ts:76", "tests/routes/llm-config.test.ts:165"], "since": "D575"}, {"id": "file-driven-reload-channel", "reason": "extensions/**/manifest.json 与 locale JSON 等内容文件仍走既有 POST /api/reload 通道；settings.yaml 内插件类键=restart，不制造第二套生效机制", "anchors": ["src/routes/reload.ts:21"], "since": "既有通道（未追溯卡号）"}]
+    keys[rogue.whoAmI] = {"path": "rogue.whoAmI", "applies": "restart", "declared": false, "effective": 1, "pending": null, "sourceLayer": "workspace", "defaultValue": null, "changedOnDisk": false}
+  PASS 路径C · 未声明键进 undeclared[] | undeclared=['rogue.whoAmI']
+  PASS 路径C · declared = false | actual=False expected=False
+  PASS 路径C · applies 强制 = restart | actual='restart' expected='restart'
+  PASS 路径C-① · 启动日志含未声明清单 | SETTINGS_UNUSED_UNDECLARED
+  PASS 路径C-② · 启动日志含枚举边界声明 | SETTINGS_UNDECLARED_SCOPE
+  PASS 路径C-③ · 启动日志含 CTO-② 既存例外打印 | SETTINGS_EXCEPTION_ACTIVE
+  启动日志三行原文:
+    {"level":40,"time":1790597342791,"pid":39324,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":1,"undeclared":["rogue.whoAmI"],"msg":"SETTINGS_UNUSED_UNDECLARED 未声明分类项（默认安全 = 强制 restart）"}
+    {"level":40,"time":1790597342791,"pid":39324,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","scope":"settings.yaml","msg":"SETTINGS_UNDECLARED_SCOPE 枚举范围 = settings.yaml 内未声明键；既有 env 键不在本卡枚举范围（D1053 §3.3 / R8）"}
+    {"level":40,"time":1790597342791,"pid":39324,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":2,"exceptions":["llm-credential-hot-reload","file-driven-reload-channel"],"msg":"SETTINGS_EXCEPTION_ACTIVE 既存例外（不按声明面自动生效，见 D1053 §6）"}
+
+=== C-neg（必做）· 两层皆不存在 ⇒ 空面不得打未声明/边界 warn，例外打印仍须出现 ===
+  kill 后 returncode = 0
+  PASS 起服 #4(空面) healthz 就绪 | http://127.0.0.1:62083/api/healthz
+  sourceFiles = {"workspace": null, "home": null}
+  degraded = False
+  PASS C-neg · 空面不得出现 SETTINGS_UNUSED_UNDECLARED | 空面 log 命中 = False
+  PASS C-neg · 空面不得出现 SETTINGS_UNDECLARED_SCOPE | 空面 log 命中 = False
+  PASS C-neg · 例外打印仍须出现（R8 独立性条款） | SETTINGS_EXCEPTION_ACTIVE 出现
+  PASS C-neg · 空面零降级（ENOENT = 正常默认） | actual=False expected=False
+  PASS C-neg · sourceFiles 皆 null | actual=None expected=None
+
+=== 收尾：起服 #4 kill returncode = 0 ===
+
+########## 汇总：34 项 PASS / 0 项 FAIL（共 34）##########

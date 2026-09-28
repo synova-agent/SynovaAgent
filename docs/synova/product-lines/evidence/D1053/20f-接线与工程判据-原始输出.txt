@@ -1,0 +1,83 @@
+########## D1053 接线与工程判据（成员 V 实测）##########
+date(utc): 2026-09-28T12:09:29Z
+HEAD: e6f3de3eb1dbe6d6ee583e3b37df886698eaaf89
+
+=== 判据① 可达性：mount 必须在 404 兜底之前（比照先例 tests/routes/overflow-mount.test.ts:23-26）===
+  indexOf(app.use(settingsRoutes))      = 18791
+  indexOf(app.use((_req, res))          = 20314
+  404 兜底锚点出现次数（唯一性检查）    = 1
+  判据 m<n ⇒ PASS
+
+  行号实测: 419:  app.use(settingsRoutes); // D1053 — 设置生效面（挂载在 404 兜底之前；比照 configRoutes:387 邻位）
+            457:  app.use((_req, res) => {
+
+=== 判据② 不动既有挂载顺序：diff origin/main 只能有纯新增 ===
+$ git diff --numstat origin/main -- src/server.ts
+4	0	src/server.ts
+
+$ git diff origin/main -- src/server.ts （完整，仅新增行）
+diff --git a/src/server.ts b/src/server.ts
+index 2fcf2a2a..b29f5168 100644
+--- a/src/server.ts
++++ b/src/server.ts
+@@ -41,6 +41,8 @@ import ontologyRoutes from './routes/ontology';
+ import ontologyAdminRoutes from './routes/ontology-admin';
+ import diagnosisRoutes from './routes/diagnosis';
+ import configRoutes from './routes/config'; // D600 — GET /api/config/dump 客户配置检查表面（--dump-config）
++import settingsRoutes from './routes/settings'; // D1053 — GET /api/settings/effective 设置生效面（live/restart 分类）
++import { initSettingsBootFence } from './config/settings-applies'; // D1053 — 生效边界显式初始化（受控例外，见该文件头）
+ import sessionsRoutes from './routes/sessions';
+ import conversationsRoutes from './routes/conversations'; // D590 — 对话 SSE 端点（ConversationEngine × HTTP 接线）
+ import metricsRoutes from './monitoring/routes';
+@@ -122,6 +124,7 @@ export const setupGuideGoneRouter: Router = Router().all(
+ );
+ 
+ export async function createServer(): Promise<Server> {
++  initSettingsBootFence(); // D1053 — 建立本 server 实例的生效边界（restart 类冻结；失败 degraded 不 exit，见 R4）
+   // ═══ D83: Bootstrap 启动序列 — 6 Phase 统一初始化 ═══
+   // 替代原有的 ~300 行内联初始化代码
+   const boot = new Bootstrap();
+@@ -413,6 +416,7 @@ export async function createServer(): Promise<Server> {
+   app.use(loopRoutes); // D20 — 循环状态 API
+   app.use(cockpitRoutes); // D220-PHASE3 — 创始人仪表盘
+   app.use(overflowRoutes); // D478 — 溢出仪表盘 API（D476 认证+隔离已就绪；修复 D90 仅 import 未挂载）
++  app.use(settingsRoutes); // D1053 — 设置生效面（挂载在 404 兜底之前；比照 configRoutes:387 邻位）
+ 
+   // ═══ D575: LLM 凭证变更热生效（A4 onChanged）═══
+   // 按请求解析架构（routes 每请求 loadConfig + createProvider）——凭证更新无需重建任何
+
+=== 判据③ 接线深度（组 4b）：initSettingsBootFence 必须在 server.ts 被调用（非仅 import）===
+45:import { initSettingsBootFence } from './config/settings-applies'; // D1053 — 生效边界显式初始化（受控例外，见该文件头）
+127:  initSettingsBootFence(); // D1053 — 建立本 server 实例的生效边界（restart 类冻结；失败 degraded 不 exit，见 R4）
+
+=== 判据④ 公开面 = 3 入口（(b) 收缩公开面，零豁免）===
+704:export function initSettingsBootFence(
+744:export function getSettingsRuntime(): SettingsRuntime {
+766:export function getEffectiveRow(path: string): SettingsEffectiveRow | null {
+  loadSettingsSpec 私有性: 0 个 export（期望 0）
+387:function loadSettingsSpec(
+  plan.json 是否被豁免改动（期望不存在/未改）: 0 个改动
+
+=== 判据⑤ 同键多消费者默认值不一致：4 落点 / 2 默认值（本卡未消除）===
+src/config/settings-applies.ts:206:  { ns: 'diagnosis', key: 'gateDataCompleteness', applies: 'live', defaultValue: 0.3,
+src/l3/synova-diagnosis-engine-impl.ts:57:  gateDataCompleteness: DEFAULT_GATE_COMPLETENESS,
+src/routes/conversations.ts:143:      gateDataCompleteness: config.diagnosis?.gateDataCompleteness ?? 0.3,
+src/routes/diagnosis.ts:311:        gateDataCompleteness: config.diagnosis?.gateDataCompleteness ?? 0.3,
+src/orchestrator/diagnosis-orchestrator.ts:65:  gateDataCompleteness: 0.4,
+
+=== 判据⑥ 既存例外清单（CTO-② 及另行登记）===
+  exception id: llm-credential-hot-reload
+  exception id: llm-credential-hot-reload
+  exception id: file-driven-reload-channel
+
+=== 判据⑦ 红证残留（硬判据）===
+$ grep -rc 'INJECTED-RED-D1053' src/ tests/ | grep -v ':0'
+  ✅ 空（0 残留）
+
+=== 判据⑧ 工作区（应只剩本卡证据）===
+?? docs/synova/product-lines/evidence/D1053/20a-三套件独立重跑-原始输出.txt
+?? docs/synova/product-lines/evidence/D1053/20b-A2定位器与两串矩阵-原始输出.txt
+?? docs/synova/product-lines/evidence/D1053/20c-三路径真进程-原始输出.txt
+?? docs/synova/product-lines/evidence/D1053/20d-负控-原始输出.txt
+?? docs/synova/product-lines/evidence/D1053/20e-变异体M1-M4-原始输出.txt
+?? docs/synova/product-lines/evidence/D1053/20f-接线与工程判据-原始输出.txt

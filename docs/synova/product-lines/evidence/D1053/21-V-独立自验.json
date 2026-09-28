@@ -1,0 +1,346 @@
+{
+  "schema": 1,
+  "record_type": "d1053-v-independent-self-verification",
+  "task": "D1053",
+  "artifact": "21-V-独立自验（成员 V 独立重跑 + 三路径 + M1-M4 变异体注入 + 负控）",
+  "owner": "d1053-verify",
+  "as_of": "2026-09-28",
+  "cwd": "/Users/wane/SynovaAgent/.synova-wt-squad-d1053",
+  "branch": "feat/d1053-live-restart-settings",
+  "head_sha": "e6f3de3eb1dbe6d6ee583e3b37df886698eaaf89",
+  "base_ref": "origin/main @ 20b55eba",
+  "contract": "每条 = 原样可复跑命令 + 原始 stdout/stderr 摘要 + 结论。禁手写数字（全部取自命令原始输出）。静默跳过 = 无效证据（A2 假绿防线）。未执行项一律写 not_run，禁写 pass。",
+  "push_receipt": {
+    "command": "git ls-remote --heads origin | grep d1053",
+    "raw": "e6f3de3eb1dbe6d6ee583e3b37df886698eaaf89\trefs/heads/feat/d1053-live-restart-settings",
+    "local_head": "e6f3de3eb1dbe6d6ee583e3b37df886698eaaf89",
+    "matches": true,
+    "ancestor_check": "git merge-base --is-ancestor bd2d9b01 origin/feat/d1053-live-restart-settings → YES（C 的修补已在远端祖先链上）"
+  },
+  "env": {
+    "node": "v24.19.0",
+    "abi_modules": "137",
+    "vitest": "vitest/4.1.8 darwin-arm64 node-v24.19.0",
+    "os": "darwin arm64",
+    "node_authority_note": "权威环境 = 默认 node v24.19.0（ABI 137）。v22.23.2（ABI 127）真 load better-sqlite3 报 NODE_MODULE_VERSION 137→127 且 exit=1；单 require 在 v22 下假绿（v12 惰性绑定）⇒ 判 ABI 一律用「require + 实例化」或真起 Bootstrap 的套件。"
+  },
+  "runs": [
+    {
+      "label": "三套件独立重跑 · 修补前代码面（ffd3f231）",
+      "head_sha": "ffd3f2318a0a1e35ed10a5ffcac380fe4274f235",
+      "command": "npx vitest run tests/config/settings-applies.test.ts tests/config/settings-source.test.ts tests/routes/settings.test.ts --no-file-parallelism --maxWorkers=1 --reporter=verbose --reporter=json --outputFile.json=/tmp/d1053-vitest.json",
+      "raw_summary": "Test Files  3 passed (3) / Tests  22 passed (22) / Duration 3.73s",
+      "exit": 0
+    },
+    {
+      "label": "三套件独立重跑 · 最终基线 X（e6f3de3e，含 C 注释/消息修补 bd2d9b01）",
+      "head_sha": "e6f3de3eb1dbe6d6ee583e3b37df886698eaaf89",
+      "command": "npx vitest run tests/config/settings-applies.test.ts tests/config/settings-source.test.ts tests/routes/settings.test.ts --no-file-parallelism --maxWorkers=1 --reporter=verbose --reporter=json --outputFile.json=/tmp/d1053-vitest-X.json",
+      "raw_summary": "Test Files  3 passed (3) / Tests  22 passed (22) / Duration 3.37s",
+      "exit": 0,
+      "json_reporter_raw": "numTotalTestSuites: 6 numTotalTests: 22 success: True；逐文件 status=passed tests：settings-applies.test.ts=6 / settings-source.test.ts=7 / routes/settings.test.ts=9",
+      "behavior_unchanged_evidence": "git diff ffd3f231..6eb4fa43 -- src/ tests/ → 空；bd2d9b01 = 1 file, +10/−2，仅注释与错误消息（无逻辑行）"
+    }
+  ],
+  "suites": [
+    {
+      "suite_name_literal": "settings-applies-live",
+      "role": "LIVE（25-8 路径 A）",
+      "file": "tests/config/settings-applies.test.ts",
+      "resolved_by_a2": { "resolved": true, "step": "content-grep", "resolved_to": "tests/config/settings-applies.test.ts", "note": "step2 文件名 glob 不命中（文件名不含该串），由 step1 内容 grep 命中" },
+      "string_occurrences_in_file": 2,
+      "cases_total": 6,
+      "cases_passed": 6,
+      "cases_failed": 0,
+      "vitest_printed_evidence": "✓ tests/config/settings-applies.test.ts > settings-applies-live · LIVE 套件（D1053 / 25-8 路径 A） > A1/A2/A3/边界/降级/边界（6 例全 ✓）",
+      "source_files": ["20a-三套件独立重跑-原始输出.txt", "/tmp/d1053-vitest-X.json（json reporter）"]
+    },
+    {
+      "suite_name_literal": "settings-applies-restart",
+      "role": "RESTART（25-9 路径 B）",
+      "file": "tests/config/settings-source.test.ts",
+      "resolved_by_a2": { "resolved": true, "step": "content-grep", "resolved_to": "tests/config/settings-source.test.ts", "note": "同上，step1 命中" },
+      "string_occurrences_in_file": 2,
+      "cases_total": 7,
+      "cases_passed": 7,
+      "cases_failed": 0,
+      "vitest_printed_evidence": "✓ tests/config/settings-source.test.ts > settings-applies-restart · RESTART 套件（D1053 / 25-9 路径 B） > B1/B2/B3/边界/降级/降级/边界（7 例全 ✓）",
+      "source_files": ["20a-三套件独立重跑-原始输出.txt", "/tmp/d1053-vitest-X.json"]
+    },
+    {
+      "suite_name_literal": null,
+      "role": "入口/E2E（两消费者同值断言落此）",
+      "file": "tests/routes/settings.test.ts",
+      "resolved_by_a2": { "resolved": false, "step": "n/a", "note": "该套件按 R1 设计不含两个 A2 串（两串各 0 命中）——非缺陷，是防误绑约束" },
+      "string_occurrences_in_file": 0,
+      "cases_total": 9,
+      "cases_passed": 9,
+      "cases_failed": 0,
+      "vitest_printed_evidence": "✓ tests/routes/settings.test.ts > 入口 GET /api/settings/effective + 第二消费者 /api/config/dump（D1053） > C1/C1b/C2/C3/C3b/C4/C4b/C2b/C3c（9 例全 ✓）",
+      "source_files": ["20a-三套件独立重跑-原始输出.txt", "/tmp/d1053-vitest-X.json"]
+    }
+  ],
+  "a2_locator_recheck": {
+    "ran_a2_pipeline": false,
+    "reason": "run-machine-evidence.sh 会写 evidence 根 + 一次性给全部 35 点写 pass（含未跑套件）＝ 自造 P0-1 假绿；且越 V 写集 ⇒ 只复跑其定位逻辑（:75-88 同款），实跑写入留 CTO/K3。",
+    "live_string": { "step1_content_grep_l": "tests/config/settings-applies.test.ts", "step2_filename_glob": "<none>", "verdict": "resolved（修补前为 unresolved）" },
+    "restart_string": { "step1_content_grep_l": "tests/config/settings-source.test.ts", "step2_filename_glob": "<none>", "verdict": "resolved（修补前为 unresolved）" },
+    "near_diagonal_matrix": {
+      "command": "for f in $(grep -rl 'settings-applies-live|settings-applies-restart' tests/); do grep -c 各串; done",
+      "raw": "tests/config/settings-applies.test.ts live=2 restart=0 ; tests/config/settings-source.test.ts live=0 restart=2",
+      "live_string_file_count": 1,
+      "restart_string_file_count": 1,
+      "co_occurrence": false,
+      "verdict": "每串恰 1 文件、互不共现 ⇒ 无 A2 grep -l | head -1 误绑"
+    },
+    "old_suite_names_residual": 0
+  },
+  "paths": [
+    {
+      "id": "A",
+      "name": "live 生效（不重启）",
+      "nonce": { "value": "0.7788", "independence_proof": "grep -rn 0.7788 tests/ src/ → 空输出（0 命中）；避开夹具常量 0.3→0.55" },
+      "observed": {
+        "effective.keys[diagnosis.gateDataCompleteness].effective": 0.9911,
+        "dump.settings.keys[diagnosis.gateDataCompleteness].effective": 0.9911,
+        "two_consumers_deep_equal": true,
+        "bootId_before": "6310b7e6-08cf-4250-bde0-e5f647a728fb",
+        "bootId_after": "6310b7e6-08cf-4250-bde0-e5f647a728fb",
+        "pending": null
+      },
+      "verdict": "pass"
+    },
+    {
+      "id": "B",
+      "name": "restart 隔离（同 boot 绝不半生效 + 真实 kill/重启后生效）",
+      "observed_before_restart": {
+        "effective": "http://old.invalid",
+        "pending": "http://new.invalid",
+        "applies": "restart",
+        "changedOnDisk": true,
+        "two_consumers_equal": true,
+        "healthz": 200,
+        "port_unchanged": true,
+        "pid_unchanged": true,
+        "bootId": "6310b7e6-08cf-4250-bde0-e5f647a728fb"
+      },
+      "observed_after_real_kill_restart": {
+        "bootId": "4a466913-7fec-45a3-9207-a9fcb9023292",
+        "bootId_changed": true,
+        "effective": "http://new.invalid",
+        "pending": null,
+        "two_consumers_equal": true,
+        "kill_returncode": 0,
+        "pid": "31129 → 31267"
+      },
+      "d_boot_1": "同一 bootId 下 restart 键 effective 恒等（未变化）⇒ 无半生效；bootId 仅在实际重启后变化",
+      "verdict": "pass"
+    },
+    {
+      "id": "C",
+      "name": "未声明键默认安全（三件齐查）",
+      "observed": {
+        "undeclared": ["rogue.whoAmI"],
+        "undeclaredTotal": 1,
+        "row": { "applies": "restart", "declared": false, "effective": 1, "sourceLayer": "workspace" },
+        "log_undeclared_list": "SETTINGS_UNUSED_UNDECLARED 未声明分类项（默认安全 = 强制 restart） count=1 undeclared=[\"rogue.whoAmI\"]",
+        "log_scope_boundary": "SETTINGS_UNDECLARED_SCOPE 枚举范围 = settings.yaml 内未声明键；既有 env 键不在本卡枚举范围（D1053 §3.3 / R8）",
+        "log_exception_print": "SETTINGS_EXCEPTION_ACTIVE 既存例外（不按声明面自动生效，见 D1053 §6） count=2 exceptions=[\"llm-credential-hot-reload\",\"file-driven-reload-channel\"]"
+      },
+      "verdict": "pass",
+      "three_parts_present": true
+    },
+    {
+      "id": "C-neg",
+      "name": "空面（两层皆 ENOENT）不得误报 —— 必做项，检验 R8 独立性条款",
+      "observed": {
+        "sourceFiles": { "workspace": null, "home": null },
+        "degraded": false,
+        "SETTINGS_UNUSED_UNDECLARED_present": false,
+        "SETTINGS_UNDECLARED_SCOPE_present": false,
+        "SETTINGS_EXCEPTION_ACTIVE_present": true
+      },
+      "note": "只测『该打印的有』会放过误报型缺陷；本条同时测『不该打印的没有』，且验证例外打印独立于面非空。",
+      "verdict": "pass"
+    }
+  ],
+  "negative_control": {
+    "valid_form": {
+      "fixture": "/tmp/d1053-bad/settings.yaml（文件名必须是 settings.yaml，否则加载器读不到 = F1 型静默夹具失效）",
+      "fixture_body": "bad:\n  x: { value: 1, applies: sometimes }",
+      "observed": {
+        "http": 200,
+        "degraded": true,
+        "code": "SETTINGS_SPEC_INVALID",
+        "reason": "SETTINGS_BOOT_FAILED settings-applies: settings.yaml 不得携带 applies（分类唯一真相源 = 代码 registry）——涉事路径: bad.x.applies",
+        "keys_paths": [],
+        "silent_default_fallback": false,
+        "healthz": 200,
+        "process_exit_code_after_kill": 0,
+        "boot_log": "SETTINGS_BOOT_FAILED … code=SETTINGS_SPEC_INVALID phase=spec retryable=false（层级二：catch → degraded + log.warn，不 process.exit）"
+      },
+      "verdict": "pass（因正确理由失败：拒载 + degraded 可见 + 涉事键不在 keys[] + 无静默回落）"
+    },
+    "invalid_form_rejected": {
+      "command": "node node_modules/tsx/dist/cli.mjs -e \"import('./src/config/settings-applies.ts').then(m=>m.loadSettingsSpec())\"",
+      "exit": 1,
+      "raw": "TypeError: m.loadSettingsSpec is not a function",
+      "classification": "INVALID 证据 — 该 exit≠0 因符号不存在（(b) 收缩公开面后 loadSettingsSpec 已私有）⇒ 不计通过。这是 F1 型假绿的新变体：若只看『exit≠0』会假通过。"
+    },
+    "layered_semantics": "加载器层 fail-closed（拒载，reason 显式点名 bad.x.applies）／进程层不 process.exit（degraded + log.warn，服务照常起）——两层同时成立。"
+  },
+  "mutants": [
+    {
+      "id": "M1",
+      "description": "restart 项当 live 处理",
+      "injection_point": "src/config/settings-applies.ts :: buildRow 内 `const applies: SettingsApplies = isUndeclared ? 'restart' : spec.applies;` → `'live'`",
+      "pre_sha256": "dd5852b2be9d8f5fb27351cefb39e9f9ee4edc22e3ae66fad4c2a9d50b60520b",
+      "restored_sha256": "dd5852b2be9d8f5fb27351cefb39e9f9ee4edc22e3ae66fad4c2a9d50b60520b",
+      "sha256_match": true,
+      "raw_summary": "Test Files  2 failed | 1 passed (3) / Tests  4 failed | 18 passed (22)",
+      "red_suite": "tests/config/settings-source.test.ts（RESTART）",
+      "red_test_names": [
+        "B1 · 同 boot 改 restart 键 ⇒ effective 仍旧值 + pending 新值 + applies:restart（绝不半生效）",
+        "B2 · 同 boot 内多次读取 restart 键 effective 恒等（判据 D-BOOT-1：变化即半生效）",
+        "边界 · restart 键仅 home 层给值 ⇒ 同 boot 冻结后改 home 盘仍为旧值",
+        "× tests/routes/settings.test.ts C1b · restart 键在两消费者上同样一致"
+      ],
+      "verdict": "pass（期望红套件已红）"
+    },
+    {
+      "id": "M2",
+      "description": "删分类声明（模拟忘声明）",
+      "injection_point": "src/config/settings-applies.ts :: 从 BUILTIN_SETTINGS_DECLARATIONS 移除 `diagnosis.gateDataCompleteness` 条目",
+      "pre_sha256": "dd5852b2be9d8f5fb27351cefb39e9f9ee4edc22e3ae66fad4c2a9d50b60520b",
+      "restored_sha256": "dd5852b2be9d8f5fb27351cefb39e9f9ee4edc22e3ae66fad4c2a9d50b60520b",
+      "sha256_match": true,
+      "raw_summary": "Test Files  2 failed | 1 passed (3) / Tests  2 failed | 20 passed (22)",
+      "red_suite": "tests/config/settings-applies.test.ts（LIVE）",
+      "red_test_names": [
+        "A1 · live 键改盘后不重启即新值（同一 runtime 的 effective 立即变）",
+        "× tests/routes/settings.test.ts C1 · 两消费者同一新值"
+      ],
+      "spec_vs_actual": "规格 §8.3 预期『A3 必红』，实测红的是 A1（A3 仍绿）。**套件级要求满足**（LIVE 套件红），但规格写的具体用例名与实测不符 ⇒ 规格 M7 型陈述漂移，登记待 S 更正。",
+      "verdict": "pass（期望红套件已红；具体红用例与规格陈述不一致已登记）"
+    },
+    {
+      "id": "M3",
+      "description": "消费者绕过 accessor 自缓存（「接线了≠被执行」判别性夹具）",
+      "injection_point": "src/routes/config.ts :: settingsBlock() 内注入模块级缓存（首次读后 `__injectedCache` 直接返回，绕开 getSettingsRuntime()）",
+      "pre_sha256": "f256ace010c33d964f9796bf0b4a53be8a2704b3513d6d6cc201c1c6a145bf7d",
+      "restored_sha256": "f256ace010c33d964f9796bf0b4a53be8a2704b3513d6d6cc201c1c6a145bf7d",
+      "sha256_match": true,
+      "raw_summary": "Test Files  1 failed | 2 passed (3) / Tests  1 failed | 21 passed (22)",
+      "red_suite": "tests/routes/settings.test.ts（E2E）",
+      "red_test_names": [
+        "C1 · 两消费者同一新值：live 键改盘后两端点读回的 effective 相同且为新值（同一 it 内互比）"
+      ],
+      "verdict": "pass（判别性成立：路由级缓存使两消费者同值断言变红 ⇒ 该断言真实执行、非装饰）"
+    },
+    {
+      "id": "M4",
+      "description": "放宽 fail-closed（yaml 内 applies 不再拒载）",
+      "injection_point": "src/config/settings-applies.ts :: `if (offending.length > 0) {` → `if (offending.length > 0 && false) {`",
+      "pre_sha256": "dd5852b2be9d8f5fb27351cefb39e9f9ee4edc22e3ae66fad4c2a9d50b60520b",
+      "restored_sha256": "dd5852b2be9d8f5fb27351cefb39e9f9ee4edc22e3ae66fad4c2a9d50b60520b",
+      "sha256_match": true,
+      "raw_summary": "Test Files  2 failed | 1 passed (3) / Tests  2 failed | 20 passed (22)",
+      "red_suite": "tests/routes/settings.test.ts（E2E）",
+      "red_test_names": [
+        "C4 · 非法声明（yaml 出现 applies 字段）⇒ 200 + degraded + 规格错误码，且涉事键不在 keys[]",
+        "× tests/config/settings-applies.test.ts 降级 · 非法声明（yaml 携带 applies）⇒ runtime degraded + SETTINGS_SPEC_INVALID"
+      ],
+      "verdict": "pass（期望红套件已红）"
+    }
+  ],
+  "mutants_common": {
+    "marker": "INJECTED-RED-D1053",
+    "restore_method": "git checkout -- <file>",
+    "all_sha256_restored": true,
+    "all_git_status_clean_after_restore": true,
+    "raw_evidence_file": "20e-变异体M1-M4-原始输出.txt"
+  },
+  "residual_red_marker": {
+    "command": "grep -rc 'INJECTED-RED-D1053' src/ tests/ | grep -v ':0'",
+    "raw": "<空输出>",
+    "verdict": "0 残留"
+  },
+  "wiring": {
+    "mount_before_404": {
+      "command": "python3 indexOf('app.use(settingsRoutes)') vs indexOf('app.use((_req, res)')",
+      "raw": "18791 < 20314（行号 419 < 457）；404 锚点出现次数=1（indexOf 无歧义）",
+      "verdict": "pass"
+    },
+    "no_reorder_of_existing_mounts": {
+      "command": "git diff --numstat origin/main -- src/server.ts",
+      "raw": "4\t0\tsrc/server.ts ⇒ 纯新增（4 物理行 = 2 import + 1 initSettingsBootFence() 调用 + 1 mount），无删除/重排",
+      "verdict": "pass",
+      "note": "不以行数判红绿；此处仅作『未改动既有挂载顺序』的证据，实质判据 = 上述 diff 只有新增行 + mount 位置可达。"
+    },
+    "wiring_depth_4b": "initSettingsBootFence 在 src/server.ts:45 import、:127 调用（非仅 import）⇒ 组 4b 满足",
+    "exemption_path": "（b）收缩公开面：公开面 = initSettingsBootFence / getSettingsRuntime / getEffectiveRow（3 入口）；loadSettingsSpec 私有（export 命中 0）。`.claude/plan.json` 零改动（git diff --name-only origin/main -- .claude/plan.json 为空）⇒ **零豁免**，未走 plan.json/deferred。"
+  },
+  "deviations": [
+    {
+      "id": "DEV-1",
+      "severity": "P2（非验收面；HTTP 契约字段）",
+      "claim": "`/api/settings/effective` 的 live 键行 `defaultValue` 返回 null，规格 §7.1 schema 示例对 live 键（diagnosis.gateDataCompleteness）写的是 0.3。",
+      "root_cause_measured": "buildRow 的 live 分支用 `defaultValue: frozen`，而 boot 阶段 `frozen` Map 只对 `spec.applies === 'restart'` 填充（settings-applies.ts:581 `if (spec.applies !== 'restart') continue;`）⇒ live 键取到 undefined → JSON null。restart 分支用 `state.frozenDefault`（正确）。",
+      "raw_evidence": "20c 原始行：effective.keys[diagnosis.gateDataCompleteness] = {\"applies\":\"live\",...,\"defaultValue\":null,...} vs keys[llm.baseUrl] = {...,\"defaultValue\":\"https://api.deepseek.com/v1\",...}",
+      "test_coverage": "三套件均未断言 defaultValue（grep -n defaultValue tests/… → 无命中）⇒ 未被 C 的套件覆盖",
+      "impact": "不影响 effective/pending/applies/declared/sourceLayer，不影响 25-8/25-9 三路径与 D-BOOT-1；仅消费方读 defaultValue 时会拿到 null。",
+      "disposition": "登记，交 CTO/K3 判是否阻塞（V 不判通过）"
+    },
+    {
+      "id": "DEV-2",
+      "severity": "P2（非验收面；计数口径）",
+      "claim": "`counts.restart` 把未声明（强制 restart）行也计入：实测 counts = {\"declared\":9,\"live\":4,\"restart\":6,\"undeclared\":1}，而规格 §7.1 示例为 restart:5（且 4+5=9=declared）。",
+      "root_cause_measured": "routes/settings.ts:116-117 `live/restart = keys.filter(applies===...).length`，而 `keys` 含未声明行（includeUndeclared 默认 true）⇒ 未声明行并入 restart 计数。",
+      "raw_evidence": "20c 路径 C 原始行：counts = {\"declared\": 9, \"live\": 4, \"restart\": 6, \"undeclared\": 1}",
+      "impact": "不影响路径 A/B/C 判据；纯计数口径与规格示例不一致（自洽解读为『applies=restart 的行数』，但会与规格算术冲突）。",
+      "disposition": "登记，交 CTO/K3 裁（V 不判通过）"
+    },
+    {
+      "id": "DEV-3",
+      "severity": "P3（文档陈述漂移，非产品缺陷）",
+      "claim": "规格 §8.3 写 M2 ⇒『A3 必红』，实测红的是 A1（A3 仍绿）。套件级要求（LIVE 套件红）满足。",
+      "raw_evidence": "20e M2 段红用例名 = A1 + C1",
+      "disposition": "登记，建议 S 更正规格用例名（V 不改该文件）"
+    },
+    {
+      "id": "DEV-4",
+      "severity": "P3（契约命名：规格 vs 最终裁决）",
+      "claim": "规格 §7.2 命名第二消费者顶层字段为 `settingsApplies`，实现为 `settings`（含 keys/undeclared/degraded/scope）。后者与队长 task-2 v2 裁决表一致（『顶层新增 settings:{keys,undeclared,degraded,scope}』），故属规格未同步而非实现越权。",
+      "raw_evidence": "src/routes/config.ts:55 `settings: settingsBlock()`, :27-35 形状；规格 §7.2 原文为 settingsApplies",
+      "disposition": "登记（已在 §7.2 层面的规格漂移，建议 S 同步）"
+    }
+  ],
+  "duty_from_spec": {
+    "item": "规格 §十二 R3 要求 V 点明『同键多消费者默认值不一致未被本卡消除』",
+    "measured_sites": [
+      "src/config/settings-applies.ts:206 — 声明 defaultValue: 0.3（本卡声明面唯一化）",
+      "src/l3/synova-diagnosis-engine-impl.ts:57 — DEFAULT_GATE_COMPLETENESS = 0.3",
+      "src/routes/diagnosis.ts:311 — config.diagnosis?.gateDataCompleteness ?? 0.3",
+      "src/routes/conversations.ts:143 — config.diagnosis?.gateDataCompleteness ?? 0.3（规格 R3 行未点名）",
+      "src/orchestrator/diagnosis-orchestrator.ts:65 — gateDataCompleteness: 0.4（唯一 0.4）"
+    ],
+    "conclusion": "4 个落点 / 2 个不同默认值（0.3×3、0.4×1）。本卡只把**声明面**唯一化为 0.3；`orchestrator.ts:65`=0.4 与 `conversations.ts:143` 均**未消除**（后两者在『明令不碰』清单内）。"
+  },
+  "limitations": [
+    "本卡自验**不引用** `docs/synova/product-lines/evidence/test-*.json`（A2 管线 verdict 无法区分『跑了且绿』与『压根没跑』；实物 = test-2026-09-28.json，sha256 2d01c9f63509d8c6d430e187c167fd0f4114510dc35bd9fda7d8c01060376660，35/35 全 pass，其中 25-8/25-9 在对应套件从未存在时即被写 pass，V 已独立复核并上报）。",
+    "M4 的『单元级直调 loader 断言抛出』形态在本卡**物理不可执行**：`loadSettingsSpec` 已按裁决 (b) 私有（export 命中 0），harness 无法 import。本卡按队长裁决改用公开面形态取证（degraded + code + 涉事键不在 keys[] + 无静默回落）；该 exit≠0 形态已被我自己复现为 INVALID（TypeError: is not a function），不计通过。",
+    "V 只读产品代码：`src/**`、`tests/**` 未做任何持久修改；M1-M4 注入后均 `git checkout --` 复原并经 sha256 与 git status 双向验证。",
+    "本卡自验未跑全量 vitest、未跑 A2 管线实跑写入、未跑 CI/pre-commit（归 C/CTO 链）。",
+    "C 自报『5 files / 48 tests 全绿』属其自身运行集（含 D6 回归 + llm-config 例外探针）；V 的独立重跑集 = 本卡 3 套件 3 files / 22 tests，两者集不同，V 只对后者作证。",
+    "路径 B 的「新 boot」用**真实 kill + 重启进程**实现（非 `initSettingsBootFence({force:true})`），故不受『未传 force 恒假红』口径影响。"
+  ],
+  "not_run": [
+    "run-machine-evidence.sh 实跑（会写 evidence 根 + 一次性 35 点 pass = 自造 P0-1 假绿；留 CTO/K3）",
+    "全量 vitest 套件",
+    "pre-commit 13 组 / pre-push 门禁（归 C/CTO）",
+    "`SYNO_CI=1` 严格模式门禁",
+    "CI（GitHub Actions）腿、Windows 腿"
+  ],
+  "conclusion_scope": "本自验只对 25-8/25-9（D1053 三路径 + D-BOOT-1 + C-neg + M1-M4 判别性 + 负控分层语义）作证；`deviations[]` 4 条为**非验收面**登记，是否阻塞归 CTO 收件闸与 K3 终审。",
+  "verdict": "自验结论：可提请独立审计"
+}
