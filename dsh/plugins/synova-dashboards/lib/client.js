@@ -78,7 +78,37 @@ window.__ModuleLoader__.load({
 			".spo-tag-green{background:#16a34a;color:#fff}.spo-tag-amber{background:#d97706;color:#fff}.spo-tag-blue{background:#2563eb;color:#fff}.spo-tag-gray{background:#6b7280;color:#fff}",
 			".spo-item{display:flex;align-items:center;gap:8px;padding:6px 12px;border-top:1px solid var(--dsw-alias-border-l1);font-size:12px;min-width:0}",
 			".spo-itemTitle{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-secondary)}",
-			".spo-id{flex:none;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px;background:var(--dsw-alias-interactive-bg-hover-solid);color:var(--dsw-alias-label-primary);font-variant-numeric:tabular-nums}"
+			".spo-id{flex:none;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px;background:var(--dsw-alias-interactive-bg-hover-solid);color:var(--dsw-alias-label-primary);font-variant-numeric:tabular-nums}",
+			// ── D1060「开发工作台 / 治理线」——统一 swb- 前缀，与上述 spo- 互不干扰 ──
+			// 四问格子矩阵：16 行 × 4 问；空格必须显式 ⚪未填（院方 X27：缺失≠通过）
+			".swb-legend{display:flex;flex-wrap:wrap;gap:10px;padding:8px 12px;font-size:11px;color:var(--dsw-alias-label-secondary);border-top:1px solid var(--dsw-alias-border-l1)}",
+			".swb-legendItem{display:flex;align-items:center;gap:5px}",
+			".swb-chip{display:inline-block;width:10px;height:10px;border-radius:3px;flex:none}",
+			".swb-gridWrap{overflow:auto;max-height:52vh}",
+			".swb-grid{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}",
+			".swb-grid th{position:sticky;top:0;z-index:1;background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary);font-weight:600;text-align:left;padding:6px 8px;border-bottom:1px solid var(--dsw-alias-border-l1);white-space:nowrap}",
+			".swb-grid td{padding:0;border-bottom:1px solid var(--dsw-alias-border-l1);vertical-align:top}",
+			".swb-layer{color:var(--dsw-alias-label-tertiary);font-size:10px;white-space:nowrap;padding:6px 8px}",
+			".swb-ext{padding:6px 8px;color:var(--dsw-alias-label-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
+			".swb-pri{width:44px;text-align:center;color:var(--dsw-alias-label-tertiary);padding:6px 4px}",
+			".swb-cell{padding:5px 7px;line-height:15px;min-height:30px;border-left:4px solid transparent}",
+			".swb-cellTop{display:block;font-weight:600;white-space:nowrap}",
+			".swb-cellSub{display:block;color:var(--dsw-alias-label-tertiary);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
+			".swb-green{border-left-color:#0a7d32}.swb-yellow{border-left-color:#b8860b}.swb-red{border-left-color:#b3261e}.swb-empty{border-left-color:#6b7280;background:color-mix(in srgb,#6b7280 8%,transparent)}.swb-unknown{border-left-color:#7c3aed;background:color-mix(in srgb,#7c3aed 10%,transparent)}",
+			".swb-kv{display:flex;gap:8px;padding:5px 12px;border-top:1px solid var(--dsw-alias-border-l1);font-size:11px;align-items:baseline}",
+			".swb-kvKey{flex:none;width:56px;color:var(--dsw-alias-label-tertiary)}",
+			".swb-kvVal{flex:1;min-width:0;color:var(--dsw-alias-label-secondary);word-break:break-word}",
+			".swb-flow{display:grid;grid-template-columns:1fr 1fr;gap:0}",
+			".swb-flowCol{min-width:0;border-left:1px solid var(--dsw-alias-border-l1)}",
+			".swb-flowCol:first-child{border-left:none}",
+			".swb-flowHead{padding:6px 12px;font-size:11px;font-weight:600;color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-interactive-bg-hover)}",
+			".swb-pill{display:inline-block;font-size:10px;font-weight:600;padding:1px 6px;border-radius:999px;background:var(--dsw-alias-interactive-bg-hover-solid);color:var(--dsw-alias-label-secondary)}",
+			".swb-pill-red{background:#dc2626;color:#fff}.swb-pill-green{background:#16a34a;color:#fff}.swb-pill-amber{background:#d97706;color:#fff}",
+			".swb-scroll{max-height:26vh;overflow-y:auto}",
+			".swb-srcTag{font-size:10px;color:var(--dsw-alias-label-tertiary);white-space:nowrap}",
+			".swb-filter{display:flex;gap:6px;padding:6px 12px;font-size:11px;align-items:center;border-top:1px solid var(--dsw-alias-border-l1)}",
+			".swb-filterBtn{border:1px solid var(--dsw-alias-border-l1);background:transparent;color:var(--dsw-alias-label-secondary);border-radius:999px;padding:2px 9px;font-size:11px;cursor:pointer}",
+			".swb-filterBtn[data-on=\"1\"]{background:var(--dsw-alias-interactive-bg-hover-solid);color:var(--dsw-alias-label-primary);font-weight:600}"
 		].join("");
 
 		// ── 小工具 ─────────────────────────────────────────────────────────────
@@ -601,13 +631,590 @@ window.__ModuleLoader__.load({
 			] });
 		}
 
+		// ══ D1060：面板 A「Synova 开发工作台」/ 面板 B「治理线」════════════════════════
+		// 两条硬约束（创始人 2026-09-28）：
+		//   ① 治理线与格子矩阵**物理分离** —— 两个独立左栏入口 + 两个独立 Host 路由，
+		//      不是同一面板里的两个区块（所以这里是两套 main key，不是一套）。
+		//   ② 空格必须显式 ⚪未填/待办，**绝不伪装成绿**（院方 X27：缺失≠通过）。
+		// 两面板共用同一外壳：几何/轮询/降级/拖动缩放行为**逐字一致**（铁律 31），
+		// 复制两遍必然漂移。既有「项目总览」面板不动（31 条测试覆盖，改造风险 > 收益）。
+		const WB_GEO_KEY = "synova.wb.panel.v1";
+		const WB_COLLAPSE_KEY = "synova.wb.collapse.v1";
+		const GOV_GEO_KEY = "synova.gov.panel.v1";
+		const GOV_COLLAPSE_KEY = "synova.gov.collapse.v1";
+		const WB_URL = "/synova/workbench/data";
+		const GOV_URL = "/synova/governance/data";
+		const WB_PANEL_ID = "synova-dev-workbench";
+		const GOV_PANEL_ID = "synova-governance-line";
+
+		/** 四色（与 lib/workbench.js GRID_COLORS 同口径；未知态单列，不改写成绿）。 */
+		const GRID_LABEL = { green: "🟢 生效了", yellow: "🟡 接了没生效", red: "🔴 缺失", empty: "⚪ 未填", unknown: "❔ 未知态" };
+		const GRID_HEX = { green: "#0a7d32", yellow: "#b8860b", red: "#b3261e", empty: "#6b7280", unknown: "#7c3aed" };
+
+		function readGeoFor(storageKey) {
+			const saved = readJSONPref(storageKey);
+			const usable = saved && Number.isFinite(Number(saved.width)) && Number.isFinite(Number(saved.height));
+			return normalizeGeo(usable ? saved : defaultGeo());
+		}
+		function readCollapsedFor(storageKey, defaults) {
+			return Object.assign({}, defaults, readJSONPref(storageKey) ?? {});
+		}
+
+		/**
+		 * 两个新面板的通用外壳。
+		 * @input  props.title/url/geoKey/collapseKey/collapseDefaults/renderBody/onBack
+		 * @output 与「项目总览」同构的浮动只读卡片（拖动/缩放/折叠/60s 轮询/手动刷新）
+		 * @degraded 路由级 ok:false → 整面板降级横幅；payload.degraded → 部分降级警告 + 逐源原因
+		 */
+		function SynovaPanel(props) {
+			const url = props.url;
+			const renderBody = props.renderBody;
+			const onBack = props.onBack;
+			const [data, setData] = useState(null);
+			const [error, setError] = useState(null);
+			const [at, setAt] = useState(null);
+			const [busy, setBusy] = useState(false);
+			const [geo, setGeo] = useState(() => readGeoFor(props.geoKey));
+			const [collapsed, setCollapsed] = useState(() => readCollapsedFor(props.collapseKey, props.collapseDefaults));
+			const drag = react.useRef(null);
+			const lastGeoRef = react.useRef(null);
+			const capture = (e) => capturePointer(e);
+
+			const load = useCallback(() => {
+				setBusy(true);
+				fetch(url, { headers: { accept: "application/json" } })
+					.then((r) => r.json())
+					.then((j) => { setData(j); setError(null); })
+					.catch((e) => { setData(null); setError(String(e && e.message ? e.message : e)); })
+					.then(() => {
+						setAt(new Date().toLocaleTimeString("zh-CN", { hour12: false }));
+						setBusy(false);
+					});
+			}, [url]);
+
+			useEffect(() => {
+				load();
+				const timer = setInterval(load, 60000);
+				const onVis = () => { if (document.visibilityState === "visible") load(); };
+				document.addEventListener("visibilitychange", onVis);
+				return () => { clearInterval(timer); document.removeEventListener("visibilitychange", onVis); };
+			}, [load]);
+
+			const toggleSection = useCallback((id) => {
+				setCollapsed((prev) => {
+					const next = Object.assign({}, prev, { [id]: !prev[id] });
+					writeJSONPref(props.collapseKey, next);
+					return next;
+				});
+			}, [props.collapseKey]);
+
+			const onDragStart = useCallback((e) => {
+				drag.current = { x: e.clientX, y: e.clientY, left: geo.left, top: geo.top };
+				lastGeoRef.current = geo;
+				capture(e);
+			}, [geo]);
+			const onDragMove = useCallback((e) => {
+				if (drag.current === null) return;
+				const next = normalizeGeo({
+					width: geo.width, height: geo.height,
+					left: drag.current.left + (e.clientX - drag.current.x),
+					top: drag.current.top + (e.clientY - drag.current.y)
+				});
+				lastGeoRef.current = next;
+				setGeo(next);
+			}, [geo.width, geo.height]);
+			const onDragEnd = useCallback(() => {
+				if (drag.current === null) return;
+				drag.current = null;
+				writeJSONPref(props.geoKey, lastGeoRef.current ?? geo);
+			}, [geo, props.geoKey]);
+			const onResizeStart = useCallback((e) => {
+				drag.current = { x: e.clientX, y: e.clientY, width: geo.width, height: geo.height, resize: true };
+				lastGeoRef.current = geo;
+				capture(e);
+			}, [geo]);
+			const onResizeMove = useCallback((e) => {
+				if (drag.current === null || drag.current.resize !== true) return;
+				const next = normalizeGeo({
+					left: geo.left, top: geo.top,
+					width: drag.current.width + (e.clientX - drag.current.x),
+					height: drag.current.height + (e.clientY - drag.current.y)
+				});
+				lastGeoRef.current = next;
+				setGeo(next);
+			}, [geo.left, geo.top]);
+			const onResizeEnd = useCallback(() => {
+				if (drag.current === null) return;
+				drag.current = null;
+				writeJSONPref(props.geoKey, lastGeoRef.current ?? geo);
+			}, [geo, props.geoKey]);
+
+			const routeDegraded = data !== null && data.ok === false;
+			const degradeMsg = error ?? (routeDegraded ? (data.error ?? "数据不可用") : null);
+			const usable = data !== null && data.ok !== false;
+			const body = [];
+			if (degradeMsg) {
+				body.push(jsx("div", { className: "spo-degraded", key: "deg", children: "⚠ 降级：" + degradeMsg + "（面板仍可用，数据源未就绪）" }));
+			} else if (usable && data.degraded === true) {
+				const srcs = Array.isArray(data.degraded_sources) ? data.degraded_sources : [];
+				body.push(jsx("div", { className: "spo-warn", key: "warn", children: "部分数据源降级" + (srcs.length > 0 ? "：" + srcs.join("、") : "") }));
+			}
+			if (usable) {
+				for (const node of renderBody(data, collapsed, toggleSection)) body.push(node);
+			}
+
+			return jsx("div", {
+				className: "spo-root",
+				style: { left: geo.left + "px", top: geo.top + "px", width: geo.width + "px", height: geo.height + "px" },
+				children: [
+					jsx("div", {
+						className: "spo-head spo-grip",
+						title: "拖动标题栏移动面板",
+						onPointerDown: onDragStart, onPointerMove: onDragMove,
+						onPointerUp: onDragEnd, onPointerCancel: onDragEnd,
+						children: [
+							jsx("div", { className: "spo-title", children: props.title }),
+							props.badge ? jsx("span", { className: "spo-tag", children: props.badge }) : null,
+							usable && data.generated_at ? jsx("span", { className: "spo-muted", children: "取数 " + String(data.generated_at).slice(11, 19) }) : null,
+							busy ? jsx("div", { className: "spo-spin" }) : null,
+							jsx("button", { type: "button", className: "spo-iconBtn", title: "刷新", onClick: load, children: "↻" }),
+							onBack ? jsx("button", { type: "button", className: "spo-iconBtn", title: "返回会话", onClick: onBack, children: "»" }) : null
+						]
+					}),
+					jsx("div", { className: "spo-body", children: body }),
+					jsx("div", {
+						className: "spo-head spo-foot",
+						style: { borderTop: "1px solid var(--dsw-alias-border-l1)", borderBottom: "none", padding: "6px 18px" },
+						children: [
+							jsx("span", { className: "spo-muted", children: "只读视图 · 数字全部来自仓库机读件（禁手写）· 更新 " + (at ?? "—") }),
+							jsx("span", { className: "spo-spacer" }),
+							jsx("span", { className: "spo-muted", children: degradeMsg ? "降级" : "60s 自动刷新" })
+						]
+					}),
+					jsx("div", {
+						className: "spo-resize", title: "拖动缩放面板",
+						onPointerDown: onResizeStart, onPointerMove: onResizeMove,
+						onPointerUp: onResizeEnd, onPointerCancel: onResizeEnd
+					})
+				]
+			});
+		}
+
+		/** 四问格子矩阵：16 行 × 4 问，按 layer 分组合并首列（rowSpan）。 */
+		function gridSection(grid, collapsed, onToggle) {
+			if (!grid || grid.ok !== true) {
+				return jsx(Section, {
+					id: "grid", title: "① 四问格子矩阵", collapsed, onToggle,
+					children: jsx("div", { className: "spo-empty", children: "降级：宪章格子不可读 —— " + ((grid && grid.error) || "未知原因") })
+				});
+			}
+			const qs = Array.isArray(grid.questions) ? grid.questions : [];
+			const rows = Array.isArray(grid.rows) ? grid.rows : [];
+			const groups = [];
+			for (const r of rows) {
+				const last = groups[groups.length - 1];
+				if (last && last.layer === r.layer) last.rows.push(r);
+				else groups.push({ layer: r.layer, rows: [r] });
+			}
+			const headCells = [
+				jsx("th", { key: "layer", style: { width: "66px" }, children: "层" }),
+				jsx("th", { key: "ext", style: { width: "150px" }, children: "扩展点" }),
+				jsx("th", { key: "pri", style: { width: "40px" }, children: "级" })
+			];
+			for (const q of qs) headCells.push(jsx("th", { key: q.code, title: q.desc || q.text, children: q.text || q.code }));
+
+			const bodyRows = [];
+			for (const g of groups) {
+				g.rows.forEach((r, ri) => {
+					const tds = [];
+					if (ri === 0) {
+						tds.push(jsx("td", { key: "layer", className: "swb-layer", rowSpan: g.rows.length, children: g.layer }));
+					}
+					tds.push(jsx("td", { key: "ext", className: "swb-ext", title: r.ext_point, children: r.ext_point }));
+					tds.push(jsx("td", { key: "pri", className: "swb-pri", children: r.priority ?? "—" }));
+					for (const q of qs) {
+						const cell = r.cells ? r.cells[q.code] : null;
+						if (!cell) {
+							tds.push(jsx("td", { key: q.code, className: "swb-cell swb-empty", title: "该格在数据源中不存在 —— 显式报缺，不默认绿", children: [
+								jsx("span", { className: "swb-cellTop", children: "⚪ 未填" }),
+								jsx("span", { className: "swb-cellSub", children: "数据源缺此格" })
+							] }));
+							continue;
+						}
+						const st = GRID_LABEL[cell.status] ? cell.status : "unknown";
+						const tip = [
+							cell.id,
+							cell.judgement ? "判据：" + cell.judgement : "判据：未填（待办）",
+							cell.command ? "命令：" + cell.command : "",
+							cell.owner ? "owner " + cell.owner : "",
+							cell.updated_at || ""
+						].filter(Boolean).join(" · ");
+						tds.push(jsx("td", {
+							key: q.code,
+							className: "swb-cell swb-" + st,
+							title: tip,
+							children: [
+								jsx("span", { className: "swb-cellTop", style: { color: GRID_HEX[st] }, children: GRID_LABEL[st] }),
+								jsx("span", { className: "swb-cellSub", title: cell.judgement || "", children: cell.judgement ? cell.judgement : (st === "empty" ? "待办 · 未填判据" : (cell.id || "")) })
+							]
+						}));
+					}
+					bodyRows.push(jsx("tr", { key: (g.layer || "") + "-" + (r.ext_point || "") + "-" + ri, children: tds }));
+				});
+			}
+
+			const d = grid.derived ?? {};
+			const bs = d.by_status ?? {};
+			const legend = jsx("div", { className: "swb-legend", children: [
+				jsx("span", { className: "swb-legendItem", children: [jsx("span", { className: "swb-chip", style: { background: GRID_HEX.green } }), "🟢 生效了 " + (bs.green ?? 0)] }),
+				jsx("span", { className: "swb-legendItem", children: [jsx("span", { className: "swb-chip", style: { background: GRID_HEX.yellow } }), "🟡 接了没生效 " + (bs.yellow ?? 0)] }),
+				jsx("span", { className: "swb-legendItem", children: [jsx("span", { className: "swb-chip", style: { background: GRID_HEX.red } }), "🔴 缺失 " + (bs.red ?? 0)] }),
+				jsx("span", { className: "swb-legendItem", children: [jsx("span", { className: "swb-chip", style: { background: GRID_HEX.empty } }), "⚪ 未填 " + (bs.empty ?? 0)] }),
+				(bs.unknown ?? 0) > 0 ? jsx("span", { className: "swb-legendItem", children: [jsx("span", { className: "swb-chip", style: { background: GRID_HEX.unknown } }), "❔ 未知态 " + bs.unknown] }) : null,
+				jsx("span", { className: "spo-spacer" }),
+				jsx("span", { className: "swb-srcTag", title: "源：" + grid.path + "（" + grid.source + "）", children: "源 " + grid.source + " · " + (d.rows ?? 0) + " 行 × " + (d.questions ?? 0) + " 问 · 已填 " + (d.filled ?? 0) + "/" + (d.cells ?? 0) })
+			] });
+
+			return jsx(Section, {
+				id: "grid",
+				title: "① 四问格子矩阵（16 行 × 4 问）",
+				collapsed, onToggle,
+				extra: jsx("span", { className: "spo-muted", children: "已填 " + (d.filled ?? 0) + "/" + (d.cells ?? 0) + " · ⚪未填 " + (bs.empty ?? 0) }),
+				children: [
+					jsx("div", { key: "wrap", className: "swb-gridWrap", children: jsx("table", { className: "swb-grid", children: [
+						jsx("thead", { key: "h", children: jsx("tr", { children: headCells }) }),
+						jsx("tbody", { key: "b", children: bodyRows })
+					] }) }),
+					jsx("div", { key: "lg", className: "swb-legend", children: [
+						jsx("span", { className: "spo-muted", children: grid.rules?.empty_is_not_green ?? "空格显式报待办，不默认绿（X27）" }),
+						jsx("span", { className: "spo-spacer" }),
+						jsx("span", { className: "swb-srcTag", title: grid.schema ?? "", children: (grid.counts?.questions ?? "?") + " 问 · 口径声明 filled=" + (grid.counts?.filled ?? "—") })
+					] }),
+					legend
+				].filter(Boolean)
+			});
+		}
+
+		/** ② 今日/本周流水：git 两侧 + PR（API，或显式标注的快照回退）。 */
+		function flowSection(flow, collapsed, onToggle) {
+			if (!flow || flow.ok !== true) {
+				return jsx(Section, {
+					id: "flow", title: "② 今日/本周流水", collapsed, onToggle,
+					children: jsx("div", { className: "spo-empty", children: "降级：流水不可读" })
+				});
+			}
+			const git = flow.git ?? {};
+			const pr = flow.pr ?? {};
+			const commitRow = (c, i) => jsx("div", { className: "spo-item", key: "c" + i, children: [
+				jsx("span", { className: "spo-id", children: c.hash }),
+				jsx("span", { className: "spo-itemTitle", title: c.subject + " · " + c.author, children: c.subject }),
+				jsx("span", { className: "swb-srcTag", children: String(c.date || "").slice(5, 16).replace("T", " ") })
+			] });
+			const prRow = (p, i) => jsx("div", { className: "spo-item", key: "p" + (p.number ?? i), children: [
+				jsx("span", { className: "spo-id", children: "#" + p.number }),
+				jsx("span", { className: "spo-itemTitle", title: p.title, children: p.title }),
+				p.draft ? jsx("span", { className: "swb-pill", children: "draft" }) : null
+			] });
+
+			const gitToday = git.today?.commits ?? [];
+			const gitWeek = git.week?.commits ?? [];
+			const colToday = jsx("div", { className: "swb-flowCol", key: "today", children: [
+				jsx("div", { className: "swb-flowHead", children: "今日提交 " + gitToday.length + (git.today?.capped ? "（截断）" : "") }),
+				git.ok !== true
+					? jsx("div", { className: "spo-empty", children: "降级：" + (git.error ?? "git 不可读") })
+					: (gitToday.length === 0
+						? jsx("div", { className: "spo-empty", children: "今日无提交" })
+						: jsx("div", { className: "swb-scroll", children: gitToday.slice(0, 12).map(commitRow) }))
+			] });
+			const colWeek = jsx("div", { className: "swb-flowCol", key: "week", children: [
+				jsx("div", { className: "swb-flowHead", children: "本周提交 " + gitWeek.length + (git.week?.capped ? "（截断）" : "") + " · 自 " + String(git.week?.since ?? "").slice(0, 10) }),
+				git.ok !== true
+					? jsx("div", { className: "spo-empty", children: "降级：" + (git.error ?? "git 不可读") })
+					: jsx("div", { className: "swb-scroll", children: gitWeek.slice(0, 20).map(commitRow) })
+			] });
+
+			const prCells = [];
+			if (pr.ok !== true) {
+				prCells.push(jsx("div", { className: "spo-empty", key: "prdeg", children: "降级：PR 取数失败 —— " + (pr.error ?? "") }));
+			} else {
+				const c = pr.counts ?? {};
+				prCells.push(jsx("div", { className: "swb-kv", key: "prk", children: [
+					jsx("span", { className: "swb-kvKey", children: "PR 源" }),
+					jsx("span", { className: "swb-kvVal", children: pr.source === "api"
+						? "GitHub API 实时（" + (pr.slug ?? "") + (pr.partial ? " · 部分失败：" + (pr.attempts ?? []).join("；") : "") + "）"
+						: "快照 " + (pr.generated_at ?? "") + (pr.note ? " —— " + pr.note : "") })
+				] }));
+				prCells.push(jsx("div", { className: "swb-kv", key: "prq", children: [
+					jsx("span", { className: "swb-kvKey", children: "未合队列" }),
+					jsx("span", { className: "swb-kvVal", children: [
+						jsx("span", { className: (c.open > 12 ? "swb-pill swb-pill-red" : "swb-pill"), children: String(c.open ?? 0) + " 条" }),
+						"　今日新开 " + (c.open_today ?? 0) + " · 本周新开 " + (c.open_week ?? 0) + " · 本周已合 " + (c.merged_week ?? 0) + " · 今日已合 " + (c.merged_today ?? 0)
+					] })
+				] }));
+				const mergedList = pr.merged_week ?? [];
+				prCells.push(jsx("div", { className: "swb-flowHead", key: "prh", children: "本周已合并 " + (c.merged_week ?? mergedList.length) + (pr.merged_capped ? "（截断）" : "") }));
+				prCells.push(mergedList.length === 0
+					? jsx("div", { className: "spo-empty", key: "prempty", children: pr.source === "api" ? "本周无已合并 PR" : "快照不含合并时间——今日/本周已合计数需 API（当前不可用），故显式留空而非拿旧数据充数" })
+					: jsx("div", { className: "swb-scroll", key: "prlist", children: mergedList.slice(0, 20).map(prRow) }));
+				const openList = pr.open ?? [];
+				prCells.push(jsx("div", { className: "swb-flowHead", key: "openh", children: "未合 PR（按最近更新，取 " + openList.length + " 条）" }));
+				prCells.push(openList.length === 0
+					? jsx("div", { className: "spo-empty", key: "openempty", children: "无未合 PR" })
+					: jsx("div", { className: "swb-scroll", key: "openlist", children: openList.slice(0, 15).map(prRow) }));
+			}
+
+			return jsx(Section, {
+				id: "flow", title: "② 今日/本周流水", collapsed, onToggle,
+				extra: jsx("span", { className: "spo-muted", children: "今日 " + gitToday.length + " 提交 · 本周 " + gitWeek.length + " 提交 · 未合 PR " + ((pr.counts ?? {}).open ?? "—") }),
+				children: [
+					jsx("div", { key: "git", className: "swb-flow", children: [colToday, colWeek] }),
+					jsx("div", { key: "pr", children: prCells })
+				]
+			});
+		}
+
+		/** ③ 待你裁：一句话 + 我的倾向 + 等待天数（权威源）；卡面扫描单列，不混入。 */
+		function decisionsSection(dec, collapsed, onToggle) {
+			if (!dec || dec.ok !== true) {
+				return jsx(Section, {
+					id: "decisions", title: "③ 待你裁", collapsed, onToggle,
+					children: jsx("div", { className: "spo-empty", children: "降级：待裁源不可读 —— " + ((dec && dec.error) || "未知原因") })
+				});
+			}
+			const pending = dec.pending ?? [];
+			const items = pending.length === 0
+				? jsx("div", { className: "spo-empty", children: "当前无待你裁事项（源：" + dec.source + "，待裁 0 / 已裁 " + dec.resolved_count + "）" })
+				: pending.map((d, i) => jsx("div", { className: "swb-kv", key: d.id ?? i, style: { flexDirection: "column", alignItems: "stretch", gap: "3px" }, children: [
+					jsx("div", { style: { display: "flex", gap: "8px", alignItems: "baseline" }, children: [
+						d.id ? jsx("span", { className: "spo-id", children: d.id }) : null,
+						jsx("span", { style: { flex: 1, minWidth: 0, fontWeight: 600 }, children: d.title }),
+						jsx("span", { className: "swb-pill swb-pill-amber", children: d.waiting_days === null ? "等待 —" : "等待 " + d.waiting_days + " 天" })
+					] }),
+					d.context ? jsx("div", { className: "spo-muted", children: d.context }) : null,
+					jsx("div", { className: "spo-muted", children: "我的倾向：" + (d.suggestion?.label ?? "—（未给）") + (d.suggestion?.reason ? " —— " + d.suggestion.reason : "") })
+				] }));
+
+			const scan = dec.card_scan ?? [];
+			return jsx(Section, {
+				id: "decisions", title: "③ 待你裁", collapsed, onToggle,
+				extra: jsx("span", { className: "spo-muted", children: "待裁 " + dec.pending_count + " · 卡面扫描 " + dec.card_scan_count + " · 已裁 " + dec.resolved_count }),
+				children: [
+					jsx("div", { key: "src", className: "swb-kv", children: [
+						jsx("span", { className: "swb-kvKey", children: "源" }),
+						jsx("span", { className: "swb-kvVal", children: dec.source + "（上游单源 " + dec.upstream_source + "，生成于 " + (dec.generated_at ?? "—") + "）" })
+					] }),
+					jsx("div", { key: "items", children: items }),
+					jsx("div", { key: "scanHead", className: "swb-flowHead", children: "卡面文本扫描「需创始人」 " + scan.length + " 条（非结构化 —— 无选项/无倾向，故单列不混入上表）" }),
+					scan.length === 0
+						? jsx("div", { className: "spo-empty", key: "scanEmpty", children: "无" })
+						: jsx("div", { className: "swb-scroll", key: "scan", children: scan.map((s, i) => jsx("div", { className: "spo-item", key: s.id ?? i, children: [
+							jsx("span", { className: "spo-id", children: s.id }),
+							jsx("span", { className: "spo-itemTitle", title: s.excerpt, children: s.title }),
+							jsx("span", { className: "swb-pill", children: s.waiting_days === null ? "等待 —" : "等待 " + s.waiting_days + " 天" })
+						] })) })
+				]
+			});
+		}
+
+		/** ④ 阻塞：卡在哪 + 卡了几天（三要素口径）；未申报的单列，不静默补。 */
+		function blockedSection(blk, collapsed, onToggle) {
+			if (!blk || blk.ok !== true) {
+				return jsx(Section, {
+					id: "blocked", title: "④ 阻塞", collapsed, onToggle,
+					children: jsx("div", { className: "spo-empty", children: "降级：阻塞源不可读 —— " + ((blk && blk.error) || "未知原因") })
+				});
+			}
+			const items = blk.items ?? [];
+			const list = items.length === 0
+				? jsx("div", { className: "spo-empty", children: "阻塞 0 条 —— 口径：" + blk.rule })
+				: items.map((b, i) => jsx("div", { className: "spo-blocked", key: (b.id ?? "x") + i, children: [
+					jsx("div", { className: "spo-blockedHead", children: [
+						b.id ? jsx("span", { className: "spo-tag", children: b.id }) : null,
+						b.line ? jsx("span", { className: "swb-pill", children: "线 " + b.line }) : null,
+						jsx("span", { className: "spo-blockedReason", title: b.reason, children: b.reason }),
+						jsx("span", { className: "spo-num", style: { color: "#dc2626", fontWeight: 600 }, children: b.days === null ? "已卡 ?" : "已卡 " + b.days + " 天" })
+					] }),
+					jsx("div", { className: "spo-muted", children: "起始 " + (b.since ?? "—") + " · 需要 " + (b.needs ?? "—") + " · 源 " + b.source })
+				] }));
+
+			const nc = blk.nonconforming ?? [];
+			return jsx(Section, {
+				id: "blocked", title: "④ 阻塞", collapsed, onToggle,
+				extra: jsx("span", { className: "spo-muted", children: "计入 " + blk.count + " · 未申报 " + blk.nonconforming_count }),
+				children: [
+					jsx("div", { key: "list", children: list }),
+					jsx("div", { key: "ncHead", className: "swb-flowHead", children: "卡面 blocked 备注未按三要素申报 " + nc.length + " 条（reason+since+needs 缺一即不计入阻塞数 —— 不静默补）" }),
+					nc.length === 0
+						? jsx("div", { className: "spo-empty", key: "ncEmpty", children: "无" })
+						: jsx("div", { className: "swb-scroll", key: "nc", children: nc.map((n, i) => jsx("div", { className: "spo-item", key: (n.id ?? "n") + i, children: [
+							jsx("span", { className: "spo-id", children: n.id }),
+							jsx("span", { className: "spo-itemTitle", title: n.note, children: n.note || "（无备注）" }),
+							jsx("span", { className: "swb-pill", children: n.kind })
+						] })) })
+				]
+			});
+		}
+
+		function WorkbenchPanel(props) {
+			return jsx(SynovaPanel, {
+				title: "Synova 开发工作台",
+				badge: "面板 A",
+				url: WB_URL,
+				geoKey: WB_GEO_KEY,
+				collapseKey: WB_COLLAPSE_KEY,
+				collapseDefaults: { grid: false, flow: false, decisions: false, blocked: false },
+				onBack: props && props.onBack,
+				renderBody: (data, collapsed, toggle) => [
+					gridSection(data.grid, collapsed.grid, toggle),
+					flowSection(data.flow, collapsed.flow, toggle),
+					decisionsSection(data.decisions, collapsed.decisions, toggle),
+					blockedSection(data.blocked, collapsed.blocked, toggle)
+				]
+			});
+		}
+
+		/** 面板 B「治理线」——与格子矩阵物理分离（独立入口 + 独立路由）。 */
+		function GovernancePanel(props) {
+			const [onlyActive, setOnlyActive] = useState(true);
+			// 筛选态是会话内 UI 状态，不落 localStorage（只读视图原则，与既有面板一致）
+			return jsx(SynovaPanel, {
+				title: "治理线",
+				badge: "面板 B",
+				url: GOV_URL,
+				geoKey: GOV_GEO_KEY,
+				collapseKey: GOV_COLLAPSE_KEY,
+				collapseDefaults: { cards: false, debt: false },
+				onBack: props && props.onBack,
+				renderBody: (data, collapsed, toggle) => {
+					const cards = data.cards ?? {};
+					const all = onlyActive ? (cards.active ?? []) : [].concat(cards.active ?? [], cards.resting ?? []);
+					const rows = all.map((c, i) => jsx("div", { className: "spo-item", key: (c.id ?? "x") + i, children: [
+						jsx("span", { className: "spo-id", children: c.id }),
+						jsx("span", { className: "swb-pill", style: { flex: "none" }, children: c.domain_label }),
+						jsx("span", { className: "spo-itemTitle", title: c.title + "（入选信号：" + (c.signals ?? []).join("、") + "）", children: c.title }),
+						jsx("span", { className: "swb-srcTag", title: "serves 依据：" + c.serves_source, children: c.serves ? "服务 " + c.serves : "—（卡面未声明）" }),
+						jsx("span", { className: "swb-pill", children: c.status ?? "?" }),
+						jsx("span", { className: "spo-num", style: { color: (c.waiting_days ?? 0) >= 7 ? "#dc2626" : undefined, fontWeight: 600 }, children: c.waiting_days === null ? "等待 —" : "等待 " + c.waiting_days + " 天" })
+					] }));
+					const debt = data.debt ?? {};
+					return [
+						jsx(Section, {
+							id: "cards", key: "cards",
+							title: "治理卡（域 / 卡号 / 状态 / 服务哪条主线 / 等待天数）",
+							collapsed: collapsed.cards, onToggle: toggle,
+							extra: jsx("span", { className: "spo-muted", children: "活卡 " + (cards.active_count ?? 0) + " · 终态 " + (cards.resting_count ?? 0) + " · 共 " + (cards.count ?? 0) }),
+							children: [
+								jsx("div", { className: "swb-kv", key: "rule", children: [
+									jsx("span", { className: "swb-kvKey", children: "口径" }),
+									jsx("span", { className: "swb-kvVal", children: (data.scope?.rule ?? "") + "　命中信号计数：" + JSON.stringify(data.scope?.signals ?? {}) })
+								] }),
+								jsx("div", { className: "swb-kv", key: "filterNote", children: [
+									jsx("span", { className: "swb-kvKey", children: "注意" }),
+									jsx("span", { className: "swb-kvVal", children: cards.filter_note ?? "" })
+								] }),
+								jsx("div", { className: "swb-filter", key: "filter", children: [
+									jsx("button", { type: "button", className: "swb-filterBtn", "data-on": onlyActive ? "1" : "0", onClick: () => setOnlyActive(true), children: "活卡 " + (cards.active_count ?? 0) }),
+									jsx("button", { type: "button", className: "swb-filterBtn", "data-on": onlyActive ? "0" : "1", onClick: () => setOnlyActive(false), children: "全部 " + (cards.count ?? 0) }),
+									jsx("span", { className: "swb-srcTag", children: cards.ok === false ? "降级：" + (cards.error ?? "") : "源 task-state/D*.json（读卡 " + (cards.count ?? 0) + "，坏卡 " + (cards.read_error_count ?? 0) + "）" })
+								] }),
+								rows.length === 0
+									? jsx("div", { className: "spo-empty", key: "empty", children: "无符合条件的治理卡" })
+									: jsx("div", { className: "swb-scroll", key: "rows", children: rows })
+							]
+						}),
+						jsx(Section, {
+							id: "debt", key: "debt",
+							title: "欠账 / 待规划（board-backlog.json）",
+							collapsed: collapsed.debt, onToggle: toggle,
+							extra: jsx("span", { className: "spo-muted", children: debt.ok ? debt.count + " 项" : "降级" }),
+							children: debt.ok
+								? [
+									jsx("div", { className: "swb-kv", key: "src", children: [
+										jsx("span", { className: "swb-kvKey", children: "源" }),
+										jsx("span", { className: "swb-kvVal", children: debt.source + (debt.source_detail ? "（" + debt.source_detail + "）" : "") + "　｜　" + debt.todos_yaml_note })
+									] }),
+									(debt.items ?? []).length === 0
+										? jsx("div", { className: "spo-empty", key: "e", children: "欠账表为空" })
+										: jsx("div", { className: "swb-scroll", key: "l", children: (debt.items ?? []).map((x, i) => jsx("div", { className: "spo-item", key: x.id ?? i, children: [
+											jsx("span", { className: "spo-id", children: x.id }),
+											jsx("span", { className: "spo-itemTitle", title: x.note, children: x.title })
+										] })) })
+								]
+								: jsx("div", { className: "spo-empty", children: "降级：欠账表不可读 —— " + (debt.error ?? "未知原因") })
+						})
+					];
+				}
+			});
+		}
+
+		// 注：react/jsx-runtime 的签名是 jsx(type, props, key) —— 第 3 个参数是 **key 不是 children**。
+		// 早前写成 jsx("span", {...}, "📊") 时字形被当成 key 丢掉，**图标恒为空 span**
+		// （2026-09-29 真机取证：<span title="项目总览"></span> 无文本）。故 children 一律写进 props。
 		/** 侧栏入口图标：sidebar.panellist owner props = { size, active }（官方全局面板行）。 */
 		function ProjectOverviewIcon(props) {
 			const size = (props && props.size) || 16;
 			return jsx("span", {
 				style: { fontSize: Math.round(size * 0.9), lineHeight: 1 },
-				title: "项目总览"
-			}, "📊");
+				title: "项目总览",
+				children: "📊"
+			});
+		}
+
+		/** 面板 A 图标。 */
+		function WorkbenchIcon(props) {
+			const size = (props && props.size) || 16;
+			return jsx("span", {
+				style: { fontSize: Math.round(size * 0.9), lineHeight: 1 },
+				title: "Synova 开发工作台",
+				children: "🧰"
+			});
+		}
+
+		/** 面板 B 图标（治理线 —— 与面板 A 物理分离的第二个入口）。 */
+		function GovernanceIcon(props) {
+			const size = (props && props.size) || 16;
+			return jsx("span", {
+				style: { fontSize: Math.round(size * 0.9), lineHeight: 1 },
+				title: "治理线",
+				children: "⚖️"
+			});
+		}
+
+		// ── 注册降级（Done ⑤：slot 不存在 / 版本不足 → 显式 degraded，不静默）──────
+		// 背景：官方协议下「选择未注册的 main key 会抛错并保留当前选中态」——
+		//   若 main cell 注册失败而入口行照常注册，用户点进去会**什么都不发生**（静默降级）。
+		// 做法：① 逐个注册包 try/catch，失败 console.error 留痕（铁律 24 禁空吞）；
+		//       ② main cell 未注册成功时，该入口图标改显 ⚠ + title 说明（前端可见，不静默）；
+		//       ③ 失败清单挂到 exports.__synovaRegistrationDegraded 供诊断/测试读取。
+		const MAIN_REGISTERED = new Map();
+		const REGISTRATION_FAILURES = [];
+
+		function guardRegister(label, fn) {
+			try {
+				fn();
+				return true;
+			} catch (err) {
+				const msg = label + "：" + (err && err.message ? err.message : String(err));
+				REGISTRATION_FAILURES.push(msg);
+				console.error("[@synova/dsh-dashboards] 槽位注册失败（降级可见）：" + msg);
+				return false;
+			}
+		}
+
+		/** 入口图标包装：main cell 注册失败 → 显示 ⚠（显式降级，不静默消失）。 */
+		function iconWithHealthFallback(Icon, log, key) {
+			const Wrapped = (props) => {
+				if (MAIN_REGISTERED.get(key) === false) {
+					const size = (props && props.size) || 16;
+					return jsx("span", {
+						style: { fontSize: Math.round(size * 0.9), lineHeight: 1, color: "#dc2626" },
+						title: log + " —— 降级：main 面板未注册（点击不会切面板）；详见控制台 [@synova/dsh-dashboards]",
+						children: "⚠"
+					});
+				}
+				return jsx(Icon, props);
+			};
+			return Wrapped;
 		}
 
 		// ── 插件体 ────────────────────────────────────────────────────────────
@@ -618,6 +1225,14 @@ window.__ModuleLoader__.load({
 		//   收 owner props { size, active }；**同一个 id** 寻址 root 作用域 main（keyed）的组件。
 		//   官方明确：选择未注册的 main key 会抛错并保留旧选中态 ⇒ 必须先注册 main，再注册入口行。
 		const PANEL_ID = "synova-project-overview";
+		// D1060：三个面板 = 三对 (main keyed cell + sidebar.panellist 入口)，id 各自独立。
+		// 治理线（GOV_PANEL_ID）与开发工作台（WB_PANEL_ID）是**两个独立入口**，
+		// 不是同一面板的两个区块 —— 即创始人要求的"物理分离"。
+		const PANEL_ENTRIES = [
+			{ id: PANEL_ID, order: 50, label: "项目总览", key: PANEL_ID, Icon: ProjectOverviewIcon, Panel: ProjectOverviewPanel, log: "项目总览" },
+			{ id: WB_PANEL_ID, order: 51, label: "开发工作台", key: WB_PANEL_ID, Icon: WorkbenchIcon, Panel: WorkbenchPanel, log: "开发工作台" },
+			{ id: GOV_PANEL_ID, order: 52, label: "治理线", key: GOV_PANEL_ID, Icon: GovernanceIcon, Panel: GovernancePanel, log: "治理线" }
+		];
 
 		function apply(ctx) {
 			const slots = ctx.slots;
@@ -631,20 +1246,26 @@ window.__ModuleLoader__.load({
 				tag.textContent = CSS;
 				document.head.appendChild(tag);
 			}
-			// ① 先注册 main keyed cell（选中入口行时由 layout 派发到此）
-			ctx.effect(() => slots.inject("main", () => slots.register(
-				{ name: "main", key: PANEL_ID },
-				() => jsx(ProjectOverviewPanel, { onBack: () => ctx.layout.selectPanel(null) })
-			)), "synova-project-overview: main cell");
-			// ② 再注册左栏入口行（与「任务看板」同区：sidebar.panellist）
-			ctx.effect(() => slots.inject("sidebar.panellist", () => slots.register(
-				{ name: "sidebar.panellist", id: PANEL_ID, order: 50, label: "项目总览" },
-				ProjectOverviewIcon
-			)), "synova-project-overview: sidebar entry");
+			// 逐个面板成对注册：① main keyed cell（选中入口行时由 layout 派发到此）
+			// ② 左栏入口行（sidebar.panellist）。顺序不可反 —— 未注册的 main key 会抛错。
+			// 两步都过 guardRegister：任一失败 → 留痕 + 入口显 ⚠（Done ⑤ 降级显式）。
+			for (const entry of PANEL_ENTRIES) {
+				const okMain = guardRegister("main/" + entry.key, () => ctx.effect(() => slots.inject("main", () => slots.register(
+					{ name: "main", key: entry.key },
+					() => jsx(entry.Panel, { onBack: () => ctx.layout.selectPanel(null) })
+				)), "synova-dashboards: " + entry.log + " main cell"));
+				MAIN_REGISTERED.set(entry.key, okMain);
+				guardRegister("sidebar.panellist/" + entry.id, () => ctx.effect(() => slots.inject("sidebar.panellist", () => slots.register(
+					{ name: "sidebar.panellist", id: entry.id, order: entry.order, label: entry.label },
+					iconWithHealthFallback(entry.Icon, entry.log, entry.key)
+				)), "synova-dashboards: " + entry.log + " sidebar entry"));
+			}
 		}
 
 		exports.apply = apply;
 		exports.inject = inject;
+		/** 诊断面（只读）：注册失败清单 —— 空数组 = 三对槽位全部注册成功。 */
+		exports.__synovaRegistrationDegraded = REGISTRATION_FAILURES;
 		return module.exports;
 	}
 });

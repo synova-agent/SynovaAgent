@@ -1,0 +1,8 @@
+=== 改坏即红 原始输出 ===
+2026-09-29 01:22:07 CST
+--- 动作：从已安装的 lib/client.js 删除 PANEL_ENTRIES 里开发工作台那一行（slot 注册项）---
+--- 删除后 WB_PANEL_ID 残留引用数（grep -c）：2 ---
+--- CDP Page.reload(ignoreCache) 后，侧栏实际条目：
+"{\"sidebarRows\":[\"项目总览\",\"治理线\"],\"panelRoots\":0,\"gridTables\":0}"
+--- 点击「开发工作台」的返回（按钮已不存在）：
+"NOT FOUND（改坏即红：入口消失）"

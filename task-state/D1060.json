@@ -1,0 +1,23 @@
+{
+  "task_id": "D1060",
+  "title": "D963 升级「Synova 开发工作台」双面板（四问格子 / 流水 / 待你裁 / 阻塞 + 治理线物理分离）",
+  "status": "impl_done",
+  "spec": ".claude/task-briefs/2026-09-29-D1060-D963升级-Synova开发工作台-双面板.md",
+  "impl": "dsh/plugins/synova-dashboards/lib/{repofile,flow,workbench,governance,index,client}.js",
+  "audit": null,
+  "fix_task_id": null,
+  "domain": "mac",
+  "risk": "medium",
+  "owner": "DeepSeek Harness",
+  "milestone": "M0 项目管理基建",
+  "depends_on": ["D963", "D1059"],
+  "updated_at": "2026-09-29",
+  "updated_by": "DeepSeek Harness",
+  "write_set": [
+    "dsh/plugins/synova-dashboards/**",
+    "docs/synova/product-lines/evidence/D1060/**",
+    "task-state/D1060.json",
+    ".claude/task-briefs/2026-09-29-D1060-D963升级-Synova开发工作台-双面板.md"
+  ],
+  "note": "【目的】把 D963「宪章三问 48 格」升级为「Synova 开发工作台」，并新增**与格子物理分离**的治理线面板。【现场复核（禁臆写）】① D963 的 Client/Host 实现只在未合分支 feat/d963-charter-grid-panel，且其基线过旧（相对 main 766 文件反向 diff）无法干净合并；② 四问 64 格只在未合 PR #880（refs/pull/880/head）；③ 桌面端 profile 当时装的是 /tmp/d963-plugin-degraded 降级测试件（repoRoot=/tmp/d963-nosource），创始人看到的是降级态。【处置】新分支 feat/D1060-synova-workbench；以 merge 提交并入 PR #880 前置（保出处），在 main 上重写两面板，不复活旧分支。【两面板】A=四问格子矩阵（16×4，四色，空格显式 ⚪未填，禁伪装成绿 X27）+ 今日/本周流水（git log + GitHub PR API，失败回退仓库快照并显式标注）+ 待你裁（product-progress#decisions + 卡面扫描单列）+ 阻塞（三要素口径，未申报单列）；B=治理卡（域/卡号/状态/服务哪条主线/等待天数）+ 欠账表 board-backlog.json。【slot 出处】slot-catalog.ts:1730 main / :2989 sidebar.panellist。【顺带修】① package.json 死声明 @deepseek-ai/dsh-client-runtime（锚定版不存在，实测）移除；② 三个入口图标恒为空 span 的真机缺陷（jsx 第 3 参是 key 不是 children）修复；③ 安装脚本支持桌面端 profile（$DSH_PROFILE_DIR）。【验收】npm test 81/81；真机截图 + 改坏即红 + 降级显式证据见 docs/synova/product-lines/evidence/D1060/。"
+}

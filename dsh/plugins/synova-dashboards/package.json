@@ -1,6 +1,6 @@
 {
   "name": "@synova/dsh-dashboards",
-  "description": "Synova 全局跟踪三仪表盘 + 项目总览（左侧栏入口 + 中央只读面板）——DSH Web 可视化插件（Host 只读数据路由 + Client Slots UI 双面）",
+  "description": "Synova 全局跟踪三仪表盘 + 项目总览 + 开发工作台（四问格子/流水/待裁/阻塞）+ 治理线（左侧栏入口 + 中央只读面板）——DSH Web 可视化插件（Host 只读数据路由 + Client Slots UI 双面）",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -22,13 +22,12 @@
     "client": {
       "platform": "web",
       "inject": [
-        "@deepseek-ai/dsh-client-runtime",
         "@deepseek-ai/dsh-client-ui-layout"
       ]
     }
   },
   "license": "MIT",
   "scripts": {
-    "test": "node --test test/ledger.test.js test/host-route.test.js test/client-panel.test.js"
+    "test": "node --test test/ledger.test.js test/host-route.test.js test/client-panel.test.js test/workbench.test.js test/governance.test.js test/flow.test.js"
   }
 }
