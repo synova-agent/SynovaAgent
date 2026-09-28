@@ -1,0 +1,77 @@
+{
+ "evidence_id": "D1054/cardb-judgment",
+ "task": "§D CARD-B = B3 三 live 联动 —— 只给判据",
+ "produced_by": "squad-a-b2",
+ "base_sha": "20b55eba9ce0db5cfa238bd09e02b4732d234af3",
+ "question": "task-state/{D488,D491,D492}.json 的 spec.path 指向 docs/plans 里的文件；能否与 B3（docs/plans，win）同 PR？",
+ "step1_three_spec_paths": [
+  {
+   "task_id": "D488",
+   "status": "spec_done",
+   "spec_path": "docs/plans/codex/implementation/SYNOVA-IMPL-D488-stage5b-expert-fix-20260828.md",
+   "target_exists": true,
+   "target_domain": "win",
+   "heads_tracked": true
+  },
+  {
+   "task_id": "D491",
+   "status": "spec_done",
+   "spec_path": "docs/plans/codex/implementation/SYNOVA-IMPL-D491-expert-router-test-debt-20260902.md",
+   "target_exists": true,
+   "target_domain": "win",
+   "heads_tracked": true
+  },
+  {
+   "task_id": "D492",
+   "status": "impl_done",
+   "spec_path": "docs/plans/codex/implementation/SYNOVA-IMPL-D492-task-decomposer-expert-map-20260902.md",
+   "target_exists": true,
+   "target_domain": "win",
+   "heads_tracked": true
+  }
+ ],
+ "step2_consumer": {
+  "file": "scripts/control-tower/gen-cto-health.py",
+  "lines": "305-315",
+  "raw": "spec_path = (d.get(\"spec\") or {}).get(\"path\")\nspec_path_ok = bool(\n    spec_path\n    and (REPO / spec_path).exists()\n    and (repo_degraded or spec_path.replace(\"\\\\\", \"/\") in head_files)\n)\nhas_spec = num in spec_files or spec_path_ok",
+  "semantics": "双重条件：① 工作区文件存在 **且** ② 该路径在 HEAD 跟踪集内。二者缺一 ⇒ spec_path_ok=False ⇒ has_spec 退回 glob 分支 ⇒ 该 D# 在看板上可能显示为无 spec（degraded/phantom）",
+  "implication": "若 B3 **移动/重命名**这 3 个 spec 目标而不同步改 task-state 的 spec.path ⇒ 看板 spec 字段退化（非硬红，属派生数据退化）"
+ },
+ "step3_domain_verification": {
+  "claim_from_spec": "check-ownership.py 实测 ✅ PASS 1 个文件同域: win（豁免 3）⇒ 可与 B3 同 PR",
+  "my_reproduction": [
+   {
+    "cmd": "check-ownership.py docs/plans/2026-09-19-D819-改动清单.md task-state/D488.json task-state/D491.json task-state/D492.json",
+    "raw": "win  docs/plans/2026-09-19-D819-改动清单.md\n\n✅ PASS 1 个文件同域: win（无归属 0，域判定豁免 3）"
+   },
+   {
+    "cmd": "check-ownership.py docs/plans/codex/implementation/SYNOVA-IMPL-D488-stage5b-expert-fix-20260828.md task-state/D488.json task-state/D491.json task-state/D492.json",
+    "raw": "win  docs/plans/codex/implementation/SYNOVA-IMPL-D488-stage5b-expert-fix-20260828.md\n\n✅ PASS 1 个文件同域: win（无归属 0，域判定豁免 3）"
+   }
+  ],
+  "why_exempt": "task-state/** 在 ownership.yaml 的 domain_neutral 内 ⇒ 3 件被豁免，不产生 mac 侧归属 ⇒ 与 B3 的 docs/plans(win) 同域无冲突",
+  "verdict": "✅ **可与 B3 同 PR**（域面成立，与权威件 §三 CARD-B 一致）"
+ },
+ "step4_judgment": {
+  "answer": "可以同 PR —— 但有**两个前置条件**，缺一即不可",
+  "conditions": [
+   {
+    "id": "CB-1",
+    "condition": "B3 若**移动/改名**这 3 个 spec 目标文件，则 task-state 的 spec.path **必须在同一 commit 清/改**（权威件写集口径=「清指向 B3 件的值」）",
+    "why": "否则 gen-cto-health.py:305-315 的 spec_path_ok 双条件失败 ⇒ 看板 spec 列退化（非硬红）"
+   },
+   {
+    "id": "CB-2",
+    "condition": "domain_neutral 豁免是**路径前缀**给予的，不因 task-state 文件被改动而失效 ⇒ 域面始终安全；**但**若 B3 同时改 `scripts/control-tower/gen-cto-health.py`（mac），则整 PR 变跨域 ⇒ FAIL",
+    "why": "gen-cto-health.py 域=mac（via scripts/control-tower/**）；权威件已声明「本计划设计上避免」，此处仅作判据登记"
+   }
+  ],
+  "phantom_criteria_warning": {
+   "source": "权威件 §三 CARD-B 明示：分歧点",
+   "requirement": "判据须含「字段非空 **且** 文件不存在」的矛盾夹具（否则 phantom 判据可被空值洗绿）",
+   "current_observed": "三件现状 = 字段非空 且 文件存在 且 已在 HEAD ⇒ 属**健康**态（非 phantom）；清理动作后会进入「字段被清空」态，此时必须有夹具证明「空值不被误判为 spec 存在」"
+  },
+  "boundary": "本卡**未**改动 task-state/{D488,D491,D492}.json，也未改 gen-cto-health.py（红线：只给判据）"
+ },
+ "not_a_verdict": "本件为执行方取证材料，非独立审计结论。"
+}

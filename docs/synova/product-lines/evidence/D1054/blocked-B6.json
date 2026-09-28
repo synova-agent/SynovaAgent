@@ -1,0 +1,114 @@
+{
+ "evidence_id": "D1054/blocked-B6",
+ "task": "§B B6 = scripts/archive/gen-survey.py —— 🔴 已阻断，本批只取证不改动",
+ "produced_by": "squad-a-b2",
+ "base_sha": "20b55eba9ce0db5cfa238bd09e02b4732d234af3",
+ "headline": "删除 gen-survey.py 与「同 commit 清 ratchet 条目」是一对**必须原子**的动作，但两者分属 win / mac 两域 ⇒ 违反 D733 ② 单域硬规则。**单 PR 不可行，拆两 PR 中间态必红**。",
+ "step1_reproduce": {
+  "cmd": "python3 scripts/control-tower/check-ownership.py scripts/archive/gen-survey.py tests/control-tower/grep-oP-regression.test.sh",
+  "exit": 1,
+  "raw": "win  scripts/archive/gen-survey.py\nmac  tests/control-tower/grep-oP-regression.test.sh\n\n❌ FAIL 跨域: 变更落在 2 个域 ['mac', 'win'] —— 单个 PR 只许一个域（无归属 0，域判定豁免 0）",
+  "control_each_alone": [
+   {
+    "cmd": "check-ownership.py scripts/archive/gen-survey.py",
+    "raw": "✅ PASS 1 个文件同域: win（无归属 0，域判定豁免 0）"
+   },
+   {
+    "cmd": "check-ownership.py tests/control-tower/grep-oP-regression.test.sh",
+    "raw": "✅ PASS 1 个文件同域: mac（无归属 0，域判定豁免 0）"
+   }
+  ],
+  "conclusion": "单件各自 PASS、组合 FAIL ⇒ 阻断确由跨域组合产生，非单件问题",
+  "ownership_trace": {
+   "scripts/archive/gen-survey.py": "win（via 兜底 glob '**'，default: true）",
+   "tests/control-tower/grep-oP-regression.test.sh": "mac（via glob 'tests/control-tower/**'）",
+   "yaml": "docs/synova/coordination/ownership.yaml（43 条规则，顺序求值最后匹配者胜）",
+   "domain_neutral": "实测**未含**这两条（现行 14 条，含 .claude/task-briefs/**、task-state/**、memory/notes/**、docs/synova/product-lines/evidence/** 等）"
+  }
+ },
+ "step2_option_evidence": {
+  "Ⓐ_统一归属_CTO批跨域": {
+   "mechanism": "改 docs/synova/coordination/ownership.yaml 使两路径同域，或 CTO 对本次跨域出 explicit waiver",
+   "worked_form": [
+    "在 ownership.yaml 加规则 `- glob: \"scripts/archive/**\" owner: \"mac\"`（插在 mac 段）⇒ gen-survey.py 变 mac，与 test 同域 ⇒ 单 PR 可过",
+    "例：`- glob: \"scripts/archive/**\"` → `owner: mac`，source 记 TASK-ROUTING.md 新裁定"
+   ],
+   "evidence_for": [
+    "ownership.yaml 域=mac（docs/synova/coordination/** → mac）⇒ 改规则本身与 mac 侧 test 同域 ⇒ PR 仍单域 mac ✅",
+    "check-ownership.py:79 load_ownership() 读**工作区**yaml ⇒ 同 PR 内改规则对本次校验即时生效（无 bootstrap 死锁）"
+   ],
+   "cost_risk": "改 `scripts/archive/**` 归属是**治理规则变更** ⇒ 需 CTO + K3；且会给整个 scripts/archive/ 定 mac（当前兜底 win），影响面大于本件",
+   "verdict": "可行，代价=规则变更+审批"
+  },
+  "Ⓑ_加入 domain_neutral": {
+   "mechanism": "把两条路径加入 ownership.yaml 的 `domain_neutral`",
+   "current_domain_neutral": [
+    ".claude/bypass.log",
+    ".claude/gate-hits.log",
+    ".claude/task-briefs/**",
+    "task-state/**",
+    "memory/notes/**",
+    ".codex/**",
+    "docs/synova/product-lines/evidence/**",
+    ".gitignore",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "LOOP.md",
+    "knowledge/shared/README.md",
+    "docs/authority/DRIFT-LEDGER.md",
+    "docs/authority/system-registry.json"
+   ],
+   "proposed_addition": [
+    "scripts/archive/gen-survey.py",
+    "tests/control-tower/grep-oP-regression.test.sh"
+   ],
+   "evidence_for": [
+    "check-ownership.py:26 语义 = 「ownership.yaml 的 domain_neutral 列出的路径」⇒ 命中即豁免，机制上可过"
+   ],
+   "semantic_objection": "🔴 domain_neutral 的既定语义是「**各线都写自己那一份**」的共享文件（bypass.log / task-state / notes / 证据目录）。gen-survey.py 与 grep-oP-regression.test.sh **不是**各线各写一份的文件 ⇒ 语义不匹配；把它当「跨域逃生舱」用会**削弱 D733 ② 单域硬规则**（先例一开，任何跨域组合都可要求加白名单）",
+   "verdict": "机制可行但有语义误用风险，不建议；若采用应先把 domain_neutral 的契约收窄为「显式枚举的共享件」并加判别性测试防滥用"
+  },
+  "Ⓒ_拆两PR_中间态必红": {
+   "claim": "两种拆法的中间态都使 BOM 棘轮变红",
+   "ratchet_location": "tests/control-tower/grep-oP-regression.test.sh:207 BOM_PENDING；:221 为**等号断言**（BOM_ACTUAL = BOM_EXPECT）",
+   "is_blocking": [
+    "ci.yml:371 明确把该测试列入 CI 执行清单 ⇒ 棘轮红 = CI 红 = 阻断合并"
+   ],
+   "current_state": {
+    "cmd": "实跑测试的两条命令",
+    "BOM_ACTUAL": 10,
+    "BOM_EXPECT": 10,
+    "result": "✅ 一致（GREEN）"
+   },
+   "pr1_win_only_delete_file": {
+    "expect": "BOM_EXPECT（10，含该件）",
+    "actual": "BOM_ACTUAL（9，已无该件）",
+    "diff_raw": "1d0\n< scripts/archive/gen-survey.py",
+    "non_empty": true,
+    "verdict": "🔴 RED"
+   },
+   "pr2_mac_only_remove_entry": {
+    "expect": "BOM_EXPECT（9，已删条目）",
+    "actual": "BOM_ACTUAL（10，文件仍在）",
+    "diff_raw": "0a1\n> scripts/archive/gen-survey.py",
+    "non_empty": true,
+    "verdict": "🔴 RED"
+   },
+   "symmetric_proof": "两次 diff 互为镜像（1d0 / 0a1）⇒ 等号断言在**任一单侧动作**下都非空 ⇒ 两序皆红 ⇒ 拆法不可行",
+   "verdict": "✅ Ⓒ 的「中间态必红」**实证成立**（非论证）"
+  },
+  "option_Ⓓ_card_face_did_not_list": "（本批登记）还有第四条：**改判保留**（B6 不出库，登记为保留件）—— 零风险、零跨域，代价是 1 件 BOM 待清件留在仓中（本就在 BOM_PENDING 里）。CTO 若以成本/收益权衡可选此条。",
+  "recommendation": "CTO 三选一之外建议并记 Ⓓ；若必须在 Ⓐ/Ⓑ/Ⓒ 中选，Ⓐ 优于 Ⓑ（Ⓑ 有语义误用先例风险），Ⓒ 已证不可行"
+ },
+ "step3_bom_evidence": {
+  "cmd_worktree": "xxd -l 16 scripts/archive/gen-survey.py",
+  "raw_worktree": "00000000: efbb bf69 6d70 6f72 7420 6f73 0a0a 4f55  ...import os..OU",
+  "cmd_head": "git show HEAD:scripts/archive/gen-survey.py | xxd -l 16",
+  "raw_head": "00000000: efbb bf69 6d70 6f72 7420 6f73 0a0a 4f55  ...import os..OU",
+  "conclusion": "首 3 字节确为 ef bb bf（UTF-8 BOM），工作区与 HEAD 一致 ✅（卡面取证项完成）",
+  "side_observation": "file(1) 误判为 'Nim source code'（.py 扩展名+内容启发式）；不影响结论，仅记录",
+  "ratchet_list_position": "BOM_PENDING 第 1 条即 scripts/archive/gen-survey.py"
+ },
+ "redline": "本批**未**删除/修改任何文件；gen-survey.py 与 grep-oP-regression.test.sh 均保持原样（见 A-03 git status）",
+ "not_a_verdict": "本件为执行方取证材料，非独立审计结论。"
+}

@@ -1,0 +1,233 @@
+{
+ "evidence_id": "D1054/A-01",
+ "task": "§A B5 §①② 引用复核（双法）+ 出库口径判定",
+ "produced_by": "squad-a-b2",
+ "produced_at_utc": "2026-09-28T11:35:43Z",
+ "base": {
+  "repo": "/Users/wane/SynovaAgent/.synova-wt-d1054",
+  "branch": "chore/d1054-b5b6-cardab",
+  "base_sha": "20b55eba9ce0db5cfa238bd09e02b4732d234af3",
+  "head_sha": "20b55eba9ce0db5cfa238bd09e02b4732d234af3",
+  "origin_main_sha": "20b55eba9ce0db5cfa238bd09e02b4732d234af3",
+  "fetch": "git fetch origin --quiet (exit 0)"
+ },
+ "premise_recheck": {
+  "md_total": {
+   "cmd": "git ls-files '*.md' | wc -l",
+   "value": 1631,
+   "frozen": 1631,
+   "match": true
+  },
+  "ts_caliber": {
+   "frozen_value": 509,
+   "my_first_measure": {
+    "cmd": "git ls-files 'src/**/*.ts' 'packages/**/*.ts' | wc -l",
+    "value": 500,
+    "verdict": "我的 glob 写法错"
+   },
+   "correct_cmd": "git ls-files 'src/*.ts' 'packages/*.ts' | wc -l",
+   "correct_value": 509,
+   "source": "scripts/control-tower/daily-cto-board.sh:79 声明口径",
+   "verdict": "✅ 冻结值 509 正确；偏差在我，非前提失败"
+  },
+  "docs_archive": {
+   "md": 18,
+   "ts": 12,
+   "all_files": 30,
+   "cmd": "git ls-files 'docs/archive/**' 分类计数",
+   "note": "两口径皆真：md-only 18（递归）/ all-files 30（=18 md + 12 ts）"
+  },
+  "docs_archive_domain": {
+   "cmd": "python3 scripts/control-tower/check-ownership.py <18 件>",
+   "result": "✅ PASS 18 个文件同域: win（无归属 0，域判定豁免 0）"
+  },
+  "scripts_archive": {
+   "cmd": "git ls-files 'scripts/archive/**'",
+   "value": [
+    "scripts/archive/gen-survey.py"
+   ],
+   "note": "= §B B6 对象，已阻断，本批不动"
+  }
+ },
+ "step1_reference_recheck": {
+  "method1_exact_path": {
+   "cmd": "git grep -n -I -F -f <30 件全路径清单>",
+   "exit": 0,
+   "hit_lines": 9,
+   "hit_files": 8,
+   "full_output_in_this_json": [
+    ".claude/task-briefs/2026-09-04-D573-fde-to-ga-terminology.md:91:- 不改 docs/archive/SYNOVA-IMPL-DSH-D538-frontend-leftbar-codex-20260827.md — archive 全目录不动）",
+    "docs/archive/SYNOVA-IMPL-DSH-D379-path-dependency-shell-20260816.md:58:历史参考 [docs/archive/sentinels/path-dependency/computes/detect.ts](docs/archive/sentinels/path-dependency/computes/detect.ts)（`detectPathDependency(store, orgId)` 算法，HHI 入度集中度 60% + 单一来源依赖 40%），但用的是**旧 Promise 接口**：",
+    "docs/authority/COMMIT-PLAN-20260820.md:21:| `docs/archive/TOMBSTONE-20260820.md` | 新建 | 归档墓碑 |",
+    "docs/synova/coordination/裁定-双DSH提升清单-20260922.md:40:| `detect.ts:88` spread 溢出 | 实际在 **`docs/archive/sentinels/path-dependency/computes/detect.ts:78`** —— **归档件**、行号差 10；活件在 `extensions/sentinels/path-dependency/computes/detect.ts` | 引用时改标活件路径并重核行号 |",
+    "docs/synova/product-lines/evidence/D1050-B2/A-01-nolink-recheck.json:372:    \"docs/archive/SYNOVA-IMPL-DSH-D379-path-dependency-shell-20260816.md:29:**来源**: [D379 派活 brief](.claude/task-briefs/D379-path-dependency.md)（spec 归 dev-doc 线）\",",
+    "docs/synova/product-lines/evidence/D1050-B2/A-01-nolink-recheck.json:373:    \"docs/archive/v3/LOOP-ENGINEERING-V3-DEPLOYMENT.md:222:brief_file = os.environ.get('BRIEF_FILE', '.claude/task-briefs/brief.md')\",",
+    "docs/synova/product-lines/evidence/D922-phase0-recon-20260923.md:1417:docs/archive/08-代码审计报告-20260603.md:570:| P3-08 | `src/orchestrator/subagent-coordinator.ts:190-213` | `ExpertAutonomyEngine` 在协调器内直接 `new` | 改为依赖注入 |",
+    "docs/synova/research/official-borrowing-recheck.md:395:OK    docs/archive/SYNOVA-IMPL-DSH-D534-notes-four-state-mechanism-20260826.md  cites=4  problems=0",
+    "extensions/sentinels/path-dependency/computes/detect.ts:10: * 算法（历史实现 docs/archive/sentinels/path-dependency/computes/detect.ts 适配同步接口）:"
+   ],
+   "classification": [
+    {
+     "hit": ".claude/task-briefs/2026-09-04-D573-fde-to-ga-terminology.md:91",
+     "kind": "历史 brief 正文",
+     "live": false
+    },
+    {
+     "hit": "docs/archive/SYNOVA-IMPL-DSH-D379-path-dependency-shell-20260816.md:58",
+     "kind": "批内自指（archive 件引 archive 件）",
+     "live": false
+    },
+    {
+     "hit": "docs/authority/COMMIT-PLAN-20260820.md:21",
+     "kind": "历史提交计划表",
+     "live": false
+    },
+    {
+     "hit": "docs/synova/coordination/裁定-双DSH提升清单-20260922.md:40",
+     "kind": "裁定件正文（明确标注该件为归档件、活件在 extensions/）",
+     "live": false
+    },
+    {
+     "hit": "docs/synova/product-lines/evidence/D1050-B2/A-01-nolink-recheck.json:372,373",
+     "kind": "B2 证据内的原始输出转存（自指）",
+     "live": false
+    },
+    {
+     "hit": "docs/synova/product-lines/evidence/D922-phase0-recon-20260923.md:1417",
+     "kind": "历史 recon 证据（引文块）",
+     "live": false
+    },
+    {
+     "hit": "docs/synova/research/official-borrowing-recheck.md:395",
+     "kind": "recheck 报告输出转存",
+     "live": false
+    },
+    {
+     "hit": "extensions/sentinels/path-dependency/computes/detect.ts:10",
+     "kind": "⚠️ 活生产码中的**注释**（非 import/非调用）",
+     "live": false,
+     "flag": "删 docs/archive/sentinels/path-dependency/computes/detect.ts 会使该注释路径悬空 —— 但该件属 12 件 .ts，本批**不出库**，故无影响；若日后出 .ts 需同批修注释"
+    }
+   ]
+  },
+  "method2_directory_consumers": {
+   "cmd": "git grep -n -I 'docs/archive' -- 'scripts/**' 'tests/**' '.github/**' '*.json' '*.yml' '*.yaml'",
+   "hit_lines": 28,
+   "full_output_in_this_json": [
+    "### 2a 目录级消费者：docs/archive 在 scripts/ tests/ .github/ *.json *.yml",
+    "docs/synova/product-lines/evidence/D1050-B2/A-01-nolink-recheck.json:372:    \"docs/archive/SYNOVA-IMPL-DSH-D379-path-dependency-shell-20260816.md:29:**来源**: [D379 派活 brief](.claude/task-briefs/D379-path-dependency.md)（spec 归 dev-doc 线）\",",
+    "docs/synova/product-lines/evidence/D1050-B2/A-01-nolink-recheck.json:373:    \"docs/archive/v3/LOOP-ENGINEERING-V3-DEPLOYMENT.md:222:brief_file = os.environ.get('BRIEF_FILE', '.claude/task-briefs/brief.md')\",",
+    "docs/synova/product-lines/evidence/D1050-B2/A-01-nolink-recheck.json:763:    \"scripts/control-tower/check-pr-budget.sh:407:OUTBOUND_ALLOW_RE='^(\\\\.claude/task-briefs/|docs/plans/|docs/synova/coordination/|memory/notes/|docs/synova/archive/|docs/archive/)'\",",
+    "docs/synova/product-lines/evidence/D1050-B2/A-01-nolink-recheck.json:826:    \"tests/control-tower/check-pr-budget.test.sh:328:ALLOW_SPEC='^(\\\\.claude/task-briefs/|docs/plans/|docs/synova/coordination/|memory/notes/|docs/synova/archive/|docs/archive/)'\",",
+    "docs/synova/product-lines/evidence/D1050-B2/A-01-nolink-recheck.json:927:    \"scripts/control-tower/check-pr-budget.sh:407:OUTBOUND_ALLOW_RE='^(\\\\.claude/task-briefs/|docs/plans/|docs/synova/coordination/|memory/notes/|docs/synova/archive/|docs/archive/)'\",",
+    "docs/synova/product-lines/evidence/D1050-B2/A-01-nolink-recheck.json:1010:    \"tests/control-tower/check-pr-budget.test.sh:328:ALLOW_SPEC='^(\\\\.claude/task-briefs/|docs/plans/|docs/synova/coordination/|memory/notes/|docs/synova/archive/|docs/archive/)'\",",
+    "scripts/control-tower/check-pr-budget.sh:407:OUTBOUND_ALLOW_RE='^(\\.claude/task-briefs/|docs/plans/|docs/synova/coordination/|memory/notes/|docs/synova/archive/|docs/archive/)'",
+    "scripts/doc-system/doc-triage.sh:74:echo \"建议: 人工审阅后 → 归档候选移入 docs/archive/ 并立墓碑；删除候选确认后删除；UNK 逐个定性。\"",
+    "tests/control-tower/check-pr-budget.test.sh:212:#    落点 docs/archive/ 不在 D860 GOV_PREFIX_RE 内 → 放行只能来自 D1028 出库豁免（判别性）",
+    "tests/control-tower/check-pr-budget.test.sh:213:run_expect 0 \"DS1③ 只删白名单内 300 件 → exit 0\" --diff-status \"$(mk_set 'docs/archive/f' 300 D '.md')\"",
+    "tests/control-tower/check-pr-budget.test.sh:234:mkdir -p \"$DEL_SB/src\" \"$DEL_SB/docs/archive\"",
+    "tests/control-tower/check-pr-budget.test.sh:237:printf 'y\\n' > \"$DEL_SB/docs/archive/keep.md\"",
+    "tests/control-tower/check-pr-budget.test.sh:253:mkdir -p \"$DEL_SB2/docs/archive\"",
+    "tests/control-tower/check-pr-budget.test.sh:255:while [ \"$_i\" -le 20 ]; do printf 'x\\n' > \"$DEL_SB2/docs/archive/doc$(printf '%03d' \"$_i\").md\"; _i=$((_i + 1)); done",
+    "tests/control-tower/check-pr-budget.test.sh:261:while [ \"$_i\" -le 20 ]; do rm -f \"$DEL_SB2/docs/archive/doc$(printf '%03d' \"$_i\").md\"; _i=$((_i + 1)); done",
+    "tests/control-tower/check-pr-budget.test.sh:283:mv_case d1028-mv-src src/a.ts docs/archive/a.ts",
+    "tests/control-tower/check-pr-budget.test.sh:284:if [ \"$MV_EXIT\" = 1 ]; then pass \"DS3 git mv src/a.ts → docs/archive/a.ts → exit 1 (exit=$MV_EXIT)\"; else fail \"DS3 R 双侧（新侧白名单）未拦 — 期望 1 实际 $MV_EXIT\"; echo \"$OUT\" | sed 's/^/      | /' >&2; fi",
+    "tests/control-tower/check-pr-budget.test.sh:290:mv_case d1028-mv-ok docs/plans/b.md docs/archive/b.md",
+    "tests/control-tower/check-pr-budget.test.sh:291:if [ \"$MV_EXIT\" = 0 ]; then pass \"DS3 白名单内重命名（docs/plans → docs/archive）→ exit 0 豁免\"; else fail \"DS3 纯归档重命名被误拦 — 期望 0 实际 $MV_EXIT\"; echo \"$OUT\" | sed 's/^/      | /' >&2; fi",
+    "tests/control-tower/check-pr-budget.test.sh:309:OUT=\"$(bash \"$NOC/check-pr-budget.sh\" --diff-status \"$(printf 'D\\tdocs/archive/a.md\\n')\" 2>&1)\"; _e=$?",
+    "tests/control-tower/check-pr-budget.test.sh:314:OUT=\"$(PATH=\"$BROKEN:$PATH\" bash \"$TOOL\" --diff-status \"$(printf 'D\\tdocs/archive/a.md\\n')\" 2>&1)\"; _e=$?",
+    "tests/control-tower/check-pr-budget.test.sh:328:ALLOW_SPEC='^(\\.claude/task-briefs/|docs/plans/|docs/synova/coordination/|memory/notes/|docs/synova/archive/|docs/archive/)'",
+    "tests/doc-system/doc-categories.test.sh:17:mkdir -p \"$FIX/docs/authority\" \"$FIX/docs/archive\" \"$FIX/docs/research\" \\",
+    "tests/doc-system/doc-categories.test.sh:21:: > \"$FIX/docs/archive/b.md\"            # archive",
+    "tests/doc-system/doc-registry-gate.test.sh:17:mkdir -p \"$FIX/docs/authority\" \"$FIX/docs/archive\"",
+    "tests/doc-system/doc-registry-gate.test.sh:18:: > \"$FIX/a.md\"; : > \"$FIX/docs/good.md\"; : > \"$FIX/docs/bad.md\"; : > \"$FIX/docs/archive/hist.md\"",
+    "tests/doc-system/doc-triage.test.sh:17:mkdir -p \"$FIX/docs/archive\" \"$FIX/docs/sub\"",
+    "tests/doc-system/doc-triage.test.sh:22:: > \"$FIX/docs/archive/old.md\"  # archive 路径 → ARCH"
+   ],
+   "classification": [
+    {
+     "file": "scripts/control-tower/check-pr-budget.sh:407",
+     "kind": "OUTBOUND_ALLOW_RE 含 docs/archive/ ⇒ 纯删除 PR 可走出库豁免",
+     "live_for_blocking": false,
+     "supportive": true
+    },
+    {
+     "file": "tests/control-tower/check-pr-budget.test.sh:212-213,290-291",
+     "kind": "判别性测试：明确断言「只删 docs/archive/ 白名单内 300 件 → exit 0」",
+     "live_for_blocking": false,
+     "supportive": true
+    },
+    {
+     "file": "tests/control-tower/{check-pr-budget,doc-categories,doc-registry-gate,doc-triage}.test.sh",
+     "kind": "全部落在 mktemp 沙箱（$FIX/$DEL_SB/$SB）",
+     "live_for_blocking": false
+    },
+    {
+     "file": "scripts/doc-system/doc-triage.sh:74",
+     "kind": "建议输出串（提示语）",
+     "live_for_blocking": false
+    }
+   ]
+  },
+  "doc_registry_treatment": {
+   "gate": "scripts/doc-system/doc-registry-gate.sh",
+   "exclude_regex": "EXCLUDE='^tmp/|\\.claude/|memory/|...|/archive/|/Archive/'",
+   "gate_scope": "只检 git ls-files --others + git diff --cached --diff-filter=A 中 \\.(md|yaml)$",
+   "implication": "① 删除 docs/archive/** 不在检查范围 ⇒ 删除门禁中性；② 本批证据 .json **不匹配** \\.(md|yaml)$ ⇒ 亦不检（这正是卡面要求证据用 .json 的机制原因）",
+   "registry_file_actually_read": "docs/authority/DOCS-REGISTRY.yaml（8479 B）",
+   "docs_archive_hits_in_real_registry": {
+    "cmd": "grep -c 'docs/archive' docs/authority/DOCS-REGISTRY.yaml",
+    "value": 0,
+    "note": "⚠️ 自我订正：我首查的是 scripts/control-tower/doc-registry.json（错文件，亦 0 命中）；门禁实读的是 docs/authority/DOCS-REGISTRY.yaml，两者均已核实为 0"
+   },
+   "system_registry": "docs/authority/system-registry.json 存在（22475 B），docs/archive 命中 0"
+  }
+ },
+ "step2_scope_judgment": {
+  "question": "只出 md-only 18，还是 md+12ts 全出（30）？",
+  "decision": "拣 Ⓐ 只出 md-only 18",
+  "criteria": [
+   {
+    "id": "C1 CI 成本",
+    "cmd": "ci.yml:48 原句谓词 | grep -qvE '\\.(md|json)$|task-state/|\\.claude/|^\\.gitignore$|^LICENSE$|^\\.gitkeep$'",
+    "option_A": "18 件全命中 ⇒ docs_only=true ⇒ CI 早退 ≈2min",
+    "option_B": "12 件 .ts 全不命中 ⇒ docs_only=false ⇒ CI 全量 ≈35min（17.5×）",
+    "unmatched_in_B": [
+     "docs/archive/sentinels/collaboration-health/computes/cpc.ts",
+     "docs/archive/sentinels/eob/computes/boundary.ts",
+     "docs/archive/sentinels/eob/computes/types.ts",
+     "docs/archive/sentinels/financial-snapshot/computes/snapshot.ts",
+     "docs/archive/sentinels/gap-dynamics/computes/dynamics.ts",
+     "docs/archive/sentinels/hacd/computes/density.ts",
+     "docs/archive/sentinels/hona/computes/network.ts",
+     "docs/archive/sentinels/htm/computes/trust.ts",
+     "docs/archive/sentinels/path-dependency/computes/detect.ts",
+     "docs/archive/sentinels/self-awareness/computes/bias.ts",
+     "docs/archive/sentinels/seven-powers/computes/score.ts",
+     "docs/archive/sentinels/token-economics/computes/cost.ts"
+    ],
+    "weight": "决定性"
+   },
+   {
+    "id": "C2 写集越界",
+    "detail": "docs/archive/sentinels/path-dependency/computes/detect.ts 被活生产码注释点名 extensions/sentinels/path-dependency/computes/detect.ts:10 ⇒ 删归档件产生悬空注释；修注释须动 extensions/** = 不在本批 writeScopes（docs/archive + docs/synova/product-lines/evidence/D1054）内 ⇒ 越界（D821）",
+    "weight": "决定性"
+   },
+   {
+    "id": "C3 风险类别",
+    "detail": "本批域＝文档出库；.ts 是代码，删除牵动 tsc/接线面，应另判另批",
+    "weight": "支持性"
+   },
+   {
+    "id": "C4 域",
+    "detail": "md 18 与 ts 12 **均单域 win PASS** ⇒ 域不是阻碍（诚实登记：我曾预期 extensions 跨域，实测 extensions/...detect.ts 亦 win，该预期不成立）",
+    "weight": "中性"
+   }
+  ],
+  "N_outbound": 18,
+  "N_left_in_repo": 12,
+  "leftover_registered": "L3（12 件 .ts 留仓，是否另批出需 CTO 定，CI 成本 ≈35min）"
+ },
+ "conclusion": "① 双法：法1 9 行/8 文件、法2 28 行，逐条分类后**出库集（18 件 md）活引用 0**；唯一触及活生产码的是 12 件 .ts 中的 detect.ts 注释，而该 12 件本批不出库。② 口径拣 md-only 18（C1/C2 两条决定性）。",
+ "not_a_verdict": "本件为执行方自验材料，非独立审计结论。"
+}

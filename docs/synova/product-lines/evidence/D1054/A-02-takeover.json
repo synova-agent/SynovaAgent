@@ -1,0 +1,130 @@
+{
+ "evidence_id": "D1054/A-02",
+ "task": "§A ③ 承接就位（docs/archive/ md 18 件）",
+ "produced_by": "squad-a-b2",
+ "base_sha": "20b55eba9ce0db5cfa238bd09e02b4732d234af3",
+ "outbound_N": 18,
+ "status": "🔴 BLOCKED —— 沙箱拒绝工作区外写入；本 session 无法提权，已两次回报队长待执行（B1/B2 先例，第三次同一堵点）",
+ "target": {
+  "dest_root": "/Users/wane/Synova-过程档案/出库-主仓",
+  "dest_subdir": "出库-主仓/docs/archive",
+  "archive_repo": "/Users/wane/Synova-过程档案",
+  "archive_head_at_check": "2bc04fd43497821e72f3a863c7cbf9e7792f2d60",
+  "existing_files_under_docs_archive": 0
+ },
+ "write_attempt": {
+  "cmd": "bash /tmp/d1054-archive.sh（卡面要求的③全部动作合并命令：mkdir → 逐件 cp -p 保形 → 逐件 shasum -a 256 对账 → 档案仓 commit）",
+  "exit": 1,
+  "raw_stderr": "mkdir: /Users/wane/Synova-过程档案/出库-主仓/docs: Operation not permitted",
+  "stopped_at": "首个 mkdir（docs 子目录尚不存在）",
+  "partial_state": "档案仓零改动（HEAD 仍 2bc04fd，出库-主仓/docs/archive = 0 件）",
+  "escalation_blocked_reason": "本 session 运行时固定：approval prompts are disabled；delegated subagent 权限范围不可在 session 内加宽 ⇒ 卡面所述 sandbox_permissions=\"danger-full-access\" 重试在本 session 不被允许。按要求**未重试**。"
+ },
+ "handoff": {
+  "exact_command": "bash /tmp/d1054-archive.sh",
+  "script_sha256": "5568474673ce57222aa13c2c8268178564b8f20e1e5a6ab004c56334eea52edd",
+  "list_path": "/tmp/d1054-archive-md.txt",
+  "list_count": 18,
+  "expected_output": "COPIED=18 / SHA256_MATCH=18 / SHA256_MISMATCH=0 / ARCHIVE_COMMIT=<sha> / OK",
+  "if_tmp_not_shared": "本 JSON 已含 18 件全量 path+sha256（manifest），可据此重建清单再跑同法",
+  "independent_readback_plan": "队长回执后 B2 将对档案仓逐件重算 shasum -a 256 与主仓比对（不采信转述，同 B2 做法）"
+ },
+ "manifest": [
+  {
+   "path": "docs/archive/08-代码审计报告-20260603.md",
+   "sha256": "819917522ea5c4477619114a66f1e56b1309082d72a1ad0520ed5c4440d1ba23",
+   "bytes": 22395
+  },
+  {
+   "path": "docs/archive/Loop-Engineering-V4.0-方案-20260623.md",
+   "sha256": "076e5ac07230ad25317a9474f48a79354b848babcfbf521a65fd25fd2ba4c058",
+   "bytes": 5688
+  },
+  {
+   "path": "docs/archive/Loop-Engineering-改进点-20260624.md",
+   "sha256": "68af4740e7805f5c59d56684459a37c45c79f03cf26e9d1b0df3ff087bb896f2",
+   "bytes": 8329
+  },
+  {
+   "path": "docs/archive/REMEDIATION-PLAN-20260603.md",
+   "sha256": "1468ff639095d232deafda0a34be0b73055ac7155b344f506b4570179c6a782b",
+   "bytes": 4773
+  },
+  {
+   "path": "docs/archive/SYNOVA-IMPL-DSH-D379-path-dependency-shell-20260816.md",
+   "sha256": "a785cd0f774105019f653d0f1df2b4dac13ca9391b8048cf0260a0a121929d22",
+   "bytes": 13706
+  },
+  {
+   "path": "docs/archive/SYNOVA-IMPL-DSH-D382-doc-commit-exempt-20260816.md",
+   "sha256": "c81bf48d9cd87b0c50e018ecb9e81049f7b49583786cab44cfb87b0d78d9d648",
+   "bytes": 26757
+  },
+  {
+   "path": "docs/archive/SYNOVA-IMPL-DSH-D534-notes-four-state-mechanism-20260826.md",
+   "sha256": "38ee7f17bd9b0a2a554bedf96e4650c2430df2dccd4aa4ae87c8e053067368ba",
+   "bytes": 28216
+  },
+  {
+   "path": "docs/archive/SYNOVA-IMPL-DSH-D535-guard-loop-hygiene-20260826.md",
+   "sha256": "0170eb28d0b7a9298dcf2203fdbe2ec511aacd65058d864a24a2e28d40cae1ed",
+   "bytes": 26875
+  },
+  {
+   "path": "docs/archive/SYNOVA-IMPL-DSH-D538-frontend-leftbar-codex-20260827.md",
+   "sha256": "6446e1f58a1295b86f78050832abb1a7fd0ae8c04de9ed04f324da5a921eac6a",
+   "bytes": 38506
+  },
+  {
+   "path": "docs/archive/SYNOVA-IMPL-DSH-D544-leftbar-acceptance-20260828.md",
+   "sha256": "f9c393a22089c595cee628d96581571d4a07f9913ef0f9a05fc713eae1a04f39",
+   "bytes": 38817
+  },
+  {
+   "path": "docs/archive/SYNOVA-IMPL-DSH-D546-sentinel-findings-event-20260828.md",
+   "sha256": "ac8c33be3b53e92eace876a673a197f0bc894d958dc2804155aeb287bae38549",
+   "bytes": 34271
+  },
+  {
+   "path": "docs/archive/TOMBSTONE-20260820.md",
+   "sha256": "631955d5a2b0f43016b59bf7557379442adf46b114f4878ce54a7396a927d862",
+   "bytes": 763
+  },
+  {
+   "path": "docs/archive/loop-engineering-v4-physics-only-零AI自律工程.md",
+   "sha256": "216467704c5066b4648e0da62f3fe320c824ee71f4aeadac7f27667b970f0a8f",
+   "bytes": 12904
+  },
+  {
+   "path": "docs/archive/loop-engineering-v4.0-zero-ai-discipline-零AI自律工程.md",
+   "sha256": "2f0066ab665202565c45db6499e13dfc824783ab771d4ebabb700627db5a4fa1",
+   "bytes": 8055
+  },
+  {
+   "path": "docs/archive/v3/LOOP-ENGINEERING-SETUP-GUIDE.md",
+   "sha256": "6e8171c1f646fa52328212f69d68c4c05b29212262cffd36c60a8db54b069f25",
+   "bytes": 11028
+  },
+  {
+   "path": "docs/archive/v3/LOOP-ENGINEERING-V3-DEPLOYMENT.md",
+   "sha256": "b20a63de42e379dd9ca5ae9a13fb92f8cef72c993e977f16862b8dbf96598cf3",
+   "bytes": 39805
+  },
+  {
+   "path": "docs/archive/v3/LOOP-ENGINEERING-V3.0-设计文档-20260617.md",
+   "sha256": "f11f6616f6be6cd8c09217696fbb9ed67f9cf05a11896e96bd4e0228f8a0dbc1",
+   "bytes": 11787
+  },
+  {
+   "path": "docs/archive/v3/SLICE-SUMMARY-20260620.md",
+   "sha256": "ac0b4fac2ceda351f0f24f189609e807bc90d76abea267263ca8b3737a6d50d5",
+   "bytes": 5164
+  }
+ ],
+ "reconciliation": {
+  "planned": "N/N 全等（18/18）",
+  "performed": false,
+  "reason": "承接未落地"
+ },
+ "not_a_verdict": "本件为执行方自验材料，非独立审计结论。"
+}

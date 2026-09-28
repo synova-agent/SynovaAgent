@@ -1,0 +1,147 @@
+{
+ "evidence_id": "D1054/A-03",
+ "task": "§A ④ 主仓出库 + 三闸回执 + 计数闭合",
+ "produced_by": "squad-a-b2",
+ "base_sha": "20b55eba9ce0db5cfa238bd09e02b4732d234af3",
+ "status": "🔴 NOT EXECUTED —— 两道阻断：(1) ③ 承接未落地（沙箱，待队长执行）；(2) **DEV-4：本批变更形态过不了 pr-budget（18 删 + 6 证据 ⇒ exit 1）**，须先由队长裁决拆两 PR",
+ "planned_outbound": {
+  "N": 18,
+  "method": "逐件 git rm（禁 -r 整目录）",
+  "script": "/tmp/d1054-rm.sh（已备）",
+  "expected_staged": "18 D（docs/archive/*.md）+ 6 A（本批证据 .json）"
+ },
+ "planned_gates": [
+  {
+   "闸1_doc_registry": {
+    "cmd": "DOC_TRUTH_ROOT=. bash scripts/doc-system/doc-registry-gate.sh",
+    "expect": "exit 0 / 0 未登记",
+    "pre_verified_reasoning": "docs/archive/** 命中 gate 的 EXCLUDE `/archive/`；且 gate 只检 \\.(md|yaml)$ 新增 ⇒ 删除侧与 .json 证据均不入检"
+   }
+  },
+  {
+   "闸2_pre_commit": {
+    "cmd": "SYNO_CI=1 bash scripts/pre-commit-check.sh",
+    "expect": "exit 0（13 组）",
+    "pre_run_observed": "🔴 预跑 **exit 1** —— 组 6 `❌ Q2 排除项缺少文件路径`，brief 第 25 行 `- 不改 <具体文件路径，排除项必须含文件名>`。**根因：本批 brief 是 alloc-task-id 未填骨架（13 处占位符）**；`.claude/task-briefs` 不在 task-11 writeScopes ⇒ B2 按红线未越界填，已请队长处置（与 B2 DEV-3 同类）",
+    "raw_pre_run_file": "/tmp/d1054-g2pre.clean.txt"
+   }
+  },
+  {
+   "闸3_pr_budget": {
+    "cmd": "bash scripts/control-tower/check-pr-budget.sh",
+    "expect": "exit 0",
+    "note": "`docs/archive/` 在 OUTBOUND_ALLOW_RE 内（check-pr-budget.sh:407）；判别性测试 check-pr-budget.test.sh:212-213 明确断言「只删白名单内 docs/archive/ 300 件 → exit 0」。⚠️ 但本批**混入 6 个证据 .json（A）** ⇒ 非纯删除 ⇒ D1028 出库豁免**可能不生效**，届时与 B2 同形（改由 D860 治理产物豁免放行）——**实测后以原文回执为准，不预称**"
+   }
+  },
+  {
+   "闸4_reference_surface": {
+    "cmd": "grep -nF -f /tmp/d1054-archive-md.txt -r scripts tests .github .claude/settings.json",
+    "expect": "0 行",
+    "pre_verified": "✅ 出库集（18 件 md）在 scripts/+tests/+.github/+settings.json 精确路径命中 0 行（见 A-01 法1/法2 分类）"
+   }
+  }
+ ],
+ "counting_closure": {
+  "md_total_before": 1631,
+  "briefs_or_archive_before": {
+   "docs_archive_all_files": 30,
+   "docs_archive_md": 18,
+   "docs_archive_ts": 12
+  },
+  "planned_deleted": 18,
+  "planned_added_md": 1,
+  "planned_added_non_md": 6,
+  "formula_if_executed": "docs/archive/**: 30 − 18 = 12（精确闭合）；主仓 md 总数: 1631 − 18 + 1（本批新 brief）= 1614",
+  "measured_after": null,
+  "reason": "未执行 rm"
+ },
+ "deviations": [
+  {
+   "id": "DEV-1",
+   "what": "③ 承接由队长执行（B2 session 沙箱第三次拒绝工作区外写入）",
+   "handling": "回报队长；脚本/清单/manifest 已备妥"
+  },
+  {
+   "id": "DEV-2",
+   "what": "本批 brief 为未填骨架 ⇒ 组 6 硬阻断 commit；`.claude/task-briefs` 不在 task-11 writeScopes",
+   "handling": "已请队长二选一（授权填 / 自己填）。**未自行套用 B2 的 DEV-3 裁决**——B2 的 writeScopes 当时含该路径，本次不含，故不擅自等同",
+   "note": "填充稿已备 /tmp/d1054-prep/brief.md（71 行、0 占位符、排除项逐条带具体文件路径）"
+  },
+  {
+   "id": "DEV-3",
+   "what": "我方 ts 口径首测偏差",
+   "handling": "我首测 `git ls-files 'src/**/*.ts' 'packages/**/*.ts'` = 500 ≠ 冻结 509；按 daily-cto-board.sh:79 声明口径 `git ls-files 'src/*.ts' 'packages/*.ts'` = 509 ⇒ **冻结值正确，我的 glob 错**，已订正"
+  }
+ ],
+ "redline_receipt": {
+  "未执行_list": [
+   "git rm",
+   "git mv",
+   "任何文件删除/移动/内容修改（除 docs/synova/product-lines/evidence/D1054/ 下新建 6 个证据 .json）"
+  ],
+  "scripts/audit/**": "未碰",
+  "docs/synova/audit-reports/**": "未碰",
+  "门禁脚本/ci.yml": "未碰",
+  "--no-verify/git stash/force push": "未用",
+  "push": "未 push"
+ },
+ "not_a_verdict": "本件为执行方自验材料，非独立审计结论。",
+ "blocking_finding_DEV4": {
+  "id": "DEV-4",
+  "severity": "🔴 阻断等级（不是提示）",
+  "what": "§A「18 件出库 + 6 个证据 .json 同 PR」**无法通过 pr-budget 门禁** —— 卡面「纯删除 PR 可走出库豁免」与卡面「证据须落 docs/synova/product-lines/evidence/D1054/」两条**互相排斥**。",
+  "evidence_three_way": [
+   {
+    "case": "Ⓐ 纯删 18 件 docs/archive/**.md",
+    "cmd": "check-pr-budget.sh --diff-status '<18×D>'",
+    "exit": 0,
+    "raw": "✅ ① D734 出库豁免生效（18 件纯删除/重命名，全部落出库白名单） … ✅ PASS PR 预算内（0 文件）",
+    "verdict": "PASS —— 卡面这句**成立**"
+   },
+   {
+    "case": "Ⓑ 18 删 + 6 证据 .json（**本批真实形态**）",
+    "cmd": "check-pr-budget.sh --diff-status '<18×D + 6×A>'",
+    "exit": 1,
+    "raw": "ℹ️  出库豁免不适用（D1028 路径级豁免未生效）:\n       ⓐ 不满足: 变更含 6 件增/改（非纯删除/重命名）→ D/R 计入预算\n       ⓑ 不满足: 白名单外路径 6 件 …\n  ℹ️  D860 治理产物豁免: 6 件不计预算 …\n  ❌ ① 变更文件数 18 > 上限 12 —— 拆 PR（禁调高上限）\n❌ FAIL PR 超预算 —— 拆 PR，不要调高上限",
+    "verdict": "🔴 **FAIL exit 1**"
+   },
+   {
+    "case": "Ⓒ 对照：删 docs/archive + 删 scripts/ 代码",
+    "cmd": "check-pr-budget.sh --diff-status 'D docs/archive/a.md + D scripts/x.sh'",
+    "exit": 1,
+    "raw": "❌ ① D1028 旁路封堵: 纯删除/重命名命中 ❌ 拒绝名单 1 件 —— 绝不豁免（exit 1）",
+    "verdict": "FAIL（符合预期，说明拒绝名单有效）"
+   }
+  ],
+  "root_cause": [
+   "D1028 出库豁免是**全有或全无**：要求「无增/改件」⇒ 只要同 PR 带任何 A/M，18 件删除就全部计入预算。",
+   "回落 D860 治理产物豁免**救不了**：GOV_PREFIX_RE='^(\\.claude/task-briefs/|task-state/|memory/notes/|docs/plans/|docs/synova/product-lines/evidence/)' —— 证据 .json 命中（6 件不计数），但 **`docs/archive/` 不在其中** ⇒ 18 件照样计数。",
+   "18 > 上限 12 ⇒ FAIL。**B2 之所以过，是因为 B2 的 275 件删除落在 `.claude/task-briefs/`（命中 GOV_PREFIX_RE）⇒ 全部豁免、只计入 1 件**；`docs/archive/` 不享受这个前缀。"
+  ],
+  "why_card_face_is_wrong": "卡面写「前缀在 OUTBOUND_ALLOW_RE 内 ⇒ 纯删除 PR 可走出库豁免」（✅ 成立）与「证据落 docs/synova/product-lines/evidence/D1054/」（✅ 要求）——两条**不能同时满足**。卡内不一致（同 B1「口径1 不可达」类）。",
+  "options": [
+   {
+    "id": "OPT-1 拆两 PR（推荐）",
+    "plan": "PR-1 = 纯删 18 件 `docs/archive/**.md`（走 D1028 出库豁免 ⇒ exit 0）；PR-2 = 6 个证据 `.json`（全命中 GOV_PREFIX_RE ⇒ 0 计数 ⇒ exit 0）",
+    "evidence": "上表 Ⓐ 与（可再跑）证据-only 两跑均 exit 0",
+    "cost": "多一个 PR；两 PR 需声明依赖（PR-2 的证据指向 PR-1 的删除）",
+    "verdict": "✅ 唯一在规则内可行的路径"
+   },
+   {
+    "id": "OPT-2 只删 ≤12 件",
+    "plan": "18 拆 12+6 两个纯删除 PR",
+    "why_not": "仍需 2 个 PR，且第三处证据还得再拆 ⇒ 3 PR，更差；且违背「整批出库」口径",
+    "verdict": "❌ 劣于 OPT-1"
+   },
+   {
+    "id": "OPT-3 把 docs/archive/** 加进 GOV_PREFIX_RE",
+    "plan": "改 check-pr-budget.sh 的 GOV_PREFIX_RE",
+    "why_not": "**改门禁脚本 = 红线**（本卡禁令 + 审计红线）；且属规则变更须 CTO+K3",
+    "verdict": "❌ 不可由本卡执行"
+   }
+  ],
+  "recommendation": "OPT-1：拆 PR-1（纯删 18）/ PR-2（6 证据）。**请队长裁决**；若坚持单 PR，则需 (a) 把证据改落 `docs/plans/` 或 `.claude/task-briefs/`（均在 GOV_PREFIX_RE 内 ⇒ 18 件删除不再被豁免，仍 FAIL）——**无效**；或 (b) CTO 改 GOV_PREFIX_RE 加入 `docs/archive/`（规则变更，非本卡）。⇒ **单 PR 无解**。",
+  "executed": false,
+  "note": "本条为**只读预演**（用门禁自带 `--diff-status` 注入缝，未改仓库任何文件）。真实路径同形：commit 后 `origin/main...HEAD` 会给出同样的 D/A 分类。"
+ }
+}

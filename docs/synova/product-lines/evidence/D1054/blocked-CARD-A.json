@@ -1,0 +1,113 @@
+{
+ "evidence_id": "D1054/blocked-CARD-A",
+ "task": "§C CARD-A = D819 原件 —— 🔴 已阻断，本批只取证不改动（未执行 mv/改引用）",
+ "produced_by": "squad-a-b2",
+ "base_sha": "20b55eba9ce0db5cfa238bd09e02b4732d234af3",
+ "headline": "「Win git mv 2 件 + Mac 改 :4」**本身即跨域** ⇒ 单 PR 必 FAIL D733 ②；落点 docs/synova/evidence/** 现存 0 件 ⇒ 建目录+入保留分类属规则变更，须 CTO 批。",
+ "object_set": [
+  {
+   "path": "docs/plans/2026-09-19-D819-自验记录.md",
+   "exists": true,
+   "domain": "win",
+   "owner_via": "glob docs/plans/**"
+  },
+  {
+   "path": "docs/plans/2026-09-19-D819-改动清单.md",
+   "exists": true,
+   "domain": "win",
+   "owner_via": "glob docs/plans/**"
+  },
+  {
+   "path": "docs/synova/coordination/小队模式-固化件-v1-20260919.md",
+   "exists": true,
+   "domain": "mac",
+   "owner_via": "glob docs/synova/coordination/**",
+   "referencing_line": {
+    "line": 4,
+    "raw": "> **来源**：D819 试点（三人小队：规格/编码/自验；K3 队外）——实测数据见 `docs/plans/2026-09-19-D819-自验记录.md` 与 PR #646/#647",
+    "note": "该行引用被 mv 的第 1 件 ⇒ mv 后此引用悬空，故卡面要求同批改 :4"
+   }
+  }
+ ],
+ "step1_reproduce": {
+  "cmd": "python3 scripts/control-tower/check-ownership.py docs/plans/2026-09-19-D819-自验记录.md docs/plans/2026-09-19-D819-改动清单.md docs/synova/coordination/小队模式-固化件-v1-20260919.md",
+  "exit": 1,
+  "raw": "win  docs/plans/2026-09-19-D819-自验记录.md\nwin  docs/plans/2026-09-19-D819-改动清单.md\nmac  docs/synova/coordination/小队模式-固化件-v1-20260919.md\n\n❌ FAIL 跨域: 变更落在 2 个域 ['mac', 'win'] —— 单个 PR 只许一个域（无归属 0，域判定豁免 0）",
+  "conclusion": "卡面三件同 PR 的写集必 FAIL ⇒ 不可执行"
+ },
+ "step2_two_stage_split": {
+  "win_段": {
+   "write_set": [
+    "docs/plans/2026-09-19-D819-自验记录.md（移出，D）",
+    "docs/plans/2026-09-19-D819-改动清单.md（移出，D）",
+    "docs/synova/evidence/2026-09-19-D819-自验记录.md（移入，A）",
+    "docs/synova/evidence/2026-09-19-D819-改动清单.md（移入，A）"
+   ],
+   "cmd": "posix `git mv` ×2（保历史）",
+   "domain_check": {
+    "cmd": "check-ownership.py <上述 4 路径>",
+    "raw": "✅ PASS 4 个文件同域: win（无归属 0，域判定豁免 0）",
+    "verdict": "✅ 单域 win ⇒ 可作单 PR"
+   },
+   "extra_required": [
+    "保留分类登记：docs/synova/evidence/** 现存 0 件、不在任何批、也不在保留分类 ⇒ 须同批列入保留分类（规则变更 → 需 CTO + K3）"
+   ]
+  },
+  "mac_段": {
+   "write_set": [
+    "docs/synova/coordination/小队模式-固化件-v1-20260919.md:4（把 `docs/plans/2026-09-19-D819-自验记录.md` 改为新落点）"
+   ],
+   "domain_check": {
+    "cmd": "check-ownership.py docs/synova/coordination/小队模式-固化件-v1-20260919.md",
+    "raw": "✅ PASS 1 个文件同域: mac（无归属 0，域判定豁免 0）",
+    "verdict": "✅ 单域 mac ⇒ 可作单 PR"
+   }
+  },
+  "ordering_question": "🔴 两段的**顺序**决定中间态是否可接受：",
+  "order_A_win_first": {
+   "desc": "PR-win 先合并",
+   "intermediate": "docs/synova/coordination/小队模式-固化件-v1-20260919.md:4 指向已不存在的旧路径",
+   "risk": "markdown 链接悬空。**已证：不存在 markdown 相对链接存在性门禁**（`check-gitlinks.sh` 检的是 gitlink/160000 条目而非 md 链接；`check-doc-truth.sh` C4 仅覆盖 `CHRONICLE/INDEX/START-HERE/docs/authority/*`，不校验协调件正文里的相对路径；CI `ci.yml` 亦无 md 链接校验）⇒ 中间态**不构成门禁红**，属正确性/可追溯性缺口而非合并阻断",
+   "verdict": "中间态：引用悬空，**非门禁红（已证）**"
+  },
+  "order_B_mac_first": {
+   "desc": "PR-mac 先合并",
+   "intermediate": "协调件 :4 指向 docs/synova/evidence/... 但该文件尚不存在",
+   "risk": "同 A：反方向悬空，同样**非门禁红（已证）**",
+   "verdict": "中间态：引用悬空，**非门禁红（已证）**"
+  },
+  "note": "两序都有悬空窗口，但**均已证非门禁红** ⇒ 拆两段的**唯一**硬约束是 D733 ② 单域，不是中间态 CI；这与 B6 Ⓒ（棘轮等号断言 ⇒ 必红）**结构性不同**：B6 不可拆，CARD-A **可拆**。",
+  "L_CA2_status": {
+   "id": "L-CA2",
+   "question": "中间态悬空引用是否被门禁抓？",
+   "answer": "否（已证）",
+   "evidence": [
+    "scripts/control-tower/check-gitlinks.sh 头注：检 gitlink(160000)，非 md 链接",
+    "scripts/doc-system/check-doc-truth.sh C4：仅 docs/authority/* 等权威层文档存在性",
+    "grep -rln 'broken.*link|链接.*失效' scripts/ tests/ → 0 命中"
+   ],
+   "status": "CLOSED"
+  }
+ },
+ "step3_landing_zone_evidence": {
+  "docs_synova_evidence_exists": {
+   "cmd": "git ls-files 'docs/synova/evidence/**' | wc -l",
+   "value": 0,
+   "frozen": 0,
+   "match": true
+  },
+  "landing_domain": {
+   "cmd": "check-ownership.py docs/synova/evidence/x.md",
+   "raw": "win  docs/synova/evidence/x.md",
+   "verdict": "win（via 兜底 glob '**'，default: true）⇒ 与源 docs/plans/** 同域 ✅"
+  },
+  "alternate_landing_rejected": {
+   "cmd": "check-ownership.py docs/plans/2026-09-19-D819-自验记录.md docs/authority/2026-09-19-D819-自验记录.md",
+   "raw": "win  docs/plans/2026-09-19-D819-自验记录.md\nmac  docs/authority/2026-09-19-D819-自验记录.md\n\n❌ FAIL 跨域: 变更落在 2 个域 ['mac', 'win']",
+   "verdict": "round-1 曾推荐的 docs/authority/ 落点实测 mac ⇒ 与源跨域、单 PR 必 FAIL（该推荐须改，卡面已记）"
+  },
+  "rule_change_required": "建 docs/synova/evidence/ 目录 = 新增目录类目；doc-categories.sh CATEGORIES 现有枚举 = governance|archive|decision|research|retrospective|devdoc|draft|pitfall|diary|knowledge|unclassified ⇒ **无 evidence 类目** ⇒ 入保留分类属规则变更，须 CTO+K3"
+ },
+ "redline": "本批**未**执行任何 mv / 未修改任何引用；三件保持原样（见 A-03 git status）",
+ "not_a_verdict": "本件为执行方取证材料，非独立审计结论。"
+}
