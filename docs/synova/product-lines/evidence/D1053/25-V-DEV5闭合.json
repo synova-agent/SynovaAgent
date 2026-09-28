@@ -1,0 +1,122 @@
+{
+  "schema": 1,
+  "record_type": "d1053-v-dev5-closure-verification",
+  "task": "D1053",
+  "artifact": "25-V DEV-5 闭合独立复核（基线 85b42949）：M3+只跑C1 必红 + 对照组 + 三套件",
+  "owner": "d1053-verify",
+  "as_of": "2026-09-28",
+  "cwd": "/Users/wane/SynovaAgent/.synova-wt-squad-d1053",
+  "branch": "feat/d1053-live-restart-settings",
+
+  "supersedes": {
+    "statement": "本件取代 `22-V-增量复验结论.md` / `23-V-增量复验.json`（基线 33e63fd5）中对 **DEV-5** 的『未闭合』结论（DEV-5 现已闭合）；同时取代其对三套件/三路径的结论（测试面已变更）。`20*`/`21-*`/`22*`/`23-V` 原件**一律保持原样不动**。",
+    "superseded_head_sha": "33e63fd52d4b45d207c7e33329b36bdd534c59a9",
+    "reason": "C1 修后本体（`85b42949`）：`tests/routes/settings.test.ts` 改了 C1 形状（先预热 → 改盘 → 再比），代码面产品文件未动。",
+    "originals_untouched": true
+  },
+
+  "head_sha": "85b429499a6ec940e9cc02da1f7efecec9223f34",
+  "base_ref": "origin/main @ 20b55eba",
+  "env": { "node": "v24.19.0", "abi_modules": "137", "vitest": "vitest/4.1.8 darwin-arm64 node-v24.19.0", "os": "darwin arm64" },
+
+  "dev5_closure": {
+    "criterion": "M3 注入 + **只跑 C1**（-t \"C1 ·\"）⇒ 必须红（DEV-5 闭合的唯一判据）",
+    "verdict": "closed",
+    "injection_point": "src/routes/config.ts :: settingsBlock() 模块级缓存（首读后直接返回缓存块；标记 INJECTED-RED-D1053）",
+    "three_run_experiment": [
+      {
+        "run": "① M3 + 只跑 C1（判据）",
+        "command": "npx vitest run tests/routes/settings.test.ts --no-file-parallelism --maxWorkers=1 --reporter=verbose -t \"C1 ·\"",
+        "raw_summary": "Test Files  1 failed (1) / Tests  1 failed | 8 skipped (9)",
+        "red_test": "C1 · 两消费者同一新值（M3 判别性形状）：先预热读两端点 → 改盘 → 再读，双端同新值且均异于改前",
+        "failure_for_the_right_reason": {
+          "raw": "AssertionError: expected 0.3 to be 0.55 // Object.is equality\n ❯ tests/routes/settings.test.ts:151:30\n    151|     expect(rowB1?.effective).toBe(0.55);",
+          "interpretation_of_raw": "失败点是 **第二消费者**（rowB1 = `b1.body.settings.keys`，即 /api/config/dump）返回**陈旧缓存值 0.3**，而磁盘已改为 0.55 ⇒ 正是 M3 缺陷（消费者滞留旧值）本身，非旁证、非跨用例污染。",
+          "result": "RED ✓"
+        }
+      },
+      {
+        "run": "② M3 + 只跑 C4（对照：不得因污染而红）",
+        "command": "npx vitest run tests/routes/settings.test.ts --no-file-parallelism --maxWorkers=1 --reporter=verbose -t \"C4 ·\"",
+        "raw_summary": "Test Files  1 passed (1) / Tests  1 passed | 8 skipped (9)",
+        "result": "PASS ✓（22g 时 C4 的红确系 C1 预热造成的跨用例污染；隔离跑不再红）"
+      },
+      {
+        "run": "③ M3 + 全量 E2E 套件（对照）",
+        "command": "npx vitest run tests/routes/settings.test.ts --no-file-parallelism --maxWorkers=1 --reporter=verbose",
+        "raw_summary": "Test Files  1 failed (1) / Tests  2 failed | 7 passed (9)",
+        "red_tests": [
+          "C1 · 两消费者同一新值（M3 判别性形状）——**自身判据命中**",
+          "C4 · 非法声明（yaml 出现 applies 字段）——**次生污染**：注入的模块级缓存在同文件内跨用例持久（C1 已把它填为 0.30/0.55），后续 C4 读到陈旧块"
+        ],
+        "note": "③ 的 C4 红不构成假绿，仅说明『注入的模块级缓存』会在同文件内跨用例残留；**DEV-5 的原始病因（C1 假绿）已消除**。22g 时③红的是 C4（C1 绿）；现在③红的是 C1+C4（C1 先红）。"
+      }
+    ],
+    "before_after_comparison": {
+      "22g（基线 33e63fd5，修前）": { "full": "1 failed（C4）", "only_C1": "PASS（假绿）", "only_C4": "PASS" },
+      "24b（基线 85b42949，修后）": { "full": "2 failed（C1 自身 + C4 次生）", "only_C1": "RED（判据命中）", "only_C4": "PASS" }
+    },
+    "c1_new_shape_source": "tests/routes/settings.test.ts:119-165（① 起手写 0.30 → ② 预热双端 → ③ 改盘 0.55 → ④ 再读双端 → 深比 ∧ 均异于改前 → DEV-1 defaultValue ∧ scope）",
+    "raw_evidence_file": "24b-DEV5闭合判定实验-原始输出.txt（含三次跑的**完整未截断**原始输出 + Failed Tests 详情块）"
+  },
+
+  "suites_rerun": {
+    "command": "npx vitest run tests/config/settings-applies.test.ts tests/config/settings-source.test.ts tests/routes/settings.test.ts --no-file-parallelism --maxWorkers=1 --reporter=verbose --reporter=json --outputFile.json=/tmp/d1053-vitest-v3.json",
+    "raw_summary": "Test Files  3 passed (3) / Tests  22 passed (22) / Duration 3.44s",
+    "exit": 0,
+    "per_file": [
+      { "file": "tests/config/settings-applies.test.ts", "role": "LIVE（串 settings-applies-live）", "cases": 6, "status": "passed" },
+      { "file": "tests/config/settings-source.test.ts", "role": "RESTART（串 settings-applies-restart）", "cases": 7, "status": "passed" },
+      { "file": "tests/routes/settings.test.ts", "role": "入口/E2E（不含两串）", "cases": 9, "status": "passed" }
+    ],
+    "raw_evidence_file": "24a-三套件独立重跑-原始输出.txt"
+  },
+
+  "sha256_three_state": {
+    "src/routes/config.ts": {
+      "pre": "f256ace010c33d964f9796bf0b4a53be8a2704b3513d6d6cc201c1c6a145bf7d",
+      "after_injection": "（见 24b 注入 diff）",
+      "restored": "f256ace010c33d964f9796bf0b4a53be8a2704b3513d6d6cc201c1c6a145bf7d",
+      "match": true
+    },
+    "tests/routes/settings.test.ts": {
+      "pre": "b0cb02b815157995d65162e51f4da016d2a416e0c7323e0811de4c61cff92ef6",
+      "restored": "b0cb02b815157995d65162e51f4da016d2a416e0c7323e0811de4c61cff92ef6",
+      "match": true,
+      "note": "本批注入只动 src/routes/config.ts；测试文件未被注入，三态中仅 pre==restored"
+    },
+    "restore_method": "git checkout -- src/routes/config.ts",
+    "git_status_clean_after_restore": true
+  },
+
+  "residual_red_marker": { "command": "grep -rc 'INJECTED-RED-D1053' src/ tests/ | grep -v ':0'", "raw": "<空>", "verdict": "0 残留" },
+
+  "carried_over": {
+    "a2_locator": "settings-applies-live → tests/config/settings-applies.test.ts（step1 content-grep）；settings-applies-restart → tests/config/settings-source.test.ts（step1）；两串各 1 文件、互不共现；旧名残留 0",
+    "wiring": "indexOf(mount)=18791 < indexOf(404)=20314（419<457，锚点唯一 1 次）；git diff --numstat origin/main -- src/server.ts = 4 0（纯新增）；公开面 3 入口、loadSettingsSpec export 0、plan.json 改动 0 ⇒ 豁免路径 =（b）零豁免",
+    "duty_R3_four_sites": "4 落点 / 2 默认值（settings-applies.ts:206=0.3｜impl:57=0.3｜diagnosis.ts:311 ??0.3｜conversations.ts:143 ??0.3｜orchestrator:65=0.4）——本卡仅唯一化声明面，orchestrator/conversations **未消除**",
+    "raw_evidence_file": "24c-A2与接线-原始输出.txt"
+  },
+
+  "limitations": [
+    "本件**不引用** `evidence/test-*.json`（A2 管线 verdict 无法区分「跑了且绿」与「压根没跑」；实物 sha256 `2d01c9f63509d8c6d430e187c167fd0f4114510dc35bd9fda7d8c01060376660`）。",
+    "③ 全量跑中 C4 仍因『注入的模块级缓存跨用例残留』而次生变红：这是**注入物本身的持久性**所致，不构成假绿，也不影响 DEV-5 判据（C1 已自身变红）。",
+    "V 只读产品代码：注入仅落 `src/routes/config.ts`，复原后 sha256 与 git status 双验一致；`tests/**` 未做任何持久修改。",
+    "本批未跑：A2 实跑 / 全量 vitest / pre-commit / CI（归 C/CTO 链）。",
+    "路径 B 的『新 boot』在历史批次用真实 kill+重启验证；本批未重跑三路径（产品代码面 `85b42949` vs `33e63fd5` 的 `src/` diff 仅为……见下），故沿用 22c 结论。"
+  ],
+  "not_run": [
+    "run-machine-evidence.sh 实跑（自造 P0-1 假绿风险）",
+    "三路径真进程重跑（本批产品 src/ 面未变；见 src_diff_vs_prev_baseline）",
+    "M1/M2/M4 重跑（本批只针对 DEV-5 的 M3 判据；M1/M2/M4 见 22e）",
+    "全量 vitest / pre-commit / pre-push / SYNO_CI=1 / CI（含 Windows 腿）"
+  ],
+
+  "src_diff_vs_prev_baseline": {
+    "command": "git diff --stat 33e63fd5..85b42949 -- src/ tests/",
+    "raw": " tests/routes/settings.test.ts | 53 ++++++++++++++++++++++++++++---------------\n 1 file changed, 35 insertions(+), 18 deletions(-)",
+    "conclusion": "产品代码（src/**）在 `33e63fd5 → 85b42949` 之间 **0 改动**；改动仅在测试文件 ⇒ 22c 的三路径/C-neg 结论对本基线**仍然有效**（同一 src 面）。"
+  },
+
+  "verdict": "自验结论：可提请独立审计"
+}

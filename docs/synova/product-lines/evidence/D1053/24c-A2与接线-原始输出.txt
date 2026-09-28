@@ -1,0 +1,26 @@
+########## D1053 第三批 · A2 定位器 + 接线判据（基线 85b42949）##########
+date(utc): 2026-09-28T12:26:22Z
+HEAD: 85b429499a6ec940e9cc02da1f7efecec9223f34
+
+=== A2 定位器只读复跑（不实跑管线）===
+  settings-applies-live → step1 内容grep = tests/config/settings-applies.test.ts ; step2 文件名 = <none>
+  settings-applies-restart → step1 内容grep = tests/config/settings-source.test.ts ; step2 文件名 = <none>
+
+=== 两串近对角矩阵 ===
+  tests/config/settings-applies.test.ts    live=2 restart=0
+  tests/config/settings-source.test.ts     live=0 restart=2
+
+=== 接线实质判据 ===
+  mount 可达性: indexOf(mount)=18791 < indexOf(404)=20314 ⇒ PASS（404 锚点出现 1 次）
+  git diff --numstat origin/main -- src/server.ts → 4	0	src/server.ts
+  公开面: 3 入口；loadSettingsSpec export = 0；plan.json 改动 = 0
+
+=== 4 落点 / 2 默认值（未消除）===
+src/config/settings-applies.ts:206:  { ns: 'diagnosis', key: 'gateDataCompleteness', applies: 'live', defaultValue: 0.3,
+src/l3/synova-diagnosis-engine-impl.ts:57:  gateDataCompleteness: DEFAULT_GATE_COMPLETENESS,
+src/routes/conversations.ts:143:      gateDataCompleteness: config.diagnosis?.gateDataCompleteness ?? 0.3,
+src/routes/diagnosis.ts:311:        gateDataCompleteness: config.diagnosis?.gateDataCompleteness ?? 0.3,
+src/orchestrator/diagnosis-orchestrator.ts:65:  gateDataCompleteness: 0.4,
+
+=== 红证残留 ===
+  ✅ 0 残留
