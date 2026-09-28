@@ -1,0 +1,237 @@
+{
+  "task": "D1053",
+  "artifact": "00-premise-freeze（队长开工前前提冻结实测）",
+  "owner": "synova-squad-lead",
+  "as_of": "2026-09-28",
+  "cwd": "/Users/wane/SynovaAgent/.synova-wt-squad-d1053",
+  "base": "origin/main @ 20b55eba（本地 main 已 pull --ff-only 同步，开工时 behind 7 已清零）",
+  "plan_doc": "docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D1053-live-restart-settings-20260928.md（六项产出 PLAN；落 dev-doc 豁免区以免撞 D782 登记门禁，同 D1051/D599/D600 规范）",
+  "plan_ref": {
+    "doc": "docs/synova/coordination/整体推进计划-主线-20260913.md",
+    "declared": "v1.2 @ sha256(content)=4e46603f；git blob = 8078f15b",
+    "verified": true,
+    "note": "两数皆真且互不矛盾：content sha256 前缀 4e46603f 逐字命中，git hash-object 前缀 8078f15b 逐字命中"
+  },
+  "contract": "每条 = 原样可复跑命令 + 原始 stdout/stderr 摘要 + 结论。禁手写数字。派单件事实前提逐条实测——不成立/偏差一律登记，不改口径。",
+  "premises": [
+    {
+      "id": "P1",
+      "claim": "依据计划 sha256(content)=4e46603f 与 git blob=8078f15b",
+      "cmd": "shasum -a 256 docs/synova/coordination/整体推进计划-主线-20260913.md; git hash-object docs/synova/coordination/整体推进计划-主线-20260913.md",
+      "exit": 0,
+      "raw_stdout": "4e46603facae436191cb730084d7fd441bc2ba194dbf7fd7fdbbeb7cfa0f4c9a  docs/synova/coordination/整体推进计划-主线-20260913.md\n8078f15b2c27e2b9d967322ad33040406e195cbf",
+      "verdict": "成立"
+    },
+    {
+      "id": "P2",
+      "claim": "src/ 无 applies/live-restart 分类（仅 rule-loader.ts:26 无关 appliesTo）",
+      "cmd": "grep -rn 'applies' src/ --include='*.ts' --include='*.tsx'",
+      "exit": 1,
+      "raw_stdout": "src/l3/rule-loader.ts:26:  appliesTo?: string[];\n命中计数: 1",
+      "verdict": "成立（逐字命中 1 处，语义无关）"
+    },
+    {
+      "id": "P3",
+      "claim": "tests/ 零命中",
+      "cmd": "grep -rniE 'applies|liveRestart|live-restart' tests/",
+      "exit": 1,
+      "raw_stdout": "命中计数: 0",
+      "verdict": "成立"
+    },
+    {
+      "id": "P4",
+      "claim": "node_modules 无 @deepseek-ai/dsh-settings",
+      "cmd": "ls -d node_modules/@deepseek-ai",
+      "exit": 1,
+      "raw_stdout": "ls: node_modules/@deepseek-ai: No such file or directory",
+      "verdict": "成立（零 DSH 包依赖，与『接缝-预留⇒不引包』红线一致）"
+    },
+    {
+      "id": "P5",
+      "claim": "【不成立】客户配置包 mountPreset/leakedServices 机制，接线在 src/config.ts:34",
+      "cmd": "grep -rn 'mountPreset' src/ tests/ scripts/; sed -n '34p' src/config.ts; grep -rn 'leakedServices' src/",
+      "exit": 1,
+      "raw_stdout": "mountPreset 计数: 0\nsrc/config.ts:34:    findingCountRatioWarning: number;\nsrc/config/customer-config-package.ts:277: * 审计客户配置是否试图命名进程级全局物（DSH leakedServices 理念的静态数据版）：",
+      "verdict": "不成立（派单件前提错）。真实机制：符号名是 discoverCustomerConfigPackages/resolveCustomerConfig/mountCustomerConfig（src/config/customer-config-package.ts），Synova 侧泄漏审计函数名是 leakedGlobalConfig（tests/config/customer-config-package.test.ts:179），leakedServices 仅作为 DSH 理念出现在注释里；src/config.ts:34 是 sentinel 阈值字段。能力面**存在且已 pass**（K3 批次1 25-6 pass），故**不废卡**，但派单件的路径/符号锚点必须按本条更正。",
+      "supporting": {
+        "cmd": "grep -rn 'customer-config-package|resolveCustomerConfig' src/ --include='*.ts'",
+        "raw_stdout": "src/routes/diagnosis.ts:21:  discoverCustomerConfigPackages,\nsrc/routes/diagnosis.ts:226:      const roster = await discoverCustomerConfigPackages(configRoots);\nsrc/routes/config.ts:20:import { resolveCustomerConfig, DEFAULT_ROOT_NAME } from '../config/customer-config-package';\nsrc/routes/config.ts:34:    const mounted = await resolveCustomerConfig(orgId, { roots });"
+      }
+    },
+    {
+      "id": "P6",
+      "claim": "【不成立·路径错】接线在 src/agent/../diagnosis.ts:226",
+      "cmd": "sed -n '210,240p' src/diagnosis.ts",
+      "exit": 1,
+      "raw_stdout": "sed: src/diagnosis.ts: No such file or directory",
+      "verdict": "不成立（路径）／成立（行号）。真实文件 = src/routes/diagnosis.ts:226-228（L1 路由，非 src/agent/）。派单件把 `src/routes/diagnosis.ts` 误写为 `src/agent/../diagnosis.ts`。"
+    },
+    {
+      "id": "P7",
+      "claim": "【偏差】判据来源 K3 批次1 报告在 main 可读",
+      "cmd": "ls docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md",
+      "exit": 1,
+      "raw_stdout": "ls: docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md: No such file or directory",
+      "supporting": {
+        "cmd": "git log --all --diff-filter=A --name-only --format='COMMIT %h %s' -- '*K3-产品线审计*'; git branch -a --contains 643069b9",
+        "raw_stdout": "COMMIT 643069b9 audit(K3): 产品线批次1 线25+线1 15点 — pass11/fail4 + P0 A2假绿 + A7归因\n  remotes/origin/audit/k3-20260928-batch1-line25-line1\n  remotes/ssh/audit/k3-20260928-batch1-line25-line1",
+        "note": "git log --oneline main -- <该路径> 为空 ⇒ 该报告从未进 main。本卡判据来源经 git show 643069b9:<path> 取原文核读（316 行，FIX-C 段 = 本任务）"
+      },
+      "verdict": "偏差成立 —— 派单件『开工前必读 1』指向未落 main 的路径。本卡以 commit 643069b9 为可回源引用，并在 plan 登记（不废卡：判据原文已核读）。"
+    },
+    {
+      "id": "P8",
+      "claim": "【不成立】yaml note 的 DSH 锚点：@deepseek-ai/dsh-settings v0.1.6-alpha.2 `SettingsApplies` = live|restart（lib/types/index.d.ts:21）、注册时 applies 缺省即 live（lib/index.js:288）",
+      "cmd": "git -C /Users/wane/src/deepseek-harness-017 grep -n 'SettingsApplies' | wc -l; sed -n '440,452p' packages/settings/settings/lib/index.js; sed -n '25,40p' packages/settings/settings/lib/types/types.d.ts",
+      "exit": 0,
+      "raw_stdout": "SettingsApplies 全仓命中计数: 0\nlib/index.js:446:        applies: \"live\",\ntypes.d.ts:32:    applies: 'live';",
+      "verdict": "不成立（K3 P1-2 独立复现）。当前 DSH 快照 0.1.7-rc.1 @ 46a7f68b：SettingsApplies 类型不存在；applies 在 packages/settings/settings/lib/index.js:446 **硬编码 'live'**（无注册期声明、无 restart 取值）；类型面仅字面量 applies:'live'。⇒ 25-8/25-9 不能写成『接入 DSH 的 live|restart 分类』（该能力在锁定快照不存在），只能写『借范式自研 + 以其恒 live 默认作反例边界』。**这是本卡最关键的修正项，需 CTO 裁决（见 plan §CTO 裁项 1）。**",
+      "supporting": {
+        "cmd": "python3 -c \"import json;print(json.load(open('package.json'))['version'])\"  # cwd=/Users/wane/src/deepseek-harness-017",
+        "raw_stdout": "0.1.7-rc.1"
+      }
+    },
+    {
+      "id": "P9",
+      "claim": "【不成立】派单件 §二②：DSH 侧 dsh-settings/lib/index.js 实测为 `applies: options?.applies ?? \"live\"`（默认 live）",
+      "cmd": "git -C /Users/wane/src/deepseek-harness-017 grep -n '?? \"live\"'; grep -n 'applies' packages/settings/settings/lib/index.js",
+      "exit": 1,
+      "raw_stdout": "?? \"live\" 全仓命中计数: 0\nlib/index.js 内 applies 仅 1 处: 446:        applies: \"live\",",
+      "verdict": "不成立。现快照无 `?? \"live\"` 降级形态——该句描述的是 v0.1.6-alpha.2 旧版；现版直接硬编码 'live'（连『可声明』的口子都没有）。方向不变（DSH 默认即 live = 25-9 要防的半生效盲区），但**引用原文必须换成现验锚点**。"
+    },
+    {
+      "id": "P10",
+      "claim": "【不成立】派单件 §九③ / 附录A:167：dsh-settings-file 的 resolveSpec / 分层 resolve 可作范式来源",
+      "cmd": "find /Users/wane/src/deepseek-harness-017 -maxdepth 5 -name 'dsh-settings-file' -o -maxdepth 5 -name 'settings-file'; git -C /Users/wane/src/deepseek-harness-017 grep -n 'patchNode' | wc -l; git -C /Users/wane/src/deepseek-harness-017 grep -n 'resolveSpec'",
+      "exit": 0,
+      "raw_stdout": "find: (空)\npatchNode 全仓命中计数: 0\npackages/credentials/credentials-local/src/index.ts:88:export function resolveSpec(config: Config): ResolvedSpec {",
+      "verdict": "不成立。当前快照 packages/settings/ 下只有 settings/ 一个包（=@deepseek-ai/dsh-settings）；**dsh-settings-file 包不存在**；patchNode 全仓 0 命中；resolveSpec 仅存在于 credentials-local（路径定位语义，与『settings spec 解析』不同）。⇒ B-10 的可借面收敛为**本仓已有的 D599 落点**（src/config/config-layers.ts 的 mergeLayers/dumpLayers/configNamespace 已按 B-10 落 main，附录A 行 227 实证），新卡复用而非另起。"
+    },
+    {
+      "id": "P11",
+      "claim": "处置表判定：dsh-settings=接缝-预留；dsh-settings-file=借鉴-范式；dsh-api-settings-controller=接缝-预留；6×dsh-client-ui-settings-*=不适用",
+      "cmd": "grep -n 'settings' docs/synova/research/DSH迁移施工图-20260820/附录A-DSH-224包处置表-20260904.md",
+      "exit": 0,
+      "raw_stdout": "33:| dsh-api-settings-controller | settings 域的 Remote owner | 接缝-预留 | 远程契约面 |\n71:| dsh-client-ui-settings-general | ... | 不适用 | 纯 UI |\n72:| dsh-client-ui-settings-models | ... | 不适用 | 纯 UI |\n73:| dsh-client-ui-settings-plugin-inventory | ... | 不适用 | 纯 UI |\n74:| dsh-client-ui-settings-plugins | ... | 不适用 | 纯 UI |\n75:| dsh-client-ui-settings | ... | 不适用 | 纯 UI |\n167:| dsh-settings-file | settings.yaml 文件后端 settings provider | 借鉴-范式 | 缺口：声明式分层配置文件（workspace/home 两级 + schema 化 spec 解析 resolveSpec） |\n168:| dsh-settings | 抽象用户设置 seam（ctx.settings） | 接缝-预留 | Stage 2：配置契约 |",
+      "verdict": "成立（逐条命中；但 167 行所描述的包在锁定快照已不存在——见 P10）。『接缝-预留⇒不引包』结论不变，且本卡红线明文禁引 @deepseek-ai/* 依赖。"
+    },
+    {
+      "id": "P12",
+      "claim": "B-10 借鉴指引原文位（派单件称 :94）",
+      "cmd": "grep -n 'B-10' docs/synova/research/DSH迁移施工图-20260820/DSH借鉴指引-v2-20260904.md",
+      "exit": 0,
+      "raw_stdout": "94:| B-10 | **配置三层+可 dump**：`mergeLayers`（对象递归/数组整值替换）、namespace 注册制、`patchNode` 注释保留叶子级 patch、CLI `--dump-config` 逐层带来源（dsh-settings/dsh-settings-file/dsh lib/dump-config-*.js） | CFG 四层叠加实现蓝本 + 支持诊断第一命令 | 权限治理 0% |",
+      "verdict": "成立（:94 逐字命中）。⚠️ B-10 行内引用的 patchNode 与 dsh-settings-file 在当前快照不可核（P10）⇒ 借鉴面按 P10 收敛。"
+    },
+    {
+      "id": "P13",
+      "claim": "MOVO 挂起原文（CTO-固化-II §六）",
+      "cmd": "sed -n '64,72p' docs/synova/coordination/CTO-固化-II-研究院权威结论-20260924.md",
+      "exit": 0,
+      "raw_stdout": "## 六、明确挂起 / 待创始人裁决\n- **挂起（不派工）**：所有 **MOVO 对照类**条目（M2 员工身份平面／M3 临时能力授权／M5 产物指标／M6 待办／M7 连续失败计数）——MOVO 侧 file:line **从未回源**。",
+      "verdict": "成立（原文在第 68 行附近，语境与本卡『借了但证明不了=不算借到』一致）"
+    },
+    {
+      "id": "P14",
+      "claim": "第六章『复制范式而非代码』",
+      "cmd": "grep -n '复制.*范式.*而非.*代码' docs/synova/research/Harness研究与Synova战略再定位-20260816/第六章-借鉴清单与走出自己的特色-20260816.md",
+      "exit": 0,
+      "raw_stdout": "21:**复制 vs 借鉴的边界**：Harness 是 MIT，代码可直接复制，但建议**复制\"范式\"而非\"代码\"**——Synova 有自己的架构与铁律，直接引 Harness 代码会引入依赖（Harness 未稳定）。B1/B3/B4/B5/B6 复制理念自研，B2/B7/B8 评估是否引包。",
+      "verdict": "成立（:21 逐字命中）"
+    },
+    {
+      "id": "P15",
+      "claim": "【口径偏差】派单件：『线25 现 5/10 → 完成后 8/10；全项目 verified 11 → 14』",
+      "cmd": "python3 - <<'PY' (读 docs/synova/product-lines/product-progress.json 逐线计 verified) PY",
+      "exit": 0,
+      "raw_stdout": "线25: 插件化扩展体系 | points: [('25-1','pending_k3'),('25-2','pending_k3'),('25-3','pending_k3'),('25-4','uncommitted'),('25-5','uncommitted'),('25-6','pending_k3'),('25-7','pending_k3'),('25-8','pending_k3'),('25-9','pending_k3')]\n线25 verified = 0 / 9\n全项目 verified = 0 | 总点数 = 180\n状态计数 = {'pending_k3': 51, 'stale': 30, 'uncommitted': 95, 'rejected': 2, 'failed': 2}\ngenerated_at = 2026-09-28 15:51:09",
+      "verdict": "口径偏差成立。派单件的 5/10 与 11/14 是 **K3 批次1 verdict 口径**（线25 pass 5：25-1/2/3/6/10；fail 3：25-7/8/9；线1 pass 6）；而 **product-progress.json 权威口径**下 pending_k3 不计入 verified（『机器绿但未审不计分』，K3 报告 §四 A7 归因原文）⇒ 现为 0/9 与全项目 0。另：main 的 yaml 线25 只有 25-1…25-9 **共 9 点**（K3 按派单定义审的 25-10 尚未落 main）⇒ 分母不是 10。本卡记分对象 = 25-8 / 25-9 两点由 pending_k3 起算的状态机迁移。"
+    },
+    {
+      "id": "P16",
+      "claim": "25-8/25-9 定义与证据串（product-lines.yaml）",
+      "cmd": "sed -n '1166,1175p' docs/synova/product-lines/product-lines.yaml",
+      "exit": 0,
+      "raw_stdout": "25-8 desc: live 类设置改完不重启即生效…全部在跑的消费者观察到同一新值（无部分消费者滞留旧值）；evidence: [\"test:settings-applies-live\", \"founder-demo:改配置免重启演示\"]\n25-9 desc: restart 类设置改完在重启前不得半生效…重启后新值生效；evidence: [\"test:settings-applies-restart\"]\n25-8 note: 『与 25-9 共用同一 applies 分类机制，两者须同批声明』",
+      "verdict": "成立。**硬约束**：evidence 串逐字为 settings-applies-live / settings-applies-restart ⇒ 测试文件名必须字面包含该串（A2 定位器按内容 grep→文件名两步找 tests/）。"
+    },
+    {
+      "id": "P17",
+      "claim": "【偏差·已登记】GS-08 scenario 记分通道不可用（D791 PR-B 未落 main）",
+      "cmd": "ls -la scripts/golden-scenarios/GS-08-report-readable/; cat README.md; git diff --stat main...origin/feat/d791-line3-onepager",
+      "exit": 0,
+      "raw_stdout": "GS-08 目录含 README.md/expect.json/run.sh/fixtures(空)\nREADME: 『诚实 RED 声明（2026-08-21）——本场景为模板契约级断言』『GS-01 产物 → 一页纸的端到端管线…仍待验证』\nfeat/d791-line3-onepager 未合并：GS-08-report-readable/{README.md,expect.json,run.sh,fixtures/diagnosis-report.json,render-onepager.ts} +190/~ 行",
+      "verdict": "偏差成立且**不阻塞本卡**：25-8/25-9 的权威证据通道是 test:（非 scenario:GS-08）；fixture 自备（同 D1051 处置）。登记入回执与 PR 正文。"
+    },
+    {
+      "id": "P18",
+      "claim": "域归属：候选写集单域 win；证据/流程件 domain-neutral",
+      "cmd": "python3 scripts/control-tower/check-ownership.py <13 候选路径>",
+      "exit": 0,
+      "raw_stdout": "win  src/config/settings-applies.ts / src/config/settings-runtime.ts / src/routes/settings.ts / src/server.ts / tests/config/settings-applies-live.test.ts / tests/config/settings-applies-restart.test.ts / tests/routes/settings-applies-e2e.test.ts\ndomain-neutral  evidence/D1053/**.json / .claude/task-briefs/** / task-state/D1053.json / memory/notes/proposed/** / .claude/bypass.log\n✅ PASS 7 个文件同域: win（无归属 0，域判定豁免 5）",
+      "verdict": "成立（D734 单域门禁满足）"
+    },
+    {
+      "id": "P19",
+      "claim": "写集冲突：0 工作树脏改动；热点文件远端在途分支清单",
+      "cmd": "遍历 git worktree list 的脏状态 + 遍历 origin 未合并分支对目标路径的 diff",
+      "exit": 0,
+      "raw_stdout": "② 共 0 个工作树在目标路径上有脏改动\n③ src/server.ts 被 15 个未合并分支触及（最新 tip 2026-09-25）；src/sentinel/baseline-store.ts 被 3 个（D967b/D968a/D968b，2026-09-25/26）；src/config.ts 仅被 desktop-phase0-auth（2026-07-01）触及",
+      "verdict": "成立 ⇒ 本卡收敛：**不碰 src/sentinel/baseline-store.ts**；server.ts 只加 1 import + 1 mount（最小化热点面）。"
+    },
+    {
+      "id": "P20",
+      "claim": "【不成立】派单件：线3 切片（#877 在飞）『不构成冲突（不同模块面）』",
+      "cmd": "git diff --name-only origin/main...origin/feat/d1051-line3-report-depth",
+      "exit": 0,
+      "raw_stdout": "src/agent/report-assembler.ts\nsrc/agent/report-depth.ts\nsrc/l3/report-templates.ts\nsrc/routes/conversations.ts\nsrc/routes/diagnosis.ts\ntests/agent/report-depth.test.ts\ntests/agent/report-detailed.test.ts\ntests/routes/conversations-report-view.test.ts\ntests/routes/diagnosis-report-depth.test.ts",
+      "verdict": "部分不成立。D1051 写集含 **src/routes/diagnosis.ts 与 src/routes/conversations.ts**——恰是现存 live 通道（阈值类 per-request 读取点 L1 消费者）。⇒ 本卡**不碰这两文件**（否则跨卡写集重叠），live 消费者改用本卡新增/既有的 settings 面。"
+    },
+    {
+      "id": "P21",
+      "claim": "架构边界：新模块落 src/config/** 不撞 L1→L3 基线",
+      "cmd": "grep -n \"PAT_L3\\|PAT_L4\\|PAT_L5\" scripts/check-architecture.sh; grep -rn \"from '../config\" src/routes/",
+      "exit": 0,
+      "raw_stdout": "PAT_L3='(/l3/|/sentinel/|/expert-platform/|/expert/)'\nPAT_L4='(/l4/|/evidence/|/adapters/sqlite-graph-store|graph-bridge)'\nPAT_L5='(/store/|/cron/|/l5/|init/engine-context|better-sqlite3)'\nsrc/routes/config.ts:20:import { resolveCustomerConfig, DEFAULT_ROOT_NAME } from '../config/customer-config-package';",
+      "verdict": "成立 ⇒ src/config/** 不在任何层模式内，L1 路由可合法 import（既有先例 routes/config.ts:20）。避开『L1 路由新增 import 撞 L3 基线』（线3 切片被退回的形态）。"
+    },
+    {
+      "id": "P22",
+      "claim": "A2 假绿机制 + 25-8/25-9 已在 test 绑定点清单内",
+      "cmd": "sed -n '70,90p' scripts/product-lines/run-machine-evidence.sh; python3 scripts/product-lines/list-test-points.py | tail -1",
+      "exit": 0,
+      "raw_stdout": "run-machine-evidence.sh:76-80 套件定位失败 → echo '? $s → 未找到测试文件（跳过该套件）'（无 fail-closed）；VERDICT 预置 'pass'、QUOTE 'vitest 套件全绿'\nlist-test-points: INFO test 绑定验收点 35 个 → …,25-8,25-9,…",
+      "verdict": "成立 ⇒ A2 现在就会尝试定位 settings-applies-live / settings-applies-restart 并因 NONE 而静默跳过（K3 P0-1 实证）。本卡对策：套件命名精确对齐 + 证据附『实际执行的套件名 + 用例数』。"
+    },
+    {
+      "id": "P23",
+      "claim": "证据新鲜度门（六态）与 stale 触发",
+      "cmd": "grep -n 'stale' scripts/product-lines/calc-progress.py | head; python3 scripts/product-lines/evidence-writer.py --help",
+      "exit": 0,
+      "raw_stdout": "calc-progress.py:47: 2. 场景/测试类证据: 日期后该线 modules 有 git 变更 → stale（自动失效，不继承旧绿）\nevidence-writer.py 参数: --type {ci,scenario,test,founder_demo} --date --verdict --points --source --quote --out-dir（**无 --at**）",
+      "verdict": "成立 ⇒ 点级证据须在**代码冻结后**跑（证据日期后 src/config 再有提交即 stale）；证据 14 天 TTL；本卡 3 天内送审。"
+    },
+    {
+      "id": "P24",
+      "claim": "CP3 条件域映射（#CRITERIA 取值依据）",
+      "cmd": "cat .codex/criteria-code-map.json",
+      "exit": 0,
+      "raw_stdout": "C: 接入与控制 — glob 含 src/routes/**/*.ts\nD: 基础设施与部署 — glob 含 src/**/*.ts（兜底）+ scripts/**",
+      "verdict": "成立 ⇒ 本卡改动横跨 src/config/**（仅 D 兜底）+ src/routes/**（C）⇒ brief 记 #CRITERIA: D（兜底域，覆盖全部 src/**），并在 plan 说明理由。"
+    },
+    {
+      "id": "P25",
+      "claim": "取号与工作树合规",
+      "cmd": "bash scripts/control-tower/alloc-task-id.sh '线25 live-restart 设置分类' --prefix squad-",
+      "exit": 0,
+      "raw_stdout": "D1053\n已登记: /Users/wane/SynovaAgent/task-state/D1053.json (status=claimed)\nworktree 名: .synova-wt-squad-d1053\nbrief 骨架已生成: .claude/task-briefs/2026-09-28-D1053-线25-live-restart-设置分类.md",
+      "verdict": "成立（三者一致：brief 文件名 = task-state/D1053.json = commit 前缀 D1053；worktree 带 squad- 前缀）"
+    }
+  ],
+  "verdict_summary": {
+    "成立": ["P1", "P2", "P3", "P4", "P11", "P12", "P13", "P14", "P16", "P18", "P19", "P21", "P22", "P23", "P24", "P25"],
+    "不成立_须更正": ["P5", "P6", "P7", "P8", "P9", "P10", "P15", "P17", "P20"],
+    "废卡触发": false,
+    "结论": "派单件 9 条前提不成立/偏差：其中 6 条是**锚点/路径过时**（P5/P6/P7/P10 + P8/P9 的 DSH 版本漂移）、1 条是**口径混用**（P15：K3 verdict 口径 ≠ product-progress verified 口径）、2 条是**协同面误判**（P17 GS-08 通道、P20 线3 写集重叠）。**均未击穿任务可行性**（判据原文已核读、底层能力面存在），故不废卡；但 plan 的写集与设计必须按更正后的锚点构造，且 P8/P9/P10 三条 DSH 锚点断裂需 CTO 裁决。"
+  }
+}

@@ -1,0 +1,118 @@
+# D1053 写集冲突扫描（M2）· 2026-09-28 · cwd=.synova-wt-squad-d1053 @ origin/main 20b55eba
+
+> 口径：每条 = 原样可复跑命令 + 完整输出（禁 head 截断）+ 「共 N 处」实算。数字由命令原始输出求得，非手写。
+
+## ① 被改/被消费符号的现有引用面
+
+### mergeLayers — 共 19 处（本卡**复用不修改**）
+
+```
+src/config/config-layers.ts:8: *   - mergeLayers(under, over): plain object 递归合并；数组/标量整值替换（决策点 1，
+src/config/config-layers.ts:67: * 将 `over` 叠加到 `under` 之上（DSH mergeLayers 同型，读源码自研）。
+src/config/config-layers.ts:75:export function mergeLayers(under: unknown, over: unknown): unknown {
+src/config/config-layers.ts:81:    merged[key] = key in merged ? mergeLayers(merged[key], value) : value;
+src/config/config-layers.ts:129:/** JSON round-trip 深拷贝（detached；mergeLayers 输出的 plain JSON 值安全）。 */
+src/config/config-layers.ts:173:    acc = mergeLayers(acc, doc);
+tests/config/config-layers.test.ts:6/7/8/20/31/35/49/62/67/72/74/76/78（13 处）
+```
+
+### dumpLayers — 共 13 处（复用）
+
+```
+src/config/config-layers.ts:18/149/186/195/206
+src/config/customer-config-package.ts:35(import) / :413(调用)
+tests/config/config-layers.test.ts:13/24/167/169/196/197
+```
+
+### resolveLayers — 共 22 处（复用）
+
+```
+src/config/config-layers.ts:14/17/47/124/164/166/182/187
+src/config/customer-config-package.ts:36(import) / :361(注释)
+tests/config/config-layers.test.ts:11/12/14/23/114/116/127/136/137/142/145/158
+```
+
+### configNamespace — 共 13 处（复用）
+
+```
+src/config/config-layers.ts:12/112
+tests/config/config-layers.test.ts:10/22/98/100/101/102/106/107/108/109/110
+```
+
+### loadConfig — 共 53 处（**只读消费面**；本卡若接线将影响其返回值语义 ⇒ 高风险点）
+
+生产调用点（去测试/去 email-service 同名函数）：
+
+```
+src/init/engine-context.ts:58            （boot）
+src/l3/ga-collaboration.ts:23            （module-scope 冻结 = 事实上的 restart 消费者）
+src/deploy/bootstrap.ts:673
+src/cli.ts:67
+src/tui-v2/chat.tsx:248
+src/agent/interactive-card.ts:21         （module-scope 冻结 = 事实上的 restart 消费者）
+src/agent/synova-agent.ts:48
+src/routes/conversations.ts:112 / :191   ⚠ D1051 在飞写集
+src/routes/chat.ts:25
+src/routes/diagnosis.ts:216              ⚠ D1051 在飞写集
+src/server.ts:418(注释)
+```
+
+现存活/重启语义**先例**（本卡设计输入）：
+
+```
+src/config.ts:76:  // 每请求 loadConfig() 均重读凭证文件 → 保存后下一请求即用新 key（热重载, spec §6 决策 3）
+tests/routes/llm-config.test.ts:165:  it('热重载同进程断言（DS3 自动化代理）: POST 新 key → 同一进程 loadConfig() 立即读到新值')
+```
+
+### configRoutes（server.ts 挂载点，本卡唯一必改的既有 L1 文件）— 共 2 处
+
+```
+src/server.ts:43:import configRoutes from './routes/config'; // D600 — GET /api/config/dump 客户配置检查表面（--dump-config）
+src/server.ts:385:  app.use(configRoutes); // D600 — config/dump 挂载（逐层 provenance 检查表面）
+```
+
+### src/config/** 现唯一消费者文件（去重）
+
+```
+src/cli.ts
+src/config.ts
+src/config/customer-config-package.ts
+src/routes/config.ts
+src/routes/diagnosis.ts
+tests/config/config-layers.test.ts
+tests/config/customer-config-package.test.ts
+tests/routes/diagnosis-customer-config.test.ts
+```
+
+## ② 其他工作树在目标路径上的脏改动
+
+```
+共 0 个工作树在目标路径上有脏改动
+```
+
+（扫描命令：遍历 `git worktree list --porcelain` 的每个 worktree，`git status --porcelain` 过滤 `src/config|src/routes|src/server.ts|src/sentinel`）
+
+## ③ 远端未合并分支触及目标路径（去重后按 tip 时间）
+
+| 目标路径 | 未合并分支 | tip |
+|---|---|---|
+| `src/server.ts` | `origin/feat/d947-middleware-default-posture` | 2026-09-25 04:39 |
+| `src/server.ts` | `origin/feat/d948-identity-chain-server` | 2026-09-25 03:12 |
+| `src/server.ts` | `origin/fix/d1002-workspaces-route-order` | 2026-09-25 15:10 |
+| `src/server.ts` | `origin/feat/p2-invariants{,-core,-docs,-failclosed}` | 2026-09-21/22 |
+| `src/server.ts` | `origin/feat/win-d716-dual-guide`、`origin/fix/ct64-ci-syno-env`、`origin/session/04`、`origin/feat/desktop-phase0-auth` | ≤2026-09-15 |
+| `src/sentinel/baseline-store.ts` | `origin/feat/D967b-sentinel-alert-stats`、`origin/feat/D968a-sentinel-single-registry`、`origin/feat/D968b-win-single-entry` | 2026-09-25 23:43 / 2026-09-26 00:11 / 2026-09-26 00:21 |
+| `src/config.ts` | `origin/feat/desktop-phase0-auth` | 2026-07-01 |
+| `src/routes/diagnosis.ts`、`src/routes/conversations.ts` | **`origin/feat/d1051-line3-report-depth`（在飞）** + 一批旧分支 | 2026-09-28（在飞） |
+
+## ④ 结论与本卡收敛
+
+1. ① 引用面合计 **5 个复用符号 / 80 处**（19+13+22+13+2，实算自上方各段「共 N 处」）+ `loadConfig` 消费面 53 处。
+2. ② 0 个工作树在目标路径有脏改动 —— 无同机并发写者。
+3. ③ 热点面 ⇒ **本卡写集收缩**：
+   - `src/server.ts`：只加 1 行 import + 1 行 mount（15 个未合并分支触及，最小化）；
+   - **不碰** `src/sentinel/baseline-store.ts`（3 个未合并分支）；
+   - **不碰** `src/routes/diagnosis.ts` / `src/routes/conversations.ts`（D1051 在飞写集，派单件「不同模块面」的判断在此两点上不成立 —— 已登记 00-premise-freeze P20）；
+   - `src/config/config-layers.ts` / `customer-config-package.ts`：**只读复用，不修改**（唯一消费者面清晰，改它=扩大爆炸半径）。
+4. 写集两两互斥（队内）：详见 plan §2 逐文件写者表；同文件同一时间只有一名写者。
+5. 重型验证（vitest / 全量门禁）**串行 ≤1**（机器 8GB，已有两次压满前科）。
