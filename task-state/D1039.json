@@ -26,7 +26,8 @@
     "docs/synova/product-lines/evidence/D1039-PR正文与开PR指令-给CTO.md",
     "tests/control-tower/d956-failmsg.test.sh",
     "scripts/control-tower/merge_writeset_gate.py",
-    "tests/control-tower/merge_writeset_gate.test.sh"
+    "tests/control-tower/merge_writeset_gate.test.sh",
+    "memory/notes/proposed/2026-09-28-d1039-presets-rule.md"
   ],
   "updated_at": "2026-09-28",
   "updated_by": "synova-squad-lead (D708 词边界修复 + 回归夹具)"
