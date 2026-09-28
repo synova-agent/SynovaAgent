@@ -465,7 +465,7 @@ settings:
 
 ---
 
-## 六、既存例外节（活规格第 3 项；落地字段 / 日志 / 待办）
+## 六、既存例外节 ——【活规格第 3 项】（落地字段 / 日志 / 待办）
 
 本节即 §3.2 裁决②的执行视图，**逐条落到可核物**：
 
@@ -825,7 +825,7 @@ git status --porcelain   # 期望仅本卡声明写集
 | 本次 spec 提交只改 1 个文件 | git diff --stat HEAD | 1 file changed |
 | §2.1 声明条数 = 1 | python3 scripts/control-tower/devdoc_writeset.py --extract docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D1053-live-restart-settings-20260928.md | cleaned 数组长度 1 |
 | 写集表可被门禁提取器解析（零漂移的前提） | python3 scripts/control-tower/devdoc_writeset.py --extract docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D1053-live-restart-settings-20260928.md | status=ok 且 cleaned 长度 1（漂移实测见 §2.1 注，跑 bash scripts/workflow/check-dev-doc-write-set.sh 得 声明 1 条 漂移 0） |
-| 7 项 + 队长 2 项各自成节且非空 | grep -n "活规格第" docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D1053-live-restart-settings-20260928.md | 命中 7 处标题 |
+| 7 项 + 队长 2 项各自成节且非空 | grep -n "^## .*活规格第" docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D1053-live-restart-settings-20260928.md | 命中 7 行（仅二级标题；本表行不计入） |
 | 三套件定案名与配对门一致 | grep -n "tests/config/settings-applies.test.ts" docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D1053-live-restart-settings-20260928.md | 命中 ≥1 |
 | 分类表 9 条声明均带实测消费者锚点 | grep -n "src/l3/synova-diagnosis-engine-impl.ts:52" docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D1053-live-restart-settings-20260928.md | 命中 ≥1 |
 | DSH 现验锚点可核（M3 用现验命令） | git -C /Users/wane/src/deepseek-harness-017 grep -n applies packages/settings/settings/lib/index.js | 命中硬编码 live |
