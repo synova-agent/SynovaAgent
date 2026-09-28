@@ -1,0 +1,48 @@
+{
+  "task_id": "D1057",
+  "title": "CT10 独立复核（V）—— task-7 mac 9 卡 / task-8 win golden 逐条反向验证",
+  "status": "impl_done",
+  "risk": "high",
+  "domain": "mac",
+  "owner": "ct10-verify",
+  "executor": "ct10-verify（V，独立复核；maker/checker 分离，不写产品代码）",
+  "blocked": null,
+  "spec": ".claude/task-briefs/2026-09-28-D1057-CT10-独立复核.md",
+  "impl": {
+    "commit": null,
+    "commit_note": "本卡为只读复核卡：实现在于逐条独立重跑 + 改坏即红，落点为本分支的报告文件；提交后由 synova-commit 回填",
+    "by": "ct10-verify",
+    "at": "2026-09-28",
+    "files": [
+      "docs/synova/product-lines/evidence/CT10-VERIFY-独立复核报告-20260928.md",
+      "task-state/D1057.json",
+      ".claude/task-briefs/2026-09-28-D1057-CT10-独立复核.md"
+    ],
+    "verify": {
+      "复核对象锚点": "mac fix/ct10-mac-gates-20260928 tip=872507ed（内容 023aa771/76fff3ef）；win fix/ct10-win-golden-20260928 tip=e72f7084（内容 b4a7ac00/de54c49d）；改前基线 main=20b55eba",
+      "推送态取件": "全部用 git show <sha>:<file> 取推送态副本重取 md5，未采信产出方自报；两名分支推送态与工作树副本逐件 md5 一致",
+      "改坏即红": "①②④⑦⑧ + win①③ 各有 mutation 反例；mutation 与夹具全部在 /tmp 沙箱副本执行，零仓库写入",
+      "重型验证": "仅跑 npx tsx scripts/ci/golden-case-checker.ts（0.33s）与产出方夹具（2.96s）；未跑 vitest / 未跑全量门禁；全程串行无并发",
+      "污染检查": "复跑前后产出方工作树 git status --short 为空、关键文件 md5 未变",
+      "自验结论": "退回（附理由）—— task-7（mac）3 卡未交付（⑥⑨⑩）+ 1 卡半件（⑤）；win ③ 按卡面口径不成立，待 CTO 裁定"
+    },
+    "new_findings": [
+      "R8（P1）：纯净 main 导出上 tests/control-tower/pre-dispatch-check.test.sh = 7 通过 / 1 失败 exit 1；根因 = 夹具 :13 head -1 取 D1007.json 被 grep -oE 'D[0-9]{3}' 截成 D100，而 task-state/D100.json 不存在；CT-40 因此硬阻断 pre-dispatch-check.sh 的任何提交（已用 SYNO_TEST_ARM=1 注入缝复现阻断）",
+      "⑥①（CT-D1051-01）真实存在：bash scripts/control-tower/check-bypass-log.sh 无参 → 382 条 + exit 1；产出方原『未复现』基于错误目标脚本 check-pr-budget.sh，已于第二轮更正",
+      "④ 真实入口未修（3 处）：gen-task-board.py:447 scan_briefs（直接调生产函数实测：d922 件无键）、staging_guard.py:90、gen-cto-health.py:276/:284（4 位号截断，当前 0/265 为潜伏）",
+      "卡面口径更正：⑥ 来源『D1045 报告』不存在（全仓 grep 0 命中），真来源 = docs/synova/product-lines/evidence/D1051/31-ct-findings.json（3 条）；⑤ pre-commit-check.sh 同族 --diff-filter=A 实为 3 处（卡面写 2 处，漏 :283 本地默认路径）"
+    ]
+  },
+  "audit": null,
+  "fix_task_id": null,
+  "write_set": [
+    "docs/synova/product-lines/evidence/CT10-VERIFY-独立复核报告-20260928.md",
+    "task-state/D1057.json",
+    ".claude/task-briefs/2026-09-28-D1057-CT10-独立复核.md"
+  ],
+  "base_branch": "main",
+  "branch": "verify/ct10-reverse-20260928",
+  "note": "独立反向复核卡（V）。自验结论 = 退回（附理由）：task-7（mac）9 卡中 ⑥⑨⑩ 未交付、⑤ 半件（PYBIN 已写未提交，被 R8 阻塞）；已交付的 ①②⑦⑧ 与 win ①②经独立重跑 + 改坏即红全部成立。win ③ 按卡面口径不成立（空集仍放行；已披露偏离且两条理由经我独立证实：硬判红实测致 1/11 + exit 1；tests/fixtures/golden-cases/** 不在写集）⇒ 待 CTO 裁定。复核期间未修改任何产出方文件；全部实验在 /tmp 沙箱副本执行。",
+  "updated_at": "2026-09-28",
+  "updated_by": "ct10-verify"
+}
