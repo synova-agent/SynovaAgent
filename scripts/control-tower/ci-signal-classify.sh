@@ -81,6 +81,7 @@ RULES=(
   "doc-tests|^tests/doc-system/"
   "tsconfig|^tsconfig[^/]*\\.json$"
   "root-package|^package\\.json$"
+  "presets|^docs/synova/presets/"   # D1039 P1(K3): 2026-08 以来 11 commit 触碰却 MISS ⇒ 该跑没跑
 )
 MISS_DISPLAY_CAP=15   # 未命中明细显示上限（超出显式声明条数，禁静默截断——铁律 11）
 
