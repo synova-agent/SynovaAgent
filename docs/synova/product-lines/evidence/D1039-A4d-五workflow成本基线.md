@@ -475,4 +475,162 @@ INFO 6,619→0；ERROR 320→320 恒等）。命令逐字见 §5.2，级别分�
 
 ---
 
+## 八、第二轮：PR #873 两个红的定位与修复（2026-09-28）
+
+> 队长定位并派活；本节记录**我复现**的原始输出与修复后的自验。**两红均已复现成立，非误报。**
+
+### 8.1 红 1 — `G12: task brief Q2 范围一致性`（`TypeScript + Lint + Iron Laws`）
+
+**复跑（CI 等价口径，原始输出）**：
+```
+$ GITHUB_ACTIONS=true SYNO_CI=1 SYNO_DIFF_BASE=origin/main bash scripts/pre-commit-check.sh
+  ❌ G12: task brief Q2 范围一致性（写集单一事实源，D749）: 2 处  [硬阻断]
+     tests/win/vitest-log-level.test.sh (不在 Q2 范围内)
+     vitest.config.ts (不在 Q2 范围内)
+  ❌ 1 组未通过 — 提交已拒绝
+```
+> ⚠️ **与队长转述的差异（点名）**：队长转述的 annotation 只列了 `.test.sh` 一处，
+> 本地实测是 **2 处**（`vitest.config.ts` 也在内）。**以实测为准**，两份都必须在写集里。
+
+**根因（三层，逐层实测）**：
+1. **表层**：G12 用**别人的** Q2 去核**我的**文件。
+2. **中层**：我的分支**没有自己的 brief** ——
+   `git diff --name-only origin/main...HEAD -- .claude/task-briefs/` → **空**。
+3. **病根**：`scripts/workflow/resolve-commit-brief.sh` 回退链（认领 → `current-brief` → 今日最新）
+   **全落空就静默挑一份无关 brief** ⇒ 解析到 `.claude/task-briefs/2026-09-27-D1023-skill-lessons-ref.md`，
+   而该 brief `grep -c "tests/win"` → **0**。
+
+**修复**：新建 `.claude/task-briefs/2026-09-28-D1040-A4b-vitest-log-level.md`，含
+`#CRITERIA: D` + `## 写集` 机器块（D749 单一事实源）+ 六字段。
+**解析器实测**（不是我肉眼认为对）：
+```
+parse_write_set.include = ['vitest.config.ts', 'tests/win/vitest-log-level.test.sh',
+                           'docs/.../D1039-A4d-五workflow成本基线.md', '.claude/task-briefs/2026-09-28-D1040-...md']
+parse_q2.exclude        = ['.github/workflows/ci.yml', 'packages/test-kit/vitest.config.ts', 'src/',
+                           'scripts/audit/', 'docs/synova/audit-reports/', 'memory/notes/',
+                           'task-state/', 'packages/logger/src/index.ts']
+parse_criteria          = 'D'
+```
+**修后复跑**：`✅ G12: 所有文件均在 Q2 范围内` ⇒ `✅ 全部 13 组通过`（EXIT=0）。
+
+**踩到的两个 brief 书写陷阱（都来自 D1028 的实证，已规避）**：
+① 只能有一个 `^##\s*写集` 标题——再加一个 `## 写集边界…` 会被抢先命中 ⇒ 该块无表格行 ⇒ `include=[]` ⇒ G12 全量误报；
+② `做什么`/`不做什么` **必须行首写**（写成 `### 做什么` 则 `parse_q2` 只认行首 ⇒ exclude 臂**空转 fail-open**）。
+
+### 8.2 红 2 — `Gate Integrity` 的 CI 密封清单 ratchet（**本批按裁定不修**）
+
+```
+── B CI 清单登记 gate（密封面 ratchet）──
+VIOLATION: 新增测试未登记 CI 密封清单: tests/win/vitest-log-level.test.sh
+CI-REGISTRY: 测试文件 742（密封面 sh/py 132；ts 面 610）；ci.yml 登记（密封面）53；
+             密封面未登记 79；基线 78 条；基线外新增 1；基线过期 0
+GATE-INTEGRITY: VIOLATION(1)      EXIT=1
+```
+**处置（队长 2026-09-28 裁决）**：**不为变绿去改 `ci.yml`**（不在写集，且它正是 A4-c/D1039 的活）。
+本处**如实保持红**，等 A4-c（含该登记行）**先合 main** ⇒ 本分支 `merge origin/main` 继承该登记 ⇒ 自动消失。
+**⇒ 合并顺序：A4-c 先，A4-b 后。**
+
+### 8.3 时序守卫（新增）—— 三条判据全部实测通过
+
+**为什么需要**：本测试会被 A4-c 登记进 CI，而 **A4-c 分支不含本卡的 `vitest.config.ts` 修复**
+⇒ 无条件硬断言会让 A4-c 必红。但判别性又不能丢。
+
+**🔴 一处必须在设计上说清的张力**：队长给的守卫字面规格是「契约行不存在 ⇒ 跳过不判红」，
+但判据③又要求「本分支删掉该行 ⇒ 必须红」。**这两条在只读配置内容时是互斥的**
+——「A4-c 分支（从来不该有）」与「本分支被回退（本该有却没有）」在**配置内容上完全同形**。
+⇒ 我用**分支历史**作区分信号（`git log -S<契约行> -- vitest.config.ts`），三模式穷尽且互斥：
+
+| 契约行在配置 | 本分支历史曾引入 | 模式 | 行为 |
+|---|---|---|---|
+| 是 | 是 | `ASSERT` | 硬断言 |
+| 否 | **是** | `REGRESSION` | **红**（引入过又丢了） |
+| 否 | 否 | `SKIP` | 跳过留痕，不判红 |
+| 否 | **不可判定** | **`ASSERT`** | **fail-safe：宁可误红，不静默放行**（队长 2026-09-28 追加硬要求） |
+
+**🔴 fail-safe（第 4 行，安全侧）**：历史信号**不可判定** ⇒ 降级 **`ASSERT`**，**绝不降级 `SKIP`**。
+不可判定条件（任一命中）：① `git rev-parse --absolute-git-dir` / `--git-common-dir` 失败或为空；
+② 存在 `shallow` 文件（浅克隆）；③ `git log -S` 非零退出。
+**理由**：判据③（判别性）是**安全侧**，`SKIP` 是**松侧**；历史信号会因 shallow clone / fetch-depth 不足在 CI 失效
+（`ci.yml:312` 的 D520 先例：depth=1 时 `origin/main` 缺失）——那时若静默 `SKIP`，**判别性会静默消失**（M3 家族）。
+**实测本仓 CT job 用 `fetch-depth: 0`（`ci.yml:312`）⇒ 正常 CI 走 ASSERT/SKIP，fail-safe 只在病态环境触发。**
+
+**信号有效性实测**：本分支 `git log -S` 命中 **1**（`5e8031ab`）；`origin/main` 命中 **0**。
+
+**四判据原始输出**：
+```
+① A4-c 类分支（scratch worktree @ origin/main + 本测试文件，已清理）:
+     契约行在 vitest.config.ts 中  : 0
+     本分支历史曾引入该契约行      : 0   (可判定=1 rc=1)
+     ⇒ 模式 = SKIP
+     ⏭️  SKIP: vitest.config.ts 无 LOG_LEVEL 契约行，且本分支历史从未引入过它。
+     ⏭️  SKIP: 原因 = 本测试由 A4-c/D1039 登记进 ci.yml 密封清单，而该分支不含本卡修复。
+     ⏭️  SKIP: 判别性未丢 = 在含修复的分支上仍是硬断言；删掉契约行即转 REGRESSION 红（判据③）。
+     ⏭️  SKIP: 应然状态 = 合并顺序 A4-c 先、A4-b 后；A4-b 合入 main 后即转为 ASSERT。
+   ── 3. 边界护栏 ✅ / ── 5. 生产接线 ✅
+   模式: SKIP   结果: 2 通过, 0 失败    Status: ⏭️ SKIP    **EXIT=0（不红，判据①满足）**
+
+② 本分支:
+     ⇒ 模式 = ASSERT      探针 env LOG_LEVEL = 'warn'   pino = 'warn'
+     （§1/§2/§3/§4/§5 全绿）  结果: 8 通过, 0 失败   **EXIT=0（判据②满足）**
+
+③ 本分支 + 删掉契约行（模拟回退）:
+     ⇒ 模式 = REGRESSION
+     ❌ process.env.LOG_LEVEL 期望 warn，实得 'undefined'
+     ❌ pino 生效级别期望 warn，实得 'info'
+     ❌ 无法注释配置行（LOG_LEVEL 契约行缺失 ⇒ 修复已被拿掉 ⇒ 本测试即红）
+     结果: 4 通过, 4 失败   Status: ❌    **EXIT=1（判据③满足 ⇒ 判别性保持）**
+     随后 cmp 复原 → RESTORED_OK
+
+④ fail-safe 反例（**真浅克隆**，非模拟）:
+   $ git clone --depth 1 --single-branch --branch main file:///Users/wane/SynovaAgent /tmp/a4b-shallow
+     → .git/shallow 存在（内容 ff467712…）；git log 条数 = **1**
+     → 配置里有契约行 = 0；`git log -S` 命中 = **0**   ← 浅克隆下必然 0，这就是"信号失效"的形态
+
+   (a) 旧两模式逻辑在同一浅克隆下：
+       契约行在配置 = 0 ；旧逻辑只看『有没有命中』= 0
+       ⇒ 旧逻辑判定 = **SKIP**（判别性静默消失 —— 这正是 fail-safe 要堵的洞）
+
+   (b) 新逻辑（含 fail-safe）在同一浅克隆下：
+       契约行在 vitest.config.ts 中  : 0
+       本分支历史曾引入该契约行      : 0   (可判定=0 rc=2)
+       ⚠️  FAIL-SAFE: 历史信号不可判定 (rc=2) ⇒ 降级 ASSERT，**不降级 SKIP**
+       ⚠️  FAIL-SAFE: 可能原因 = shallow clone (fetch-depth<0) / git 不可用 / gitdir 不可解析
+       ⚠️  FAIL-SAFE: 取舍 = 宁可误红（安全侧），不可静默放行（松侧）
+       ⇒ 模式 = ASSERT        ← **走了 ASSERT 而非 SKIP（判据④满足）**
+       ❌ process.env.LOG_LEVEL 期望 warn，实得 'undefined'
+       结果: 4 通过, 3 失败   **EXIT=1（安全侧误红，符合契约）**
+```
+**子项 3 与 5（`silent` 护栏、生产接线）不依赖修复 ⇒ 在任何模式下都照跑**，SKIP 模式也非空转。
+
+**⚠️ 两处 brief / 门禁解析陷阱（本卡实测，队长 2026-09-28 采纳转 CTO）**：
+① **只能有一个 `^##\s*写集` 标题** —— 再加一个 `## 写集边界…` 会被 `parse_write_set` 抢先命中 ⇒
+   该块无 `|` 表格行 ⇒ `present=True, include=[]` ⇒ **G12 全量误报**（D1028 实证，本卡规避）。
+② **`做什么` / `不做什么` 必须行首写** —— 写成 `### 做什么` 时 `parse_q2` 只认行首 ⇒
+   **exclude 臂空转（fail-open）**，15 条排除项会被当成 include（D1028 实证，本卡规避）。
+   ⇒ 与队长的「G12 排除臂对目录 glob 完全失效」**同族**：排除臂本就脆弱。
+
+### 8.4 本轮门禁结果（原始输出摘录）
+
+```
+$ GITHUB_ACTIONS=true SYNO_CI=1 SYNO_DIFF_BASE=origin/main bash scripts/pre-commit-check.sh
+  ✅ G12: 所有文件均在 Q2 范围内
+  ✅ D734 PR 预算: 文件数 / 单域 / 落后基线 均在预算内
+  ✅ 全部 13 组通过
+  ⚠️  1 项警告 (不阻断)   ← PRD 对照（可选提示，永不阻断）
+EXIT=0
+
+$ bash scripts/control-tower/check-gate-integrity.sh
+  GATE-INTEGRITY: VIOLATION(1)     ← 见 §8.2，按裁定等 A4-c 合入后消失
+EXIT=1
+```
+
+### 8.5 本轮遗留
+
+| # | 项 | 为什么本批不能做 |
+|---|---|---|
+| 10 | **门禁缺口：没有任何门禁检查「提交所在分支是否有自己的 brief」** —— resolver 会用无关 brief 静默顶上，只在 G12 报一个**指向错误方向**的错（看起来像"文件不在范围"，实际是"brief 缺失"） | 属 `scripts/workflow/resolve-commit-brief.sh` 域，**不在本卡写集**；队长已登记拟报 CTO 另立卡（建议 resolver 命中「非本分支认领的 brief」时**显式降级/报错**，而非静默挑一份） |
+| 11 | `PATTERN-BASELINE: STALE(bsd) scripts/pre-commit-check.sh:991`（`expires 2026-10-08`） | 存量台账过期项，**不影响退出码**；修它属 `scripts/pre-commit-check.sh` 域（不在写集） |
+
+---
+
 *本文件为 A4-d（D1041，父卡 D1039）+ A4-b（D1040）交付物。所有数字均来自实测，公式在 §〇 声明。*
