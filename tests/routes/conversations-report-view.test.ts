@@ -268,9 +268,15 @@ describe('D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HT
   //   `reason?: 'NO_REPORT' | 'RENDER_DEGRADED'`；`degraded` 为 boolean。
 
   it('⑦ 渲染降级路径 → 帧 degraded:true + reason:RENDER_DEGRADED（R6 判别性：isDegradedRender 恒 false 即红）', async () => {
-    // 注入「注册表 render 抛错」——与 `renderOnePager`/`renderDetailedReport` 的 whole-body catch
-    // 契约对撞，必然落 `onePagerFallback`/`detailedReportFallback`（两者文面均含「（降级：」）。
-    // 这是路由侧唯一可达的 RENDER_DEGRADED 触发面（注册表是渲染失败的单一入口）。
+    // RENDER_DEGRADED 有**两个**可达注入面（本用例走 A）：
+    // · 注入面 A（本用例）：覆写 registry.render 使其抛错 → 走 `renderOnePager` /
+    //   `renderDetailedReport` 的 whole-body catch（report-assembler.ts:359 / :755）
+    //   → 落 `onePagerFallback` / `detailedReportFallback`（两者文面均含「（降级：」）。
+    // · 注入面 B（成员 V task-5 独立实测）：注册一个会抛的**模板** → 被注册表内部
+    //   try/catch 吞成 `模板渲染失败: …` 字符串（report-templates.ts:335-337，不外抛）
+    //   → 但 report-assembler.ts:346 / :740 的 `startsWith('模板渲染失败')` 判定
+    //   **仍**使其落 fallback。⇒ 两面都可达；覆写 registry.render 覆盖的是**异常路径**，
+    //   而非「唯一可达面」（原「唯一可达」表述已被 V 的独立探针证伪，遂更正）。
     class ThrowingRegistry extends ReportTemplateRegistry {
       render(): string {
         throw new Error('mock: registry.render 爆炸（RENDER_DEGRADED 注入）');
