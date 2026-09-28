@@ -91,9 +91,12 @@ $ sed -n '82,92p' tests/ci/golden-case-break-test.sh
 修复后同一事实变成 `passed=null` + 一行 `快照层: 未覆盖（无快照段）— 不作判定`，
 **"通过"这个词不再被未判定的事实冒领**。
 
-**待 CTO 复核项**：若 CTO 认定 ③ 必须硬判红（未覆盖 ⇒ 阻断），则须同时授权：
-(a) `tests/fixtures/golden-cases/**` 写集（补 10 条快照段），或 (b) 明确接受全队 pre-push/CI 常红。
-**在此之前我按上版落地**（不擅自改门禁语义）。
+**✅ CTO 已裁（2026-09-28，经队长转达 · 第 3 项裁定）：采纳「中间方案」（显式记未覆盖 + 覆盖度可见）。**
+即：本件落地的形态**就是 CTO 批准的形态**，**不采用**卡面字面「未覆盖 ⇒ 硬判红」。
+裁定同时把「字面口径未落地」归入**后续卡**（不在本批补做）⇒ 本节**不再存在"待复核"状态**。
+依据（CTO 同批裁定的理由）：`tests/fixtures/golden-cases/**` 补齐属**另卡**范畴；
+CTO **不接受**全队 pre-push/CI 常红；同批 CTO 亦认同「在猜测上建新机制比不建更糟」的判断取向。
+⇒ 本节结论由「**待 CTO 复核**」正式转为「**已裁定 · 中间方案获批**」。
 
 ---
 
@@ -329,7 +332,7 @@ git status --short
 | # | 遗留项 | 性质 | 建议处置 | 归属 |
 |---|--------|------|---------|------|
 | **R1** | 新夹具 `tests/ci/golden-dataset-coverage.test.sh` **未登记进 CI 白名单**。实测 `grep -n "tests/ci" .github/workflows/ci.yml` **零命中** —— CI 的门禁测试是**显式白名单** `for t in \ …`（`ci.yml:339-379`），不是 glob；同目录既有 `golden-case-break-test.sh` **同样未登记**（它只出现在 `.claude/settings.json:45` 的 Bash 允许清单里）。要让本夹具在 CI 自动跑，须改 `.github/workflows/ci.yml` | **写集外** | 请队长裁定：扩写集到 `ci.yml` 加一行，或按同目录既有惯例接受（本卡不擅自扩） | 队长 / CTO |
-| **R2** | ③ 的**字面口径**（未覆盖 ⇒ 硬判红）未落地 | **待 CTO 复核** | §1.2 已列明代价：须同时授权 `tests/fixtures/golden-cases/**` 写集（补 10 条快照段），或接受全队 pre-push/CI 常红 | CTO |
+| **R2** | ③ 的**字面口径**（未覆盖 ⇒ 硬判红）未落地 | ✅ **已裁定（2026-09-28）**：CTO 采纳**中间方案**（显式记未覆盖 + 覆盖度可见），**不采用**字面硬判红；该字面口径归入**后续卡**（本批不补做）。§1.2 已同步 | 无（已闭合） |
 | **R3** | `scripts/ci/**` **不在 D534 Note 必填触发面**内 | 事实记录 | `scripts/commit-msg-check.sh:140` 的 `CT_ORCH_TOUCHED` 只匹配 `scripts/{control-tower,workflow,hooks}/`+`src/orchestrator/`+`AGENTS.md`/`CLAUDE.md`/`memory/notes/README.md` ⇒ `scripts/ci/` 的治理变更**无 Note 强制**。另 `memory/notes/**` 不在本卡写集，故**未新建 Note** | 队长 / CTO |
 | **R4** | 黄金数据集覆盖面仍为 **1/16** | 已知缺口 | 本次只做「可见化」，**未**做「逐个登记」（卡面明令不做）；后续 D355-D360 按同契约增量登记 | 后续批次 |
 | **R5** | 10/11 fixture 无快照段 | 已知缺口 | 由 ③ 显式可见（`快照覆盖: 1/11`），不再静默；补快照段需独立卡 + 写集 | 后续批次 |

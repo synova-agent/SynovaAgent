@@ -32,7 +32,7 @@
   ],
   "base_branch": "main",
   "branch": "fix/ct10-win-golden-20260928",
-  "note": "CT10 拆 2 PR 之 win 件（CTO 裁定）。③ 按依据计划 D1046 口径落地：空集恒真消除 + 覆盖度可见；未采用卡面字面「未覆盖硬判红」（会导致 10/11 fixture 转红 + 全队 pre-push:276 / ci.yml:564 常红，且修它需 tests/fixtures/golden-cases/** 写集，本卡无授权）—— 已上报队长，待 CTO 复核。",
+  "note": "CT10 拆 2 PR 之 win 件（CTO 裁定）。③ 按依据计划 D1046 口径落地：空集恒真消除 + 覆盖度可见；未采用卡面字面「未覆盖硬判红」（会导致 10/11 fixture 转红 + 全队 pre-push:276 / ci.yml:564 常红，且修它需 tests/fixtures/golden-cases/** 写集，本卡无授权）。**CTO 已于 2026-09-28 裁定采纳该中间方案**（显式记未覆盖 + 覆盖度可见），字面硬判红口径归入后续卡 ⇒ 本件落地形态即 CTO 批准形态。",
   "updated_at": "2026-09-28",
   "updated_by": "ct10-exec"
 }
