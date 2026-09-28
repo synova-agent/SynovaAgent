@@ -69,7 +69,12 @@ export interface SettingsException {
 export interface SettingsKeySpec {
   /** kebab-case 命名空间（^[a-z][a-z0-9-]*$，≤64 字符）。 */
   ns: string;
-  /** 命名空间内的单段键名（不含 '.'，≤64 字符）。 */
+  /**
+   * 命名空间内的键名：**允许点分多段**（`^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*$`）；每段须非空
+   * ⇒ 禁前导/尾随/连续 `.` 与空段。≤64 字符。与常量 `KEY_PATTERN` 逐字一致（D1053 规格 §5.3
+   * 裁定允许点分多段：`ns` 正则不容 `.`，故 `path = ns + '.' + key` 唯一可还原；且 §5.1 插件类
+   * `extensions.skill.enabled` 必须以该形态覆盖）。
+   */
   key: string;
   applies: SettingsApplies;
   /** 文件两层均未定义时采用的默认值（必须与 domain 相容）。 */
@@ -342,7 +347,10 @@ function validateSpec(spec: SettingsKeySpec, phase: string): void {
     throw new SettingsSpecError(phase, `命名空间非法（需 ^[a-z][a-z0-9-]*$ 且 ≤64）: ${JSON.stringify(spec.ns)}`);
   }
   if (typeof spec.key !== 'string' || spec.key === '' || !KEY_PATTERN.test(spec.key) || spec.key.length > 64) {
-    throw new SettingsSpecError(phase, `键名非法（需单段 [A-Za-z0-9_-]+ 且 ≤64，禁含 '.'）: ${JSON.stringify(spec.key)}`);
+    throw new SettingsSpecError(
+      phase,
+      `键名非法（需点分多段 [A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)*，禁前导/尾随/连续 '.' 与空段，≤64）: ${JSON.stringify(spec.key)}`,
+    );
   }
   if (spec.applies !== 'live' && spec.applies !== 'restart') {
     throw new SettingsSpecError(
