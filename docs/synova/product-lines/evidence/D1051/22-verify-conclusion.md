@@ -114,3 +114,39 @@ bash scripts/check-architecture.sh ; SYNO_CI=1 bash scripts/check-architecture.s
 - 只读产品代码：全部注入均在注入后 `git checkout --` 复原（每例 sha 比对 `shaRestored: true`），`src/` 最终状态 == `f47f9098`。
 - 未触碰 `scripts/**`（控制塔/K3 面）、未触碰 `scripts/audit/**`、未改 `.github/**`。
 - 本文件不含「审计通过」措辞；**是否通过归 CTO 收件闸 + K3 终审**。
+
+## 八 交付回执（M6 收尾三件 + ls-remote 回执）
+
+### 8.1 被验代码（物理核验）
+```
+$ git diff f47f9098..origin/feat/d1051-line3-report-depth -- src tests   → （空输出：代码面一致）
+$ git merge-base --is-ancestor f47f9098 origin/feat/d1051-line3-report-depth   → YES（实现提交仍在发布分支历史中）
+$ git log --oneline -1 origin/feat/d1051-line3-report-depth
+1d340c62 chore: bypass COMMITTED 登记 (auto hook, D521)
+```
+说明：发布分支头在本轮复核期间由 `ea72e805` 前进到 `1d340c62`（新增纯 docs 提交 `3e113504` spec 口径回填 + hook 自动登记），`git diff ea72e805..3e113504 -- src tests` 为**空**、`git diff f47f9098..origin/feat -- src tests` 亦为**空** ⇒ 被验代码面未变。
+
+### 8.2 复核分支与提交
+```
+分支: verify/d1051-line3-report-depth
+证据提交（含本目录全部工件 + 本文件）: cc518daa3c60c8d327687d809e069ec25ae69535
+  - 内容: 90a57ebd（证据提交）→ 7a6192ff（hook 自动登记）→ cc518daa（合并发布头 ea72e805/后续 docs）
+$ git diff --stat f47f9098..cc518daa -- src tests   → （空输出：本分支未改产品代码）
+```
+
+### 8.3 ls-remote 回执（原始输出）
+```
+$ git ls-remote --heads origin | grep d1051
+f23f18b6445e247e0b17c08e5a4a5adfee15ac05	refs/heads/docs/d1051-line3-spec
+1d340c62c5b29acf27f5e8b077f356f1377998e1	refs/heads/feat/d1051-line3-report-depth
+cc518daa3c60c8d327687d809e069ec25ae69535	refs/heads/verify/d1051-line3-report-depth
+$ git rev-parse HEAD
+cc518daa3c60c8d327687d809e069ec25ae69535
+```
+（本回执文件自身的提交会使分支 tip 前移一次；以 `git ls-remote` 实时输出为准。）
+
+### 8.4 遗留清单（提示项，非退回项）
+- ① `report_view` 帧 `degraded`/`reason='RENDER_DEGRADED'` 分支零断言覆盖（R6 实证 6/6 仍绿）——是否补测由 CTO/K3 定。
+- ② `npx tsc --noEmit` 存量 31 行错（与基线逐行相同；本卡 9 文件零错误）——不得以「lint 全绿」当验收判据。
+- ③ 我的 harness 与 C 的测试**互不依赖**；但两者共用同一 `diagnosis_checkpoints` 归档契约——若后续该契约变更，两处需同步复核。
+- ④ 本分支为**复核分支出库**，未走 PR；如需归档请按 CTO 流程处置（本文件不主张合并）。
