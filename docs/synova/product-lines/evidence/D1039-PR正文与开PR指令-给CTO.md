@@ -10,8 +10,11 @@
 
 ## PR-1
 
-- **head**：`team/a4-ci-cost` @ `39e955a70c6b0918287763ad611980aa524ca32e`
+- **head 分支**：`team/a4-ci-cost`（**开 PR 用分支名即可，不必钉 SHA**）
 - **base**：`main`（`ff4677129dce2ff068a816eed3db0687b060c64c`）
+
+> ⚠️ **关于 SHA**：分支每次 commit 后 `post-commit` hook 会追加一个「bypass COMMITTED 登记」影子提交 ⇒ **远端 head 会跳动**。
+> 因此**开 PR 请用分支名**，不要钉 SHA。本文件写就时的 head = `f344ed5cc266bdefb4234aa5f3e76443981f7a3f`（仅供对照）。
 - **标题**：`ci(D1039): control-tower-tests 按需跑（job 恒调度 + 内层 if 门控）`
 
 ### 正文
@@ -107,7 +110,7 @@ GitHub Actions `shell: bash` 实际调用 `bash --noprofile --norc -eo pipefail`
 ## PR-2
 
 - **head**：`team/a4b-vitest-log` @ `ad3e5c14950b12fff8e2ddbd55f7e6c30dd5e9b1`
-- **base**：`main`（`ff4677129dce2ff068a816eed3db0687b060c64c`）
+- **base**：`main`（开 PR 时 `ff4677129dce2ff068a816eed3db0687b060c64c`）
 - **标题**：`test(D1040)+docs(D1041): 测试期 LOG_LEVEL=warn + 五 workflow 成本基线`
 
 ### 正文
