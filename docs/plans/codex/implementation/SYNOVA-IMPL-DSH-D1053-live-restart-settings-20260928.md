@@ -569,6 +569,12 @@ log.warn({ count, exceptions }, 'SETTINGS_EXCEPTION_ACTIVE 既存例外（不按
 **关键断言语义（供套件与 V 逐条核；含命名判据，V 可在自己的 harness 里独立断言）**
 
 - `effective` 对 live 键 = **本次请求**重新读盘的值；对 restart 键 = **boot 冻结值**（同 `bootId` 内多次请求恒等）。
+- **`defaultValue` 对 live 键与 restart 键同源 = 声明面默认值（DEV-1）**：两者都取 `SettingsKeySpec.defaultValue`，**live 键行不得为 `null`**。**修后实测值 = `0.3`（live 键 `diagnosis.gateDataCompleteness`）**。断言覆盖位置（实测 file:line）：**A1 内** `tests/config/settings-applies.test.ts:77-79`（`expect(after?.defaultValue).toBe(0.3)`、`expect(before?.defaultValue).toBe(0.3)`）+ **C1 内** `tests/routes/settings.test.ts:142-144`（HTTP 契约面 `rowA`/`rowB` 同断言）。
+- **`counts` 的互斥分区语义（DEV-2 · 与实现 `src/routes/settings.ts:116-137` 逐字对齐）**：`counts = { declared, live, restart, undeclared }`，四桶**互斥**（任一行只进一桶），恒有两条不变量：
+  1. **已声明行内部划分**：`declared === live + restart`（`live`/`restart` 的过滤器均含 `row.declared &&` ⇒ 未声明行**不进**这两个桶）；
+  2. **未声明行单独一桶**：`counts.undeclared === undeclaredTotal`（同源镜像）；且 `counts.declared + counts.undeclared === keys.length`。
+  - 示例期望（§7.1 的 JSON，与 §5.1 的 9 条声明一致）：`declared=9`、`live=4`、`restart=5`、`undeclared=1`、`undeclaredTotal=1`、`keys.length=10`（9 已声明 + 1 未声明，`includeUndeclared` 缺省 `1`）。**修后实测值 = `{declared:9, live:4, restart:5, undeclared:1}`（C 复核）**，修前 `restart:6`。**断言覆盖位置（实测 file:line）：C3 内** `tests/routes/settings.test.ts:193-199`（`declared/live/restart` 三值 + `counts.undeclared === undeclaredTotal` + `live+restart === declared` 两条不变量同点断言）。
+  - **版本注记**：本节曾一度把 `counts` 收窄为三键（`{declared, live, restart}`）；**读 C 的实现（`f80992a9`）后按其口径定稿为四键**——`counts.undeclared` 是 `undeclaredTotal` 的**镜像**字段，不是"把未声明行计入 declared/live/restart"。判据只认上述两条不变量。
 - `pending != null` **仅当**该键 `applies==='restart'` 且磁盘现值 `deepEqualJson` 与 `effective` 不等。
 - **判据 D-BOOT-1（硬判别式，出处 = 本节）**：**同一 `bootId` 下，任一 `applies:'restart'` 键的 `effective` 发生变化 ⇒ 必红（半生效）**。
   - 判据的机器形态：对同一 `bootId` 的两次采样做 `deepEqualJson(row.effective_1, row.effective_2)`，不相等即违反。
@@ -579,7 +585,8 @@ log.warn({ count, exceptions }, 'SETTINGS_EXCEPTION_ACTIVE 既存例外（不按
 ### 7.2 `GET /api/config/dump?orgId=…` 扩列（既有，向后兼容；形状按 R6/R7 定死）
 
 - 保留既有全部字段：`ok` / `orgId` / `config` / `provenance` / `degraded` / `reason?` / `audit`（`src/routes/config.ts:35-43` 实测）。
-- **新增一个顶层字段 `settings`（R6/R7 定死形状）**：
+- **新增一个顶层字段 `settings`（R6/R7 定死形状；**DEV-4** 字段名按实现改齐）**：
+  > **命名以实现为准（DEV-4）**：本字段名为 **`settings`**（与 task-2 v2 裁决表一致）。本规格早期版本曾用过另一个名字——**该名已作废，本规格不再以它指称该字段**；全文仅剩**对照提及**（本注 + §12.2 DEV-4 登记行），**实现面与字段名均无该名残留**（自查：`grep -c settingsApplies src/routes/config.ts` = **0**）。
 
 ```json
 {
@@ -618,6 +625,8 @@ log.warn({ count, exceptions }, 'SETTINGS_EXCEPTION_ACTIVE 既存例外（不按
 | `undeclaredTotal` | 响应顶层 | 未声明项总数（截断前） |
 | `undeclaredScope` | 响应顶层 | **恒为字面量 `"settings.yaml"`** —— 把 R8 的枚举范围边界同时暴露在 HTTP 面（机器可核，不靠读日志） |
 | `truncated` | 响应顶层 | `undeclared.length < undeclaredTotal` 时为 `true`（阈值 = `limit`，默认 100） |
+| `counts` | 响应顶层 | **四桶互斥分区（DEV-2，与实现 `src/routes/settings.ts:132-137` 对齐）**：`{declared, live, restart, undeclared}`；不变量 ①`declared === live + restart`（`live`/`restart` 的过滤器含 `row.declared &&`）；②`counts.undeclared === undeclaredTotal` 且 `declared + undeclared === keys.length` |
+| `keys[].defaultValue` | 每键行 | **live 与 restart 同源 = 声明面默认值**（DEV-1）；**live 键行不得为 `null`** |
 | `keys[].declared` | 每键行 | 未声明项并入时为 `false`，且 `applies` **必为 `restart`** |
 | `/api/config/dump.settings` | 该面顶层 | `{keys, undeclared, degraded, scope:"process"}`；catch 分支同样增列（§7.2） |
 | 启动日志 | stdout/stderr | §六 的**三行** `log.warn`（未声明清单 + 范围边界 + 例外节），**启动期各一次** |
@@ -632,7 +641,7 @@ log.warn({ count, exceptions }, 'SETTINGS_EXCEPTION_ACTIVE 既存例外（不按
 
 | 套件（文件名逐字） | 承载断言 | 对应变异体（注入点） | 红证判据 |
 |---|---|---|---|
-| `tests/config/settings-applies.test.ts`（**LIVE 套件**，内容含串 `settings-applies-live`） | **A1** live 键改盘后同一 runtime 的 `effective` 立即新值；**A2** `sourceLayer` 归属正确（home/workspace/declaration 三态）；**A3** 未声明键 ⇒ `applies:'restart'` + `declared:false` + 进 `undeclared[]` | **M2**（从声明常量删一条键）⇒ A3 必红；**M1**（applies 判定分支把 restart 当 live）⇒ **本套件 A2/A3 不红**（设计如此），由 RESTART 套件红 | 对应 `expect(...)` 失败 |
+| `tests/config/settings-applies.test.ts`（**LIVE 套件**，内容含串 `settings-applies-live`） | **A1** live 键改盘后同一 runtime 的 `effective` 立即新值（**并含 DEV-1 断言**：`:77-79` live 键 `defaultValue === 0.3`）；**A2** `sourceLayer` 归属正确（home/workspace/declaration 三态）；**A3** 未声明键 ⇒ `applies:'restart'` + `declared:false` + 进 `undeclared[]`；**A4**（**DEV-1**）**live 键行的 `defaultValue` = 声明面默认值**（与 restart 同源；**不得为 `null`**）—— 本卡由 **A1 内断言承载**（C 落在既有用例内，见 `:77-79`） | **M2**（从声明常量删一条键）⇒ **本套件必红**（V 实测落到 **A1**，见 §8.3）；**M1**（applies 判定分支把 restart 当 live）⇒ **本套件 A2/A3 不红**（设计如此），由 RESTART 套件红 | 对应 `expect(...)` 失败 |
 | `tests/config/settings-source.test.ts`（**RESTART 套件**，内容含串 `settings-applies-restart`） | **B1** 同一 boot：改盘后 `effective` = 旧值 **且** `pending` = 新值 **且** `applies:'restart'`；**B2** 同 boot 内多次读取 `effective` 恒等（冻结稳定，判据 **D-BOOT-1**）；**B3** 新 boot（`initSettingsBootFence({ force: true })` 二次调用，公开入口；**`force` 不可省**——不传则幂等返回同一实例）：`bootId` 变化 **且** `effective` = 新值 | **M1**（restart 当 live）⇒ B1 必红（`effective` 变新值 = 半生效） | 同上 |
 | `tests/routes/settings.test.ts`（**入口/E2E 套件**，内容**不含**两串） | **C1 两消费者同一新值**：真实 HTTP 下，`/api/settings/effective` 与 `/api/config/dump` 对同一 key 的 `effective` 满足 `deepEqualJson` 相等（live 键改盘后为**新值**且两值相等）；**C2** `400` 校验语义（4 种非法 query）；**C3** 未声明清单出现在 HTTP 响应（`undeclared[]` + `undeclaredScope` + `truncated`）；**C4** 非法声明 ⇒ `200 + degraded:true + code:'SETTINGS_SPEC_INVALID'` 且涉事键不在 `keys[]` | **M3**（`src/routes/config.ts` 消费者侧注入模块级缓存）⇒ **C1 必红**（两消费者值不等）；**M4**（负控：yaml 带 `applies:'sometimes'`）⇒ C4 必红 | 同上 |
 
@@ -658,7 +667,7 @@ log.warn({ count, exceptions }, 'SETTINGS_EXCEPTION_ACTIVE 既存例外（不按
 | 变异 | 改哪里（注入点） | 期望哪个套件红 | 复原判据 |
 |---|---|---|---|
 | **M1** restart 项当 live 处理 | `src/config/settings-applies.ts` 的分类判定分支，使 `restart` 键走现读 | `tests/config/settings-source.test.ts` 的 **B1 必红** | 复原后 `git diff --stat` 空 **且** `shasum -a 256 <file>` 与注入前记录值逐字相同（V 注入前后各存一次基线哈希） |
-| **M2** 删分类声明 | 从 `BUILTIN_SETTINGS_DECLARATIONS` 移除一条键（模拟"忘声明"） | `tests/config/settings-applies.test.ts` 的 **A3 必红** | 同上（哈希一致） |
+| **M2** 删分类声明 | 从 `BUILTIN_SETTINGS_DECLARATIONS` 移除一条键（模拟"忘声明"） | `tests/config/settings-applies.test.ts` 的 **A1 必红**（**DEV-3 · V 实测**：M2 下红的是 **A1**，A3 仍绿 ⇒ 规格原写 A3 属陈述漂移，已改）——**套件级要求 = LIVE 套件必须红**，具体用例名以实测为准（不得因用例名与规格不符而判"不红"） | 同上（哈希一致） |
 | **M3** 消费者绕过 accessor 自缓存 | `src/routes/config.ts` 内注入模块级缓存分支（首次读后缓存 `settings` 块） | `tests/routes/settings.test.ts` 的 **C1 必红**（两消费者值不等） | 同上 |
 | **M4** 非法配置负控 | **两个面各一条**（(b) 后入口面已消失，见 §九 F14）：① **yaml 面（夹具）** = `/tmp/d1053-bad/settings.yaml` 内含 `applies` 键（R5：值面本不得携带分类）→ 对应 §十三 **⑦-a**；② **registry 面（变异体 M4-r）** = 把内置声明表某条 `applies` 改成非法值（如 `'sometimes'`）→ 因其已私有化，**无命令入口**，判别形态 = **改值即红**（`tests/config/settings-applies.test.ts` 的启动断言红 / ⑦-a 形态转 `degraded`） | `tests/routes/settings.test.ts` 的 **C4 必红**；**且** ⑦-a 逐项成立（`degraded===true` ∧ `code==='SETTINGS_SPEC_INVALID'` ∧ `rows().length===0` ∧ 涉事键 `row(...)===null` ∧ 无默认值回落）；**且** M4-r 注入后对应套件必红；**且** ⑦-b 进程级起服**不崩死**（degraded 响应，见 §7.3） | 删除负控夹具目录 `/tmp/d1053-bad`（在 /tmp，不涉仓库）+ M4-r 复原哈希一致（§8.3 通则）；`git status --porcelain` 仅剩本卡声明写集 |
 
@@ -762,6 +771,19 @@ log.warn({ count, exceptions }, 'SETTINGS_EXCEPTION_ACTIVE 既存例外（不按
 | **零豁免声明** | **未修改 `.claude/plan.json`**，**未添加任何 deferred/wiring 豁免**；不使用 `mock\|fake\|_internal\|_deprecated` 命名绕过缝（`:665` 的跳过规则）。收缩 = 从源头消除待判定的导出，而非放宽门禁。 |
 | **代价与记账** | 负控的"直调即抛"形态不可执行 ⇒ 见 **§九 F14**（等价形态替代 + 判别力论证）；并新增 **F15** 防"为测试重新导出"的隐式回归。 |
 | **不可逆性** | 若实现期发现某私有符号确需跨文件消费 ⇒ **不得自行导出**，须**回报 CTO 改裁决**（本规格不预留后门）。 |
+
+### 12.2 偏差登记（V 独立自验登记 · DEV-1 ~ DEV-4）
+
+> 来源：成员 V 的独立自验（读规格 + 实测实现）。**P2 两条 = 实现面缺陷，C 在本 PR 内修；P3 两条 = 本规格的陈述漂移，本次一并改齐。** 登记后规格与实现同口径。
+
+| 编号 | 级别 | 偏差事实（V 实测） | 处置 | 落点 / 状态 |
+|---|---|---|---|---|
+| **DEV-1** | **P2**（实现面）· 状态 **closed（本 PR 内修，C `f80992a9`）** | live 键行的 `defaultValue` 曾返回 `null`（`frozen` 快照只填 restart 类）⇒ live 行缺声明面默认值 | **规格明确：live 与 restart 的 `defaultValue` 同源 = `SettingsKeySpec.defaultValue`，live 行不得为 `null`**；**修后实测 = `0.3`**。**断言覆盖位置（实测）**：`tests/config/settings-applies.test.ts:77-79`（A1 内）+ `tests/routes/settings.test.ts:142-144`（C1 内，HTTP 面 rowA/rowB） | §7.1 断言语义首条（含修后实测值 + 覆盖位置）｜§7.4 `keys[].defaultValue` 行｜§8.1 LIVE 行 **A4**（注明由 A1 内断言承载）—— **C 已修并带覆盖** ✅ |
+| **DEV-2** | **P2**（实现面）· 状态 **closed（本 PR 内修，C `f80992a9`）** | `counts` 曾把未声明行计入 `restart`（过滤器只有 `applies==='restart'`，缺 `row.declared`）⇒ 与 `undeclared` 口径重叠，无法自洽对账；**修前实测 `restart:6`** | **定稿口径 = 四桶互斥分区**（队长裁决：**维持实现现状，不删 `counts.undeclared` 镜像键**）：`{declared, live, restart, undeclared}`；不变量 ①`declared === live + restart`（后两者过滤器含 `row.declared &&`，实测 `src/routes/settings.ts:117-118`）；②`counts.undeclared === undeclaredTotal` 且 `declared + undeclared === keys.length`。**修后实测 = `{9, 4, 5, 1}`**（期望数字与 §5.1 的 9 条声明一致，`keys.length=10`）；**断言覆盖位置（实测）** = `tests/routes/settings.test.ts:193-199`（**C3 内**：三值 + 两条不变量同点断言） | §7.1 示例四键 + 断言语义条（含修后实测值 + 覆盖位置）｜§7.4 `counts` 行 —— **C 已修并带覆盖** ✅｜⚠️ `f80992a9` subject 写「counts.restart **计入**未声明」，语义应为「修：**曾**计入」⇒ **以代码为准**（队长已记入 PR 正文 + 收尾遗留清单） |
+| **DEV-3** | **P3**（规格陈述漂移） | §8.3 原写「M2 ⇒ **A3** 必红」；V 实测 **M2 下红的是 A1，A3 仍绿** | §8.3 M2 行与 §8.1 LIVE 行均改为 **A1 必红**，并注明「**套件级要求 = LIVE 套件必须红**，具体用例名以实测为准（不得因用例名与规格不符而判"不红"）」 | §8.3 **:661**｜§8.1 **:635** —— 本规格已改 ✅ |
+| **DEV-4** | **P3**（规格陈述漂移） | §7.2 曾把第二消费者字段命名为 `settingsApplies`，实现为 **`settings`**（与 task-2 v2 裁决表一致） | 全文按实现改齐为 **`settings`**；并显式登记「旧名为作废名」。**自查口径（避免自指误报）**：以**实现面**为准 —— `grep -c settingsApplies src/routes/config.ts` = **0**、`grep -rc settingsApplies src/` 无命中文件；doc 内仅保留**对照提及**（本登记行 + §7.2 作废说明共 3 行，**不是**命名残留） | §7.2 **:587**（含作废说明）｜实现面自查 **0** ✅ |
+
+> **两条 P2 的验证形态**：均属"实现被规格纠正"⇒ 修复后由 **V 复跑其三套件独立重跑证据**复核（不新增夹具）；本规格不因 P2 而放宽任何判据。**P2 未修完不得合并**（与 K3 终审同闸）。
 
 **上限**：成员 ≤4（队长 + ≤2 编码 + 1 独立自验）；WIP=1（本卡未过 CTO 收件闸不放行下一张代码卡）；重型验证同时 ≤1。
 
@@ -903,6 +925,9 @@ git status --porcelain   # 期望仅本卡声明写集
 | 导出面 (b) 定稿：settings-applies 恰 3 个 function 导出 | grep -c "export function" src/config/settings-applies.ts | 命中 3 |
 | 工厂已删：routes/settings 无 function 导出 | grep -c "export function" src/routes/settings.ts | 命中 0 |
 | 点分 key 定案与实现同向（KEY_PATTERN 允许点分多段） | grep -n "KEY_PATTERN" src/config/settings-applies.ts | 命中 ≥1 |
+| 第二消费者字段名 = settings（DEV-4；settingsApplies 为作废名） | grep -c "settingsApplies" src/routes/config.ts | 命中 0 |
+| DEV-1 有断言覆盖（A1 内 + C1 内） | grep -c "defaultValue).toBe" tests/config/settings-applies.test.ts tests/routes/settings.test.ts | 两文件各 2（共 4） |
+| DEV-2 有断言覆盖（C3 内 counts 不变量） | grep -c "counts?.restart).toBe" tests/routes/settings.test.ts | 命中 1 |
 | 分类表 9 条声明均带实测消费者锚点 | grep -n "src/l3/synova-diagnosis-engine-impl.ts:52" docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D1053-live-restart-settings-20260928.md | 命中 ≥1 |
 | DSH 现验锚点可核（M3 用现验命令） | git -C /Users/wane/src/deepseek-harness-017 grep -n applies packages/settings/settings/lib/index.js | 命中硬编码 live |
 | 既存例外 E1 锚点可核 | grep -n 热重载 src/config.ts | 命中 76 |
