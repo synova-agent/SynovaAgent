@@ -1,0 +1,207 @@
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-d1051-verify
+
+ ❯ tests/agent/report-detailed.test.ts (15 tests | 5 failed) 13ms
+     × ① 五章标题字面齐备 + 头行 + 尾行报告 ID 5ms
+     ✓ ② 「详细」的判别点：根因全量输出（3 条全出）+ 置信度降序 0ms
+     ✓ ③ 专家完整推理：全部 findings 输出（含同专家多 finding） 0ms
+     × ④ 行动建议全量 + 数据时点逐字透传（不换算、不解析） 1ms
+     × ⑤ 条目行带可解析溯源指针 [src:report:<reportId>#…]（五类片段齐备） 1ms
+     × ⑥ 空 rootCauses / 空 expertReports / 空 recommendations → 各章 [degraded] 且不抛（J6） 1ms
+     ✓ ⑦ 空 summary / 空 generatedAt → 结论章与时点章各自 [degraded] 0ms
+     ✓ ⑧ 注册表缺 detailed_report → 落 fallback 并含降级标记（J1 判别性夹具） 1ms
+     ✓ ⑨ registry.render 抛错 → 返回含降级标记的字符串，永不抛出（DS7） 0ms
+     ✓ ⑩ 非完整形状经 isRenderableDiagnosisReport 拒绝（不伪造章节的准入面） 0ms
+     ✓ ⑪ 确定性：同输入两次渲染字节相等（禁渲染时刻——DS7） 0ms
+     ✓ ⑫ reportId 空 → 指针省略（不伪造），尾行显示 (缺省) 0ms
+     ✓ ⑬ 分发器 renderReportView：detailed → 详版；one_pager → 与 renderOnePager(ceo) 同源同构 1ms
+     ✓ ⑭ 装配轴映射表：one_pager→ceo / detailed→expert（两轴正交的唯一转换点） 0ms
+     × ⑮ 单元素/恰临界：1 根因 1 专家 1 建议不触发任何 [degraded] 0ms
+
+ Test Files  1 failed (1)
+      Tests  5 failed | 10 passed (15)
+   Start at  18:01:59
+   Duration  169ms (transform 51ms, setup 0ms, import 70ms, tests 13ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——正常路径 > ① 五章标题字面齐备 + 头行 + 尾行报告 ID
+AssertionError: expected '## d1051-org 诊断详细报告\n\n### 结论\n- 增长健康…' to contain '### 行动建议'
+
+- Expected
++ Received
+
+- ### 行动建议
++ ## d1051-org 诊断详细报告
++
++ ### 结论
++ - 增长健康度中等，现金流为关键约束。[src:report:rpt-d1051-001#summary]
++
++ ### 根因
++ - 现金流跑道不足 6 个月（维度 finance，置信度 0.9）[src:report:rpt-d1051-001#rootcause:0]
++ - 关键岗位继任空白（维度 talent，置信度 0.72）[src:report:rpt-d1051-001#rootcause:1]
++ - 客户集中度过高（维度 customer，置信度 0.55）[src:report:rpt-d1051-001#rootcause:2]
++
++ ### 专家完整推理
++ - fundamental-efficiency（置信度 0.8）：应收账期过长[src:report:rpt-d1051-001#expert:0]
++ - customer-growth（置信度 0.65）：客户集中度偏高；复购率下滑[src:report:rpt-d1051-001#expert:1]
++
++ ### 数据时点
++ - 报告数据时点：2026-09-28T00:00:00.000Z
++ - 本行为既有字段透传，不主张 3-9 时间窗口径（周/月聚合视图归 D828）。
++
++ 📎 报告 ID: rpt-d1051-001
+
+ ❯ tests/agent/report-detailed.test.ts:71:18
+     69|
+     70|     for (const title of CHAPTER_TITLES) {
+     71|       expect(md).toContain(title);
+       |                  ^
+     72|     }
+     73|     expect(md).toContain('## d1051-org 诊断详细报告');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——正常路径 > ④ 行动建议全量 + 数据时点逐字透传（不换算、不解析）
+AssertionError: expected '## d1051-org 诊断详细报告\n\n### 结论\n- 增长健康…' to contain '启动应急融资'
+
+- Expected
++ Received
+
+- 启动应急融资
++ ## d1051-org 诊断详细报告
++
++ ### 结论
++ - 增长健康度中等，现金流为关键约束。[src:report:rpt-d1051-001#summary]
++
++ ### 根因
++ - 现金流跑道不足 6 个月（维度 finance，置信度 0.9）[src:report:rpt-d1051-001#rootcause:0]
++ - 关键岗位继任空白（维度 talent，置信度 0.72）[src:report:rpt-d1051-001#rootcause:1]
++ - 客户集中度过高（维度 customer，置信度 0.55）[src:report:rpt-d1051-001#rootcause:2]
++
++ ### 专家完整推理
++ - fundamental-efficiency（置信度 0.8）：应收账期过长[src:report:rpt-d1051-001#expert:0]
++ - customer-growth（置信度 0.65）：客户集中度偏高；复购率下滑[src:report:rpt-d1051-001#expert:1]
++
++ ### 数据时点
++ - 报告数据时点：2026-09-28T00:00:00.000Z
++ - 本行为既有字段透传，不主张 3-9 时间窗口径（周/月聚合视图归 D828）。
++
++ 📎 报告 ID: rpt-d1051-001
+
+ ❯ tests/agent/report-detailed.test.ts:105:16
+    103|   it('④ 行动建议全量 + 数据时点逐字透传（不换算、不解析）', () => {
+    104|     const md = renderDetailedReport(makeReport());
+    105|     expect(md).toContain('启动应急融资');
+       |                ^
+    106|     expect(md).toContain('建立关键岗位继任计划');
+    107|     expect(md).toContain('优先级 critical');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——正常路径 > ⑤ 条目行带可解析溯源指针 [src:report:<reportId>#…]（五类片段齐备）
+AssertionError: expected '## d1051-org 诊断详细报告\n\n### 结论\n- 增长健康…' to contain '[src:report:rpt-d1051-001#recommendat…'
+
+- Expected
++ Received
+
+- [src:report:rpt-d1051-001#recommendation:0]
++ ## d1051-org 诊断详细报告
++
++ ### 结论
++ - 增长健康度中等，现金流为关键约束。[src:report:rpt-d1051-001#summary]
++
++ ### 根因
++ - 现金流跑道不足 6 个月（维度 finance，置信度 0.9）[src:report:rpt-d1051-001#rootcause:0]
++ - 关键岗位继任空白（维度 talent，置信度 0.72）[src:report:rpt-d1051-001#rootcause:1]
++ - 客户集中度过高（维度 customer，置信度 0.55）[src:report:rpt-d1051-001#rootcause:2]
++
++ ### 专家完整推理
++ - fundamental-efficiency（置信度 0.8）：应收账期过长[src:report:rpt-d1051-001#expert:0]
++ - customer-growth（置信度 0.65）：客户集中度偏高；复购率下滑[src:report:rpt-d1051-001#expert:1]
++
++ ### 数据时点
++ - 报告数据时点：2026-09-28T00:00:00.000Z
++ - 本行为既有字段透传，不主张 3-9 时间窗口径（周/月聚合视图归 D828）。
++
++ 📎 报告 ID: rpt-d1051-001
+
+ ❯ tests/agent/report-detailed.test.ts:118:16
+    116|     expect(md).toContain('[src:report:rpt-d1051-001#rootcause:0]');
+    117|     expect(md).toContain('[src:report:rpt-d1051-001#expert:0]');
+    118|     expect(md).toContain('[src:report:rpt-d1051-001#recommendation:0]'…
+       |                ^
+    119|     expect(md).toContain('[src:report:rpt-d1051-001#recommendation:1]'…
+    120|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——降级路径 > ⑥ 空 rootCauses / 空 expertReports / 空 recommendations → 各章 [degraded] 且不抛（J6）
+AssertionError: expected '## d1051-org 诊断详细报告\n\n### 结论\n- 增长健康…' to contain '### 行动建议'
+
+- Expected
++ Received
+
+- ### 行动建议
++ ## d1051-org 诊断详细报告
++
++ ### 结论
++ - 增长健康度中等，现金流为关键约束。[src:report:rpt-d1051-001#summary]
++
++ ### 根因
++ - [degraded] 无根因记录
++
++ ### 专家完整推理
++ - [degraded] 无专家报告记录
++
++ ### 数据时点
++ - 报告数据时点：2026-09-28T00:00:00.000Z
++ - 本行为既有字段透传，不主张 3-9 时间窗口径（周/月聚合视图归 D828）。
++
++ 📎 报告 ID: rpt-d1051-001
+
+ ❯ tests/agent/report-detailed.test.ts:133:18
+    131|     // 五章仍齐备（降级不省略章节结构）
+    132|     for (const title of CHAPTER_TITLES) {
+    133|       expect(md).toContain(title);
+       |                  ^
+    134|     }
+    135|     expect(md).toContain('[degraded] 无根因记录');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——边界条件 > ⑮ 单元素/恰临界：1 根因 1 专家 1 建议不触发任何 [degraded]
+AssertionError: expected '## d1051-org 诊断详细报告\n\n### 结论\n- 增长健康…' to contain '唯一建议'
+
+- Expected
++ Received
+
+- 唯一建议
++ ## d1051-org 诊断详细报告
++
++ ### 结论
++ - 增长健康度中等，现金流为关键约束。[src:report:rpt-d1051-001#summary]
++
++ ### 根因
++ - 唯一根因（维度 finance，置信度 0.5）[src:report:rpt-d1051-001#rootcause:0]
++
++ ### 专家完整推理
++ - solo（置信度 0.5）：唯一发现[src:report:rpt-d1051-001#expert:0]
++
++ ### 数据时点
++ - 报告数据时点：2026-09-28T00:00:00.000Z
++ - 本行为既有字段透传，不主张 3-9 时间窗口径（周/月聚合视图归 D828）。
++
++ 📎 报告 ID: rpt-d1051-001
+
+ ❯ tests/agent/report-detailed.test.ts:242:16
+    240|     expect(md).toContain('唯一根因');
+    241|     expect(md).toContain('唯一发现');
+    242|     expect(md).toContain('唯一建议');
+       |                ^
+    243|   });
+    244| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+

@@ -1,0 +1,126 @@
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-d1051-verify
+
+ ❯ tests/routes/diagnosis-report-depth.test.ts (7 tests | 4 failed) 305ms
+     ✓ ⓪ Q5 等价性四条：注入面与生产同形（可判而非声明） 1ms
+     × ① 归档产物可读：无 depth 的 markdown → 200 text/markdown（现状语义不变） 71ms
+     × ② 零回归判别（J2）：不带 depth 的产物 === `?depth=one_pager` 的产物（字节相等） 15ms
+     × ③ 3-2 详细报告：`?depth=detailed` → 200 + 五章齐备 + 头回执 detailed 7ms
+     × ④ 非法 depth → 200 + X-Report-Depth-Degraded: UNKNOWN_DEPTH + 落回一页纸（DS4 不静默） 4ms
+     ✓ ⑤ JSON 分支不变：`?format=json`（含任何 depth）不加深度头、不新增字段 8ms
+     ✓ ⑥ 未知 reportId → 404 诚实语义不变 1ms
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 3 passed (7)
+   Start at  18:01:56
+   Duration  472ms (transform 229ms, setup 0ms, import 90ms, tests 305ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/routes/diagnosis-report-depth.test.ts > D1051 W4: 报告呈现深度端点（真实路由 + 真实 HTTP） > ① 归档产物可读：无 depth 的 markdown → 200 text/markdown（现状语义不变）
+AssertionError: expected 'detailed' to be 'one_pager' // Object.is equality
+
+Expected: "one_pager"
+Received: "detailed"
+
+ ❯ tests/routes/diagnosis-report-depth.test.ts:163:52
+    161|     expect(res.status).toBe(200);
+    162|     expect(res.headers.get('content-type')).toContain('text/markdown');
+    163|     expect(res.headers.get('x-report-view-depth')).toBe('one_pager');
+       |                                                    ^
+    164|     const md = await res.text();
+    165|     // 一页纸四槽位结构（3-1 现状）
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  tests/routes/diagnosis-report-depth.test.ts > D1051 W4: 报告呈现深度端点（真实路由 + 真实 HTTP） > ② 零回归判别（J2）：不带 depth 的产物 === `?depth=one_pager` 的产物（字节相等）
+AssertionError: expected '## ⚠️ d1051-org: 1 个高风险项需立即关注\n\n### …' to be '## d1051-org 诊断详细报告\n\n### 结论\n- 增长健康…' // Object.is equality
+
+- Expected
++ Received
+
+- ## d1051-org 诊断详细报告
+-
+- ### 结论
+- - 增长健康度中等，现金流为关键约束。[src:report:d1051-fixed-report-001#summary]
+-
+- ### 根因
+- - 现金流跑道不足 6 个月（维度 finance，置信度 0.9）[src:report:d1051-fixed-report-001#rootcause:0]
+- - 客户集中度过高（维度 customer，置信度 0.55）[src:report:d1051-fixed-report-001#rootcause:1]
+-
+- ### 专家完整推理
+- - fundamental-efficiency（置信度 0.8）：应收账期过长[src:report:d1051-fixed-report-001#expert:0]
+-
+- ### 行动建议
+- - 启动应急融资（优先级 critical｜fundamental-efficiency）[src:report:d1051-fixed-report-001#recommendation:0]
+-
+- ### 数据时点
+- - 报告数据时点：2026-09-28T00:00:00.000Z
+- - 本行为既有字段透传，不主张 3-9 时间窗口径（周/月聚合视图归 D828）。
+-
+- 📎 报告 ID: d1051-fixed-report-001
++ ## ⚠️ d1051-org: 1 个高风险项需立即关注
++
++ ### 结论
++ - 核心瓶颈: 现金流跑道不足 6 个月。建议: 启动应急融资 [src:report:d1051-fixed-report-001#summary]
++
++ **Top 3:**
++ - 🔴 现金流跑道不足 6 个月
++ - 🔴 客户集中度过高
++ - 💡 核心瓶颈: 现金流跑道不足 6 个月。建议: 启动应急融资
++
++ ### 关键证据
++ - [degraded] 未提供关键证据（inputs 缺席）
++
++ ### 各维度循环结论
++ - 门店复制循环：未建立基线（无快照数据）[degraded] [src:cycle:store-replication@none]
++ - ARR增长循环：未建立基线（无快照数据）[degraded] [src:cycle:arr-growth@none]
++ - 现金流循环：未建立基线（无快照数据）[degraded] [src:cycle:cash-cycle@none]
++ - 客户循环：未建立基线（无快照数据）[degraded] [src:cycle:customer-cycle@none]
++ - 产品循环：未建立基线（无快照数据）[degraded] [src:cycle:product-cycle@none]
++ - 人才循环：未建立基线（无快照数据）[degraded] [src:cycle:talent-cycle@none]
++
++ ### 行动建议
++ - 启动应急融资（优先级 critical｜fundamental-efficiency）[src:report:d1051-fixed-report-001#recommendation:0]
++
++ 📎 完整报告: 0 目标 · 2 告警
+
+ ❯ tests/routes/diagnosis-report-depth.test.ts:179:15
+    177|     const b = await explicit.text();
+    178|     // 若「默认不是 one_pager」（如误改走 detailed），本断言必红 ⇒ 判别性夹具
+    179|     expect(b).toBe(a);
+       |               ^
+    180|     expect(explicit.headers.get('x-report-view-depth')).toBe('one_page…
+    181|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  tests/routes/diagnosis-report-depth.test.ts > D1051 W4: 报告呈现深度端点（真实路由 + 真实 HTTP） > ③ 3-2 详细报告：`?depth=detailed` → 200 + 五章齐备 + 头回执 detailed
+AssertionError: expected '## d1051-org 诊断详细报告\n\n### 结论\n- 增长健康…' not to be '## d1051-org 诊断详细报告\n\n### 结论\n- 增长健康…' // Object.is equality
+ ❯ tests/routes/diagnosis-report-depth.test.ts:200:20
+    198|     // 详细报告 ≠ 一页纸（产物不同源）
+    199|     const onePager = await (await fetch(`${baseUrl}/api/diagnosis/cons…
+    200|     expect(md).not.toBe(onePager);
+       |                    ^
+    201|   });
+    202|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  tests/routes/diagnosis-report-depth.test.ts > D1051 W4: 报告呈现深度端点（真实路由 + 真实 HTTP） > ④ 非法 depth → 200 + X-Report-Depth-Degraded: UNKNOWN_DEPTH + 落回一页纸（DS4 不静默）
+AssertionError: expected 'detailed' to be 'one_pager' // Object.is equality
+
+Expected: "one_pager"
+Received: "detailed"
+
+ ❯ tests/routes/diagnosis-report-depth.test.ts:208:52
+    206|     // 显式降级信号（不静默）
+    207|     expect(res.headers.get('x-report-depth-degraded')).toBe('UNKNOWN_D…
+    208|     expect(res.headers.get('x-report-view-depth')).toBe('one_pager');
+       |                                                    ^
+    209|     const md = await res.text();
+    210|     // 落回一页纸（非详版）
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+

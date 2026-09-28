@@ -1,0 +1,10 @@
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-d1051-verify
+
+ ✓ tests/routes/diagnosis-report-depth.test.ts (7 tests) 359ms
+
+ Test Files  1 passed (1)
+      Tests  7 passed (7)
+   Start at  18:01:53
+   Duration  575ms (transform 259ms, setup 0ms, import 138ms, tests 359ms, environment 0ms)
+

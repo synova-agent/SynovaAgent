@@ -1,0 +1,240 @@
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-d1051-verify
+
+ ❯ tests/agent/report-depth.test.ts (14 tests | 5 failed) 7ms
+     ✓ ① 取值域恰 2 值 {one_pager, detailed}，默认 = one_pager 1ms
+     ✓ ② 呈现轴 → 一页纸深度映射两值全备（one_pager→ceo，detailed→flywheel） 0ms
+     ✓ ③ normalizeReportViewDepth：两合法值各自原样返回（不误报非法） 0ms
+     × ④ 词表两方向全部命中正确方向（detailed 9 词 / one_pager 8 词，逐词断言） 3ms
+     × ⑤ 句子内嵌词也命中（includes 语义，非全等匹配） 0ms
+     ✓ ⑥ 非法值 → undefined（装配轴词 expert/raw/ceo/flywheel 一律不通用——DS1） 0ms
+     ✓ ⑦ 非字符串值 → undefined（不抛、不静默强转） 0ms
+     ✓ ⑧ 判别降级：非字符串 / 空串 → matched:false + 默认值（调用方零行为变化） 0ms
+     ✓ ⑨ 不含任何词的长句 → matched:false（不猜、不切换） 0ms
+     × ⑩ 最长匹配优先：`讲细一点` 命中 detailed 且 keyword 恰为 `讲细一点`（J4） 0ms
+     × ⑪ 最长匹配优先：`再详细一点`（5 字，全表最长）不被 `详细`（2 字）截断 0ms
+     × ⑫ 同长词码点字典序稳定：跨方向同长命中时判定唯一且可预期 0ms
+     ✓ ⑬ 确定性：同输入两次调用结果深等（无时刻/无随机——DS8） 0ms
+     ✓ ⑭ 章节标题单源恰五章且顺序固定（W3 装配 + L3 数据双面共用） 0ms
+ ❯ tests/routes/conversations-report-view.test.ts (6 tests | 5 failed) 1092ms
+     × ① 「讲细一点」→ report_view 帧，depth=detailed，markdown 含详版章节（3-3 正向） 134ms
+     × ② 「说人话」→ report_view 帧，depth=one_pager，markdown 为四槽位一页纸（3-3 反向） 95ms
+     ✓ ③ 零回归判别（J5）：不含深度词 → 无 report_view 帧 98ms
+     × ④ 不伪造（DS12）：无可用报告 → degraded:true + reason=NO_REPORT + markdown=null 103ms
+     × ⑤ 同源同构（DS11）：帧内 markdown ≡ HTTP `?depth=detailed` 产物 184ms
+     × ⑥ 幂等：同一会话连发两次「讲细一点」→ 两帧 markdown 字节相等（无时刻污染） 142ms
+
+ Test Files  2 failed (2)
+      Tests  10 failed | 10 passed (20)
+   Start at  18:02:01
+   Duration  1.28s (transform 403ms, setup 0ms, import 140ms, tests 1.10s, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 10 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——正常路径 > ④ 词表两方向全部命中正确方向（detailed 9 词 / one_pager 8 词，逐词断言）
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/agent/report-depth.test.ts:57:25
+     55|     for (const word of DETAILED_WORDS) {
+     56|       const r = resolveViewDepthFromUtterance(word);
+     57|       expect(r.matched).toBe(true);
+       |                         ^
+     58|       expect(r.depth).toBe('detailed');
+     59|       if (r.matched) expect(r.keyword).toBe(word);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/10]⎯
+
+ FAIL  tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——正常路径 > ⑤ 句子内嵌词也命中（includes 语义，非全等匹配）
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/agent/report-depth.test.ts:71:23
+     69|   it('⑤ 句子内嵌词也命中（includes 语义，非全等匹配）', () => {
+     70|     const r = resolveViewDepthFromUtterance('这个报告我看不太懂，能不能讲细一点？');
+     71|     expect(r.matched).toBe(true);
+       |                       ^
+     72|     expect(r.depth).toBe('detailed');
+     73|     if (r.matched) expect(r.keyword).toBe('讲细一点');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/10]⎯
+
+ FAIL  tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——边界条件 > ⑩ 最长匹配优先：`讲细一点` 命中 detailed 且 keyword 恰为 `讲细一点`（J4）
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/agent/report-depth.test.ts:127:23
+    125|   it('⑩ 最长匹配优先：`讲细一点` 命中 detailed 且 keyword 恰为 `讲细一点`（J4）', () => {
+    126|     const r = resolveViewDepthFromUtterance('讲细一点');
+    127|     expect(r.matched).toBe(true);
+       |                       ^
+    128|     expect(r.depth).toBe('detailed');
+    129|     // 若词表未按长度降序排，`细一点` 会先命中 → keyword 变成 `细一点` ⇒ 本断言报红
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/10]⎯
+
+ FAIL  tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——边界条件 > ⑪ 最长匹配优先：`再详细一点`（5 字，全表最长）不被 `详细`（2 字）截断
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/agent/report-depth.test.ts:135:23
+    133|   it('⑪ 最长匹配优先：`再详细一点`（5 字，全表最长）不被 `详细`（2 字）截断', () => {
+    134|     const r = resolveViewDepthFromUtterance('再详细一点');
+    135|     expect(r.matched).toBe(true);
+       |                       ^
+    136|     if (r.matched) expect(r.keyword).toBe('再详细一点');
+    137|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/10]⎯
+
+ FAIL  tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——边界条件 > ⑫ 同长词码点字典序稳定：跨方向同长命中时判定唯一且可预期
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/agent/report-depth.test.ts:142:23
+    140|     // 2 字组跨方向：码点 全(U+5168) < 概(U+6982) ⇒ `全量` 先命中 → detailed
+    141|     const a = resolveViewDepthFromUtterance('全量 概览');
+    142|     expect(a.matched).toBe(true);
+       |                       ^
+    143|     expect(a.depth).toBe('detailed');
+    144|     if (a.matched) expect(a.keyword).toBe('全量');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/10]⎯
+
+ FAIL  tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ① 「讲细一点」→ report_view 帧，depth=detailed，markdown 含详版章节（3-3 正向）
+AssertionError: expected undefined to be truthy
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ❯ tests/routes/conversations-report-view.test.ts:183:18
+    181|
+    182|     const view = frames.find(f => f.type === 'report_view');
+    183|     expect(view).toBeTruthy();
+       |                  ^
+    184|     expect(view?.data.depth).toBe('detailed');
+    185|     expect(view?.data.sessionId).toBe(sessionId);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/10]⎯
+
+ FAIL  tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ② 「说人话」→ report_view 帧，depth=one_pager，markdown 为四槽位一页纸（3-3 反向）
+AssertionError: expected undefined to be truthy
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ❯ tests/routes/conversations-report-view.test.ts:204:18
+    202|
+    203|     const view = frames.find(f => f.type === 'report_view');
+    204|     expect(view).toBeTruthy();
+       |                  ^
+    205|     expect(view?.data.depth).toBe('one_pager');
+    206|     expect(view?.data.degraded).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/10]⎯
+
+ FAIL  tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ④ 不伪造（DS12）：无可用报告 → degraded:true + reason=NO_REPORT + markdown=null
+AssertionError: expected undefined to be truthy
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ❯ tests/routes/conversations-report-view.test.ts:232:18
+    230|
+    231|     const view = frames.find(f => f.type === 'report_view');
+    232|     expect(view).toBeTruthy();
+       |                  ^
+    233|     expect(view?.data.degraded).toBe(true);
+    234|     expect(view?.data.reason).toBe('NO_REPORT');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/10]⎯
+
+ FAIL  tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ⑤ 同源同构（DS11）：帧内 markdown ≡ HTTP `?depth=detailed` 产物
+AssertionError: expected undefined to be '## d1051-org 诊断详细报告\n\n### 结论\n- 增长健康…' // Object.is equality
+
+- Expected:
+"## d1051-org 诊断详细报告
+
+### 结论
+- 增长健康度中等，现金流为关键约束。[src:report:d1051-conv-report-001#summary]
+
+### 根因
+- 现金流跑道不足 6 个月（维度 finance，置信度 0.9）[src:report:d1051-conv-report-001#rootcause:0]
+- 客户集中度过高（维度 customer，置信度 0.55）[src:report:d1051-conv-report-001#rootcause:1]
+
+### 专家完整推理
+- fundamental-efficiency（置信度 0.8）：应收账期过长[src:report:d1051-conv-report-001#expert:0]
+
+### 行动建议
+- 启动应急融资（优先级 critical｜fundamental-efficiency）[src:report:d1051-conv-report-001#recommendation:0]
+
+### 数据时点
+- 报告数据时点：2026-09-28T00:00:00.000Z
+- 本行为既有字段透传，不主张 3-9 时间窗口径（周/月聚合视图归 D828）。
+
+📎 报告 ID: d1051-conv-report-001"
+
++ Received:
+undefined
+
+ ❯ tests/routes/conversations-report-view.test.ts:254:27
+    252|
+    253|     // 两入口共用 renderReportView ⇒ 同深度产物字节相等
+    254|     expect(frameMarkdown).toBe(httpMarkdown);
+       |                           ^
+    255|   });
+    256|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/10]⎯
+
+ FAIL  tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ⑥ 幂等：同一会话连发两次「讲细一点」→ 两帧 markdown 字节相等（无时刻污染）
+AssertionError: expected 'undefined' to be 'string' // Object.is equality
+
+Expected: "string"
+Received: "undefined"
+
+ ❯ tests/routes/conversations-report-view.test.ts:261:41
+    259|     const first = (await sendMessage(sessionId, '讲细一点', ORG_WITH_REPOR…
+    260|     const second = (await sendMessage(sessionId, '讲细一点', ORG_WITH_REPO…
+    261|     expect(typeof first?.data.markdown).toBe('string');
+       |                                         ^
+    262|     expect(second?.data.markdown).toBe(first?.data.markdown);
+    263|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/10]⎯
+

@@ -1,0 +1,31 @@
+extensions/sentinels/_extinct/adaptation-velocity/aggregate.ts(1,38): error TS2307: Cannot find module '../../../src/sentinel/types' or its corresponding type declarations.
+extensions/sentinels/_extinct/adaptation-velocity/aggregate.ts(2,37): error TS2307: Cannot find module '../../../src/l4/graph-traversal' or its corresponding type declarations.
+extensions/sentinels/_extinct/adaptation-velocity/aggregate.ts(22,158): error TS7006: Parameter 'n' implicitly has an 'any' type.
+extensions/sentinels/_extinct/capital-efficiency/aggregate.ts(7,38): error TS2307: Cannot find module '../../../src/sentinel/types' or its corresponding type declarations.
+extensions/sentinels/_extinct/capital-efficiency/aggregate.ts(8,37): error TS2307: Cannot find module '../../../src/l4/graph-traversal' or its corresponding type declarations.
+extensions/sentinels/_extinct/capital-structure/aggregate.ts(4,38): error TS2307: Cannot find module '../../../src/sentinel/types' or its corresponding type declarations.
+extensions/sentinels/_extinct/capital-structure/aggregate.ts(5,37): error TS2307: Cannot find module '../../../src/l4/graph-traversal' or its corresponding type declarations.
+extensions/sentinels/_extinct/capital-turnover/aggregate.ts(1,38): error TS2307: Cannot find module '../../../src/sentinel/types' or its corresponding type declarations.
+extensions/sentinels/_extinct/capital-turnover/aggregate.ts(2,37): error TS2307: Cannot find module '../../../src/l4/graph-traversal' or its corresponding type declarations.
+extensions/sentinels/_extinct/competitive-dynamics/aggregate.ts(4,38): error TS2307: Cannot find module '../../../src/sentinel/types' or its corresponding type declarations.
+extensions/sentinels/_extinct/competitive-dynamics/aggregate.ts(5,37): error TS2307: Cannot find module '../../../src/l4/graph-traversal' or its corresponding type declarations.
+extensions/sentinels/_extinct/competitive-dynamics/aggregate.ts(28,164): error TS7006: Parameter 'n' implicitly has an 'any' type.
+extensions/sentinels/_extinct/competitive-moat-perceptual/aggregate.ts(1,38): error TS2307: Cannot find module '../../../src/sentinel/types' or its corresponding type declarations.
+extensions/sentinels/_extinct/competitive-moat-perceptual/aggregate.ts(2,37): error TS2307: Cannot find module '../../../src/l4/graph-traversal' or its corresponding type declarations.
+extensions/sentinels/_extinct/competitive-moat-structural/aggregate.ts(1,38): error TS2307: Cannot find module '../../../src/sentinel/types' or its corresponding type declarations.
+extensions/sentinels/_extinct/competitive-moat-structural/aggregate.ts(2,37): error TS2307: Cannot find module '../../../src/l4/graph-traversal' or its corresponding type declarations.
+extensions/sentinels/_extinct/competitive-moat-structural/aggregate.ts(56,47): error TS7006: Parameter 's' implicitly has an 'any' type.
+extensions/sentinels/_extinct/competitive-moat-structural/aggregate.ts(56,50): error TS7006: Parameter 'e' implicitly has an 'any' type.
+extensions/sentinels/_extinct/connector-coverage/aggregate.ts(1,38): error TS2307: Cannot find module '../../../src/sentinel/types' or its corresponding type declarations.
+extensions/sentinels/_extinct/connector-coverage/aggregate.ts(2,37): error TS2307: Cannot find module '../../../src/l4/graph-traversal' or its corresponding type declarations.
+extensions/sentinels/_extinct/market-lifecycle/aggregate.ts(4,38): error TS2307: Cannot find module '../../../src/sentinel/types' or its corresponding type declarations.
+extensions/sentinels/_extinct/market-lifecycle/aggregate.ts(5,37): error TS2307: Cannot find module '../../../src/l4/graph-traversal' or its corresponding type declarations.
+extensions/sentinels/_extinct/market-lifecycle/aggregate.ts(27,164): error TS7006: Parameter 'n' implicitly has an 'any' type.
+extensions/sentinels/_extinct/structural-change/aggregate.ts(4,38): error TS2307: Cannot find module '../../../src/sentinel/types' or its corresponding type declarations.
+extensions/sentinels/_extinct/structural-change/aggregate.ts(5,37): error TS2307: Cannot find module '../../../src/l4/graph-traversal' or its corresponding type declarations.
+src/connectors/ima.ts(143,64): error TS2345: Argument of type 'string' is not assignable to parameter of type '"strategy" | "operations" | "meetings"'.
+src/server.ts(464,20): error TS2345: Argument of type 'MainAgent' is not assignable to parameter of type 'MainAgentLike'.
+  The types returned by 'executeLoop(...)' are incompatible between these types.
+    Type 'Promise<LoopExecutionRecord>' is not assignable to type 'Promise<{ ok: boolean; error?: string | undefined; }>'.
+      Property 'ok' is missing in type 'LoopExecutionRecord' but required in type '{ ok: boolean; error?: string | undefined; }'.
+src/server.ts(465,22): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'GraphBridgeLike'.
