@@ -386,6 +386,30 @@ jobs:
             exit 1
           fi
           exit 0
+      # ── D1039/L-WIRE: D1023 docs-only 白名单判别性夹具（"移除了才绿、加回去就红"）──────────
+      # 身份: #861 把 `.gitattributes`/`.gitmodules` 加进 docs-only 早退白名单的判别性夹具，
+      #   已在 main（docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh，168 行）；
+      #   本轮把它接进 CI —— 此前它**零可执行调用点**（`git grep -l docsonly-guard -- scripts
+      #   .github` = 0 命中），属「机制建成未接线」。
+      # 🔴 为什么是独立 step 而**不是** canary `for t` 清单项（实测）：
+      #   夹具的 HARD 判据是 `[ "${SYNO_CI:-}" = "1" ]`，而本 job **没有 SYNO_CI** ⇒ 作为清单项
+      #   由循环里那句 `bash "$t"` 跑它时恒为 SOFT ⇒ **永不为红 = 纸老虎**（判据②「改坏即红」
+      #   在 CI 层不可能成立）。⇒ 本 step 显式给 `SYNO_CI: "1"` 才是真门禁。
+      #   同因: pre-commit 默认亦无 SYNO_CI（D515「本地软提示 + CI 权威」）⇒ 接 pre-commit 同样
+      #   拿不到 HARD，唯一落点就是本处。
+      # 单一真值源（CTO 注意③）: 夹具自行从 ci.yml `grep -oE` 提取白名单正则；本 step **不传**
+      #   任何正则、不设 `SYNO_CI_YML`（保持默认被测文件）⇒ 夹具判别力不被外部注入削弱。
+      # 递归风险 = 0（CTO 注意①）: 实测该夹具外部依赖 python3/node/curl/git 调用 = 0，只读 ci.yml
+      #   文本 + `grep -qvE` 判行为，**不调用任何门禁/CI 脚本** ⇒ 不构成「CI 的 CI」递归。
+      # 三态（CTO 注意②）: 0 = 11 断言全 PASS ｜ 1 = HARD 下有 FAIL（有人把 .gitattributes 或
+      #   .gitmodules 加回白名单等）⇒ step 红 ⇒ 必需 context 红（有意）｜ 2 = 被测 ci.yml 缺失
+      #   （调用错误）⇒ 同样红，**绝不静默当 PASS**。无 `|| true` / 无 `continue-on-error`。
+      # 位置: 置于重活之前 = fail-fast（实测耗时 0.047s，避免白烧 13/60min 重活）。
+      - name: D1023 docs-only whitelist guard (L-WIRE, HARD)
+        shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（夹具是 bash 语法）
+        env:
+          SYNO_CI: "1"   # 契约: 1 = HARD（任一 FAIL ⇒ exit 1）
+        run: bash docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh
       - name: Run hermetic control-tower gate tests
         # T3: step 级 timeout（CTO 定值 60min on windows）；ubuntu 取 13（须 < 其 job 级 14）。
         timeout-minutes: ${{ matrix.os == 'windows-latest' && 60 || 13 }}
