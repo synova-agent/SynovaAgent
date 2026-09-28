@@ -1874,3 +1874,6 @@ Binary file .claude/bypass.log matches
 2026-09-28T17:13:40+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=ad0e1285ef885c4aa668df6479df94a1dba17fe5
 2026-09-28T17:14:39+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=e94f558589bc5a93668a6a373bc7cd5ca8f8e65a
 2026-09-28T17:15:37+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=36c7d123ae639d1a01d1e0273092760fcb1d92fe
+2026-09-28T16:49:19+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=bcf0a226d8641cda268baeb24321725ed014b499
+2026-09-28T16:50:09+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=97f044840038e9bcc59475f91ab5d52e5be0b645
+2026-09-28T16:50:45+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=d07d4f9acd3510f595234c83cada726ab272f4cc
