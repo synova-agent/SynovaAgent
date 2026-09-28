@@ -79,7 +79,7 @@
 
 | # | 文件 | 动作 | 写者 | 说明 |
 |---|---|---|---|---|
-| 1 | `src/config/settings-applies.ts` | 新建 | C1 | 分类内核：`SettingsApplies`；声明常量（§5.1）+ `declareSettings()`；未声明⇒强制 restart + 清单；live 现读 / restart boot 冻结；逐键 dump |
+| 1 | `src/config/settings-applies.ts` | 新建 | C1 | 分类内核：`SettingsApplies`；声明常量（§5.1）+ `declareSettings()`（**均内部，不导出** —— 裁决 (b)）；未声明⇒强制 restart + 清单；live 现读 / restart boot 冻结；逐键 dump |
 | 2 | `src/config/settings-source.ts` | 新建 | C1 | 两层文件源（workspace/home）读取 + 类型校验；叠加**复用** `config-layers.mergeLayers/resolveLayers`，**不重写第二套**（§4.5） |
 | 3 | `src/routes/settings.ts` | 新建 | C1 | **真实入口** `GET /api/settings/effective`：每请求经同一 runtime accessor 取值（§七） |
 | 4 | `src/routes/config.ts` | 修改（+≤15 行） | C1 | **第二消费者**：`/api/config/dump` 顶层增列 `settings:{keys,undeclared,degraded,scope}` 块（§7.2）—— 「两消费者同一新值」的物理证明面 |
@@ -214,7 +214,7 @@ win  tests/routes/settings.test.ts
 
 ### 3.4 R5 · 声明载体（唯一真相源，逐字定死）
 
-- **分类声明的唯一真相源 = 代码内 registry**（`src/config/settings-applies.ts` 的 `BUILTIN_SETTINGS_DECLARATIONS` + `declareSettings()` 登记项）。
+- **分类声明的唯一真相源 = 代码内 registry**（`src/config/settings-applies.ts` 的 `BUILTIN_SETTINGS_DECLARATIONS` + `declareSettings()` 登记项 —— **两者均按裁决 (b) 私有，不导出**）。
 - **`settings.yaml` 只提供值**（键路径 → 值），**不承载 `applies`**。
 - **yaml 中出现 `applies` 字段 ⇒ fail-closed 拒绝加载**：`degraded:true` + `code:'SETTINGS_SPEC_INVALID'` + `reason` **显式指向 registry**（"`applies` 只能在代码 registry 声明，不能写在 settings.yaml"）。
 - 该规则同时**保住 M4 负控夹具**（§8.3）：负控文件写 `applies: "sometimes"` ⇒ 必红。
@@ -303,16 +303,25 @@ export interface SettingsSpecBundle {
 
 **函数契约（可直接抄进实现 JSDoc）**
 
-| 函数 | @input | @output | @degraded | @error（铁律 32） |
-|---|---|---|---|---|
-| `declareSettings(spec: SettingsKeySpec): void` | 单条键声明 | `void`；登记成功即进声明表 | 无（纯声明期，不做 I/O） | `SettingsSpecError`：非法 ns/key 格式、非法 `applies`（非 `live\|restart`）、缺 `consumer`、`defaultValue` 与 `domain` 不相容、**同 path 重复声明且内容不等**（内容全等 = 幂等，静默返回）→ `{code:'SETTINGS_SPEC_INVALID', phase:'declare', retryable:false}` |
-| `loadSettingsSpec(options?: { source?: SettingsSourceResult; registry?: readonly SettingsKeySpec[] }): SettingsSpecBundle` | 可选已读源（缺省 = 调 `loadSettingsSource()`）；可选 registry 覆盖（缺省 = 内置声明表） | **读 + 校验**：返回 `{ declarations, source, resolved, layerOfPath, undeclared, degraded, reason?, code? }`；**不冻结**（冻结是 boot 的职责）。**这是 M4 负控的单元级直调入口**（§8.3） | 源层解析失败 / 文件值类型失配 ⇒ bundle 携 `degraded:true` + `reason` + `code`（**不因此抛**，铁律 24/31） | **fail-closed 主判据**：声明非法（`applies` 非 `live\|restart`、非法 ns/key、重复冲突声明、`domain` 越界、**yaml 出现 `applies`**）⇒ 抛 `SettingsSpecError` → `{code:'SETTINGS_SPEC_INVALID', phase:'spec', retryable:false}` |
-| `bootSettingsRuntime(options?: { source?: SettingsSourceResult; now?: () => Date }): SettingsRuntime` | 可选已读源（缺省 = 调 `loadSettingsSource()`）；`now` 注入缝 | **纯工厂**：每次调用返回**全新独立** runtime（新 `bootId`）；**冻结全部 restart 类（含未声明项）的 boot 值**；打印未声明清单 + 范围边界 + 例外节（各一次 `log.warn`，触发条件见 §六 ④） | 源层解析失败/类型失配 ⇒ runtime `degraded:true` + `reason` + `code`，**仍返回可用 runtime**（live 键照常、restart 键用冻结/默认值） | 内部调 `loadSettingsSpec()`；其 `SettingsSpecError` **向上抛**（保留 fail-closed 语义，供单元级负控；生产路径由 `initSettingsBootFence` 转 degraded） |
-| `initSettingsBootFence(options?): SettingsRuntime` | 同上一行 | **生产接线入口**：由 `src/server.ts` 的 `createServer()`（`:124`）显式调用；注册"本 server 实例的生效边界"，返回 runtime；**重复调用 = 同一实例**（幂等，`bootId` 不变） | **失败不 `process.exit`**：抛错被 `createServer()` 捕获 ⇒ `log.warn` + runtime `degraded:true` + `code:'SETTINGS_BOOT_FAILED'`，服务照常起（铁律 24/31：配置面故障不成为启动故障面） | 内部捕获 `SettingsSpecError` ⇒ 转为上述 degraded；**不向 `createServer()` 抛** |
-| `getSettingsRuntime(): SettingsRuntime` | 无参 | 读取**已初始化**的生效边界；**未初始化时**（非生产装配路径）⇒ 隐式初始化一次 + `log.warn('SETTINGS_BOOT_IMPLICIT …')` + 该 runtime 标 `degraded:true` / `code:'SETTINGS_BOOT_IMPLICIT'`（**可观测，不隐藏**） | 透传底层 runtime 的 `degraded` | 不抛（隐式路径的 `SettingsSpecError` 同 `initSettingsBootFence` 转 degraded） |
-| `getEffectiveRow(path: string): SettingsEffectiveRow \| null` | 全路径 `ns.key` | 单键行；未声明但存在于源 ⇒ `applies:'restart'` + `declared:false`；既未声明也不存在 ⇒ `null` | 透传 | 无（读取路径不抛；未命中返回 `null`） |
+**出口面（裁决 (b) 收缩后定稿，见 §十二 D-EXPORT-1）**：本文件**运行时值导出（`export function|class|const`）共 4 个公开 + 6 个内部 = 10**，其中本表 3 公开 / 3 内部；另 1 公开在 §4.2（`loadSettingsSource`，跨文件已被消费）、3 内部为 `SettingsSpecError`（class）+ `BUILTIN_SETTINGS_DECLARATIONS`、`SETTINGS_FILE`（const）。
+**类型导出（`export interface|type`）不参与该口径**（门禁 4a 只扫 `export function|class|const`，实测 `scripts/pre-commit-check.sh:662`），故 `SettingsKeySpec`/`SettingsRuntime`/`SettingsEffectiveRow` 等仍导出以便 L1 路由类型化。
+**［公开］** = 跨文件消费（有 `src/**` 生产消费者）；**［内部］** = 模块私有（调用方在 `src/` 之外，如测试 harness）⇒ 门禁 4a 不可见，本卡按 (b) 私有化（**零豁免，未改 plan.json**）。
 
-> **注意（接线铁律 4/0-2 + pre-commit 组 4）**：每个新导出必须有 `src/**` 内的**生产调用方**（不得只有测试调用）——本规格既定调用方：声明常量注册走 `declareSettings`（同文件 `BUILTIN_SETTINGS_DECLARATIONS` 注册循环）；`loadSettingsSpec` 由 `bootSettingsRuntime` 内部调用；`getEffectiveRow` 由 `rows()` 内部调用 + `src/routes/settings.ts` 的 ns/key 精确查询路径调用；`initSettingsBootFence` 由 `src/server.ts` 调用；`bootSettingsRuntime` 由 `initSettingsBootFence` 内部调用。
+| 函数 | 出口面 | @input | @output | @degraded | @error（铁律 32） |
+|---|---|---|---|---|---|
+| `declareSettings(spec: SettingsKeySpec): void` | 内部 | 单条键声明 | `void`；登记成功即进声明表 | 无（纯声明期，不做 I/O） | `SettingsSpecError`：非法 ns/key 格式、非法 `applies`（非 `live\|restart`）、缺 `consumer`、`defaultValue` 与 `domain` 不相容、**同 path 重复声明且内容不等**（内容全等 = 幂等，静默返回）→ `{code:'SETTINGS_SPEC_INVALID', phase:'declare', retryable:false}` |
+| `loadSettingsSpec(options?: { source?: SettingsSourceResult; registry?: readonly SettingsKeySpec[] }): SettingsSpecBundle` | 内部 | 可选已读源（缺省 = 调 `loadSettingsSource()`）；可选 registry 覆盖（缺省 = 内置声明表） | **读 + 校验**：返回 `{ declarations, source, resolved, layerOfPath, undeclared, degraded, reason?, code? }`；**不冻结**（冻结是 boot 的职责）。原为 M4 负控的单元级直调入口；**(b) 后该入口对外不可达** ⇒ 负控形态改由 §十三 ⑦-a 的公开面等价形态承担（见 §九 F14） | 源层解析失败 / 文件值类型失配 ⇒ bundle 携 `degraded:true` + `reason` + `code`（**不因此抛**，铁律 24/31） | **fail-closed 主判据**：声明非法（`applies` 非 `live\|restart`、非法 ns/key、重复冲突声明、`domain` 越界、**yaml 出现 `applies`**）⇒ 抛 `SettingsSpecError` → `{code:'SETTINGS_SPEC_INVALID', phase:'spec', retryable:false}`（**仅内部抛/内部捕**，不越过模块边界） |
+| `bootSettingsRuntime(options?: { source?: SettingsSourceResult; now?: () => Date }): SettingsRuntime` | 内部 | 可选已读源（缺省 = 调 `loadSettingsSource()`）；`now` 注入缝 | **纯工厂**：每次调用返回**全新独立** runtime（新 `bootId`）；**冻结全部 restart 类（含未声明项）的 boot 值**；打印未声明清单 + 范围边界 + 例外节（各一次 `log.warn`，触发条件见 §六 ④） | 源层解析失败/类型失配 ⇒ runtime `degraded:true` + `reason` + `code`，**仍返回可用 runtime**（live 键照常、restart 键用冻结/默认值） | 内部调 `loadSettingsSpec()`；其 `SettingsSpecError` 在模块内被 `initSettingsBootFence` 转 degraded；**不向模块外抛** |
+| `initSettingsBootFence(options?): SettingsRuntime` | **公开** | `options?: { source?: SettingsSourceResult; registry?: readonly SettingsKeySpec[]; now?: () => Date; **force?: boolean** }`——`force !== true` 时**幂等**（返回同一实例）；`force: true` ⇒ **重建边界**（新 `bootId`） | **生产接线入口**：由 `src/server.ts` 的 `createServer()`（`:124`）显式调用；注册"本 server 实例的生效边界"，返回 runtime；**重复调用 = 同一实例**（幂等，`bootId` 不变） | **失败不 `process.exit`**：抛错在模块内捕获 ⇒ `log.warn` + runtime `degraded:true` + `code`（`SettingsSpecError` ⇒ `'SETTINGS_SPEC_INVALID'`；其它 ⇒ `'SETTINGS_BOOT_FAILED'`）且 `rows()=[]` / `row()=null`，服务照常起（铁律 24/31：配置面故障不成为启动故障面） | 内部捕获 `SettingsSpecError` ⇒ 转为上述 degraded；**对调用方不抛**（对外可观测形态 = `runtime.code`） |
+| `getSettingsRuntime(): SettingsRuntime` | **公开** | 无参 | 读取**已初始化**的生效边界；**未初始化时**（非生产装配路径）⇒ 隐式初始化一次 + `log.warn('SETTINGS_BOOT_IMPLICIT …')` + 该 runtime 标 `degraded:true` / `code:'SETTINGS_BOOT_IMPLICIT'`（**可观测，不隐藏**） | 透传底层 runtime 的 `degraded` | 不抛（隐式路径的 `SettingsSpecError` 同 `initSettingsBootFence` 转 degraded） |
+| `getEffectiveRow(path: string): SettingsEffectiveRow \| null` | **公开** | 全路径 `ns.key` | 单键行；未声明但存在于源 ⇒ `applies:'restart'` + `declared:false`；既未声明也不存在 ⇒ `null` | 透传 | 无（读取路径不抛；未命中返回 `null`） |
+
+> **`SettingsSpecError` 契约保留**（`.code` / `.phase` / `.retryable`，铁律 32 不变），但 **(b) 后标记为内部**：**仅内部抛 / 内部捕**；**对外可观测形态 = `runtime.code === 'SETTINGS_SPEC_INVALID'`**（两个 HTTP 面同样以此为准，§7.3）。
+
+> **注意（接线铁律 4/0-2 + pre-commit 组 4；裁决 (b) 后口径更新）**：门禁 4a 只扫**新文件**的 `export function|class|const`，并要求该符号被**其它** `src/**` 文件引用（排除同文件、排除 `*.test.`，实测 `scripts/pre-commit-check.sh:662-669`）。
+> ⇒ **(b) 下保留导出 = 4 个（3 入口 + `loadSettingsSource`），全部有 `src/**` 生产消费者**：`initSettingsBootFence` 由 `src/server.ts` 调用；`getSettingsRuntime` 由 `src/routes/settings.ts` + `src/routes/config.ts` 调用；`getEffectiveRow` 由 `src/routes/settings.ts` 精确查询路径调用；`loadSettingsSource` 由同层 `settings-applies.ts` import。
+> ⇒ **转私有者不再导出** ⇒ 门禁 4a 不可见（**这正是 (b) 的目的：零豁免、不碰 plan.json**）；其内部调用链保留：`declareSettings` ← 同文件 `BUILTIN_SETTINGS_DECLARATIONS` 注册循环；`loadSettingsSpec` ← `bootSettingsRuntime`；`bootSettingsRuntime` ← `initSettingsBootFence`；`SettingsSpecError` 仅内部抛/捕。
+> ⚠️ **同文件自引用不满足门禁 4a（实测澄清，C 报）**：`WIRED` 的三重收窄含 **`grep -v "$file"`**（`scripts/pre-commit-check.sh:668`）⇒ "在本文件内被自己调用"**不算**被引用；`grep -v "\.test\."` ⇒ "只有测试调用"也不算。故任何**导出**符号都必须有**别的 `src/**` 文件**消费——这正是 (b) 必须私有化（而不是靠同文件调用"糊过去"）的物理原因。
 >
 > **R4 · 生效边界的"受控例外"注释口径（逐字，实现必须原样落注释）** —— 本卡在 `src/config/settings-applies.ts` 内保留**一个**进程级生效边界，与 D599「客户配置不得写入任何进程级/全局单例」（`docs/plans/codex/implementation/SYNOVA-IMPL-D599-customer-config-package-20260908.md:93` 决策点 3；`src/config/customer-config-package.ts:17/358` 同口径）存在口径张力，故**按受控例外显式登记、不隐藏**：
 
@@ -326,7 +335,7 @@ export interface SettingsSpecBundle {
 //   ③ 不做隐式单例：初始化**必须**由 createServer() 显式调用 initSettingsBootFence()（src/server.ts:124）；
 //      模块 import 副作用**不得**初始化（禁 `let x = boot()` 形态）。
 //   ④ 可重置/可观测：bootId 可核（HTTP 响应）、初始化失败降级不 process.exit、隐式初始化必打
-//      SETTINGS_BOOT_IMPLICIT 警告。测试用 bootSettingsRuntime() 造独立实例，不依赖本边界。
+//      SETTINGS_BOOT_IMPLICIT 警告。测试用 initSettingsBootFence({ force: true })（公开入口）造独立实例，不依赖本边界。
 ```
 
 ### 4.2 `src/config/settings-source.ts`
@@ -346,9 +355,9 @@ export interface SettingsSourceResult {
 }
 ```
 
-| 函数 | @input | @output | @degraded | @error（铁律 32） |
-|---|---|---|---|---|
-| `loadSettingsSource(options?: { root?: string; home?: string }): SettingsSourceResult` | 可选覆盖（缺省取 env，见 §4.5） | 两层叠加 doc + 文件路径 + 逐路径归属 | **是**：解析失败 / 类型失配 / IO 错误 ⇒ `degraded:true` + `reason` + `log.warn`（铁律 24） | 不抛业务错（结构错误全部降级为 `degraded`，禁静默——`errors[]` 非空时 `degraded` 必须为 `true`） |
+| 函数 | 出口面 | @input | @output | @degraded | @error（铁律 32） |
+|---|---|---|---|---|---|
+| `loadSettingsSource(options?: { root?: string; home?: string }): SettingsSourceResult` | **公开**（跨文件已消费：`settings-applies.ts` import） | 可选覆盖（缺省取 env，见 §4.5） | 两层叠加 doc + 文件路径 + 逐路径归属 | **是**：解析失败 / 类型失配 / IO 错误 ⇒ `degraded:true` + `reason` + `log.warn`（铁律 24） | 不抛业务错（结构错误全部降级为 `degraded`，禁静默——`errors[]` 非空时 `degraded` 必须为 `true`） |
 
 **ENOENT vs 解析失败（逐字规则，实现必须区分）**
 
@@ -362,9 +371,11 @@ export interface SettingsSourceResult {
 
 ### 4.3 `src/routes/settings.ts`
 
-| 函数 | @input | @output | @degraded | @error（铁律 32） |
-|---|---|---|---|---|
-| `createSettingsRoutes(runtime?: SettingsRuntime): Router` | 可选注入 runtime（缺省 = `getSettingsRuntime()`）；构造时**不** boot | express `Router`，绑定 `GET /api/settings/effective` | 每次请求从 runtime 读 `degraded`/`reason`/`code` 并透传响应体 | 无抛出路径：声明非法被 `SettingsSpecError` 捕获 ⇒ `200 + degraded:true + code`（§7.3）；未知异常 ⇒ 兜底 `200 + degraded:true + code:'SETTINGS_ROUTE_INTERNAL'` + `log.warn`（检查表面不成为故障面） |
+**出口面（(b) 定稿）**：**仅 `export default`（router 实例）**。`createSettingsRoutes` **已删除**——它与 default export 构成双入口，按 (b)「留一」删除；路由实例在模块加载时构造（构造时**不** boot，boot 由 `src/server.ts` 的 `initSettingsBootFence()` 负责）。
+
+| 出口面 | 行为 | @input | @output | @degraded | @error（铁律 32） |
+|---|---|---|---|---|---|
+| `export default`（`Router` 实例，绑定 `GET /api/settings/effective`） | 每请求经 `getSettingsRuntime()` 取值（**公开入口**，与 `src/routes/config.ts` 同一 runtime） | 请求 query（§7.1） | JSON 响应（§7.1 schema） | 每次请求从 runtime 读 `degraded`/`reason`/`code` 并透传响应体 | 无抛出路径：声明非法在模块内被转 `runtime.code` ⇒ `200 + degraded:true + code`（§7.3）；未知异常 ⇒ 兜底 `200 + degraded:true + code:'SETTINGS_ROUTE_INTERNAL'` + `log.warn`（检查表面不成为故障面） |
 
 ### 4.4 装配与"两消费者同一 runtime"（`src/server.ts` 恰 4 物理行）
 
@@ -382,12 +393,14 @@ app.use(settingsRoutes);                                            // ← 改�
 > 两个 import 来自不同模块（L1 路由 / 配置域）⇒ **不可能合并成一行**；亦**不得**用 wiring shim 转成一 import（与 R4「显式由 `createServer()` 调用、禁 import 副作用」相悖）。
 > 热点文件（15 个未合并分支触及，§九 F7）⇒ **不得再多加一行**。
 
-- `src/routes/settings.ts` **默认导出 = `createSettingsRoutes()` 的实例**（与既有 `configRoutes`/`reloadRoutes` 导出风格一致）。
-- **生效边界 = 该 server 实例启动时刻**（R4 定案）：生产 = 进程启动（`createServer()` 调 `initSettingsBootFence()`）；测试 = 再次调用 `initSettingsBootFence()` 或 `bootSettingsRuntime()` 造新边界。
+- `src/routes/settings.ts` **只有 `export default`（router 实例）**（与既有 `configRoutes`/`reloadRoutes` 导出风格一致）；工厂函数 `createSettingsRoutes` **按 (b) 删除**（§4.3）——路由的 runtime 由每请求 `getSettingsRuntime()` 取，**不需要注入参数**，故工厂无存在必要。
+- **测试不得依赖注入式工厂**：三套件要造"第二个 boot"，用 **`initSettingsBootFence({ force: true })`（公开入口）** 或经真实 `createServer()` 重启（§8.1），不得为测试重新引入工厂（那是被裁决删掉的公开面）。
+- **第二次 boot 必须传 `force: true`（实测澄清，C 报；否则判据恒假红）**：`initSettingsBootFence()` 在 `force !== true` 时**幂等**——返回**同一实例**（`bootId` 不变）。⇒ 若照旧写"再调一次 = 新 boot"，**B3/D-BOOT-1 的"新 boot 后新值生效"永远不可能成立**（拿到的是同一冻结快照）。造第二个边界的两种合法形态：① `initSettingsBootFence({ force: true })`；② 真进程重启（§十三 ⑤ kill + 重新起服）。
+- **生效边界 = 该 server 实例启动时刻**（R4 定案）：生产 = 进程启动（`createServer()` 调 `initSettingsBootFence()`，**不传 force**）；测试 = `initSettingsBootFence({ force: true })`（公开入口，本卡**唯一**的边界构造函数）造新边界。
 - **boot 时点**：显式调用发生在 `createServer()` 内、`app.listen()`（`:476`）之前 ⇒ 未声明清单、范围边界、例外节均在**启动期**打印（满足 §3.3 与 R8 的可观测性）。
 - **初始化失败**：`degraded:true` + `log.warn`，**不 `process.exit`**；服务照常监听（配置面故障不成为启动故障面）。
 - **第二消费者**：`src/routes/config.ts` 内的 `/api/config/dump` 处理器调用**同一个** `getSettingsRuntime()`（同一进程单例）⇒ 两个面天然同值，**不需要共享变量、不需要 DI 容器**。
-- **测试可 boot 两次（restart 语义）而不用 src 测试开关**：`bootSettingsRuntime()` 是**生产导出**（非测试开关），三套件各自调用它构造独立 runtime ⇒ "重启后新值生效"在同进程内可判（§8.2 路径 B）。**禁止**在 `src/**` 添加任何 `if (process.env.NODE_ENV==='test')` 类开关（《穿真实入口 v1》四条禁止之一）。
+- **测试可 boot 两次（restart 语义）而不用 src 测试开关**：**公开入口 `initSettingsBootFence({ force: true })`** 即边界构造函数（**生产入口，非测试开关**；工厂 `bootSettingsRuntime()` 为模块私有，(b) 后不可 import）——三套件经它构造第二个边界 ⇒ "重启后新值生效"在同进程内可判（§8.2 路径 B）。**注意 `force: true` 不可省**（幂等语义，见上一条）。**禁止**在 `src/**` 添加任何 `if (process.env.NODE_ENV==='test')` 类开关（《穿真实入口 v1》四条禁止之一），**亦禁止**为测试重新导出私有符号（§九 F15）。
 
 ### 4.5 设置源接口契约（队长新增 1，逐字固定；S/C/V 同一份）
 
@@ -454,7 +467,7 @@ settings:
 | 参数 | 空 | 单元素 | 恰临界（=阈值 / =limit） | 超限 | 零 / 负值 |
 |---|---|---|---|---|---|
 | `SettingsKeySpec.ns` | `''` → 抛 `SETTINGS_SPEC_INVALID` | `'a'` 合法（正则容许单字符） | 长度 64 合法 | 长度 65 → 抛 | 无负值语义（非数字） |
-| `SettingsKeySpec.key` | `''` → 抛 | `'x'` 合法 | 长度 64 合法 | 长度 65 → 抛；含 `'.'` → 抛（禁多段，避免与 `path` 混淆） | 同上 |
+| `SettingsKeySpec.key` | `''` → 抛 | `'x'` 合法（单段） | **总长 64 合法**（上限按整串计） | **多段合法**：`'skill.enabled'`（§5.1 插件类键）必须可用；非法形态 → 抛：空段（`.`/`'a..b'`）、前导/尾随点（`'.a'`/`'a.'`）、含非 `[A-Za-z0-9_-]` 字符、总长 65 | 同上 |
 | `SettingsKeySpec.consumer` | `''` → 抛（声明不完整） | `'src/x.ts:1'` 合法 | 无上限约束（超长仅告警） | — | — |
 | `applies` | `''` / 缺省 → 抛（**禁隐式默认**） | 合法值仅 `'live'` / `'restart'` | — | `'sometimes'`/`'LIVE'` → 抛（**M4 负控**）；**yaml 里出现 `applies` 字段本身 → 抛**（R5：值面不得携带分类） | — |
 | `diagnosis.gateDataCompleteness`（`domain:{minimum:0,maximum:1}`） | `null` → 类型失配降级 | — | `0` 合法（下界闭）、`1` 合法（上界闭） | `1.000001` → 抛；`-0.000001` → 抛 | `0` 合法（语义 = 不过滤）；负值 → 抛；`NaN`/`Infinity` → 抛 |
@@ -464,6 +477,16 @@ settings:
 | `includeUndeclared`（query） | 缺省 = `1` | `'0'`/`'1'` 合法 | — | 其它值 → `400`（§7.3） | — |
 | `limit`（query，1..500，默认 100） | 缺省 = 100 | `1` 合法 | `1` / `500` 均合法（**含边界**） | `501` → `400`；非数字 → `400` | `0` → `400`；负值 → `400` |
 | `undeclared[]`（输出集合） | `[]` = 无未声明（**非降级**） | 1 条 | 恰 100 条时 `truncated:false` | 101 条 ⇒ 输出前 100 + `truncated:true` | — |
+
+**`key` 可否含 `.` —— 二选一定案（C 实测提出，本规格裁定「允许点分多段」）**
+
+- **冲突**：§5.1 需键路径 `extensions.skill.enabled`（插件类锚点，yaml 25-9 的四类之一）；而 §5.3 原写「`key` 含 `'.'` → 抛」，两者**不可同时满足**。
+- **裁定：允许点分多段**（`key` 为 ns 内的点分子路径）。理由三条：
+  1. **§5.1 的四类覆盖是验收硬约束**（插件类必须有 ≥1 具体键路径）⇒ 不能为校验规则牺牲类覆盖；
+  2. **歧义不存在**：`ns` 的正则 `^[a-z][a-z0-9-]*$` **不容许 `.`** ⇒ 点分首段恒为 ns ⇒ `path = ns + '.' + key` 可**唯一**还原（不存在"点属于 ns 还是 key"的二义）；
+  3. **与 C 的实现一致**：`src/config/settings-applies.ts:169` `KEY_PATTERN = /^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*$/`（各段非空）⇒ 规格与实现同向，无返工。
+- **生效校验规则（逐字）**：`key` 须匹配 `^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*$` 且**整串长度 ≤ 64**；违者 fail-closed 抛 `SETTINGS_SPEC_INVALID`。
+- **实现面遗留（不在本卡写集，交 C）**：同文件 `:72` 的类型注释仍写「不含 `'.'`」，`:345` 的错误消息仍写「禁含 `'.'`」——**均为陈述与校验不一致的陈旧文案**（校验本身按 `KEY_PATTERN` 放行点分），须由 C 更正为与本节同口径。
 
 ---
 
@@ -550,6 +573,7 @@ log.warn({ count, exceptions }, 'SETTINGS_EXCEPTION_ACTIVE 既存例外（不按
 - **判据 D-BOOT-1（硬判别式，出处 = 本节）**：**同一 `bootId` 下，任一 `applies:'restart'` 键的 `effective` 发生变化 ⇒ 必红（半生效）**。
   - 判据的机器形态：对同一 `bootId` 的两次采样做 `deepEqualJson(row.effective_1, row.effective_2)`，不相等即违反。
   - 反向（同样必核）：`bootId` **变化**后 restart 键 `effective` 允许变化；若新 boot 下 restart 键**仍为旧值**而磁盘已改 ⇒ 判 **"restart 声明未生效"**（25-9 的 fail_when 第二条）。
+  - **造第二个 boot 的正确形态 = `initSettingsBootFence({ force: true })`**（不传 `force` 则幂等返回同一实例 ⇒ `bootId` 不变 ⇒ 本判据恒假红，非真红）；或真进程重启（§十三 ⑤）。
   - V 的独立断言**不依赖 C 的用例**（同一条判据，独立 harness 复现）。
 
 ### 7.2 `GET /api/config/dump?orgId=…` 扩列（既有，向后兼容；形状按 R6/R7 定死）
@@ -609,7 +633,7 @@ log.warn({ count, exceptions }, 'SETTINGS_EXCEPTION_ACTIVE 既存例外（不按
 | 套件（文件名逐字） | 承载断言 | 对应变异体（注入点） | 红证判据 |
 |---|---|---|---|
 | `tests/config/settings-applies.test.ts`（**LIVE 套件**，内容含串 `settings-applies-live`） | **A1** live 键改盘后同一 runtime 的 `effective` 立即新值；**A2** `sourceLayer` 归属正确（home/workspace/declaration 三态）；**A3** 未声明键 ⇒ `applies:'restart'` + `declared:false` + 进 `undeclared[]` | **M2**（从声明常量删一条键）⇒ A3 必红；**M1**（applies 判定分支把 restart 当 live）⇒ **本套件 A2/A3 不红**（设计如此），由 RESTART 套件红 | 对应 `expect(...)` 失败 |
-| `tests/config/settings-source.test.ts`（**RESTART 套件**，内容含串 `settings-applies-restart`） | **B1** 同一 boot：改盘后 `effective` = 旧值 **且** `pending` = 新值 **且** `applies:'restart'`；**B2** 同 boot 内多次读取 `effective` 恒等（冻结稳定，判据 **D-BOOT-1**）；**B3** 新 boot（`bootSettingsRuntime()` 二次调用）：`bootId` 变化 **且** `effective` = 新值 | **M1**（restart 当 live）⇒ B1 必红（`effective` 变新值 = 半生效） | 同上 |
+| `tests/config/settings-source.test.ts`（**RESTART 套件**，内容含串 `settings-applies-restart`） | **B1** 同一 boot：改盘后 `effective` = 旧值 **且** `pending` = 新值 **且** `applies:'restart'`；**B2** 同 boot 内多次读取 `effective` 恒等（冻结稳定，判据 **D-BOOT-1**）；**B3** 新 boot（`initSettingsBootFence({ force: true })` 二次调用，公开入口；**`force` 不可省**——不传则幂等返回同一实例）：`bootId` 变化 **且** `effective` = 新值 | **M1**（restart 当 live）⇒ B1 必红（`effective` 变新值 = 半生效） | 同上 |
 | `tests/routes/settings.test.ts`（**入口/E2E 套件**，内容**不含**两串） | **C1 两消费者同一新值**：真实 HTTP 下，`/api/settings/effective` 与 `/api/config/dump` 对同一 key 的 `effective` 满足 `deepEqualJson` 相等（live 键改盘后为**新值**且两值相等）；**C2** `400` 校验语义（4 种非法 query）；**C3** 未声明清单出现在 HTTP 响应（`undeclared[]` + `undeclaredScope` + `truncated`）；**C4** 非法声明 ⇒ `200 + degraded:true + code:'SETTINGS_SPEC_INVALID'` 且涉事键不在 `keys[]` | **M3**（`src/routes/config.ts` 消费者侧注入模块级缓存）⇒ **C1 必红**（两消费者值不等）；**M4**（负控：yaml 带 `applies:'sometimes'`）⇒ C4 必红 | 同上 |
 
 **e2e 装配（逐字约束，铁律 12 不 mock 管线）**
@@ -624,7 +648,7 @@ log.warn({ count, exceptions }, 'SETTINGS_EXCEPTION_ACTIVE 既存例外（不按
 | 路径 | 场景 | 夹具装配 | 判据（可执行） | 验收点 |
 |---|---|---|---|---|
 | **A · live 生效** | 改 live 类键（阈值类 `diagnosis.gateDataCompleteness` 0.3→0.55） | 起服 → `GET` 一次 → `sed -i` 改 `<root>/settings.yaml` → **不重启**再 `GET` | 两消费者都返回新值 **且 `deepEqualJson(a,b)===true`**（无部分消费者滞留旧值） | 25-8 |
-| **B · restart 隔离** | 改 restart 类键（连接类 `llm.baseUrl` `old.invalid`→`new.invalid`） | 同上改盘 → 同进程重复 `GET` → 再 `bootSettingsRuntime()` 二次 boot / 或真重启进程 | 同 boot：`effective` **仍 `old.invalid`** + `pending` = `new.invalid` + `applies:'restart'` + `/api/healthz` 200 + 端口不变；新 boot：`bootId` 变 + `effective` = `new.invalid` | 25-9 |
+| **B · restart 隔离** | 改 restart 类键（连接类 `llm.baseUrl` `old.invalid`→`new.invalid`） | 同上改盘 → 同进程重复 `GET` → 再 `initSettingsBootFence({ force: true })` 二次 boot（公开入口，**`force` 不可省**）/ 或真重启进程 | 同 boot：`effective` **仍 `old.invalid`** + `pending` = `new.invalid` + `applies:'restart'` + `/api/healthz` 200 + 端口不变；新 boot：`bootId` 变 + `effective` = `new.invalid` | 25-9 |
 | **C · 默认安全（未声明）** | 源里放未声明键 `rogue.whoAmI` | 在 A/B 的同一文件追加该键 → 起服 | 该键 `applies` **强制 `restart`**、`declared:false`、进 `undeclared[]`；**三行启动日志各 ≥1**：`SETTINGS_UNUSED_UNDECLARED` + `SETTINGS_UNDECLARED_SCOPE`（枚举边界声明）+ `SETTINGS_EXCEPTION_ACTIVE`（CTO-② 例外打印） | 25-8 note + 完成标准 |
 
 **健康检查路径（实测，勿抄）**：`/api/healthz` —— `grep -n "api/healthz" src/routes/healthz.ts` → `323:router.get('/api/healthz', async (_req, res) => {`。**不是** `/healthz`（PLAN §四 写作 `healthz` 属不精确，本规格已更正）。
@@ -636,7 +660,7 @@ log.warn({ count, exceptions }, 'SETTINGS_EXCEPTION_ACTIVE 既存例外（不按
 | **M1** restart 项当 live 处理 | `src/config/settings-applies.ts` 的分类判定分支，使 `restart` 键走现读 | `tests/config/settings-source.test.ts` 的 **B1 必红** | 复原后 `git diff --stat` 空 **且** `shasum -a 256 <file>` 与注入前记录值逐字相同（V 注入前后各存一次基线哈希） |
 | **M2** 删分类声明 | 从 `BUILTIN_SETTINGS_DECLARATIONS` 移除一条键（模拟"忘声明"） | `tests/config/settings-applies.test.ts` 的 **A3 必红** | 同上（哈希一致） |
 | **M3** 消费者绕过 accessor 自缓存 | `src/routes/config.ts` 内注入模块级缓存分支（首次读后缓存 `settings` 块） | `tests/routes/settings.test.ts` 的 **C1 必红**（两消费者值不等） | 同上 |
-| **M4** 非法配置负控 | **两个入参面各一条**（返工 B 已修夹具路径）：① yaml 面 = `/tmp/d1053-bad/settings.yaml` 内含 `applies` 键（R5：值面本不得携带分类）→ 对应 §十三 **⑦-a**；② registry 面 = `declareSettings({applies:'sometimes'})` → 对应 §十三 **⑦-a₂** | `tests/routes/settings.test.ts` 的 **C4 必红**；**且** ⑦-a 与 ⑦-a₂ **各自**非 0 exit（单元级 fail-closed）；**且** ⑦-b 进程级起服**不崩死**（degraded 响应，见 §7.3） | 删除负控夹具目录 `/tmp/d1053-bad`（在 /tmp，不涉仓库）；`git status --porcelain` 仅剩本卡声明写集 |
+| **M4** 非法配置负控 | **两个面各一条**（(b) 后入口面已消失，见 §九 F14）：① **yaml 面（夹具）** = `/tmp/d1053-bad/settings.yaml` 内含 `applies` 键（R5：值面本不得携带分类）→ 对应 §十三 **⑦-a**；② **registry 面（变异体 M4-r）** = 把内置声明表某条 `applies` 改成非法值（如 `'sometimes'`）→ 因其已私有化，**无命令入口**，判别形态 = **改值即红**（`tests/config/settings-applies.test.ts` 的启动断言红 / ⑦-a 形态转 `degraded`） | `tests/routes/settings.test.ts` 的 **C4 必红**；**且** ⑦-a 逐项成立（`degraded===true` ∧ `code==='SETTINGS_SPEC_INVALID'` ∧ `rows().length===0` ∧ 涉事键 `row(...)===null` ∧ 无默认值回落）；**且** M4-r 注入后对应套件必红；**且** ⑦-b 进程级起服**不崩死**（degraded 响应，见 §7.3） | 删除负控夹具目录 `/tmp/d1053-bad`（在 /tmp，不涉仓库）+ M4-r 复原哈希一致（§8.3 通则）；`git status --porcelain` 仅剩本卡声明写集 |
 
 **判别性要求（"删掉即报红"）**：M1-M4 每条必须能被 V **独立复现为红**；若注入后套件仍绿 ⇒ 判定 **"接线了≠被执行"**，退回（不是补文档）。
 
@@ -665,6 +689,8 @@ log.warn({ count, exceptions }, 'SETTINGS_EXCEPTION_ACTIVE 既存例外（不按
 | **F11** | **不引 `@deepseek-ai/*` 依赖** | `ls -d node_modules/@deepseek-ai` → `No such file or directory`；处置表 `dsh-settings` = 接缝-预留 | 引包 = 越界（红线）；M3 锚点用注释 + 现验命令，不落 import |
 | **F12** | **`js-yaml` 属传递依赖借用**（本卡新增登记） | `npm ls js-yaml` → `js-yaml@4.3.0 extraneous`；`package.json` 无该直接依赖（仅 `@types/js-yaml` 在 devDependencies）；`package-lock.json` 内由 `electron-updater`/`app-builder-lib` 传递引入 ⇒ `npm ci` 会装上 | 沿用既有先例（`src/config/customer-config-package.ts:32` 同型 import）；**不改 `package.json`**（超写集）；若实现期解析器不可用 ⇒ 报阻塞，**不得**静默跳过 YAML 支持；待办见 §10 |
 | **F13** | **端口假设漂移**（PLAN §六 用 `${PORT:-18790}`） | `src/config.ts:107` = `parseInt(process.env.PORT \|\| String(filePort \|\| 3000), 10)`；`filePort` 来自 `synova.json`（`{"server":{"port":18790}}`）或 `DEFAULT_CONFIG.server.port = 18790`（`src/config-file.ts`） | 验收命令**显式 `export PORT=<空闲口>`** + 从启动日志回读；**不依赖**隐式默认口（§十三） |
+| **F14** | **导出面收缩导致验证形态缺失**（裁决 (b) 的**代价**，须记账而非忽略） | 组 4 门禁（`pre-commit-check.sh:662-669`）只认 `export function\|class\|const` 且要求 **`src/**` 外部文件**引用（排除同文件、排除 `*.test.`）⇒ `loadSettingsSpec` / `declareSettings` / `bootSettingsRuntime` / `SettingsSpecError` 转私有后，**「直调 loader 断言抛出」这一单元级负控形态在命令面不可执行**（测试与 shell 均无入口） | ① 负控改用**公开面等价形态**（§十三 ⑦-a：`initSettingsBootFence()` + `runtime.degraded/code/rows()/row()` 逐项核，含"不得静默回落默认值"）；② registry 面「applies 取值非法」的判别力由**变异体 M4-r**承担（改 registry 值即红，§8.3）——**判别力不降**：fail-closed 语义逐项可核，只是承载形态从"抛出的异常"变为"runtime.code + 空 rows"；③ 真进程形态保留（§十三 ⑦-b） |
+| **F15** | **私有化派生的隐式回归风险**：为让测试可注入而"顺手"重新导出 | 同 F14 门禁口径 | 硬约束：**不得**为测试重新导出任何被 (b) 私有化的符号（§4.4 已写明）；三套件造"第二个 boot"只用公开入口 `initSettingsBootFence()` 或真实 `createServer()` 重启 |
 
 ---
 
@@ -726,6 +752,17 @@ log.warn({ count, exceptions }, 'SETTINGS_EXCEPTION_ACTIVE 既存例外（不按
 | R6 | 证据 stale | `calc-progress.py:47` | 代码冻结后跑证据；3 天内送审（F4） |
 | R7 | 自验独立性（M3 型事故） | — | V 不得由 C1 兼任；V 只读产品代码（可写 `/tmp`）；注入在临时分支/临时文件上做，出证据后复原 |
 
+### 12.1 偏差登记（D-EXPORT-1：导出面 6 → 3）
+
+| 项 | 内容 |
+|---|---|
+| **偏差编号** | **D-EXPORT-1** |
+| **偏差事实** | 本规格 v1 设计 `src/config/settings-applies.ts` **6 个函数出口**（`declareSettings` / `loadSettingsSpec` / `bootSettingsRuntime` / `initSettingsBootFence` / `getSettingsRuntime` / `getEffectiveRow`）+ `src/routes/settings.ts` 的工厂 `createSettingsRoutes`。**裁决 (b) 收缩公开面后**：保留 **3 入口**（`initSettingsBootFence` / `getSettingsRuntime` / `getEffectiveRow`）+ 跨文件已消费的 `loadSettingsSource`（§4.2）= **4 个运行时值导出**；**转私有 6 个**（`SettingsSpecError`、`loadSettingsSpec`、`bootSettingsRuntime`、`SETTINGS_FILE`、`BUILTIN_SETTINGS_DECLARATIONS`、`declareSettings`）；**删除 1 个**（`createSettingsRoutes`，与 default export 双入口，按"留一"删）。 |
+| **依据（可核）** | 组 4 接线门禁 `scripts/pre-commit-check.sh:667-668`：`WIRED=$(grep -rn "\b${name}\b" src/ --include="*.ts" … \| grep -v "export.*${name}" \| grep -v "$file" \| grep -v "\.test\." \| head -1)`；空 ⇒ `UNWIRED` ⇒ `hard_check`（`:677`）**硬阻断**。即：**扫描面仅 `src/**`、排除同文件、排除测试**。3 个符号（`SettingsSpecError` / `loadSettingsSpec` / `bootSettingsRuntime`）的**生产消费者为无**（消费者只在测试 harness），故按 (b) 私有化。 |
+| **零豁免声明** | **未修改 `.claude/plan.json`**，**未添加任何 deferred/wiring 豁免**；不使用 `mock\|fake\|_internal\|_deprecated` 命名绕过缝（`:665` 的跳过规则）。收缩 = 从源头消除待判定的导出，而非放宽门禁。 |
+| **代价与记账** | 负控的"直调即抛"形态不可执行 ⇒ 见 **§九 F14**（等价形态替代 + 判别力论证）；并新增 **F15** 防"为测试重新导出"的隐式回归。 |
+| **不可逆性** | 若实现期发现某私有符号确需跨文件消费 ⇒ **不得自行导出**，须**回报 CTO 改裁决**（本规格不预留后门）。 |
+
 **上限**：成员 ≤4（队长 + ≤2 编码 + 1 独立自验）；WIP=1（本卡未过 CTO 收件闸不放行下一张代码卡）；重型验证同时 ≤1。
 
 ---
@@ -744,8 +781,10 @@ rm -rf /tmp/d1053-root /tmp/d1053-settings-home
 mkdir -p /tmp/d1053-root /tmp/d1053-settings-home
 
 # ── ① 三套件（独立重跑）——必须打印套件名与用例数（防 A2 静默跳过，F1） ──
-# 返工 C：钉 Node 22 + 关文件级并行（§十二 R4「重型验证串行 ≤1」；e2e 起真实 createServer ⇒ 默认并发会撞 8GB 上限）
-export PATH="$HOME/.nvm/versions/node/v22.23.2/bin:$PATH"   # 实测该路径存在（node -v 应打印 v22.23.2）
+# 返工 C（v2，(b) 同批修订）：用**默认 node**（不 pin nvm 路径）+ 关文件级并行
+#   （§十二 R4「重型验证串行 ≤1」；e2e 起真实 createServer ⇒ 默认并发会撞 8GB 上限）
+node -v                                  # 期望 v24.19.0（实测 which node → …/nvm/versions/node/v24.19.0/bin/node）
+node -p "process.versions.modules"       # 期望 137（Node 24 ABI；实测）
 npx vitest run tests/config/settings-applies.test.ts \
                tests/config/settings-source.test.ts \
                tests/routes/settings.test.ts \
@@ -798,20 +837,31 @@ grep -c 'SETTINGS_UNDECLARED_SCOPE'   /tmp/d1053-server2.log   # 期望 ≥1（�
 grep -c 'SETTINGS_EXCEPTION_ACTIVE'   /tmp/d1053-server2.log   # 期望 ≥1（CTO-② 例外打印）
 kill $SRV; sleep 1
 
-# ── ⑦ 负控：**两条并存**（单元级 = 非 0 exit；进程级 = degraded 不崩死） ──
+# ── ⑦ 负控：**两条并存**（公开面单元级 = 非 0 exit；进程级 = degraded 不崩死） ──
 # 返工 B（F1 型"夹具静默失效"修复）：加载器唯一读取面 = `<root>/settings.yaml`（§4.5）⇒
 #   负控必须放在**独立 root 的 settings.yaml**，不能写成 `<root>/bad.yaml`（那样读到的是合法 settings.yaml，两条判据双双落空）
 BADROOT=/tmp/d1053-bad
 rm -rf "$BADROOT"; mkdir -p "$BADROOT"
 printf 'settings:\n  bad:\n    x: { value: 1, applies: sometimes }\n' > "$BADROOT/settings.yaml"
 # 注（R5 语义，防判据被误读）：本夹具触发 `SETTINGS_SPEC_INVALID` 的直接原因是 **yaml 里出现 `applies` 键本身**
-#   （R5：值面不得携带分类）；"applies 取值非法" 的另一条负控属**单元级**——见 ⑦-a 加注。
-# ⑦-a 单元级直调（fail-closed 抛 SettingsSpecError ⇒ 非 0 exit）
+#   （R5：值面不得携带分类），**不是** `sometimes` 这个取值。
+# ⑦-a **公开面等价形态**（裁决 (b) 后替代原「直调 loader 断言抛出」形态，见 §九 F14）：
+#   原形态走 loadSettingsSpec()/declareSettings —— (b) 已将其转私有 ⇒ 测试/shell 无入口。
+#   等价形态用**公开入口** initSettingsBootFence()，逐项核 fail-closed 语义：
+#     runtime.degraded===true ∧ runtime.code==='SETTINGS_SPEC_INVALID' ∧ rows().length===0
+#     ∧ 涉事键 row('bad.x')===null ∧ **不得静默回落默认值**（= 不得返回 keys 里带 defaultValue 的正常行）
+# ⚠️ 硬注记（**防 F1 型假绿复发**，C 实测提出）：
+#   · 负控判据必须**因 `SETTINGS_SPEC_INVALID` 而失败**；因「符号不存在 / import 失败 / 语法错」导致的 exit≠0
+#     **一律不计为成立**（判据只认自己的失败原因）。
+#   · 本形态的**成功判据 = exit 0**（正向断言：条件全真才 exit 0）⇒ 极性上不可能被 TypeError 冒充：
+#     若 `initSettingsBootFence` 不存在，`.then()` 内即抛 ⇒ tsx exit≠0 ⇒ 本项**判失败**（而不是判为成立）。
+#   · ⛔ **已作废的旧形态（禁止再用）**：`npx tsx -e "…m.loadSettingsSpec()"` → 「期望非 0 exit」
+#     ——(b) 私有化后该命令恒 exit 1（`TypeError: m.loadSettingsSpec is not a function`），
+#       会以**错误理由**呈现为成立，是本卡新造的假绿点。
 SYNOVA_SETTINGS_ROOT="$BADROOT" SYNOVA_SETTINGS_HOME=/tmp/d1053-nonexistent \
-  npx tsx -e "import('/Users/wane/SynovaAgent/.synova-wt-squad-d1053/src/config/settings-applies.ts').then(m=>m.loadSettingsSpec())"; echo "⑦-a 期望非 0 exit"
-# ⑦-a₂ 单元级：applies 取值非法（`'sometimes'`）—— 经 declareSettings/registry 入参，非 yaml 面
-SYNOVA_SETTINGS_ROOT=/tmp/d1053-nonexistent SYNOVA_SETTINGS_HOME=/tmp/d1053-nonexistent \
-  npx tsx -e "import('/Users/wane/SynovaAgent/.synova-wt-squad-d1053/src/config/settings-applies.ts').then(m=>m.declareSettings({ns:'bad',key:'x',applies:'sometimes',defaultValue:1,consumer:'tests'}))"; echo "⑦-a₂ 期望非 0 exit"
+  npx tsx -e "import('/Users/wane/SynovaAgent/.synova-wt-squad-d1053/src/config/settings-applies.ts').then(m=>{const r=m.initSettingsBootFence();const rows=r.rows();const one=r.row('bad.x');const pass=r.degraded===true&&r.code==='SETTINGS_SPEC_INVALID'&&rows.length===0&&one===null&&!rows.some(x=>x.effective===x.defaultValue);console.log(JSON.stringify({degraded:r.degraded,code:r.code,rows:rows.length,row:one}));process.exit(pass?0:1)})" ; echo "⑦-a 期望 **exit=0**（degraded ∧ code=SETTINGS_SPEC_INVALID ∧ 0 行 ∧ row('bad.x')=null ∧ 无默认值回落）"
+# ⑦-a₂ 「applies 取值非法」的 registry 面负控：**(b) 后私有化 ⇒ 命令面无入口**，
+#   其判别力由 **变异体 M4-r**（改 registry 值即红）承担 —— 见 §8.3 与 §九 F14，不在本命令块执行。
 # ⑦-b 进程级（配置面故障不得成为启动故障面：不崩死，返回 degraded + code）
 SYNOVA_SETTINGS_ROOT="$BADROOT" SYNOVA_SKIP_MCP=1 npx tsx src/index.ts > /tmp/d1053-server3.log 2>&1 & SRV=$!
 sleep 5
@@ -832,9 +882,10 @@ git status --porcelain   # 期望仅本卡声明写集
 |---|---|---|---|
 | **A** | `src/server.ts` 行数口径四方冲突（"仅 2 行" / "3 行" / "只加 2 行"×2） | 统一为 **恰 4 物理行** = 2 import（不同模块，不可合并）+ `initSettingsBootFence()` + `app.use`；**反对 wiring shim**（与 R4 禁 import 副作用相悖） | §2.2:86｜§4.4:369-381｜§九 F7:661｜§十二 R1:721 |
 | **B** | ⑦ 负控夹具写在 `<root>/bad.yaml` ⇒ 加载器读的是同目录**合法 `settings.yaml`**，⑦-a/⑦-b 判据**双双落空**（F1 型夹具静默失效） | 独立 root：`/tmp/d1053-bad/settings.yaml`；⑦-a **与** ⑦-b 均显式指向该 root；新增 ⑦-a₂ 覆盖"applies 取值非法"（registry 入参面） | §十三 ⑦:801-820 |
-| **C** | ① 未串行 + 未钉 Node ⇒ 与 §十二 R4「重型验证串行 ≤1」自相矛盾（e2e 起真实 `createServer()`，默认 `--fileParallelism=true` 会三文件并发） | 钉 Node 22（`$HOME/.nvm/versions/node/v22.23.2/bin`，实测存在）+ `--no-file-parallelism --maxWorkers=1`（实测 vitest 4.1.8 支持两开关；保留 `--reporter=verbose`） | §十三 ①:746-752 |
+| **C** | ① 未串行 + 未钉 Node ⇒ 与 §十二 R4「重型验证串行 ≤1」自相矛盾（e2e 起真实 `createServer()`，默认 `--fileParallelism=true` 会三文件并发） | **[v2 修订]** 用**默认 node**（实测 `v24.19.0` / ABI `137`，不再 pin nvm 路径）+ `--no-file-parallelism --maxWorkers=1`（实测 vitest 4.1.8 支持两开关；保留 `--reporter=verbose`）——**原「钉 Node 22」口径已作废** | §十三 ① |
+| **(b)** | 组 4 接线门禁要求新 export 被 `src/**` 跨文件引用；3 符号生产消费者为无 | **收缩公开面（零豁免，不碰 plan.json）**：6 函数出口 → **3 入口**（+ `loadSettingsSource`）；转私有 6；删 `createSettingsRoutes`；负控改公开面等价形态（F14）；新增 F15 防"为测试重新导出" | §4.1:306｜§4.2:355｜§4.3:371｜§4.4:377｜§十二 D-EXPORT-1｜§九 F14/F15｜§十三 ⑦-a |
 
-> **三条口径更正（实测/裁决，勿抄 PLAN）**：① 健康面 = `/api/healthz`（`src/routes/healthz.ts:323`），**不是** `/healthz`；② 端口**必须显式 `export PORT=<空闲口>`**，不得依赖 `${PORT:-18790}` 形态的隐式默认（F13）；③ 负控判据**两条并存**——单元级直调 `loadSettingsSpec()` 非 0 exit，**且**进程级起服 degraded 不崩死（不是二选一）；④ env 名 = `SYNOVA_SETTINGS_ROOT` + `SYNOVA_SETTINGS_HOME`（R3 定案）；`SYNOVA_SETTINGS_FILE` 与安装目录 env 均已作废（§4.5）。
+> **口径更正（实测/裁决，勿抄 PLAN）**：① 健康面 = `/api/healthz`（`src/routes/healthz.ts:323`），**不是** `/healthz`；② 端口**必须显式 `export PORT=<空闲口>`**，不得依赖 `${PORT:-18790}` 形态的隐式默认（F13）；③ 负控判据**两条并存**——**[v2]** 公开面单元级形态（`initSettingsBootFence()` + `degraded/code/rows/row` 逐项核，**不再是** `loadSettingsSpec()` 直调：(b) 已私有化，见 F14）**且**进程级起服 degraded 不崩死（不是二选一）；④ env 名 = `SYNOVA_SETTINGS_ROOT` + `SYNOVA_SETTINGS_HOME`（R3 定案）；`SYNOVA_SETTINGS_FILE` 与安装目录 env 均已作废（§4.5）；⑤ **[v2]** 三套件 `npx vitest` 的命令**不得**使用 v22 nvm 路径（现口径 = 默认 `v24.19.0`）；⑥ **[v2]** 测试**不得** import 任何被 (b) 私有化的符号（`declareSettings`/`loadSettingsSpec`/`bootSettingsRuntime`/`SettingsSpecError`/`BUILTIN_SETTINGS_DECLARATIONS`/`SETTINGS_FILE`），造"第二个 boot"只用公开入口（§4.4 / F15）。
 
 ---
 
@@ -849,6 +900,9 @@ git status --porcelain   # 期望仅本卡声明写集
 | 写集表可被门禁提取器解析（零漂移的前提） | python3 scripts/control-tower/devdoc_writeset.py --extract docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D1053-live-restart-settings-20260928.md | status=ok 且 cleaned 长度 1（漂移实测见 §2.1 注，跑 bash scripts/workflow/check-dev-doc-write-set.sh 得 声明 1 条 漂移 0） |
 | 7 项 + 队长 2 项各自成节且非空 | grep -n "^## .*活规格第" docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D1053-live-restart-settings-20260928.md | 命中 7 行（仅二级标题；本表行不计入） |
 | 三套件定案名与配对门一致 | grep -n "tests/config/settings-applies.test.ts" docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D1053-live-restart-settings-20260928.md | 命中 ≥1 |
+| 导出面 (b) 定稿：settings-applies 恰 3 个 function 导出 | grep -c "export function" src/config/settings-applies.ts | 命中 3 |
+| 工厂已删：routes/settings 无 function 导出 | grep -c "export function" src/routes/settings.ts | 命中 0 |
+| 点分 key 定案与实现同向（KEY_PATTERN 允许点分多段） | grep -n "KEY_PATTERN" src/config/settings-applies.ts | 命中 ≥1 |
 | 分类表 9 条声明均带实测消费者锚点 | grep -n "src/l3/synova-diagnosis-engine-impl.ts:52" docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D1053-live-restart-settings-20260928.md | 命中 ≥1 |
 | DSH 现验锚点可核（M3 用现验命令） | git -C /Users/wane/src/deepseek-harness-017 grep -n applies packages/settings/settings/lib/index.js | 命中硬编码 live |
 | 既存例外 E1 锚点可核 | grep -n 热重载 src/config.ts | 命中 76 |
