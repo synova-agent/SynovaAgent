@@ -1,0 +1,39 @@
+{
+  "task_id": "D1039",
+  "title": "A4-CI成本收口 — control-tower-tests 按需跑（ci.yml 路径门控 + 可测分类器）",
+  "status": "audited",
+  "spec": ".claude/task-briefs/2026-09-28-D1039-A4-CI成本收口.md",
+  "impl": null,
+  "audit": {
+    "verdict": "CONDITIONAL_PASS",
+    "auditor": "kimi-k3",
+    "report": "docs/synova/audit-reports/2026-09-28-D1039.md",
+    "date": "2026-09-28",
+    "summary": "CI 语义变更本体成立：job 恒调度+step 级 if:（禁 job 级 paths:）保住 12 必需 context，机制有生产同构实证（run 36356863703 docs-only 跳过=CT 双腿 success）。六重点独立复核：①成立(js-yaml 解析+API step 级) ②三网兜延迟不兜发生 ④4 样本方差 2222/1432/2152/1824s 经 API 逐秒复现，'不得宣称降本'恰当 ⑤数据缺失型移交成立但闭合无主(须跟踪) ⑥--head 护栏事故已闭合(1677f1afa 回退+head 处字面串 0 命中+gate-integrity 55/0+run8 与 4691 双 13/13 绿)。13 处推翻读数抽查 8/8 属实。🔴 P1 必修：docs/synova/presets/** 7 个非 md/json 文件(.yml/.sh)是 for-list 测试 check-preset-bundles.test.sh:34 真实依赖，白名单不挡(改前会跑)+RULES 不挡(改后 MISS 跳过)=净回归'该跑没跑'，2026-08 以来 11 commit 触碰、≥3 个纯 presets 形态 ⇒ 证伪'最坏=多跑一次绝不=该跑没跑'断言(该断言仅对分类器降级成立，对路径集不完备不成立)；根因=三道依赖面测量(brief Q0.b/A4v §3.3/配对测试判别性①②)同用字面量提取，组合变量路径($REPO_SRC)三次穿透。修复=RULES+presets 一行+夹具两断言。P2×3：决策 Note schedule 行为描述与实现不一致(实现保守正确)/移交闭合无 task-state 归属/tests/win 变更失 canary-drift warning 可见性≤7天。L2 写集 20/21(bypass.log hook 自动已说明)。L3 零 no-verify 绕过(15 条全 pre-commit PASS)。审计基线分支=main(487 FAIL 零新增)。north-star 对齐零跑偏。归因: implement+枚举法预设(命中 A4v 坑#7 既有 M 类，强化该类防线即可，勿新增 M 类)"
+  },
+  "fix_task_id": null,
+  "write_set": [
+    ".github/workflows/ci.yml",
+    "scripts/control-tower/ci-signal-classify.sh",
+    "tests/control-tower/ci-signal-classify.test.sh",
+    ".claude/task-briefs/2026-09-28-D1039-A4-CI成本收口.md",
+    "task-state/D1039.json",
+    "task-state/D1040.json",
+    "task-state/D1041.json",
+    "task-state/D1042.json",
+    "task-state/D1043.json",
+    "memory/notes/proposed/2026-09-28-D1039-ci-signal-classify.md",
+    "docs/synova/product-lines/evidence/D1039-A4d-五workflow成本基线.md",
+    "docs/synova/product-lines/evidence/D1039-A4e-watchdog-根因.md",
+    "docs/synova/product-lines/evidence/D1039-A4v-独立复核-墙钟比对.md",
+    "docs/synova/product-lines/evidence/D1039-收尾三件-diff-自验-遗留.md",
+    "docs/synova/product-lines/evidence/D1039-A4c-自验与反例-原始输出.md",
+    "docs/synova/product-lines/evidence/D1039-A4v-reconcile.sh",
+    "docs/synova/product-lines/evidence/D1039-PR正文与开PR指令-给CTO.md",
+    "tests/control-tower/d956-failmsg.test.sh",
+    "scripts/control-tower/merge_writeset_gate.py",
+    "tests/control-tower/merge_writeset_gate.test.sh"
+  ],
+  "updated_at": "2026-09-28",
+  "updated_by": "kimi-k3 (D1039 audit write-back)"
+}
