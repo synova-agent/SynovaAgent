@@ -1,6 +1,6 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════════════
-# vitest-log-level.test.sh — D1035 (A4-b) 测试期 LOG_LEVEL 收敛
+# vitest-log-level.test.sh — D1040 (A4-b) 测试期 LOG_LEVEL 收敛
 #
 # 被测契约（vitest.config.ts → test.env.LOG_LEVEL）:
 #   输入 : 外部环境变量 LOG_LEVEL（可缺省）
@@ -88,7 +88,7 @@ extract() {
 }
 
 echo "═══════════════════════════════════════════════════════════════"
-echo "  D1035 · 测试期 LOG_LEVEL 契约（vitest.config.ts test.env）"
+echo "  D1040 · 测试期 LOG_LEVEL 契约（vitest.config.ts test.env）"
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 
@@ -166,10 +166,10 @@ echo ""
 echo "═══════════════════════════════════════════════════════════════"
 echo "  结果: $PASS 通过, $FAIL 失败"
 if [ "$FAIL" -gt 0 ]; then
-  echo "  Status: ❌ D1035 LOG_LEVEL 契约未通过"
+  echo "  Status: ❌ D1040 LOG_LEVEL 契约未通过"
   echo "═══════════════════════════════════════════════════════════════"
   exit 1
 fi
-echo "  Status: ✅ D1035 LOG_LEVEL 契约全部通过"
+echo "  Status: ✅ D1040 LOG_LEVEL 契约全部通过"
 echo "═══════════════════════════════════════════════════════════════"
 exit 0

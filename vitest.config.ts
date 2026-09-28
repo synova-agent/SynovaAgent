@@ -60,7 +60,7 @@ export default defineConfig({
       PORT: '3099',
       SYNOVA_DB_PATH: ':memory:',
       SYNOVA_SKIP_MCP: '1',
-      // A4-b (D1035): 测试期默认收敛到 warn — ERROR 不再被 INFO 淹没（失败时仍能出上下文）。
+      // A4-b (D1040): 测试期默认收敛到 warn — ERROR 不再被 INFO 淹没（失败时仍能出上下文）。
       // ① 用 `process.env.LOG_LEVEL ?? 'warn'` 而非硬编码：`test.env` 是**覆盖**语义
       //    （实测 E2b：硬编码 'warn' 时外部 `LOG_LEVEL=debug npx vitest run` 仍被压成 warn），
       //    `??` 在 config 主进程求值 ⇒ 外部显式值可透传，不静默夺走调试开关。
