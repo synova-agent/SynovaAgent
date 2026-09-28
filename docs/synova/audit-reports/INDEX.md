@@ -81,6 +81,7 @@
 | 2026-09-21 | K3-D865-复审 | 未判定（见报告正文） | `k3-repo@9d1e14b8:docs/synova/audit-reports/2026-09-21-K3-D865-复审.md` | 2026-09-21 |
 | 2026-09-24 | K3批次4-PR745-746-747 | 未判定（见报告正文） | `k3-repo@b272b765:docs/synova/audit-reports/2026-09-24-K3批次4-PR745-746-747.md` | 2026-09-24 |
 | 2026-09-25 | K3-批次5 | 未判定（见报告正文） | `k3-repo@001631bc:docs/synova/audit-reports/2026-09-25-K3-批次5.md` | 2026-09-25 |
+| 2026-09-28 | K3-D1045-门禁必要性审计-独立复核 | CONDITIONAL PASS（六条核心 5 成立+1 算术瑕疵；假绿 4/4 实证；D962 修复在途；CI 逐门禁 30d 命中已补全） | `docs/synova/audit-reports/2026-09-28-D1045-门禁必要性审计-K3独立复核.md` | 2026-09-28 |
 | — | AGENT-CAPABILITY-FULL-CHAIN-AUDIT-20260813 | 未判定（见报告正文） | `k3-repo@8d64c433:docs/synova/audit-reports/AGENT-CAPABILITY-FULL-CHAIN-AUDIT-20260813.md` | — |
 | — | AGENT-INFRASTRUCTURE-AUDIT-20260814 | 未判定（见报告正文） | `k3-repo@34b4d80f:docs/synova/audit-reports/AGENT-INFRASTRUCTURE-AUDIT-20260814.md` | — |
 | — | DS8-flip-physical-verification | 未判定（见报告正文） | `k3-repo@ece4e268:docs/synova/audit-reports/D577-sentinel-threshold-wiring-evidence-20260905/DS8-flip-physical-verification.md` | — |

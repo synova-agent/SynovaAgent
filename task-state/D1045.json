@@ -1,0 +1,25 @@
+{
+  "task_id": "D1045",
+  "title": "门禁必要性审计（哪些该留/该退役）",
+  "status": "audited",
+  "risk": "high",
+  "spec": "docs/synova/coordination/整体推进计划-主线-20260913.md v1.2 @ 4e46603f（被审报告自述）",
+  "impl": "只读审计批：档案仓 69233d6（报告）+ eb8732b（INDEX），主仓零 commit",
+  "audit": {
+    "verdict": "CONDITIONAL_PASS",
+    "auditor": "kimi-k3",
+    "report": "docs/synova/audit-reports/2026-09-28-D1045-门禁必要性审计-K3独立复核.md",
+    "date": "2026-09-28",
+    "summary": "独立复核六条核心：5 条完全成立 + 1 条算术瑕疵（47/112=42.0% 非 41.1%）。假绿 4/4 物理实证（组1b :508 同词自排除 printf 复现 / 组4a plan.json 19 天致 :674 恒真 + plan_aware_check 零埋点 / A7 :1533 --diff-filter=A 漏检 + pre-dispatch-check.sh:59 活违规由 1b911728 引入 / 组10 双变量零赋值恒 soft_pass）。CHANGED_FILES 血统分歧裁决：只看新增行法 0 行 ⇒ 报告结论成立（引用命令未注明路径过滤为 P2）。exit 0 判定=D515 设计非缺陷，误导载体在铁律 8/38/46/47/48 文本；20 hard_check=16 直调+4 decl_check 成立。命中统计：全聚合 207 logs/36,721 行/30d hit 3,715（主树 486，PRD 门占 50.6%）⇒ 判死依据不可用成立。C 域 4 件零调用+接手者 4 断言全部反驳成立，处置语义恰当。4 处推翻派单全部成立且构成 L4 缺口 G1。新发现：A17 job 级红 2 次（均 npm ci 基建噪声，零真实拦截成立）；D962 分支已含组10 修复未入 main（收卡应改接线 D962）。CI 逐门禁 30d：Iron Laws 284 / CT-win 91 / CT-ubuntu 85 / Vitest2 62 / GateIntegrity 32。分支保护 12 检查 strict=False enforce_admins=True 实证。crontab OS 级拒绝在 K3 环境同样复现。"
+  },
+  "fix_task_id": null,
+  "updated_at": "2026-09-28",
+  "updated_by": "kimi-k3",
+  "domain": "audit",
+  "owner": "gate-line",
+  "executor": "synova-squad-lead+ABCD",
+  "milestone": "门禁治理轮",
+  "depends_on": [],
+  "next": "CTO 收件闸：① 按 K3 修复清单 P0 四项立卡（组10 优先接线 D962 勿重开）② 铁律文本去「pre-commit 硬阻断」口径 ③ log_gate 补三 helper ④ gate-stats --all-worktrees ⑤ A17 证据基线改写后再进退役程序 ⑥ 报告 8 项精度修正随对应卡带修",
+  "note": "K3 独立复核依据 CTO 授权（GITHUB_TOKEN repo,workflow / 全 worktree 日志读取）。产品仓全程只读（沙箱实测 utf8.test.sh 复跑因写临时文件被拒=环境自证）。红线遵守：未碰 scripts/audit/**、未改任何代码、报告只落 K3 工作区。"
+}
