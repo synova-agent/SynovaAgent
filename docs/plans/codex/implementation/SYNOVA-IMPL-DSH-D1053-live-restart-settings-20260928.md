@@ -83,7 +83,7 @@
 | 2 | `src/config/settings-source.ts` | 新建 | C1 | 两层文件源（workspace/home）读取 + 类型校验；叠加**复用** `config-layers.mergeLayers/resolveLayers`，**不重写第二套**（§4.5） |
 | 3 | `src/routes/settings.ts` | 新建 | C1 | **真实入口** `GET /api/settings/effective`：每请求经同一 runtime accessor 取值（§七） |
 | 4 | `src/routes/config.ts` | 修改（+≤15 行） | C1 | **第二消费者**：`/api/config/dump` 顶层增列 `settings:{keys,undeclared,degraded,scope}` 块（§7.2）—— 「两消费者同一新值」的物理证明面 |
-| 5 | `src/server.ts` | 修改（**仅 3 行**） | C1 | 1 import + 1 `initSettingsBootFence()` 显式初始化 + 1 mount；热点文件（15 个未合并分支触及）⇒ **只允许这 3 行**（R4 由 2 行放宽） |
+| 5 | `src/server.ts` | 修改（**恰 4 物理行**） | C1 | 2 import（`./routes/settings` + `./config/settings-applies`，各占 1 物理行，来自不同模块**不可能并成一行**）+ 1 `initSettingsBootFence()` + 1 `app.use(settingsRoutes)`；热点文件（15 个未合并分支触及）⇒ **只允许这 4 行**（R4 由「1 import + 1 mount」放宽；**反对 wiring shim**——与 R4「显式由 `createServer()` 调用、禁 import 副作用」相悖） |
 | 6 | `tests/config/settings-applies.test.ts` | 新建 | C1 | **LIVE 套件**；文件**内容**含串 `settings-applies-live`（不含 restart 串） |
 | 7 | `tests/config/settings-source.test.ts` | 新建 | C1 | **RESTART 套件**；文件**内容**含串 `settings-applies-restart`（不含 live 串） |
 | 8 | `tests/routes/settings.test.ts` | 新建 | C1 | **入口/E2E 套件**（路径 A+B+C 的 HTTP 端到端，真实路由、不 mock 管线，铁律 12）；承载"两消费者同一新值"断言（§8.1）；**内容不含**两串 |
@@ -366,19 +366,21 @@ export interface SettingsSourceResult {
 |---|---|---|---|---|
 | `createSettingsRoutes(runtime?: SettingsRuntime): Router` | 可选注入 runtime（缺省 = `getSettingsRuntime()`）；构造时**不** boot | express `Router`，绑定 `GET /api/settings/effective` | 每次请求从 runtime 读 `degraded`/`reason`/`code` 并透传响应体 | 无抛出路径：声明非法被 `SettingsSpecError` 捕获 ⇒ `200 + degraded:true + code`（§7.3）；未知异常 ⇒ 兜底 `200 + degraded:true + code:'SETTINGS_ROUTE_INTERNAL'` + `log.warn`（检查表面不成为故障面） |
 
-### 4.4 装配与"两消费者同一 runtime"（`src/server.ts` 仅 2 行）
+### 4.4 装配与"两消费者同一 runtime"（`src/server.ts` 恰 4 物理行）
 
-**唯一装配路径（逐字，R4 后为 3 行）**：
+**唯一装配路径（逐字，R4 后为 4 物理行）**：
 
 ```ts
-import settingsRoutes from './routes/settings';                    // ← server.ts 改动 1/3（D1053）
-import { initSettingsBootFence } from './config/settings-applies'; // ← server.ts 改动 2/3（D1053）
-// …（在 createServer() 体内、app.listen(config.port) 之前）
-initSettingsBootFence();                                           // ← server.ts 改动 3/3（D1053，显式初始化生效边界）
-app.use(settingsRoutes);                                           // ← 与改动 3 同属本卡；参照 configRoutes:385 邻位
+import settingsRoutes from './routes/settings';                     // ← 改动 1/4（D1053）
+import { initSettingsBootFence } from './config/settings-applies';  // ← 改动 2/4（D1053）
+// …（本行是说明注释，不是改动；initSettingsBootFence() 放在 createServer() 体内、app.listen(config.port) 之前）
+initSettingsBootFence();                                            // ← 改动 3/4（D1053，显式初始化生效边界）
+app.use(settingsRoutes);                                            // ← 改动 4/4（D1053；参照 configRoutes:385 邻位）
 ```
 
-> 行数口径：**import ×2 + 调用/挂载 ×2 = 3 行逻辑改动**（1 import 组 + 1 `initSettingsBootFence()` + 1 `app.use`）。热点文件（15 个未合并分支触及，§九 F7）⇒ **不得再多加一行**。
+> 行数口径（**返工 A 定稿**）：**import 组 ×1（含 2 个 import = 2 物理行）+ `initSettingsBootFence()` ×1 + `app.use(settingsRoutes)` ×1 = 恰 4 物理行**。
+> 两个 import 来自不同模块（L1 路由 / 配置域）⇒ **不可能合并成一行**；亦**不得**用 wiring shim 转成一 import（与 R4「显式由 `createServer()` 调用、禁 import 副作用」相悖）。
+> 热点文件（15 个未合并分支触及，§九 F7）⇒ **不得再多加一行**。
 
 - `src/routes/settings.ts` **默认导出 = `createSettingsRoutes()` 的实例**（与既有 `configRoutes`/`reloadRoutes` 导出风格一致）。
 - **生效边界 = 该 server 实例启动时刻**（R4 定案）：生产 = 进程启动（`createServer()` 调 `initSettingsBootFence()`）；测试 = 再次调用 `initSettingsBootFence()` 或 `bootSettingsRuntime()` 造新边界。
@@ -634,7 +636,7 @@ log.warn({ count, exceptions }, 'SETTINGS_EXCEPTION_ACTIVE 既存例外（不按
 | **M1** restart 项当 live 处理 | `src/config/settings-applies.ts` 的分类判定分支，使 `restart` 键走现读 | `tests/config/settings-source.test.ts` 的 **B1 必红** | 复原后 `git diff --stat` 空 **且** `shasum -a 256 <file>` 与注入前记录值逐字相同（V 注入前后各存一次基线哈希） |
 | **M2** 删分类声明 | 从 `BUILTIN_SETTINGS_DECLARATIONS` 移除一条键（模拟"忘声明"） | `tests/config/settings-applies.test.ts` 的 **A3 必红** | 同上（哈希一致） |
 | **M3** 消费者绕过 accessor 自缓存 | `src/routes/config.ts` 内注入模块级缓存分支（首次读后缓存 `settings` 块） | `tests/routes/settings.test.ts` 的 **C1 必红**（两消费者值不等） | 同上 |
-| **M4** 非法配置负控 | 夹具文件写 `applies: "sometimes"`（R5：yaml 本不得含 `applies`）／坏 YAML | `tests/routes/settings.test.ts` 的 **C4 必红**；**且**单元级直调 `loadSettingsSpec()` 抛 `SettingsSpecError`（**非 0 exit**）；**且**进程级起服**不崩死**（degraded 响应，见 §7.3） | 删除负控夹具文件；`git status --porcelain` 仅剩本卡声明写集 |
+| **M4** 非法配置负控 | **两个入参面各一条**（返工 B 已修夹具路径）：① yaml 面 = `/tmp/d1053-bad/settings.yaml` 内含 `applies` 键（R5：值面本不得携带分类）→ 对应 §十三 **⑦-a**；② registry 面 = `declareSettings({applies:'sometimes'})` → 对应 §十三 **⑦-a₂** | `tests/routes/settings.test.ts` 的 **C4 必红**；**且** ⑦-a 与 ⑦-a₂ **各自**非 0 exit（单元级 fail-closed）；**且** ⑦-b 进程级起服**不崩死**（degraded 响应，见 §7.3） | 删除负控夹具目录 `/tmp/d1053-bad`（在 /tmp，不涉仓库）；`git status --porcelain` 仅剩本卡声明写集 |
 
 **判别性要求（"删掉即报红"）**：M1-M4 每条必须能被 V **独立复现为红**；若注入后套件仍绿 ⇒ 判定 **"接线了≠被执行"**，退回（不是补文档）。
 
@@ -656,7 +658,7 @@ log.warn({ count, exceptions }, 'SETTINGS_EXCEPTION_ACTIVE 既存例外（不按
 | **F4** | **证据新鲜度**：证据日期后该线 modules（`src/config/`）再有提交 ⇒ 判 `stale` | `scripts/product-lines/calc-progress.py:47` | 证据在**代码冻结后**跑；3 天内送审；证据产出后不再改 `src/config/**` |
 | **F5** | **L1→L3 跨层基线**（线3 切片曾被退回） | `scripts/check-architecture.sh` 的 `PAT_L3='(/l3/\|/sentinel/\|/expert-platform/\|/expert/)'`；`src/config/**` 不在任何层模式内 | 新模块落 `src/config/**`；测试/路由不 import `l3/ sentinel/ expert/ l4/ store/`；`src/routes/config.ts` 已有 `../config/*` 合法先例（`:20`） |
 | **F6** | **跨卡写集重叠** | D1051 在飞写集实测含 `src/routes/diagnosis.ts`、`src/routes/conversations.ts`；`src/sentinel/baseline-store.ts` 被 3 分支触及 | 三者**不进写集**（§2.3）；开工/合并前 `git fetch --all` 复扫 |
-| **F7** | **热点文件**（`src/server.ts` 被 15 个未合并分支触及） | `10-conflict-scan.txt` ③ | 只加 2 行（§4.4）；合并前复扫 |
+| **F7** | **热点文件**（`src/server.ts` 被 15 个未合并分支触及） | `10-conflict-scan.txt` ③ | **恰 4 物理行**（§4.4 返工 A 定稿：2 import + `initSettingsBootFence()` + `app.use`）；合并前复扫 |
 | **F8** | **红证残留** | — | 标记串 + 收尾 `grep=0`（§8.4） |
 | **F9** | **Windows 门禁 fail-open** | — | 本卡不含 win 专属脚本改动；若 CI 该腿 degraded，必须在回执**显式标 degraded**（禁静默绿） |
 | **F10** | **同类第二次 = 升级** | M1/M6/M7 模式（K3 台账） | 出现同类第二次 ⇒ 立即升级 CTO，**不自行加机制**（一类一机制） |
@@ -716,7 +718,7 @@ log.warn({ count, exceptions }, 'SETTINGS_EXCEPTION_ACTIVE 既存例外（不按
 
 | # | 风险 | 量级/口径 | 对策 |
 |---|---|---|---|
-| R1 | `src/server.ts` 热点冲突（15 个未合并分支） | 实测 tip 2026-09-25 | 只加 2 行；合并前 `git fetch --all` 复扫 + rebase 而非 merge |
+| R1 | `src/server.ts` 热点冲突（15 个未合并分支） | 实测 tip 2026-09-25 | **恰 4 物理行**（§4.4）；合并前 `git fetch --all` 复扫 + rebase 而非 merge |
 | R2 | `loadConfig()` 语义回归（消费面 53 处） | 实测 53 处 | 本卡**不接管** `loadConfig()`；新面独立闭环；既有 env 键语义不变（§3.3） |
 | R3 | 同键多消费者默认值不一致（真实半生效温床） | **4 落点 / 2 个不同默认值（0.3×3、0.4×1）**，实测：`src/l3/synova-diagnosis-engine-impl.ts:52` `DEFAULT_GATE_COMPLETENESS = 0.3`；`src/routes/diagnosis.ts:311` `?? 0.3`；`src/routes/conversations.ts:143` `?? 0.3`；`src/orchestrator/diagnosis-orchestrator.ts:65` `gateDataCompleteness: 0.4`（**唯一 0.4**） | 本卡**只把声明面唯一化**为 `defaultValue: 0.3` + `consumer` 锚点（§5.1）；**`src/routes/conversations.ts:143` 与 `src/orchestrator/diagnosis-orchestrator.ts:65` 两处均未消除**（前者 = D1051 在飞写集，后者 = 超写集）⇒ V 的证据**必须点明"未消除 + 未消除的原因"**，禁写成"已统一" |
 | R4 | 重型验证压满（8GB 机器，两次前科） | — | vitest **串行 ≤1**；本卡重型验证 = 3 套件一次性跑（不并发） |
@@ -742,9 +744,12 @@ rm -rf /tmp/d1053-root /tmp/d1053-settings-home
 mkdir -p /tmp/d1053-root /tmp/d1053-settings-home
 
 # ── ① 三套件（独立重跑）——必须打印套件名与用例数（防 A2 静默跳过，F1） ──
+# 返工 C：钉 Node 22 + 关文件级并行（§十二 R4「重型验证串行 ≤1」；e2e 起真实 createServer ⇒ 默认并发会撞 8GB 上限）
+export PATH="$HOME/.nvm/versions/node/v22.23.2/bin:$PATH"   # 实测该路径存在（node -v 应打印 v22.23.2）
 npx vitest run tests/config/settings-applies.test.ts \
                tests/config/settings-source.test.ts \
-               tests/routes/settings.test.ts --reporter=verbose
+               tests/routes/settings.test.ts \
+               --reporter=verbose --no-file-parallelism --maxWorkers=1
 
 # ── ② 起真实服务：显式空闲口 + 从启动日志回读实际端口（F13，不依赖隐式默认口） ──
 export PORT=17453                                # 现场选空闲口；PORT 优先于 synova.json/DEFAULT_CONFIG
@@ -794,12 +799,21 @@ grep -c 'SETTINGS_EXCEPTION_ACTIVE'   /tmp/d1053-server2.log   # 期望 ≥1（C
 kill $SRV; sleep 1
 
 # ── ⑦ 负控：**两条并存**（单元级 = 非 0 exit；进程级 = degraded 不崩死） ──
-printf 'settings:\n  bad:\n    x: { applies: sometimes }\n' > /tmp/d1053-root/bad.yaml
+# 返工 B（F1 型"夹具静默失效"修复）：加载器唯一读取面 = `<root>/settings.yaml`（§4.5）⇒
+#   负控必须放在**独立 root 的 settings.yaml**，不能写成 `<root>/bad.yaml`（那样读到的是合法 settings.yaml，两条判据双双落空）
+BADROOT=/tmp/d1053-bad
+rm -rf "$BADROOT"; mkdir -p "$BADROOT"
+printf 'settings:\n  bad:\n    x: { value: 1, applies: sometimes }\n' > "$BADROOT/settings.yaml"
+# 注（R5 语义，防判据被误读）：本夹具触发 `SETTINGS_SPEC_INVALID` 的直接原因是 **yaml 里出现 `applies` 键本身**
+#   （R5：值面不得携带分类）；"applies 取值非法" 的另一条负控属**单元级**——见 ⑦-a 加注。
 # ⑦-a 单元级直调（fail-closed 抛 SettingsSpecError ⇒ 非 0 exit）
-SYNOVA_SETTINGS_ROOT=/tmp/d1053-root SYNOVA_SETTINGS_HOME=/tmp/d1053-nonexistent \
+SYNOVA_SETTINGS_ROOT="$BADROOT" SYNOVA_SETTINGS_HOME=/tmp/d1053-nonexistent \
   npx tsx -e "import('/Users/wane/SynovaAgent/.synova-wt-squad-d1053/src/config/settings-applies.ts').then(m=>m.loadSettingsSpec())"; echo "⑦-a 期望非 0 exit"
+# ⑦-a₂ 单元级：applies 取值非法（`'sometimes'`）—— 经 declareSettings/registry 入参，非 yaml 面
+SYNOVA_SETTINGS_ROOT=/tmp/d1053-nonexistent SYNOVA_SETTINGS_HOME=/tmp/d1053-nonexistent \
+  npx tsx -e "import('/Users/wane/SynovaAgent/.synova-wt-squad-d1053/src/config/settings-applies.ts').then(m=>m.declareSettings({ns:'bad',key:'x',applies:'sometimes',defaultValue:1,consumer:'tests'}))"; echo "⑦-a₂ 期望非 0 exit"
 # ⑦-b 进程级（配置面故障不得成为启动故障面：不崩死，返回 degraded + code）
-SYNOVA_SKIP_MCP=1 npx tsx src/index.ts > /tmp/d1053-server3.log 2>&1 & SRV=$!
+SYNOVA_SETTINGS_ROOT="$BADROOT" SYNOVA_SKIP_MCP=1 npx tsx src/index.ts > /tmp/d1053-server3.log 2>&1 & SRV=$!
 sleep 5
 curl -s "http://127.0.0.1:${PORT}/api/healthz" -o /dev/null -w '%{http_code}\n'          # 期望 200（未崩死）
 curl -s "http://127.0.0.1:${PORT}/api/settings/effective" | grep -c 'SETTINGS_SPEC_INVALID'  # 期望 ≥1（degraded + code）
@@ -811,6 +825,14 @@ git status --porcelain   # 期望仅本卡声明写集
 ```
 
 **四件套对应**：①=verify 命令（三套件）｜②=真实入口（真配置面读改 + 真 HTTP 读值 + 健康面）｜③④⑤⑥⑦=改坏即红（M1-M4 + **§八 8.3 的复原哈希一致**）｜`evidence/D1053/*.json`=.json 证据（含「实际执行了哪个套件、跑了几个用例」原始输出）。
+
+**返工登记（队长裁定，全部落在本文件）**
+
+| 返工 | 缺陷 | 修法 | 落点 |
+|---|---|---|---|
+| **A** | `src/server.ts` 行数口径四方冲突（"仅 2 行" / "3 行" / "只加 2 行"×2） | 统一为 **恰 4 物理行** = 2 import（不同模块，不可合并）+ `initSettingsBootFence()` + `app.use`；**反对 wiring shim**（与 R4 禁 import 副作用相悖） | §2.2:86｜§4.4:369-381｜§九 F7:661｜§十二 R1:721 |
+| **B** | ⑦ 负控夹具写在 `<root>/bad.yaml` ⇒ 加载器读的是同目录**合法 `settings.yaml`**，⑦-a/⑦-b 判据**双双落空**（F1 型夹具静默失效） | 独立 root：`/tmp/d1053-bad/settings.yaml`；⑦-a **与** ⑦-b 均显式指向该 root；新增 ⑦-a₂ 覆盖"applies 取值非法"（registry 入参面） | §十三 ⑦:801-820 |
+| **C** | ① 未串行 + 未钉 Node ⇒ 与 §十二 R4「重型验证串行 ≤1」自相矛盾（e2e 起真实 `createServer()`，默认 `--fileParallelism=true` 会三文件并发） | 钉 Node 22（`$HOME/.nvm/versions/node/v22.23.2/bin`，实测存在）+ `--no-file-parallelism --maxWorkers=1`（实测 vitest 4.1.8 支持两开关；保留 `--reporter=verbose`） | §十三 ①:746-752 |
 
 > **三条口径更正（实测/裁决，勿抄 PLAN）**：① 健康面 = `/api/healthz`（`src/routes/healthz.ts:323`），**不是** `/healthz`；② 端口**必须显式 `export PORT=<空闲口>`**，不得依赖 `${PORT:-18790}` 形态的隐式默认（F13）；③ 负控判据**两条并存**——单元级直调 `loadSettingsSpec()` 非 0 exit，**且**进程级起服 degraded 不崩死（不是二选一）；④ env 名 = `SYNOVA_SETTINGS_ROOT` + `SYNOVA_SETTINGS_HOME`（R3 定案）；`SYNOVA_SETTINGS_FILE` 与安装目录 env 均已作废（§4.5）。
 
