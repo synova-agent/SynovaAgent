@@ -49,7 +49,8 @@ code{{background:#f3f4f6;padding:1px 4px;border-radius:3px}}
 🟢 生效 {cnt('green')} ｜ 🟡 接了未生效 {cnt('yellow')} ｜ 🔴 缺失 {cnt('red')} ｜
 ⚪ <b>未填 {cnt('empty')}</b>（未填=待办，<b>不伪装成绿</b>）<br>
 生成时间 {ts} ｜ 机读源 <code>docs/synova/coordination/宪章三问-48格.json</code></div>
-<table><thead><tr><th>层</th><th>可扩展项</th><th>① 加了吗（存在性）</th><th>② 接上了吗（接线）</th><th>③ 生效了吗（结果）</th></tr></thead>
+<table><thead><tr><th>层</th><th>可扩展项</th><th>① 加了吗（存在性）</th><th>② 接上了吗（接线）</th><th>③ 生效了吗（结果）</th>
+                <th>④ 删了吗（删除后无残留）</th></tr></thead>
 <tbody>{''.join(rows)}</tbody></table>
 <div class="rules">
 <b>判据规则</b>：每格必须是<b>穿生产入口的用例</b>，不是 grep 命中｜正向 + <b>改坏即红</b> + 降级三态<br>
