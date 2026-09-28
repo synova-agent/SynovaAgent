@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-28 17:13:07",
+  "generated_at": "2026-09-28 17:15:33",
   "version": "1.1",
   "total_lines": 29,
   "lines_v1": 28,
@@ -10,7 +10,7 @@
     "schema": "discrete-health-buckets/1",
     "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
     "granularity": "acceptance_point(product-lines.yaml)",
-    "denominator": 180,
+    "denominator": 181,
     "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
     "cmd_semantics": {
       "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
@@ -25,7 +25,7 @@
     },
     "denominator_note": "与 `docs/synova/project/ledger.json` 的 totals.buckets 分母不同（此处 = product-lines.yaml 验收点数；账本 = V1 断言表条数）——同名档不可跨件混读，各档自带 denominator",
     "healthy": {
-      "count": 10,
+      "count": 11,
       "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=f['buckets']['healthy']['count'];b=k['buckets']['healthy']['count'];sys.exit('MISMATCH buckets.buckets.healthy.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('healthy=' + str(a))\"",
       "cmd_kind": "source_recompute",
       "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=d['buckets']['healthy']['count'];print('healthy=' + str(v))\"",
@@ -124,7 +124,7 @@
       "null_terms": [
         "missing"
       ],
-      "known_terms_sum": 180,
+      "known_terms_sum": 181,
       "holds": true,
       "note": "null 档不参与求和（归属不可判定，禁猜 0）；state_unknown 是显式残余，故恒等式永远闭合——任何验收点都不会被静默丢弃。边界（队长 2026-09-20 裁定）：本恒等式**只保证完备性**（丢点会显形为 state_unknown），**不保证各档归类正确**——归类正确性由tests/project/calc-progress-panel.test.sh 与源侧独立核对命令负责；它是自洽性检查，不是正确性证据"
     },
@@ -5437,14 +5437,14 @@
       "baseline_pct": 40,
       "baseline_note": "工具在；认证/权限/打包缺",
       "done_definition": "企业里已有的 AI 助手能通过 MCP 安全地调用 Synova（有认证、有权限、装得上）",
-      "total": 6,
-      "verified": 0,
-      "progress_pct": 0,
+      "total": 7,
+      "verified": 1,
+      "progress_pct": 14,
       "buckets": {
         "schema": "discrete-health-buckets/1",
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
-        "denominator": 6,
+        "denominator": 7,
         "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
@@ -5459,7 +5459,7 @@
         },
         "denominator_note": "与 `docs/synova/project/ledger.json` 的 totals.buckets 分母不同（此处 = product-lines.yaml 验收点数；账本 = V1 断言表条数）——同名档不可跨件混读，各档自带 denominator",
         "healthy": {
-          "count": 0,
+          "count": 1,
           "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '26')['buckets']['healthy']['count'];b=next(l for l in k['lines'] if str(l['id']) == '26')['buckets']['healthy']['count'];sys.exit('MISMATCH lines[id=26].buckets.buckets.healthy.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('healthy=' + str(a))\"",
           "cmd_kind": "source_recompute",
           "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '26')['buckets']['healthy']['count'];print('healthy=' + str(v))\"",
@@ -5558,7 +5558,7 @@
           "null_terms": [
             "missing"
           ],
-          "known_terms_sum": 6,
+          "known_terms_sum": 7,
           "holds": true,
           "note": "null 档不参与求和（归属不可判定，禁猜 0）；state_unknown 是显式残余，故恒等式永远闭合——任何验收点都不会被静默丢弃。边界（队长 2026-09-20 裁定）：本恒等式**只保证完备性**（丢点会显形为 state_unknown），**不保证各档归类正确**——归类正确性由tests/project/calc-progress-panel.test.sh 与源侧独立核对命令负责；它是自洽性检查，不是正确性证据"
         },
@@ -5572,11 +5572,20 @@
         "uncommitted": 5,
         "failed": 0,
         "pending_k3": 1,
-        "verified": 0,
+        "verified": 1,
         "rejected": 0,
         "stale": 0
       },
       "points": [
+        {
+          "id": "25-10",
+          "desc": "删除插件后无遗留：删除任一类插件文件（专家/技能/哨兵/连接器）后注册表/目录索引无残留、运行时不调度、无悬空引用、行为回到删除前",
+          "status": "verified",
+          "evidence_files": [
+            "docs/synova/product-lines/evidence/k3-batch1-line25-line1-2026-09-28.json"
+          ],
+          "note": "创始人 2026-09-28 批准增补（完成度体系缺从有到无逆向链）；K3 批次1 已按本定义三步实测 pass"
+        },
         {
           "id": "26-1",
           "desc": "MCP 工具暴露（诊断/监测工具可被调用）",
@@ -6069,7 +6078,8 @@
     "problems": [
       "点 4-4 非法 status 种子: 'deferred'",
       "点 4-5 非法 status 种子: 'deferred'",
-      "点 4-6 非法 status 种子: 'deferred'"
+      "点 4-6 非法 status 种子: 'deferred'",
+      "点 25-10 非法 status 种子: ''"
     ],
     "git_check": "partial"
   }
