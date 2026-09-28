@@ -1,0 +1,11 @@
+{
+  "task_id": "D1059",
+  "title": "宪章格子升四问（48→64）+ 生成器对齐 + D963 规格更新",
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-09-29",
+  "updated_by": "alloc-task-id"
+}

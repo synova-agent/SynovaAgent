@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""宪章「三问」48 格 · HTML 看板生成器（D943）
+"""宪章「四问」64 格 · HTML 看板生成器（D943 立 / 2026-09-28 三问→四问）
 输入：docs/synova/coordination/宪章三问-48格.json（机读单源）
 输出：docs/synova/charter/三问-48格.html
 四色：green=生效了 / yellow=接上了但没生效 / red=缺失 / empty=未填（显式待办，不伪装成绿）
+四问：加 / 接 / 生效 / 删（创始人 2026-09-26 批准；删=删除后无残留）
 """
 import json, html, os, sys, datetime
 for s in ("stdout","stderr"):
@@ -11,7 +12,7 @@ for s in ("stdout","stderr"):
 def main():
     repo=sys.argv[1] if len(sys.argv)>1 else "."
     src=os.path.join(repo,"docs/synova/coordination/宪章三问-48格.json")
-    dst=os.path.join(repo,"docs/synova/coordination/三问-48格.html")
+    dst=os.path.join(repo,"docs/synova/coordination/四问-64格.html")
     d=json.load(open(src,encoding="utf-8")); cells=d["cells"]
     def cnt(st): return sum(1 for c in cells if c.get("status")==st)
     COL={"green":("#0a7d32","🟢 生效了"),"yellow":("#b8860b","🟡 接了但没生效"),
@@ -21,7 +22,7 @@ def main():
     rows=[]
     for (layer,name),qs in by.items():
         tds=[]
-        for qid in ("q1","q2","q3"):
+        for qid in ("q1","q2","q3","q4"):
             c=qs.get(qid,{})
             st=c.get("status","empty"); col,label=COL.get(st,COL["empty"])
             note=html.escape(c.get("judgement") or c.get("question_desc") or "")
@@ -57,6 +58,6 @@ code{{background:#f3f4f6;padding:1px 4px;border-radius:3px}}
 </div></body></html>"""
     os.makedirs(os.path.dirname(dst),exist_ok=True)
     open(dst,"w",encoding="utf-8").write(out)
-    print("  ✅ 已生成: %s（%d 行 × 3 问）" % (dst,len(by)))
+    print("  ✅ 已生成: %s（%d 行 × 4 问）" % (dst,len(by)))
     return 0
 if __name__=="__main__": sys.exit(main())
