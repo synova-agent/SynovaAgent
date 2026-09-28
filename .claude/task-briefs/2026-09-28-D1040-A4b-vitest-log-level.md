@@ -18,6 +18,7 @@
 | vitest.config.ts | task |
 | tests/win/vitest-log-level.test.sh | task |
 | docs/synova/product-lines/evidence/D1039-A4d-五workflow成本基线.md | task |
+| docs/synova/product-lines/evidence/D1039-A4b-D708真merge-ref复现.md | task（M6 收尾证据，见附录 F） |
 | .claude/task-briefs/2026-09-28-D1040-A4b-vitest-log-level.md | task |
 | .claude/bypass.log | builtin（post-commit hook D521 自动追加 `COMMITTED \| pre-commit PASS`，非人工写入） |
 
@@ -64,6 +65,7 @@
 - vitest.config.ts — 在 `test.env` 增 `LOG_LEVEL: process.env.LOG_LEVEL ?? 'warn'`（不新增 setupFiles）
 - tests/win/vitest-log-level.test.sh — 新建契约测试（正向 warn / 外部 debug 透传 / 不得 silent / 判别性夹具 / 生产接线 / 时序守卫四判据）
 - docs/synova/product-lines/evidence/D1039-A4d-五workflow成本基线.md — A4-d 成本基线（含 A4-b 日志口径与本收尾三件）
+- docs/synova/product-lines/evidence/D1039-A4b-D708真merge-ref复现.md — D708 真 merge-ref 端到端复现（M6 收尾证据）
 - .claude/task-briefs/2026-09-28-D1040-A4b-vitest-log-level.md — 本件
 
 不做什么
@@ -186,3 +188,23 @@ $ sed -n '56,83p' scripts/control-tower/check-canary-drift.sh
 ### E. 与队长指令的一处口径修正（已获队长确认）
 本卡早期按「**禁 push**」执行；后续队长指令要求 `synova-commit` 提交 —— 该工具**自带 push（M4 设计行为）**。
 队长 2026-09-28 确认：**这是工具设计行为，不算违反纪律**，且「全员禁 push」与 `synova-commit` 路径**自相矛盾**，属指令口径问题。
+
+### F. M6 收尾证据落库（2026-09-28，队长开窗）
+新增 `docs/synova/product-lines/evidence/D1039-A4b-D708真merge-ref复现.md`（**只读复现，未改任何实现文件**）。
+用途：把「D708 缺陷」端到端钉死 —— 不止"推断错了"，而是**把零违纪的交付控成了夹带**。
+
+**为何必须同时改本 brief（偏离队长"只加这一个新文件"的唯一一处，已报）**：
+该新文件**必须声明进写集**，否则 D708 自己会把它判成夹带。**scratch worktree 实测两态**：
+```
+情形 A（只在工作区加文件、不声明）:
+   ❌ 结论: block — 检测到 1 个写集外文件（夹带）
+      变更集: 6 个文件 / 声明写集 4 条
+      夹带文件 1 个（不匹配任何声明项）:
+        - docs/synova/product-lines/evidence/D1039-A4b-D708真merge-ref复现.md
+情形 B（在机器块 + Q2 同时声明）:
+   ✅ 结论: pass — 提交文件集 ⊆ 声明写集（无夹带）
+      变更集: 6 个文件 / 声明写集 5 条
+        · docs/synova/product-lines/evidence/D1039-A4b-D708真merge-ref复现.md   ← S3:brief.Q2-include
+```
+⇒ 故本 brief 只动了**两行声明**（机器块 + `## Q2` 做什么），**未改任何判据/正文结论**。
+**`vitest.config.ts` / `tests/win/**` / `.github/workflows/ci.yml` / 其余已定稿内容全部未动**（`#873` 保持冻结）。
