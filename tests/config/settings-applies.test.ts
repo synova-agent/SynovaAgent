@@ -26,6 +26,8 @@ interface RowLike {
   effective: unknown;
   pending: unknown;
   sourceLayer: string;
+  /** 声明面默认值（DEV-1：live 键也必须给出声明默认值，不得为 null）。 */
+  defaultValue: unknown;
 }
 
 describe('settings-applies-live · LIVE 套件（D1053 / 25-8 路径 A）', () => {
@@ -72,6 +74,9 @@ describe('settings-applies-live · LIVE 套件（D1053 / 25-8 路径 A）', () =
     const after = runtime.row('diagnosis.gateDataCompleteness') as RowLike | null;
     expect(after?.effective).toBe(0.55);
     expect(after?.pending).toBeNull();
+    // DEV-1 判据：live 键行的 defaultValue = **声明面**默认值（registry 的 0.3），与文件现值/冻结表无关
+    expect(after?.defaultValue).toBe(0.3);
+    expect(before?.defaultValue).toBe(0.3);
   });
 
   it('A2 · sourceLayer 三态归属（workspace / home / declaration）', () => {

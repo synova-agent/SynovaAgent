@@ -537,7 +537,7 @@ function buildRow(state: BootState, path: string, fresh: SettingsSourceResult): 
       pending: null,
       changedOnDisk: false,
       sourceLayer: layer === 'none' ? 'declaration' : layer,
-      defaultValue: frozen,
+      defaultValue: state.frozenDefault.get(path) ?? null, // DEV-1: live 行取声明默认值，非 boot 冻结值
       consumer: declaredSpec.consumer,
       ...(declaredSpec.exception === undefined ? {} : { exceptionId: declaredSpec.exception.id }),
     };
@@ -585,19 +585,19 @@ function bootSettingsRuntime(
   const frozenDefault = new Map<string, unknown>();
   for (const spec of bundle.declarations) {
     const path = pathOf(spec);
+    // DEV-1: frozenDefault 对**所有**声明键填充（defaultValue 是声明属性，与 applies 无关）
+    frozenDefault.set(path, spec.defaultValue);
     if (spec.applies !== 'restart') continue;
     if (bundle.fallbacks.has(path)) {
       // 类型失配 ⇒ 回落声明默认值，不把坏文件值冻结为生效值
       frozen.set(path, bundle.fallbacks.get(path));
       frozenLayer.set(path, 'declaration');
-      frozenDefault.set(path, spec.defaultValue);
       continue;
     }
     const located = valueAt(bundle.resolved, path);
     const layer = located.found ? bundle.layerOfPath(path) : 'declaration';
     frozen.set(path, located.found ? located.value : spec.defaultValue);
     frozenLayer.set(path, layer === 'none' ? 'declaration' : layer);
-    frozenDefault.set(path, spec.defaultValue);
   }
   for (const path of bundle.undeclared) {
     const located = valueAt(bundle.resolved, path);

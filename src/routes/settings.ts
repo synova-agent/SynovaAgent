@@ -113,8 +113,9 @@ function bodyOf(
   }
   const undeclaredTotal = runtime.undeclared.length;
   const undeclaredShown = runtime.undeclared.slice(0, query.limit);
-  const live = keys.filter((row) => row.applies === 'live').length;
-  const restart = keys.filter((row) => row.applies === 'restart').length;
+  // DEV-2: counts 只统计**已声明**行（未声明行强制 restart，按规格 §7.1 示例 4+5=9=declared）
+  const live = keys.filter((row) => row.declared && row.applies === 'live').length;
+  const restart = keys.filter((row) => row.declared && row.applies === 'restart').length;
   return {
     ok: true,
     degraded: runtime.degraded,

@@ -37,6 +37,8 @@ interface EffectiveKey {
   effective?: unknown;
   pending?: unknown;
   sourceLayer?: string;
+  /** 声明面默认值（DEV-1：live 键也必须给出，不得为 null）。 */
+  defaultValue?: unknown;
 }
 interface EffectiveBody {
   ok?: boolean;
@@ -50,6 +52,8 @@ interface EffectiveBody {
   undeclaredScope?: string;
   truncated?: boolean;
   keys?: EffectiveKey[];
+  /** DEV-2：declared/live/restart 只统计已声明行；undeclared 独立计数。 */
+  counts?: { declared?: number; live?: number; restart?: number; undeclared?: number };
   error?: string;
 }
 interface DumpBody {
@@ -135,6 +139,10 @@ describe('入口 GET /api/settings/effective + 第二消费者 /api/config/dump�
     expect(deepEqualJson(rowA?.effective, rowB?.effective)).toBe(true);
     expect(deepEqualJson(rowA?.effective, rowA?.effective)).toBe(true);
 
+    // DEV-1 判据（HTTP 契约面）：live 键行的 defaultValue = 声明面默认值 0.3，**不得为 null**
+    expect(rowA?.defaultValue).toBe(0.3);
+    expect(rowB?.defaultValue).toBe(0.3);
+
     // 第二消费者同时暴露 scope（进程级，R7）
     expect(b.body.settings?.scope).toBe('process');
   });
@@ -182,6 +190,13 @@ describe('入口 GET /api/settings/effective + 第二消费者 /api/config/dump�
     expect(body.undeclaredScope).toBe('settings.yaml');
     expect(body.truncated).toBe(false);
     expect(body.undeclaredTotal).toBe(body.undeclared?.length);
+    // DEV-2 判据：declared/live/restart 只统计**已声明**行；未声明行独立计数（规格 §7.1 示例 4+5=9）
+    const counts = body.counts;
+    expect(counts?.declared).toBe(9);
+    expect(counts?.live).toBe(4);
+    expect(counts?.restart).toBe(5);
+    expect(counts?.undeclared).toBe(body.undeclaredTotal);
+    expect((counts?.live ?? 0) + (counts?.restart ?? 0)).toBe(counts?.declared);
   });
 
   it('C3b · 未声明项在 keys[] 中强制 restart + declared:false（默认安全可观测）', async () => {
