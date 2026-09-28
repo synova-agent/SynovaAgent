@@ -1,0 +1,80 @@
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-d1051-verify
+
+ ❯ tests/agent/report-detailed.test.ts (15 tests | 2 failed) 10ms
+     ✓ ① 五章标题字面齐备 + 头行 + 尾行报告 ID 2ms
+     ✓ ② 「详细」的判别点：根因全量输出（3 条全出）+ 置信度降序 0ms
+     ✓ ③ 专家完整推理：全部 findings 输出（含同专家多 finding） 0ms
+     ✓ ④ 行动建议全量 + 数据时点逐字透传（不换算、不解析） 0ms
+     ✓ ⑤ 条目行带可解析溯源指针 [src:report:<reportId>#…]（五类片段齐备） 0ms
+     ✓ ⑥ 空 rootCauses / 空 expertReports / 空 recommendations → 各章 [degraded] 且不抛（J6） 0ms
+     ✓ ⑦ 空 summary / 空 generatedAt → 结论章与时点章各自 [degraded] 0ms
+     × ⑧ 注册表缺 detailed_report → 落 fallback 并含降级标记（J1 判别性夹具） 4ms
+     × ⑨ registry.render 抛错 → 返回含降级标记的字符串，永不抛出（DS7） 1ms
+     ✓ ⑩ 非完整形状经 isRenderableDiagnosisReport 拒绝（不伪造章节的准入面） 0ms
+     ✓ ⑪ 确定性：同输入两次渲染字节相等（禁渲染时刻——DS7） 0ms
+     ✓ ⑫ reportId 空 → 指针省略（不伪造），尾行显示 (缺省) 0ms
+     ✓ ⑬ 分发器 renderReportView：detailed → 详版；one_pager → 与 renderOnePager(ceo) 同源同构 1ms
+     ✓ ⑭ 装配轴映射表：one_pager→ceo / detailed→expert（两轴正交的唯一转换点） 0ms
+     ✓ ⑮ 单元素/恰临界：1 根因 1 专家 1 建议不触发任何 [degraded] 0ms
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 13 passed (15)
+   Start at  18:02:05
+   Duration  161ms (transform 50ms, setup 0ms, import 69ms, tests 10ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——降级路径 > ⑧ 注册表缺 detailed_report → 落 fallback 并含降级标记（J1 判别性夹具）
+AssertionError: expected '# d1051-org 诊断详细报告（模板不可用，纯文本输出）\n\n增长…' to contain '降级'
+
+- Expected
++ Received
+
+- 降级
++ # d1051-org 诊断详细报告（模板不可用，纯文本输出）
++
++ 增长健康度中等，现金流为关键约束。
++ - 根因: 现金流跑道不足 6 个月
++ - 根因: 客户集中度过高
++ - 根因: 关键岗位继任空白
++ - 建议: 启动应急融资
++ - 建议: 建立关键岗位继任计划
+
+ ❯ tests/agent/report-detailed.test.ts:159:16
+    157|     const md = renderDetailedReport(makeReport());
+    158|     // 必须落到纯文本 fallback（含降级标记），而非伪造章节
+    159|     expect(md).toContain('降级');
+       |                ^
+    160|     // 判别点：若模板真实渲染，此字符串必然存在；fallback 不含章节标题 ⇒ 本断言报红即证明"接线了≠被执行"
+    161|     expect(md).not.toContain('### 根因');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——降级路径 > ⑨ registry.render 抛错 → 返回含降级标记的字符串，永不抛出（DS7）
+AssertionError: expected '# d1051-org 诊断详细报告（模板不可用，纯文本输出）\n\n增长…' to contain '降级'
+
+- Expected
++ Received
+
+- 降级
++ # d1051-org 诊断详细报告（模板不可用，纯文本输出）
++
++ 增长健康度中等，现金流为关键约束。
++ - 根因: 现金流跑道不足 6 个月
++ - 根因: 客户集中度过高
++ - 根因: 关键岗位继任空白
++ - 建议: 启动应急融资
++ - 建议: 建立关键岗位继任计划
+
+ ❯ tests/agent/report-detailed.test.ts:175:16
+    173|     let md = '';
+    174|     expect(() => { md = renderDetailedReport(makeReport()); }).not.toT…
+    175|     expect(md).toContain('降级');
+       |                ^
+    176|     // 降级输出仍含核心信息（不产出空壳）
+    177|     expect(md).toContain('现金流跑道不足 6 个月');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+

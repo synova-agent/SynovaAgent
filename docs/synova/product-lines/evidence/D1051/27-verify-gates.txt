@@ -1,0 +1,96 @@
+# D1051 控制塔门禁独立复核（原始输出，成员 V）
+# head: f47f90982b4dec10e407bd806e851aaad4f47fb4
+# 生成时间: 2026-09-28T18:00:09+08:00
+
+## ① bash scripts/check-architecture.sh
+
+═══ 架构边界检查 (铁律 39) ═══
+
+  [0;32m✅ L2→L4 边界: 无直接引用[0m
+  [1;33m⚠ L1 扫描目标缺失(跳过): src/tui-v3[0m
+─── 1b. L1→L3 跨层引用 ───
+  [1;33m⚠ 存量违规 9 处 (基线棘轮内, 不阻断——修复后请收紧 tests/architecture/l1-cross-layer-baseline.txt):[0m
+     src/routes/conversations.ts:139:  const { createSynovaDiagnosisEngine } = await import('../l3/synova-diagnosis-engine-impl');
+     src/routes/diagnosis.ts:285:    const { createSynovaDiagnosisEngine } = await import('../l3/synova-diagnosis-engine-impl');
+     src/routes/evolution.ts:34:  const { getGlobalSentinelRunner } = await import('../sentinel/runner');
+     src/tui-v2/chat.tsx:187:        const { createKnowledgeAgent } = await import('../l3/knowledge-agent');
+     src/mcp/skill-installer.ts:126:        const { getExpertRegistry } = await import('../l3/expert-registry');
+     src/server.ts:203:        const { getSentinelRegistry } = await import('./sentinel/registry');
+     src/server.ts:204:        const { aggregateSignals } = await import('./sentinel/signal-aggregator');
+     src/server.ts:272:    expertRegistry: new (await import('./l3/expert-registry')).ExpertRegistry(),
+     src/server.ts:274:    reportTemplates: new (await import('./l3/report-templates')).ReportTemplateRegistry(),
+     铁律 39: L1 只能依赖 L2。l3/ sentinel/ expert-platform/ expert/ 是 L3 层。正确做法: L1 → L2 (agent/ orchestrator/) → L3。
+
+─── 1c. L1→L4 跨层引用 ───
+  [1;33m⚠ 存量违规 10 处 (基线棘轮内, 不阻断——修复后请收紧 tests/architecture/l1-cross-layer-baseline.txt):[0m
+     src/routes/chat.ts:38:    const { SqliteGraphStore } = await import('../adapters/sqlite-graph-store');
+     src/routes/ga-annotations.ts:38:  const { getAgentMemoryStore } = await import('../l4/agent-memory-store');
+     src/routes/evolution.ts:27:  const { getAgentMemoryStore } = await import('../l4/agent-memory-store');
+     src/routes/knowledge-ask.ts:39:    const { KnowledgeStore } = await import('../l4/knowledge-store');
+     src/routes/ga-calibration.ts:70:  const { getAgentMemoryStore } = await import('../l4/agent-memory-store');
+     src/routes/ontology-admin.ts:16:    const { loadOntology } = await import('../l4/ontology-loader');
+     src/routes/ga-corrections.ts:9:  const { getAgentMemoryStore } = await import('../l4/agent-memory-store');
+     src/tui-v2/chat.tsx:57:    const { SqliteGraphStore } = await import('../adapters/sqlite-graph-store');
+     src/mcp/tool-registration.ts:104:      const { SqliteGraphStore } = await import('../adapters/sqlite-graph-store');
+     src/mcp/tool-definitions.ts:393:          const { loadOntology } = await import('../l4/ontology-loader');
+     铁律 39: L1 不得直接访问 L4 (l4/ evidence/ sqlite-graph-store 图桥接)。必须通过 L2 编排层。
+
+─── 1d. L1→L5 跨层引用 ───
+  [1;33m⚠ 存量违规 19 处 (基线棘轮内, 不阻断——修复后请收紧 tests/architecture/l1-cross-layer-baseline.txt):[0m
+     src/routes/conversations.ts:107:  return import('../store/session-store');
+     src/routes/chat.ts:39:    const { getDatabase } = await import('../init/engine-context');
+     src/routes/im.ts:41:    const { getDatabase } = await import('../init/engine-context');
+     src/routes/im.ts:42:    const { SessionStore: SS } = await import('../store/session-store');
+     src/routes/diagnosis.ts:339:        const { SessionStore, isSqliteDatabase } = await import('../store/session-store');
+     src/routes/diagnosis.ts:683:    const { SessionStore, isSqliteDatabase } = await import('../store/session-store');
+     src/routes/diagnosis.ts:823:    const { SessionStore, isSqliteDatabase } = await import('../store/session-store');
+     src/routes/diagnosis.ts:848:    const { isDiagnosisReportArchive } = await import('../store/session-store');
+     src/routes/ga-annotations.ts:39:  const { getDatabase } = await import('../init/engine-context');
+     src/routes/evolution.ts:28:  const { getDatabase } = await import('../init/engine-context');
+     src/routes/knowledge-ask.ts:38:    const { getDatabase } = await import('../init/engine-context');
+     src/routes/ga-calibration.ts:71:  const { getDatabase } = await import('../init/engine-context');
+     src/routes/ga-corrections.ts:10:  const { getDatabase } = await import('../init/engine-context');
+     src/mcp/tool-registration.ts:105:      const { getDatabase } = await import('../init/engine-context');
+     src/mcp/tool-definitions.ts:383:        const { getDatabase, initEngineContext } = await import('../init/engine-context');
+     src/mcp/tool-definitions.ts:423:        const { getDatabase, initEngineContext } = await import('../init/engine-context');
+     src/mcp/tool-definitions.ts:428:        const { SessionStore } = await import('../store/session-store');
+     src/l1/im-inbound.ts:171:  const { SessionStore } = await import('../store/session-store');
+     src/server.ts:436:      const { runConnectorPipeline } = await import('./l5/connector-pipeline');
+     铁律 39: L1 不得直触 L5 (store/ cron/ l5/ better-sqlite3 / init/engine-context 句柄直取)。存储实例由 L2 bootstrap 组装后 DI 注入。
+
+  [0;32m✅ L3→L5 边界: 无直接数据库操作[0m
+  [1;33m⚠  GraphStore 在 graph-bridge.ts 声明 (1处, 类型镜像自退役的 engine-core)[0m
+     运行: npx vitest run tests/architecture/graphstore-compatibility.test.ts
+  [0;32m✅ 多租户安全: query 调用均传递 graph[0m
+
+  [0;32m架构检查: 全部通过 ✅[0m
+
+EXIT=0
+
+## ② SYNO_CI=1 bash scripts/check-architecture.sh（CI strict 口径）
+  [1;33m⚠  GraphStore 在 graph-bridge.ts 声明 (1处, 类型镜像自退役的 engine-core)[0m
+     运行: npx vitest run tests/architecture/graphstore-compatibility.test.ts
+  [0;32m✅ 多租户安全: query 调用均传递 graph[0m
+
+  [0;32m架构检查: 全部通过 ✅[0m
+
+EXIT=0
+
+## ③ 棘轮基线（本卡涉及文件，唯一来源=tests/architecture/l1-cross-layer-baseline.txt）
+38:src/routes/conversations.ts=1
+39:src/routes/diagnosis.ts=1
+61:src/routes/conversations.ts=1
+62:src/routes/diagnosis.ts=4
+
+## ④ bash scripts/control-tower/check-bypass-log.sh origin/main（我的分支停在 f47f9098，分支头 ea72e805 含 hook 自动登记）
+[0;31m❌ bypass.log 缺以下提交记录（执行证据链断裂）:[0m
+  feat(d1051): 线3 报告深度——详细报告(3-2) + 对话调深度(3-3)，一页纸(3-1)零回归 [f47f9098]
+  请确认提交经 synova-commit（含 COMMITTED 记录）或一次性补记后再推送
+EXIT=1
+
+## ⑤ bash scripts/control-tower/check-bypass-log.sh origin/feat/d1051-line3-report-depth（真实交付头）
+[0;32m✅ bypass.log 对账通过: f47f90982b4dec10e407bd806e851aaad4f47fb4..HEAD 全部提交有记录[0m
+EXIT=0
+
+## ⑥ origin/feat 分支头 bypass.log 内 f47f9098 记录
+1876:2026-09-28T17:53:03+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=f47f90982b4dec10e407bd806e851aaad4f47fb4
