@@ -20,8 +20,11 @@
     "docs/synova/product-lines/evidence/D1039-A4d-五workflow成本基线.md",
     "docs/synova/product-lines/evidence/D1039-A4e-watchdog-根因.md",
     "docs/synova/product-lines/evidence/D1039-A4v-独立复核-墙钟比对.md",
-    "docs/synova/product-lines/evidence/D1039-收尾三件-diff-自验-遗留.md"
+    "docs/synova/product-lines/evidence/D1039-收尾三件-diff-自验-遗留.md",
+    "docs/synova/product-lines/evidence/D1039-A4c-自验与反例-原始输出.md",
+    "docs/synova/product-lines/evidence/D1039-A4v-reconcile.sh",
+    "docs/synova/product-lines/evidence/D1039-PR正文与开PR指令-给CTO.md"
   ],
   "updated_at": "2026-09-28",
-  "updated_by": "synova-squad-lead"
+  "updated_by": "synova-squad-lead (D708 夹带修复)"
 }
