@@ -25,7 +25,10 @@ FIND=0
 tmp=$(mktemp); trap 'rm -f "$tmp"' EXIT
 
 echo "── ① 任务号真实性（禁臆写，需 task-state 存在）──"
-for d in $(grep -oE 'D[0-9]{3}' "$DOC" | sort -u); do
+# D1058/R8 修复（2026-09-28）: 原 'D[0-9]{3}' 对 D1007.json 截成 D100 → 查不到 task-state
+#   → 「⚠️ D100 无 task-state」exit 1 → 静默冻结本脚本（纯净 main 上 7过1败，CT-40 双阻断）。
+#   改为 {3,4} 贪婪匹配（D1007 整体命中；短号 D100 亦不受影响）。
+for d in $(grep -oE 'D[0-9]{3,4}' "$DOC" | sort -u); do
   if [ -f "$ROOT/task-state/$d.json" ]; then echo "  ✅ $d 已登记"
   else echo "  ⚠️ $d 无 task-state（新建须走 alloc-task-id.sh）"; FIND=1; fi
 done
@@ -67,6 +70,38 @@ else
 fi
 
 echo "── ⑩ 主线计划锚定（CTO 必读：整体推进计划）──"
+# ══ 闸 2 增补（D1058，2026-09-28）：派单件 §〇 归属与依据（三项机械检查）══
+# 设计依据：CTO-派单规程.md「派单七问」+「分域裁剪」（主线严 / 治理宽 / 两类全域强制）
+# ① 归属字段存在：主线卡须含「线 <id> · 点 <id>」；治理卡须含「治理域」+「目的声明」
+# ② 权威件回执段存在（③ 全域强制）
+# ③ 声明的点 id 在 product-lines.yaml 命中（防臆造/过期）
+# 豁免：文件含 `§〇: legacy-exempt`（历史派单件）⇒ 跳过本段并显式打印（不静默）
+SEC0="$(grep -c '归属与依据' "$DOC" 2>/dev/null | tr -d '\n\r' || true)"
+OWNER="$(grep -oE '线[[:space:]]*[0-9]+[[:space:]]*·[[:space:]]*点[[:space:]]*[0-9]+(-[0-9]+)?' "$DOC" 2>/dev/null | head -1 || true)"
+GOV="$(grep -cE '治理域|目的声明|解除.*阻塞' "$DOC" 2>/dev/null | tr -d '\n\r' || true)"
+RECEIPT="$(grep -cE '权威件回执|读了.*(权威|研究院|总纲|契约|指引)' "$DOC" 2>/dev/null | tr -d '\n\r' || true)"
+if grep -q '§〇: legacy-exempt' "$DOC" 2>/dev/null; then
+  echo "  ⚠️ 闸 2：§〇 检查豁免（legacy-exempt 显式标记）"
+elif [ "${SEC0:-0}" -eq 0 ]; then
+  echo "  ⚠️ 闸 2-①：无「§〇 归属与依据」段（**警告**：新卡按 CTO-派单规程七问填；存量件可标 §〇: legacy-exempt 静默）"
+else
+  if [ -n "$OWNER" ]; then
+    PT="$(echo "$OWNER" | grep -oE '[0-9]+-[0-9]+$' || true)"
+    if [ -n "$PT" ] && [ -f "$ROOT/docs/synova/product-lines/product-lines.yaml" ]; then
+      if grep -q "id: \"$PT\"" "$ROOT/docs/synova/product-lines/product-lines.yaml" 2>/dev/null; then
+        echo "  ✅ 闸 2-①：归属点 $PT 在 yaml 命中"
+      else
+        echo "  ❌ 闸 2-③：声明的点 $PT 不在 product-lines.yaml（臆造或过期）"; FIND=1
+      fi
+    fi
+  fi
+  if [ "${GOV:-0}" -gt 0 ]; then echo "  ✅ 闸 2-①：治理域/目的声明在场"; fi
+  if [ "${RECEIPT:-0}" -eq 0 ]; then
+    echo "  ❌ 闸 2-②：无「权威件回执」段（全域强制）"; FIND=1
+  else
+    echo "  ✅ 闸 2-②：权威件回执在场"
+  fi
+fi
 PLAN=$(ls "$ROOT"/docs/synova/coordination/整体推进计划-主线-*.md 2>/dev/null | head -1)
 if [ -z "$PLAN" ]; then
   echo "  ⚠️ degraded: 未找到整体推进计划文档 → 跳过锚定（须人工确认计划存在）"
