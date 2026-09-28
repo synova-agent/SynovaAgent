@@ -150,3 +150,10 @@ $ git ls-remote --heads origin | grep feat/d1051-line3-report-depth
 6. **V 的提示（保留在案，非退回）**：`tsc --noEmit` 存量 31 错与基线逐行相同 ⇒ 验收禁用「`npm run lint` 全绿」；本卡 9 文件零错误。
 
 7. **未做的事（对齐派单 §一 排除项）**：3-4 导出 / 3-5 手机 / 3-6 创始人核验 / 3-7（不认领）；`scripts/golden-scenarios/**`（mac 域）未动；`.hbs` 第二轨未扩（D480 已定 markdown 主载体）；`src/agent/builtin-tools.ts` 与 `interactive-card.ts`、`intent-router.ts` 未动。
+
+8. **PR 预算取舍（D734 硬门禁，实测 13 > 12 ⇒ 裁件而非开口子）**
+被计数 13 件 = 9 代码 + 3 验证 harness（`23-reverse-entry-walk.ts` / `23b-probe-throwing-template.ts` / `24-break-red-driver.py`）+ `.claude/bypass.log`（hook 每次提交自动追加，不可去）。
+**处置**：移除价值最低的一件 **`23b-probe-throwing-template.ts`**（一次性探针；其**输出日志 `28-verify-probe-throwing-template.txt` 保留在库**，结论已并入 `20b-verify-break-red-R6.json` 的 R6c 例）。
+**该文件未丢**：完整存在于已推送分支 `verify/d1051-line3-report-depth`（`git show origin/verify/d1051-line3-report-depth:docs/synova/product-lines/evidence/D1051/23b-probe-throwing-template.ts`）。
+裁后计数 = 9 + 2 + 1 = **12 ≤ 12**。
+（**未**采用任何"改名绕豁免"手法：`.ts`→`.txt` 一类做法属伪装治理产物，本卡明确不做。）
