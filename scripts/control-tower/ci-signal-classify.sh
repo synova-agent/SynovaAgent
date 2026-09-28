@@ -131,7 +131,7 @@ done
 
 case "$MODE" in
   github)
-    [ -n "${GITHUB_OUTPUT:-}" ] || _fail_closed 1 "--mode github 需要 \$GITHUB_OUTPUT（未设置）"
+    [ -n "${GITHUB_OUTPUT:-}" ] || _fail_closed 1 "--mode github 需要 \$GITHUB_OUTPUT （未设置）"
     ;;
   human) ;;
   *) _fail_closed 1 "未知 --mode: ${MODE}（只接受 github|human）" ;;
