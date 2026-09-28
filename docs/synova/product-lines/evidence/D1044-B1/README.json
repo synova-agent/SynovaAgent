@@ -6,7 +6,7 @@
     "origin_main": "ff4677129dce2ff068a816eed3db0687b060c64c",
     "base_head": "ff467712"
   },
-  "head_at_write": "e5b46f1723bfde725985f42292e91ece1a502283",
+  "head_at_write": "9ff56a79295af1cbb757c93bd7c65396f78c7f56",
   "producers": {
     "synova-squad-lead": [
       "00-premise-freeze.json",
@@ -36,7 +36,7 @@
     {
       "file": "00-premise-freeze.json",
       "bytes": 3340,
-      "sha256": "52707a10640f51da0df8e9060ca3f3c8774fb8e3e7f11e8edaec096192cc6e49"
+      "sha256": "fc889bec7c1c542c3e2f2017effc57eef97c60df12197bd0d7f6a19fd11b0db1"
     },
     {
       "file": "A-01-nolink-recheck.json",
@@ -70,8 +70,8 @@
     },
     {
       "file": "C-01-closeout-three.json",
-      "bytes": 27604,
-      "sha256": "1a11d7c4ddf6eaf574caed36b242e973a72db4e354c3838907c14cc12320e302"
+      "bytes": 28493,
+      "sha256": "04ae3f5463d729866517c8e13613196601e34676b76b7538c9211c276965b0b9"
     }
   ]
 }

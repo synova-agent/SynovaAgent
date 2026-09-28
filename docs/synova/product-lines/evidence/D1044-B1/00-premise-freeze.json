@@ -2,7 +2,7 @@
   "task": "D1044",
   "artifact": "00-premise-freeze",
   "owner": "synova-squad-lead",
-  "as_of": "2026-09-28T00:40:58Z",
+  "as_of": "2026-09-28T00:43:51Z",
   "note": "队长开工前的逐条前提冻结实测；每条 = 命令 + 原始输出 + 退出码。",
   "premises": [
     {
