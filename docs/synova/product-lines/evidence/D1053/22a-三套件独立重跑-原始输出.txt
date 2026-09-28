@@ -1,0 +1,437 @@
+########## D1053 增量复验 · 三套件独立重跑（基线 33e63fd5）##########
+date(utc): 2026-09-28T12:19:09Z
+HEAD: f43f10704bba40a89577c6d763d4c5d5550703ec
+代码基线: 33e63fd5（S 的 8b7759b9 只改 docs）
+node: v24.19.0  ABI: 137  vitest: vitest/4.1.8 darwin-arm64 node-v24.19.0
+
+$ npx vitest run tests/config/settings-applies.test.ts tests/config/settings-source.test.ts tests/routes/settings.test.ts --no-file-parallelism --maxWorkers=1 --reporter=verbose --reporter=json --outputFile.json=/tmp/d1053-vitest-v2.json
+
+--- vitest 原始输出（完整）---
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-squad-d1053
+
+{"level":30,"time":1790597708570,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/workspace-service","msg":"WorkspaceService 已初始化"}
+{"level":40,"time":1790597709312,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":1,"undeclared":["rogue.whoAmI"],"msg":"SETTINGS_UNUSED_UNDECLARED 未声明分类项（默认安全 = 强制 restart）"}
+{"level":40,"time":1790597709312,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","scope":"settings.yaml","msg":"SETTINGS_UNDECLARED_SCOPE 枚举范围 = settings.yaml 内未声明键；既有 env 键不在本卡枚举范围（D1053 §3.3 / R8）"}
+{"level":40,"time":1790597709312,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":2,"exceptions":["llm-credential-hot-reload","file-driven-reload-channel"],"msg":"SETTINGS_EXCEPTION_ACTIVE 既存例外（不按声明面自动生效，见 D1053 §6）"}
+{"level":30,"time":1790597709313,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"services/config-file","path":"/Users/wane/SynovaAgent/.synova-wt-squad-d1053/synova.json","msg":"配置文件加载成功"}
+{"level":30,"time":1790597709313,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"config","port":18790,"source":"synova.json","msg":"使用文件配置"}
+{"level":30,"time":1790597709314,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"services/config-recovery","path":"/Users/wane/SynovaAgent/.synova-wt-squad-d1053/synova.json","size":693,"msg":"配置校验通过"}
+{"level":30,"time":1790597709314,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"config","port":0,"devMode":true,"dbPath":":memory:","model":"deepseek-v4-flash","llmConfigured":false,"msg":"配置加载完成"}
+{"level":30,"time":1790597709314,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","port":0,"devMode":true,"msg":"配置已加载"}
+{"level":30,"time":1790597709314,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"services/config-file","path":"/Users/wane/SynovaAgent/.synova-wt-squad-d1053/synova.json","msg":"配置文件加载成功"}
+{"level":30,"time":1790597709314,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"config","port":18790,"source":"synova.json","msg":"使用文件配置"}
+{"level":30,"time":1790597709314,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"services/config-recovery","path":"/Users/wane/SynovaAgent/.synova-wt-squad-d1053/synova.json","size":693,"msg":"配置校验通过"}
+{"level":30,"time":1790597709314,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"config","port":0,"devMode":true,"dbPath":":memory:","model":"deepseek-v4-flash","llmConfigured":false,"msg":"配置加载完成"}
+{"level":30,"time":1790597709322,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"store/schema-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1790597709322,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"store/schema-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1790597709322,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"init/engine-context","path":":memory:","msg":"SQLite 数据库已打开"}
+{"level":30,"time":1790597709322,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"init/engine-context","msg":"EngineContext 注入完成 (SQLite 持久化存储模式)"}
+{"level":30,"time":1790597709322,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"数据库已初始化 (SQLite WAL)"}
+{"level":30,"time":1790597709323,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"services/audit-service","msg":"审计服务已初始化"}
+{"level":30,"time":1790597709323,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"审计服务已初始化"}
+{"level":30,"time":1790597709324,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"编排层已初始化 (EventBus + PhaseStateMachine + SessionManager)"}
+{"level":30,"time":1790597709324,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","phase":"infrastructure","durationMs":11,"msg":"Phase 0 完成"}
+{"level":40,"time":1790597709328,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/rollback","path":"/Users/wane/Library/Application Support/Synova/data/_snapshots/pre-schema-migration","msg":"快照已存在，跳过创建"}
+{"level":40,"time":1790597709332,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"adapters/sqlite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1790597709335,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"GraphStore + OntologyEventBus 已初始化"}
+{"level":30,"time":1790597709335,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1790597709336,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+{"level":30,"time":1790597709336,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"AgentMemoryStore 已初始化"}
+{"level":30,"time":1790597709336,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","phase":"storage","durationMs":12,"msg":"Phase 1 完成"}
+{"level":30,"time":1790597709336,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 2d: CausalChainLoader — 预留接口，未实现 (D83 范围)"}
+{"level":30,"time":1790597709340,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/loader","count":45,"errors":0,"msg":"哨兵加载完成"}
+{"level":30,"time":1790597709344,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-agent-deployment-maturity","name":"T7 Agent部署成熟度","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709348,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-ai-ecosystem-fit","name":"T6 AI软件生态匹配度","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709351,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-ai-investment-return","name":"T8 AI投入产出比","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709357,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-api-coverage","name":"API可达性与协议覆盖","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709361,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-business-model-coherence","name":"商业模式一致性","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709382,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-capital-health","name":"资本健康","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709403,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l4/ontology-loader","nodes":29,"edges":55,"msg":"本体类型加载完成"}
+{"level":40,"time":1790597709403,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/loader","sentinel":"cash-runway","nodeType":"Financial","msg":"哨兵依赖的节点类型在本体中不存在 — degraded"}
+{"level":30,"time":1790597709403,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-cash-runway","name":"现金流哨兵","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709408,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-channel-capacity","name":"O6","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709410,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-competitive-moat","name":"竞争护城河","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709412,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-competitive-position","name":"竞争定位","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709418,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-customer-demand-shift","name":"客户需求迁移","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709424,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-data-health","name":"数据健康度","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709428,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-environment-rent-dependency","name":"环境红利依赖性","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709434,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-explore-exploit-balance","name":"O1","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709439,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-financing-constraint","name":"融资约束指数","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709446,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-growth-quality","name":"增长质量指数","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709450,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-human-agent-boundary","name":"T9 人Agent混合边界效率","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709455,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-incentive-alignment","name":"O3","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709459,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-info-distortion","name":"O7","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709463,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-internal-transaction-cost","name":"内部交易成本增长率","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597709468,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/loader","sentinel":"key-person-risk","nodeType":"Financial","msg":"哨兵依赖的节点类型在本体中不存在 — degraded"}
+{"level":30,"time":1790597709468,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-key-person-risk","name":"关键人风险哨兵","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709472,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-knowledge-accessibility","name":"O4","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709475,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-make-or-buy","name":"自制外购决策健康度","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597709490,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/loader","sentinel":"margin-health","nodeType":"Financial","msg":"哨兵依赖的节点类型在本体中不存在 — degraded"}
+{"level":30,"time":1790597709490,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-margin-health","name":"利润健康","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709494,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-moat-dependency","name":"护城河依赖度","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709498,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-network-power","name":"网络权力指数","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709502,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-niche-breadth","name":"生态位宽度与深度","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709505,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-niche-squeeze","name":"生态位挤压指数","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709509,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-opportunity-window","name":"结构性机会窗口","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709514,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-org-repairability","name":"O8","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709517,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-path-dependency","name":"路径依赖 (Path Dependency)","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709522,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-power-rigidity","name":"O9","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709526,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-process-ai-readiness","name":"T5 流程AI化就绪度","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709531,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-resource-misallocation","name":"S3","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597709536,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/loader","sentinel":"revenue-health","nodeType":"Financial","msg":"哨兵依赖的节点类型在本体中不存在 — degraded"}
+{"level":30,"time":1790597709536,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-revenue-health","name":"收入健康哨兵","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709540,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-routine-diffusion","name":"O5","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709544,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-routine-mutation","name":"O2","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709546,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-sentinel-forecast-accuracy","name":"预测精度哨兵","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709547,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-sentinel-pricing-strategy","name":"定价策略哨兵","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709556,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-software-health","name":"软件资产健康度","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709560,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-strategy-capability-fit","name":"S1","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709564,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-talent-density","name":"O10","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709567,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-time-penetration","name":"时间穿透力","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709588,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-unit-economics","name":"单位经济可持续性","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709592,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-value-capture","name":"价值捕获效率","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597709592,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/loader","registered":45,"errors":0,"msg":"文件驱动哨兵已注册"}
+{"level":30,"time":1790597709592,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","sentinels":45,"registered":45,"msg":"Phase 2a: SentinelLoader 完成"}
+{"level":30,"time":1790597709598,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"skill/loader","count":41,"errors":0,"msg":"Skill 加载完成"}
+{"level":30,"time":1790597709600,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"skill/loader","registered":41,"errors":0,"msg":"文件驱动 Skill 已注册"}
+{"level":30,"time":1790597709600,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","skills":41,"registered":41,"msg":"Phase 2b: SkillLoader 完成"}
+{"level":30,"time":1790597709607,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"playbook/loader","count":21,"errors":0,"msg":"Playbook 加载完成"}
+{"level":30,"time":1790597709609,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"playbook/loader","registered":21,"errors":0,"msg":"Playbook 已注册"}
+{"level":30,"time":1790597709609,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","playbooks":21,"registered":21,"msg":"Phase 2c: PlaybookLoader 完成"}
+{"level":40,"time":1790597709621,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"cron/scheduler","msg":"ALTER TABLE trigger_type 已存在或失败 — 跳过"}
+{"level":40,"time":1790597709621,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"cron/scheduler","msg":"ALTER TABLE event_types 已存在或失败 — 跳过"}
+{"level":40,"time":1790597709621,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"cron/scheduler","msg":"ALTER TABLE last_event_at 已存在或失败 — 跳过"}
+{"level":30,"time":1790597709622,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"loops/loop-scheduler","msg":"[D9] loop-4-self-check 已注册 (0 0 * * *)"}
+{"level":30,"time":1790597709623,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"loops/loop-scheduler","msg":"[D9] loop-5-knowledge 已注册 (0 0 * * 0)"}
+{"level":30,"time":1790597709770,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"loops/loop-scheduler","msg":"[D9] loop-1-diagnosis 已注册 (0 9 1 */3 *)"}
+{"level":30,"time":1790597709771,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"loops/loop-scheduler","msg":"[D9] loop-2-navigation 已注册 (0 9 * * 1)"}
+{"level":30,"time":1790597709914,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"loops/loop-scheduler","msg":"[D237] loop-3-ga-evolution 已注册 (0 9 1 */3 *)"}
+{"level":30,"time":1790597709915,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"loops/loop-scheduler","msg":"[D238] loop-6-overflow 已注册 (0 9 1 * *)"}
+{"level":30,"time":1790597709915,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"loops/trigger-config","count":1,"msg":"循环触发矩阵验证通过"}
+{"level":30,"time":1790597710055,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"loops/loop-scheduler","loopId":"loop-1","loopName":"Enterprise Diagnosis","msg":"循环已注册"}
+{"level":30,"time":1790597710055,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"loops/trigger-config","count":1,"msg":"循环触发矩阵验证通过"}
+{"level":30,"time":1790597710057,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"loops/loop-scheduler","loopId":"loop-2","loopName":"Department Navigation","msg":"循环已注册"}
+{"level":30,"time":1790597710057,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"loops/trigger-config","count":1,"msg":"循环触发矩阵验证通过"}
+{"level":30,"time":1790597710333,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"loops/loop-scheduler","loopId":"loop-3","loopName":"GA Evolution","msg":"循环已注册"}
+{"level":30,"time":1790597710333,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"loops/trigger-config","count":1,"msg":"循环触发矩阵验证通过"}
+{"level":30,"time":1790597710641,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"loops/loop-scheduler","loopId":"loop-4","loopName":"System Self-Check","msg":"循环已注册"}
+{"level":30,"time":1790597710642,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"loops/trigger-config","count":1,"msg":"循环触发矩阵验证通过"}
+{"level":30,"time":1790597710780,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"loops/loop-scheduler","loopId":"loop-5","loopName":"Knowledge Accumulation","msg":"循环已注册"}
+{"level":30,"time":1790597710780,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"loops/trigger-config","count":1,"msg":"循环触发矩阵验证通过"}
+{"level":30,"time":1790597710921,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"loops/loop-scheduler","loopId":"loop-6","loopName":"Overflow Monitor","msg":"循环已注册"}
+{"level":30,"time":1790597710921,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"loops/loop-scheduler","count":6,"total":6,"msg":"默认循环已注册"}
+{"level":30,"time":1790597710921,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","loops":6,"msg":"Phase 2e: 循环调度器注册完成"}
+{"level":30,"time":1790597710921,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/main-agent","loopId":"loop-1","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1790597710921,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/main-agent","loopId":"loop-2","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1790597710921,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/main-agent","loopId":"loop-3","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1790597710921,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/main-agent","loopId":"loop-4","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1790597710921,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/main-agent","loopId":"loop-5","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1790597710921,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/main-agent","loopId":"loop-6","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1790597710921,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","loops":6,"msg":"Phase 2f: MainAgent 注册完成"}
+{"level":30,"time":1790597710921,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","subPhases":[{"name":"causal-chain-loader","status":"success","durationMs":0},{"name":"sentinel-loader","status":"success","durationMs":256},{"name":"skill-loader","status":"success","durationMs":8},{"name":"playbook-loader","status":"success","durationMs":9},{"name":"loop-scheduler","status":"success","durationMs":1312},{"name":"main-agent","status":"success","durationMs":0}],"msg":"Phase 2 子 Phase 完成"}
+{"level":30,"time":1790597710921,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","phase":"core-engine","durationMs":1585,"msg":"Phase 2 完成"}
+{"level":30,"time":1790597710929,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 3a: Connector 工具绑定完成"}
+{"level":30,"time":1790597710936,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"locale/loader","lang":"zh-CN","cacheSize":1,"msg":"locale 加载完成"}
+{"level":30,"time":1790597710936,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"init/file-driven-loaders","msg":"locale loader 已初始化"}
+{"level":30,"time":1790597710939,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"init/file-driven-loaders","msg":"report template loader 已初始化"}
+{"level":30,"time":1790597710947,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l3/framework-loader","count":85,"categories":["psychology","economics","math-engineering","medicine","biology-physics","law-governance"],"msg":"认知框架加载完成"}
+{"level":30,"time":1790597710948,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"init/file-driven-loaders","msg":"framework loader 已初始化"}
+{"level":30,"time":1790597710952,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"notifications/registry","channel":"email","msg":"通知适配器已注册"}
+{"level":30,"time":1790597710953,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"notifications/registry","channel":"feishu-approval","msg":"通知适配器已注册"}
+{"level":30,"time":1790597710956,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"notifications/registry","channel":"jira","msg":"通知适配器已注册"}
+{"level":30,"time":1790597710959,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"notifications/registry","channel":"linear","msg":"通知适配器已注册"}
+{"level":30,"time":1790597710959,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"notifications/loader","registered":4,"msg":"通知适配器已从文件加载"}
+{"level":30,"time":1790597710959,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"init/file-driven-loaders","registered":4,"msg":"notification adapters 已初始化"}
+{"level":40,"time":1790597710959,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-agent-deployment-maturity","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710959,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-agent-deployment-maturity","name":"T7 Agent部署成熟度","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710960,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-ai-ecosystem-fit","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710960,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-ai-ecosystem-fit","name":"T6 AI软件生态匹配度","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710960,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-ai-investment-return","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710960,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-ai-investment-return","name":"T8 AI投入产出比","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710960,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-api-coverage","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710960,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-api-coverage","name":"API可达性与协议覆盖","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710961,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-business-model-coherence","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710961,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-business-model-coherence","name":"商业模式一致性","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710961,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-capital-health","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710961,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-capital-health","name":"资本健康","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710961,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/loader","sentinel":"cash-runway","nodeType":"Financial","msg":"哨兵依赖的节点类型在本体中不存在 — degraded"}
+{"level":40,"time":1790597710961,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-cash-runway","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710961,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-cash-runway","name":"现金流哨兵","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710962,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-channel-capacity","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710962,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-channel-capacity","name":"O6","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710962,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-competitive-moat","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710962,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-competitive-moat","name":"竞争护城河","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710962,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-competitive-position","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710962,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-competitive-position","name":"竞争定位","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710962,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-customer-demand-shift","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710962,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-customer-demand-shift","name":"客户需求迁移","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710963,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-data-health","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710963,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-data-health","name":"数据健康度","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710963,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-environment-rent-dependency","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710963,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-environment-rent-dependency","name":"环境红利依赖性","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710963,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-explore-exploit-balance","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710963,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-explore-exploit-balance","name":"O1","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710963,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-financing-constraint","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710963,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-financing-constraint","name":"融资约束指数","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710964,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-growth-quality","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710964,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-growth-quality","name":"增长质量指数","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710964,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-human-agent-boundary","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710964,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-human-agent-boundary","name":"T9 人Agent混合边界效率","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710964,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-incentive-alignment","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710964,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-incentive-alignment","name":"O3","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710964,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-info-distortion","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710964,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-info-distortion","name":"O7","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710965,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-internal-transaction-cost","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710965,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-internal-transaction-cost","name":"内部交易成本增长率","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710965,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/loader","sentinel":"key-person-risk","nodeType":"Financial","msg":"哨兵依赖的节点类型在本体中不存在 — degraded"}
+{"level":40,"time":1790597710965,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-key-person-risk","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710965,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-key-person-risk","name":"关键人风险哨兵","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710965,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-knowledge-accessibility","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710965,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-knowledge-accessibility","name":"O4","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710965,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-make-or-buy","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710965,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-make-or-buy","name":"自制外购决策健康度","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710966,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/loader","sentinel":"margin-health","nodeType":"Financial","msg":"哨兵依赖的节点类型在本体中不存在 — degraded"}
+{"level":40,"time":1790597710966,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-margin-health","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710966,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-margin-health","name":"利润健康","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710966,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-moat-dependency","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710966,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-moat-dependency","name":"护城河依赖度","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710966,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-network-power","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710966,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-network-power","name":"网络权力指数","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710966,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-niche-breadth","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710966,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-niche-breadth","name":"生态位宽度与深度","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710966,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-niche-squeeze","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710966,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-niche-squeeze","name":"生态位挤压指数","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710967,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-opportunity-window","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710967,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-opportunity-window","name":"结构性机会窗口","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710967,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-org-repairability","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710967,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-org-repairability","name":"O8","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710967,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-path-dependency","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710967,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-path-dependency","name":"路径依赖 (Path Dependency)","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710967,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-power-rigidity","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710967,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-power-rigidity","name":"O9","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710968,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-process-ai-readiness","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710968,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-process-ai-readiness","name":"T5 流程AI化就绪度","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710968,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-resource-misallocation","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710968,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-resource-misallocation","name":"S3","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710968,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/loader","sentinel":"revenue-health","nodeType":"Financial","msg":"哨兵依赖的节点类型在本体中不存在 — degraded"}
+{"level":40,"time":1790597710968,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-revenue-health","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710968,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-revenue-health","name":"收入健康哨兵","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710969,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-routine-diffusion","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710969,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-routine-diffusion","name":"O5","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710969,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-routine-mutation","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710969,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-routine-mutation","name":"O2","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710969,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-sentinel-forecast-accuracy","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710969,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-sentinel-forecast-accuracy","name":"预测精度哨兵","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710969,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-sentinel-pricing-strategy","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710969,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-sentinel-pricing-strategy","name":"定价策略哨兵","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710969,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-software-health","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710969,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-software-health","name":"软件资产健康度","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710970,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-strategy-capability-fit","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710970,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-strategy-capability-fit","name":"S1","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710970,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-talent-density","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710970,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-talent-density","name":"O10","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710970,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-time-penetration","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710970,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-time-penetration","name":"时间穿透力","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710970,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-unit-economics","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710970,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-unit-economics","name":"单位经济可持续性","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1790597710971,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-value-capture","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1790597710971,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-value-capture","name":"价值捕获效率","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1790597710971,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"sentinel/loader","registered":45,"errors":0,"msg":"文件驱动哨兵已注册"}
+{"level":30,"time":1790597710971,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"init/file-driven-loaders","count":45,"registered":45,"msg":"sentinel loader 已初始化"}
+{"level":30,"time":1790597710974,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l3/rule-loader","diagnostic":6,"strategies":4,"msg":"规则加载完成"}
+{"level":30,"time":1790597710974,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"init/file-driven-loaders","diag":6,"sens":0,"strategies":4,"msg":"rule loader 已初始化"}
+{"level":30,"time":1790597710974,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"init/file-driven-loaders","nodes":29,"edges":55,"msg":"ontology loader 已初始化"}
+{"level":30,"time":1790597710976,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l4/adapter-loader","count":2,"msg":"适配器加载完成"}
+{"level":30,"time":1790597710976,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"init/file-driven-loaders","count":2,"msg":"adapter loader 已初始化"}
+{"level":30,"time":1790597710977,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/adapter-scanner","count":8,"errors":0,"msg":"field-mappings 扫描完成"}
+{"level":30,"time":1790597710977,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/adapter-registry","registered":8,"errors":0,"msg":"批量适配器注册完成"}
+{"level":30,"time":1790597710977,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"init/file-driven-loaders","registered":8,"total":8,"msg":"field-mappings 适配器已自动发现并注册"}
+{"level":30,"time":1790597710977,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 3b: 文件驱动加载器初始化完成"}
+{"level":30,"time":1790597710983,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","count":16,"msg":"Phase 3c: ExtensionRegistry discover 完成"}
+{"level":30,"time":1790597710985,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"adapters/federal","msg":"FederalReporter 已初始化 (联邦进化已启用)"}
+{"level":30,"time":1790597710985,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 3d: 联邦进化上报已启用"}
+{"level":30,"time":1790597710985,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","phase":"ontology-compute","durationMs":64,"msg":"Phase 3 完成"}
+{"level":30,"time":1790597711019,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 4a: CredentialVault 已初始化 (AES-256-GCM)"}
+{"level":30,"time":1790597711019,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 4b: CredentialPool 已初始化 (多凭据轮换)"}
+{"level":30,"time":1790597711019,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 4c: PIIScrubber 已初始化 (S1-S4 敏感度脱敏)"}
+{"level":40,"time":1790597711019,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"services/config-recovery","path":":memory:.config.json","msg":"配置文件不存在"}
+{"level":30,"time":1790597711019,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 4e: Knowledge 服务已初始化"}
+{"level":30,"time":1790597711019,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 4f: BehaviorMonitor 已加载 — 4 rules active"}
+{"level":30,"time":1790597711020,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/expert-config-loader","expertCount":6,"path":"/Users/wane/SynovaAgent/.synova-wt-squad-d1053/expert/expert-registry.yaml","msg":"专家配置已从 yaml 加载"}
+{"level":30,"time":1790597711020,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","experts":6,"msg":"Phase 4g: 专家配置已加载"}
+{"level":30,"time":1790597711020,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 4h: PolicyEngine 已验证"}
+{"level":30,"time":1790597711033,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/file-scanner","msg":"measurers/ 目录不存在 — 跳过测量器配置扫描"}
+{"level":30,"time":1790597711034,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/file-scanner","experts":6,"measurers":0,"knowledge":2,"totalFiles":40,"errors":0,"msg":"文件扫描完成"}
+{"level":30,"time":1790597711034,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l3/expert-registry","type":"competitive-strategy","msg":"专家类型已注册"}
+{"level":30,"time":1790597711034,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/expert-file-loader","expert":"competitive-strategy","sources":["expert/competitive-strategy/IDENTITY.md","expert/competitive-strategy/IDENTITY.md (analytical_lens)","expert/competitive-strategy/THEORY.md","expert/competitive-strategy/RULES.md","expert/competitive-strategy/TOOLS.md","expert/competitive-strategy/CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC","KNOWLEDGE"],"msg":"专家已从文件加载"}
+{"level":30,"time":1790597711034,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l3/expert-registry","type":"customer-growth","msg":"专家类型已注册"}
+{"level":30,"time":1790597711034,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/expert-file-loader","expert":"customer-growth","sources":["expert/customer-growth/IDENTITY.md","expert/customer-growth/IDENTITY.md (analytical_lens)","expert/customer-growth/THEORY.md","expert/customer-growth/RULES.md","expert/customer-growth/TOOLS.md","expert/customer-growth/KNOWLEDGE.md","expert/customer-growth/CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC"],"msg":"专家已从文件加载"}
+{"level":30,"time":1790597711034,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l3/expert-registry","type":"fundamental-efficiency","msg":"专家类型已注册"}
+{"level":30,"time":1790597711034,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/expert-file-loader","expert":"fundamental-efficiency","sources":["expert/fundamental-efficiency/IDENTITY.md","expert/fundamental-efficiency/IDENTITY.md (analytical_lens)","expert/fundamental-efficiency/THEORY.md","expert/fundamental-efficiency/RULES.md","expert/fundamental-efficiency/TOOLS.md","expert/fundamental-efficiency/KNOWLEDGE.md","expert/fundamental-efficiency/CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC"],"msg":"专家已从文件加载"}
+{"level":30,"time":1790597711034,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l3/expert-registry","type":"host","msg":"专家类型已注册"}
+{"level":30,"time":1790597711034,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/expert-file-loader","expert":"host","sources":["expert/host/IDENTITY.md","expert/host/IDENTITY.md (analytical_lens)","expert/host/THEORY.md","expert/host/RULES.md","expert/host/TOOLS.md","expert/host/CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC","KNOWLEDGE"],"msg":"专家已从文件加载"}
+{"level":30,"time":1790597711034,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l3/expert-registry","type":"organizational-capability","msg":"专家类型已注册"}
+{"level":30,"time":1790597711034,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/expert-file-loader","expert":"organizational-capability","sources":["expert/organizational-capability/IDENTITY.md","expert/organizational-capability/IDENTITY.md (analytical_lens)","expert/organizational-capability/THEORY.md","expert/organizational-capability/RULES.md","expert/organizational-capability/TOOLS.md","expert/organizational-capability/KNOWLEDGE.md","expert/organizational-capability/CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC"],"msg":"专家已从文件加载"}
+{"level":30,"time":1790597711035,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l3/expert-registry","type":"technology-foundation","msg":"专家类型已注册"}
+{"level":30,"time":1790597711035,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/expert-file-loader","expert":"technology-foundation","sources":["expert/technology-foundation/IDENTITY.md","expert/technology-foundation/IDENTITY.md (analytical_lens)","expert/technology-foundation/THEORY.md","expert/technology-foundation/RULES.md","expert/technology-foundation/TOOLS.md","expert/technology-foundation/CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC","KNOWLEDGE"],"msg":"专家已从文件加载"}
+{"level":30,"time":1790597711035,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/expert-file-loader","fromFiles":6,"fromDefaults":0,"totalLoaded":6,"errors":0,"msg":"专家文件加载完成"}
+{"level":30,"time":1790597711035,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","fromFiles":6,"total":6,"msg":"Phase 4i: 专家文件加载完成"}
+{"level":30,"time":1790597711035,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 4j: Workspace 服务已就绪"}
+{"level":30,"time":1790597711035,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","phase":"expert-security","durationMs":50,"msg":"Phase 4 完成"}
+{"level":30,"time":1790597711038,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"services/context-budget","msg":"ContextBudgetTracker 已初始化"}
+{"level":30,"time":1790597711038,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 5a: 上下文预算追踪器已初始化"}
+{"level":30,"time":1790597711038,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 5b: BossMailbox 已就绪"}
+{"level":30,"time":1790597711038,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 5c: Cron 调度器已启动"}
+{"level":30,"time":1790597711195,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"Connector 同步调度已启动 (cron: */30 * * * *)"}
+{"level":30,"time":1790597711195,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"企业事实冲突扫描调度已启动 (cron: 0 4 * * *)"}
+{"level":30,"time":1790597711195,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"每日简报调度已启动 (cron: 0 19 * * *)"}
+{"level":30,"time":1790597711195,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"数据库备份调度已启动 (cron: 0 3 * * *, 保留 7 天)"}
+{"level":30,"time":1790597711202,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l3/evidence-retention","tier":"permanent","source":"default:permanent","msg":"证据保留分级=永久 — 跳过过期清理（证据是蒸馏前资产，D660）"}
+{"level":30,"time":1790597711202,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","tier":"permanent","windowMs":null,"source":"default:permanent","cron":"30 3 * * *","msg":"证据保留分级维护已启动（启动清理 + 每日 cron）"}
+{"level":30,"time":1790597711213,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+{"level":30,"time":1790597711213,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l3/knowledge-agent","extracted":0,"errors":0,"msg":"齿轮6 知识提取完成"}
+{"level":30,"time":1790597711213,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l3/gear6-scheduler","intervalMs":21600000,"msg":"齿轮6 调度器已启动 (每6h)"}
+{"level":30,"time":1790597711213,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 5d: 齿轮6 知识提取调度已启动 (每6h)"}
+{"level":30,"time":1790597711213,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l3/gear6-scheduler","extracted":0,"errors":0,"msg":"齿轮6 首次运行完成"}
+{"level":30,"time":1790597711229,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+{"level":30,"time":1790597711241,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l3/pkb-seed","inserted":178,"total":178,"msg":"PKB 种子知识写入完成"}
+{"level":30,"time":1790597711241,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","inserted":178,"msg":"PKB 种子知识已初始化"}
+{"level":30,"time":1790597711242,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 5e: KnowledgeAgent 已注册 — 第7个专家就绪"}
+{"level":30,"time":1790597711244,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 5f: 文件安全守卫已启动"}
+{"level":30,"time":1790597711250,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l5/alert-rules","count":0,"msg":"冷却期已从 SQLite 恢复"}
+{"level":30,"time":1790597711250,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 5f: 告警规则引擎已初始化"}
+{"level":30,"time":1790597711253,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 5f: IM 通道 — 未配置飞书 Webhook"}
+{"level":30,"time":1790597711253,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"deploy/bootstrap","phase":"interaction","durationMs":218,"msg":"Phase 5 完成"}
+{"level":30,"time":1790597711253,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","msg":"Bootstrap 服务已就绪，开始 Express 设置"}
+{"level":30,"time":1790597711253,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"notifications/registry","channel":"electron","msg":"通知适配器已注册"}
+{"level":30,"time":1790597711253,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","msg":"Electron 通知适配器已注册"}
+{"level":30,"time":1790597711262,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"orchestrator/phase-gate-check","phaseGates":["1→2: dataCompleteness","2→3: hypothesisConfidence","4→5: reportCompleteness"],"thresholds":{"minEvidenceCount":3,"minHypothesisConfidence":0.5,"minExpertsPassed":4},"msg":"Phase Gate Check 已注册"}
+{"level":30,"time":1790597711274,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/file-scanner","msg":"measurers/ 目录不存在 — 跳过测量器配置扫描"}
+{"level":30,"time":1790597711275,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/file-scanner","experts":6,"measurers":0,"knowledge":2,"totalFiles":40,"errors":0,"msg":"文件扫描完成"}
+{"level":30,"time":1790597711275,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l3/expert-registry","type":"competitive-strategy","msg":"专家类型已注册"}
+{"level":30,"time":1790597711275,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/expert-file-loader","expert":"competitive-strategy","sources":["expert/competitive-strategy/IDENTITY.md","expert/competitive-strategy/IDENTITY.md (analytical_lens)","expert/competitive-strategy/THEORY.md","expert/competitive-strategy/RULES.md","expert/competitive-strategy/TOOLS.md","expert/competitive-strategy/CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC","KNOWLEDGE"],"msg":"专家已从文件加载"}
+{"level":30,"time":1790597711275,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l3/expert-registry","type":"customer-growth","msg":"专家类型已注册"}
+{"level":30,"time":1790597711275,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/expert-file-loader","expert":"customer-growth","sources":["expert/customer-growth/IDENTITY.md","expert/customer-growth/IDENTITY.md (analytical_lens)","expert/customer-growth/THEORY.md","expert/customer-growth/RULES.md","expert/customer-growth/TOOLS.md","expert/customer-growth/KNOWLEDGE.md","expert/customer-growth/CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC"],"msg":"专家已从文件加载"}
+{"level":30,"time":1790597711275,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l3/expert-registry","type":"fundamental-efficiency","msg":"专家类型已注册"}
+{"level":30,"time":1790597711275,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/expert-file-loader","expert":"fundamental-efficiency","sources":["expert/fundamental-efficiency/IDENTITY.md","expert/fundamental-efficiency/IDENTITY.md (analytical_lens)","expert/fundamental-efficiency/THEORY.md","expert/fundamental-efficiency/RULES.md","expert/fundamental-efficiency/TOOLS.md","expert/fundamental-efficiency/KNOWLEDGE.md","expert/fundamental-efficiency/CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC"],"msg":"专家已从文件加载"}
+{"level":30,"time":1790597711275,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l3/expert-registry","type":"host","msg":"专家类型已注册"}
+{"level":30,"time":1790597711275,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/expert-file-loader","expert":"host","sources":["expert/host/IDENTITY.md","expert/host/IDENTITY.md (analytical_lens)","expert/host/THEORY.md","expert/host/RULES.md","expert/host/TOOLS.md","expert/host/CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC","KNOWLEDGE"],"msg":"专家已从文件加载"}
+{"level":30,"time":1790597711275,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l3/expert-registry","type":"organizational-capability","msg":"专家类型已注册"}
+{"level":30,"time":1790597711275,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/expert-file-loader","expert":"organizational-capability","sources":["expert/organizational-capability/IDENTITY.md","expert/organizational-capability/IDENTITY.md (analytical_lens)","expert/organizational-capability/THEORY.md","expert/organizational-capability/RULES.md","expert/organizational-capability/TOOLS.md","expert/organizational-capability/KNOWLEDGE.md","expert/organizational-capability/CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC"],"msg":"专家已从文件加载"}
+{"level":30,"time":1790597711275,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"l3/expert-registry","type":"technology-foundation","msg":"专家类型已注册"}
+{"level":30,"time":1790597711275,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/expert-file-loader","expert":"technology-foundation","sources":["expert/technology-foundation/IDENTITY.md","expert/technology-foundation/IDENTITY.md (analytical_lens)","expert/technology-foundation/THEORY.md","expert/technology-foundation/RULES.md","expert/technology-foundation/TOOLS.md","expert/technology-foundation/CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC","KNOWLEDGE"],"msg":"专家已从文件加载"}
+{"level":30,"time":1790597711275,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/expert-file-loader","fromFiles":6,"fromDefaults":0,"totalLoaded":6,"errors":0,"msg":"专家文件加载完成"}
+{"level":30,"time":1790597711275,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","fromFiles":6,"total":6,"msg":"Phase 0 专家文件加载完成"}
+{"level":30,"time":1790597711282,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/main-agent","loopId":"loop-1","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1790597711282,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/main-agent","loopId":"loop-2","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1790597711282,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/main-agent","loopId":"loop-3","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1790597711282,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/main-agent","loopId":"loop-4","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1790597711282,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/main-agent","loopId":"loop-5","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1790597711282,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"agent/main-agent","loopId":"loop-6","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1790597711282,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"routes/overflow","msg":"Overflow GraphStore 已注入"}
+{"level":30,"time":1790597711283,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"services/memory-monitor","rss":217399296,"heapUsed":58792880,"msg":"[MEMORY] 基线"}
+{"level":30,"time":1790597711283,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","msg":"全局错误处理器已注册 (uncaughtException + unhandledRejection)"}
+{"level":30,"time":1790597711283,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","port":0,"msg":"Synova-Agent → http://localhost:0"}
+{"level":40,"time":1790597711291,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"auth","msg":"DEV_MODE: JWT_SECRET not set, auto-assigning admin role"}
+{"level":40,"time":1790597711300,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"auth","msg":"DEV_MODE: JWT_SECRET not set, auto-assigning admin role"}
+{"level":40,"time":1790597711301,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"config/customer-config-package","orgId":"default","roots":["/Users/wane/SynovaAgent/.synova-wt-squad-d1053/customer-config"],"msg":"customer-config: 无客户配置包 — default 层兜底（degraded）"}
+{"level":40,"time":1790597711303,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"auth","msg":"DEV_MODE: JWT_SECRET not set, auto-assigning admin role"}
+{"level":40,"time":1790597711307,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"auth","msg":"DEV_MODE: JWT_SECRET not set, auto-assigning admin role"}
+{"level":40,"time":1790597711307,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"config/customer-config-package","orgId":"default","roots":["/Users/wane/SynovaAgent/.synova-wt-squad-d1053/customer-config"],"msg":"customer-config: 无客户配置包 — default 层兜底（degraded）"}
+{"level":40,"time":1790597711310,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"auth","msg":"DEV_MODE: JWT_SECRET not set, auto-assigning admin role"}
+{"level":40,"time":1790597711313,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"auth","msg":"DEV_MODE: JWT_SECRET not set, auto-assigning admin role"}
+{"level":40,"time":1790597711315,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"auth","msg":"DEV_MODE: JWT_SECRET not set, auto-assigning admin role"}
+{"level":40,"time":1790597711317,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"auth","msg":"DEV_MODE: JWT_SECRET not set, auto-assigning admin role"}
+{"level":40,"time":1790597711320,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"auth","msg":"DEV_MODE: JWT_SECRET not set, auto-assigning admin role"}
+{"level":40,"time":1790597711323,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"auth","msg":"DEV_MODE: JWT_SECRET not set, auto-assigning admin role"}
+{"level":40,"time":1790597711326,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"auth","msg":"DEV_MODE: JWT_SECRET not set, auto-assigning admin role"}
+{"level":40,"time":1790597711329,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"auth","msg":"DEV_MODE: JWT_SECRET not set, auto-assigning admin role"}
+{"level":40,"time":1790597711330,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","err":{"code":"SETTINGS_SPEC_INVALID","phase":"spec","retryable":false,"name":"SettingsSpecError"},"code":"SETTINGS_SPEC_INVALID","msg":"SETTINGS_BOOT_FAILED 生效边界初始化失败 — degraded，服务照常起（铁律 24/31）"}
+{"level":40,"time":1790597711332,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"auth","msg":"DEV_MODE: JWT_SECRET not set, auto-assigning admin role"}
+{"level":40,"time":1790597711334,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"auth","msg":"DEV_MODE: JWT_SECRET not set, auto-assigning admin role"}
+{"level":40,"time":1790597711334,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"config/customer-config-package","orgId":"default","roots":["/Users/wane/SynovaAgent/.synova-wt-squad-d1053/customer-config"],"msg":"customer-config: 无客户配置包 — default 层兜底（degraded）"}
+{"level":40,"time":1790597711339,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"auth","msg":"DEV_MODE: JWT_SECRET not set, auto-assigning admin role"}
+{"level":40,"time":1790597711340,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":3,"undeclared":["rogue.a","rogue.b","rogue.c"],"msg":"SETTINGS_UNUSED_UNDECLARED 未声明分类项（默认安全 = 强制 restart）"}
+{"level":40,"time":1790597711340,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","scope":"settings.yaml","msg":"SETTINGS_UNDECLARED_SCOPE 枚举范围 = settings.yaml 内未声明键；既有 env 键不在本卡枚举范围（D1053 §3.3 / R8）"}
+{"level":40,"time":1790597711340,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":2,"exceptions":["llm-credential-hot-reload","file-driven-reload-channel"],"msg":"SETTINGS_EXCEPTION_ACTIVE 既存例外（不按声明面自动生效，见 D1053 §6）"}
+{"level":40,"time":1790597711342,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","service":"auth","msg":"DEV_MODE: JWT_SECRET not set, auto-assigning admin role"}
+ ✓ tests/routes/settings.test.ts > 入口 GET /api/settings/effective + 第二消费者 /api/config/dump（D1053） > C1 · 两消费者同一新值：live 键改盘后两端点读回的 effective 相同且为新值（同一 it 内互比） 19ms
+ ✓ tests/routes/settings.test.ts > 入口 GET /api/settings/effective + 第二消费者 /api/config/dump（D1053） > C1b · restart 键在两消费者上同样一致（均为 boot 冻结旧值 + pending 新值） 6ms
+ ✓ tests/routes/settings.test.ts > 入口 GET /api/settings/effective + 第二消费者 /api/config/dump（D1053） > C2 · 400 校验语义（ns 格式 / key 无 ns / includeUndeclared 非法 / limit 越界） 16ms
+ ✓ tests/routes/settings.test.ts > 入口 GET /api/settings/effective + 第二消费者 /api/config/dump（D1053） > C3 · 未声明清单出现在 HTTP 面（undeclared[] + 枚举范围声明 + truncated） 3ms
+ ✓ tests/routes/settings.test.ts > 入口 GET /api/settings/effective + 第二消费者 /api/config/dump（D1053） > C3b · 未声明项在 keys[] 中强制 restart + declared:false（默认安全可观测） 3ms
+ ✓ tests/routes/settings.test.ts > 入口 GET /api/settings/effective + 第二消费者 /api/config/dump（D1053） > C4 · 非法声明（yaml 出现 applies 字段）⇒ 200 + degraded + 规格错误码，且涉事键不在 keys[] 5ms
+ ✓ tests/routes/settings.test.ts > 入口 GET /api/settings/effective + 第二消费者 /api/config/dump（D1053） > C4b · healthz 在规格错误下仍 200（配置面故障不成为启动故障面） 3ms
+ ✓ tests/routes/settings.test.ts > 入口 GET /api/settings/effective + 第二消费者 /api/config/dump（D1053） > C2b · 未知键查询 ⇒ 200 + keys:[]（不是 404） 2ms
+ ✓ tests/routes/settings.test.ts > 入口 GET /api/settings/effective + 第二消费者 /api/config/dump（D1053） > C3c · 边界：limit=1 时截断可见（truncated 与 undeclaredTotal 自洽） 3ms
+{"level":30,"time":1790597711348,"pid":50560,"hostname":"192.168.1.7","name":"synova-agent","forensics":{"signal":"SIGTERM","pid":50560,"uptime":3.126178416,"memory":{"rss":253247488,"heapTotal":196296704,"heapUsed":65621344,"external":4505548,"arrayBuffers":379045},"timestamp":"2026-09-28T12:15:11.348Z"},"msg":"shutdown forensics"}
+{"level":40,"time":1790597711460,"pid":50561,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":0,"undeclared":[],"msg":"SETTINGS_UNUSED_UNDECLARED 未声明分类项（默认安全 = 强制 restart）"}
+{"level":40,"time":1790597711460,"pid":50561,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","scope":"settings.yaml","msg":"SETTINGS_UNDECLARED_SCOPE 枚举范围 = settings.yaml 内未声明键；既有 env 键不在本卡枚举范围（D1053 §3.3 / R8）"}
+{"level":40,"time":1790597711460,"pid":50561,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":2,"exceptions":["llm-credential-hot-reload","file-driven-reload-channel"],"msg":"SETTINGS_EXCEPTION_ACTIVE 既存例外（不按声明面自动生效，见 D1053 §6）"}
+{"level":40,"time":1790597711462,"pid":50561,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":0,"undeclared":[],"msg":"SETTINGS_UNUSED_UNDECLARED 未声明分类项（默认安全 = 强制 restart）"}
+{"level":40,"time":1790597711462,"pid":50561,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","scope":"settings.yaml","msg":"SETTINGS_UNDECLARED_SCOPE 枚举范围 = settings.yaml 内未声明键；既有 env 键不在本卡枚举范围（D1053 §3.3 / R8）"}
+{"level":40,"time":1790597711462,"pid":50561,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":2,"exceptions":["llm-credential-hot-reload","file-driven-reload-channel"],"msg":"SETTINGS_EXCEPTION_ACTIVE 既存例外（不按声明面自动生效，见 D1053 §6）"}
+{"level":40,"time":1790597711464,"pid":50561,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":0,"undeclared":[],"msg":"SETTINGS_UNUSED_UNDECLARED 未声明分类项（默认安全 = 强制 restart）"}
+{"level":40,"time":1790597711465,"pid":50561,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","scope":"settings.yaml","msg":"SETTINGS_UNDECLARED_SCOPE 枚举范围 = settings.yaml 内未声明键；既有 env 键不在本卡枚举范围（D1053 §3.3 / R8）"}
+{"level":40,"time":1790597711465,"pid":50561,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":2,"exceptions":["llm-credential-hot-reload","file-driven-reload-channel"],"msg":"SETTINGS_EXCEPTION_ACTIVE 既存例外（不按声明面自动生效，见 D1053 §6）"}
+{"level":40,"time":1790597711466,"pid":50561,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":0,"undeclared":[],"msg":"SETTINGS_UNUSED_UNDECLARED 未声明分类项（默认安全 = 强制 restart）"}
+{"level":40,"time":1790597711466,"pid":50561,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","scope":"settings.yaml","msg":"SETTINGS_UNDECLARED_SCOPE 枚举范围 = settings.yaml 内未声明键；既有 env 键不在本卡枚举范围（D1053 §3.3 / R8）"}
+{"level":40,"time":1790597711466,"pid":50561,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":2,"exceptions":["llm-credential-hot-reload","file-driven-reload-channel"],"msg":"SETTINGS_EXCEPTION_ACTIVE 既存例外（不按声明面自动生效，见 D1053 §6）"}
+{"level":40,"time":1790597711467,"pid":50561,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":2,"exceptions":["llm-credential-hot-reload","file-driven-reload-channel"],"msg":"SETTINGS_EXCEPTION_ACTIVE 既存例外（不按声明面自动生效，见 D1053 §6）"}
+{"level":40,"time":1790597711469,"pid":50561,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-source","path":"/var/folders/bs/ltqkv_rd45z6b7p5wq90vv500000gn/T/d1053-restart-root-KdA3T2/settings.yaml","detail":"unexpected end of the stream within a double quoted scalar (4:1)","msg":"settings-source: 层文件解析失败 — degraded（铁律 24）"}
+{"level":40,"time":1790597711469,"pid":50561,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":2,"exceptions":["llm-credential-hot-reload","file-driven-reload-channel"],"msg":"SETTINGS_EXCEPTION_ACTIVE 既存例外（不按声明面自动生效，见 D1053 §6）"}
+{"level":40,"time":1790597711469,"pid":50561,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-source","path":"/var/folders/bs/ltqkv_rd45z6b7p5wq90vv500000gn/T/d1053-restart-root-KdA3T2/settings.yaml","detail":"unexpected end of the stream within a double quoted scalar (4:1)","msg":"settings-source: 层文件解析失败 — degraded（铁律 24）"}
+{"level":40,"time":1790597711470,"pid":50561,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","path":"server.port","expected":"number","actual":"string","msg":"settings-applies: 文件值类型与声明不符 — 回落默认值（degraded）"}
+{"level":40,"time":1790597711470,"pid":50561,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":0,"undeclared":[],"msg":"SETTINGS_UNUSED_UNDECLARED 未声明分类项（默认安全 = 强制 restart）"}
+{"level":40,"time":1790597711470,"pid":50561,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","scope":"settings.yaml","msg":"SETTINGS_UNDECLARED_SCOPE 枚举范围 = settings.yaml 内未声明键；既有 env 键不在本卡枚举范围（D1053 §3.3 / R8）"}
+{"level":40,"time":1790597711470,"pid":50561,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":2,"exceptions":["llm-credential-hot-reload","file-driven-reload-channel"],"msg":"SETTINGS_EXCEPTION_ACTIVE 既存例外（不按声明面自动生效，见 D1053 §6）"}
+{"level":40,"time":1790597711471,"pid":50561,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":0,"undeclared":[],"msg":"SETTINGS_UNUSED_UNDECLARED 未声明分类项（默认安全 = 强制 restart）"}
+{"level":40,"time":1790597711471,"pid":50561,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","scope":"settings.yaml","msg":"SETTINGS_UNDECLARED_SCOPE 枚举范围 = settings.yaml 内未声明键；既有 env 键不在本卡枚举范围（D1053 §3.3 / R8）"}
+{"level":40,"time":1790597711471,"pid":50561,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":2,"exceptions":["llm-credential-hot-reload","file-driven-reload-channel"],"msg":"SETTINGS_EXCEPTION_ACTIVE 既存例外（不按声明面自动生效，见 D1053 §6）"}
+ ✓ tests/config/settings-source.test.ts > settings-applies-restart · RESTART 套件（D1053 / 25-9 路径 B） > B1 · 同 boot 改 restart 键 ⇒ effective 仍旧值 + pending 新值 + applies:restart（绝不半生效） 6ms
+ ✓ tests/config/settings-source.test.ts > settings-applies-restart · RESTART 套件（D1053 / 25-9 路径 B） > B2 · 同 boot 内多次读取 restart 键 effective 恒等（判据 D-BOOT-1：变化即半生效） 2ms
+ ✓ tests/config/settings-source.test.ts > settings-applies-restart · RESTART 套件（D1053 / 25-9 路径 B） > B3 · 新 boot（模块态重置 = 真实重启语义）⇒ bootId 变 + restart 键 effective = 新值 3ms
+ ✓ tests/config/settings-source.test.ts > settings-applies-restart · RESTART 套件（D1053 / 25-9 路径 B） > 边界 · 两层文件均无该 restart 键 ⇒ 回落声明默认值且 sourceLayer:declaration 1ms
+ ✓ tests/config/settings-source.test.ts > settings-applies-restart · RESTART 套件（D1053 / 25-9 路径 B） > 降级 · YAML 不可解析 ⇒ degraded:true + code + reason（铁律 24/31，检查面不成为故障面） 2ms
+ ✓ tests/config/settings-source.test.ts > settings-applies-restart · RESTART 套件（D1053 / 25-9 路径 B） > 降级 · 文件值类型与声明默认值不同类 ⇒ degraded + 该键回落默认值（显式点名，禁静默） 1ms
+ ✓ tests/config/settings-source.test.ts > settings-applies-restart · RESTART 套件（D1053 / 25-9 路径 B） > 边界 · restart 键仅 home 层给值 ⇒ 同 boot 冻结后改 home 盘仍为旧值 1ms
+{"level":40,"time":1790597711584,"pid":50562,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":0,"undeclared":[],"msg":"SETTINGS_UNUSED_UNDECLARED 未声明分类项（默认安全 = 强制 restart）"}
+{"level":40,"time":1790597711584,"pid":50562,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","scope":"settings.yaml","msg":"SETTINGS_UNDECLARED_SCOPE 枚举范围 = settings.yaml 内未声明键；既有 env 键不在本卡枚举范围（D1053 §3.3 / R8）"}
+{"level":40,"time":1790597711584,"pid":50562,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":2,"exceptions":["llm-credential-hot-reload","file-driven-reload-channel"],"msg":"SETTINGS_EXCEPTION_ACTIVE 既存例外（不按声明面自动生效，见 D1053 §6）"}
+{"level":40,"time":1790597711587,"pid":50562,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":0,"undeclared":[],"msg":"SETTINGS_UNUSED_UNDECLARED 未声明分类项（默认安全 = 强制 restart）"}
+{"level":40,"time":1790597711587,"pid":50562,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","scope":"settings.yaml","msg":"SETTINGS_UNDECLARED_SCOPE 枚举范围 = settings.yaml 内未声明键；既有 env 键不在本卡枚举范围（D1053 §3.3 / R8）"}
+{"level":40,"time":1790597711587,"pid":50562,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":2,"exceptions":["llm-credential-hot-reload","file-driven-reload-channel"],"msg":"SETTINGS_EXCEPTION_ACTIVE 既存例外（不按声明面自动生效，见 D1053 §6）"}
+{"level":40,"time":1790597711588,"pid":50562,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":0,"undeclared":[],"msg":"SETTINGS_UNUSED_UNDECLARED 未声明分类项（默认安全 = 强制 restart）"}
+{"level":40,"time":1790597711588,"pid":50562,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","scope":"settings.yaml","msg":"SETTINGS_UNDECLARED_SCOPE 枚举范围 = settings.yaml 内未声明键；既有 env 键不在本卡枚举范围（D1053 §3.3 / R8）"}
+{"level":40,"time":1790597711588,"pid":50562,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":2,"exceptions":["llm-credential-hot-reload","file-driven-reload-channel"],"msg":"SETTINGS_EXCEPTION_ACTIVE 既存例外（不按声明面自动生效，见 D1053 §6）"}
+{"level":40,"time":1790597711590,"pid":50562,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":1,"undeclared":["rogue.whoAmI"],"msg":"SETTINGS_UNUSED_UNDECLARED 未声明分类项（默认安全 = 强制 restart）"}
+{"level":40,"time":1790597711590,"pid":50562,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","scope":"settings.yaml","msg":"SETTINGS_UNDECLARED_SCOPE 枚举范围 = settings.yaml 内未声明键；既有 env 键不在本卡枚举范围（D1053 §3.3 / R8）"}
+{"level":40,"time":1790597711590,"pid":50562,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":2,"exceptions":["llm-credential-hot-reload","file-driven-reload-channel"],"msg":"SETTINGS_EXCEPTION_ACTIVE 既存例外（不按声明面自动生效，见 D1053 §6）"}
+{"level":40,"time":1790597711592,"pid":50562,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":2,"exceptions":["llm-credential-hot-reload","file-driven-reload-channel"],"msg":"SETTINGS_EXCEPTION_ACTIVE 既存例外（不按声明面自动生效，见 D1053 §6）"}
+{"level":40,"time":1790597711594,"pid":50562,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","err":{"code":"SETTINGS_SPEC_INVALID","phase":"spec","retryable":false,"name":"SettingsSpecError"},"code":"SETTINGS_SPEC_INVALID","msg":"SETTINGS_BOOT_FAILED 生效边界初始化失败 — degraded，服务照常起（铁律 24/31）"}
+{"level":40,"time":1790597711595,"pid":50562,"hostname":"192.168.1.7","name":"synova-agent","service":"config/settings-applies","count":2,"exceptions":["llm-credential-hot-reload","file-driven-reload-channel"],"msg":"SETTINGS_EXCEPTION_ACTIVE 既存例外（不按声明面自动生效，见 D1053 §6）"}
+ ✓ tests/config/settings-applies.test.ts > settings-applies-live · LIVE 套件（D1053 / 25-8 路径 A） > A1 · live 键改盘后不重启即新值（同一 runtime 的 effective 立即变） 7ms
+ ✓ tests/config/settings-applies.test.ts > settings-applies-live · LIVE 套件（D1053 / 25-8 路径 A） > A2 · sourceLayer 三态归属（workspace / home / declaration） 3ms
+ ✓ tests/config/settings-applies.test.ts > settings-applies-live · LIVE 套件（D1053 / 25-8 路径 A） > A3 · 未声明键 ⇒ 强制 restart + declared:false + 进 undeclared[]（默认安全） 2ms
+ ✓ tests/config/settings-applies.test.ts > settings-applies-live · LIVE 套件（D1053 / 25-8 路径 A） > 边界 · 两层皆不存在 ⇒ 零降级 + 全 declaration 归属（ENOENT 是正常默认，不是降级） 2ms
+ ✓ tests/config/settings-applies.test.ts > settings-applies-live · LIVE 套件（D1053 / 25-8 路径 A） > 降级 · 非法声明（yaml 携带 applies）⇒ runtime degraded + SETTINGS_SPEC_INVALID，且涉事键不出现（(b) 版：负控只剩真 runtime 一形态） 2ms
+ ✓ tests/config/settings-applies.test.ts > settings-applies-live · LIVE 套件（D1053 / 25-8 路径 A） > 边界 · 目录存在但文件缺失（仅父目录在）⇒ 仍视为 ENOENT 正常默认 1ms
+
+ Test Files  3 passed (3)
+      Tests  22 passed (22)
+   Start at  20:15:08
+   Duration  3.40s (transform 1.07s, setup 0ms, import 1.07s, tests 2.07s, environment 0ms)
+
+JSON report written to /tmp/d1053-vitest-v2.json
+
+--- json reporter 逐套件计数（机器可核）---
+usage: cut -b list [-n] [file ...]
+       cut -c list [file ...]
+       cut -f list [-s] [-w | -d delim] [file ...]
+numTotalTestSuites = 6  numTotalTests = 22  success = True
+  tests/config/settings-applies.test.ts          status=passed   tests=6
+  tests/config/settings-source.test.ts           status=passed   tests=7
+  tests/routes/settings.test.ts                  status=passed   tests=9
+
+json sha256 = 

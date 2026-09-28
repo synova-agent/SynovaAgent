@@ -1,0 +1,87 @@
+########## D1053 增量复验 V2：路径 A/B/C + C-neg + DEV-1/DEV-2 复核 ##########
+date(utc): 2026-09-28T12:15:31Z
+HEAD: 33e63fd52d4b45d207c7e33329b36bdd534c59a9
+33e63fd52d4b45d207c7e33329b36bdd534c59a9	refs/heads/feat/d1053-live-restart-settings
+node: v24.19.0  ABI: 137
+
+=== nonce 独立性（grep 0 命中）===
+  $ grep -rn 0.7788 tests/ src/ → <空输出 = 0 命中>
+  PASS nonce 0.7788 0 命中 | grep 空
+
+=== 起服 #1（PORT=62347）===
+  PASS 起服 #1 就绪 | /api/healthz 200
+
+=== DEV-1 复核：live 键行 defaultValue 必须 = 声明默认值 0.3（修前 null）===
+    effective.keys[diagnosis.gateDataCompleteness] = {"path": "diagnosis.gateDataCompleteness", "applies": "live", "declared": true, "effective": 0.7788, "pending": null, "sourceLayer": "workspace", "defaultValue": 0.3, "changedOnDisk": false}
+    dump.settings.keys[diagnosis.gateDataCompleteness] = {"path": "diagnosis.gateDataCompleteness", "applies": "live", "declared": true, "effective": 0.7788, "pending": null, "sourceLayer": "workspace", "defaultValue": 0.3, "changedOnDisk": false}
+  PASS DEV-1 · effective 面 live 键 defaultValue | actual=0.3 expected=0.3
+  PASS DEV-1 · dump 面 live 键 defaultValue（两消费者一致） | actual=0.3 expected=0.3
+
+=== DEV-2 复核（基线面：无未声明键）===
+  [基线] counts = {"declared": 9, "live": 4, "restart": 5, "undeclared": 0}   undeclaredTotal=0   keys.length=9
+  PASS 基线 · ① declared === live + restart | actual=9 expected=9
+  PASS 基线 · ② counts.undeclared === undeclaredTotal | actual=0 expected=0
+  PASS 基线 · ③ declared + undeclared === keys.length | actual=9 expected=9
+  PASS 基线 · ④期望 9/4/5/0 | actual=[9, 4, 5, 0] expected=[9, 4, 5, 0]
+
+=== 路径 A · live 生效（不重启）===
+    effective.keys[diagnosis.gateDataCompleteness] = {"path": "diagnosis.gateDataCompleteness", "applies": "live", "declared": true, "effective": 0.9911, "pending": null, "sourceLayer": "workspace", "defaultValue": 0.3, "changedOnDisk": false}
+    dump.settings.keys[diagnosis.gateDataCompleteness] = {"path": "diagnosis.gateDataCompleteness", "applies": "live", "declared": true, "effective": 0.9911, "pending": null, "sourceLayer": "workspace", "defaultValue": 0.3, "changedOnDisk": false}
+  PASS 路径A · effective 新值 | actual=0.9911 expected=0.9911
+  PASS 路径A · 两消费者同值 | actual=0.9911 expected=0.9911
+  PASS 路径A · bootId 未变 | actual='ee67f17b-8605-41af-84ea-fecd1c876093' expected='ee67f17b-8605-41af-84ea-fecd1c876093'
+  PASS 路径A · pending=null（live） | actual=None expected=None
+
+=== 路径 B · restart 隔离（同 boot）===
+    effective.keys[llm.baseUrl] = {"path": "llm.baseUrl", "applies": "restart", "declared": true, "effective": "http://old.invalid", "pending": "http://new.invalid", "sourceLayer": "workspace", "defaultValue": "https://api.deepseek.com/v1", "changedOnDisk": true}
+    dump.settings.keys[llm.baseUrl] = {"path": "llm.baseUrl", "applies": "restart", "declared": true, "effective": "http://old.invalid", "pending": "http://new.invalid", "sourceLayer": "workspace", "defaultValue": "https://api.deepseek.com/v1", "changedOnDisk": true}
+  PASS 路径B · effective 旧值（D-BOOT-1 前提） | actual='http://old.invalid' expected='http://old.invalid'
+  PASS 路径B · pending = 新值 | actual='http://new.invalid' expected='http://new.invalid'
+  PASS 路径B · applies=restart | actual='restart' expected='restart'
+  PASS 路径B · 两消费者同值 | actual='http://old.invalid' expected='http://old.invalid'
+  PASS 路径B · healthz | actual=200 expected=200
+  PASS 路径B · 端口不变 | node    50621 wane   14u  IPv6 0x3dcb07469ff10894      0t0  TCP *:62347 (LISTEN)
+
+=== 路径 B · 真实 kill + 重启 ===
+  kill rc = 0
+  PASS 起服 #2 就绪 | /api/healthz 200
+  bootId: ee67f17b-8605-41af-84ea-fecd1c876093 → a3d848a4-5cf0-470d-bb81-96f9c87ff49d ; PID: 50620 → 50624
+    effective.keys[llm.baseUrl] = {"path": "llm.baseUrl", "applies": "restart", "declared": true, "effective": "http://new.invalid", "pending": null, "sourceLayer": "workspace", "defaultValue": "https://api.deepseek.com/v1", "changedOnDisk": false}
+  PASS 路径B · bootId 已变 | ee67f17b-8605-41af-84ea-fecd1c876093 → a3d848a4-5cf0-470d-bb81-96f9c87ff49d
+  PASS 路径B · 重启后 effective 新值 | actual='http://new.invalid' expected='http://new.invalid'
+  PASS 路径B · 重启后 pending 清空 | actual=None expected=None
+  PASS 路径B · 重启后两消费者同值 | actual='http://new.invalid' expected='http://new.invalid'
+
+=== 路径 C · 未声明键（三件齐）+ DEV-2 复核（含未声明行）===
+  kill rc = 0
+  PASS 起服 #3 就绪 | /api/healthz 200
+  undeclared = ["rogue.whoAmI"]  undeclaredTotal = 1
+    keys[rogue.whoAmI] = {"path": "rogue.whoAmI", "applies": "restart", "declared": false, "effective": 1, "pending": null, "sourceLayer": "workspace", "defaultValue": null, "changedOnDisk": false}
+  PASS 路径C · 进 undeclared[] | ['rogue.whoAmI']
+  PASS 路径C · declared=false | actual=False expected=False
+  PASS 路径C · applies 强制 restart | actual='restart' expected='restart'
+  [含未声明] counts = {"declared": 9, "live": 4, "restart": 5, "undeclared": 1}   undeclaredTotal=1   keys.length=10
+  PASS 含未声明 · ① declared === live + restart | actual=9 expected=9
+  PASS 含未声明 · ② counts.undeclared === undeclaredTotal | actual=1 expected=1
+  PASS 含未声明 · ③ declared + undeclared === keys.length | actual=10 expected=10
+  PASS 含未声明 · ④期望 9/4/5/1 | actual=[9, 4, 5, 1] expected=[9, 4, 5, 1]
+  PASS 路径C-① 未声明清单 | SETTINGS_UNUSED_UNDECLARED
+  PASS 路径C-② 枚举边界声明 | SETTINGS_UNDECLARED_SCOPE
+  PASS 路径C-③ 既存例外打印 | SETTINGS_EXCEPTION_ACTIVE
+
+=== C-neg（空面不误报）===
+  kill rc = 0
+  PASS 起服 #4（空面）就绪 | /api/healthz 200
+  sourceFiles = {"workspace": null, "home": null}  degraded = False
+  PASS C-neg · 空面不得出现 SETTINGS_UNUSED_UNDECLARED | 不出现
+  PASS C-neg · 空面不得出现 SETTINGS_UNDECLARED_SCOPE | 不出现
+  PASS C-neg · 例外行仍须出现（R8 独立性） | 出现
+  PASS C-neg · 空面零降级 | actual=False expected=False
+  [空面] counts = {"declared": 9, "live": 4, "restart": 5, "undeclared": 0}   undeclaredTotal=0   keys.length=9
+  PASS 空面 · ① declared === live + restart | actual=9 expected=9
+  PASS 空面 · ② counts.undeclared === undeclaredTotal | actual=0 expected=0
+  PASS 空面 · ③ declared + undeclared === keys.length | actual=9 expected=9
+  PASS 空面 · ④期望 9/4/5/0 | actual=[9, 4, 5, 0] expected=[9, 4, 5, 0]
+  收尾 kill rc = 0
+
+########## 汇总：43 PASS / 0 FAIL（共 43）##########

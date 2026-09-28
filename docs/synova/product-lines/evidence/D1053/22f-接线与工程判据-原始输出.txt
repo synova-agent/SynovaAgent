@@ -1,0 +1,30 @@
+########## D1053 增量复验：接线与工程判据（基线 33e63fd5）##########
+date(utc): 2026-09-28T12:16:37Z
+HEAD: f43f10704bba40a89577c6d763d4c5d5550703ec
+
+判据① mount 可达性: indexOf(mount)=18791 < indexOf(404)=20314 ⇒ PASS
+  404 锚点出现次数（唯一性）= 1
+
+判据② 不动既有挂载顺序: $ git diff --numstat origin/main -- src/server.ts
+4	0	src/server.ts
+
+判据③ 组 4b 调用（非仅 import）:
+45:import { initSettingsBootFence } from './config/settings-applies'; // D1053 — 生效边界显式初始化（受控例外，见该文件头）
+127:  initSettingsBootFence(); // D1053 — 建立本 server 实例的生效边界（restart 类冻结；失败 degraded 不 exit，见 R4）
+
+判据④ 公开面 + 豁免路径（(b) 收缩公开面 + 零豁免）:
+704:export function initSettingsBootFence(
+744:export function getSettingsRuntime(): SettingsRuntime {
+766:export function getEffectiveRow(path: string): SettingsEffectiveRow | null {
+  loadSettingsSpec export 命中 = 0（期望 0）
+  .claude/plan.json 改动数 = 0（期望 0）
+
+判据⑤ 4 落点 / 2 默认值（本卡未消除）:
+src/config/settings-applies.ts:206:  { ns: 'diagnosis', key: 'gateDataCompleteness', applies: 'live', defaultValue: 0.3,
+src/l3/synova-diagnosis-engine-impl.ts:57:  gateDataCompleteness: DEFAULT_GATE_COMPLETENESS,
+src/routes/conversations.ts:143:      gateDataCompleteness: config.diagnosis?.gateDataCompleteness ?? 0.3,
+src/routes/diagnosis.ts:311:        gateDataCompleteness: config.diagnosis?.gateDataCompleteness ?? 0.3,
+src/orchestrator/diagnosis-orchestrator.ts:65:  gateDataCompleteness: 0.4,
+
+判据⑥ 红证残留:
+  ✅ 0 残留

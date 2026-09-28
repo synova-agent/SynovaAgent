@@ -1,0 +1,63 @@
+########## D1053 增量复验 · M3 判别性精化实验（基线 33e63fd5）##########
+date(utc): 2026-09-28T12:18:19Z
+HEAD: f43f10704bba40a89577c6d763d4c5d5550703ec
+代码基线: 33e63fd5（S 的 8b7759b9 只改 docs ⇒ 代码面未变）
+
+### 实验目的
+规格 §8.1 把「两消费者同一新值」断言（E2E C1）标为 M3（消费者自缓存）的判别点。
+本实验问：C1 自身能否独立捕获 M3？以及 V 的独立 harness 能否捕获？
+
+### 步骤 1：注入 M3（routes/config.ts 模块级缓存）
+  pre sha256 = f256ace010c33d964f9796bf0b4a53be8a2704b3513d6d6cc201c1c6a145bf7d
+diff --git a/src/routes/config.ts b/src/routes/config.ts
+index 1acbcdbc..bf15f097 100644
+--- a/src/routes/config.ts
++++ b/src/routes/config.ts
+@@ -24,14 +24,18 @@ const log = createLogger('routes/config');
+ const router = Router();
+ 
+ /** D1053 第二消费者：与 /api/settings/effective 共用同一 boot 生效边界（每请求现读，零缓存 —— M3 判别点）。 */
++let __injectedCache: { keys: unknown[]; undeclared: string[]; degraded: boolean; scope: string } | null = null; // INJECTED-RED-D1053 M3
+ function settingsBlock(): { keys: unknown[]; undeclared: string[]; degraded: boolean; scope: string } {
++  if (__injectedCache !== null) return __injectedCache; // INJECTED-RED-D1053 M3
+   const runtime = getSettingsRuntime();
+-  return {
++  const __out = {
+     keys: runtime.rows({ includeUndeclared: true, limit: 100 }),
+     undeclared: runtime.undeclared,
+     degraded: runtime.degraded,
+     scope: 'process',
+   };
++  __injectedCache = __out; // INJECTED-RED-D1053 M3
++  return __out;
+ }
+ 
+ router.get('/api/config/dump', async (req: Request, res: Response) => {
+
+### 步骤 2：E2E 套件三种跑法（同一注入下）
+--- [全量] npx vitest run tests/routes/settings.test.ts 
+     × tests/routes/settings.test.ts > 入口 GET /api/settings/effective + 第二消费者 /api/config/dump（D1053） > C4 · 非法声明（yaml 出现 applies 字段）⇒ 200 + degraded + 规格错误码，且涉事键不在 keys[] 7ms
+     Test Files  1 failed (1)
+          Tests  1 failed | 8 passed (9)
+--- [只跑 C1] npx vitest run tests/routes/settings.test.ts -t C1 ·
+     Test Files  1 passed (1)
+          Tests  2 passed | 7 skipped (9)
+--- [只跑 C4] npx vitest run tests/routes/settings.test.ts -t C4 ·
+     Test Files  1 passed (1)
+          Tests  2 passed | 7 skipped (9)
+--- [只跑 C1/C1b] npx vitest run tests/routes/settings.test.ts -t C1
+     Test Files  1 passed (1)
+          Tests  2 passed | 7 skipped (9)
+
+### 步骤 3：V 独立 harness 在同一注入下的结果（可核文件 /tmp/d1053-m3-harness.txt）
+    FAIL 路径A · 两消费者同值 | actual=0.9911 expected=0.7788
+  ########## 汇总：42 PASS / 1 FAIL（共 43）##########
+    FAIL: 路径A · 两消费者同值 | actual=0.9911 expected=0.7788
+
+  ⇒ V harness 的『两消费者同值』在 M3 下 FAIL（effective=0.9911 新值 vs dump=0.7788 陈旧缓存值）
+  ⇒ C1 隔离跑 PASS ⇒ C1 自身不具 M3 判别性；全量跑的红来自跨用例缓存污染（C1 预热缓存 → C4 读到陈旧块）
+
+### 步骤 4：复原
+  post sha256 = f256ace010c33d964f9796bf0b4a53be8a2704b3513d6d6cc201c1c6a145bf7d
+  ✅ sha256 复原一致
+  红证残留: 空（0 残留）

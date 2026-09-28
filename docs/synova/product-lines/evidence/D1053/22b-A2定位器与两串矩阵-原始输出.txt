@@ -1,0 +1,23 @@
+########## D1053 增量复验：A2 定位器 + 两串矩阵（基线 33e63fd5）##########
+date(utc): 2026-09-28T12:16:36Z
+HEAD: f43f10704bba40a89577c6d763d4c5d5550703ec
+
+=== 不实跑 run-machine-evidence.sh（会写 evidence 根 + 一次性 35 点 pass = 自造 P0-1 假绿）；只复跑定位逻辑（:75-88 同款）===
+
+--- 套件串: settings-applies-live ---
+  step1 内容grep -l → tests/config/settings-applies.test.ts
+  step2 文件名glob → <none>
+--- 套件串: settings-applies-restart ---
+  step1 内容grep -l → tests/config/settings-source.test.ts
+  step2 文件名glob → <none>
+
+=== 两串近对角矩阵（全局 tests/）===
+tests/config/settings-applies.test.ts    live=2 restart=0
+tests/config/settings-source.test.ts     live=0 restart=2
+
+live 串命中文件数    = 1
+restart 串命中文件数 = 1
+
+=== 旧套件名残留（应为 0）===
+settings-applies.test.ts
+settings-source.test.ts
