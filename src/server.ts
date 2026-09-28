@@ -41,6 +41,8 @@ import ontologyRoutes from './routes/ontology';
 import ontologyAdminRoutes from './routes/ontology-admin';
 import diagnosisRoutes from './routes/diagnosis';
 import configRoutes from './routes/config'; // D600 — GET /api/config/dump 客户配置检查表面（--dump-config）
+import settingsRoutes from './routes/settings'; // D1053 — GET /api/settings/effective 设置生效面（live/restart 分类）
+import { initSettingsBootFence } from './config/settings-applies'; // D1053 — 生效边界显式初始化（受控例外，见该文件头）
 import sessionsRoutes from './routes/sessions';
 import conversationsRoutes from './routes/conversations'; // D590 — 对话 SSE 端点（ConversationEngine × HTTP 接线）
 import metricsRoutes from './monitoring/routes';
@@ -122,6 +124,7 @@ export const setupGuideGoneRouter: Router = Router().all(
 );
 
 export async function createServer(): Promise<Server> {
+  initSettingsBootFence(); // D1053 — 建立本 server 实例的生效边界（restart 类冻结；失败 degraded 不 exit，见 R4）
   // ═══ D83: Bootstrap 启动序列 — 6 Phase 统一初始化 ═══
   // 替代原有的 ~300 行内联初始化代码
   const boot = new Bootstrap();
@@ -413,6 +416,7 @@ export async function createServer(): Promise<Server> {
   app.use(loopRoutes); // D20 — 循环状态 API
   app.use(cockpitRoutes); // D220-PHASE3 — 创始人仪表盘
   app.use(overflowRoutes); // D478 — 溢出仪表盘 API（D476 认证+隔离已就绪；修复 D90 仅 import 未挂载）
+  app.use(settingsRoutes); // D1053 — 设置生效面（挂载在 404 兜底之前；比照 configRoutes:387 邻位）
 
   // ═══ D575: LLM 凭证变更热生效（A4 onChanged）═══
   // 按请求解析架构（routes 每请求 loadConfig + createProvider）——凭证更新无需重建任何

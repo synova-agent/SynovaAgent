@@ -18,9 +18,21 @@ import { Router, type Request, type Response } from 'express';
 import { join } from 'node:path';
 import { createLogger } from '@synova/logger';
 import { resolveCustomerConfig, DEFAULT_ROOT_NAME } from '../config/customer-config-package';
+import { getSettingsRuntime } from '../config/settings-applies';
 
 const log = createLogger('routes/config');
 const router = Router();
+
+/** D1053 第二消费者：与 /api/settings/effective 共用同一 boot 生效边界（每请求现读，零缓存 —— M3 判别点）。 */
+function settingsBlock(): { keys: unknown[]; undeclared: string[]; degraded: boolean; scope: string } {
+  const runtime = getSettingsRuntime();
+  return {
+    keys: runtime.rows({ includeUndeclared: true, limit: 100 }),
+    undeclared: runtime.undeclared,
+    degraded: runtime.degraded,
+    scope: 'process',
+  };
+}
 
 router.get('/api/config/dump', async (req: Request, res: Response) => {
   const orgId = typeof req.query.orgId === 'string' ? req.query.orgId.trim() : '';
@@ -40,6 +52,7 @@ router.get('/api/config/dump', async (req: Request, res: Response) => {
       degraded: mounted.degraded,
       ...(mounted.reason === undefined ? {} : { reason: mounted.reason }),
       audit: mounted.audit,
+      settings: settingsBlock(), // D1053 — 第二消费者：与 /api/settings/effective 同值（零 org 维度，scope:'process'）
     });
   } catch (error: unknown) {
     // 防御兜底：resolveCustomerConfig 契约内不抛，此路收敛为 degraded 响应（铁律 24: log + degraded）
@@ -53,6 +66,7 @@ router.get('/api/config/dump', async (req: Request, res: Response) => {
       degraded: true,
       reason: `客户配置解析异常: ${detail}`,
       audit: [],
+      settings: { keys: [], undeclared: [], degraded: true, scope: 'process' }, // D1053 — 降级分支同样增列（形状一致，R7）
     });
   }
 });
