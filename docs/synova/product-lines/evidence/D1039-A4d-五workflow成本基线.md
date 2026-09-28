@@ -463,7 +463,7 @@ INFO 6,619→0；ERROR 320→320 恒等）。命令逐字见 §5.2，级别分�
 
 | # | 遗留项 | 为什么本批不能做 |
 |---|---|---|
-| 1 | `tests/win/vitest-log-level.test.sh` **未接线进 CI**（`ci.yml` 的 `Run hermetic control-tower gate tests` 是**显式文件清单**，不是 glob；且 `tests/win` 全仓零引用） | `ci.yml` **不在我的写集**（写集严格限定 3 文件），且 CI/控制塔文件是**热点文件按 CTO 排期**。**后果要说清：本测试现在只能手工跑，CI 不会发现它红** ⇒ 需 CTO 另开卡接线（这与"机制建成未接线"同型，正是 K3 的 M3 家族）。 |
+| 1 | ~~`tests/win/vitest-log-level.test.sh` **未接线进 CI**~~ **✅ 已闭合（2026-09-28，见 §8.6）** | 原理由：`ci.yml` 不在我的写集（严格限定 3 文件）。**队长同日授权写集扩展** ⇒ 已在 `quality` job 加「登记 + 真执行」step；`check-gate-integrity.sh` 复跑 = `GATE-INTEGRITY: OK`。**本测试现在 CI 会真跑，不再只能手工跑。** |
 | 2 | `packages/test-kit/vitest.config.ts:29` 用 `LOG_LEVEL: 'silent'`，与本卡 `'warn'` 语义**不一致** | 卡面红线明令**不改 `packages/**`**。且这是**另一个 harness**（root vitest 的 include 只覆盖 `./tests/**`，`packages/test-kit/tests/**` 归它自己那份 config）。**建议 CTO 单独裁决**：`silent` 与该包"失败时出上下文"的目标相悖。 |
 | 3 | 改后 **WARN 2,727→2,715（−12）未逐条溯源** | 属**用例间非确定性**告警，定位需**多次全量统计**（3× 全量 ≈ 3×50s，且 8GB 机器要求串行、队列里还有别人）。**且非本卡目标量**——本卡目标是 INFO 淹没 ERROR。**不声称已解释**。 |
 | 4 | 创始人侧参考值 **7,767 行 / 1.58 MB / INFO 2,696** 本批内**无法证实或证伪** | ① 它是 **CI `Vitest (1/2)` 单分片 job 的网页日志**口径，与本地全量 stdout 不同载体；② 队长事后拉 CI 日志时 GitHub 匿名 API **已 403 配额耗尽**（reset 后另取）。已在 §5.1 明确标注**不可直接比较**，**不假装核过**。 |
@@ -526,19 +526,20 @@ CI-REGISTRY: 测试文件 742（密封面 sh/py 132；ts 面 610）；ci.yml 登
              密封面未登记 79；基线 78 条；基线外新增 1；基线过期 0
 GATE-INTEGRITY: VIOLATION(1)      EXIT=1
 ```
-**处置（队长 2026-09-28 裁决）**：**不为变绿去改 `ci.yml`**（不在写集，且它正是 A4-c/D1039 的活）。
-本处**如实保持红**，等 A4-c（含该登记行）**先合 main** ⇒ 本分支 `merge origin/main` 继承该登记 ⇒ 自动消失。
-**⇒ 合并顺序：A4-c 先，A4-b 后。**
+**处置（队长 2026-09-28 裁决，同日更新 —— 见 §8.6：登记落点已从 A4-c 改到本分支，本处已闭合）**：
+原裁定为「不为变绿去改 `ci.yml`，等 A4-c 先合」。**同日队长裁决更新**：登记（+ 真执行）放进**本分支**，
+理由 = 本树有该测试文件 ⇒ 写完整路径**不产生幽灵告警**，且立刻满足本分支自己的 ratchet ⇒ **#873 当场可合**。
+⇒ 本处红**已消失**（见 §8.6 复跑原始输出：`GATE-INTEGRITY: OK`）。
 
-### 8.3 时序守卫（新增）—— 三条判据全部实测通过
+### 8.3 时序守卫 —— **四条判据**全部实测通过（含 fail-safe）
 
-**为什么需要**：本测试会被 A4-c 登记进 CI，而 **A4-c 分支不含本卡的 `vitest.config.ts` 修复**
-⇒ 无条件硬断言会让 A4-c 必红。但判别性又不能丢。
+**为什么需要**：本测试会被登记进 CI，而**不含本卡修复的分支**（如 A4-c）跑它时会硬断言失败
+⇒ 无条件硬断言会让那种分支必红。但判别性又不能丢。
 
 **🔴 一处必须在设计上说清的张力**：队长给的守卫字面规格是「契约行不存在 ⇒ 跳过不判红」，
 但判据③又要求「本分支删掉该行 ⇒ 必须红」。**这两条在只读配置内容时是互斥的**
 ——「A4-c 分支（从来不该有）」与「本分支被回退（本该有却没有）」在**配置内容上完全同形**。
-⇒ 我用**分支历史**作区分信号（`git log -S<契约行> -- vitest.config.ts`），三模式穷尽且互斥：
+⇒ 我用**分支历史**作区分信号（`git log -S<契约行> -- vitest.config.ts`），四模式穷尽且互斥：
 
 | 契约行在配置 | 本分支历史曾引入 | 模式 | 行为 |
 |---|---|---|---|
@@ -630,6 +631,148 @@ EXIT=1
 |---|---|---|
 | 10 | **门禁缺口：没有任何门禁检查「提交所在分支是否有自己的 brief」** —— resolver 会用无关 brief 静默顶上，只在 G12 报一个**指向错误方向**的错（看起来像"文件不在范围"，实际是"brief 缺失"） | 属 `scripts/workflow/resolve-commit-brief.sh` 域，**不在本卡写集**；队长已登记拟报 CTO 另立卡（建议 resolver 命中「非本分支认领的 brief」时**显式降级/报错**，而非静默挑一份） |
 | 11 | `PATTERN-BASELINE: STALE(bsd) scripts/pre-commit-check.sh:991`（`expires 2026-10-08`） | 存量台账过期项，**不影响退出码**；修它属 `scripts/pre-commit-check.sh` 域（不在写集） |
+
+---
+
+## 八·续、登记接线闭合（2026-09-28 同日，队长裁决更新后）
+
+### 8.6 ci.yml 接线（**登记 + 真执行**）—— §8.2 的红就此闭合
+
+**队长裁决更新**：登记落点从 A4-c **改到本分支**（写入集扩展，队长明确授权）。理由四条：
+① 本树**有该测试文件** ⇒ 写完整路径**不产生「幽灵清单项（清单有、文件无）」**告警；
+② 登记立刻满足**本分支自己的** ratchet ⇒ **#873 当场可合**（不必再等 A4-c 先合）；
+③ 合并后 main 同时拿到「文件 + 完整登记 + 真执行」⇒ 比「占位 + 事后补」干净；
+④ 抹掉先前 D1039→D1040 的人为依赖（那条依赖本就是为绕 ratchet 才出现的）。
+
+**被否决的 α 方案（登记在 A4-c）与否决理由**：两个 matcher 同源同形态（都扫 ci.yml 全文）——
+`check-gate-integrity.sh` 的登记 matcher 与 `check-canary-drift.sh:34` 的幽灵 matcher。
+ci.yml 一旦出现完整路径就**同时**算「已登记」+「清单项」，而该文件**不在 A4-c 的树**
+⇒ A4-c 会多一条幽灵告警，其文案 `幽灵清单项（清单有、文件无——改删）` **会引导后人删掉一行正确的登记**
+——一条会诱导后人删掉正确内容的可见告警，**比静默更坏**。
+
+**落点选择的实测依据**：
+
+| 候选 job | 有 `npm ci`？ | 判据 |
+|---|---|---|
+| `control-tower-tests` | **否**（零 npm 依赖） | ❌ 本测试要 `npx vitest run`，无依赖跑不起来 |
+| `test`（Vitest） | 是 | ❌ `strategy.matrix.shard = [1/2, 2/2]` ⇒ **会跑两遍** |
+| **`quality`** | **是** | ✅ 6 min 预算，本测试实测 **3.589s** |
+
+**为何放 `quality` job 末位**：测试内的判别性夹具会临时注释 `vitest.config.ts` 的契约行再复原
+（trap + `cmp` 自校验）⇒ 放末位可保证**其后没有任何 step 会观察到该瞬时状态**。
+
+**实际写入（逐字）**：
+```yaml
+      - name: A4-b LOG_LEVEL contract test (D1040)
+        if: steps.docsonly.outputs.docs_only != 'true'
+        run: bash tests/win/vitest-log-level.test.sh
+```
+（前面 8 行注释说明登记形态/落点理由/末位理由/时序守卫；`run` 行含**完整路径**以供两个 matcher 命中。
+**未用注释登记、未用无后缀写法取巧**——队长已否决。）
+
+**复跑原始输出（4 项全绿）**：
+```
+① YAML 合法性（node yaml 解析）:
+     quality.name = "TypeScript + Lint + Iron Laws"      ← 必需 context 名未变
+     quality.timeout-minutes = 6                          ← 未变
+     quality.steps 数 = 10
+     末尾 step = {"name":"A4-b LOG_LEVEL contract test (D1040)","if":"...docs_only != 'true'","run":"bash tests/win/vitest-log-level.test.sh"}
+     control-tower-tests 未被动: timeout = ${{ matrix.os == 'windows-latest' && 106 || 14 }} | name = "Control Tower Gate Tests (${{ matrix.os }})"
+
+② bash scripts/control-tower/check-gate-integrity.sh
+     CI-REGISTRY: ci.yml 登记（密封面）**54**（原 53）；基线外新增 **0**（原 1）；基线过期 0
+     GATE-INTEGRITY: **OK**            EXIT=0        ← §8.2 的红已闭合
+
+③ bash scripts/control-tower/check-canary-drift.sh
+     EXIT=0；我的测试在「不在 canary 清单」告警里出现 **0** 次；**无幽灵告警**
+
+④ GITHUB_ACTIONS=true SYNO_CI=1 SYNO_DIFF_BASE=origin/main bash scripts/pre-commit-check.sh
+     ✅ 全部 13 组通过                 EXIT=0
+```
+
+**🔴 必需 context 不受影响（K3 会核这一条，队长 2026-09-28 点名要求写入交付说明）**：
+
+本卡改的是 `quality` job **内部的 steps 列表（追加一个 step）**，**未触碰** job 的三个身份字段：
+
+| 字段 | 改前 | 改后 | 是否影响必需 context |
+|---|---|---|---|
+| `name:`（**= 必需 context 名**） | `TypeScript + Lint + Iron Laws` | **逐字未变** | ✅ 无影响 |
+| `runs-on:` | `ubuntu-latest` | 未变 | ✅ |
+| `timeout-minutes:` | `6` | **未变** | ✅ |
+
+**结论（可被独立复核）**：main 分支保护的 **12 个必需检查**（含 `TypeScript + Lint + Iron Laws`）
+**全部照常创建、照常报告**——本 step 只是在该 job 内多跑 3.589s 的一个断言脚本。
+**不存在**「新增 step 改了 job 名 ⇒ 必需 context 永不报告 ⇒ PR 永久 blocked」这一类风险。
+复核命令：`node -e "const y=require('yaml'),d=y.parse(require('fs').readFileSync('.github/workflows/ci.yml','utf8'));console.log(JSON.stringify({name:d.jobs.quality.name,to:d.jobs.quality['timeout-minutes'],runs:d.jobs.quality['runs-on']}))"`
+
+（另：本 step 带 `if: steps.docsonly.outputs.docs_only != 'true'` ⇒ 纯文档 PR 不跑，与同 job 其余 step 口径一致；
+**job 本身仍照常创建**，故 docs-only PR 的可读状态与改前一致。）
+
+### 8.7 fail-safe 反例 —— **逐字命令 + 完整原始输出**（队长点名的补件）
+
+```bash
+$ git clone --depth 1 --single-branch --branch main "file:///Users/wane/SynovaAgent" /tmp/a4b-failsafe
+$ cd /tmp/a4b-failsafe
+$ cat .git/shallow
+ff4677129dce2ff068a816eed3db0687b060c64c          ← 浅克隆标记存在
+$ git rev-list --count HEAD
+1                                                 ← 历史上只有 1 个提交（信号必然失效）
+$ mkdir -p tests/win && cp <worktree>/tests/win/vitest-log-level.test.sh tests/win/
+$ ln -sfn /Users/wane/SynovaAgent/node_modules node_modules
+$ bash tests/win/vitest-log-level.test.sh
+```
+**原始输出（EXIT=1）**：
+```
+═══════════════════════════════════════════════════════════════
+  D1040 · 测试期 LOG_LEVEL 契约（vitest.config.ts test.env）
+═══════════════════════════════════════════════════════════════
+
+── 0. 时序守卫模式判定 ──
+     契约行在 vitest.config.ts 中  : 0
+     本分支历史曾引入该契约行      : 0   (可判定=0 rc=2)
+     ⚠️  FAIL-SAFE: 历史信号不可判定 (rc=2) ⇒ 降级 ASSERT，**不降级 SKIP**
+     ⚠️  FAIL-SAFE: 可能原因 = shallow clone (fetch-depth<0) / git 不可用 / gitdir 不可解析
+     ⚠️  FAIL-SAFE: 取舍 = 宁可误红（安全侧），不可静默放行（松侧）
+     ⇒ 模式 = ASSERT                      ← 判据④：走 ASSERT 而非 SKIP
+
+── 1. 正常路径: 无外部 LOG_LEVEL ⇒ 应收敛到 warn ──
+     探针 env LOG_LEVEL = 'undefined'   探针 pino level = 'info'
+  ❌ process.env.LOG_LEVEL 期望 warn，实得 'undefined'
+  ❌ pino 生效级别期望 warn，实得 'info'
+
+── 2. 降级/边界: 外部 LOG_LEVEL=debug ⇒ 必须透传（语义：外部显式值优先）──
+     探针 env LOG_LEVEL = 'debug'   探针 pino level = 'debug'
+  ✅ 外部显式值透传（证明是 ?? 而非硬编码 warn）
+  ✅ pino 生效级别 = debug
+
+── 4. 判别性夹具: 注释掉配置行 ⇒ 探针必须转红（该行承重）──
+  ❌ 无法注释配置行（LOG_LEVEL 契约行缺失 ⇒ 修复已被拿掉 ⇒ 本测试即红）
+
+── 3. 边界护栏: 配置不得把 LOG_LEVEL 设成 'silent' ──
+  ✅ 配置未设 silent（失败上下文保留）
+
+── 5. 生产接线: package.json 的 test 脚本走默认 config 解析 ──
+     npm test = 'vitest run'
+  ✅ npm test 走 'vitest run' ⇒ 默认解析 vitest.config.ts（非孤儿配置）
+═══════════════════════════════════════════════════════════════
+  模式: ASSERT   结果: 4 通过, 3 失败
+  Status: ❌ D1040 LOG_LEVEL 契约未通过
+═══════════════════════════════════════════════════════════════
+```
+**反证（同一浅克隆下旧两模式逻辑会判 SKIP）** —— 逐字命令 + 原始输出：
+```bash
+$ KEY="LOG_LEVEL: process.env.LOG_LEVEL ?? 'warn',"
+$ FIX_IN_CONFIG=0; grep -qF "$KEY" vitest.config.ts 2>/dev/null && FIX_IN_CONFIG=1; echo "FIX_IN_CONFIG=$FIX_IN_CONFIG"
+FIX_IN_CONFIG=0
+$ FIX_IN_HISTORY=0; git log --format=%H -S"$KEY" -- vitest.config.ts 2>/dev/null | grep -q . && FIX_IN_HISTORY=1; echo "FIX_IN_HISTORY=$FIX_IN_HISTORY"
+FIX_IN_HISTORY=0
+$ # 旧两模式逻辑：FIX_IN_CONFIG≠1 且 FIX_IN_HISTORY≠1 ⇒ SKIP
+⇒ 旧逻辑判定 MODE=SKIP（判别性静默消失）
+```
+⇒ **同一环境、同一命令，旧逻辑静默 SKIP、新逻辑 fail-safe ASSERT** —— 这就是 fail-safe 的价值。
+
+**运行耗时（判据② ASSERT 路径，本机）**：`real 0m3.589s`（队长本机实测 3.3s，同量级）。
+`quality` job 预算 6 min ⇒ 影响可忽略。
 
 ---
 

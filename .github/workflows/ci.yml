@@ -125,6 +125,22 @@ jobs:
         run: |
           python3 scripts/control-tower/merge_writeset_gate.py \
             --base origin/main --head HEAD --branch "${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+      # D1040 (A4-b): LOG_LEVEL 契约测试接线 —— **真执行**（非注释登记；注释=假绿，本批已两次否决）。
+      #   ① 登记形态：本 step 的 run 行含**完整路径** tests/win/vitest-log-level.test.sh
+      #      ⇒ 被两个 matcher 同时看到（check-gate-integrity.sh 的 CI-REGISTRY ratchet 明确支持
+      #      「任意 job 的 run: 步骤」；check-canary-drift.sh 扫 ci.yml 全文）
+      #      ⇒ 既不产生「新增测试未登记」violation，也不产生「幽灵清单项（清单有、文件无）」告警。
+      #   ② 落点为何是 quality 而不是 control-tower-tests：该测试要 `npx vitest run`（真跑探针
+      #      读 worker 内 process.env 与 pino 生效级别），而 CT job **零 npm 依赖**（无 npm ci）；
+      #      quality 有 npm ci。test job 是 shard ×2 会跑两遍，不划算。
+      #   ③ 为何放在本 job **末位**：测试内的判别性夹具会临时注释 vitest.config.ts 的契约行再复原
+      #      （trap + cmp 自校验）⇒ 放末位可保证其后没有任何 step 会观察到该瞬时状态。
+      #   ④ 时序守卫（测试内）：无契约行的树 ⇒ SKIP 留痕不判红；含契约行 ⇒ 硬断言；
+      #      历史信号不可判定（浅克隆/fetch-depth 不足）⇒ **fail-safe 降级 ASSERT**（安全侧）。
+      #      本 job 用 fetch-depth: 0 ⇒ 正常走 ASSERT/SKIP，fail-safe 不触发。
+      - name: A4-b LOG_LEVEL contract test (D1040)
+        if: steps.docsonly.outputs.docs_only != 'true'
+        run: bash tests/win/vitest-log-level.test.sh
 
   test:
     # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-09-26T04:47:47+08:00；
