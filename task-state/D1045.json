@@ -21,5 +21,5 @@
   "milestone": "门禁治理轮",
   "depends_on": [],
   "next": "CTO 收件闸：① 按 K3 修复清单 P0 四项立卡（组10 优先接线 D962 勿重开）② 铁律文本去「pre-commit 硬阻断」口径 ③ log_gate 补三 helper ④ gate-stats --all-worktrees ⑤ A17 证据基线改写后再进退役程序 ⑥ 报告 8 项精度修正随对应卡带修",
-  "note": "K3 独立复核依据 CTO 授权（GITHUB_TOKEN repo,workflow / 全 worktree 日志读取）。产品仓全程只读（沙箱实测 utf8.test.sh 复跑因写临时文件被拒=环境自证）。红线遵守：未碰 scripts/audit/**、未改任何代码、报告只落 K3 工作区。"
+  "note": "K3 独立复核依据 CTO 授权（GITHUB_TOKEN repo,workflow / 全 worktree 日志读取）。产品仓全程只读（沙箱实测 utf8.test.sh 复跑因写临时文件被拒=环境自证）。红线遵守：未碰 scripts/audit/**、未改任何代码。归档：档案仓 ~/Synova-过程档案/2026-09-28-D1045-门禁必要性审计-K3独立复核.md @ 63ef6b9（契约 §11.3 线k3·审计报告，sha256 de630727… 与 K3 工作区副本字节级全等）；工作区分支 audit/k3-20260928-d1045-report（f3ded8c1b+908aad712）保留为工作记录，未推送主仓（§2.4 过程不入库）。closure: CTO 已落实三处补正（42.0%/CI密封47/A17基线）；N5 归因改 control-tower（CTO 认账）；D1044 BASE 对照 100% 复现；机制并入 D1048。hard_check 计数终局：门禁线补2『20 未复现』系口径混用——其自测数据（hard_check 调用点 16 + decl_check 出现 5 − 定义 1 = 调用 4）恰证 16+4=20 可复现，P3 可闭。"
 }
