@@ -177,3 +177,29 @@ cc518daa3c60c8d327687d809e069ec25ae69535
 - ② `npx tsc --noEmit` 存量 31 行错（与基线逐行相同；本卡 9 文件零错误）——不得以「lint 全绿」当验收判据。
 - ③ 我的 harness 与 C 的测试**互不依赖**；但两者共用同一 `diagnosis_checkpoints` 归档契约——若后续该契约变更，两处需同步复核。
 - ④ 本分支为**复核分支出库**，未走 PR；如需归档请按 CTO 流程处置（本文件不主张合并）。
+
+## 九 T5 窄复核交付回执（task-5）
+
+### 9.1 三件事的实测结果
+1. **产品代码未变动**（我自己跑）：`git diff --stat f47f9098..dd885493 -- src` → **空**；`git diff --name-only origin/main -- src tests | sort` → **9 文件**（与 T3 期一致）；T4 只动 `tests/routes/conversations-report-view.test.ts`（**+50 行**）。
+2. **新用例真绿**：单套件 `npx vitest run tests/routes/conversations-report-view.test.ts` → `Test Files 1 passed (1)` / `Tests 8 passed (8)`，`✓` 行数 **8** == 文件内 `it(` 计数 **8**，`skip|todo|.only` 命中 **0**；7 套件合计 `Tests 67 passed (67)`、`✓` 行数 **67**（T3 期为 65）。
+3. **新用例真红**（我自己注入，四元组见 §3.5 / `20b-verify-break-red-R6.json`）：R6（`isDegradedRender` 恒 false）与 R6c（fallback 降级标记抹掉）两处独立注入，均 **8/8 → 1 failed, 7 passed（⑦ 红，失败断言 `expected false to be true` @ `conversations-report-view.test.ts:288:35`）→ revert → 8/8**；对照组 ⑧ 未连带红。
+
+### 9.2 C 的三条关键信息（独立核验结论）
+- ① **可达性**：**成立**（⑦ 自身通过即证该注入面可达）；另发现**第二个**可达面（注册会抛的模板），见 §6 提示③。
+- ② **「易踩空」**：**机制成立、后果表述不成立**——`report-templates.ts:333-338` 确吞异常为「模板渲染失败: …」字符串，但 `report-assembler.ts:740` 的 `startsWith('模板渲染失败')` 判定使 fallback **仍被触发**（探针实测 `degraded:true`）。
+- ③ **C 自测四元组**：**与我独立复现同形态**（`1 failed | 7 passed`，⑦ 红 / ⑧ 绿）。
+
+### 9.3 收尾三查（原始值）
+```
+$ git status --porcelain → 空（改坏实验已 revert 干净）
+$ grep -rn "INJECTED-RED" src/ tests/ scripts/ → 0
+$ bash scripts/control-tower/check-bypass-log.sh origin/main → exit 0（对账通过）
+```
+
+### 9.4 ls-remote 回执（原始输出）
+```
+$ git ls-remote --heads origin | grep verify/d1051
+5ba9d9abf2ce54bf37ea7dc64078ed8f6708ae84	refs/heads/verify/d1051-line3-report-depth
+```
+（本回执提交会使分支 tip 再前移一次；以 `git ls-remote` 实时输出为准。）
