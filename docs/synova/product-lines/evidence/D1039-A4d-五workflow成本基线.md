@@ -346,4 +346,133 @@ done
 
 ---
 
-*本文件为 A4-d（D1041，父卡 D1039）交付物。所有数字均来自上列 curl 原始 JSON，公式在 §〇 声明。*
+## 七、收尾三件（M6）— 改动清单 / 自验结论 / 遗留清单
+
+> 归属：**D1040（A4-b）+ D1041（A4-d）同批**，证据统一挂父卡 **D1039**。
+> 本文件是这两个任务的**唯一**证据落点（不另开文件——写集严格限定 3 个文件，M6 要求的
+> 收尾三件按纪律写入本文件而非扩写集）。
+> 分支 `team/a4b-vitest-log`｜工作树 `.synova-wt-a4-b`｜最终 HEAD `15e88bdc`
+
+### 7.1 改动清单（`git diff --stat` 原始输出）
+
+```
+$ git diff --stat origin/main...HEAD
+ .claude/bypass.log                                 |   4 +
+ .../evidence/D1039-A4d-五workflow成本基线.md       | 349 +++++++++++++++++++++
+ tests/win/vitest-log-level.test.sh                 | 175 +++++++++++
+ vitest.config.ts                                   |   9 +
+ 4 files changed, 537 insertions(+)
+
+$ git diff --stat origin/main...HEAD -- vitest.config.ts tests/win/vitest-log-level.test.sh \
+    "docs/synova/product-lines/evidence/D1039-A4d-五workflow成本基线.md"
+ .../evidence/D1039-A4d-五workflow成本基线.md       | 349 +++++++++++++++++++++
+ tests/win/vitest-log-level.test.sh                 | 175 +++++++++++
+ vitest.config.ts                                   |   9 +
+ 3 files changed, 533 insertions(+)
+```
+
+⚠️ **`.claude/bypass.log | 4 +` 不是我的写集**：由 `post-commit` hook（D521）**自动**追加并提交
+（每条内容为 `COMMITTED | pre-commit PASS (hook 层登记) | HASH=<我的 commit>`，
+**全部是 PASS 不是 bypass**）。我既不能改 hook（`scripts/` 域）也不能阻止它（阻止要 `--no-verify`，
+是红线）。**如实披露，请 K3 按机制产物而非越界处置。**
+
+**分支历史（`git log --oneline origin/main..HEAD`）**：
+
+```
+15e88bdc chore: bypass COMMITTED 登记 (auto hook, D521)     ← hook 自动
+c032ece5 test(D1040): 号段更正 D1035→D1040（仅注释与横幅，零行为变更）
+f13395c6 chore: bypass COMMITTED 登记 (auto hook, D521)     ← hook 自动
+a1ee8ff5 docs(D1041): 补环境限定 — 本地非 CI 口径的红与 CI 侧同 commit 的绿必须并列
+5b44d22c chore: bypass COMMITTED 登记 (auto hook, D521)     ← hook 自动
+0559c645 docs(D1041): 五 workflow 成本基线（实测）— CT(windows) 占总墙钟 97.031%~99.955%
+0069b535 chore: bypass COMMITTED 登记 (auto hook, D521)     ← hook 自动
+5e8031ab test(D1040): 测试期强制 LOG_LEVEL=warn — ERROR 不再被 INFO 淹没
+```
+
+**ls-remote 回执（禁 push ⇒ 预期 0）**：
+
+```
+$ git ls-remote --heads origin | grep -c "team/a4b-vitest-log"
+0
+$ git rev-parse team/a4b-vitest-log
+15e88bdc3ce84b6d8c92d907f6c6e34e3deb8f8f
+```
+⇒ **origin 上无此分支**（本地 SHAs 待队长攒批 push）。**本批未 push、未 force push、未 `--no-verify`、未 `git stash`。**
+
+### 7.2 自验结论（逐条验收命令 + 原始输出）
+
+**A（D1040）契约测试 — `bash tests/win/vitest-log-level.test.sh`**
+
+```
+── 1. 正常路径: 无外部 LOG_LEVEL ⇒ 应收敛到 warn ──
+     探针 env LOG_LEVEL = 'warn'   探针 pino level = 'warn'
+  ✅ process.env.LOG_LEVEL = warn
+  ✅ pino 生效级别 = warn（模块加载期真读到）
+── 2. 降级/边界: 外部 LOG_LEVEL=debug ⇒ 必须透传（语义：外部显式值优先）──
+     探针 env LOG_LEVEL = 'debug'   探针 pino level = 'debug'
+  ✅ 外部显式值透传（证明是 ?? 而非硬编码 warn）
+  ✅ pino 生效级别 = debug
+── 3. 边界护栏: 配置不得把 LOG_LEVEL 设成 'silent' ──
+  ✅ 配置未设 silent（失败上下文保留）
+── 4. 判别性夹具: 注释掉配置行 ⇒ 探针必须转红（该行承重）──
+     注释后 探针 env LOG_LEVEL = 'undefined'   探针 pino level = 'info'
+  ✅ 拿掉修复 ⇒ 探针退化为 'undefined'/'info'（第 1 步断言随之转红 ⇒ 判别性成立）
+  ✅ 配置已立即复原（cmp 相等）
+── 5. 生产接线: package.json 的 test 脚本走默认 config 解析 ──
+     npm test = 'vitest run'
+  ✅ npm test 走 'vitest run' ⇒ 默认解析 vitest.config.ts（非孤儿配置）
+  结果: 8 通过, 0 失败   Status: ✅    EXIT=0
+```
+（在**最终 SHA `15e88bdc`** 上复跑，工作树 `git status --porcelain` 为空时执行）
+
+**B（D1040）判别性夹具 ——「拿掉修复 ⇒ 红」（原始输出，节选关键行）**
+
+真实**删除** `LOG_LEVEL` 契约行后复跑同一测试：
+
+```
+$ bash tests/win/vitest-log-level.test.sh ; echo "EXIT=$?"
+── 1. 正常路径: 无外部 LOG_LEVEL ⇒ 应收敛到 warn ──
+     探针 env LOG_LEVEL = 'undefined'   探针 pino level = 'info'
+  ❌ process.env.LOG_LEVEL 期望 warn，实得 'undefined'
+  ❌ pino 生效级别期望 warn，实得 'info'
+── 4. 判别性夹具: 注释掉配置行 ⇒ 探针必须转红（该行承重）──
+  ❌ 无法注释配置行（LOG_LEVEL 契约行缺失 ⇒ 修复已被拿掉 ⇒ 本测试即红）
+  结果: 4 通过, 3 失败
+  Status: ❌ D1040 LOG_LEVEL 契约未通过
+EXIT=1
+```
+随后 `cp /tmp/a4b-config.bak vitest.config.ts && cmp -s …` → `RESTORED_OK`，配置零残留。
+
+**C（D1040）`npx vitest run tests/logger.test.ts`**
+
+```
+{"level":40,...,"msg":"test warn message"}
+{"level":50,...,"msg":"test error message"}
+ ✓ tests/logger.test.ts (5 tests) 3ms
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+```
+> 旁证：输出里**只有 `level:40/50`，INFO 不再出现** —— 契约在真实 logger 上生效。
+
+**D（D1040）改前/改后原始数字** —— 见 §5.2 表（14,502→7,911 行；2,791,604→1,338,368 bytes；
+INFO 6,619→0；ERROR 320→320 恒等）。命令逐字见 §5.2，级别分布命令见 §5.2 末。
+
+**E（D1041）A4-d 数据** —— 全部来自 §一/§二 的 curl 原始 JSON，公式见 §〇。
+
+### 7.3 遗留清单（每条 = 为什么**本批不能做**）
+
+| # | 遗留项 | 为什么本批不能做 |
+|---|---|---|
+| 1 | `tests/win/vitest-log-level.test.sh` **未接线进 CI**（`ci.yml` 的 `Run hermetic control-tower gate tests` 是**显式文件清单**，不是 glob；且 `tests/win` 全仓零引用） | `ci.yml` **不在我的写集**（写集严格限定 3 文件），且 CI/控制塔文件是**热点文件按 CTO 排期**。**后果要说清：本测试现在只能手工跑，CI 不会发现它红** ⇒ 需 CTO 另开卡接线（这与"机制建成未接线"同型，正是 K3 的 M3 家族）。 |
+| 2 | `packages/test-kit/vitest.config.ts:29` 用 `LOG_LEVEL: 'silent'`，与本卡 `'warn'` 语义**不一致** | 卡面红线明令**不改 `packages/**`**。且这是**另一个 harness**（root vitest 的 include 只覆盖 `./tests/**`，`packages/test-kit/tests/**` 归它自己那份 config）。**建议 CTO 单独裁决**：`silent` 与该包"失败时出上下文"的目标相悖。 |
+| 3 | 改后 **WARN 2,727→2,715（−12）未逐条溯源** | 属**用例间非确定性**告警，定位需**多次全量统计**（3× 全量 ≈ 3×50s，且 8GB 机器要求串行、队列里还有别人）。**且非本卡目标量**——本卡目标是 INFO 淹没 ERROR。**不声称已解释**。 |
+| 4 | 创始人侧参考值 **7,767 行 / 1.58 MB / INFO 2,696** 本批内**无法证实或证伪** | ① 它是 **CI `Vitest (1/2)` 单分片 job 的网页日志**口径，与本地全量 stdout 不同载体；② 队长事后拉 CI 日志时 GitHub 匿名 API **已 403 配额耗尽**（reset 后另取）。已在 §5.1 明确标注**不可直接比较**，**不假装核过**。 |
+| 5 | 本地 3 个存量红（`tests/acceptance/zero-code-industry.test.ts` ×2、`tests/l3/graphbridge-wiring.test.ts` ×1） | **改前即红（基线自带）**，非本卡引入；且 **CI 侧同 commit 为绿**（环境依赖，见 §5.4.3）。修它们属 `src/**`/测试域，**不在写集**。 |
+| 6 | `.claude/bypass.log` 被 hook 自动提交 4 行进我的分支 | `post-commit` hook（D521）**自动行为**；改 hook 属 `scripts/` 域（不在写集），阻止它需 `--no-verify`（红线禁）。**已披露**（§7.1）。 |
+| 7 | 全量 vitest **会污染 4 个 tracked 文件**（`D817-capture-*.json` / `D819-capture-*.json` / `extensions/industries/*/thresholds.json`）——测试自身往 fixture 写时间戳 | 修它要改**测试或源码**（`tests/**`/`src/**` 均不在写集）。本批处置 = **两次跑完各 `git checkout --` 复原一次**，已确认最终工作树 clean。**这是存量缺陷**（D819 同型先例），建议立卡。 |
+| 8 | ci.yml 口径只取**单 run 采样**，未扩样到 12-run 均值/P95 | 扩样需**消耗 GitHub API 配额**（无 token 60/h，本次取数后余 2），且 §一 已按卡面口径（代表性 run）交付。已作为局限声明（§四.1）。 |
+| 9 | 号段 `D1035/D1036` 已被本批更正为 `D1040/D1041`，但 `memory/notes/**` 的 Note 由队长写 | 队长明令"**Note 由队长写，你不要动 `memory/notes/**`**" ⇒ 属队长收口项，非我写集。 |
+
+---
+
+*本文件为 A4-d（D1041，父卡 D1039）+ A4-b（D1040）交付物。所有数字均来自实测，公式在 §〇 声明。*
