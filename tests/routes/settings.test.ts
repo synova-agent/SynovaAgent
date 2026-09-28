@@ -116,35 +116,52 @@ afterAll(() => {
 });
 
 describe('入口 GET /api/settings/effective + 第二消费者 /api/config/dump（D1053）', () => {
-  it('C1 · 两消费者同一新值：live 键改盘后两端点读回的 effective 相同且为新值（同一 it 内互比）', async () => {
-    // 改盘（不重启；live 键下一次读取即新值）
+  it('C1 · 两消费者同一新值（M3 判别性形状）：先预热读两端点 → 改盘 → 再读，双端同新值且均异于改前', async () => {
+    // ① 起手写确定初值（自足：不依赖 beforeAll 残留，也不依赖任何其它用例的缓存污染）
+    writeWorkspace(
+      'settings:\n  diagnosis:\n    gateDataCompleteness: 0.30\n  rogue:\n    whoAmI: 1\n',
+    );
+
+    // ② 预热：两端点各读一次 ⇒ 任何「消费者侧模块级缓存」此刻被填入**改前值 0.30**
+    //    （25-8 判据原文是「改值后**下一次读取**即返回新值」——"下一次"本身要求前面有过一次读取）
+    const a0 = await getEffective('?ns=diagnosis&key=gateDataCompleteness');
+    const b0 = await getDump();
+    const rowA0 = a0.body.keys?.find((k) => k.path === 'diagnosis.gateDataCompleteness');
+    const rowB0 = b0.body.settings?.keys?.find((k) => k.path === 'diagnosis.gateDataCompleteness');
+    expect(rowA0?.effective).toBe(0.3);
+    expect(rowB0?.effective).toBe(0.3);
+    expect(deepEqualJson(rowA0?.effective, rowB0?.effective)).toBe(true);
+
+    // ③ 改盘（不重启；live 键下一次读取即新值）
     writeWorkspace(
       'settings:\n  diagnosis:\n    gateDataCompleteness: 0.55\n  rogue:\n    whoAmI: 1\n',
     );
 
-    // 同一 it() 内先后读两个消费者，再互比 —— M3（消费者自缓存）的判别点
-    const a = await getEffective('?ns=diagnosis&key=gateDataCompleteness');
-    const b = await getDump();
+    // ④ 再读：同一 it() 内先后读两个消费者，再互比 —— M3（消费者自缓存）的判别点
+    const a1 = await getEffective('?ns=diagnosis&key=gateDataCompleteness');
+    const b1 = await getDump();
 
-    expect(a.status).toBe(200);
-    expect(a.body.degraded).toBe(false);
-    const rowA = a.body.keys?.find((k) => k.path === 'diagnosis.gateDataCompleteness');
-    expect(rowA?.effective).toBe(0.55);
+    expect(a1.status).toBe(200);
+    expect(a1.body.degraded).toBe(false);
+    const rowA1 = a1.body.keys?.find((k) => k.path === 'diagnosis.gateDataCompleteness');
+    expect(rowA1?.effective).toBe(0.55);
 
-    expect(b.status).toBe(200);
-    const rowB = b.body.settings?.keys?.find((k) => k.path === 'diagnosis.gateDataCompleteness');
-    expect(rowB?.effective).toBe(0.55);
+    expect(b1.status).toBe(200);
+    const rowB1 = b1.body.settings?.keys?.find((k) => k.path === 'diagnosis.gateDataCompleteness');
+    expect(rowB1?.effective).toBe(0.55);
 
-    // 硬判据：两值深度相等（无部分消费者滞留旧值）
-    expect(deepEqualJson(rowA?.effective, rowB?.effective)).toBe(true);
-    expect(deepEqualJson(rowA?.effective, rowA?.effective)).toBe(true);
+    // 硬判据 1：改盘后两消费者**同时**为新值 —— 深度相等（无部分消费者滞留旧值）
+    expect(deepEqualJson(rowA1?.effective, rowB1?.effective)).toBe(true);
+    // 硬判据 2：两消费者均**不等于改前值** —— 任一消费者停滞在旧值即红（这就是 M3 的判别力）
+    expect(deepEqualJson(rowA1?.effective, rowA0?.effective)).toBe(false);
+    expect(deepEqualJson(rowB1?.effective, rowB0?.effective)).toBe(false);
 
     // DEV-1 判据（HTTP 契约面）：live 键行的 defaultValue = 声明面默认值 0.3，**不得为 null**
-    expect(rowA?.defaultValue).toBe(0.3);
-    expect(rowB?.defaultValue).toBe(0.3);
+    expect(rowA1?.defaultValue).toBe(0.3);
+    expect(rowB1?.defaultValue).toBe(0.3);
 
     // 第二消费者同时暴露 scope（进程级，R7）
-    expect(b.body.settings?.scope).toBe('process');
+    expect(b1.body.settings?.scope).toBe('process');
   });
 
   it('C1b · restart 键在两消费者上同样一致（均为 boot 冻结旧值 + pending 新值）', async () => {
