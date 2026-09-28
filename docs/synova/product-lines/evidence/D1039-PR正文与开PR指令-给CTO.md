@@ -10,7 +10,7 @@
 
 ## PR-1
 
-- **head**：`team/a4-ci-cost` @ `e17d19f5881fab37ddb97e678e2e0e5a74263462`
+- **head**：`team/a4-ci-cost` @ `ecbba8c1ce84461f5ec002a8bdaa760a4fc52c27`
 - **base**：`main`（`ff4677129dce2ff068a816eed3db0687b060c64c`）
 - **标题**：`ci(D1039): control-tower-tests 按需跑（job 恒调度 + 内层 if 门控）`
 
@@ -202,7 +202,7 @@ curl -s -X POST -H "Authorization: token $TOKEN" \
   -d '{"title":"test(D1040)+docs(D1041): 测试期 LOG_LEVEL=warn + 五 workflow 成本基线","head":"team/a4b-vitest-log","base":"main","body":"<PR-2 正文>"}'
 
 # 验证检查是否真的报告（必须非零！零 = 通道又断了）
-for SHA in e17d19f5881fab37ddb97e678e2e0e5a74263462 ad3e5c14950b12fff8e2ddbd55f7e6c30dd5e9b1; do
+for SHA in ecbba8c1ce84461f5ec002a8bdaa760a4fc52c27 ad3e5c14950b12fff8e2ddbd55f7e6c30dd5e9b1; do
   curl -s -H "Authorization: token $TOKEN" \
     "https://api.github.com/repos/tangbaobao520/SynovaAgent/commits/$SHA/check-runs" \
     | python3 -c "import json,sys;print('$SHA', json.load(sys.stdin)['total_count'])"
