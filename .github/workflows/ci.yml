@@ -376,6 +376,7 @@ jobs:
             tests/control-tower/verify-doc.test.sh \
             tests/doc-system/check-doc-truth.test.sh \
             tests/doc-system/doc-registry-gate.test.sh \
+            tests/doc-system/doc-dup-rule.test.sh \
             tests/doc-system/doc-categories.test.sh \
             tests/doc-system/doc-staleness.test.sh \
             tests/doc-system/doc-triage.test.sh \

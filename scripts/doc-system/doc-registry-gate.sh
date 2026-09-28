@@ -12,6 +12,12 @@
 # 排除（生成物/历史区，无需登记）:
 #   - docs/synova/DASHBOARD*.md（自动生成）
 #   - 路径含 /archive/ 或 /Archive/（历史归档，只读）
+#
+# D964 追加（文档减负，**并入本检查，不新建脚本**）:
+#   同类文档唯一性 —— 新增 .md 的「归一化名」与既有文档撞名，或内容指纹与既有文档完全相同
+#   ⇒ 判疑似重复文档，必须在新文件里写明「取代: <路径>」/「合并: <路径>」/「supersedes: <路径>」
+#   才放行；否则 exit 1（红）。归一化 = 去日期(YYYYMMDD/YYYY-MM-DD)、去版本(vN)、去 D# 任务号、小写。
+#   判据（改坏即红）: 构造重复文档样例 ⇒ 必须红（tests/doc-system/doc-dup-rule.test.sh）。
 # ═══════════════════════════════════════════════════════════════════════════════
 set +e
 ROOT="${DOC_TRUTH_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}" # swallow-ok:
@@ -45,5 +51,84 @@ else
   while IFS= read -r rel; do check_file "$rel"; done < <(find "$ROOT" -type f \( -name '*.md' -o -name '*.yaml' \) 2>/dev/null | sed "s|^$ROOT/||") # swallow-ok:
 fi
 
-echo "── 汇总: 检查 $CHECKED 个文档，$FAIL 个未登记 ──"
+# ── D964 同类文档唯一性（并入本检查；只查**新增**文档，成本与新增数成正比）──
+# 归一化名撞名 或 内容指纹相同 ⇒ 必须写明「取代:/合并:/supersedes: <路径>」，否则红。
+DUP=0
+if git -c safe.directory="$ROOT" -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+  NEW_MD=$( { git -c safe.directory="$ROOT" -C "$ROOT" ls-files --others --exclude-standard 2>/dev/null; git -c safe.directory="$ROOT" -C "$ROOT" diff --cached --name-only --diff-filter=A 2>/dev/null; } | grep -E '\.md$' | grep -vE "$EXCLUDE" | sort -u ) # swallow-ok:
+  if [ -n "$NEW_MD" ]; then
+    EXIST_MD=$(git -c safe.directory="$ROOT" -C "$ROOT" ls-files '*.md' | grep -vE "$EXCLUDE") # swallow-ok:
+    # 归一化 + 指纹比对交给 python（bash sed/tr 在 CJK 路径下会破坏多字节变量，
+    # 且 Windows 无 GNU sed —— ctrl-tower-change 模式 2 / windows-compat 要求）
+    DUP_OUT=$("${PYBIN:-python3}" - "$ROOT" "$EXCLUDE" "$NEW_MD" <<'PYEOF'
+import os, re, sys, hashlib
+root, exclude = sys.argv[1], re.compile(sys.argv[2])
+new = [l for l in sys.argv[3].splitlines() if l.strip()] if len(sys.argv) > 3 else []
+DATE = re.compile(r"\d{4}-?\d{2}-?\d{2}")
+VER = re.compile(r"[Vv]\d+(\.\d+)*")
+DID = re.compile(r"D\d{3,4}")
+def norm(p):
+    b = os.path.basename(p)[:-3] if p.endswith(".md") else os.path.basename(p)
+    b = DID.sub("", VER.sub("", DATE.sub("", b)))
+    b = re.sub(r"[-_ ]+", "-", b.lower()).strip("-")
+    return b
+tracked = [l for l in os.popen('git -C "%s" ls-files "*.md"' % root).read().splitlines() if l.strip()]
+# 新增文件若已 git add（staged），也会出现在 ls-files 中 → 必须先剔除自身，否则自我撞名（误拦实证）
+_newset = set(new)
+tracked = [t for t in tracked if not exclude.search(t) and t not in _newset]
+existing = {}
+for t in tracked:
+    n = norm(t)
+    if n:
+        existing.setdefault(n, []).append(t)
+for rel in new:
+    n = norm(rel)
+    hit = None
+    if n and n in existing:
+        hit = "归一化名撞名（%s；既有: %s）" % (n, existing[n][0])
+    if hit is None:
+        p = os.path.join(root, rel)
+        # 空文件（0 字节）不做指纹比对：空 == 空 无信息量，历史上全是夹具/占位文件（误拦实证）
+        if os.path.isfile(p) and os.path.getsize(p) > 0:
+            try:
+                h = hashlib.md5(open(p, "rb").read()).hexdigest()
+            except OSError:
+                h = None
+            if h:
+                for c in tracked[:800]:
+                    q = os.path.join(root, c)
+                    if os.path.isfile(q) and os.path.getsize(q) == os.path.getsize(p):
+                        try:
+                            if hashlib.md5(open(q, "rb").read()).hexdigest() == h:
+                                hit = "内容完全相同（与 %s）" % c
+                                break
+                        except OSError:
+                            continue
+    if hit:
+        txt = ""
+        try:
+            txt = open(os.path.join(root, rel), encoding="utf-8", errors="replace").read()
+        except OSError:
+            pass
+        if re.search(r"^[ \t]*(取代|合并|supersedes)[ \t]*[:：][ \t]*\S", txt, re.M):
+            print("DECLARED\t%s\t" % rel)
+        else:
+            print("VIOLATION\t%s\t%s" % (rel, hit))
+PYEOF
+)
+    while IFS=$'\t' read -r kind rel detail; do
+      [ -z "${kind:-}" ] && continue
+      if [ "$kind" = "DECLARED" ]; then
+        echo "  ✅ 疑似重复但已声明取代/合并: $rel"
+      else
+        echo "  ❌ 疑似重复文档: $rel — $detail"
+        echo "     修法: 不新增（改既有那份），或在新文件头部写「取代: <被取代的路径>」/「合并: <被合并的路径>」"
+        DUP=$((DUP+1))
+      fi
+    done <<< "$DUP_OUT"
+    [ "$DUP" -gt 0 ] && FAIL=$((FAIL+DUP))
+  fi
+fi
+
+echo "── 汇总: 检查 $CHECKED 个文档，$FAIL 个未登记，$DUP 个疑似重复 ──"
 if [ "$FAIL" -eq 0 ]; then echo "  ✅ 登记门禁通过"; exit 0; else echo "  ❌ 登记门禁阻断"; exit 1; fi
