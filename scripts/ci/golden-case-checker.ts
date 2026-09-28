@@ -218,6 +218,34 @@ export function deriveActual(caseData: GoldenCase): {
   };
 }
 
+// ═══ D1056 ③: 快照层三态判定（铁律 47 契约优先） ═══
+
+/**
+ * decideSnapshotVerdict — 判定一个黄金案例的快照层结论（纯函数，无 IO）。
+ *
+ * 契约:
+ *   @input  — results: 该案逐层快照结果映射（compute / findings / expertReport 任意组合，
+ *             旧 fixture 可能三层皆无 → 空对象）
+ *   @output — { covered: boolean; passed: boolean | null }
+ *             covered=false → passed=null（未覆盖: **既非 pass 也非 fail**，不作判定）
+ *             covered=true  → passed = 各层全部 passed
+ *   @degraded — 不适用（纯函数，无 IO；调用方不因此降级）
+ *
+ * 边界（本函数存在的全部理由）:
+ *   空集**必须**返回 passed=null，不得返回 true。
+ *   `Object.values({}).every(...)` === true 是空集恒真缺陷 —— 会把"没有快照段的旧
+ *   fixture"静默算作快照层通过（覆盖度不可见）。对齐 golden-snapshot-runner.ts
+ *   `checked === 0` 的"无检查可执行必须显式可见"范式。
+ *   同时保持 D396 向后兼容边界: 未覆盖不阻断（调用方用 `passed !== false` 实现）。
+ */
+export function decideSnapshotVerdict(
+  results: NonNullable<CheckerReport['results'][number]['snapshot']>,
+): { covered: boolean; passed: boolean | null } {
+  const covered = Object.keys(results).length > 0;
+  if (!covered) return { covered: false, passed: null };
+  return { covered: true, passed: Object.values(results).every((r) => r.passed) };
+}
+
 // ═══ 主函数 ═══
 
 /**
@@ -251,6 +279,9 @@ function runAllChecks(): CheckerReport {
 
   let passedCases = 0;
   let failedCases = 0;
+  // D1056 ③: 快照覆盖度台账 — 让"此案有没有被快照层判定"成为可见事实（原实现不可见）。
+  let coveredCases = 0;
+  let uncoveredCases = 0;
   const results: CheckerReport['results'] = [];
 
   for (const file of files) {
@@ -267,8 +298,17 @@ function runAllChecks(): CheckerReport {
     if (caseData.compute) snapshotResults.compute = runComputeSnapshot(caseData.compute);
     if (caseData.findings) snapshotResults.findings = runFindingsSnapshot(caseData.findings);
     if (caseData.expertReport) snapshotResults.expertReport = runExpertReportAssertion(caseData.expertReport);
-    const snapshotPassed = Object.values(snapshotResults).every((r) => r.passed);
-    const casePassed = f1.passed && snapshotPassed;
+    // D1056 ③ (L-4) 修复: 原为 `Object.values(snapshotResults).every((r) => r.passed)`。
+    //   `[].every()` === true —— 空集恒真: 无快照段的旧 fixture 被静默算作「快照层通过」，
+    //   既不是真通过也不是任何可见信号（覆盖度不可见）。
+    // 判定逻辑抽到 decideSnapshotVerdict（纯函数，可独立判别 + 可被"改坏即红"夹具打靶）。
+    // 边界保持: D396 向后兼容契约（旧 fixture 无快照段不阻断）由 `snapshotPassed !== false`
+    // 等价实现，且 tests/ci/golden-case-checker.test.ts:255 的既有断言不受影响。
+    const snapshotVerdict = decideSnapshotVerdict(snapshotResults);
+    const snapshotCovered = snapshotVerdict.covered;
+    const snapshotPassed = snapshotVerdict.passed;
+    if (snapshotCovered) coveredCases++; else uncoveredCases++;
+    const casePassed = f1.passed && snapshotPassed !== false;
 
     const passEmoji = casePassed ? '✅' : '❌';
     const resultLine = `  ${passEmoji} ${caseData.id}: ${caseData.title}`;
@@ -300,6 +340,10 @@ function runAllChecks(): CheckerReport {
       const r = snapshotResults.expertReport;
       console.log(`     专家报告结构断言: ${r.passed ? 'PASS' : 'FAIL'}`);
       if (!r.passed) for (const d of r.diffs) console.log(`       - ${d}`);
+    }
+    // D1056 ③: 未覆盖必须显式可见 — 不得因"没有可打印的快照行"而被读者读作通过。
+    if (!snapshotCovered) {
+      console.log('     快照层: 未覆盖（无快照段）— 不作判定');
     }
 
     if (casePassed) {
@@ -333,6 +377,8 @@ function runAllChecks(): CheckerReport {
   console.log('═══════════════════════════════════════════════════════════');
   console.log(`  结果: ${allPassed && goldenPassed ? '✅ 全部通过' : '❌ 有未通过案例'}`);
   console.log(`  通过: ${passedCases}/${files.length}`);
+  // D1056 ③: 覆盖度汇总 — 11/11 通过不等于 11/11 被快照层判定。
+  console.log(`  快照覆盖: ${coveredCases}/${files.length} 案例（未覆盖 ${uncoveredCases} 个 — 无快照段，不作判定）`);
   if (failedCases > 0) {
     console.log(`  失败: ${failedCases}`);
   }

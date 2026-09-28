@@ -383,6 +383,10 @@ export function runGoldenDatasetCheck(
     }
   }
 
+  // D1056 ①: 覆盖度可见 — checked/skipped 原本只在 checked===0 的失败分支里被读到，
+  // 通过时"到底查了几个、跳了几个"对读者完全不可见（D1046: 覆盖不足 + 覆盖度不可见）。
+  // 本行无条件打印，使绿态也能看到真实覆盖面（不是让读者假定 11 个哨兵全查了）。
+  console.log(`[golden-snapshot-runner] 黄金数据集 compute 覆盖: 实际检查 ${checked} 个 / 跳过 ${skipped} 个（registry 已登记 ${Object.keys(computeFnRegistry).length} 个 / 数据集哨兵 ${Object.keys(dataset.sentinels).length} 个）`);
   if (checked === 0) {
     diffs.push(`已登记 compute 哨兵实际检查数为 0（跳过 ${skipped} 个）— 黄金数据集未覆盖任何可执行 computeFnRegistry 检查`);
   }
