@@ -17,6 +17,7 @@ import express from 'express';
 import Database from 'better-sqlite3';
 import type { Server } from 'http';
 import { SessionStore } from '../../src/store/session-store';
+import { getReportTemplateRegistry, ReportTemplateRegistry } from '../../src/l3/report-templates';
 
 // ═══ mocks（形态对齐 tests/routes/diagnosis-report-persistence.test.ts D593 先例）═══
 vi.mock('../../src/providers', async (importOriginal) => {
@@ -260,5 +261,54 @@ describe('D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HT
     const second = (await sendMessage(sessionId, '讲细一点', ORG_WITH_REPORT)).find(f => f.type === 'report_view');
     expect(typeof first?.data.markdown).toBe('string');
     expect(second?.data.markdown).toBe(first?.data.markdown);
+  });
+
+  // ═══ D1051 T4 补测（V 提示①）：rendered 降级面 degraded/reason 的判别性覆盖 ═══
+  // 字面量来源：spec §5.5「`report_view` 帧」块实测确认（:259 / :450）
+  //   `reason?: 'NO_REPORT' | 'RENDER_DEGRADED'`；`degraded` 为 boolean。
+
+  it('⑦ 渲染降级路径 → 帧 degraded:true + reason:RENDER_DEGRADED（R6 判别性：isDegradedRender 恒 false 即红）', async () => {
+    // 注入「注册表 render 抛错」——与 `renderOnePager`/`renderDetailedReport` 的 whole-body catch
+    // 契约对撞，必然落 `onePagerFallback`/`detailedReportFallback`（两者文面均含「（降级：」）。
+    // 这是路由侧唯一可达的 RENDER_DEGRADED 触发面（注册表是渲染失败的单一入口）。
+    class ThrowingRegistry extends ReportTemplateRegistry {
+      render(): string {
+        throw new Error('mock: registry.render 爆炸（RENDER_DEGRADED 注入）');
+      }
+    }
+    getReportTemplateRegistry(new ThrowingRegistry());
+    try {
+      const sessionId = await openSession(ORG_WITH_REPORT);
+      const frames = await sendMessage(sessionId, '讲细一点', ORG_WITH_REPORT);
+      const view = frames.find(f => f.type === 'report_view');
+
+      expect(view).toBeTruthy();
+      // 判别性核心：若 `isDegradedRender` 被恒置 false（V 的 R6 注入），
+      // `degraded` 恒 false、`reason` 恒 undefined ⇒ 以下两条必红。
+      expect(view?.data.degraded).toBe(true);
+      expect(view?.data.reason).toBe('RENDER_DEGRADED');
+      // 降级仍送达 fallback 纯文本（内容真实、标记诚实——不静默、不清空）
+      expect(typeof view?.data.markdown).toBe('string');
+      expect(String(view?.data.markdown)).toContain('降级');
+      // 硬约束不受降级影响：末帧仍是 end、无 error 帧
+      expect(frames[frames.length - 1].type).toBe('end');
+      expect(frames.filter(f => f.type === 'error')).toHaveLength(0);
+    } finally {
+      // 还原 singleton（构造器自动重注册全部 built-ins——注册表是模块级单例，跨用例持久）
+      getReportTemplateRegistry(new ReportTemplateRegistry());
+    }
+  });
+
+  it('⑧ 对照（防恒真）：正常注册表 → 帧 degraded 恒为 false 且不带 reason', async () => {
+    // 与 ⑦ 成对：若有人把 `degraded` 写成恒 true（或 reason 恒赋值），本用例报红。
+    const sessionId = await openSession(ORG_WITH_REPORT);
+    const frames = await sendMessage(sessionId, '讲细一点', ORG_WITH_REPORT);
+    const view = frames.find(f => f.type === 'report_view');
+
+    expect(view).toBeTruthy();
+    expect(view?.data.degraded).toBe(false);
+    expect(view?.data.reason).toBeUndefined();
+    // 正常产物不得带 fallback 文面（与 ⑦ 的「降级」断言互为反证）
+    expect(String(view?.data.markdown)).not.toContain('（降级：');
   });
 });
