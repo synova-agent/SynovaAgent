@@ -3,7 +3,7 @@
  "task": "§A ④ 主仓出库 + 三闸回执 + 计数闭合",
  "produced_by": "squad-a-b2",
  "base_sha": "20b55eba9ce0db5cfa238bd09e02b4732d234af3",
- "status": "🔴 NOT EXECUTED —— 两道阻断：(1) ③ 承接未落地（沙箱，待队长执行）；(2) **DEV-4：本批变更形态过不了 pr-budget（18 删 + 6 证据 ⇒ exit 1）**，须先由队长裁决拆两 PR",
+ "status": "✅ DONE —— P1′ 两 PR 拆法落地；两形态三闸均 exit 0",
  "planned_outbound": {
   "N": 18,
   "method": "逐件 git rm（禁 -r 整目录）",
@@ -42,35 +42,67 @@
   }
  ],
  "counting_closure": {
-  "md_total_before": 1631,
-  "briefs_or_archive_before": {
-   "docs_archive_all_files": 30,
-   "docs_archive_md": 18,
-   "docs_archive_ts": 12
+  "origin_main_md_total": {
+   "cmd": "git ls-tree -r --name-only 20b55eba9ce0db5cfa238bd09e02b4732d234af3 | grep -c '\\.md$'",
+   "value": 1631,
+   "frozen": 1631,
+   "match": true
   },
-  "planned_deleted": 18,
-  "planned_added_md": 1,
-  "planned_added_non_md": 6,
-  "formula_if_executed": "docs/archive/**: 30 − 18 = 12（精确闭合）；主仓 md 总数: 1631 − 18 + 1（本批新 brief）= 1614",
-  "measured_after": null,
-  "reason": "未执行 rm"
+  "origin_main_docs_archive_all_files": {
+   "cmd": "git ls-tree -r --name-only 20b55eba9ce0db5cfa238bd09e02b4732d234af3 docs/archive/ | wc -l",
+   "value": 30,
+   "frozen": 30,
+   "match": true
+  },
+  "deleted": 18,
+  "added_md": 2,
+  "added_md_breakdown": [
+   "`.claude/task-briefs/2026-09-28-D1054-B5-B6-outbound-cardab.md`（brief，PR-A）",
+   "memory/notes/proposed/2026-09-28-D1054-b5b6-cardab.md（Note，PR-A）"
+  ],
+  "formula": "md: 1631 − 18 + 2 = 1615（两 PR 合并后）；docs/archive: 30 − 18 = 12（= 12 件 .ts 留存）",
+  "measured_per_branch": {
+   "origin_main": 1631,
+   "PR_A": 1624,
+   "PR_B": 1622,
+   "check": "PR-A = 1631 − 9 + 2 = 1624 ✅；PR-B = 1631 − 9 = 1622 ✅"
+  },
+  "projected_after_merge": 1615,
+  "note": "两个 PR 独立自 origin/main ⇒ 合并后 md = 1631 − 18 + 2 = 1615；本卡在两 PR 未合并前**不宣称已闭合**，只给逐分支实测 + 合并投影。"
  },
  "deviations": [
   {
    "id": "DEV-1",
    "what": "③ 承接由队长执行（B2 session 沙箱第三次拒绝工作区外写入）",
-   "handling": "回报队长；脚本/清单/manifest 已备妥"
+   "resolved": "队长执行；档案仓 b5550699；B2 独立回读 18/18 全等"
   },
   {
    "id": "DEV-2",
-   "what": "本批 brief 为未填骨架 ⇒ 组 6 硬阻断 commit；`.claude/task-briefs` 不在 task-11 writeScopes",
-   "handling": "已请队长二选一（授权填 / 自己填）。**未自行套用 B2 的 DEV-3 裁决**——B2 的 writeScopes 当时含该路径，本次不含，故不擅自等同",
-   "note": "填充稿已备 /tmp/d1054-prep/brief.md（71 行、0 占位符、排除项逐条带具体文件路径）"
+   "what": "本批 brief 为 alloc-task-id 未填骨架 ⇒ 组 6 硬阻断；`.claude/task-briefs` 不在 task-11 writeScopes",
+   "resolved": "队长**显式豁免 scope**、授权填充；B2 按实测填 71 行 / 0 占位符，并按队长提醒移除「不改 .claude/task-briefs/**」自相矛盾项；两形态组 6 均 ✅"
   },
   {
    "id": "DEV-3",
-   "what": "我方 ts 口径首测偏差",
-   "handling": "我首测 `git ls-files 'src/**/*.ts' 'packages/**/*.ts'` = 500 ≠ 冻结 509；按 daily-cto-board.sh:79 声明口径 `git ls-files 'src/*.ts' 'packages/*.ts'` = 509 ⇒ **冻结值正确，我的 glob 错**，已订正"
+   "what": "我方 ts 口径首测偏差（`**` glob 得 500 ≠ 509）",
+   "resolved": "按 daily-cto-board.sh:79 声明口径 `git ls-files 'src/*.ts' 'packages/*.ts'` = 509 ⇒ 冻结值正确，我的 glob 错"
+  },
+  {
+   "id": "DEV-4",
+   "what": "卡面「纯删 18 件可走出库豁免」与「证据同 PR」互斥 ⇒ 单 PR 无解",
+   "resolved": "队长裁决 P1′ 拆两 PR"
+  },
+  {
+   "id": "DEV-5",
+   "what": "🔴 队长原裁 OPT-1（PR-1 纯删 18）**在真实分支上 FAIL** —— post-commit hook 影子提交改 `.claude/bypass.log` ⇒ 破 D1028「纯删除」前置 ⇒ 18+1=19 > 12",
+   "root_cause": "`check-pr-budget.sh` 对影子提交**零处理**（`grep -c 'bypass'` = **0**）；而 `merge_writeset_gate.py:118-132` 明确把影子提交列为已知产物并跳过 ⇒ **两条门禁口径不一致**。后果：**D1028 出库豁免在任何真实分支上实际不可达**（每分支至少一个影子提交）——也解释了判别夹具为何必须用 `--diff-status` 注入。",
+   "evidence": "真实分支原文：`ⓐ 不满足: 变更含 1 件增/改` + `❌ ① 变更文件数 19 > 上限 12`；三组注入实测定边界（11 D + 9 豁免 + 1 shadow = 12 PASS / 12 D + … = 13 FAIL）",
+   "counting_model": "计数 = docs/archive 删除件数 + 1（bypass.log）；证据/brief/卡/Note 共 9 件走 D860（GOV_PREFIX_RE × GOV_EXT_RE）豁免不计 ⇒ **上限是「删除 ≤ 11」而非「≤12」**",
+   "resolved": "队长改判 **P1′ 9+9**，两形态各计数 10，均 PASS",
+   "control_tower_candidates": [
+    "① pr-budget 跳过 subject 含 `bypass COMMITTED 登记` 的提交（对齐 merge_writeset_gate.py:118-132）",
+    "② 把 `docs/archive/**` 加进 `GOV_PREFIX_RE`"
+   ],
+   "owner": "CTO（本卡不改门禁——红线）"
   }
  ],
  "redline_receipt": {
@@ -143,5 +175,114 @@
   "recommendation": "OPT-1：拆 PR-1（纯删 18）/ PR-2（6 证据）。**请队长裁决**；若坚持单 PR，则需 (a) 把证据改落 `docs/plans/` 或 `.claude/task-briefs/`（均在 GOV_PREFIX_RE 内 ⇒ 18 件删除不再被豁免，仍 FAIL）——**无效**；或 (b) CTO 改 GOV_PREFIX_RE 加入 `docs/archive/`（规则变更，非本卡）。⇒ **单 PR 无解**。",
   "executed": false,
   "note": "本条为**只读预演**（用门禁自带 `--diff-status` 注入缝，未改仓库任何文件）。真实路径同形：commit 后 `origin/main...HEAD` 会给出同样的 D/A 分类。"
+ },
+ "final_pr_shape": {
+  "decision": "P1′（队长 2026-09-28 裁决）：9 + 9 拆两 PR",
+  "PR_A": {
+   "branch": "chore/d1054-b5b6-cardab",
+   "commit": "e047544c",
+   "content": "9 件 docs/archive/**.md 删除 + 6 证据 + brief + task-state/D1054.json + Note",
+   "counted": 10,
+   "exempt": 9,
+   "gate": "✅ PASS PR 预算内（10 文件）",
+   "shadow_commit": "ddcf1179（post-commit hook）"
+  },
+  "PR_B": {
+   "branch": "chore/d1054-b5b6-cardab-prb",
+   "commit": "8a4d1a2f",
+   "content": "其余 9 件 docs/archive/**.md 删除",
+   "counted": 10,
+   "exempt": 0,
+   "gate": "✅ PASS PR 预算内（10 文件）",
+   "shadow_commit": "f47bb0f9（post-commit hook）"
+  },
+  "why_not_OPT1": "🔴 队长原裁的 OPT-1（PR-1 纯删 18 / PR-2 证据）**在真实分支上 FAIL**：post-commit hook 影子提交改 `.claude/bypass.log` ⇒ 破 D1028「纯删除」前置 ⇒ 18+1=19 > 12。见 DEV-5。",
+  "evidence_describes": "本批 B5 = PR-A 9 + PR-B 9（合计 18）；证据落 PR-A 并在此注明 PR-B 承接剩余 9 件"
+ },
+ "gates": {
+  "闸1_doc_registry": {
+   "cmd": "DOC_TRUTH_ROOT=. bash scripts/doc-system/doc-registry-gate.sh",
+   "PR_A_post_commit": {
+    "exit": 0,
+    "raw": [
+     "── 汇总: 检查 0 个文档，0 个未登记 ──",
+     "  ✅ 登记门禁通过"
+    ]
+   },
+   "PR_B_post_commit": {
+    "exit": 0,
+    "raw": [
+     "── 汇总: 检查 0 个文档，0 个未登记 ──",
+     "  ✅ 登记门禁通过"
+    ]
+   }
+  },
+  "闸2_pre_commit": {
+   "cmd": "SYNO_CI=1 bash scripts/pre-commit-check.sh",
+   "PR_A": {
+    "exit": 0,
+    "raw_tail": [
+     "═══════════════════════════════════════════════════════════",
+     "  ✅ 全部 13 组通过",
+     "  ⚠️  1 项警告 (不阻断)",
+     "═══════════════════════════════════════════════════════════",
+     ""
+    ]
+   },
+   "PR_B": {
+    "exit": 0,
+    "raw_tail": [
+     "═══════════════════════════════════════════════════════════",
+     "  ✅ 全部 13 组通过",
+     "  ⚠️  1 项警告 (不阻断)",
+     "═══════════════════════════════════════════════════════════",
+     ""
+    ]
+   },
+   "note": "两形态**均 13 组全跑 0 失败**（纯删除暂存集在 `--diff-filter=ACMR` 下为空 ⇒ CT-34 纯文档早退不适用 ⇒ fail-closed 走全量）"
+  },
+  "闸3_pr_budget": {
+   "cmd": "bash scripts/control-tower/check-pr-budget.sh",
+   "PR_A_post_commit": {
+    "exit": 0,
+    "raw": [
+     "── PR 预算门禁（D734）: 基线=origin/main 上限=12 文件 / 落后阈值=20 ──",
+     "  ℹ️  出库豁免不适用（D1028 路径级豁免未生效）:",
+     "       ⓐ 不满足: 变更含 10 件增/改（非纯删除/重命名）→ D/R 计入预算",
+     "       ⓑ 不满足: 白名单外路径 8 件（未落出库白名单）:",
+     "         .claude/bypass.log",
+     "         docs/synova/product-lines/evidence/D1054/A-01-nolink.json",
+     "         docs/synova/product-lines/evidence/D1054/A-02-takeover.json",
+     "         docs/synova/product-lines/evidence/D1054/A-03-gates.json",
+     "         docs/synova/product-lines/evidence/D1054/blocked-B6.json",
+     "         docs/synova/product-lines/evidence/D1054/blocked-CARD-A.json",
+     "         docs/synova/product-lines/evidence/D1054/cardb-judgment.json",
+     "         task-state/D1054.json",
+     "  ℹ️  D860 治理产物豁免: 9 件不计预算（brief/卡/Note/规格/自验证据，代码文件仍计入）",
+     "  ✅ ① 变更文件数 10 ≤ 上限 12",
+     "  ✅ ② 变更单域: ✅ PASS 9 个文件同域: win（无归属 0，域判定豁免 1）",
+     "  ✅ ③ 落后 origin/main 0 个提交 ≤ 20",
+     "✅ PASS PR 预算内（10 文件）"
+    ]
+   },
+   "PR_B_post_commit": {
+    "exit": 0,
+    "raw": [
+     "── PR 预算门禁（D734）: 基线=origin/main 上限=12 文件 / 落后阈值=20 ──",
+     "  ℹ️  出库豁免不适用（D1028 路径级豁免未生效）:",
+     "       ⓐ 不满足: 变更含 1 件增/改（非纯删除/重命名）→ D/R 计入预算",
+     "       ⓑ 不满足: 白名单外路径 1 件（未落出库白名单）:",
+     "         .claude/bypass.log",
+     "  ✅ ① 变更文件数 10 ≤ 上限 12",
+     "  ✅ ② 变更单域: ✅ PASS 9 个文件同域: win（无归属 0，域判定豁免 1）",
+     "  ✅ ③ 落后 origin/main 0 个提交 ≤ 20",
+     "✅ PASS PR 预算内（10 文件）"
+    ]
+   }
+  },
+  "闸4_reference_surface": {
+   "cmd": "grep -nF -f /tmp/d1054-archive-md.txt -r scripts tests .github .claude/settings.json",
+   "hits": 0
+  }
  }
 }

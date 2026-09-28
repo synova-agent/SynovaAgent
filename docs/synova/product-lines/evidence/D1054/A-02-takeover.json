@@ -4,13 +4,13 @@
  "produced_by": "squad-a-b2",
  "base_sha": "20b55eba9ce0db5cfa238bd09e02b4732d234af3",
  "outbound_N": 18,
- "status": "🔴 BLOCKED —— 沙箱拒绝工作区外写入；本 session 无法提权，已两次回报队长待执行（B1/B2 先例，第三次同一堵点）",
+ "status": "✅ DONE —— 由队长执行（B2 session 沙箱拒绝工作区外写入）",
  "target": {
   "dest_root": "/Users/wane/Synova-过程档案/出库-主仓",
   "dest_subdir": "出库-主仓/docs/archive",
   "archive_repo": "/Users/wane/Synova-过程档案",
-  "archive_head_at_check": "2bc04fd43497821e72f3a863c7cbf9e7792f2d60",
-  "existing_files_under_docs_archive": 0
+  "archive_head_at_check": "b55506991f892fe542287ec2dc6343eebe9bd4c3",
+  "existing_files_under_docs_archive": 18
  },
  "write_attempt": {
   "cmd": "bash /tmp/d1054-archive.sh（卡面要求的③全部动作合并命令：mkdir → 逐件 cp -p 保形 → 逐件 shasum -a 256 对账 → 档案仓 commit）",
@@ -18,7 +18,8 @@
   "raw_stderr": "mkdir: /Users/wane/Synova-过程档案/出库-主仓/docs: Operation not permitted",
   "stopped_at": "首个 mkdir（docs 子目录尚不存在）",
   "partial_state": "档案仓零改动（HEAD 仍 2bc04fd，出库-主仓/docs/archive = 0 件）",
-  "escalation_blocked_reason": "本 session 运行时固定：approval prompts are disabled；delegated subagent 权限范围不可在 session 内加宽 ⇒ 卡面所述 sandbox_permissions=\"danger-full-access\" 重试在本 session 不被允许。按要求**未重试**。"
+  "escalation_blocked_reason": "本 session 运行时固定：approval prompts are disabled；delegated subagent 权限范围不可在 session 内加宽 ⇒ 卡面所述 sandbox_permissions=\"danger-full-access\" 重试在本 session 不被允许。按要求**未重试**。",
+  "note": "如实保留首次沙箱拒绝记录（第三次同一堵点）"
  },
  "handoff": {
   "exact_command": "bash /tmp/d1054-archive.sh",
@@ -123,8 +124,24 @@
  ],
  "reconciliation": {
   "planned": "N/N 全等（18/18）",
-  "performed": false,
-  "reason": "承接未落地"
+  "performed": true,
+  "producer_reported": {
+   "SHA256_MATCH": 18,
+   "SHA256_MISMATCH": 0,
+   "by": "lead"
+  },
+  "independent_readback_by_b2": {
+   "why": "不信转述 —— B2 自己对档案仓逐件重算 shasum -a 256 与主仓比对",
+   "cmd": "while read p; do shasum -a 256 \"$p\" vs \"$DEST/$p\"; done < /tmp/d1054-archive-md.txt",
+   "result": {
+    "MATCH": 18,
+    "MISMATCH": 0
+   },
+   "archive_head_at_readback": "b55506991f892fe542287ec2dc6343eebe9bd4c3"
+  }
  },
- "not_a_verdict": "本件为执行方自验材料，非独立审计结论。"
+ "not_a_verdict": "本件为执行方自验材料，非独立审计结论。",
+ "executed_by": "lead（队长执行）；B2 提供合并命令 + 18 件 path/sha256 清单，并**独立回读**对账",
+ "lead_raw_output": "COPIED=18\nSHA256_MATCH=18\nSHA256_MISMATCH=0\nDEST_FILES_IN_TASKBRIEFS_TOP=18\nARCHIVE_COMMIT=b55506991f892fe542287ec2dc6343eebe9bd4c3\nOK",
+ "archive_repo_commit": "b55506991f892fe542287ec2dc6343eebe9bd4c3"
 }
