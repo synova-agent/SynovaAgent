@@ -34,14 +34,23 @@
       "红线": "scripts/audit/**、src/** 零改动；calc-progress.py / product-lines.yaml / 看板插件零改动"
     }
   },
-  "audit": null,
+  "audit": {
+    "verdict": "CONDITIONAL PASS",
+    "auditor": "kimi-k3",
+    "report": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次2-线21-15-20-8-4.md",
+    "date": "2026-09-28",
+    "summary": "假绿回退机制本身正确（K3 批次2：fail-closed 派生器 + 反向可复原设计，验收点①③④过）；CONDITIONAL：验收点②（接线完成后改回 test 复原）10 天未执行——20-3 实现已接线（本批实证）但证据列仍 pending_wiring，六态/三档/实现三口径打架（P1-4），建议补复原触发器（CT-D809）"
+  },
   "fix_task_id": null,
   "updated_at": "2026-09-18",
   "updated_by": "DeepSeek Harness",
   "domain": "mac",
   "owner": "dsh",
   "milestone": "M0 项目管理基建",
-  "depends_on": ["D806", "D808"],
+  "depends_on": [
+    "D806",
+    "D808"
+  ],
   "blocked": null,
   "target": "2026-W38",
   "acceptance_points": [

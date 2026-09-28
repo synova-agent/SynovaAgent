@@ -9,7 +9,13 @@
     "at": "2026-09-08",
     "note": "交付合并事实（git log 实证）；本文件由 D770 补登记"
   },
-  "audit": null,
+  "audit": {
+    "verdict": "PASS",
+    "auditor": "kimi-k3",
+    "report": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次2-线21-15-20-8-4.md",
+    "date": "2026-09-28",
+    "summary": "token 四桶+预算护栏复核（K3 批次2 21-3）：token-meter 11 + diagnosis-token-meter 集成 4 独立重跑绿；四桶 disjoint/checkBudget 三态（warn 0.8/exceed 1.0）/非法预算降级面全锁定"
+  },
   "fix_task_id": null,
   "updated_at": "2026-09-15",
   "updated_by": "synova-cto",

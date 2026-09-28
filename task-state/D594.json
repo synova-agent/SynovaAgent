@@ -4,7 +4,13 @@
   "status": "closed",
   "spec": null,
   "impl": null,
-  "audit": null,
+  "audit": {
+    "verdict": "PASS",
+    "auditor": "kimi-k3",
+    "report": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次2-线21-15-20-8-4.md",
+    "date": "2026-09-28",
+    "summary": "compaction 四件套实质复核（K3 批次2 20-3）：常量对齐（0.8/0.16）+ 生产接线（conversation-engine.ts:596/752 compactIfNeeded，blame 09-08）+ 37 用例独立重跑绿 + DSH compaction-basic@0.1.7-rc.1 在——D809 note『组件层有生产调用点』分列获独立证实；V1 证据列 pending_wiring 复原归 CTO（P1-4 三口径打架已报）"
+  },
   "fix_task_id": null,
   "updated_at": "2026-09-10",
   "updated_by": "dsh-cto",

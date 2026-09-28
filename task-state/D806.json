@@ -17,7 +17,13 @@
       "spec_source": "glob('docs/synova/project/26线-V1验收标准*.md') = 唯一候选 26线-V1验收标准-v0.2-20260917.md（含 §五 签字块）；v0.1 移出 glob 防 sorted()[-1] 静默回退分母"
     }
   },
-  "audit": null,
+  "audit": {
+    "verdict": "CONDITIONAL PASS",
+    "auditor": "kimi-k3",
+    "report": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次2-线21-15-20-8-4.md",
+    "date": "2026-09-28",
+    "summary": "借鉴卡台账映射属实（K3 批次2：20-3/21-3 绑定复核成立，两源映射声明在）；CONDITIONAL：其 pass 证据经 D809 判定不点亮（pending_wiring）且 A2 面为假绿（套件串带后缀定位 NONE）——本批复核支持接线已成立，证据列复原归 CTO"
+  },
   "fix_task_id": null,
   "change_log": [
     {
