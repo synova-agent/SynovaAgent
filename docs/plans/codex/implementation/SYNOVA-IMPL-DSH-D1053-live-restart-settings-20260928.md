@@ -643,7 +643,7 @@ log.warn({ count, exceptions }, 'SETTINGS_EXCEPTION_ACTIVE 既存例外（不按
 |---|---|---|---|
 | `tests/config/settings-applies.test.ts`（**LIVE 套件**，内容含串 `settings-applies-live`） | **A1** live 键改盘后同一 runtime 的 `effective` 立即新值（**并含 DEV-1 断言**：`:77-79` live 键 `defaultValue === 0.3`）；**A2** `sourceLayer` 归属正确（home/workspace/declaration 三态）；**A3** 未声明键 ⇒ `applies:'restart'` + `declared:false` + 进 `undeclared[]`；**A4**（**DEV-1**）**live 键行的 `defaultValue` = 声明面默认值**（与 restart 同源；**不得为 `null`**）—— 本卡由 **A1 内断言承载**（C 落在既有用例内，见 `:77-79`） | **M2**（从声明常量删一条键）⇒ **本套件必红**（V 实测落到 **A1**，见 §8.3）；**M1**（applies 判定分支把 restart 当 live）⇒ **本套件 A2/A3 不红**（设计如此），由 RESTART 套件红 | 对应 `expect(...)` 失败 |
 | `tests/config/settings-source.test.ts`（**RESTART 套件**，内容含串 `settings-applies-restart`） | **B1** 同一 boot：改盘后 `effective` = 旧值 **且** `pending` = 新值 **且** `applies:'restart'`；**B2** 同 boot 内多次读取 `effective` 恒等（冻结稳定，判据 **D-BOOT-1**）；**B3** 新 boot（`initSettingsBootFence({ force: true })` 二次调用，公开入口；**`force` 不可省**——不传则幂等返回同一实例）：`bootId` 变化 **且** `effective` = 新值 | **M1**（restart 当 live）⇒ B1 必红（`effective` 变新值 = 半生效） | 同上 |
-| `tests/routes/settings.test.ts`（**入口/E2E 套件**，内容**不含**两串） | **C1 两消费者同一新值**：真实 HTTP 下，`/api/settings/effective` 与 `/api/config/dump` 对同一 key 的 `effective` 满足 `deepEqualJson` 相等（live 键改盘后为**新值**且两值相等）；**C2** `400` 校验语义（4 种非法 query）；**C3** 未声明清单出现在 HTTP 响应（`undeclared[]` + `undeclaredScope` + `truncated`）；**C4** 非法声明 ⇒ `200 + degraded:true + code:'SETTINGS_SPEC_INVALID'` 且涉事键不在 `keys[]` | **M3**（`src/routes/config.ts` 消费者侧注入模块级缓存）⇒ **C1 必红**（两消费者值不等）；**M4**（负控：yaml 带 `applies:'sometimes'`）⇒ C4 必红 | 同上 |
+| `tests/routes/settings.test.ts`（**入口/E2E 套件**，内容**不含**两串） | **C1 两消费者同一新值**：真实 HTTP 下，`/api/settings/effective` 与 `/api/config/dump` 对同一 key 的 `effective` 满足 `deepEqualJson` 相等（live 键改盘后为**新值**且两值相等）；**C2** `400` 校验语义（4 种非法 query）；**C3** 未声明清单出现在 HTTP 响应（`undeclared[]` + `undeclaredScope` + `truncated`）；**C4** 非法声明 ⇒ `200 + degraded:true + code:'SETTINGS_SPEC_INVALID'` 且涉事键不在 `keys[]` | **M3**（`src/routes/config.ts` 消费者侧注入模块级缓存）⇒ **C1 必红** —— **判据形状（DEV-5 修后口径）：C1 必须「先预热两端点 → 再改盘 → 再读两端点并互比」**；**不得依赖跨用例缓存污染**（禁用"先改盘后首读"形状：缓存首次填充即新值 ⇒ M3 下仍绿，见 `22g`）。**套件级要求 = E2E 套件必须红**（具体用例名以实测为准）；**M4**（负控：yaml 带 `applies:'sometimes'`）⇒ C4 必红 | 同上 |
 
 **e2e 装配（逐字约束，铁律 12 不 mock 管线）**
 
@@ -668,7 +668,7 @@ log.warn({ count, exceptions }, 'SETTINGS_EXCEPTION_ACTIVE 既存例外（不按
 |---|---|---|---|
 | **M1** restart 项当 live 处理 | `src/config/settings-applies.ts` 的分类判定分支，使 `restart` 键走现读 | `tests/config/settings-source.test.ts` 的 **B1 必红** | 复原后 `git diff --stat` 空 **且** `shasum -a 256 <file>` 与注入前记录值逐字相同（V 注入前后各存一次基线哈希） |
 | **M2** 删分类声明 | 从 `BUILTIN_SETTINGS_DECLARATIONS` 移除一条键（模拟"忘声明"） | `tests/config/settings-applies.test.ts` 的 **A1 必红**（**DEV-3 · V 实测**：M2 下红的是 **A1**，A3 仍绿 ⇒ 规格原写 A3 属陈述漂移，已改）——**套件级要求 = LIVE 套件必须红**，具体用例名以实测为准（不得因用例名与规格不符而判"不红"） | 同上（哈希一致） |
-| **M3** 消费者绕过 accessor 自缓存 | `src/routes/config.ts` 内注入模块级缓存分支（首次读后缓存 `settings` 块） | `tests/routes/settings.test.ts` 的 **C1 必红**（两消费者值不等） | 同上 |
+| **M3** 消费者绕过 accessor 自缓存 | `src/routes/config.ts` 内注入模块级缓存分支（首次读后缓存 `settings` 块） | `tests/routes/settings.test.ts` 的 **C1 必红**（两消费者值不等）—— **DEV-5 修后口径**：C1 判据形状必须为「**先预热两端点 → 再改盘 → 再读并互比**」；**不得依赖跨用例缓存污染**（"先改盘后首读"形状在 M3 下仍绿，见 `22g`）。**套件级要求 = E2E 套件必须红**；闭合法 = **`M3 + 只跑 C1` 必须红**（`-t C1 ·` 隔离跑） | 同上 |
 | **M4** 非法配置负控 | **两个面各一条**（(b) 后入口面已消失，见 §九 F14）：① **yaml 面（夹具）** = `/tmp/d1053-bad/settings.yaml` 内含 `applies` 键（R5：值面本不得携带分类）→ 对应 §十三 **⑦-a**；② **registry 面（变异体 M4-r）** = 把内置声明表某条 `applies` 改成非法值（如 `'sometimes'`）→ 因其已私有化，**无命令入口**，判别形态 = **改值即红**（`tests/config/settings-applies.test.ts` 的启动断言红 / ⑦-a 形态转 `degraded`） | `tests/routes/settings.test.ts` 的 **C4 必红**；**且** ⑦-a 逐项成立（`degraded===true` ∧ `code==='SETTINGS_SPEC_INVALID'` ∧ `rows().length===0` ∧ 涉事键 `row(...)===null` ∧ 无默认值回落）；**且** M4-r 注入后对应套件必红；**且** ⑦-b 进程级起服**不崩死**（degraded 响应，见 §7.3） | 删除负控夹具目录 `/tmp/d1053-bad`（在 /tmp，不涉仓库）+ M4-r 复原哈希一致（§8.3 通则）；`git status --porcelain` 仅剩本卡声明写集 |
 
 **判别性要求（"删掉即报红"）**：M1-M4 每条必须能被 V **独立复现为红**；若注入后套件仍绿 ⇒ 判定 **"接线了≠被执行"**，退回（不是补文档）。
@@ -772,9 +772,13 @@ log.warn({ count, exceptions }, 'SETTINGS_EXCEPTION_ACTIVE 既存例外（不按
 | **代价与记账** | 负控的"直调即抛"形态不可执行 ⇒ 见 **§九 F14**（等价形态替代 + 判别力论证）；并新增 **F15** 防"为测试重新导出"的隐式回归。 |
 | **不可逆性** | 若实现期发现某私有符号确需跨文件消费 ⇒ **不得自行导出**，须**回报 CTO 改裁决**（本规格不预留后门）。 |
 
-### 12.2 偏差登记（V 独立自验登记 · DEV-1 ~ DEV-4）
+### 12.2 偏差登记（V 独立自验登记 · DEV-1 ~ DEV-5）
 
-> 来源：成员 V 的独立自验（读规格 + 实测实现）。**P2 两条 = 实现面缺陷，C 在本 PR 内修；P3 两条 = 本规格的陈述漂移，本次一并改齐。** 登记后规格与实现同口径。
+> 来源：成员 V 的独立自验（读规格 + 实测实现）。**P2 三条 = 实现面/夹具面缺陷，C 在本 PR 内修；P3 两条 = 本规格的陈述漂移，本次一并改齐。** 登记后规格与实现同口径。
+> **来源批次与基线（避免引用 stale 件）**：
+> · DEV-1 ~ DEV-4 = V 的**首批**自验（件 `20-V-自验结论.md` / `21-V-独立自验.json`）——**按 F4 该批已随代码推进失效**，本表仅保留其**登记内容**，不作为现行结论；
+> · **DEV-5 = V 的增量复验**（件 **`22-V-增量复验结论.md`** / **`23-V-增量复验.json`**，含专项实验 **`22g-M3判别性精化实验-原始输出.txt`**），**基线 = `33e63fd5`**（本规格后续 doc-only 提交不改变代码基线）；
+> · 判据/复跑一律**以最新批次件为准**；task-5 第三批到位后，本节将再补指针。
 
 | 编号 | 级别 | 偏差事实（V 实测） | 处置 | 落点 / 状态 |
 |---|---|---|---|---|
@@ -782,8 +786,9 @@ log.warn({ count, exceptions }, 'SETTINGS_EXCEPTION_ACTIVE 既存例外（不按
 | **DEV-2** | **P2**（实现面）· 状态 **closed（本 PR 内修，C `f80992a9`）** | `counts` 曾把未声明行计入 `restart`（过滤器只有 `applies==='restart'`，缺 `row.declared`）⇒ 与 `undeclared` 口径重叠，无法自洽对账；**修前实测 `restart:6`** | **定稿口径 = 四桶互斥分区**（队长裁决：**维持实现现状，不删 `counts.undeclared` 镜像键**）：`{declared, live, restart, undeclared}`；不变量 ①`declared === live + restart`（后两者过滤器含 `row.declared &&`，实测 `src/routes/settings.ts:117-118`）；②`counts.undeclared === undeclaredTotal` 且 `declared + undeclared === keys.length`。**修后实测 = `{9, 4, 5, 1}`**（期望数字与 §5.1 的 9 条声明一致，`keys.length=10`）；**断言覆盖位置（实测）** = `tests/routes/settings.test.ts:193-199`（**C3 内**：三值 + 两条不变量同点断言） | §7.1 示例四键 + 断言语义条（含修后实测值 + 覆盖位置）｜§7.4 `counts` 行 —— **C 已修并带覆盖** ✅｜⚠️ `f80992a9` subject 写「counts.restart **计入**未声明」，语义应为「修：**曾**计入」⇒ **以代码为准**（队长已记入 PR 正文 + 收尾遗留清单） |
 | **DEV-3** | **P3**（规格陈述漂移） | §8.3 原写「M2 ⇒ **A3** 必红」；V 实测 **M2 下红的是 A1，A3 仍绿** | §8.3 M2 行与 §8.1 LIVE 行均改为 **A1 必红**，并注明「**套件级要求 = LIVE 套件必须红**，具体用例名以实测为准（不得因用例名与规格不符而判"不红"）」 | §8.3 **:661**｜§8.1 **:635** —— 本规格已改 ✅ |
 | **DEV-4** | **P3**（规格陈述漂移） | §7.2 曾把第二消费者字段命名为 `settingsApplies`，实现为 **`settings`**（与 task-2 v2 裁决表一致） | 全文按实现改齐为 **`settings`**；并显式登记「旧名为作废名」。**自查口径（避免自指误报）**：以**实现面**为准 —— `grep -c settingsApplies src/routes/config.ts` = **0**、`grep -rc settingsApplies src/` 无命中文件；doc 内仅保留**对照提及**（本登记行 + §7.2 作废说明共 3 行，**不是**命名残留） | §7.2 **:587**（含作废说明）｜实现面自查 **0** ✅ |
+| **DEV-5** | **P2**（夹具面 + 规格陈述）· 状态 **closed — 修毕（C `34554877`）· 闭合判据在 V**（不得由 S/C 自判闭合） | §8.1 / §8.3 原声明「M3 ⇒ **C1 必红**」；V 实测（件 `22g`，基线 `33e63fd5`）：**同一注入下 `-t C1 ·` 隔离跑 = PASS**（`Tests 2 passed \| 7 skipped`）；全量跑的红是 **C4**，而 C4 的红**依赖 C1 预热造成的跨用例缓存污染** ⇒ 规格陈述与夹具实际行为不符（**非产品缺陷**：V 自建 harness 在同注入下 **FAIL**（`actual=0.9911 expected=0.7788`，42 PASS/1 FAIL）⇒ 产品判据有判别力） | **根因**：C1 形状为「**先改盘 → 再首读**」⇒ 缓存**首次填充即新值** ⇒ 两消费者天然同值，M3 下仍绿。**修法**：C1 改为「**先预热两端点（旧值）→ 再改盘 → 再读两端点并互比**」⇒ 带缓存的消费者会返回陈旧值 ⇒ 不等 ⇒ 红。规格 §8.1 / §8.3 的 M3 行同步改为**修后口径**并加"**不得依赖跨用例缓存污染**"；闭合法 = **`M3 + 只跑 C1`（`-t C1 ·`）必须红**，由 V 复核 | 规格侧：§8.1 **:646**｜§8.3 **:671** ✅ 已改。实现/夹具侧（**C `34554877` 修后实测行号**，`tests/routes/settings.test.ts`）：C1 用例体 = **`:119-165`**（`:119` 用例名已含「M3 判别性形状」；`-t "C1 ·"` 过滤仍命中，实测 1 处）；自足初值 0.30 = **`:121-123`**；**预热双端 = `:127-128`**；改前双端同值 = **`:133`**；改盘 0.55 = **`:136-138`**；再读双端 = **`:141-142`**；双端同新值 = **`:154`**；**M3 判别核心 = `:156-157`（after ≠ before，任一消费者停滞旧值即红）**；`defaultValue=0.3` = **`:160-161`**；`scope='process'` = **`:164`**。真值断言（`rowA?.effective, rowA?.effective`）已删：实测 **0 命中**；同类自比（`deepEqualJson(X,X)` / `expect(X).toBe(X)`）在三套件**全扫 0 命中** |
 
-> **两条 P2 的验证形态**：均属"实现被规格纠正"⇒ 修复后由 **V 复跑其三套件独立重跑证据**复核（不新增夹具）；本规格不因 P2 而放宽任何判据。**P2 未修完不得合并**（与 K3 终审同闸）。
+> **三条 P2 的验证形态（DEV-1 / DEV-2 / DEV-5）**：均属"实现/夹具被规格纠正"⇒ 修复后由 **V 复跑增量证据**复核；其中 **DEV-1 / DEV-2 走"三套件独立重跑"**（无新增夹具），**DEV-5 走专项判别性闭合法 = `M3 + 只跑 C1`（`-t C1 ·`）必须红**（新增的是**判据形状**，不是新夹具；见 `22g`）。本规格不因任何 P2 而放宽判据。**P2 未修完不得合并**（与 K3 终审同闸）。
 
 **上限**：成员 ≤4（队长 + ≤2 编码 + 1 独立自验）；WIP=1（本卡未过 CTO 收件闸不放行下一张代码卡）；重型验证同时 ≤1。
 
@@ -928,6 +933,10 @@ git status --porcelain   # 期望仅本卡声明写集
 | 第二消费者字段名 = settings（DEV-4；settingsApplies 为作废名） | grep -c "settingsApplies" src/routes/config.ts | 命中 0 |
 | DEV-1 有断言覆盖（A1 内 + C1 内） | grep -c "defaultValue).toBe" tests/config/settings-applies.test.ts tests/routes/settings.test.ts | 两文件各 2（共 4） |
 | DEV-2 有断言覆盖（C3 内 counts 不变量） | grep -c "counts?.restart).toBe" tests/routes/settings.test.ts | 命中 1 |
+| DEV-5：M3 判据形状已含「先预热」口径（§8.1 + §8.3 + 登记行） | grep -c "先预热" docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D1053-live-restart-settings-20260928.md | 命中 3 |
+| DEV-5：已写明禁用跨用例缓存污染 | grep -c "跨用例缓存污染" docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D1053-live-restart-settings-20260928.md | 命中 3 |
+| DEV-5：C1 用例名已带「M3 判别性形状」 | grep -c "M3 判别性形状" tests/routes/settings.test.ts | 命中 1 |
+| DEV-5：真值断言（自比）已删且无同类 | grep -c "rowA?.effective, rowA?.effective" tests/routes/settings.test.ts | 命中 0 |
 | 分类表 9 条声明均带实测消费者锚点 | grep -n "src/l3/synova-diagnosis-engine-impl.ts:52" docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D1053-live-restart-settings-20260928.md | 命中 ≥1 |
 | DSH 现验锚点可核（M3 用现验命令） | git -C /Users/wane/src/deepseek-harness-017 grep -n applies packages/settings/settings/lib/index.js | 命中硬编码 live |
 | 既存例外 E1 锚点可核 | grep -n 热重载 src/config.ts | 命中 76 |
