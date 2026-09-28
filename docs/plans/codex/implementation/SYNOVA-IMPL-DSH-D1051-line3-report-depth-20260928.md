@@ -556,22 +556,23 @@ bash scripts/check-architecture.sh
 
 ## 8. 接线点（每条新 export 的生产调用点 + grep 指纹）
 
-| # | 新 export（文件） | 生产调用点（写进 src/ 的调用） | grep 指纹（实现完成后须命中，**禁 `head` 截断**） |
+| # | 新 export（定义文件） | 生产调用点（写进 src/ 的调用） | **文件集合型指纹**（§13.2 口径：**禁用行数**） |
 |---|------------------|----------------------------|----------------------------------------------|
-| 1 | `renderReportView`（W3） | `src/routes/diagnosis.ts`（markdown 分支）+ `src/routes/conversations.ts`（`report_view` 帧） | `grep -rn "renderReportView" src/` → 期待 **3 行**（1 定义 + 2 调用） |
-| 2 | `renderDetailedReport`（W3） | 经 `renderReportView` 的 `detailed` 分支（**唯一调用点**） | `grep -rn "renderDetailedReport" src/` → 期待 **2 行**（1 定义 + 1 调用） |
-| 3 | `assembleOnePagerInputsForOrg`（W3） | `src/routes/diagnosis.ts:723`（薄委托）+ `src/routes/conversations.ts`（`one_pager` 方向装配） | `grep -rn "assembleOnePagerInputsForOrg" src/` → 期待 **3 行** |
-| 4 | `isRenderableDiagnosisReport`（W3） | `src/routes/diagnosis.ts`（detailed 分支前置窄化）+ `src/routes/conversations.ts`（归档报告窄化） | `grep -rn "isRenderableDiagnosisReport" src/` → 期待 **3 行** |
-| 5 | `normalizeReportViewDepth`（W1） | `src/routes/diagnosis.ts`（`?depth=` 解析）+ `src/routes/conversations.ts`（判别结果校验） | `grep -rn "normalizeReportViewDepth" src/` → 期待 **3 行** |
-| 6 | `resolveViewDepthFromUtterance`（W1） | `src/routes/conversations.ts`（每轮判别，**唯一生产调用点**） | `grep -rn "resolveViewDepthFromUtterance" src/` → 期待 **2 行** |
-| 7 | `REPORT_VIEW_DEPTHS` / `DEFAULT_REPORT_VIEW_DEPTH` / `VIEW_TO_ONEPAGER_DEPTH`（W1） | `src/routes/diagnosis.ts` + `src/routes/conversations.ts` | `grep -rn "REPORT_VIEW_DEPTHS\|DEFAULT_REPORT_VIEW_DEPTH\|VIEW_TO_ONEPAGER_DEPTH" src/` → 期待 **≥4 行** |
-| 8 | `DETAILED_REPORT_CHAPTER_TITLES`（W1，L2） | **唯一生产调用点 = `src/agent/report-assembler.ts`（同层 W3）**；`src/l3/report-templates.ts` **不得**出现该符号（子裁定 (i)：标题随数据走） | `grep -rn "DETAILED_REPORT_CHAPTER_TITLES" src/` → 期待 **恰 2 行**（1 定义 + 1 调用）；且 `grep -rn "DETAILED_REPORT_CHAPTER_TITLES" src/l3/` → **0 行** |
-| 9 | 模板名 `detailed_report`（W2） | `src/agent/report-assembler.ts`（`renderDetailedReport` 内 `registry.render('detailed_report', …)`） | `grep -rn "detailed_report" src/` → 期待 **≥2 行**（注册 + 消费） |
-| 10 | **架构：L1→L3 零新增**（DR-1） | L1 两路由经 `../agent/report-depth`（L2）取用，**不出现 `../l3/**` 新值导入** | `bash scripts/check-architecture.sh` → `1b. L1→L3` 段 `new=0`（§7.4）；`grep -nE "from ['\"]\.\./l3/\|import\(['\"]\.\./l3/" src/routes/diagnosis.ts src/routes/conversations.ts` → **仍各恰 1 行**（既有 `../l3/synova-diagnosis-engine-impl`，不得变成 2） |
+| 1 | `renderReportView`（W3 `src/agent/report-assembler.ts`） | `src/routes/diagnosis.ts`（markdown 分支）+ `src/routes/conversations.ts`（`report_view` 帧） | `grep -rl "renderReportView" src/ \| sort` → **恰** `src/agent/report-assembler.ts`、`src/routes/conversations.ts`、`src/routes/diagnosis.ts`（3 文件） |
+| 2 | `renderDetailedReport`（W3 `src/agent/report-assembler.ts`） | 经 `renderReportView` 的 `detailed` 分支（**唯一调用点，同文件内**） | `grep -rl "renderDetailedReport" src/ \| grep -v '^src/agent/report-assembler.ts$'` → **空**（无外部消费者）；**行为由 T2 断言**（grep 只回答"符号在哪些文件出现"——V3.7 口径） |
+| 3 | `assembleOnePagerInputsForOrg`（W3 `src/agent/report-assembler.ts`） | `src/routes/diagnosis.ts:723`（薄委托）+ `src/routes/conversations.ts`（`one_pager` 方向装配） | `grep -rl "assembleOnePagerInputsForOrg" src/ \| sort` → **恰** 上述 3 文件 |
+| 4 | `isRenderableDiagnosisReport`（W3 `src/agent/report-assembler.ts`） | `src/routes/diagnosis.ts`（detailed 分支前置窄化）+ `src/routes/conversations.ts`（归档报告窄化） | `grep -rl "isRenderableDiagnosisReport" src/ \| sort` → **恰** 上述 3 文件 |
+| 5 | `normalizeReportViewDepth`（W1 `src/agent/report-depth.ts`） | `src/routes/diagnosis.ts`（`?depth=` 解析）+ `src/routes/conversations.ts`（判别结果校验） | `grep -rl "normalizeReportViewDepth" src/ \| sort` → **恰** `src/agent/report-depth.ts`、`src/routes/conversations.ts`、`src/routes/diagnosis.ts` |
+| 6 | `resolveViewDepthFromUtterance`（W1 `src/agent/report-depth.ts`） | `src/routes/conversations.ts`（每轮判别，**唯一生产调用点**） | `grep -rl "resolveViewDepthFromUtterance" src/ \| sort` → **恰** `src/agent/report-depth.ts`、`src/routes/conversations.ts` |
+| 7 | `REPORT_VIEW_DEPTHS` / `DEFAULT_REPORT_VIEW_DEPTH` / `VIEW_TO_ONEPAGER_DEPTH`（W1） | `src/routes/diagnosis.ts` + `src/routes/conversations.ts` | `grep -rl "REPORT_VIEW_DEPTHS\|DEFAULT_REPORT_VIEW_DEPTH\|VIEW_TO_ONEPAGER_DEPTH" src/ \| sort` → 集合 ⊆ {`src/agent/report-depth.ts`（W1 定义）、`src/agent/report-assembler.ts`（W3 映射）、`src/routes/conversations.ts`、`src/routes/diagnosis.ts`}，**且含后两者**（两路由必须有生产消费） |
+| 8 | `DETAILED_REPORT_CHAPTER_TITLES`（W1，L2） | **定义在 W1；生产消费者仅限同层 W3**；`src/l3/report-templates.ts` **不得**出现该符号（子裁定 (i)：标题随数据走） | **不变量判据（见 §13-(c)，非行数）**：① `grep -rn "DETAILED_REPORT_CHAPTER_TITLES" src/l3/` → **0 行**；② `grep -rl "DETAILED_REPORT_CHAPTER_TITLES" src/ \| grep -vE '^src/agent/(report-depth\|report-assembler)\.ts$'` → **空**。**禁用「src/ 命中恰 N 行」**（定义 + JSDoc 提及 + 同层 import + 使用 ≥4 行，随注释增减漂移） |
+| 9 | 模板名 `detailed_report`（W2 注册 / W3 消费） | `src/agent/report-assembler.ts`（`renderDetailedReport` 内 `registry.render('detailed_report', …)`） | `grep -rl "detailed_report" src/ \| sort` → **恰** `src/agent/report-assembler.ts`、`src/l3/report-templates.ts`（注册 + 消费，**文件集合型**） |
+| 10 | **架构：L1→L3 零新增**（DR-1） | L1 两路由经 `../agent/report-depth`（L2）取用，**不出现 `../l3/**` 新值导入** | **唯一权威判据 = 门禁计数**：`bash scripts/check-architecture.sh` → `1b. L1→L3` 段 **`new=0`**（§7.4）。**不得用裸 grep 行数代替**（见 §13-(d)：`diagnosis.ts` 裸 grep = 3 行，含 `:108` `type … = import(` 与 `:543 as import(` 两处**类型位**；门禁 `strip_type_position()` 剥除后为 **1**，与基线 1 相等；加 1 处值导入即 2>1 = NEW） |
 | 11 | **架构：L3 模板零新增 import**（子裁定 (i)） | `src/l3/report-templates.ts` 只加字段与模板对象 | `git diff origin/main -- src/l3/report-templates.ts \| grep -c "^+.*import"` → **0** |
 
 > **WIRE CHECK 硬门禁（铁律 0-2 第 5 步）**：上表 **11 条**指纹**全部命中**才算接线完成；任一条 0 命中 = 未完成，**不得声称交付**。
-> `VIEW_TO_ASSEMBLE_DEPTH` 落 W3（同层，`ReportDepth` 定义处）——指纹 #7 的调用点仍在两路由，期待行数不变。
+> **口径（§13.2）**：指纹一律为**文件集合型**（`grep -rl … | sort` + 期望文件集合），**禁用「src/ 命中 N 行」型字面**——行数会被 JSDoc 提及、import/解构行、**子串碰撞**（如 `renderOnePager` 被 `renderOnePagerOnDemand` 连带命中）污染而不可预测（实测 `grep -rn "renderOnePager" src/` = **14 行**，而「1 定义 + 2 import + 2 调用」本应 5 行）。
+> `VIEW_TO_ASSEMBLE_DEPTH` 落 W3（同层，`ReportDepth` 定义处）——指纹 #7 的调用点仍在两路由。
 
 ---
 
@@ -612,25 +613,25 @@ bash scripts/check-architecture.sh
 | # | 声明 | 核验方式 |
 |---|------|---------|
 | DS1 | 呈现粒度轴为**独立轴**，取值域恰 `{one_pager, detailed}`，与 `ReportDepth`(4 值) 不相通 | `grep -n "REPORT_VIEW_DEPTHS" src/agent/report-depth.ts`；T1 断言 `expert/raw/ceo/flywheel` 均 `undefined` |
-| DS2 | 注册表新增**恰 1 个**模板 `detailed_report`，既有 3 模板与既有 `ReportData` 字段逐字未改 | `git diff src/l3/report-templates.ts`；`grep -c "name:" src/l3/report-templates.ts` = 4 |
+| DS2 | 注册表新增**恰 1 个**模板 `detailed_report`，既有 3 模板与既有 `ReportData` 字段逐字未改 | `git diff src/l3/report-templates.ts`；**模板计数用锚定 grep**：`grep -c "^  name: '" src/l3/report-templates.ts` = **4**（基线 3 + 新增 1；**禁用无锚定的 `grep -c "name:"`**——见 §13-(a)：该形态基线即 7、加模板后 8，字面永不等于 4） |
 | DS3 | 无 `depth` 的 markdown 请求产物与改动前**字节级相同** | T3 断言「无 depth === `?depth=one_pager`」（J2） |
 | DS4 | 非法 `depth` **不静默**：fallback `one_pager` + `log.warn` + `X-Report-Depth-Degraded: UNKNOWN_DEPTH` | T3 断言响应头存在 + 断言返回一页纸结构 |
-| DS5 | 详细报告为**五章**，章标题来自 `DETAILED_REPORT_CHAPTER_TITLES` 单源（**L2 定义、L2 消费；标题经 `chapters[].title` 随数据进 L3**） | T2 断言五章标题齐全；`grep -rn "DETAILED_REPORT_CHAPTER_TITLES" src/` = **恰 2 行**；`grep -rn "DETAILED_REPORT_CHAPTER_TITLES" src/l3/` = **0 行** |
+| DS5 | 详细报告为**五章**，章标题来自 `DETAILED_REPORT_CHAPTER_TITLES` 单源（**L2 定义、L2 消费；标题经 `chapters[].title` 随数据进 L3**） | T2 断言五章标题齐全；**不变量判据**（见 §13-(c)）：`grep -rn "DETAILED_REPORT_CHAPTER_TITLES" src/l3/` = **0 行**，且 `grep -rl "DETAILED_REPORT_CHAPTER_TITLES" src/ \| grep -vE '^src/agent/(report-depth\|report-assembler)\.ts$'` = **空**（消费者仅限 W1/W3）。**禁用「src/ 命中恰 N 行」型字面** |
 | DS6 | 详细报告章节数据源 **100% 既有字段**，零新指标 / 零新窗口 | `git diff` 中无新比率/评分/阈值常量；`src/agent/report-assembler.ts` 新增行不含算术聚合 |
 | DS7 | 详情渲染**永不抛出**且**不含量化时刻** | T2 注入抛错注册表 → 返回含降级标记的字符串（不 throw）；同输入两次 `toBe` 相等 |
 | DS8 | 3-3 判别为**确定性关键词表**（不含 LLM 调用、不含随机、不含时刻） | `grep -rn "resolveViewDepthFromUtterance" src/agent/report-depth.ts`；T1 同输入两次相等 |
-| DS19 | **架构双向干净（DR-1）**：L1 零新增 `../l3/**` 值导入；L3 模板零新增 import | `bash scripts/check-architecture.sh` → `1b. L1→L3` 段 `new=0`（§7.4）；`git diff origin/main -- src/l3/report-templates.ts \| grep -c "^+.*import"` = **0**；`grep -nE "from ['\"]\.\./l3/\|import\(['\"]\.\./l3/" src/routes/diagnosis.ts src/routes/conversations.ts` 各恰 1 行 |
+| DS19 | **架构双向干净（DR-1）**：L1 零新增 `../l3/**` 值导入；L3 模板零新增 import | `bash scripts/check-architecture.sh` → `1b. L1→L3` 段 `new=0`（**唯一权威判据**，§7.4）；`git diff origin/main -- src/l3/report-templates.ts \| grep -c "^+.*import"` = **0**。**禁用「两路由 `../l3/` grep 各恰 1 行」型字面**（见 §13-(d)：`diagnosis.ts` 原始 grep 为 3 行——含 2 处类型位，门禁 `strip_type_position` 后才是 1） |
 | DS20 | 呈现轴模块**零 import**（无 L1→L3、无 L2↔L3 环） | `grep -cE "^import\|^} from\|from '" src/agent/report-depth.ts` = **0**（除 JSDoc 注释外无 import 语句） |
 | DS9 | 3-3 未命中词 → **零行为变化**（无 `report_view` 帧） | T4 断言（J5） |
 | DS10 | `report_view` 帧为 **additive**，`complete` 帧既有 6 字段一字未改 | `git diff src/routes/conversations.ts` 中 `complete` 帧块无删除行；T4 断言末帧 `end` + 无 `error` 帧 |
-| DS11 | 对话路与 HTTP 路**同深度同产物**（同源 `renderReportView`） | `grep -rn "renderReportView" src/` = 3 行；T4 断言帧内 markdown 与 HTTP 产物同构 |
+| DS11 | 对话路与 HTTP 路**同深度同产物**（同源 `renderReportView`） | **文件集合型（§13.2）**：`grep -rl "renderReportView" src/ \| sort` = {`src/agent/report-assembler.ts`（定义）、`src/routes/conversations.ts`、`src/routes/diagnosis.ts`}；**行为由 T4 断言**帧内 markdown 与 HTTP 产物同构 |
 | DS12 | 无报告时**不伪造**（`markdown:null, degraded:true, reason:'NO_REPORT'`） | T4 断言 |
 | DS13 | `buildOnePagerInputs` 下沉为**行为等价**委托（D791a 路径零回归） | 23 it/140 expect 三文件全绿（A5）；`git diff` 仅删除函数体、改为委托调用 |
 | DS14 | 写集**仅 win 域**且 **≤12 文件**（治理产物不计） | `check-ownership.py <写集> --owner win` → PASS；`git diff --stat` 文件数 ≤9 |
-| DS15 | §8 九条接线指纹**全部命中** | 逐条 `grep -rn` 原始输出（禁 `head` 截断） |
+| DS15 | §8 **11 条**接线指纹**全部命中**（**文件集合型**，非行数型——§13.2） | 逐条 `grep -rl … \| sort` 原始输出（禁 `head` 截断），逐条比对期望文件集合 |
 | DS16 | 三点证据落 `docs/synova/product-lines/evidence/`，且**次日重跑**（CT-62） | `ls -1 docs/synova/product-lines/evidence/ \| grep <date>`；证据 `.json` 含 3-1/3-2/3-3 |
 | DS17 | 免责边界：**未**实现 3-4/3-5/3-6/3-9；**未**改 GS-08 场景 | `git diff --stat` 不含 `scripts/**`、`extensions/**`、`docs/synova/coordination/**` |
-| DS18 | 无死代码 / 无 `as any` / 无空壳测试 | `grep -rn "as any\|as never\|as unknown as" <写集>` = 0；每个新 test 文件 `grep -c "expect("` > 0 |
+| DS18 | 无死代码 / **`as any`/`as never`/`as unknown as` 新增零引入** / 无空壳测试 | **零引入判据（增量）**：`git diff origin/main -- src/ \| grep "^+" \| grep -c "as any\|as never\|as unknown as"` = **0**（存量不在本卡范围：基线 `report-assembler.ts` 2 处、`conversations.ts` 1 处，见 §13-(b)；**绝对计数「=0」不可达，禁用**）；每个新 test 文件 `grep -c "expect("` > 0 |
 
 ---
 
@@ -657,6 +658,166 @@ grep -n "src/l3/report-depth\|tests/l3/report-depth" \
 ```
 
 > **规格边界声明**：本规格**不写任何产品代码**（`git diff --stat` 中 `src/**`、`tests/**` 必须为 0 行改动）。规格作者与实现者**分离**（`squad-discipline` 独立性硬要求）；本规格须**先落 main 可读**，实现方不得引用未落 main 的规格路径。
+
+---
+
+## 13. 指纹口径回填记录（第 2 次退回；原口径 → 不可达证据 → 回填后口径 → 实跑输出）
+
+> **背景**：队长第 2 次退回，仅「口径回填」一类问题——**方向与裁定全部成立**，缺陷是 4 条验收指纹的**字面值不可达**（命令写成了到不了的数）。发现方 = 成员 C（实现时实跑，判定「实现无缺陷、命令字面不可达」，不越权改规格）。**本节由成员 S 在 `.synova-wt-d1051-spec` 工作树内逐条独立复测后回填**；**未改结构、未改写集、未改裁定**（DR-1 的 A 案 + 子裁定 (i) 保持）。
+> **共同教训**：**「绝对计数」型判据在存量仓库里极易不可达**——正确形态是「**锚定 grep**」「**增量（diff）计数**」或「**不变量（文件集合 / 目录命中数）**」。回填后每条判据均**实跑可到**。
+
+### (a) DS2 / §5.1 —— 模板计数 `grep -c "name:"` = 4
+
+- **原口径**：`grep -c "name:" src/l3/report-templates.ts` = **4**
+- **不可达证据（本工作树实跑，基线 3 模板）**：
+  ```
+  $ grep -c "name:" src/l3/report-templates.ts
+  7
+  $ grep -n "name:" src/l3/report-templates.ts
+  14:  name: string;                                          ← interface 字段
+  23:  goals: Array<{ name: string; … }>;                     ← ReportData 字段
+  44:  name: 'daily_briefing',                                ← 模板①
+  89:  name: 'weekly_summary',                                ← 模板②
+  197:  name: 'executive_summary',                            ← 模板③
+  254:    log.info({ name: template.name }, '报告模板已注册');  ← 日志
+  257:  get(name: string): ReportTemplate | undefined {        ← 取值器
+  ```
+  ⇒ 基线即 **7**；加第 4 模板后为 **8**，**字面永不等于 4**。
+- **回填后口径（锚定）**：`grep -c "^  name: '" src/l3/report-templates.ts` = **4**（基线 3 + 新增 1）
+- **实跑输出（锚定形态可到，且恰好数出 3 个模板字面量）**：
+  ```
+  $ grep -c "^  name: '" src/l3/report-templates.ts
+  3                    ← 基线；C 实现后应为 4（= 基线 + 1）
+  $ grep -n "^  name: '" src/l3/report-templates.ts
+  44:  name: 'daily_briefing',
+  89:  name: 'weekly_summary',
+  197:  name: 'executive_summary',
+  ```
+
+### (b) DS18 —— `as any|as never|as unknown as` = 0
+
+- **原口径**：`grep -rn "as any\|as never\|as unknown as" <写集>` = **0**
+- **不可达证据（本工作树实跑；写集 4 个存量 src 文件）**：
+  ```
+  $ grep -c 'as any\|as never\|as unknown as' src/agent/report-assembler.ts   → 2
+  src/agent/report-assembler.ts:77:  const data = report as unknown as Record<string, unknown>;   ← 代码行（存量）
+  src/agent/report-assembler.ts:205: * 铁律 38：用 unknown + 收窄，不用 `as any`）。              ← 注释行
+  $ grep -c 'as any\|as never\|as unknown as' src/routes/conversations.ts    → 1
+  src/routes/conversations.ts:223:    //    禁 im-inbound 的 as never 形态）                        ← 注释行
+  $ grep -c 'as any\|as never\|as unknown as' src/routes/diagnosis.ts        → 0
+  $ grep -c 'as any\|as never\|as unknown as' src/l3/report-templates.ts     → 0
+  ```
+  ⇒ 写集整体**基线存量 3 处**，绝对计数**永不为 0**。
+- **回填后口径（增量零引入）**：`git diff origin/main -- src/ | grep "^+" | grep -c "as any\|as never\|as unknown as"` = **0**
+- **实跑输出（判据形态可用）**：
+  ```
+  $ git diff origin/main -- src/ | grep "^+" | grep -c "as any\|as never\|as unknown as"
+  0                    ← 本工作树无 src 改动；C 的分支上此值即「新增零引入」的判据
+  ```
+  **注**：存量 3 处**不在本卡范围**（本卡禁改 `report-onepager-trace.ts` 等等价约束；`report-assembler.ts` 的 `:77` 为 D49/D480 遗留，若需清零应**另立卡**）。
+
+### (c) §8 指纹 #8 / DS5 —— `DETAILED_REPORT_CHAPTER_TITLES` 「src/ 恰 2 行」
+
+- **原口径**：`grep -rn "DETAILED_REPORT_CHAPTER_TITLES" src/` = **恰 2 行**（1 定义 + 1 调用）
+- **不可达证据**：该计数**漏计 import 与 JSDoc 提及**。按本 spec §5.2/§5.3 自身声明的形态，实现后至少为 **4 行**（`export const …` 定义行 + W1 JSDoc 提及 + W3 `import { … }` 行 + W3 实义使用行），C 实跑为 **5 行**（多 1 处 JSDoc）。**且 C 合理地把「数据时点」章标题改为从装配产物末章标题取（对章序免疫），实义使用数随之变化**——行数型判据**随实现风格漂移**。
+- **本工作树实跑（符号未实现，基线）**：
+  ```
+  $ grep -rn "DETAILED_REPORT_CHAPTER_TITLES" src/      → 0 行   （尚未实现）
+  $ grep -rn "DETAILED_REPORT_CHAPTER_TITLES" src/l3/   → 0 行
+  ```
+- **回填后口径（不变量，与「用几次」解耦）**：
+  1. `grep -rn "DETAILED_REPORT_CHAPTER_TITLES" src/l3/` = **0 行**（子裁定 (i) 的核心不变量：L3 不依赖该常量）
+  2. 消费者文件集合 ⊆ `{src/agent/report-depth.ts, src/agent/report-assembler.ts}`：
+     `grep -rl "DETAILED_REPORT_CHAPTER_TITLES" src/ | grep -vE '^src/agent/(report-depth|report-assembler)\.ts$'` → **空**
+- **实跑输出（形态可用性演示——用同类既有常量 `ONEPAGER_SLOT_TITLES` 证明两条命令都可判定）**：
+  ```
+  $ grep -rl "ONEPAGER_SLOT_TITLES" src/ | sort
+  src/agent/report-assembler.ts
+  src/agent/report-onepager-trace.ts
+  $ grep -rn "ONEPAGER_SLOT_TITLES" src/l3/
+  （空）                                    ← L3 命中 = 0 的不变量形态成立
+  ```
+  **注**：C 的实现选择（末章标题取自装配产物）**不需要**改规格——回填后的判据对「使用次数」免疫，只锚定**定义处**与**消费者文件集合**。
+
+### (d) §8 指纹 #10 / DS19 —— 两路由 `../l3/` 「各恰 1 行」
+
+- **原口径**：`grep -nE "from ['\"]\.\./l3/|import\(['\"]\.\./l3/" <两路由>` → **各恰 1 行**
+- **不可达证据（本工作树实跑）**：
+  ```
+  $ grep -nE "from ['\"]\.\./l3/|import\(['\"]\.\./l3/" src/routes/diagnosis.ts   → 3 行
+  108:type DiagnosisReportLike = import('../l3/synova-diagnosis-engine').DiagnosisReport;      ← 类型位
+  278:    const { createSynovaDiagnosisEngine } = await import('../l3/synova-diagnosis-engine-impl');  ← 值导入（门禁计数）
+  543:            result.report as import('../l3/synova-diagnosis-engine').DiagnosisReport,       ← 类型位（as import(）
+  $ grep -nE "from ['\"]\.\./l3/|import\(['\"]\.\./l3/" src/routes/conversations.ts → 1 行
+  120:  const { createSynovaDiagnosisEngine } = await import('../l3/synova-diagnosis-engine-impl');
+  ```
+  ⇒ **grep 计数 ≠ 门禁计数**。门禁 `check-architecture.sh` 经 `strip_type_position()`（`:94`：剥 `import type` / `: import(` / `as import(` / `type X = import(`）后才是 1。
+- **复现门禁自身计数（决定性）**：
+  ```
+  --- src/routes/diagnosis.ts ---
+    raw grep 行数              = 3
+    strip_type_position 后行数 = 1        ← 与基线 1 相等（棘轮内）；加 1 处值导入即 2>1 = NEW
+  --- src/routes/conversations.ts ---
+    raw grep 行数              = 1
+    strip_type_position 后行数 = 1
+  ```
+- **回填后口径（删掉易误读的 grep 数字，以门禁为准）**：**唯一权威判据** = `bash scripts/check-architecture.sh` 的 `1b. L1→L3` 段 **`new=0`**（§7.4）；裸 grep 行数**不得**用作判据。
+- **实跑输出**：见 §7.4 / 交付回报（`exit=0`、末行 `架构检查: 全部通过 ✅`、`1b.` 段无 `NEW`/`❌`）。
+
+### 13.1 回填影响面（逐条，**无遗漏复核命令**）
+
+| 位置 | 原字面 | 回填后 |
+|------|--------|--------|
+| §11 `DS2` | `grep -c "name:"` = 4 | 锚定 `grep -c "^  name: '"` = 4 |
+| §11 `DS18` | 绝对计数 = 0 | 增量：`git diff origin/main -- src/ \| grep "^+" \| grep -c …` = 0 |
+| §8 指纹 `#8` | src/ 恰 2 行 | L3 命中 = 0 + 消费者文件集合 ⊆ {W1,W3} |
+| §11 `DS5`（**同源，必要上下文措辞**） | src/ 恰 2 行 | 同 #8 不变量 |
+| §8 指纹 `#10` | 两路由各恰 1 行 | 删裸 grep 数，以门禁 `new=0` 为唯一权威 |
+| §11 `DS19`（**同源，必要上下文措辞**） | 两路由各恰 1 行 | 同 #10 |
+
+> **回填完整性复核（可重跑，段界式无行号硬编码）**：
+> ```bash
+> SPEC=docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D1051-line3-report-depth-20260928.md
+> # ① §13 之外不得存在「断言型」旧字面（禁令行/反例说明行不计）
+> awk '/^## 13\./{s=1} /^## 附/{s=0} !s' $SPEC | grep "恰 2 行\|各恰 1 行" | grep -vc "禁用"        # 期望 0
+> # ② §13 之外不得存在「grep … → 期待 N 行」型判据（禁令行不计）
+> awk '/^## 13\./{s=1} /^## 附/{s=0} !s' $SPEC \
+>   | grep "grep .*→ 期待 .*行\|grep .* = [0-9]* 行\|各恰" | grep -vc "禁用\|不得用"                # 期望 0
+> ```
+> **实跑输出**：① `命中数 = 0`（§13 外仅 1 行含该字面，且为**禁令行**「禁用「两路由 `../l3/` grep 各恰 1 行」型字面」，已排除）；② `命中数 = 0`（无输出行）。
+> ⚠️ ② 的过滤器含反例说明豁免：§8 #10 与 §13-(d) 会**引用**「裸 grep = 3 行」作为**不可达证据/禁令**，属预期保留；判据只看「是否存在**肯定式**行数期望」。
+
+### 13.2 同源清扫：§8 剩余**行数型**指纹 → 一律改**文件集合型**（主动预防第 3 次退回）
+
+**为什么扫**：C 发现的 (c)/(d) 不是两条孤立笔误，而是**同一缺陷类**——「`grep -rn "<符号>" src/` **行数** = 定义数 + 调用数」这个假设**不成立**。行数会被三类东西污染：① **JSDoc/注释提及**；② **import / 解构行**（`const { X } = await import(…)` 也含符号名）；③ **子串碰撞**（`renderOnePager` 被 `renderOnePagerOnDemand` 连带命中）。
+
+**实证（本工作树实跑，用同类既有符号，非推测）**：
+```
+$ grep -rn "renderOnePager" src/ | wc -l
+14        ← 按「1 定义 + 2 import + 2 调用」应约为 5；实测 14（JSDoc 提及 + `renderOnePagerOnDemand` 子串碰撞）
+$ grep -rn "buildOnePagerInputs" src/ | wc -l
+3         ← 该项恰好等于「1 定义 + 2 调用」（无碰撞），说明行数型**时对时错、不可预测**
+```
+⇒ 行数型判据**不能作为验收口径**（对错取决于命名与注释，不由实现正确性决定）。
+
+**清扫范围与回填后形态**（§8 表 #1–#7、#9 共 8 条 + §11 DS11/DS15）：
+
+| 位置 | 原口径 | 回填后 |
+|------|--------|--------|
+| §8 #1 `renderReportView` | 期待 3 行 | `grep -rl … \| sort` = 3 文件集合 |
+| §8 #2 `renderDetailedReport` | 期待 2 行 | 定义文件外**消费者集合 = 空**（+ 行为由 T2 断言） |
+| §8 #3 `assembleOnePagerInputsForOrg` | 期待 3 行 | 3 文件集合 |
+| §8 #4 `isRenderableDiagnosisReport` | 期待 3 行 | 3 文件集合 |
+| §8 #5 `normalizeReportViewDepth` | 期待 3 行 | 3 文件集合 |
+| §8 #6 `resolveViewDepthFromUtterance` | 期待 2 行 | 2 文件集合 |
+| §8 #7 `REPORT_VIEW_DEPTHS`/`DEFAULT_R…`/`VIEW_TO_ONEPAGER_DEPTH` | 期待 ≥4 行 | 集合 ⊆ 4 文件 **且含两路由** |
+| §8 #9 `detailed_report` | 期待 ≥2 行 | 2 文件集合（注册处 + 消费处） |
+| §11 `DS11` | `renderReportView` = 3 行 | 同 #1 文件集合 |
+| §11 `DS15` | 「§8 九条」 | 「§8 **十一条**」+ 文件集合型 |
+
+**范围声明（透明、可回退）**：本节属**口径统一**（同类缺陷预防），**不动**结构 / 写集 / 裁定；§8 `#8`/`#10`/`#11` 已是文件集合型或增量型，未改。若队长/CTO 认为超出本次授权范围，可单独回退本节（其余回填不受影响）。
+
+**「grep 回答不了调用链」原则（V3.7 原文口径）**：grep 只回答「这个符号在**哪些文件**出现过」（物理事实）；「它在**正确的调用链**中吗」由 agent 自检 + **测试断言**回答，不由 grep 行数回答。
 
 ---
 
