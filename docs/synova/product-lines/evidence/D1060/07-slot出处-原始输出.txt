@@ -1,0 +1,14 @@
+=== slot 名出处（实读，不猜）===
+  catalog:1730+     key: 'main',
+  catalog:1730+     kind: 'keyed',
+  catalog:1730+     scope: 'root',
+  catalog:1730+     summary: 'Central panel selected by sidebar entry id.',
+  catalog:1730+     doc: 'Central panel selected by sidebar entry id. The reserved `conversation`\nkey hosts the Conversation; other keys receive no Session binding.',
+  catalog:2989+     key: 'sidebar.panellist',
+  catalog:2989+     kind: 'list',
+  catalog:2989+     scope: 'root',
+  catalog:2989+     summary: 'Global panel icons.',
+  catalog:2989+     doc: 'Global panel icons. Each list id addresses the matching main panel;\nthe sidebar owns the button and resolves its label from list metadata.',
+--- source 行 ---
+1764:    source: 'packages/client/ui-layout/src/client/index.ts:66',
+3036:    source: 'packages/client/ui-sidebar/src/client/contract/slots.ts:34',
