@@ -189,16 +189,34 @@
   "base": "d85900407a46fbeb9bb97271ae8fb1fb4ccc4fc4",
   "md_before_head": 1904,
   "md_deleted_in_this_change": 275,
-  "md_added_in_this_change": 1,
-  "predicted_md_after": 1630,
-  "formula": "Δ(md) = −(删除侧 md) + (新增侧 md) = −275 + 1 = −274；绝对数 1904 → 1630",
+  "md_added_in_this_change": 2,
+  "predicted_md_after": 1631,
+  "formula": "Δ(md) = −(删除侧 md 275) + (新增侧 md 2) = −273；绝对数 1904 → 1631",
   "new_files_this_batch": [
    "`.claude/task-briefs/2026-09-28-D1050-B2-task-briefs-outbound.md`（+1 md）",
    "docs/synova/product-lines/evidence/D1050-B2/{A-01-nolink-recheck,A-02-archive-takeover,A-03-outbound-gates,excluded-briefs}.json（4 个 .json，非 md）",
    "task-state/D1050.json（非 md）"
   ],
-  "b1_lesson": "B1 的 +2 教训：计数须把本批新增件计入，否则 Δ 不闭合。本卡照做。",
-  "measured_after_commit": null
+  "b1_lesson": "B1 的 +2 教训：计数必须把本批新增件计入。本批新增 **2 个 .md**（brief + Note）—— 首版 A-03 曾按 +1 预测 1630，实测 1631，差额恰为漏计的 Note ⇒ 已按实测更正，**Δ 精确闭合**。",
+  "measured_after_commit": {
+   "cmd": "git ls-files '*.md' | wc -l",
+   "value": 1631,
+   "matches_prediction": true
+  },
+  "md_added_breakdown": [
+   "`.claude/task-briefs/2026-09-28-D1050-B2-task-briefs-outbound.md`（brief，+1 md）",
+   "memory/notes/proposed/2026-09-28-D1050-b2-task-briefs-outbound.md（Note，+1 md）"
+  ],
+  "briefs_after": {
+   "cmd": "git ls-files '.claude/task-briefs/*.md' | wc -l",
+   "value": 150,
+   "formula": "424 − 275 + 1 = 150",
+   "matches": true
+  },
+  "deletion_residual_check": {
+   "cmd": "逐 275 件 [ -e ] 判残留",
+   "residual": 0
+  }
  },
  "deviations": [
   {
@@ -216,7 +234,101 @@
    "id": "DEV-3",
    "what": "`.claude/task-briefs/2026-09-28-D1050-B2-task-briefs-outbound.md` 原为 alloc-task-id 生成的**未填骨架**，pre-commit 组 6 硬阻断「Q2 排除项缺少文件路径」",
    "handling": "该 brief 在本卡 writeScopes（.claude/task-briefs）内 ⇒ 由本卡按实测填充 Q0/Q1/Q2/Q3/架构层/Done；重跑组 6 通过。已回报队长。"
+  },
+  {
+   "id": "DEV-4",
+   "what": "卡面期望「pr-budget：出库豁免 PASS」，实测**并非**走 D1028 出库豁免路径",
+   "evidence": "闸3 原文：`ℹ️ 出库豁免不适用（D1028 路径级豁免未生效）: ⓐ 不满足: 变更含 8 件增/改（非纯删除/重命名）→ D/R 计入预算; ⓑ 不满足: 白名单外路径 6 件` ⇒ 改由 `ℹ️ D860 治理产物豁免: 282 件不计预算` 放行，终判 `✅ PASS PR 预算内（1 文件）`",
+   "handling": "闸 exit 0，未阻断；如实原样回执，不宣称「出库豁免生效」。根因：本批是「出库 + 本批产物」混合变更，非纯删除、"
+  },
+  {
+   "id": "DEV-5",
+   "what": "CI 与本地对「证据 .json」的口径不同（队长订正，避免读者误判）",
+   "detail": "本地 pre-commit 的 CT-34 纯文档白名单 `DOC_PREFIX_RE` 下 `docs/` 仅允许 .md|.html|.txt ⇒ 证据 .json **不在**白名单 ⇒ 本地走**全量 13 组**。而 CI 侧 `ci.yml:51` 的 docs-only 白名单**含 `\\.(md|json)$`** ⇒ 本批变更集（275 D 的 .md + 4 个 .json + brief + Note + task-state）**全部命中** ⇒ `docs_only=true` ⇒ 走早退（≈2 分钟）。⇒ **CI 成本可控，证据落点无需更改**。",
+   "handling": "仅登记口径差异，不改任何门禁脚本。"
   }
  ],
- "not_a_verdict": "本件为执行方自验材料，非独立审计结论；不含「通过」判定。"
+ "not_a_verdict": "本件为执行方自验材料，非独立审计结论；不含「通过」判定。",
+ "commit": {
+  "sha": "bcf0a226d8641cda268baeb24321725ed014b499",
+  "subject": "chore(D1050): .claude/task-briefs/ 非 archive 存量 brief 出库 275 件（承接后移出）",
+  "composition": {
+   "D": 275,
+   "A": 7
+  },
+  "added": [
+   "`.claude/task-briefs/2026-09-28-D1050-B2-task-briefs-outbound.md`（brief）",
+   "docs/synova/product-lines/evidence/D1050-B2/{A-01,A-02,A-03,excluded-briefs}.json（4 证据）",
+   "memory/notes/proposed/2026-09-28-D1050-b2-task-briefs-outbound.md（Note，队长写）",
+   "task-state/D1050.json"
+  ],
+  "hook_side_commit": "82aaba61e75605438f267f7f03dcd35c543e2c65 —— post-commit hook 自动登记 .claude/bypass.log（D521），**未混入主 commit**",
+  "pushed": false,
+  "ls_remote_check": "git ls-remote --heads origin chore/b2-task-briefs-outbound → 0 条（未推）"
+ },
+ "post_commit_receipts": {
+  "why_rerun": "闸1/闸3 按 `origin/main...HEAD` 取变更集，commit 前 HEAD 未前进 ⇒ 空回执；故 commit 后复跑取真回执。",
+  "闸1_doc_registry": {
+   "cmd": "DOC_TRUTH_ROOT=. bash scripts/doc-system/doc-registry-gate.sh",
+   "exit": 0,
+   "raw": [
+    "── 汇总: 检查 0 个文档，0 个未登记 ──",
+    "  ✅ 登记门禁通过"
+   ]
+  },
+  "闸2_pre_commit": {
+   "cmd": "SYNO_CI=1 bash scripts/pre-commit-check.sh",
+   "exit": 0,
+   "raw_tail": [
+    "  [0;32m✅ G13: 无技能文件变更(跳过)[0m",
+    "",
+    "[0;36m── D782: 文档真相防线（D1 真相验证 + D2 登记门禁）──[0m",
+    "  [0;32m✅ D1 文档真相: 全部硬检查通过 (15 ✅)[0m",
+    "  [0;32m✅ D2 登记门禁: ── 汇总: 检查 0 个文档，0 个未登记 ──[0m",
+    "",
+    "[0;36m── PR 预算门禁 (D734) ──[0m",
+    "  [0;32m✅ D734 PR 预算: 文件数 / 单域 / 落后基线 均在预算内[0m",
+    "  [0;32m✅ V5 平台敏感命令: 新控制塔脚本对照 PLATFORM-CHECKLIST.md (D520)[0m",
+    "  [0;32m✅ DSH 断面一致性 (D943)[0m",
+    "",
+    "═══════════════════════════════════════════════════════════",
+    "  [0;32m✅ 全部 13 组通过[0m",
+    "  [1;33m⚠️  1 项警告 (不阻断)[0m",
+    "═══════════════════════════════════════════════════════════",
+    ""
+   ]
+  },
+  "闸3_pr_budget": {
+   "cmd": "bash scripts/control-tower/check-pr-budget.sh",
+   "exit": 0,
+   "raw": [
+    "── PR 预算门禁（D734）: 基线=origin/main 上限=12 文件 / 落后阈值=20 ──",
+    "  ℹ️  出库豁免不适用（D1028 路径级豁免未生效）:",
+    "       ⓐ 不满足: 变更含 8 件增/改（非纯删除/重命名）→ D/R 计入预算",
+    "       ⓑ 不满足: 白名单外路径 6 件（未落出库白名单）:",
+    "         .claude/bypass.log",
+    "         docs/synova/product-lines/evidence/D1050-B2/A-01-nolink-recheck.json",
+    "         docs/synova/product-lines/evidence/D1050-B2/A-02-archive-takeover.json",
+    "         docs/synova/product-lines/evidence/D1050-B2/A-03-outbound-gates.json",
+    "         docs/synova/product-lines/evidence/D1050-B2/excluded-briefs.json",
+    "         task-state/D1050.json",
+    "  ℹ️  D860 治理产物豁免: 282 件不计预算（brief/卡/Note/规格/自验证据，代码文件仍计入）",
+    "  ✅ ① 变更文件数 1 ≤ 上限 12",
+    "  ✅ ② 变更单域: ✅ PASS 0 个文件同域: 无归属（无归属 0，域判定豁免 1）",
+    "  ✅ ③ 落后 origin/main 0 个提交 ≤ 20",
+    "✅ PASS PR 预算内（1 文件）"
+   ]
+  },
+  "闸4_reference_surface": {
+   "cmd": "grep -nF -f <275 出库清单> -r scripts tests .github .claude/settings.json",
+   "hits": 0
+  },
+  "verdict": "四闸 exit 0；不含「通过」判定——通过与否归 CTO 收件闸 + K3 终审。"
+ },
+ "ci_vs_local_divergence": {
+  "local_pre_commit_13_groups": true,
+  "ci_docs_only_early_exit": true,
+  "ci_docs_only_whitelist": "ci.yml:51 含 \\\\.(md|json)$",
+  "impact": "CI 约 2 分钟；本地全量 13 组 exit 0。"
+ }
 }
