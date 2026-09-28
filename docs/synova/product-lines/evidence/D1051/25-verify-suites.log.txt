@@ -1,43 +1,43 @@
 
  RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-d1051-verify
 
- ✓ tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——正常路径 > ① 取值域恰 2 值 {one_pager, detailed}，默认 = one_pager 2ms
+ ✓ tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——正常路径 > ① 取值域恰 2 值 {one_pager, detailed}，默认 = one_pager 10ms
  ✓ tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——正常路径 > ② 呈现轴 → 一页纸深度映射两值全备（one_pager→ceo，detailed→flywheel） 0ms
- ✓ tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——正常路径 > ③ normalizeReportViewDepth：两合法值各自原样返回（不误报非法） 0ms
+ ✓ tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——正常路径 > ③ normalizeReportViewDepth：两合法值各自原样返回（不误报非法） 2ms
  ✓ tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——正常路径 > ④ 词表两方向全部命中正确方向（detailed 9 词 / one_pager 8 词，逐词断言） 1ms
  ✓ tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——正常路径 > ⑤ 句子内嵌词也命中（includes 语义，非全等匹配） 0ms
  ✓ tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——降级路径 > ⑥ 非法值 → undefined（装配轴词 expert/raw/ceo/flywheel 一律不通用——DS1） 0ms
  ✓ tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——降级路径 > ⑦ 非字符串值 → undefined（不抛、不静默强转） 0ms
- ✓ tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——降级路径 > ⑧ 判别降级：非字符串 / 空串 → matched:false + 默认值（调用方零行为变化） 0ms
+ ✓ tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——降级路径 > ⑧ 判别降级：非字符串 / 空串 → matched:false + 默认值（调用方零行为变化） 1ms
  ✓ tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——降级路径 > ⑨ 不含任何词的长句 → matched:false（不猜、不切换） 0ms
  ✓ tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——边界条件 > ⑩ 最长匹配优先：`讲细一点` 命中 detailed 且 keyword 恰为 `讲细一点`（J4） 0ms
  ✓ tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——边界条件 > ⑪ 最长匹配优先：`再详细一点`（5 字，全表最长）不被 `详细`（2 字）截断 0ms
  ✓ tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——边界条件 > ⑫ 同长词码点字典序稳定：跨方向同长命中时判定唯一且可预期 0ms
  ✓ tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——边界条件 > ⑬ 确定性：同输入两次调用结果深等（无时刻/无随机——DS8） 0ms
- ✓ tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——边界条件 > ⑭ 章节标题单源恰五章且顺序固定（W3 装配 + L3 数据双面共用） 0ms
+ ✓ tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——边界条件 > ⑭ 章节标题单源恰五章且顺序固定（W3 装配 + L3 数据双面共用） 1ms
  ✓ tests/agent/report-assembler.test.ts > D480: renderOnePager — 诊断报告一页纸渲染 > ① 正常报告（ceo 深度）→ markdown 一页纸：含瓶颈+建议+高风险头行，消费 executive_summary 模板 2ms
  ✓ tests/agent/report-assembler.test.ts > D480: renderOnePager — 诊断报告一页纸渲染 > ② 空 rootCauses → 优雅文案（运行平稳/未发现显著瓶颈），无高风险行、无降级标记 0ms
  ✓ tests/agent/report-assembler.test.ts > D480: renderOnePager — 诊断报告一页纸渲染 > ③ registry.render 抛错 → 纯文本 fallback（含降级标记+核心瓶颈），不抛出 1ms
- ✓ tests/agent/report-assembler.test.ts > D480: renderOnePager — 诊断报告一页纸渲染 > ④ flywheel 深度 → top5 根因计数 + 原始建议行动；ceo 深度 → top2 计数 + assembleCeo 摘要；默认 depth = ceo 1ms
- ✓ tests/agent/report-assembler.test.ts > D480: renderOnePager — 诊断报告一页纸渲染 > ⑤ 回归守护：assembleReport flywheel 四层组装行为不变（Stage 5a 同语义） 1ms
- ✓ tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——正常路径 > ① 五章标题字面齐备 + 头行 + 尾行报告 ID 3ms
+ ✓ tests/agent/report-assembler.test.ts > D480: renderOnePager — 诊断报告一页纸渲染 > ④ flywheel 深度 → top5 根因计数 + 原始建议行动；ceo 深度 → top2 计数 + assembleCeo 摘要；默认 depth = ceo 0ms
+ ✓ tests/agent/report-assembler.test.ts > D480: renderOnePager — 诊断报告一页纸渲染 > ⑤ 回归守护：assembleReport flywheel 四层组装行为不变（Stage 5a 同语义） 0ms
+ ✓ tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——正常路径 > ① 五章标题字面齐备 + 头行 + 尾行报告 ID 2ms
  ✓ tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——正常路径 > ② 「详细」的判别点：根因全量输出（3 条全出）+ 置信度降序 0ms
  ✓ tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——正常路径 > ③ 专家完整推理：全部 findings 输出（含同专家多 finding） 0ms
  ✓ tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——正常路径 > ④ 行动建议全量 + 数据时点逐字透传（不换算、不解析） 0ms
  ✓ tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——正常路径 > ⑤ 条目行带可解析溯源指针 [src:report:<reportId>#…]（五类片段齐备） 0ms
  ✓ tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——降级路径 > ⑥ 空 rootCauses / 空 expertReports / 空 recommendations → 各章 [degraded] 且不抛（J6） 1ms
  ✓ tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——降级路径 > ⑦ 空 summary / 空 generatedAt → 结论章与时点章各自 [degraded] 0ms
- ✓ tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——降级路径 > ⑧ 注册表缺 detailed_report → 落 fallback 并含降级标记（J1 判别性夹具） 2ms
+ ✓ tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——降级路径 > ⑧ 注册表缺 detailed_report → 落 fallback 并含降级标记（J1 判别性夹具） 1ms
  ✓ tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——降级路径 > ⑨ registry.render 抛错 → 返回含降级标记的字符串，永不抛出（DS7） 0ms
  ✓ tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——降级路径 > ⑩ 非完整形状经 isRenderableDiagnosisReport 拒绝（不伪造章节的准入面） 0ms
  ✓ tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——边界条件 > ⑪ 确定性：同输入两次渲染字节相等（禁渲染时刻——DS7） 0ms
- ✓ tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——边界条件 > ⑫ reportId 空 → 指针省略（不伪造），尾行显示 (缺省) 1ms
+ ✓ tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——边界条件 > ⑫ reportId 空 → 指针省略（不伪造），尾行显示 (缺省) 0ms
  ✓ tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——边界条件 > ⑬ 分发器 renderReportView：detailed → 详版；one_pager → 与 renderOnePager(ceo) 同源同构 1ms
  ✓ tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——边界条件 > ⑭ 装配轴映射表：one_pager→ceo / detailed→expert（两轴正交的唯一转换点） 0ms
  ✓ tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——边界条件 > ⑮ 单元素/恰临界：1 根因 1 专家 1 建议不触发任何 [degraded] 0ms
- ✓ tests/agent/report-onepager-trace.test.ts > D791: 一页纸结论先行四槽位（渲染结构面） > ① 带 inputs → 四槽位标题字面齐备；S3 行数 = registry 长度且每行带 [src:cycle: 指针 5ms
- ✓ tests/agent/report-onepager-trace.test.ts > D791: 一页纸结论先行四槽位（渲染结构面） > ⑪ 模板槽位标题常量与审计模块 ONEPAGER_SLOT_TITLES 字面一致（双源防漂移） 1ms
- ✓ tests/agent/report-onepager-trace.test.ts > D791: 一页纸结论先行四槽位（渲染结构面） > ② 覆盖审计：missingPointerLines === 0 且 conclusionLines ≥ 4（R1 条条带指针） 1ms
+ ✓ tests/agent/report-onepager-trace.test.ts > D791: 一页纸结论先行四槽位（渲染结构面） > ① 带 inputs → 四槽位标题字面齐备；S3 行数 = registry 长度且每行带 [src:cycle: 指针 4ms
+ ✓ tests/agent/report-onepager-trace.test.ts > D791: 一页纸结论先行四槽位（渲染结构面） > ⑪ 模板槽位标题常量与审计模块 ONEPAGER_SLOT_TITLES 字面一致（双源防漂移） 0ms
+ ✓ tests/agent/report-onepager-trace.test.ts > D791: 一页纸结论先行四槽位（渲染结构面） > ② 覆盖审计：missingPointerLines === 0 且 conclusionLines ≥ 4（R1 条条带指针） 0ms
  ✓ tests/agent/report-onepager-trace.test.ts > D791: 一页纸结论先行四槽位（渲染结构面） > ④ inputs 缺席 → S2/S3 渲染 [degraded] 空态行且不抛出（whole-body 契约） 0ms
  ✓ tests/agent/report-onepager-trace.test.ts > D791: 一页纸结论先行四槽位（渲染结构面） > ⑤ registry.render 抛错 → D480 纯文本 fallback（含降级标记 + 核心瓶颈），不抛出 0ms
  ✓ tests/agent/report-onepager-trace.test.ts > D791: 一页纸结论先行四槽位（渲染结构面） > ⑦ 确定性：同输入两次渲染字节相等 + 跨两个不同系统时刻渲染字节仍相等（禁渲染时刻） 2ms
@@ -47,28 +47,35 @@
  ✓ tests/agent/report-onepager-trace.test.ts > D791: 结论溯源指针（文法 / 覆盖 / 三态解析） > ⑥ 解析器抛错 / 缺席 → 计 unknown 而非 resolved（"判不了" ≠ "判过了"） 1ms
  ✓ tests/agent/report-onepager-trace.test.ts > D791: 结论溯源指针（文法 / 覆盖 / 三态解析） > 边界: 重复指针去重 / 越界 index 计 unresolved / 未知 kind 不匹配 / stripPointers 剥离 0ms
  ✓ tests/agent/report-onepager-trace.test.ts > D791: 结论溯源指针（文法 / 覆盖 / 三态解析） > 边界: buildEvidenceHighlights / assembleOnePagerInputs 字段缺失 → 跳过（不编造）且「空即缺席」 0ms
- ✓ tests/agent/cycle-conclusion-service.test.ts > D791: buildCycleConclusions — 各维度循环结论派生（3-7 数据面） > 正常路径: 2 条真实快照 → 2 行带 @YYYY-MM 指针，文案只拼既有 DashboardRow 字段 14ms
+ ✓ tests/agent/cycle-conclusion-service.test.ts > D791: buildCycleConclusions — 各维度循环结论派生（3-7 数据面） > 正常路径: 2 条真实快照 → 2 行带 @YYYY-MM 指针，文案只拼既有 DashboardRow 字段 13ms
  ✓ tests/agent/cycle-conclusion-service.test.ts > D791: buildCycleConclusions — 各维度循环结论派生（3-7 数据面） > 降级: store 缺席 → 全量「未建立基线」行（registry 驱动，不硬编码维度表） 1ms
  ✓ tests/agent/cycle-conclusion-service.test.ts > D791: buildCycleConclusions — 各维度循环结论派生（3-7 数据面） > 降级: orgId 非法 → lines=[] + reason=invalid-org-id（不抛） 1ms
  ✓ tests/agent/cycle-conclusion-service.test.ts > D791: buildCycleConclusions — 各维度循环结论派生（3-7 数据面） > 降级: 无已注册循环 → lines=[] + reason=no-registered-cycles（不抛，不编造维度） 1ms
  ✓ tests/agent/cycle-conclusion-service.test.ts > D791: buildCycleConclusions — 各维度循环结论派生（3-7 数据面） > 边界: S3 裁剪 7 循环 → 6 条（registry 顺序保留，被裁条目不出现在正文） 1ms
  ✓ tests/agent/cycle-conclusion-service.test.ts > D791: buildCycleConclusions — 各维度循环结论派生（3-7 数据面） > 边界: 未注册维度不出现（S3 只由 registry 驱动，防硬编码「客户/资本/人才」三件套） 0ms
  ✓ tests/routes/diagnosis-report-depth.test.ts > D1051 W4: 报告呈现深度端点（真实路由 + 真实 HTTP） > ⓪ Q5 等价性四条：注入面与生产同形（可判而非声明） 1ms
- ✓ tests/routes/diagnosis-report-depth.test.ts > D1051 W4: 报告呈现深度端点（真实路由 + 真实 HTTP） > ① 归档产物可读：无 depth 的 markdown → 200 text/markdown（现状语义不变） 38ms
+ ✓ tests/routes/diagnosis-report-depth.test.ts > D1051 W4: 报告呈现深度端点（真实路由 + 真实 HTTP） > ① 归档产物可读：无 depth 的 markdown → 200 text/markdown（现状语义不变） 40ms
  ✓ tests/routes/diagnosis-report-depth.test.ts > D1051 W4: 报告呈现深度端点（真实路由 + 真实 HTTP） > ② 零回归判别（J2）：不带 depth 的产物 === `?depth=one_pager` 的产物（字节相等） 7ms
  ✓ tests/routes/diagnosis-report-depth.test.ts > D1051 W4: 报告呈现深度端点（真实路由 + 真实 HTTP） > ③ 3-2 详细报告：`?depth=detailed` → 200 + 五章齐备 + 头回执 detailed 8ms
- ✓ tests/routes/diagnosis-report-depth.test.ts > D1051 W4: 报告呈现深度端点（真实路由 + 真实 HTTP） > ④ 非法 depth → 200 + X-Report-Depth-Degraded: UNKNOWN_DEPTH + 落回一页纸（DS4 不静默） 23ms
+ ✓ tests/routes/diagnosis-report-depth.test.ts > D1051 W4: 报告呈现深度端点（真实路由 + 真实 HTTP） > ④ 非法 depth → 200 + X-Report-Depth-Degraded: UNKNOWN_DEPTH + 落回一页纸（DS4 不静默） 21ms
  ✓ tests/routes/diagnosis-report-depth.test.ts > D1051 W4: 报告呈现深度端点（真实路由 + 真实 HTTP） > ⑤ JSON 分支不变：`?format=json`（含任何 depth）不加深度头、不新增字段 7ms
- ✓ tests/routes/diagnosis-report-depth.test.ts > D1051 W4: 报告呈现深度端点（真实路由 + 真实 HTTP） > ⑥ 未知 reportId → 404 诚实语义不变 2ms
- ✓ tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ① 「讲细一点」→ report_view 帧，depth=detailed，markdown 含详版章节（3-3 正向） 136ms
- ✓ tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ② 「说人话」→ report_view 帧，depth=one_pager，markdown 为四槽位一页纸（3-3 反向） 108ms
- ✓ tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ③ 零回归判别（J5）：不含深度词 → 无 report_view 帧 98ms
- ✓ tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ④ 不伪造（DS12）：无可用报告 → degraded:true + reason=NO_REPORT + markdown=null 102ms
- ✓ tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ⑤ 同源同构（DS11）：帧内 markdown ≡ HTTP `?depth=detailed` 产物 116ms
- ✓ tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ⑥ 幂等：同一会话连发两次「讲细一点」→ 两帧 markdown 字节相等（无时刻污染） 150ms
+ ✓ tests/routes/diagnosis-report-depth.test.ts > D1051 W4: 报告呈现深度端点（真实路由 + 真实 HTTP） > ⑥ 未知 reportId → 404 诚实语义不变 4ms
+ ✓ tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ① 「讲细一点」→ report_view 帧，depth=detailed，markdown 含详版章节（3-3 正向） 134ms
+ ✓ tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ② 「说人话」→ report_view 帧，depth=one_pager，markdown 为四槽位一页纸（3-3 反向） 106ms
+ ✓ tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ③ 零回归判别（J5）：不含深度词 → 无 report_view 帧 99ms
+ ✓ tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ④ 不伪造（DS12）：无可用报告 → degraded:true + reason=NO_REPORT + markdown=null 101ms
+ ✓ tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ⑤ 同源同构（DS11）：帧内 markdown ≡ HTTP `?depth=detailed` 产物 125ms
+ ✓ tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ⑥ 幂等：同一会话连发两次「讲细一点」→ 两帧 markdown 字节相等（无时刻污染） 142ms
+ ✓ tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ⑦ 渲染降级路径 → 帧 degraded:true + reason:RENDER_DEGRADED（R6 判别性：isDegradedRender 恒 false 即红） 98ms
+ ✓ tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ⑧ 对照（防恒真）：正常注册表 → 帧 degraded 恒为 false 且不带 reason 104ms
 
  Test Files  7 passed (7)
-      Tests  65 passed (65)
-   Start at  17:59:33
-   Duration  1.42s (transform 1.08s, setup 0ms, import 1.15s, tests 1.40s, environment 1ms)
+      Tests  67 passed (67)
+   Start at  18:09:19
+   Duration  1.60s (transform 1.08s, setup 0ms, import 1.18s, tests 1.64s, environment 1ms)
 
+npm notice
+npm notice New major version of npm available! 11.17.0 -> 12.1.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.1.0
+npm notice To update run: npm install -g npm@12.1.0
+npm notice

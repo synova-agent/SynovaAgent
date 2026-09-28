@@ -1,20 +1,20 @@
 
  RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-d1051-verify
 
- ❯ tests/routes/conversations-report-view.test.ts (8 tests | 1 failed) 1266ms
-     ✓ ① 「讲细一点」→ report_view 帧，depth=detailed，markdown 含详版章节（3-3 正向） 151ms
-     ✓ ② 「说人话」→ report_view 帧，depth=one_pager，markdown 为四槽位一页纸（3-3 反向） 128ms
-     ✓ ③ 零回归判别（J5）：不含深度词 → 无 report_view 帧 96ms
-     ✓ ④ 不伪造（DS12）：无可用报告 → degraded:true + reason=NO_REPORT + markdown=null 98ms
-     ✓ ⑤ 同源同构（DS11）：帧内 markdown ≡ HTTP `?depth=detailed` 产物 115ms
-     ✓ ⑥ 幂等：同一会话连发两次「讲细一点」→ 两帧 markdown 字节相等（无时刻污染） 150ms
-     × ⑦ 渲染降级路径 → 帧 degraded:true + reason:RENDER_DEGRADED（R6 判别性：isDegradedRender 恒 false 即红） 109ms
-     ✓ ⑧ 对照（防恒真）：正常注册表 → 帧 degraded 恒为 false 且不带 reason 103ms
+ ❯ tests/routes/conversations-report-view.test.ts (8 tests | 1 failed) 1284ms
+     ✓ ① 「讲细一点」→ report_view 帧，depth=detailed，markdown 含详版章节（3-3 正向） 149ms
+     ✓ ② 「说人话」→ report_view 帧，depth=one_pager，markdown 为四槽位一页纸（3-3 反向） 121ms
+     ✓ ③ 零回归判别（J5）：不含深度词 → 无 report_view 帧 95ms
+     ✓ ④ 不伪造（DS12）：无可用报告 → degraded:true + reason=NO_REPORT + markdown=null 101ms
+     ✓ ⑤ 同源同构（DS11）：帧内 markdown ≡ HTTP `?depth=detailed` 产物 118ms
+     ✓ ⑥ 幂等：同一会话连发两次「讲细一点」→ 两帧 markdown 字节相等（无时刻污染） 152ms
+     × ⑦ 渲染降级路径 → 帧 degraded:true + reason:RENDER_DEGRADED（R6 判别性：isDegradedRender 恒 false 即红） 115ms
+     ✓ ⑧ 对照（防恒真）：正常注册表 → 帧 degraded 恒为 false 且不带 reason 104ms
 
  Test Files  1 failed (1)
       Tests  1 failed | 7 passed (8)
-   Start at  18:09:55
-   Duration  1.45s (transform 344ms, setup 0ms, import 101ms, tests 1.27s, environment 0ms)
+   Start at  18:10:01
+   Duration  1.47s (transform 350ms, setup 0ms, import 101ms, tests 1.28s, environment 0ms)
 
 
 ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯

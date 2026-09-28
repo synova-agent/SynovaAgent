@@ -80,14 +80,24 @@ CASES = [
     },
     {
         "id": "R6",
-        "title": "对话帧渲染降级检测恒 false（degraded / reason='RENDER_DEGRADED' 静默化）",
+        "title": "对话帧渲染降级检测恒 false（degraded / reason='RENDER_DEGRADED' 静默化）——T4 补测后覆核",
         "file": "src/routes/conversations.ts",
         "old": "function isDegradedRender(markdown: string): boolean {\n  return markdown.includes('（降级：');\n}",
         "new": "function isDegradedRender(markdown: string): boolean {\n  return false; // INJECTED-RED-6 渲染降级检测恒 false（degraded/RENDER_DEGRADED 静默化）\n}",
         "cmd": ["npx", "vitest", "run", "tests/routes/conversations-report-view.test.ts"],
-        "expect_red": [],
-        "expect_stay_green": True,
-        "assertion": "留痕探针（非验收判据）：若注入后仍绿 ⇒ 该路径（report_view 帧 degraded/reason 字段）在既有套件中零断言覆盖 = 覆盖盲区；若红 ⇒ 已被间接覆盖",
+        "expect_red": ["⑦ 渲染降级路径"],
+        "expect_green": ["⑧ 对照"],
+        "assertion": "补测后：「⑦ 渲染降级路径 → 帧 degraded:true + reason:RENDER_DEGRADED」必须报红；「⑧ 对照（防恒真）」不得连带红",
+    },
+    {
+        "id": "R6c",
+        "title": "降级标记静默化（detailedReportFallback 的「（降级：」被抹掉）→ ⑦ 亦须红（第二独立注入源）",
+        "file": "src/agent/report-assembler.ts",
+        "old": "  const lines = [`# ${report.teamId} 诊断详细报告（降级：模板渲染失败，纯文本输出）`, ''];",
+        "new": "  const lines = [`# ${report.teamId} 诊断详细报告（模板不可用，纯文本输出）`, '']; // INJECTED-RED-6c 降级标记静默化（对话帧侧）",
+        "cmd": ["npx", "vitest", "run", "tests/routes/conversations-report-view.test.ts"],
+        "expect_red": ["⑦ 渲染降级路径"],
+        "assertion": "第二注入源（独立于 R6 的判定点）：帧 degraded 判定依赖 fallback 文面「（降级：」——抹掉后 ⑦ 必须报红",
     },
 ]
 
@@ -117,7 +127,16 @@ def main() -> int:
     records = []
     head = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
 
-    for case in CASES:
+    # CLI: --only R6,R6c  --out <path>（窄复核用：只跑指定用例，产物另存）
+    only = None
+    out = OUT
+    if "--only" in sys.argv:
+        only = [x.strip() for x in sys.argv[sys.argv.index("--only") + 1].split(",") if x.strip()]
+    if "--out" in sys.argv:
+        out = sys.argv[sys.argv.index("--out") + 1]
+    cases = [c for c in CASES if only is None or c["id"] in only]
+
+    for case in cases:
         cid = case["id"]
         path = case["file"]
         pre_sha = sha256_file(path)
@@ -157,7 +176,13 @@ def main() -> int:
             f.write(out_red)
         f_red, t_red, failed_red = parse_vitest(out_red)
         hit_expect = [e for e in case["expect_red"] if any(e in fl for fl in failed_red)]
-        rec["red"] = {"exit": rc_red, "testFiles": f_red, "tests": t_red, "failingTests": failed_red, "expectMatched": hit_expect}
+        expect_green_missing = [g for g in case.get("expect_green", []) if any(g in fl for fl in failed_red)]
+        rec["red"] = {
+            "exit": rc_red, "testFiles": f_red, "tests": t_red, "failingTests": failed_red,
+            "expectMatched": hit_expect,
+            "expectGreenStillGreen": [g for g in case.get("expect_green", []) if g not in expect_green_missing],
+            "expectGreenCollateralFailures": expect_green_missing,
+        }
 
         # ④ revert + green
         subprocess.run(["git", "checkout", "--", path], check=True)
@@ -184,9 +209,14 @@ def main() -> int:
         elif not hit_expect:
             rec["verdict"] = "RED-UNEXPECTED"
             rec["detail"] = f"红了但失败用例未命中期望子串 {case['expect_red']}"
+        elif expect_green_missing:
+            rec["verdict"] = "RED-UNEXPECTED"
+            rec["detail"] = f"连带红（应保持绿的对照组也失败）：{expect_green_missing}"
         else:
             rec["verdict"] = "PASS"
-            rec["detail"] = f"注入即红，失败用例命中 {hit_expect}"
+            rec["detail"] = f"注入即红，失败用例命中 {hit_expect}" + (
+                f"；对照组保持绿 {case.get('expect_green')}" if case.get("expect_green") else ""
+            )
         records.append(rec)
         print(f"[{rec['verdict']}] {cid} {case['title']} | pre={t_pre} | red={t_red} | post={t_post}")
 
@@ -199,14 +229,15 @@ def main() -> int:
         "method": "每例：pre-green → 精确文本注入(恰1处, 带 INJECTED-RED-n 标记) → 同命令须红 → git checkout -- 复原(sha 校验) → 再跑须绿；原始日志见 logs-break-red/",
         "generatedAt": subprocess.run(["date", "-Iseconds"], capture_output=True, text=True).stdout.strip(),
         "head": head,
+        "casesRun": [c["id"] for c in cases],
         "verdictCounts": verdicts,
         "cases": records,
-        "rawLogs": sorted(os.listdir(LOGD)),
+        "rawLogs": sorted(f for f in os.listdir(LOGD) if any(f.startswith(c["id"] + "-") for c in cases)),
     }
-    with open(OUT, "w", encoding="utf-8") as f:
+    with open(out, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
         f.write("\n")
-    print(f"[SUMMARY] {json.dumps(verdicts, ensure_ascii=False)} → {OUT}")
+    print(f"[SUMMARY] {json.dumps(verdicts, ensure_ascii=False)} → {out}")
     return 0 if ok == len(records) else 1
 
 
