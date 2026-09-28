@@ -74,6 +74,10 @@
       "sha256": "9c46e741c0c455181be2d9d1ddd74c58a64f9f65a060489e706a51cf54124700"
     }
   ],
-  "delivered_revision": "9eecea7c24ae868fefce7f3b14c3ae187b30e207",
-  "delivered_revision_note": "R-2：`head_at_write` 是生成时点的 HEAD（可能指向父提交），本字段才是本证据集描述的交付 revision。"
+  "delivered_revision_authoritative": {
+    "how_to_read": "以分支指针为准：`git ls-remote origin refs/heads/chore/b1-archive-outbound`（本证据集的权威 revision）",
+    "why_not_embedded": "自指限制：任何文件都无法记录『包含它自己的那个提交』的 hash —— 写入时该 hash 尚不存在。故此处**不内嵌最终 hash**，只记录指针方法。",
+    "revision_at_write": "9eecea7c（本字段所在提交的父提交；每次修正都会后移一位，属预期）",
+    "revision_readback_verified": "eb601053 —— 队长用 `git show FETCH_HEAD:<path>` 从 origin 回读复核过本文件内容"
+  }
 }
