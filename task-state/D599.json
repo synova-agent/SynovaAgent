@@ -9,7 +9,13 @@
     "at": "2026-09-08",
     "note": "交付合并事实（git log 实证）；本文件由 D770 补登记"
   },
-  "audit": null,
+  "audit": {
+    "verdict": "PASS",
+    "auditor": "kimi-k3",
+    "report": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md",
+    "date": "2026-09-28",
+    "summary": "25-6 运行时配置包实质复验（K3 批次1）：专属套件 23/23 独立重跑绿（Node22）+ mountCustomerConfig 逐请求 discover 无缓存（customer-config-package.ts:367-373）+ 生产接线 diagnosis.ts:226-228/config.ts:34；DSH mountPreset/leakedServices 锚点现验实在"
+  },
   "fix_task_id": null,
   "updated_at": "2026-09-15",
   "updated_by": "synova-cto",

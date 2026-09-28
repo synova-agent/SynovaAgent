@@ -10,7 +10,13 @@
     "at": "2026-09-13",
     "note": "修 F3（跨平台 P0）：打包态沙箱 preload 不允许 require 相对文件 → electronAPI undefined → UI 全线失效。保持 renderer 沙箱，改 additionalArguments 传配置 + 加启动自检哨兵。功能级验证：应用自检输出 preload-check OK（serverUrl=http://localhost:18790）"
   },
-  "audit": null,
+  "audit": {
+    "verdict": "PASS",
+    "auditor": "kimi-k3",
+    "report": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md",
+    "date": "2026-09-28",
+    "summary": "F3 修复物理确认（K3 批次1）：app.asar 解包 preload.cjs 含 --synova-server-url 透传方案 + 打包态直连实测 [preload-check] OK: electronAPI 已暴露 + 渲染层资产加载 + healthz 200；自检哨兵 main.cjs:109-124 在位"
+  },
   "fix_task_id": null,
   "updated_at": "2026-09-13",
   "updated_by": "synova-cto"

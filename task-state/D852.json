@@ -15,7 +15,13 @@
     ".claude/task-briefs/D852.md"
   ],
   "impl": "docs/synova/product-lines/product-lines.yaml（+6 验收点，28 线不变）+ preconditions.yaml（NA-D852 + CLC-1/CLC-2）+ 3 份 coordination 落地件；已合 main 25082884（PR #681）",
-  "audit": null,
+  "audit": {
+    "verdict": "CONDITIONAL PASS",
+    "auditor": "kimi-k3",
+    "report": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md",
+    "date": "2026-09-28",
+    "summary": "文档交付属实（K3 批次1：6 验收点+live-restart 清单+V1 变更单三件齐、yaml 可解析）。CONDITIONAL：其所定义 25-8/25-9 至今零实现零测试，却被 A2 写假绿 pass（P0-1，FIX-A/FIX-C 立项）；DSH 行号引用在当前快照不可核（P1-2 需重锚版本）"
+  },
   "fix_task_id": null,
   "updated_at": "2026-09-20",
   "updated_by": "mac-dev-doc",

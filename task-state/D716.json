@@ -40,7 +40,13 @@
     },
     "note": "spec 2（1-5 双引导收敛）Win 线实施。判绿口径遵守：不以打包态 404 冒充收敛（打包态证据归 Mac）；1-5 状态推进与证据归档归 Mac/CTO（本卡不改 product-lines.yaml）。DS9/DS10 归 Mac/CTO。"
   },
-  "audit": null,
+  "audit": {
+    "verdict": "PASS",
+    "auditor": "kimi-k3",
+    "report": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md",
+    "date": "2026-09-28",
+    "summary": "1-5 双引导收敛复验（K3 批次1）：setup-guide-retired.test.ts 14/14 绿（Node22 实测）+ app/js/setup.js 已删 + 410 路由先于 /app 静态挂载（server.ts:320-325）"
+  },
   "fix_task_id": null,
   "updated_at": "2026-09-13",
   "updated_by": "dev-doc",

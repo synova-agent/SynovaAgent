@@ -45,7 +45,13 @@
     ],
     "red_lines": "scripts/audit/ 零触碰；scripts/product-lines/* 零改动；线 1 modules（electron/ electron-renderer/ scripts/install* scripts/deploy/ scripts/setup/）零改动"
   },
-  "audit": null,
+  "audit": {
+    "verdict": "PASS",
+    "auditor": "kimi-k3",
+    "report": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md",
+    "date": "2026-09-28",
+    "summary": "线1 桌面证据链复现（K3 批次1）：mac-install 四断言 5s 全过 / 计时 8.4s WITHIN_TARGET / 升级 DATA_RETAINED(md5 全等+integrity ok) / 签名门禁 exit 0——四类命令全部独立重跑绿"
+  },
   "fix_task_id": null,
   "updated_at": "2026-09-13",
   "updated_by": "dsh-harness-mac",

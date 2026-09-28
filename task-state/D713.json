@@ -10,7 +10,13 @@
     "at": "2026-09-13",
     "note": "ad-hoc 签名 + 构建期自检 + 按 arch 备 native + 出货前签名门禁；配套证据 docs/synova/product-lines/evidence/D713-published-artifact-20260913.json"
   },
-  "audit": null,
+  "audit": {
+    "verdict": "CONDITIONAL PASS",
+    "auditor": "kimi-k3",
+    "report": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md",
+    "date": "2026-09-28",
+    "summary": "发布物实测记录复现成立（K3 批次1，四断言+签名）；CONDITIONAL：本仓 release dmg 为 09-13 15:49 构建（md5 9326757d…≠存档 00cdeac3…），含 D714 修复且实测健康——存档产物 md5 链需 CTO 补登记新发布物"
+  },
   "fix_task_id": null,
   "updated_at": "2026-09-13",
   "updated_by": "synova-cto"
