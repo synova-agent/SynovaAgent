@@ -53,13 +53,13 @@
 | 层 | 本卡动作 | 既有模块 |
 |----|---------|---------|
 | L1 交互 | `GET …/report?depth=` 生效；对话 SSE 旁挂 `report_view` 帧 | `src/routes/diagnosis.ts`、`src/routes/conversations.ts` |
-| L2 编排/装配 | 详细报告渲染器（`DiagnosisReport → 章节 markdown`）；S2/S3 输入装配下沉为可复用导出 | `src/agent/report-assembler.ts`、`src/agent/report-onepager-trace.ts`、`src/agent/cycle-conclusion-service.ts` |
-| L3 洞察/版式 | **呈现粒度轴**单一事实源 + 第 4 个模板 `detailed_report` | `src/l3/report-templates.ts`、**新增 `src/l3/report-depth.ts`** |
+| L2 编排/装配 | **呈现粒度轴单一事实源（DR-1 裁定落点）** + 详细报告渲染器（`DiagnosisReport → 章节 markdown`）+ S2/S3 输入装配下沉为可复用导出 | `src/agent/report-assembler.ts`、`src/agent/report-onepager-trace.ts`、`src/agent/cycle-conclusion-service.ts`、**新增 `src/agent/report-depth.ts`** |
+| L3 洞察/版式 | 第 4 个模板 `detailed_report`（**哑渲染器，零新增 import**——见 §4.5 Q7 子裁定 (i)） | `src/l3/report-templates.ts` |
 | L4/L5 | **零改动**（报告归档读面用既有 `listDiagnosisReports` / `getDiagnosisCheckpoint`） | — |
 
 **b) 文件审计（grep 实测，全部 file:line 于 §4）** — 复用判断：`renderOnePager` 复用（不透支）；`ReportTemplateRegistry` 复用（加第 4 模板，**无任何 `list().length` 断言**，见 §7.2）；`ReportData` 复用（**纯附加可选字段**）；`buildOnePagerInputs` 的 S2/S3 装配**下沉复用**（消除两处实现）；对话入口复用（**不新建路由**）。
 
-**c) 决策** — 复用优先，**只新增 1 个 src 模块**（`src/l3/report-depth.ts`：深度轴词表 + 守卫 + 映射 + 对话判别词表）；不新建路由、不新建 SSE 端点、不扩 `.hbs` 第二轨、不碰 `IntentRouter`。
+**c) 决策** — 复用优先，**只新增 1 个 src 模块**（`src/agent/report-depth.ts`，**L2**：深度轴词表 + 守卫 + 一页纸深度映射 + 对话判别词表；**零 import，不引 L3 也不引其他 L2 模块**——见 §4.5 Q7）；不新建路由、不新建 SSE 端点、不扩 `.hbs` 第二轨、不碰 `IntentRouter`、**L1 零新增跨层 import**。
 
 ### Q1 调研
 
@@ -82,7 +82,7 @@
 ### Q2 范围（最简方案）
 
 **做什么**（逐文件见 §5.1）：
-- 新增 `src/l3/report-depth.ts`：`ReportViewDepth` 轴 + 守卫 + 两根轴的映射 + 3-3 对话判别词表（**纯函数，零 I/O**）。
+- 新增 `src/agent/report-depth.ts`（**L2**）：`ReportViewDepth` 轴 + 守卫 + 一页纸深度映射 + 3-3 对话判别词表（**纯函数，零 I/O，零 import**——DR-1 裁定 A 案）。
 - `src/l3/report-templates.ts`：`ReportData` **+1 个可选字段** `chapters?`；注册第 4 个模板 `detailed_report`（消费 `chapters`）。
 - `src/agent/report-assembler.ts`：+`renderReportView(report, viewDepth, inputs?)` 分发器、+`renderDetailedReport(report)`（`DiagnosisReport → 章节 ReportData → registry.render`）、+`assembleOnePagerInputsForOrg(orgId, graphStore?)`（S2/S3 装配的**唯一实现**，`diagnosis.ts:723` 私有函数改为薄委托）；+`isRenderableDiagnosisReport(v)` 形状谓词。
 - `src/routes/diagnosis.ts`：`GET …/report` 的 markdown 分支接受 `?depth=one_pager|detailed`，默认 `one_pager` = **现状字节级不变**。
@@ -205,6 +205,17 @@
 - **F4（3-3 渲染链）**：对话流内零渲染（E3）；S2/S3 装配私有不可复用（C9）。
 - **F5（证据面）**：GS-08 无固定诊断产物（§1 偏差②）；三点 `status: uncommitted`，**0 证据**。
 
+### G. 架构门禁实测（DR-1 依据；两个方向都写清）
+
+**门禁脚本**：`bash scripts/check-architecture.sh`（250 行）；L1 文件集含 **`src/routes/`**（`:70` `for d in routes tui-v2 tui-v3 mcp cli l1 l1-interaction`）；L3 路径模式 `PAT_L3='(/l3/|/sentinel/|/expert-platform/|/expert/)'`（`:88`）；棘轮比对 `compare_baseline()`（`:96-125`）；`new > 0` 且 `SYNO_CI=1` → `FAIL=$((FAIL+1))`（`:157-159`）⇒ **CI strict = 硬阻断**。匹配的是 import 语句文本的三形态（`from ''` / `import('')` / `require('')`，`:132`），且 `strip_type_position()`（`:94`）**豁免 `import type` 与非值位置**。
+
+| 方向 | 门禁规则（实测） | 本卡约束 |
+|------|----------------|---------|
+| **L1 → L3**（禁新增） | 基线 `tests/architecture/l1-cross-layer-baseline.txt` `[L1→L3]` 段实测：`src/routes/conversations.ts=1`、`src/routes/diagnosis.ts=1`（各已用满 1 处——`../l3/synova-diagnosis-engine-impl` 引擎动态 import，见下方原始输出 `:120` / `:278`） | **两文件各不得再出现任何 `../l3/**` 值导入**（否则 `2 > 1` = 2 处 `NEW` = PR CI 硬失败）。⇒ **呈现轴模块必须落 L2**（`src/agent/report-depth.ts`），L1 经 `../agent/report-depth` 取用 ⇒ 命中 `PAT_L3` 零次 |
+| **L3 → L2**（本模块的依赖方向） | 门禁**未**设 L3→L2 检查（脚本内边界检查仅：L2→L4 `:40-57`、L1→L3/L4/L5 `:174-180`、L3→L5 `:181-199`）；架构规则（铁律 39 图：`L3 → L2 + L4`）**允许** L3 依赖 L2 | 本卡**不制造任何 L3→L2 的值导入**：子裁定 (i) 让章节标题**随数据走**（`chapters: {title, body}[]`），`src/l3/report-templates.ts` **零新增 import** ⇒ 既无 L1→L3，也无 **L2↔L3 循环 import**（唯一方向为既有的 L2→L3：`src/agent/report-assembler.ts` → `src/l3/report-templates.ts`，今日已存在，未改） |
+
+**门禁现状实测（撰写/修订时，未写产品代码）**：`bash scripts/check-architecture.sh` → `1b./1c./1d.` 三段均为「存量违规…基线棘轮内」`new=0`，末行 **`架构检查: 全部通过 ✅`**，`exit=0`（全量原始输出见交付回报）。
+
 ---
 
 ## 4.5 决策参考（D333 四步 + 收敛检查）
@@ -218,7 +229,7 @@
 | ① 第一性原理 | 「装配多少层数据」（`ReportDepth`：ceo/flywheel/expert/raw → `AssembledReport.data` JSON）与「输出几章多少字」（呈现粒度 → markdown）是**正交的两根轴**。实测 B3/B4 证明装配轴产出 JSON 而非章节 ⇒ 复用必然错义。 |
 | ② Anthropic 基线 | 契约优先（铁律 47）：一根轴一个类型、一个词表。共享枚举会让 `?depth=expert` 二义（要 JSON？要章节？要一页纸？）。 |
 | ③ 开源实证 | 同资源多视图走**查询参数 + 独立视图枚举**（`?format=…&depth=…`）是 HTTP 内容协商的通用形态；`format=markdown\|json` 已是既有形态（C2），`depth` 与之正交、互不覆盖。 |
-| ④ 收敛检查 | **取值域**：`one_pager \| detailed`（**不含** ceo/flywheel/expert/raw）。**非法值/缺席语义**：回退 `one_pager`（= 今日现状）+ `log.warn` + 响应头 `X-Report-Depth-Degraded: UNKNOWN_DEPTH`（**不静默**，铁律 24）。**两轴映射**（唯一定义点 `src/l3/report-depth.ts`）：`one_pager → 装配 'ceo' / 一页纸 'ceo'`，`detailed → 装配 'expert' / 一页纸 'flywheel'`（`flywheel` 仅用于详版页头的 Top-N 更全，不额外接线）。 |
+| ④ 收敛检查 | **取值域**：`one_pager \| detailed`（**不含** ceo/flywheel/expert/raw）。**非法值/缺席语义**：回退 `one_pager`（= 今日现状）+ `log.warn` + 响应头 `X-Report-Depth-Degraded: UNKNOWN_DEPTH`（**不静默**，铁律 24）。**两轴映射**（唯一定义点：一页纸深度 `VIEW_TO_ONEPAGER_DEPTH` 在 `src/agent/report-depth.ts`（W1）；装配深度 `VIEW_TO_ASSEMBLE_DEPTH` 在 `src/agent/report-assembler.ts`（W3，`ReportDepth:31` 同文件）——**均为 L2，零跨层边**）：`one_pager → 装配 'ceo' / 一页纸 'ceo'`，`detailed → 装配 'expert' / 一页纸 'flywheel'`（`flywheel` 仅用于详版页头的 Top-N 更全，不额外接线）。 |
 
 ### Q2（装载层与文件数）——裁定：**L3 加第 4 模板 + L2 做映射；新增 src 模块 1 个（不是 3 个）**
 
@@ -227,7 +238,7 @@
 | ① 第一性原理 | 版式（模板）与数据装配（映射）必须分层：模板只认 `ReportData`，映射只认 `DiagnosisReport`。第 4 模板与既有 3 个同构 ⇒ 注册表是**唯一版式事实源**，不引入第二套加载轨。 |
 | ② Anthropic 基线 | 最小可审单元：1 个新 src 模块（纯函数词表）+ 4 处同构扩展，优于 3 个新模块。 |
 | ③ 开源实证 | add optional prop（`ReportData.chapters?`）而非新增 5 个模板专属字段——泛型章节数组把章节语义留在 L2，模板保持哑渲染器。 |
-| ④ 收敛检查（**文件数硬算**） | D734 上限 **12 文件**（治理产物豁免）。本卡 **9 个预算内文件** = 5 改（`src/l3/report-depth.ts` 为新增；`src/l3/report-templates.ts`、`src/agent/report-assembler.ts`、`src/routes/diagnosis.ts`、`src/routes/conversations.ts` 为改）+ 4 新 test；**+2 治理产物**（spec/brief）。**不触** `src/agent/builtin-tools.ts`（见 Q3 改动说明：3-3 走路由层，工具面不动 ⇒ 比 C 草案少 1 改）。 |
+| ④ 收敛检查（**文件数硬算**） | D734 上限 **12 文件**（治理产物豁免）。本卡 **9 个预算内文件** = 5 改（`src/agent/report-depth.ts` 为新增，**L2**；`src/l3/report-templates.ts`、`src/agent/report-assembler.ts`、`src/routes/diagnosis.ts`、`src/routes/conversations.ts` 为改）+ 4 新 test；**+2 治理产物**（spec/brief）。**不触** `src/agent/builtin-tools.ts`（见 Q3 改动说明：3-3 走路由层，工具面不动 ⇒ 比 C 草案少 1 改）。**落层修正（Q7 A 案）不改变文件数**。 |
 
 ### Q3（3-3 判别归属层）——裁定：**L1 路由层确定性判别（关键词表），禁 LLM 判意图；不扩 `IntentRouter`**
 
@@ -236,7 +247,7 @@
 | ① 第一性原理 | 「说句话就切换」是可承诺的产品行为 ⇒ 必须**确定性**。LLM 判意图引入不确定性，且无法写「删掉即报红」的夹具。 |
 | ② Anthropic 基线 | 判别纯函数化（零 I/O、可单测）；路由只做「取词 → 查表 → 分发」。既有测试文化钉死确定性（`report-onepager-trace.test.ts` 跨系统时刻字节相等）⇒ 判别不得引入任何时刻/随机。 |
 | ③ 开源实证 | 命令式自然语言接口（CLI/git 风格）用**关键词表 + 最长匹配**实现确定性别名，而非语义模型。 |
-| ④ 收敛检查（**确定性边界**） | 词表（**单源** `src/l3/report-depth.ts`，按 `(长度 desc, 字典序 asc)` 排序，**逐条 `includes`，首个命中即判定**——最长匹配优先，故 `讲细一点` 先于 `细一点` 命中 `detailed`）：<br>· `detailed`：`讲细一点` / `再详细一点` / `详细` / `细一点` / `展开` / `深一点` / `再深` / `完整报告` / `全量`<br>· `one_pager`：`说人话` / `一句话` / `概览` / `简单说` / `太长了` / `看不懂` / `简短` / `总结一下`<br>**未命中 → 不切换**（不出现 `report_view` 帧，零行为变化），工具/日志侧 `log.debug`。**禁 LLM 判意图**；`IntentRouter`（E11）不动。 |
+| ④ 收敛检查（**确定性边界**） | 词表（**单源** `src/agent/report-depth.ts`，L2；按 `(长度 desc, 字典序 asc)` 排序，**逐条 `includes`，首个命中即判定**——最长匹配优先，故 `讲细一点` 先于 `细一点` 命中 `detailed`）：<br>· `detailed`：`讲细一点` / `再详细一点` / `详细` / `细一点` / `展开` / `深一点` / `再深` / `完整报告` / `全量`<br>· `one_pager`：`说人话` / `一句话` / `概览` / `简单说` / `太长了` / `看不懂` / `简短` / `总结一下`<br>**未命中 → 不切换**（不出现 `report_view` 帧，零行为变化），工具/日志侧 `log.debug`。**禁 LLM 判意图**；`IntentRouter`（E11）不动。 |
 
 ### Q4（对话桥报告产物字段）——裁定：**既有 `complete` 帧一字不改；旁挂新帧 `report_view`（不是给 `complete` 加字段）**
 
@@ -265,6 +276,26 @@
 | ③ 开源实证 | 报告交付以「服务端渲染 markdown → 客户端样式化」为常见形态；HTML/PDF 属导出层（3-4）。 |
 | ④ 收敛检查 | §6 逐条写明「不改 `extensions/reports/default.hbs` / `executive-summary.hbs` / `manifest.json`」；若后续裁定改走 `.hbs` 轨，须**另立卡**并同步本表第 4 行。 |
 
+### Q7（DR-1 退回裁定：呈现轴的落层）——裁定：**A 案 + 子裁定 (i)**
+
+> 触发：队长退回 `task-1`（rev 5），缺陷 **DR-1：新增 L1→L3 跨层违规 ⇒ CI strict 硬失败**。本规格初版把呈现轴模块放在 L3（`src/l3/report-depth.ts`），而 L1 的 `src/routes/diagnosis.ts`（读 `?depth=`）与 `src/routes/conversations.ts`（判别深度词）都要 import 它 ⇒ **两文件各 +1 → `2 > 1` = 2 处 NEW**。
+
+| 步 | 内容 |
+|----|------|
+| ① 第一性原理 | 「深度词表 / 查询参数规范化 / 对话话语判别」全部是**编排层关注点**（解析入参、决定渲染策略），不是 L3 洞察层能力。放 L3 只是「版式相关所以放版式目录」的类比误推——**语义归属应看谁定义策略，而非看概念像谁**。 |
+| ② Anthropic 基线 | 铁律 39 只允许 L1→L2 相邻依赖；门禁是**棘轮**（只减不增），存量违规不是「预留配额」而是待偿债。新增能力**不得消耗存量额度**。 |
+| ③ 开源实证 | 分层仓库中「请求解释层（request interpretation）」惯例与编排层同居；跨层白名单/棘轮基线的通行做法是**新代码零新增命中**，而非提高基线。 |
+| ④ 收敛检查（**选 A 不选 B**） | **A 案**：`src/l3/report-depth.ts` → **`src/agent/report-depth.ts`**（L2），配对测试 `tests/l3/report-depth.test.ts` → **`tests/agent/report-depth.test.ts`**。合法性：L1→L2 ✓（相邻）、L2 同层 ✓、L3→L2 ✓。**文件数不变（仍 9）**。**B 案被否**：让 L1 只透传原始字符串、由 L2 回深度结果——虽然也能消除 NEW，但把「解析 + 判别 + 映射」三件都塞进 `report-assembler.ts`（该文件已 533 行且持有 D791a 回归红线），**职责混杂 + 扩大热点文件改动面**；A 案把新概念集中在新文件，边界更清。 |
+
+**子裁定 (i)（`DETAILED_REPORT_CHAPTER_TITLES` 归属）——裁定：L3 模板不依赖共享常量，章节标题随数据走。**
+
+- `ReportData.chapters?: Array<{ title: string; body: string[] }>` —— **title 与正文同源**（由 L2 装配时一并写入）。
+- `DETAILED_REPORT_CHAPTER_TITLES` 留在 **L2**（`src/agent/report-depth.ts`），**唯一消费者 = `src/agent/report-assembler.ts`（同层）**；`src/l3/report-templates.ts` 只做 `for (const ch of data.chapters)` 的哑渲染，**零新增 import**。
+- **否决 (ii)**（明写 L3→L2 import）：虽然门禁未设 L3→L2 检查且铁律 39 允许，但 `src/agent/report-assembler.ts`（L2）今日已 import `src/l3/report-templates.ts`（L3）⇒ 再加 L3→L2 就构成 **L2↔L3 双向耦合**（运行时无环但**模块图成环**，后续任一侧改动都会引发两侧连锁），且为省一个字段引入跨层依赖，**收益不抵成本**。
+- ⇒ **两个方向都要干净**：无 L1→L3（A 案保证）、无 L3→L2（子裁定 (i) 保证）、无 L2↔L3 环；唯一跨层边是既有的 L2→L3（未改动）。
+
+**连带修订清单（本裁定波及）**：§3 Q0(a) 分层表 · §3 Q2 做什么 · §4 新增 G 节 · §5.1 写集表 W1/T1 与 W2 字段形状 · §5.2 契约块（路径 + `VIEW_TO_ASSEMBLE_DEPTH` 移至 W3）· §5.3 章节表 · §7.2 架构注（改为双向口径）· §7.4 新增门禁验收 · §8 接线指纹 #8 · §11 DS1/DS5/DS8 路径 · §12 自检链。**均已同步，无遗漏**（复核方式：`grep -n "src/l3/report-depth\|tests/l3/report-depth" <spec>` 应仅命中本 Q7 行的**历史对照**表述）。
+
 ---
 
 ## 5. What We Build
@@ -273,12 +304,12 @@
 
 | # | 文件 | 操作 | 说明 | 层 | 承重验收点 |
 |---|------|------|------|----|-----------|
-| W1 | `src/l3/report-depth.ts` | **新建** | 呈现粒度轴单一事实源：`REPORT_VIEW_DEPTHS` / `ReportViewDepth` / `DEFAULT_REPORT_VIEW_DEPTH` / `normalizeReportViewDepth` / `VIEW_TO_ASSEMBLE_DEPTH` / `VIEW_TO_ONEPAGER_DEPTH` / `DETAILED_REPORT_CHAPTER_TITLES` / `resolveViewDepthFromUtterance`（含词表常量）。**纯函数，零 I/O，零时刻** | L3 | 3-2 / 3-3 |
-| W2 | `src/l3/report-templates.ts` | 改 | `ReportData` **+1 可选字段** `chapters?: Array<{title: string; lines: string[]}>`；注册第 4 模板 `detailed_report`（消费 `chapters`，空章 → `[degraded]` 说明行）；既有 3 模板与既有字段**逐字不动** | L3 | 3-2 |
-| W3 | `src/agent/report-assembler.ts` | 改 | +`renderDetailedReport(report)`、+`renderReportView(report, viewDepth, inputs?)` 分发器、+`assembleOnePagerInputsForOrg(orgId, graphStore?)`（F4 的 S2/S3 装配**唯一实现**）、+`isRenderableDiagnosisReport(v)` 谓词；`renderOnePager`/`assembleReport` **逻辑零改** | L2 | 3-1/3-2/3-3 |
+| W1 | `src/agent/report-depth.ts` | **新建** | 呈现粒度轴单一事实源：`REPORT_VIEW_DEPTHS` / `ReportViewDepth` / `DEFAULT_REPORT_VIEW_DEPTH` / `normalizeReportViewDepth` / `VIEW_TO_ONEPAGER_DEPTH` / `DETAILED_REPORT_CHAPTER_TITLES` / `resolveViewDepthFromUtterance`（含词表常量）。**纯函数，零 I/O，零时刻，零 import**（不引 L3、不引其他 L2 模块——DR-1 裁定 A 案） | **L2** | 3-2 / 3-3 |
+| W2 | `src/l3/report-templates.ts` | 改 | `ReportData` **+1 可选字段** `chapters?: Array<{ title: string; body: string[] }>`（**标题随数据走**——子裁定 (i)，本文件**零新增 import**）；注册第 4 模板 `detailed_report`（哑渲染 `data.chapters`，空章 → `[degraded]` 说明行）；既有 3 模板与既有字段**逐字不动** | L3 | 3-2 |
+| W3 | `src/agent/report-assembler.ts` | 改 | +`renderDetailedReport(report)`、+`renderReportView(report, viewDepth, inputs?)` 分发器、+`VIEW_TO_ASSEMBLE_DEPTH`（**装配轴映射表唯一落点**——`ReportDepth` 本就定义于本文件 `:31`，与 W1 同层取值，**零跨层边**）、+`assembleOnePagerInputsForOrg(orgId, graphStore?)`（F4 的 S2/S3 装配**唯一实现**）、+`isRenderableDiagnosisReport(v)` 谓词；`renderOnePager`/`assembleReport` **逻辑零改** | L2 | 3-1/3-2/3-3 |
 | W4 | `src/routes/diagnosis.ts` | 改 | `respondReport` 的 **markdown 分支**读 `?depth=`（默认 `one_pager`）；`renderOnePagerOnDemand` 改收 `viewDepth`；`buildOnePagerInputs`（`:723`）改为薄委托 `assembleOnePagerInputsForOrg`（**行为等价**）；私有 `isFullDiagnosisReportLike` **不动** | L1 | 3-1/3-2 |
 | W5 | `src/routes/conversations.ts` | 改 | ① `handleConversationMessage` 内**确定性判别**深度词 → ② 取报告（本轮 `diagnosisResult.report` 优先，否则归档最新）→ ③ `renderReportView` → ④ 旁挂 `report_view` 帧。`complete` 帧（`:328-336`）**一字不改**；未命中词 → 零行为变化 | L1 | 3-3 |
-| T1 | `tests/l3/report-depth.test.ts` | 新建 | W1 三路径：正常（两值全映射）/ 降级（非法值 → `undefined`；空串 → 未命中）/ 边界（**最长匹配优先级**：`讲细一点` 必须命中 `detailed` 而非被 `细一点` 截断；同长词字典序稳定） | — | 3-2/3-3 |
+| T1 | `tests/agent/report-depth.test.ts` | 新建 | W1 三路径：正常（两值全映射）/ 降级（非法值 → `undefined`；空串 → 未命中）/ 边界（**最长匹配优先级**：`讲细一点` 必须命中 `detailed` 而非被 `细一点` 截断；同长词字典序稳定）。**配对测试路径随 W1 落层同步**（DR-1 裁定 A 案） | — | 3-2/3-3 |
 | T2 | `tests/agent/report-detailed.test.ts` | 新建 | W3 详细渲染三路径：正常（五章俱全）/ 降级（空 `rootCauses`/空 `expertReports` → 该章 `[degraded]` 且**不抛**）/ 边界（**删掉即红**：注入缺 `detailed_report` 的注册表 → 必须落到 fallback 并含降级标记；确定性：同输入两次字节相等） | — | 3-2 |
 | T3 | `tests/routes/diagnosis-report-depth.test.ts` | 新建 | **真实路由集成**（Q5 四条等价性断言）：`?depth=detailed` → 200 text/markdown 且含章节标题；**不带 depth → 与 `?depth=one_pager` 字节相等**（零回归判别夹具）；非法 depth → 200 + `X-Report-Depth-Degraded` + 落回一页纸 | — | 3-1/3-2 |
 | T4 | `tests/routes/conversations-report-view.test.ts`（**承重对象是路由帧，不是工具单测**——由 C 草案的 `tests/agent/builtin-tools-report-depth.test.ts` 改名而来，见下方改名说明） | 新建 | **对话帧集成**：注入归档报告（`saveDiagnosisCheckpoint`）→ `POST /api/conversations/:id/messages` 带「讲细一点」→ 流内出现 `report_view` 且 `depth='detailed'`、`markdown` 含章节；带「说人话」→ `depth='one_pager'`；**不含深度词 → 无 `report_view` 帧**（判别性夹具）；无报告 → `degraded:true, reason:'NO_REPORT'`；全程末帧 `end`、无 `error` 帧 | — | 3-3 |
@@ -288,7 +319,9 @@
 > **W5 撤销说明（对应 §4.5 Q2 收敛检查）**：成员 C 草案含 `src/agent/builtin-tools.ts` 改动（新增内建工具）。**本规格裁定 3-3 走路由层确定性判别**（Q3/Q4），故 **`src/agent/builtin-tools.ts` 移出写集**——工具面不动，写集由 6 改降为 5 改。
 > **T4 改名说明**：3-3 的承重测试是**路由帧集成**，不是工具单测；文件名必须反映承重对象（`tests/routes/conversations-report-view.test.ts`）。
 
-### 5.2 深度契约（`src/l3/report-depth.ts`，W1）
+### 5.2 深度契约（`src/agent/report-depth.ts`，W1；**L2**，DR-1 裁定 A 案）
+
+> **依赖方向声明（本模块的铁律 39 面）**：W1 **零 import** —— 不引 `src/l3/**`（不越层）、不引其他 `src/agent/**` 模块（不制造同层耦合）。`ReportDepth`（装配轴）与 `VIEW_TO_ASSEMBLE_DEPTH` 均落在 **W3**（同层，`:31` 定义处），因此本模块**不产生任何跨层边**；L1 两路由经 `../agent/report-depth` 取用（**L1→L2，相邻合法**）。
 
 ```ts
 /** 报告呈现粒度轴（与装配轴 ReportDepth 正交——见 §4.5 Q1） */
@@ -308,15 +341,18 @@ export const DEFAULT_REPORT_VIEW_DEPTH: ReportViewDepth = 'one_pager';
  */
 export function normalizeReportViewDepth(value: unknown): ReportViewDepth | undefined;
 
-/** 呈现轴 → 装配轴（唯一映射点；装配轴类型引用既有 ReportDepth，不重定义） */
-export const VIEW_TO_ASSEMBLE_DEPTH: Readonly<Record<ReportViewDepth, ReportDepth>>;
-// one_pager → 'ceo' ｜ detailed → 'expert'
+/** 呈现轴 → 装配轴（**不在此文件**——装配轴类型 `ReportDepth` 定义于 W3 `src/agent/report-assembler.ts:31`，
+ *  故本映射表落 W3（同层 L2，零跨层边）。本文件不定义、不导出它，避免 L2 内互相 import。
+ *  W3 侧形态：export const VIEW_TO_ASSEMBLE_DEPTH: Readonly<Record<ReportViewDepth, ReportDepth>>;
+ *  one_pager → 'ceo' ｜ detailed → 'expert' */
 
 /** 呈现轴 → 一页纸渲染深度（唯一映射点；决定页头 Top-N 全集宽度） */
 export const VIEW_TO_ONEPAGER_DEPTH: Readonly<Record<ReportViewDepth, 'ceo' | 'flywheel'>>;
 // one_pager → 'ceo' ｜ detailed → 'flywheel'
 
-/** 详细报告章节标题（字面固定——模板渲染与结构审计共同依赖；漂移由单测守护） */
+/** 详细报告章节标题（字面固定——W1 定义、**唯一消费者 = 同层 W3** 构造 `chapters` 时使用；
+ *  L3 模板**不依赖本常量**（标题随数据走——§4.5 Q7 子裁定 (i)），故本文件对 L3 零可见性要求。
+ *  漂移由单测守护。） */
 export const DETAILED_REPORT_CHAPTER_TITLES = [
   '### 结论', '### 根因', '### 专家完整推理', '### 行动建议', '### 数据时点',
 ] as const;
@@ -338,15 +374,17 @@ export function resolveViewDepthFromUtterance(text: unknown):
 
 ### 5.3 章节契约与槽位契约（W2 + W3）
 
-**详细报告章节表（`chapters` → markdown）**——数据源**全部为既有字段**，零新指标、零新窗口：
+**详细报告章节表（`chapters` → markdown）**——数据源**全部为既有字段**，零新指标、零新窗口。**装载形状（§4.5 Q7 子裁定 (i)）**：`ReportData.chapters?: Array<{ title: string; body: string[] }>`——**标题随数据走**（W3 用 `DETAILED_REPORT_CHAPTER_TITLES[i]` 作 `title` 装配；W2 模板只做 `for (const ch of data.chapters)` 哑渲染，**不 import 任何常量**）：
 
-| 章 | 标题 | 数据源（既有字段） | 空态（不静默） |
+| 章 | `title`（= `DETAILED_REPORT_CHAPTER_TITLES[i]`） | `body[]` 数据源（既有字段） | 空态（不静默 → 该章 `body` 为单行说明） |
 |----|------|------------------|--------------|
 | 1 | `### 结论` | `report.summary`（经 `enforceReport` 散文化，M1 对齐一页纸 S1 语义：结论可溯源） | `[degraded] 无结论内容可溯源` |
 | 2 | `### 根因` | `report.rootCauses[]`，按 `confidence` **降序全量**（非 Top-N——这是「详细」的判别点），每行带 `[src:report:<reportId>#rootcause:<i>]` | `[degraded] 无根因记录` |
 | 3 | `### 专家完整推理` | `report.expertReports[]`（`expert` + 全部 `findings[]` + `confidence`），每行带 `[src:report:<reportId>#expert:<i>]` | `[degraded] 无专家报告记录` |
 | 4 | `### 行动建议` | `report.recommendations[]` **全量**（含 `priority` / `expert`），每行带 `[src:report:<reportId>#recommendation:<i>]` | `[degraded] 无行动建议记录` |
 | 5 | `### 数据时点` | `report.generatedAt` **逐字透传** + 说明「本行为既有字段透传，**不主张 3-9 时间窗口径**（周/月聚合视图归 D828）」 | `[degraded] 报告缺数据时点` |
+
+> **模板侧零 import 的可核性**：`git diff src/l3/report-templates.ts` 的**新增行不得含任何 `import` 语句**（唯一新增是 `ReportData.chapters?` 字段 + `DETAILED_REPORT` 模板对象）。验收命令：`git diff origin/main -- src/l3/report-templates.ts | grep -c "^+.*import"` → **必须为 0**。
 
 **槽位契约（一页纸，3-1，**不得改语义**）**：四槽位标题与顺序 = `['### 结论','### 关键证据','### 各维度循环结论','### 行动建议']`（B7）；降级标记 = ASCII `[degraded]`（B8）；渲染输出**禁含渲染时刻**（B9）；`renderOnePager(report)` 默认 === `'ceo'`（B2 + 回归断言）；`ONEPAGER_CHAR_BUDGET=1200` 不因本卡变化（B10）。
 
@@ -482,7 +520,10 @@ export function assembleOnePagerInputsForOrg(orgId: string, graphStore?: unknown
 - `tests/routes/diagnosis-report-persistence.test.ts`（含用例 10：`?format=markdown` → `text/markdown` 200）、`tests/routes/diagnosis-consult-events.test.ts:161`（GET report 行为零回归）、`tests/routes/diagnosis-customer-config.test.ts`（`report.onePager` 为字符串且非空）——**均须保持绿**。
 - 注册表加第 4 模板**安全**：D6 实测 report 模板注册表**零长度断言**。
 - 对话帧 additive **安全**：A8 实测无严格序列 equality；硬约束仅「末帧 `end`、无 `error` 帧」。
-- 架构边界：本卡不新增跨层 import。**注意**：`src/l3/report-depth.ts` 若引用 `ReportDepth`，必须 `import type { ReportDepth } from '../agent/report-assembler'` —— 这是 **L3 → L2 反向依赖 = 违规**。⇒ **W1 不得 import L2**：`ReportDepth` 只在本卡 W3（L2）侧做映射，W1 只导出呈现轴与词表（映射表放 W3，或 W1 内联 4 值字面量并加注释说明**不重定义装配轴**）。**实现须二选一并在 spec 交付说明中写明选择**——推荐：映射表 `VIEW_TO_ASSEMBLE_DEPTH` 放 **W3**（L2，可安全 import L3 的 `ReportViewDepth`）。
+- 架构边界（**双向口径，DR-1 修正后**——详见 §4 G 节与 §4.5 Q7）：
+  - **L1 → L3 禁新增**：`src/routes/diagnosis.ts` 与 `src/routes/conversations.ts` 的 `[L1→L3]` 基线**各 = 1（已用满）**。⇒ 本卡两文件**不得出现任何 `../l3/**` 值导入**；呈现轴模块经 **`../agent/report-depth`（L2）**取用。
+  - **L3 → L2 本卡不新增**：`src/l3/report-templates.ts` **零新增 import**（章节标题随 `chapters[].title` 数据走 ⇒ 无需 import L2 的常量）。⇒ 既无 L1→L3，也无 **L2↔L3 双向耦合**（唯一跨层边是既有的 L2→L3：`report-assembler.ts` → `report-templates.ts`，未改）。
+  - **L2 内同层**：`src/agent/report-depth.ts` **零 import**；`VIEW_TO_ASSEMBLE_DEPTH` 落 W3（`ReportDepth` 同文件定义）。
 
 ### 7.3 判别性夹具（「删掉即报红」——铁律 0-2 第 5 步 + 坑清单第 8 条）
 
@@ -497,6 +538,22 @@ export function assembleOnePagerInputsForOrg(orgId: string, graphStore?: unknown
 
 ---
 
+### 7.4 架构门禁验收（**可重跑**；DR-1 退回新增，必须贴原始输出全文）
+
+```bash
+# 硬门禁：L1→L3 段 new=0（CI strict 下 new>0 = 硬阻断，见 §4 G）
+bash scripts/check-architecture.sh
+```
+
+**通过判据（逐条）**：
+1. `1b. L1→L3 跨层引用` 段**不出现** `❌`、**不出现** `基线外新增`（`new=0`）；允许出现「存量违规 N 处（基线棘轮内）」。
+2. 输出**不得**出现 `↳ src/routes/diagnosis.ts: 实际 2 > 基线 1` 或 `↳ src/routes/conversations.ts: 实际 2 > 基线 1` 形态的行。
+3. `SUMMARY total=… new=…`（脚本内部棘轮比对摘要；如需单独取用：`SYNO_ARCH_BASELINE=tests/architecture/l1-cross-layer-baseline.txt` 下 `compare_baseline` 的 `new` 计数字段）。
+4. 末行 `架构检查: 全部通过 ✅`，`exit=0`。
+5. 三段 `[L1→L3]/[L1→L4]/[L1→L5]` 的 **`new` 均为 0**（本卡若因其他存量文件漂移导致任一 `new>0`，**退回实现**并报 CTO——不得抬高基线消解）。
+
+**独立反证（V 必做）**：临时把 `src/routes/diagnosis.ts` 的深度解析改成直接 `import … from '../l3/report-depth'` → 跑同一命令 → **必须出现 `实际 2 > 基线 1` + `❌ … [CI strict——软提示在 CI 上为硬阻断]`**（这是「门禁真的在管这件事」的判别性证据）；还原后必须回到 `new=0`。
+
 ## 8. 接线点（每条新 export 的生产调用点 + grep 指纹）
 
 | # | 新 export（文件） | 生产调用点（写进 src/ 的调用） | grep 指纹（实现完成后须命中，**禁 `head` 截断**） |
@@ -508,11 +565,13 @@ export function assembleOnePagerInputsForOrg(orgId: string, graphStore?: unknown
 | 5 | `normalizeReportViewDepth`（W1） | `src/routes/diagnosis.ts`（`?depth=` 解析）+ `src/routes/conversations.ts`（判别结果校验） | `grep -rn "normalizeReportViewDepth" src/` → 期待 **3 行** |
 | 6 | `resolveViewDepthFromUtterance`（W1） | `src/routes/conversations.ts`（每轮判别，**唯一生产调用点**） | `grep -rn "resolveViewDepthFromUtterance" src/` → 期待 **2 行** |
 | 7 | `REPORT_VIEW_DEPTHS` / `DEFAULT_REPORT_VIEW_DEPTH` / `VIEW_TO_ONEPAGER_DEPTH`（W1） | `src/routes/diagnosis.ts` + `src/routes/conversations.ts` | `grep -rn "REPORT_VIEW_DEPTHS\|DEFAULT_REPORT_VIEW_DEPTH\|VIEW_TO_ONEPAGER_DEPTH" src/` → 期待 **≥4 行** |
-| 8 | `DETAILED_REPORT_CHAPTER_TITLES`（W1） | `src/agent/report-assembler.ts`（章节构造）+ `src/l3/report-templates.ts`（模板渲染） | `grep -rn "DETAILED_REPORT_CHAPTER_TITLES" src/` → 期待 **≥3 行** |
+| 8 | `DETAILED_REPORT_CHAPTER_TITLES`（W1，L2） | **唯一生产调用点 = `src/agent/report-assembler.ts`（同层 W3）**；`src/l3/report-templates.ts` **不得**出现该符号（子裁定 (i)：标题随数据走） | `grep -rn "DETAILED_REPORT_CHAPTER_TITLES" src/` → 期待 **恰 2 行**（1 定义 + 1 调用）；且 `grep -rn "DETAILED_REPORT_CHAPTER_TITLES" src/l3/` → **0 行** |
 | 9 | 模板名 `detailed_report`（W2） | `src/agent/report-assembler.ts`（`renderDetailedReport` 内 `registry.render('detailed_report', …)`） | `grep -rn "detailed_report" src/` → 期待 **≥2 行**（注册 + 消费） |
+| 10 | **架构：L1→L3 零新增**（DR-1） | L1 两路由经 `../agent/report-depth`（L2）取用，**不出现 `../l3/**` 新值导入** | `bash scripts/check-architecture.sh` → `1b. L1→L3` 段 `new=0`（§7.4）；`grep -nE "from ['\"]\.\./l3/\|import\(['\"]\.\./l3/" src/routes/diagnosis.ts src/routes/conversations.ts` → **仍各恰 1 行**（既有 `../l3/synova-diagnosis-engine-impl`，不得变成 2） |
+| 11 | **架构：L3 模板零新增 import**（子裁定 (i)） | `src/l3/report-templates.ts` 只加字段与模板对象 | `git diff origin/main -- src/l3/report-templates.ts \| grep -c "^+.*import"` → **0** |
 
-> **WIRE CHECK 硬门禁（铁律 0-2 第 5 步）**：上表 9 条指纹**全部命中**才算接线完成；任一条 0 命中 = 未完成，**不得声称交付**。
-> `REPORT_VIEW_DEPTHS` 若因 W1 与 W3 的类型选择（§7.2 架构注）而映射表落在 W3，指纹 #7 的期待行数不变（调用点仍在两路由）。
+> **WIRE CHECK 硬门禁（铁律 0-2 第 5 步）**：上表 **11 条**指纹**全部命中**才算接线完成；任一条 0 命中 = 未完成，**不得声称交付**。
+> `VIEW_TO_ASSEMBLE_DEPTH` 落 W3（同层，`ReportDepth` 定义处）——指纹 #7 的调用点仍在两路由，期待行数不变。
 
 ---
 
@@ -552,14 +611,16 @@ export function assembleOnePagerInputsForOrg(orgId: string, graphStore?: unknown
 
 | # | 声明 | 核验方式 |
 |---|------|---------|
-| DS1 | 呈现粒度轴为**独立轴**，取值域恰 `{one_pager, detailed}`，与 `ReportDepth`(4 值) 不相通 | `grep -n "REPORT_VIEW_DEPTHS" src/l3/report-depth.ts`；T1 断言 `expert/raw/ceo/flywheel` 均 `undefined` |
+| DS1 | 呈现粒度轴为**独立轴**，取值域恰 `{one_pager, detailed}`，与 `ReportDepth`(4 值) 不相通 | `grep -n "REPORT_VIEW_DEPTHS" src/agent/report-depth.ts`；T1 断言 `expert/raw/ceo/flywheel` 均 `undefined` |
 | DS2 | 注册表新增**恰 1 个**模板 `detailed_report`，既有 3 模板与既有 `ReportData` 字段逐字未改 | `git diff src/l3/report-templates.ts`；`grep -c "name:" src/l3/report-templates.ts` = 4 |
 | DS3 | 无 `depth` 的 markdown 请求产物与改动前**字节级相同** | T3 断言「无 depth === `?depth=one_pager`」（J2） |
 | DS4 | 非法 `depth` **不静默**：fallback `one_pager` + `log.warn` + `X-Report-Depth-Degraded: UNKNOWN_DEPTH` | T3 断言响应头存在 + 断言返回一页纸结构 |
-| DS5 | 详细报告为**五章**，章标题来自 `DETAILED_REPORT_CHAPTER_TITLES` 单源 | T2 断言五章标题齐全；`grep -rn "DETAILED_REPORT_CHAPTER_TITLES" src/` ≥3 行 |
+| DS5 | 详细报告为**五章**，章标题来自 `DETAILED_REPORT_CHAPTER_TITLES` 单源（**L2 定义、L2 消费；标题经 `chapters[].title` 随数据进 L3**） | T2 断言五章标题齐全；`grep -rn "DETAILED_REPORT_CHAPTER_TITLES" src/` = **恰 2 行**；`grep -rn "DETAILED_REPORT_CHAPTER_TITLES" src/l3/` = **0 行** |
 | DS6 | 详细报告章节数据源 **100% 既有字段**，零新指标 / 零新窗口 | `git diff` 中无新比率/评分/阈值常量；`src/agent/report-assembler.ts` 新增行不含算术聚合 |
 | DS7 | 详情渲染**永不抛出**且**不含量化时刻** | T2 注入抛错注册表 → 返回含降级标记的字符串（不 throw）；同输入两次 `toBe` 相等 |
-| DS8 | 3-3 判别为**确定性关键词表**（不含 LLM 调用、不含随机、不含时刻） | `grep -rn "resolveViewDepthFromUtterance" src/l3/report-depth.ts`；T1 同输入两次相等 |
+| DS8 | 3-3 判别为**确定性关键词表**（不含 LLM 调用、不含随机、不含时刻） | `grep -rn "resolveViewDepthFromUtterance" src/agent/report-depth.ts`；T1 同输入两次相等 |
+| DS19 | **架构双向干净（DR-1）**：L1 零新增 `../l3/**` 值导入；L3 模板零新增 import | `bash scripts/check-architecture.sh` → `1b. L1→L3` 段 `new=0`（§7.4）；`git diff origin/main -- src/l3/report-templates.ts \| grep -c "^+.*import"` = **0**；`grep -nE "from ['\"]\.\./l3/\|import\(['\"]\.\./l3/" src/routes/diagnosis.ts src/routes/conversations.ts` 各恰 1 行 |
+| DS20 | 呈现轴模块**零 import**（无 L1→L3、无 L2↔L3 环） | `grep -cE "^import\|^} from\|from '" src/agent/report-depth.ts` = **0**（除 JSDoc 注释外无 import 语句） |
 | DS9 | 3-3 未命中词 → **零行为变化**（无 `report_view` 帧） | T4 断言（J5） |
 | DS10 | `report_view` 帧为 **additive**，`complete` 帧既有 6 字段一字未改 | `git diff src/routes/conversations.ts` 中 `complete` 帧块无删除行；T4 断言末帧 `end` + 无 `error` 帧 |
 | DS11 | 对话路与 HTTP 路**同深度同产物**（同源 `renderReportView`） | `grep -rn "renderReportView" src/` = 3 行；T4 断言帧内 markdown 与 HTTP 产物同构 |
@@ -588,6 +649,11 @@ python3 scripts/control-tower/check-ownership.py \
     docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D1051-line3-report-depth-20260928.md | sort -u) --owner win
 # ④ 改动面
 git diff --stat
+# ⑤ 架构门禁（DR-1 修正后必跑）——1b. L1→L3 段须 new=0
+bash scripts/check-architecture.sh
+# ⑥ DR-1 复核：旧路径不得残留（仅允许 Q7 行的历史对照表述）
+grep -n "src/l3/report-depth\|tests/l3/report-depth" \
+  docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D1051-line3-report-depth-20260928.md
 ```
 
 > **规格边界声明**：本规格**不写任何产品代码**（`git diff --stat` 中 `src/**`、`tests/**` 必须为 0 行改动）。规格作者与实现者**分离**（`squad-discipline` 独立性硬要求）；本规格须**先落 main 可读**，实现方不得引用未落 main 的规格路径。
