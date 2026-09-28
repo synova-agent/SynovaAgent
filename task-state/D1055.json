@@ -8,7 +8,21 @@
   "executor": "ct10-exec（A）/ 独立自验待派（ct10-verify D1057）",
   "blocked": null,
   "spec": ".claude/task-briefs/2026-09-28-D1055-CT10-mac门禁凑批.md",
-  "impl": null,
+  "impl": {
+    "commit": "76fff3efdebeb63395c29c0dc03035e87c6022e4",
+    "commit_note": "主交付提交（10 件）。其后另有「复核更正 + pre-dispatch-check.sh」提交；tip 以 git ls-remote 为准",
+    "by": "ct10-exec",
+    "at": "2026-09-28",
+    "files": [
+      "docs/synova/coordination/ownership.yaml",
+      "scripts/product-lines/aggregate-todos.py",
+      "scripts/product-lines/evidence-writer.py",
+      "scripts/product-lines/calc-progress.py",
+      "scripts/product-lines/run-machine-evidence.sh",
+      "scripts/control-tower/pre-dispatch-check.sh",
+      "tests/control-tower/brief-parseable.test.sh"
+    ]
+  },
   "audit": null,
   "fix_task_id": null,
   "write_set": [

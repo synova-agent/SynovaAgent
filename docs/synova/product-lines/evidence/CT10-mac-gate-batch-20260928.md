@@ -9,11 +9,11 @@
 | 卡 | 状态 | 说明 |
 |----|------|------|
 | ① ownership +2 | ✅ 完整落地 | 改前 exit 1 → 改后 exit 0；红→绿证 |
-| ④ F-2 跨大小写 D# | ✅ 完整落地 | **额外发现同族第二缺陷：4 位号全失效** |
+| ④ F-2 跨大小写 D# | ⚠️ **部分落地**（复核后更正，见 §3.5） | 已修 `aggregate-todos.py` + `pre-dispatch-check.sh:28`（同族第二缺陷 **4 位号全失效**是净收益）；**F-2 真实入口 `gen-task-board.py:447` / `staging_guard.py:90` 不在写集 ⇒ F-2 现象仍会复现** |
 | ⑦ `--at` 端到端 | ✅ 完整落地 | writer 补 `--at`；calc-progress machine 路径消费 `at` |
 | ⑧ 夹具化 | ✅ 完整落地 | 真实 brief 依赖清零；移开两 brief 仍绿 |
 | ② A2 假绿 | ✅ 完整落地 | 点级覆盖门；**口径与卡面不符，见 §二** |
-| ⑤ diff-filter + PYBIN | ⚠️ **半件** | PYBIN（`pre-dispatch-check.sh:59`）✅ 落地；`A→ACMR` **实测后建议不做**（见 §七 R2） |
+| ⑤ diff-filter + PYBIN | ⚠️ **半件** | PYBIN（`pre-pispatch` 更正：`pre-dispatch-check.sh:59`）代码**已写并验证**，但 **CT-40 硬阻断**：其配对测试 `tests/control-tower/pre-dispatch-check.test.sh` **在 main 上本就是红的**（根因 = 4 位号截断，见 §七 R8）⇒ 该文件**未提交**，留工作树。`A→ACMR` **实测后建议不做**（见 §七 R2） |
 | ⑥ 控制塔 3 发现 | ❌ 未动 | 三件目标文件**均不在本卡写集**（见 §七 R3） |
 | ⑨ D809 触发器 | ❌ 未动 | 需更大语义变更 + 未定位「三口径」，见 §七 R4 |
 | ⑩ O-3 删除类覆盖 | ❌ 未动 | 与 ⑤ 的 R/C 缺口同族，需 CTO 裁定，见 §七 R5 |
@@ -249,6 +249,29 @@ $ bash scripts/control-tower/pre-dispatch-check.sh /tmp/ct10mac-probe/dispatch-f
   ✅ D922 已登记
 ```
 
+### 3.5 ⚠️ 独立复核后的更正：④ 判「**部分成立**」（ct10-verify D1057 提出，我逐条独立复现）
+
+🔴 **3.3 节把 ④ 说过头了。** 复核指出：`aggregate-todos.py` 的 5 个输入源
+（台账 / 偏差登记册 / C线清单 / DASHBOARD / 场景）**都不读 brief 文件名**，
+故改那里的 `D_RE` **没有覆盖 F-2 的实际入口**。逐条独立复现，**结论成立**：
+
+| # | 位置 | 我的独立实测（原始输出） | 状态 |
+|---|------|------------------------|------|
+| ④-1 | `scripts/control-tower/gen-task-board.py:447` `scan_briefs`（**直接调用该生产函数**） | `登记条数 = 132`；`'D922' in result = True`（来自另两份**大写**件）；**`2026-09-24-B3-d922-fixture-registry.md` 不产生任何键** | ❌ 未修（不在写集） |
+| ④-2 | `scripts/control-tower/staging_guard.py:90` `re.search(r"D\d+", Path(brief).stem)` | 大小写敏感 ⇒ `d922….md → None` | ❌ 未修（不在写集） |
+| ④-3 | `scripts/control-tower/gen-cto-health.py:275` / `:284` `re.search(r"D(\d{3})", f.name)` | **4 位号被截断**：`SYNOVA-IMPL-D1044-x.md → 104`；`D922 → 922`；`d922 → None`。`docs/plans/codex/implementation/` 实测 **265** 件 ⇒ 当前 **0/265** 命中，属潜伏缺陷 | ❌ 未修（不在写集） |
+
+**因此 ④ 的准确表述是**：
+- ✅ **已修**：`aggregate-todos.py` 的 `D_RE` 与 `pre-dispatch-check.sh:28` —— 这两处确有该缺陷，
+  改后行为已实测（3.3 / 3.4）。对 `aggregate-todos.py` 而言 **4 位号修复是本次真正的净收益**
+  （它的输入源虽然不读 brief 文件名，但**确实**读含 D# 的台账/登记册/看板文本，故 4 位号缺陷在它身上是活的）。
+- ❌ **未修**：**F-2 的真实入口**（`gen-task-board.py:447` / `staging_guard.py:90`）
+  + `gen-cto-health.py` 的 4 位号截断 —— 三个文件**均不在 task-7 写集**，见 §七 R7。
+
+🔴 **「F-2 已修」这句话我收回**：F-2 的报告现象（该件 `d_number=null`、只靠 X5 偶然保留）
+**在本批之后仍会复现**。本批在 ④ 上的真实交付 = 两个同族抽取点的宽度修正
++ 三处未修点的实测清单（归位给后续卡）。
+
 ---
 
 ## 四、⑦ `--at` 端到端（writer 产出 → calc-progress 消费）
@@ -387,7 +410,10 @@ $ bash scripts/control-tower/pre-dispatch-check.sh /tmp/ct10mac-probe/dispatch-f
 |---|--------|------|------|------|
 | **R1** | A2 套件**错配**（`grep -l \| head -1` 取首个命中，如 `conversation-engine → tests/contract/llm-failover.test.ts`）；且 17/32 套件根本不可定位 | 真实缺陷（本卡只做了"不再谎报 pass"，未修归属正确性） | 正解 = 在 `docs/synova/product-lines/product-lines.yaml` 显式声明 suite→测试文件映射 —— **该文件不在本卡写集**，需扩写集 | 队长 / CTO |
 | **R2** | ⑤ 的 `--diff-filter=A→ACMR` **建议不做** | **实测反对** | `pre-commit-check.sh:458` `NEW_IMPL` 靠该变量判断"新实现文件须配对测试"；放宽到 ACMR ⇒ **修改过的** src/ 文件也被当新增 ⇒ 组 2 全队误报。真正的缺口是 **rename/copy 对 A 不可见**，应**新增** `R/C` 变量而非放宽 `A`（与 ⑩ O-3 同族） | CTO |
-| **R3** | ⑥ 三条发现（无参默认 base 误导 / devdoc 写集表首列 ID 致 S2 静默失效 / `synova-commit` no-op exit 0）**未动** | **写集外** | 目标文件 `devdoc_writeset.py` / `merge_writeset_gate.py` / `synova-commit` 均不在本卡 `write_scopes`。我自己只复现到：`check-pr-budget.sh` 无参在本树输出 `0 文件 / PASS`（**未复现**「385 假阳性」）；`grep -n "tests/ci" ci.yml` 零命中（与本批 R1 无关的另一件） | 队长 / CTO |
+| **R3** | ⑥ 三条发现（无参默认 base 误导 / devdoc 写集表首列 ID 致 S2 静默失效 / `synova-commit` no-op exit 0）**未动** | **写集外** | 目标文件 `devdoc_writeset.py` / `merge_writeset_gate.py` / `synova-commit` 均不在本卡 `write_scopes`。**🔴 复核更正（ct10-verify D1057）**：我原先说「未复现 385 假阳性」是**我认错了目标脚本**——我在 `check-pr-budget.sh`（无参输出 `0 文件 / PASS`）上找，而该发现指的是 **`check-bypass-log.sh:32`**。按正确目标我独立复现：`BASE="${SYNO_BASE_REF:-${1:-origin/feat/prompt-architecture}}"` ⇒ **默认 base 是一个陈旧分支**；无参实跑输出一长串历史提交 + `exit=1`，`grep -cE "\[[0-9a-f]{8}\]"` **= 383**（复核 382 / 队长 385 —— 数字随 main 增长漂移）。⇒ **该发现真实存在，我原「未复现」的表述错误，已收回** | 队长 / CTO |
+| **R7** | 🆕 **F-2 真实入口未修**（复核提出、我独立复现，见 §3.5）：`gen-task-board.py:447`、`staging_guard.py:90`、`gen-cto-health.py:275/:284` | 真实缺陷 · **写集外** | 三个文件均不在 task-7 `write_scopes`。`gen-cto-health.py` 一处是**潜伏**缺陷（4 位号截断，当前 0/265 命中）；建议立独立卡**或**把三处并入后续 D# 抽取收敛卡 | 队长 / CTO |
+| **R8** | 🔴 **main 上 `tests/control-tower/pre-dispatch-check.test.sh` 本是红的** ⇒ **CT-40 硬阻断任何对 `pre-dispatch-check.sh` 的提交** | **P1 · 阻塞 ⑤** | 根因实测：该测试夹具生成行 `EXIST=$(ls "$REPO"/task-state/D*.json \| head -1 \| grep -oE "D[0-9]{3}")` —— `head -1` 取到 `D1007.json`（4 位号按字典序排最前），`grep -oE "D[0-9]{3}"` **把它截成 `D100`**，而 `task-state/D100.json` 不存在 ⇒ 脚本判「D100 无 task-state」⇒ `exit 1`。**与 ④ 同族（3 位号截断 4 位号）**。修法（一行，在**测试文件**内，故不在我写集）：`grep -oE "D[0-9]+\.json"` 后取 basename，或 `ls … \| head -1 \| xargs basename \| grep -oE "D[0-9]+"` | 队长 / CTO |
+| **R9** | ⑤ PYBIN 改动**已写未提交**（`scripts/control-tower/pre-dispatch-check.sh` +14/−3，改动本身 `bash -n` OK + 夹具实测 `D1055`/`d1031` 均被检出） | 被 R8 阻塞 | 待 R8 修好后，或扩写集允许我修 R8 的那一行，即可提交 | 队长 / CTO |
 | **R4** | ⑨ D809「三口径打架」复原触发器**未动** | 需更大语义变更 | 已定位候选面：`calc-progress.py:245`（「两源对账：V1 断言表该线撤回行 vs 提交件该线值」）、`:260`（不一致即 `sys.exit` 要求人工裁决）、`:330/:336`（撤回集 ∩ 分母 / `state_unknown = uncommitted − 撤回数`）、`:475-481`（`read_withdrawn_points` 读 V1 表「证据」列 = pending_wiring）。「三口径」= **V1 断言表撤回标记 / 提交件推算 / yaml 点集**；缺的是"接线完成后把 `pending_wiring` 改回 `test`"的提醒机制 | 队长 / CTO |
 | **R5** | ⑩ O-3（G6 跳过 / G10 幽灵 / G12 仅 ACMR ⇒ 删除类 PR 缺门禁覆盖）**未动** | 需 CTO 裁定 + 可能扩写集 | 与 R2 同族；`scripts/pre-commit-check.sh` 虽在写集内，但"给 G6/G10/G12 补删除类覆盖"是**门禁语义变更**，不应在凑批里夹带 | CTO |
 | **R6** | ② 的 `exit 2`（零覆盖）分支**未在真实数据上触发** | 如实记录 | 因抽取面与 `list-test-points.py` 口径不完全重合，仍有 4 点恒被覆盖；分支为构造存在，不宣称已实测 | 后续 |
