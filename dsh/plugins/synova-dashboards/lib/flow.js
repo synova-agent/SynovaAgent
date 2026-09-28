@@ -115,8 +115,20 @@ export async function readGithubToken(path = DEFAULT_CREDENTIALS) {
   }
   const m = raw.match(/GITHUB_TOKEN:\s*("([^"]*)"|'([^']*)'|(\S+))/);
   const token = m ? (m[2] ?? m[3] ?? m[4] ?? "").trim() : "";
-  if (!token) return { ok: false, error: `凭据文件无 GITHUB_TOKEN 字段（${path}）` };
-  return { ok: true, token, source: `file:${path}` };
+  if (!token) return { ok: false, error: "凭据文件无 GITHUB_TOKEN 字段" };
+  // 只回传**来源类型**，不回传路径：绝对路径会随 200 响应出网（独立复核 finding f）
+  return { ok: true, token, source: "file" };
+}
+
+/**
+ * 脱敏：把 token 明文从任何将要回传/落日志的字符串里抹掉。
+ * 独立复核 finding 5：自定义 fetch 可能把请求头原文塞进 error.message，
+ * 一旦原样回传就会**把 token 写进 200 响应体**。此处兜底，改后不可复现。
+ */
+export function redact(text, token) {
+  const s = String(text ?? "");
+  if (!token || token.length < 8) return s;
+  return s.split(token).join("***");
 }
 
 /** 从 origin remote URL 解析 owner/repo（不硬编码仓库名）。 */
@@ -163,7 +175,7 @@ async function fetchPrPage(fetchImpl, slug, token, query) {
     if (!Array.isArray(body)) return { ok: false, error: "GitHub API 返回非数组" };
     return { ok: true, items: body.map(projectPr) };
   } catch (err) {
-    const msg = err?.name === "AbortError" ? "GitHub API 超时（8s）" : `GitHub API 失败：${err?.message ?? err}`;
+    const msg = err?.name === "AbortError" ? "GitHub API 超时（8s）" : `GitHub API 失败：${redact(err?.message ?? err, token)}`;
     return { ok: false, error: msg };
   } finally {
     clearTimeout(timer);
@@ -212,7 +224,7 @@ async function fetchMergedSince(fetchImpl, slug, token, sinceDate) {
       }))
     };
   } catch (err) {
-    const msg = err?.name === "AbortError" ? "GitHub search 超时（8s）" : `GitHub search 失败：${err?.message ?? err}`;
+    const msg = err?.name === "AbortError" ? "GitHub search 超时（8s）" : `GitHub search 失败：${redact(err?.message ?? err, token)}`;
     return { ok: false, error: msg };
   } finally {
     clearTimeout(timer);

@@ -799,7 +799,7 @@ test("D1060 面板 A：四问格子矩阵渲染 16 行 × N 问，四色显式�
   try {
     const r = await p.renderDetailed(null, { panelKey: "synova-dev-workbench" });
     assert.match(r.text, /Synova 开发工作台/, "面板标题必须在场");
-    assert.match(r.text, /① 四问格子矩阵（16 行 × 4 问）/, "格子区块标题");
+    assert.match(r.text, /① 四问格子矩阵（2 行 × 2 问）/, "格子区块标题的行/问数取自数据（禁硬编码）");
     // 表头两问（夹具 2 问）
     assert.match(r.text, /加了吗/);
     assert.match(r.text, /接上了吗/);
@@ -916,7 +916,7 @@ test("D1060 面板 A：阻塞渲染 卡在哪 + 卡了几天；未申报单列�
     assert.match(r.text, /已卡 11 天/);
     assert.match(r.text, /需要 D778 合入/);
     assert.match(r.text, /计入 1 · 未申报 1/);
-    assert.match(r.text, /卡面 blocked 备注未按三要素申报 1 条/);
+    assert.match(r.text, /未按三要素申报（reason\+since\+needs 缺一即不计入阻塞数，不静默补）共 1 条/);
   } finally {
     p.restore();
   }

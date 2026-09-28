@@ -297,3 +297,120 @@ test("collectWorkbench：全绿夹具下 ok:true / degraded:false，且数字全
   assert.equal(typeof p.flow.git.error, "string");
   assert.equal(p.ok, true, "四块里至少一块可用 ⇒ ok:true（面板不整黑）");
 });
+
+// ══ 独立复核反例回归（2026-09-29：K3 式独立验证发现 4 处"口径声明与实际不符/静默丢弃"）══════
+// 每条都对应一个**实跑过的反例**，修复后必须仍然绿；改名/删除即视为回归。
+
+test("回归 CE1：ledger 条目缺三要素 → 不计入阻塞数，单列「上源三要素不全」（不得兜成「(无原因)」计入）", () => {
+  const ledger = { ok: true, parsed: { blocked: [{ id: "B-EMPTY" }] } };
+  const b = buildBlocked(ledger, { ok: true, parsed: { lines: [] } }, [], new Date("2026-09-29T10:00:00+08:00"));
+  assert.equal(b.count, 0, "缺要素条目不得计入阻塞数");
+  assert.equal(b.nonconforming_count, 1, "必须单列，不静默丢");
+  assert.equal(b.nonconforming[0].kind, "上源三要素不全");
+  assert.match(b.nonconforming[0].id ?? "", /^$/);
+  assert.match(b.nonconforming[0].note, /docs\/synova\/project\/ledger\.json/, "必须标注上源");
+});
+
+test("回归 CE3：product-progress 线级 blocked 缺 since/needs → 不计入，单列", () => {
+  const progress = { ok: true, parsed: { lines: [{ id: 3, name: "报告", blocked: [{ reason: "r only" }] }] } };
+  const b = buildBlocked({ ok: false, error: "ledger 不可读" }, progress, [], new Date());
+  assert.equal(b.count, 0);
+  assert.equal(b.nonconforming_count, 1);
+  assert.match(b.nonconforming[0].kind, /上源三要素不全/);
+});
+
+test("回归 CE4：卡面三要素齐全 + ledger 不可读 → 必须从卡面直取计入（否则真实阻塞静默消失）", () => {
+  const cards = [card({ task_id: "D901", line: 7, blocked: { reason: "前置未合", since: "2026-09-18", needs: "D778" } })];
+  const b = buildBlocked({ ok: false, error: "工作区无 ledger.json" }, { ok: false, error: "无 progress" }, cards, new Date("2026-09-29T10:00:00+08:00"));
+  assert.equal(b.count, 1, "ledger 不可读时卡面完整阻塞必须补位计入");
+  assert.equal(b.card_fallback_count, 1);
+  assert.equal(b.items[0].id, "D901");
+  assert.equal(b.items[0].line, 7);
+  assert.match(b.items[0].source, /task-state\/D901\.json/);
+  assert.equal(b.degraded, true, "ledger 不可读必须显式降级");
+  // ledger 可用时**不得**重复计入（去重 + 只在 !ledger.ok 时补位）
+  const b2 = buildBlocked({ ok: true, parsed: { blocked: [{ id: "D901", reason: "前置未合", since: "2026-09-18", needs: "D778", days: 11 }] } }, { ok: false, error: "x" }, cards, new Date("2026-09-29T10:00:00+08:00"));
+  assert.equal(b2.count, 1, "ledger 可用时不得因卡面直取而双计");
+  assert.equal(b2.card_fallback_count, 0);
+});
+
+test("回归 CE5：卡面 blocked 为 true/数字/数组（类型非法）→ 单列，不静默丢弃", () => {
+  const cards = [
+    card({ task_id: "D1", blocked: true }),
+    card({ task_id: "D2", blocked: 42 }),
+    card({ task_id: "D3", blocked: ["a", "b"] })
+  ];
+  const b = buildBlocked({ ok: true, parsed: { blocked: [] } }, { ok: true, parsed: { lines: [] } }, cards, new Date());
+  assert.equal(b.count, 0);
+  assert.equal(b.nonconforming_count, 3, "三种非法类型都必须可见");
+  for (const n of b.nonconforming) assert.match(n.kind, /类型非法/);
+  assert.deepEqual(b.nonconforming.map((n) => n.id).sort(), ["D1", "D2", "D3"]);
+});
+
+test("回归 CE6：两条无 id、同 reason、不同 since 的阻塞 → 不得误合为一条", () => {
+  const ledger = { ok: true, parsed: { blocked: [
+    { reason: "同因", since: "2026-09-01", needs: "N", days: 28 },
+    { reason: "同因", since: "2026-09-20", needs: "N", days: 9 }
+  ] } };
+  const b = buildBlocked(ledger, { ok: true, parsed: { lines: [] } }, [], new Date());
+  assert.equal(b.count, 2, "去重键必须含 since/needs");
+});
+
+test("回归 CE7：ledger.blocked 里混入字符串/null/数字 → 单列「非对象条目」，不计入", () => {
+  const ledger = { ok: true, parsed: { blocked: ["a string", null, 5, { id: "OK", reason: "r", since: "2026-09-20", needs: "n", days: 9 }] } };
+  const b = buildBlocked(ledger, { ok: true, parsed: { lines: [] } }, [], new Date());
+  assert.equal(b.count, 1, "只有合法那条计入");
+  assert.equal(b.items[0].id, "OK");
+  assert.equal(b.malformed_upstream, 3, "三条非法上源条目必须被点名");
+  assert.equal(b.nonconforming_count, 3);
+});
+
+test("回归 finding a：ledger 不可读但 progress 可读 → collectWorkbench 必须把它计入 degraded_sources", async () => {
+  const root = makeDir({
+    [GRID_REL_PATH]: GRID,
+    "docs/synova/product-lines/product-progress.json": { generated_at: "x", decisions: [], lines: [{ id: 3, name: "报告", blocked: [{ id: "L3", reason: "r", since: "2026-09-20", needs: "n", days: 9 }] }] },
+    "task-state/D1.json": { task_id: "D1", title: "t", status: "claimed", updated_at: "2026-09-20" }
+  });
+  const p = await collectWorkbench(root, { now: new Date("2026-09-29T10:00:00+08:00"), fetchImpl: async () => { throw new Error("no net"); } });
+  assert.equal(p.blocked.ok, true, "progress 可用 ⇒ 阻塞块仍可用");
+  assert.equal(p.blocked.degraded, true, "ledger 不可读 ⇒ 块级 degraded 必须为真");
+  assert.ok(p.degraded_sources.some((s) => s.includes("阻塞")), "必须进 degraded_sources，实际：" + JSON.stringify(p.degraded_sources));
+  assert.equal(p.blocked.items[0].id, "L3", "可用源的条目仍展示");
+});
+
+test("回归 finding b：任务卡坏 JSON → 必须进 degraded_sources（同数据在治理线可见，A 面不得静默）", async () => {
+  const root = makeDir({
+    [GRID_REL_PATH]: GRID,
+    "task-state/D1.json": { task_id: "D1", title: "好卡", status: "claimed", updated_at: "2026-09-20" },
+    "task-state/D2.json": "{ bad json"
+  });
+  const p = await collectWorkbench(root, { now: new Date("2026-09-29T10:00:00+08:00"), fetchImpl: async () => { throw new Error("no net"); } });
+  assert.equal(p.task_cards.error_count, 1);
+  assert.ok(p.degraded_sources.some((s) => s.includes("坏卡")), "坏卡必须入 degraded_sources：" + JSON.stringify(p.degraded_sources));
+});
+
+test("回归 finding h：cells 为空数组的格子文件 → 视为结构异常（空矩阵不得冒充合法全未填）", async () => {
+  const root = makeDir({ [GRID_REL_PATH]: { schema: "x", counts: { cells: 0 }, cells: [] } });
+  const g = await readGrid(root);
+  assert.equal(g.ok, false);
+  assert.equal(g.degraded, true);
+  assert.match(g.error, /结构异常/);
+});
+
+test("回归 finding d：cells 里混入非对象元素 → 计入 derived.malformed，且不算「已填」", async () => {
+  const g2 = JSON.parse(JSON.stringify(GRID));
+  g2.cells.push(null, "junk");
+  const root = makeDir({ [GRID_REL_PATH]: g2 });
+  const g = await readGrid(root);
+  assert.equal(g.ok, true);
+  assert.equal(g.derived.malformed, 2);
+  assert.equal(g.derived.filled, 0, "畸形元素不得被算成已填");
+  assert.equal(g.derived.by_status.empty, 8);
+  assert.ok(g.issues.some((s) => s.includes("非对象元素")));
+});
+
+test("回归 finding e：EMPTY_STATUSES 必须被生产代码消费（防死导出，铁律 37）", async () => {
+  const src = await import("node:fs/promises").then((m) => m.readFile(new URL("../lib/workbench.js", import.meta.url), "utf8"));
+  const uses = src.split("EMPTY_STATUSES").length - 1;
+  assert.ok(uses >= 2, "EMPTY_STATUSES 必须至少被定义处 + 一处生产调用（当前出现 " + uses + " 次）");
+});

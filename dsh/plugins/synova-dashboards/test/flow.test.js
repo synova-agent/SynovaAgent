@@ -100,7 +100,7 @@ test("readGithubToken：env 覆盖优先；文件缺 GITHUB_TOKEN 字段 → 显
   const ok = await readGithubToken(join(withTok, "creds.yaml"));
   assert.equal(ok.ok, true);
   assert.equal(ok.token, "ghp_secret_value", "引号必须剥掉");
-  assert.match(ok.source, /^file:/);
+  assert.equal(ok.source, "file", "只回传来源类型，不回传凭据文件绝对路径（防路径随响应出网）");
 
   const missing = await readGithubToken(join(makeDir({}), "nope.yaml"));
   assert.equal(missing.ok, false);
@@ -224,4 +224,35 @@ test("collectFlow：git 不可用（非仓库）→ git 段显式降级，函数
   assert.equal(f.git.degraded, true);
   assert.ok(typeof f.git.error === "string" && f.git.error.length > 0);
   assert.equal(f.ok, false, "两块都不可用 ⇒ ok:false");
+});
+
+// ══ 独立复核反例回归（2026-09-29）══════════════════════════════════════════
+test("回归 finding 5：自定义 fetch 把 Authorization 原文塞进 error → 必须脱敏，token 不得随 200 响应出网", async () => {
+  const repo = makeGitRepo();
+  const creds = makeDir({ "c.yaml": "GITHUB_TOKEN: super-secret-token-value\n" });
+  const f = await collectFlow(repo, {
+    now: new Date("2026-09-29T10:00:00+08:00"),
+    credentialsPath: join(creds, "c.yaml"),
+    fetchImpl: async (url, opts) => {
+      throw new Error("boom Authorization: " + (opts && opts.headers && opts.headers.authorization));
+    }
+  });
+  const serialized = JSON.stringify(f);
+  assert.equal(serialized.includes("super-secret-token-value"), false, "token 明文不得出现在任何回传字段");
+  assert.match(f.pr.error, /\*\*\*/, "必须留脱敏痕迹而不是原样透传");
+  assert.equal(f.pr.ok, false);
+});
+
+test("回归 finding f：凭据文件绝对路径不得进入响应体（只回传来源类型）", async () => {
+  const repo = makeGitRepo();
+  const creds = makeDir({ "c.yaml": "GITHUB_TOKEN: tok-abcdefgh\n" });
+  const f = await collectFlow(repo, {
+    now: new Date("2026-09-29T10:00:00+08:00"),
+    credentialsPath: join(creds, "c.yaml"),
+    fetchImpl: async (url) => (String(url).includes("/search/issues")
+      ? { ok: true, status: 200, json: async () => ({ total_count: 0, items: [] }) }
+      : { ok: true, status: 200, json: async () => [] })
+  });
+  assert.equal(f.pr.credential_source, "file");
+  assert.equal(JSON.stringify(f).includes(creds), false, "凭据目录绝对路径不得出现在响应体");
 });

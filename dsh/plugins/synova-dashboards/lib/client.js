@@ -877,10 +877,15 @@ window.__ModuleLoader__.load({
 
 			return jsx(Section, {
 				id: "grid",
-				title: "① 四问格子矩阵（16 行 × 4 问）",
+				// 标题里的行/问数**取自数据**（早前硬编码「16 行 × 4 问」，
+				// repoRoot 指向未升四问的仓库时会显示 3 问却写 4 问 —— 独立复核 finding g）
+				title: "① 四问格子矩阵（" + (d.rows ?? 0) + " 行 × " + (d.questions ?? 0) + " 问）",
 				collapsed, onToggle,
-				extra: jsx("span", { className: "spo-muted", children: "已填 " + (d.filled ?? 0) + "/" + (d.cells ?? 0) + " · ⚪未填 " + (bs.empty ?? 0) }),
+				extra: jsx("span", { className: "spo-muted", children: "已填 " + (d.filled ?? 0) + "/" + (d.cells ?? 0) + " · ⚪未填 " + (bs.empty ?? 0) + ((d.malformed ?? 0) > 0 ? " · ❗畸形 " + d.malformed : "") }),
 				children: [
+					(Array.isArray(grid.issues) && grid.issues.length > 0)
+						? jsx("div", { className: "spo-warn", key: "issues", children: "格子结构提示：" + grid.issues.join("；") })
+						: null,
 					jsx("div", { key: "wrap", className: "swb-gridWrap", children: jsx("table", { className: "swb-grid", children: [
 						jsx("thead", { key: "h", children: jsx("tr", { children: headCells }) }),
 						jsx("tbody", { key: "b", children: bodyRows })
@@ -1042,8 +1047,13 @@ window.__ModuleLoader__.load({
 				id: "blocked", title: "④ 阻塞", collapsed, onToggle,
 				extra: jsx("span", { className: "spo-muted", children: "计入 " + blk.count + " · 未申报 " + blk.nonconforming_count }),
 				children: [
+					// 部分降级（如 ledger 不可读但 product-progress 可用）必须在本区也显式可见 ——
+					// 否则面板展示的是**残缺阻塞列表**却零信号（独立复核 finding a）
+					(blk.degraded === true)
+						? jsx("div", { className: "spo-warn", key: "blkWarn", children: "部分阻塞源降级：" + (blk.error ?? "") + ((blk.card_fallback_count ?? 0) > 0 ? "；已从卡面直取 " + blk.card_fallback_count + " 条三要素齐全的阻塞补位" : "") })
+						: null,
 					jsx("div", { key: "list", children: list }),
-					jsx("div", { key: "ncHead", className: "swb-flowHead", children: "卡面 blocked 备注未按三要素申报 " + nc.length + " 条（reason+since+needs 缺一即不计入阻塞数 —— 不静默补）" }),
+					jsx("div", { key: "ncHead", className: "swb-flowHead", children: "未按三要素申报（reason+since+needs 缺一即不计入阻塞数，不静默补）共 " + nc.length + " 条" }),
 					nc.length === 0
 						? jsx("div", { className: "spo-empty", key: "ncEmpty", children: "无" })
 						: jsx("div", { className: "swb-scroll", key: "nc", children: nc.map((n, i) => jsx("div", { className: "spo-item", key: (n.id ?? "n") + i, children: [

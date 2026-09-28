@@ -104,6 +104,42 @@ CDP Page.reload(ignoreCache) 后，侧栏实际条目：
 4. **PR 取数三级**：API → 仓库快照（显式标注「快照 + 生成时间」，**不伪造今日/本周已合数**）→ 显式 degraded。
 5. **仓库文件二级**：工作区 → `origin/main`（`lib/repofile.js` 收敛一处）→ 显式 degraded（带逐级原因）。
 
+## 五之二、独立复核（子代理零上下文）与修复
+
+提交后跑了一轮**独立验证**（只读；8 项声称逐条核 + 未声称问题扫描）。结果：**7 项 TRUE、1 项 FALSE**，
+另发现 8 项未声称问题。原始记录：`08-独立验证与修复-原始记录.txt`。
+
+**FALSE 项（口径声明与实际不符）**：声称「三要素齐全才计入阻塞」，但门槛只施加于卡面 `blocked` 对象，
+`ledger#blocked` 与 `product-progress#lines[].blocked` **无条件计入**；而面板文案宣称「缺一不计入」。
+反例：`ledger.blocked=[{id:'B-EMPTY'}]` → `count:1, reason:"(无原因)"`。
+
+**处置：全部修复并逐条加回归测试**（`test/workbench.test.js` 回归 CE1/CE3/CE4/CE5/CE6/CE7 + finding a/b/d/e/h，
+`test/flow.test.js` 回归 finding 5/f）：
+
+| # | 问题 | 修法 |
+|---|---|---|
+| FALSE | 三要素门槛只覆盖一个入参 | 门槛**统一施加于三个入参**；缺要素 → 单列「上源三要素不全」并标注来源，不计入 |
+| a | ledger 不可读但 progress 可读 → 面板展示残缺列表且 `degraded_sources` 为空 | 块级 `degraded` 也入 `degraded_sources`；区块内再加 `spo-warn` 行 |
+| b | 任务卡坏 JSON 从不进面板 A payload | 新增 `task_cards{ok,count,error_count,errors}`，坏卡入 `degraded_sources` |
+| c | 引用不存在的 `flow.degraded_sources`；丢 git/pr 各自原因 | 逐条拼 git/pr/快照回退原因 |
+| d | 非对象格元素被算成「已填」 | 单列 `derived.malformed`，不再进 filled |
+| e | `EMPTY_STATUSES` 死导出 | 改为 `normalizeStatus` 直接消费 + 回归测试断言被生产代码引用 |
+| f | 凭据文件绝对路径随 200 响应出网 | `credential_source` 只回 `"file"`；回归断言响应体不含凭据目录 |
+| g | 标题硬编码「16 行 × 4 问」 | 行/问数取自 `derived`（真机复验：由数据渲染为「16 行 × 4 问」） |
+| h | `{"cells":[]}` → 合法空矩阵 | 0 行视为**结构异常** → degraded |
+| 5残 | 自定义 fetch 把 Authorization 塞进 error 时原样透传 | 新增 `redact()`，错误串里 token → `***`；回归实测不可复现 |
+| CE4 | 卡面三要素齐全 + ledger 不可读 → 真实阻塞静默消失 | ledger 不可读时从卡面**直取补位**（标 source），ledger 可用时不重复计 |
+| CE5 | 卡面 `blocked: true/42/[]` 静默丢弃 | 单列「类型非法（boolean/number/array）」 |
+| CE6 | 两条无 id 同 reason 的阻塞被误合 | 去重键含 `since`/`needs` |
+| CE7 | 上源混入字符串/null/数字被静默跳过 | 单列「非对象条目」，计入 `derived.malformed_upstream` |
+
+> 独立复核另指出：安装副本 `cordis.patch.yml` 的 `repoRoot` 指向本任务 worktree，
+> 主工作区 `/Users/wane/SynovaAgent` 的格子文件仍是 48 格/3 问 —— 故把标题里的行列数改为**取自数据**（修 g）；
+> 本 PR 合入 main 后主工作区即为 64 格/4 问。
+> **线上 Host 半的时点差异**：Host 半在进程启动时载入，本轮修复后**未重启桌面端**（重启会打断创始人当前会话），
+> 故线上路由仍跑修复前一版；修复后的 Host 代码已用「真仓库根 + 假 webServer」在进程内端到端复跑
+> （`grid 16×4 / flow PR api / task_cards 378 张 0 坏卡 / leak_token=false`），并另有 94 条自动化测试覆盖。
+
 ## 六、Done ⑥ 死声明已核/修（dsh-client-runtime 注入）
 
 实测：锚定版（`/Users/wane/src/deepseek-harness-017/packages/client/`）包清单中
@@ -125,14 +161,16 @@ CDP Page.reload(ignoreCache) 后，侧栏实际条目：
 ## 八、自动化测试
 
 ```
-npm test → tests 81 | pass 81 | fail 0      （原始输出：06-npm-test-原始输出.txt）
+npm test → tests 94 | pass 94 | fail 0      （原始输出：06-npm-test-原始输出.txt）
 ```
 
-新增覆盖：四问格子（四色 / 空格不折算成绿 / 未知态单列 / 坏 JSON / 缺 cells）、
+新增覆盖（81 → 94 条：含独立复核 13 条回归）：四问格子（四色 / 空格不折算成绿 / 未知态单列 / 坏 JSON / 缺 cells / 空数组 / 畸形元素）、
 待你裁（权威源 vs 卡面扫描单列 / 无锚点不编天数）、阻塞（三要素口径 / 未申报单列 / 两源去重）、
 治理线（三信号 / 服务主线显式优先-文本抽取-不猜 / 活卡终态分流排序 / 两源独立降级）、
 PR（API 正常 / 无 token 回退快照且不伪造合并数 / 两级失败 / HTTP 非 200）、
-注册降级 ⚠、图标 children 回归、三面板零写入（只 GET）。
+注册降级 ⚠、图标 children 回归、三面板零写入（只 GET）、
+阻塞三要素门槛三入参统一 + 卡面补位 + 类型非法不静默丢 + 去重键含 since/needs、
+降级清单覆盖块级 partial（ledger 不可读 / 坏卡 / PR 快照回退）、token 脱敏。
 
 ## 九、红线自查
 

@@ -1,12 +1,9 @@
-✔ readTaskCards：坏 JSON 卡进 errors 但其余卡照读（单卡不拖垮整表） (2.889958ms)
-✔ readTaskCards 降级：task-state 目录不存在 → ok:false（ENOENT 与坏 JSON 分开报） (1.49775ms)
-✔ collectWorkbench：不存在的 repoRoot 下也不抛异常，四块各自显式降级 (62.978ms)
-✔ collectWorkbench：全绿夹具下 ok:true / degraded:false，且数字全部来自夹具（禁手写） (49.885417ms)
-ℹ tests 81
+✔ 回归 finding e：EMPTY_STATUSES 必须被生产代码消费（防死导出，铁律 37） (0.769667ms)
+ℹ tests 94
 ℹ suites 0
-ℹ pass 81
+ℹ pass 94
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 1239.719709
+ℹ duration_ms 1551.338292
