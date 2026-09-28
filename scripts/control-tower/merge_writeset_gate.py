@@ -119,7 +119,18 @@ def changed_files(repo: str, base: str, head: str) -> Tuple[str, List[str]]:
 # D708 复核修复①: 大小写不敏感。分支名/提交 scope 常见小写（feat/win-d702-…、docs(d702): …），
 #   旧实现只认大写 D → 推断为空 → 回退链失守（复核实测 parse_did('feat/win-d702-…') → None）。
 #   统一归一化为大写，保证与 task-state / brief 文件名里的 D# 口径一致。
-DID_RE = re.compile(r"[Dd]\d+")
+#
+# D708 复核修复③（2026-09-28，PR #872 实测 · 独立复核员定位 + 队长端到端复核）:
+#   **必须加词边界**：GitHub 的 PR merge commit subject **内嵌 40 字符全长 SHA**，例如
+#     `Merge b2678c205f93b65bd63b68956d287ddd9f780224 into ff4677129dce2ff068a816eed3db0687b060c64c`
+#   旧 `[Dd]\d+` 无边界 ⇒ 命中 SHA 内部的十六进制片段（`b65b**d63**b68` → `d63`）
+#   ⇒ infer_did 误判为 `D63` ⇒ 派生到无关 dev doc ⇒ 声明 0 条 ⇒ :446 fail-closed **exit 2**。
+#   现象：`--base origin/main --head HEAD` 在**线性 HEAD 上 pass、在 PR merge commit 上 degraded**。
+#   实测（真实 refs/pull/872/merge = d1ba4905）：旧正则 findall → ['d63','d287','d9','d3'] ⇒ D63 ⇒ EXIT=2；
+#   新正则 findall → [] ⇒ 回退到分支名/更早提交 ⇒ D1039 ⇒ EXIT=0。
+#   判据（回归）：`ci(D1039):`→D1039 ｜ `fix(D63):`→D63 ｜ `docs(D1034):`→D1034 ｜
+#                  `feat(d702):`→d702 ｜ `bypass COMMITTED 登记 (auto hook, D521)`→D521 ｜ merge 全长 SHA→**无**
+DID_RE = re.compile(r"(?<![0-9A-Za-z])[Dd]\d+(?![0-9A-Za-z])")
 
 # D708 复核修复②: post-commit hook 生成「登记影子提交」，其 subject 含 `bypass COMMITTED 登记`
 #   且**带一个历史 D#**（如 `(auto hook, D521)`）。HEAD 经常就是这个影子提交 →
