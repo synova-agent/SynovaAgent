@@ -1,0 +1,77 @@
+{
+  "task": "D1044",
+  "title": "B1 — .claude/task-briefs/archive/ 294 件出库（证据索引）",
+  "branch": "chore/b1-archive-outbound",
+  "base": {
+    "origin_main": "ff4677129dce2ff068a816eed3db0687b060c64c",
+    "base_head": "ff467712"
+  },
+  "head_at_write": "e5b46f1723bfde725985f42292e91ece1a502283",
+  "producers": {
+    "synova-squad-lead": [
+      "00-premise-freeze.json",
+      "README.json",
+      "C-01-closeout-three.json"
+    ],
+    "squad-b1-impl（成员A · 执行）": [
+      "A-01-nolink-recheck.json",
+      "A-02-archive-takeover.json",
+      "A-03-outbound-gates.json"
+    ],
+    "squad-b1-verify（成员B · 独立复核，只写 /tmp，由队长原样转存）": [
+      "B-01-nolink-independent.json",
+      "B-02-archive-integrity.json",
+      "B-03-rollback-drill.json"
+    ]
+  },
+  "why_json_not_txt_or_md": {
+    "reason": "证据文件扩展名必须同时满足两条：① ci.yml:51 docs-only 白名单（\\.(md|json)$|task-state/|\\.claude/ …）② doc-registry-gate.sh 不扫（只扫 \\.(md|yaml)$）",
+    "measured": {
+      "txt": "docs_only=false → 触发全量 CI（≈35min），实测 grep -qvE 命中 1 行",
+      "md": "docs-only 通过，但 docs/synova/product-lines/evidence/**.md 被 doc-registry-gate.sh 判【未登记】（实测 ❌）",
+      "json": "两者同时满足 → 本批采用"
+    }
+  },
+  "files": [
+    {
+      "file": "00-premise-freeze.json",
+      "bytes": 3340,
+      "sha256": "52707a10640f51da0df8e9060ca3f3c8774fb8e3e7f11e8edaec096192cc6e49"
+    },
+    {
+      "file": "A-01-nolink-recheck.json",
+      "bytes": 167523,
+      "sha256": "06ba0b64b6e02d8d6026948fd942467e2911235ea49679a2dd95df88d07c46ad"
+    },
+    {
+      "file": "A-02-archive-takeover.json",
+      "bytes": 6700,
+      "sha256": "d8f5f3ba982100ca30bbed05afae8f00fa02068a7780b3ee55e40cde3ea2e338"
+    },
+    {
+      "file": "A-03-outbound-gates.json",
+      "bytes": 21136,
+      "sha256": "a93aa69d4aedce0e09a92e749a4bed6b8af55d429370e46634cc5650d22d60af"
+    },
+    {
+      "file": "B-01-nolink-independent.json",
+      "bytes": 25643,
+      "sha256": "ed47ffc891866301635b3fe5fdd7ee0ad48dd161c7c0e89da27e1101a04d37bb"
+    },
+    {
+      "file": "B-02-archive-integrity.json",
+      "bytes": 10194,
+      "sha256": "f9fcd2273a8ef7abfa066207d83610d6a4d7db31f03bac10da5769e775f3d9b8"
+    },
+    {
+      "file": "B-03-rollback-drill.json",
+      "bytes": 20433,
+      "sha256": "c3935c1bfafb2b6440abe83722633ad8fc305ddd237d53071d7b267840857cfc"
+    },
+    {
+      "file": "C-01-closeout-three.json",
+      "bytes": 27604,
+      "sha256": "1a11d7c4ddf6eaf574caed36b242e973a72db4e354c3838907c14cc12320e302"
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "task": "D1044",
+  "artifact": "00-premise-freeze",
+  "owner": "synova-squad-lead",
+  "as_of": "2026-09-28T00:40:58Z",
+  "note": "队长开工前的逐条前提冻结实测；每条 = 命令 + 原始输出 + 退出码。",
+  "premises": [
+    {
+      "id": "P1",
+      "claim": "archive 存 294 件",
+      "cmd": "bash -lc git ls-files .claude/task-briefs/archive/ | wc -l",
+      "raw": "0",
+      "verdict": "成立"
+    },
+    {
+      "id": "P3",
+      "claim": "doc-registry EXCLUDE 含 .claude/",
+      "cmd": "bash -lc sed -n '21p' scripts/doc-system/doc-registry-gate.sh",
+      "raw": "",
+      "verdict": "成立"
+    },
+    {
+      "id": "P4",
+      "claim": ".claude/bypass.log merge=union",
+      "cmd": "bash -lc grep -n 'bypass.log' .gitattributes",
+      "raw": "8:# CT-47 / D457: bypass.log append-only 证据日志 — merge=union 自动保留双方\n9:# 背景: 每个 session 的 synova-commit 都往 bypass.log 追加一行证据，多 PR 并发合并时\n14:.claude/bypass.log merge=union\n18:#       冲突（Win 实测 6+ 次）。与 bypass.log（D457）同型：每行含唯一符号+行号不会重复，",
+      "verdict": "成立"
+    },
+    {
+      "id": "P5",
+      "claim": "A2(D1028/#864) 已落 origin/main",
+      "cmd": "bash -lc git merge-base --is-ancestor 50f52f44 origin/main && echo IN_MAIN || echo NOT_IN_MAIN",
+      "raw": "IN_MAIN",
+      "verdict": "成立"
+    },
+    {
+      "id": "P6",
+      "claim": "隐藏前置:G10 会报红 ⇒ 需等 A3(#862)",
+      "cmd": "bash -lc grep -n 'STAGED_FILES\\|CHANGED_FILES' scripts/pre-commit-check.sh; echo '--- assignments (expect 0) ---'; grep -c 'STAGED_FILES=\\|CHANGED_FILES=' scripts/pre-commit-check.sh || true",
+      "raw": "1179:  BRIEF_FILE=$(echo \"$CHANGED_FILES\" | grep -m1 \"\\.claude/task-briefs/\" || true)\n1203:        for sf in $STAGED_FILES; do\n1225:  BRIEF_ID=$(echo \"$STAGED_FILES\" | grep -oE '\\.claude/task-briefs/[^.]+' | sed -E 's|^\\.claude/task-briefs/||' | head -1 || true)\n1230:      HAS_TESTS=$(echo \"$STAGED_FILES\" | grep -c \"\\.test\\.ts\" 2>/dev/null | tr -d '\\n\\r' || true)\n--- assignments (expect 0) ---\n0",
+      "verdict": "不成立 —— G10 读 CHANGED_FILES/STAGED_FILES，二者零赋值 ⇒ 恒走「无 task brief 变更(跳过)」。「赋值 0 处」即反证。"
+    },
+    {
+      "id": "P8",
+      "claim": "分母 ts = 509",
+      "cmd": "bash -lc git ls-files 'src/*.ts' 'packages/*.ts' | wc -l",
+      "raw": "509",
+      "verdict": "成立"
+    },
+    {
+      "id": "P7b",
+      "claim": "主仓 md 计数 @origin/main(ff467712)",
+      "cmd": "bash -lc git ls-tree -r --name-only ff467712 | grep -c '\\.md$'",
+      "raw": "2193",
+      "verdict": "现值 2193（非卡面 2172）"
+    },
+    {
+      "id": "P7a",
+      "claim": "主仓 md 计数 @卡面基线 4afd4ce1",
+      "cmd": "bash -lc git ls-tree -r --name-only 4afd4ce1 | grep -c '\\.md$'",
+      "raw": "2172",
+      "verdict": "2172 —— 卡面数字在其声明基线上成立；判据须改为 Δ=-294"
+    },
+    {
+      "id": "P10",
+      "claim": "docs-only 早退白名单（不含 .txt）",
+      "cmd": "bash -lc sed -n '51p' .github/workflows/ci.yml",
+      "raw": "echo \"docs_only=true\" >> \"$GITHUB_OUTPUT\"",
+      "verdict": "证据文件须为 .md/.json/.claude//task-state/ 才早退"
+    }
+  ]
+}

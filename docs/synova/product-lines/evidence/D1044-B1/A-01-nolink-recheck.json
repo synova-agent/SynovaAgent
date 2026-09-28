@@ -42,5 +42,67 @@
     "口径2_队长精化_排除本批声明产物": "1 行（唯一例外 D1028:651）；两遍同为 1",
     "589_到_590_漂移说明": "队长追加 §判据精化与例外登记（brief L417 起）后 brief 命中 294→295：该节 L437 原样引用了 D1028:651 那一行，而该行本身含一个 archive 路径 ⇒ +1。两口径原始输出俱在本文件。"
   },
-  "conclusion": "本批 294 件在主仓（除 archive/ 目录外）活引用 0 件。口径1=590 中的 589 为本批自身声明产物（卡面 §写集 要求逐条列出 294 条删除侧路径，与本 brief、task-state/D1044.json 的『0 命中』要求互斥 ⇒ 原判据在本批不可达，属卡内不一致）；口径2=1，唯一例外 docs/synova/coordination/出库声明与批次模板-D1028-20260927.md:651，位于该文件 645-663 行 ```text 围栏块内，系 D1028 自身 `git grep -n 'doc-registry\\.json'` 输出的原样转写（§A.3 清单第 5 条），非 import / 非调用 / 非门禁读取 ⇒ 判为非活引用（队长裁定 + 成员B 独立复跑 src/ packages/ scripts/ tests/ .github/ docs/authority/ memory/ decisions/ = 0 命中）。"
+  "conclusion": "本批 294 件在主仓（除 archive/ 目录外）活引用 0 件。口径1=590 中的 589 为本批自身声明产物（卡面 §写集 要求逐条列出 294 条删除侧路径，与本 brief、task-state/D1044.json 的『0 命中』要求互斥 ⇒ 原判据在本批不可达，属卡内不一致）；口径2=1，唯一例外 docs/synova/coordination/出库声明与批次模板-D1028-20260927.md:651，位于该文件 645-663 行 ```text 围栏块内，系 D1028 自身 `git grep -n 'doc-registry\\.json'` 输出的原样转写（§A.3 清单第 5 条），非 import / 非调用 / 非门禁读取 ⇒ 判为非活引用（队长裁定 + 成员B 独立复跑 src/ packages/ scripts/ tests/ .github/ docs/authority/ memory/ decisions/ = 0 命中）。",
+  "final_state_anchor": {
+    "as_of": "2026-09-28T00:39:19Z",
+    "captured_before_this_edit": true,
+    "state_at_capture": {
+      "HEAD": "e5b46f1723bfde725985f42292e91ece1a502283",
+      "origin/main": "ff4677129dce2ff068a816eed3db0687b060c64c",
+      "ahead_behind_origin_main...HEAD": "0 / 2  (ahead 2, behind 0)",
+      "working_tree": "clean —— git status --short 输出 0 行",
+      "commits": [
+        "e5b46f17 chore: bypass COMMITTED 登记 (auto hook, D521)",
+        "5b483760 chore(D1044): .claude/task-briefs/archive/ 294 件出库（承接后移出）",
+        "ff467712 docs(D1034): cto-handover 加「派单模板 v2」— 预置坑位（门禁合规六条 + 推送纪律四条）"
+      ]
+    },
+    "commands": [
+      {
+        "cmd": "git rev-parse HEAD",
+        "exit": 0,
+        "stdout": "e5b46f1723bfde725985f42292e91ece1a502283\n",
+        "stderr": ""
+      },
+      {
+        "cmd": "git rev-parse origin/main",
+        "exit": 0,
+        "stdout": "ff4677129dce2ff068a816eed3db0687b060c64c\n",
+        "stderr": ""
+      },
+      {
+        "cmd": "git rev-list --left-right --count origin/main...HEAD",
+        "exit": 0,
+        "stdout": "0\t2\n",
+        "stderr": ""
+      },
+      {
+        "cmd": "git status --short",
+        "exit": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "cmd": "git log --oneline -3",
+        "exit": 0,
+        "stdout": "e5b46f17 chore: bypass COMMITTED 登记 (auto hook, D521)\n5b483760 chore(D1044): .claude/task-briefs/archive/ 294 件出库（承接后移出）\nff467712 docs(D1034): cto-handover 加「派单模板 v2」— 预置坑位（门禁合规六条 + 推送纪律四条）\n",
+        "stderr": ""
+      },
+      {
+        "cmd": "bash scripts/control-tower/check-pr-budget.sh",
+        "exit": 0,
+        "stdout": "── PR 预算门禁（D734）: 基线=origin/main 上限=12 文件 / 落后阈值=20 ──\n  ℹ️  出库豁免不适用（D1028 路径级豁免未生效）:\n       ⓐ 不满足: 变更含 7 件增/改（非纯删除/重命名）→ D/R 计入预算\n       ⓑ 不满足: 白名单外路径 5 件（未落出库白名单）:\n         .claude/bypass.log\n         docs/synova/product-lines/evidence/D1044-B1/A-01-nolink-recheck.json\n         docs/synova/product-lines/evidence/D1044-B1/A-02-archive-takeover.json\n         docs/synova/product-lines/evidence/D1044-B1/A-03-outbound-gates.json\n         task-state/D1044.json\n  ℹ️  D860 治理产物豁免: 300 件不计预算（brief/卡/Note/规格/自验证据，代码文件仍计入）\n  ✅ ① 变更文件数 1 ≤ 上限 12\n  ✅ ② 变更单域: ✅ PASS 0 个文件同域: 无归属（无归属 0，域判定豁免 1）\n  ✅ ③ 落后 origin/main 0 个提交 ≤ 20\n✅ PASS PR 预算内（1 文件）\n",
+        "stderr": ""
+      }
+    ],
+    "budget_at_final_head": {
+      "measured_by": "squad-b1-impl（执行方独立复跑，读-only，复跑后 git status --short 仍 0 行）",
+      "result": "exit=0 ｜ ✅ PASS PR 预算内（1 文件）｜ ✅ ① 变更文件数 1 ≤ 上限 12",
+      "why_1_not_0": "门禁原文：ℹ️ D860 治理产物豁免 300 件不计预算；白名单外仅 .claude/bypass.log 1 件计入（该文件由 post-commit hook 在 e5b46f17 提交，不匹配 GOV_PREFIX_RE）。同时原文注明『出库豁免不适用（D1028 路径级豁免未生效）ⓐ 变更含 7 件增/改 ⓑ 白名单外路径 5 件』——印证队长 D-3：本批实际生效的是 D860 治理产物豁免，非 #864 出库豁免。",
+      "note": "与 ③ 阶段回执（当时 0 文件）不矛盾：时点不同。0 = 仅 294 删除入 index（全豁免）；1 = 最终 HEAD（含 hook 的 bypass.log 提交）。"
+    },
+    "commit_status_of_this_anchor": "未提交（工作区改动）。遵队长裁决：task-1 完成后『不要动仓库』，等 verifier task-3 回退演练跑完由队长统一收口提交。⚠️ 本锚必须与主仓交付同批提交，否则单次 push 会漏掉本锚。",
+    "self_hash_note": "本锚写入使 A-01 自身 sha256 变化：写入前 = d7b1159e93c459ee18f208cae12eeb13ae04421f56eee7d9c456343f93df0cf9；写入后由队长复算。A-02 / A-03 本次未改动，sha256 保持 d8f5f3ba982100ca30bbed05afae8f00fa02068a7780b3ee55e40cde3ea2e338 / a93aa69d4aedce0e09a92e749a4bed6b8af55d429370e46634cc5650d22d60af。",
+    "identity_ruling": "队长裁决 A：不 amend。本批 2 个 commit 的 author/committer 均为 D1029 fixture <d1029-test@example.invalid>（来源 file:/Users/wane/SynovaAgent/.git/config，全库 123 commit 波及），登记为具名遗留 L-6，走规则由 CTO 修配置，不做一次性 amend。"
+  }
 }
