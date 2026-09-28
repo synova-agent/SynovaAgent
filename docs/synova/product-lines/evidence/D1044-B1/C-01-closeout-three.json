@@ -90,7 +90,7 @@
    },
    {
     "id": "L-6",
-    "item": "仓库级 git 身份为夹具残留：file:/Users/wane/SynovaAgent/.git/config ⇒ user.name='D1029 fixture' / user.email='d1029-test@example.invalid'，全库 123 个 commit 已用该身份（含本批 2 个）",
+    "item": "仓库级 git 身份为夹具残留：file:/Users/wane/SynovaAgent/.git/config ⇒ user.name='D1029 fixture' / user.email='d1029-test@example.invalid'，全库 **≥123** 个 commit 已用该身份（含本批 2 个；**数字随 ref 集合漂移**：同一命令实测 fetch 前 123 / fetch 后 151 ⇒ 不写死）",
     "why_not_now": "根因是**共享配置**，改单个 commit 治不了本、且 amend 会打断 .claude/bypass.log 的 HASH=5b483760 证据链 ⇒ 按『不做一次性特例』走规则，须 CTO 在 .git/config 设回 tangbaobao520 <huangxuesongvip@163.com>",
     "evidence": "brief §红线 之外的 L-6；A 报告 + 队长复算：git config --local --show-origin --get user.name"
    },
@@ -105,6 +105,12 @@
     "item": "卡面 worktree 命令 `git worktree add <dir> <branch>` 在分支已被其它工作树占用时不可执行",
     "why_not_now": "B 改用 --detach 钉同一 sha 完成演练；建议模板写 `--detach <sha>`",
     "evidence": "B-03"
+   },
+   {
+    "id": "L-12",
+    "item": "（R-4·结构性假绿面）干净树复跑 `SYNO_CI=1 scripts/pre-commit-check.sh`：`Notes 迁移 / G10 / G11 / G13` 共 4 项输出『跳过』，结尾**仍打印**『✅ 全部 13 组通过』——该总结句**不随跳过而变**，故『13 组通过』不是状态无关陈述",
+    "why_not_now": "控制塔域（`scripts/pre-commit-check.sh`），与本批 L-3/L-4 同族（门禁读暂存集 ⇒ 结论依赖运行时机）；本批只登记不改",
+    "evidence": "成员B 复核④ 在干净树实测；队长复现：grep -c '跳过' = 4，且 '✅ 全部 13 组通过' 同时存在"
    }
   ]
  },
@@ -127,6 +133,10 @@
    "stdout": "── PR 预算门禁（D734）: 基线=origin/main 上限=12 文件 / 落后阈值=20 ──\n  ℹ️  出库豁免不适用（D1028 路径级豁免未生效）:\n       ⓐ 不满足: 变更含 13 件增/改（非纯删除/重命名）→ D/R 计入预算\n       ⓑ 不满足: 白名单外路径 11 件（未落出库白名单）:\n         .claude/bypass.log\n         docs/synova/product-lines/evidence/D1044-B1/00-premise-freeze.json\n         docs/synova/product-lines/evidence/D1044-B1/A-01-nolink-recheck.json\n         docs/synova/product-lines/evidence/D1044-B1/A-02-archive-takeover.json\n         docs/synova/product-lines/evidence/D1044-B1/A-03-outbound-gates.json\n         docs/synova/product-lines/evidence/D1044-B1/B-01-nolink-independent.json\n         docs/synova/product-lines/evidence/D1044-B1/B-02-archive-integrity.json\n         docs/synova/product-lines/evidence/D1044-B1/B-03-rollback-drill.json\n         docs/synova/product-lines/evidence/D1044-B1/C-01-closeout-three.json\n         docs/synova/product-lines/evidence/D1044-B1/README.json\n         task-state/D1044.json\n  ℹ️  D860 治理产物豁免: 306 件不计预算（brief/卡/Note/规格/自验证据，代码文件仍计入）\n  ✅ ① 变更文件数 1 ≤ 上限 12\n  ✅ ② 变更单域: ✅ PASS 0 个文件同域: 无归属（无归属 0，域判定豁免 1）\n  ✅ ③ 落后 origin/main 0 个提交 ≤ 20\n✅ PASS PR 预算内（1 文件）\n",
    "stderr": ""
   },
-  "note": "三条均为提交前/提交后在实体工作树上的实跑原始输出"
+  "note": "三条均为提交前/提交后在实体工作树上的实跑原始输出",
+  "pre_commit_named_warning": {
+   "line": "⚠️  PRD 对照: Done 标准引用 PRD 章节(可选): 1 处  [可选提示——永不阻断]",
+   "why": "R-3：原记录只给 `| tail -6`，未点名唯一告警。坑清单『绿腿告警必须可见』要求告警原文入档。"
+  }
  }
 }

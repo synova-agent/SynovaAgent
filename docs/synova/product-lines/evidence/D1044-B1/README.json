@@ -6,7 +6,7 @@
     "origin_main": "ff4677129dce2ff068a816eed3db0687b060c64c",
     "base_head": "ff467712"
   },
-  "head_at_write": "2f5c75f005b8391f6a232e9ecbf9acecd4d44f53",
+  "head_at_write": "9eecea7c24ae868fefce7f3b14c3ae187b30e207",
   "producers": {
     "synova-squad-lead": [
       "00-premise-freeze.json",
@@ -35,8 +35,8 @@
   "files": [
     {
       "file": "00-premise-freeze.json",
-      "bytes": 8138,
-      "sha256": "00b4171ac3aa6b48a13ff511e231b12ca96d6aa66c11a398c32c7ebfd8e8e524"
+      "bytes": 10230,
+      "sha256": "a78154862579473f34b167077f829fe7a03e7896217d35b801a0d3842744b85a"
     },
     {
       "file": "A-01-nolink-recheck.json",
@@ -70,8 +70,10 @@
     },
     {
       "file": "C-01-closeout-three.json",
-      "bytes": 28493,
-      "sha256": "5b621f7d06ebd505fb67c9e56c0896b11897922c7829ebe2ccbbfdda54000738"
+      "bytes": 29529,
+      "sha256": "9c46e741c0c455181be2d9d1ddd74c58a64f9f65a060489e706a51cf54124700"
     }
-  ]
+  ],
+  "delivered_revision": "9eecea7c24ae868fefce7f3b14c3ae187b30e207",
+  "delivered_revision_note": "R-2：`head_at_write` 是生成时点的 HEAD（可能指向父提交），本字段才是本证据集描述的交付 revision。"
 }

@@ -19,7 +19,9 @@
       "exit": 0,
       "raw_stdout": "     294\n",
       "raw_stderr": "",
-      "verdict": "成立（raw=294 @ff467712）"
+      "verdict": "成立（raw=294 @ff467712）",
+      "cwd": "/Users/wane/SynovaAgent/.synova-wt-b1-d1044",
+      "cwd_head": "9eecea7c"
     },
     {
       "id": "P1b",
@@ -29,7 +31,9 @@
       "exit": 0,
       "raw_stdout": "       0\n",
       "raw_stderr": "",
-      "verdict": "成立（raw=0 @HEAD，与 P1a 构成 Δ=−294）"
+      "verdict": "成立（raw=0 @HEAD，与 P1a 构成 Δ=−294）",
+      "cwd": "/Users/wane/SynovaAgent/.synova-wt-b1-d1044",
+      "cwd_head": "HEAD(=9eecea7c)"
     },
     {
       "id": "P2a",
@@ -39,7 +43,9 @@
       "exit": 0,
       "raw_stdout": "     294\n       1\n",
       "raw_stderr": "",
-      "verdict": "需复核（raw='294\\n       1'）"
+      "verdict": "需复核（raw='294\\n       1'）",
+      "cwd": "/Users/wane/SynovaAgent/.synova-wt-b1-d1044",
+      "cwd_head": "HEAD(=9eecea7c)"
     },
     {
       "id": "P2b",
@@ -49,7 +55,9 @@
       "exit": 0,
       "raw_stdout": "       1\n",
       "raw_stderr": "",
-      "verdict": "命中 1 行 —— 与 P2a 一致（口径交叉验证）"
+      "verdict": "命中 1 行 —— 与 P2a 一致（口径交叉验证）",
+      "cwd": "/Users/wane/SynovaAgent/.synova-wt-b1-d1044",
+      "cwd_head": "HEAD(=9eecea7c)"
     },
     {
       "id": "P3",
@@ -59,7 +67,9 @@
       "exit": 0,
       "raw_stdout": "22:EXCLUDE='^tmp/|\\.claude/|memory/|docs/plans/codex/implementation/|docs/synova/audit-reports/|docs/authority/chronicle-drafts/|docs/synova/DASHBOARD.*\\.md$|/archive/|/Archive/'\n",
       "raw_stderr": "",
-      "verdict": "成立（EXCLUDE 定义在 22 行；其正则含 \\.claude/ 与 /archive/）"
+      "verdict": "成立（EXCLUDE 定义在 22 行；其正则含 \\.claude/ 与 /archive/）",
+      "cwd": "/Users/wane/SynovaAgent/.synova-wt-b1-d1044",
+      "cwd_head": "9eecea7c"
     },
     {
       "id": "P4",
@@ -69,7 +79,9 @@
       "exit": 0,
       "raw_stdout": "8:# CT-47 / D457: bypass.log append-only 证据日志 — merge=union 自动保留双方\n9:# 背景: 每个 session 的 synova-commit 都往 bypass.log 追加一行证据，多 PR 并发合并时\n14:.claude/bypass.log merge=union\n18:#       冲突（Win 实测 6+ 次）。与 bypass.log（D457）同型：每行含唯一符号+行号不会重复，\n",
       "raw_stderr": "",
-      "verdict": "成立（命中 4 行，含 .claude/bypass.log merge=union）"
+      "verdict": "成立（命中 4 行，含 .claude/bypass.log merge=union）",
+      "cwd": "/Users/wane/SynovaAgent/.synova-wt-b1-d1044",
+      "cwd_head": "9eecea7c"
     },
     {
       "id": "P5",
@@ -79,7 +91,9 @@
       "exit": 0,
       "raw_stdout": "IN_MAIN\n",
       "raw_stderr": "",
-      "verdict": "成立（IN_MAIN）"
+      "verdict": "成立（IN_MAIN）",
+      "cwd": "/Users/wane/SynovaAgent/.synova-wt-b1-d1044",
+      "cwd_head": "9eecea7c"
     },
     {
       "id": "P6",
@@ -89,7 +103,9 @@
       "exit": 0,
       "raw_stdout": "1179:  BRIEF_FILE=$(echo \"$CHANGED_FILES\" | grep -m1 \"\\.claude/task-briefs/\" || true)\n1203:        for sf in $STAGED_FILES; do\n1225:  BRIEF_ID=$(echo \"$STAGED_FILES\" | grep -oE '\\.claude/task-briefs/[^.]+' | sed -E 's|^\\.claude/task-briefs/||' | head -1 || true)\n1230:      HAS_TESTS=$(echo \"$STAGED_FILES\" | grep -c \"\\.test\\.ts\" 2>/dev/null | tr -d '\\n\\r' || true)\nassignments=0\n",
       "raw_stderr": "",
-      "verdict": "不成立 —— CHANGED_FILES/STAGED_FILES 仅 4 处使用、0 处赋值（幽灵变量）；实测 G10 恒输出『无 task brief 变更(跳过)』 ⇒ A3/#862 非本批前置"
+      "verdict": "不成立 —— CHANGED_FILES/STAGED_FILES 仅 4 处使用、0 处赋值（幽灵变量）；实测 G10 恒输出『无 task brief 变更(跳过)』 ⇒ A3/#862 非本批前置",
+      "cwd": "/Users/wane/SynovaAgent/.synova-wt-b1-d1044",
+      "cwd_head": "9eecea7c"
     },
     {
       "id": "P7a",
@@ -99,7 +115,9 @@
       "exit": 0,
       "raw_stdout": "2172\n",
       "raw_stderr": "",
-      "verdict": "raw=2172 —— 与卡面一致（卡面数字在其声明基线上成立）"
+      "verdict": "raw=2172 —— 与卡面一致（卡面数字在其声明基线上成立）",
+      "cwd": "/Users/wane/SynovaAgent/.synova-wt-b1-d1044",
+      "cwd_head": "9eecea7c"
     },
     {
       "id": "P7b",
@@ -109,7 +127,9 @@
       "exit": 0,
       "raw_stdout": "2193\n",
       "raw_stderr": "",
-      "verdict": "raw=2193 —— 相对卡面 2172 漂移 +21 ⇒ 判据改为『同一命令 Δ=−294』"
+      "verdict": "raw=2193 —— 相对卡面 2172 漂移 +21 ⇒ 判据改为『同一命令 Δ=−294』",
+      "cwd": "/Users/wane/SynovaAgent/.synova-wt-b1-d1044",
+      "cwd_head": "9eecea7c"
     },
     {
       "id": "P8",
@@ -119,7 +139,9 @@
       "exit": 0,
       "raw_stdout": "     509\n",
       "raw_stderr": "",
-      "verdict": "成立（raw=509，出库前后不变）"
+      "verdict": "成立（raw=509，出库前后不变）",
+      "cwd": "/Users/wane/SynovaAgent/.synova-wt-b1-d1044",
+      "cwd_head": "9eecea7c"
     },
     {
       "id": "P9",
@@ -129,7 +151,9 @@
       "exit": 0,
       "raw_stdout": "  ℹ️  出库豁免不适用（D1028 路径级豁免未生效）:\n  ℹ️  D860 治理产物豁免: 306 件不计预算（brief/卡/Note/规格/自验证据，代码文件仍计入）\n  ✅ ① 变更文件数 1 ≤ 上限 12\n",
       "raw_stderr": "",
-      "verdict": "不成立（归因错）：实测输出『出库豁免不适用』，实际放行来自 D860 治理产物豁免 306 件 ⇒ N_FILES=1"
+      "verdict": "不成立（归因错）：实测输出『出库豁免不适用』，实际放行来自 D860 治理产物豁免 306 件 ⇒ N_FILES=1",
+      "cwd": "/Users/wane/SynovaAgent/.synova-wt-b1-d1044",
+      "cwd_head": "9eecea7c"
     },
     {
       "id": "P10",
@@ -139,7 +163,9 @@
       "exit": 0,
       "raw_stdout": "            echo \"docs_only=true\" >> \"$GITHUB_OUTPUT\"\n",
       "raw_stderr": "",
-      "verdict": "成立（白名单 \\.(md|json)$|task-state/|\\.claude/…；实测 .txt 证据 → docs_only=false，.json → true）"
+      "verdict": "成立（白名单 \\.(md|json)$|task-state/|\\.claude/…；实测 .txt 证据 → docs_only=false，.json → true）",
+      "cwd": "/Users/wane/SynovaAgent/.synova-wt-b1-d1044",
+      "cwd_head": "9eecea7c"
     },
     {
       "id": "P11",
@@ -149,7 +175,16 @@
       "exit": 0,
       "raw_stdout": "NOT_WRITABLE\n",
       "raw_stderr": "",
-      "verdict": "成立（NOT_WRITABLE ⇒ 承接须提权，已由队长单次提权执行）"
+      "verdict": "成立（NOT_WRITABLE ⇒ 承接须提权，已由队长单次提权执行）",
+      "cwd": "/Users/wane/SynovaAgent/.synova-wt-b1-d1044",
+      "cwd_head": "9eecea7c"
     }
-  ]
+  ],
+  "fields_contract": {
+    "cmd": "原样可复跑（交给 `bash -c '<cmd>'`）；禁止 `bash -lc <多词>` 形态（会被截成首词）",
+    "cwd": "该条命令的执行目录 —— **必须记录**：同一条 P1b 在 @ff467712 得 294、在出库后树得 0",
+    "raw_stdout / raw_stderr / exit": "机器可比的原始输出与退出码（非叙述、非摘要）",
+    "verdict": "人读结论（不得替代 raw_stdout）",
+    "R-1 clarification": "成员B 复核④ 记录『raw/cwd 全为 null、原始输出只以叙述嵌在 verdict』——经队长回读实测：`raw_stdout`/`raw_stderr`/`exit` **均在且非空**（键名为 raw_stdout 而非 raw，故 `e['raw']` 取到 None；P1b 的 raw_stdout 原文为 '       0\\n'）。成立的部分是 **cwd 未记录**，本版已补。"
+  }
 }
