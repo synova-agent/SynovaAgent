@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-28 17:15:34",
+  "generated_at": "2026-09-28 19:27:18",
   "schema": "evidence-expiry/1",
   "today": "2026-09-28",
   "ttl_days": 14,
@@ -144,6 +144,6 @@
       "days_left": 2
     }
   ],
-  "scanned_points": 59,
+  "scanned_points": 62,
   "note": "只预警不改判分（判分唯 calc-progress.py）。expired=已过 TTL; expiring=剩余 ≤ warn_days（下个重跑周期内过期）。仅 TTL 时间维度; modules git 变更类失效由 calc 判（stale 态），不在此重复。"
 }
