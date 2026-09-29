@@ -80,6 +80,34 @@
     "--fast 不覆盖 windows 平台差异类红（归 PR-A）",
     "registry sources 字段当前实测 2（登记表 + gate-hits 日志；degraded 日志在首次写入前不存在）"
   ],
+  "cto_one_liner_placement": {
+    "decision_by": "lead 2026-09-29",
+    "not_root_readme": "仓库根 README.md 是产品向文档且不在本卡写集 -> 未擅自改",
+    "actually_at": ["scripts/workflow/pre-push-preview.sh 头注释第 9 行", "scripts/workflow/pre-push-preview.sh --help 输出第 4 行"],
+    "help_visible_repro": "bash scripts/workflow/pre-push-preview.sh --help | head -5"
+  },
+  "wiring_discriminative_proof": {
+    "claim": "新门禁 8 真的在执行（接线了 != 被执行）——它先拦下了它的作者",
+    "first_push_rc": 1,
+    "first_push_block": "❌ 门禁 8: 推前预演未通过 — 推送已拒绝 (D1061 任务 4) / ❌ ② D708 写集对账: 不通过（rc=2 —— 夹带/声明源空）",
+    "root_cause": "本分支当时无 S1 写集声明（task-state/D1061.json 不在 main 也不在本分支）",
+    "second_push_rc": 0,
+    "annotation": "同一门禁、同一分支，一次红一次绿 -> 判定真实，非恒真/恒假摆设"
+  },
+  "write_set_declaration": {
+    "file": "task-state/D1061.json",
+    "items": 22,
+    "scope": "PR-A ∪ PR-B 并集",
+    "rationale": "D708 按 origin/main..HEAD 对账；并集使任一侧先合并、另一侧后 rebase 都不夹带，且不因对侧先合并而误红",
+    "lead_ruling": "coder-a 侧同名文件内容不同时以本 PR-B 并集版为准；PR-A 先合并后 PR-B rebase 时保留并集版"
+  },
+  "fixture_self_defect_lesson": {
+    "class": "ctrl-tower-change 模式 2（$VAR 紧贴全角标点 -> unbound variable）",
+    "hidden_because": "只在断言失败分支触发 -> 绿跑时完全不可见（夹具的报错路径从未被测过）",
+    "found_by": "四个变异体运行时",
+    "lesson": "变异体不只验被测物，也验夹具",
+    "suggested_mechanism": "把『$VAR 紧贴全角标点』纳入控制塔脚本/夹具静态扫描（现无此扫描）"
+  },
   "redlines_check": {
     "scripts_audit_touched": false,
     "src_touched": false,

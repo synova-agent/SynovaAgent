@@ -207,6 +207,80 @@ git log -1 --format='%ad %h' --date=short -S'- [ ] 入口可触达' -- scripts/w
 
 1. **`ci.yml` 接线未做** —— 单写者顺位 coder-a → coder-b，须待 PR-A 合并后 rebase 再加；本 PR 不含 ci.yml。
 2. **`task-state/D1061.json` 未由我创建/修改** —— 该文件不在 main（`git ls-tree origin/main` 零命中），且 PR-A(task-1) 声明为**首写者**；为避免同文件双写冲突，PR-B 条目由 coder-a 侧并集或 merge 时补齐（**偏差已报队长**）。
-3. **`README` 落位偏差** —— 卡面要求该一行命令「进 README」；本 PR 落在**本证据文件**（在写集内）。仓库根 `README.md` 是产品向文档（安装/API/MCP）且**不在本卡写集**，未擅自改；如队长要求入根 README 或 `收件闸检查单`，请裁定后我补。
+3. **`README` 落位（队长已裁定，已执行）** —— 卡面「进 README」**不进仓库根 `README.md`**（产品向、且不在本卡写集）。落位改为 **`pre-push-preview.sh` 头注释 + `--help` 输出**（均在写集内）；CTO 要的是"能用"，该行原样进队长给 CTO 的最终回执。可见性复跑证据：
+
+```
+$ bash scripts/workflow/pre-push-preview.sh --help | head -5
+pre-push-preview.sh — D1061 任务 4: 推前四件套（本地秒级预演）
+
+★ 一行命令（CTO 附加①，可直接嵌进推送前流程）:
+     bash scripts/workflow/pre-push-preview.sh --fast        # ≤10s，全绿才推
+
+$ grep -n "bash scripts/workflow/pre-push-preview.sh --fast" scripts/workflow/pre-push-preview.sh
+9:#      bash scripts/workflow/pre-push-preview.sh --fast        # ≤10s，全绿才推
+79:echo "   一行命令: bash scripts/workflow/pre-push-preview.sh --fast"
+```
 4. 熔断登记表当前为**空表**（无已知门禁故障）——诚实状态，不代表"故障已清零"。
 5. `--fast` 只覆盖三种红；windows 平台差异类红不在其中（归 PR-A 的 windows 敏感子集）。
+
+---
+
+## 八、接线判别性自证：「作者被自己的门禁拦下」（改坏即红 / 接线了≠被执行）
+
+本 PR **第一次 `git push` 被我自己新接的门禁 8 拦下**（`push rc=1`）——因为该分支当时**没有 S1 写集声明**
+（`task-state/D1061.json` 不在 main，也不在本分支）。**这不是装饰**：门禁先拦住了它的作者。
+原始输出（保留原样）：
+
+```
+── 门禁 8: 推前预演 (D1061 · fast ≤10s / full 可选) ─────
+══ 推前预演（D1061 任务 4 · 模式 fast）══════════════════════
+   分支: chore/d1061-b-gate-mechanism
+   一行命令: bash scripts/workflow/pre-push-preview.sh --fast
+
+  ⚠️  ① brief: 绑定不到 brief（无 --brief / 无 current-brief / 分支名无 D#）→ SKIP（显式，不静默）
+     ⚠️ 结论: degraded — 无任何写集声明（S1 task-state.write_set / S2 dev doc 写集表 / S3 task brief Q2 三源皆空）且变更含源码文件 → fail-closed 阻断
+  ❌ ② D708 写集对账: 不通过（rc=2 —— 夹带/声明源空）
+     a) 代码/测试/脚本/CI 面残留: 0 个文件（期望 0，扫描根: src tests scripts .github）
+     b) 仓库面残留（排除 docs）: 0 个文件（期望 0）
+     c) 反向判别（探针必须命中）: 1（期望 ≥1，=0 说明探针失效＝假绿）
+  ✅ ③ 夹具三面自测: 通过
+
+  ⚠️  降级（可见，不计通过也不计红）:
+     - brief 绑定失败 → 跳过 brief 闸
+
+  ❌ 推前预演未通过 — 请修复后再推（本地能抓的错别送 CI）
+     - D708 写集对账 rc=2
+
+  ❌ 门禁 8: 推前预演未通过 — 推送已拒绝 (D1061 任务 4)
+error: failed to push some refs to 'github.com:tangbaobao520/SynovaAgent.git'
+```
+
+修法后第二次 push `rc=0`，同一门禁打印 `✅ ② D708 写集对账: 通过（rc=0）` / `✅ 全部门禁通过 — 允许推送`。
+**判据**：同一门禁、同一分支，一次红一次绿 ⇒ 该门禁**真的在判定**，且不是恒真/恒假的摆设。
+
+## 九、变异体顺带暴露的**夹具自身缺陷**（可复用经验）
+
+四个变异体运行时暴露出本卡**三套新测试文件本身**的缺陷：`$VAR` 紧贴**全角标点**时，
+bash（UTF-8 locale）把全角括号当**变量名字符** ⇒ `set -u` 下 `unbound variable`。
+**它只在断言失败分支触发 ⇒ 绿跑时完全不可见**——即"夹具的报错路径从未被测过"。
+这与 `ctrl-tower-change` **模式 2** 同源，且实证了「**变异体不只验被测物，也验夹具**」。
+
+| 文件 | 修复处数 |
+|---|---|
+| `tests/control-tower/gate-circuit-breaker.test.sh` | 6 |
+| `tests/control-tower/pre-push-preview.test.sh` | 4 |
+| `tests/control-tower/brief-parser-cjk-path.test.sh` | 2 |
+| **合计** | **12** |
+
+原文样例（改前）与改法：`no "边界: rc=$RC（过期必须不跳 = 0）"` → `no "边界: rc=${RC}（过期必须不跳 = 0）"`。
+复扫结果：三文件命中 **0**；三套测试复跑 `19 / 16 / 11 通过, 0 失败`。
+**建议沉淀**：控制塔脚本/夹具新增时，把"`$VAR` 紧贴全角标点"纳入静态扫描（现无此扫描）。
+
+## 十、`task-state/D1061.json` 写集口径（队长裁定，已执行）
+
+本卡拆两条 PR（PR-A 提速线 / PR-B 机制线），两条 PR 都需要 D708 的 S1 声明源。
+`task-state/D1061.json` 的 `write_set` 取 **PR-A ∪ PR-B 并集（22 条）**：
+- 理由：D708 按 `origin/main..HEAD` 对账 ⇒ 并集使**任一侧先合并、另一侧后 rebase 都不夹带**，
+  且不因对侧先合并而误红（若各写各的半套，先合并者会让后合并者整片红）。
+- 队长裁定（2026-09-29）：coder-a 侧同名文件内容不同时，**以本 PR-B 的"并集 22 条"版为准**；
+  PR-A 先合并后 PR-B rebase 时，**保留并集版**为 base 之后的最终形态。

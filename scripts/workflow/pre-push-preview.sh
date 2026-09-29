@@ -51,7 +51,7 @@ while [ $# -gt 0 ]; do
     --full) MODE="full"; shift ;;
     --brief) BRIEF_OVERRIDE="${2:-}"; shift 2 ;;
     --json) AS_JSON=1; shift ;;
-    -h|--help) sed -n '2,40p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '6,48p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "❌ 未知参数: $1（--help 看用法）" >&2; exit 2 ;;
   esac
 done
