@@ -169,6 +169,16 @@ bash "$SEL" --repo "$SB" --map "$SB/missing.json" --list >/dev/null 2>&1
 # ── 生产映射 sanity ──
 ALLOUT=$(bash "$SEL" --repo "$REPO" --map "$MAP" --degraded-log "$TMPD/deg-prod.log" --all 2>/dev/null)  # swallow-ok: 夹具静默捕获被测脚本输出——判定由紧随其后的断言承担（非生产吞错）
 N=$(cnt "$ALLOUT")
+
+# ── 完整性不变式: 域并集 == ci.yml catalog（**集合相等**，不只比条数）──
+# 理由: 选择集来自域并集；若某套件不在任何域内，则该套件变更时**永远不会被选中** = 静默缩小覆盖面。
+DOMOUT=$(bash "$SEL" --repo "$REPO" --map "$MAP" --list 2>/dev/null | awk -F':: ' '/DOMAIN /{print $2}' | sort -u)  # swallow-ok: 夹具只取 --list 的 stdout 域清单，stderr 摘要行不入断言；判定由紧随的「集合相等」断言承担（非生产吞错）
+CATOUT=$(printf '%s\n' "$ALLOUT" | sort -u)
+ONLY_IN_CAT=$(comm -13 <(printf '%s\n' "$DOMOUT") <(printf '%s\n' "$CATOUT"))
+ONLY_IN_DOM=$(comm -23 <(printf '%s\n' "$DOMOUT") <(printf '%s\n' "$CATOUT"))
+[ -z "$ONLY_IN_CAT" ] && [ -z "$ONLY_IN_DOM" ] \
+  && ok "完整性不变式: 域并集 == ci.yml catalog（${N} 条集合相等，零缺口/零孤儿）" \
+  || no "域并集 ≠ catalog：仅 catalog 有 [$(printf '%s' "$ONLY_IN_CAT" | tr '\n' ' ')]；仅域有 [$(printf '%s' "$ONLY_IN_DOM" | tr '\n' ' ')]"
 [ "${N:-0}" -ge 52 ] && ok "生产映射: --all 与 ci.yml 同源（${N} 条 ≥ 52）" || no "生产 --all 应 ≥52，实际 ${N:-0}"
 
 PRODOUT=$(bash "$SEL" --repo "$REPO" --map "$MAP" --degraded-log "$TMPD/deg-prod.log" --changed HEAD~1...HEAD 2>/dev/null)  # swallow-ok: 夹具静默捕获被测脚本输出——判定由紧随其后的断言承担（非生产吞错）

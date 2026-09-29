@@ -523,9 +523,9 @@ jobs:
             tests/control-tower/daily-cto-board-ratio.test.sh \
             tests/control-tower/install-dsh-preset.test.sh \
             tests/control-tower/d956-failmsg.test.sh \
-            tests/control-tower/ci-signal-classify.test.sh \
             tests/control-tower/ct-suite-select.test.sh \
-            tests/control-tower/simulate-ci-dedup.test.sh; do
+            tests/control-tower/simulate-ci-dedup.test.sh \
+            tests/control-tower/ci-signal-classify.test.sh; do
             CATALOG="${CATALOG}${t}"$'\n'
           done
           CATALOG="$(printf '%s\n' "$CATALOG" | grep . | sort -u)"

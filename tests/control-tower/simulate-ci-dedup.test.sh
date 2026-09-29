@@ -111,6 +111,15 @@ OUT=$(GITHUB_ACTIONS=true SYNO_SIM_NESTED=full runsb "$CNT" "$STUB" 2>&1); RC=$?
 N=$(grep -c . "$CNT" 2>/dev/null || true)
 [ "$RC" -eq 0 ] && [ "${N:-0}" -eq 2 ] && ok "覆盖缝: CI + SYNO_SIM_NESTED=full → 强制全量 ${N}/2 条" || no "full 覆盖缝失效（rc=$RC ${N:-0} 条）"
 
+# ── 覆盖缝: 非法 SYNO_SIM_NESTED → fail-closed 按 full（**绝不静默 skip**）──
+# A6 覆盖缺口补断言（verifier 2026-09-29 复核发现：头注释声明该语义但夹具内无对应断言）
+: > "$CNT"
+OUT=$(GITHUB_ACTIONS=true SYNO_SIM_NESTED=bogus runsb "$CNT" "$STUB" 2>&1); RC=$?
+N=$(grep -c . "$CNT" 2>/dev/null || true)
+[ "$RC" -eq 0 ] && [ "${N:-0}" -eq 2 ] && echo "$OUT" | grep -q "非法" \
+  && ok "覆盖缝: SYNO_SIM_NESTED 非法值 → fail-closed 按 full（内层 ${N}/2 条）+ 显式点名（不静默 skip）" \
+  || no "非法值应 fail-closed 全量（rc=$RC 实跑 ${N:-0} 条、stderr 无『非法』点名）"
+
 # ── 三态: CI 内红桩仍 exit 1（跳过不吞业务失败）──
 OUT=$(GITHUB_ACTIONS=true runsb "$TMPD/c2.txt" "$RED" 2>&1); RC=$?
 [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "模拟失败" && ok "三态: CI 内红桩仍 exit 1 + 修复指引（跳过不吞失败）" || no "CI 内红桩应 exit 1（实际 rc=${RC}）"
@@ -149,6 +158,26 @@ PY
     [ "${MN:-0}" -eq 2 ] \
       && ok "变异体被检出: 删跳过分支 → CI 内层执行 ${MN} 条 ≠ 0（靶心断言必红）" \
       || no "变异体未被检出（CI 内层 ${MN:-0} 条）—— 靶心断言无判别力"
+  fi
+
+  # 变异体②: 非法值改判**静默 skip** → 「非法值 fail-closed 按 full」断言必红
+  MUT3="$TMPD/mut3.sh"; cp "$SIM" "$MUT3"
+  "$PYBIN" - "$MUT3" <<'PY'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1]); t = p.read_text(encoding="utf-8")
+old = 'fail-closed 按 full 执行${RESET}" >&2; SKIP_NESTED=0 ;;'
+assert old in t, "MUT3 anchor missing"
+p.write_text(t.replace(old, '非法值静默 skip${RESET}" >&2; SKIP_NESTED=1 ;;', 1), encoding="utf-8")
+PY
+  if cmp -s "$SIM" "$MUT3"; then
+    no "变异体②锚点未命中（脚本结构已变，夹具须同步）"
+  else
+    : > "$CNT"
+    ( cd "$SB" && DD_COUNT_FILE="$CNT" SYNO_SIM_PRECOMMIT="$STUB" SYNO_SIM_DEGRADED_LOG="$TMPD/deg-mut3.log" GITHUB_ACTIONS=true SYNO_SIM_NESTED=bogus bash "$MUT3" ) >/dev/null 2>&1
+    M3N=$(grep -c . "$CNT" 2>/dev/null || true)
+    [ "${M3N:-0}" -eq 0 ] \
+      && ok "变异体②被检出: 非法值改判静默 skip → 内层 0 条 ≠ 期望 2 条（fail-closed 断言必红）" \
+      || no "变异体②未被检出（内层 ${M3N:-0} 条）—— fail-closed 断言无判别力"
   fi
 fi
 
