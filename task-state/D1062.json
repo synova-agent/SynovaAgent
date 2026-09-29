@@ -1,0 +1,11 @@
+{
+  "task_id": "D1062",
+  "title": "废除域门禁阻断语义（② 单域检查 → 信息性）",
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-09-29",
+  "updated_by": "alloc-task-id"
+}

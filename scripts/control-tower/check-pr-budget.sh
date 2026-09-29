@@ -649,33 +649,22 @@ if [ "$OUTBOUND_DENY_HARD" -eq 1 ]; then
   FAILED=1
 fi
 
-# ── ② 变更只落在一个域（D733 check-ownership.py 的单域模式）──
-if [ ! -f "$OWNERSHIP" ]; then
-  echo "❌ 检查执行失败: 域校验器缺失 ${OWNERSHIP}（D734 依赖 D733；fail-closed）" >&2
-  exit 2
-fi
-if [ -z "$PYBIN" ]; then
-  echo "❌ 检查执行失败: python 不可用，无法做域校验（fail-closed，不静默放过）" >&2
-  exit 2
-fi
-if [ "$N_FILES" -eq 0 ]; then
-  echo "  ✅ ② 无变更文件 → 域校验跳过"
-else
-  DOMAIN_OUT="$("$PYBIN" "$OWNERSHIP" $COUNTED 2>&1)"; DOMAIN_EXIT=$?
-  if [ "$DOMAIN_EXIT" -eq 0 ]; then
-    echo "  ✅ ② 变更单域: $(printf '%s\n' "$DOMAIN_OUT" | grep -E '^✅ PASS' | head -1)"
-  elif [ "$DOMAIN_EXIT" -eq 1 ]; then
-    echo "  ❌ ② 变更跨域 —— 一个 PR 只许一个域（D733 ownership.yaml）"
-    printf '%s\n' "$DOMAIN_OUT" | grep -E '^(mac|win|k3|⚠️)' | head -12 | sed 's/^/       /'
-    FAILED=1
+# ── ② 变更涉及的域（**信息性，不阻断**）──
+  # 创始人 2026-09-29 决策：**域不用于分配与阻断**（"硬要分域，门禁相互拉扯，浪费时间"）。
+  # 分配由 CTO 指定；本段只显示信息。校验器缺失 / python 不可用 ⇒ 同样不阻断。
+  if [ "${N_FILES:-0}" -gt 0 ] && [ -f "$OWNERSHIP" ] && [ -n "$PYBIN" ]; then
+    DOMAIN_OUT="$("$PYBIN" "$OWNERSHIP" $COUNTED 2>&1)" || true
+    if printf '%s' "$DOMAIN_OUT" | grep -q '^✅ PASS'; then
+      echo "  ✅ ② 变更单域: $(printf '%s\n' "$DOMAIN_OUT" | grep -E '^✅ PASS' | head -1)"
+    else
+      echo "  ℹ️  ② 变更跨域（**信息性，不阻断** —— 域不用于分配/阻断）:"
+      printf '%s\n' "$DOMAIN_OUT" | grep -E '^(mac|win|k3|⚠️)' | head -8 | sed 's/^/       /'
+    fi
   else
-    echo "❌ 检查执行失败: 域校验器 exit=${DOMAIN_EXIT}（fail-closed）" >&2
-    printf '%s\n' "$DOMAIN_OUT" | head -5 | sed 's/^/     /' >&2
-    exit 2
+    echo "  ℹ️  ② 域信息跳过（无变更 / 校验器缺失 / python 不可用 —— 不阻断）"
   fi
-fi
 
-# ── ③ 落后基线提交数（告警，不阻断——防「落后分支直接合」）──
+  # ── ③ 落后基线提交数（告警，不阻断——防「落后分支直接合」）──
 if [ -n "${BEHIND:-}" ]; then
   if [ "$BEHIND" -gt "$MAX_BEHIND" ]; then
     echo "  ⚠️  ③ 分支落后 $BASE 共 $BEHIND 个提交（> ${MAX_BEHIND}）—— 先 rebase/merge 再开 PR"
