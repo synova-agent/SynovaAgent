@@ -165,14 +165,24 @@ T0=$(now_ms)
 ROOTS="${SYNO_PREVIEW_ROOTS:-src tests scripts .github}"
 A_HITS="$(grep -rl "$MARK" $ROOTS 2>/dev/null | wc -l | tr -d ' \n')"
 B_HITS="$(grep -rl "$MARK" . --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=docs 2>/dev/null | wc -l | tr -d ' \n')"
+# D1061 自纠: b 面**不是** 0 —— 真夹具的口径是「排除 docs 后 ≤ 基线（当前 13）」。
+#   原先我硬编码 0 ⇒ 对合法引用假红（实测: memory/notes/proposed/2026-09-28-d1052-…md 合法携带该标记）。
+#   这里**从夹具读出阈值**（自同步，避免两处硬编码漂移）；读不到 ⇒ 判红，不静默取 0。
+B_BASELINE="${SYNO_PREVIEW_B_BASELINE:-$(grep -oE 'REPO_RESIDUE" -gt [0-9]+' "$ROOT/tests/control-tower/precommit-groups-injection.test.sh" 2>/dev/null | grep -oE '[0-9]+' | head -1)}"
+B_OK=0
+if [ -z "$B_BASELINE" ]; then
+  echo -e "  ${RED}⚠️  ③ b 面基线未能从夹具读出（夹具改动/缺失）→ 判红（不静默取 0）${RESET}"
+else
+  [ "$B_HITS" -le "$B_BASELINE" ] && B_OK=1
+fi
 # c 面反向判别: 探针必须能**找到**标记（否则 grep 失效/正则写错 → 前两面恒 0 是假绿）
 CDIR="$(mktemp -d)"; printf '%s\n' "$MARK" > "$CDIR/probe.txt"
 C_HITS="$(grep -rl "$MARK" "$CDIR" 2>/dev/null | wc -l | tr -d ' \n')"
 rm -rf "$CDIR"
 echo "     a) 代码/测试/脚本/CI 面残留: $A_HITS 个文件（期望 0，扫描根: ${ROOTS}）"
-echo "     b) 仓库面残留（排除 docs）: $B_HITS 个文件（期望 0）"
+echo "     b) 仓库面残留（排除 docs）: $B_HITS 个文件（期望 ≤ 基线 ${B_BASELINE:-读取失败}）"
 echo "     c) 反向判别（探针必须命中）: ${C_HITS}（期望 ≥1，=0 说明探针失效＝假绿）"
-if [ "$A_HITS" -eq 0 ] && [ "$B_HITS" -eq 0 ] && [ "$C_HITS" -ge 1 ]; then
+if [ "$A_HITS" -eq 0 ] && [ "$B_OK" -eq 1 ] && [ "$C_HITS" -ge 1 ]; then
   echo -e "  ${GREEN}✅ ③ 夹具三面自测: 通过${RESET}"
   record "marks" "pass" 0 "$(( $(now_ms) - T0 ))" "a=$A_HITS b=$B_HITS c=$C_HITS"
 else
