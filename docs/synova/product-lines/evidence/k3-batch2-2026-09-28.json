@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "record_type": "k3",
+  "source": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次2-线21-15-20-8-4.md",
+  "date": "2026-09-28",
+  "auditor": "kimi-k3",
+  "batch": "K3 产品线审计 批次2（线21/15/20/8/4 五条底座线，17 点）",
+  "base": "origin/main 20b55eba9",
+  "note": "A6 双轨降级：本 JSON 由 K3 产出，CTO 收件时人工登记进证据面。pass 12 / fail 5 / 无法复核 0。fail 项按 17 点批先例不写进证据面翻红，转 FIX：FIX-A（A2 假绿管线，批次1 已立项本批加重）/FIX-D（8-7 出站实现）/FIX-E（4-9 spill 实现）/FIX-F（20-2 缺口）/FIX-G（锚点修护）。DSH 版本快照：dsh-v0.1.7-rc.1。",
+  "verdicts": [
+    { "acceptance_point": "4-3", "verdict": "pass", "quote": "connector-registry 7 + connector-binding 3 + feishu 集成 1 绿（2 用例凭据缺失显式 skip :51-52 非静默）；实现 src/connectors/feishu.ts + feishu-bridge.ts + extensions/adapters/feishu/", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次2-线21-15-20-8-4.md:§二-4-3" },
+    { "acceptance_point": "4-8", "verdict": "fail", "quote": "k3 复核不足以转绿：连接器真实 API 链路段零复现证据（FEISHU_* 凭据缺失 2/3 用例 skip），机制面绿≠链路复核过；补凭据真机验证后可翻", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次2-线21-15-20-8-4.md:§二-4-8" },
+    { "acceptance_point": "4-9", "verdict": "fail", "quote": "零实现：grep spill src/packages 0 命中（prompt-assembler:688 的 32000 是提示词预算非 spill）；DSH 锚点断裂（note 引 0.1.6-alpha.2 maxInlineBytes:102-103，当前 0.1.7-rc.1 已改 maxInlineTokens lib/index.js:141-144）；A2 pass 假绿（套件 NONE 跳过）", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次2-线21-15-20-8-4.md:§二-4-9" },
+    { "acceptance_point": "8-5", "verdict": "pass", "quote": "desc 限定 P0-1+N14 修复验证：manifest 挂载修复在位（sentinel-loader P0-1 块）+ GS-05 重跑 DEDUP_STABLE count=1（4/4 断言 exit 0）；出站段缺属 8-7 另判", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次2-线21-15-20-8-4.md:§二-8-5" },
+    { "acceptance_point": "8-7", "verdict": "fail", "quote": "零实现零测试：ProactivePush 生产仅 signal-file/electron-notify 两通道（synova-agent.ts:97-134）；webhook 仅类型枚举（proactive-push.ts:49）无 URL/密钥/签名/投递；tests 零 webhook 文件；A2 pass 假绿", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次2-线21-15-20-8-4.md:§二-8-7" },
+    { "acceptance_point": "8-8", "verdict": "pass", "quote": "判据①入站默认关 GS-05 全绿（4/4 exit 0）；判据② im-inbound 243 行零 sentinel/ticket 引用（:168-189 只接对话面）——外部触发无工单写点无去重键触点；DSH webhook 0.1.7-rc.1 零 outbound（纯入站证实，行号 :148/:316 vs note 引 :90/:245 已漂）", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次2-线21-15-20-8-4.md:§二-8-8" },
+    { "acceptance_point": "15-1", "verdict": "pass", "quote": "判定式全注册满足：expert-registry 13 + file-scanner 7 + expert-file-loader 4 绿 + 集成断言 registry v3.0 六位专家（integration.test.ts:25-33）+ 批次1 探针物理实证；A2 错位实锤（grep 首中 e2e-autonomy）；desc『7位』数字漂移单列（v3.0=6 位）", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次2-线21-15-20-8-4.md:§二-15-1" },
+    { "acceptance_point": "15-3", "verdict": "pass", "quote": "tool-registry 15 用例绿（register/invoke/覆盖/列表/原子性）；A2 错位实锤（tool-registration 串 grep 首中 graphstore-unify 架构测试——真测试从未被 A2 跑过）", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次2-线21-15-20-8-4.md:§二-15-3" },
+    { "acceptance_point": "15-4", "verdict": "pass", "quote": "gate 6 绿（11 件 fixture 存在可解析）+ 评分器亲跑 exit 0（F1 三指标 100%：关键边命中率/根因节点匹配率/告警级别一致率）", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次2-线21-15-20-8-4.md:§二-15-4" },
+    { "acceptance_point": "15-7", "verdict": "pass", "quote": "专家体系复核通过：15-1/15-3/15-4 独立重跑全 pass；15-2/15-5/15-6 uncommitted 未入本批（范围注记）", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次2-线21-15-20-8-4.md:§二-15-7" },
+    { "acceptance_point": "20-2", "verdict": "fail", "quote": "判定式两具名项缺失：附录A:24 锚点（并行工具调用上限 DEFAULT_MAX_PARALLEL_TOOL_CALLS / turn 边界投影）在 agent 循环层零实现（仅 module-runner.ts:50 诊断模块批跑 maxParallel 语义不同）；接口冻结无契约证据；DSH 侧 dsh-agent-loop 包实体 0.1.7-rc.1 无此名。工具循环本体健康（45 测试重跑绿+GS-01 SSE 留痕）不构成语义等价", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次2-线21-15-20-8-4.md:§二-20-2" },
+    { "acceptance_point": "20-3", "verdict": "pass", "quote": "四件全实证：常量对齐（0.8/0.16 @:28-29；8192/4096/1024+PRUNE_MARKER @tool-result-pruner:23,36-39）+ 生产接线（conversation-engine:596/752 + tool-loop-executor:14,80，blame 09-08）+ 37 用例重跑绿 + DSH 包 0.1.7-rc.1 在。双漂移单列：V1 证据列仍 pending_wiring（D809 复原步骤未执行）+ Win 旧锚点未修", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次2-线21-15-20-8-4.md:§二-20-3" },
+    { "acceptance_point": "20-6", "verdict": "fail", "quote": "判定式四件套两过两不过：G1 零依赖 grep 0 结果 ✓ + D806 台账行 ✓；借鉴卡锚点现验 ✗（B4 四文件 Win 旧锚点 0.1.1-rc.2 十天未修）+ K3 复核 ✗（20-2 fail）", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次2-线21-15-20-8-4.md:§二-20-6" },
+    { "acceptance_point": "21-1", "verdict": "pass", "quote": "DSH 四码锚点实在（error.js:22/:24/:32/:40 @0.1.7-rc.1）+ 本仓对齐（errors/types.ts:50,643-646 + normalizeLlmFailure:744 冻结 {message,code}）+ taxonomy 22 + resilience 14 + provider-loader 3 全绿；A2 错位实锤（provider 串首中 llm-resilience）", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次2-线21-15-20-8-4.md:§二-21-1" },
+    { "acceptance_point": "21-2", "verdict": "pass", "quote": "判定式『效果可测量（golden-case 指标）』满足：checker exit 0 三指标 100% + gate 6 绿；『优化策略』未见漂移单列（yaml note 自认深度优化=0，按判定式下 pass）", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次2-线21-15-20-8-4.md:§二-21-2" },
+    { "acceptance_point": "21-3", "verdict": "pass", "quote": "四桶 disjoint + checkBudget 三态（warn 0.8/exceed 1.0）+ 非法预算降级：token-meter 11 + 集成 4 重跑绿；DSH token-meter 包 0.1.7-rc.1 在；A2 假绿（『token-meter 套件』带后缀定位 NONE 跳过）", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次2-线21-15-20-8-4.md:§二-21-3" },
+    { "acceptance_point": "21-5", "verdict": "pass", "quote": "模型底座复核通过：21-1/21-2/21-3 独立重跑全 pass；21-4 founder-demo 面未入本批", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次2-线21-15-20-8-4.md:§二-21-5" }
+  ],
+  "summary": { "pass": 12, "fail": 5, "not_auditable": 0 },
+  "a2_evidence_audit": {
+    "total_suites_checked": 11,
+    "silent_skip": ["spill-policy", "webhook-outbound", "webhook-inbound-boundary", "dsh-agent-loop 锚点 + GS-01 工具调用留痕", "compaction 套件", "token-meter 套件"],
+    "mislocated": ["expert-registry→e2e-autonomy.integration", "tool-registration→graphstore-unify", "provider→llm-resilience"],
+    "located": ["connector→connector-registry", "golden-case→golden-case-gate"]
+  },
+  "fix_proposals": [
+    { "id": "FIX-A", "priority": "P0", "target": "scripts/product-lines/run-machine-evidence.sh", "action": "批次1 已立项；本批 6 跳过+3 错位加重证据", "attribution": "control-tower/M1" },
+    { "id": "FIX-D", "priority": "P1", "target": "线8 8-7", "action": "出站 webhook 实现（URL+密钥+签名+稳定 id+重试 degraded）+ 专属测试命名对齐", "attribution": "implement" },
+    { "id": "FIX-E", "priority": "P1", "target": "线4 4-9", "action": "spill 双阈值实现；先重锚 DSH（当前 maxInlineTokens 单阈值 token 单位，口径差扩大须创始人重裁）", "attribution": "implement+devdoc" },
+    { "id": "FIX-F", "priority": "P1", "target": "线20 20-2", "action": "agent 循环层并行工具上限+turn 边界投影+接口冻结契约（附录A:24 三项缺口）", "attribution": "implement" },
+    { "id": "FIX-G", "priority": "P2", "target": "B4 四文件 + golden-case-checker", "action": "DSH 锚点更新至 Mac 路径 0.1.7-rc.1；checker 加 pass 摘要输出", "attribution": "implement" },
+    { "id": "CT-D809", "priority": "P2", "target": "撤回复原机制", "action": "接线验证绿→自动提示改回证据列（防三口径打架）", "attribution": "control-tower" }
+  ],
+  "task_state_backfills": ["D594", "D598", "D806", "D809"]
+}

@@ -41,7 +41,9 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-TOOL="$REPO_DIR/scripts/control-tower/check-pr-budget.sh"
+# 被检实现注入点（ctrl-tower-change 模式 5）: 默认 = 仓内实现；
+#   SYNO_BUDGET_SRC=<path> 指向基线/变异副本 ⇒ "改坏即红"取证，零真实文件改动。
+TOOL="${SYNO_BUDGET_SRC:-$REPO_DIR/scripts/control-tower/check-pr-budget.sh}"
 PC="$REPO_DIR/scripts/pre-commit-check.sh"
 
 TMPD="$(mktemp -d)"
@@ -264,6 +266,31 @@ git -C "$DEL_SB2" -c user.name=t -c user.email=t@t commit -q -m del
 OUT="$(cd "$DEL_SB2" && bash "$TOOL" --base "$DEL_BASE2" 2>&1)"; _e=$?
 if [ "$_e" = 0 ]; then pass "11b 真 git 纯删白名单内 20 件 → exit 0"; else fail "11b 真 git 纯归档删除被误拦 — 期望 0 实际 $_e"; echo "$OUT" | sed 's/^/      | /' >&2; fi
 if echo "$OUT" | grep -q "出库豁免生效（20 件纯删除/重命名"; then pass "11b 真 git 纯归档删除点名豁免生效 + 件数"; else fail "11b 真 git 纯归档删除未点名豁免"; fi
+
+echo ""
+echo "── 11c. CT-D 豁免粒度: 目录级豁免逐条可核 + 数量阈值 ──"
+# 粒度①: 每个豁免路径逐行打印（原实现只给一个计数 ⇒ 豁免了哪些文件不可核）
+run_expect 0 "CT-D① 治理豁免 + evidence 豁免混排" --files "task-state/D999.json docs/synova/product-lines/evidence/CT9-a.md scripts/control-tower/check-pr-budget.sh"
+echo "$OUT" | grep -q "· task-state/D999.json" && pass "CT-D① 逐条打印治理豁免路径" || fail "CT-D① 未逐条打印豁免路径"
+echo "$OUT" | grep -q "CT9-a.md" && pass "CT-D① 逐条打印 evidence 豁免路径" || fail "CT-D① 未打印 evidence 豁免路径"
+echo "$OUT" | grep -q "目录级豁免 docs/synova/product-lines/evidence/" && pass "CT-D① 明示「目录级豁免」来源" || fail "CT-D① 未明示目录级豁免来源"
+
+# 粒度②: evidence 目录豁免件数上限 = --max-files（不引入新魔数）
+EV12=""; for _i in $(seq 1 12); do EV12="$EV12 docs/synova/product-lines/evidence/x$_i.txt"; done
+EV13="$EV12 docs/synova/product-lines/evidence/x13.txt"
+run_expect 0 "CT-D② 12 件 evidence（恰在上限）→ 不报超阈值" --files "$EV12 scripts/control-tower/check-pr-budget.sh"
+echo "$OUT" | grep -q "CT-D evidence 目录级豁免超阈值" && fail "CT-D② 恰在上限内误报超阈值" || pass "CT-D② 恰在上限内不告警"
+run_expect 0 "CT-D② 13 件 evidence + 1 脚本 → 超出 1 件计入预算（仍 ≤12）" --files "$EV13 scripts/control-tower/check-pr-budget.sh"
+echo "$OUT" | grep -q "共 13 件 > 上限 12 件" && pass "CT-D② 超阈值口径点名（共 N 件 / 上限）" || fail "CT-D② 超阈值未点名"
+echo "$OUT" | grep -q "x13.txt" && pass "CT-D② 逐条点名被计入预算的文件" || fail "CT-D② 未点名被计入的文件"
+echo "$OUT" | grep -q "✅ ① 变更文件数 2 " && pass "CT-D② 计数正确（13 豁免 12 + 超阈值 1 + 脚本 1 = 2 计入）" || fail "CT-D② 计数不符: $(echo "$OUT" | grep -a '① 变更文件数' )"
+
+# 粒度② 判别性: 13 件 evidence + 12 件代码 —— 超出的 1 件真进预算 ⇒ 13 > 12 判红。
+#   去掉阈值（= 原实现的无界目录级豁免）时这里是 12 ≤ 12 **假绿**（见证据文件改前/改后对照）。
+C12=""; for _i in $(seq 1 12); do C12="$C12 scripts/control-tower/z$_i.sh"; done
+run_expect 1 "CT-D② 13 evidence + 12 代码 → 超出件计入后 13 > 上限 12 判红" --files "$EV13 $C12"
+echo "$OUT" | grep -q "13 > 上限 12" && pass "CT-D② 判红口径点名 13 > 12" || fail "CT-D② 判红口径未点名"
+run_expect 0 "CT-D② 反例: 12 evidence + 12 代码 → 仍在预算（阈值不误拦）" --files "$EV12 $C12"
 
 echo ""
 echo "── 12. D1028 DS3 旁路封堵（R 双侧真 git mv + DENY_EXACT + 各 ❌ 前缀）──"
