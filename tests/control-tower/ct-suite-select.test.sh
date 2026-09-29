@@ -102,14 +102,14 @@ SB_MAP="$SB/map.json"
 sel() { bash "$SEL" --repo "$SB" --map "$SB_MAP" --degraded-log "$DEG" "$@"; }
 
 # ── 正常: --all / 改 src/l3 → 只选 A 域 ──
-OUT=$(sel --all 2>/dev/null); RC=$?; N=$(cnt "$OUT")
+OUT=$(sel --all 2>/dev/null); RC=$?; N=$(cnt "$OUT")  # swallow-ok: 夹具静默捕获被测脚本输出——判定由紧随其后的断言承担（非生产吞错）
 [ "$RC" -eq 0 ] && [ "${N:-0}" -eq 3 ] && ok "--all → 3 条（合成清单全量）rc=0" || no "--all 应 3 条 rc=0，实际 ${N:-0} 条 rc=$RC"
 
-OUT=$(sel --changed origin/main...l3only 2>/dev/null); RC=$?; N=$(cnt "$OUT")
+OUT=$(sel --changed origin/main...l3only 2>/dev/null); RC=$?; N=$(cnt "$OUT")  # swallow-ok: 夹具静默捕获被测脚本输出——判定由紧随其后的断言承担（非生产吞错）
 [ "$RC" -eq 0 ] && [ "${N:-0}" -eq 1 ] && [ "$OUT" = "tests/control-tower/sel-a.test.sh" ] \
   && ok "正常: 改 src/l3/** → 只选 A 域（1/3 条）" || no "正常路径应只选 A 域 1 条，实际 ${N:-0} 条: $OUT"
 
-OUT=$(sel --changed origin/main...l3only --platform windows 2>/dev/null); N=$(cnt "$OUT")
+OUT=$(sel --changed origin/main...l3only --platform windows 2>/dev/null); N=$(cnt "$OUT")  # swallow-ok: 夹具静默捕获被测脚本输出——判定由紧随其后的断言承担（非生产吞错）
 [ "${N:-0}" -eq 2 ] && ok "--platform windows → A ∪ 平台敏感 = 2 条" || no "windows 应 2 条，实际 ${N:-0}"
 
 OUT=$(sel --changed origin/main...l3only 2>&1 >/dev/null)
@@ -167,18 +167,18 @@ bash "$SEL" --repo "$SB" --map "$SB/missing.json" --list >/dev/null 2>&1
 [ $? -eq 1 ] && ok "--list + 映射缺失 → exit 1（fail-closed，无内容可打印）" || no "--list 缺映射应 exit 1"
 
 # ── 生产映射 sanity ──
-ALLOUT=$(bash "$SEL" --repo "$REPO" --map "$MAP" --degraded-log "$TMPD/deg-prod.log" --all 2>/dev/null)
+ALLOUT=$(bash "$SEL" --repo "$REPO" --map "$MAP" --degraded-log "$TMPD/deg-prod.log" --all 2>/dev/null)  # swallow-ok: 夹具静默捕获被测脚本输出——判定由紧随其后的断言承担（非生产吞错）
 N=$(cnt "$ALLOUT")
 [ "${N:-0}" -ge 52 ] && ok "生产映射: --all 与 ci.yml 同源（${N} 条 ≥ 52）" || no "生产 --all 应 ≥52，实际 ${N:-0}"
 
-PRODOUT=$(bash "$SEL" --repo "$REPO" --map "$MAP" --degraded-log "$TMPD/deg-prod.log" --changed HEAD~1...HEAD 2>/dev/null)
+PRODOUT=$(bash "$SEL" --repo "$REPO" --map "$MAP" --degraded-log "$TMPD/deg-prod.log" --changed HEAD~1...HEAD 2>/dev/null)  # swallow-ok: 夹具静默捕获被测脚本输出——判定由紧随其后的断言承担（非生产吞错）
 N=$(cnt "$PRODOUT"); MISSING=0
 while IFS= read -r s; do [ -z "$s" ] && continue; [ -f "$REPO/$s" ] || MISSING=$((MISSING+1)); done <<< "$PRODOUT"
 [ "${N:-0}" -gt 0 ] && [ "$MISSING" -eq 0 ] \
   && ok "生产映射: 真实 range 选择 ${N} 条，全部在仓库存在" || no "生产选择异常（${N:-0} 条，缺失 ${MISSING}）"
 
-PLAT_N=$(bash "$SEL" --repo "$REPO" --map "$MAP" --list 2>/dev/null | grep -c 'PLATFORM windows' || true)
-PLAT_OUT=$(bash "$SEL" --repo "$REPO" --map "$MAP" --list 2>/dev/null | awk -F':: ' '/PLATFORM windows/ {print $2}')
+PLAT_N=$(bash "$SEL" --repo "$REPO" --map "$MAP" --list 2>/dev/null | grep -c 'PLATFORM windows' || true)  # swallow-ok: 夹具静默捕获被测脚本输出——判定由紧随其后的断言承担（非生产吞错）
+PLAT_OUT=$(bash "$SEL" --repo "$REPO" --map "$MAP" --list 2>/dev/null | awk -F':: ' '/PLATFORM windows/ {print $2}')  # swallow-ok: 夹具静默捕获被测脚本输出——判定由紧随其后的断言承担（非生产吞错）
 PLAT_ORPHAN=0
 while IFS= read -r s; do
   [ -z "$s" ] && continue
@@ -201,7 +201,7 @@ assert "FORCE_FULL=0\n" in t, "MUT1 anchor missing"
 p.write_text(t.replace("FORCE_FULL=0\n", "FORCE_FULL=1  # MUTATION-1: 恒返回全量\n", 1), encoding="utf-8")
 PY
 if cmp -s "$SEL" "$MUT1"; then no "变异体①锚点未命中（脚本结构已变，夹具须同步）"; else
-  M1OUT=$(bash "$MUT1" --repo "$SB" --map "$SB/map.json" --degraded-log "$TMPD/mut1.log" --changed origin/main...l3only 2>/dev/null)
+  M1OUT=$(bash "$MUT1" --repo "$SB" --map "$SB/map.json" --degraded-log "$TMPD/mut1.log" --changed origin/main...l3only 2>/dev/null)  # swallow-ok: 夹具静默捕获被测脚本输出——判定由紧随其后的断言承担（非生产吞错）
   M1N=$(cnt "$M1OUT")
   [ "${M1N:-0}" -eq 3 ] && ok "变异体①被检出: 恒返回全量 → 正常路径输出 3 条 ≠ 期望 1 条（正常断言必红）" \
     || no "变异体①未被检出（输出 ${M1N:-0} 条）—— 正常路径断言无判别力"
@@ -221,7 +221,7 @@ if cmp -s "$SEL" "$MUT2"; then no "变异体②锚点未命中（脚本结构已
   git -C "$SB" checkout -q -b empty-dom2 origin/main
   mkdir -p "$SB/docs"; printf 'x\n' > "$SB/docs/empty-probe.md"
   G add -A; G commit -qm "empty domain 2"
-  M2OUT=$(bash "$MUT2" --repo "$SB" --map "$SB/map.json" --degraded-log "$TMPD/mut2.log" --changed origin/main...HEAD 2>/dev/null); M2RC=$?
+  M2OUT=$(bash "$MUT2" --repo "$SB" --map "$SB/map.json" --degraded-log "$TMPD/mut2.log" --changed origin/main...HEAD 2>/dev/null); M2RC=$?  # swallow-ok: 夹具静默捕获被测脚本输出——判定由紧随其后的断言承担（非生产吞错）
   M2N=$(cnt "$M2OUT")
   [ "$M2RC" -eq 0 ] && [ "${M2N:-0}" -eq 0 ] && ok "变异体②被检出: 删 D4 守卫 → 0 选中静默 exit 0（边界断言必红）" \
     || no "变异体②未被检出（rc=$M2RC 输出 ${M2N:-0} 条）—— 边界断言无判别力"
