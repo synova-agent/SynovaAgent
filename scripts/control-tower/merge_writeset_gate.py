@@ -40,6 +40,22 @@ scripts/control-tower/merge_writeset_gate.py — D708 合并级写集对账 gate
   ② 路径级内置: `.claude/bypass.log`（每个提交都被 post-commit hook 追加的证据账本，
      与写集无关，属运行期产物）
   ③ 声明级: 声明文件里的 `## 写集豁免` 段落（每行 `- <路径> — <理由>`），无理由不生效
+
+CT-D（2026-09-27）评估结论 —— **本 gate 不给 `docs/synova/product-lines/evidence/**` 加目录级豁免**:
+  评估对象: `check-pr-budget.sh` 的 `GOV_PREFIX_RE` 对 `docs/synova/product-lines/evidence/`
+    是**目录级**豁免（治理产物不计 ≤12 文件预算）；本 gate 只有 `.claude/bypass.log`。
+  结论: **不改**（保持 evidence 必须进本 PR 的声明写集）。三条理由:
+    ① 两 gate 的豁免语义不同类: 预算 gate 的豁免是"**计数口径**"（这类文件不占 PR 体积），
+       本 gate 的豁免是"**授权口径**"（这类文件不属本 PR 的写集）——把计数口径搬到授权口径
+       是语义挪用，不是口径统一。
+    ② `evidence/` 是**各任务证明的聚集地**（实测 113 文件 / 19 目录）。给它目录级豁免 =
+       任何 PR 都可静默夹带、乃至改写**别人的**证据文件——恰是本 gate（intra-PR 自洽）
+       要防的那一格。证据文件本身就是交付物，必须在自己的声明里。
+    ③ 实测行为对照（本文件不改、仅记录）:
+       · evidence 文件**已**在声明写集里 → `pass`（正常放行）
+       · evidence 文件**未**在声明写集里 → `block` + 逐文件点名（保留可审计性）
+     需要放行一次的场合，走豁免③（`## 写集豁免` 段落 + 逐条理由），**豁免必须显式**。
+  编号对账: 本 gate 的路径级内置豁免只有 ② 一条；目录级豁免 0 条（有意）。
 """
 import argparse
 import shutil
@@ -92,6 +108,24 @@ class GateError(Exception):
     """gate 自身无法判定（→ exit 2，fail-closed）。"""
 
 
+class AmbiguousDeclaration(GateError):
+    """声明文件多命中（CT-A2）——**必须 fail-closed 并逐条点名全部候选**。
+
+    为什么不能取一个: `find_declaration_files()` 原先用 `hits[-1]`（排序末位）静默取一份
+    → 同名匹配多份时（如 `D1` 会同时命中 `…D1…`/`…D10…` 等）声明源可能指向**别人的任务**
+    → 写集对账用的是别人的声明，夹带判定整体失真，且失败点不可见。
+    处置: 报错 + 候选逐条点名（调用方 → exit 2，_emit 打印全部候选路径）。
+    """
+
+    def __init__(self, kind: str, pattern: str, candidates: List[str]):
+        self.kind = kind
+        self.pattern = pattern
+        self.candidates = list(candidates)
+        super().__init__(
+            f"声明源多命中（{kind}，匹配 {pattern}）: {len(self.candidates)} 个候选 "
+            f"→ fail-closed，拒绝静默取一个；候选: " + " | ".join(self.candidates))
+
+
 def run_git(args: List[str], cwd: str) -> str:
     try:
         p = subprocess.run(["git"] + args, cwd=cwd, capture_output=True,
@@ -119,7 +153,45 @@ def changed_files(repo: str, base: str, head: str) -> Tuple[str, List[str]]:
 # D708 复核修复①: 大小写不敏感。分支名/提交 scope 常见小写（feat/win-d702-…、docs(d702): …），
 #   旧实现只认大写 D → 推断为空 → 回退链失守（复核实测 parse_did('feat/win-d702-…') → None）。
 #   统一归一化为大写，保证与 task-state / brief 文件名里的 D# 口径一致。
-DID_RE = re.compile(r"[Dd]\d+")
+#
+# ── 合并级归并（D1030 #867 × D1039 #872，2026-09-29）──
+#   两条支线改的是**同一判据的两种实现**，此处取"更严且更多层"的 D1030 方案：
+#     · D1039（#872）: DID_RE 加**字母数字**词边界 `(?<![0-9A-Za-z])…(?![0-9A-Za-z])`
+#       目标用例 = PR merge commit 内嵌 40 全长 SHA（`Merge b2678c2… into ff46771…` → 误判 D63）。
+#     · D1030（#867）: 三层修法（① 合成 merge 主题整条不参与 ② 十六进制邻接边界 ③ 裸 SHA 词元判无效）
+#       目标用例 = **同一族根因**（合成 merge 主题里的 SHA 被抠成伪号，实测 5 SHA → D54/D4/D0/D34/D34）。
+#   ⇒ 取 D1030：其第①层把 `Merge <40hex> into <40hex>` 整条吞掉，D1039 的目标用例被完全覆盖；
+#     且另覆盖 `--first-parent` 与 `merge-base..start` 两处漂移（D1039 未涉及）。
+#   ⇒ D1039 的回归判据（`ci(D1039):`→D1039 ｜ `docs(D1034):`→D1034 ｜ `feat(d702):`→d702 ｜
+#     `bypass COMMITTED 登记 (auto hook, D521)`→D521 ｜ merge 全长 SHA→无）逐条保留在
+#     tests/control-tower/merge_writeset_gate.test.sh 中，归并后仍须全绿。
+# ═══ CT-C（2026-09-27，P0）: D# 推断随机性根治 ═══
+# 现象（改前实测）: GitHub 对 pull_request 事件**合成**的 merge 提交，主题形如
+#   `Merge <head_sha> into <base_sha>`（两个载荷**都是十六进制 SHA**）。
+#   旧 DID_RE = `[Dd]\d+` 从**整条主题**贪婪取号 → 从 SHA 里抠出伪号：
+#     改前实测: `Merge 9e4141…d54e… into 760923…` → **D54**；`Union Merge 4afd4ce into 017bef55` → **D4**
+#   ⇒ **同一份代码、不同 SHA ⇒ 推出不同 D#**（5 个 SHA 实测 → D54 / D4 / D0 / D34 / D34）。
+# 三层修法（缺一不可，逐层都可以单独回红）：
+#   ① `is_synthetic_merge_subject()`：合成 merge 主题**整体不参与**推断。其载荷按定义是
+#      VCS 元数据（SHA / PR 号），**永远不是**作者写的任务号；只吞这两种 VCS 合成主题，
+#      真业务主题（`docs(D814): …`、`feat/win-d702-…`、`Merge branch 'main'`）一律不吞。
+#   ② `DID_RE` 加**十六进制邻接边界**：紧邻其它十六进制字符的 `d<数字>` 属于一个 hex blob
+#      （SHA / 短哈希），不是任务号。
+#   ③ `_inside_sha_token()`：候选若**整词元**就是 7–40 位裸 SHA（② 的边界对"整词元"无效），判无效。
+DID_RE = re.compile(r"(?<![0-9a-fA-F])[Dd]\d+(?![0-9a-fA-F])")
+
+# 合成 merge 主题特征（CT-C 修法①）。**锚定式**：只有"整条主题就是 VCS 合成产物"才命中，
+#   避免把带 SHA 字样的真业务主题一起吞掉（边界收紧）。
+SYNTHETIC_MERGE_SUBJECT_RES: Tuple[re.Pattern, ...] = (
+    # GitHub 合成的 pull_request merge / 本地 `git merge <sha>`：载荷两侧都是 SHA。
+    re.compile(r"^Merge [0-9a-fA-F]{7,40} into [0-9a-fA-F]{7,40}\s*$"),
+    # GitHub 把 PR 合进主干：`Merge pull request #N from <owner>/<branch>`。
+    #   分支名里可能夹带**别人的** D# → 扫历史时会把写集错锚到别的任务。
+    re.compile(r"^Merge pull request #\d+ from \S+"),
+)
+
+# `_inside_sha_token` 用的裸 SHA 词元（CT-C 修法③）。
+SHA_TOKEN_RE = re.compile(r"[0-9a-fA-F]{7,40}")
 
 # D708 复核修复②: post-commit hook 生成「登记影子提交」，其 subject 含 `bypass COMMITTED 登记`
 #   且**带一个历史 D#**（如 `(auto hook, D521)`）。HEAD 经常就是这个影子提交 →
@@ -129,28 +201,92 @@ REGISTRATION_SUBJECT_RE = re.compile(r"bypass COMMITTED 登记")
 FALLBACK_SCAN_DEPTH = 20
 
 
+def is_synthetic_merge_subject(text: str) -> bool:
+    """主题是否是 VCS 合成的 merge 提交（其载荷按定义是 SHA/PR 号，不是作者写的任务号）。
+
+    契约（铁律 47）:
+      @input  text: 提交主题原样（可含前后空白）
+      @output True = 合成 merge 主题（不得用于 D# 推断）/ False = 其它
+      @降级   无（纯字符串判定，不抛错）
+    收紧边界: 两条都是**整条主题锚定**（`^…$` / `^…` 且载荷形态固定）——
+      `Merge branch 'main' into feat/foo`、`docs(D814): …` 均**不**命中（不吞真业务主题）。
+    """
+    s = (text or "").strip()
+    return any(rx.match(s) is not None for rx in SYNTHETIC_MERGE_SUBJECT_RES)
+
+
+def _inside_sha_token(text: str, start: int, end: int) -> bool:
+    """[start, end) 的候选是否落在某个 7–40 位裸十六进制词元内（CT-C 修法③）。
+
+    为什么②不够: `DID_RE` 的邻接边界只挡"紧邻其它 hex 字符"的情形；**整词元**恰好是
+      7–40 位纯 hex（如 `Merge d5412345 into x` 里的 `d5412345`）时边界两侧都是空格、
+      ② 放行，但它在形态上就是一个裸 SHA → 必须判无效。
+    """
+    for m in SHA_TOKEN_RE.finditer(text or ""):
+        if m.start() <= start and end <= m.end():
+            return True
+    return False
+
+
+def _redact_hex(text: str) -> str:
+    """把文本里的裸 SHA 形态词元（7–40 位十六进制）替换成 `<sha>`（CT-C 收口②的输出面）。
+
+    为什么输出面也要收口: P0 的判据是"**同一份代码在不同 SHA 上跑 ⇒ 结果逐字一致**"。
+      推断面收口后，"决策字段"已一致，但诊断行仍会回显合成 merge 主题的原始 SHA
+      → 输出随 SHA 变化 ⇒ 判据②在**输出面**仍不成立（且下游若有工具从 gate 输出里
+      抠 `[Dd]\\d+`，会再把伪号捡回去）。
+      脱敏后输出完全不携带 SHA 文本 ⇒ 判据从"决策一致"升级为"逐字节一致"。
+    """
+    return SHA_TOKEN_RE.sub("<sha>", text or "")
+
+
 def parse_did(text: str) -> Optional[str]:
-    m = DID_RE.search(text or "")
-    return m.group(0).upper() if m else None
+    """从文本里取 D#（CT-C 后只认"像任务号的位置"）。
+
+    契约（铁律 47）:
+      @input  text: 任意文本（分支名 / 提交主题 / --did 值）
+      @output 归一化大写的 D#；无合法候选 → None
+      @降级   ① 合成 merge 主题 → None（载荷是 SHA，不是作者意图）；
+              ② 候选落在裸 SHA 词元内 → **跳过该候选继续找下一个**（不静默取伪号，也不因此丢弃整条文本）
+    保持既有正确行为（D708 回归面）: `feat/win-d702-…` → D702、`docs(d702): …` → D702、
+      `fix/D708-merge-writeset-gate` → D708、`(auto hook, D521)` → D521。
+    """
+    s = text or ""
+    if is_synthetic_merge_subject(s):
+        return None
+    for m in DID_RE.finditer(s):
+        if _inside_sha_token(s, m.start(), m.end()):
+            continue
+        return m.group(0).upper()
+    return None
 
 
 def infer_did(repo: str, branch: str, head: str,
-              override: Optional[str] = None) -> Tuple[Optional[str], str, List[str]]:
+              override: Optional[str] = None,
+              merge_base: str = "") -> Tuple[Optional[str], str, List[str]]:
     """推断任务 D#。返回 (D#|None, 来源, 诊断行列表)。
 
     顺序（D954）：⓪ `--did` 显式覆盖 → ① 分支名 → ② 向前遍历提交 subject
-    （跳过自动登记影子提交，保留既有保护）。
+    （跳过自动登记影子提交 + 跳过合成 merge 提交）。
 
     来源取值: `explicit` | `branch` | `commit-subject` | `none`。
-    `diag` 逐条记录**试过哪些源、为何空** —— 三源全空时由调用方打印，
+    `diag` 逐条记录**试过哪些源、为何空、扫了什么范围** —— 三源全空时由调用方打印，
     使 fail-closed 可诊断（K3 判 #741：推断失败此前是静默的）。
 
-    注: D814「改用 `--first-parent` 只扫分支自身提交」**仍未落地**
-    （`task-state/D814.json` status=claimed / impl=null，全仓 grep `first-parent` = 0），
-    故此处**无该语义可回退**；一旦 D814 落地，只需把下方 `git log` 调用加 `--first-parent`。
+    CT-C（2026-09-27）② 段落的两项收口（D814 落地）:
+      a. **`--first-parent`**：只沿第一父链走（分支自身提交），并入侧（merge 的第二父）
+         不再参与 → 修 D814「merge main 后错锚到 main 侧任务号」。
+      b. **`merge_base..start` 范围**：把 base 侧历史整体挡在扫描面外
+         （`git merge-base(base, head)` 之前的提交不提供 D#）。
+      c. **合成 merge 锚点**：HEAD 本身是 GitHub 合成的 merge 提交时（主题
+         `Merge <head_sha> into <base_sha>`），其第一父是 **base**、PR 自身提交在**第二父**侧；
+         直接对 HEAD 用 `--first-parent` 第一步就走进 main 历史 → 故锚到 `HEAD^2` 再扫。
 
-    契约: 绝不因推断失败而放行 —— 失败一律返回 `(None, "none", diag)`，
-    由调用方维持既有 fail-closed 拒绝路径。
+    契约（铁律 47）:
+      @input  repo/branch/head/override/merge_base（merge_base 缺省 ""= 不设范围，兼容旧调用）
+      @output (D#|None, 来源, 诊断行列表)
+      @降级   绝不因推断失败而放行 —— 失败一律返回 `(None, "none", diag)`，
+              由调用方维持既有 fail-closed 拒绝路径。
     """
     diag: List[str] = []
 
@@ -175,16 +311,41 @@ def infer_did(repo: str, branch: str, head: str,
         return d, "branch", diag
     diag.append(f"源 branch: 分支名 {branch!r} 不含 D#")
 
-    # ② 提交 subject 回退（跳过自动登记影子提交）
+    # ② 提交 subject 回退（跳过自动登记影子提交 + 跳过合成 merge 提交；CT-C/D814）
+    #   CT-C(c): HEAD 是合成 merge 提交时锚到第二父（PR 自身顶端），否则 --first-parent
+    #   第一步就走 base（main）侧 → 只扫到 main 历史（D814 型错锚）。
+    start = head
     try:
-        out = run_git(["log", f"--max-count={FALLBACK_SCAN_DEPTH}", "--format=%s", head], repo)
+        meta = run_git(["log", "-1", "--format=%s%x00%P", head], repo)
+        _subj, _, _parents = meta.partition("\x00")
+        _subj = _subj.strip()
+        _plist = _parents.split()
+        if is_synthetic_merge_subject(_subj) and len(_plist) >= 2:
+            start = f"{head}^2"
+            diag.append(f"源 commit-subject: HEAD 是合成 merge 提交（主题 {_redact_hex(_subj)!r}）"
+                        f"→ 锚到第二父 {start}（PR 自身顶端）后再扫，避免走进 base 历史")
+    except GateError as exc:
+        diag.append(f"源 commit-subject: 无法读取 HEAD 元信息（{exc}）→ 直接扫 {head}")
+
+    #   CT-C(a)+(b): --first-parent 只沿第一父链（分支自身提交）；
+    #   merge_base..start 把并入的 base 历史挡在扫描面外（两者互补：前者管"走哪条链"，
+    #   后者管"链走到哪里为止"）。
+    rev_spec = f"{merge_base}..{start}" if merge_base else start
+    try:
+        out = run_git(["log", "--first-parent", f"--max-count={FALLBACK_SCAN_DEPTH}",
+                       "--format=%s", rev_spec], repo)
     except GateError as exc:
         diag.append(f"源 commit-subject: 无法读取提交历史（{exc}）→ 回退不可用")
         return None, "none", diag
-    scanned = skipped = 0
+    diag.append(f"源 commit-subject: 扫描范围 `git log --first-parent {rev_spec}`"
+                f"（只沿第一父链 = 分支自身提交；base 侧历史不提供 D#）")
+    scanned = skipped = synthetic = 0
     for subj in out.splitlines():
         subj = subj.strip()
         if not subj:
+            continue
+        if is_synthetic_merge_subject(subj):
+            synthetic += 1
             continue
         if REGISTRATION_SUBJECT_RE.search(subj):
             skipped += 1
@@ -192,17 +353,28 @@ def infer_did(repo: str, branch: str, head: str,
         scanned += 1
         d = parse_did(subj)
         if d:
-            diag.append(f"源 commit-subject: 扫过 {scanned} 条非登记提交后命中 {subj!r} → {d}"
-                        f"（已跳过 {skipped} 条自动登记影子提交）")
+            diag.append(f"源 commit-subject: 扫过 {scanned} 条非登记提交后命中 {_redact_hex(subj)!r} → {d}"
+                        f"（已跳过 {skipped} 条自动登记影子提交 / {synthetic} 条合成 merge 提交）")
             return d, "commit-subject", diag
     diag.append(f"源 commit-subject: 最近 {FALLBACK_SCAN_DEPTH} 条内扫过 {scanned} 条非登记提交"
-                f"（跳过 {skipped} 条登记影子提交），均不含 D# → 回退空")
+                f"（跳过 {skipped} 条登记影子提交 / {synthetic} 条合成 merge 提交），"
+                f"均不含 D# → 回退空")
     diag.append("全部来源皆空 → D# 推断失败（fail-closed：维持既有拒绝路径，不静默放行）")
     return None, "none", diag
 
 
 def find_declaration_files(repo: str, did: Optional[str]) -> Tuple[Optional[str], Optional[str], Optional[str]]:
-    """按 S1/S2/S3 定位声明文件（task-state / dev doc / brief）。"""
+    """按 S1/S2/S3 定位声明文件（task-state / dev doc / brief）。
+
+    CT-A2: S2/S3 多命中 ⇒ 抛 `AmbiguousDeclaration`（fail-closed + 点名全部候选），
+      **不再** `hits[-1]` 静默取末位。
+
+    契约（铁律 47）:
+      @input  repo: 仓库根；did: 已推断出的 D#（None = 只探 task-state 之外不用）
+      @output (task-state 路径|None, dev doc 路径|None, brief 路径|None)
+      @降级   单命中/零命中按原语义返回；**多命中 → 抛 AmbiguousDeclaration**
+              （不返回半套声明源，避免"用半份声明判夹带"产生假阳性/假阴性）
+    """
     ts = dd = bf = None
     if did:
         cand = Path(repo) / "task-state" / f"{did}.json"
@@ -210,16 +382,21 @@ def find_declaration_files(repo: str, did: Optional[str]) -> Tuple[Optional[str]
             ts = str(cand)
         impl = Path(repo) / "docs" / "plans" / "codex" / "implementation"
         if impl.is_dir():
-            hits = sorted(impl.glob(f"SYNOVA-IMPL-*{did}*.md"))
+            _pat = f"SYNOVA-IMPL-*{did}*.md"
+            hits = sorted(impl.glob(_pat))
+            if len(hits) > 1:
+                raise AmbiguousDeclaration("S2 dev doc", _pat, [str(h) for h in hits])
             if hits:
-                dd = str(hits[-1])
+                dd = str(hits[0])
     briefs = Path(repo) / ".claude" / "task-briefs"
     if briefs.is_dir():
         allb = sorted(briefs.glob("*.md"))
         if did:
             hits = [b for b in allb if did in b.name]
+            if len(hits) > 1:
+                raise AmbiguousDeclaration("S3 brief", f"*{did}*.md", [str(h) for h in hits])
             if hits:
-                bf = str(hits[-1])
+                bf = str(hits[0])
     return ts, dd, bf
 
 
@@ -406,8 +583,8 @@ def main() -> int:
         _emit(result, args.json)
         return 0
 
-    # ── D# 推断: --did 显式覆盖 → 分支名 → 回退最近提交 scope（D954）──
-    did, did_src, did_diag = infer_did(repo, branch, args.head, args.did)
+    # ── D# 推断: --did 显式覆盖 → 分支名 → 回退最近提交 scope（D954；CT-C 收口随机性）──
+    did, did_src, did_diag = infer_did(repo, branch, args.head, args.did, mb)
     result["task_id"] = did
     result["task_id_source"] = did_src
     result["task_id_diag"] = did_diag
@@ -419,7 +596,17 @@ def main() -> int:
         _log_degraded(repo, result["reason"])
         return 2
 
-    ts, dd, bf = find_declaration_files(repo, did)
+    try:
+        ts, dd, bf = find_declaration_files(repo, did)
+    except AmbiguousDeclaration as exc:
+        # CT-A2: 多命中 → fail-closed（exit 2），候选逐条点名（不静默取一个）
+        result["status"] = "degraded"
+        result["reason"] = str(exc)
+        result["ambiguous"] = {"kind": exc.kind, "pattern": exc.pattern,
+                               "candidates": exc.candidates}
+        _emit(result, args.json)
+        _log_degraded(repo, result["reason"])
+        return 2
     declared, warns = collect_declared(repo, ts, dd, bf)
     result["warns"].extend(warns)
     result["sources"] = {"task_state": ts, "dev_doc": dd, "brief": bf}
@@ -514,6 +701,14 @@ def _emit(result: dict, as_json: bool) -> None:
         print("   D# 推断诊断（S1 task-state / S2 dev doc / S3 brief 声明源为空）:")
         for _line in result["task_id_diag"]:
             print(f"     · {_line}")
+    if result.get("ambiguous"):
+        _amb = result["ambiguous"]
+        print(f"   ⚠️ 声明源多命中 → fail-closed（{_amb.get('kind','')}，匹配 {_amb.get('pattern','')}）")
+        print(f"      候选 {len(_amb.get('candidates') or [])} 个（必须人工消歧，**不许静默取一个**）:")
+        for _c in (_amb.get("candidates") or []):
+            print(f"     - {_c}")
+        print("      修复指引（二选一）: ① 只保留本任务那一个（重命名/删除另一个）"
+              "② 用 `--did` 显式指定任务号，使候选收敛到唯一")
     if "changed_count" in result:
         print(f"   变更集: {result['changed_count']} 个文件（merge-base {str(result.get('merge_base',''))[:8]}）")
     if result.get("declared"):
