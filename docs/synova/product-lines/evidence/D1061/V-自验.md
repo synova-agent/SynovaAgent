@@ -396,33 +396,77 @@ rc=1
    即该接线的**失效模式 = 保守回退全量**，**现有测试抓不到**；夹具对它的"接线"断言是 **grep 型**（`grep -q "ct-suite-select.sh" "$CIY"`）。
    ⇒ 与 PR-B 门禁 8 同类：**弱判据**；但此处失效方向**安全（多跑，不会少跑）**，与门禁 8（预演不生效）性质不同。**登记，不判缺陷。**
 
-### 十-A-7 时间对比（两口径）—— **已完成（CI 真跑）**
+### 十-A-7 时间对比（两口径）—— **已完成（CI 真跑，权威 run）**
 
-**run `36527360094`**（event=pull_request, sha `89d22f1c`, created 2026-09-29T05:41:31Z, updated 05:52:40Z, `conclusion=failure`）
+**run `36528674633`**（event=pull_request, sha **`7d1a614c`**, created 05:57:54Z, updated 06:08:29Z, **`conclusion=success`**）
+> 前一版 run `36527360094`（669s/665s，failure）**已作废**。
 
-| 口径 | 改后（本次 CI） | 基线 | Δ | 目标 | 达标 |
+| 口径 | 改后（权威 run） | 基线 | Δ | 目标 | 达标 |
 |---|---|---|---|---|---|
-| **A · run 墙钟** | **669s（11.2 min）** | 中位 2146s（我 n=14 配对真跑） | **−68.8%** | ≤480s | ❌ **未达标** |
-| **B · windows CT 腿** | **665s（11.1 min）** | 中位 2035s（队长 n=25）／2141s（我 n=14） | **−67.3%** | ≤300s | ❌ **未达标（2.2×）** |
+| **A · run 墙钟** | **635s（10.6 min）** | 中位 2146s（我 n=14 配对真跑） | **−70.4%** | ≤480s | ❌ **未达标**（差 155s） |
+| **B · windows CT 腿** | **630s（10.5 min）** | 中位 2035s（队长 n=25）／2141s（我 n=14） | **−69.0%** | ≤300s | ❌ **未达标（2.1×）** |
 
-- 腿/run墙钟 = **99.4%** ⇒ windows CT 腿**仍是关键路径**（与基线同构）。
-- 提速**巨大且真实**（约 −68%），但**两个目标都没到**；`≤8min` 差 189s，`≤5min` 差 365s。
+- 腿/run墙钟 = **99.2%** ⇒ windows CT 腿**仍是关键路径**。
+- 我独立取数复现：13/13 job 全绿（含前次 skipped 的 `Vitest (1/2)=170s`、`Vitest (2/2)=155s`、`Golden Case F1 Gate=29s`）。
 
-**job 级明细（按时长降序）**
+**★ 口径声明（队长要求显式写明，供 K3 复核）**
+本次选择集 = **`__FULL__`（55/55）**：
 ```
-  665s  Control Tower Gate Tests (windows-latest)      completed  failure
-  124s  Architecture Check                             completed  success
-  120s  TypeScript + Lint + Iron Laws                  completed  failure
-  112s  Integration Contract Check                     completed  success
-   95s  Checker Review (maker/checker)                 completed  success
-   81s  Control Tower Gate Tests (ubuntu-latest)        completed  success
-   42s  Test-Kit Architecture Tests (windows-latest)    completed  success
-   22s  Gate Integrity (pattern sentinel + injection …  completed  success
-   21s  Test-Kit Architecture Tests (ubuntu-latest)     completed  success
-   13s  npm audit                                      completed  success
-    0s  Vitest (${{ matrix.shard }})                    completed  skipped
-   -1s  Golden Case F1 Gate                             completed  skipped
+$ bash scripts/control-tower/ct-suite-select.sh --changed origin/main...HEAD --platform windows
+[D1061-SELECT] mode=select platform=windows changed=18 selected_of_total=55/55 degraded=0
 ```
+机制：**PR-A 自身改了 `.github/workflows/*`** → map 规则
+`{"glob": ".github/workflows/*", "domains": ["__FULL__"], "why": "CI 定义自身变更 ⇒ 选择器前提失效（D1061）"}`
+（`ct-suite-select.sh:195/:219`「首个命中生效 ⇒ 全量」）。
+⇒ **630s 是「全量跑」口径下的数字，不含任何子集裁剪收益。**
+子集收益只在**非 ci.yml 变更**的 PR 上体现（我实测 docs-only 区间 → **29/54**）。
+**这正是队长裁定 A2 起点口径 (i) 的依据。**
+
+### 十-A-9 CI 真跑失败项（F1/F2 已在 `7d1a614c` 修复，我逐条独立复核）
+
+#### F1 · V5 平台敏感命令（D520）—— ✅ **已修（我独立跑门禁复现）**
+```
+$ SYNO_CI=1 bash scripts/pre-commit-check.sh        # PR-A 树 @ 7d1a614c，rc=1，wall=3s
+:102  ✅ V5 平台敏感命令: 新控制塔脚本对照 PLATFORM-CHECKLIST.md (D520)
+$ grep 'ct-suite-select.sh: 平台敏感' f1.log        # → 零命中
+```
+- 修法实证：`:96 for _c in python3 python py; do  # D520: …`；`:105` 尾注 `# D520: 文案含字面量（非调用）`
+- 我另用门禁 `:1538` 的**同款过滤词集**静态复算 → 命中为空 ✅
+- ⚠ **本次门禁跑仍有 1 组红，但与本卡无关**：
+  `❌ D2 登记门禁: 有未登记文档 2 处`（点名 `docs/synova/dispatch/2026-09-29-D1061-CT提速-门禁机制修正.md`）
+  —— 属**共享注册表未登记**，队长已裁定留未清项；**CI 侧该 job 为 success**。**不得算作 F1 未修。**
+
+#### F2 · windows CT 腿红 —— ✅ **已修；真根因 = `MAP_TSV` 未清 CRLF（PLATFORM-CHECKLIST #2 复发）**
+`ct-suite-select.sh:128` 新增 `MAP_TSV="$(printf '%s\n' "$MAP_TSV" | tr -d '\r')"`。
+机制：Windows python 文本模式输出 `\r\n` → 域名带尾 `\r` → 查表落空 → `D4` → 回退全量。
+
+**① 常驻 CRLF 断言是否真能红 —— 我自己改坏（判别性证明）**
+> **诚实登记**：我**第一次变异无效** —— 用 sed 剥 `tr -d '\r'` 产生了**语法错误**
+> （`MAP_TSV="$MAP_TSV"| tr -d '\r')"`），失败**源于语法错而非语义** ⇒ 判为无效变异并作废重做。
+第二次（**语法合法**，`bash -n` 通过）：
+```
+变异 :128  MAP_TSV="$(printf '%s\n' "$MAP_TSV" | tr -d '\r')"
+      →     MAP_TSV="$(printf '%s\n' "$MAP_TSV")"
+基线 26 通过 0 失败 → 改坏 rc=1 / 25 通过 1 失败
+  ❌ CRLF 仿真下选择错误（rc=0 n=3）⇒ 域名带尾 \r 查表落空
+     ｜ stderr=[D1061-DEGRADED] code=D4 reason=无域命中：选中 0 条（changed=1）——0 条静默通过被禁 → **回退全量**（fail-closed，绝不静默缩小）
+```
+⇒ `自验结论` = **常驻断言具判别力，且精确复现 CI 的 F2 签名（回退全量 3/3）** ✅
+
+**② `init.defaultBranch` 假设 —— 我独立复算，确认已被证伪（与 coder-a 结论一致，无分歧）**
+```
+$ GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=init.defaultBranch GIT_CONFIG_VALUE_0=master \
+    bash tests/control-tower/ct-suite-select.test.sh
+rc=0   结果: 26 通过, 0 失败   ❌ 行数 = 0
+$ GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=init.defaultBranch GIT_CONFIG_VALUE_0=master \
+    git config --get init.defaultBranch
+master                     # ← 证明 env 真的生效，该对照不是空转
+```
+⇒ `自验结论` = **`init.defaultBranch` 假设确已证伪**（强制 `master` 下夹具仍 26/0）。
+备注：当前夹具内**未见** `init.defaultBranch` 的常驻回归探针（grep 零命中）；因假设已证伪，无需常驻守护。
+
+#### F3 · `#872` 夹具 —— ✅ 仍绿（非失败项）
+`bash tests/control-tower/ci-signal-classify.test.sh` → `rc=0, 78 通过, 0 失败, 0 显式跳过`
 
 ### 十-A-9 CI 真跑失败项（**新增，两条独立阻塞**）
 
@@ -475,15 +519,23 @@ rc=0  wall=2s   结果: 78 通过, 0 失败, 0 显式跳过
 
 | 判据 | 结论词 |
 |---|---|
-| 红线 / 禁碰面 / a 面残留 / 写集（18 文件） | `自验结论` = 零越界、零残留（新 sha `89d22f1c` 复算同结论） |
+| 红线 / 禁碰面 / a 面残留（新 sha `7d1a614c`，18 文件） | `自验结论` = 零越界、零残留 |
 | b 面 main 15 → PR-A 17（+2） | `自验结论` = 合法（队长授权承载；须用 #882 docs 排除口径判） |
-| 夹具 rc=0（macOS） | `自验结论` = 我独立重跑全绿（≠ 通过） |
+| 夹具 rc=0 | `自验结论` = `ct-suite-select.test.sh` 26/0、`simulate-ci-dedup.test.sh` 15/0（我独立重跑） |
 | A1–A6 变异体 | `自验结论` = 6/6 判别成立 |
-| 新增：A6 缺口闭合 + 完整性不变式 | `自验结论` = 均成立且**我独立做了判别性变异**（见 §十-A-5 / 新事实 2a·2b） |
-| `ci.yml:427` 接线真执行 + 单源一致 + fail-closed | `自验结论` = 成立 |
-| 选择器缩小能力 | `自验结论` = 真实成立（docs-only → 29/54） |
-| `#872` 夹具恢复 | `自验结论` = 已恢复（78/0） |
-| 两口径时间对比 | `自验结论` = **已完成**：run 墙钟 **669s**（−68.8%）、windows CT 腿 **665s**（−67.3%） |
-| 目标 `≤8min` / `≤5min` | **两口径均未达标**（669s > 480s；665s > 300s） |
-| **CI 真跑结论** | **`failure`** —— 两条独立阻塞（F1 D520 一行可修；F2 Windows 特定全量回退） |
-| **PR-A 整体** | **`退回（附理由）`** —— 理由两条：**F1** `ct-suite-select.sh:92` 触发 V5 平台敏感命令（补 `# D520:` 即消解）；**F2** 新夹具 `ct-suite-select.test.sh` 在 **Windows** 走全量回退而红（macOS 绿，属 **Windows 兼容缺陷**，需保留 stderr 定位回退码）。**两口径虽已完成但均未达标**，目标达成度需你与 CTO 另行裁定。 |
+| A6 缺口闭合 + 完整性不变式（55 条集合相等） | `自验结论` = 均成立且**我独立做了判别性变异** |
+| **F1（V5/D520）** | `自验结论` = **已修**（我独立跑 `SYNO_CI=1 pre-commit-check.sh`：V5 行 ✅，零点名；残留 D2 红与本卡无关） |
+| **F2（Windows CRLF）** | `自验结论` = **已修**；常驻 CRLF 断言经我变异证明**具判别力并复现 CI 签名** |
+| **F2-② `init.defaultBranch` 假设** | `自验结论` = **确已证伪**（强制 master 仍 26/0；env 生效已证） |
+| `ci.yml:427` 接线 + 单源一致 + fail-closed | `自验结论` = 成立 |
+| 选择器缩小能力 | `自验结论` = 真实成立（docs-only → 29/54）；**本次 PR-A 为 `__FULL__` 55/55，无裁剪收益** |
+| **两口径时间对比** | `自验结论` = **已完成（权威 run `36528674633`）**：run 墙钟 **635s**（−70.4%）、windows CT 腿 **630s**（−69.0%） |
+| 目标 `≤8min` / `≤5min` | **两口径均未达标**（635s > 480s；630s > 300s） |
+| **PR-A 整体** | **`可提请独立审计`** —— 非 CI 面（红线/写集/残留/变异体/接线/缩小能力）与 CI 面（F1/F2 修复 + 两口径）**均已独立复核**；**目标达成度未达标**，由你与 CTO 裁定；**合并归 CTO，我不判通过**。 |
+
+### 十-A-10 我自己的操作事故登记（诚实）
+
+**LOCK-LEAK-1**：我在 A1–A6 变异批（被 `job_kill` 终止）时**泄漏了重型锁**（`/tmp/.synova-d1061-heavy.lock`，owner=`91941`），导致后续需要该锁的成员被挡约数小时。
+- 发现：本轮开工前 `ls -d` 见锁仍在，且 `kill -0 91941` 证实该进程**已不存在**。
+- 处置：按**属主校验**（owner=91941 且进程已亡）`rm -f owner && rmdir` 释放。**未误删他人锁。**
+- 纪律修正：**被 kill 的批处理必须留 `trap ... EXIT` 兜底释放**，不能把释放写在脚本末尾（kill 时到不了）。

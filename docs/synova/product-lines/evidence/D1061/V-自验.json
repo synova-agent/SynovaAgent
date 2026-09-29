@@ -31,7 +31,7 @@
   },
   "pr_a": {
     "branch": "chore/d1061-a-ci-speedup",
-    "remote_sha": "89d22f1ca3b51475020c39169a32b3f05949fe2d",
+    "remote_sha": "7d1a614c40cd5fe7e95ce4de821909efd7aa5f0a",
     "pr": "#886",
     "state": "PUSHED_AND_VERIFIED",
     "independence_disclosure": {
@@ -241,92 +241,109 @@
       "recommendation": "git rebase origin/main 解 dirty 后重推（synchronize 已在触发 types 内）"
     },
     "target_verdict": {
-      "run_wall_le_480s": "未达标：669s > 480s",
-      "win_ct_leg_le_300s": "未达标：665s > 300s（2.2×）"
+      "run_wall_le_480s": "未达标：635s > 480s（−70.4%）",
+      "win_ct_leg_le_300s": "未达标：630s > 300s（−69.0%，2.1×）"
     },
-    "verdict": "PR-A：退回（附理由）—— CI 已真跑且**红**，两条独立阻塞项：① `TypeScript + Lint + Iron Laws` = V5 平台敏感命令(D520) 点名 ct-suite-select.sh:92（补 `# D520:` 即消解）；② `Control Tower Gate Tests (windows-latest)` = 新夹具 ct-suite-select.test.sh 在 Windows 走全量回退而红（macOS 绿）。两口径时间均可完成：run 墙钟 669s（−68.8%）、windows CT 腿 665s（−67.3%），**但二者均未达标**（目标 480s / 300s）。",
+    "verdict": "PR-A：**可提请独立审计**（非 CI 面 + CI 面均已复核）。新 run 36528674633 = success（13/13 job 绿）；两口径 635s/630s（−70.4%/−69.0%）**仍均未达标**（480s/300s）；F1 已修（我独立跑 SYNO_CI=1 pre-commit-check.sh 复现）；F2 真根因=MAP_TSV CRLF，常驻断言经我变异证明具判别力；init.defaultBranch 假设经我独立复算确已证伪。**合并归 CTO，我不判通过。**",
     "files_total": 18,
     "ci_run": {
-      "run_id": 36527360094,
+      "run_id": 36528674633,
       "event": "pull_request",
-      "sha": "89d22f1c",
+      "sha": "7d1a614c",
       "status": "completed",
-      "conclusion": "failure",
-      "created_at": "2026-09-29T05:41:31Z",
-      "updated_at": "2026-09-29T05:52:40Z",
+      "conclusion": "success",
+      "created_at": "2026-09-29T05:57:54Z",
+      "updated_at": "2026-09-29T06:08:29Z",
+      "supersedes": {
+        "run_id": 36527360094,
+        "note": "旧 run 669s/665s 作废"
+      },
       "caliber_A_run_wall": {
-        "seconds": 669,
-        "minutes": 11.2,
+        "seconds": 635,
+        "minutes": 10.6,
         "baseline_median_s": 2146,
-        "baseline_source": "verifier n=14 配对真跑样本",
-        "delta_pct": -68.8,
+        "delta_pct": -70.4,
         "target_s": 480,
         "target_met": false
       },
       "caliber_B_windows_ct_leg": {
-        "seconds": 665,
-        "minutes": 11.1,
-        "conclusion": "failure",
+        "seconds": 630,
+        "minutes": 10.5,
+        "conclusion": "success",
         "baseline_median_s": 2035,
-        "baseline_source": "lead n=25 真跑样本（verifier n=14 为 2141s）",
-        "delta_pct": -67.3,
+        "delta_pct": -69.0,
         "target_s": 300,
         "target_met": false,
-        "leg_over_run_wall_pct": 99.4
+        "leg_over_run_wall_pct": 99.2
       },
-      "jobs": [
-        {
-          "name": "Control Tower Gate Tests (windows-latest)",
-          "s": 665,
-          "conclusion": "failure"
-        },
-        {
-          "name": "Architecture Check",
-          "s": 124,
-          "conclusion": "success"
-        },
-        {
-          "name": "TypeScript + Lint + Iron Laws",
-          "s": 120,
-          "conclusion": "failure"
-        },
-        {
-          "name": "Integration Contract Check",
-          "s": 112,
-          "conclusion": "success"
-        },
-        {
-          "name": "Checker Review (maker/checker)",
-          "s": 95,
-          "conclusion": "success"
-        },
-        {
-          "name": "Control Tower Gate Tests (ubuntu-latest)",
-          "s": 81,
-          "conclusion": "success"
-        },
-        {
-          "name": "Test-Kit Architecture Tests (windows-latest)",
-          "s": 42,
-          "conclusion": "success"
-        },
-        {
-          "name": "Gate Integrity (pattern sentinel + injection fixture)",
-          "s": 22,
-          "conclusion": "success"
-        },
-        {
-          "name": "Test-Kit Architecture Tests (ubuntu-latest)",
-          "s": 21,
-          "conclusion": "success"
-        },
-        {
-          "name": "npm audit",
-          "s": 13,
-          "conclusion": "success"
-        }
+      "jobs_all": [
+        [
+          630,
+          "Control Tower Gate Tests (windows-latest)",
+          "success"
+        ],
+        [
+          170,
+          "Vitest (1/2)",
+          "success"
+        ],
+        [
+          155,
+          "Vitest (2/2)",
+          "success"
+        ],
+        [
+          129,
+          "TypeScript + Lint + Iron Laws",
+          "success"
+        ],
+        [
+          123,
+          "Architecture Check",
+          "success"
+        ],
+        [
+          111,
+          "Integration Contract Check",
+          "success"
+        ],
+        [
+          107,
+          "Checker Review (maker/checker)",
+          "success"
+        ],
+        [
+          72,
+          "Control Tower Gate Tests (ubuntu-latest)",
+          "success"
+        ],
+        [
+          35,
+          "Test-Kit Architecture Tests (windows-latest)",
+          "success"
+        ],
+        [
+          29,
+          "Golden Case F1 Gate",
+          "success"
+        ],
+        [
+          28,
+          "Gate Integrity (pattern sentinel + injection fixture)",
+          "success"
+        ],
+        [
+          15,
+          "Test-Kit Architecture Tests (ubuntu-latest)",
+          "success"
+        ],
+        [
+          13,
+          "npm audit",
+          "success"
+        ]
       ],
-      "verdict": "两口径均可完成；但 windows CT 腿与前段门禁 job 均 FAILURE"
+      "verdict": "自验结论 = 我独立取数复现（635s/630s，13/13 job success）"
     },
     "ci_failures": [
       {
@@ -336,7 +353,13 @@
         "raw": "❌ V5 平台敏感命令: 新控制塔脚本对照 PLATFORM-CHECKLIST.md (D520): 1 处  [CI strict——软提示在 CI 上为硬阻断]\n   scripts/control-tower/ct-suite-select.sh: 平台敏感命令（见 PLATFORM-CHECKLIST.md）",
         "root_cause": "scripts/pre-commit-check.sh:1538 判定 = grep -nE '\\bpython3\\b|date \\+%s|date -v|grep -P' 该文件，再 grep -v 'PYBIN|swallow-ok|D520|#' 过滤；ct-suite-select.sh:92 `for _c in python3 python py; do`（PYBIN 三级探测本体的那一行）未含 PYBIN/D520/# → 被点名",
         "note": "讽刺点：被点名的正是 PLATFORM-CHECKLIST #1 推荐的正确写法；同一门禁在 PR-B 上由 coder-b 用行尾 `# D520: …` 注释消解",
-        "fix": "给该行补 `# D520:` 或含 `PYBIN` 即消解（与 PR-B 同法）"
+        "fix": "给该行补 `# D520:` 或含 `PYBIN` 即消解（与 PR-B 同法）",
+        "fixed_at_7d1a614c": {
+          "my_check": "SYNO_CI=1 bash scripts/pre-commit-check.sh（在 7d1a614c 上）→ `:102 ✅ V5 平台敏感命令: 新控制塔脚本对照 PLATFORM-CHECKLIST.md (D520)`；`grep 'ct-suite-select.sh: 平台敏感'` → 零命中",
+          "fix_evidence": "ct-suite-select.sh:96 `for _c in python3 python py; do  # D520: …`；:105 尾注 `# D520: 文案含字面量（非调用）`",
+          "residual_red": "❌ D2 登记门禁: 有未登记文档 2 处（点名 docs/synova/dispatch/2026-09-29-D1061-…md）——**与 F1 无关**，队长已裁定留未清项，CI 侧绿",
+          "verdict": "自验结论 = F1 已修（独立复现）"
+        }
       },
       {
         "id": "F2",
@@ -347,7 +370,21 @@
         "local_status": "同一夹具在 macOS 上 23 通过 0 失败（我独立跑，见 §十-A-3）",
         "root_cause": "Windows 特定，未能在 macOS 复现；候选回退码 D1/D2/D3/D5/D6（:160/:169/:183/:198/:236）",
         "diagnostic_obstacle": "夹具 :108 的正常路径调用用 `2>/dev/null` 吞掉 stderr 的 `[D1061-DEGRADED] code=…` 行——**恰是定位该失败所需的唯一诊断**；即那 9 处 swallow-ok 豁免遮蔽了本次排障关键信息",
-        "action": "需在 Windows 上跑该夹具并保留 stderr（去掉 2>/dev/null 或用 :115/:121 那种 2>file 形式）"
+        "action": "需在 Windows 上跑该夹具并保留 stderr（去掉 2>/dev/null 或用 :115/:121 那种 2>file 形式）",
+        "true_root_cause_at_7d1a614c": {
+          "cause": "MAP_TSV 未清 CRLF（PLATFORM-CHECKLIST #2 复发）：Windows python 文本模式输出 \\r\\n → 域名带尾 \\r → 查表落空 → D4 → 回退全量",
+          "fix": "ct-suite-select.sh:128 `MAP_TSV=… | tr -d '\\r'`",
+          "my_mutation_1_INVALID": "首次用 sed 剥 tr -d '\\r' 产生**语法错误**（`MAP_TSV=\"$MAP_TSV\"| tr -d '\\r')\"`）→ 该次失败**因语法错而非语义** ⇒ 判为无效变异，已作废重做（诚实登记）",
+          "my_mutation_2_VALID": {
+            "mutation": "python 精确替换 :128 为 `MAP_TSV=\"$(printf '%s\\n' \"$MAP_TSV\")\"`（bash -n 通过）",
+            "baseline": "26 通过 0 失败",
+            "mutated_rc": 1,
+            "mutated": "25 通过 1 失败",
+            "red_assertion": "❌ CRLF 仿真下选择错误（rc=0 n=3）⇒ 域名带尾 \\r 查表落空 ｜ stderr=[D1061-DEGRADED] code=D4 reason=无域命中：选中 0 条（changed=1）——0 条静默通过被禁 → 回退全量",
+            "reproduces_ci_signature": true
+          },
+          "verdict": "自验结论 = 常驻 CRLF 断言具判别力，且**精确复现 CI 的 F2 签名**（回退全量 3/3）"
+        }
       }
     ],
     "new_facts_verified": [
@@ -375,8 +412,23 @@
         "claim": "merge main 一度打断 #872 夹具（ci-signal-classify.test.sh），已改排序修复（78/0）",
         "my_check": "我独立跑 tests/control-tower/ci-signal-classify.test.sh → rc=0 2s，`结果: 78 通过, 0 失败, 0 显式跳过`",
         "verdict": "自验结论 = 确已恢复"
+      },
+      {
+        "id": "F2-② init.defaultBranch 假设",
+        "lead_hypothesis": "失败源于夹具沙箱 `git init` 的默认分支名",
+        "coder_a_claim": "该假设已被证伪",
+        "my_check": "env 方式强制 `GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=init.defaultBranch GIT_CONFIG_VALUE_0=master` 跑夹具 → rc=0，**26 通过 0 失败**，❌ 行数 0；并用 `git config --get init.defaultBranch` 返回 `master` 证明 env 生效（对照非空转）",
+        "verdict": "自验结论 = 假设**确已证伪**，与 coder-a 结论一致（无分歧需上报）",
+        "note": "当前夹具内未见 init.defaultBranch 的常驻回归探针（grep 零命中）；因假设已证伪，无需常驻守护"
       }
-    ]
+    ],
+    "ci_run_selection_set": {
+      "cmd": "bash scripts/control-tower/ct-suite-select.sh --changed origin/main...HEAD --platform windows",
+      "observed": "[D1061-SELECT] mode=select platform=windows changed=18 selected_of_total=55/55 degraded=0",
+      "selection": "__FULL__（55/55）",
+      "mechanism": "PR-A 自身改 `.github/workflows/*` → map 规则 `{\"glob\": \".github/workflows/*\", \"domains\": [\"__FULL__\"]}`（:195/:219 首个命中生效 ⇒ 全量）",
+      "implication": "**630s 是「全量跑」下的数字，不含任何子集裁剪收益**；子集收益仅在非 ci.yml 变更的 PR 上体现（我实测 docs-only → 29/54）"
+    }
   },
   "pr_b": {
     "branch": "chore/d1061-b-gate-mechanism",
