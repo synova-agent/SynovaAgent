@@ -75,19 +75,24 @@ echo "$OUT3" | grep -q 'D956-degraded' && ok "空日志: 显式降级注解（�
 # ── 用例 4（边界-中文不字节截断）: 中文失败行完整入窗 ──
 echo "$OUT1" | grep -q 'expect(count).toBe(5)' && ok "中文混排失败行未被字节截断" || no "中文失败行被截断: $OUT1"
 
-# ── 用例 5（零回归）: 通过路径零 ::error——D956 段在 if 失败分支内 ──
-CTX=$(awk '/Run hermetic control-tower gate tests/,/exit \$FAIL/' "$CI")
-FIRST_ERR=$(printf '%s\n' "$CTX" | grep -v '^\s*#' | grep -n '::error' | head -1 | cut -d: -f1)
-FIRST_IF=$(printf '%s\n' "$CTX" | grep -v '^\s*#' | grep -n 'if ! bash "\$t"' | head -1 | cut -d: -f1)
-FI_LINE=$(printf '%s\n' "$CTX" | grep -n '^ *fi *$' | head -1 | cut -d: -f1)
-if [ -n "$FIRST_ERR" ] && [ -n "$FIRST_IF" ] && [ "$FIRST_ERR" -gt "$FIRST_IF" ]; then
-  ok "零回归: ::error 仅在测试失败分支内（通过时注解路径不变）"
+# ── 用例 5（零回归）: D956 段必须物理位于 canary 失败分支内 —— 用**标记段定位**，不用粗区间 ──
+#   D1039 实证: 旧实现取「Run hermetic… → exit $FAIL」粗区间里的"第一个 ::error"，任何人在同一
+#   job 新增一个带自己 ::error 的 step（如 D1039 新增的 Classify step）都会被误判为
+#   "::error 在失败分支外"（实测假红 err=34 if=108）。⇒ 改用本夹具自述的提取契约
+#   （D956-MSG-START/END 标记，见文件头 + L34）做定位。
+#   判别性保持: 把 D956 段移到 `if ! bash "$t"` 之前（挪出失败分支）⇒ START_LN < BRANCH_IF_LN ⇒ 本用例转红。
+START_LN=$(grep -n '# D956-MSG-START' "$CI" | head -1 | cut -d: -f1)
+BRANCH_IF_LN=$(awk -v s="$START_LN" 'NR < s && /if ! bash "\$t"/ { n = NR } END { print n + 0 }' "$CI")
+IN_BRANCH=0
+if [ -n "$START_LN" ] && [ "$BRANCH_IF_LN" -gt 0 ] && [ "$START_LN" -gt "$BRANCH_IF_LN" ]; then IN_BRANCH=1; fi
+if [ "$IN_BRANCH" -eq 1 ] && printf '%s\n' "$BLOCK" | grep -q '::error'; then
+  ok "零回归: D956 段在失败分支内且发出 ::error（if@${BRANCH_IF_LN} < START@${START_LN}）"
 else
-  no "零回归失败: ::error 不在失败分支内 (err=$FIRST_ERR if=$FIRST_IF)"
+  no "零回归失败: D956 段不在失败分支内或缺 ::error (if=$BRANCH_IF_LN start=$START_LN)"
 fi
 # FAIL=1 仍在（门禁语义不变——D956 不新增阻断也不放松）
 printf '%s\n' "$BLOCK" | grep -q 'FAIL=1' || true  # FAIL=1 在段外（分支尾），查上下文
-printf '%s\n' "$CTX" | grep -q 'FAIL=1' && ok "门禁语义不变: FAIL=1 保留" || no "FAIL=1 丢失"
+grep -q 'FAIL=1' "$CI" && ok "门禁语义不变: FAIL=1 保留" || no "FAIL=1 丢失"
 
 echo ""
 echo "═══ d956-failmsg: PASS=$PASS FAIL=$FAIL ═══"

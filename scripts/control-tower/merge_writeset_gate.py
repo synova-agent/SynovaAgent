@@ -154,6 +154,17 @@ def changed_files(repo: str, base: str, head: str) -> Tuple[str, List[str]]:
 #   旧实现只认大写 D → 推断为空 → 回退链失守（复核实测 parse_did('feat/win-d702-…') → None）。
 #   统一归一化为大写，保证与 task-state / brief 文件名里的 D# 口径一致。
 #
+# ── 合并级归并（D1030 #867 × D1039 #872，2026-09-29）──
+#   两条支线改的是**同一判据的两种实现**，此处取"更严且更多层"的 D1030 方案：
+#     · D1039（#872）: DID_RE 加**字母数字**词边界 `(?<![0-9A-Za-z])…(?![0-9A-Za-z])`
+#       目标用例 = PR merge commit 内嵌 40 全长 SHA（`Merge b2678c2… into ff46771…` → 误判 D63）。
+#     · D1030（#867）: 三层修法（① 合成 merge 主题整条不参与 ② 十六进制邻接边界 ③ 裸 SHA 词元判无效）
+#       目标用例 = **同一族根因**（合成 merge 主题里的 SHA 被抠成伪号，实测 5 SHA → D54/D4/D0/D34/D34）。
+#   ⇒ 取 D1030：其第①层把 `Merge <40hex> into <40hex>` 整条吞掉，D1039 的目标用例被完全覆盖；
+#     且另覆盖 `--first-parent` 与 `merge-base..start` 两处漂移（D1039 未涉及）。
+#   ⇒ D1039 的回归判据（`ci(D1039):`→D1039 ｜ `docs(D1034):`→D1034 ｜ `feat(d702):`→d702 ｜
+#     `bypass COMMITTED 登记 (auto hook, D521)`→D521 ｜ merge 全长 SHA→无）逐条保留在
+#     tests/control-tower/merge_writeset_gate.test.sh 中，归并后仍须全绿。
 # ═══ CT-C（2026-09-27，P0）: D# 推断随机性根治 ═══
 # 现象（改前实测）: GitHub 对 pull_request 事件**合成**的 merge 提交，主题形如
 #   `Merge <head_sha> into <base_sha>`（两个载荷**都是十六进制 SHA**）。

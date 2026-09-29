@@ -235,6 +235,64 @@ PYEOF
 )
 [ "$DID_OUT" = "OK" ] && ok "⑩ parse_did 大小写不敏感且归一化大写（d702→D702）" || no "⑩ $DID_OUT"
 
+# ⑩b 词边界：GitHub PR merge commit 的**全长 SHA** 不得被误当任务号（D1039 / 2026-09-28 实测）
+#     现象: PR #872 的 `TypeScript + Lint + Iron Laws` 在 D708 step exit 2（degraded），
+#           线性 HEAD 却 pass —— 唯一变量 = CI checkout 的合成 merge commit。
+#     机制: subject `Merge <40字节SHA> into <40字节SHA>` 里的十六进制片段（`b65b**d63**b68`）命中 `[Dd]\d+`
+#           ⇒ 误判 D63 ⇒ 派生无关 dev doc ⇒ 声明 0 条 ⇒ :446 fail-closed。
+#     判据: 真 merge subject ⇒ **零** D#；既有 6 类真实输入**逐一不变**。
+DID_BOUNDARY_OUT=$("$PYBIN" - "$REPO" <<'PYEOF'
+import importlib.util as u, sys
+sp = u.spec_from_file_location("g", sys.argv[1] + "/scripts/control-tower/merge_writeset_gate.py")
+m = u.module_from_spec(sp); sp.loader.exec_module(m)
+merge_subj = ("Merge b2678c205f93b65bd63b68956d287ddd9f780224 into "
+              "ff4677129dce2ff068a816eed3db0687b060c64c")
+want_none = [merge_subj,
+             "Merge 02163969bee9987233f2b8af21a89420b356e249 into ff4677129dce2ff068a816eed3db0687b060c64c"]
+keep = [("ci(D1039): control-tower-tests 按需跑", "D1039"),
+        ("fix(D63): something", "D63"),
+        ("docs(D1034): cto-handover 加「派单模板 v2」", "D1034"),
+        ("feat(d702): lower", "D702"),
+        ("chore: bypass COMMITTED 登记 (auto hook, D521)", "D521")]
+bad = [f"merge误判:{m.parse_did(s)!r}" for s in want_none if m.parse_did(s) is not None]
+bad += [f"{t}->{m.parse_did(t)!r}(期望{exp})" for t, exp in keep if m.parse_did(t) != exp]
+print("OK" if not bad else "BAD:" + ",".join(bad))
+PYEOF
+)
+[ "$DID_BOUNDARY_OUT" = "OK" ] && ok "⑩b 词边界: 全长 SHA merge subject 零误判 + 6 类真实输入不变（回归夹具）" || no "⑩b $DID_BOUNDARY_OUT"
+
+# ⑩c 反例（判别性）: 还原旧正则 ⇒ ⑩b 的判据必须立即失效（证明该夹具真的承重，不是恒真）
+#   归并说明（D1030 #867 × D1039 #872，2026-09-29）: #872 原本只还原 DID_RE 的词边界；
+#   #867 落地后同一案例另有 ①合成 merge 主题检测 与 ③裸 SHA 词元判无效 两层兜住
+#   ⇒ 只还原 ② 不再能转红（实测 NO_RED）。故此处**三层一起还原**才是同一语义的判别器：
+#   断言"去掉全部三层修法 ⇒ 立即误判"，证明 ⑩b 不是恒真夹具、三层修法各有承重。
+DID_MUT=$("$PYBIN" - "$REPO" <<'PYEOF'
+import importlib.util as u, sys, re
+sp = u.spec_from_file_location("g", sys.argv[1] + "/scripts/control-tower/merge_writeset_gate.py")
+m = u.module_from_spec(sp); sp.loader.exec_module(m)
+# 仅在本进程内还原（不落盘、不改仓库文件）
+m.DID_RE = re.compile(r"[Dd]\d+")             # 还原 CT-C 修法②（十六进制邻接边界）
+m.SYNTHETIC_MERGE_SUBJECT_RES = ()            # 关掉 CT-C 修法①（合成 merge 主题整体不参与）
+m._inside_sha_token = lambda *a, **k: False   # 关掉 CT-C 修法③（裸 SHA 词元判无效）
+merge_subj = ("Merge b2678c205f93b65bd63b68956d287ddd9f780224 into "
+              "ff4677129dce2ff068a816eed3db0687b060c64c")
+print("RED_OK" if m.parse_did(merge_subj) is not None else "NO_RED")
+PYEOF
+)
+[ "$DID_MUT" = "RED_OK" ] && ok "⑩c 判别性: 三层修法全还原 ⇒ 全长 SHA 立即被误判（夹具承重，非恒真）" || no "⑩c 判别性失效: $DID_MUT"
+# ⑩d 归并后仍须成立: **只**还原 ② （保留 ①③）⇒ 不得误判（证明三层是叠加防护，非单点）
+DID_MUT2=$("$PYBIN" - "$REPO" <<'PYEOF'
+import importlib.util as u, sys, re
+sp = u.spec_from_file_location("g", sys.argv[1] + "/scripts/control-tower/merge_writeset_gate.py")
+m = u.module_from_spec(sp); sp.loader.exec_module(m)
+m.DID_RE = re.compile(r"[Dd]\d+")
+merge_subj = ("Merge b2678c205f93b65bd63b68956d287ddd9f780224 into "
+              "ff4677129dce2ff068a816eed3db0687b060c64c")
+print("SAFE" if m.parse_did(merge_subj) is None else "LEAK")
+PYEOF
+)
+[ "$DID_MUT2" = "SAFE" ] && ok "⑩d 叠加防护: 只还原 ② 仍不误判（①/③ 独立兜住同一形）" || no "⑩d 叠加防护失效: $DID_MUT2"
+
 # ⑪ 回退链跳过自动登记影子提交（HEAD 常为登记提交，其 subject 带历史 D#）
 #    地形: 分支名小写无大写 D 期 → 提交 feat(d712) → 再叠一个登记影子提交(含 D521)
 SB2="$TMPD/d712"; mkdir -p "$SB2/scripts/control-tower" "$SB2/.claude/task-briefs" "$SB2/src"
