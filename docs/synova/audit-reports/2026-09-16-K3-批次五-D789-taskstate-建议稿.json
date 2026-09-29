@@ -1,0 +1,62 @@
+{
+  "task_id": "D789",
+  "title": "K3 审计批次五：D774/D786 流水线与看门狗 + D782 part1 + 门禁变更（D778/D788）+ A1 口径修复",
+  "status": "audited",
+  "spec": null,
+  "impl": null,
+  "audit": {
+    "verdict": "CONDITIONAL PASS",
+    "report": "docs/synova/audit-reports/2026-09-16-K3-批次五-门禁与度量.md",
+    "by": "K3 independent session",
+    "at": "2026-09-16",
+    "baseline": "cdeba8e9（origin/main）+ macOS arm64 / bash 3.2.57 / Python 3.9.6 / node v22.22.0",
+    "scopes": {
+      "A1_派单复核门禁_PR574": {
+        "artifact": "ce1d9469（refs/pull/574/head；未合 main）",
+        "verdict": "CONDITIONAL PASS",
+        "passed": "23/23 断言独立重跑绿；两处接线在场（pre-commit-check.sh:383 CT-34 早退分支 + :1476 主流程）且 CI strict 下降级/失败实测 exit 1（本地无 SYNO_CI 时 exit 0）；引用词旁路 7 词语义正确 + ℹ️ 留痕；性能 0.03–0.13s",
+        "blockers": "P0-1 计划哈希真相源=提交者本地工作树（正确锚定的派单文档在落后基线树上必红，实测 exit 1）；P0-2 门禁 glob 只认 派单-*.md，审计派单-*.md 等 11 份真派单文档全部绕过（PR #601 自身即实例，其 Iron Laws job=success）",
+        "p1": "测试夹具自锚定本树哈希 + 全 派单-* 命名 → 对 P0-1/P0-2 结构性不敏感（23/23 假安全感）"
+      },
+      "A2_预算门禁口径_PR589": {
+        "artifact": "5e59f186（分支仅 docs/chore，check-pr-budget.sh blob 与 main 逐字相同 dde3f79164）",
+        "verdict": "NOT-AUDITABLE",
+        "missing": "适用范围结论与文档化（脚本头 + 协调文档 + PR 六文件全零命中）；F2 fail-closed 白名单；F3 N_FILES=0 语义与两类件数打印；反向「src/ 移出白名单→必红」；实现 PR 的 CI job 级结论",
+        "verified_now": "上限 12 未变（:52/:64）；双模式对 PR #572 真跑（--files 与真 git）结论完全一致 = FAIL（51 文件，非口径所致）→ F5 结论独立复现"
+      },
+      "A3_A1度量口径修复": {
+        "artifact": "未落地（calc-progress.py 最后改动 2026-09-06 acc228dc；批六待派明确列为待做）",
+        "verdict": "NOT-AUDITABLE",
+        "defect_located": "机器路径未用时间戳：calc-progress.py:216 max(key=v['date']) + :227 git_touched_after(latest['date'])；而 at 字段在 :271 已装载 → 同日先证据后代码提交仍判 stale。TTL 14 天 = :67（K3 路径 :152 / 机器路径 :222）"
+      },
+      "B1_证据保鲜流水线_D774": {
+        "artifact": "cdeba8e9（PR #575 已合）",
+        "verdict": "PASS",
+        "evidence": "tests/control-tower/rerun-evidence.test.sh 全绿（幂等 T4 / 部分 fail 显式 exit 1 T2 / 降级 exit 2 fail-closed T3 / 接线 T6）",
+        "p1": "证据→判分口径断裂比派单描述更前一层：calc-progress.py:383 只扫 docs/synova/product-lines/evidence 的 *.json（非递归），GS 证据在 scripts/golden-scenarios/evidence/（29 份）根本不在输入集；且 GS 的点 id 为 S0-1/S1-1 而 yaml 合法 id 全无 S* 前缀 → 新场景证据对六态零贡献且零告警（M1 族）"
+      },
+      "B2_仪表盘通道抢救_D786": {
+        "artifact": "cdeba8e9（#590/#591/#592 已合）",
+        "verdict": "PASS",
+        "evidence": "产物 generated_at=2026-09-16 19:00:59 + 六态 stale=21/pending_k3=42 与 #591 声明一致；F6 机理独立 API 复现（bot PR #586/#404/#386 check-runs=0；PAT PR #592/#589/#601=12，#593=24）；看门狗三态实测 0/1/2 + 边界（恰好 3 天=新鲜）+ JSON 损坏=2；CI-诊断通道.md PART B 四节齐备"
+      },
+      "C_D782防线接线_PR593": {
+        "artifact": "73110752 / 3622a3d1（已合 main）",
+        "verdict": "PASS",
+        "evidence": "doc-registry-gate.test.sh 9/0（W1 :64 / W2 :65 接线断言）；doc-system 6 测试确实列于 ci.yml:259-264；7 个 doc-system 测试本机全绿；13 组横幅与组数未变（pre-commit-check.sh:1523，D782 按注释 :1402-1411 不并入编号）",
+        "p2": "doc-truth-probe.test.sh 本机绿但不在 CI canary 清单"
+      },
+      "D_控制塔三机制_PR585": {
+        "artifact": "ed5603f0（a1a1d338 = 派单+brief+task-state，零 scripts/ 改动；未合 main）",
+        "verdict": "NOT-AUDITABLE",
+        "missing": "三机制 A/B/C 的实现落点与正向+反向+接线三类证据",
+        "verified_now": "D593 裁定订正：物证①（--name-only 含 diagnosis.ts=1）✅ 物证②（:596 saveDiagnosisCheckpoint）✅ 四恢复面 file:line ✅ 架构门禁 SYNO_CI=1 exit 0 ✅；物证③ 21/21 实跑本环境被 .vite-temp EPERM 阻断（不在可写区）→ 记为环境限制并给旁证（三文件 blob 与 main 逐字相同）"
+      }
+    },
+    "north_star": "无方向偏离（三问全过）。风险 = A1 两条 P0 会让 D778 门禁产出假红，与编码指令自述『假红即噪音，噪音导致绕过』同源 → 按 P0 处理",
+    "ledger": "K3-B5-01…07，建议 CT-74…CT-79（M1/M2/M3/M5 四类内强化，不新增 M 类）"
+  },
+  "fix_task_id": null,
+  "updated_at": "2026-09-16",
+  "updated_by": "K3 independent session (synova-k3-audit)"
+}

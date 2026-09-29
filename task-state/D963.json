@@ -1,0 +1,27 @@
+{
+  "task_id": "D963",
+  "title": "DSH 侧边栏面板「宪章三问 48 格」——48 格的第一个真实用例（按三问验收）",
+  "status": "spec_done",
+  "risk": "medium",
+  "domain": "mac",
+  "owner": "dsh-squad",
+  "executor": "synova-squad-lead（队长）+ ≤2 编码 + 1 独立自验",
+  "milestone": "M0 项目管理基建",
+  "depends_on": [
+    "D962"
+  ],
+  "spec": "docs/synova/coordination/宪章三问-48格.json",
+  "write_set": [
+    "dsh/plugins/synova-dashboards/**",
+    "docs/synova/coordination/宪章三问-48格.json",
+    "docs/synova/coordination/三问-48格.html",
+    "scripts/control-tower/gen-charter-grid.py",
+    "task-state/D963.json",
+    ".claude/task-briefs/2026-09-25-D963-dsh-sidebar-charter-grid-panel.md"
+  ],
+  "updated_at": "2026-09-25",
+  "updated_by": "synova-cto",
+  "note": "【目的】把宪章「三问」48 格做成 **DSH 左侧边栏面板**，创始人点击即可看到 16 项扩展点 × 加了吗/接上了吗/生效了吗。【为什么这么做】院方宪章 01 约束2 要求每个扩展点三问可机器判定，而 §3.2 的 48 格**零格填写**；本项目**本身就是一个真实扩展点** ⇒ 用它验证三问判据自身可执行（一举两得）。【已有基础（CTO 实读）】① DSH 有客户端 slot 机制：packages/extensions/cordis-client-runner/src/client/slot-catalog.ts ② 我们已有插件 dsh/plugins/synova-dashboards（含 cordis.patch.yml / package.json / README / install-dashboards.sh）③ 该插件 package.json 已声明 '@deepseek-ai/dsh-client-ui-layout'，且有 test/client-panel.test.js ⇒ client panel 骨架已在。【前置（不做则第三问必红）】P1 先核/修该插件的死声明：它被记录为仍注入 dsh-client-runtime（在锚定版不存在）⇒ 静默跳过；P2 读 slot-catalog.ts 确认可用的侧边栏/面板 slot 名（**不许猜**，给 file:line）。【三问判据（穿生产入口，不是 grep）】① 加了吗：panel 文件/slot 注册项存在（给路径）② 接上了吗：slot 注册被宿主消费（给注册点 file:line + 宿主引用）③ 生效了吗：**真实打开桌面端 → 左侧边栏出现该条目 → 点击看到 48 格矩阵（含 16 行×3 列与四色）**，给截图/录屏 + 时间戳【改坏即红】删掉 slot 注册项 → 面板必须消失（给原始输出/截图）【降级三态】DSH 版本不足 / 插件未装 / slot 名不存在 ⇒ **显式 degraded**，不得静默无面板【数据来源】面板读 docs/synova/coordination/宪章三问-48格.json（机读单源），渲染复用 gen-charter-grid.py 的口径；**空格必须显式显示为待办（X27：缺失≠通过）**。【上限纪律】一次只做本项（3 格），不铺开 48 格。【归属】win 域（dsh/plugins/** 归属待 check-ownership.py 实判，以判定为准）+ DSH 小队执行；K3 前不合并。",
+  "owner_side": "mac",
+  "cross_domain_reason": "dsh/plugins/** 经 check-ownership.py 实判归 win，但**创始人 2026-09-25 指定本项由 Mac 侧执行**（DSH 侧边栏工具面属控制塔/工具域，且数据源与生成器均在 mac 域）。CTO **特批跨域**；不改 ownership.yaml。"
+}

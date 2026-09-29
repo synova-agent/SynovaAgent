@@ -1,0 +1,5 @@
+{ "name": "canary-sentinel", "version": "1.0.0", "type": "sentinel", "displayName": "Canary",
+  "description": "control fixture", "schedule": "0 0 * * *", "expert": "host", "priority": "P2",
+  "computes": ["canary"], "thresholds": { "x": { "warning": 0.4, "critical": 0.7 } }, "aggregation": "worst_first",
+  "context": { "requiredDataSources": [], "dataAccess": { "allowedDimensions": [], "sensitiveAccess": "read" } },
+  "entryPoint": "./computes/detect.ts", "exportKey": "canarySentinel" }

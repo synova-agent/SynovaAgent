@@ -1,0 +1,20 @@
+{
+  "task_id": "D965",
+  "title": "P0 修 3 个坏哨兵（path-dependency 缺 aggregate；forecast-accuracy / pricing-strategy 契约违反）",
+  "status": "spec_done",
+  "risk": "high",
+  "domain": "mac",
+  "owner": "mac-coding",
+  "executor": "dsh-squad",
+  "milestone": "哨兵体系整改（十环判据）",
+  "spec": "docs/synova/architecture/SYNOVA-哨兵体系-最终版-v1-20260925.md",
+  "write_set": [
+    "extensions/sentinels/path-dependency/**",
+    "extensions/sentinels/sentinel-forecast-accuracy/**",
+    "extensions/sentinels/sentinel-pricing-strategy/**",
+    "task-state/D965.json"
+  ],
+  "updated_at": "2026-09-25",
+  "updated_by": "synova-cto",
+  "note": "依据派单 docs/synova/coordination/派单-哨兵体系整改-20260925.md；判据见该文档逐卡 Done 段。"
+}
