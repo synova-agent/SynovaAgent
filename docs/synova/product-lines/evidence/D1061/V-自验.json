@@ -5,48 +5,247 @@
   "worktree": "/Users/wane/SynovaAgent/.synova-wt-squad-d1061-verify",
   "worktree_base_sha": "20b55eba9ce0db5cfa238bd09e02b4732d234af3",
   "generated_at": "2026-09-29",
-  "conclusion_words_allowed": ["自验结论", "可提请独立审计", "退回（附理由）"],
+  "conclusion_words_allowed": [
+    "自验结论",
+    "可提请独立审计",
+    "退回（附理由）"
+  ],
   "note": "本文件永不含『审计通过』。通过与否归 CTO 收件闸 + K3。",
-
   "baseline_drift": {
     "note": "复核期间 origin/main 前移",
     "from": "20b55eba9ce0db5cfa238bd09e02b4732d234af3",
     "to": "d9955cfbee3d217dec1734ff87b10bee3ee6192b",
     "cause": "Merge PR #875；内含 #882 = D1052 注入夹具 b 面排除 docs（N3 修复）",
     "touched_this_cards_write_set": false,
-    "b_face_baseline_moved": {"old": 14, "new": 15,
-      "new_file": "memory/notes/proposed/2026-09-28-d1052-a-face-selfmatch.md"},
-    "prb_vs_new_main": {"prb_b_face": 14, "main_b_face": 15, "introduced": 0,
-      "relation": "PR-B 的 b 面是当前 main 的严格子集"}
-  },
-
-  "pr_a": {
-    "branch": "chore/d1061-a-ci-speedup",
-    "remote_sha": null,
-    "state": "NOT_PUSHED_AT_TIME_OF_WRITING",
-    "verdict": "未完成（远端无该分支；task-1 仍 in_progress）",
-    "preliminary_observation": {
-      "note": "非正式复核：coder-a 工作树 d9955cfb 有 11 项未提交改动，尚未推送",
-      "fixture": "tests/control-tower/simulate-ci-dedup.test.sh（未提交）",
-      "my_independent_runs": [
-        {"run": 1, "rc": 0, "wall_s": 1, "cases": "13 通过/0 失败"},
-        {"run": 2, "rc": 0, "wall_s": 1, "cases": "13 通过/0 失败"},
-        {"run": 3, "rc": 0, "wall_s": 0, "cases": "13 通过/0 失败"}
-      ],
-      "key_assertions_seen": [
-        "★ 修法: CI 环境（GITHUB_ACTIONS=true）→ 内层执行数 = 0（本卡靶心判据）",
-        "真实仓库端到端: CI 模式 0s、内层 ✅ 行 0 个（改前为 3×44=132 次内层执行）",
-        "变异体被检出: 删跳过分支 → CI 内层执行 2 条 ≠ 0（靶心断言必红）"
-      ],
-      "verdict": "自验结论 = 该夹具在我机器上 3/3 独立绿灯且 1s 级（≠ 通过；未推送 ⇒ 非最终 sha）"
+    "b_face_baseline_moved": {
+      "old": 14,
+      "new": 15,
+      "new_file": "memory/notes/proposed/2026-09-28-d1052-a-face-selfmatch.md"
     },
-    "self_correction": {
-      "suspicion": "据 pgrep 见 6 个 simulate-ci-dedup 实例，怀疑夹具挂死",
-      "refuted_by": "3 次独立运行均 1s 内 rc=0；6 个 PID 三次复查完全不变且无新增 ⇒ 陈旧孤儿残留，非活跃挂死",
-      "action": "未据该错误观察下任何结论"
+    "prb_vs_new_main": {
+      "prb_b_face": 14,
+      "main_b_face": 15,
+      "introduced": 0,
+      "relation": "PR-B 的 b 面是当前 main 的严格子集"
     }
   },
-
+  "pr_a": {
+    "branch": "chore/d1061-a-ci-speedup",
+    "remote_sha": "adb83dc6edc50c6edefe49b4028b819772835178",
+    "pr": "#886",
+    "state": "PUSHED_AND_VERIFIED",
+    "independence_disclosure": {
+      "fact": "coder-a 全程停滞未提交；PR-A 的提交与推送由队长代做（代码作者仍为 coder-a）",
+      "verifier_vs_code_and_commit": "verifier 与两者均非同人 ⇒ 独立性成立",
+      "process_anomaly": "「编码者 ↔ 提交者」不一致，登记为流程事实（非缺陷）"
+    },
+    "redline": {
+      "cmd": "git diff --name-only origin/main...adb83dc6 | grep -E '^(src/|scripts/audit/)'",
+      "hits": 0,
+      "forbidden_four_files_touched": 0,
+      "verdict": "自验结论 = 零越界"
+    },
+    "residue": {
+      "a_face": {
+        "src": 0,
+        "tests": 0,
+        "scripts": 0,
+        ".github": 0
+      },
+      "b_face": {
+        "main_baseline": 15,
+        "pr_a": 17,
+        "pr_a_added": 2,
+        "added_files": [
+          "docs/synova/dispatch/2026-09-29-D1061-CT提速-门禁机制修正.md",
+          "docs/synova/product-lines/evidence/D1061/00-前提实测-原始输出.md"
+        ],
+        "verdict": "自验结论 = 合法（队长追加授权承载的派单件+前提证据，天然含该串；按 #882 docs 排除口径判）",
+        "caveat": "朴素判据「b 必须 == 基线 15」会把 +2 误判为新增残留"
+      }
+    },
+    "write_set": {
+      "files_total": 15,
+      "in_declaration": 11,
+      "governance_artifact": 1,
+      "lead_added_authorized": 2,
+      "out_of_scope": 0,
+      "verdict": "自验结论 = 无越界"
+    },
+    "fixtures_run": [
+      {
+        "file": "tests/control-tower/ct-suite-select.test.sh",
+        "rc": 0,
+        "real_s": 4.97,
+        "ran": true
+      },
+      {
+        "file": "tests/control-tower/simulate-ci-dedup.test.sh",
+        "rc": 0,
+        "real_s": 1.18,
+        "ran": true
+      }
+    ],
+    "swallow_ok_verification": {
+      "comments_count": 9,
+      "redundant": 1,
+      "checker": "scripts/workflow/check-silent-swallow.sh --diff",
+      "input_source": "git diff --cached (STAGED) —— 实现 :104",
+      "vacuous_green_on_committed_pr": "[silent-swallow] ✅ 无新增 .sh — 跳过 (rc=0) —— 不能作为豁免有效证据",
+      "proper_rerun_with_43_files_staged": {
+        "rc": 0,
+        "out": "✅ 无新增静默吞错"
+      },
+      "discriminating_test": {
+        "mutation": "剥掉全部 9 处 # swallow-ok 注释（保留 2>/dev/null）",
+        "rc": 1,
+        "flagged": 8,
+        "sample": "❌ tests/control-tower/ct-suite-select.test.sh: +OUT=$(sel --all 2>/dev/null); RC=$?; N=$(cnt \"$OUT\")",
+        "verdict": "自验结论 = 9 处豁免真实且承重；改坏即红 rc 0→1"
+      },
+      "redundant_note": "第 9 处 PLAT_N= (:180) 已有 || true，命中同行 fallback 自动豁免"
+    },
+    "mutations": [
+      {
+        "id": "A1",
+        "target": "scripts/control-tower/simulate-ci.sh:76",
+        "mutation": "if [ \"$SKIP_NESTED\" -eq 1 ]; then -> if false; then",
+        "baseline_rc": 0,
+        "mutated_rc": 1,
+        "red_assertions": [
+          "CI 环境应 0 条内层执行（rc=0 实跑 2 条）",
+          "CI=true 应 0 条（rc=0 实跑 2 条）",
+          "跳过未打印原因（静默风险）",
+          "degraded 日志缺 N1 事件"
+        ],
+        "verdict": "自验结论 = 判别成立"
+      },
+      {
+        "id": "A2",
+        "target": "scripts/control-tower/simulate-ci.sh:66",
+        "mutation": "IS_CI 判定 -> if false; then",
+        "baseline_inner": 0,
+        "mutated_inner": 2,
+        "verdict": "自验结论 = 判别成立"
+      },
+      {
+        "id": "A3",
+        "target": "scripts/control-tower/ct-suite-select.sh:178",
+        "mutation": "FORCE_FULL=0 -> 1",
+        "baseline_rc": 0,
+        "mutated_rc": 1,
+        "red_count": 7,
+        "red_assertions": [
+          "正常路径应只选 A 域 1 条，实际 3 条",
+          "windows 应 2 条，实际 3",
+          "摘要行缺 selected_of_total",
+          "D2 不符（rc=0 n=3）",
+          "D4 不符（rc=0 n=3）"
+        ],
+        "verdict": "自验结论 = 判别成立"
+      },
+      {
+        "id": "A4",
+        "target": "scripts/control-tower/ct-suite-select.sh:254",
+        "mutation": "if [ \"$SEL_N\" -eq 0 ]; then -> if false; then",
+        "baseline_rc": 0,
+        "mutated_rc": 1,
+        "red_count": 2,
+        "red_assertions": [
+          "D4 不符（rc=0 n=0）"
+        ],
+        "verdict": "自验结论 = 判别成立"
+      },
+      {
+        "id": "A5",
+        "target": "(不改码，直接行为) 映射缺失",
+        "observed": "[D1061-DEGRADED] code=D1 → 回退全量; selected_of_total=54/54 degraded=1; 日志落盘 1 行",
+        "verdict": "自验结论 = 显式回退，非静默 0 条"
+      },
+      {
+        "id": "A6",
+        "target": "scripts/control-tower/simulate-ci.sh 非法值分支",
+        "mutation": "SKIP_NESTED=0 -> 1",
+        "original": "非法值 → 按 full 跑内层 2 条 + 点名「非法…fail-closed 按 full 执行」",
+        "mutant": "非法值 → 静默 skip，内层 0 条，无「非法」告警",
+        "verdict": "自验结论 = 判别成立",
+        "coverage_gap": "simulate-ci-dedup.test.sh 头注释声明该语义但夹具内无对应断言（grep 零命中）→ 目前仅由我的直接行为测试守护"
+      }
+    ],
+    "fixture_fail_loud_behavior": "变异与夹具自身锚点重叠时，夹具打印「变异体①/②锚点未命中（脚本结构已变，夹具须同步）」→ fail-loud，不静默跳过",
+    "ci_yml_wiring": {
+      "call_site": ".github/workflows/ci.yml:427  TESTS=\"$(bash scripts/control-tower/ct-suite-select.sh --changed origin/main...HEAD --platform \"$CT_PLATFORM\" 2>/tmp/ct-select.log)\"",
+      "executed_not_merely_declared": {
+        "cmd": "原样执行该命令（windows 面）",
+        "rc": 0,
+        "stderr": "[D1061-SELECT] mode=select platform=windows changed=15 selected_of_total=54/54 degraded=0"
+      },
+      "single_source_consistency": {
+        "method": "awk '/for t in \\\\/,/; do$/' 提取 job for 块",
+        "catalog": 54,
+        "selector_all": 54,
+        "symmetric_difference": 0,
+        "self_correction": "我先前用整文件 grep 得 47 并误判 7 条 catalog 外条目 → 错，已纠正"
+      },
+      "fail_closed_verified": [
+        {
+          "case": "非法区间 --changed '~1...'",
+          "observed": "D5 变更范围不可解析 → 回退全量; 54/54 degraded=1"
+        },
+        {
+          "case": ".github/workflows/* 变更",
+          "observed": "map 规则 __FULL__（CI 定义自身变更 ⇒ 选择器前提失效）"
+        },
+        {
+          "case": "src/* / packages/*",
+          "observed": "__FULL__（有意不缩小）"
+        }
+      ],
+      "narrowing_real_case": {
+        "range": "9e7ffeb1~1...9e7ffeb1 (docs-only, 4 files)",
+        "observed": "changed=4 selected_of_total=29/54 degraded=0",
+        "verdict": "自验结论 = 真实缩小约 46%"
+      },
+      "contrast_pr_b_range": "54/54（同时命中 5 个 ct 域 + doc-system = 6 域全覆盖，设计内）",
+      "discriminator_boundary": "删除 :427 的调用 → TESTS 空 → 回退全量 → 不会变红（只变慢）；夹具接线断言为 grep 型。失效方向安全（多跑不少跑），登记不判缺陷"
+    },
+    "time_comparison": {
+      "status": "CI 侧不可完成",
+      "evidence": {
+        "runs_by_branch": 0,
+        "runs_by_sha": [
+          0,
+          0,
+          0
+        ],
+        "check_runs_for_sha": 0,
+        "pr_state": "#886 open draft=false mergeable=False mergeable_state=dirty"
+      },
+      "trigger_config": "push.branches:[main]（feature push 不触发）；唯一触发面 = pull_request",
+      "root_cause": "PR 与已前移的 main 冲突 → GitHub 无法构造 PR 合并引用 → 不排 run",
+      "control_case": "PR-B #883 mergeable_state=None → 正常触发 run 36522644152",
+      "local_ab": {
+        "after": {
+          "inner": 0,
+          "wall_s": 0
+        },
+        "before": {
+          "completed_in_60s_window": 0,
+          "unit_costs": {
+            "gate-failopen-net": "73s",
+            "alloc-task-id-lock": ">10min 未完成"
+          }
+        },
+        "caveat": "本地数据不得替代 CI 口径"
+      },
+      "recommendation": "git rebase origin/main 解 dirty 后重推（synchronize 已在触发 types 内）"
+    },
+    "target_verdict": {
+      "run_wall_le_480s": "未决",
+      "win_ct_leg_le_300s": "未决"
+    },
+    "verdict": "PR-A：CI 证据面 = 退回（附理由：零 CI run，需 rebase 解冲突后以 CI 真跑补两口径）；其余面（红线/写集/残留/变异体/接线/缩小能力）= 可提请独立审计"
+  },
   "pr_b": {
     "branch": "chore/d1061-b-gate-mechanism",
     "verified_sha_initial": "96135a1a5d95e0fcfc69dd1c1ea0047c7f115ceb",
@@ -59,7 +258,12 @@
     },
     "residue_scan": {
       "cmd_a_face": "git grep -c INJECTED-RED -- <dir>（src/tests/scripts/.github）",
-      "a_face": {"src": 0, "tests": 0, "scripts": 0, ".github": 0},
+      "a_face": {
+        "src": 0,
+        "tests": 0,
+        "scripts": 0,
+        ".github": 0
+      },
       "b_face_total": 14,
       "b_face_baseline": 14,
       "b_face_baseline_current_main": 15,
@@ -71,49 +275,119 @@
       "baseline_origin_main_failures": 17,
       "pr_b_failures": 16,
       "introduced": 0,
-      "fixed": ["scripts/control-tower/alloc-task-id.sh"],
+      "fixed": [
+        "scripts/control-tower/alloc-task-id.sh"
+      ],
       "verdict": "自验结论 = PR-B 零新增，且修好 1 条存量；该检查在 main 上本就 rc=1，不能当红绿判据"
     },
     "fixtures_run": [
-      {"file": "tests/control-tower/gate-circuit-breaker.test.sh", "rc": 0, "cases": "19 通过/0 失败", "real_s": 2.50, "ran": true},
-      {"file": "tests/control-tower/pre-push-preview.test.sh", "rc": 0, "cases": "16 通过/0 失败", "real_s": 6.42, "ran": true},
-      {"file": "tests/control-tower/brief-parser-cjk-path.test.sh", "rc": 0, "cases": "11 通过/0 失败", "real_s": 2.42, "ran": true},
-      {"file": "tests/control-tower/alloc-task-id.test.sh", "rc": 0, "cases": "全绿", "real_s": 2.47, "ran": true}
+      {
+        "file": "tests/control-tower/gate-circuit-breaker.test.sh",
+        "rc": 0,
+        "cases": "19 通过/0 失败",
+        "real_s": 2.5,
+        "ran": true
+      },
+      {
+        "file": "tests/control-tower/pre-push-preview.test.sh",
+        "rc": 0,
+        "cases": "16 通过/0 失败",
+        "real_s": 6.42,
+        "ran": true
+      },
+      {
+        "file": "tests/control-tower/brief-parser-cjk-path.test.sh",
+        "rc": 0,
+        "cases": "11 通过/0 失败",
+        "real_s": 2.42,
+        "ran": true
+      },
+      {
+        "file": "tests/control-tower/alloc-task-id.test.sh",
+        "rc": 0,
+        "cases": "全绿",
+        "real_s": 2.47,
+        "ran": true
+      }
     ],
     "mutations": [
-      {"id": "B1", "target": "scripts/control-tower/gate-circuit-breaker.sh:157",
-       "mutation": "\"active\": bool(exp_ok and d >= today)} -> \"active\": True}",
-       "baseline_rc": 0, "mutated_rc": 1, "baseline_cases": "19/0", "mutated_cases": "15/4",
-       "red_assertions": ["边界: rc=3（过期必须不跳 = 0）", "边界: 过期无告警",
-                          "边界: GATE-HEALTH: status=KNOWN-FAULT known=1 expired=0（应 DEGRADED expired=1）",
-                          "边界: DEGRADED rc=0（期望 1）"],
-       "verdict": "自验结论 = 判别性成立"},
-      {"id": "B2", "target": "scripts/workflow/pre-push-preview.sh:114",
-       "mutation": "BO=\"$(bash \"$CHECK_BRIEF\" \"$BRIEF_FILE\" 2>&1)\"; BRC=$? -> BO=\"\"; BRC=0",
-       "baseline_rc": 0, "mutated_rc": 1, "baseline_cases": "16/0", "mutated_cases": "12/4",
-       "red_assertions": ["边界: 缺 #CRITERIA rc=0（期望 1）", "边界: 未点名 #CRITERIA"],
-       "verdict": "自验结论 = 判别性成立"},
-      {"id": "B3", "target": "scripts/control-tower/alloc-task-id.sh:389",
-       "mutation": "删 `  \"write_set\": []`",
-       "baseline_rc": 0, "mutated_rc": 1, "baseline_cases": "0 失败", "mutated_cases": "FAIL=2",
-       "red_assertions": ["11b 骨架缺 write_set 键（新卡三源皆空 → D708 fail-closed）",
-                          "11b write_set 非空数组/非合法 JSON（骨架契约偏离）"],
-       "verdict": "自验结论 = 判别性成立"},
-      {"id": "B4", "target": "scripts/control-tower/brief_parser.py:131",
-       "mutation": "if not PATH_SHAPE_RE.match(path): -> if True:",
-       "baseline_rc": 0, "mutated_rc": 1, "baseline_cases": "11/0", "mutated_cases": "9/2",
-       "red_assertions": ["（CJK 路径被截断相关 2 条）"],
-       "verdict": "自验结论 = 判别性成立"}
+      {
+        "id": "B1",
+        "target": "scripts/control-tower/gate-circuit-breaker.sh:157",
+        "mutation": "\"active\": bool(exp_ok and d >= today)} -> \"active\": True}",
+        "baseline_rc": 0,
+        "mutated_rc": 1,
+        "baseline_cases": "19/0",
+        "mutated_cases": "15/4",
+        "red_assertions": [
+          "边界: rc=3（过期必须不跳 = 0）",
+          "边界: 过期无告警",
+          "边界: GATE-HEALTH: status=KNOWN-FAULT known=1 expired=0（应 DEGRADED expired=1）",
+          "边界: DEGRADED rc=0（期望 1）"
+        ],
+        "verdict": "自验结论 = 判别性成立"
+      },
+      {
+        "id": "B2",
+        "target": "scripts/workflow/pre-push-preview.sh:114",
+        "mutation": "BO=\"$(bash \"$CHECK_BRIEF\" \"$BRIEF_FILE\" 2>&1)\"; BRC=$? -> BO=\"\"; BRC=0",
+        "baseline_rc": 0,
+        "mutated_rc": 1,
+        "baseline_cases": "16/0",
+        "mutated_cases": "12/4",
+        "red_assertions": [
+          "边界: 缺 #CRITERIA rc=0（期望 1）",
+          "边界: 未点名 #CRITERIA"
+        ],
+        "verdict": "自验结论 = 判别性成立"
+      },
+      {
+        "id": "B3",
+        "target": "scripts/control-tower/alloc-task-id.sh:389",
+        "mutation": "删 `  \"write_set\": []`",
+        "baseline_rc": 0,
+        "mutated_rc": 1,
+        "baseline_cases": "0 失败",
+        "mutated_cases": "FAIL=2",
+        "red_assertions": [
+          "11b 骨架缺 write_set 键（新卡三源皆空 → D708 fail-closed）",
+          "11b write_set 非空数组/非合法 JSON（骨架契约偏离）"
+        ],
+        "verdict": "自验结论 = 判别性成立"
+      },
+      {
+        "id": "B4",
+        "target": "scripts/control-tower/brief_parser.py:131",
+        "mutation": "if not PATH_SHAPE_RE.match(path): -> if True:",
+        "baseline_rc": 0,
+        "mutated_rc": 1,
+        "baseline_cases": "11/0",
+        "mutated_cases": "9/2",
+        "red_assertions": [
+          "（CJK 路径被截断相关 2 条）"
+        ],
+        "verdict": "自验结论 = 判别性成立"
+      }
     ],
     "mutations_targets_still_present_on_final_sha": true,
     "cto_extra_requirements": {
-      "req1_one_line_command": {"cmd": "bash scripts/workflow/pre-push-preview.sh --fast",
-        "rc": 0, "real_s": 0.73, "target_le_10s": true, "verdict": "自验结论 = 落地"},
-      "req2_health_line": {"cmd": "bash scripts/control-tower/gate-circuit-breaker.sh --health-line",
+      "req1_one_line_command": {
+        "cmd": "bash scripts/workflow/pre-push-preview.sh --fast",
+        "rc": 0,
+        "real_s": 0.73,
+        "target_le_10s": true,
+        "verdict": "自验结论 = 落地"
+      },
+      "req2_health_line": {
+        "cmd": "bash scripts/control-tower/gate-circuit-breaker.sh --health-line",
         "observed": "GATE-HEALTH: status=OK known=0 expired=0 sources=1 checked_at=2026-09-29T02:34:03Z",
-        "frozen_regex_matched": true, "verdict": "自验结论 = 落地（格式逐字段匹配冻结契约）",
-        "caveat": "全仓 GATE-HEALTH 命中 14 处，无一处为生产消费方 → 有能力无消费方，须记遗留"},
-      "req3_before_after_in_receipt": {"verdict": "待核（B 证据自报；我的变异体复核独立成立）"}
+        "frozen_regex_matched": true,
+        "verdict": "自验结论 = 落地（格式逐字段匹配冻结契约）",
+        "caveat": "全仓 GATE-HEALTH 命中 14 处，无一处为生产消费方 → 有能力无消费方，须记遗留"
+      },
+      "req3_before_after_in_receipt": {
+        "verdict": "待核（B 证据自报；我的变异体复核独立成立）"
+      }
     },
     "wiring": {
       "pre_push_preview_called_by_pre_push_check": {
@@ -121,63 +395,132 @@
         "executed_not_merely_declared": true,
         "discriminator_status": "夹具层待补（端到端被 golden-case F1 先拦；见 not_done）"
       },
-      "gate_health_consumers": {"count": 14, "production_consumers": 0,
-        "verdict": "自验结论 = 未接线到消费方（消费方 D963 属另一在飞工作流）→ 记遗留"}
+      "gate_health_consumers": {
+        "count": 14,
+        "production_consumers": 0,
+        "verdict": "自验结论 = 未接线到消费方（消费方 D963 属另一在飞工作流）→ 记遗留"
+      }
     },
     "redlines_bypass": {
-      "detected_bypass_total_hist": 22, "detected_bypass_last": "2026-09-25T00:56:43Z", "detected_bypass_24h": 0,
+      "detected_bypass_total_hist": 22,
+      "detected_bypass_last": "2026-09-25T00:56:43Z",
+      "detected_bypass_24h": 0,
       "pr_b_bypass_log_delta": "2 行，均 COMMITTED | pre-commit PASS（非绕过）",
-      "stash_list": 2, "stash_dates": ["2026-09-08", "2026-09-05"], "stash_provenance": "存量旧债（D597/D575），非 D1061",
+      "stash_list": 2,
+      "stash_dates": [
+        "2026-09-08",
+        "2026-09-05"
+      ],
+      "stash_provenance": "存量旧债（D597/D575），非 D1061",
       "reflog_force_hit": "假阳性（enforce_admins）",
       "verdict": "自验结论 = 本小队零绕过痕迹"
     }
   },
-
   "premises_recomputed": [
-    {"id": "P1", "cmd": "bash scripts/control-tower/alloc-task-id.sh --check-id D1060", "rc": 1,
-     "output": "remote-branch feat/D1060-synova-workbench / local-branch ... / worktree-name .synova-wt-d1060", "verdict": "独立复现=成立"},
-    {"id": "P6", "cmd": "printf '派单 D1060 与 D1061\\n' | grep -oE 'D[0-9]{3}'", "output": "D106", "verdict": "独立复现=成立"},
-    {"id": "P7", "cmd": "grep -cE '(^|[[:space:]])(export[[:space:]]+)?STAGED_FILES=' scripts/pre-commit-check.sh", "output": "0",
-     "usages": 3, "usage_lines": [1203, 1225, 1230], "verdict": "独立复现=成立"},
-    {"id": "residue_baseline", "a_face": "0/0/0/0", "b_face": 14, "verdict": "独立复现=成立（逐条全在 docs/**）"},
-    {"id": "task_state_D1061_write_set", "cmd": "grep -c write_set task-state/D1061.json", "output": "0", "rc": 1, "verdict": "基线=无该键，与卡面一致"}
+    {
+      "id": "P1",
+      "cmd": "bash scripts/control-tower/alloc-task-id.sh --check-id D1060",
+      "rc": 1,
+      "output": "remote-branch feat/D1060-synova-workbench / local-branch ... / worktree-name .synova-wt-d1060",
+      "verdict": "独立复现=成立"
+    },
+    {
+      "id": "P6",
+      "cmd": "printf '派单 D1060 与 D1061\\n' | grep -oE 'D[0-9]{3}'",
+      "output": "D106",
+      "verdict": "独立复现=成立"
+    },
+    {
+      "id": "P7",
+      "cmd": "grep -cE '(^|[[:space:]])(export[[:space:]]+)?STAGED_FILES=' scripts/pre-commit-check.sh",
+      "output": "0",
+      "usages": 3,
+      "usage_lines": [
+        1203,
+        1225,
+        1230
+      ],
+      "verdict": "独立复现=成立"
+    },
+    {
+      "id": "residue_baseline",
+      "a_face": "0/0/0/0",
+      "b_face": 14,
+      "verdict": "独立复现=成立（逐条全在 docs/**）"
+    },
+    {
+      "id": "task_state_D1061_write_set",
+      "cmd": "grep -c write_set task-state/D1061.json",
+      "output": "0",
+      "rc": 1,
+      "verdict": "基线=无该键，与卡面一致"
+    }
   ],
-
   "n1_attribution": {
-    "run": 36457345292, "job": 109046960841,
+    "run": 36457345292,
+    "job": 109046960841,
     "cmd": "curl -sL -H \"Authorization: token $TOK\" .../actions/jobs/109046960841/logs",
     "parsed": "行首 ISO 时间戳 + CI 自打 `── <test>` 标记间差值",
-    "markers": 44, "inter_marker_total_s": 1591,
-    "simulate_ci_test_s": 1050, "lead_self_report_s": 1051, "share_pct": 66.0, "lead_share_pct": 65,
+    "markers": 44,
+    "inter_marker_total_s": 1591,
+    "simulate_ci_test_s": 1050,
+    "lead_self_report_s": 1051,
+    "share_pct": 66.0,
+    "lead_share_pct": 65,
     "top5_share_pct": 88.0,
-    "nesting": {"calls": 3, "suites": 44, "inner_executions": 132, "depth": 1,
-                "no_deeper_recursion_proof": "44 条内层套件逐条 grep 'simulate-ci.sh' → 零命中"},
+    "nesting": {
+      "calls": 3,
+      "suites": 44,
+      "inner_executions": 132,
+      "depth": 1,
+      "no_deeper_recursion_proof": "44 条内层套件逐条 grep 'simulate-ci.sh' → 零命中"
+    },
     "verdict": "自验结论 = 独立复现成立"
   },
-
   "timing_calibers": {
     "note": "run 墙钟 与 windows CT 腿 分列，禁混用（队长纠正）",
-    "paired_sample_n14": {"run_wall_median_s": 2146, "win_ct_leg_median_s": 2141, "leg_over_wall_pct": 99.8},
-    "lead_sample_n25": {"win_ct_leg_median_s": 2035, "range_s": [1432, 2500]},
-    "targets": {"run_wall": "<=480s (8min)", "win_ct_leg": "<=300s (5min)"},
-    "post_n1_estimate": {"run_wall_s": 1096, "win_ct_leg_s": 1091, "same_run_leg_s": 582},
+    "paired_sample_n14": {
+      "run_wall_median_s": 2146,
+      "win_ct_leg_median_s": 2141,
+      "leg_over_wall_pct": 99.8
+    },
+    "lead_sample_n25": {
+      "win_ct_leg_median_s": 2035,
+      "range_s": [
+        1432,
+        2500
+      ]
+    },
+    "targets": {
+      "run_wall": "<=480s (8min)",
+      "win_ct_leg": "<=300s (5min)"
+    },
+    "post_n1_estimate": {
+      "run_wall_s": 1096,
+      "win_ct_leg_s": 1091,
+      "same_run_leg_s": 582
+    },
     "verdict": "未决 —— N1 单独两口径均达不到目标（约 18min vs 5/8min），须 PR-A 给「N1+选择器」合计实测"
   },
-
   "not_done": [
-    "PR-A 全部复核（分支未推送）",
-    "门禁 8 夹具层判别子（注入失败 preview 桩 → rc 非 0）：已派 coder-b；端到端不可行的理由=会在 golden-case F1 先红且触发 vitest --changed 重型",
-    "PR-B 最终 sha 上的四变异体重跑（靶点已在 f116b911 静态确认仍在；因重型锁被他人持有而未跑）",
-    "simulate-ci.test.sh 本地基线计时（a) 首轮并发被污染已主动让位；b) 仍待安静窗口）"
+    "PR-A 两口径时间对比（CI 侧不可完成：零 CI run；需 rebase 解 dirty 后重跑）",
+    "门禁 8 夹具层判别子（注入失败 preview 桩 → rc 非 0）：已派 coder-b",
+    "PR-B 最终 sha 上的四变异体重跑（靶点已在 f116b911 静态确认仍在）",
+    "A6 语义（非法 SYNO_SIM_NESTED fail-closed）在 dedup 夹具内补断言"
   ],
-
   "incidents": [
-    {"id": "INC-1", "what": "重型验证三实例并发（coder-a×2 + verifier×1）",
-     "action_taken": "verifier 主动让位（kill 自身 + 释放锁）；己方基线可复现，coder-a 前后对比不可复现",
-     "defect_found": "锁=裸目录无属主校验，非属主 rmdir 会释放他人锁",
-     "resolution": "队长已改 owner 校验协议，全员生效"},
-    {"id": "INC-2", "what": "verifier 曾在主树误跑 pre-push-check.sh（worktree add 分支名非法 → cd 失败）",
-     "action_taken": "核实主树 M 文件 mtime=Sep27/28 早于我 10:34 运行 → 非我造成；未改主树任何文件",
-     "discipline": "以后 worktree add 失败先断言 pwd"}
+    {
+      "id": "INC-1",
+      "what": "重型验证三实例并发（coder-a×2 + verifier×1）",
+      "action_taken": "verifier 主动让位（kill 自身 + 释放锁）；己方基线可复现，coder-a 前后对比不可复现",
+      "defect_found": "锁=裸目录无属主校验，非属主 rmdir 会释放他人锁",
+      "resolution": "队长已改 owner 校验协议，全员生效"
+    },
+    {
+      "id": "INC-2",
+      "what": "verifier 曾在主树误跑 pre-push-check.sh（worktree add 分支名非法 → cd 失败）",
+      "action_taken": "核实主树 M 文件 mtime=Sep27/28 早于我 10:34 运行 → 非我造成；未改主树任何文件",
+      "discipline": "以后 worktree add 失败先断言 pwd"
+    }
   ]
 }

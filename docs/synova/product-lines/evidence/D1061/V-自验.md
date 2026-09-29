@@ -31,20 +31,9 @@ $ git diff --name-only 20b55eba..origin/main | grep -E '<本卡写集>'
 | **PR-A**（task-1） | `chore/d1061-a-ci-speedup` | — | ❌ **远端无该分支**（`git ls-remote --heads origin \| grep d1061` 只有 PR-B）→ **未完成，未复核** |
 | **PR-B**（task-3） | `chore/d1061-b-gate-mechanism` | `96135a1a` → `f116b911` | ✅ 已复核（另见 §七 待补项） |
 
-**PR-A 预备观察（非正式复核；coder-a 工作树 `d9955cfb` 有 11 项未提交改动，尚未推送）**
+**PR-A 正式复核（已推送 `adb83dc6` / PR #886 · 详见本文档 §十「PR-A 专章」）**
 
-我独立跑了 coder-a 的**未提交**新夹具 `tests/control-tower/simulate-ci-dedup.test.sh`（在其工作树内，只读执行）：
-```
-run1: rc=0  wall=1s  结果: 13 通过, 0 失败
-run2: rc=0  wall=1s  结果: 13 通过, 0 失败
-run3: rc=0  wall=0s  结果: 13 通过, 0 失败
-```
-含靶心断言 `✅ ★ 修法: CI 环境（GITHUB_ACTIONS=true）→ 内层执行数 = 0（本卡靶心判据）`、
-`✅ 真实仓库端到端: CI 模式 0s、内层 ✅ 行 0 个（改前为 3×44=132 次内层执行）`、
-`✅ 变异体被检出: 删跳过分支 → CI 内层执行 2 条 ≠ 0（靶心断言必红）`。
-⇒ **`自验结论` = 该夹具在我机器上 3/3 独立绿灯且 1s 级**（**≠ 通过**；未推送 ⇒ 非最终 sha，正式复核待推送后进行）。
-
-**一次自查纠错（诚实登记）**：我曾据 `pgrep -fl simulate-ci-dedup` 见到 6 个实例（PID 47134/47236/68647/68760/94422/94524）而怀疑「夹具挂死」。**实测证伪**：我 3 次独立运行均在 1s 内 rc=0 通过，且那 6 个 PID 三次复查**完全不变、无新增** ⇒ 是**陈旧孤儿残留**，**不是活跃挂死**。**未据该错误观察下任何结论**。
+> 早期版本此处曾记录「PR-A 未推送」的预备观察与一次 `pgrep` 自查纠错；PR-A 推送后已升级为 §十 专章。**一次自查纠错保留在 §十-A-4**（曾据 `pgrep` 见 6 个实例怀疑夹具挂死 → 实测证伪：3 次独立运行均 1s 内 rc=0，6 个 PID 复查不变无新增 = 陈旧孤儿残留，**未据此下结论**）。
 
 ```
 $ git ls-remote --heads origin | grep -i d1061
@@ -324,5 +313,120 @@ PR-B  96135a1a   : → rc=1，❌ 16 个 .sh 缺头块
 | `pre-push-preview` 接线 | `自验结论` = 真执行成立；**判别子待补** |
 | `GATE-HEALTH:` 消费方 | `自验结论` = **未接线到消费方** → 遗留 |
 | 红线（bypass/stash/force） | `自验结论` = 零绕过 |
-| **PR-A 整体** | **未完成，无结论** |
-| **本报告整体** | **`可提请独立审计`（PR-B 部分）+ 未清项 6 条**；**不构成任何"通过"** |
+| **PR-A 整体** | 见 §十（CI 证据面 `退回`；其余面 `可提请独立审计`） |
+| **本报告整体** | **`可提请独立审计`（PR-A 非 CI 面 + PR-B）+ CI 面未清**；**不构成任何"通过"** |
+
+---
+
+## 十、PR-A 专章（分支 `chore/d1061-a-ci-speedup` @ `adb83dc6` · PR #886）
+
+### 十-A-1 独立性登记（队长要求如实记录）
+
+**coder-a 全程停滞未提交，PR-A 的提交与推送由队长代做**（代码作者仍为 coder-a）。
+⇒ 独立性口径：被验产物 = **coder-a 的代码 + 队长的提交/推送动作**。我（verifier）与**两者均非同人** ⇒ 独立性成立；但「编码者 ↔ 提交者」不一致本身是**流程异常**，登记为流程事实（非缺陷）。队长另代打的 9 处 `# swallow-ok:` 注释见 §十-A-4。
+
+### 十-A-2 红线 / 残留 / 写集
+
+| 项 | 我的复算（命令 → 原始输出） | 结论 |
+|---|---|---|
+| `src/**` + `scripts/audit/**` | `git diff --name-only origin/main...adb83dc6 \| grep -E '^(src/\|scripts/audit/)'` → **空（0 处）** | `自验结论` = 零越界 |
+| 禁碰面四文件 | `simulate-ci.test.sh` / `pre-commit-check.sh` / `merge_writeset_gate.py` / `precommit-groups-injection.test.sh` → **四项均 ✅ 未碰** | `自验结论` = 遵守禁碰 |
+| a 面残留 | `src 0 / tests 0 / scripts 0 / .github 0` | `自验结论` = 零残留 |
+| b 面残留 | 当前 main = **15** → PR-A = **17**；差集「仅 PR-A 有」= **2 条** | 见下 |
+| 写集 | 15 文件：**11 在 task-1 声明内** + 1 治理产物（`.claude/bypass.log` auto-hook）+ **2 条队长追加授权**（派单件 `dispatch/2026-09-29-D1061-…md`、前提证据 `00-前提实测-原始输出.md`）→ **越界 0** | `自验结论` = 无越界 |
+
+**b 面 +2 的口径要点（给 CTO 收件闸）**：新增 2 条**正是队长追加授权由 PR-A 承载的**派单件与前提证据；二者**天然含 `INJECTED-RED` 字样**（证据文件在引用该串）。
+按 **#882（已合入 main）新口径**「b 面残留断言不再把 `docs/` 计入」⇒ **合法**。
+⚠ **但若用「b 面必须等于基线 15」这类朴素判据，会把 PR-A 的 +2 误判成新增残留。**
+
+### 十-A-3 夹具独立重跑
+
+| 夹具 | 我的 rc | real |
+|---|---|---|
+| `tests/control-tower/ct-suite-select.test.sh` | **0** | 4.97s |
+| `tests/control-tower/simulate-ci-dedup.test.sh` | **0** | 1.18s |
+
+### 十-A-4 队长代打的 9 处 `# swallow-ok:` —— **这 9 处是真的，且承重；但「`--diff` 0 命中」本身有陷阱**
+
+1. **陷阱（重要）**：`check-silent-swallow.sh --diff` 的**输入是 `git diff --cached`（已暂存区间）**（实现 `scripts/workflow/check-silent-swallow.sh:104`）。
+   在**已提交的 PR 上直接跑** → 暂存区为空 → 输出 **`[silent-swallow] ✅ 无新增 .sh — 跳过`**、`rc=0`。
+   ⇒ **这个 rc=0 是空绿（vacuous），不能作为「豁免有效」的证据。**（我复现了这一步）
+2. **正确用法**：把 PR 变更置入暂存区（我用 `git reset --soft origin/main` → 43 文件入暂存）后重跑 → **rc=0，`[silent-swallow] ✅ 无新增静默吞错`**。
+3. **判别性证明（改坏即红）**：把 `ct-suite-select.test.sh` 的 **9 处 `# swallow-ok:` 注释全部剥掉**（保留 `2>/dev/null`）后重跑：
+```
+[silent-swallow] ❌ tests/control-tower/ct-suite-select.test.sh: +OUT=$(sel --all 2>/dev/null); RC=$?; N=$(cnt "$OUT")
+[silent-swallow] ❌ …（共 8 行逐条点名）…
+[silent-swallow] ❌ 8 处新增静默吞错（如需豁免加 # swallow-ok: 注释）
+rc=1
+```
+⇒ `自验结论` = **9 处豁免真实且承重；改坏即红（rc 0→1，8 条逐条点名）**；还原后复跑回到 `✅`。
+4. **备注**：9 处中**第 9 处（`PLAT_N=` :180）冗余** —— 该行已有 `|| true` 命中「同行 fallback」自动豁免。**无害，非缺陷。**
+
+### 十-A-5 变异体 A1–A6（改坏一行 → 断言必须变红）
+
+| # | 改坏对象 | 基线 | 改坏后 | 变红的断言（原始输出） |
+|---|---|---|---|---|
+| **A1** | `simulate-ci.sh:76` `if [ "$SKIP_NESTED" -eq 1 ]; then` → `if false; then` | rc=0 | **4 条红** | `❌ CI 环境应 0 条内层执行（rc=0 实跑 2 条）`<br>`❌ CI=true 应 0 条（rc=0 实跑 2 条）`<br>`❌ 跳过未打印原因（静默风险）`<br>`❌ degraded 日志缺 N1 事件` |
+| **A2** | `simulate-ci.sh:66` IS_CI 判定 → `if false; then` | 内层 **0** 次 | 内层 **2** 次 | 沙箱直测：原始 = 0 次 + `⏭ 段 2/2 显式跳过`；变异 = 2 次跑满内层 |
+| **A3** | `ct-suite-select.sh:178` `FORCE_FULL=0` → `1` | rc=0 | rc=1，**7 条红** | `❌ 正常路径应只选 A 域 1 条，实际 3 条`<br>`❌ windows 应 2 条，实际 3`<br>`❌ 摘要行缺 selected_of_total`<br>`❌ D2 不符（rc=0 n=3）`<br>`❌ D4 不符（rc=0 n=3）` |
+| **A4** | `ct-suite-select.sh:254` `if [ "$SEL_N" -eq 0 ]; then` → `if false; then` | rc=0 | rc=1，**2 条红** | `❌ D4 不符（rc=0 n=0）`（0 选中静默通过被捕获） |
+| **A5** | 映射缺失（不改码，直接行为） | — | — | `[D1061-DEGRADED] code=D1 reason=映射缺失或非法 … → **回退全量**（fail-closed，绝不静默缩小）` + `selected_of_total=54/54 degraded=1` + degraded 日志落盘 1 行 ⇒ **显式回退，非静默 0 条** ✅ |
+| **A6** | `simulate-ci.sh` 非法值分支 `SKIP_NESTED=0` → `1` | 非法值 → **按 full 跑内层 2 条** + `⚠ SYNO_SIM_NESTED='BOGUS' 非法（期望 auto\|full\|skip）— fail-closed 按 full 执行` | 非法值 → **静默 skip，内层 0 条，无「非法」告警** | ⇒ 判别成立 |
+
+- A3/A4 额外暴露一条**好行为**：我的变异与夹具自身变异锚点重叠时，夹具打印
+  `❌ 变异体①/②锚点未命中（脚本结构已变，夹具须同步）` → **fail-loud，不静默跳过**。
+- **A6 覆盖缺口（登记，非缺陷）**：`simulate-ci-dedup.test.sh` 头注释声明「非法值 fail-closed 按 full」，但**夹具内无对应断言**（全文 grep 零命中）。该语义目前**只由我的直接行为测试守护**；建议补一条断言。
+- 全部实验在 `/tmp` 副本上做（注入缝 `SYNO_SIM_BIN` / `SYNO_CT_SELECT_BIN`）；真实文件零改动，收尾 `git status --short` 为空（期间一次 `reset --soft` 仅动索引，已 `reset --hard` 复原）。
+
+### 十-A-6 `ci.yml` 接线判别子（「接线了」≠「被执行」）
+
+1. **真调用点**：`.github/workflows/ci.yml:427`
+   `TESTS="$(bash scripts/control-tower/ct-suite-select.sh --changed origin/main...HEAD --platform "$CT_PLATFORM" 2>/tmp/ct-select.log)"`
+   我**原样执行该命令**（windows 面）→ `rc=0`，stderr：
+   `[D1061-SELECT] mode=select platform=windows changed=15 selected_of_total=54/54 degraded=0`
+   ⇒ **选择器确实被执行**（非仅字符串在场）✅
+2. **单源一致性（我一开始判错，已自查纠正）**：用「整文件 grep」得 catalog=47，一度以为选择器输出含 7 条 catalog 外条目 → **错**。用正确口径（`awk '/for t in \\/,/; do$/'` 提取 job 的 for 块）得 **54**，与选择器 `--all` 的 **54** **双向差集为 0** ⇒ **同一单源、完全一致**，`⊆ catalog` 守卫**不会误触发**。
+3. **fail-closed 守卫已实测**：
+   - 非法区间 `--changed '~1...'` → `[D1061-DEGRADED] code=D5 reason=变更范围不可解析 … → 回退全量（fail-closed，绝不静默缩小）`，`selected_of_total=54/54 degraded=1` ✅
+   - `.github/workflows/*` → map 规则 `{"glob": ".github/workflows/*", "domains": ["__FULL__"], "why": "CI 定义自身变更 ⇒ 选择器前提失效（D1061）"}` ⇒ **PR-A 自身 54/54 属设计内行为，非缺陷** ✅
+   - `src/*` / `packages/*` → `__FULL__`（有意不缩小）✅
+4. **缩小能力真实存在（真实区间验证）**：`--changed '9e7ffeb1~1...9e7ffeb1'`（**docs-only** 4 文件）→ `changed=4 selected_of_total=**29/54** degraded=0` ⇒ **真实缩小约 46%** ✅
+   （对照：PR-B 区间 → 54/54，因其同时命中 5 个 ct 域 + doc-system = **6 域全覆盖** ⇒ 设计内。）
+5. **⚠ 接线判别力的边界（须登记）**：**若删掉 `:427` 的选择器调用**，`TESTS` 为空 → 走 `TESTS="$CATALOG"` **回退全量** → **不会变红**（只会变慢）。
+   即该接线的**失效模式 = 保守回退全量**，**现有测试抓不到**；夹具对它的"接线"断言是 **grep 型**（`grep -q "ct-suite-select.sh" "$CIY"`）。
+   ⇒ 与 PR-B 门禁 8 同类：**弱判据**；但此处失效方向**安全（多跑，不会少跑）**，与门禁 8（预演不生效）性质不同。**登记，不判缺陷。**
+
+### 十-A-7 时间对比（两口径）—— **CI 侧不可完成**
+
+**实测（PR-A 零 CI）**：
+```
+curl .../actions/runs?branch=chore/d1061-a-ci-speedup      → run 数 = 0
+curl .../actions/runs?head_sha=adb83dc6|dbbe4818|f80afd58  → 各 0 条
+curl .../commits/adb83dc6/check-runs                       → check_run 数 = 0
+curl .../pulls/886 → state=open draft=false mergeable=False mergeable_state=dirty
+```
+- `ci.yml` 触发配置：`push.branches: [main]`（feature push **不触发**）；唯一触发面 = `pull_request`。
+- ⇒ **PR-A 自建 PR（04:33Z）至今零 workflow run、零 check-run**；唯一解释是 **PR 与已前移的 main 冲突（`mergeable_state=dirty`）→ GitHub 无法构造 PR 合并引用**。
+- **对照**：PR-B（#883，`mergeable_state=None`）同 `pull_request` 事件**正常触发** run `36522644152`。
+- ⇒ **【两口径时间对比】= 不可完成**（无 CI 数据）；**本地数据不能替代 CI 口径**。
+- **建议**：`git rebase origin/main` 解 `dirty` 后重推（`synchronize` 已在触发 types 内）→ CI 即起。
+
+**本地 A/B（仅机理性佐证，不得当 CI 口径）**
+| | 内层执行数 | wall |
+|---|---|---|
+| **改后**（PR-A `simulate-ci.sh` + `GITHUB_ACTIONS=true` + 绿桩） | **0** | **0s** |
+| **改前**（`origin/main` 同条件） | 60s 窗口内**完成 0 条**（首条套件即超窗） | 单位成本实测：`gate-failopen-net` **73s**；`alloc-task-id-lock` **>10min 未完成** |
+
+### 十-A-8 结论词（PR-A）
+
+| 判据 | 结论词 |
+|---|---|
+| 红线 / 禁碰面 / a 面残留 / 写集 | `自验结论` = 零越界、零残留 |
+| b 面 +2 | `自验结论` = 合法（队长授权承载的派单件与前提证据；须用 #882 口径判） |
+| 两夹具 rc=0 | `自验结论` = 我独立重跑全绿（≠ 通过） |
+| A1–A6 变异体 | `自验结论` = **6/6 判别成立**（A6 夹具侧无断言 = 覆盖缺口已登记） |
+| `ci.yml` 接线真执行 + 单源一致 + fail-closed | `自验结论` = 成立；**删除调用不变红（保守回退）已登记** |
+| 选择器缩小能力 | `自验结论` = 真实成立（docs-only → 29/54） |
+| **两口径时间对比 / CI 真跑** | **无法完成 —— PR-A 零 CI run（`dirty`）** |
+| 目标 ≤5min / ≤8min | **未决** |
+| **PR-A 整体** | **`退回（附理由）`（仅限「CI 证据面」）**：需 rebase 解冲突 → 触发 CI → 以 CI 真跑补齐两口径对比；**其余面（红线/写集/残留/变异体/接线/缩小能力）= `可提请独立审计`** |
