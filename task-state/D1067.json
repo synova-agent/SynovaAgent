@@ -1,0 +1,24 @@
+{
+  "task_id": "D1067",
+  "title": "FIX CT-2b 夹具 BSD 宿主假设（/usr/bin/stat 硬编码，GNU/Linux 宿主可能误红）",
+  "status": "pending",
+  "risk": "low",
+  "domain": "mac",
+  "owner": null,
+  "executor": null,
+  "milestone": "M0 项目管理基建",
+  "depends_on": ["D1064"],
+  "blocked": null,
+  "target": "2026-W40",
+  "spec": ".claude/task-briefs/2026-09-29-D1067-FIX-CT-2b-夹具-BSD-宿主假设-usr-bin-stat-硬编码.md",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "priority": 3,
+  "note": "来源 = D1064(#894) 独立自验员发现 + Mac-CTO 2026-09-29 批令立卡（欠账表）。D1064 的 CT-2b CI 等价夹具 `-c %Y` 委托腿硬编码 /usr/bin/stat（BSD 宿主假设）：mac 本机正确（GNU stat -c 报 illegal option → 落 BSD 语义）、当前 CI 不受影响（shim 全程接管，D1064 双环境 17/0 实证）；但套件若未来跑在 GNU/Linux 宿主，委托腿拿真 GNU 输出 → 新代码丢弃落 shim -f 腿 → CT-2b 可能误红（测的是宿主方言而非 hook）。M5b 族第 3 例（裸 git init 方言、GNU stat 方言之后）。修法：按 uname 分派委托或夹具头显式声明宿主假设；不动 hook、不放宽判据。开工前置：D1064/#894 合并后基线。",
+  "write_set": [
+    "tests/control-tower/post-commit.test.sh",
+    ".claude/task-briefs/2026-09-29-D1067-FIX-CT-2b-夹具-BSD-宿主假设-usr-bin-stat-硬编码.md",
+    "task-state/D1067.json"
+  ]
+}
