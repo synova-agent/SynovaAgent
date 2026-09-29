@@ -17,6 +17,10 @@ on:
         description: "安全网②: 强制跑 control-tower 重活（绕过路径判据；其余 job 照常跑）"
         type: boolean
         default: false
+      ct_parallel_jobs:
+        description: "D1061-A2: windows/ubuntu 控制塔密封测试并行度（1=串行；隔离式：每测试独立日志）"
+        type: number
+        default: 3
   # ③ 周期兜底: 每 7 天（周日 20:00 UTC）无条件全量跑一次 control-tower 重活。
   #   用途: 判据路径集漂移 / 门禁腐化，在"长时间不碰控制塔路径"的静默期也能暴露（最坏延迟 7 天）。
   #   其余 9 个 job 在本 run 里**保持原始行为（恒跑）**——不额外加 job 级 if:（队长 D1039 裁决:
@@ -459,6 +463,8 @@ jobs:
         #   该用例自身含时序守卫（无修复的分支 ⇒ SKIP），断言 vitest.config.ts 收敛 LOG_LEVEL=warn。
         run: |
           FAIL=0
+          # D1061-A2: 密封清单物化（单源，供并行执行与串行注解两阶段共用）
+          CATALOG=""
           for t in \
             tests/control-tower/verify-parallel.test.sh \
             tests/control-tower/verify-claims-table.test.sh \
@@ -513,30 +519,73 @@ jobs:
             tests/control-tower/install-dsh-preset.test.sh \
             tests/control-tower/d956-failmsg.test.sh \
             tests/control-tower/ci-signal-classify.test.sh; do
-            echo "── $t"
-            # D526: 测试失败输出进 ::error 注解——无 token 也能经 annotations 定位（D521 工具1 语义）
-            if ! bash "$t" > /tmp/ct-out.log 2>&1; then
+            CATALOG="${CATALOG}${t}"$'\n'
+          done
+          CATALOG="$(printf '%s\n' "$CATALOG" | grep . | sort -u)"
+          CATALOG_N="$(printf '%s\n' "$CATALOG" | grep -c . | tr -d ' \n\r')"
+
+          # ── D1061-A2: 隔离式并行执行（每测试独立日志；**禁**共用 ${CT_TEST_LOG}）──────────
+          # 依据 A-05 §6 逐套件实测（windows，全量 55 条 598s）：4 条占 358s ⇒ 串行墙钟受最长项支配。
+          # 安全审计（A2 证据）：55 条密封测试**无跨测试共用的固定 /tmp 路径**
+          #   （每个固定路径只被同一条测试使用；mktemp 模板均为 .XXXXXX）⇒ 并行不因 /tmp 冲突 flaky。
+          # 并行度可配: workflow_dispatch 输入 ct_parallel_jobs（默认 3；1 = 串行，等价旧行为）。
+          CT_JOBS="${{ inputs.ct_parallel_jobs || 3 }}"
+          CT_LOGDIR="$(mktemp -d)"
+          trap 'rm -rf "$CT_LOGDIR"' EXIT
+          printf '%s\n' "$CATALOG" > "$CT_LOGDIR/list.txt"
+          echo "::notice title=D1061-A2::并行度=${CT_JOBS}；隔离式日志目录=$CT_LOGDIR；密封清单 ${CATALOG_N} 条"
+          export CT_LOGDIR
+          if [ "${CT_JOBS:-1}" -gt 1 ]; then
+            # 并行阶段：worker 只写自己的 stdout/stderr 与 rc 文件，绝不互相覆盖；xargs 非零被 || 吸收
+            xargs -P "$CT_JOBS" -I{} bash -c '
+              t="$1"; base="$(printf "%s" "$t" | tr "/" "_")"
+              printf "── %s\n" "$t"
+              if bash "$t" > "$CT_LOGDIR/$base.log" 2>&1; then rc=0; else rc=1; fi
+              printf "%s\n" "$rc" > "$CT_LOGDIR/$base.rc"
+              printf "──[rc=%s] %s\n" "$rc" "$t"
+            ' _ {} < "$CT_LOGDIR/list.txt" || true
+          else
+            while IFS= read -r t; do
+              [ -z "$t" ] && continue
+              base="$(printf "%s" "$t" | tr "/" "_")"
+              printf "── %s\n" "$t"
+              if bash "$t" > "$CT_LOGDIR/$base.log" 2>&1; then rc=0; else rc=1; fi
+              printf "%s\n" "$rc" > "$CT_LOGDIR/$base.rc"
+              printf "──[rc=%s] %s\n" "$rc" "$t"
+            done <<< "$CATALOG"
+          fi
+
+          # 注解阶段：按清单顺序**串行**发射（输出确定性；与并行执行解耦）
+          while IFS= read -r t; do
+            [ -z "$t" ] && continue
+            base="$(printf "%s" "$t" | tr "/" "_")"
+            CT_TEST_LOG="$CT_LOGDIR/$base.log"
+            CT_TEST_RC="$(cat "$CT_LOGDIR/$base.rc" 2>/dev/null || echo 1)"
+              if [ "${CT_TEST_RC:-1}" -ne 0 ]; then
+              # D526: 测试失败输出进 ::error 注解——无 token 也能经 annotations 定位（D521 工具1 语义）
+              #   D1061-A2: 执行已在上方并行/串行阶段完成（每测试独立日志 + rc 文件）；
+              #   本段只**发射注解**，因此不再重复执行 `bash "$t"`。
               echo "FAIL: $t"
               # D956-MSG-START（夹具 tests/control-tower/d956-failmsg.test.sh 按此标记提取本段做行为断言，改格式须同步夹具）
               # D956①: 失败断言行优先入窗——FAIL|❌|not ok 命中行先入，不被 tail 窗挤掉
-              HITS=$(grep -E 'FAIL|❌|not ok' /tmp/ct-out.log 2>/dev/null | head -4 || true)
-              TAILW=$(tail -8 /tmp/ct-out.log 2>/dev/null || true)
+              HITS=$(grep -E 'FAIL|❌|not ok' ${CT_TEST_LOG} 2>/dev/null | head -4 || true)
+              TAILW=$(tail -8 ${CT_TEST_LOG} 2>/dev/null || true)
               RAW=$(printf '%s\n%s' "$HITS" "$TAILW" | grep -v '^$' | awk '!seen[$0]++' | tr '\n' '|' | tr -d '%')
               # D956②: 字符级截断（原 cut -c1-450 按字节，中文≈150 字即断）+ 截断自报
               MSG="$RAW"
               if [ "${#RAW}" -gt 450 ]; then
-                MSG="${RAW:0:400}…[truncated; full log: /tmp/ct-out.log + job raw output]"
+                MSG="${RAW:0:400}…[truncated; full log: ${CT_TEST_LOG} + job raw output]"
               fi
               # D956③: 三态——构造失败/空日志 ⇒ 显式降级注解，不静默通过（FAIL=1 已设）
               if [ -z "$MSG" ]; then
-                MSG="[D956-degraded] annotation-construction-empty; full log: /tmp/ct-out.log + job raw output"
+                MSG="[D956-degraded] annotation-construction-empty; full log: ${CT_TEST_LOG} + job raw output"
                 echo "::warning title=D956::$t 注解构造降级（空日志或 grep 不可用）"
               fi
               echo "::error title=$t::$MSG"
               # D956-MSG-END
               FAIL=1
             fi
-          done
+          done <<< "$CATALOG"
           # D943: DSH 断面一致性自扫（CI 无本地 DSH 树 → --no-tree-check；文档一致性仍全查）。
           # 独立命令而非加入上方 for 清单——清单项由 `bash "$t"` 执行，命令串不可混入。
           if ! python3 scripts/control-tower/check-dsh-anchor.py --repo . --no-tree-check; then

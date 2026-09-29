@@ -38,9 +38,12 @@ BLOCK=$(printf '%s\n' "$BLOCK" | sed 's/^              //')
 
 # 运行器: 用夹具日志路径替换 /tmp/ct-out.log；$t 由调用方注入
 run_d956() {  # $1=夹具日志路径 ; stdout=注解行
+  # D1061-A2: 被测段改为「只发射注解」形态 —— 补齐其依赖的 CT_TEST_LOG / CT_TEST_RC
   local t="fixture-test-name"
   local LOG="$1"
-  printf '%s\n' "$BLOCK" | sed "s|/tmp/ct-out.log|$LOG|g" > "$RUNNER"
+  local CT_TEST_LOG="$1"
+  local CT_TEST_RC=1
+  printf '%s\n' "$BLOCK" | sed "s|\${CT_TEST_LOG}|$LOG|g" > "$RUNNER"
   ( . "$RUNNER" ) 2>/dev/null  # swallow-ok: 夹具只取 stdout 注解行，stderr 噪声不入断言
 }
 
@@ -82,13 +85,23 @@ echo "$OUT1" | grep -q 'expect(count).toBe(5)' && ok "中文混排失败行未�
 #   （D956-MSG-START/END 标记，见文件头 + L34）做定位。
 #   判别性保持: 把 D956 段移到 `if ! bash "$t"` 之前（挪出失败分支）⇒ START_LN < BRANCH_IF_LN ⇒ 本用例转红。
 START_LN=$(grep -n '# D956-MSG-START' "$CI" | head -1 | cut -d: -f1)
-BRANCH_IF_LN=$(awk -v s="$START_LN" 'NR < s && /if ! bash "\$t"/ { n = NR } END { print n + 0 }' "$CI")
+# D1061-A2: 执行已抽到「隔离式并行/串行执行阶段」（每测试独立日志 + rc 文件），注解段改为只发射注解。
+#   ⇒ 失败分支锚点由 `if ! bash "$t"` 改为 rc 判定；两种形态都接受（兼容并行前后）。
+BRANCH_IF_LN=$(awk -v s="$START_LN" 'NR < s && (/if ! bash "\$t"/ || /CT_TEST_RC:-1\}" -ne 0 \]/) { n = NR } END { print n + 0 }' "$CI")
 IN_BRANCH=0
 if [ -n "$START_LN" ] && [ "$BRANCH_IF_LN" -gt 0 ] && [ "$START_LN" -gt "$BRANCH_IF_LN" ]; then IN_BRANCH=1; fi
 if [ "$IN_BRANCH" -eq 1 ] && printf '%s\n' "$BLOCK" | grep -q '::error'; then
   ok "零回归: D956 段在失败分支内且发出 ::error（if@${BRANCH_IF_LN} < START@${START_LN}）"
 else
   no "零回归失败: D956 段不在失败分支内或缺 ::error (if=$BRANCH_IF_LN start=$START_LN)"
+fi
+
+# ── 用例 6（D1061-A2 判别性）: 注解段**不得**重复执行测试（执行已抽到并行/串行阶段）──
+#   判别性: 有人在注解段重新 `bash "$t"`（即并行改造被回退）⇒ 本用例转红。
+if printf '%s\n' "$BLOCK" | grep -qE 'bash "\$t"'; then
+  no "A2 判别失败: D956 注解段仍含 `bash \"\$t\"`（执行未抽离 ⇒ 与隔离式并行冲突）"
+else
+  ok "A2: D956 段只发射注解、不重复执行测试（执行在隔离式并行/串行阶段）"
 fi
 # FAIL=1 仍在（门禁语义不变——D956 不新增阻断也不放松）
 printf '%s\n' "$BLOCK" | grep -q 'FAIL=1' || true  # FAIL=1 在段外（分支尾），查上下文
