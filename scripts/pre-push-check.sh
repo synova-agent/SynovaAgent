@@ -460,8 +460,16 @@ elif [[ "${SYNO_PREVIEW_SKIP:-0}" = "1" ]]; then
   echo -e "  ${YELLOW}⚠️  门禁 8: SYNO_PREVIEW_SKIP=1 逃生舱生效 — 推前预演跳过${RESET}"
   _CT_LOG="$SCRIPT_DIR/control-tower/control_tower_log.py"
   if [[ -f "$_CT_LOG" ]]; then
-    python3 "$_CT_LOG" degraded --component pre-push-check \
-      --reason "SYNO_PREVIEW_SKIP=1: 门禁 8 推前预演被显式跳过" >/dev/null 2>&1 || true  # swallow-ok: 降级日志不可写不阻断业务（铁律 11）；可见告警已在上一行打印
+    # D520 平台清单项1: 三级探测 PYBIN（禁裸 python3）——Windows 部分机器无 python3.exe。
+    #   本脚本此前无 PYBIN，故本块自探测；探不到 → 显式可见告警（不静默）。
+    _PYBIN=""
+    for _c in python3 python py; do command -v "$_c" >/dev/null 2>&1 && { _PYBIN="$_c"; break; }; done
+    if [[ -n "$_PYBIN" ]]; then
+      "$_PYBIN" "$_CT_LOG" degraded --component pre-push-check \
+        --reason "SYNO_PREVIEW_SKIP=1: 门禁 8 推前预演被显式跳过" >/dev/null 2>&1 || true  # swallow-ok: 降级日志不可写不阻断业务（铁律 11）；可见告警已在上一行打印
+    else
+      echo -e "  ${YELLOW}⚠️  无 python3/python/py — 逃生舱 degraded 事件未落盘（可见告警已在上行打印）${RESET}"
+    fi
   fi
 else
   if ! bash "$PREVIEW" "--${SYNO_PREVIEW_MODE:-fast}"; then

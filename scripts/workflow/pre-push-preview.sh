@@ -61,7 +61,7 @@ PYBIN=""
 if command -v python3 >/dev/null 2>&1; then PYBIN="python3"
 elif command -v python >/dev/null 2>&1; then PYBIN="python"
 else
-  echo "❌ 预演自身故障: 找不到 python3/python → exit 2" >&2
+  echo "❌ 预演自身故障: 找不到 python3/python → exit 2" >&2  # D520: 仅报错文案提及；实际调用一律走 $PYBIN（三级探测在本脚本上方）
   exit 2
 fi
 
