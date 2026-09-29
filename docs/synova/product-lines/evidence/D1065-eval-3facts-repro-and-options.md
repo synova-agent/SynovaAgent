@@ -47,4 +47,54 @@ git merge-tree --write-tree "$mb" HEAD origin/main; rc=$?; rm .git/info/attribut
 
 ## 五、验收映射（落地后执行）
 
-① 三条复现原始输出（上文§一 + CTO 侧 API 实测）② 本表 + 选型理由（待 CTO 填）③ 连续合并 ≥2 PR 无需为后者重推（两次 API 返回）④ 证据守恒 `wc -l ≥ 两侧新增之和` + `grep -c '^-20'` 增量=0 ⑤ GATE-INTEGRITY: OK
+① 三条复现原始输出（上文§一 + CTO 侧 API 实测）② 本表 + 选型理由（**CTO 已裁决，见 §六**）③ 连续合并 ≥2 PR 无需为后者重推（两次 API 返回）④ 证据守恒 `wc -l ≥ 两侧新增之和` + `grep -c '^-20'` 增量=0 ⑤ GATE-INTEGRITY: OK
+
+---
+
+## 六、CTO 验收与选型裁决（2026-09-29，并行 CTO 签署）
+
+### 6.1 验收结论：**通过**（无条件通过；不属「有条件通过」）
+**事实层逐条复核实测（不采信转述）**：
+
+| 评估件声明 | 实测复核 | 结论 |
+|---|---|---|
+| `.sessions/` 在 `.gitignore:86`（卡面 :83 笔误） | `grep -n sessions .gitignore` → `86:.sessions/` | ✅ 更正确 |
+| union driver 内置，`install-hooks.sh:137-142` 注册属冗余 | 合成仓库 + `GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null`：**未注册 driver 时 union 仍生效**（a/c/b 三行并集） | ✅ 正确 |
+| Gatekeeper 只读 legacy（P0） | `pre-commit-check.sh:236/1059` `BYPASS_LOG="$ROOT/.claude/bypass.log"`；1085-1086 读 `$BYPASS_LOG` | ✅ **P0 成立** |
+| `grep -c '^-20'` = 1109（守恒判据基线） | `git log -p -- .claude/bypass.log \| grep -c '^-20'` → **1109** | ✅ 逐字一致 |
+| `synova-submit.sh` 存在于改动面 | `ls -la scripts/control-tower/synova-submit.sh` → 存在（7201 B） | ✅ 存在 |
+| check-bypass-log.sh 已接全源 | `check-bypass-log.sh:23-29` 调 `bypass-ledger.sh sources` | ✅ 正确 |
+
+**唯一数字漂移（非缺陷）**：评估件基线 `main bypass.log = 1925` 行 / `origin/main = c6787513`；
+复核时实测 **1926** 行 / main 已推进至 `956a03ed`（D1064/D1065 卡片 PR 合并所致）。
+⇒ 实施 PR 落地前**必须重取基线**（判据 ④「增量=0」是相对基线，不是绝对 1109）。
+
+### 6.2 选型裁决：**a 选定（根治）；c + 预检 先行；b 否决**
+- **b 否决** —— 同意评估件理由：守恒从「物理可验」退为「基建可活」，审计红线承受不起。
+- **a 选定为唯一根治路径** —— 它同时满足三条：证据守恒物理可验、Stage 1 基建已铺、切面可枚举（读者 14 文件已列）。
+- **c 采纳为过渡止血** —— ≤2 文件、不碰任何热点，可与 a 并行准备。
+- **第四建议（本地预检）采纳，但形态调整为「告警不阻断」**：
+  理由 = 实测存在**时序窗口**——`#867` 在被下游计算为 dirty 的情况下仍被 API 成功合入（缓存态滞后）。
+  ⇒ 若硬阻断，会出现「本地红 / 远端绿」的假红，被绕过的风险大于收益（V4.5.1 教训：过激门禁必被 --no-verify）。
+  ⇒ 先以**告警 + 指引**上线，收 1–2 天误报数据，再决定是否升级为阻断（数据驱动）。
+
+**上线顺序**：`预检(告警) + c`（互不碰面，可同一窗口） → `a`（受 §6.3 热点窗口约束）。
+
+### 6.3 热点排期裁决（`scripts/pre-commit-check.sh`）
+**实测争用者（`git diff --name-only origin/main...<head>` 扫描当前打开 PR）**：
+- `#890` `fix/d1063-pr3-scan-gate`（D1063 客户名扫描门禁）—— 触碰
+- `#862` `fix/a3-g10-g11-fakegreen-20260927`（D1023）—— 触碰
+- `task-state/*.json` 面**未见** D328（该队列不在 task-state 可核面）⇒ **窗口需 Mac-CTO 给定**
+
+**裁决**：
+1. **a 排在 #890 与 #862 之后**（同一文件三卡不并行）；
+2. **a 内部「切写 + 切读」必须同一 PR 闭合，禁止拆两个 PR** —— 依据即本评估件的 P0（Gatekeeper 只读 legacy）；
+3. a 的 PR 正文必须含**熔断双源仍触发**的判别夹具原始输出（改坏即红）。
+
+### 6.4 CTO 追加判据（4 条，落地 PR 逐条验收）
+1. **快照幂等**：主账本 = per-session 的纯并集投影 ⇒ 对「同一 HASH 多行」必须幂等（去重键 = 整行内容，重复执行 `wc -l` 不变）。
+2. **熔断双源事实面**：24h 计数须覆盖 legacy + `.sessions/*/bypass.log`；否则切写后计数恒 0 = 熔断失明。
+3. **守恒两件套**：`grep -c '^-20'` 增量 = 0 **且** `wc -l` 不减（评估件 §一 的 1109 违迹证明单用其一不够）。
+4. **降级显式**：`.sessions` 目录缺失 / hook 未装（新 clone、CI 容器）⇒ 必须显式 degraded 提示（铁律 11），不得静默丢证据。
+
+> 签署：并行 CTO（D1061 处置批）｜复核命令与原始输出见 §6.1 表列
