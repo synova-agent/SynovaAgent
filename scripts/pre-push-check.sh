@@ -134,6 +134,60 @@ if [[ "${SYNO_SYNC_ONLY:-}" == "1" ]]; then
   exit "$EC"
 fi
 
+run_gate8_preview() {
+# ═══ 门禁 8: 推前预演 (D1061 任务 4 — 硬阻断) ═══
+# 为什么独立于 0-7: 0-7 答"能不能推"（同步/secrets/回归/对账），本门答"**推上去 CI 会不会红**"。
+#   CI 一次红 = windows CT 腿 ~35 分钟 + 12 条必过检查重跑；而三种最常见红在本地就能秒级判定:
+#   ① brief 格式（Done checkbox / #CRITERIA）② 写集对账 D708 ③ 注入夹具三面残留。
+#   实测: 干净树 --fast 1.09s（见 docs/synova/product-lines/evidence/D1061/B-*.md）。
+# 逃生舱: SYNO_PREVIEW_SKIP=1 → 显式降级（可见告警 + degraded-events.log），绝不静默。
+#   SYNO_PREVIEW_MODE=full → 追加 SYNO_CI=1 pre-commit（默认 fast）。
+echo ""
+echo -e "${CYAN}── 门禁 8: 推前预演 (D1061 · fast ≤10s / full 可选) ─────${RESET}"
+PREVIEW="$SCRIPT_DIR/workflow/pre-push-preview.sh"
+if [[ ! -f "$PREVIEW" ]]; then
+  echo -e "  ${YELLOW}⚠️  pre-push-preview.sh 缺失 — 预演跳过 (fail-open, 可见)${RESET}"
+elif [[ "${SYNO_PREVIEW_SKIP:-0}" = "1" ]]; then
+  echo -e "  ${YELLOW}⚠️  门禁 8: SYNO_PREVIEW_SKIP=1 逃生舱生效 — 推前预演跳过${RESET}"
+  _CT_LOG="$SCRIPT_DIR/control-tower/control_tower_log.py"
+  if [[ -f "$_CT_LOG" ]]; then
+    # D520 平台清单项1: 三级探测 PYBIN（禁裸 python3）——Windows 部分机器无 python3.exe。
+    #   本脚本此前无 PYBIN，故本块自探测；探不到 → 显式可见告警（不静默）。
+    _PYBIN=""
+    for _c in python3 python py; do command -v "$_c" >/dev/null 2>&1 && { _PYBIN="$_c"; break; }; done
+    if [[ -n "$_PYBIN" ]]; then
+      "$_PYBIN" "$_CT_LOG" degraded --component pre-push-check \
+        --reason "SYNO_PREVIEW_SKIP=1: 门禁 8 推前预演被显式跳过" >/dev/null 2>&1 || true  # swallow-ok: 降级日志不可写不阻断业务（铁律 11）；可见告警已在上一行打印
+    else
+      echo -e "  ${YELLOW}⚠️  无 python3/python/py — 逃生舱 degraded 事件未落盘（可见告警已在上行打印）${RESET}"
+    fi
+  fi
+else
+  # 测试注入缝: SYNO_PREVIEW_CMD=<shell 命令> → 用桩替代真实 preview（夹具判别性用）
+  if [[ -n "${SYNO_PREVIEW_CMD:-}" ]]; then
+    _PV=(bash -c "$SYNO_PREVIEW_CMD")
+  else
+    _PV=(bash "$PREVIEW" "--${SYNO_PREVIEW_MODE:-fast}")
+  fi
+  if ! "${_PV[@]}"; then
+    echo ""
+    echo -e "  ${RED}❌ 门禁 8: 推前预演未通过 — 推送已拒绝 (D1061 任务 4)${RESET}"
+    return 1
+  fi
+fi
+return 0
+}
+
+
+# 测试注入: SYNO_PREVIEW_ONLY=1 只跑门禁 8 (pre-push-preview.test.sh 隔离单测；镜像 SYNO_SYNC_ONLY)
+if [[ "${SYNO_PREVIEW_ONLY:-}" == "1" ]]; then
+  set +e
+  run_gate8_preview
+  EC=$?
+  set -e
+  exit "$EC"
+fi
+
 # ═══ D319: VERSION.md 最新版本必须有对应 tag ═══
 # 版本事实与 git 对齐: bump 与代码同 commit（VERSION.md 规则），tag 由
 # synova-commit 提交成功后自动创建（annotated）。push 前校验: 最新版本无
@@ -444,39 +498,12 @@ else
   echo -e "  ${YELLOW}⚠️  check-bypass-log.sh 缺失 — 对账跳过 (fail-open)${RESET}"
 fi
 
-# ═══ 门禁 8: 推前预演 (D1061 任务 4 — 硬阻断) ═══
-# 为什么独立于 0-7: 0-7 答"能不能推"（同步/secrets/回归/对账），本门答"**推上去 CI 会不会红**"。
-#   CI 一次红 = windows CT 腿 ~35 分钟 + 12 条必过检查重跑；而三种最常见红在本地就能秒级判定:
-#   ① brief 格式（Done checkbox / #CRITERIA）② 写集对账 D708 ③ 注入夹具三面残留。
-#   实测: 干净树 --fast 1.09s（见 docs/synova/product-lines/evidence/D1061/B-*.md）。
-# 逃生舱: SYNO_PREVIEW_SKIP=1 → 显式降级（可见告警 + degraded-events.log），绝不静默。
-#   SYNO_PREVIEW_MODE=full → 追加 SYNO_CI=1 pre-commit（默认 fast）。
-echo ""
-echo -e "${CYAN}── 门禁 8: 推前预演 (D1061 · fast ≤10s / full 可选) ─────${RESET}"
-PREVIEW="$SCRIPT_DIR/workflow/pre-push-preview.sh"
-if [[ ! -f "$PREVIEW" ]]; then
-  echo -e "  ${YELLOW}⚠️  pre-push-preview.sh 缺失 — 预演跳过 (fail-open, 可见)${RESET}"
-elif [[ "${SYNO_PREVIEW_SKIP:-0}" = "1" ]]; then
-  echo -e "  ${YELLOW}⚠️  门禁 8: SYNO_PREVIEW_SKIP=1 逃生舱生效 — 推前预演跳过${RESET}"
-  _CT_LOG="$SCRIPT_DIR/control-tower/control_tower_log.py"
-  if [[ -f "$_CT_LOG" ]]; then
-    # D520 平台清单项1: 三级探测 PYBIN（禁裸 python3）——Windows 部分机器无 python3.exe。
-    #   本脚本此前无 PYBIN，故本块自探测；探不到 → 显式可见告警（不静默）。
-    _PYBIN=""
-    for _c in python3 python py; do command -v "$_c" >/dev/null 2>&1 && { _PYBIN="$_c"; break; }; done
-    if [[ -n "$_PYBIN" ]]; then
-      "$_PYBIN" "$_CT_LOG" degraded --component pre-push-check \
-        --reason "SYNO_PREVIEW_SKIP=1: 门禁 8 推前预演被显式跳过" >/dev/null 2>&1 || true  # swallow-ok: 降级日志不可写不阻断业务（铁律 11）；可见告警已在上一行打印
-    else
-      echo -e "  ${YELLOW}⚠️  无 python3/python/py — 逃生舱 degraded 事件未落盘（可见告警已在上行打印）${RESET}"
-    fi
-  fi
-else
-  if ! bash "$PREVIEW" "--${SYNO_PREVIEW_MODE:-fast}"; then
-    echo ""
-    echo -e "  ${RED}❌ 门禁 8: 推前预演未通过 — 推送已拒绝 (D1061 任务 4)${RESET}"
-    exit 1
-  fi
+
+# 门禁 8: 推前预演（函数体见上方定义；此处调用）
+if ! run_gate8_preview; then
+  echo ""
+  echo -e "  ${RED}❌ 门禁 8: 推前预演未通过 — 推送已拒绝 (D1061 任务 4)${RESET}"
+  exit 1
 fi
 
 echo ""

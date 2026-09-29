@@ -5,10 +5,10 @@
   "base": "20b55eba",
   "writer": "coder-b",
   "suites_run": 4,
-  "cases_run": 102,
+  "cases_run": 110,
   "cases_breakdown": {
     "gate-circuit-breaker.test.sh": 19,
-    "pre-push-preview.test.sh": 16,
+    "pre-push-preview.test.sh": 24,
     "brief-parser-cjk-path.test.sh": 11,
     "alloc-task-id.test.sh": 56
   },
@@ -28,7 +28,11 @@
     "command": "bash scripts/control-tower/gate-circuit-breaker.sh --health-line",
     "format_frozen": "GATE-HEALTH: status=<OK|DEGRADED|KNOWN-FAULT> known=<n> expired=<n> sources=<n> checked_at=<ISO8601>",
     "observed": "GATE-HEALTH: status=OK known=0 expired=0 sources=2 checked_at=2026-09-29T02:06:01Z",
-    "exit_codes": {"0": "OK|KNOWN-FAULT", "1": "DEGRADED", "2": "breaker self-fault"}
+    "exit_codes": {
+      "0": "OK|KNOWN-FAULT",
+      "1": "DEGRADED",
+      "2": "breaker self-fault"
+    }
   },
   "cto_one_liner": "bash scripts/workflow/pre-push-preview.sh --fast",
   "breaker_states": {
@@ -44,7 +48,8 @@
     "breaker_remove_expires_check": "rc=1 结果: 17 通过, 2 失败",
     "preview_remove_brief_parse": "rc=1 结果: 14 通过, 2 失败",
     "alloc_skeleton_drop_write_set": "rc=1 PASS=54 FAIL=2",
-    "brief_parser_revert_paren_strip": "rc=1 结果: 9 通过, 2 失败"
+    "brief_parser_revert_paren_strip": "rc=1 结果: 9 通过, 2 失败",
+    "preview_remove_gate8_callsite": "rc=1 结果: 21 通过, 3 失败（调用点判别三条）"
   },
   "exist_brief_checkbox_survey": {
     "source": "origin/main @ 20b55eba .claude/task-briefs/*.md",
@@ -75,15 +80,18 @@
   "known_gaps": [
     "ci.yml 接线未做（单写者顺位 coder-a -> coder-b，待 PR-A 合并后 rebase 再加）",
     "task-state/D1061.json 未由 PR-B 创建/修改（PR-A 为首写者，避免同文件双写）",
-    "README 落位：一行命令落在本证据文件（写集内）；仓库根 README.md 不在本卡写集，未擅自改",
     "熔断登记表当前为空表（无已知门禁故障）",
     "--fast 不覆盖 windows 平台差异类红（归 PR-A）",
-    "registry sources 字段当前实测 2（登记表 + gate-hits 日志；degraded 日志在首次写入前不存在）"
+    "registry sources 字段当前实测 2（登记表 + gate-hits 日志；degraded 日志在首次写入前不存在）",
+    "本分支已撤掉自建 D1061 brief（队长裁定：以 coder-a 那份为唯一基线，rebase 时取 main 版），故 G12 在 PR-A 合并前仍会红——已知且已接受"
   ],
   "cto_one_liner_placement": {
     "decision_by": "lead 2026-09-29",
     "not_root_readme": "仓库根 README.md 是产品向文档且不在本卡写集 -> 未擅自改",
-    "actually_at": ["scripts/workflow/pre-push-preview.sh 头注释第 9 行", "scripts/workflow/pre-push-preview.sh --help 输出第 4 行"],
+    "actually_at": [
+      "scripts/workflow/pre-push-preview.sh 头注释第 9 行",
+      "scripts/workflow/pre-push-preview.sh --help 输出第 4 行"
+    ],
     "help_visible_repro": "bash scripts/workflow/pre-push-preview.sh --help | head -5"
   },
   "wiring_discriminative_proof": {
@@ -114,5 +122,15 @@
     "no_verify_used": false,
     "git_stash_used": false,
     "force_push_used": false
+  },
+  "wiring_criteria_upgrade": {
+    "triggered_by": "verifier 变异体复核（坑清单第 7 条：禁 grep 型静态判据当验收）",
+    "old_defect": "全文件 grep 'pre-push-preview.sh' 在删件 fail-open 分支下恒真 -> 删掉 preview 也永不红",
+    "fix1_behaviour": "SYNO_PREVIEW_ONLY=1 + SYNO_PREVIEW_CMD 桩；判别子A 失败桩->rc=1 且点名；判别子B 通过桩->rc=0",
+    "fix2_callsite": "判据限定生产尾部区间：实际调用 / 报文点名 / exit 1 三条",
+    "no_end_to_end_reason": "端到端会被 golden-case F1 先拦 + 触发 vitest --changed 重型，代价与收益不成比例",
+    "residual_limit": "判别子A/B 走 SYNO_PREVIEW_ONLY 早退路径调同一函数；生产调用点由定位式结构判据覆盖（非行为层）",
+    "weak_criterion_kept": "全文件 grep 保留但降级标注为『仅声明在场』",
+    "failopen_not_a_defect": "缺件 fail-open = 既有语义『脚本缺失=CI 降级信号』+ 可见告警，非缺陷项"
   }
 }

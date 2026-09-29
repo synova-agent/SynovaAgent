@@ -84,9 +84,36 @@ bash "$PREVIEW" --fast --brief "$GOOD" >/dev/null 2>&1
 E=$(date +%s); DUR=$((E - S))
 [ "$DUR" -le 10 ] && ok "契约: --fast 实测 ${DUR}s ≤ 10s" || no "契约: --fast 实测 ${DUR}s > 10s"
 
-# ── 接线: pre-push-check.sh 真的调用（铁律 0-2 WIRE CHECK）──
+# ── 接线（**判别子：行为层**，非 grep）——坑清单第 7 条：禁 grep 型静态判据当验收 ──
+# 背景（verifier 复核暴露）: 纯 grep 断言在"删掉 preview 文件"时**永不红** ——
+#   `pre-push-check.sh` 的缺件 fail-open 告警行也含同名串，grep 照样命中。
+# 故并列两条行为判别子（隔离缝 `SYNO_PREVIEW_ONLY=1` 只跑门禁 8，镜像既有 `SYNO_SYNC_ONLY` 惯例）：
+STUB_FAIL='echo "STUB: 强制 preview 失败"; exit 1'
+STUB_OK='echo "STUB: 强制 preview 通过"; exit 0'
+OUT="$(SYNO_PREVIEW_ONLY=1 SYNO_PREVIEW_CMD="$STUB_FAIL" bash "$REPO/scripts/pre-push-check.sh" 2>&1)"; RC=$?
+[ "$RC" -ne 0 ] && ok "判别子A: preview 桩失败 → pre-push-check.sh rc=${RC}≠0（行为层接线成立）" \
+  || no "判别子A: preview 失败但 rc=0（门禁 8 未真正判定）"
+printf '%s' "$OUT" | grep -q "门禁 8: 推前预演未通过" && ok "判别子A: 报文点名门禁 8（可定位）" || no "判别子A: 未点名门禁 8"
+OUT="$(SYNO_PREVIEW_ONLY=1 SYNO_PREVIEW_CMD="$STUB_OK" bash "$REPO/scripts/pre-push-check.sh" 2>&1)"; RC=$?
+[ "$RC" -eq 0 ] && ok "判别子B: preview 桩通过 → rc=0（正向对照，排除恒红）" || no "判别子B: 桩通过却 rc=$RC（恒红）"
+grep -q "run_gate8_preview" "$REPO/scripts/pre-push-check.sh" \
+  && ok "反向判别: 门禁 8 以函数形式存在（摘掉它则判别子A 必失红）" \
+  || no "反向判别: 找不到门禁 8 函数定义"
+# ── 调用点判别（**定位式**，非"串出现即算"）──
+# 为什么不能只 grep 全文件: 缺件 fail-open 分支里也有同名串 ⇒ 全文件 grep 恒真（不判别）。
+# 这里把判据**限定在生产尾部区间**（自调用点注释起至文件末），
+#   ⇒ 删掉尾部调用/删掉 exit 1 → 本条必红（实测见 B 证据）。
+TAIL="$(sed -n '/门禁 8: 推前预演（函数体见上方定义；此处调用）/,$p' "$REPO/scripts/pre-push-check.sh")"
+[ -n "$TAIL" ] && ok "调用点判别: 定位到生产尾部区间（${#TAIL} 字节）" || no "调用点判别: 找不到生产尾部区间"
+printf '%s' "$TAIL" | grep -q 'if ! run_gate8_preview; then' \
+  && ok "调用点判别: 生产尾部**实际调用** run_gate8_preview" || no "调用点判别: 生产尾部未调用门禁 8（接线断裂）"
+printf '%s' "$TAIL" | grep -q '门禁 8: 推前预演未通过 — 推送已拒绝' \
+  && ok "调用点判别: 失败路径报文点名门禁 8" || no "调用点判别: 失败路径报文缺失"
+printf '%s' "$TAIL" | grep -qE '^[[:space:]]*exit 1[[:space:]]*$' \
+  && ok "调用点判别: 失败路径确有 exit 1（硬阻断）" || no "调用点判别: 失败路径无 exit 1"
+# ── **弱判据**（保留但降级标注: 只证"声明在场"，**不证**"被调用"）──
 WIRE="$(grep -n "pre-push-preview.sh" "$REPO/scripts/pre-push-check.sh" 2>/dev/null | head -3)"
-if [ -n "$WIRE" ]; then ok "接线: pre-push-check.sh 调用 preview → $(printf '%s' "$WIRE" | head -1)"; else no "接线: pre-push-check.sh 未调用 preview（未接线）"; fi
+if [ -n "$WIRE" ]; then ok "弱判据(仅声明在场，非执行): pre-push-preview.sh 出现于 $(printf '%s' "$WIRE" | head -1)"; else no "弱判据: pre-push-check.sh 未见 preview 声明"; fi
 grep -q "SYNO_PREVIEW_SKIP" "$REPO/scripts/pre-push-check.sh" && ok "接线: 逃生舱 SYNO_PREVIEW_SKIP 存在（须有测试）" || no "接线: 逃生舱缺失"
 # 原门禁 0-7 一条不删（逐条点名，防"接线=删旧门"）
 KEPT=0

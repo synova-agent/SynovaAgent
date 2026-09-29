@@ -284,3 +284,63 @@ bash（UTF-8 locale）把全角括号当**变量名字符** ⇒ `set -u` 下 `un
   且不因对侧先合并而误红（若各写各的半套，先合并者会让后合并者整片红）。
 - 队长裁定（2026-09-29）：coder-a 侧同名文件内容不同时，**以本 PR-B 的"并集 22 条"版为准**；
   PR-A 先合并后 PR-B rebase 时，**保留并集版**为 base 之后的最终形态。
+
+---
+
+## 十一、接线判据升级：grep 型弱判据 → 行为判别子 + 定位式调用点判别（verifier 复核后的必修）
+
+### 问题（verifier 变异体复核暴露；坑清单第 7 条「禁 grep 型静态判据当验收」）
+原接线断言是**纯 grep 型**：
+```
+WIRE="$(grep -n "pre-push-preview.sh" "$REPO/scripts/pre-push-check.sh" | head -3)"
+[ -n "$WIRE" ] && ok "接线: …" || no "接线: …未调用 preview"
+```
+缺陷：**文件里出现字符串 ≠ 被调用** —— `pre-push-check.sh` 的**缺件 fail-open 分支**（"pre-push-preview.sh 缺失 → 跳过"）也含同名串
+⇒ 该断言**在"删掉 preview 文件"时永不红**，不构成判别性证据。**实测确认**：本条被判为 grep 型弱判据，仅保留「声明在场」的信息量并**降级标注**。
+
+### 修法 1 · 行为判别子（夹具层，**不做端到端**）
+新增两个注入缝（镜像既有 `SYNO_SYNC_ONLY` 惯例，非新范式）：
+- `SYNO_PREVIEW_ONLY=1` → 只跑门禁 8（隔离单测）
+- `SYNO_PREVIEW_CMD=<shell 命令>` → 用桩替代真实 preview
+
+```
+$ STUB_FAIL='echo "STUB: 强制 preview 失败"; exit 1'
+$ SYNO_PREVIEW_ONLY=1 SYNO_PREVIEW_CMD="$STUB_FAIL" bash scripts/pre-push-check.sh
+── 门禁 8: 推前预演 (D1061 · fast ≤10s / full 可选) ─────
+STUB: 强制 preview 失败
+
+  ❌ 门禁 8: 推前预演未通过 — 推送已拒绝 (D1061 任务 4)
+rc=1                                        ← 判别子A：rc 非 0
+
+$ STUB_OK='echo "STUB: 强制 preview 通过"; exit 0'
+$ SYNO_PREVIEW_ONLY=1 SYNO_PREVIEW_CMD="$STUB_OK" bash scripts/pre-push-check.sh
+── 门禁 8: 推前预演 (D1061 · fast ≤10s / full 可选) ─────
+STUB: 强制 preview 通过
+rc=0                                        ← 判别子B：正向对照，排除"恒红"
+```
+
+### 修法 2 · 调用点判别（**定位式**，把判据限定在生产尾部区间）
+只 grep 全文件仍不判别（fail-open 分支会满足它）。故判据**限定自调用点注释起至文件末的区间**，三条并列：
+```
+$ 基线
+  ✅ 调用点判别: 定位到生产尾部区间（204 字节）
+  ✅ 调用点判别: 生产尾部**实际调用** run_gate8_preview
+  ✅ 调用点判别: 失败路径报文点名门禁 8
+  ✅ 调用点判别: 失败路径确有 exit 1（硬阻断）
+
+$ 变异体: 摘掉尾部 `if ! run_gate8_preview; then … exit 1; fi`
+  ❌ 调用点判别: 生产尾部未调用门禁 8（接线断裂）
+  ❌ 调用点判别: 失败路径报文缺失
+  ❌ 调用点判别: 失败路径无 exit 1
+  结果: 21 通过, 3 失败   rc=1        ← revert 后 24 通过, 0 失败 rc=0
+```
+
+### 为什么**不做**端到端（附理由，防后来者"补一个更真的"重复踩坑）
+端到端跑完整 `pre-push-check.sh` 会被 **golden-case F1 门禁**先拦，并触发 **`vitest --changed` 重型回归**
+——代价与收益不成比例（本判据的目标只是"门禁 8 在判定且在调用点上"，`SYNO_PREVIEW_ONLY` 已隔离达成）。
+**残留局限（如实登记）**：判别子 A/B 走的是 `SYNO_PREVIEW_ONLY` 早退路径调用**同一个函数**；
+"生产尾部是否调用"由修法 2 的**定位式结构判据**覆盖（非行为层）。两层合起来：
+函数判定正确性 = 行为层证据；调用点存在性 = 定位式结构证据。**二者缺一即留假绿口子。**
+
+### 另：`pre-push-check.sh` 缺件 fail-open **不作为缺陷项**
+沿用既有语义「脚本缺失 = CI 降级信号」+ **可见**告警（非静默）——这是设计意图，不是漏拦。按此口径登记，不定性为缺陷。
