@@ -40,7 +40,7 @@ d663ee22 chore: bypass COMMITTED 登记 (auto hook, D521)
 1. CT-2b 夹具 `-c %Y` 委托硬编码 `/usr/bin/stat`（BSD 宿主假设）：若未来套件跑在 GNU/Linux 宿主可能误红。建议后续卡在夹具注释显式声明或按 uname 分派。非阻断。
 2. `check-gate-integrity.sh` 报存量棘轮 STALE(bsd) pre-commit-check.sh:991（expires 2026-10-08，不阻断，禁碰清单内）。
 3. 沙箱内 `_bypass_append` 委托 bypass-ledger.sh 恒走降级路径（改前既有，stderr 噪音源，非本卡面）。
-4. 编码报告的「写集互斥险情」（开工时工作树有未提交并发改动）：队长核查 = 现工作树干净、提交序列自洽、diff 与派单写集一致，判定无残留写者；疑似首轮失联派单的残迹，未进入提交。
+4. 「写集互斥险情」归属已收口（2026-09-29 队长核验）：首轮派单执行者（后台子代理，中途不可寻址被误判失联）实际完成了同题独立复现+修复，其后与二次派单产出**逐字节一致**（`git diff` = 空），已 ff 对齐远端、**零重复提交**（实测 `ls-remote` 仍 = abb9adc8，提交序列 10 条不变）。两执行者独立得出相同根因与修法 = 结论交叉印证。附带：首轮执行者另跑 `simulate-ci.test.sh` → 16 通过 0 失败（约 35 分钟，EXIT=0），邻居面回归补全。
 
 ## 四、PR 正文素材（供 CTO session 开 PR）
 
