@@ -4,14 +4,38 @@
 #
 # 契约（铁律 47 契约优先）:
 #   输入:  环境 DOC_TRUTH_ROOT 覆盖仓库根（测试用）
-#          git 仓库 → 检查 untracked 新增 .md/.yaml 是否已登记；
+#          git 仓库 → **三源并集**：
+#            ① untracked（`git ls-files --others --exclude-standard`）
+#            ② staged-new（`git diff --cached --diff-filter=A`）
+#            ③ **base..HEAD 新增**（CT-D2 新增；`git diff --diff-filter=A <merge-base>..HEAD`）
 #          非 git（测试 fixture）→ 全量扫描模式
-#   输出:  每文件 ✅/❌ + 汇总；任一未登记 → exit 1（硬阻断）；全部登记 → exit 0
+#   输出:  每文件 ✅/❌ + 扫描源行 + 汇总（**必打印检查数 N**）；
+#          任一未登记 → exit 1（硬阻断）；全部登记 → exit 0
 #   降级:  DOCS-REGISTRY.yaml 缺失 → ⚠️ 警告 exit 0（台账未建立不阻断）
+#          base 全链不可解析 / merge-base 为空 → ⚠️ **显式降级**：源③跳过但**打印留痕**
+#          （沿用 pre-push 门禁 0-1 与 check-pr-budget.sh 对「fetch 失败」的既有语义：
+#            环境性缺 ref 不把所有 PR 误打成红，但绝不静默——留痕行即证据）
 #
-# 排除（生成物/历史区，无需登记）:
+# 排除（生成物/历史区/**运行期产物**，无需登记）:
 #   - docs/synova/DASHBOARD*.md（自动生成）
 #   - 路径含 /archive/ 或 /Archive/（历史归档，只读）
+#   - docs/synova/product-lines/evidence/（CT-D2 2026-09-28：任务级 M5 自验证据，
+#     **运行期产物口径**，与 DASHBOARD*.md 同类。**只豁免、不登记**——避免双真相源。
+#     依据：实测该目录 tracked 文档持续增长（本次实测 30 件，全仓口径 113 件），
+#     逐条登记会使每个任务都要改**共享**的 DOCS-REGISTRY.yaml（写冲突机器），
+#     且证据是"任务证明"而非"权威文档"，登记不产生真相价值。）
+#
+# CT-D2（2026-09-28）修 fail-open —— 根因 → 修法 → 判据:
+#   根因: 旧实现只取 ① ②。CI `actions/checkout`（fetch-depth: 0）后所有文件都已
+#     tracked+committed ⇒ ①② **皆空** ⇒ 汇总「检查 0 个文档」⇒ FAIL=0 ⇒ 放行。
+#     即：门禁只在**本地未提交态**有效，在**提交态从未真正行使**（fail-open）。
+#   修法: 增源 ③ = 本分支 base..HEAD **新增**的文档；base 解析链 origin/main →
+#     main → origin/HEAD（与 scripts/control-tower/check-pr-budget.sh 同口径）。
+#     ⚠️ 不做"全仓 tracked 全量登记"：实测全仓 tracked .md/.yaml 过现有排除后仍有
+#     **872 件候选、其中 751 件未登记**（台账仅 39 条、面向权威文档）⇒ 全量口径会
+#     把每个 PR 都判红。故范围严格限定为"**本分支新增**"（与门禁本来的语义一致）。
+#   判据: 纯 tracked 仓库（无 untracked/staged）+ 分支新增未登记文档 ⇒
+#     必须「检查 N 个文档」且 N>0、exit 1（见 tests/doc-system/doc-registry-gate.test.sh 用例 H）。
 # ═══════════════════════════════════════════════════════════════════════════════
 set +e
 ROOT="${DOC_TRUTH_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}" # swallow-ok:
@@ -19,7 +43,7 @@ REGISTRY="$ROOT/docs/authority/DOCS-REGISTRY.yaml"
 [ -f "$REGISTRY" ] || { echo "  ⚠️ 降级: DOCS-REGISTRY.yaml 不存在，跳过登记检查（exit 0）"; exit 0; }
 REG=$(cat "$REGISTRY")
 
-EXCLUDE='^tmp/|\.claude/|memory/|docs/plans/codex/implementation/|docs/synova/audit-reports/|docs/authority/chronicle-drafts/|docs/synova/DASHBOARD.*\.md$|/archive/|/Archive/'
+EXCLUDE='^tmp/|\.claude/|memory/|docs/plans/codex/implementation/|docs/synova/audit-reports/|docs/authority/chronicle-drafts/|docs/synova/DASHBOARD.*\.md$|/archive/|/Archive/|docs/synova/product-lines/evidence/'
 
 FAIL=0; CHECKED=0
 check_file() { # $1 = 相对路径
@@ -38,10 +62,28 @@ check_file() { # $1 = 相对路径
 }
 
 if git -c safe.directory="$ROOT" -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+  # ── CT-D2 源③：base 解析链 + merge-base..HEAD 新增文档 ──
+  BASE_REF=""
+  for _cand in origin/main main origin/HEAD; do
+    if git -c safe.directory="$ROOT" -C "$ROOT" rev-parse --verify --quiet "$_cand" >/dev/null 2>&1; then BASE_REF="$_cand"; break; fi
+  done
+  MERGE_BASE=""
+  [ -n "$BASE_REF" ] && MERGE_BASE="$(git -c safe.directory="$ROOT" -C "$ROOT" merge-base "$BASE_REF" HEAD 2>/dev/null)" # swallow-ok: merge-base 失败即降级（下一分支显式留痕），不改判定
+  ADDED_VS_BASE=""
+  if [ -n "$MERGE_BASE" ]; then
+    ADDED_VS_BASE="$(git -c safe.directory="$ROOT" -C "$ROOT" diff --name-only --diff-filter=A "$MERGE_BASE"..HEAD 2>/dev/null)" # swallow-ok: diff 失败即源③为空（扫描源行已留痕），不改判定
+  elif [ -n "$BASE_REF" ]; then
+    echo "  ⚠️ 降级: merge-base($BASE_REF, HEAD) 为空 → 源③（base..HEAD 新增）跳过（显式留痕，不静默）"
+  else
+    echo "  ⚠️ 降级: base 全链不可解析（尝试过 origin/main / main / origin/HEAD）→ 源③（base..HEAD 新增）跳过（显式留痕，不静默；请先 git fetch origin）"
+  fi
+  echo "  ℹ️ 扫描源: ① untracked ② staged-new ③ base..HEAD 新增（base=${BASE_REF:-不可解析} merge-base=${MERGE_BASE:0:8}）"
   # untracked 新增 + staged 新增（git add 过、未提交）都要登记；
-  # 提交场景靠 staged 集合（git add 后文件不再出现在 ls-files --others）
-  while IFS= read -r rel; do check_file "$rel"; done < <({ git -c safe.directory="$ROOT" -C "$ROOT" ls-files --others --exclude-standard 2>/dev/null; git -c safe.directory="$ROOT" -C "$ROOT" diff --cached --name-only --diff-filter=A 2>/dev/null; } | grep -E '\.(md|yaml)$' | sort -u) # swallow-ok:
+  # 提交场景靠 staged 集合（git add 后文件不再出现在 ls-files --others）；
+  # **CI/纯提交态靠源③**（①② 皆空时仍能扫到本分支新增的文档 —— CT-D2 修 fail-open）
+  while IFS= read -r rel; do check_file "$rel"; done < <({ git -c safe.directory="$ROOT" -C "$ROOT" ls-files --others --exclude-standard 2>/dev/null; git -c safe.directory="$ROOT" -C "$ROOT" diff --cached --name-only --diff-filter=A 2>/dev/null; printf '%s\n' "$ADDED_VS_BASE"; } | grep -E '\.(md|yaml)$' | sort -u) # swallow-ok:
 else
+  echo "  ℹ️ 扫描源: 全量 find（非 git 模式）"
   while IFS= read -r rel; do check_file "$rel"; done < <(find "$ROOT" -type f \( -name '*.md' -o -name '*.yaml' \) 2>/dev/null | sed "s|^$ROOT/||") # swallow-ok:
 fi
 

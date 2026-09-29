@@ -1,0 +1,22 @@
+{
+  "task_id": "D967",
+  "title": "P0 measurements 时序层（建表+接线+基线改名+修零值污染+产品价值验证）",
+  "status": "spec_done",
+  "risk": "high",
+  "domain": "mac",
+  "owner": "mac-coding",
+  "executor": "dsh-squad",
+  "milestone": "哨兵体系整改（十环判据）",
+  "spec": "docs/synova/architecture/SYNOVA-哨兵体系-最终版-v1-20260925.md",
+  "write_set": [
+    "src/store/measurements.ts",
+    "src/sentinel/**",
+    "src/agent/post-diagnosis-processor.ts",
+    "src/sentinel/baseline-store.ts",
+    "tests/**",
+    "task-state/D967.json"
+  ],
+  "updated_at": "2026-09-25",
+  "updated_by": "synova-cto",
+  "note": "依据派单 docs/synova/coordination/派单-哨兵体系整改-20260925.md；判据见该文档逐卡 Done 段。"
+}

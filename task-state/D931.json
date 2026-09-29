@@ -1,7 +1,7 @@
 {
   "task_id": "D931",
   "title": "小队执行形态接线（队长预设挂 Agent Teams + 派单模板执行形态硬字段 + 纪律条目）",
-  "status": "impl_done",
+  "status": "audited",
   "risk": "high",
   "domain": "mac",
   "owner": "mac-coding",
@@ -10,12 +10,20 @@
   "worktree": ".synova-wt-d931",
   "base": "origin/main 967a58e5",
   "milestone": "M0 项目管理基建",
-  "depends_on": ["D926"],
+  "depends_on": [
+    "D926"
+  ],
   "blocked": null,
   "target": "2026-W40",
   "spec": ".claude/task-briefs/2026-09-23-D931-squad-team-wiring.md",
   "impl": "根因修复（创始人 2026-09-23 指出「小队是摆设、队长预设没到位」）：① install-squad-lead.sh 把 legacy delegation（子代理）替换为 agent-team + tool-agent-team + ui-agent-team（含 overlay 同构 config，maxMembers=4 把成员上限物理化）+ 修脚本原有全角括号紧贴变量 bug；② squad-lead SYSTEM-PROMPT 增「团队机制」节（怎么建成员/共享任务格式/队长不下场/运行记录判据）；③ squad-discipline 技能增同节（双写一致）；④ 派单模板增「执行形态」硬字段（DSH 默认不建队友 → 派单必须显式要求）。",
-  "audit": null,
+  "audit": {
+    "verdict": "CONDITIONAL PASS",
+    "auditor": "kimi-k3",
+    "report": "docs/synova/audit-reports/2026-09-24-K3-批次2-D918-D936.md",
+    "date": "2026-09-24",
+    "summary": "3/0/4 落位仅 CLI 侧（~/.dsh 实物+mtime 吻合）；maxMembers=4 执行机制在 DSH roster.ts:274 属实；P1：CLI 运行时 0.1.0-rc.8 无 experimental 三包（195 包 0 命中）无法解析；桌面 trial 0.1.7-alpha.2 预设副本仍 9/21 旧版（delegation 残留）——'重开 session 即生效'两侧各断一半。条件：双根同步+插件缺失处置"
+  },
   "fix_task_id": null,
   "write_set": [
     "docs/synova/presets/install-squad-lead.sh",
@@ -31,6 +39,6 @@
     "after_install": "落位后预设: agent-team:1 tool-agent-team:1 ui-agent-team:1 残留 delegation:0 | maxMembers:4",
     "note": "预设需重启 DSH / 新开 session 生效"
   },
-  "updated_at": "2026-09-23",
-  "updated_by": "synova-cto"
+  "updated_at": "2026-09-24",
+  "updated_by": "kimi-k3"
 }

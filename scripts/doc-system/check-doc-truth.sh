@@ -108,7 +108,7 @@ done
 # ---- W1 版本 vs 最新 tag（仅警告）----
 LATEST_TAG=$(git -c safe.directory="$ROOT" -C "$ROOT" tag 2>/dev/null | sort -V | tail -1) # swallow-ok:
 if [ -n "$LATEST_TAG" ] && [ -n "$VER_AGENTS" ] && [ "$LATEST_TAG" != "$VER_AGENTS" ]; then
-  warn "W1 版本滞后" "文档头部 $VER_AGENTS vs 最新 tag $LATEST_TAG（版本轴可能不同，仅提示）"
+  warn "W1 版本滞后" "文档头部 $VER_AGENTS vs 最新 tag ${LATEST_TAG}（版本轴可能不同，仅提示）"
 fi
 
 echo "── 汇总 ──"

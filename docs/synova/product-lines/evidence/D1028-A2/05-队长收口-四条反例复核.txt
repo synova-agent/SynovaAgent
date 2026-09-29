@@ -1,0 +1,97 @@
+═══ D1028 队长收口复核 —— 四条反例（含卡面强调的 ①②）═══
+生成: 2026-09-27T06:37:23Z (UTC)
+被验物（冻结）: commit 1b37ccf9 | 脚本 sha256 = 45c6bd5edc1c150128b4ba56fc2461b02819f10c58bf232090a171b923eb8b70
+方法: 注入缝 --diff-status（name-status 逐行）+ 真 git 沙箱 两种；队长亲自跑，不采信成员自报。
+
+━━━ 卡面判据 ① 纯删 src/** 13 件 ⇒ 必须仍被拦 ━━━
+── ① 纯删 src/** 13 件（注入缝） ──
+$ bash scripts/control-tower/check-pr-budget.sh --diff-status '<13 行 name-status>'
+── PR 预算门禁（D734）: 基线=origin/main 上限=12 文件 / 落后阈值=20 ──
+  ℹ️  出库豁免不适用（D1028 路径级豁免未生效）:
+       ⓐ 满足: 无增/改件（纯删除 13 件 + 重命名 0 件）
+       ⓑ 不满足: 白名单外路径 13 件（未落出库白名单）:
+         src/mod001.ts
+         src/mod002.ts
+         src/mod003.ts
+         src/mod004.ts
+         src/mod005.ts
+         src/mod006.ts
+         src/mod007.ts
+         src/mod008.ts
+         src/mod009.ts
+         src/mod010.ts
+         src/mod011.ts
+         src/mod012.ts
+         src/mod013.ts
+       ⓑ 不满足: 命中 ❌ 拒绝名单 13 件（绝不豁免）:
+         src/mod001.ts
+         src/mod002.ts
+         src/mod003.ts
+         src/mod004.ts
+         src/mod005.ts
+         src/mod006.ts
+         src/mod007.ts
+         src/mod008.ts
+         src/mod009.ts
+         src/mod010.ts
+         src/mod011.ts
+         src/mod012.ts
+         src/mod013.ts
+  ❌ ① 变更文件数 13 > 上限 12 —— 拆 PR（禁调高上限）
+  ❌ ① D1028 旁路封堵: 纯删除/重命名命中 ❌ 拒绝名单 13 件 —— 绝不豁免（exit 1）
+  ✅ ② 变更单域: ✅ PASS 13 个文件同域: win（无归属 0，域判定豁免 0）
+  ✅ ③ 落后检查跳过（注入模式 --files/--diff-status 无 git 上下文）
+❌ FAIL PR 超预算 —— 拆 PR，不要调高上限
+=> exit code: 1  （期望 1）  ✅ 相符
+=> 输出含「拒绝名单」 ✅
+
+━━━ 卡面判据 ② 删白名单内 13 件 + 改 1 件 ⇒ 必须仍被拦 ━━━
+── ② 删 docs/synova/archive/ 13 + 改 1（非 D860 的白名单前缀） ──
+$ bash scripts/control-tower/check-pr-budget.sh --diff-status '<14 行 name-status>'
+── PR 预算门禁（D734）: 基线=origin/main 上限=12 文件 / 落后阈值=20 ──
+  ℹ️  出库豁免不适用（D1028 路径级豁免未生效）:
+       ⓐ 不满足: 变更含 1 件增/改（非纯删除/重命名）→ D/R 计入预算
+  ❌ ① 变更文件数 14 > 上限 12 —— 拆 PR（禁调高上限）
+  ✅ ② 变更单域: ✅ PASS 14 个文件同域: win（无归属 0，域判定豁免 0）
+  ✅ ③ 落后检查跳过（注入模式 --files/--diff-status 无 git 上下文）
+❌ FAIL PR 超预算 —— 拆 PR，不要调高上限
+=> exit code: 1  （期望 1）  ✅ 相符
+=> 输出含「14 > 上限 12」 ✅
+
+━━━ 卡面判据 ②'（判别性夹具）删白名单内 1 + 改 1 ⇒ exit 0 且必须报「出库豁免不适用」━━━
+── ②' 删 1 + 改 1 ──
+$ bash scripts/control-tower/check-pr-budget.sh --diff-status '<2 行 name-status>'
+── PR 预算门禁（D734）: 基线=origin/main 上限=12 文件 / 落后阈值=20 ──
+  ℹ️  出库豁免不适用（D1028 路径级豁免未生效）:
+       ⓐ 不满足: 变更含 1 件增/改（非纯删除/重命名）→ D/R 计入预算
+  ✅ ① 变更文件数 2 ≤ 上限 12
+  ✅ ② 变更单域: ✅ PASS 2 个文件同域: win（无归属 0，域判定豁免 0）
+  ✅ ③ 落后检查跳过（注入模式 --files/--diff-status 无 git 上下文）
+✅ PASS PR 预算内（2 文件）
+=> exit code: 0  （期望 0）  ✅ 相符
+=> 输出含「出库豁免不适用」 ✅
+
+━━━ 卡面判据 ③ 只删白名单内 300 件 ⇒ 豁免生效 ━━━
+── ③ 纯删 docs/archive/ 300 件 ──
+$ bash scripts/control-tower/check-pr-budget.sh --diff-status '<300 行 name-status>'
+── PR 预算门禁（D734）: 基线=origin/main 上限=12 文件 / 落后阈值=20 ──
+  ✅ ① D734 出库豁免生效（300 件纯删除/重命名，全部落出库白名单）
+  ⚠️  未读到「## 出库声明」（pre-commit 读不到 PR 正文）—— 请在 PR 描述补「## 出库声明」批次段，合并级对账见 D708
+  ✅ ② 无变更文件 → 域校验跳过
+  ✅ ③ 落后检查跳过（注入模式 --files/--diff-status 无 git 上下文）
+✅ PASS PR 预算内（0 文件）
+=> exit code: 0  （期望 0）  ✅ 相符
+=> 输出含「出库豁免生效」 ✅
+
+━━━ 卡面判据 ④ 白名单内删除 + 无 ## 出库声明 ⇒ 按本队裁定（豁免仍生效 + ⚠️）━━━
+── ④ 无需声明 ──
+$ bash scripts/control-tower/check-pr-budget.sh --diff-status '<5 行 name-status>'
+── PR 预算门禁（D734）: 基线=origin/main 上限=12 文件 / 落后阈值=20 ──
+  ✅ ① D734 出库豁免生效（5 件纯删除/重命名，全部落出库白名单）
+  ⚠️  未读到「## 出库声明」（pre-commit 读不到 PR 正文）—— 请在 PR 描述补「## 出库声明」批次段，合并级对账见 D708
+  ✅ ② 无变更文件 → 域校验跳过
+  ✅ ③ 落后检查跳过（注入模式 --files/--diff-status 无 git 上下文）
+✅ PASS PR 预算内（0 文件）
+=> exit code: 0  （期望 0）  ✅ 相符
+=> 输出含「出库声明」 ✅
+

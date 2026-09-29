@@ -18,13 +18,33 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   ⑥ 分支豁免  — auto/** 自动分支 → skip
 #   ⑦ 判定失败  — 取不到 merge-base → exit 2（degraded，不假装通过）
 #   ⑧ 文档降级  — 无声明但全为文档范围 → skip + degraded 登记
+#   ⑮ CT-C 合成 merge 主题不得提供 D#（含 d54 / 真实 SHA / 大写裸 SHA / 正例不回归）
+#   ⑯ CT-C 端到端: HEAD=合成 merge ⇒ 从**分支自身提交**推断 D712（不取 SHA 伪号）
+#   ⑰ CT-C 硬判据②: 同一份代码 × 5 个不同 SHA ⇒ 输出**逐字节一致**
+#   ⑱ CT-C --first-parent: 并入侧（第二父链）的 D# 不得获胜（去掉该参数即红）
+#   ⑲ CT-C merge-base 范围: 并入的 base 历史不得提供 D#（去掉范围即红）
+#   ⑳ CT-A2 声明源多命中 ⇒ fail-closed + 逐条点名（dev doc / brief 各一）
 #   接线        — ci.yml 真的调用本 gate（防「机制建成未接线」M3；D664 刚踩过同型）
 # 沙箱: mktemp git 仓库 + 复制 scripts/control-tower 解析器，零网络零真实仓库依赖
+# 变异注入: SYNO_GATE_SRC=<path> 指向变异副本 ⇒ "改坏即红"取证，零真实文件改动
 # ═══════════════════════════════════════════════════════════════
 set -uo pipefail
 unset GIT_DIR GIT_WORK_TREE
+# ── 平台方言硬约束（windows-compat 模式 1/2）: **禁裸 python3** ──
+#   Win Git Bash 常无 python3（仅 python/py），且损坏 shim 须试运行才可判可用（D330）。
+#   探测失败 → 显式 exit 2（夹具无法判定 ≠ 通过）。
+PYBIN=""
+for _c in python3 python py; do
+  if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then PYBIN="$_c"; break; fi
+done
+if [ -z "$PYBIN" ]; then
+  echo "  ❌ PYBIN 不可用（python3/python/py 均缺失或不可运行）—— 夹具无法判定，显式失败而非静默跳过" >&2
+  exit 2
+fi
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-GATE="$REPO/scripts/control-tower/merge_writeset_gate.py"
+# 被检实现注入点（ctrl-tower-change 模式 5）: 默认 = 仓内实现；
+#   SYNO_GATE_SRC=<path> 指向**变异副本** ⇒ "改坏即红"取证，零真实文件改动。
+GATE_SRC="${SYNO_GATE_SRC:-$REPO/scripts/control-tower/merge_writeset_gate.py}"
 PASS=0; FAIL=0
 ok() { echo "  ✅ $1"; PASS=$((PASS+1)); }
 no() { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
@@ -39,7 +59,7 @@ grep -q 'merge_writeset_gate.py' "$REPO/.github/workflows/ci.yml" \
 # ── 沙箱仓库 ──
 SB="$TMPD/sb"
 mkdir -p "$SB/scripts/control-tower" "$SB/.claude/task-briefs" "$SB/src" "$SB/docs"
-cp "$REPO/scripts/control-tower/merge_writeset_gate.py" "$SB/scripts/control-tower/"
+cp "$GATE_SRC" "$SB/scripts/control-tower/merge_writeset_gate.py"
 cp "$REPO/scripts/control-tower/brief_parser.py" "$SB/scripts/control-tower/"
 cp "$REPO/scripts/control-tower/devdoc_writeset.py" "$SB/scripts/control-tower/"
 git -C "$SB" init -q
@@ -59,7 +79,7 @@ mkbrief() { # $1 = 额外段落（写 brief 文件）
   } > "$SB/.claude/task-briefs/2026-09-12-D708-sandbox.md"
 }
 run_gate() { # $@ = 额外 gate 参数
-  (cd "$SB" && python3 "$SB/scripts/control-tower/merge_writeset_gate.py" \
+  (cd "$SB" && "$PYBIN" "$SB/scripts/control-tower/merge_writeset_gate.py" \
      --repo-root "$SB" --base "$BASE" --head HEAD --branch "${BRANCH:-fix/D708-sandbox}" "$@" 2>&1)
 }
 
@@ -76,7 +96,15 @@ reset_sandbox() { # $1 = 豁免段落（可空）; $2 = --no-brief 表示删掉 
   git -C "$SB" commit -q -m "chore: scaffold"
   BASE=$(git -C "$SB" rev-parse HEAD)
 }
-commit_it() { git -C "$SB" add -A >/dev/null 2>&1; git -C "$SB" commit -q -m "$1"; }
+commit_it() { # 提交**必须真的产生变更** —— 否则 git 静默失败（无差异），BASE..HEAD 变空，
+              # 后续断言会落进 gate 的"变更集为空 → exit 0"早期分支而**恒绿**（假信心）。
+              # D954 实测: ⑨b 第二段曾因重复写同内容触发此坑。
+  git -C "$SB" add -A >/dev/null 2>&1
+  if ! git -C "$SB" commit -q -m "$1"; then
+    no "commit_it 未产生提交（无差异或提交失败）: $1 —— 后续断言将失去判别性"
+    return 1
+  fi
+}
 
 # ── ① 正常放行 ──
 reset_sandbox ""
@@ -144,7 +172,7 @@ BRANCH="main" OUT=$(run_gate); rc=$?
 BRANCH="fix/D708-sandbox"
 
 # ── ⑦ 判定失败 → exit 2（不假装通过）──
-OUT=$(cd "$SB" && python3 "$SB/scripts/control-tower/merge_writeset_gate.py" \
+OUT=$(cd "$SB" && "$PYBIN" "$SB/scripts/control-tower/merge_writeset_gate.py" \
         --repo-root "$SB" --base no-such-ref-xyz --head HEAD --branch fix/D708-sandbox 2>&1); rc=$?
 [ "$rc" -eq 2 ] && ok "⑦ 取不到 merge-base → exit 2" || no "⑦ 期望 exit 2，实得 $rc"
 
@@ -168,14 +196,20 @@ else
   no "⑨b CJK 文件名处理异常: rc=$rc :: $(echo "$OUT" | grep -a 夹带 | head -2)"
 fi
 # 声明里加入该中文路径 → 必须转绿（证明匹配而非转义串比较）
+# D954 修复: 原实现在此**重复写入与上一段相同的 'z'** → 无差异 → commit_it 静默失败 →
+#   BASE==HEAD → 变更集为空 → gate 在"变更集为空"分支返回 0 ⇒ 本断言此前是**恒绿**
+#   （实测 BASE=HEAD、变更集为空）。改写为不同内容使变更真实存在。
 reset_sandbox $'## 写集豁免\n- docs/synova/coordination/D708-中文设计稿-20260912.md — CJK 路径匹配演示'
-printf 'z\n' > "$SB/docs/synova/coordination/D708-中文设计稿-20260912.md"; commit_it "docs(D708): cjk declared"
+printf 'z-declared\n' > "$SB/docs/synova/coordination/D708-中文设计稿-20260912.md"; commit_it "docs(D708): cjk declared"
+# 非空变更守卫: 本断言的前提是"确有变更可比"（否则又会退回恒绿）
+[ -n "$(git -C "$SB" diff --name-only "$BASE"..HEAD)" ] \
+  && ok "⑨b 前提: 变更集非空（断言有判别性）" || no "⑨b 前提不成立: 变更集为空 → 后续断言恒绿"
 OUT=$(run_gate); rc=$?
 [ "$rc" -eq 0 ] && ok "⑨b CJK 路径加入声明后转绿（匹配语义正确）" || no "⑨b CJK 路径声明未生效: rc=$rc"
 
 # ── ⑨ JSON 输出契约（CI 消费）──
 OUT=$(run_gate --json | tail -1)
-echo "$OUT" | python3 -c "
+echo "$OUT" | "$PYBIN" -c "
 import json,sys
 d=json.load(sys.stdin)
 assert d['component']=='merge-writeset-gate', d
@@ -187,9 +221,9 @@ echo ""
 echo "=== D708 复核修复: D# 推断 ==="
 
 # ⑩ parse_did 大小写不敏感 + 归一化大写（真实输入，主 CTO 复现命令同款）
-DID_OUT=$(python3 - "$REPO" <<'PYEOF'
+DID_OUT=$("$PYBIN" - "$GATE_SRC" <<'PYEOF'
 import importlib.util as u, sys
-sp = u.spec_from_file_location("g", sys.argv[1] + "/scripts/control-tower/merge_writeset_gate.py")
+sp = u.spec_from_file_location("g", sys.argv[1])
 m = u.module_from_spec(sp); sp.loader.exec_module(m)
 cases = [("feat/win-d702-write-op-no-swallow", "D702"),
          ("docs(d702): 补文档", "D702"),
@@ -204,7 +238,7 @@ PYEOF
 # ⑪ 回退链跳过自动登记影子提交（HEAD 常为登记提交，其 subject 带历史 D#）
 #    地形: 分支名小写无大写 D 期 → 提交 feat(d712) → 再叠一个登记影子提交(含 D521)
 SB2="$TMPD/d712"; mkdir -p "$SB2/scripts/control-tower" "$SB2/.claude/task-briefs" "$SB2/src"
-cp "$REPO/scripts/control-tower/merge_writeset_gate.py" "$SB2/scripts/control-tower/"
+cp "$GATE_SRC" "$SB2/scripts/control-tower/merge_writeset_gate.py"
 cp "$REPO/scripts/control-tower/brief_parser.py" "$SB2/scripts/control-tower/"
 cp "$REPO/scripts/control-tower/devdoc_writeset.py" "$SB2/scripts/control-tower/"
 git -C "$SB2" init -q; git -C "$SB2" config user.email t@t.local; git -C "$SB2" config user.name t
@@ -214,10 +248,10 @@ git -C "$SB2" commit -q -m "chore: base"; B2=$(git -C "$SB2" rev-parse HEAD)
 printf 'a\n' > "$SB2/src/a.ts"; git -C "$SB2" add -A >/dev/null 2>&1
 git -C "$SB2" commit -q -m "feat(win-d712): declared file"
 git -C "$SB2" commit -q --allow-empty -m "chore: bypass COMMITTED 登记 (auto hook, D521)"
-OUT=$(cd "$SB2" && python3 "$SB2/scripts/control-tower/merge_writeset_gate.py" \
+OUT=$(cd "$SB2" && "$PYBIN" "$SB2/scripts/control-tower/merge_writeset_gate.py" \
         --repo-root "$SB2" --base "$B2" --head HEAD \
         --branch feat/win-write-op-no-swallow --json 2>&1 | tail -1)
-TID=$(echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('task_id') or 'NONE', d.get('task_id_source'), d['status'])" 2>/dev/null || echo "PARSE-FAIL")
+TID=$(echo "$OUT" | "$PYBIN" -c "import json,sys; d=json.load(sys.stdin); print(d.get('task_id') or 'NONE', d.get('task_id_source'), d['status'])" 2>/dev/null || echo "PARSE-FAIL")
 case "$TID" in
   "D712 commit-subject pass") ok "⑪ 回退链跳过登记提交 → D712（非 D521）且判定 pass" ;;
   *) no "⑪ 回退链错配: '$TID'（期望 'D712 commit-subject pass'）" ;;
@@ -225,7 +259,8 @@ esac
 
 # ⑫ PR 正文声明源（复核建议项）: GITHUB_EVENT_PATH 里的 ## 写集豁免 生效
 SB3="$TMPD/prbody"; mkdir -p "$SB3/scripts/control-tower" "$SB3/.claude/task-briefs" "$SB3/src"
-cp "$REPO/scripts/control-tower/"*.py "$SB3/scripts/control-tower/"
+cp "$REPO/scripts/control-tower/brief_parser.py" "$REPO/scripts/control-tower/devdoc_writeset.py" "$SB3/scripts/control-tower/"
+cp "$GATE_SRC" "$SB3/scripts/control-tower/merge_writeset_gate.py"
 git -C "$SB3" init -q; git -C "$SB3" config user.email t@t.local; git -C "$SB3" config user.name t
 printf '#CRITERIA: A\n\n# Task Brief\n> 认领: 🛠\n\n## Q0\n### a) x\n\n## Q1\ny\n\n## Q2:\n做什么:\n- src/a.ts\n不做什么:\n- 不改 scripts/audit/audit-rules.sh\n\n## Q3\nz\n\n## 架构层:\nscripts\n\n## Done 标准\n- [x] v\n' > "$SB3/.claude/task-briefs/2026-09-12-D708-pb.md"
 printf 'seed\n' > "$SB3/seed.txt"; git -C "$SB3" add -A >/dev/null 2>&1
@@ -235,11 +270,400 @@ git -C "$SB3" add -A >/dev/null 2>&1; git -C "$SB3" commit -q -m "feat(D708): ou
 cat > "$TMPD/event.json" <<'JSONEOF'
 {"pull_request": {"body": "## 写集豁免\n- src/outside.ts — 并行线只读引用（PR 正文声明演示）"}}
 JSONEOF
-OUT=$(cd "$SB3" && GITHUB_EVENT_PATH="$TMPD/event.json" python3 "$SB3/scripts/control-tower/merge_writeset_gate.py" \
+OUT=$(cd "$SB3" && GITHUB_EVENT_PATH="$TMPD/event.json" "$PYBIN" "$SB3/scripts/control-tower/merge_writeset_gate.py" \
         --repo-root "$SB3" --base "$B3" --head HEAD --branch fix/D708-pb 2>&1); rc=$?
 { [ "$rc" -eq 0 ] && echo "$OUT" | grep -q 'PR 正文声明演示'; } \
   && ok "⑫ PR 正文（GITHUB_EVENT_PATH）声明源生效 → exit 0 且打印理由" \
   || no "⑫ PR 正文声明源未生效: rc=$rc"
+
+# ═══ D954: --did 显式覆盖 + infer_did 回退诊断（K3 判 #741 建议项）═══
+echo ""
+echo "=== D954: --did 覆盖 / infer_did 回退诊断 ==="
+
+# 共同地形: **分支名无 D# + 提交 subject 无 D#** → D# 只能来自 --did 或文件声明源。
+#   这样才真正压到"推断失败"路径（既有沙箱用 fix/D708-sandbox 分支，分支名自带 D#，压不到）。
+mk_sb_nodid() { # $1=目录 [$2=brief 文件名（省略=不写 brief）]
+  local d="$1" bf="${2:-}"
+  mkdir -p "$d/scripts/control-tower" "$d/.claude/task-briefs" "$d/src" "$d/docs"
+  cp "$GATE_SRC" "$d/scripts/control-tower/merge_writeset_gate.py"
+  cp "$REPO/scripts/control-tower/brief_parser.py" "$d/scripts/control-tower/"
+  cp "$REPO/scripts/control-tower/devdoc_writeset.py" "$d/scripts/control-tower/"
+  git -C "$d" init -q
+  git -C "$d" config user.email t@t.local
+  git -C "$d" config user.name t
+  if [ -n "$bf" ]; then
+    { printf '#CRITERIA: A\n\n# Task Brief: D945 sandbox\n> 认领: 🛠 编码 session\n\n'
+      printf '## Q0: 定位\n### a) 拼图\n控制塔。\n\n## Q1: 调研\n铁律 35。\n\n'
+      printf '## Q2: 范围 — 最简方案\n做什么:\n- src/a.ts\n不做什么:\n- 不改 scripts/audit/audit-rules.sh\n\n'
+      printf '## Q3: 验收\n入口: CI。\n\n## 架构层:\nscripts（控制塔域）\n\n## Done 标准\n- [x] verify: x\n'
+    } > "$d/.claude/task-briefs/$bf"
+  fi
+  printf 'seed\n' > "$d/seed.txt"
+  git -C "$d" add -A >/dev/null 2>&1
+  git -C "$d" commit -q -m "chore: base"        # subject 刻意无 D#
+}
+
+# ── ⑬ --did 显式覆盖 ──
+SB4="$TMPD/did-override"
+mk_sb_nodid "$SB4" "2026-09-25-D945-sandbox.md"
+B4=$(git -C "$SB4" rev-parse HEAD)
+printf 'a\n' > "$SB4/src/a.ts"
+git -C "$SB4" add -A >/dev/null 2>&1
+git -C "$SB4" commit -q -m "feat: declared file"          # subject 刻意无 D#
+# ⑬-1 判别性对照: 不给 --did → D# 推不出 → 三源全空 → fail-closed
+#      （这条证明下面的绿**真的来自 --did**，而不是恒真）
+OUT=$(cd "$SB4" && "$PYBIN" "$SB4/scripts/control-tower/merge_writeset_gate.py" \
+        --repo-root "$SB4" --base "$B4" --head HEAD --branch fix/no-did-anywhere 2>&1); rc=$?
+[ "$rc" -eq 2 ] && ok "⑬-1 对照: 无 --did → fail-closed exit 2（D# 推不出）" \
+                || no "⑬-1 对照: 期望 exit 2，实得 $rc"
+# ⑬-2 给 --did D945 → 来源记为 explicit，声明命中 → exit 0
+OUT=$(cd "$SB4" && "$PYBIN" "$SB4/scripts/control-tower/merge_writeset_gate.py" \
+        --repo-root "$SB4" --base "$B4" --head HEAD --branch fix/no-did-anywhere \
+        --did D945 --json 2>&1 | tail -1)
+PARSED=$(echo "$OUT" | "$PYBIN" -c "import json,sys;d=json.load(sys.stdin);print(d.get('task_id'),d.get('task_id_source'),d.get('status'))" 2>/dev/null || echo "PARSE-FAIL")
+case "$PARSED" in
+  "D945 explicit pass") ok "⑬-2 --did D945 → task_id=D945 / source=explicit / pass" ;;
+  *) no "⑬-2 --did 覆盖未生效: '$PARSED'（期望 'D945 explicit pass'）" ;;
+esac
+# ⑬-3 --did 取小写须归一化为大写（与 parse_did/brief 文件名口径一致）
+OUT=$(cd "$SB4" && "$PYBIN" "$SB4/scripts/control-tower/merge_writeset_gate.py" \
+        --repo-root "$SB4" --base "$B4" --head HEAD --branch fix/no-did-anywhere \
+        --did d945 --json 2>&1 | tail -1)
+PARSED=$(echo "$OUT" | "$PYBIN" -c "import json,sys;d=json.load(sys.stdin);print(d.get('task_id'),d.get('task_id_source'))" 2>/dev/null || echo "PARSE-FAIL")
+[ "$PARSED" = "D945 explicit" ] && ok "⑬-3 --did 小写 d945 归一化为 D945" \
+                                || no "⑬-3 大小写未归一化: '$PARSED'"
+# ⑬-4 人类可读输出必须打印来源（"同时打印来源便于诊断"）
+OUT=$(cd "$SB4" && "$PYBIN" "$SB4/scripts/control-tower/merge_writeset_gate.py" \
+        --repo-root "$SB4" --base "$B4" --head HEAD --branch fix/no-did-anywhere --did D945 2>&1); rc=$?
+{ [ "$rc" -eq 0 ] && echo "$OUT" | grep -q 'D# 推断来源: explicit'; } \
+  && ok "⑬-4 打印 D# 推断来源 = explicit（来源可见）" \
+  || no "⑬-4 未打印 explicit 来源: rc=$rc"
+# ⑬-5 反例: --did 值不合法 → fail-closed exit 2（**拒绝静默改用其它来源推断出的 D#**）
+#      自建沙箱（不复用 $SB：⑨b 后 $SB 的 BASE==HEAD，变更集为空 → 会在早期分支返回 0，
+#      根本走不到 D# 推断，断言会变成恒绿）。
+#      地形刻意让"分支名本身带 D# 且声明齐备"→ 不设此保护就会静默回退到 D708 并 rc=0；
+#      设了保护则 rc=2 ⇒ 该断言对保护本身敏感（下方 ⑬-5a 即是"无保护时会绿"的基线证明）。
+SB6="$TMPD/did-invalid"
+mk_sb_nodid "$SB6" "2026-09-12-D708-guard.md"
+B6=$(git -C "$SB6" rev-parse HEAD)
+printf 'a\n' > "$SB6/src/a.ts"
+git -C "$SB6" add -A >/dev/null 2>&1
+git -C "$SB6" commit -q -m "feat: declared file"          # subject 无 D#；D# 只能来自分支名
+# ⑬-5a 基线: 不给 --did → 分支名推断出 D708 + 声明齐备 → exit 0（证明本场景"本来会绿"）
+OUT=$(cd "$SB6" && "$PYBIN" "$SB6/scripts/control-tower/merge_writeset_gate.py" \
+        --repo-root "$SB6" --base "$B6" --head HEAD --branch fix/D708-guard --json 2>&1 | tail -1)
+PARSED=$(echo "$OUT" | "$PYBIN" -c "import json,sys;d=json.load(sys.stdin);print(d.get('task_id'),d.get('task_id_source'),d.get('status'))" 2>/dev/null || echo "PARSE-FAIL")
+case "$PARSED" in
+  "D708 branch pass") ok "⑬-5a 基线: 分支名推断 D708 且声明命中 → pass（场景本来会绿）" ;;
+  *) no "⑬-5a 基线不成立: '$PARSED'（期望 'D708 branch pass'；本用例失去判别性）" ;;
+esac
+# ⑬-5b 给非法 --did → 必须 exit 2，绝不静默回退到 D708
+OUT=$(cd "$SB6" && "$PYBIN" "$SB6/scripts/control-tower/merge_writeset_gate.py" \
+        --repo-root "$SB6" --base "$B6" --head HEAD --branch fix/D708-guard \
+        --did oops-no-digit 2>&1); rc=$?
+[ "$rc" -eq 2 ] && ok "⑬-5b --did 值不含 D# → exit 2（不静默改用其它来源）" \
+                || no "⑬-5b --did 非法值被静默忽略（实得 rc=${rc}，期望 2）"
+echo "$OUT" | grep -q '不含 D# 形态' \
+  && ok "⑬-5b 诊断点名 --did 值不合法" || no "⑬-5b 未诊断非法 --did"
+
+# ── ⑭ 回退诊断: 三源全空 → 退试 commit subject + 诊断打印 + 仍不放行 ──
+SB5="$TMPD/did-fallback"
+mk_sb_nodid "$SB5"                       # 无 brief
+B5=$(git -C "$SB5" rev-parse HEAD)
+printf 'c\n' > "$SB5/src/c_undeclared.ts"
+git -C "$SB5" add -A >/dev/null 2>&1
+git -C "$SB5" commit -q -m "feat: no did anywhere"        # subject 刻意无 D#
+OUT=$(cd "$SB5" && "$PYBIN" "$SB5/scripts/control-tower/merge_writeset_gate.py" \
+        --repo-root "$SB5" --base "$B5" --head HEAD --branch fix/no-did-anywhere 2>&1); rc=$?
+[ "$rc" -eq 2 ] && ok "⑭ 三源全空 + 源码变更 → exit 2（fail-closed，绝不静默通过）" \
+                || no "⑭ 期望 exit 2（不放行），实得 $rc"
+echo "$OUT" | grep -q '源 explicit: 未提供 --did' \
+  && ok "⑭ 诊断: explicit 源已尝试并说明未提供" || no "⑭ 诊断缺 explicit 源说明"
+echo "$OUT" | grep -q '源 branch:' \
+  && ok "⑭ 诊断: 分支名源已尝试" || no "⑭ 诊断缺 branch 源"
+echo "$OUT" | grep -q '源 commit-subject:' \
+  && ok "⑭ 诊断: **退试 commit subject** 已尝试" || no "⑭ 诊断缺 commit-subject 回退"
+echo "$OUT" | grep -q '全部来源皆空' \
+  && ok "⑭ 诊断: 明示全部来源皆空" || no "⑭ 诊断未明示全空"
+echo "$OUT" | grep -q 'fail-closed' \
+  && ok "⑭ 明示 fail-closed 语义（不放行）" || no "⑭ 未明示 fail-closed"
+echo "$OUT" | grep -q '登记影子提交' \
+  && ok "⑭ 诊断: 保留「跳过自动登记影子提交」既有保护说明" || no "⑭ 诊断未说明登记影子提交保护"
+echo "$OUT" | grep -qE '扫过 [0-9]+ 条非登记提交' \
+  && ok "⑭ 诊断: 给出实际扫描提交数（可核，非空话）" || no "⑭ 诊断未给扫描计数"
+# ⑭ 反例（防"诊断恒打印"）: 能推断出 D# 时不该走诊断块
+OUT=$(cd "$SB4" && "$PYBIN" "$SB4/scripts/control-tower/merge_writeset_gate.py" \
+        --repo-root "$SB4" --base "$B4" --head HEAD --branch fix/no-did-anywhere --did D945 2>&1)
+echo "$OUT" | grep -q 'S1 task-state / S2 dev doc / S3 brief 声明源为空' \
+  && no "⑭ 反例: 已命中声明仍打印「声明源为空」诊断（诊断块条件写错）" \
+  || ok "⑭ 反例: 命中声明时不打印全空诊断（诊断非恒真）"
+
+# ═══ CT-C（2026-09-27，P0）: D# 推断随机性根治 ═══
+# 现象: GitHub 对 pull_request 合成的 merge 提交主题 = `Merge <head_sha> into <base_sha>`，
+#   旧 DID_RE `[Dd]\d+` 从 SHA 里抠出伪号 ⇒ 同一份代码不同 SHA ⇒ 不同 D#（实测 D54/D4/D0/D34）。
+echo ""
+echo "=== CT-C: 合成 merge 主题 / SHA 不得提供 D# ==="
+
+# ── ⑮ parse_did: SHA 伪号一律不出（负例）× 既有语义不回归（正例）──
+DID3=$("$PYBIN" - "$GATE_SRC" <<'PYEOF'
+import importlib.util as u, sys
+sp = u.spec_from_file_location("g", sys.argv[1]); m = u.module_from_spec(sp); sp.loader.exec_module(m)
+neg = [
+  ("Merge 9e41414096fbfc45b2471a4d54e6244cb73b37db into 760923659e7e28889f7549aaf36458b502eee658", "硬判据①: head SHA 内含 d54"),
+  ("Merge 4afd4ce1 into 017bef55", "真实短 SHA 对"),
+  ("Merge 5836e434 into 4afd4ce1", "真实短 SHA 对"),
+  ("Merge d0f6c2f2 into 1234567", "真实短 SHA"),
+  ("Merge d0f6c2f2efgh into 1234567890abcdef", "非标准 SHA 形态（只靠修法②挡住）"),
+  ("Merge deadbeef into cafebabe", "纯 hex 词元"),
+  ("Merge pull request #123 from x/y", "GitHub PR 合成主题"),
+  ("Merge D5412345 into 1234567", "大写裸 SHA 词元"),
+  ("fix: revert d5412345", "裸 SHA 词元（只靠修法③挡住）"),
+  ("feat/d54abc-rename", "短 hex 片段 <7 位（只靠修法②挡住，修法③不覆盖）"),
+  ("fix: revert d54abcz", "短 hex 片段 <7 位（只靠修法②挡住，修法③不覆盖）"),
+]
+bad = [f"NEG {t!r}->{m.parse_did(t)!r}" for t, _ in neg if m.parse_did(t) is not None]
+pos = [("feat/win-d702-write-op-no-swallow", "D702"), ("docs(d702): 补文档", "D702"),
+       ("fix/D708-merge-writeset-gate", "D708"), ("no-digit-here", None),
+       ("chore: bypass COMMITTED 登记 (auto hook, D521)", "D521"),
+       ("Merge branch 'main' into feat/foo", None),
+       ("fix: revert d5412345 for D999", "D999"), ("docs(D814): 任务号推断修复", "D814")]
+bad += [f"POS {t!r}->{m.parse_did(t)!r}（期望 {exp!r}）" for t, exp in pos if m.parse_did(t) != exp]
+print("OK" if not bad else "BAD: " + " ; ".join(bad))
+PYEOF
+)
+[ "$DID3" = "OK" ] && ok "⑮ SHA 伪号全清（11 负例）+ 既有正例不回归（8 正例）" || no "⑮ $DID3"
+
+# ── CT-C 地形助手 ──
+ctc_init() { # $1=目录 —— 建沙箱仓（解析器 + git 身份）
+  local d="$1"
+  mkdir -p "$d/scripts/control-tower" "$d/.claude/task-briefs" "$d/src" "$d/docs"
+  cp "$GATE_SRC" "$d/scripts/control-tower/merge_writeset_gate.py"
+  cp "$REPO/scripts/control-tower/brief_parser.py" "$REPO/scripts/control-tower/devdoc_writeset.py" "$d/scripts/control-tower/"
+  # ⚠️ 必须显式 `-b main`：`git init` 的默认分支随**环境**变（本机 /Library/.../gitconfig = main，
+  #    GitHub runner = master —— CI 实证 `hint: Using 'master' as the name for the initial branch`）。
+  #    下面 ⑯/⑰ 段的 `git checkout -q main` 在 master 环境下静默失败 ⇒ HEAD 仍停在 feature
+  #    ⇒ `git merge --no-ff feature` 变 "Already up to date" ⇒ 合成 merge 地形根本没建成
+  #    ⇒ task_id=None（本机 60/60、CI 58/2 的环境依赖根因）。
+  git -C "$d" init -q -b main; git -C "$d" config user.email t@t.local; git -C "$d" config user.name t
+}
+ctc_brief() { # $1=目录 $2=brief 文件名 $3=D#
+  { printf '#CRITERIA: A\n\n# Task Brief: %s sandbox\n> 认领: 🛠 编码 session\n\n' "$3"
+    printf '## Q0: 定位\n### a) 拼图\n控制塔。\n\n## Q1: 调研\n铁律 35。\n\n'
+    printf '## Q2: 范围 — 最简方案\n做什么:\n- src/a.ts\n不做什么:\n- 不改 scripts/audit/audit-rules.sh\n\n'
+    printf '## Q3: 验收\n入口: CI。\n\n## 架构层:\nscripts（控制塔域）\n\n## Done 标准\n- [x] verify: x\n'
+  } > "$1/.claude/task-briefs/$2"
+}
+ctc_gate() { # $1=目录 $2=base $3...=额外参数
+  ( cd "$1" && "$PYBIN" "$1/scripts/control-tower/merge_writeset_gate.py" \
+      --repo-root "$1" --base "$2" --head HEAD --branch fix/no-did-anywhere "${@:3}" --json 2>&1 | tail -1 )
+}
+ctc_field() { # $1=JSON $2=字段名
+  printf '%s' "$1" | "$PYBIN" -c "
+import json,sys
+d=json.load(sys.stdin)
+v=d.get(sys.argv[1]) if len(sys.argv)>1 else None
+print('None' if v is None else v)" "$2" 2>/dev/null || echo "PARSE-FAIL"
+}
+
+# ── ⑯ 端到端: HEAD = 合成 merge（GitHub pull_request 形态）⇒ 从**分支自身提交**推断 ──
+SB7="$TMPD/ctc-syn"
+ctc_init "$SB7"
+ctc_brief "$SB7" "2026-09-12-D712-sandbox.md" D712
+printf 'seed\n' > "$SB7/seed.txt"
+git -C "$SB7" add -A >/dev/null 2>&1; git -C "$SB7" commit -q -m "chore: base"
+CTC_BASE=$(git -C "$SB7" rev-parse HEAD)
+git -C "$SB7" checkout -qb feature
+printf 'a\n' > "$SB7/src/a.ts"
+git -C "$SB7" add -A >/dev/null 2>&1; git -C "$SB7" commit -q -m "feat(win-d712): declared file"
+git -C "$SB7" checkout -q main
+ctc_syn_merge() { # $1=head-SHA 文本 —— 重建 HEAD 为合成 merge 提交（parents = base, feature）
+  git -C "$SB7" reset -q --hard "$CTC_BASE"
+  git -C "$SB7" clean -qfd
+  git -C "$SB7" merge -q --no-ff feature -m "Merge $1 into $CTC_BASE"
+}
+ctc_syn_merge 9e41414096fbfc45b2471a4d54e6244cb73b37db
+OUT=$(ctc_gate "$SB7" "$CTC_BASE")
+PARSED=$(ctc_field "$OUT" task_id)
+SRC=$(ctc_field "$OUT" task_id_source)
+case "$PARSED $SRC" in
+  "D712 commit-subject") ok "⑯ 合成 merge 被跳过 ⇒ 从分支自身提交推断 D712（非 SHA 伪号）" ;;
+  *) no "⑯ 合成 merge 地形推断错: task_id='$PARSED' source='$SRC'（期望 D712 commit-subject）" ;;
+esac
+echo "$OUT" | grep -q '合成 merge 提交' \
+  && ok "⑯ 诊断可见「识别合成 merge 并锚到第二父」" || no "⑯ 缺合成 merge 诊断"
+# 反向: SHA 里的伪号（d54/d4/d0/d34）不得出现在 task_id 或 declared 源里
+case "$PARSED" in D54|D4|D0|D34) no "⑯ 仍从 SHA 抠出伪号: $PARSED" ;; *) ok "⑯ 伪号未出现（task_id=${PARSED}）" ;; esac
+
+# ── ⑰ 硬判据②: 同一份代码 × 5 个不同 SHA ⇒ 输出**逐字节一致** ──
+HASHES=""; _i=0
+for _sha in 9e41414096fbfc45b2471a4d54e6244cb73b37db 4afd4ce1 5836e434 d0f6c2f2 017bef55; do
+  _i=$((_i+1))
+  ctc_syn_merge "$_sha"
+  ctc_gate "$SB7" "$CTC_BASE" > "$TMPD/ctc-id-$_i.json"
+  HASHES="${HASHES}$("$PYBIN" -c "import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" "$TMPD/ctc-id-$_i.json")
+"
+done
+UNIQ_N=$(printf '%s' "$HASHES" | sed '/^$/d' | sort -u | grep -c . | tr -d '\r\n')
+[ "$UNIQ_N" = "1" ] \
+  && ok "⑰ 同一份代码 × 5 个不同 SHA ⇒ 输出逐字节一致（唯一 sha256=1）" \
+  || no "⑰ 输出随 SHA 变化（唯一 sha256=${UNIQ_N}，应为 1）"
+
+# ── ⑱ --first-parent: 并入侧（第二父链）的 D# 不得获胜 ──
+#   地形: 兄弟分支提交**日期更晚**（日期序排在分支自身提交之前）——只有 --first-parent 能挡住。
+#   ⚠️ 必须显式给提交日期: 同一秒内的提交在 `git log` 里次序不定 ⇒ 夹具会失去判别性
+#      （实测未设日期时，去掉 --first-parent 仍偶然取到 D712 = 假绿）。
+SB8="$TMPD/ctc-firstparent"
+ctc_init "$SB8"
+ctc_brief "$SB8" "2026-09-12-D712-sandbox.md" D712
+printf 'seed\n' > "$SB8/seed.txt"
+git -C "$SB8" add -A >/dev/null 2>&1
+GIT_AUTHOR_DATE="2026-09-12T09:00:00+0800" GIT_COMMITTER_DATE="2026-09-12T09:00:00+0800" \
+  git -C "$SB8" commit -q -m "chore: base"
+B8=$(git -C "$SB8" rev-parse HEAD)
+git -C "$SB8" checkout -qb feature
+printf 'a\n' > "$SB8/src/a.ts"
+git -C "$SB8" add -A >/dev/null 2>&1
+GIT_AUTHOR_DATE="2026-09-12T10:00:00+0800" GIT_COMMITTER_DATE="2026-09-12T10:00:00+0800" \
+  git -C "$SB8" commit -q -m "feat(win-d712): declared file"
+git -C "$SB8" checkout -qb sibling "$B8"
+GIT_AUTHOR_DATE="2026-09-12T11:00:00+0800" GIT_COMMITTER_DATE="2026-09-12T11:00:00+0800" \
+  git -C "$SB8" commit -q --allow-empty -m "fix(d999): sibling work"
+git -C "$SB8" checkout -q feature
+GIT_AUTHOR_DATE="2026-09-12T12:00:00+0800" GIT_COMMITTER_DATE="2026-09-12T12:00:00+0800" \
+  git -C "$SB8" merge -q --no-ff sibling -m "Merge branch 'sibling' into feature"
+# 前提守卫: 不加 --first-parent 时日期序确实取到并入侧 D999（否则夹具无判别性）
+PREMISE=$(git -C "$SB8" log --max-count=20 --format=%s "$B8"..HEAD | tr '\n' '|')
+case "$PREMISE" in
+  *"Merge branch 'sibling' into feature"*"fix(d999): sibling work"*"feat(win-d712): declared file"*)
+    ok "⑱ 前提: 日期序把并入侧 d999 排在分支自身提交之前（夹具可判别）" ;;
+  *) no "⑱ 前提不成立: 日期序=$PREMISE ⇒ 本用例失去判别性" ;;
+esac
+OUT=$(ctc_gate "$SB8" "$B8")
+PARSED=$(ctc_field "$OUT" task_id)
+[ "$PARSED" = "D712" ] \
+  && ok "⑱ --first-parent: 并入侧 D999 不获胜 → D712" \
+  || no "⑱ 并入侧 D# 获胜（task_id=${PARSED}，期望 D712）"
+
+# ── ⑲ merge-base 范围: 并入/继承的 base 历史不得提供 D# ──
+#   地形: 主干祖先提交带 D800（有声明）+ 分支自身无任何 D# + HEAD 为合成 merge。
+#   去掉 merge-base 范围 ⇒ 会沿第一父链走到主干祖先 → D800（假绿）。
+SB9="$TMPD/ctc-range"
+ctc_init "$SB9"
+ctc_brief "$SB9" "2026-09-12-D800-ancestor.md" D800
+printf 'seed\n' > "$SB9/seed.txt"
+git -C "$SB9" add -A >/dev/null 2>&1; git -C "$SB9" commit -q -m "feat(D800): 主干祖先提交"
+printf 'x\n' > "$SB9/docs/branchpoint.md"
+git -C "$SB9" add -A >/dev/null 2>&1; git -C "$SB9" commit -q -m "chore: branch point"
+git -C "$SB9" checkout -qb feature
+printf 'a\n' > "$SB9/src/a.ts"
+git -C "$SB9" add -A >/dev/null 2>&1; git -C "$SB9" commit -q -m "chore: branch work"
+git -C "$SB9" checkout -q main
+git -C "$SB9" commit -q --allow-empty -m "chore: main advances"
+BASE9=$(git -C "$SB9" rev-parse HEAD)
+git -C "$SB9" merge -q --no-ff feature -m "Merge 4afd4ce1 into $BASE9"
+OUT=$(ctc_gate "$SB9" "$BASE9")
+PARSED=$(ctc_field "$OUT" task_id)
+[ "$PARSED" = "None" ] \
+  && ok "⑲ merge-base 范围: 主干祖先 D800 未被扫到（task_id=None，fail-closed）" \
+  || no "⑲ 主干历史提供了 D#（task_id=${PARSED}，期望 None）"
+
+# ═══ CT-A2: 声明源多命中 ⇒ fail-closed + 逐条点名 ═══
+echo ""
+echo "=== CT-A2: 声明源多命中 fail-closed ==="
+
+mk_a2_sb() { # $1=目录
+  local d="$1"
+  mkdir -p "$d/scripts/control-tower" "$d/.claude/task-briefs" "$d/src" "$d/task-state"
+  cp "$GATE_SRC" "$d/scripts/control-tower/merge_writeset_gate.py"
+  cp "$REPO/scripts/control-tower/brief_parser.py" "$REPO/scripts/control-tower/devdoc_writeset.py" "$d/scripts/control-tower/"
+  git -C "$d" init -q; git -C "$d" config user.email t@t.local; git -C "$d" config user.name t
+  printf 'seed\n' > "$d/seed.txt"
+  git -C "$d" add -A >/dev/null 2>&1; git -C "$d" commit -q -m "chore: base"
+}
+
+# ── ⑳-1 S2 dev doc 多命中 ──
+SB10="$TMPD/cta2-dev"; mk_a2_sb "$SB10"
+mkdir -p "$SB10/docs/plans/codex/implementation"
+printf '# dev doc a\n' > "$SB10/docs/plans/codex/implementation/SYNOVA-IMPL-D945-sandbox-a.md"
+printf '# dev doc b\n' > "$SB10/docs/plans/codex/implementation/SYNOVA-IMPL-D945-sandbox-b.md"
+git -C "$SB10" add -A >/dev/null 2>&1; git -C "$SB10" commit -q -m "docs(D945): 两份同名 dev doc（夹具）"
+B10=$(git -C "$SB10" rev-parse HEAD)
+printf 'a\n' > "$SB10/src/a.ts"; git -C "$SB10" add -A >/dev/null 2>&1
+git -C "$SB10" commit -q -m "feat(D945): change"
+OUT=$(cd "$SB10" && "$PYBIN" "$SB10/scripts/control-tower/merge_writeset_gate.py" \
+        --repo-root "$SB10" --base "$B10" --head HEAD --branch fix/no-did-anywhere --did D945 2>&1); rc=$?
+{ [ "$rc" -eq 2 ] && echo "$OUT" | grep -q 'SYNOVA-IMPL-D945-sandbox-a.md' \
+  && echo "$OUT" | grep -q 'SYNOVA-IMPL-D945-sandbox-b.md' && echo "$OUT" | grep -q '多命中'; } \
+  && ok "⑳-1 dev doc 多命中 → exit 2 + 两条候选路径全点名" \
+  || no "⑳-1 dev doc 多命中未 fail-closed: rc=$rc"
+# 注: 本仓测试带 `set -o pipefail`，而 gate 在此场景**故意** exit 2 ⇒ 管道整体非 0。
+#   故不能用 `|| echo 0`（会往 stdout 追加第二行，N10 变 "2\n0"）；改两步取值。
+JSON10=$( (cd "$SB10" && "$PYBIN" "$SB10/scripts/control-tower/merge_writeset_gate.py" \
+        --repo-root "$SB10" --base "$B10" --head HEAD --branch fix/no-did-anywhere --did D945 --json 2>&1 \
+        | tail -1) ) || true
+N10=$(printf '%s' "$JSON10" | "$PYBIN" -c "
+import json,sys
+d=json.load(sys.stdin)
+print(len(((d.get('ambiguous') or {}).get('candidates')) or []))" 2>/dev/null) || N10="PARSE-FAIL"
+[ "$N10" = "2" ] && ok "⑳-1 --json 契约: ambiguous.candidates 恰 2 条" || no "⑳-1 candidates 计数错: $N10"
+
+# ── ⑳-2 S3 brief 多命中 ──
+SB11="$TMPD/cta2-brief"; mk_a2_sb "$SB11"
+ctc_brief "$SB11" "2026-09-12-D945-aaa.md" D945
+ctc_brief "$SB11" "2026-09-25-D945-bbb.md" D945
+git -C "$SB11" add -A >/dev/null 2>&1; git -C "$SB11" commit -q -m "docs(D945): 两份同号 brief（夹具）"
+B11=$(git -C "$SB11" rev-parse HEAD)
+printf 'a\n' > "$SB11/src/a.ts"; git -C "$SB11" add -A >/dev/null 2>&1
+git -C "$SB11" commit -q -m "feat(D945): change"
+OUT=$(cd "$SB11" && "$PYBIN" "$SB11/scripts/control-tower/merge_writeset_gate.py" \
+        --repo-root "$SB11" --base "$B11" --head HEAD --branch fix/no-did-anywhere --did D945 2>&1); rc=$?
+{ [ "$rc" -eq 2 ] && echo "$OUT" | grep -q 'D945-aaa.md' && echo "$OUT" | grep -q 'D945-bbb.md'; } \
+  && ok "⑳-2 brief 多命中 → exit 2 + 两条候选路径全点名" \
+  || no "⑳-2 brief 多命中未 fail-closed: rc=$rc"
+echo "$OUT" | grep -q 'S3 brief' && ok "⑳-2 点名多命中的源（S3 brief）" || no "⑳-2 未点名来源"
+
+# ── ㉑ 落地接线: --first-parent 必须真在代码里（防"注释自述已落地"）──
+FP_N=$(grep -c -- '--first-parent' "$GATE_SRC" | tr -d '\r\n')
+[ "$FP_N" -ge 1 ] && ok "㉑ --first-parent 已落地（源码命中 $FP_N 处）" || no "㉑ --first-parent 未落地（D814 未接线）"
+
+# ── ㉒ 对抗性用例（独立反证实测 20/20；P0 漏放的新形态）──
+#   为什么与 ⑮ 分列: ⑮ 覆盖三类主干（合成 merge 主题 / hex 邻接边界 / 裸 SHA 词元）；
+#   本段钉住**边界形态**，其中 4 例是 ⑮ **未覆盖**的（由独立反证新增）:
+#     ① `Merge pull request #N from <owner>/<branch>` 且**分支名自带 D#** —— 若只挡 "Merge pull request"
+#        字面而不整条短路，别人的 D# 会从 PR 合成主题漏进来（P0 的新形态）；
+#     ② 真业务主题**内嵌**在别的主提交里（`Revert "Merge …"`）—— 防"只锚行首"的实现回退；
+#     ③ conventional 前缀 + scope（`squash! docs(D814): x`）—— 防"只认行首位置"；
+#     ④ **全大写** SHA（`Merge DEADBEEF into CAFEBABE`）—— `[0-9a-fA-F]` 两侧大小写都要挡。
+ADV=$("$PYBIN" - "$GATE_SRC" <<'PYEOF'
+import importlib.util as u, sys
+sp = u.spec_from_file_location("g", sys.argv[1]); m = u.module_from_spec(sp); sp.loader.exec_module(m)
+cases = [
+  ("Merge deadbeef into cafebabe", None, "纯 hex 词元"),
+  ("Merge d0d0d0d into 1234567", None, "短 hex 对"),
+  ("Merge D0D0D0D into 1234567", None, "短 hex 对（大写）"),
+  ("Merge cafeBABE into DEADbeef", None, "混合大小写"),
+  ("Merge DEADBEEF into CAFEBABE", None, "全大写 SHA（⑮ 未覆盖）"),
+  ("Merge pull request #123 from x/y", None, "PR 合成主题"),
+  ("Merge pull request #123 from user/fix/d702-thing", None, "PR 合成主题且分支名带 D#（⑮ 未覆盖）"),
+  ("Merge branch 'main'", None, "裸 merge 分支（无 into）"),
+  ("Merge branch 'main' into feat/foo", None, "merge 分支 into"),
+  ("docs(D814): 任务号推断修复", "D814", "真业务主题不吞"),
+  ("feat/win-d702-write-op-no-swallow", "D702", "分支名小写 d"),
+  ("fix/D708-merge-writeset-gate", "D708", "分支名大写 D"),
+  ("feat/ct-gate-inference-20260927", None, "纯日期后缀不得当号"),
+  ("chore: bypass COMMITTED 登记 (auto hook, D521)", "D521", "登记影子提交仍可取号（跳过逻辑在上层）"),
+  ("Merge 4afd4ce1 into 017bef55", None, "真实短 SHA 对"),
+  ("Merge 5836e434 into d0f6c2f2", None, "真实短 SHA 对（倒置）"),
+  ('Revert "Merge 4afd4ce1 into 017bef55"', None, "内嵌 merge 主题（⑮ 未覆盖）"),
+  ("squash! docs(D814): x", "D814", "conventional 前缀 + scope（⑮ 未覆盖）"),
+  ("D1030", "D1030", "裸号"),
+  ("d1030", "D1030", "裸号小写归一"),
+]
+bad = [f"{t!r}->{m.parse_did(t)!r}（期望 {exp!r}；{why}）" for t, exp, why in cases if m.parse_did(t) != exp]
+print("OK" if not bad else "BAD: " + " ; ".join(bad))
+PYEOF
+)
+[ "$ADV" = "OK" ] && ok "㉒ 对抗性 20 例全符合预期（含 4 例 ⑮ 未覆盖形态）" || no "㉒ $ADV"
 
 echo ""
 echo "  结果: $PASS 通过, $FAIL 失败"
