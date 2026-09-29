@@ -158,6 +158,51 @@ printf '%s' "$ROW_CLEAN" | grep -q "COMMITTED | pre-commit PASS (hook 层登记)
   && ok "下一干净提交恢复纯 PASS（mtime 窗口 + 消费判定生效）" \
   || no "干净提交被误标为软失败: ${ROW_CLEAN:-（无）}"
 
+# ── CT-2b (D1064): CI 等价夹具 — GNU stat 方言注入（ubuntu job 109245598170 复现面）──
+# 根因: GNU `stat -f` = --file-system（格式仅经 -c），`stat -f %m FILE` 把 %m 当第二个文件操作数:
+#   %m 报错(stderr, exit 1 被 || true 吞) + FILE 走 stdout 输出多行文件系统信息 → v=非空垃圾 →
+#   回退链不触发 → 算术爆炸 → 状态空 → 记成纯 PASS（本机 BSD 无此面 → 必绿假阳性）。
+# 手法（D1030 同源）: 测试内自建 GNU 语义 stat shim 前置 PATH，在本机强制走 GNU 面。
+# 判据（改坏即红）: 还原 _mtime_sec 回退链顺序（BSD -f %m 在前）→ 本节第 1/2 条断言变红。
+echo ""
+echo "── CT-2b: CI 等价（GNU stat 方言注入）→ 软失败仍须记 DEGRADED-PASS ──"
+GSBIN="$TMPD/gnustat"; mkdir -p "$GSBIN"
+cat > "$GSBIN/stat" <<'GSEOF'
+#!/bin/bash
+# GNU coreutils stat 等价 shim（只复刻 _mtime_sec 触碰的两种调用形态）:
+if [ "$1" = "-f" ]; then   # -f=--file-system: %m 当文件操作数 → stderr+exit1；FILE 走 stdout 默认 fs 信息
+  echo "stat: cannot read file system information '$2': No such file or directory" >&2
+  echo "  File: \"$3\""
+  echo "  ID: 0000000000000000 Namelen: 255     Type: ext2/ext3"
+  echo "Block size: 4096       Fundamental block size: 4096"
+  echo "Blocks: Total: 103473     Free: 95302     Available: 92165"
+  echo "Inodes: Total: 2621440    Free: 2600835"
+  exit 1
+fi
+if [ "$1" = "-c" ] && [ "$2" = "%Y" ]; then   # GNU 合法形态 → 委托本机 stat 取 mtime 秒
+  exec /usr/bin/stat -f %m "$3"
+fi
+exec /usr/bin/stat "$@"
+GSEOF
+chmod +x "$GSBIN/stat"
+SB3="$TMPD/sb3"; mkdir -p "$SB3/.claude" "$SB3/.git/hooks"
+git -C "$SB3" init -q; git -C "$SB3" config user.name t; git -C "$SB3" config user.email t@t
+printf '#!/bin/bash\nexec bash "%s"\n' "$HOOK_SRC" > "$SB3/.git/hooks/post-commit"
+chmod +x "$SB3/.git/hooks/post-commit"
+echo seed > "$SB3/.claude/bypass.log"; git -C "$SB3" add .claude/bypass.log
+git -C "$SB3" -c user.name=t -c user.email=t@t commit -q --no-verify -m "seed"
+echo "2026-09-28T06:18:04+08:00 | GATE_FAIL_SOFT | exit=1 | branch=main" >> "$SB3/.claude/gate-soft-warnings.log"
+echo f1 > "$SB3/f1.txt"; git -C "$SB3" add f1.txt
+echo "$(git -C "$SB3" rev-parse HEAD)|$(date +%s)" > "$SB3/.claude/last-precommit-success"
+PATH="$GSBIN:$PATH" git -C "$SB3" -c user.name=t -c user.email=t@t commit -q --no-verify -m "chore: soft-fail (GNU stat env)" 2>/dev/null
+H_GNU=$(git -C "$SB3" rev-parse HEAD^)
+ROW_GNU=$(grep -F "$H_GNU" "$SB3/.claude/bypass.log" || true)
+printf '%s' "$ROW_GNU" | grep -q "COMMITTED | pre-commit DEGRADED-PASS (soft-fail allowed ts=2026-09-28T06:18:04+08:00 exit=1)" \
+  && ok "CI 等价（GNU stat）→ 账本仍记 DEGRADED-PASS（环境依赖根治）" \
+  || no "GNU stat 环境下账本未记真实状态: ${ROW_GNU:-（无本 HASH 行）}"
+printf '%s' "$ROW_GNU" | grep -q "pre-commit PASS (hook 层登记)" \
+  && no "GNU stat 环境下软失败被记成纯 PASS（判据未满足）" || ok "GNU stat 环境下同一 HASH 无纯 PASS 行（记录不矛盾）"
+
 echo ""
 echo "结果: $PASS 通过, $FAIL 失败"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1
