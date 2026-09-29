@@ -1,0 +1,87 @@
+{
+  "task_id": "D1068",
+  "title": "门禁证据载体迁移：bypass.log → commit trailer（段1 机制核 + CI 可见化）",
+  "date": "2026-09-29",
+  "branch": "chore/D1068-trailer-evidence",
+  "base": "c6787513dd9db799a04016ead89292b67a6f72dd",
+  "real_commit": "e61436fa4ca7b4f85371e7779f217ace58009942",
+  "remote_receipt": {
+    "command": "git ls-remote --heads origin | grep -i D1068",
+    "output": "4db89e425a87e307571255b37c130a7590716878 refs/heads/chore/D1068-trailer-evidence",
+    "note": "4db89e42 是 post-commit hook 的影子登记提交（仅 .claude/bypass.log）；实体提交 = e61436fa（HEAD^）"
+  },
+  "end_to_end": {
+    "claim": "trailer 真的写进提交消息（全链路真实执行，非抽取写块）",
+    "command": "git log -1 --format='%(trailers:key=PreCommit-PASS,valueonly)' HEAD^",
+    "output": "7071cb440bedc4818f5848480b0559fb5f8cd1203050c87c9a555807877569a3",
+    "marker_match": {
+      "command": "bash scripts/control-tower/precommit-evidence.sh verify 7071cb44…",
+      "output": "match",
+      "exit": 0,
+      "limit": "标记被下次提交覆盖后不可回溯核验（同提交周期内有效）"
+    }
+  },
+  "acceptance": {
+    "C1_zero_file_conflict": {
+      "status": "部分可核（GitHub 侧无法验证）",
+      "verified_locally": "删 union 后两分支各改同一文件 ⇒ CONFLICT(content)/CONFLICT(add/add) 硬冲突；union 在时 clean",
+      "conclusion": "本地实测支持 CTO「拆两步」裁决：只删 union 不停写会把「可自动合并的脏」换成「不可自动合并的脏」",
+      "not_verified": "GitHub 判 clean —— 需 PR 环境，本会话无该上下文"
+    },
+    "C2_compat_transition": {
+      "status": "成立",
+      "evidence": "三态对账：态1 trailer 通过 / 态2 仅旧 log 通过 / 态3 皆无 exit 1",
+      "undiscriminated_history": "SYNO_BASE_REF=HEAD~25 区间：新旧对账器逐字一致（同 14 条存量缺口，零新增误报）"
+    },
+    "C3_break_it_turns_red": {
+      "status": "成立（判别性）",
+      "evidence": "独立自验员：删掉 trailer 写入 ⇒ 对账 exit 1 并点名；恢复 ⇒ exit 0；树未变（唯一差异 = trailer 本身）",
+      "method": "真实 git 仓 + 真实提交；禁用 grep 型静态判据当验收"
+    },
+    "C4_consumers": {
+      "status": "部分（段 1）",
+      "detail": "本批只落写入侧 + 对账器 + CI；其余消费者属段 2–3（详见 brief「后续段」）",
+      "scope_correction": "侦察实测：bypass.log 被 42 个文件引用，21 个测试硬断言日志结构 —— 派单件 ⑥ 只点 6 个消费者，实测面 ≈30 文件，超 PR ≤12 预算"
+    },
+    "C5_archive": {
+      "status": "不由本队执行（CTO 承接）",
+      "detail": "CTO 2026-09-29 裁决：档案仓承载由 CTO 本地做 + sha256 对账"
+    },
+    "C6_evidence": {
+      "status": "本文件",
+      "suites": {
+        "tests/control-tower/precommit-evidence.test.sh": "43 项断言 / exit 0",
+        "tests/control-tower/check-bypass-log.test.sh": "5 通过 0 失败 / exit 0",
+        "tests/control-tower/bypass-union-merge.test.sh": "3 通过 0 失败 / exit 0（union 本批保留，故仍绿）",
+        "scripts/pre-commit-check.sh": "13 组全过 / exit 0",
+        "scripts/control-tower/ct-test-gate.sh": "SYNC-OK 控制塔脚本配对测试全绿"
+      }
+    }
+  },
+  "independent_verification": {
+    "verifier": "verify-trailer（独立成员，只读，未改工作树任何文件）",
+    "conclusion": "可提请独立审计",
+    "findings_upheld": [
+      "R1 trailer 值可伪造：对账只验「有无」，不验「值从何来」；无密钥/无树绑定/无提交绑定 —— 属设计强度上限，已写进脚本头与 memory note 的诚实表述",
+      "R3 双写者时序：install-hooks.sh 与 synova-commit 都会写标记；跨秒重写 ⇒ verify 报 mismatch（影响 verify，不影响对账主路径）",
+      "R5 段 2 前置条件：synova-commit:694「缺 pre-commit-check.sh」的降级路径不产 trailer；段 2 停写旧账本时必须同批补，否则该路径提交全变态 3",
+      "R6 新测试 §12「接线」为 grep 型判据，可被注释假绿 —— 真判别在 §7–§11 真仓真提交",
+      "R7 .gitattributes 冲突类型表述不精确（有共同基为 content、无共同基为 add/add），结论正确"
+    ],
+    "disputed_by_lead": {
+      "R2": "「verify 无生产调用方 = 死路径」—— 实测反驳：verify 对刚提交的 commit 返回 match（同提交周期内有效）。它不是死代码，是手工校验入口；真实缺口是跨提交后不可回溯（=R3 上限）"
+    },
+    "not_verified_by_verifier": [
+      "GitHub 侧可合并性（C1 原意）",
+      "Windows/certutil 分支（macOS 环境无 certutil）",
+      "synova-commit 全脚本真实执行 —— 已由 lead 的出卡提交补齐（见 end_to_end）"
+    ]
+  },
+  "leave_behind": [
+    "段 2：停写 post-commit.sh:23 + 删两条 merge=union + 退役 bypass-union-merge.test.sh + verify-d703.sh 的 no-verify 改读 trailer；必须同批补 degraded-pass 路径 trailer（R5）",
+    "段 3：loop-context.sh / sop-gate.sh 两个 READ 消费者 + 6 个 PATH-ONLY 文件",
+    "段 4：21 个硬断言日志结构的测试（清单见 brief）",
+    "段 5：CI 硬门禁升级（所有机器重装 hook 后）+ AGENTS.md/CLAUDE.md 文档同步",
+    "pre-push-check.sh:444 在 check-bypass-log.sh 缺失时 fail-open，与 CI 侧 fail-closed 不一致（非本卡引入，登记）"
+  ]
+}
