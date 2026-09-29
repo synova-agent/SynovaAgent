@@ -323,16 +323,11 @@ describe('P3 · PUT /api/workspaces/:id/merge — 写守卫', () => {
 // ════════════════════════════════════════════════════════════════
 // P0 — GET /api/workspaces/mine 活越权读
 //
-// ⚠️ F-1（PR-2b 新发现 · CTO 已裁定 (b)：**另立卡**，本卡**不修 ordering**）:
-//   `src/routes/workspaces-api.ts` 中 `router.get('/api/workspaces/:id')`（:126）注册在
-//   `router.get('/api/workspaces/mine')`（:264）**之前** ⇒ Express 以 `:id`='mine' 命中前者
-//   ⇒ `GET /api/workspaces/mine` 经 HTTP **恒 404 'workspace not found'**，P0 修复位点
-//   **在 HTTP 面不可达**（该遮蔽先于本卡存在；`GET /api/workspaces/conflicts`（:294）同理）。
-//   ⇒ 故本组 P0 判别性证据改用 **直接 handler 运行时探针**（仍非 grep 型静态判据），
-//     并另设一条**登记性断言**锁定 HTTP 面现状。
-//   ⇒ **CTO 裁定：本卡不修 ordering**（修之会使 `/conflicts` 由 404 变可达 = 可达面扩张，须另立卡）；
-//     登记性断言在此**锁定现状（不代表期望行为）**。**缺陷已登记，另立卡**。
-//     将来修 ordering 后，该断言须翻转为 `200`，不得静默改动。
+// D1002（ordering 已修）: /by-dept/:dept、/mine、/conflicts 三块已整体上移至
+//   `GET /:id` 之前注册 ⇒ /mine 经 HTTP **真实可达**（D947 F-1 遮蔽收口；原
+//   「恒 404 / CTO 裁定另立卡 / 本卡不修 ordering」口径作废——D1002 即那张卡）。
+//   本组**直接 handler 运行时探针保留**（快速判别性路径，语义不变，仍非 grep 型
+//   静态判据）；HTTP 面正路径见下方 D1002 翻转断言（200）。
 // ════════════════════════════════════════════════════════════════
 
 /** 取 /mine 的 handler（直接调用形态，绕过路由遮蔽，用于 P0 判别性探针） */
@@ -422,13 +417,13 @@ describe('P0 · GET /api/workspaces/mine — 自报身份完全失效（直接 h
     expect(r.status).toBe(401);
   });
 
-  it('登记性断言（F-1 未清）: HTTP 面被 /:id 遮蔽 → 恒 404（锁定现状，不代表期望行为）', async () => {
-    // 本断言的作用是**让 F-1 可见且不可静默漂移**：一旦有人修了 ordering，
-    // 本断言立刻变红，迫使同步更新本组（届时 HTTP 正路径直接可用）。
-    // **F-1 已裁定 (b) 另立卡，本卡不修 ordering ⇒ 缺陷已登记，另立卡**；此处仅锁定现状。
+  it('D1002 翻转: HTTP 面可达 → 200（原登记性断言按 :335 预告「翻转为 200，不得静默改动」执行）', async () => {
+    // D947 期原断言 = expect(404)（F-1 遮蔽锁定现状，不代表期望行为）。
+    // D1002 修 ordering 后按原预告翻转；staff JWT 下 /mine 返回真实过滤结果。
     const r = await api('/api/workspaces/mine', { token: T_STAFF });
-    expect(r.status).toBe(404);
-    expect(r.body['error']).toBe('workspace not found');
+    expect(r.status).toBe(200);
+    expect(r.body['ok']).toBe(true);
+    expect(r.body['role']).toBe('staff');
   });
 });
 

@@ -50,6 +50,7 @@ function denyWorkspaceWrite(res: Response, reason: string, rbac?: RbacContext): 
  * 取**已验签**的 RBAC 上下文；无验签身份 → 写 403 并返回 `undefined`。
  * 调用方形态固定为：`const rbac = requireVerifiedRbac(req, res); if (!rbac) return;`
  * ⇒ 既 fail-closed，又让 TS 正确收窄，且判据结果**从不被丢弃**。
+ * D1002: 不消费上下文的端点可写短式 `if (!requireVerifiedRbac(req, res)) return;`（判据同样从不丢弃）。
  */
 function requireVerifiedRbac(req: Request, res: Response): RbacContext | undefined {
   const rbac = readRbac(req);
@@ -121,6 +122,78 @@ router.post('/api/workspaces', (req: Request, res: Response) => {
   store.set(id, ws);
   log.info({ id, title, owner: rbac.userId }, '工作区已创建');
   res.json({ ok: true, workspace: ws });
+});
+
+// ═══ D1002 F-1: 注册序修复 — 静态/字面量段路由先于参数段 GET /:id 注册 ═══
+// Express 按注册序匹配：/mine、/conflicts 若注册在 /:id 之后，一段式 GET 会被
+// /:id 以 id='mine'/'conflicts' 吞掉（HTTP 恒 404）；/by-dept/:dept 为两段式虽未被
+// 遮蔽，一并前移属防御性卫生。顺序契约 = tests/routes/workspaces-mine-conflicts.test.ts。
+
+// 按部门过滤
+router.get('/api/workspaces/by-dept/:dept', (req: Request, res: Response) => {
+  const dept = req.params.dept;
+  const list = Array.from(store.values())
+    .filter(w => w.department === dept || w.visibility === 'global')
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  res.json({ ok: true, workspaces: list, department: dept });
+});
+
+// 获取当前用户可见的工作区
+router.get('/api/workspaces/mine', (req: Request, res: Response) => {
+  // D947 P0（活越权读修复）——改前实现（实测 file:line 记于 evidence）:
+  //   const token = String(req.headers['x-synova-token'] || '');
+  //   const role = token.includes('admin') ? 'admin' : token.includes('liaison') ? 'liaison' : 'manager';
+  //   const dept = token.split(':')[1] || '';
+  //   ① 身份来自**未验签**的自报头子串判定 ⇒ 已认证的低权用户只要带 `x-synova-token: admin`
+  //      即得 role='admin' ⇒ 返回**全部工作区**（含跨部门/他人私有）。
+  //   ② 不带该头时默认 role='manager'（不得默认 manager —— 默认放行姿态）。
+  //   改后：身份**只**取自 `req.rbac`（rbacMiddleware ← jwtAuthMiddleware 验签后注入）；
+  //   无验签身份 → 403 fail-closed；自报头零参与。
+  const rbac = requireVerifiedRbac(req, res);
+  if (!rbac) return;
+
+  const role = rbac.role;
+  const dept = rbac.department;   // R5/REV-8（D947 期口径）: JWT 载荷无 department ⇒ 恒 undefined；D1000 切片 A 起由 JWT 携带——届时以身份链为准
+  const userId = rbac.userId;
+
+  let list: Workspace[];
+  if (role === 'admin' || role === 'liaison') {
+    list = Array.from(store.values());
+  } else {
+    list = Array.from(store.values()).filter(w =>
+      w.department === dept || w.owner === userId || w.visibility === 'global',
+    );
+  }
+  list.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  res.json({ ok: true, workspaces: list, role, department: dept });
+});
+
+// 冲突检测 (对接人)
+router.get('/api/workspaces/conflicts', (req: Request, res: Response) => {
+  // D1002: 读端点守卫（先加守卫、后放开遮蔽，两步同一 commit 不拆；短式——不消费上下文）
+  if (!requireVerifiedRbac(req, res)) return;
+  const conflicts: WorkspaceConflict[] = [];
+  const all = Array.from(store.values()).filter(w => w.status === 'confirmed');
+
+  for (let i = 0; i < all.length; i++) {
+    for (let j = i + 1; j < all.length; j++) {
+      const a = all[i]; const b = all[j];
+      if (a.department === b.department) continue;
+      // 简单数值型冲突: 同title的confirmed workspace跨部门 → 标记冲突
+      if (a.title.includes(b.title.slice(0, 5)) || b.title.includes(a.title.slice(0, 5))) {
+        conflicts.push({
+          id: `conflict_${Date.now().toString(36)}`,
+          type: 'numeric',
+          dimension: a.title,
+          workspaceA: { id: a.id, department: a.department || 'unknown', value: a.title, evidence: '' },
+          workspaceB: { id: b.id, department: b.department || 'unknown', value: b.title, evidence: '' },
+          detectedAt: new Date().toISOString(),
+          status: 'open',
+        });
+      }
+    }
+  }
+  res.json({ ok: true, conflicts, count: conflicts.length });
 });
 
 router.get('/api/workspaces/:id', (req: Request, res: Response) => {
@@ -251,71 +324,6 @@ router.post('/api/workspaces/:id/sub', (req: Request, res: Response) => {
   res.json({ ok: true, workspace: subWs });
 });
 
-// 按部门过滤
-router.get('/api/workspaces/by-dept/:dept', (req: Request, res: Response) => {
-  const dept = req.params.dept;
-  const list = Array.from(store.values())
-    .filter(w => w.department === dept || w.visibility === 'global')
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-  res.json({ ok: true, workspaces: list, department: dept });
-});
-
-// 获取当前用户可见的工作区
-router.get('/api/workspaces/mine', (req: Request, res: Response) => {
-  // D947 P0（活越权读修复）——改前实现（实测 file:line 记于 evidence）:
-  //   const token = String(req.headers['x-synova-token'] || '');
-  //   const role = token.includes('admin') ? 'admin' : token.includes('liaison') ? 'liaison' : 'manager';
-  //   const dept = token.split(':')[1] || '';
-  //   ① 身份来自**未验签**的自报头子串判定 ⇒ 已认证的低权用户只要带 `x-synova-token: admin`
-  //      即得 role='admin' ⇒ 返回**全部工作区**（含跨部门/他人私有）。
-  //   ② 不带该头时默认 role='manager'（不得默认 manager —— 默认放行姿态）。
-  //   改后：身份**只**取自 `req.rbac`（rbacMiddleware ← jwtAuthMiddleware 验签后注入）；
-  //   无验签身份 → 403 fail-closed；自报头零参与。
-  const rbac = requireVerifiedRbac(req, res);
-  if (!rbac) return;
-
-  const role = rbac.role;
-  const dept = rbac.department;   // R5/REV-8: JWT 载荷无 department ⇒ 恒 undefined（已登记功能回退）
-  const userId = rbac.userId;
-
-  let list: Workspace[];
-  if (role === 'admin' || role === 'liaison') {
-    list = Array.from(store.values());
-  } else {
-    list = Array.from(store.values()).filter(w =>
-      w.department === dept || w.owner === userId || w.visibility === 'global',
-    );
-  }
-  list.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-  res.json({ ok: true, workspaces: list, role, department: dept });
-});
-
-// 冲突检测 (对接人)
-router.get('/api/workspaces/conflicts', (_req: Request, res: Response) => {
-  const conflicts: WorkspaceConflict[] = [];
-  const all = Array.from(store.values()).filter(w => w.status === 'confirmed');
-
-  for (let i = 0; i < all.length; i++) {
-    for (let j = i + 1; j < all.length; j++) {
-      const a = all[i]; const b = all[j];
-      if (a.department === b.department) continue;
-      // 简单数值型冲突: 同title的confirmed workspace跨部门 → 标记冲突
-      if (a.title.includes(b.title.slice(0, 5)) || b.title.includes(a.title.slice(0, 5))) {
-        conflicts.push({
-          id: `conflict_${Date.now().toString(36)}`,
-          type: 'numeric',
-          dimension: a.title,
-          workspaceA: { id: a.id, department: a.department || 'unknown', value: a.title, evidence: '' },
-          workspaceB: { id: b.id, department: b.department || 'unknown', value: b.title, evidence: '' },
-          detectedAt: new Date().toISOString(),
-          status: 'open',
-        });
-      }
-    }
-  }
-  res.json({ ok: true, conflicts, count: conflicts.length });
-});
-
 // 子工作区方案汇入全局
 router.put('/api/workspaces/:id/merge', (req: Request, res: Response) => {
   // D947 P3: 无验签身份 → 403
@@ -324,14 +332,18 @@ router.put('/api/workspaces/:id/merge', (req: Request, res: Response) => {
 
   const id = String(req.params.id);
   const ws = store.get(id);
+  // D1002 E-2: 权限判据**前移到形状校验之前**——低权（staff/ga/liaison/非属主 manager）
+  //   对任何 id 形态先吃 403，不向未授权方泄露存在性/形状；admin 才落到 400/404 层。
+  //   D947 P3 原判据不变：绑定被汇入的**子工作区**（改名/状态流转的目标资源）；
+  //   ws 不存在时按 {department:undefined, owner:undefined} 提交判据（低权恒 deny）。
+  if (!canModifyWorkspace(rbac, { department: ws?.department, owner: ws?.owner })) {
+    return denyWorkspaceWrite(res, 'insufficient_permission', rbac);
+  }
+
   if (!ws || !ws.parentWsId) return res.status(400).json({ ok: false, error: 'not a sub-workspace' });
 
   const parent = store.get(ws.parentWsId);
   if (!parent) return res.status(404).json({ ok: false, error: 'parent not found' });
-  // D947 P3: 权限判据绑定被汇入的**子工作区**（改名/状态流转的目标资源）
-  if (!canModifyWorkspace(rbac, { department: ws.department, owner: ws.owner })) {
-    return denyWorkspaceWrite(res, 'insufficient_permission', rbac);
-  }
 
   ws.status = 'resolved';
   ws.updatedAt = new Date().toISOString();
