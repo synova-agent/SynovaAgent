@@ -173,3 +173,126 @@ union 合并驱动下与 main 分歧；③ 属「一次性特例清洗」——�
 | 独立自验（V1–V12 + L1–L8） | `docs/synova/product-lines/evidence/D1069/D1069-独立自验.md` |
 | 决策 Note（铁律 49 / D534） | `memory/notes/implemented/2026-09-29-D1069-resolve-brief-anchor.md` |
 | 本件（收尾三件） | `docs/synova/product-lines/evidence/D1069/D1069-收尾三件-diff-自验结论-遗留清单.md` |
+
+---
+
+## 四、PR 正文与开 PR 指令（给 CTO）
+
+> **⚠️ 开 PR 必须用真实凭据（PAT / 网页人工）**，不能用 bot 的 `secrets.GITHUB_TOKEN`。
+> 依据 `docs/synova/coordination/CI-诊断通道.md`：由 `GITHUB_TOKEN` 触发的事件**不会触发新的 workflow run**（防递归）
+> ⇒ bot 创建的 PR 上 `pull_request` 触发的 workflow 都不跑 ⇒ 必需检查永不报告 ⇒ **PR 永久 blocked**。
+> 本会话**无 `gh`、无 `GITHUB_TOKEN`/`GH_TOKEN`/`GITHUB_PAT`（实测均 unset）**，故无法自行开 PR —— 与 D1039 先例同型。
+
+- **head 分支**：`fix/D1069-resolve-brief-anchor`
+- **base**：`main`（开 PR 时以当时 `origin/main` 为准）
+- **标题**：`fix(D1069): resolve-commit-brief 强锚点优先级 + 去重认领计数 + D# 两级定位`
+- **merge 方式**：**Merge commit（勿 squash）** —— 派单明确要求；且本分支含 5 个 `chore: bypass COMMITTED 登记` 影子提交，squash 会改写 HASH 使 bypass 台账对账失真。
+- **⚠️ 请用分支名，不要钉 SHA**：每次 commit 后 `post-commit` hook 会追加「bypass COMMITTED 登记」影子提交 ⇒ 远端 head 会跳动。
+  写就时 head = `c4002949a9e23df1574873798e2d21056f15e2bb`（仅供对照）。
+
+### 正文（可直接粘贴）
+
+```markdown
+## 目标
+
+解除「认领锚点失配」对四条链的阻塞（#868→#894 / #883 / #892）。
+`scripts/workflow/resolve-commit-brief.sh` 是 pre-commit G12 / check-plan-integrity /
+check-brief-vs-code / check-verifiable-done / commit-msg-check / staging_guard 的**共同上游**：
+它回答「本提交由哪个 task brief 管辖」。解析错 ⇒ `staging_guard.py:86`
+判「认领 brief D# ≠ 本 session 任务」→ **硬阻断**。
+
+## 根因（开工前实测，含原始输出）
+
+**① 强锚点形同虚设（优先级倒置）**
+强锚点（提交自身的 D# 证据：暂存 `task-state/D<id>.json` / 分支名）**只做同数 tie-break、只做认领全空时的末位回退**，
+永远压不过「启发级」的路径认领计数。实测：
+```
+$ bash scripts/workflow/resolve-commit-brief.sh ".github/workflows/ci.yml
+task-state/D1061.json"          # 提交自身身份 = D1061
+.../2026-09-28-D1039-A4-CI成本收口.md    # ← 落到**他人**的陈旧 brief（D1039）
+```
+因果链：`:218` 逐条目累加计数 → `:227-228 best=max; if best>0: sys.exit(0)`
+⇒ `:230` tie-break 与 `:249` 锚点回退**均不可达**。
+
+**② 认领计数按「出现次数」而非「去重文件数」**
+`n = sum(1 for sf in staged for p in scope if match_path(sf,p))`。
+D1039 的 brief 在 Q2 把 `.github/workflows/ci.yml` 写了 **4 次**（`grep -c` 实测 = 4）
+⇒ 单个暂存文件即可得 n=4，压过「声明多个真实文件」的当前 brief。
+
+**③ 强锚点 D#→brief 定位用分隔符 glob，17 个 brief 物理不可达**
+`briefs_by_id()` 用 `*-D<id>-*`（要求首 D# 后紧跟 `-`）⇒
+`2026-08-22-D471.md` / `D311-multi-session-coordination.md` / `D808.md` 等**对其自身 D# 永不命中**
+（实测 17 例真身份失配，清单见证据件）。
+
+## 改动（单文件 `scripts/workflow/resolve-commit-brief.sh`，+107/−3）
+
+1. **规范 1 · P0 强锚点优先**（`:157-205`，注入缝标记 `:171/:204`）
+   一级身份集命中且 `parse_criteria` 通过 ⇒ **直接定案**，不再进入认领计数。
+   D# 来源优先级：**暂存 `task-state/D<id>.json` > 分支名**。不可解析/无锚点 ⇒ 下探 P1..P4（行为与修复前一致，不阻断）。
+2. **规范 2 · 认领计数 = 去重文件数**（`:317-322`）
+   `scope` 与 `staged` 均去空去重，每文件至多计 1。不变式：同一路径写 N 次 ⇒ 贡献恒为 1。
+3. **规范 3 · D#→brief 两级定位**（`:103-154`）
+   一级「身份集」= 文件名首 D# token 的边界匹配（对齐 `alloc-task-id.sh:191` 既有边界正则惯例，
+   纯 bash 逐字符零子进程）；二级「提及集」= 旧 glob 语义，**仅在一级为空时**兜底入池，**P0 不认**。
+
+未触碰：`:248` 入池合并 / `:334` tie-break / `:350` 末位回退 / P1·P3·P4 全部原样。
+
+## 判据 C1–C5（全绿，原始输出见证据件）
+
+| 判据 | 结论 | 判别性来源 |
+|---|---|---|
+| C1 复现 | ✅ | 同一输入 → D1039（修前） |
+| C2 修复 | ✅ | 同一输入 → **D1061**（修后）；仅回退规范 2 仍返回 D1061 ⇒ **P0 是必要条件** |
+| C3 改坏即红 | ✅ | `sed` 删 `<<<ANCHOR-PRIORITY-START/END>>>`（变异 378 行 vs 生产 412 行）→ 回落 **D1039** |
+| C4 回归 | ✅ | `resolve-commit-brief.test.sh` **69 通过 / 0 失败**（既有 32 + 追加 37）；邻居 commit-msg 类全绿 |
+| C5 证据 | ✅ | `docs/synova/product-lines/evidence/D1069/`（.md + .json，含 C1–C5 与用例数） |
+
+测试：**追加 13 用例 / 37 断言**进既有 406 行套件（**0 删除**，既有 11 用例字节零改动，32✅/0❌ 在两段中逐字节相同）。
+不新建 `tests/**/*.test.sh` —— 实测新建会触发 M9 密封面棘轮 `VIOLATION: 新增测试未登记 CI 密封清单` ⇒ `GATE-INTEGRITY: VIOLATION(1)`。
+
+## 门禁自检（原始输出）
+
+```
+bash -n scripts/workflow/resolve-commit-brief.sh                 exit=0
+bash tests/control-tower/resolve-commit-brief.test.sh            69 通过 / 0 失败  exit=0
+bash scripts/control-tower/check-gate-integrity.sh               GATE-INTEGRITY: OK（基线外新增 0；基线过期 0）
+bash scripts/check-plan-integrity.sh                             exit=0
+bash scripts/commit-msg-check.sh <msg>                           exit=0（D395-a/D534 Note 门禁通过）
+bash scripts/workflow/check-silent-swallow.sh --diff             exit=0
+```
+
+## 🔴 门禁语义变更 —— 请 K3 复审
+
+本 PR 改的是**门禁脚本的优先级语义**（启发级 → 自证级），按派单红线**必须过 ctrl-tower-change 模式 6 + K3**。
+请 K3 重点核：
+1. **P0 绝对优先是否引入新误伤**：分支锚点与暂存 task-state 冲突时取 state；无锚点时零行为变化（D291/D296 保护）。
+2. **两级定位的取舍**：`2026-09-29-D1064-FIX-D1032-*.md` 的次位 D1032 不再优先锚定（D1032 有真身份件 ⇒ 消除旧 glob 双命中歧义）；
+   `D313-D314-control-tower-finalize.md` 的次位 D314 由二级兜底保住覆盖（合卡 brief，D314 无独立身份件）。
+3. **继承测试 8/9/10/11（D718）未回归**，含负向用例「无锚点陈旧 brief 不得劫持」。
+
+## 未随 PR 变更（如实登记）
+
+`.claude/bypass.log`（append-only 证据台账，`.gitattributes` 配 `merge=union`）—— **近 200 次提交 100% 触发**，
+本次由 `synova-commit` + `post-commit` hook 自动纳入，**非成员手写**。
+其中含来自测试的 `TASK_ID=D331-test | AGENT=test` 的 `DEGRADED-PASS` 行（HASH 在仓库不存在）。
+**未剥离**：`origin/main` 上已有 **53 行**同型记录（2026-09-14 起），只清本分支属一次性特例且会与 main 分歧 ⇒ 正解是立卡修根因（见遗留 L6）。
+新增 17 行中 2 行为本分支真实登记（`COMMITTED | pre-commit PASS | HASH=3104921d…/dae6b55e…`）。
+
+## 遗留（本 PR 不做，逐条带 file:line）
+
+- **L6（建议优先）** 门禁台账假证据：`tests/control-tower/tag-bypass-wiring.test.sh:215,260` → `scripts/control-tower/synova-commit:34,36`（`BYPASS_LOG` 按脚本位置推导、不可注入）⇒ 测试污染真实台账，影响「24h 绕过」核查可信度。
+- **L4** `tests/control-tower/staging-guard-session.test.py:101,119,166` 既有 5 红 ⇒ **认领制回归覆盖当前失效**（夹具 brief 无日期前缀，落 D366 窗口外）。
+- **L5** `today-by-name.test.sh:67 DAY_WINDOW_RE: unbound variable` 既有红。
+- **L9** `check-silent-swallow.sh --utf8` 存量 17 个 .sh 缺 UTF-8 头块（本卡文件不在名单内）。
+- 完整 L1–L9 见 `docs/synova/product-lines/evidence/D1069/D1069-收尾三件-diff-自验结论-遗留清单.md` §三。
+
+## 合入后
+
+四条链 **#868→#894 / #883 / #892 随即解锁**（认领锚点失配解除）。
+```
+
+### 开 PR 后请立即通知 CTO
+合入后按派单要求**立即通知 CTO**：四条链随即解锁。
+
+---
+
