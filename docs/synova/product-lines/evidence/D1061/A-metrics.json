@@ -6,7 +6,6 @@
   "date": "2026-09-29",
   "base_commit": "d9955cfb",
   "branch": "chore/d1061-a-ci-speedup",
-
   "suites_run": {
     "catalog_total": 55,
     "catalog_source": ".github/workflows/ci.yml → job control-tower-tests → for t in ... （单源；--all 与 simulate-ci.sh 同源提取）",
@@ -25,7 +24,6 @@
     "windows_platform_only": "23/55",
     "ubuntu": "55/55"
   },
-
   "timing": {
     "scope_declaration": "两个口径分列，不混用。① 本机 macOS 代理量（非 CI 口径）② CI 实测（来自前提实测 N1 段，run 36457345292）",
     "local_macos": {
@@ -73,7 +71,6 @@
       "residual_report": "docs/synova/product-lines/evidence/D1061/A-05-增量提案-残留成本.md"
     }
   },
-
   "gates": {
     "ct_suite_select_test": "23 通过 0 失败（含完整性不变式 + 2 变异体）",
     "simulate_ci_dedup_test": "15 通过 0 失败（含 CI 内层执行数 = 0 + 2 变异体）",
@@ -83,11 +80,19 @@
     "silent_swallow_utf8": "rc=1 为 main 存量（18 条）；本分支新增 0 条、两侧集合相等（差集口径）",
     "pre_commit_check": "见 PR 正文与 CI 回执"
   },
-
   "honest_gaps": [
     "windows 腿 ≤5 min 目标**未达成**（残留主因: gate-failopen-net 120s + alloc-task-id-lock 99s + check-gate-integrity 72s，三者不在本卡写集内）",
     "windows 真实秒数须由 PR-A 的 CI run 回执补齐；本机 macOS 数字只是代理量",
     "本地（无 CI 标记）路径仍是全量，刻意保留；开发者本机跑 simulate-ci.test.sh 仍≈1545s",
-    "A-05 §1.1 中「其余 28 条未入选 ≤11s 各」是上限推断，非逐条 windows 实测"
-  ]
+    "A-05 §1.1 中「其余 28 条未入选 ≤11s 各」是上限推断，非逐条 windows 实测",
+    "首推唯一红 = V5 平台敏感命令（本地软提示 / CI 转硬阻断）——「本地漏、CI 拦」的又一实证；已加 D520 豁免标记修复，详见 A-03 §11"
+  ],
+  "pr_run": {
+    "first_run_id": 36527360094,
+    "first_head": "89d22f1c",
+    "first_run_red": "TypeScript + Lint + Iron Laws（V5 平台敏感命令）",
+    "ct_ubuntu_s": 81,
+    "ct_windows_s": null,
+    "note": "CT-ubuntu 81s（基线 160–226s）；CT-windows 时长待回执"
+  }
 }

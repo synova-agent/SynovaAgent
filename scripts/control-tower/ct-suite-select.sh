@@ -32,6 +32,7 @@ set -uo pipefail
 ROOT=""
 MAP=""
 RANGE=""
+CHANGED_FILES=""
 PLATFORM="any"
 MODE=""
 DEGLOG=""
@@ -40,14 +41,17 @@ DEG_COUNT=0
 usage() {
   echo "用法: bash scripts/control-tower/ct-suite-select.sh <模式> [选项]"
   echo "  --changed <base>...<head>   变更范围（git 三段点）"
+  echo "  --changed-files <file|->    直接给定变更文件清单（一行一个；- = stdin）"
+  echo "                              —— 判定逻辑的**确定性注入缝**（夹具用，绕开 git 范围解析）"
   echo "  --platform <any|ubuntu|windows|macos>"
-  echo "  --list | --all              二选一（与 --changed 互斥）"
+  echo "  --list | --all              二选一（与 --changed/--changed-files 互斥）"
   echo "  --map <path> / --repo <path> / --degraded-log <path>"
 }
 
 while [ $# -gt 0 ]; do
   case "${1:-}" in
     --changed)      RANGE="${2:-}"; shift 2 ;;
+    --changed-files) CHANGED_FILES="${2:-}"; shift 2 ;;
     --platform)     PLATFORM="${2:-}"; shift 2 ;;
     --list)         MODE="list"; shift ;;
     --all)          MODE="all"; shift ;;
@@ -89,7 +93,7 @@ fi
 
 # ── PYBIN 三级探测（PLATFORM-CHECKLIST #1，禁裸 python3）──
 PYBIN=""
-for _c in python3 python py; do
+for _c in python3 python py; do  # D520: 三级探测 python3/python/py（见 PLATFORM-CHECKLIST.md #1）
   if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then PYBIN="$_c"; break; fi
 done
 
@@ -98,7 +102,7 @@ MAP_TSV=""
 if [ ! -f "$MAP" ]; then
   MAP_OK=0
 elif [ -z "$PYBIN" ]; then
-  echo "❌ 执行失败: python 不可用（python3/python/py 三级探测均失败）——无法解析映射 $MAP" >&2
+  echo "❌ 执行失败: python 不可用（python3/python/py 三级探测均失败）——无法解析映射 $MAP" >&2  # D520: 文案含字面量（非调用）
   exit 2
 else
   MAP_TSV="$("$PYBIN" -c '
@@ -141,15 +145,25 @@ if [ "$MODE" = "all" ]; then
   exit 0
 fi
 
-if [ -z "$MODE" ] && [ -z "$RANGE" ]; then
-  echo "❌ 参数非法: 需显式给出 --changed / --list / --all 之一（禁隐式默认）" >&2
+if [ -z "$MODE" ] && [ -z "$RANGE" ] && [ -z "$CHANGED_FILES" ]; then
+  echo "❌ 参数非法: 需显式给出 --changed / --changed-files / --list / --all 之一（禁隐式默认）" >&2
   usage >&2
   exit 2
 fi
 
 # ── 选择模式 ──
-# ① 变更集
-if [ -z "$RANGE" ]; then
+# ① 变更集（两种来源：--changed-files 注入缝优先 → 全平台确定性；否则 git 三段点）
+if [ -n "$CHANGED_FILES" ]; then
+  if [ "$CHANGED_FILES" = "-" ]; then
+    CHANGED_RAW="$(cat)"
+  elif [ -f "$CHANGED_FILES" ]; then
+    CHANGED_RAW="$(cat "$CHANGED_FILES")"
+  else
+    degraded D5 "变更文件清单不存在: ${CHANGED_FILES}（--changed-files 需指向文件或 -）"
+    CHANGED_RAW="__RANGE_BAD__"
+  fi
+  CHANGED="$(printf '%s\n' "$CHANGED_RAW" | tr -d '\r')"
+elif [ -z "$RANGE" ]; then
   CHANGED=""
 else
   # PLATFORM-CHECKLIST #3: core.quotepath=false（中文文件名不被八进制转义）
@@ -157,7 +171,7 @@ else
   GIT_RC=$?
   CHANGED="$(printf '%s\n' "$CHANGED_RAW" | tr -d '\r')"
   if [ "$GIT_RC" -ne 0 ]; then
-    degraded D5 "变更范围不可解析: $RANGE (git diff rc=$GIT_RC)"
+    degraded D5 "变更范围不可解析: ${RANGE} (git diff rc=${GIT_RC})"
     CHANGED="__RANGE_BAD__"
   fi
 fi
