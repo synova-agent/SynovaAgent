@@ -1,5 +1,5 @@
 {
-  "_comment": "V3 §1.5 条件代码区域映射表 — CP3 检查代码变更归属",
+  "_comment": "V3 §1.5 条件代码区域映射表 — CP3 检查代码变更归属。D.glob 的 tests/** 为 D1023 A3补修新增（CTO 2026-09-27 裁定）：此前 tests/** 不在 A/B/C/D 任一区域，而 D.description 自写「所有源文件(兜底)」——判据数据与自身描述矛盾；不加则任何带 #CRITERIA 的 PR 只要触及 tests/** 必红（含本卡第④件的夹具自身）。",
   "criteria": {
     "A": {
       "name": "核心诊断逻辑",
@@ -18,7 +18,7 @@
     },
     "D": {
       "name": "基础设施与部署",
-      "glob": ["src/**/*.ts", "scripts/**/*.{sh,py}", "package.json", "build-synova.cjs"],
+      "glob": ["src/**/*.ts", "scripts/**/*.{sh,py}", "tests/**", "package.json", "build-synova.cjs"],
       "description": "所有源文件(兜底)"
     }
   }

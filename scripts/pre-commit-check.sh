@@ -1176,31 +1176,125 @@ echo -e "${CYAN}── 组 10/13: V3 流水线健康度 ──${RESET}"
 CRITERIA_MAP="$ROOT/.codex/criteria-code-map.json"
 if [ -f "$CRITERIA_MAP" ]; then
   # V3 CP3-1: G10 条件区域检查 — 暂存的文件是否在声明的条件区域内
-  BRIEF_FILE=$(echo "$CHANGED_FILES" | grep -m1 "\.claude/task-briefs/" || true)
+  # A3 修复（2026-09-27）：原为 $CHANGED_FILES（零赋值 ⇒ 恒空 ⇒ G10 主体不可达、恒打绿勾）
+  # 真变量 = STAGED_ALL（:313，来自 GIT_CACHED_ALL_NAMES，已处理本地暂存/CI diff range 两态）
+  BRIEF_FILE=$(echo "$STAGED_ALL" | grep -m1 "\.claude/task-briefs/" || true)
   if [ -n "$BRIEF_FILE" ]; then
     BRIEF_PATH="$ROOT/$BRIEF_FILE"
-    CRITERIA=$(grep -oE '#CRITERIA[[:space:]]*[:=][[:space:]]*[A-D]' "$BRIEF_PATH" 2>/dev/null | sed -E 's/.*[=:][[:space:]]*//' || true)
+    # D1023 A3补修 / 验收后修正 (2026-09-27, task-3 修正A): 加 `head -1` —— 原式对**多匹配**会产出多行值，
+    #   插进下方 python 单引号字面量即 SyntaxError（`m.get('A\nA')`）被 `|| true` 吞 ⇒ 映射读不到 ⇒ 打绿勾
+    #   （与 ⑦ 同族：**读不到 map 却打绿**）。取首处 = 恢复"brief 声明的那个条件区域"的语义。
+    #   防御性（可复现，非"我记得"）: `.claude/task-briefs/*.md` 共 419 份，其中 320 份含 `#CRITERIA` 子串，
+    #   **36 份**按本模式 `#CRITERIA[[:space:]]*[:=][[:space:]]*[A-D]` 匹配 **≥2 处**。触发源 = brief 模板注释行
+    #   `<!-- #CRITERIA: A/B/C/D ... -->`（`A` 是 `A/B/C/D` 的前缀，故与真声明被同一模式一并命中）。
+    #   一条命令复现证人: grep -nE '#CRITERIA[[:space:]]*[:=][[:space:]]*[A-D]' .claude/task-briefs/2026-08-14-auto.md
+    #     → :128 `#CRITERIA: A` + :129 模板注释行 ⇒ 抽取得 $'A\nA'（多行）⇒ 上述 python 插值 SyntaxError。
+    #   计数口径勿混: 「含 `#CRITERIA` 子串 ≥2 次」的文件 = 40 份，≠ 上句的模式匹配 36 份。
+    CRITERIA=$(grep -oE '#CRITERIA[[:space:]]*[:=][[:space:]]*[A-D]' "$BRIEF_PATH" 2>/dev/null | sed -E 's/.*[=:][[:space:]]*//' | head -1 || true)
     if [ -n "$CRITERIA" ]; then
-      # 读取条件代码映射
-      CRITERIA_GLOBS=$(python -c "
+      # 读取条件代码映射 —— D1023 A3补修 (2026-09-27, CTO 裁定⑦):
+      #   原为裸 `python -c ... 2>/dev/null || true`。实测本机无 `python`（rc=127，只有 python3）被 `|| true` 吞
+      #   ⇒ CRITERIA_GLOBS 恒空 ⇒ 走「无映射区域(跳过)」soft_pass ⇒ **仍打 ✅ 绿勾**（G10 假绿的第二条路径，
+      #   与本卡 ①② 同病）。修法 = 复用本文件既有两处范式，不发明第二套机制:
+      #     ① PYBIN 三级探测（:1592-1596，PLATFORM-CHECKLIST #1，禁裸 python3/python）
+      #     ② 显式降级（:869-876）: ⚠️ 可见 + 写 .codex/control-tower/logs/degraded-events.log
+      #   判定语义**不变**: 解析不到映射 ⇒ 本项**不可判定**（不打 ✅＝禁假绿，也不打 ❌＝不静默判红），降级可见。
+      G10_UNJUDGED=""
+      G10_PYBIN=""
+      for _c in python3 python py; do
+        if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then G10_PYBIN="$_c"; break; fi
+      done
+      CRITERIA_GLOBS=""
+      if [ -z "$G10_PYBIN" ]; then
+        G10_UNJUDGED="无可用 python（python3/python/py 三级探测全失败）"
+      else
+        CRITERIA_GLOBS=$("$G10_PYBIN" -c "
 import json
 with open('$CRITERIA_MAP') as f:
     m = json.load(f)
 g = m.get('criteria', {}).get('$CRITERIA', {}).get('glob', [])
 for gx in g:
     print(gx)
-" 2>/dev/null || true)
+" 2>/dev/null)   # swallow-ok: 失败**不吞**——紧随其后用 $? 判 rc 并走显式降级（见下 G10_MAP_RC 分支）
+        G10_MAP_RC=$?
+        # rc≠0（JSON 坏 / 语法错 / 读不到文件）同样**不得**退化成绿勾
+        if [ "$G10_MAP_RC" -ne 0 ]; then
+          CRITERIA_GLOBS=""
+          G10_UNJUDGED="条件区域映射解析失败（${G10_PYBIN} rc=${G10_MAP_RC}）"
+        fi
+      fi
+      if [ -n "$G10_UNJUDGED" ]; then
+        echo -e "  ${YELLOW}⚠️  G10: ${G10_UNJUDGED} — 条件区域检查本项不可判定（降级登记；既不打绿勾也不判红）${RESET}"
+        mkdir -p "$ROOT/.codex/control-tower/logs" 2>/dev/null || true
+        echo "{\"time\": \"$(date -u +%Y-%m-%dT%H:%M:%S+00:00)\", \"component\": \"pre-commit-group10-criteria-map\", \"reason\": \"${G10_UNJUDGED} — G10 不可判定 (degraded, 不判绿)\"}" >> "$ROOT/.codex/control-tower/logs/degraded-events.log" 2>/dev/null || true
+      fi
       REGEX_GLOBS=""
       while IFS= read -r gx; do
         [ -z "$gx" ] && continue
-        # 转换 glob 到 grep 正则
-        REGEX=$(echo "$gx" | sed 's/\*/.*/g; s/?/./g')
+        # 转换 glob 到 grep 正则 (D1023 A3补修, 2026-09-27: 两处缺陷最小修复)
+        #   旧式 `sed 's/\*/.*/g; s/?/./g'` 实测 `scripts/**/*.{sh,py}` → `scripts/.*.*/.*.{sh,py}`:
+        #     (a) `**/` → `.*.*/` 要求 ≥2 层路径 ⇒ 匹配不到 scripts/pre-commit-check.sh（D.glob 零命中）
+        #     (b) `{sh,py}` 未转 alternation ⇒ 字面花括号，永不匹配
+        #   修复: `**/` → `(.*/)?`；`{a,b}` → `(a|b)`。其余（`*`→`.*`、`?`→`.`、非锚定）保持不动。
+        #   占位符 @DSTAR@ 必须最后还原：若先展开 `(.*/)?`，后续 `s#[*]#.*#g` 会把它再变成 `(..*/)`（实测）。
+        #   括号/花括号/星号/问号一律用方括号转义类（[?] 而非 \?）——BSD sed 与 GNU sed 行为一致（Windows Git Bash 同跑）。
+        #   验收后修正 (2026-09-27, task-3 修正B): 逗号→alternation **只允许发生在花括号组内**。
+        #     上一版 `s#,#|#g` 是**无条件**全局替换 ⇒ 花括号外逗号被静默改义（`src/a,b.ts` → `src/a|b.ts`），
+        #     超出 CTO 批准的最小修原文「其余不动」；当时只因 15 条现存 glob 的逗号恰都在花括号内而巧合正确。
+        #     做法：先把 `{` 标成 @LBR@，再逐轮把「@LBR@/@LGRP@ 之后、**闭合花括号之前**的最近一个逗号」转成 `|`
+        #     （@LGRP@ = "曾是含逗号的花括号组"标记），最后把 @LGRP@/@LBR@…} 统一回填为 `(…)` ——
+        #     即**除花括号外逗号这一处**外，与上一版管线在所有输入上行为一致（含 `{foo}` 这类无逗号花括号）。
+        #     三个易错点（均为实测踩过）:
+        #     · 内容类必须写 `[^@}]`（排除 `}`）：只写 `[^@]` 时循环会越过 `}` 继续吃**花括号外**的逗号
+        #       —— `src/x{1,2},y.ts` 会变 `src/x(1|2)|y.ts`（当年那条回归就是这样漏的）。
+        #     · `:dmgrp` / `t dmgrp` 必须各自独立成 `-e` 表达式：BSD sed 不接受 `;` 分隔的标签
+        #       （实测 `sed -E ':a; s#..#..#g; ta; …'` → `unused label` 报错、整条管线不执行）。
+        #     · 循环每轮只消化一个逗号 ⇒ 收敛轮数 = 花括号内逗号数（不多于 glob 字节数），无死循环面。
+        #     · 等价性已证（task-3 验收 5）: 15 条现存 glob 转换结果**逐字节相同**；回归集 10/10 MATCH；
+        #       `src/a,b.ts` 不再变形；`{html,js,css}` 仍得 `(html|js|css)`。
+        REGEX=$(echo "$gx" | sed -E \
+          -e 's#[*][*]/#@DSTAR@#g' \
+          -e 's#[{]#@LBR@#g' \
+          -e ':dmgrp' \
+          -e 's#@L(BR|GRP)@([^@}]*),#@LGRP@\2|#g' \
+          -e 't dmgrp' \
+          -e 's#@L(GRP|BR)@([^}]*)[}]#(\2)#g' \
+          -e 's#[*]#.*#g' \
+          -e 's#[?]#.#g' \
+          -e 's#@DSTAR@#(.*/)?#g')
         REGEX_GLOBS="${REGEX_GLOBS}|${REGEX}"
       done <<< "$CRITERIA_GLOBS"
       REGEX_GLOBS="${REGEX_GLOBS#|}"
-      if [ -n "$REGEX_GLOBS" ]; then
-        MISMATCH=""
-        for sf in $STAGED_FILES; do
+      MISMATCH=""   # 先初始化：降级路径不进入下方判定，MISMATCH 仍需为"无"（勿依赖未赋值变量）
+      if [ -n "$G10_UNJUDGED" ]; then
+        :  # 降级已在下方 ⚠️ + degraded-events.log 登记；此处**不打绿勾**（禁假绿）
+      elif [ -n "$REGEX_GLOBS" ]; then
+        # D1023 A3补修: domain-neutral 路径豁免 —— 清单**同源** docs/synova/coordination/ownership.yaml:207
+        #   的 domain_neutral 全量 14 项（CTO 裁定：按同源 14 项口径，不另发明；逐项顺序与 :207 一致）:
+        #     .claude/bypass.log / .claude/gate-hits.log / .claude/task-briefs/** / task-state/** /
+        #     memory/notes/** / .codex/** / docs/synova/product-lines/evidence/** / .gitignore /
+        #     AGENTS.md / CLAUDE.md / LOOP.md / knowledge/shared/README.md /
+        #     docs/authority/DRIFT-LEDGER.md / docs/authority/system-registry.json
+        #   语义: 这 14 个 domain-neutral 路径的变更**不参与**「条件区域」判定 —— 理由与 ownership.yaml 该行
+        #   （D758/D774/D782）同源: 这些路径的变更跟着触发方走，不构成"这条 PR 属于哪条线"的信号。
+        #   ⚠️ 口径禁写成"豁免只针对账本类文件"（实测不成立）: 清单里 docs/synova/product-lines/evidence/**
+        #   实际覆盖 3 个**源码类**文件（D592-run-e2e.sh 231 行 + fixtures fixture-green/red 的 detect.ts 6/5 行）。
+        #   锚定（^...$）+ 点号转义: 只豁免整条精确路径或目录子树，杜绝前缀误扩（如 task-state/ 不吞 task-statefoo）。
+        #   注: gate-hits.log 是运行时产物（.gitignore:37，不参与 diff）；列全不裁，保持与 ownership.yaml 逐字同源。
+        DM_EXEMPT_RE='^(\.claude/bypass\.log|\.claude/gate-hits\.log|\.claude/task-briefs/.*|task-state/.*|memory/notes/.*|\.codex/.*|docs/synova/product-lines/evidence/.*|\.gitignore|AGENTS\.md|CLAUDE\.md|LOOP\.md|knowledge/shared/README\.md|docs/authority/DRIFT-LEDGER\.md|docs/authority/system-registry\.json)$'
+        DM_EXEMPT_N=0
+        DM_EXEMPT_LOG=""
+        for sf in $STAGED_ALL; do
+          # D1023-DOMNEUTRAL-EXEMPT-BEGIN
+          #   判别性夹具 tests/control-tower/precommit-groups-injection.test.sh 场景 g10exempt
+          #   会**删掉本区间**后重跑同一注入，要求 G10 转红 —— 证明"绿"来自本分支本身，
+          #   而不是整条闸被放宽（禁 grep 型静态判据当验收；删掉即报红才是判别力）。
+          if echo "$sf" | grep -qE "$DM_EXEMPT_RE"; then
+            DM_EXEMPT_N=$((DM_EXEMPT_N + 1))
+            DM_EXEMPT_LOG="${DM_EXEMPT_LOG}  $sf (domain-neutral 路径豁免，不参与条件区域判定)\n"
+            continue
+          fi
+          # D1023-DOMNEUTRAL-EXEMPT-END
           if ! echo "$sf" | grep -qE "($REGEX_GLOBS)"; then
             MISMATCH="${MISMATCH}  $sf (不在条件 $CRITERIA 的映射区域内)\n"
           fi
@@ -1208,7 +1302,14 @@ for gx in g:
         if [ -n "$MISMATCH" ]; then
           warn_check "G10: 条件区域不匹配" "$MISMATCH"
         else
-          soft_pass "G10: 条件区域检查通过 ($CRITERIA)"
+          # 绿腿可见性（铁律 11 反面对照）: 豁免过的文件逐个点名 —— 绿勾下必须能看出「跳过了什么」，
+          #   否则豁免本身成为新的静默跳过面（本卡 ①② 的存在理由就是"恒绿不可见"）。
+          if [ "$DM_EXEMPT_N" -gt 0 ]; then
+            echo -e "     ${GREEN}domain-neutral 路径豁免 ${DM_EXEMPT_N} 项（ownership.yaml:207）${RESET}"
+            printf '%b' "$DM_EXEMPT_LOG" | head -8 | sed 's/^/     /'
+            if [ "$DM_EXEMPT_N" -gt 8 ]; then echo "     （以上仅列前 8 项，共 ${DM_EXEMPT_N} 项）"; fi
+          fi
+          soft_pass "G10: 条件区域检查通过 (${CRITERIA}; domain-neutral 豁免 ${DM_EXEMPT_N} 项)"
         fi
       else
         soft_pass "G10: 条件 $CRITERIA 无映射区域(跳过)"
@@ -1222,12 +1323,12 @@ for gx in g:
 
   # V3 CP3-2: G11 测试覆盖检查
   HAS_E2E=0; HAS_TESTS=0
-  BRIEF_ID=$(echo "$STAGED_FILES" | grep -oE '\.claude/task-briefs/[^.]+' | sed -E 's|^\.claude/task-briefs/||' | head -1 || true)
+  BRIEF_ID=$(echo "$STAGED_ALL" | grep -oE '\.claude/task-briefs/[^.]+' | sed -E 's|^\.claude/task-briefs/||' | head -1 || true)
   if [ -n "$BRIEF_ID" ]; then
     BRIEF_PATH="$ROOT/.claude/task-briefs/${BRIEF_ID}.md"
     if [ -f "$BRIEF_PATH" ]; then
       HAS_E2E=$(grep -c "端到端\|e2e\|curl.*200\|HTTP.*200" "$BRIEF_PATH" 2>/dev/null | tr -d '\n\r' || true)
-      HAS_TESTS=$(echo "$STAGED_FILES" | grep -c "\.test\.ts" 2>/dev/null | tr -d '\n\r' || true)
+      HAS_TESTS=$(echo "$STAGED_ALL" | grep -c "\.test\.ts" 2>/dev/null | tr -d '\n\r' || true)
       if [ "$HAS_E2E" -gt 0 ] && [ "$HAS_TESTS" -eq 0 ]; then
         warn_check "G11: 声明的端到端验收但无测试文件" "$BRIEF_ID 声明了端到端验收，但暂存区无测试文件"
       else
