@@ -1304,7 +1304,7 @@
   ],
   "updated_at": "2026-09-29 00:42:56",
   "updated_by": "synova-cto",
-  "judged_at": "2026-09-29T05:17:00.431Z",
+  "judged_at": "2026-09-29T05:25:14.822Z",
   "judged_by": "dsh/plugins/synova-dashboards/scripts/judge-charter.mjs (D1066)",
   "judge_convention": {
     "exit0": "命令退出 0 ⇒ 该格判据成立（green）",

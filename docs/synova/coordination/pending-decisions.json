@@ -1,7 +1,7 @@
 {
   "schema": "pending-decisions/1",
   "generated_by": "dsh/plugins/synova-dashboards/scripts/gen-governance-ledger.mjs",
-  "generated_at": "2026-09-29T05:18:15.362Z",
+  "generated_at": "2026-09-29T05:25:14.602Z",
   "source": {
     "upstream": "docs/synova/product-lines/cockpit-override.yaml#pending_decisions",
     "primary": "docs/synova/coordination/pending-decisions.json",
