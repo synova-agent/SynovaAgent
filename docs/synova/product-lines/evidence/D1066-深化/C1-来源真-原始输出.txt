@@ -1,0 +1,25 @@
+=== C1 来源真 · 原始输出 ===
+2026-09-29 13:17:55 CST
+
+--- 病根（修复前，CTO/K3 实测）：profile dependency 指 /tmp ⇒ lib/ 空壳 ---
+dep(修复前) : file:/tmp/v-ux/dsh/plugins/synova-dashboards   （/tmp/v-ux 已不存在）
+lib/ 内容   : 空目录（0 个文件）
+
+--- 修复动作：由脚本生成/维护 profile 配置（禁止手工改）---
+$ bash dsh/plugins/synova-dashboards/scripts/install-dashboards.sh --profile-dir ~/.dsh/profiles/web
+==> 安装来源（主仓交付件）: /Users/wane/SynovaAgent/dsh/plugins/synova-dashboards
+    源头体检 ✅ lib/*.js = 4
+    已更新: dependencies: file:/tmp/v-ux/... → file:/Users/wane/SynovaAgent/dsh/plugins/synova-dashboards
+==> ⑤ 装后自证 ✅ 副本 lib/*.js = 4，与源头逐字节一致
+
+--- 修复后复验（只读）---
+lib/*.js 计数 : 4
+dep           : file:/Users/wane/SynovaAgent/dsh/plugins/synova-dashboards
+与主仓交付件  : 逐字节一致 ✅
+bundles 含包名: True
+
+--- 来源 fail-closed 自测（4 条，脚本内置）---
+T1 来源=/tmp           → exit 2（易失路径黑名单）
+T2 源头 lib/ 无 js     → exit 2（空壳源头拒装）
+T3 profile pkg 缺失    → exit 1
+T4 源头缺 lib/index.js → exit 2

@@ -1083,3 +1083,81 @@ test("D1060 回归：入口图标字形必须在 props.children（jsx 第 3 参�
     p.restore();
   }
 });
+
+// ══ D1066「时效真」：来源行 / 陈旧变灰 / 易失路径告警（C3）══════════════════════
+/** 给夹具payload 注入 provenance（模拟真实 Host 返回）。 */
+function withProvenance(payload, prov, summary) {
+  const p = JSON.parse(JSON.stringify(payload));
+  p.provenance = prov;
+  p.provenance_summary = summary;
+  return p;
+}
+const PROV_VOLATILE = {
+  label: "① 四问格子矩阵",
+  path: "/tmp/v-ux/dsh/plugins/synova-dashboards/docs/x.json",
+  source: "worktree", generated_at: "2026-09-20T00:00:00.000Z",
+  age_hours: 200, stale: true, volatile: true,
+  warning: "数据源落在易失路径（/tmp/…）—— /tmp 与临时 worktree 会被清理", note: null
+};
+const PROV_OK = {
+  label: "① 四问格子矩阵", path: "/Users/wane/SynovaAgent/docs/x.json",
+  source: "worktree", generated_at: "2026-09-29T05:00:00.000Z",
+  age_hours: 1, stale: false, volatile: false, warning: null, note: null
+};
+
+test("D1066 C3：来源落在易失路径 ⇒ 面板顶部显式自检告警（不是藏在某区块里）", async () => {
+  const p = loadPlugin();
+  try {
+    const payload = withProvenance(WB_OK, [PROV_VOLATILE], { ok: false, volatile_paths: [PROV_VOLATILE.path], stale_paths: [PROV_VOLATILE.path], unknown_time_paths: [] });
+    const r = await p.renderDetailed(null, { panelKey: "synova-dev-workbench", workbench: payload });
+    assert.match(r.text, /数据源自检/, "必须有自检横幅");
+    assert.match(r.text, /易失路径/);
+    assert.match(r.text, /D1066 病根/);
+    const warn = r.nodes.find((n) => (n.className || "").includes("swb-provWarn"));
+    assert.ok(warn, "自检横幅必须有独立 className（可被真机取证）");
+  } finally {
+    p.restore();
+  }
+});
+
+test("D1066 C3：来源行显示 来源路径 + 生成时间 + 年龄；>24h 标陈旧并变灰", async () => {
+  const p = loadPlugin();
+  try {
+    const payload = withProvenance(WB_OK, [PROV_VOLATILE], { ok: true, volatile_paths: [], stale_paths: [], unknown_time_paths: [] });
+    const r = await p.renderDetailed(null, { panelKey: "synova-dev-workbench", workbench: payload });
+    assert.match(r.text, /生成 2026-09-20 00:00/, "必须显示生成时间");
+    assert.match(r.text, /年龄 200h/);
+    assert.match(r.text, /陈旧\(>24h\)/, ">24h 必须显式标陈旧");
+    const stale = r.nodes.filter((n) => (n.className || "").includes("swb-provStale"));
+    assert.ok(stale.length >= 1, "陈旧来源行必须有变灰 class（swb-provStale）");
+  } finally {
+    p.restore();
+  }
+});
+
+test("D1066 C3：新鲜来源（<24h、非易失）⇒ 无自检横幅、无陈旧标记、无易失标", async () => {
+  const p = loadPlugin();
+  try {
+    const payload = withProvenance(WB_OK, [PROV_OK], { ok: true, volatile_paths: [], stale_paths: [], unknown_time_paths: [] });
+    const r = await p.renderDetailed(null, { panelKey: "synova-dev-workbench", workbench: payload });
+    assert.doesNotMatch(r.text, /数据源自检/, "非易失 ⇒ 不得报自检告警（防假告警）");
+    assert.doesNotMatch(r.text, /陈旧/, "1h < 24h ⇒ 不得标陈旧");
+    assert.match(r.text, /年龄 1h/);
+    assert.equal(r.nodes.filter((n) => (n.className || "").includes("swb-provStale")).length, 0);
+  } finally {
+    p.restore();
+  }
+});
+
+test("D1066 C3：时间不可解析 ⇒ 显式「—」+ 不标新鲜（stale=null 不得折算成 false）", async () => {
+  const p = loadPlugin();
+  try {
+    const bad = Object.assign({}, PROV_OK, { generated_at: "不是时间", age_hours: null, stale: null });
+    const payload = withProvenance(WB_OK, [bad], { ok: true, volatile_paths: [], stale_paths: [], unknown_time_paths: [bad.path] });
+    const r = await p.renderDetailed(null, { panelKey: "synova-dev-workbench", workbench: payload });
+    assert.match(r.text, /年龄 —（时间不可解析）/);
+    assert.doesNotMatch(r.text, /年龄 1h/);
+  } finally {
+    p.restore();
+  }
+});

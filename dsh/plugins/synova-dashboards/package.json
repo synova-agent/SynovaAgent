@@ -28,6 +28,6 @@
   },
   "license": "MIT",
   "scripts": {
-    "test": "node --test test/ledger.test.js test/host-route.test.js test/client-panel.test.js test/workbench.test.js test/governance.test.js test/flow.test.js"
+    "test": "node --test test/ledger.test.js test/host-route.test.js test/client-panel.test.js test/workbench.test.js test/governance.test.js test/flow.test.js test/judge-charter.test.js test/repofile.test.js"
   }
 }

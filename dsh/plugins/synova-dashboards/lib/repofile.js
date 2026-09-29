@@ -139,3 +139,83 @@ export async function gitRead(repoRoot, args, { timeout = 10000, maxBuffer = 32 
     return { ok: false, error: `git ${args.join(" ")} 失败：${reason}` };
   }
 }
+
+// ══ D1066「时效真」：来源/生成时间/陈旧/易失路径自检 ══════════════════════════
+// 目的（派单 §一.3）：面板每块数据旁可见 **来源路径 + 生成时间 + 是否陈旧**；
+//   且数据源一旦落在易失路径（/tmp、临时 worktree）⇒ **显式告警**，防 D1066 病根复发。
+//
+// 契约（铁律 47）：
+//   @input  p: string（绝对或相对路径）｜generatedAt: string|Date|null｜now: Date
+//   @output { path, generated_at, age_hours|null, stale: boolean|null, volatile: boolean, warning: string|null }
+//   @degraded 时间不可解析 → age_hours=null / stale=null（UI 显「—」），**不猜 0、不默认新鲜**
+//   @write 零写入（纯函数）
+
+/** 易失路径黑名单（与 install-dashboards.sh 的来源黑名单同口径，防两条链各写一套）。 */
+export const VOLATILE_PATH_RE = /(^|\/)(tmp|private\/tmp|var\/folders)(\/|$)|(^|\/)\.?synova-wt-/;
+
+/**
+ * 判断路径是否易失（会被清理的临时位置）。
+ * @param {string} p
+ * @returns {boolean}
+ */
+export function isVolatilePath(p) {
+  return VOLATILE_PATH_RE.test(String(p ?? ""));
+}
+
+/** 陈旧阈值（小时）：超过即 UI 变灰并提示重生成。 */
+export const STALE_AFTER_HOURS = 24;
+
+/**
+ * 组装一条来源说明（供每个数据块旁展示）。
+ * @param {{label:string, path:string, source?:string|null, generated_at?:string|Date|null, now:Date, note?:string|null}} args
+ * @returns {{label:string, path:string, source:string|null, generated_at:string|null, age_hours:number|null, stale:boolean|null, volatile:boolean, warning:string|null, note:string|null}}
+ */
+export function provenanceOf(args) {
+  const now = args.now instanceof Date ? args.now : new Date();
+  const raw = args.generated_at ?? null;
+  let iso = null;
+  let ageHours = null;
+  if (raw instanceof Date) {
+    iso = Number.isFinite(raw.getTime()) ? raw.toISOString() : null;
+    ageHours = iso ? (now.getTime() - raw.getTime()) / 3600000 : null;
+  } else if (typeof raw === "string" && raw.trim() !== "") {
+    const t = Date.parse(raw);
+    if (Number.isFinite(t)) {
+      iso = new Date(t).toISOString();
+      ageHours = (now.getTime() - t) / 3600000;
+    } else {
+      iso = raw; // 原样保留（人可读但不可解析），age 保持 null
+    }
+  }
+  ageHours = ageHours === null ? null : Math.round(ageHours * 10) / 10;
+  const p = String(args.path ?? "");
+  const volatile = isVolatilePath(p);
+  return {
+    label: args.label,
+    path: p,
+    source: args.source ?? null,
+    generated_at: iso,
+    age_hours: ageHours,
+    stale: ageHours === null ? null : ageHours > STALE_AFTER_HOURS,
+    volatile,
+    warning: volatile
+      ? `数据源落在易失路径（${p}）—— /tmp 与临时 worktree 会被清理，清理后面板将读不到数据（D1066 病根）。请把来源指向主仓。`
+      : null,
+    note: args.note ?? null
+  };
+}
+
+/**
+ * 把多条 provenance 汇总成面板级自检（供顶端横幅）。
+ * @param {Array<object>} list provenanceOf 结果数组
+ * @returns {{ok:boolean, volatile_paths:string[], stale_paths:string[], unknown_time_paths:string[]}}
+ */
+export function provenanceSummary(list) {
+  const arr = Array.isArray(list) ? list : [];
+  return {
+    ok: arr.every((x) => !x.volatile),
+    volatile_paths: arr.filter((x) => x.volatile).map((x) => x.path),
+    stale_paths: arr.filter((x) => x.stale === true).map((x) => x.path),
+    unknown_time_paths: arr.filter((x) => x.stale === null).map((x) => x.path)
+  };
+}

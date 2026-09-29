@@ -1,0 +1,86 @@
+{
+  "schema": "pending-decisions/1",
+  "generated_by": "dsh/plugins/synova-dashboards/scripts/gen-governance-ledger.mjs",
+  "generated_at": "2026-09-29T05:18:15.362Z",
+  "source": {
+    "upstream": "docs/synova/product-lines/cockpit-override.yaml#pending_decisions",
+    "primary": "docs/synova/coordination/pending-decisions.json",
+    "card_scan": "task-state/D###.json（卡面文本扫描「需创始人」，非结构化）"
+  },
+  "degraded": false,
+  "degraded_sources": [],
+  "counts": {
+    "pending": 0,
+    "resolved": 2,
+    "card_scan": 2
+  },
+  "pending": [],
+  "resolved": [
+    {
+      "id": "D-1",
+      "title": "告警去重窗口用多久？（同一件事多久内只提醒一次）",
+      "context": "审计员发现告警去重键不稳定（先修键是技术活，已排任务）。窗口大小是产品决策：太长会漏掉重要变化，太短会反复打扰老板。",
+      "options": [
+        {
+          "label": "5 分钟",
+          "note": "同一异常 5 分钟内只提醒一次；周级监测节奏下足够"
+        },
+        {
+          "label": "30 分钟",
+          "note": "更安静，但半小时内的两次独立异常会合并"
+        }
+      ],
+      "suggestion": {
+        "label": "5 分钟",
+        "reason": "监测最细是周级，重复告警都发生在同一轮；5 分钟足够去重，且不吞掉真实变化"
+      },
+      "status": "resolved",
+      "resolved_date": "2026-09-12",
+      "raised_date": null,
+      "waiting_days": null,
+      "waiting_unknown": true
+    },
+    {
+      "id": "D-2",
+      "title": "第一条做到 100% 的线选哪条？",
+      "context": "每条线到 100% 都要审计员全量复核（防烂尾）。第一条 100% 线是样板，建议选演示刚需、修复路径最清晰的。",
+      "options": [
+        {
+          "label": "资本循环（线 10）",
+          "note": "演示刚需（持续监测叙事）；审计员已给出转绿路径，第一步只需修一行配置"
+        },
+        {
+          "label": "首次诊断（线 06）",
+          "note": "演示刚需（首诊叙事）；但从未端到端实测，路径最长"
+        }
+      ],
+      "suggestion": {
+        "label": "资本循环（线 10）",
+        "reason": "修复路径最短、每步都有审计员给的断点清单，最快立信"
+      },
+      "status": "resolved",
+      "resolved_date": "2026-09-12",
+      "raised_date": null,
+      "waiting_days": null,
+      "waiting_unknown": true
+    }
+  ],
+  "card_scan": [
+    {
+      "id": "D776",
+      "title": "线4 数据接入：L5 连接器（CRM/财务/HR）+ L4 类型契约收敛 → GS-01~04 转绿",
+      "status": "claimed",
+      "updated_at": "2026-09-15",
+      "waiting_days": 14,
+      "excerpt": "todos.yaml T-4-01（P0）: 『Agent 核心能力全链路 FAIL（0/3 贯通）：L5 无 CRM/财务/HR 连接器；L4 类型契约断裂（Market≠Client、People≠Person）』，acceptance = GS-01/02/03/04 转绿 + 证据入库。前置口径需创始人确认三套"
+    },
+    {
+      "id": "D811",
+      "title": "队列收口：未合 PR 台账扫描器 + 可签字关闭清单 + 上限=12 提示层 + 旁路派生指标",
+      "status": "impl_done",
+      "updated_at": "2026-09-20",
+      "waiting_days": 9,
+      "excerpt": "跨分支动作：会对多个在途 PR 分支推送 merge-main 提交（非 force）。排除 K3 审计域（audit/k3-* 分支、scripts/audit/**）。本卡不关闭任何 PR（需创始人签字或 token）。 【2026-09-20 CTO 扩范围（创始人同意先派②）】按《DSH 决策镜头》先修瓶颈：①"
+    }
+  ]
+}

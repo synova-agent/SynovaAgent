@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import {
   collectGovernance, governanceSignals, resolveServes, extractLines,
-  BACKLOG_REL_PATH, ACTIVE_STATUSES, RESTING_STATUSES
+  BACKLOG_REL_PATH, GOVERNANCE_LEDGER_REL, ACTIVE_STATUSES, RESTING_STATUSES
 } from "../lib/governance.js";
 
 function makeDir(files = {}) {
@@ -63,7 +63,10 @@ test("collectGovernance 正常：治理卡按信号入选，活卡/终态分流�
   const now = new Date("2026-09-29T10:00:00+08:00");
   const g = await collectGovernance(root, { now });
   assert.equal(g.ok, true);
-  assert.equal(g.degraded, false);
+  // D1066：落库件缺失 → 显式回退现场扫描（回退本身入 degraded_sources，不静默）
+  assert.equal(g.source_mode, "live-scan-fallback");
+  assert.equal(g.degraded, true);
+  assert.ok(g.degraded_sources.some((x) => x.includes("落库件不可用")), JSON.stringify(g.degraded_sources));
   assert.equal(g.cards.count, 3, "D700 无治理信号 → 不入列");
   assert.equal(g.cards.active_count, 2, "impl_done 属活卡");
   assert.equal(g.cards.resting_count, 1, "audited 属终态");
@@ -140,4 +143,84 @@ test("actives/resting 状态集口径：终态不入活卡（防把已审完的�
     assert.ok(RESTING_STATUSES.has(s), s + " 应为终态");
   }
   assert.equal(ACTIVE_STATUSES.has("audited"), false);
+});
+
+// ══ D1066 §一.4「治理落库」：面板主源 = 仓库内 governance-tasks.json ══════════
+const LEDGER_DOC = {
+  schema: "governance-tasks/1",
+  generated_by: "dsh/plugins/synova-dashboards/scripts/gen-governance-ledger.mjs",
+  generated_at: "2026-09-29T05:13:00.939Z",
+  source: { primary: "task-state/D###.json", rule: "治理线 = 三条机器可见信号之一" },
+  degraded: false,
+  degraded_sources: [],
+  counts: { total: 2, active: 1, resting: 1, debt: 1, by_domain: { mac: 2 } },
+  cards: [
+    { id: "D1014", title: "N12 根治 ci.yml concurrency", status: "impl_done", domain: "mac", domain_label: "mac", signals: ["标题/里程碑含 治理|门禁|控制塔"], serves: "线 3、线 8", serves_source: "卡面文本抽取", updated_at: "2026-09-26", waiting_days: 3 },
+    { id: "D387", title: "CT-34 纯文档提交豁免门禁", status: "audited", domain: "mac", domain_label: "mac", signals: ["标题以 CT- 开头"], serves: "线 1", serves_source: "卡面文本抽取", updated_at: "2026-08-20", waiting_days: 40 }
+  ],
+  debt: [{ id: "PLAN-x", title: "待规划项", note: "备注" }]
+};
+
+test("D1066 C4：落库件在场 → 主源切换为 in-repo-ledger（不再现场扫卡），条数取自落库件", async () => {
+  const root = makeDir({
+    [GOVERNANCE_LEDGER_REL]: LEDGER_DOC,
+    // 故意**不放** task-state：证明主源真的换成了落库件（回退源根本没被读）
+    "task-state-must-not-be-read/README": "若主源还是现场扫描，本用例会得到 0 条"
+  });
+  const g = await collectGovernance(root, { now: new Date("2026-09-29T10:00:00+08:00") });
+  assert.equal(g.source_mode, "in-repo-ledger");
+  assert.equal(g.degraded, false, "落库件可用且未标降级 ⇒ degraded 必须 false");
+  assert.equal(g.cards.count, 2);
+  assert.equal(g.cards.active_count, 1, "impl_done 属活卡（按落库件 status 分流）");
+  assert.equal(g.cards.resting_count, 1, "audited 属终态");
+  assert.equal(g.cards.active[0].id, "D1014");
+  assert.equal(g.cards.active[0].serves, "线 3、线 8");
+  assert.equal(g.cards.active[0].waiting_days, 3, "落库件的等待天数原样采用（生成时算的），不重算");
+  assert.equal(g.debt.count, 1);
+  assert.equal(g.debt.source, GOVERNANCE_LEDGER_REL + "#debt");
+  assert.equal(g.ledger.ok, true);
+  assert.equal(g.ledger.generated_at, LEDGER_DOC.generated_at);
+  assert.equal(g.ledger.schema, "governance-tasks/1");
+});
+
+test("D1066 C3：落库件 provenance 带 generated_at；非易失路径不得告警，易失路径必须告警", async () => {
+  // ① 主仓风格路径（fixture 在 /tmp 下，故这里显式注入 now 后只断言 generated_at/age 语义）
+  const root = makeDir({ [GOVERNANCE_LEDGER_REL]: LEDGER_DOC });
+  const g = await collectGovernance(root, { now: new Date("2026-09-29T06:13:00Z") });
+  const pv = g.provenance[0];
+  assert.equal(pv.label, "治理台账（仓库内落库件）");
+  assert.equal(pv.generated_at, "2026-09-29T05:13:00.939Z");
+  assert.ok(pv.age_hours > 0.9 && pv.age_hours < 1.1, "年龄应为 ~1h，实际 " + pv.age_hours);
+  assert.equal(pv.stale, false, "1h < 24h ⇒ 不陈旧");
+  assert.equal(pv.volatile, true, "fixture 在 /tmp 下 ⇒ 易失自检必须命中（这就是 C3 注入测试）");
+  assert.match(pv.warning, /易失路径/);
+  assert.equal(g.provenance_summary.ok, false);
+  assert.ok(g.provenance_summary.volatile_paths.length >= 1);
+});
+
+test("D1066 C3：落库件陈旧（>24h）⇒ stale=true（UI 变灰）；时间不可解析 ⇒ stale=null（不猜新鲜）", async () => {
+  const oldDoc = { ...LEDGER_DOC, generated_at: "2026-09-20T00:00:00.000Z" };
+  const root = makeDir({ [GOVERNANCE_LEDGER_REL]: oldDoc });
+  const g = await collectGovernance(root, { now: new Date("2026-09-29T10:00:00Z") });
+  assert.equal(g.provenance[0].stale, true, "9 天前 ⇒ 陈旧");
+  assert.ok(g.provenance[0].age_hours > 200);
+
+  const badDoc = { ...LEDGER_DOC, generated_at: "不是时间" };
+  const root2 = makeDir({ [GOVERNANCE_LEDGER_REL]: badDoc });
+  const g2 = await collectGovernance(root2, { now: new Date("2026-09-29T10:00:00Z") });
+  assert.equal(g2.provenance[0].age_hours, null);
+  assert.equal(g2.provenance[0].stale, null, "不可解析 ⇒ null（UI 显 —），不得默认新鲜");
+});
+
+test("D1066 C4：落库件结构异常（缺 cards 数组）⇒ 显式回退现场扫描，不静默", async () => {
+  const root = makeDir({
+    [GOVERNANCE_LEDGER_REL]: { schema: "governance-tasks/1", generated_at: "2026-09-29T00:00:00Z" },
+    "task-state/D513.json": { task_id: "D513", title: "控制塔四项返修", status: "impl_done", updated_at: "2026-08-29" }
+  });
+  const g = await collectGovernance(root, { now: new Date("2026-09-29T10:00:00+08:00") });
+  assert.equal(g.source_mode, "live-scan-fallback");
+  assert.equal(g.cards.count, 1, "回退现场扫描后仍拿到卡");
+  assert.equal(g.ledger.ok, false);
+  assert.match(g.ledger.hint, /gen-governance-ledger\.mjs/);
+  assert.ok(g.degraded_sources.some((x) => x.includes("落库件不可用")));
 });

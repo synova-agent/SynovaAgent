@@ -1,0 +1,7 @@
+=== C3+C4 一致性复核（同一次取数）===
+落库件 generated_at: 2026-09-29T05:18:15.362Z
+面板 ledger.generated_at: 2026-09-29T05:18:15.362Z
+一致: True
+落库件 counts: {"total": 58, "active": 42, "resting": 16, "debt": 50, "by_domain": {"—（卡面未声明）": 23, "mac": 30, "win": 3, "doc-governance": 1, "k3": 1}}
+面板 counts: cards=58 active=42 debt=50
+source_mode=in-repo-ledger

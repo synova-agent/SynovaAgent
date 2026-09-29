@@ -27,11 +27,15 @@
 //       "缺绑定则不臆测归属（宁缺勿造）"）。
 //     · 等待天数 = 今天 − updated_at；updated_at 不可解析 → null（UI 显 —）。
 //   @write   零写入。
-import { readRepoJson } from "./repofile.js";
+import { join } from "node:path";
+import { readRepoJson, provenanceOf, provenanceSummary } from "./repofile.js";
 import { readTaskCards, daysBetween } from "./workbench.js";
 
 /** 欠账/待规划表（机器生成；task-board-adapter 消费的同一份）。 */
 export const BACKLOG_REL_PATH = "docs/synova/coordination/board-backlog.json";
+
+/** D1066 §一.4：治理卡台账落库件（仓库内、机器生成；面板主源）。 */
+export const GOVERNANCE_LEDGER_REL = "docs/synova/coordination/governance-tasks.json";
 
 /** 活卡状态（= 仍需推进；不含终态）。 */
 export const ACTIVE_STATUSES = new Set(["claimed", "spec_done", "impl_done", "in_progress", "audit_done"]);
@@ -94,68 +98,99 @@ export async function collectGovernance(repoRoot, opts = {}) {
   const now = opts.now instanceof Date ? opts.now : new Date();
   const degradedSources = [];
 
-  const cardsRes = await readTaskCards(repoRoot).catch((err) => ({
-    ok: false,
-    degraded: true,
-    error: `task-state 异常：${err?.message ?? err}`,
-    cards: [],
-    errors: []
+  // ── ① 主源：仓库内落库件 governance-tasks.json（D1066 §一.4「治理落库」）──────
+  // 治「数据源在库外档案仓 / 每次请求现场扫 390 张卡」：面板改读仓库内机读件，
+  // 且落库件自带 generated_at ⇒ 陈旧可见（见 provenance）。
+  const ledgerRes = await readRepoJson(repoRoot, GOVERNANCE_LEDGER_REL).catch((err) => ({
+    ok: false, degraded: true, error: `governance-tasks.json 异常：${err?.message ?? err}`, attempts: []
   }));
-  const backlogRes = await readRepoJson(repoRoot, BACKLOG_REL_PATH).catch((err) => ({
-    ok: false,
-    degraded: true,
-    error: `board-backlog 异常：${err?.message ?? err}`,
-    attempts: []
-  }));
+  const ledgerDoc = ledgerRes.ok === true && Array.isArray(ledgerRes.parsed?.cards) ? ledgerRes.parsed : null;
 
-  if (!cardsRes.ok) degradedSources.push(`治理卡：${cardsRes.error}`);
-  if (!backlogRes.ok) degradedSources.push(`欠账表：${backlogRes.error}`);
+  // ── ② 回退源：现场扫描（**仅当落库件不可用**，且回退本身显式入 degraded_sources）──
+  let cardsRes = { ok: false, cards: [], errors: [], error: "未扫描（落库件可用）" };
+  let backlogRes = { ok: false, error: "未读取（落库件可用）" };
+  if (!ledgerDoc) {
+    [cardsRes, backlogRes] = await Promise.all([
+      readTaskCards(repoRoot).catch((err) => ({ ok: false, degraded: true, error: `task-state 异常：${err?.message ?? err}`, cards: [], errors: [] })),
+      readRepoJson(repoRoot, BACKLOG_REL_PATH).catch((err) => ({ ok: false, degraded: true, error: `board-backlog 异常：${err?.message ?? err}`, attempts: [] }))
+    ]);
+    degradedSources.push(
+      `治理台账落库件不可用（${ledgerRes.error ?? "结构异常"}）→ 已回退现场扫描 task-state；` +
+      `该回退态下数据源仍在库外实时扫，建议跑 node dsh/plugins/synova-dashboards/scripts/gen-governance-ledger.mjs --repo-root <repo> 落库`
+    );
+    if (!cardsRes.ok) degradedSources.push(`治理卡：${cardsRes.error}`);
+    if (!backlogRes.ok) degradedSources.push(`欠账表：${backlogRes.error}`);
+  } else if (ledgerDoc.degraded === true) {
+    degradedSources.push(`落库件自身降级：${(ledgerDoc.degraded_sources ?? []).join("；") || "未注明"}`);
+  }
 
   const active = [];
   const resting = [];
   const byDomain = {};
   const signalCounts = {};
-  const errors = [...(cardsRes.errors ?? [])];
+  const errors = ledgerDoc ? [] : [...(cardsRes.errors ?? [])];
 
-  for (const c of cardsRes.cards ?? []) {
-    const signals = governanceSignals(c);
-    if (signals.length === 0) continue;
-    for (const s of signals) signalCounts[s] = (signalCounts[s] ?? 0) + 1;
-
-    const domain = typeof c.domain === "string" && c.domain !== "" ? c.domain : null;
-    const key = domain ?? "—（卡面未声明）";
+  const pushCard = (item) => {
+    const key = item.domain_label ?? "—（卡面未声明）";
     byDomain[key] = (byDomain[key] ?? 0) + 1;
-
-    const serves = resolveServes(c);
-    const status = String(c.status ?? "");
-    const blockedRaw = c.blocked;
-    const blockedNote =
-      typeof blockedRaw === "string"
-        ? blockedRaw.replace(/\s+/g, " ").slice(0, 200)
-        : blockedRaw && typeof blockedRaw === "object"
-          ? String(blockedRaw.reason ?? "").replace(/\s+/g, " ").slice(0, 200)
-          : null;
-
-    const item = {
-      id: c.task_id ?? null,
-      title: c.title ?? "(无标题)",
-      status: status || null,
-      domain,
-      domain_label: domain ?? "—（卡面未声明）",
-      signals,
-      serves: serves.serves,
-      serves_source: serves.serves_source,
-      milestone: c.milestone ?? null,
-      owner: c.owner ?? null,
-      risk: c.risk ?? null,
-      depends_on: Array.isArray(c.depends_on) ? c.depends_on : [],
-      blocked_note: blockedNote,
-      updated_at: c.updated_at ?? null,
-      waiting_days: c.updated_at ? daysBetween(c.updated_at, now) : null
-    };
-
-    if (ACTIVE_STATUSES.has(status)) active.push(item);
+    for (const s of item.signals ?? []) signalCounts[s] = (signalCounts[s] ?? 0) + 1;
+    if (ACTIVE_STATUSES.has(String(item.status ?? ""))) active.push(item);
     else resting.push(item);
+  };
+
+  if (ledgerDoc) {
+    // 落库件路径：卡已是面板形状（生成器用同一套 governanceSignals/resolveServes 产出）
+    for (const c of ledgerDoc.cards) {
+      if (!c || typeof c !== "object") continue;
+      pushCard({
+        id: c.id ?? null,
+        title: c.title ?? "(无标题)",
+        status: c.status ?? null,
+        domain: c.domain ?? null,
+        domain_label: c.domain_label ?? (c.domain ?? "—（卡面未声明）"),
+        signals: Array.isArray(c.signals) ? c.signals : [],
+        serves: c.serves ?? null,
+        serves_source: c.serves_source ?? "卡面未声明",
+        milestone: c.milestone ?? null,
+        owner: c.owner ?? null,
+        risk: c.risk ?? null,
+        depends_on: Array.isArray(c.depends_on) ? c.depends_on : [],
+        blocked_note: c.blocked_note ?? null,
+        updated_at: c.updated_at ?? null,
+        waiting_days: c.waiting_days ?? null
+      });
+    }
+  } else {
+    for (const c of cardsRes.cards ?? []) {
+      const signals = governanceSignals(c);
+      if (signals.length === 0) continue;
+      const domain = typeof c.domain === "string" && c.domain !== "" ? c.domain : null;
+      const serves = resolveServes(c);
+      const blockedRaw = c.blocked;
+      const blockedNote =
+        typeof blockedRaw === "string"
+          ? blockedRaw.replace(/\s+/g, " ").slice(0, 200)
+          : blockedRaw && typeof blockedRaw === "object"
+            ? String(blockedRaw.reason ?? "").replace(/\s+/g, " ").slice(0, 200)
+            : null;
+      pushCard({
+        id: c.task_id ?? null,
+        title: c.title ?? "(无标题)",
+        status: c.status ?? null,
+        domain,
+        domain_label: domain ?? "—（卡面未声明）",
+        signals,
+        serves: serves.serves,
+        serves_source: serves.serves_source,
+        milestone: c.milestone ?? null,
+        owner: c.owner ?? null,
+        risk: c.risk ?? null,
+        depends_on: Array.isArray(c.depends_on) ? c.depends_on : [],
+        blocked_note: blockedNote,
+        updated_at: c.updated_at ?? null,
+        waiting_days: c.updated_at ? daysBetween(c.updated_at, now) : null
+      });
+    }
   }
 
   // 等待最久的排最前（创始人视角：先看卡最久的）
@@ -163,18 +198,22 @@ export async function collectGovernance(repoRoot, opts = {}) {
   active.sort(byWait);
   resting.sort(byWait);
 
-  let debt = {
-    ok: false,
-    degraded: true,
-    source: BACKLOG_REL_PATH,
-    items: [],
-    count: 0,
-    error: backlogRes.error ?? "board-backlog 不可读",
-    // 显式声明未消费 todos.yaml（T-*）及原因：本插件零依赖，不引入第二套 YAML 解析器 ——
-    // 宁可少一个源并列明，也不静默漏源（铁律 24/31）。
-    todos_yaml_note: "docs/synova/product-lines/todos.yaml（T-* 待办）未消费：插件零依赖，不引 YAML 解析器；该源由 task-board-adapter 的 Python 派生器消费"
-  };
-  if (backlogRes.ok) {
+  // ── ③ 欠账/待规划 ────────────────────────────────────────────────────────
+  const TODOS_NOTE = "docs/synova/product-lines/todos.yaml（T-* 待办）未消费：插件零依赖，不引 YAML 解析器；该源由 task-board-adapter 的 Python 派生器消费";
+  let debt;
+  if (ledgerDoc) {
+    const items = Array.isArray(ledgerDoc.debt) ? ledgerDoc.debt : [];
+    debt = {
+      ok: true,
+      degraded: false,
+      source: GOVERNANCE_LEDGER_REL + "#debt",
+      source_detail: ledgerRes.fallback_note,
+      generated_at: ledgerDoc.generated_at ?? null,
+      items,
+      count: items.length,
+      todos_yaml_note: TODOS_NOTE
+    };
+  } else if (backlogRes.ok) {
     const raw = Array.isArray(backlogRes.parsed?.backlog) ? backlogRes.parsed.backlog : [];
     const items = raw
       .filter((x) => x && typeof x === "object")
@@ -188,25 +227,77 @@ export async function collectGovernance(repoRoot, opts = {}) {
       degraded: false,
       source: BACKLOG_REL_PATH,
       source_detail: backlogRes.fallback_note,
+      generated_at: backlogRes.parsed?.generated_at ?? null,
       schema_version: backlogRes.parsed?.schemaVersion ?? null,
       items,
       count: items.length,
-      todos_yaml_note: "docs/synova/product-lines/todos.yaml（T-* 待办）未消费：插件零依赖，不引 YAML 解析器；该源由 task-board-adapter 的 Python 派生器消费"
+      todos_yaml_note: TODOS_NOTE
+    };
+  } else {
+    debt = {
+      ok: false,
+      degraded: true,
+      source: BACKLOG_REL_PATH,
+      items: [],
+      count: 0,
+      error: backlogRes.error ?? "board-backlog 不可读",
+      todos_yaml_note: TODOS_NOTE
     };
   }
 
+  // ── ④ D1066「时效真」：来源 + 生成时间 + 陈旧 + 易失路径自检 ────────────────
+  const provenance = [
+    provenanceOf({
+      label: ledgerDoc ? "治理台账（仓库内落库件）" : "治理卡（现场扫描回退）",
+      path: join(repoRoot, GOVERNANCE_LEDGER_REL),
+      source: ledgerDoc ? ledgerRes.source : "task-state(live)",
+      generated_at: ledgerDoc ? ledgerDoc.generated_at ?? null : now,
+      now,
+      note: ledgerDoc ? null : `落库件不可用：${ledgerRes.error ?? "结构异常"}`
+    }),
+    provenanceOf({
+      label: "欠账/待规划",
+      path: join(repoRoot, debt.source === GOVERNANCE_LEDGER_REL + "#debt" ? GOVERNANCE_LEDGER_REL : BACKLOG_REL_PATH),
+      source: debt.ok ? debt.source : null,
+      generated_at: debt.generated_at ?? null,
+      now
+    })
+  ];
+
   return {
-    ok: cardsRes.ok || debt.ok,
+    ok: (ledgerDoc ? ledgerDoc.cards.length > 0 : cardsRes.ok) || debt.ok,
     degraded: degradedSources.length > 0,
     degraded_sources: degradedSources,
     generated_at: now.toISOString(),
+    source_mode: ledgerDoc ? "in-repo-ledger" : "live-scan-fallback",
+    ledger: ledgerDoc
+      ? {
+          ok: true,
+          path: GOVERNANCE_LEDGER_REL,
+          source: ledgerRes.source,
+          generated_at: ledgerDoc.generated_at ?? null,
+          schema: ledgerDoc.schema ?? null,
+          generated_by: ledgerDoc.generated_by ?? null,
+          counts: ledgerDoc.counts ?? null,
+          degraded: ledgerDoc.degraded === true,
+          degraded_sources: ledgerDoc.degraded_sources ?? []
+        }
+      : {
+          ok: false,
+          path: GOVERNANCE_LEDGER_REL,
+          error: ledgerRes.error ?? "落库件结构异常",
+          hint: "跑 node dsh/plugins/synova-dashboards/scripts/gen-governance-ledger.mjs --repo-root <repo> 落库"
+        },
+    provenance,
+    provenance_summary: provenanceSummary(provenance),
     scope: {
       rule: "治理线 = 三条机器可见信号之一：① domain=doc-governance ② 标题以 CT- 开头 ③ 标题/里程碑含 治理|门禁|控制塔。逐卡回传命中信号，可复核可推翻。",
       signals: signalCounts
     },
     cards: {
-      ok: cardsRes.ok,
-      error: cardsRes.ok ? undefined : cardsRes.error,
+      ok: ledgerDoc ? true : cardsRes.ok,
+      error: ledgerDoc ? undefined : (cardsRes.ok ? undefined : cardsRes.error),
+      source: ledgerDoc ? GOVERNANCE_LEDGER_REL : "task-state(现场扫描)",
       filter_note: "「服务哪条主线」只认卡面显式字段或文本里的『线 N』；没有就显示『—（卡面未声明）』，不猜。",
       active,
       resting,

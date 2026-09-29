@@ -1,0 +1,16 @@
+=== C3 时效真 · 注入测试（数据源改成 worktree 路径 ⇒ 面板显式告警）===
+注入方式：真机 repoRoot = .synova-wt-d1066（临时 worktree，属易失路径黑名单）
+结果：provenance_summary.ok=false，volatile_paths 逐条点名（见下）
+
+workbench.provenance age/stale/volatile:
+   {'label': '① 四问格子矩阵', 'age': 101.3, 'stale': True, 'volatile': True}
+   {'label': '② 流水 · git', 'age': 0, 'stale': False, 'volatile': True}
+   {'label': '② 流水 · PR', 'age': 0, 'stale': False, 'volatile': False}
+   {'label': '③ 待你裁', 'age': 0.1, 'stale': False, 'volatile': True}
+   {'label': '④ 阻塞', 'age': 205.8, 'stale': True, 'volatile': True}
+governance.volatile_summary: {"ok": false, "volatile_paths": ["/Users/wane/SynovaAgent/.synova-wt-d1066/docs/synova/coordination/governance-tasks.json", "/Users/wane/SynovaAgent/.synova-wt-d1066/docs/synova/coordination/governance-tasks.json"], "stale_paths": [], "unknown_time_paths": []}
+governance.provenance:
+   {'label': '治理台账（仓库内落库件）', 'age': 0.1, 'stale': False, 'volatile': True}
+   {'label': '欠账/待规划', 'age': 0.1, 'stale': False, 'volatile': True}
+
+单元测试覆盖（client）：4 条 —— 易失⇒顶部自检横幅 / 陈旧⇒变灰+标陈旧 / 新鲜⇒无假告警 / 时间不可解析⇒显「—」不折算

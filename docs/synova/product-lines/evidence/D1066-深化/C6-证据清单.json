@@ -1,0 +1,49 @@
+{
+  "schema": "d1066-evidence/1",
+  "task": "D1066（承接 D1060 · 深化）",
+  "generated_at": "2026-09-29T05:20:00Z",
+  "suite": {
+    "runner": "node --test（插件内 7 个测试文件）",
+    "cases_declared": 108,
+    "tests": "108",
+    "pass": "108",
+    "fail": "0",
+    "skipped": "0"
+  },
+  "criteria": {
+    "C1_source": {
+      "status": "partial",
+      "done": "web profile 来源已收回主仓（lib/ 4 js，与主仓逐字节一致，配置由脚本生成）",
+      "pending": "冷启动（重启后 19387 两路由 200）—— 需先合并 PR 使主仓含 D1060/D1066 交付件，再重启 App；重启须先报 CTO"
+    },
+    "C2_content": {
+      "status": "done",
+      "filled": 30,
+      "cells": 64,
+      "green": 29,
+      "red": 1,
+      "empty": 34,
+      "note": "判据执行器机械派生；q3(生效)16 格 + q4(删除)16 格 + 时间尺度 2 格无证据 ⇒ ⚪ 待办，不折算成绿"
+    },
+    "C3_freshness": {
+      "status": "done",
+      "note": "五块 provenance（路径/生成时间/年龄/陈旧/易失）；易失注入测试命中；单测 4 条"
+    },
+    "C4_governance_in_repo": {
+      "status": "done",
+      "files": [
+        "docs/synova/coordination/governance-tasks.json",
+        "docs/synova/coordination/pending-decisions.json"
+      ],
+      "panel": "source_mode=in-repo-ledger，cards=58（活 42），debt=50，与落库件 counts 一致"
+    },
+    "C5_break_red": {
+      "status": "pending",
+      "note": "需在装载 D1066 交付件的环境下重新取证（改坏即删 slot / 改错数据源）；当前桌面 profile 仍装 D1060 worktree 版，待合并后重装再取证"
+    },
+    "C6_evidence": {
+      "status": "done",
+      "dir": "docs/synova/product-lines/evidence/D1066-深化/"
+    }
+  }
+}

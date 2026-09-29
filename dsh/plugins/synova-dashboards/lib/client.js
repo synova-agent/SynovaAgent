@@ -108,7 +108,14 @@ window.__ModuleLoader__.load({
 			".swb-srcTag{font-size:10px;color:var(--dsw-alias-label-tertiary);white-space:nowrap}",
 			".swb-filter{display:flex;gap:6px;padding:6px 12px;font-size:11px;align-items:center;border-top:1px solid var(--dsw-alias-border-l1)}",
 			".swb-filterBtn{border:1px solid var(--dsw-alias-border-l1);background:transparent;color:var(--dsw-alias-label-secondary);border-radius:999px;padding:2px 9px;font-size:11px;cursor:pointer}",
-			".swb-filterBtn[data-on=\"1\"]{background:var(--dsw-alias-interactive-bg-hover-solid);color:var(--dsw-alias-label-primary);font-weight:600}"
+			".swb-filterBtn[data-on=\"1\"]{background:var(--dsw-alias-interactive-bg-hover-solid);color:var(--dsw-alias-label-primary);font-weight:600}",
+			// D1066「时效真」：来源行 / 陈旧变灰 / 易失路径告警
+			".swb-prov{display:flex;gap:6px;align-items:baseline;padding:4px 12px;border-top:1px dashed var(--dsw-alias-border-l1);font-size:10px;color:var(--dsw-alias-label-tertiary);flex-wrap:wrap}",
+			".swb-provStale{opacity:.55}",
+			".swb-provStale .swb-provPath{text-decoration:line-through}",
+			".swb-provBad{color:#dc2626;font-weight:600}",
+			".swb-provPath{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all}",
+			".swb-provWarn{padding:8px 12px;border-radius:10px;background:color-mix(in srgb,#dc2626 14%,transparent);color:#dc2626;font-size:11px;line-height:17px}"
 		].join("");
 
 		// ── 小工具 ─────────────────────────────────────────────────────────────
@@ -760,6 +767,9 @@ window.__ModuleLoader__.load({
 				body.push(jsx("div", { className: "spo-warn", key: "warn", children: "部分数据源降级" + (srcs.length > 0 ? "：" + srcs.join("、") : "") }));
 			}
 			if (usable) {
+				// D1066「时效真」：数据源自检横幅（易失路径一次性集中告警，不藏在各区块里）
+				const selfCheck = jsx(ProvenanceSelfCheck, { key: "provcheck", summary: data.provenance_summary });
+				if (selfCheck) body.push(selfCheck);
 				for (const node of renderBody(data, collapsed, toggleSection)) body.push(node);
 			}
 
@@ -800,8 +810,45 @@ window.__ModuleLoader__.load({
 			});
 		}
 
+		/**
+		 * D1066「时效真」：一条来源说明 —— 来源路径 + 生成时间 + 年龄 + 陈旧/易失标记。
+		 * @input prov = {label,path,source,generated_at,age_hours,stale,volatile,warning,note}
+		 */
+		function ProvenanceLine(props) {
+			const pv = props.prov;
+			if (!pv) return null;
+			const cls = "swb-prov" + (pv.stale === true ? " swb-provStale" : "");
+			const bits = [];
+			bits.push(jsx("span", { key: "lb", children: pv.label }));
+			bits.push(jsx("span", { key: "src", className: pv.volatile ? "swb-provBad" : "", title: pv.path, children: "源 " + (pv.source ?? "—") + " · " + String(pv.path || "").split("/").slice(-2).join("/") }));
+			bits.push(jsx("span", { key: "gen", children: "生成 " + (pv.generated_at ? String(pv.generated_at).slice(0, 16).replace("T", " ") : "—") }));
+			bits.push(jsx("span", { key: "age", className: pv.stale === true ? "swb-provBad" : "", children: pv.age_hours === null ? "年龄 —（时间不可解析）" : "年龄 " + pv.age_hours + "h" + (pv.stale === true ? " ⚠ 陈旧(>24h)" : "") }));
+			if (pv.volatile) bits.push(jsx("span", { key: "vol", className: "swb-provBad", title: pv.warning || "", children: "⚠ 易失路径" }));
+			if (pv.note) bits.push(jsx("span", { key: "note", children: "· " + pv.note }));
+			return jsx("div", { className: cls, children: bits });
+		}
+
+		/** 顶端「数据源自检」横幅：任一来源落在易失路径 ⇒ 显式告警（防 D1066 病根复发）。 */
+		function ProvenanceSelfCheck(props) {
+			const sum = props.summary;
+			if (!sum || sum.ok === true) return null;
+			const vols = Array.isArray(sum.volatile_paths) ? sum.volatile_paths : [];
+			return jsx("div", {
+				className: "swb-provWarn",
+				title: vols.join("\n"),
+				children: "⚠ 数据源自检：有 " + vols.length + " 处来源落在**易失路径**（/tmp 或临时 worktree）—— 清理后本面板将读不到数据（D1066 病根）。请把 projectRoot/来源指向主仓。样例：" + (vols[0] ?? "")
+			});
+		}
+
+		/** 按 label 前缀取 provenance（找不到返回 null，不编造）。 */
+		function provByLabel(data, prefix) {
+			const list = data && Array.isArray(data.provenance) ? data.provenance : [];
+			return list.find((x) => String(x.label ?? "").startsWith(prefix)) ?? null;
+		}
+
 		/** 四问格子矩阵：16 行 × 4 问，按 layer 分组合并首列（rowSpan）。 */
-		function gridSection(grid, collapsed, onToggle) {
+		function gridSection(grid, collapsed, onToggle, prov) {
+			const props = { prov };
 			if (!grid || grid.ok !== true) {
 				return jsx(Section, {
 					id: "grid", title: "① 四问格子矩阵", collapsed, onToggle,
@@ -895,13 +942,15 @@ window.__ModuleLoader__.load({
 						jsx("span", { className: "spo-spacer" }),
 						jsx("span", { className: "swb-srcTag", title: grid.schema ?? "", children: (grid.counts?.questions ?? "?") + " 问 · 口径声明 filled=" + (grid.counts?.filled ?? "—") })
 					] }),
-					legend
+					legend,
+					jsx(ProvenanceLine, { key: "prov", prov: props.prov })
 				].filter(Boolean)
 			});
 		}
 
 		/** ② 今日/本周流水：git 两侧 + PR（API，或显式标注的快照回退）。 */
-		function flowSection(flow, collapsed, onToggle) {
+		function flowSection(flow, collapsed, onToggle, gitProv, prProv) {
+			const props = { gitProv, prProv };
 			if (!flow || flow.ok !== true) {
 				return jsx(Section, {
 					id: "flow", title: "② 今日/本周流水", collapsed, onToggle,
@@ -973,13 +1022,16 @@ window.__ModuleLoader__.load({
 				extra: jsx("span", { className: "spo-muted", children: "今日 " + gitToday.length + " 提交 · 本周 " + gitWeek.length + " 提交 · 未合 PR " + ((pr.counts ?? {}).open ?? "—") }),
 				children: [
 					jsx("div", { key: "git", className: "swb-flow", children: [colToday, colWeek] }),
-					jsx("div", { key: "pr", children: prCells })
+					jsx("div", { key: "pr", children: prCells }),
+					jsx(ProvenanceLine, { key: "provGit", prov: props.gitProv }),
+					jsx(ProvenanceLine, { key: "provPr", prov: props.prProv })
 				]
 			});
 		}
 
 		/** ③ 待你裁：一句话 + 我的倾向 + 等待天数（权威源）；卡面扫描单列，不混入。 */
-		function decisionsSection(dec, collapsed, onToggle) {
+		function decisionsSection(dec, collapsed, onToggle, prov) {
+			const props = { prov };
 			if (!dec || dec.ok !== true) {
 				return jsx(Section, {
 					id: "decisions", title: "③ 待你裁", collapsed, onToggle,
@@ -1010,6 +1062,7 @@ window.__ModuleLoader__.load({
 					] }),
 					jsx("div", { key: "items", children: items }),
 					jsx("div", { key: "scanHead", className: "swb-flowHead", children: "卡面文本扫描「需创始人」 " + scan.length + " 条（非结构化 —— 无选项/无倾向，故单列不混入上表）" }),
+					jsx(ProvenanceLine, { key: "prov", prov: props.prov }),
 					scan.length === 0
 						? jsx("div", { className: "spo-empty", key: "scanEmpty", children: "无" })
 						: jsx("div", { className: "swb-scroll", key: "scan", children: scan.map((s, i) => jsx("div", { className: "spo-item", key: s.id ?? i, children: [
@@ -1022,7 +1075,8 @@ window.__ModuleLoader__.load({
 		}
 
 		/** ④ 阻塞：卡在哪 + 卡了几天（三要素口径）；未申报的单列，不静默补。 */
-		function blockedSection(blk, collapsed, onToggle) {
+		function blockedSection(blk, collapsed, onToggle, prov) {
+			const props = { prov };
 			if (!blk || blk.ok !== true) {
 				return jsx(Section, {
 					id: "blocked", title: "④ 阻塞", collapsed, onToggle,
@@ -1054,6 +1108,7 @@ window.__ModuleLoader__.load({
 						: null,
 					jsx("div", { key: "list", children: list }),
 					jsx("div", { key: "ncHead", className: "swb-flowHead", children: "未按三要素申报（reason+since+needs 缺一即不计入阻塞数，不静默补）共 " + nc.length + " 条" }),
+					jsx(ProvenanceLine, { key: "prov", prov: props.prov }),
 					nc.length === 0
 						? jsx("div", { className: "spo-empty", key: "ncEmpty", children: "无" })
 						: jsx("div", { className: "swb-scroll", key: "nc", children: nc.map((n, i) => jsx("div", { className: "spo-item", key: (n.id ?? "n") + i, children: [
@@ -1075,10 +1130,10 @@ window.__ModuleLoader__.load({
 				collapseDefaults: { grid: false, flow: false, decisions: false, blocked: false },
 				onBack: props && props.onBack,
 				renderBody: (data, collapsed, toggle) => [
-					gridSection(data.grid, collapsed.grid, toggle),
-					flowSection(data.flow, collapsed.flow, toggle),
-					decisionsSection(data.decisions, collapsed.decisions, toggle),
-					blockedSection(data.blocked, collapsed.blocked, toggle)
+					gridSection(data.grid, collapsed.grid, toggle, provByLabel(data, "①")),
+					flowSection(data.flow, collapsed.flow, toggle, provByLabel(data, "② 流水 · git"), provByLabel(data, "② 流水 · PR")),
+					decisionsSection(data.decisions, collapsed.decisions, toggle, provByLabel(data, "③")),
+					blockedSection(data.blocked, collapsed.blocked, toggle, provByLabel(data, "④"))
 				]
 			});
 		}
@@ -1129,7 +1184,15 @@ window.__ModuleLoader__.load({
 								] }),
 								rows.length === 0
 									? jsx("div", { className: "spo-empty", key: "empty", children: "无符合条件的治理卡" })
-									: jsx("div", { className: "swb-scroll", key: "rows", children: rows })
+									: jsx("div", { className: "swb-scroll", key: "rows", children: rows }),
+								// D1066「时效真」：本块来源 + 生成时间 + 陈旧/易失标记
+								jsx(ProvenanceLine, { key: "provCards", prov: (data.provenance ?? [])[0] ?? null }),
+								jsx("div", { className: "swb-kv", key: "ledger", children: [
+									jsx("span", { className: "swb-kvKey", children: "落库件" }),
+									jsx("span", { className: "swb-kvVal", children: data.ledger?.ok
+										? (data.ledger.path + " · schema " + (data.ledger.schema ?? "—") + " · 生成 " + (data.ledger.generated_at ?? "—") + " · 由 " + (data.ledger.generated_by ?? "—").split("/").slice(-1)[0])
+										: ("不可用：" + (data.ledger?.error ?? "—") + "　" + (data.ledger?.hint ?? "")) })
+								] })
 							]
 						}),
 						jsx(Section, {
@@ -1148,7 +1211,8 @@ window.__ModuleLoader__.load({
 										: jsx("div", { className: "swb-scroll", key: "l", children: (debt.items ?? []).map((x, i) => jsx("div", { className: "spo-item", key: x.id ?? i, children: [
 											jsx("span", { className: "spo-id", children: x.id }),
 											jsx("span", { className: "spo-itemTitle", title: x.note, children: x.title })
-										] })) })
+										] })) }),
+									jsx(ProvenanceLine, { key: "provDebt", prov: (data.provenance ?? [])[1] ?? null })
 								]
 								: jsx("div", { className: "spo-empty", children: "降级：欠账表不可读 —— " + (debt.error ?? "未知原因") })
 						})

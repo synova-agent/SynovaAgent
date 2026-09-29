@@ -50,6 +50,57 @@ D963（宪章格子面板）的升级：从一个静态格子升级为四区块�
 `docs/synova/product-lines/todos.yaml`（T-*）**未消费**并在面板上写明原因（插件零依赖，不引 YAML 解析器；
 该源由 task-board-adapter 的 Python 派生器消费）—— 宁可少一个源并列明，也不静默漏源。
 
+## D1066 · 看板数据真实性（来源真 / 内容真 / 时效真 / 治理落库）
+
+> 承 D1060 · 深化。病根（CTO+K3 实测）：profile 的 dependency 指过 `file:/tmp/v-ux/...`，
+> /tmp 清理后安装目录只剩空目录 ⇒ Host 半加载不到代码，**面板静默消失**。
+
+### ① 来源真（install-dashboards.sh）
+
+| 机制 | 行为 |
+|---|---|
+| 来源定位 | `--repo-root` > `$SYNOVA_REPO_ROOT` > **git 主工作树**（`git worktree list --porcelain` 首行）> 脚本上溯三级 |
+| 易失路径黑名单 | 来源命中 `/tmp`、`/private/tmp`、`/var/folders`、`*/.synova-wt-*/*` ⇒ **exit 2 拒装** |
+| 源头体检（fail-closed） | 缺 `lib/`、`lib/*.js` 计数 0、缺 `package.json`/`lib/index.js`/`lib/client.js` ⇒ **exit 2 拒装**（宁可不装，不装空壳） |
+| 装后自证 | 副本 `lib/*.js` 非空 + `diff -r` 与源头逐字节一致 ⇒ 才打印成功；否则**回滚**上一份副本 + exit 3 |
+| profile 配置 | dependencies / `dsh.profile.bundles` **由脚本生成维护**，禁止手工改 profile package.json |
+
+### ② 内容真（charter-judge-map.json + judge-charter.mjs）
+
+宪章 64 格的状态**由命令退出码派生，不手编**：
+
+```bash
+node dsh/plugins/synova-dashboards/scripts/judge-charter.mjs --repo-root <repo> [--dry-run]
+```
+
+- `judge_state=ready` 且命令退出 0 ⇒ 🟢 生效了；非 0 ⇒ 🔴 缺失；`judge_state=todo` ⇒ ⚪ 未填/待办（**不折算成绿**）
+- 每格落 `judge_cmd`（可复跑）+ `judge_basis`（判据含义）+ `evidence`（退出码与输出）+ `checked_by`
+- 判据映射 `docs/synova/coordination/charter-judge-map.json`：16 扩展点 × 4 问；证据路径逐条 grep 实测
+- 首批结果：`filled 30/64`（🟢29 🔴1）；q3「生效了吗」16 格 + q4「删了吗」16 格 + 时间尺度 2 格无证据 ⇒ ⚪ 待办
+- 执行器当场抓出两处**作者假绿**并修正：报告模板 q2 指错文件（改指 manifest `entryPoint` 声明的 loader 并追到 `src/server.ts` 调用链）；
+  公式参数 q2 只命中注释行 → 加严为「排除注释行后 ≥1 命中」⇒ 真结论 🔴（`transfer_function` 声明在边数据里、生产 TS 零读取）
+
+### ③ 时效真（provenance）
+
+每个数据块旁显示 **来源路径 + 来源类型 + 生成时间 + 年龄**；`>24h` ⇒ 变灰并标「⚠ 陈旧(>24h)」；
+时间不可解析 ⇒ 显「—」且 `stale=null`（**不默认新鲜**）。
+**数据源自检**：来源落在 `/tmp` 或 `.synova-wt-*` ⇒ 面板顶部红色自检横幅逐条点名（防 D1066 病根复发），
+同时进 `degraded_sources`（铁律 31）。
+
+### ④ 治理落库（仓库内两件）
+
+```bash
+node dsh/plugins/synova-dashboards/scripts/gen-governance-ledger.mjs --repo-root <repo>
+```
+
+| 落库件 | 内容 | 面板 |
+|---|---|---|
+| `docs/synova/coordination/governance-tasks.json` | 治理卡台账（域/卡号/状态/服务的阻塞/等待天数）+ 欠账表 | 面板 B **主源**（`source_mode=in-repo-ledger`） |
+| `docs/synova/coordination/pending-decisions.json` | 待裁清单（pending/resolved/卡面扫描） | 面板 A ③ 待你裁主源 |
+
+- 落库件不可用/结构异常 ⇒ 显式回退现场扫描或现场派生，并在 `degraded_sources` 说明原因（**不静默**）
+- 两源皆空 ⇒ 生成器 **exit 2 拒写**（不写空台账冒充数据）
+
 ## 面板 A（项目总览）六区块
 
 | 面板区块 | 数据 | 数据源（Host 端按请求实时取数，无缓存） |

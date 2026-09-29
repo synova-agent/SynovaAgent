@@ -27,7 +27,8 @@
 //       缺一即"未申报"，单列 nonconforming **不静默补**。
 //     · 待你裁 = status ≠ resolved 才算待裁；等待天数取该项自带日期字段，缺失则 null（UI 显 —）。
 //   @write   零写入：只 readFile / 只读 git / 只读 HTTP GET。
-import { readRepoJson } from "./repofile.js";
+import { join } from "node:path";
+import { readRepoJson, provenanceOf, provenanceSummary } from "./repofile.js";
 import { collectFlow } from "./flow.js";
 
 /** 四问格子机读单源（D1059 起含 q4「删了吗」）。 */
@@ -38,6 +39,8 @@ export const PROGRESS_REL_PATH = "docs/synova/product-lines/product-progress.jso
 export const LEDGER_REL_PATH = "docs/synova/project/ledger.json";
 /** 任务卡目录（治理卡/阻塞申报/待裁文本扫描的共同源）。 */
 export const TASK_STATE_DIR = "task-state";
+/** D1066 §一.4：待裁清单落库件（仓库内、机器生成；面板主源）。 */
+export const PENDING_DECISIONS_REL = "docs/synova/coordination/pending-decisions.json";
 
 /** 四色（与 scripts/control-tower/gen-charter-grid.py:15-16 同口径，禁第二套配色）。 */
 export const GRID_COLORS = {
@@ -166,6 +169,8 @@ export async function readGrid(repoRoot) {
     source_detail: r.fallback_note,
     path: GRID_REL_PATH,
     schema: d?.schema ?? null,
+    // D1066「时效真」：格子文件的生成时间（宪章 JSON 自带 created_at）→ 用于落后/陈旧判定
+    created_at: d?.created_at ?? null,
     rules: d?.rules ?? null,
     // 文件自带 counts（作者声明）+ derived（本模块按 cells 实数，逐格可核）——
     // 两者并列展示，冲突时以 derived 为准并可见（不覆盖文件值，不静默改口径）
@@ -196,7 +201,29 @@ export async function readGrid(repoRoot) {
  * @param {Date} now
  * @param {Array<object>} cards 已读的任务卡（由 readTaskCards 提供，避免重复扫盘）
  */
-export function buildDecisions(progress, cards, now) {
+export function buildDecisions(progress, cards, now, ledgerDoc = null) {
+  if (ledgerDoc && typeof ledgerDoc === "object") {
+    return {
+      ok: true,
+      degraded: ledgerDoc.degraded === true,
+      error: ledgerDoc.degraded === true ? (ledgerDoc.degraded_sources ?? []).join("；") : undefined,
+      source: PENDING_DECISIONS_REL,
+      upstream_source: ledgerDoc.source?.upstream ?? "docs/synova/product-lines/cockpit-override.yaml#pending_decisions",
+      generated_at: ledgerDoc.generated_at ?? null,
+      from_ledger: true,
+      pending: Array.isArray(ledgerDoc.pending) ? ledgerDoc.pending : [],
+      pending_count: ledgerDoc.counts?.pending ?? (ledgerDoc.pending ?? []).length,
+      resolved_count: ledgerDoc.counts?.resolved ?? (ledgerDoc.resolved ?? []).length,
+      resolved: Array.isArray(ledgerDoc.resolved) ? ledgerDoc.resolved : [],
+      card_scan: Array.isArray(ledgerDoc.card_scan) ? ledgerDoc.card_scan : [],
+      card_scan_count: ledgerDoc.counts?.card_scan ?? (ledgerDoc.card_scan ?? []).length
+    };
+  }
+  return buildDecisionsLive(progress, cards, now);
+}
+
+/** 回退路径：现场从 product-progress#decisions + 卡面扫描派生（落库件不可用时）。 */
+function buildDecisionsLive(progress, cards, now) {
   const pending = [];
   const resolved = [];
   const src = progress?.ok ? progress.parsed?.decisions : null;
@@ -463,7 +490,14 @@ export async function collectWorkbench(repoRoot, opts = {}) {
   ]);
 
   const cards = Array.isArray(cardsRes.cards) ? cardsRes.cards : [];
-  const decisions = buildDecisions(progress, cards, now);
+  // D1066 §一.4：待裁清单优先读仓库内落库件；不可用 → 显式回退现场派生
+  const decLedgerRes = await readRepoJson(repoRoot, PENDING_DECISIONS_REL).catch((err) => ({
+    ok: false, degraded: true, error: `pending-decisions.json 异常：${err?.message ?? err}`, attempts: []
+  }));
+  const decLedgerDoc = decLedgerRes.ok === true && (Array.isArray(decLedgerRes.parsed?.pending) || Array.isArray(decLedgerRes.parsed?.card_scan))
+    ? decLedgerRes.parsed
+    : null;
+  const decisions = buildDecisions(progress, cards, now, decLedgerDoc);
   const blocked = buildBlocked(ledger, progress, cards, now);
 
   // 降级清单必须覆盖**每一处**部分降级（铁律 31）。
@@ -482,6 +516,12 @@ export async function collectWorkbench(repoRoot, opts = {}) {
   if (flowParts.length > 0) degradedSources.push(flowParts.join("；"));
 
   if (!decisions.ok) degradedSources.push(`待你裁：${decisions.error}`);
+  if (decisions.ok === true && decisions.from_ledger !== true) {
+    degradedSources.push(`待裁落库件不可用（${decLedgerRes.error ?? "结构异常"}）→ 已回退现场派生；建议跑 scripts/gen-governance-ledger.mjs 落库`);
+  }
+  if (decisions.from_ledger === true && decLedgerDoc?.degraded === true) {
+    degradedSources.push(`待裁落库件自身降级：${(decLedgerDoc.degraded_sources ?? []).join("；") || "未注明"}`);
+  }
   if (blocked.ok !== true) {
     degradedSources.push(`阻塞：${blocked.error ?? "不可用"}`);
   } else if (blocked.degraded === true) {
@@ -495,11 +535,47 @@ export async function collectWorkbench(repoRoot, opts = {}) {
     degradedSources.push(`宪章格子（结构提示）：${grid.issues.join("；")}`);
   }
 
+  // ── D1066「时效真」：每块数据的 来源路径 + 生成时间 + 陈旧 + 易失路径自检 ──
+  const provenance = [
+    provenanceOf({
+      label: "① 四问格子矩阵", path: join(repoRoot, GRID_REL_PATH), source: grid.source ?? null,
+      generated_at: grid.source === "worktree" || grid.source === "origin/main" ? (grid.created_at ?? null) : null,
+      now, note: grid.ok ? null : grid.error ?? null
+    }),
+    provenanceOf({
+      label: "② 流水 · git", path: join(repoRoot, ".git"), source: "git",
+      generated_at: flow?.generated_at ?? now, now, note: flow?.git?.error ?? null
+    }),
+    provenanceOf({
+      label: "② 流水 · PR", path: flow?.pr?.source === "snapshot" ? join(repoRoot, "docs/synova/project/pr-queue.json") : "api.github.com",
+      source: flow?.pr?.source ?? null,
+      generated_at: flow?.pr?.source === "api" ? now : flow?.pr?.generated_at ?? null,
+      now, note: flow?.pr?.error ?? flow?.pr?.note ?? null
+    }),
+    provenanceOf({
+      label: "③ 待你裁", path: join(repoRoot, decisions.from_ledger ? PENDING_DECISIONS_REL : PROGRESS_REL_PATH),
+      source: decisions.source ?? null, generated_at: decisions.generated_at ?? null,
+      now, note: decisions.from_ledger ? null : "来自现场派生（落库件不可用）"
+    }),
+    provenanceOf({
+      label: "④ 阻塞", path: join(repoRoot, LEDGER_REL_PATH), source: (blocked.sources ?? [])[0] ?? null,
+      generated_at: ledger.ok ? ledger.parsed?.generated_at ?? null : null,
+      now, note: blocked.degraded ? blocked.error ?? null : null
+    })
+  ];
+  const volatileProv = provenance.filter((x) => x.volatile);
+  for (const x of volatileProv) degradedSources.push(`${x.label}：${x.warning}`);
+
   return {
     ok: grid.ok || flow.ok || decisions.ok || blocked.ok,
     degraded: degradedSources.length > 0,
     degraded_sources: degradedSources,
     generated_at: now.toISOString(),
+    provenance,
+    provenance_summary: provenanceSummary(provenance),
+    decisions_ledger: decLedgerDoc
+      ? { ok: true, path: PENDING_DECISIONS_REL, source: decLedgerRes.source, generated_at: decLedgerDoc.generated_at ?? null, schema: decLedgerDoc.schema ?? null, counts: decLedgerDoc.counts ?? null }
+      : { ok: false, path: PENDING_DECISIONS_REL, error: decLedgerRes.error ?? "结构异常" },
     grid,
     flow,
     decisions,

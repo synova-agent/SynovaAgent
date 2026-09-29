@@ -1,0 +1,105 @@
+{
+ "workbench": {
+  "status": 200,
+  "degraded": true,
+  "grid_filled": 30,
+  "grid_by_status": {
+   "green": 29,
+   "yellow": 0,
+   "red": 1,
+   "empty": 34,
+   "unknown": 0
+  },
+  "rows": 16,
+  "questions": 4,
+  "provenance": [
+   {
+    "label": "① 四问格子矩阵",
+    "age": 101.3,
+    "stale": true,
+    "volatile": true
+   },
+   {
+    "label": "② 流水 · git",
+    "age": 0,
+    "stale": false,
+    "volatile": true
+   },
+   {
+    "label": "② 流水 · PR",
+    "age": 0,
+    "stale": false,
+    "volatile": false
+   },
+   {
+    "label": "③ 待你裁",
+    "age": 0,
+    "stale": false,
+    "volatile": true
+   },
+   {
+    "label": "④ 阻塞",
+    "age": 205.8,
+    "stale": true,
+    "volatile": true
+   }
+  ],
+  "decisions_from_ledger": true,
+  "decisions_ledger_ok": true
+ },
+ "governance": {
+  "status": 200,
+  "degraded": false,
+  "source_mode": "in-repo-ledger",
+  "cards": 58,
+  "active": 42,
+  "debt": 50,
+  "ledger": {
+   "ok": true,
+   "path": "docs/synova/coordination/governance-tasks.json",
+   "source": "worktree",
+   "generated_at": "2026-09-29T05:18:15.362Z",
+   "schema": "governance-tasks/1",
+   "generated_by": "dsh/plugins/synova-dashboards/scripts/gen-governance-ledger.mjs",
+   "counts": {
+    "total": 58,
+    "active": 42,
+    "resting": 16,
+    "debt": 50,
+    "by_domain": {
+     "—（卡面未声明）": 23,
+     "mac": 30,
+     "win": 3,
+     "doc-governance": 1,
+     "k3": 1
+    }
+   },
+   "degraded": false,
+   "degraded_sources": []
+  },
+  "provenance": [
+   {
+    "label": "治理台账（仓库内落库件）",
+    "age": 0,
+    "stale": false,
+    "volatile": true
+   },
+   {
+    "label": "欠账/待规划",
+    "age": 0,
+    "stale": false,
+    "volatile": true
+   }
+  ],
+  "volatile_summary": {
+   "ok": false,
+   "volatile_paths": [
+    "/Users/wane/SynovaAgent/.synova-wt-d1066/docs/synova/coordination/governance-tasks.json",
+    "/Users/wane/SynovaAgent/.synova-wt-d1066/docs/synova/coordination/governance-tasks.json"
+   ],
+   "stale_paths": [],
+   "unknown_time_paths": []
+  }
+ }
+}
+warns: ["synova-dashboards/workbench: ① 四问格子矩阵：数据源落在易失路径（/Users/wane/SynovaAgent/.synova-wt-d1066/docs/synova/coordination/宪章三问-48格.json）—— /tmp 与临时 worktree 会被清理，清理后面板将读不到数据（D1066 病根）。请把来源指向主仓。；② 流水 · git：数据源落在易失路径（/Users/wane/SynovaAgent/.synova-wt-d1066/.git）—— /tmp 与临时 worktree 会被清理，清理后面板将读不到数据（D1066 病根）。请把来源指向主仓。；③ 待你裁：数据源落在易失路径（/Users/wane/SynovaAgent/.synova-wt-d1066/docs/synova/coordination/pending-decisions.json）—— /tmp 与临时 worktree 会被清理，清理后面板将读不到数据（D1066 病根）。请把来源指向主仓。；④ 阻塞：数据源落在易失路径（/Users/wane/SynovaAgent/.synova-wt-d1066/docs/synova/project/ledger.json）—— /tmp 与临时 worktree 会被清理，清理后面板将读不到数据（D1066 病根）。请把来源指向主仓。"]
