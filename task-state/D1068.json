@@ -19,6 +19,8 @@
     "tests/control-tower/check-bypass-log.test.sh",
     ".claude/task-briefs/2026-09-29-D1068-门禁证据载体迁移-trailer.md",
     "task-state/D1068.json",
-    "memory/notes/proposed/2026-09-29-d1068-trailer-evidence.md"
+    "memory/notes/proposed/2026-09-29-d1068-trailer-evidence.md",
+    "docs/synova/product-lines/evidence/D1068/trailer-evidence-staged1.json",
+    "docs/synova/product-lines/evidence/D1068/PR-描述-D1068.md"
   ]
 }
