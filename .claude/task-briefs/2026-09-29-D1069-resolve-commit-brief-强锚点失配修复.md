@@ -163,6 +163,8 @@ $ rm -f tests/control-tower/zz-probe-anchor.test.sh   # 已清理，无残留
 - docs/synova/product-lines/evidence/D1069/D1069-anchor-fix-evidence.json — 新建（C1–C5 证据 .json）。
 - docs/synova/product-lines/evidence/D1069/D1069-C1C5-原始输出.md — 新建（C1–C5 命令原始输出全文）。
 - docs/synova/product-lines/evidence/D1069/D1069-独立自验.md — 新建（独立自验员结论，非编码方）。
+- docs/synova/product-lines/evidence/D1069/D1069-收尾三件-diff-自验结论-遗留清单.md — 新建（**M6 强制**队长收尾件）。
+  · 非可选：M6「收尾三件（diff / 自验结论 / 遗留清单）必须提交进仓库并给路径」。
 - memory/notes/implemented/2026-09-29-D1069-resolve-brief-anchor.md — 新建（**铁律 49 / D534 强制**决策 Note）。
   · 非可选：commit-msg-check.sh:140 的 CT_ORCH_TOUCHED 命中 `scripts/workflow/**` ⇒ 无 Note 引用则**物理无法提交**。
   · ⚠️ **文件名必须纯 ASCII**：门禁用 `grep -oE '(memory/notes|decisions)/[A-Za-z0-9_./-]+\.md'` 抽取路径，
@@ -263,7 +265,9 @@ scripts（控制塔 / 门禁链）— 非 L1–L5 产品层。按 ctrl-tower-cha
 - [ ] verify: bash tests/control-tower/resolve-commit-brief.test.sh → exit 0 且用例数 >0
 - [ ] verify: 变异副本（规范 4 sed 删除）对复现输入返回 D1039 ⇒ C3 红证成立
 - [ ] verify: bash scripts/control-tower/check-gate-integrity.sh → GATE-INTEGRITY: OK（密封面棘轮零新增违规）
-- [ ] verify: git diff --name-only origin/main → 恰为写集 **8** 条，零越界
+- [ ] verify: git diff --name-only origin/main → 恰为写集 **9** 条，零越界
+      （实测另含第 10 条 `.claude/bypass.log` —— 工具台账，append-only + `merge=union`，
+        近 200 次提交 100% 触发；定性见 D1069-收尾三件 §2.4(a)，不剥离、随 PR 入 main、登记遗留 L6）
 - [ ] verify: bash tests/control-tower/resolve-commit-brief.test.sh → 既有套件全绿（C4）
 - [ ] verify: bash -n scripts/workflow/resolve-commit-brief.sh → exit 0
 - [ ] verify: bash scripts/workflow/check-silent-swallow.sh **--diff** → exit 0（= pre-commit-check.sh:554 实际调用模式）。
