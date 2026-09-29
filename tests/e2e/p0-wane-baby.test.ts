@@ -1,5 +1,5 @@
 /**
- * p0-wane-baby.test.ts — 哇呢宝贝 P0 端到端验证
+ * p0-wane-baby.test.ts — 示例企业A P0 端到端验证
  *
  * 用模拟数据运行所有 P0 compute 函数，验证核心诊断结论:
  * 1. F1: KZ>2.0 (融资约束) + 现金跑道<6月
@@ -26,13 +26,13 @@ import { computeProblemActionCycle } from '../../extensions/sentinels/org-repair
 import { computeFinkelsteinPowerIndex } from '../../extensions/sentinels/power-rigidity/computes/compute-power-rigidity';
 import { computeExploreExploitBalanceV2 } from '../../extensions/sentinels/explore-exploit-balance/computes/compute-explore-exploit-balance';
 
-describe('P0 哇呢宝贝端到端验证', () => {
-  // ═══ 模拟 哇呢宝贝 数据 ═══
+describe('P0 示例企业A端到端验证', () => {
+  // ═══ 模拟 示例企业A 数据 ═══
   // 226家低产会所 + 150家高产会所
   // 工厂28人 + 运营30人的固定成本结构
   // 融资约束: 无正规财报 → 银行无法授信
 
-  it('F1: KZ>2.0 表示融资约束 (哇呢宝贝诊断结论 #2)', () => {
+  it('F1: KZ>2.0 表示融资约束 (示例企业A诊断结论 #2)', () => {
     // 模拟融资约束企业: 低经营现金流, 高负债, 低现金
     const r = computeKzIndex([{
       operatingCashFlow: 200000,
@@ -45,7 +45,7 @@ describe('P0 哇呢宝贝端到端验证', () => {
     expect(r.degraded).toBe(false);
   });
 
-  it('F1: 现金跑道不足6个月 (哇呢宝贝诊断结论 #2)', () => {
+  it('F1: 现金跑道不足6个月 (示例企业A诊断结论 #2)', () => {
     // 模拟现金流紧张: 总现金少, 月均运营支出高
     const r = computeCashRunway([
       { cash: 500000, operatingExpense: 150000 },
@@ -69,7 +69,7 @@ describe('P0 哇呢宝贝端到端验证', () => {
     expect(r.signal).toBe('critical');
   });
 
-  it('I10: 低产客户群边际贡献为正 (哇呢宝贝诊断结论 #1)', () => {
+  it('I10: 低产客户群边际贡献为正 (示例企业A诊断结论 #1)', () => {
     // 模拟 226家低产 + 150家高产
     const groups = [
       { groupId: 'high_yield_150', revenue: 150000, variableCost: 60000 },   // MC=90000, ratio=0.6
@@ -85,7 +85,7 @@ describe('P0 哇呢宝贝端到端验证', () => {
     expect(r.degraded).toBe(false);
   });
 
-  it('I10: 固定成本高度刚性 — 工厂+运营无法缩减 (哇呢宝贝诊断结论 #1)', () => {
+  it('I10: 固定成本高度刚性 — 工厂+运营无法缩减 (示例企业A诊断结论 #1)', () => {
     // 工厂28人 + 运营30人的固定成本结构
     const costItems = [
       { name: 'Factory Rent', amount: 80000 },
@@ -101,8 +101,8 @@ describe('P0 哇呢宝贝端到端验证', () => {
     expect(r.totalReducible).toBeLessThan(r.totalFixed * 0.5);
   });
 
-  it('I10: 场景模拟 — 砍掉低产群利润不改善 (哇呢宝贝诊断结论 #1)', () => {
-    // 哇呢案例: 砍掉226家低产会所 → 利润下降
+  it('I10: 场景模拟 — 砍掉低产群利润不改善 (示例企业A诊断结论 #1)', () => {
+    // 示例企业A案例: 砍掉226家低产会所 → 利润下降
     const mcGroups = [
       { groupId: 'high_yield_150', revenue: 150000, variableCost: 60000, marginalContribution: 90000, mcRatio: 0.6, isPositive: true },
       { groupId: 'low_yield_226', revenue: 248600, variableCost: 180000, marginalContribution: 68600, mcRatio: 0.276, isPositive: true },
@@ -121,7 +121,7 @@ describe('P0 哇呢宝贝端到端验证', () => {
     expect(r.warnings.length).toBeGreaterThanOrEqual(0);
   });
 
-  it('O8: 修复周期超过6个月 — 组织修复能力弱 (哇呢宝贝诊断结论 #3)', () => {
+  it('O8: 修复周期超过6个月 — 组织修复能力弱 (示例企业A诊断结论 #3)', () => {
     // 广东工厂和南宁运营的信息不对称问题已存在数年未修
     const events = [
       { eventType: 'problem_detected', timestamp: '2025-01-15', problemCategory: 'factory_ops_gap', resolved: true, resolvedAt: '2025-10-20' },
@@ -150,7 +150,7 @@ describe('P0 哇呢宝贝端到端验证', () => {
     expect(r.signal).toBe('stage0_exempt');
   });
 
-  it('O1: 探索不足 — 过度利用 (哇呢宝贝诊断: 缺乏创新)', () => {
+  it('O1: 探索不足 — 过度利用 (示例企业A诊断: 缺乏创新)', () => {
     // 模拟企业目标几乎全是运营优化型
     const r = computeExploreExploitBalanceV2({
       goals: [
