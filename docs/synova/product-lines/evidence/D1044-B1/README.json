@@ -1,0 +1,83 @@
+{
+  "task": "D1044",
+  "title": "B1 — .claude/task-briefs/archive/ 294 件出库（证据索引）",
+  "branch": "chore/b1-archive-outbound",
+  "base": {
+    "origin_main": "ff4677129dce2ff068a816eed3db0687b060c64c",
+    "base_head": "ff467712"
+  },
+  "head_at_write": "9eecea7c24ae868fefce7f3b14c3ae187b30e207",
+  "producers": {
+    "synova-squad-lead": [
+      "00-premise-freeze.json",
+      "README.json",
+      "C-01-closeout-three.json"
+    ],
+    "squad-b1-impl（成员A · 执行）": [
+      "A-01-nolink-recheck.json",
+      "A-02-archive-takeover.json",
+      "A-03-outbound-gates.json"
+    ],
+    "squad-b1-verify（成员B · 独立复核，只写 /tmp，由队长原样转存）": [
+      "B-01-nolink-independent.json",
+      "B-02-archive-integrity.json",
+      "B-03-rollback-drill.json"
+    ]
+  },
+  "why_json_not_txt_or_md": {
+    "reason": "证据文件扩展名必须同时满足两条：① ci.yml:51 docs-only 白名单（\\.(md|json)$|task-state/|\\.claude/ …）② doc-registry-gate.sh 不扫（只扫 \\.(md|yaml)$）",
+    "measured": {
+      "txt": "docs_only=false → 触发全量 CI（≈35min），实测 grep -qvE 命中 1 行",
+      "md": "docs-only 通过，但 docs/synova/product-lines/evidence/**.md 被 doc-registry-gate.sh 判【未登记】（实测 ❌）",
+      "json": "两者同时满足 → 本批采用"
+    }
+  },
+  "files": [
+    {
+      "file": "00-premise-freeze.json",
+      "bytes": 10230,
+      "sha256": "a78154862579473f34b167077f829fe7a03e7896217d35b801a0d3842744b85a"
+    },
+    {
+      "file": "A-01-nolink-recheck.json",
+      "bytes": 167523,
+      "sha256": "06ba0b64b6e02d8d6026948fd942467e2911235ea49679a2dd95df88d07c46ad"
+    },
+    {
+      "file": "A-02-archive-takeover.json",
+      "bytes": 6700,
+      "sha256": "d8f5f3ba982100ca30bbed05afae8f00fa02068a7780b3ee55e40cde3ea2e338"
+    },
+    {
+      "file": "A-03-outbound-gates.json",
+      "bytes": 21136,
+      "sha256": "a93aa69d4aedce0e09a92e749a4bed6b8af55d429370e46634cc5650d22d60af"
+    },
+    {
+      "file": "B-01-nolink-independent.json",
+      "bytes": 25643,
+      "sha256": "ed47ffc891866301635b3fe5fdd7ee0ad48dd161c7c0e89da27e1101a04d37bb"
+    },
+    {
+      "file": "B-02-archive-integrity.json",
+      "bytes": 10194,
+      "sha256": "f9fcd2273a8ef7abfa066207d83610d6a4d7db31f03bac10da5769e775f3d9b8"
+    },
+    {
+      "file": "B-03-rollback-drill.json",
+      "bytes": 20433,
+      "sha256": "c3935c1bfafb2b6440abe83722633ad8fc305ddd237d53071d7b267840857cfc"
+    },
+    {
+      "file": "C-01-closeout-three.json",
+      "bytes": 29529,
+      "sha256": "9c46e741c0c455181be2d9d1ddd74c58a64f9f65a060489e706a51cf54124700"
+    }
+  ],
+  "delivered_revision_authoritative": {
+    "how_to_read": "以分支指针为准：`git ls-remote origin refs/heads/chore/b1-archive-outbound`（本证据集的权威 revision）",
+    "why_not_embedded": "自指限制：任何文件都无法记录『包含它自己的那个提交』的 hash —— 写入时该 hash 尚不存在。故此处**不内嵌最终 hash**，只记录指针方法。",
+    "revision_at_write": "9eecea7c（本字段所在提交的父提交；每次修正都会后移一位，属预期）",
+    "revision_readback_verified": "eb601053 —— 队长用 `git show FETCH_HEAD:<path>` 从 origin 回读复核过本文件内容"
+  }
+}
