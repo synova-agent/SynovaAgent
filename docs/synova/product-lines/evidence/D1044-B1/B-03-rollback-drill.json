@@ -1,0 +1,326 @@
+{
+ "task": "D1044",
+ "artifact": "B-03-rollback-drill.json",
+ "producer": "squad-b1-verify（成员B · 独立复核，独立于执行方）",
+ "transcribed_by": "synova-squad-lead（原样转存，未改一字）",
+ "description": "成员B 独立复核③：回退路径实际演练（恢复 294 → sha256 294/294 → 再删 0）",
+ "source_path_in_session": "/tmp/b1b/verify-03-rollback-drill.json",
+ "source_sha256": "6ac9969931bb30390ffc5c48ad30a32cbfb9e943c6f4169c0ef525a3f8f32bce",
+ "disclosure": "本文件为成员B 在 /tmp 的产出，由队长原样转存进仓库（B 只写 /tmp，不写仓库）。内容未做任何修改。",
+ "content": {
+  "task": "D1044",
+  "check": "复核③ 回退路径实际演练 + 复核②第三边 + 5b483760 提交边界",
+  "role": "成员B 独立复核",
+  "as_of": "2026-09-28T08:40:07.857969+08:00",
+  "drill_tree": {
+   "path": "/tmp/b1b-verify",
+   "creation": "git worktree add --detach /tmp/b1b-verify e5b46f17",
+   "deviation": "卡面写 `worktree add /tmp/b1b-verify chore/b1-archive-outbound`，但该分支被 A 的工作树占用（git: 'chore/b1-archive-outbound' is already used by worktree at /Users/wane/SynovaAgent/.synova-wt-b1-d1044）⇒ 改以 --detach 钉在交付 revision e5b46f17。演练所需状态（出库后的树）完全一致，且 sha 已钉死可核。"
+  },
+  "delivered_revision": {
+   "baseline_pre_outbound": "ff467712",
+   "outbound_commit": "5b483760",
+   "branch_head": "e5b46f17 (post-commit hook 的 bypass.log 影子提交)"
+  },
+  "step_a": {
+   "head": "e5b46f1723bfde725985f42292e91ece1a502283",
+   "log": "e5b46f17 chore: bypass COMMITTED 登记 (auto hook, D521)\n5b483760 chore(D1044): .claude/task-briefs/archive/ 294 件出库（承接后移出）\nff467712 docs(D1034): cto-handover 加「派单模板 v2」— 预置坑位（门禁合规六条 + 推送纪律四条）\n",
+   "archive_files_at_head": "0",
+   "baseline_ls_tree_count": "294"
+  },
+  "step_b_restore": {
+   "checkout": "git checkout ff467712 -- .claude/task-briefs/archive/",
+   "raw": "CHECKOUT_EXIT=0\n     294",
+   "verdict": "恢复 294 件（CHECKOUT_EXIT=0）—— 成立"
+  },
+  "step_c_content_equality": {
+   "manifest_lines": "294",
+   "diff_stdout": "DIFF_EXIT=0",
+   "diff_lines": "0",
+   "verdict": "恢复件与 ff467712 基线 sha256 全串一致，diff 0 行 ⇒ 恢复的是原内容而非空文件 —— 成立"
+  },
+  "step_d_redelete": {
+   "literal_card_command": {
+    "cmd": "git rm -r --quiet .claude/task-briefs/archive/ (紧跟 checkout 恢复之后)",
+    "count_after": "294",
+    "stderr_head": "error: the following files have changes staged in the index:（294 件逐条列出）",
+    "verdict": "【不成立——按卡面字面命令】checkout 恢复会把 294 件写入 index（相对 HEAD 是新增），git rm 无 -f 时受『已暂存变更』保护拒绝删除 ⇒ RM_EXIT=1，件数仍 294",
+    "compound_cmd_exit": 0,
+    "inner_RM_EXIT": 1,
+    "note": "compound exit=0 是因为整串以 `git ls-files | wc -l` 结尾；真正要看的内部信号是 stdout 里的 RM_EXIT=1。"
+   },
+   "remedy_tested": {
+    "cmd": "git rm -r --quiet -f .claude/task-briefs/archive/",
+    "raw": "staged_count= 294\nRM_F_EXIT=0\n       0",
+    "verdict": "加 -f 后 RM_F_EXIT=0、件数 0 ⇒ 流程【可重复】，但需 -f（或先 reset 到干净 index）",
+    "compound_cmd_exit": 0,
+    "inner_RM_F_EXIT": 0
+   },
+   "scope_note": "A 的真实出库未受影响：其执行时 index 与 HEAD 一致（工作区干净），`git rm -r --quiet` 正常成功（见 5b483760 的 294 条删除）。本条仅指『恢复后再删一次』这一演练序列。"
+  },
+  "step_e_discriminating_2": {
+   "scenario": "恢复 294 件后把全部 294 件截断为 0 字节（模拟『只恢复空文件』）",
+   "count_only_judge": "COUNT_ONLY_JUDGE= 294   <- 只数件数的判据会判绿   ⇒ 只数件数的判据会判绿（陷阱）",
+   "sha256_judge": {
+    "diff_exit": 0,
+    "diff_lines": "590",
+    "head": "1,294c1,294\n< 9850b694f09b55f16c49f4ee19f07afaa4c794957256e9fdcf9f119e04bef74c  .claude/task-briefs/archive/2026-06-05-1600----getX.md\n< 8c11ac091bb93fdacbd62aac4b105f7083712a6a0ed2505356f92a6e63ffb981  .claude/task-briefs/archive/2026-06-05-1618-P3---Provider--.md\n< 6f452be53ec18d08103ee2d11d9578c14bf90a4fafd37d4b124bbcdefd91d7e9  .claude/task-briefs/archive/2026-06-05-1646-DI--serverts-.md\n< a1e5ca4398c3e41f8e66fc5e4dba4a191601f3421cef8ce77a9e979e90d82bba  .claude/task-briefs/archive/2026-06-05-1713-M1-Slice1-AuthProvider--RBAC--.md\n< c5cae59a5f248b8439e476585aac6f1537e0d2808a8cf6cf51a2d1a502d86334  .claude/task-briefs/archive/2026-06-05-1727-M1-Slice2-IM-Webhook--.md\n"
+   },
+   "restore_after": {
+    "raw": "DIFF_EXIT=0",
+    "verdict": "DIFF_EXIT=0 ⇒ 复原后回绿"
+   },
+   "verdict": "c) 的 sha256 判据【具判别性、非恒绿】：同名同数但内容为空时被拦下（590 行 diff、DIFF_EXIT=1）"
+  },
+  "step_f_closeout": {
+   "raw": "HEAD is now at e5b46f17 chore: bypass COMMITTED 登记 (auto hook, D521)\nRESET_EXIT=0\nSTATUS_LINES= 0\ne5b46f1723bfde725985f42292e91ece1a502283\n       0",
+   "verdict": "RESET_EXIT=0、STATUS_LINES=0、HEAD=e5b46f17、件数 0 ⇒ 我的树干净"
+  },
+  "collateral_zero_change": {
+   "main_worktree_dirty": {
+    "before": "22",
+    "after": "22"
+   },
+   "A_tree_dirty": {
+    "before": "1",
+    "after": "1"
+   },
+   "A_tree_head": {
+    "before": "e5b46f1723bfde725985f42292e91ece1a502283",
+    "after": "e5b46f1723bfde725985f42292e91ece1a502283"
+   },
+   "verdict": "主工作区与 A 的树【零改动】（22→22、1→1、HEAD 不变）；档案仓全程只读"
+  },
+  "three_way_leg3": {
+   "cmd": "git -C /tmp/b1b-verify ls-files '.claude/task-briefs/archive/*.md' | wc -l",
+   "value": "0",
+   "verdict": "主仓已删 = 0 ⇒ 三边：基线 294 == 档案仓 294 == 主仓 0 —— 成立"
+  },
+  "commit_boundary_5b483760": {
+   "name_only_count": "300",
+   "non_whitelisted_count": "0",
+   "grep_exit_note": "x02 exit=1 属预期（grep -v 无残留行）",
+   "whitelist": "archive/ | .claude/task-briefs/2026-09-28-D1044-*.md | task-state/D1044.json | memory/notes/proposed/2026-09-28-D1044-*.md | docs/synova/product-lines/evidence/D1044-B1/",
+   "verdict": "300 件、0 件夹带 —— 成立；构成 = 294 删除 + 6 新增（brief 456 行 / Note 46 / 3 个 evidence JSON / task-state 327）"
+  },
+  "commands": [
+   {
+    "id": "p00",
+    "cmd": "git -C /Users/wane/SynovaAgent status --porcelain | wc -l",
+    "exit": 0,
+    "stdout": "      22\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "p01",
+    "cmd": "git -C /Users/wane/SynovaAgent/.synova-wt-b1-d1044 status --porcelain | wc -l",
+    "exit": 0,
+    "stdout": "       1\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "p02",
+    "cmd": "git -C /Users/wane/SynovaAgent/.synova-wt-b1-d1044 rev-parse HEAD",
+    "exit": 0,
+    "stdout": "e5b46f1723bfde725985f42292e91ece1a502283\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "a01",
+    "cmd": "git rev-parse HEAD",
+    "exit": 0,
+    "stdout": "e5b46f1723bfde725985f42292e91ece1a502283\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "a02",
+    "cmd": "git log --oneline -3",
+    "exit": 0,
+    "stdout": "e5b46f17 chore: bypass COMMITTED 登记 (auto hook, D521)\n5b483760 chore(D1044): .claude/task-briefs/archive/ 294 件出库（承接后移出）\nff467712 docs(D1034): cto-handover 加「派单模板 v2」— 预置坑位（门禁合规六条 + 推送纪律四条）\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "a03",
+    "cmd": "git ls-files '.claude/task-briefs/archive/*.md' | wc -l",
+    "exit": 0,
+    "stdout": "       0\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "a04",
+    "cmd": "git ls-tree -r --name-only ff467712 .claude/task-briefs/archive/ | wc -l",
+    "exit": 0,
+    "stdout": "     294\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "b01",
+    "cmd": "git checkout ff467712 -- .claude/task-briefs/archive/; echo CHECKOUT_EXIT=$?; git ls-files '.claude/task-briefs/archive/*.md' | wc -l",
+    "exit": 0,
+    "stdout": "CHECKOUT_EXIT=0\n     294\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "c01",
+    "cmd": "find .claude/task-briefs/archive -name '*.md' -print0 | sort -z | xargs -0 shasum -a 256 | sort -k2 > /tmp/b1b/drill-restored.sha256; wc -l < /tmp/b1b/drill-restored.sha256",
+    "exit": 0,
+    "stdout": "     294\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "c02",
+    "cmd": "diff /tmp/b1b/q2-baseline.sha256 /tmp/b1b/drill-restored.sha256; echo DIFF_EXIT=$?",
+    "exit": 0,
+    "stdout": "DIFF_EXIT=0\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "c03",
+    "cmd": "diff /tmp/b1b/q2-baseline.sha256 /tmp/b1b/drill-restored.sha256 | wc -l",
+    "exit": 0,
+    "stdout": "       0\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "d01",
+    "cmd": "git rm -r --quiet .claude/task-briefs/archive/; echo RM_EXIT=$?; git ls-files '.claude/task-briefs/archive/*.md' | wc -l",
+    "exit": 0,
+    "stdout": "RM_EXIT=1\n     294\n",
+    "stderr": "error: the following files have changes staged in the index:\n    .claude/task-briefs/archive/2026-06-05-1600----getX.md\n    .claude/task-briefs/archive/2026-06-05-1618-P3---Provider--.md\n    .claude/task-briefs/archive/2026-06-05-1646-DI--serverts-.md\n    .claude/task-briefs/archive/2026-06-05-1713-M1-Slice1-AuthProvider--RBAC--.md\n    .claude/task-briefs/archive/2026-06-05-1727-M1-Slice2-IM-Webhook--.md\n    .claude/task-briefs/archive/2026-06-05-1745-M1-Slice3-L4---Knowledge.md\n    .claude/task-briefs/archive/2026-06-05-1824-M2-KnowledgeAgent7--6.md\n    .claude/task-briefs/archive/2026-06-05-2018-PKB-Slice-1-Schema--queryknowle.md\n    .claude/task-briefs/archive/2026-06-05-2042-PKB-----.md\n    .claude/task-briefs/archive/2026-06-06-0422-KnowledgeAgent---QA-.md\n    .claude/task-briefs/archive/2026-06-06-1746-.md\n    .claude/task-briefs/archive/2026-06-06-1749-as-any.md\n    .claude/task-briefs/archive/2026-06-06-1857-Phase-4-AlertRuleEngine-SQLite.md\n    .claude/task-briefs/archive/2026-06-06-1910-Phase-4c-knowledgechunksorgid.md\n    .claude/task-briefs/archive/2026-06-06-1915-Phase-5-.md\n    .claude/task-briefs/archive/2026-06-06-1919-Phase-6-LLM--reasoni.md\n    .claude/task-briefs/archive/2026-06-11-1430-P0-1-HTTP--P0-3.md\n    .claude/task-briefs/archive/2026-06-11-1552-P0-2-.md\n    .claude/task-briefs/archive/2026-06-12-2312--SentinelRunner--.md\n    .claude/task-briefs/archive/2026-06-13-0758--10-.md\n    .claude/task-briefs/archive/2026-06-14-0231-.md\n    .claude/task-briefs/archive/2026-06-14-0233--.md\n    .claude/task-briefs/archive/2026-06-14-0326-L1L2.md\n    .claude/task-briefs/archive/2026-06-14-1126--DocExtractor.md\n    .claude/task-briefs/archive/2026-06-14-1452-4real.md\n    .claude/task-briefs/archive/2026-06-14-1613-engine-core-deprecation.md\n    .claude/task-briefs/archive/2026-06-14-1907-P1-1---Quality-Firewall-.md\n    .claude/task-briefs/archive/2026-06-14-p0-1-slice0-tuiv2-tsc.md\n    .claude/task-briefs/archive/2026-06-14-p0-1-slice1-sentinel-tsc.md\n    .claude/task-briefs/archive/2026-06-15-0135-Path-A-Express-.md\n    .claude/task-briefs/archive/2026-06-15-2247-Phase-1---6-.md\n    .claude/task-briefs/archive/2026-06-17-0000-提交未提交改动.md\n    .claude/task-briefs/archive/2026-06-17-2152-Agent--735.md\n    .claude/task-briefs/archive/2026-06-19-0012--.md\n    .claude/task-briefs/archive/2026-06-19-0107-Day1---.md\n    .claude/task-briefs/archive/2026-06-19-0205-PKB--GitHub-.md\n    .claude/task-briefs/archive/2026-06-19-1113-OUTPUTSPEC.md\n    .claude/task-briefs/archive/2026-06-19-1130-Day3---AgentUI.md\n    .claude/task-briefs/archive/2026-06-19-1130-e.md\n    .claude/task-briefs/archive/2026-06-19-1148-Day4---.md\n    .claude/task-briefs/archive/2026-06-19-1148-HTML.md\n    .claude/task-briefs/archive/2026-06-19-1201-D.md\n    .claude/task-briefs/archive/2026-06-19-1257-pm-skills.md\n    .claude/task-briefs/archive/2026-06-19-1314-Day5---.md\n    .claude/task-briefs/archive/2026-06-19-1327-Day6---LLM.md\n    .claude/task-briefs/archive/2026-06-19-1338-SkillExpertPKB.md\n    .claude/task-briefs/archive/2026-06-19-1403-Skill.md\n    .claude/task-briefs/archive/2026-06-19-1637-chatJSsend.md\n    .claude/task-briefs/archive/2026-06-20-0016--5118.md\n    .claude/task-briefs/archive/2026-06-20-1543-Loop-Engineering-v32v33.md\n    .claude/task-briefs/archive/2026-06-20-1549-Slice-9-.md\n    .claude/task-briefs/archive/2026-06-20-1605-Slice-8-AgentMemor.md\n    .claude/task-briefs/archive/2026-06-20-1758-Slice-4-GA.md\n    .claude/task-briefs/archive/2026-06-20-2254-.md\n    .claude/task-briefs/archive/2026-06-20-2330-Phase2-AgentMemoryStoreconversati.md\n    .claude/task-briefs/archive/2026-06-20-2338-Slice-F1-ExpertTyperunti.md\n    .claude/task-briefs/archive/2026-06-20-2349-Slice-F2-expert-registryyaml-.md\n    .claude/task-briefs/archive/2026-06-20-2353-EXPERTREP.md\n    .claude/task-briefs/archive/2026-06-21-0012-205-SOG-schema--.md\n    .claude/task-briefs/archive/2026-06-21-0028-API-workspaces-api.md\n    .claude/task-briefs/archive/2026-06-21-0106-v33v34.md\n    .claude/task-briefs/archive/2026-06-21-0115-v34v354.md\n    \n",
+    "stderr_truncated_for_readability": true
+   },
+   {
+    "id": "e01",
+    "cmd": "git checkout ff467712 -- .claude/task-briefs/archive/; git ls-files '.claude/task-briefs/archive/*.md' | wc -l",
+    "exit": 0,
+    "stdout": "     294\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "e02",
+    "cmd": "find .claude/task-briefs/archive -name '*.md' -exec sh -c ': > \"$1\"' _ {} \\; ; echo TRUNCATED_ALL; find .claude/task-briefs/archive -name '*.md' -size 0 | wc -l",
+    "exit": 0,
+    "stdout": "TRUNCATED_ALL\n     294\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "e03",
+    "cmd": "echo COUNT_ONLY_JUDGE=$(git ls-files '.claude/task-briefs/archive/*.md' | wc -l)  '  <- 只数件数的判据会判绿'",
+    "exit": 0,
+    "stdout": "COUNT_ONLY_JUDGE= 294   <- 只数件数的判据会判绿\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "e04",
+    "cmd": "find .claude/task-briefs/archive -name '*.md' -print0 | sort -z | xargs -0 shasum -a 256 | sort -k2 > /tmp/b1b/drill-empty.sha256; diff /tmp/b1b/q2-baseline.sha256 /tmp/b1b/drill-empty.sha256 > /tmp/b1b/drill-empty.diff 2>&1; echo DIFF_EXIT=$?; wc -l < /tmp/b1b/drill-empty.diff",
+    "exit": 0,
+    "stdout": "DIFF_EXIT=1\n     590\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "e05",
+    "cmd": "sed -n '1,6p' /tmp/b1b/drill-empty.diff",
+    "exit": 0,
+    "stdout": "1,294c1,294\n< 9850b694f09b55f16c49f4ee19f07afaa4c794957256e9fdcf9f119e04bef74c  .claude/task-briefs/archive/2026-06-05-1600----getX.md\n< 8c11ac091bb93fdacbd62aac4b105f7083712a6a0ed2505356f92a6e63ffb981  .claude/task-briefs/archive/2026-06-05-1618-P3---Provider--.md\n< 6f452be53ec18d08103ee2d11d9578c14bf90a4fafd37d4b124bbcdefd91d7e9  .claude/task-briefs/archive/2026-06-05-1646-DI--serverts-.md\n< a1e5ca4398c3e41f8e66fc5e4dba4a191601f3421cef8ce77a9e979e90d82bba  .claude/task-briefs/archive/2026-06-05-1713-M1-Slice1-AuthProvider--RBAC--.md\n< c5cae59a5f248b8439e476585aac6f1537e0d2808a8cf6cf51a2d1a502d86334  .claude/task-briefs/archive/2026-06-05-1727-M1-Slice2-IM-Webhook--.md\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "e06",
+    "cmd": "rm -r .claude/task-briefs/archive; git checkout ff467712 -- .claude/task-briefs/archive/; find .claude/task-briefs/archive -name '*.md' -print0 | sort -z | xargs -0 shasum -a 256 | sort -k2 > /tmp/b1b/drill-restored2.sha256; diff /tmp/b1b/q2-baseline.sha256 /tmp/b1b/drill-restored2.sha256; echo DIFF_EXIT=$?",
+    "exit": 0,
+    "stdout": "DIFF_EXIT=0\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "f01",
+    "cmd": "git rm -r --quiet .claude/task-briefs/archive/ 2>/dev/null; git reset --hard HEAD; echo RESET_EXIT=$?; git status --porcelain; echo STATUS_LINES=$(git status --porcelain | wc -l); git rev-parse HEAD; git ls-files '.claude/task-briefs/archive/*.md' | wc -l",
+    "exit": 0,
+    "stdout": "HEAD is now at e5b46f17 chore: bypass COMMITTED 登记 (auto hook, D521)\nRESET_EXIT=0\nSTATUS_LINES= 0\ne5b46f1723bfde725985f42292e91ece1a502283\n       0\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "p10",
+    "cmd": "git -C /Users/wane/SynovaAgent status --porcelain | wc -l",
+    "exit": 0,
+    "stdout": "      22\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "p11",
+    "cmd": "git -C /Users/wane/SynovaAgent/.synova-wt-b1-d1044 status --porcelain | wc -l",
+    "exit": 0,
+    "stdout": "       1\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "p12",
+    "cmd": "git -C /Users/wane/SynovaAgent/.synova-wt-b1-d1044 rev-parse HEAD",
+    "exit": 0,
+    "stdout": "e5b46f1723bfde725985f42292e91ece1a502283\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "x01",
+    "cmd": "git -c core.quotepath=false diff-tree --no-commit-id --name-only -r 5b483760 | wc -l",
+    "exit": 0,
+    "stdout": "     300\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "x02",
+    "cmd": "git -c core.quotepath=false diff-tree --no-commit-id --name-only -r 5b483760 | grep -vE '^(\\.claude/task-briefs/archive/|\\.claude/task-briefs/2026-09-28-D1044-[^/]*\\.md$|task-state/D1044\\.json$|memory/notes/proposed/2026-09-28-D1044-[^/]*\\.md$|docs/synova/product-lines/evidence/D1044-B1/)' ; echo NONWHITELIST_EXIT=$?",
+    "exit": 0,
+    "stdout": "NONWHITELIST_EXIT=1\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "x03",
+    "cmd": "git -c core.quotepath=false diff-tree --no-commit-id --name-only -r 5b483760 | grep -vE '^(\\.claude/task-briefs/archive/|\\.claude/task-briefs/2026-09-28-D1044-[^/]*\\.md$|task-state/D1044\\.json$|memory/notes/proposed/2026-09-28-D1044-[^/]*\\.md$|docs/synova/product-lines/evidence/D1044-B1/)' | wc -l",
+    "exit": 0,
+    "stdout": "       0\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "d02",
+    "cmd": "git checkout ff467712 -- .claude/task-briefs/archive/; echo staged_count=$(git ls-files '.claude/task-briefs/archive/*.md' | wc -l); git rm -r --quiet -f .claude/task-briefs/archive/; echo RM_F_EXIT=$?; git ls-files '.claude/task-briefs/archive/*.md' | wc -l",
+    "exit": 0,
+    "stdout": "staged_count= 294\nRM_F_EXIT=0\n       0\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   },
+   {
+    "id": "d03",
+    "cmd": "git reset --hard HEAD >/dev/null; git status --porcelain | wc -l; ls -d .claude/task-briefs/archive 2>&1 | head -1",
+    "exit": 0,
+    "stdout": "       0\nls: .claude/task-briefs/archive: No such file or directory\n",
+    "stderr": "",
+    "stderr_truncated_for_readability": false
+   }
+  ],
+  "conclusion": "独立复核结论：① 回退路径【成立】，但有一个【判据修正】：按卡面字面 `git rm -r --quiet` 在『恢复之后』执行会 exit=1（已暂存变更保护），件数仍 294 —— 需 `-f` 才可重复（实测 RM_F_EXIT=0 → 0 件）。A 的真实出库不受影响（其时 index 干净）。②『恢复的是原内容』【成立】：294 件与 ff467712 基线 sha256 全串比对 diff 0 行。③ 判据判别性【成立】：把 294 件全截断为 0 字节后，只数件数的判据仍绿（294），sha256 判据报红（590 行 diff / DIFF_EXIT=1），复原后回绿。④ 三边一致【成立】：基线 294 == 档案仓 294 == 主仓 0。⑤ 5b483760 提交边界【成立】：300 件、0 件夹带。⑥ 隔离【成立】：主工作区与 A 的树零改动。裁决归 CTO 收件闸 + K3；本件仅为独立复核结论。"
+ }
+}
