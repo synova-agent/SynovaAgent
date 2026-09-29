@@ -1,0 +1,210 @@
+{
+  "version": "D1061-v1",
+  "generated_at": "2026-09-29",
+  "source_of_truth": ".github/workflows/ci.yml → job `control-tower-tests` → step `Run hermetic control-tower gate tests` 的 `for t in ...` 清单",
+  "semantics": {
+    "domains": "域 → 该域覆盖的密封套件（每个套件归属恰好一个域；域间并集 = 全量清单）",
+    "rules": "变更路径 glob → 域列表（或 __FULL__）；**自上而下，首个命中生效**",
+    "__FULL__": "该路径无法安全判定影响面 → 显式回退全量（fail-closed，绝不静默缩小）",
+    "catch_all": "未命中任何规则的路径 → __FULL__（fail-closed）",
+    "unknown_domain": "规则引用未定义域 → 该规则按 __FULL__ 处理（fail-closed）",
+    "glob_note": "本表 glob 由 bash `[[ $path == $pattern ]]` 求值：`*` 跨 `/` 匹配；`?` 单字符",
+    "platform_note": "非 windows 平台不裁剪（ubuntu 为基线，保持全量）；windows = 变更相关 ∪ platform_sensitive.windows"
+  },
+  "domains": {
+    "doc-system": [
+      "tests/doc-system/check-doc-truth.test.sh",
+      "tests/doc-system/doc-categories.test.sh",
+      "tests/doc-system/doc-registry-gate.test.sh",
+      "tests/doc-system/doc-staleness.test.sh",
+      "tests/doc-system/doc-triage.test.sh",
+      "tests/doc-system/generate-chronicle-monthly.test.sh",
+      "tests/control-tower/check-citations.test.sh",
+      "tests/control-tower/check-progress-freshness.test.sh",
+      "tests/control-tower/check-k3-report.test.sh",
+      "tests/control-tower/verify-doc.test.sh",
+      "tests/control-tower/check-dsh-anchor.test.sh",
+      "tests/control-tower/daily-cto-board-ratio.test.sh"
+    ],
+    "commit-chain": [
+      "tests/control-tower/post-commit.test.sh",
+      "tests/control-tower/post-commit-marker.test.sh",
+      "tests/control-tower/synova-commit.test.sh",
+      "tests/control-tower/synova-submit.test.sh",
+      "tests/control-tower/simulate-ci.test.sh",
+      "tests/control-tower/ct-test-gate.test.sh",
+      "tests/control-tower/d956-failmsg.test.sh",
+      "tests/control-tower/ci-strict-visible.test.sh",
+      "tests/control-tower/fastlane-bypass-only.test.sh",
+      "tests/control-tower/fastlane-extended.test.sh",
+      "tests/control-tower/install-dsh-preset.test.sh",
+      "tests/control-tower/check-preset-bundles.test.sh"
+    ],
+    "task-lifecycle": [
+      "tests/control-tower/alloc-task-id.test.sh",
+      "tests/control-tower/alloc-task-id-lock.test.sh",
+      "tests/control-tower/check-name-allocation.test.sh",
+      "tests/control-tower/claim-regex-narrow.test.sh",
+      "tests/control-tower/skeleton-brief-gate.test.sh",
+      "tests/control-tower/brief-parser-strip.test.sh",
+      "tests/control-tower/q2-error-locating.test.sh",
+      "tests/control-tower/task-start-parallel.test.sh",
+      "tests/control-tower/write-set-check.test.sh",
+      "tests/control-tower/verify-claims-table.test.sh"
+    ],
+    "ct-integrity": [
+      "tests/control-tower/check-gate-integrity.test.sh",
+      "tests/control-tower/gate-failopen-net.test.sh",
+      "tests/control-tower/gate-stats.test.sh",
+      "tests/control-tower/ci-ratchet-base.test.sh",
+      "tests/control-tower/incident-loop.test.sh",
+      "tests/control-tower/check-canary-drift.test.sh",
+      "tests/control-tower/scan-fullwidth-vars.test.sh",
+      "tests/control-tower/grep-oP-regression.test.sh",
+      "tests/control-tower/g12-day-window.test.sh",
+      "tests/control-tower/tag-ancestry.test.sh",
+      "tests/control-tower/check-gitlinks.test.sh",
+      "tests/control-tower/clone-config-init.test.sh",
+      "tests/control-tower/clone-shadow-commit.test.sh",
+      "tests/control-tower/platform-checklist.test.sh"
+    ],
+    "ct-parallel-writeset": [
+      "tests/control-tower/verify-parallel.test.sh",
+      "tests/control-tower/verify-parallel-ci.test.sh",
+      "tests/control-tower/parallel-main-tree-occupancy.test.sh",
+      "tests/control-tower/merge_writeset_gate.test.sh"
+    ],
+    "selector-self": [
+      "tests/control-tower/ct-suite-select.test.sh",
+      "tests/control-tower/simulate-ci-dedup.test.sh"
+    ]
+  },
+  "rules": [
+    { "glob": ".github/workflows/*", "domains": ["__FULL__"], "why": "CI 定义自身变更 ⇒ 选择器前提失效（D1061）" },
+    { "glob": "scripts/ci/*", "domains": ["__FULL__"], "why": "CI 辅助脚本变更 ⇒ 影响面无法安全判定" },
+    { "glob": "scripts/pre-commit-check.sh", "domains": ["__FULL__"], "why": "pre-commit 13 组门禁核心，被多数密封测试断言" },
+    { "glob": "scripts/pre-push-check.sh", "domains": ["__FULL__"], "why": "推前门禁，同上" },
+
+    { "glob": "scripts/control-tower/ct-suite-select.sh", "domains": ["selector-self"] },
+    { "glob": "scripts/control-tower/ct-suite-map.json", "domains": ["selector-self"] },
+    { "glob": "tests/control-tower/ct-suite-select.test.sh", "domains": ["selector-self"] },
+    { "glob": "tests/control-tower/simulate-ci-dedup.test.sh", "domains": ["selector-self"] },
+
+    { "glob": "scripts/control-tower/simulate-ci.sh", "domains": ["commit-chain"] },
+    { "glob": "scripts/control-tower/synova-commit", "domains": ["commit-chain"] },
+    { "glob": "scripts/control-tower/synova-commit.sh", "domains": ["commit-chain"] },
+    { "glob": "scripts/control-tower/synova-submit.sh", "domains": ["commit-chain"] },
+    { "glob": "scripts/control-tower/post-commit*", "domains": ["commit-chain"] },
+    { "glob": "scripts/control-tower/install-dsh-preset.sh", "domains": ["commit-chain"] },
+    { "glob": "scripts/control-tower/check-preset-bundles.sh", "domains": ["commit-chain"] },
+    { "glob": "scripts/install-hooks.sh", "domains": ["commit-chain"] },
+
+    { "glob": "scripts/control-tower/alloc-task-id.sh", "domains": ["task-lifecycle"] },
+    { "glob": "scripts/control-tower/check-name-allocation.sh", "domains": ["task-lifecycle"] },
+    { "glob": "scripts/control-tower/claim-regex*", "domains": ["task-lifecycle"] },
+    { "glob": "scripts/workflow/task-start.sh", "domains": ["task-lifecycle"] },
+    { "glob": "scripts/workflow/generate-task-brief.py", "domains": ["task-lifecycle"] },
+    { "glob": "scripts/workflow/check-brief-parseable.sh", "domains": ["task-lifecycle"] },
+
+    { "glob": "scripts/control-tower/verify-parallel.sh", "domains": ["ct-parallel-writeset"] },
+    { "glob": "scripts/control-tower/merge_writeset_gate.py", "domains": ["ct-parallel-writeset"] },
+    { "glob": "scripts/control-tower/write-set*", "domains": ["ct-parallel-writeset"] },
+
+    { "glob": "scripts/control-tower/check-gate-integrity.sh", "domains": ["ct-integrity"] },
+    { "glob": "scripts/control-tower/gate-*", "domains": ["ct-integrity"] },
+    { "glob": "scripts/control-tower/ci-ratchet*", "domains": ["ct-integrity"] },
+    { "glob": "scripts/control-tower/check-canary-drift.sh", "domains": ["ct-integrity"] },
+    { "glob": "scripts/control-tower/scan-fullwidth-vars.sh", "domains": ["ct-integrity"] },
+    { "glob": "scripts/control-tower/PLATFORM-CHECKLIST.md", "domains": ["ct-integrity"] },
+
+    { "glob": "docs/*", "domains": ["doc-system"] },
+    { "glob": "memory/*", "domains": ["doc-system"] },
+    { "glob": "task-state/*", "domains": ["doc-system"] },
+    { "glob": ".claude/*", "domains": ["doc-system"] },
+    { "glob": "*.md", "domains": ["doc-system"] },
+    { "glob": "tests/doc-system/*", "domains": ["doc-system"] },
+
+    { "glob": "tests/control-tower/*", "domains": ["commit-chain", "task-lifecycle", "ct-integrity", "ct-parallel-writeset", "selector-self"], "why": "密封测试自身变更 ⇒ 保守跑全部 CT 域" },
+    { "glob": "scripts/control-tower/*", "domains": ["commit-chain", "task-lifecycle", "ct-integrity", "ct-parallel-writeset", "selector-self"], "why": "控制塔脚本变更 ⇒ 保守跑全部 CT 域" },
+    { "glob": "scripts/*", "domains": ["commit-chain", "task-lifecycle", "ct-integrity", "ct-parallel-writeset", "selector-self"] },
+
+    { "glob": "src/*", "domains": ["__FULL__"], "why": "产品源码变更：52 条密封测试均引用/构造 src 夹具，无法安全判定影响面 ⇒ fail-closed 全量（本卡有意不缩小，见 evidence/A-02）" },
+    { "glob": "packages/*", "domains": ["__FULL__"], "why": "同上" }
+  ],
+  "platform_sensitive": {
+    "windows": [
+      "tests/control-tower/alloc-task-id.test.sh",
+      "tests/control-tower/alloc-task-id-lock.test.sh",
+      "tests/control-tower/brief-parser-strip.test.sh",
+      "tests/control-tower/check-citations.test.sh",
+      "tests/control-tower/check-dsh-anchor.test.sh",
+      "tests/control-tower/check-gate-integrity.test.sh",
+      "tests/control-tower/check-k3-report.test.sh",
+      "tests/control-tower/check-preset-bundles.test.sh",
+      "tests/control-tower/check-progress-freshness.test.sh",
+      "tests/control-tower/g12-day-window.test.sh",
+      "tests/control-tower/gate-stats.test.sh",
+      "tests/control-tower/grep-oP-regression.test.sh",
+      "tests/control-tower/incident-loop.test.sh",
+      "tests/control-tower/install-dsh-preset.test.sh",
+      "tests/control-tower/merge_writeset_gate.test.sh",
+      "tests/control-tower/parallel-main-tree-occupancy.test.sh",
+      "tests/control-tower/platform-checklist.test.sh",
+      "tests/control-tower/q2-error-locating.test.sh",
+      "tests/control-tower/scan-fullwidth-vars.test.sh",
+      "tests/control-tower/synova-commit.test.sh",
+      "tests/control-tower/task-start-parallel.test.sh",
+      "tests/doc-system/doc-staleness.test.sh",
+      "tests/doc-system/doc-triage.test.sh"
+    ],
+    "windows_reasons": {
+      "tests/control-tower/alloc-task-id.test.sh": "断言链内**显式平台分支**：python 相对路径 stat 探针 → PLATFORM-DIFF 走「持锁超时」分支（:258-276）",
+      "tests/control-tower/alloc-task-id-lock.test.sh": "同上（:24-39）；文件锁语义（Windows 无 POSIX flock 等价）",
+      "tests/control-tower/brief-parser-strip.test.sh": "裸 `python3` 子进程调解析器（:30,:31）→ PATH/shim 差异（D328/D513）",
+      "tests/control-tower/check-citations.test.sh": "python 三级探测后子进程调用（:7,:13）→ 无 python 即 fail-open 跳过，行为随平台变",
+      "tests/control-tower/check-dsh-anchor.test.sh": "裸 `python3` 拼命令串（:3）→ Windows 无 python3.exe 即整测试失败",
+      "tests/control-tower/check-gate-integrity.test.sh": "**grep ERE 方言敏感已实锤**（:70-82 注释记 #768/#774 windows 断案）：`^+++` 在 BSD rc=2 / GNU rc 0-1 → 断言载荷与分支随方言变",
+      "tests/control-tower/check-k3-report.test.sh": "裸 `python3` 拼命令串（:3）→ 同 check-dsh-anchor",
+      "tests/control-tower/check-preset-bundles.test.sh": "python 三级探测 + 子进程调用（:13,:38）",
+      "tests/control-tower/check-progress-freshness.test.sh": "python 三级探测 + 子进程调用（:12,:15）；无 python 即 exit 2 失败",
+      "tests/control-tower/g12-day-window.test.sh": "**`date -v`(BSD) / `date -d`(GNU) 双方言回退链**（:12-15）——PLATFORM-CHECKLIST #5 原案；另调 python 生成窗口正则",
+      "tests/control-tower/gate-stats.test.sh": "裸 `python3 -` heredoc 子进程（:18）",
+      "tests/control-tower/grep-oP-regression.test.sh": "**grep -P/grep -oP 方言回归网本身**：其断言就是「BSD grep 无 -P → 检查静默失效」（:10-21）",
+      "tests/control-tower/incident-loop.test.sh": "多次裸 `python3` 子进程 + `command -v python3` 探针（:24-63）",
+      "tests/control-tower/install-dsh-preset.test.sh": "大量裸 `python3` heredoc 变异体执行（:45,:68,:211,:316）+ 平台转储（:188）",
+      "tests/control-tower/merge_writeset_gate.test.sh": "python 三级探测 + 子进程调用（:6）；无 python 即显式失败",
+      "tests/control-tower/parallel-main-tree-occupancy.test.sh": "裸 `python3 -c` 子进程（:20,:36）",
+      "tests/control-tower/platform-checklist.test.sh": "**平台清单自身的夹具**：CRLF 清洗 / 裸 python3 / grep -P / timeout 缺失 8 条逐条断言（:14-51）",
+      "tests/control-tower/q2-error-locating.test.sh": "裸 `python3 -` heredoc 子进程（:44）",
+      "tests/control-tower/scan-fullwidth-vars.test.sh": "python 三级探测 + 子进程（:28,:243）+ 显式 grep -P 假绿陷阱负例（:62-80）",
+      "tests/control-tower/synova-commit.test.sh": "多次裸 `python3` 子进程调 session_registry.py（:24-52）",
+      "tests/control-tower/task-start-parallel.test.sh": "裸 `python3` 子进程调 session_registry.py（:24,:25）",
+      "tests/doc-system/doc-staleness.test.sh": "以 `python3 os.utime` **替代 GNU-only `touch -d`**（:18，注释记 D782）——选型理由本身即平台分歧",
+      "tests/doc-system/doc-triage.test.sh": "同 doc-staleness（:19，D782）"
+    },
+    "derivation": {
+      "basis": "scripts/control-tower/PLATFORM-CHECKLIST.md（D520，仓库自带跨平台权威清单）的 9 条",
+      "criterion": "**只收「该测试断言链路上真的会执行平台分歧命令」的套件**（入选理由逐条见 windows_reasons）；仅**提及**平台命令、或使用**可移植形式**的套件一律剔除。",
+      "detectors": "裸 python/python3 子进程（PATH/shim，D328/D513）｜date -v(GNU)/date -d(BSD) 方言回退｜grep -P/grep -oP（BSD grep 无 PCRE，D313）｜grep -E 方言（^+++ BSD rc=2 / GNU 0-1，D520 CI 实证）｜CRLF/编码｜文件锁/路径分隔符",
+      "excluded_and_why": [
+        "mktemp —— PLATFORM-CHECKLIST 附录明列「双平台安全命令」",
+        "PYTHONIOENCODING / LC_ALL —— 52/52 全命中（D313 M5 头块），零判别力",
+        "tr -d '\\r' —— 是 CRLF 的**缓解措施**，不是危害",
+        "date +%s —— GNU/BSD/Git Bash 行为一致（非 #5 所指的 date -d/-v）；故剔除 post-commit / post-commit-marker / clone-shadow-commit / fastlane-bypass-only",
+        "sed -i.bak —— 后缀紧跟是**可移植形式**（#9 的坑是 `sed -i ''`）；故剔除 check-doc-truth",
+        "gate-failopen-net.test.sh —— 紧口径扫描**零命中**（其内容为门禁逻辑断言，不含平台分歧命令）；实测 120s 成本高但**不属于本子集**",
+        "verify-parallel-ci.test.sh —— 唯一命中是 LC_ALL 头块（无判别力）"
+      ],
+      "command": "grep -vE '^[[:space:]]*#' <每个测试> | grep -nE '\\bpython3?\\b|date -d|date -v|grep -P|grep -oP|sed -i|gtimeout|(^|[^a-zA-Z_./-])timeout[[:space:]]'",
+      "measured": {
+        "raw_detector_hits": 28,
+        "after_per_suite_review": 23,
+        "dropped": 5,
+        "total_sealed": 52
+      },
+      "caveat": "仍是**保守集**（宁可多跑不可漏跑）：判据止步于「命令在断言链路上会被执行」，未对每个套件做 windows 实跑归因；漏跑由「全量 windows（夜间/合并前）一道」兜底（本卡保留，禁删）。完整逐条原始输出见 docs/synova/product-lines/evidence/D1061/A-02。"
+    },
+    "ubuntu": [],
+    "macos": []
+  }
+}

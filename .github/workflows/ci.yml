@@ -9,6 +9,19 @@ on:
     branches: [main]
     # D1014 ⒞: 触发类型显式化（原为默认 opened/synchronize/reopened + 新增 ready_for_review）
     types: [opened, synchronize, reopened, ready_for_review]
+  # D1061/PR-A: windows 全量密封跑**保留一道**（禁删）——PR 面 windows 只跑「变更相关 ∪ 平台敏感」，
+  #   全量由夜间 schedule + 合并前 workflow_dispatch(ct_full_suite=true) 承担。
+  #   口径依据: CI windows CT 腿实测 1432–2500s（占 run 墙钟 89.6–99.9%），全量逐 PR 跑是队列放大器。
+  schedule:
+    - cron: '0 18 * * *'   # 02:00 CST（错峰，避开 03:30 数据备份）
+  workflow_dispatch:
+    inputs:
+      ct_full_suite:
+        description: '控制塔密封清单全量跑（合并前/夜间一道；false = 按变更选择）'
+        required: false
+        default: 'true'
+        type: choice
+        options: ['true', 'false']
 
 # N12 根治（D1014 · CTO 已批）: 同 workflow + 同 ref 只保留最新一条 run。
 # 依据: 全仓此前 concurrency = 0 ⇒ 同分支反复 push 无限排队（实测 feat/d962-2a-merge 独占 18 条，
@@ -336,6 +349,9 @@ jobs:
         #   实为零代码提交（M2），本批真实落地；6 测试本地全绿后入列。
         run: |
           FAIL=0
+          # D1061/PR-A: 密封清单**单源**在此处物化（catalog）。simulate-ci.sh 与
+          #   ct-suite-select.sh 的 --all/全量兜底均从本 ci.yml 同源提取（不散列、不漂移）。
+          CATALOG=""
           for t in \
             tests/control-tower/verify-parallel.test.sh \
             tests/control-tower/verify-claims-table.test.sh \
@@ -388,7 +404,50 @@ jobs:
             tests/control-tower/check-k3-report.test.sh \
             tests/control-tower/daily-cto-board-ratio.test.sh \
             tests/control-tower/install-dsh-preset.test.sh \
-            tests/control-tower/d956-failmsg.test.sh; do
+            tests/control-tower/d956-failmsg.test.sh \
+            tests/control-tower/ct-suite-select.test.sh \
+            tests/control-tower/simulate-ci-dedup.test.sh; do
+            CATALOG="${CATALOG}${t}"$'\n'
+          done
+          CATALOG="$(printf '%s\n' "$CATALOG" | grep . | sort -u)"
+          CATALOG_N="$(printf '%s\n' "$CATALOG" | grep -c . | tr -d ' \n\r')"
+
+          # ── D1061/PR-A 套件选择 ──────────────────────────────────────────────
+          # windows = 变更相关 ∪ 平台敏感（`--platform windows`）；其余平台**保持全量**（本卡不动 ubuntu 面）。
+          # 选择器降级语义 = 映射缺失/空变更/未映射路径 → 显式回退全量 + ::warning（绝不静默缩小）。
+          # ct_full_suite=true（夜间 schedule / 合并前 workflow_dispatch）= 全量一道（禁删）。
+          CT_PLATFORM="ubuntu"
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then CT_PLATFORM="windows"; fi
+          TESTS=""
+          if [ "${{ inputs.ct_full_suite || 'false' }}" = "true" ]; then
+            echo "::notice title=D1061-select::ct_full_suite=true → 全量密封清单 ${CATALOG_N} 条（合并前/夜间一道）"
+          elif [ "$CT_PLATFORM" != "windows" ]; then
+            echo "::notice title=D1061-select::platform=$CT_PLATFORM → 保持全量 ${CATALOG_N} 条（本卡仅裁 windows 面）"
+          else
+            TESTS="$(bash scripts/control-tower/ct-suite-select.sh --changed origin/main...HEAD --platform "$CT_PLATFORM" 2>/tmp/ct-select.log)"
+            SEL_RC=$?
+            grep -E '^\[D1061-(SELECT|DEGRADED)\]' /tmp/ct-select.log || true
+            if [ "$SEL_RC" -ne 0 ]; then
+              echo "::warning title=D1061-select::选择器 rc=$SEL_RC（执行失败）→ fail-closed 回退全量"
+              TESTS=""
+            fi
+          fi
+          # 选择集必须 ⊆ catalog；否则 fail-closed 全量（防映射漂移静默缩小覆盖面）
+          EXTRA=""
+          if [ -n "$TESTS" ]; then
+            EXTRA="$(printf '%s\n' "$TESTS" | grep -vxF -f <(printf '%s\n' "$CATALOG") || true)"
+          fi
+          if [ -z "$TESTS" ] || [ -n "$EXTRA" ]; then
+            if [ -n "$EXTRA" ]; then
+              echo "::warning title=D1061-select::选择集含 catalog 外条目（fail-closed 全量）: $(printf '%s' "$EXTRA" | tr '\n' ' ')"
+            fi
+            TESTS="$CATALOG"
+          fi
+          N="$(printf '%s\n' "$TESTS" | grep -c . | tr -d ' \n\r')"
+          echo "::notice title=D1061-select::platform=$CT_PLATFORM selected=${N}/${CATALOG_N}"
+
+          while IFS= read -r t; do
+            [ -z "$t" ] && continue
             echo "── $t"
             # D526: 测试失败输出进 ::error 注解——无 token 也能经 annotations 定位（D521 工具1 语义）
             if ! bash "$t" > /tmp/ct-out.log 2>&1; then
@@ -412,9 +471,9 @@ jobs:
               # D956-MSG-END
               FAIL=1
             fi
-          done
+          done <<< "$TESTS"
           # D943: DSH 断面一致性自扫（CI 无本地 DSH 树 → --no-tree-check；文档一致性仍全查）。
-          # 独立命令而非加入上方 for 清单——清单项由 `bash "$t"` 执行，命令串不可混入。
+          # 独立命令而非加入上方 catalog——catalog 项由 `bash "$t"` 执行，命令串不可混入。
           if ! python3 scripts/control-tower/check-dsh-anchor.py --repo . --no-tree-check; then
             echo "::error title=check-dsh-anchor::DSH 断面自扫失败（见上方 ❌ file:line）"
             FAIL=1
