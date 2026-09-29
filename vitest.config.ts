@@ -60,6 +60,15 @@ export default defineConfig({
       PORT: '3099',
       SYNOVA_DB_PATH: ':memory:',
       SYNOVA_SKIP_MCP: '1',
+      // A4-b (D1040): 测试期默认收敛到 warn — ERROR 不再被 INFO 淹没（失败时仍能出上下文）。
+      // ① 用 `process.env.LOG_LEVEL ?? 'warn'` 而非硬编码：`test.env` 是**覆盖**语义
+      //    （实测 E2b：硬编码 'warn' 时外部 `LOG_LEVEL=debug npx vitest run` 仍被压成 warn），
+      //    `??` 在 config 主进程求值 ⇒ 外部显式值可透传，不静默夺走调试开关。
+      // ② 不用 setupFiles：logger 在**模块加载期**固化级别（packages/logger/src/index.ts:12），
+      //    test.env 在 worker 启动时注入，早于任何测试模块 import；且 test.env 单点声明、diff 最小。
+      // ③ 勿设为 'silent'：packages/logger/src/index.ts:44 的二级抑制开关会让 fd 2 彻底静音，
+      //    失败上下文一并消失。
+      LOG_LEVEL: process.env.LOG_LEVEL ?? 'warn',
     },
   },
 });
