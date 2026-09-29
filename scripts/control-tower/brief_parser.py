@@ -71,6 +71,20 @@ def parse_write_set(text: str) -> dict:
     return {"present": True, "include": include, "builtin": builtin}
 
 
+# D1061 5④: 「路径形状」判定 —— 明确扩展名结尾 + 路径体不含空白。
+#   为什么需要它: parse_q2 原实现**无条件** `re.split(r"[（(]", path, 1)[0]`，把
+#   **路径自带的括号**当成"括号描述"剥掉 ⇒ 含括号的真实文件名被截断（#878 实证：
+#   `.claude/task-briefs/2026-09-28-D1052-…-docs（系统性假红修复）.md` → 截成 `…-docs`
+#   → D708 判「夹带」→ 全 PR 假红）。
+#   判定口径: `^<无空白路径体>.<明确扩展名>$`。路径体用 `[^\s]+` 覆盖中文/全角括号/半角括号/
+#   连字符（`\w` 不含 CJK 标点，不能用来判中文路径）。扩展名白名单 = 本仓实际会出现的交付物类型。
+#   命中 ⇒ **整体保留**（不再剥括号）；未命中 ⇒ 回退既有剥括号行为（钉住语义不回归，
+#   见 tests/control-tower/brief-parser-strip.test.sh —— 该文件本卡不改）。
+PATH_SHAPE_RE = re.compile(
+    r"^[^\s]+\.(?:md|sh|py|ts|tsx|js|json|yml|yaml|txt|html)$"
+)
+
+
 def parse_q2(text: str) -> dict:
     """Q2 做什么/不做什么 路径提取（语义 = G12 awk 精确对齐）。"""
     include: List[str] = []
@@ -108,10 +122,23 @@ def parse_q2(text: str) -> dict:
                 raw = re.sub(
                     r"^(修改|新增|新建|修复|扩展|实现|更新|重构|升级|创建|编写|增加|优化|调整|添加|改)\s*",
                     "", raw)
-            # strip 后置分隔
-            path = re.split(r"[:：]| — ", raw, 1)[0].strip()
-            # 剥括号描述（include/exclude 同规则）
-            path = re.split(r"[（(]", path, 1)[0].strip()
+            # D1061 5④（完备版）: **路径形状优先 —— 必须在两个切分之前**。
+            #   为什么顺序是关键: parse_q2 有**两个**分隔符都会吃掉真实文件名 ——
+            #     ① `re.split(r"[:：]| — ", …)` 全角冒号：`…派单闸门落地：R8-修复…` → `…派单闸门落地`
+            #        （D1061 实战定位：D1058 brief 名自带全角冒号 ⇒ D708 判夹带）
+            #     ② `re.split(r"[（(]", …)` 全角括号：`…-docs（系统性假红修复）.md` → `…-docs`
+            #        （红因 B / #878 实证）
+            #   只修②对①型名字不完备 ⇒ 形状命中（含中文/全角标点/明确扩展名）时**整段保留、不做任何切分**；
+            #   形状不命中才回退既有「先冒号、后括号」两刀（保住三条钉住语义，见
+            #   tests/control-tower/brief-parser-strip.test.sh）。
+            if PATH_SHAPE_RE.match(raw.strip()):
+                path = raw.strip()
+            else:
+                # strip 后置分隔
+                path = re.split(r"[:：]| — ", raw, 1)[0].strip()
+                # 回退: 未命中形状 ⇒ 剥括号描述（include/exclude 同规则）
+                if not PATH_SHAPE_RE.match(path):
+                    path = re.split(r"[（(]", path, 1)[0].strip()
             # D543: 剥行号后缀「path L750」——对齐 devdoc_writeset.py:76 同款正则。
             # 缺此步时 Q2 写「pre-commit-check.sh L750」整体当路径 → 与实际改动
             # 「pre-commit-check.sh」不匹配 → G12 误判越界（D541 CI 红第三处根因）。

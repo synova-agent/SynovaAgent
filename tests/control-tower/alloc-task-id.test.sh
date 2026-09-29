@@ -473,6 +473,40 @@ esac
 rm -rf "$F11"
 echo ""
 
+echo "── 11b. D1061 任务 5③: 建卡器骨架含 write_set（喂 D708 的 S1 声明源）──"
+# 为什么: D708 的 S1 源 = task-state/<D#>.json 的 `write_set`。建卡器不初始化它 ⇒
+#   新卡默认「三源皆空」⇒ 含源码文件的 PR 一律 fail-closed 红（#878 实证: 任务 D09 /
+#   夹带 tests/control-tower/precommit-groups-injection.test.sh / rc=2）。
+#   判据: 骨架必须含 `"write_set": []`；变异体 = 删掉该键 → 本条必红。
+F11B=$(mktemp -d); mkdir -p "$F11B/task-state"
+cp "$REPO_DIR/task-state/TEMPLATE.json" "$F11B/task-state/TEMPLATE.json"
+EXIT=0
+OUT=$(SYNO_TASK_STATE_DIR="$F11B/task-state" SYNO_BRIEF_DIR="$F11B/briefs" \
+      SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_NO_BRANCH=1 bash "$TOOL" "D1061-writeset" 2>&1) || EXIT=$?
+NEWID11B=$(printf '%s\n' "$OUT" | sed -n '1p')
+assert_exit 0 "$EXIT" "11b 建卡 rc"
+SKEL11B="$F11B/task-state/${NEWID11B}.json"
+if [ -f "$SKEL11B" ]; then
+  grep -q '"write_set"' "$SKEL11B" \
+    && pass "11b 骨架含 write_set 键（S1 声明源已初始化）" \
+    || fail "11b 骨架缺 write_set 键（新卡三源皆空 → D708 fail-closed）"
+  if python3 - "$SKEL11B" <<'PYX'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as fh:
+    d = json.load(fh)
+sys.exit(0 if d.get("write_set") == [] else 1)
+PYX
+  then
+    pass "11b write_set 是合法 JSON 空数组（契约：骨架留空，由作者逐条声明）"
+  else
+    fail "11b write_set 非空数组/非合法 JSON（骨架契约偏离）"
+  fi
+else
+  fail "11b 骨架未生成: $SKEL11B"
+fi
+rm -rf "$F11B"
+echo ""
+
 echo "── 12. D940/E-M5 接线判别性: 本测试必须在 ci.yml 密封清单内（删掉该行即红）──"
 # 沿 check-progress-freshness.test.sh:44 / merge_writeset_gate.test.sh:36 同款。
 # 此前全仓只有 check-canary-drift.sh 能察觉本测试掉出清单，但它契约恒 exit 0（CI 里写作 `|| true`）

@@ -1,0 +1,146 @@
+{
+  "task_id": "D1061",
+  "part": "PR-B",
+  "branch": "chore/d1061-b-gate-mechanism",
+  "base": "20b55eba",
+  "writer": "coder-b",
+  "suites_run": 4,
+  "cases_run": 111,
+  "cases_breakdown": {
+    "gate-circuit-breaker.test.sh": 19,
+    "pre-push-preview.test.sh": 24,
+    "brief-parser-cjk-path.test.sh": 12,
+    "alloc-task-id.test.sh": 56
+  },
+  "rc": {
+    "gate-circuit-breaker.test.sh": 0,
+    "pre-push-preview.test.sh": 0,
+    "brief-parser-cjk-path.test.sh": 0,
+    "alloc-task-id.test.sh": 0,
+    "brief-parser-strip.test.sh (钉住语义，未改该文件)": 0
+  },
+  "timings_s": {
+    "pre_push_preview_fast": 1.09,
+    "pre_push_preview_fast_bad_brief": 1.46,
+    "budget_s": 10
+  },
+  "health_line": {
+    "command": "bash scripts/control-tower/gate-circuit-breaker.sh --health-line",
+    "format_frozen": "GATE-HEALTH: status=<OK|DEGRADED|KNOWN-FAULT> known=<n> expired=<n> sources=<n> checked_at=<ISO8601>",
+    "observed": "GATE-HEALTH: status=OK known=0 expired=0 sources=2 checked_at=2026-09-29T02:06:01Z",
+    "exit_codes": {
+      "0": "OK|KNOWN-FAULT",
+      "1": "DEGRADED",
+      "2": "breaker self-fault"
+    }
+  },
+  "cto_one_liner": "bash scripts/workflow/pre-push-preview.sh --fast",
+  "breaker_states": {
+    "should_skip_absent": 0,
+    "should_skip_active_registration": 3,
+    "should_skip_expired_registration": 0,
+    "registry_corrupt": 2,
+    "streak_alert_threshold_consecutive": 2,
+    "streak_1_alert": false,
+    "streak_2_alert": true
+  },
+  "variants_red_on_break": {
+    "breaker_remove_expires_check": "rc=1 结果: 17 通过, 2 失败",
+    "preview_remove_brief_parse": "rc=1 结果: 14 通过, 2 失败",
+    "alloc_skeleton_drop_write_set": "rc=1 PASS=54 FAIL=2",
+    "brief_parser_revert_paren_strip": "rc=1 结果: 9 通过, 2 失败",
+    "preview_remove_gate8_callsite": "rc=1 结果: 21 通过, 3 失败（调用点判别三条）",
+    "brief_parser_move_shape_check_after_colon_split": "rc=1 结果: 11 通过, 1 失败（全角冒号被截断）"
+  },
+  "exist_brief_checkbox_survey": {
+    "source": "origin/main @ 20b55eba .claude/task-briefs/*.md",
+    "total": 150,
+    "done_count_zero": 9,
+    "done_count_zero_pct": 6.0,
+    "type_a_section_exists_no_checkbox": 9,
+    "type_b_section_missing": 0,
+    "confirmed_red_by_real_gate": "9/9",
+    "also_missing_CRITERIA": 8,
+    "generator_checkbox_since": "2026-06-14 37abc153",
+    "attribution": "手写件绕过生成器（生成器无漂移）",
+    "repro": "python3 - <<'PY' (brief_parser.parse_done over .claude/task-briefs/*.md) ; git log -1 -S'- [ ] 入口可触达' -- scripts/workflow/generate-task-brief.py"
+  },
+  "self_corrected_defects": {
+    "fullwidth_variable_boundary": {
+      "symptom": "$VAR（全角…） 在 set -u 下 unbound variable（ctrl-tower-change 模式 2）",
+      "found_by": "变异体运行（只在该断言的失败分支触发 ⇒ 绿跑不可见）",
+      "fixed_occurrences": 12,
+      "files": [
+        "tests/control-tower/gate-circuit-breaker.test.sh",
+        "tests/control-tower/pre-push-preview.test.sh",
+        "tests/control-tower/brief-parser-cjk-path.test.sh"
+      ],
+      "recheck_hits": 0
+    }
+  },
+  "known_gaps": [
+    "ci.yml 接线未做（单写者顺位 coder-a -> coder-b，待 PR-A 合并后 rebase 再加）",
+    "task-state/D1061.json 未由 PR-B 创建/修改（PR-A 为首写者，避免同文件双写）",
+    "熔断登记表当前为空表（无已知门禁故障）",
+    "--fast 不覆盖 windows 平台差异类红（归 PR-A）",
+    "registry sources 字段当前实测 2（登记表 + gate-hits 日志；degraded 日志在首次写入前不存在）",
+    "本分支已撤掉自建 D1061 brief（队长裁定：以 coder-a 那份为唯一基线，rebase 时取 main 版），故 G12 在 PR-A 合并前仍会红——已知且已接受"
+  ],
+  "cto_one_liner_placement": {
+    "decision_by": "lead 2026-09-29",
+    "not_root_readme": "仓库根 README.md 是产品向文档且不在本卡写集 -> 未擅自改",
+    "actually_at": [
+      "scripts/workflow/pre-push-preview.sh 头注释第 9 行",
+      "scripts/workflow/pre-push-preview.sh --help 输出第 4 行"
+    ],
+    "help_visible_repro": "bash scripts/workflow/pre-push-preview.sh --help | head -5"
+  },
+  "wiring_discriminative_proof": {
+    "claim": "新门禁 8 真的在执行（接线了 != 被执行）——它先拦下了它的作者",
+    "first_push_rc": 1,
+    "first_push_block": "❌ 门禁 8: 推前预演未通过 — 推送已拒绝 (D1061 任务 4) / ❌ ② D708 写集对账: 不通过（rc=2 —— 夹带/声明源空）",
+    "root_cause": "本分支当时无 S1 写集声明（task-state/D1061.json 不在 main 也不在本分支）",
+    "second_push_rc": 0,
+    "annotation": "同一门禁、同一分支，一次红一次绿 -> 判定真实，非恒真/恒假摆设"
+  },
+  "write_set_declaration": {
+    "file": "task-state/D1061.json",
+    "items": 22,
+    "scope": "PR-A ∪ PR-B 并集",
+    "rationale": "D708 按 origin/main..HEAD 对账；并集使任一侧先合并、另一侧后 rebase 都不夹带，且不因对侧先合并而误红",
+    "lead_ruling": "coder-a 侧同名文件内容不同时以本 PR-B 并集版为准；PR-A 先合并后 PR-B rebase 时保留并集版"
+  },
+  "fixture_self_defect_lesson": {
+    "class": "ctrl-tower-change 模式 2（$VAR 紧贴全角标点 -> unbound variable）",
+    "hidden_because": "只在断言失败分支触发 -> 绿跑时完全不可见（夹具的报错路径从未被测过）",
+    "found_by": "四个变异体运行时",
+    "lesson": "变异体不只验被测物，也验夹具",
+    "suggested_mechanism": "把『$VAR 紧贴全角标点』纳入控制塔脚本/夹具静态扫描（现无此扫描）"
+  },
+  "redlines_check": {
+    "scripts_audit_touched": false,
+    "src_touched": false,
+    "no_verify_used": false,
+    "git_stash_used": false,
+    "force_push_used": false
+  },
+  "wiring_criteria_upgrade": {
+    "triggered_by": "verifier 变异体复核（坑清单第 7 条：禁 grep 型静态判据当验收）",
+    "old_defect": "全文件 grep 'pre-push-preview.sh' 在删件 fail-open 分支下恒真 -> 删掉 preview 也永不红",
+    "fix1_behaviour": "SYNO_PREVIEW_ONLY=1 + SYNO_PREVIEW_CMD 桩；判别子A 失败桩->rc=1 且点名；判别子B 通过桩->rc=0",
+    "fix2_callsite": "判据限定生产尾部区间：实际调用 / 报文点名 / exit 1 三条",
+    "no_end_to_end_reason": "端到端会被 golden-case F1 先拦 + 触发 vitest --changed 重型，代价与收益不成比例",
+    "residual_limit": "判别子A/B 走 SYNO_PREVIEW_ONLY 早退路径调同一函数；生产调用点由定位式结构判据覆盖（非行为层）",
+    "weak_criterion_kept": "全文件 grep 保留但降级标注为『仅声明在场』",
+    "failopen_not_a_defect": "缺件 fail-open = 既有语义『脚本缺失=CI 降级信号』+ 可见告警，非缺陷项"
+  },
+  "path_shape_family": {
+    "root_cause": "order: 先①全角冒号切分 -> 后②全角括号切分，故只修②对①型名字不完备",
+    "member_1_fullwidth_colon": "…派单闸门落地：R8-修复… -> …派单闸门落地（本卡定位，D1058 实战）",
+    "member_2_fullwidth_paren": "…-docs（系统性假红修复）.md -> …-docs（红因 B / #878）",
+    "member_3_Lnumber": "scripts/x.sh L750 -> scripts/x.sh（D543 有意保留）",
+    "fix": "PATH_SHAPE_RE 形状优先提到两个切分之前；形状命中整段保留，未命中回退两刀",
+    "real_world_proof": "D1058 brief Q2 现解析出完整全角冒号文件名",
+    "conclusion": "声明源可靠性与解析器复杂度成反比：S1(task-state.write_set, JSON) > S3(散文 Q2)；主源应为 S1"
+  }
+}

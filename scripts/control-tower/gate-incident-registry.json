@@ -1,0 +1,6 @@
+{
+  "schema": "gate-incident-registry/1.0",
+  "note": "已知门禁故障登记表（到期棘轮，抄 scripts/control-tower/gate-integrity-baseline.txt 的模式，不造新范式）。规则：① 条目存在且 expires >= 今天 ⇒ 该门禁可被熔断跳过（--should-skip 出 3），跳过必写 degraded-events.log + 可见告警；② expires < 今天 ⇒ 条目自动失效，必须照跑且告警（健康行转 DEGRADED）；③ 门禁修好后须删除条目（棘轮语义：条目已不再需要 = 登记过期）。owner 必填（谁负责在 expires 前修好），evidence 必填（可核引用）。",
+  "updated_at": "2026-09-29",
+  "gates": []
+}
