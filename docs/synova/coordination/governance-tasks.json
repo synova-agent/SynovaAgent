@@ -1,0 +1,1416 @@
+{
+  "schema": "governance-tasks/1",
+  "generated_by": "dsh/plugins/synova-dashboards/scripts/gen-governance-ledger.mjs",
+  "generated_at": "2026-09-29T05:25:14.602Z",
+  "source": {
+    "primary": "task-state/D###.json",
+    "secondary": "docs/synova/coordination/board-backlog.json",
+    "rule": "治理线 = 三条机器可见信号之一：① domain=doc-governance ② 标题以 CT- 开头 ③ 标题/里程碑含 治理|门禁|控制塔。逐卡回传命中信号，可复核可推翻。",
+    "signals": {
+      "标题/里程碑含 治理|门禁|控制塔": 52,
+      "标题以 CT- 开头": 6,
+      "domain=doc-governance": 1
+    }
+  },
+  "degraded": false,
+  "degraded_sources": [],
+  "counts": {
+    "total": 58,
+    "active": 42,
+    "resting": 16,
+    "debt": 50,
+    "by_domain": {
+      "—（卡面未声明）": 23,
+      "mac": 30,
+      "win": 3,
+      "doc-governance": 1,
+      "k3": 1
+    }
+  },
+  "cards": [
+    {
+      "id": "D513",
+      "title": "控制塔四项返修（Win反馈+D331残余）",
+      "status": "impl_done",
+      "domain": null,
+      "domain_label": "—（卡面未声明）",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-08-29",
+      "waiting_days": 31
+    },
+    {
+      "id": "D515",
+      "title": "控制塔 V5.0.0 减负重构（三批 13 项）",
+      "status": "impl_done",
+      "domain": null,
+      "domain_label": "—（卡面未声明）",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-08-29",
+      "waiting_days": 31
+    },
+    {
+      "id": "D520",
+      "title": "控制塔跨平台适配收口（CRLF/python3/fastlane/双平台CI/checklist）+ 版本纪律",
+      "status": "impl_done",
+      "domain": null,
+      "domain_label": "—（卡面未声明）",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-08-29",
+      "waiting_days": 31
+    },
+    {
+      "id": "D521",
+      "title": "控制塔提交链路收敛 — tag时机/bypass竞态/语义parser/CI诊断/push模拟（治本）",
+      "status": "impl_done",
+      "domain": null,
+      "domain_label": "—（卡面未声明）",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-08-29",
+      "waiting_days": 31
+    },
+    {
+      "id": "D535",
+      "title": "guard 循环卫生+超时（Stage1-D4，控制塔防跑偏）",
+      "status": "impl_done",
+      "domain": null,
+      "domain_label": "—（卡面未声明）",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-08-29",
+      "waiting_days": 31
+    },
+    {
+      "id": "D537",
+      "title": "控制塔并行污染+提交链摩擦根治（Win 反馈 #1-#6，单源 6 项）",
+      "status": "impl_done",
+      "domain": null,
+      "domain_label": "—（卡面未声明）",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-08-29",
+      "waiting_days": 31
+    },
+    {
+      "id": "D558",
+      "title": "CT-46 pre-commit 组1 类型安全模式扩 as never / as unknown as",
+      "status": "claimed",
+      "domain": null,
+      "domain_label": "—（卡面未声明）",
+      "signals": [
+        "标题以 CT- 开头"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-08-29",
+      "waiting_days": 31
+    },
+    {
+      "id": "D742",
+      "title": "孤儿测试门禁——CI 未执行的测试文件清单（防『写了没人跑』）",
+      "status": "claimed",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-15",
+      "waiting_days": 14
+    },
+    {
+      "id": "D752",
+      "title": "哨兵类型网登记从软约束改硬门禁（8/45 未登记，P1）",
+      "status": "impl_done",
+      "domain": null,
+      "domain_label": "—（卡面未声明）",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-15",
+      "waiting_days": 14
+    },
+    {
+      "id": "D757",
+      "title": "哨兵类型欠账修复：3 个未登记哨兵的类型错（D752 门禁暴露）",
+      "status": "claimed",
+      "domain": "win",
+      "domain_label": "win",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-15",
+      "waiting_days": 14
+    },
+    {
+      "id": "D778",
+      "title": "交付物复核门禁：派单文档 pre-commit 强制 pre-dispatch-check + CTO 交付三件套固化",
+      "status": "claimed",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-15",
+      "waiting_days": 14
+    },
+    {
+      "id": "D788",
+      "title": "预算门禁口径修正：只计审查面（治理/审计产物不计入计数与域判定）——解锁审计批次落地",
+      "status": "claimed",
+      "domain": null,
+      "domain_label": "—（卡面未声明）",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-16",
+      "waiting_days": 13
+    },
+    {
+      "id": "D789",
+      "title": "K3 审计批次五：D774/D786 流水线与看门狗 + D782 part1 + 门禁变更（D778/D788）+ A1 口径修复",
+      "status": "claimed",
+      "domain": null,
+      "domain_label": "—（卡面未声明）",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-16",
+      "waiting_days": 13
+    },
+    {
+      "id": "D797",
+      "title": "S1：task-state 六字段回填 + 门禁（解锁阻塞/时间轴）",
+      "status": "claimed",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 项目管理基建",
+      "milestone": "M0 项目管理基建",
+      "owner": "mac-coding",
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-17",
+      "waiting_days": 12
+    },
+    {
+      "id": "D808",
+      "title": "DSH 借鉴标准更新（治理文档）：合规口径 + G3 守卫物理化 + 落点归属 + V1 元断言一致性核对表",
+      "status": "impl_done",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 项目管理基建",
+      "milestone": "M0 项目管理基建",
+      "owner": "cto",
+      "risk": null,
+      "depends_on": [
+        "D797",
+        "D793"
+      ],
+      "blocked_note": null,
+      "updated_at": "2026-09-18",
+      "waiting_days": 11
+    },
+    {
+      "id": "D812",
+      "title": "派单引用小节存在性门禁（C4）：pre-dispatch-check 增检查 ⑪",
+      "status": "claimed",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 项目管理基建",
+      "milestone": "M0 项目管理基建",
+      "owner": "mac-coding",
+      "risk": "medium",
+      "depends_on": [
+        "D778"
+      ],
+      "blocked_note": "前置：#574（D778 派单复核门禁）合入后才可开工——同一文件 pre-dispatch-check.sh，必须串行",
+      "updated_at": "2026-09-18",
+      "waiting_days": 11
+    },
+    {
+      "id": "D816",
+      "title": "控制塔卫生：alloc-task-id 跨 worktree 取号 + .claude/bypass.log 停止入库",
+      "status": "claimed",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 项目管理基建",
+      "milestone": "M0 项目管理基建",
+      "owner": "mac-coding",
+      "risk": "high",
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-18",
+      "waiting_days": 11
+    },
+    {
+      "id": "D824",
+      "title": "T-D12 check-bridge-files 孤儿脚本处置（防回潮门禁本身『写了没接上』）",
+      "status": "claimed",
+      "domain": "win",
+      "domain_label": "win",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M1 产品可用",
+      "milestone": "M1 产品可用",
+      "owner": "mac-coding",
+      "risk": "high",
+      "depends_on": [
+        "D813"
+      ],
+      "blocked_note": "串行：D813 也在改 scripts/pre-commit-check.sh（同文件），**D813 先落、D824 再动**",
+      "updated_at": "2026-09-18",
+      "waiting_days": 11
+    },
+    {
+      "id": "D832",
+      "title": "固化①：新验收标准进派单与规格（门禁 + 模板）",
+      "status": "claimed",
+      "domain": "win",
+      "domain_label": "win",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M1 产品可用",
+      "milestone": "M1 产品可用",
+      "owner": "mac-coding",
+      "risk": "high",
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-18",
+      "waiting_days": 11
+    },
+    {
+      "id": "D833",
+      "title": "固化②：CTO 验收记录模板 + 检查（我的验收也受门禁约束）",
+      "status": "claimed",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M1 产品可用",
+      "milestone": "M1 产品可用",
+      "owner": "mac-coding",
+      "risk": "medium",
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-18",
+      "waiting_days": 11
+    },
+    {
+      "id": "D835",
+      "title": "控制塔卫生 2：D708 写集门禁对 git mv（重命名）来源路径误判为夹带",
+      "status": "claimed",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 项目管理基建",
+      "milestone": "M0 项目管理基建",
+      "owner": "mac-coding",
+      "risk": "medium",
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-19",
+      "waiting_days": 10
+    },
+    {
+      "id": "D837",
+      "title": "小队模式物理门禁：check-team-protocol.sh（M1–M6 六项检查 + 夹具 + 接线）",
+      "status": "claimed",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 项目管理基建",
+      "milestone": "M0 项目管理基建",
+      "owner": "mac-coding",
+      "risk": "high",
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-19",
+      "waiting_days": 10
+    },
+    {
+      "id": "D839",
+      "title": "认领制缺陷：已完成 session 的 brief 不释放声明 → 后续任务被永久锁死（D296/D329 门禁）",
+      "status": "claimed",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 项目管理基建",
+      "milestone": "M0 项目管理基建",
+      "owner": "mac-coding",
+      "risk": "high",
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-19",
+      "waiting_days": 10
+    },
+    {
+      "id": "D848",
+      "title": "账本漂移门禁：证据/状态变更合并后必须重算 ledger 派生器（K3 D815 P1 归因）",
+      "status": "claimed",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": "线 10",
+      "serves_source": "卡面文本抽取",
+      "milestone": "M0 项目管理基建",
+      "owner": "mac-coding",
+      "risk": "high",
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-20",
+      "waiting_days": 9
+    },
+    {
+      "id": "D857",
+      "title": "控制塔两处「总完成度」改读离散三档（CT-74）+ 补『禁百分比』grep 断言",
+      "status": "claimed",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 项目管理基建",
+      "milestone": "M0 项目管理基建",
+      "owner": "mac-coding",
+      "risk": "high",
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-20",
+      "waiting_days": 9
+    },
+    {
+      "id": "D860",
+      "title": "PR 预算口径治本（F9/F12 一族）：治理产物（brief/卡/Note/规格/自验记录）不计入 ≤12 文件预算",
+      "status": "impl_done",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 项目管理基建",
+      "milestone": "M0 项目管理基建",
+      "owner": "mac-coding",
+      "risk": "high",
+      "depends_on": [
+        "D853"
+      ],
+      "blocked_note": null,
+      "updated_at": "2026-09-21",
+      "waiting_days": 8
+    },
+    {
+      "id": "D869",
+      "title": "门禁组 7 死检查：`^+++` 使 grep -Ev exit 2 被 `|| true` 吞",
+      "status": "claimed",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 项目管理基建",
+      "milestone": "M0 项目管理基建",
+      "owner": "mac-coding",
+      "risk": "medium",
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-22",
+      "waiting_days": 7
+    },
+    {
+      "id": "D911",
+      "title": "控制塔门禁三缺陷根治：D708 误拦合法 PR / D733 无「代行」机制 / D749 判据漂移",
+      "status": "claimed",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 项目管理基建",
+      "milestone": "M0 项目管理基建",
+      "owner": "mac-coding",
+      "risk": "high",
+      "depends_on": [
+        "D861",
+        "D860",
+        "D858"
+      ],
+      "blocked_note": "写集硬边界：`scripts/control-tower/merge_writeset_gate.py`、`scripts/control-tower/check-pr-budget.sh`、`tests/control-tower/merge_writeset_gate.test.sh`、`tests/control-tower/check-pr-budget.test.sh` 四件正被 **P",
+      "updated_at": "2026-09-22",
+      "waiting_days": 7
+    },
+    {
+      "id": "D914",
+      "title": "ownership 补齐：CTO 治理文档三目录（dispatch/authority/research）落 win 兜底 → 归 mac",
+      "status": "impl_done",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 项目管理基建",
+      "milestone": "M0 项目管理基建",
+      "owner": "synova-cto",
+      "risk": "medium",
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-22",
+      "waiting_days": 7
+    },
+    {
+      "id": "D921",
+      "title": "K3 独立审计派单（D919 引用可核验门禁 + D920 合并队列推进器）",
+      "status": "impl_done",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 项目管理基建",
+      "milestone": "M0 项目管理基建",
+      "owner": "mac-coding",
+      "risk": "medium",
+      "depends_on": [
+        "D919",
+        "D920"
+      ],
+      "blocked_note": null,
+      "updated_at": "2026-09-23",
+      "waiting_days": 6
+    },
+    {
+      "id": "D923",
+      "title": "W1-1·D1：K3 升级为必经合并门禁 + 异构交叉评审",
+      "status": "spec_done",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 项目管理基建",
+      "milestone": "M0 项目管理基建",
+      "owner": "mac-coding",
+      "risk": "medium",
+      "depends_on": [
+        "D922"
+      ],
+      "blocked_note": null,
+      "updated_at": "2026-09-23",
+      "waiting_days": 6
+    },
+    {
+      "id": "D930",
+      "title": "Win 侧同步包（控制塔/预设/技能/必读文档对齐）",
+      "status": "impl_done",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 项目管理基建",
+      "milestone": "M0 项目管理基建",
+      "owner": "mac-coding",
+      "risk": "high",
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-23",
+      "waiting_days": 6
+    },
+    {
+      "id": "D935",
+      "title": "M1 ownership presets 域修正（窄卡）",
+      "status": "claimed",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M1 控制塔域判定",
+      "milestone": "M1 控制塔域判定",
+      "owner": "synova-squad-lead",
+      "risk": "medium",
+      "depends_on": [],
+      "blocked_note": "已解除。开工前 M2 扫描发现本卡 3 文件与在飞卡 **D911**（claimed/high/5 工作树）write_set 100% 重叠；依 TASK-ROUTING §串行点「写集重叠 → 停手问创始人」上报，**CTO 裁定 A**：M1 先合、令 D911 暂停这 3 文件。",
+      "updated_at": "2026-09-24",
+      "waiting_days": 5
+    },
+    {
+      "id": "D936",
+      "title": "模块归属改为服从 ownership.yaml（删四组冲突清单）+ 台账三批登记",
+      "status": "impl_done",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M1 控制塔域判定",
+      "milestone": "M1 控制塔域判定",
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-24",
+      "waiting_days": 5
+    },
+    {
+      "id": "D937",
+      "title": "P0 门禁 fail-open 假绿：pre-commit 组 7a ERE 非法致检查恒过",
+      "status": "spec_done",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 项目管理基建",
+      "milestone": "M0 项目管理基建",
+      "owner": "mac-coding",
+      "risk": "high",
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-24",
+      "waiting_days": 5
+    },
+    {
+      "id": "D955",
+      "title": "D943 文档面 + DSH 断面接线（PR-2）：旧断面锚清零 + 断面门禁接线 CI/pre-commit",
+      "status": "impl_done",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 项目管理基建",
+      "milestone": "M0 项目管理基建",
+      "owner": "mac-coding",
+      "risk": "medium",
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-24",
+      "waiting_days": 5
+    },
+    {
+      "id": "D1007",
+      "title": "M9 门禁三件套收口（恢复 rebase 丢失接线 + M3 夹具假绿根治 + 棘轮基线清理；承接 PR#768/原#741）",
+      "status": "impl_done",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 项目管理基建",
+      "milestone": "M0 项目管理基建",
+      "owner": "mac-coding",
+      "risk": "high",
+      "depends_on": [
+        "M9",
+        "D954"
+      ],
+      "blocked_note": null,
+      "updated_at": "2026-09-25",
+      "waiting_days": 4
+    },
+    {
+      "id": "D943",
+      "title": "D943 机制面：DSH 断面唯一源+门禁 / K3 报告机械保险 / 观测式看板 runner（拆分自 #738）",
+      "status": "impl_done",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 项目管理基建",
+      "milestone": "M0 项目管理基建",
+      "owner": "mac-coding",
+      "risk": "medium",
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-25",
+      "waiting_days": 4
+    },
+    {
+      "id": "D964",
+      "title": "文档减负 + K3 报告指针式（程序卡：阶段0 只读 / 阶段1 门禁豁免 / 阶段1b 引用豁免根 / 阶段2 K3报告PR清收 / 阶段3 同类文档唯一性 / 阶段4 分批归档 / 阶段5 日报指标）",
+      "status": "in_progress",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 治理",
+      "milestone": "M0 治理",
+      "owner": "mac-cto",
+      "risk": "high",
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-25",
+      "waiting_days": 4
+    },
+    {
+      "id": "D1014",
+      "title": "N12 根治：ci.yml 加 concurrency（同 ref 只留最新）+ push 触发收窄为 [main] + pull_request.types 显式化",
+      "status": "impl_done",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：治理体系最小充分形态 · 阶段 0 阻塞解除 + 阶段 4 前置",
+      "milestone": "治理体系最小充分形态 · 阶段 0 阻塞解除 + 阶段 4 前置",
+      "owner": "mac-cto-parallel",
+      "risk": "high",
+      "depends_on": [],
+      "blocked_note": "门禁/CI 语义变更 ⇒ CTO 已批（2026-09-26），K3 审紧随",
+      "updated_at": "2026-09-26T03:30:00+08:00",
+      "waiting_days": 3
+    },
+    {
+      "id": "D1044",
+      "title": "B1-archive-294-outbound",
+      "status": "claimed",
+      "domain": "doc-governance",
+      "domain_label": "doc-governance",
+      "signals": [
+        "domain=doc-governance"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：B1",
+      "milestone": "B1",
+      "owner": "synova-squad-lead",
+      "risk": "irreversible-delete",
+      "depends_on": [
+        "D1028"
+      ],
+      "blocked_note": null,
+      "updated_at": "2026-09-28",
+      "waiting_days": 1
+    },
+    {
+      "id": "D1060",
+      "title": "D963 升级「Synova 开发工作台」双面板（四问格子 / 流水 / 待你裁 / 阻塞 + 治理线物理分离）",
+      "status": "impl_done",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 项目管理基建",
+      "milestone": "M0 项目管理基建",
+      "owner": "DeepSeek Harness",
+      "risk": "medium",
+      "depends_on": [
+        "D963",
+        "D1059"
+      ],
+      "blocked_note": null,
+      "updated_at": "2026-09-29",
+      "waiting_days": 0
+    },
+    {
+      "id": "D387",
+      "title": "CT-34 纯文档提交豁免门禁（pre-commit 白名单 + Secrets 保留）",
+      "status": "audited",
+      "domain": null,
+      "domain_label": "—（卡面未声明）",
+      "signals": [
+        "标题以 CT- 开头",
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-08-22T13:29:37+00:00",
+      "waiting_days": 37
+    },
+    {
+      "id": "D396",
+      "title": "snapshot 测试（黄金用例固化回归门禁——K3 提前 P0 同批）",
+      "status": "audited",
+      "domain": null,
+      "domain_label": "—（卡面未声明）",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-08-22T13:29:37+00:00",
+      "waiting_days": 37
+    },
+    {
+      "id": "D399",
+      "title": "D393 审计 FAIL 修复（自指悖论/spec 双向失真/CTO-HEALTH 可复现/门禁记录入库）",
+      "status": "audited",
+      "domain": null,
+      "domain_label": "—（卡面未声明）",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-08-22T13:29:37+00:00",
+      "waiting_days": 37
+    },
+    {
+      "id": "D405",
+      "title": "CT-41① CI 状态入仪表盘",
+      "status": "audited",
+      "domain": null,
+      "domain_label": "—（卡面未声明）",
+      "signals": [
+        "标题以 CT- 开头"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-08-22T13:29:37+00:00",
+      "waiting_days": 37
+    },
+    {
+      "id": "D406",
+      "title": "D395-a 审计 P1 修复（P1-2 腐化通道优先：check-lessons-learned 改向 + P1-1 层1门禁落点）",
+      "status": "audited",
+      "domain": null,
+      "domain_label": "—（卡面未声明）",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-08-22T13:29:37+00:00",
+      "waiting_days": 37
+    },
+    {
+      "id": "D428",
+      "title": "CTO 收尾：K3 U1-U8 控制塔升级 15 分支批量合并入 main",
+      "status": "audited",
+      "domain": null,
+      "domain_label": "—（卡面未声明）",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-08-22T13:29:37+00:00",
+      "waiting_days": 37
+    },
+    {
+      "id": "D441",
+      "title": "D339 quotepath 修复移植到 main（Mac 中文文件名门禁误报根治）",
+      "status": "audited",
+      "domain": null,
+      "domain_label": "—（卡面未声明）",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-08-22T13:29:37+00:00",
+      "waiting_days": 37
+    },
+    {
+      "id": "D451",
+      "title": "CT-42 session 专属 brief 读侧接线 + D331 补记死循环豁免",
+      "status": "audited",
+      "domain": null,
+      "domain_label": "—（卡面未声明）",
+      "signals": [
+        "标题以 CT- 开头"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-08-22T13:29:37+00:00",
+      "waiting_days": 37
+    },
+    {
+      "id": "D453",
+      "title": "CT-39 CI 红超 24h 自动入待办（信号失效 M1 同型根治）",
+      "status": "audited",
+      "domain": null,
+      "domain_label": "—（卡面未声明）",
+      "signals": [
+        "标题以 CT- 开头"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-08-22T13:29:37+00:00",
+      "waiting_days": 37
+    },
+    {
+      "id": "D459",
+      "title": "生成物单点生成门禁（G12d，session 禁改 CI 生成物）",
+      "status": "audited",
+      "domain": null,
+      "domain_label": "—（卡面未声明）",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-08-22T13:29:37+00:00",
+      "waiting_days": 37
+    },
+    {
+      "id": "D465",
+      "title": "CI 门禁 diff 语义补齐（空暂存假绿消除）",
+      "status": "audited",
+      "domain": null,
+      "domain_label": "—（卡面未声明）",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-08-22T13:29:37+00:00",
+      "waiting_days": 37
+    },
+    {
+      "id": "D474",
+      "title": "snapshot keyless 回放门禁（Stage1-D3）",
+      "status": "audited",
+      "domain": null,
+      "domain_label": "—（卡面未声明）",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-08-22T13:29:37+00:00",
+      "waiting_days": 37
+    },
+    {
+      "id": "D582",
+      "title": "CT-60 D328 提取大小写兼容",
+      "status": "audited",
+      "domain": null,
+      "domain_label": "—（卡面未声明）",
+      "signals": [
+        "标题以 CT- 开头"
+      ],
+      "serves": null,
+      "serves_source": "卡面未声明",
+      "milestone": null,
+      "owner": null,
+      "risk": null,
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-06",
+      "waiting_days": 23
+    },
+    {
+      "id": "D841",
+      "title": "K3 独立审计：D839 认领门禁变更（完成即释放/批量释放/持久化）——门禁变更属审计面",
+      "status": "audited",
+      "domain": "k3",
+      "domain_label": "k3",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 项目管理基建",
+      "milestone": "M0 项目管理基建",
+      "owner": "k3",
+      "risk": "high",
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-20",
+      "waiting_days": 9
+    },
+    {
+      "id": "D918",
+      "title": "控制塔日期边界定时炸弹修复（gate-stats 夹具相对时间化）——合并队列解阻第一件",
+      "status": "audited",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 项目管理基建",
+      "milestone": "M0 项目管理基建",
+      "owner": "mac-coding",
+      "risk": "high",
+      "depends_on": [],
+      "blocked_note": null,
+      "updated_at": "2026-09-24",
+      "waiting_days": 5
+    },
+    {
+      "id": "D919",
+      "title": "引用可核验门禁（check-citations fail-closed + 可归因；pre-dispatch ⑥ 接线 + CI 密封）",
+      "status": "audited",
+      "domain": "mac",
+      "domain_label": "mac",
+      "signals": [
+        "标题/里程碑含 治理|门禁|控制塔"
+      ],
+      "serves": null,
+      "serves_source": "仅里程碑：M0 项目管理基建",
+      "milestone": "M0 项目管理基建",
+      "owner": "mac-coding",
+      "risk": "high",
+      "depends_on": [
+        "D732",
+        "D749"
+      ],
+      "blocked_note": null,
+      "updated_at": "2026-09-24",
+      "waiting_days": 5
+    }
+  ],
+  "debt": [
+    {
+      "id": "PLAN-vitest-typecheck",
+      "title": "流程盲区强化：vitest 类型检查（D473 暴露 TS2322 静默通过）",
+      "note": "等编码 session 完成 D500 后，在 verify-incremental L2 或 CI 强化类型检查"
+    },
+    {
+      "id": "PLAN-u5-u6-gate",
+      "title": "U 系列门禁收尾：U5 secrets-failopen + U6 sop-gate 接线",
+      "note": "D417(u5 脚本未落地) + D416(u6 sop-gate.sh 存在未接线)，pre-audit-summary 目前只聚合 U1-U4/U7"
+    },
+    {
+      "id": "PLAN-win-d338-d357",
+      "title": "Win 侧任务跟踪：D338 orgId 契约网关 + D357 连接器 + D359/D360",
+      "note": "均归 Win（Claude），Mac 仓库暂无其 task-state；D338 落地后 Mac 重跑 GS-07 转绿"
+    },
+    {
+      "id": "PLAN-d1-src-store-coord",
+      "title": "D500 事件溯源编码前：与 Win 核对 src/store 写集归属",
+      "note": "src/store 归 Win（🔵 借 DSH 层），D500 编码前须 grep 确认写集避免撞车"
+    },
+    {
+      "id": "PLAN-d660-data-lifecycle",
+      "title": "数据生命周期与蒸馏阶梯设计（五层阶梯 + 三问分类 + 蒸馏触发规则）",
+      "note": "创始人 2026-09-10 提出：按时间清理是错误模型。五层=事件日志(归档不删)/Evidence(过期=蒸馏完成)/Findings(关闭归档)/Facts(版本链 superseded_by)/Knowledge(git永久)。dev-doc spec 任务。"
+    },
+    {
+      "id": "PLAN-vector-direction",
+      "title": "向量层方向备忘：图为主存储，向量是检索加速器",
+      "note": "CTO 判定：本体层 SQLite 图存储正确，不为向量而向量。未来场景=非结构化文档语义检索 + 专家 RAG 时加 sqlite-vec 层。不做现在，方向记录。"
+    },
+    {
+      "id": "PLAN-expireold-wiring",
+      "title": "evidence expireOld 零调用接线 + 哨兵数据保留分级策略",
+      "note": "M3 家族：expireOld() 存在但全仓零生产调用方；sentinel_baselines/events 无清理逻辑。需统一保留分级（永久/定期/临时）+ cron 清理任务。"
+    },
+    {
+      "id": "PLAN-d593-fix2",
+      "title": "【已闭环 2026-09-10】D593 二次修复——K3 CONDITIONAL PASS",
+      "note": "PR #476 合并（main e53b5984），三物证 K3 独立复跑全过，P0×2 闭环。遗留条件①（棘轮）已由 CTO 落地（基线 2→4 + 例外记账头），条件②（CI 结论确认）= CTO 答复：#476 Architecture job 红，红态合并 = CT-47 第三次实证，加严提案已上报创始人。升 PASS 待 K3 下批复确认。"
+    },
+    {
+      "id": "PLAN-m9-writeset-gate",
+      "title": "M9 免疫细胞：合并级写集对账 gate（声称 vs diff 差集）",
+      "note": "M2 族第三次（#449 夹带 D603 51 文件 + #442 夹带 6 文件 + D593-FIX 声称提交实未提交）。合并前 diff 范围必须与任务写集/合并消息一致，不一致即拦。"
+    },
+    {
+      "id": "PLAN-ci-syno-leak",
+      "title": "【假说成立·已修复关闭 2026-09-10 D663】ci.yml SYNO_CI 泄漏",
+      "note": "D663 实证翻案：ci.yml:105 job 级 SYNO_CI=1 经 process.env 被 vitest spawnSync 继承 → gate 测试 local 子运行误判 CI strict → 5 断言假红。修复 = runScript 剥除继承 SYNO_CI（CI 场景显式传参不受影响，语义零弱化），PR #480 入 main。CTO 勘误：本条在 #479 曾被误判「假"
+    },
+    {
+      "id": "PLAN-diagnosis-l5-di",
+      "title": "diagnosis.ts L1→L5 DI 注入重构（棘轮逆向例外的收紧任务）",
+      "note": "owner=编码线；期限=下个 L1 质量批（随 D654/D655/D656）。resolveStoreFromRequest + readReportFromCheckpoint 的 SessionStore 直取改 L2 bootstrap 组装注入，落地后基线 4→2→0 收紧（K3 附记：消债而非记账，正解）。规则：新增跨层债须 CTO 逐例批准。"
+    },
+    {
+      "id": "PLAN-react-markdown-dep",
+      "title": "react-markdown 未声明依赖修复（K3 D595 审计发现）",
+      "note": "use-streaming-conversation 在干净安装下因 react-markdown 未声明依赖必失败。前审 21/21 绿为污染安装态。package.json 补依赖。"
+    },
+    {
+      "id": "PLAN-mac-quality-batch2",
+      "title": "Mac 质量第二批：D654 安全面收口 + D655 专家测试债 19 条 + D656 brief 生成器",
+      "note": "K3 D651 评估派生。D654=llm-config SSRF 面 + spec 威胁模型必答题；D655=D282/D583 测试债清偿；D656=CLI 自动格式化消灭格式类返工。"
+    },
+    {
+      "id": "PLAN-expert-rename-d583",
+      "title": "D583 专家命名测试债（挂起：等研究系统提示词补充）",
+      "note": "命名悬案（cycle vs 问题域）等创始人补充研究系统提示词后裁定。D597 之后解挂。"
+    },
+    {
+      "id": "PLAN-evidence-refresh",
+      "title": "产品线 evidence 重验批（freshness gate 执法后 36 stale）",
+      "note": "L1 大批合并触碰各线模块 → 11 verified 过期到 1。代码稳定后跑 evidence 重验恢复（D589 同款机制，evidence 带 at 时间戳）。"
+    },
+    {
+      "id": "PLAN-k3-cond-clear",
+      "title": "K3 CONDITIONAL 条件清零：D590/D591/D602 条件逐条核对收口",
+      "note": "【2026-09-14 D740 订正】原 note 称「D590/D591=D547 骨架 brief 已清+审计清单已补」——**与实测不符（M2 型失真声明）**：7 份骨架 brief（D587/D591/D593/D594/D595/D596/D597）至今仍在 origin/main 的 `.claude/task-briefs/`，占位符 `认领: <agent>` / `<本任务在"
+    },
+    {
+      "id": "PLAN-ironlaw-enforcement",
+      "title": "铁律 40/41/44 真实执法接线（D603 拉平后无执法）",
+      "note": "D603 把声称拉平为如实描述（无 pre-commit 自动执法），补真实 check 属控制塔域。patch 缺失/memo 移除/LineBuffer 类名检测。"
+    },
+    {
+      "id": "PLAN-resolve-commit-brief-bsd",
+      "title": "【已并入 D661 交付 2026-09-10】resolve-commit-brief.sh grep -oP 跨平台修复",
+      "note": "D661 全清两目录 20 处（PR #481）+ external-auditor 空数组崩溃修复。剩余 pre-commit-check.sh 自身 6 处 + scripts/hooks/ + scripts/checks/ + check-*.sh → D664 另派。"
+    },
+    {
+      "id": "PLAN-m8-session-worktree-isolation",
+      "title": "M8 防线缺口：并行 session 共享主工作区互踩——强制 worktree 隔离",
+      "note": "D663 session 升级（2026-09-10 实证）：三 session 共享一树，current-brief 互踩/暂存区混装/staging_guard 误拦/未暂存修改被批量 checkout 冲掉（同秒批量特征，因隔离 worktree 幸存）。方向=每 session 强制 .synova-wt-<sid> 隔离，主工作区只留 CTO/合并。机制设计后派工；session 启动策"
+    },
+    {
+      "id": "PLAN-synova-commit-deletion-loss",
+      "title": "synova-commit pathspec 部分提交回滚吞已暂存删除项",
+      "note": "D665 实证：synova-commit 无 --files 时走 git commit -- <staged paths> 部分提交；hook/门禁失败路径会把已暂存删除项静默移出索引，下一次尝试即以不完整树提交（9aabd581 声称摘除 10 gitlink 实际树未变，ls-tree 复核抓到，638bfb5b 补齐）。修法方向：部分提交前后校验 staged 集合一致性，或删除类路径改"
+    },
+    {
+      "id": "PLAN-brief-archlayer-dual-parser",
+      "title": "brief 架构层字段双解析器口径不一致（check-brief-parseable 接受内联 vs 组6 awk 要求 body 行）",
+      "note": "D665 CI 实证：组6 awk 提取 ## 架构层: 标题行之后的 body 判定填写；check-brief-parseable.sh 读标题行内联值——内联写法本地自检绿、CI strict 红（PR #494 首轮 TypeScript job 失败真因）。修法：组6 awk 升级为『标题行内联值或 body 行皆可』，补双向回归用例。"
+    },
+    {
+      "id": "PLAN-d660-brief-latent-mine",
+      "title": "task-briefs/2026-09-10-D660-task-board-activity-semantics.md 架构层内联写法踩组6 口径（潜伏地雷）",
+      "note": "D665 双解析器扫描发现：D660 brief（已在 main）架构层为内联写法，未来任何触碰该文件的 PR 会 CI strict 红组6。修法：架构层标题下补一行 body（1 行改动），随 PLAN-brief-archlayer-dual-parser 一并处理。"
+    },
+    {
+      "id": "PLAN-credential-rotation-deferred",
+      "title": "5 组密钥轮换——创始人 2026-09-11 决定暂缓（风险已知保留）",
+      "note": "取证结论：5 把钥匙的真实值在全部 git 历史与 HEAD 树零命中（逐值搜索）；本机非仓库位置零命中（.claude/settings.local.json 含 2 把智谱钥匙但被 .gitignore:52 挡住、从未入库）。唯一险情=前任《履职总账》含 2 枚明文 ghp_ token，Push Protection 拦截、token 从未入历史，本地副本已脱敏、明文原版已删除。创始人 2"
+    },
+    {
+      "id": "PLAN-packaging-signature-broken",
+      "title": "【P0】打包产物签名封印缺失 → 装完打不开（dmg 内 app 无 _CodeSignature，macOS 拒绝启动）",
+      "note": "实测证据链：① dmg 内 app（/Volumes/SynovaAgent-0.1.0-arm64/SynovaAgent.app）无 Contents/_CodeSignature → codesign --verify 报 'code has no resources but signature indicates they must be present' → macOS 拒启（典型弹窗『"
+    },
+    {
+      "id": "PLAN-expert-count-drift",
+      "title": "文档-实现漂移（M7）：AGENTS.md 声称专家数与 expert/ 实测不符",
+      "note": "周自检报：AGENTS.md 声称 7 位专家，expert/ 实测 6 个。CTO 复核：expert/ 下有 8 个目录，其中 _deprecated/_template 非专家 → 真专家 6 个（competitive-strategy / customer-growth / fundamental-efficiency / host / organizational-capability"
+    },
+    {
+      "id": "PLAN-f3-preload-sandbox-broken",
+      "title": "【P0·跨平台】打包态 preload 沙箱化断链 → 窗口能开但 UI 用不了（electronAPI undefined）",
+      "note": "链路（源码已核）：electron/main.cjs:76-80 webPreferences 未设 sandbox → Electron≥20 默认 sandbox:true → 沙箱 preload 不允许 require 相对文件 → electron/preload.cjs:18 require('./config.json') 抛 module not found（source: nod"
+    },
+    {
+      "id": "PLAN-cockpit-script-not-packaged",
+      "title": "打包态 cockpit 路由依赖未打包脚本 → 驾驶舱页报 FileNotFoundError",
+      "note": "证据：应用后端日志 routes/cockpit 报 FileNotFoundError: /Applications/SynovaAgent.app/Contents/Resources/scripts/control-tower/generate-dashboard.py（打包未含该脚本）。修法二选一：① extraResources 补入所需脚本（注意依赖面，避免把整棵控制塔拖进包）② 该路"
+    },
+    {
+      "id": "PLAN-win-verify-script-hangs",
+      "title": "scripts/desktop/win-install-verify.ps1 无限挂起（无超时，违反自身 exit 契约）",
+      "note": "步骤② Start-Process $exe /S -Wait 无超时；机器需提权时永久挂起，既不 exit 0 也不 exit 1/2（违背脚本自身契约）。证据 run-E-official-script/b-staged-out.txt。修法：加 -TimeoutSec/Job 超时 → 超时按 exit 2（检查未执行）语义返回。"
+    },
+    {
+      "id": "PLAN-evidence-log-gitignored",
+      "title": "证据 .log 被 .gitignore 静默忽略（Win 侧 12 个证据文件差点丢失）",
+      "note": "release/ 与部分 .log 规则导致证据文件未被跟踪 → 『证据不在 git = 温床』（D572 同型）。Win 侧已 force-add 12 个文件修复。修法：为 docs/synova/product-lines/evidence/** 增加白名单（! 规则）+ 在证据写入脚本后加『git check-ignore』自检，防再次静默丢失。"
+    },
+    {
+      "id": "PLAN-dispatch-doc-not-in-main",
+      "title": "派单文档未先入 main → 执行方在净仓库态读不到（Win 侧 G0 实测）",
+      "note": "Win 机器 main 上不存在 docs/synova/coordination/派单-桌面端线1重验批-D712-20260912.md（当时 #509 未合并）→ 执行方只能按用户消息里的摘要执行。修法：派单流程规定『派单文档必须先合并入 main，再向执行方发说明』；已写入派单模板路由节（可加一条检查）。"
+    },
+    {
+      "id": "PLAN-evidence-invalidation-granularity",
+      "title": "证据失效粒度太粗：一行内任一文件变更 → 该行全部验收点转 stale",
+      "note": "product-lines.yaml 的 modules 是**行级**绑定；A1 机制按行判 stale。实证：4 天开发（D593→D710）后重算，verified 11→1、stale 18→29、总体 7%→1%。后果=仪表盘长期显示『没进度』，读者无法区分『真没做』与『做了待重验』——M1 类信号失效风险。改进方向：验收点级失效绑定（每点声明自己的关键文件/测试），或对 stale 再"
+    },
+    {
+      "id": "PLAN-d1-notification-wiring",
+      "title": "D-1 状态驱动通知模型落地四步（跨线）",
+      "note": "步1 Mac 接线（src/sentinel/runner.ts:1321 通知决策改读工单状态 + 实质变化判定）→ 步2 Win 交互入口（首次告警的沟通请求：节奏/格式）→ 步3 契约 schema(dev-doc) + Mac loader + Win 周期报告 → 步4 Win 复盘沉淀/复发识别。决策全文 docs/synova/product-lines/DECISION-D1-状态"
+    },
+    {
+      "id": "PLAN-product-lines-suite-red-unwired",
+      "title": "product-lines 测试套件存量红且未接线 CI（3 失败；测试侧期望漂移，管线本身正常）",
+      "note": "证据：tests/control-tower/product-lines.test.py 在 origin/main 基线（独立 worktree）跑出同样 3 个失败 → 存量红，非本次改动引入。三条：① test_real_page_and_no_jargon（页面裁决区断言，2026-09-12 D-1/D-2 转 resolved 后『常存在』假设失效，应改为数据驱动：有 open 才渲染"
+    },
+    {
+      "id": "PLAN-product-lines-test-side-effect",
+      "title": "product-lines 测试套件有副作用：TestRefreshAll 真跑 refresh-all.sh → 写回 tracked 生成物",
+      "note": "证据: 跑 tests/control-tower/product-lines.test.py 后 git status 出现 M docs/synova/product-lines/product-progress.json（差异仅 generated_at + 线18 的 stale 3→1）。TestRefreshAll.test_end_to_end 直接 subprocess 跑 ref"
+    },
+    {
+      "id": "PLAN-build-chain-native-deps-gap",
+      "title": "构建链缺口：build-synova.cjs 文档三步链不含 native 依赖准备 → 本地打包出不可用包",
+      "note": "实证：只按 build-synova.cjs 头注释的三步链打包 → 包内 better-sqlite3 为 node ABI(127)，Electron 33 需 130 → 安装后 ERR_DLOPEN_FAILED（Mac 侧实测复现空壳包，补 prebuild-install -r electron -t 33.4.11 后通过）。CI 有该步（.github/workflows/desk"
+    },
+    {
+      "id": "PLAN-desktop-x64-dmg-stale-abi",
+      "title": "x64 dmg 内含 node ABI 二进制，装后不可用（本批只覆盖 arm64）",
+      "note": "Mac 侧已把 00:45 构建的 x64 dmg 从 release/ 删除；x64 未重打未验证。线 1 的 1-3 结论本批只覆盖 arm64 → 若产品承诺双架构（x64 客户），需补一轮 x64 重打+实测，否则 1-3 的 verified 有隐含范围限制，应在证据里显式标注。"
+    },
+    {
+      "id": "PLAN-upgrade-verify-bad-assertion",
+      "title": "scripts/desktop/upgrade-data-verify.sh:71 rows 探针引用不存在的表 sessions（坏断言）",
+      "note": "该行 UNION ALL SELECT 'sessions', COUNT(*) FROM sessions；全仓 grep 无 CREATE TABLE ... sessions → 探针永真/永假（SQL 报错被吞或恒 0），不影响 md5/表清单/integrity 三项真断言，但属静默失真。修法：改为真实表名或删除该探针 + 补断言存在性校验。"
+    },
+    {
+      "id": "PLAN-concurrent-main-worktree-switch",
+      "title": "主工作区被并发切换分支（M8 实证）：D712 Mac 侧作业期间主树 HEAD 被切走",
+      "note": "Mac 侧报告：作业期间分支被其他 session 从 fix/d712-… 切到 fix/d711-…，派单文档随之消失。主 CTO 认领责任：本人同一时段在主工作区执行了多次分支切换（fix/d711 → tmp-464-refresh → 回归）。Mac 侧应对正确（改走 .sessions/d712-mac/repo 独立 clone，符合 git-sync-pr V5.2.0）。系统级修"
+    },
+    {
+      "id": "PLAN-main-vitest-preexisting-red",
+      "title": "main 的 Vitest 一直有 3 个真红文件，被 CI 棘轮当「存量失败」静默放行（仓库级假绿）",
+      "note": "实证：main 提交 021897a0 的 Vitest(2/2) 日志为 `Test Files 3 failed | 286 passed | 1 skipped (290)`，紧跟 `Pre-existing test failures from unchanged files — not blocking` → 作业结论 success。即「main 全绿」是假象。三个真红（本地 vite"
+    },
+    {
+      "id": "PLAN-graphbridge-wiring-red",
+      "title": "tests/l3/graphbridge-wiring.test.ts 断言红：failing module 场景下 graphNodes.length 期望 1 实为 0",
+      "note": "用例 `GraphBridge → ModuleRunner.afterRun → Phase 1 > Given a failing module ... Then only successful modules create nodes`：`tests/l3/graphbridge-wiring.test.ts:79` `expect(graphNodes.length).toBe(1)` 收"
+    },
+    {
+      "id": "PLAN-gen-cto-health-spec-crash",
+      "title": "【P0】gen-cto-health.py:305 崩溃 → 第③面 CTO 健康看板自 D600 起无法生成",
+      "note": "`scripts/control-tower/gen-cto-health.py:305` 对 `d.get('spec').get('path')` 直接取键，而 `task-state/D600.json` 的 `spec` 是**字符串**（非对象）→ `AttributeError: str object has no attribute get`，`--dry-run` 与写盘路径同崩（"
+    },
+    {
+      "id": "PLAN-board-verdict-dimension",
+      "title": "任务看板补 audit.verdict 维度：5 个 FAIL 落 done/todo 列，failed 列结构不可达",
+      "note": "`dsh/plugins/task-board-adapter/lib/sync.js:40-48` 列映射表只认 `task-state.status`（`audited→done`），`:190-198` / `:286-290` **从不读** `raw.audit.verdict` → Host 账本 `~/.dsh/task-board/ledger-v2.json` 实测 `D393→"
+    },
+    {
+      "id": "PLAN-dashboard-line-status",
+      "title": "产品线级状态三层补全（契约 yaml + calc-progress 写入 + 三消费端呈现）",
+      "note": "`product-progress.json` 实测 **26/26 条线均无 `status` 键**（派单点名桌面端/对话交互/MCP 集成三条＝L1 交互层三条）。写入端 `scripts/product-lines/calc-progress.py:316-330` 只写 `status_counts` 不写线级 `status`；契约 `product-lines.yaml` 亦无线级 "
+    },
+    {
+      "id": "PLAN-g12-writeset-glob-unify",
+      "title": "G12 与 D708 写集匹配器统一（G12 match_path 字面匹配不展开 glob）",
+      "note": "同一份 brief Q2 glob 声明，CI 端 merge_writeset_gate.py 用 fnmatch 认、本地 pre-commit G12 用 brief_parser.match_path（re.escape 字面）拒 → glob 声明在 G12 永不匹配（D718 §⑥ 首记、D703 期再发、D774 两拦后以 8 行精确文件名绕过）。修法方向：G12 的 matches"
+    },
+    {
+      "id": "PLAN-gs-evidence-id-mapping",
+      "title": "GS 场景证据验收点 id 体系断裂（L1-x/S0-x vs yaml 1-x，calc 零兑换）+ GS-01/02/04 持续失败修复",
+      "note": "GS 场景证据 acceptance_point 用 L1-1/S0-1 等场景侧 id，product-lines.yaml 点 id 为 1-1/7-1 → calc-progress verdicts_by_point 索引永不命中，GS 证据对产品进度零兑换（保鲜流水线兑换全靠线1 vitest+A2 写对 id）。需建「场景点→产品点」机器可读映射（GS expect.json 或 ya"
+    },
+    {
+      "id": "PLAN-d808-card-rewrite",
+      "title": "B-01…B-10 借鉴卡回写 26 线验收点 + 生成绑定证据（M2 物理化）",
+      "note": "7 张卡代码已在 main（B-01 D586 / B-02+B-06 D593 / B-03 D598 / B-04 D587 / B-05 D594 / B-07 D588 / B-09+B-10 D599），但 docs/synova/product-lines/evidence/ 全目录无任何卡的绑定记录（grep 借鉴/B-0/D587/D593/D598/D599 仅 README.m"
+    },
+    {
+      "id": "PLAN-d808-module-ownership",
+      "title": "借鉴落点归属落 product-lines.yaml（src/llm|store|config 归属 + providers/ → src/providers/ 修正）",
+      "note": "① src/llm（7 文件、含 B-02/03/04/06 落点）、src/store（6 文件、B-07）、src/config（2 文件、B-09/B-10）无一被任何线 modules 包含 → A1 惰性失效永不触发；② yaml 线20/线21 写 \"providers/\" 实测 `git log -- providers/` 零输出（目录不存在），真实目录 src/providers"
+    },
+    {
+      "id": "PLAN-d808-anchor-refresh",
+      "title": "4 文件 DSH 锚点按 M3 补齐（包+文件+符号 + 现验命令）",
+      "note": "src/llm/tool-result-pruner.ts、src/llm/timeout.ts、src/agent/context-compaction.ts、src/store/session-projection.ts 的锚点注释仍为旧口径（Win 路径 D:/deepseek-harness/packages/... + 版本 0.1.1-rc.2，无现验命令）。现行安装 deepseek"
+    },
+    {
+      "id": "PLAN-d808-b20-unregistered",
+      "title": "借鉴卡 B-20 未登记（D760…D768 已覆盖 B-11…B-19，D769 空号）",
+      "note": "task-state/D760…D768 分别对应 B-11…B-19（均 claimed），B-20（速览族 6 项）无 task-state 登记（D769 不存在）。按 M2 每张卡必须有验收点绑定 → 需先登记再回写；速览族 6 项（output-retention / repeat-tool-reminder / scrubbedParentEnv / time-context / se"
+    },
+    {
+      "id": "PLAN-prepush-golden-tri-state",
+      "title": "pre-push 黄金案例 F1 门禁需三态退出码（检查未执行 ≠ 发现退化）",
+      "note": "scripts/pre-push-check.sh:276 以 `npx tsx scripts/ci/golden-case-checker.ts` 判 F1，环境失败（本机 ~/.npm/_cacache 含 root-owned 文件 → npm EPERM）时输出「❌ 黄金案例 F1 门禁失败 — 诊断质量退解冻, 见上方 diff」= 把「检查未执行」报成「发现质量退化」（M5 环境依赖"
+    }
+  ]
+}

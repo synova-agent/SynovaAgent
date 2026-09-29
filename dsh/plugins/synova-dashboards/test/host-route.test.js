@@ -105,13 +105,29 @@ test("Host 半导出契约：name / inject 保持 webServer（bundle 层按此�
   assert.deepEqual(inject, ["webServer"]);
 });
 
-test("同时注册两条只读路由：/synova/dashboards/data（原有）与 /synova/pm/ledger（新增）", async () => {
+test("同时注册四条只读路由：dashboards/data + pm/ledger（原有）+ workbench/data + governance/data（D1060）", async () => {
   const root = makeRepo({ [LEDGER_REL_PATH]: GOOD_LEDGER });
   const { routes } = await loadHost(root);
-  assert.equal(routes.length, 2, "应恰好注册两条路由");
+  assert.equal(routes.length, 4, "应恰好注册四条路由");
   for (const r of routes) assert.equal(r.kind, "exact");
   findRoute(routes, "/synova/dashboards/data");
   findRoute(routes, "/synova/pm/ledger");
+  // D1060：两个新面板各一条只读路由（物理分离 ⇒ 两条独立路由，不是一个路由两个 section）
+  findRoute(routes, "/synova/workbench/data");
+  findRoute(routes, "/synova/governance/data");
+});
+
+test("D1060 降级形状：两个新路由在空仓库下仍 200 + 显式 degraded，不 500 不抛异常", async () => {
+  const root = makeRepo({}); // 无任何数据源
+  const { routes } = await loadHost(root);
+  for (const path of ["/synova/workbench/data", "/synova/governance/data"]) {
+    const res = fakeRes();
+    await findRoute(routes, path).handler({}, res);
+    assert.equal(res.statusCode, 200, path + " 降级也必须走 200");
+    const body = JSON.parse(res.body);
+    assert.equal(body.degraded, true, path + " 必须显式 degraded:true");
+    assert.ok(String(body.error ?? (body.degraded_sources ?? []).join("；")).length > 0, path + " 降级必须带原因（禁静默）");
+  }
 });
 
 test("正常路径：工作区账本存在 → 200 + 账本字段全保留 + source=worktree + no-store", async () => {

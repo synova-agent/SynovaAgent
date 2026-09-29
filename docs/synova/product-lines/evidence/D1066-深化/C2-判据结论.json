@@ -1,0 +1,319 @@
+{
+  "schema": "d1066-charter-judge-summary/1",
+  "judged_at": "2026-09-29T05:17:00.431Z",
+  "judged_by": "dsh/plugins/synova-dashboards/scripts/judge-charter.mjs (D1066)",
+  "counts": {
+    "cells": 64,
+    "ext_points": 16,
+    "questions": 4,
+    "filled": 30
+  },
+  "by_status": {
+    "green": 29,
+    "empty": 34,
+    "red": 1
+  },
+  "by_question": {
+    "q1": {
+      "green": 15,
+      "empty": 1
+    },
+    "q2": {
+      "green": 14,
+      "red": 1,
+      "empty": 1
+    },
+    "q3": {
+      "empty": 16
+    },
+    "q4": {
+      "empty": 16
+    }
+  },
+  "judge_state": {
+    "ready": 30,
+    "todo": 34
+  },
+  "map_counts": {
+    "ready_cells": 30,
+    "todo_cells": 34
+  },
+  "filled_cells": [
+    {
+      "id": "C01",
+      "layer": "对象层",
+      "ext_point": "节点（要素）",
+      "question": "q1",
+      "status": "green",
+      "judge_cmd": "test -f extensions/ontology/manifest.json && grep -q '\"nodeTypes\"' extensions/ontology/manifest.json",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C02",
+      "layer": "对象层",
+      "ext_point": "节点（要素）",
+      "question": "q2",
+      "status": "green",
+      "judge_cmd": "grep -rq 'ontology' src/l4/ontology-loader.ts && grep -rq 'ontology' src/init/file-driven-loaders.ts",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C04",
+      "layer": "对象层",
+      "ext_point": "边（关系）",
+      "question": "q1",
+      "status": "green",
+      "judge_cmd": "test -d extensions/ontology/edge-types && test \"$(ls extensions/ontology/edge-types | wc -l | tr -d ' ')\" -ge 1",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C05",
+      "layer": "对象层",
+      "ext_point": "边（关系）",
+      "question": "q2",
+      "status": "green",
+      "judge_cmd": "grep -q '\"edgeTypes\"' extensions/ontology/manifest.json && grep -rq 'edgeTypes' src/l4/ontology-loader.ts",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C07",
+      "layer": "对象层",
+      "ext_point": "属性/字段",
+      "question": "q1",
+      "status": "green",
+      "judge_cmd": "test -f extensions/ontology/tags.json && test -f extensions/ontology/manifest.json",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C08",
+      "layer": "对象层",
+      "ext_point": "属性/字段",
+      "question": "q2",
+      "status": "green",
+      "judge_cmd": "grep -rq 'ontology' src/l4/ontology-loader.ts",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C10",
+      "layer": "计算层",
+      "ext_point": "计算函数（compute）",
+      "question": "q1",
+      "status": "green",
+      "judge_cmd": "test \"$(find extensions -name 'compute*.ts' -print -quit | wc -l | tr -d ' ')\" -ge 1",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C11",
+      "layer": "计算层",
+      "ext_point": "计算函数（compute）",
+      "question": "q2",
+      "status": "green",
+      "judge_cmd": "grep -q 'computes' src/sentinel/sentinel-loader.ts",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C13",
+      "layer": "计算层",
+      "ext_point": "公式参数（transfer_function 的值）",
+      "question": "q1",
+      "status": "green",
+      "judge_cmd": "grep -rlq 'transfer_function' extensions/ontology/edge-types",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C14",
+      "layer": "计算层",
+      "ext_point": "公式参数（transfer_function 的值）",
+      "question": "q2",
+      "status": "red",
+      "judge_cmd": "test \"$(grep -rn 'transfer_function' src/ --include='*.ts' | grep -vE ':[0-9]+: *(\\*|//|/\\*)' | wc -l | tr -d ' ')\" -ge 1",
+      "evidence": "exit=1"
+    },
+    {
+      "id": "C16",
+      "layer": "判据层",
+      "ext_point": "哨兵（判据）",
+      "question": "q1",
+      "status": "green",
+      "judge_cmd": "test \"$(ls extensions/sentinels/*/manifest.json 2>/dev/null | wc -l | tr -d ' ')\" -ge 1",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C17",
+      "layer": "判据层",
+      "ext_point": "哨兵（判据）",
+      "question": "q2",
+      "status": "green",
+      "judge_cmd": "grep -rq 'sentinels' src/sentinel/registry.ts && grep -rq 'sentinels' src/sentinel/sentinel-loader.ts",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C19",
+      "layer": "判据层",
+      "ext_point": "阈值",
+      "question": "q1",
+      "status": "green",
+      "judge_cmd": "grep -rlq '\"thresholds\"' extensions/sentinels/*/manifest.json",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C20",
+      "layer": "判据层",
+      "ext_point": "阈值",
+      "question": "q2",
+      "status": "green",
+      "judge_cmd": "grep -rq 'thresholds' src/sentinel/ --include='*.ts'",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C22",
+      "layer": "判据层",
+      "ext_point": "行业基准（对标数据）",
+      "question": "q1",
+      "status": "green",
+      "judge_cmd": "test -d extensions/industries && test \"$(ls extensions/industries | wc -l | tr -d ' ')\" -ge 1",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C23",
+      "layer": "判据层",
+      "ext_point": "行业基准（对标数据）",
+      "question": "q2",
+      "status": "green",
+      "judge_cmd": "grep -rq 'industr' src/l4/industry-loader.ts",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C25",
+      "layer": "叙事层",
+      "ext_point": "专家",
+      "question": "q1",
+      "status": "green",
+      "judge_cmd": "test -f expert/expert-registry.yaml && test \"$(ls -d expert/*/ 2>/dev/null | wc -l | tr -d ' ')\" -ge 1",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C26",
+      "layer": "叙事层",
+      "ext_point": "专家",
+      "question": "q2",
+      "status": "green",
+      "judge_cmd": "grep -rq 'expert' src/l3/expert-dispatcher.ts && grep -rq 'ExpertRegistry\\|listExperts\\|registerExpert' src/l3/expert-dispatcher.ts",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C28",
+      "layer": "叙事层",
+      "ext_point": "报告模板/输出格式",
+      "question": "q1",
+      "status": "green",
+      "judge_cmd": "test -d extensions/reports && test \"$(ls extensions/reports | wc -l | tr -d ' ')\" -ge 1",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C29",
+      "layer": "叙事层",
+      "ext_point": "报告模板/输出格式",
+      "question": "q2",
+      "status": "green",
+      "judge_cmd": "test -f src/l3/report-template-loader.ts && grep -q 'report-template-loader' src/init/file-driven-loaders.ts && grep -rq 'file-driven-loaders' src/server.ts",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C31",
+      "layer": "时间层",
+      "ext_point": "业务循环（增删）",
+      "question": "q1",
+      "status": "green",
+      "judge_cmd": "test -d extensions/playbooks && test \"$(ls extensions/playbooks | wc -l | tr -d ' ')\" -ge 1",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C32",
+      "layer": "时间层",
+      "ext_point": "业务循环（增删）",
+      "question": "q2",
+      "status": "green",
+      "judge_cmd": "grep -rq 'playbook' src/playbook/playbook-loader.ts",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C37",
+      "layer": "输入层",
+      "ext_point": "字段映射",
+      "question": "q1",
+      "status": "green",
+      "judge_cmd": "test -d extensions/ontology/field-mappings && test \"$(ls extensions/ontology/field-mappings | wc -l | tr -d ' ')\" -ge 1",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C38",
+      "layer": "输入层",
+      "ext_point": "字段映射",
+      "question": "q2",
+      "status": "green",
+      "judge_cmd": "grep -rq 'field-mappings\\|fieldMappings' src/init/file-driven-loaders.ts",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C40",
+      "layer": "输入层",
+      "ext_point": "数据连接器",
+      "question": "q1",
+      "status": "green",
+      "judge_cmd": "test \"$(ls src/connectors/*.ts 2>/dev/null | wc -l | tr -d ' ')\" -ge 1",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C41",
+      "layer": "输入层",
+      "ext_point": "数据连接器",
+      "question": "q2",
+      "status": "green",
+      "judge_cmd": "grep -rq 'connectors' src/agent/synova-agent.ts",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C43",
+      "layer": "组织层",
+      "ext_point": "角色预设",
+      "question": "q1",
+      "status": "green",
+      "judge_cmd": "test \"$(ls -d docs/synova/presets/*/ 2>/dev/null | wc -l | tr -d ' ')\" -ge 1",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C44",
+      "layer": "组织层",
+      "ext_point": "角色预设",
+      "question": "q2",
+      "status": "green",
+      "judge_cmd": "test -f scripts/control-tower/install-dsh-preset.sh",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C46",
+      "layer": "组织层",
+      "ext_point": "知识范围（谁能看什么）",
+      "question": "q1",
+      "status": "green",
+      "judge_cmd": "test -f extensions/policies/data-access.yaml",
+      "evidence": "exit=0"
+    },
+    {
+      "id": "C47",
+      "layer": "组织层",
+      "ext_point": "知识范围（谁能看什么）",
+      "question": "q2",
+      "status": "green",
+      "judge_cmd": "grep -rq 'data-access\\|dataAccess' src/skill/skill-loader.ts",
+      "evidence": "exit=0"
+    }
+  ],
+  "empty_reason_kinds": [
+    "同上",
+    "本仓无「时间尺度」独立扩展点定义文件（sched",
+    "需「删除后无残留」演练证据（真删+全库 grep",
+    "需「穿生产入口的用例」证据（宪章 :149 口径"
+  ]
+}

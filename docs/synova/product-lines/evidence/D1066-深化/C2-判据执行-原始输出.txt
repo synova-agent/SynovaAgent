@@ -1,0 +1,20 @@
+=== C2 内容真 · 原始输出 ===
+2026-09-29 13:18:01 CST
+
+$ node dsh/plugins/synova-dashboards/scripts/judge-charter.mjs --repo-root <repo>
+C61  ⚪ 未填  (todo)
+C62  ⚪ 未填  (todo)
+C63  ⚪ 未填  (todo)
+C64  ⚪ 未填  (todo)
+
+[dry-run] ready=30 green=29 red=1 empty=34
+
+--- 判据映射（16 扩展点 × 4 问）---
+schema=charter-judge-map/1  ready=30  todo=34
+约定: {"exit0": "命令退出 0 ⇒ 该格判据成立（green）", "nonzero": "退出非 0 ⇒ 判据不成立（red）", "todo": "不执行、保持 empty（⚪ 待办）", "forbid": "未执行的格不得被判为 green（院方 X27：缺失≠通过）"}
+
+--- 执行器抓出的两处**自身假绿**（探针错误 → 修正记录）---
+① 报告模板 q2 首版 grep 指错文件（briefing-generator.ts）→ 修正为 manifest.entryPoint 声明的 src/l3/report-template-loader.ts，
+   并追到生产入口 src/server.ts → src/init/file-driven-loaders.ts →(dynamic import) 该 loader
+② 公式参数 q2 首版 grep 命中**注释行**（direction-monitor.ts:312『未来支持从 transfer_function 推导』）⇒ 假绿；
+   加严为「排除注释行后 ≥1 命中」→ 真结论 🔴 缺失（声明在边数据里，生产 TS 零读取）

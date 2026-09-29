@@ -1,0 +1,435 @@
+{
+  "schema": "charter-judge-map/1",
+  "generated_by": "D1066（作者：DeepSeek Harness；证据路径逐条 grep 实测）",
+  "note": "宪章 64 格的判据命令映射。约定：judge_cmd 退出 0 = 该格判据成立（🟢）；非 0 = 判据不成立（🔴 缺失）；judge_state=todo 的格**不执行**、保持 ⚪ 未填/待办（禁折算成绿）。q3/q4 需穿生产入口用例与删除演练证据，本卡无该证据 ⇒ 全列 todo，待 CTO 提供证据映射。",
+  "convention": {
+    "exit0": "命令退出 0 ⇒ 该格判据成立（green）",
+    "nonzero": "退出非 0 ⇒ 判据不成立（red）",
+    "todo": "不执行、保持 empty（⚪ 待办）",
+    "forbid": "未执行的格不得被判为 green（院方 X27：缺失≠通过）"
+  },
+  "counts": {
+    "ready_cells": 30,
+    "todo_cells": 34
+  },
+  "probes": [
+    {
+      "layer": "对象层",
+      "ext_point": "节点（要素）",
+      "q1": {
+        "state": "ready",
+        "cmd": "test -f extensions/ontology/manifest.json && grep -q '\"nodeTypes\"' extensions/ontology/manifest.json",
+        "basis": "ontology manifest 声明 nodeTypes"
+      },
+      "q2": {
+        "state": "ready",
+        "cmd": "grep -rq 'ontology' src/l4/ontology-loader.ts && grep -rq 'ontology' src/init/file-driven-loaders.ts",
+        "basis": "生产加载器 src/l4/ontology-loader.ts + src/init/file-driven-loaders.ts 引用 ontology"
+      },
+      "q3": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填"
+      },
+      "q4": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填"
+      }
+    },
+    {
+      "layer": "对象层",
+      "ext_point": "边（关系）",
+      "q1": {
+        "state": "ready",
+        "cmd": "test -d extensions/ontology/edge-types && test \"$(ls extensions/ontology/edge-types | wc -l | tr -d ' ')\" -ge 1",
+        "basis": "extensions/ontology/edge-types/ 下存在边类型定义"
+      },
+      "q2": {
+        "state": "ready",
+        "cmd": "grep -q '\"edgeTypes\"' extensions/ontology/manifest.json && grep -rq 'edgeTypes' src/l4/ontology-loader.ts",
+        "basis": "manifest 声明 edgeTypes 且生产加载器读取"
+      },
+      "q3": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填"
+      },
+      "q4": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填"
+      }
+    },
+    {
+      "layer": "对象层",
+      "ext_point": "属性/字段",
+      "q1": {
+        "state": "ready",
+        "cmd": "test -f extensions/ontology/tags.json && test -f extensions/ontology/manifest.json",
+        "basis": "ontology manifest + tags.json（字段/标签登记）在场"
+      },
+      "q2": {
+        "state": "ready",
+        "cmd": "grep -rq 'ontology' src/l4/ontology-loader.ts",
+        "basis": "生产加载器读取 ontology 目录"
+      },
+      "q3": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填"
+      },
+      "q4": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填"
+      }
+    },
+    {
+      "layer": "计算层",
+      "ext_point": "计算函数（compute）",
+      "q1": {
+        "state": "ready",
+        "cmd": "test \"$(find extensions -name 'compute*.ts' -print -quit | wc -l | tr -d ' ')\" -ge 1",
+        "basis": "extensions/**/computes/*.ts 至少 1 个"
+      },
+      "q2": {
+        "state": "ready",
+        "cmd": "grep -q 'computes' src/sentinel/sentinel-loader.ts",
+        "basis": "生产加载器 src/sentinel/sentinel-loader.ts 读取 computes"
+      },
+      "q3": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填"
+      },
+      "q4": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填"
+      }
+    },
+    {
+      "layer": "计算层",
+      "ext_point": "公式参数（transfer_function 的值）",
+      "q1": {
+        "state": "ready",
+        "cmd": "grep -rlq 'transfer_function' extensions/ontology/edge-types",
+        "basis": "边类型 JSON 内含 transfer_function 参数字段"
+      },
+      "q2": {
+        "state": "ready",
+        "cmd": "test \"$(grep -rn 'transfer_function' src/ --include='*.ts' | grep -vE ':[0-9]+: *(\\*|//|/\\*)' | wc -l | tr -d ' ')\" -ge 1",
+        "basis": "生产 TS 代码里存在 **非注释** 的 transfer_function 读取（首版判据 grep 命中注释，被本执行器抓出 → 排除注释行重判）"
+      },
+      "q3": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填"
+      },
+      "q4": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填"
+      }
+    },
+    {
+      "layer": "判据层",
+      "ext_point": "哨兵（判据）",
+      "q1": {
+        "state": "ready",
+        "cmd": "test \"$(ls extensions/sentinels/*/manifest.json 2>/dev/null | wc -l | tr -d ' ')\" -ge 1",
+        "basis": "extensions/sentinels/*/manifest.json ≥1"
+      },
+      "q2": {
+        "state": "ready",
+        "cmd": "grep -rq 'sentinels' src/sentinel/registry.ts && grep -rq 'sentinels' src/sentinel/sentinel-loader.ts",
+        "basis": "生产注册表/加载器读取 sentinels"
+      },
+      "q3": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填"
+      },
+      "q4": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填"
+      }
+    },
+    {
+      "layer": "判据层",
+      "ext_point": "阈值",
+      "q1": {
+        "state": "ready",
+        "cmd": "grep -rlq '\"thresholds\"' extensions/sentinels/*/manifest.json",
+        "basis": "哨兵 manifest 声明 thresholds"
+      },
+      "q2": {
+        "state": "ready",
+        "cmd": "grep -rq 'thresholds' src/sentinel/ --include='*.ts'",
+        "basis": "生产代码消费 thresholds"
+      },
+      "q3": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填"
+      },
+      "q4": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填"
+      }
+    },
+    {
+      "layer": "判据层",
+      "ext_point": "行业基准（对标数据）",
+      "q1": {
+        "state": "ready",
+        "cmd": "test -d extensions/industries && test \"$(ls extensions/industries | wc -l | tr -d ' ')\" -ge 1",
+        "basis": "extensions/industries/ 下存在行业基准"
+      },
+      "q2": {
+        "state": "ready",
+        "cmd": "grep -rq 'industr' src/l4/industry-loader.ts",
+        "basis": "生产加载器 src/l4/industry-loader.ts"
+      },
+      "q3": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填"
+      },
+      "q4": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填"
+      }
+    },
+    {
+      "layer": "叙事层",
+      "ext_point": "专家",
+      "q1": {
+        "state": "ready",
+        "cmd": "test -f expert/expert-registry.yaml && test \"$(ls -d expert/*/ 2>/dev/null | wc -l | tr -d ' ')\" -ge 1",
+        "basis": "expert/ 下专家目录 + expert-registry.yaml"
+      },
+      "q2": {
+        "state": "ready",
+        "cmd": "grep -rq 'expert' src/l3/expert-dispatcher.ts && grep -rq 'ExpertRegistry\\|listExperts\\|registerExpert' src/l3/expert-dispatcher.ts",
+        "basis": "生产调度器 src/l3/expert-dispatcher.ts 消费专家注册表（原判据只命中注册表内的 log 标签，已加严为调度器侧消费点）"
+      },
+      "q3": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填"
+      },
+      "q4": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填"
+      }
+    },
+    {
+      "layer": "叙事层",
+      "ext_point": "报告模板/输出格式",
+      "q1": {
+        "state": "ready",
+        "cmd": "test -d extensions/reports && test \"$(ls extensions/reports | wc -l | tr -d ' ')\" -ge 1",
+        "basis": "extensions/reports/ 下存在模板（.hbs）"
+      },
+      "q2": {
+        "state": "ready",
+        "cmd": "test -f src/l3/report-template-loader.ts && grep -q 'report-template-loader' src/init/file-driven-loaders.ts && grep -rq 'file-driven-loaders' src/server.ts",
+        "basis": "生产调用链：src/server.ts → src/init/file-driven-loaders.ts →(dynamic import) src/l3/report-template-loader.ts（前两版判据指错文件，由判据执行器抓出后修正）"
+      },
+      "q3": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填"
+      },
+      "q4": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填"
+      }
+    },
+    {
+      "layer": "时间层",
+      "ext_point": "业务循环（增删）",
+      "q1": {
+        "state": "ready",
+        "cmd": "test -d extensions/playbooks && test \"$(ls extensions/playbooks | wc -l | tr -d ' ')\" -ge 1",
+        "basis": "extensions/playbooks/ 下存在循环/剧本定义"
+      },
+      "q2": {
+        "state": "ready",
+        "cmd": "grep -rq 'playbook' src/playbook/playbook-loader.ts",
+        "basis": "生产加载器 src/playbook/playbook-loader.ts"
+      },
+      "q3": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填"
+      },
+      "q4": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填"
+      }
+    },
+    {
+      "layer": "时间层",
+      "ext_point": "时间尺度",
+      "q1": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "本仓无「时间尺度」独立扩展点定义文件（schedule 字段散落在哨兵 manifest 内），判据待 CTO 映射"
+      },
+      "q2": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "同上"
+      },
+      "q3": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填"
+      },
+      "q4": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填"
+      }
+    },
+    {
+      "layer": "输入层",
+      "ext_point": "字段映射",
+      "q1": {
+        "state": "ready",
+        "cmd": "test -d extensions/ontology/field-mappings && test \"$(ls extensions/ontology/field-mappings | wc -l | tr -d ' ')\" -ge 1",
+        "basis": "extensions/ontology/field-mappings/ 存在"
+      },
+      "q2": {
+        "state": "ready",
+        "cmd": "grep -rq 'field-mappings\\|fieldMappings' src/init/file-driven-loaders.ts",
+        "basis": "生产加载器 src/init/file-driven-loaders.ts"
+      },
+      "q3": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填"
+      },
+      "q4": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填"
+      }
+    },
+    {
+      "layer": "输入层",
+      "ext_point": "数据连接器",
+      "q1": {
+        "state": "ready",
+        "cmd": "test \"$(ls src/connectors/*.ts 2>/dev/null | wc -l | tr -d ' ')\" -ge 1",
+        "basis": "src/connectors/*.ts ≥1"
+      },
+      "q2": {
+        "state": "ready",
+        "cmd": "grep -rq 'connectors' src/agent/synova-agent.ts",
+        "basis": "生产装配点 src/agent/synova-agent.ts 引用连接器"
+      },
+      "q3": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填"
+      },
+      "q4": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填"
+      }
+    },
+    {
+      "layer": "组织层",
+      "ext_point": "角色预设",
+      "q1": {
+        "state": "ready",
+        "cmd": "test \"$(ls -d docs/synova/presets/*/ 2>/dev/null | wc -l | tr -d ' ')\" -ge 1",
+        "basis": "docs/synova/presets/*/ 存在角色预设"
+      },
+      "q2": {
+        "state": "ready",
+        "cmd": "test -f scripts/control-tower/install-dsh-preset.sh",
+        "basis": "安装器 scripts/control-tower/install-dsh-preset.sh（预设落地的生产入口）"
+      },
+      "q3": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填"
+      },
+      "q4": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填"
+      }
+    },
+    {
+      "layer": "组织层",
+      "ext_point": "知识范围（谁能看什么）",
+      "q1": {
+        "state": "ready",
+        "cmd": "test -f extensions/policies/data-access.yaml",
+        "basis": "extensions/policies/data-access.yaml（访问范围策略）"
+      },
+      "q2": {
+        "state": "ready",
+        "cmd": "grep -rq 'data-access\\|dataAccess' src/skill/skill-loader.ts",
+        "basis": "生产加载器 src/skill/skill-loader.ts 读取访问范围"
+      },
+      "q3": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填"
+      },
+      "q4": {
+        "state": "todo",
+        "cmd": "",
+        "basis": "",
+        "todo_reason": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填"
+      }
+    }
+  ]
+}

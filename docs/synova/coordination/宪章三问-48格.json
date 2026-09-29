@@ -18,7 +18,7 @@
     "cells": 64,
     "ext_points": 16,
     "questions": 4,
-    "filled": 0
+    "filled": 30
   },
   "cells": [
     {
@@ -29,13 +29,17 @@
       "question": "q1",
       "question_text": "加了吗",
       "question_desc": "存在性 —— 文件在不在、注册表里有没有",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：ontology manifest 声明 nodeTypes（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "test -f extensions/ontology/manifest.json && grep -q '\"nodeTypes\"' extensions/ontology/manifest.json",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "test -f extensions/ontology/manifest.json && grep -q '\"nodeTypes\"' extensions/ontology/manifest.json",
+      "judge_basis": "ontology manifest 声明 nodeTypes",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C02",
@@ -45,13 +49,17 @@
       "question": "q2",
       "question_text": "接上了吗",
       "question_desc": "接线 —— 有没有生产调用点",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：生产加载器 src/l4/ontology-loader.ts + src/init/file-driven-loaders.ts 引用 ontology（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "grep -rq 'ontology' src/l4/ontology-loader.ts && grep -rq 'ontology' src/init/file-driven-loaders.ts",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "grep -rq 'ontology' src/l4/ontology-loader.ts && grep -rq 'ontology' src/init/file-driven-loaders.ts",
+      "judge_basis": "生产加载器 src/l4/ontology-loader.ts + src/init/file-driven-loaders.ts 引用 ontology",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C03",
@@ -63,11 +71,15 @@
       "question_desc": "结果 —— 端到端跑一次，结果里有没有它",
       "status": "empty",
       "priority": "P1",
-      "judgement": "",
+      "judgement": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填",
       "evidence": "",
       "command": "",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C04",
@@ -77,13 +89,17 @@
       "question": "q1",
       "question_text": "加了吗",
       "question_desc": "存在性 —— 文件在不在、注册表里有没有",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：extensions/ontology/edge-types/ 下存在边类型定义（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "test -d extensions/ontology/edge-types && test \"$(ls extensions/ontology/edge-types | wc -l | tr -d ' ')\" -ge 1",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "test -d extensions/ontology/edge-types && test \"$(ls extensions/ontology/edge-types | wc -l | tr -d ' ')\" -ge 1",
+      "judge_basis": "extensions/ontology/edge-types/ 下存在边类型定义",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C05",
@@ -93,13 +109,17 @@
       "question": "q2",
       "question_text": "接上了吗",
       "question_desc": "接线 —— 有没有生产调用点",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：manifest 声明 edgeTypes 且生产加载器读取（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "grep -q '\"edgeTypes\"' extensions/ontology/manifest.json && grep -rq 'edgeTypes' src/l4/ontology-loader.ts",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "grep -q '\"edgeTypes\"' extensions/ontology/manifest.json && grep -rq 'edgeTypes' src/l4/ontology-loader.ts",
+      "judge_basis": "manifest 声明 edgeTypes 且生产加载器读取",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C06",
@@ -111,11 +131,15 @@
       "question_desc": "结果 —— 端到端跑一次，结果里有没有它",
       "status": "empty",
       "priority": "P1",
-      "judgement": "",
+      "judgement": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填",
       "evidence": "",
       "command": "",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C07",
@@ -125,13 +149,17 @@
       "question": "q1",
       "question_text": "加了吗",
       "question_desc": "存在性 —— 文件在不在、注册表里有没有",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：ontology manifest + tags.json（字段/标签登记）在场（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "test -f extensions/ontology/tags.json && test -f extensions/ontology/manifest.json",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "test -f extensions/ontology/tags.json && test -f extensions/ontology/manifest.json",
+      "judge_basis": "ontology manifest + tags.json（字段/标签登记）在场",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C08",
@@ -141,13 +169,17 @@
       "question": "q2",
       "question_text": "接上了吗",
       "question_desc": "接线 —— 有没有生产调用点",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：生产加载器读取 ontology 目录（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "grep -rq 'ontology' src/l4/ontology-loader.ts",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "grep -rq 'ontology' src/l4/ontology-loader.ts",
+      "judge_basis": "生产加载器读取 ontology 目录",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C09",
@@ -159,11 +191,15 @@
       "question_desc": "结果 —— 端到端跑一次，结果里有没有它",
       "status": "empty",
       "priority": "P1",
-      "judgement": "",
+      "judgement": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填",
       "evidence": "",
       "command": "",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C10",
@@ -173,13 +209,17 @@
       "question": "q1",
       "question_text": "加了吗",
       "question_desc": "存在性 —— 文件在不在、注册表里有没有",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：extensions/**/computes/*.ts 至少 1 个（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "test \"$(find extensions -name 'compute*.ts' -print -quit | wc -l | tr -d ' ')\" -ge 1",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "test \"$(find extensions -name 'compute*.ts' -print -quit | wc -l | tr -d ' ')\" -ge 1",
+      "judge_basis": "extensions/**/computes/*.ts 至少 1 个",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C11",
@@ -189,13 +229,17 @@
       "question": "q2",
       "question_text": "接上了吗",
       "question_desc": "接线 —— 有没有生产调用点",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：生产加载器 src/sentinel/sentinel-loader.ts 读取 computes（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "grep -q 'computes' src/sentinel/sentinel-loader.ts",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "grep -q 'computes' src/sentinel/sentinel-loader.ts",
+      "judge_basis": "生产加载器 src/sentinel/sentinel-loader.ts 读取 computes",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C12",
@@ -207,11 +251,15 @@
       "question_desc": "结果 —— 端到端跑一次，结果里有没有它",
       "status": "empty",
       "priority": "P1",
-      "judgement": "",
+      "judgement": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填",
       "evidence": "",
       "command": "",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C13",
@@ -221,13 +269,17 @@
       "question": "q1",
       "question_text": "加了吗",
       "question_desc": "存在性 —— 文件在不在、注册表里有没有",
-      "status": "empty",
+      "status": "green",
       "priority": "P0",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：边类型 JSON 内含 transfer_function 参数字段（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "grep -rlq 'transfer_function' extensions/ontology/edge-types",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "grep -rlq 'transfer_function' extensions/ontology/edge-types",
+      "judge_basis": "边类型 JSON 内含 transfer_function 参数字段",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C14",
@@ -237,13 +289,17 @@
       "question": "q2",
       "question_text": "接上了吗",
       "question_desc": "接线 —— 有没有生产调用点",
-      "status": "empty",
+      "status": "red",
       "priority": "P0",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据不成立：生产 TS 代码里存在 **非注释** 的 transfer_function 读取（首版判据 grep 命中注释，被本执行器抓出 → 排除注释行重判）（命令退出 1）",
+      "evidence": "exit=1",
+      "command": "test \"$(grep -rn 'transfer_function' src/ --include='*.ts' | grep -vE ':[0-9]+: *(\\*|//|/\\*)' | wc -l | tr -d ' ')\" -ge 1",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "test \"$(grep -rn 'transfer_function' src/ --include='*.ts' | grep -vE ':[0-9]+: *(\\*|//|/\\*)' | wc -l | tr -d ' ')\" -ge 1",
+      "judge_basis": "生产 TS 代码里存在 **非注释** 的 transfer_function 读取（首版判据 grep 命中注释，被本执行器抓出 → 排除注释行重判）",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C15",
@@ -255,11 +311,15 @@
       "question_desc": "结果 —— 端到端跑一次，结果里有没有它",
       "status": "empty",
       "priority": "P0",
-      "judgement": "",
+      "judgement": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填",
       "evidence": "",
       "command": "",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C16",
@@ -269,13 +329,17 @@
       "question": "q1",
       "question_text": "加了吗",
       "question_desc": "存在性 —— 文件在不在、注册表里有没有",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：extensions/sentinels/*/manifest.json ≥1（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "test \"$(ls extensions/sentinels/*/manifest.json 2>/dev/null | wc -l | tr -d ' ')\" -ge 1",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "test \"$(ls extensions/sentinels/*/manifest.json 2>/dev/null | wc -l | tr -d ' ')\" -ge 1",
+      "judge_basis": "extensions/sentinels/*/manifest.json ≥1",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C17",
@@ -285,13 +349,17 @@
       "question": "q2",
       "question_text": "接上了吗",
       "question_desc": "接线 —— 有没有生产调用点",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：生产注册表/加载器读取 sentinels（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "grep -rq 'sentinels' src/sentinel/registry.ts && grep -rq 'sentinels' src/sentinel/sentinel-loader.ts",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "grep -rq 'sentinels' src/sentinel/registry.ts && grep -rq 'sentinels' src/sentinel/sentinel-loader.ts",
+      "judge_basis": "生产注册表/加载器读取 sentinels",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C18",
@@ -303,11 +371,15 @@
       "question_desc": "结果 —— 端到端跑一次，结果里有没有它",
       "status": "empty",
       "priority": "P1",
-      "judgement": "",
+      "judgement": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填",
       "evidence": "",
       "command": "",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C19",
@@ -317,13 +389,17 @@
       "question": "q1",
       "question_text": "加了吗",
       "question_desc": "存在性 —— 文件在不在、注册表里有没有",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：哨兵 manifest 声明 thresholds（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "grep -rlq '\"thresholds\"' extensions/sentinels/*/manifest.json",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "grep -rlq '\"thresholds\"' extensions/sentinels/*/manifest.json",
+      "judge_basis": "哨兵 manifest 声明 thresholds",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C20",
@@ -333,13 +409,17 @@
       "question": "q2",
       "question_text": "接上了吗",
       "question_desc": "接线 —— 有没有生产调用点",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：生产代码消费 thresholds（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "grep -rq 'thresholds' src/sentinel/ --include='*.ts'",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "grep -rq 'thresholds' src/sentinel/ --include='*.ts'",
+      "judge_basis": "生产代码消费 thresholds",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C21",
@@ -351,11 +431,15 @@
       "question_desc": "结果 —— 端到端跑一次，结果里有没有它",
       "status": "empty",
       "priority": "P1",
-      "judgement": "",
+      "judgement": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填",
       "evidence": "",
       "command": "",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C22",
@@ -365,13 +449,17 @@
       "question": "q1",
       "question_text": "加了吗",
       "question_desc": "存在性 —— 文件在不在、注册表里有没有",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：extensions/industries/ 下存在行业基准（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "test -d extensions/industries && test \"$(ls extensions/industries | wc -l | tr -d ' ')\" -ge 1",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "test -d extensions/industries && test \"$(ls extensions/industries | wc -l | tr -d ' ')\" -ge 1",
+      "judge_basis": "extensions/industries/ 下存在行业基准",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C23",
@@ -381,13 +469,17 @@
       "question": "q2",
       "question_text": "接上了吗",
       "question_desc": "接线 —— 有没有生产调用点",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：生产加载器 src/l4/industry-loader.ts（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "grep -rq 'industr' src/l4/industry-loader.ts",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "grep -rq 'industr' src/l4/industry-loader.ts",
+      "judge_basis": "生产加载器 src/l4/industry-loader.ts",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C24",
@@ -399,11 +491,15 @@
       "question_desc": "结果 —— 端到端跑一次，结果里有没有它",
       "status": "empty",
       "priority": "P1",
-      "judgement": "",
+      "judgement": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填",
       "evidence": "",
       "command": "",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C25",
@@ -413,13 +509,17 @@
       "question": "q1",
       "question_text": "加了吗",
       "question_desc": "存在性 —— 文件在不在、注册表里有没有",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：expert/ 下专家目录 + expert-registry.yaml（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "test -f expert/expert-registry.yaml && test \"$(ls -d expert/*/ 2>/dev/null | wc -l | tr -d ' ')\" -ge 1",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "test -f expert/expert-registry.yaml && test \"$(ls -d expert/*/ 2>/dev/null | wc -l | tr -d ' ')\" -ge 1",
+      "judge_basis": "expert/ 下专家目录 + expert-registry.yaml",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C26",
@@ -429,13 +529,17 @@
       "question": "q2",
       "question_text": "接上了吗",
       "question_desc": "接线 —— 有没有生产调用点",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：生产调度器 src/l3/expert-dispatcher.ts 消费专家注册表（原判据只命中注册表内的 log 标签，已加严为调度器侧消费点）（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "grep -rq 'expert' src/l3/expert-dispatcher.ts && grep -rq 'ExpertRegistry\\|listExperts\\|registerExpert' src/l3/expert-dispatcher.ts",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "grep -rq 'expert' src/l3/expert-dispatcher.ts && grep -rq 'ExpertRegistry\\|listExperts\\|registerExpert' src/l3/expert-dispatcher.ts",
+      "judge_basis": "生产调度器 src/l3/expert-dispatcher.ts 消费专家注册表（原判据只命中注册表内的 log 标签，已加严为调度器侧消费点）",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C27",
@@ -447,11 +551,15 @@
       "question_desc": "结果 —— 端到端跑一次，结果里有没有它",
       "status": "empty",
       "priority": "P1",
-      "judgement": "",
+      "judgement": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填",
       "evidence": "",
       "command": "",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C28",
@@ -461,13 +569,17 @@
       "question": "q1",
       "question_text": "加了吗",
       "question_desc": "存在性 —— 文件在不在、注册表里有没有",
-      "status": "empty",
+      "status": "green",
       "priority": "P0",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：extensions/reports/ 下存在模板（.hbs）（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "test -d extensions/reports && test \"$(ls extensions/reports | wc -l | tr -d ' ')\" -ge 1",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "test -d extensions/reports && test \"$(ls extensions/reports | wc -l | tr -d ' ')\" -ge 1",
+      "judge_basis": "extensions/reports/ 下存在模板（.hbs）",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C29",
@@ -477,13 +589,17 @@
       "question": "q2",
       "question_text": "接上了吗",
       "question_desc": "接线 —— 有没有生产调用点",
-      "status": "empty",
+      "status": "green",
       "priority": "P0",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：生产调用链：src/server.ts → src/init/file-driven-loaders.ts →(dynamic import) src/l3/report-template-loader.ts（前两版判据指错文件，由判据执行器抓出后修正）（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "test -f src/l3/report-template-loader.ts && grep -q 'report-template-loader' src/init/file-driven-loaders.ts && grep -rq 'file-driven-loaders' src/server.ts",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "test -f src/l3/report-template-loader.ts && grep -q 'report-template-loader' src/init/file-driven-loaders.ts && grep -rq 'file-driven-loaders' src/server.ts",
+      "judge_basis": "生产调用链：src/server.ts → src/init/file-driven-loaders.ts →(dynamic import) src/l3/report-template-loader.ts（前两版判据指错文件，由判据执行器抓出后修正）",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C30",
@@ -495,11 +611,15 @@
       "question_desc": "结果 —— 端到端跑一次，结果里有没有它",
       "status": "empty",
       "priority": "P0",
-      "judgement": "",
+      "judgement": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填",
       "evidence": "",
       "command": "",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C31",
@@ -509,13 +629,17 @@
       "question": "q1",
       "question_text": "加了吗",
       "question_desc": "存在性 —— 文件在不在、注册表里有没有",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：extensions/playbooks/ 下存在循环/剧本定义（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "test -d extensions/playbooks && test \"$(ls extensions/playbooks | wc -l | tr -d ' ')\" -ge 1",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "test -d extensions/playbooks && test \"$(ls extensions/playbooks | wc -l | tr -d ' ')\" -ge 1",
+      "judge_basis": "extensions/playbooks/ 下存在循环/剧本定义",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C32",
@@ -525,13 +649,17 @@
       "question": "q2",
       "question_text": "接上了吗",
       "question_desc": "接线 —— 有没有生产调用点",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：生产加载器 src/playbook/playbook-loader.ts（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "grep -rq 'playbook' src/playbook/playbook-loader.ts",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "grep -rq 'playbook' src/playbook/playbook-loader.ts",
+      "judge_basis": "生产加载器 src/playbook/playbook-loader.ts",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C33",
@@ -543,11 +671,15 @@
       "question_desc": "结果 —— 端到端跑一次，结果里有没有它",
       "status": "empty",
       "priority": "P1",
-      "judgement": "",
+      "judgement": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填",
       "evidence": "",
       "command": "",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C34",
@@ -559,11 +691,15 @@
       "question_desc": "存在性 —— 文件在不在、注册表里有没有",
       "status": "empty",
       "priority": "P1",
-      "judgement": "",
+      "judgement": "本仓无「时间尺度」独立扩展点定义文件（schedule 字段散落在哨兵 manifest 内），判据待 CTO 映射",
       "evidence": "",
       "command": "",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C35",
@@ -575,11 +711,15 @@
       "question_desc": "接线 —— 有没有生产调用点",
       "status": "empty",
       "priority": "P1",
-      "judgement": "",
+      "judgement": "同上",
       "evidence": "",
       "command": "",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C36",
@@ -591,11 +731,15 @@
       "question_desc": "结果 —— 端到端跑一次，结果里有没有它",
       "status": "empty",
       "priority": "P1",
-      "judgement": "",
+      "judgement": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填",
       "evidence": "",
       "command": "",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C37",
@@ -605,13 +749,17 @@
       "question": "q1",
       "question_text": "加了吗",
       "question_desc": "存在性 —— 文件在不在、注册表里有没有",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：extensions/ontology/field-mappings/ 存在（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "test -d extensions/ontology/field-mappings && test \"$(ls extensions/ontology/field-mappings | wc -l | tr -d ' ')\" -ge 1",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "test -d extensions/ontology/field-mappings && test \"$(ls extensions/ontology/field-mappings | wc -l | tr -d ' ')\" -ge 1",
+      "judge_basis": "extensions/ontology/field-mappings/ 存在",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C38",
@@ -621,13 +769,17 @@
       "question": "q2",
       "question_text": "接上了吗",
       "question_desc": "接线 —— 有没有生产调用点",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：生产加载器 src/init/file-driven-loaders.ts（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "grep -rq 'field-mappings\\|fieldMappings' src/init/file-driven-loaders.ts",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "grep -rq 'field-mappings\\|fieldMappings' src/init/file-driven-loaders.ts",
+      "judge_basis": "生产加载器 src/init/file-driven-loaders.ts",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C39",
@@ -639,11 +791,15 @@
       "question_desc": "结果 —— 端到端跑一次，结果里有没有它",
       "status": "empty",
       "priority": "P1",
-      "judgement": "",
+      "judgement": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填",
       "evidence": "",
       "command": "",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C40",
@@ -653,13 +809,17 @@
       "question": "q1",
       "question_text": "加了吗",
       "question_desc": "存在性 —— 文件在不在、注册表里有没有",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：src/connectors/*.ts ≥1（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "test \"$(ls src/connectors/*.ts 2>/dev/null | wc -l | tr -d ' ')\" -ge 1",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "test \"$(ls src/connectors/*.ts 2>/dev/null | wc -l | tr -d ' ')\" -ge 1",
+      "judge_basis": "src/connectors/*.ts ≥1",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C41",
@@ -669,13 +829,17 @@
       "question": "q2",
       "question_text": "接上了吗",
       "question_desc": "接线 —— 有没有生产调用点",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：生产装配点 src/agent/synova-agent.ts 引用连接器（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "grep -rq 'connectors' src/agent/synova-agent.ts",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "grep -rq 'connectors' src/agent/synova-agent.ts",
+      "judge_basis": "生产装配点 src/agent/synova-agent.ts 引用连接器",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C42",
@@ -687,11 +851,15 @@
       "question_desc": "结果 —— 端到端跑一次，结果里有没有它",
       "status": "empty",
       "priority": "P1",
-      "judgement": "",
+      "judgement": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填",
       "evidence": "",
       "command": "",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C43",
@@ -701,13 +869,17 @@
       "question": "q1",
       "question_text": "加了吗",
       "question_desc": "存在性 —— 文件在不在、注册表里有没有",
-      "status": "empty",
+      "status": "green",
       "priority": "P0",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：docs/synova/presets/*/ 存在角色预设（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "test \"$(ls -d docs/synova/presets/*/ 2>/dev/null | wc -l | tr -d ' ')\" -ge 1",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "test \"$(ls -d docs/synova/presets/*/ 2>/dev/null | wc -l | tr -d ' ')\" -ge 1",
+      "judge_basis": "docs/synova/presets/*/ 存在角色预设",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C44",
@@ -717,13 +889,17 @@
       "question": "q2",
       "question_text": "接上了吗",
       "question_desc": "接线 —— 有没有生产调用点",
-      "status": "empty",
+      "status": "green",
       "priority": "P0",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：安装器 scripts/control-tower/install-dsh-preset.sh（预设落地的生产入口）（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "test -f scripts/control-tower/install-dsh-preset.sh",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "test -f scripts/control-tower/install-dsh-preset.sh",
+      "judge_basis": "安装器 scripts/control-tower/install-dsh-preset.sh（预设落地的生产入口）",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C45",
@@ -735,11 +911,15 @@
       "question_desc": "结果 —— 端到端跑一次，结果里有没有它",
       "status": "empty",
       "priority": "P0",
-      "judgement": "",
+      "judgement": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填",
       "evidence": "",
       "command": "",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C46",
@@ -749,13 +929,17 @@
       "question": "q1",
       "question_text": "加了吗",
       "question_desc": "存在性 —— 文件在不在、注册表里有没有",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：extensions/policies/data-access.yaml（访问范围策略）（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "test -f extensions/policies/data-access.yaml",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "test -f extensions/policies/data-access.yaml",
+      "judge_basis": "extensions/policies/data-access.yaml（访问范围策略）",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C47",
@@ -765,13 +949,17 @@
       "question": "q2",
       "question_text": "接上了吗",
       "question_desc": "接线 —— 有没有生产调用点",
-      "status": "empty",
+      "status": "green",
       "priority": "P1",
-      "judgement": "",
-      "evidence": "",
-      "command": "",
+      "judgement": "判据成立：生产加载器 src/skill/skill-loader.ts 读取访问范围（命令退出 0）",
+      "evidence": "exit=0",
+      "command": "grep -rq 'data-access\\|dataAccess' src/skill/skill-loader.ts",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "ready",
+      "judge_cmd": "grep -rq 'data-access\\|dataAccess' src/skill/skill-loader.ts",
+      "judge_basis": "生产加载器 src/skill/skill-loader.ts 读取访问范围",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C48",
@@ -783,11 +971,15 @@
       "question_desc": "结果 —— 端到端跑一次，结果里有没有它",
       "status": "empty",
       "priority": "P1",
-      "judgement": "",
+      "judgement": "需「穿生产入口的用例」证据（宪章 :149 口径）——本卡无该证据，待 CTO 提供证据映射后填",
       "evidence": "",
       "command": "",
       "owner": "",
-      "updated_at": ""
+      "updated_at": "2026-09-29",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C49",
@@ -799,8 +991,15 @@
       "question_desc": "删除后无残留 —— 删掉该扩展物后：注册表/目录索引无残留、运行时不调度、无悬空引用、行为回到删除前",
       "status": "empty",
       "priority": "P1",
-      "judgement": null,
-      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）"
+      "judgement": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填",
+      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "evidence": "",
+      "command": "",
+      "updated_at": "2026-09-29",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C50",
@@ -812,8 +1011,15 @@
       "question_desc": "删除后无残留 —— 删掉该扩展物后：注册表/目录索引无残留、运行时不调度、无悬空引用、行为回到删除前",
       "status": "empty",
       "priority": "P1",
-      "judgement": null,
-      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）"
+      "judgement": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填",
+      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "evidence": "",
+      "command": "",
+      "updated_at": "2026-09-29",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C51",
@@ -825,8 +1031,15 @@
       "question_desc": "删除后无残留 —— 删掉该扩展物后：注册表/目录索引无残留、运行时不调度、无悬空引用、行为回到删除前",
       "status": "empty",
       "priority": "P1",
-      "judgement": null,
-      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）"
+      "judgement": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填",
+      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "evidence": "",
+      "command": "",
+      "updated_at": "2026-09-29",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C52",
@@ -838,8 +1051,15 @@
       "question_desc": "删除后无残留 —— 删掉该扩展物后：注册表/目录索引无残留、运行时不调度、无悬空引用、行为回到删除前",
       "status": "empty",
       "priority": "P1",
-      "judgement": null,
-      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）"
+      "judgement": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填",
+      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "evidence": "",
+      "command": "",
+      "updated_at": "2026-09-29",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C53",
@@ -851,8 +1071,15 @@
       "question_desc": "删除后无残留 —— 删掉该扩展物后：注册表/目录索引无残留、运行时不调度、无悬空引用、行为回到删除前",
       "status": "empty",
       "priority": "P1",
-      "judgement": null,
-      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）"
+      "judgement": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填",
+      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "evidence": "",
+      "command": "",
+      "updated_at": "2026-09-29",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C54",
@@ -864,8 +1091,15 @@
       "question_desc": "删除后无残留 —— 删掉该扩展物后：注册表/目录索引无残留、运行时不调度、无悬空引用、行为回到删除前",
       "status": "empty",
       "priority": "P1",
-      "judgement": null,
-      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）"
+      "judgement": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填",
+      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "evidence": "",
+      "command": "",
+      "updated_at": "2026-09-29",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C55",
@@ -877,8 +1111,15 @@
       "question_desc": "删除后无残留 —— 删掉该扩展物后：注册表/目录索引无残留、运行时不调度、无悬空引用、行为回到删除前",
       "status": "empty",
       "priority": "P1",
-      "judgement": null,
-      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）"
+      "judgement": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填",
+      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "evidence": "",
+      "command": "",
+      "updated_at": "2026-09-29",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C56",
@@ -890,8 +1131,15 @@
       "question_desc": "删除后无残留 —— 删掉该扩展物后：注册表/目录索引无残留、运行时不调度、无悬空引用、行为回到删除前",
       "status": "empty",
       "priority": "P1",
-      "judgement": null,
-      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）"
+      "judgement": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填",
+      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "evidence": "",
+      "command": "",
+      "updated_at": "2026-09-29",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C57",
@@ -903,8 +1151,15 @@
       "question_desc": "删除后无残留 —— 删掉该扩展物后：注册表/目录索引无残留、运行时不调度、无悬空引用、行为回到删除前",
       "status": "empty",
       "priority": "P1",
-      "judgement": null,
-      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）"
+      "judgement": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填",
+      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "evidence": "",
+      "command": "",
+      "updated_at": "2026-09-29",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C58",
@@ -916,8 +1171,15 @@
       "question_desc": "删除后无残留 —— 删掉该扩展物后：注册表/目录索引无残留、运行时不调度、无悬空引用、行为回到删除前",
       "status": "empty",
       "priority": "P1",
-      "judgement": null,
-      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）"
+      "judgement": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填",
+      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "evidence": "",
+      "command": "",
+      "updated_at": "2026-09-29",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C59",
@@ -929,8 +1191,15 @@
       "question_desc": "删除后无残留 —— 删掉该扩展物后：注册表/目录索引无残留、运行时不调度、无悬空引用、行为回到删除前",
       "status": "empty",
       "priority": "P1",
-      "judgement": null,
-      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）"
+      "judgement": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填",
+      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "evidence": "",
+      "command": "",
+      "updated_at": "2026-09-29",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C60",
@@ -942,8 +1211,15 @@
       "question_desc": "删除后无残留 —— 删掉该扩展物后：注册表/目录索引无残留、运行时不调度、无悬空引用、行为回到删除前",
       "status": "empty",
       "priority": "P1",
-      "judgement": null,
-      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）"
+      "judgement": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填",
+      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "evidence": "",
+      "command": "",
+      "updated_at": "2026-09-29",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C61",
@@ -955,8 +1231,15 @@
       "question_desc": "删除后无残留 —— 删掉该扩展物后：注册表/目录索引无残留、运行时不调度、无悬空引用、行为回到删除前",
       "status": "empty",
       "priority": "P1",
-      "judgement": null,
-      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）"
+      "judgement": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填",
+      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "evidence": "",
+      "command": "",
+      "updated_at": "2026-09-29",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C62",
@@ -968,8 +1251,15 @@
       "question_desc": "删除后无残留 —— 删掉该扩展物后：注册表/目录索引无残留、运行时不调度、无悬空引用、行为回到删除前",
       "status": "empty",
       "priority": "P1",
-      "judgement": null,
-      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）"
+      "judgement": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填",
+      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "evidence": "",
+      "command": "",
+      "updated_at": "2026-09-29",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C63",
@@ -981,8 +1271,15 @@
       "question_desc": "删除后无残留 —— 删掉该扩展物后：注册表/目录索引无残留、运行时不调度、无悬空引用、行为回到删除前",
       "status": "empty",
       "priority": "P1",
-      "judgement": null,
-      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）"
+      "judgement": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填",
+      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "evidence": "",
+      "command": "",
+      "updated_at": "2026-09-29",
+      "checked_by": "judge-charter.mjs@D1066"
     },
     {
       "id": "C64",
@@ -994,10 +1291,25 @@
       "question_desc": "删除后无残留 —— 删掉该扩展物后：注册表/目录索引无残留、运行时不调度、无悬空引用、行为回到删除前",
       "status": "empty",
       "priority": "P1",
-      "judgement": null,
-      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）"
+      "judgement": "需「删除后无残留」演练证据（真删+全库 grep 复核）——本仓无演练记录，待 CTO 提供映射后填",
+      "basis": "创始人 2026-09-26 批准「三问 → 四问」（加/接/生效/删）；首个真实用例 = 25-10（删除插件后无遗留，K3 批次1 三步实测 pass）",
+      "judge_state": "todo",
+      "judge_cmd": "",
+      "judge_basis": "",
+      "evidence": "",
+      "command": "",
+      "updated_at": "2026-09-29",
+      "checked_by": "judge-charter.mjs@D1066"
     }
   ],
   "updated_at": "2026-09-29 00:42:56",
-  "updated_by": "synova-cto"
+  "updated_by": "synova-cto",
+  "judged_at": "2026-09-29T05:25:14.822Z",
+  "judged_by": "dsh/plugins/synova-dashboards/scripts/judge-charter.mjs (D1066)",
+  "judge_convention": {
+    "exit0": "命令退出 0 ⇒ 该格判据成立（green）",
+    "nonzero": "退出非 0 ⇒ 判据不成立（red）",
+    "todo": "不执行、保持 empty（⚪ 待办）",
+    "forbid": "未执行的格不得被判为 green（院方 X27：缺失≠通过）"
+  }
 }

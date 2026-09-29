@@ -1,0 +1,24 @@
+=== C4 治理落库 · 原始输出 ===
+2026-09-29 13:18:15 CST
+
+$ node dsh/plugins/synova-dashboards/scripts/gen-governance-ledger.mjs --repo-root <repo>
+✅ 写出 docs/synova/coordination/governance-tasks.json
+✅ 写出 docs/synova/coordination/pending-decisions.json
+   治理卡 58（活卡 42 / 终态 16）· 欠账 50 · 待裁 0 · 已裁 2 · 卡面扫描 2
+   generated_at 2026-09-29T05:18:15.362Z
+
+--- 仓库内两件（git 跟踪）---
+-rw-r--r--@ 1 wane  staff  57487 Sep 29 13:18 docs/synova/coordination/governance-tasks.json
+-rw-r--r--@ 1 wane  staff   3632 Sep 29 13:18 docs/synova/coordination/pending-decisions.json
+
+--- 面板 B 取数（Host 路由内进程实跑）---
+source_mode=in-repo-ledger  degraded=False
+cards=58（活卡 42）· debt=50
+ledger: {"ok": true, "path": "docs/synova/coordination/governance-tasks.json", "source": "worktree", "generated_at": "2026-09-29T05:13:00.939Z", "schema": "governance-tasks/1", "generated_by": "dsh/plugins/synova-dashboards/scripts/gen-governance-ledger.mjs", "counts": {"total": 58, "active": 42, "resting": 16, "debt": 50, "by_domain": {"mac": 30, "doc-governance": 1, "—（卡面未声明）": 23, "win": 3, "k3": 1}}, "degraded": false, "degraded_sources": []}
+
+--- 口径一致性（落库件 counts vs 面板）---
+落库件 counts: {"total": 58, "active": 42, "resting": 16, "debt": 50, "by_domain": {"—（卡面未声明）": 23, "mac": 30, "win": 3, "doc-governance": 1, "k3": 1}}
+落库件 schema=governance-tasks/1 generated_at=2026-09-29T05:18:15.362Z
+
+--- 空台账拒写（fail-closed 测试）---
+$ gen-governance-ledger.mjs --repo-root <空目录>  → exit 2「两源皆空 —— 拒绝写出空台账冒充数据」
