@@ -103,6 +103,17 @@ rules:
   - glob: "scripts/golden-scenarios/**"
     owner: "mac"
     source: "TASK-ROUTING.md L33"
+  # D1001 落表（2026-09-29，CTO）：渲染层测试归属 —— 测的是 electron-renderer（与 electron* 同域）
+  #   依据：D1001 建议件（RV-1 已放行）实测这些测试 import electron-renderer/src/**，
+  #   此前落 `**` 兜底判 win，与"测试随被测对象归属"惯例（tests/control-tower 先例）不符。
+  - glob: "tests/electron/**"
+    owner: "mac"
+    source: "D1001 落表：渲染层测试随 electron* 归 mac"
+  
+  - glob: "tests/ga-collab-*.test.ts"
+    owner: "mac"
+    source: "D1001 落表：ga-collab 测试 import electron-renderer/src/{stores,components} ⇒ 随渲染层归 mac"
+  
   - glob: "tests/control-tower/**"
     owner: "mac"
     source: "派生: TASK-ROUTING.md L37/L63（门禁脚本的测试随门禁脚本归属）"

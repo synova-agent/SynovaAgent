@@ -31,6 +31,8 @@ scripts/install-hooks.sh                 @tangbaobao520
 scripts/backup/**                        @tangbaobao520
 scripts/product-lines/**                 @tangbaobao520
 scripts/golden-scenarios/**              @tangbaobao520
+tests/electron/**                        @tangbaobao520
+tests/ga-collab-*.test.ts                @tangbaobao520
 tests/control-tower/**                   @tangbaobao520
 docs/synova/coordination/**              @tangbaobao520
 docs/synova/product-lines/**             @tangbaobao520
