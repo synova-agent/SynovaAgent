@@ -1,0 +1,121 @@
+{
+  "task": "D1069",
+  "title": "resolve-commit-brief 强锚点失配修复 — 测试方 B（coder-tests）证据",
+  "date": "2026-09-29",
+  "producer": "coder-tests",
+  "raw_output_evidence": "docs/synova/product-lines/evidence/D1069/D1069-C1C5-原始输出.md",
+
+  "suite": {
+    "path": "tests/control-tower/resolve-commit-brief.test.sh",
+    "sha256": "e2637579baf3ceebedcd6a2da494902286e7c7fcae90a1764cf668f4b050ab14",
+    "method": "追加进既有套件（不新建 tests/**/*.test.sh）—— 新建 sh/py 测试触发 M9 密封面棘轮 CI-REGISTRY 违规（实测「基线外新增 1 / GATE-INTEGRITY: VIOLATION(1)」）；本文件已在 gate-integrity-baseline.txt:88",
+    "legacy": {
+      "cases": "1–11",
+      "case_count": 11,
+      "assertions": 32,
+      "assertions_passed_before_append": 32,
+      "assertions_passed_after_append": 32,
+      "modified_existing_lines": 0,
+      "diff_deleted_lines_grep_count": 0,
+      "diff_stat": "1 file changed, 325 insertions(+)"
+    },
+    "appended": {
+      "cases": "12–24",
+      "case_count": 13,
+      "assertions": 37,
+      "assertions_passed_pre_fix": 24,
+      "assertions_failed_pre_fix": 13,
+      "assertions_passed_post_fix": 37,
+      "assertions_failed_post_fix": 0
+    },
+    "totals": {
+      "pre_fix_run": {"exit": 1, "passed": 56, "failed": 13},
+      "post_fix_run": {"exit": 0, "passed": 69, "failed": 0}
+    }
+  },
+
+  "subjects": {
+    "pre_fix": {
+      "source": "git show origin/main:scripts/workflow/resolve-commit-brief.sh",
+      "sha256": "47ea3d3aa63f5aa7fa6d41a2f980b8461ffaeae6b003bd52d6c1d063aaf913b1",
+      "anchor_priority_seam_grep_count": 0,
+      "mirror_tree": "/tmp/d1069-prefix-mirror (tests/control-tower + scripts/workflow + scripts/control-tower/brief_parser.py + staging_guard.py)",
+      "note": "按内容 pin 的固定物，不依赖时间点/工作树状态"
+    },
+    "post_fix": {
+      "path": ".synova-wt-squad-d1069/scripts/workflow/resolve-commit-brief.sh",
+      "sha256": "4c618a0d098bb9bf47366903adb7a4c24302af51d77d715b1f9627a4b8b618e5",
+      "anchor_priority_seam_lines": [171, 204],
+      "mutation_copy_lines": 378,
+      "production_lines": 412,
+      "mutation_removed_lines": 34
+    }
+  },
+
+  "criteria": {
+    "C1": {
+      "conclusion": "成立（判别性基线以按内容 pin 的修前脚本建立）",
+      "detail": "任务书 Q0b 两条（D1039 / D1061）为 main 树环境实测；工作树环境**不复现**（分支自带 D1069 强锚点 + 缺 main 树未跟踪的 D1061 brief），已如实登记，不改卡口径。改用 origin/main 修前脚本（sha256 47ea3d3aa63f5aa7…）作修前被测物，修前 RED exit=1 / 56 通过 13 失败，13 处失败全部落在追加段的判别性用例。",
+      "evidence": "D1069-C1C5-原始输出.md §C1-0 / §C1-1 / 附录 A"
+    },
+    "C2": {
+      "conclusion": "成立",
+      "detail": "D1061 brief 按字节复制进工作树（双向 shasum 同源 51d5a223e5b786f14…），修后生产脚本对**同一输入** \".github/workflows/ci.yml\\ntask-state/D1061.json\" 与 \"task-state/D1061.json\" 均返回 2026-09-29-D1061-CT提速+门禁机制修正.md（exit=0）⇒ 不再落 D1039。临时 brief 已删，git status --short 零残留。",
+      "evidence": "D1069-C1C5-原始输出.md §C2"
+    },
+    "C3": {
+      "conclusion": "成立（改坏即红 + 恢复即绿，两段原始输出全交）",
+      "detail": "sed '/<<<ANCHOR-PRIORITY-START>>>/,/<<<ANCHOR-PRIORITY-END>>>/d' 生成变异副本，与生产脚本跑同一输入：修后 生产→2026-09-26-D905-strong-anchor-mut.md（绿证）/ 变异→2026-09-29-D906-competitor-mut.md（红证）/ 两者不等 ✅。修前两者同为 D906-competitor（无缝合可删，308 行 = 308 行）⇒ 改坏即红的判别性成立。变异副本仍可运行（exit=0，规范 4 要求）。",
+      "evidence": "D1069-C1C5-原始输出.md §C3 + 附录 A/B 用例 15"
+    },
+    "C4": {
+      "conclusion": "成立（相关套件无回归；2 处失败经纯净树对照判定为既有基线）",
+      "detail": "13 个相关套件串行执行（同一时间 ≤1 个重型验证）。resolve-commit-brief 69/0、brief-parser-strip 30/0、brief_parser 6/0、brief-parseable 12/0、precommit-groups-injection BASELINE_OK、tag-bypass-wiring 26/0、grep-oP-regression 38/0、commit-msg-consistency 16/0、commit-msg-merge 0、commit-msg-note-mandatory PASS=10/FAIL=0、test-staging-guard OK(8)。2 套失败：today-by-name.test.sh（line 67 DAY_WINDOW_RE: unbound variable）与 staging-guard-session.test.py（FAILED failures=5）—— 在 origin/main 纯净树上**同样失败、失败集逐名一致**（唯一差异为计时行），属既有基线，非本卡引入。",
+      "evidence": "D1069-C1C5-原始输出.md §C4"
+    },
+    "C5": {
+      "conclusion": "成立",
+      "detail": "本 .json + D1069-C1C5-原始输出.md 落 docs/synova/product-lines/evidence/D1069/；含套件名、用例数（既有 11 + 追加 13 = 24 用例 / 69 断言）与 C1–C5 逐条结论。",
+      "evidence": "本文件"
+    }
+  },
+
+  "appended_cases": [
+    {"id": 12, "spec": "①", "asserts": "暂存 task-state/D900.json 强锚点 brief 定案，认领数更高的竞争者不得压过（规范 1 P0）", "discriminating": "修前 best=2（竞争者 a.sh+b.sh）> 强锚点 1 ⇒ 返回 D901-competitor（红）", "pre_fix": "FAIL", "post_fix": "PASS"},
+    {"id": 13, "spec": "②", "asserts": "无 task-state / 分支无 D#，仅 current-brief 认领 ≥1 ⇒ 返回 current-brief（规范 1 P1 回归）", "discriminating": "回归保护（修前修后同绿）", "pre_fix": "PASS", "post_fix": "PASS"},
+    {"id": 14, "spec": "③", "asserts": "无任何锚点、无 current-brief ⇒ 回退到窗口内可解析 brief（规范 1 P4）", "discriminating": "降级路径保护（修前修后同绿）", "pre_fix": "PASS", "post_fix": "PASS"},
+    {"id": 15, "spec": "④", "asserts": "规范 4 缝删除后变异副本返回竞争者、生产脚本返回强锚点、两者必须不等（改坏即红 C3）", "discriminating": "修前无缝可删（308=308）⇒ 两者同值 ⇒ 红", "pre_fix": "FAIL(2)", "post_fix": "PASS"},
+    {"id": 16, "spec": "⑤", "asserts": "同路径 Q2 写 4 次 vs 另一 brief 声明 2 个不同文件且都被暂存 ⇒ 去重后 2>1 返回后者（规范 2 不变式）", "discriminating": "修前按出现次数 4>2 ⇒ 返回 D910-multi-count（红）", "pre_fix": "FAIL(2)", "post_fix": "PASS"},
+    {"id": 17, "spec": "⑥", "asserts": "<date>-D471.md（D# 结尾无连字符）+ 分支含 D471 ⇒ 命中该 brief（规范 3 一级身份 边界）", "discriminating": "修前 glob *-D471-* 不命中 ⇒ 落到无关今日 brief D999-unrelated（红）", "pre_fix": "FAIL(2)", "post_fix": "PASS"},
+    {"id": 18, "spec": "⑦", "asserts": "无身份锚点的陈旧 brief 认领更多文件 ⇒ 不得劫持（D291/D296 保护；候选池不扩大）", "discriminating": "防窗口放宽式退化（修前修后同绿）", "pre_fix": "PASS", "post_fix": "PASS"},
+    {"id": 19, "spec": "⑧a", "asserts": "次位 D282 提及件 vs 首 token D282 身份件（同数 n=1）⇒ 身份件胜出（规范 3 一级压制）", "discriminating": "修前旧 glob *-D282-* 双命中 + 字典序 ⇒ 09-26 提及件胜出（红）", "pre_fix": "FAIL(2)", "post_fix": "PASS"},
+    {"id": 20, "spec": "⑧b", "asserts": "仅 <date>-D313-x-D314-y.md（无 D314 身份件）+ 暂存 task-state/D314.json ⇒ 仍须命中（规范 3 二级兜底）", "discriminating": "防「纯一级」式过度收敛；若二级缺失则失去锚点（红）", "pre_fix": "PASS", "post_fix": "PASS"},
+    {"id": 21, "spec": "⑨", "asserts": "生产脚本含 ANCHOR-PRIORITY-START/END 双向标记 + staging_guard.py 仍在调用 resolver（铁律 0-2 WIRE CHECK）", "discriminating": "修前无缝合 ⇒ 红（缝随修复落地）", "pre_fix": "FAIL(1)", "post_fix": "PASS"},
+    {"id": 22, "spec": "⑩", "asserts": "断言器本身可红（同值判失败）+ 不同值判通过（防假绿 / 反例 C）", "discriminating": "自检红通道有效性（修前修后同绿）", "pre_fix": "PASS", "post_fix": "PASS"},
+    {"id": 23, "spec": "⑫", "asserts": "二级提及命中不得升格 P0：二级 + 竞争者认领数 2>1 ⇒ 走计数裁决", "discriminating": "若把二级并入 P0 则直接定案返回 D314-cover2（红）；正确行为 = 返回 D999-competitor2", "pre_fix": "PASS", "post_fix": "PASS"},
+    {"id": 24, "spec": "⑬", "asserts": "来源优先级 state > branch：state 锚点 D1061 与分支锚点 D1069 不一致 ⇒ 取 state 那份（规范 1 来源优先级）", "discriminating": "修前 tie n=1 → 字典序 ⇒ D1069 分支件胜出（红）；亦可判别「先取分支锚点」的错误实现", "pre_fix": "FAIL(2)", "post_fix": "PASS"}
+  ],
+
+  "environment_notes": [
+    "任务书 Q0b 的两条复现在工作树不可移植：①工作树分支 fix/D1069-resolve-brief-anchor 自带 D1069 强锚点；②工作树 .claude/task-briefs/ 不含 main 树未跟踪的 D1061 brief。已报队长并获批改用按内容 pin 的 origin/main 被测物。",
+    "全部用例零网络、零真实仓库改动：mktemp -d + git init 沙箱 + trap 清理；生产脚本在用例 15 中被复制进沙箱并由 sed 生成变异副本，未修改生产文件。",
+    "重型验证串行：13 个回归套件逐个执行，同一时间 ≤1 个。"
+  ],
+
+  "unowned_changes_in_worktree": [
+    {
+      "path": ".claude/bypass.log",
+      "content": "TASK_ID=D331-test | AGENT=test 的 DEGRADED/COMMITTED 记录（2026-09-29T16:15:51–53，共 6 行）",
+      "owner": "非本卡成员（coder-tests 未触碰）",
+      "action": "已报队长，未处置（不在本卡写集内）"
+    }
+  ],
+
+  "self_check_5": {
+    "wiring": "用例 21 物理断言：生产脚本含 ANCHOR-PRIORITY-START/END（171/204 行）+ staging_guard.py 调用 resolver 命中 2 处（grep -c 原始输出）",
+    "error_handling": "测试侧无 catch；生产脚本降级路径（P0 brief 不可解析 → 下探 P1..P4；锚点缺失 → 原语义）由用例 13/14/20/23 覆盖",
+    "type_safety": "bash 套件，无 as any / as never / as unknown as；未新增 TS 文件",
+    "test_quality": "真实断言：exit code + 输出点名（d_assert_exit / d_assert_contains / d_assert_not_contains / d_assert_differs）；覆盖正常（12/13/16/19/24）、降级（14/20）、边界（17）、负向（18/23）、接线（21）、自检（22）",
+    "residue": "工作树无本卡残留：临时 D1061 brief 已删（git status --short 证明）；未跟踪项仅 D1069 brief / task-state/D1069.json / 证据目录"
+  }
+}
