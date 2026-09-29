@@ -1939,3 +1939,4 @@ Binary file .claude/bypass.log matches
 2026-09-29T16:17:34+08:00 | DEGRADED | pre-commit-check.sh not found | TASK_ID=D331-test | AGENT=test
 2026-09-29T16:17:34+08:00 | COMMITTED | pre-commit DEGRADED-PASS | TASK_ID=D331-test | AGENT=test | HASH=0122c2d333560c906252190b2fa40d23dc0d1bb8
 2026-09-29T16:17:50+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=3104921d45f6138f96ca7daa78014b0693775bd4
+2026-09-29T16:20:21+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=dae6b55e25eb74f46db7014e1c586fe566c361b8
