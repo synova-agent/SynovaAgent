@@ -89,15 +89,20 @@ evidence/
 !docs/synova/STATE.md
 
 # ═══ D1063 / CN-01: 客户机密数据「等效禁入」规则 ═══
-# 依据（实测，不臆写）: D1063 并集 172 件 = 文件名命中 25 + 内容命中 167（独立复算见
-#   scripts/control-tower/scan-client-names.py）。形态分布：.md 98 / .html 45 / .txt 12 /
+# 依据（实测，不臆写；🔴 **口径写死在每个数字旁**，防下次登记新条目再漂）:
+#   基线 9608fba7 —— 文件名命中 25 件 ｜ 内容命中 **167 件（仅 CN-01 条目）** /
+#   **172 件（CN-01∪CN-02）** ｜ 并集（名 ∪ 内容，CN-01∪CN-02）**177 件** ｜
+#   另有 1 件 docx（路径干净、OOXML 内含名；二进制不做内容扫描 ⇒ **不属上述任何集合**）
+#   ⇒ **实际待清 178 件**。独立复算见 scripts/control-tower/scan-client-names.py。
+#   形态分布（CN-01 口径并集 172 件内）：.md 98 / .html 45 / .txt 12 /
 #   .ts 6 / .docx 2 / .pdf 2 / .py 2 / .bak(.bak3) 3 / .json 1 / .yaml 1。
 # 规则形状 =「目录 × 类型」等效表达，**不写任何客户名明文**（数据文件与门禁同口径）。
 # ⚠️ 两条如实声明的边界（不假称全知）:
 #   ① .gitignore 只拦**新增未跟踪**文件，**不会**让已入库文件出库 —— 存量出库由 PR-1/PR-2
 #      （git rm -f / 改写）承担，本规则只切断「再次入库」这条路。
-#   ② 文本形态（.md/.html/.txt = 155/172，占 90%）**无法**按类型忽略（仓库本身以 .md/.html 为主），
-#      它们的防线是 scripts/control-tower/scan-client-names.py（暂存区内容扫描 + CT-34 分支接线）。
+#   ② 文本形态（.md/.html/.txt = 155 件，占 CN-01 口径并集 172 件的 90%）**无法**按类型忽略
+#      （仓库本身以 .md/.html 为主），它们的防线是 scripts/control-tower/scan-client-names.py
+#      （暂存区内容扫描 + CT-34 分支接线）。
 # 客户材料目录（历史实测路径含 client-cases/，任意深度）
 client-cases/
 # 客户方案/材料包常驻目录 × 文档二进制类型（docx/pdf/pptx/xlsx 是内容不可见的泄漏形态）
