@@ -22,6 +22,8 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   边界 — rc=2 三路径（无输入 / --id 格式非法 / 缺值与未知选项）
 #   金丝雀 — 同一夹具只改 id: 占用输入 rc=1 vs 空闲输入 rc=0 → 两者不同才证明校验器真在判
 #            （恒 0 或恒 1 的"空转网"在此变红）
+#   CT-B — 同号检测: 同 D# ≥2 份 brief → rc=1 + 点名全部路径；单份 / 仅 slug 交叉引用 → rc=0
+#            （改前 brief 根本不参与判定 → 前者 rc=0 = 缺口；见 §9）
 #
 # 密封性（重要）: 全部用**临时 git 仓 + bare origin**（离线、CI 双平台可跑）。
 #   不连真远端、不依赖真仓的 tracking ref —— 真仓当前**有** origin/docs/d942-cto-fixation
@@ -29,7 +31,8 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 # ═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-TOOL="$REPO/scripts/control-tower/check-name-allocation.sh"
+# 变异测试缝（CT-B「改坏即红」用）: 指定被测脚本，否则测仓库内实现。
+TOOL="${SYNO_TOOL_UNDER_TEST:-$REPO/scripts/control-tower/check-name-allocation.sh}"
 PASS=0; FAIL=0
 ok() { echo "  ✅ $1"; PASS=$((PASS+1)); }
 no() { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
@@ -164,6 +167,39 @@ if [ "$RC_HIT" = "1" ] && [ "$RC_MISS" = "0" ]; then
 else
   no "金丝雀失败: 占用 rc=${RC_HIT}（应 1）、空闲 rc=${RC_MISS}（应 0）—— 校验器恒返回同一值即空转"
 fi
+
+echo ""
+echo "── 9. CT-B 同号检测: 同 D# ≥2 份 brief → rc=1 + 点名全部；单份/交叉引用 → rc=0 ──"
+# 缺口（改前）: 占用判定只认 alloc --check-id 的 5 类标签，brief「不参与发号」
+#   （alloc-task-id.sh:252）→ 建 brief 复用已占号无任何检测面（D1023 两份 brief 实证）。
+# 改坏即红: 删掉 check-name-allocation.sh 的 brief-dup 段 → 本节前三条必红。
+chkb() { # <brief_dir> <args...>
+  local _bd="$1"; shift
+  OUT=$( cd "$WA" && SYNO_TASK_STATE_DIR="$WA/task-state" SYNO_BRIEF_DIR="$_bd" bash "$TOOL" "$@" 2>&1 ); RC=$?
+}
+BRIEFS="$TMP/briefs"; mkdir -p "$BRIEFS"
+printf '## Q0: 定位 — 同号候选 A\n' > "$BRIEFS/2026-09-26-D99001-dup-a.md"
+printf '## Q0: 定位 — 同号候选 B\n' > "$BRIEFS/2026-09-26-D99001-dup-b.md"
+chkb "$BRIEFS" --id D99001 --worktree .synova-wt-squad-d99001 --branch docs/d99001-probe
+[ "$RC" -eq 1 ] && ok "同 D# 两份 brief → rc=1（改前 rc=0 = 缺口）" \
+  || no "应 rc=1，实际 rc=${RC}：$(printf '%s' "$OUT" | sed -n '1,3p' | tr '\n' '|')"
+has "brief-dup:" && ok "点名新面标签 brief-dup" || no "缺 brief-dup 标签，实际输出: $(printf '%s' "$OUT" | tr '\n' '|')"
+has "D99001-dup-a.md" && has "D99001-dup-b.md" \
+  && ok "点名两条完整路径（A + B）" || no "未点名两条路径: $(printf '%s' "$OUT" | tr '\n' '|')"
+# 判别性反例 1: 号空闲 + 仅一份 brief → 不得出现 brief-dup（rc=0）
+SINGLE_B="$TMP/briefs-single"; mkdir -p "$SINGLE_B"
+printf '## Q0: 定位 — 唯一\n' > "$SINGLE_B/2026-09-26-D99002-only.md"
+chkb "$SINGLE_B" --id D99002 --worktree .synova-wt-squad-d99002 --branch docs/d99002-probe
+[ "$RC" -eq 0 ] && ok "仅一份 brief → rc=0（无占用、无同号）" \
+  || no "应 rc=0，实际 rc=${RC}：$(printf '%s' "$OUT" | sed -n '1,3p' | tr '\n' '|')"
+has "brief-dup:" && no "单份 brief 被误报 brief-dup（假阳性）" || ok "单份 brief 无 brief-dup（判别性成立）"
+# 判别性反例 2: D# 只出现在别的 brief 的 slug 里（交叉引用）→ 不算任务身份
+XREF_B="$TMP/briefs-xref"; mkdir -p "$XREF_B"
+printf '## Q0: 定位 — 身份 D99003\n' > "$XREF_B/2026-09-26-D99003-main.md"
+printf '## Q0: 定位 — 身份 D99004（slug 提到 D99003）\n' > "$XREF_B/2026-09-26-D99004-FIX-D99003.md"
+chkb "$XREF_B" --id D99003 --worktree .synova-wt-squad-d99003 --branch docs/d99003-probe
+[ "$RC" -eq 0 ] && ok "slug 交叉引用不误伤（身份 = 日期前缀后的第一个 D#）" \
+  || no "交叉引用被误判为同号，rc=${RC}：$(printf '%s' "$OUT" | sed -n '1,3p' | tr '\n' '|')"
 
 echo ""
 echo "结果: $PASS 通过, $FAIL 失败"

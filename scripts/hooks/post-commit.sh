@@ -28,6 +28,48 @@ _bypass_append() {
   fi
 }
 
+# ═══ CT-2 (D1023 批次): 软失败被放行 ⇒ 账本记真实状态（不记纯 PASS）═══
+# 缺口（改前实测，原始输出见 docs/synova/product-lines/evidence/CT2-*）:
+#   pre-commit 硬失败被 .git/hooks/pre-commit wrapper（install-hooks.sh 生成）**软化放行**后，
+#   本 hook 仍写 `COMMITTED | pre-commit PASS (hook 层登记)` —— 而真实状态在
+#   .claude/gate-soft-warnings.log = `<ts> | GATE_FAIL_SOFT | exit=1 | branch=…`。
+#   同一提交两处记录互相矛盾：账本把「门禁失败但放行」记成纯 PASS（审计无法复算门禁健康度）。
+# 契约(铁律 47):
+#   @input  — 无参；读 ① $ROOT/.claude/gate-soft-warnings.log（wrapper 先 append）
+#                      ② marker 文件 mtime（wrapper 后写，同一轮 pre-commit 内）
+#   @output — 空 = 本次提交与「软失败放行」无关联 → 上层写**原 PASS 行，文本一字不动**；
+#             非空 = "DEGRADED-PASS (soft-fail allowed ts=<证据行 ts> exit=<n>)" → 上层写真实状态
+#   @degraded — 日志/marker 缺失或 stat 不可用 → 返回空（退回原行为，不臆造 DEGRADED；宁少标不误标。
+#             真实状态本身已由 wrapper 的 gate-soft-warnings.log / pre-commit-failures.log 双留痕）
+# 配对依据（不解析时间戳，纯文件写入序——跨平台零 date 方言依赖）:
+#   wrapper 顺序 = append 软失败行 → 写 marker ⇒ 同一轮两次写入 mtime 相差 <1s；
+#   下一轮干净提交会**重写 marker**（mtime 前移）而日志不变 ⇒「marker 比日志新」= 该软失败行
+#   已过时，不再标注（防把后续干净提交误标为 DEGRADED）。
+#   窗口 SYNO_SOFT_FAIL_WINDOW（秒，默认 5）可调；实测同一轮差值 = 0s。
+_mtime_sec() { # <file> → mtime 秒（BSD stat → GNU stat 回退；都不可用 → 空）
+  local f="$1" v=""
+  v="$(stat -f %m "$f" 2>/dev/null || true)"
+  [ -n "$v" ] || v="$(stat -c %Y "$f" 2>/dev/null || true)"
+  printf '%s' "$v"
+}
+_softfail_state() {
+  local log="$ROOT/.claude/gate-soft-warnings.log" row lm mm win ts ex
+  [ -f "$log" ] || return 0
+  row="$(grep 'GATE_FAIL_SOFT' "$log" 2>/dev/null | tail -1 || true)"
+  [ -n "$row" ] || return 0
+  lm="$(_mtime_sec "$log")"; mm="$(_mtime_sec "$MARKER")"
+  [ -n "$lm" ] && [ -n "$mm" ] || return 0
+  win="${SYNO_SOFT_FAIL_WINDOW:-5}"
+  [ "$((mm - lm))" -le "$win" ] || return 0   # marker 比日志新 → 软失败行属更早一轮（已过时）
+  [ "$((lm - mm))" -le "$win" ] || return 0
+  ts="$(printf '%s' "$row" | awk -F'|' '{gsub(/^[ \t]+|[ \t]+$/,"",$1); print $1}')"
+  ex="$(printf '%s' "$row" | awk -F'|' '{gsub(/^[ \t]+|[ \t]+$/,"",$3); print $3}')"
+  # 消费判定（决定性，补 mtime 窗口在同一秒内的盲区）: 该证据行 ts 已被账本标注过 → 不重复标注
+  # （同一软失败事件只对第一个提交生效；后续提交即使落在窗口内也恢复纯 PASS）
+  if grep -qF "soft-fail allowed ts=${ts}" "$ROOT/.claude/bypass.log" 2>/dev/null; then return 0; fi
+  printf 'DEGRADED-PASS (soft-fail allowed ts=%s %s)' "$ts" "$ex"
+}
+
 # ═══ --no-verify 绕过检测 (D366 head 对账 + D421 CT-29 分场景三判) ═══
 # marker 格式 (install-hooks.sh pre-commit 写): <pre-commit 时 HEAD>|<epoch 秒>
 # 判定 (三判, 消除 CT-29 并发/amend 误报):
@@ -97,7 +139,11 @@ if [ -f "$MARKER" ]; then
           *)
             HASH_NOW=$(git rev-parse HEAD 2>/dev/null || true)
             if [ -n "$HASH_NOW" ]; then
-              echo "$(date -Iseconds) | COMMITTED | pre-commit PASS (hook 层登记) | HASH=$HASH_NOW" | _bypass_append
+              # CT-2: 软失败被放行 ⇒ 记真实状态；正常路径行文本一字不动（既有硬断言保持绿）
+              _COMMITTED_STATE="pre-commit PASS (hook 层登记)"
+              _SOFT_STATE="$(_softfail_state)"
+              [ -n "$_SOFT_STATE" ] && _COMMITTED_STATE="pre-commit ${_SOFT_STATE}"
+              echo "$(date -Iseconds) | COMMITTED | ${_COMMITTED_STATE} | HASH=$HASH_NOW" | _bypass_append
               # CT-43（D554）: `-o -m ... -- <path>` 限定登记提交只含 bypass.log——不卷走暂存区遗留文件
               # （D552 实证: D311 guard 阻断后遗留 staged 文件被本提交整体卷入 8b6deaf4，M8 变体；
               #   注意 -m 必须在 -- 之前，否则被当 pathspec）

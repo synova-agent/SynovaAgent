@@ -1,0 +1,27 @@
+{
+  "task_id": "D1032",
+  "title": "CT系列-brief账本门禁收口",
+  "status": "in_progress",
+  "spec": ".claude/task-briefs/2026-09-28-D1032-CT系列-brief账本门禁收口.md",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-09-29",
+  "updated_by": "cto-parallel-d1061",
+  "write_set": [
+    "scripts/workflow/resolve-commit-brief.sh",
+    "scripts/control-tower/check-name-allocation.sh",
+    "scripts/hooks/post-commit.sh",
+    "tests/control-tower/resolve-commit-brief.test.sh",
+    "tests/control-tower/check-name-allocation.test.sh",
+    "tests/control-tower/simulate-ci.test.sh",
+    "tests/control-tower/post-commit.test.sh",
+    ".github/workflows/ci.yml",
+    "memory/notes/implemented/process/2026-09-28-ct-flow-gate-fail-closed-ledger.md",
+    "docs/synova/product-lines/evidence/CT2-门禁流程修复-证据.md",
+    "docs/synova/product-lines/evidence/CT2-M6收尾-自验结论与遗留清单.md",
+    "task-state/D1032.json",
+    ".claude/task-briefs/2026-09-28-D1032-CT系列-brief账本门禁收口.md",
+    ".claude/bypass.log"
+  ]
+}

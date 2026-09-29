@@ -223,13 +223,25 @@ if cur and any(b == cur and n > 0 for n, b in claims):
     print(cur)
     sys.exit(0)
 
-# 2. 认领数最多的 brief；同数时身份锚点优先（强 → 弱 → 其余按原字典序，无锚点零行为变化）
+# 2. 认领数最多的 brief；同数时身份锚点优先（强 → 弱）；同层仍并列 → fail-closed
+# CT-A1: 原实现 top.sort(...) + print(top[0]) = 同层并列时静默按字典序取「首位」——
+#   陈旧 brief 可能恒胜（D718 型误伤），且无任何告警 → 认领制失去物理依据。
+#   修法: 只做同层唯一裁决；同层仍并列 → 输出机器可读标记 + 全部候选（stdout），
+#         由 bash 侧 fail-closed（绝不 print 任一候选）。
 best = max(n for n, _b in claims) if claims else 0
 if best > 0:
-    top = [b for n, b in claims if n == best]
-    top.sort(key=lambda b: (0 if b in anchored_strong else (1 if b in anchored_weak else 2), b))
-    print(top[0])
-    sys.exit(0)
+    top_n = [b for n, b in claims if n == best]
+    # 身份锚点分层: 0=强(分支名/暂存 task-state) 1=弱(current-brief 声明) 2=无锚点
+    tiered = [(0 if b in anchored_strong else (1 if b in anchored_weak else 2), b) for b in top_n]
+    best_tier = min(t for t, _b in tiered)
+    finalists = sorted(b for t, b in tiered if t == best_tier)
+    if len(finalists) == 1:
+        print(finalists[0])
+        sys.exit(0)
+    print('SYNO_AMBIGUOUS_BRIEF count=' + str(best) + ' candidates=' + str(len(finalists)))
+    for b in finalists:
+        print(b)
+    sys.exit(3)
 
 # 3. 回退: current-brief
 if cur:
@@ -237,6 +249,21 @@ if cur:
     sys.exit(0)
 " 2>/dev/null || true)
 fi
+
+# ═══ CT-A1: 多命中 fail-closed（同层仍并列 → 拒绝猜测，绝不静默取首位）═══
+# 契约: stdout 只承载 brief 路径（staging_guard.py 取 stdout 首行当路径）——
+#   并列 → stdout 为空 + 诊断走 stderr + exit 2（三态: 2 = 未能得出确定结论，同样阻断）。
+#   证据: 修复前同层并列由字典序裁决且零告警（见 tests/.../resolve-commit-brief.test.sh 场景 12）。
+case "$RESULT" in
+  SYNO_AMBIGUOUS_BRIEF*)
+    echo "❌ resolve-commit-brief: 多命中并列且身份锚点无法裁决 — fail-closed（拒绝猜测 brief）" >&2
+    echo "   stdout 不输出任何 brief 路径（调用方必须按「无确定 brief」处理）" >&2
+    printf '%s\n' "$RESULT" | sed -n '1p' | sed 's/^/   标记: /' >&2
+    echo "   并列候选（需人工消歧: 指定 current-brief，或改用含 D# 的分支名）:" >&2
+    printf '%s\n' "$RESULT" | tail -n +2 | sed 's/^/     - /' >&2
+    exit 2
+    ;;
+esac
 
 if [ -n "$RESULT" ] && [ -f "$RESULT" ]; then
   echo "$RESULT"
