@@ -19,6 +19,7 @@
     "scripts/control-tower/gen-charter-grid.py",
     "task-state/D963.json",
     ".claude/task-briefs/2026-09-25-D963-dsh-sidebar-charter-grid-panel.md",
+    ".claude/task-briefs/2026-09-29-D1059-宪章格子升四问-64格-生成器对齐.md",
     ".claude/task-briefs/2026-09-29-D1059-宪章格子升四问（48→64）+-生成器对齐-+-D963-规格更新.md",
     "memory/notes/proposed/2026-09-28-d1059-charter-grid-four-questions.md",
     "task-state/D1059.json"
