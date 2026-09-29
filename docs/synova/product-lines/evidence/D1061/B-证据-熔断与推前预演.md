@@ -429,3 +429,28 @@ $ python3 scripts/control-tower/brief_parser.py --all <D1058 brief>
 > **门禁的主源应为 S1，S3 只作兜底**；把 Q2 散文当主源 = 把门禁成败押在一个**有 3 个已知截断点**的解析器上。
 > 这正是本卡「建卡器初始化 `write_set`」（5③）为何是**系统性**修复而非补丁 ——
 > #878/#882 靠 S1 解锁、#879 也靠 S1 绕过截断，两处实战都指向同一结论。
+
+---
+
+## 十四、两条"平台/环境差异"实证（「本地全绿 ≠ CI 全绿」）
+
+### 1 · `set -u` 下 `${VAR//…}` 的 unset 行为：macOS bash 3.2 不报、Ubuntu bash 5.x 报
+D1061 在 #862 合并收尾中由我方引入一处缺陷（解析器吞换行 ⇒ `CLONE_POSITIVE` 赋值被并进注释行）：
+```
+CI（Ubuntu）: tests/control-tower/precommit-groups-injection.test.sh: line 997:
+              CLONE_POSITIVE: unbound variable           ← 真红，CT-ubuntu 挂
+本机（macOS bash 3.2）: bash -uc 'X="${X//[^0-9]/}"; echo ok'  → ok（**不报**）
+本机复跑同夹具          → rc=0、`✅ 残留断言满足（a=0,b<=13,c>0）`（**复现不出**）
+```
+**结论**：`${VAR//pattern/repl}` 在 unset 时，**bash 3.2 静默展开为空、bash 5.x 在 `set -u` 下报 unbound**。
+⇒ 本机全绿**不能**覆盖这类平台差异；这正是"门禁必须两层（本地秒级 + CI 权威）"的实证，
+也是本卡 `--fast` 只作**推前快速判别**、不作权威判定的原因。
+
+### 2 · `check-silent-swallow.sh --utf8` 在 main 基线本就 rc=1
+实测（同一命令，两个工作树）：
+```
+origin/main（20b55eba）       → rc=1，[utf8] ❌ 17 个 .sh 缺头块（逐行相同）
+本卡分支（修 alloc-task-id 后）→ rc=1，❌ 16 个（少的那 1 条 = 本卡修的 alloc-task-id.sh）
+```
+**结论**：该检查**不能拿 rc 当红绿**，必须走**基线差集**口径（「本分支新增 0 条」）。
+本卡新增脚本（gate-circuit-breaker.sh / pre-push-preview.sh）**均不在 ❌ 名单**。
