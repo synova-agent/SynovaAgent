@@ -12,8 +12,8 @@
   "audit": null,
   "fix_task_id": null,
   "base_branch": "main",
-  "base_head": "20b55eba9ce0db5cfa238bd09e02b4732d234af3",
-  "note": "本卡拆两条 PR：PR-A = CI 提速线（N1 递归重跑 + 变更选择器 + windows 敏感子集 + ci.yml 接线）；PR-B = 门禁机制线（熔断/元监控 + 推前四件套 + 建卡器 write_set + 路径尾括号根因）。write_set 为**两条 PR 声明的并集**（D708 按 origin/main..HEAD 对账；并集使任一 PR 单独或先后合并均不夹带，且不因对侧先合并而误红）。PR-B 分支 chore/d1061-b-gate-mechanism 由 coder-b 于 2026-09-29 首写；若 PR-A 分支已先行写入本文件，合并时按并集取全（两边语义都要）。",
+  "base_head": "d610cc07",
+  "note": "本卡拆两条 PR：PR-A = CI 提速线（N1 递归重跑 + 变更选择器 + windows 敏感子集 + ci.yml 接线）；PR-B = 门禁机制线（熔断/元监控 + 推前四件套 + 建卡器 write_set + 路径尾括号根因）。write_set 为**两条 PR 声明的并集**（D708 按 origin/main..HEAD 对账；并集使任一 PR 单独或先后合并均不夹带，且不因对侧先合并而误红）。PR-B 分支 chore/d1061-b-gate-mechanism 由 coder-b 于 2026-09-29 首写；PR-A 侧按队长 2026-09-29 裁定追加唯一一条 PR-A 独有件 docs/synova/dispatch/2026-09-29-D1061-CT提速-门禁机制修正.md（派单件须在 main 可读），其余条目与 PR-B 版**一字不差**。",
   "write_set": [
     "scripts/control-tower/ct-suite-select.sh",
     "scripts/control-tower/ct-suite-map.json",
@@ -34,9 +34,17 @@
     "task-state/D1061.json",
     ".claude/task-briefs/2026-09-29-D1061-CT提速+门禁机制修正.md",
     "memory/notes/proposed/2026-09-29-d1061-gate-mechanism.md",
-    "memory/notes/proposed",
-    "docs/synova/product-lines/evidence/D1061",
+    "memory/notes/proposed/2026-09-29-d1061-ct-ci-speedup.md",
     "docs/synova/dispatch/2026-09-29-D1061-CT提速-门禁机制修正.md",
+    "docs/synova/product-lines/evidence/D1061/00-前提实测-原始输出.md",
+    "docs/synova/product-lines/evidence/D1061/A-01-N1-修复与前后对比.md",
+    "docs/synova/product-lines/evidence/D1061/A-02-windows-敏感子集-推导.md",
+    "docs/synova/product-lines/evidence/D1061/A-03-验收命令原始输出.md",
+    "docs/synova/product-lines/evidence/D1061/A-04-改坏即红-原始输出.md",
+    "docs/synova/product-lines/evidence/D1061/A-05-增量提案-残留成本.md",
+    "docs/synova/product-lines/evidence/D1061/A-metrics.json",
+    "docs/synova/product-lines/evidence/D1061/B-证据-熔断与推前预演.md",
+    "docs/synova/product-lines/evidence/D1061/B-证据.json",
     ".claude/bypass.log"
   ]
 }
