@@ -29,7 +29,7 @@ grep `memory/notes/` 在 `scripts/commit-msg-check.sh`（唯一目标）；无�
 不做什么：
 - 不改 scripts/pre-commit-check.sh（门禁判定逻辑）
 - 不改 scripts/control-tower/merge_writeset_gate.py
-- 不改任何 src/** 产品代码
+- 不改 src/**
 
 > ⚠️ 注：Q2 路径**必须裸写**（不加反引号/引号、不放代码块）—— brief_parser 会把反引号算进路径模式，
 > G12 的 matches() 永不匹配；放进代码块则 parser 不读 ⇒ "无路径条目"。（本卡先后踩了这两个坑。）
