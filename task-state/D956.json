@@ -1,0 +1,26 @@
+{
+  "task_id": "D956",
+  "title": "CI 失败消息观测性（失败行入窗+截断自报+三态）",
+  "status": "in_progress",
+  "write_set_comment": "3 文件 = git diff origin/main...fix/d956-ci-failmsg --name-status（1A+2M）；task-25【1】补声明解锁 G12",
+  "write_set": {
+    "added": [
+      ".claude/task-briefs/2026-09-25-D956-ci-failmsg.md",
+      "task-state/D956.json",
+      "tests/control-tower/d956-failmsg.test.sh"
+    ],
+    "deleted": [],
+    "modified": [
+      ".github/workflows/ci.yml",
+      ".claude/bypass.log"
+    ]
+  },
+  "branches": {
+    "impl": "fix/d956-ci-failmsg @ 0844d7c5"
+  },
+  "spec": {
+    "path": ".claude/task-briefs/2026-09-25-D956-ci-failmsg.md"
+  },
+  "impl": null,
+  "audit": null
+}

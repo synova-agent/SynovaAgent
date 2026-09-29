@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-09-16 19:03:10",
+  "generated_at": "2026-09-28 22:02:37",
   "schema": "evidence-expiry/1",
-  "today": "2026-09-16",
+  "today": "2026-09-28",
   "ttl_days": 14,
   "warn_days": 7,
   "expired": [
@@ -11,25 +11,15 @@
       "point": "1-2",
       "evidence_date": "2026-08-29",
       "expire_date": "2026-09-12",
-      "days_over": 4
+      "days_over": 16
     },
-    {
-      "line": "1",
-      "line_name": "桌面端",
-      "point": "1-8",
-      "evidence_date": "2026-08-29",
-      "expire_date": "2026-09-12",
-      "days_over": 4
-    }
-  ],
-  "expiring": [
     {
       "line": "10",
       "line_name": "资本循环",
       "point": "10-3",
       "evidence_date": "2026-09-05",
       "expire_date": "2026-09-19",
-      "days_left": 3
+      "days_over": 9
     },
     {
       "line": "11",
@@ -37,7 +27,7 @@
       "point": "11-1",
       "evidence_date": "2026-09-08",
       "expire_date": "2026-09-22",
-      "days_left": 6
+      "days_over": 6
     },
     {
       "line": "11",
@@ -45,7 +35,7 @@
       "point": "11-2",
       "evidence_date": "2026-09-08",
       "expire_date": "2026-09-22",
-      "days_left": 6
+      "days_over": 6
     },
     {
       "line": "18",
@@ -53,7 +43,7 @@
       "point": "18-1",
       "evidence_date": "2026-09-08",
       "expire_date": "2026-09-22",
-      "days_left": 6
+      "days_over": 6
     },
     {
       "line": "2",
@@ -61,7 +51,7 @@
       "point": "2-1",
       "evidence_date": "2026-09-08",
       "expire_date": "2026-09-22",
-      "days_left": 6
+      "days_over": 6
     },
     {
       "line": "2",
@@ -69,7 +59,7 @@
       "point": "2-2",
       "evidence_date": "2026-09-08",
       "expire_date": "2026-09-22",
-      "days_left": 6
+      "days_over": 6
     },
     {
       "line": "2",
@@ -77,7 +67,7 @@
       "point": "2-7",
       "evidence_date": "2026-09-08",
       "expire_date": "2026-09-22",
-      "days_left": 6
+      "days_over": 6
     },
     {
       "line": "7",
@@ -85,7 +75,7 @@
       "point": "7-1",
       "evidence_date": "2026-09-08",
       "expire_date": "2026-09-22",
-      "days_left": 6
+      "days_over": 6
     },
     {
       "line": "7",
@@ -93,7 +83,7 @@
       "point": "7-2",
       "evidence_date": "2026-09-05",
       "expire_date": "2026-09-19",
-      "days_left": 3
+      "days_over": 9
     },
     {
       "line": "7",
@@ -101,7 +91,7 @@
       "point": "7-3",
       "evidence_date": "2026-09-08",
       "expire_date": "2026-09-22",
-      "days_left": 6
+      "days_over": 6
     },
     {
       "line": "8",
@@ -109,7 +99,7 @@
       "point": "8-1",
       "evidence_date": "2026-09-05",
       "expire_date": "2026-09-19",
-      "days_left": 3
+      "days_over": 9
     },
     {
       "line": "8",
@@ -117,7 +107,7 @@
       "point": "8-2",
       "evidence_date": "2026-09-06",
       "expire_date": "2026-09-20",
-      "days_left": 4
+      "days_over": 8
     },
     {
       "line": "8",
@@ -125,7 +115,7 @@
       "point": "8-3",
       "evidence_date": "2026-09-06",
       "expire_date": "2026-09-20",
-      "days_left": 4
+      "days_over": 8
     },
     {
       "line": "8",
@@ -133,7 +123,7 @@
       "point": "8-4",
       "evidence_date": "2026-09-06",
       "expire_date": "2026-09-20",
-      "days_left": 4
+      "days_over": 8
     },
     {
       "line": "9",
@@ -141,9 +131,19 @@
       "point": "9-2",
       "evidence_date": "2026-09-08",
       "expire_date": "2026-09-22",
-      "days_left": 6
+      "days_over": 6
     }
   ],
-  "scanned_points": 41,
+  "expiring": [
+    {
+      "line": "1",
+      "line_name": "桌面端",
+      "point": "1-1",
+      "evidence_date": "2026-09-16",
+      "expire_date": "2026-09-30",
+      "days_left": 2
+    }
+  ],
+  "scanned_points": 63,
   "note": "只预警不改判分（判分唯 calc-progress.py）。expired=已过 TTL; expiring=剩余 ≤ warn_days（下个重跑周期内过期）。仅 TTL 时间维度; modules git 变更类失效由 calc 判（stale 态），不在此重复。"
 }

@@ -14,10 +14,16 @@
     "task-state/D935.json"
   ],
   "impl": "4015ab66",
-  "audit": null,
+  "audit": {
+    "verdict": "PASS",
+    "auditor": "kimi-k3",
+    "report": "docs/synova/audit-reports/2026-09-24-K3-批次2-D918-D936.md",
+    "date": "2026-09-24",
+    "summary": "纯新增 presets→mac（ownership.yaml:148+CODEOWNERS 再生成+判别夹具）；机器裁决翻转实测；既有归属零改动；D931 写集转绿"
+  },
   "fix_task_id": null,
   "updated_at": "2026-09-24",
-  "updated_by": "synova-squad-lead",
+  "updated_by": "kimi-k3",
   "domain": "mac",
   "owner": "synova-squad-lead",
   "executor": "d935-encoder",

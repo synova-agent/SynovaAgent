@@ -2,12 +2,28 @@ name: CI �� SynovaAgent
 
 on:
   push:
-    branches: [main, feat/*]
+    # N12 根治（D1014）: 去掉 feat/* —— 每次 feature push 都跑全量 CI 是队列放大器。
+    # 依赖 push 的检查改为「开/更新 PR 时触发」（pull_request 面已覆盖）。
+    branches: [main]
   pull_request:
     branches: [main]
+    # D1014 ⒞: 触发类型显式化（原为默认 opened/synchronize/reopened + 新增 ready_for_review）
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# N12 根治（D1014 · CTO 已批）: 同 workflow + 同 ref 只保留最新一条 run。
+# 依据: 全仓此前 concurrency = 0 ⇒ 同分支反复 push 无限排队（实测 feat/d962-2a-merge 独占 18 条，
+# 全队列一度 38 queued 不消费）。cancel-in-progress 让"新 run 取消旧 run"。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   quality:
+    # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-09-26T04:47:47+08:00；
+    # 公式 = max(P95×1.5, 中位数×3)）：audit 1 / Test-Kit(ubuntu) 1 / Golden Case 1 /
+    # Gate Integrity 1 / Test-Kit(windows) 2 / Architecture 6 / Checker Review 6 /
+    # Integration 6 / TypeScript+Iron Laws 6 / Vitest 8 / Control Tower(ubuntu) 14 / (windows) 106。
+    timeout-minutes: 6
     name: TypeScript + Lint + Iron Laws
     runs-on: ubuntu-latest
     steps:
@@ -20,8 +36,16 @@ jobs:
       # 注: main push 合并后 diff 为空 → 按纯文档跳过（PR 门已验证，避免空跑）。
       - name: Detect docs-only change (D515)
         id: docsonly
+        shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
-          if git diff --name-only origin/main...HEAD | grep -qvE '\.(md|json)$|task-state/|\.claude/'; then
+          # 白名单锚定分层（有意设计，勿"统一锚点"）:
+          #   无锚点（\.(md|json)$ / task-state/ / \.claude/）= 任意深度匹配；带 ^…$
+          #   （^\.gitignore$ / ^LICENSE$ / ^\.gitkeep$）= 仅仓库根匹配。理由: 文档类可在任意
+          #   子目录（docs/a/b.md 须放行）；根级治理文件只应在根，收进任意深度会误放同名子目录文件。
+          # D1023/P1 修: .gitattributes/.gitmodules 移出白名单 —— .gitattributes 是 CI 运行时
+          #   语义载体（*.sh eol=lf、merge=union、scripts/audit/** -text），改它即改 CI 本身
+          #   须走全量；.gitmodules 仓库不存在，留着 = 新增子模块+文档即零验证入库。
+          if git diff --name-only origin/main...HEAD | grep -qvE '\.(md|json)$|task-state/|\.claude/|^\.gitignore$|^LICENSE$|^\.gitkeep$'; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
@@ -103,6 +127,11 @@ jobs:
             --base origin/main --head HEAD --branch "${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
 
   test:
+    # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-09-26T04:47:47+08:00；
+    # 公式 = max(P95×1.5, 中位数×3)）：audit 1 / Test-Kit(ubuntu) 1 / Golden Case 1 /
+    # Gate Integrity 1 / Test-Kit(windows) 2 / Architecture 6 / Checker Review 6 /
+    # Integration 6 / TypeScript+Iron Laws 6 / Vitest 8 / Control Tower(ubuntu) 14 / (windows) 106。
+    timeout-minutes: 8
     name: Vitest (${{ matrix.shard }})
     needs: quality
     runs-on: ubuntu-latest
@@ -113,10 +142,26 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Detect docs-only change (D515)
+        id: docsonly
+        shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
+        run: |
+          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          # 白名单锚定分层有意（无锚点=任意深度 / ^…$=仅根）；详注见第 1 个 Detect docs-only 步骤（D1023/P1）
+          elif git diff --name-only origin/main...HEAD | grep -qvE '\.(md|json)$|task-state/|\.claude/|^\.gitignore$|^LICENSE$|^\.gitkeep$'; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-node@v4
+        if: steps.docsonly.outputs.docs_only != 'true'
         with: { node-version: '20', cache: 'npm' }
       - run: npm ci
+        if: steps.docsonly.outputs.docs_only != 'true'
       - name: Run tests
+        if: steps.docsonly.outputs.docs_only != 'true'
         env:
           NO_COLOR: "1"
         run: |
@@ -161,21 +206,50 @@ jobs:
           exit 1
 
   architecture:
+    # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-09-26T04:47:47+08:00；
+    # 公式 = max(P95×1.5, 中位数×3)）：audit 1 / Test-Kit(ubuntu) 1 / Golden Case 1 /
+    # Gate Integrity 1 / Test-Kit(windows) 2 / Architecture 6 / Checker Review 6 /
+    # Integration 6 / TypeScript+Iron Laws 6 / Vitest 8 / Control Tower(ubuntu) 14 / (windows) 106。
+    timeout-minutes: 6
     name: Architecture Check
     runs-on: ubuntu-latest
     env:
       SYNO_CI: "1"  # CT-64: 与 TypeScript job 对齐——check-architecture.sh 在 CI 也走严格模式（棘轮基线内不阻断，新增才阻断）
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect docs-only change (D515)
+        id: docsonly
+        shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
+        run: |
+          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          # 白名单锚定分层有意（无锚点=任意深度 / ^…$=仅根）；详注见第 1 个 Detect docs-only 步骤（D1023/P1）
+          elif git diff --name-only origin/main...HEAD | grep -qvE '\.(md|json)$|task-state/|\.claude/|^\.gitignore$|^LICENSE$|^\.gitkeep$'; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-node@v4
+        if: steps.docsonly.outputs.docs_only != 'true'
         with: { node-version: '20', cache: 'npm' }
       - run: npm ci
+        if: steps.docsonly.outputs.docs_only != 'true'
       - name: Layer boundary check
+        if: steps.docsonly.outputs.docs_only != 'true'
         run: bash scripts/check-architecture.sh
       - name: GraphStore compatibility
+        if: steps.docsonly.outputs.docs_only != 'true'
         run: npx vitest run tests/architecture/
 
   test-kit-architecture:
+    # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-09-26T04:47:47+08:00；
+    # 公式 = max(P95×1.5, 中位数×3)）：audit 1 / Test-Kit(ubuntu) 1 / Golden Case 1 /
+    # Gate Integrity 1 / Test-Kit(windows) 2 / Architecture 6 / Checker Review 6 /
+    # Integration 6 / TypeScript+Iron Laws 6 / Vitest 8 / Control Tower(ubuntu) 14 / (windows) 106。
+    timeout-minutes: ${{ matrix.os == 'windows-latest' && 2 || 1 }}
     name: Test-Kit Architecture Tests (${{ matrix.os }})
     # D565 (K3 D489 批 P1, M3 家族): packages/test-kit 是独立 package（自带 lock，
     # 不在 root workspaces）——root Vitest/Architecture job 结构性覆盖不到它，
@@ -187,12 +261,30 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect docs-only change (D515)
+        id: docsonly
+        shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
+        run: |
+          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          # 白名单锚定分层有意（无锚点=任意深度 / ^…$=仅根）；详注见第 1 个 Detect docs-only 步骤（D1023/P1）
+          elif git diff --name-only origin/main...HEAD | grep -qvE '\.(md|json)$|task-state/|\.claude/|^\.gitignore$|^LICENSE$|^\.gitkeep$'; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-node@v4
+        if: steps.docsonly.outputs.docs_only != 'true'
         with: { node-version: '20', cache: 'npm' }
       - name: Install test-kit deps
+        if: steps.docsonly.outputs.docs_only != 'true'
         working-directory: packages/test-kit
         run: npm ci
       - name: Run ratchet baseline test (05-as-any-audit)
+        if: steps.docsonly.outputs.docs_only != 'true'
         working-directory: packages/test-kit
         run: npx vitest run tests/architecture/05-as-any-audit.test.ts
       # D565 登记: architecture 套件余 4 文件（01/02/04）存量红（wiring-audit 引用已
@@ -200,6 +292,13 @@ jobs:
       # （CT-51 队列），修复一个入列一个；全绿后本 job 收敛为跑全目录。
 
   control-tower-tests:
+    # T3 止血（CTO 已批）：job/step 级 timeout-minutes。
+    # 基线声明 = **只取 success**；n=12 / 中位数 35.2min / P95 38.5min /
+    # as_of=2026-09-26T04:47:47+08:00 / 公式 = max(P95×1.5, 中位数×3)
+    #   ⇒ max(38.5×1.5, 35.2×3) = max(57.75, 105.6) = 105.6 ⇒ 取整 106（windows）。
+    # ubuntu 分支同表：中位数 274s / P95 301s ⇒ max(451.5, 822) = 822s ⇒ 14min。
+    # 关键 step「Run hermetic control-tower gate tests」= 60min（windows）/ 13min（ubuntu，须 < job 级 14）。
+    timeout-minutes: ${{ matrix.os == 'windows-latest' && 106 || 14 }}
     name: Control Tower Gate Tests (${{ matrix.os }})
     # D520/任务2: 双平台矩阵——平台问题（CRLF/python3/路径）不再等 Win 实测暴露。
     strategy:
@@ -211,7 +310,23 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # D520: verify-parallel 豁免逻辑依赖 origin/main ref（depth=1 时缺失→误红）
+      - name: Detect docs-only change (D515)
+        id: docsonly
+        shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
+        run: |
+          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          # 白名单锚定分层有意（无锚点=任意深度 / ^…$=仅根）；详注见第 1 个 Detect docs-only 步骤（D1023/P1）
+          elif git diff --name-only origin/main...HEAD | grep -qvE '\.(md|json)$|task-state/|\.claude/|^\.gitignore$|^LICENSE$|^\.gitkeep$'; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+          fi
       - name: Run hermetic control-tower gate tests
+        # T3: step 级 timeout（CTO 定值 60min on windows）；ubuntu 取 13（须 < 其 job 级 14）。
+        timeout-minutes: ${{ matrix.os == 'windows-latest' && 60 || 13 }}
+        if: steps.docsonly.outputs.docs_only != 'true'
         shell: bash
         # 密封测试扩容（D520）：原 5 个（U2/U4/U5a/U5c/U7）+ D515/D520 新增的
         # mktemp/注入缝密封测试。其余测试依赖 git 历史/运行时数据，非密封，
@@ -251,9 +366,11 @@ jobs:
             tests/control-tower/verify-parallel-ci.test.sh \
             tests/control-tower/alloc-task-id.test.sh \
             tests/control-tower/alloc-task-id-lock.test.sh \
+            tests/control-tower/check-name-allocation.test.sh \
             tests/control-tower/check-gitlinks.test.sh \
             tests/control-tower/grep-oP-regression.test.sh \
             tests/control-tower/scan-fullwidth-vars.test.sh \
+            tests/control-tower/gate-failopen-net.test.sh \
             tests/control-tower/merge_writeset_gate.test.sh \
             tests/control-tower/ci-ratchet-base.test.sh \
             tests/control-tower/verify-doc.test.sh \
@@ -265,15 +382,34 @@ jobs:
             tests/doc-system/generate-chronicle-monthly.test.sh \
             tests/control-tower/check-citations.test.sh \
             tests/control-tower/check-progress-freshness.test.sh \
+            tests/control-tower/check-preset-bundles.test.sh \
             tests/control-tower/check-dsh-anchor.test.sh \
+            tests/control-tower/check-gate-integrity.test.sh \
             tests/control-tower/check-k3-report.test.sh \
-            tests/control-tower/install-dsh-preset.test.sh; do
+            tests/control-tower/daily-cto-board-ratio.test.sh \
+            tests/control-tower/install-dsh-preset.test.sh \
+            tests/control-tower/d956-failmsg.test.sh; do
             echo "── $t"
             # D526: 测试失败输出进 ::error 注解——无 token 也能经 annotations 定位（D521 工具1 语义）
             if ! bash "$t" > /tmp/ct-out.log 2>&1; then
               echo "FAIL: $t"
-              MSG=$(tail -8 /tmp/ct-out.log | tr '\n' '|' | tr -d '%' | cut -c1-450)
+              # D956-MSG-START（夹具 tests/control-tower/d956-failmsg.test.sh 按此标记提取本段做行为断言，改格式须同步夹具）
+              # D956①: 失败断言行优先入窗——FAIL|❌|not ok 命中行先入，不被 tail 窗挤掉
+              HITS=$(grep -E 'FAIL|❌|not ok' /tmp/ct-out.log 2>/dev/null | head -4 || true)
+              TAILW=$(tail -8 /tmp/ct-out.log 2>/dev/null || true)
+              RAW=$(printf '%s\n%s' "$HITS" "$TAILW" | grep -v '^$' | awk '!seen[$0]++' | tr '\n' '|' | tr -d '%')
+              # D956②: 字符级截断（原 cut -c1-450 按字节，中文≈150 字即断）+ 截断自报
+              MSG="$RAW"
+              if [ "${#RAW}" -gt 450 ]; then
+                MSG="${RAW:0:400}…[truncated; full log: /tmp/ct-out.log + job raw output]"
+              fi
+              # D956③: 三态——构造失败/空日志 ⇒ 显式降级注解，不静默通过（FAIL=1 已设）
+              if [ -z "$MSG" ]; then
+                MSG="[D956-degraded] annotation-construction-empty; full log: /tmp/ct-out.log + job raw output"
+                echo "::warning title=D956::$t 注解构造降级（空日志或 grep 不可用）"
+              fi
               echo "::error title=$t::$MSG"
+              # D956-MSG-END
               FAIL=1
             fi
           done
@@ -289,17 +425,45 @@ jobs:
           exit $FAIL
 
   integration-check:
+    # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-09-26T04:47:47+08:00；
+    # 公式 = max(P95×1.5, 中位数×3)）：audit 1 / Test-Kit(ubuntu) 1 / Golden Case 1 /
+    # Gate Integrity 1 / Test-Kit(windows) 2 / Architecture 6 / Checker Review 6 /
+    # Integration 6 / TypeScript+Iron Laws 6 / Vitest 8 / Control Tower(ubuntu) 14 / (windows) 106。
+    timeout-minutes: 6
     name: Integration Contract Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect docs-only change (D515)
+        id: docsonly
+        shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
+        run: |
+          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          # 白名单锚定分层有意（无锚点=任意深度 / ^…$=仅根）；详注见第 1 个 Detect docs-only 步骤（D1023/P1）
+          elif git diff --name-only origin/main...HEAD | grep -qvE '\.(md|json)$|task-state/|\.claude/|^\.gitignore$|^LICENSE$|^\.gitkeep$'; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-node@v4
+        if: steps.docsonly.outputs.docs_only != 'true'
         with: { node-version: '20', cache: 'npm' }
       - run: npm ci
+        if: steps.docsonly.outputs.docs_only != 'true'
       - name: L1+L2 integration checks
+        if: steps.docsonly.outputs.docs_only != 'true'
         run: bash scripts/workflow/check-integration.sh
 
   checker-review:
+    # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-09-26T04:47:47+08:00；
+    # 公式 = max(P95×1.5, 中位数×3)）：audit 1 / Test-Kit(ubuntu) 1 / Golden Case 1 /
+    # Gate Integrity 1 / Test-Kit(windows) 2 / Architecture 6 / Checker Review 6 /
+    # Integration 6 / TypeScript+Iron Laws 6 / Vitest 8 / Control Tower(ubuntu) 14 / (windows) 106。
+    timeout-minutes: 6
     name: Checker Review (maker/checker)
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/feat/')
@@ -307,15 +471,37 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Detect docs-only change (D515)
+        id: docsonly
+        shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
+        run: |
+          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          # 白名单锚定分层有意（无锚点=任意深度 / ^…$=仅根）；详注见第 1 个 Detect docs-only 步骤（D1023/P1）
+          elif git diff --name-only origin/main...HEAD | grep -qvE '\.(md|json)$|task-state/|\.claude/|^\.gitignore$|^LICENSE$|^\.gitkeep$'; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-node@v4
+        if: steps.docsonly.outputs.docs_only != 'true'
         with: { node-version: '20', cache: 'npm' }
       - run: npm ci
+        if: steps.docsonly.outputs.docs_only != 'true'
       - name: Run checker review
+        if: steps.docsonly.outputs.docs_only != 'true'
         run: bash scripts/checker-review.sh
       - name: Brief vs Code consistency
+        if: steps.docsonly.outputs.docs_only != 'true'
         run: bash scripts/workflow/check-brief-vs-code.sh --strict || true
 
   audit:
+    # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-09-26T04:47:47+08:00；
+    # 公式 = max(P95×1.5, 中位数×3)）：audit 1 / Test-Kit(ubuntu) 1 / Golden Case 1 /
+    # Gate Integrity 1 / Test-Kit(windows) 2 / Architecture 6 / Checker Review 6 /
+    # Integration 6 / TypeScript+Iron Laws 6 / Vitest 8 / Control Tower(ubuntu) 14 / (windows) 106。
+    timeout-minutes: 1
     name: npm audit
     runs-on: ubuntu-latest
     # 2026-08-16 创始人裁决豁免（台账登记）：33 漏洞（32 high/1 critical）在 node-gyp
@@ -324,18 +510,187 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect docs-only change (D515)
+        id: docsonly
+        shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
+        run: |
+          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          # 白名单锚定分层有意（无锚点=任意深度 / ^…$=仅根）；详注见第 1 个 Detect docs-only 步骤（D1023/P1）
+          elif git diff --name-only origin/main...HEAD | grep -qvE '\.(md|json)$|task-state/|\.claude/|^\.gitignore$|^LICENSE$|^\.gitkeep$'; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+          fi
       - run: npm audit --audit-level=high || echo "npm audit 已豁免 (2026-08-16 创始人裁决, 见台账)"
+        if: steps.docsonly.outputs.docs_only != 'true'
 
   golden-case:
+    # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-09-26T04:47:47+08:00；
+    # 公式 = max(P95×1.5, 中位数×3)）：audit 1 / Test-Kit(ubuntu) 1 / Golden Case 1 /
+    # Gate Integrity 1 / Test-Kit(windows) 2 / Architecture 6 / Checker Review 6 /
+    # Integration 6 / TypeScript+Iron Laws 6 / Vitest 8 / Control Tower(ubuntu) 14 / (windows) 106。
+    timeout-minutes: 1
     name: Golden Case F1 Gate
     needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect docs-only change (D515)
+        id: docsonly
+        shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
+        run: |
+          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          # 白名单锚定分层有意（无锚点=任意深度 / ^…$=仅根）；详注见第 1 个 Detect docs-only 步骤（D1023/P1）
+          elif git diff --name-only origin/main...HEAD | grep -qvE '\.(md|json)$|task-state/|\.claude/|^\.gitignore$|^LICENSE$|^\.gitkeep$'; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-node@v4
+        if: steps.docsonly.outputs.docs_only != 'true'
         with: { node-version: '22', cache: 'npm' }
       - run: npm ci
+        if: steps.docsonly.outputs.docs_only != 'true'
       - name: Run golden case F1 gate
+        if: steps.docsonly.outputs.docs_only != 'true'
         run: npx tsx scripts/ci/golden-case-checker.ts
       - name: Run diagnosis quality check
+        if: steps.docsonly.outputs.docs_only != 'true'
         run: bash scripts/ci/diagnosis-quality-check.sh
+
+  # ── M9 门禁完整性：三件套接线（task-5 检查器 + task-6 夹具/基线表；本 job 由 task-6 登记）──
+  # 三步各堵一类洞，缺一步即门禁有洞（B 模式口径：登记 gate 判 = 路径出现在 ci.yml **全文**，
+  #   含本 job 的 run: 行；重型夹具不入 canary 密封清单，避免 canary 运行时长翻倍）：
+  #   step 1 = 检查器本体（模式哨兵 + 登记 gate；本地/CI 同一条命令）
+  #   step 2 = 注入夹具**抽检**（组 1/2/7/12 + 绿基线；全量由 SYNO_PRE_COMMIT_INJECT_FULL=1
+  #            人工或夜间触发——全量 ≈ 12 组 ×1 次 pre-commit，副本内实测 ~4s/次）
+  #   step 3 = CI 既有红基线对账（--ci-reds /tmp/checkruns.json），取数 fail-closed
+  gate-integrity:
+    # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-09-26T04:47:47+08:00；
+    # 公式 = max(P95×1.5, 中位数×3)）：audit 1 / Test-Kit(ubuntu) 1 / Golden Case 1 /
+    # Gate Integrity 1 / Test-Kit(windows) 2 / Architecture 6 / Checker Review 6 /
+    # Integration 6 / TypeScript+Iron Laws 6 / Vitest 8 / Control Tower(ubuntu) 14 / (windows) 106。
+    timeout-minutes: 1
+    name: Gate Integrity (pattern sentinel + injection fixture + ci-reds)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 登记 gate/模式哨兵依赖 origin/main 与完整历史（同 control-tower-tests 口径）
+      # 棘轮语义（check-gate-integrity.sh 的 PATTERN-BASELINE 段，README 见该脚本头部）：
+      #   存量非法模式（如 scripts/pre-commit-check.sh:991 的 `^+++` 非法 ERE——组 7a 因此恒绿）
+      #   以「登记豁免 owner/expires」形式入 gate-integrity-baseline.txt → 修复未落地前不堵队列；
+      #   **未登记的新非法模式仍必红**；已登记条目过期或失效（模式已消失却未清理）→ exit 1。
+      #   棘轮只减不增：到期即强制清理，豁免不得续期式常驻。
+      - name: Detect docs-only change (D515)
+        id: docsonly
+        shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
+        run: |
+          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          # 白名单锚定分层有意（无锚点=任意深度 / ^…$=仅根）；详注见第 1 个 Detect docs-only 步骤（D1023/P1）
+          elif git diff --name-only origin/main...HEAD | grep -qvE '\.(md|json)$|task-state/|\.claude/|^\.gitignore$|^LICENSE$|^\.gitkeep$'; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Gate integrity pattern sentinel + registration gate
+        if: steps.docsonly.outputs.docs_only != 'true'
+        run: bash scripts/control-tower/check-gate-integrity.sh
+      # 抽检即注册（B 模式口径）——该行同时是"夹具在 CI 里无人执行"的反证。
+      - name: pre-commit groups injection fixture (sampled)
+        if: steps.docsonly.outputs.docs_only != 'true'
+        run: bash tests/control-tower/precommit-groups-injection.test.sh
+      # 取数失败必须让 step 失败（fail-closed，不静默放行）：豁免台账核对不到 = 既有红基线不可核。
+      - name: CI red baseline reconciliation (--ci-reds, fail-closed fetch)
+        if: steps.docsonly.outputs.docs_only != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          OUT=/tmp/checkruns.json
+          # D954（K3 定罪修复）: 对账对象 = **base**，不是当前提交。
+          #   旧取数 REF=head.sha → 该时刻同 SHA 多数 job 仍 in_progress（conclusion≠failure）
+          #   → 「失败检查 0 项」→ 棘轮从未被行使（同 SHA 终局实有 3 个 failure）。
+          #   base 是已定态集合，才可判定"有没有既有红"。
+          REF="${PR_BASE_SHA:-}"
+          if [ -z "$REF" ]; then
+            echo "── push 事件：base = origin/main（fetch 后解析）"
+            git fetch origin main --quiet 2>/dev/null || true   # swallow-ok: fetch 失败时下方 rev-parse 仍可命中既存 origin/main；两者皆失败 → fail-closed
+            REF="$(git rev-parse --verify --quiet 'origin/main^{commit}' 2>/dev/null || true)"
+          fi
+          if [ -z "$REF" ]; then
+            echo "::error title=ci-reds base::无法解析 base ref（PR base.sha 为空且 origin/main 不可解析）—— fail-closed，不静默放行"
+            exit 1
+          fi
+          echo "对账对象 base = ${REF}"
+          printf '%s\n' "$REF" > /tmp/ci-reds-base-ref.txt
+          URL="https://api.github.com/repos/${REPO}/commits/${REF}/check-runs?per_page=100"
+          AUTH=()
+          [ -n "${GH_TOKEN:-}" ] && AUTH=(-H "Authorization: Bearer ${GH_TOKEN}")
+          ok=0
+          for i in 1 2 3; do
+            echo "── check-runs 取数尝试 ${i}/3: ${URL}"
+            if curl -sS --fail --max-time 30 "${AUTH[@]+"${AUTH[@]}"}" \
+                 -H "Accept: application/vnd.github+json" \
+                 -H "X-GitHub-Api-Version: 2022-11-28" \
+                 -o "$OUT" "$URL"; then
+              ok=1
+              break
+            fi
+            echo "::warning title=ci-reds fetch::第 ${i} 次取数失败（最多 3 次，退避重试）"
+            sleep $((i * 5))
+          done
+          if [ "$ok" -ne 1 ]; then
+            echo "::error title=ci-reds fetch::check-runs 取数 3 次全失败 —— fail-closed，不静默放行（既有红基线无从核对）"
+            exit 1
+          fi
+          N=$(python3 -c "import json;print(len(json.load(open('$OUT')).get('check_runs',[])))")
+          if [ "$N" -eq 0 ]; then
+            echo "::warning title=ci-reds::${REF} 取到 0 条 check-runs（尚无检查记录）——基线核对为空集，不等于「已核对通过」"
+          fi
+          echo "check_runs=${N} (ref=${REF})"
+          bash scripts/control-tower/check-gate-integrity.sh --root "$PWD" --ci-reds /tmp/checkruns.json --base-ref "$REF"
+      # 证据步（M9 task-11）：判定已由前面 step 完成，本步只把关键行发布为 **可公开检索的注解**——
+      #   GitHub job logs 端点匿名 404/403（CTO 证据要求 ③ 的 CI GNU 侧原始输出取不回，K3 也核不了），
+      #   而注解有公开 API：GET /repos/{owner}/{repo}/check-runs/{id}/annotations（无需 token）。
+      #   `|| true` 仅限本步（判定归前一步）；`if: always()` 保证失败时同样出证据；注解 ≤10 行（GitHub 上限）。
+      - name: Publish gate-integrity summary (public evidence via annotations)
+        if: steps.docsonly.outputs.docs_only != 'true' && (always())
+        run: |
+          set -uo pipefail
+          # 证据步：判定已由前面 step 完成；此处只把关键行发布为可公开检索的注解
+          # 带上 --ci-reds + --base-ref（若取数成功），使 C 段对账结果与**对账对象身份**同样可公开检索；
+          # 缺文件则自然回落 SKIPPED（可见，不静默）。
+          ARGS=""
+          [ -f /tmp/checkruns.json ] && ARGS="--ci-reds /tmp/checkruns.json"
+          # D954: base ref 由前一步落盘（单一解析点）；缺失则不传 → 检查器出显式 SKIPPED（不伪造判定）
+          if [ -f /tmp/ci-reds-base-ref.txt ]; then
+            ARGS="$ARGS --base-ref $(cat /tmp/ci-reds-base-ref.txt)"
+          fi
+          OUT="$(bash scripts/control-tower/check-gate-integrity.sh --root "$PWD" $ARGS 2>&1 || true)"
+          # 取不到关键行时**可见但不断**（发布者不判红；真实判定见 step 1）——见下方 ::warning 分支
+          # D954: 「对账对象」行**优先占一个注解位**（注解 ≤10 条上限）——保证对账对象身份必然可公开检索，
+          #   不被 PATTERN/REGISTRY 等行的条数挤出（原实现 head -10 有被挤掉的风险）。
+          KEY="$(echo "$OUT" | grep -E '^对账对象 = ' | head -1 || true)"
+          REST="$(echo "$OUT" | grep -E '^(PATTERN-SENTINEL|PATTERN-BASELINE|CI-REGISTRY|CI-RED-CHECK|CI-RED-BASELINE|GATE-INTEGRITY):' | head -9 || true)"
+          LINES="$(printf '%s\n%s\n' "$KEY" "$REST" | grep -v '^$' | head -10 || true)"
+          if [ -z "$LINES" ]; then
+            echo "::warning title=gate-integrity::证据步未取到关键行（检查器可能未能执行）——发布者不判红；真实判定见 step 1"
+          else
+            echo "$LINES" | while IFS= read -r line; do
+              echo "::notice title=gate-integrity::$line"
+            done
+          fi
+

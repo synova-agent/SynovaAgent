@@ -1,0 +1,40 @@
+{
+  "task_id": "D945",
+  "title": "预设机制迁移（legacy 目录 → bundle 声明行）：仓库侧收口 + legacy 退役 + B3 夹具适配 + 一致性对账",
+  "status": "spec_done",
+  "risk": "high",
+  "domain": "mac",
+  "owner": "mac-coding",
+  "executor": "synova-squad-lead（小队队长）+ 成员（≤2 编码 + 1 自验）",
+  "milestone": "M0 项目管理基建",
+  "depends_on": [
+    "B3"
+  ],
+  "blocked": null,
+  "target": "2026-W40",
+  "spec": ".claude/task-briefs/2026-09-25-D945-preset-bundle-migration.md",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "write_set": [
+    "docs/synova/presets/synova-squad-lead/package.json",
+    "docs/synova/presets/synova-squad-lead/cordis.patch.yml",
+    "scripts/control-tower/check-preset-bundles.sh",
+    "tests/control-tower/check-preset-bundles.test.sh",
+    "scripts/control-tower/install-dsh-preset.sh",
+    "docs/synova/presets/install-squad-lead.sh",
+    "tests/control-tower/install-dsh-preset.test.sh",
+    ".github/workflows/ci.yml",
+    "docs/synova/product-lines/evidence/D945-preset-bundle/legacy-inventory.md",
+    "docs/synova/product-lines/evidence/D945-preset-bundle/consistency-report.md",
+    ".claude/task-briefs/2026-09-25-D945-preset-bundle-migration.md",
+    "task-state/D945.json",
+    "memory/notes/proposed/2026-09-25-d945-preset-bundle-migration.md",
+    "tests/control-tower/precommit-groups-injection.test.sh"
+  ],
+  "priority": 1,
+  "wip_rule": "WIP=1：本卡为当前唯一在制代码卡；C 段空转（D954）等 M9(#741) 合入 main 后另行开工",
+  "note": "范围按 CTO 2026-09-25 开工令收窄为四段：①仓库侧 bundle 化（安装器停写 legacy）②legacy 退役（只列清单+tar 备份，不删）③B3 夹具适配（T3/T3c 仍承重、T3b 仍负控）④bundle↔仓库源一致性对账（必须点名 squad-lead 的 delegation 残留 / agent-team 缺失）。运行时 bundle 迁移已于 2026-09-23 完成（16 条 bundles / 12 个 @local 已装），本卡做仓库侧收口。不动 ownership.yaml（CTO 单写者）、不删两处 home 的 legacy 目录、不碰 profiles/desktop/cordis.patch.yml。",
+  "updated_at": "2026-09-25",
+  "updated_by": "synova-squad-lead"
+}

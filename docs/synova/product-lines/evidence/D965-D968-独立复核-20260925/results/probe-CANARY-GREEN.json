@@ -1,0 +1,62 @@
+{
+  "label": "CANARY-GREEN",
+  "dbPath": "/tmp/verify-d965/db-A.db",
+  "loadSentinels": {
+    "count": 1,
+    "degraded": false,
+    "errors": []
+  },
+  "rows": [
+    {
+      "name": "canary-sentinel",
+      "entryPoint": "./computes/detect.ts",
+      "exportKey": "canarySentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 1,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 1,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 1,
+      "storeCounts": {},
+      "traversalCounts": {},
+      "storeCallTotal": 0,
+      "findingIds": [
+        "canary-green"
+      ],
+      "evidenceLens": [
+        1
+      ],
+      "edgeReadPrepare": 0,
+      "edgeReadPrepareFail": 0
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "arrayCount": 1,
+    "threwCount": 0,
+    "nonArrayCount": 0,
+    "zeroFindingsRaw": [],
+    "zeroFindingsUnpacked": [],
+    "zeroStoreCalls": [
+      "canary-sentinel"
+    ],
+    "unpackedNonZero": [
+      {
+        "name": "canary-sentinel",
+        "len": 1,
+        "ids": [
+          "canary-green"
+        ]
+      }
+    ],
+    "edgeReadPrepare": 0,
+    "edgeReadPrepareFailed": 0,
+    "edgeReadPrepareSucceeded": 0
+  }
+}

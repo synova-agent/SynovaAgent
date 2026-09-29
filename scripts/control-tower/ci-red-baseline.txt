@@ -1,0 +1,66 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# ci-red-baseline.txt — CI 既有红基线登记表（M9 task-6 建、task-9 扩到两类事件口径）
+#
+# 格式（冻结，勿改）: `#` 注释行 + 每条一行（数据行 5 个字段，分隔符 " | "）:
+#   CHECK_NAME | first_seen（YYYY-MM-DD） | evidence（引用） | owner（名或 UNASSIGNED） | expires（YYYY-MM-DD）
+#   ↑ 键名 = first_seen / evidence / owner / expires；值为上面的括号内容（数据行写作 <键>=<值>，见下方各行）
+#   值内不得出现 '|'；CHECK_NAME 必须与 check-runs API 返回的 name **逐字一致**（含全角括号/空格/大小写，不规范化）。
+#
+# 解析器约束（供对齐，实读 scripts/control-tower/check-gate-integrity.sh run_ci_reds）:
+#   · 数据行 = 上述格式；`#` 行忽略；行首/行尾 trim 后为空的行忽略
+#   · 匹配 = `grep -E -m1 "^<CHECK_NAME 正则转义>[[:space:]]*\|"` → CHECK_NAME 必须**行首逐字**
+#   · owner/expires 按**键取值**（不是字段序号）；缺 expires → 显式降级 exit 2（不静默当 0）
+#   · 判红口径 = 仅 conclusion == "failure" 计入"失败检查"；null/in_progress/skipped/neutral **不计**
+#   · 未登记的失败 → VIOLATION（红）；已登记且未过期 → 计入"基线命中"；expires < 今天 → VIOLATION（过期）
+#   · 棘轮只减不增：过期条目须修或延期；条目对应 job 转绿后应删除（否则成死条目，本文件当前不自动清理）
+#
+# 红 / 非红口径:
+#   红     = conclusion ∈ {failure, timed_out, cancelled, action_required, startup_failure}
+#            （解析器实际只消耗 failure；其余按未登记失败处理——宁红不放过）
+#   非红   = success / neutral / skipped；**未定态（conclusion=null / in-progress）单列说明，见段头注**
+#   基线语义 = "已登记且未到期的既有红**不作为新增**追责"；**未登记的红仍必红**。
+#
+# owner: 6 条中 5 条 UNASSIGNED —— **待 CTO 指派**（不自行认领，避免制造"归属已收口"的假象）；
+#   1 条 `Vitest (1/2)`（2026-09-25 增补）为 owner=CTO-Mac（按 CTO 派单指令登记）。
+# expires: 默认 = first_seen + 30 天；当前 5 条为 2026-10-24，`Vitest (1/2)` 为 2026-10-25（CTO 指令值）。
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ── [MAIN-PUSH] 段 —— main 分支 push 事件口径（保留既有 2 条） ─────────────────────
+# ⚠️ 分片名非确定（2026-09-25 增补注，不改判据）: `Vitest (N/2)` 的 N 由 vitest 分片决定，某文件落在哪个
+#   shard 不保证稳定 → **同一底层红**可能以 `(1/2)` 或 `(2/2)` 两种 check 名出现。故本段必须**两名并存**：
+#   `Vitest (2/2)`（f25e61eb 观测）+ `Vitest (1/2)`（PR base 0ab457f2 观测，2026-09-25 增补）。
+#   缺任一 → 对账在该分片配置下必报「未登记 CI 失败」。根治 = 分片名归一化（去 `/N` 后缀或按家族匹配），
+#   属**判据语义变更，须过 K3，另立卡**，不在本卡做。
+#   实测对照（PR base 0ab457f2336df22de2511e3c635c439c9927c4b2，check-runs API）:
+#     `Vitest (1/2)` = failure（→ 解析器计入，故本卡必须登记）
+#     `Vitest (2/2)` = cancelled（**非 failure → 解析器不计**，故既有条目此刻不被消耗，属正常不矛盾）
+# 口径: GET /repos/tangbaobao520/SynovaAgent/commits/<main-tip>/check-runs?per_page=100（事件类型 = push → main）
+# 取数: main tip = f25e61eb105690359dbe13baf64695e5ff1748f0
+#   $ git ls-remote origin refs/heads/main   → f25e61eb105690359dbe13baf64695e5ff1748f0  refs/heads/main
+#   $ curl -sS --fail ".../commits/main/check-runs?per_page=100" -o /tmp/checkruns.json   → http_code=200
+#   $ python3 -c "import json;d=json.load(open('/tmp/checkruns.json'));print('total=%d'%len(d['check_runs']))"
+#     total_check_runs=20；conclusions={'failure': 2, 'skipped': 2, 'success': 16}
+# 截至时刻: 2026-09-24T18:16+08:00（`Vitest (1/2)` 条目 2026-09-25 增补，见其 evidence 内 started）　　条数: 3　　owner: 2 条 UNASSIGNED + 1 条 CTO-Mac
+产物新鲜度（generated_at > 3 天必红） | first_seen=2026-09-24 | evidence=check-runs API main f25e61eb, conclusion=failure, started=2026-09-24T06:31:55Z, https://github.com/tangbaobao520/SynovaAgent/actions/runs/35964932621/job/107521310524 | owner=UNASSIGNED | expires=2026-10-24
+Vitest (2/2) | first_seen=2026-09-24 | evidence=check-runs API main f25e61eb, conclusion=failure, started=2026-09-24T05:04:29Z, https://github.com/tangbaobao520/SynovaAgent/actions/runs/35958319035/job/107501294874 （同一现象在 ci.yml L150-156 已有既有记录 PLAN-main-vitest-preexisting-red：存量红放行须可见、须烧掉，不得长期依赖放行） | owner=UNASSIGNED | expires=2026-10-24
+Vitest (1/2) | first_seen=2026-09-24 | evidence=check-runs API PR base 0ab457f2336df22de2511e3c635c439c9927c4b2, conclusion=failure, started=2026-09-25T05:12:58Z, name 逐字对齐无规范化, https://github.com/tangbaobao520/SynovaAgent/actions/runs/36097388138/job/107952956055 （与上方 `Vitest (2/2)` **同一底层红** = tests/deploy/recovery-pack.test.ts 的 locale 中文断言；vitest 分片把该文件落在 shard 1 → check 名漂移为 (1/2)，故须两名并存——见段头注） | owner=CTO-Mac | expires=2026-10-25
+
+# ── [BRANCH/PR-PUSH] 段 —— 分支/PR push 事件口径（新增 3 条） ──────────────────────
+# 口径: GET /repos/tangbaobao520/SynovaAgent/commits/<base>/check-runs?per_page=100（事件类型 = push → feat/… 分支）
+# 取数: base = 94426c5b48ef04c3d11e4e4bea3ba3a6cd10e142（D938 分支 base，CTO 实测点）
+#   $ curl -sS --fail ".../commits/94426c5b48ef04c3d11e4e4bea3ba3a6cd10e142/check-runs?per_page=100" -o /tmp/d938runs.json
+#     total_check_runs=11；conclusions={'skipped': 2, 'success': 6, 'failure': 2, None: 1}
+#   $ curl -sS ".../commit/94426c5b.../checks"（commit checks 网页 = 独立于 REST 限流的第二条取数路径）
+#     实测 mtime = 2026-09-24 20:08:54 +0800（本机 stat 原始输出）
+#     TypeScript + Lint + Iron Laws             → "This job failed"
+#     Control Tower Gate Tests (ubuntu-latest)  → "This job failed"
+#     Control Tower Gate Tests (windows-latest) → "This job is in progress"
+# 截至时刻: 2026-09-24T20:10+08:00（API 快照 19:58:05 / checks 页 20:08:54，均本机实测）
+# 　　　　　条数: 3　　owner: 待 CTO 指派（当前 UNASSIGNED）
+# ⚠️ 观测注（不改登记、只记事实）: `Control Tower Gate Tests (windows-latest)` 两次独立观测
+#     （API 快照 19:58:05 / commit checks 页 20:08:54）均为 **未定态**（conclusion=null / in-progress），
+#     不是已定态的 failure。按 CTO 指令登记 3 条 → 它一旦转 failure 即被覆盖；
+#     **若其终局转 success，本条应删除**（本文件无自动清理：死条目不会被解析器判红，属已知卫生缺口）。
+TypeScript + Lint + Iron Laws | first_seen=2026-09-24 | evidence=check-runs API base 94426c5b, conclusion=failure, started=2026-09-24T11:50:19Z, job=107618889200, https://github.com/tangbaobao520/SynovaAgent/actions/runs/35995365564 | owner=UNASSIGNED | expires=2026-10-24
+Control Tower Gate Tests (ubuntu-latest) | first_seen=2026-09-24 | evidence=check-runs API base 94426c5b, conclusion=failure, started=2026-09-24T11:50:19Z, job=107618889115, https://github.com/tangbaobao520/SynovaAgent/actions/runs/35995365564 | owner=UNASSIGNED | expires=2026-10-24
+Control Tower Gate Tests (windows-latest) | first_seen=2026-09-24 | evidence=check-runs API base 94426c5b, conclusion=null(in-progress) at 2026-09-24T19:58:05+08:00 与提交 checks 页 20:08:54+08:00 (aria-label=This job is in progress), job=107618889188, https://github.com/tangbaobao520/SynovaAgent/actions/runs/35995365564 （未定态观测，见段头注） | owner=UNASSIGNED | expires=2026-10-24

@@ -1,18 +1,26 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════════════
-# install-dsh-preset.test.sh — DSH 预设一键安装脚本测试（P3: preset 落位 + 漂移检查）
+# install-dsh-preset.test.sh — DSH 预设一键安装脚本测试（D945: 载体 = profile bundle 层）
 #
 # 覆盖（铁律 48: 正常/降级/边界; 铁律 0-2: red→green）:
-#   1. 首次安装: 复制 standard 预设 + persona 行替换 + preset.yml 替换（正常）
+#   1. 首次安装: bundle 层落位（package.json + cordis.patch.yml）+ profile bundle 声明
+#      **且不写 legacy** `.agent-presets/`（正常）
 #   2. --check 安装后 → exit 0（正常）
-#   3. 已安装 persona 被改 → --check exit 1 + 点名文件（边界）
+#   3. 已安装 persona 被改 → --check exit 1 + 点名（边界）【T3/T3c 承重】
 #   4. 未安装 → --check exit 1 "未安装"（边界）
-#   5. 源预设无 persona 行 → exit 2 降级 + 显式日志（降级, D328: 不产出坏预设）
-#   6. DSH home 不可写 → exit 2 降级（降级）
+#   5. bundle 源缺 cordis.patch.yml → exit 2 降级 + 无半成品（降级, D328: 不产出坏 bundle）
+#   6. profile 不可写 → exit 2 降级（降级）
 #   7. 重复安装幂等 → 两次 exit 0, 最终状态一致（正常）
-#   8. 仓库 persona-block.yml 存在且以 "- id: persona" 开头（生产接线）
+#   8. 仓库 bundle 源可安装 + 声明行形态（生产接线, 非仅静态存在）
 #
-# 隔离: mktemp 沙箱 + --home/--standard-from 测试注入, 不碰真实 ~/.dsh。
+# D945 载体迁移（CTO 批准，2026-09-25）: 预设落位从 legacy `$DSH_HOME/.agent-presets/<id>/`
+#   改为 profile **bundle 层** `$PROFILE_DIR/node_modules/@local/dsh-preset-<id>/` +
+#   `package.json` 的 `dsh.profile.bundles[]` 声明。安装器 `--home`/`--standard-from`
+#   已成 **DEPRECATED（调用即 exit 2）**，改走 `--profile-dir`/`--bundle-src` + `SYNO_*` 缝。
+#   本夹具随之把 T1–T11 的载体假设从 legacy 目录换成 bundle 层（判据语义不变）。
+#
+# 隔离: mktemp 沙箱（fake profile + fake bundle 源 + fake legacy home）+ --profile-dir/
+#   --bundle-src 注入, **完全不碰真实 ~/.dsh**（SYNO_LEGACY_HOME 亦指向沙箱）。
 # 用法: bash tests/control-tower/install-dsh-preset.test.sh
 # 退出码: 0 = 全部通过
 #
@@ -45,7 +53,9 @@ SCRIPT_DIR="$(cd "$(dirname "$_self_path")" && pwd)"
 # 仓库定位：注入缝优先（元变异体在 /tmp 运行 → 指回真仓库）；缺省回落 BASH_SOURCE/../..
 REPO_DIR="${SYNO_IDP_REPO_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 INSTALL="$REPO_DIR/scripts/control-tower/install-dsh-preset.sh"
-DRAFT="$REPO_DIR/docs/synova/coordination/dsh-preset-draft"
+# D945: 仓库 bundle 源（文件驱动注册表：目录名 = 预设 id，package.json 声明 dsh.bundle.patch）
+BUNDLE_SRC_REAL="$REPO_DIR/docs/synova/presets"
+REAL_ID="synova-squad-lead"
 # 注入标记（**拼接构造**：夹具源码内不出现该标记的字面量 →
 #   仓库内 grep 该字面量命中 0；红证只存在于 /tmp 沙箱副本）
 MARKER="INJECTED""-RED"
@@ -129,27 +139,40 @@ sys.stdout.buffer.write(b"\n".join(lines[start:end]) + b"\n")
 PY
 }
 
-# ── 沙箱: fake DSH home + fake standard 预设 ──
+# ── 沙箱: fake profile（bundle 层根）+ fake 仓库 bundle 源 + fake legacy home ──
+#   D945: 三处都在 mktemp 内 → 真实 ~/.dsh* 与真实 profiles/desktop/ 零读写。
 TMP=$(mktemp -d /tmp/idp-preset.XXXXXX)
-HOME_MOCK="$TMP/dsh-home"
-STD_MOCK="$TMP/standard"
-mkdir -p "$HOME_MOCK" "$STD_MOCK"
+PROFILE_MOCK="$TMP/profile"
+BUNDLE_MOCK="$TMP/bundle-src"
+HOME_MOCK="$TMP/dsh-home"                 # legacy home（本脚本只读提示；绝不写）
+DEG_LOG="$TMP/degraded.log"
+mkdir -p "$PROFILE_MOCK/node_modules/@local" "$BUNDLE_MOCK" "$HOME_MOCK"
 trap 'rm -rf "$TMP"' EXIT
 
-# ── 平台能力探针: POSIX 权限位是否被强制（决定 T6 是否可判定）──
-PERM_PROBE="$TMP/perm-probe"
-mkdir -p "$PERM_PROBE"
-chmod 555 "$PERM_PROBE"
-if (touch "$PERM_PROBE/x") 2>/dev/null; then POSIX_PERM_ENFORCED=0; else POSIX_PERM_ENFORCED=1; fi   # swallow-ok: 探测型（平台是否强制 POSIX 权限位）；成败由 if/else 两分支显式处理，非静默吞错
-chmod 755 "$PERM_PROBE" 2>/dev/null || true
-rm -rf "$PERM_PROBE"
+# profile package.json —— bundle 选择器的声明面（dsh.profile.bundles）
+cat > "$PROFILE_MOCK/package.json" << 'JSON'
+{
+  "name": "fake-profile",
+  "private": true,
+  "dsh": { "profile": { "bundles": [] } }
+}
+JSON
 
-cat > "$STD_MOCK/preset.yml" << 'YAML'
-name: standard
-description: fake standard preset
-YAML
-cat > "$STD_MOCK/agent.cordis.yml" << 'YAML'
-# fake standard agent.cordis.yml
+# 仓库 bundle 源（文件驱动注册表：目录名 = 预设 id；package.json 声明 dsh.bundle.patch）
+MOCK_ID="synova-dsh"
+mkdir -p "$BUNDLE_MOCK/$MOCK_ID"
+cat > "$BUNDLE_MOCK/$MOCK_ID/package.json" << 'JSON'
+{
+  "name": "@local/dsh-preset-synova-dsh",
+  "version": "0.0.0",
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
+}
+JSON
+# patch 须满足安装器落位前校验: 含 `- insert:` 与 `    - id: preset-<id>`，且无 `- id: delegation`
+cat > "$BUNDLE_MOCK/$MOCK_ID/cordis.patch.yml" << 'YAML'
+- insert:
+    - id: preset-synova-dsh
+      name: '@local/dsh-preset-synova-dsh'
 - id: persona
   name: '@deepseek-ai/dsh-persona'
   config:
@@ -159,28 +182,52 @@ cat > "$STD_MOCK/agent.cordis.yml" << 'YAML'
   name: '@deepseek-ai/dsh-tool-bash'
 YAML
 
-RUN() { bash "$INSTALL" --home "$HOME_MOCK" --standard-from "$STD_MOCK" "$@"; }
-INSTALLED="$HOME_MOCK/.agent-presets/synova-dsh"
+RUN() { # 全部注入缝指向沙箱（含 SYNO_LEGACY_HOME）→ 不碰真实 ~/.dsh*
+  SYNO_LEGACY_HOME="$HOME_MOCK" SYNO_PRESET_DEGRADED_LOG="$DEG_LOG" \
+    bash "$INSTALL" --profile-dir "$PROFILE_MOCK" --bundle-src "$BUNDLE_MOCK" "$@"
+}
+INSTALLED="$PROFILE_MOCK/node_modules/@local/dsh-preset-$MOCK_ID"
+PATCH_FILE="$INSTALLED/cordis.patch.yml"          # 判据面载体（原 legacy agent.cordis.yml）
+SRC_PATCH="$BUNDLE_MOCK/$MOCK_ID/cordis.patch.yml"
+PROFILE_PKG="$PROFILE_MOCK/package.json"
 
-# ── T1: 首次安装（正常路径）──
+# ── 平台能力探针: POSIX 权限位是否被强制（决定 T6 是否可判定）──
+PERM_PROBE="$TMP/perm-probe"
+mkdir -p "$PERM_PROBE"
+chmod 555 "$PERM_PROBE"
+if (touch "$PERM_PROBE/x") 2>/dev/null; then POSIX_PERM_ENFORCED=0; else POSIX_PERM_ENFORCED=1; fi   # swallow-ok: 探测型（平台是否强制 POSIX 权限位）；成败由 if/else 两分支显式处理，非静默吞错
+chmod 755 "$PERM_PROBE" 2>/dev/null || true
+rm -rf "$PERM_PROBE"
+
+# 便捷: 造一个带合法 dsh.profile.bundles 的 profile（缺省空声明）
+make_profile() { # <dir>
+  mkdir -p "$1/node_modules/@local"
+  printf '{\n  "name": "sandbox-profile",\n  "private": true,\n  "dsh": { "profile": { "bundles": [] } }\n}\n' > "$1/package.json"
+}
+
+# ── T1: 首次安装（正常路径, bundle 层）──
 OUT1=$(RUN --install 2>&1)
 EXIT1=$?
 assert_exit "$EXIT1" 0 "T1: --install exit 0"
-[ -f "$INSTALLED/agent.cordis.yml" ] && pass "T1: agent.cordis.yml 已落位" || fail "T1: agent.cordis.yml 缺失"
-assert_grep "$INSTALLED/agent.cordis.yml" "SynovaAgent 仓库的 DeepSeek Harness" "T1: persona 已替换为仓库版"
-assert_grep "$INSTALLED/agent.cordis.yml" "tool-bash" "T1: 非 persona 行原样保留"
-assert_grep "$INSTALLED/preset.yml" "纪律模式" "T1: preset.yml 已替换为仓库版"
-[ -f "$INSTALLED/.synova-preset-version" ] && pass "T1: 版本标记已写" || fail "T1: 版本标记缺失"
+[ -f "$INSTALLED/package.json" ] && pass "T1: package.json 已落位" || fail "T1: package.json 缺失"
+[ -f "$INSTALLED/cordis.patch.yml" ] && pass "T1: cordis.patch.yml 已落位" || fail "T1: cordis.patch.yml 缺失"
+assert_grep "$PROFILE_PKG" "@local/dsh-preset-$MOCK_ID" "T1: bundle 声明已写入 profile package.json"
+cmp -s "$INSTALLED/cordis.patch.yml" "$SRC_PATCH" && pass "T1: patch 与仓库源逐字节一致" || fail "T1: patch 与仓库源不一致"
+[ ! -e "$HOME_MOCK/.agent-presets" ] && pass "T1: 未写 legacy .agent-presets/（D945 退役生效）" || fail "T1: 仍写 legacy（退役未生效）"
 
-# ── T11: devdoc 预设同步落位（多预设注册表, 2026-08-15 加入）──
-# D922（2026-09-23）: synova-devdoc 退役（创始人批准 B 案）→ T11 断言改为「退役语义」三件：
-#   ① 默认安装集**不再**装 devdoc（退役生效）② 退役在注册表以注释留痕（可逆）③ 能力已技能化保留
-DEVDOC_INSTALLED="$HOME_MOCK/.agent-presets/synova-devdoc"
-[ ! -f "$DEVDOC_INSTALLED/agent.cordis.yml" ] && pass "T11: devdoc 默认不再安装（退役生效）" || fail "T11: devdoc 仍被安装（退役未生效）"
-grep -qE '^# *synova-devdoc\|' "$REPO_DIR/scripts/control-tower/install-dsh-preset.sh" \
+# ── T11: devdoc 预设退役语义（D922 创始人批准 B 案；D945 改写为 bundle 载体）──
+# 三件: ① 默认集**不再**落位 devdoc ② 退役在注册表以注释留痕（可逆）
+#       ③ 能力已技能化保留；④ **显式请求退役 id → exit 1 + RETIRED**（新载体上的退役承重面）
+DEVDOC_INSTALLED="$PROFILE_MOCK/node_modules/@local/dsh-preset-synova-devdoc"
+[ ! -e "$DEVDOC_INSTALLED" ] && pass "T11: devdoc 默认不再落位（退役生效）" || fail "T11: devdoc 仍被落位（退役未生效）"
+grep -qE '^# *synova-devdoc\|' "$INSTALL" \
   && pass "T11: 退役在注册表留痕（注释行，可逆）" || fail "T11: 退役无留痕（不可逆）"
 RP="$REPO_DIR"; [ -f "$RP/.claude/skills/dev-doc-spec/SKILL.md" ] && [ -f "$RP/.dsh/skills/dev-doc-spec/SKILL.md" ] \
   && pass "T11: 能力技能化保留（dev-doc-spec 双写齐备）" || fail "T11: 能力未保留（skill 缺失）"
+OUT11R=$(RUN --check synova-devdoc 2>&1)
+EXIT11R=$?
+assert_exit "$EXIT11R" 1 "T11: 显式请求已退役 id → exit 1"
+echo "$OUT11R" | grep -q "RETIRED" && pass "T11: 输出点名 RETIRED（退役语义可见）" || fail "T11: 未点名 RETIRED"
 
 # ── T2: --check 安装后 → exit 0（正常）──
 OUT2=$(RUN --check 2>&1)
@@ -194,16 +241,16 @@ echo "$OUT2" | grep -qi "SYNC-OK" && pass "T2: 输出含 SYNC-OK" || fail "T2: �
 #   **面内前提耦合（B3 返工）**: 标记必须先落在判据面内（与 T3c 同源计数），否则 T3 的绿
 #   可能来自"整文件 EOL 变化/空行"等**非目标原因** → 此时 T3 不得记 PASS。
 T3_STATUS=PASS
-inject_persona_drift "$INSTALLED/agent.cordis.yml"
+inject_persona_drift "$PATCH_FILE"
 T3_INJECT_RC=$?
-MARKERS=$(extract_persona_probe "$INSTALLED/agent.cordis.yml" | tr -d '\r' | grep -c -- "$MARKER" || true)
+MARKERS=$(extract_persona_probe "$PATCH_FILE" | tr -d '\r' | grep -c -- "$MARKER" || true)
 OUT3=$(RUN --check 2>&1)
 EXIT3=$?
 assert_exit "$EXIT3" 1 "T3(承重): 结构锚注入 persona 漂移 → --check exit 1" || T3_STATUS=FAIL
-echo "$OUT3" | grep -q "agent.cordis.yml" && pass "T3(承重): 输出点名 agent.cordis.yml" || { T3_STATUS=FAIL; fail "T3(承重): 未点名漂移文件"; }
-echo "$OUT3" | grep -q "persona 与仓库 persona-block.yml 不一致" \
-  && pass "T3(承重): 漂移原因是 persona 内容不一致（非 EOL/结构类假漂移）" \
-  || { T3_STATUS=FAIL; fail "T3(承重): 漂移原因不是 persona 内容不一致（检查输出无该原因，疑为 EOL/结构类假漂移）"; }
+echo "$OUT3" | grep -q "cordis.patch.yml" && pass "T3(承重): 输出点名 cordis.patch.yml" || { T3_STATUS=FAIL; fail "T3(承重): 未点名漂移文件"; }
+echo "$OUT3" | grep -q "内容不一致" \
+  && pass "T3(承重): 漂移原因是内容不一致（非 EOL/结构类假漂移）" \
+  || { T3_STATUS=FAIL; fail "T3(承重): 漂移原因不是内容不一致（检查输出无该原因，疑为 EOL/结构类假漂移）"; }
 if [ "$MARKERS" -ge 1 ]; then
   pass "T3(承重): 面内前提成立（判据面内 ${MARKER} 计数=${MARKERS} ≥ 1）"
 else
@@ -211,7 +258,7 @@ else
   fail "T3(承重): 面内前提不成立（判据面内 ${MARKER} 计数=${MARKERS}）——本次 check_rc=${EXIT3} 的绿不作为通过依据"
 fi
 printf 'T3-STATUS: %s\n' "$T3_STATUS"
-echo "T3 LOAD-BEARING: inject=structural(块内) inject_rc=${T3_INJECT_RC} check_rc=${EXIT3} 面内计数=${MARKERS} 点名=$(printf '%s\n' "$OUT3" | grep -c 'agent.cordis.yml' || true) status=${T3_STATUS}"
+echo "T3 LOAD-BEARING: inject=structural(块内) inject_rc=${T3_INJECT_RC} check_rc=${EXIT3} 面内计数=${MARKERS} 点名=$(printf '%s\n' "$OUT3" | grep -c 'cordis.patch.yml' || true) status=${T3_STATUS}"
 
 # ── T3c（**承重 / LOAD-BEARING**）: 落点证明 —— 标记必须落在判据面（persona 块）内 ──
 #   失败时输出 **四段自证 dump**（ASCII 前缀 `T3C-DUMP-n:`，供 CI 注解公开检索）：
@@ -223,20 +270,20 @@ if [ "$T3C_STATUS" = "FAIL" ]; then
   # 每项 ≤5 行 / 每行 ≤200 字节（适配注解配额；完整版另落 step summary）
   echo "T3C-DUMP-1: python3=$(command -v python3 2>/dev/null || echo MISSING) version=$(python3 -V 2>&1 | cut -c1-120)"
   echo "T3C-DUMP-2: installed head -5 ↓"
-  head -5 "$INSTALLED/agent.cordis.yml" 2>/dev/null | cut -c1-200 | sed 's/^/T3C-DUMP-2: /'   # swallow-ok: 诊断转储（文件缺失则该段留空，dump 仍输出；不影响任何判据）
+  head -5 "$PATCH_FILE" 2>/dev/null | cut -c1-200 | sed 's/^/T3C-DUMP-2: /'   # swallow-ok: 诊断转储（文件缺失则该段留空，dump 仍输出；不影响任何判据）
   echo "T3C-DUMP-3: extract_persona_probe head -5 ↓"
-  extract_persona_probe "$INSTALLED/agent.cordis.yml" 2>&1 | head -5 | cut -c1-200 | sed 's/^/T3C-DUMP-3: /'
+  extract_persona_probe "$PATCH_FILE" 2>&1 | head -5 | cut -c1-200 | sed 's/^/T3C-DUMP-3: /'
   echo "T3C-DUMP-4: 标记行 od -c（前 32 字节）↓"
-  grep -a -m1 -- "$MARKER" "$INSTALLED/agent.cordis.yml" 2>/dev/null | od -c 2>/dev/null | head -2 | cut -c1-200 | sed 's/^/T3C-DUMP-4: /'   # swallow-ok: 诊断转储（探测型 grep：无命中=标记不在文件里，下一行显式打印命中数；非静默吞错）
-  echo "T3C-DUMP-4: 文件内标记命中=$(grep -a -c -- "$MARKER" "$INSTALLED/agent.cordis.yml" 2>/dev/null || echo 0)（0 = 标记根本没写进文件）"
+  grep -a -m1 -- "$MARKER" "$PATCH_FILE" 2>/dev/null | od -c 2>/dev/null | head -2 | cut -c1-200 | sed 's/^/T3C-DUMP-4: /'   # swallow-ok: 诊断转储（探测型 grep：无命中=标记不在文件里，下一行显式打印命中数；非静默吞错）
+  echo "T3C-DUMP-4: 文件内标记命中=$(grep -a -c -- "$MARKER" "$PATCH_FILE" 2>/dev/null || echo 0)（0 = 标记根本没写进文件）"
 fi
 printf 'T3c-STATUS: %s\n' "$T3C_STATUS"
 echo "T3c LOAD-BEARING: extract_persona 面内 ${MARKER}=${MARKERS}（期望 ${EXPECT_MARKERS}）→ 注入落在判据面内 status=${T3C_STATUS}"
 
 # ── M2（判别性元变异）: 注入插到**块外** → T3c 面内计数必须为 0（证明 T3c 对落点敏感）──
 RUN --install >/dev/null 2>&1
-inject_persona_drift "$INSTALLED/agent.cordis.yml" outside
-M2_MARKERS=$(extract_persona_probe "$INSTALLED/agent.cordis.yml" | tr -d '\r' | grep -c -- "$MARKER" || true)
+inject_persona_drift "$PATCH_FILE" outside
+M2_MARKERS=$(extract_persona_probe "$PATCH_FILE" | tr -d '\r' | grep -c -- "$MARKER" || true)
 if [ "$M2_MARKERS" -eq 0 ]; then
   pass "M2 判别性: 块外注入 → 判据面内计数 0（T3c 依赖真实落点，非恒真）"
 else
@@ -248,10 +295,10 @@ fi
 #   命中 0 → sed 空转 → --check 仍 exit 0。**本断言不是主判据**，只证明"旧判据失效"；
 #   承重 = T3（漂移被抓）+ T3c（落点在判据面内）。
 RUN --install >/dev/null 2>&1
-OLD_LITERAL_HITS=$(grep -c 'DeepSeek Harness 编码代理' "$INSTALLED/agent.cordis.yml" || true)
+OLD_LITERAL_HITS=$(grep -c 'DeepSeek Harness 编码代理' "$PATCH_FILE" || true)
 # 旧判据的字面量替换用 python3 落地（语义与旧 `sed -i 's/…/…/'` 等价；避开 BSD/GNU `-i` 语法分歧
 #   与失败分支的 stderr 噪音）。本断言要证明的只是"该字面量已不存在 → 替换空转 → 旧判据已死"。
-OLD_LITERAL='DeepSeek Harness 编码代理' NEW_LITERAL='被篡改的代理' TARGET="$INSTALLED/agent.cordis.yml" python3 - <<'PY'
+OLD_LITERAL='DeepSeek Harness 编码代理' NEW_LITERAL='被篡改的代理' TARGET="$PATCH_FILE" python3 - <<'PY'
 import os
 p = os.environ["TARGET"]
 s = open(p, encoding="utf-8").read()
@@ -265,56 +312,67 @@ RUN --install >/dev/null 2>&1    # 复原，供后续 T7 幂等断言
 
 # ── T4: 未安装 → --check exit 1（边界）──
 FRESH_HOME="$TMP/fresh-home"
-mkdir -p "$FRESH_HOME"
-OUT4=$(bash "$INSTALL" --home "$FRESH_HOME" --standard-from "$STD_MOCK" --check 2>&1)
+make_profile "$FRESH_HOME"
+OUT4=$(SYNO_LEGACY_HOME="$HOME_MOCK" SYNO_PRESET_DEGRADED_LOG="$DEG_LOG" \
+  bash "$INSTALL" --profile-dir "$FRESH_HOME" --bundle-src "$BUNDLE_MOCK" --check 2>&1)
 EXIT4=$?
 assert_exit "$EXIT4" 1 "T4: 未安装 --check exit 1"
 echo "$OUT4" | grep -q "未安装" && pass "T4: 输出含'未安装'提示" || fail "T4: 无未安装提示"
 
-# ── T5: 源预设无 persona 行 → exit 2 降级（降级, D328 三态）──
-BAD_STD="$TMP/bad-standard"
-mkdir -p "$BAD_STD"
-cat > "$BAD_STD/preset.yml" << 'YAML'
-name: standard
-YAML
-printf -- '- id: tool-bash\n  name: bash\n' > "$BAD_STD/agent.cordis.yml"
-OUT5=$(bash "$INSTALL" --home "$TMP/home5" --standard-from "$BAD_STD" --install 2>&1)
+# ── T5: bundle 源缺 cordis.patch.yml → exit 2 降级（降级, D328 三态: 不产出坏 bundle）──
+#   D945 形态变更: 原「standard 源无 persona 行」判据随 legacy 载体一并消失；
+#   等价承重面 = 落位前校验拒绝缺件/坏件（stage_bundle fail-closed）。
+BAD_SRC="$TMP/bad-bundle-src"
+mkdir -p "$BAD_SRC/synova-bad"
+cp "$BUNDLE_MOCK/$MOCK_ID/package.json" "$BAD_SRC/synova-bad/package.json"   # 只给 package.json，故意不给 patch
+BAD_PROFILE="$TMP/bad-profile"
+make_profile "$BAD_PROFILE"
+OUT5=$(SYNO_LEGACY_HOME="$HOME_MOCK" SYNO_PRESET_DEGRADED_LOG="$DEG_LOG" \
+  bash "$INSTALL" --profile-dir "$BAD_PROFILE" --bundle-src "$BAD_SRC" --install 2>&1)
 EXIT5=$?
-assert_exit "$EXIT5" 2 "T5: 无 persona 行 exit 2 (不产出坏预设)"
-echo "$OUT5" | grep -qi "degraded\|persona" && pass "T5: 降级有显式日志" || fail "T5: 降级无日志"
+assert_exit "$EXIT5" 2 "T5: bundle 源缺 patch → exit 2 (不产出坏 bundle)"
+echo "$OUT5" | grep -qi "degraded" && pass "T5: 降级有显式日志" || fail "T5: 降级无日志"
+[ ! -e "$BAD_PROFILE/node_modules/@local/dsh-preset-synova-bad" ] && pass "T5: 无半成品残留" || fail "T5: 半成品残留"
 
-# ── T6: DSH home 不可写 → exit 2 降级（降级；**POSIX 权限语义平台相关**）──
+# ── T6: profile 不可写 → exit 2 降级（降级；**POSIX 权限语义平台相关**）──
 #   平台能力探针: Windows/Git Bash 不强制 chmod 555（无 POSIX 权限位语义）→ 该断言不可判定，
 #   显式 SKIP 并写明原因（不静默当通过）；POSIX（macOS 本地 / ubuntu CI）仍为硬断言。
 if [ "$POSIX_PERM_ENFORCED" = "1" ]; then
   RO_HOME="$TMP/ro-home"
-  mkdir -p "$RO_HOME"
-  chmod 555 "$RO_HOME"
-  OUT6=$(bash "$INSTALL" --home "$RO_HOME/.agent-presets" --standard-from "$STD_MOCK" --install 2>&1)
+  make_profile "$RO_HOME"
+  # 落位真正写入的是 bundle 层 `node_modules/@local/`（staging 在此 mkdir）——
+  # 只 chmod 父目录 555 挡不住嵌套子目录写入（父目录只挡其直接子项的增删），故三层一并只读。
+  chmod 555 "$RO_HOME/node_modules/@local" "$RO_HOME/node_modules" "$RO_HOME"
+  OUT6=$(SYNO_LEGACY_HOME="$HOME_MOCK" SYNO_PRESET_DEGRADED_LOG="$DEG_LOG" \
+    bash "$INSTALL" --profile-dir "$RO_HOME" --bundle-src "$BUNDLE_MOCK" --install 2>&1)
   EXIT6=$?
-  chmod 755 "$RO_HOME"
-  assert_exit "$EXIT6" 2 "T6: home 不可写 exit 2"
+  chmod -R u+w "$RO_HOME" 2>/dev/null || true   # swallow-ok: 复原权限供 trap 清理；失败不改变 T6 判据（断言已取到 EXIT6）
+  assert_exit "$EXIT6" 2 "T6: profile 不可写 exit 2"
 else
-  skip "T6-SKIP-PLATFORM(no-posix-perm): 平台不强制 chmod 555 → home 不可写路径不可判定（Windows Git Bash）；POSIX/ubuntu 侧仍是硬断言"
+  skip "T6-SKIP-PLATFORM(no-posix-perm): 平台不强制 chmod 555 → profile 不可写路径不可判定（Windows Git Bash）；POSIX/ubuntu 侧仍是硬断言"
 fi
 
-# ── T9: DSH_INSTALL_DIR 环境探测路径（不注入 --standard-from, D370 fix: set -u unbound）──
-FAKE_INSTALL="$TMP/fake-install"
-mkdir -p "$FAKE_INSTALL/config/agent-presets/standard"
-cp "$STD_MOCK/preset.yml" "$FAKE_INSTALL/config/agent-presets/standard/preset.yml"
-cp "$STD_MOCK/agent.cordis.yml" "$FAKE_INSTALL/config/agent-presets/standard/agent.cordis.yml"
-OUT9=$(DSH_INSTALL_DIR="$FAKE_INSTALL" bash "$INSTALL" --home "$TMP/home9" --install 2>&1)
+# ── T9: SYNO_* 注入缝路径（等价于旧「DSH_INSTALL_DIR 环境探测」；不注入 CLI 参数）──
+#   D945: legacy 的 standard 源探测链（DSH_INSTALL_DIR / npm root -g / nvm）已随载体删除；
+#   替代承重面 = 仓库 bundle 源经 env 缝解析（与 --bundle-src 同语义，二者不可同时缺失）。
+PROF9="$TMP/home9-profile"
+make_profile "$PROF9"
+OUT9=$(SYNO_PRESET_REPO_DIR="$BUNDLE_MOCK" SYNO_PROFILE_DIR="$PROF9" \
+  SYNO_LEGACY_HOME="$HOME_MOCK" SYNO_PRESET_DEGRADED_LOG="$DEG_LOG" bash "$INSTALL" --install 2>&1)
 EXIT9=$?
-assert_exit "$EXIT9" 0 "T9: DSH_INSTALL_DIR 探测安装 exit 0"
-[ -f "$TMP/home9/.agent-presets/synova-dsh/agent.cordis.yml" ] \
-  && pass "T9: 探测路径产出预设" || fail "T9: 探测路径无产出"
+assert_exit "$EXIT9" 0 "T9: SYNO_* 注入缝（bundle 源 + profile）→ --install exit 0"
+[ -f "$PROF9/node_modules/@local/dsh-preset-$MOCK_ID/cordis.patch.yml" ] \
+  && pass "T9: 注入缝路径产出 bundle" || fail "T9: 注入缝路径无产出"
 
-# ── T10: 无任何探测命中 → exit 2 降级（D328: 不产出半成品）──
-# 受限 PATH（无 npm/basename 干扰, windows-compat 模式 2）保证探测确定性失败
-OUT10=$(env PATH="/usr/bin:/bin" DSH_INSTALL_DIR="$TMP/不存在" HOME=/nonexistent-home bash "$INSTALL" --home "$TMP/home10" --install 2>&1)
+# ── T10: bundle 源不可达 → exit 2 降级（D328: 不产出半成品）──
+#   受限 PATH（windows-compat 模式 2）保证无外部命令可救场；源目录不存在 → fail-closed。
+PROF10="$TMP/home10-profile"
+make_profile "$PROF10"
+OUT10=$(env PATH="/usr/bin:/bin" SYNO_PRESET_REPO_DIR="$TMP/不存在" SYNO_PROFILE_DIR="$PROF10" \
+  SYNO_LEGACY_HOME="$HOME_MOCK" SYNO_PRESET_DEGRADED_LOG="$DEG_LOG" bash "$INSTALL" --install 2>&1)
 EXIT10=$?
-assert_exit "$EXIT10" 2 "T10: 探测全失败 exit 2"
-[ ! -e "$TMP/home10/.agent-presets/synova-dsh" ] && pass "T10: 无半成品残留" || fail "T10: 半成品残留"
+assert_exit "$EXIT10" 2 "T10: bundle 源不可达 exit 2"
+[ ! -e "$PROF10/node_modules/@local/dsh-preset-$MOCK_ID" ] && pass "T10: 无半成品残留" || fail "T10: 半成品残留"
 
 # ── T7: 重复安装幂等（正常）──
 OUT7=$(RUN --install 2>&1)
@@ -323,12 +381,34 @@ assert_exit "$EXIT7" 0 "T7: 二次 --install exit 0"
 OUT7C=$(RUN --check 2>&1)
 assert_exit "$?" 0 "T7: 二次安装后 --check 仍 exit 0"
 
-# ── T8: 仓库 persona-block.yml 生产接线 ──
-if [ -f "$DRAFT/persona-block.yml" ] && head -1 "$DRAFT/persona-block.yml" | grep -q -- "- id: persona"; then
-  pass "T8: persona-block.yml 存在且首行 - id: persona（安装源）"
+# ── T8: 仓库 bundle 源生产接线（D945: legacy `dsh-preset-draft/persona-block.yml` → bundle 声明行）──
+#   静态面（形态）: package.json 声明 dsh.bundle.patch + patch 含 insert/preset 声明行 + D931 硬判据。
+#   **执行面（判别性）**: 真实仓库 bundle 源必须**可被安装器落位**——删掉/改坏源即报红，
+#   杜绝"grep 型静态判据冒充接线验收"。
+T8_SRC="$BUNDLE_SRC_REAL/$REAL_ID"
+if [ -f "$T8_SRC/package.json" ] && [ -f "$T8_SRC/cordis.patch.yml" ]; then
+  pass "T8: 仓库 bundle 源齐备（package.json + cordis.patch.yml）"
 else
-  fail "T8: persona-block.yml 缺失/格式错"
+  fail "T8: 仓库 bundle 源缺失（期望 $T8_SRC/{package.json,cordis.patch.yml}）"
 fi
+assert_grep "$T8_SRC/package.json" '"bundle"' "T8: package.json 含 dsh.bundle 声明块"
+assert_grep "$T8_SRC/package.json" '"patch"' "T8: package.json 含 dsh.bundle.patch 声明行（文件驱动注册表锚）"
+assert_grep "$T8_SRC/cordis.patch.yml" "^- insert:" "T8: patch 含 - insert: 声明行形态"
+assert_grep "$T8_SRC/cordis.patch.yml" "    - id: preset-$REAL_ID" "T8: patch 含 preset 声明行"
+AT8=$(grep -c "agent-team" "$T8_SRC/cordis.patch.yml" || true)
+[ "$AT8" -ge 1 ] && pass "T8: patch 含 agent-team（${AT8} 处, D931 要求 ≥1）" || fail "T8: patch 缺 agent-team"
+DL8=$(grep -c "id: delegation" "$T8_SRC/cordis.patch.yml" || true)
+[ "$DL8" -eq 0 ] && pass "T8: patch 无 legacy delegation 行（D931 要求 =0）" || fail "T8: patch 含 legacy delegation 行（got=${DL8}）"
+T8_PROF="$TMP/t8-profile"
+make_profile "$T8_PROF"
+OUT8=$(SYNO_PRESET_REPO_DIR="$BUNDLE_SRC_REAL" SYNO_PROFILE_DIR="$T8_PROF" \
+  SYNO_LEGACY_HOME="$HOME_MOCK" SYNO_PRESET_DEGRADED_LOG="$DEG_LOG" \
+  bash "$INSTALL" --install "$REAL_ID" 2>&1)
+EXIT8=$?
+assert_exit "$EXIT8" 0 "T8: 仓库 bundle 源可安装（生产接线被执行，非仅静态存在）"
+[ -f "$T8_PROF/node_modules/@local/dsh-preset-$REAL_ID/cordis.patch.yml" ] \
+  && [ -f "$T8_PROF/node_modules/@local/dsh-preset-$REAL_ID/package.json" ] \
+  && pass "T8: 真实 bundle 源落位产物齐备" || fail "T8: 真实 bundle 源落位产物缺失"
 
 # ── M1/M4 判别性元变异（变异体在 /tmp 副本运行；红证只落 /tmp，不入仓库）──
 #   M1: 注入器置 no-op → 变异体的 T3 必须红（证明 T3 依赖真实注入，不是恒真）。
