@@ -439,7 +439,12 @@ ctc_init() { # $1=目录 —— 建沙箱仓（解析器 + git 身份）
   mkdir -p "$d/scripts/control-tower" "$d/.claude/task-briefs" "$d/src" "$d/docs"
   cp "$GATE_SRC" "$d/scripts/control-tower/merge_writeset_gate.py"
   cp "$REPO/scripts/control-tower/brief_parser.py" "$REPO/scripts/control-tower/devdoc_writeset.py" "$d/scripts/control-tower/"
-  git -C "$d" init -q; git -C "$d" config user.email t@t.local; git -C "$d" config user.name t
+  # ⚠️ 必须显式 `-b main`：`git init` 的默认分支随**环境**变（本机 /Library/.../gitconfig = main，
+  #    GitHub runner = master —— CI 实证 `hint: Using 'master' as the name for the initial branch`）。
+  #    下面 ⑯/⑰ 段的 `git checkout -q main` 在 master 环境下静默失败 ⇒ HEAD 仍停在 feature
+  #    ⇒ `git merge --no-ff feature` 变 "Already up to date" ⇒ 合成 merge 地形根本没建成
+  #    ⇒ task_id=None（本机 60/60、CI 58/2 的环境依赖根因）。
+  git -C "$d" init -q -b main; git -C "$d" config user.email t@t.local; git -C "$d" config user.name t
 }
 ctc_brief() { # $1=目录 $2=brief 文件名 $3=D#
   { printf '#CRITERIA: A\n\n# Task Brief: %s sandbox\n> 认领: 🛠 编码 session\n\n' "$3"
