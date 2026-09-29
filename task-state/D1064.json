@@ -1,7 +1,12 @@
 {
   "task_id": "D1064",
   "title": "post-commit 软失败记账 CI 必红/本机必绿（GNU stat 方言环境依赖根治）",
-  "status": "claimed",
+  "status": "delivered",
+  "pr": 894,
+  "verdict": "可提请独立审计（独立自验员 9 项全复跑；K3 复审通过前不合并）",
+  "evidence": "docs/synova/product-lines/evidence/D1064-closeout-diff-selfverify-remaining.md",
+  "merge_order": "先合 base（fix/ct-flow-brief-ledger-20260927 = #868 D1032）→ 再合 #894；两卡均在等 D328 认领门禁修复（CTO 已立卡）",
+  "push_receipt": "7c8115f7 = git ls-remote origin/fix/D1064-softfail-ledger-ci-parity（2026-09-29）",
   "risk": "medium",
   "domain": "mac",
   "owner": "synova-squad-lead",
