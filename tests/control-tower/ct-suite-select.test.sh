@@ -237,6 +237,38 @@ done <<< "$PLAT_OUT"
 "$PYBIN" -c "import json,sys;d=json.load(open(sys.argv[1],encoding='utf-8'));r=d['platform_sensitive'].get('windows_reasons',{});w=set(d['platform_sensitive']['windows']);sys.exit(0 if w and w<=set(r) else 1)" "$MAP" >/dev/null 2>&1 \
   && ok "生产映射: 平台敏感逐条理由（windows_reasons）齐备" || no "windows_reasons 未覆盖 windows 全项"
 
+# ── D1061-A3 分片：完整性不变式 + 参数校验 + 过滤正确性 ──
+# 不变式 = 每条 catalog 条目**恰好**属于一个分片 ∪ 各分片并集 == catalog（零缺口/零重复/零孤儿）
+#   —— 这是防「分片后某套件永不被跑」的唯一物理保障。
+SHLIST=$(selprodq --list)
+printf '%s\n' "$SHLIST" | grep -q '  SHARDKEY' || true
+SH_CAT=$(printf '%s\n' "$SHLIST" | awk -F' :: ' '/DOMAIN /{print $2}' | sort -u)
+SH_UNION=$(printf '%s\n' "$SHLIST" | awk -F' :: ' '/ SHARD [0-9]+ ::/{print $2}' | sort)
+SH_UNIQ=$(printf '%s\n' "$SH_UNION" | sort -u)
+SH_DUP_N=$(printf '%s\n' "$SH_UNION" | uniq -d | grep -c . || true)
+SH_GAP=$(comm -23 <(printf '%s\n' "$SH_CAT") <(printf '%s\n' "$SH_UNIQ"))
+SH_ORPH=$(comm -13 <(printf '%s\n' "$SH_CAT") <(printf '%s\n' "$SH_UNIQ"))
+[ -z "$SH_GAP" ] && [ -z "$SH_ORPH" ] && [ "${SH_DUP_N:-0}" -eq 0 ] \
+  && ok "分片完整性不变式: 每条 catalog 条目恰好属一个分片（catalog=$(cnt "$SH_CAT") 分片并集=$(cnt "$SH_UNIQ") 重复=${SH_DUP_N:-0}）" \
+  || no "分片不变式破：缺口=[$(printf '%s' "$SH_GAP" | tr '\n' ' ')] 孤儿=[$(printf '%s' "$SH_ORPH" | tr '\n' ' ')] 重复=${SH_DUP_N:-0}"
+
+SHTOT=$(printf '%s\n' "$SHLIST" | awk '/ SHARDKEY /{print $3}' | head -1)
+[ "${SHTOT:-0}" -ge 2 ] && ok "分片数声明可读: shards.count=${SHTOT}" || no "shards.count 缺失或 <2（${SHTOT:-none}）"
+
+SHP1=$(selprodq --list | awk -F' :: ' '/ SHARD 1 ::/{print $2}' | sort -u)
+# 用**真实映射可命中的路径**（docs/** → doc-system 域）；不可用触发 __FULL__ 的路径（那会输出全量）
+printf 'docs/synova/coordination/probe.md\n' > "$CHG/real-doc.txt"
+SEL1=$(selprodq --shard 1/3 --changed-files "$CHG/real-doc.txt" | sort -u)
+SH_OK=1; while IFS= read -r s; do [ -z "$s" ] && continue; printf '%s\n' "$SHP1" | grep -qxF "$s" || SH_OK=0; done <<< "$SEL1"
+[ "$SH_OK" -eq 1 ] && ok "分片过滤: --shard 1/3 输出 ⊆ 分片 1 分配表（$(cnt "$SEL1") 条）" || no "--shard 1/3 输出含非分片 1 条目"
+
+bash "$SEL" --repo "$SB" --map "$SB/map.json" --shard 4/3 --changed-files "$CHG/l3.txt" >/dev/null 2>&1
+[ $? -eq 2 ] && ok "分片参数校验: --shard 4/3 越界 → exit 2" || no "--shard 4/3 应 exit 2"
+bash "$SEL" --repo "$SB" --map "$SB/map.json" --shard abc --changed-files "$CHG/l3.txt" >/dev/null 2>&1
+[ $? -eq 2 ] && ok "分片参数校验: --shard abc 非数字 → exit 2" || no "--shard abc 应 exit 2"
+bash "$SEL" --repo "$SB" --map "$SB/map.json" --shard 1 --changed-files "$CHG/l3.txt" >/dev/null 2>&1
+[ $? -eq 2 ] && ok "分片参数校验: --shard 1（缺 /n）→ exit 2" || no "--shard 1 应 exit 2"
+
 # ══════════ 变异体（改坏即红；只在 /tmp 副本上改，真文件零残留）══════════
 echo ""
 echo "── 变异体（判别力自证）──"

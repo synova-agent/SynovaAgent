@@ -33,6 +33,7 @@ ROOT=""
 MAP=""
 RANGE=""
 CHANGED_FILES=""
+SHARD=""
 PLATFORM="any"
 MODE=""
 DEGLOG=""
@@ -43,6 +44,7 @@ usage() {
   echo "  --changed <base>...<head>   变更范围（git 三段点）"
   echo "  --changed-files <file|->    直接给定变更文件清单（一行一个；- = stdin）"
   echo "                              —— 判定逻辑的**确定性注入缝**（夹具用，绕开 git 范围解析）"
+  echo "  --shard <i>/<n>             只输出第 i 个分片（1<=i<=n；D1061-A3 windows 三分片）"
   echo "  --platform <any|ubuntu|windows|macos>"
   echo "  --list | --all              二选一（与 --changed/--changed-files 互斥）"
   echo "  --map <path> / --repo <path> / --degraded-log <path>"
@@ -52,6 +54,7 @@ while [ $# -gt 0 ]; do
   case "${1:-}" in
     --changed)      RANGE="${2:-}"; shift 2 ;;
     --changed-files) CHANGED_FILES="${2:-}"; shift 2 ;;
+    --shard)        SHARD="${2:-}"; shift 2 ;;
     --platform)     PLATFORM="${2:-}"; shift 2 ;;
     --list)         MODE="list"; shift ;;
     --all)          MODE="all"; shift ;;
@@ -120,6 +123,12 @@ for plat, suites in sorted(d.get("platform_sensitive", {}).items()):
     if isinstance(suites, list):
         for s in suites:
             print("PLAT\t%s\t%s" % (plat, s))
+_sh = d.get("shards", {})
+if isinstance(_sh, dict) and isinstance(_sh.get("assign"), dict):
+    print("SHARDKEY\tcount\t%s" % _sh.get("count", ""))
+    for sid, suites in sorted(_sh["assign"].items()):
+        for s in suites:
+            print("SHARD\t%s\t%s" % (sid, s))
 ' "$MAP" 2>/dev/null)" || MAP_OK=0
   # PLATFORM-CHECKLIST #2（CRLF 清洗）: Windows 上 python 文本模式把 print 的 \n 写成 \r\n，
   #   尾 \r 会留在 IFS=tab 的**最后一个字段**（域名）⇒ DOM 查表落空 ⇒ 退化成全量回退。
@@ -139,6 +148,8 @@ if [ "$MODE" = "list" ]; then
   printf '%s\n' "$MAP_TSV" | awk -F'\t' '$1=="DOM"{print "  DOMAIN " $2 " :: " $3}'
   printf '%s\n' "$MAP_TSV" | awk -F'\t' '$1=="RULE"{print "  RULE[" $2 "] " $3 " -> " $4}'
   printf '%s\n' "$MAP_TSV" | awk -F'\t' '$1=="PLAT"{print "  PLATFORM " $2 " :: " $3}'
+  printf '%s\n' "$MAP_TSV" | awk -F'\t' '$1=="SHARD"{print "  SHARD " $2 " :: " $3}'
+  printf '%s\n' "$MAP_TSV" | awk -F'\t' '$1=="SHARDKEY"{print "  SHARDKEY " $2 " " $3}'
   echo "[D1061-SELECT] mode=list platform=$PLATFORM changed=0 selected_of_total=${TOTAL}/${TOTAL} degraded=$DEG_COUNT"
   exit 0
 fi
@@ -182,11 +193,11 @@ else
 fi
 
 if [ "$CHANGED" = "__RANGE_BAD__" ]; then
-  full_list; echo "[D1061-SELECT] mode=select platform=$PLATFORM changed=0 selected_of_total=${TOTAL}/${TOTAL} degraded=$DEG_COUNT" >&2; exit 0
+  full_list; echo "[D1061-SELECT] shard=${SHARD:-any} mode=select platform=$PLATFORM changed=0 selected_of_total=${TOTAL}/${TOTAL} degraded=$DEG_COUNT" >&2; exit 0
 fi
 if [ -z "$CHANGED" ]; then
   degraded D3 "变更集为空（range='${RANGE:-<未给>}'）——0 条静默通过被禁"
-  full_list; echo "[D1061-SELECT] mode=select platform=$PLATFORM changed=0 selected_of_total=${TOTAL}/${TOTAL} degraded=$DEG_COUNT" >&2; exit 0
+  full_list; echo "[D1061-SELECT] shard=${SHARD:-any} mode=select platform=$PLATFORM changed=0 selected_of_total=${TOTAL}/${TOTAL} degraded=$DEG_COUNT" >&2; exit 0
 fi
 
 CHANGED_N="$(printf '%s\n' "$CHANGED" | grep -c . | tr -d '\n\r')"
@@ -226,7 +237,7 @@ fi
 
 if [ "$FORCE_FULL" -eq 1 ]; then
   full_list
-  echo "[D1061-SELECT] mode=select platform=$PLATFORM changed=$CHANGED_N selected_of_total=${TOTAL}/${TOTAL} degraded=$DEG_COUNT" >&2
+  echo "[D1061-SELECT] shard=${SHARD:-any} mode=select platform=$PLATFORM changed=$CHANGED_N selected_of_total=${TOTAL}/${TOTAL} degraded=$DEG_COUNT" >&2
   exit 0
 fi
 
@@ -244,7 +255,7 @@ done <<< "$MATCHED"
 
 if [ "$FORCE_FULL" -eq 1 ]; then
   full_list
-  echo "[D1061-SELECT] mode=select platform=$PLATFORM changed=$CHANGED_N selected_of_total=${TOTAL}/${TOTAL} degraded=$DEG_COUNT" >&2
+  echo "[D1061-SELECT] shard=${SHARD:-any} mode=select platform=$PLATFORM changed=$CHANGED_N selected_of_total=${TOTAL}/${TOTAL} degraded=$DEG_COUNT" >&2
   exit 0
 fi
 
@@ -261,8 +272,36 @@ fi
 
 if [ "$FORCE_FULL" -eq 1 ]; then
   full_list
-  echo "[D1061-SELECT] mode=select platform=$PLATFORM changed=$CHANGED_N selected_of_total=${TOTAL}/${TOTAL} degraded=$DEG_COUNT" >&2
+  echo "[D1061-SELECT] shard=${SHARD:-any} mode=select platform=$PLATFORM changed=$CHANGED_N selected_of_total=${TOTAL}/${TOTAL} degraded=$DEG_COUNT" >&2
   exit 0
+fi
+
+# ④b 分片过滤（D1061-A3）—— `<i>/<n>`，越界/格式错 ⇒ exit 2（fail-closed，不静默给空）
+if [ -n "$SHARD" ]; then
+  case "$SHARD" in
+    */*) SH_I="${SHARD%%/*}"; SH_N="${SHARD##*/}" ;;
+    *) echo "❌ 参数非法: --shard 需形如 <i>/<n>，收到 '${SHARD}'" >&2; exit 2 ;;
+  esac
+  case "$SH_I" in ''|*[!0-9]*) echo "❌ 参数非法: 分片序号非数字: '${SH_I}'" >&2; exit 2 ;; esac
+  case "$SH_N" in ''|*[!0-9]*) echo "❌ 参数非法: 分片总数非数字: '${SH_N}'" >&2; exit 2 ;; esac
+  if [ "$SH_N" -lt 1 ] || [ "$SH_I" -lt 1 ] || [ "$SH_I" -gt "$SH_N" ]; then
+    echo "❌ 参数非法: --shard ${SHARD} 越界（要求 1<=i<=n 且 n>=1）" >&2; exit 2
+  fi
+  SH_MAP_N="$(printf '%s\n' "$MAP_TSV" | awk -F'\t' '$1=="SHARDKEY" && $2=="count" {print $3}' | head -1)"
+  if [ -n "$SH_MAP_N" ] && [ "$SH_N" != "$SH_MAP_N" ]; then
+    degraded D2 "分片总数与映射表不符: --shard n=${SH_N} vs map shards.count=${SH_MAP_N}"
+    FORCE_FULL=1
+  else
+    SH_LIST="$(printf '%s\n' "$MAP_TSV" | awk -F'\t' -v i="$SH_I" '$1=="SHARD" && $2==i {print $3}')"
+    if [ -z "$SH_LIST" ]; then
+      degraded D2 "映射表无分片 ${SH_I} 的分配（${MAP}）"
+      FORCE_FULL=1
+    else
+      SEL="$(printf '%s\n' "$SEL" | grep -xF -f <(printf '%s\n' "$SH_LIST") || true)"
+      SH_SEL_N="$(printf '%s\n' "$SEL" | grep -c . || true)"
+      echo "[D1061-SHARD] shard=${SH_I}/${SH_N} selected_in_shard=${SH_SEL_N:-0}" >&2
+    fi
+  fi
 fi
 
 # ⑤ 去重 + 存在性校验（选择集内的路径必须在仓库真实存在，否则 fail-closed）
@@ -273,7 +312,7 @@ SEL_N="${SEL_N:-0}"
 if [ "$SEL_N" -eq 0 ]; then
   degraded D4 "无域命中：选中 0 条（changed=${CHANGED_N}）——0 条静默通过被禁"
   full_list
-  echo "[D1061-SELECT] mode=select platform=$PLATFORM changed=$CHANGED_N selected_of_total=${TOTAL}/${TOTAL} degraded=$DEG_COUNT" >&2
+  echo "[D1061-SELECT] shard=${SHARD:-any} mode=select platform=$PLATFORM changed=$CHANGED_N selected_of_total=${TOTAL}/${TOTAL} degraded=$DEG_COUNT" >&2
   exit 0
 fi
 
@@ -285,10 +324,10 @@ done <<< "$SEL_OUT"
 if [ -n "$MISSING" ]; then
   degraded D2 "选中套件在仓库不存在:${MISSING}"
   full_list
-  echo "[D1061-SELECT] mode=select platform=$PLATFORM changed=$CHANGED_N selected_of_total=${TOTAL}/${TOTAL} degraded=$DEG_COUNT" >&2
+  echo "[D1061-SELECT] shard=${SHARD:-any} mode=select platform=$PLATFORM changed=$CHANGED_N selected_of_total=${TOTAL}/${TOTAL} degraded=$DEG_COUNT" >&2
   exit 0
 fi
 
 printf '%s\n' "$SEL_OUT"
-echo "[D1061-SELECT] mode=select platform=$PLATFORM changed=$CHANGED_N selected_of_total=${SEL_N}/${TOTAL} degraded=$DEG_COUNT" >&2
+echo "[D1061-SELECT] shard=${SHARD:-any} mode=select platform=$PLATFORM changed=$CHANGED_N selected_of_total=${SEL_N}/${TOTAL} degraded=$DEG_COUNT" >&2
 exit 0
