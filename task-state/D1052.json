@@ -2,10 +2,17 @@
   "task_id": "D1052",
   "title": "注入夹具 b 面排除 docs（系统性假红修复）",
   "status": "claimed",
-  "spec": null,
+  "spec": ".claude/task-briefs/2026-09-28-D1052-注入夹具-b-面排除-docs（系统性假红修复）.md",
   "impl": null,
   "audit": null,
   "fix_task_id": null,
-  "updated_at": "2026-09-28",
-  "updated_by": "alloc-task-id"
+  "updated_at": "2026-09-29",
+  "updated_by": "cto-parallel-d1061",
+  "write_set": [
+    "tests/control-tower/precommit-groups-injection.test.sh",
+    ".claude/task-briefs/2026-09-28-D1052-注入夹具-b-面排除-docs（系统性假红修复）.md",
+    "task-state/D1052.json",
+    "memory/notes/proposed/2026-09-28-d1052-a-face-selfmatch.md",
+    ".claude/bypass.log"
+  ]
 }
