@@ -510,22 +510,70 @@ fi
 # 规则: 治理前缀（brief/卡/Note/规格/自验证据）且扩展名属治理产物（md/json/yaml/yml/txt）
 #        → 不计入 ≤12 文件预算（交付文件才计数）。
 # 反例防线: 同前缀下的**代码文件**（.ts/.sh/.py 等）不豁免——伪装成治理产物的代码仍被计数。
+#
+# ── CT-D（2026-09-27）豁免**粒度**评估结论 ──
+# 评估对象: 本表第 5 项 `docs/synova/product-lines/evidence/` 是**目录级**豁免
+#   （`merge_writeset_gate.py` 侧只有 `.claude/bypass.log` 一条路径级内置豁免 → 口径不一致）。
+# 结论 = **保留目录级豁免，但补两条粒度约束**（不改成路径级白名单）:
+#   · 为什么不用路径级白名单: evidence 文件名是任务定制的（`CT1-*`/`D940-*`/`D716-win-*/...`），
+#     白名单必然漏 → 每次新任务都得改门禁脚本（把"运行期产物"变成"改门禁"），违背 D860 本意。
+#   · 为什么必须补粒度: 目录级豁免若不设界 = **无界通道**（evidence/ 下随便塞，预算恒绿）；
+#     且原实现只打印一个**计数**，豁免了哪些文件**不可核**（与 `merge_writeset_gate.py`
+#     自己写的"豁免必须显式、且逐条打印理由"同款原则冲突）。
+#   粒度① **逐条列举**: 每个豁免路径逐行打印（内容可核，不静默）。
+#   粒度② **数量阈值**: evidence 目录的豁免件数上限 = `--max-files`（复用同一个旋钮，**不引入新魔数**）。
+#     超出部分**计入预算**并逐条点名。阈值本身不单独判红（判红仍只由 ① 文件数预算决定）
+#     ⇒ 不会凭一个魔数误拦正常 PR。
+#     为何上限 = MAX_FILES: 本豁免是给 M5 必备证据开的**窄口子**（每任务 1~3 件），
+#     其规模不应超过整个 PR 允许的文件数；超过即视为"证据顺带夹带"，回到预算视野。
+#   ⚠️ 与 `merge_writeset_gate.py` 的分工: 那边是**授权口径**（该文件是否属本 PR 写集），
+#     故**不加**目录级豁免（否则任何 PR 可静默改写他人证据）；这边是**计数口径**，
+#     故保留目录级豁免 + 上述两条约束。两者不是"口径不一致"，是不同语义。
 GOV_PREFIX_RE='^(\.claude/task-briefs/|task-state/|memory/notes/|docs/plans/|docs/synova/product-lines/evidence/)'
 GOV_EXT_RE='\.(md|json|ya?ml|txt)$'
+EVIDENCE_PREFIX='docs/synova/product-lines/evidence/'
 COUNTED=""
-EXEMPT_N=0
+GOV_OTHER=""
+EVID_CAND=""
 while IFS= read -r _f; do
   [ -z "$_f" ] && continue
   if printf '%s' "$_f" | grep -qE "$GOV_PREFIX_RE" && printf '%s' "$_f" | grep -qE "$GOV_EXT_RE"; then
-    EXEMPT_N=$((EXEMPT_N + 1))
+    case "$_f" in
+      "$EVIDENCE_PREFIX"*) EVID_CAND="${EVID_CAND}${_f}
+" ;;
+      *) GOV_OTHER="${GOV_OTHER}${_f}
+" ;;
+    esac
   else
     COUNTED="${COUNTED}${_f}
 "
   fi
 done < <(printf '%s\n' "$COUNT_PATHS")
-COUNTED="$(printf '%s' "$COUNTED" | sed '/^$/d')"
+
+# CT-D 粒度②: evidence 目录豁免有界化 —— 取**字典序前 MAX_FILES 件**豁免（与输入顺序无关 ⇒ 结果确定），
+#   其余计入预算。EVID_ALL_N 是"共 N 件"的全量口径（逐条点名，不截断输出）。
+_EV_ALL="$(printf '%s' "$EVID_CAND" | sed '/^$/d' | sort)"
+EVID_ALL_N="$(printf '%s\n' "$_EV_ALL" | grep -c . | tr -d '\r\n')"; EVID_ALL_N="$(_clean_num "$EVID_ALL_N")"
+EVID_KEEP="$(printf '%s\n' "$_EV_ALL" | head -n "$MAX_FILES")"
+EVID_OVER="$(printf '%s\n' "$_EV_ALL" | tail -n "+$((MAX_FILES + 1))")"
+GOV_OTHER_N="$(printf '%s\n' "$GOV_OTHER" | grep -c . | tr -d '\r\n')"; GOV_OTHER_N="$(_clean_num "$GOV_OTHER_N")"
+EVID_KEEP_N="$(printf '%s\n' "$EVID_KEEP" | grep -c . | tr -d '\r\n')"; EVID_KEEP_N="$(_clean_num "$EVID_KEEP_N")"
+EVID_OVER_N="$(printf '%s\n' "$EVID_OVER" | grep -c . | tr -d '\r\n')"; EVID_OVER_N="$(_clean_num "$EVID_OVER_N")"
+EXEMPT_N=$((GOV_OTHER_N + EVID_KEEP_N))
+COUNTED="$(printf '%s%s\n' "$COUNTED" "$EVID_OVER" | sed '/^$/d')"
 if [ "$OUTBOUND_EXEMPT" -eq 0 ] && [ "$EXEMPT_N" -gt 0 ]; then
   echo "  ℹ️  D860 治理产物豁免: ${EXEMPT_N} 件不计预算（brief/卡/Note/规格/自验证据，代码文件仍计入）"
+  # CT-D 粒度①: 逐条列举（豁免内容可核，不静默）
+  [ "$GOV_OTHER_N" -gt 0 ] && printf '%s\n' "$GOV_OTHER" | sed '/^$/d' | sed 's/^/       · /'
+  if [ "$EVID_KEEP_N" -gt 0 ]; then
+    echo "       · [目录级豁免 ${EVIDENCE_PREFIX}] ${EVID_KEEP_N}/${MAX_FILES} 件:"
+    printf '%s\n' "$EVID_KEEP" | sed '/^$/d' | sed 's/^/         - /'
+  fi
+fi
+if [ "$OUTBOUND_EXEMPT" -eq 0 ] && [ "$EVID_OVER_N" -gt 0 ]; then
+  echo "  ⚠️  CT-D evidence 目录级豁免超阈值: 目录内共 ${EVID_ALL_N} 件 > 上限 ${MAX_FILES} 件"
+  echo "      ⇒ 超出 ${EVID_OVER_N} 件**计入预算**（阈值不单独判红；判红仍由 ① 文件数决定）:"
+  printf '%s\n' "$EVID_OVER" | sed '/^$/d' | sed 's/^/         - /'
 fi
 N_FILES="$(_count_lines "$COUNTED")"; N_FILES="${N_FILES:-0}"
 if [ "$OUTBOUND_EXEMPT" -eq 1 ]; then
