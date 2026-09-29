@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "salt": "9f1d9886249ae2bebe9ca9478997fae5",
+  "entries": [
+    {
+      "id": "CN-01",
+      "len": 4,
+      "sha256": "2b1704ac45e76c9da90f4a5b8d53d6df39b1e33aa112ec6f459f61c4ffba01d2",
+      "nonAscii": true
+    },
+    {
+      "id": "CN-02",
+      "len": 2,
+      "sha256": "13e57b9591523fc54d3b38e36301fffb31427d5ca57288ab4e821b1887eec754",
+      "nonAscii": true
+    }
+  ],
+  "pathEntries": [
+    {
+      "id": "CN-01",
+      "len": 4,
+      "sha256": "2b1704ac45e76c9da90f4a5b8d53d6df39b1e33aa112ec6f459f61c4ffba01d2",
+      "nonAscii": true
+    },
+    {
+      "id": "CN-02",
+      "len": 2,
+      "sha256": "13e57b9591523fc54d3b38e36301fffb31427d5ca57288ab4e821b1887eec754",
+      "nonAscii": true
+    }
+  ],
+  "binaryPolicy": {
+    "allowlist": [
+      {
+        "path": "assets/icon.ico",
+        "method": "raw",
+        "reviewedAt": "2026-09-29"
+      },
+      {
+        "path": "docs/plans/codex/SYNOVA-商业计划书-20260623.pptx",
+        "method": "zip-xml",
+        "reviewedAt": "2026-09-29"
+      },
+      {
+        "path": "electron/icon.png",
+        "method": "raw",
+        "reviewedAt": "2026-09-29"
+      },
+      {
+        "path": "synova_worker/connectors/__pycache__/__init__.cpython-313.pyc",
+        "method": "raw",
+        "reviewedAt": "2026-09-29"
+      },
+      {
+        "path": "synova_worker/connectors/__pycache__/feishu.cpython-313.pyc",
+        "method": "raw",
+        "reviewedAt": "2026-09-29"
+      },
+      {
+        "path": "synova_worker/sog/__pycache__/__init__.cpython-313.pyc",
+        "method": "raw",
+        "reviewedAt": "2026-09-29"
+      },
+      {
+        "path": "synova_worker/sog/__pycache__/schema.cpython-313.pyc",
+        "method": "raw",
+        "reviewedAt": "2026-09-29"
+      },
+      {
+        "path": "vendor/pandoc-skill/README.docx",
+        "method": "zip-xml",
+        "reviewedAt": "2026-09-29"
+      },
+      {
+        "path": "vendor/pandoc-skill/Synova-商业计划书-pandoc.docx",
+        "method": "zip-xml",
+        "reviewedAt": "2026-09-29"
+      },
+      {
+        "path": "vendor/pandoc-skill/Synova-商业计划书.docx",
+        "method": "zip-xml",
+        "reviewedAt": "2026-09-29"
+      },
+      {
+        "path": "vendor/pandoc-skill/templates/template_sci论文-标题不编号.docx",
+        "method": "zip-xml",
+        "reviewedAt": "2026-09-29"
+      },
+      {
+        "path": "vendor/pandoc-skill/templates/template_sci论文-标题编号.docx",
+        "method": "zip-xml",
+        "reviewedAt": "2026-09-29"
+      },
+      {
+        "path": "vendor/pandoc-skill/templates/template_标题不编号-列表第二行缩进.docx",
+        "method": "zip-xml",
+        "reviewedAt": "2026-09-29"
+      },
+      {
+        "path": "vendor/pandoc-skill/templates/template_标题不编号-列表第二行顶格-无首行缩进.docx",
+        "method": "zip-xml",
+        "reviewedAt": "2026-09-29"
+      },
+      {
+        "path": "vendor/pandoc-skill/templates/template_标题不编号-列表第二行顶格.docx",
+        "method": "zip-xml",
+        "reviewedAt": "2026-09-29"
+      },
+      {
+        "path": "vendor/pandoc-skill/templates/template_标题编号-列表第二行缩进.docx",
+        "method": "zip-xml",
+        "reviewedAt": "2026-09-29"
+      },
+      {
+        "path": "vendor/pandoc-skill/templates/template_标题编号-列表第二行顶格.docx",
+        "method": "zip-xml",
+        "reviewedAt": "2026-09-29"
+      }
+    ],
+    "refused": [
+      {
+        "path": "docs/plans/codex/20260815-决策-预算申请-AI技能比赛-V1.docx",
+        "reason": "review-hit: OOXML 内含已登记名（路径干净，禁登记以免掩盖）"
+      }
+    ],
+    "default": "block",
+    "reviewCommand": "python3 scripts/control-tower/scan-client-names.py --review-binary   # 复核 allowlist 全部条目"
+  }
+}

@@ -29,6 +29,7 @@ gen-task-board.py — 仪表盘 git 化生成器 v1 (D320)
   python gen-task-board.py --help
 """
 import argparse
+import hashlib
 import json
 import re
 import subprocess
@@ -187,17 +188,40 @@ AUTHOR_BRAND_MAP: Dict[str, str] = {
     "ClawOrg-Win": "Synova-Win",
     "ClawOrg-Mac": "Synova-Mac",
     "ClawOrg": "Synova",
-    "哇呢": "Synova-Mac",
 }
 EMAIL_BRAND_MAP: Dict[str, str] = {
     "claworg@users.noreply.github.com": "synova@users.noreply.github.com",
     "wane@wanedeMacBook-Pro.local": "synova@users.noreply.github.com",
 }
 
+# ── D1063 / CN-01: 历史作者别名去明文（本文件曾把客户标识当 key 明文入库）──
+# 为什么不能"换个中性占位 key 了事": 该别名是**真实 git 历史 author**（实测 1/24 个作者名就是它），
+#   而 docs/synova/DASHBOARD.md / DASHBOARD-CN.md 是 **git 跟踪**产物且渲染 author 列
+#   （见本文件 render 表头 "作者"/"Author" 与整行的 c["author"]）⇒ 换占位 = 该别名不再归一
+#   ⇒ 下次重生成看板时**原始别名会写进被跟踪的看板**（把本卡要清的泄露重新引入）。
+# 故保留"行为完全不变"（命中即归一到 Synova-Mac）但**不存明文**：只存加盐 SHA-256。
+# 口径与 scripts/control-tower/client-name-patterns.json 完全一致：sha256(salt_bytes‖别名 UTF-8)。
+_AUTHOR_ALIAS_SALT = "4a799e32c93bd6bac5d7d77af17d5554"
+_AUTHOR_ALIAS_MAP: Dict[str, str] = {  # sha256(salt‖别名) → 归一显示名
+    "011e0c517e2e0e07c04c551798e038888ed70edfdce66a45593f9bc730ad8403": "Synova-Mac",
+}
+
+
+def _alias_digest(name: str) -> str:
+    """历史作者别名的加盐指纹（明文不入库；对应 client-name-patterns.json 同口径）。"""
+    return hashlib.sha256(bytes.fromhex(_AUTHOR_ALIAS_SALT) + name.encode("utf-8")).hexdigest()
+
 
 def normalize_author(author: str) -> str:
-    """author 显示名归一 (品牌迁移 ClawOrg → Synova)。未命中则原样返回。"""
-    return AUTHOR_BRAND_MAP.get(author, author)
+    """author 显示名归一 (品牌迁移 ClawOrg → Synova + 历史客户标识别名)。未命中则原样返回。
+
+    两道查表: ① 明文品牌映射（ClawOrg 系，本身不含客户标识）
+             ② **加盐哈希映射**（历史别名含客户标识 ⇒ 明文不入库，行为与旧明文 key 等价）
+    未命中 → 原样返回（不臆改他人作者名）。
+    """
+    if author in AUTHOR_BRAND_MAP:
+        return AUTHOR_BRAND_MAP[author]
+    return _AUTHOR_ALIAS_MAP.get(_alias_digest(author), author)
 
 
 def normalize_email(email: str) -> str:
