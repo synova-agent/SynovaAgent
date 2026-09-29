@@ -90,9 +90,26 @@
   "pr_run": {
     "first_run_id": 36527360094,
     "first_head": "89d22f1c",
-    "first_run_red": "TypeScript + Lint + Iron Laws（V5 平台敏感命令）",
+    "first_run_red": [
+      "TypeScript + Lint + Iron Laws ← V5 平台敏感命令（本地软提示 / CI 硬阻断）",
+      "Control Tower Gate Tests (windows-latest) ← 夹具跨平台红（python CRLF，见 A-03 §12）"
+    ],
+    "wall_s": 669,
+    "wall_baseline_median_s": 2146,
+    "ct_windows_s": 665,
+    "ct_windows_baseline_median_s": 2035,
     "ct_ubuntu_s": 81,
-    "ct_windows_s": null,
-    "note": "CT-ubuntu 81s（基线 160–226s）；CT-windows 时长待回执"
-  }
+    "ct_leg_share_of_wall": "99.4%",
+    "delta_windows_pct": -67.3,
+    "delta_wall_pct": -68.8,
+    "targets": {
+      "run_wall_target_s": 480,
+      "run_wall_gap_s": 189,
+      "windows_leg_target_s": 300,
+      "windows_leg_gap_s": 365,
+      "met": false
+    },
+    "note": "权威两口径（run 墙钟 / windows CT 腿），由队长从 run 36527360094 取；本卡不改变口径、不加豁免"
+  },
+  "ci_windows_ct_leg": {}
 }

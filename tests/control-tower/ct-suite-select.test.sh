@@ -121,9 +121,10 @@ selprodq() { bash "$SEL" --repo "$REPO" --map "$MAP" --degraded-log "$TMPD/deg-p
 OUT=$(selq --all); RC=$?; N=$(cnt "$OUT")
 [ "$RC" -eq 0 ] && [ "${N:-0}" -eq 3 ] && ok "--all → 3 条（合成清单全量）rc=0" || no "--all 应 3 条 rc=0，实际 ${N:-0} 条 rc=$RC"
 
-OUT=$(selq --changed-files "$CHG/l3.txt"); RC=$?; N=$(cnt "$OUT")
+OUT=$(sel --changed-files "$CHG/l3.txt" 2>"$TMPD/e0"); RC=$?; N=$(cnt "$OUT")
 [ "$RC" -eq 0 ] && [ "${N:-0}" -eq 1 ] && [ "$OUT" = "tests/control-tower/sel-a.test.sh" ] \
-  && ok "正常: 改 src/l3/** → 只选 A 域（1/3 条）" || no "正常路径应只选 A 域 1 条，实际 ${N:-0} 条: $OUT"
+  && ok "正常: 改 src/l3/** → 只选 A 域（1/3 条）" \
+  || no "正常路径应只选 A 域 1 条，实际 ${N:-0} 条: $OUT ｜ stderr=$(tr '\n' '|' < "$TMPD/e0")"
 
 OUT=$(selq --changed-files "$CHG/l3.txt" --platform windows); N=$(cnt "$OUT")
 [ "${N:-0}" -eq 2 ] && ok "--platform windows → A ∪ 平台敏感 = 2 条" || no "windows 应 2 条，实际 ${N:-0}"
@@ -134,6 +135,23 @@ OUT=$(selq --changed-files "$CHG/l4.txt"); N=$(cnt "$OUT")
 
 OUT=$(sel --changed-files "$CHG/l3.txt" 2>&1 >/dev/null)
 echo "$OUT" | grep -q "selected_of_total=1/3" && ok "摘要行含 selected_of_total=1/3（机器可读）" || no "摘要行缺 selected_of_total（stderr: $OUT）"
+
+# ── CRLF 仿真（复现 Windows python 文本模式的 \r\n）──
+# 依据: PLATFORM-CHECKLIST #2「python/命令输出进算术/比较前必清 CRLF」。
+# 首推在 CI windows 变红（4 条断言连带红：正常/窗口/摘要/D4 全走「全量回退」），
+# 根因 = 选择器 python 输出（MAP_TSV）未清 \r ⇒ 域名带尾 \r ⇒ DOM 查表落空 ⇒ D2 全量回退。
+# 本用例用 PATH 前置 python3 shim（stdout 每行尾追加 \r）**真复现**该平台差异，零生产注入缝。
+SHIM="$TMPD/shim"; mkdir -p "$SHIM"
+REALPY="$(command -v "$PYBIN")"
+cat > "$SHIM/python3" <<EOF
+#!/bin/bash
+"$REALPY" "\$@" | awk '{printf "%s\r\n", \$0}'
+EOF
+chmod +x "$SHIM/python3"
+OUT=$(PATH="$SHIM:$PATH" bash "$SEL" --repo "$SB" --map "$SB/map.json" --degraded-log "$TMPD/deg-crlf.log" --changed-files "$CHG/l3.txt" 2>"$TMPD/e7"); RC=$?; N=$(cnt "$OUT")
+[ "$RC" -eq 0 ] && [ "${N:-0}" -eq 1 ] && [ "$OUT" = "tests/control-tower/sel-a.test.sh" ] \
+  && ok "CRLF 仿真（python 输出 \\r\\n，Windows 文本模式）→ 仍只选 A 域 1 条（PLATFORM-CHECKLIST #2）" \
+  || no "CRLF 仿真下选择错误（rc=$RC n=${N:-0}）⇒ 域名带尾 \\r 查表落空 ｜ stderr=$(tr '\n' '|' < "$TMPD/e7")"
 
 # ── git 三段点（生产路径）独立断言：失败时打印原始输出以自诊断 ──
 RGBAD=$(git -C "$SB" diff --name-only origin/main...l3only 2>&1); RGBAD_RC=$?

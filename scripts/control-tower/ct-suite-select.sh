@@ -121,6 +121,11 @@ for plat, suites in sorted(d.get("platform_sensitive", {}).items()):
         for s in suites:
             print("PLAT\t%s\t%s" % (plat, s))
 ' "$MAP" 2>/dev/null)" || MAP_OK=0
+  # PLATFORM-CHECKLIST #2（CRLF 清洗）: Windows 上 python 文本模式把 print 的 \n 写成 \r\n，
+  #   尾 \r 会留在 IFS=tab 的**最后一个字段**（域名）⇒ DOM 查表落空 ⇒ 退化成全量回退。
+  #   2026-09-29 CI windows 实证：本卡首推 ct-suite-select.test.sh 4 条断言连带红，签名
+  #   「正常路径 3 条 / D4 回退」；本机用 PATH 前置 python3 shim（stdout 追加 \r）**逐字复现**。
+  MAP_TSV="$(printf '%s\n' "$MAP_TSV" | tr -d '\r')"
   [ -z "$MAP_TSV" ] && MAP_OK=0
 fi
 
