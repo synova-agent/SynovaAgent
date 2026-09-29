@@ -352,7 +352,10 @@ if grep -q -- "--name-status --find-renames" "$TOOL"; then pass "DS5 S1 新口�
 if grep -q "diff --name-only --diff-filter=ACMR" "$TOOL"; then fail "DS5 旧口径 --diff-filter=ACMR 残留（双口径风险）"; else pass "DS5 旧口径 --diff-filter=ACMR 已清零"; fi
 if grep -qF -- '--diff-status' "$TOOL"; then pass "DS5 --diff-status 注入缝在"; else fail "DS5 无 --diff-status 注入缝"; fi
 # 冻结规格正则逐字（防漂移；改一个字符 = 白名单/拒绝名单语义变了）
-ALLOW_SPEC='^(\.claude/task-briefs/|docs/plans/|docs/synova/coordination/|memory/notes/|docs/synova/archive/|docs/archive/)'
+# 2026-09-29 变更（创始人决策：客户数据安全事件处置）—— 白名单扩 4 前缀：
+#   docs/synova/ （存量客户名 104 件）｜docs/research/（2）｜decisions/（1）｜CHRONICLE.md（1）
+#   理由：纯删（无 A/M）风险低 + DENY/DENY_EXACT 兜底仍在；域门禁同日废除（见 D1062）
+ALLOW_SPEC='^(\.claude/task-briefs/|docs/plans/|docs/synova/coordination/|memory/notes/|docs/synova/archive/|docs/archive/|docs/synova/|docs/research/|decisions/|CHRONICLE\.md$)'
 DENY_SPEC='^(src/|scripts/|\.github/|tests/|extensions/|expert/)'
 if grep -qF "$ALLOW_SPEC" "$TOOL"; then pass "DS5 ✅ 出库白名单正则与冻结规格逐字一致"; else fail "DS5 ✅ 白名单正则漂移"; fi
 if grep -qF "$DENY_SPEC" "$TOOL"; then pass "DS5 ❌ 拒绝名单正则与冻结规格逐字一致"; else fail "DS5 ❌ 拒绝名单正则漂移"; fi

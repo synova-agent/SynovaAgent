@@ -404,7 +404,9 @@ _decl_missing_list() {  # $1=声明路径集 $2=需覆盖路径集 → 打印未
 }
 
 # ── S2 路径级出库豁免: ⓐ（AM_SET 空）∧ ⓑ（全部变更路径落 ✅ 且零命中 ❌）──
-OUTBOUND_ALLOW_RE='^(\.claude/task-briefs/|docs/plans/|docs/synova/coordination/|memory/notes/|docs/synova/archive/|docs/archive/)'
+# 2026-09-29 扩：客户数据处置（docs/synova 存量 / research / decisions / CHRONICLE）——
+#   依据：创始人 2026-09-29 安全事件处置（公开仓库客户名 172 件并集）；纯删风险低 + DENY 兜底仍在。
+OUTBOUND_ALLOW_RE='^(\.claude/task-briefs/|docs/plans/|docs/synova/coordination/|memory/notes/|docs/synova/archive/|docs/archive/|docs/synova/|docs/research/|decisions/|CHRONICLE\.md$)'
 OUTBOUND_DENY_RE='^(src/|scripts/|\.github/|tests/|extensions/|expert/)'
 OUTBOUND_DENY_EXACT_RE='^docs/synova/coordination/(ownership\.yaml|AUDIT-PROTOCOL\.md)$'
 OUTBOUND_EXEMPT=0
