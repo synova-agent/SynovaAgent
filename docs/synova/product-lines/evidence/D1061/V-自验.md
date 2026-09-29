@@ -396,37 +396,94 @@ rc=1
    即该接线的**失效模式 = 保守回退全量**，**现有测试抓不到**；夹具对它的"接线"断言是 **grep 型**（`grep -q "ct-suite-select.sh" "$CIY"`）。
    ⇒ 与 PR-B 门禁 8 同类：**弱判据**；但此处失效方向**安全（多跑，不会少跑）**，与门禁 8（预演不生效）性质不同。**登记，不判缺陷。**
 
-### 十-A-7 时间对比（两口径）—— **CI 侧不可完成**
+### 十-A-7 时间对比（两口径）—— **已完成（CI 真跑）**
 
-**实测（PR-A 零 CI）**：
+**run `36527360094`**（event=pull_request, sha `89d22f1c`, created 2026-09-29T05:41:31Z, updated 05:52:40Z, `conclusion=failure`）
+
+| 口径 | 改后（本次 CI） | 基线 | Δ | 目标 | 达标 |
+|---|---|---|---|---|---|
+| **A · run 墙钟** | **669s（11.2 min）** | 中位 2146s（我 n=14 配对真跑） | **−68.8%** | ≤480s | ❌ **未达标** |
+| **B · windows CT 腿** | **665s（11.1 min）** | 中位 2035s（队长 n=25）／2141s（我 n=14） | **−67.3%** | ≤300s | ❌ **未达标（2.2×）** |
+
+- 腿/run墙钟 = **99.4%** ⇒ windows CT 腿**仍是关键路径**（与基线同构）。
+- 提速**巨大且真实**（约 −68%），但**两个目标都没到**；`≤8min` 差 189s，`≤5min` 差 365s。
+
+**job 级明细（按时长降序）**
 ```
-curl .../actions/runs?branch=chore/d1061-a-ci-speedup      → run 数 = 0
-curl .../actions/runs?head_sha=adb83dc6|dbbe4818|f80afd58  → 各 0 条
-curl .../commits/adb83dc6/check-runs                       → check_run 数 = 0
-curl .../pulls/886 → state=open draft=false mergeable=False mergeable_state=dirty
+  665s  Control Tower Gate Tests (windows-latest)      completed  failure
+  124s  Architecture Check                             completed  success
+  120s  TypeScript + Lint + Iron Laws                  completed  failure
+  112s  Integration Contract Check                     completed  success
+   95s  Checker Review (maker/checker)                 completed  success
+   81s  Control Tower Gate Tests (ubuntu-latest)        completed  success
+   42s  Test-Kit Architecture Tests (windows-latest)    completed  success
+   22s  Gate Integrity (pattern sentinel + injection …  completed  success
+   21s  Test-Kit Architecture Tests (ubuntu-latest)     completed  success
+   13s  npm audit                                      completed  success
+    0s  Vitest (${{ matrix.shard }})                    completed  skipped
+   -1s  Golden Case F1 Gate                             completed  skipped
 ```
-- `ci.yml` 触发配置：`push.branches: [main]`（feature push **不触发**）；唯一触发面 = `pull_request`。
-- ⇒ **PR-A 自建 PR（04:33Z）至今零 workflow run、零 check-run**；唯一解释是 **PR 与已前移的 main 冲突（`mergeable_state=dirty`）→ GitHub 无法构造 PR 合并引用**。
-- **对照**：PR-B（#883，`mergeable_state=None`）同 `pull_request` 事件**正常触发** run `36522644152`。
-- ⇒ **【两口径时间对比】= 不可完成**（无 CI 数据）；**本地数据不能替代 CI 口径**。
-- **建议**：`git rebase origin/main` 解 `dirty` 后重推（`synchronize` 已在触发 types 内）→ CI 即起。
 
-**本地 A/B（仅机理性佐证，不得当 CI 口径）**
-| | 内层执行数 | wall |
-|---|---|---|
-| **改后**（PR-A `simulate-ci.sh` + `GITHUB_ACTIONS=true` + 绿桩） | **0** | **0s** |
-| **改前**（`origin/main` 同条件） | 60s 窗口内**完成 0 条**（首条套件即超窗） | 单位成本实测：`gate-failopen-net` **73s**；`alloc-task-id-lock` **>10min 未完成** |
+### 十-A-9 CI 真跑失败项（**新增，两条独立阻塞**）
 
-### 十-A-8 结论词（PR-A）
+#### F1 · `TypeScript + Lint + Iron Laws` → V5 平台敏感命令（D520）
+
+原始输出：
+```
+❌ V5 平台敏感命令: 新控制塔脚本对照 PLATFORM-CHECKLIST.md (D520): 1 处  [CI strict——软提示在 CI 上为硬阻断]
+   scripts/control-tower/ct-suite-select.sh: 平台敏感命令（见 PLATFORM-CHECKLIST.md）
+```
+**根因（我定位到判定行）**：`scripts/pre-commit-check.sh:1538`
+```bash
+_pf_hits=$(grep -nE '\bpython3\b|date \+%s|date -v|grep -P' "$ROOT/$_pf" 2>/dev/null | grep -v 'PYBIN\|swallow-ok\|D520\|#' | head -3 || true)
+```
+即：grep 出含 `\bpython3\b` 的行，再**过滤掉**含 `PYBIN`/`swallow-ok`/`D520`/`#` 的行。
+`ct-suite-select.sh:92` 为
+```bash
+for _c in python3 python py; do
+```
+—— 这正是 PLATFORM-CHECKLIST #1 **推荐的三级探测本体**，但该行**不含**过滤词 ⇒ 被点名。
+讽刺点：**正确写法本身触发门禁**。同一门禁在 PR-B 上由 coder-b 用行尾 `# D520: …` 注释消解。
+**消解**：给该行补 `# D520:`（或使该行含 `PYBIN`），与 PR-B 同法。**属一行修复。**
+
+#### F2 · `Control Tower Gate Tests (windows-latest)` → PR-A **自建新夹具**在 Windows 红
+
+原始输出：
+```
+FAIL: tests/control-tower/ct-suite-select.test.sh
+##[error]  ❌ 正常路径应只选 A 域 1 条，实际 3 条: tests/control-tower/sel-a.test.sh|
+          ❌ windows 应 2 条，实际 3| ❌ 摘要行缺 selected_of_total| ❌ D4 不符（rc=0 n=3）
+```
+- **签名**：选择器在 Windows 上走了**全量回退（3/3）**而非收窄（1/3）—— **与我的 A3 变异（`FORCE_FULL=1`）完全同签名**。
+- **本地对照**：同一夹具在 **macOS 上 23 通过 / 0 失败**（我独立跑）。
+- **root cause**：Windows 特定，**我未能在 macOS 复现**；候选回退码 = D1(`:183`)/D2(`:219,:236,:267`)/D3(`:169`)/D5(`:160`)/D6(`:198`)。
+- ⚠ **排障障碍（关键观察）**：夹具 `:108` 的正常路径调用写作
+  `OUT=$(sel --changed origin/main...l3only 2>/dev/null); RC=$?; N=$(cnt "$OUT")  # swallow-ok: …`
+  —— **`2>/dev/null` 吞掉了 stderr 的 `[D1061-DEGRADED] code=…` 行**，而**那行正是定位本失败所需的唯一诊断**。
+  换言之：**那 9 处 `swallow-ok` 豁免（本身合法、见 §十-A-4）遮蔽了本次排障的关键信息**。
+  （夹具确有保留 stderr 的调用，见 `:115/:121/:128/:136` 的 `2>"$TMPD/e1"` 形式，但**正常路径这条没有**。）
+- **处置建议**：在 Windows 上跑该夹具并**保留 stderr**（去掉 `2>/dev/null`，或改成 `2>"$TMPD/…"`）即可直接读出回退码 → 精确定位。
+
+#### F3 · `#872` 夹具恢复 —— ✅ **已核实恢复（非失败项）**
+```
+$ bash tests/control-tower/ci-signal-classify.test.sh
+rc=0  wall=2s   结果: 78 通过, 0 失败, 0 显式跳过
+```
+（Windows CT 腿日志中该夹具已通过，未出现在失败点。）
+
+### 十-A-8 结论词（PR-A）—— **最终判定**
 
 | 判据 | 结论词 |
 |---|---|
-| 红线 / 禁碰面 / a 面残留 / 写集 | `自验结论` = 零越界、零残留 |
-| b 面 +2 | `自验结论` = 合法（队长授权承载的派单件与前提证据；须用 #882 口径判） |
-| 两夹具 rc=0 | `自验结论` = 我独立重跑全绿（≠ 通过） |
-| A1–A6 变异体 | `自验结论` = **6/6 判别成立**（A6 夹具侧无断言 = 覆盖缺口已登记） |
-| `ci.yml` 接线真执行 + 单源一致 + fail-closed | `自验结论` = 成立；**删除调用不变红（保守回退）已登记** |
+| 红线 / 禁碰面 / a 面残留 / 写集（18 文件） | `自验结论` = 零越界、零残留（新 sha `89d22f1c` 复算同结论） |
+| b 面 main 15 → PR-A 17（+2） | `自验结论` = 合法（队长授权承载；须用 #882 docs 排除口径判） |
+| 夹具 rc=0（macOS） | `自验结论` = 我独立重跑全绿（≠ 通过） |
+| A1–A6 变异体 | `自验结论` = 6/6 判别成立 |
+| 新增：A6 缺口闭合 + 完整性不变式 | `自验结论` = 均成立且**我独立做了判别性变异**（见 §十-A-5 / 新事实 2a·2b） |
+| `ci.yml:427` 接线真执行 + 单源一致 + fail-closed | `自验结论` = 成立 |
 | 选择器缩小能力 | `自验结论` = 真实成立（docs-only → 29/54） |
-| **两口径时间对比 / CI 真跑** | **无法完成 —— PR-A 零 CI run（`dirty`）** |
-| 目标 ≤5min / ≤8min | **未决** |
-| **PR-A 整体** | **`退回（附理由）`（仅限「CI 证据面」）**：需 rebase 解冲突 → 触发 CI → 以 CI 真跑补齐两口径对比；**其余面（红线/写集/残留/变异体/接线/缩小能力）= `可提请独立审计`** |
+| `#872` 夹具恢复 | `自验结论` = 已恢复（78/0） |
+| 两口径时间对比 | `自验结论` = **已完成**：run 墙钟 **669s**（−68.8%）、windows CT 腿 **665s**（−67.3%） |
+| 目标 `≤8min` / `≤5min` | **两口径均未达标**（669s > 480s；665s > 300s） |
+| **CI 真跑结论** | **`failure`** —— 两条独立阻塞（F1 D520 一行可修；F2 Windows 特定全量回退） |
+| **PR-A 整体** | **`退回（附理由）`** —— 理由两条：**F1** `ct-suite-select.sh:92` 触发 V5 平台敏感命令（补 `# D520:` 即消解）；**F2** 新夹具 `ct-suite-select.test.sh` 在 **Windows** 走全量回退而红（macOS 绿，属 **Windows 兼容缺陷**，需保留 stderr 定位回退码）。**两口径虽已完成但均未达标**，目标达成度需你与 CTO 另行裁定。 |

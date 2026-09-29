@@ -31,7 +31,7 @@
   },
   "pr_a": {
     "branch": "chore/d1061-a-ci-speedup",
-    "remote_sha": "adb83dc6edc50c6edefe49b4028b819772835178",
+    "remote_sha": "89d22f1ca3b51475020c39169a32b3f05949fe2d",
     "pr": "#886",
     "state": "PUSHED_AND_VERIFIED",
     "independence_disclosure": {
@@ -241,10 +241,142 @@
       "recommendation": "git rebase origin/main 解 dirty 后重推（synchronize 已在触发 types 内）"
     },
     "target_verdict": {
-      "run_wall_le_480s": "未决",
-      "win_ct_leg_le_300s": "未决"
+      "run_wall_le_480s": "未达标：669s > 480s",
+      "win_ct_leg_le_300s": "未达标：665s > 300s（2.2×）"
     },
-    "verdict": "PR-A：CI 证据面 = 退回（附理由：零 CI run，需 rebase 解冲突后以 CI 真跑补两口径）；其余面（红线/写集/残留/变异体/接线/缩小能力）= 可提请独立审计"
+    "verdict": "PR-A：退回（附理由）—— CI 已真跑且**红**，两条独立阻塞项：① `TypeScript + Lint + Iron Laws` = V5 平台敏感命令(D520) 点名 ct-suite-select.sh:92（补 `# D520:` 即消解）；② `Control Tower Gate Tests (windows-latest)` = 新夹具 ct-suite-select.test.sh 在 Windows 走全量回退而红（macOS 绿）。两口径时间均可完成：run 墙钟 669s（−68.8%）、windows CT 腿 665s（−67.3%），**但二者均未达标**（目标 480s / 300s）。",
+    "files_total": 18,
+    "ci_run": {
+      "run_id": 36527360094,
+      "event": "pull_request",
+      "sha": "89d22f1c",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-09-29T05:41:31Z",
+      "updated_at": "2026-09-29T05:52:40Z",
+      "caliber_A_run_wall": {
+        "seconds": 669,
+        "minutes": 11.2,
+        "baseline_median_s": 2146,
+        "baseline_source": "verifier n=14 配对真跑样本",
+        "delta_pct": -68.8,
+        "target_s": 480,
+        "target_met": false
+      },
+      "caliber_B_windows_ct_leg": {
+        "seconds": 665,
+        "minutes": 11.1,
+        "conclusion": "failure",
+        "baseline_median_s": 2035,
+        "baseline_source": "lead n=25 真跑样本（verifier n=14 为 2141s）",
+        "delta_pct": -67.3,
+        "target_s": 300,
+        "target_met": false,
+        "leg_over_run_wall_pct": 99.4
+      },
+      "jobs": [
+        {
+          "name": "Control Tower Gate Tests (windows-latest)",
+          "s": 665,
+          "conclusion": "failure"
+        },
+        {
+          "name": "Architecture Check",
+          "s": 124,
+          "conclusion": "success"
+        },
+        {
+          "name": "TypeScript + Lint + Iron Laws",
+          "s": 120,
+          "conclusion": "failure"
+        },
+        {
+          "name": "Integration Contract Check",
+          "s": 112,
+          "conclusion": "success"
+        },
+        {
+          "name": "Checker Review (maker/checker)",
+          "s": 95,
+          "conclusion": "success"
+        },
+        {
+          "name": "Control Tower Gate Tests (ubuntu-latest)",
+          "s": 81,
+          "conclusion": "success"
+        },
+        {
+          "name": "Test-Kit Architecture Tests (windows-latest)",
+          "s": 42,
+          "conclusion": "success"
+        },
+        {
+          "name": "Gate Integrity (pattern sentinel + injection fixture)",
+          "s": 22,
+          "conclusion": "success"
+        },
+        {
+          "name": "Test-Kit Architecture Tests (ubuntu-latest)",
+          "s": 21,
+          "conclusion": "success"
+        },
+        {
+          "name": "npm audit",
+          "s": 13,
+          "conclusion": "success"
+        }
+      ],
+      "verdict": "两口径均可完成；但 windows CT 腿与前段门禁 job 均 FAILURE"
+    },
+    "ci_failures": [
+      {
+        "id": "F1",
+        "job": "TypeScript + Lint + Iron Laws",
+        "group": "V5 平台敏感命令 (D520)",
+        "raw": "❌ V5 平台敏感命令: 新控制塔脚本对照 PLATFORM-CHECKLIST.md (D520): 1 处  [CI strict——软提示在 CI 上为硬阻断]\n   scripts/control-tower/ct-suite-select.sh: 平台敏感命令（见 PLATFORM-CHECKLIST.md）",
+        "root_cause": "scripts/pre-commit-check.sh:1538 判定 = grep -nE '\\bpython3\\b|date \\+%s|date -v|grep -P' 该文件，再 grep -v 'PYBIN|swallow-ok|D520|#' 过滤；ct-suite-select.sh:92 `for _c in python3 python py; do`（PYBIN 三级探测本体的那一行）未含 PYBIN/D520/# → 被点名",
+        "note": "讽刺点：被点名的正是 PLATFORM-CHECKLIST #1 推荐的正确写法；同一门禁在 PR-B 上由 coder-b 用行尾 `# D520: …` 注释消解",
+        "fix": "给该行补 `# D520:` 或含 `PYBIN` 即消解（与 PR-B 同法）"
+      },
+      {
+        "id": "F2",
+        "job": "Control Tower Gate Tests (windows-latest)",
+        "test": "tests/control-tower/ct-suite-select.test.sh",
+        "raw": "FAIL: tests/control-tower/ct-suite-select.test.sh\n##[error]  ❌ 正常路径应只选 A 域 1 条，实际 3 条: tests/control-tower/sel-a.test.sh|  ❌ windows 应 2 条，实际 3|  ❌ 摘要行缺 selected_of_total|  ❌ D4 不符（rc=0 n=3）",
+        "signature": "选择器在 Windows 上走了**全量回退**（3/3）而非收窄（1/3）——与 A3 变异（FORCE_FULL=1）同签名",
+        "local_status": "同一夹具在 macOS 上 23 通过 0 失败（我独立跑，见 §十-A-3）",
+        "root_cause": "Windows 特定，未能在 macOS 复现；候选回退码 D1/D2/D3/D5/D6（:160/:169/:183/:198/:236）",
+        "diagnostic_obstacle": "夹具 :108 的正常路径调用用 `2>/dev/null` 吞掉 stderr 的 `[D1061-DEGRADED] code=…` 行——**恰是定位该失败所需的唯一诊断**；即那 9 处 swallow-ok 豁免遮蔽了本次排障关键信息",
+        "action": "需在 Windows 上跑该夹具并保留 stderr（去掉 2>/dev/null 或用 :115/:121 那种 2>file 形式）"
+      }
+    ],
+    "new_facts_verified": [
+      {
+        "id": "1",
+        "claim": "coder-a 本地 A/B: 改前 1545.09s → 改后 0.13s，内层 132→0",
+        "my_reproduction": "改后侧我独立跑 3 次 = 0.30s/0.30s/0.12s，内层 ✅ 行 0（同口径 macOS 代理量）",
+        "local_before_evidence": "gate-failopen-net 单位成本 73s；alloc-task-id-lock >10min 未完成；60s 窗口完成 0 条",
+        "verdict": "自验结论 = 改后侧独立复现成立；改前侧未逐秒复现但与机制一致（权威仍取 CI）"
+      },
+      {
+        "id": "2a",
+        "claim": "dedup 夹具 13 → 15 断言 + 变异体③（非法值改判静默 skip → 必红）",
+        "my_check": "夹具实跑 15 通过 0 失败；我用自有变异（非法值分支→SKIP_NESTED=1）→ rc=1 且新增断言红：`❌ 非法值应 fail-closed 全量（rc=0 实跑 0 条、stderr 无『非法』点名）`",
+        "verdict": "自验结论 = A6 覆盖缺口已闭合且断言具判别力"
+      },
+      {
+        "id": "2b",
+        "claim": "完整性不变式（域并集 == ci.yml catalog，集合相等）",
+        "my_check": "断言实跑 `✅ 完整性不变式: 域并集 == ci.yml catalog（55 条集合相等，零缺口/零孤儿）`（catalog 已随合 main 由 54→55）；我做判别性变异（从 map 的 doc-system 域删 1 条）→ rc=1 `❌ 域并集 ≠ catalog：仅 catalog 有 [tests/doc-system/check-doc-truth.test.sh]；仅域有 []`，已还原",
+        "verdict": "自验结论 = 不变式成立且具判别力（防『某套件永不入选=静默缩小覆盖面』）"
+      },
+      {
+        "id": "3",
+        "claim": "merge main 一度打断 #872 夹具（ci-signal-classify.test.sh），已改排序修复（78/0）",
+        "my_check": "我独立跑 tests/control-tower/ci-signal-classify.test.sh → rc=0 2s，`结果: 78 通过, 0 失败, 0 显式跳过`",
+        "verdict": "自验结论 = 确已恢复"
+      }
+    ]
   },
   "pr_b": {
     "branch": "chore/d1061-b-gate-mechanism",
