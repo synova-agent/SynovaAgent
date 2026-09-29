@@ -8,6 +8,18 @@
   "conclusion_words_allowed": ["自验结论", "可提请独立审计", "退回（附理由）"],
   "note": "本文件永不含『审计通过』。通过与否归 CTO 收件闸 + K3。",
 
+  "baseline_drift": {
+    "note": "复核期间 origin/main 前移",
+    "from": "20b55eba9ce0db5cfa238bd09e02b4732d234af3",
+    "to": "d9955cfbee3d217dec1734ff87b10bee3ee6192b",
+    "cause": "Merge PR #875；内含 #882 = D1052 注入夹具 b 面排除 docs（N3 修复）",
+    "touched_this_cards_write_set": false,
+    "b_face_baseline_moved": {"old": 14, "new": 15,
+      "new_file": "memory/notes/proposed/2026-09-28-d1052-a-face-selfmatch.md"},
+    "prb_vs_new_main": {"prb_b_face": 14, "main_b_face": 15, "introduced": 0,
+      "relation": "PR-B 的 b 面是当前 main 的严格子集"}
+  },
+
   "pr_a": {
     "branch": "chore/d1061-a-ci-speedup",
     "remote_sha": null,
@@ -30,7 +42,9 @@
       "a_face": {"src": 0, "tests": 0, "scripts": 0, ".github": 0},
       "b_face_total": 14,
       "b_face_baseline": 14,
-      "verdict": "自验结论 = 零新增（b 面 14 与基线一致，逐条全在 docs/**）"
+      "b_face_baseline_current_main": 15,
+      "b_face_introduced_by_prb": 0,
+      "verdict": "自验结论 = 零新增（PR-B 的 b 面是当前 main 的严格子集，逐条全在 docs/** 与 memory/**）"
     },
     "utf8_scan_baseline_diff": {
       "cmd": "bash scripts/workflow/check-silent-swallow.sh --utf8",

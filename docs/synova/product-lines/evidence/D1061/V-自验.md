@@ -11,6 +11,19 @@
 - 所有数字均来自**命令原始输出**，禁手写；关键扫描**不截断**并标注「共 N 处」。
 - 重型验证（vitest / 全量门禁 / 黄金门禁）**串行 ≤1**，用 `/tmp/.synova-d1061-heavy.lock` 排队（已按队长修订版加**属主校验**）。
 
+## 〇-a、基线漂移登记（**重要**）
+
+复核期间 `origin/main` **前移了**：
+
+```
+20b55eba  →  d9955cfb   （Merge PR #875；内含 #882 = D1052 注入夹具 b 面排除 docs）
+$ git diff --name-only 20b55eba..origin/main | grep -E '<本卡写集>'
+（未触碰本卡任何写集文件）
+```
+- 影响 1：**`origin/main...` 系列 diff 的基线已改用 `d9955cfb`** 复核（见 §4.1 复算）。
+- 影响 2：**b 面基线由 14 → 15**（新增的第 15 条 = `memory/notes/proposed/2026-09-28-d1052-a-face-selfmatch.md`，由 #882 合并列车带入）。
+- 影响 3：`main` **未触碰** D1061 任何写集文件 ⇒ 本卡两条分支 rebase 不受影响。
+
 ## 〇-b、本轮状态总览（诚实登记）
 
 | 被验对象 | 分支 | 复核 sha | 状态 |
@@ -36,7 +49,7 @@ task-4 在 `task-1`+`task-3` 完成前 **blocked，系统拒绝 claim**（实测
 | P6 | R8 自冻结（`D[0-9]{3}` 截断） | `printf '派单 D1060 与 D1061\n' \| grep -oE 'D[0-9]{3}'` | `D106` | 0 | `自验结论` = 独立复现成立 |
 | P7 | G10 幽灵门（变量恒空） | `grep -cE '(^\|[[:space:]])(export[[:space:]]+)?STAGED_FILES=' scripts/pre-commit-check.sh` | `0`；使用点 `3`（`:1203` `:1225` `:1230`） | 0 | `自验结论` = 独立复现成立 |
 | — | 残留基线 a 面 = 0 | `git grep -c INJECTED-RED -- <dir>` | `src 0 / tests 0 / scripts 0 / .github 0` | 0 | `自验结论` = 独立复现成立 |
-| — | 残留基线 b 面 = 14，全在 docs | `git grep -l INJECTED-RED` | **共 14 个文件**，逐条全在 `docs/**` | 0 | `自验结论` = 独立复现成立 |
+| — | 残留基线 b 面 = 14，全在 docs（**基线已漂移至 15**，见 §〇-a） | `git grep -l INJECTED-RED` | **共 14 个文件**，逐条全在 `docs/**` | 0 | `自验结论` = 独立复现成立（当时基线 `20b55eba`） |
 | — | 建卡器不初始化 `write_set` | `grep -c write_set task-state/D1061.json` | `0`；生成点 `alloc-task-id.sh:375` | **1** | `自验结论` = 独立复现成立 |
 
 b 面 14 条原始清单（不截断，全部 `docs/**`）：
@@ -120,7 +133,16 @@ curl -sL -H "Authorization: token $TOK" \
 | 声称 | 证据（命令 + 原始输出） | 结论 |
 |---|---|---|
 | 不碰 `src/**`、`scripts/audit/**` | `git diff --name-only origin/main...96135a1a \| grep -E '^(src/\|scripts/audit/)'` → **空（共 0 处）** | `自验结论` = 零越界 |
-| 零注入残留 | a 面 `src 0 / tests 0 / scripts 0 / .github 0`；b 面 **14 = 基线，零新增** | `自验结论` = 零新增 |
+| 零注入残留 | a 面 `src 0 / tests 0 / scripts 0 / .github 0`（新 main 复算同为 0）；b 面见下 | `自验结论` = 零新增 |
+
+**b 面复算（对**新**基线 `d9955cfb` 做差集，禁只看单侧）**
+```
+新 main b 面 = 15 个文件（15th = memory/notes/proposed/2026-09-28-d1052-a-face-selfmatch.md，由 #882 带入）
+PR-B  b 面 = 14 个文件
+差集: 仅新 main 有 = memory/notes/proposed/2026-09-28-d1052-a-face-selfmatch.md
+      仅 PR-B 有 = （空）   ← PR-B 新增 = 0
+```
+⇒ PR-B 的 b 面是当前 main 的**严格子集**，**零新增**。（PR-B 分支基于 `20b55eba`，故不含 #882 带入的那 1 条；合并后自动继承 main 的 15。）
 
 ### 4.2 写集对照（16 文件，逐条核）
 
