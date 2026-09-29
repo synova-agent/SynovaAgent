@@ -1,0 +1,599 @@
+{
+  "task": "D1061-A3",
+  "artifact": "A3-02-run-metrics.json",
+  "writer": "coder-a",
+  "captured_at_utc": "2026-09-29T08:36:47Z",
+  "source": {
+    "run_id": 36542166241,
+    "run_url": "https://github.com/tangbaobao520/SynovaAgent/actions/runs/36542166241",
+    "head_sha": "980c629ab1a99bff9582db5838d1d6000761e773",
+    "event": "pull_request",
+    "trigger": "PR #900 opened (base=main)",
+    "run_status": "completed",
+    "run_conclusion": "failure",
+    "jobs_total": 16,
+    "api": "GET /repos/tangbaobao520/SynovaAgent/actions/runs/36542166241/jobs?per_page=100",
+    "leg_formula": "completed_at - started_at (UTC, seconds)"
+  },
+  "jobs": [
+    {
+      "job_id": 109319930216,
+      "name": "Architecture Check",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-09-29T08:21:10Z",
+      "completed_at": "2026-09-29T08:23:15Z",
+      "leg_seconds": 125,
+      "failed_step": null
+    },
+    {
+      "job_id": 109319930217,
+      "name": "Checker Review (maker/checker)",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-09-29T08:21:10Z",
+      "completed_at": "2026-09-29T08:23:08Z",
+      "leg_seconds": 118,
+      "failed_step": null
+    },
+    {
+      "job_id": 109319930338,
+      "name": "Control Tower Gate Tests (ubuntu-latest)",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-09-29T08:21:09Z",
+      "completed_at": "2026-09-29T08:22:33Z",
+      "leg_seconds": 84,
+      "failed_step": {
+        "number": 6,
+        "name": "Run hermetic control-tower gate tests",
+        "conclusion": "failure"
+      }
+    },
+    {
+      "job_id": 109319930106,
+      "name": "Control Tower Gate Tests (windows-latest, shard 1/4)",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-09-29T08:21:09Z",
+      "completed_at": "2026-09-29T08:32:53Z",
+      "leg_seconds": 704,
+      "failed_step": {
+        "number": 6,
+        "name": "Run hermetic control-tower gate tests",
+        "conclusion": "failure"
+      }
+    },
+    {
+      "job_id": 109319930077,
+      "name": "Control Tower Gate Tests (windows-latest, shard 2/4)",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-09-29T08:21:10Z",
+      "completed_at": "2026-09-29T08:33:43Z",
+      "leg_seconds": 753,
+      "failed_step": {
+        "number": 6,
+        "name": "Run hermetic control-tower gate tests",
+        "conclusion": "failure"
+      }
+    },
+    {
+      "job_id": 109319930290,
+      "name": "Control Tower Gate Tests (windows-latest, shard 3/4)",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-09-29T08:21:10Z",
+      "completed_at": "2026-09-29T08:31:09Z",
+      "leg_seconds": 599,
+      "failed_step": {
+        "number": 6,
+        "name": "Run hermetic control-tower gate tests",
+        "conclusion": "failure"
+      }
+    },
+    {
+      "job_id": 109319930188,
+      "name": "Control Tower Gate Tests (windows-latest, shard 4/4)",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-09-29T08:21:08Z",
+      "completed_at": "2026-09-29T08:33:18Z",
+      "leg_seconds": 730,
+      "failed_step": {
+        "number": 6,
+        "name": "Run hermetic control-tower gate tests",
+        "conclusion": "failure"
+      }
+    },
+    {
+      "job_id": 109319930152,
+      "name": "Gate Integrity (pattern sentinel + injection fixture + ci-reds)",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-09-29T08:21:09Z",
+      "completed_at": "2026-09-29T08:21:34Z",
+      "leg_seconds": 25,
+      "failed_step": null
+    },
+    {
+      "job_id": 109321643945,
+      "name": "Golden Case F1 Gate",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-09-29T08:26:13Z",
+      "completed_at": "2026-09-29T08:26:45Z",
+      "leg_seconds": 32,
+      "failed_step": null
+    },
+    {
+      "job_id": 109319929807,
+      "name": "Integration Contract Check",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-09-29T08:21:08Z",
+      "completed_at": "2026-09-29T08:22:35Z",
+      "leg_seconds": 87,
+      "failed_step": null
+    },
+    {
+      "job_id": 109319930029,
+      "name": "Test-Kit Architecture Tests (ubuntu-latest)",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-09-29T08:21:09Z",
+      "completed_at": "2026-09-29T08:21:28Z",
+      "leg_seconds": 19,
+      "failed_step": null
+    },
+    {
+      "job_id": 109319930163,
+      "name": "Test-Kit Architecture Tests (windows-latest)",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-09-29T08:21:08Z",
+      "completed_at": "2026-09-29T08:21:42Z",
+      "leg_seconds": 34,
+      "failed_step": null
+    },
+    {
+      "job_id": 109319930289,
+      "name": "TypeScript + Lint + Iron Laws",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-09-29T08:21:09Z",
+      "completed_at": "2026-09-29T08:23:17Z",
+      "leg_seconds": 128,
+      "failed_step": null
+    },
+    {
+      "job_id": 109320665073,
+      "name": "Vitest (1/2)",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-09-29T08:23:19Z",
+      "completed_at": "2026-09-29T08:25:37Z",
+      "leg_seconds": 138,
+      "failed_step": null
+    },
+    {
+      "job_id": 109320665033,
+      "name": "Vitest (2/2)",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-09-29T08:23:19Z",
+      "completed_at": "2026-09-29T08:26:10Z",
+      "leg_seconds": 171,
+      "failed_step": null
+    },
+    {
+      "job_id": 109319930950,
+      "name": "npm audit",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-09-29T08:21:09Z",
+      "completed_at": "2026-09-29T08:21:24Z",
+      "leg_seconds": 15,
+      "failed_step": null
+    }
+  ],
+  "control_tower_legs": {
+    "count": 5,
+    "failed": 5,
+    "windows_shards": [
+      {
+        "name": "Control Tower Gate Tests (windows-latest, shard 1/4)",
+        "job_id": 109319930106,
+        "conclusion": "failure",
+        "leg_seconds": 704
+      },
+      {
+        "name": "Control Tower Gate Tests (windows-latest, shard 2/4)",
+        "job_id": 109319930077,
+        "conclusion": "failure",
+        "leg_seconds": 753
+      },
+      {
+        "name": "Control Tower Gate Tests (windows-latest, shard 3/4)",
+        "job_id": 109319930290,
+        "conclusion": "failure",
+        "leg_seconds": 599
+      },
+      {
+        "name": "Control Tower Gate Tests (windows-latest, shard 4/4)",
+        "job_id": 109319930188,
+        "conclusion": "failure",
+        "leg_seconds": 730
+      }
+    ],
+    "ubuntu": [
+      {
+        "name": "Control Tower Gate Tests (ubuntu-latest)",
+        "job_id": 109319930338,
+        "conclusion": "failure",
+        "leg_seconds": 84
+      }
+    ],
+    "windows_shard_leg_seconds": [
+      599,
+      704,
+      730,
+      753
+    ],
+    "criterion_seconds": 300,
+    "criterion_source": "docs/synova/product-lines/evidence/D1061-A3/A3-01-分片方案与不变式.md:11 「判据 = windows CT 腿 ≤ 300s」",
+    "criterion_met": false,
+    "criterion_note": "实测 4 条 windows 分片腿 = 599/704/730/753s，全部 > 300s；A3-01 §7 预测 238–260s，实测为其 2.3–3.2 倍"
+  },
+  "selector_selection_per_shard": {
+    "source": "CI job log notice + [D1061-SELECT] stderr line, 逐字",
+    "observed": {
+      "Control Tower Gate Tests (windows-latest, shard 1/4)": {
+        "select_line": "[D1061-SELECT] shard=1/4 mode=select platform=windows changed=19 selected_of_total=55/55 degraded=0",
+        "notice": "##[notice]platform=windows shard=1/4 selected=55/55"
+      },
+      "Control Tower Gate Tests (windows-latest, shard 2/4)": {
+        "select_line": "[D1061-SELECT] shard=2/4 mode=select platform=windows changed=19 selected_of_total=55/55 degraded=0"
+      },
+      "Control Tower Gate Tests (windows-latest, shard 3/4)": {
+        "select_line": "[D1061-SELECT] shard=3/4 mode=select platform=windows changed=19 selected_of_total=55/55 degraded=0"
+      },
+      "Control Tower Gate Tests (windows-latest, shard 4/4)": {
+        "select_line": "[D1061-SELECT] shard=4/4 mode=select platform=windows changed=19 selected_of_total=55/55 degraded=0"
+      }
+    },
+    "local_reproduction": {
+      "cmd": "bash scripts/control-tower/ct-suite-select.sh --changed origin/main...HEAD --platform <P> --shard <S>",
+      "results": [
+        {
+          "platform": "windows",
+          "shard": "1/4",
+          "stdout_suites": 55,
+          "stderr": "[D1061-SELECT] shard=1/4 mode=select platform=windows changed=19 selected_of_total=55/55 degraded=0"
+        },
+        {
+          "platform": "windows",
+          "shard": "3/4",
+          "stdout_suites": 55,
+          "stderr": "[D1061-SELECT] shard=3/4 mode=select platform=windows changed=19 selected_of_total=55/55 degraded=0"
+        },
+        {
+          "platform": "ubuntu",
+          "shard": "1/4",
+          "stdout_suites": 55,
+          "stderr": "[D1061-SELECT] shard=1/4 mode=select platform=ubuntu changed=19 selected_of_total=55/55 degraded=0"
+        },
+        {
+          "platform": "ubuntu",
+          "shard": "3/4",
+          "stdout_suites": 55,
+          "stderr": "[D1061-SELECT] shard=3/4 mode=select platform=ubuntu changed=19 selected_of_total=55/55 degraded=0"
+        }
+      ],
+      "conclusion": "分片过滤未生效：每个分片都返回全量 55 条 catalog"
+    }
+  },
+  "root_cause": {
+    "summary": "本 PR 修改了 .github/workflows/ci.yml；map 规则 `.github/workflows/*` → domains [\"__FULL__\"] 使 FORCE_FULL=1，选择器在分片过滤（ct-suite-select.sh:280）之前就 full_list + exit 0（:273-277）⇒ 分片永不生效",
+    "rule_verbatim": {
+      "glob": ".github/workflows/*",
+      "domains": [
+        "__FULL__"
+      ],
+      "why": "CI 定义自身变更 ⇒ 选择器前提失效（D1061）"
+    },
+    "rule_file": "scripts/control-tower/ct-suite-map.json → rules[0]",
+    "code_ordering": "scripts/control-tower/ct-suite-select.sh:273-277 (FORCE_FULL → full_list → exit 0) 早于 :280 分片过滤",
+    "trace_proof": "bash -x 输出命中行: `[[ .github/workflows/ci.yml == .github/workflows/* ]]` → `HIT=__FULL__` → `FORCE_FULL=1`",
+    "changed_files_count": 19
+  },
+  "baseline_comparison": {
+    "run_id": 36528674633,
+    "note": "A3-01 引用的 PR-A baseline run",
+    "legs": [
+      {
+        "name": "Control Tower Gate Tests (ubuntu-latest)",
+        "job_id": 109277211498,
+        "conclusion": "success",
+        "leg_seconds": 72
+      },
+      {
+        "name": "Control Tower Gate Tests (windows-latest)",
+        "job_id": 109277211633,
+        "conclusion": "success",
+        "leg_seconds": 630
+      }
+    ],
+    "delta_windows": "baseline 单腿 630s（绿） → A3 四分片 599/704/730/753s（全红）：不但没降到 ≤300s，且总计算量≈4×"
+  },
+  "failures": {
+    "common_cause": "全部 5 条 CT 腿（ubuntu + 4 windows 分片）均在同一夹具处失败",
+    "fixture": "tests/control-tower/ci-signal-classify.test.sh",
+    "assertion": "tests/control-tower/ci-signal-classify.test.sh:239-240 — printf '%s' \"$CTJOB\" | grep -qF \"name: Control Tower Gate Tests (\\${{ matrix.os }})\" && ok \"身份不变: job 名未改（必需 context 名依赖）\" || no \"job 名被改动\"",
+    "a3_touched_fixture": false,
+    "a3_touched_fixture_evidence": "git diff --stat c6787513..HEAD -- tests/control-tower/ci-signal-classify.test.sh → 0 行输出",
+    "failure_line": "FAIL: tests/control-tower/ci-signal-classify.test.sh",
+    "annotation": "##[error]  ❌ job 名被改动| ... |结果: 77 通过, 1 失败, 0 显式跳过|",
+    "lead_hypothesis_refuted": "队长预期『仅 shard 3 红』；实测 4 条 windows 分片全红（因分片未生效，每片都跑了该夹具）"
+  },
+  "pr_state": {
+    "number": 900,
+    "url": "https://github.com/tangbaobao520/SynovaAgent/pull/900",
+    "state": "open",
+    "base_ref": "main",
+    "head_ref": "chore/d1061-a3-shards",
+    "head_sha": "980c629ab1a99bff9582db5838d1d6000761e773",
+    "mergeable": true,
+    "mergeable_state": "blocked",
+    "commits": 19,
+    "changed_files": 19,
+    "additions": 3583,
+    "deletions": 4,
+    "observed_by": "GET /repos/tangbaobao520/SynovaAgent/pulls/900",
+    "note": "dirty 已由 merge main 解除；blocked = 旧必需检查名 `Control Tower Gate Tests (windows-latest)` 不再上报（分片名带 shard 后缀）"
+  },
+  "log_reading_caveat": {
+    "observation": "各 CT job 日志中可数到的 `── tests/…` 启动行为 43 条，而选择器报 selected=55/55",
+    "control": "baseline 绿 run 36528674633 的 windows CT 日志同样为 43 条、同样止于 tag-ancestry.test.sh",
+    "conclusion": "43 vs 55 是**日志读取侧的既有现象（下载截断）**，baseline 绿 run 一致 ⇒ **不是 A3 引入的回归**，不作为本卡判据；选择器层面的 55/55 才是权威数字"
+  },
+  "run_2": {
+    "run_id": 36544058249,
+    "run_url": "https://github.com/tangbaobao520/SynovaAgent/actions/runs/36544058249",
+    "head_sha": "bab4c126adb461578006e2ab4eedbf587a36ecdf",
+    "event": "pull_request (synchronize)",
+    "trigger": "证据提交 70df8aa7（+ post-commit hook bab4c126）推送后自动触发",
+    "run_status": "completed",
+    "run_conclusion": "failure",
+    "jobs_total": 15,
+    "api": "GET /repos/tangbaobao520/SynovaAgent/actions/runs/36544058249/jobs?per_page=100",
+    "leg_formula": "completed_at - started_at (UTC, seconds)",
+    "jobs": [
+      {
+        "job_id": 109326083208,
+        "name": "Architecture Check",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-09-29T08:39:03Z",
+        "completed_at": "2026-09-29T08:41:04Z",
+        "leg_seconds": 121
+      },
+      {
+        "job_id": 109326083182,
+        "name": "Checker Review (maker/checker)",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-09-29T08:39:04Z",
+        "completed_at": "2026-09-29T08:41:01Z",
+        "leg_seconds": 117
+      },
+      {
+        "job_id": 109326083364,
+        "name": "Control Tower Gate Tests (ubuntu-latest)",
+        "status": "completed",
+        "conclusion": "failure",
+        "started_at": "2026-09-29T08:39:03Z",
+        "completed_at": "2026-09-29T08:40:09Z",
+        "leg_seconds": 66
+      },
+      {
+        "job_id": 109326083368,
+        "name": "Control Tower Gate Tests (windows-latest, shard 1/4)",
+        "status": "completed",
+        "conclusion": "failure",
+        "started_at": "2026-09-29T08:39:06Z",
+        "completed_at": "2026-09-29T08:51:39Z",
+        "leg_seconds": 753
+      },
+      {
+        "job_id": 109326087181,
+        "name": "Control Tower Gate Tests (windows-latest, shard 2/4)",
+        "status": "completed",
+        "conclusion": "failure",
+        "started_at": "2026-09-29T08:39:05Z",
+        "completed_at": "2026-09-29T08:49:00Z",
+        "leg_seconds": 595
+      },
+      {
+        "job_id": 109326083233,
+        "name": "Control Tower Gate Tests (windows-latest, shard 3/4)",
+        "status": "completed",
+        "conclusion": "failure",
+        "started_at": "2026-09-29T08:39:05Z",
+        "completed_at": "2026-09-29T08:50:45Z",
+        "leg_seconds": 700
+      },
+      {
+        "job_id": 109326083229,
+        "name": "Control Tower Gate Tests (windows-latest, shard 4/4)",
+        "status": "completed",
+        "conclusion": "failure",
+        "started_at": "2026-09-29T08:39:03Z",
+        "completed_at": "2026-09-29T08:47:18Z",
+        "leg_seconds": 495
+      },
+      {
+        "job_id": 109326083139,
+        "name": "Gate Integrity (pattern sentinel + injection fixture + ci-reds)",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-09-29T08:39:04Z",
+        "completed_at": "2026-09-29T08:39:30Z",
+        "leg_seconds": 26
+      },
+      {
+        "job_id": 109326795067,
+        "name": "Golden Case F1 Gate",
+        "status": "completed",
+        "conclusion": "skipped",
+        "started_at": "2026-09-29T08:41:03Z",
+        "completed_at": "2026-09-29T08:41:03Z",
+        "leg_seconds": 0
+      },
+      {
+        "job_id": 109326083204,
+        "name": "Integration Contract Check",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-09-29T08:39:03Z",
+        "completed_at": "2026-09-29T08:40:49Z",
+        "leg_seconds": 106
+      },
+      {
+        "job_id": 109326083150,
+        "name": "Test-Kit Architecture Tests (ubuntu-latest)",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-09-29T08:39:03Z",
+        "completed_at": "2026-09-29T08:39:21Z",
+        "leg_seconds": 18
+      },
+      {
+        "job_id": 109326083295,
+        "name": "Test-Kit Architecture Tests (windows-latest)",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-09-29T08:39:04Z",
+        "completed_at": "2026-09-29T08:39:45Z",
+        "leg_seconds": 41
+      },
+      {
+        "job_id": 109326083203,
+        "name": "TypeScript + Lint + Iron Laws",
+        "status": "completed",
+        "conclusion": "failure",
+        "started_at": "2026-09-29T08:39:03Z",
+        "completed_at": "2026-09-29T08:41:02Z",
+        "leg_seconds": 119
+      },
+      {
+        "job_id": 109326793372,
+        "name": "Vitest (${{ matrix.shard }})",
+        "status": "completed",
+        "conclusion": "skipped",
+        "started_at": "2026-09-29T08:41:03Z",
+        "completed_at": "2026-09-29T08:41:03Z",
+        "leg_seconds": 0
+      },
+      {
+        "job_id": 109326083237,
+        "name": "npm audit",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-09-29T08:39:03Z",
+        "completed_at": "2026-09-29T08:39:23Z",
+        "leg_seconds": 20
+      }
+    ],
+    "control_tower_legs": {
+      "count": 5,
+      "failed": 5,
+      "windows_shards": [
+        {
+          "name": "Control Tower Gate Tests (windows-latest, shard 1/4)",
+          "job_id": 109326083368,
+          "conclusion": "failure",
+          "leg_seconds": 753
+        },
+        {
+          "name": "Control Tower Gate Tests (windows-latest, shard 2/4)",
+          "job_id": 109326087181,
+          "conclusion": "failure",
+          "leg_seconds": 595
+        },
+        {
+          "name": "Control Tower Gate Tests (windows-latest, shard 3/4)",
+          "job_id": 109326083233,
+          "conclusion": "failure",
+          "leg_seconds": 700
+        },
+        {
+          "name": "Control Tower Gate Tests (windows-latest, shard 4/4)",
+          "job_id": 109326083229,
+          "conclusion": "failure",
+          "leg_seconds": 495
+        }
+      ],
+      "windows_shard_leg_seconds": [
+        495,
+        595,
+        700,
+        753
+      ],
+      "criterion_seconds": 300,
+      "criterion_met": false
+    },
+    "selector_selection_per_shard_observed": {
+      "windows shard 1/4": {
+        "line": "[D1061-SELECT] shard=1/4 mode=select platform=windows changed=21 selected_of_total=55/55 degraded=0",
+        "notice": "##[notice]platform=windows shard=1/4 selected=55/55"
+      },
+      "ubuntu": {
+        "notice": "##[notice]platform=ubuntu shard=1/4 selected=55/55"
+      }
+    },
+    "selection_set_note": "第二 run 的分片选择集**仍是 55/55**（短路未修，符合预期）⇒ 本 run 腿时**只作方差记录，不作达标判据**。",
+    "same_failure_as_run1": {
+      "fixture": "tests/control-tower/ci-signal-classify.test.sh",
+      "shard1_fail_line": "FAIL: tests/control-tower/ci-signal-classify.test.sh (08:43:48Z)",
+      "occurrences_in_shard1_log": 1
+    },
+    "new_failure_not_present_in_run1": {
+      "job": "TypeScript + Lint + Iron Laws",
+      "job_id": 109326083203,
+      "conclusion": "failure",
+      "failed_step": "step 10 'Merge write-set reconciliation (D708)'",
+      "gate_output": [
+        "── merge-writeset-gate (D708) 合并级写集对账 ──",
+        "❌ 结论: block — 检测到 2 个写集外文件（夹带）",
+        "   任务: D1061 | 分支: chore/d1061-a3-shards",
+        "   变更集: 21 个文件（merge-base f51aaf9b）",
+        "   夹带文件 2 个（不匹配任何声明项）:",
+        "     - docs/synova/product-lines/evidence/D1061-A3/A3-02-PR与run回执.md",
+        "     - docs/synova/product-lines/evidence/D1061-A3/A3-02-run-metrics.json"
+      ],
+      "cause": "D708 读的是仓库侧声明（S1 task-state/D1061.json write_set + S3 brief Q2-include）；其中声明了 A3-01，但**未声明 A3-02 两个证据文件**。task-1 的写集只写在共享任务板上，不在仓库声明源内。",
+      "consequence": "必需检查 `TypeScript + Lint + Iron Laws` 转红；其下游 `Vitest (${{ matrix.shard }})` 与 `Golden Case F1 Gate` 被 skip",
+      "gate_offered_remedies": [
+        "① 把该文件加入声明（S1 task-state write_set / S2 dev doc 写集表 / S3 brief Q2）—— 属写集扩写，需 CTO 批",
+        "② 从本 PR 移出该文件",
+        "③ 显式豁免：在 PR 正文/声明文件加 `## 写集豁免` 段落，每行 `- <路径> — <理由>`（无理由不生效）—— 仅改 PR 正文，不动仓库文件"
+      ],
+      "status": "未修，等 CTO/队长裁定"
+    },
+    "skipped_jobs": [
+      {
+        "name": "Vitest (${{ matrix.shard }})",
+        "job_id": 109326793372,
+        "status": "skipped",
+        "note": "未展开的 matrix job 名；因上游 quality 失败而 skip"
+      },
+      {
+        "name": "Golden Case F1 Gate",
+        "job_id": 109326795067,
+        "status": "skipped"
+      }
+    ],
+    "variance_note": "两 run 的 windows 分片腿时：run1 = 599/704/730/753s；run2 = 495/595/700/753s。极差 258s（shard 4: 730→495；shard 2: 753→595），说明单腿方差可达 ~±130s 量级 —— 这正是 A3-01「余量仅 1s」担忧的量化佐证（但两者均远超 300s 判据，方差记录不改变判据不成立的结论）。"
+  }
+}

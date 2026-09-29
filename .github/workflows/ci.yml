@@ -11,14 +11,22 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
   # ── D1039 安全网②③（①②③ 全貌见 control-tower-tests job 头注释块）──────────────────
   # ② 手动强制: 判据误判/排障时人工强制跑 control-tower 重活（默认 false，不改变日常行为）。
+  #    D1061/PR-A 追加 `ct_full_suite` = 「合并前**全量密封清单**一道」的显式/可审计形式
+  #    （true 时不做「变更相关 ∪ 平台敏感」裁剪）。默认 true = fail-safe 口径（多跑不漏跑）。
   workflow_dispatch:
     inputs:
       force_control_tower_tests:
         description: "安全网②: 强制跑 control-tower 重活（绕过路径判据；其余 job 照常跑）"
         type: boolean
         default: false
+      ct_full_suite:
+        description: "D1061/PR-A: 密封清单全量跑（true=不裁 windows 面；false=变更相关 ∪ 平台敏感）"
+        type: boolean
+        default: true
   # ③ 周期兜底: 每 7 天（周日 20:00 UTC）无条件全量跑一次 control-tower 重活。
   #   用途: 判据路径集漂移 / 门禁腐化，在"长时间不碰控制塔路径"的静默期也能暴露（最坏延迟 7 天）。
+  #   D1061/PR-A 复用本安全网作为「全量 windows 一道」的**周期载体（禁删）**——本卡未新增 cron：
+  #   每日全量 windows 腿（实测 1432–2500s）会变成新的队列放大器，与卡面目标相反。
   #   其余 9 个 job 在本 run 里**保持原始行为（恒跑）**——不额外加 job 级 if:（队长 D1039 裁决:
   #   多 9 处 job 级 if = 把"必需 context 可能被 skip"的风险面从 2 个扩到 12 个，收益仅省 ~326s/周）。
   schedule:
@@ -352,12 +360,22 @@ jobs:
     # ubuntu 分支同表：中位数 274s / P95 301s ⇒ max(451.5, 822) = 822s ⇒ 14min。
     # 关键 step「Run hermetic control-tower gate tests」= 60min（windows）/ 13min（ubuntu，须 < job 级 14）。
     timeout-minutes: ${{ matrix.os == 'windows-latest' && 106 || 14 }}
-    name: Control Tower Gate Tests (${{ matrix.os }})
+    name: Control Tower Gate Tests (${{ matrix.os }}${{ matrix.os == 'windows-latest' && format(', shard {0}/4', matrix.shard) || '' }})
     # D520/任务2: 双平台矩阵——平台问题（CRLF/python3/路径）不再等 Win 实测暴露。
     strategy:
       fail-fast: false
       matrix:
+        # D1061-A3: windows 面**四分片**（队长裁 (b)：3 分片在较差 run 口径下余量仅 1s = 擦线）（并行实测为负结果 ⇒ 改横向分片：负载分到独立 runner）。
+        # ubuntu 面保持单分片（job 名不变 ⇒ 必需检查名 `Control Tower Gate Tests (ubuntu-latest)` 不受影响）。
         os: [ubuntu-latest, windows-latest]
+        shard: [1, 2, 3, 4]
+        exclude:
+          - os: ubuntu-latest
+            shard: 2
+          - os: ubuntu-latest
+            shard: 3
+          - os: ubuntu-latest
+            shard: 4
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -459,6 +477,9 @@ jobs:
         #   该用例自身含时序守卫（无修复的分支 ⇒ SKIP），断言 vitest.config.ts 收敛 LOG_LEVEL=warn。
         run: |
           FAIL=0
+          # D1061/PR-A: 密封清单**单源**在此处物化（catalog）。simulate-ci.sh 与
+          #   ct-suite-select.sh 的 --all/全量兜底均从本 ci.yml 同源提取（不散列、不漂移）。
+          CATALOG=""
           for t in \
             tests/control-tower/verify-parallel.test.sh \
             tests/control-tower/verify-claims-table.test.sh \
@@ -512,7 +533,55 @@ jobs:
             tests/control-tower/daily-cto-board-ratio.test.sh \
             tests/control-tower/install-dsh-preset.test.sh \
             tests/control-tower/d956-failmsg.test.sh \
+            tests/control-tower/ct-suite-select.test.sh \
+            tests/control-tower/simulate-ci-dedup.test.sh \
             tests/control-tower/ci-signal-classify.test.sh; do
+            CATALOG="${CATALOG}${t}"$'\n'
+          done
+          CATALOG="$(printf '%s\n' "$CATALOG" | grep . | sort -u)"
+          CATALOG_N="$(printf '%s\n' "$CATALOG" | grep -c . | tr -d ' \n\r')"
+
+          # ── D1061/PR-A 套件选择（与 D1039 判据**正交**：D1039 决定「重活跑不跑」，本段决定「windows 面跑哪些」）──
+          # windows = 变更相关 ∪ 平台敏感（`--platform windows`）；其余平台**保持全量**（本卡不动 ubuntu 面）。
+          # 选择器降级语义 = 映射缺失/空变更/未映射路径 → 显式回退全量 + ::warning（绝不静默缩小）。
+          # ct_full_suite=true（workflow_dispatch 默认值 = 合并前全量一道）= 不裁剪；周期全量由 D1039 安全网③ 承担。
+          CT_PLATFORM="ubuntu"
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then CT_PLATFORM="windows"; fi
+          TESTS=""
+          if [ "${{ inputs.ct_full_suite || 'false' }}" = "true" ]; then
+            echo "::notice title=D1061-select::ct_full_suite=true → 全量密封清单 ${CATALOG_N} 条（合并前/手动全量一道）"
+          elif [ "$CT_PLATFORM" != "windows" ]; then
+            echo "::notice title=D1061-select::platform=$CT_PLATFORM → 保持全量 ${CATALOG_N} 条（本卡仅裁 windows 面）"
+          else
+            # D1061-A3: windows = 变更相关 ∪ 平台敏感，再 ∩ 本分片（分片表在 ct-suite-map.json，
+            #   完整性不变式由 ct-suite-select.test.sh 物理守护：每条 catalog 条目恰好属一个分片）
+            TESTS="$(bash scripts/control-tower/ct-suite-select.sh --changed origin/main...HEAD --platform "$CT_PLATFORM" --shard "${{ matrix.shard }}/4" 2>/tmp/ct-select.log)"
+            SEL_RC=$?
+            grep -E '^\[D1061-(SELECT|DEGRADED)\]' /tmp/ct-select.log || true
+            if [ "$SEL_RC" -ne 0 ]; then
+              echo "::warning title=D1061-select::选择器 rc=$SEL_RC（执行失败）→ fail-closed 回退全量"
+              TESTS=""
+            fi
+          fi
+          # 选择集必须 ⊆ catalog；否则 fail-closed 全量（防映射漂移静默缩小覆盖面）
+          EXTRA=""
+          if [ -n "$TESTS" ]; then
+            EXTRA="$(printf '%s\n' "$TESTS" | grep -vxF -f <(printf '%s\n' "$CATALOG") || true)"
+          fi
+          if [ -z "$TESTS" ] || [ -n "$EXTRA" ]; then
+            if [ -n "$EXTRA" ]; then
+              echo "::warning title=D1061-select::选择集含 catalog 外条目（fail-closed 全量）: $(printf '%s' "$EXTRA" | tr '\n' ' ')"
+            fi
+            TESTS="$CATALOG"
+          fi
+          N="$(printf '%s\n' "$TESTS" | grep -c . | tr -d ' \n\r')"
+          echo "::notice title=D1061-select::platform=$CT_PLATFORM shard=${{ matrix.shard }}/4 selected=${N}/${CATALOG_N}"
+          if [ "${N:-0}" -eq 0 ]; then
+            echo "::notice title=D1061-select::本分片本次 0 条可跑（选择集与本分片交集为空）——按设计快速通过，非静默跳过"
+          fi
+
+          while IFS= read -r t; do
+            [ -z "$t" ] && continue
             echo "── $t"
             # D526: 测试失败输出进 ::error 注解——无 token 也能经 annotations 定位（D521 工具1 语义）
             if ! bash "$t" > /tmp/ct-out.log 2>&1; then
@@ -536,9 +605,9 @@ jobs:
               # D956-MSG-END
               FAIL=1
             fi
-          done
+          done <<< "$TESTS"
           # D943: DSH 断面一致性自扫（CI 无本地 DSH 树 → --no-tree-check；文档一致性仍全查）。
-          # 独立命令而非加入上方 for 清单——清单项由 `bash "$t"` 执行，命令串不可混入。
+          # 独立命令而非加入上方 catalog——catalog 项由 `bash "$t"` 执行，命令串不可混入。
           if ! python3 scripts/control-tower/check-dsh-anchor.py --repo . --no-tree-check; then
             echo "::error title=check-dsh-anchor::DSH 断面自扫失败（见上方 ❌ file:line）"
             FAIL=1
