@@ -5,6 +5,13 @@
 .codex/checkpoints/** linguist-generated=true
 .codex/dependency-graph.json linguist-generated=true
 
+# ⚠️ D1068 (2026-09-29) — 本条 union 声明**本批保留**，删除与「停写旧日志」同批执行。
+# 理由（本地实测，非推断）: 删掉 union 后，两分支各改 `.claude/bypass.log` 会得到
+#   `CONFLICT (add/add)` **硬冲突**；union 在时自动合并 clean。
+#   ⇒ **只删 union 而不停写**，是把「可自动合并的脏」换成「不可自动合并的脏」，
+#   合并吞吐更差，与 C1 目标相反。真解 = ① 停写（post-commit.sh:23）② 再删 union。
+# 裁决: CTO 2026-09-29「拆两步：写入侧先（含停写），再删 union」。
+# 下文为 CT-47 / D457 原文（D1068 迁移完成后随之退役）:
 # CT-47 / D457: bypass.log append-only 证据日志 — merge=union 自动保留双方
 # 背景: 每个 session 的 synova-commit 都往 bypass.log 追加一行证据，多 PR 并发合并时
 #       必然冲突（D357/D358/D354 三个分支都改了它）。append-only 日志合并 = 取并集，

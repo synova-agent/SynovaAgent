@@ -425,6 +425,60 @@ jobs:
         env:
           SYNO_CI: "1"   # 契约: 1 = HARD（任一 FAIL ⇒ exit 1）
         run: bash docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh
+      # ── D1068: 门禁证据载体 = commit trailer（对账「可见」，硬门禁留待下一批）──────────────
+      # 机制（唯一载体是脚本，本 step 只消费结论）:
+      #   `synova-commit` 在 git commit 之前调 scripts/control-tower/precommit-evidence.sh
+      #   write→hash，把 `PreCommit-PASS: <sha256>` 追加进提交消息；对账脚本
+      #   `scripts/control-tower/check-bypass-log.sh` 三态判定:
+      #     态1 消息含 trailer（新载体）· 态2 无 trailer 但旧账本 `.claude/bypass.log` 有该 SHA
+      #     （兼容过渡）· 态3 两者皆无 ⇒ exit 1。
+      # 🔴 为什么本批对「无 trailer」**只告警不判红**（真证据空洞除外；时序理由，K3 请按此核）:
+      #   ① trailer 由**已安装的** hook（scripts/install-hooks.sh 装进 .git/hooks 的
+      #      pre-commit 包装器）或 synova-commit 写出；hook 只在有人跑
+      #      `bash scripts/install-hooks.sh` 时才更新。
+      #   ② 本批**还没有任何 CI 强制别的机器重装 hook** ⇒ 老 clone 产出的提交可能没有 trailer。
+      #   ③ ⇒ 「无 trailer」在本批不等于「证据链断裂」: 只要有旧账本记录（态2）就是**合法过渡态**。
+      #      在此把「无 trailer」判红 = 过渡期误拦正常状态 → 逼出 `--no-verify`（V4.5.1 的原始病根）。
+      #   ⇒ 本 step 的退出码映射:
+      #      exit 0（态1 或 态2 —— 都算有证据）→ 绿 + **过渡期可见性 ::warning**（见下）
+      #      exit 1（态3 —— 既无 trailer 也无旧账本）→ ::error + 红 = **真证据空洞**（真缺陷）
+      #      exit 2（对账器自身执行失败/降级）→ ::error + 红（fail-closed，绝不与通过混同：
+      #             ctrl-tower-change 模式 1）
+      #   下一批（与「停写旧日志 + 删 union」同批）: 所有机器重装 hook 后，态2 随旧日志停写自然
+      #   枯竭 ⇒ 本 step 升级为「无 trailer 即红」的硬门禁（届时删除下面的 ::warning 分支）。
+      # 不另写平行逻辑: 判据唯一载体 = check-bypass-log.sh（平行逻辑 = 两处漂移）。
+      # 位置: 置于重活之前 = fail-fast（实测 <2s）；无 `if:` ⇒ 恒执行（不因分类器判据或
+      #   docs-only 而跳过 —— 被跳过的 check 等于没有）。
+      - name: D1068 commit-trailer evidence reconciliation (visible; hard gate next batch)
+        shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（对账器是 bash 语法）
+        env:
+          # 显式给 base: ① 绕开脚本内置的 `git fetch`（Windows 上 SSH hang 的已知源）；
+          #   ② base 不可解析时脚本会走 exit 1「base 不可解析」——与态3 同码，故由下方
+          #      预检先分离出来单独报，避免把「查不了」误标成「证据空洞」。
+          SYNO_BASE_REF: origin/main
+        run: |
+          # base 预检: 「查不了」≠「通过」（D414/U1c 教训）——不可解析即 fail-closed 红。
+          if ! git rev-parse --verify -q "$SYNO_BASE_REF" >/dev/null 2>&1; then
+            echo "::error title=D1068-trailer::base $SYNO_BASE_REF 不可解析 — 对账无法执行（fail-closed，不当作通过）"
+            exit 1
+          fi
+          RC=0
+          # GH Actions 的 bash 带 -e ⇒ 必须 `cmd || RC=$?`（否则 RC 赋值成死代码，降级直接判红）
+          LOG="$(bash scripts/control-tower/check-bypass-log.sh 2>&1)" || RC=$?
+          printf '%s\n' "$LOG"
+          if [ "$RC" -eq 0 ]; then
+            # 过渡期可见性: 靠旧账本兜底的提交必须看得见（否则「载体迁移完成度」无人可察）
+            if printf '%s' "$LOG" | grep -q '旧账本（兼容）=[1-9]'; then
+              echo "::warning title=D1068-trailer::过渡期: 本区间存在仅靠旧账本 .claude/bypass.log 兜底的提交（无 trailer）——载体迁移未完成；硬门禁（无 trailer 即红）留待下一批「停写旧日志 + 删 union」同批，届时各机器须重装 hook（bash scripts/install-hooks.sh）"
+            fi
+            exit 0
+          fi
+          if [ "$RC" -eq 1 ]; then
+            echo "::error title=D1068-trailer::证据空洞 — 区间内存在既无 PreCommit-PASS trailer、也无旧账本记录的提交（真缺陷，非过渡态；见上方逐条点名）"
+            exit 1
+          fi
+          echo "::error title=D1068-trailer::对账器执行失败/降级（exit $RC）——fail-closed，不当作通过"
+          exit 1
       - name: Run hermetic control-tower gate tests
         # T3: step 级 timeout（CTO 定值 60min on windows）；ubuntu 取 13（须 < 其 job 级 14）。
         timeout-minutes: ${{ matrix.os == 'windows-latest' && 60 || 13 }}
@@ -512,6 +566,7 @@ jobs:
             tests/control-tower/daily-cto-board-ratio.test.sh \
             tests/control-tower/install-dsh-preset.test.sh \
             tests/control-tower/d956-failmsg.test.sh \
+            tests/control-tower/precommit-evidence.test.sh \
             tests/control-tower/ci-signal-classify.test.sh; do
             echo "── $t"
             # D526: 测试失败输出进 ::error 注解——无 token 也能经 annotations 定位（D521 工具1 语义）

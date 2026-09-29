@@ -1,0 +1,24 @@
+{
+  "task_id": "D1068",
+  "title": "门禁证据载体迁移：bypass.log → commit trailer（段1 机制核 + CI 可见化）",
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-09-29",
+  "updated_by": "lead-D1068",
+  "write_set": [
+    "scripts/control-tower/precommit-evidence.sh",
+    "scripts/control-tower/synova-commit",
+    "scripts/control-tower/check-bypass-log.sh",
+    "scripts/install-hooks.sh",
+    ".gitattributes",
+    ".github/workflows/ci.yml",
+    "tests/control-tower/precommit-trailer.test.sh",
+    "tests/control-tower/check-bypass-log.test.sh",
+    ".claude/task-briefs/2026-09-29-D1068-门禁证据载体迁移-trailer.md",
+    "task-state/D1068.json",
+    "memory/notes/proposed/2026-09-29-d1068-trailer-evidence.md"
+  ]
+}

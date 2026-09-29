@@ -8,7 +8,10 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 # 覆盖矩阵（铁律 48 三路径 + 接线）:
 #   正常 — 无新提交（origin/main..HEAD 空）→ exit 0
 #   降级 — git log 执行失败 → exit 2（fail-closed, 不当作通过）
-#   边界 — bypass.log 缺失 → exit 1；显式 SYNO_BASE_REF 不可解析 → exit 1
+#   边界 — 显式 SYNO_BASE_REF 不可解析 → exit 1
+#          D1068 改: 「旧日志缺失」不再是失败条件（证据载体已迁 trailer）——
+#          改为断言「空区间 + 无来源 ⇒ exit 0，但必须**显式转纯 trailer 对账**（不静默）」；
+#          「有提交却无任何证据」由下方 D1068 三态用例覆盖（那才是真缺陷）。
 #   接线 — git log 失败 fail-closed 代码真实存在于脚本（铁律 0-2）
 # ═══════════════════════════════════════════════════════════════
 set -uo pipefail
@@ -35,12 +38,21 @@ SYNO_BASE_REF=origin/main bash "$GATE" >/dev/null 2>&1
 rc=$?
 [ "$rc" -eq 0 ] && ok "无新提交对账 → exit 0" || no "无新提交应 exit 0, 实际 $rc"
 
-# ── 边界: bypass.log 缺失 → exit 1 ──
+# ── 边界: 旧日志缺失 —— D1068 语义变更 ──
+# 旧断言「bypass.log 缺失 ⇒ exit 1」测的是「证据文件是存在性前提」。
+# D1068 把证据载体迁到 commit trailer 后，该前提**不再成立**：日志缺失只是「本区间无旧来源」，
+# 是否通过应由**逐提交的证据三态**决定，而不是由「文件在不在」决定。
+# 故本条改为断言：空区间 + 无来源 ⇒ exit 0，且**必须打印"转为纯 trailer 对账"**（不静默）。
+# 真缺陷（有提交却无任何证据 ⇒ exit 1）由 precommit-trailer.test.sh 的三态用例把关。
 mv "$BYPASS" "$BYPASS.u1bak" 2>/dev/null || true  # swallow-ok: bypass.log 备份/还原操作, 测试隔离可忽略
-SYNO_BASE_REF=origin/main bash "$GATE" >/dev/null 2>&1
+OUT_MISSING="$(SYNO_BASE_REF=origin/main bash "$GATE" 2>&1)"
 rc=$?
 cleanup
-[ "$rc" -eq 1 ] && ok "bypass.log 缺失 → exit 1" || no "bypass.log 缺失应 exit 1, 实际 $rc"
+if [ "$rc" -eq 0 ] && printf '%s' "$OUT_MISSING" | grep -q "纯 trailer 对账"; then
+  ok "D1068: 旧日志缺失 + 空区间 → exit 0 且显式转纯 trailer 对账（不静默）"
+else
+  no "D1068: 旧日志缺失应 exit 0 且明示转纯 trailer 对账, 实际 rc=$rc out=$OUT_MISSING"
+fi
 
 # ── 边界: 显式 SYNO_BASE_REF 不可解析 → exit 1（硬错误, 非 fail-open）──
 SYNO_BASE_REF="nonexistent-ref-xyz" bash "$GATE" >/dev/null 2>&1

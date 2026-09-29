@@ -55,6 +55,13 @@ if [ $EXIT_CODE -ne 0 ]; then
 fi
 # 无论成败都写 marker（失败但放行 = 经过了 pre-commit，非 --no-verify）
 echo "$(git rev-parse HEAD 2>/dev/null || true)|$(date +%s)" > "$ROOT/.claude/last-precommit-success"
+# D1068: 同时写「提交级证据」标记（落 .git/ 内部、**不被 git 跟踪**）——供 synova-commit 算 trailer。
+#   与上面 marker 分工不同、不可互相替代:
+#     last-precommit-success = 给 post-commit 判 --no-verify（内容 HEAD|epoch）
+#     precommit-evidence     = 给 commit trailer 用（内容 tree/head/epoch → sha256）
+#   写入失败不阻断提交（降级显式: 该提交将被对账拦在推送闸）——铁律 11 不静默。
+bash "$ROOT/scripts/control-tower/precommit-evidence.sh" write 2>/dev/null || \
+  echo "  ⚠️  D1068: 门禁证据标记写入失败 — 本提交将被对账拦（degraded）" >&2
 exit 0'
   elif [ -f "$entry" ]; then
     # 门禁入口（commit-msg 需 "$1" 提交信息文件；pre-push 需 "$1" remote 名 "$2" url —
@@ -138,6 +145,10 @@ _ensure_clone_git_config
 # .gitattributes 声明 .claude/bypass.log merge=union，但 git 需知道 union driver 是什么。
 # 这里注册一次，让 append-only 证据日志多 PR 合并自动取并集（不再冲突）。
 # 幂等: 重复运行 set 覆盖，无害。
+# ⚠️ D1068 (2026-09-29) — 本注册与其 `.gitattributes` 声明**本批保留**，与「停写旧日志」同批退役。
+#    实测依据: 删 union 后两分支各改同一文件 ⇒ `CONFLICT (add/add)` 硬冲突；union 在则 clean。
+#    只删 union 不停写 = 把「可自动合并的脏」换成「不可自动合并的脏」⇒ 合并吞吐更差。
+#    裁决: CTO 2026-09-29「拆两步：写入侧先（含停写），再删 union」。
 git config merge.union.driver "git merge-file --union %A %O %B" 2>/dev/null || true  # swallow-ok: git config 失败=非 git 仓库/只读, 降级不阻断
 echo "  ✅ git config merge.union.driver — bypass.log 自动合并"
 

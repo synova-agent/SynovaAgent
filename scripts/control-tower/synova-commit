@@ -817,6 +817,33 @@ if [[ $PRECOMMIT_EXIT -eq 0 ]]; then
     fi
   fi
 
+  # ═══ D1068: 门禁证据载体 = commit trailer ═══
+  # 时机最紧: 必须在**暂存态已冻结**（D706 断言之后）且 **git commit 之前** 写标记 —
+  #   标记内容含 `git write-tree`，此时树 = 即将提交的树，绑定才有意义。
+  # 判据（本卡 §Q1）: trailer 值 = sha256(标记内容)，标记只在门禁跑完后写出 ⇒
+  #   未跑门禁则算不出 trailer（C3「改坏即红」的物理基础）。
+  # 降级（铁律 11，不静默）: 标记写入失败 ⇒ **不阻断提交**（提交本身合法），但显式告警 +
+  #   记 degraded-events.log；该提交将对账失败，由 D331 语义拦在**推送闸**（比本地硬拦更正确：
+  #   证据缺失是「不能推送」而非「不能提交」——提交不产生共享状态）。
+  EVIDENCE_SH="$SCRIPT_DIR/precommit-evidence.sh"
+  if [[ -f "$EVIDENCE_SH" ]]; then
+    if bash "$EVIDENCE_SH" write 2>/dev/null; then
+      _PC_SHA="$(bash "$EVIDENCE_SH" hash 2>/dev/null || true)"
+      if [[ -n "$_PC_SHA" ]]; then
+        MESSAGE="$(printf '%s\n\nPreCommit-PASS: %s' "$MESSAGE" "$_PC_SHA")"
+        echo -e "  ${GREEN}🔏 D1068: 门禁证据 trailer 已置入（PreCommit-PASS: ${_PC_SHA:0:12}…）${NC}"
+      else
+        echo -e "  ${YELLOW}⚠ D1068: 标记已写但 sha256 计算失败 — trailer 未置入，本提交将对账失败（不阻断提交）${NC}"
+        echo "$(date -Iseconds) | DEGRADED | D1068 trailer 未置入: sha256 计算失败 | TASK_ID=$TASK_ID" >> "$DEGRADED_LOG" 2>/dev/null || true
+      fi
+    else
+      echo -e "  ${YELLOW}⚠ D1068: 门禁标记写入失败 — trailer 未置入，本提交将对账失败（不阻断提交）${NC}"
+      echo "$(date -Iseconds) | DEGRADED | D1068 trailer 未置入: 标记写入失败 | TASK_ID=$TASK_ID" >> "$DEGRADED_LOG" 2>/dev/null || true
+    fi
+  else
+    echo -e "  ${YELLOW}⚠ D1068: precommit-evidence.sh 缺失 — trailer 未置入（对账缺证据）${NC}"
+  fi
+
   # D706: 索引精确提交（不用 -a、不用 pathspec —— 逐字提交索引，天然携带删除项）
   COMMIT_EXIT=0
   _d706_index_exact_commit "$MESSAGE" || COMMIT_EXIT=$?
