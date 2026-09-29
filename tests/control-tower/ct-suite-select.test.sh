@@ -258,12 +258,12 @@ SHTOT=$(printf '%s\n' "$SHLIST" | awk '/ SHARDKEY /{print $3}' | head -1)
 SHP1=$(selprodq --list | awk -F' :: ' '/ SHARD 1 ::/{print $2}' | sort -u)
 # 用**真实映射可命中的路径**（docs/** → doc-system 域）；不可用触发 __FULL__ 的路径（那会输出全量）
 printf 'docs/synova/coordination/probe.md\n' > "$CHG/real-doc.txt"
-SEL1=$(selprodq --shard 1/3 --changed-files "$CHG/real-doc.txt" | sort -u)
+SEL1=$(selprodq --shard 1/4 --changed-files "$CHG/real-doc.txt" | sort -u)
 SH_OK=1; while IFS= read -r s; do [ -z "$s" ] && continue; printf '%s\n' "$SHP1" | grep -qxF "$s" || SH_OK=0; done <<< "$SEL1"
-[ "$SH_OK" -eq 1 ] && ok "分片过滤: --shard 1/3 输出 ⊆ 分片 1 分配表（$(cnt "$SEL1") 条）" || no "--shard 1/3 输出含非分片 1 条目"
+[ "$SH_OK" -eq 1 ] && ok "分片过滤: --shard 1/4 输出 ⊆ 分片 1 分配表（$(cnt "$SEL1") 条）" || no "--shard 1/4 输出含非分片 1 条目"
 
-bash "$SEL" --repo "$SB" --map "$SB/map.json" --shard 4/3 --changed-files "$CHG/l3.txt" >/dev/null 2>&1
-[ $? -eq 2 ] && ok "分片参数校验: --shard 4/3 越界 → exit 2" || no "--shard 4/3 应 exit 2"
+bash "$SEL" --repo "$SB" --map "$SB/map.json" --shard 9/4 --changed-files "$CHG/l3.txt" >/dev/null 2>&1
+[ $? -eq 2 ] && ok "分片参数校验: --shard 9/4 越界 → exit 2" || no "--shard 9/4 应 exit 2"
 bash "$SEL" --repo "$SB" --map "$SB/map.json" --shard abc --changed-files "$CHG/l3.txt" >/dev/null 2>&1
 [ $? -eq 2 ] && ok "分片参数校验: --shard abc 非数字 → exit 2" || no "--shard abc 应 exit 2"
 bash "$SEL" --repo "$SB" --map "$SB/map.json" --shard 1 --changed-files "$CHG/l3.txt" >/dev/null 2>&1

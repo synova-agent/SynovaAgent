@@ -360,20 +360,22 @@ jobs:
     # ubuntu 分支同表：中位数 274s / P95 301s ⇒ max(451.5, 822) = 822s ⇒ 14min。
     # 关键 step「Run hermetic control-tower gate tests」= 60min（windows）/ 13min（ubuntu，须 < job 级 14）。
     timeout-minutes: ${{ matrix.os == 'windows-latest' && 106 || 14 }}
-    name: Control Tower Gate Tests (${{ matrix.os }}${{ matrix.os == 'windows-latest' && format(', shard {0}/3', matrix.shard) || '' }})
+    name: Control Tower Gate Tests (${{ matrix.os }}${{ matrix.os == 'windows-latest' && format(', shard {0}/4', matrix.shard) || '' }})
     # D520/任务2: 双平台矩阵——平台问题（CRLF/python3/路径）不再等 Win 实测暴露。
     strategy:
       fail-fast: false
       matrix:
-        # D1061-A3: windows 面**三分片**（并行实测为负结果 ⇒ 改横向分片：负载分到独立 runner）。
+        # D1061-A3: windows 面**四分片**（队长裁 (b)：3 分片在较差 run 口径下余量仅 1s = 擦线）（并行实测为负结果 ⇒ 改横向分片：负载分到独立 runner）。
         # ubuntu 面保持单分片（job 名不变 ⇒ 必需检查名 `Control Tower Gate Tests (ubuntu-latest)` 不受影响）。
         os: [ubuntu-latest, windows-latest]
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4]
         exclude:
           - os: ubuntu-latest
             shard: 2
           - os: ubuntu-latest
             shard: 3
+          - os: ubuntu-latest
+            shard: 4
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -553,7 +555,7 @@ jobs:
           else
             # D1061-A3: windows = 变更相关 ∪ 平台敏感，再 ∩ 本分片（分片表在 ct-suite-map.json，
             #   完整性不变式由 ct-suite-select.test.sh 物理守护：每条 catalog 条目恰好属一个分片）
-            TESTS="$(bash scripts/control-tower/ct-suite-select.sh --changed origin/main...HEAD --platform "$CT_PLATFORM" --shard "${{ matrix.shard }}/3" 2>/tmp/ct-select.log)"
+            TESTS="$(bash scripts/control-tower/ct-suite-select.sh --changed origin/main...HEAD --platform "$CT_PLATFORM" --shard "${{ matrix.shard }}/4" 2>/tmp/ct-select.log)"
             SEL_RC=$?
             grep -E '^\[D1061-(SELECT|DEGRADED)\]' /tmp/ct-select.log || true
             if [ "$SEL_RC" -ne 0 ]; then
@@ -573,7 +575,7 @@ jobs:
             TESTS="$CATALOG"
           fi
           N="$(printf '%s\n' "$TESTS" | grep -c . | tr -d ' \n\r')"
-          echo "::notice title=D1061-select::platform=$CT_PLATFORM shard=${{ matrix.shard }}/3 selected=${N}/${CATALOG_N}"
+          echo "::notice title=D1061-select::platform=$CT_PLATFORM shard=${{ matrix.shard }}/4 selected=${N}/${CATALOG_N}"
           if [ "${N:-0}" -eq 0 ]; then
             echo "::notice title=D1061-select::本分片本次 0 条可跑（选择集与本分片交集为空）——按设计快速通过，非静默跳过"
           fi
