@@ -5,11 +5,11 @@
   "base": "20b55eba",
   "writer": "coder-b",
   "suites_run": 4,
-  "cases_run": 110,
+  "cases_run": 111,
   "cases_breakdown": {
     "gate-circuit-breaker.test.sh": 19,
     "pre-push-preview.test.sh": 24,
-    "brief-parser-cjk-path.test.sh": 11,
+    "brief-parser-cjk-path.test.sh": 12,
     "alloc-task-id.test.sh": 56
   },
   "rc": {
@@ -49,7 +49,8 @@
     "preview_remove_brief_parse": "rc=1 结果: 14 通过, 2 失败",
     "alloc_skeleton_drop_write_set": "rc=1 PASS=54 FAIL=2",
     "brief_parser_revert_paren_strip": "rc=1 结果: 9 通过, 2 失败",
-    "preview_remove_gate8_callsite": "rc=1 结果: 21 通过, 3 失败（调用点判别三条）"
+    "preview_remove_gate8_callsite": "rc=1 结果: 21 通过, 3 失败（调用点判别三条）",
+    "brief_parser_move_shape_check_after_colon_split": "rc=1 结果: 11 通过, 1 失败（全角冒号被截断）"
   },
   "exist_brief_checkbox_survey": {
     "source": "origin/main @ 20b55eba .claude/task-briefs/*.md",
@@ -132,5 +133,14 @@
     "residual_limit": "判别子A/B 走 SYNO_PREVIEW_ONLY 早退路径调同一函数；生产调用点由定位式结构判据覆盖（非行为层）",
     "weak_criterion_kept": "全文件 grep 保留但降级标注为『仅声明在场』",
     "failopen_not_a_defect": "缺件 fail-open = 既有语义『脚本缺失=CI 降级信号』+ 可见告警，非缺陷项"
+  },
+  "path_shape_family": {
+    "root_cause": "order: 先①全角冒号切分 -> 后②全角括号切分，故只修②对①型名字不完备",
+    "member_1_fullwidth_colon": "…派单闸门落地：R8-修复… -> …派单闸门落地（本卡定位，D1058 实战）",
+    "member_2_fullwidth_paren": "…-docs（系统性假红修复）.md -> …-docs（红因 B / #878）",
+    "member_3_Lnumber": "scripts/x.sh L750 -> scripts/x.sh（D543 有意保留）",
+    "fix": "PATH_SHAPE_RE 形状优先提到两个切分之前；形状命中整段保留，未命中回退两刀",
+    "real_world_proof": "D1058 brief Q2 现解析出完整全角冒号文件名",
+    "conclusion": "声明源可靠性与解析器复杂度成反比：S1(task-state.write_set, JSON) > S3(散文 Q2)；主源应为 S1"
   }
 }

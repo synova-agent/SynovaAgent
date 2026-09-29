@@ -39,6 +39,7 @@ cat > "$FIXTURE" <<'EOF'
 - 新增 scripts/control-tower/new-gate.sh
 - .claude/task-briefs/x-docs（系统性假红修复）.md
 - .claude/task-briefs/y-docs(ascii-paren).md
+- .claude/task-briefs/2026-09-29-D1058-派单闸门落地：R8-修复-+-§〇-归属-回执-点-id-三项检查.md
 - scripts/x.sh L750
 不做什么（含文件路径）:
 - 不改 scripts/audit/（K3 专属红线）
@@ -66,6 +67,9 @@ printf '%s' "$INC" | grep -qF '.claude/task-briefs/x-docs（系统性假红修�
 printf '%s' "$INC" | grep -qF '.claude/task-briefs/y-docs(ascii-paren).md' \
   && ok "正常: 半角括号真实文件名 完整保留" \
   || no "正常: 半角括号文件名被截断 → $INC"
+printf '%s' "$INC" | grep -qF '.claude/task-briefs/2026-09-29-D1058-派单闸门落地：R8-修复-+-§〇-归属-回执-点-id-三项检查.md' \
+  && ok "正常: **全角冒号**真实文件名 完整保留（D1058 实战样本；形状优先须在冒号切分之前）" \
+  || no "正常: 全角冒号文件名被截断 → $INC"
 printf '%s' "$INC" | grep -qF 'src/l3/foo.ts' \
   && ok "正常: 「路径 + 括号描述」仍剥描述 → src/l3/foo.ts" \
   || no "正常: src/l3/foo.ts 未正确剥描述 → $INC"
@@ -93,7 +97,7 @@ printf '%s' "$EXC" | grep -qF 'src/l4/bar.ts' \
 # ── 判据计数（防"只看命中不看总数"）──
 N_INC="$(printf '%s' "$INC" | "$PYBIN" -c "import json,sys;print(len(json.load(sys.stdin)))" 2>/dev/null || echo -1)"
 N_EXC="$(printf '%s' "$EXC" | "$PYBIN" -c "import json,sys;print(len(json.load(sys.stdin)))" 2>/dev/null || echo -1)"
-[ "$N_INC" -eq 5 ] && ok "边界: include 条数 = 5（无重复/无丢失）" || no "边界: include 条数 = ${N_INC}（期望 5）"
+[ "$N_INC" -eq 6 ] && ok "边界: include 条数 = 6（无重复/无丢失）" || no "边界: include 条数 = ${N_INC}（期望 6）"
 [ "$N_EXC" -eq 2 ] && ok "边界: exclude 条数 = 2" || no "边界: exclude 条数 = ${N_EXC}（期望 2）"
 
 echo ""
@@ -112,6 +116,8 @@ fi
 echo ""
 echo "  结果: $PASS 通过, $FAIL 失败"
 # 变异体（改坏即红，本卡实测贴于 B 证据）:
-#   把 parse_q2 的 `if not PATH_SHAPE_RE.match(path):` 条件删掉（恢复无条件剥括号）
-#   → 上面第 1 条「全角括号真实文件名完整保留」与第 2 条「半角」必红。
+# 变异体（改坏即红，本卡实测贴于 B 证据）:
+#   ① 把形状优先判据**挪回两个切分之后**（即恢复 `[:：]` 先切）
+#      → 「全角冒号文件名完整保留」必红；
+#   ② 删掉形状判定（恢复无条件剥括号）→ 「全角/半角括号文件名完整保留」必红。
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1
