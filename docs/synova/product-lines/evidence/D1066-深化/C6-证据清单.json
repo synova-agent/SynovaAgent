@@ -1,7 +1,7 @@
 {
   "schema": "d1066-evidence/1",
   "task": "D1066（承接 D1060 · 深化）",
-  "generated_at": "2026-09-29T05:20:00Z",
+  "generated_at": "2026-09-29T05:30:00Z",
   "suite": {
     "runner": "node --test（插件内 7 个测试文件）",
     "cases_declared": 108,
@@ -14,7 +14,8 @@
     "C1_source": {
       "status": "partial",
       "done": "web profile 来源已收回主仓（lib/ 4 js，与主仓逐字节一致，配置由脚本生成）",
-      "pending": "冷启动（重启后 19387 两路由 200）—— 需先合并 PR 使主仓含 D1060/D1066 交付件，再重启 App；重启须先报 CTO"
+      "pending": "冷启动（重启后 19387 两路由 200）—— 需先合并 PR 使主仓含 D1060/D1066 交付件，再重启 App；重启须先报 CTO",
+      "blocker": "PR #892 合并被分支保护拦截：enforce_admins=true + 12 项必需检查；其中 3 项为仓库系统性红（D734 PR 预算超限 46>12；Gate Integrity / Control Tower Gate Tests 的注入夹具假红＝未合 PR #878 所修）。平台不允许绕过（REST 405）。"
     },
     "C2_content": {
       "status": "done",
@@ -38,12 +39,14 @@
       "panel": "source_mode=in-repo-ledger，cards=58（活 42），debt=50，与落库件 counts 一致"
     },
     "C5_break_red": {
-      "status": "pending",
-      "note": "需在装载 D1066 交付件的环境下重新取证（改坏即删 slot / 改错数据源）；当前桌面 profile 仍装 D1060 worktree 版，待合并后重装再取证"
+      "status": "partial",
+      "done": "单元级重新取证（2026-09-29 13:27）：删 slot 注册行 ⇒ 客户端契约测试变红（三对不成立，面板不存在）；恢复 ⇒ 114/114 绿；改错数据源（repoRoot 指向不存在目录）⇒ 两路由 200 + degraded=true（sources=9/3），不 500 不空白",
+      "pending": "桌面端真机截图取证需装载 D1066 交付件（依赖合并）"
     },
     "C6_evidence": {
       "status": "done",
       "dir": "docs/synova/product-lines/evidence/D1066-深化/"
     }
-  }
+  },
+  "blocker_summary": "合并被拦 ⇒ 主仓暂无 D1066 交付件 ⇒ C1 冷启动与 C5 真机取证无法完成；需 CTO 处置（退役 PR 降队列 / 先合 #878 / 或 UI 侧处置）"
 }

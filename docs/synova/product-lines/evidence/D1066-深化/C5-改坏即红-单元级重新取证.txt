@@ -1,0 +1,23 @@
+=== C5 改坏即红（单元级重新取证，非复用 D1060 截图）===
+2026-09-29 13:27:04 CST
+
+--- 动作：从交付件 lib/client.js 删除「开发工作台」那一行 slot 注册 ---
+已删除注册行：71217 → 71090 字节
+
+--- 复跑客户端契约测试（期望变红：三对注册不再成立）---
+✖ 注册契约：三对 (sidebar.panellist 入口行 + main keyed cell) 成对、id/key 相同、main 先注册 (6.145875ms)
+ℹ pass 0
+ℹ fail 1
+✖ failing tests:
+✖ 注册契约：三对 (sidebar.panellist 入口行 + main keyed cell) 成对、id/key 相同、main 先注册 (6.145875ms)
+
+--- 恢复注册行 ---
+--- 恢复后复跑（期望全绿）---
+ℹ tests 114
+ℹ pass 114
+ℹ fail 0
+
+--- 另一半：改错数据源 ⇒ 显式降级（Host 层实测）---
+repoRoot 指向不存在目录时，两路由仍 200 + degraded（不 500 / 不空白）：
+/synova/workbench/data http=200 ok=false degraded=true sources=9
+/synova/governance/data http=200 ok=false degraded=true sources=3
