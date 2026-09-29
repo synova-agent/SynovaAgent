@@ -15,10 +15,13 @@
     "command": "git log -1 --format='%(trailers:key=PreCommit-PASS,valueonly)' HEAD^",
     "output": "7071cb440bedc4818f5848480b0559fb5f8cd1203050c87c9a555807877569a3",
     "marker_match": {
-      "command": "bash scripts/control-tower/precommit-evidence.sh verify 7071cb44…",
-      "output": "match",
-      "exit": 0,
-      "limit": "标记被下次提交覆盖后不可回溯核验（同提交周期内有效）"
+      "command_at_measure_time": "bash scripts/control-tower/precommit-evidence.sh verify 7071cb44…",
+      "output_at_measure_time": "match",
+      "exit_at_measure_time": 0,
+      "measured_at": "2026-09-29T14:39（提交 e61436fa 之后立即）",
+      "invalidated_by": "下一个提交覆盖标记文件 ⇒ 同一命令在 14:40:53 复跑得 mismatch/1",
+      "verifier_reproduction": "独立自验员原样复跑得 mismatch，exit=1",
+      "honest_limit": "该命令只在**同提交周期内**（标记未被下一次提交覆盖前）有效；跨提交核验必然失效。K3 请按此条件复跑，不要按无条件 match 复跑"
     }
   },
   "acceptance": {
@@ -51,9 +54,9 @@
       "status": "本文件",
       "suites": {
         "tests/control-tower/precommit-evidence.test.sh": "43 项断言 / exit 0",
-        "tests/control-tower/check-bypass-log.test.sh": "5 通过 0 失败 / exit 0",
+        "tests/control-tower/check-bypass-log.test.sh": "5 通过 0 失败 / exit 0（修复后；见 fix_after_verifier_rejection）",
         "tests/control-tower/bypass-union-merge.test.sh": "3 通过 0 失败 / exit 0（union 本批保留，故仍绿）",
-        "scripts/pre-commit-check.sh": "13 组全过 / exit 0",
+        "scripts/pre-commit-check.sh": "13 组全过 / exit 0（lead 自跑；自验员因只读约束未复跑）",
         "scripts/control-tower/ct-test-gate.sh": "SYNC-OK 控制塔脚本配对测试全绿"
       }
     }
@@ -83,5 +86,18 @@
     "段 4：21 个硬断言日志结构的测试（清单见 brief）",
     "段 5：CI 硬门禁升级（所有机器重装 hook 后）+ AGENTS.md/CLAUDE.md 文档同步",
     "pre-push-check.sh:444 在 check-bypass-log.sh 缺失时 fail-open，与 CI 侧 fail-closed 不一致（非本卡引入，登记）"
-  ]
+  ],
+  "fix_after_verifier_rejection": {
+    "verdict": "退回（独立自验员 verify-trailer，针对交付修订 4b616074）",
+    "blocker_1": {
+      "symptom": "tests/control-tower/check-bypass-log.test.sh 实测 4 通过 1 失败 / exit 1",
+      "root_cause": "断言耦合本机状态：bypass-ledger.sh 的来源不止 .claude/bypass.log，还含 .sessions/*/bypass.log（.gitignore 忽略 ⇒ 新 clone 为空、跑过一次提交即有）",
+      "fix": "测试内用三处注入缝隔离全部来源：SYNO_LEGACY_BYPASS_LOG + SYNO_BYPASS_SESSIONS_ROOT + SYNO_BYPASS_LEDGER_DIR",
+      "decoupling_proof": "注入 stray .sessions 账本（来源 2→3）后复跑仍 5 通过 0 失败"
+    },
+    "blocker_2": {
+      "symptom": "本文件原写 check-bypass-log.test.sh = 5 通过 0 失败、verify → match，在交付修订上不可复现",
+      "fix": "本文件已改为可复现表述 + 补测点/失效条件；verify 行见 end_to_end.marker_match"
+    }
+  }
 }

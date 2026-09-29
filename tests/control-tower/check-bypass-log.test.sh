@@ -42,14 +42,32 @@ rc=$?
 # 旧断言「bypass.log 缺失 ⇒ exit 1」测的是「证据文件是存在性前提」。
 # D1068 把证据载体迁到 commit trailer 后，该前提**不再成立**：日志缺失只是「本区间无旧来源」，
 # 是否通过应由**逐提交的证据三态**决定，而不是由「文件在不在」决定。
-# 故本条改为断言：空区间 + 无来源 ⇒ exit 0，且**必须打印"转为纯 trailer 对账"**（不静默）。
-# 真缺陷（有提交却无任何证据 ⇒ exit 1）由 precommit-trailer.test.sh 的三态用例把关。
+# 故本条断言：**无任何账本来源** + 空区间 ⇒ exit 0，且**必须打印"转为纯 trailer 对账"**（不静默）。
+# 真缺陷（有提交却无任何证据 ⇒ exit 1）由 precommit-evidence.test.sh 的三态用例把关。
+#
+# ⚠️ 隔离要求（D1068 独立自验 B1 退回，实测根因）:
+#   本脚本的「来源」不止 `.claude/bypass.log` —— `bypass-ledger.sh sources` 还会扫
+#   `.sessions/*/bypass.log`（`.gitignore` 忽略 ⇒ **本机状态**：新 clone 为空、提交过一次即有）。
+#   旧版本条断言只移走旧日志就期望「无来源」⇒ 在**任何跑过提交的机器上必假红**
+#   （实测: 4 通过 1 失败，失败项即本条）。
+#   修法: 用 bypass-ledger.sh 的既有注入缝把两个来源都指到空位，使断言与环境解耦。
+U1TMP="$(mktemp -d /tmp/d1068-u1.XXXXXX)"  # swallow-ok: mktemp 失败时下方 -d 判定即红，非静默
+mkdir -p "$U1TMP/sessions" "$U1TMP/ledger" 2>/dev/null || true  # swallow-ok: 目录已存在/创建失败由下方判定覆盖
 mv "$BYPASS" "$BYPASS.u1bak" 2>/dev/null || true  # swallow-ok: bypass.log 备份/还原操作, 测试隔离可忽略
-OUT_MISSING="$(SYNO_BASE_REF=origin/main bash "$GATE" 2>&1)"
+# 三处来源全隔离（缺一不可，实测）:
+#   SYNO_LEGACY_BYPASS_LOG     → 旧路径
+#   SYNO_BYPASS_SESSIONS_ROOT  → 仓库内全部 .sessions/*/bypass.log
+#   SYNO_BYPASS_LEDGER_DIR     → 本 session 落点目录（bypass-ledger.sh 会 ls 该目录下 *.log）
+OUT_MISSING="$(SYNO_BASE_REF=origin/main \
+  SYNO_LEGACY_BYPASS_LOG="$U1TMP/absent.log" \
+  SYNO_BYPASS_SESSIONS_ROOT="$U1TMP/sessions" \
+  SYNO_BYPASS_LEDGER_DIR="$U1TMP/ledger" \
+  bash "$GATE" 2>&1)"
 rc=$?
 cleanup
+rm -rf "$U1TMP" 2>/dev/null || true  # swallow-ok: 临时目录清理失败不影响断言（已断完）
 if [ "$rc" -eq 0 ] && printf '%s' "$OUT_MISSING" | grep -q "纯 trailer 对账"; then
-  ok "D1068: 旧日志缺失 + 空区间 → exit 0 且显式转纯 trailer 对账（不静默）"
+  ok "D1068: 无任何账本来源 + 空区间 → exit 0 且显式转纯 trailer 对账（不静默；已用注入缝隔离本机 .sessions）"
 else
   no "D1068: 旧日志缺失应 exit 0 且明示转纯 trailer 对账, 实际 rc=$rc out=$OUT_MISSING"
 fi
