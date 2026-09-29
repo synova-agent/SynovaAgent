@@ -114,7 +114,8 @@ VIOLATION: 新增测试未登记 CI 密封清单: tests/control-tower/zz-probe-a
 CI-REGISTRY: 测试文件 743（密封面 sh/py 133；ts 面 610）；ci.yml 登记（密封面）55；密封面未登记 79；基线 78 条；基线外新增 1；基线过期 0
 GATE-INTEGRITY: VIOLATION(1)
 
-$ rm -f tests/control-tower/zz-probe-anchor.test.sh   # 已清理，无残留
+$ rm -f tests/control-tower/zz-probe-anchor.test.sh
+$ ls tests/control-tower/zz-probe-anchor.test.sh 2>&1 || true   # 物理证明：No such file（grep/ls 零命中）
 ```
 ⇒ 专项测试必须**追加进既有 `tests/control-tower/resolve-commit-brief.test.sh`**
 （该文件已在 gate-integrity-baseline.txt [R] 段，追加零新增未登记文件）。
