@@ -24,7 +24,27 @@
     "branch": "chore/d1061-a-ci-speedup",
     "remote_sha": null,
     "state": "NOT_PUSHED_AT_TIME_OF_WRITING",
-    "verdict": "未完成（远端无该分支；task-1 仍 in_progress）"
+    "verdict": "未完成（远端无该分支；task-1 仍 in_progress）",
+    "preliminary_observation": {
+      "note": "非正式复核：coder-a 工作树 d9955cfb 有 11 项未提交改动，尚未推送",
+      "fixture": "tests/control-tower/simulate-ci-dedup.test.sh（未提交）",
+      "my_independent_runs": [
+        {"run": 1, "rc": 0, "wall_s": 1, "cases": "13 通过/0 失败"},
+        {"run": 2, "rc": 0, "wall_s": 1, "cases": "13 通过/0 失败"},
+        {"run": 3, "rc": 0, "wall_s": 0, "cases": "13 通过/0 失败"}
+      ],
+      "key_assertions_seen": [
+        "★ 修法: CI 环境（GITHUB_ACTIONS=true）→ 内层执行数 = 0（本卡靶心判据）",
+        "真实仓库端到端: CI 模式 0s、内层 ✅ 行 0 个（改前为 3×44=132 次内层执行）",
+        "变异体被检出: 删跳过分支 → CI 内层执行 2 条 ≠ 0（靶心断言必红）"
+      ],
+      "verdict": "自验结论 = 该夹具在我机器上 3/3 独立绿灯且 1s 级（≠ 通过；未推送 ⇒ 非最终 sha）"
+    },
+    "self_correction": {
+      "suspicion": "据 pgrep 见 6 个 simulate-ci-dedup 实例，怀疑夹具挂死",
+      "refuted_by": "3 次独立运行均 1s 内 rc=0；6 个 PID 三次复查完全不变且无新增 ⇒ 陈旧孤儿残留，非活跃挂死",
+      "action": "未据该错误观察下任何结论"
+    }
   },
 
   "pr_b": {

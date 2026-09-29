@@ -31,6 +31,21 @@ $ git diff --name-only 20b55eba..origin/main | grep -E '<本卡写集>'
 | **PR-A**（task-1） | `chore/d1061-a-ci-speedup` | — | ❌ **远端无该分支**（`git ls-remote --heads origin \| grep d1061` 只有 PR-B）→ **未完成，未复核** |
 | **PR-B**（task-3） | `chore/d1061-b-gate-mechanism` | `96135a1a` → `f116b911` | ✅ 已复核（另见 §七 待补项） |
 
+**PR-A 预备观察（非正式复核；coder-a 工作树 `d9955cfb` 有 11 项未提交改动，尚未推送）**
+
+我独立跑了 coder-a 的**未提交**新夹具 `tests/control-tower/simulate-ci-dedup.test.sh`（在其工作树内，只读执行）：
+```
+run1: rc=0  wall=1s  结果: 13 通过, 0 失败
+run2: rc=0  wall=1s  结果: 13 通过, 0 失败
+run3: rc=0  wall=0s  结果: 13 通过, 0 失败
+```
+含靶心断言 `✅ ★ 修法: CI 环境（GITHUB_ACTIONS=true）→ 内层执行数 = 0（本卡靶心判据）`、
+`✅ 真实仓库端到端: CI 模式 0s、内层 ✅ 行 0 个（改前为 3×44=132 次内层执行）`、
+`✅ 变异体被检出: 删跳过分支 → CI 内层执行 2 条 ≠ 0（靶心断言必红）`。
+⇒ **`自验结论` = 该夹具在我机器上 3/3 独立绿灯且 1s 级**（**≠ 通过**；未推送 ⇒ 非最终 sha，正式复核待推送后进行）。
+
+**一次自查纠错（诚实登记）**：我曾据 `pgrep -fl simulate-ci-dedup` 见到 6 个实例（PID 47134/47236/68647/68760/94422/94524）而怀疑「夹具挂死」。**实测证伪**：我 3 次独立运行均在 1s 内 rc=0 通过，且那 6 个 PID 三次复查**完全不变、无新增** ⇒ 是**陈旧孤儿残留**，**不是活跃挂死**。**未据该错误观察下任何结论**。
+
 ```
 $ git ls-remote --heads origin | grep -i d1061
 f116b91148be0087c7fa65b56543f1b32be369c0	refs/heads/chore/d1061-b-gate-mechanism
