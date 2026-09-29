@@ -20,7 +20,7 @@
 #     依据：CTO 2026-09-24 裁定——既有红允许存在，但必须显式登记为基线豁免；既有红不许无声存在。
 #
 # 截至: 2026-09-24T10:18:45Z
-# [R] 条数: 78（tests 面 sh|py 122 文件 / base ci.yml 登记 43 / 未登记 79；2026-09-25 删 1 条过期条目 tests/control-tower/install-dsh-preset.test.sh —— origin/main:.github/workflows/ci.yml:272 已登记它，按棘轮语义「条目已登记=基线过期，须删条目」清理，非判据放宽）
+# [R] 条数: 77（tests 面 sh|py 122 文件 / base ci.yml 登记 43 / 未登记 79；2026-09-25 删 1 条过期条目 tests/control-tower/install-dsh-preset.test.sh —— origin/main:.github/workflows/ci.yml:272 已登记它，按棘轮语义「条目已登记=基线过期，须删条目」清理，非判据放宽。2026-09-29 再删 1 条 tests/control-tower/resolve-commit-brief.test.sh —— D1032 把该夹具登记进 ci.yml CT job 显式清单，同上棘轮语义清理，非判据放宽）
 # [P] 条数: 1（唯一既有非法模式 scripts/pre-commit-check.sh:991；归 D937，本卡不改该文件）
 # 注意: 本卡新增的 2 个夹具（tests/control-tower/check-gate-integrity.test.sh、
 #       tests/control-tower/precommit-groups-injection.test.sh）**不入 [R] 段**——由 m9-coder-b 登记进 ci.yml。
@@ -85,7 +85,6 @@ tests/control-tower/product-lines.test.py
 tests/control-tower/push-sync-guard.test.sh
 tests/control-tower/redeem-task-redeem.test.sh
 tests/control-tower/rerun-evidence.test.sh
-tests/control-tower/resolve-commit-brief.test.sh
 tests/control-tower/secrets-env-exempt.test.sh
 tests/control-tower/session-worktree-isolation.test.sh
 tests/control-tower/sop-gate.test.sh
