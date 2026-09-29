@@ -1,0 +1,109 @@
+{
+  "schema": 1,
+  "record_type": "k3",
+  "source": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md",
+  "date": "2026-09-28",
+  "auditor": "kimi-k3",
+  "batch": "K3 产品线审计 批次1（线25 插件化 + 线1 桌面端，15 点）",
+  "note": "A6 双轨降级：本 JSON 由 K3 产出，CTO 收件时人工登记进证据面。pass 11 / fail 4 / 无法复核 0。按 2026-09-02 产品线 17 点批先例（PR #327），fail 裁决不写进证据面翻红，转 FIX 任务：FIX-A（A2 假绿管线 P0）/FIX-B（GS-01 断言对齐 D590）/FIX-C（25-8/25-9 实现）。CTO 可自行决定是否登记 fail 项。",
+  "verdicts": [
+    {
+      "acceptance_point": "25-1",
+      "verdict": "pass",
+      "quote": "探针专家加目录+IDENTITY.md → FileScanner scan=7 / ExpertRegistry 注册 / prompt 含 K3-AUDIT-PROBE-EXPERT 标记；删后 scan=6 零残留。机制链 file-scanner.ts:243-296 → expert-file-loader.ts:178-199",
+      "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md:§二-25-1"
+    },
+    {
+      "acceptance_point": "25-2",
+      "verdict": "pass",
+      "quote": "双技能面闭环：extensions/skills/custom（src/skill/skill-loader 42→41，零错误）+ skills/SKILL.md（src/skills/skill-loader 7→6）；加即发现、删即消失",
+      "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md:§二-25-2"
+    },
+    {
+      "acceptance_point": "25-3",
+      "verdict": "pass",
+      "quote": "探针哨兵 loadSentinels total=46 + registerLoadedSentinels registered=46 零错误；删后 45 零残留；D751 e2e 三环 Node22 实测 5/5 绿（Node24 环3 为 ABI 环境假失败，已判别）",
+      "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md:§二-25-3"
+    },
+    {
+      "acceptance_point": "25-6",
+      "verdict": "pass",
+      "quote": "customer-config-package.ts:367-373 mountCustomerConfig 逐请求 discover（全文件零 cache）→ 加包下请求即生效不重启；生产接线 diagnosis.ts:226-228 + config.ts:34；专属套件 23/23 独立重跑绿；DSH 锚点 mountPreset/leakedServices（agent-preset-registry/lib/types/mount.d.ts:114/:39）实在",
+      "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md:§二-25-6"
+    },
+    {
+      "acceptance_point": "25-7",
+      "verdict": "fail",
+      "quote": "体系复核不通过：25-8/25-9 假绿（A2 聚合 pass 覆盖无套件可跑点，run-machine-evidence.sh:76-80 静默跳过+:86-110 聚合写 pass）+ 25-1/2/3 映射到空壳冒烟测试；25-1/2/3/6/10 实测通过。FIX-A/FIX-C 后可复审",
+      "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md:§二-25-7"
+    },
+    {
+      "acceptance_point": "25-8",
+      "verdict": "fail",
+      "quote": "零实现（src/ 无 applies/live-restart 分类，node_modules 无 @deepseek-ai）零测试（settings-applies-live 双方式定位 NONE）；A2 的 pass 为假绿；DSH 引用行号在当前快照(0.1.7-rc.1)不可核（SettingsApplies git grep 零命中，index.js:446 硬编码 live）",
+      "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md:§二-25-8/25-9"
+    },
+    {
+      "acceptance_point": "25-9",
+      "verdict": "fail",
+      "quote": "同 25-8：零实现零测试+假绿证据+DSH 版本锚点断裂（yaml 引 v0.1.6-alpha.2 lib/types/index.d.ts:21/lib/index.js:288，当前 DSH 无此类型与行号）",
+      "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md:§二-25-8/25-9"
+    },
+    {
+      "acceptance_point": "25-10",
+      "verdict": "pass",
+      "quote": "三步全过：①加→scan7/skill42/sentinel46+registered46 零错误 ②删→6/41/45+全仓 grep k3-audit-probe 0 命中+errors=[]+DB 无插件持久表 ③Node22 下 5 套件 18 测试全绿。fail_when 四条均未触发",
+      "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md:§二-25-10"
+    },
+    {
+      "acceptance_point": "1-1",
+      "verdict": "fail",
+      "quote": "verify 公式 GS-01 exit 0 不满足：重跑 exit 1（7/8 断言过，唯一红 noauth-401——auth.ts:121 自 D590(09-08 b54a0fb6a) 将 consult 列入 JWT 白名单，断言契约 20 天未对账）。打包实质独立复验健康：产物在+四断言+preload-check+签名门禁全绿。FIX-B 对齐断言后重跑即翻绿",
+      "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md:§三-1-1"
+    },
+    {
+      "acceptance_point": "1-3",
+      "verdict": "pass",
+      "quote": "mac-install-verify.sh --skip-build 复跑 exit 0：挂载→cp→启动，四断言第 5s 全过（A1 进程/A2 窗口/A3 healthz 200/A4 backend.log）；verify-package-signature.sh exit 0",
+      "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md:§三-1-3"
+    },
+    {
+      "acceptance_point": "1-4",
+      "verdict": "pass",
+      "quote": "四断言过 + F3 直连证据：[preload-check] OK: electronAPI 已暴露, serverUrl=http://localhost:18790 + 渲染层资产加载 + healthz 200。D713 刭的渲染层断链已由 D714(7c4bf9ac8) 修复：asar 内 preload 含 --synova-server-url 透传（解包实测），自检哨兵在 main.cjs:109-124",
+      "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md:§三-1-4"
+    },
+    {
+      "acceptance_point": "1-5",
+      "verdict": "pass",
+      "quote": "D716(b1618971c 09-15 #538) 退场守卫 setup-guide-retired.test.ts 14/14 绿（Node22 实测）；app/js/setup.js 已删；410 路由先于 /app 静态挂载（server.ts:104-113/:320-325）。09-13 的 fail 证据已被 D716 取代",
+      "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md:§三-1-5"
+    },
+    {
+      "acceptance_point": "1-6",
+      "verdict": "pass",
+      "quote": "first-diagnosis-timing.sh --mode prod 复跑：install→launch→healthz→ready total_sec=8.4 / target 1800 / WITHIN_TARGET / exit 0（复现 D712 的 8.7s）",
+      "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md:§三-1-6"
+    },
+    {
+      "acceptance_point": "1-7",
+      "verdict": "pass",
+      "quote": "upgrade-data-verify.sh 复跑：tables=54 / md5_v1==md5_v2(4121feea…) / integrity_v2 ok / DATA_RETAINED / exit 0（临时 userData，真实库零触碰）。P2 顺记：rows_v2 的 sessions 表断言报错被吞",
+      "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md:§三-1-7"
+    },
+    {
+      "acceptance_point": "1-8",
+      "verdict": "pass",
+      "quote": "本批报告即独立复核记录：安装四断言/计时/升级/签名四类命令全部独立重跑绿；D712/D713/D719 证据链可复现。遗留：1-2 Windows 仍 stale 未实测（另卡，不属本批）",
+      "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次1-线25线1.md:§三-1-8"
+    }
+  ],
+  "summary": { "pass": 11, "fail": 4, "not_auditable": 0 },
+  "fix_proposals": [
+    { "id": "FIX-A", "priority": "P0", "target": "scripts/product-lines/run-machine-evidence.sh", "action": "套件定位失败 fail-closed：该点不写 pass；verdict 按点位归属拆分（或引 CT-52 suite-registry）", "attribution": "control-tower/M1" },
+    { "id": "FIX-B", "priority": "P1", "target": "scripts/golden-scenarios/GS-01-first-diagnosis", "action": "断言①对齐 D590 白名单裁决（200+SSE）或恢复路由保护（401），重跑翻转 1-1", "attribution": "control-tower/M7" },
+    { "id": "FIX-C", "priority": "P1", "target": "线25 25-8/25-9", "action": "实现 applies 分类（先按 P1-2 重锚 DSH 版本+行号），live/restart 各配真测试且命名与 yaml 套件串对齐", "attribution": "implement+devdoc" },
+    { "id": "CT-A7", "priority": "P2", "target": "scripts/product-lines/gen-k3-task.py", "action": "加点级 pending_k3 阈值触发（堆积态自动派单）", "attribution": "control-tower" }
+  ],
+  "task_state_backfills": ["D599", "D712", "D713", "D714", "D716", "D852"]
+}
