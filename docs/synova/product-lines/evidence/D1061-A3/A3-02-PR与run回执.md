@@ -477,3 +477,131 @@ A3 的交付物**本身就是改 ci.yml** ⇒ 命中 `.github/workflows/* → __
 ---
 
 *本文所有数字取自命令原始输出；凡未实测项已在第八节「未能做到的事」逐条列明。*
+
+---
+
+## 十、证据提交 + 第二条 run（方差记录）
+
+### 10.1 提交与推送
+用 `scripts/control-tower/synova-commit`（自带 auto-push，**未手工再推**）：
+```
+[chore/d1061-a3-shards 70df8aa7] docs(D1061-A3): 退回证据 —— 分片被 __FULL__ 短路（4 腿各跑全量 55/55，599/704/730/753s）+ 元门禁 5 腿全红
+ 2 files changed, 839 insertions(+)
+ create mode 100644 docs/synova/product-lines/evidence/D1061-A3/A3-02-PR与run回执.md
+ create mode 100644 docs/synova/product-lines/evidence/D1061-A3/A3-02-run-metrics.json
+  ✅ 全部门禁通过 — 允许推送
+To github.com:tangbaobao520/SynovaAgent.git
+   980c629a..bab4c126  chore/d1061-a3-shards -> chore/d1061-a3-shards
+```
+pre-commit：`✅ 全部 13 组通过`；`✅ Commit 格式正确`；`✅ D395-a/D534 Note 引用门禁: 无治理/规则区变更（跳过）`（本次仅 `docs/`，未命中治理区；Note 引用仍按要求写入 commit body）；`✅ D706: 提交树与暂存声明一致（2 项变更逐项核对）`。
+**未使用 `--no-verify`**（首次尝试因 `--files` 传参方式不对被拦，读报错后改为多参数，未绕行）。
+
+```bash
+$ git ls-remote --heads origin | grep chore/d1061-a3-shards
+bab4c126adb461578006e2ab4eedbf587a36ecdf	refs/heads/chore/d1061-a3-shards
+$ git rev-parse HEAD
+bab4c126adb461578006e2ab4eedbf587a36ecdf
+```
+（`bab4c126` = post-commit hook 的 `bypass COMMITTED 登记`，紧随 `70df8aa7`；远端 == 本地。）
+
+### 10.2 第二 run
+```
+GET /actions/runs?branch=chore/d1061-a3-shards
+total_count = 2
+id=36544058249 | event=pull_request | status=completed | conclusion=failure | head_sha=bab4c126adb461578006e2ab4eedbf587a36ecdf | created=2026-09-29T08:39:00Z
+id=36542166241 | event=pull_request | status=completed | conclusion=failure | head_sha=980c629ab1a99bff9582db5838d1d6000761e773 | created=2026-09-29T08:21:06Z
+```
+第二 run job 数 **15**（第一 run 16）。
+
+### 10.3 两 run 腿时对照（windows CT 分片，秒）
+
+| 分片 | run 1（`36542166241`） | run 2（`36544058249`） | 差值 |
+|---|---|---|---|
+| shard 1/4 | 704 | **753** | +49 |
+| shard 2/4 | 753 | **595** | −158 |
+| shard 3/4 | 730 | **700** | −30 |
+| shard 4/4 | 599 | **495** | −104 |
+| ubuntu | 84 | 66 | −18 |
+
+**极差 258s**（shard 2: 753 → 595；shard 4: 599 → 495），单腿方差达 **~±130s** 量级。
+⇒ 这是 A3-01「余量仅 1s」担忧的**量化佐证**；但两 run 全部腿均**远超 300s 判据**，**方差记录不改变判据不成立的结论**。
+
+### 10.4 第二 run 的分片选择集：**仍是 55/55**（符合预期）
+```
+[D1061-SELECT] shard=1/4 mode=select platform=windows changed=21 selected_of_total=55/55 degraded=0
+##[notice]platform=windows shard=1/4 selected=55/55
+##[notice]platform=ubuntu shard=1/4 selected=55/55
+```
+短路未修 ⇒ **第二 run 腿时只作方差记录，不作达标判据**。
+
+### 10.5 第二 run 同因复现
+```
+FAIL: tests/control-tower/ci-signal-classify.test.sh   （08:43:48Z，shard 1/4 日志内共 1 处）
+```
+
+---
+
+## 十一、⚠️ 第二 run 暴露的**新红**：D708 写集声明缺口（本轮最重要新发现）
+
+### 11.1 现象
+第二 run 的 `TypeScript + Lint + Iron Laws`（**必需检查**，job id `109326083203`）**failure**，失败 step 为 **`step 10 'Merge write-set reconciliation (D708)'`**。
+
+第一 run 该 job **success**（当时 A3-02 尚未提交）⇒ **是本轮证据提交引入的新红**。
+
+### 11.2 门禁原始输出（完整）
+```
+── merge-writeset-gate (D708) 合并级写集对账 ──
+❌ 结论: block — 检测到 2 个写集外文件（夹带）
+   任务: D1061 | 分支: chore/d1061-a3-shards
+   D# 推断来源: branch → D1061
+   变更集: 21 个文件（merge-base f51aaf9b）
+   声明写集 36 条（多源并集）:
+     · scripts/control-tower/ct-suite-select.sh   ← S1:task-state.write_set
+     ...
+     · docs/synova/product-lines/evidence/D1061-A3/A3-01-分片方案与不变式.md   ← S3:brief.Q2-include
+     ...
+   豁免 1 条（显式，逐条打印理由）:
+     · .claude/bypass.log   ← [builtin] post-commit hook 每次提交追加的证据账本（运行期产物，与写集无关）
+   夹带文件 2 个（不匹配任何声明项）:
+     - docs/synova/product-lines/evidence/D1061-A3/A3-02-PR与run回执.md
+     - docs/synova/product-lines/evidence/D1061-A3/A3-02-run-metrics.json
+```
+（声明写集共 36 条，其中**含 `A3-01-分片方案与不变式.md`，不含 A3-02 两文件**。）
+
+### 11.3 根因
+D708 读的是**仓库侧写集声明源**（`S1 task-state/D1061.json → write_set` 与 `S3 brief.Q2-include`）。
+这两个源**声明了 `A3-01`，未声明 `A3-02`**。
+**task-1 的写集只写在共享任务板上，不在仓库声明源内** ⇒ 门禁看不到 ⇒ 判夹带。
+（⇒ 「写集写进 task-1 正文」与 D708 的实际读源之间存在缺口，属**流程级发现**。）
+
+### 11.4 连带影响
+- 必需检查 `TypeScript + Lint + Iron Laws` 转红 ⇒ PR 又多一条不可合因由；
+- 其下游 `Vitest (${{ matrix.shard }})`（job `109326793372`）与 `Golden Case F1 Gate`（job `109326795067`）被 **skip**（matrix job 名未展开 = 未调度）。
+
+### 11.5 门禁自带的三个修法（**均未执行，等裁定**）
+```
+① 把该文件加入声明（S1 task-state write_set / S2 dev doc 写集表 / S3 brief Q2）
+② 从本 PR 移出该文件（它可能属于另一个任务）
+③ 显式豁免: 在 PR 正文/声明文件加 `## 写集豁免` 段落，每行 `- <路径> — <理由>`（无理由不生效）
+```
+- **①** = 改 `task-state/D1061.json` 或 task brief ⇒ **写集扩写（M2 越界），须 CTO 批**；
+- **②** = 撤掉本轮证据提交（与队长授权项 1 冲突）；
+- **③** = **仅改 PR #900 正文**，不动任何仓库文件 —— 三个修法里代价最小，但**改 PR 正文不在队长授权的三件事之内**，故未执行。
+
+### 11.6 状态
+**未修**。已按红线「遇到门禁拦 → 停下报队长」上报，等 CTO/队长裁定采用 ①②③ 中哪一个。
+
+---
+
+## 十二、更新后的待裁定事项
+
+1. **C4 失败如何记账** —— 退回重做 / 改设计(R-B) / 缩范围(R-A + 分片短路)？
+2. **分片短路**（`FORCE_FULL` 早于分片过滤）是否立新卡？最小充分修 = **把分片过滤同样作用于 `full_list` 路径**（`shards.assign` 本身是 55 的完整划分，切分后正好落到 A3-01 预测口径）。
+3. **写集是否扩** —— R-A 需 +1 夹具文件；D708 修法① 需改 task-state/brief。
+4. **判据是否重定** —— `≤300s` 在 `__FULL__` 口径下无法达成（实测 495–753s）。
+5. **D708 修法选 ①②③** —— ③ 只动 PR 正文，是否授权？
+6. **第三 run 风险** —— 第二 run 因 D708 转红；若继续提交（如修 D708 后的补证）会再触发第三 run。
+
+---
+
+*本文所有数字取自命令原始输出；凡未实测项已在第八节「未能做到的事」逐条列明。*
