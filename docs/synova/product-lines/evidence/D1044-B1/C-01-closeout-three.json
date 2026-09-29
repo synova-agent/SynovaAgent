@@ -1,0 +1,142 @@
+{
+ "task": "D1044",
+ "artifact": "C-01-closeout-three（M6 收尾三件：diff / 自验结论 / 遗留清单）",
+ "producer": "synova-squad-lead",
+ "as_of": "2026-09-28T01:06:31Z",
+ "branch": "chore/b1-archive-outbound",
+ "1_diff": {
+  "git_diff_stat": {
+   "cmd": "git diff --stat ff467712..HEAD",
+   "exit": 0,
+   "stdout": " .claude/bypass.log                                 |   3 +\n .../2026-09-28-D1044-B1-archive-294-outbound.md    | 456 +++++++++++++++++++++\n .../task-briefs/archive/2026-06-05-1600----getX.md |  31 --\n .../archive/2026-06-05-1618-P3---Provider--.md     |  31 --\n .../archive/2026-06-05-1646-DI--serverts-.md       |  31 --\n ...26-06-05-1713-M1-Slice1-AuthProvider--RBAC--.md |  31 --\n .../2026-06-05-1727-M1-Slice2-IM-Webhook--.md      |  31 --\n .../2026-06-05-1745-M1-Slice3-L4---Knowledge.md    |  31 --\n .../2026-06-05-1824-M2-KnowledgeAgent7--6.md       |  31 --\n ...6-06-05-2018-PKB-Slice-1-Schema--queryknowle.md |  31 --\n .../archive/2026-06-05-2042-PKB-----.md            |  31 --\n .../2026-06-06-0422-KnowledgeAgent---QA-.md        |  31 --\n .claude/task-briefs/archive/2026-06-06-1746-.md    |  31 --\n .../task-briefs/archive/2026-06-06-1749-as-any.md  |  31 --\n ...26-06-06-1857-Phase-4-AlertRuleEngine-SQLite.md |  31 --\n ...026-06-06-1910-Phase-4c-knowledgechunksorgid.md |  31 --\n .../archive/2026-06-06-1915-Phase-5-.md            |  31 --\n .../2026-06-06-1919-Phase-6-LLM--reasoni.md        |  31 --\n .../archive/2026-06-11-1430-P0-1-HTTP--P0-3.md     |  31 --\n .../task-briefs/archive/2026-06-11-1552-P0-2-.md   |  31 --\n .../archive/2026-06-12-2312--SentinelRunner--.md   |  31 --\n .../task-briefs/archive/2026-06-13-0758--10-.md    |  31 --\n .claude/task-briefs/archive/2026-06-14-0231-.md    |  51 ---\n .claude/task-briefs/archive/2026-06-14-0233--.md   |  59 ---\n .../task-briefs/archive/2026-06-14-0326-L1L2.md    |  62 ---\n .../archive/2026-06-14-1126--DocExtractor.md       |  66 ---\n .../task-briefs/archive/2026-06-14-1452-4real.md   |  59 ---\n .../2026-06-14-1613-engine-core-deprecation.md     |  57 ---\n .../2026-06-14-1907-P1-1---Quality-Firewall-.md    |  59 ---\n .../archive/2026-06-14-p0-1-slice0-tuiv2-tsc.md    |  47 ---\n .../archive/2026-06-14-p0-1-slice1-sentinel-tsc.md |  47 ---\n .../archive/2026-06-15-0135-Path-A-Express-.md     |  92 -----\n .../archive/2026-06-15-2247-Phase-1---6-.md        |  59 ---\n .../archive/2026-06-17-0000-提交未提交改动.md      |  32 --\n .../archive/2026-06-17-2152-Agent--735.md          |  52 ---\n .claude/task-briefs/archive/2026-06-19-0012--.md   |  52 ---\n .../task-briefs/archive/2026-06-19-0107-Day1---.md |  52 ---\n .../archive/2026-06-19-0205-PKB--GitHub-.md        |  68 ---\n .../archive/2026-06-19-1113-OUTPUTSPEC.md          |  38 --\n .../archive/2026-06-19-1130-Day3---AgentUI.md      |  52 ---\n .claude/task-briefs/archive/2026-06-19-1130-e.md   |  61 ---\n .../task-briefs/archive/2026-06-19-1148-Day4---.md |  52 ---\n .../task-briefs/archive/2026-06-19-1148-HTML.md    |  58 ---\n .claude/task-briefs/archive/2026-06-19-1201-D.md   |  57 ---\n .../archive/2026-06-19-1257-pm-skills.md           |  53 ---\n .../task-briefs/archive/2026-06-19-1314-Day5---.md |  52 ---\n .../archive/2026-06-19-1327-Day6---LLM.md          |  52 ---\n .../archive/2026-06-19-1338-SkillExpertPKB.md      |  22 -\n .../task-briefs/archive/2026-06-19-1403-Skill.md   |  25 --\n .../archive/2026-06-19-1637-chatJSsend.md          |  20 -\n .../task-briefs/archive/2026-06-20-0016--5118.md   |  52 ---\n .../2026-06-20-1543-Loop-Engineering-v32v33.md     |  26 --\n .../archive/2026-06-20-1549-Slice-9-.md            |  23 --\n .../archive/2026-06-20-1605-Slice-8-AgentMemor.md  |  51 ---\n .../archive/2026-06-20-1758-Slice-4-GA.md          |  50 ---\n .claude/task-briefs/archive/2026-06-20-2254-.md    |  64 ---\n ...06-20-2330-Phase2-AgentMemoryStoreconversati.md |  66 ---\n .../2026-06-20-2338-Slice-F1-ExpertTyperunti.md    |  52 ---\n ...026-06-20-2349-Slice-F2-expert-registryyaml-.md |  53 ---\n .../archive/2026-06-20-2353-EXPERTREP.md           |  50 ---\n .../archive/2026-06-21-0012-205-SOG-schema--.md    |  52 ---\n .../archive/2026-06-21-0028-API-workspaces-api.md  |  52 ---\n .../task-briefs/archive/2026-06-21-0106-v33v34.md  |  18 -\n .../task-briefs/archive/2026-06-21-0115-v34v354.md |  50 ---\n .../archive/2026-06-21-0120-Batch1-192.md          |  51 ---\n ...6-21-0124-Batch2-63-workspace-context-bridge.md |  57 ---\n .../archive/2026-06-21-0152-Batch3-7CRUD93.md      |  56 ---\n .../archive/2026-06-21-0207--BridgetagsSchema.md   |  59 ---\n .../archive/2026-06-21-2129-Slice-3-Agent--.md     | 128 ------\n .../archive/2026-06-21-2348--Synova--.md           |  84 ----\n .../task-briefs/archive/2026-06-22-0004-Synova-.md |  76 ----\n ...06-22-0014-Step-2--SynovaDiagnosisEngineImpl.md |  75 ----\n .../2026-06-22-0446-Step-3-Feature-flag---SY.md    |  68 ---\n .../archive/2026-06-22-0848-Step-4---.md           |  55 ---\n .../2026-06-22-1931--post-processing--Synova-.md   |  62 ---\n ...2026-06-22-2212-Step-1-SynovaGraphStore--L4-.md |  38 --\n .../archive/2026-06-22-2251-Batch-1-i18n--.md      |  52 ---\n .claude/task-briefs/archive/2026-06-22-2313---.md  |  24 --\n .../archive/2026-06-23-0005-Batch-1-i18n--.md      |  52 ---\n .../archive/2026-06-23-0007--KeyPersonRisk-L5-.md  |  31 --\n .claude/task-briefs/archive/2026-06-23-0213-.md    |  52 ---\n .../archive/2026-06-23-0222-Batch-3-----.md        |  68 ---\n .../2026-06-23-0337-Batch-4--JSON-Schema--.md      | 123 ------\n .../archive/2026-06-23-1410-Batch-5---.md          |  73 ----\n .../task-briefs/archive/2026-06-23-1433-Q0c4.md    |  88 ----\n .../archive/2026-06-23-1744-Batch-5---.md          |  96 -----\n .../archive/2026-06-23-1937---extensionssen.md     |  77 ----\n .../archive/2026-06-24-0036-V41-hook-check-mem.md  |  81 ----\n ...4-0321-T1-Batch1-CPCPathDependencyTokenEcono.md |  68 ---\n ...-0334-T1-Batch2-SevenPowersFinancialSnapshot.md |  98 -----\n ...4-0357-T1-Batch3-HTMHACDSelfAwareness-comput.md |  89 ----\n ...6-06-24-0413-T1-Batch4-HONAEOB-computeKeyPer.md |  96 -----\n .../task-briefs/archive/2026-06-24-0416-T2--.md    | 101 -----\n .../archive/2026-06-24-0445-T3-3-revenuecashpro.md |  98 -----\n .../2026-06-24-0935-V41-16computeaggregate.md      |  96 -----\n .../2026-06-24-1221-E1--listForTeam--E2-Ph.md      |  57 ---\n .../archive/2026-06-24-1350--knowledgea.md         | 103 -----\n .../archive/2026-06-24-1500-V42--Plan-Actual.md    |  99 -----\n .../archive/2026-06-24-1536-PRD--6--P0P1-.md       |  46 ---\n .../task-briefs/archive/2026-06-24-1733-PRD--.md   |  73 ----\n .../archive/2026-06-24-1911-V423-PRD--5P1.md       |  37 --\n .../2026-06-25-0103-Task-00-11deprecated.md        |  73 ----\n .../archive/2026-06-25-0108-Task-02---grep.md      |  93 -----\n .../archive/2026-06-25-0226-Task-03-5manifest.md   |  89 ----\n .../2026-06-25-2124-Task-050--SentinelManifest-.md | 125 ------\n ...6-06-25-2158-Task-052--risk-aggregator-senti.md | 116 ------\n ...6-06-25-2220-Task-11--api-accessibility--pro.md | 124 ------\n ...-26-0010-Task-12-data-readiness--data-silos-.md | 129 ------\n ...26-0133-Task-13-saas-utilization--shadow-it-.md | 129 ------\n ...26-06-26-0301-Task-14-customer-dynamics--E4-.md | 128 ------\n ...6-26-0404-Task-15-revenue-decomposition--F3-.md | 108 -----\n .../archive/2026-06-26-1146-Task-21-E1-.md         | 119 ------\n .../archive/2026-06-26-1700-Task-22-E2-.md         | 118 ------\n .../archive/2026-06-26-1919-Task-23-E3-.md         | 100 -----\n .../archive/2026-06-26-2239-Task-24-E5-.md         | 118 ------\n .../archive/2026-06-27-1214-Task-25-E6-.md         |  97 -----\n .../archive/2026-06-27-1336-Task-26-F1-.md         |  97 -----\n .../archive/2026-06-27-1430-Task-27-F2-.md         | 101 -----\n .../archive/2026-06-27-1507-Task-28-F4-.md         | 101 -----\n .../archive/2026-06-27-1524-Task-29-F5-.md         |  95 -----\n .../archive/2026-06-27-1542-Task-210-.md           |  87 ----\n .../archive/2026-06-27-1601-Task-31-I1-.md         |  95 -----\n .../archive/2026-06-27-1623-Task-32-I2-.md         |  93 -----\n .../archive/2026-06-27-1635-Task-33-I3-.md         |  93 -----\n .../archive/2026-06-27-1712-Task-34-I4-.md         |  92 -----\n .../archive/2026-06-27-1732-Task-35-I7-.md         |  91 ----\n .../archive/2026-06-27-1751-Task-36-I10-.md        |  89 ----\n .../archive/2026-06-27-2052-Task-37-I11-.md        |  88 ----\n .../archive/2026-06-27-2109-Task-41-I5-.md         |  88 ----\n .../archive/2026-06-27-2123-Task-42-I6-.md         |  88 ----\n .../archive/2026-06-27-2140-Task-43-I8-.md         | 118 ------\n .../archive/2026-06-27-2141-Task-44-I9-.md         | 118 ------\n .../archive/2026-06-27-2141-Task-45-I12-.md        | 118 ------\n .../archive/2026-06-27-2144-Task-46-T4--T5-.md     | 117 ------\n .../2026-06-27-2145-Task-47-T6-AI-T7-Agent.md      | 117 ------\n .../2026-06-27-2145-Task-48-T8-AI-T9-Age.md        | 117 ------\n .../archive/2026-06-27-2147-Task-51-S1--S2-.md     | 114 ------\n .../archive/2026-06-27-2148-Task-52-O1--O2-.md     | 114 ------\n .../archive/2026-06-27-2148-Task-53-O3--O4-.md     | 114 ------\n .../archive/2026-06-27-2148-Task-54-O5--O6-.md     | 114 ------\n .../archive/2026-06-27-2148-Task-55-O7--O8-.md     | 114 ------\n .../archive/2026-06-27-2149-Task-56-O9--O10-.md    | 114 ------\n .../archive/2026-06-27-2153-Task-61--strategy-.md  | 114 ------\n .../archive/2026-06-27-2153-Task-62--finance-.md   | 114 ------\n .../archive/2026-06-27-2226-Task-71-.md            |  91 ----\n .../archive/2026-06-27-2238-Task-72---.md          | 114 ------\n .../archive/2026-06-27-2238-Task-73---.md          | 114 ------\n .../archive/2026-06-28-0010-fix-S2---stu.md        | 118 ------\n .../archive/2026-06-28-0025-fix-S3---stu.md        | 117 ------\n .../archive/2026-06-28-0034-fix-O1----st.md        | 117 ------\n .../archive/2026-06-28-0051-fix-O2---stub.md       | 119 ------\n .../archive/2026-06-28-0100-fix-O3---.md           | 116 ------\n .../archive/2026-06-28-0118-fix-O4---.md           |  86 ----\n .../archive/2026-06-28-0131-fix-O5---stu.md        | 116 ------\n .../archive/2026-06-28-0217-fix-O6---stu.md        |  92 -----\n .../archive/2026-06-28-0224-fix-O7---stub.md       |  91 ----\n .../archive/2026-06-28-0246-fix-O8---stu.md        |  91 ----\n .../archive/2026-06-28-0304-fix-O9---stu.md        |  91 ----\n .../archive/2026-06-28-0330-fix-O10---stub.md      |  91 ----\n .../archive/2026-06-28-0349-fix-T4---stu.md        |  90 ----\n .../archive/2026-06-28-0907-fix-layer.md           |  97 -----\n ...-06-28-0929-fix-SentinelConfig--layerauxilia.md |  85 ----\n ...-28-1431-Batch-0-theoryCOREmd--DESIGNPRINCIP.md | 114 ------\n .../2026-06-28-1946-Batch-cleanup-37auxiliaryEx.md | 115 ------\n .../archive/2026-06-29-0038--5--technoEconomi.md   | 139 -------\n .../2026-06-29-0126-Batch-sentinel--TOOLSmd.md     | 130 ------\n .../2026-06-29-1043-Phase-1-Logger--packages.md    | 133 ------\n .../2026-06-29-1422-Slice-1-Cron-GraphStore.md     |  38 --\n .../2026-06-29-1652-check-brief-vs-code-CI--.md    |  41 --\n .../task-briefs/archive/2026-06-29-1723-6----.md   |  44 --\n .../2026-06-29-1856-5-manifestjson-dependsOn-.md   | 114 ------\n .../task-briefs/archive/2026-06-29-2030-fix-ci.md  |  48 ---\n .../archive/2026-06-29-2134-CI--npm-ci--.md        | 114 ------\n .claude/task-briefs/archive/2026-06-29-2241-.md    | 114 ------\n .../2026-06-29-2241-Phase-0-evolution-scaffold.md  |  90 ----\n .../archive/2026-06-29-2242-1-dependsOn---sent.md  | 114 ------\n .../archive/2026-06-30-0102-E2E---6-.md            | 114 ------\n .claude/task-briefs/archive/2026-06-30-2211-.md    |  75 ----\n .../archive/2026-06-30-E2E-sentinel-ID-compat.md   |  28 --\n ...-06-30-Phase-P0-1-migrate-feedback-collector.md |  85 ----\n .../archive/2026-06-30-Phase-P0-2-org-adapter.md   |  73 ----\n .../2026-06-30-Phase-P0-3-session-learner.md       |  73 ----\n .../archive/2026-06-30-Phase-P1-1-L3WriteAPI.md    |  72 ----\n .../2026-06-30-Phase-P1-2-industry-thresholds.md   |  78 ----\n .claude/task-briefs/archive/2026-07-01-1020-.md    | 114 ------\n .claude/task-briefs/archive/2026-07-01-1313-.md    |  69 ----\n .claude/task-briefs/archive/2026-07-01-1420-.md    | 114 ------\n .../archive/2026-07-01-2005-Phase-01-JWTGA.md      | 177 --------\n ...-2251-Phase-02-GraphStore-deleteNodedeleteEd.md | 161 --------\n .../archive/2026-07-01-E2E-sentinel-ID-compat.md   |  86 ----\n .../archive/2026-07-01-Fix-3-CI-excludes.md        |  47 ---\n .../archive/2026-07-01-Fix-7-unit-test-bugs.md     |  86 ----\n .../archive/2026-07-01-Fix-CI-51-Failures.md       |  74 ----\n .../archive/2026-07-01-P1-cron-wiring.md           |  74 ----\n .../2026-07-01-P1-file-driven-thresholds.md        |  98 -----\n .../archive/2026-07-01-P1-snapshot-checksum.md     |  81 ----\n .../2026-07-01-P2-file-driven-expert-map.md        |  83 ----\n .../2026-07-01-Phase-P0-evolution-hardening.md     | 108 -----\n .../2026-07-01-Phase-P1-3-rule-version-manager.md  |  89 ----\n .../2026-07-01-Phase-P1-integration-tests.md       |  98 -----\n .../2026-07-01-Phase-P2-evolution-proposals.md     |  98 -----\n .../2026-07-01-Phase-P3-expert-evolution.md        |  83 ----\n .../2026-07-01-RUNTIME-Phase0-global-error-WAL.md  | 187 ---------\n .../archive/2026-07-01-expert-files-merge.md       |  27 --\n .../2026-07-01-fix-evolution-type-constraint.md    |  79 ----\n .../2026-07-02-0018-Phase-03--AuditStore-.md       | 119 ------\n .../2026-07-02-0547-Phase-04-GA-BehaviorMonitor.md | 122 ------\n .../archive/2026-07-02-0921-Phase-05-Electron.md   | 138 -------\n .../2026-07-02-1444-Phase-06--Light-Theme-for-D.md |  63 ---\n .../archive/2026-07-02-2110-Phase-11--Welcome.md   | 118 ------\n ...2-2144-Phase-12-ComposerExpertAttributionuse.md | 117 ------\n .../archive/2026-07-02-Fix-6-CI-excludes.md        |  61 ---\n .../archive/2026-07-02-HOST-config-setup.md        |  54 ---\n .../archive/2026-07-02-P2-ga-dashboard.md          |  88 ----\n .../archive/2026-07-02-P2-snapshot-ttl.md          |  78 ----\n .../2026-07-02-RUNTIME-Phase1-restart-shutdown.md  | 162 --------\n .../2026-07-02-RUNTIME-Phase1b-drain-wiring.md     |  74 ----\n .../2026-07-02-RUNTIME-Phase2-delivery-stuck.md    |  88 ----\n ...026-07-02-Runtime-P0-behavior-monitor-wiring.md |  68 ---\n .../archive/2026-07-02-fix-codex-review.md         |  87 ----\n .../archive/2026-07-03-0000-Phase-21--R.md         | 108 -----\n ...-0038-Phase-22-CommandPalette--NotificationC.md | 105 -----\n .../archive/2026-07-03-0224-Phase-31-GA.md         | 109 -----\n .../archive/2026-07-03-0306-Phase-32-.md           |  99 -----\n .../archive/2026-07-03-1709-Phase-41-.md           | 107 -----\n ...26-07-03-RUNTIME-Phase3-rate-schema-compress.md |  95 -----\n .../2026-07-03-RUNTIME-Phase4-lanes-config.md      |  85 ----\n ...6-07-03-RUNTIME-Phase5-memory-forensics-fts5.md |  93 -----\n .../archive/2026-07-03-upgrade-v4.3.0.md           |  71 ----\n .../task-briefs/archive/2026-07-04-0000-Step3-4.md | 104 -----\n ...2026-07-04-Phase-G1-context-pluggable-engine.md | 119 ------\n .../2026-07-04-RUNTIME-Phase5-1-auto-update.md     |  62 ---\n .../archive/2026-07-04-TaskA-Complete.md           |  32 --\n .../2026-07-04-TaskA-Step1-entity-schemas.md       |  53 ---\n .../archive/2026-07-04-TaskA-Step2-edges-loader.md |  21 -\n ...026-07-05-0201-Phase-4-tool-guard-fts5-jsonl.md | 184 ---------\n ...0259-Phase-0-Inject-GraphTraversal-into-Sent.md | 151 -------\n ...1226-Phase-1-Pilot-cash-runway-aggregate-mig.md |  87 ----\n .../2026-07-05-1530-Phase-1-SoftwareHealth.md      |  69 ----\n .../2026-07-05-1608-Phase-1-UnitEconomics.md       |  51 ---\n .../archive/2026-07-05-2106-Phase-2-Batch-1.md     |  61 ---\n .../archive/2026-07-05-2138-Phase-2-Batch-2.md     |  30 --\n .../archive/2026-07-05-2158-Phase-2-Batch-3.md     |  14 -\n .../2026-07-05-Phase-G3-escalation-engine.md       | 115 ------\n .../archive/2026-07-05-codex-audit-fix.md          |  45 --\n .../archive/2026-07-06-0012-Phase-3-Batch-1.md     |  16 -\n .../task-briefs/archive/2026-07-06-0223-P0P1---.md | 263 ------------\n .../task-briefs/archive/2026-07-06-evolution-v3.md |  43 --\n .../2026-07-08-0017-ontology-unification.md        | 147 -------\n .../archive/2026-07-08-0043-T3-GA-annotations.md   |  57 ---\n .../archive/2026-07-08-T2-哨兵核心修复.md          |  25 --\n .../archive/2026-07-08-T6-计算模块缺口补充.md      |  29 --\n .../archive/2026-07-09-T11-无数据诊断.md           |  88 ----\n .../archive/2026-07-09-T12-dormant-docs.md         |  77 ----\n .../archive/2026-07-09-T7-growth-edges.md          |  83 ----\n .../archive/2026-07-09-T7a-BRAND_BUILDS.md         |  45 --\n .../archive/2026-07-09-T7b-边接线到GraphBridge.md  |  38 --\n ...09-T9-sentinel-accuracy-management-economics.md |  78 ----\n .../archive/2026-07-10-I2-3a-compute边引用迁移.md  |  16 -\n .../2026-07-10-I2-3b-new-compute-stage0-1.md       |  16 -\n .../2026-07-10-I2-3c-new-compute-stage2-3.md       |  27 --\n .../2026-07-10-I2-3d-new-compute-stage4-5-X.md     |  30 --\n .../archive/2026-07-10-I2-Phase1-42边JSON.md       |  32 --\n .../archive/2026-07-10-I2-Phase2-枚举同步.md       |  33 --\n .../2026-07-11-D24-I2-3b-3c-contract补全.md        |  41 --\n .../archive/2026-07-11-D35-数据管道可观测性.md     |  49 ---\n .../2026-07-13-D47-双进程架构-首次启动检查.md      |  55 ---\n .../archive/2026-07-13-D49-watchdog-monitoring.md  |  58 ---\n .../archive/2026-07-13-D49-独立看门狗-三层监控.md  |  54 ---\n .../archive/2026-07-13-D57-tone-fusion.md          |  56 ---\n .../2026-07-13-D69-expert-prompts降级-文件驱动.md  |  61 ---\n .../archive/2026-07-14-D50-一键恢复包-备份验证.md  |  52 ---\n .../archive/2026-07-14-D51-CI-CD黄金案例F1门禁.md  |  38 --\n .../archive/2026-07-14-D58-manifest-loader.md      |  33 --\n .../2026-07-14-D69-expert-prompts-decommission.md  |  36 --\n .../archive/2026-07-14-D73-goal-sentinel.md        |  36 --\n .../2026-07-14-D74-workspace-data-aggregation.md   |  56 ---\n .../archive/2026-07-14-D79-context-loader.md       |  34 --\n .../archive/2026-07-15-D51-ci-golden-case.md       |  26 --\n .../archive/2026-07-15-D59-me-compute-enhance.md   |  32 --\n .../2026-07-15-D75-lightweight-rediagnosis.md      |  53 ---\n .../archive/2026-07-15-D76-pkb-feedback.md         |  45 --\n .../archive/2026-07-15-D77-system-integration.md   |  40 --\n .../2026-07-15-D80-playbook-execution-record.md    |  33 --\n .../archive/2026-07-16-D61-me-compute-new.md       |  22 -\n .../archive/2026-07-21-D8c-expert-routing.md       |   4 -\n .../archive/2026-07-21-D8d-cross-validation.md     |   4 -\n .../archive/2026-07-21-D8e-conflict-arbitration.md |   4 -\n .../2026-07-21-D8f-convergence-mechanism.md        |   4 -\n .../archive/2026-07-22-D200-context-injector.md    |   5 -\n .../2026-07-22-D201-gatekeeper-synova-commit.md    |   4 -\n .../archive/2026-07-22-D202-external-auditor.md    |   4 -\n .../archive/2026-07-22-D206-dev-doc-gatekeeper.md  |   4 -\n .claude/task-briefs/archive/2026-07-28-auto.md     | 126 ------\n .claude/task-briefs/archive/2026-07-29-auto.md     | 104 -----\n .claude/task-briefs/archive/2026-07-30-auto.md     | 116 ------\n .../evidence/D1044-B1/00-premise-freeze.json       |  72 ++++\n .../evidence/D1044-B1/A-01-nolink-recheck.json     | 108 +++++\n .../evidence/D1044-B1/A-02-archive-takeover.json   |  57 +++\n .../evidence/D1044-B1/A-03-outbound-gates.json     |  88 ++++\n .../evidence/D1044-B1/B-01-nolink-independent.json | 451 ++++++++++++++++++++\n .../evidence/D1044-B1/B-02-archive-integrity.json  | 206 ++++++++++\n .../evidence/D1044-B1/B-03-rollback-drill.json     | 326 +++++++++++++++\n .../evidence/D1044-B1/C-01-closeout-three.json     | 132 ++++++\n .../product-lines/evidence/D1044-B1/README.json    |  77 ++++\n .../2026-09-28-D1044-b1-archive-outbound.md        |  46 +++\n task-state/D1044.json                              | 327 +++++++++++++++\n 307 files changed, 2349 insertions(+), 21757 deletions(-)\n",
+   "stderr": ""
+  },
+  "status_histogram": {
+   "cmd": "git -c core.quotepath=false diff --name-status origin/main...HEAD | awk '{print $1}' | sort | uniq -c",
+   "exit": 0,
+   "stdout": "  12 A\n 294 D\n   1 M\n",
+   "stderr": ""
+  },
+  "counts": {
+   "archive_deleted": 294,
+   "files_remaining_in_archive": "0",
+   "md_index_before_rm": "2193 (git ls-tree origin/main)",
+   "md_index_after": "1901 (含本批新增 brief+Note；只 rm 未 add 时为 1899)",
+   "delta_expected": "-294",
+   "ts_denominator": "509",
+   "doc_code_ratio_before": "2193/509 = 4.31",
+   "doc_code_ratio_after": "1899/509 = 3.73（分母 509 不变）"
+  },
+  "commit_boundary_5b483760": {
+   "cmd": "git -c core.quotepath=false diff-tree --no-commit-id --name-only -r 5b483760 | wc -l",
+   "exit": 0,
+   "stdout": "     300\n",
+   "stderr": "",
+   "note": "300 = 294 删除 + 6 新增（brief / task-state / Note / A-01..A-03）；白名单外 = 0（无夹带）"
+  },
+  "archive_repo": {
+   "cmd": "git -C ~/Synova-过程档案 log --oneline -1; git -C ~/Synova-过程档案 -c core.quotepath=false diff-tree --no-commit-id --name-only -r 85a55b1 | wc -l",
+   "exit": 0,
+   "stdout": "85a55b1 docs(档案仓): 承接 B1/D1044 出库 294 件 briefs/archive\n     294\n",
+   "stderr": ""
+  }
+ },
+ "2_self_verification_conclusion": {
+  "statement": "自验结论（非审计结论，非『通过』）：B1 出库的三条硬判据均取得独立可复跑的原始证据 —— ① 依赖语义零引用（1 处围栏引文为例外，已逐条点名）② 承接副本 294/294 字节级全等（基线 == 档案仓；主仓已删 = 0）③ 回退路径实际演练成功（恢复 294 → sha256 294/294 → 再删 0）且判据具判别性（做坏即红）。三条门禁 exit=0。",
+  "verified_by_whom": {
+   "① 零引用": "成员B 独立三口径（全路径 -F -f / 逐件词干 BRE / 逐件 -F）命中数一致 + 语义抽样 10 件；成员A 双口径复跑",
+   "② 承接完整性": "成员A（自 ff467712 对象复算 + 20 件 cmp）与成员B（sha256 全串集合 diff + 20 件 cmp + 做坏实验）**各自独立**得出 294/294",
+   "③ 回退演练": "成员B 在 /tmp/b1b-verify 独立演练（成员A 未参与，满足自验不得由编码兼任）"
+  },
+  "explicit_caveats": [
+   "本结论 = 自验结论，**不等于审计通过**；通过与否归 CTO 收件闸 + K3 终审（卡面 §八）。",
+   "判据① 为精化口径（原卡面字面口径与卡面 §三② 互斥、不可达），精化依据与被排除候选全部留在 brief §判据精化 与 B-01。",
+   "预算门禁的放行来自 D860 治理产物豁免（300 件），**不是** #864 出库豁免（实测输出『出库豁免不适用』）。",
+   "CI 侧 docs-only 早退为**预测**（依据 ci.yml:51 正则 + 本地同口径实测），**尚未经实际 PR 运行验证**。"
+  ]
+ },
+ "3_residual_list": {
+  "note": "逐条写明为何不在本批做（卡面 §五⑥）",
+  "items": [
+   {
+    "id": "L-1",
+    "item": "docs/synova/coordination/出库声明与批次模板-D1028-20260927.md:651 出库后留陈旧引文",
+    "why_not_now": "不在冻结写集内；扩写集须 CTO 批复",
+    "evidence": "B-01 / brief §判据精化 §3"
+   },
+   {
+    "id": "L-2",
+    "item": "docs/synova/STATE.md:83 活体陈述『archive = 294』出库后过时",
+    "why_not_now": "同上。实测不影响门禁：check-doc-truth.sh C4 只校验 7 条权威层路径，不含 .claude/**，D1 实跑全绿",
+    "evidence": "brief §判据精化 §3"
+   },
+   {
+    "id": "L-3",
+    "item": "G10/G11 幽灵变量（CHANGED_FILES/STAGED_FILES 零赋值）⇒ 条件区域检查恒不触发（假绿）",
+    "why_not_now": "属控制塔域 scripts/pre-commit-check.sh，本批只登记不改；A3(#862) 在修、未合",
+    "evidence": "00-premise-freeze.json P6 + 本文件 4_gates.precommit"
+   },
+   {
+    "id": "L-4",
+    "item": "doc-registry-gate.sh 只扫 untracked + staged-新增 ⇒ commit 后输入归零（假绿）",
+    "why_not_now": "同上，控制塔域；与 D1028 交付遗留 L7 同源",
+    "evidence": "本文件 4_gates.doc_registry"
+   },
+   {
+    "id": "L-5",
+    "item": "卡面前提 P6（G10 会报红 ⇒ 需等 A3）与 P9（预算靠 #864 豁免）**不成立**；P7 计数值随 main 漂移 +21",
+    "why_not_now": "已在本 brief §Q0.b 与 memory Note 逐条订正并上报 CTO；A3/#864 均非本批前置",
+    "evidence": "00-premise-freeze.json"
+   },
+   {
+    "id": "L-6",
+    "item": "仓库级 git 身份为夹具残留：file:/Users/wane/SynovaAgent/.git/config ⇒ user.name='D1029 fixture' / user.email='d1029-test@example.invalid'，全库 **≥123** 个 commit 已用该身份（含本批 2 个；**数字随 ref 集合漂移**：同一命令实测 fetch 前 123 / fetch 后 151 ⇒ 不写死）",
+    "why_not_now": "根因是**共享配置**，改单个 commit 治不了本、且 amend 会打断 .claude/bypass.log 的 HASH=5b483760 证据链 ⇒ 按『不做一次性特例』走规则，须 CTO 在 .git/config 设回 tangbaobao520 <huangxuesongvip@163.com>",
+    "evidence": "brief §红线 之外的 L-6；A 报告 + 队长复算：git config --local --show-origin --get user.name"
+   },
+   {
+    "id": "L-7",
+    "item": "卡面回退命令 `git rm -r --quiet` 在 `git checkout <sha> -- <path>` 之后会失败（需 -f）：index 相对 HEAD 已暂存 294 条新增，git rm 无 -f 受保护拒绝",
+    "why_not_now": "属卡面判据修正，非本批缺陷（A 真实出库时 index 与 HEAD 一致、正常成功）；建议写进后续批次模板",
+    "evidence": "B-03 step_d_redelete"
+   },
+   {
+    "id": "L-8",
+    "item": "卡面 worktree 命令 `git worktree add <dir> <branch>` 在分支已被其它工作树占用时不可执行",
+    "why_not_now": "B 改用 --detach 钉同一 sha 完成演练；建议模板写 `--detach <sha>`",
+    "evidence": "B-03"
+   },
+   {
+    "id": "L-12",
+    "item": "（R-4·结构性假绿面）干净树复跑 `SYNO_CI=1 scripts/pre-commit-check.sh`：`Notes 迁移 / G10 / G11 / G13` 共 4 项输出『跳过』，结尾**仍打印**『✅ 全部 13 组通过』——该总结句**不随跳过而变**，故『13 组通过』不是状态无关陈述",
+    "why_not_now": "控制塔域（`scripts/pre-commit-check.sh`），与本批 L-3/L-4 同族（门禁读暂存集 ⇒ 结论依赖运行时机）；本批只登记不改",
+    "evidence": "成员B 复核④ 在干净树实测；队长复现：grep -c '跳过' = 4，且 '✅ 全部 13 组通过' 同时存在"
+   }
+  ]
+ },
+ "4_gates": {
+  "doc_registry": {
+   "cmd": "DOC_TRUTH_ROOT=. bash scripts/doc-system/doc-registry-gate.sh",
+   "exit": 0,
+   "stdout": "── 汇总: 检查 0 个文档，0 个未登记 ──\n  ✅ 登记门禁通过\n",
+   "stderr": ""
+  },
+  "pre_commit_tail": {
+   "cmd": "SYNO_CI=1 bash scripts/pre-commit-check.sh 2>&1 | tail -6",
+   "exit": 0,
+   "stdout": "\n═══════════════════════════════════════════════════════════\n  \u001b[0;32m✅ 全部 13 组通过\u001b[0m\n  \u001b[1;33m⚠️  1 项警告 (不阻断)\u001b[0m\n═══════════════════════════════════════════════════════════\n\n",
+   "stderr": ""
+  },
+  "pr_budget": {
+   "cmd": "bash scripts/control-tower/check-pr-budget.sh",
+   "exit": 0,
+   "stdout": "── PR 预算门禁（D734）: 基线=origin/main 上限=12 文件 / 落后阈值=20 ──\n  ℹ️  出库豁免不适用（D1028 路径级豁免未生效）:\n       ⓐ 不满足: 变更含 13 件增/改（非纯删除/重命名）→ D/R 计入预算\n       ⓑ 不满足: 白名单外路径 11 件（未落出库白名单）:\n         .claude/bypass.log\n         docs/synova/product-lines/evidence/D1044-B1/00-premise-freeze.json\n         docs/synova/product-lines/evidence/D1044-B1/A-01-nolink-recheck.json\n         docs/synova/product-lines/evidence/D1044-B1/A-02-archive-takeover.json\n         docs/synova/product-lines/evidence/D1044-B1/A-03-outbound-gates.json\n         docs/synova/product-lines/evidence/D1044-B1/B-01-nolink-independent.json\n         docs/synova/product-lines/evidence/D1044-B1/B-02-archive-integrity.json\n         docs/synova/product-lines/evidence/D1044-B1/B-03-rollback-drill.json\n         docs/synova/product-lines/evidence/D1044-B1/C-01-closeout-three.json\n         docs/synova/product-lines/evidence/D1044-B1/README.json\n         task-state/D1044.json\n  ℹ️  D860 治理产物豁免: 306 件不计预算（brief/卡/Note/规格/自验证据，代码文件仍计入）\n  ✅ ① 变更文件数 1 ≤ 上限 12\n  ✅ ② 变更单域: ✅ PASS 0 个文件同域: 无归属（无归属 0，域判定豁免 1）\n  ✅ ③ 落后 origin/main 0 个提交 ≤ 20\n✅ PASS PR 预算内（1 文件）\n",
+   "stderr": ""
+  },
+  "note": "三条均为提交前/提交后在实体工作树上的实跑原始输出",
+  "pre_commit_named_warning": {
+   "line": "⚠️  PRD 对照: Done 标准引用 PRD 章节(可选): 1 处  [可选提示——永不阻断]",
+   "why": "R-3：原记录只给 `| tail -6`，未点名唯一告警。坑清单『绿腿告警必须可见』要求告警原文入档。"
+  }
+ }
+}

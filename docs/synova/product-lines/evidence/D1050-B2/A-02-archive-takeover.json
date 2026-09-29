@@ -1,0 +1,1719 @@
+{
+ "evidence_id": "D1050-B2/A-02",
+ "task": "③ 承接就位（~/Synova-过程档案/出库-主仓/）",
+ "produced_by": "squad-a-b2 (执行成员)",
+ "status": "✅ DONE —— 由队长执行（B2 session 沙箱拒绝工作区外写入）",
+ "base_sha": "d85900407a46fbeb9bb97271ae8fb1fb4ccc4fc4",
+ "outbound_N": 275,
+ "target": {
+  "dest_root": "/Users/wane/Synova-过程档案/出库-主仓",
+  "dest_briefs_dir": "/Users/wane/Synova-过程档案/出库-主仓/.claude/task-briefs",
+  "archive_repo": true,
+  "archive_repo_toplevel": "/Users/wane/Synova-过程档案",
+  "pre_existing_from_B1": {
+   "files": 294,
+   "under": "出库-主仓/.claude/task-briefs/archive/",
+   "archive_repo_clean": true
+  }
+ },
+ "read_access": {
+  "cmd": "ls -la ~/Synova-过程档案/ ; git -C ~/Synova-过程档案 log --oneline -3 ; git -C ~/Synova-过程档案 status --porcelain",
+  "result": "读操作全部成功（目录可列、档案仓 HEAD 可读、status 干净）"
+ },
+ "write_attempt": {
+  "cmd": "bash /tmp/b2-archive.sh   （卡面要求的「③全部动作合并成一条命令」：mkdir → 逐件 cp -p 保形 → shasum -a 256 逐件对账 → 档案仓 commit，对账不等等即 exit 3）",
+  "exit": 1,
+  "raw_stderr_tail": "cp: /Users/wane/Synova-过程档案/出库-主仓/.claude/task-briefs/2026-06-14-0201-SentinelExpertDispatcher.md: Operation not permitted",
+  "stopped_at": "首个 cp；mkdir 为目标目录已存在（no-op）",
+  "partial_state": "档案仓零改动（git status --porcelain 空）；无半成品",
+  "escalation_blocked_reason": "本 session 运行时固定：approval prompts are disabled；delegated subagent 权限范围不可在 session 内加宽 ⇒ 卡面所述 sandbox_permissions=\"danger-full-access\" 重试在本 session 不被允许。按要求**未重试**。"
+ },
+ "handoff_to_lead": {
+  "exact_command": "bash /tmp/b2-archive.sh",
+  "script_sha256": "a9888b153113a2c772e1b86308f0e249795cb9ed5c608e0cc01df12020524a78",
+  "script_body": "set -euo pipefail\nSRC=/Users/wane/SynovaAgent/.synova-wt-b2-d1050\nDEST=$HOME/Synova-过程档案/出库-主仓\ncd \"$SRC\"\nmkdir -p \"$DEST/.claude/task-briefs\"\nN=0\nwhile IFS= read -r p; do\n  [ -z \"$p\" ] && continue\n  mkdir -p \"$DEST/$(dirname \"$p\")\"\n  cp -p \"$p\" \"$DEST/$p\"\n  N=$((N+1))\ndone < /tmp/b2-outbound-list.txt\necho \"COPIED=$N\"\n# ---- sha256 逐件对账（N/N 全等）----\nMATCH=0; MISMATCH=0\nwhile IFS= read -r p; do\n  [ -z \"$p\" ] && continue\n  a=$(shasum -a 256 \"$SRC/$p\" | awk '{print $1}')\n  b=$(shasum -a 256 \"$DEST/$p\" | awk '{print $1}')\n  if [ \"$a\" = \"$b\" ]; then MATCH=$((MATCH+1)); else MISMATCH=$((MISMATCH+1)); echo \"MISMATCH: $p\"; fi\ndone < /tmp/b2-outbound-list.txt\necho \"SHA256_MATCH=$MATCH\"\necho \"SHA256_MISMATCH=$MISMATCH\"\necho \"DEST_FILES_IN_TASKBRIEFS_TOP=$(find \"$DEST/.claude/task-briefs\" -maxdepth 1 -type f -name '*.md' | wc -l | tr -d ' ')\"\nif [ \"$MISMATCH\" -ne 0 ] || [ \"$MATCH\" -ne \"$N\" ]; then echo \"RECONCILE_FAIL\"; exit 3; fi\ngit -C \"$HOME/Synova-过程档案\" add -A 出库-主仓\ngit -C \"$HOME/Synova-过程档案\" -c user.name=synova-archive -c user.email=archive@synova.local \\\n  commit -q -m \"chore(D1050-B2): 承接主仓 .claude/task-briefs/ 非 archive 存量出库 275 件（保形）\" -- 出库-主仓\necho \"ARCHIVE_COMMIT=$(git -C \"$HOME/Synova-过程档案\" rev-parse HEAD)\"\necho \"ARCHIVE_HEAD_COUNT=$(git -C \"$HOME/Synova-过程档案\" ls-files 出库-主仓 | wc -l | tr -d ' ')\"\necho \"OK\"\n",
+  "list_path": "/tmp/b2-outbound-list.txt",
+  "list_sha256": "3ae1b400f4e4e97e9aa28de04f457e10ce05ecdba65d4706d61223811e23ca1a",
+  "list_body": [
+   ".claude/task-briefs/2026-06-14-0201-SentinelExpertDispatcher.md",
+   ".claude/task-briefs/2026-06-14-1143-D53-API.md",
+   ".claude/task-briefs/2026-06-14-1208-D1D46.md",
+   ".claude/task-briefs/2026-06-16-1108-Phase-1---3-.md",
+   ".claude/task-briefs/2026-06-18-1653-Phase-0-Week-3-6--D1D3D5-.md",
+   ".claude/task-briefs/2026-06-20-2339-Slice-F1-ExpertTyperuntime-string.md",
+   ".claude/task-briefs/2026-07-10-D3-THEORY-METRIC_BINDS修复.md",
+   ".claude/task-briefs/2026-07-10-D4-Financial字段统一.md",
+   ".claude/task-briefs/2026-07-10-D5-CircuitBreaker接线.md",
+   ".claude/task-briefs/2026-07-10-D6-推送通知接线.md",
+   ".claude/task-briefs/2026-07-11-D14-15概念节点NodeType注册.md",
+   ".claude/task-briefs/2026-07-11-D31-6数据适配器JSON.md",
+   ".claude/task-briefs/2026-07-11-D32-Outcome-JSON字段补全.md",
+   ".claude/task-briefs/2026-07-11-D34-PII脱敏接入.md",
+   ".claude/task-briefs/2026-07-11-D36-可插拔扩展机制.md",
+   ".claude/task-briefs/2026-07-12-D15a-哨兵合并废弃.md",
+   ".claude/task-briefs/2026-07-12-D30-数据质量门禁.md",
+   ".claude/task-briefs/2026-07-12-D33-存储时间语义.md",
+   ".claude/task-briefs/2026-07-12-D37-data-conflict-awareness.md",
+   ".claude/task-briefs/2026-07-12-D38-PolicyEngine权限引擎.md",
+   ".claude/task-briefs/2026-07-12-D39-TraversalPermissionFilter.md",
+   ".claude/task-briefs/2026-07-12-D40-DataExporter-DataPurger.md",
+   ".claude/task-briefs/2026-07-12-D43-PromptInjectionDetector.md",
+   ".claude/task-briefs/2026-07-12-D53-专家AgentSpec文件化.md",
+   ".claude/task-briefs/2026-07-12-D65-Skill-Tool-Registry-Loader.md",
+   ".claude/task-briefs/2026-07-13-D48-静默升级-版本回滚.md",
+   ".claude/task-briefs/2026-07-13-D54-prompt-assembler.md",
+   ".claude/task-briefs/2026-07-13-D55-reasoning-crossval.md",
+   ".claude/task-briefs/2026-07-13-D56-data-conflict-protocol.md",
+   ".claude/task-briefs/2026-07-13-D57-tone-enforcer.md",
+   ".claude/task-briefs/2026-07-13-D66-出厂内置Skill清单.md",
+   ".claude/task-briefs/2026-07-13-D67-Playbook加载器.md",
+   ".claude/task-briefs/2026-07-13-D68-Tool原子验证-权限模型.md",
+   ".claude/task-briefs/2026-07-14-D83-bootstrap-startup-sequence.md",
+   ".claude/task-briefs/2026-07-21-D8a-main-agent.md",
+   ".claude/task-briefs/2026-07-21-D8b-task-decomposer.md",
+   ".claude/task-briefs/2026-07-31-auto.md",
+   ".claude/task-briefs/2026-08-01-D290-audit-check-python-native.md",
+   ".claude/task-briefs/2026-08-01-auto.md",
+   ".claude/task-briefs/2026-08-10-auto.md",
+   ".claude/task-briefs/2026-08-12-D330.md",
+   ".claude/task-briefs/2026-08-14-auto.md",
+   ".claude/task-briefs/2026-08-15-AGENT-INFRASTRUCTURE-SCAN.md",
+   ".claude/task-briefs/2026-08-15-D307-worktree-isolation.md",
+   ".claude/task-briefs/2026-08-16-D383-cto-batch.md",
+   ".claude/task-briefs/2026-08-16-D384-cto-audit-fix.md",
+   ".claude/task-briefs/2026-08-16-D385-audit-ingest.md",
+   ".claude/task-briefs/2026-08-16-D386-vitest-sentinel-assert.md",
+   ".claude/task-briefs/2026-08-16-D387-doc-commit-exempt.md",
+   ".claude/task-briefs/2026-08-16-D389-audit-ingest-d387.md",
+   ".claude/task-briefs/2026-08-16-D390-exempt-guard.md",
+   ".claude/task-briefs/2026-08-16-D392-audit-exempt.md",
+   ".claude/task-briefs/2026-08-16-D393-derived-status.md",
+   ".claude/task-briefs/2026-08-16-D399-audit-fix.md",
+   ".claude/task-briefs/2026-08-16-D400-closeout.md",
+   ".claude/task-briefs/2026-08-16-D401-ledger-sync.md",
+   ".claude/task-briefs/2026-08-16-D403-dispatch-commit.md",
+   ".claude/task-briefs/2026-08-16-D404-context-fix.md",
+   ".claude/task-briefs/2026-08-16-D405-ci-dashboard.md",
+   ".claude/task-briefs/2026-08-16-D406-lessons-fix.md",
+   ".claude/task-briefs/2026-08-17-D333-evolution-loop.md",
+   ".claude/task-briefs/2026-08-17-D356-sentinel-threshold.md",
+   ".claude/task-briefs/2026-08-17-D407-cto-health-audit-glob.md",
+   ".claude/task-briefs/2026-08-17-D408-closeout-registry-todos.md",
+   ".claude/task-briefs/2026-08-17-D409-taskstate-consistency.md",
+   ".claude/task-briefs/2026-08-17-D410-task-to-progress-auto-redeem.md",
+   ".claude/task-briefs/2026-08-17-D412-artifact-reproducibility.md",
+   ".claude/task-briefs/2026-08-17-D413-ct-test-gate.md",
+   ".claude/task-briefs/2026-08-17-D414-bypass-evidence-chain.md",
+   ".claude/task-briefs/2026-08-17-D415-writeset-reconcile.md",
+   ".claude/task-briefs/2026-08-17-D416-sop-gate.md",
+   ".claude/task-briefs/2026-08-17-D417-secrets-failopen.md",
+   ".claude/task-briefs/2026-08-17-D419-founder-truth.md",
+   ".claude/task-briefs/2026-08-17-D428-closeout-merge-batch.md",
+   ".claude/task-briefs/2026-08-17-D430-u8-deadref-hotfix.md",
+   ".claude/task-briefs/2026-08-18-D402-federated-fix.md",
+   ".claude/task-briefs/2026-08-18-D430-a2-evidence-wiring.md",
+   ".claude/task-briefs/2026-08-18-D440-dashboard-ci.md",
+   ".claude/task-briefs/2026-08-18-D442-gs03-capital-cycle.md",
+   ".claude/task-briefs/2026-08-18-D450-gs-dispatch.md",
+   ".claude/task-briefs/2026-08-18-D451-ct42-d331.md",
+   ".claude/task-briefs/2026-08-18-D452-full-project-view.md",
+   ".claude/task-briefs/2026-08-18-D453-ct39-ci-stale-red.md",
+   ".claude/task-briefs/2026-08-18-D453-sentinel-trigger-fix.md",
+   ".claude/task-briefs/2026-08-18-D454-env-esm-fix.md",
+   ".claude/task-briefs/2026-08-18-D455-d355-cash-fix.md",
+   ".claude/task-briefs/2026-08-18-D456-alloc-lock.md",
+   ".claude/task-briefs/2026-08-18-D456-token-env-fix.md",
+   ".claude/task-briefs/2026-08-18-D457-bypass-union.md",
+   ".claude/task-briefs/2026-08-18-D457-pre-push-delete-fix.md",
+   ".claude/task-briefs/2026-08-18-D458-parallel-root-fix.md",
+   ".claude/task-briefs/2026-08-19-D445-gs05-alert-loop.md",
+   ".claude/task-briefs/2026-08-20-D459-generated-gate.md",
+   ".claude/task-briefs/2026-08-20-D460-llm-verifier.md",
+   ".claude/task-briefs/2026-08-20-doc-system-new-files.md",
+   ".claude/task-briefs/2026-08-21-D443-gs02-customer-cycle.md",
+   ".claude/task-briefs/2026-08-21-D444-gs04-talent-cycle.md",
+   ".claude/task-briefs/2026-08-21-D446-D449-gs-scenarios.md",
+   ".claude/task-briefs/2026-08-21-D454-esm-require-cleanup.md",
+   ".claude/task-briefs/2026-08-21-D461-worktree-closeout.md",
+   ".claude/task-briefs/2026-08-21-D462-sqlite-v12.md",
+   ".claude/task-briefs/2026-08-21-D463-gs05-closure-fix.md",
+   ".claude/task-briefs/2026-08-21-D464-control-tower-gate-fix.md",
+   ".claude/task-briefs/2026-08-21-D465-ci-diff-gap-fix.md",
+   ".claude/task-briefs/2026-08-21-D466-bypass-log-comment-sync.md",
+   ".claude/task-briefs/2026-08-21-D467-move-ci-authority.md",
+   ".claude/task-briefs/2026-08-21-D468-sync-downgrade.md",
+   ".claude/task-briefs/2026-08-22-D240-enterprise-facts-delivery.md",
+   ".claude/task-briefs/2026-08-22-D338-org-isolation.md",
+   ".claude/task-briefs/2026-08-22-D472-notes-lifecycle.md",
+   ".claude/task-briefs/2026-08-22-D473-guard-loop-hygiene.md",
+   ".claude/task-briefs/2026-08-22-D474-golden-dataset-gate.md",
+   ".claude/task-briefs/2026-08-22-D500-session-event-sourcing.md",
+   ".claude/task-briefs/2026-08-22-D501-as-any-exclude-tests.md",
+   ".claude/task-briefs/2026-08-22-FEISHU-BRIDGE-ops.md",
+   ".claude/task-briefs/2026-08-23-D502-board-multi-source-unify.md",
+   ".claude/task-briefs/2026-08-23-D503-g12-timezone-window.md",
+   ".claude/task-briefs/2026-08-23-D504-electron-desktop-impl.md",
+   ".claude/task-briefs/2026-08-23-D505-sentinel-self-check-impl.md",
+   ".claude/task-briefs/2026-08-23-D508-commit-flow-dedrag.md",
+   ".claude/task-briefs/2026-08-23-D513-tower-repairs.md",
+   ".claude/task-briefs/2026-08-24-D483-register-slice-a.md",
+   ".claude/task-briefs/2026-08-24-D514-d510-audit-fix.md",
+   ".claude/task-briefs/2026-08-24-D515.md",
+   ".claude/task-briefs/2026-08-24-D516-ci-strict.md",
+   ".claude/task-briefs/2026-08-24-D520.md",
+   ".claude/task-briefs/2026-08-24-V5.0.1-verify-parallel-exempt.md",
+   ".claude/task-briefs/2026-08-24-g12-taskstate-exempt.md",
+   ".claude/task-briefs/2026-08-25-D484-enterprise-invite-slice-b.md",
+   ".claude/task-briefs/2026-08-25-D485-account-link-slice-c.md",
+   ".claude/task-briefs/2026-08-25-D521.md",
+   ".claude/task-briefs/2026-08-25-D523-win-double-click.md",
+   ".claude/task-briefs/2026-08-25-D525-D526.md",
+   ".claude/task-briefs/2026-08-25-D527-D528-slice-c.md",
+   ".claude/task-briefs/2026-08-25-D529-desktop-ci.md",
+   ".claude/task-briefs/2026-08-25-V5.1.2-verify-parallel-crlf.md",
+   ".claude/task-briefs/2026-08-26-D533-CI-diagnostics-root-cause.md",
+   ".claude/task-briefs/2026-08-26-D534-Stage1-D2-agent-notes.md",
+   ".claude/task-briefs/2026-08-26-D535-Stage1-D4-guard-timeout.md",
+   ".claude/task-briefs/2026-08-27-D539-session-worktree-isolation.md",
+   ".claude/task-briefs/2026-08-27-D540-clone-pilot-shadow-commit.md",
+   ".claude/task-briefs/2026-08-27-D541-claim-regex-narrow.md",
+   ".claude/task-briefs/2026-08-28-D487-ga-session-events.md",
+   ".claude/task-briefs/2026-08-28-D542-ci-strict-visible-fail.md",
+   ".claude/task-briefs/2026-08-28-D543-gate-tests-seal-and-parser-symmetry.md",
+   ".claude/task-briefs/2026-08-28-D544-leftbar-acceptance-merge.md",
+   ".claude/task-briefs/2026-08-28-D545-v520-skill-sync.md",
+   ".claude/task-briefs/2026-08-28-D546-sentinel-findings-event.md",
+   ".claude/task-briefs/2026-08-28-D547-skeleton-brief-gate.md",
+   ".claude/task-briefs/2026-08-28-D550-alloc-origin-merge.md",
+   ".claude/task-briefs/2026-08-28-D551-ga-calibration-backend-spec.md",
+   ".claude/task-briefs/2026-08-28-D552-cto-governance-backfill-workspace-sweep.md",
+   ".claude/task-briefs/2026-08-28-D553-impl-done-disposal-and-audit-dispatch.md",
+   ".claude/task-briefs/2026-08-28-D554-post-commit-no-sweep-ct43.md",
+   ".claude/task-briefs/2026-08-28-D555-verify-parallel-ci-closed-task-exempt.md",
+   ".claude/task-briefs/2026-08-28-D556-ga-collab-e2e.md",
+   ".claude/task-briefs/2026-08-29-D489-ga-consult-events-slice2b.md",
+   ".claude/task-briefs/2026-08-29-D558-D487-session_events-迁移回归测试补写（K3-P1）.md",
+   ".claude/task-briefs/2026-08-29-D560-claim-regex-redo.md",
+   ".claude/task-briefs/2026-08-29-D561-three-p1-restore.md",
+   ".claude/task-briefs/2026-08-29-D562-k3-reaudit-dispatch.md",
+   ".claude/task-briefs/2026-08-30-D556-closeout-dispatch.md",
+   ".claude/task-briefs/2026-08-31-D563-diagnosis-as-never-fix.md",
+   ".claude/task-briefs/2026-08-31-D564-incident-loop-win-fix.md",
+   ".claude/task-briefs/2026-08-31-fastlane-threshold-fix.md",
+   ".claude/task-briefs/2026-08-31-simulate-ci-diagnosis-fix.md",
+   ".claude/task-briefs/2026-09-02-D489-k3-closeout.md",
+   ".claude/task-briefs/2026-09-02-D563-diagnosis-as-never-fix.md",
+   ".claude/task-briefs/2026-09-02-D563D564-closeout-ledger.md",
+   ".claude/task-briefs/2026-09-02-D564-incident-loop-win-fix.md",
+   ".claude/task-briefs/2026-09-02-D565-testkit-ci-wiring.md",
+   ".claude/task-briefs/2026-09-02-D567-expert-enum-propagation.md",
+   ".claude/task-briefs/2026-09-02-D568-superseded-by-chain.md",
+   ".claude/task-briefs/2026-09-02-D569-dashboards-git-read.md",
+   ".claude/task-briefs/2026-09-02-productlines-audit-dispatch.md",
+   ".claude/task-briefs/2026-09-02-productlines-closeout.md",
+   ".claude/task-briefs/2026-09-03-D570-版本对齐.md",
+   ".claude/task-briefs/2026-09-03-D571-逃生舱审计链修复.md",
+   ".claude/task-briefs/2026-09-04-D492-task-decomposer-expert-map.md",
+   ".claude/task-briefs/2026-09-04-D572-线1桌面端K3全量复核.md",
+   ".claude/task-briefs/2026-09-04-D576-兑换诚实化.md",
+   ".claude/task-briefs/2026-09-05-D575-llm-first-run-config.md",
+   ".claude/task-briefs/2026-09-05-D577-sentinel-threshold-wiring-impl.md",
+   ".claude/task-briefs/2026-09-05-D577-sentinel-threshold-wiring-spec.md",
+   ".claude/task-briefs/2026-09-05-D578-FIX-D572-Win真机实测1-2.md",
+   ".claude/task-briefs/2026-09-05-D579-FIX-D572-k3verdict-stale机制.md",
+   ".claude/task-briefs/2026-09-06-D580-08告警工单切片-8-2入库-8-3去重稳定化-8-4状态机API.md",
+   ".claude/task-briefs/2026-09-06-D581-D578收尾三残留-Win验证脚本BOM-证据路径-构建守卫.md",
+   ".claude/task-briefs/2026-09-06-D581-win-verify-build-guard.md",
+   ".claude/task-briefs/2026-09-06-D582-CT-60-D328-提取大小写兼容.md",
+   ".claude/task-briefs/2026-09-06-D584-P1-DSH线测试债-sentinels与契约批.md",
+   ".claude/task-briefs/2026-09-07-D586-win-llm-error-taxonomy.md",
+   ".claude/task-briefs/2026-09-07-D587-stale重验批.md",
+   ".claude/task-briefs/2026-09-07-D587-win-tool-result-pruner.md",
+   ".claude/task-briefs/2026-09-07-D588-session-projection.md",
+   ".claude/task-briefs/2026-09-07-D594-context-compaction.md",
+   ".claude/task-briefs/2026-09-08-CT-64-arch-gate-patches.md",
+   ".claude/task-briefs/2026-09-08-D589-stale-reverify.md",
+   ".claude/task-briefs/2026-09-08-D590-L1-P1对话HTTP-SSE端点.md",
+   ".claude/task-briefs/2026-09-08-D591-L1-P1桌面端对话接线.md",
+   ".claude/task-briefs/2026-09-08-D591-桌面对话接线-真流式+提交回声+向导后直达对话.md",
+   ".claude/task-briefs/2026-09-08-D592-L1-P1对话E2E场景.md",
+   ".claude/task-briefs/2026-09-08-D593-L1-P2桌面报告工单.md",
+   ".claude/task-briefs/2026-09-08-D593-llm-call-resilience.md",
+   ".claude/task-briefs/2026-09-08-D593-report-persistence.md",
+   ".claude/task-briefs/2026-09-08-D594-L1-P2交互卡片链路.md",
+   ".claude/task-briefs/2026-09-08-D594-context-compaction.md",
+   ".claude/task-briefs/2026-09-08-D595-L1-P3MCP认证权限.md",
+   ".claude/task-briefs/2026-09-08-D596-L1-P3TUI清理与文档拉平.md",
+   ".claude/task-briefs/2026-09-08-D597-D588会话投影接线-M3第5次修复.md",
+   ".claude/task-briefs/2026-09-08-D597-session-projection-wiring.md",
+   ".claude/task-briefs/2026-09-08-D598-token-meter-cost-guardrail.md",
+   ".claude/task-briefs/2026-09-08-D599-customer-config-package.md",
+   ".claude/task-briefs/2026-09-08-D600-cfg-first-command.md",
+   ".claude/task-briefs/2026-09-08-D601-task-board-mapping-calibrate.md",
+   ".claude/task-briefs/2026-09-09-D593-FIX-restore.md",
+   ".claude/task-briefs/2026-09-09-D593-FIX2.md",
+   ".claude/task-briefs/2026-09-09-D600-cfg-first-command.md",
+   ".claude/task-briefs/2026-09-09-D602-interactive-cards-preload.md",
+   ".claude/task-briefs/2026-09-09-D603-L1P3-TUI清理跨层静态清零文档拉平.md",
+   ".claude/task-briefs/2026-09-09-D651-K3双线编码管线代码质量对比评估.md",
+   ".claude/task-briefs/2026-09-09-D651-expert-name-reference-sync.md",
+   ".claude/task-briefs/2026-09-10-D660-task-board-activity-semantics.md",
+   ".claude/task-briefs/2026-09-10-D661-grep-oP-portable-family-fix.md",
+   ".claude/task-briefs/2026-09-10-D663-ct-ci-hermetic-arch-ratchet.md",
+   ".claude/task-briefs/2026-09-10-D663-tools-compute-seam.md",
+   ".claude/task-briefs/2026-09-10-D665-main-build-job-failure-fix.md",
+   ".claude/task-briefs/2026-09-12-D664-pre-commit-check-grep-p-self-clean.md",
+   ".claude/task-briefs/2026-09-12-D706-synova-commit-deletion-loss-fix.md",
+   ".claude/task-briefs/2026-09-12-D707-brief-archlayer-parser-unify.md",
+   ".claude/task-briefs/2026-09-12-D708-m9-merge-writeset-gate.md",
+   ".claude/task-briefs/2026-09-13-D712-desktop-line1-reverification.md",
+   ".claude/task-briefs/2026-09-13-D712-mac-line1-reverify.md",
+   ".claude/task-briefs/2026-09-13-D713-desktop-package-signature-and-verify-gate.md",
+   ".claude/task-briefs/2026-09-13-D714-f3-preload-sandbox-renderer-api-fix.md",
+   ".claude/task-briefs/2026-09-13-D715-k3-audit-ctl-slice-and-line1.md",
+   ".claude/task-briefs/2026-09-13-D717-coding-product-debt-batch.md",
+   ".claude/task-briefs/2026-09-13-D718-cto-parallel-ctl-minor-fixes.md",
+   ".claude/task-briefs/2026-09-13-D721-ci-vitest-ratchet-merge-base-and-visible-exemption.md",
+   ".claude/task-briefs/CLAUDE2-RISK12-INDUSTRY-KB.md",
+   ".claude/task-briefs/CLAUDE2-RISK6-FORMULAS.md",
+   ".claude/task-briefs/CODEX-ENGINE-CORE-CLEANUP.md",
+   ".claude/task-briefs/CODEX-ENGINE-CORE-SPLIT.md",
+   ".claude/task-briefs/CODEX-PRD-差距修复-20260624.md",
+   ".claude/task-briefs/CODEX-SOG-本体扩展-20260624.md",
+   ".claude/task-briefs/D281.md",
+   ".claude/task-briefs/D291-empty-catches.md",
+   ".claude/task-briefs/D300-golden-case-gate.md",
+   ".claude/task-briefs/D315-utf8-batch-closeout.md",
+   ".claude/task-briefs/D316-ct-v460-fix.md",
+   ".claude/task-briefs/D317-engine-core-retirement-cleanup.md",
+   ".claude/task-briefs/D317-g12b-ci-fix.md",
+   ".claude/task-briefs/D318-dual-machine-hooks.md",
+   ".claude/task-briefs/D319-git-tag-auto.md",
+   ".claude/task-briefs/D321-bash32-hook-chain.md",
+   ".claude/task-briefs/D329-session-identity-staging-guard.md",
+   ".claude/task-briefs/D331-tag-bypass-wiring-fix.md",
+   ".claude/task-briefs/D333-decision-reference-framework.md",
+   ".claude/task-briefs/D334-multi-machine-pr-workflow.md",
+   ".claude/task-briefs/D335-sync-backup.md",
+   ".claude/task-briefs/D336-multi-agent-collab.md",
+   ".claude/task-briefs/D379-path-dependency.md",
+   ".claude/task-briefs/D391-admin-knowledge-fix.md",
+   ".claude/task-briefs/D394-sentinel-events.md",
+   ".claude/task-briefs/D394.md",
+   ".claude/task-briefs/D395a-notes-four-state.md",
+   ".claude/task-briefs/D395a.md",
+   ".claude/task-briefs/D396-snapshot-golden.md",
+   ".claude/task-briefs/D396.md",
+   ".claude/task-briefs/D402-audit-fix-p1.md",
+   ".claude/task-briefs/D517-installer-build.md",
+   ".claude/task-briefs/D518-single-entry.md",
+   ".claude/task-briefs/D519-mac-install-test.md",
+   ".claude/task-briefs/D536-deploy-acceptance.md",
+   ".claude/task-briefs/phase34-nodate.md"
+  ],
+  "if_tmp_not_shared": "本 JSON 已含 275 件全量 path + sha256（见 manifest），可据此在队长 session 重建清单后再跑同法。",
+  "expected_output": "COPIED=275 / SHA256_MATCH=275 / SHA256_MISMATCH=0 / RECONCILE ok / ARCHIVE_COMMIT=<sha>",
+  "then": "队长回「已承接 + 档案仓 commit sha」→ B2 执行 ④（逐件 git rm + 四闸 + Δ）",
+  "executed": true
+ },
+ "manifest": [
+  {
+   "path": ".claude/task-briefs/2026-06-14-0201-SentinelExpertDispatcher.md",
+   "sha256": "e6d228cfac9d025283a14e563a626ad1f0a01d4f4d349af16bc2ce58b8c5553d",
+   "bytes": 1459
+  },
+  {
+   "path": ".claude/task-briefs/2026-06-14-1143-D53-API.md",
+   "sha256": "18fe62afaeb04037ce083c0c25aeae3df9dc8fd115d47daf14109ff34bbcc1ad",
+   "bytes": 1736
+  },
+  {
+   "path": ".claude/task-briefs/2026-06-14-1208-D1D46.md",
+   "sha256": "1200f71b7090e53f520c217018d43b3a97df91219d4687e6a15cdd5f9670368b",
+   "bytes": 1774
+  },
+  {
+   "path": ".claude/task-briefs/2026-06-16-1108-Phase-1---3-.md",
+   "sha256": "6d600c3a4a18f315cfa06f5460087dd79ea4f4c15488de8f8899a7fca4a12a6a",
+   "bytes": 2130
+  },
+  {
+   "path": ".claude/task-briefs/2026-06-18-1653-Phase-0-Week-3-6--D1D3D5-.md",
+   "sha256": "02255125758c799cc3469fc6e303ce0962654224f8ff521d067cf4d1738ce669",
+   "bytes": 3760
+  },
+  {
+   "path": ".claude/task-briefs/2026-06-20-2339-Slice-F1-ExpertTyperuntime-string.md",
+   "sha256": "9e8cee62e4c5c615c51fb5cbb3b72560211466406591c7a0d4816ced70b7fac0",
+   "bytes": 1642
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-10-D3-THEORY-METRIC_BINDS修复.md",
+   "sha256": "857749ba9c814c2db01e70f6ac9c53fab896c3e00dc2cc0a15c3887f0eb508a7",
+   "bytes": 980
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-10-D4-Financial字段统一.md",
+   "sha256": "7c7c6620d6e82a16a221ca55374b3cde12375631f8421cc4bd3a64eb46afc81c",
+   "bytes": 1726
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-10-D5-CircuitBreaker接线.md",
+   "sha256": "2526cdbd8fcff924980d9c268dd357e179fce516be0b848c122eac5f4d4cb6da",
+   "bytes": 1977
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-10-D6-推送通知接线.md",
+   "sha256": "39a77385bf872e41561445c59c562b9eb78ed93c47c4ed5c76bd52797c92606c",
+   "bytes": 1414
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-11-D14-15概念节点NodeType注册.md",
+   "sha256": "c74c144b98df23a2e4a21e3fd429bd266657328ad5667b961c7ac5170d7d2e97",
+   "bytes": 2559
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-11-D31-6数据适配器JSON.md",
+   "sha256": "8cdd7a0b672e56e926d7ce81648627637dea11ffd501797dab8c7f88969e2be3",
+   "bytes": 2733
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-11-D32-Outcome-JSON字段补全.md",
+   "sha256": "a5ccf776cffd334b306427555f8c92e14db5bf437ebcb6a44dd0440870625053",
+   "bytes": 1786
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-11-D34-PII脱敏接入.md",
+   "sha256": "7977d4016336b44ffd3791f0d10bb9a2606b62fa9f4302fc8cec8a5667b7e8e6",
+   "bytes": 2144
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-11-D36-可插拔扩展机制.md",
+   "sha256": "3ada7841267395e691ccf67db2c13fe809f215307a75cda81f86a29385f4eebe",
+   "bytes": 2646
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-12-D15a-哨兵合并废弃.md",
+   "sha256": "5bebaa80d8d822378e31312666d4888465a4c27bf111d6bd9e2238c961eb32d6",
+   "bytes": 3202
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-12-D30-数据质量门禁.md",
+   "sha256": "c7dd50ab2162ff19f03edc7d2b21f798ed1f70fc9289e6c86490d42853b96011",
+   "bytes": 2316
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-12-D33-存储时间语义.md",
+   "sha256": "e2398de24e04748e4f15390e2104122b2a9a48f52bf0a6e0571b027cf25ed8f1",
+   "bytes": 1379
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-12-D37-data-conflict-awareness.md",
+   "sha256": "b5e313f458b962717331144a1839c59ebdb542e3a9035c166b7797885ca154f8",
+   "bytes": 1894
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-12-D38-PolicyEngine权限引擎.md",
+   "sha256": "b14116a08aba1a49d54cc42de9db27e8081fc1b53fd1811c05a6cdc3bd639e36",
+   "bytes": 2258
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-12-D39-TraversalPermissionFilter.md",
+   "sha256": "ac93a83a20bb795ea7eb112588d3963682e4317d3d607161a37be0e9b7ed2610",
+   "bytes": 1807
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-12-D40-DataExporter-DataPurger.md",
+   "sha256": "76f8f4b5704597d6f76d2a6522b3c6d5b14dfabe207f71cc9b31d09267c8aa3e",
+   "bytes": 2774
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-12-D43-PromptInjectionDetector.md",
+   "sha256": "04c8db46802237729c1990edbf760f4f15a6e90d3c6a2a4365ab33ffdb9ddff1",
+   "bytes": 2912
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-12-D53-专家AgentSpec文件化.md",
+   "sha256": "3ba269fb71a168546e446dbdeef0b7913eec8d0bae1d372add033db9c11860e4",
+   "bytes": 3188
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-12-D65-Skill-Tool-Registry-Loader.md",
+   "sha256": "17865ca51a42500fe91284a3c14704fec552a915f1312e04cefd0f0eeb5a5b8c",
+   "bytes": 3584
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-13-D48-静默升级-版本回滚.md",
+   "sha256": "2f5b454041d86db76a722b28356e76d97772da17f063182d235747e18b50961c",
+   "bytes": 2985
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-13-D54-prompt-assembler.md",
+   "sha256": "01cde254f22fd2f1c433d64e78c74514e32b8c3bb939c05877b94d9532eeb0c4",
+   "bytes": 2873
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-13-D55-reasoning-crossval.md",
+   "sha256": "550f9ccfb3fc24264809f3effa4bc50dee6edc88e5fac3e443150a8805fad68e",
+   "bytes": 2164
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-13-D56-data-conflict-protocol.md",
+   "sha256": "6e5da24789ecf537cf3dfa218dad86a4dd97b4c79473232acd759ed012124cb9",
+   "bytes": 1514
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-13-D57-tone-enforcer.md",
+   "sha256": "a3281ea3fbda7f0b092d1669ab785ab7b20238360d14e918b7149752f8d305dc",
+   "bytes": 1649
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-13-D66-出厂内置Skill清单.md",
+   "sha256": "0841ca1f7e965160faaa4b94b4de486bf0e089a7bd9b1f0b7b385b011b2d425b",
+   "bytes": 3094
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-13-D67-Playbook加载器.md",
+   "sha256": "9fe6c9b94a8028625a570f8087eaf40238ecd10a2049f79b1e83eaa1dff6112a",
+   "bytes": 2318
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-13-D68-Tool原子验证-权限模型.md",
+   "sha256": "291cb93282d6ed86094afee6baac7cfc7855fbe88ebc9dd95bd24eb538a014d9",
+   "bytes": 2396
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-14-D83-bootstrap-startup-sequence.md",
+   "sha256": "51a4840b3fa781bf277d9b3e27aa80d8db6054f7553a692d47e299636e20958c",
+   "bytes": 2971
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-21-D8a-main-agent.md",
+   "sha256": "1aafdac3a6f040fd1ee0bb0aac51592852f75f100d5730be14563bb2117ab35f",
+   "bytes": 163
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-21-D8b-task-decomposer.md",
+   "sha256": "0767735e1f4f92b2a2ec2acf07e233c74bfb8b78372590fffa505cfba5e78481",
+   "bytes": 125
+  },
+  {
+   "path": ".claude/task-briefs/2026-07-31-auto.md",
+   "sha256": "a86cfc2d99f4409c682384ade13c26d59ff0817a49849f44fa0e6acb4215a4fc",
+   "bytes": 2400
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-01-D290-audit-check-python-native.md",
+   "sha256": "f790c02d64adeb83450ba7e58e75f390a5b9a1a825dffff345dc2134d6365132",
+   "bytes": 1996
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-01-auto.md",
+   "sha256": "6b4544330318de94f062cdc7b266c6aada277ba25b7dff748f1412d015ff8c70",
+   "bytes": 11632
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-10-auto.md",
+   "sha256": "ecda29c7031da6ad228bafbaf2970e01238f65ab777f802d20a67aa0b9d3cacf",
+   "bytes": 7018
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-12-D330.md",
+   "sha256": "c65fe7599935001084e24e7210f6895acfb0151fee4cc6f8eb191edd53e4adc1",
+   "bytes": 7817
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-14-auto.md",
+   "sha256": "7099a6bc7e269b696bcdee1efe5452c726ee2861b885421a432fa277acad61ee",
+   "bytes": 7058
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-15-AGENT-INFRASTRUCTURE-SCAN.md",
+   "sha256": "d1d03d7372d10378455ed3a02aeb583c1ecf2bd785b6bdb7b4e5d9a5d75cb0f2",
+   "bytes": 5752
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-15-D307-worktree-isolation.md",
+   "sha256": "6b23a7aaba991ac3d3cf9c454bdfd4ca9012fa9ff3c8a18ec977234447715cc5",
+   "bytes": 16043
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-16-D383-cto-batch.md",
+   "sha256": "f0702be7a6b3c6c70e0e73643ddc60b9afd1a69c3560ef5319a05ed58b842f83",
+   "bytes": 4331
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-16-D384-cto-audit-fix.md",
+   "sha256": "073dac6bcabb346252878f4026d64c7cad880589d9ea1b16dee79b334140fd27",
+   "bytes": 3542
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-16-D385-audit-ingest.md",
+   "sha256": "28ef3ab7726adbe56963174611fb44196f9efb026ecf4de27dd2c65fe472f6d2",
+   "bytes": 2073
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-16-D386-vitest-sentinel-assert.md",
+   "sha256": "846014f3c03b5a342aab3e2afbbae7be31f5450cd0d3563b9e835e89c402833e",
+   "bytes": 2050
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-16-D387-doc-commit-exempt.md",
+   "sha256": "c315811e76a452c9b6a170ee208f8fc53a8748ab41e008a117c590f0af04ce1c",
+   "bytes": 13032
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-16-D389-audit-ingest-d387.md",
+   "sha256": "7c331b9004ccb9742e52926966d13938862ca9878c6171270c2ac3166486dd38",
+   "bytes": 1811
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-16-D390-exempt-guard.md",
+   "sha256": "d46a1fec959b2d7b6d1bd6498df96407082371751a722327f0ba5b64c48ebace",
+   "bytes": 2644
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-16-D392-audit-exempt.md",
+   "sha256": "7c22fe1d15f33c8d6305e94612ff958e70f318a14ae6b59a7a9b0011b61e4c84",
+   "bytes": 2110
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-16-D393-derived-status.md",
+   "sha256": "afe90b2edbd5d4224485c642b5a169a9a2beda61de6e6fd35d271a04be8498db",
+   "bytes": 2623
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-16-D399-audit-fix.md",
+   "sha256": "ae1d4434a40281fdf148dae7604e320eee98559feb2f3ba05db59cd6c2b37406",
+   "bytes": 2801
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-16-D400-closeout.md",
+   "sha256": "1bd28a549402e09a96f9871c924a2ec68cf5d74252b38ef4e77708a248c8b75c",
+   "bytes": 2438
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-16-D401-ledger-sync.md",
+   "sha256": "a54fa2d98366c9860f7a79dd5a21e11a3bac62c14a10717009f648f32dd53b8d",
+   "bytes": 2549
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-16-D403-dispatch-commit.md",
+   "sha256": "93285e517bcc8b8bb894ef2abac44996695f9f9dae97dba2d8948198a0a4a041",
+   "bytes": 2580
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-16-D404-context-fix.md",
+   "sha256": "446082f3375aa7b75d420bea1b6a8797f8abf0d0a60e87ba9e2db5a95715fc4a",
+   "bytes": 2360
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-16-D405-ci-dashboard.md",
+   "sha256": "cf3b92e157d551d1ec3b967afca5c2c69e0660c4259f3cf3c563827173dcbfc8",
+   "bytes": 1927
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-16-D406-lessons-fix.md",
+   "sha256": "fc1149c5a5b7e94a36ef1dff7ad06c07cac13868fa3551415b6edbf1fe71c371",
+   "bytes": 2235
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-17-D333-evolution-loop.md",
+   "sha256": "4cd4c441d105cd437a9327d9c7a3cda0176b7b453de2806b6b8fee90de3ed12c",
+   "bytes": 15137
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-17-D356-sentinel-threshold.md",
+   "sha256": "c392e5f193922b1e700cee906921fe5fc9f7f843f3711862d70b2f460589d178",
+   "bytes": 14771
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-17-D407-cto-health-audit-glob.md",
+   "sha256": "9884ac8c782ff8db0f5dbf7a180ce1f96c2200fe1b3adcb5cc5d93fd9afbd03f",
+   "bytes": 2790
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-17-D408-closeout-registry-todos.md",
+   "sha256": "dc83a4b8299f0239f50f2a794a307d0618efa2b7403e01a348bb291fa312e4e2",
+   "bytes": 2551
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-17-D409-taskstate-consistency.md",
+   "sha256": "842c8a2bef91e5067f791f16b901f69033635e8496e52639a19eba6f423e764f",
+   "bytes": 2120
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-17-D410-task-to-progress-auto-redeem.md",
+   "sha256": "5cdd8d8eefc4c23500ce742d81168832378177c8c928b6b56958091b668eb87b",
+   "bytes": 2658
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-17-D412-artifact-reproducibility.md",
+   "sha256": "ea3a20309dad32feff0e36267b06fe1c1980af6865dd70abc34ea8d29e0b7352",
+   "bytes": 3082
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-17-D413-ct-test-gate.md",
+   "sha256": "20212137adf7e131af4956883f13e2cf3e3bb1c36b1726b43d40c9371e204f7d",
+   "bytes": 2843
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-17-D414-bypass-evidence-chain.md",
+   "sha256": "40c294f884bfb495007ececa53c13401bd318a97c0b9b70685c2e067c3d624a5",
+   "bytes": 2644
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-17-D415-writeset-reconcile.md",
+   "sha256": "2c5e80ffc23ad4f7915496415cc4d892c7e7bbcc28e6eaf1764ab680a3d521e8",
+   "bytes": 2508
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-17-D416-sop-gate.md",
+   "sha256": "5413501f6c023b39304a3cf7ba0065e372ff2ce680ee8314058d1c6b89ae5bbb",
+   "bytes": 2272
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-17-D417-secrets-failopen.md",
+   "sha256": "ce741322e1ee4c402d709053b8cb921e4aad16f3ba117d157013592221e6fdcf",
+   "bytes": 2335
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-17-D419-founder-truth.md",
+   "sha256": "9ddb7e13c774c43759d3735f217efb646bdc3f7c712f0046dea694643bbb3add",
+   "bytes": 2159
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-17-D428-closeout-merge-batch.md",
+   "sha256": "fdbadd0d4af2793df79263ef20b89f56e390d916b78bc01f002b990abef3967b",
+   "bytes": 1672
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-17-D430-u8-deadref-hotfix.md",
+   "sha256": "e49e5d831170c22099774a7f8fe4318fecdb25a187349be2d1e0b5a31ff2f564",
+   "bytes": 1808
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-18-D402-federated-fix.md",
+   "sha256": "bac80def5b1f2f1d20fa3507d4707638b5e25efd120f161003bacff88c148aad",
+   "bytes": 13762
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-18-D430-a2-evidence-wiring.md",
+   "sha256": "5b1572966a3a423fc622a8e7886dd673454d4847e85e08a9862ad74f05eac75d",
+   "bytes": 2480
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-18-D440-dashboard-ci.md",
+   "sha256": "7735ea655cee50cd2b783f16e1b86c3ddedc60e6ff5dcf6141722429c481f9a3",
+   "bytes": 1946
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-18-D442-gs03-capital-cycle.md",
+   "sha256": "3cd81a7916824d421dd949ed541d4ba8c3b554195501a170f7e262822a2d25f3",
+   "bytes": 3468
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-18-D450-gs-dispatch.md",
+   "sha256": "7ca6e7e91f3190b4d5b6401d82ce334504c6457bd2f17d9b9d97886e05221294",
+   "bytes": 2022
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-18-D451-ct42-d331.md",
+   "sha256": "5239b582058ac97d07b850235c10c575780f44c3889a102ef9af15f111ea64fc",
+   "bytes": 1891
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-18-D452-full-project-view.md",
+   "sha256": "1f45925d4d8e98eaeef30dce529eda4ccb3d5c2b2dc16ea221b0861eb066eff5",
+   "bytes": 2060
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-18-D453-ct39-ci-stale-red.md",
+   "sha256": "2ca6d598f6d265464dcfde30fb47f8d56e046e80556f2fb4ba5cc349b2e98a72",
+   "bytes": 1828
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-18-D453-sentinel-trigger-fix.md",
+   "sha256": "824922034a2b0e6b57a4d52eb0cd52a2c2a0f6e273f477201b815b3f27b3cc0d",
+   "bytes": 2517
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-18-D454-env-esm-fix.md",
+   "sha256": "ed23b28e0dd36b8d7bce78891ede230d64b845f664cb048a7286ac11ac13d527",
+   "bytes": 1725
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-18-D455-d355-cash-fix.md",
+   "sha256": "2b126f59ae1a70bc331f4647c8d631bf82c145e676b5bdae34de39a5d54066f2",
+   "bytes": 3128
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-18-D456-alloc-lock.md",
+   "sha256": "b8977b24654a9e9f08eaba803ce512c80042247993c16c10ae4147e07b440732",
+   "bytes": 1604
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-18-D456-token-env-fix.md",
+   "sha256": "54fc81637007148144f68c474986625a21872b4154c52d44ba87b53cf46fc0c4",
+   "bytes": 1405
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-18-D457-bypass-union.md",
+   "sha256": "8d3ea04aa53068c51530906d2dd90517ef69658d8567f2ab8b91e3e58a208a57",
+   "bytes": 1672
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-18-D457-pre-push-delete-fix.md",
+   "sha256": "6db72fcad388e1890446a76b53a9a417314ce87f15a663c5881bf95bc95dc49a",
+   "bytes": 1847
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-18-D458-parallel-root-fix.md",
+   "sha256": "57fe1965f720fb2775e56849df6c04e674d411e0998116fc52cf0754044fc4aa",
+   "bytes": 2388
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-19-D445-gs05-alert-loop.md",
+   "sha256": "720d4215c740ce80d1bc59194f447188d85ed52337c74946215edc8f5b9019de",
+   "bytes": 13406
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-20-D459-generated-gate.md",
+   "sha256": "92568f8cd15d9c3aa9f142116d867125849d5c666734d861f0590d73e18f9a65",
+   "bytes": 1675
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-20-D460-llm-verifier.md",
+   "sha256": "9511f8334288bfc05185fbc400c94d4bd2c674d194d2801c57526f8e73f9c3ca",
+   "bytes": 1918
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-20-doc-system-new-files.md",
+   "sha256": "daedc6e5a1e7a2c7da1b71d3402b38e6efa1dc3968e918a0ce9a964927f817fa",
+   "bytes": 2522
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-21-D443-gs02-customer-cycle.md",
+   "sha256": "8b9fd950aaac6aaeebc6843baa7040670038287f79854ee98db7357f3677e8b3",
+   "bytes": 10165
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-21-D444-gs04-talent-cycle.md",
+   "sha256": "4543f6971ee907b6815f7922f760ddc3f7e7e71e17e7c91ded52f0defd8d027d",
+   "bytes": 9249
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-21-D446-D449-gs-scenarios.md",
+   "sha256": "218c84358b1bec206199bf7ee6f4962aae8aaed5c3bece8b35d28aa9f70ac9d1",
+   "bytes": 3454
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-21-D454-esm-require-cleanup.md",
+   "sha256": "410db8f4f6225d0b7b5350d04e9319c21a1cdae4fc1f2e0856bb4a8b8527a1c4",
+   "bytes": 5610
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-21-D461-worktree-closeout.md",
+   "sha256": "64a8d59e3eb2af5c7ec15605492b387e8ac671e53d504adc30f825912a642bb5",
+   "bytes": 2065
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-21-D462-sqlite-v12.md",
+   "sha256": "3baeff23536c5133934818beaf2b3fb59a8fa253a5964b66509b7fdb467b6236",
+   "bytes": 11142
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-21-D463-gs05-closure-fix.md",
+   "sha256": "8b830b563856bda922400e9f9235c1a56a474b9236d96810ae6d8b2f2c293cfd",
+   "bytes": 11268
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-21-D464-control-tower-gate-fix.md",
+   "sha256": "bea17592535bde2268588cef82655064a79a5ad568d93921ca81c67f1d3d2d2a",
+   "bytes": 2815
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-21-D465-ci-diff-gap-fix.md",
+   "sha256": "83121b979bf17d44ffe16720ab9994adeb3e38501a12947a9d255f9b130ad5bc",
+   "bytes": 2019
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-21-D466-bypass-log-comment-sync.md",
+   "sha256": "1cfd95b139818dc7f1bcbaf7e1423a520cf4acdc2428c33401a4bf0f9b335ce7",
+   "bytes": 1941
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-21-D467-move-ci-authority.md",
+   "sha256": "f156a3ffc136e361eff97104585ca437124ee4078f837531faf53b2fbfd93826",
+   "bytes": 2043
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-21-D468-sync-downgrade.md",
+   "sha256": "293dc1dcf440035b51e7fe5550334c8cf8cb46b6e717647bce27a30dbf6837b7",
+   "bytes": 1920
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-22-D240-enterprise-facts-delivery.md",
+   "sha256": "403b3a595fd856894b4c171f389890b89d686313a5d4b6b2fe1f68fed4b60733",
+   "bytes": 1809
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-22-D338-org-isolation.md",
+   "sha256": "828cd63316116f8cc3d7023f50ca4d3df2ade086cfe16b7ae94cb711e13adc19",
+   "bytes": 22629
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-22-D472-notes-lifecycle.md",
+   "sha256": "ee341408b309fa94c3777cf0eb162e82248ef9622cb4638159c0bf49661219fe",
+   "bytes": 4910
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-22-D473-guard-loop-hygiene.md",
+   "sha256": "e90ce088e1b848e3567fb55a226e40c9edc5b66aa2f61ba2fc71372deecdcfd2",
+   "bytes": 4586
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-22-D474-golden-dataset-gate.md",
+   "sha256": "8cd41dea244cb3f5dc469847416d23e13ea1f332d02624d0a7fc7efa635a556c",
+   "bytes": 4494
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-22-D500-session-event-sourcing.md",
+   "sha256": "303082ff227faf7101d4b211f48bb43dac963a41457aadecd8d6e5723d4936a7",
+   "bytes": 4903
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-22-D501-as-any-exclude-tests.md",
+   "sha256": "0b98baebcd49b8729d709efc53d328afd436c828364c2f863ead2398e4eb2fc6",
+   "bytes": 2875
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-22-FEISHU-BRIDGE-ops.md",
+   "sha256": "7d3888cc0baf216bed35c614435841b7de98b32d1ec68f2034bf2b314324e15f",
+   "bytes": 2402
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-23-D502-board-multi-source-unify.md",
+   "sha256": "d8d54acfcfdd0524d551a1edb63b039945ae7ddb025167e82ec1a403c1a48c13",
+   "bytes": 5476
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-23-D503-g12-timezone-window.md",
+   "sha256": "18595cc439c575b59c579f4cb93a66f078664c1820b25b6db06a38bcf41ed26e",
+   "bytes": 3014
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-23-D504-electron-desktop-impl.md",
+   "sha256": "64cdb3a7c993370bb894fdf1929752124082b726496ca0765f926f7287f99099",
+   "bytes": 13614
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-23-D505-sentinel-self-check-impl.md",
+   "sha256": "a62f1cc6a1ef343935296b0fd9f1d042fd40d6a1f9983faa5b795febd64791bf",
+   "bytes": 12542
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-23-D508-commit-flow-dedrag.md",
+   "sha256": "7faeba661785e7e09a6010954c72d170c4bd455a8cfff64f0a82988f447f52b4",
+   "bytes": 4228
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-23-D513-tower-repairs.md",
+   "sha256": "8e2a10b31ddb9529590b2bb2da81e3052474b49a985443712781ea4d6e6020a6",
+   "bytes": 3746
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-24-D483-register-slice-a.md",
+   "sha256": "3ff34ff6b56b67cf6c33db466b919ee5720d554bf1f2ae48d1f51c3e4053fbcd",
+   "bytes": 12224
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-24-D514-d510-audit-fix.md",
+   "sha256": "e31fe7b9a0da73b0b2a60d35cd3cfde6881a334d7c73e723f97f82df2e1886e1",
+   "bytes": 1768
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-24-D515.md",
+   "sha256": "789d9dca69967dbfed04dfebec883c44c309f053d2e512304a077b4b68c4afbd",
+   "bytes": 4306
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-24-D516-ci-strict.md",
+   "sha256": "9a461d5c9e9f8682d74f3c685cf36478690a12d80d2cc399778d7c9fb5a94d74",
+   "bytes": 1721
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-24-D520.md",
+   "sha256": "2f5d1facb60de04cf382e75b667fedc467ab6da9e729811253d13aee5997cc58",
+   "bytes": 3734
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-24-V5.0.1-verify-parallel-exempt.md",
+   "sha256": "1556926cc6d718733d0b8c88c4f661911ff794f64a6b2bc18c5b1f80dd289efb",
+   "bytes": 2247
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-24-g12-taskstate-exempt.md",
+   "sha256": "0c49e8c57a8d510886570c5901dfd06b032c293ca16b0baff4a68c2f6970634e",
+   "bytes": 2547
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-25-D484-enterprise-invite-slice-b.md",
+   "sha256": "e14d7a4e3c246783bcec4b2afc6d9cdb61b99bf04083fd73c62869ef1e4aeeaf",
+   "bytes": 9954
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-25-D485-account-link-slice-c.md",
+   "sha256": "9327a81e5a2ba25ae27eb4341d7326fd99dcc459467dbf62c92dde0659a78cc2",
+   "bytes": 12049
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-25-D521.md",
+   "sha256": "a33e41827ddcebbf3d727b4558df0c4d109ee6431b9f29085d23df5d73288464",
+   "bytes": 4549
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-25-D523-win-double-click.md",
+   "sha256": "ce0a607a323a2afc2a9b5f21ed4e40c9b9f9866d4e0bab93f7b23f8b54581617",
+   "bytes": 2795
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-25-D525-D526.md",
+   "sha256": "e3098ccb360f778de24e3aa6e617bae19548ce393c51857220782058240f1515",
+   "bytes": 3151
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-25-D527-D528-slice-c.md",
+   "sha256": "d51b2f3ebb4142d6b242a9c0d1d2820b8f84ad8ae8e76ff511a1661381890de1",
+   "bytes": 5196
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-25-D529-desktop-ci.md",
+   "sha256": "a1c99b56e51e7af1eb396183033be3b61b6cd3628d931def7fe14301cc6c52c7",
+   "bytes": 2225
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-25-V5.1.2-verify-parallel-crlf.md",
+   "sha256": "9e03f8b7632b1f75219d12b7eeae916a445c6f25c283a563197b352c6a6c32d6",
+   "bytes": 1663
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-26-D533-CI-diagnostics-root-cause.md",
+   "sha256": "e740ac9d61b97872755752d75a8176cdc23a4ce5bdca0c69113a2daef9141cb6",
+   "bytes": 5298
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-26-D534-Stage1-D2-agent-notes.md",
+   "sha256": "5ecf047bc13b0b4c2addef9fa43984c263e5fa7cb6def7c1bf6cd5cbee645ce7",
+   "bytes": 4159
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-26-D535-Stage1-D4-guard-timeout.md",
+   "sha256": "86876360aa5846d9c7e1b3ddea65c99acaa1895acd1e2896e6a977681605033e",
+   "bytes": 4111
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-27-D539-session-worktree-isolation.md",
+   "sha256": "66737eda4f23bc5d7e9a5c8e38afd9a3245d4f60cec69b2000f3eb8609c69637",
+   "bytes": 4694
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-27-D540-clone-pilot-shadow-commit.md",
+   "sha256": "22d10c9dbb7321cd8ac4ce878ec8963bea5ba7ceeecaea9e05cac7be9fd2d638",
+   "bytes": 7690
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-27-D541-claim-regex-narrow.md",
+   "sha256": "7c3373d9104ca821385994cfa9788c91aad1f8dfceb88493fe5d3e9cd9b9b308",
+   "bytes": 4395
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-28-D487-ga-session-events.md",
+   "sha256": "7381b36ed4d7fd7b3ffda35f388287c87b1ad0313919512c2a94e1b68ebda5ee",
+   "bytes": 6361
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-28-D542-ci-strict-visible-fail.md",
+   "sha256": "5f6caae55a176acd715036fd1e1b16209c60ff5355119d6f048db872df8f4d19",
+   "bytes": 3078
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-28-D543-gate-tests-seal-and-parser-symmetry.md",
+   "sha256": "f55a0d49ade64bb3f7374416765869726294ad313b21c1c574a674542e26ea57",
+   "bytes": 3167
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-28-D544-leftbar-acceptance-merge.md",
+   "sha256": "5bd335a4840a24fe99f8d82ff3505f0d9097ba4954b3d61b627427dae2fbf259",
+   "bytes": 4052
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-28-D545-v520-skill-sync.md",
+   "sha256": "61e626dade3a3d3c49d252cefddb303cfda90c50951e205c41e872b8fcdb52ff",
+   "bytes": 5347
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-28-D546-sentinel-findings-event.md",
+   "sha256": "3f256af270fcb3e0f55255b0748f54e3a15ebf53d860f1ef0f576ac7977edc31",
+   "bytes": 5948
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-28-D547-skeleton-brief-gate.md",
+   "sha256": "75d99ed2b6acc32db30943380649e62c2d619548672426d3e87530ca557c84b4",
+   "bytes": 1281
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-28-D550-alloc-origin-merge.md",
+   "sha256": "3bfbfa44fd10310db721898e133b8bacae69766042066f1ed68bdb8a8a4af030",
+   "bytes": 1144
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-28-D551-ga-calibration-backend-spec.md",
+   "sha256": "c2e56c6ce5aca2e384a68fe32ed0b31df2e07b410ee034db0fcbe009ffc8da75",
+   "bytes": 4311
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-28-D552-cto-governance-backfill-workspace-sweep.md",
+   "sha256": "f0f078b0455823094772f471ec1b1f35f834921dfd01dfc2d22bb01855d2e814",
+   "bytes": 5215
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-28-D553-impl-done-disposal-and-audit-dispatch.md",
+   "sha256": "e9fb331880a4362ebdb5f8729499209f37ea4a644b247fb75dfb78b0770b8d08",
+   "bytes": 3897
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-28-D554-post-commit-no-sweep-ct43.md",
+   "sha256": "ee703f574851178d9df96b916975ed0298f8fd459ab2e063d7190ce8898d9ff7",
+   "bytes": 4088
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-28-D555-verify-parallel-ci-closed-task-exempt.md",
+   "sha256": "b10b2c6105a1bb19c31f1312a2ab428844fb06809cb965d8c89414c2cb03e343",
+   "bytes": 4057
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-28-D556-ga-collab-e2e.md",
+   "sha256": "daa0cf524a0a98ae41d0924618e4630fcad89a111238790fca158349ac276e1e",
+   "bytes": 10376
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-29-D489-ga-consult-events-slice2b.md",
+   "sha256": "7dabc3568322d64d9a9a88c3e4bc654634a7c1d8a67a7beee4a8f95018db612b",
+   "bytes": 12109
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-29-D558-D487-session_events-迁移回归测试补写（K3-P1）.md",
+   "sha256": "66eb5c4e64bc7a7cd8cde0305508b28d03d48e5e1a242ede094b03cde3f535fc",
+   "bytes": 5000
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-29-D560-claim-regex-redo.md",
+   "sha256": "d373e80c2b301bc1797d5a1e2200aff794bb825912937d9c19d7c0fb3557fb5c",
+   "bytes": 3205
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-29-D561-three-p1-restore.md",
+   "sha256": "098fa67ccaade94b7e23e770ac76f8f71243c0583b38d8ddb675fbd4e77e8122",
+   "bytes": 3026
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-29-D562-k3-reaudit-dispatch.md",
+   "sha256": "b0691c54d5613b8a40f97d7faf9212a8c717965fccd59d4048e1af24db588780",
+   "bytes": 2452
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-30-D556-closeout-dispatch.md",
+   "sha256": "f0a22eb9eeb7cd0971109d40180648bf80cec94f64910ffcc78e51ecb816756d",
+   "bytes": 1652
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-31-D563-diagnosis-as-never-fix.md",
+   "sha256": "7f821298d61fc538d48395e6c75d64a8cb4227309f158aad4be43c9dac3a10b0",
+   "bytes": 4834
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-31-D564-incident-loop-win-fix.md",
+   "sha256": "dd08acc955d926c0fdc0e9854fc0d4b64bde90684794d9f67e0599060809be85",
+   "bytes": 4603
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-31-fastlane-threshold-fix.md",
+   "sha256": "30c9dc96ea293ae4b6b3bb0a0f1de952d14db2747a372713fbed89005800f672",
+   "bytes": 1585
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-31-simulate-ci-diagnosis-fix.md",
+   "sha256": "ecbc4733f5466fbccdee95ce39fb166168ff0885ea9fc31b914d157d92bb2fbf",
+   "bytes": 1304
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-02-D489-k3-closeout.md",
+   "sha256": "6c550a9951966aa4c56373118e5fba501f56e0d6ab6165026429a7117d41ab4f",
+   "bytes": 1175
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-02-D563-diagnosis-as-never-fix.md",
+   "sha256": "4d904d32c409a1c1a018a0afa590a759199acfb413d9315a0fada7ff7b1ecfb1",
+   "bytes": 5549
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-02-D563D564-closeout-ledger.md",
+   "sha256": "2cd01e9726a898f6f2836494d67ae449274fdd8644feec5d03aa5a8f4692f83e",
+   "bytes": 1323
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-02-D564-incident-loop-win-fix.md",
+   "sha256": "8abeff91ace44a4d619d7fb79c448a328974633260f57d40900217025e9db5f0",
+   "bytes": 6064
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-02-D565-testkit-ci-wiring.md",
+   "sha256": "85e450a2421b4552702a0d2c64b4fae76c1fc2cf5327c68b81312ad364773701",
+   "bytes": 3150
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-02-D567-expert-enum-propagation.md",
+   "sha256": "fa639a06f44caa1478affde4a06bbdd36138cc49ff6227f4f199b496d288b116",
+   "bytes": 3390
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-02-D568-superseded-by-chain.md",
+   "sha256": "cb33851dbc5fdf73820db59d5893fdf4f6593f471163a712e3df0d8578f87d1e",
+   "bytes": 2430
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-02-D569-dashboards-git-read.md",
+   "sha256": "954477cf879219edc1c8195c8dd8c922291cec1c32789e1de001d6fbd1e4fd52",
+   "bytes": 2180
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-02-productlines-audit-dispatch.md",
+   "sha256": "c7767fe1edabfd34188d2b3943d3930592320b7a17fa793b7a7630428e2ac04e",
+   "bytes": 1564
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-02-productlines-closeout.md",
+   "sha256": "426b9d414eade222200dc20a48e57a37ee55ad109250337cf31eb86b34a98e7f",
+   "bytes": 1481
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-03-D570-版本对齐.md",
+   "sha256": "64a91927d8bad0939fb2c79ecba4cab55c3e35d03cf991cd70a7d98cdcff8c4f",
+   "bytes": 2328
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-03-D571-逃生舱审计链修复.md",
+   "sha256": "f8a4ac08cd82eff44c2143121cc6fa9c8af210eff2c505e86715927f0e599fd3",
+   "bytes": 2976
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-04-D492-task-decomposer-expert-map.md",
+   "sha256": "b6a9a2cf811ca3ab05d11d85826c5fb8030650d903bd4ded7e70c03094fd4b54",
+   "bytes": 16814
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-04-D572-线1桌面端K3全量复核.md",
+   "sha256": "e2b4b60067a83bcf7b71668023c88dbbe1677b02b3f50edb41796c34019c97c8",
+   "bytes": 2903
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-04-D576-兑换诚实化.md",
+   "sha256": "ece59face156b2e764e17da98e88cc5e2115deeb65d0410bf1f5899bf8445a9a",
+   "bytes": 2564
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-05-D575-llm-first-run-config.md",
+   "sha256": "0c061c5c0b18da84d35cac9b24a5fa8ecdd04256e2953fd21f699deb74213775",
+   "bytes": 8801
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-05-D577-sentinel-threshold-wiring-impl.md",
+   "sha256": "c86f74c1b7590ee818f1ff68aa431e9474674bb753beaa153307e874696218c0",
+   "bytes": 6272
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-05-D577-sentinel-threshold-wiring-spec.md",
+   "sha256": "8a6e6d4a7068a862b5d50ac3f643ed97e50dd3bc9fae5e167a6eeb8df1ee89e3",
+   "bytes": 4829
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-05-D578-FIX-D572-Win真机实测1-2.md",
+   "sha256": "acbd32999aa21c20d77f506ff67d2597ae3f4b8ed6cb3e1222aa86124490c0b3",
+   "bytes": 3797
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-05-D579-FIX-D572-k3verdict-stale机制.md",
+   "sha256": "55e3cb88c038d380347c9d59966c9d3551eeeff28ec9fae9cc6294961ba87d8f",
+   "bytes": 6396
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-06-D580-08告警工单切片-8-2入库-8-3去重稳定化-8-4状态机API.md",
+   "sha256": "91e3815a2a00e2c055b6ae30c6101bf0e5953fa83f9ce4bd8a6c25801d370598",
+   "bytes": 9666
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-06-D581-D578收尾三残留-Win验证脚本BOM-证据路径-构建守卫.md",
+   "sha256": "804a0cc287c1b043bad24ca8de94c29512863360fc333f9e3b5c573a32f4ffa4",
+   "bytes": 2392
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-06-D581-win-verify-build-guard.md",
+   "sha256": "ea57b0771ae315c125442171009456f0f50c948bbb911d3d593baa7b8cdc7d35",
+   "bytes": 8977
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-06-D582-CT-60-D328-提取大小写兼容.md",
+   "sha256": "3a230554f300006f6f5496ffda1fe48d12c10a60d798c735a729f14009b9126d",
+   "bytes": 2464
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-06-D584-P1-DSH线测试债-sentinels与契约批.md",
+   "sha256": "74965dd30ab152ae90d299059b7a13bb1d2e49f57aeb809659d97f74344c283d",
+   "bytes": 2016
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-07-D586-win-llm-error-taxonomy.md",
+   "sha256": "28f5d5bde1fb79c207dc50a7e9ec2ba83cf4168411039fbd4c49309569fecb9b",
+   "bytes": 6299
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-07-D587-stale重验批.md",
+   "sha256": "81332b78754e84b06b98b2f8e180d91eb97c303a0a136902e88843061550c960",
+   "bytes": 1034
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-07-D587-win-tool-result-pruner.md",
+   "sha256": "c00065536034bc4af0c41a56b13c2920f083520435bad24ee5096fc6f3280ac3",
+   "bytes": 6941
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-07-D588-session-projection.md",
+   "sha256": "582d0d2181416ca5f629c5b5fd427df71a79608cc78ef364d77352ca87a5969e",
+   "bytes": 8060
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-07-D594-context-compaction.md",
+   "sha256": "0aa17f68c58941d219f12c5ab4397b09b1d3f77daa41a8e8c65f2d1de6603fd6",
+   "bytes": 9837
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-08-CT-64-arch-gate-patches.md",
+   "sha256": "cefcd65325b53d6520729f4511685f2d81acc388cb1e0397734912305aae79b1",
+   "bytes": 11181
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-08-D589-stale-reverify.md",
+   "sha256": "a252c698c3c19800dc091229e20d2ec07a48fbc7d0fab291b4a4c1021e615e67",
+   "bytes": 10533
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-08-D590-L1-P1对话HTTP-SSE端点.md",
+   "sha256": "752277579219fa21f1e88c1cfb6f344e1577b5d2e83177f4497c490e39d08cac",
+   "bytes": 7085
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-08-D591-L1-P1桌面端对话接线.md",
+   "sha256": "77e65e0ab0ffc37e70f4660e328bb7bc02e62052602c91cdd6f86eeeefd9b886",
+   "bytes": 1046
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-08-D591-桌面对话接线-真流式+提交回声+向导后直达对话.md",
+   "sha256": "d3aba1fcf2ee861613f7a8c4dfdf06d4e9d7f63d86e5c74909dff0e4de923f2c",
+   "bytes": 6682
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-08-D592-L1-P1对话E2E场景.md",
+   "sha256": "51623647a6f7fa1563dc23e55e510429a6e8a8298144a82242858b3b489a254f",
+   "bytes": 7585
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-08-D593-L1-P2桌面报告工单.md",
+   "sha256": "b02571964d51051a03005a236dfae8f7eadcf899c494310fa841871121ca2eff",
+   "bytes": 1043
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-08-D593-llm-call-resilience.md",
+   "sha256": "477946a434abe0d27b82828ca2372a4c8d7466d460d6ad7cabf467572aae357b",
+   "bytes": 10963
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-08-D593-report-persistence.md",
+   "sha256": "fad72951335f094294b58a140a99d139d6d51b4a41a984907f74b2bd8b92acb2",
+   "bytes": 9529
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-08-D594-L1-P2交互卡片链路.md",
+   "sha256": "23413b239c7e3bcad2904c1fecd78dade420735023c49be799f25e2a0e0a34a0",
+   "bytes": 1043
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-08-D594-context-compaction.md",
+   "sha256": "0aa17f68c58941d219f12c5ab4397b09b1d3f77daa41a8e8c65f2d1de6603fd6",
+   "bytes": 9837
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-08-D595-L1-P3MCP认证权限.md",
+   "sha256": "0ea2a7baa47ee2134ed46465407d4e12987fbbdb08ce518be1fa59de5dbd4bd2",
+   "bytes": 1040
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-08-D596-L1-P3TUI清理与文档拉平.md",
+   "sha256": "c29f9238587e471211990c66c7c46d2613dcb821f5126a6f3662c56cdbc6608d",
+   "bytes": 1049
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-08-D597-D588会话投影接线-M3第5次修复.md",
+   "sha256": "cb984dc2485ac90caf90fb54b0349a5f7cd16bb00622b7fa04545152f9d880a9",
+   "bytes": 1058
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-08-D597-session-projection-wiring.md",
+   "sha256": "0144a843de78f573cd39c21f289c824b6ad15dae2d6e2cdbca831e123566dcb5",
+   "bytes": 6473
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-08-D598-token-meter-cost-guardrail.md",
+   "sha256": "dcd9c59087ffdcc6222a5d572e40153435176d63aecf7e12fd26dfdd408bb365",
+   "bytes": 10057
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-08-D599-customer-config-package.md",
+   "sha256": "13f5802b692109b36882f418faf91834e65b7c20798dcfb8226dd6b7371487e7",
+   "bytes": 10387
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-08-D600-cfg-first-command.md",
+   "sha256": "c00d699db98667f8b606d86291f40599842611c5ca032ee909428fb462e8a573",
+   "bytes": 10987
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-08-D601-task-board-mapping-calibrate.md",
+   "sha256": "b6161ec3474179388d5e279d020aa33d78403034d9f68408b2449fc6ebcb453b",
+   "bytes": 4969
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-09-D593-FIX-restore.md",
+   "sha256": "e6ac01885c70be2f9069b8f79d06af5f80330ca6db7f0112a65849c43422c404",
+   "bytes": 5637
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-09-D593-FIX2.md",
+   "sha256": "ab1471151e98baf1bf2357d003c520c4107bb8463d3b5fc360ccb06e84025220",
+   "bytes": 3929
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-09-D600-cfg-first-command.md",
+   "sha256": "c00d699db98667f8b606d86291f40599842611c5ca032ee909428fb462e8a573",
+   "bytes": 10987
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-09-D602-interactive-cards-preload.md",
+   "sha256": "5b985ef75460ef3117c80af559f6ec25d8ce44770d806f0476eed6a9363e0b06",
+   "bytes": 9076
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-09-D603-L1P3-TUI清理跨层静态清零文档拉平.md",
+   "sha256": "44ffad6f1c2324fdbb0040eaa59c38571fd5d0b0bb75835b33ad8981138f7534",
+   "bytes": 3675
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-09-D651-K3双线编码管线代码质量对比评估.md",
+   "sha256": "336c5a3c84fd9c3f1a06329a1901a55dd540061d831ede8f389b9dbed66a2769",
+   "bytes": 3127
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-09-D651-expert-name-reference-sync.md",
+   "sha256": "941ec0e9dd0b13d0b8a4cf71d064345d81e8ff4aa8a7bd564f817673a42762c9",
+   "bytes": 12932
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-10-D660-task-board-activity-semantics.md",
+   "sha256": "dac109fbb32186e06795fa07d3a9f97dd6ec0d0fdaaf08eec59bb83b6be436d7",
+   "bytes": 5495
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-10-D661-grep-oP-portable-family-fix.md",
+   "sha256": "50f542a1556941dcb0ed3055bb280d49622f57fd6bcf2de0d77b95467173d096",
+   "bytes": 5963
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-10-D663-ct-ci-hermetic-arch-ratchet.md",
+   "sha256": "0c12c62d9baca0224d9b505c496c408e07344b942a0713d16cd64081a7e88d6f",
+   "bytes": 5102
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-10-D663-tools-compute-seam.md",
+   "sha256": "31f07881e5f3ceb6b328ed42090aa99e123b484e8cbe067776b69cc4b60ecb57",
+   "bytes": 17161
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-10-D665-main-build-job-failure-fix.md",
+   "sha256": "d110954631da2f8c621d0c45d4416e82afef839f078909873ad76210745f9d87",
+   "bytes": 4577
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-12-D664-pre-commit-check-grep-p-self-clean.md",
+   "sha256": "4ddae2d42417efc2d5b9533ccbabfaee96b6a687dbf6aa713d7c1277844a8b88",
+   "bytes": 4861
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-12-D706-synova-commit-deletion-loss-fix.md",
+   "sha256": "be1c1e5691e4ff976c689229df6148a033c497d38a8e276b49683a545aeb20d1",
+   "bytes": 3802
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-12-D707-brief-archlayer-parser-unify.md",
+   "sha256": "0910bd384e7876a85433a2f0e879de6ca170bb559d72b2aecdaa8daa5255c866",
+   "bytes": 4504
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-12-D708-m9-merge-writeset-gate.md",
+   "sha256": "4ac06a6789a6ab723d6be8844d7f0ddf69a26cac637076db97f8e4218cea77bb",
+   "bytes": 4979
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-13-D712-desktop-line1-reverification.md",
+   "sha256": "4567aefecc6e8d5571340ba52c69b5b138b66f111a3b8943d6453740271c4893",
+   "bytes": 4115
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-13-D712-mac-line1-reverify.md",
+   "sha256": "4748561c9dd3495dae83064ec725744d96ae7d98c24300a9f17da8e080e8d42f",
+   "bytes": 4800
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-13-D713-desktop-package-signature-and-verify-gate.md",
+   "sha256": "b5af5f4c435633e886d9fb137fcd65a84e7441642d9445fe98ff45891dcf05d4",
+   "bytes": 5659
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-13-D714-f3-preload-sandbox-renderer-api-fix.md",
+   "sha256": "c5a1e1f4238e1fa5989a5645edd22b3b369e5f40445ad5066ea4a3da7adfafe6",
+   "bytes": 4920
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-13-D715-k3-audit-ctl-slice-and-line1.md",
+   "sha256": "a3bddb0d69157e5166f05bfb1458fb8dadcd741db509f799d6ed030ec7f281d6",
+   "bytes": 3677
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-13-D717-coding-product-debt-batch.md",
+   "sha256": "676719c16ff1a0c77bb13cbeeff8323c47f50d26beae5cd92e3bfd855dcd686c",
+   "bytes": 5580
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-13-D718-cto-parallel-ctl-minor-fixes.md",
+   "sha256": "4a6e52bbcbae4345fb0a10c17ad2c01464260c822b69b0085abb50b1f2b1da45",
+   "bytes": 4799
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-13-D721-ci-vitest-ratchet-merge-base-and-visible-exemption.md",
+   "sha256": "13810f9c4c7386fce60d1f776ea06f17020a1d47efb14363e5c02a633ece3894",
+   "bytes": 6504
+  },
+  {
+   "path": ".claude/task-briefs/CLAUDE2-RISK12-INDUSTRY-KB.md",
+   "sha256": "e8805fbc172c176ce13db92c8e4440947285e4127fe1a62f6c0f8c9fb07b6578",
+   "bytes": 1503
+  },
+  {
+   "path": ".claude/task-briefs/CLAUDE2-RISK6-FORMULAS.md",
+   "sha256": "fc69a72fb34b730df23fc3792dc25ca741d3e4187045146463ec77210ae3466e",
+   "bytes": 1618
+  },
+  {
+   "path": ".claude/task-briefs/CODEX-ENGINE-CORE-CLEANUP.md",
+   "sha256": "f3a5748037004bde9b640bd47a196633eb424eac0b6ca85a27627f2ad4f5cf4c",
+   "bytes": 5529
+  },
+  {
+   "path": ".claude/task-briefs/CODEX-ENGINE-CORE-SPLIT.md",
+   "sha256": "101a366ace0de6d6e788317f68991460482296723b1286ab3e7820e90af640e1",
+   "bytes": 10259
+  },
+  {
+   "path": ".claude/task-briefs/CODEX-PRD-差距修复-20260624.md",
+   "sha256": "aea4b31aadaf72a44f046ffaa8264e608eebf742eefd214f9ace893deb9bac0c",
+   "bytes": 10239
+  },
+  {
+   "path": ".claude/task-briefs/CODEX-SOG-本体扩展-20260624.md",
+   "sha256": "ff76940cee6f3aa3bab089b47c4641a22cdabdaa164537227004acda5c59073f",
+   "bytes": 3863
+  },
+  {
+   "path": ".claude/task-briefs/D281.md",
+   "sha256": "1247c51624202e9d32b7c3b1e3e103213b23b815c1f9474aa81a8a01c5324e40",
+   "bytes": 2008
+  },
+  {
+   "path": ".claude/task-briefs/D291-empty-catches.md",
+   "sha256": "fcfcc680725c9b4140225ac7482ab6bb828cf79dc83905db5c40eb4ea1912c8c",
+   "bytes": 14038
+  },
+  {
+   "path": ".claude/task-briefs/D300-golden-case-gate.md",
+   "sha256": "130ecc4f46f7bdd6100177ceb79fca90b6ac9c244acf308d9a4cf768d088c4b3",
+   "bytes": 13492
+  },
+  {
+   "path": ".claude/task-briefs/D315-utf8-batch-closeout.md",
+   "sha256": "0bdf8060492d43587f9aedb4c82f7531432a73af44aa32c0ae4d8cef887c95d2",
+   "bytes": 4431
+  },
+  {
+   "path": ".claude/task-briefs/D316-ct-v460-fix.md",
+   "sha256": "6030b7af830bd66fc8d87f69f459f6849e6c9ab7ebfdcfb3378758e8c86cd2c3",
+   "bytes": 4680
+  },
+  {
+   "path": ".claude/task-briefs/D317-engine-core-retirement-cleanup.md",
+   "sha256": "4d5cced6c7869098a17604483d99bbab0ea134b825982e6b60b9180d1c3166fa",
+   "bytes": 14407
+  },
+  {
+   "path": ".claude/task-briefs/D317-g12b-ci-fix.md",
+   "sha256": "5d5d377889fba2a16316536188bb86eb7795342f317aea9061d887b599d833bf",
+   "bytes": 5096
+  },
+  {
+   "path": ".claude/task-briefs/D318-dual-machine-hooks.md",
+   "sha256": "91a71a5c946c2d08e1bbdd433e68ed77a6ca24175201d1a3df409beb043c2c15",
+   "bytes": 9132
+  },
+  {
+   "path": ".claude/task-briefs/D319-git-tag-auto.md",
+   "sha256": "4c86a17261002501c3b4a01d05e75f2a19609d418855f9b192a925d66d8eb32d",
+   "bytes": 4608
+  },
+  {
+   "path": ".claude/task-briefs/D321-bash32-hook-chain.md",
+   "sha256": "991fcd3114defc4a0aeea97787f1cd3d9e2a81224612883ab5068e8750b8cc7d",
+   "bytes": 12240
+  },
+  {
+   "path": ".claude/task-briefs/D329-session-identity-staging-guard.md",
+   "sha256": "45ec5d7cc7122207046f809a1f8dbd24644b9520ce32385c2a229794d0148ed0",
+   "bytes": 13753
+  },
+  {
+   "path": ".claude/task-briefs/D331-tag-bypass-wiring-fix.md",
+   "sha256": "d646544c49cbf23d44dec2a3e004c40a8b687a8b1f90318e66f6128f000d456b",
+   "bytes": 7564
+  },
+  {
+   "path": ".claude/task-briefs/D333-decision-reference-framework.md",
+   "sha256": "09cbe83ff88dd3d54e3a4c99332a684bda41a5425c721531f33402571d069a9d",
+   "bytes": 5220
+  },
+  {
+   "path": ".claude/task-briefs/D334-multi-machine-pr-workflow.md",
+   "sha256": "2f5d8e1fb12c259bfe6b26b70dcd214bf8b9346ae827d00c17ad5f18413941fd",
+   "bytes": 5966
+  },
+  {
+   "path": ".claude/task-briefs/D335-sync-backup.md",
+   "sha256": "1ec315b2a023d4f25b5e9f5a1b06659bccf106c0fce51788efb52bfffd6335a2",
+   "bytes": 5217
+  },
+  {
+   "path": ".claude/task-briefs/D336-multi-agent-collab.md",
+   "sha256": "308749eeb403051af0904256d4cd3262b6f76d7a66b8bced51960a92842705f4",
+   "bytes": 4408
+  },
+  {
+   "path": ".claude/task-briefs/D379-path-dependency.md",
+   "sha256": "0ba44a977924de51fb721bdcfca509d4984c4e13d3c21c5e2c2450d0cb61926f",
+   "bytes": 2705
+  },
+  {
+   "path": ".claude/task-briefs/D391-admin-knowledge-fix.md",
+   "sha256": "ef9df183b834a5ca0cb15232e4c3bd9726663775dc34a28f063f36f5f83da9fa",
+   "bytes": 2592
+  },
+  {
+   "path": ".claude/task-briefs/D394-sentinel-events.md",
+   "sha256": "127b334407662aa0dc00ad6505ebdb4b1fbee6340510700fe251a27375a7dde1",
+   "bytes": 2063
+  },
+  {
+   "path": ".claude/task-briefs/D394.md",
+   "sha256": "6b03d8f1167938c1dcd0da61ec9c2245b73600797ab0370fdcede73f5d9dc1c1",
+   "bytes": 6701
+  },
+  {
+   "path": ".claude/task-briefs/D395a-notes-four-state.md",
+   "sha256": "61cb820905b8e87cbf6373d4402ce27b919cba88872ac72e4931bb8d3c6b6b12",
+   "bytes": 1624
+  },
+  {
+   "path": ".claude/task-briefs/D395a.md",
+   "sha256": "193b96127e21a384285f1a7d7efd055b73604f4c643013d498e5cd81ce5a2f27",
+   "bytes": 6836
+  },
+  {
+   "path": ".claude/task-briefs/D396-snapshot-golden.md",
+   "sha256": "3523f18f2bd2dbf37838ca2696e6d6b8a68dac5476af18adfeda00a914e27406",
+   "bytes": 1392
+  },
+  {
+   "path": ".claude/task-briefs/D396.md",
+   "sha256": "2b7cea9cd3da8fb166f44930fe9decad8e241ae6fbe984ed4390e9a9ff110955",
+   "bytes": 7825
+  },
+  {
+   "path": ".claude/task-briefs/D402-audit-fix-p1.md",
+   "sha256": "d0993c530280804ee3a072d82a85efea996d0fd0ef41ae2a9c145f24245a7e7b",
+   "bytes": 1292
+  },
+  {
+   "path": ".claude/task-briefs/D517-installer-build.md",
+   "sha256": "9bb3369c41ac8016463efa4eaf605135fca112ff1c1285b3fbb7179fea5e9318",
+   "bytes": 4244
+  },
+  {
+   "path": ".claude/task-briefs/D518-single-entry.md",
+   "sha256": "4e2631e4ac20bbca81b1afebb9c062a0a426dcf86f175665444f9cac5fdd4208",
+   "bytes": 4080
+  },
+  {
+   "path": ".claude/task-briefs/D519-mac-install-test.md",
+   "sha256": "60f3f296915218dd966b9628fe73f90449bbfe7ae4468dd0b5447c6606154119",
+   "bytes": 3539
+  },
+  {
+   "path": ".claude/task-briefs/D536-deploy-acceptance.md",
+   "sha256": "32ba5139a3c2d6a4cab77dd58c67b47e10c2c61c7da7494fd0d09ccc49040063",
+   "bytes": 5342
+  },
+  {
+   "path": ".claude/task-briefs/phase34-nodate.md",
+   "sha256": "cde6072831e0d0a36ab5047b0dbd4ef9cd67be69999b8caad2bb0afbbfc37664",
+   "bytes": 5033
+  }
+ ],
+ "reconciliation": {
+  "planned": "N/N 全等（275/275）",
+  "performed": true,
+  "producer_reported": {
+   "SHA256_MATCH": 275,
+   "SHA256_MISMATCH": 0,
+   "by": "lead"
+  },
+  "independent_readback_by_b2": {
+   "why": "不信转述 —— B2 自己对档案仓逐件重算 shasum -a 256 与主仓比对",
+   "cmd": "while read p; do a=$(shasum -a 256 \"$p\"); b=$(shasum -a 256 \"$DEST/$p\"); [ \"$a\" = \"$b\" ]; done < /tmp/b2-outbound-list.txt",
+   "result": {
+    "MISMATCH": 0,
+    "MATCH": 275
+   },
+   "archive_head_at_readback": "0bec81aa6c66f38be26e69a1722f12cc15bd2f5b",
+   "archive_tracked_files_under_outbound": 569
+  }
+ },
+ "not_a_verdict": "本件为执行方自验材料，非独立审计结论。",
+ "executed_by": "lead（队长）；B2 提供合并命令 + 275 件 path/sha256 清单，并独立回读对账",
+ "lead_raw_output": "COPIED=275\nSHA256_MATCH=275\nSHA256_MISMATCH=0\nDEST_FILES_IN_TASKBRIEFS_TOP=275\nARCHIVE_COMMIT=0bec81aa6c66f38be26e69a1722f12cc15bd2f5b\nARCHIVE_HEAD_COUNT=569\nOK",
+ "archive_repo_commit": "0bec81aa6c66f38be26e69a1722f12cc15bd2f5b"
+}

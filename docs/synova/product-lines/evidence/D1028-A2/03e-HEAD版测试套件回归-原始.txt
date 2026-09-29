@@ -1,0 +1,49 @@
+════════════════════════════════════════════════════════════
+独立回归：改动前（HEAD 版）测试套件 × 新旧两个实现 × 两种 cwd
+HEAD 测试 sha256 = 104ab4583f15fe2779ad079d1b05c63f9c1a6fd2045928a80b66466e3406b2aa
+原版实现 sha256  = f4c3e94753d5b72e5e8a305d8b0dbcfeb4f623dab0431f70a202c8765b019260
+新实现  sha256   = 45c6bd5edc1c150128b4ba56fc2461b02819f10c58bf232090a171b923eb8b70
+════════════════════════════════════════════════════════════
+env=nongit  impl=orig  cwd=/tmp                                                 exit=1    ❌ 1 项失败 / 31 项通过
+           ❌ 0 文件（空写集） — 期望 exit=0 实际 exit=2
+           ❌ 1 项失败 / 31 项通过
+env=nongit  impl=new   cwd=/tmp                                                 exit=1    ❌ 1 项失败 / 31 项通过
+           ❌ 0 文件（空写集） — 期望 exit=0 实际 exit=2
+           ❌ 1 项失败 / 31 项通过
+env=git     impl=orig  cwd=/Users/wane/SynovaAgent/.synova-wt-a2-d1028          exit=0    ✅ 全部通过: 32 项
+env=git     impl=new   cwd=/Users/wane/SynovaAgent/.synova-wt-a2-d1028          exit=0    ✅ 全部通过: 32 项
+
+════════ 既有 32 项逐项点名（git cwd × 新实现）════════
+  ✅ 2 个 Mac 文件 (exit=0)
+  ✅ 单域判定输出点名
+  ✅ 13 文件 > 默认 12 (exit=1)
+  ✅ 超限输出点名「拆 PR」
+  ✅ 输出禁调高上限
+  ✅ --max-files 20 时同写集放行 (exit=0)
+  ✅ Mac 脚本 + Win src 混合 (exit=1)
+  ✅ 跨域输出点名
+  ✅ bypass.log 豁免后仍单域 (exit=0)
+  ✅ D758 证据目录豁免: Win 代码 + 自己的验收证据 → 单域 (exit=0)
+  ✅ D758 豁免不掩盖真跨域（证据 + Win 代码 + Mac 脚本） (exit=1)
+  ✅ 0 文件（空写集） (exit=0)
+  ✅ 恰好等于上限 (exit=0)
+  ✅ 上限 1、写集 2 (exit=1)
+  ✅ 无任何基线的仓库 → exit 0
+  ✅ 降级明示「基线不可解析」（不静默）
+  ✅ 降级说明不静默放过
+  ✅ 缺 check-ownership.py → exit 2
+  ✅ 缺口点名「域校验器缺失」
+  ✅ 落后但未超文件/域预算 → exit 0（落后不阻断）
+  ✅ 落后告警输出点名
+  ✅ 12 交付文件 + brief/卡/Note/规格 各 1 → 豁免 4 件后 12 计数放行 (exit=0)
+  ✅ 豁免件数点名（可见，不静默）
+  ✅ memory/notes yaml 也豁免 (exit=0)
+  ✅ 自验证据目录豁免（docs/synova/product-lines/evidence/） (exit=0)
+  ✅ 13 件纯代码仍被拦（豁免不放宽真代码） (exit=1)
+  ✅ 反例: task-state/evil.ts（代码伪装进治理前缀）→ 仍计数 13 > 12 (exit=1)
+  ✅ 反例计数点名 13
+  ✅ 反例: .claude/task-briefs/evil.sh 仍计数 (exit=1)
+  ✅ 接线: pre-commit-check.sh 真调用本脚本
+  ✅ 组数横幅未改（快速通道仍为「跳过 12 组」）
+  ✅ 总结横幅仍为 13 组（未并组）
+  ✅ 全部通过: 32 项
