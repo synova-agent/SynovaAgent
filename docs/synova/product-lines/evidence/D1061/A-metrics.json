@@ -1,0 +1,115 @@
+{
+  "task": "D1061",
+  "pr": "PR-A",
+  "line": "CT 提速线",
+  "author": "coder-a",
+  "date": "2026-09-29",
+  "base_commit": "d9955cfb",
+  "branch": "chore/d1061-a-ci-speedup",
+  "suites_run": {
+    "catalog_total": 55,
+    "catalog_source": ".github/workflows/ci.yml → job control-tower-tests → for t in ... （单源；--all 与 simulate-ci.sh 同源提取）",
+    "windows_selection_size_platform_sensitive_only": 23,
+    "windows_selection_example_range_HEAD~1...HEAD": 29,
+    "ubuntu_selection": "全量 55（本卡不动 ubuntu 面）"
+  },
+  "cases_run": {
+    "inner_executions_before": 132,
+    "inner_executions_after_ci_env": 0,
+    "note": "before = simulate-ci.test.sh 调 simulate-ci.sh 3 次 × 每次重跑 44 条密封测试；after = CI 环境内层执行数恒 0（对调用方数量不敏感）"
+  },
+  "selected_of_total": {
+    "windows_example": "29/54",
+    "windows_example_note": "口径 = 变更集 HEAD~1...HEAD（283 文件，全为 .claude/docs/task-state/memory）∪ 平台敏感 23 条；当时 catalog=54（其后 main 带入 ci-signal-classify.test.sh ⇒ 55）",
+    "windows_platform_only": "23/55",
+    "ubuntu": "55/55"
+  },
+  "timing": {
+    "scope_declaration": "两个口径分列，不混用。① 本机 macOS 代理量（非 CI 口径）② CI 实测（来自前提实测 N1 段，run 36457345292）",
+    "local_macos": {
+      "command": "GITHUB_ACTIONS=true /usr/bin/time -p bash tests/control-tower/simulate-ci.test.sh",
+      "before": {
+        "tree": "/tmp/.synova-d1061a-base (pristine origin/main @ d610cc07)",
+        "rc": 0,
+        "assertions": "7 通过 0 失败",
+        "real_s": 1545.09,
+        "concurrency": "pgrep -fl 'pre-commit-check|vitest|simulate-ci\\.test' → NONE"
+      },
+      "after": {
+        "tree": "/Users/wane/SynovaAgent/.synova-wt-squad-d1061-a @ d610cc07 + PR-A 工作区改动",
+        "rc": 0,
+        "assertions": "7 通过 0 失败",
+        "real_s": 0.13,
+        "concurrency": "pgrep -fl 'pre-commit-check|vitest|simulate-ci\\.test' → NONE"
+      },
+      "delta_s": -1544.96,
+      "delta_pct": -99.99,
+      "caveat": "macOS 代理量，非 CI 口径；权威对比取 PR-A 的 CI run（windows CT 腿）",
+      "void_runs": [
+        {
+          "reason": "并发污染：同机同时跑 2 个实例（PID 9043 与 35505/35507/35508），互抢 CPU 且争的正是被测对象",
+          "real_s": 1536.03,
+          "disposition": "作废登记，不进入结论"
+        },
+        {
+          "reason": "基线漂移：基线树当时停在 20b55eba（旧 main），后按队长指令 re-point 到 d610cc07 重测",
+          "real_s": null,
+          "disposition": "作废登记"
+        }
+      ]
+    },
+    "ci_windows_ct_leg": {
+      "source": "docs/synova/product-lines/evidence/D1061/00-前提实测-原始输出.md §N1（run 36457345292 逐测试行首 ISO 时间戳推算）",
+      "simulate_ci_test_before_s": 1051,
+      "share_of_leg_before": "65%",
+      "leg_total_before_s": 1619,
+      "leg_after_projection_s": 568,
+      "projection_caveat": "推算，非 windows 实测：1051s − 0.13s ≈ 1051s 的削减；权威数字须取 PR-A 自身 CI run 的 windows CT 腿 job 时长",
+      "baseline_reference": "windows CT 腿 n=25 中位 2035s（范围 1432–2500s）",
+      "target": "windows 腿 ≤ 300s",
+      "target_met": false,
+      "residual_report": "docs/synova/product-lines/evidence/D1061/A-05-增量提案-残留成本.md"
+    }
+  },
+  "gates": {
+    "ct_suite_select_test": "23 通过 0 失败（含完整性不变式 + 2 变异体）",
+    "simulate_ci_dedup_test": "15 通过 0 失败（含 CI 内层执行数 = 0 + 2 变异体）",
+    "ci_signal_classify_test": "78 通过 0 失败（main 既有夹具，本卡改动后仍绿）",
+    "d956_failmsg_test": "13 通过 0 失败",
+    "check_canary_drift_test": "11 通过 0 失败",
+    "silent_swallow_utf8": "rc=1 为 main 存量（18 条）；本分支新增 0 条、两侧集合相等（差集口径）",
+    "pre_commit_check": "见 PR 正文与 CI 回执"
+  },
+  "honest_gaps": [
+    "windows 腿 ≤5 min 目标**未达成**（残留主因: gate-failopen-net 120s + alloc-task-id-lock 99s + check-gate-integrity 72s，三者不在本卡写集内）",
+    "windows 真实秒数须由 PR-A 的 CI run 回执补齐；本机 macOS 数字只是代理量",
+    "本地（无 CI 标记）路径仍是全量，刻意保留；开发者本机跑 simulate-ci.test.sh 仍≈1545s",
+    "A-05 §1.1 中「其余 28 条未入选 ≤11s 各」是上限推断，非逐条 windows 实测",
+    "首推唯一红 = V5 平台敏感命令（本地软提示 / CI 转硬阻断）——「本地漏、CI 拦」的又一实证；已加 D520 豁免标记修复，详见 A-03 §11"
+  ],
+  "pr_run": {
+    "first_run_id": 36527360094,
+    "first_head": "89d22f1c",
+    "first_run_red": [
+      "TypeScript + Lint + Iron Laws ← V5 平台敏感命令（本地软提示 / CI 硬阻断）",
+      "Control Tower Gate Tests (windows-latest) ← 夹具跨平台红（python CRLF，见 A-03 §12）"
+    ],
+    "wall_s": 669,
+    "wall_baseline_median_s": 2146,
+    "ct_windows_s": 665,
+    "ct_windows_baseline_median_s": 2035,
+    "ct_ubuntu_s": 81,
+    "ct_leg_share_of_wall": "99.4%",
+    "delta_windows_pct": -67.3,
+    "delta_wall_pct": -68.8,
+    "targets": {
+      "run_wall_target_s": 480,
+      "run_wall_gap_s": 189,
+      "windows_leg_target_s": 300,
+      "windows_leg_gap_s": 365,
+      "met": false
+    },
+    "note": "权威两口径（run 墙钟 / windows CT 腿），由队长从 run 36527360094 取；本卡不改变口径、不加豁免"
+  },
+  "ci_windows_ct_leg": {}
+}
