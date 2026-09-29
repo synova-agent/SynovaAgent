@@ -444,6 +444,33 @@ else
   echo -e "  ${YELLOW}⚠️  check-bypass-log.sh 缺失 — 对账跳过 (fail-open)${RESET}"
 fi
 
+# ═══ 门禁 8: 推前预演 (D1061 任务 4 — 硬阻断) ═══
+# 为什么独立于 0-7: 0-7 答"能不能推"（同步/secrets/回归/对账），本门答"**推上去 CI 会不会红**"。
+#   CI 一次红 = windows CT 腿 ~35 分钟 + 12 条必过检查重跑；而三种最常见红在本地就能秒级判定:
+#   ① brief 格式（Done checkbox / #CRITERIA）② 写集对账 D708 ③ 注入夹具三面残留。
+#   实测: 干净树 --fast 1.09s（见 docs/synova/product-lines/evidence/D1061/B-*.md）。
+# 逃生舱: SYNO_PREVIEW_SKIP=1 → 显式降级（可见告警 + degraded-events.log），绝不静默。
+#   SYNO_PREVIEW_MODE=full → 追加 SYNO_CI=1 pre-commit（默认 fast）。
+echo ""
+echo -e "${CYAN}── 门禁 8: 推前预演 (D1061 · fast ≤10s / full 可选) ─────${RESET}"
+PREVIEW="$SCRIPT_DIR/workflow/pre-push-preview.sh"
+if [[ ! -f "$PREVIEW" ]]; then
+  echo -e "  ${YELLOW}⚠️  pre-push-preview.sh 缺失 — 预演跳过 (fail-open, 可见)${RESET}"
+elif [[ "${SYNO_PREVIEW_SKIP:-0}" = "1" ]]; then
+  echo -e "  ${YELLOW}⚠️  门禁 8: SYNO_PREVIEW_SKIP=1 逃生舱生效 — 推前预演跳过${RESET}"
+  _CT_LOG="$SCRIPT_DIR/control-tower/control_tower_log.py"
+  if [[ -f "$_CT_LOG" ]]; then
+    python3 "$_CT_LOG" degraded --component pre-push-check \
+      --reason "SYNO_PREVIEW_SKIP=1: 门禁 8 推前预演被显式跳过" >/dev/null 2>&1 || true  # swallow-ok: 降级日志不可写不阻断业务（铁律 11）；可见告警已在上一行打印
+  fi
+else
+  if ! bash "$PREVIEW" "--${SYNO_PREVIEW_MODE:-fast}"; then
+    echo ""
+    echo -e "  ${RED}❌ 门禁 8: 推前预演未通过 — 推送已拒绝 (D1061 任务 4)${RESET}"
+    exit 1
+  fi
+fi
+
 echo ""
 echo -e "  ${GREEN}✅ 全部门禁通过 — 允许推送${RESET}"
 echo ""

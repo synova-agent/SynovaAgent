@@ -1,4 +1,7 @@
 #!/bin/bash
+# D313 M5 UTF-8 强制: Windows 控制台/子进程统一 UTF-8
+export PYTHONIOENCODING=utf-8
+export LC_ALL=C.UTF-8 2>/dev/null || true
 # ═══════════════════════════════════════════════════════════════════════════════
 # alloc-task-id.sh — D# 统一分配器（CT-36, 2026-08-16, D384 折入）
 #
@@ -382,7 +385,8 @@ cat > "$STATE_FILE" <<EOF
   "audit": null,
   "fix_task_id": null,
   "updated_at": "$(date +%Y-%m-%d)",
-  "updated_by": "alloc-task-id"
+  "updated_by": "alloc-task-id",
+  "write_set": []
 }
 EOF
 

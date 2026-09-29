@@ -1,0 +1,90 @@
+{
+  "task_id": "D1061",
+  "part": "PR-B",
+  "branch": "chore/d1061-b-gate-mechanism",
+  "base": "20b55eba",
+  "writer": "coder-b",
+  "suites_run": 4,
+  "cases_run": 102,
+  "cases_breakdown": {
+    "gate-circuit-breaker.test.sh": 19,
+    "pre-push-preview.test.sh": 16,
+    "brief-parser-cjk-path.test.sh": 11,
+    "alloc-task-id.test.sh": 56
+  },
+  "rc": {
+    "gate-circuit-breaker.test.sh": 0,
+    "pre-push-preview.test.sh": 0,
+    "brief-parser-cjk-path.test.sh": 0,
+    "alloc-task-id.test.sh": 0,
+    "brief-parser-strip.test.sh (钉住语义，未改该文件)": 0
+  },
+  "timings_s": {
+    "pre_push_preview_fast": 1.09,
+    "pre_push_preview_fast_bad_brief": 1.46,
+    "budget_s": 10
+  },
+  "health_line": {
+    "command": "bash scripts/control-tower/gate-circuit-breaker.sh --health-line",
+    "format_frozen": "GATE-HEALTH: status=<OK|DEGRADED|KNOWN-FAULT> known=<n> expired=<n> sources=<n> checked_at=<ISO8601>",
+    "observed": "GATE-HEALTH: status=OK known=0 expired=0 sources=2 checked_at=2026-09-29T02:06:01Z",
+    "exit_codes": {"0": "OK|KNOWN-FAULT", "1": "DEGRADED", "2": "breaker self-fault"}
+  },
+  "cto_one_liner": "bash scripts/workflow/pre-push-preview.sh --fast",
+  "breaker_states": {
+    "should_skip_absent": 0,
+    "should_skip_active_registration": 3,
+    "should_skip_expired_registration": 0,
+    "registry_corrupt": 2,
+    "streak_alert_threshold_consecutive": 2,
+    "streak_1_alert": false,
+    "streak_2_alert": true
+  },
+  "variants_red_on_break": {
+    "breaker_remove_expires_check": "rc=1 结果: 17 通过, 2 失败",
+    "preview_remove_brief_parse": "rc=1 结果: 14 通过, 2 失败",
+    "alloc_skeleton_drop_write_set": "rc=1 PASS=54 FAIL=2",
+    "brief_parser_revert_paren_strip": "rc=1 结果: 9 通过, 2 失败"
+  },
+  "exist_brief_checkbox_survey": {
+    "source": "origin/main @ 20b55eba .claude/task-briefs/*.md",
+    "total": 150,
+    "done_count_zero": 9,
+    "done_count_zero_pct": 6.0,
+    "type_a_section_exists_no_checkbox": 9,
+    "type_b_section_missing": 0,
+    "confirmed_red_by_real_gate": "9/9",
+    "also_missing_CRITERIA": 8,
+    "generator_checkbox_since": "2026-06-14 37abc153",
+    "attribution": "手写件绕过生成器（生成器无漂移）",
+    "repro": "python3 - <<'PY' (brief_parser.parse_done over .claude/task-briefs/*.md) ; git log -1 -S'- [ ] 入口可触达' -- scripts/workflow/generate-task-brief.py"
+  },
+  "self_corrected_defects": {
+    "fullwidth_variable_boundary": {
+      "symptom": "$VAR（全角…） 在 set -u 下 unbound variable（ctrl-tower-change 模式 2）",
+      "found_by": "变异体运行（只在该断言的失败分支触发 ⇒ 绿跑不可见）",
+      "fixed_occurrences": 12,
+      "files": [
+        "tests/control-tower/gate-circuit-breaker.test.sh",
+        "tests/control-tower/pre-push-preview.test.sh",
+        "tests/control-tower/brief-parser-cjk-path.test.sh"
+      ],
+      "recheck_hits": 0
+    }
+  },
+  "known_gaps": [
+    "ci.yml 接线未做（单写者顺位 coder-a -> coder-b，待 PR-A 合并后 rebase 再加）",
+    "task-state/D1061.json 未由 PR-B 创建/修改（PR-A 为首写者，避免同文件双写）",
+    "README 落位：一行命令落在本证据文件（写集内）；仓库根 README.md 不在本卡写集，未擅自改",
+    "熔断登记表当前为空表（无已知门禁故障）",
+    "--fast 不覆盖 windows 平台差异类红（归 PR-A）",
+    "registry sources 字段当前实测 2（登记表 + gate-hits 日志；degraded 日志在首次写入前不存在）"
+  ],
+  "redlines_check": {
+    "scripts_audit_touched": false,
+    "src_touched": false,
+    "no_verify_used": false,
+    "git_stash_used": false,
+    "force_push_used": false
+  }
+}
