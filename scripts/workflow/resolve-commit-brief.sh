@@ -88,8 +88,54 @@ _ids_of() {
 }
 ANCHOR_IDS_STRONG="$(_ids_of "$ANCHOR_STRONG_RAW")"
 ANCHOR_IDS_WEAK="$(_ids_of "$ANCHOR_WEAK_RAW")"
-# 按 D# 找 brief（文件名含 -D<id>-）
+# D1069 规范 3（队长裁决 · 两级定位）: D#→brief 定位按「一级身份集 / 二级提及集」分级。
+# ── 一级「身份集」= 文件名 basename 中「第一个」D<digits> token == 锚点 D#（briefs_by_id）。
+#   旧实现用 glob *-D<id>-*（要求首 D# 后紧跟分隔符）→ 文件名形如
+#   `2026-08-22-D471.md` / `D311-multi-session-coordination.md` / `D808.md` 的 brief
+#   对**其自身** D# 物理不可达（实测 19 例，见 brief Q0b 与 D1069-C1C5 原始输出）。
+#   边界对齐 alloc-task-id.sh:191 `(^|[^0-9a-z])d<num>([^0-9]|$)`（该处 grep -i ⇒ 大小写无关）：
+#     左边界 = 串首 或 前一字符非 [0-9A-Za-z]；右边界 = 数字串止于串尾或非数字（内层循环已保证）。
+# ── 二级「提及集」= 锚点 D# 出现在**非首位**（briefs_by_id_mention = 旧 glob 语义）。
+#   合卡 brief（D313-D314-control-tower-finalize.md）的 D314 无独立身份件，纯一级会让
+#   task-state/D314.json 彻底失去锚点 → 故二级只在「一级为空」时兜底。
+#   而 2026-09-29-D1064-FIX-D1032-*.md 的 D1032 有真身份件 → 一级即命中，消除旧 glob 双命中歧义。
+# 性能: 纯 bash 逐字符扫描（零子进程）—— 每文件 1 次 grep 在 Windows ×160 brief 是分钟级。
 briefs_by_id() {
+  local ids="$1" id f b len i j ch prev num
+  [ -z "$ids" ] && return 0
+  for id in $ids; do
+    for f in "$ROOT/.claude/task-briefs/"*.md; do
+      [ -e "$f" ] || continue
+      b=${f##*/}
+      len=${#b}; i=0; num=""
+      while [ "$i" -lt "$len" ]; do
+        ch="${b:$i:1}"
+        if [ "$ch" = "d" ] || [ "$ch" = "D" ]; then
+          prev=""
+          [ "$i" -eq 0 ] || prev="${b:$((i - 1)):1}"
+          if [ -z "$prev" ] || [ -n "${prev//[0-9A-Za-z]/}" ]; then
+            j=$((i + 1)); num=""
+            while [ "$j" -lt "$len" ]; do
+              ch="${b:$j:1}"
+              case "$ch" in
+                [0-9]) num="$num$ch" ;;
+                *) break ;;
+              esac
+              j=$((j + 1))
+            done
+            [ -n "$num" ] && break
+          fi
+        fi
+        i=$((i + 1))
+      done
+      [ -n "$num" ] && [ "$num" = "$id" ] && echo "$f"
+    done
+  done
+  return 0
+}
+# 二级「提及集」—— 保留旧 glob *-D<id>-* 语义（首 D# 后紧跟分隔符），仅在身份集为空时兜底。
+# 不参与 P0 定案（P0 只认一级身份集），只入候选池 / 参与同数 tie-break。
+briefs_by_id_mention() {
   local ids="$1" id f
   [ -z "$ids" ] && return 0
   for id in $ids; do
@@ -100,8 +146,62 @@ briefs_by_id() {
   done
   return 0
 }
+# 候选池 + tie-break 集合: 一级非空 ⇒ 一级（消除双命中歧义）；一级为空 ⇒ 二级（保住合卡覆盖）。
+# P0 的身份集在下方注入缝内单独计算（缝外不得引用缝内变量）。
 ANCHORED_STRONG_FILES="$(briefs_by_id "$ANCHOR_IDS_STRONG" | sort -u || true)"
+if [ -z "$ANCHORED_STRONG_FILES" ]; then
+  ANCHORED_STRONG_FILES="$(briefs_by_id_mention "$ANCHOR_IDS_STRONG" | sort -u || true)"
+fi
 ANCHORED_WEAK_FILES="$(briefs_by_id "$ANCHOR_IDS_WEAK" | sort -u || true)"
+
+# ── D1069 规范 1: P0 强锚点优先级（显式优先级 > 启发投票）─────────────────────────
+# 第一性原理（证据分级）: ①自证级 = 本提交自身的载荷（暂存 task-state/D<id>.json 就是本次
+#   提交的 D# 声明）+ 分支名（本 session 的任务声明）；③启发级 = 日期窗口 + 路径认领计数。
+#   修复前 ③ 恒压 ① —— 锚点只在「同数」时 tie-break（:230）、只在认领全空时末位回退（:246），
+#   故 D1061 自己的提交被 D1039 的陈旧 brief（ci.yml 在 Q2 写了 4 次）劫持。
+# P0: **一级身份集**（文件名首 D# token == 锚点 D#）的 brief 存在且 parse_criteria 通过
+#   ⇒ 直接输出，不再进入认领计数。二级「提及集」（次位交叉引用）P0 不认 —— 只入候选池 /
+#   参与同数 tie-break（队长裁决 规范 3 两级定位）。
+# D# 来源优先级（规范 1）: 暂存 task-state/D<id>.json  >  分支名 D#。
+# 降级（规范 1/5）: 无锚点 ⇒ 本块零 spawn（不进 python）；锚点 brief 缺失或不可解析 ⇒ 下探
+#   P1..P4，不阻断，行为与修复前一致（绝不静默返回坏 brief）。
+# 注: 本块是规范 4「改坏即红」注入缝 —— 测试方按标记区间 sed 删除构造变异副本，故块外
+#   不得引用块内变量（块内变量一律以 p0 前缀命名，删除后块外零残留引用），且本块不得
+#   依赖块外的 RESULT 初值。P0 用到的身份集在本缝内就地计算（不复用缝外变量）。
+# <<<ANCHOR-PRIORITY-START>>>
+_p0_state_ids="$(_ids_of "$(printf '%s\n' "$STAGED" | grep -oE 'task-state/D[0-9]+\.json' || true)")"
+_p0_branch_ids="$(_ids_of "$BR_CUR")"
+# 一级身份集，按来源优先序拼接：暂存 task-state D# 优先，其后分支名 D#（顺序即优先级）。
+_p0_files="$(printf '%s\n%s\n' \
+  "$(briefs_by_id "$_p0_state_ids" | sort -u || true)" \
+  "$(briefs_by_id "$_p0_branch_ids" | sort -u || true)")"
+if [ -n "$PYBIN" ] && [ -n "${_p0_state_ids}${_p0_branch_ids}" ]; then
+  RESULT=$("$PYBIN" -c "
+import sys
+sys.path.insert(0, r'$PARSER_DIR_W')
+from brief_parser import parse_criteria
+
+seen = set()
+for b in '''$_p0_files'''.split(chr(10)):
+    b = b.strip()
+    if not b or b in seen:
+        continue
+    seen.add(b)
+    try:
+        text = open(b, encoding='utf-8', errors='replace').read()
+    except OSError:
+        continue
+    if parse_criteria(text):
+        print(b)
+        sys.exit(0)
+sys.exit(1)
+" 2>/dev/null || true)
+  if [ -n "$RESULT" ] && [ -f "$RESULT" ]; then
+    echo "$RESULT"
+    exit 0
+  fi
+fi
+# <<<ANCHOR-PRIORITY-END>>>
 
 # 今日全部 brief (认领候选) — D366: 文件名日期前缀 (mtime 会被 git pull 刷, 不可靠)
 # D366: 按文件名日期判断"今日" — 替代 find 按 mtime 的今日判定
@@ -214,8 +314,12 @@ for b in briefs:
         text = open(b, encoding='utf-8').read()
     except OSError:
         continue
-    scope = parse_q2(text)['include']
-    n = sum(1 for sf in staged for p in scope if match_path(sf, p))
+    # D1069 规范 2: 认领计数 = 去重文件数 —— scope 去空去重 × staged 去空去重，每文件至多计 1。
+    # 不变式: 同一路径在 Q2 写 N 次 ⇒ 对任一暂存文件贡献恒为 1（修复前 = (staged × scope) 出现
+    #   次数，D1039 brief 的 ci.yml 在 Q2 出现 4 次 → 单文件暂存即可得 n=4，压过真身锚点）。
+    scope = sorted({p.strip() for p in parse_q2(text)['include'] if p.strip()})
+    n = sum(1 for sf in sorted({s.strip() for s in staged if s.strip()})
+            if any(match_path(sf, p) for p in scope))
     claims.append((n, b))
 
 # 1. current-brief 认领 ≥1 → 用它
