@@ -1,0 +1,293 @@
+{
+  "artifact": "D1051 反向走入口（独立复核，成员 V）",
+  "method": "真实 express 路由 + 真实 better-sqlite3 :memory: + 真实 HTTP(listen(0)+fetch) + 本地 OpenAI 兼容 LLM 替身；固定诊断产物由本脚本直写 diagnosis_checkpoints(phase=5)，不经引擎、不经编码成员 helper",
+  "generatedAt": "2026-09-28T09:58:42.024Z",
+  "head": "f47f90982b4dec10e407bd806e851aaad4f47fb4",
+  "node": "v24.19.0",
+  "orgId": "org-d1051-v",
+  "fixtureReportId": "rpt_d1051_verify_1",
+  "fixtureMode": "N1 负控：字段名故意写错（description→title / findings→notes）",
+  "shaCrossCheck": {
+    "note": "一页纸三态（S1 默认 / S2 显式 / S4 非法回退）应同 sha256；详版 S3 应与之相异",
+    "s1_body": "1b14d0069dbc544516016902654f8288c9fd998321b53d5da2f4069acd4dd45b",
+    "s2_body": "1b14d0069dbc544516016902654f8288c9fd998321b53d5da2f4069acd4dd45b",
+    "s3_body": "785bf208c83963c93450086b890d2f36959b9592c09036af86ae9dadd152db53",
+    "s4_body": "1b14d0069dbc544516016902654f8288c9fd998321b53d5da2f4069acd4dd45b",
+    "onePagerConsistent": true,
+    "detailedDiffers": true
+  },
+  "totals": {
+    "steps": 12,
+    "pass": 10,
+    "fail": 2
+  },
+  "steps": [
+    {
+      "id": "S0",
+      "title": "对照探针（非白名单，期望 401——证鉴权中间件真挂载）",
+      "request": {
+        "method": "GET",
+        "url": "/api/d1051v-probe"
+      },
+      "status": 401,
+      "responseHeaders": {
+        "connection": "keep-alive",
+        "content-length": "122",
+        "content-type": "application/json; charset=utf-8",
+        "date": "Mon, 28 Sep 2026 09:58:41 GMT",
+        "etag": "W/\"7a-JOlGO1iZsiOG1IYfOn4yD1KloCs\"",
+        "keep-alive": "timeout=5",
+        "x-powered-by": "Express"
+      },
+      "bodyBytes": 122,
+      "bodySha256": "6f52061637a699873a38c3751761d041c21c4a606168634521a443ed3d75e20b",
+      "snippet": "{\"ok\":false,\"code\":\"UNAUTHORIZED\",\"message\":\"Missing or invalid Authorization header. Use: Authorization: Bearer <token>\"}",
+      "assertion": "status === 401",
+      "verdict": "PASS"
+    },
+    {
+      "id": "S1",
+      "title": "默认取报告（markdown，无 depth）→ 应得一页纸（浅）",
+      "request": {
+        "method": "GET",
+        "url": "/api/diagnosis/consult/rpt_d1051_verify_1/report?format=markdown"
+      },
+      "status": 200,
+      "responseHeaders": {
+        "connection": "keep-alive",
+        "content-length": "1315",
+        "content-type": "text/markdown; charset=utf-8",
+        "date": "Mon, 28 Sep 2026 09:58:41 GMT",
+        "etag": "W/\"523-+rfZSvPs8/5RVdyqMylIbbhoLbQ\"",
+        "keep-alive": "timeout=5",
+        "x-powered-by": "Express",
+        "x-report-view-depth": "one_pager"
+      },
+      "bodyBytes": 838,
+      "bodySha256": "1b14d0069dbc544516016902654f8288c9fd998321b53d5da2f4069acd4dd45b",
+      "snippet": "## ⚠️ org-d1051-v: 1 个高风险项需立即关注\n\n### 结论\n- 核心瓶颈: undefined。建议: 补足精加工工序产能（外协或增班） [src:report:rpt_d1051_verify_1#summary]\n\n**Top 3:**\n- 🔴 undefined\n- 💡 核心瓶颈: undefined。建议: 补足精加工工序产能（外协或增班）\n\n### 关键证据\n- [degraded] 未提供关键证据（inputs 缺席）\n\n### 各维度循环结论\n- 门店复制循环：未建立基线（无快照数据）[degraded] [src:cycle:store-replication@none]\n- ARR增长循环：未建立基线（无快照数据）[degraded] [src:cycle:arr-growth@none]\n- 现金流循环：未建立基线（无快照数据）[degraded",
+      "assertion": "200 + content-type text/markdown + 头 X-Report-View-Depth=one_pager",
+      "verdict": "FAIL",
+      "detail": "ct=text/markdown; charset=utf-8 depth=one_pager"
+    },
+    {
+      "id": "S2",
+      "title": "显式 depth=one_pager → 与默认产物字节相等（零回归判别夹具）",
+      "request": {
+        "method": "GET",
+        "url": "/api/diagnosis/consult/rpt_d1051_verify_1/report?format=markdown&depth=one_pager"
+      },
+      "status": 200,
+      "responseHeaders": {
+        "connection": "keep-alive",
+        "content-length": "1315",
+        "content-type": "text/markdown; charset=utf-8",
+        "date": "Mon, 28 Sep 2026 09:58:41 GMT",
+        "etag": "W/\"523-+rfZSvPs8/5RVdyqMylIbbhoLbQ\"",
+        "keep-alive": "timeout=5",
+        "x-powered-by": "Express",
+        "x-report-view-depth": "one_pager"
+      },
+      "bodyBytes": 838,
+      "bodySha256": "1b14d0069dbc544516016902654f8288c9fd998321b53d5da2f4069acd4dd45b",
+      "snippet": "## ⚠️ org-d1051-v: 1 个高风险项需立即关注\n\n### 结论\n- 核心瓶颈: undefined。建议: 补足精加工工序产能（外协或增班） [src:report:rpt_d1051_verify_1#summary]\n\n**Top 3:**\n- 🔴 undefined\n- 💡 核心瓶颈: undefined。建议: 补足精加工工序产能（外协或增班）\n\n### 关键证据\n- [degraded] 未提供关键证据（inputs 缺席）\n\n### 各维度循环结论\n- 门店复制循环：未建立基线（无快照数据）[degraded] [src:cycle:store-replication@none]\n- ARR增长循环：未建立基线（无快照数据）[degraded] [src:cycle:arr-growth@none]\n- 现金流循环：未建立基线（无快照数据）[degraded",
+      "assertion": "200 且 body === S1.body（字节相等；sha256 相等可复算）",
+      "verdict": "PASS"
+    },
+    {
+      "id": "S3",
+      "title": "显式 depth=detailed → 详细报告（五章齐备 + 内容锚齐备；sha256 与 S1 相异）",
+      "request": {
+        "method": "GET",
+        "url": "/api/diagnosis/consult/rpt_d1051_verify_1/report?format=markdown&depth=detailed"
+      },
+      "status": 200,
+      "responseHeaders": {
+        "connection": "keep-alive",
+        "content-length": "835",
+        "content-type": "text/markdown; charset=utf-8",
+        "date": "Mon, 28 Sep 2026 09:58:41 GMT",
+        "etag": "W/\"343-YOwLTdd5JkddpBIWKXPBcI0lvns\"",
+        "keep-alive": "timeout=5",
+        "x-powered-by": "Express",
+        "x-report-view-depth": "detailed"
+      },
+      "bodyBytes": 549,
+      "bodySha256": "785bf208c83963c93450086b890d2f36959b9592c09036af86ae9dadd152db53",
+      "snippet": "## org-d1051-v 诊断详细报告\n\n### 结论\n- 增长卡点在精加工工序产能：订单交付周期长于同行，客户复购承压。[src:report:rpt_d1051_verify_1#summary]\n\n### 根因\n- [degraded] 无根因记录\n\n### 专家完整推理\n- fundamental-efficiency（置信度 0.82）：无 finding 记录[src:report:rpt_d1051_verify_1#expert:0]\n\n### 行动建议\n- 补足精加工工序产能（外协或增班）（优先级 high｜fundamental-efficiency）[src:report:rpt_d1051_verify_1#recommendation:0]\n- 建立交付后 7 日回访 SOP（优先级 medium｜customer-growth）[src:report:rpt",
+      "assertion": "200 + 头 X-Report-View-Depth=detailed + 五章标题齐备 + 尾行报告 ID + 内容锚齐备 + 无字面 undefined + sha256 ≠ S1.sha256",
+      "verdict": "FAIL",
+      "detail": "depth=detailed 缺章=[] 缺内容锚=[\"精加工工序产能不足\"] shaEqual=false"
+    },
+    {
+      "id": "S4",
+      "title": "非法 depth（expert，属装配轴词）→ 显式降级 + 落回一页纸",
+      "request": {
+        "method": "GET",
+        "url": "/api/diagnosis/consult/rpt_d1051_verify_1/report?format=markdown&depth=expert"
+      },
+      "status": 200,
+      "responseHeaders": {
+        "connection": "keep-alive",
+        "content-length": "1315",
+        "content-type": "text/markdown; charset=utf-8",
+        "date": "Mon, 28 Sep 2026 09:58:41 GMT",
+        "etag": "W/\"523-+rfZSvPs8/5RVdyqMylIbbhoLbQ\"",
+        "keep-alive": "timeout=5",
+        "x-powered-by": "Express",
+        "x-report-depth-degraded": "UNKNOWN_DEPTH",
+        "x-report-view-depth": "one_pager"
+      },
+      "bodyBytes": 838,
+      "bodySha256": "1b14d0069dbc544516016902654f8288c9fd998321b53d5da2f4069acd4dd45b",
+      "snippet": "## ⚠️ org-d1051-v: 1 个高风险项需立即关注\n\n### 结论\n- 核心瓶颈: undefined。建议: 补足精加工工序产能（外协或增班） [src:report:rpt_d1051_verify_1#summary]\n\n**Top 3:**\n- 🔴 undefined\n- 💡 核心瓶颈: undefined。建议: 补足精加工工序产能（外协或增班）\n\n### 关键证据\n- [degraded] 未提供关键证据（inputs 缺席）\n\n### 各维度循环结论\n- 门店复制循环：未建立基线（无快照数据）[degraded] [src:cycle:store-replication@none]\n- ARR增长循环：未建立基线（无快照数据）[degraded] [src:cycle:arr-growth@none]\n- 现金流循环：未建立基线（无快照数据）[degraded",
+      "assertion": "200 + 头 X-Report-Depth-Degraded=UNKNOWN_DEPTH + 头 X-Report-View-Depth=one_pager + sha256 === S1.sha256",
+      "verdict": "PASS"
+    },
+    {
+      "id": "S5",
+      "title": "JSON 分支：?format=json&depth=detailed → 不加深度头、不新增字段（现状不变）",
+      "request": {
+        "method": "GET",
+        "url": "/api/diagnosis/consult/rpt_d1051_verify_1/report?format=json&depth=detailed"
+      },
+      "status": 200,
+      "responseHeaders": {
+        "connection": "keep-alive",
+        "content-length": "2695",
+        "content-type": "application/json; charset=utf-8",
+        "date": "Mon, 28 Sep 2026 09:58:41 GMT",
+        "etag": "W/\"a87-l/5IAVQVV4FLvOB7gUZvksoquEM\"",
+        "keep-alive": "timeout=5",
+        "x-powered-by": "Express"
+      },
+      "bodyBytes": 2283,
+      "bodySha256": "1731d2ebb2522c83a9300c4ca084fca7587c572ebe02a4fe6844b27a6a9a0f63",
+      "snippet": "{\"ok\":true,\"consultId\":\"rpt_d1051_verify_1\",\"teamId\":\"org-d1051-v\",\"completedAt\":\"2026-09-28T10:00:00.000Z\",\"report\":{\"reportId\":\"rpt_d1051_verify_1\",\"teamId\":\"org-d1051-v\",\"generatedAt\":\"2026-09-28T10:00:00.000Z\",\"summary\":\"增长卡点在精加工工序产能：订单交付周期长于同行，客户复购承压。\",\"expertReports\":[{\"expert\":\"fundamental-efficiency\",\"notes\":[\"精加工工序产能利用率 96%，为全链瓶颈\"],\"confidence\":0.82}],\"rootCauses\":[{\"title\":\"精加工工序产能不足\",\"d",
+      "assertion": "200 + 无 X-Report-View-Depth/X-Report-Depth-Degraded 头 + report.reportId === fixture id",
+      "verdict": "PASS"
+    },
+    {
+      "id": "S6a",
+      "title": "对话第 1 轮建会话（open 帧取 sessionId）",
+      "request": {
+        "method": "POST",
+        "url": "/api/conversations",
+        "body": {
+          "message": "我们是 50 人的制造企业",
+          "orgId": "org-d1051-v"
+        }
+      },
+      "status": 200,
+      "responseHeaders": {},
+      "bodyBytes": 1059,
+      "bodySha256": "52811b12a7b87d3448b7b44cc9e3759cb2f5d069b823d4e39441693b0a9be782",
+      "snippet": "event: open\ndata: {\"type\":\"open\",\"sessionId\":\"sess_mul2rp46_ztne\",\"phase\":0}\n\nevent: token\ndata: {\"type\":\"token\",\"text\":\"收\"}\n\nevent: token\ndata: {\"type\":\"token\",\"text\":\"到\"}\n\nevent: token\ndata: {\"type\":\"token\",\"text\":\"，\"}\n\nevent: token\ndata: {\"type\":\"token\",\"text\":\"我\"}\n\nevent: token\ndata: {\"type\":\"to",
+      "assertion": "200 + open 帧含 sessionId",
+      "verdict": "PASS"
+    },
+    {
+      "id": "S6b",
+      "title": "对话第 2 轮（无深度词——零行为变化对照）",
+      "request": {
+        "method": "POST",
+        "url": "/api/conversations/sess_mul2rp46_ztne/messages",
+        "body": {
+          "message": "团队分生产/销售/研发三块"
+        }
+      },
+      "status": 200,
+      "responseHeaders": {},
+      "bodyBytes": 1059,
+      "bodySha256": "52811b12a7b87d3448b7b44cc9e3759cb2f5d069b823d4e39441693b0a9be782",
+      "snippet": "event: open\ndata: {\"type\":\"open\",\"sessionId\":\"sess_mul2rp46_ztne\",\"phase\":0}\n\nevent: token\ndata: {\"type\":\"token\",\"text\":\"收\"}\n\nevent: token\ndata: {\"type\":\"token\",\"text\":\"到\"}\n\nevent: token\ndata: {\"type\"",
+      "assertion": "200 + 末帧 end + 无 report_view 帧",
+      "verdict": "PASS"
+    },
+    {
+      "id": "S6",
+      "title": "对话「讲细一点」→ SSE report_view 帧 depth=detailed（详版章节）",
+      "request": {
+        "method": "POST",
+        "url": "/api/conversations/sess_mul2rp46_ztne/messages",
+        "body": {
+          "message": "讲细一点"
+        }
+      },
+      "status": 200,
+      "responseHeaders": {},
+      "bodyBytes": 1791,
+      "bodySha256": "38d8aefc4b3f61b904d41c5c5f69cd363f2cb2d0b8a659cf85ac59b99108c7ad",
+      "reportViewMarkdown": {
+        "bytes": 549,
+        "sha256": "785bf208c83963c93450086b890d2f36959b9592c09036af86ae9dadd152db53"
+      },
+      "snippet": "frames=[\"open\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"agent_message\",\"report_view\",\"end\"] report_view={\"depth\":\"detailed\",\"reportId\":\"rpt_d1051_verify_1\",\"degraded\":false,\"bytes\":549}",
+      "assertion": "200 + report_view.depth=detailed + markdown 含五章 + 末帧 end + 无 error 帧",
+      "verdict": "PASS"
+    },
+    {
+      "id": "S7",
+      "title": "对话「说人话」→ SSE report_view 帧 depth=one_pager（回一页纸）",
+      "request": {
+        "method": "POST",
+        "url": "/api/conversations/sess_mul2rp46_ztne/messages",
+        "body": {
+          "message": "说人话"
+        }
+      },
+      "status": 200,
+      "responseHeaders": {},
+      "bodyBytes": 2086,
+      "bodySha256": "ab276e9f5037249738edec2dca0f4b976da029858fd8f9af3580a70a08d1d3f0",
+      "reportViewMarkdown": {
+        "bytes": 838,
+        "sha256": "1b14d0069dbc544516016902654f8288c9fd998321b53d5da2f4069acd4dd45b"
+      },
+      "snippet": "frames=[\"open\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"agent_message\",\"report_view\",\"end\"] report_view={\"depth\":\"one_pager\",\"bytes\":838}",
+      "assertion": "200 + report_view.depth=one_pager + markdown 非空且 ≠ 详版 + 末帧 end + 无 error 帧",
+      "verdict": "PASS"
+    },
+    {
+      "id": "S8",
+      "title": "对话不含深度词 → 无 report_view 帧（零行为变化判别夹具）",
+      "request": {
+        "method": "POST",
+        "url": "/api/conversations/sess_mul2rp46_ztne/messages",
+        "body": {
+          "message": "今天先聊到这里"
+        }
+      },
+      "status": 200,
+      "responseHeaders": {},
+      "bodyBytes": 1059,
+      "bodySha256": "52811b12a7b87d3448b7b44cc9e3759cb2f5d069b823d4e39441693b0a9be782",
+      "snippet": "frames=[\"open\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"token\",\"agent_message\",\"end\"]",
+      "assertion": "200 + 帧序列无 report_view + 末帧 end",
+      "verdict": "PASS"
+    },
+    {
+      "id": "S9",
+      "title": "未知 reportId → 404 NOT_FOUND（诚实语义不变）",
+      "request": {
+        "method": "GET",
+        "url": "/api/diagnosis/consult/ghost-d1051/report?format=markdown"
+      },
+      "status": 404,
+      "responseHeaders": {
+        "connection": "keep-alive",
+        "content-length": "99",
+        "content-type": "application/json; charset=utf-8",
+        "date": "Mon, 28 Sep 2026 09:58:42 GMT",
+        "etag": "W/\"63-HLg5PDTNG7gXVX48J2yZqRw5O8I\"",
+        "keep-alive": "timeout=5",
+        "x-powered-by": "Express"
+      },
+      "bodyBytes": 61,
+      "bodySha256": "d464d52e29763402a42ddaa66fffd1ec8e163f7e71f3042909291b71c63db7f1",
+      "snippet": "{\"ok\":false,\"error\":\"诊断报告不存在（可能尚未完成或已过期）\",\"code\":\"NOT_FOUND\"}",
+      "assertion": "404 + code NOT_FOUND",
+      "verdict": "PASS"
+    }
+  ]
+}

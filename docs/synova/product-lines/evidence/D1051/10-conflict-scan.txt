@@ -1,0 +1,125 @@
+# D1051 写集冲突扫描（M2）· 2026-09-28T09:20:39Z · cwd=/Users/wane/SynovaAgent @ d8590040
+
+## ① 被改符号的现有引用面（完整，禁截断）
+--- renderOnePager: 共 39 处 ---
+src/agent/report-assembler.ts:11: * D480: renderOnePager 消费 l3/report-templates 的 executive_summary 模板，
+src/agent/report-assembler.ts:228: *   @degraded 无 I/O 纯映射，不降级（异常由 renderOnePager whole-body catch 兜底）
+src/agent/report-assembler.ts:329:export function renderOnePager(
+src/agent/report-onepager-trace.ts:13: *   @error  — 本模块全部导出函数**永不抛出**（whole-body 语义，同 renderOnePager/D480 先例）；
+src/routes/diagnosis.ts:127: * 不盲信 JSON，铁律 38）。数组项内部字段交由 renderOnePager 自身 whole-body catch 兜底。
+src/routes/diagnosis.ts:552:          const { renderOnePager } = await import('../agent/report-assembler');
+src/routes/diagnosis.ts:556:          onePager = renderOnePager(
+src/routes/diagnosis.ts:810: * renderOnePager 自身永不抛出（whole-body catch），此处只兜模块加载失败。
+src/routes/diagnosis.ts:814:    const { renderOnePager } = await import('../agent/report-assembler');
+src/routes/diagnosis.ts:815:    // D791: 按需渲染同样注入四槽位 inputs（DS10——本文件全部 renderOnePager 调用点一致）
+src/routes/diagnosis.ts:818:    return renderOnePager(report, 'ceo', inputs);
+tests/agent/cycle-conclusion-service.test.ts:16:import { renderOnePager, assembleOnePagerInputs } from '../../src/agent/report-assembler';
+tests/agent/cycle-conclusion-service.test.ts:208:    const md = renderOnePager(
+tests/agent/cycle-conclusion-service.test.ts:224:    const md = renderOnePager(
+tests/agent/report-assembler.test.ts:4: * 覆盖 renderOnePager 三路径（正常/空根因优雅文案/降级纯文本）+ flywheel 深度边界
+tests/agent/report-assembler.test.ts:12:import { assembleReport, renderOnePager } from '../../src/agent/report-assembler';
+tests/agent/report-assembler.test.ts:41:// ═══ D480: renderOnePager ═══
+tests/agent/report-assembler.test.ts:43:describe('D480: renderOnePager — 诊断报告一页纸渲染', () => {
+tests/agent/report-assembler.test.ts:46:    const md = renderOnePager(report, 'ceo');
+tests/agent/report-assembler.test.ts:66:    const md = renderOnePager(report, 'ceo');
+tests/agent/report-assembler.test.ts:90:      const md = renderOnePager(report, 'ceo');
+tests/agent/report-assembler.test.ts:115:    const flywheelMd = renderOnePager(report, 'flywheel');
+tests/agent/report-assembler.test.ts:124:    const ceoMd = renderOnePager(report, 'ceo');
+tests/agent/report-assembler.test.ts:129:    // 默认参数契约：renderOnePager(report) === ceo 深度
+tests/agent/report-assembler.test.ts:130:    expect(renderOnePager(report)).toBe(ceoMd);
+tests/agent/report-onepager-trace.test.ts:21:  renderOnePager,
+tests/agent/report-onepager-trace.test.ts:129:    const md = renderOnePager(makeReport(), 'ceo', await makeInputs(registry));
+tests/agent/report-onepager-trace.test.ts:145:    const md = renderOnePager(makeReport(), 'ceo', await makeInputs(registry));
+tests/agent/report-onepager-trace.test.ts:157:    const md = renderOnePager(makeReport(), 'ceo');
+tests/agent/report-onepager-trace.test.ts:175:    const md = renderOnePager(makeReport(), 'ceo', { cycleConclusions: ['x'], evidenceHighlights: ['y'] });
+tests/agent/report-onepager-trace.test.ts:186:    const first = renderOnePager(makeReport(), 'ceo', inputs);
+tests/agent/report-onepager-trace.test.ts:187:    expect(renderOnePager(makeReport(), 'ceo', inputs)).toBe(first);
+tests/agent/report-onepager-trace.test.ts:193:      const at2030 = renderOnePager(makeReport(), 'ceo', inputs);
+tests/agent/report-onepager-trace.test.ts:195:      const at2031 = renderOnePager(makeReport(), 'ceo', inputs);
+tests/agent/report-onepager-trace.test.ts:207:    const longLine = renderOnePager(makeReport(), 'ceo', { ...inputs, cycleConclusions: ['超' + '长'.repeat(80) + ' [src:cycle:x@none]'] });
+tests/agent/report-onepager-trace.test.ts:211:    const longConclusion = renderOnePager(
+tests/agent/report-onepager-trace.test.ts:221:    const overBudget = renderOnePager(makeReport(), 'ceo', { ...inputs, cycleConclusions: bulk });
+tests/agent/report-onepager-trace.test.ts:225:    const ok = auditOnePagerReadability(renderOnePager(makeReport(), 'ceo', inputs));
+tests/agent/report-onepager-trace.test.ts:254:    const md = renderOnePager(makeReport(), 'ceo', await makeInputs(registry));
+--- assembleOnePagerInputs: 共 11 处 ---
+src/agent/report-assembler.ts:497:export function assembleOnePagerInputs(
+src/routes/diagnosis.ts:748:  // 「空即缺席」规则单源在 L2 assembleOnePagerInputs（与 GS-08 场景驱动同一函数——
+src/routes/diagnosis.ts:750:  const inputs = assembler.assembleOnePagerInputs(findingReports, cycleLines);
+tests/agent/cycle-conclusion-service.test.ts:16:import { renderOnePager, assembleOnePagerInputs } from '../../src/agent/report-assembler';
+tests/agent/cycle-conclusion-service.test.ts:211:      assembleOnePagerInputs([], conclusions.lines.map(line => line.text)),
+tests/agent/cycle-conclusion-service.test.ts:227:      assembleOnePagerInputs([], conclusions.lines.map(line => line.text)),
+tests/agent/report-onepager-trace.test.ts:24:  assembleOnePagerInputs,
+tests/agent/report-onepager-trace.test.ts:96:  return assembleOnePagerInputs(
+tests/agent/report-onepager-trace.test.ts:327:  it('边界: buildEvidenceHighlights / assembleOnePagerInputs 字段缺失 → 跳过（不编造）且「空即缺席」', () => {
+tests/agent/report-onepager-trace.test.ts:338:    expect(assembleOnePagerInputs([], [])).toEqual({});
+tests/agent/report-onepager-trace.test.ts:339:    expect(assembleOnePagerInputs(null, ['行 [src:cycle:c@none]']).cycleConclusions).toEqual(['行 [src:cycle:c@none]']);
+--- OnePagerInputs: 共 10 处 ---
+src/agent/report-assembler.ts:215:export interface OnePagerInputs {
+src/agent/report-assembler.ts:247:  inputs?: OnePagerInputs,
+src/agent/report-assembler.ts:332:  inputs?: OnePagerInputs,
+src/agent/report-assembler.ts:489: *   @output OnePagerInputs —— 字段**仅在非空时设置**
+src/agent/report-assembler.ts:500:): OnePagerInputs {
+src/agent/report-assembler.ts:501:  const inputs: OnePagerInputs = {};
+src/routes/diagnosis.ts:698:type OnePagerInputsLike = import('../agent/report-assembler').OnePagerInputs;
+src/routes/diagnosis.ts:716: *   @output OnePagerInputs（两个字段各自独立可选——缺席即模板侧 [degraded] 空态行）
+tests/agent/report-onepager-trace.test.ts:25:  type OnePagerInputs,
+tests/agent/report-onepager-trace.test.ts:94:async function makeInputs(registry: CycleRegistry, orgId = 'd791-org'): Promise<OnePagerInputs> {
+--- assembleReport: 共 12 处 ---
+src/agent/report-assembler.ts:109:export function assembleReport(
+src/agent/report-assembler.ts:327: *   注：不走 tone-enforcer——一页纸是结构化 markdown 非散文（D57 只作用于 assembleReport）。
+src/routes/diagnosis.ts:541:          const { assembleReport } = await import('../agent/report-assembler');
+src/routes/diagnosis.ts:542:          const assembled = assembleReport(
+tests/agent/report-assembler.test.ts:5: * + assembleReport flywheel 回归守护（Stage 5a 同语义，D480 零行为改动）。
+tests/agent/report-assembler.test.ts:12:import { assembleReport, renderOnePager } from '../../src/agent/report-assembler';
+tests/agent/report-assembler.test.ts:133:  it('⑤ 回归守护：assembleReport flywheel 四层组装行为不变（Stage 5a 同语义）', () => {
+tests/agent/report-assembler.test.ts:135:    const assembled = assembleReport(report, 'flywheel');
+tests/interview/e2e-preliminary-diagnosis.test.ts:10:import { assembleReport } from '../../src/agent/report-assembler';
+tests/interview/e2e-preliminary-diagnosis.test.ts:83:    const assembled = assembleReport(report, 'ceo', undefined, 'preliminary');
+tests/e2e/full-pipeline.integration.test.ts:171:    const { assembleReport } = await import('../../src/agent/report-assembler');
+tests/e2e/full-pipeline.integration.test.ts:189:    const assembled = assembleReport(report, 'flywheel');
+--- ReportDepth: 共 3 处 ---
+src/agent/report-assembler.ts:31:export type ReportDepth = 'ceo' | 'flywheel' | 'expert' | 'raw';
+src/agent/report-assembler.ts:36:  depth: ReportDepth;
+src/agent/report-assembler.ts:111:  depth: ReportDepth = 'flywheel',
+--- ReportTemplateRegistry: 共 16 处 ---
+src/l3/report-templates.ts:241:// ═══ ReportTemplateRegistry ═══
+src/l3/report-templates.ts:243:export class ReportTemplateRegistry {
+src/l3/report-templates.ts:280:let _instance: ReportTemplateRegistry | null = null;
+src/l3/report-templates.ts:281:export function getReportTemplateRegistry(inject?: ReportTemplateRegistry): ReportTemplateRegistry {
+src/l3/report-templates.ts:283:  if (!_instance) _instance = new ReportTemplateRegistry();
+src/l3/index.ts:10:export { ReportTemplateRegistry } from './report-templates';
+src/server.ts:274:    reportTemplates: new (await import('./l3/report-templates')).ReportTemplateRegistry(),
+src/services/container.ts:27:import type { ReportTemplateRegistry } from '../l3/report-templates';
+src/services/container.ts:60:  reportTemplates: ReportTemplateRegistry;
+tests/agent/report-assembler.test.ts:13:import { getReportTemplateRegistry, ReportTemplateRegistry } from '../../src/l3/report-templates';
+tests/agent/report-assembler.test.ts:78:    // 机制注释（防后人"简化"）：ReportTemplateRegistry.render 内部吞模板异常并返回
+tests/agent/report-assembler.test.ts:82:    class ThrowingRegistry extends ReportTemplateRegistry {
+tests/agent/report-assembler.test.ts:101:      getReportTemplateRegistry(new ReportTemplateRegistry());
+tests/agent/report-onepager-trace.test.ts:35:import { EXECUTIVE_SUMMARY_SLOT_TITLES, getReportTemplateRegistry, ReportTemplateRegistry } from '../../src/l3/report-templates';
+tests/agent/report-onepager-trace.test.ts:121:  getReportTemplateRegistry(new ReportTemplateRegistry());
+tests/agent/report-onepager-trace.test.ts:169:    class ThrowingRegistry extends ReportTemplateRegistry {
+--- handleConversationMessage: 共 4 处 ---
+src/routes/conversations.ts:157:async function handleConversationMessage(req: Request, res: Response, pathSessionId?: string): Promise<void> {
+src/routes/conversations.ts:355:  void handleConversationMessage(req, res);
+src/routes/conversations.ts:360:  void handleConversationMessage(req, res, req.params.id as string);
+tests/agent/tool-loop-tool-pairing.integration.test.ts:7: *     （POST /api/conversations → src/routes/conversations.ts handleConversationMessage）
+
+## ② 其他工作树脏文件（本切片目标路径）
+共 0 个工作树在目标路径上有脏改动
+
+## ③ 远端未合并分支触及目标路径（去重后按 tip 时间）
+2026-09-22 00:11:38 +0800  origin/feat/p2-invariants-docs
+2026-09-21 22:54:41 +0800  origin/feat/p2-invariants-failclosed
+2026-09-20 19:58:36 +0800  origin/team/win-batch14
+2026-09-18 11:26:39 +0800  origin/feat/d810-llm-resilience-wiring
+2026-09-17 13:28:27 +0800  origin/feat/d791b-onepager-mac
+2026-09-17 13:27:42 +0800  origin/feat/d791a-onepager-win
+2026-09-17 04:09:57 +0800  origin/feat/d791-line3-onepager
+2026-09-10 10:50:48 +0800  origin/fix/d593-restore
+2026-09-09 01:02:28 +0800  origin/feat/d593-report-persistence-p2
+2026-09-08 15:12:12 +0800  origin/feat/win-d598-token-meter
+2026-08-29 22:05:37 +0800  origin/feat/win-d489-consult-events
+2026-07-01 20:29:38 +0800  origin/feat/desktop-phase0-auth
+
+## 结论
+① 引用面共 7 个符号 / 95 处（本行数字由上方各段「共 N 处」实算求得，非手写，命令见文件生成脚本）；② 0 个工作树在目标路径有脏改动；③ 12 个未合并分支触及目标路径，最新 tip = 2026-09-22（6 天前），无活跃竞争者。

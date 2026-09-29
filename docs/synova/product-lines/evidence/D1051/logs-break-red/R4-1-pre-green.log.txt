@@ -1,0 +1,11 @@
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-d1051-verify
+
+ ✓ tests/agent/report-depth.test.ts (14 tests) 4ms
+ ✓ tests/routes/conversations-report-view.test.ts (6 tests) 1067ms
+
+ Test Files  2 passed (2)
+      Tests  20 passed (20)
+   Start at  18:02:00
+   Duration  1.26s (transform 374ms, setup 0ms, import 139ms, tests 1.07s, environment 0ms)
+

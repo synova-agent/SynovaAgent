@@ -1,0 +1,83 @@
+{
+  "task": "D1051",
+  "artifact": "31-ct-findings（控制塔面发现，交 CT 队列；本小队不修 scripts/**，仅登记）",
+  "owner": "synova-squad-lead",
+  "as_of": "2026-09-28",
+  "contract": "每条 = 现象 + 原样可复跑命令 + 原始输出摘要 + 影响 + 建议。禁手写数字。",
+  "findings": [
+    {
+      "id": "CT-D1051-01",
+      "severity": "中（误导性默认值，产生 385 条假阳性 exit 1）",
+      "script": "scripts/control-tower/check-bypass-log.sh",
+      "line": 32,
+      "code": "BASE=\"${SYNO_BASE_REF:-${1:-origin/feat/prompt-architecture}}\"",
+      "phenomenon": "无参运行该脚本时，base 落到遗留分支 origin/feat/prompt-architecture，merge-base 极老 ⇒ 把大量 main 侧历史提交算进对账范围，报 385 条『缺记录』并 exit 1。",
+      "cmd": "cd /Users/wane/SynovaAgent && bash scripts/control-tower/check-bypass-log.sh 2>&1 | grep -cE \"\\[[0-9a-f]{8}\\]\"",
+      "raw_stdout": "385（成员 C 实测时点 2026-09-28）",
+      "raw_stdout_replay": "382（队长复跑时点；该计数随 main 提交增长而漂移——现象与归因不依赖精确值，只需『数量级 = 数百条』）",
+      "exit": 1,
+      "contrast": {
+        "note": "pre-push 走的路径传的是 origin/main（pre-push-check.sh:433-437），真实范围只有本分支自己的提交。",
+        "cmd": "cd /Users/wane/SynovaAgent/.synova-wt-d1051-impl && bash scripts/control-tower/check-bypass-log.sh origin/main 2>&1 | grep -cE \"\\[[0-9a-f]{8}\\]\"",
+        "raw_stdout_after_fix": "0",
+        "exit_after_fix": 0
+      },
+      "impact": "把执行者导向『控制塔缺陷、不是我的账』的错误归因；本卡 D1051 成员 C 实测即据此误判（结论对一半、归因错），后由队长按真实参数复现才定位到真因（2 条 cherry-pick 新 SHA）。",
+      "suggestion": "默认 base 改为 origin/main（与 pre-push 同源）；或在无参且解析到非 main 基时 fail-loud 打印所用 base 并提示，不静默按遗留分支对账。",
+      "evidence_source": "队长实跑 + 成员 C 复现（见 D1051 成员 C 的推送阻断报告）"
+    },
+    {
+      "id": "CT-D1051-02",
+      "severity": "中（写集声明源 S2 实际失效 ⇒ 合法治理产物被判『夹带』）",
+      "script": "scripts/control-tower/devdoc_writeset.py（merge_writeset_gate.py 的 S2 源）",
+      "phenomenon": "dev doc 写集表若首列为 ID 列（| # | 文件 | 操作 | …），解析器取到的是 ID（w1/t1/…）而非文件路径 ⇒ S2 声明源对该表完全失效；后果是 spec/brief 这类合法治理产物被判『夹带文件』。",
+      "cmd": "cd /Users/wane/SynovaAgent && python3 scripts/control-tower/devdoc_writeset.py --extract .synova-wt-d1051-spec/docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D1051-line3-report-depth-20260928.md",
+      "raw_stdout": "{\"status\": \"ok\", \"entries\": [\"#\", \"W1\", \"W2\", \"W3\", \"W4\", \"W5\", \"T1\", \"T2\", \"T3\", \"T4\", \"G1\", \"G2\"], \"cleaned\": [\"#\", \"w1\", \"w2\", \"w3\", \"w4\", \"w5\", \"t1\", \"t2\", \"t3\", \"t4\", \"g1\", \"g2\"]}",
+      "phenomenon_evidence_2": {
+        "cmd": "cd /Users/wane/SynovaAgent/.synova-wt-d1051-impl && python3 scripts/control-tower/merge_writeset_gate.py --base origin/main --head HEAD --branch feat/d1051-line3-report-depth --did D1051",
+        "raw_stdout_excerpt": "夹带文件 2 个（不匹配任何声明项）:\n  - .claude/task-briefs/2026-09-28-D1051-线3报告体系首切片-一页纸+详细报告+对话调深度.md\n  - docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D1051-line3-report-depth-20260928.md",
+        "note": "同一运行里 S2 声明的条目打印为 t1/t2/t3/t4/g1/g2（ID 而非路径）——即解析器确实取了首列。"
+      },
+      "contrast": "先例对照：D791 的 spec §5.1 表首列即『文件』（| 文件 | 操作 | 说明 |），故其 S2 源可用。本卡 spec 加了 `#` ID 列后 S2 失效。",
+      "impact": "写集对账的三源之一（S2）对采用 ID 首列表格的 dev doc 静默失效；本次靠 S3（brief Q2-include）兜住了 9 个代码文件，治理产物则被判夹带。",
+      "suggestion": "（a）解析器识别并跳过纯 ID 列（或按列内容判定路径列）；（b）或在 dev doc 规范里硬性要求『文件路径列必须为首列』并在 gate 里校验，二者取一，避免同一失效在下一份 spec 重演。",
+      "evidence_source": "队长实跑（本卡 §5.1 表为 ID 首列）"
+    },
+    {
+      "id": "CT-D1051-03",
+      "severity": "低（口径缺口：同日验证必判 stale）",
+      "script": "scripts/product-lines/calc-progress.py（machine 路径） + scripts/product-lines/evidence-writer.py",
+      "phenomenon": "k3 路径已支持 at 全量 ISO（CT-62，`freshness_gate(..., evidence_at=latest.get('at'))`），但 machine 路径（scenario/test/ci/task_redeem）只传 date，且 evidence-writer.py 不产出 at 字段 ⇒ 与代码同日的验证必然被判 stale，只能靠『跨天重跑』消解。",
+      "cmd": "cd /Users/wane/SynovaAgent && sed -n '640,672p' scripts/product-lines/calc-progress.py",
+      "raw_stdout_excerpt": "latest = max(machine, key=lambda v: v[\"date\"])\n...\ntouched, err = git_touched_after(line_modules, latest[\"date\"], git_cmd)",
+      "supporting": [
+        {
+          "cmd": "cd /Users/wane/SynovaAgent && python3 scripts/product-lines/evidence-writer.py --help 2>&1 | grep -c -- \"--at\"",
+          "raw_stdout": "0"
+        },
+        {
+          "cmd": "cd /Users/wane/SynovaAgent && sed -n '557,560p' scripts/product-lines/calc-progress.py",
+          "raw_stdout": "    # CT-62: 证据时间戳粒度——at 全量 ISO datetime 直接用（同日验证不被当日提交误杀）；\n    # date-only（YYYY-MM-DD）保持旧语义 T00:00:00（保守：当日提交算 touched）\n    since = since_date if \"T\" in since_date else since_date + \"T00:00:00\""
+        }
+      ],
+      "impact": "每次代码提交当日的验证都不能记分，必须次日重跑；D791 spec §5.5 与本卡均按『跨天重跑』处理（本仓既有先例：线 1 test-2026-09-15.json 失效 → 次日 test-2026-09-16.json 重验）。",
+      "suggestion": "machine 路径与 k3 路径对齐（传 evidence_at），并让 evidence-writer.py 产出 at；或在文档里把『次日重跑』写成显式流程，避免每个任务重新踩一遍。",
+      "evidence_source": "队长实读 calc-progress.py 与 evidence-writer.py --help"
+    }
+  ],
+  "note": "本小队**未修改** scripts/** 任何文件（控制塔域不属本卡写集）；以上仅登记，处置权在 CTO/CT 队列。",
+  "findings_addendum": [
+    {
+      "id": "CT-D1051-04",
+      "severity": "低（成功哨兵缺口：no-op 与成功不可区分）",
+      "script": "scripts/control-tower/synova-commit",
+      "phenomenon": "无 `--files` 且暂存区为空时，脚本打印 `⚠ 暂存区为空 — 没有要提交的变更` 但**退出码为 0**，与「提交成功」不可区分；执行者若不查 `git log` 会误以为已提交。",
+      "cmd": "cd /Users/wane/SynovaAgent/.synova-wt-d1051-impl && git synova-commit -m \"probe\" ; echo exit=$? ; git log --oneline -1",
+      "raw_stdout": "⚠ 暂存区为空 — 没有要提交的变更\nexit=0\n（HEAD 未变动）",
+      "note": "该形态由成员 C 在 task-4 实测（其报告 §5.1 原文）；`-m` 短参亦不受支持（必填 `--task-id/--agent/--message`）。",
+      "impact": "静默 no-op 会让「已提交」成为不可核自述；本卡靠执行者自查 `git log` 才发现，属侥幸。",
+      "suggestion": "no-op 分支改为非 0 退出（或至少输出机器可判的成功哨兵行），与 D938 在 alloc-task-id.sh 上的同类修复保持一致口径。",
+      "evidence_source": "成员 C（deepseek-harness-squad-c）task-4 报告 §5.1"
+    }
+  ]
+}

@@ -1,0 +1,173 @@
+{
+  "task": "D1051",
+  "artifact": "00-premise-freeze（队长开工前前提冻结实测）",
+  "owner": "synova-squad-lead",
+  "as_of": "2026-09-28",
+  "plan_ref": {
+    "doc": "docs/synova/coordination/整体推进计划-主线-20260913.md",
+    "declared": "v1.2 @ sha256(content)=4e46603f",
+    "verified": true
+  },
+  "contract": "每条 = 原样可复跑的命令（bash -c '<cmd>'） + 原始 stdout/stderr 摘要 + 退出码 + 结论。禁手写数字。",
+  "cwd": "/Users/wane/SynovaAgent",
+  "cwd_head": "d8590040",
+  "premises": [
+    {
+      "id": "P1",
+      "claim": "依据计划 = v1.2，sha256(content) 前缀 4e46603f",
+      "cmd": "shasum -a 256 docs/synova/coordination/整体推进计划-主线-20260913.md",
+      "runnable_as": "bash -c '<cmd>'",
+      "exit": 0,
+      "raw_stdout": "4e46603facae436191cb730084d7fd441bc2ba194dbf7fd7fdbbeb7cfa0f4c9a  docs/synova/coordination/整体推进计划-主线-20260913.md",
+      "verdict": "成立（前缀 4e46603f 逐字命中）"
+    },
+    {
+      "id": "P1b",
+      "claim": "上述文件自标版本 = v1.2",
+      "cmd": "grep -c '版本: v1.2' docs/synova/coordination/整体推进计划-主线-20260913.md",
+      "exit": 0,
+      "raw_stdout": "1",
+      "verdict": "成立（L3 自标『版本: v1.2 | 定稿: 2026-09-13（v1.2 2026-09-15）』）"
+    },
+    {
+      "id": "P2",
+      "claim": "一页纸结构已存在（baseline_note）",
+      "cmd": "grep -n 'baseline_note: \"一页纸结构有' docs/synova/product-lines/product-lines.yaml",
+      "exit": 0,
+      "raw_stdout": "163:    baseline_note: \"一页纸结构有；详细报告/交互深度 = 0\"",
+      "supporting": [
+        {
+          "cmd": "grep -n 'export function renderOnePager' src/agent/report-assembler.ts",
+          "raw_stdout": "329:export function renderOnePager(",
+          "note": "D791a（b396bafc，已落 main）交付四槽位渲染器"
+        },
+        {
+          "cmd": "grep -c 'EXECUTIVE_SUMMARY_SLOT_TITLES' src/l3/report-templates.ts",
+          "raw_stdout": "1",
+          "note": "四槽位标题常量存在"
+        }
+      ],
+      "verdict": "成立 —— 且『详细报告/交互深度 = 0』与本切片范围（3-2/3-3）一致"
+    },
+    {
+      "id": "P3",
+      "claim": "诊断管线尾部有『综合诊断报告』产出位",
+      "cmd": "grep -rn 'Phase 4: 报告生成' src/l3/synova-diagnosis-engine-impl.ts",
+      "exit": 0,
+      "raw_stdout": "src/l3/synova-diagnosis-engine-impl.ts:12: *   Phase 4: 报告生成      — 综合诊断报告\nsrc/l3/synova-diagnosis-engine-impl.ts:407:      // ═══ Phase 4: 报告生成 ═══",
+      "supporting": [
+        {
+          "cmd": "grep -rn 'renderOnePager(' src/routes/diagnosis.ts",
+          "raw_stdout": "src/routes/diagnosis.ts:556:          onePager = renderOnePager(\nsrc/routes/diagnosis.ts:818:    return renderOnePager(report, 'ceo', inputs);",
+          "note": "L1 呈现层两个生产调用点：SSE 完成路径 + GET 按需渲染路径（后者硬编码 'ceo' 深度）"
+        }
+      ],
+      "verdict": "成立"
+    },
+    {
+      "id": "P4",
+      "claim": "线2 对话入口现成（SSE/卡片，3-3 的触发入口不用新建）",
+      "cmd": "grep -n 'api/conversations' src/routes/conversations.ts",
+      "exit": 0,
+      "raw_stdout": "4: * POST /api/conversations              body {message, sessionId?, orgId?} → 单飞入口（sessionId 缺省即新建会话）\n5: * POST /api/conversations/:id/messages body {message}                     → 定向续轮（:id 不存在 → 404）\n353:// POST /api/conversations — 单飞入口（sessionId 缺省即新建）\n354:router.post('/api/conversations', (req: Request, res: Response) => {\n358:// POST /api/conversations/:id/messages — 定向续轮\n359:router.post('/api/conversations/:id/messages', (req: Request, res: Response) => {",
+      "supporting": [
+        {
+          "cmd": "ls -1 src/agent/interactive-card.ts",
+          "raw_stdout": "src/agent/interactive-card.ts",
+          "note": "卡片组件在（复用，不新造）"
+        },
+        {
+          "cmd": "grep -c 'text/event-stream' src/routes/diagnosis.ts",
+          "raw_stdout": "1",
+          "note": "SSE 在（诊断侧流式）"
+        }
+      ],
+      "verdict": "成立（入口存在；接线待本切片实现）"
+    },
+    {
+      "id": "P5",
+      "claim": "3-9 时间窗口径已定（禁另立）",
+      "cmd": "grep -n 'id: \"3-9\"' docs/synova/product-lines/product-lines.yaml",
+      "exit": 0,
+      "raw_stdout": "208:      - id: \"3-9\"",
+      "note": "L209 全文定义：报告须标注数据时点与时间窗，日粒度为主 + 周/月聚合须可复算、不得另立独立口径",
+      "verdict": "成立（本切片禁另立时间窗口径）"
+    },
+    {
+      "id": "P6",
+      "claim": "3-1/3-2/3-3 三验收点当前均 uncommitted（0 证据）",
+      "cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json'));l=next(l for l in d['lines'] if str(l['id'])=='3');print([(p['id'],p['status']) for p in l['points'] if p['id'] in ('3-1','3-2','3-3')])\"",
+      "raw_stdout": "[('3-1', 'uncommitted'), ('3-2', 'uncommitted'), ('3-3', 'uncommitted')]",
+      "correction": "首版记的 cmd 用 l['acceptance_points']，实跑 KeyError（该 JSON 的键是 'points'，'acceptance_points' 是 product-lines.yaml 的键名）——已改为实跑通过的形态，输出为复跑原始输出。",
+      "verdict": "成立（三点点位数一致，是本切片的记分对象）"
+    },
+    {
+      "id": "P7",
+      "claim": "【偏差·须报 CTO】D791 PR-B（mac 域：GS-08 生产路径改造 + 点级证据）未落 main",
+      "cmd": "git merge-base --is-ancestor db7252c8 HEAD; echo exit=$?",
+      "raw_stdout": "exit=1",
+      "supporting": [
+        {
+          "cmd": "git log --oneline -1 -- scripts/golden-scenarios/GS-08-report-readable/run.sh",
+          "raw_stdout": "4c8572a3 feat(D446): GS-01/06/07/08 场景脚本 + evidence（诚实 RED）",
+          "note": "GS-08 在 main 仍是 D446 初版（110 行、.hbs 模板加载级），expect.json 的 evidence_map 用场景私有标签 S8-1/S8-2"
+        },
+        {
+          "cmd": "git merge-base --is-ancestor b396bafc HEAD; echo exit=$?",
+          "raw_stdout": "exit=0",
+          "note": "仅 D791a（win 域 src+tests，PR #617）落 main"
+        }
+      ],
+      "verdict": "偏差成立 —— 本切片**不得**假定 GS-08 已是生产路径验收；『scenario:GS-08』当下不是可用的拿分通道（S8-x 与 3-x 无映射层）"
+    },
+    {
+      "id": "P8",
+      "claim": "【偏差·须报 CTO】『golden 场景固定诊断产物』在 main 不存在",
+      "cmd": "ls -1 scripts/golden-scenarios/GS-08-report-readable/fixtures/ | wc -l",
+      "exit": 0,
+      "raw_stdout": "       0",
+      "supporting": [
+        {
+          "cmd": "grep -rl 'rootCauses\\|expertReports' scripts/golden-scenarios/*/fixtures/ 2>/dev/null | wc -l",
+          "raw_stdout": "       0",
+          "note": "全场景 fixtures 内无任何诊断报告 JSON"
+        }
+      ],
+      "verdict": "偏差成立 —— 本切片须自备固定诊断产物（fixture），不得假定『有数据可渲染』"
+    },
+    {
+      "id": "P9",
+      "claim": "域划分：src/** 与 tests/** = win；scripts/golden-scenarios/** = mac；evidence 为 domain-neutral",
+      "cmd": "python3 scripts/control-tower/check-ownership.py src/agent/report-assembler.ts tests/agent/x.test.ts scripts/golden-scenarios/GS-08-report-readable/run.sh docs/synova/product-lines/evidence/x.json",
+      "exit": 1,
+      "raw_stdout": "·   domain-neutral  docs/synova/product-lines/evidence/x.json\nwin  src/agent/report-assembler.ts\nwin  tests/agent/x.test.ts\nmac  scripts/golden-scenarios/GS-08-report-readable/run.sh\n\n❌ FAIL 跨域: 变更落在 2 个域 ['mac', 'win'] —— 单个 PR 只许一个域（无归属 0，域判定豁免 1）",
+      "verdict": "成立 —— 派单『PR（一件）』与 D734 单域门禁叠加 ⇒ 本切片收敛到 win 域（src+tests），验证工件落 domain-neutral 的 evidence/ 并随同一 PR 走"
+    },
+    {
+      "id": "P10",
+      "claim": "证据新鲜度门：evidence-writer 不写 at ⇒ 同日提交会判 stale（CT-62 只对 at 全量 ISO 生效）",
+      "cmd": "grep -n 'since = since_date if \"T\" in since_date' scripts/product-lines/calc-progress.py",
+      "exit": 0,
+      "raw_stdout": "559:    since = since_date if \"T\" in since_date else since_date + \"T00:00:00\"",
+      "supporting": [
+        {
+          "cmd": "python3 scripts/product-lines/evidence-writer.py --help 2>&1 | grep -c -- \"--at\"",
+          "raw_stdout": "0",
+          "note": "evidence-writer.py 无 --at 选项"
+        },
+        {
+          "cmd": "grep -n 'modules:' docs/synova/product-lines/product-lines.yaml | sed -n '3p'",
+          "raw_stdout": "164:    modules: [\"src/l3/\", \"extensions/reports/\", \"src/agent/report-assembler.ts\"]",
+          "note": "线 3 modules 三项 —— 本切片必然改动其中 src/l3/ 与/或 src/agent/report-assembler.ts"
+        }
+      ],
+      "verdict": "成立 —— 点级证据须在**代码提交后的下一个自然日**重跑产出，否则 3-1/3-2/3-3 判 stale 而非 pending_k3"
+    }
+  ],
+  "verdict_summary": {
+    "成立": ["P1", "P1b", "P2", "P3", "P4", "P5", "P6", "P9", "P10"],
+    "偏差_须报CTO": ["P7", "P8"],
+    "废卡触发": false,
+    "结论": "四条『基础（实测）』前提全部成立；两条**完成标准附带假定**（GS-08 已改造 / golden 场景有固定诊断产物）实测不成立 —— 不废卡，但本切片须自备固定诊断产物并把验证工件收敛到 win 域 + domain-neutral evidence/"
+  }
+}

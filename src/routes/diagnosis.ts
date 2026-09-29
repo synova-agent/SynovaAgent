@@ -43,6 +43,13 @@ import {
   type ProviderUsageLike,
 } from '../llm/token-meter';
 import { injectManualSignal } from '../agent/sentinel-service';
+// D1051 W4: 呈现粒度轴（L1→L2 相邻依赖合法——DR-1 裁定：呈现轴落 L2，本文件零 L3 新增引用）
+import {
+  DEFAULT_REPORT_VIEW_DEPTH,
+  REPORT_VIEW_DEPTHS,
+  normalizeReportViewDepth,
+  type ReportViewDepth,
+} from '../agent/report-depth';
 
 const log = createLogger('routes/diagnosis');
 const router = Router();
@@ -721,37 +728,11 @@ function readGraphStore(req: Request): unknown {
  *       （L1 不直触 cycles/l4，铁律 39）。
  */
 async function buildOnePagerInputs(req: Request, orgId: string): Promise<OnePagerInputsLike> {
-  const [sentinel, assembler, cycleService] = await Promise.all([
-    import('../agent/sentinel-service'),
-    import('../agent/report-assembler'),
-    import('../agent/cycle-conclusion-service'),
-  ]);
-
-  let findingReports: unknown = [];
-  try {
-    findingReports = sentinel.getSentinelExpertReports().reports;
-  } catch (err: unknown) {
-    log.warn({ err, orgId }, '关键证据来源读取失败 — S2 槽位降级（输入缺席 → [degraded] 空态行）');
-  }
-
-  let cycleLines: string[] = [];
-  try {
-    const conclusions = await cycleService.buildCycleConclusions(orgId, readGraphStore(req));
-    cycleLines = conclusions.lines.map(line => line.text);
-    if (cycleLines.length === 0) {
-      log.warn({ orgId, reason: conclusions.reason }, '循环结论为空 — S3 槽位走 [degraded] 空态行');
-    }
-  } catch (err: unknown) {
-    log.warn({ err, orgId }, '循环结论派生失败 — S3 槽位降级（输入缺席 → [degraded] 空态行）');
-  }
-
-  // 「空即缺席」规则单源在 L2 assembleOnePagerInputs（与 GS-08 场景驱动同一函数——
-  // 保证"生产 HTTP 产物 ≡ 本地同输入渲染"的端到端等价性可判）
-  const inputs = assembler.assembleOnePagerInputs(findingReports, cycleLines);
-  if (inputs.evidenceHighlights === undefined) {
-    log.warn({ orgId }, '哨兵无 finding 记录 — S2 槽位走 [degraded] 空态行（不静默省略）');
-  }
-  return inputs;
+  // D1051 W4: 装配逻辑下沉为 L2 单源实现（`assembleOnePagerInputsForOrg`）——本函数仅保留
+  // 「从 req 取 graphStore」这一 L1 职责；S2/S3 的取数与降级语义与对话路由共用同一实现
+  // （行为等价：原先的内联装配逐句搬入 L2，无逻辑变更——DS13）。
+  const { assembleOnePagerInputsForOrg } = await import('../agent/report-assembler');
+  return assembleOnePagerInputsForOrg(orgId, readGraphStore(req));
 }
 
 /**
@@ -807,17 +788,24 @@ async function buildPointerAudit(
 
 /**
  * D480: GET 按需渲染一页纸（raw 深度咨询未在完成时渲染）。
- * renderOnePager 自身永不抛出（whole-body catch），此处只兜模块加载失败。
+ * renderOnePager/renderDetailedReport 自身永不抛出（whole-body catch），此处只兜模块加载失败。
+ *
+ * D1051 W4: 改收呈现深度 `viewDepth`（默认浅层=现状）；渲染统一经 `renderReportView` 分发，
+ * 保证「HTTP 端点」与「对话帧」两入口**同深度同产物**（同一分发器）。
  */
-async function renderOnePagerOnDemand(req: Request, report: DiagnosisReportLike): Promise<string> {
+async function renderOnePagerOnDemand(
+  req: Request,
+  report: DiagnosisReportLike,
+  viewDepth: ReportViewDepth = DEFAULT_REPORT_VIEW_DEPTH,
+): Promise<string> {
   try {
-    const { renderOnePager } = await import('../agent/report-assembler');
-    // D791: 按需渲染同样注入四槽位 inputs（DS10——本文件全部 renderOnePager 调用点一致）
+    const { renderReportView } = await import('../agent/report-assembler');
+    // D791: 按需渲染同样注入四槽位 inputs（DS10——本文件全部渲染调用点一致）
     const orgId = typeof report.teamId === 'string' ? report.teamId : '';
     const inputs = await buildOnePagerInputs(req, orgId);
-    return renderOnePager(report, 'ceo', inputs);
+    return renderReportView(report, viewDepth, inputs);
   } catch (err: unknown) {
-    log.warn({ err }, '一页纸按需渲染失败 — degraded（返回摘要提示文本）');
+    log.warn({ err, viewDepth }, '报告按需渲染失败 — degraded（返回摘要提示文本）');
     return `诊断摘要: ${report.summary || '诊断完成'}（一页纸渲染不可用，请使用 JSON 格式查看完整报告）`;
   }
 }
@@ -869,7 +857,12 @@ async function readReportFromCheckpoint(req: Request, reportId: string): Promise
   }
 }
 
-/** D593: report 响应组装（json/markdown 双格式；markdown 按需补渲染 onePager，D480 语义不变） */
+/**
+ * D593: report 响应组装（json/markdown 双格式；markdown 按需补渲染 onePager，D480 语义不变）。
+ *
+ * D1051 W4: markdown 分支按**呈现深度** `viewDepth` 取用（`?depth=one_pager|detailed`，默认浅层）；
+ * `viewDepth` 只作用于 markdown 渲染——**JSON 分支完全不变**（不新增字段、不加响应头）。
+ */
 async function respondReport(
   req: Request,
   res: Response,
@@ -879,17 +872,25 @@ async function respondReport(
   completedAt: string,
   report: DiagnosisReportLike | ColdReadArchive['report'],
   onePager: string | null,
+  viewDepth: ReportViewDepth,
+  depthDegraded: boolean,
 ): Promise<void> {
   if (format === 'markdown') {
-    if (onePager) {
+    // D1051: 呈现深度可观测（头回执）+ 非法入参显式降级（不静默——铁律 24/31）
+    res.set('X-Report-View-Depth', viewDepth);
+    if (depthDegraded) res.set('X-Report-Depth-Degraded', 'UNKNOWN_DEPTH');
+
+    // one_pager 方向：完成时已渲染的产物直接用（字节级不变——3-1 零回归，J2 夹具守护）
+    if (viewDepth === 'one_pager' && onePager) {
       res.type('text/markdown; charset=utf-8').send(onePager);
       return;
     }
+    // detailed 方向（或 one_pager 无缓存）→ 按深度渲染；完整形状前置窄化
     if (isFullDiagnosisReportLike(report)) {
-      res.type('text/markdown; charset=utf-8').send(await renderOnePagerOnDemand(req, report));
+      res.type('text/markdown; charset=utf-8').send(await renderOnePagerOnDemand(req, report, viewDepth));
       return;
     }
-    // 归档 report 非完整引擎形状（如 fake/历史数据）→ 摘要文本诚实降级（不伪造一页纸，铁律 24）
+    // 归档 report 非完整引擎形状（如 fake/历史数据）→ 摘要文本诚实降级（不伪造一页纸/章节，铁律 24）
     res.type('text/markdown; charset=utf-8').send(
       `诊断摘要: ${report.summary || '诊断完成'}（报告结构不完整，无法渲染一页纸；请使用 JSON 格式查看完整报告）`,
     );
@@ -911,10 +912,24 @@ router.get('/api/diagnosis/consult/:consultId/report', async (req: Request, res:
   const { consultId } = req.params as { consultId: string };
   const format = typeof req.query.format === 'string' ? req.query.format : 'json';
 
+  // D1051: 呈现深度解析（`?depth=` 只作用于 markdown 渲染）。
+  // 非法/非字符串 → 回退浅层默认 + log.warn + 响应头 X-Report-Depth-Degraded（不静默，铁律 24）。
+  const rawDepth = typeof req.query.depth === 'string' ? req.query.depth : undefined;
+  const normalizedDepth = normalizeReportViewDepth(rawDepth);
+  const viewDepth: ReportViewDepth = normalizedDepth ?? DEFAULT_REPORT_VIEW_DEPTH;
+  const depthDegraded = rawDepth !== undefined && normalizedDepth === undefined;
+  if (depthDegraded) {
+    // 降级日志回带**合法取值域**（运维可自纠，避免只报"非法"而不报"该填什么"）
+    log.warn(
+      { consultId, rawDepth, accepted: REPORT_VIEW_DEPTHS },
+      '非法 depth 入参 — 回退一页纸（degraded，不静默，铁律 24）',
+    );
+  }
+
   // ① 一级缓存（进程内快路径；键=consultId——resume 等既有调用方语义不变）
   const completed = completedReports.get(consultId);
   if (completed) {
-    await respondReport(req, res, consultId, format, completed.teamId, completed.completedAt, completed.report, completed.onePager);
+    await respondReport(req, res, consultId, format, completed.teamId, completed.completedAt, completed.report, completed.onePager, viewDepth, depthDegraded);
     return;
   }
 
@@ -922,7 +937,7 @@ router.get('/api/diagnosis/consult/:consultId/report', async (req: Request, res:
   //    consultId 调用方由内存层服务，重启后 reportId 可读回，spec §5.4 决策 3）
   const archive = await readReportFromCheckpoint(req, consultId);
   if (archive) {
-    await respondReport(req, res, consultId, format, archive.teamId, archive.completedAt, archive.report, archive.onePager ?? null);
+    await respondReport(req, res, consultId, format, archive.teamId, archive.completedAt, archive.report, archive.onePager ?? null, viewDepth, depthDegraded);
     return;
   }
 

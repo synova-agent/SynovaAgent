@@ -1,0 +1,40 @@
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-d1051-verify
+
+ ❯ tests/routes/conversations-report-view.test.ts (8 tests | 1 failed) 1284ms
+     ✓ ① 「讲细一点」→ report_view 帧，depth=detailed，markdown 含详版章节（3-3 正向） 149ms
+     ✓ ② 「说人话」→ report_view 帧，depth=one_pager，markdown 为四槽位一页纸（3-3 反向） 121ms
+     ✓ ③ 零回归判别（J5）：不含深度词 → 无 report_view 帧 95ms
+     ✓ ④ 不伪造（DS12）：无可用报告 → degraded:true + reason=NO_REPORT + markdown=null 101ms
+     ✓ ⑤ 同源同构（DS11）：帧内 markdown ≡ HTTP `?depth=detailed` 产物 118ms
+     ✓ ⑥ 幂等：同一会话连发两次「讲细一点」→ 两帧 markdown 字节相等（无时刻污染） 152ms
+     × ⑦ 渲染降级路径 → 帧 degraded:true + reason:RENDER_DEGRADED（R6 判别性：isDegradedRender 恒 false 即红） 115ms
+     ✓ ⑧ 对照（防恒真）：正常注册表 → 帧 degraded 恒为 false 且不带 reason 104ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 passed (8)
+   Start at  18:10:01
+   Duration  1.47s (transform 350ms, setup 0ms, import 101ms, tests 1.28s, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ⑦ 渲染降级路径 → 帧 degraded:true + reason:RENDER_DEGRADED（R6 判别性：isDegradedRender 恒 false 即红）
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/routes/conversations-report-view.test.ts:288:35
+    286|       // 判别性核心：若 `isDegradedRender` 被恒置 false（V 的 R6 注入），
+    287|       // `degraded` 恒 false、`reason` 恒 undefined ⇒ 以下两条必红。
+    288|       expect(view?.data.degraded).toBe(true);
+       |                                   ^
+    289|       expect(view?.data.reason).toBe('RENDER_DEGRADED');
+    290|       // 降级仍送达 fallback 纯文本（内容真实、标记诚实——不静默、不清空）
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
