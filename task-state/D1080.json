@@ -7,7 +7,7 @@
   "spec": ".claude/task-briefs/2026-09-30-D1080-receipt.md",
   "updated_at": "2026-09-30",
   "updated_by": "harness-登记（X30 启动窗）",
-  "note": "工程线自行登记（2026-09-30，占用表真实化）：本号为 X30 落点启动窗实际占用。上游 Mac-CTO 曾就 D1070/D1072/D1073 代登记（其 note 已声明「如 X30 侧自行登记，以侧内填写为准」），本登记即侧内填写。全部产出在本地分支 feat/D1070-x30-48h-m0（未推 PR，创始人裁定先本地）。",
+  "note": "S-4 五件套首次实用：抓到执行方自身 7 件无 brief 的流程违规并闭合，写集双向差归零。指针: ~/Synova-过程档案/2026-09-30-mac小队-回执-X30启动窗S-4五件套.md；sha256:fb8f7e35a90cc959；as_of 2026-09-30；重跑=打开该件按§五命令",
   "impl": null,
   "audit": null,
   "fix_task_id": null

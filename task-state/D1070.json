@@ -10,5 +10,5 @@
   "fix_task_id": null,
   "updated_at": "2026-09-30",
   "updated_by": "harness-登记（X30 启动窗）",
-  "note": "工程线自行登记（2026-09-30，占用表真实化）：本号为 X30 落点启动窗实际占用。上游 Mac-CTO 曾就 D1070/D1072/D1073 代登记（其 note 已声明「如 X30 侧自行登记，以侧内填写为准」），本登记即侧内填写。全部产出在本地分支 feat/D1070-x30-48h-m0（未推 PR，创始人裁定先本地）。"
+  "note": "M0 已落地：ci.yml 加入 merge_group（grep -c=3）；日志有界快照+轮转 scripts/control-tower/log-snapshot.sh（179 行，测试 20/20）。重跑: bash tests/control-tower/log-snapshot.test.sh。as_of 2026-09-30。"
 }

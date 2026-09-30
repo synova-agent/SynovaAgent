@@ -7,7 +7,7 @@
   "spec": ".claude/task-briefs/2026-09-30-D1087-empty-test-card.md",
   "updated_at": "2026-09-30",
   "updated_by": "harness-登记（X30 启动窗）",
-  "note": "工程线自行登记（2026-09-30，占用表真实化）：本号为 X30 落点启动窗实际占用。上游 Mac-CTO 曾就 D1070/D1072/D1073 代登记（其 note 已声明「如 X30 侧自行登记，以侧内填写为准」），本登记即侧内填写。全部产出在本地分支 feat/D1070-x30-48h-m0（未推 PR，创始人裁定先本地）。",
+  "note": "两包 × 四问操作卡（可粘贴指令＋判别项＋失败处置）。指针: ~/Synova-过程档案/2026-09-30-mac小队-记录-空会话测试操作卡.md；sha256:cd23ee0e08ea6b6c；as_of 2026-09-30；重跑=打开该件按§五命令",
   "impl": null,
   "audit": null,
   "fix_task_id": null
