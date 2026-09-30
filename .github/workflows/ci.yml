@@ -9,6 +9,12 @@ on:
     branches: [main]
     # D1014 ⒞: 触发类型显式化（原为默认 opened/synchronize/reopened + 新增 ready_for_review）
     types: [opened, synchronize, reopened, ready_for_review]
+  # D1070 / X30 M0①（Q3 迁移硬顺序 ①）: merge group 事件必须能触发本 workflow。
+  # 为什么必须先加这一行: merge queue 合入时 GitHub 在 merge group 上建的是临时合并分支；
+  #   若 workflow 不声明 merge_group，队列里**永远不产生 required check** → 全队列等到超时卡死
+  #   （与 D515 同族坑）。故本行是 M3（开 merge queue）的物理先决条件，必须先于开队列合入。
+  # 为何不能只靠 pull_request: 队列走的是 merge_group 事件，PR 事件不在队列合入路径上。
+  merge_group:
   # ── D1039 安全网②③（①②③ 全貌见 control-tower-tests job 头注释块）──────────────────
   # ② 手动强制: 判据误判/排障时人工强制跑 control-tower 重活（默认 false，不改变日常行为）。
   workflow_dispatch:
