@@ -26,7 +26,21 @@
 #               ls-remote 不可达 → stderr `degraded: …` 显式可见 + 仍按可判定位置发号
 #   @exit   — 0 = 发号成功（或 dry-run 预览且无冲突）
 #             1 = 拒绝发号（号已在任一位置被占 / 跨位置校验失败 / task-state 不可读）
+#             2 = **超时 fail-closed**（D1091 新增：远端腿或 worktree 扫描腿到点未回，
+#                 此时"继续发号"＝在无法校验占用的前提下撞号，故拒绝；见 @degraded）
 #   @error  — 冲突位置逐行点名，标签 ∈ {task-state, origin-main, remote-branch, local-branch, worktree-name}
+#             ls-remote 不可达 → stderr `degraded: …` 显式可见 + 仍按可判定位置发号
+#               ⚠ 与"超时"区分：不可达=快而确定（降级继续）；超时=环境有病（拒绝发号）
+#
+# D1091 变更（消灭"无超时腿"——本机无 timeout 二进制）:
+#   背景: 原实现 `command -v timeout || gtimeout` 在 macOS 双双落空 → `git ls-remote` 走无界分支；
+#     worktree 扫描是纯 bash 双循环（457 worktree × ~400 卡 ≈ 18 万次迭代）。实测全参数运行
+#     **>7 分钟无输出**（CTO 台账第七批①，同类第 3 次），取号入口等于瘫痪。
+#   本卡两条腿各加硬超时（便携实现 `_run_bounded`，零依赖，超时返回 124）:
+#     · 远端腿: SYNO_ALLOC_LSREMOTE_TIMEOUT（默认 20s）
+#     · 扫描腿: SYNO_ALLOC_SCAN_TIMEOUT（默认 30s）—— 同批把扫描改 `_wt_scan`（xargs -P8 + ls），
+#       实测 **>4min → 1s**，号集与旧法逐值一致（唯一号 495）。0 = 显式关超时（回到旧行为）。
+#   测试缝: SYNO_ALLOC_TEST_STALL_SECS（生产不设）＝在腿内 sleep N 秒，用于确定性验证超时路径。
 #
 # D940 变更（跨位置拒绝重号，**补缺口非造轮子**）:
 #   现存能力（不在本卡内）：本地 task-state(:83) ∪ origin/main(:89-91) ∪ worktree task-state(:101-129)
@@ -136,6 +150,49 @@ _lock_release() {
   exit "$rc"  # 显式导出退出码（EXIT trap 内 exit 不回递归触发 trap）
 }
 
+# ═══ D1091: 有界执行（本机无 timeout 二进制 ⇒ 原实现的"无超时腿"必须消灭）═══
+# 背景: 原两条腿都无上限 —— ① `command -v timeout || gtimeout` 在 macOS 双双落空 → 走无界
+#   `git ls-remote`；② worktree 扫描是纯 bash 双循环。实测（2026-09-30，457 worktree）:
+#   全参数运行 >7 分钟无输出（CTO 台账第七批① 第 3 次挂死），取号入口等于瘫痪。
+# 契约: 超时 → 返回 **124**（与 GNU timeout 同码）；调用方据此 fail-closed（exit 2，不静默漏号）。
+#   便携回退 = 后台 pid + 0.1s 轮询（macOS/Linux 通吃，零依赖）；shell 函数亦可（background 函数）。
+_run_bounded() {
+  local secs="$1"; shift
+  if [ "${secs:-0}" = "0" ]; then "$@"; return $?; fi   # 0 = 显式关超时（回到旧行为）
+  local _pid=""
+  if [ "$(type -t "$1" 2>/dev/null)" = "function" ]; then
+    "$@" & _pid=$!                                       # shell 函数 → 只能走便携路径
+  elif command -v timeout >/dev/null 2>&1; then timeout "$secs" "$@"; return $?
+  elif command -v gtimeout >/dev/null 2>&1; then gtimeout "$secs" "$@"; return $?
+  else
+    "$@" & _pid=$!
+  fi
+  local _tenths=$(( secs * 10 )) _i=0
+  while kill -0 "$_pid" 2>/dev/null; do
+    if [ "$_i" -ge "$_tenths" ]; then
+      kill -TERM "$_pid" 2>/dev/null || true
+      sleep 0.2
+      kill -KILL "$_pid" 2>/dev/null || true
+      wait "$_pid" 2>/dev/null || true
+      return 124
+    fi
+    sleep 0.1
+    _i=$(( _i + 1 ))
+  done
+  wait "$_pid"; return $?
+}
+
+# D1091: worktree 占用枚举（输出每行一个唯一号）。
+# 为什么换掉 bash 双循环: 457 worktree × 每树 ~400 张卡 ≈ 18 万次 `[ -e ]`+case 迭代，实测 >4 分钟。
+#   本写法 = xargs -P8 分片 + 每片一个 `ls`（BSD/GNU 通吃），**语义不变**（同一批 D*.json → 同一号集）。
+# 实测: 旧双循环 >4min ｜ 单进程 find 39s ｜ 本写法 **1s**（唯一号 495，与单进程 find 逐值一致）。
+_wt_scan() {
+  printf '%s\n' $1 \
+    | xargs -P 8 -I{} sh -c 'ls -1 "{}"/task-state/D*.json 2>/dev/null' 2>/dev/null \
+    | sed -n 's|.*/D\([0-9][0-9]*\)\.json$|\1|p' \
+    | grep -E '^[0-9]+$' | sort -u || true
+}
+
 # ═══ D940: 远端分支权威快照 — **拿锁前**取 ═══
 # 为什么在锁外: 真仓 `git ls-remote --heads origin` 实测 6.08s / 666 分支。放进临界区会把
 #   并发分配串行成 6s/次，撞 LOCK_WAIT_SEC=30 上限（并发锁失效）。快照只用于发号前校验。
@@ -149,15 +206,22 @@ if [ "${SYNO_ALLOC_NO_BRANCH:-0}" = "1" ]; then
 elif [ -z "$TS_TOP" ]; then
   :  # task-state 不在 git 仓库内（测试沙箱/非常规布局）→ 无远端语义，跳过
 else
-  _LSR_TO="$(command -v timeout || command -v gtimeout || true)"
+  _LSR_TO_SECS="${SYNO_ALLOC_LSREMOTE_TIMEOUT:-20}"
   _LSR_OUT=""
   _LSR_RC=0
-  if [ -n "$_LSR_TO" ]; then
-    _LSR_OUT="$("$_LSR_TO" "${SYNO_ALLOC_LSREMOTE_TIMEOUT:-20}" git -C "$TS_TOP" ls-remote --heads origin 2>/dev/null)" || _LSR_RC=$?
+  if [ -n "${SYNO_ALLOC_TEST_STALL_SECS:-}" ]; then
+    # 测试注入缝（生产不设）: 以 sleep 模拟"网络腿挂住"，用于确定性验证超时路径
+    _LSR_OUT="$(_run_bounded "$_LSR_TO_SECS" sleep "${SYNO_ALLOC_TEST_STALL_SECS}" 2>/dev/null)" || _LSR_RC=$?
   else
-    _LSR_OUT="$(git -C "$TS_TOP" ls-remote --heads origin 2>/dev/null)" || _LSR_RC=$?
+    _LSR_OUT="$(_run_bounded "$_LSR_TO_SECS" git -C "$TS_TOP" ls-remote --heads origin 2>/dev/null)" || _LSR_RC=$?
   fi
-  if [ "$_LSR_RC" -ne 0 ]; then
+  if [ "$_LSR_RC" -eq 124 ]; then
+    # D1091 fail-closed: **超时 ≠ 不可达**。不可达是"快而确定"（降级继续，见下支）；
+    #   超时说明环境有病（挂在网络腿/巨量 worktree），此时"继续发号"= 在无法校验远端占用的
+    #   前提下撞号。故拒绝发号（exit 2），并要求显式处置。
+    echo "degraded: 远端分支快照超时（${_LSR_TO_SECS}s）— fail-closed，拒绝发号（SYNO_ALLOC_LSREMOTE_TIMEOUT 可调；0=不限）" >&2
+    exit 2
+  elif [ "$_LSR_RC" -ne 0 ]; then
     # 降级: 显式可见（铁律 11），不静默；仍按可判定位置继续（卡面: 仍可用）
     echo "degraded: 远端分支不可达 (origin 未配置/网络不可达, rc=${_LSR_RC}) — 仅按可判定位置校验" >&2
   else
@@ -277,27 +341,23 @@ else
   if [ -z "$TS_TOP" ]; then
     :  # task-state 目录不在 git 仓库内（测试沙箱/非常规布局）→ 无 worktree 语义，跳过
   elif WORKTREE_LIST=$(git -C "$TS_TOP" worktree list --porcelain 2>/dev/null); then
-    WT_DIRS=$(printf '%s\n' "$WORKTREE_LIST" | awk '/^worktree /{print $2}')
-    for wt in $WT_DIRS; do
-      [ "$wt" = "$TS_TOP" ] && continue  # 主工作区已读（TASK_STATE_DIR）
-      for f in "$wt"/task-state/D*.json; do
-        [ -e "$f" ] || continue
-        # D940（卡面范围外的必要前提修复，lead 2026-09-24 授权 A）:
-        #   原为 `bn=$(basename "$f")` —— 每文件一次子进程。本机 200 个 worktree × 50,788 个
-        #   task-state 文件 = 50,788 次 fork → 该循环实测 258s，使取号入口 ≈4.3 分钟（≫ LOCK_WAIT_SEC=30）。
-        #   改纯参数展开：同字符串、零子进程、语义等价（见 D940 证据件「等价性 + 耗时」双证据）。
-        #   仅此一处；WORKTREE_USED 累计展开等其它噪音不在本卡。
-        bn="${f##*/}"
-        case "$bn" in
-          D[0-9]*.json)
-            n=${bn#D}; n=${n%.json}
-            case "$n" in ''|*[!0-9]*) continue ;; esac
-            WORKTREE_USED="${WORKTREE_USED}${n}
-"
-            ;;
-        esac
-      done
-    done
+    WT_DIRS=$(printf '%s\n' "$WORKTREE_LIST" | awk '/^worktree /{print $2}' | grep -vx "$TS_TOP" || true)
+    # ── D1091: 扫描腿改「并行枚举」+ 有界 ─────────────────────────────────────────
+    # 历史: D940 已消掉「每文件一个 basename 子进程」（258s），但纯 bash 双循环本体
+    #   （457 worktree × ~400 卡 ≈ 18 万次迭代）本机实测仍 **>4 分钟无输出**（CTO 台账第七批①）。
+    # 现写法: `_wt_scan` = xargs -P8 分片 + 每片一个 ls；实测 **1s**，号集与旧法逐值一致（495）。
+    _WT_SCAN_TO="${SYNO_ALLOC_SCAN_TIMEOUT:-30}"
+    _WT_SCAN_RC=0
+    if [ -n "${SYNO_ALLOC_TEST_STALL_SECS:-}" ]; then
+      # 测试注入缝（生产不设）: 以 sleep 模拟扫描腿挂住 → 确定性验证超时路径
+      WORKTREE_USED="$(_run_bounded "$_WT_SCAN_TO" sleep "${SYNO_ALLOC_TEST_STALL_SECS}" 2>/dev/null)" || _WT_SCAN_RC=$?
+    else
+      WORKTREE_USED="$(_run_bounded "$_WT_SCAN_TO" _wt_scan "$WT_DIRS" 2>/dev/null)" || _WT_SCAN_RC=$?
+    fi
+    if [ "$_WT_SCAN_RC" -eq 124 ]; then
+      echo "degraded: worktree 占用扫描超时（${_WT_SCAN_TO}s / $(printf '%s\n' $WT_DIRS | wc -l | tr -d ' ') 个 worktree）— fail-closed，拒绝发号（SYNO_ALLOC_SCAN_TIMEOUT 可调；0=不限）" >&2
+      exit 2
+    fi
   else
     echo "⚠ alloc-task-id: git worktree list 失败——在途 worktree 占用检查跳过（可能漏号）" >&2
   fi

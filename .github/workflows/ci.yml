@@ -495,6 +495,7 @@ jobs:
             tests/control-tower/verify-parallel-ci.test.sh \
             tests/control-tower/alloc-task-id.test.sh \
             tests/control-tower/alloc-task-id-lock.test.sh \
+            tests/control-tower/alloc-task-id-timeout.test.sh \
             tests/control-tower/check-name-allocation.test.sh \
             tests/control-tower/check-gitlinks.test.sh \
             tests/control-tower/grep-oP-regression.test.sh \
