@@ -7,7 +7,7 @@
   "spec": ".claude/task-briefs/2026-09-30-D1084-acceptance-checklist.md",
   "updated_at": "2026-09-30",
   "updated_by": "harness-登记（X30 启动窗）",
-  "note": "启动窗 11 项：7 达成／2 待创始人／1 未达／1 阻断。指针: ~/Synova-过程档案/2026-09-30-mac小队-交付-启动窗验收清单.md；sha256:b987fe18d50f391c；as_of 2026-09-30；重跑=打开该件按§五命令",
+  "note": "启动窗 11 项：7 达成／2 待创始人／1 未达／1 阻断。指针: ~/Synova-过程档案/2026-09-30-mac小队-交付-启动窗验收清单.md；sha256:b987fe18d50f391c；as_of 2026-09-30；重跑=打开该件按§五命令（终版已出：库外仓 2026-09-30-mac小队-交付-启动窗验收清单终版.md，sha256:41679a26b2ddab6c；11 项 ✅6/⚠️3/⏳2）",
   "impl": null,
   "audit": null,
   "fix_task_id": null
