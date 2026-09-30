@@ -23,7 +23,7 @@ SB="$(mktemp -d)"; LOCK_ROOT="$(mktemp -d)"
 # 夹具前提（D1091 首跑踩到）: 沙箱必须是 **git 仓 + 含 task-state/**，否则脚本在更早的
 # 「task-state 不可读 → exit 1」处就退出，超时腿根本不会执行（假红）。对齐 alloc-task-id-lock.test.sh。
 mkdir -p "$SB/task-state" "$SB/briefs"
-git -C "$SB" init -q 2>/dev/null
+git -C "$SB" init -q 2>/dev/null  # swallow-ok: 夹具仓库已存在时 init 报错，无影响
 PASS=0; FAIL=0; FAILED_NAMES=()
 ok() { echo "  ✅ $1"; PASS=$((PASS+1)); }
 no() { echo "  ❌ $1"; FAIL=$((FAIL+1)); FAILED_NAMES+=("$1"); }

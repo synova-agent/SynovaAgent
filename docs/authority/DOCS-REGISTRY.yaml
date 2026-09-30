@@ -279,3 +279,15 @@ documents:
     path: .dsh/skills/squad-discipline/SKILL.md
     status: active
     owner: DSH
+
+    - id: DOC-0119
+      type: decision
+      path: decisions/proposed/process/2026-09-30-preset-landing-must-diff-against-working-peer.md
+      status: draft
+      owner: DSH
+
+    - id: DOC-0120
+      type: decision
+      path: decisions/proposed/process/2026-09-30-cite-by-section-name-not-line-number.md
+      status: draft
+      owner: DSH

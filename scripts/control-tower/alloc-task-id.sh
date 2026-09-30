@@ -160,7 +160,7 @@ _run_bounded() {
   local secs="$1"; shift
   if [ "${secs:-0}" = "0" ]; then "$@"; return $?; fi   # 0 = 显式关超时（回到旧行为）
   local _pid=""
-  if [ "$(type -t "$1" 2>/dev/null)" = "function" ]; then
+  if [ "$(type -t "$1" 2>/dev/null)" = "function" ]; then  # swallow-ok: type 失败=非函数，走外部命令分支，非错误
     "$@" & _pid=$!                                       # shell 函数 → 只能走便携路径
   elif command -v timeout >/dev/null 2>&1; then timeout "$secs" "$@"; return $?
   elif command -v gtimeout >/dev/null 2>&1; then gtimeout "$secs" "$@"; return $?
@@ -168,7 +168,7 @@ _run_bounded() {
     "$@" & _pid=$!
   fi
   local _tenths=$(( secs * 10 )) _i=0
-  while kill -0 "$_pid" 2>/dev/null; do
+  while kill -0 "$_pid" 2>/dev/null; do  # swallow-ok: 进程已退出=循环正常结束条件，非错误
     if [ "$_i" -ge "$_tenths" ]; then
       kill -TERM "$_pid" 2>/dev/null || true
       sleep 0.2
