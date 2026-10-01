@@ -1,0 +1,14 @@
+{
+  "task_id": "D1070",
+  "title": "X30 落地启动窗 M0 基础层（T1 merge_group + T2 门禁日志有界归档）",
+  "status": "impl_done",
+  "domain": "mac",
+  "owner": "工程线（X30 启动窗）",
+  "spec": ".claude/task-briefs/2026-09-30-D1070-x30-m0.md",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-09-30",
+  "updated_by": "harness-登记（X30 启动窗）",
+  "note": "M0 已落地：ci.yml 加入 merge_group（grep -c=3）；日志有界快照+轮转 scripts/control-tower/log-snapshot.sh（179 行，测试 20/20）。重跑: bash tests/control-tower/log-snapshot.test.sh。as_of 2026-09-30。"
+}
