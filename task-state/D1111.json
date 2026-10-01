@@ -1,0 +1,3 @@
+{"id":"D1111","title":"防跑偏机制（状态台账 + 6 条不变量自查）","status":"in_progress","created":"2026-10-02","branch":"docs/D1110-role-governance-line",
+"write_set":["docs/synova/coordination/CTO-状态台账.md","scripts/control-tower/cto-drift-check.sh","docs/synova/CTO-ROLE.md","docs/authority/DOCS-REGISTRY.yaml","task-state/D1111.json","memory/notes/proposed/2026-10-02-d1111-cto-anti-drift.md",".claude/bypass.log"],
+"note":"创始人定「不跑偏是唯一最重要的事」⇒ 三道机制：①CTO-状态台账（≤60行/重写式/只装常量）②cto-drift-check.sh 六条不变量（I1台账膨胀 I2四段 I3三线锚齐 I4待裁有到期 I5冷启动≤14天 I6不碰scripts/audit）③外部判据（K3/创始人，未接线）。台账治前任病根：只装随线数x窗数增长的常量，任务级去GitHub"}

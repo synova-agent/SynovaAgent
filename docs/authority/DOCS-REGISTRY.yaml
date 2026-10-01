@@ -324,3 +324,10 @@ documents:
     status: active
     owner: DSH
 
+  # ---- D1111（CTO 防跑偏机制）2026-10-02 ----
+  - id: DOC-0136
+    type: governance
+    path: docs/synova/coordination/CTO-状态台账.md
+    status: active
+    owner: DSH
+
