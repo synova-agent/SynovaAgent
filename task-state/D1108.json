@@ -1,0 +1,3 @@
+{"id":"D1108","title":"经验教训索引（主仓侧检索面）","status":"in_progress","created":"2026-10-01","branch":"docs/D1108-lessons-index",
+"write_set":["docs/synova/coordination/经验教训索引.md","docs/authority/DOCS-REGISTRY.yaml","task-state/D1108.json",".claude/bypass.log"],
+"note":"教训全本在 ~/Synova-过程档案/2026-09-27-cto-记录-经验教训库.md（库外，机器一坏即失）⇒ 主仓建可检索索引面；正文不搬（§11 库外资产规范，避免双真相源）。本日续写 L-026~L-030（3 好实践 + 2 错误）"}

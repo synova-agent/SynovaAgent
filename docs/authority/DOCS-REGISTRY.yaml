@@ -301,3 +301,35 @@ documents:
     status: active
     owner: line-lead
 
+  # ---- D1106（CI 红根因取证 + 两张派单件 + 紧急预案）2026-10-01 ----
+  - id: DOC-0128
+    type: research
+    path: docs/synova/coordination/根因-check-preset-bundles-CI独有红-20261001.md
+    status: active
+    owner: DSH
+
+  - id: DOC-0129
+    type: governance
+    path: docs/synova/coordination/模块卡-W1-权限两姿态-20261001.md
+    status: active
+    owner: DSH
+
+  - id: DOC-0130
+    type: governance
+    path: docs/synova/coordination/治理卡-G1-preset-bundles-CI红-20261001.md
+    status: active
+    owner: DSH
+
+  - id: DOC-0131
+    type: decision
+    path: decisions/proposed/process/2026-10-01-branch-protection-emergency-plan.md
+    status: draft
+    owner: DSH
+
+  # ---- D1108（经验教训索引）2026-10-01 ----
+  - id: DOC-0134
+    type: knowledge
+    path: docs/synova/coordination/经验教训索引.md
+    status: active
+    owner: DSH
+
