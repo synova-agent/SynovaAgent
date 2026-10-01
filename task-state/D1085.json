@@ -1,0 +1,14 @@
+{
+  "task_id": "D1085",
+  "title": "T5 PRODUCT-BRIEF v3.2 落回（M-B4 签字后）",
+  "status": "impl_done",
+  "domain": "mac",
+  "owner": "工程线（X30 启动窗）",
+  "spec": ".claude/task-briefs/2026-09-30-D1085-brief-landing.md",
+  "updated_at": "2026-09-30",
+  "updated_by": "harness-登记（X30 启动窗）",
+  "note": "PRODUCT-BRIEF v3.2 已落回 .claude/PRODUCT-BRIEF.md（98 行，头部写于 2026-09-30）；创始人签字见研究院修复草案 v3（署名「白也」）。as_of 2026-09-30。",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null
+}
