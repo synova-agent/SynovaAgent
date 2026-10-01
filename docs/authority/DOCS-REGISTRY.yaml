@@ -317,3 +317,10 @@ documents:
     status: active
     owner: line-lead
 
+  # ---- D1110（治理线责任边界 + 文档治理含 HTML）2026-10-01 ----
+  - id: DOC-0135
+    type: governance
+    path: docs/synova/coordination/方向锚-治理线-20261001.md
+    status: active
+    owner: DSH
+

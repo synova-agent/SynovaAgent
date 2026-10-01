@@ -1,0 +1,3 @@
+{"id":"D1110","title":"岗位件补治理线与文档治理边界 + 治理线第一窗方向锚","status":"in_progress","created":"2026-10-01","branch":"docs/D1110-role-governance-line",
+"write_set":["docs/synova/CTO-ROLE.md","docs/synova/coordination/方向锚-治理线-20261001.md","docs/authority/DOCS-REGISTRY.yaml","task-state/D1110.json",".claude/bypass.log"],
+"note":"CTO-ROLE.md 补 §1.1 责任归属表（门禁与控制塔演进/门禁语义送审/迁移/文档治理含HTML/存量红 = 治理线）+ §1.2 文档治理范围边界（HTML 257 件三不管）+ §2 边界语（本文件是所有权边界不是工作清单）；方向锚-治理线-20261001.md 只给方向+边界+判据形态，不排具体任务（创始人 2026-10-01 指示：只对各线负责人负责）"}
