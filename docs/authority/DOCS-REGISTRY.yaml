@@ -301,3 +301,16 @@ documents:
     status: active
     owner: line-lead
 
+  # ---- D1107（DOC-CONTRACT 三闸执行体）2026-10-01 ----
+  - id: DOC-0132
+    type: governance
+    path: scripts/control-tower/check-doc-contract.sh
+    status: active
+    owner: DSH
+
+  - id: DOC-0133
+    type: governance
+    path: scripts/control-tower/validate_doc_contract.py
+    status: active
+    owner: DSH
+

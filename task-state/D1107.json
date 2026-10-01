@@ -1,0 +1,3 @@
+{"id":"D1107","title":"DOC-CONTRACT 三闸执行体（交 K3 独立复核）","status":"in_progress","created":"2026-10-01","branch":"chore/D1107-doc-contract-gates",
+"write_set":["scripts/control-tower/check-doc-contract.sh","scripts/control-tower/validate_doc_contract.py","docs/synova/DOC-CONTRACT.md","docs/authority/DOCS-REGISTRY.yaml",".claude/task-briefs/2026-10-01-D1107-三闸执行体.md","task-state/D1107.json","memory/notes/proposed/2026-10-01-d1107-doc-contract-executor.md",".claude/bypass.log"],
+"note":"契约 §3 自述机器可核但全仓无执行体（0 命中 / 阳性对照 45）；本件补执行体+§3.1；不新增判据、不接线、不声称合规；作者即判者 ⇒ 交 K3 独立复核（红线 R-6）；全量核暴露 2 处存量违规只上报不代改"}
