@@ -213,6 +213,34 @@ decisions/{lifecycle}/{class}/YYYY-MM-DD-topic-title.md
    ⇒ 特例：`scripts/golden-scenarios/evidence/**`（GSS 契约要求 git 跟踪，见 .gitignore:82）**放行**
 ❌ 其余一律阻断（coordination/ · task-briefs/ · reports/ · 派单 · 纪要 · 分类 · 看板 · 探针留档）
 
+### 3.1 三闸的执行体（D1107 补，2026-10-01）
+
+> **补的是「机器可核」这句话的执行面**。实测缺口：契约自述三闸「机器可核」，但全仓无执行体 ——
+> ```
+> grep -rn "DOC-CONTRACT" --include=*.sh --include=*.py --include=*.yml scripts/ .github/   → 0 命中
+> 阳性对照: grep -rn "pre-commit-check" 同口径                                              → 45 命中
+> ```
+> ⇒ 不是 grep 坏了，是**真没有**。独立复核（`取证-20261001/独立复核-交接三件-20261001.md`）
+> 亦已把「文档契约三闸（格式/取代/入库）无机器执行体」列为 ⚠️ 未修项。
+
+| 闸 | 执行体 | 触发点 | 现状 |
+|---|---|---|---|
+| 格式闸 / 取代闸 / 入库闸 | `bash scripts/control-tower/check-doc-contract.sh`<br>（`--staged` / `--files` / `--json`；内核 `validate_doc_contract.py`） | 人工或 CI **按需** | 🟡 **可跑、未接线** —— 接入 pre-commit / CI 属治理线工单 |
+| —— | —— | pre-commit（13 组）· CI job | 🔲 未接线 |
+
+**判据来源（执行体不发明新判据，逐条对应本契约）**：
+- 闸 1 ← 本契约 §2.2 模板（头三行 + 六段齐 + 状态↔目录交叉校验）
+- 闸 2 ← §3 取代闸 + §2.2 取代链三步
+- 闸 3 ← §3 白名单（含 **§9 过渡期白名单补充 :300** 的 `memory/notes/**`）
+
+**独立性声明（红线 R-6）**：执行体由 D1107 作者新增 ⇒ **其判据正确性须 K3 独立复核**；
+作者侧已附反例夹具（缺段 ⇒ 红）与阴性夹具（合法最小件 ⇒ 绿），但**夹具自测 ≠ 独立验证**。
+
+**已知不判成违规的存量冲突（显式登记，不掩盖）**：`coordination/` 与 `task-briefs/` 在 §3 属阻断面，
+但**二者仍在库**（`.claude/task-briefs/*.md`、`docs/synova/coordination/*.md` 均有跟踪面），
+且认领制与写集闸**物理要求每任务一份 brief** ⇒ 二者当前**打架**。
+处置：属 §7 存量迁移，归治理线；**本执行体不把它判成新违规**（否则任一提交都红 ⇒ 必然被绕过，V3.9 教训）。
+
 ---
 
 ## 4. 维护责任（谁写、谁维护）
