@@ -379,6 +379,32 @@ inj_g13() {
 # 通用约定：场景名 $name 若未红，则尝试 assert_${name}_structural；不存在该函数 → NOT_RED（判失败）。
 # 每个 assert 必须**用当前脚本里的真实模式**做探针（从副本 pre-commit-check.sh 抽模式），
 # 抽出失败即返回 1（宁可判红，不得用"我记得"当理由）。
+# 组 12：场景未红的结构性理由 —— 组 12 在「无今日 brief」时**整段跳过**（soft_pass / fail-open）。
+#   pre-commit-check.sh 组 12 注释自述（D506 修正）：
+#     "ALL_TODAY_BRIEFS 空 → G12 整段跳过 soft_pass（fail-open）"
+#   本场景只注入 scripts/m9-fixture-g12.sh，**未注入"今日 brief"** ⇒ 组 12 不产生 ❌
+#   是其 fail-open 行为所致 —— 属**门禁自身缺陷**（需 CTO 另行派工），非夹具失效。
+#   物理探针（不许口头豁免）：① 组 12 标签在源码 ② fail-open 分支在源码 ③ clone 内今日 brief 数 = 0
+assert_g12_structural() {
+  local pc="$CLONE/scripts/pre-commit-check.sh"
+  if ! grep -q '组 12/13: Task Scope 一致性' "$pc" 2>/dev/null; then
+    echo "    [structural g12] 未找到组 12 标签（模式抽不到）"
+    return 1
+  fi
+  local fo
+  fo="$(grep -cE 'ALL_TODAY_BRIEFS 空|G12 整段跳过|整段跳过 soft_pass' "$pc" 2>/dev/null || true)"
+  fo="${fo//[^0-9]/}"
+  local today n
+  today="$(date +%Y-%m-%d)"
+  n="$(ls "$CLONE/.claude/task-briefs/" 2>/dev/null | grep -c "$today" || true)"
+  n="${n//[^0-9]/}"
+  echo "    [structural g12] fail-open 自述命中 ${fo:-0} 处 ｜ clone 内今日($today) brief 数 = ${n:-0}"
+  if [ "${fo:-0}" -gt 0 ] && [ "${n:-0}" -eq 0 ]; then
+    return 0   # fail-open 分支存在 + 今日 brief 为 0 ⇒ 组 12 结构性不可达（门禁缺陷，已立卡）
+  fi
+  return 1
+}
+
 assert_g10_structural() {
   local pc="$CLONE/scripts/pre-commit-check.sh"
   local defs usages

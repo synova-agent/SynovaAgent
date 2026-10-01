@@ -5,9 +5,9 @@
   "domain": "mac",
   "owner": "工程线（X30 启动窗）",
   "spec": ".claude/task-briefs/2026-09-30-D1076-k3-persona.md",
-  "updated_at": "2026-09-30",
+  "updated_at": "2026-10-01",
   "updated_by": "harness-登记（X30 启动窗）",
-  "note": "K3 常驻 persona 两块更新提案（拒绝三分类＋告警升级表），按 D336 红线不落笔，待 CTO/K3 执行。指针: ~/Synova-过程档案/2026-09-30-mac小队-规格-K3persona更新提案.md；sha256:44bb878ee053f1b6；as_of 2026-09-30；重跑=打开该件按§五命令",
+  "note": "K3 常驻 persona 两块更新提案（拒绝三分类＋告警升级表），按 D336 红线不落笔，待 CTO/K3 执行。指针: ~/Synova-过程档案/2026-09-30-mac小队-规格-K3persona更新提案.md；sha256:44bb878ee053f1b6；as_of 2026-09-30；重跑=打开该件按§五命令｜【2026-10-01 闭环】K3 已落 persona 两块并三验证通过（① 源与运行态 diff=SAME ② 新 session 实测行为改变 ③ 留痕落库外仓+INDEX）；**legacy 漂移待裁**（仓内 persona-block.yml 未同步 → 交创始人/CTO 裁定「同批更新」或「有意保留」）；C-2 裁定=**采纳+加固**（判据文本见 K3 回执 §③，落 空对话测试清单.md 属清单 owner）。",
   "impl": null,
   "audit": null,
   "fix_task_id": null

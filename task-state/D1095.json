@@ -1,14 +1,14 @@
 {
-  "task_id": "D1095",
-  "title": "执行 Mac-CTO 五项裁定（分支保护与 CI 准出）",
-  "status": "claimed",
-  "domain": "mac",
-  "owner": "工程线（X30 启动窗）",
-  "spec": ".claude/task-briefs/2026-10-01-D1095-cto-ruling-exec.md",
-  "impl": null,
-  "audit": null,
-  "fix_task_id": null,
-  "updated_at": "2026-10-01",
-  "updated_by": "harness-登记（X30 启动窗）",
-  "note": "执行 Mac-CTO 2026-10-01 五项裁定（decisions/process/2026-10-01-branch-protection-and-ci-admission.md）。④ 已落：log-snapshot.sh 的裸 python3 改 PYBIN 三级探测（PLATFORM-CHECKLIST §1）⇒ V5 平台敏感命令命中清零，测试 20/20 无回归。① 预算口径（排除 task-state/task-briefs/memory-notes，MAX_FILES=12 不变 + 显示三值）待改；② 必需集（Gate Integrity 进 / npm audit 出但保持运行）待 API 改+复验；③ Convert to ruleset（不可逆，须①②落地后）。"
+  "id": "D1095",
+  "title": "g12 夹具结构性断言（存量红根治）",
+  "status": "in_progress",
+  "created": "2026-10-01",
+  "branch": "fix/g12-structural-assert",
+  "write_set": [
+    "tests/control-tower/precommit-groups-injection.test.sh",
+    "memory/notes/proposed/2026-10-01-g12-structural-assert.md",
+    ".claude/task-briefs/2026-10-01-D1095-g12结构性断言-存量红根治.md",
+    "task-state/D1095.json"
+  ],
+  "note": "存量红根治：g12 场景补 assert_g12_structural（物理探针三要素）"
 }

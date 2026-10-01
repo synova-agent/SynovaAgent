@@ -1,6 +1,6 @@
-# Task Brief: D1095 — 执行 Mac-CTO 五项裁定（分支保护与 CI 准出）
+# Task Brief: D1100 — 执行 Mac-CTO 五项裁定（分支保护与 CI 准出）
 
-> 生成: 2026-10-01｜任务: D1095｜认领: 工程线（X30 启动窗）｜分支: feat/x30-48h-m0
+> 生成: 2026-10-01｜任务: D1100｜认领: 工程线（X30 启动窗）｜分支: feat/x30-48h-m0
 > 依据: `decisions/process/2026-10-01-branch-protection-and-ci-admission.md`（CTO 裁定：五项全批，带约束）
 
 ## 项目身份（每次重读 — 源自 CLAUDE.md §项目身份）
@@ -54,10 +54,10 @@ SynovaAgent 是驻扎企业的 AI 诊断系统；诊断是手段，**增长导�
 
 | 文件 | 类 |
 |---|---|
-| `.claude/task-briefs/2026-10-01-D1095-cto-ruling-exec.md` | task |
+| `.claude/task-briefs/2026-10-01-D1100-cto-ruling-exec.md` | task |
 | `scripts/control-tower/log-snapshot.sh` | task |
 | `scripts/control-tower/check-pr-budget.sh` | task |
-| `task-state/D1095.json` | task |
+| `task-state/D1100.json` | task |
 | `.claude/bypass.log` | builtin（synova-commit D414） |
 
 ## Q3: 验收 — 入口 → 交互 → 结果
