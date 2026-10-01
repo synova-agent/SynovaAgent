@@ -279,3 +279,16 @@ documents:
     path: .dsh/skills/squad-discipline/SKILL.md
     status: active
     owner: DSH
+
+  # ---- D1063 PR-3 决策 Note（Mac 小队 2026-09-29 登记）----
+  # 登记原因: D2 登记门禁（scripts/doc-system/doc-registry-gate.sh:46 EXCLUDE）当前**不含** decisions/，
+  #   故 decisions/** 下的决策 Note 必须登记（gate 原文即「登记 … 或核对排除规则」）。
+  #   ⚠️ 缺口已上报队长：契约 §9 把 Note 家扩到 decisions/ 与 memory/ 双址，而 EXCLUDE 只放过 memory/——
+  #   若要免登记，应改 EXCLUDE（属治理门禁变更，另开卡）。
+  - id: DOC-0119
+    type: decision
+    path: decisions/process/2026-09-29-cn01-client-data-outbound-gate.md
+    status: active
+    owner: DSH
+    note: "D1063/CN-01 客户机密名入库扫描门禁（加盐哈希清单 + 文本/二进制双分流 + CT-34 分支内接线）"
+    verified-by: tests/control-tower/scan-client-names.test.sh + tests/control-tower/client-name-gate.test.sh (门禁判别性/接线)

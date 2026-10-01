@@ -19,6 +19,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 # ─── SUT: 加载 gen-task-board.py (D320) ───
 _SUT = os.path.join(
@@ -91,7 +92,6 @@ class TestGenTaskBoard(unittest.TestCase):
         self.assertEqual(_gtb.normalize_author("ClawOrg"), "Synova")
         self.assertEqual(_gtb.normalize_author("ClawOrg-Win"), "Synova-Win")
         self.assertEqual(_gtb.normalize_author("ClawOrg-Mac"), "Synova-Mac")
-        self.assertEqual(_gtb.normalize_author("哇呢"), "Synova-Mac")
         self.assertEqual(_gtb.normalize_author("Synova"), "Synova")
         self.assertEqual(_gtb.normalize_author("Test Runner"), "Test Runner")
         self.assertEqual(_gtb.normalize_email("claworg@users.noreply.github.com"),
@@ -100,6 +100,26 @@ class TestGenTaskBoard(unittest.TestCase):
                          "synova@users.noreply.github.com")
         self.assertEqual(_gtb.normalize_email("test@synova.local"),
                          "test@synova.local")
+
+    def test_author_alias_masked_without_plaintext(self):
+        """D1063/CN-01: 历史客户标识别名走**加盐哈希**通道归一，且明文不入库。
+
+        断言设计（为什么不用真实别名）: 真实别名本身就是客户标识 ⇒ 把它写进测试文件
+        等于把要清的东西再入库一次。故:
+          ① 机制自证 — 注册一个**合成**别名，断言其经哈希通道被归一（行为等价旧明文 key）
+          ② 结构自证 — 生产哈希表非空、key 全为 64 hex、value 为归一显示名
+          ③ 反向自证 — 未登记别名**原样返回**（不臆改他人作者名）
+        真实别名仍生效由验收时以实际值调用本函数复核（不落盘明文）。
+        """
+        synth = "SYNTHETIC-AUTHOR-ALIAS"
+        self.assertEqual(_gtb.normalize_author(synth), synth)   # 未登记 → 原样
+        with mock.patch.dict(_gtb._AUTHOR_ALIAS_MAP,
+                             {_gtb._alias_digest(synth): "Synova-Mac"}):
+            self.assertEqual(_gtb.normalize_author(synth), "Synova-Mac")
+        self.assertGreaterEqual(len(_gtb._AUTHOR_ALIAS_MAP), 1, "生产别名哈希表不得为空")
+        for digest, display in _gtb._AUTHOR_ALIAS_MAP.items():
+            self.assertRegex(digest, r"^[0-9a-f]{64}$", "key 必须是加盐 SHA-256（64 hex）")
+            self.assertTrue(display.startswith("Synova"), f"归一显示名异常: {display}")
 
     def test_author_normalized_in_git_log(self):
         """git_log_d 读取时对历史 ClawOrg author 做显示层归一 (email 同步)"""

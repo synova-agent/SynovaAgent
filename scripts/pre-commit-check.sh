@@ -343,6 +343,39 @@ if [ "$DOC_ONLY" -eq 1 ]; then
         exit 1
       fi
     fi
+
+    # ── D1063 / CN-01: 客户机密名扫描（**不随 CT-34 豁免**）──
+    # 为什么必须在此分支内也接一次: 纯文档提交在 :319 就早退，**永远到不了** 13 组主路径的同类检查；
+    #   而 D1063 实测泄露正是文档形态（口径：文件名 25 件；内容命中 167 件＝仅 CN-01 / 172 件＝
+    #   CN-01∪CN-02；其中大量是 .md/.html/.json，
+    #   且 `*.html` 在 DOC_PREFIX_RE 白名单内 —— 实测纯文档判定=1、非文档计数=0）。
+    #   只接主路径 = 纯文档提交整段绕过本门禁（与 D472 修复 Notes 迁移门禁被 CT-34 绕过的同型缺陷）。
+    # 级别: 与上方 Secrets 同级（数据泄漏 = 安全类，不进「质量组」语义）⇒ 命中**硬阻断，不看 SYNO_CI**，
+    #   与 Secrets 同为 exit 1；降级（exit 2，如数据文件缺失）同样 fail-closed 阻断，不静默放行（铁律 11）。
+    # 性能: 只读暂存区、增量口径，实测 <1s，不破坏 CT-34 秒过（V4.5.1 教训）。
+    _CN_PYBIN_DOC=""
+    for _c in python3 python py; do  # PYBIN 三级探测（PLATFORM-CHECKLIST #1，禁裸 python3）
+      if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then _CN_PYBIN_DOC="$_c"; break; fi
+    done
+    _CN_SCANNER_DOC="$ROOT/scripts/control-tower/scan-client-names.py"
+    if [ -z "$_CN_PYBIN_DOC" ]; then
+      echo -e "  ${RED}❌ 客户机密名扫描: 无可用 python — 无法判定，fail-closed（不静默放行）[硬阻断]${RESET}"
+      exit 1
+    elif [ ! -f "$_CN_SCANNER_DOC" ]; then
+      echo -e "  ${RED}❌ 客户机密名扫描: 扫描器缺失 scripts/control-tower/scan-client-names.py [硬阻断]${RESET}"
+      exit 1
+    else
+      _CN_OUT_DOC="$("$_CN_PYBIN_DOC" "$_CN_SCANNER_DOC" --repo "$ROOT" --scan-staged 2>&1)"
+      _CN_RC_DOC=$?
+      if [ "$_CN_RC_DOC" -eq 0 ]; then
+        echo -e "  ${GREEN}✅ 客户机密名扫描: $(printf '%s' "$_CN_OUT_DOC" | tail -1)${RESET}"
+      else
+        echo -e "  ${RED}❌ 客户机密名扫描: exit=$_CN_RC_DOC (0=通过/1=命中/2=降级) — 纯文档提交不豁免机密数据 [硬阻断]${RESET}"
+        printf '%s\n' "$_CN_OUT_DOC" | head -10 | while read -r line; do [ -n "$line" ] && echo "     ${line}"; done
+        exit 1
+      fi
+    fi
+
     echo -e "  ${GREEN}✅ 纯文档提交豁免检查完成 (CT-34)${RESET}"
     exit 0
   else
@@ -383,6 +416,42 @@ fi
 # ⚠️ 不裸看 git diff --cached：D414 会把 bypass.log 自动 add 进正常提交——裸看暂存区
 #    会让正常提交误走快速通道 = 质量根被绕过（D515 spec 自查坑）。唯一信号源 = 环境变量。
 # Secrets 保留（证据文件也可能泄密）；D331 对账由 pre-push 兜底，无需重复。
+
+# ═══ D1063 / CN-01: 客户机密名扫描（附加检查；**不并入 13 组编号** —— 同 D734/D782 接入模式）═══
+# 背景（D1063 实测；🔴 报数必带口径 —— 条目集不同则数不同，本卡曾因此漂一次）:
+#   基线 9608fba7 —— 文件名 25 件 ｜ 内容命中 167 件（仅 CN-01）/ 172 件（CN-01∪CN-02）｜
+#   并集（名 ∪ 内容，CN-01∪CN-02）177 件 ｜ 另有 1 件 docx（路径干净、OOXML 内含名、二进制
+#   不做内容扫描 ⇒ 不属上述任何集合）⇒ 实际待清 178 件。
+#   根因之一 = 无任何门禁能拦「把客户数据写进仓库」这种动作；本块补该调用点。
+#   数据清单不写死进脚本: scripts/control-tower/client-name-patterns.json（加盐 SHA-256，零明文）。
+# 为何不并入 13 组编号: 「✅ 全部 13 组通过」自声明行是 check-doc-truth.sh C2 的真值来源，
+#   改组数 = 连锁打破 AGENTS/CLAUDE/LOOP 的「13 组」声明（同 D782 :1461-1463 的判定）。
+# 位置（为什么在这里）: ① 在 CT-34 早退分支**之后** —— 纯文档提交走 :319-352 早退，本块不可达，
+#   故 CT-34 分支内**另有第二处接线**（缺一即纯文档整段绕过，而本次泄露正是文档形态）；
+#   ② 在 par_start **之前** —— 增量扫描实测 <1s，不占用并行槽（V4.5.1: 慢门禁 ⇒ 被迫 --no-verify）。
+# 判定: soft_check（本地 ⚠️ 软提示 / CI SYNO_CI=1 转硬 ❌，D515/D516）—— 与 D734 同口径。
+echo ""
+echo -e "${CYAN}── 客户机密名扫描 (D1063 / CN-01) ──${RESET}"
+_CN_PYBIN=""
+for _c in python3 python py; do  # PYBIN 三级探测（PLATFORM-CHECKLIST #1，禁裸 python3）
+  if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then _CN_PYBIN="$_c"; break; fi
+done
+_CN_SCANNER="$ROOT/scripts/control-tower/scan-client-names.py"
+if [ -z "$_CN_PYBIN" ]; then
+  soft_check "客户机密名扫描 (D1063): 无可用 python（fail-closed，不静默跳过）" "1"
+elif [ ! -f "$_CN_SCANNER" ]; then
+  soft_check "客户机密名扫描 (D1063): 扫描器缺失 scripts/control-tower/scan-client-names.py" "1"
+else
+  _CN_OUT="$("$_CN_PYBIN" "$_CN_SCANNER" --repo "$ROOT" --scan-staged 2>&1)"
+  _CN_RC=$?
+  if [ "$_CN_RC" -eq 0 ]; then
+    soft_pass "客户机密名扫描 (D1063): $(printf '%s' "$_CN_OUT" | tail -1)"
+  elif [ "$_CN_RC" -eq 1 ]; then
+    soft_check "客户机密名扫描 (D1063): 命中/未登记二进制 — 移除或改写后重试（scripts/control-tower/scan-client-names.py）" "$_CN_OUT"
+  else
+    soft_check "客户机密名扫描 (D1063): 扫描器降级或失败 (exit=$_CN_RC, D328 三态) — 未通过不得当作通过" "$_CN_OUT"
+  fi
+fi
 
 # ═══ V4.5.1: 慢脚本并行化 — 慢盘上串行 95s → 并行 ~26s ═══
 # 环境事实: 本机单文件 I/O ~500ms, python 启动 ~1.5s, git ~1s。
