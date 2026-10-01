@@ -1,0 +1,3 @@
+{"id":"D1113","title":"基座线 B-1 收件闸回执 + 岗位件补插件契约（宪章级缺漏）","status":"in_progress","created":"2026-10-02","branch":"docs/D1113-receipt-and-plugin-contract",
+"write_set":["docs/synova/coordination/收件闸回执-基座线B-1-20261002.md","docs/synova/CTO-ROLE.md","task-state/D1113.json","docs/synova/coordination/CTO-派单模板-v3.md",".claude/bypass.log"],
+"note":"① 收件闸回执：B-1 技术核验通过（我独立复核 timeout 存在+retry-middleware 接线、pruner 调用点 :244 JSON.stringify 先剪）、交付形态退回补三项（未推远端/无 task-state/号源用已废止的 Codex 流程）；② 岗位件补 §7.3 插件契约（院方 01 宪章级，此前我的预设完全缺）：三层能力/package-owned registry/五条约束/我们的实测缺口/对本职三条含义；③ 派单模板补 L-031/L-032 执行体（§〇-补 复现证据块 + §〇-补2 交付形态四要素）④ D# 让号：本件用 D1113（原 A7 件 D1112 与治理线撞号，我方让号）"}

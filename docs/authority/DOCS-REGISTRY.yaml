@@ -331,3 +331,10 @@ documents:
     status: active
     owner: DSH
 
+  # ---- D1113（收件闸回执 + 岗位件补插件契约 + 派单模板补执行体）2026-10-02 ----
+  - id: DOC-0138
+    type: governance
+    path: docs/synova/coordination/收件闸回执-基座线B-1-20261002.md
+    status: active
+    owner: DSH
+
