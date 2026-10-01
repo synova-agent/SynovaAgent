@@ -1,0 +1,33 @@
+{
+  "task_id": "D844",
+  "title": "归档恢复 3/3：协调文档 2 份 + 黄金场景证据 2 份（mac 域）",
+  "status": "impl_done",
+  "risk": "low",
+  "spec": "归档恢复：2026-09-20 主工作区清理时，这些文件被保全进归档（当时全仓唯一、main 里没有）。经逐项核对：与 main 无冲突、看板影响实测为零 → 走正常 PR 捡回仓库。",
+  "write_set": [
+    "task-state/D844.json",
+    "docs/synova/coordination/D792-main存量红定位-20260917.md",
+    "docs/synova/coordination/编码指令-D803-capital-cycle-20260917.md",
+    "scripts/golden-scenarios/evidence/GS-07-2026-08-23.json",
+    "scripts/golden-scenarios/evidence/first-diagnosis-timing-2026-09-13.json"
+  ],
+  "impl": "从 .synova-archive-20260920/moved*/ 按原路径恢复；未经修改（内容与归档一致）",
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-09-20",
+  "updated_by": "synova-cto",
+  "domain": "mac",
+  "owner": "synova-cto",
+  "executor": "synova-cto",
+  "milestone": "M0 项目管理基建",
+  "depends_on": [],
+  "blocked": null,
+  "target": "2026-W38",
+  "acceptance_points": [
+    "恢复后文件内容与归档一致（sha256 逐一比对）",
+    "看板派生器 gen-project-board.py 仍 degraded=false 且数字不变",
+    "PR 走 CI 全绿后合并"
+  ],
+  "next": "—",
+  "note": "D792 存量红定位报告（32KB，只读诊断）+ D803 编码指令底稿（活卡 D803=线10 资本循环，指令有复用价值）+ 2 份黄金场景证据。"
+}

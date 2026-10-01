@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "record_type": "scenario",
+  "scenario_id": "GS-07",
+  "source": "scripts/golden-scenarios/GS-07-data-security/expect.runtime.json",
+  "date": "2026-08-22",
+  "verdict": "pass",
+  "verdicts": [
+    {
+      "acceptance_point": "S7-1",
+      "verdict": "pass",
+      "quote": "pii-scrubbed pass: scrub(S2) 脱敏：姓名→[姓名]，手机号→[手机号]（敏感数据脱敏）（符合预期） | rbac-denied pass: staff 访问 private workspace → HTTP 403（越权拒绝）（符合预期）"
+    },
+    {
+      "acceptance_point": "S7-2",
+      "verdict": "pass",
+      "quote": "pii-boundary-s1 pass: scrub(S1) 姓名保持原文（敏感度级别正确）（符合预期）"
+    }
+  ],
+  "assertions": [
+    {
+      "id": "pii-scrubbed",
+      "desc": "scrub(S2) 脱敏：姓名→[姓名]，手机号→[手机号]（敏感数据脱敏）",
+      "purpose": "证明 PII 脱敏引擎可用：S2 级人名/联系方式脱敏（S7-1；敏感数据 → 脱敏）",
+      "verdict": "pass",
+      "detail": "符合预期"
+    },
+    {
+      "id": "rbac-denied",
+      "desc": "staff 访问 private workspace → HTTP 403（越权拒绝）",
+      "purpose": "证明 RBAC 越权拒绝 fail-closed（S7-1；越权访问被拒）",
+      "verdict": "pass",
+      "detail": "符合预期"
+    },
+    {
+      "id": "pii-boundary-s1",
+      "desc": "scrub(S1) 姓名保持原文（敏感度级别正确）",
+      "purpose": "证明脱敏级别边界正确：S1 不脱敏内部级字段（S7-2；级别语义）",
+      "verdict": "pass",
+      "detail": "符合预期"
+    }
+  ]
+}
