@@ -1,0 +1,14 @@
+{
+  "task_id": "D1090",
+  "title": "文档契约合规迁移（X30 窗口 14 件分流 + 2 决策）",
+  "status": "claimed",
+  "domain": "mac",
+  "owner": "工程线（X30 启动窗）",
+  "spec": ".claude/task-briefs/2026-09-30-D1090-doc-contract-migration.md",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-09-30",
+  "updated_by": "harness-登记（X30 启动窗）",
+  "note": "工程线自行登记（2026-09-30，占用表真实化）：文档契约合规迁移——把 X30 窗口写入 coordination/ 的 14 份过程件按契约 §7 三类分流（13 件出库到 ~/Synova-过程档案/、1 件转 PR 正文），结论进卡 note（§10.1②），沉淀 2 份 B 层决策（decisions/proposed/process/）。触发：创始人指出契约 2026-09-27 已生效而本线未遵守。（C-2 判据改写提案已出：库外仓 2026-09-30-mac小队-规格-空对话测试C2判据改写提案.md，sha256:f308a4aa65b69aac）"
+}
