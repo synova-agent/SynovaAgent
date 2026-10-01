@@ -76,6 +76,13 @@ except (AttributeError, ValueError):
 # ── 内置豁免（路径级）。加条目必须附理由，且会在输出里打印 ──
 BUILTIN_EXEMPT: Dict[str, str] = {
     ".claude/bypass.log": "post-commit hook 每次提交追加的证据账本（运行期产物，与写集无关）",
+    # K3 报告指针式（CTO 治理）：审计报告全文落 K3 独立仓，本仓只落 docs/synova/audit-reports/
+    # 下一行索引（INDEX.md）。索引行由任意任务在交付时追加，属跨任务公共登记产物，
+    # 不归属任何单一任务写集——声明写集不含它不是夹带。
+    "docs/synova/audit-reports/**": "K3 报告指针式索引（INDEX.md 一行一条），跨任务公共登记产物，不属单一任务写集",
+    # 文档减负归档：历史文档批量 git mv 到 archive/ 前缀（零引用集合），无单一属主任务，
+    # 归档 PR 的写集天然是「被移动的历史文件全集」，逐条声明无意义。
+    "archive/**": "文档减负归档移动（历史文档无单一属主任务，归档路径统一收口）",
 }
 # 分支级跳过
 #   auto/**  —— CI 自动生成的仪表盘分支（无写集语义）
@@ -641,8 +648,12 @@ def main() -> int:
     smuggled: List[str] = []
     exempted: List[dict] = []
     for f in files:
-        if f in BUILTIN_EXEMPT:
-            exempted.append({"file": f, "reason": BUILTIN_EXEMPT[f], "kind": "builtin"})
+        # 内置豁免支持精确路径与 glob（如 docs/synova/audit-reports/**、archive/**）
+        ex_reason = BUILTIN_EXEMPT.get(f) or next(
+            (r for p, r in BUILTIN_EXEMPT.items() if fnmatch.fnmatch(f, p)), None
+        )
+        if ex_reason:
+            exempted.append({"file": f, "reason": ex_reason, "kind": "builtin"})
             continue
         hit = next(((e, s) for e, s in declared if matches(f, e)), None)
         if hit:

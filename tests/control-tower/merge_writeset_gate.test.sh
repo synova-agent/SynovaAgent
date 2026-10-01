@@ -159,6 +159,24 @@ OUT=$(run_gate); rc=$?
 [ "$rc" -eq 0 ] && ok "⑤ bypass.log 内置豁免 → exit 0" || no "⑤ bypass.log 被误判夹带: rc=$rc"
 echo "$OUT" | grep -q 'post-commit hook' && ok "⑤ 打印内置豁免理由" || no "⑤ 未打印内置豁免理由"
 
+# ── ⑨ K3 报告指针式内置豁免: docs/synova/audit-reports/** 与 archive/** ──
+# 判据（改坏即红）: 声明写集不含 audit-reports/INDEX.md 时，改前=夹带红，改后=内置豁免绿。
+reset_sandbox ""
+printf 'a\n' > "$SB/src/a.ts"
+mkdir -p "$SB/docs/synova/audit-reports" "$SB/archive/old-docs"
+printf '| B1 | x | PASS | k3-repo@sha:r.md |\n' > "$SB/docs/synova/audit-reports/INDEX.md"
+printf 'moved\n' > "$SB/archive/old-docs/legacy.md"
+commit_it "feat(D708): k3 index + archive move"
+OUT=$(run_gate); rc=$?
+[ "$rc" -eq 0 ] && ok "⑨ audit-reports/INDEX.md 内置豁免 → exit 0" || { no "⑨ INDEX.md 被误判夹带: rc=$rc"; echo "$OUT" | tail -5; }
+echo "$OUT" | grep -q '指针式索引' && ok "⑨ 打印 audit-reports 豁免理由" || no "⑨ 未打印 audit-reports 豁免理由"
+if echo "$OUT" | grep -q '夹带文件'; then no "⑨ archive/** glob 未生效（仍判夹带）"; else ok "⑨ archive/** glob 豁免 → 不判夹带"; fi
+# 改坏即红: 反证——去掉 audit-reports 豁免键后同场景必须点名夹带（副本 gate 上模拟）
+sed '/audit-reports\/\*\*/d' "$GATE" > "$SB/scripts/control-tower/gate_broken.py"
+OUT2=$( (cd "$SB" && python3 "$SB/scripts/control-tower/gate_broken.py" --repo-root "$SB" --base "$BASE" --head HEAD --branch fix/D708-sandbox 2>&1) )
+echo "$OUT2" | grep -q 'docs/synova/audit-reports/INDEX.md' \
+  && ok "⑨ 改坏即红: 去掉豁免键后 INDEX.md 被点名夹带" || no "⑨ 改坏即红失败（去豁免仍绿 = 门禁失效）"
+
 # ── ⑥ 分支豁免: auto/**（CI 生成物分支）──
 BRANCH="auto/dashboard" OUT=$(run_gate); rc=$?
 { [ "$rc" -eq 0 ] && echo "$OUT" | grep -q 'auto/'; } \

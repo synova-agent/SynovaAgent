@@ -1740,6 +1740,7 @@ Binary file .claude/bypass.log matches
 2026-09-24T20:21:11Z detected-bypass head-mismatch marker=114e129e7ae2d9888d3c9a719391de8c39a756c1 parent=da6a42f4150393c225ff6303541cf9a4e55964b2
 2026-09-25T04:47:41+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=a4ea5bd1f02193e3665f90717b965d469854dcee
 2026-09-25T07:39:30+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=40771c092ae39c44b51fc50b8f954dbe53374a58
+2026-09-25T13:04:52+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=bac6d03667b5e834833e62bd7b49ce4fe6a48c7d
 2026-09-25T05:05:54Z detected-bypass head-mismatch marker=0fd44b7689c1a8870a8bc7a4394e53120061bf4b parent=519edadf83642b517b415cce52927a02b120b865
 2026-09-25T13:06:30+08:00 | GATE_FAIL_SOFT | exit=1 | branch=
 2026-09-25T13:06:35+08:00 | GATE_FAIL_SOFT | exit=1 | branch=
@@ -1780,6 +1781,10 @@ Binary file .claude/bypass.log matches
 2026-09-25T12:12:43+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=0f6a72e1311a36e09a72b5a8d92b8bfed77bb450
 2026-09-25T12:35:27+08:00 | GATE_FAIL_SOFT | exit=1 | branch=fix/d937-gate-failopen-v2
 2026-09-25T12:35:27+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=c23357ca3924b5f24bddcba186bd475903eb0a5d
+2026-09-25T14:07:47+08:00 | GATE_FAIL_SOFT | exit=1 | branch=chore/cto-doc-slim-phase1-writeset-exempt
+2026-09-25T14:07:47+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=9c52d50f5049d1052081e0f0a4472cbecbcc5264
+2026-09-25T14:28:22+08:00 | GATE_FAIL_SOFT | exit=1 | branch=chore/cto-doc-slim-phase1-writeset-exempt
+2026-09-25T14:28:22+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=73ed397eb3cdf427a3fc0a8aa817aa3feb1cf07a
 2026-09-25T13:42:05+08:00 | GATE_FAIL_SOFT | exit=1 | branch=chore/cto-doc-slim-phase1b-citations-archive
 2026-09-25T13:42:07+08:00 | GATE_FAIL_SOFT | exit=1 | branch=chore/cto-doc-slim-phase1b-citations-archive
 2026-09-25T13:42:07+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=7904aceb0db1ed66b39d4d72424d8561f810c423
@@ -1808,6 +1813,10 @@ Binary file .claude/bypass.log matches
 2026-09-25T13:43:10+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=ca880226878e06378d8740f746afa450effa6842
 2026-09-25T14:27:42+08:00 | GATE_FAIL_SOFT | exit=1 | branch=chore/cto-doc-slim-k3-index
 2026-09-25T14:27:42+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=4bd48d6bc3f303bfa6fd8a7a122a3f678a19f94a
+2026-09-25T15:09:44+08:00 | GATE_FAIL_SOFT | exit=1 | branch=chore/cto-doc-slim-phase1-writeset-exempt
+2026-09-25T15:09:44+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=cabe7255af7e72d134093b4b8b6cd9a0efb8d863
+2026-09-25T15:50:42+08:00 | GATE_FAIL_SOFT | exit=1 | branch=chore/cto-doc-slim-phase1-writeset-exempt
+2026-09-25T15:50:43+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=04714052e3a60b990a709eb8f0c34fe613fc6b18
 2026-09-25T16:02:35+08:00 | GATE_FAIL_SOFT | exit=1 | branch=chore/d964-ledger-row6
 2026-09-25T16:02:35+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=1153518d2532fdfd2bde464763b3270f84906901
 2026-09-25T15:50:41+08:00 | GATE_FAIL_SOFT | exit=1 | branch=chore/cto-doc-slim-phase1b-citations-archive
