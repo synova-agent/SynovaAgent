@@ -1,8 +1,7 @@
----
-title: 落 pre-push-preview.sh（L-022「推前四件套」工具化）
+# 决策: 落 pre-push-preview.sh（L-022「推前四件套」工具化）
+
 状态: proposed
 日期: 2026-10-01
----
 
 ## 一句话
 
@@ -40,3 +39,16 @@ L-022 实体只在 `~/Synova-过程档案/`，是 4 条**手工命令**（非脚
 ## 取代
 
 无（新建）
+
+## 取代判定（契约 §3 闸2）
+
+- **同主题候选检索命令**：`grep -rl '推前预演\|L-022\|pre-push-preview' decisions/ memory/notes/ 2>/dev/null`
+- **检索到的候选**：
+  · `scripts/pre-push-check.sh`（既有**推前门禁**）—— 非决策件；与本件关系是**互补**（本件是"预演工具"，不阻断；门禁仍由它执行）
+  · `memory/notes/proposed/2026-09-18-d806-ledger-dsh-alignment.md` —— 主题为账本对齐，不相关
+  · `memory/notes/implemented/2026-09-03-d571-escape-hatch-audit-chain.md` —— 主题为逃逸舱审计，不相关
+- **判定**：**无全取代、无部分取代**。本文为**新主题**（L-022 四件套的**工具化落地**），
+  不改变任何既有决策的效力；亦未被任何既有决策取代。
+- **备注**：本段为**事后补齐**（契约自查 2026-10-01 发现初版缺失闸2 要素）——
+  根因见契约 §3 三闸**无机器执行体**（`grep -rn 'DOC-CONTRACT' scripts/ .github/` 零命中），
+  属契约自身待修项，已记入交接索引。
