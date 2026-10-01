@@ -1,0 +1,36 @@
+{
+  "task_id": "D1064",
+  "title": "post-commit 软失败记账 CI 必红/本机必绿（GNU stat 方言环境依赖根治）",
+  "status": "delivered",
+  "pr": 894,
+  "verdict": "可提请独立审计（独立自验员 9 项全复跑；K3 复审通过前不合并）",
+  "evidence": "docs/synova/product-lines/evidence/D1064-closeout-diff-selfverify-remaining.md",
+  "merge_order": "先合 base（fix/ct-flow-brief-ledger-20260927 = #868 D1032）→ 再合 #894；两卡均在等 D328 认领门禁修复（CTO 已立卡）",
+  "push_receipt": "7c8115f7 = git ls-remote origin/fix/D1064-softfail-ledger-ci-parity（2026-09-29）",
+  "risk": "medium",
+  "domain": "mac",
+  "owner": "synova-squad-lead",
+  "executor": "D1064 编码执行者（SynovaAgent 专职小队）",
+  "milestone": "M0 项目管理基建",
+  "depends_on": [
+    "D1023",
+    "D1030"
+  ],
+  "blocked": null,
+  "target": "2026-W40",
+  "spec": ".claude/task-briefs/2026-09-29-D1064-softfail-ledger-CI-parity.md",
+  "impl": "fix/D1064-softfail-ledger-ci-parity",
+  "audit": null,
+  "fix_task_id": null,
+  "priority": 1,
+  "base_branch": "fix/ct-flow-brief-ledger-20260927",
+  "base_head": "d718820f",
+  "note": "队长派单（2026-09-29）。栈式 PR（base=PR #868 头分支 d718820f）。根因（coreutils v9.4 src/stat.c 实证 + 改前红证）：GNU `stat -f` = --file-system，`stat -f %m FILE` 把 %m 当文件操作数（报错 exit 1 被 || true 吞）+ FILE 文件系统信息走 stdout ⇒ v=非空垃圾 ⇒ 回退链不触发 ⇒ $((mm-lm)) 算术爆炸 ⇒ || return 0 ⇒ 账本记纯 PASS（ubuntu job 109245598170 症状逐字吻合）；BSD/macOS `stat -f %m` 恰为合法 mtime 语法 ⇒ 本机必绿假阳性。修法：_mtime_sec 回退链反转为 GNU `stat -c %Y` 权威在前 + 两级结果纯数字校验（非数字/空一律丢弃）。CT-2b CI 等价夹具 = 测试内 GNU 语义 stat shim 前置 PATH（D1030 手法同源）。改前红证：d718820f 原版代码 + shim → `13 通过, 2 失败`（与 CI 逐字一致）；改后本机/GNU shim 双环境 `17 通过, 0 失败`；变异（注释 _softfail_state 调用）→ 4 失败（判别性成立）。判据文本 DEGRADED-PASS 一字未改。",
+  "write_set": [
+    "scripts/hooks/post-commit.sh",
+    "tests/control-tower/post-commit.test.sh",
+    ".claude/task-briefs/2026-09-29-D1064-softfail-ledger-CI-parity.md",
+    "task-state/D1064.json",
+    ".claude/bypass.log"
+  ]
+}

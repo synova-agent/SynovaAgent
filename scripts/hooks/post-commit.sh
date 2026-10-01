@@ -46,10 +46,17 @@ _bypass_append() {
 #   下一轮干净提交会**重写 marker**（mtime 前移）而日志不变 ⇒「marker 比日志新」= 该软失败行
 #   已过时，不再标注（防把后续干净提交误标为 DEGRADED）。
 #   窗口 SYNO_SOFT_FAIL_WINDOW（秒，默认 5）可调；实测同一轮差值 = 0s。
-_mtime_sec() { # <file> → mtime 秒（BSD stat → GNU stat 回退；都不可用 → 空）
+# D1064 (CI 必红/本机必绿根因, job 109245598170): GNU stat 语义差异——GNU `stat -f` =
+#   --file-system（文件系统状态，格式仅经 -c 传入），`stat -f %m FILE` 把 %m 当第二个文件操作数：
+#   %m 报错走 stderr（exit 1 被 || true 吞），FILE 走 stdout 输出多行文件系统信息 → v 捕获
+#   非空垃圾 → 回退链不触发 → $((mm - lm)) 算术爆炸 → || return 0 → 状态空 → 记成纯 PASS。
+#   修复: 回退链反转为 GNU 权威在前（-c %Y），BSD -f %m 兜底；并对两次结果做纯数字校验
+#   （非数字/空 → 丢弃 → 走下一级），垃圾永远进不了算术窗口（零方言依赖）。
+_mtime_sec() { # <file> → mtime 秒（GNU stat -c %Y 权威 → BSD stat -f %m 兜底；非数字一律丢弃 → 空）
   local f="$1" v=""
-  v="$(stat -f %m "$f" 2>/dev/null || true)"
-  [ -n "$v" ] || v="$(stat -c %Y "$f" 2>/dev/null || true)"
+  v="$(stat -c %Y "$f" 2>/dev/null || true)"          # GNU/Linux
+  case "$v" in ''|*[!0-9]*) v="$(stat -f %m "$f" 2>/dev/null || true)";; esac   # BSD/macOS
+  case "$v" in ''|*[!0-9]*) v="";; esac               # 两级都失败或产出非数字垃圾 → 显式空（降级路径）
   printf '%s' "$v"
 }
 _softfail_state() {
