@@ -72,7 +72,7 @@ echo "── 推前预演（L-022 四件套）── root=$ROOT"
   step "1/4 brief 可解析" bash scripts/workflow/check-brief-parseable.sh || echo "  (跳过 1/4：脚本缺失)"
 
 [ -f scripts/control-tower/merge_writeset_gate.py ] && \
-  step "2/4 写集一致" python3 scripts/control-tower/merge_writeset_gate.py || echo "  (跳过 2/4：脚本缺失)"
+  step "2/4 写集一致" python3 scripts/control-tower/merge_writeset_gate.py || echo "  (跳过 2/4：脚本缺失)"  # D520: macOS 自带 python3（PLATFORM-CHECKLIST）
 
 [ -f tests/control-tower/precommit-groups-injection.test.sh ] && \
   step "3/4 夹具自测" bash tests/control-tower/precommit-groups-injection.test.sh || echo "  (跳过 3/4：夹具缺失)"
