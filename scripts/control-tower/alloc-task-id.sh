@@ -133,6 +133,8 @@ _lock_release() {
     rc=1
   fi
   rmdir "$LOCK_DIR" 2>/dev/null || true  # swallow-ok: 释放锁失败=已释放
+  # FIX-006: 清理扫描用临时文件（读取面索引）；未创建时静默跳过
+  [ -n "${WT_USED_FILE:-}" ] && rm -f "$WT_USED_FILE" 2>/dev/null || true
   exit "$rc"  # 显式导出退出码（EXIT trap 内 exit 不回递归触发 trap）
 }
 
@@ -216,6 +218,28 @@ _occupy_locations() {
       fi
     done <<< "$(git -C "$TS_TOP" worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2}' || true)"
   fi
+  # ⑥ FIX-006: 其它 worktree 的 task-state（= 读取面 WORKTREE_USED 的**同源**）。
+  #   修「读取面 ≠ 拒绝面」：原拒绝面只查 worktree **目录名**（⑤），而占用表读取面用的是
+  #   「其它 worktree 的 task-state/D*.json」⇒ 某号已在别处登记（并把 MAX 推高）时仍可能被发放。
+  #   优先**复用读取面产物** WT_USED_FILE（号→路径索引）；索引缺失（如 --check-id 只读模式）时
+  #   退化为按号定向探测（每 worktree 一次 -f 判断，O(#worktree)，不做全表扫描）。
+  if [ "${SYNO_ALLOC_NO_WORKTREE:-0}" != "1" ] && [ -n "$TS_TOP" ]; then
+    local idx_hit=""
+    if [ -n "${WT_USED_FILE:-}" ] && [ -s "$WT_USED_FILE" ]; then
+      idx_hit="$(awk -v n="$num" -F'\t' '$1==n {print $2}' "$WT_USED_FILE" 2>/dev/null | head -5 || true)"  # swallow-ok: 索引存在性已由 -s 保证；读空=该号不在读取面结果中
+    fi
+    if [ -n "$idx_hit" ]; then
+      while IFS= read -r _p; do
+        [ -n "$_p" ] && printf 'worktree-task-state  %s\n' "$_p"
+      done <<< "$idx_hit"
+    else
+      while IFS= read -r wt; do
+        [ -z "$wt" ] && continue
+        [ "$wt" = "$TS_TOP" ] && continue
+        [ -f "$wt/task-state/D${num}.json" ] && printf 'worktree-task-state  %s\n' "$wt/task-state/D${num}.json"
+      done <<< "$(git -C "$TS_TOP" worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2}' || true)"
+    fi
+  fi
   return 0
 }
 
@@ -270,6 +294,12 @@ USED="$(printf '%s\n%s\n' "$USED" "$REMOTE_USED" | grep -E '^[0-9]+$' || true)"
 # task-state/D*.json 合入占用表。语义：扫描跟随 TASK_STATE_DIR 所属仓库（测试注入临时目录
 # = 非 git → 自动跳过）；SYNO_ALLOC_NO_WORKTREE=1 测试注入缝；降级显式提示（不静默）。
 WORKTREE_USED=""
+# FIX-006（P0 挂死）: 原实现 `WORKTREE_USED="${WORKTREE_USED}${n}\n"` 在双层循环内做**字符串累加**——
+#   bash 字符串不可变 ⇒ 每次追加复制整串 ⇒ O(n²)。实测规模（297 worktree / 87,130 个 task-state
+#   文件）≈92s，使取号入口远超 LOCK_WAIT_SEC=30。改为**追加写临时文件**（O(1) 每次），末尾一次读入；
+#   同一文件同时充当「号 → 路径」索引，供拒绝面 `_occupy_locations` 复用（修「读取面 ≠ 拒绝面」）。
+WT_USED_FILE="$(mktemp "${TMPDIR:-/tmp}/syno-alloc-wtused.XXXXXX" 2>/dev/null || echo "$TASK_STATE_DIR/.wt-used.$$")"
+: > "$WT_USED_FILE" 2>/dev/null || true
 if [ "${SYNO_ALLOC_NO_WORKTREE:-0}" = "1" ]; then
   :  # 测试注入缝: 禁用 worktree 扫描
 else
@@ -292,8 +322,7 @@ else
           D[0-9]*.json)
             n=${bn#D}; n=${n%.json}
             case "$n" in ''|*[!0-9]*) continue ;; esac
-            WORKTREE_USED="${WORKTREE_USED}${n}
-"
+            printf '%s\t%s\n' "$n" "$f" >> "$WT_USED_FILE"
             ;;
         esac
       done
@@ -302,6 +331,9 @@ else
     echo "⚠ alloc-task-id: git worktree list 失败——在途 worktree 占用检查跳过（可能漏号）" >&2
   fi
 fi
+WORKTREE_USED="$(cut -f1 "$WT_USED_FILE" 2>/dev/null | grep -E '^[0-9]+$' || true)"
+WT_USED_FILE_ROWS="$(grep -c . "$WT_USED_FILE" 2>/dev/null || true)"
+[ -z "$WT_USED_FILE_ROWS" ] && WT_USED_FILE_ROWS=0
 USED="$(printf '%s\n%s\n' "$USED" "$WORKTREE_USED" | grep -E '^[0-9]+$' || true)"
 
 # CT-63: 远端分支名 D# 扫描——Win/Claude 线自编号不走 alloc，分支名是唯一在途信号

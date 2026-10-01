@@ -488,6 +488,48 @@ if [ "$FAIL" -gt 0 ] && [ -z "$FIRST_FAIL" ]; then
   echo "  ❌ SELF-CHECK: FAIL=$FAIL 但 FIRST_FAIL 为空（fail() 记名机制缺陷）"
   exit 2
 fi
+# ═══ FIX-006: 拒绝面必须使用读取面同源（其它 worktree 的 task-state）——成对反例 ═══
+# 缺陷: `_occupy_locations` 原只查 worktree **目录名**（⑤），而占用表读取面用的是
+#   「其它 worktree 的 task-state/D*.json」⇒ 号已在别处登记时，--check-id 仍答"未占"。
+# ⒜ 未占用名 → 放行（rc=0） ｜ ⒝ 已占用名（登记在另一 worktree）→ 拒绝（rc=1 + 点名）
+F6_DIR="$(mktemp -d)"; CLEANUP_DIRS+=("$F6_DIR")
+F6_MAIN="$F6_DIR/main"; F6_WT2="$F6_DIR/wt2"
+mkdir -p "$F6_MAIN/task-state"
+git -C "$F6_MAIN" init -q
+git -C "$F6_MAIN" config user.email t@t.local && git -C "$F6_MAIN" config user.name t
+printf '{}\n' > "$F6_MAIN/task-state/D1000.json"
+git -C "$F6_MAIN" add -A >/dev/null 2>&1 && git -C "$F6_MAIN" commit -q -m base
+git -C "$F6_MAIN" worktree add -q "$F6_WT2" -b wt2 >/dev/null 2>&1
+mkdir -p "$F6_WT2/task-state"; printf '{}\n' > "$F6_WT2/task-state/D9999.json"
+f6_check() { # $1 = 号; $2 = 锁目录后缀
+  SYNO_TASK_STATE_DIR="$F6_MAIN/task-state" SYNO_LOCK_DIR="$F6_DIR/lock-$2" \
+  SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_BRANCH=1 bash "$TOOL" --check-id "$1" 2>&1
+}
+OUT=$(f6_check 8888 a) && F6_RC=0 || F6_RC=$?
+[ "$F6_RC" -eq 0 ] && pass "FIX-006⒜ 未占用名 → 放行（rc=0）" || fail "FIX-006⒜ 未占用名被拒（rc=$F6_RC）"
+OUT=$(f6_check 9999 b) && F6_RC=0 || F6_RC=$?
+[ "$F6_RC" -eq 1 ] && pass "FIX-006⒝ 已占用名（另一 worktree 的 task-state）→ 拒绝（rc=1）" || fail "FIX-006⒝ 漏判：已占用名被放行（rc=$F6_RC）"
+printf '%s\n' "$OUT" | grep -q 'worktree-task-state' \
+  && pass "FIX-006⒝ 冲突点名 worktree-task-state（读取面同源）" || fail "FIX-006⒝ 未点名 worktree-task-state"
+# 判别性反例（改坏即红）: 把 ⑥ 段外层条件改成 `if false; then`（模拟回退到修前）→ ⒝ 必须重新漏判
+F6_MUT="$F6_DIR/alloc-mutant.sh"
+python3 -c "
+import sys
+src=open(sys.argv[1],encoding='utf-8').read().split(chr(10))
+out=[];armed=False
+for line in src:
+    if line.startswith('  # ⑥ FIX-006:'):
+        armed=True
+    if armed and line.startswith('  if '):
+        line='  if false; then   # MUTANT: 禁用 ⑥'
+        armed=False
+    out.append(line)
+open(sys.argv[2],'w',encoding='utf-8').write(chr(10).join(out))
+" "$TOOL" "$F6_MUT"
+grep -q 'MUTANT: 禁用 ⑥' "$F6_MUT" && pass "FIX-006 变异体已生成（⑥ 段外层条件 → if false）" || fail "FIX-006 变异体生成失败（sed/python 未命中 ⑥ 段）"
+OUT=$(SYNO_TASK_STATE_DIR="$F6_MAIN/task-state" SYNO_LOCK_DIR="$F6_DIR/lock-m" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_BRANCH=1 bash "$F6_MUT" --check-id 9999 2>&1) && F6_RC=0 || F6_RC=$?
+[ "$F6_RC" -eq 0 ] && pass "FIX-006 判别性反例: 屏蔽 ⑥ 后 ⒝ 重新漏判（说明该断言非恒真）" || fail "FIX-006 判别性反例失败: 屏蔽 ⑥ 后仍判已占用（变异体未生效）"
+
 echo "  结果: PASS=$PASS FAIL=$FAIL${FIRST_FAIL:+ FIRST_FAIL=${FIRST_FAIL}}"
 echo "═══════════════════════════════════════════════════════════"
 # 失败摘要（**必须留在最后一行**：CI 只截 tail -8 进 ::error 注解）
