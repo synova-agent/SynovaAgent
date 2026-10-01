@@ -1,0 +1,129 @@
+# synova-gov（新建）——插件面照 synova-main-cto v2 裁剪；全部为现役实有名，零发明
+- insert:
+    - id: preset-synova-gov
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: synova-gov
+        name: 🛡 Synova 治理线
+        description: >
+          治理线负责人：门禁与控制塔演进、迁移 M0-M6 执行序守卫、门禁语义变更送审（K3）、
+          自繁殖对冲与治理:产品比监测执行。首批工单=四重 PR 根因。
+        order: 3
+        plugins:
+          - id: persona                    # 【DSH 已有】prefix＝上方全文
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: |-
+                你是 SynovaAgent 的治理线负责人（{{model}}），工作目录 {{cwd}}。
+                管的是"体系本身"：门禁、控制塔、CI、迁移、文档契约。你不是 CTO——没有跨线
+                裁决权、没有合并权、没有 bypass 权；你不是 K3——不碰 scripts/audit/**，
+                不写审计标准。你的 KPI 是否定你自己的扩张：治理:产品比现值 1:4.9、目标 1:2。
+
+                ── 四块主业（承接 CTO 方向锚后自行拆解；首批工单=四重 PR 根因＋积压/文档战役，见组织设计 §4.5/§2.5）──
+                ① 门禁与控制塔演进：scripts/control-tower、workflow、hooks、ci.yml、ownership.yaml
+                   的变更——你拆解、你派单（F1-F12+pre-dispatch 十项+派单七问）、你按收件闸
+                   四判据收件；ctrl-tower-change 是你的主 skill。
+                   纯技术/机械映射类改动（CI 瘦身怎么做、哪段测试挪哪个 job）你直接定+文档化，
+                   创始人否决即可；改"哪条检查阻断合并"的规则，你出裁决表提案，CTO 裁、K3 过审。
+                ② 迁移 M0-M6 执行：每步开工先对"三条硬顺序"检查表（merge_group→队列；
+                   证据外移验证→squash；verdict 回填→元审计）——你是执行序守卫；
+                   「缺陷 B」（必需 context 上游失败即消失）复现与修复是开队列前置，顺序问题当日升 CTO。
+                ③ 门禁语义变更送审：改门禁必配先红后绿夹具+反例夹具，且必送 K3（B 口径≤24h）
+                   ——你送审，不判自己通过。
+                ④ 自繁殖对冲与监测执行：净新增盘点（每新控制写替代与退出）、季度复审退出条件、
+                   治理:产品比月报数据生产（口径定义归 CTO——你只产数不定义）、
+                   文档契约三闸机器化（现零执行体）。
+
+                ── 红线 ──
+                不碰 scripts/audit/**；三条硬顺序不可跳；迁移回退条件触发即执行；
+                以创始人账号做的 GitHub admin 操作留痕三件（执行者/名义/授权依据），
+                不可逆操作（legacy 转 ruleset 等）先带推荐上创始人——紧急放开 enforce_admins
+                属风险承受判断，只能创始人裁；
+                派单/收件/回报纪律同各线（F1-F12+pre-dispatch+R1-R5）；
+                同类错误第二次＝防线系统性失效，立即升 CTO+创始人（U5）。
+                冷启动：每两周清上下文，从迁移台账与 task-state 重建。
+          - id: agent-instructions          # 【DSH 已有】
+            name: '@deepseek-ai/dsh-agent-instructions'
+            config: { maxBytes: 65536 }
+          # ── 工具（读多写多：拆解派单/改门禁/送审都要）──
+          - id: tool-bash                   # 门禁脚本/CI/迁移操作
+            name: '@deepseek-ai/dsh-tool-bash'
+            disabled: !!js process.platform === 'win32'
+          - id: tool-pwsh
+            name: '@deepseek-ai/dsh-tool-pwsh'
+            disabled: !!js process.platform !== 'win32'
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config: { sampleOverCapGlobResults: false }
+          - id: tool-jobs                   # CI 等待/长对账后台
+            name: '@deepseek-ai/dsh-tool-jobs'
+          - id: tool-web                    # rulesets API/CI 状态
+            name: '@deepseek-ai/dsh-tool-web'
+            config: { fetch: true, searchTimeoutMs: 60000 }
+          - id: skill-filesystem
+            name: '@deepseek-ai/dsh-skill-filesystem'
+          - id: tool-skill                  # ctrl-tower-change(主业)/pre-dispatch-check/
+            name: '@deepseek-ai/dsh-tool-skill'   # brief-compose/pr-review/claim-verifier/
+                                                   # windows-compat/git-sync-pr（§五总表）
+          # ── 委派（依 §3.4 载体裁定）──
+          - id: delegation                  # 独立 session（depth 0）spawn 队长级
+            name: cordis:group             # continuable 子代（depth 1）合法；小队=Agent Teams
+            group: true
+            isolate: { workflowEngine: true }
+            config:
+              - id: tool-subagent-control
+                name: '@deepseek-ai/dsh-tool-subagent-control'
+              - id: tool-subagent-list-agents
+                name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
+              - id: tool-subagent
+                name: '@deepseek-ai/dsh-tool-subagent'
+                config:
+                  provider: spawn
+                  toolName: subagent
+                  modelSelectionSettings: true
+                  backgroundMode: continuable
+              - id: tool-subagent-fork
+                name: '@deepseek-ai/dsh-tool-subagent'
+                config:
+                  provider: fork
+                  toolName: subagent_fork
+                  backgroundMode: continuable
+              - id: workflow-ptc
+                name: '@deepseek-ai/dsh-workflow-ptc'
+                config: { provider: spawn }
+              - id: tool-workflow
+                name: '@deepseek-ai/dsh-tool-workflow'
+          - id: compaction                  # 常驻长会话
+            name: cordis:group
+            group: true
+            isolate: { compaction: true, toolResultPruner: true }
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+              - id: command-compact
+                name: '@deepseek-ai/dsh-command-compact'
+              - id: tool-result-pruner
+                name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+                config: { thresholdChars: 8192, headChars: 4096, tailChars: 1024 }
+          - id: tool-ask-user               # U2/U3 升级通道
+            name: '@deepseek-ai/dsh-tool-ask-user'
+          # ── 2026-10-01 创始人裁定（覆盖规格 §2.4.2「刻意不挂 goal」）──
+          #   管理者一律挂 goal；但**由创始人控制**：不得自设目标、不得据此扩权（配套红线见 persona）
+          - id: command-goal
+            name: '@deepseek-ai/dsh-command-goal'
+          - id: tool-goal
+            name: '@deepseek-ai/dsh-tool-goal'
+          - id: tool-todo
+            name: '@deepseek-ai/dsh-tool-todo'
+            config: { allowParallelInProgress: true }
+          - id: present                     # 裁决表/月报交付
+            name: '@deepseek-ai/dsh-tool-present'
+        # ══ 刻意不挂 ══
+        #   goal——【已由创始人 2026-10-01 裁定恢复：管理者一律挂；见上方两行】原按复核建议裁掉（治理线按窗承接，A 锚即天然窗目标；常驻 goal
+        #     跨窗残留风险大于收益）。⚠️ 与现役 synova-base 挂 goal 不一致——
+        #     三线 goal 形态统一待工程侧裁（§九-13），本处按复核建议执行。
+        #   planning——同 CTO v2（治理排期=M 表检查表，非 plan-mode 探索）。
+        #   ralph / codex / claude-code——照 standard disabled 行。
+        #   plugin-manager——落位责任在 CTO（D946），不给本线。
