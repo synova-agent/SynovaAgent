@@ -653,18 +653,38 @@ def run(args):
     print("── 必需集 ⊆ 本仓可产出集: %d/%d 命中 ──" % (len(required) - len(missing), len(required)))
 
     live_note = ""
+    live_degraded = False
     if args.api_check:
-        live, _data = fetch_live_contexts(args.repo, args.branch)
-        live_only, base_only = diff_lists(live, required)
-        print("── live branch protection ⇄ 基线（双向，只报不改）──")
-        print("  live contexts = %d 条（gh api repos/%s/branches/%s/protection）" % (len(live), args.repo, args.branch))
-        for name in live_only:
-            violations.append("live 必需 context 未登记进基线（基线缺 live）: %s" % name)
-        for name in base_only:
-            violations.append("基线登记但 live 已不是必需 context（live 缺基线）: %s" % name)
-        if not live_only and not base_only:
-            print("  OK: live %d 条与基线逐字一致（双向零差集）" % len(live))
-        live_note = "；live=%d" % len(live)
+        # 🔴 D1111/收件修正（由 ct-gate 夹具 ③ 抓出）: `--allow-degraded` **只**把「live 取数不可用」
+        #   降为 warning，**绝不**吞掉静态面违规。若在此处直接抛 Degrade，静态面已判出的
+        #   `missing` 会被丢掉 ⇒ 旗标变"免检开关"（本窗实测：静态 11/12 + 坏 gh + 旗标 曾得 exit 0）。
+        #   故：allow_degraded 时**就地降级**（记 live_degraded，继续走到末尾判定）；
+        #   不带旗标时保持原语义（抛 Degrade ⇒ main 捕获 ⇒ exit 2，fail-closed）。
+        try:
+            live, _data = fetch_live_contexts(args.repo, args.branch)
+        except Degrade as exc:
+            if not args.allow_degraded:
+                raise
+            live_degraded = True
+            sys.stderr.write("degraded: %s\n" % exc.reason)
+            sys.stderr.write(
+                "warning: --allow-degraded 已启用 —— live 对账不可用（本仓 CI 的 github.token 无 admin "
+                "权限读 branch protection）⇒ 本次只出静态判定；live 双向对账请用带 PAT 的定期任务\n")
+            print("── live branch protection ⇄ 基线（双向，只报不改）──")
+            print("  SKIPPED(degraded): 取数不可用 ⇒ 本次不做 live 对账（静态判定不受影响）")
+        else:
+            live_only, base_only = diff_lists(live, required)
+            print("── live branch protection ⇄ 基线（双向，只报不改）──")
+            print("  live contexts = %d 条（gh api repos/%s/branches/%s/protection）" % (len(live), args.repo, args.branch))
+            for name in live_only:
+                violations.append("live 必需 context 未登记进基线（基线缺 live）: %s" % name)
+            for name in base_only:
+                violations.append("基线登记但 live 已不是必需 context（live 缺基线）: %s" % name)
+            if not live_only and not base_only:
+                print("  OK: live %d 条与基线逐字一致（双向零差集）" % len(live))
+            live_note = "；live=%d" % len(live)
+    if live_degraded:
+        live_note = "；live=SKIPPED(degraded)"
 
     if args.reverse:
         extra = [name for name in sorted(produced) if name not in set(required)]
@@ -696,17 +716,9 @@ def main(argv=None):
     except Degrade as exc:
         sys.stderr.write("degraded: %s\n" % exc.reason)
         print("REQUIRED-CONTEXTS: DEGRADED")
-        # --allow-degraded（D1111 新增，CI 专用）: 「取不到 live protection」**不改变静态判定**——
-        #   静态面（基线 ⊆ 本仓 job 名展开集）在 Degrade 之前已完成且已打印；此时降级只代表
-        #   「本次没能做 live 双向对账」，不代表判据失败。CI 上 github.token 无 admin 权限读
-        #   branch protection（实测：PR #935 Gate Integrity 因本步 exit 2 变红；本机已登录 gh 时 OK）
-        #   ⇒ CI 以本旗标把「live 对账不可用」降为**显式 warning**（仍 fail-closed 式可见），
-        #   由本地/带 PAT 的定期任务承担 live 对账。默认（不带旗标）**保持 exit 2**，绝不静默放行。
-        if args.allow_degraded:
-            sys.stderr.write(
-                "warning: --allow-degraded 已启用 —— live 对账不可用不改判静态结论；"
-                "不带该旗标时本情形为 exit 2（fail-closed）\n")
-            return EXIT_OK
+        # 注意: `--allow-degraded` 的降级处理**只**发生在 run() 内的 live 取数点（就地，见上）。
+        #   凡逃逸到此处的一律是「判据源缺失/不可读 ⇒ 静态面都没能完成」⇒ **永远 exit 2**，
+        #   不因旗标而放行（否则旗标会变成免检开关）。
         return EXIT_DEGRADED
 
 

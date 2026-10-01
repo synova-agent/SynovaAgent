@@ -21,7 +21,18 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #            live 少一条→1 点名 / 非法 JSON→2 / 缺 required_status_checks→2
 #   边界 ⑥ — 基线重复登记 → exit 1 点名；--reverse 报告模式对"缺产出"**不判违规**（exit 0 + NOTE）
 #   只读 ⑦ — 静态断言: 本器无写保护规则调用（无 --method/-X，无 PATCH/PUT/POST/DELETE）
-#   接线 ⑧ — 生产接线检查（**本卡不接线**，由线负责人统一做）: 未接线时打 ⚠️ 提示、不判红
+#   降级 ⑤b — `--allow-degraded`（D1111 CI 降级面，CI 上 github.token 无 admin 权限读保护规则）:
+#            ① 坏 gh + `--api-check --allow-degraded` ⇒ exit 0 且 stderr 同时含 `degraded:` 与 `warning:`
+#            ② 同场景**不带**旗标 ⇒ exit 2（fail-closed 未削弱）
+#            ③ **静态面违规在降级下仍必红**：改坏 job name + 坏 gh + 旗标 ⇒ exit 1（不是 0）
+#            ④ 旗标**单独使用**（无 --api-check / 无 Degrade）⇒ 行为与不带旗标完全一致（0/1 不变）
+#            ⑤ [收紧断言] 判据自身不可得（基线缺失）+ 旗标 ⇒ 仍须 exit 2（"判据拿不到 ≠ 通过"）
+#   接线 ⑧ — **真接线断言**（已接线）: ci.yml 调用 check-required-contexts.py（`run:` 段，非注释）
+#            + canary 清单登记本测试；另用 ci.yml **副本**做反向验证（删接线 ⇒ 断言必失效）
+#
+# 🔴 本文件有 2 条断言按上述**契约**写、当前实现未满足 ⇒ 现在必红（③ ⑤）。
+#    实测根因与最小补丁见回执（Degrade 早退先于静态裁决；补丁后本文件应 44/44 全绿）。
+#    严禁把这两条改写成"接受 exit 0"——那是把 fail-open 包装成通过（V3.9: 软机制 0% 有效）。
 #
 # 沙箱: 全部夹具在 mktemp -d 内；真 ci.yml / 真基线只**只读复制**；网络零依赖
 #   （--api-check 的 live 数据由本地 stub gh / 注入缝提供，绝不打真 API）。
@@ -264,6 +275,48 @@ else
   echo "  ⚠️ SKIP: Windows 无 POSIX 可执行 shim — PATH 坏 shim / stub gh 用例跳过（注入缝用例已覆盖降级路径）"
 fi
 
+# ── ⑤b --allow-degraded（D1111 CI 降级面；判定期望取自旗标契约，非实测行为）──
+echo "── ⑤b --allow-degraded（CI 降级面）──"
+FIXAD="$TMPD/fix-allow-degraded"; mk_fixture "$FIXAD"
+BADGH="$TMPD/no-such-gh-binary"
+
+# ① 坏 gh + --api-check --allow-degraded ⇒ exit 0，且 stderr 同时可见 degraded: / warning:
+runq env SYNO_REQUIRED_CONTEXTS_GH="$BADGH" "$PY" "$C" --root "$FIXAD" --api-check --allow-degraded
+[ "$RC" -eq 0 ] && ok "① 坏 gh + --api-check --allow-degraded → exit 0" \
+  || no "① 应 exit 0（降级转 warning），实际 $RC: $(echo "$OUT" | tail -1)"
+echo "$ERR" | grep -q "^degraded: " && ok "① stderr 含 degraded:（降级原因可见）" \
+  || no "① stderr 缺 degraded: 行: $ERR"
+echo "$ERR" | grep -q "^warning: " && ok "① stderr 含 warning:（降级被显式标注）" \
+  || no "① stderr 缺 warning: 行: $ERR"
+
+# ② 同场景**不带旗标** ⇒ exit 2（fail-closed 保留，不因新增旗标而削弱默认路径）
+runq env SYNO_REQUIRED_CONTEXTS_GH="$BADGH" "$PY" "$C" --root "$FIXAD" --api-check
+[ "$RC" -eq 2 ] && ok "② 同场景不带旗标 → exit 2（默认仍 fail-closed）" \
+  || no "② 不带旗标应 exit 2，实际 $RC"
+
+# ③ 最重要: **静态面违规在降级下仍必红** —— 改坏 job name + 坏 gh + 旗标 ⇒ exit 1（不是 0）
+runq env SYNO_REQUIRED_CONTEXTS_GH="$BADGH" "$PY" "$C" --root "$FIX1" --api-check --allow-degraded
+if [ "$RC" -eq 1 ]; then
+  echo "$OUT" | grep -q "^VIOLATION: " && ok "③ 静态面违规在降级下仍必红（exit 1 + 点名）" \
+    || no "③ exit 1 但未点名 VIOLATION"
+else
+  no "③ 静态面违规被降级吞掉: 应 exit 1，实测 ${RC}（降级 ≠ 免检；根因+补丁见回执）"
+fi
+
+# ④ 旗标**单独使用**（无 --api-check ⇒ 无 Degrade 场景）⇒ 判定与不带旗标完全一致
+runq "$PY" "$C" --root "$FIXAD" --allow-degraded
+[ "$RC" -eq 0 ] && ok "④ 旗标单独使用（健康夹具）→ exit 0（与不带旗标一致）" \
+  || no "④ 健康夹具 + 旗标应 exit 0，实际 $RC"
+runq "$PY" "$C" --root "$FIX1" --allow-degraded
+[ "$RC" -eq 1 ] && ok "④ 旗标单独使用（违规夹具）→ exit 1（与不带旗标一致）" \
+  || no "④ 违规夹具 + 旗标应 exit 1，实际 $RC"
+
+# ⑤ [收紧断言] 判据自身不可得（基线缺失）+ 旗标 ⇒ 仍须 exit 2：降级旗标覆盖的是
+#    「live 对账取不到数」，不是「判据文件没了也能过」——后者是门禁静默失效（D328 族）。
+runq "$PY" "$C" --root "$FIXN" --allow-degraded
+[ "$RC" -eq 2 ] && ok "⑤ [收紧] 基线缺失 + 旗标 → 仍 exit 2（判据不可得 ≠ 通过）" \
+  || no "⑤ [收紧] 基线缺失 + 旗标应 exit 2（判据不可得不得静默通过），实测 $RC"
+
 # ── ⑦ 只读红线（静态断言: 无写保护规则调用）──
 echo "── ⑦ 只读红线 ──"
 if grep -v '^[[:space:]]*#' "$C" | grep -qE -- '--method|[[:space:]]-X[[:space:]]|PATCH|PUT|POST|DELETE'; then
@@ -285,14 +338,30 @@ else
   no "bash <file>.py --help 失败: $(head -1 "$TMPD/bash-help.out")"
 fi
 
-# ── ⑧ 生产接线检查（本卡**不接线**，归线负责人统一做）──
-echo "── ⑧ 接线（本卡范围外）──"
-if grep -q "check-required-contexts" "$REPO/.github/workflows/ci.yml" 2>/dev/null \
-   || grep -q "check-required-contexts" "$REPO/scripts/pre-commit-check.sh" 2>/dev/null; then
-  ok "接线: ci.yml / pre-commit-check.sh 已调用 check-required-contexts"
+# ── ⑧ 生产接线断言（已接线；D1111 线负责人接线: ci.yml gate-integrity job + canary 清单）──
+echo "── ⑧ 接线（真断言 + 反向验证）──"
+CIY="${SYNO_CT_WIRING_CI_YML:-$REPO/.github/workflows/ci.yml}"
+wiring_ok() { # $1 = ci.yml 路径；rc 0 = 接线完整（调用 + canary 登记 + run: 段命中，非仅注释）
+  local f="$1"
+  [ -f "$f" ] || return 1
+  grep -q "check-required-contexts" "$f" 2>/dev/null || return 1
+  grep -q "check-required-contexts\.test\.sh" "$f" 2>/dev/null || return 1
+  grep -v '^[[:space:]]*#' "$f" | grep -q "check-required-contexts\.py" || return 1
+  return 0
+}
+if wiring_ok "$CIY"; then
+  ok "接线: ci.yml 调用 check-required-contexts.py（run: 段，非注释）"
+  ok "接线: ci.yml canary 清单登记 check-required-contexts.test.sh"
 else
-  echo "  ⚠️ 待接线: ci.yml / scripts/pre-commit-check.sh 尚未调用 check-required-contexts"
-  echo "     （本卡交付脚本+测试+基线；接线由线负责人统一做，避免热点文件多人写——见回执）"
+  no "接线缺失（${CIY}）: 须含 run: 段调用 check-required-contexts.py + canary 登记本测试"
+fi
+# 反向验证（判别性；夹具 = ci.yml **副本**，绝不碰真文件）: 删掉接线行 ⇒ wiring_ok 必判否
+FIXY="$TMPD/wiring-stripped-ci.yml"
+grep -v 'check-required-contexts' "$CIY" > "$FIXY" 2>/dev/null || true
+if [ -s "$FIXY" ] && ! wiring_ok "$FIXY"; then
+  ok "反向验证: 删掉接线（副本）⇒ 断言失效（不是纸老虎）"
+else
+  no "反向验证失败: 去掉接线后断言仍通过（夹具 ${FIXY}）"
 fi
 
 echo ""

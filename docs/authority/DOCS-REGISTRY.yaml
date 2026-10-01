@@ -324,3 +324,8 @@ documents:
     status: active
     owner: line-lead
 
+  - id: DOC-0140
+    type: governance
+    path: docs/synova/coordination/2026-10-02-D3-线登记与收口-R1R5-治理线一窗.md
+    status: active
+    owner: line-lead
