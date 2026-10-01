@@ -2,6 +2,14 @@
 # D313 M5 UTF-8 强制: Windows 控制台/子进程统一 UTF-8
 export PYTHONIOENCODING=utf-8
 export LC_ALL=C.UTF-8 2>/dev/null || true
+
+# D520/V5 平台敏感命令规避（PLATFORM-CHECKLIST.md #1）：**禁裸 python3** —— Windows 部分机器
+#   无 python3.exe（仅 python / py -3）；损坏 shim 只探存在性会静默漏拦（D328/D513）。
+PYBIN=""
+for _c in python3 python py; do  # PYBIN 三级探测（本行含 PYBIN 标记供 D520 平台扫描识别）
+  command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1 && PYBIN="$_c" && break
+done
+[ -z "$PYBIN" ] && { echo "⚠ log-snapshot: python 不可用（python3/python/py 均不可用）— 显式降级" >&2; exit 2; }  # D520 铁律 11：不静默
 # ═══════════════════════════════════════════════════════════════════════════════
 # log-snapshot.sh — 门禁日志「有界快照 + 轮转」归档（D1070 / X30 M0②）
 #
@@ -156,7 +164,7 @@ for name in "${NAMES[@]}"; do
 done
 
 # ── 索引全量重建（K3 消费入口）────────────────────────────────────────────────
-python3 - "$SNAPSHOT_DIR" "$TS" "$KEEP" "$MAX_BYTES" <<'PY'
+"$PYBIN" - "$SNAPSHOT_DIR" "$TS" "$KEEP" "$MAX_BYTES" <<'PY'
 import json, os, sys, hashlib, glob
 snap_dir, ts, keep, max_bytes = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
 items = []
