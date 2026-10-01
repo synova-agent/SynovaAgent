@@ -1,8 +1,7 @@
----
-title: 落 pre-push-preview.sh（L-022「推前四件套」工具化）
+# 决策: 落 pre-push-preview.sh（L-022「推前四件套」工具化）
+
 状态: proposed
 日期: 2026-10-01
----
 
 ## 一句话
 
