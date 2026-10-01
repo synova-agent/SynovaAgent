@@ -317,3 +317,10 @@ documents:
     status: active
     owner: line-lead
 
+  # D1112 送审件（A5 送审链：提案→K3 过审→CTO 裁；红线 7「改门禁者不自判」）
+  - id: DOC-0139
+    type: governance
+    path: docs/synova/coordination/K3审计请求-D1112-门禁语义变更-20261002.md
+    status: active
+    owner: line-lead
+

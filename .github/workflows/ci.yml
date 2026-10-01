@@ -771,17 +771,22 @@ jobs:
       # 补的缺口（D971 同型）: 无人保证「branch protection 的 12 个必需 context 名」与
       #   「workflow job `name:` 展开后实际能产出的 check-run 名」一致；改一个字符 ⇒ 必需 context
       #   静默失配 ⇒ check-run 永不上报 ⇒ PR 永久 blocked（405 "N of 12 required status checks are expected")。
-      # 判据载体: scripts/control-tower/required-checks-baseline.txt（12 条，与 live protection 双向核对）。
+      # 判据载体: scripts/control-tower/required-checks-baseline.txt（12 条）。
       # 本步**不判**「Gate Integrity 该不该进必需集」（那是语义变更，走 K3→CTO）；只判「名与名一致」。
-      # 取数语义: live 多一条 = warning（与「已发布但尚未回填基线」的合法窗口对齐）；
-      #   live 缺基线条目 / job 名失配 / 无法取数 = 红（有后果的漂移；降级绝不放行）。
+      # 三态: 0=一致 / 1=违规（exit 1 ⇒ 本 job 红）/ 2=降级（fail-closed）。
+      # 🔴 D1111 实测修正: CI 上 `github.token` **无 admin 权限**读 branch protection（本机已登录 gh 时 OK）
+      #   ⇒ 首版带 `--api-check` 使本步恒 exit 2（PR #935 实测本 job 因此变红，annotation 只有
+      #   "Process completed with exit code 2"）。修法：**静态面是阻断判据**（不取数、无网络、必可跑；
+      #   改坏 job 名 = 必红），live 双向对账降为**显式 warning**（`--allow-degraded`：打印 degraded 原因
+      #   + warning 行、exit 0）。判定不被降级削弱：静态面违规仍 exit 1。
+      #   live 对账的真落点 = 本地/带 PAT 的定期任务（见 D1 §2-A1 与 D2 §6）。
       - name: Required contexts ⇄ job name consistency (A1-①, read-only)
         if: steps.docsonly.outputs.docs_only != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
-          OUT="$(python3 scripts/control-tower/check-required-contexts.py --api-check --verbose 2>&1)"; rc=$?
+          OUT="$(python3 scripts/control-tower/check-required-contexts.py --api-check --allow-degraded --verbose 2>&1)"; rc=$?
           printf '%s\n' "$OUT"
           printf '%s\n' "$OUT" > /tmp/required-contexts-check.out
           exit "$rc"

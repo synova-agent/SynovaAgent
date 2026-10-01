@@ -598,6 +598,9 @@ def build_parser():
     parser.add_argument("--baseline", default=None, help="基线文件（默认 <root>/scripts/control-tower/required-checks-baseline.txt）")
     parser.add_argument("--workflows", default=None, help="workflow 目录（默认 <root>/.github/workflows）")
     parser.add_argument("--api-check", action="store_true", help="只读调 gh api，把 live contexts 与基线双向比对（只报不改）")
+    parser.add_argument("--allow-degraded", action="store_true",
+                        help="CI 专用: live 对账不可用时降为显式 warning（exit 0）；"
+                             "静态面判定不受影响。不带则 Degrade ⇒ exit 2（fail-closed）")
     parser.add_argument("--repo", default=DEFAULT_REPO, help="branch protection 所属仓（默认 %s）" % DEFAULT_REPO)
     parser.add_argument("--branch", default=DEFAULT_BRANCH, help="分支名（默认 %s）" % DEFAULT_BRANCH)
     parser.add_argument("--reverse", action="store_true", help="追加「产出但非必需」清单（信息级；报告模式不判违规）")
@@ -693,6 +696,17 @@ def main(argv=None):
     except Degrade as exc:
         sys.stderr.write("degraded: %s\n" % exc.reason)
         print("REQUIRED-CONTEXTS: DEGRADED")
+        # --allow-degraded（D1111 新增，CI 专用）: 「取不到 live protection」**不改变静态判定**——
+        #   静态面（基线 ⊆ 本仓 job 名展开集）在 Degrade 之前已完成且已打印；此时降级只代表
+        #   「本次没能做 live 双向对账」，不代表判据失败。CI 上 github.token 无 admin 权限读
+        #   branch protection（实测：PR #935 Gate Integrity 因本步 exit 2 变红；本机已登录 gh 时 OK）
+        #   ⇒ CI 以本旗标把「live 对账不可用」降为**显式 warning**（仍 fail-closed 式可见），
+        #   由本地/带 PAT 的定期任务承担 live 对账。默认（不带旗标）**保持 exit 2**，绝不静默放行。
+        if args.allow_degraded:
+            sys.stderr.write(
+                "warning: --allow-degraded 已启用 —— live 对账不可用不改判静态结论；"
+                "不带该旗标时本情形为 exit 2（fail-closed）\n")
+            return EXIT_OK
         return EXIT_DEGRADED
 
 
