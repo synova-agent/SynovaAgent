@@ -1,11 +1,15 @@
 {
-  "task_id": "D1069",
-  "title": "resolve-commit-brief 强锚点失配修复",
-  "status": "claimed",
-  "spec": null,
-  "impl": null,
-  "audit": null,
-  "fix_task_id": null,
-  "updated_at": "2026-09-29",
-  "updated_by": "alloc-task-id"
+  "id": "D1069",
+  "title": "resolve-commit-brief 锚点失配修复",
+  "status": "in_progress",
+  "created": "2026-09-29",
+  "updated": "2026-10-01",
+  "branch": "fix/D1069-resolve-brief-anchor",
+  "write_set": [
+    "scripts/workflow/resolve-commit-brief.sh",
+    "tests/control-tower/resolve-commit-brief.test.sh",
+    ".claude/task-briefs/2026-10-01-D1069-resolve-brief锚点修复-今日brief.md",
+    "task-state/D1069.json"
+  ],
+  "note": "2026-10-01 补当日 brief"
 }
