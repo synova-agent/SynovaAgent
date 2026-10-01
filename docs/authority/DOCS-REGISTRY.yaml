@@ -326,3 +326,10 @@ documents:
     status: draft
     owner: DSH
 
+  # ---- D1108（经验教训索引）2026-10-01 ----
+  - id: DOC-0134
+    type: knowledge
+    path: docs/synova/coordination/经验教训索引.md
+    status: active
+    owner: DSH
+
