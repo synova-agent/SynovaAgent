@@ -23,6 +23,7 @@
 # owner: 6 条中 5 条 UNASSIGNED —— **待 CTO 指派**（不自行认领，避免制造"归属已收口"的假象）；
 #   1 条 `Vitest (1/2)`（2026-09-25 增补）为 owner=CTO-Mac（按 CTO 派单指令登记）。
 # expires: 默认 = first_seen + 30 天；当前 5 条为 2026-10-24，`Vitest (1/2)` 为 2026-10-25（CTO 指令值）。
+# 2026-09-26（FIX-014）: 数据行新增**第 6 可选键** `disposition_due=YYYY-MM-DD`（D954 消费：逾期判红，与 expires 同级硬门；**键缺失不回溯**，故存量条目不因本键消失而变红；解析按键取值，不按字段序号）——本次 `Vitest (2/2)` owner UNASSIGNED→Mac-小队 + disposition_due=2026-10-24，`Vitest (1/2)` 补 disposition_due=2026-10-25；据此上方「6 条中 5 条 UNASSIGNED、1 条 CTO-Mac」更新为「4 条 UNASSIGNED、1 条 CTO-Mac、1 条 Mac-小队」。
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # ── [MAIN-PUSH] 段 —— main 分支 push 事件口径（保留既有 2 条） ─────────────────────
@@ -42,8 +43,8 @@
 #     total_check_runs=20；conclusions={'failure': 2, 'skipped': 2, 'success': 16}
 # 截至时刻: 2026-09-24T18:16+08:00（`Vitest (1/2)` 条目 2026-09-25 增补，见其 evidence 内 started）　　条数: 3　　owner: 2 条 UNASSIGNED + 1 条 CTO-Mac
 产物新鲜度（generated_at > 3 天必红） | first_seen=2026-09-24 | evidence=check-runs API main f25e61eb, conclusion=failure, started=2026-09-24T06:31:55Z, https://github.com/tangbaobao520/SynovaAgent/actions/runs/35964932621/job/107521310524 | owner=UNASSIGNED | expires=2026-10-24
-Vitest (2/2) | first_seen=2026-09-24 | evidence=check-runs API main f25e61eb, conclusion=failure, started=2026-09-24T05:04:29Z, https://github.com/tangbaobao520/SynovaAgent/actions/runs/35958319035/job/107501294874 （同一现象在 ci.yml L150-156 已有既有记录 PLAN-main-vitest-preexisting-red：存量红放行须可见、须烧掉，不得长期依赖放行） | owner=UNASSIGNED | expires=2026-10-24
-Vitest (1/2) | first_seen=2026-09-24 | evidence=check-runs API PR base 0ab457f2336df22de2511e3c635c439c9927c4b2, conclusion=failure, started=2026-09-25T05:12:58Z, name 逐字对齐无规范化, https://github.com/tangbaobao520/SynovaAgent/actions/runs/36097388138/job/107952956055 （与上方 `Vitest (2/2)` **同一底层红** = tests/deploy/recovery-pack.test.ts 的 locale 中文断言；vitest 分片把该文件落在 shard 1 → check 名漂移为 (1/2)，故须两名并存——见段头注） | owner=CTO-Mac | expires=2026-10-25
+Vitest (2/2) | first_seen=2026-09-24 | evidence=check-runs API main f25e61eb, conclusion=failure, started=2026-09-24T05:04:29Z, https://github.com/tangbaobao520/SynovaAgent/actions/runs/35958319035/job/107501294874 （同一现象在 ci.yml L150-156 已有既有记录 PLAN-main-vitest-preexisting-red：存量红放行须可见、须烧掉，不得长期依赖放行）; 2026-09-26 FIX-014 复核实证 main ef299746: check-runs API 唯一 failure=Vitest (2/2)，run 36146340288 job 108108419949 conclusion=failure started=2026-09-25T14:18:24Z https://github.com/tangbaobao520/SynovaAgent/actions/runs/36146340288/job/108108419949 内 FAIL tests/l3/graphbridge-wiring.test.ts:79 AssertionError expected +0 to be 1，Test Files 1 failed / 293 passed / 1 skipped; 既存红非本推送引入: 父提交 0f709900 run 36129254913 同用例同名同 file:line 亦 failure | owner=Mac-小队 | expires=2026-10-24 | disposition_due=2026-10-24
+Vitest (1/2) | first_seen=2026-09-24 | evidence=check-runs API PR base 0ab457f2336df22de2511e3c635c439c9927c4b2, conclusion=failure, started=2026-09-25T05:12:58Z, name 逐字对齐无规范化, https://github.com/tangbaobao520/SynovaAgent/actions/runs/36097388138/job/107952956055 （与上方 `Vitest (2/2)` **同一底层红** = tests/deploy/recovery-pack.test.ts 的 locale 中文断言；vitest 分片把该文件落在 shard 1 → check 名漂移为 (1/2)，故须两名并存——见段头注） | owner=CTO-Mac | expires=2026-10-25 | disposition_due=2026-10-25
 
 # ── [BRANCH/PR-PUSH] 段 —— 分支/PR push 事件口径（新增 3 条） ──────────────────────
 # 口径: GET /repos/tangbaobao520/SynovaAgent/commits/<base>/check-runs?per_page=100（事件类型 = push → feat/… 分支）
