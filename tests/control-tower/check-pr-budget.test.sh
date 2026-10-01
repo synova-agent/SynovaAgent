@@ -5,7 +5,7 @@
 # 覆盖（铁律 48: 正常 / 降级 / 边界 / 反例）:
 #   1. 正常路径 — 小写集单域 → exit 0
 #   2. 超预算  — 文件数 > 上限 → exit 1（且点明「拆 PR」）
-#   3. 跨域    — 变更落两个域 → exit 1（调 D733 check-ownership 单域模式）
+#   3. 跨域    — 变更落两个域 → **exit 0（信息性，2026-09-29 创始人决策：域不阻断）**
 #   4. 边界    — 0 文件 / 恰好等于上限 / --max-files 注入
 #   5. 降级    — 基线全链不可解析 → 显式 ⚠️ 留痕 + exit 0（不静默、不误红）
 #   6. 检查失败 — 域校验器缺失 → exit 2（fail-closed）
@@ -17,7 +17,7 @@
 #      ③ 只删白名单内 300 件放行 / ④ 无「## 出库声明」时豁免仍生效 + ⚠️
 #  12. D1028 DS3 旁路封堵 — R 双侧真 git mv（双向）/ DENY_EXACT 精确拒绝 /
 #      各 ❌ 前缀 ≥13 件纯删 → 全 exit 1
-#  13. D1028 DS4 三态与降级 — 豁免件 + 域校验器缺失 → 2 / python 不可用 → 2 /
+#  13. D1028 DS4 三态与降级 — 豁免件 + 域校验器缺失 → **0** / python 不可用 → **0**（2026-09-29 域不阻断）/
 #      空变更集不误报「豁免生效」
 #  14. D1028 DS5 自过与接线 — bash -n / 冻结规格正则逐字 / 旧口径 --diff-filter=ACMR 清零 /
 #      接线 ≥1 / MAX_FILES=12 与「禁调高上限」不回归 / D1028-A2v2 新缝与文案
@@ -121,14 +121,14 @@ if echo "$OUT" | grep -q "禁调高上限"; then pass "输出禁调高上限"; e
 run_expect 0 "--max-files 20 时同写集放行" --max-files 20 --files "a1.ts a2.ts a3.ts a4.ts a5.ts a6.ts a7.ts a8.ts a9.ts a10.ts a11.ts a12.ts a13.ts"
 
 echo ""
-echo "── 3. 跨域: 变更落两个域 → exit 1 ──"
-run_expect 1 "Mac 脚本 + Win src 混合" --files "scripts/control-tower/check-pr-budget.sh src/server.ts"
+echo "── 3. 跨域: 变更落两个域 → exit 0（信息性，不阻断）──"
+run_expect 0 "跨域不阻断: Mac 脚本 + Win src 混合" --files "scripts/control-tower/check-pr-budget.sh src/server.ts"
 if echo "$OUT" | grep -q "变更跨域"; then pass "跨域输出点名"; else fail "跨域未点名"; fi
 # 域判定豁免: bypass.log（各线都写的簿记）不应把单域 PR 误判成跨域
 run_expect 0 "bypass.log 豁免后仍单域" --files ".claude/bypass.log scripts/control-tower/check-pr-budget.sh"
 # D758: PR #538 实测形态——Win 的 1-5 双引导 + 它自己的验收证据，曾被判跨域卡死
 run_expect 0 "D758 证据目录豁免: Win 代码 + 自己的验收证据 → 单域" --files "docs/synova/product-lines/evidence/D716-win-20260913/1-5-dual-guide-win-evidence.txt src/server.ts tests/routes/setup-guide-retired.test.ts"
-run_expect 1 "D758 豁免不掩盖真跨域（证据 + Win 代码 + Mac 脚本）" --files "docs/synova/product-lines/evidence/D716-win-20260913/x.txt src/server.ts scripts/control-tower/check-pr-budget.sh"
+run_expect 0 "D758 证据 + Win 代码 + Mac 脚本（跨域不阻断）" --files "docs/synova/product-lines/evidence/D716-win-20260913/x.txt src/server.ts scripts/control-tower/check-pr-budget.sh"
 
 echo ""
 echo "── 4. 边界 ──"
@@ -149,12 +149,12 @@ if echo "$OUT" | grep -q "degraded: 基线不可解析"; then pass "降级明示
 if echo "$OUT" | grep -q "不静默放过"; then pass "降级说明不静默放过"; else fail "降级说明缺失"; fi
 
 echo ""
-echo "── 6. 检查失败: 域校验器缺失 → exit 2（fail-closed）──"
+echo "── 6. 域校验器缺失 → exit 0（信息性，不阻断；2026-09-29）──"
 mkdir -p "$TMPD/nochecker"
 cp "$TOOL" "$TMPD/nochecker/check-pr-budget.sh"
 OUT="$(bash "$TMPD/nochecker/check-pr-budget.sh" --files "scripts/control-tower/check-pr-budget.sh" 2>&1)"; _e=$?
-[ "$_e" = 2 ] && pass "缺 check-ownership.py → exit 2" || fail "缺域校验器 — 期望 2 实际 $_e"
-if echo "$OUT" | grep -q "域校验器缺失"; then pass "缺口点名「域校验器缺失」"; else fail "缺口未点名"; fi
+[ "$_e" = 0 ] && pass "缺 check-ownership.py → **不阻断**（2026-09-29 新语义：域信息性）" || fail "缺域校验器 — 期望 0 实际 $_e"
+if echo "$OUT" | grep -q "域信息跳过"; then pass "输出点名「域信息跳过」（不静默）"; else fail "信息跳过来源未点名"; fi
 
 echo ""
 echo "── 7. 落后基线: 沙箱仓库真落后 → ⚠️ 告警但 exit 0 ──"
@@ -214,7 +214,7 @@ if echo "$OUT" | grep -q "出库豁免不适用"; then pass "DS1②' 变体 输�
 #    落点 docs/archive/ 不在 D860 GOV_PREFIX_RE 内 → 放行只能来自 D1028 出库豁免（判别性）
 run_expect 0 "DS1③ 只删白名单内 300 件 → exit 0" --diff-status "$(mk_set 'docs/archive/f' 300 D '.md')"
 if echo "$OUT" | grep -q "出库豁免生效（300 件纯删除/重命名"; then pass "DS1③ 输出点名「出库豁免生效」+ 300 件"; else fail "DS1③ 未点名豁免生效/件数"; fi
-if echo "$OUT" | grep -q "✅ ② 无变更文件 → 域校验跳过"; then pass "DS1③ 豁免后 N_FILES=0（② 域校验跳过）"; else fail "DS1③ 豁免后未归零"; fi
+if echo "$OUT" | grep -q "域信息跳过"; then pass "DS1③ 豁免后 N_FILES=0（② 域信息跳过）"; else fail "DS1③ 豁免后未归零"; fi
 if echo "$OUT" | grep -q "13 > 上限"; then fail "DS1③ 仍在报超预算"; else pass "DS1③ 无超预算残留"; fi
 
 # ④ 只删白名单内文件 + 无「## 出库声明」→ 豁免仍生效 + ⚠️ 提示（§Q2.S4）
@@ -334,12 +334,12 @@ NOC="$TMPD/d1028-nochecker"
 mkdir -p "$NOC"
 cp "$TOOL" "$NOC/check-pr-budget.sh"
 OUT="$(bash "$NOC/check-pr-budget.sh" --diff-status "$(printf 'D\tdocs/archive/a.md\n')" 2>&1)"; _e=$?
-if [ "$_e" = 2 ]; then pass "DS4 豁免件 + 域校验器缺失 → exit 2（豁免不放行 fail-closed）"; else fail "DS4 豁免件缺校验器 — 期望 2 实际 $_e"; echo "$OUT" | sed 's/^/      | /' >&2; fi
+if [ "$_e" = 0 ]; then pass "DS4 豁免件 + 域校验器缺失 → exit 0（域信息性，不阻断）"; else fail "DS4 豁免件缺校验器 — 期望 0 实际 $_e"; echo "$OUT" | sed 's/^/      | /' >&2; fi
 BROKEN="$TMPD/d1028-brokenpy"
 mkdir -p "$BROKEN"
 for _c in python3 python py; do printf '#!/bin/sh\nexit 1\n' > "$BROKEN/$_c"; chmod +x "$BROKEN/$_c"; done
 OUT="$(PATH="$BROKEN:$PATH" bash "$TOOL" --diff-status "$(printf 'D\tdocs/archive/a.md\n')" 2>&1)"; _e=$?
-if [ "$_e" = 2 ]; then pass "DS4 python 不可用（三级探测全废）→ exit 2"; else fail "DS4 python 不可用 — 期望 2 实际 $_e"; echo "$OUT" | sed 's/^/      | /' >&2; fi
+if [ "$_e" = 0 ]; then pass "DS4 python 不可用（三级探测全废）→ exit 0（域信息性，不阻断）"; else fail "DS4 python 不可用 — 期望 0 实际 $_e"; echo "$OUT" | sed 's/^/      | /' >&2; fi
 if echo "$OUT" | grep -q "python 不可用"; then pass "DS4 python 不可用明示（不静默）"; else fail "DS4 python 不可用未明示"; fi
 run_expect 0 "DS4 空变更集（--diff-status \"\"）→ exit 0" --diff-status ""
 if echo "$OUT" | grep -q "出库豁免生效"; then fail "DS4 空变更集误报「豁免生效」"; else pass "DS4 空变更集不误报「豁免生效」"; fi
@@ -352,7 +352,10 @@ if grep -q -- "--name-status --find-renames" "$TOOL"; then pass "DS5 S1 新口�
 if grep -q "diff --name-only --diff-filter=ACMR" "$TOOL"; then fail "DS5 旧口径 --diff-filter=ACMR 残留（双口径风险）"; else pass "DS5 旧口径 --diff-filter=ACMR 已清零"; fi
 if grep -qF -- '--diff-status' "$TOOL"; then pass "DS5 --diff-status 注入缝在"; else fail "DS5 无 --diff-status 注入缝"; fi
 # 冻结规格正则逐字（防漂移；改一个字符 = 白名单/拒绝名单语义变了）
-ALLOW_SPEC='^(\.claude/task-briefs/|docs/plans/|docs/synova/coordination/|memory/notes/|docs/synova/archive/|docs/archive/)'
+# 2026-09-29 变更（创始人决策：客户数据安全事件处置）—— 白名单扩 4 前缀：
+#   docs/synova/ （存量客户名 104 件）｜docs/research/（2）｜decisions/（1）｜CHRONICLE.md（1）
+#   理由：纯删（无 A/M）风险低 + DENY/DENY_EXACT 兜底仍在；域门禁同日废除（见 D1062）
+ALLOW_SPEC='^(\.claude/task-briefs/|docs/plans/|docs/synova/coordination/|memory/notes/|docs/synova/archive/|docs/archive/|docs/synova/|docs/research/|decisions/|CHRONICLE\.md$)'
 DENY_SPEC='^(src/|scripts/|\.github/|tests/|extensions/|expert/)'
 if grep -qF "$ALLOW_SPEC" "$TOOL"; then pass "DS5 ✅ 出库白名单正则与冻结规格逐字一致"; else fail "DS5 ✅ 白名单正则漂移"; fi
 if grep -qF "$DENY_SPEC" "$TOOL"; then pass "DS5 ❌ 拒绝名单正则与冻结规格逐字一致"; else fail "DS5 ❌ 拒绝名单正则漂移"; fi
