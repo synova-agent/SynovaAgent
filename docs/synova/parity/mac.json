@@ -1,0 +1,27 @@
+{
+  "schema": "synova/parity/v1",
+  "skills_sha256": {
+    "brief-compose": "a25e044d52753fa575f5d902c4358d5c06d1a217933793278cd565140a8851ee",
+    "claim-verifier": "34d09144bc41e42b0734fdd76eee88199d5b7c5e4c2f942532821b740c0ab0be",
+    "contract-template": "253714c0d67a18845580cc35ffbba0f244920c173bfe1fe45a8a6bfbe51275a0",
+    "cto-handover": "2ede7a8caed6e0d45635100e9fcb86daea6a573219e7814f3dd5c98645a1fd3f",
+    "ctrl-tower-change": "545728544c1147cabca3f02177c33cd2cc5d70a270e7ad1e2bb2a28acc474643",
+    "dev-doc-delivery": "58b62b8cc764934c95a161d4629799698953ec8dd7e2d0b6d9e9f859752e590d",
+    "dev-doc-spec": "739b94d415a8fa57d84e97083b3479ce0035bded0947ece242e2938abe4cc28a",
+    "dsh-decision-lens": "97a98fb83279c4cc4d9b72110c28096755b10dfbf84fb49e2c65f831b4d21916",
+    "git-sync-pr": "a0fd80959ee7889bf440371b366ff5d2d8ce5b02fe2c1a35067b0c2bb77ebf2d",
+    "north-star-guard": "59f6d44751b1dc7a4f9f4e49507dd0d08bbc51ee4e9c9e27450dff355cd5b4c2",
+    "pr-review": "0a1b9591a094e422b7404ec4ec977a28b7ec11d9f7729337b5393ba3467a3e0f",
+    "pre-dispatch-check": "cceb00c5b71403e7bbcc16a26aeb805ff2659f583ef2b41fd6fe1a5aacbab39f",
+    "squad-discipline": "975702b47a3a3b2a9030cda14bfe11a77fa9d5feb47f3d5f345ebd2ff649a6e7",
+    "synova-audit": "27cc0cc72deb89c55454e75d1b046748dc38dcff97bdd08991cc9a9272bd5eb2",
+    "synova-verify": "0f9c5478b7bd82e3062fc81ea3a0f2f5203c8436f0d127aaf6a5f9f012db06b6",
+    "windows-compat": "48891abe8452ff475c27472c7c4ec9a91b482cf5ac692f53dd75e9f10fcac91c"
+  },
+  "preset_cordis_patch_sha256": {
+    "synova-k3-audit": "55d0c60e128bd08a4aa7ea5a98baa40864122f5ed245c2eea84c8c8edde0659e",
+    "synova-squad-lead": "24cf1677413f36d84226b80a826011da2d3f1a3c287744af8d50e259124ba47d"
+  },
+  "dsh_anchor_tag": "dsh-v0.1.7-rc.1",
+  "bundles_line_count": 21
+}
