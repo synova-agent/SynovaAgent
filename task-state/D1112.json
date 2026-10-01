@@ -1,0 +1,3 @@
+{"id":"D1112","title":"A7 口径更正（三档）并提交裁定件","status":"in_progress","created":"2026-10-02","branch":"docs/D1112-a7-caliber",
+"write_set":["decisions/process/2026-10-01-branch-protection-and-ci-admission.md","docs/authority/DOCS-REGISTRY.yaml","task-state/D1112.json",".claude/bypass.log"],
+"note":"创始人 2026-10-02 裁：A7 口径改三档（15min 管快层=不含CT两腿 / >25min 管能否开 merge queue=现不开 / CT 腿单独立目标先插桩）。本件把原决策四里的 25min 误引改掉（原文出处并列：15min←05 §I-4 验收判据；25min←Q3 R-1 反例节），并附实测三档数字（快层≈12min 达标 / 整轮 35-47min 饱和 / CT windows 2106s、ubuntu 307s 慢 6.8 倍无归因）"}

@@ -301,3 +301,10 @@ documents:
     status: active
     owner: line-lead
 
+  # ---- D1112（分支保护与 CI 准出 · 裁定件入库 + A7 口径更正）2026-10-02 ----
+  - id: DOC-0137
+    type: decision
+    path: decisions/process/2026-10-01-branch-protection-and-ci-admission.md
+    status: active
+    owner: DSH
+
