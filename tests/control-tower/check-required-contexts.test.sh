@@ -22,17 +22,24 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   边界 ⑥ — 基线重复登记 → exit 1 点名；--reverse 报告模式对"缺产出"**不判违规**（exit 0 + NOTE）
 #   只读 ⑦ — 静态断言: 本器无写保护规则调用（无 --method/-X，无 PATCH/PUT/POST/DELETE）
 #   降级 ⑤b — `--allow-degraded`（D1111 CI 降级面，CI 上 github.token 无 admin 权限读保护规则）:
+#            【四场景现状（8e05643a1 修复后；本文件逐条锁住，防回退）】
+#              健康静态 + 坏 gh + 旗标 → 0 ｜ 健康静态 + 坏 gh 无旗标 → 2
+#              ｜ **静态违规（改坏 job name）+ 坏 gh + 旗标 → 1 且点名** ｜ 判据源不可得（基线缺失）+ 旗标 → 2
+#              语义边界: 旗标**只**降「live 取数失败」；`main()` 的 except 只 exit 2（旗标不是免检开关）
 #            ① 坏 gh + `--api-check --allow-degraded` ⇒ exit 0 且 stderr 同时含 `degraded:` 与 `warning:`
 #            ② 同场景**不带**旗标 ⇒ exit 2（fail-closed 未削弱）
-#            ③ **静态面违规在降级下仍必红**：改坏 job name + 坏 gh + 旗标 ⇒ exit 1（不是 0）
+#            ③ **静态面违规在降级下仍必红**：改坏 job name + 坏 gh + 旗标 ⇒ exit 1（不是 0）——最关键
 #            ④ 旗标**单独使用**（无 --api-check / 无 Degrade）⇒ 行为与不带旗标完全一致（0/1 不变）
 #            ⑤ [收紧断言] 判据自身不可得（基线缺失）+ 旗标 ⇒ 仍须 exit 2（"判据拿不到 ≠ 通过"）
+#            ⑥ 降级必须**可见**：stdout 出 `SKIPPED(degraded)`（铁律 11 静默降级禁止）
 #   接线 ⑧ — **真接线断言**（已接线）: ci.yml 调用 check-required-contexts.py（`run:` 段，非注释）
 #            + canary 清单登记本测试；另用 ci.yml **副本**做反向验证（删接线 ⇒ 断言必失效）
 #
-# 🔴 本文件有 2 条断言按上述**契约**写、当前实现未满足 ⇒ 现在必红（③ ⑤）。
-#    实测根因与最小补丁见回执（Degrade 早退先于静态裁决；补丁后本文件应 44/44 全绿）。
-#    严禁把这两条改写成"接受 exit 0"——那是把 fail-open 包装成通过（V3.9: 软机制 0% 有效）。
+# 历史与红线（不许回退）: 首版把 Degrade 早退放在静态裁决**之前** ⇒ 带 `--allow-degraded` 时连静态违规
+#   也得 exit 0；CI 上 token 读不到 protection ⇒ 该步**恒绿**（空转门禁，D328 族；由本文件 ③ 抓出）。
+#   已由 8e05643a1 修复: 降级**就地**收在 live 取数点、静态裁决继续执行、`main()` 的 except 只 exit 2。
+#   ③⑤ 两条断言即该修复的判别性守卫 —— 严禁改写成"接受 exit 0"（把 fail-open 包装成通过；
+#   V3.9 教训: 软机制 0% 有效）。
 #
 # 沙箱: 全部夹具在 mktemp -d 内；真 ci.yml / 真基线只**只读复制**；网络零依赖
 #   （--api-check 的 live 数据由本地 stub gh / 注入缝提供，绝不打真 API）。
@@ -316,6 +323,11 @@ runq "$PY" "$C" --root "$FIX1" --allow-degraded
 runq "$PY" "$C" --root "$FIXN" --allow-degraded
 [ "$RC" -eq 2 ] && ok "⑤ [收紧] 基线缺失 + 旗标 → 仍 exit 2（判据不可得 ≠ 通过）" \
   || no "⑤ [收紧] 基线缺失 + 旗标应 exit 2（判据不可得不得静默通过），实测 $RC"
+
+# ⑥ 降级必须**可见**（铁律 11 静默降级禁止）: stdout 出 SKIPPED(degraded) 标注
+runq env SYNO_REQUIRED_CONTEXTS_GH="$BADGH" "$PY" "$C" --root "$FIXAD" --api-check --allow-degraded
+echo "$OUT" | grep -q "SKIPPED(degraded)" && ok "⑥ 降级对 stdout 可见（SKIPPED(degraded)，非静默）" \
+  || no "⑥ 降级未在 stdout 标注（静默降级，铁律 11）: $(echo "$OUT" | tail -2 | tr '\n' '|')"
 
 # ── ⑦ 只读红线（静态断言: 无写保护规则调用）──
 echo "── ⑦ 只读红线 ──"
