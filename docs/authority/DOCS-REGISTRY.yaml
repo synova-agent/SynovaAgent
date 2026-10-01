@@ -279,3 +279,19 @@ documents:
     path: .dsh/skills/squad-discipline/SKILL.md
     status: active
     owner: DSH
+
+  # ---- D1098（CTO 岗位说明书·三级制）2026-10-01 ----
+  # 注：DOC-0119/0120 同时被 PR #915 用于两份 2026-09-30 决策件；
+  #     本仓登记门禁不校 id 唯一（实测 grep duplicate/重复/unique 零命中），合并时人工去重。
+  - id: DOC-0119
+    type: decision
+    path: decisions/proposed/process/2026-10-01-cto-role-three-tier.md
+    status: draft
+    owner: DSH
+
+  - id: DOC-0120
+    type: governance
+    path: docs/synova/CTO-ROLE.md
+    status: active
+    owner: DSH
+
