@@ -1,3 +1,19 @@
-{"id":"D1098","title":"CTO 岗位说明书（三级制）","status":"in_progress","created":"2026-10-01","branch":"docs/cto-role-definition",
-"write_set":["docs/synova/CTO-ROLE.md","decisions/proposed/process/2026-10-01-cto-role-three-tier.md","memory/notes/proposed/2026-10-01-cto-role-three-tier.md","task-state/D1098.json",".claude/task-briefs/2026-10-01-D1098-CTO岗位说明书-三级制.md"],
-"note":"新增 C 层岗位件 CTO-ROLE.md（四件事/红线 R-1~R-8/三档/界桩 S-a~S-f/门禁 C′1–C′7/落地 G-1~G-3）；B 层决策 proposed；未做项=载体 v2 落位（沙箱外不可写）已显式登记"}
+{
+ "id": "D1098",
+ "title": "CTO 岗位说明书（三级制）",
+ "status": "in_progress",
+ "created": "2026-10-01",
+ "branch": "docs/cto-role-definition",
+ "write_set": [
+  "docs/synova/CTO-ROLE.md",
+  "decisions/proposed/process/2026-10-01-cto-role-three-tier.md",
+  "memory/notes/proposed/2026-10-01-cto-role-three-tier.md",
+  "task-state/D1098.json",
+  ".claude/task-briefs/2026-10-01-D1098-CTO岗位说明书-三级制.md",
+  "docs/synova/presets/README.md",
+  "docs/synova/presets/synova-base/README.md",
+  "docs/synova/presets/synova-base/cordis.patch.yml",
+  "docs/synova/presets/synova-base/package.json"
+ ],
+ "note": "CTO-ROLE.md（四件事/红线/分档/界桩/门禁 C′1–C′7/落地 G-1~G-3）+ B 层决策 proposed + 铁律 49 Note；并入仓 presets/README.md + synova-base/（此前仅存于主工作区）；文档契约合规=机械核对降级（三闸执行体按 R-6 摘出→D1099）；未做项=载体 v2 落位（沙箱外不可写）+ 执行体未接线"
+}

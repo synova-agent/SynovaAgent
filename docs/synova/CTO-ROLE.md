@@ -178,5 +178,43 @@ authority:
 | `CTO-DSH派单台账.md` | 同上 | **整份移交** |
 | `cto-handover` skill（`.claude/skills/` 与 `.dsh/skills/`，各 464 行） | 仍是「过渡 CTO → 真正 CTO」旧形状 | 按本文改 v2；**改后必跑 `sync-dsh-skills.sh`** |
 | `docs/synova/presets/synova-cto/`（在仓） | 与 `synova-main-cto` 并存 ⇒ **一物两写者** | **收敛后卸载**（走 `plugin_manager`，不手改 `package.json`） |
+| `docs/synova/presets/README.md`、`synova-base/` | 🆕 **本轮入仓**（此前只存在于主工作区、`origin/main` 实测缺失） | 已入仓；其头部已加《入库记录》＋两处版本事实（`-017` 已删／断面错配） |
 
 **一句话**：本文件生效后，「CTO 直接派单 / 收执 / 写任务卡」在本文与载体上都属违例。
+
+---
+
+## 8. 本文的文档契约合规自证（**机器可核，不靠自律**）
+
+> 依据 `docs/synova/DOC-CONTRACT.md` §2.2 / §3 / §3.1。跑法：
+> `bash scripts/control-tower/check-doc-contract.sh --files <新增 md 清单>`
+
+| 契约条款 | 本 PR 的取值 | 判据 |
+|---|---|---|
+| 五层归属：**C 层长期**，位置 `docs/**` | `docs/synova/CTO-ROLE.md` | §2.2 表 |
+| 一主题一份（禁中央索引） | `grep -rln "CTO" decisions/` 仅 2 件、主题不同 | ✅ |
+| **闸 1 格式闸** | B 层决策件：头三行 + 六段齐 + 状态↔目录 | ✅ pass |
+| **闸 2 取代闸** | 决策件 §取代 = 候选 2 件 + 逐条判定（全「不取代」） | ✅ pass |
+| **闸 3 入库闸** | 本 PR 5 类新增 md 逐条过白名单 | ✅ pass |
+
+**执行体（**不在本 PR**，另立 D1099 支线后并入）**：`scripts/control-tower/check-doc-contract.sh` +
+`validate_doc_contract.py`。契约原本**无执行体**（实测证据见下方），执行体已写好并带反例/阴性夹具，
+但按以下两条纪律**从本 PR 摘出**换 PR 走：
+
+1. **红线 R-6「改门禁者不得自判通过」** —— 本 PR 作者即执行体作者，混在一个 PR 里 = 自己给自己出题自己判；
+2. **单域预算** —— `scripts/**` 属另一域（`.github/`·`scripts/`·`tests/`·`extensions/`·`expert/` 在出库**拒绝名单**内），
+   本 PR 是纯文档域，不宜夹带。
+
+🔴 **本 PR 对"是否合规"的立场**：**只给机械核对结果，不给自己发通过** —— 判据是否正确、合规是否成立，**归 K3**。
+
+⚠️ **独立性**：执行体由本 PR 作者新增 ⇒ **判据正确性须 K3 独立复核**（红线 R-6）；
+作者侧反例/阴性夹具已附，但**自测 ≠ 独立验证**。
+
+**本 PR 已知不合规项（登记，不掩盖）**：`.claude/task-briefs/` 按契约 §3 文本属阻断面，
+但认领制与写集闸物理要求每任务一份 brief ⇒ **契约与认领制存量打架**，未在本 PR 消解（属 §7 存量迁移，归治理线）。
+
+🔴 **实测缺口（须知悉，非本 PR 可独力解决）**：**三闸目前没有机器执行体** ——
+`grep -rn "DOC-CONTRACT" --include="*.sh|*.py|*.yml" scripts/ .github/` = **0 命中**
+（阳性对照：`pre-commit-check` 同口径 **45 命中** ⇒ 不是 grep 坏了）。
+⇒ 契约 §3「机器可核」目前是**文档承诺**；本 PR 的合规是**人工逐条核 + 附命令**，不是门禁保证了它。
+接线属治理线工单（见 §6 G-1）。
