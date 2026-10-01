@@ -279,3 +279,25 @@ documents:
     path: .dsh/skills/squad-discipline/SKILL.md
     status: active
     owner: DSH
+
+  # ---- D1105（派单件移交线负责人层）2026-10-01 ----
+  # 来源：~/Synova-过程档案/ 整份搬运，内容逐字未改（只加 4 行来源头）。
+  # 归层：三级制下这三件**不再归 CTO**，由线负责人承接 ⇒ 入库防"本机一坏无处恢复"。
+  - id: DOC-0121
+    type: governance
+    path: docs/synova/coordination/CTO-派单规程.md
+    status: active
+    owner: line-lead
+
+  - id: DOC-0122
+    type: governance
+    path: docs/synova/coordination/CTO-派单模板-v3.md
+    status: active
+    owner: line-lead
+
+  - id: DOC-0123
+    type: governance
+    path: docs/synova/coordination/CTO-DSH派单台账.md
+    status: active
+    owner: line-lead
+
