@@ -280,6 +280,19 @@ documents:
     status: active
     owner: DSH
 
+  # 号段注（D1105 去重）：本批原用 DOC-0119/0120，但 main（#926）已占用 0119-0123
+  # ⇒ 合并时人工去重改号 0124/0125（登记门禁不校 id 唯一，靠人工守）
+    - id: DOC-0124
+      type: decision
+      path: decisions/proposed/process/2026-09-30-preset-landing-must-diff-against-working-peer.md
+      status: draft
+      owner: DSH
+
+    - id: DOC-0125
+      type: decision
+      path: decisions/proposed/process/2026-09-30-cite-by-section-name-not-line-number.md
+      status: draft
+      owner: DSH
   # ---- D1105（派单件移交线负责人层）2026-10-01 ----
   # 来源：~/Synova-过程档案/ 整份搬运，内容逐字未改（只加 4 行来源头）。
   # 归层：三级制下这三件**不再归 CTO**，由线负责人承接 ⇒ 入库防"本机一坏无处恢复"。
@@ -301,3 +314,31 @@ documents:
     status: active
     owner: line-lead
 
+  # ---- D1111（治理线第一窗：门禁专项吸收 + 文档治理范围修正）2026-10-02 ----
+  # 取号实测：全局最大（origin/main ∪ 未合并分支）＝ DOC-0136（docs/D1110 分支，实测）
+  #   ⇒ 本批自 DOC-0137 起。取号口径缺陷另有登记：跨分支撞号（D2 §6-C-5）。
+  # 归层：C 层（长期可读治理件）；出役后转 F 层（见 D2 §4/§5）。
+  - id: DOC-0137
+    type: governance
+    path: docs/synova/coordination/2026-10-02-D1-门禁专项吸收件-治理线一窗.md
+    status: active
+    owner: line-lead
+
+  - id: DOC-0138
+    type: governance
+    path: docs/synova/coordination/2026-10-02-D2-文档治理范围修正件-治理线一窗.md
+    status: active
+    owner: line-lead
+
+  # D1112 送审件（A5 送审链：提案→K3 过审→CTO 裁；红线 7「改门禁者不自判」）
+  - id: DOC-0139
+    type: governance
+    path: docs/synova/coordination/K3审计请求-D1112-门禁语义变更-20261002.md
+    status: active
+    owner: line-lead
+
+  - id: DOC-0140
+    type: governance
+    path: docs/synova/coordination/2026-10-02-D3-线登记与收口-R1R5-治理线一窗.md
+    status: active
+    owner: line-lead

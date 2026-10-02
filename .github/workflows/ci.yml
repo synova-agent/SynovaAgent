@@ -9,6 +9,12 @@ on:
     branches: [main]
     # D1014 ⒞: 触发类型显式化（原为默认 opened/synchronize/reopened + 新增 ready_for_review）
     types: [opened, synchronize, reopened, ready_for_review]
+  # D1070 / X30 M0①（Q3 迁移硬顺序 ①）: merge group 事件必须能触发本 workflow。
+  # 为什么必须先加这一行: merge queue 合入时 GitHub 在 merge group 上建的是临时合并分支；
+  #   若 workflow 不声明 merge_group，队列里**永远不产生 required check** → 全队列等到超时卡死
+  #   （与 D515 同族坑）。故本行是 M3（开 merge queue）的物理先决条件，必须先于开队列合入。
+  # 为何不能只靠 pull_request: 队列走的是 merge_group 事件，PR 事件不在队列合入路径上。
+  merge_group:
   # ── D1039 安全网②③（①②③ 全貌见 control-tower-tests job 头注释块）──────────────────
   # ② 手动强制: 判据误判/排障时人工强制跑 control-tower 重活（默认 false，不改变日常行为）。
   workflow_dispatch:
@@ -52,14 +58,32 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
-          # 白名单锚定分层（有意设计，勿"统一锚点"）:
-          #   无锚点（\.(md|json)$ / task-state/ / \.claude/）= 任意深度匹配；带 ^…$
-          #   （^\.gitignore$ / ^LICENSE$ / ^\.gitkeep$）= 仅仓库根匹配。理由: 文档类可在任意
-          #   子目录（docs/a/b.md 须放行）；根级治理文件只应在根，收进任意深度会误放同名子目录文件。
+          # 白名单锚定分层（D1111/A5 修: 全部**逐条带路径锚**）:
+          #   依据（K3 W-1 原话「无锚点」＋研究院 A5 实测）: 旧式 '\.(md|json)$' 无前缀锚 ⇒
+          #   **任何** .json（package.json / tsconfig.json / src/**/*.json）与**任何**深度同名目录
+          #   （src/task-state/**）都被判「纯文档」⇒ 10 个 job 空转、必需 context 假绿。
+          #   本窗实测: 全仓 .json 共 981 件，旧正则下**全部**走 docs-only（含 tsconfig/eslintrc）。
+          #   新式规则（逐条可判；判据文本在**本文件内 10 处内联副本**，必须逐字一致——
+          #   单一真值源收敛属重构（另卡），本窗只保证「10 处同源 + 夹具判别」）:
+          #     ① ^docs/.+\.(md|json|html)$  —— docs 下文档面（.html 纳入见 DOC-CONTRACT §3 / D1111-D2）
+          #     ② ^(task-state|memory|decisions)/ —— 过程/决策载体（内容不影响构建与运行时）
+          #     ③ ^(\.claude|\.dsh)/skills/ —— 技能本体（非纯文档，但内容是提示词，不影响构建）
+          #     ④ ^[^/]+\.md$               —— **仅仓库根**的 .md（含 ^ 锚；否则 [^/]+ 会跨 '/' 误命中深层）
+          #     ⑤ ^(LICENSE|\.gitignore|\.gitkeep)$ —— 根级治理文件（仅根）
+          #   ⚠️ 有意 **不** 放行: 其余 .claude/**（settings.json/hooks.json 可改门禁本身）、
+          #      expert/** 与 knowledge/**（运行时资产）、src/**、scripts/**、.github/**、根级 .json
+          #   ⚠️ 空变更集（合并提交 diff 为空）⇒ 无行命中 grep -v ⇒ 仍按 docs-only（原语义保留）。
+          #   ⚠️ D1111/独立自验 E5: 本处（唯一一处）此前**缺** `git rev-parse --verify origin/main`
+          #      fail-safe（其余 9 处均有）⇒ origin/main 不可解析时本处会**早退为 docs-only**（方向相反：
+          #      别处全量、本处瘦身）。空 diff 时 grep -qvE 返 1 同样早退 ⇒ 两条路径都收敛到「早退」。
+          #      ⇒ 现补 fail-safe，与其余 9 处**同一判据、同一降级方向**（不可解析 ⇒ 全量，绝不误跳）。
           # D1023/P1 修: .gitattributes/.gitmodules 移出白名单 —— .gitattributes 是 CI 运行时
           #   语义载体（*.sh eol=lf、merge=union、scripts/audit/** -text），改它即改 CI 本身
           #   须走全量；.gitmodules 仓库不存在，留着 = 新增子模块+文档即零验证入库。
-          if git diff --name-only origin/main...HEAD | grep -qvE '\.(md|json)$|task-state/|\.claude/|^\.gitignore$|^LICENSE$|^\.gitkeep$'; then
+          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
@@ -163,6 +187,13 @@ jobs:
     timeout-minutes: 8
     name: Vitest (${{ matrix.shard }})
     needs: quality
+    # D1111/A3 缺陷 B 修（研究院 A3 提案，机械实现）: 上游 quality 红时，job 级无 `if:` ⇒ 本 job
+    #   被 skip ⇒ 两个**必需 context**（Vitest (1/2) / (2/2)）不产生 check-run ⇒ GitHub 报
+    #   「N of 12 required status checks are expected」⇒ PR 永久 blocked，而不是显示一个红。
+    #   （实证: ci-red-baseline.txt:24 记 `Vitest (1/2)` 已列 owner=CTO-Mac 的存量红。）
+    #   修法 = job 级 `if: ${{ !cancelled() }}`：上游失败/未通过时**照跑并如实报红**（红是红，
+    #   不再消失）；仅 workflow 被手动取消时不跑（`always()` 会连取消都硬跑，故用 !cancelled()）。
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -178,8 +209,8 @@ jobs:
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # 白名单锚定分层有意（无锚点=任意深度 / ^…$=仅根）；详注见第 1 个 Detect docs-only 步骤（D1023/P1）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '\.(md|json)$|task-state/|\.claude/|^\.gitignore$|^LICENSE$|^\.gitkeep$'; then
+          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
+          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
@@ -255,8 +286,8 @@ jobs:
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # 白名单锚定分层有意（无锚点=任意深度 / ^…$=仅根）；详注见第 1 个 Detect docs-only 步骤（D1023/P1）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '\.(md|json)$|task-state/|\.claude/|^\.gitignore$|^LICENSE$|^\.gitkeep$'; then
+          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
+          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
@@ -299,8 +330,8 @@ jobs:
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # 白名单锚定分层有意（无锚点=任意深度 / ^…$=仅根）；详注见第 1 个 Detect docs-only 步骤（D1023/P1）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '\.(md|json)$|task-state/|\.claude/|^\.gitignore$|^LICENSE$|^\.gitkeep$'; then
+          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
+          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
@@ -370,13 +401,16 @@ jobs:
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # 白名单锚定分层有意（无锚点=任意深度 / ^…$=仅根）；详注见第 1 个 Detect docs-only 步骤（D1023/P1）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '\.(md|json)$|task-state/|\.claude/|^\.gitignore$|^LICENSE$|^\.gitkeep$'; then
+          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
+          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
           fi
-      # ── D1039 安全网①: 路径判据（唯一载体 = 分类器脚本；本 step 只消费结论）──────────────
+      # ── D1039 安全网①: 路径判据（分类器脚本产结论；本 step 只消费结论）──────────────
+      #   ⚠️ D1111/独立自验 E6 更正: 此处旧注曾写「路径判据唯一载体 = 分类器脚本」，与事实不符——
+      #   `ci-signal-classify.sh` 内**不含** docs-only 白名单正则（那 10 份副本在 ci.yml 内联）。
+      #   分类器管的是「control-tower 重活是否跑」，与 docs-only 瘦身是**两套**判据，勿互指。
       # 三态（Ctrl-tower 模式 1）: 0 = 正常（run 可真可假）｜2 = 降级（分类器已强制 run=true +
       #   stderr 留痕）⇒ 降级必须「可见但不阻断」——安全值（全量跑）已在效果上生效，不该把 PR
       #   判红；1 = 分类器自身失败（调用非法/内部不一致）⇒ 真红可见，倒逼修复（不静默放行）。
@@ -492,6 +526,10 @@ jobs:
             tests/control-tower/verify-parallel-ci.test.sh \
             tests/control-tower/alloc-task-id.test.sh \
             tests/control-tower/alloc-task-id-lock.test.sh \
+            tests/control-tower/alloc-task-id-timeout.test.sh \
+            tests/control-tower/log-snapshot.test.sh \
+            tests/control-tower/classify-worktrees.test.sh \
+            tests/control-tower/verdict-baseline.test.sh \
             tests/control-tower/check-name-allocation.test.sh \
             tests/control-tower/check-gitlinks.test.sh \
             tests/control-tower/grep-oP-regression.test.sh \
@@ -515,8 +553,19 @@ jobs:
             tests/control-tower/daily-cto-board-ratio.test.sh \
             tests/control-tower/install-dsh-preset.test.sh \
             tests/control-tower/d956-failmsg.test.sh \
+            tests/control-tower/check-required-contexts.test.sh \
             tests/control-tower/ci-signal-classify.test.sh; do
             echo "── $t"
+            # D1094 平台跳过名单（分层原则：平台无关的失败不该拖垮整条 Windows 腿；但**显式打印**不静默）
+            #   背景: 2026-10-01 实测 —— 这两条夹具在 Windows(Git Bash) 下失败，根因是
+            #   classify-worktrees.py / verdict-baseline.py 的 Windows 兼容缺陷（另立卡 D1094 修复）。
+            #   处置: 先在 Windows 腿跳过（ubuntu 腿照跑），修好后同批删除本名单。
+            #   注: 本名单留在 ci.yml 内 ⇒ check-gate-integrity 的密封面登记闸照常认（D1093 教训）。
+            case "${RUNNER_OS:-}:$t" in
+              Windows:tests/control-tower/classify-worktrees.test.sh|Windows:tests/control-tower/verdict-baseline.test.sh)
+                echo "  ⏭ SKIP(Windows): D1094 待修 —— Python 工具 Windows 兼容缺陷（另见卡 note）"
+                continue ;;
+            esac
             # D526: 测试失败输出进 ::error 注解——无 token 也能经 annotations 定位（D521 工具1 语义）
             if ! bash "$t" > /tmp/ct-out.log 2>&1; then
               echo "FAIL: $t"
@@ -570,8 +619,8 @@ jobs:
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # 白名单锚定分层有意（无锚点=任意深度 / ^…$=仅根）；详注见第 1 个 Detect docs-only 步骤（D1023/P1）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '\.(md|json)$|task-state/|\.claude/|^\.gitignore$|^LICENSE$|^\.gitkeep$'; then
+          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
+          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
@@ -605,8 +654,8 @@ jobs:
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # 白名单锚定分层有意（无锚点=任意深度 / ^…$=仅根）；详注见第 1 个 Detect docs-only 步骤（D1023/P1）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '\.(md|json)$|task-state/|\.claude/|^\.gitignore$|^LICENSE$|^\.gitkeep$'; then
+          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
+          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
@@ -646,8 +695,8 @@ jobs:
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # 白名单锚定分层有意（无锚点=任意深度 / ^…$=仅根）；详注见第 1 个 Detect docs-only 步骤（D1023/P1）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '\.(md|json)$|task-state/|\.claude/|^\.gitignore$|^LICENSE$|^\.gitkeep$'; then
+          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
+          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
@@ -663,6 +712,10 @@ jobs:
     timeout-minutes: 2
     name: Golden Case F1 Gate
     needs: test
+    # D1111/A3 同族修（缺陷 B 第二处）: 本 job 亦承载**必需 context**（Golden Case F1 Gate）
+    #   且 needs: test；上游 quality/test 任一红 ⇒ 无 job 级 `if:` 即被 skip ⇒ context 消失 ⇒
+    #   PR 永久 blocked。同 test job 口径：`!cancelled()` 保证「红要红得出来」。
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -675,8 +728,8 @@ jobs:
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # 白名单锚定分层有意（无锚点=任意深度 / ^…$=仅根）；详注见第 1 个 Detect docs-only 步骤（D1023/P1）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '\.(md|json)$|task-state/|\.claude/|^\.gitignore$|^LICENSE$|^\.gitkeep$'; then
+          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
+          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
@@ -724,8 +777,8 @@ jobs:
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # 白名单锚定分层有意（无锚点=任意深度 / ^…$=仅根）；详注见第 1 个 Detect docs-only 步骤（D1023/P1）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '\.(md|json)$|task-state/|\.claude/|^\.gitignore$|^LICENSE$|^\.gitkeep$'; then
+          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
+          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
@@ -737,6 +790,29 @@ jobs:
       - name: pre-commit groups injection fixture (sampled)
         if: steps.docsonly.outputs.docs_only != 'true'
         run: bash tests/control-tower/precommit-groups-injection.test.sh
+      # ── D1111/A1-①: 必需 context ⇄ job `name:` 展开名 一致性门禁（**只读**）──────────────
+      # 补的缺口（D971 同型）: 无人保证「branch protection 的 12 个必需 context 名」与
+      #   「workflow job `name:` 展开后实际能产出的 check-run 名」一致；改一个字符 ⇒ 必需 context
+      #   静默失配 ⇒ check-run 永不上报 ⇒ PR 永久 blocked（405 "N of 12 required status checks are expected")。
+      # 判据载体: scripts/control-tower/required-checks-baseline.txt（12 条）。
+      # 本步**不判**「Gate Integrity 该不该进必需集」（那是语义变更，走 K3→CTO）；只判「名与名一致」。
+      # 三态: 0=一致 / 1=违规（exit 1 ⇒ 本 job 红）/ 2=降级（fail-closed）。
+      # 🔴 D1111 实测修正: CI 上 `github.token` **无 admin 权限**读 branch protection（本机已登录 gh 时 OK）
+      #   ⇒ 首版带 `--api-check` 使本步恒 exit 2（PR #935 实测本 job 因此变红，annotation 只有
+      #   "Process completed with exit code 2"）。修法：**静态面是阻断判据**（不取数、无网络、必可跑；
+      #   改坏 job 名 = 必红），live 双向对账降为**显式 warning**（`--allow-degraded`：打印 degraded 原因
+      #   + warning 行、exit 0）。判定不被降级削弱：静态面违规仍 exit 1。
+      #   live 对账的真落点 = 本地/带 PAT 的定期任务（见 D1 §2-A1 与 D2 §6）。
+      - name: Required contexts ⇄ job name consistency (A1-①, read-only)
+        if: steps.docsonly.outputs.docs_only != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          OUT="$(python3 scripts/control-tower/check-required-contexts.py --api-check --allow-degraded --verbose 2>&1)"; rc=$?
+          printf '%s\n' "$OUT"
+          printf '%s\n' "$OUT" > /tmp/required-contexts-check.out
+          exit "$rc"
       # 取数失败必须让 step 失败（fail-closed，不静默放行）：豁免台账核对不到 = 既有红基线不可核。
       - name: CI red baseline reconciliation (--ci-reds, fail-closed fetch)
         if: steps.docsonly.outputs.docs_only != 'true'

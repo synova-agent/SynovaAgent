@@ -118,6 +118,19 @@ report struct "struct-gitignore-root-covered" "t" "$got"
 if printf 'docs/.gitignore\n' | grep -qE "$RE"; then got="t"; else got="f"; fi
 report struct "struct-gitignore-anchor-root-only" "f" "$got"
 
+# ⑥ 行为断言（D1111/A5 + 独立自验 E4 整改）: **fail-safe 计数 = 10**。
+#    为什么是这一条而不是「存在任意 ^ 锚」: 独立自验实测（第 2 批 §不一致 1）证明
+#    「存在 ^ 锚」型判据对旧正则**必然 PASS**（旧式本来就有 `^\.gitignore$`/`^LICENSE$`/`^\.gitkeep$`）
+#    ⇒ 判别力 0，是纸老虎，且其注释理由与事实相反。本夹具头注释自己就禁「grep 型静态判据当验收」。
+#    本条的判别力来源 = 现成先红夹具: 删掉 ci.yml block@51 的 fail-safe（其余不动）时，
+#    本计数 10→9 ⇒ 必红（该变体夹具见验证方 `fixtures/ci-no-failsafe-51.yml`）。
+#    即：它守的是「10 处 detect 必须同样 fail-closed」这条**有后果**的不变量
+#    （唯一一处缺 fail-safe 时，origin/main 不可解析会让那处反方向早退）。
+FAILSAFE_N=$(grep -c 'git rev-parse --verify -q origin/main' "$CI_YML" || true)
+FAILSAFE_N=$(printf '%s' "$FAILSAFE_N" | tr -d '[:space:]')
+if [ "$FAILSAFE_N" = "10" ]; then got="10"; else got="$FAILSAFE_N"; fi
+report struct "struct-failsafe-count-10" "10" "$got"
+
 echo "--- 用例断言（判定与 ci.yml 同构: grep -qvE 返 0 ⇒ docs_only=false）---"
 
 # run_case <name> <expect t/f> <files 多行字符串>
@@ -146,16 +159,48 @@ docs/x.md"
 run_case "c-gitignore-still-docsonly" "t" ".gitignore
 docs/x.md"
 
-# d) 纯文档组合（md + task-state + .claude 任意深度）⇒ 仍早退
+# d) 纯文档组合（docs 任意深度 + task-state 根级）⇒ 仍早退
+#    ⚠️ D1111/A5 语义变更（有意，非放宽）: 旧例含 `.claude/task-briefs/x.md` 并期望 t；
+#    因 `.claude/**` 移除早退面（改 .claude/settings.json/hooks.json = 改门禁本身 ⇒ 必须全量），
+#    该路径现判 f。故本用例只留白名单内路径（同时断言新边界，见案例 n）。
 run_case "d-pure-docs-still-docsonly" "t" "docs/x.md
 task-state/D1.json
-.claude/task-briefs/x.md"
+.dsh/skills/pr-review/SKILL.md"
+
+# n) D1111/A5 边界: `.claude/task-briefs/*.md` 现在走**全量**（旧: 早退）
+#    理由: 同一目录下 settings.json/hooks.json 是门禁配置；按目录整体放行 = 让配置变更混在
+#    brief 变更里零验证入库。此项与案例 d 成对，显式锁定新边界（不是"少写一行"）。
+run_case "n-claude-task-briefs-goes-full" "f" ".claude/task-briefs/x.md"
 
 # e) 源码文件 ⇒ 走全量
 run_case "e-source-goes-full" "f" "src/a.ts"
 
 # f) CI 自身改动 ⇒ 走全量
 run_case "f-ci-yml-goes-full" "f" ".github/workflows/ci.yml"
+
+# ── D1111/A5 扩充用例（旧正则与新正则判定**相反** ⇒ 真判别性；旧六例无判别）─────────
+#   旧行为 = 无锚点 ⇒ 以下 5 例在旧正则下判 t（早退），实为「非文档变更跳过全部检查」。
+
+# g) 根级 package.json ⇒ 走全量（旧: 早退）
+run_case "g-root-package-json-goes-full" "f" "package.json"
+
+# h) 根级 tsconfig.json ⇒ 走全量（旧: 早退）
+run_case "h-root-tsconfig-goes-full" "f" "tsconfig.json"
+
+# i) 任意深度 .json（src/）⇒ 走全量（旧: 早退）
+run_case "i-src-json-goes-full" "f" "src/probe.json"
+
+# j) 同名深层目录（src/task-state/）⇒ 走全量（旧: 早退）
+run_case "j-nested-task-state-dir-goes-full" "f" "src/task-state/probe.sh"
+
+# k) expert 运行时资产 .md ⇒ 走全量（旧: 早退）
+run_case "k-expert-md-goes-full" "f" "expert/host/SKILL.md"
+
+# l) 本地控制塔配置 .claude/settings.json ⇒ 走全量（旧: 早退；改它=改门禁本身）
+run_case "l-claude-settings-goes-full" "f" ".claude/settings.json"
+
+# m) docs 下 .html ⇒ 早退（D1111/D2 新纳入：.html 进文档面；旧正则判 f 属**漏放行**方向）
+run_case "m-docs-html-still-docsonly" "t" "docs/report.html"
 
 echo
 echo "RESULT: $PASS_N PASS / $FAIL_N FAIL"
