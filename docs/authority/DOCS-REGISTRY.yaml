@@ -317,6 +317,36 @@ documents:
     status: active
     owner: line-lead
 
+
+  # ---- D1111（治理线第一窗：门禁专项吸收 + 文档治理范围修正）2026-10-02 ----
+  # 取号实测：全局最大（origin/main ∪ 未合并分支）＝ DOC-0136（docs/D1110 分支，实测）
+  #   ⇒ 本批自 DOC-0137 起。取号口径缺陷另有登记：跨分支撞号（D2 §6-C-5）。
+  # 归层：C 层（长期可读治理件）；出役后转 F 层（见 D2 §4/§5）。
+  - id: DOC-0137
+    type: governance
+    path: docs/synova/coordination/2026-10-02-D1-门禁专项吸收件-治理线一窗.md
+    status: active
+    owner: line-lead
+
+  - id: DOC-0138
+    type: governance
+    path: docs/synova/coordination/2026-10-02-D2-文档治理范围修正件-治理线一窗.md
+    status: active
+    owner: line-lead
+
+  # D1112 送审件（A5 送审链：提案→K3 过审→CTO 裁；红线 7「改门禁者不自判」）
+  - id: DOC-0139
+    type: governance
+    path: docs/synova/coordination/K3审计请求-D1112-门禁语义变更-20261002.md
+    status: active
+    owner: line-lead
+
+  - id: DOC-0140
+    type: governance
+    path: docs/synova/coordination/2026-10-02-D3-线登记与收口-R1R5-治理线一窗.md
+    status: active
+    owner: line-lead
+
   # ---- D1110（治理线责任边界 + 文档治理含 HTML）2026-10-01 ----
   - id: DOC-0135
     type: governance
@@ -330,4 +360,3 @@ documents:
     path: docs/synova/coordination/CTO-状态台账.md
     status: active
     owner: DSH
-
