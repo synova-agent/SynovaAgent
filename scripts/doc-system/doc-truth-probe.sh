@@ -107,7 +107,7 @@ PYEOF
 # ── probe-only: 只读判定 ──
 if [ "$MODE" = "probe-only" ]; then
   if [ ! -f "$D1" ]; then
-    echo "degraded: D1 脚本缺失 $D1（D328 exit 2）" >&2; exit 2
+    echo "degraded: D1 脚本缺失 ${D1}（D328 exit 2）" >&2; exit 2
   fi
   PARSED=$(parse_ledger)
   _LV=$(printf '%s\n' "$PARSED" | sed -n '1p' | tr -d '\r')
@@ -133,7 +133,7 @@ fi
 
 # ── run: 跑 D1 → 刷新台账机器段 → 判定 ──
 if [ ! -f "$D1" ]; then
-  echo "degraded: D1 脚本缺失 $D1（D328 exit 2）" >&2; exit 2
+  echo "degraded: D1 脚本缺失 ${D1}（D328 exit 2）" >&2; exit 2
 fi
 D1_OUT=$(bash "$D1" 2>&1)
 D1_EXIT=$?
@@ -200,9 +200,9 @@ fi
 
 # 人工段追加本轮红项提示（不重复刷机器段）
 if [ "$D1_EXIT" -ne 0 ]; then
-  echo "PROBE: FRESH-RED — D1 存在硬失败，台账已刷新（firstRedAt=$FIRST_RED）:"
+  echo "PROBE: FRESH-RED — D1 存在硬失败，台账已刷新（firstRedAt=${FIRST_RED}）:"
   printf '%s\n' "$FAILS" | head -8 | sed 's/^/     /'
   exit 1
 fi
-echo "PROBE: FRESH-GREEN — D1 全部硬检查通过，台账已刷新（$SUMMARY）"
+echo "PROBE: FRESH-GREEN — D1 全部硬检查通过，台账已刷新（${SUMMARY}）"
 exit 0

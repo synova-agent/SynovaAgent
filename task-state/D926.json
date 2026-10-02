@@ -1,7 +1,7 @@
 {
   "task_id": "D926",
   "title": "小队行为纪律技能化（synova-dsh persona 精简 + squad-discipline 技能 + 队长预设接线）",
-  "status": "impl_done",
+  "status": "audited",
   "risk": "medium",
   "domain": "mac",
   "owner": "mac-coding",
@@ -10,12 +10,20 @@
   "worktree": ".synova-wt-d926",
   "base": "origin/main 6c23006a",
   "milestone": "M0 项目管理基建",
-  "depends_on": ["D922"],
+  "depends_on": [
+    "D922"
+  ],
   "blocked": null,
   "target": "2026-W40",
   "spec": ".claude/task-briefs/2026-09-23-D926-squad-discipline.md",
   "impl": "① 新增 skill squad-discipline（双写，56 行/6 节 17 条）——只收门禁抓不到的行为纪律，显式声明门禁已覆盖条款不重复；② synova-dsh persona 128 → 45 行（persona.md + persona-block.yml 双写一致），改为指向脚本与 CI 为单一事实源；③ squad-lead SYSTEM-PROMPT 追加「队内行为纪律」段（37→46 行）接线两个技能。",
-  "audit": null,
+  "audit": {
+    "verdict": "CONDITIONAL PASS",
+    "auditor": "kimi-k3",
+    "report": "docs/synova/audit-reports/2026-09-24-K3-批次2-D918-D936.md",
+    "date": "2026-09-24",
+    "summary": "P1：persona 重写未跑同域夹具（铁律 9 传播缺失）→ D922 夹具 T3 红；SYSTEM-PROMPT.md 经卡号提交 00d112a3 核实已交付；技能 SYNC-OK。条件：与 D922 联动修复"
+  },
   "fix_task_id": null,
   "write_set": [
     ".claude/skills/squad-discipline/SKILL.md",
@@ -34,6 +42,6 @@
     "verify": "sync-dsh-skills --check SYNC-OK（16 技能）；install-dsh-preset.test.sh PASS=25 FAIL=0；pre-commit 13 组通过"
   },
   "note": "创始人 2026-09-23 指令：编码 session 名存实亡 → 取其可取、与控制塔不冲突者给小队、可变 skill。本卡即落地：能力以 skill 保留，常驻载体精简为成员身份 + 场景路由。",
-  "updated_at": "2026-09-23",
-  "updated_by": "synova-cto"
+  "updated_at": "2026-09-24",
+  "updated_by": "kimi-k3"
 }

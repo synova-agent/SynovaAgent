@@ -17,7 +17,13 @@
   "target": "2026-W40",
   "spec": "docs/synova/coordination/派单-W1-双DSH提升-20260923.md（含程序定义 + Wave 划分 + W1 三项详细规格）",
   "impl": null,
-  "audit": null,
+  "audit": {
+    "verdict": "CONDITIONAL PASS",
+    "auditor": "kimi-k3",
+    "report": "docs/synova/audit-reports/2026-09-24-K3-批次2-D918-D936.md",
+    "date": "2026-09-24",
+    "summary": "P1×2：install-dsh-preset.test.sh 未登记 ci.yml（M3 复发）+ main 现红 2 条（T3 字面串被 D926 persona 重写弄断，sed 空转→漂移检测失效）；Phase-0 六文件有独立 brief（P2 汇总缺口）。条件：登记 CI+修 T3+转绿"
+  },
   "fix_task_id": null,
   "write_set": [
     "docs/synova/coordination/派单-W1-双DSH提升-20260923.md",

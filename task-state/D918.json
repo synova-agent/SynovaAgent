@@ -1,7 +1,7 @@
 {
   "task_id": "D918",
   "title": "控制塔日期边界定时炸弹修复（gate-stats 夹具相对时间化）——合并队列解阻第一件",
-  "status": "impl_done",
+  "status": "audited",
   "risk": "high",
   "domain": "mac",
   "owner": "mac-coding",
@@ -15,7 +15,13 @@
   "target": "2026-W39",
   "spec": ".claude/task-briefs/2026-09-23-D918-gate-stats-date-bomb-fix.md",
   "impl": "tests/control-tower/gate-stats.test.sh：夹具由写死绝对时间（2026-08-24T01:00:00Z）+ 30 天滚动窗口，改为 python3 相对 now 生成（10 天前 hit/miss 对 / 9 天前另一检查点 / 40 天前应被排除）；新增『窗口外数据被排除』显式断言；覆盖矩阵登记回归防线。",
-  "audit": null,
+  "audit": {
+    "verdict": "PASS",
+    "auditor": "kimi-k3",
+    "report": "docs/synova/audit-reports/2026-09-24-K3-批次2-D918-D936.md",
+    "date": "2026-09-24",
+    "summary": "夹具 9/0 独立复跑绿（相对时间化+窗口外断言）；写集精确一致；scripts/audit 零交集"
+  },
   "fix_task_id": null,
   "write_set": [
     "tests/control-tower/gate-stats.test.sh",
@@ -30,6 +36,6 @@
     "impact": "该测试为 CI 密封清单成员；main 与全部分支同红 → Control Tower Gate Tests 对所有 PR 恒红 → 合并队列（#712/#713/#706/#704）整体堵死"
   },
   "note": "同类（日期/时间粒度脆弱）在 CTO backlog A1 已登记过一次（calc-progress.py --since 天粒度）——本次为同型第二例，按红线『同类错误第二次出现 = 防线系统性失效』升级登记，待创始人裁决是否立类防线（滚动窗口类夹具禁写死绝对时间）。",
-  "updated_at": "2026-09-23",
-  "updated_by": "synova-cto"
+  "updated_at": "2026-09-24",
+  "updated_by": "kimi-k3"
 }

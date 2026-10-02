@@ -1,0 +1,14 @@
+{
+  "task_id": "D1043",
+  "title": "A4-v 独立复核：真实 run 实测比对改动前后 CI 墙钟",
+  "status": "claimed",
+  "spec": ".claude/task-briefs/2026-09-28-D1039-A4-CI成本收口.md",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "write_set": [
+    "docs/synova/product-lines/evidence/D1039-A4v-独立复核-墙钟比对.md"
+  ],
+  "updated_at": "2026-09-28",
+  "updated_by": "verifier-v"
+}

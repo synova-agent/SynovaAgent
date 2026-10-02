@@ -1,0 +1,17 @@
+{
+  "task_id": "D1058",
+  "title": "派单闸门落地：R8 修复 + §〇 归属/回执/点 id 三项检查",
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-09-29",
+  "updated_by": "alloc-task-id",
+  "write_set": [
+    "scripts/control-tower/pre-dispatch-check.sh",
+    ".claude/task-briefs/2026-09-29-D1058-派单闸门落地：R8-修复-+-§〇-归属-回执-点-id-三项检查.md",
+    "task-state/D1058.json",
+    "memory/notes/proposed/2026-09-28-d1058-dispatch-gate.md"
+  ]
+}

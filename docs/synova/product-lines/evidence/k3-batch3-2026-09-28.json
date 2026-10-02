@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "record_type": "k3",
+  "source": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次3-镜像尾点.md",
+  "date": "2026-09-28",
+  "auditor": "kimi-k3",
+  "batch": "K3 产品线审计 批次3（清账批：剩余 pending_k3 镜像尾点 20 点）",
+  "base": "origin/main 20b55eba9",
+  "note": "A6 双轨降级：本 JSON 由 K3 产出，CTO 收件人工登记。pass 3 / fail 17 / 无法复核 0。清账批性质：17 个 fail 中 16 个是『证据链空缺/未成环』的复核不通过（测试面大多绿）、1 个（3-9）是能力零实现——按 17 点批先例 fail 不写进证据面翻红，转 FIX-H/I/J + FIX-A 加重。三批总账：52 点 pass26/fail26，51 点存量 pending_k3 清零。",
+  "verdicts": [
+    { "acceptance_point": "3-8", "verdict": "fail", "quote": "线3 前置 3-1..3-7 全部 uncommitted 零证据——报告体系无任何可复核证据链，复核对象缺席", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次3-镜像尾点.md:§〇" },
+    { "acceptance_point": "3-9", "verdict": "fail", "quote": "零实现（全仓无日粒度/周/月聚合/一致合成；temporal-baseline 是趋势检测）+ D828 status=claimed 未接线（D852 变更单明文『D828 未接线前 3-9 不得判通过』）+ A2 假绿（time-window-aggregation 套件 NONE 跳过，三批第 7 例）", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次3-镜像尾点.md:§二-3-9" },
+    { "acceptance_point": "5-6", "verdict": "fail", "quote": "线5 前置 5-1..5-5 全 uncommitted 零证据", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次3-镜像尾点.md:§〇" },
+    { "acceptance_point": "6-7", "verdict": "fail", "quote": "线6 前置 6-1..6-6 全 uncommitted 零证据", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次3-镜像尾点.md:§〇" },
+    { "acceptance_point": "7-7", "verdict": "pass", "quote": "真测试 15 用例绿（cron.test 7 含 :43 失败记录断言 + scheduler.test 8）+ 实现三件（scheduler.ts:387-389 lastError+failures / :396-397 持久化 / :388 失败后 60s 重排）。注记：A2 错位（cron-scheduler 串 grep 首中 sentinel-runner-auto-ticket）", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次3-镜像尾点.md:§二-7-7" },
+    { "acceptance_point": "7-8", "verdict": "fail", "quote": "闭环缺环：7-3 监测结果持久化 failed + 7-4 基线对比/7-5 聚合→报告/7-6 周期报告全 uncommitted——监测→报告链零证据（抽验：7-1 cron 15 用例绿支持其 verified 历史）", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次3-镜像尾点.md:§三" },
+    { "acceptance_point": "9-6", "verdict": "fail", "quote": "线9：9-2 stale（历史证据过期）+ 9-1/9-3/9-4/9-5 uncommitted——客户循环全链路无有效证据", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次3-镜像尾点.md:§〇" },
+    { "acceptance_point": "10-2", "verdict": "pass", "quote": "l4-contract 13 用例绿（snake/camel 属性契约）+ GS-03 场景亲跑 9/9 断言 exit 0（空库降级诚实/负向/越阈触发全过）；A2 本批唯一正确命中的套件", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次3-镜像尾点.md:§二-10-2" },
+    { "acceptance_point": "11-7", "verdict": "fail", "quote": "抽验计算面健康（key-person-risk 7 + talent retention/deployment 8 = 15 用例绿）但 11-1/11-2 stale + 11-3..11-6（数据→告警→端到端）全 uncommitted——五环只点亮计算环", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次3-镜像尾点.md:§三" },
+    { "acceptance_point": "12-5", "verdict": "fail", "quote": "线12 前置 12-1..12-4 全 uncommitted 零证据", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次3-镜像尾点.md:§〇" },
+    { "acceptance_point": "13-5", "verdict": "fail", "quote": "线13 前置 13-1..13-4 全 uncommitted 零证据", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次3-镜像尾点.md:§〇" },
+    { "acceptance_point": "14-5", "verdict": "fail", "quote": "线14 前置 14-1..14-4 全 uncommitted 零证据", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次3-镜像尾点.md:§〇" },
+    { "acceptance_point": "16-5", "verdict": "fail", "quote": "线16 前置 16-1..16-4 全 uncommitted 零证据", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次3-镜像尾点.md:§〇" },
+    { "acceptance_point": "17-5", "verdict": "pass", "quote": "desc 限定 N13 P0 修复验证：三项全修复有实证——middle-evolution 生产调用（loop-handlers.ts:23,387）+ feedback-collector 注入生产 DB（synova-agent.ts:68-70）+ loop-scheduler 真实注册非 placeholder（:370-385）+ middle-evolution 13 用例绿。注记 P1-7：17-1/17-2 仍 failed 未随 D333 修复翻转", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次3-镜像尾点.md:§三" },
+    { "acceptance_point": "18-6", "verdict": "fail", "quote": "抽验 session-projection 7 绿（18-2 B-07 面）；但 18-1 唯一 verified + 18-3 消费端/18-4 组织记忆 uncommitted——存而不用，记忆体系不成环", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次3-镜像尾点.md:§三" },
+    { "acceptance_point": "19-5", "verdict": "fail", "quote": "19-1 rejected 至今未修：direction-monitor 零生产调用（K3 08-13 P1-A1 拒绝 → 09-28 grep 实证仍零命中，46 天，P0-3）+ 19-2 stale + 19-3/19-4 uncommitted", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次3-镜像尾点.md:§三" },
+    { "acceptance_point": "22-6", "verdict": "fail", "quote": "韧性面实质改善（D810 09-18 接线 callWithResilience 生产调用 + 14 用例绿——D809『B-02 零调用方』已过时）；但 22-2 自愈/22-3 降级/22-4 备份/22-5 健康报告全 uncommitted + watchdog 零测试——5 环 4 环零证据", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次3-镜像尾点.md:§三" },
+    { "acceptance_point": "23-6", "verdict": "fail", "quote": "线23 前置 23-1..23-5 全 uncommitted 零证据", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次3-镜像尾点.md:§〇" },
+    { "acceptance_point": "24-6", "verdict": "fail", "quote": "抽验 audit-store 24 用例绿（24-4 面复跑）；但 24-3 防注入 failed（且 fail 证据记录缺失，仅 yaml 种子状态）+ 24-1 PII/24-2 本地部署/24-5 对抗性全 uncommitted", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次3-镜像尾点.md:§三" },
+    { "acceptance_point": "26-6", "verdict": "fail", "quote": "线26 前置 26-1..26-5 全 uncommitted 零证据", "quote_ref": "docs/synova/audit-reports/2026-09-28-K3-产品线审计-批次3-镜像尾点.md:§〇" }
+  ],
+  "summary": { "pass": 3, "fail": 17, "not_auditable": 0 },
+  "three_batch_total": { "points": 52, "pass": 26, "fail": 26, "not_auditable": 0, "note": "51 存量 pending_k3 全部清账（25-10 为新增点额外覆盖）" },
+  "fix_proposals": [
+    { "id": "FIX-H", "priority": "P1(建议升P0)", "target": "线19 19-1", "action": "direction-monitor 生产接线（组件与测试就绪，缺调用方；46 天旧账）", "attribution": "control-tower/M4变体+implement" },
+    { "id": "FIX-I", "priority": "P1", "target": "线3 3-9", "action": "时间窗聚合实现（D828 接线先行；日粒度+周/月一致合成可复算）", "attribution": "implement" },
+    { "id": "FIX-J", "priority": "P2", "target": "17-1/17-2/22-1", "action": "修复后状态翻转登记（D333/D810 证据补录，D809 型脱节三例一并清）", "attribution": "control-tower/M7" },
+    { "id": "FIX-A", "priority": "P0", "target": "run-machine-evidence.sh", "action": "三批累计：NONE×7 + 错位×5 + 带后缀串×3——fail-closed 改造证据清单已足", "attribution": "control-tower/M1" },
+    { "id": "CT-3项", "priority": "建议", "target": "派单/状态机", "action": "①拒绝态纳入派单跟踪 ②镜像点入池规则（前置≥1机器绿）③修复落地→翻转提示通用化", "attribution": "control-tower" }
+  ],
+  "task_state_backfills": ["D810"]
+}

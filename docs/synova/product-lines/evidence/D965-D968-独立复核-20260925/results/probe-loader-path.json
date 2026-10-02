@@ -1,0 +1,481 @@
+{
+  "dbPath": "/tmp/verify-d965/db-loader.db",
+  "registered": {
+    "registered": 45,
+    "errors": []
+  },
+  "listLength": 45,
+  "out": [
+    {
+      "id": "sentinel-agent-deployment-maturity",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 10
+    },
+    {
+      "id": "sentinel-ai-ecosystem-fit",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-ai-investment-return",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-api-coverage",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 1
+    },
+    {
+      "id": "sentinel-business-model-coherence",
+      "findings": 1,
+      "ids": [
+        "i7-crit"
+      ],
+      "evidenceLens": [
+        2
+      ],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-capital-health",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 1
+    },
+    {
+      "id": "sentinel-cash-runway",
+      "findings": 2,
+      "ids": [
+        "cr_runway_degraded",
+        "cr_overdue_degraded"
+      ],
+      "evidenceLens": [
+        0,
+        0
+      ],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-channel-capacity",
+      "findings": 1,
+      "ids": [
+        "o6-nodata"
+      ],
+      "evidenceLens": [
+        0
+      ],
+      "degraded": false,
+      "ok": true,
+      "ms": 1
+    },
+    {
+      "id": "sentinel-competitive-moat",
+      "findings": 1,
+      "ids": [
+        "i3-nodata"
+      ],
+      "evidenceLens": [
+        3
+      ],
+      "degraded": false,
+      "ok": true,
+      "ms": 3
+    },
+    {
+      "id": "sentinel-competitive-position",
+      "findings": 1,
+      "ids": [
+        "e1-nodata"
+      ],
+      "evidenceLens": [
+        2
+      ],
+      "degraded": false,
+      "ok": true,
+      "ms": 3
+    },
+    {
+      "id": "sentinel-customer-demand-shift",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": true,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-data-health",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-environment-rent-dependency",
+      "findings": 1,
+      "ids": [
+        "e5-rent-warn"
+      ],
+      "evidenceLens": [
+        1
+      ],
+      "degraded": false,
+      "ok": true,
+      "ms": 1
+    },
+    {
+      "id": "sentinel-explore-exploit-balance",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-financing-constraint",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-growth-quality",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 1
+    },
+    {
+      "id": "sentinel-human-agent-boundary",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-incentive-alignment",
+      "findings": 1,
+      "ids": [
+        "o3-nodata"
+      ],
+      "evidenceLens": [
+        0
+      ],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-info-distortion",
+      "findings": 1,
+      "ids": [
+        "o7-nodata"
+      ],
+      "evidenceLens": [
+        0
+      ],
+      "degraded": false,
+      "ok": true,
+      "ms": 1
+    },
+    {
+      "id": "sentinel-internal-transaction-cost",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-key-person-risk",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-knowledge-accessibility",
+      "findings": 1,
+      "ids": [
+        "o4-nodata"
+      ],
+      "evidenceLens": [
+        0
+      ],
+      "degraded": false,
+      "ok": true,
+      "ms": 1
+    },
+    {
+      "id": "sentinel-make-or-buy",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-margin-health",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-moat-dependency",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-network-power",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 1
+    },
+    {
+      "id": "sentinel-niche-breadth",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-niche-squeeze",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-opportunity-window",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 1
+    },
+    {
+      "id": "sentinel-org-repairability",
+      "findings": 1,
+      "ids": [
+        "o8-nodata"
+      ],
+      "evidenceLens": [
+        0
+      ],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-path-dependency",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-power-rigidity",
+      "findings": 1,
+      "ids": [
+        "o9-nodata"
+      ],
+      "evidenceLens": [
+        0
+      ],
+      "degraded": false,
+      "ok": true,
+      "ms": 1
+    },
+    {
+      "id": "sentinel-process-ai-readiness",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-resource-misallocation",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-revenue-health",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 1
+    },
+    {
+      "id": "sentinel-routine-diffusion",
+      "findings": 1,
+      "ids": [
+        "o5-nodata"
+      ],
+      "evidenceLens": [
+        0
+      ],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-routine-mutation",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 1
+    },
+    {
+      "id": "sentinel-sentinel-forecast-accuracy",
+      "findings": 3,
+      "ids": [
+        "forecast-mape",
+        "forecast-sample",
+        "forecast-timeseries"
+      ],
+      "evidenceLens": [
+        0,
+        0,
+        0
+      ],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-sentinel-pricing-strategy",
+      "findings": 1,
+      "ids": [
+        "pricing-disc"
+      ],
+      "evidenceLens": [
+        0
+      ],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-software-health",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-strategy-capability-fit",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 1
+    },
+    {
+      "id": "sentinel-talent-density",
+      "findings": 1,
+      "ids": [
+        "o10-nodata"
+      ],
+      "evidenceLens": [
+        0
+      ],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-time-penetration",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "id": "sentinel-unit-economics",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 1
+    },
+    {
+      "id": "sentinel-value-capture",
+      "findings": 0,
+      "ids": [],
+      "evidenceLens": [],
+      "degraded": false,
+      "ok": true,
+      "ms": 0
+    }
+  ]
+}

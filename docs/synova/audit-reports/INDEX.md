@@ -1,0 +1,164 @@
+# 审计报告索引（K3 报告指针式 · D964 主线 A）
+
+> **本文件是我们仓唯一落地的审计索引**：一条一行。审计报告**全文**在 K3 侧（`k3-repo@<sha>:<path>` 指针可核）。
+> 判据（机器可判）：**INDEX.md 里有一行** = 该批次报告已落库。
+> 维护：新增 K3 批次 ⇒ 本文件追加一行；**不在本仓新增报告正文文件**。
+> 豁免：`docs/synova/audit-reports/**` 已进 `merge-writeset-gate` 内置豁免（PR #764，K3 审计中）。
+
+| 批次/日期 | 对象 | 结论 | 指针（k3-repo@sha:path） | 日期 |
+|---|---|---|---|---|
+| 2026-08-11 | D328 | 未判定（见报告正文） | `k3-repo@8d64c433:docs/synova/audit-reports/2026-08-11-D328.md` | 2026-08-11 |
+| 2026-08-12 | D328 | 未判定（见报告正文） | `k3-repo@8d64c433:docs/synova/audit-reports/2026-08-12-D328.md` | 2026-08-12 |
+| 2026-08-12 | D329 | 未判定（见报告正文） | `k3-repo@8d64c433:docs/synova/audit-reports/2026-08-12-D329.md` | 2026-08-12 |
+| 2026-08-12 | D330 | 未判定（见报告正文） | `k3-repo@8d64c433:docs/synova/audit-reports/2026-08-12-D330.md` | 2026-08-12 |
+| 2026-08-13 | D331 | 未判定（见报告正文） | `k3-repo@8d64c433:docs/synova/audit-reports/2026-08-13-D331.md` | 2026-08-13 |
+| 2026-08-15 | D307-delivery | 未判定（见报告正文） | `k3-repo@c5209c02:docs/synova/audit-reports/2026-08-15-D307-delivery.md` | 2026-08-15 |
+| 2026-08-15 | D366 | 未判定（见报告正文） | `k3-repo@21c53e04:docs/synova/audit-reports/2026-08-15-D366.md` | 2026-08-15 |
+| 2026-08-16 | D307 | 未判定（见报告正文） | `k3-repo@34b4d80f:docs/synova/audit-reports/2026-08-16-D307.md` | 2026-08-16 |
+| 2026-08-16 | D355 | 未判定（见报告正文） | `k3-repo@48d7632f:docs/synova/audit-reports/2026-08-16-D355.md` | 2026-08-16 |
+| 2026-08-16 | D356 | 未判定（见报告正文） | `k3-repo@ed9d248d:docs/synova/audit-reports/2026-08-16-D356.md` | 2026-08-16 |
+| 2026-08-16 | D363-llm-failover-delivery | 未判定（见报告正文） | `k3-repo@89d84c04:docs/synova/audit-reports/2026-08-16-D363-llm-failover-delivery.md` | 2026-08-16 |
+| 2026-08-16 | D363 | 未判定（见报告正文） | `k3-repo@48d7632f:docs/synova/audit-reports/2026-08-16-D363.md` | 2026-08-16 |
+| 2026-08-16 | D383 | 未判定（见报告正文） | `k3-repo@1e708bd7:docs/synova/audit-reports/2026-08-16-D383.md` | 2026-08-16 |
+| 2026-08-16 | D387 | 未判定（见报告正文） | `k3-repo@1288c3b1:docs/synova/audit-reports/2026-08-16-D387.md` | 2026-08-16 |
+| 2026-08-16 | D391 | 未判定（见报告正文） | `k3-repo@f68b9d68:docs/synova/audit-reports/2026-08-16-D391.md` | 2026-08-16 |
+| 2026-08-16 | D393 | 未判定（见报告正文） | `k3-repo@6f75f6e5:docs/synova/audit-reports/2026-08-16-D393.md` | 2026-08-16 |
+| 2026-08-16 | D394-D398-strategy-consult | 未判定（见报告正文） | `k3-repo@1336d6b5:docs/synova/audit-reports/2026-08-16-D394-D398-strategy-consult.md` | 2026-08-16 |
+| 2026-08-16 | D399-review | 未判定（见报告正文） | `k3-repo@56a3bb71:docs/synova/audit-reports/2026-08-16-D399-review.md` | 2026-08-16 |
+| 2026-08-17 | D356 | 未判定（见报告正文） | `k3-repo@34b4d80f:docs/synova/audit-reports/2026-08-17-D356.md` | 2026-08-17 |
+| 2026-08-17 | D394 | 未判定（见报告正文） | `k3-repo@416558b4:docs/synova/audit-reports/2026-08-17-D394.md` | 2026-08-17 |
+| 2026-08-17 | D395a | 未判定（见报告正文） | `k3-repo@8439c0dd:docs/synova/audit-reports/2026-08-17-D395a.md` | 2026-08-17 |
+| 2026-08-17 | D396 | 未判定（见报告正文） | `k3-repo@4a94ebda:docs/synova/audit-reports/2026-08-17-D396.md` | 2026-08-17 |
+| 2026-08-17 | product-lines-verification | 未判定（见报告正文） | `k3-repo@4724f9a8:docs/synova/audit-reports/2026-08-17-product-lines-verification.md` | 2026-08-17 |
+| 2026-08-20 | D354 | 未判定（见报告正文） | `k3-repo@1cf133b4:docs/synova/audit-reports/2026-08-20-D354.md` | 2026-08-20 |
+| 2026-08-20 | D357 | 未判定（见报告正文） | `k3-repo@be9c4cc6:docs/synova/audit-reports/2026-08-20-D357.md` | 2026-08-20 |
+| 2026-08-20 | D358 | 未判定（见报告正文） | `k3-repo@1cf133b4:docs/synova/audit-reports/2026-08-20-D358.md` | 2026-08-20 |
+| 2026-08-22 | D338-org-audit | 未判定（见报告正文） | `k3-repo@a3564b4c:docs/synova/audit-reports/2026-08-22-D338-org-audit.md` | 2026-08-22 |
+| 2026-08-22 | P0-control-tower-stage1 | 未判定（见报告正文） | `k3-repo@5848de18:docs/synova/audit-reports/2026-08-22-P0-control-tower-stage1.md` | 2026-08-22 |
+| 2026-08-22 | P1-gs-deploy-u | 未判定（见报告正文） | `k3-repo@5848de18:docs/synova/audit-reports/2026-08-22-P1-gs-deploy-u.md` | 2026-08-22 |
+| 2026-08-22 | P2-batch-audit | 未判定（见报告正文） | `k3-repo@5848de18:docs/synova/audit-reports/2026-08-22-P2-batch-audit.md` | 2026-08-22 |
+| 2026-08-23 | D502-D503-board-unify | 未判定（见报告正文） | `k3-repo@223efb05:docs/synova/audit-reports/2026-08-23-D502-D503-board-unify.md` | 2026-08-23 |
+| 2026-08-23 | D504-D505 | 未判定（见报告正文） | `k3-repo@223efb05:docs/synova/audit-reports/2026-08-23-D504-D505.md` | 2026-08-23 |
+| 2026-08-24 | D515 | 未判定（见报告正文） | `k3-repo@dc84af51:docs/synova/audit-reports/2026-08-24-D515.md` | 2026-08-24 |
+| 2026-08-25 | D517-D519 | 未判定（见报告正文） | `k3-repo@eed7cd67:docs/synova/audit-reports/2026-08-25-D517-D519.md` | 2026-08-25 |
+| 2026-08-25 | D522-D523 | 未判定（见报告正文） | `k3-repo@bccc9195:docs/synova/audit-reports/2026-08-25-D522-D523.md` | 2026-08-25 |
+| 2026-08-25 | D527-D528-slice-c | 未判定（见报告正文） | `k3-repo@1a13ccdb:docs/synova/audit-reports/2026-08-25-D527-D528-slice-c.md` | 2026-08-25 |
+| 2026-08-28 | D483-D484-D486 | 未判定（见报告正文） | `k3-repo@55dba73a:docs/synova/audit-reports/2026-08-28-D483-D484-D486.md` | 2026-08-28 |
+| 2026-08-28 | D501-D550-impl-done-batch | 未判定（见报告正文） | `k3-repo@dc84af51:docs/synova/audit-reports/2026-08-28-D501-D550-impl-done-batch.md` | 2026-08-28 |
+| 2026-08-28 | D540-D547-governance-closeout | 未判定（见报告正文） | `k3-repo@e47e9ec1:docs/synova/audit-reports/2026-08-28-D540-D547-governance-closeout.md` | 2026-08-28 |
+| 2026-08-29 | D551-D487-ga-line | 未判定（见报告正文） | `k3-repo@f4019aa4:docs/synova/audit-reports/2026-08-29-D551-D487-ga-line.md` | 2026-08-29 |
+| 2026-08-29 | D558-D561-reaudit | 未判定（见报告正文） | `k3-repo@4f4dcb9a:docs/synova/audit-reports/2026-08-29-D558-D561-reaudit.md` | 2026-08-29 |
+| 2026-09-02 | D489-D563-D564 | 未判定（见报告正文） | `k3-repo@59b918d7:docs/synova/audit-reports/2026-09-02-D489-D563-D564.md` | 2026-09-02 |
+| 2026-09-02 | productlines-17points | 未判定（见报告正文） | `k3-repo@b300617c:docs/synova/audit-reports/2026-09-02-productlines-17points.md` | 2026-09-02 |
+| 2026-09-04 | D572-line1-desktop | 未判定（见报告正文） | `k3-repo@951d7bae:docs/synova/audit-reports/2026-09-04-D572-line1-desktop.md` | 2026-09-04 |
+| 2026-09-06 | K3-D579D580D581D582-closeout | 未判定（见报告正文） | `k3-repo@4c2b7043:docs/synova/audit-reports/2026-09-06-K3-D579D580D581D582-closeout.md` | 2026-09-06 |
+| 2026-09-07 | K3-D586-closeout | 未判定（见报告正文） | `k3-repo@efc8215c:docs/synova/audit-reports/2026-09-07-K3-D586-closeout.md` | 2026-09-07 |
+| 2026-09-08 | K3-D592-closeout | 未判定（见报告正文） | `k3-repo@373adf10:docs/synova/audit-reports/2026-09-08-K3-D592-closeout.md` | 2026-09-08 |
+| 2026-09-08 | K3-seven-task-batch-closeout | 未判定（见报告正文） | `k3-repo@e0308d35:docs/synova/audit-reports/2026-09-08-K3-seven-task-batch-closeout.md` | 2026-09-08 |
+| 2026-09-08 | K3-win-backlog-11-closeout | 未判定（见报告正文） | `k3-repo@efc8215c:docs/synova/audit-reports/2026-09-08-K3-win-backlog-11-closeout.md` | 2026-09-08 |
+| 2026-09-09 | D651-dual-pipeline-quality-eval | 未判定（见报告正文） | `k3-repo@c2819e08:docs/synova/audit-reports/2026-09-09-D651-dual-pipeline-quality-eval.md` | 2026-09-09 |
+| 2026-09-09 | K3-D590-D591-closeout | 未判定（见报告正文） | `k3-repo@373adf10:docs/synova/audit-reports/2026-09-09-K3-D590-D591-closeout.md` | 2026-09-09 |
+| 2026-09-09 | K3-D593-D602-closeout | 未判定（见报告正文） | `k3-repo@f3df0284:docs/synova/audit-reports/2026-09-09-K3-D593-D602-closeout.md` | 2026-09-09 |
+| 2026-09-10 | K3-D593FIX-D595-closeout | 未判定（见报告正文） | `k3-repo@3f8d5118:docs/synova/audit-reports/2026-09-10-K3-D593FIX-D595-closeout.md` | 2026-09-10 |
+| 2026-09-10 | K3-D593FIX2-closeout | 未判定（见报告正文） | `k3-repo@47a0e812:docs/synova/audit-reports/2026-09-10-K3-D593FIX2-closeout.md` | 2026-09-10 |
+| 2026-09-13 | D715 | 未判定（见报告正文） | `k3-repo@335eb5bd:docs/synova/audit-reports/2026-09-13-D715.md` | 2026-09-13 |
+| 2026-09-16 | K3-D788-precheck | 未判定（见报告正文） | `k3-repo@d294dbcf:docs/synova/audit-reports/2026-09-16-K3-D788-precheck.md` | 2026-09-16 |
+| 2026-09-16 | K3-批次五-D789-taskstate-建议稿.j | 未判定（见报告正文） | `k3-repo@d67b201d:docs/synova/audit-reports/2026-09-16-K3-批次五-D789-taskstate-建议稿.json` | 2026-09-16 |
+| 2026-09-16 | K3-批次五-台账追加建议 | 未判定（见报告正文） | `k3-repo@d67b201d:docs/synova/audit-reports/2026-09-16-K3-批次五-台账追加建议.md` | 2026-09-16 |
+| 2026-09-16 | K3-批次五-门禁与度量 | 未判定（见报告正文） | `k3-repo@d67b201d:docs/synova/audit-reports/2026-09-16-K3-批次五-门禁与度量.md` | 2026-09-16 |
+| 2026-09-17 | K3-批次六-D794-D795-D790-D796-D804 | 未判定（见报告正文） | `k3-repo@f5f9c636:docs/synova/audit-reports/2026-09-17-K3-批次六-D794-D795-D790-D796-D804.md` | 2026-09-17 |
+| 2026-09-17 | K3-批次六-taskstate-建议稿.j | 未判定（见报告正文） | `k3-repo@f5f9c636:docs/synova/audit-reports/2026-09-17-K3-批次六-taskstate-建议稿.json` | 2026-09-17 |
+| 2026-09-18 | K3-D808 | 未判定（见报告正文） | `k3-repo@fb481a26:docs/synova/audit-reports/2026-09-18-K3-D808.md` | 2026-09-18 |
+| 2026-09-18 | K3-line10 | 未判定（见报告正文） | `k3-repo@a85e6619:docs/synova/audit-reports/2026-09-18-K3-line10.md` | 2026-09-18 |
+| 2026-09-19 | K3-D819 | 未判定（见报告正文） | `k3-repo@2b1b645c:docs/synova/audit-reports/2026-09-19-K3-D819.md` | 2026-09-19 |
+| 2026-09-20 | K3-D839 | 未判定（见报告正文） | `k3-repo@32e653be:docs/synova/audit-reports/2026-09-20-K3-D839.md` | 2026-09-20 |
+| 2026-09-20 | K3-D850D852 | 未判定（见报告正文） | `k3-repo@cc4e4166:docs/synova/audit-reports/2026-09-20-K3-D850D852.md` | 2026-09-20 |
+| 2026-09-20 | K3-D854 | 未判定（见报告正文） | `k3-repo@cc4e4166:docs/synova/audit-reports/2026-09-20-K3-D854.md` | 2026-09-20 |
+| 2026-09-21 | D821 | 未判定（见报告正文） | `k3-repo@41c4d201:docs/synova/audit-reports/2026-09-21-D821.md` | 2026-09-21 |
+| 2026-09-21 | K3-D858-复审 | 未判定（见报告正文） | `k3-repo@7be1ff86:docs/synova/audit-reports/2026-09-21-K3-D858-复审.md` | 2026-09-21 |
+| 2026-09-21 | K3-D862 | 未判定（见报告正文） | `k3-repo@3b47edcc:docs/synova/audit-reports/2026-09-21-K3-D862.md` | 2026-09-21 |
+| 2026-09-21 | K3-D864-复审 | 未判定（见报告正文） | `k3-repo@6d4e76cb:docs/synova/audit-reports/2026-09-21-K3-D864-复审.md` | 2026-09-21 |
+| 2026-09-21 | K3-D865-复审 | 未判定（见报告正文） | `k3-repo@9d1e14b8:docs/synova/audit-reports/2026-09-21-K3-D865-复审.md` | 2026-09-21 |
+| 2026-09-24 | K3批次4-PR745-746-747 | 未判定（见报告正文） | `k3-repo@b272b765:docs/synova/audit-reports/2026-09-24-K3批次4-PR745-746-747.md` | 2026-09-24 |
+| 2026-09-25 | K3-批次5 | 未判定（见报告正文） | `k3-repo@001631bc:docs/synova/audit-reports/2026-09-25-K3-批次5.md` | 2026-09-25 |
+| — | AGENT-CAPABILITY-FULL-CHAIN-AUDIT-20260813 | 未判定（见报告正文） | `k3-repo@8d64c433:docs/synova/audit-reports/AGENT-CAPABILITY-FULL-CHAIN-AUDIT-20260813.md` | — |
+| — | AGENT-INFRASTRUCTURE-AUDIT-20260814 | 未判定（见报告正文） | `k3-repo@34b4d80f:docs/synova/audit-reports/AGENT-INFRASTRUCTURE-AUDIT-20260814.md` | — |
+| — | DS8-flip-physical-verification | 未判定（见报告正文） | `k3-repo@ece4e268:docs/synova/audit-reports/D577-sentinel-threshold-wiring-evidence-20260905/DS8-flip-physical-verification.md` | — |
+| — | README | 未判定（见报告正文） | `k3-repo@ece4e268:docs/synova/audit-reports/D577-sentinel-threshold-wiring-evidence-20260905/README.md` | — |
+| — | T1-T10-red-green-evidence | 未判定（见报告正文） | `k3-repo@ece4e268:docs/synova/audit-reports/D577-sentinel-threshold-wiring-evidence-20260905/T1-T10-red-green-evidence.md` | — |
+| — | wiring-and-hygiene-grep-evidence | 未判定（见报告正文） | `k3-repo@ece4e268:docs/synova/audit-reports/D577-sentinel-threshold-wiring-evidence-20260905/wiring-and-hygiene-grep-evidence.md` | — |
+| — | calc-diff | 未判定（见报告正文） | `k3-repo@1c084775:docs/synova/audit-reports/D579-k3-verdict-stale-evidence-20260906/calc-diff.md` | — |
+| — | test-output | 未判定（见报告正文） | `k3-repo@1c084775:docs/synova/audit-reports/D579-k3-verdict-stale-evidence-20260906/test-output.md` | — |
+| — | README | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/README.md` | — |
+| — | finding-id-consumers-grep-evidence | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/finding-id-consumers-grep-evidence.md` | — |
+| — | arch-green.log. | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/logs/arch-green.log.txt` | — |
+| — | arch-red.log. | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/logs/arch-red.log.txt` | — |
+| — | green-finding-id.log. | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/logs/green-finding-id.log.txt` | — |
+| — | green-finding-id2.log. | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/logs/green-finding-id2.log.txt` | — |
+| — | green-routes.log. | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/logs/green-routes.log.txt` | — |
+| — | green-routes2.log. | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/logs/green-routes2.log.txt` | — |
+| — | green-store-transition.log. | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/logs/green-store-transition.log.txt` | — |
+| — | green-store-transition2.log. | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/logs/green-store-transition2.log.txt` | — |
+| — | idem-run1.log. | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/logs/idem-run1.log.txt` | — |
+| — | idem-run2.log. | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/logs/idem-run2.log.txt` | — |
+| — | red-finding-id.log. | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/logs/red-finding-id.log.txt` | — |
+| — | red-finding-id2.log. | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/logs/red-finding-id2.log.txt` | — |
+| — | red-store-transition-routes.log. | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/logs/red-store-transition-routes.log.txt` | — |
+| — | regression-sentinel.log. | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/logs/regression-sentinel.log.txt` | — |
+| — | tsc-after.log. | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/logs/tsc-after.log.txt` | — |
+| — | tsc-baseline.log. | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/logs/tsc-baseline.log.txt` | — |
+| — | vitest-after-summary.log. | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/logs/vitest-after-summary.log.txt` | — |
+| — | vitest-baseline-failed-files. | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/logs/vitest-baseline-failed-files.txt` | — |
+| — | vitest-baseline-summary.log. | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/logs/vitest-baseline-summary.log.txt` | — |
+| — | zero-code-after-commit.log. | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/logs/zero-code-after-commit.log.txt` | — |
+| — | red-green-evidence | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/red-green-evidence.md` | — |
+| — | wiring-and-write-set-evidence | 未判定（见报告正文） | `k3-repo@e8d11fd6:docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/wiring-and-write-set-evidence.md` | — |
+| — | README | 未判定（见报告正文） | `k3-repo@b54a0fb6:docs/synova/audit-reports/D590-chat-sse-evidence-20260908/README.md` | — |
+| — | e2e-ds2-ds3-curl.log. | 未判定（见报告正文） | `k3-repo@b54a0fb6:docs/synova/audit-reports/D590-chat-sse-evidence-20260908/e2e-ds2-ds3-curl.log.txt` | — |
+| — | e2e-session-readback-restart.log. | 未判定（见报告正文） | `k3-repo@b54a0fb6:docs/synova/audit-reports/D590-chat-sse-evidence-20260908/e2e-session-readback-restart.log.txt` | — |
+| — | e2e-sse-full-stream.log. | 未判定（见报告正文） | `k3-repo@b54a0fb6:docs/synova/audit-reports/D590-chat-sse-evidence-20260908/e2e-sse-full-stream.log.txt` | — |
+| — | green-full-vitest-mine-alone.log. | 未判定（见报告正文） | `k3-repo@b54a0fb6:docs/synova/audit-reports/D590-chat-sse-evidence-20260908/green-full-vitest-mine-alone.log.txt` | — |
+| — | green-full-vitest.log. | 未判定（见报告正文） | `k3-repo@b54a0fb6:docs/synova/audit-reports/D590-chat-sse-evidence-20260908/green-full-vitest.log.txt` | — |
+| — | red-conversations.log. | 未判定（见报告正文） | `k3-repo@b54a0fb6:docs/synova/audit-reports/D590-chat-sse-evidence-20260908/red-conversations.log.txt` | — |
+| — | red-use-streaming-contract.log. | 未判定（见报告正文） | `k3-repo@b54a0fb6:docs/synova/audit-reports/D590-chat-sse-evidence-20260908/red-use-streaming-contract.log.txt` | — |
+| — | run-ds2-ds3-evidence | 未判定（见报告正文） | `k3-repo@b54a0fb6:docs/synova/audit-reports/D590-chat-sse-evidence-20260908/run-ds2-ds3-evidence.sh` | — |
+| — | wiring-grep.log. | 未判定（见报告正文） | `k3-repo@b54a0fb6:docs/synova/audit-reports/D590-chat-sse-evidence-20260908/wiring-grep.log.txt` | — |
+| — | README | 未判定（见报告正文） | `k3-repo@bdfad5c0:docs/synova/audit-reports/D591-desktop-chat-wiring-evidence-20260908/README.md` | — |
+| — | ds2-driver | 未判定（见报告正文） | `k3-repo@bdfad5c0:docs/synova/audit-reports/D591-desktop-chat-wiring-evidence-20260908/ds2-driver.ts` | — |
+| — | e2e-ds2-desktop-chat.log. | 未判定（见报告正文） | `k3-repo@bdfad5c0:docs/synova/audit-reports/D591-desktop-chat-wiring-evidence-20260908/e2e-ds2-desktop-chat.log.txt` | — |
+| — | green-full-vitest-mine.log. | 未判定（见报告正文） | `k3-repo@bdfad5c0:docs/synova/audit-reports/D591-desktop-chat-wiring-evidence-20260908/green-full-vitest-mine.log.txt` | — |
+| — | green-use-streaming-conversation.log. | 未判定（见报告正文） | `k3-repo@bdfad5c0:docs/synova/audit-reports/D591-desktop-chat-wiring-evidence-20260908/green-use-streaming-conversation.log.txt` | — |
+| — | red-use-streaming-conversation.log. | 未判定（见报告正文） | `k3-repo@bdfad5c0:docs/synova/audit-reports/D591-desktop-chat-wiring-evidence-20260908/red-use-streaming-conversation.log.txt` | — |
+| — | run-ds2-evidence | 未判定（见报告正文） | `k3-repo@bdfad5c0:docs/synova/audit-reports/D591-desktop-chat-wiring-evidence-20260908/run-ds2-evidence.sh` | — |
+| — | wiring-grep.log. | 未判定（见报告正文） | `k3-repo@bdfad5c0:docs/synova/audit-reports/D591-desktop-chat-wiring-evidence-20260908/wiring-grep.log.txt` | — |
+| — | README | 未判定（见报告正文） | `k3-repo@f5f9c462:docs/synova/audit-reports/D593-FIX-restore-evidence-20260909/README.md` | — |
+| — | green-after-restore.log. | 未判定（见报告正文） | `k3-repo@f5f9c462:docs/synova/audit-reports/D593-FIX-restore-evidence-20260909/green-after-restore.log.txt` | — |
+| — | red-before-restore.log. | 未判定（见报告正文） | `k3-repo@f5f9c462:docs/synova/audit-reports/D593-FIX-restore-evidence-20260909/red-before-restore.log.txt` | — |
+| — | D593-run-ds2 | 未判定（见报告正文） | `k3-repo@c7eb8e0d:docs/synova/audit-reports/D593-report-persistence-evidence-20260908/D593-run-ds2.sh` | — |
+| — | README | 未判定（见报告正文） | `k3-repo@c7eb8e0d:docs/synova/audit-reports/D593-report-persistence-evidence-20260908/README.md` | — |
+| — | ds2-consult-sse.log. | 未判定（见报告正文） | `k3-repo@c7eb8e0d:docs/synova/audit-reports/D593-report-persistence-evidence-20260908/ds2-consult-sse.log.txt` | — |
+| — | ds2-restart-readback.log. | 未判定（见报告正文） | `k3-repo@c7eb8e0d:docs/synova/audit-reports/D593-report-persistence-evidence-20260908/ds2-restart-readback.log.txt` | — |
+| — | ds2-server-phase1.log. | 未判定（见报告正文） | `k3-repo@c7eb8e0d:docs/synova/audit-reports/D593-report-persistence-evidence-20260908/ds2-server-phase1.log.txt` | — |
+| — | ds2-server-phase2.log. | 未判定（见报告正文） | `k3-repo@c7eb8e0d:docs/synova/audit-reports/D593-report-persistence-evidence-20260908/ds2-server-phase2.log.txt` | — |
+| — | full-vitest-baseline-diff.log. | 未判定（见报告正文） | `k3-repo@c7eb8e0d:docs/synova/audit-reports/D593-report-persistence-evidence-20260908/full-vitest-baseline-diff.log.txt` | — |
+| — | red-vitest.log. | 未判定（见报告正文） | `k3-repo@c7eb8e0d:docs/synova/audit-reports/D593-report-persistence-evidence-20260908/red-vitest.log.txt` | — |
+| — | tsc-errors-baseline-95e1c9fa.log. | 未判定（见报告正文） | `k3-repo@c7eb8e0d:docs/synova/audit-reports/D593-report-persistence-evidence-20260908/tsc-errors-baseline-95e1c9fa.log.txt` | — |
+| — | tsc-errors-impl-branch.log. | 未判定（见报告正文） | `k3-repo@c7eb8e0d:docs/synova/audit-reports/D593-report-persistence-evidence-20260908/tsc-errors-impl-branch.log.txt` | — |
+| — | README | 未判定（见报告正文） | `k3-repo@749c3b51:docs/synova/audit-reports/D602-ipc-notification-evidence-20260909/README.md` | — |
+| — | ds4-transition-evidence | 未判定（见报告正文） | `k3-repo@749c3b51:docs/synova/audit-reports/D602-ipc-notification-evidence-20260909/ds4-transition-evidence.md` | — |
+| — | ds5-sse-error-evidence | 未判定（见报告正文） | `k3-repo@749c3b51:docs/synova/audit-reports/D602-ipc-notification-evidence-20260909/ds5-sse-error-evidence.md` | — |
+| — | backend-boot.log. | 未判定（见报告正文） | `k3-repo@749c3b51:docs/synova/audit-reports/D602-ipc-notification-evidence-20260909/logs/backend-boot.log.txt` | — |
+| — | consult-sse-error-frame. | 未判定（见报告正文） | `k3-repo@749c3b51:docs/synova/audit-reports/D602-ipc-notification-evidence-20260909/logs/consult-sse-error-frame.txt` | — |
+| — | consult-sse-full-stream.log. | 未判定（见报告正文） | `k3-repo@749c3b51:docs/synova/audit-reports/D602-ipc-notification-evidence-20260909/logs/consult-sse-full-stream.log.txt` | — |
+| — | tickets-after-restart.j | 未判定（见报告正文） | `k3-repo@749c3b51:docs/synova/audit-reports/D602-ipc-notification-evidence-20260909/logs/tickets-after-restart.json` | — |
+| — | tickets-after.j | 未判定（见报告正文） | `k3-repo@749c3b51:docs/synova/audit-reports/D602-ipc-notification-evidence-20260909/logs/tickets-after.json` | — |
+| — | tickets-before.j | 未判定（见报告正文） | `k3-repo@749c3b51:docs/synova/audit-reports/D602-ipc-notification-evidence-20260909/logs/tickets-before.json` | — |
+| — | transition-response. | 未判定（见报告正文） | `k3-repo@749c3b51:docs/synova/audit-reports/D602-ipc-notification-evidence-20260909/logs/transition-response.txt` | — |
+| — | red-green-evidence | 未判定（见报告正文） | `k3-repo@749c3b51:docs/synova/audit-reports/D602-ipc-notification-evidence-20260909/red-green-evidence.md` | — |
+
+## 远端状态（阶段 A 前置复核，2026-09-25 实测）
+
+- K3 工作区 `/Users/wane/Synova-k3独立审计` **已有远端**：`origin` = `git@github.com:Tangbaobao520/SynovaAgent.git`（**与本仓同一远端**，K3 走分支合入 main）。
+- 即：`k3-repo@<sha>` 指针当前指向**本仓历史**（报告正文文件目前仍在本仓 `docs/synova/audit-reports/` 内，共 148 份）。
+- **待创始人裁决**：是否要为 K3 报告正文建**物理独立远端**（私有新仓）以彻底把正文移出本仓——这会改 K3 工作流（报告要 push 到新仓而非本仓分支），且需先解决：① 本仓 148 份正文的迁移与引用断链 ② `check-citations` 的指向 ③ K3 侧写权边界。**CTO 不擅自开仓**（跨工作流变更）。
+- 在裁决前：本索引已可按「一行一条」机器判定；正文仍在本仓，但**不新增正文**（新批次只追加本索引一行 + 正文落 K3 工作区分支）。

@@ -139,20 +139,20 @@ fi
 # 落点: commit-msg hook（查 commit message），非 pre-commit 组 6（K3 §4.2 L219）。
 CT_ORCH_TOUCHED=$(echo "$STAGED_LIST" | grep -E '^(scripts/(control-tower|workflow|hooks)/|src/orchestrator/|AGENTS\.md$|CLAUDE\.md$|memory/notes/README\.md$)' | grep -vE '\.test\.sh$' || true)
 if [ -n "$CT_ORCH_TOUCHED" ]; then
-  if ! echo "$COMMIT_MSG" | grep -qE 'memory/notes/'; then
+  if ! echo "$COMMIT_MSG" | grep -qE 'memory/notes/|decisions/'; then
     echo ""
     echo -e "${RED}❌ D395-a/D534 Note 引用门禁: 非平凡变更的 commit 必须引用 Note 路径${RESET}"
     echo "   本次 commit 改动命中治理脚本区/规则文档区（scripts/{control-tower,workflow,hooks}/ 或 src/orchestrator/ 或 AGENTS.md/CLAUDE.md/memory/notes/README.md）:"
     echo "$CT_ORCH_TOUCHED" | sed 's/^/     - /'
-    echo "   请在 commit message 中引用决策 Note（如 memory/notes/implemented/2026-08-17-<主题>.md）"
+    echo "   请在 commit message 中引用决策 Note（如 memory/notes/implemented/… 或 decisions/process/… —— 2026-09-27 契约 §9 扩展）"
     echo "   （K3 §4.2: 决策可沉淀、可检索、不腐化 — 强化 M7，物理门禁不靠自觉）"
     exit 1
   fi
   NOTE_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-  NOTE_PATHS=$(echo "$COMMIT_MSG" | grep -oE 'memory/notes/[A-Za-z0-9_./-]+\.md' | sort -u || true)
+  NOTE_PATHS=$(echo "$COMMIT_MSG" | grep -oE '(memory/notes|decisions)/[A-Za-z0-9_./-]+\.md' | sort -u || true)
   if [ -z "$NOTE_PATHS" ]; then
     echo -e "${RED}❌ D395-a Note 引用门禁: commit message 含 memory/notes/ 但无有效 Note 文件路径${RESET}"
-    echo "   须引用形如 memory/notes/<四态>/YYYY-MM-DD-<主题>.md 的 Note 文件"
+    echo "   须引用形如 memory/notes/<四态>/YYYY-MM-DD-<主题>.md 的 Note，或 decisions/<lifecycle>/YYYY-MM-DD-<主题>.md"
     exit 1
   fi
   for np in $NOTE_PATHS; do
