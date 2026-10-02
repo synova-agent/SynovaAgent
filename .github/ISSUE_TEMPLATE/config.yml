@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 方向锚与派单件（仓内）
+    url: https://github.com/synova-agent/SynovaAgent/tree/main/docs/synova/coordination
+    about: 本仓的协调件（锚／回执／模块分配）在 docs/synova/coordination/ 下
