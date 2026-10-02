@@ -301,3 +301,10 @@ documents:
     status: active
     owner: line-lead
 
+  # ---- D1109（DSH 版本口径与断面登记）2026-10-02 ----
+  - id: DOC-0140
+    type: governance
+    path: docs/synova/coordination/DSH版本口径与断面-登记-20261001.md
+    status: active
+    owner: DSH
+
