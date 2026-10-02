@@ -1998,3 +1998,4 @@ Binary file .claude/bypass.log matches
 2026-10-02T18:11:25+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=2547565ced30319643594fefe4c35adbe221b8c8
 2026-10-02T18:29:27+08:00 | DEGRADED | pre-commit-check.sh not found | TASK_ID=D319-test | AGENT=test
 2026-10-02T18:29:27+08:00 | COMMITTED | pre-commit DEGRADED-PASS | TASK_ID=D319-test | AGENT=test | HASH=24750c6123a519747d91885ec74232a927bb1ca3
+2026-10-02T18:35:07+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=587726182e7a9a381ed68c447eb2b2c4a5290a0b
