@@ -84,13 +84,55 @@ PY
 
 ### 2.3 🔴 改坏即红夹具（只跑一次拿"通过"不算过）
 
+⚠️ **「挑哪个哨兵改坏」决定夹具真假。** 基线里**已经不一致的 12 个哨兵**，对它删声明**不会让总数变化**——它本来就在 `bad` 名单里。
+**实测（2026-10-02）**：
+
+| 选的哨兵 | 基线 | 改坏后 | 判定 |
+|---|---|---|---|
+| `cash-runway`（基线已在 bad 名单） | 12/45 | **12/45 不变** | ❌ **夹具假过** |
+| `agent-deployment-maturity`（基线一致） | 12/45 | **13/45** 且该 id 进 bad | ✅ 夹具有效 |
+
+⇒ **必须先算出「当前一致」的哨兵再挑**（45−12＝33 个候选），不许凭感觉点一个。
+
 ```bash
-# ① 基线：记下 mismatch 数（应 = 12/45）
-# ② 改坏：任一哨兵 manifest 的 computes[] 删一项
-# ③ 必红：重跑 → 该哨兵必须进 bad，总数必须 +1
-# ④ 恢复：改回 → 必须回到基线
-git checkout -- extensions/sentinels/<id>/manifest.json
+# ⓪ 挑一个【当前一致】的哨兵（--target 自动挑；--bad 打印 bad 名单）
+cat > /tmp/sentinel-check.py <<'PY'
+import json, os, glob, sys
+root="extensions/sentinels"
+def disk_slugs(cdir):
+    out=set()
+    if not os.path.isdir(cdir): return out
+    for f in os.listdir(cdir):
+        if not f.endswith(".ts") or f.endswith((".test.ts",".spec.ts",".d.ts")): continue
+        s=f[:-3]
+        if s.startswith("compute-"): s=s[len("compute-"):]
+        out.add(s)
+    return out
+bad=[]; mfs=sorted(glob.glob(f"{root}/*/manifest.json"))
+for mf in mfs:
+    d=os.path.dirname(mf); sid=os.path.basename(d)
+    m=json.load(open(mf))
+    dec=set((x[len("compute-"):] if x.startswith("compute-") else x) for x in (m.get("computes") or []))
+    on=disk_slugs(os.path.join(d,"computes"))
+    if dec!=on: bad.append(sid)
+print(f"active={len(mfs)} mismatch={len(bad)}/{len(mfs)}")
+if "--bad" in sys.argv: print("bad:", " ".join(bad))
+if "--target" in sys.argv:
+    allids=[os.path.basename(os.path.dirname(p)) for p in mfs]
+    good=[s for s in allids if s not in bad]
+    print("TARGET="+(good[0] if good else ""))
+PY
+
+# ① 基线（应 = 12/45）
+python3 /tmp/sentinel-check.py
+T=$(python3 /tmp/sentinel-check.py --target | sed -n 's/^TARGET=//p')   # 当前一致的哨兵
+
+# ② 改坏：只删【这一个】的 manifest.computes[] 最后一项
+# ③ 必红：重跑 → 该 id 必须进 bad，总数必须 = 13/45
+# ④ 恢复：git restore "extensions/sentinels/$T/manifest.json" → 必须回到 12/45
 ```
+
+四步全部留原始输出；**只跑①拿到"通过"不算过**。
 
 ### 2.4 三类失败与处置
 
