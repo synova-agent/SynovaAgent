@@ -342,3 +342,18 @@ documents:
     path: docs/synova/coordination/2026-10-02-D3-线登记与收口-R1R5-治理线一窗.md
     status: active
     owner: line-lead
+
+  # ---- Win 线派单件（D1000 身份链 / D1004 js-yaml）2026-10-02 补登记 ----
+  # 依据：Mac-CTO 2026-09-25 裁定「正式派单件 = 入库（docs/synova/dispatch/**）」
+  # 红因：D2 登记门禁（CI strict）判「有未登记文档 2 个」⇒ 本批补登记
+  - id: DOC-0141
+    type: governance
+    path: docs/synova/dispatch/D1000-win-identity-chain-department-20260924.md
+    status: active
+    owner: win-line
+
+  - id: DOC-0142
+    type: governance
+    path: docs/synova/dispatch/D1004-js-yaml-dependency-20260925.md
+    status: active
+    owner: win-line
