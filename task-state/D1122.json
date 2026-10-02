@@ -1,0 +1,28 @@
+{
+  "task_id": "D1122",
+  "title": "W1-A 死项退役（机械项 A1 + A3 已落地；A9 未落地退回队长）",
+  "status": "claimed",
+  "risk": "medium",
+  "spec": null,
+  "impl": {
+    "commit": null,
+    "by": "gov-impl-retire",
+    "at": "2026-10-02T00:00:00Z",
+    "files": [
+      ".codex/hooks.json",
+      ".codex/control-tower/VERSION.md",
+      "scripts/workflow/hook-check-task-scope.sh",
+      "tests/control-tower/hook-check-task-scope.test.sh",
+      "scripts/control-tower/gate-integrity-baseline.txt",
+      ".claude/task-briefs/2026-10-02-D1122-W1A-死项退役.md",
+      "memory/notes/proposed/2026-10-02-d1122-govl-dead-retire.md"
+    ],
+    "note": "commit sha 由生成器从 git log '(D1122)' 派生（task-state/README.md D393 口径，json 内为 null 属预期）"
+  },
+  "audit": null,
+  "fix_task_id": null,
+  "branch": "fix/D1122-govl-dead-retire",
+  "worktree": ".synova-wt-w1a",
+  "updated_at": "2026-10-02T00:00:00Z",
+  "updated_by": "coding"
+}

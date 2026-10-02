@@ -12,11 +12,6 @@
           {
             "type": "command",
             "command": "bash scripts/workflow/hook-block-write.sh"
-          },
-          {
-            "type": "command",
-            "command": "bash scripts/hooks/hook-enforce-v25.sh",
-            "statusMessage": "验证 v2.5 合规..."
           }
         ]
       },

@@ -261,7 +261,7 @@
 - **变更**: PATCH bump — 4 处 `find -newermt` 今日判定 → `today_files_by_prefix/suffix` 文件名日期筛选；marker `head|ts` 对账 + 去 rm + legacy 纯时间戳过渡分支 + root commit 显式降级
 - **D366 (门禁判定修复)**:
   - `scripts/pre-commit-check.sh` — 组 12 ALL_TODAY_BRIEFS 按文件名日期前缀
-  - `scripts/workflow/resolve-commit-brief.sh` / `scripts/workflow/hook-check-task-scope.sh` — 同上
+  - `scripts/workflow/resolve-commit-brief.sh` / `scripts/workflow/hook-check-task-scope.sh` — 同上；后者**已退役（D1122）**，2026-10-02 删除（死门禁：无 hook 接线、`ci.yml` 0 命中）
   - `scripts/control-tower/verify-parallel.sh` — --scan-today 按 `-YYYYMMDD.md` 文件名后缀
   - `scripts/hooks/post-commit.sh` — head==HEAD^ 对账、不匹配/无 marker=detected-bypass、超时=possible-bypass、legacy 兼容、root commit 降级；不 rm marker
   - `scripts/install-hooks.sh` — pre-commit wrapper 写 `head|timestamp`
