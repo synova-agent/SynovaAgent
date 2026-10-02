@@ -18,10 +18,14 @@
 #     会在当时在飞的 **124 个 PR** 上产生 **124 处「因配置缺失而红」**的 check-run 噪音。
 #     噪音的代价不是"看起来乱"，而是**人会开始绕开机制**（V3.9 教训：「软机制 0% 有效」），
 #     且这是**配置未就位、非代码缺陷** ⇒ 不该以红噪音形式摊到每个 PR 上。
-#   恢复条件（两个都满足才恢复）:
-#     ① secret `ISSUE_LIFECYCLE_TOKEN` 就位（fine-grained PAT，org `synova-agent`，
-#        组织权限 `Projects: Read and write`）；
-#     ② 补 U1 端到端验证：用 `workflow_dispatch` 真改一次 Project 状态成功。
+#   ⏭ 启用条件（**已由 CTO 附令 · Project 写入权分阶段 覆盖**，2026-10-02）:
+#     本 workflow 归档为**阶段 2 预备件**，阶段 1（现在）不做 Project 写入、**零 secret**。
+#     启用需**同时**满足：① **B 段政策三层落地并转正**；② **由 CTO 建单一 App**
+#       （如 `synova-project-bot`，由 workflow 统一 mint；⛔ 未启动前不许预建 App/预置 secret）。
+#     ⚠️ 口径以 `docs/synova/coordination/2026-10-02-WB2-issue-lifecycle.md` **§5 保证 1″** 为准
+#       （本注释为指向性引用，避免事实源两处漂移）。
+#     ❌ 已作废的旧口径：原写「secret `ISSUE_LIFECYCLE_TOKEN` 就位 + 补 U1 即可恢复」
+#       —— 该裁定已被上述附令覆盖，**不要再按它执行**。
 #   恢复操作：把下面 `RESTORE-BEGIN/END` 之间 4 行的 `# ` 去掉即可（**一行不改、不加**）。
 #   恢复正确性**已被机器验证**（不等 token）：产出件 §5-a 的测试会把该段取消注释后交给
 #     YAML 解析器，断言"展开后恰为 3 个 PR 事件且**不含 edited**" ⇒ 恢复动作本身不会引入回归。
@@ -34,10 +38,12 @@
 #      其中 title-only（changes 仅含 title）显式判定 ⇒ 即便将来误加订阅也不改状态。
 #      ⚠️ 代码面保证**与触发面无关，现在就可测**，夹具见产出件 §5-b（T2/T3 实测 0 mutation）。
 #
-# 🔴 token（本 workflow 唯一的外部前置）:
+# 🔴 token（**阶段 2 启用后才需要**；阶段 1 不配置）:
 #   Projects (V2) 的 GraphQL **读写都不能用 `GITHUB_TOKEN`** —— 它是 repo-scoped。
-#   需要 secret `ISSUE_LIFECYCLE_TOKEN` = fine-grained PAT（资源所有者 = 组织 synova-agent，
-#   组织权限 `Projects: Read and write`）。缺该 secret 时本 job 会**显式报错**（不静默跳过）。
+#   阶段 2 启用时需 secret `ISSUE_LIFECYCLE_TOKEN` = fine-grained PAT（资源所有者 = 组织 synova-agent，
+#   组织权限 `Projects: Read and write`）；由 CTO 按附令建单一 App 统一 mint，**本卡不配**。
+#   ⚠️ 阶段 1 若有人手动跑 `workflow_dispatch`：因 token 未配置，本 job 会**显式报错**
+#     （`LIFECYCLE: ERROR` + `::error::`），**不静默跳过** —— 这是刻意的（铁律 11/31）。
 #   ref: https://github.github.com/gh-aw/reference/auth-projects/
 #
 # permissions 最小集依据: GitHub 官方 `permissions:` 可取值表中**没有**可授予
@@ -92,7 +98,10 @@ jobs:
       - name: 流转 Project 状态
         env:
           # 只传专用 PAT：不把 GITHUB_TOKEN 当回退，避免失败信息退化成难懂的 403。
-          # 未配 secret 时 lifecycle.mjs 会打印可操作的 ERROR（显式失败，不静默跳过）。
+          # 🔴 下面这行是**引用，不是配置** —— 它**不会创建 secret**；`ISSUE_LIFECYCLE_TOKEN`
+          #   当前**未配置**，因此该表达式**解析为空字符串**。故本文件**不违反**「阶段 1 零 secret」
+          #   （「零 secret」= 仓库不配置 secret，本卡满足）。表达式**保留**：阶段 2 启用时正好要用。
+          #   未配置时的显式失败行为见上方 token 段注释。
           ISSUE_LIFECYCLE_TOKEN: ${{ secrets.ISSUE_LIFECYCLE_TOKEN }}
         run: |
           set +e
