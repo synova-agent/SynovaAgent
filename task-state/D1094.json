@@ -1,0 +1,14 @@
+{
+  "task_id": "D1094",
+  "title": "Python 工具 Windows 兼容修复（classify-worktrees / verdict-baseline）",
+  "status": "claimed",
+  "domain": "win",
+  "owner": "待派（建议 Win/Codex）",
+  "spec": ".claude/task-briefs/2026-10-01-D1094-win-compat.md",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-01",
+  "updated_by": "harness-登记（X30 启动窗）",
+  "note": "PR #908 Windows 门禁腿红的根因与处置：新登记的 classify-worktrees.test.sh / verdict-baseline.test.sh 在 Windows(Git Bash) 下失败（前者 PASS=7 FAIL=1「脚本 exit=0 期望 0 实际 1」；后者「位置种类=3 实际 0」等）⇒ 我这两个 Python 工具存在 Windows 兼容缺陷（登记把它们暴露出来，属收获）。临时处置：ci.yml 循环内加**显式**平台跳过名单（仅 Windows 腿跳过，ubuntu 照跑，打印 SKIP 行不静默）。待办：修 tools 的 Windows 兼容（路径/编码/子进程假设），修好删除跳过名单；建议交 Win/Codex（本机可复现）。"
+}
