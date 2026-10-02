@@ -20,8 +20,9 @@ description: 哨兵全生命周期判据与检查（synova-sentinel 能力面负
 
 | 事实 | 值 | 复跑 |
 |---|---|---|
-| 活跃哨兵 | **45** | `ls -d extensions/sentinels/*/ \| grep -v _extinct \| wc -l` |
+| 活跃哨兵 | **45** | `ls extensions/sentinels/*/manifest.json \| wc -l` ⚠️ **不要用目录计数**：`ls -d extensions/sentinels/*/ \| grep -v _extinct \| wc -l` = **46**（多出无 manifest 的 `shared/`，实测 2026-10-03） |
 | 顶层索引 | 1 | `extensions/sentinels/manifest.json`（`type: sentinel`，`sentinels.<领域[]>` 分组登记） |
+| 🔴 顶层索引**登记率** | **42/45** | 3 个活跃哨兵**未登记**：`path-dependency`、`sentinel-forecast-accuracy`、`sentinel-pricing-strategy`（复跑脚本见 §3.1） |
 | 退役哨兵 | **12** | `ls extensions/sentinels/_extinct/ \| wc -l` |
 | `manifest.computes[]` ≠ 磁盘 | **12/45** | §2 脚本（口径见 §2，错一步就误报） |
 
@@ -40,15 +41,19 @@ description: 哨兵全生命周期判据与检查（synova-sentinel 能力面负
 | manifest `computes[]` | `<slug>` 或 `compute-<slug>` | 去前导 `compute-` |
 | 磁盘 `computes/` | `<slug>.ts` 或 `compute-<slug>.ts` | 去 `.ts`，再去前导 `compute-` |
 
-**三次实测（2026-10-02，同一份盘）**：
+**真值表（2026-10-03 由独立自验复跑全 4×2 组合；同一份盘）**：
 
-| 口径 | 结果 |
-|---|---|
-| 不做归一化（要求 manifest 恰为 `<slug>`） | 误报 **43/45** |
-| 只认 `computes/compute-<slug>.ts` | 误报 **27/45** |
-| **两侧都归一** | **真值 12/45** |
+| manifest 侧 ↓ ＼ 磁盘侧 → | 原样 | 归一 | 只认裸名 | **只认 `compute-*.ts`** |
+|---|---|---|---|---|
+| 原样 | **12/45** | 28/45 | 28/45 | **43/45** |
+| **归一** | 28/45 | **12/45** ✅ | 28/45 | **27/45** |
 
-⚠️ 这条正是本技能存在的主要理由：不写清归一化，检查器就是误报机。
+🔴 **真正的规则不是"要不要归一"，而是"两侧口径必须一致"**：
+- **两侧都归一**（推荐，§2.2 脚本）或**两侧都原样** → 都得到 12/45（两种写法在语料上是双射）。
+- **一侧归一、一侧原样** → 误报。**43/45** 与 **27/45** 都出自"磁盘侧只认 `compute-*.ts`"这个**子集口径**（把不带前缀的那批文件整批漏掉），不是"没做归一化"。
+- ❌ 绝不要用"磁盘只认某种命名"的写法——它是这两次误报的唯一来源。
+
+⚠️ 这条正是本技能存在的主要理由：口径不写死，检查器就是误报机；且**误报方向是"变少"**（12→43 是把好哨兵判坏，43 这种大数反而更该怀疑自己）。
 
 ### 2.2 判据脚本（真源，直接可跑；改哨兵面前后各跑一次，两个数都贴）
 
@@ -153,6 +158,18 @@ T=$(python3 /tmp/sentinel-check.py --target | sed -n 's/^TARGET=//p')   # 当前
 - `extensions/sentinels/<id>/` 必须同时有 `manifest.json` + `aggregate.ts`。
 - `manifest.json` 必填键（45/45 实测齐备）：`$schema name version type displayName description schedule expert priority layer computeKind computes thresholds aggregation context entryPoint exportKey auxiliaryExperts`。
 - **顶层索引必须登记**：`extensions/sentinels/manifest.json` 的 `sentinels.<领域[]>` 里要有该 id —— 漏登记 = 加载器看不见，**目录在场 ≠ 出现**。
+- 🔴 **现状缺口（as_of 2026-10-03，实测）**：登记 **42/45**，未登记 3 个 —— `path-dependency`、`sentinel-forecast-accuracy`、`sentinel-pricing-strategy`。复跑：
+  ```bash
+  python3 - <<'PY'
+  import json, glob, os
+  d = json.load(open('extensions/sentinels/manifest.json'))
+  reg = set(x for v in d['sentinels'].values() if isinstance(v, list) for x in v)
+  active = {os.path.basename(os.path.dirname(p)) for p in glob.glob('extensions/sentinels/*/manifest.json')}
+  print("registered=%d active=%d" % (len(reg), len(active)))
+  print("active-but-NOT-registered:", sorted(active - reg))
+  PY
+  ```
+  > 这条属"问① 加了吗"的**直接反例**：目录在场、manifest 齐全、但顶层索引未登记 ⇒ 加载器看不见。修复归哨兵能力面负责人（不许只改 sitemap 了事，须先确认 loader 真实读取路径）。
 - `entryPoint`（`./aggregate.ts`）与 `exportKey` 必须与文件里的真实导出逐字一致。
 
 ### 3.2 问③ 生效了吗（真被生产代码调用）
