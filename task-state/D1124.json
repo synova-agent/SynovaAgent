@@ -1,0 +1,3 @@
+{"id":"D1124","title":"L1 指令面瘦身（CLAUDE.md 退役为指针 + AGENTS.md 合并独有内容）","status":"in_progress","created":"2026-10-02","branch":"docs/D1122-cto-deliverables-contract",
+"write_set":["AGENTS.md","CLAUDE.md","task-state/D1124.json",".claude/task-briefs/2026-10-02-D1124-L1瘦身.md",".claude/bypass.log","docs/authority/DOCS-REGISTRY.yaml"],
+"note":"创始人 2026-10-02 指 CLAUDE.md 是 Claude Code 遗留件、出现在 CTO 上下文不合适。实测：DSH 候选清单含 AGENTS.md+CLAUDE.md（config.ts:12），内容不同者各注入一份 ⇒ 两件共占 89.1% 预算。处置：CLAUDE.md 独有 9 条铁律（0-3b 多机PR/0-4 备份/0-5 多Agent协议含审计红线/40-45 TUI/46-47 架构完整性）并入 AGENTS.md；CLAUDE.md 改指针件并保留版本号+流程约束两处兼容行。结果 41.3%，腾出 38KB。3 处脚本硬依赖改造归治理线。"}

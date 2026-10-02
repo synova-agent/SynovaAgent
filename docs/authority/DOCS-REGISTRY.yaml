@@ -420,3 +420,24 @@ documents:
     status: active
     owner: DSH
 
+  # ---- D1124（L1 瘦身：模板/抽取清单/总方案）2026-10-02 ----
+  - id: DOC-0166
+    type: governance
+    path: docs/synova/coordination/AGENTS-md-模板-20261002.md
+    status: active
+    owner: DSH
+
+  # ---- D1124（L1 瘦身：模板/抽取清单/总方案）2026-10-02 ----
+  - id: DOC-0167
+    type: governance
+    path: docs/synova/coordination/CLAUDE-md-抽取清单-20261002.md
+    status: active
+    owner: DSH
+
+  # ---- D1124（L1 瘦身：模板/抽取清单/总方案）2026-10-02 ----
+  - id: DOC-0168
+    type: governance
+    path: docs/synova/coordination/指令面与GitHub三层-总方案-20261002.md
+    status: active
+    owner: DSH
+
