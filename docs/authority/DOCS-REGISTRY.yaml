@@ -355,21 +355,21 @@ documents:
     owner: DSH
 
   # ---- D1111（CTO 防跑偏机制）2026-10-02 ----
-  - id: DOC-0136
+  - id: DOC-0146
     type: governance
     path: docs/synova/coordination/CTO-状态台账.md
     status: active
     owner: DSH
 
   # ---- D1113（收件闸回执 + 岗位件补插件契约 + 派单模板补执行体）2026-10-02 ----
-  - id: DOC-1311
+  - id: DOC-0142
     type: governance
     path: docs/synova/coordination/收件闸回执-基座线B-1-20261002.md
     status: active
     owner: DSH
 
   # ---- D1114（补两线窗锚）2026-10-02 ----
-  - id: DOC-1312
+  - id: DOC-0143
     type: governance
     path: docs/synova/coordination/方向锚-基座线-20261002.md
     status: active
@@ -377,7 +377,7 @@ documents:
 
 
   # ---- D1114（补两线窗锚）2026-10-02 ----
-  - id: DOC-01310
+  - id: DOC-0144
     type: governance
     path: docs/synova/coordination/方向锚-产品线-20261002.md
     status: active
