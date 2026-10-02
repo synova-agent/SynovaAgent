@@ -1,0 +1,26 @@
+{
+  "task_id": "D1002",
+  "title": "工作区路由遮蔽修复（W2/F-1）+ 错误码顺序（E-2）+ /conflicts 守卫补齐",
+  "status": "claimed",
+  "risk": "high",
+  "domain": "win",
+  "owner_side": "win",
+  "owner": "win-codex-cto",
+  "executor": "synova-squad-lead（队长不下场写码）+ 1 编码 + 1 独立自验 + 1 独立复核",
+  "branch": "fix/d1002-workspaces-route-order",
+  "base": "D947 合入后的 main（#754 → #755 合并之后；workspaces-api.ts 被 D947 PR-2 改写，基于旧 main 必冲突）",
+  "depends_on": ["D947"],
+  "blocked": "等 D947 双 PR 合并（#754 → #755）后方可开工；D1001/D1000-A 可与本卡并行（域不同、文件不重叠）",
+  "target": "2026-W40",
+  "spec": "docs/synova/dispatch/D1002-workspaces-route-order-f1-20260925.md（派单即规格）",
+  "write_set": [
+    "src/routes/workspaces-api.ts",
+    "tests/routes/workspaces-mine-conflicts.test.ts",
+    "tests/routes/workspace-access-write-endpoint.test.ts",
+    "task-state/D1002.json"
+  ],
+  "renumber": "原 D950（与 Mac 侧 D950 = 116 卡归一撞号）→ D1002；Mac-CTO 2026-09-25 裁定批准",
+  "note": "实测：/:id 注册于 :126，/mine 于 :264、/conflicts 于 :294 → 运行时探针两跳均 404（PLAN §1-补 2 原始输出）。D947-RULINGS.md:253 已裁「本卡不修 ordering，另立卡」；本卡是承重件（不修则用户可见的部门工作区永远不可达）。安全核心：/conflicts 现为 _req 无守卫，放开遮蔽前必须先加 requireVerifiedRbac，两步同 commit。E-2（/merge 的 400 先于 403）来自 K3 审计 §一.5。明确排除：src/middleware/auth.ts（D1000 切片 A 持有，避免同文件双写者）、GET /api/workspaces 的既有无守卫缺口（F-5，另立卡）、department-workspace.ts（已 deprecated）。字段规范：domain 单值枚举 + owner_side（Mac-CTO 2026-09-25 §四）。",
+  "updated_at": "2026-09-25",
+  "updated_by": "win-codex-cto"
+}
