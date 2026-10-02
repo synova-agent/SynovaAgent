@@ -426,3 +426,60 @@ documents:
     path: docs/synova/coordination/AGENTS-md-模板-20261002.md
     status: active
     owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0167
+    type: instruction
+    path: extensions/sentinels/AGENTS.md
+    status: active
+    owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0168
+    type: instruction
+    path: src/l3/AGENTS.md
+    status: active
+    owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0169
+    type: instruction
+    path: expert/AGENTS.md
+    status: active
+    owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0170
+    type: instruction
+    path: src/l4/AGENTS.md
+    status: active
+    owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0171
+    type: instruction
+    path: scripts/control-tower/AGENTS.md
+    status: active
+    owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0172
+    type: instruction
+    path: .github/AGENTS.md
+    status: active
+    owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0173
+    type: instruction
+    path: docs/AGENTS.md
+    status: active
+    owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0174
+    type: instruction
+    path: tests/control-tower/AGENTS.md
+    status: active
+    owner: DSH
+
