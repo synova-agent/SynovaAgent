@@ -280,6 +280,22 @@ documents:
     status: active
     owner: DSH
 
+  # ---- D1098（CTO 岗位说明书·三级制）2026-10-01 ----
+  # 号段去重（D1105 裁定）：本支原用 0119/0120，与 main（#926）撞号 0119-0123
+  # ⇒ 改号 0126/0127（#928 用 0124/0125）。登记门禁不校 id 唯一，全靠人工守。
+  # 注：DOC-0119/0120 同时被 PR #915 用于两份 2026-09-30 决策件；
+  #     本仓登记门禁不校 id 唯一（实测 grep duplicate/重复/unique 零命中），合并时人工去重。
+  - id: DOC-0126
+    type: decision
+    path: decisions/proposed/process/2026-10-01-cto-role-three-tier.md
+    status: draft
+    owner: DSH
+
+  - id: DOC-0127
+    type: governance
+    path: docs/synova/CTO-ROLE.md
+    status: active
+    owner: DSH
   # ---- D1105（派单件移交线负责人层）2026-10-01 ----
   # 来源：~/Synova-过程档案/ 整份搬运，内容逐字未改（只加 4 行来源头）。
   # 归层：三级制下这三件**不再归 CTO**，由线负责人承接 ⇒ 入库防"本机一坏无处恢复"。
