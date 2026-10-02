@@ -342,3 +342,172 @@ documents:
     path: docs/synova/coordination/2026-10-02-D3-线登记与收口-R1R5-治理线一窗.md
     status: active
     owner: line-lead
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0141
+    type: governance
+    path: .github/ISSUE_TEMPLATE/bug.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0142
+    type: governance
+    path: .github/ISSUE_TEMPLATE/feature.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0143
+    type: governance
+    path: .github/ISSUE_TEMPLATE/task.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0144
+    type: governance
+    path: decisions/process/2026-10-01-branch-protection-and-ci-admission.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0145
+    type: governance
+    path: decisions/proposed/process/2026-10-01-branch-protection-emergency-plan.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0146
+    type: governance
+    path: decisions/proposed/process/2026-10-01-cto-role-three-tier.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0147
+    type: governance
+    path: docs/synova/CTO-ROLE.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0148
+    type: governance
+    path: docs/synova/coordination/CTO-状态台账.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0149
+    type: governance
+    path: docs/synova/coordination/DSH版本口径与断面-登记-20261001.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0150
+    type: governance
+    path: docs/synova/coordination/Issues启用-待开清单与范围声明-20261002.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0151
+    type: governance
+    path: docs/synova/coordination/收件闸回执-基座线B-1-20261002.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0152
+    type: governance
+    path: docs/synova/coordination/收件闸回执-治理线第一窗-20261002.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0153
+    type: governance
+    path: docs/synova/coordination/方向锚-产品线-20261002.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0154
+    type: governance
+    path: docs/synova/coordination/方向锚-基座线-20261002.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0155
+    type: governance
+    path: docs/synova/coordination/方向锚-治理线-20261001.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0156
+    type: governance
+    path: docs/synova/coordination/方向锚-治理线-总窗-20261002.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0157
+    type: governance
+    path: docs/synova/coordination/最终分工方案-20261002.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0158
+    type: governance
+    path: docs/synova/coordination/根因-check-preset-bundles-CI独有红-20261001.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0159
+    type: governance
+    path: docs/synova/coordination/模块分配-Win侧-20261002.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0160
+    type: governance
+    path: docs/synova/coordination/模块卡-W1-权限两姿态-20261001.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0161
+    type: governance
+    path: docs/synova/coordination/治理卡-G1-preset-bundles-CI红-20261001.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0162
+    type: governance
+    path: docs/synova/coordination/经验教训索引.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0163
+    type: governance
+    path: docs/synova/presets/README.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0164
+    type: governance
+    path: docs/synova/presets/synova-base/README.md
+    status: active
+    owner: DSH
+
