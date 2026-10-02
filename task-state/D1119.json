@@ -1,0 +1,3 @@
+{"id":"D1119","title":"治理线总窗大任务 + 最终分工方案（派活出去）","status":"in_progress","created":"2026-10-02","branch":"docs/D1110-role-governance-line",
+"write_set":["docs/synova/coordination/方向锚-治理线-总窗-20261002.md","docs/synova/coordination/最终分工方案-20261002.md","docs/authority/DOCS-REGISTRY.yaml","task-state/D1119.json",".claude/task-briefs/2026-10-02-D1119-大任务与分工.md",".claude/bypass.log"],
+"note":"创始人令：①给治理线一个大任务（门禁总收口 + 散落门禁归一 + 文档总收口含HTML/登记表冲突）②定最终分工方案并派活出去，CTO 不再陷在门禁/PR 操作。本件出：治理线总窗锚（含附一散落门禁地图要求：我实测列了 10 类散落形态：PreToolUse/pre-commit/commit-msg/pre-push/ci.yml/ruleset 两套/doc 三闸/号源/三张棘轮基线）+ 最终分工方案（四角色+一句话判据+我的输出形态+失效条件）。其余三线锚已在 #940/#941 系列出。 "}

@@ -389,3 +389,18 @@ documents:
     path: docs/synova/coordination/模块分配-Win侧-20261002.md
     status: active
     owner: DSH
+
+  # ---- D1119（治理线总窗方向锚）2026-10-02 ----
+  - id: DOC-0147
+    type: governance
+    path: docs/synova/coordination/方向锚-治理线-总窗-20261002.md
+    status: active
+    owner: DSH
+
+  # ---- D1119（最终分工方案）2026-10-02 ----
+  - id: DOC-0148
+    type: governance
+    path: docs/synova/coordination/最终分工方案-20261002.md
+    status: active
+    owner: DSH
+
