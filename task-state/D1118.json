@@ -1,0 +1,3 @@
+{"id":"D1118","title":"治理线第一窗收件闸回执 + 待裁清单 + 下一批安排","status":"in_progress","created":"2026-10-02","branch":"docs/D1110-role-governance-line",
+"write_set":["docs/synova/coordination/收件闸回执-治理线第一窗-20261002.md","docs/authority/DOCS-REGISTRY.yaml","task-state/D1118.json",".claude/task-briefs/2026-10-02-D1118-治理线一窗回执.md",".claude/bypass.log"],
+"note":"治理线第一窗（D1112）收件闸回执：技术核验逐条现场复算（A5 锚已落地 :80/:207 含 .html；A3 job 级 !cancelled() :190/:695；npm audit continue-on-error :663 + 实测 SUCCESS；A1-① 基线 12 行 + CI 接线 2；.html 257；CT(windows) 758s/670s vs 基线 2142s）。待裁：S-1/S-2/S-3（K3 过审→CTO 裁，建议 S-3 先批、S-1 现可接因 A5 已修）；A6 有条件下授权删死条目；A4 归创始人。纪律偏差（未走共享任务板）不予追责但下窗必走板。"}

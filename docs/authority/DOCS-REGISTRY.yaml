@@ -360,3 +360,11 @@ documents:
     path: docs/synova/coordination/CTO-状态台账.md
     status: active
     owner: DSH
+
+  # ---- D1118（治理线第一窗收件闸回执 + 待裁 + 下一批）2026-10-02 ----
+  - id: DOC-0141
+    type: governance
+    path: docs/synova/coordination/收件闸回执-治理线第一窗-20261002.md
+    status: active
+    owner: DSH
+
