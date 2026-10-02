@@ -1,0 +1,3 @@
+{"id":"D1125","title":"L2 域级 AGENTS.md A 批 8 份（路径归属成为可查事实）","status":"in_progress","created":"2026-10-02","branch":"docs/D1122-cto-deliverables-contract",
+"write_set":["extensions/sentinels/AGENTS.md","src/l3/AGENTS.md","expert/AGENTS.md","src/l4/AGENTS.md","scripts/control-tower/AGENTS.md",".github/AGENTS.md","docs/AGENTS.md","tests/control-tower/AGENTS.md","docs/authority/DOCS-REGISTRY.yaml","task-state/D1125.json",".claude/task-briefs/2026-10-02-D1125-L2域级8份.md",".claude/bypass.log"],
+"note":"创始人 2026-10-02「这一份你定个目标，里边的内容全部你自己完成」。L2 层：DSH 有 22 份分层 AGENTS.md，我方只有根级 1 份。由 8 个并行子代理各写一域（写集不重叠），每份附复核清单与实测命令。合计 31,806 B；与根两件合计 58,886 B / 65,536 = 89.8% ⇒ B 批 5 份装不进（需另议）。子代理发现四处冲突只登记不处置。"}

@@ -342,3 +342,144 @@ documents:
     path: docs/synova/coordination/2026-10-02-D3-线登记与收口-R1R5-治理线一窗.md
     status: active
     owner: line-lead
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0141
+    type: governance
+    path: .github/ISSUE_TEMPLATE/bug.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0142
+    type: governance
+    path: .github/ISSUE_TEMPLATE/feature.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0143
+    type: governance
+    path: .github/ISSUE_TEMPLATE/task.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0144
+    type: governance
+    path: decisions/process/2026-10-01-branch-protection-and-ci-admission.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0145
+    type: governance
+    path: decisions/proposed/process/2026-10-01-branch-protection-emergency-plan.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0146
+    type: governance
+    path: decisions/proposed/process/2026-10-01-cto-role-three-tier.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0147
+    type: governance
+    path: docs/synova/CTO-ROLE.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0149
+    type: governance
+    path: docs/synova/coordination/DSH版本口径与断面-登记-20261001.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0163
+    type: governance
+    path: docs/synova/presets/README.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0164
+    type: governance
+    path: docs/synova/presets/synova-base/README.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（分工定稿 → B 层决策）2026-10-02 ----
+  - id: DOC-0165
+    type: decision
+    path: decisions/implemented/process/2026-10-02-role-division-final.md
+    status: active
+    owner: DSH
+
+  # ---- D1124（L1 瘦身：模板/抽取清单/总方案）2026-10-02 ----
+  - id: DOC-0166
+    type: governance
+    path: docs/synova/coordination/AGENTS-md-模板-20261002.md
+    status: active
+    owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0167
+    type: instruction
+    path: extensions/sentinels/AGENTS.md
+    status: active
+    owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0168
+    type: instruction
+    path: src/l3/AGENTS.md
+    status: active
+    owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0169
+    type: instruction
+    path: expert/AGENTS.md
+    status: active
+    owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0170
+    type: instruction
+    path: src/l4/AGENTS.md
+    status: active
+    owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0171
+    type: instruction
+    path: scripts/control-tower/AGENTS.md
+    status: active
+    owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0172
+    type: instruction
+    path: .github/AGENTS.md
+    status: active
+    owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0173
+    type: instruction
+    path: docs/AGENTS.md
+    status: active
+    owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0174
+    type: instruction
+    path: tests/control-tower/AGENTS.md
+    status: active
+    owner: DSH
+

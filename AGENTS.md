@@ -53,6 +53,29 @@ Step 5 WIRE CHECK 是硬门禁：`grep -rn "新函数名" src/` — 零结果 = 
 - 保存进度: 先 `git commit`（走 synova-commit），不要 stash
 hook 已检测 `git stash` 并提示（hook-git-detect.sh）。
 
+**铁律 0-3b. 多机 PR 工作流（D334，2026-08-14 创始人定）。**
+main 是唯一真相。一人一事一分支。合并走 PR。禁止直接 push main（pre-push 门禁 0-2 硬阻断）。
+开工前必须 `git fetch --all && git pull --ff-only`；禁止在 `[behind N]` 状态开工或 push
+（pre-push 门禁 0-1 + 提交端 D335 check-branch-sync 双端硬阻断）。禁止 force push 共享分支。规范全文:
+`docs/synova/coordination/MULTI-MACHINE-PR-WORKFLOW.md`；skill: `git-sync-pr`。
+历史：2026-08-11~13 双机同分支交替 push，Mac tracking ref 过期 4 天误报 ahead、实际落后
+11 commit，险些互相覆盖。
+
+**铁律 0-4. 数据资产备份（D335，2026-08-14 创始人定）。**
+代码有三地备份（GitHub+Mac+Win），数据必须同样有异地副本。`data/synova.db` 每日
+03:30 由 launchd 自动备份到 iCloud Drive（`scripts/backup/backup-db.sh`，sqlite3
+.backup 一致性快照 + integrity_check + 14 份轮转）。禁止直接 cp 数据库（可能拷到
+写一半的库）。新机器开工前验证备份任务存在：`launchctl list | grep synova.backup`。
+
+**铁律 0-5. 多 Agent 协作协议（D336，2026-08-14 创始人定）。**
+四角色两条线：开发线 = Codex+DeepSeek(dev doc) + DeepSeek Harness(架构/基建/PR审查/创新)
++ Claude Code(功能实现)；审计线 = Kimi K3(独立审计)。任务路由查
+`docs/synova/coordination/TASK-ROUTING.md`，协议全文 `docs/synova/coordination/MULTI-AGENT-COLLAB.md`。
+**审计红线（违反=事故）**：DeepSeek Harness 与 Claude Code 永不修改审计脚本
+（scripts/audit/ 等）、永不编写审计标准、禁止自我审计（开发者改过的门禁同样受 K3 审）。
+PR 审查 ≠ 审计：审计结论只认 K3 报告。同一模块同一时间只允许一个角色认领。
+
+
 
 **铁律 47. 契约优先。** 新增 compute 函数必须先定义输入/输出/降级契约（JSDoc），再实现。参见 SYNOVA-ARCH-质量与测试体系-20260707.md §二。
 **铁律 48. 测试不可为空壳。** 测试文件必须有 expect() 断言。空壳测试 → commit 阻断。每个 compute 函数至少覆盖：正常路径 + 降级路径 + 边界条件。
@@ -60,8 +83,6 @@ hook 已检测 `git stash` 并提示（hook-git-detect.sh）。
 **铁律 49（D534 新增）. 决策必须沉淀。** 非平凡变更（治理脚本/铁律/规则文档）的 commit 必须引用 memory/notes/ 四态 Note（commit-msg 物理门禁）；新决策写 proposed/，落地 git mv 到 implemented/，否决 rejected/，过时 archived/。规范见 `memory/notes/README.md`。
 
 ### 一、接线铁律
-
-**铁律 1. 垂直切片交付。** 按用户可见的行为拆，不按技术层拆。
 
 **铁律 1. 垂直切片交付。** 按用户可见的行为拆，不按技术层拆。
 **铁律 4. 交付不完整——写了代码没接线。** 入口 → 交互 → 结果，三环节缺一不可交付。
@@ -110,6 +131,116 @@ L5 存储 (SQLite) → L4
 pre-commit `check-architecture.sh` 检测 L2→L4 / L3→L5 跨层违规。
 
 
+
+### 六、TUI V2 铁律（2026-06-07 新增 — 基于闪烁修复+流式事故）
+
+> 以下铁律来自 2026-06-07 TUI V2 闪烁修复和流式 Pipeline 事故。
+> 核心原则：**ink 补丁层已经解决了闪烁，React 层不要过度工程化。**
+
+**铁律 40. 闪烁修复不可回退（冻结）。**
+
+任何修改 TUI V2 时，必须确认以下冻结项完好：
+```
+[ ] patches/ink+5.2.1.patch 存在
+[ ] package.json "postinstall": "patch-package" 存在
+[ ] React.memo 在 Message/StreamingText 上
+[ ] 没有引入全量重渲染（forceUpdate / 逐 token 的 setState）
+[ ] 没有 fallback 到旧的 useStreaming 实现
+```
+执法现状（2026-09-09 D603 拉平）：本条**无 pre-commit 自动执法**——`patch 文件缺失/postinstall 缺失/React.memo 被移除`全靠人工按上方清单核查（L1 审计 §3.3 实证：scripts/ 全目录 grep 零执法逻辑）。补真实 check 属 scripts/control-tower 域，CTO 另行派工。
+
+**铁律 41. 流式 Pipeline 简单直接 — 禁止过度工程化。**
+
+`useStreaming` hook 只能用 `bufferRef += token` + `setTimeout(flush, 16)` 模式。
+禁止引入：`LineBuffer` / `FrameRateLimiter` / `StreamChunker` 多层嵌套。
+ink 补丁层已解决闪烁，React 层只需简单的 buffer + 60fps flush。
+
+**Why**：LineBuffer 要求换行才提交→无换行文本永远不可见。三层嵌套→buffer 永远来不及 flush。
+执法现状（2026-09-09 D603 拉平）：本条**无 pre-commit 自动执法**——`use-streaming.ts` 中出现 `LineBuffer`/`FrameRateLimiter`/`StreamChunker` 类名不会触发任何门禁，靠 code review 把关（同上，scripts/ 零执法逻辑）。
+
+**铁律 42. 逐字流必须有延迟。**
+
+非流式 API 模拟流式时，`for (const ch of content) onToken(ch)` 必须配合 `await sleep(5)`。
+每字符至少 5ms 间隔，留出 UI flush 时间。
+
+**Why**：零延迟→所有 token 几毫秒内传完→buffer 来不及显示→用户看到空白。
+pre-commit 警告：`tool-loop-executor.ts` 中 `for (const ch of` 后无 `sleep`。
+
+**铁律 43. finishStreaming 调用顺序不可反。**
+
+必须是：
+```
+flushBuffer() → addAgentMessage(reply) → setState({ isStreaming: false })
+```
+先 `isStreaming=false` 后 `addAgentMessage` → 中间有一帧空白。
+
+**Why**：顺序反了会在流式结束和新消息之间出现空白帧。
+pre-commit 警告：检测 `setState({ ... isStreaming: false })` 在 `addAgentMessage` 之前。
+
+**铁律 44. ChatPanel 禁止 `justifyContent="flex-end"`。**
+
+ink 不支持真正的滚动。flex-end 会把旧消息推出可见区域。
+正确做法：消息截断算法 + `⋯ 上方还有 N 条消息`。
+
+执法现状（2026-09-09 D603 拉平）：本条**无 pre-commit 自动执法**——`chat-panel.tsx` 中出现 `justifyContent.*flex-end` 不会触发任何门禁，靠 code review 把关（同上，scripts/ 零执法逻辑）。
+
+**铁律 45. 注释中 `*/` 必须加空格。**
+
+JSDoc 或块注释中 `*/` 必须写为 `* /`。
+否则 esbuild 把 `*/` 识别为块注释结束符→编译失败。
+
+**Why**：message.tsx 注释写了 `-/*/+`，esbuild 解析崩溃。
+pre-commit 警告：`.tsx` 文件注释中出现 `*/`（非行尾的块注释结束符）。
+
+
+### 八、架构完整性 — 2026-06-21 新增（engine-core 拆分欺诈事故）
+
+> 以下铁律来自 2026-05 至 2026-06 engine-core 拆分欺诈事故。
+> 核心原则：**桥接文件 ≠ 迁移。声称拆完 = grep 零引用。**
+
+**铁律 46. 禁止桥接代理文件——迁移必须是代码真搬，不准建 import 代理。**
+
+桥接文件定义：src/ 下的文件，主体内容仅为 `import { X } from '../../packages/engine-core/...'; export const X = _X;`。
+
+**判定标准**：
+```
+纯桥接 = 文件中非 import/export/注释 的有效代码行数 = 0
+部分桥接 = 有原创代码但仍直接 import engine-core
+```
+
+**修复标准**：
+1. 将 engine-core 中的代码真正复制/移动到 src/ 对应位置
+2. 在 src/ 文件中重写实现，不 import engine-core
+3. 更新所有调用方的 import 路径
+4. 删除 engine-core 中已迁移的旧文件
+5. `grep -r "packages/engine-core" src/` 零结果（白名单除外）
+
+**白名单**（唯一允许引用 engine-core 的文件）：
+- `src/adapters/engine-core-adapter.ts` — 官方适配器
+- `src/init/engine-context.ts` — 引擎初始化
+- `src/types/engine-core-types.ts` — 类型重导出
+- `src/agent/orchestrator-adapter.ts` — 编排器适配
+- `src/l4/graph-bridge.ts` — 图桥接
+- `src/l4/entity-resolver-l2.ts` — 实体解析
+- `src/l4/engine-graph-store.ts` — 图存储
+- `src/l4/diagnosis-graph-query.ts` — 图查询
+
+**Why**：2026-05~06，engine-core 拆分被反复声称完成，实际全部是桥接文件——538 文件原封不动，20 个桥接文件伪装成迁移。tsc 被骗过（import 路径合法），但运行时 17 处 CJS require() 在 ESM 下崩溃。一个月反复承诺零实质进展。
+
+pre-commit 硬阻断：`bash scripts/pre-commit-check.sh` — 非白名单 src/ 文件引用 `packages/engine-core` → 第 5 组硬阻断，拒绝提交。
+
+**铁律 47. "拆完了"必须由 grep 物理证明。**
+
+声称任何模块"已拆分/已迁移/已清理"前，必须运行：
+```bash
+grep -r "旧路径/旧包名" src/ --include="*.ts" --include="*.tsx" | grep -v "node_modules" | grep -v "\.test\."
+```
+零结果 = 拆完了。有结果 = 没拆完，继续拆。
+
+**Why**：tsc 零错误 ≠ 拆分完成。import 路径合法可以骗过编译器，骗不过 grep。
+pre-commit 警告：task brief 中声明"已完成拆分"但 grep 仍有旧路径引用。
+
+
 ---
 
 ## 项目身份
@@ -117,6 +248,29 @@ pre-commit `check-architecture.sh` 检测 L2→L4 / L3→L5 跨层违规。
 **产品**: SynovaAgent — 组织数字孪生诊断 + 持续增长导航系统。
 **定位**: 独立 Agent 进程，通过 HTTP API + MCP 对外服务；**桌面端**（Electron，品牌表层，施工图 🟢）：能装/能开/能用 8 验证点已闭环（切片 A/B/C，2026-08-25）。
 **市场**: 5-1000人团队的组织诊断与增长导航。
+
+**L0 进化** (独立于五层，自我迭代):
+```
+evolution/ (SessionLearningEngine, FeedbackCollector, OntologyAdapter)
+两路反馈 → 候选池 → 确认/执行验证 → 写入知识库/权重模型
+分歧记录 → 三个月后自动验证 → 更新/降级
+```
+
+**文件化扩展** (不改代码):
+- `expert/` — 新增专家 = 新建目录 + 8 个文件 → 自动注册
+- `expert/expert-registry.yaml` — 声明哪些专家启用、用什么工具
+- `knowledge/shared/` — 共享知识单源。专家 KNOWLEDGE.md 只引用不复制
+- `theory/` — 理论基础。每个文件对应一个学科模块
+
+**技能扩展**:
+- `skills/` — SKILL.md 定义完整方法论。按需加载。新增 skill = 新建目录 + SKILL.md → ExpertDispatcher 自动发现
+
+**数据安全**:
+- L0 公开摘要 — 所有人可见
+- L1 聚合信号 — GA + 客户可见
+- L2 脱敏证据 — GA + 客户可见（人名/金额已脱敏）
+- L3 原始数据 — 仅客户企业内部 Agent 可见。GA 永久不可见
+
 
 **两大核心系统**:
 1. **GA 按需诊断** — 用户触发，6阶段管道，全部测量器+专家 → 综合诊断报告
