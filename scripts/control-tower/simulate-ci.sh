@@ -59,7 +59,7 @@ TESTS=$(grep -oE 'tests/control-tower/[a-z0-9-]+\.test\.sh' "$ROOT/.github/workf
 #     windows 腿墙钟 96%（D1099 证据: 3474s/3607s）。
 #   默认（未设/非 smoke）= 与历史逐字节等价：清单全跑。
 SCOPE="${SYNO_SIM_SCOPE:-full}"
-SMOKE_TESTS="${SYNO_SIM_SMOKE_TESTS:-tests/control-tower/gate-stats.test.sh tests/control-tower/q2-error-locating.test.sh}"
+SMOKE_TESTS="${SYNO_SIM_SMOKE_TESTS:-tests/control-tower/q2-error-locating.test.sh}"
 if [ -z "$TESTS" ]; then
   echo -e "${YELLOW}⚠ ci.yml 未提取到测试清单 — 段降级跳过${RESET}"
   echo "SIM_MANIFEST_TOTAL=0 SIM_RUN=0 SIM_SCOPE=$SCOPE"

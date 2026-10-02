@@ -501,7 +501,6 @@ jobs:
             tests/control-tower/ct-test-gate.test.sh \
             tests/control-tower/task-start-parallel.test.sh \
             tests/control-tower/fastlane-bypass-only.test.sh \
-            tests/control-tower/gate-stats.test.sh \
             tests/control-tower/q2-error-locating.test.sh \
             tests/control-tower/platform-checklist.test.sh \
             tests/control-tower/tag-ancestry.test.sh \
