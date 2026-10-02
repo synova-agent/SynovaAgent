@@ -1,0 +1,13 @@
+{
+  "id": "D1123",
+  "title": "W1-B 裁决材料：A2 hook-enforce-loop.sh 接线 vs 退役 + A10 dev-doc-gatekeeper 跨线影响",
+  "status": "impl_done",
+  "created": "2026-10-02",
+  "branch": "docs/D1123-govl-decide",
+  "write_set": [
+    "docs/synova/coordination/2026-10-02-D1123-A2A10裁决材料-治理线总窗.md",
+    "task-state/D1123.json",
+    ".claude/task-briefs/2026-10-02-D1123-w1b-a2a10裁决材料.md"
+  ],
+  "note": "只读取证 + 产出提案件（不改任何被审文件）。A2 结论：倾向乙（退役 hook-enforce-loop.sh）——唯一自动释放路径 verify-incremental.sh:66 自身坏（$MAX， 紧贴 U+FF0C，set -u 下 unbound variable；E2E 7 轮实测第 6/7 轮 exit 1 且 state 停 5 不动），全仓 Write 冻结无可靠出口；释放仅靠无留痕 bash rm。设计前提倒置（PostToolUse 失败晚于 Write，阻断的是修复）。同信号已有非阻断断路器 loop-context.sh。接线面实测：.claude/settings.json 0 命中、.codex/hooks.json:18 悬空（指向自 63852ad7c 起不存在的 hook-enforce-v25.sh，该 commit 同 diff 内改名+建配置用旧名）、scripts/** 调用方 0、ci.yml 0、tests 0；全仓 hook-enforce-loop 5 处全为文档。另发现: verify-incremental.sh L2 npx tsc 在无 node_modules 时静默空转、A2-d scan-fullwidth-vars.sh 未接门禁（全树残余 26 处/15 文件无人看）。A10 结论：倾向方案 B（保留脚本 + 摘误引用）。app/js/control-tower.js:18 为可执行假引用（:57 fetch('/'+signalPath)，信号文件不存在且 .codex/signals/ gitignored，卡片常态 unknown/degraded；signalExpiryMs=600s），app/** 属 win 域需跨线派单；app/founder-dashboard.html:670/:718 为展示串（rdcPipeline 数据，无后果）；.claude/.dsh dev-doc-spec SKILL:24 为活契约散文（mac 域，门禁有活消费方 ⇒ 退役过早）；dev_doc_gatekeeper.py 为孤儿（仅自身测试+一份 spec 提及，U2d 已登记收口未做）；CI 显式列举 tests/control-tower/*.test.sh 118 个只跑 51 个，该门禁夹具不在内。机制存废/门禁语义一律只出提案，送 CTO 裁 + K3 审，未自判。"
+}
