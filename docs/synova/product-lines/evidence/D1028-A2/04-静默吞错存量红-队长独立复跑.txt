@@ -1,0 +1,68 @@
+═══ D1028 DS5「check-silent-swallow.sh --utf8」存量红 — 队长独立复跑（非成员转述）═══
+生成: 2026-09-27T06:32:02Z (UTC)
+工作树: .synova-wt-a2-d1028 | HEAD: 4afd4ce187575b96c0074d1db81277a8a08e4679 | 分支: chore/d1028-outbound-path-exemption
+
+$ bash scripts/workflow/check-silent-swallow.sh --utf8
+[utf8] ❌ /Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/ci/check-contract-gaps.sh 缺 PYTHONIOENCODING 头块
+[utf8] ❌ /Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/ci/diagnosis-quality-check.sh 缺 PYTHONIOENCODING 头块
+[utf8] ❌ /Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/ci/verify-d703.sh 缺 PYTHONIOENCODING 头块
+[utf8] ❌ /Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/ci/verify-doc.sh 缺 PYTHONIOENCODING 头块
+[utf8] ❌ /Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/control-tower/alloc-task-id.sh 缺 PYTHONIOENCODING 头块
+[utf8] ❌ /Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/control-tower/check-bypass-log.sh 缺 PYTHONIOENCODING 头块
+[utf8] ❌ /Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/control-tower/check-sentinel-type-net.sh 缺 PYTHONIOENCODING 头块
+[utf8] ❌ /Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/control-tower/daily-cto-board.sh 缺 PYTHONIOENCODING 头块
+[utf8] ❌ /Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/control-tower/declare-write-set.sh 缺 PYTHONIOENCODING 头块
+[utf8] ❌ /Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/control-tower/dev-doc-gatekeeper.sh 缺 PYTHONIOENCODING 头块
+[utf8] ❌ /Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/control-tower/inject-commit-instruction.sh 缺 PYTHONIOENCODING 头块
+[utf8] ❌ /Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/control-tower/pre-dispatch-check.sh 缺 PYTHONIOENCODING 头块
+[utf8] ❌ /Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/workflow/check-golden-regression.sh 缺 PYTHONIOENCODING 头块
+[utf8] ❌ /Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/workflow/check-integration.sh 缺 PYTHONIOENCODING 头块
+[utf8] ❌ /Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/workflow/check-self-diagnosis.sh 缺 PYTHONIOENCODING 头块
+[utf8] ❌ /Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/workflow/log-no-verify.sh 缺 PYTHONIOENCODING 头块
+[utf8] ❌ /Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/hooks/hook-git-guard.sh 缺 PYTHONIOENCODING 头块
+[utf8] ⚠️  /Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/control-tower/founder-truth.py 缺 sys.stdout.reconfigure（非 CI 门禁可豁免）
+[utf8] ⚠️  /Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/control-tower/gen-cto-health.py 缺 sys.stdout.reconfigure（非 CI 门禁可豁免）
+[utf8] ⚠️  /Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/control-tower/gen-plan-status.py 缺 sys.stdout.reconfigure（非 CI 门禁可豁免）
+[utf8] ⚠️  /Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/workflow/generate-task-brief.py 缺 sys.stdout.reconfigure（非 CI 门禁可豁免）
+[utf8] ⚠️  /Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/audit/analyze-transitive-closure.py 缺 sys.stdout.reconfigure（非 CI 门禁可豁免）
+[utf8] ⚠️  /Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/audit/completion_schema.py 缺 sys.stdout.reconfigure（非 CI 门禁可豁免）
+[utf8] ❌ 17 个 .sh 缺头块
+EXIT=1
+
+── 交叉验证 1: 这 17 件是否在本卡写集（应为 0）──
+$ git diff --name-only HEAD -- scripts/ | wc -l
+1
+$ bash scripts/workflow/check-silent-swallow.sh --utf8 2>&1 | grep -c 'check-pr-budget'
+0
+
+── 交叉验证 2: 与 main（origin/main）清单是否逐行相同 ──
+$ git diff --stat origin/main -- scripts/workflow/check-silent-swallow.sh
+(空 = 未改该检查器本身)
+
+── 交叉验证 3: 本卡改动的两个文件是否出现在 17 件清单 ──
+(未出现)
+
+── 交叉验证 4（决定性）: 17 件相对 origin/main 是否逐字节未改 ──
+$ bash scripts/workflow/check-silent-swallow.sh --utf8 | grep '❌ /' | sed 's|.*<worktree>/||'
+scripts/ci/check-contract-gaps.sh 缺 PYTHONIOENCODING 头块
+scripts/ci/diagnosis-quality-check.sh 缺 PYTHONIOENCODING 头块
+scripts/ci/verify-d703.sh 缺 PYTHONIOENCODING 头块
+scripts/ci/verify-doc.sh 缺 PYTHONIOENCODING 头块
+scripts/control-tower/alloc-task-id.sh 缺 PYTHONIOENCODING 头块
+scripts/control-tower/check-bypass-log.sh 缺 PYTHONIOENCODING 头块
+scripts/control-tower/check-sentinel-type-net.sh 缺 PYTHONIOENCODING 头块
+scripts/control-tower/daily-cto-board.sh 缺 PYTHONIOENCODING 头块
+scripts/control-tower/declare-write-set.sh 缺 PYTHONIOENCODING 头块
+scripts/control-tower/dev-doc-gatekeeper.sh 缺 PYTHONIOENCODING 头块
+scripts/control-tower/inject-commit-instruction.sh 缺 PYTHONIOENCODING 头块
+scripts/control-tower/pre-dispatch-check.sh 缺 PYTHONIOENCODING 头块
+scripts/workflow/check-golden-regression.sh 缺 PYTHONIOENCODING 头块
+scripts/workflow/check-integration.sh 缺 PYTHONIOENCODING 头块
+scripts/workflow/check-self-diagnosis.sh 缺 PYTHONIOENCODING 头块
+scripts/workflow/log-no-verify.sh 缺 PYTHONIOENCODING 头块
+scripts/hooks/hook-git-guard.sh 缺 PYTHONIOENCODING 头块
+
+$ git diff --name-only origin/main -- <上述 17 件>
+  → 行数: 0
+
+结论: 输出为空 ⇒ 这 17 件与 origin/main 逐字节一致 ⇒ 「17 个 .sh 缺头块」为**存量红**，非本卡引入。

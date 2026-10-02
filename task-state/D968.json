@@ -1,0 +1,22 @@
+{
+  "task_id": "D968",
+  "title": "P1 统一哨兵注册为单入口（裁剪 adapters 5 个 @deprecated + 去 runner 冗余）",
+  "status": "spec_done",
+  "risk": "high",
+  "domain": "mac",
+  "owner": "mac-coding",
+  "executor": "dsh-squad",
+  "milestone": "哨兵体系整改（十环判据）",
+  "spec": "docs/synova/architecture/SYNOVA-哨兵体系-最终版-v1-20260925.md",
+  "write_set": [
+    "src/sentinel/adapters/**",
+    "src/sentinel/builtins.ts",
+    "src/init/file-driven-loaders.ts",
+    "src/sentinel/runner.ts",
+    "tests/**",
+    "task-state/D968.json"
+  ],
+  "updated_at": "2026-09-25",
+  "updated_by": "synova-cto",
+  "note": "依据派单 docs/synova/coordination/派单-哨兵体系整改-20260925.md；判据见该文档逐卡 Done 段。"
+}

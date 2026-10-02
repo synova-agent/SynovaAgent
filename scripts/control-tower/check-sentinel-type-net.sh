@@ -46,11 +46,11 @@ TYPES_FILE="$ROOT/src/sentinel/types.ts"
 
 # fail-closed: 输入不存在 = 环境降级（exit 2），不当作"无哨兵=绿"
 if [ ! -d "$SENTINELS_DIR" ]; then
-  echo "degraded: 哨兵目录不存在: $SENTINELS_DIR（fail-closed，不判绿）" >&2
+  echo "degraded: 哨兵目录不存在: ${SENTINELS_DIR}（fail-closed，不判绿）" >&2
   exit 2
 fi
 if [ ! -f "$TYPES_FILE" ]; then
-  echo "degraded: 类型网文件不存在: $TYPES_FILE（fail-closed，不判绿）" >&2
+  echo "degraded: 类型网文件不存在: ${TYPES_FILE}（fail-closed，不判绿）" >&2
   exit 2
 fi
 

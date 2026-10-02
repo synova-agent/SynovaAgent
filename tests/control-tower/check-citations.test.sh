@@ -131,5 +131,18 @@ if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "待建声明 1"; then ok "边界: �
 else no "边界: 「新建」未识别为声明（rc=${RC}, out=${OUT}）"; fi
 
 echo ""
+echo "=== D964: archive/** 豁免根（文档减负归档）==="
+# 归档件引用的是「移动前」路径 ⇒ 豁免；同内容放非 archive 路径 ⇒ 必须红（改坏即红）
+mkdir -p "$TMPD/archive" "$TMPD/docs964"
+printf '见 `src/nonexistent-964.ts:99`\n' > "$TMPD/archive/old-964.md"
+OUT=$("$PY" "$C" "$TMPD/archive/old-964.md" --repo "$REPO" 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "archive/\*\* 豁免根"; then ok "⑨ archive/** 豁免根生效 → exit 0 且显式打印跳过（不静默）"
+else no "⑨ archive 豁免未生效（rc=${RC}, out=${OUT}）"; fi
+cp "$TMPD/archive/old-964.md" "$TMPD/docs964/broken-964.md"
+OUT=$("$PY" "$C" "$TMPD/docs964/broken-964.md" --repo "$REPO" 2>&1); RC=$?
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "CITE_FILE_NOT_FOUND"; then ok "⑨ 改坏即红: 同内容非 archive 路径必须报违规 → exit 1"
+else no "⑨ 改坏即红失败（rc=${RC}, out=${OUT}）"; fi
+
+echo ""
 echo "结果: $PASS 通过, $FAIL 失败"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1

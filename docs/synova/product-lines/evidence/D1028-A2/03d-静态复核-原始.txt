@@ -1,0 +1,244 @@
+
+════════════════════════════════════════════
+§ ST-01 bash -n（语法）
+════════════════════════════════════════════
+exit=0
+
+════════════════════════════════════════════
+§ ST-02 grep -n 'diff-filter'（原始输出全文）
+════════════════════════════════════════════
+共 2 处
+12:#   旧口径 `--diff-filter=ACMR` 把 D 全滤掉 ⇒ **对纯删除 PR 完全失明**（实测：合成仓库纯删 5 件
+131:  # S1: --name-status --find-renames 取全量（含 D）——旧口径 --diff-filter=ACMR 对纯删除 PR 失明
+--- 是否仍以 --diff-filter=ACMR 为唯一变更集口径 ---
+共 2 处 ACMR
+12:#   旧口径 `--diff-filter=ACMR` 把 D 全滤掉 ⇒ **对纯删除 PR 完全失明**（实测：合成仓库纯删 5 件
+131:  # S1: --name-status --find-renames 取全量（含 D）——旧口径 --diff-filter=ACMR 对纯删除 PR 失明
+--- 是否出现 name-status / --find-renames（S1 口径）---
+共 4 处
+14:#   `--name-status --find-renames`（**取全量含 D**），并新增**路径级出库豁免**：
+29:#               --diff-status "<txt>" D1028 新增注入缝: 原样喂 `git diff --name-status`
+131:  # S1: --name-status --find-renames 取全量（含 D）——旧口径 --diff-filter=ACMR 对纯删除 PR 失明
+132:  STATUS_TEXT="$(git -c core.quotepath=false diff --name-status --find-renames "$BASE...HEAD" 2>/dev/null)" || {
+
+════════════════════════════════════════════
+§ ST-03 接线 grep: pre-commit-check.sh 引用 check-pr-budget.sh
+════════════════════════════════════════════
+共 4 处（要求 ≥1）
+1515:if [ -x "$ROOT/scripts/control-tower/check-pr-budget.sh" ] || [ -f "$ROOT/scripts/control-tower/check-pr-budget.sh" ]; then
+1516:  PRB_OUT=$(bash "$ROOT/scripts/control-tower/check-pr-budget.sh" --quiet 2>&1)
+1521:    soft_check "D734 PR 预算超限 (拆 PR，禁调高上限——见 scripts/control-tower/check-pr-budget.sh)" "$PRB_OUT"
+1526:  soft_check "D734 PR 预算: 检查脚本缺失 scripts/control-tower/check-pr-budget.sh" "1"
+
+════════════════════════════════════════════
+§ ST-04 白名单/拒绝名单逐字比对（brief §Q2 L88–L92）
+════════════════════════════════════════════
+--- brief 原文（/Users/wane/SynovaAgent/.synova-wt-a2-d1028/.claude/task-briefs/2026-09-27-D1028-A2-纯归档出库路径级豁免.md L86-L93）---
+|---|---|---|
+| 成员A `impl-gate` | `scripts/control-tower/check-pr-budget.sh` | 唯一实现文件 |
+| 成员A `impl-gate` | `tests/control-tower/check-pr-budget.test.sh` | 配对测试（含 4 条反例） |
+| 成员B `docs-mech` | `docs/synova/coordination/出库声明与批次模板-D1028-20260927.md` | ②③④ 机制文档 |
+| 成员B `docs-mech` | `memory/notes/proposed/2026-09-27-D1028-outbound-exemption.md` | 铁律 49 决策 Note（原名含 CJK → 撞 `commit-msg-check.sh:153` ASCII-only 正则，已改 ASCII；见附录 D1） |
+| 队长 | `.claude/task-briefs/2026-09-27-D1028-*.md` | 本件 |
+| 队长 | `docs/synova/product-lines/evidence/D1028-A2/**` | 反例测试证据（自验员产出、队长原样转存） |
+| 队长 | `~/Synova-过程档案/2026-09-27-门禁线-交付-A2豁免.md` + `INDEX.md` | 仓外交付总报告 |
+--- 提取到的字面量 ---
+ALLOW_LIT   = [| 成员A `impl-gate` | `tests/control-tower/check-pr-budget.test.sh` | 配对测试（含 4 条反例） |]
+DENY_LIT    = [| 成员B `docs-mech` | `docs/synova/coordination/出库声明与批次模板-D1028-20260927.md` | ②③④ 机制文档 |]
+DENY_EX1    = [| 队长 | `.claude/task-briefs/2026-09-27-D1028-*.md` | 本件 |]
+DENY_EX2    = [| 队长 | `docs/synova/product-lines/evidence/D1028-A2/**` | 反例测试证据（自验员产出、队长原样转存） |]
+
+--- 逐条在实现中 grep -F（共 N 处）---
+ALLOW_LIT: 命中 0 处
+DENY_LIT: 命中 0 处
+DENY_EX1: 命中 0 处
+DENY_EX2: 命中 0 处
+
+--- 实现中 OUTBOUND_* 定义行 ---
+48:#   ✅ OUTBOUND_ALLOW_RE   — 出库白名单前缀（纯归档/出库批次允许）
+49:#   ❌ OUTBOUND_DENY_RE    — 拒绝名单前缀（代码/门禁/测试/扩展域，绝不豁免）
+50:#   ❌ OUTBOUND_DENY_EXACT — CTO 2026-09-27 追加的精确路径（ownership.yaml /
+185:OUTBOUND_ALLOW_RE='^(\.claude/task-briefs/|docs/plans/|docs/synova/coordination/|memory/notes/|docs/synova/archive/|docs/archive/)'
+186:OUTBOUND_DENY_RE='^(src/|scripts/|\.github/|tests/|extensions/|expert/)'
+187:OUTBOUND_DENY_EXACT_RE='^docs/synova/coordination/(ownership\.yaml|AUDIT-PROTOCOL\.md)$'
+188:OUTBOUND_EXEMPT=0
+189:OUTBOUND_DENY_HARD=0
+198:  printf '%s' "$_p" | grep -qE "$OUTBOUND_ALLOW_RE" && _in_allow=1
+199:  if printf '%s' "$_p" | grep -qE "$OUTBOUND_DENY_RE" || printf '%s' "$_p" | grep -qE "$OUTBOUND_DENY_EXACT_RE"; then _in_deny=1; fi
+214:    OUTBOUND_EXEMPT=1
+230:      if [ "$AM_N" -eq 0 ]; then OUTBOUND_DENY_HARD=1; fi
+253:if [ "$OUTBOUND_EXEMPT" -eq 0 ] && [ "$EXEMPT_N" -gt 0 ]; then
+257:if [ "$OUTBOUND_EXEMPT" -eq 1 ]; then
+266:if [ "$OUTBOUND_EXEMPT" -eq 1 ]; then
+276:if [ "$OUTBOUND_DENY_HARD" -eq 1 ]; then
+
+════════════════════════════════════════════
+§ ST-05 MAX_FILES=12 / ST-06 MAX_BEHIND=20 与 ②③ 语义
+════════════════════════════════════════════
+共 6 处
+73:MAX_FILES=12
+74:MAX_BEHIND=20
+83:    --max-files)   MAX_FILES="${2:-}"; shift 2 ;;
+84:    --max-behind)  MAX_BEHIND="${2:-}"; shift 2 ;;
+96:MAX_FILES="$(_clean_num "$MAX_FILES")"; MAX_FILES="${MAX_FILES:-12}"
+97:MAX_BEHIND="$(_clean_num "$MAX_BEHIND")"; MAX_BEHIND="${MAX_BEHIND:-20}"
+--- ① / ② / ③ 判定行 ---
+34:#   @output — stdout 逐项 ✅/⚠️/❌ 点名: ① 文件数（豁免生效时为出库豁免行） ② 域（调
+35:#             check-ownership.py） ③ 落后基线提交数；❌ 行点名具体超标项。
+134:  # ③ 落后基线提交数（只有真 git 模式才算得出来）
+265:# ── ① 变更文件数 ≤ 上限（或 D1028 出库豁免生效 / 旁路封堵 FAIL）──
+267:  echo "  ✅ ① D734 出库豁免生效（$((N_DEL + N_REN)) 件纯删除/重命名，全部落出库白名单）"
+271:  echo "  ✅ ① 变更文件数 $N_FILES ≤ 上限 $MAX_FILES"
+273:  echo "  ❌ ① 变更文件数 $N_FILES > 上限 $MAX_FILES —— 拆 PR（禁调高上限）"
+277:  echo "  ❌ ① D1028 旁路封堵: 纯删除/重命名命中 ❌ 拒绝名单 ${DENY_N} 件 —— 绝不豁免（exit 1）"
+281:# ── ② 变更只落在一个域（D733 check-ownership.py 的单域模式）──
+291:  echo "  ✅ ② 无变更文件 → 域校验跳过"
+295:    echo "  ✅ ② 变更单域: $(printf '%s\n' "$DOMAIN_OUT" | grep -E '^✅ PASS' | head -1)"
+297:    echo "  ❌ ② 变更跨域 —— 一个 PR 只许一个域（D733 ownership.yaml）"
+307:# ── ③ 落后基线提交数（告警，不阻断——防「落后分支直接合」）──
+310:    echo "  ⚠️  ③ 分支落后 $BASE 共 $BEHIND 个提交（> ${MAX_BEHIND}）—— 先 rebase/merge 再开 PR"
+312:    echo "  ✅ ③ 落后 $BASE $BEHIND 个提交 ≤ $MAX_BEHIND"
+316:    echo "  ✅ ③ 落后检查跳过（注入模式 --files/--diff-status 无 git 上下文）"
+318:    echo "  ✅ ③ 落后检查跳过（无 git 上下文）"
+64:OWNERSHIP="$SCRIPT_DIR/check-ownership.py"
+282:if [ ! -f "$OWNERSHIP" ]; then
+283:  echo "❌ 检查执行失败: 域校验器缺失 ${OWNERSHIP}（D734 依赖 D733；fail-closed）" >&2
+293:  DOMAIN_OUT="$("$PYBIN" "$OWNERSHIP" $COUNTED 2>&1)"; DOMAIN_EXIT=$?
+
+════════════════════════════════════════════
+§ ST-07 红证不残留（三种口径，全量输出）
+════════════════════════════════════════════
+口径① 全仓文件数     : 8
+口径② 仅 .sh 脚本命中 : 0
+口径③ 本卡两文件命中 : scripts/control-tower/check-pr-budget.sh:0 tests/control-tower/check-pr-budget.test.sh:0 
+--- 全仓逐文件命中清单（原始输出）---
+./docs/synova/product-lines/evidence/D922-phase0-verify-20260923.md:63:- **N6（提示，非队长错）** 坑清单写"红证不残留（`grep -c INJECTED-RED`=0）"，实测字面 grep 有 **2 行**命中，均为散文（`docs/synova/audit-reports/2026-09-20-K3-D854.md:40` 叙述该注入、`presets/synova-squad-lead/SYSTEM-PROMPT.md:29` 规则原文本身），**非活夹具残留**；恰好印证"grep 型静态判据"会误报。
+./docs/synova/product-lines/evidence/D935-20260924/self-verify.md:390:$ 本卡 6 件逐文件 git grep -c INJECTED-RED  →  全部 0
+./docs/synova/product-lines/evidence/D935-20260924/self-verify.md:391:$ git diff origin/main...HEAD | grep -c INJECTED-RED  →  0
+./docs/synova/product-lines/evidence/D935-20260924/self-verify.md:440:   - `INJECTED-RED` 字面 grep 存在散文误报（§5.6，D922 已记录）。
+./docs/synova/product-lines/evidence/D935-20260924/closeout.md:112:11. **M7 型指标漂移**：`grep -c INJECTED-RED` 全仓 4 处**均为散文引用**（K3 报告 / W1 计划 / D922 证据 / SYSTEM-PROMPT 坑清单原文），非红证残留；本卡 6 文件逐文件命中 0。D922 已记录同一误报。
+./docs/synova/coordination/总计划-双DSH提升-W1波-20260923.md:114:> - **红证不残留**：所有"故意写坏"的注入一律在 `mktemp -d` 副本上进行，`trap` 清理；收尾断言仓库内 `grep -rc INJECTED-RED` = 0 且 `git status --porcelain` 空。
+./docs/synova/coordination/总计划-双DSH提升-W1波-20260923.md:175:grep -rc INJECTED-RED "$WT" --include=*.sh    # 期望 0
+./docs/synova/coordination/总计划-双DSH提升-W1波-20260923.md:242:grep -rc INJECTED-RED "$WT" --include=*.sh   # 期望 0
+./docs/synova/coordination/总计划-双DSH提升-W1波-20260923.md:301:grep -rc INJECTED-RED "$WT" --include=*.sh      # 期望 0
+./docs/synova/coordination/总计划-双DSH提升-W1波-20260923.md:432:| **R5** | 红证残留进仓库 | `git status --porcelain` 非空 / `INJECTED-RED` 命中 | mktemp + trap 清理；收尾两条命令为必跑项 | 残留 → 停，清干净再交付 |
+./docs/synova/coordination/收件闸检查单.md:28:- [ ] **红证不得残留仓库**（`grep -rc INJECTED-RED` 须 0）
+./docs/synova/presets/synova-squad-lead/cordis.patch.yml:66:                数字必贴原始输出｜M6 必提交｜卡面前提自己验｜引用先确认在 main｜交付附 ls-remote 回执｜冲突扫描完整输出｜**禁 grep 型静态判据当验收**（实测 3/5=60%）｜**"接线了"≠"被执行"**（要有"删掉即报红"的判别性夹具）｜红证不残留（`grep -c INJECTED-RED`=0）｜空 blob 不进 main｜栈式 PR 必须声明 base｜PR 预算×治理产物｜Windows 门禁 fail-open 要显式 degraded｜CI 失败断言给完整片段（禁 `tail -8`）｜绿腿告警必须可见｜同类第二次**立即升级 CTO**｜跨卡簿记提交声明持有文件的 D#｜不并发跑重型验证
+./docs/synova/presets/synova-squad-lead/SYSTEM-PROMPT.md:29:数字必贴原始输出｜M6 必提交｜卡面前提自己验｜引用先确认在 main｜交付附 ls-remote 回执｜冲突扫描完整输出｜**禁 grep 型静态判据当验收**（实测 3/5=60%）｜**"接线了"≠"被执行"**（要有"删掉即报红"的判别性夹具）｜红证不残留（`grep -c INJECTED-RED`=0）｜空 blob 不进 main｜栈式 PR 必须声明 base｜PR 预算×治理产物｜Windows 门禁 fail-open 要显式 degraded｜CI 失败断言给完整片段（禁 `tail -8`）｜绿腿告警必须可见｜同类第二次**立即升级 CTO**｜跨卡簿记提交声明持有文件的 D#｜不并发跑重型验证
+./docs/synova/audit-reports/2026-09-20-K3-D854.md:40:失败点 = `tests/project/gen-project-board.test.sh` 的判定依据：#3909 与 #3912 之间的**唯一功能差异**是 commit `b7cda35e` 在该文件组⑥ 注入的 3 行必然失败断言（`[ "INJECTED-RED" = "expected-green" ]`，`git show b7cda35e` 实证）+ `dac9a3fe`（仅 bypass.log 登记）。#3909 同一 job ubuntu 绿 → #3912 ubuntu 红的成因即该注入断言。注入在 `958dfc81` 整段删除，`git diff b7cda35e 958dfc81 -- tests/project/gen-project-board.test.sh` 确认逐行还原、最终 PR diff 零残留。
+判定: 全仓 8 处（散文引用已知误报，D922/D935 先例）；活夹具口径 .sh 命中 0 处 → 通过（无活夹具残留）
+
+════════════════════════════════════════════
+§ ST-08 --diff-status 注入缝（S1 要求）
+════════════════════════════════════════════
+共 10 处
+29:#               --diff-status "<txt>" D1028 新增注入缝: 原样喂 `git diff --name-status`
+33:#             （--diff-status 优先于 --files）
+76:DIFF_STATUS=""
+77:DIFF_STATUS_SET=0
+86:    --diff-status) DIFF_STATUS="${2:-}"; DIFF_STATUS_SET=1; shift 2 ;;
+101:# ── S1 取变更集（D1028：全量含 D；--files/--diff-status 为测试注入缝）──
+105:if [ "$DIFF_STATUS_SET" -eq 1 ]; then
+107:  STATUS_TEXT="$DIFF_STATUS"
+114:    echo "❌ 检查执行失败: 非 git 仓库且未提供 --files/--diff-status（fail-closed）" >&2
+316:    echo "  ✅ ③ 落后检查跳过（注入模式 --files/--diff-status 无 git 上下文）"
+--files 相关共 7 处
+27:#               --files "<f1> <f2>" 显式变更集（测试注入；**语义不变**：视为 A/M，
+33:#             （--diff-status 优先于 --files）
+85:    --files)       FILES_OVERRIDE="${2:-}"; shift 2 ;;
+101:# ── S1 取变更集（D1028：全量含 D；--files/--diff-status 为测试注入缝）──
+110:  # --files 语义不变（视为 A/M）。用 awk 加状态列而非 sed —— BSD sed 的替换侧不认 \t
+114:    echo "❌ 检查执行失败: 非 git 仓库且未提供 --files/--diff-status（fail-closed）" >&2
+316:    echo "  ✅ ③ 落后检查跳过（注入模式 --files/--diff-status 无 git 上下文）"
+
+════════════════════════════════════════════
+§ REG-01 tests/control-tower/check-pr-budget.test.sh（全量输出）
+════════════════════════════════════════════
+exit=0
+输出行数=115
+  ✅ DS3 git mv src/a.ts → docs/archive/a.ts → exit 1 (exit=1)
+  ✅ DS3 R 双侧 旧侧 src/a.ts 被点名
+  ✅ DS3 git mv docs/plans/a.md → src/a.ts → exit 1 (exit=1)
+  ✅ DS3 R 双侧（反向）新侧 src/a.ts 被点名
+  ✅ DS3 白名单内重命名（docs/plans → docs/archive）→ exit 0 豁免
+  ✅ DS3 纯归档重命名 点名豁免生效
+  ✅ DS3 删 docs/synova/coordination/ownership.yaml → exit 1 (exit=1)
+  ✅ DS3 DENY_EXACT ownership.yaml 被点名
+  ✅ DS3 删 docs/synova/coordination/AUDIT-PROTOCOL.md → exit 1 (exit=1)
+  ✅ DS3 DENY_EXACT AUDIT-PROTOCOL.md 被点名
+  ✅ DS3 ❌ 前缀 .github/workflows/w ≥13 件纯删 → exit 1 (exit=1)
+  ✅ DS3 ❌ 前缀 tests/control-tower/t ≥13 件纯删 → exit 1 (exit=1)
+  ✅ DS3 ❌ 前缀 extensions/sentinels/s ≥13 件纯删 → exit 1 (exit=1)
+  ✅ DS3 ❌ 前缀 expert/host/e ≥13 件纯删 → exit 1 (exit=1)
+  ✅ DS3 ❌ 前缀 scripts/control-tower/s ≥13 件纯删 → exit 1 (exit=1)
+── 13. D1028 DS4 三态与降级（豁免不破 fail-closed）──
+  ✅ DS4 豁免件 + 域校验器缺失 → exit 2（豁免不放行 fail-closed）
+  ✅ DS4 python 不可用（三级探测全废）→ exit 2
+  ✅ DS4 python 不可用明示（不静默）
+  ✅ DS4 空变更集（--diff-status ""）→ exit 0 (exit=0)
+  ✅ DS4 空变更集不误报「豁免生效」
+  ✅ DS4 空变更集走既有 ① 分支
+  ✅ DS5 bash -n 语法通过
+  ✅ DS5 S1 新口径 --name-status --find-renames 在
+  ✅ DS5 旧口径 --diff-filter=ACMR 已清零
+  ✅ DS5 --diff-status 注入缝在
+  ✅ DS5 ✅ 出库白名单正则与冻结规格逐字一致
+  ✅ DS5 ❌ 拒绝名单正则与冻结规格逐字一致
+  ✅ DS5 ❌ DENY_EXACT（ownership.yaml / AUDIT-PROTOCOL.md）在
+  ✅ DS5 MAX_FILES=12 默认值不回归
+  ✅ DS5 「禁调高上限」输出不回归
+  ✅ DS5 头注释契约含 @input
+  ✅ DS5 头注释契约含 @output
+  ✅ DS5 头注释契约含 @exit
+  ✅ DS5 头注释契约含 @degraded
+  ✅ DS5 接线: pre-commit-check.sh 命中 4 处（≥1）
+  ✅ 接线: pre-commit-check.sh 真调用本脚本
+  ✅ 组数横幅未改（快速通道仍为「跳过 12 组」）
+  ✅ 总结横幅仍为 13 组（未并组）
+  ✅ 全部通过: 94 项
+
+════════════════════════════════════════════
+§ REG-02 tests/control-tower/check-ownership.test.sh（全量输出）
+════════════════════════════════════════════
+exit=0
+输出行数=75
+  ✅ 豁免不掩盖真跨域（Mac+Win 仍 exit 1）
+  ✅ 豁免路径不参与 --owner 断言 (exit=0)
+  ✅ 非豁免路径仍受 --owner 断言（回归） (exit=1)
+  ✅ D758 证据目录豁免: Win 代码 + 自己的验收证据 → exit 0
+  ✅ D758 证据路径明示 domain-neutral（不静默）
+  ✅ D758 Win 证据 + Mac 控制塔脚本 → 仍单域（证据不掺域）
+  ✅ D758 豁免不掩盖真跨域（Win 代码 + Mac 脚本仍 exit 1）
+  ✅ D758 豁免路径不参与 --owner 断言 (exit=0)
+  ✅ 反向验证前置: 兜底规则已移除
+  ✅ 删兜底 → src/server.ts 变绿 (exit=0)
+  ✅ 删兜底 → src/evidence/x.ts 变绿 (exit=0)
+  ✅ 原 yaml 复测仍红（未污染真实文件） (exit=1)
+  ✅ 复测输出点名「越域」
+  ✅ 无归属时明示 ⚠️（不静默）
+  ✅ D935 presets 根文件 = Mac (exit=0)
+  ✅ D935 presets 子目录文件 = Mac (exit=0)
+  ✅ D935 presets 派给 win 越域（对称） (exit=1)
+  ✅ D935 改坏前置: 沙箱副本已删 presets 规则
+  ✅ D935 删 presets 规则 → presets 路径派 mac 必红 (exit=1)
+  ✅ D935 删 presets 规则 → 子目录文件同样必红 (exit=1)
+  ✅ D935 原 yaml 复测仍绿（未污染真实文件） (exit=0)
+── 6. 降级与边界（fail-closed → exit 2）──
+  ✅ yaml 不存在 → exit 2 (exit=2)
+  ✅ yaml 语法非法 → exit 2 (exit=2)
+  ✅ rules 为空 → exit 2 (exit=2)
+  ✅ yaml 非映射 → exit 2 (exit=2)
+  ✅ 无文件参数 → exit 2
+  ✅ 未知 owner → exit 2（argparse 拒绝）
+  ✅ 尚未创建的文件路径也可判域 (exit=0)
+  ✅ drift: .github/CODEOWNERS 与生成结果逐字节一致
+  ✅ --emit-codeowners exit 0 (exit=0)
+  ✅ CODEOWNERS 顺序: 兜底(12) 在 Mac 例外(17) 之前
+  ✅ default 规则恰 1 条
+  ✅ 显式规则存在: src/sentinel/**
+  ✅ 显式规则存在: src/cron/**
+  ✅ 显式规则存在: src/mcp/**
+  ✅ 显式规则存在: scripts/audit/**
+  ✅ 显式规则存在: scripts/control-tower/**
+  ✅ 接线: CODEOWNERS 头声明由 check-ownership.py 生成（产物消费成立）
+  ✅ 全部通过: 58 项

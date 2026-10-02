@@ -1,0 +1,128 @@
+{
+  "label": "DRY",
+  "dbPath": "/tmp/verify-d965/db-A.db",
+  "loadSentinels": {
+    "count": 3,
+    "degraded": false,
+    "errors": []
+  },
+  "rows": [
+    {
+      "name": "customer-demand-shift",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "customerDemandShiftSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": false,
+      "rawLen": null,
+      "rawKeys": [
+        "findings",
+        "degraded"
+      ],
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": true,
+      "threw": null,
+      "ms": 3,
+      "storeCounts": {
+        "queryEdges": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 1,
+      "findingIds": [],
+      "evidenceLens": []
+    },
+    {
+      "name": "path-dependency",
+      "entryPoint": "./computes/detect.ts",
+      "exportKey": "pathDependencySentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryNodes": 1,
+        "queryEdges": 1
+      },
+      "traversalCounts": {},
+      "storeCallTotal": 2,
+      "findingIds": [],
+      "evidenceLens": []
+    },
+    {
+      "name": "sentinel-forecast-accuracy",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "forecastAccuracySentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": false,
+      "rawLen": null,
+      "rawKeys": [
+        "ok",
+        "findings",
+        "durationMs",
+        "checkedAt",
+        "degraded"
+      ],
+      "rawType": "object",
+      "unpackedLen": 3,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {},
+      "traversalCounts": {},
+      "storeCallTotal": 0,
+      "findingIds": [
+        "forecast-mape",
+        "forecast-sample",
+        "forecast-timeseries"
+      ],
+      "evidenceLens": [
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "summary": {
+    "total": 3,
+    "arrayCount": 1,
+    "threwCount": 0,
+    "nonArrayCount": 2,
+    "zeroFindingsRaw": [
+      "path-dependency"
+    ],
+    "zeroFindingsUnpacked": [
+      "customer-demand-shift",
+      "path-dependency"
+    ],
+    "zeroStoreCalls": [
+      "sentinel-forecast-accuracy"
+    ],
+    "unpackedNonZero": [
+      {
+        "name": "sentinel-forecast-accuracy",
+        "len": 3,
+        "ids": [
+          "forecast-mape",
+          "forecast-sample",
+          "forecast-timeseries"
+        ]
+      }
+    ]
+  }
+}

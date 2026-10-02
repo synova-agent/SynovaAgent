@@ -1,0 +1,2270 @@
+{
+ "evidence_id": "D1050-B2/excluded-briefs",
+ "purpose": "② 活跃性过滤的排除清单 —— 逐条给理由（本批最关键的 fail-closed 产物）",
+ "base_sha": "d85900407a46fbeb9bb97271ae8fb1fb4ccc4fc4",
+ "object_total": 424,
+ "excluded_total": 149,
+ "outbound_N": 275,
+ "status_vocabulary_measured": {
+  "source": "task-state/*.json 的 status 字段（实测，卡面判据 {done,merged,superseded} 零命中）",
+  "by_file": {
+   "closed": 15,
+   "audited": 124,
+   "claimed": 104,
+   "impl_done": 107,
+   "spec_done": 22,
+   "rejected": 2,
+   "in_progress": 2,
+   "audit_done": 1,
+   "None": 1
+  },
+  "registry_d_number_floor": 356,
+  "registry_floor_cmd": "ls task-state/ | grep -oE '^D[0-9]+' | sort -t D -k2 -n | head -3  →  D356 D379 D383"
+ },
+ "status_mapping_rebuilt": {
+  "outbound_allowed": [
+   "audited",
+   "impl_done",
+   "closed",
+   "rejected",
+   "audit_done"
+  ],
+  "always_excluded": [
+   "claimed",
+   "in_progress",
+   "spec_done"
+  ],
+  "no_task_state": "拆两档（fail-closed）：D# < 356 或 无 D# ⇒ 结构性无卡，可出库；D# ≥ 356 ⇒ 疑似漏登记/在飞，排除",
+  "unexpected_status": "凡 status ∉ outbound_allowed ⇒ 排除（含 None）"
+ },
+ "rule_table": [
+  {
+   "id": "X1",
+   "rule": "是 .claude/current-brief 指向件",
+   "why": "在飞：该文件是本 session 认领链锚点",
+   "count": 1
+  },
+  {
+   "id": "X2",
+   "rule": "是本批自身新 brief",
+   "why": "自指；该件未跟踪故不在 424 内",
+   "count": 0
+  },
+  {
+   "id": "X3",
+   "rule": "被 scripts/ tests/ .github/ .claude/settings.json 以精确路径点名",
+   "why": "其中 2 件为 fail-closed 测试夹具（删则测试必红）；其余 4 件实测非活但按 fail-closed 保留",
+   "count": 6
+  },
+  {
+   "id": "X4",
+   "rule": "task-state status ∈ {claimed, in_progress, spec_done}",
+   "why": "认领链在飞（G10/G6/G12 认领依赖）",
+   "count": 56
+  },
+  {
+   "id": "X5",
+   "rule": "近 14 天（≥2026-09-14）有 git 触碰",
+   "why": "近期活跃 ⇒ 可能在飞",
+   "count": 89
+  },
+  {
+   "id": "X6",
+   "rule": "无 task-state 且 D# ≥ 356",
+   "why": "注册表实测下限 D356；注册表时代内本应有卡却无 ⇒ 疑似漏登记/在飞",
+   "count": 48
+  }
+ ],
+ "items": [
+  {
+   "path": ".claude/task-briefs/2026-08-02-D286-GraphStore-unify.md",
+   "filename": "2026-08-02-D286-GraphStore-unify.md",
+   "d_number": "D286",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X3"
+   ],
+   "reasons": [
+    "非历史层精确路径点名（.claude/settings.json / tests / generate-task-brief.py）—— 实测判非活，按 fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-15-D366-gate-today-marker.md",
+   "filename": "2026-08-15-D366-gate-today-marker.md",
+   "d_number": "D366",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#366 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-16-D363-llm-runtime-failover.md",
+   "filename": "2026-08-16-D363-llm-runtime-failover.md",
+   "d_number": "D363",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#363 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-17-D421-u5a-marker-tristate.md",
+   "filename": "2026-08-17-D421-u5a-marker-tristate.md",
+   "d_number": "D421",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#421 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-17-D422-u5c-verify-parallel-tristate.md",
+   "filename": "2026-08-17-D422-u5c-verify-parallel-tristate.md",
+   "d_number": "D422",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#422 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-17-D423-u4-claims-table.md",
+   "filename": "2026-08-17-D423-u4-claims-table.md",
+   "d_number": "D423",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#423 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-17-D424-console-panels.md",
+   "filename": "2026-08-17-D424-console-panels.md",
+   "d_number": "D424",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#424 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-17-D426-u8-pre-audit-summary.md",
+   "filename": "2026-08-17-D426-u8-pre-audit-summary.md",
+   "d_number": "D426",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#426 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-17-D431-sidebar-upgrade.md",
+   "filename": "2026-08-17-D431-sidebar-upgrade.md",
+   "d_number": "D431",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#431 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-17-D433-fail-open-batch.md",
+   "filename": "2026-08-17-D433-fail-open-batch.md",
+   "d_number": "D433",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#433 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-17-D438-bypass-audit-signal-split.md",
+   "filename": "2026-08-17-D438-bypass-audit-signal-split.md",
+   "d_number": "D438",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#438 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-18-D361-gss-common.md",
+   "filename": "2026-08-18-D361-gss-common.md",
+   "d_number": "D361",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#361 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-19-D358-merged-sentinel-deextinct.md",
+   "filename": "2026-08-19-D358-merged-sentinel-deextinct.md",
+   "d_number": "D358",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#358 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-22-D470-field-mapping-contract.md",
+   "filename": "2026-08-22-D470-field-mapping-contract.md",
+   "d_number": "D470",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#470 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-22-D471.md",
+   "filename": "2026-08-22-D471.md",
+   "d_number": "D471",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#471 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-22-D475-loop-handlers-realization.md",
+   "filename": "2026-08-22-D475-loop-handlers-realization.md",
+   "d_number": "D475",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#475 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-23-D476-ga-enterprise-scope.md",
+   "filename": "2026-08-23-D476-ga-enterprise-scope.md",
+   "d_number": "D476",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#476 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-23-D477-standardkey-tags-cleanup.md",
+   "filename": "2026-08-23-D477-standardkey-tags-cleanup.md",
+   "d_number": "D477",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#477 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-23-D478-overflow-mount.md",
+   "filename": "2026-08-23-D478-overflow-mount.md",
+   "d_number": "D478",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#478 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-23-D479-auth-legacy-orgid.md",
+   "filename": "2026-08-23-D479-auth-legacy-orgid.md",
+   "d_number": "D479",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#479 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-23-D480-report-onepager.md",
+   "filename": "2026-08-23-D480-report-onepager.md",
+   "d_number": "D480",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#480 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-24-D481-auth-integration-contract-fix.md",
+   "filename": "2026-08-24-D481-auth-integration-contract-fix.md",
+   "d_number": "D481",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#481 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-24-D482-org-expert-claims.md",
+   "filename": "2026-08-24-D482-org-expert-claims.md",
+   "d_number": "D482",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#482 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-29-D559-CT-46-as-never-gate.md",
+   "filename": "2026-08-29-D559-CT-46-as-never-gate.md",
+   "d_number": "D559",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-08-29",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X4"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-08-30-D488-stage5b-expert-fix.md",
+   "filename": "2026-08-30-D488-stage5b-expert-fix.md",
+   "d_number": "D488",
+   "task_state_status": "spec_done",
+   "last_git_touch": "2026-09-01",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X4"
+   ],
+   "reasons": [
+    "task-state status=spec_done（实测词表）—— fail-closed 一律排除（认领链在飞）"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-02-D490-expert-config-parser-fix.md",
+   "filename": "2026-09-02-D490-expert-config-parser-fix.md",
+   "d_number": "D490",
+   "task_state_status": "spec_done",
+   "last_git_touch": "2026-09-02",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X4"
+   ],
+   "reasons": [
+    "task-state status=spec_done（实测词表）—— fail-closed 一律排除（认领链在飞）"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-02-D491-expert-router-test-debt.md",
+   "filename": "2026-09-02-D491-expert-router-test-debt.md",
+   "d_number": "D491",
+   "task_state_status": "spec_done",
+   "last_git_touch": "2026-09-02",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X4"
+   ],
+   "reasons": [
+    "task-state status=spec_done（实测词表）—— fail-closed 一律排除（认领链在飞）"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-04-D573-fde-to-ga-terminology.md",
+   "filename": "2026-09-04-D573-fde-to-ga-terminology.md",
+   "d_number": "D573",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-09-05",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#573 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-06-D583-P0专家名测试债-D282迁移余波.md",
+   "filename": "2026-09-06-D583-P0专家名测试债-D282迁移余波.md",
+   "d_number": "D583",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-06",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X4"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-09-D650-expert-registry-domain-rename.md",
+   "filename": "2026-09-09-D650-expert-registry-domain-rename.md",
+   "d_number": "D650",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-09-09",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#650 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-09-D658-sentinel-manifest-expert-sync.md",
+   "filename": "2026-09-09-D658-sentinel-manifest-expert-sync.md",
+   "d_number": "D658",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-09-10",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#658 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-10-D658-sentinel-manifest-expert-sync.md",
+   "filename": "2026-09-10-D658-sentinel-manifest-expert-sync.md",
+   "d_number": "D658",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-09-10",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#658 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-10-D662-expert-residual-sweep.md",
+   "filename": "2026-09-10-D662-expert-residual-sweep.md",
+   "d_number": "D662",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-09-10",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#662 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-10-D701-decision-record-source.md",
+   "filename": "2026-09-10-D701-decision-record-source.md",
+   "d_number": "D701",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-09-10",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#701 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-11-D702-write-op-no-swallow.md",
+   "filename": "2026-09-11-D702-write-op-no-swallow.md",
+   "d_number": "D702",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-09-12",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#702 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-11-D703-evidence-command-mechanization.md",
+   "filename": "2026-09-11-D703-evidence-command-mechanization.md",
+   "d_number": "D703",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-09-11",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#703 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-11-D705-cto-docs-batch-d593-confirm-backlog.md",
+   "filename": "2026-09-11-D705-cto-docs-batch-d593-confirm-backlog.md",
+   "d_number": "D705",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-11",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X4"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-11-D709-dispatch-parallel-cto-batch.md",
+   "filename": "2026-09-11-D709-dispatch-parallel-cto-batch.md",
+   "d_number": "D709",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-12",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X4"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-11-D710-ct47-lock-landing-record.md",
+   "filename": "2026-09-11-D710-ct47-lock-landing-record.md",
+   "d_number": "D710",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-12",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X4"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-12-D711-D1-notification-model-landing.md",
+   "filename": "2026-09-12-D711-D1-notification-model-landing.md",
+   "d_number": "D711",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-13",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X4"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-13-D703-evidence-command-mechanization.md",
+   "filename": "2026-09-13-D703-evidence-command-mechanization.md",
+   "d_number": "D703",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-09-13",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#703 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-13-D716-1-5-dual-guide-convergence.md",
+   "filename": "2026-09-13-D716-1-5-dual-guide-convergence.md",
+   "d_number": "D716",
+   "task_state_status": "spec_done",
+   "last_git_touch": "2026-09-15",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=spec_done（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-15 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-13-D716-devdoc-monitoring-contract-and-dual-guide.md",
+   "filename": "2026-09-13-D716-devdoc-monitoring-contract-and-dual-guide.md",
+   "d_number": "D716",
+   "task_state_status": "spec_done",
+   "last_git_touch": "2026-09-13",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X4"
+   ],
+   "reasons": [
+    "task-state status=spec_done（实测词表）—— fail-closed 一律排除（认领链在飞）"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-13-D719-dispatch-batch2-registration.md",
+   "filename": "2026-09-13-D719-dispatch-batch2-registration.md",
+   "d_number": "D719",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-13",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X4"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-13-D720-brief-landing-and-tree-hygiene.md",
+   "filename": "2026-09-13-D720-brief-landing-and-tree-hygiene.md",
+   "d_number": "D720",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-13",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X4"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-13-D725-D660-数据生命周期五层阶梯-spec.md",
+   "filename": "2026-09-13-D725-D660-数据生命周期五层阶梯-spec.md",
+   "d_number": "D725",
+   "task_state_status": "spec_done",
+   "last_git_touch": "2026-09-13",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X4"
+   ],
+   "reasons": [
+    "task-state status=spec_done（实测词表）—— fail-closed 一律排除（认领链在飞）"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-13-D732-dispatch-batch3-registration.md",
+   "filename": "2026-09-13-D732-dispatch-batch3-registration.md",
+   "d_number": "D732",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-09-14",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5",
+    "X6"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-14 ≥ 2026-09-14",
+    "无 task-state 但 D#732 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-14-D716-1-5-dual-guide-convergence-mirror.md",
+   "filename": "2026-09-14-D716-1-5-dual-guide-convergence-mirror.md",
+   "d_number": "D716",
+   "task_state_status": "spec_done",
+   "last_git_touch": "2026-09-15",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=spec_done（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-15 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-14-D733-ownership-machine-readable.md",
+   "filename": "2026-09-14-D733-ownership-machine-readable.md",
+   "d_number": "D733",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-09-14",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5",
+    "X6"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-14 ≥ 2026-09-14",
+    "无 task-state 但 D#733 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-14-D734-pr-budget.md",
+   "filename": "2026-09-14-D734-pr-budget.md",
+   "d_number": "D734",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-09-14",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5",
+    "X6"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-14 ≥ 2026-09-14",
+    "无 task-state 但 D#734 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-14-D735-bypass-out-stage1.md",
+   "filename": "2026-09-14-D735-bypass-out-stage1.md",
+   "d_number": "D735",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-09-14",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5",
+    "X6"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-14 ≥ 2026-09-14",
+    "无 task-state 但 D#735 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-14-D737-tag-bypass-wiring-真红定位与修复.md",
+   "filename": "2026-09-14-D737-tag-bypass-wiring-真红定位与修复.md",
+   "d_number": "D737",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-15",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-15 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-14-D740-L1未闭合项取证.md",
+   "filename": "2026-09-14-D740-L1未闭合项取证.md",
+   "d_number": "D740",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-14",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-14 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-14-D741-真相源写入链路定位.md",
+   "filename": "2026-09-14-D741-真相源写入链路定位.md",
+   "d_number": "D741",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-14",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-14 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-14-D748-board-verdict-dimension.md",
+   "filename": "2026-09-14-D748-board-verdict-dimension.md",
+   "d_number": "D748",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-14",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-14 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-14-D749-write-set-generated-single-source.md",
+   "filename": "2026-09-14-D749-write-set-generated-single-source.md",
+   "d_number": "D749",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-14",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-14 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-14-D750-fix-infercategory-7-of-10-unreachable.md",
+   "filename": "2026-09-14-D750-fix-infercategory-7-of-10-unreachable.md",
+   "d_number": "D750",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-14",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-14 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-14-D751-new-sentinel-e2e-assertion.md",
+   "filename": "2026-09-14-D751-new-sentinel-e2e-assertion.md",
+   "d_number": "D751",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-15",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-15 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-14-D755-inquiry-pluginability-debt-registration.md",
+   "filename": "2026-09-14-D755-inquiry-pluginability-debt-registration.md",
+   "d_number": "D755",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-14",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-14 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-14-D756-dispatch-sentinel-debts.md",
+   "filename": "2026-09-14-D756-dispatch-sentinel-debts.md",
+   "d_number": "D756",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-14",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-14 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-15-D752-type-net-gate.md",
+   "filename": "2026-09-15-D752-type-net-gate.md",
+   "d_number": "D752",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-15",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-15 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-15-D754-runner-comment-drift.md",
+   "filename": "2026-09-15-D754-runner-comment-drift.md",
+   "d_number": "D754",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-15",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-15 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-15-D757-sentinel-type-debt.md",
+   "filename": "2026-09-15-D757-sentinel-type-debt.md",
+   "d_number": "D757",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-15",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-15 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-15-D758-evidence-domain-neutral.md",
+   "filename": "2026-09-15-D758-evidence-domain-neutral.md",
+   "d_number": "D758",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-15",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-15 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-15-D759-revert-nodemailer10.md",
+   "filename": "2026-09-15-D759-revert-nodemailer10.md",
+   "d_number": "D759",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-15",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-15 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-15-D770-register-dsh-cards.md",
+   "filename": "2026-09-15-D770-register-dsh-cards.md",
+   "d_number": "D770",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-20",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-20 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-15-D771-dispatch-check-d370.md",
+   "filename": "2026-09-15-D771-dispatch-check-d370.md",
+   "d_number": "D771",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-15",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-15 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-15-D773-win-proxy-rule.md",
+   "filename": "2026-09-15-D773-win-proxy-rule.md",
+   "d_number": "D773",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-16",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-16 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-15-D774-证据保鲜流水线：一键重跑全部可自动化验收-+-兑换-+-TTL-定时-+-过期预警.md",
+   "filename": "2026-09-15-D774-证据保鲜流水线：一键重跑全部可自动化验收-+-兑换-+-TTL-定时-+-过期预警.md",
+   "d_number": "D774",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-16",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-16 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-15-D777-batch5-product.md",
+   "filename": "2026-09-15-D777-batch5-product.md",
+   "d_number": "D777",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-15",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-15 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-15-D778-review-gate.md",
+   "filename": "2026-09-15-D778-review-gate.md",
+   "d_number": "D778",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-16",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-16 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-15-D782-机制批：18-份真相源文档接机器防线（check-doc-truth-+-doc-registry-gate-入-pre-commit-+-唯一-runner-+-system-registry-规格）.md",
+   "filename": "2026-09-15-D782-机制批：18-份真相源文档接机器防线（check-doc-truth-+-doc-registry-gate-入-pre-commit-+-唯一-runner-+-system-registry-规格）.md",
+   "d_number": "D782",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-16",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-16 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-16-D786-D774-收口补丁派单：刷新产物落-main-+-仪表盘自动更新通道抢救（bot-PR-永久-blocked-根因）.md",
+   "filename": "2026-09-16-D786-D774-收口补丁派单：刷新产物落-main-+-仪表盘自动更新通道抢救（bot-PR-永久-blocked-根因）.md",
+   "d_number": "D786",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-09-16",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5",
+    "X6"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-16 ≥ 2026-09-14",
+    "无 task-state 但 D#786 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-17-D791a-line3-onepager-win.md",
+   "filename": "2026-09-17-D791a-line3-onepager-win.md",
+   "d_number": "D791",
+   "task_state_status": "spec_done",
+   "last_git_touch": "2026-09-17",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=spec_done（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-17 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-17-D794-收口-项目总览面板可用化（拖拽-缩放-折叠-修裁切）+成果落库.md",
+   "filename": "2026-09-17-D794-收口-项目总览面板可用化（拖拽-缩放-折叠-修裁切）+成果落库.md",
+   "d_number": "D794",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-17",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-17 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-17-D795-项目账本派生器.md",
+   "filename": "2026-09-17-D795-项目账本派生器.md",
+   "d_number": "D795",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-17",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-17 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-17-D803-capital-cycle.md",
+   "filename": "2026-09-17-D803-capital-cycle.md",
+   "d_number": "D803",
+   "task_state_status": null,
+   "last_git_touch": "2026-09-18",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-18 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-18-D806-台账修复-DSH复用可见.md",
+   "filename": "2026-09-18-D806-台账修复-DSH复用可见.md",
+   "d_number": "D806",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-20",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-20 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-18-D809-假绿回退-pending-wiring.md",
+   "filename": "2026-09-18-D809-假绿回退-pending-wiring.md",
+   "d_number": "D809",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-18",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-18 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-18-D810-llm-resilience-wiring.md",
+   "filename": "2026-09-18-D810-llm-resilience-wiring.md",
+   "d_number": "D810",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-18",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-18 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-18-D819-tools-in-body.md",
+   "filename": "2026-09-18-D819-tools-in-body.md",
+   "d_number": "D819",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-19",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-19 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-19-D817-生产入口级对话.md",
+   "filename": "2026-09-19-D817-生产入口级对话.md",
+   "d_number": "D817",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-19",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-19 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-19-D838-V1变更单.md",
+   "filename": "2026-09-19-D838-V1变更单.md",
+   "d_number": "D838",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-19",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-19 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-20-D811-队列收口.md",
+   "filename": "2026-09-20-D811-队列收口.md",
+   "d_number": "D811",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-20",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-20 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-20-D845-DSH决策纪律skill.md",
+   "filename": "2026-09-20-D845-DSH决策纪律skill.md",
+   "d_number": "D845",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-20",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-20 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-20-D850-D852-小队收口.md",
+   "filename": "2026-09-20-D850-D852-小队收口.md",
+   "d_number": "D850",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-21",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-21 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-20-D850-discrete-health.md",
+   "filename": "2026-09-20-D850-discrete-health.md",
+   "d_number": "D850",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-21",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-21 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-21-D861-D860-控制塔验证基建batch2.md",
+   "filename": "2026-09-21-D861-D860-控制塔验证基建batch2.md",
+   "d_number": "D861",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-22",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-22 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-22-D861-win测试修复-代行.md",
+   "filename": "2026-09-22-D861-win测试修复-代行.md",
+   "d_number": "D861",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-22",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-22 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-22-D912-研究院材料权威级-撞号重编.md",
+   "filename": "2026-09-22-D912-研究院材料权威级-撞号重编.md",
+   "d_number": "D912",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-22",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-22 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-22-D914-ownership-CTO文档三目录.md",
+   "filename": "2026-09-22-D914-ownership-CTO文档三目录.md",
+   "d_number": "D914",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-22",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-22 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-22-D917-双DSH提升清单入库裁定.md",
+   "filename": "2026-09-22-D917-双DSH提升清单入库裁定.md",
+   "d_number": "D917",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-22",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-22 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-23-D918-gate-stats-date-bomb-fix.md",
+   "filename": "2026-09-23-D918-gate-stats-date-bomb-fix.md",
+   "d_number": "D918",
+   "task_state_status": "audited",
+   "last_git_touch": "2026-09-23",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-23 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-23-D919-citation-gate.md",
+   "filename": "2026-09-23-D919-citation-gate.md",
+   "d_number": "D919",
+   "task_state_status": "audited",
+   "last_git_touch": "2026-09-23",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-23 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-23-D920-merge-queue-tool.md",
+   "filename": "2026-09-23-D920-merge-queue-tool.md",
+   "d_number": "D920",
+   "task_state_status": "audited",
+   "last_git_touch": "2026-09-23",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-23 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-23-D921-K3-audit-dispatch.md",
+   "filename": "2026-09-23-D921-K3-audit-dispatch.md",
+   "d_number": "D921",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-23",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-23 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-23-D922-W1-dispatch.md",
+   "filename": "2026-09-23-D922-W1-dispatch.md",
+   "d_number": "D922",
+   "task_state_status": "spec_done",
+   "last_git_touch": "2026-09-23",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=spec_done（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-23 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-23-D922-phase0-master-plan.md",
+   "filename": "2026-09-23-D922-phase0-master-plan.md",
+   "d_number": "D922",
+   "task_state_status": "spec_done",
+   "last_git_touch": "2026-09-23",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=spec_done（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-23 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-23-D926-squad-discipline.md",
+   "filename": "2026-09-23-D926-squad-discipline.md",
+   "d_number": "D926",
+   "task_state_status": "audited",
+   "last_git_touch": "2026-09-23",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-23 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-23-D930-win-sync.md",
+   "filename": "2026-09-23-D930-win-sync.md",
+   "d_number": "D930",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-23",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-23 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-23-D931-squad-team-wiring.md",
+   "filename": "2026-09-23-D931-squad-team-wiring.md",
+   "d_number": "D931",
+   "task_state_status": "audited",
+   "last_git_touch": "2026-09-23",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-23 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-24-B3-d922-fixture-registry.md",
+   "filename": "2026-09-24-B3-d922-fixture-registry.md",
+   "d_number": null,
+   "task_state_status": "__no_did__",
+   "last_git_touch": "2026-09-25",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-25 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-24-B5-taskstate-backfill.md",
+   "filename": "2026-09-24-B5-taskstate-backfill.md",
+   "d_number": null,
+   "task_state_status": "__no_did__",
+   "last_git_touch": "2026-09-24",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-24 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-24-D935-M1-ownership-presets-域修正.md",
+   "filename": "2026-09-24-D935-M1-ownership-presets-域修正.md",
+   "d_number": "D935",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-24",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-24 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-24-D936-ownership-defer.md",
+   "filename": "2026-09-24-D936-ownership-defer.md",
+   "d_number": "D936",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-24",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-24 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-24-D937-five-cards.md",
+   "filename": "2026-09-24-D937-five-cards.md",
+   "d_number": "D937",
+   "task_state_status": "spec_done",
+   "last_git_touch": "2026-09-24",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=spec_done（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-24 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-24-D937-gate-failopen-fakegreen.md",
+   "filename": "2026-09-24-D937-gate-failopen-fakegreen.md",
+   "d_number": "D937",
+   "task_state_status": "spec_done",
+   "last_git_touch": "2026-09-25",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=spec_done（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-25 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-24-D938-alloc-task-id-defects.md",
+   "filename": "2026-09-24-D938-alloc-task-id-defects.md",
+   "d_number": "D938",
+   "task_state_status": "spec_done",
+   "last_git_touch": "2026-09-25",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=spec_done（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-25 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-24-D940-name-allocation-registry.md",
+   "filename": "2026-09-24-D940-name-allocation-registry.md",
+   "d_number": "D940",
+   "task_state_status": "spec_done",
+   "last_git_touch": "2026-09-25",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=spec_done（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-25 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-24-D942-cto-fixation.md",
+   "filename": "2026-09-24-D942-cto-fixation.md",
+   "d_number": "D942",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-24",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-24 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-24-D943-cto-a-items.md",
+   "filename": "2026-09-24-D943-cto-a-items.md",
+   "d_number": "D943",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-25",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X1",
+    "X5"
+   ],
+   "reasons": [
+    "current-brief 指向件（.claude/current-brief 实测内容 = 该文件名）",
+    "近 14 天有活动：git log 末次触碰 2026-09-25 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-24-D943-mechanism.md",
+   "filename": "2026-09-24-D943-mechanism.md",
+   "d_number": "D943",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-25",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-25 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-24-D955-d943-docs-anchor.md",
+   "filename": "2026-09-24-D955-d943-docs-anchor.md",
+   "d_number": "D955",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-25",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-25 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-24-M9-gate-integrity.md",
+   "filename": "2026-09-24-M9-gate-integrity.md",
+   "d_number": null,
+   "task_state_status": "__no_did__",
+   "last_git_touch": "2026-09-25",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-25 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-25-D1007-M9-门禁三件套收口（恢复-rebase-丢失接线-+-M3-夹具假绿根治-+-棘轮基线清理；承接-PR#768-原#741）.md",
+   "filename": "2026-09-25-D1007-M9-门禁三件套收口（恢复-rebase-丢失接线-+-M3-夹具假绿根治-+-棘轮基线清理；承接-PR#768-原#741）.md",
+   "d_number": "D1007",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-25",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-25 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-25-D945-preset-bundle-migration.md",
+   "filename": "2026-09-25-D945-preset-bundle-migration.md",
+   "d_number": "D945",
+   "task_state_status": "spec_done",
+   "last_git_touch": "2026-09-25",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=spec_done（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-25 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-25-D954-ci-reds-base-ref.md",
+   "filename": "2026-09-25-D954-ci-reds-base-ref.md",
+   "d_number": "D954",
+   "task_state_status": "spec_done",
+   "last_git_touch": "2026-09-25",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=spec_done（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-25 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-25-D956-ci-failmsg.md",
+   "filename": "2026-09-25-D956-ci-failmsg.md",
+   "d_number": "D956",
+   "task_state_status": "in_progress",
+   "last_git_touch": "2026-09-26",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=in_progress（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-26 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-25-D963-dsh-sidebar-charter-grid-panel.md",
+   "filename": "2026-09-25-D963-dsh-sidebar-charter-grid-panel.md",
+   "d_number": "D963",
+   "task_state_status": "spec_done",
+   "last_git_touch": "2026-09-25",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=spec_done（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-25 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-25-D964-ledger-k3req-index.md",
+   "filename": "2026-09-25-D964-ledger-k3req-index.md",
+   "d_number": "D964",
+   "task_state_status": "in_progress",
+   "last_git_touch": "2026-09-25",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=in_progress（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-25 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-25-D964-ledger-row6.md",
+   "filename": "2026-09-25-D964-ledger-row6.md",
+   "d_number": "D964",
+   "task_state_status": "in_progress",
+   "last_git_touch": "2026-09-25",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=in_progress（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-25 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-25-D964-phase1b-citations-archive.md",
+   "filename": "2026-09-25-D964-phase1b-citations-archive.md",
+   "d_number": "D964",
+   "task_state_status": "in_progress",
+   "last_git_touch": "2026-09-25",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=in_progress（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-25 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-25-D964-phase4-archive-batch1.md",
+   "filename": "2026-09-25-D964-phase4-archive-batch1.md",
+   "d_number": "D964",
+   "task_state_status": "in_progress",
+   "last_git_touch": "2026-09-25",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=in_progress（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-25 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-25-D964-phase5-daily-ratio.md",
+   "filename": "2026-09-25-D964-phase5-daily-ratio.md",
+   "d_number": "D964",
+   "task_state_status": "in_progress",
+   "last_git_touch": "2026-09-25",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=in_progress（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-25 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-26-D1014-N12-根治-ci.yml-concurrency-+-push-触发收窄.md",
+   "filename": "2026-09-26-D1014-N12-根治-ci.yml-concurrency-+-push-触发收窄.md",
+   "d_number": "D1014",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-26",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-26 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-26-D1023-ci-docsonly-whitelist.md",
+   "filename": "2026-09-26-D1023-ci-docsonly-whitelist.md",
+   "d_number": "D1023",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-28",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-28 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-26-D1023-commit-msg-decisions.md",
+   "filename": "2026-09-26-D1023-commit-msg-decisions.md",
+   "d_number": "D1023",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-27",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-27 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-27-D1023-skill-lessons-ref.md",
+   "filename": "2026-09-27-D1023-skill-lessons-ref.md",
+   "d_number": "D1023",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-28",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-28 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-27-D1028-A2-纯归档出库路径级豁免.md",
+   "filename": "2026-09-27-D1028-A2-纯归档出库路径级豁免.md",
+   "d_number": "D1028",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-09-28",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5",
+    "X6"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-28 ≥ 2026-09-14",
+    "无 task-state 但 D#1028 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-27-D1034-dispatch-template-v2.md",
+   "filename": "2026-09-27-D1034-dispatch-template-v2.md",
+   "d_number": "D1034",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-09-28",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5",
+    "X6"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-28 ≥ 2026-09-14",
+    "无 task-state 但 D#1034 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-28-D1031-CT系列-gitattributes裸CR清理.md",
+   "filename": "2026-09-28-D1031-CT系列-gitattributes裸CR清理.md",
+   "d_number": "D1031",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-28",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-28 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/2026-09-28-D1044-B1-archive-294-outbound.md",
+   "filename": "2026-09-28-D1044-B1-archive-294-outbound.md",
+   "d_number": "D1044",
+   "task_state_status": "claimed",
+   "last_git_touch": "2026-09-28",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X4",
+    "X5"
+   ],
+   "reasons": [
+    "task-state status=claimed（实测词表）—— fail-closed 一律排除（认领链在飞）",
+    "近 14 天有活动：git log 末次触碰 2026-09-28 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/D311-multi-session-coordination.md",
+   "filename": "D311-multi-session-coordination.md",
+   "d_number": "D311",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X3"
+   ],
+   "reasons": [
+    "非历史层精确路径点名（.claude/settings.json / tests / generate-task-brief.py）—— 实测判非活，按 fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/D312-baseline-tools.md",
+   "filename": "D312-baseline-tools.md",
+   "d_number": "D312",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X3"
+   ],
+   "reasons": [
+    "非历史层精确路径点名（.claude/settings.json / tests / generate-task-brief.py）—— 实测判非活，按 fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/D313-D314-control-tower-finalize.md",
+   "filename": "D313-D314-control-tower-finalize.md",
+   "d_number": "D313",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X3"
+   ],
+   "reasons": [
+    "非历史层精确路径点名（.claude/settings.json / tests / generate-task-brief.py）—— 实测判非活，按 fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/D320-dashboard-gitify.md",
+   "filename": "D320-dashboard-gitify.md",
+   "d_number": "D320",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X3"
+   ],
+   "reasons": [
+    "非历史层精确路径点名（.claude/settings.json / tests / generate-task-brief.py）—— 实测判非活，按 fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/D362-docs-sync.md",
+   "filename": "D362-docs-sync.md",
+   "d_number": "D362",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#362 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/D371-product-progress-phase1.md",
+   "filename": "D371-product-progress-phase1.md",
+   "d_number": "D371",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#371 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/D372-product-progress-idempotency.md",
+   "filename": "D372-product-progress-idempotency.md",
+   "d_number": "D372",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#372 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/D373-product-progress-pr-fix.md",
+   "filename": "D373-product-progress-pr-fix.md",
+   "d_number": "D373",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#373 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/D374-dsh-devdoc-preset.md",
+   "filename": "D374-dsh-devdoc-preset.md",
+   "d_number": "D374",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#374 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/D375-dsh-cto-audit-a2.md",
+   "filename": "D375-dsh-cto-audit-a2.md",
+   "d_number": "D375",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#375 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/D376-routing-charter-v4.md",
+   "filename": "D376-routing-charter-v4.md",
+   "d_number": "D376",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#376 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/D377-cto-handover-finalize.md",
+   "filename": "D377-cto-handover-finalize.md",
+   "d_number": "D377",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#377 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/D378-sentinel-count-fix.md",
+   "filename": "D378-sentinel-count-fix.md",
+   "d_number": "D378",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#378 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/D380-codeowners.md",
+   "filename": "D380-codeowners.md",
+   "d_number": "D380",
+   "task_state_status": "__no_taskstate__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X6"
+   ],
+   "reasons": [
+    "无 task-state 但 D#380 ≥ 356（task-state 注册表实测下限 D356）—— 注册表时代内本应有卡，疑似漏登记/在飞，fail-closed 保留"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/D808.md",
+   "filename": "D808.md",
+   "d_number": "D808",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-18",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-18 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/D852.md",
+   "filename": "D852.md",
+   "d_number": "D852",
+   "task_state_status": "impl_done",
+   "last_git_touch": "2026-09-20",
+   "recent_14d": true,
+   "exclusion_codes": [
+    "X5"
+   ],
+   "reasons": [
+    "近 14 天有活动：git log 末次触碰 2026-09-20 ≥ 2026-09-14"
+   ]
+  },
+  {
+   "path": ".claude/task-briefs/brief.md",
+   "filename": "brief.md",
+   "d_number": null,
+   "task_state_status": "__no_did__",
+   "last_git_touch": "2026-08-25",
+   "recent_14d": false,
+   "exclusion_codes": [
+    "X3"
+   ],
+   "reasons": [
+    "非历史层精确路径点名（.claude/settings.json / tests / generate-task-brief.py）—— 实测判非活，按 fail-closed 保留"
+   ]
+  }
+ ],
+ "rule_consistency_check": "出库集与排除集互斥且并集 = 424（275+149=424，实测）",
+ "flagged_for_lead": "X6 为本批唯一「另判」项。备选口径：无 task-state 一律排除 ⇒ 排除 203 / N=221。请队长确认或收紧。"
+}

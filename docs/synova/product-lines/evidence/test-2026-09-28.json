@@ -1,0 +1,184 @@
+{
+  "schema": 1,
+  "record_type": "test",
+  "source": "run-machine-evidence.sh (A2)",
+  "date": "2026-09-28",
+  "written_by": "evidence-writer.py",
+  "verdicts": [
+    {
+      "acceptance_point": "2-5",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "3-9",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "4-3",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "4-9",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "7-7",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "8-7",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "8-8",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "10-2",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "10-4",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "15-1",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "15-3",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "15-4",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "18-2",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "18-5",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "19-2",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "20-2",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "20-3",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "20-5",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "21-1",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "21-2",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "21-3",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "22-1",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "24-4",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "25-1",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "25-2",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "25-3",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "25-6",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "25-8",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "25-9",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "27-2",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "27-3",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "27-5",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "28-2",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "28-3",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    },
+    {
+      "acceptance_point": "28-4",
+      "verdict": "pass",
+      "quote": "vitest 套件全绿"
+    }
+  ]
+}
