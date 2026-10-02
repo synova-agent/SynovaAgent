@@ -25,9 +25,30 @@ TODAY=$(date +%Y-%m-%d)
 echo -e "${CYAN}[check-brief-vs-code] 查找今日 brief (${TODAY})${RESET}"
 BRIEF=$(find "$ROOT/.claude/task-briefs/" -type f -name "${TODAY}*" 2>/dev/null | xargs ls -t 2>/dev/null | head -1)
 
-# 也检查 CLAUDE.md 中是否引用 V4.5.1
-FLOW_CONSTRAINT=$(grep "流程约束" "$ROOT/CLAUDE.md" 2>/dev/null | grep -oE 'V[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
-echo -e "  流程约束: ${FLOW_CONSTRAINT:-unknown}"
+# D1133: 取数源改以**单一真源 AGENTS.md 为首选**；AGENTS.md 无该行时**显式回退** CLAUDE.md 并标注实际来源。
+#   ⚠️ 前提勘误（实测 as_of 2026-10-03）：**AGENTS.md 当前没有『流程约束』行**（`grep -c` = 0）。
+#     该行现存于 CLAUDE.md:251（`V4.5.1`，存量）与退役指针件 :28（`V5.2.7`，兼容行）。
+#   ⚠️ 两条**版本轴不同，不可互相替代**：
+#     · AGENTS.md 头部 `V5.2.7` = 文档/铁律版本轴
+#     · 『流程约束』`V4.5.1` = Loop Engineering 流程版本轴
+#     ⇒ 故此处**不**用 AGENTS.md 头部版本去冒充『流程约束』（那会串轴）。
+#   ⚠️ 消除静默降级（铁律 11/31 气味，**单列给 K3 判**）：原 `${FLOW_CONSTRAINT:-unknown}`
+#     取不到时打印 "unknown" 后继续，读者无法区分"真值就是 unknown"与"取数源变了/没了"。
+#   ✅ 本行历来**只 echo 不判**（不进 HARD_FAIL）⇒ 本改造**不改变门禁结论**，只改诊断可读性。
+FLOW_CONSTRAINT=""; FLOW_SRC=""
+if [ -f "$ROOT/AGENTS.md" ]; then
+  FLOW_CONSTRAINT=$(grep "流程约束" "$ROOT/AGENTS.md" 2>/dev/null | grep -oE 'V[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
+  [ -n "$FLOW_CONSTRAINT" ] && FLOW_SRC="AGENTS.md（单一真源）"
+fi
+if [ -z "$FLOW_CONSTRAINT" ] && [ -f "$ROOT/CLAUDE.md" ]; then
+  FLOW_CONSTRAINT=$(grep "流程约束" "$ROOT/CLAUDE.md" 2>/dev/null | grep -oE 'V[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
+  [ -n "$FLOW_CONSTRAINT" ] && FLOW_SRC="CLAUDE.md（**回退**：AGENTS.md 暂无『流程约束』行 ⇒ 真源归属待 CTO 定）"
+fi
+if [ -n "$FLOW_CONSTRAINT" ]; then
+  echo -e "  流程约束: ${FLOW_CONSTRAINT}（取数源: ${FLOW_SRC}）"
+else
+  warn_check "流程约束" "AGENTS.md / CLAUDE.md 均未取到『流程约束』V#.#.#（显式提示，不以 unknown 冒充；本项不阻断）"
+fi
 
 if [ -z "$BRIEF" ]; then
   echo -e "  ${YELLOW}无今日 brief — 跳过验证 (可能是 CI 触发推送)${RESET}"

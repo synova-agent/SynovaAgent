@@ -1,7 +1,23 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════════════
-# check-doc-truth.test.sh — 文档真相验证脚本测试（铁律 48：正常/边界/降级三路径）
-# 用例: A 全一致→0 | B 专家数不符→1 | C 组数不符→1 | D 版本不符→1 | E 路径缺失→1
+# check-doc-truth.test.sh — 文档真相验证脚本测试（铁律 48：正常/降级/边界三路径）
+#
+# D1133（2026-10-03）门禁语义变更：C1/C2 判定面移出 CLAUDE.md；C3 改「单一真源
+#   AGENTS.md」；版本真源不可解析 ⇒ exit 2 fail-closed。本夹具同步扩到 11 例。
+#
+# 用例（含 D1133 反例矩阵 5 条）:
+#   A 三件齐+版本一致          → 0   （改造不误伤 —— 卡面反例矩阵第 1 条）
+#   B AGENTS.md 专家数不符      → 1
+#   C AGENTS.md 组数不符        → 1
+#   D LOOP.md 版本 ≠ 真源       → 1   （卡面矩阵第 3 条：红并点名）
+#   E 权威层路径缺失            → 1
+#   F CLAUDE.md = 31 行指针件   → 0   （**卡面矩阵第 2 条 = 本卡目标态**）
+#   G CLAUDE.md 缺失            → 0   （卡面矩阵第 5 条：已移出判定面）
+#   H AGENTS.md 缺失            → 2   （卡面矩阵第 4 条：fail-closed）
+#   I AGENTS.md 版本不可解析    → 2   （fail-closed，边界）
+#   J LOOP.md 缺失              → 2   （fail-closed，边界；判定面不可判定）
+#   K CLAUDE.md 专家数不符      → 0   （**语义变更证据**：CLAUDE.md 已移出 C1 判定面）
+#
 # 运行: bash tests/doc-system/check-doc-truth.test.sh
 # ═══════════════════════════════════════════════════════════════════════════════
 set +e
@@ -15,45 +31,63 @@ t() { # $1=用例名 $2=期望exit $3=实际exit
 FIX=$(mktemp -d)
 trap 'rm -rf "$FIX"' EXIT
 
-# ── fixture：registry 2 专家 + pre-commit 自声明 5 组 + 文档全一致 + 权威层齐全 ──
-mkdir -p "$FIX/expert" "$FIX/scripts" "$FIX/docs/authority" "$FIX/knowledge/shared"
-cat > "$FIX/expert/expert-registry.yaml" <<'EOF'
+mk() { # 重建全部 fixture（每个用例都从干净基线起，防用例间污染）
+  rm -rf "$FIX"; mkdir -p "$FIX/expert" "$FIX/scripts" "$FIX/docs/authority" "$FIX/knowledge/shared"
+  cat > "$FIX/expert/expert-registry.yaml" <<'EOF'
 experts:
   alpha:
     enabled: true
   beta:
     enabled: true
 EOF
-printf '  echo "  Loop Engineering V1.0.0 — pre-commit (5 组)"\n' > "$FIX/scripts/pre-commit-check.sh"
-printf '  echo -e "  ✅ 全部 5 组通过"\n' >> "$FIX/scripts/pre-commit-check.sh"
-printf '> V1.0.0 | 2026-08-19 | pre-commit 5 组\n\n2位专家\n' > "$FIX/AGENTS.md"
-printf '> V1.0.0 "Main" | 2026-08-19\n\npre-commit 5 组\n\n2位专家\n' > "$FIX/CLAUDE.md"
-printf '> V1.0.0\n\npre-commit 5 组\n' > "$FIX/LOOP.md"
-printf '2位专家\n' > "$FIX/knowledge/shared/README.md"
-: > "$FIX/CHRONICLE.md"; : > "$FIX/INDEX.md"; : > "$FIX/START-HERE.md"
-: > "$FIX/docs/authority/PRD.md"; : > "$FIX/docs/authority/ARCHITECTURE.md"
-: > "$FIX/docs/authority/STATUS.md"; : > "$FIX/docs/authority/DOCS-REGISTRY.yaml"
+  printf '  echo "  Loop Engineering V1.0.0 — pre-commit (5 组)"\n' > "$FIX/scripts/pre-commit-check.sh"
+  printf '  echo -e "  ✅ 全部 5 组通过"\n' >> "$FIX/scripts/pre-commit-check.sh"
+  printf '> V1.0.0 | 2026-08-19 | pre-commit 5 组\n\n2位专家\n' > "$FIX/AGENTS.md"
+  printf '> V1.0.0 "Main" | 2026-08-19\n\npre-commit 5 组\n\n2位专家\n' > "$FIX/CLAUDE.md"
+  printf '> V1.0.0\n\npre-commit 5 组\n' > "$FIX/LOOP.md"
+  printf '2位专家\n' > "$FIX/knowledge/shared/README.md"
+  : > "$FIX/CHRONICLE.md"; : > "$FIX/INDEX.md"; : > "$FIX/START-HERE.md"
+  : > "$FIX/docs/authority/PRD.md"; : > "$FIX/docs/authority/ARCHITECTURE.md"
+  : > "$FIX/docs/authority/STATUS.md"; : > "$FIX/docs/authority/DOCS-REGISTRY.yaml"
+}
+ptr() { # 31 行指针件的等价最小体（保留版本号 + 流程约束行，删专家数/组数声明）
+  { echo '# CLAUDE.md — 已退役（指针件）'
+    echo '> **V1.0.0** | 2026-08-19 | **本文件已退役，内容并入 AGENTS.md**'
+    echo '**流程约束: V1.0.0** — 全文见 AGENTS.md（本文件不再重复）'; } > "$FIX/CLAUDE.md"
+}
+run() { DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" >/dev/null 2>&1; echo $?; }
 
-DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" >/dev/null 2>&1; t "A 全一致" 0 $?
+mk; t "A 三件齐+版本一致" 0 "$(run)"
 
-# B: 专家数不符
-sed -i.bak 's/2位专家/3位专家/' "$FIX/CLAUDE.md"
-DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" >/dev/null 2>&1; t "B 专家数不符" 1 $?
-sed -i.bak 's/3位专家/2位专家/' "$FIX/CLAUDE.md" && rm -f "$FIX/CLAUDE.md.bak"
+mk; sed -i.bak 's/2位专家/3位专家/' "$FIX/AGENTS.md"
+t "B AGENTS.md 专家数不符" 1 "$(run)"
 
-# C: 组数不符
-sed -i.bak 's/pre-commit 5 组/pre-commit 13 组/' "$FIX/AGENTS.md"
-DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" >/dev/null 2>&1; t "C 组数不符" 1 $?
-sed -i.bak 's/pre-commit 13 组/pre-commit 5 组/' "$FIX/AGENTS.md" && rm -f "$FIX/AGENTS.md.bak"
+mk; sed -i.bak 's/pre-commit 5 组/pre-commit 13 组/' "$FIX/AGENTS.md"
+t "C AGENTS.md 组数不符" 1 "$(run)"
 
-# D: 版本不符
-sed -i.bak 's/V1.0.0/V2.0.0/' "$FIX/LOOP.md"
-DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" >/dev/null 2>&1; t "D 版本不符" 1 $?
-sed -i.bak 's/V2.0.0/V1.0.0/' "$FIX/LOOP.md" && rm -f "$FIX/LOOP.md.bak"
+mk; sed -i.bak 's/V1.0.0/V2.0.0/' "$FIX/LOOP.md"
+t "D LOOP.md 版本 ≠ 真源" 1 "$(run)"
 
-# E: 权威层路径缺失
-rm "$FIX/docs/authority/PRD.md"
-DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" >/dev/null 2>&1; t "E 路径缺失" 1 $?
+mk; rm "$FIX/docs/authority/PRD.md"
+t "E 权威层路径缺失" 1 "$(run)"
+
+mk; ptr
+t "F CLAUDE.md=指针件（目标态）" 0 "$(run)"
+
+mk; rm "$FIX/CLAUDE.md"
+t "G CLAUDE.md 缺失" 0 "$(run)"
+
+mk; rm "$FIX/AGENTS.md"
+t "H AGENTS.md 缺失（fail-closed）" 2 "$(run)"
+
+mk; sed -i.bak 's/> V1.0.0 | 2026-08-19/> 无版本号 | 2026-08-19/' "$FIX/AGENTS.md"
+t "I AGENTS.md 版本不可解析（fail-closed）" 2 "$(run)"
+
+mk; rm "$FIX/LOOP.md"
+t "J LOOP.md 缺失（fail-closed）" 2 "$(run)"
+
+mk; sed -i.bak 's/2位专家/3位专家/' "$FIX/CLAUDE.md"
+t "K CLAUDE.md 专家数不符（已移出判定面）" 0 "$(run)"
 
 echo "── 汇总: $PASS 通过 / $FAIL 失败 ──"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1
