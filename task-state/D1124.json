@@ -1,0 +1,27 @@
+{
+  "task_id": "D1124",
+  "title": "治理线B段Issue状态流转（.github/workflows/issue-lifecycle.yml，非门禁）",
+  "status": "impl_done",
+  "spec": {
+    "doc": "CTO 补充指令 1 · B 段政策（2026-10-02）§2-② + 共享任务 task-11",
+    "by": "lead",
+    "at": "2026-10-02"
+  },
+  "impl": {
+    "commit": "PENDING",
+    "by": "gov-impl-decide",
+    "at": "2026-10-02",
+    "branch": "feat/d1131-issue-lifecycle",
+    "files": [
+      ".github/workflows/issue-lifecycle.yml",
+      ".github/issue-management/lifecycle.mjs",
+      "docs/synova/coordination/2026-10-02-WB2-issue-lifecycle.md",
+      ".claude/task-briefs/2026-10-02-D1124-治理线B段Issue状态流转.md"
+    ]
+  },
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-02",
+  "updated_by": "gov-impl-decide",
+  "note": "非门禁 workflow：PR opened/reopened→其引用 Issue 置 In progress（opened 另初始化 Start Date）；review_requested→In review；changes_requested→退回 In progress；workflow_dispatch 人工纠偏。『只改标题不触发』双保证：① on: 不订阅 edited（主）② decide() 对 edited 一律 NOOP（代码面），T2/T3 实测 0 mutation（离线注入缝机械证明，T1 正面对照 2 处 mutation）。Project 事实全部 gh api graphql 只读实测（number=1、nodeId=PVT_kwDOFAmDns4Blb57、Status field PVTSSF_lADOFAmDns4Blb57zhkIzLE、In progress=a3530961 / In review=1b0f439f、Start Date field PVTF_lADOFAmDns4Blb57zhkIzfQ），未采信任何 DSH 编号。permissions 最小集仅 contents: read（checkout 必需，不可再收窄；Projects V2 无可授予权限键，须走 secret PAT）。job name『Issue Lifecycle (非必需)』与 12 条必需集零重名（node 解析逐字比对 + check-required-contexts.py → REQUIRED-CONTEXTS: OK 12/12；--reverse 明列本卡为非必需 ⇒ 不阻断合并）。G1 零命中。阻塞前置 P1：secret ISSUE_LIFECYCLE_TOKEN 不存在（实测 grep secrets. workflows 共 0 处、repo secrets 列表为空）⇒ 缺 token 时显式 ERROR 不静默，请示 CTO 配 fine-grained PAT（组织权限 Projects: Read and write）。写集外产物 2 件（task-state/D1124.json + task brief）为 alloc-task-id.sh 强制生成，已披露请裁。"
+}

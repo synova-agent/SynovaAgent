@@ -1,0 +1,87 @@
+# issue-lifecycle.yml — Issue/PR 状态自动流转（D1124）
+#
+# 目的: Project「Synova 作业面」(#1) 的状态随 PR/Review 事件自动流转，减少手工拖拽。
+#   · PR opened / reopened            → 其引用的 Issue → `In progress`（opened 另初始化 Start Date）
+#   · 请求审查 review_requested       → `In review`
+#   · 审查 changes_requested          → 退回 `In progress`
+#   · workflow_dispatch               → 人工纠偏通道（状态机必须有可用的手动修复路径）
+#
+# 🔴 这不是门禁（CTO 补充指令 §2-②明写）:
+#   · 本 workflow **不在** main 的 12 条必需状态检查内 ⇒ 其红/绿不阻断任何 PR 合并；
+#   · 不改 branch protection / 不改必需集 / 不改任何既有 job 的 `name:` / 不改 ci.yml。
+#   · job name 特意避开 12 条必需集（逐条比对见 docs/synova/coordination/2026-10-02-WB2-*）。
+#
+# 🔴 只改标题不触发（CTO 明写判据），两道保证:
+#   ① **触发面**：`on:` **不订阅 `edited`** ⇒ 标题编辑根本不产生 run（主保证）；
+#   ② **代码面**：lifecycle.mjs 的 decide() 对 `pull_request:edited` 一律 NOOP，
+#      其中 title-only（changes 仅含 title）显式判定 ⇒ 即便将来误加订阅也不改状态。
+#
+# 🔴 token（本 workflow 唯一的外部前置）:
+#   Projects (V2) 的 GraphQL **读写都不能用 `GITHUB_TOKEN`** —— 它是 repo-scoped。
+#   需要 secret `ISSUE_LIFECYCLE_TOKEN` = fine-grained PAT（资源所有者 = 组织 synova-agent，
+#   组织权限 `Projects: Read and write`）。缺该 secret 时本 job 会**显式报错**（不静默跳过）。
+#   ref: https://github.github.com/gh-aw/reference/auth-projects/
+#
+# permissions 最小集依据: GitHub 官方 `permissions:` 可取值表中**没有**可授予
+#   Projects (V2) 的键（`repository-projects` 仅覆盖 Projects classic）⇒ 本 workflow 的
+#   Projects 权限**不经** `permissions:` 授予，而由上面的 PAT 承担。
+#   ref: https://github.com/github/docs → data/reusables/actions/github-token-available-permissions.md
+
+name: Issue Lifecycle (D1124)
+
+on:
+  pull_request:
+    # 只订阅会改变流转语义的事件；**刻意不含 edited**（标题编辑不得改状态）
+    types: [opened, reopened, review_requested]
+  pull_request_review:
+    types: [submitted]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: '要纠偏的 PR 编号（其引用的 Issue 会被改状态）'
+        required: true
+      status:
+        description: '目标状态档'
+        required: true
+        type: choice
+        options: [Inbox, Backlog, Ready, In progress, In review, Done, No action]
+
+# ── 最小权限（逐项说明见文件头；再收窄结论：已是最小）──
+#   contents: read — 唯一必需：actions/checkout 需要读仓库才能拿到 lifecycle.mjs。
+#                    不能收窄为 none（checkout 会失败）；不需要 write（本 workflow 不写仓库）。
+#   issues / pull-requests — **不需要**：引用关系从事件 payload 的 PR body 解析（本地正则），
+#                    不经 API 读 issue/PR ⇒ 刻意不申请，保持最小。
+permissions:
+  contents: read
+
+# 同一 PR 的状态流转串行化（不取消在途 run：PR opened 的 Start Date 初始化不能被后续事件吞掉）
+concurrency:
+  group: issue-lifecycle-${{ github.event.pull_request.number || github.event.inputs.pr_number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  lifecycle:
+    # ⚠ job name 必须与 scripts/control-tower/required-checks-baseline.txt 的 12 条**零重名**
+    #   （重名会让本非必需 job 的 check-run 冒充必需检查 —— D971 同族风险）
+    name: Issue Lifecycle (非必需)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout（取 lifecycle.mjs）
+        uses: actions/checkout@v4
+
+      - name: 流转 Project 状态
+        env:
+          # 只传专用 PAT：不把 GITHUB_TOKEN 当回退，避免失败信息退化成难懂的 403。
+          # 未配 secret 时 lifecycle.mjs 会打印可操作的 ERROR（显式失败，不静默跳过）。
+          ISSUE_LIFECYCLE_TOKEN: ${{ secrets.ISSUE_LIFECYCLE_TOKEN }}
+        run: |
+          set +e
+          node .github/issue-management/lifecycle.mjs
+          rc=$?
+          set -e
+          case "$rc" in
+            0) echo "Issue Lifecycle 完成（rc=0）" ;;
+            2) echo "::warning title=Issue Lifecycle 降级::平台性跳过（见上方 DEGRADED 行），不阻断" ;;
+            *) echo "::error title=Issue Lifecycle 失败::rc=$rc（见上方输出；缺 ISSUE_LIFECYCLE_TOKEN 是最常见原因）"; exit "$rc" ;;
+          esac
