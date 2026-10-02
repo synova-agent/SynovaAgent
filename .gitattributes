@@ -19,6 +19,22 @@
 #       合并 = 取并集。union 驱动复用 merge.union.driver（install-hooks.sh 已注册）。
 .claude/reference-map.md merge=union
 
+# D1120 / 治理线总窗（附二#2）: DOCS-REGISTRY.yaml 登记表 — merge=union
+# 背景: 每新增一份文档就要在 DOCS-REGISTRY.yaml 里追加一条；多 PR 并发时**每个新文档 PR 必冲突**
+#       （CTO 2026-10-02 在 5 个 PR 上实测：解了 5 支、还自造了坏号 DOC-01310）。与 bypass.log、
+#       reference-map.md 同型 = append-only 登记，合并 = 取并集。
+# 实测（沙箱夹具，先红后绿，命令见 D3 交付件 §2）:
+#   · 无本规则 → `CONFLICT (content): Merge conflict`（红）
+#   · 有本规则 → 无冲突，双方条目并存（绿）
+# 🔴 残余风险（实测，必须知道）: union 对**两侧改同一行**的场景**不产生冲突**，而是产出
+#   **重复键**（实测得到同一 entry 内 `status: draft` + `status: active` 两行）。即冲突从"显式失败"
+#   变成"静默脏数据"。当前 `scripts/doc-system/doc-registry-gate.sh` **无查重**（grep dup/重复/uniq 零命中）。
+#   ⚠️ 该查重属**门禁语义变更**（改"哪条检查阻断合并"）⇒ 按红线须 K3 过审后再落地；
+#      已备好"扩展 doc-registry-gate.sh"方案 + 正例/反例夹具（D3 §2.3），**待 K3**。
+# 前置条件: union 驱动须在本机 .git/config 注册（`git config merge.union.driver`），
+#   由 scripts/install-hooks.sh:141 注册。**未注册的机器上本规则静默降级为普通文本冲突**（= 无效果）。
+docs/authority/DOCS-REGISTRY.yaml merge=union
+
 # D520/任务2: bash/python 脚本强制 LF——Windows runner autocrlf=true 会把 .sh 检出成
 # CRLF 导致 bash 全线 ": command not found"（双平台 CI 必备）
 *.sh text eol=lf

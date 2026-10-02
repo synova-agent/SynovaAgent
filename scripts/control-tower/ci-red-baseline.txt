@@ -42,8 +42,20 @@
 #     total_check_runs=20；conclusions={'failure': 2, 'skipped': 2, 'success': 16}
 # 截至时刻: 2026-09-24T18:16+08:00（`Vitest (1/2)` 条目 2026-09-25 增补，见其 evidence 内 started）　　条数: 3　　owner: 2 条 UNASSIGNED + 1 条 CTO-Mac
 产物新鲜度（generated_at > 3 天必红） | first_seen=2026-09-24 | evidence=check-runs API main f25e61eb, conclusion=failure, started=2026-09-24T06:31:55Z, https://github.com/tangbaobao520/SynovaAgent/actions/runs/35964932621/job/107521310524 | owner=UNASSIGNED | expires=2026-10-24
-Vitest (2/2) | first_seen=2026-09-24 | evidence=check-runs API main f25e61eb, conclusion=failure, started=2026-09-24T05:04:29Z, https://github.com/tangbaobao520/SynovaAgent/actions/runs/35958319035/job/107501294874 （同一现象在 ci.yml L150-156 已有既有记录 PLAN-main-vitest-preexisting-red：存量红放行须可见、须烧掉，不得长期依赖放行） | owner=UNASSIGNED | expires=2026-10-24
-Vitest (1/2) | first_seen=2026-09-24 | evidence=check-runs API PR base 0ab457f2336df22de2511e3c635c439c9927c4b2, conclusion=failure, started=2026-09-25T05:12:58Z, name 逐字对齐无规范化, https://github.com/tangbaobao520/SynovaAgent/actions/runs/36097388138/job/107952956055 （与上方 `Vitest (2/2)` **同一底层红** = tests/deploy/recovery-pack.test.ts 的 locale 中文断言；vitest 分片把该文件落在 shard 1 → check 名漂移为 (1/2)，故须两名并存——见段头注） | owner=CTO-Mac | expires=2026-10-25
+# ── A6 执行记录（D1120 · 治理线总窗 · CTO 有条件授权，见 D1118 收件闸回执 §四-①）────────────
+# 删除 2 条**已死**条目 —— 本文件段头自述「条目对应 job 转绿后应删除（否则成死条目）」。
+# 逐条判据（条件 1）= 该 CHECK_NAME 在**两处对账面**均不出现在 failure 集合：
+#   (a) main 近 30 次提交：`Vitest (1/2)` 有记录 17 次 = 17/17 success；`(2/2)` 同（0 failure / 0 cancelled）
+#   (b) 全部 41 个 open PR 头：两 name 均无任何 conclusion ∉ {success, 无 check-run}
+#   取数 as_of=2026-10-02T07:35Z；命令与原始输出见交付件 D1 §4。
+# 替代控制（条件 2）= ① A3/D1111 的 job 级 `if: ${{ !cancelled() }}`（ci.yml:190/:695）保证上游红时
+#   Vitest/Golden 仍**上报**（红要红得出来，不再"context 消失"）；② `check-required-contexts.py`
+#   断言"必需集 ⊆ 产出集"，context 消失类事故另有机器检测；③ 底层红（locale 断言）已随修复转绿。
+# 条件 3：**未续期**（两条各带原 expires，直接删除，不作延期）；**未静默**（本条即删除记录）。
+# 条件 4：删除后数据行 6 → 4；`check-gate-integrity.sh` 仍能读取本基线（0 命中即所有失败判"未登记"= 红）。
+# 删除人=治理线（执行）；授权=Mac-CTO｜终审=K3。
+# ─────────────────────────────────────────────────────────────────────────────
+
 
 # ── [BRANCH/PR-PUSH] 段 —— 分支/PR push 事件口径（新增 3 条） ──────────────────────
 # 口径: GET /repos/tangbaobao520/SynovaAgent/commits/<base>/check-runs?per_page=100（事件类型 = push → feat/… 分支）
