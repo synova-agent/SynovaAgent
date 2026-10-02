@@ -42,18 +42,24 @@
 #     total_check_runs=20；conclusions={'failure': 2, 'skipped': 2, 'success': 16}
 # 截至时刻: 2026-09-24T18:16+08:00（`Vitest (1/2)` 条目 2026-09-25 增补，见其 evidence 内 started）　　条数: 3　　owner: 2 条 UNASSIGNED + 1 条 CTO-Mac
 产物新鲜度（generated_at > 3 天必红） | first_seen=2026-09-24 | evidence=check-runs API main f25e61eb, conclusion=failure, started=2026-09-24T06:31:55Z, https://github.com/tangbaobao520/SynovaAgent/actions/runs/35964932621/job/107521310524 | owner=UNASSIGNED | expires=2026-10-24
-# ── A6 执行记录（D1120 · 治理线总窗 · CTO 有条件授权，见 D1118 收件闸回执 §四-①）────────────
-# 删除 2 条**已死**条目 —— 本文件段头自述「条目对应 job 转绿后应删除（否则成死条目）」。
-# 逐条判据（条件 1）= 该 CHECK_NAME 在**两处对账面**均不出现在 failure 集合：
-#   (a) main 近 30 次提交：`Vitest (1/2)` 有记录 17 次 = 17/17 success；`(2/2)` 同（0 failure / 0 cancelled）
-#   (b) 全部 41 个 open PR 头：两 name 均无任何 conclusion ∉ {success, 无 check-run}
-#   取数 as_of=2026-10-02T07:35Z；命令与原始输出见交付件 D1 §4。
-# 替代控制（条件 2）= ① A3/D1111 的 job 级 `if: ${{ !cancelled() }}`（ci.yml:190/:695）保证上游红时
-#   Vitest/Golden 仍**上报**（红要红得出来，不再"context 消失"）；② `check-required-contexts.py`
-#   断言"必需集 ⊆ 产出集"，context 消失类事故另有机器检测；③ 底层红（locale 断言）已随修复转绿。
-# 条件 3：**未续期**（两条各带原 expires，直接删除，不作延期）；**未静默**（本条即删除记录）。
-# 条件 4：删除后数据行 6 → 4；`check-gate-integrity.sh` 仍能读取本基线（0 命中即所有失败判"未登记"= 红）。
-# 删除人=治理线（执行）；授权=Mac-CTO｜终审=K3。
+# ── A6 执行记录（D1120 · 治理线总窗）── 修订 r2（按 K3 2026-10-02 判定纠正）──────────
+# 🔴 r1 被判 P0：r1 声称“已执行 6→4”，但该变更**只在分支** `docs/govl-total-window-20261002`，
+#    `origin/main` 无据（K3 实测 main 仍 6 行）。**r2 起一律标注分支态锚点**。
+# 授权链锚点：D1118 收件闸回执 §四-①（有条件授权）。
+#   ⚠️ 该回执在 `origin/main` **不存在**（K3 实测全树零命中）—— 当前只在分支
+#   `docs/D1110-role-governance-line`（PR #934，未合并）。**授权链当前不可从 main 核验**，
+#   已如实登记为缺口；执行依据 = 该分支上的回执原文（CTO 署名）。
+# 判据（条件 1）= 对账对象是 **base**（ci.yml:822-827：PR 事件取 `event.pull_request.base.sha`，
+#   push 事件取 `origin/main`），**不是 PR 头**。故“PR 头红”**不构成**“既有红仍在”的理由。
+#   实测（as_of=2026-10-02T08:49Z）：`产物新鲜度` 在 main tip 与 8a29fc333 均为 failure；
+#   其余 5 条在 main/PR base 面均 success ⇒ **按本文件自述规则（转绿应删）5 条全删**。
+# 替代控制（条件 2）= ① A3/D1111 job 级 `if: ${{ !cancelled() }}`（ci.yml:190/:695）保证上游红时
+#   照常上报（红要红得出来）；② `check-required-contexts.py` 断言"必需集 ⊆ 产出集"；
+#   ③ 5 条对应 job 在 base 面已转绿。
+# 条件 3：**未续期**（各条带原 expires 直接删除，无一条延期）；**未静默**（本记录即删除留痕）。
+# 条件 4：删除后数据行 **6 → 1**（r1 曾误做 6→4 并误述为“已落地”，已按 K3 纠正）。
+# 分支态锚点（可远程核验）：分支 `docs/govl-total-window-20261002`；本行起随该分支首推生效。
+# 终审：K3。若 CTO 对删除集另有裁定，以其裁定为准。
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -73,6 +79,3 @@
 #     （API 快照 19:58:05 / commit checks 页 20:08:54）均为 **未定态**（conclusion=null / in-progress），
 #     不是已定态的 failure。按 CTO 指令登记 3 条 → 它一旦转 failure 即被覆盖；
 #     **若其终局转 success，本条应删除**（本文件无自动清理：死条目不会被解析器判红，属已知卫生缺口）。
-TypeScript + Lint + Iron Laws | first_seen=2026-09-24 | evidence=check-runs API base 94426c5b, conclusion=failure, started=2026-09-24T11:50:19Z, job=107618889200, https://github.com/tangbaobao520/SynovaAgent/actions/runs/35995365564 | owner=UNASSIGNED | expires=2026-10-24
-Control Tower Gate Tests (ubuntu-latest) | first_seen=2026-09-24 | evidence=check-runs API base 94426c5b, conclusion=failure, started=2026-09-24T11:50:19Z, job=107618889115, https://github.com/tangbaobao520/SynovaAgent/actions/runs/35995365564 | owner=UNASSIGNED | expires=2026-10-24
-Control Tower Gate Tests (windows-latest) | first_seen=2026-09-24 | evidence=check-runs API base 94426c5b, conclusion=null(in-progress) at 2026-09-24T19:58:05+08:00 与提交 checks 页 20:08:54+08:00 (aria-label=This job is in progress), job=107618889188, https://github.com/tangbaobao520/SynovaAgent/actions/runs/35995365564 （未定态观测，见段头注） | owner=UNASSIGNED | expires=2026-10-24
