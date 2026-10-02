@@ -338,3 +338,18 @@ documents:
     status: active
     owner: DSH
 
+  # ---- D1114（补两线窗锚）2026-10-02 ----
+  - id: DOC-0139
+    type: governance
+    path: docs/synova/coordination/方向锚-基座线-20261002.md
+    status: active
+    owner: DSH
+
+
+  # ---- D1114（补两线窗锚）2026-10-02 ----
+  - id: DOC-01310
+    type: governance
+    path: docs/synova/coordination/方向锚-产品线-20261002.md
+    status: active
+    owner: DSH
+
