@@ -362,3 +362,10 @@ documents:
     path: docs/synova/coordination/2026-10-02-D3-线登记与收口-R1R5-治理线一窗.md
     status: active
     owner: line-lead
+
+  # D1132 交付记录（建两预设包 + 哨兵 skill；PR #—）
+  - id: DOC-0141
+    type: governance
+    path: docs/synova/coordination/交付-D1132-两预设包与哨兵skill-20261003.md
+    status: active
+    owner: line-lead
