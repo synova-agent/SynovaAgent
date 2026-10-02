@@ -1,0 +1,3 @@
+{"id":"D1121","title":"派单三件（四条根因/K3 送审/支清理）+ K3 审计清单更新","status":"in_progress","created":"2026-10-02","branch":"docs/D1121-dispatch-k3",
+"write_set":["docs/synova/dispatch/2026-10-02-派单三件-根因-K3送审-支清理.md","docs/synova/coordination/K3审计清单-20260822.md","docs/authority/DOCS-REGISTRY.yaml","task-state/D1121.json",".claude/task-briefs/2026-10-02-D1121-派单三件.md",".claude/bypass.log"],
+"note":"创始人 2026-10-02「同意，现在写，我来转」。三件：A 给治理线四条机制性根因（堆叠支致 D708 夹带/DOCS-REGISTRY 缺 merge=union/号源三载体不同步/D734 预算与声明结构性错配），每条带我的实测证据与复现命令；B 给 K3 的 D# 推断缺陷送审（CI 实测 任务:D1109 应为 D1112 + --did 判别对照 pass）；C 给治理线支清理（D11xx 18 条 + 早期 12 条）。并更新 K3审计清单（院方点出未走清单登记 F1 教训，清单停在 08-22）⇒ 先登记后送审。"}

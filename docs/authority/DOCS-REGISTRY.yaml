@@ -511,3 +511,10 @@ documents:
     status: active
     owner: DSH
 
+  # ---- D1121（派单三件：根因/K3送审/支清理）2026-10-02 ----
+  - id: DOC-0165
+    type: dispatch
+    path: docs/synova/dispatch/2026-10-02-派单三件-根因-K3送审-支清理.md
+    status: active
+    owner: DSH
+
