@@ -342,3 +342,13 @@ documents:
     path: docs/synova/coordination/2026-10-02-D3-线登记与收口-R1R5-治理线一窗.md
     status: active
     owner: line-lead
+
+  # D1125 W-B1 预演报告（issue 政策门禁）
+  # 取号依据: as_of=2026-10-02，实测**本文件内**最大 DOC- 号 = 0140
+  #   （`grep -oE 'DOC-[0-9]+' docs/authority/DOCS-REGISTRY.yaml | sed 's/DOC-//' | sort -n | tail -1`）
+  #   ⇒ 本条 = 0140 + 1 = DOC-0141。**不采用分支/水位表口径**（队长 2026-10-02 裁决，防 D1115 型撞号）。
+  - id: DOC-0141
+    type: governance
+    path: docs/synova/coordination/2026-10-02-WB1-issue-policy-预演报告.md
+    status: active
+    owner: line-lead

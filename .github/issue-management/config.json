@@ -1,0 +1,97 @@
+{
+  "$schema": "./config.schema.md",
+  "version": "1.0.0",
+  "policyName": "Synova issue policy",
+  "enforcement": {
+    "mode": "informational",
+    "rationale": "首日为 soft-launch：本仓现存 124 个在飞 open PR 的标签面里 kind/* 与 p0-p3 命中数为 0（见 docs/synova/coordination/2026-10-02-WB1-* 预演报告），若直接设为必过 job 会同时卡死全部在飞 PR。",
+    "flipToBlocking": "两步：① 把本 job 加入 branch protection 必需集；② 把本字段改为 \"blocking\"（或给 workflow 传 ISSUE_POLICY_ENFORCE=true）。二者缺一不可，且必须分批（先补齐存量标签）。",
+    "exitCodeContract": "informational ⇒ 恒 exit 0（违规只报不拦）；blocking ⇒ 有 block 级违规时 exit 1"
+  },
+  "stages": {
+    "_note": "分级上线预案（可执行、可复算）: `--stage N` 只启用 enable 列出的规则；未列出的规则一律视为 disabled。预演命中数见 docs/synova/coordination/2026-10-02-WB1-issue-policy-预演报告.md。",
+    "1": {
+      "label": "第 1 级 · 只报「PR 未引用任何 Issue」",
+      "enable": ["linkedIssue"]
+    },
+    "2": {
+      "label": "第 2 级 · 第 1 级 + kind/* 分类标签",
+      "enable": ["linkedIssue", "typeLabel"]
+    },
+    "3": {
+      "label": "第 3 级 · 第 2 级 + 优先级标签",
+      "enable": ["linkedIssue", "typeLabel", "priorityLabel"]
+    },
+    "4": {
+      "label": "第 4 级 · 第 3 级 + area/* + 正文段落 + 占位残留（warn 规则全开）",
+      "enable": ["linkedIssue", "typeLabel", "priorityLabel", "areaLabel", "requiredSections", "placeholderLeft"]
+    }
+  },
+  "draftExemptRules": [
+    "typeLabel",
+    "priorityLabel",
+    "areaLabel",
+    "requiredSections",
+    "placeholderLeft"
+  ],
+  "rules": {
+    "linkedIssue": {
+      "enabled": true,
+      "severity": "block",
+      "minRefs": 1,
+      "acceptPatterns": [
+        "(^|[^A-Za-z0-9_])#([0-9]+)(?![0-9])",
+        "([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)#([0-9]+)(?![0-9])"
+      ],
+      "message": "PR 标题/正文未引用任何 Issue",
+      "fix": "在 PR 正文加一行 `Closes #<issue号>`（或 `Refs #<issue号>`）"
+    },
+    "typeLabel": {
+      "enabled": true,
+      "severity": "block",
+      "prefix": "kind/",
+      "allowed": ["kind/feature", "kind/bug-fix", "kind/doc", "kind/testing", "kind/cleanup"],
+      "message": "PR 缺 kind/* 分类标签",
+      "fix": "给 PR 加且只加一个 kind/* 标签（kind/feature / kind/bug-fix / kind/doc / kind/testing / kind/cleanup）"
+    },
+    "priorityLabel": {
+      "enabled": true,
+      "severity": "block",
+      "allowed": ["p0", "p1", "p2", "p3"],
+      "message": "PR 缺优先级标签",
+      "fix": "给 PR 加一个优先级标签（p0 / p1 / p2 / p3）"
+    },
+    "areaLabel": {
+      "enabled": true,
+      "severity": "warn",
+      "prefix": "area/",
+      "message": "PR 缺 area/* 领域标签",
+      "fix": "给 PR 加一个 area/* 标签（area/ci / area/docs / area/dispatch / area/runtime / area/domain）"
+    },
+    "requiredSections": {
+      "enabled": true,
+      "severity": "warn",
+      "sections": ["变更说明"],
+      "message": "PR 正文缺模板要求的段落",
+      "fix": "按 .github/pull_request_template.md 补回 `## 变更说明` 段并填写实质内容"
+    },
+    "placeholderLeft": {
+      "enabled": true,
+      "severity": "warn",
+      "markers": [
+        "简要描述此 PR 做了什么，用户会看到什么变化",
+        "关联的铁律编号，如 铁律 38 (as any)、铁律 8 (Mock) 等"
+      ],
+      "message": "PR 正文残留模板占位注释（未填写）",
+      "fix": "删除模板 HTML 注释占位，替换为实质内容"
+    },
+    "linkedIssueLabels": {
+      "enabled": false,
+      "severity": "warn",
+      "requiresPermission": "issues: read",
+      "message": "被引用 Issue 缺 kind/* 或优先级标签",
+      "fix": "给被引用的 Issue 补 kind/* 与 p0-p3 标签",
+      "note": "阶段 2 规则：需要读 Issue 标签（API），故启用时 workflow 必须加 `issues: read` 权限。当前禁用 ⇒ 只需 contents: read。"
+    }
+  }
+}

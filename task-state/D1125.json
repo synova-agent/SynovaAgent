@@ -1,0 +1,31 @@
+{
+  "task_id": "D1125",
+  "title": "治理线B段 Issue 政策门禁【非必过软上线】+ 预演报告",
+  "status": "audit_pending",
+  "risk": "medium",
+  "spec": null,
+  "impl": {
+    "commit": null,
+    "by": "gov-impl-retire",
+    "at": "2026-10-02",
+    "files": [
+      ".github/workflows/issue-policy.yml",
+      ".github/issue-management/config.json",
+      ".github/issue-management/rules.mjs",
+      ".github/issue-management/policy.mjs",
+      "tests/issue-management/policy.test.mjs",
+      "tests/issue-management/cli.test.mjs",
+      "docs/synova/coordination/2026-10-02-WB1-issue-policy-预演报告.md",
+      "docs/authority/DOCS-REGISTRY.yaml",
+      ".claude/task-briefs/2026-10-02-D1125-治理线B段Issue政策门禁.md"
+    ],
+    "note": "commit sha 由生成器从 git log '(D1125)' 派生（D393 口径，json 内 null 属预期）；分支 feat/d1125-issue-policy，PR 组合暂缓（待队长治理线窗 W-B1a 落 ownership 归属后再开）"
+  },
+  "audit": null,
+  "fix_task_id": null,
+  "branch": "feat/d1125-issue-policy",
+  "worktree": ".synova-wt-wb1",
+  "enforcement_mode": "informational",
+  "updated_at": "2026-10-02",
+  "updated_by": "coding"
+}

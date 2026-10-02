@@ -1,0 +1,82 @@
+# .github/workflows/issue-policy.yml
+#
+# Issue 政策检查 — **informational / 非必过**（首日软上线，见 docs/synova/coordination/2026-10-02-WB1-issue-policy-预演报告.md）
+#
+# 为什么非必过: 实测本仓 124 个在飞 open PR 中 kind/* 与 p0-p3 命中为 0 ⇒ 一步到位设为必过会同时卡死全部在飞 PR。
+# 翻到必过的两步（缺一不可，且须先补存量标签）:
+#   ① 把本 job 的 name（`Issue policy`）加入 branch protection 必需集；
+#   ② 把 .github/issue-management/config.json 的 enforcement.mode 改为 "blocking"（或给本 workflow 传 ISSUE_POLICY_ENFORCE=true）。
+#
+# 🔴 防"PR 改策略让自己过"：本 workflow 显式 checkout **默认分支** 取策略代码与配置，
+#    因此 PR 分支上对 .github/issue-management/** 的任何改动都**不影响本次判定**（判定只读默认分支那份）。
+#
+# 权限最小集（逐项给"为何必需"）:
+#   contents: read —— 唯一必需项。actions/checkout 取默认分支的 .github/issue-management/** +
+#                    读 workflow 自身，均属读仓库内容；本检查不写任何仓库资源（不评论、不打标签、不上报 check-run 之外的东西）。
+#   ✗ 不需要 pull-requests: write / issues: write —— 本检查只读事件体、只输出 job 日志与 summary。
+#   ✗ 不需要 pull-requests: read —— PR 字段（title/body/labels/isDraft）来自事件体 github.event.pull_request，不调 API。
+#   ⚠️ 仅当启用 config.rules.linkedIssueLabels.enabled=true（读被引用 Issue 的标签，阶段 2）时，
+#      才需要追加 `issues: read` —— 该规则当前 disabled，故此处**不授予**，避免预留未用权限。
+
+name: Issue policy
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled, ready_for_review, review_requested]
+  pull_request_review:
+    types: [submitted]
+
+# 同一 PR 的多次事件串行化，避免 labeled/edited 抖动时并发占 runner
+concurrency:
+  group: issue-policy-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  issue-policy:
+    name: Issue policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout policy code from default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Write PR payload (from event body, no API call)
+        env:
+          PR_JSON: ${{ toJSON(github.event.pull_request) }}
+        run: |
+          printf '%s' "$PR_JSON" > "$RUNNER_TEMP/pr.json"
+          echo "payload bytes: $(wc -c < "$RUNNER_TEMP/pr.json")"
+
+      - name: Evaluate issue policy (informational)
+        id: policy
+        run: |
+          set +e
+          node .github/issue-management/policy.mjs --payload "$RUNNER_TEMP/pr.json" | tee "$RUNNER_TEMP/policy.out"
+          rc=${PIPESTATUS[0]}
+          set -e
+          echo "policy_rc=$rc" >> "$GITHUB_OUTPUT"
+          case "$rc" in
+            0) echo "✅ issue policy: 无 block 级违规（或 informational 模式只报不拦）" ;;
+            1) echo "⚠️ issue policy: 存在 block 级违规 —— 当前 informational 模式，**不阻断**（转必过需两步，见本文件头）" ;;
+            2) echo "::error title=issue-policy::检查未执行（exit 2 = 配置/payload 不可用）—— 这不是通过"; exit 2 ;;
+            *) echo "::error title=issue-policy::未知退出码 $rc"; exit 2 ;;
+          esac
+
+      - name: Note in summary
+        if: always()
+        run: |
+          {
+            echo ""
+            echo "<details><summary>原始输出</summary>"
+            echo ""
+            echo '```'
+            cat "$RUNNER_TEMP/policy.out" 2>/dev/null || echo "(无输出)"
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
