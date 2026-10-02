@@ -3,7 +3,7 @@
   "title": "治理线B段Issue状态流转（.github/workflows/issue-lifecycle.yml，非门禁）",
   "status": "impl_done",
   "spec": {
-    "doc": "CTO 补充指令 1 · B 段政策（2026-10-02）§2-② + 共享任务 task-11",
+    "doc": "CTO 补充指令 1 · B 段政策（2026-10-02）§2-② + 共享任务 task-11 + 队长裁决 W-B2-①–⑤",
     "by": "lead",
     "at": "2026-10-02"
   },
@@ -23,5 +23,5 @@
   "fix_task_id": null,
   "updated_at": "2026-10-02",
   "updated_by": "gov-impl-decide",
-  "note": "非门禁 workflow：PR opened/reopened→其引用 Issue 置 In progress（opened 另初始化 Start Date）；review_requested→In review；changes_requested→退回 In progress；workflow_dispatch 人工纠偏。『只改标题不触发』双保证：① on: 不订阅 edited（主）② decide() 对 edited 一律 NOOP（代码面），T2/T3 实测 0 mutation（离线注入缝机械证明，T1 正面对照 2 处 mutation）。Project 事实全部 gh api graphql 只读实测（number=1、nodeId=PVT_kwDOFAmDns4Blb57、Status field PVTSSF_lADOFAmDns4Blb57zhkIzLE、In progress=a3530961 / In review=1b0f439f、Start Date field PVTF_lADOFAmDns4Blb57zhkIzfQ），未采信任何 DSH 编号。permissions 最小集仅 contents: read（checkout 必需，不可再收窄；Projects V2 无可授予权限键，须走 secret PAT）。job name『Issue Lifecycle (非必需)』与 12 条必需集零重名（node 解析逐字比对 + check-required-contexts.py → REQUIRED-CONTEXTS: OK 12/12；--reverse 明列本卡为非必需 ⇒ 不阻断合并）。G1 零命中。阻塞前置 P1：secret ISSUE_LIFECYCLE_TOKEN 不存在（实测 grep secrets. workflows 共 0 处、repo secrets 列表为空）⇒ 缺 token 时显式 ERROR 不静默，请示 CTO 配 fine-grained PAT（组织权限 Projects: Read and write）。写集外产物 2 件（task-state/D1124.json + task brief）为 alloc-task-id.sh 强制生成，已披露请裁。"
+  "note": "非门禁 workflow（不进 12 条必需集、不阻断合并）。事件语义：PR opened/reopened→其引用 Issue 置 In progress（opened 另初始化 Start Date）；review_requested→In review；changes_requested→退回 In progress；workflow_dispatch 人工纠偏。🔴 队长裁决 W-B2-③ 已落地：触发面收窄为『当前只启用 workflow_dispatch』，PR/Review 事件移入 RESTORE-BEGIN/END 注释段（4 行，去掉 '# ' 即恢复）；恢复条件 = secret ISSUE_LIFECYCLE_TOKEN 就位 + U1 端到端真改一次 Project 状态 —— 本卡完成条件不是『代码写完』。恢复路径已机器验证：把该段取消注释后交 YAML 解析器，断言展开后 = pull_request[opened,reopened,review_requested] + pull_request_review[submitted] 且不含 edited（堵住恢复时手滑加回 edited）。『只改标题不触发』：① 触发面（PR 事件整体未订阅，收窄期更强）② 代码面 decide() 对 edited 一律 NOOP（与触发面无关，现在就可测），T2/T3 实测 0 mutation（离线注入缝 SYNO_LIFECYCLE_MUTATION_LOG + TARGETS 机械证明），T1 正面对照 2 处 mutation。Project 事实全部 gh api graphql 只读实测（number=1、nodeId=PVT_kwDOFAmDns4Blb57、Status field PVTSSF_lADOFAmDns4Blb57zhkIzLE、In progress=a3530961 / In review=1b0f439f、Start Date field PVTF_lADOFAmDns4Blb57zhkIzfQ），未采信任何 DSH 编号；队长给的 number/nodeId/7 档名称全部实测复现一致。permissions 最小集仅 contents: read（checkout 必需，不可再收窄为 none、不需 write；issues/pull-requests 刻意不申请因引用从 payload 本地正则解析）。job name『Issue Lifecycle (非必需)』与 12 条必需集零重名（node 解析逐字比对 + check-required-contexts.py → REQUIRED-CONTEXTS: OK 12/12；--reverse 明列本卡为非必需）。G1 零命中。队长裁决 W-B2-①：写集外 2 件（task-state/D1124.json + task brief）获批，且认定系派单写集漏项、不构成夹带。W-B2-②：分支名保留现名，规范定为 <type>/<分配器D#>-<slug>，d1131 系队长手写笔误，本线处理正确。W-B2-④：验收命令 import yaml 假失败系队长自身漏项，采纳本线三路互证（node yaml + ruby + 仓库自带解析器）。阻塞前置 P1：secret ISSUE_LIFECYCLE_TOKEN 不存在（实测 grep secrets. workflows 共 0 处、repo secrets 列表为空；org 级 403 未验证）⇒ 缺 token 时保持显式 ERROR 不降级为 warning（队长裁决 W-B2-③ 明示），收窄后无 PR 红噪音。未验证 6 项保留在产出件 §10 供 K3 对齐。"
 }

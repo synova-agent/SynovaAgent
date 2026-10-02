@@ -2,9 +2,13 @@
 
 > **性质**：治理线 B 段 W-B2 卡。交付 1 个**非门禁** workflow + 1 个单文件执行器 + 本产出件。
 > **基线 pin**：`origin/main = 4225fe884bdccbed4ae2df7dc23160fa9273fdf4`（分支 `feat/d1131-issue-lifecycle`）
-> **取证 as_of**：2026-10-02T09:4x–10:0xZ
+> **取证 as_of**：2026-10-02T09:4x–10:3xZ（含队长裁决 W-B2-①–⑤ 后的收窄改动）
 > **性质声明（🔴 全程）**：本 workflow **不进 main 的 12 条必需状态检查**、不改 branch protection、
 > 不改任何既有 job 的 `name:`、不改 `ci.yml`。它红了**不阻断**任何 PR 合并。
+> **🔴 触发面现状（队长裁决 W-B2-③）**：`on:` **当前只启用 `workflow_dispatch`（手动）**；
+> PR/Review 事件为注释态（`RESTORE-BEGIN/END`），待 secret `ISSUE_LIFECYCLE_TOKEN` 就位 + U1 端到端
+> 通过后**一行恢复**（恢复路径已机器验证，见 §5 保证 1）。**本卡完成条件 = token 就位 + U1 真改一次**，
+> 不是"代码写完"。
 
 ---
 
@@ -64,6 +68,11 @@ FIELD Start Date       id=PVTF_lADOFAmDns4Blb57zhkIzfQ dataType=DATE
 
 ## §3 事件 → 状态 决策表（`decide()` 是唯一真相源）
 
+> ⚠️ **触发面现状（队长裁决 W-B2-③）**：下表**全部事件语义均已实现并实测**，但 workflow 的
+> **`on:` 当前只启用 `workflow_dispatch`** —— PR/Review 事件处于注释态（`RESTORE-BEGIN/END`），
+> 待 `ISSUE_LIFECYCLE_TOKEN` 就位后一行恢复。详见 §5 保证 1 与 1′。
+> 表内 T1–T12 用 `--event` 直接喂脚本，**不依赖 `on:`** ⇒ 收窄不影响其有效性。
+
 | 事件 / action | 目标状态 | 附带 | 实测退出码 | mutation 数 |
 |---|---|---|---|---|
 | `pull_request` / `opened` | `In progress` | **Start Date 初始化**（仅当该字段当前为空） | 0 | 2（T1） |
@@ -107,37 +116,58 @@ $ git status --porcelain
 | `.claude/task-briefs/2026-10-02-D1124-治理线B段Issue状态流转.md` | ⚠ **写集未列** | **分配器强制产物** —— 队长派单明令「先跑 `alloc-task-id.sh`」；该脚本按 squad-discipline §15 自动建 brief（brief 骨架由脚本生成、我仅填字段） |
 | `task-state/D1124.json` | ⚠ **写集未列** | 同上，`alloc-task-id.sh` 自动登记 |
 
-> 🔎 **如实标注**：后两项**不在派单写集的字面清单**里，但它们是**队长明令执行的分配器的必然产物**
-> （squad-discipline §15「取号必走分配器，禁自编号」）。我**没有**静默夹带：在此逐条披露，请队长裁：
-> 若要求严格 ⊆ 写集，我可把这两项移出本 PR（但那样就没有 task brief / 无 task-state 登记，反而违反取号纪律）。
+> 🔎 **队长裁决 W-B2-①（2026-10-02）：批准**。理由：二者是 `alloc-task-id.sh` 的**必然产物**，而"取号必走分配器"是
+> `squad-discipline §15` 硬约束 —— 要号就得有这两件。**且队长认定这是派单写集漏项**（未预置
+> `task-state/D1124.json` 与 `.claude/task-briefs/2026-10-02-D1124-` 两个前缀）⇒ **不构成夹带**。
 > **零其他夹带**（无 `.github/issue-management/policy.mjs`、`rules.mjs`、`config.json`、`issue-policy.yml`、`ci.yml` 改动）。
 >
-> ⚠ **分支名与任务号不一致**：队长给的建枝命令是 `feat/d1131-issue-lifecycle`，而分配器返回 **D1124**。
-> 我按队长命令保留分支名、按分配器用 D1124 作任务号 ⇒ 二者不同源。**已如实标注，请队长裁定统一口径。**
+> 🔎 **队长裁决 W-B2-②（2026-10-02）：保留分支名现名，规范定为 `<type>/<分配器D#>-<slug>`**（号**只能**来自分配器）。
+> `feat/d1131-...` 里的 `d1131` 系队长**手写笔误**；我"按命令保留分支名、按分配器用 D1124"的处理被认定**正确**，不需再动。
 
 ---
 
 ## §5 验收 ③（🔴 CTO 明写判据）：**只改标题不触发** —— 两道保证 + 实测
 
-### 保证 1（主）· 触发面：`on:` 不订阅 `edited`
+### 保证 1（主）· 触发面：**当前只启用 `workflow_dispatch`**，PR 事件整体不订阅
+
+> ⚠️ 依队长裁决 **W-B2-③**，触发面已**收窄**（原 PR 事件改为注释态，token 就位后一行恢复）。
+> 收窄期内"标题编辑不触发"这一保证**更强**：连 `opened` 都不订阅，`edited` 更无从触发。
 
 ```
-$ node -e "
-const YAML=require('yaml'), fs=require('fs');
-const d=YAML.parse(fs.readFileSync('.github/workflows/issue-lifecycle.yml','utf8'));
-const on=d.on;
-console.log('on 顶层事件 =', Object.keys(on));
-console.log('on.pull_request.types =', on.pull_request.types);
-console.log('on.pull_request_review.types =', on.pull_request_review.types);
-if(on.pull_request.types.includes('edited')) { console.log('❌ FAIL: 订阅了 edited'); process.exit(1); }
-console.log('✅ 断言通过: edited 不在订阅集合 ⇒ 标题编辑不产生 run');
-"
-on 顶层事件 = [ 'pull_request', 'pull_request_review', 'workflow_dispatch' ]
-on.pull_request.types = [ 'opened', 'reopened', 'review_requested' ]
-on.pull_request_review.types = [ 'submitted' ]
-✅ 断言通过: edited 不在订阅集合 ⇒ 标题编辑不产生 run
+$ node -e "<现状断言 + RESTORE 段恢复测试>"
+A) 现状 on 顶层事件 = [ 'workflow_dispatch' ]
+   ✅ 现状 = 仅 workflow_dispatch（PR 事件整体不订阅 ⇒ 零红噪音）
+B) RESTORE 段 = 第 51 → 56 行（段内 4 行）
+   取消注释后逐行:
+     |  pull_request:
+     |    types: [opened, reopened, review_requested]
+     |  pull_request_review:
+     |    types: [submitted]
+   解析结果 on = {"pull_request":{"types":["opened","reopened","review_requested"]},"pull_request_review":{"types":["submitted"]}}
+   恢复后 on.pull_request.types = [ 'opened', 'reopened', 'review_requested' ]  / pull_request_review.types = [ 'submitted' ]
+   ✅ 恢复后 = pull_request[opened,reopened,review_requested] + pull_request_review[submitted]，**不含 edited**
+✅ 全部断言通过：活跃态已收窄 + 恢复路径本身可机器验证
 >>> exit=0
 ```
+
+> 🔎 **恢复路径本身现在就可机器验证（不等 token）**：测试把 RESTORE 段取消注释后交给 YAML 解析器，
+> 断言"展开后恰为 3 个 PR 事件且**不含 `edited`**"。⇒ 未来那次"一行恢复"不会引入回归，
+> 也**堵住了"恢复时手滑把 edited 加回来"**这条路径。判据是**解析产物**（`restored.on`），不是文本 grep。
+
+### 保证 1′ · 收窄决策与恢复条件（队长裁决 W-B2-③）
+
+| 项 | 内容 |
+|---|---|
+| **现状** | `on:` 下只有 `workflow_dispatch`；PR 事件在 `RESTORE-BEGIN/END` 段内为注释态 |
+| **为什么收窄** | secret `ISSUE_LIFECYCLE_TOKEN` 未配置（§8-P1）。此时开 PR 事件 ⇒ 在飞的 **124 个 PR** 各产生一处"因配置缺失而红"的 check-run ⇒ 噪音会训练人绕开机制（V3.9「软机制 0% 有效」同族），且这是**配置未就位、非代码缺陷** |
+| **恢复条件（两条都要满足）** | ① secret 就位（fine-grained PAT，org `synova-agent`，组织权限 `Projects: Read and write`）；② 补 **U1 端到端**：用 `workflow_dispatch` **真改一次** Project 状态成功 |
+| **恢复操作** | 把 `RESTORE-BEGIN/END` 之间 **4 行**的 `# ` 去掉即可（不加行、不改行） |
+| **恢复正确性** | 已机器验证（上方 B 段）；断言"3 个 PR 事件 + 不含 edited"由解析产物强制 |
+| **本卡完成条件（队长口径）** | **不是"代码写完"**，而是"token 就位 + U1 端到端真改一次"；在此之前只走手动通道 |
+| **我是否同意收窄** | **同意，无异议**。124 处配置性红噪音会让人绕道；且与"非门禁"定位一致 —— 非门禁的东西不该在 PR 上制造视觉阻断感。**不需要队长改回。** |
+
+> ⚠️ **措辞修正（自捉错 #9）**：本件初版此处写"`on:` 不订阅 `edited`" —— 收窄后该字面**仍成立但不完整**。
+> 准确表述是「**PR 事件整体未订阅**；**恢复后亦不含 `edited`（已机器验证）**」。已按实测改写。
 
 ### 保证 2 · 代码面：即便被误订阅，title-only 也判 NOOP
 
@@ -342,7 +372,7 @@ ruby YAML OK; keys = ["name", true, "permissions", "concurrency", "jobs"]
 
 | # | 前置 | 现状（实测） | 不做会怎样 |
 |---|---|---|---|
-| **P1** | 配 secret **`ISSUE_LIFECYCLE_TOKEN`** = fine-grained PAT（资源所有者 `synova-agent`，组织权限 `Projects: Read and write`） | **不存在**。实测：`grep -rn 'secrets\.' .github/workflows/` → **共 0 处**；`gh api repos/synova-agent/SynovaAgent/actions/secrets` → 空 | 每次触发走 T9 分支：job **显式红**（`LIFECYCLE: ERROR` + `::error::`）并打印可操作提示。**不阻断合并**（非必需），但会持续红直到配置 |
+| **P1** | 配 secret **`ISSUE_LIFECYCLE_TOKEN`** = fine-grained PAT（资源所有者 `synova-agent`，组织权限 `Projects: Read and write`） | **不存在**。实测：`grep -rn 'secrets\.' .github/workflows/` → **共 0 处**；`gh api repos/synova-agent/SynovaAgent/actions/secrets` → 空 | **（收窄后）当前无任何 PR 事件订阅 ⇒ 不会产生红噪音**。只有手动跑 `workflow_dispatch` 时会显式红（`LIFECYCLE: ERROR` + `::error::` + 可操作提示），**保持显式红不降级**（队长裁决 W-B2-③）。本卡完成条件 = P1 就位 + U1 端到端 |
 | **P2** | 确认 issue 已在 Project #1 中 | 未知（未逐条核对全仓 issue 与 Project 的纳管范围） | issue 不在 Project 时**跳过并打印原因**（不擅自添加）⇒ 流转不生效但不报错。若期望"自动纳管"，需 CTO 裁是否放开 `addProjectV2ItemById` |
 
 **我为什么让它在缺 token 时"红"而不是"静默绿"**：铁律 11/31（禁静默降级）＋ 队长本批明令
@@ -363,7 +393,8 @@ ruby YAML OK; keys = ["name", true, "permissions", "concurrency", "jobs"]
 | 5 | **测试 harness 自身返回非 0**：`run()` 末行 `[ -f "$4" ] && sed ...`，T6 无 log 文件 ⇒ 函数返回 1、脚本整体 exit 1（≠ 产品失败） | 看到末行 `[exit code: 1]` 与前面全部 T 的输出矛盾 | 已在报告中标明"该 exit code 来自 harness 而非产品"；后续 T7+ 补 `|| true` |
 | 6 | 险些把 `on:` 当普通字符串键读：**YAML 1.1 把裸 `on` 解析成布尔 `true`**（ruby 输出 `["name", true, ...]`） | ruby 与 node 的 keys 输出不一致（node `yaml` 按 1.2 给 `'on'`） | 断言脚本同时兼容两种：`d.get('on') \|\| d.get(True)`；并在产出件里**如实展示两个解析器的差异**（不藏） |
 | 7 | **写集外产物**：`alloc-task-id.sh` 自动建了 `task-state/D1124.json` + task brief，二者**不在派单写集字面清单** | 跑分配器后 `git status` 立刻可见 | **不藏**：§4 逐条披露为"分配器强制产物"并请队长裁。全窗零夹带其他文件 |
-| 8 | **分支名与任务号不同源**：队长建枝命令写 `d1131`，分配器返回 `D1124` | 对比派单与分配器输出 | 按队长命令保留分支名、按分配器用 D1124；§4 标注请裁 |
+| 8 | **分支名与任务号不同源**：队长建枝命令写 `d1131`，分配器返回 `D1124` | 对比派单与分配器输出 | 按队长命令保留分支名、按分配器用 D1124；§4 标注请裁。**队长已裁**：保留现名，规范定为 `<type>/<分配器D#>-<slug>`；`d1131` 系队长手写笔误，我的处理被认定正确 |
+| 9 | **收窄后措辞失真（本件自身）**：队长裁 W-B2-③ 收窄触发面后，本件 §5 原写"`on:` 不订阅 `edited`" —— 该字面在收窄后**仍成立但不完整**（真实状态是"PR 事件整体未订阅"），继续照旧会让人误以为 PR 事件在跑 | 改 YAML 后回读 §5 保证 1，发现描述与产物不一致 | 已改写为「**PR 事件整体未订阅**；**恢复后亦不含 `edited`（已机器验证）**」，并补 §5 保证 1′ 收窄/恢复表。**教训**：改产物必须回扫产出件里的每一句"现状描述" —— 它们在改动那一刻就可能从"对"变成"不完整" |
 
 ---
 
@@ -371,7 +402,7 @@ ruby YAML OK; keys = ["name", true, "permissions", "concurrency", "jobs"]
 
 | # | 项 | 为什么没验 | 需要什么 |
 |---|---|---|---|
-| U1 | **端到端真跑**（真 token → 真改 Project 状态） | 无 `ISSUE_LIFECYCLE_TOKEN`（§8-P1 实测不存在）；本卡禁止写 GitHub 凭据/secret | CTO 配 P1 后，用 `workflow_dispatch` 手动纠偏通道对一个测试 PR 跑一次 |
+| U1 | **端到端真跑**（真 token → 真改 Project 状态） | 无 `ISSUE_LIFECYCLE_TOKEN`（§8-P1 实测不存在）；本卡禁止写 GitHub 凭据/secret | **本卡的完成条件**：CTO 配 P1 后，用 `workflow_dispatch` 手动纠偏通道对一个测试 PR 跑一次并确认 Project 状态真的变了；成功后按 §5 保证 1′ 恢复 PR 事件 |
 | U2 | `on:`/`permissions:` 在 **GitHub Actions 运行器**上的最终解释（如 `concurrency` 组表达式在 `pull_request_review` 下的取值） | 需真实 run；本地只能用解析器验语法与结构 | 首次触发后看 run 摘要 |
 | U3 | issue 与 Project #1 的**纳管覆盖度**（多少 issue 已在板内） | 未逐条遍历全仓 issue（超本卡范围） | `gh project item-list 1` 对账（只读） |
 | U4 | 该 workflow 的 check-run **名字**在 Actions 面板的实际展示（是否为 job `name:` 逐字） | 需一次真实 run | 首次触发后核对（这也是我把它命名得与 12 条明显不同的原因） |
@@ -396,12 +427,18 @@ bash scripts/control-tower/alloc-task-id.sh "治理线B段Issue状态流转"   #
 
 # YAML / 结构
 node --check .github/issue-management/lifecycle.mjs
-node -e "const Y=require('yaml'),f=require('fs');const d=Y.parse(f.readFileSync('.github/workflows/issue-lifecycle.yml','utf8'));console.log(Object.keys(d),d.on.pull_request.types)"
+node -e "const Y=require('yaml'),f=require('fs');const d=Y.parse(f.readFileSync('.github/workflows/issue-lifecycle.yml','utf8'));console.log(Object.keys(d))"  # keys
 ruby -ryaml -e 'p YAML.load_file(".github/workflows/issue-lifecycle.yml").keys'
 python3 scripts/control-tower/check-required-contexts.py                 # → REQUIRED-CONTEXTS: OK
 python3 scripts/control-tower/check-required-contexts.py --reverse        # → 明列本卡"非必需"
 
-# 只改标题不触发（离线，零网络零凭据）
+# 触发面收窄 + 恢复路径验证（§5 保证 1/1′）
+#   A 现状：on 顶层事件必须恰为 ['workflow_dispatch']
+#   B 恢复：取 RESTORE-BEGIN/END 之间 4 行 → 去掉 "# " → 前置 "on:" → YAML 解析
+#           → 断言 = pull_request[opened,reopened,review_requested] + pull_request_review[submitted] 且不含 edited
+#   完整脚本见 §5 保证 1 的原始输出（node -e，退出 0 = 全部断言通过）
+
+# 只改标题不触发（离线，零网络零凭据；与触发面收窄无关，代码面保证**现在就可测**）
 FIX=/tmp/d1124-fx
 export SYNO_LIFECYCLE_TARGETS='{"101":{"itemId":"PVTI_item101","statusName":"Ready","startDate":null}}'
 SYNO_LIFECYCLE_MUTATION_LOG=$FIX/m2.log node .github/issue-management/lifecycle.mjs \
@@ -413,4 +450,6 @@ SYNO_LIFECYCLE_MUTATION_LOG=$FIX/m1.log node .github/issue-management/lifecycle.
 grep -ci 'dsh\|deepseek harness' .github/workflows/issue-lifecycle.yml .github/issue-management/lifecycle.mjs
 
 # 夹具 JSON 生成见 §5；完整 12 例（T1–T12）均在 §5 贴出原始输出
+# ⚠ 注意：T1–T12 用 `--event` 直接喂脚本，**不依赖 workflow 的 on:** ——
+#   故触发面收窄不影响这些夹具的有效性（它们验的是 decide()/planMutations() 的语义）
 ```

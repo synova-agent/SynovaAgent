@@ -11,10 +11,28 @@
 #   · 不改 branch protection / 不改必需集 / 不改任何既有 job 的 `name:` / 不改 ci.yml。
 #   · job name 特意避开 12 条必需集（逐条比对见 docs/synova/coordination/2026-10-02-WB2-*）。
 #
+# 🔴🔴 触发面收窄（队长裁决 2026-10-02 · W-B2-③）—— **当前只启用 workflow_dispatch**
+#
+#   现状：`on:` 下 PR 事件已被**注释掉**，只剩 `workflow_dispatch`（手动纠偏）。
+#   为什么：secret `ISSUE_LIFECYCLE_TOKEN` **尚未配置**（实测不存在）。此时若开 PR 事件，
+#     会在当时在飞的 **124 个 PR** 上产生 **124 处「因配置缺失而红」**的 check-run 噪音。
+#     噪音的代价不是"看起来乱"，而是**人会开始绕开机制**（V3.9 教训：「软机制 0% 有效」），
+#     且这是**配置未就位、非代码缺陷** ⇒ 不该以红噪音形式摊到每个 PR 上。
+#   恢复条件（两个都满足才恢复）:
+#     ① secret `ISSUE_LIFECYCLE_TOKEN` 就位（fine-grained PAT，org `synova-agent`，
+#        组织权限 `Projects: Read and write`）；
+#     ② 补 U1 端到端验证：用 `workflow_dispatch` 真改一次 Project 状态成功。
+#   恢复操作：把下面 `RESTORE-BEGIN/END` 之间 4 行的 `# ` 去掉即可（**一行不改、不加**）。
+#   恢复正确性**已被机器验证**（不等 token）：产出件 §5-a 的测试会把该段取消注释后交给
+#     YAML 解析器，断言"展开后恰为 3 个 PR 事件且**不含 edited**" ⇒ 恢复动作本身不会引入回归。
+#
 # 🔴 只改标题不触发（CTO 明写判据），两道保证:
-#   ① **触发面**：`on:` **不订阅 `edited`** ⇒ 标题编辑根本不产生 run（主保证）；
+#   ① **触发面**：`on:` **不订阅 `edited`** ⇒ 标题编辑根本不产生 run（主保证）。
+#      当前该保证落在 RESTORE 段（该段是 PR 事件恢复后的真身，且**不含 edited**）；
+#      收窄期内 PR 事件整体不订阅 ⇒ 主保证**更强**（连 opened 都不订阅）。
 #   ② **代码面**：lifecycle.mjs 的 decide() 对 `pull_request:edited` 一律 NOOP，
 #      其中 title-only（changes 仅含 title）显式判定 ⇒ 即便将来误加订阅也不改状态。
+#      ⚠️ 代码面保证**与触发面无关，现在就可测**，夹具见产出件 §5-b（T2/T3 实测 0 mutation）。
 #
 # 🔴 token（本 workflow 唯一的外部前置）:
 #   Projects (V2) 的 GraphQL **读写都不能用 `GITHUB_TOKEN`** —— 它是 repo-scoped。
@@ -30,11 +48,12 @@
 name: Issue Lifecycle (D1124)
 
 on:
-  pull_request:
-    # 只订阅会改变流转语义的事件；**刻意不含 edited**（标题编辑不得改状态）
-    types: [opened, reopened, review_requested]
-  pull_request_review:
-    types: [submitted]
+  # ── RESTORE-BEGIN（取消下面 4 行注释即恢复事件触发；此段**不得**含 edited）──
+  # pull_request:
+  #   types: [opened, reopened, review_requested]
+  # pull_request_review:
+  #   types: [submitted]
+  # ── RESTORE-END ──
   workflow_dispatch:
     inputs:
       pr_number:
