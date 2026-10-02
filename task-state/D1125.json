@@ -1,7 +1,7 @@
 {
   "task_id": "D1125",
   "title": "治理线B段 Issue 政策门禁【非必过软上线】+ 预演报告",
-  "status": "impl_done",
+  "status": "audit_pending",
   "risk": "medium",
   "spec": null,
   "impl": {
