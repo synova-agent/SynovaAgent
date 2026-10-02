@@ -1,0 +1,29 @@
+{
+  "task_id": "D1064",
+  "title": "FIX-D1032 软失败记账 CI-only 红（post-commit _softfail_state）",
+  "status": "claimed",
+  "risk": "medium",
+  "domain": "mac",
+  "owner": "mac-coding",
+  "spec": ".claude/task-briefs/2026-09-29-D1064-FIX-D1032-软失败记账-CI-only-红（post-commit-_softfail_state-mtime-窗口）.md",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "source_task": "D1032",
+  "priority": 1,
+  "base_branch": "main",
+  "base_head": "e0c4f8f8",
+  "updated_at": "2026-09-29",
+  "updated_by": "cto-parallel-d1061",
+  "note": "来源 = D1032(#868) CI 红归因（Mac-CTO 2026-09-29 裁定「立卡」）。现象：tests/control-tower/post-commit.test.sh 在 CI 必红（❌ 账本未记真实状态 / ❌ 软失败被记成纯 PASS），本机同命令 15 通过 0 失败 ⇒ 环境依赖型真缺陷（M5b 族），不是判据问题。嫌疑面 = scripts/hooks/post-commit.sh 的 _mtime_sec()/_softfail_state()（两道 mtime 窗口 + stat 方言回退链）。同型先例：D1030 夹具裸 git init 在 runner 默认 master 而本机 main（本机 60/60、CI 58/2）。验收要求：先交「CI 等价复现命令 + 改前必红原始输出」，再修；不放宽 CT-2 判据文本。",
+  "write_set": [
+    "scripts/hooks/post-commit.sh",
+    "tests/control-tower/post-commit.test.sh",
+    ".claude/task-briefs/2026-09-29-D1064-FIX-D1032-软失败记账-CI-only-红（post-commit-_softfail_state-mtime-窗口）.md",
+    "task-state/D1064.json",
+    ".claude/task-briefs/2026-09-29-D1065-FIX-bypass.log-跨-PR-弄脏（合并吞吐瓶颈）.md",
+    "task-state/D1065.json",
+    ".claude/bypass.log"
+  ],
+  "write_set_note": "末两条（D1065 的 brief/state）是**同批登记**的第二张卡：D708 合并级对账按分支名只解析一个 D#（本批分支 chore/D1064-D1065-fix-cards-20260929 → D1064）⇒ 由本卡代声明，卡片 PR 的提交集合才闭合。实施 PR 各自落地时按实际改动更新本表。"
+}

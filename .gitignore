@@ -84,3 +84,6 @@ evidence/
 # 树级守门: scripts/control-tower/check-gitlinks.sh（三态退出）+ 密封测试入 ci.yml。
 .synova-wt-*
 .sessions/
+
+# 文档契约 v1.0（2026-09-26）: STATE.md 是入口层正式文件（"现在到哪了"的唯一答案）
+!docs/synova/STATE.md

@@ -1,0 +1,16 @@
+{
+  "id": "D1062",
+  "title": "域门禁改信息性（不阻断）—— 创始人 2026-09-29 决策",
+  "status": "in_progress",
+  "created": "2026-09-29",
+  "updated": "2026-10-01",
+  "branch": "fix/domain-gate-not-blocking",
+  "write_set": [
+    "scripts/control-tower/check-pr-budget.sh",
+    "tests/control-tower/check-pr-budget.test.sh",
+    ".claude/task-briefs/2026-10-01-D1062-域门禁改信息性-续（今日brief补齐）.md",
+    "task-state/D1062.json",
+    "memory/notes/proposed/2026-09-29-domain-gate-not-blocking.md"
+  ],
+  "note": "2026-10-01 补齐当日 brief（CI 今日-brief 门禁）+ 修 D708 写集对账夹带误判"
+}

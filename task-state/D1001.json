@@ -1,0 +1,42 @@
+{
+  "task_id": "D1001",
+  "title": "表缺口收口：渲染层测试归属改判 mac（改判建议件 + 证据集；Mac-CTO 执行改表）",
+  "status": "delivered",
+  "risk": "low",
+  "domain": "mac",
+  "owner_side": "win",
+  "cross_domain_reason": "产物 = 改判建议件 + 证据集（docs/synova/product-lines/evidence/**，D758 域判定豁免）+ 本卡片（task-state/** 豁免）；被建议改动的 ownership.yaml / .github/CODEOWNERS / tests/control-tower/check-ownership.test.sh 均为 mac 域且 Mac-CTO 单写者（最终开工指令 §〇.2），Win 零直接改动（三方复核确认）。",
+  "renumber": "原 D949 与 Mac 侧 N8 卡撞号 → D1001（Mac-CTO 2026-09-25《Win 侧撞号处置》§一/§二/§四）。旧号作废；两份产物正文 D949|d949 grep 零匹配（code-a 自检 + 自验员 + 复核员三方核）。",
+  "branch": "fix/d1001-ownership-renderer-tests",
+  "base": "origin/main @ 6a714483（开工时已核未漂）。工作期间远端 main 前移至 443816ee：复核员经 raw.githubusercontent.com 直读远端 main 确认 ownership.yaml / .github/CODEOWNERS / tests/control-tower/check-ownership.test.sh / scripts/control-tower/check-ownership.py 均未受影响（无 tests/electron、ga-collab-* 规则，无人抢跑），D1001 证据不失效；本地 origin/main ref 陈旧于 327df3b3，登记备查，后续开工先 git fetch --all（铁律 0-3）。",
+  "spec": "docs/synova/dispatch/D1001-ownership-renderer-tests-20260925.md @ origin/docs/d949-d950-dispatch tip 124d41dc（指纹三方一致，见 audit.review）；RV-1 修订条目（写集收窄/分支改名/编码陷阱/反向验证天然前后对照/测试补丁直粘文本/D935 转建议）经 CTO 2026-09-25 复核放行。",
+  "owner": "win-codex-cto",
+  "executor": "synova-squad-lead（队长，不下场写码）+ code-a（撰写两份产物）+ d1001-verifier（独立自验，只读）+ d1001-reviewer（独立复核，只读）",
+  "depends_on": [],
+  "blocks": ["D1000 切片 B：本建议件被 Mac-CTO 采纳落表前不得开工（硬依赖）"],
+  "write_set": [
+    "docs/synova/product-lines/evidence/D1001-20260925/建议-ownership-渲染层测试改判.md",
+    "docs/synova/product-lines/evidence/D1001-20260925/证据集-原始输出.md",
+    "task-state/D1001.json"
+  ],
+  "impl": "见 evidence 两件。核心内容：两条规则逐字建议（tests/electron/** + tests/ga-collab-*.test.ts → mac，插入位置双写：electron-renderer/** source 行后 / L177 后 L179 前，** 兜底 L35 之后）+ E1–E5 实测 + 期望①–⑥ 每条可复现命令 + 边界枚举（tests/ga-collab.test.ts 无中段不命中，归因=缺字面连字符；空中段 ga-collab-.test.ts 实测命中 True）+ 编码陷阱（PS 5.1 > 写 UTF-16LE BOM → drift 断言必炸；cmd/git-bash 重定向 + 首 3 字节核验）+ 反向验证 = 天然前后对照（落表前 E1 红 / 落表后同命令绿）+ 测试补丁可直粘断言（8b 节两条，58→60，沙箱端到端实测 60 项 EXIT=0）+ D935 遗留转建议（真缺口仅 dsh/** 一条；docs/synova/presets/** 已在 origin/main L148-150；主树脏件 2 files +13/−7 全文登记，三不：不动/不 stash/不提交）。diff --stat vs 开工基准 6a714483：3 files changed（提交回执见回单）。",
+  "audit": {
+    "self_check": "d1001-verifier（独立成员，只读）：证据集全部关键命令独立复跑逐字复现（E1–E5/边界/fnmatch 探针/期望④⑤基线/D935 缺口/RV-a~e）；独立重建沙箱 S1–S6 复现；端到端终态假根实跑 60 项 EXIT=0；W1–W6 + 附加全 ✅；发现 2 处叙述计数笔误（41→43 条 glob、20→21 个 dsh 文件）已由 code-a 全查修正并复扫零残留。自验结论：可提请独立审计（不判通过）。",
+    "review": "d1001-reviewer（独立成员，只读）：A1–A10 规格静态对账全 ✅ 零退回（规则块与派单 §3.1 字节级一致 RULE_BLOCK_IDENTICAL=True；W6 两命令逐字相同 W6_CMD_IDENTICAL=True；E5 八文件与 D1000 派单 §五 B 表 + PLAN §4 B-① 严丝合缝，第 7 件旧号→新号处理如实注明）；指纹对账三坐标 × 三方值一致（docs/d949-d950-dispatch=124d41dc 三方一致；base 声明 6a714483=worktree HEAD，远端 main 已前移 443816ee 且关键文件未受影响；交付分支远端不存在=未推送）；抽跑 E1/E5/期望⑤基线 3/3 复现。复核结论：可提请独立审计（退回清单：无）。终审归 K3，执行方不判通过。"
+  },
+  "pending": [
+    "Mac-CTO 落表执行：两条规则 + dsh/** 遗留建议 → --emit-codeowners 再生（cmd/git-bash 重定向，核首 3 字节 ≠ EF BB BF）→ 8b 测试补丁（58→60）→ 期望①–⑥ 逐条自验。落表前 D1000 切片 B 不得开工。",
+    "主工作树 D935 未提交脏件（ownership.yaml + CODEOWNERS，2 files +13/−7）：Win 不再持有改动，不动/不 stash/不提交，处置归 Mac-CTO。",
+    "本地 origin/main ref 陈旧（327df3b3 < 远端 443816ee）：任何后续开工先 git fetch --all（铁律 0-3）。",
+    "渲染层测试「测试跟随被测模块」通则未成文：tests/llm-config-frontend.test.ts 等同类仍判 win（派单件 §八-1 预登记，归 Mac-CTO）。",
+    "tests/control-tower/ownership.test.sh 被引用但文件不存在（派单件 §八-3，非本卡引入，Mac 侧备查）。"
+  ],
+  "team_log": [
+    "d1001-code-a（撰写）：运行完成；产出两份产物（含 RV-1 四项 delta + 计数修正 5 处）；共享任务 task-1 completed。",
+    "d1001-verifier（独立自验）：运行完成；只读复跑全部证据 + W1–W6 对照 + 独立沙箱/端到端；共享任务 task-2 completed。",
+    "d1001-reviewer（独立复核）：运行完成；A1–A10 + 指纹三坐标 + 抽跑 3/3；共享任务 task-3 completed。",
+    "synova-squad-lead（队长）：前提冻结实测、RV-1 送审、任务板管理、task-state/D1001.json 撰写、收口提交。"
+  ],
+  "updated_at": "2026-09-25",
+  "updated_by": "synova-squad-lead"
+}

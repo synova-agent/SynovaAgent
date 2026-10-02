@@ -1,0 +1,3 @@
+{"id":"D1097","title":"交接指令落地 skill","status":"in_progress","created":"2026-10-01","branch":"chore/skill-handover-polish",
+"write_set":[".claude/skills/brief-compose/SKILL.md",".claude/skills/cto-handover/SKILL.md",".dsh/skills/brief-compose/SKILL.md",".dsh/skills/cto-handover/SKILL.md",".claude/task-briefs/2026-10-01-D1097-skill交接指令落地.md","task-state/D1097.json","memory/notes/proposed/2026-10-01-skill-handover-polish.md"],
+"note":"brief-compose 加交前五步自检；cto-handover 加【Synova-主CTO】交接指令指针"}

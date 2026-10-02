@@ -1,0 +1,14 @@
+{
+  "task_id": "D1091",
+  "title": "取号器超时修复（两腿有界 + fail-closed + 扫描加速）",
+  "status": "claimed",
+  "domain": "mac",
+  "owner": "工程线（X30 启动窗）",
+  "spec": ".claude/task-briefs/2026-09-30-D1091-alloc-timeout.md",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-09-30",
+  "updated_by": "harness-登记（X30 启动窗）",
+  "note": "CTO 台账第七批① 第 3 次挂死的修复：两腿各加硬超时（便携 _run_bounded，本机无 timeout 二进制）、超时→exit 2 fail-closed、扫描腿改 xargs -P8 并行枚举（>4min → 1s，号集 495 逐值一致）；端到端 13s。实测与复跑见库外仓 2026-09-30-mac小队-记录-取号器超时修复.md。（证据件: ~/Synova-过程档案/2026-09-30-mac小队-记录-取号器超时修复.md，sha256:43d69a3167ae1ced）"
+}

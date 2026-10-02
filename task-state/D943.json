@@ -19,7 +19,14 @@
     "docs/synova/coordination/已作废口径表.md",
     "task-state/D943.json",
     "memory/notes/proposed/2026-09-24-dsh-anchor-gate.md",
-    ".claude/task-briefs/2026-09-24-D943-mechanism.md"
+    ".claude/task-briefs/2026-09-24-D943-mechanism.md",
+    ".claude/task-briefs/2026-09-24-D943-cto-a-items.md",
+    ".claude/task-briefs/2026-09-25-D963-dsh-sidebar-charter-grid-panel.md",
+    "docs/synova/coordination/三问-48格.html",
+    "docs/synova/coordination/宪章三问-48格.json",
+    "memory/notes/implemented/2026-09-25-research-institute-baseline.md",
+    "scripts/control-tower/gen-charter-grid.py",
+    "task-state/D963.json"
   ],
   "impl": {
     "branch": "fix/d943-anchor-exempt",

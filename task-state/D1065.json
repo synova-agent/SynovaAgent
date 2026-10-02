@@ -1,0 +1,24 @@
+{
+  "task_id": "D1065",
+  "title": "FIX bypass.log 跨 PR 弄脏（合并吞吐瓶颈）",
+  "status": "claimed",
+  "risk": "high",
+  "domain": "mac",
+  "owner": "mac-coding",
+  "spec": ".claude/task-briefs/2026-09-29-D1065-FIX-bypass.log-跨-PR-弄脏（合并吞吐瓶颈）.md",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "priority": 1,
+  "base_branch": "main",
+  "base_head": "e0c4f8f8",
+  "updated_at": "2026-09-29",
+  "updated_by": "cto-parallel-d1061",
+  "note": "来源 = D1061 CI 处置批实测（Mac-CTO 2026-09-29 裁定「立卡」，方案 a/b 优先、c 为缓解）。核心事实三条：① GitHub 合并后端**尊重** .gitattributes 的 merge=union（main 的 bypass.log 1881→1895 行，两侧新增都在）；② 但它的**可合并性计算不尊重** —— main 前移后 PR 变 mergeable=False/dirty，#880 上 PUT /pulls/880/update-branch 直接 422 `merge conflict between base and head`；本机 git merge-tree（honors union）同一组合 clean，临时关掉 union 后唯一冲突文件就是 .claude/bypass.log；③ 代价 = 每个 PR 合并前必须「贴最新 main 再推一次」，一轮 CI ≈ 40 分钟（windows CT 单跑 37 分钟）⇒ 合并吞吐真瓶颈。验收要求：先交方案评估表（a: per-session 落点归并 / b: 退出 PR 内容面由 CI 集中落账 / c: 合并助手脚本化缓解），落地后连续合并 ≥2 PR 无需为后者重推，且证据行守恒。",
+  "write_set": [
+    ".claude/task-briefs/2026-09-29-D1065-FIX-bypass.log-跨-PR-弄脏（合并吞吐瓶颈）.md",
+    "task-state/D1065.json",
+    ".claude/bypass.log"
+  ],
+  "write_set_note": "卡级声明（方案未定不预支文件）。实施 PR 定案后按实际改动扩展（候选：scripts/control-tower/bypass-ledger.sh / scripts/hooks/post-commit.sh / .gitattributes）。"
+}

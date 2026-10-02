@@ -1,0 +1,11 @@
+{
+  "task_id": "D1116",
+  "title": "T3 timeout 基线重取（ci.yml，n=12 实采样）",
+  "status": "impl_done",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-02",
+  "updated_by": "alloc-task-id"
+}

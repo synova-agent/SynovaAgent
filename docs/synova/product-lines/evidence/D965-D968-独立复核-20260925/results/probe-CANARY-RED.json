@@ -1,0 +1,52 @@
+{
+  "label": "CANARY-RED",
+  "dbPath": "/tmp/verify-d965/db-A.db",
+  "loadSentinels": {
+    "count": 1,
+    "degraded": false,
+    "errors": []
+  },
+  "rows": [
+    {
+      "name": "canary-sentinel",
+      "entryPoint": "./computes/detect.ts",
+      "exportKey": "canarySentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": false,
+      "rawLen": null,
+      "rawKeys": "undefined",
+      "rawType": "undefined",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": "Error: CANARY-RED-D965",
+      "ms": 0,
+      "storeCounts": {},
+      "traversalCounts": {},
+      "storeCallTotal": 0,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 0,
+      "edgeReadPrepareFail": 0
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "arrayCount": 0,
+    "threwCount": 1,
+    "nonArrayCount": 1,
+    "zeroFindingsRaw": [],
+    "zeroFindingsUnpacked": [
+      "canary-sentinel"
+    ],
+    "zeroStoreCalls": [
+      "canary-sentinel"
+    ],
+    "unpackedNonZero": [],
+    "edgeReadPrepare": 0,
+    "edgeReadPrepareFailed": 0,
+    "edgeReadPrepareSucceeded": 0
+  }
+}

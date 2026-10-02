@@ -1,0 +1,45 @@
+{
+  "_说明": "K3 批次六审计 verdict 建议稿（2026-09-17）。产品仓库 docs/synova/coordination/task-state/ 下无五任务状态文件；实际登记位于仓库根 task-state/*.json（D794 除外——任何位置均无）。本稿由 CTO 或执行方回填，K3 不写产品仓库。",
+  "audit_batch": "k3-2026-09-17-batch6",
+  "audit_report": "docs/synova/audit-reports/2026-09-17-K3-批次六-D794-D795-D790-D796-D804.md",
+  "audit_baseline": "origin/main@0f59e514",
+  "verdicts": {
+    "D790": {
+      "pr": 606,
+      "verdict": "PASS",
+      "findings": ["P2 K3-B6-06 真仓集成测试对 git 历史形态敏感（审计机恒红/dev 机绿，环境依赖存量，非本卡引入）"],
+      "回填": "task-state/D790.json 追加 audit 段：{audited_by:'k3', verdict:'pass', date:'2026-09-17', report:'<audit_report>'}"
+    },
+    "D794": {
+      "pr": 613,
+      "verdict": "CONDITIONAL PASS",
+      "condition": "将 doc 分支（docs/dispatch-d794-d795-20260917 / docs/dispatch-batch7-20260917，status=claimed）上的 task-state/D794.json 并入实现 PR #613，或随 #613 合并带入 main（K3-B6-01 v1.1：五 PR head+main absent、仅两 doc 分支在场；两臂判据皆不满足，P1 维持）",
+      "findings": ["P1 K3-B6-01 task-state 未落自身实现 PR/main（仅在派单 doc 分支；状态机断链，F1 第四次实证）", "P2 K3-B6-02 brief 写集含 README 而 PR 12 文件（留痕偏离未回刷写集段）", "P2 K3-B6-03 cordis.patch.yml 硬编码 /Users/wane/SynovaAgent"],
+      "回填": "登记随 #613 落库后追加 audit 段 verdict:'conditional_pass'"
+    },
+    "D795": {
+      "pr": 612,
+      "verdict": "CONDITIONAL PASS",
+      "condition": "timeline.actual.first_commit 环境依赖披露/修复（K3-B6-04，P1：产物记 2026-06-03，按 GitHub 对象图重生成=2026-08-01，662965f3 双根实证）",
+      "findings": ["P1 K3-B6-04 timeline 跨机不可复现且无告警", "P2 K3-B6-05 测试未入 CI canary（已披露，本审计已独立复跑全绿缓解）"],
+      "回填": "task-state/D795.json audit 段 verdict:'conditional_pass' + known_open 修正 2026-06-03 表述"
+    },
+    "D796": {
+      "pr": 611,
+      "verdict": "PASS",
+      "findings": ["P2 K3-B6-07 C1 无任务号分支放行（fail-open 盲区，探测④实证）", "P2 K3-B6-08 D796 task-state 停留 claimed 未回填 impl_done"],
+      "回填": "task-state/D796.json 先回填 impl_done（触发自身 C2 闸自证），再追加 audit 段 verdict:'pass'"
+    },
+    "D804": {
+      "pr": 618,
+      "verdict": "CONDITIONAL PASS（仅派单质量域）",
+      "condition": "补派单「内部一致性」自检节并重跑 pre-dispatch-check 留原始输出（K3-B6-09，P1：Done 声称'机械项全通过'，实跑 exit 1，⑨ 为内容确定性失败项）",
+      "findings": ["P1 K3-B6-09 Done 声称与实跑不符", "P2 K3-B6-10 冻结门物理执法窗口期（C4/pre-commit 闸挂账未落地）"],
+      "回填": "task-state/D804.json audit 段 verdict:'conditional_pass'（范围: dispatch quality only，实现未开始不计）"
+    }
+  },
+  "l3": {
+    "bypass": "五 PR 共 10 条 bypass.log 追加：9 条 COMMITTED|PASS 正常标记 + #613 一条 BLOCKED(pre-commit FAIL exit 1) 真实拦截；零 detected-bypass",
+    "ci": "CI job 级结论不可达（无 GitHub 凭据），NOT-VERIFIED"
+  }
+}
