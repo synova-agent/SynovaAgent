@@ -301,3 +301,11 @@ documents:
     status: active
     owner: line-lead
 
+  - id: DOC-0124
+    type: governance
+    path: docs/synova/coordination/B-1-BR5对账-20261001.md
+    status: active
+    owner: DSH
+    note: "D1114 · 基座线 B-1：BR-5 四处（timeout/tool-result-pruner/context-compaction/session-projection）↔ DSH 0.2.0-rc.2 对账。断面 我方 f51aaf9bf / rc.2 tag 639ed015。结论：timeout 不过时（blob 三 tag 全等 3fc4d2387b）；另三处过时且不可整换（G1 零依赖，DSH 侧均为 cordis Service）。补证：§十一 pruner 影响量化（真实形状输入码点硬切 JSON ⇒ 输出非合法 JSON，实测 json.loads 失败）＋ §十二 四处生产调用点（session-projection 实测生产零读取方）。自查更正 8 处。🔴 未经 K3 抽验不得进排期或对外表述。"
+    verified-by: "(待 K3 抽验；建议最小面 = 本件 §十一 JSON 破坏复现 + §一 溯源表)"
+
