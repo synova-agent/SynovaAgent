@@ -1,3 +1,0 @@
-{"id":"D1109","title":"DSH 版本口径与断面登记（含我自己的误报更正）","status":"in_progress","created":"2026-10-01","branch":"docs/D1109-dsh-anchor-lag-register",
-"write_set":["docs/synova/coordination/DSH版本口径与断面-登记-20261001.md","docs/synova/STATE.md","task-state/D1109.json",".claude/bypass.log"],
-"note":"实测登记：① 更正我自己上一轮的误报（'三处权威件滞后'不准确，实为 1 处同件矛盾+1 处文件干净）② 唯一实质项＝权威体系索引 :110-111 仍指引已删的 -017 路径与旧基准 ③ 两条取码纪律（-020 无 rc.2 工作树 / 引 file:line 须写侧）④ BR-5 四处待重对列入显式欠账（基座线 B-1 执行，K3 抽验）"}
