@@ -1,0 +1,14 @@
+{
+  "task_id": "D1086",
+  "title": "M-B5 方向锚重挂（工程侧半）",
+  "status": "impl_done",
+  "domain": "mac",
+  "owner": "工程线（X30 启动窗）",
+  "spec": ".claude/task-briefs/2026-09-30-D1086-mb5-anchors.md",
+  "updated_at": "2026-09-30",
+  "updated_by": "harness-登记（X30 启动窗）",
+  "note": "结论：行号锚 0 处、存量 F12 锚 0 个（「重挂」实为「起挂」）；新旧 BRIEF 八节语义全变，映射表为唯一依据；模板锚点选择权留 CTO。指针: ~/Synova-过程档案/2026-09-30-mac小队-交付-MB5方向锚重挂.md；sha256:1ac8f2fc40b149a9；as_of 2026-09-30；重跑=打开该件按§五命令",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null
+}
