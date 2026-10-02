@@ -268,6 +268,37 @@ export function clearRevokedTokens(): void {
 }
 
 // ════════════════════════════════════════════════════════════════
+// D947: 权限过滤条件派生（唯一漏斗）
+// ════════════════════════════════════════════════════════════════
+
+/**
+ * 知识块敏感度级别——与 l4/knowledge-store.ts 的
+ * `KnowledgeChunk.accessSensitivity` 同源（'normal' | 'sensitive' | 'restricted'）。
+ * 数组顺序即级别高低，索引越大越敏感。
+ */
+const CHUNK_SENSITIVITY_LEVELS = ['normal', 'sensitive', 'restricted'];
+
+/**
+ * 由认证身份派生「可读知识块敏感度」白名单。
+ *
+ * 契约:
+ *   输入 — role（JWT 验签后的角色）、clearance（请求上下文声明的敏感度上限）
+ *   输出 — 级别白名单数组，恒非空且至少含 'normal'；用于 FilterClause 的
+ *          `access.sensitivity` IN 条件（l4/knowledge-store.ts:701 matchFilter 为 AND 语义）
+ *   降级 — role/clearance 无法识别时回落最窄白名单 ['normal']（fail-closed，绝不放宽）
+ *
+ * @param role - 验签后的角色；'admin' 不受 clearance 限制
+ * @param clearance - 上下文声明的敏感度上限
+ */
+function allowedSensitivities(role: string, clearance: string): string[] {
+  const levels: string[] = [...CHUNK_SENSITIVITY_LEVELS];
+  const ceilingIndex = role === 'admin'
+    ? levels.length - 1
+    : Math.max(0, levels.indexOf(clearance));
+  return levels.slice(0, ceilingIndex + 1);
+}
+
+// ════════════════════════════════════════════════════════════════
 // Express Middleware
 // ════════════════════════════════════════════════════════════════
 
@@ -279,15 +310,48 @@ export function clearRevokedTokens(): void {
  */
 export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunction): void {
   try {
-    // 白名单路径——跳过
+    // 白名单路径——跳过认证。
+    //
+    // D947/L-20: 白名单语义 = 「**不要求**认证」，不等于「**忽略**认证」。
+    // 原实现直接 next()，使白名单路径**永不注入 req.auth**（注入只在下方非白名单分支），
+    // 后果：白名单路径上的路由内 requireAuth（extractAuthFromRequest，如 solutions.ts:36/93
+    // 的 GET /api/solutions）**无法被任何合法凭据满足** —— 删除自报通道后该端点对全部客户端恒 401。
+    // 修法：白名单分支内**尝试**解析 Bearer，**仅在验签通过时**注入 req.auth；
+    // 无凭据 / 无效凭据 / 验签失败 → 一律照旧放行（不得因凭据问题改变可达性）。
+    // P0 不变量：注入的只能是**验签身份**；任何自报值（header/query 里的 role/userId）永不进入
+    // req.auth / req.rbac。
     if (isWhitelisted(req.path)) {
+      const whitelistAuthHeader = req.headers['authorization'] as string | undefined;
+      if (whitelistAuthHeader && whitelistAuthHeader.startsWith('Bearer ')) {
+        const whitelistToken = whitelistAuthHeader.slice(7).trim();
+        const whitelistResult = whitelistToken
+          ? verifyJwtToken(whitelistToken)
+          : { payload: null, error: 'Token is empty' };
+        if (whitelistResult.payload) {
+          (req as Request & { auth?: JwtPayload }).auth = whitelistResult.payload;
+        } else {
+          // 留痕但**不拦截**：白名单属「不要求认证」，P5 的 fail-closed 只适用于安全判据，
+          // 凭据无效不构成拦截理由（可达性必须保持不变）。沿用三态口径以便区分：
+          // 判据不可用（配置缺失） vs 被拒绝（凭据无效）；whitelist:true 区分于真正的 401。
+          const ignoredCode = whitelistResult.error === 'JWT_SECRET not configured'
+            ? 'AUTH_UNAVAILABLE'
+            : 'AUTH_REJECTED';
+          log.warn(
+            { code: ignoredCode, whitelist: true, reason: whitelistResult.error, path: req.path },
+            '白名单路径携带 Bearer 但未被采纳 — 照旧放行（白名单=不要求认证，不拦截）',
+          );
+        }
+      }
       return next();
     }
 
     // DevMode 无 JWT_SECRET：自动 admin
     const secret = process.env.JWT_SECRET;
     if (!secret && process.env.DEV_MODE === 'true') {
-      log.warn('DEV_MODE: JWT_SECRET not set, auto-assigning admin role');
+      log.warn(
+        { code: 'AUTH_DEV_MODE_GRANT', reason: 'jwt_secret_not_configured' },
+        '安全判据: 开发姿态放行（DEV_MODE=true 且无 JWT_SECRET）——非生产路径；生产须 DEV_MODE=false 并配置 JWT_SECRET',
+      );
       (req as Request & { auth?: JwtPayload }).auth = {
         sub: 'dev-admin',
         role: 'admin',
@@ -303,6 +367,10 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
     // 提取 Authorization header
     const authHeader = req.headers['authorization'] as string | undefined;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      log.warn(
+        { code: 'AUTH_REJECTED', reason: 'missing_or_invalid_authorization_header', path: req.path },
+        '安全判据: 被拒绝 — 缺 Authorization/Bearer 头（HTTP 401，fail-closed）',
+      );
       res.status(401).json({
         ok: false,
         code: 'UNAUTHORIZED',
@@ -313,6 +381,10 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
 
     const token = authHeader.slice(7).trim();
     if (!token) {
+      log.warn(
+        { code: 'AUTH_REJECTED', reason: 'empty_token', path: req.path },
+        '安全判据: 被拒绝 — Authorization 头中 token 为空（HTTP 401，fail-closed）',
+      );
       res.status(401).json({ ok: false, code: 'UNAUTHORIZED', message: 'Token is empty' });
       return;
     }
@@ -320,6 +392,18 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
     // 验证 token
     const result = verifyJwtToken(token);
     if (!result.payload) {
+      // D947/P5: 三态可区分——「不可用（系统异常）」是判据配置缺失，「被拒绝」是凭据无效。
+      const unavailable = result.error === 'JWT_SECRET not configured';
+      const meta = {
+        code: unavailable ? 'AUTH_UNAVAILABLE' : 'AUTH_REJECTED',
+        reason: result.error,
+        path: req.path,
+      };
+      const message = unavailable
+        ? '安全判据: 不可用（系统异常）— JWT_SECRET 不可用，fail-closed 拒绝（HTTP 401）'
+        : '安全判据: 被拒绝 — token 校验失败（HTTP 401，fail-closed）';
+      if (unavailable) log.error(meta, message);
+      else log.warn(meta, message);
       res.status(401).json({
         ok: false,
         code: 'UNAUTHORIZED',
@@ -327,6 +411,9 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
       });
       return;
     }
+
+    // D947: 先落常量——`result.payload` 的类型收窄不会穿进下方闭包（TS18047）
+    const payload = result.payload;
 
     // 注入 auth 到请求对象（下游 RBAC 使用）
     (req as Request & { auth?: JwtPayload }).auth = result.payload;
@@ -352,7 +439,23 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
           permissions: { version: 1, expiresAt: result.payload.exp * 1000 },
         },
         authProvider: {
-          getPermissionFilter: async () => ({ conditions: [] }),
+          /**
+           * D947: 权限过滤唯一漏斗——返回的条件由**认证身份**派生，绝不返回空条件集。
+           *
+           * 为何非空是关键（实证）: l4/knowledge-store.ts:335 在条件集长度为 0 时
+           * **完全跳过过滤**（filteredOut 恒 0，注释自述 "admin: 无过滤"，但该短路
+           * 无条件生效）——空条件不等于"无限制"，而等于"不过滤"（fail-open）。
+           * 原实现恒返空条件集 ⇒ 所有知识检索绕过权限判定。
+           */
+          getPermissionFilter: async (ctx) => ({
+            conditions: [
+              {
+                field: 'access.sensitivity',
+                operator: 'IN',
+                value: allowedSensitivities(payload.role, ctx.auth.sensitivity),
+              },
+            ],
+          }),
         },
       }, async () => {
         next();
@@ -365,7 +468,7 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
       next();
     }
   } catch (err: unknown) {
-    log.error({ err }, 'jwtAuthMiddleware 异常');
+    log.error({ code: 'AUTH_ERROR', err }, '安全判据: 出错 — jwtAuthMiddleware 异常（HTTP 500，degraded:true）');
     res.status(500).json({ ok: false, code: 'AUTH_ERROR', message: 'Authentication error', degraded: true });
   }
 }
@@ -373,16 +476,20 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
 /**
  * 从请求对象提取认证上下文（供 RBAC 和路由使用）。
  *
+ * D947（默认安全姿态）: **唯一**可信来源是 `req.auth`（jwtAuthMiddleware 验签后注入）。
+ * 已删除 `x-synova-token` 自报分支——该 header 不经验签即可自封 `role`
+ * （如 `admin:org:user`），属默认放行姿态。无认证上下文时返回 `null`，
+ * 由调用方 fail-closed 处理（例：routes/ga-auth.ts requireGa → 401）。
+ *
  * 优先级:
- *   1. req.auth（JWT 中间件注入）
- *   2. x-synova-token header（向下兼容旧格式）
- *   3. null（未认证）
+ *   1. req.auth（JWT 中间件验签注入）
+ *   2. null（未认证 → 调用方拒绝）
  */
 export function extractAuthFromRequest(req: {
   auth?: JwtPayload;
   headers?: Record<string, unknown>;
 }): AuthRequestContext | null {
-  // 优先 JWT 中间件注入的 auth
+  // 唯一可信来源：JWT 中间件注入的 auth
   if (req.auth) {
     return {
       role: req.auth.role as WorkspaceRole | 'ga',
@@ -391,16 +498,13 @@ export function extractAuthFromRequest(req: {
     };
   }
 
-  // 向下兼容 x-synova-token 格式
-  const token = req.headers?.['x-synova-token'] as string | undefined;
-  if (token && token.includes(':')) {
-    const parts = token.split(':');
-    return {
-      role: (parts[0] as WorkspaceRole | 'ga') || 'staff',
-      userId: parts[2] || 'dev',
-      // D479: legacy token 缺 orgId 段时回退实例 org（SYNOVA_ORG_ID，与 config.ts orgId 同源），'default' 仅作 env 缺失兜底
-      orgId: parts[1] || process.env.SYNOVA_ORG_ID || 'default',
-    };
+  // D947: 原 x-synova-token 自报分支已删除——无验签的 `role:orgId:userId`
+  // 字符串可自封任意角色（含 admin）。此处仅留痕，不据其放行。
+  if (req.headers?.['x-synova-token'] !== undefined) {
+    log.warn(
+      { code: 'AUTH_REJECTED', reason: 'self_reported_token_header_ignored' },
+      '安全判据: 被拒绝 — 忽略未验签的 x-synova-token 自报凭据（fail-closed）',
+    );
   }
 
   return null;
