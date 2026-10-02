@@ -64,3 +64,4 @@
 | `cto-drift-check.sh`（6 条不变量） | 🟢 已跑通（可手动；夹具三态实测：红 exit1／degraded exit2／绿 exit0） |
 | GitHub Issues 派单面 / Milestones 窗 | 🔲 待启用（实测：issue=0 起点干净；Milestone 可建） |
 | C′1 锚齐 / C′3 派单零痕迹 / C′6 收口齐收 | 🔴 **未接线** ⇒ 机制 3 靠人（**需外部判据方**） |
+| 🔴 **号段水位表（发现 10-02）** | 该表写「Mac 下一个 **D969**」，真实最大号 **D1115** ⇒ **滞后 146 个号**。**出卡给治理线**（属 `scripts/control-tower/**`＝其域）｜🔴 **本台账引号以 `task-state/` 实物为权威，不引水位表**（L-034） |
