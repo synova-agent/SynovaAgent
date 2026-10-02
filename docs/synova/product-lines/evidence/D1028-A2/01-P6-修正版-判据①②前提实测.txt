@@ -1,0 +1,85 @@
+═══ D1028 P6 修正版 —— 判据①② 前提实测（真 git 沙箱 + main 上真门禁）═══
+生成: 2026-09-27T06:23:04Z (UTC) | 门禁文件: scripts/control-tower/check-pr-budget.sh @ 4afd4ce1（179 行原版）
+修正说明: 前版沙箱 HEAD 停在 main 分支，`--base main` 使 `main...HEAD` 恒空 ⇒ 0 文件假绿（「检查未执行==检查通过」）。本版一律先 `git checkout -b feat` 再改，故差异真实可见。
+
+### 场景1: 纯删 src/** 14 件（判据① 形态） ###
+沙箱 base($B) = 8b2097ab039dd347684a700616f0cd625b696dd6 ；当前分支 = feat ；改动 commit = 0ac5bd6
+$ git diff --name-only --diff-filter=ACMR $B...HEAD
+   → ACMR 行数: 0
+$ git diff --name-only --diff-filter=AM $B...HEAD
+   → AM 行数: 0
+$ git diff --name-status $B...HEAD
+   D	src/f1.ts
+   D	src/f10.ts
+   D	src/f11.ts
+   D	src/f12.ts
+   D	src/f13.ts
+   D	src/f14.ts
+   D	src/f2.ts
+   D	src/f3.ts
+   D	src/f4.ts
+   D	src/f5.ts
+   D	src/f6.ts
+   D	src/f7.ts
+   D	src/f8.ts
+   D	src/f9.ts
+$ (cd 沙箱 && bash </Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/control-tower/check-pr-budget.sh> --base main)
+   ── PR 预算门禁（D734）: 基线=main 上限=12 文件 / 落后阈值=20 ──
+     ✅ ① 变更文件数 0 ≤ 上限 12
+     ✅ ② 无变更文件 → 域校验跳过
+     ✅ ③ 落后 main 0 个提交 ≤ 20
+   ✅ PASS PR 预算内（0 文件）
+   => exit code: 0
+
+### 场景2: 纯移动 3 件 docs/plans/** → docs/synova/archive/**（R 计数） ###
+沙箱 base($B) = 2dda1e5222f025aac8f448ee72fb924ff9fc77a0 ；当前分支 = feat ；改动 commit = 8c00a77
+$ git diff --name-only --diff-filter=ACMR $B...HEAD
+   docs/synova/archive/d1.md
+   docs/synova/archive/d2.md
+   docs/synova/archive/d3.md
+   → ACMR 行数: 3
+$ git diff --name-only --diff-filter=AM $B...HEAD
+   → AM 行数: 0
+$ git diff --name-status $B...HEAD
+   R100	docs/plans/d1.md	docs/synova/archive/d1.md
+   R100	docs/plans/d2.md	docs/synova/archive/d2.md
+   R100	docs/plans/d3.md	docs/synova/archive/d3.md
+$ (cd 沙箱 && bash </Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/control-tower/check-pr-budget.sh> --base main)
+   ── PR 预算门禁（D734）: 基线=main 上限=12 文件 / 落后阈值=20 ──
+     ✅ ① 变更文件数 3 ≤ 上限 12
+     ✅ ② 变更单域: ✅ PASS 3 个文件同域: win（无归属 0，域判定豁免 0）
+     ✅ ③ 落后 main 0 个提交 ≤ 20
+   ✅ PASS PR 预算内（3 文件）
+   => exit code: 0
+
+### 场景3: 删 src 13 件 + 改 1 件（判据② 形态） ###
+沙箱 base($B) = 2dda1e5222f025aac8f448ee72fb924ff9fc77a0 ；当前分支 = feat ；改动 commit = 4ae23cc
+$ git diff --name-only --diff-filter=ACMR $B...HEAD
+   src/f14.ts
+   → ACMR 行数: 1
+$ git diff --name-only --diff-filter=AM $B...HEAD
+   src/f14.ts
+   → AM 行数: 1
+$ git diff --name-status $B...HEAD
+   D	src/f1.ts
+   D	src/f10.ts
+   D	src/f11.ts
+   D	src/f12.ts
+   D	src/f13.ts
+   M	src/f14.ts
+   D	src/f2.ts
+   D	src/f3.ts
+   D	src/f4.ts
+   D	src/f5.ts
+   D	src/f6.ts
+   D	src/f7.ts
+   D	src/f8.ts
+   D	src/f9.ts
+$ (cd 沙箱 && bash </Users/wane/SynovaAgent/.synova-wt-a2-d1028/scripts/control-tower/check-pr-budget.sh> --base main)
+   ── PR 预算门禁（D734）: 基线=main 上限=12 文件 / 落后阈值=20 ──
+     ✅ ① 变更文件数 1 ≤ 上限 12
+     ✅ ② 变更单域: ✅ PASS 1 个文件同域: win（无归属 0，域判定豁免 0）
+     ✅ ③ 落后 main 0 个提交 ≤ 20
+   ✅ PASS PR 预算内（1 文件）
+   => exit code: 0
+

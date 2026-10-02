@@ -240,7 +240,18 @@ def main() -> int:
         return 2
 
     reports, all_v = [], []
-    for a in args.artifacts:
+    # D964: `archive/**` 豁免根 —— 归档 = 历史文档批量 git mv 到 archive 前缀
+    #   （文档减负），其内部引用的是**移动前**的路径 ⇒ 归档件不再做引用解析，
+    #   否则归档批 PR 会因断链恒红。**显式打印跳过**（不静默，铁律 11）。
+    archived = [a for a in args.artifacts
+                if "/archive/" in a.replace("\\", "/") or a.startswith("archive/")]
+    for a in archived:
+        print(f"  ⏭ 跳过（archive/** 豁免根，D964）: {a}")
+    active = [a for a in args.artifacts if a not in set(archived)]
+    if not active:
+        print("  汇总: 全部 artifact 命中 archive/** 豁免根（无引用核验）")
+        return 0
+    for a in active:
         rep, err = scan(a, roots, prefixes, False, owner)
         if err:
             print(f"degraded: {err} — fail-closed", file=sys.stderr)

@@ -1,0 +1,14 @@
+{
+  "id": "D1096",
+  "title": "推前预演脚本（L-022 四件套工具化）",
+  "status": "in_progress",
+  "created": "2026-10-01",
+  "branch": "chore/p0-2-pre-push-preview",
+  "write_set": [
+    "scripts/workflow/pre-push-preview.sh",
+    "decisions/proposed/process/2026-10-01-pre-push-preview.md",
+    ".claude/task-briefs/2026-10-01-D1096-推前预演脚本-四件套工具化.md",
+    "task-state/D1096.json"
+  ],
+  "note": "P0-2：L-022 四件套工具化 + npx 假红修复 + 存量红分类；独立复核后修 --strict/参数解析"
+}

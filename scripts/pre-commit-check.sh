@@ -988,8 +988,61 @@ echo ""
 echo -e "${CYAN}── 组 7/13: 架构合规 ──${RESET}"
 
 # 7a. DiagnosticModule 禁止 (原 6)
-NEW_DIAG=$(echo "$GIT_CACHED_DIFF" | grep "^+.*DiagnosticModule" | grep -Ev "scripts/pre-commit-check.sh|.md|.html|//|@deprecated|import type|^+++|hard_check|禁止新 DiagnosticModule|不要再使用 DiagnosticModule" || true)
-soft_check "禁止 DiagnosticModule: 新模块须实现 Sentinel 接口" "${NEW_DIAG:-}"
+# D937: 原实现三处缺陷（K3 可核）:
+#   ① 排除模式含未转义 `^+++`（ERE 非法）→ BSD grep exit 2 → 管道整体失败 →
+#      NEW_DIAG 恒空 → 本检查自 D467（ab05e2de，BRE→ERE 迁移）起从未生效（fail-open 假绿）。
+#      实证: `echo test | grep -Ev '^+++'` → rc=2 "repetition-operator operand invalid"
+#      （本脚本无 set -e，管道失败后继续跑完并打 ✅）
+#   ② `|| true` 吞掉 grep 自身错误（exit≥2）→ 与「无命中」不可区分（铁律 11 静默降级禁止）
+#   ③ 文件级豁免（自身/.md/.html）与行级豁免混在一张表里按行子串匹配 → 误报
+#      实证: 58a19796 朴素修复（仅转义 ^+++）→ 5 处误报，全来自
+#      docs/SYNOVA-MASTER-全量对齐手册-20260610.html 正文（文档，非代码）
+# 修法: ① diff 头按结构化字符串比较逐文件判定豁免（免正则 → 根除非法 ERE 类）；
+#       ② 行级注释豁免锚定行首，用 POSIX [[:space:]]（非 \s —— D664 既有口径:
+#          \s 属 GNU 扩展，POSIX ERE 未定义）；
+#       ③ grep 退出码三态: rc≥2 = 检查自身失败 → 显式降级，绝不判 ✅
+_DIAG_SELF='scripts/pre-commit-check.sh'
+_DIAG_EXCL='@deprecated|import type|^\+[[:space:]]*(//|/\*|\*|#)|hard_check|禁止 ?新? ?DiagnosticModule|不要再使用 DiagnosticModule'
+# D390 武装缝: 排除模式覆盖仅 SYNO_TEST_ARM=1 时生效（生产路径忽略该变量，fail-closed）
+if [ "${SYNO_TEST_ARM:-0}" = "1" ]; then
+  _DIAG_EXCL="${SYNO_DIAG_EXCL_OVERRIDE:-$_DIAG_EXCL}"
+fi
+# 候选行提取: 命中 `+++ b/<path>` 头即切换当前文件；文档/检查器自身整文件跳过。
+# 纯字符串比较（无正则）；兼容 git quotepath 引号形态 `+++ "b/<path>"`（CI 默认 quotepath=true，
+# 本机 config 为 off —— 不处理引号则 CI 下 .html 豁免静默失效）。
+_DIAG_CAND=$(printf '%s\n' "$GIT_CACHED_DIFF" | awk -v self="$_DIAG_SELF" '
+  substr($0,1,4)=="+++ " {
+    f=substr($0,5); n=length(f)
+    if (n>=2 && substr(f,1,1)=="\"" && substr(f,n,1)=="\"") { f=substr(f,2,n-2); n=n-2 }
+    if (substr(f,1,2)=="b/") { f=substr(f,3); n=n-2 }
+    skip=(f==self || (n>=3 && substr(f,n-2)==".md") || (n>=5 && substr(f,n-4)==".html"))
+    next
+  }
+  skip { next }
+  substr($0,1,1)=="+" && index($0,"DiagnosticModule")>0 { print }
+')
+# grep 退出码三态: 0=有命中 1=无命中 2+=模式非法或 grep 不可用（检查自身失败）
+_DIAG_RC=0
+if command -v grep >/dev/null 2>&1; then
+  NEW_DIAG=$(printf '%s\n' "$_DIAG_CAND" | grep -Ev -- "$_DIAG_EXCL"); _DIAG_RC=$?
+else
+  _DIAG_RC=127
+fi
+if [ "$_DIAG_RC" -ge 2 ]; then
+  # 检查自身失败 → 显式降级登记（沿 L876 group6-layer 既有格式），禁止 fail-open 假绿（铁律 11）
+  echo -e "  ${YELLOW}⚠️  禁止新 DiagnosticModule: 检查降级 — grep 不可用或排除模式非法 (rc=${_DIAG_RC})；本项未判定${RESET}"
+  mkdir -p "$ROOT/.codex/control-tower/logs" 2>/dev/null || true
+  echo "{\"time\": \"$(date -u +%Y-%m-%dT%H:%M:%S+00:00)\", \"component\": \"pre-commit-group7a-diagnosticmodule\", \"reason\": \"grep rc=${_DIAG_RC} — 排除模式非法或 grep 不可用 (degraded, 非通过)\"}" >> "$ROOT/.codex/control-tower/logs/degraded-events.log" 2>/dev/null || true
+  if [ "${SYNO_CI:-0}" = "1" ]; then
+    echo -e "  ${RED}❌ 禁止新 DiagnosticModule: 检查降级  [CI strict——降级即失败]${RESET}"
+    HARD_FAIL=$((HARD_FAIL + 1))
+  else
+    SOFT_COUNT=$((SOFT_COUNT + 1))
+  fi
+  log_gate "禁止 DiagnosticModule: 新模块须实现 Sentinel 接口" degraded
+else
+  soft_check "禁止 DiagnosticModule: 新模块须实现 Sentinel 接口" "${NEW_DIAG:-}"
+fi
 
 # 7b. 专家配置校验 (原 9)
 if bash "$ROOT/scripts/validate-expert-config.sh" 2>&1; then
@@ -1489,6 +1542,27 @@ if [ -f "$ROOT/scripts/control-tower/PLATFORM-CHECKLIST.md" ]; then
   soft_check "V5 平台敏感命令: 新控制塔脚本对照 PLATFORM-CHECKLIST.md (D520)" "${_PLAT_HITS:-}"
 else
   soft_pass "V5 平台检查: PLATFORM-CHECKLIST.md 不存在(跳过)"
+fi
+
+# ── D943: DSH 断面一致性（唯一源 docs/synova/coordination/DSH-断面.json）──
+# ① 位置：**必须在上方 if/else 之外**——放进 PLATFORM-CHECKLIST 的 if 块内会随该文件缺失而永不执行（M1 fail-open）。
+# ② 语义：soft_check 第二参是「命中/失败描述串」而非命令——直接传命令串会恒判 1 命中，
+#    本地恒 ⚠️、CI（SYNO_CI=1）恒 ❌ 硬阻断。故先跑命令取结论，仅失败时喂入描述。
+# ③ --no-tree-check：CI 无本地 DSH 树（DSH-断面.json 记的是绝对路径）→ 带树跑必 DEGRADED 假红。
+#    带树校验由本机显式命令与 scripts/control-tower/daily-cto-board.sh 承担（每日跑）。
+_DSH_PYBIN=""
+for _c in python3 python py; do  # PYBIN 三级探测（PLATFORM-CHECKLIST #1，禁裸 python3）
+  if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then _DSH_PYBIN="$_c"; break; fi
+done
+if [ -z "$_DSH_PYBIN" ]; then
+  soft_check "DSH 断面一致性 (D943): 无可用 python（fail-closed，不静默跳过）" "1"
+elif [ ! -f "$ROOT/scripts/control-tower/check-dsh-anchor.py" ]; then
+  soft_check "DSH 断面一致性 (D943): 门禁脚本缺失 scripts/control-tower/check-dsh-anchor.py" "1"
+else
+  _DSH_ANCHOR_OUT="$("$_DSH_PYBIN" "$ROOT/scripts/control-tower/check-dsh-anchor.py" --repo "$ROOT" --no-tree-check 2>&1)"
+  _DSH_ANCHOR_RC=$?
+  if [ "$_DSH_ANCHOR_RC" -eq 0 ]; then _DSH_ANCHOR_HITS=""; else _DSH_ANCHOR_HITS="$(printf '%s' "$_DSH_ANCHOR_OUT" | tail -8) (rc=$_DSH_ANCHOR_RC)"; fi
+  soft_check "DSH 断面一致性 (D943)" "${_DSH_ANCHOR_HITS}"
 fi
 
 # V3: 写 CP3 检查点

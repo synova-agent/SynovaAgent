@@ -1,0 +1,104 @@
+SRC = /tmp/a2-verify2/frozen/check-pr-budget.sh
+SRC sha256 = 21ec22d2882316efc7d75370f42f5b83765ce359efe61874dc8f4de58f1d0087
+BASE_OUT = /tmp/a2-verify2/out-frozen
+
+────────── 变异体 m1 ──────────
+✅ 变异 m1 已应用: 去掉「声明路径集 ⊇ 实际 ❌ D/R 路径集」判据（局部声明即可放行）
+   变异前: '  elif _decl_covers "$DECL_PATHS" "$DR_DENY_RE_LIST"; then'
+   变异后: '  elif true; then  # MUTATED: ⊇ 覆盖判据被移除'
+变异后 sha256 = 15b96955137d6ec9df801150416b340daadd365bd6fe555aed93486d6f0d8925
+══════ 汇总: 共 51 条夹具 —— PASS=42 FAIL=9 ══════
+结果表: /tmp/a2-verify2/out-m1/results.tsv
+SBX: /tmp/a2-verify2/sbx.dqy4FO
+
+────────── 变异体 m2 ──────────
+✅ 变异 m2 已应用: 把生效路径从 N_FILES 计数剔除（放行被写成豁免）
+   变异前: 'N_FILES="$(_count_lines "$COUNTED")"; N_FILES="${N_FILES:-0}"\nif [ "$OUTBOUND_EXEMPT" -eq 1 ]; then'
+   变异后: 'if [ "$DECL_EFFECTIVE" -eq 1 ] && [ -n "$DR_DENY_RE_LIST" ]; then\n  COUNTED="$(printf \'%s\\n\' "$COUNTED" | grep -vxF -f <(printf \'%s\\n\' "$DR_DENY_RE_LI'
+变异后 sha256 = a3074c474322b55a04379c156b91edc32da53b39eead609cbcd10688f628104f
+══════ 汇总: 共 51 条夹具 —— PASS=45 FAIL=6 ══════
+结果表: /tmp/a2-verify2/out-m2/results.tsv
+SBX: /tmp/a2-verify2/sbx.5wolke
+
+────────── 变异体 m3 ──────────
+✅ 变异 m3 已应用: 去掉「无依据不生效」（无 ` — 依据` 的条目也算有效条目/可作覆盖）
+   变异前: '      *) if [ -n "$reason" ]; then printf \'P\\t%s\\n\' "$p"; else printf \'N\\t%s\\n\' "$p"; fi ;;'
+   变异后: '      *) printf \'P\\t%s\\n\' "$p" ;;  # MUTATED: 无依据也算有效条目'
+变异后 sha256 = 991182f0ac6a86e19d08ed90f320dffadd3742155d00a0d4fea6855ac3467850
+══════ 汇总: 共 51 条夹具 —— PASS=50 FAIL=1 ══════
+结果表: /tmp/a2-verify2/out-m3/results.tsv
+SBX: /tmp/a2-verify2/sbx.bhMGbm
+
+────────── 变异体 m4 ──────────
+✅ 变异 m4 已应用: 逃生口失效（声明生效也不解除硬拦）
+   变异前: '  if [ "$AM_N" -eq 0 ] && [ "$DECL_EFFECTIVE" -eq 0 ]; then OUTBOUND_DENY_HARD=1; fi'
+   变异后: '  if [ "$AM_N" -eq 0 ]; then OUTBOUND_DENY_HARD=1; fi  # MUTATED: 逃生口失效'
+变异后 sha256 = d391cff95bb5b2e86c26b98dd36814d83e48009a90f406ca2d3789a9432a51a9
+══════ 汇总: 共 51 条夹具 —— PASS=35 FAIL=16 ══════
+结果表: /tmp/a2-verify2/out-m4/results.tsv
+SBX: /tmp/a2-verify2/sbx.xz6gY2
+
+────────── 变异体 m5 ──────────
+✅ 变异 m5 已应用: 去掉 DENY_EXACT 收紧（声明可放行 ownership.yaml / AUDIT-PROTOCOL.md）
+   变异前: '  if [ "$DR_DENY_EXACT_N" -gt 0 ]; then   # 收紧: DENY_EXACT 绝不随声明放行\n    DECL_EFFECTIVE=0\n    DECL_RELEASED_N=0\n    DECL_INEFFECTIVE="命中 DENY_EXACT ${DR'
+   变异后: '  :  # MUTATED: DENY_EXACT 收紧被移除（声明可放行治理文件）'
+变异后 sha256 = 18acb8fefb68e498b61d454cc0df254c90d7541c5f18937dde5af78c9fc9a563
+══════ 汇总: 共 51 条夹具 —— PASS=50 FAIL=1 ══════
+结果表: /tmp/a2-verify2/out-m5/results.tsv
+SBX: /tmp/a2-verify2/sbx.9174s7
+
+══════════ 逐条对比（基线 PASS → 变异后 FAIL = 该条夹具抓住了变异）══════════
+基线夹具数 = 51，基线 FAIL(0) = 无
+
+变异体 m1（去掉「声明路径集 ⊇ 实际 ❌ D/R 路径集」判据）:
+  变红夹具（共 9 条）: A4, A6, B16, B18, B4, B5, B6, C4, D12
+  转绿夹具（共 0 条）: 无
+    A4     变异后 exit=0
+    A6     变异后 exit=0
+    B16    变异后 exit=0
+    B18    变异后 exit=0
+    B4     变异后 exit=0
+    B5     变异后 exit=0
+    B6     变异后 exit=0
+    C4     变异后 exit=0
+    D12    变异后 exit=0
+
+变异体 m2（把生效路径从计数剔除（重演「放行=豁免」））:
+  变红夹具（共 6 条）: A2, A3, B13, B15, C2, C3
+  转绿夹具（共 0 条）: 无
+    A2     变异后 exit=0
+    A3     变异后 exit=0
+    B13    变异后 exit=1
+    B15    变异后 exit=0
+    C2     变异后 exit=0
+    C3     变异后 exit=0
+
+变异体 m3（去掉「无依据不生效」）:
+  变红夹具（共 1 条）: A5
+  转绿夹具（共 0 条）: 无
+    A5     变异后 exit=0
+
+变异体 m4（逃生口失效（声明生效也不解除硬拦））:
+  变红夹具（共 16 条）: A2, B1, B11, B17, B2, B3, C2, C5, C6, D1, D10, D2, D4, D6, D8, D9
+  转绿夹具（共 0 条）: 无
+    A2     变异后 exit=1
+    B1     变异后 exit=1
+    B11    变异后 exit=1
+    B17    变异后 exit=1
+    B2     变异后 exit=1
+    B3     变异后 exit=1
+    C2     变异后 exit=1
+    C5     变异后 exit=1
+    C6     变异后 exit=1
+    D1     变异后 exit=1
+    D10    变异后 exit=1
+    D2     变异后 exit=1
+    D4     变异后 exit=1
+    D6     变异后 exit=1
+    D8     变异后 exit=1
+    D9     变异后 exit=1
+
+变异体 m5（去掉 DENY_EXACT 收紧（声明可放行治理文件））:
+  变红夹具（共 1 条）: B19
+  转绿夹具（共 0 条）: 无
+    B19    变异后 exit=1

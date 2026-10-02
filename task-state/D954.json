@@ -1,0 +1,33 @@
+{
+  "task_id": "D954",
+  "title": "C 段空转修复：--ci-reds 对账对象改指 base + 判别夹具 + infer_did 回退/--did",
+  "status": "spec_done",
+  "risk": "high",
+  "domain": "mac",
+  "owner": "mac-coding",
+  "executor": "synova-squad-lead + 成员（coder-a / coder-b / 独立自验 m9-verifier）",
+  "milestone": "M0 项目管理基建",
+  "depends_on": ["M9"],
+  "blocked": null,
+  "target": "2026-W40",
+  "spec": ".claude/task-briefs/2026-09-25-D954-ci-reds-base-ref.md",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "write_set": [
+    "scripts/control-tower/check-gate-integrity.sh",
+    "tests/control-tower/check-gate-integrity.test.sh",
+    ".github/workflows/ci.yml",
+    "scripts/control-tower/merge_writeset_gate.py",
+    "tests/control-tower/merge_writeset_gate.test.sh",
+    ".claude/task-briefs/2026-09-25-D954-ci-reds-base-ref.md",
+    "task-state/D954.json",
+    "memory/notes/proposed/2026-09-25-d954-ci-reds-base-ref.md"
+  ],
+  "priority": 1,
+  "base_branch": "feat/m9-gate-integrity",
+  "base_head": "c4206f9bbe68008bda451f1e4afbeefa3b477f86",
+  "note": "CTO 令（2026-09-25）：D954 改为在 #741 分支上追加提交（K3 判 #741 不通过 = C 段空转；原『等 M9 合 main』构成死锁）。判据：① REF 改指 base（PR: pull_request.base.sha；push: fetch origin main 解析）② 输出必打印『对账对象 = <ref> @ <sha>』③ 判别夹具『base 有红且未登记 → 必须红』④ 不许降级为占位 ⑤ K3 建议：infer_did 回退（三源全空 → 退试 commit subject + 注诊断，仍不放行）+ 新增 --did 显式覆盖 ⑥ 追加：--ci-reds 同时消费 disposition_due 并在逾期判红（可延后但不得静默略过）。只追加提交，不回退/覆盖 M9 既有提交；不动 #747/#745/#738/#744；推送目标 = feat/m9-gate-integrity（PR 由 CTO 开）。",
+  "updated_at": "2026-09-25",
+  "updated_by": "synova-squad-lead"
+}

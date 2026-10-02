@@ -1,0 +1,16 @@
+{
+  "task_id": "D1022",
+  "title": "T3 CI 止血包（timeouts + docsonly 推广）",
+  "status": "claimed",
+  "spec": ".claude/task-briefs/2026-09-26-D1022-T3-CI-止血包.md",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "write_set": [
+    ".github/workflows/ci.yml",
+    "docs/synova/coordination/D1022-T3-ci-止血包-20260926.md",
+    "task-state/D1022.json"
+  ],
+  "updated_at": "2026-09-26",
+  "updated_by": "squad-ci"
+}

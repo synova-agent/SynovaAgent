@@ -1,0 +1,3 @@
+{"id":"D1104","title":"brief 模板占位符雷拆除（全队阻断源）","status":"in_progress","created":"2026-10-01","branch":"fix/D1104-brief-placeholder-bomb",
+"write_set":[".claude/task-briefs/2026-10-01-D1097-skill交接指令落地.md",".claude/task-briefs/2026-09-06-D583-P0专家名测试债-D282迁移余波.md",".claude/task-briefs/2026-10-01-D1104-brief-占位符雷拆除.md","task-state/D1104.json","memory/notes/proposed/2026-10-01-d1104-brief-placeholder-bomb.md",".claude/bypass.log"],
+"note":"删 D1097 空壳骨架（同 D# 双件消歧）；回填 D1097 真件头；填 D583 六处占位符；判据与门禁脚本一律不动（缺口另立卡）"}
