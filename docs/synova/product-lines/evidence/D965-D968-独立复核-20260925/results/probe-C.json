@@ -1,0 +1,1562 @@
+{
+  "label": "C",
+  "dbPath": "/tmp/verify-d965/db-C.db",
+  "loadSentinels": {
+    "count": 45,
+    "degraded": false,
+    "errors": []
+  },
+  "rows": [
+    {
+      "name": "agent-deployment-maturity",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "AgentDeploymentMaturitySentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 1,
+      "storeCounts": {
+        "queryEdges": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 1,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "ai-ecosystem-fit",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "AiEcosystemFitSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 1,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "ai-investment-return",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "AiInvestmentReturnSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 1,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "api-coverage",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "apiCoverageSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 1,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "business-model-coherence",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "businessModelCoherenceSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 1,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 1,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1,
+        "queryNodes": 5
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 6,
+      "findingIds": [
+        "i7-warn"
+      ],
+      "evidenceLens": [
+        3
+      ],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "capital-health",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "capitalHealthSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": true,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryNodes": 1
+      },
+      "traversalCounts": {},
+      "storeCallTotal": 1,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 0,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "cash-runway",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "cashRunwaySentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": true,
+      "rawIsArray": true,
+      "rawLen": 2,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 2,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 4,
+        "queryNodes": 2
+      },
+      "traversalCounts": {
+        "traverse": 4
+      },
+      "storeCallTotal": 6,
+      "findingIds": [
+        "cr_runway_degraded",
+        "cr_overdue_degraded"
+      ],
+      "evidenceLens": [
+        0,
+        0
+      ],
+      "edgeReadPrepare": 4,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "channel-capacity",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "channelCapacitySentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 1,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 1,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1,
+        "queryNodes": 3
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 4,
+      "findingIds": [
+        "o6-warn"
+      ],
+      "evidenceLens": [
+        2
+      ],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "competitive-moat",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "competitiveMoatSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 1,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 1,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 4,
+      "storeCounts": {
+        "queryEdges": 2,
+        "queryNodes": 2
+      },
+      "traversalCounts": {
+        "traverse": 2
+      },
+      "storeCallTotal": 4,
+      "findingIds": [
+        "i3-nodata"
+      ],
+      "evidenceLens": [
+        3
+      ],
+      "edgeReadPrepare": 2,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "competitive-position",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "competitivePositionSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 1,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 1,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 2,
+      "storeCounts": {
+        "queryEdges": 2,
+        "queryNodes": 4
+      },
+      "traversalCounts": {
+        "traverse": 2
+      },
+      "storeCallTotal": 6,
+      "findingIds": [
+        "e1-nodata"
+      ],
+      "evidenceLens": [
+        2
+      ],
+      "edgeReadPrepare": 2,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "customer-demand-shift",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "customerDemandShiftSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": false,
+      "rawLen": null,
+      "rawKeys": [
+        "findings",
+        "degraded"
+      ],
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": true,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 1,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "data-health",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "dataHealthSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 1,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "environment-rent-dependency",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "environmentRentDependencySentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 1,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 1,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 1,
+      "storeCounts": {
+        "queryEdges": 1,
+        "queryNodes": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 2,
+      "findingIds": [
+        "e5-rent-warn"
+      ],
+      "evidenceLens": [
+        1
+      ],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "explore-exploit-balance",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "exploreExploitBalanceSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 1,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "financing-constraint",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "financingConstraintSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1,
+        "queryNodes": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 2,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "growth-quality",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "growthQualitySentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1,
+        "queryNodes": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 2,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "human-agent-boundary",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "HumanAgentBoundarySentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 1,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "incentive-alignment",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "incentiveAlignmentSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 1,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 1,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1,
+        "queryNodes": 2
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 3,
+      "findingIds": [
+        "o3-nodata"
+      ],
+      "evidenceLens": [
+        0
+      ],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "info-distortion",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "infoDistortionSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 1,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 1,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1,
+        "queryNodes": 2
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 3,
+      "findingIds": [
+        "o7-nodata"
+      ],
+      "evidenceLens": [
+        0
+      ],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "internal-transaction-cost",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "internalTransactionCostSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 1,
+      "storeCounts": {
+        "queryEdges": 1,
+        "queryNodes": 3
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 4,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "key-person-risk",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "keyPersonRiskSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryNodes": 1,
+        "queryEdges": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 2,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "knowledge-accessibility",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "knowledgeAccessibilitySentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 1,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 1,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1,
+        "queryNodes": 2
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 3,
+      "findingIds": [
+        "o4-nodata"
+      ],
+      "evidenceLens": [
+        0
+      ],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "make-or-buy",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "makeOrBuySentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 1,
+      "storeCounts": {
+        "queryEdges": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 1,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "margin-health",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "marginHealthSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": true,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryNodes": 1
+      },
+      "traversalCounts": {},
+      "storeCallTotal": 1,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 0,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "moat-dependency",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "moatDependencySentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 1,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "network-power",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "networkPowerSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 1,
+      "storeCounts": {
+        "queryEdges": 1,
+        "queryNodes": 4
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 5,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "niche-breadth",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "nicheBreadthSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 1,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "niche-squeeze",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "nicheSqueezeSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 1,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "opportunity-window",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "opportunityWindowSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 1,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "org-repairability",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "orgRepairabilitySentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 1,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 1,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1,
+        "queryNodes": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 2,
+      "findingIds": [
+        "o8-nodata"
+      ],
+      "evidenceLens": [
+        0
+      ],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "path-dependency",
+      "entryPoint": "./computes/detect.ts",
+      "exportKey": "pathDependencySentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 1,
+      "storeCounts": {
+        "queryNodes": 1,
+        "queryEdges": 1
+      },
+      "traversalCounts": {},
+      "storeCallTotal": 2,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "power-rigidity",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "powerRigiditySentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 1,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 1,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1,
+        "queryNodes": 2
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 3,
+      "findingIds": [
+        "o9-nodata"
+      ],
+      "evidenceLens": [
+        0
+      ],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "process-ai-readiness",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "ProcessAiReadinessSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 1,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "resource-misallocation",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "resourceMisallocationSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 1,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "revenue-health",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "revenueHealthSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": true,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 2,
+        "queryNodes": 2
+      },
+      "traversalCounts": {
+        "traverse": 2
+      },
+      "storeCallTotal": 4,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 2,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "routine-diffusion",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "routineDiffusionSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 1,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 1,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1,
+        "queryNodes": 2
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 3,
+      "findingIds": [
+        "o5-crit"
+      ],
+      "evidenceLens": [
+        2
+      ],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "routine-mutation",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "routineMutationSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 1,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "sentinel-forecast-accuracy",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "forecastAccuracySentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": false,
+      "rawLen": null,
+      "rawKeys": [
+        "ok",
+        "findings",
+        "durationMs",
+        "checkedAt",
+        "degraded"
+      ],
+      "rawType": "object",
+      "unpackedLen": 3,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {},
+      "traversalCounts": {},
+      "storeCallTotal": 0,
+      "findingIds": [
+        "forecast-mape",
+        "forecast-sample",
+        "forecast-timeseries"
+      ],
+      "evidenceLens": [
+        0,
+        0,
+        0
+      ],
+      "edgeReadPrepare": 0,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "sentinel-pricing-strategy",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "pricingStrategySentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": false,
+      "rawLen": null,
+      "rawKeys": [
+        "ok",
+        "findings",
+        "durationMs",
+        "checkedAt",
+        "degraded"
+      ],
+      "rawType": "object",
+      "unpackedLen": 1,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {},
+      "traversalCounts": {},
+      "storeCallTotal": 0,
+      "findingIds": [
+        "pricing-disc"
+      ],
+      "evidenceLens": [
+        0
+      ],
+      "edgeReadPrepare": 0,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "software-health",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "softwareHealthSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 3,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 3,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1,
+        "queryNodes": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 2,
+      "findingIds": [
+        "t1-usage-crit",
+        "t1-shadow-crit",
+        "t1-ih-crit"
+      ],
+      "evidenceLens": [
+        2,
+        2,
+        2
+      ],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "strategy-capability-fit",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "strategyCapabilityFitSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 1,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "talent-density",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "talentDensitySentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 1,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 1,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1,
+        "queryNodes": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 2,
+      "findingIds": [
+        "o10-nodata"
+      ],
+      "evidenceLens": [
+        0
+      ],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "time-penetration",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "timePenetrationSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1,
+        "queryNodes": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 2,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "unit-economics",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "unitEconomicsSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 1,
+      "storeCounts": {
+        "queryEdges": 3,
+        "queryNodes": 2
+      },
+      "traversalCounts": {
+        "traverse": 2
+      },
+      "storeCallTotal": 5,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 3,
+      "edgeReadPrepareFail": 0
+    },
+    {
+      "name": "value-capture",
+      "entryPoint": "./aggregate.ts",
+      "exportKey": "valueCaptureSentinel",
+      "entryExists": true,
+      "moduleLoaded": true,
+      "hasCheck": true,
+      "hasManifestField": false,
+      "rawIsArray": true,
+      "rawLen": 0,
+      "rawKeys": null,
+      "rawType": "object",
+      "unpackedLen": 0,
+      "degradedProp": false,
+      "threw": null,
+      "ms": 0,
+      "storeCounts": {
+        "queryEdges": 1
+      },
+      "traversalCounts": {
+        "traverse": 1
+      },
+      "storeCallTotal": 1,
+      "findingIds": [],
+      "evidenceLens": [],
+      "edgeReadPrepare": 1,
+      "edgeReadPrepareFail": 0
+    }
+  ],
+  "summary": {
+    "total": 45,
+    "arrayCount": 42,
+    "threwCount": 0,
+    "nonArrayCount": 3,
+    "zeroFindingsRaw": [
+      "agent-deployment-maturity",
+      "ai-ecosystem-fit",
+      "ai-investment-return",
+      "api-coverage",
+      "capital-health",
+      "data-health",
+      "explore-exploit-balance",
+      "financing-constraint",
+      "growth-quality",
+      "human-agent-boundary",
+      "internal-transaction-cost",
+      "key-person-risk",
+      "make-or-buy",
+      "margin-health",
+      "moat-dependency",
+      "network-power",
+      "niche-breadth",
+      "niche-squeeze",
+      "opportunity-window",
+      "path-dependency",
+      "process-ai-readiness",
+      "resource-misallocation",
+      "revenue-health",
+      "routine-mutation",
+      "strategy-capability-fit",
+      "time-penetration",
+      "unit-economics",
+      "value-capture"
+    ],
+    "zeroFindingsUnpacked": [
+      "agent-deployment-maturity",
+      "ai-ecosystem-fit",
+      "ai-investment-return",
+      "api-coverage",
+      "capital-health",
+      "customer-demand-shift",
+      "data-health",
+      "explore-exploit-balance",
+      "financing-constraint",
+      "growth-quality",
+      "human-agent-boundary",
+      "internal-transaction-cost",
+      "key-person-risk",
+      "make-or-buy",
+      "margin-health",
+      "moat-dependency",
+      "network-power",
+      "niche-breadth",
+      "niche-squeeze",
+      "opportunity-window",
+      "path-dependency",
+      "process-ai-readiness",
+      "resource-misallocation",
+      "revenue-health",
+      "routine-mutation",
+      "strategy-capability-fit",
+      "time-penetration",
+      "unit-economics",
+      "value-capture"
+    ],
+    "zeroStoreCalls": [
+      "sentinel-forecast-accuracy",
+      "sentinel-pricing-strategy"
+    ],
+    "unpackedNonZero": [
+      {
+        "name": "business-model-coherence",
+        "len": 1,
+        "ids": [
+          "i7-warn"
+        ]
+      },
+      {
+        "name": "cash-runway",
+        "len": 2,
+        "ids": [
+          "cr_runway_degraded",
+          "cr_overdue_degraded"
+        ]
+      },
+      {
+        "name": "channel-capacity",
+        "len": 1,
+        "ids": [
+          "o6-warn"
+        ]
+      },
+      {
+        "name": "competitive-moat",
+        "len": 1,
+        "ids": [
+          "i3-nodata"
+        ]
+      },
+      {
+        "name": "competitive-position",
+        "len": 1,
+        "ids": [
+          "e1-nodata"
+        ]
+      },
+      {
+        "name": "environment-rent-dependency",
+        "len": 1,
+        "ids": [
+          "e5-rent-warn"
+        ]
+      },
+      {
+        "name": "incentive-alignment",
+        "len": 1,
+        "ids": [
+          "o3-nodata"
+        ]
+      },
+      {
+        "name": "info-distortion",
+        "len": 1,
+        "ids": [
+          "o7-nodata"
+        ]
+      },
+      {
+        "name": "knowledge-accessibility",
+        "len": 1,
+        "ids": [
+          "o4-nodata"
+        ]
+      },
+      {
+        "name": "org-repairability",
+        "len": 1,
+        "ids": [
+          "o8-nodata"
+        ]
+      },
+      {
+        "name": "power-rigidity",
+        "len": 1,
+        "ids": [
+          "o9-nodata"
+        ]
+      },
+      {
+        "name": "routine-diffusion",
+        "len": 1,
+        "ids": [
+          "o5-crit"
+        ]
+      },
+      {
+        "name": "sentinel-forecast-accuracy",
+        "len": 3,
+        "ids": [
+          "forecast-mape",
+          "forecast-sample",
+          "forecast-timeseries"
+        ]
+      },
+      {
+        "name": "sentinel-pricing-strategy",
+        "len": 1,
+        "ids": [
+          "pricing-disc"
+        ]
+      },
+      {
+        "name": "software-health",
+        "len": 3,
+        "ids": [
+          "t1-usage-crit",
+          "t1-shadow-crit",
+          "t1-ih-crit"
+        ]
+      },
+      {
+        "name": "talent-density",
+        "len": 1,
+        "ids": [
+          "o10-nodata"
+        ]
+      }
+    ],
+    "edgeReadPrepare": 49,
+    "edgeReadPrepareFailed": 0,
+    "edgeReadPrepareSucceeded": 49
+  }
+}

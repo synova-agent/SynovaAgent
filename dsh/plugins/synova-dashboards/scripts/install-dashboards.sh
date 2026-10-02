@@ -67,12 +67,19 @@ io.open(p, "w", encoding="utf-8").write(json.dumps(d, indent=2, ensure_ascii=Fal
 print("    已更新: " + (", ".join(changed) if changed else "无变化（已就位）"))
 PY
 
-echo "==> ④ 删除 synova-cto 预设的旧 loader 块（避免重复挂载）"
+echo "==> ④ 【已退役】synova-cto 预设旧 loader 块清理"
+# D1105（2026-10-01）：本步骤退役。原路径 $DSH_HOME/.agent-presets/synova-cto/agent.cordis.yml
+#   属**目录式载体**，rc.2 下不再被任何代码读取，且该 legacy 目录已删（两个 home 均已清）。
+#   保留代码 = 死引用 ⇒ 改为跳过 + 说明。**不删历史行为**：旧版曾靠它避免与 bundle 层重复挂载；
+#   若在**旧 home** 上跑本脚本（.agent-presets 仍在场），需人工清一次旧块（见下方提示）。
 if [ ! -f "$PRESET_FILE" ]; then
-  echo "    预设不存在，跳过: $PRESET_FILE"
+  echo "    跳过（已退役）：legacy 目录不存在 = $PRESET_FILE"
+  echo "    ℹ️ 若你仍在旧 home（.agent-presets 未清）上安装，请人工删除该预设里的「$MARKER」块，"
+  echo "       否则会与 bundle 层重复挂载。新机制（dsh.profile.bundles）无需此步。"
 elif ! grep -qF "$MARKER" "$PRESET_FILE"; then
-  echo "    无旧块，跳过"
+  echo "    legacy 目录在场但无旧块，跳过"
 else
+  echo "    ⚠️ 检测到 legacy 目录仍在场且含旧块 —— 执行一次性清理（本步为兼容旧 home 保留）"
   python3 - "$PRESET_FILE" "$MARKER" "$ENTRY_ID" <<'PY'
 import io, sys
 p, marker, entry_id = sys.argv[1], sys.argv[2], sys.argv[3]

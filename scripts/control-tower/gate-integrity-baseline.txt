@@ -1,0 +1,114 @@
+# gate-integrity-baseline.txt — M9 门禁完整性 ratchet 基线（**双段单文件**）
+#
+# 判定逻辑见 scripts/control-tower/check-gate-integrity.sh 头注释；两段各由一模式读取。
+#
+# [R] REGISTRY-BASELINE 段 —— B 模式（CI 密封清单登记 gate）读:
+#     违规面 = CI 密封面 = tests/ 下 *.test.sh / *.test.py（只有被显式登记才会在 CI 执行）
+#     登记判定 = 路径出现在 .github/workflows/ci.yml **全文**（密封 for t in 区块或任意 job 的 run: 步骤）
+#     段内条目 = 截至生成时刻的"未登记"全清单；新增未登记 → 违规；条目已登记/文件已删 → 违规（基线过期）
+#     生成命令（base = origin/fix/d938-alloc-task-id 416b4667）:
+#       comm -23 \
+#         <(git ls-tree -r --name-only HEAD | grep -E '^tests/.*\.test\.(sh|py)$' | sort -u) \
+#         <(git show HEAD:.github/workflows/ci.yml | grep -oE 'tests/[A-Za-z0-9_./-]+\.test\.(sh|py)' | sort -u)
+#       （交叉核对：对工作区 ci.yml 用卡片 awk 'for t in' 口径 → 同为 79 条，两法 diff 零差异）
+#
+# [P] PATTERN-BASELINE 段 —— A 模式哨兵读（既有非法 grep 模式的**显式登记**，未登记即违规）:
+#     格式：<脚本相对路径>:<行号> | owner=<D#/角色> | expires=YYYY-MM-DD | evidence=<引用>
+#     规则：命中条目的既有违规**不判违规**（打印 PATTERN-BASELINE: registered <n>）；
+#           不在段内的新非法模式**必红**；条目 expires < 今天 → exit 1；
+#           条目已不再违规（如 D937 修好后）→ exit 1「基线过期，须删条目」。
+#     依据：CTO 2026-09-24 裁定——既有红允许存在，但必须显式登记为基线豁免；既有红不许无声存在。
+#
+# 截至: 2026-09-24T10:18:45Z
+# [R] 条数: 78（tests 面 sh|py 122 文件 / base ci.yml 登记 43 / 未登记 79；2026-09-25 删 1 条过期条目 tests/control-tower/install-dsh-preset.test.sh —— origin/main:.github/workflows/ci.yml:272 已登记它，按棘轮语义「条目已登记=基线过期，须删条目」清理，非判据放宽）
+# [P] 条数: 1（唯一既有非法模式 scripts/pre-commit-check.sh:991；归 D937，本卡不改该文件）
+# 注意: 本卡新增的 2 个夹具（tests/control-tower/check-gate-integrity.test.sh、
+#       tests/control-tower/precommit-groups-injection.test.sh）**不入 [R] 段**——由 m9-coder-b 登记进 ci.yml。
+#       [P] 段条目条数 ≠ 0（后者含 [P] 数据行）；段内计数用下方命令:
+#         awk 'BEGIN{s="R"} /^[[:space:]]*#/{l=$0; sub(/^[[:space:]]*#[[:space:]]*/,"",l); if(l ~ /^═+[[:space:]]*PATTERN-BASELINE/){s="P";next} if(l ~ /^═+[[:space:]]*REGISTRY-BASELINE/){s="R";next} next} /^[[:space:]]*$/{next} s=="R"{print}' <本文件> | wc -l   # → 78
+#         awk 'BEGIN{s="R"} /^[[:space:]]*#/{l=$0; sub(/^[[:space:]]*#[[:space:]]*/,"",l); if(l ~ /^═+[[:space:]]*PATTERN-BASELINE/){s="P";next} if(l ~ /^═+[[:space:]]*REGISTRY-BASELINE/){s="R";next} next} /^[[:space:]]*$/{next} s=="P"{print}' <本文件> | wc -l   # → 1
+#
+# ═══ REGISTRY-BASELINE（未登记测试的存量棘轮；B 模式读）═══
+tests/control-tower/attach.test.sh
+tests/control-tower/backup-db.test.sh
+tests/control-tower/ban-stash.test.sh
+tests/control-tower/baseline-check.test.sh
+tests/control-tower/baseline-exemption.test.sh
+tests/control-tower/brief-parseable.test.sh
+tests/control-tower/brief-template-decision.test.sh
+tests/control-tower/brief_parser.test.sh
+tests/control-tower/bypass-ledger.test.sh
+tests/control-tower/bypass-union-merge.test.sh
+tests/control-tower/calc-k3-stale.test.py
+tests/control-tower/check-bypass-log.test.sh
+tests/control-tower/check-ci-stale-red.test.sh
+tests/control-tower/check-dataflow-alignment.test.sh
+tests/control-tower/check-dev-doc-write-set.test.sh
+tests/control-tower/check-notes-lifecycle.test.sh
+tests/control-tower/check-orphan-worktrees.test.sh
+tests/control-tower/check-ownership.test.sh
+tests/control-tower/check-pr-budget.test.sh
+tests/control-tower/check-secrets.test.sh
+tests/control-tower/check-sentinel-type-net.test.sh
+tests/control-tower/check-test-first.test.sh
+tests/control-tower/ci-strict-mode.test.sh
+tests/control-tower/commit-msg-consistency.test.sh
+tests/control-tower/commit-msg-merge.test.sh
+tests/control-tower/commit-msg-note-mandatory.test.sh
+tests/control-tower/daemon-smoke.test.sh
+tests/control-tower/dashboard-alignment.test.py
+tests/control-tower/decide-next.test.sh
+tests/control-tower/declare-write-set.test.sh
+tests/control-tower/dev-doc-gatekeeper.test.sh
+tests/control-tower/doc-commit-exempt.test.sh
+tests/control-tower/external-auditor.test.sh
+tests/control-tower/founder-truth.test.sh
+tests/control-tower/g12-taskstate-exempt.test.sh
+tests/control-tower/gen-cto-health-batch-report.test.py
+tests/control-tower/gen-cto-health-repro.test.sh
+tests/control-tower/gen-cto-health.test.sh
+tests/control-tower/gen-plan-status.test.sh
+tests/control-tower/gen-task-board.test.py
+tests/control-tower/generated-gate.test.sh
+tests/control-tower/hard-gate-convergence.test.sh
+tests/control-tower/hook-block-write.test.sh
+tests/control-tower/hook-check-memory.test.sh
+tests/control-tower/hook-check-task-scope.test.sh
+tests/control-tower/hook-git-detect.test.sh
+tests/control-tower/hooks-install.test.sh
+tests/control-tower/incident-loop-hygiene.test.sh
+tests/control-tower/merge-pr-queue.test.sh
+tests/control-tower/notes-four-state.test.sh
+tests/control-tower/pre-audit-summary.test.sh
+tests/control-tower/pre-dispatch-check.test.sh
+tests/control-tower/product-lines.test.py
+tests/control-tower/push-sync-guard.test.sh
+tests/control-tower/redeem-task-redeem.test.sh
+tests/control-tower/rerun-evidence.test.sh
+tests/control-tower/resolve-commit-brief.test.sh
+tests/control-tower/secrets-env-exempt.test.sh
+tests/control-tower/session-worktree-isolation.test.sh
+tests/control-tower/sop-gate.test.sh
+tests/control-tower/staging-guard-session.test.py
+tests/control-tower/sync-dsh-skills.test.sh
+tests/control-tower/tag-bypass-wiring.test.sh
+tests/control-tower/tag-consistency.test.sh
+tests/control-tower/task-start.test.sh
+tests/control-tower/today-by-name.test.sh
+tests/control-tower/utf8.test.sh
+tests/control-tower/verify-incremental.test.sh
+tests/control-tower/weekly-selfcheck.test.sh
+tests/control-tower/worktree-manager.test.py
+tests/control-tower/worktree-manager.test.sh
+tests/control-tower/writeset-c6-gatekeeper.test.sh
+tests/desktop/verify-package-signature.test.sh
+tests/doc-system/doc-truth-probe.test.sh
+tests/doc-system/system-registry.test.sh
+tests/project/calc-progress-panel.test.sh
+tests/project/gen-project-board.test.sh
+tests/project/pr-queue-scan.test.sh
+
+# ═══ PATTERN-BASELINE（既有非法 grep 模式的存量登记，新增即拦；A 模式读）═══
+# 格式：<脚本相对路径>:<行号> | owner=<D#/角色> | expires=YYYY-MM-DD | evidence=<引用>
+# 规则：命中条目的既有违规不判违规；不在段内的新非法模式必红；条目过期 → exit 1；条目已不再违规 → exit 1（须删条目）
+scripts/pre-commit-check.sh:991 | owner=D937 | expires=2026-10-08 | evidence=fix/d937-gate-failopen「组 7a 非法 ERE」

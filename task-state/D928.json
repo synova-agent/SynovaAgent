@@ -1,0 +1,64 @@
+{
+  "task_id": "D928",
+  "title": "第③面生成器修复（gen-cto-health 崩溃 + verdict 误判）——恢复「打开即真相」",
+  "status": "impl_done",
+  "risk": "high",
+  "domain": "mac",
+  "executor": "dsh-cto",
+  "writer": "synova-squad-b5",
+  "writer_note": "按 CTO 2026-09-24 口径记（writer=谁写这个文件；updated_by=最后改动者）。归属以 CTO 裁定为准。【自述·一手观察，仓库不可取证】本 session（b5-c1）对该文件零字节写入（全程只读核验 + 停写待命）。【不可取证，见 B5-自验.md §9.4 U5】提交身份在本仓恒为 synova-cto，无法区分代理；birth 因每次写入重置，故 17:4x 期间的物理写入者无法由仓库证据判定 → 归 D940 判据取证。【可核】本版本 birth=2026-09-24 18:08:02（复核命令：stat -f '%N birth=%SB' task-state/D928.json）。",
+  "root_cause_field_alias": "backfill_reason",
+  "milestone": "M0 项目管理基建",
+  "depends_on": [],
+  "blocked": null,
+  "spec": {
+    "path": ".claude/task-briefs/2026-09-23-D928-cto-health-crash.md",
+    "by": "dsh-cto",
+    "at": "2026-09-23",
+    "in_main": false,
+    "note": "本 brief 只随未合并分支 fix/d929-cto-health-crash（a3cd5bf4）走；main 侧不存在该文件 → 生成器 spec 派生会显示未就绪（诚实态，非缺陷）"
+  },
+  "impl": "scripts/control-tower/gen-cto-health.py 三处修复：① spec 字段字符串形态不再触发 AttributeError（原实现假定 dict）② 字符串 spec 加「形如路径」守卫（散文式 spec 不再被当路径 → 修 File name too long）③ verdict 解析改为「显式裁决行 > 无歧义子串 > 歧义即 ?」（原实现子串序 PASS 先于 FAIL → 同时含二者即误判 PASS，台账 2026-09-14 记 CTO-HEALTH.md:69 把 D393 的 FAIL 显示为 PASS）。",
+  "audit": null,
+  "fix_task_id": null,
+  "pr": 725,
+  "branch": "fix/d929-cto-health-crash",
+  "commit": "a3cd5bf47299cb174af43fcda01bfa6135d65154",
+  "branch_tip_at_registration": "ffd47dda97e9e73805783e6fdc02e6f27b7965cc",
+  "base": "origin/main 967a58e5",
+  "merged_to_main": false,
+  "write_set": [
+    "scripts/control-tower/gen-cto-health.py",
+    "task-state/D928.json",
+    ".claude/task-briefs/2026-09-23-D928-cto-health-crash.md",
+    "memory/notes/proposed/2026-09-23-cto-health-crash-fix.md"
+  ],
+  "write_set_note": "本列表按冻结事实照列该分支提交（a3cd5bf4）的真实文件；其中 .claude/task-briefs/2026-09-23-D928-cto-health-crash.md 与 memory/notes/proposed/2026-09-23-cto-health-crash-fix.md 未落 main → 引用豁免（明细见 note⑥，本卡断言不依赖这两份文件）",
+  "evidence": {
+    "verified_at_registration": {
+      "main_pre_fix_line": "scripts/control-tower/gen-cto-health.py:305 = spec_path = (d.get(\"spec\") or {}).get(\"path\")（只认 dict；字符串 spec 必 AttributeError）",
+      "branch_post_fix_lines": "a3cd5bf4 版同文件 L309 isinstance(_spec, dict) / L311 elif isinstance(_spec, str)",
+      "mechanism_repro": "python3 -c 用字符串 spec 求值 main 的原表达式 → AttributeError: 'str' object has no attribute 'get'（exit 3）——机制级复现，非跑整只生成器",
+      "re_import_ok": "main 已有 import re（L32）→ 修复所用的 re.match / re.search 不会 NameError",
+      "not_in_main": "git merge-base --is-ancestor a3cd5bf4 origin/main → 非 0；git log origin/main --grep=#725 → 0 条",
+      "branch_tip": "origin/fix/d929-cto-health-crash = ffd47dda（已将 origin/main 并入分支，a3cd5bf4 为其祖先）",
+      "derived_status_check": "git log --all --format=%s | grep -c '(D928)' = 1 → 生成器 impl 派生与卡面 status=impl_done 一致",
+      "commit_files": "git show --name-only a3cd5bf4 → 4 件，与 write_set 逐条相同",
+      "commit_numstat": "git show --numstat a3cd5bf4 → gen-cto-health.py 25+/4-；任务 brief 53+/0；决策 Note 19+/0；task-state/D928.json 34+/0；合计 4 files changed, 131 insertions(+), 4 deletions(-)",
+      "doc_only_eval": "按生产正则 DOC_PREFIX_RE（scripts/pre-commit-check.sh:305）求值 a3cd5bf4 → non_doc=[scripts/control-tower/gen-cto-health.py]、DOC_ONLY=False（本卡非纯文档卡）"
+    },
+    "recorded_on_branch_card": {
+      "_provenance": "task-state/D928.json @ a3cd5bf4（分支卡自记；本次补登记未复跑其两项测试——复跑会写 docs/synova/CTO-HEALTH.md 与 .claude/bypass.log，越出本卡写集，故原样转记、不背书）",
+      "before": "python3 scripts/control-tower/gen-cto-health.py --dry-run → 崩溃（AttributeError 'str' object has no attribute 'get' / OSError File name too long）；main 上 tests gen-cto-health.test.sh 与 gen-cto-health-repro.test.sh 均 FAIL（存量）",
+      "after": "同一命令 exit=0；两个测试均 PASS（分支 vs main 对照实测）",
+      "impact": "第③面 CTO 健康看板自 2026-09-14（D600 卡）起完全无法生成 → 创始人「打开即真相」失效；本条恢复生成能力 + 修正 verdict 误判（FAIL 不再显示为 PASS）"
+    }
+  },
+  "root_cause_missing_registration": "当时把 task-state/D928.json 当作交付文件随实现分支一起提交——卡只存在于未合并提交 a3cd5bf4 内，未在 main 侧走 alloc-task-id「先登记后使用」建卡，main 侧 task-state 无此任务，看板/生成器看不到（F1 族第 4 次）。CT-34「纯文档卡豁免」口径不适用于本卡：a3cd5bf4 文件集含 scripts/control-tower/gen-cto-health.py，按生产正则实测非纯文档（DOC_ONLY=False）。",
+  "main_refs": [
+    "docs/synova/coordination/派单-K3审计-批次2-20260924.md:23（D928 | #725 | 第③面生成器三处修复）"
+  ],
+  "note": "① add/add 冲突面：同一路径 task-state/D928.json 已存在于未合并提交 a3cd5bf4（那份自记 updated_at=2026-09-23 / updated_by=synova-cto，可核命令 git show a3cd5bf4:task-state/D928.json），本卡与其事实一致；分支合并时按 add/add 处置，不得静默覆盖。② K3 面更正（实测）：K3 批次2 报告 L149 写「D928/D933/D934/D936 无 task-state 文件（main 及各分支均无）」，其中「各分支均无」对 D928 不成立——a3cd5bf4:task-state/D928.json 存在（34 行）；按实测更正为「main 无、分支有」，故本卡根因按「卡随未合并分支走」而非 CT-34 口径记录。K3 出处：K3 批次2 报告（提交 2bf2630d，refs/remotes/origin/audit/k3-batch2；未落 main → 引用豁免，本卡仅据此记 provenance，断言不依赖该文件）。⑥ 本卡未落 main 的引用均已标注 in_main / 引用豁免，清单如下（穷举）：① spec.path（已标 in_main:false）② write_set 内两件分支文件 .claude/task-briefs/2026-09-23-D928-cto-health-crash.md 与 memory/notes/proposed/2026-09-23-cto-health-crash-fix.md（按冻结事实「该分支提交的真实文件」照列，均随 a3cd5bf4，未落 main）③ recorded_on_branch_card._provenance 与 note① 引的分支卡 task-state/D928.json（以提交锚 a3cd5bf4 检索，非仓内路径引用）④ K3 批次2 报告（提交锚 2bf2630d + 引用豁免）。本卡作为本 PR 交付物，其自身路径 task-state/D928.json 在 main 于合并前不存在（自指，非外部引用）。除上述四项外，其余引用均已在 main 可核。③ 本卡引用的 brief / Note / 代码修复都在未合并分支上，main 侧只有本卡可见。④ 属 K3 批次2 派单（main_refs），audit=null，未审计前不得合并。⑤ 最高风险变更面（门禁/看板）：台账 2026-09-14 记 P0 gen-cto-health spec 类型崩溃 + PASS 先于 FAIL 子串判定。",
+  "updated_at": "2026-09-24",
+  "updated_by": "synova-squad-b5"
+}

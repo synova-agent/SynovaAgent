@@ -1,0 +1,83 @@
+═══ D1028 前提冻结实测 — 原始输出 ═══
+生成: 2026-09-27T06:22:37Z (UTC) | as_of commit: 4afd4ce187575b96c0074d1db81277a8a08e4679
+
+── P1: check-pr-budget.sh 存在且是 D734 门禁 ──
+$ wc -l scripts/control-tower/check-pr-budget.sh
+     179 scripts/control-tower/check-pr-budget.sh
+$ grep -n 'D734' scripts/control-tower/check-pr-budget.sh
+6:# check-pr-budget.sh — D734 PR 预算门禁（冲突概率 ∝ 改动大小 × 分支存活时间）
+9:#   差点回退他人成果。大 PR + 长存活分支 = 冲突源，也是 D734 自己要禁止的形态。
+67:echo "── PR 预算门禁（D734）: 基线=$BASE 上限=${MAX_FILES} 文件 / 落后阈值=${MAX_BEHIND} ──"
+139:  echo "❌ 检查执行失败: 域校验器缺失 ${OWNERSHIP}（D734 依赖 D733；fail-closed）" >&2
+$ grep -n 'check-pr-budget.sh' scripts/pre-commit-check.sh
+1515:if [ -x "$ROOT/scripts/control-tower/check-pr-budget.sh" ] || [ -f "$ROOT/scripts/control-tower/check-pr-budget.sh" ]; then
+1516:  PRB_OUT=$(bash "$ROOT/scripts/control-tower/check-pr-budget.sh" --quiet 2>&1)
+1521:    soft_check "D734 PR 预算超限 (拆 PR，禁调高上限——见 scripts/control-tower/check-pr-budget.sh)" "$PRB_OUT"
+1526:  soft_check "D734 PR 预算: 检查脚本缺失 scripts/control-tower/check-pr-budget.sh" "1"
+
+── P4: D708 `## 写集豁免` 已被 CI 解析 ──
+$ grep -n '写集豁免\|EXEMPT_HEADING_RE' scripts/control-tower/merge_writeset_gate.py
+31:           --pr-body <file>（可选；用于读取 PR 正文里的 `## 写集豁免`）
+42:  ③ 声明级: 声明文件里的 `## 写集豁免` 段落（每行 `- <路径> — <理由>`），无理由不生效
+291:EXEMPT_HEADING_RE = re.compile(r"^#{2,4}\s*写集豁免")
+295:    """从任意文本里扫 `## 写集豁免` 段落: 每行 `- <路径> — <理由>`。无理由不生效。"""
+299:        if EXEMPT_HEADING_RE.match(line):
+313:    """声明文件里的 `## 写集豁免` 段落（多源取并）。"""
+329:    `## 写集豁免` 声明形同虚设。此处自取事件体，**无需改 ci.yml**，也让本地可注入测试。
+536:        print("     ③ 显式豁免: 在 PR 正文/声明文件加 `## 写集豁免` 段落，每行 `- <路径> — <理由>`（无理由不生效）")
+539:        print("     可直接粘贴的精确豁免行（补全理由后放入 PR 正文 `## 写集豁免`）:")
+$ grep -n 'merge_writeset_gate' .github/workflows/ci.yml
+119:          python3 scripts/control-tower/merge_writeset_gate.py \
+363:            tests/control-tower/merge_writeset_gate.test.sh \
+
+── P5: A1(#861, a1201ceb) 是否落 main ──
+$ git merge-base --is-ancestor a1201ceb HEAD && echo 'IN MAIN' || echo 'NOT IN MAIN'
+NOT IN MAIN
+$ git branch -a --contains a1201ceb
++ chore/ci-docsonly-whitelist-20260927
+  remotes/origin/chore/ci-docsonly-whitelist-20260927
+  remotes/ssh/chore/ci-docsonly-whitelist-20260927
+
+── P2: 文档出库集 1,288 份？(六前缀 .md 实测) ──
+$ git ls-files ".claude/task-briefs/**" | grep -c "\.md$"  =>  712
+$ git ls-files "docs/plans/**" | grep -c "\.md$"  =>  334
+$ git ls-files "docs/synova/coordination/**" | grep -c "\.md$"  =>  219
+$ git ls-files "memory/notes/**" | grep -c "\.md$"  =>  149
+$ git ls-files "docs/synova/archive/**" | grep -c "\.md$"  =>  1
+$ git ls-files "docs/archive/**" | grep -c "\.md$"  =>  18
+$ 六前缀 .md 总和 =>
+1433
+$ 全部 tracked .md =>
+2172
+$ 全部 tracked 文件 =>
+    5569
+$ 63 组合(≥1 前缀) 子集和命中 1288 的组合数 => (见下)
+每前缀 .md: {'.claude/task-briefs': 712, 'docs/plans': 334, 'docs/synova/coordination': 219, 'memory/notes': 149, 'docs/synova/archive': 1, 'docs/archive': 18} 总和 1433
+每前缀 全文件: {'.claude/task-briefs': 712, 'docs/plans': 358, 'docs/synova/coordination': 235, 'memory/notes': 152, 'docs/synova/archive': 59, 'docs/archive': 30} 总和 1546
+命中 1288 的组合: 无（63 组合全枚举）
+
+── P3: doc-registry 真源与「12 份」核对 ──
+$ ls -la docs/authority/DOCS-REGISTRY.yaml scripts/control-tower/doc-registry.json
+-rw-r--r--@ 1 wane  staff  8479 Sep 27 14:20 docs/authority/DOCS-REGISTRY.yaml
+-rw-r--r--@ 1 wane  staff  2525 Sep 27 14:20 scripts/control-tower/doc-registry.json
+$ grep -n "DOCS-REGISTRY.yaml" scripts/doc-system/doc-registry-gate.sh
+10:#   降级:  DOCS-REGISTRY.yaml 缺失 → ⚠️ 警告 exit 0（台账未建立不阻断）
+18:REGISTRY="$ROOT/docs/authority/DOCS-REGISTRY.yaml"
+19:[ -f "$REGISTRY" ] || { echo "  ⚠️ 降级: DOCS-REGISTRY.yaml 不存在，跳过登记检查（exit 0）"; exit 0; }
+28:  [ "$rel" = "docs/authority/DOCS-REGISTRY.yaml" ] && return   # 台账自身（自引用）
+35:    echo "  ❌ 未登记: $rel （请加入 docs/authority/DOCS-REGISTRY.yaml）"
+$ grep -rn "doc-registry.json" scripts/ | grep -v Binary
+scripts/control-tower/inject-context.py:34:REGISTRY_PATH = SCRIPT_DIR / "doc-registry.json"
+scripts/control-tower/context-injector.sh:15:#   - scripts/control-tower/doc-registry.json
+$ python3 解析 DOCS-REGISTRY.yaml 落出库白名单前缀的条目
+解析条目总数: 39
+落出库白名单前缀的条目数: 7
+    DOC-0102 docs/synova/coordination/DECISION-REFERENCE.md active
+    DOC-0105 docs/synova/coordination/TASK-ROUTING.md active
+    DOC-0107 memory/ active
+    DOC-0108 docs/synova/coordination/DSH-DEVDOC-MODE.md active
+    DOC-0109 docs/synova/coordination/K3-AUDIT-STANDARD-v2-20260820.md active
+    DOC-0031 docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md active
+    DOC-0114 docs/synova/coordination/派单-W1-双DSH提升-20260923.md active
+
+── P6 段已被队长判定为**无效证据**并重做（原因：沙箱里 HEAD 就在 main 分支，`--base main` 使 `main...HEAD` 恒空 = 「检查未执行==检查通过」）——正确版本见本目录 01-P6-修正版。

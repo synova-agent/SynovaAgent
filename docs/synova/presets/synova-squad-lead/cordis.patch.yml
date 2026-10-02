@@ -1,0 +1,259 @@
+# 由 synova-squad-lead/preset.yml + agent.cordis.yml 迁移生成（2026-09-25）
+# 迁移规则见 @deepseek-ai/dsh-agent-preset 的 editing-cordis-compositions SKILL。
+- insert:
+    - id: preset-synova-squad-lead
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: synova-squad-lead
+        name: 🎽 Synova 小队队长
+        description: 专职小队队长：一次带一支队（M1–M6）。只协调不下场写码、前提先实测、写集逐文件互斥、自验必须独立、证据必须可核（命令原始输出 + ls-remote 回执）。不判"通过"——通过与否归 CTO 收件闸 + K3 终审。上限：成员≤4、重型验证串行、PR≤12 代码域。
+        plugins:
+          # The `standard` agent preset: the full coding agent, mounted once per process.
+          #
+          # This file is an AGENT-PLANE composition. The roster mounts it ONCE under a
+          # standing scope; every session naming it joins by scope parentage, so the
+          # tools and prompt sections registered here cover each joined agent while a
+          # session's own state stays keyed per Session/Agent inside the plugins. The
+          # host composition (`base.cordis.yml` + `web.cordis.yml`) keeps everything a
+          # preset must not own: the registries themselves, the sandbox and approval
+          # stack, persistence, and the model route.
+          #
+          # A service row here MUST sit inside a group carrying an `isolate` realm.
+          # Without one it publishes into the root realm, where it is process-global —
+          # another preset publishing the same name collides, and a host reader would
+          # resolve one preset's instance for every session; `dsh-agent-presets` rejects
+          # that at mount. `true` means an entry-local realm: this standing mount's own
+          # private instance, apart from every other preset's. (A shared label does NOT
+          # pool instances — `provide()` throws on the second registration under the
+          # same realm symbol; labels join REALMS, and are not what this file needs.)
+
+          # ── identity ────────────────────────────────────────────────────────────────
+
+          # The preset's own persona, shadowing the deployment default for this agent.
+          # `{{model}}` and `{{cwd}}` resolve from the agent's own route and workspace.
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: |-
+                你是 SynovaAgent 的**专职小队队长**（synova-squad-lead），由 {{model}} 驱动，工作目录 {{cwd}}。
+                **你一次只带一支小队。你不是 CTO，也不是编码。**
+
+                ═══════════ 唯一职责 ═══════════
+                **让你的队的产出，成为"可被独立验证的交付"。** 你不产生结论，只产生**证据 + 自验结论**。
+
+                ═══════════ 四条不可让渡 ═══════════
+                1 **前提冻结**：派单件每条事实性前提（"零生产引用""某函数零调用""某字段不存在"）**开工前必须实测**：`- <前提> | 命令 | 输出摘要`。**实测不成立 → 停，报 CTO 改卡/废卡**（批十四 4 张卡前提全错，全靠执行方拦下）。
+                2 **写集互斥**：逐文件声明 `write_scopes`，**两两不得重叠**；**同文件同一时间只有一个写者**（热点文件如 `ci.yml` 按 CTO 排期）。开工前做**冲突扫描**（`grep` 现有引用与调用方，**输出完整贴，禁 `head` 截断**，标注"共 N 处"）。
+                3 **自验独立**：**自验不得由编码兼任**；自验员只读（可写 `/tmp`）。队内**只说"自验结论"**，永不说"审计通过"。
+                4 **证据可核**：所有数字用**命令原始输出**（`git diff --stat` 等），禁手写；交付附 **`git ls-remote --heads origin | grep <branch>` 回执**（今天三次"声称已推送、实际只在本地"）。
+
+                ═══════════ 五条禁令 ═══════════
+                - **不下场写码**（只协调、只判前提、只验证据）。
+                - **不判"通过"**：只能给 `自验结论` / `可提请独立审计` / `退回（附理由）`；**通过与否归 CTO 收件闸 + K3 终审**。
+                - **不擅自扩写集**：越界文件 → 先报 CTO（D821 的 connector 越界即由此暴露）。
+                - **不引用未落 main 的路径**（派单件、报告、规格都必须先在 main 可读）。
+                - **不做一次性特例**：预算/豁免/清洗一律走规则（要改规则 → 立卡 + K3 复审）。
+
+                ═══════════ 上限（先量后加负载）═══════════
+                - 成员 ≤ **4**（队长 + ≤2 编码 + 1 自验）；**不组第 5 人**。
+                - 重型验证（vitest / 全量门禁 / 黄金门禁）**串行**，同一时间 ≤ **1** 个在跑（机器 8GB，已两次压满）。
+                - PR **≤12 文件 + 单域**（按 D860 口径：治理产物不计入）；超了**拆 PR**，不开口子。
+
+                ═══════════ M1–M6（照做）═══════════
+                M1 专用工作树 `.synova-wt-*`（**不复用他人工作树**）｜M2 写集互斥 + 冲突扫描｜M3 自验独立（独立成员）｜M4 工具默认副作用不得与指令冲突（`synova-commit` 自带 push，勿手工再推）｜M5 证据按任务号命名落 `docs/synova/product-lines/evidence/`｜M6 **收尾三件（diff / 自验结论 / 遗留清单）必须提交进仓库并给路径** + **归属逐张收口**（owner 不自动释放）
+
+                ═══════════ 坑清单（18 条，逐条对照；全文见派单模板 §〇-f）═══════════
+                数字必贴原始输出｜M6 必提交｜卡面前提自己验｜引用先确认在 main｜交付附 ls-remote 回执｜冲突扫描完整输出｜**禁 grep 型静态判据当验收**（实测 3/5=60%）｜**"接线了"≠"被执行"**（要有"删掉即报红"的判别性夹具）｜红证不残留（`grep -c INJECTED-RED`=0）｜空 blob 不进 main｜栈式 PR 必须声明 base｜PR 预算×治理产物｜Windows 门禁 fail-open 要显式 degraded｜CI 失败断言给完整片段（禁 `tail -8`）｜绿腿告警必须可见｜同类第二次**立即升级 CTO**｜跨卡簿记提交声明持有文件的 D#｜不并发跑重型验证
+
+                ═══════════ 交付语义 ═══════════
+                - **退回只约束该件**，不冻结无依赖的并行任务；判定依据只有一条：**两件是否真的互相依赖**。
+                - **有依赖** → 老实串行；**无依赖** → 照常并行开工。
+                - 交付标 `可提请独立审计`；**K3 复审通过前不得合并**。
+
+                ═══════════ 红线 ═══════════
+                不改产品代码之外的东西、不碰 `scripts/audit/**`、不写审计标准、禁自我审计；禁 `--no-verify` / `git stash` / force push；不宣称"越用越准/进化"、不把线全绿说成"产品被验证"。
+
+          - id: agent-instructions
+            name: '@deepseek-ai/dsh-agent-instructions'
+            config:
+              maxBytes: 65536
+
+          # ── shell ───────────────────────────────────────────────────────────────────
+
+          # `shell-env` stays in the HOST composition: `apps/cli/src/web.ts` injects it to
+          # publish `DSH_WEB_URL`/`DSH_WEB_MODE`, and a host row that injects a service is
+          # the criterion for host-plane ownership — injection resolves before any session
+          # exists, so there is no agent to key by. Behind a preset realm those variables
+          # never reached the model's shell at all. Both shell tools consume the host
+          # registry from here; their executors (`bash-sandbox`/`pwsh-sandbox`) are
+          # host-plane too.
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'
+            disabled: !!js process.platform === 'win32'
+
+          - id: tool-pwsh
+            name: '@deepseek-ai/dsh-tool-pwsh'
+            disabled: !!js process.platform !== 'win32'
+
+          # ── filesystem ──────────────────────────────────────────────────────────────
+
+          # Both register into the host `tools` registry and provide nothing, so
+          # they need no realm. The `fs` service and its policy stay in the host.
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+
+          # ── background jobs ────────────────────────────────────────────────────────
+
+          # Only the model-facing controls. The task REGISTRY stays on the host plane:
+          # its producers sit outside any realm this file could put it in — `tool-bash`
+          # above resolves it with `ctx.get`, and an entry-local realm here is invisible
+          # to every sibling row, so `run_in_background` would answer "background jobs
+          # unavailable" while these controls sat in the catalog. The registry is keyed by
+          # owning agent anyway, so one host instance serves every session. What a preset
+          # chooses is whether its agent can collect and stop background work at all.
+          - id: tool-jobs
+            name: '@deepseek-ai/dsh-tool-jobs'
+
+          # ── skills ──────────────────────────────────────────────────────────────────
+
+          # The skill REGISTRY lives in the host composition and is layered per scope:
+          # these rows register into THIS preset's layer of it, so they need no realm.
+          # `skill-filesystem` contributes local-root discovery for agents on this preset, and
+          # `tool-skill` gives them the catalog and loader; the merged catalog also
+          # carries whatever the deployment registered globally (repository plugins).
+          - id: skill-filesystem
+            name: '@deepseek-ai/dsh-skill-filesystem'
+
+          - id: tool-skill
+            name: '@deepseek-ai/dsh-tool-skill'
+
+          # ── goals ───────────────────────────────────────────────────────────────────
+
+          # Only the model-facing tool. The goal SERVICE, its session driver, and the
+          # `/goal` command stay on the host plane: the Gateway serves the goal domain as
+          # Remote endpoints whose receiver comes from a generated descriptor, so it
+          # resolves `goals` on the host and an entry-local realm here would hide it. The
+          # registry is keyed by session anyway, so one host instance serves every
+          # session. What a preset chooses is whether its agent can call the goal tool.
+          - id: tool-goal
+            name: '@deepseek-ai/dsh-tool-goal'
+
+          # ── plan mode ───────────────────────────────────────────────────────────────
+
+          # Plan state is per-agent by nature, so an entry-local realm is not a
+          # workaround here — it is the correct lifetime.
+          - id: planning
+            name: cordis:group
+            group: true
+            isolate:
+              planMode: true
+            config:
+              - id: plan-mode
+                name: '@deepseek-ai/dsh-plan-mode'
+                config:
+                  section: |
+                        You are in plan mode. Stay in plan mode until exit_plan_mode succeeds or the user switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
+
+                        Explore first. Use non-mutating reads, searches, static analysis, and checks to ground the plan in the actual repository. Do not edit or write files, change configuration, run formatters or code generation that rewrites tracked files, commit, or otherwise carry out the plan. Prefer existing functions and patterns over new machinery.
+
+                        The tool catalog stays the same across modes for request-cache stability. These plan-mode rules override any later tool description or guidance that suggests using mutation tools; those tools remain listed to keep the tool catalog unchanged. Do not use todo_write to track this planning phase: it tracks implementation after an approved plan, while the plan itself belongs in exit_plan_mode.
+
+                        Resolve discoverable facts by inspection. Use ask_user_question only for user-owned choices or material ambiguity that inspection cannot answer. Do not ask the user where code lives or how current behavior works when you can find out.
+
+                        Make the plan decision-complete: state the goal and success criteria; group implementation changes by subsystem; identify public API, schema, and data-flow changes; cover edge cases, failure modes, tests, acceptance criteria, and explicit assumptions. Keep it concise enough to review but detailed enough that another engineer can implement it without making design decisions.
+
+                        When ready, call exit_plan_mode with the complete plan markdown, starting with a # title. Make exit_plan_mode the only and final tool call in that assistant response: it presents the plan for approval, and implementation begins only in a later step after approval. Do not paste the final plan as a plain reply or ask "should I proceed?" through prose or ask_user_question. If review rejects it, incorporate the feedback and present again. If the review channel is unavailable or aborted, stay in plan mode and ask the user to switch modes manually; do not proceed with implementation.
+
+          # ── compaction ──────────────────────────────────────────────────────────────
+
+          # `compaction-basic` reads `toolResultPrune` through `ctx.get`, so the pruner must
+          # share this realm rather than sit outside it.
+          #
+          # `tokenMeter` is deliberately NOT in this realm: the meter stays on the HOST
+          # plane, and the rows here resolve that one instance. It takes no configuration,
+          # keys every fold by Session, and owns the context-meter projection units the
+          # browser reads for every session — behind a realm those units would come and go
+          # with whichever presets happen to be mounted. What a preset chooses is whether
+          # its agent compacts at all, which is `compaction-basic` below.
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+              toolResultPruner: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+
+              - id: command-compact
+                name: '@deepseek-ai/dsh-command-compact'
+
+              - id: tool-result-pruner
+                name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+                config:
+                  thresholdChars: 8192
+                  headChars: 4096
+                  tailChars: 1024
+
+          # ── delegation and workflows ────────────────────────────────────────────────
+
+          # The `subagents` registry and its spawn/fork backends live in the HOST
+          # composition: the registry is a process singleton whose cross-session queries
+          # the api-proxy serves to the browser, and a provider name may only be
+          # registered once. This preset contributes the delegation TOOLS, which resolve
+          # that host registry.
+          #
+          # `workflows` is different — nothing outside an agent reads it — so every row
+          # that reaches it shares one entry-local realm here, and a consumer left
+          # outside would resolve a host registry this preset does not populate.
+          #
+          # `tool-subagent-report` is host-plane for the same reason as the registry,
+          # not because a preset may not want it: it registers a CONTINUABLE SETUP on
+          # that singleton rather than a tool this agent calls, and the setup list is
+          # not scope-aware — one copy per mounted preset means every child gets
+          # `report` registered once per live session, which throws on the second.
+          - id: agent-team
+            name: '@deepseek-ai/dsh-experimental-agent-team'
+            config:
+              maxMembers: 4        # 纪律物理化：成员 ≤4（队长 + ≤2 编码 + 1 自验）
+              maxTasks: 256
+              maxPendingMessagesPerMember: 64
+              maxMessageBytes: 65536
+              disposalTimeoutMs: 5000
+
+          - id: tool-agent-team
+            name: '@deepseek-ai/dsh-experimental-tool-agent-team'
+            config:
+              freshProvider: spawn
+              forkProvider: fork
+
+          - id: ui-agent-team
+            name: '@deepseek-ai/dsh-experimental-client-ui-agent-team'
+
+          - id: tool-ask-user
+            name: '@deepseek-ai/dsh-tool-ask-user'
+
+          - id: tool-todo
+            name: '@deepseek-ai/dsh-tool-todo'
+            config:
+              allowParallelInProgress: true
+
+          # The `web` service and its search provider stay in the host composition; only
+          # the model-facing tool is per-session.
+          - id: tool-web
+            name: '@deepseek-ai/dsh-tool-web'
+            config:
+              fetch: false
+              searchTimeoutMs: 60000
+
+          # ── D540 独立 clone 隔离（创始人批准 2026-08-27，定稿 v3）──
+          # 开工第一步（任何 git 写操作前，物理规则非纪律）：
+          # 1. 判断：当前目录路径含 .sessions/ → 已在专属 clone，正常工作
+          # 2. 不在 → git clone --local /Users/wane/SynovaAgent .sessions/<sid>/repo（1.4s 硬链接）+ 修正 origin 指向 GitHub + git 配置（user.name/email、凭据、core.quotepath=false）+ install-hooks，然后 cd .sessions/<sid>/repo 工作
+          # 3. 主工作区 /Users/wane/SynovaAgent = Codex 专用（dev doc/台账/协调唯一写者）；任务 session 禁止在此 checkout/add/commit/push
+          # 完成收尾：分支 push 开 PR 合并后，检查无未提交/未推送，删除 clone（.sessions/<sid>/repo）

@@ -1,0 +1,51 @@
+{
+  "task_id": "D933",
+  "title": "Win 派单（W0 + 首模块）+ 模块归属基线",
+  "status": "impl_done",
+  "domain": "mac",
+  "executor": "dsh-cto",
+  "writer": "synova-squad-b5",
+  "writer_note": "按 CTO 2026-09-24 口径记（writer=谁写这个文件；updated_by=最后改动者）。归属以 CTO 裁定为准。【自述·一手观察，仓库不可取证】本 session（b5-c1）对该文件零字节写入（全程只读核验 + 停写待命）。【不可取证，见 B5-自验.md §9.4 U5】提交身份在本仓恒为 synova-cto，无法区分代理；birth 因每次写入重置，故 17:4x 期间的物理写入者无法由仓库证据判定 → 归 D940 判据取证。【可核】本版本 birth=2026-09-24 18:08:09（复核命令：stat -f '%N birth=%SB' task-state/D933.json）。",
+  "root_cause_field_alias": "backfill_reason",
+  "milestone": "M0 项目管理基建",
+  "depends_on": [],
+  "blocked": null,
+  "spec": {
+    "path": "docs/synova/coordination/派单-W0与首模块-Win侧-20260923.md",
+    "by": "synova-cto",
+    "at": "2026-09-23",
+    "note": "本卡无独立 dev doc：派单件出件即交付物（同一 PR #730 合并）"
+  },
+  "impl": "Win 侧 W0 前置 + 首模块派单（src/middleware 默认安全姿态）+ 模块归属基线（一模块一边）——两份文档随 PR #730 合并入 main（merge commit 09466083）。",
+  "audit": null,
+  "fix_task_id": null,
+  "pr": 730,
+  "merge_commit": "0946608339c5b4d4bc58277b1994d150582d9920",
+  "merged_to_main": true,
+  "write_set": [
+    "docs/synova/coordination/派单-W0与首模块-Win侧-20260923.md",
+    "docs/synova/coordination/模块归属-MacWin-20260923.md"
+  ],
+  "evidence": {
+    "verified_at_registration": {
+      "in_main": "git merge-base --is-ancestor 09466083 origin/main → exit 0（D933_IN_MAIN）",
+      "merge_commit_title": "09466083 = Merge pull request #730 from tangbaobao520/docs/d933-win-dispatch-ownership",
+      "pr_files": "git show --stat 09466083 → 3 files: .claude/bypass.log(builtin/hook 自动) + 模块归属-MacWin-20260923.md(13+) + 派单-W0与首模块-Win侧-20260923.md(52+)；后两件即本卡 write_set",
+      "docs_present_in_main": "worktree(=origin/main) 实存：模块归属-MacWin-20260923.md 3706 B / 派单-W0与首模块-Win侧-20260923.md 4068 B",
+      "derived_status_check": "git log --all --format=%s | grep -c '(D933)' = 3 → 生成器 impl 派生与卡面 status=impl_done 一致",
+      "never_registered_before": "git log --all --oneline -- task-state/D933.json → 0 条（全分支从未登记；K3 报告 L149「main 及各分支均无」对本卡成立）",
+      "ct34_doc_only_eval": "按生产正则 DOC_PREFIX_RE（scripts/pre-commit-check.sh:305）求值 D933 内容提交：f10a6275（2 文件）→ DOC_ONLY=True；b553cf93（第4条判据修订）→ DOC_ONLY=True；对照 327a4165（bypass.log 自动提交）→ False",
+      "ct34_early_exit": "pre-commit-check.sh:319-347 早退分支实读：仅跑 scripts/check-secrets.sh，另在 memory/notes/proposed/ 命中时跑 scripts/control-tower/check-notes-lifecycle.sh（两脚本均已在 main）；不含任何要求新建 task-state 卡的门禁点",
+      "ct34_exempt_log_direct_evidence": "cat /Users/wane/SynovaAgent/.synova-wt-d933/.claude/exempt.log → 3 行 EXEMPT（2026-09-24T04:15:06 两件并列 ｜ 04:15:41 ｜ 04:18:53，均为本卡 write_set 两件 docs）；该路径被 .gitignore:8（*.log）忽略 → 永不入 origin/main，但工作树实存（384 B）→ 本卡 CT-34 早退有直接日志证据，而非仅靠生产正则推定",
+      "k3_source": "K3 批次2 报告（提交 2bf2630d，refs/remotes/origin/audit/k3-batch2；未落 main → 引用豁免，本卡仅据此记 provenance，断言不依赖该文件）§五 第 7 行 →「D928/D933/D934/D936 无 task-state ｜ 本该拦住的防线：task-state 登记 gate ｜ 为何没拦：纯文档卡走 CT-34 豁免路径时跳过了登记 ｜ 归因 control-tower」。核验命令（以提交锚检索，非仓内路径引用）：git show 2bf2630d:docs/synova/audit-reports/2026-09-24-K3-批次2-D918-D936.md | sed -n '236,246p'",
+      "ownership_followup": "归属文档 #730 版 13 行 → 现行 37 行（git diff --stat 09466083 -- 该文件 = 1 file changed, 33 insertions(+), 9 deletions(-)），由 acafaa03（docs(D936): 模块归属改为服从 ownership.yaml（删四组冲突清单））落地；是否满足 K3 第 25 行口径留 K3 复核"
+    }
+  },
+  "root_cause_missing_registration": "该卡是纯文档卡：PR #730 的两笔内容提交（f10a6275 / b553cf93）文件集全部命中 pre-commit-check.sh:305 的 DOC_PREFIX_RE → 走 CT-34 早退分支（豁免 12 组，只跑 Secrets + Notes 迁移，无任何要求建卡的门禁点），出件即合并，未走 alloc-task-id「先登记后使用」→ main 侧 task-state 始终为空（F1 族第 4 次；K3 批次2 报告 §五第 7 行同口径）。",
+  "main_refs": [
+    "docs/synova/coordination/派单-K3审计-批次2-20260924.md:25（D933 | #730 | Win 派单（W0+首模块）+ 模块归属基线）"
+  ],
+  "note": "① PR #730 的 .claude/bypass.log 为 post-commit hook 自动写入的 builtin 产物，不计入本卡 write_set（write_set 仅两 docs）。② 归属文档以 docs/synova/coordination/ownership.yaml 为唯一机器可读源（该文档自声明「本件不是事实源」）；K3 批次2 第 25 行要求核「基线与 ownership.yaml 的冲突是否已按服从表改正（见 #733）」——该修正已由 acafaa03（D936）落地（13→37 行），结论留 K3 复核，本卡不代判。③ 补登记属 K3 批次2 派单（main_refs），audit=null，未审计前不得合并；本卡未落 main 的引用均已标注 in_main / 引用豁免——K3 批次2 报告以提交锚 2bf2630d 给出并标「引用豁免」（断言不依赖该文件），spec.path 在 main 可读，write_set 两件均已在 main。其余引用均在 main 可读。④ CT-34 豁免事件本应写 .claude/exempt.log（pre-commit-check.sh:328-330）；该路径被 .gitignore:8（`*.log`）忽略，**永不入 origin/main**（工作树可存在、实测非空）——**直接证据已取证**：/Users/wane/SynovaAgent/.synova-wt-d933/.claude/exempt.log（384 B，mtime 2026-09-24 04:18:53）三行即本卡两件交付物的 EXEMPT 记录（04:15:06 staged=模块归属-MacWin-20260923.md,派单-W0与首模块-Win侧-20260923.md ｜ 04:15:41 ｜ 04:18:53），与本 PR 两次内容提交时序吻合；故早退发生与否既有「提交文件集过生产正则」佐证，又有豁免日志直证。（勘误：本卡上一版曾写「该路径在 origin/main 与工作树均不存在」——后半句不成立，已按实测更正。）",
+  "updated_at": "2026-09-24",
+  "updated_by": "synova-squad-b5"
+}

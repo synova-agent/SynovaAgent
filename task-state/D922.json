@@ -10,12 +10,20 @@
   "worktree": ".synova-wt-d922",
   "base": "origin/main 6c23006a",
   "milestone": "M0 项目管理基建",
-  "depends_on": ["D917"],
+  "depends_on": [
+    "D917"
+  ],
   "blocked": null,
   "target": "2026-W40",
   "spec": "docs/synova/coordination/派单-W1-双DSH提升-20260923.md（含程序定义 + Wave 划分 + W1 三项详细规格）",
   "impl": null,
-  "audit": null,
+  "audit": {
+    "verdict": "CONDITIONAL PASS",
+    "auditor": "kimi-k3",
+    "report": "docs/synova/audit-reports/2026-09-24-K3-批次2-D918-D936.md",
+    "date": "2026-09-24",
+    "summary": "P1×2：install-dsh-preset.test.sh 未登记 ci.yml（M3 复发）+ main 现红 2 条（T3 字面串被 D926 persona 重写弄断，sed 空转→漂移检测失效）；Phase-0 六文件有独立 brief（P2 汇总缺口）。条件：登记 CI+修 T3+转绿"
+  },
   "fix_task_id": null,
   "write_set": [
     "docs/synova/coordination/派单-W1-双DSH提升-20260923.md",
@@ -28,19 +36,34 @@
     ".claude/skills/dev-doc-spec/SKILL.md",
     ".dsh/skills/dev-doc-spec/SKILL.md",
     "scripts/control-tower/install-dsh-preset.sh",
-    "docs/synova/coordination/TASK-ROUTING.md"
+    "docs/synova/coordination/TASK-ROUTING.md",
+    "tests/control-tower/install-dsh-preset.test.sh",
+    ".github/workflows/ci.yml",
+    ".claude/task-briefs/2026-09-24-B3-d922-fixture-registry.md"
   ],
   "program": {
     "source": "docs/synova/research/研究院交接-20260922/双DSH执行提升清单.md（121 行）+ docs/synova/coordination/裁定-双DSH提升清单-20260922.md（99 行，含创始人三项裁决）",
     "shape": "1 程序卡 + 9 子卡 + 3 Wave；Wave 门 = K3 审 + CTO 收件闸，未过不得开下一 Wave",
     "waves": {
-      "W1": ["D923 = D1 K3 必经合并门禁", "D924 = B4 子进程输出协议", "D925 = C2 deps-interface 立标准"],
-      "W2": ["B1 路由自卫 + 财务负值 guard（前置 D911 切片 B）", "B2 边界值清单进 dev doc 模板"],
-      "W3": ["B3 as/! 门禁（先钉计数配方）", "C1 编排层第二抽象（先观测一轮）", "D2 Win 环境标准化（等机器）", "D3 Win 长处固化"]
+      "W1": [
+        "D923 = D1 K3 必经合并门禁",
+        "D924 = B4 子进程输出协议",
+        "D925 = C2 deps-interface 立标准"
+      ],
+      "W2": [
+        "B1 路由自卫 + 财务负值 guard（前置 D911 切片 B）",
+        "B2 边界值清单进 dev doc 模板"
+      ],
+      "W3": [
+        "B3 as/! 门禁（先钉计数配方）",
+        "C1 编排层第二抽象（先观测一轮）",
+        "D2 Win 环境标准化（等机器）",
+        "D3 Win 长处固化"
+      ]
     },
     "done_definition": "9 子卡全 merged + 每卡含先红后绿夹具与反例夹具（裁定 A2）+ 写明失效条件（裁定 A3）+ K3 报告在库 + 程序卡状态与证据链闭合",
     "prerequisite_unlocked_by_cto": "D1 前置（5 份 K3 报告入 main + verdict 回填）已于 2026-09-23 由 CTO 完成（PR #712 / #713 合并，D821/D858/D865 卡 audited/PASS）"
   },
-  "updated_at": "2026-09-23",
+  "updated_at": "2026-09-24",
   "updated_by": "synova-cto"
 }

@@ -1,0 +1,3 @@
+{"id":"D1105","title":"派单件移交线负责人层 + dashboards 改道","status":"in_progress","created":"2026-10-01","branch":"docs/D1105-dispatch-procedure-and-dashboards",
+"write_set":["docs/synova/coordination/CTO-派单规程.md","docs/synova/coordination/CTO-派单模板-v3.md","docs/synova/coordination/CTO-DSH派单台账.md","docs/authority/DOCS-REGISTRY.yaml","dsh/plugins/synova-dashboards/scripts/install-dashboards.sh",".claude/task-briefs/2026-10-01-D1105-派单件移交与dashboards改道.md","task-state/D1105.json","memory/notes/proposed/2026-10-01-d1105-dispatch-handover.md",".claude/bypass.log"],
+"note":"三件派单作业件从过程档案整份搬运入仓（内容逐字对账，只加来源头）⇒ 线负责人层拿得到判据源；install-dashboards.sh ④ 步退役 legacy 死引用；三件登记 DOC-0121/0122/0123"}

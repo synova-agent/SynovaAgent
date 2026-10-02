@@ -139,3 +139,10 @@
 2. **执行形态 = 小队（🎽 synova-squad-lead）**：队长 + ≤2 编码（走 🛠 synova-dsh 纪律模式）+ 1 自验；自验不得由编码兼任。
 3. **制衡提示（承重墙）**：规格与协调同归 CTO 后，独立环节只剩 K3 → **K3 必经合并门禁（D923）不是可选项**，是该形态的制衡承重墙。
 4. **长任务形状**：程序卡（1）+ 子卡（N）+ Wave 门（K3 审 + CTO 收件闸），见 `docs/synova/coordination/派单-W1-双DSH提升-20260923.md`。
+
+---
+
+## 域归属的唯一源（D943，2026-09-24）
+
+**`docs/synova/coordination/ownership.yaml` 是「路径 → 域（mac/win/k3）」的唯一机器可读源**；本文中任何归属描述（含「Mac 域／Win 域」字样）均为导航性说明，**冲突时以该表的机器裁决为准**。
+判定命令：`python3 scripts/control-tower/check-ownership.py <文件...> --owner mac|win`。改表属**门禁语义变更**：须同批 `--emit-codeowners` + 逐字节 drift 断言 + 判别性夹具，并**必过 K3**。

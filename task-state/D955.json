@@ -1,0 +1,73 @@
+{
+  "task_id": "D955",
+  "title": "D943 文档面 + DSH 断面接线（PR-2）：旧断面锚清零 + 断面门禁接线 CI/pre-commit",
+  "status": "impl_done",
+  "risk": "medium",
+  "domain": "mac",
+  "owner": "mac-coding",
+  "executor": "dsh-cto",
+  "milestone": "M0 项目管理基建",
+  "write_set": [
+    "docs/synova/coordination/TASK-ROUTING.md",
+    "docs/synova/coordination/Win侧同步包-20260923.md",
+    "docs/synova/coordination/两侧协作方式-Mac与Win-20260923.md",
+    "docs/synova/coordination/开工指令-Mac小队-D937-20260924.md",
+    "docs/synova/coordination/派单-W0与首模块-Win侧-20260923.md",
+    "docs/synova/coordination/收件闸检查单.md",
+    "docs/synova/coordination/规格-M9-门禁三件套-唯一事实源.md",
+    "docs/synova/coordination/派单模板.md",
+    "docs/synova/coordination/CTO-固化-II-研究院权威结论-20260924.md",
+    "docs/synova/coordination/CTO-固化-最终方向与在制任务-20260924.md",
+    ".github/workflows/ci.yml",
+    "scripts/pre-commit-check.sh",
+    "task-state/D955.json",
+    ".claude/task-briefs/2026-09-24-D955-d943-docs-anchor.md"
+  ],
+  "spec": "docs/synova/coordination/派单-并行CTO-PR2-新规范接线-20260924.md",
+  "impl": {
+    "branch": "feat/d943-docs-anchor",
+    "note": "前置：PR #745（机制面）squash 落 main = 1145827。本单接线 + 文档面。本卡覆盖 PR-2（#748）与其拆分出的 PR-2a（收件闸检查单.md 单独落地）——拆分为 D734 预算 CI 实测强制。"
+  },
+  "audit": null,
+  "fix_task_id": null,
+  "note": "派单 §一 的 10 份写集实测不足以让完成标准 1/2 转绿：main 上另有 2 份带旧锚文档（CTO-固化-II L17 / CTO-固化-最终方向 L81）不在写集内 → 本单补入。接线形态与派单字面不同，两处实测偏差已在 brief Q1 与 PR 正文记录：①「清单加一行」会把命令塞进 `bash \"$t\"` 清单（必红），改为 done 之后独立命令计入 FAIL；② `soft_check` 第二参是命中描述串而非命令（原文形态恒判 1 命中 → CI strict 恒红），改为先跑命令取结论。③ 门禁冲突（待 K3/CTO 裁定）：D734 预算按 `git diff --name-only --diff-filter=ACMR origin/main...HEAD` 计数，而 .claude/bypass.log 由 post-commit hook 每次提交强制追加（merge-writeset-gate 自认其为「运行期产物，与写集无关」并豁免，D860 GOV_PREFIX_RE 却未含它）→ 顶格 12 份写集在 CI 上必假红（实测 13 > 12，唯一超标项即该账本）；本轮按 D734 指示「拆 PR」处置（禁调高上限），收件闸检查单.md 移出为 PR-2a。",
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "P1",
+      "title": "D734 预算门禁与强制 bypass.log 账本口径冲突 → 顶格 12 份写集必假红",
+      "evidence": "CI Iron Laws job（PR #748）= `❌ ① 变更文件数 13 > 上限 12`，13 中唯一非交付项为 .claude/bypass.log（post-commit hook 强制追加）；merge_writeset_gate 自认其「运行期产物，与写集无关」并逐条豁免，check-pr-budget.sh 的 D860 GOV_PREFIX_RE 未含它。",
+      "disposition": "本单按 D734「拆 PR（禁调高上限）」处置（收件闸检查单.md → PR-2a #749）；是否把 .claude/bypass.log 纳入 D860 豁免属门禁语义变更，待 K3/CTO 裁定。"
+    },
+    {
+      "id": "F2",
+      "severity": "P1",
+      "title": "check-dsh-anchor.py 豁免判定可被普通词触发（fail-open 向量）——本单刚把它接进 CI/pre-commit",
+      "evidence": "脚本 L75：任一行含 `superseded`（或 `已作废口径表`/`## 引用豁免`）即置 exempt=True，且对**该行之后至下一个 `## ` 标题**全部跳过扫描。实测探针（同内容仅差该词）：\n  A 含「旧的 superseded 记录见下表」+ 下行 `0.1.7-alpha.2 @ 00102833` → `DSH-ANCHOR: OK  [扫描 1 份]` exit 0（违规被静默跳过）\n  B 去掉该词、违规行不变 → `❌ ...:3 引用了已 superseded 的断面` `VIOLATION(1)` exit 1",
+      "disposition": "门禁语义变更不在本单权限内（改判定逻辑须另立卡 + K3）；登记待裁定。"
+    },
+    {
+      "id": "F3",
+      "severity": "P2",
+      "title": "/tmp/.synova-before-brief 是机器全局证据文件 → 跨 session 串扰",
+      "evidence": "本单 pre-commit 组 6 报 `⚠️ 时间戳顺序: brief 必须早于代码写入`，其内容为 `FILE=/Users/wane/.claude/projects/-Users-wane-SynovaAgent/memory/dsh-electron-source-desktop.md | BRIEF=.claude/task-briefs/2026-09-24-D941-ownership-generative-rewrite.md` —— 与本单无关（另一 session）。",
+      "disposition": "CI 上 /tmp 为干净 runner 故不触发；本地多 session 并行时会互相污染。待裁定（按 session 隔离证据文件）。"
+    },
+    {
+      "id": "F4",
+      "severity": "P2",
+      "title": "未合分支 #738 的剩余载荷会二次染红断面自扫 + D943 卡分叉",
+      "evidence": "docs/d943-cto-a-items 树上自扫 `VIOLATION(2)`：`派单-K3审计-批次4-20260924.md:17` 与 `派单-并行CTO-PR2-新规范接线-20260924.md:83`（本单派单件自己）仍写 `0.1.7-alpha.2 @ 00102833`（main 无此二文件故本单未清）。另：`task-state/D943.json` 在 #738 = blob 5c2b02ca、在已合 #745 = blob 8af1cff4（main 现为后者）→ #738 剩余载荷落地时该卡与上述二件需一并处理。",
+      "disposition": "不属本单写集（另分支载荷）；登记待主 CTO 处理。"
+    },
+    {
+      "id": "F5",
+      "severity": "P2",
+      "title": "alloc-task-id.sh L242 全角标点致 unbound variable（D370 同型）",
+      "evidence": "本单取号实测：`scripts/control-tower/alloc-task-id.sh: line 242: BRIEF_FILE）： unbound variable`（号已正确发出 D955，报错发生在建骨架 brief 段）。",
+      "disposition": "已由在途卡 D944（mac-fullwidth-residual-6）覆盖，不另立卡。"
+    }
+  ],
+  "updated_at": "2026-09-24",
+  "updated_by": "synova-cto"
+}

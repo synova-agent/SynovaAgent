@@ -1,0 +1,39 @@
+{
+  "task_id": "D943",
+  "title": "D943 机制面：DSH 断面唯一源+门禁 / K3 报告机械保险 / 观测式看板 runner（拆分自 #738）",
+  "status": "impl_done",
+  "risk": "medium",
+  "domain": "mac",
+  "owner": "mac-coding",
+  "executor": "dsh-cto",
+  "milestone": "M0 项目管理基建",
+  "write_set": [
+    "scripts/control-tower/check-dsh-anchor.py",
+    "scripts/control-tower/check-k3-report.py",
+    "scripts/control-tower/daily-cto-board.sh",
+    "tests/control-tower/check-dsh-anchor.test.sh",
+    "tests/control-tower/check-k3-report.test.sh",
+    ".github/workflows/ci.yml",
+    "docs/synova/coordination/CTO-看板-自动.md",
+    "docs/synova/coordination/DSH-断面.json",
+    "docs/synova/coordination/已作废口径表.md",
+    "task-state/D943.json",
+    "memory/notes/proposed/2026-09-24-dsh-anchor-gate.md",
+    ".claude/task-briefs/2026-09-24-D943-mechanism.md",
+    ".claude/task-briefs/2026-09-24-D943-cto-a-items.md",
+    ".claude/task-briefs/2026-09-25-D963-dsh-sidebar-charter-grid-panel.md",
+    "docs/synova/coordination/三问-48格.html",
+    "docs/synova/coordination/宪章三问-48格.json",
+    "memory/notes/implemented/2026-09-25-research-institute-baseline.md",
+    "scripts/control-tower/gen-charter-grid.py",
+    "task-state/D963.json"
+  ],
+  "impl": {
+    "branch": "fix/d943-anchor-exempt",
+    "note": "CTO 自产治理件；write_set 为登记用（门禁 S1 写集源）。2026-09-25 载体变更：原分支 feat/d943-mechanism 随 #745 合并后 PR 已 closed（GitHub 不可重开），按主 CTO 补充令改为自 origin/main 新建 fix/d943-anchor-exempt，只做 P1 豁免逃逸收口。"
+  },
+  "spec": "docs/synova/coordination/CTO-固化-最终方向与在制任务-20260924.md",
+  "note": "CTO 侧治理交付。补登记动机：commit 前缀引用了 D942/D943 但无卡 → 写集门禁三源皆空 → fail-closed（#736/#738 的 CI 红真因）。 ｜ 拆分说明：原 #738 含 23 文件超 D734 上限，拆为「机制面」（本 PR）与「文档/接线面」（PR-2）。 ｜ 2026-09-24 修复：ci.yml 两行由循环体移入清单（原形态致 ubuntu Control-Tower job exit 126）；恢复 docs/synova/coordination/派单模板.md 到 main 版本（4fd7fcc9 误删，属夹带）；CTO-看板-自动.md 属本 PR 产物 → 补登记 write_set。自扫接线（ci.yml + pre-commit soft_check）移交 PR-2。 ｜ 2026-09-25 修复轮（主 CTO 补充令，载体 fix/d943-anchor-exempt @ origin/main 11458279）：K3 批次4 §1.4【P1 豁免单行逃逸】真修——check-dsh-anchor.py 删除「行内含 superseded / 已作废口径表 即豁免」关键字分支；豁免只认 `## 引用豁免` 段，且段内须至少一条逐行显式条目（`-`/`*`/`+`/`1.` 列表项），无条目则整段不生效（fail-closed）。夹具 10→12：T11（段外关键字行仍判 VIOLATION(1)，K3 逃逸向量原样复现）/ T12（段内显式条目 OK(0)），并对 T11/T12 加 rc+结论串双断言。收紧豁免后暴露的合法内容按各自动出清路径收口（均在 D943 write_set 内）：① 版本串正则加 `(?!-)` 排除 SynovaAgent-0.1.0-win32-x64.exe 被截成 0.1.0-win32 的误报（原靠关键字豁免吞掉）；② DSH-断面.json 沿革补登 0.1.2-rc.1 / 0.1.3-alpha.1（出处 docs/synova/coordination/审计发现台账-DSH-CTO.md:266-267，属史料叙述 → 按 policy.known_versions_note「历史版本一律入本表」）；③ 已作废口径表.md 补 `## 引用豁免` 显式段（该表登记的是作废事实本身）。§1.2（ci.yml 夹具入清单）与 §1.3（write_set 补登）经复核为 35de80cb 已落位，本轮不重复改。遗留边界：本分支带树/CI 模式自扫均报 VIOLATION(4)，4 条全落 3 份旧断面锚文档（CTO-固化-II:17 / CTO-固化-最终方向:81 / Win侧同步包:94 ×2），属 PR-2（D955 feat/d955-d943-docs-anchor）修复面；合并态模拟（D955 树 + 本轮文件）实测 DSH-ANCHOR: OK。",
+  "updated_at": "2026-09-25",
+  "updated_by": "synova-cto"
+}

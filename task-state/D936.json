@@ -1,0 +1,40 @@
+{
+  "task_id": "D936",
+  "title": "模块归属改为服从 ownership.yaml（删四组冲突清单）+ 台账三批登记",
+  "status": "impl_done",
+  "executor": "dsh-cto",
+  "writer": "synova-squad-b5",
+  "writer_note": "按 CTO 2026-09-24 口径记（writer=谁写这个文件；updated_by=最后改动者）。归属以 CTO 裁定为准。【自述·一手观察，仓库不可取证】本 session（b5-c1）对该文件零字节写入（全程只读核验 + 停写待命）。【不可取证，见 B5-自验.md §9.4 U5】提交身份在本仓恒为 synova-cto，无法区分代理；birth 因每次写入重置，故 17:4x 期间的物理写入者无法由仓库证据判定 → 归 D940 判据取证。【可核】本版本 birth=2026-09-24 18:08:04（复核命令：stat -f '%N birth=%SB' task-state/D936.json）。",
+  "root_cause_field_alias": "backfill_reason",
+  "domain": "mac",
+  "milestone": "M1 控制塔域判定",
+  "depends_on": [],
+  "pr": "#733",
+  "merge_commit": "12383f144f912279390698eb325eacba78e75a9c",
+  "merged_to_main": true,
+  "branch": "docs/d936-ownership-defer",
+  "spec": ".claude/task-briefs/2026-09-24-D936-ownership-defer.md",
+  "impl": "PR #733（merge commit 12383f144f912279390698eb325eacba78e75a9c，merged_to_main=true）合入 main，4 文件：docs/synova/coordination/模块归属-MacWin-20260923.md（M，+33/-9——改为「三条原则 + 服从 ownership.yaml」，删四组冲突清单）、docs/synova/coordination/审计发现台账-DSH-CTO.md（M，+2——2026-09-24 三处登记）、.claude/task-briefs/2026-09-24-D936-ownership-defer.md（A，42 行新文件）+ .claude/bypass.log（M，+2 行，hook 自动登记 builtin，不计入 write_set）。分支 docs/d936-ownership-defer，实现提交 acafaa03、e48b1900。",
+  "audit": "pending：K3 批次2 派单 docs/synova/coordination/派单-K3审计-批次2-20260924.md:28（审计问项=台账引用口径「39 条违规」的构成是否需豁免规则）",
+  "fix_task_id": null,
+  "write_set": [
+    "docs/synova/coordination/模块归属-MacWin-20260923.md",
+    ".claude/task-briefs/2026-09-24-D936-ownership-defer.md",
+    "docs/synova/coordination/审计发现台账-DSH-CTO.md"
+  ],
+  "evidence": {
+    "pr_merged": "git -C /Users/wane/SynovaAgent/.synova-wt-squad-b5 merge-base --is-ancestor 12383f144f912279390698eb325eacba78e75a9c origin/main && echo D936_PR_IN_MAIN → D936_PR_IN_MAIN",
+    "file_list": "git diff --name-status 2cda1528 12383f14 → M .claude/bypass.log | A .claude/task-briefs/2026-09-24-D936-ownership-defer.md | M docs/synova/coordination/审计发现台账-DSH-CTO.md | M docs/synova/coordination/模块归属-MacWin-20260923.md；numstat 2/0、42/0、2/0、33/9",
+    "main_reference": "docs/synova/coordination/派单-K3审计-批次2-20260924.md:28；.claude/task-briefs/2026-09-24-D936-ownership-defer.md:1（标题即「Task Brief — D936 模块归属改为服从 ownership.yaml（删四组冲突清单）」）",
+    "number_reuse_leftovers": "撞号留痕三处（均为 main 侧可核原文）：task-state/D940.json:23「D936 被我重复使用」、task-state/D935.json:35「已立卡 **D936**，必过 K3」、docs/synova/coordination/派单-Mac小队-五卡-20260924.md:27「D936 被 CTO 重复使用」",
+    "other_main_reference_not_collision": "非撞号的另一处 main 引用（勿混入撞号清单）：docs/synova/coordination/派单-K3审计-批次2-20260924.md:35 原文=「4. **D933/D936**：我（CTO）关于归属的**两次自我纠错**是否已彻底（有无残留的第二事实源）。」",
+    "skeleton_untracked": "git -C /Users/wane/SynovaAgent status --porcelain task-state/D936.json → ?? task-state/D936.json（主工作区未跟踪骨架；未落 main → 引用豁免，git cat-file -e origin/main:task-state/D936.json → exit=128；不在本卡写集，未删未改）",
+    "main_task_state": "git ls-tree --name-only origin/main task-state/ 匹配 D936.json 命中数 = 0 → main 侧无 D936 卡",
+    "no_task_state_in_pr": "git diff --name-status '12383f14^1' 12383f14 → M .claude/bypass.log | A .claude/task-briefs/2026-09-24-D936-ownership-defer.md | M docs/synova/coordination/审计发现台账-DSH-CTO.md | M docs/synova/coordination/模块归属-MacWin-20260923.md；本 PR 命中 task-state/ 路径数 = 0（grep -c）",
+    "ct34_exemption_layer": "CT-34 文档提交豁免（main 侧可核）：docs/synova/coordination/AUDIT-FINDINGS-LEDGER.md:90（创始人 2026-08-16 决策）+ scripts/pre-commit-check.sh:290-346（is_doc_only → 纯文档提交只跑 Secrets、豁免 12 组）"
+  },
+  "root_cause_missing_registration": "号码复用 + 骨架未提交为主因：D936 号先由分配器 alloc-task-id 发给 M1b 并生成骨架 task-state/D936.json（该骨架未落 main → 引用豁免；可核：git -C /Users/wane/SynovaAgent status --porcelain task-state/ 显示 ?? task-state/D936.json；updated_by=alloc-task-id），M1b 改挂 D941 后本号又被 #733 的 ownership 文档任务使用，而骨架始终未提交、main 侧不存在；并列一层：本卡 PR（#733）实测 4 文件（3 个文档/brief + .claude/bypass.log）零 task-state 文件，纯文档卡走 CT-34 豁免路径（只跑 Secrets、豁免 12 组），登记环节没有物理点会红（F1 族第 4 次；登记缺失自 D593 起三次同源）。",
+  "note": "⚠️ 号码复用事故（按 CTO B5 派单原样登记，不美化、不省略）：① 本号 D936 先由分配器 alloc-task-id 发给 M1b「ownership 全量重写」并生成骨架 task-state/D936.json（未落 main → 引用豁免；可核：git -C /Users/wane/SynovaAgent status --porcelain task-state/ 显示 ?? task-state/D936.json；注意同名不同物——该骨架是主工作区未跟踪文件，与本卡自身文件同路径；title=「M1b ownership 全量重写（#730 新基线：最长前缀 + fail-closed + electron/src/extensions 翻转）」，status=claimed，updated_by=alloc-task-id）——该骨架至今仍是主工作区未跟踪文件（git status → ?? task-state/D936.json），从未提交，故 main 侧 task-state 无 D936 卡。② M1b 已改挂 D941 承载：task-state/D941.json（title=「M1b：ownership.yaml 生成式重写（最长前缀 + 兜底 fail-closed + 解析算法）必过 K3」，updated_by=synova-cto）。③ 本卡 D936 按 CTO B5 派单 + PR #733 brief 记为「模块归属服从 ownership.yaml」任务（brief 标题：Task Brief — D936 模块归属改为服从 ownership.yaml（删四组冲突清单））。④ 撞号在 main 侧三处留痕（自验判红后已删去原误列为撞号的 K3 派单 :35）：task-state/D940.json:23「D936 被我重复使用」、task-state/D935.json:35「已立卡 **D936**，必过 K3」、docs/synova/coordination/派单-Mac小队-五卡-20260924.md:27「D936 被 CTO 重复使用」。⑤ 分配器同批缺陷（非本卡引入，D935 收尾已登记）：取号时 title 含 / 未消毒 → 本号 brief 骨架未生成，报错「…/D936-M1b-…electron/src/extensions…md: No such file or directory」（docs/synova/product-lines/evidence/D935-20260924/closeout.md:98）。⑥ 撞号机制处置由 D940（名字统一分配：worktree/分支/卡号）立项，见 task-state/D940.json。⑦ 同一 K3 派单件的另一处引用（不是撞号，勿混）：docs/synova/coordination/派单-K3审计-批次2-20260924.md:35 原文「4. **D933/D936**：我（CTO）关于归属的**两次自我纠错**是否已彻底（有无残留的第二事实源）。」",
+  "updated_at": "2026-09-24",
+  "updated_by": "synova-squad-b5"
+}

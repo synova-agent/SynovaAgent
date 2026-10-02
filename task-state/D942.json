@@ -1,0 +1,25 @@
+{
+  "task_id": "D942",
+  "title": "CTO 固化件 I/II + cto/k3 预设入仓 + cto-handover 技能开工首件",
+  "status": "impl_done",
+  "risk": "medium",
+  "domain": "mac",
+  "owner": "mac-coding",
+  "executor": "dsh-cto",
+  "milestone": "M0 项目管理基建",
+  "write_set": [
+    "docs/synova/coordination/**",
+    ".claude/skills/**",
+    ".dsh/skills/**",
+    "docs/synova/presets/**",
+    "task-state/**"
+  ],
+  "impl": {
+    "branch": "docs/d942-cto-fixation",
+    "note": "CTO 自产治理件；write_set 为登记用（门禁 S1 写集源）"
+  },
+  "spec": "docs/synova/coordination/CTO-固化-最终方向与在制任务-20260924.md",
+  "note": "CTO 侧治理交付。补登记动机：commit 前缀引用了 D942/D943 但无卡 → 写集门禁三源皆空 → fail-closed（#736/#738 的 CI 红真因）。",
+  "updated_at": "2026-09-24",
+  "updated_by": "synova-cto"
+}

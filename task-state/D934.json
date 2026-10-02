@@ -1,0 +1,35 @@
+{
+  "task_id": "D934",
+  "title": "两侧协作方式（Mac/Win 同构，唯一差异 = CTO 角色由 Codex 执行）",
+  "status": "impl_done",
+  "executor": "dsh-cto",
+  "writer": "synova-squad-b5",
+  "writer_note": "按 CTO 2026-09-24 口径记（writer=谁写这个文件；updated_by=最后改动者）。归属以 CTO 裁定为准。【自述·一手观察，仓库不可取证】本 session（b5-c1）对该文件零字节写入（全程只读核验 + 停写待命）。【不可取证，见 B5-自验.md §9.4 U5】提交身份在本仓恒为 synova-cto，无法区分代理；birth 因每次写入重置，故 17:4x 期间的物理写入者无法由仓库证据判定 → 归 D940 判据取证。【可核】本版本 birth=2026-09-24 18:08:04（复核命令：stat -f '%N birth=%SB' task-state/D934.json）。",
+  "root_cause_field_alias": "backfill_reason",
+  "domain": "mac",
+  "milestone": "M0 项目管理基建",
+  "depends_on": [],
+  "pr": "#731",
+  "merge_commit": "1a1cccc8f3d40b93e1d32cf881352ff25850c394",
+  "merged_to_main": true,
+  "branch": "docs/d934-cross-side-mode",
+  "spec": "docs/synova/coordination/两侧协作方式-Mac与Win-20260923.md",
+  "impl": "PR #731（merge commit 1a1cccc8f3d40b93e1d32cf881352ff25850c394，2026-09-24 04:50:58 +0800，merged_to_main=true）合入 main，2 文件：docs/synova/coordination/两侧协作方式-Mac与Win-20260923.md（A，72 行新文件——文档自声明「本件是两侧协作的唯一事实源」）+ .claude/bypass.log（M，+1 行，hook 自动登记 builtin，不计入 write_set）。分支 docs/d934-cross-side-mode，实现提交 6782ff2d。",
+  "audit": "pending：K3 批次2 派单 docs/synova/coordination/派单-K3审计-批次2-20260924.md:26（审计问项=「严禁子代理代替小队」的判据是否可执行；有无与现行法规/仓库现实冲突处）",
+  "fix_task_id": null,
+  "write_set": [
+    "docs/synova/coordination/两侧协作方式-Mac与Win-20260923.md"
+  ],
+  "evidence": {
+    "pr_merged": "git -C /Users/wane/SynovaAgent/.synova-wt-squad-b5 merge-base --is-ancestor 1a1cccc8f3d40b93e1d32cf881352ff25850c394 origin/main && echo D934_IN_MAIN → D934_IN_MAIN",
+    "file_list": "git diff --name-status cbce421a 1a1cccc8 → M .claude/bypass.log | A docs/synova/coordination/两侧协作方式-Mac与Win-20260923.md；numstat 72/0（新文件 72 行）；wc -l 该文件 → 72",
+    "main_reference": "docs/synova/coordination/派单-K3审计-批次2-20260924.md:26（批次2 审计表行：D934 | #731 | 两侧协作方式…）",
+    "no_task_state_in_pr": "git diff --name-status '1a1cccc8^1' 1a1cccc8 → M .claude/bypass.log | A docs/synova/coordination/两侧协作方式-Mac与Win-20260923.md；两 PR 合计命中 task-state/ 路径数 = 0（grep -c）→ 本件是纯文档卡，PR 内零登记动作",
+    "ct34_exemption_layer": "CT-34 文档提交豁免（main 侧可核）：docs/synova/coordination/AUDIT-FINDINGS-LEDGER.md:90（创始人 2026-08-16 决策）+ scripts/pre-commit-check.sh:290-346（is_doc_only → 纯文档提交只跑 Secrets、豁免 12 组）→ 纯文档卡没有会因「未登记」而红的物理点",
+    "main_task_state": "git ls-tree --name-only origin/main task-state/ 匹配 D934.json 命中数 = 0 → main 侧无本卡，本卡即补登记（本卡自身文件 D934.json 未落 main → 引用豁免；可核：git cat-file -e origin/main:task-state/D934.json → exit=128；本 PR 提交后落 main）"
+  },
+  "root_cause_missing_registration": "纯文档卡由 CTO 直接出件并合并（#731），走 CT-34 纯文档提交路径（只跑 Secrets、豁免 12 组），登记环节没有任何物理点会红；且本件从未经 alloc-task-id 取号建卡——该 PR 实测仅 1 个 docs 文件 + .claude/bypass.log、零 task-state 文件，故 main 侧 task-state 无 D934 卡（F1 族第 4 次；登记缺失自 D593 起三次同源）。",
+  "note": "B5 补登记（CTO 派单）：交付物早已合并 main（PR #731），本卡只补登记，无新交付、无新写集。main 侧引用见 docs/synova/coordination/派单-K3审计-批次2-20260924.md:26。待办：K3 批次2 审计（status 未完结），审计回执前不得视为已验收。",
+  "updated_at": "2026-09-24",
+  "updated_by": "synova-squad-b5"
+}
