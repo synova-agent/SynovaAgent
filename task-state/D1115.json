@@ -1,0 +1,3 @@
+{"id":"D1115","title":"Win 侧模块分配权落文件（CTO 直配）+ #939 采纳","status":"in_progress","created":"2026-10-02","branch":"docs/D1115-win-module-assign",
+"write_set":["docs/synova/CTO-ROLE.md","docs/synova/coordination/模块分配-Win侧-20261002.md","docs/synova/coordination/CTO-状态台账.md","docs/authority/DOCS-REGISTRY.yaml","task-state/D1115.json",".claude/bypass.log"],
+"note":"创始人 2026-10-02：「以后不分域，win 侧的任务由你分配模块就行」⇒ 落 CTO-ROLE.md §1.1.1（CTO 直配模块/WIP=1/仍不给方向权与合并权/号源仍走唯一入口/跨线热点文件归治理线单写者）。#939（X30 工程落地 session 派的 Win 侧门禁工作）按创始人「已经在做了」采纳不退回，条件两条：补派单记录 + 并入治理线单写者序列；验收按 A7 三档分别出数"}

@@ -353,3 +353,10 @@ documents:
     status: active
     owner: DSH
 
+  # ---- D1115（Win 侧模块分配权 + #939 采纳）2026-10-02 ----
+  - id: DOC-0141
+    type: governance
+    path: docs/synova/coordination/模块分配-Win侧-20261002.md
+    status: active
+    owner: DSH
+
