@@ -1,0 +1,14 @@
+{
+  "task_id": "D1115",
+  "title": "B-1 交付收口：BR-5 四处对账件落仓 + task-state + 证据补强",
+  "status": "claimed",
+  "domain": "mac",
+  "owner": "基座线(deepseek-flash)",
+  "spec": ".claude/task-briefs/2026-10-02-D1115-b1-br5-closeout.md",
+  "impl": "docs/synova/coordination/B-1-BR5对账-20261001.md",
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-02",
+  "updated_by": "harness-基座线",
+  "note": "CTO 验收退回补三项：① 对账件从未在任何远端分支 ⇒ 落仓可审计；② 有产物无卡 = 僵尸形态 ⇒ 补 task-state(brief+本件)；③ 号源走水位表。另补两条证据：⑤-1 pruner 影响量化(P0 支撑)、⑤-2 另三处生产调用点。K3 抽验面=对账件 §二-2 第一红 + §一 溯源表；未抽验前不得进排期/对外。号源偏差记录：alloc-task-id.sh 调用挂起(ls-remote 网络面)⇒ 按 CTO 指令以水位表最大号+1 取号。水位表最大号实测 D1113(分支 docs/D1113-receipt-and-plugin-contract)⇒ 本件原取 D1114，但**收口轮实测 D1114 已被 ssh 远端分支 docs/D1114-anchors-base-product（含 task-state/D1114.json）占用** ⇒ 依「单一递增」改为 D1115（D1115 在 origin/ssh/本地 task-state 三面均无占用）。撞号与改号全过程见对账件 §九。"
+}
