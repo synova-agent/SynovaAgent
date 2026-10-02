@@ -1,0 +1,14 @@
+{
+  "task_id": "D1071",
+  "title": "X30 M0.5a 295 工作树三分类（只读，不删）",
+  "status": "impl_done",
+  "domain": "mac",
+  "owner": "工程线（X30 启动窗）",
+  "spec": ".claude/task-briefs/2026-09-30-D1071-x30-t3.md",
+  "updated_at": "2026-09-30",
+  "updated_by": "harness-登记（X30 启动窗）",
+  "note": "295 工作树只读三分类（可合105/需改125/作废65/活跃1，零删除）。指针: ~/Synova-过程档案/2026-09-30-mac小队-记录-295工作树三分类.md；sha256:b0342035f283b159；as_of 2026-09-30；重跑=打开该件按§五命令",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null
+}

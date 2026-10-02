@@ -35,6 +35,12 @@
 做什么：
 - docs/authority/DOCS-REGISTRY.yaml
 - .claude/task-briefs/2026-10-02-D1003-doc-registry-registration.md
+- docs/synova/dispatch/D1001-ownership-renderer-tests-20260925.md
+- docs/synova/dispatch/D1002-workspaces-route-order-f1-20260925.md
+- docs/synova/dispatch/D1003-docs-tools-and-a-class-registry-20260926.md
+- task-state/D1001.json
+- task-state/D1002.json
+- task-state/D1003.json
 - .claude/bypass.log
 
 不做什么：

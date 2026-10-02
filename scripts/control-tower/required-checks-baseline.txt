@@ -1,0 +1,53 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# required-checks-baseline.txt — main 分支保护「必需状态检查」登记表（live 镜像表）
+#
+# 用途: scripts/control-tower/check-required-contexts.py 的必需集来源。断言
+#   「必需集 ⊆ .github/workflows/** 能产出的 check-run 名全集（job `name:` + strategy.matrix 展开）」。
+#   失配 ⇒ 该 check-run 永不上报 ⇒ PR 永久 blocked
+#   （D971 同型事故原文: 405 "12 of 12 required status checks are expected."）。
+#
+# schema（数据行，分隔符 " | "；值内不得出现 '|'）:
+#   <CONTEXT_NAME 逐字> | owner=<名或 UNASSIGNED> | source=branch-protection API | as_of=<ISO8601 Z> | evidence=<引用>
+#   · CONTEXT_NAME 必须与 branch protection 的 required_status_checks.contexts **逐字一致**
+#     （含全角括号/空格/大小写；不规范化、不改写内部空白）。
+#   · owner: 漂移（job name 改动 / 保护规则改动）时的处置责任人；
+#     UNASSIGNED = 待 CTO/线负责人指派（不自行认领，同 ci-red-baseline.txt 口径）。
+#   · source: 唯一合法来源 = branch-protection API（手抄即失效）。
+#   · as_of: 本表生成时刻（UTC）。
+#   · evidence: 取数锚点（仓@main SHA + API 路径）。
+#   · expires: **本表不设该键** —— 本表是「live 镜像」不是「豁免表」，不存在"过期即放行"语义；
+#     新鲜度由 `--api-check` 的 live ⇄ 基线双向比对保证（漂移即 exit 1）。
+#     若未来要复审期限棘轮，须**同时**落地消费逻辑（不得只写键不消费；V3.9 教训: 软机制 0% 有效）。
+#
+# 生成方式（**不许手抄**；下列命令即本文件的实际生成命令，可整段重放）:
+#   AS_OF=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+#   SHA=$(gh api repos/synova-agent/SynovaAgent/branches/main --jq .commit.sha)
+#   gh api repos/synova-agent/SynovaAgent/branches/main/protection \
+#     --jq '.required_status_checks.contexts[]' \
+#   | while IFS= read -r c; do
+#       printf '%s | owner=UNASSIGNED | source=branch-protection API | as_of=%s | evidence=synova-agent/SynovaAgent@%s GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts\n' \
+#         "$c" "$AS_OF" "$SHA"
+#     done
+#
+# 本次生成取数（实测原始值）:
+#   as_of = 2026-10-01T18:41:11Z
+#   main sha = 4da93b5c3209f87ad8ab092b02fe20f261df3580
+#   contexts_count = 12（= `gh api … --jq ".required_status_checks.contexts | length"`）
+#
+# 校验命令（本表的两条消费路径）:
+#   python3 scripts/control-tower/check-required-contexts.py             # 本地: 必需集 ⊆ 产出集（0/1/2）
+#   python3 scripts/control-tower/check-required-contexts.py --api-check # live ⇄ 基线 双向比对（0/1/2，只报不改）
+#   配套测试: bash tests/control-tower/check-required-contexts.test.sh
+# ═══════════════════════════════════════════════════════════════════════════════
+Architecture Check | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
+Checker Review (maker/checker) | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
+Control Tower Gate Tests (ubuntu-latest) | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
+Control Tower Gate Tests (windows-latest) | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
+Golden Case F1 Gate | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
+Integration Contract Check | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
+Test-Kit Architecture Tests (ubuntu-latest) | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
+Test-Kit Architecture Tests (windows-latest) | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
+TypeScript + Lint + Iron Laws | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
+Vitest (1/2) | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
+Vitest (2/2) | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
+npm audit | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
