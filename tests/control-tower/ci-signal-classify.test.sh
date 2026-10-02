@@ -244,19 +244,53 @@ printf '%s' "$CTJOB" | grep -qF 'os: [ubuntu-latest, windows-latest]' \
   && ok "身份不变: strategy.matrix 未改" || no "strategy.matrix 被改动"
 printf '%s' "$CTJOB" | grep -q 'steps.docsonly.outputs.docs_only' \
   && ok "判据嵌套: docs-only 内门保留（非替代）" || no "docs-only 内门丢失"
-# 分支保护基线（队长 D1039 裁决: 不给其余 job 加 job 级 if: —— 少动必需 context 风险面）
+# 分支保护基线（D1039 队长裁决 → **D1112 语义修正，2026-10-02**）
+#   原判据: 8 个无 if: 的 job「一律不许出现 job 级 if:」。
+#   D1112 实测该判据**抓错了方向**（PR #935 CI 实证 + PR #931 check-runs 实证）:
+#     `test`（Vitest (1/2)(2/2)）与 `golden-case`（Golden Case F1 Gate）承载必需 context 且有 `needs:`；
+#     上游 quality 红时**无 job 级 if:** ⇒ 被隐式 success() 跳过 ⇒ **必需 context 根本不产生**
+#     （PR #931 head 84e9d033 实测: check-run 名回退为未展开的 `Vitest (${{ matrix.shard }})`，
+#      `Vitest (1/2)/(2/2)` 从未出现，`mergeStateStatus=BLOCKED`）。
+#   ⇒ 正确的判据不是"有没有 if:"，而是"if: **是否锁死在已登记的冻结表达式**上"：
+#     ① `needs:` 下游（承载必需 context）**必须** `if: ${{ !cancelled() }}`（= 照跑并如实报红、不消失）
+#     ② 其余 job 保持无 if:（不给必需 context 加新风险面）
+#     ③ 任何**新** if: 或表达式漂移 ⇒ 必红（本判据仍是判别性棘轮，不是放行开关）
+#   冻结表达式登记表（改它 = 改门禁语义 ⇒ 必须过 K3→CTO；见 PR #935 送审项 S-3）
+FROZEN_IF_TEST='${{ !cancelled() }}'
+DOWNSTREAM_NEEDS_JOBS="test golden-case"   # 有 needs: 且承载必需 context 的 job（新增者必须显式登记）
+BASELINE_NO_IF_JOBS="quality architecture test-kit-architecture integration-check audit gate-integrity"
 IF_TOUCHED=""
-for j in quality test architecture test-kit-architecture integration-check audit golden-case gate-integrity; do
+for j in $BASELINE_NO_IF_JOBS; do
   job_block "$j" | grep -qE '^    if:' && IF_TOUCHED="${IF_TOUCHED} ${j}"
 done
+for j in $DOWNSTREAM_NEEDS_JOBS; do
+  if job_block "$j" | grep -qE "^    if: \\\$\\{\\{ !cancelled\\(\\) \\}\\}\$"; then :; else
+    IF_TOUCHED="${IF_TOUCHED} ${j}(缺/偏离冻结表达式 ${FROZEN_IF_TEST})"
+  fi
+done
 [ -z "$IF_TOUCHED" ] \
-  && ok "分支保护基线: 8 个原本无 job 级 if: 的 job 保持无 if（未被新门控触碰）" \
-  || no "以下 job 被新增了 job 级 if:（必需 context 风险面扩大）:${IF_TOUCHED}"
+  && ok "分支保护基线: 上游 6 job 无 if: + needs 下游 2 job 锁死 !cancelled()（表达式冻结，漂移即红）" \
+  || no "job 级 if: 偏离登记（新增/漂移 = 必需 context 风险面变化）:${IF_TOUCHED}"
 if job_block checker-review | grep -qF "if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/feat/')"; then
   ok "分支保护基线: checker-review 的 if: 与基线逐字一致（未加 schedule 门控）"
 else
   no "checker-review 的 if: 偏离基线（基线 = github.event_name == 'pull_request' || startsWith(…feat/)）"
 fi
+# 兜底棘轮（D1112）: 穷举 ci.yml 里**所有**有 `needs:` 的 job，必须逐个登记。
+#   防"新增一个 needs 下游 job 却忘了加 !cancelled()"⇒ 该 job 的必需 context 又会在上游红时消失。
+#   登记面 = DOWNSTREAM_NEEDS_JOBS（上面做 if: 冻结核）+ 已知无需 job 级 if 的例外白名单。
+NEEDS_UNREG=""
+for j in $(grep -nE '^  [a-z0-9_-]+:$' "$CI" | sed 's/^[0-9]*:  //; s/:$//'); do
+  if job_block "$j" | grep -qE "^    needs:"; then
+    case " $DOWNSTREAM_NEEDS_JOBS checker-review " in
+      *" $j "*) : ;;
+      *) NEEDS_UNREG="${NEEDS_UNREG} ${j}" ;;
+    esac
+  fi
+done
+[ -z "$NEEDS_UNREG" ] \
+  && ok "兜底棘轮: 全部有 needs: 的 job 均已登记（新增未登记者 ⇒ 必红）" \
+  || no "有 needs: 但未登记的 job（上游红时其必需 context 可能消失）:${NEEDS_UNREG}"
 printf '%s' "$CTJOB" | grep -q "github.event_name == 'workflow_dispatch'" \
   && ok "安全网②: workflow_dispatch ⇒ 重活无条件跑（人工触发不落 run=false）" \
   || no "缺 dispatch 无条件分支（手动触发可能被静默跳过）"
