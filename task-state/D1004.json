@@ -1,0 +1,25 @@
+{
+  "task_id": "D1004",
+  "title": "js-yaml 未声明依赖收口（package.json 只声明 @types，运行时包缺失）",
+  "status": "claimed",
+  "risk": "low",
+  "domain": "win",
+  "owner_side": "win",
+  "owner": "win-codex-cto",
+  "executor": "synova-squad-lead（队长不下场写码）+ 1 编码 + 1 独立自验 + 1 独立复核",
+  "branch": "fix/d1004-js-yaml-dependency",
+  "base": "origin/main（合后确切 SHA，回执须写明；禁用本地 main）",
+  "depends_on": [],
+  "blocked": "无（可立即开工）",
+  "target": "2026-W40",
+  "spec": "docs/synova/dispatch/D1004-js-yaml-dependency-20260925.md（派单即规格）",
+  "write_set": [
+    "package.json",
+    "package-lock.json",
+    "task-state/D1004.json"
+  ],
+  "source": "K3 D947 独立终审报告 §一.1 注 2（新发现，先于 D947 存在、非回归）",
+  "note": "实测：package.json 只有 @types/js-yaml，无 js-yaml；静态 import 两处——src/config/customer-config-package.ts:32 与 src/playbook/playbook-loader.ts:17（K3 只列了第一处，CTO 复算补出第二处）。maker 侧靠父仓 node_modules 解析侥幸通过；全新 clone 的 CI 必红（D947 新夹具首次把该静态链拉进 vitest 收集面）。版本取 4.1.0 = K3 审计期间两侧对称注入的版本。判据 J1-J6：npm ls 非 extraneous、脱离父仓可解析、两条 import 链都覆盖、@types 保留、零 src 改动、npm ci 干净安装通过。冷启动场景必须实跑，只在开发机既有 node_modules 下验证算空转。",
+  "updated_at": "2026-09-25",
+  "updated_by": "win-codex-cto"
+}

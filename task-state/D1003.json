@@ -1,0 +1,25 @@
+{
+  "task_id": "D1003",
+  "title": "文档/产物治理：Windows 工具陷阱固化（docs/tools.md）+ A 类一次性产物清理登记（18 件，跨域拆单）",
+  "status": "claimed",
+  "risk": "low",
+  "domain": "win",
+  "owner_side": "win",
+  "owner": "win-codex-cto",
+  "executor": "synova-squad-lead（队长不下场写码）+ 1 编码 + 1 独立自验 + 1 独立复核",
+  "branch": "docs/d1003-tools-and-a-class-registry",
+  "base": "origin/main（合后确切 SHA，回执须写明；禁用本地 main）",
+  "depends_on": [],
+  "blocked": "无（本卡只写文档，不删文件，可立即开工）",
+  "target": "2026-W40",
+  "spec": "docs/synova/dispatch/D1003-docs-tools-and-a-class-registry-20260926.md（派单即规格）",
+  "write_set": [
+    "docs/tools.md",
+    "docs/synova/product-lines/evidence/D1003-20260926/A类清理清单.md",
+    "task-state/D1003.json"
+  ],
+  "source": "① CTO 2026-09-25 裁定「docs/tools.md 立项 = D1003」；② CTO 2026-09-26 对 chore/remove-a-class-artifacts-20260923 逐条核实",
+  "note": "A 件：固化 4 条已反复踩到的 Windows 工具陷阱——(1) findstr 被转义引号 → 假阴性；(2) 中文路径过 cmd 代码页 → if exist/dir 假阴性；(3) bash 在 PowerShell PATH 解析到未安装 WSL 存根 / Git bash 需自带 PATH；(4) PowerShell 内置模块加载失败 → Get-Content/Get-ChildItem 不可用。B 件：A 类 18 件清理清单——实测 18/18 仍在 origin/main（git cat-file -e 逐条）；分四类（Python 缓存 4 / 旧仓库嵌套副本 8 / 一次性看板快照 3 / .bak 与备份 3）；**跨域**：mac 2 件（docs/synova/research/archive/** 两个 .html.bak）交 Mac-CTO，win 16 件归后续执行卡。不直接推原分支（混入 D725 已进 main 的内容 / 22 文件超预算 / 跨域）。原分支与工作树 .claude/worktrees/a-class-cleanup @ 36b7342d 未推，是删除的唯一本地副本，拆分执行前不得删。**本卡不删任何文件**。",
+  "updated_at": "2026-09-26",
+  "updated_by": "win-codex-cto"
+}

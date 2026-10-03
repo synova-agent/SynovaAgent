@@ -1,0 +1,14 @@
+{
+  "task_id": "D1093",
+  "title": "PR #908 CI 修复（登记闸 + 文档登记 + swallow-ok）",
+  "status": "claimed",
+  "domain": "mac",
+  "owner": "工程线（X30 启动窗）",
+  "spec": ".claude/task-briefs/2026-10-01-D1093-ci-fixes.md",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-01",
+  "updated_by": "harness-登记（X30 启动窗）",
+  "note": "PR #908 CI 修复：①补登记 3 个控制塔测试进 ci.yml 密封清单（log-snapshot/classify-worktrees/verdict-baseline —— \"建了不接线\"复发，gate-integrity 实测 VIOLATION(3)→OK）；②补登记 2 份决策件进 DOCS-REGISTRY.yaml（DOC-0119/0120）；③给 3 处 2>/dev/null 加 swallow-ok（CI 严格模式硬判）。另发现 D734 PR 预算门禁：上限 12 文件，本 PR 65 文件 ⇒ quality job 必红 ⇒ 需拆 PR（门禁明写\"拆 PR，禁调高上限\"）。"
+}

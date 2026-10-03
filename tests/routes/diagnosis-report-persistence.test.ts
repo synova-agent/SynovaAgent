@@ -7,7 +7,9 @@
  *   3. 双 ID 兼容：进程内 consultId（内存键命中）→ 200；reportId（内存 miss → checkpoint 冷读）→ 200
  *   4. 未知 id：GET /consult/ghost/report → 404 {ok:false, code:'NOT_FOUND'}（语义保持）
  *   5. 列表：两次落盘 → GET /api/diagnosis/reports total=2、saved_at DESC、limit=1&offset=1 取第二条
- *   6. 白名单（P0-1 收尾）：无 Authorization 下五前缀非 401 + 非白名单对照探针 401
+ *   6. 白名单（P0-1 收尾）：无 Authorization 下四前缀非 401 + 非白名单对照探针 401；
+ *      /api/solutions 以**真实 JWT Bearer** 验证可达性（D947/L-18：自报 x-synova-token 通道已断，
+ *      见文件末 §功能回退登记）
  *   7. 降级：partial_report 损坏行跳过 + degraded:true + total 不缩水；db 缺失 → 503 STORE_UNAVAILABLE
  *   8. 对话桥落盘：conversations phaseComplete → checkpoint 行 source:'conversation'；同 db 重启后 GET 200
  *   9. 边界：limit=0 → 夹取 1；limit=1000 → 夹取 200；offset 负数 → 0
@@ -25,6 +27,19 @@ import express from 'express';
 import Database from 'better-sqlite3';
 import type { Server } from 'http';
 import { SessionStore } from '../../src/store/session-store';
+
+// ════════════════════════════════════════════════════════════════
+// N1 硬前置（D947）—— 夹具自证环境已就位，否则判空转
+// 注：本文件描述块 beforeAll 会刻意切到「生产姿态」（DEV_MODE=false 且删 JWT_SECRET，
+// 见 :184-185，对应用例 6 白名单 401 语义）；故用例 6 的 JWT 分支**就地重设并自证** N1。
+// ════════════════════════════════════════════════════════════════
+
+beforeAll(() => {
+  process.env.JWT_SECRET = 'd947-test-secret-0123456789';
+  process.env.DEV_MODE = 'false';
+  expect(process.env.JWT_SECRET?.length ?? 0).toBeGreaterThanOrEqual(16);
+  expect(process.env.DEV_MODE).toBe('false');
+});
 
 // ═══ hoisted mock 状态（vi.mock 工厂提升后仍可读写）═══
 const mocks = vi.hoisted(() => ({
@@ -333,15 +348,35 @@ describe('D593: 报告落盘 + 读回 + 列表 + 白名单（spec §7 用例表�
       expect(res.status, `${method} ${path} 不应 401（D593 白名单五前缀）`).not.toBe(401);
       await res.text().catch(() => '');
     }
-    // solutions：白名单只解决 jwtAuthMiddleware 层——solutions.ts 路由内还有 requireAuth
-    // （extractAuthFromRequest）。桌面 GA 实际形态 = D556 seed 的 x-synova-token 头
-    // （RightPanel apiFetch :157-159 自动附带，非 Authorization 头——spec 用例 6"无 Authorization"语义）
-    const seeded = await fetch(`${authUrl}/api/solutions`, {
-      method: 'GET',
-      headers: { 'x-synova-token': 'ga:org-d593:u1' },
-    });
-    expect(seeded.status, 'GET /api/solutions 携带桌面 seed 头不应 401').not.toBe(401);
-    await seeded.text().catch(() => '');
+    // solutions：白名单只解决 jwtAuthMiddleware 层——solutions.ts:36/93 路由内还有 requireAuth
+    // （extractAuthFromRequest）。
+    //
+    // D947（L-18 迁移）: 原用例用「桌面 seed 头 x-synova-token: ga:org-d593:u1」，该自报通道
+    // 已随 D947 默认安全姿态断开（详见文件末 §功能回退登记）。本用例的真实意图是
+    // 「P0-1 白名单收尾后 GA 仍可达 /api/solutions」——改用**真实 JWT Bearer** 才测到意图本身。
+    // 断言强度**提高**：精确 200 + ok:true + solutions 为数组（原文仅为 not.toBe(401) 弱断言）。
+    const jwtSecretPrev = process.env.JWT_SECRET;
+    process.env.JWT_SECRET = 'd947-test-secret-0123456789'; // N1：真实可验签密钥（就地重设并自证）
+    process.env.DEV_MODE = 'false';
+    expect(process.env.JWT_SECRET?.length ?? 0).toBeGreaterThanOrEqual(16);
+    expect(process.env.DEV_MODE).toBe('false');
+    try {
+      const { signJwtToken } = await import('../../src/middleware/auth');
+      const gaJwt = signJwtToken({ sub: 'u1', role: 'ga', orgId: 'org-d593' });
+      expect(gaJwt).toBeTruthy();
+
+      const solutions = await fetch(`${authUrl}/api/solutions`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${gaJwt}` },
+      });
+      expect(solutions.status, 'GET /api/solutions 携带真实 JWT 应 200').toBe(200);
+      const solBody = await solutions.json() as { ok: boolean; solutions: unknown[] };
+      expect(solBody.ok).toBe(true);
+      expect(Array.isArray(solBody.solutions)).toBe(true);
+    } finally {
+      if (jwtSecretPrev === undefined) delete process.env.JWT_SECRET;
+      else process.env.JWT_SECRET = jwtSecretPrev;
+    }
     // 对照探针：非白名单路径仍 401（白名单没有因此被放宽）
     const probe = await fetch(`${authUrl}/api/d593-probe`);
     expect(probe.status).toBe(401);
@@ -479,3 +514,23 @@ describe('D593: 报告落盘 + 读回 + 列表 + 白名单（spec §7 用例表�
     expect(body.report.reportId).toBe(oldest.reportId);
   });
 });
+
+// ════════════════════════════════════════════════════════════════
+// §功能回退登记（D947 / L-18）—— 不是「测试调整」，是产品面行为变更
+//
+// 断开的东西: `x-synova-token: <role>:<orgId>:<userId>` 自报身份通道。
+// 原因: D947 默认安全姿态——不经验签的字符串不得作为身份来源（判据 P0）。
+//
+// 运行时后果（已实测的调用方，均返 401）:
+//   · /api/solutions                     ← src/routes/solutions.ts:32/37/46 requireAuth
+//   · 全部 requireGa 的 /api/ga/*         ← src/routes/ga-auth.ts:21
+//     （ga-annotations / ga-corrections / ga-admin）
+//   · /api/audit、/api/enterprise、/api/ga/calibration、/api/ga/corrections
+// 受影响客户端: 桌面 GA 的 dev-seed 旁路
+//   · electron-renderer/src/components/RightPanel.tsx:155-159（seed 存在时附该头）
+//   · electron-renderer/src/stores/ga-collab.ts:44/92（getSeedToken 组装 role:orgId:userId）
+//
+// 登记去向: 派单件 §六 遗留 2「electron-renderer 的 dev-seed 旁路将失效…正确修法
+// （改走正规登录）属 Mac 域，须另立卡」——与 R5 / REV-8 并列为第 2 条功能回退。
+// **本 PR 不修**；功能下线（迁移到 Bearer JWT）+ 该卡登记须由 CTO 执行「另立卡」。
+// ════════════════════════════════════════════════════════════════
