@@ -31,6 +31,35 @@ export interface ValidationError {
   expected: string;
 }
 
+/**
+ * 单次 props 校验结论。
+ *
+ * 契约（铁律 47 — 输入/输出/降级）:
+ * - 输入: 由 `validateNodeProps(nodeType, props)` 产出。
+ * - 输出: `errors` 为空**不等于**校验通过 —— 当 `degraded=true` 时语义是"**未校验**（已放行）"。
+ *         `uncoveredType` 仅在 `degraded=true` 时给出，指向缺 schema 的那个 nodeType。
+ * - 降级: `degraded=true` 即降级标记（铁律 11/31）——该类型无 schema，数据已放行但**未被校验**。
+ *         调用方必须检查，**不得**把 `errors.length === 0` 当作"通过"。
+ */
+export interface SchemaValidationResult {
+  errors: ValidationError[];
+  degraded: boolean;
+  uncoveredType?: string;
+}
+
+/**
+ * 本进程内出现过的、无 schema 覆盖的节点类型（去重，按首次出现顺序）。
+ *
+ * 契约（铁律 47 — 输入/输出/降级）:
+ * - 输入: 模块内状态，仅在 `validateNodeProps` 命中未知 nodeType 时写入。
+ * - 输出: 未覆盖类型名集合；`size` 即告警文案里的「未覆盖类型 N 个」。
+ * - 降级: 不适用（纯内存 Set，无 IO、无异常路径）。
+ *
+ * Why 按"类型"去重而非按"次数"计数: 同一类型在一次诊断中会被写入成百上千次，
+ * 按次数报警会把日志淹掉 —— 噪音会让降级信号被无视，正是铁律 11 想防的反面。
+ */
+const uncoveredNodeTypes = new Set<string>();
+
 // ═══ Schema 定义 ═══
 
 const NODE_SCHEMAS: Record<string, SchemaRule> = {
@@ -134,11 +163,35 @@ function validateProp(value: unknown, rule: PropRule, nodeType: string, field: s
 }
 
 /**
- * 校验单个节点的 props。返回错误列表（空 = 通过）。
+ * 校验单个节点的 props。
+ *
+ * 契约（铁律 47 — 输入/输出/降级）:
+ * - 输入: `nodeType`（节点类型名）+ `props`（待写入的属性）。
+ * - 输出: `SchemaValidationResult` —— `errors` 为该次校验发现的错误列表（空 = 无错误）。
+ * - 降级: 该 nodeType **无 schema** 时 `degraded=true` + `uncoveredType=nodeType`，`errors` 为空，
+ *         **不阻断写入**（文件驱动扩展允许新类型先落地）。降级信号同时以 `log.warn` 显形
+ *         （铁律 11/31）。
  */
-export function validateNodeProps(nodeType: string, props: Record<string, unknown>): ValidationError[] {
+export function validateNodeProps(nodeType: string, props: Record<string, unknown>): SchemaValidationResult {
   const schema = NODE_SCHEMAS[nodeType];
-  if (!schema) return []; // 未知类型 — 不校验（允许扩展）
+  if (!schema) {
+    // 未知类型 — 不阻断（允许文件驱动扩展），但**不得静默**（铁律 11/31）
+    const firstSighting = !uncoveredNodeTypes.has(nodeType);
+    uncoveredNodeTypes.add(nodeType);
+    if (firstSighting) {
+      log.warn(
+        {
+          code: 'SOG_SCHEMA_UNCOVERED',
+          nodeType,
+          uncoveredCount: uncoveredNodeTypes.size,
+          uncoveredTypes: [...uncoveredNodeTypes],
+          coveredCount: Object.keys(NODE_SCHEMAS).length,
+        },
+        `[SOG-schema] 未覆盖类型 ${uncoveredNodeTypes.size} 个（本次新增 ${nodeType}）— 该类型数据已放行但未校验（degraded，不阻断）`,
+      );
+    }
+    return { errors: [], degraded: true, uncoveredType: nodeType };
+  }
 
   const errors: ValidationError[] = [];
 
@@ -159,17 +212,26 @@ export function validateNodeProps(nodeType: string, props: Record<string, unknow
     }
   }
 
-  return errors;
+  return { errors, degraded: false };
 }
 
 /**
- * 校验并记录。返回 true = 通过。
+ * 校验并记录。返回 true = 通过（含"无 schema 放行"的降级放行）。
+ *
+ * 契约（铁律 47 — 输入/输出/降级）:
+ * - 输入: `nodeType` + `props`。
+ * - 输出: `true` = 通过或降级放行；`false` = 存在校验错误（错误已逐条 `log.warn`）。
+ * - 降级: 无 schema 的类型返回 `true`（**不阻断**，语义同改造前）；降级告警由
+ *         `validateNodeProps` 发出，此处不重复打日志（防噪音）。
  */
 export function validateAndLog(nodeType: string, props: Record<string, unknown>): boolean {
-  const errors = validateNodeProps(nodeType, props);
-  if (errors.length === 0) return true;
+  const result = validateNodeProps(nodeType, props);
 
-  for (const e of errors) {
+  // 降级放行（无 schema）不计为校验失败 —— 与改造前行为一致（不阻断），告警已在上游发出
+  if (result.degraded) return true;
+  if (result.errors.length === 0) return true;
+
+  for (const e of result.errors) {
     log.warn({
       nodeType: e.nodeType,
       field: e.field,
