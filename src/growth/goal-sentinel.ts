@@ -187,7 +187,13 @@ export function createGoalSentinel(
 
         // 活跃期: 对每个指标执行三因子偏离检测
         for (const metric of goal.metrics) {
-          const baseline = metric.baselinePeriod ? 0 : null; // simplified
+          // 因子3 基线（#979 修复）: 基线 = 采集期历史样本均值。
+          //  原实现 `metric.baselinePeriod ? 0 : null` 与 computeDeviations 的 `baseline !== null && baseline !== 0`
+          //  判据互斥 ⇒ 基线恒为 0/null ⇒ 因子3 恒 false（自相矛盾一行，已删）。
+          //  契约: metric 未声明 baselinePeriod（无基线语义）或采集期无样本 → null（因子3 不判定，不猜值）。
+          const baseline = metric.baselinePeriod && state.samples.length > 0
+            ? state.samples.reduce((sum, s) => sum + s.value, 0) / state.samples.length
+            : null;
           const sampleValues = state.samples.map(s => s.value);
           const deviation = computeDeviations(
             metric.currentValue,
