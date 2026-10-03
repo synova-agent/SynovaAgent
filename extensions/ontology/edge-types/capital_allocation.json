@@ -11,6 +11,7 @@
     "decision_process": "string — 决策流程(top_down|bottom_up|hybrid)"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "1_month",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "资金分配到活动——资本池中的资金按照决策分配到各业务活动的内部转化阀。"
 }

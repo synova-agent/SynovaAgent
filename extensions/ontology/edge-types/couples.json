@@ -11,6 +11,7 @@
     "cross_flywheel_revenue_ratio": "number (0-1) — 跨飞轮收入占比"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "B_output_volatility = A_output_volatility * coupling_strength * exp(-coupling_lag/decay_constant)",
   "diagnostic_signals": {
     "high_coupling_risk": "coupling_strength > 0.6 AND coupling_direction == 'unidirectional' — 高耦合单向依赖风险",
