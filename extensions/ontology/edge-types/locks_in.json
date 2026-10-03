@@ -35,5 +35,6 @@
     "sentinel-process-ai-readiness"
   ],
   "action_effect_lag": "unknown",
+  "transfer_function": "TBD — to be defined in compute phase",
   "description": "客户/资源锁定。切换成本壁垒。"
 }
