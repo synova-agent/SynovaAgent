@@ -10,6 +10,7 @@
     "capital_efficiency_ratio": "number — 资本效率比率"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "运营效率吸引资本(二阶)——已有资源的高利用率和高运营利润率增强企业的融资能力。"
 }

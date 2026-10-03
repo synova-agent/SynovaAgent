@@ -47,5 +47,6 @@
     "sentinel-competitive-dynamics",
     "sentinel-adaptation-velocity"
   ],
+  "action_effect_lag": "unknown",
   "description": "资源增强。资源间的协同增强效应。"
 }

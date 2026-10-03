@@ -14,6 +14,7 @@
     "confidence_interval": "number (0-1) — 因果推断置信区间"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "revenue_lift = brand_investment * f(awareness_lift, premium_ratio_change, repeat_purchase_lift, nps_change, lag_months)",
   "diagnostic_signals": {
     "brand_decay": "lag_months > 12 AND awareness_lift < 0 AND repeat_purchase_lift < 0 — 品牌资产衰减",

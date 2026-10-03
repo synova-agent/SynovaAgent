@@ -32,5 +32,6 @@
     "sentinel-internal-transaction-cost",
     "sentinel-incentive-alignment"
   ],
+  "action_effect_lag": "unknown",
   "description": "决策集中。权力集中度及其对组织纠错能力的影响。"
 }

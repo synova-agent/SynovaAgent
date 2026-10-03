@@ -11,6 +11,7 @@
     "exit_interview_feedback": "string — 离职访谈摘要"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "人才留存——员工满意度驱动人才留在企业，减少人力池的流失。"
 }

@@ -11,6 +11,7 @@
     "push_vs_pull_ratio": "number — 推送 vs 拉取比例"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "信息流到需要的人——数据池中的信息传递到决策者和执行者的内部转化阀。"
 }

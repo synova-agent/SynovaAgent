@@ -49,5 +49,6 @@
     "sentinel-internal-transaction-cost",
     "sentinel-incentive-alignment"
   ],
+  "action_effect_lag": "unknown",
   "description": "信号传递。信息从一线到决策层的传递保真度。"
 }

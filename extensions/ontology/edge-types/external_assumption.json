@@ -37,5 +37,6 @@
     "sentinel-api-coverage",
     "sentinel-process-ai-readiness"
   ],
+  "action_effect_lag": "unknown",
   "description": "外部假设绑架。经营模型对外部环境不变的赌注。"
 }

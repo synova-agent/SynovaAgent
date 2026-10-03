@@ -11,6 +11,7 @@
     "concentration_risk": "number (0-1) — 资金来源集中度风险"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "决定资金来源比例——治理层对资本结构(股债比、融资渠道选择)的决策影响资本池构成。"
 }
