@@ -11,6 +11,7 @@
     "unit_cost_t0": "number — 初始单位成本"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "unit_cost_t = unit_cost_t0 * (cumulative_output)^(-learning_rate)",
   "diagnostic_signals": {
     "learning_stall": "learning_rate < 0.05 AND cumulative_output > baseline — 学习曲线平坦化",
