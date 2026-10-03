@@ -19,7 +19,7 @@
  * 10 用例（6 red + 4 绿守卫，对应 dev doc 缺陷 A/B/C/D/F）:
  *   1. feedback 租户契约 — 缺 enterpriseId 拒绝 + 成功路径 degraded:false    RED（缺陷 D）
  *   2. feedback 带 enterpriseId → 只返回该企业（形状无关守卫）              绿（回归守卫）
- *   3. getAggregatedSignals 全局聚合不变（D472 只读依赖，冻结）            绿（守卫）
+ *   3. getAggregatedSignals 全局聚合不变（D472 只读依赖，冻结；#976 起粒度 = per target_id） 绿（守卫）
  *   4. action-store 全部 graph 调用携带 orgId 派生图                        RED（缺陷 A/F）
  *   5. action-store 缺 orgId → fail-closed（零存储调用）                    RED（缺陷 A）
  *   6. graph-traversal 图查询非省略且非空串（含 '' bug + graphOverride）     RED（缺陷 B）
@@ -298,19 +298,29 @@ describe('D338 缺陷 D — feedback 租户契约 fail-closed', () => {
     }
   });
 
-  it('3. getAggregatedSignals 全局聚合不变（D472 只读依赖冻结，一字不动）', () => {
+  it('3. getAggregatedSignals 全局聚合不变（D472 只读依赖冻结；#976 起聚合粒度 = per target_id）', () => {
     const { collector, db } = setup();
     try {
-      // 跨企业同 decision × 3 → 全局聚合 count=3
-      collector.collectFeedback(feedbackInput('e1', 'reject', 'a0'));
-      collector.collectFeedback(feedbackInput('e1', 'reject', 'a1'));
-      collector.collectFeedback(feedbackInput('e2', 'reject', 'a2'));
+      // 跨企业同 decision × 同 target_id × 3 → 全局聚合（无租户过滤，D472 冻结语义不变）count=3
+      collector.collectFeedback(feedbackInput('e1', 'reject', 'F1_KZ'));
+      collector.collectFeedback(feedbackInput('e1', 'reject', 'F1_KZ'));
+      collector.collectFeedback(feedbackInput('e2', 'reject', 'F1_KZ'));
 
       const signals = collector.getAggregatedSignals(3);
       expect(signals).toHaveLength(1);
       expect(signals[0].decision).toBe('reject');
       expect(signals[0].count).toBe(3);
-      expect(signals[0].targetIds).toHaveLength(3);
+      expect(signals[0].targetIds).toEqual(['F1_KZ']); // #976: 聚合键 = 真 target_id
+
+      // #976（0-2 反馈键）: 不同 target_id 不再跨键合并（旧复合键口径已废）——
+      // 判别性: 每键 1 次 < 阈值 3 ⇒ 阈值 3 零聚合，阈值 1 各成一信号
+      collector.collectFeedback(feedbackInput('e1', 'modify', 'goal-1'));
+      collector.collectFeedback(feedbackInput('e1', 'modify', 'goal-2'));
+      collector.collectFeedback(feedbackInput('e1', 'modify', 'goal-3'));
+      expect(collector.getAggregatedSignals(3).filter((s) => s.decision === 'modify')).toHaveLength(0);
+      expect(
+        collector.getAggregatedSignals(1).filter((s) => s.decision === 'modify').map((s) => s.key).sort(),
+      ).toEqual(['goal-1', 'goal-2', 'goal-3']);
     } finally {
       db.close();
     }

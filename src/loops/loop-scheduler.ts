@@ -16,6 +16,8 @@ import { createLogger } from '@synova/logger';
 import type { LoopTriggerConfig, TriggerScale, ScaleName, TriggerType } from './loop-trigger-config';
 import { validateLoopConfig, LOOP_TRIGGER_MATRIX } from './loop-trigger-config';
 import { emitSignal } from '../control-tower/signal-emitter';
+import type { LoopExecutorLike } from './main-agent-binding';
+import { getBoundMainAgent } from './main-agent-binding';
 
 const log = createLogger('loops/loop-scheduler');
 
@@ -71,13 +73,63 @@ const STALL_THRESHOLD_CYCLES = 3;
 const HEARTBEAT_DIR = join(process.cwd(), '.codex');
 const HEARTBEAT_FILE = join(HEARTBEAT_DIR, 'heartbeat.json');
 
+/** 内置循环注册规格（D9/D237/D238）——消息原样保留（探针口径不可漂移） */
+interface BuiltinLoopSpec {
+  jobName: string;
+  cron: string;
+  loopId: string;
+  scale: ScaleName;
+  tag: string;
+  /** 未注入时的原始告警串（#975 判据的观测面，逐字保留） */
+  skipMessage: string;
+  /** 执行完成日志的中文标签（原样保留） */
+  doneLabel: string;
+}
+
+/**
+ * 6 个内置循环的注册规格（#975: 单一机制，消息逐字保留原 D9/D237/D238 措辞）。
+ * 顺序与历史实现一致（loop-4 → loop-5 → loop-1 → loop-2 → loop-3 → loop-6）。
+ */
+const BUILTIN_LOOPS: BuiltinLoopSpec[] = [
+  {
+    jobName: 'loop-4-self-check', cron: '0 0 * * *', loopId: 'loop-4', scale: 'fast', tag: 'D9',
+    skipMessage: '[D9] MainAgent 未注入 — 跳过 loop-4 执行 (degraded)',
+    doneLabel: 'loop-4 系统自检完成',
+  },
+  {
+    jobName: 'loop-5-knowledge', cron: '0 0 * * 0', loopId: 'loop-5', scale: 'medium', tag: 'D9',
+    skipMessage: '[D9] MainAgent 未注入 — 跳过 loop-5 执行 (degraded)',
+    doneLabel: 'loop-5 知识积累完成',
+  },
+  {
+    jobName: 'loop-1-diagnosis', cron: '0 9 1 */3 *', loopId: 'loop-1', scale: 'slow', tag: 'D9',
+    skipMessage: '[D9] MainAgent 未注入 — 跳过 loop-1 (degraded)',
+    doneLabel: 'loop-1 企业诊断完成',
+  },
+  {
+    jobName: 'loop-2-navigation', cron: '0 9 * * 1', loopId: 'loop-2', scale: 'medium', tag: 'D9',
+    skipMessage: '[D9] MainAgent 未注入 — 跳过 loop-2 (degraded)',
+    doneLabel: 'loop-2 部门导航完成',
+  },
+  {
+    jobName: 'loop-3-ga-evolution', cron: '0 9 1 */3 *', loopId: 'loop-3', scale: 'slow', tag: 'D237',
+    skipMessage: '[D237] MainAgent 未注入 — 跳过 loop-3 (degraded)',
+    doneLabel: 'loop-3 GA进化完成',
+  },
+  {
+    jobName: 'loop-6-overflow', cron: '0 9 1 * *', loopId: 'loop-6', scale: 'medium', tag: 'D238',
+    skipMessage: '[D238] MainAgent 未注入 — 跳过 loop-6',
+    doneLabel: 'loop-6 溢出监控完成',
+  },
+];
+
 // ═══ LoopScheduler ═══
 
 export class LoopScheduler {
   private loops = new Map<string, RegisteredLoop>();
   private scheduler: CronSchedulerLike | null = null;
   private enabled = true;
-  private mainAgent: { executeLoop(loopId: string, scale: string): Promise<{ status: string }> } | null = null;
+  private mainAgent: LoopExecutorLike | null = null;
 
   constructor(scheduler?: CronSchedulerLike) {
     this.scheduler = scheduler ?? null;
@@ -86,10 +138,37 @@ export class LoopScheduler {
     this.registerBuiltinLoops();
   }
 
-  /** 注入 MainAgent 实例（D8a），供内置循环执行调用 */
-  setMainAgent(agent: { executeLoop(loopId: string, scale: string): Promise<{ status: string }> }): void {
+  /**
+   * 注入 MainAgent 实例（D8a），供内置循环执行调用。
+   * #975: 除显式注入外，触发时还会兜底读取进程级绑定（main-agent-binding），
+   * 见 resolveExecutor —— 两条路径注入的是同一个 MainAgent 实例。
+   */
+  setMainAgent(agent: LoopExecutorLike): void {
     this.mainAgent = agent;
     log.info('[wiring] MainAgent 已注入 LoopScheduler');
+  }
+
+  /**
+   * #975（0-1 循环点火）: 解析本轮触发要用的执行器。
+   * 优先级: 显式注入（setMainAgent）→ 进程级绑定（server.ts 装配期 bindMainAgent）。
+   * @returns 执行器 | null
+   * @degraded 两者皆无 → null（调用方必须 log.warn + 跳过，禁静默）
+   */
+  private resolveExecutor(): LoopExecutorLike | null {
+    return this.mainAgent ?? getBoundMainAgent();
+  }
+
+  /**
+   * #975: 分派一次循环执行（尺度必须透传）。
+   * 优先 executeLoopScale(loopId, scale)；缺省回退 executeLoop(loopId, scale)。
+   * ⚠️ MainAgent#executeLoop 实为单参（忽略 scale）——直接调用会让 slow/medium 静默降为 fast，
+   * 故能走 executeLoopScale 时必须走它。
+   */
+  private async dispatchLoop(executor: LoopExecutorLike, loopId: string, scale: ScaleName): Promise<{ status: string }> {
+    if (typeof executor.executeLoopScale === 'function') {
+      return executor.executeLoopScale(loopId, scale);
+    }
+    return executor.executeLoop(loopId, scale);
   }
 
   /** 确保心跳目录存在 */
@@ -121,12 +200,15 @@ export class LoopScheduler {
   }
 
   /**
-   * D9: 注册 2 个内置业务循环到 CronScheduler。
+   * D9/D237/D238: 注册 6 个内置业务循环到 CronScheduler。
    *
-   * loop-4 (system_self_check): 系统自检，每日 0 点 (0 0 * * *)
-   *   检查哨兵状态/专家状态/数据新鲜度。
-   * loop-5 (knowledge_accumulation): 知识积累，每周日 0 点 (0 0 * * 0)
-   *   从 PKB 提取 enterprise_facts、更新知识图谱。
+   * loop-1 企业诊断（季度，slow）· loop-2 部门导航（周度，medium）· loop-3 GA进化（季度，slow）
+   * loop-4 系统自检（每日，fast）· loop-5 知识积累（每周日，medium）· loop-6 溢出监控（月级，medium）
+   * 各自 cron 表达式见下方 BUILTIN_LOOPS（唯一事实源，勿在注释里复写）。
+   *
+   * #975（0-1 循环点火）: 六个循环共用同一注册/分派机制 —— 触发时 resolveExecutor()
+   * 解析执行器（显式注入 → 进程级绑定），解析不到才 log.warn + 跳过（铁律 24+31）。
+   * 注册规格集中在 BUILTIN_LOOPS；告警/完成日志逐字保留（探针口径不可漂移）。
    *
    * 降级: MainAgent 不可用 → log.warn + 跳过执行。
    */
@@ -137,111 +219,40 @@ export class LoopScheduler {
     }
 
     try {
-      // loop-4: 系统自检（每日 0 点）
-      this.scheduler.schedule('loop-4-self-check', '0 0 * * *', async () => {
-        if (!this.mainAgent) {
-          log.warn('[D9] MainAgent 未注入 — 跳过 loop-4 执行 (degraded)');
-          return;
-        }
-        try {
-          const result = await this.mainAgent.executeLoop('loop-4', 'fast');
-          this.recordHeartbeat('loop-4');
-          log.info({ status: result.status }, 'loop-4 系统自检完成');
-        } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : String(err);
-          log.warn({ err: msg }, 'loop-4 执行失败 — degraded');
-        }
-      });
-      log.info('[D9] loop-4-self-check 已注册 (0 0 * * *)');
-
-      // loop-5: 知识积累（每周日 0 点）
-      this.scheduler.schedule('loop-5-knowledge', '0 0 * * 0', async () => {
-        if (!this.mainAgent) {
-          log.warn('[D9] MainAgent 未注入 — 跳过 loop-5 执行 (degraded)');
-          return;
-        }
-        try {
-          const result = await this.mainAgent.executeLoop('loop-5', 'medium');
-          this.recordHeartbeat('loop-5');
-          log.info({ status: result.status }, 'loop-5 知识积累完成');
-        } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : String(err);
-          log.warn({ err: msg }, 'loop-5 执行失败 — degraded');
-        }
-      });
-      log.info('[D9] loop-5-knowledge 已注册 (0 0 * * 0)');
-
-      // loop-1: 企业诊断（季度 cron，slow 尺度—完整诊断管线）
-      this.scheduler.schedule('loop-1-diagnosis', '0 9 1 */3 *', async () => {
-        if (!this.mainAgent) {
-          log.warn('[D9] MainAgent 未注入 — 跳过 loop-1 (degraded)');
-          return;
-        }
-        try {
-          const result = await this.mainAgent.executeLoop('loop-1', 'slow');
-          this.recordHeartbeat('loop-1');
-          log.info({ status: result.status }, 'loop-1 企业诊断完成');
-        } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : String(err);
-          log.warn({ err: msg }, 'loop-1 执行失败 — degraded');
-        }
-      });
-      log.info('[D9] loop-1-diagnosis 已注册 (0 9 1 */3 *)');
-
-      // loop-2: 部门导航（周度 cron，medium 尺度）
-      this.scheduler.schedule('loop-2-navigation', '0 9 * * 1', async () => {
-        if (!this.mainAgent) {
-          log.warn('[D9] MainAgent 未注入 — 跳过 loop-2 (degraded)');
-          return;
-        }
-        try {
-          const result = await this.mainAgent.executeLoop('loop-2', 'medium');
-          this.recordHeartbeat('loop-2');
-          log.info({ status: result.status }, 'loop-2 部门导航完成');
-        } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : String(err);
-          log.warn({ err: msg }, 'loop-2 执行失败 — degraded');
-        }
-      });
-      log.info('[D9] loop-2-navigation 已注册 (0 9 * * 1)');
-
-      // loop-3: GA进化（季度 cron，slow 尺度—Phase 3）
-      this.scheduler.schedule('loop-3-ga-evolution', '0 9 1 */3 *', async () => {
-        if (!this.mainAgent) {
-          log.warn('[D237] MainAgent 未注入 — 跳过 loop-3 (degraded)');
-          return;
-        }
-        try {
-          const result = await this.mainAgent.executeLoop('loop-3', 'slow');
-          this.recordHeartbeat('loop-3');
-          log.info({ status: result.status }, 'loop-3 GA进化完成');
-        } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : String(err);
-          log.warn({ err: msg }, 'loop-3 执行失败 — degraded');
-        }
-      });
-      log.info('[D237] loop-3-ga-evolution 已注册 (0 9 1 */3 *)');
-
-	      // D238: loop-6: 溢出监控（月级 cron，medium 尺度）
-	      this.scheduler.schedule('loop-6-overflow', '0 9 1 * *', async () => {
-	        if (!this.mainAgent) {
-	          log.warn('[D238] MainAgent 未注入 — 跳过 loop-6');
-	          return;
-	        }
-	        try {
-	          const result = await this.mainAgent.executeLoop('loop-6', 'medium');
-	          this.recordHeartbeat('loop-6');
-	          log.info({ status: result.status }, 'loop-6 溢出监控完成');
-	        } catch (err: unknown) {
-	          const msg = err instanceof Error ? err.message : String(err);
-	          log.warn({ err: msg }, 'loop-6 执行失败 — degraded');
-	        }
-	      });
-	      log.info('[D238] loop-6-overflow 已注册 (0 9 1 * *)');
+      for (const spec of BUILTIN_LOOPS) {
+        this.scheduleBuiltinLoop(spec);
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       log.warn({ err: msg }, '[D9] 内置循环注册失败 — 降级');
     }
+  }
+
+  /**
+   * #975: 注册一个内置循环 —— 六个循环共用同一点火/分派路径。
+   * @input  spec 注册规格（jobName/cron/loopId/scale/tag/消息，见 BUILTIN_LOOPS）
+   * @output 无（job 注册进 CronScheduler；handler 在 cron 到点时执行）
+   * @degraded 执行器未解析到 → log.warn(spec.skipMessage) + return（不 recordHeartbeat，
+   *           否则会把「未点火」伪装成「有产出」）
+   */
+  private scheduleBuiltinLoop(spec: BuiltinLoopSpec): void {
+    if (!this.scheduler) return;
+    this.scheduler.schedule(spec.jobName, spec.cron, async () => {
+      const executor = this.resolveExecutor();
+      if (!executor) {
+        log.warn(spec.skipMessage);
+        return;
+      }
+      try {
+        const result = await this.dispatchLoop(executor, spec.loopId, spec.scale);
+        this.recordHeartbeat(spec.loopId);
+        log.info({ status: result.status }, spec.doneLabel);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        log.warn({ err: msg }, `${spec.loopId} 执行失败 — degraded`);
+      }
+    });
+    log.info(`[${spec.tag}] ${spec.jobName} 已注册 (${spec.cron})`);
   }
 
   /**

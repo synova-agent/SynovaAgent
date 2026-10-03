@@ -96,7 +96,28 @@ describe('FeedbackCollector', () => {
       expect(collector.getAggregatedSignals()).toEqual([]);
     });
 
-    it('相同 decision+targetType >= threshold → 聚合', () => {
+    it('相同真目标键 decision+targetType >= threshold → 聚合（#976: per target_id）', () => {
+      const Database = require('better-sqlite3');
+      const db = new Database(':memory:');
+      db.exec(FEEDBACK_DDL);
+      collector.setDatabase(db);
+
+      for (let i = 0; i < 3; i++) {
+        collector.collectFeedback({ enterpriseId: 'e1', actorId: 'u1', decision: 'reject', targetType: 'sentinel_alert', targetId: 'F1_KZ' });
+      }
+
+      const signals = collector.getAggregatedSignals(3);
+      expect(signals.length).toBe(1);
+      expect(signals[0].decision).toBe('reject');
+      expect(signals[0].count).toBe(3);
+      // #976: key = 真哨兵 ID（消费者用它匹配 thresholdOverrides 的真键）
+      expect(signals[0].key).toBe('F1_KZ');
+      expect(signals[0].targetIds).toEqual(['F1_KZ']);
+
+      db.close();
+    });
+
+    it('不同 target_id 不跨键聚合（#976: 旧复合键口径已废）', () => {
       const Database = require('better-sqlite3');
       const db = new Database(':memory:');
       db.exec(FEEDBACK_DDL);
@@ -106,10 +127,10 @@ describe('FeedbackCollector', () => {
         collector.collectFeedback({ enterpriseId: 'e1', actorId: 'u1', decision: 'reject', targetType: 'sentinel_alert', targetId: `a${i}` });
       }
 
-      const signals = collector.getAggregatedSignals(3);
-      expect(signals.length).toBe(1);
-      expect(signals[0].decision).toBe('reject');
-      expect(signals[0].count).toBe(3);
+      // 每键仅 1 次 → 阈值 3 下零聚合
+      expect(collector.getAggregatedSignals(3).length).toBe(0);
+      // 阈值 1 → 3 条独立信号，键 = 各自 target_id
+      expect(collector.getAggregatedSignals(1).map(s => s.key).sort()).toEqual(['a0', 'a1', 'a2']);
 
       db.close();
     });

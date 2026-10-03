@@ -77,10 +77,14 @@ import importRoutes from './routes/import'; // D231
 import cockpitRoutes from './routes/cockpit'; // D220-PHASE3
 import type { ServiceContainer } from './services/container';
 // Phase 0.1: 全局错误兜底 — uncaughtException + unhandledRejection
+// ⚠️ 同名陷阱: 此处 setMainAgent 是 routes/loops 的模块级注入函数（只服务 /api/loops/*），
+//    与 LoopScheduler#setMainAgent（src/loops/loop-scheduler.ts）同名不同物。
+//    后者的点火源由 wireLoopExecution() 经 bindMainAgent 补齐（#975），不在此 import。
 import { setMainAgent } from "./routes/loops";
 import { setGraphBridge } from "./routes/import"; // D231
 import { MainAgent } from "./agent/main-agent";
 import { LOOP_TRIGGER_MATRIX } from "./loops/loop-trigger-config";
+import { bindMainAgent } from "./loops/main-agent-binding"; // #975（0-1 循环点火）
 import { registerGlobalErrorHandlers, unregisterGlobalErrorHandlers } from './services/runtime-global-handlers';
 
 import { Bootstrap } from './deploy/bootstrap';
@@ -120,6 +124,52 @@ export const setupGuideGoneRouter: Router = Router().all(
     );
   },
 );
+
+// ═══ #975（0-1 总闸）: L2 装配 — MainAgent × 两条消费链 ═══
+
+/** wireLoopExecution() 结果（铁律 31: degraded 显式传播） */
+export interface LoopWiringResult {
+  ok: boolean;
+  degraded: boolean;
+  /** 失败原因（degraded=false 时缺省） */
+  error?: string;
+  /** 已装配的 MainAgent（degraded 时 null；供测试与后续装配复用） */
+  mainAgent: MainAgent | null;
+}
+
+/**
+ * #975（0-1 循环点火）: 创建 MainAgent、注册 LOOP_TRIGGER_MATRIX 6 循环，并把它同时注入两条消费链——
+ *   ① 路由模块 src/routes/loops.ts:setMainAgent —— /api/loops/* 的状态查询与手动触发；
+ *   ② LoopScheduler 进程级绑定 src/loops/main-agent-binding.ts:bindMainAgent —— 6 个内置 cron 循环
+ *      loop-1..6 的点火源。此前该链路零注入 ⇒ 每次触发输出 `[D9] MainAgent 未注入 — 跳过 loop-N (degraded)`
+ *      后直接返回，循环从不点火（`grep -rn "\.setMainAgent(" src/` 实测 0 命中）。
+ *
+ * ⚠️ 同名陷阱: 本文件 import 的 setMainAgent 是 routes/loops 的模块级函数，与 LoopScheduler#setMainAgent
+ *    （src/loops/loop-scheduler.ts）同名不同物；后者由下面的 bindMainAgent 覆盖（调度器触发时惰性解析
+ *    getBoundMainAgent ⇒ 与 Bootstrap Phase 2e/2f 的装配先后顺序无关）。
+ *
+ * 契约（铁律 47）:
+ *   @input  无（读 LOOP_TRIGGER_MATRIX）
+ *   @output { ok:true, degraded:false, mainAgent } | { ok:false, degraded:true, error, mainAgent:null }
+ *   @degraded MainAgent 构造/注册异常 → log.warn + degraded:true（不抛，不阻断启动；铁律 24+31）
+ *   @侧效  routes/loops 模块状态 + LoopScheduler 进程绑定被写入（同一实例）
+ */
+export function wireLoopExecution(): LoopWiringResult {
+  try {
+    const mainAgent = new MainAgent();
+    for (const loopConfig of LOOP_TRIGGER_MATRIX) {
+      mainAgent.registerLoop(loopConfig);
+    }
+    setMainAgent(mainAgent);
+    bindMainAgent(mainAgent);
+    logger.info({ loops: LOOP_TRIGGER_MATRIX.length }, "[wiring] MainAgent 已注入 loops 路由 + 循环点火绑定");
+    return { ok: true, degraded: false, mainAgent };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.warn({ err: msg }, "MainAgent 初始化失败 — loops 路由与循环点火降级");
+    return { ok: false, degraded: true, error: msg, mainAgent: null };
+  }
+}
 
 export async function createServer(): Promise<Server> {
   // ═══ D83: Bootstrap 启动序列 — 6 Phase 统一初始化 ═══
@@ -464,13 +514,12 @@ export async function createServer(): Promise<Server> {
   });
 
   return new Promise((resolve, reject) => {
-    // D20: 注入 MainAgent 到 loops 路由
+    // D20: 注入 MainAgent 到 loops 路由；#975: 同一实例绑定为 LoopScheduler 循环点火源
+    const loopWiring = wireLoopExecution();
+    if (loopWiring.degraded) {
+      logger.warn({ error: loopWiring.error }, "loop 执行链降级 — /api/loops/* 与内置循环 loop-1..6 均不可用");
+    }
     try {
-      const mainAgent = new MainAgent();
-      for (const loopConfig of LOOP_TRIGGER_MATRIX) {
-        mainAgent.registerLoop(loopConfig);
-      }
-      setMainAgent(mainAgent);
       setGraphBridge(graphStore); // D231
       // D478: overflow 路由 graphStore 生产注入。services.graphStore 为 unknown（BootstrapServices），
       // 判空守卫 + 显式收窄到 GraphStore（类型源与 setter 形参同源，非 any 断言，铁律 38 合规）。
@@ -479,7 +528,7 @@ export async function createServer(): Promise<Server> {
         setOverflowGraphStore(graphStore as import('./l4/graph-bridge').GraphStore);
       }
     } catch (err: unknown) {
-      logger.warn({ err }, "MainAgent 初始化失败 — loops 路由降级");
+      logger.warn({ err }, "graphStore 注入失败 — overflow 路由降级");
     }
 
     const server = app.listen(config.port, () => {
