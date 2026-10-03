@@ -11,6 +11,7 @@
     "spec_change_frequency": "number — 规格变更频率"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "市场需求转化为产品规格——感知池中的市场洞察驱动产品开发方向。"
 }
