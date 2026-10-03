@@ -304,6 +304,50 @@ authority:
 | 2 | **方向偏离的"红队"视角**：至少**每两周**有人问一句"你现在忙的这件事，和创始人说的'快速让产品能用'是同一件吗？" | 🔴 **这正是跑偏的定义**——不是做错事，是**做着对的事但已经偏了方向** |
 | 3 | **授权边界的一处确认**：我按 §4.2 可自裁；**红线与宪章不可自裁**（含定价/定位/红线本身） | 防止"授权最大"被我自己扩成"没有边界" |
 
+### 7.3 方向坐标系 · 项目字段规格（**2026-10-03 立；翻译层的载体**）
+
+> **为什么在这里**：创始人 2026-10-03 指「**你的翻译表在对话区，压缩就忘记了**」⇒ 改为**结构化字段**（不是文档）。
+> 载体＝GitHub Project #1「Synova 作业面」（`https://github.com/orgs/synova-agent/projects/1`，项目 id `PVT_kwDOFAmDns4Blb57`）。
+> **本表是自动化脚本的唯一输入规格**：脚本只许用**下列词表**中的值，不许自由文本。
+
+**七态（院方审计口径）↔ 执行态（本坐标系口径）的分工**：
+```
+院方七态 = 【离要求的距离】（快照、只读、按机制：①健康/②写了没接/③半成品/④跑偏/⑤纯缺口/⑥坏点/⑦待核 + ⑧零使用）
+本项目字段 = 【能不能动】（活账、可写、按任务：执行态/施工批次/服务承重件/总闸/命名空间/验证级别/阻塞源）
+⇒ 两者不是精度差，是【回答的问题不同】，故并存不互相替代
+```
+
+| 字段 | field id | 选项（`option id`） |
+|---|---|---|
+| **执行态** | `PVTSSF_lADOFAmDns4Blb57zhkRqdw` | 未开工 `5627d850`｜已派单 `eda908be`｜进行中 `7942c92d`｜**阻塞 `8b100162`**｜已交付 `af8b09ab`｜不适用 `caff13b8` |
+| **施工批次** | `PVTSSF_lADOFAmDns4Blb57zhkRqgg` | 不适用 `5337dd4f`｜第0批-止血 `5da22f87`｜第1批-补齐 `afdf1753`｜第2批-地基 `49de05d0`｜第3批-新建 `d5d01e2e`｜第4批-文档 `09736d40` |
+| **服务承重件** | `PVTSSF_lADOFAmDns4Blb57zhkRqgo` | 不适用 `333296cd`｜W1-时序 `222e74a8`｜W2-因果强度 `3cf7a971`｜W3-时滞 `ad415f82`｜W4-compute注册表 `160736a7`｜W5-两层结构 `f36ac736`｜W6-进化回环 `514932a6` |
+| **总闸** | `PVTSSF_lADOFAmDns4Blb57zhkRqhk` | 不适用 `1e0b658a`｜0-1-循环点火 `922fd996`｜0-2-反馈键 `b4629097` |
+| **命名空间** | `PVTSSF_lADOFAmDns4Blb57zhkRqig` | 不适用 `87901d2f`｜N1-哨兵导出名 `3ff05ef8`｜N2-反馈键 `62c2e376`｜N3-因果边编号 `2fa70c3d`｜N4-本体类型键 `51d00d49`｜N5-租户列 `2c2355f4` |
+| **验证级别** | `PVTSSF_lADOFAmDns4Blb57zhkRqjc` | **L1-静态可达 `72f9a28a`**｜**L2-真跑通 `169166d7`** |
+| **阻塞源** | `PVTSSF_lADOFAmDns4Blb57zhkRqlQ` | 无阻塞 `d8094ffa`｜等产品仓可写 `5f462dc6`｜等边体系收敛 `fb666a39`｜等契约落地 `6083adaf`｜等创始人裁 `23730559`｜等K3 `1bc5b7fa` |
+| Status（GitHub 原生） | `PVTSSF_lADOFAmDns4Blb57zhkIzLE` | Inbox `7136be82`｜Backlog `8754811d`｜Ready `af6c98f6`｜In progress `a3530961`｜In review `1b0f439f`｜Done `e8289d05`｜No action `e1b14374` |
+| Priority（GitHub 原生） | `PVTSSF_lADOFAmDns4Blb57zhkIzfM` | p0 `3360e627`｜p1 `0daa8607`｜p2 `696f029c`｜p3 `9bacf304` |
+
+**🔴 验证级别（治院方"验证缺口"）**：院方全程**只读不启服务** ⇒ 所有"①健康"只到**静态可达**。
+故本坐标系强制每条任务标注：**L1-静态可达**（grep/文件存在/注册表命中）还是 **L2-真跑通**（穿过真实入口 + 可复核输出）。
+**禁止把 L1 报成 L2。**
+
+**写入规格（脚本用）**：
+```bash
+# 挂板（注意：gh project item-add 会报成功但偶不发挂上 ⇒ 必须用 totalCount 复核，不用 item-list 长度）
+gh project item-add 1 --owner synova-agent --url <issue-url>
+# 取字段：gh project field-list 1 --owner synova-agent --format json
+# 灌值
+gh project item-edit --id <item-id> --field-id <field-id> --project-id PVT_kwDOFAmDns4Blb57 \
+  --single-select-option-id <option-id>
+# 全表机读（唯一可信读法 —— item-list 有 30 条上限陷阱）
+gh api graphql -f query='query { node(id: "PVT_kwDOFAmDns4Blb57") { ... on ProjectV2 { items(first: 100) { totalCount nodes { content { ... on Issue { number } } fieldValues(first: 25) { nodes { ... on ProjectV2ItemFieldSingleSelectValue { name field { ... on ProjectV2FieldCommon { name } } } } } } } } } }'
+```
+
+**归属**：`workflows/**` + `CODEOWNERS` → **mac／治理线**；`ISSUE_TEMPLATE/**` → **win**（实测 `.github/AGENTS.md` §二）。
+**本条只写规格，不改任何 workflow**。
+
 ---
 
 ## 8. 本文的文档契约合规自证（**机器可核，不靠自律**）
