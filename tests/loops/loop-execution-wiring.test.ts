@@ -18,7 +18,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { rmSync } from 'fs';
 import { join } from 'path';
 import { LoopScheduler, type CronSchedulerLike } from '../../src/loops/loop-scheduler';
-import { bindMainAgent, getBoundMainAgent } from '../../src/loops/main-agent-binding';
+import { bindMainAgent, getBoundMainAgent, type LoopExecutorLike } from '../../src/loops/main-agent-binding';
 import { setDiagnosisDeps } from '../../src/agent/loop-handlers';
 import { wireLoopExecution } from '../../src/server';
 import type { GraphBridgeLike } from '../../src/growth/goal-types';
@@ -139,5 +139,37 @@ describe('#975 — 循环点火（生产装配函数 wireLoopExecution）', () =
     const rec = loopRecord(wiring.mainAgent, 'loop-1');
     expect(rec!.executionCount).toBe(1);
     expect(rec!.lastExecution?.scale).toBe('slow');
+  });
+});
+
+// ═══ #975 绑定模块三态（原 tests/loops/main-agent-binding.test.ts，按 D734 PR 预算合并进本文件）═══
+
+describe('main-agent-binding (#975 0-1 循环点火)', () => {
+  function makeExecutor(status = 'stub'): LoopExecutorLike {
+    return {
+      executeLoopScale: async () => ({ status }),
+      executeLoop: async () => ({ status: `${status}-fallback` }),
+    };
+  }
+
+  it('未绑定 → null（调用方须 log.warn + 跳过，禁静默）', () => {
+    bindMainAgent(null);
+    expect(getBoundMainAgent()).toBeNull();
+  });
+
+  it('绑定后可读回同一实例（幂等，后写覆盖前写）', () => {
+    const first = makeExecutor('first');
+    const second = makeExecutor('second');
+    bindMainAgent(first);
+    expect(getBoundMainAgent()).toBe(first);
+    bindMainAgent(second);
+    expect(getBoundMainAgent()).toBe(second);
+  });
+
+  it('传 null 清除绑定（停机/测试复位）', () => {
+    bindMainAgent(makeExecutor());
+    expect(getBoundMainAgent()).not.toBeNull();
+    bindMainAgent(null);
+    expect(getBoundMainAgent()).toBeNull();
   });
 });
