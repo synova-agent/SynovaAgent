@@ -11,6 +11,7 @@
     "investor_confidence_index": "number (0-1) — 投资者信心指数"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "企业声誉对外部资源获取的吸引(二阶)——声誉池提高资本获取和人才获取的效率。"
 }

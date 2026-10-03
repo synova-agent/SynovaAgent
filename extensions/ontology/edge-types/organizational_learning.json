@@ -11,6 +11,7 @@
     "cross_project_learning_score": "number (0-1) — 跨项目学习得分"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "经验积累提升整体运行效率(二阶)——知识池中的积累经验提高人才部署和资本分配的效率。"
 }

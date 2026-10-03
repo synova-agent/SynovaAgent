@@ -41,5 +41,7 @@
     "sentinel-structural-change",
     "sentinel-data-health"
   ],
+  "action_effect_lag": "unknown",
+  "transfer_function": "TBD — to be defined in compute phase",
   "description": "活动产出结果。"
 }
