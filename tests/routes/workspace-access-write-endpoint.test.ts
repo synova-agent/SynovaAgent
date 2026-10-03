@@ -76,6 +76,7 @@ async function api(
     const parsed: unknown = JSON.parse(text);
     if (typeof parsed === 'object' && parsed !== null) body = parsed as Record<string, unknown>;
   } catch {
+    // 降级（铁律 24/31）: 响应体非 JSON → 保留原文，不静默丢弃
     body = { _raw: text };
   }
   return { status: res.status, body };
