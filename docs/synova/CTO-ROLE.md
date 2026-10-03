@@ -348,6 +348,30 @@ gh api graphql -f query='query { node(id: "PVT_kwDOFAmDns4Blb57") { ... on Proje
 **归属**：`workflows/**` + `CODEOWNERS` → **mac／治理线**；`ISSUE_TEMPLATE/**` → **win**（实测 `.github/AGENTS.md` §二）。
 **本条只写规格，不改任何 workflow**。
 
+#### 7.3.0 项目视图（**已建 5 个；用来看"方向"而不是"列表"**）
+
+> 🔴 **视图不是装饰**：创始人 2026-10-03「**确保我们的门禁/CI/PR/project 等 GitHub 的功能可以准确反馈我们的方向**」
+> ⇒ 视图就是"方向的可视化"，打开即见"谁被什么卡住、哪条总闸没通、哪些能立刻开工"。
+
+| # | 视图 | 筛选（GraphQL `filter` 语法，实测可设） | 用途 |
+|---|---|---|---|
+| 1 | View 1 | （无筛选） | 全量表格（默认） |
+| **2** | **⛔ 阻塞** | `-阻塞源:无阻塞` | **一眼看谁被什么卡住** —— 派单前必看 |
+| **3** | **🩸 总闸** | `总闸:0-1-循环点火,总闸:0-2-反馈键` | 两个总闸的全部工作（不修则第 2 批起全部无效果） |
+| **4** | **✅ 可开工** | `阻塞源:无阻塞,执行态:未开工` | **现在能派谁** —— 派单前唯一该看的视图 |
+| **5** | **W 承重件** | `服务承重件:W1-时序,…,W6-进化回环`（6 项全列） | 护城河 6 承重件的进度（①健康 0/6） |
+
+**建视图的方法（实测可用；`gh project view-create` 不做筛选，故用 GraphQL）**：
+```bash
+# 建
+gh api graphql -f query='mutation { createProjectV2View(input: {projectId: "PVT_kwDOFAmDns4Blb57", name: "名字", layout: TABLE_LAYOUT}) { projectV2View { id number name } } }'
+# 设筛选（取上一步返回的 view id）
+gh api graphql -f query='mutation { updateProjectV2View(input: {viewId: "<view-id>", filter: "<filter>"}) { projectV2View { number name filter } } }'
+# 列（看 number/id/filter）
+gh api graphql -f query='query { node(id: "PVT_kwDOFAmDns4Blb57") { ... on ProjectV2 { views(first: 10) { nodes { id number name filter } } } } }'
+```
+**字段显示**：视图里显示哪些列需在 UI 勾选（GraphQL 暂无该入参）——打开任一视图 → 右上 `⋮` → Fields → 勾选 §7.3 的 7 个字段。
+
 #### 7.3.1 🔴 安全设计（**甲方案：token 不进 CI**）
 
 > 创始人 2026-10-03 选甲（用 CTO 现有 PAT）并指示「**你尽可能给我做到安全就行**」。
