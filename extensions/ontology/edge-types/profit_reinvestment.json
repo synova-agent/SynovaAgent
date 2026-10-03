@@ -11,7 +11,7 @@
     "capital_allocation_efficiency": "number (0-1) — 资本配置效率"
   },
   "consumed_by_sentinels": [],
-  "action_effect_lag": "6-12_months",
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "利润再投资——收入池中的利润通过再投资回注到资本池（取代原REPLENISHES）。"
 }
