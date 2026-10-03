@@ -8,6 +8,11 @@
 import { Router, type Request, type Response } from 'express';
 // D603 跨层修复（簇3）: KnowledgeStore 构造下沉 L2 桥接服务——不直触 init/engine-context（铁律 39）
 import { createSystemKnowledgeStore, type KnowledgeStore } from '../agent/knowledge-bridge-service';
+// D947 P2 收口: 权限过滤条件统一走**唯一漏斗**（services/request-context）——
+//   修复前本文件两处读端点写死空条件集字面量；实测 `l4/knowledge-store.ts:195/:335`
+//   在 `filter.conditions.length === 0` 时**完全跳过过滤** ⇒ 空条件集 = 不过滤 = fail-open。
+//   （注释措辞按 L-15 改写：不逐字复制该判据的正则字面量，原文见 git 历史。）
+import { getCurrentFilterClause } from '../services/request-context';
 import { createLogger } from '@synova/logger';
 
 const log = createLogger('routes/documents');
@@ -79,10 +84,12 @@ router.post('/api/documents/upload', (req: Request, res: Response) => {
 
 // ═══ GET /api/documents/list ═══
 
-router.get('/api/documents/list', (_req: Request, res: Response) => {
+router.get('/api/documents/list', async (_req: Request, res: Response) => {
   try {
     const store = getStore();
-    const { results } = store.search('', { conditions: [] }, 100);
+    // D947 P2: 过滤条件来自唯一漏斗（无验签上下文 ⇒ 漏斗返回拒绝型非空条件集，结果为空）
+    const filter = await getCurrentFilterClause('KnowledgeChunk');
+    const { results } = store.search('', filter, 100);
     // 按 source_id 去重，每个文档只返回一条
     const seen = new Set<string>();
     const docs = results.filter(r => {
@@ -105,11 +112,13 @@ router.get('/api/documents/list', (_req: Request, res: Response) => {
 
 // ═══ GET /api/documents/:id ═══
 
-router.get('/api/documents/:id', (req: Request, res: Response) => {
+router.get('/api/documents/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
     const store = getStore();
-    const { results } = store.search(id, { conditions: [] }, 50);
+    // D947 P2: 过滤条件来自唯一漏斗（同上，不得写死空条件集）
+    const filter = await getCurrentFilterClause('KnowledgeChunk');
+    const { results } = store.search(id, filter, 50);
     const chunks = results
       .filter(r => r.sourceId.startsWith(id))
       .map(r => ({
