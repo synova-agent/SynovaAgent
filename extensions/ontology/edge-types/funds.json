@@ -47,5 +47,7 @@
     "sentinel-business-model-coherence",
     "sentinel-connector-coverage"
   ],
+  "action_effect_lag": "unknown",
+  "transfer_function": "TBD — to be defined in compute phase",
   "description": "资金分配到活动。"
 }
