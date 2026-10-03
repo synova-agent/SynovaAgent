@@ -1,0 +1,28 @@
+{
+  "task_id": "D1133",
+  "title": "文档真源两件对齐 + 版本号单一真源（CLAUDE.md 退役配套改造）",
+  "status": "impl_done",
+  "spec": {
+    "doc": "CLAUDE.md 退役指针件 §『后续（归治理线）』+ 共享任务 task-13 + CTO 判据纠正（目标=消⚠️非消红）",
+    "by": "lead",
+    "at": "2026-10-03"
+  },
+  "impl": {
+    "commit": "PENDING",
+    "by": "gov-impl-decide",
+    "at": "2026-10-03",
+    "branch": "chore/D1133-doc-truth-ssot",
+    "files": [
+      "scripts/doc-system/check-doc-truth.sh",
+      "scripts/check-brief-vs-code.sh",
+      "tests/doc-system/check-doc-truth.test.sh",
+      "docs/synova/coordination/2026-10-03-D1133-文档真源两件对齐与版本号单一真源.md",
+      ".claude/task-briefs/2026-10-03-D1133-文档真源两件对齐与版本号单一真源.md"
+    ]
+  },
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-03",
+  "updated_by": "gov-impl-decide",
+  "note": "门禁语义变更（需 K3+CTO 裁，本线不自判）。改动：①check-doc-truth.sh C1 判定面 AGENTS/CLAUDE/knowledge-shared-README → AGENTS+README（移出 CLAUDE.md）；C2 判定面 AGENTS/CLAUDE/LOOP → AGENTS+LOOP（移出 CLAUDE.md）；C3 由『三源互等』改为『单一真源=AGENTS.md 首个 V#.#.#，LOOP.md 必须等于该源』，CLAUDE.md 只读存在性（ℹ️兼容提示）；新增 exit 2 fail-closed（真源缺失/不可解析 或 判定面 LOOP.md 缺失/不可解析）——消费者已存在：pre-commit-check.sh:1471-1481 已按 D328 处理 else(exit 2) ⇒ 无需改消费者。②check-brief-vs-code.sh 流程约束取数源改 AGENTS.md 优先+显式回退 CLAUDE.md 并标注来源，消除 ${FLOW_CONSTRAINT:-unknown} 静默降级（该行历来只 echo 不判，不改变门禁结论）。③夹具 5 例→11 例。验收：本卡脚本 11/11 exit 0；同夹具对 origin/main 原脚本 7/11（H/I/J/K 4 例判别性红）⇒ 先红后绿成立；目标态（31 行指针件）⚠️ 3→1（消 C1/C2 两处，余 1 为既有 W1）；现状 706 行 CLAUDE.md 不误伤（exit 0，仅既有 W1）。🔴 三条前提勘误（附原始输出）：P1 卡面把 C1/C2 说反——LOOP.md 属 C2 不属 C1（C1 第三件是 knowledge/shared/README.md），照字面改会让 C1 永久⚠️（LOOP.md 无专家数）；P2 AGENTS.md 没有『流程约束』行（grep -c=0），且两条版本轴不同（AGENTS.md:2=V5.2.7 文档轴 vs 流程约束=V4.5.1 流程轴）⇒ 照字面改会丢值，改为优先+显式回退+标源，CTO 日后加该行即自动切换；P3 卡面写集的 scripts/check-brief-vs-code.sh(301 行) 生产调用方=0，CI 实调的是同名另一份 scripts/workflow/check-brief-vs-code.sh(228 行)@ci.yml:673 且带 || true 吞退出码 ⇒ 本卡改动合规但对 CI 无实际影响。🔴 顺序证明：先合退役件不红（exit 0），只多 2 个 ⚠️ ⇒ 卡面『中间态必红』不准确，CTO 纠正成立；本卡顺序价值=降噪(3→1)。🔴 取号阻塞披露：alloc-task-id.sh worktree 扫描病态慢（422 worktree × 117,373 个 task-state 文件，O(候选×worktree×files)，实测>180s 未返回、bash -x 75s 产 1.32 亿行 trace）⇒ 用其自带文档化注入缝 SYNO_ALLOC_NO_WORKTREE=1 取号(11s)，随后独立补做被跳过的占用检查（其他 worktree 占用 0、远端/本地分支名 0 命中）⇒ 号可用。未改该脚本（写集外），建议立卡。未验证 6 项（U1 CI 真跑/U2 AGENTS 加行后自动切换/U3 CI 实调份是否同改/U4 Windows 腿/U5 退役件落地后整体态/U6 分配器慢根因）全列表在产出件 §10。裁决表 K1-K7 在 §9。未 push，未 complete task-13（遵队长指令）。"
+}
