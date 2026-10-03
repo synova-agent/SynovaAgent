@@ -10,6 +10,7 @@ import { Router, type Request, type Response } from 'express';
 import { createLogger } from '@synova/logger';
 import { handleInboundMessage } from '../l1/im-inbound';
 import { runWithContext } from '../services/request-context';
+import { allowedSensitivities } from '../middleware/auth';
 
 const log = createLogger('routes/im');
 const router = Router();
@@ -50,7 +51,23 @@ router.post('/api/im/feishu/webhook', async (req: Request, res: Response) => {
     }
 
     // M2: 建立请求级用户上下文 (KnowledgeAgent 工具执行时自动获取权限过滤)
-    const result = await runWithContext({ user: { userId: senderId, identity: { openId: senderId, email: '', name: senderId, source: 'feishu' }, auth: { roles: ['employee'], teamId: 'default', tenantId: 'default', sensitivity: 'normal' }, permissions: { version: 1, expiresAt: Date.now() + 3600000 } } }, async () => {
+    // #984: 必须**同时**注入 authProvider。只传 user 时 `getCurrentFilterClause` 会落回
+    //   deny-all 兜底（services/request-context.ts:75-85）⇒ **已认证的飞书用户也拿 0 行**
+    //   （实测：装配前 results=0 / 装配后 results=10 / 未认证 results=0）。
+    //   白名单规则单一真源 = middleware/auth.ts 的 allowedSensitivities（此处不复制第二份）。
+    const imUser = { userId: senderId, identity: { openId: senderId, email: '', name: senderId, source: 'feishu' }, auth: { roles: ['employee'], teamId: 'default', tenantId: 'default', sensitivity: 'normal' }, permissions: { version: 1, expiresAt: Date.now() + 3600000 } };
+    const result = await runWithContext({
+      user: imUser,
+      authProvider: {
+        getPermissionFilter: async (ctx) => ({
+          conditions: [{
+            field: 'access.sensitivity',
+            operator: 'IN' as const,
+            value: allowedSensitivities(ctx.auth.roles[0], ctx.auth.sensitivity),
+          }],
+        }),
+      },
+    }, async () => {
       return handleInboundMessage(store as unknown as Parameters<typeof handleInboundMessage>[0], piiScrubber, {
         platform: 'feishu',
         senderId,
