@@ -348,6 +348,48 @@ gh api graphql -f query='query { node(id: "PVT_kwDOFAmDns4Blb57") { ... on Proje
 **归属**：`workflows/**` + `CODEOWNERS` → **mac／治理线**；`ISSUE_TEMPLATE/**` → **win**（实测 `.github/AGENTS.md` §二）。
 **本条只写规格，不改任何 workflow**。
 
+#### 7.3.1 🔴 安全设计（**甲方案：token 不进 CI**）
+
+> 创始人 2026-10-03 选甲（用 CTO 现有 PAT）并指示「**你尽可能给我做到安全就行**」。
+> 故本设计的目标不是"能用"，是**把暴露面缩到最小**。
+
+**实测三条（决定了设计）**：
+```
+① 仓库 visibility = public（实测）
+② GitHub 内置项目工作流【不覆盖】`gh issue create` 创建的 Issue
+   —— 实测：#992 CLI 创建、不手工挂板、等 45s ⇒ 板上 totalCount 38→38，未出现
+   ⇒ 「挂板零凭证」不成立
+③ macOS 自带 GNU bash 3.2.57【不支持 declare -A】（关联数组）⇒ 脚本须可移植写法
+```
+
+**安全模型（三层）**：
+
+| 层 | 做法 | 效果 |
+|---|---|---|
+| **1 · secret 不进 CI** | `PROJECT_TOKEN` 已存 repo secret（2026-10-03），但**任何 workflow 都不得引用它**；挂板+灌字段走**本地同步器** `docs/synova/coordination/tools/sync-project-coordinates.sh` | 🔴 **CI 零凭证** ⇒ 公开仓的 CI 不成为攻击面；"所有 workflow 均可读 secret"的风险消失 |
+| **2 · 只读不联** | GitHub 两道内置保护仍在：fork 的 PR **拿不到** secret；`pull_request` 跑的是 base 分支的 workflow ⇒ 改自己 PR 里的 yml 不生效 | 陌生人 PR 路径被堵死 |
+| **3 · 命名空间可换** | workflow 若将来需要，按**名字**引用 `secrets.PROJECT_TOKEN` ⇒ 换凭证**零代码改动**（甲→乙迁移 = secret 页面点一次 Update） | 迁移成本已核为零 |
+
+**🔴 禁止事项（写死，防后人"顺手"接进 CI）**：
+```
+· 不得在 .github/workflows/** 中引用 secrets.PROJECT_TOKEN
+  （唯一例外：经 CTO 裁 + K3 过审的正式变更）
+· 不得把该 token 写进任何仓库内文件、Issue/PR 正文、task brief
+· 不得为"图方便"把同步逻辑搬到 CI —— 本地脚本已覆盖全部功能
+```
+
+**已知残余风险（如实登记，不声称安全）**：
+```
+· token 是 classic PAT（scope = project, read:org, repo）⇒ 泄露后果含"可删仓/改分支保护"（不可逆）
+· org 只有 1 名成员 ⇒ 无第二双眼睛；main 保护 required_reviews=0 ⇒ 可零 review 自合
+· PAT 有寿命（到期 workflow/脚本会失效）
+⇒ 缓解：① 不进 CI（最大暴露面已消除）；② 若要换乙（fine-grained，仅 Projects+Issues 读写）零成本
+```
+
+**本域独有红线补充**：`docs/synova/coordination/tools/**` 是 **CTO 域内的本地工具**，不属控制塔执法层
+（不在 `scripts/control-tower/**`，故不适用 PLATFORM-CHECKLIST 的"新脚本进 ci.yml 密封清单"要求）；
+但**仍按该清单的移植性要求写**（UTF-8 头 / PYBIN 三级探测 / bash 3.2 兼容）。
+
 ---
 
 ## 8. 本文的文档契约合规自证（**机器可核，不靠自律**）
