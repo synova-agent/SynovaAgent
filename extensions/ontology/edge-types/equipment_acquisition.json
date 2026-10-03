@@ -11,6 +11,7 @@
     "maintenance_cost_ratio": "number (0-1) — 维护成本占比"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "获取生产设备与设施——企业从外部设备市场购买/租赁生产设备和基础设施的输入阀。"
 }
