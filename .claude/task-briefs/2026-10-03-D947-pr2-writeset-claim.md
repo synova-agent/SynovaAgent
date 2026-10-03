@@ -13,7 +13,7 @@ L2 编排层（鉴权中间件挂载序 + 工作区写端点接线）。本卡�
 
 | 检查 | 实测 |
 |---|---|
-| `git diff --name-only origin/main...HEAD` | 24 件 |
+| `git diff --name-only origin/main...HEAD` | 25 件 |
 | 计入 D734 预算（新版门禁实测） | **11 ≤ 12 ✅ PASS** |
 | CI 红① | `❌ empty catch 无 log: tests/routes/workspace-access-write-endpoint.test.ts:78` |
 | CI 红② | `❌ G12: task brief Q2 范围一致性 9 处 [硬阻断]` |
@@ -36,7 +36,8 @@ L2 编排层（鉴权中间件挂载序 + 工作区写端点接线）。本卡�
 ## Q2: 范围 — 正确的最简方案
 做什么：
 - .claude/bypass.log
-- .claude/task-briefs/2026-09-24-D947-middleware-default-posture.md
+- .claude/task-briefs/2026-10-02-D947-pr1-writeset-claim.md
+- .claude/task-briefs/2026-10-03-D947-pr2-writeset-claim.md
 - docs/synova/product-lines/evidence/D947-20260924/D947-RECEIPT.md
 - docs/synova/product-lines/evidence/D947-20260924/D947-RULINGS.md
 - docs/synova/product-lines/evidence/D947-20260924/D947-T-V-verifier-raw-evidence.md
@@ -59,7 +60,6 @@ L2 编排层（鉴权中间件挂载序 + 工作区写端点接线）。本卡�
 - tests/routes/middleware-order.test.ts
 - tests/routes/overflow.test.ts
 - tests/routes/workspace-access-write-endpoint.test.ts
-- .claude/task-briefs/2026-10-03-D947-pr2-writeset-claim.md
 
 不做什么：
 - 不改 .github/workflows/ci.yml
