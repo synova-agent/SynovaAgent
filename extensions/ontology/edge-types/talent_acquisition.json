@@ -11,6 +11,7 @@
     "source_channel_effectiveness": "object — 各渠道效果"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "1-3_months",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "获取人力——企业从外部人才市场招聘新员工的输入阀。受TALENT_FILTER的selection_threshold调节。"
 }
