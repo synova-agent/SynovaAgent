@@ -3,7 +3,7 @@
   "record_type": "production-entry-capture",
   "task": "D819",
   "title": "工具接线三修：出站带 tools + 响应侧 tool_calls 映射 + assistant 不重复",
-  "captured_date": "2026-09-19",
+  "captured_date": "2026-10-03",
   "generated_by": "tests/agent/tool-loop-tool-pairing.integration.test.ts",
   "volatile_fields_excluded": [
     "mock 端口",

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-28 21:59:47",
+  "generated_at": "2026-10-03 06:30:18",
   "version": "1.1",
   "total_lines": 29,
   "lines_v1": 28,
@@ -11,7 +11,7 @@
     "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
     "granularity": "acceptance_point(product-lines.yaml)",
     "denominator": 181,
-    "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+    "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
     "cmd_semantics": {
       "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
       "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -74,7 +74,7 @@
         "reason": null
       },
       "live_unverified": {
-        "count": 0,
+        "count": 8,
         "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=f['buckets']['other_states']['live_unverified']['count'];b=k['buckets']['other_states']['live_unverified']['count'];sys.exit('MISMATCH buckets.buckets.other_states.live_unverified.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('live_unverified=' + str(a))\"",
         "cmd_kind": "source_recompute",
         "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=d['buckets']['other_states']['live_unverified']['count'];print('live_unverified=' + str(v))\"",
@@ -86,7 +86,7 @@
         "reason": null
       },
       "stale": {
-        "count": 31,
+        "count": 23,
         "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=f['buckets']['other_states']['stale']['count'];b=k['buckets']['other_states']['stale']['count'];sys.exit('MISMATCH buckets.buckets.other_states.stale.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('stale=' + str(a))\"",
         "cmd_kind": "source_recompute",
         "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=d['buckets']['other_states']['stale']['count'];print('stale=' + str(v))\"",
@@ -153,7 +153,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 8,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -408,7 +408,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 7,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -594,7 +594,8 @@
             "docs/synova/product-lines/evidence/test-2026-09-15-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-16-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-17.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "线程存在，长会话上下文管理见线 20"
         },
@@ -632,7 +633,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 9,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -828,7 +829,8 @@
           "status": "rejected",
           "evidence_files": [
             "docs/synova/product-lines/evidence/k3-batch3-2026-09-28.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "③ 决定③（创始人裁定表-§6五项-20260920.md §6-5）。**依赖：D828 趋势接线引用本口径**（裁定表 §6-5 ③ 原文）——本点是 D828 的前置口径，D828 实现不得另立时间窗。fail_when：只支持日／不支持周月视图／聚合值与覆盖日值求和不一致（同区间两处口径打架）／报告未标注数据时点。M1：时点与时区语义可对齐 @deepseek-ai/dsh-time-context（**v0.1.6-alpha.2**，config.timeZone / config.refreshIntervalMs，lib/index.js:161-162）——复用语义，不抄界面（M5）。"
         }
@@ -850,7 +852,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 9,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -1014,7 +1016,8 @@
             "docs/synova/product-lines/evidence/test-2026-09-15-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-16-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-17.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "已有（K3 P0-2：仅飞书+CSV）"
         },
@@ -1061,7 +1064,8 @@
           "status": "rejected",
           "evidence_files": [
             "docs/synova/product-lines/evidence/k3-batch2-2026-09-28.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "② 决定②（创始人裁定表-§6五项-20260920.md §6-5 保守起步档）。M1：超长输出属 DSH 已有能力 → 须写成『接入/配置/约束 DSH 的 spill 能力并验证』：语义位 = @deepseek-ai/dsh-spill-policy **v0.1.6-alpha.2** 的 maxInlineBytes（apply(ctx,config) lib/index.js:102-103；schema lib/types/index.js:53），后端 = dsh-spill（ctx.spillStore 抽象缝）+ dsh-spill-local（saveText :556 → 路径 locator :564）。**配置读取位置** = 该插件注册处读 config.maxInlineBytes（我方两阈值以此为读取点）。**越界行为对齐 DSH 实测**：非整数或负数 → throw（:104-105）；未配置 → no-op 不注册（:106）；无 session owner／无 spillStore backend／saveText 失败／替换后超 cap → ctx.logger.warn 且保留 inline（:107-150，不得静默丢）。fail_when：阈值硬编码不可配／非法值被静默接受／落盘失败后内容丢失或静默截断。**依赖**：DSH 侧需先接入 dsh-spill（ctx.spillStore 抽象缝）+ dsh-spill-local 后端；跨线口径（阈值单一来源）登记于 preconditions.yaml CLC-2。⚠️ 口径差（交创始人确认）：DSH 为**单阈值且单位 UTF-8 字节**，我方为**双阈值且单位字符**；8,000–32,000 之间档位的语义原裁定未定义，须实现方在 SPEC 显式声明，不得自行推定。"
         }
@@ -1083,7 +1087,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 6,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -1277,7 +1281,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 7,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -1478,7 +1482,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 8,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -1679,7 +1683,8 @@
             "docs/synova/product-lines/evidence/test-2026-09-15-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-16-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-17.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": ""
         },
@@ -1710,7 +1715,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 8,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -1901,7 +1906,8 @@
           "status": "rejected",
           "evidence_files": [
             "docs/synova/product-lines/evidence/k3-batch2-2026-09-28.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "① 决定① 出站为主（创始人裁定表-§6五项-20260920.md §6-5）。M1：DSH 的 webhook 是纯入站（@deepseek-ai/dsh-webhook **v0.1.6-alpha.2** dispatch(delivery) lib/index.js:245、createWebhookSession :90，全谱无出站投递 API；版本锚点见 D852-派单回执-20260920.md §D）→ 本点无 DSH 重叠能力，M1 不适用（自建）。fail_when：配置后事件不投递／投递无鉴权／重试耗尽后静默丢弃（须 log + degraded，铁律 24+31）／同一次告警重复投递（受 8-3 去重键约束）。依赖：8-3 去重键稳定 + 线 4 数据源凭据存储。"
         },
@@ -1911,7 +1917,8 @@
           "status": "verified",
           "evidence_files": [
             "docs/synova/product-lines/evidence/k3-batch2-2026-09-28.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "① 决定① 入站仅扩展点（外部触发不进核心）。fail_when：关闭入站缝后核心链路失败（＝核心反向依赖了扩展点）／外部触发创建或修改工单／外部触发导致去重键变化。判据是行为与不变量，禁以 grep 命中作为通过依据（总纲 §5 + 撤回清单 #3）。M1：入站方向若复用 DSH dsh-webhook（v0.1.6-alpha.2）的投递处理，须写成『接入/配置 DSH 的该能力并验证』；本点只约定边界，不约定实现。"
         }
@@ -1933,7 +1940,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 6,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -2130,7 +2137,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 8,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -2276,7 +2283,8 @@
           "evidence_files": [
             "docs/synova/product-lines/evidence/k3-batch3-2026-09-28.json",
             "docs/synova/product-lines/evidence/test-2026-09-17.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "K3：属性契约断裂"
         },
@@ -2308,7 +2316,8 @@
             "docs/synova/product-lines/evidence/test-2026-09-15-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-16-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-17.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "K3：compute-cash-runway-months.ts:60 filter bug"
         },
@@ -2358,7 +2367,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 7,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -2565,7 +2574,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 5,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -2752,7 +2761,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 5,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -2939,7 +2948,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 5,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -3126,7 +3135,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 7,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -3276,7 +3285,8 @@
             "docs/synova/product-lines/evidence/test-2026-09-15-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-16-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-17.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "代码实证存在；K3 v1.1：V5 视图硬编码旧 6 专家（D282 未传播）"
         },
@@ -3305,7 +3315,8 @@
             "docs/synova/product-lines/evidence/test-2026-09-15-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-16-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-17.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "接线存在（代码实证）"
         },
@@ -3328,7 +3339,8 @@
             "docs/synova/product-lines/evidence/test-2026-09-15-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-16-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-17.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "创始人 13 问第 10 问：提示词效果未验证"
         },
@@ -3373,7 +3385,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 5,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -3560,7 +3572,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 5,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -3749,7 +3761,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 6,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -3812,7 +3824,7 @@
             "reason": null
           },
           "live_unverified": {
-            "count": 0,
+            "count": 2,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '18')['buckets']['other_states']['live_unverified']['count'];b=next(l for l in k['lines'] if str(l['id']) == '18')['buckets']['other_states']['live_unverified']['count'];sys.exit('MISMATCH lines[id=18].buckets.buckets.other_states.live_unverified.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('live_unverified=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '18')['buckets']['other_states']['live_unverified']['count'];print('live_unverified=' + str(v))\"",
@@ -3824,7 +3836,7 @@
             "reason": null
           },
           "stale": {
-            "count": 3,
+            "count": 1,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '18')['buckets']['other_states']['stale']['count'];b=next(l for l in k['lines'] if str(l['id']) == '18')['buckets']['other_states']['stale']['count'];sys.exit('MISMATCH lines[id=18].buckets.buckets.other_states.stale.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('stale=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '18')['buckets']['other_states']['stale']['count'];print('stale=' + str(v))\"",
@@ -3875,10 +3887,10 @@
       "status_counts": {
         "uncommitted": 2,
         "failed": 0,
-        "pending_k3": 0,
+        "pending_k3": 2,
         "verified": 0,
         "rejected": 1,
-        "stale": 3
+        "stale": 1
       },
       "points": [
         {
@@ -3894,7 +3906,7 @@
         {
           "id": "18-2",
           "desc": "SessionStore + 重启恢复（重启后记忆还在）",
-          "status": "stale",
+          "status": "pending_k3",
           "evidence_files": [
             "docs/synova/product-lines/evidence/D806-borrow-cards-20260918.json",
             "docs/synova/product-lines/evidence/test-2026-08-17.json",
@@ -3909,7 +3921,8 @@
             "docs/synova/product-lines/evidence/test-2026-09-15-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-16-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-17.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "代码实证存在；重启恢复测试未作为证据登记"
         },
@@ -3930,7 +3943,7 @@
         {
           "id": "18-5",
           "desc": "版本化 + superseded_by 链（事实更新可追溯）",
-          "status": "stale",
+          "status": "pending_k3",
           "evidence_files": [
             "docs/synova/product-lines/evidence/test-2026-08-17.json",
             "docs/synova/product-lines/evidence/test-2026-08-18-1.json",
@@ -3944,7 +3957,8 @@
             "docs/synova/product-lines/evidence/test-2026-09-15-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-16-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-17.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "企业事实层设计存在"
         },
@@ -3975,7 +3989,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 5,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -4134,7 +4148,8 @@
             "docs/synova/product-lines/evidence/test-2026-09-15-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-16-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-17.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": ""
         },
@@ -4179,7 +4194,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 6,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -4324,7 +4339,8 @@
           "status": "rejected",
           "evidence_files": [
             "docs/synova/product-lines/evidence/k3-batch2-2026-09-28.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": ""
         },
@@ -4335,7 +4351,8 @@
           "evidence_files": [
             "docs/synova/product-lines/evidence/D806-borrow-cards-20260918.json",
             "docs/synova/product-lines/evidence/k3-batch2-2026-09-28.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "创始人 13 问第 4 问：当前 = 0，要设计"
         },
@@ -4366,7 +4383,8 @@
             "docs/synova/product-lines/evidence/test-2026-09-15-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-16-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-17.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "组件存在（代码实证）"
         },
@@ -4397,7 +4415,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 5,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -4547,7 +4565,8 @@
             "docs/synova/product-lines/evidence/test-2026-09-15-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-16-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-17.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "providers/deepseek.ts 存在"
         },
@@ -4569,7 +4588,8 @@
             "docs/synova/product-lines/evidence/test-2026-09-15-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-16-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-17.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "深度优化 = 0"
         },
@@ -4580,7 +4600,8 @@
           "evidence_files": [
             "docs/synova/product-lines/evidence/D806-borrow-cards-20260918.json",
             "docs/synova/product-lines/evidence/k3-batch2-2026-09-28.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": ""
         },
@@ -4618,7 +4639,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 6,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -4769,7 +4790,8 @@
             "docs/synova/product-lines/evidence/test-2026-09-15-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-16-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-17.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "组件存在（代码实证）"
         },
@@ -4828,7 +4850,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 6,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -5022,7 +5044,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 6,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -5194,7 +5216,8 @@
             "docs/synova/product-lines/evidence/test-2026-09-15-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-16-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-17.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "组件存在（代码实证）"
         },
@@ -5232,7 +5255,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 9,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -5382,7 +5405,8 @@
             "docs/synova/product-lines/evidence/test-2026-09-15-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-16-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-17.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "文件驱动已有"
         },
@@ -5404,7 +5428,8 @@
             "docs/synova/product-lines/evidence/test-2026-09-15-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-16-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-17.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": ""
         },
@@ -5426,7 +5451,8 @@
             "docs/synova/product-lines/evidence/test-2026-09-15-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-16-1.json",
             "docs/synova/product-lines/evidence/test-2026-09-17.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "builtins 自动扫描存在"
         },
@@ -5451,7 +5477,8 @@
           "evidence_files": [
             "docs/synova/product-lines/evidence/D806-borrow-cards-20260918.json",
             "docs/synova/product-lines/evidence/k3-batch1-line25-line1-2026-09-28.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "文件驱动是 1.0，运行时插件化是 2.0"
         },
@@ -5470,7 +5497,8 @@
           "status": "rejected",
           "evidence_files": [
             "docs/synova/product-lines/evidence/k3-batch1-line25-line1-2026-09-28.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "④ 决定④ 上句（展示·阈值·文案 = live）。M1：设置运行时修改属 DSH 已有能力 → 须写成『接入/配置/约束 DSH 的 settings applies 分类并验证』：@deepseek-ai/dsh-settings **v0.1.6-alpha.2** SettingsApplies = live | restart（lib/types/index.d.ts:21），注册时 applies 缺省即 live（lib/index.js:288）。fail_when：声明 live 的项改完仍需重启才生效／改完生效但半生效（部分消费者用旧值）／实为 restart 却声明 live（消费者被误导）。**依赖**：25-6 运行时插件化（提供配置读取与消费者观察点）；与 25-9 共用同一 applies 分类机制，两者须同批声明。"
         },
@@ -5480,7 +5508,8 @@
           "status": "rejected",
           "evidence_files": [
             "docs/synova/product-lines/evidence/k3-batch1-line25-line1-2026-09-28.json",
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "④ 决定④ 下句（连接·插件·数据源·鉴权 = restart）。M1 同 25-8（dsh-settings **v0.1.6-alpha.2** applies: restart）。fail_when：restart 类改动在重启前被部分应用（半生效——正是决定④ 要避免的状态）／声明 restart 但重启后仍未生效／四类中任一类缺 applies 分类声明。依赖：25-6 运行时插件化边界（本点约束其生效时机）。"
         }
@@ -5502,7 +5531,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 7,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -5705,7 +5734,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 5,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -5768,7 +5797,7 @@
             "reason": null
           },
           "live_unverified": {
-            "count": 0,
+            "count": 3,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '27')['buckets']['other_states']['live_unverified']['count'];b=next(l for l in k['lines'] if str(l['id']) == '27')['buckets']['other_states']['live_unverified']['count'];sys.exit('MISMATCH lines[id=27].buckets.buckets.other_states.live_unverified.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('live_unverified=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '27')['buckets']['other_states']['live_unverified']['count'];print('live_unverified=' + str(v))\"",
@@ -5780,7 +5809,7 @@
             "reason": null
           },
           "stale": {
-            "count": 3,
+            "count": 0,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '27')['buckets']['other_states']['stale']['count'];b=next(l for l in k['lines'] if str(l['id']) == '27')['buckets']['other_states']['stale']['count'];sys.exit('MISMATCH lines[id=27].buckets.buckets.other_states.stale.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('stale=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '27')['buckets']['other_states']['stale']['count'];print('stale=' + str(v))\"",
@@ -5831,10 +5860,10 @@
       "status_counts": {
         "uncommitted": 2,
         "failed": 0,
-        "pending_k3": 0,
+        "pending_k3": 3,
         "verified": 0,
         "rejected": 0,
-        "stale": 3
+        "stale": 0
       },
       "points": [
         {
@@ -5847,18 +5876,20 @@
         {
           "id": "27-2",
           "desc": "趋势真的接线：注入 3 期历史 → 哨兵 finding 的 payload 含 trend 且方向与注入数据一致",
-          "status": "stale",
+          "status": "pending_k3",
           "evidence_files": [
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "computeTemporalBaseline 现为零生产调用（D828 修）"
         },
         {
           "id": "27-3",
           "desc": "参数标定表存在且有来源：每个在生产被引用的测量器，其参数有标定值 + 标定依据 + 日期",
-          "status": "stale",
+          "status": "pending_k3",
           "evidence_files": [
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "依赖 27-1（没有历史测量值就无数据可标）"
         },
@@ -5872,9 +5903,10 @@
         {
           "id": "27-5",
           "desc": "因果边可用：42 条因果边的 transfer_function 不再是待定，且运行时被真实计算",
-          "status": "stale",
+          "status": "pending_k3",
           "evidence_files": [
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "E5 报 42 边 transfer_function 全 TBD、运行时零计算"
         }
@@ -5896,7 +5928,7 @@
         "authority": "docs/authority/产品完成度定义与推进总纲-20260918.md §1.2（v1，2026-09-18） + docs/synova/coordination/验收标准-穿真实入口-v1-20260918.md §二（v1.1，2026-09-19） + 方案-项目度量-从声明驱动到事实驱动.md §四/§六（创始人授权引用）",
         "granularity": "acceptance_point(product-lines.yaml)",
         "denominator": 5,
-        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-09-28",
+        "regenerate_cmd": "python3 scripts/product-lines/calc-progress.py --out /tmp/ro-pp.json --today 2026-10-03",
         "cmd_semantics": {
           "evidence_cmd": "**源侧重算**（本档「那条命令」）：从权威输入（product-lines.yaml / 证据记录 / V1 断言表 / git 事实）重算该档同一个值，并与已提交派生件该档比对；对不上 → 断言失败并打印档路径；缺中间件 → fail-closed 报错。禁止读回已提交派生物充当本字段（读回自己的输出不构成证据）。",
           "artifact_selfcheck_cmd": "**派生物侧自查**（毫秒级）：读回**已提交**派生物该档取值，核对「看板显示的数字 == 提交件里的数字」。**不承担可证伪职责**（源侧错它也错）→ **不占用**「每个数字那条命令」的位置。",
@@ -5959,7 +5991,7 @@
             "reason": null
           },
           "live_unverified": {
-            "count": 0,
+            "count": 3,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '28')['buckets']['other_states']['live_unverified']['count'];b=next(l for l in k['lines'] if str(l['id']) == '28')['buckets']['other_states']['live_unverified']['count'];sys.exit('MISMATCH lines[id=28].buckets.buckets.other_states.live_unverified.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('live_unverified=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '28')['buckets']['other_states']['live_unverified']['count'];print('live_unverified=' + str(v))\"",
@@ -5971,7 +6003,7 @@
             "reason": null
           },
           "stale": {
-            "count": 3,
+            "count": 0,
             "evidence_cmd": "python3 -c \"import json,os,sys;p='/tmp/ro-pp.json';c='docs/synova/product-lines/product-progress.json';sys.exit('FAIL-CLOSED: 缺 ' + p + ' —— 先跑 regenerate_cmd 源侧重算；不得读回提交件') if not os.path.exists(p) else None;f=json.load(open(p,encoding='utf-8'));k=json.load(open(c,encoding='utf-8'));a=next(l for l in f['lines'] if str(l['id']) == '28')['buckets']['other_states']['stale']['count'];b=next(l for l in k['lines'] if str(l['id']) == '28')['buckets']['other_states']['stale']['count'];sys.exit('MISMATCH lines[id=28].buckets.buckets.other_states.stale.count: fresh=' + repr(a) + ' committed=' + repr(b) + ' —— 源侧与提交件不一致，请重生成派生件') if a != b else None;print('stale=' + str(a))\"",
             "cmd_kind": "source_recompute",
             "artifact_selfcheck_cmd": "python3 -c \"import json;d=json.load(open('docs/synova/product-lines/product-progress.json',encoding='utf-8'));v=next(l for l in d['lines'] if str(l['id']) == '28')['buckets']['other_states']['stale']['count'];print('stale=' + str(v))\"",
@@ -6022,10 +6054,10 @@
       "status_counts": {
         "uncommitted": 2,
         "failed": 0,
-        "pending_k3": 0,
+        "pending_k3": 3,
         "verified": 0,
         "rejected": 0,
-        "stale": 3
+        "stale": 0
       },
       "points": [
         {
@@ -6038,27 +6070,30 @@
         {
           "id": "28-2",
           "desc": "数据隔离：以 org-A 身份查 org-B 的数据（搜索/报告/指标）→ 返回空，且不泄漏『存在但无权』",
-          "status": "stale",
+          "status": "pending_k3",
           "evidence_files": [
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "含 search() 缺 org_id 过滤（D826，锚点=第 2 个客户接入前）+ 指标/报告面"
         },
         {
           "id": "28-3",
           "desc": "凭据分区：两 org 各存一份凭据 → 各自出站只带自己的；GET 不回显任何明文/末 4 位",
-          "status": "stale",
+          "status": "pending_k3",
           "evidence_files": [
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "现生产路由走内存 Map + 明文 + 末 4 位回显（CTO 已核 server.ts:394 确实挂载）"
         },
         {
           "id": "28-4",
           "desc": "用量可分辨：按客户/时段统计 token 用量并可导出",
-          "status": "stale",
+          "status": "pending_k3",
           "evidence_files": [
-            "docs/synova/product-lines/evidence/test-2026-09-28.json"
+            "docs/synova/product-lines/evidence/test-2026-09-28.json",
+            "docs/synova/product-lines/evidence/test-2026-10-03.json"
           ],
           "note": "依赖会话统计两处零接线修好（D827）"
         },
