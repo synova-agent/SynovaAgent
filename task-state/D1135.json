@@ -1,0 +1,41 @@
+{
+  "task_id": "D1135",
+  "title": "DSH 树 rc.1 → rc.2 迁移 + 事实源同步（栈在 #970 之上）",
+  "status": "audit_pending",
+  "risk": "high",
+  "spec": null,
+  "impl": {
+    "commit": null,
+    "by": "gov-impl-retire",
+    "at": "2026-10-03",
+    "files": [
+      "docs/synova/coordination/DSH-断面.json",
+      ".claude/task-briefs/2026-10-03-D1135-DSH树rc1到rc2迁移与事实源同步.md"
+    ],
+    "note": "commit sha 由生成器从 git log '(D1135)' 派生（D393 口径，json 内 null 属预期）。栈基座 = fix/D1132-dsh-anchor（PR #970 head 1dbbcf38d）。A 段移树由队长在宿主机执行（本执行体沙箱对工作区外路径只读）。未新建 Note（memory/notes/** 不在写集），引用 D1132/D943 既有 Note。"
+  },
+  "audit": null,
+  "fix_task_id": null,
+  "branch": "chore/D1135-dsh-rc2",
+  "worktree": ".synova-wt-w3a",
+  "stack_base": {
+    "branch": "fix/D1132-dsh-anchor",
+    "head": "1dbbcf38d74cff8031f05ed5e3ea876a97863aab",
+    "pr": 970
+  },
+  "anchor": {
+    "fact_source": "docs/synova/coordination/DSH-断面.json",
+    "tree": "/Users/wane/src/deepseek-harness-020",
+    "current_before": "0.2.0-rc.1 @ 4878cdabd8 @ /Users/wane/src/deepseek-harness-020",
+    "current_after": "0.2.0-rc.2 @ 639ed01539 @ /Users/wane/src/deepseek-harness-020",
+    "full_sha": "639ed015397290b3745d163aafe02ffee4aa3f84",
+    "head_is_short_form": "current.head 必须是 git rev-parse --short HEAD 的逐字输出（检查器 check-dsh-anchor.py:80/:83 做字符串不等比较）；全 sha 存入 current.note"
+  },
+  "findings_registered_not_fixed": [
+    "P1 假绿：check-dsh-anchor.py:168 head_re = \\b(00102833|46a7f68b|[0-9a-f]{8})\\b 只见 8 位 hex，本仓 --short 为 10 位 ⇒ 「引用已 superseded 断面」对现行 head 格式完全失明（实测 10 位 findall=[]，8 位可触发 VIOLATION(1)）",
+    ":116 硬编码豁免 sh_ not in (\"46a7f68b\",)（D1132 已登记）",
+    "current.path 本机私有（D1132 已登记）"
+  ],
+  "updated_at": "2026-10-03",
+  "updated_by": "coding"
+}
