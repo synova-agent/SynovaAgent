@@ -7,5 +7,21 @@
   "audit": null,
   "fix_task_id": null,
   "updated_at": "2026-10-03",
-  "updated_by": "alloc-task-id"
+  "updated_by": "alloc-task-id",
+  "write_set": [
+    ".claude/task-briefs/2026-10-03-D1136-K3判据落地批P1四项.md",
+    "docs/authority/DOCS-REGISTRY.yaml",
+    "memory/notes/proposed/2026-10-03-d1136-k3-p1-batch.md",
+    "scripts/control-tower/check-ci-stale-red.sh",
+    "scripts/control-tower/check-pr-budget.sh",
+    "scripts/control-tower/pre-dispatch-check.sh",
+    "scripts/doc-system/doc-registry-gate.sh",
+    "scripts/doc-system/generate-chronicle-monthly.sh",
+    "scripts/install-hooks.sh",
+    "scripts/pre-commit-check.sh",
+    "scripts/workflow/task-start.sh",
+    "scripts/workflow/verify-incremental.sh",
+    "task-state/D1136.json",
+    "tests/doc-system/doc-registry-gate.test.sh"
+  ]
 }
