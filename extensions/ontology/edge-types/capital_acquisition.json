@@ -11,6 +11,7 @@
     "due_diligence_depth": "number (0-1) — 尽调深度"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "immediate",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "获取资本——企业从外部资本市场通过股权/债权/融资等方式获取资金的输入阀。"
 }
