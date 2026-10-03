@@ -77,9 +77,9 @@ import importRoutes from './routes/import'; // D231
 import cockpitRoutes from './routes/cockpit'; // D220-PHASE3
 import type { ServiceContainer } from './services/container';
 // Phase 0.1: 全局错误兜底 — uncaughtException + unhandledRejection
-// ⚠️ 同名陷阱: 此处 setMainAgent 是 routes/loops 的模块级注入函数（只服务 /api/loops/*），
-//    与 LoopScheduler#setMainAgent（src/loops/loop-scheduler.ts）同名不同物。
-//    后者的点火源由 wireLoopExecution() 经 bindMainAgent 补齐（#975），不在此 import。
+// ⚠️ 同名陷阱的一半已根除（#975）: LoopScheduler 侧原 `setMainAgent`（零调用 = 死代码）已按铁律 37 删除；
+//    此处 import 的是 routes/loops 的模块级注入函数（只服务 /api/loops/*）。循环点火源由
+//    wireLoopExecution() 经 bindMainAgent 写入（src/loops/main-agent-binding.ts）。
 import { setMainAgent } from "./routes/loops";
 import { setGraphBridge } from "./routes/import"; // D231
 import { MainAgent } from "./agent/main-agent";

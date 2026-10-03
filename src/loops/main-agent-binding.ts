@@ -3,8 +3,9 @@
  * @state: real
  *
  * 背景（2026-10-04 实测）: LoopScheduler 的 6 个内置 cron 循环（loop-1..6）读
- * `this.mainAgent`，而全仓 `.setMainAgent(` 零调用（LoopScheduler#setMainAgent 从未被调用）
- * ⇒ 每次触发都输出 `[D9] MainAgent 未注入 — 跳过 loop-N (degraded)` 后直接返回，循环从不点火。
+ * `this.mainAgent`，而全仓 `.setMainAgent(` 零调用（原 `LoopScheduler#setMainAgent` 从未被调用，
+ * #975 已按铁律 37 删除该零调用方法）⇒ 每次触发都输出
+ * `[D9] MainAgent 未注入 — 跳过 loop-N (degraded)` 后直接返回，循环从不点火。
  * 创建真 MainAgent 的装配点只有 src/server.ts（createServer），而 LoopScheduler 的两个构造点
  * （src/deploy/bootstrap.ts Phase 2e 先于 Phase 2f 建 agent；src/agent/synova-agent.ts）都不持有它。
  *
