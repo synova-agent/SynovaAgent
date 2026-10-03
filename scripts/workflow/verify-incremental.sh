@@ -63,7 +63,7 @@ else
 fi
 
 if [ "$ITER" -gt "$MAX" ]; then
-  echo -e "${RED}[LOOP] 已达最大循环次数 $MAX，停止自动修正。请人工介入。${RESET}"
+  echo -e "${RED}[LOOP] 已达最大循环次数 $MAX, 停止自动修正。请人工介入。${RESET}"
   rm -f "$STATE_FILE"
   exit 0
 fi

@@ -317,13 +317,17 @@ documents:
   # ---- Win 线派单件（D1001/D1002/D1003）----
   # 依据：Mac-CTO 2026-09-25 裁定「正式派单件 = 入库（docs/synova/dispatch/**）」
   # 红因：D2 登记门禁（CI strict）判「有未登记文档 3 个」⇒ 本批补登记
-  - id: DOC-0124
+  # 🔧 D1136 改号（as_of 2026-10-03）：本批原用 DOC-0124/0125，与上方
+  #    「preset-landing / cite-by-section」批（见本文件更早处，先出现者保留）**撞号**。
+  #    改号依据 = 文件内实测最大号 DOC-0142（`grep -oE 'DOC-[0-9]{4}' | sort -n | tail -1`）
+  #    ⇒ 本批改为 DOC-0143/0144。**只改 id，path/type/status/owner 一律未动。**
+  - id: DOC-0143
     type: governance
     path: docs/synova/dispatch/D1001-ownership-renderer-tests-20260925.md
     status: active
     owner: win-line
 
-  - id: DOC-0125
+  - id: DOC-0144
     type: governance
     path: docs/synova/dispatch/D1002-workspaces-route-order-f1-20260925.md
     status: active

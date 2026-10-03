@@ -64,7 +64,7 @@ PYEOF
 RC=$?
 if [ $RC -ne 0 ]; then
   echo -e "${YELLOW}⚠ CT-39: GitHub API 不可用 — 降级（不静默当真）${NC}"
-  echo "degraded: CI API 拉取失败（$RESP）" >&2
+  echo "degraded: CI API 拉取失败（${RESP}）" >&2
   exit 2
 fi
 if [ "$RESP" = "NONE" ]; then

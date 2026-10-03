@@ -1489,8 +1489,11 @@ if [ -f "$ROOT/scripts/doc-system/doc-registry-gate.sh" ]; then
   if [ "$DOC_REG_EXIT" -eq 0 ]; then
     soft_pass "D2 登记门禁: $(echo "$DOC_REG_OUT" | grep '汇总' | sed 's/^ *//' || true)"
   elif [ "$DOC_REG_EXIT" -eq 1 ]; then
-    DOC_REG_FAILS=$(echo "$DOC_REG_OUT" | grep '未登记' | sed 's/^ *//' || true)
-    soft_check "D2 登记门禁: 有未登记文档 — 登记 docs/authority/DOCS-REGISTRY.yaml 或核对排除规则" "$DOC_REG_FAILS"
+    # D1136: 同时抓「未登记」与「重复」（台账查重类失败的消息里**不含**"未登记"字样，
+    #   原只 grep '未登记' ⇒ count=0 ⇒ soft_check 打印 ✅ 并 log_gate miss
+    #   = **exit 1 的失败门禁被显示为通过（假绿）**。故并入重复类失败行。
+    DOC_REG_FAILS=$(echo "$DOC_REG_OUT" | grep -E '未登记|重复' | sed 's/^ *//' || true)
+    soft_check "D2 登记门禁: 有未登记文档或台账内部重复 — 登记 docs/authority/DOCS-REGISTRY.yaml 或核对排除规则" "$DOC_REG_FAILS"
   else
     soft_check "D2 登记门禁: 检查执行失败 (exit=$DOC_REG_EXIT, D328 三态)" "exit=$DOC_REG_EXIT"
   fi

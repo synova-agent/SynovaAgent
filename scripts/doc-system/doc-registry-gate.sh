@@ -41,7 +41,43 @@ set +e
 ROOT="${DOC_TRUTH_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}" # swallow-ok:
 REGISTRY="$ROOT/docs/authority/DOCS-REGISTRY.yaml"
 [ -f "$REGISTRY" ] || { echo "  ⚠️ 降级: DOCS-REGISTRY.yaml 不存在，跳过登记检查（exit 0）"; exit 0; }
-REG=$(cat "$REGISTRY")
+
+# ── D1136 ④a（K3 采纳）: 台账自身查重 —— 重复 id / 重复 path ⇒ 硬阻断并点名 ──
+#   背景: 本台账历史注释（原 283-284 行）自述「登记门禁不校 id 唯一，靠人工守」= 已知缺口。
+#   口径: id 与 path 各自**逐字**去重（不做大小写/空白规范化）；重复即 exit 1（fail-closed）。
+_DUP_IDS=$(grep -E '^[[:space:]]*(-[[:space:]]*)?id:[[:space:]]*' "$REGISTRY" 2>/dev/null \
+           | sed -E 's/^[[:space:]]*(-[[:space:]]*)?id:[[:space:]]*//' | sed -E 's/[[:space:]]+$//' \
+           | grep -v '^$' | sort | uniq -d || true)
+_DUP_PATHS=$(grep -E '^[[:space:]]*(-[[:space:]]*)?path:[[:space:]]*' "$REGISTRY" 2>/dev/null \
+           | sed -E 's/^[[:space:]]*(-[[:space:]]*)?path:[[:space:]]*//' | sed -E 's/[[:space:]]+$//' \
+           | grep -v '^$' | sort | uniq -d || true)
+if [ -n "$_DUP_IDS" ] || [ -n "$_DUP_PATHS" ]; then
+  echo "  ❌ 台账查重失败（D1136 ④a）:"
+  [ -n "$_DUP_IDS" ] && echo "     重复 id:   $(printf '%s' "$_DUP_IDS" | tr '\n' ' ')"
+  [ -n "$_DUP_PATHS" ] && echo "     重复 path: $(printf '%s' "$_DUP_PATHS" | tr '\n' ' ')"
+  echo "  ❌ 登记门禁阻断（台账内部重复 ⇒ 先去重；见 docs/authority/DOCS-REGISTRY.yaml）"
+  exit 1
+fi
+
+# ── D1136 ④b: 精确匹配（原为**整表子串匹配** ⇒ 不同目录同名文件互相顶替）──
+#   原实现: `[[ "$REG" == *"$rel"* ]] || [[ "$REG" == *"$base"* ]]`
+#     · `*"$rel"*`  → `docs/a/x.md` 会被 `docs/a/x.md.bak` 之类子串假命中
+#     · `*"$base"*` → **更弱的洞（K3 交叉发现）**：不同目录同名文件互相顶替
+#       （实测台账现有 4 条 `SKILL.md` ⇒ 新增未登记的 `new/dir/SKILL.md` 会被判「已登记」）
+#   修法: 只与**登记表中的 path 值**做**逐字全行**匹配；basename 兜底**仅**允许命中
+#         「登记表里本身就是裸文件名（不含 /）」的条目（如 INDEX.md），
+#         这样既保留既有裸名登记，又彻底堵住跨目录顶替。
+#   性能: 纯 bash 字符串精确匹配（预拼 `\n`+值+`\n`），零子进程（沿用原实现零 fork 的取向）。
+REG_PATHS_NL=""
+REG_BARE_NL=""
+while IFS= read -r _p; do
+  [ -z "$_p" ] && continue
+  REG_PATHS_NL="${REG_PATHS_NL}${_p}"$'\n'
+  case "$_p" in */*) ;; *) REG_BARE_NL="${REG_BARE_NL}${_p}"$'\n' ;; esac
+done < <(grep -E '^[[:space:]]*(-[[:space:]]*)?path:[[:space:]]*' "$REGISTRY" 2>/dev/null \
+         | sed -E 's/^[[:space:]]*(-[[:space:]]*)?path:[[:space:]]*//' | sed -E 's/[[:space:]]+$//' || true)
+REG_PATHS_NL=$'\n'"${REG_PATHS_NL}"
+REG_BARE_NL=$'\n'"${REG_BARE_NL}"
 
 EXCLUDE='^tmp/|\.claude/|memory/|docs/plans/codex/implementation/|docs/synova/audit-reports/|docs/authority/chronicle-drafts/|docs/synova/DASHBOARD.*\.md$|/archive/|/Archive/|docs/synova/product-lines/evidence/'
 
@@ -53,7 +89,7 @@ check_file() { # $1 = 相对路径
   [[ "$rel" =~ $EXCLUDE ]] && return   # 纯内建正则（外部 grep 在 SYSTEM 会话下每文件 ~75ms）
   CHECKED=$((CHECKED+1))
   local base="${rel##*/}"
-  if [[ "$REG" == *"$rel"* ]] || [[ "$REG" == *"$base"* ]]; then
+  if [[ "$REG_PATHS_NL" == *$'\n'"$rel"$'\n'* ]] || [[ "$REG_BARE_NL" == *$'\n'"$base"$'\n'* ]]; then
     echo "  ✅ 已登记: $rel"
   else
     echo "  ❌ 未登记: $rel （请加入 docs/authority/DOCS-REGISTRY.yaml）"

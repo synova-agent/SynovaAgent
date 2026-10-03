@@ -43,7 +43,7 @@ if git -c safe.directory="$ROOT" -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1;
   DIDS=$(echo "$LOG" | grep -oE '\bD[0-9]{2,4}\b' | sort -u | tr '\n' ' ')
   [ -n "$DIDS" ] && echo "#### 涉及任务编号: $DIDS" && echo ""
 else
-  echo "  ⚠️ 降级: 当前目录不是 git 仓库（DOC_TRUTH_ROOT=$ROOT），跳过提交统计"
+  echo "  ⚠️ 降级: 当前目录不是 git 仓库（DOC_TRUTH_ROOT=${ROOT}），跳过提交统计"
   echo ""
 fi
 

@@ -52,7 +52,7 @@ echo "── ⑥ 引用可核验（D919: 全量不截断 + 含 .md/.html/.txt + 
 #   ③ 无仓外根 → DSH 源码引用无处解析；无错误码 → 违规不可归因
 CITE_PY="$ROOT/scripts/control-tower/check-citations.py"
 if [ ! -f "$CITE_PY" ]; then
-  echo "  ⚠️ degraded: 引用核验器缺失（$CITE_PY）— 本项跳过（显式，不静默）"
+  echo "  ⚠️ degraded: 引用核验器缺失（${CITE_PY}）— 本项跳过（显式，不静默）"
 else
   # 仓外权威源：DSH 安装目录（可经 SYNO_DSH_SRC 覆盖；不存在则记录为尝试根，不误报为通过）
   DSH_SRC="${SYNO_DSH_SRC:-$(ls -d "$HOME"/.nvm/versions/node/*/lib/node_modules/@deepseek-ai/dsh 2>/dev/null | head -1)}"  # swallow-ok: 未装 nvm/DSH 时目录不存在属预期 → 空值即不启用仓外根（显式降级，下方有分支提示）

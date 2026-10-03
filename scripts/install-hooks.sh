@@ -51,7 +51,7 @@ if [ $EXIT_CODE -ne 0 ]; then
   # D508/Win#10: 软门禁噪声移出 bypass.log（证据链只记真实提交/绕过；软告警独立日志——
   #   否则每次 commit 污染 bypass.log → 下次操作前必 checkout 清理，实测 10+ 次）
   echo "$(date -Iseconds) | GATE_FAIL_SOFT | exit=$EXIT_CODE | branch=$(git branch --show-current 2>/dev/null || echo unknown)" >> "$ROOT/.claude/gate-soft-warnings.log"
-  echo "⚠️ 本地门禁未通过（exit=$EXIT_CODE）— 已放行，CI 将作为权威判定（merge 前必须绿）" >&2
+  echo "⚠️ 本地门禁未通过（exit=${EXIT_CODE}）— 已放行，CI 将作为权威判定（merge 前必须绿）" >&2
 fi
 # 无论成败都写 marker（失败但放行 = 经过了 pre-commit，非 --no-verify）
 echo "$(git rev-parse HEAD 2>/dev/null || true)|$(date +%s)" > "$ROOT/.claude/last-precommit-success"
@@ -74,7 +74,7 @@ bash "$(git rev-parse --show-toplevel)/scripts/'"$name"'-check.sh"'
     body='#!/bin/bash
 exec bash "$(git rev-parse --show-toplevel)/scripts/hooks/'"$name"'.sh"'
   else
-    echo "  !! $name 无入口（$entry / $tracked）— 跳过"
+    echo "  !! $name 无入口（${entry} / ${tracked}）— 跳过"
     return
   fi
   printf '%s\n' "$body" > "$target"

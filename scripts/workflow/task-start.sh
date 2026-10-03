@@ -78,7 +78,7 @@ _assert_dev_worktree() {
   gitdir="$(git -C "$PROJECT_ROOT" rev-parse --git-dir 2>/dev/null || echo '')"
   if [[ -z "$gitdir" ]]; then
     # 无法解析 git-dir → 显式降级提示（铁律 11，不静默），放行（fail-open：无法判主树/链接树）
-    echo "⚠ D539: 无法解析 git-dir（$PROJECT_ROOT）— worktree 检查降级放行（铁律 11，不静默）" >&2
+    echo "⚠ D539: 无法解析 git-dir（${PROJECT_ROOT}）— worktree 检查降级放行（铁律 11，不静默）" >&2
     _degraded_log "task-start.worktree-gitdir" "git rev-parse --git-dir failed"
     return 0
   fi
@@ -99,7 +99,7 @@ _assert_dev_worktree() {
     # 程序化接线（§8）: 显式 --create-worktree <sid> → 实际派发 worktree-manager.py create
     # （不意外建目录：默认不传 --create-worktree 时只给命令 + exit 1）
     if [[ -f "$WTM" ]] && python3 -c "import sys" >/dev/null 2>&1; then
-      echo "   → 正在创建 worktree（worktree-manager.py create $CREATE_WT）" >&2
+      echo "   → 正在创建 worktree（worktree-manager.py create ${CREATE_WT}）" >&2
       python3 "$WTM" create "$CREATE_WT" 2>&1 | sed 's/^/     /' >&2 || true  # swallow-ok: create 失败已如实输出，不静默
       echo "   → 创建请求已发出。请 cd 到 ../synova-wt-$CREATE_WT 后重跑 task-start.sh。" >&2
     else
