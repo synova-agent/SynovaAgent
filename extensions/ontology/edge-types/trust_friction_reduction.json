@@ -11,6 +11,7 @@
     "trust_building_velocity": "number — 信任建立速度(月)"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "信任降低协作摩擦(二阶)——组织信任水平降低人才部署和信息流的摩擦成本。"
 }

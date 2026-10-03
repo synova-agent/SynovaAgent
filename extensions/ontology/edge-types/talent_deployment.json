@@ -11,6 +11,7 @@
     "cross_function_assignment_ratio": "number (0-1) — 跨职能分配比例"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "人力分配到任务——人力池中的人才按照技能和需求分配到各业务活动的内部转化阀。"
 }
