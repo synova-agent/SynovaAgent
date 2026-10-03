@@ -1,0 +1,31 @@
+{
+  "task_id": "D1132",
+  "title": "DSH 断面源路径过期 ⇒ 收件闸 §〇 全域 DEGRADED（甲：更新事实源到树实况 + 乙：失败自证候选清单）",
+  "status": "audit_pending",
+  "risk": "high",
+  "spec": null,
+  "impl": {
+    "commit": null,
+    "by": "gov-impl-retire",
+    "at": "2026-10-03",
+    "files": [
+      "scripts/control-tower/check-dsh-anchor.py",
+      "docs/synova/coordination/DSH-断面.json",
+      "tests/control-tower/check-dsh-anchor.test.sh",
+      ".claude/task-briefs/2026-10-03-D1132-DSH断面源路径过期.md"
+    ],
+    "note": "commit sha 由生成器从 git log '(D1132)' 派生（D393 口径，json 内 null 属预期）。决策沉淀引用既有 Note memory/notes/proposed/2026-09-24-dsh-anchor-gate.md（D943 本事实源+本门禁的决策件）；未新建 Note 因 memory/notes/** 不在写集。门禁脚本变更 ⇒ 送 K3 + CTO 裁，执行方不自判通过。"
+  },
+  "audit": null,
+  "fix_task_id": null,
+  "branch": "fix/D1132-dsh-anchor",
+  "worktree": ".synova-wt-w2a",
+  "anchor": {
+    "fact_source": "docs/synova/coordination/DSH-断面.json",
+    "current_before": "0.1.7-rc.1 @ 46a7f68b @ /Users/wane/src/deepseek-harness-017 (不存在)",
+    "current_after": "0.2.0-rc.1 @ 4878cdabd8 @ /Users/wane/src/deepseek-harness-020",
+    "unresolved_discrepancy": "CTO 告知现行 = tag dsh-v0.2.0-rc.2，但该 checkout 工作树 HEAD 停在 rc.1；rc.2(639ed01539) 是 HEAD 的后代。是否移树归 CTO/创始人。"
+  },
+  "updated_at": "2026-10-03",
+  "updated_by": "coding"
+}
