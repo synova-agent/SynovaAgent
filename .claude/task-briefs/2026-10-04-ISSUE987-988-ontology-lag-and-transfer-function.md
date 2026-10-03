@@ -1,0 +1,123 @@
+# Task Brief: ISSUE#987 + #988 本体边 action_effect_lag 落地 + transfer_function 覆盖 55/55
+
+> 生成: 2026-10-04 | 卡: #987 (1-8/W3-时滞) · #988 (1-9/W2-因果强度) | 认领: exec-batch0b
+> 派单件: docs/synova/product-lines/dispatch/派单-产品线P0波次-D962-D963与第0批承接-20261004.md
+> 参考: D333 决策四步（第一性原理→Anthropic→开源实证→收敛）
+
+#CRITERIA: B
+
+## Q0: 定位 — 项目拼图 + 文件审计
+### a) 项目拼图
+L4 本体层（企业知识图谱）。本体类型定义是**文件驱动**数据源：`extensions/ontology/edge-types/*.json`
+一条边一个文件（今日 55 个）。生产装载器 `src/l4/ontology-loader.ts:85` 用 `scanDir()` 直接扫该目录，
+`EdgeTypeDef` 承载 `$id/label/tags/allowedFrom/allowedTo/requiredProps/optionalProps/consumed_by_sentinels/description`。
+本任务 = 在既有 55 条边上补两个因果元数据字段（时滞 / 传递函数），**不改代码、不改契约**。
+### b) 文件审计
+- `grep -rl "action_effect_lag" extensions/ontology/edge-types/ | wc -l` ⇒ `0`（落地前）
+- `grep -rl "transfer_function" extensions/ontology/edge-types/ | wc -l` ⇒ `45`（另有 10 条缺字段）
+- `grep -rl TBD extensions/ontology/ | wc -l` ⇒ `42`，且 `grep -rn TBD ... | grep -v transfer_function | wc -l` ⇒ `0`
+  （证明 TBD **只**出现在 transfer_function 字段值里）
+- 消费者证据：`grep -rn "transfer_function|action_effect_lag" src/ packages/ tests/` ⇒ 仅
+  `src/loops/direction-monitor.ts:312` 一处**注释**提及，无代码读取 ⇒ 本卡为 L1 数据完整性卡
+- 审计侧只读消费者：`scripts/audit/check-gates-v2.py:852-874`（C3 口径 = `len(tf)>20 且不含 TBD`）
+### c) 决策
+复用既有文件驱动数据源，**不新建类型、不改代码**。权威值来源：权威文档15 第一章 §3.4
+（`actionEffectLag` 取值规范表，点名 E-05/E-07/E-13/E-23/E-37 五条）。
+
+## Q1: 调研 — 业界最佳实践 / Anthropic 决策链 / memory 历史教训
+- 铁律 11/31（静默降级禁止 / 降级信号传播）：缺失值必须**显式**标 `unknown`，不得留空、不得猜数。
+- 铁律 34（Feature Branch）/ 铁律 0-3（多机 PR 工作流）：`fix/` 分支 + 只开 PR 不合并。
+- 铁律 35（自动化优先）：本卡判据做成**可执行检查器**（L1 字段完整性 + L2 生产装载器真跑），
+  并做「改坏即红」四步夹具，不以 grep 静态判据当验收。
+- 铁律 47/48：改动为纯数据，不新增 compute/模块，无新契约；但判据本身必须可复现且可红。
+- memory/ 历史教训：L1（静态可达）与 L2（真跑通）必须分开报，禁把 L1 报成 L2。
+参考：第一性原理（缺失值 ≠ 可省略；"没值"本身是信息）× Anthropic 工程基线（可执行断言 > 人工核对）
+× 开源实证（JSON Schema 生态惯例：字段恒在、值可为 unknown/null）→ 结论：**字段全覆盖 + 未知显式标 unknown**。
+
+## Q2: 范围 — 正确的最简方案
+做什么：
+- `extensions/ontology/edge-types/*.json` — 55 条边各补 `action_effect_lag`（5 条落权威预估值，50 条标 `unknown`）
+- `extensions/ontology/edge-types/*.json` — 10 条缺字段边补 `transfer_function`（值 `TBD — to be defined in compute phase`）
+不做什么：
+- 不改 `src/l4/ontology-loader.ts`（装载器契约不动）
+- 不改 `scripts/audit/check-gates-v2.py`（审计红线，禁自我审计）
+- 不改 `scripts/pre-commit-check.sh`（治理线域）
+- 不为 42 条 TBD 边编造公式 —— #978 明令：四个边体系互不相认，机械写映射修一次错一次
+- 不改 `src/loops/direction-monitor.ts`（L3，非本卡写集）
+
+## 写集
+| 文件 | 类型 |
+|---|---|
+| `extensions/ontology/edge-types/assumption_triggered_reallocation.json` | task |
+| `extensions/ontology/edge-types/augments.json` | task |
+| `extensions/ontology/edge-types/brand_building.json` | task |
+| `extensions/ontology/edge-types/brand_builds.json` | task |
+| `extensions/ontology/edge-types/capital_acquisition.json` | task |
+| `extensions/ontology/edge-types/capital_allocation.json` | task |
+| `extensions/ontology/edge-types/capital_source_mix.json` | task |
+| `extensions/ontology/edge-types/channel_delivery.json` | task |
+| `extensions/ontology/edge-types/competitive_positioning.json` | task |
+| `extensions/ontology/edge-types/constrains.json` | task |
+| `extensions/ontology/edge-types/couples.json` | task |
+| `extensions/ontology/edge-types/cross_functional_synergy.json` | task |
+| `extensions/ontology/edge-types/cumulative_learning.json` | task |
+| `extensions/ontology/edge-types/customer_data_loop.json` | task |
+| `extensions/ontology/edge-types/customer_lockin.json` | task |
+| `extensions/ontology/edge-types/data_collection.json` | task |
+| `extensions/ontology/edge-types/decision_authority.json` | task |
+| `extensions/ontology/edge-types/decision_concentrates.json` | task |
+| `extensions/ontology/edge-types/demand_to_spec.json` | task |
+| `extensions/ontology/edge-types/deploys.json` | task |
+| `extensions/ontology/edge-types/efficiency_attraction.json` | task |
+| `extensions/ontology/edge-types/environmental_scan.json` | task |
+| `extensions/ontology/edge-types/equipment_acquisition.json` | task |
+| `extensions/ontology/edge-types/external_assumption.json` | task |
+| `extensions/ontology/edge-types/external_feedback.json` | task |
+| `extensions/ontology/edge-types/funds.json` | task |
+| `extensions/ontology/edge-types/incentive_alignment.json` | task |
+| `extensions/ontology/edge-types/incentive_binds.json` | task |
+| `extensions/ontology/edge-types/information_flow.json` | task |
+| `extensions/ontology/edge-types/innovation_output.json` | task |
+| `extensions/ontology/edge-types/knowledge_reuse.json` | task |
+| `extensions/ontology/edge-types/knowledge_sharing.json` | task |
+| `extensions/ontology/edge-types/locks_in.json` | task |
+| `extensions/ontology/edge-types/market_share_capture.json` | task |
+| `extensions/ontology/edge-types/operational_execution.json` | task |
+| `extensions/ontology/edge-types/organizational_learning.json` | task |
+| `extensions/ontology/edge-types/procurement_bargaining.json` | task |
+| `extensions/ontology/edge-types/produces.json` | task |
+| `extensions/ontology/edge-types/profit_reinvestment.json` | task |
+| `extensions/ontology/edge-types/reputation_attraction.json` | task |
+| `extensions/ontology/edge-types/reputation_flywheel.json` | task |
+| `extensions/ontology/edge-types/retention_protects_knowledge.json` | task |
+| `extensions/ontology/edge-types/routine_rigidity.json` | task |
+| `extensions/ontology/edge-types/rule_constraint.json` | task |
+| `extensions/ontology/edge-types/sensing_calibration.json` | task |
+| `extensions/ontology/edge-types/service_support.json` | task |
+| `extensions/ontology/edge-types/signal_transmits.json` | task |
+| `extensions/ontology/edge-types/signal_upward_pass.json` | task |
+| `extensions/ontology/edge-types/talent_acquisition.json` | task |
+| `extensions/ontology/edge-types/talent_deployment.json` | task |
+| `extensions/ontology/edge-types/talent_filter.json` | task |
+| `extensions/ontology/edge-types/talent_retention.json` | task |
+| `extensions/ontology/edge-types/tech_infrastructure.json` | task |
+| `extensions/ontology/edge-types/trust_friction_reduction.json` | task |
+| `extensions/ontology/edge-types/value_pricing.json` | task |
+| `docs/synova/product-lines/evidence/issue987-988-本体边时滞与因果强度-20261004.md` | task |
+| `.claude/task-briefs/2026-10-04-ISSUE987-988-ontology-lag-and-transfer-function.md` | builtin（本卡 task brief，流程产物；各门禁另有豁免） |
+
+## Q3: 验收 — 入口 → 交互 → 结果
+入口：`extensions/ontology/edge-types/*.json`（文件驱动数据源）
+处理：`loadOntology()`（`src/l4/ontology-loader.ts:85`）扫目录 → `scanDir<EdgeTypeDef>` → 装配 `edgeEndpointMap`
+结果：L1 — 55/55 文件含该字段且非空；L2 — 生产装载器真跑后 `EDGE_TYPES_LOADED=55` 且 `WITH_FIELD_NONEMPTY=55`；
+      改坏即红：删任一字段 → L1/L2 双红 → 字节还原 → 双绿
+
+## 架构层:
+L4
+
+## Done 标准
+- [ ] verify: `python3 <checker> <root> action_effect_lag --expect 55` ⇒ `VERDICT=PASS`
+- [ ] verify: `tsx <loader_check> action_effect_lag 55` ⇒ `EDGE_TYPES_LOADED=55` + `WITH_FIELD_NONEMPTY=55` + `VERDICT=PASS`
+- [ ] verify: `grep -rl action_effect_lag extensions/ontology/edge-types/ | wc -l` ⇒ `55`
+- [ ] verify: `python3 <checker> <root> transfer_function --expect 55` ⇒ `VERDICT=PASS`
+- [ ] verify: 改坏即红四步（删字段→红→字节还原→绿）原始输出留档
