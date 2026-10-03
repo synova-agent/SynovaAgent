@@ -199,3 +199,80 @@ grep -nE "src/routes/im\.ts|src/middleware/auth\.ts" tsc 输出 ⇒ 零命中
 | 判据脚本（不入仓） | `/tmp/b0b/measure_984b.ts` · `/tmp/b0b/fixtures_984.sh` · `/tmp/b0b/measure_984.ts`（改造前基线） |
 | 数据快照 | `/tmp/b0b/measure984.db`（`sqlite3 .backup`；**未动仓库 DB**） |
 | 定位 | **自验结论 / 可提请独立审计**；**【通过】归 K3 终审** |
+
+---
+
+## 2b. 🔴 接线面 L2（补测，产品线判例 10：「判据必须同时钉死【入口】」）
+
+**为什么必须补**：本卡**全部目的就是接线**（让 `im.ts` 把 `authProvider` 传进 `runWithContext`）。
+§2 的 0/10/0 证的是**语义**（"传了 provider 会怎样"），**不证明"路由真的传了"**。⇒ 原稿把接线面标为 L1 是**自我降级**，产品线据此裁定补测。
+
+**做法（用仓内既有范式，不引 supertest）**：`tests/routes/im-authprovider.test.ts`
+—— 真 `express()` + `app.listen(0)` + `http.request` POST `/api/im/feishu/webhook`（参 `tests/middleware/auth.integration.test.ts` 范式），
+用 **`vi.mock` + `importOriginal` 的透明包装**记录路由**实际**传给 `runWithContext` 的 ctx（保留真实现、不改语义、不 mock 业务管线 —— 铁律 12）。
+DB 隔离：`SYNOVA_DB_PATH` 指向 `mkdtemp` 临时库，**不触碰仓库 `data/synova.db`**。
+
+**三条断言**（真 HTTP 入口）：
+1. 已认证飞书入站 ⇒ HTTP 200 且路由实际传入的 ctx **含 `authProvider`**，且该 provider **可用**：
+   `getPermissionFilter(user,'KnowledgeChunk','read')` ⇒ `conditions[0].field='access.sensitivity'` / `operator='IN'` / `value=['normal']`（= 真源 `allowedSensitivities` 的产出）
+2. 把路由用过的 **同一 ctx** 重进真漏斗 `getCurrentFilterClause` ⇒ 得到 `access.sensitivity` 条件，**不是 deny-all**
+3. 未认证（无 context）⇒ 真漏斗返回 **deny-all 非空条件集**（`__d947_no_authenticated_context` / `__d947_deny_all__`）⇒ **安全不回归**
+
+**改坏即红（自证有效，不红即 FATAL）**：
+
+```
+══════ 基线（应绿） ══════
+ ✓ tests/routes/im-authprovider.test.ts (3 tests) 33ms
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+  退出码=0
+
+══════ 夹具 A：撤掉 im.ts 的 authProvider（= 改造前形态 ⇒ 接线判据必红） ══════
+  已移除 authProvider 块
+── ② 必红 ──
+     × 已认证飞书入站：路由实际传入的 ctx 带**可用的** authProvider 27ms
+     × 把路由用过的 ctx 重进真漏斗：得到 sensitivity 条件，而非 deny-all 2ms
+ FAIL  tests/routes/im-authprovider.test.ts > #984 接线面（真 HTTP 入口 → 真 runWithContext） > 已认证飞书入站：路由实际传入的 ctx 带**可用的** authProvider
+ FAIL  tests/routes/im-authprovider.test.ts > #984 接线面（真 HTTP 入口 → 真 runWithContext） > 把路由用过的 ctx 重进真漏斗：得到 sensitivity 条件，而非 deny-all
+ Test Files  1 failed (1)
+      Tests  2 failed | 1 passed (3)
+  退出码=1
+── ③ 恢复 ──
+  BYTE_IDENTICAL=yes
+── ④ 回绿 ──
+ ✓ tests/routes/im-authprovider.test.ts (3 tests) 33ms
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+  退出码=0 ✓
+
+══════ 夹具 B：provider 返回空条件集（有 provider 但不可用必红） ══════
+  已改为空条件集
+── ② 必红 ──
+     × 已认证飞书入站：路由实际传入的 ctx 带**可用的** authProvider 26ms
+     × 把路由用过的 ctx 重进真漏斗：得到 sensitivity 条件，而非 deny-all 0ms
+ FAIL  tests/routes/im-authprovider.test.ts > #984 接线面（真 HTTP 入口 → 真 runWithContext） > 已认证飞书入站：路由实际传入的 ctx 带**可用的** authProvider
+ FAIL  tests/routes/im-authprovider.test.ts > #984 接线面（真 HTTP 入口 → 真 runWithContext） > 把路由用过的 ctx 重进真漏斗：得到 sensitivity 条件，而非 deny-all
+ Test Files  1 failed (1)
+      Tests  2 failed | 1 passed (3)
+  退出码=1
+── ③ 恢复 ──
+  BYTE_IDENTICAL=yes
+── ④ 回绿 ──
+ ✓ tests/routes/im-authprovider.test.ts (3 tests) 33ms
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+  退出码=0 ✓
+
+── 终态 ──
+改动文件数=1
+```
+
+| 夹具 | ① 改坏动作 | ② 必红 | ③ 恢复 | ④ 回绿 |
+|---|---|---|---|---|
+| A | 撤掉 `im.ts` 的 `authProvider` 块（= 改造前形态） | `2 failed \| 1 passed` exit 1 | 字节还原 `BYTE_IDENTICAL=yes` | `3 passed` exit 0 |
+| B | provider 改为返回**空条件集**（"有 provider 但不可用"） | `2 failed \| 1 passed` exit 1 | 字节还原 `BYTE_IDENTICAL=yes` | `3 passed` exit 0 |
+
+**口径（不合并成一句「L2」）**：
+- **语义面 = L2**（§2：真实语料 1443 行，装配前 0 / 装配后 10 / 未认证 0）
+- **接线面 = L2**（本节：真 express + 真 HTTP + 真路由，3 条断言 + 2 组改坏即红）
+
