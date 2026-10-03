@@ -11,6 +11,7 @@
     "documentation_transfer_rate": "number (0-1) — 文档交接率"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "人才留存保护知识资产(二阶)——人才留存防止核心知识随人员流失而流失。"
 }
