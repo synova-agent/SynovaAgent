@@ -141,7 +141,8 @@ export function processFeedbackSignals(signals: AggregatedSignal[]): EvolutionAc
     // Signal 6 (D556; spec §6.2 概念编号 Signal 5 — 文件内既有注释 Signal 5 = 矛盾仲裁，为保
     // DS6「只增不改」本信号顺延编号): GA 校准回流审核 — diagnosis_conclusion ×
     // reject/modify/ineffective ≥3（阈值与 MIN_TRIGGER_COUNT 同源）。getAggregatedSignals 已按
-    // decision,target_type,actor_role 分组 → 三决策各自成组、每组一条动作（spec §6.1 动作映射表）。
+    // decision,target_type,actor_role,target_id 分组（#976: per 真 target_id → `sig.key` = 真目标 ID）
+    // → 三决策各自成组、每组一条动作（spec §6.1 动作映射表）。
     // 诚实边界: 动作 = agent_memory 审核队列条目，不自动改诊断逻辑权重（层 3 descope）。
     // 注: ineffective × diagnosis_conclusion 组同时命中既有 Signal 4（其 filter 无 targetType
     // 限定，语义不动——DS6 只增不改），重叠为既有白名单语义的既定行为，测试显式断言记录。
@@ -326,7 +327,14 @@ export function computeGAProtection(
 import { readFileSync, writeFileSync, existsSync, readdirSync } from "fs";
 import { join } from "path";
 
-const EXTENSIONS_DIR = join(process.cwd(), "extensions", "industries");
+/**
+ * 回写目标目录（thresholds.json 所在行业树）。
+ * 契约: @input 无; @output 绝对/相对目录路径; @degraded 目录不存在 → applyThresholdAdjust 记 skipped。
+ * 可测性接缝: `INDUSTRIES_FIXTURE_DIR` 覆盖（先例 src/sentinel/sentinel-loader.ts:54
+ * `SENTINELS_FIXTURE_DIR`）——#976 端到端夹具在临时目录真实跑通回写，不污染仓库 tracked 文件；
+ * 未设该环境变量时默认值逐字不变（process.cwd()/extensions/industries）。
+ */
+const EXTENSIONS_DIR = process.env.INDUSTRIES_FIXTURE_DIR || join(process.cwd(), "extensions", "industries");
 const MAX_CORRECTION_RATIO = 0.3; // ±30% 上限
 const MIN_TRIGGER_COUNT = 3; // 至少 3 次同 key 纠错才触发
 

@@ -98,7 +98,10 @@ export interface FeedbackQueryResult {
 
 /** 聚合信号 */
 export interface AggregatedSignal {
-  /** 相同的 sentinel/decision 组合 */
+  /**
+   * 聚合键（#976: 真 target_id，如哨兵键 `F1_KZ` / goalId / pathKey / expertKey）。
+   * 消费者以它匹配 extensions 配置里的真键 —— 不再是 decision:target_type:actor_role 复合键。
+   */
   key: string;
   /** 信号类型 */
   decision: FeedbackDecision;
@@ -353,32 +356,43 @@ export class FeedbackCollector {
   }
 
   /**
-   * 获取聚合信号。
-   * 同一 sentinel × 同一 decision 类型出现 >= threshold 次时聚合为一条 signal。
+   * 获取聚合信号（#976 / 0-2 反馈键）。
    *
-   * @param threshold - 聚合阈值（默认 3）
-   * @returns AggregatedSignal[]
+   * 聚合粒度 = **per `target_id`**：同一真目标 ID（哨兵键如 `F1_KZ` / goalId / pathKey / expertKey）
+   * × 同一 decision × target_type × actor_role 出现 >= threshold 次时聚合为一条 signal。
+   *
+   * 契约（铁律 47）:
+   *   @input   threshold 聚合阈值（默认 3）
+   *   @output  AggregatedSignal[]；`key` = **真 target_id**（不再是
+   *            `${decision}:${target_type}:${actor_role}` 复合键）——消费者
+   *            src/loops/middle-evolution-engine.ts 直接以 `key` 作 sentinelKey/goalType/
+   *            pathKey/expertKey 去匹配 extensions 配置里的真键，复合键永远匹配不上
+   *            （#976 实测：`_gaCorrections` 在 extensions/ 零命中，从未写过一字节）。
+   *   @degraded db 缺失 / 查询异常 → log.warn + 返回 []（铁律 24+31）
    */
   getAggregatedSignals(threshold: number = 3): AggregatedSignal[] {
     if (!this.db) return [];
 
     try {
+      // 注: 不用 GROUP_CONCAT(DISTINCT target_id, ',') —— SQLite 的 DISTINCT 聚合只接受单参数
+      // （"DISTINCT aggregates must have exactly one argument"），会静默落到下方 catch → 恒空。
+      // 分组已含 target_id ⇒ 每组的 targetIds 就是该 target_id 本身（单元素）。
       const rows = this.db.prepare(`
-        SELECT decision, target_type, actor_role, COUNT(*) as count, MAX(created_at) as latest, GROUP_CONCAT(target_id, ',') as targets
+        SELECT decision, target_type, actor_role, target_id, COUNT(*) as count, MAX(created_at) as latest
         FROM feedback_log
-        GROUP BY decision, target_type, actor_role
+        GROUP BY decision, target_type, actor_role, target_id
         HAVING count >= @threshold
         ORDER BY count DESC
       `).all({ threshold }) as Array<Record<string, unknown>>;
 
       return rows.map(r => ({
-        key: `${r.decision}:${r.target_type}:${r.actor_role || ''}`,
+        key: r.target_id as string,
         decision: r.decision as FeedbackDecision,
         targetType: r.target_type as FeedbackTargetType,
         actorRoles: ((r.actor_role as string) || '').split(',').filter(Boolean),
         count: r.count as number,
         latestTimestamp: r.latest as string,
-        targetIds: ((r.targets as string) || '').split(',').filter(Boolean),
+        targetIds: [r.target_id as string],
       }));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
