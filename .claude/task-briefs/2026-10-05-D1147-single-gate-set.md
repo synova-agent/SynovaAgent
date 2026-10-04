@@ -71,7 +71,8 @@ C 段棘轮排除非必需 context（判据变更）须 K3，已请 lead 另立�
 - `.claude/task-briefs/2026-10-05-D1147-single-gate-set.md`、`memory/notes/proposed/2026-10-05-d1147-single-gate-set.md`。
 
 不做什么（含文件路径）：
-- 不改任何 `job` 的 `name:` 字段（12 必需 context 名的唯一产出者）——尤其不改 `ci.yml` 里
+- 不改 `package.json` / `tsconfig.json` / `vitest.config.ts`（构建与测试配置与本卡无关）；更不改任何 job 的
+  `name:` 字段（12 必需 context 名的唯一产出者）——尤其 `ci.yml` 里
   `name: Control Tower Gate Tests (${{ matrix.os }})` 与 `name: Test-Kit Architecture Tests (${{ matrix.os }})`。
 - 不碰 branch protection（红线）：`gh api -X PATCH …/protection/...` 由 lead 执行，本卡只给命令与回滚。
 - 不改 `scripts/pre-commit-check.sh`（归 task-3/T4）；不改 `.claude/settings.json`、`.codex/hooks.json`、
@@ -116,11 +117,14 @@ C 段棘轮排除非必需 context（判据变更）须 K3，已请 lead 另立�
 
 | 文件 | 类型 |
 |---|---|
+| .claude/bypass.log | builtin（hook 运行期产物，自动豁免） |
 | .claude/task-briefs/2026-10-05-D1147-single-gate-set.md | task |
 | .github/workflows/ci.yml | task |
+| docs/authority/DOCS-REGISTRY.yaml | task |
 | docs/synova/coordination/D1147-单套门禁-必需context变更提案.md | task |
 | docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh | task |
 | memory/notes/proposed/2026-10-05-d1147-single-gate-set.md | task |
 | scripts/control-tower/required-checks-baseline.txt | task |
 | tests/control-tower/check-required-contexts.test.sh | task |
 | tests/control-tower/ci-signal-classify.test.sh | task |
+
