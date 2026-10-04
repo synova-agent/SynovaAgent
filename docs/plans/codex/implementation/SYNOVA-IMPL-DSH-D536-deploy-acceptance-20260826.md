@@ -3,7 +3,7 @@ north-star:
   服务用户: FDE（前线部署工程师）+ 创始人——"双平台安装包"必须被真实装到目标机证明可用，而不是 CI 绿灯 + 代码 verified 的自我安慰
   服务场景: 创始人/客户拿到 CI 安装包（Mac dmg / Win exe）→ 真实安装 → 双击启动 → 服务自启 → 首诊旅程跑通 → 数据不丢，全程有物理断言 evidence，任何人可照 founder-demo checklist 复现
   模块终态: `docs/synova/runbooks/founder-demo-mac.md` + `founder-demo-win.md` checklist 从"命令可执行"升级为"真实跑通过（安装/启动/首诊/数据四段物理断言 evidence 落盘）"——客户/创始人照着装就能用
-  对齐北星: PRODUCT-BRIEF §二（直接用户=FDE，缺系统诊断工具）+ §六 P0（不能给 FDE 用的一切都不算数）；施工图 Track A 部署轨 L291（"哇呢宝贝部署用现有代码跑通"——安装包真实可用是部署轨验收前提）
+  对齐北星: PRODUCT-BRIEF §二（直接用户=FDE，缺系统诊断工具）+ §六 P0（不能给 FDE 用的一切都不算数）；施工图 Track A 部署轨 L291（"客户A部署用现有代码跑通"——安装包真实可用是部署轨验收前提）
   完成标准: Mac 实测 evidence（dmg 安装→启动→服务自启→首诊→数据不丢，物理断言）+ Win 实测 evidence（NSIS 安装→双击→出窗）+ artifact md5 落盘 + founder-demo checklist 完成态——"装上了"必须有进程/窗口/healthz/数据四类物理证明，禁止"下载了 artifact"冒充
   当前进度: 切片 A/B/C 代码闭环（D517-528 全部 audited）——验证脚本（mac-install-verify/win-install-verify/upgrade-data-verify/first-diagnosis-timing）与 runbooks（founder-demo-mac/win 等）已入库；**但 CI 安装包从未被真实装到目标机验收过**——D519 是本地构建 dmg 实测，D523 的 Win 实测一直 waiting（无 .exe 产物）；本次=用 CI artifact（run 32870900391）真实安装验收，从"验证点 verified（代码）"到"实际部署可用"
 ---
@@ -19,14 +19,14 @@ north-star:
 
 # D536: 部署轨——桌面端实际部署验收（deploy-acceptance）
 
-> 一句话问题: 切片 A/B/C 把"能装/能开/能用"的验证点做到了代码层 verified（mac-install-verify.sh 本机实测过、win-install-verify.ps1 因为无 .exe 一直 waiting、upgrade-data-verify.sh 因为无 dmg 只跑了 --dry-run）——但 **CI 打出的安装包（run 32870900391）从来没有被真实装到目标机验收过**。客户/创始人现在拿到的是一份"代码已验证、实际部署未验收"的双平台安装包。Track A 部署轨（施工图 L291）要求"哇呢宝贝部署用现有代码跑通"，本任务就是把最后一段"实际部署可用"补上。
+> 一句话问题: 切片 A/B/C 把"能装/能开/能用"的验证点做到了代码层 verified（mac-install-verify.sh 本机实测过、win-install-verify.ps1 因为无 .exe 一直 waiting、upgrade-data-verify.sh 因为无 dmg 只跑了 --dry-run）——但 **CI 打出的安装包（run 32870900391）从来没有被真实装到目标机验收过**。客户/创始人现在拿到的是一份"代码已验证、实际部署未验收"的双平台安装包。Track A 部署轨（施工图 L291）要求"客户A部署用现有代码跑通"，本任务就是把最后一段"实际部署可用"补上。
 
 ## 1. Authority Doc Verification
 
 - **派单**: `docs/synova/coordination/派单-部署轨-D536-20260826.md`（5 必答题 + 验收 + 写集约束）
   > 「下载 CI 安装包 → 真实安装到目标机（Mac + Win）→ 启动 → 服务自启 → 首诊旅程 → 数据不丢——部署验收记录（founder-demo checklist），客户/创始人可直接照着装」「验收（物理可复现）：Mac + Win 实测 evidence（安装/启动/首诊/数据，物理断言）+ founder-demo checklist 可执行 + artifact md5 落盘——禁止'下载了 artifact'冒充'装上了'」
 - **施工图**: `docs/synova/research/DSH迁移施工图-20260820/DSH迁移施工图-20260820.md` §6 Track A L291-292
-  > 「**Track A — 部署轨（最高优先级，永远不被阻塞）**：哇呢宝贝部署用**现有代码**跑通。迁移轨的任何阶段若与部署冲突，迁移轨让路。」+ L298「**部署验收前连低风险改动也不做——部署前只动文档与配置**」
+  > 「**Track A — 部署轨（最高优先级，永远不被阻塞）**：客户A部署用**现有代码**跑通。迁移轨的任何阶段若与部署冲突，迁移轨让路。」+ L298「**部署验收前连低风险改动也不做——部署前只动文档与配置**」
 - **产品北星**: `.claude/PRODUCT-BRIEF.md` §二（直接用户=FDE，缺系统诊断工具）+ §六 P0（"没有这些不能给 FDE 用"）
 - **切片先例**（本单全部复用，禁止重造）:
   - D519 spec `docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D519-mac-install-test-20260824.md`（mac-install-verify.sh 契约 0/1/2 + evidence 落盘规范）

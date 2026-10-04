@@ -149,7 +149,7 @@
 | 07-03~08 | V4.3.0 本体层（22 节点 / 17 边）；**engine-core 拆分"欺诈事故"**（桥接文件伪装迁移 → V4.4.2 三重漏洞修复）；契约优先（铁律 47/48） | `docs\plans\codex\`；AGENTS.md |
 | 07-10~16 | 权威文档 01-18 系列（42 条因果边 / 50 哨兵 / 8 位专家体系）；Anthropic 工作流 7 节点 | `docs\synova\research\权威文档*` |
 | 07-22~29 | 控制塔（D201 gatekeeper / synova-commit）；自诊断系统；**跨文档一致性审计**（发现"专家 8 声称、代码仅 6 实现" P0-2）；偏离登记册 | `docs\synova\audit-reports\`；`AUTHORITY-DEVIATION-REGISTRY-v1.md` |
-| 08-01~04 | V4.5.1（pre-commit 13 组，122s→50s 性能根治）；A/B/C 线审计；**哇呢宝贝客户项目档案**（首个客户线索） | `docs\synova\research\A线*`；`docs\plans\codex\SYNOVA-哇呢宝贝-客户项目档案-20260804.md` |
+| 08-01~04 | V4.5.1（pre-commit 13 组，122s→50s 性能根治）；A/B/C 线审计；**客户A客户项目档案**（首个客户线索） | `docs\synova\research\A线*`；`docs\plans\codex\SYNOVA-客户A-客户项目档案-20260804.md` |
 | 08-05~14 | 控制塔 V4.6 独立化；双机身份（Win/Mac）；git tag 自动化；worktree 隔离；认领制（D296）；多机 PR 工作流（D334）；数据备份（D335）；**多 Agent 协作协议（四角色两条线：开发线 Codex+DSH+Claude Code，审计线 K3）** | `docs\synova\coordination\` |
 | 08-15~19 | LLM failover、L4 数据契约、哨兵阈值告警、dedup-key 稳定性；持续审计（D355-D366） | `docs\synova\audit-reports\2026-08-1*.md` |
 
@@ -163,9 +163,9 @@
 - synova-agent 仓库：1684 commits、AGENTS.md / CLAUDE.md / LOOP.md、docs/（532 份 md）、memory/、WORKLOG 系列
 - 控制塔：pre-commit 13 组、hooks、审计脚本、任务看板（DASHBOARD）
 - 多 Agent 协作体系：Codex / DSH / Claude Code（开发线）+ Kimi K3（审计线）
-- 客户：**哇呢宝贝**（第一个付费客户，2026-08-04 建档）
+- 客户：**客户A**（第一个付费客户，2026-08-04 建档）
   - 获客故事（创始人口述 2026-08-20）：客户主要基于**信任**；当时客户遇到问题找过各种答案，创始人用 **Synova 诊断体系作提示词注入**对客户公司业务做诊断，得出与外部咨询公司和高管**完全不同的判断，最终证明 Synova 是对的** → 客户签约并打款
-  - 资料源：`C:\Users\Administrator\Desktop\哇呢宝贝项目咨询\运营文件`（50 份：合同/合伙人机制/战略计划/动员大会逐字稿/产品升级方案等）
+  - 资料源：`C:\Users\Administrator\Desktop\客户A项目咨询\运营文件`（50 份：合同/合伙人机制/战略计划/动员大会逐字稿/产品升级方案等）
 
 ---
 
@@ -187,7 +187,7 @@
 2026-07-13  权威文档 01-18 系列（42 边 / 50 哨兵 / 8 专家）
 2026-07-22  控制塔建立（gatekeeper / synova-commit）
 2026-08-01  V4.5.1（pre-commit 13 组）
-2026-08-04  哇呢宝贝客户项目档案
+2026-08-04  客户A客户项目档案
 2026-08-14  多 Agent 协作协议（四角色两条线）
 2026-08-19  本编年史启动（文档体系改革）
 ```
@@ -215,7 +215,7 @@
 3. [ ] 04-27/28 为什么密集做定位？当时发生了什么？
 4. [x] **暂停 Novis 桌面端和 SoloHub 的原因**：想法太多 → 聚焦企业咨询（可付费）→ "24 小时驻扎的麦肯锡顾问" / 免疫系统 vs 医生
 5. [ ] 06-03：把 SynovaAgent 独立成仓库的决策背景
-6. [x] **哇呢宝贝背景**：第一个付费客户；信任 + Synova 提示词注入诊断被证明正确 → 签约打款
+6. [x] **客户A背景**：第一个付费客户；信任 + Synova 提示词注入诊断被证明正确 → 签约打款
 
 ---
 
