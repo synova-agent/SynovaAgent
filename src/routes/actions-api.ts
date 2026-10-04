@@ -110,7 +110,7 @@ router.post('/api/actions', (req: Request, res: Response) => {
   const item: ActionItem = { id, workspaceId, title, description: description || '', status: 'pending', priority: (priority as ActionItem['priority']) || 'medium', createdAt: now, updatedAt: now };
   store.set(id, item);
   persistAction(id, item);
-  log.info({ id, title, owner: rbac.userId }, '行动项已创建');
+  log.info({ id, title }, '行动项已创建');
   res.json({ ok: true, action: item });
 });
 
@@ -156,7 +156,7 @@ router.put('/api/actions/:id/status', (req: Request, res: Response) => {
   item.updatedAt = new Date().toISOString();
   store.set(id, item);
   persistAction(id, item);
-  log.info({ id, status, actor: rbac.userId }, '行动项状态已更新');
+  log.info({ id, status }, '行动项状态已更新');
   res.json({ ok: true, action: item });
 });
 

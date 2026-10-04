@@ -117,8 +117,8 @@ router.get('/api/workspace/:deptId', (req: Request, res: Response) => {
   // D1153/#1051: 身份守卫（先于任何数据读取）。本卡**不做越权判定** —— 见文件头「未做」段
   const rbac = requireAuthenticatedRbac(req, res);
   if (!rbac) return;
-  const deptId = String(req.params.deptId);
   try {
+    const deptId = String(req.params.deptId);
     const deps = getDefaultDeps(req);
     const workspace = buildDepartmentWorkspace(deptId, deps);
 
@@ -142,8 +142,8 @@ router.get('/api/workspace/:deptId/goals', (req: Request, res: Response) => {
   // D1153/#1051: 身份守卫。本卡**不做越权判定** —— 见文件头「未做」段
   const rbac = requireAuthenticatedRbac(req, res);
   if (!rbac) return;
-  const deptId = String(req.params.deptId);
   try {
+    const deptId = String(req.params.deptId);
     const deps = getDefaultDeps(req);
     const workspace = buildDepartmentWorkspace(deptId, deps);
 
@@ -166,8 +166,8 @@ router.get('/api/workspace/:deptId/alerts', (req: Request, res: Response) => {
   // D1153/#1051: 身份守卫。本卡**不做越权判定** —— 见文件头「未做」段
   const rbac = requireAuthenticatedRbac(req, res);
   if (!rbac) return;
-  const deptId = String(req.params.deptId);
   try {
+    const deptId = String(req.params.deptId);
     const deps = getDefaultDeps(req);
     const workspace = buildDepartmentWorkspace(deptId, deps);
 
@@ -197,8 +197,8 @@ router.get('/api/workspace/:deptId/next-action', (req: Request, res: Response) =
   // D1153/#1051: 身份守卫。本卡**不做越权判定** —— 见文件头「未做」段
   const rbac = requireAuthenticatedRbac(req, res);
   if (!rbac) return;
-  const deptId = String(req.params.deptId);
   try {
+    const deptId = String(req.params.deptId);
     const deps = getDefaultDeps(req);
     const workspace = buildDepartmentWorkspace(deptId, deps);
 
@@ -226,10 +226,10 @@ router.put("/api/workspace/goals/:goalId/target", (req: Request, res: Response) 
   try {
     const goalId = String(req.params.goalId);
     const newTarget = req.body?.targetValue;
-
+    
     feedbackCollector.collectFeedback({
       enterpriseId: "default",
-      actorId: rbac.userId,
+      actorId: (req.headers["x-user-id"] as string) || "unknown",
       decision: "modify",
       targetType: "goal",
       targetId: goalId,
@@ -257,7 +257,7 @@ router.post("/api/workspace/proposals/:proposalId/reject", (req: Request, res: R
 
     feedbackCollector.collectFeedback({
       enterpriseId: "default",
-      actorId: rbac.userId,
+      actorId: (req.headers["x-user-id"] as string) || "unknown",
       decision: "reject_path",
       targetType: "proposal",
       targetId: proposalId,
@@ -285,7 +285,7 @@ router.put('/api/workspace/alerts/:id/dismiss', (req: Request, res: Response) =>
     // D93: 收集中层反馈 — 误报
     feedbackCollector.collectFeedback({
       enterpriseId: "default",
-      actorId: rbac.userId,
+      actorId: req.headers["x-user-id"] as string || "unknown",
       decision: "reject",
       targetType: "sentinel_alert",
       targetId: id,
