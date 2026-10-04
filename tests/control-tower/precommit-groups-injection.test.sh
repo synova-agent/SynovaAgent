@@ -698,6 +698,41 @@ else
   printf '%s\n' "$EXCL_FAILS" | sed 's/^/     /' | head -8
   D1148_FAIL=1
 fi
+
+# ── D1148 三次注入: 合并提交（无自撰文件）→ 声明三闸**无对象**，不得假红 ──
+#   背景（本卡实测）: 把 main 合并进本分支时，`git diff --cached`（vs 第一父）含**第二父的全部
+#   文件**——旧实现照此解析"认领者"，把 main 侧**别人的 brief** 当成本次对象判可解析性 →
+#   闸② 假红「#CRITERIA 缺失」（本卡真的踩到一次）。本场景在 clone 内造真实合并（side 分支
+#   带一份**故意不完整**的 brief + 一个未认领脚本），用 `--no-commit` 停在 MERGE_HEAD 存在的
+#   提交前状态，断言：rc=0 且**显式打印**跳过行（非假红、也非静默跳过）。
+echo "── D1148 合并提交无自撰文件（不得假红）──"
+reset_clone
+_SIDE_ORIG="$(git -C "$CLONE" rev-parse HEAD)"
+git -C "$CLONE" checkout -q -b d1148-side
+cat > "$CLONE/.claude/task-briefs/${TODAY}-d1148-side-brief.md" <<EOF
+# side 分支 brief（模拟别人线上的**不完整** brief：无 #CRITERIA、无 Done 条目）
+## Q2: 范围
+做什么:
+- scripts/d1148-side-probe.sh
+EOF
+printf '#!/bin/bash\n# %s d1148 side probe\nexit 0\n' "$MARK" > "$CLONE/scripts/d1148-side-probe.sh"
+chmod +x "$CLONE/scripts/d1148-side-probe.sh"
+git -C "$CLONE" add .claude/task-briefs/${TODAY}-d1148-side-brief.md scripts/d1148-side-probe.sh
+git -C "$CLONE" -c user.name=t -c user.email=t@t commit -q -m "side: 模拟 main 侧不完整 brief"
+git -C "$CLONE" checkout -q --detach "$_SIDE_ORIG"
+git -C "$CLONE" -c user.name=t -c user.email=t@t merge --no-commit --no-ff -q d1148-side
+MERGE_HEAD_PRESENT=0
+[ -n "$(git -C "$CLONE" rev-parse -q --verify MERGE_HEAD 2>/dev/null || true)" ] && MERGE_HEAD_PRESENT=1
+( cd "$CLONE" && GITHUB_ACTIONS=true SYNO_CI=1 bash scripts/pre-commit-check.sh ) >"$TMP/out.d1148-merge.log" 2>&1
+MERGE_RC=$?
+MERGE_SKIP_LINE="$(strip_ansi < "$TMP/out.d1148-merge.log" | grep '声明类三闸：合并提交且无自撰文件' || true)"
+if [ "$MERGE_HEAD_PRESENT" -eq 1 ] && [ "$MERGE_RC" -eq 0 ] && [ -n "$MERGE_SKIP_LINE" ]; then
+  echo "  ✅ D1148 合并提交: rc=0 + 显式跳过行（MERGE_HEAD 已就位；非假红非静默）"
+else
+  echo "  ❌ D1148 合并提交: MERGE_HEAD=$MERGE_HEAD_PRESENT rc=$MERGE_RC —— 声明闸把另一父的文件当成本次对象（或跳过未留痕）"
+  strip_ansi < "$TMP/out.d1148-merge.log" | grep '❌' | sed 's/^/     /' | head -6
+  D1148_FAIL=1
+fi
 echo ""
 
 # ═══ [b 面登记] b 面基线演进: 6 →（M9/#741）7 →（D945）8 →（D1028 本卡）13 ═══

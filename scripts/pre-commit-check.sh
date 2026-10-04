@@ -537,6 +537,27 @@ fi
 STAGED_SRC=$(echo "$STAGED_ALL" | grep -E '^src/|^tests/|^packages/|^scripts/' | grep -v 'scripts/pre-commit-check.sh\|scripts/check-secrets.sh\|scripts/check-file-driven.sh\|scripts/workflow/' || true)
 NEW_IMPL=$(echo "$GIT_CACHED_ADDED_NAMES" | grep -E "^src/|^extensions/" | grep "\.ts$" | grep -v "\.test\." | grep -v "\.d\.ts" | grep -v "types\.ts$\|index\.ts$\|helpers\.ts$" | grep -v "src/sentinel/compute/" || true)
 
+# ═══ D1148: 声明类三闸的**对象集**（合并提交下收敛为"本次自撰文件"）═══
+# 病根（本卡实测）：合并提交下 `git diff --cached`（vs 第一父 = 本分支 HEAD）含**第二父（main）
+#   的全部文件**——它们已在各自 PR 受门禁。若照此解析"认领者"，会把**别人的 brief** 当成本次
+#   提交的对象（实测：merge origin/main 时把 main 侧 `2026-10-04-D1145-bypass-untrack.md` 拉来判
+#   可解析性 → 闸② 假红「#CRITERIA 缺失」。旧实现校验的是另一个对象，恰好不红）。
+# 定义"本次自撰" = 索引**同时**区别于两个父（正常合并 = 空；冲突解 = 冲突文件本身）。
+# 非合并提交：DECL_SCOPE == STAGED_ALL（语义零变化）。
+_DECL_IS_MERGE=0
+DECL_SCOPE="$STAGED_ALL"
+DECL_MERGE_SKIP=0
+if [ -n "$(git rev-parse -q --verify MERGE_HEAD 2>/dev/null || true)" ]; then
+  _DECL_IS_MERGE=1
+  DECL_SCOPE="$(comm -12 \
+    <(printf '%s\n' "${STAGED_ALL:-}" | sed '/^$/d' | sort) \
+    <(git diff --cached MERGE_HEAD --name-only --diff-filter=ACMR 2>/dev/null | sed '/^$/d' | sort) \
+    2>/dev/null || true)"
+  [ -z "$DECL_SCOPE" ] && DECL_MERGE_SKIP=1
+fi
+DECL_SRC="$STAGED_SRC"
+[ "$DECL_MERGE_SKIP" = "1" ] && DECL_SRC=""   # 合并提交无自撰文件 → 闸① 无对象
+
 echo ""
 echo "═══════════════════════════════════════════════════════════"
 echo "  Loop Engineering V4.5.1 — pre-commit (13 组 + 免疫 + plan-integrity)"
@@ -845,7 +866,7 @@ soft_check "铁律 46: 桥接文件欺诈 + 包级 engine-core + 壳包检测" "
 # 5c. 铁律 47: 声称拆分完须 grep 零旧引用 (原 20 — 警告模式)
 TODAY=$(date +%Y-%m-%d)
 # D296 认领制: 多 session 并发时用认领本提交文件的 brief (跨 session 污染根治)
-BRIEF=$(bash "$ROOT/scripts/workflow/resolve-commit-brief.sh" "$STAGED_ALL" 2>/dev/null || true)
+BRIEF=$(bash "$ROOT/scripts/workflow/resolve-commit-brief.sh" "${DECL_SCOPE:-$STAGED_ALL}" 2>/dev/null || true)
 # D1148 缺陷修复（可核）: 组 12 的 `while IFS= read -r BRIEF; do … done <<< "$ALL_TODAY_BRIEFS"`
 #   会**覆盖** $BRIEF（循环变量复用），使其后所有读 $BRIEF 的检查实际校验的是"今日 brief 列表
 #   里排序最后一份"而非**认领本次提交的那一份**——G12b 可解析性检查因此长年校验错对象
@@ -927,7 +948,7 @@ hard_check "主树占用检测 (D537 #2): 主树脏 + 多活跃 session" "${_PAR
 
 TASK_BRIEF_MISSING=""
 TASK_BRIEF_EMPTY=""
-if [ -n "$STAGED_SRC" ]; then
+if [ -n "$DECL_SRC" ]; then   # D1148: 合并提交且无自撰文件时为空 → 闸① 无对象
   if [ -z "$BRIEF" ]; then
     TASK_BRIEF_MISSING="今日无 task brief。请先运行: bash scripts/workflow/task-start.sh \"任务描述\""
   else
@@ -1016,7 +1037,13 @@ fi
 DECL1="${TASK_BRIEF_MISSING:-}${TASK_BRIEF_EMPTY:-}${SKEL_BRIEF:-}${BEFORE_BRIEF_MSG:-}${Q0C_MSG}"
 # D1148: 三闸**显式保留 ✅ 行**（QUIET_SUCCESS=0 前缀）——让「声明类收敛为三条硬闸」在每次
 #   提交日志里可见（审计可核），代价 3 行输出（总行数预算内）。
-QUIET_SUCCESS=0 decl_check "声明闸① brief schema（6 字段/骨架/时间戳/Q0 系列；D1148 合并 15→3）" "${DECL1:-}"
+#   合并提交且无自撰文件（DECL_MERGE_SKIP=1）→ 三闸无对象：**显式打一行跳过**（不静默），
+#   闸②/③ 同步跳过（同一行已说明三条，见下方 guard）。
+if [ "$DECL_MERGE_SKIP" = "1" ]; then
+  echo -e "  ${YELLOW}⏭ 声明类三闸：合并提交且无自撰文件（两父文件各已在各自 PR 受门禁）→ 闸①②③ 无对象，跳过${RESET}"
+else
+  QUIET_SUCCESS=0 decl_check "声明闸① brief schema（6 字段/骨架/时间戳/Q0 系列；D1148 合并 15→3）" "${DECL1:-}"
+fi
 
 # D472: Agent Notes 迁移门禁 — proposed/ 有变更时扫僵尸条目（条件触发保持 <1s，V4.5.1 性能纪律）
 # 僵尸 = 提取到 D# 且 task-state 该 D# ∈ {impl_done, spec_done}（实现已落地但提案未 git mv）
@@ -1061,7 +1088,9 @@ VD_OUT=""
 VD_RC=0
 par_collect verifiable-done "$PAR_VERIFIABLE" > "$PAR_DIR/verifiable-done.captured" 2>&1 || VD_RC=$?
 VD_OUT="$(cat "$PAR_DIR/verifiable-done.captured" 2>/dev/null || true)"
-if [ "$VD_RC" -ne 0 ]; then
+if [ "$DECL_MERGE_SKIP" = "1" ]; then
+  :   # 合并提交无自撰文件 → 闸③ 无对象（跳过行已由闸① 处统一打印）
+elif [ "$VD_RC" -ne 0 ]; then
   QUIET_SUCCESS=0 decl_check "声明闸③ Done 可证伪（每项 - [x] 带 verify:；D1148）" "$(printf '%s\n' "$VD_OUT" | grep -v '^[[:space:]]*$' | head -6)"
 else
   QUIET_SUCCESS=0 decl_check "声明闸③ Done 可证伪（每项 - [x] 带 verify:；D1148）" ""
@@ -1515,6 +1544,16 @@ fi
 #   报告保留: 越界文件逐个点名 + 修复指引（D515 项10）。
 # ═══════════════════════════════════════════════════════════════════════════════
 DECL2=""
+# D1148: 合并提交下只保留**自撰文件**的越界项（两父既有文件的越界不属本次提交，已在各自 PR 判过）
+if [ "$_DECL_IS_MERGE" = "1" ] && [ -n "$SCOPE_VIOLATION" ]; then
+  _SV_F=""
+  while IFS= read -r _svl; do
+    [ -z "$_svl" ] && continue
+    _svp="$(printf '%s' "$_svl" | sed -E 's/^[[:space:]]*//' | awk '{print $1}')"
+    printf '%s\n' "$DECL_SCOPE" | grep -qxF -- "$_svp" && _SV_F="${_SV_F}${_svl}\n"
+  done <<< "$(printf '%s' "$SCOPE_VIOLATION")"
+  SCOPE_VIOLATION="$_SV_F"
+fi
 if [ -n "$SCOPE_VIOLATION" ]; then
   DECL2="${DECL2}${SCOPE_VIOLATION}\n"
   # D515 项10: 修复指引文案 — 改 scripts/ 需先认领 brief（Codex P5 曾被拦无文档说明）
@@ -1525,9 +1564,11 @@ fi
 #   D1148 两处修正: ① 对象用 BRIEF_RESOLVED（认领本提交的 brief，不被组 12 循环覆盖）；
 #   ② 三态 fail-closed —— 原实现 `|| true` + 只看 ❌ 字样 ⇒ 被检脚本崩溃(rc≥2)时输出无 ❌
 #      → 静默判过（假绿）。改为捕 rc：非 0（含 1=违规、≥2=检查自身失败）一律计入闸②。
-BRIEF_PARSEABLE_OUT=$(bash "$ROOT/scripts/workflow/check-brief-parseable.sh" "${BRIEF_RESOLVED:-}" 2>&1); BP_RC=$?
-if [ "$BP_RC" -ne 0 ]; then
-  DECL2="${DECL2}$(printf '%s\n' "$BRIEF_PARSEABLE_OUT" | grep -v '^[[:space:]]*$' | head -6)\n"
+if [ "$DECL_MERGE_SKIP" != "1" ]; then   # 合并提交无自撰文件 → 无对象（跳过行见闸① 处）
+  BRIEF_PARSEABLE_OUT=$(bash "$ROOT/scripts/workflow/check-brief-parseable.sh" "${BRIEF_RESOLVED:-}" 2>&1); BP_RC=$?
+  if [ "$BP_RC" -ne 0 ]; then
+    DECL2="${DECL2}$(printf '%s\n' "$BRIEF_PARSEABLE_OUT" | grep -v '^[[:space:]]*$' | head -6)\n"
+  fi
 fi
 
 # ②-3 Q2 排除项格式/被修改（来自 check-plan-integrity.sh，见闸① 后 plan-integrity 块）
@@ -1535,7 +1576,9 @@ if [ -n "${PI_Q2:-}" ]; then
   DECL2="${DECL2}${PI_Q2}"
 fi
 
-QUIET_SUCCESS=0 decl_check "声明闸② brief↔代码一致性（Q2 写集/排除项/可解析；D1148 合并 15→3）" "${DECL2:-}"
+if [ "$DECL_MERGE_SKIP" != "1" ]; then
+  QUIET_SUCCESS=0 decl_check "声明闸② brief↔代码一致性（Q2 写集/排除项/可解析；D1148 合并 15→3）" "${DECL2:-}"
+fi
 
 # G12d (D458): 生成物单点生成门禁 — session 禁止提交 CI 单点生成的产物
 # 背景: founder-console/founder-dashboard/product-progress 由 CI bot（dashboard-auto.yml /
