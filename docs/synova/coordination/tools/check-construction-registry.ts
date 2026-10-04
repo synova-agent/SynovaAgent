@@ -23,28 +23,36 @@
 
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { constructionItems as _ci, constructionBlocks as _cb, normalizePath, deriveBlockDeps, isModuleShape, type Worker } from '../施工项登记.ts';
-
-// 🔴 修 T8 发现（三态 exit 契约未实现）：登记件读不到 / 结构不对 ⇒ exit 2，不是 exit 1
-let constructionItems: typeof _ci;
-let constructionBlocks: typeof _cb;
+// 🔴 修 T8 发现（三态 exit 契约未实现）：登记件读不到 / 结构不对 ⇒ exit 2
+//    ⚠️ 必须用**动态 import**：静态 import 在 try 之前就失败，catch 根本没机会跑
+//       （CTO 自查抓到的 bug：第一版用静态 import，verify 台实测 exit=1 而非 2）
+type RegMod = typeof import('../施工项登记.ts');
+let reg: RegMod;
 try {
-  constructionItems = _ci;
-  constructionBlocks = _cb;
-  if (!Array.isArray(constructionItems) || !Array.isArray(constructionBlocks)) throw new Error('结构不对');
+  reg = (await import('../施工项登记.ts')) as RegMod;
+  if (!Array.isArray(reg.constructionItems) || !Array.isArray(reg.constructionBlocks)) throw new Error('结构不对');
 } catch (e) {
-  process.stderr.write(`  🔴 检查自身失败：登记件读不到或结构不对 — ${e instanceof Error ? e.message : String(e)}\n`);
+  process.stderr.write(
+    `  🔴 检查自身失败：登记件读不到或结构不对 — ${e instanceof Error ? e.message : String(e)}\n`,
+  );
   process.exit(2);
 }
+const { constructionItems, constructionBlocks, normalizePath, deriveBlockDeps, isModuleShape } = reg;
+type Worker = RegMod['constructionItems'][number]['worker'];
 
 type Fail = { inv: string; id: string; msg: string };
 const fails: Fail[] = [];
 const notes: string[] = [];
 const gaps: string[] = [];
 
+// 🔴 确定性（CTO 2026-10-04 自查发现）：git 探针必须指定【仓根】，不能靠 cwd ——
+//    否则同一登记件在不同目录下结果不同（验证台副本报 7 处、原文件报 0 处）。
+//    REG_GIT_ROOT 由调用方指定（默认 = 当前 cwd）。
+const GIT_ROOT = process.env.REG_GIT_ROOT ?? process.cwd();
 function sh(cmd: string, args: string[]): { ok: boolean; out: string } {
   try {
-    return { ok: true, out: execFileSync(cmd, args, { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'] }) };
+    const full = cmd === 'git' && args[0] !== '-C' ? ['-C', GIT_ROOT, ...args] : args;
+    return { ok: true, out: execFileSync(cmd, full, { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'] }) };
   } catch {
     return { ok: false, out: '' };
   }
@@ -88,35 +96,39 @@ for (const it of constructionItems) {
   };
   for (const it of constructionItems) walk(it.id, []);
 }
-// 🔴 建表项：每个 NOT NULL 字段必须有生产者（否则 exit 2 —— 治"第 29 张零行表"）
+// 🔴 建表项：每个 NOT NULL 字段必须有【可核的生产者】
+//    🔴 2026-10-04 CTO 自查修正：判据顺序改为**声明优先于 grep**。
+//       原顺序（先 grep 后看声明）会导致**同一登记件在不同 cwd 下结果不同** —— 这是执法体最不该有的性质。
+//       （实证：验证台副本报 7 处违规、原文件报 0 处；根因是 git grep 依赖 cwd 的仓状态）
+//    新逻辑（确定性，与 cwd 无关）：
+//       ① 有 producer:<id> 声明 ⇒ 通过（可核：声明指向一个 item id）
+//       ② 有 [known-gap] 声明 ⇒ 记【待办】不记违规
+//       ③ 有 run:<cmd> 声明   ⇒ 通过（命令即生产者证据）
+//       ④ 有声明但形态不可核   ⇒ exit 1（INV-1③b）
+//       ⑤ 完全无声明 ⇒ 才回落到 git grep 探针；探针也无命中 ⇒ exit 1（INV-1③）
 for (const it of constructionItems) {
   if (!it.createsTable) continue;
   for (const f of it.createsTable.notNullFields) {
-    // 生产者判据：产品仓里存在写入该字段的证据（INSERT/UPDATE/props 赋值），或【有声明位】
-    // 🔴 修 T8 发现：原用 `\\b${f}\\b` —— `\\b` 在本机 git ERE 下【不匹配任何东西】，
-    //    ⇒ hasProducer 恒 false ⇒ "必须有生产者"退化为"fieldProducers 里必须有 key"。
-    //    改为 `(^|[^A-Za-z0-9_])${f}([^A-Za-z0-9_]|$)`（手写词边界，git ERE 可用）。
-    const g = sh('git', ['grep', '-l', '-E', `(^|[^A-Za-z0-9_])${f}([^A-Za-z0-9_]|$)`, 'origin/main', '--', 'src/', 'extensions/', 'packages/']);
-    const hasProducer = g.ok && g.out.trim().length > 0;
-    if (!hasProducer) {
-      // 登记件是否有"字段→生产者"声明位？
-      const declared = it.createsTable.fieldProducers?.[f];
-      if (!declared) {
-        fails.push({
-          inv: 'INV-1③',
-          id: it.id,
-          msg: `表 ${it.createsTable.name} 的 NOT NULL 字段 "${f}" 【无生产者】且登记件无 fieldProducers 声明位 ⇒ 建不过`,
-        });
-      } else if (!/^(\[known-gap\]|producer:|run:)/.test(declared)) {
-        // 🔴 修 T8 发现（声明即可合规）：值必须是可核形态 —— [known-gap] / producer:<id> / run:<cmd>
+    const declared = it.createsTable.fieldProducers?.[f];
+    if (declared) {
+      if (declared.startsWith('[known-gap]')) {
+        gaps.push(`${it.id} · ${it.createsTable.name}.${f} — ${declared.replace('[known-gap]', '').trim().slice(0, 70)}`);
+      } else if (!/^(producer:|run:)/.test(declared)) {
         fails.push({
           inv: 'INV-1③b', id: it.id,
           msg: `字段 "${f}" 的声明不是可核形态（须 [known-gap] / producer:<id> / run:<cmd>）：${declared.slice(0, 50)}`,
         });
-      } else if (declared.startsWith('[known-gap]')) {
-        // 声明了但未实现 ⇒ 记【待办】不记【违规】（诚实报告优先于全绿）
-        gaps.push(`${it.id} · ${it.createsTable.name}.${f} — ${declared.replace('[known-gap]', '').trim().slice(0, 70)}`);
       }
+      continue; // 有可核声明 ⇒ 不回落到 grep（保证与 cwd 无关）
+    }
+    // 无声明 ⇒ 回落到 git grep 探针（手写词边界；`\b` 在本机 git ERE 下不匹配任何东西）
+    const g = sh('git', ['grep', '-l', '-E', `(^|[^A-Za-z0-9_])${f}([^A-Za-z0-9_]|$)`, 'origin/main', '--', 'src/', 'extensions/', 'packages/']);
+    const hasProducer = g.ok && g.out.trim().length > 0;
+    if (!hasProducer) {
+      fails.push({
+        inv: 'INV-1③', id: it.id,
+        msg: `表 ${it.createsTable.name} 的 NOT NULL 字段 "${f}" 【无生产者】且登记件无 fieldProducers 声明位 ⇒ 建不过`,
+      });
     }
   }
 }
