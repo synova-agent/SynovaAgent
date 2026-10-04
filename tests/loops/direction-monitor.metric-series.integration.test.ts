@@ -75,6 +75,15 @@ function capitalDeviation(report: DirectionReport) {
   return report.trackedEdges.find((d) => d.edgeId === EDGE) ?? null;
 }
 
+/**
+ * 归一化时间戳后再比较。
+ * checkedAt = new Date() 每次调用都不同 —— 若不归一化，"输出不同"可能是被时间戳
+ * 冒充的（假绿）。两条 report 的差异必须落在实质字段上。
+ */
+function stable(report: DirectionReport): DirectionReport {
+  return { ...report, checkedAt: "<normalized>" };
+}
+
 // ═══ 生命周期 ═══
 
 let db: Database.Database | null = null;
@@ -140,8 +149,8 @@ describe("D1143 W1: 测量值时序 — 同 (entity, metric) 序列真读且改�
       },
     }, null, 2));
 
-    // ── 硬断言: 输出必须不同 ──
-    expect(after).not.toEqual(before);
+    // ── 硬断言: 输出必须不同（先把 checkedAt 归一化，防时间戳冒充差异） ──
+    expect(stable(after)).not.toEqual(stable(before));
     expect(before.status).toBe("risk");
     expect(after.status).toBe("valid");
     expect(before.deviations.length).toBe(1);
