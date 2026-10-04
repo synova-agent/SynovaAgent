@@ -283,7 +283,7 @@ const byInv = new Map<string, Fail[]>();
 for (const f of fails) { const a = byInv.get(f.inv) ?? []; a.push(f); byInv.set(f.inv, a); }
 
 console.log(`  施工项登记执法体 ｜ 项数 ${constructionItems.length} ｜ 块数 ${constructionBlocks.length}`);
-console.log(`  ref: origin/main@1630a5014 ｜ 判据：INV-1 依赖 / INV-2 归属 / INV-3 标准 / BLOCK 完整性`);
+console.log(`  ref: origin/main@1630a5014 ｜ 判据：INV-1 依赖 / INV-2 派单 / INV-3 标准 / INV-4 写集 / INV-5 共写声明 / INV-6 块标准覆盖 / BLOCK 完整性`);
 console.log('');
 for (const [k, v] of [...byInv.entries()].sort()) {
   console.log(`  ${k}: ${v.length} 处`);

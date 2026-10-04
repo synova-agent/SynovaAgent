@@ -9,19 +9,21 @@
  *
  * @contract（铁律 47）
  *   @input  — 无。本文件是数据模块（纯常量），无副作用、无 IO、无运行时依赖。
- *   @output — `constructionItems` / `constructionBlocks` / `deriveOwner` 三个导出。
- *   @degraded — 不适用（纯数据模块，无失败路径）。
+ *   @output — `constructionItems`（40 项）/ `constructionBlocks`（10 块）/
+ *             `deriveBlockDeps()`（块间依赖，运行时自动汇总）/ `isModuleShape()` / `normalizePath()`
+ *   @degraded — 不适用（纯数据模块，无失败路径）
  *
- * @derivation（域的唯一权威不是本文件）
- *   `owner` 字段**不由人填**，而由 `paths` 经 `docs/synova/coordination/ownership.yaml`
- *   的规则推导（最后匹配者胜出）。本文件附一份规则镜像 `OWNERSHIP_RULES`，
- *   与 ownership.yaml **逐条对应**；镜像漂移由门禁 `check-construction-registry.py` 断言。
- *   ⇒ 治"负责人列被手填成不是负责人"（T6 面 3 反例）。
+ * ⚠️ 【已废止】本文件**不再**导出 `deriveOwner`，**不再**含 `OWNERSHIP_RULES` 镜像。
+ *    域概念已于 2026-10-04 由创始人裁定废止（见同目录《域概念废止件-20261004.md》）。
+ *    依据：「门禁里关于任务分配域的规则废止……怎么还存在域的问题呢」
+ *    ⇒ 分配单位 = **模块**；`worker` 字段 = **派给谁**（CTO 派单时指定），不是"归属"。
  *
- * @gate（三条不变量，由 scripts/control-tower/check-construction-registry.py 执行）
- *   INV-1 依赖可判：dependsOn 每个 id 存在、不成环；**建表项的每个 NOT NULL 字段必须有生产者**
- *   INV-2 归属可判：每个 item 的 owner 必须由其 paths 推导得出；owner 不可为空
- *   INV-3 标准可执行：每个 item 至少一条 acceptance.run 可执行；**禁用 grep 型判据**
+ * @gate（四条不变量，由 `tools/check-construction-registry.ts` 执行 —— **不是 .py**）
+ *   ⚠️ 该执法体**尚未接线**（CI/pre-commit 不调用）⇒ 当前"0 违规"是本机结论，**非门禁结论**（见 #1035）
+ *   INV-1 依赖可判：dependsOn 每个 id 存在、不成环；建表项的每个 NOT NULL 字段须有**可核声明**
+ *   INV-2 派单可判：worker 有值且在取值域内；paths 非空且为相对路径（`isModuleShape`）
+ *   INV-3 标准可执行：每条 acceptance 须有 expect；**禁纯 grep 型**；引用的文件须存在或在写集内
+ *   INV-4 写集互斥：写集**同路径** ⇒ exit 1，除非经 `sharedWrite` 显式声明共写（须串行）
  *   三态 exit：0=过 / 1=违规 / 2=检查自身失败
  *
  * @ref origin/main@1630a5014（2026-10-04 14:47）
@@ -850,9 +852,12 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
   {
     id: 'K8', name: '知识与图谱权限（L4）', items: ['0-6', '1-6', '3-2'],
     blockAcceptance: [
-      { run: 'npx vitest run tests/security/org-isolation-audit.test.ts', expectExit: 0 },
+      // 🔴 修 T9 面 1 反例「K8 块标准串到 K1」：原为 org-isolation-audit（= K1 的项 0-9 判据）
+      //    ⇒ K8 三项一件未做也能绿。改为 K8 自己三项的合并判据。
+      { run: 'npx vitest run tests/l4/traversal-permission.test.ts', expectExit: 0 },
+      { run: 'npx vitest run tests/l4/knowledge-scope.test.ts', expectExit: 0 },
     ],
-    source: 'T3 §二 K8',
+    source: 'T3 §二 K8（blockAcceptance 已按 T9 面1 反例改：禁串块）',
   },
   {
     id: 'K9', name: '建档·岗位预设·技能面', items: ['0-12', '3-1', '3-3', '3-4', '3-6', '3-9'],
