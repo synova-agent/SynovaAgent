@@ -110,8 +110,8 @@
 {"level":30,"time":1788810329911,"pid":76066,"hostname":"MacBook-Pro.local","name":"synova-agent","service":"agent/main-agent","loopId":"loop-5","scale":"fast","durationMs":0,"msg":"循环执行完成"}
 {"level":30,"time":1788810330020,"pid":76068,"hostname":"MacBook-Pro.local","name":"synova-agent","service":"growth/user-store","userId":"node-1","email":"d484-admin@synova.test","orgId":"org-1-mtrnhg7k","msg":"用户已创建"}
 {"level":30,"time":1788810330020,"pid":76068,"hostname":"MacBook-Pro.local","name":"synova-agent","service":"enterprise-routes","orgId":"org-1-mtrnhg7k","userId":"node-1","email":"d484-admin@synova.test","msg":"企业注册成功"}
-{"level":30,"time":1788810330108,"pid":76073,"hostname":"MacBook-Pro.local","name":"synova-agent","service":"growth/proposal-store","proposalId":"343310e0-5b75-4aeb-a980-c3adf573197b","title":"哇呢宝贝综合诊断","msg":"Proposal 已创建"}
-{"level":30,"time":1788810330109,"pid":76073,"hostname":"MacBook-Pro.local","name":"synova-agent","service":"growth/goal-store","goalId":"5bfff190-958d-41f3-ad35-2751b2a76db6","title":"均衡推进: 哇呢宝贝综合诊断","msg":"Goal 已创建"}
+{"level":30,"time":1788810330108,"pid":76073,"hostname":"MacBook-Pro.local","name":"synova-agent","service":"growth/proposal-store","proposalId":"343310e0-5b75-4aeb-a980-c3adf573197b","title":"客户A综合诊断","msg":"Proposal 已创建"}
+{"level":30,"time":1788810330109,"pid":76073,"hostname":"MacBook-Pro.local","name":"synova-agent","service":"growth/goal-store","goalId":"5bfff190-958d-41f3-ad35-2751b2a76db6","title":"均衡推进: 客户A综合诊断","msg":"Goal 已创建"}
 {"level":30,"time":1788810330109,"pid":76073,"hostname":"MacBook-Pro.local","name":"synova-agent","service":"growth/proposal-engine","goalId":"5bfff190-958d-41f3-ad35-2751b2a76db6","proposalId":"343310e0-5b75-4aeb-a980-c3adf573197b","msg":"从 Proposal 生成 Goal"}
 {"level":30,"time":1788810330110,"pid":76073,"hostname":"MacBook-Pro.local","name":"synova-agent","service":"growth/goal-store","goalId":"e5085252-4994-4439-844c-ccaf873eedb9","title":"提升利润率","msg":"Goal 已创建"}
 {"level":30,"time":1788810330155,"pid":76068,"hostname":"MacBook-Pro.local","name":"synova-agent","service":"auth-routes","userId":"node-1","loginKey":"d484-admin@synova.test","store":"graph","msg":"登录成功"}
@@ -2360,7 +2360,7 @@
 {"level":40,"time":1788810337914,"pid":76241,"hostname":"MacBook-Pro.local","name":"synova-agent","service":"growth/knowledge-feedback","err":"DB down","goalId":"goal-1","msg":"写入 PKB 失败 — 降级（不阻断 Goal 关闭）"}
 {"level":30,"time":1788810337914,"pid":76241,"hostname":"MacBook-Pro.local","name":"synova-agent","service":"growth/knowledge-feedback","goalId":"goal-1","knowledgeId":"kc_1","classifier":"execution_failure","msg":"Goal 执行知识已写入 PKB"}
 {"level":40,"time":1788810337914,"pid":76241,"hostname":"MacBook-Pro.local","name":"synova-agent","service":"growth/knowledge-feedback","err":"fail","goalId":"goal-1","msg":"写入 PKB 失败 — 降级（不阻断 Goal 关闭）"}
- ❯ tests/e2e/p0-wane-baby.test.ts (0 test)
+ ❯ tests/e2e/p0-client-a.test.ts (0 test)
 {"level":40,"time":1788810338058,"pid":76243,"hostname":"MacBook-Pro.local","name":"synova-agent","service":"l3/quality-firewall","ref":"fake_ev_1","msg":"防火墙: 证据引用不存在"}
 {"level":30,"time":1788810338100,"pid":76244,"hostname":"MacBook-Pro.local","name":"synova-agent","service":"services/role-template-store","id":"test-custom-role","msg":"自定义模板已保存"}
 {"level":30,"time":1788810338101,"pid":76244,"hostname":"MacBook-Pro.local","name":"synova-agent","service":"services/role-template-store","id":"test-custom-role","msg":"自定义模板已保存"}
@@ -8109,9 +8109,9 @@ Error: Cannot find module '../src/logger' imported from /Users/wane/SynovaAgent/
 
 ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/76]⎯
 
- FAIL  tests/e2e/p0-wane-baby.test.ts [ tests/e2e/p0-wane-baby.test.ts ]
-Error: Cannot find module '../../extensions/sentinels/capital-turnover/computes/cash-conversion-cycle' imported from /Users/wane/SynovaAgent/.synova-wt-d590/tests/e2e/p0-wane-baby.test.ts
- ❯ tests/e2e/p0-wane-baby.test.ts:17:1
+ FAIL  tests/e2e/p0-client-a.test.ts [ tests/e2e/p0-client-a.test.ts ]
+Error: Cannot find module '../../extensions/sentinels/capital-turnover/computes/cash-conversion-cycle' imported from /Users/wane/SynovaAgent/.synova-wt-d590/tests/e2e/p0-client-a.test.ts
+ ❯ tests/e2e/p0-client-a.test.ts:17:1
      15| import { computeKzIndex } from '../../extensions/sentinels/financing-c…
      16| import { computeCashRunway } from '../../extensions/sentinels/financin…
      17| import { computeCashConversionCycle } from '../../extensions/sentinels…

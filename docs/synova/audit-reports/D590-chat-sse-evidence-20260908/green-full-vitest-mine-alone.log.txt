@@ -10,7 +10,7 @@
  FAIL  tests/data-pipeline.feishu.integration.test.ts [ tests/data-pipeline.feishu.integration.test.ts ]
  FAIL  tests/data-pipeline.ingest.integration.test.ts [ tests/data-pipeline.ingest.integration.test.ts ]
  FAIL  tests/deploy/data-directory.test.ts > D47: data-directory — 平台路径 > Windows → %LOCALAPPDATA%/Synova/data
- FAIL  tests/e2e/p0-wane-baby.test.ts [ tests/e2e/p0-wane-baby.test.ts ]
+ FAIL  tests/e2e/p0-client-a.test.ts [ tests/e2e/p0-client-a.test.ts ]
  FAIL  tests/env/env-completion.test.ts > D217: agent-start.sh > L1: agent-start.sh 包含 3 步启动流程
  FAIL  tests/env/env-completion.test.ts > D217: agent-start.sh > L2a: package.json dev 指向 agent-start.sh (接线验证)
  FAIL  tests/expert/analytical-lens.test.ts > analytical_lens 完整性 > action IDENTITY.md 存在

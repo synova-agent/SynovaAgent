@@ -187,7 +187,7 @@ grep 本任务关键词在 expert/ sentinel/ extensions/ knowledge/ theory/ skil
 - 不改 src/agent/data-ingest-service.ts、extensions/ontology/tags.json（D477 写集，worktree 隔离）
 - 不 bump VERSION.md（S-8 隔离强化，非门禁/工具行为变化）
 - 不改 src/server.ts（overflowRoutes 未挂载 404 与 graphStore 生产注入缺口为 D90 遗留独立缺陷，§3.2 记录并建议另立任务）
-- 不碰 哇呢宝贝客户数据
+- 不碰 客户A客户数据
 
 ## Q3: 验收 — 入口 → 交互 → 结果
 
