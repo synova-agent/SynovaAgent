@@ -91,7 +91,7 @@ H1="$(sha_of "$HOOKS_MAIN/pre-commit")"
 OUT2="$(RUN 2>&1)"; RC2=$?
 H2="$(sha_of "$HOOKS_MAIN/pre-commit")"
 [ "$RC2" = "0" ] && ok "2 幂等: 第二次 exit 0" || bad "2 幂等: 第二次 exit=${RC2}"
-[ "$H1" = "$H2" ] && ok "2 幂等: 包装器内容逐字节不变（sha 一致）" || bad "2 幂等: 内容被改写（$H1 → $H2）"
+[ "$H1" = "$H2" ] && ok "2 幂等: 包装器内容逐字节不变（sha 一致）" || bad "2 幂等: 内容被改写（$H1 → ${H2}）"
 echo "$OUT2" | grep -q '内容已一致' && ok "2 幂等: 报告「内容已一致，未重写」" || bad "2 幂等: 未报告幂等命中（输出行数=$(echo "$OUT2" | grep -c . || true)）"
 BAKS=$(ls "$HOOKS_MAIN"/pre-commit.bak.* 2>/dev/null | wc -l | tr -d ' \r')  # swallow-ok: 无备份=0（正常）
 [ "$BAKS" = "0" ] && ok "2 幂等: 未产生 .bak（自家包装器不算外来内容）" || bad "2 幂等: 产生了 ${BAKS} 个 .bak"
@@ -138,7 +138,7 @@ O2="$(cd "$WT2" && bash "$WT2/scripts/install-hooks.sh" 2>&1)"; R2=$?
 echo "$O1" | grep -q 'linked worktree' && ok "5 worktree: 输出显式声明「影响面 = 全仓共享」" || bad "5 worktree: 未声明共享影响面"
 DIRTY1="$(git -C "$WT1" status --porcelain | wc -l | tr -d ' \r')"
 DIRTY2="$(git -C "$WT2" status --porcelain | wc -l | tr -d ' \r')"
-[ "$DIRTY1" = "0" ] && [ "$DIRTY2" = "0" ] && ok "5 worktree: 两树工作区零污染" || bad "5 worktree: 工作区被污染（wt1=$DIRTY1 wt2=$DIRTY2）"
+[ "$DIRTY1" = "0" ] && [ "$DIRTY2" = "0" ] && ok "5 worktree: 两树工作区零污染" || bad "5 worktree: 工作区被污染（wt1=$DIRTY1 wt2=${DIRTY2}）"
 
 # ── 6. 落点: git config 全部仓库级 + 宿主全局零写入 ──
 drv="$(git -C "$W" config --local --get merge.union.driver 2>/dev/null || true)"
