@@ -19,6 +19,7 @@
     "tests/control-tower/g6-layer-field.test.sh",
     "tests/control-tower/check-ontology-edge-fields.test.sh",
     "tests/control-tower/install-hooks.test.sh",
+    "tests/control-tower/install-hooks-safe.test.sh",
     "tests/control-tower/check-name-authority.test.sh",
     "tests/control-tower/check-project-coordinates.test.sh",
     ".github/workflows/ci.yml",

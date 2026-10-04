@@ -377,3 +377,28 @@ documents:
     path: docs/synova/dispatch/D1004-js-yaml-dependency-20260925.md
     status: active
     owner: win-line
+
+  # ---- 治理线 D1142 波次（8 卡）出件 2026-10-04 ----
+  - id: DOC-0143
+    type: governance
+    path: docs/synova/coordination/2026-10-04-D1142-1015-三条治理件.md
+    status: active
+    owner: line-lead
+
+  - id: DOC-0144
+    type: governance
+    path: docs/synova/coordination/2026-10-04-D1142-1026-bypass出库裁决包.md
+    status: active
+    owner: line-lead
+
+  - id: DOC-0145
+    type: governance
+    path: docs/synova/coordination/2026-10-04-D1142-1017-三阈值互斥提案.md
+    status: active
+    owner: line-lead
+
+  - id: DOC-0146
+    type: governance
+    path: docs/synova/coordination/2026-10-04-D1142-1019-上报CTO.md
+    status: active
+    owner: line-lead
