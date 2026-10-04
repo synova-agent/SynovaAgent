@@ -402,3 +402,9 @@ documents:
     path: docs/synova/product-lines/收口-R1R5-产品线P0波次-D1137-20261004.md
     status: active
     owner: synova-product-lead
+
+  - id: DOC-0147
+    type: decision
+    path: docs/synova/product-lines/CTO裁决-产品线升级件-20261004.md
+    status: active
+    owner: cto
