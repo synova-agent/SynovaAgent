@@ -135,8 +135,12 @@ python3 scripts/control-tower/check-required-contexts.py --api-check   # 会报�
 ```
 
 ⚠️ **合并顺序硬约束**：本 PR **不得早于步骤 1 的 PATCH 合并**（已满足）——若两条 windows context 仍必需而
-本 PR 已把它们的 job 改成条件创建，则**非 scripts PR 永久 blocked**。步骤 2 与合并的顺序**无约束**
-（加必需不会卡死任何"已含 gate-integrity job"的分支；实测现开 20 个 PR 的 head 均含该 job）。
+本 PR 已把它们的 job 改成条件创建，则**非 scripts PR 永久 blocked**。步骤 2 与合并的顺序无约束 ——
+但**步骤 2 自身有前置**：抽检 4 个在开 PR 的 head 的 check-runs，`gate-integrity` 命中数 =
+**#948 → 0 条**（head `781412605`，2026-10-04）/ #1029 / #1012 / #1000 → 各 1 条
+⇒ 此刻把 `Gate Integrity` 写入必需集会让 **#948 永久 blocked**，故触发条件 = **#948 重新 push 或关闭之后**。
+（📌 更正留痕：本文件上一版曾称"实测现开 20 个 PR 的 head 均含该 job"——该断言只核了 PR **创建时间**、未核 head 的
+check-runs，被 #948 反例否证；现已按 head 级实测改写。同型教训 = 用"看起来覆盖"的间接量替代直接量。）
 
 ## 4. windows 腿改造：三条约束 + 一条跨机制发现
 

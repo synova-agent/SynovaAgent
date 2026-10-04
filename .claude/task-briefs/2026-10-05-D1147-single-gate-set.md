@@ -28,6 +28,8 @@ Synova = AI 诊断 Agent。本任务位于**治理层（控制塔门禁 / CI 结
 - `tests/control-tower/ci-signal-classify.test.sh` —— 存在 → 改（:241/:243 两处钉子期望值 + :279-293 登记 2 个顾问 job）。
 - `tests/control-tower/check-required-contexts.test.sh` —— 存在 → 改（:88 `12/12` 与 ⑥/⑤ 的 `npm audit` 金丝雀改为派生）。
 - `docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh` —— 存在 → 改（⑥ 计数口径限定到 docs-only step 体内）。
+- `docs/authority/DOCS-REGISTRY.yaml` —— 存在 → 改（追加 `DOC-0143` 登记本卡送审件；**机器强制**：D2 登记门禁
+  在 `SYNO_CI=1` 下转硬阻断，首轮 CI run 即被它判红 —— 见 PR 正文 §八）。
 - 新建：`docs/synova/coordination/D1147-单套门禁-必需context变更提案.md`（提案 + 判据原始输出 + 例外清单）。
 - 新建：`memory/notes/proposed/2026-10-05-d1147-single-gate-set.md`（铁律 49 决策 Note）。
 
@@ -67,6 +69,7 @@ C 段棘轮排除非必需 context（判据变更）须 K3，已请 lead 另立�
 - `tests/control-tower/ci-signal-classify.test.sh`：2 处钉子期望值 + 登记 2 个顾问 job（lead 已批）。
 - `tests/control-tower/check-required-contexts.test.sh`：写死 `12/12`、`npm audit` 金丝雀改为派生。
 - `docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh`：⑥ 计数口径限定到 docs-only step 体内。
+- `docs/authority/DOCS-REGISTRY.yaml`：追加 `DOC-0143` 登记送审件（D2 登记门禁 strict 红因）。
 - `docs/synova/coordination/D1147-单套门禁-必需context变更提案.md`（提案件）。
 - `.claude/task-briefs/2026-10-05-D1147-single-gate-set.md`、`memory/notes/proposed/2026-10-05-d1147-single-gate-set.md`。
 
