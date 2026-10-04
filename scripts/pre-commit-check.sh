@@ -1580,6 +1580,47 @@ with open('$ROOT/.codex/checkpoints/cp3-commit-check.json','w') as f:
     json.dump(d, f)
 " 2>/dev/null || true
 
+
+# ═══ 施工项登记执法体（附加检查；不并入传统 13 组编号 —— 同 D782/D734 接入模式）═══
+# 背景: 创始人 2026-10-04「执法的连线，你没有给派单它怎么做，你直接做完不行么？」
+#   本块 = 把 CTO 的登记件执法体接进提交端，使「0 违规」从【本机结论】变【门禁结论】。
+# 判据源: docs/synova/coordination/tools/check-construction-registry.ts
+#   四条不变量：INV-1 依赖可判 / INV-2 派单可判 / INV-3 标准可执行 /
+#              INV-4 写集互斥 / INV-5 共写声明 / INV-6 块标准覆盖
+# 三态(本域铁律): 0=过 / 1=违规 / 2=检查自身失败 —— 2 同样报警（禁 \|\| true 吞崩溃）
+# 判定用 soft_check: 对齐 V5.0.0「本地软提示 + CI 权威」；CI 侧接线属治理线域(ci.yml)，见 #1035
+# 为何不并入 13 组编号: 同上（改总组数会打破 fastlane-bypass-only.test.sh 的断言）
+# 性能: 纯 node + 本地文件，无网络；实测 <2s
+echo ""
+echo -e "${CYAN}── 施工项登记执法体 (D1144) ──${RESET}"
+REG_TOOL="$ROOT/docs/synova/coordination/tools/check-construction-registry.ts"
+if [ -f "$REG_TOOL" ]; then
+  # 🔴 解析 node 绝对路径：tsx 用 `env node`，而 hook 环境 PATH 常无 node（nvm 管理）
+  REG_NODE=""
+  if command -v node >/dev/null 2>&1; then REG_NODE="$(command -v node)"
+  else
+    for cand in "$HOME"/.nvm/versions/node/*/bin/node; do
+      [ -x "$cand" ] && REG_NODE="$cand"
+    done
+  fi
+  REG_TSX_CLI="$ROOT/node_modules/tsx/dist/cli.mjs"
+  if [ -n "$REG_NODE" ] && [ -f "$REG_TSX_CLI" ]; then
+    REG_OUT=$("$REG_NODE" "$REG_TSX_CLI" "$REG_TOOL" 2>&1)
+    REG_EXIT=$?
+    if [ "$REG_EXIT" -eq 0 ]; then
+      soft_pass "D1144 施工项登记: 0 处违规（40 项 / 10 块，四条不变量全过）"
+    elif [ "$REG_EXIT" -eq 1 ]; then
+      soft_check "D1144 施工项登记违规 (跑 npx tsx docs/synova/coordination/tools/check-construction-registry.ts 看逐条)" "$REG_OUT"
+    else
+      soft_check "D1144 执法体执行失败 (exit=$REG_EXIT, D328 三态——2 表示检查自身失败)" "$REG_OUT"
+    fi
+  else
+    soft_check "D1144 执法体: 找不到 node 或 tsx（node=${REG_NODE:-无} tsx-cli=$([ -f "$REG_TSX_CLI" ] && echo 有 || echo 无)）" "1"
+  fi
+else
+  soft_check "D1144 执法体缺失: docs/synova/coordination/tools/check-construction-registry.ts" "1"
+fi
+
 # ═══════════════════════════════════════════════════════════════════
 # 结果
 # ═══════════════════════════════════════════════════════════════════
