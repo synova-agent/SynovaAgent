@@ -56,7 +56,7 @@
 * 不改 src/sentinel/、scripts/（DSH 地盘）。
 * 不改 D477 写集（data-ingest-service.ts、tags.json）。
 * 不做 GA 认证体系重设计（沿用现有 auth 中间件，不新建）。
-* 不碰 哇呢宝贝客户数据。
+* 不碰 客户A客户数据。
 
 ## 4. 测试要求（测试优先：先写 red → 再实现 green）
 
