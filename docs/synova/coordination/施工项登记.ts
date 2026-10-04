@@ -418,14 +418,12 @@ export const constructionItems: readonly ConstructionItem[] = [
 
   // ───────────────── 第 2 批 · 地基 ─────────────────
   {
-    id: '2-1', batch: '第2批', block: 'K3',
-    title: '测量值时序不存在（承重件 W1，地基）',
-    paths: ['src/sentinel/sentinel-events.ts', 'src/sentinel/'],
-    pathTBD: true, // 🔴 建表落点未定：src/sentinel（mac）or src/store（win）—— 待裁
-    dependsOn: ['0-3', '2-4', '2-6'],
+    id: '2-1a', batch: '第2批', block: 'K3',
+    title: '测量值时序 · 表定义（承重件 W1 的 schema 侧）',
+    paths: ['src/store/'],
+    dependsOn: ['2-4', '2-6'],
     createsTable: {
       name: 'metric_readings',
-      // 按 §七 合并后（metric_readings 基座 + measurements 三字段）
       notNullFields: [
         'org_id', 'metric_id', 'entity_id', 'value', 'observed_at', 'source_type',
         'is_estimated', 'confidence', 'degraded', 'created_at',
@@ -434,24 +432,41 @@ export const constructionItems: readonly ConstructionItem[] = [
     },
     acceptance: [
       {
+        run: 'npx vitest run tests/store/metric-readings-schema.test.ts',
+        expectExit: 0,
+      },
+    ],
+    status: 'todo',
+    source: '施工单 2-1（拆自 2-1，按 DSH 式「一能力一包」：schema 与 writer 分离，只通过 INSERT 契约相连）',
+  },
+
+  {
+    id: '2-1b', batch: '第2批', block: 'K3',
+    title: '测量值时序 · 写入侧（承重件 W1 的 writer 侧）',
+    paths: ['src/sentinel/'],
+    dependsOn: ['2-1a'],
+    acceptance: [
+      {
         run: 'sqlite3 data/synova.db "SELECT COUNT(*) FROM metric_readings WHERE observed_at > datetime(\'now\', \'-1 hour\')"',
         expectRowsGt: { table: 'metric_readings', n: 0 },
       },
     ],
     status: 'todo',
-    source: '施工单.md 2-1 / archive/25 / 03-存储设计',
+    source: '施工单 2-1（拆自 2-1）；写入侧 = src/sentinel（mac 域，archive/25 §三：只这三个写入点）',
   },
   {
     id: '2-2', batch: '第2批', block: 'K5',
-    title: '参数清单尚未列全',
-    paths: [],
-    pathTBD: true, // 🔴 纯文档，落点待裁（T6 建议归 mac）
-    dependsOn: [],
+    title: '参数清单（含 W5 两层结构 layer 字段）—— 2-5 已并入本项',
+    paths: ['docs/synova/coordination/'],
+    dependsOn: ['2-1a', '2-6'],
     acceptance: [
-      { run: 'npx tsx scripts/control-tower/check-param-list.ts', expectExit: 0 },
+      {
+        run: 'npx tsx docs/synova/coordination/tools/check-param-list.ts',
+        expectExit: 0,
+      },
     ],
     status: 'todo',
-    source: '施工单.md 2-2 / archive/24',
+    source: '施工单 2-2 + 2-5 合并（同一份产物：清单本体 + 其 layer 字段；按选项①「不是独立项，是产物与字段」）',
   },
   {
     id: '2-3', batch: '第2批', block: 'K6',
@@ -474,24 +489,11 @@ export const constructionItems: readonly ConstructionItem[] = [
     ],
     status: 'todo',
     source: '施工单.md 2-4',
-  },
-  {
-    id: '2-5', batch: '第2批', block: 'K5',
-    title: '两层结构（先验/偏差）无概念（承重件 W5）',
-    paths: [],
-    pathTBD: true,
-    dependsOn: ['2-2'],
-    acceptance: [
-      { run: 'npx tsx scripts/control-tower/check-param-layer.ts', expectExit: 0 },
-    ],
-    status: 'todo',
-    source: '施工单.md 2-5',
-  },
-  {
+  },  {
     id: '2-6', batch: '第2批', block: 'K5',
     title: 'compute 契约注册表不存在（承重件 W4）',
     paths: ['src/contract/'],
-    pathTBD: true, // 🔴 施工单未给目录
+    // ✅ 落点已裁（选项①）：施工单原只写"新建…解析器"未给目录；src/contract/ 已存在（win 域）
     dependsOn: [],
     acceptance: [
       { run: 'npx tsx scripts/control-tower/probe-compute-registry.ts', expectStdoutContains: 'COMPUTE-HHI-v1' },
@@ -501,23 +503,26 @@ export const constructionItems: readonly ConstructionItem[] = [
   },
   {
     id: '2-7', batch: '第2批', block: 'K5',
-    title: 'overall 准度不可测量',
-    paths: [],
-    pathTBD: true,
-    dependsOn: ['2-1', '2-2', '2-3'],
+    title: 'overall 准度计量口径（"越用越准"的可测判据）',
+    paths: ['docs/synova/coordination/tools/'],
+    dependsOn: ['2-1b', '2-2', '2-3'],
     acceptance: [
-      { run: 'npx tsx scripts/control-tower/probe-accuracy-trend.ts', expectExit: 0 },
+      {
+        run: 'npx tsx docs/synova/coordination/tools/probe-accuracy-trend.ts',
+        expectExit: 0,
+      },
     ],
     status: 'todo',
-    source: '施工单.md 2-7（阻塞项在 2-1）',
+    source: '施工单 2-7（原「补在哪」栏为空 ⇒ 按选项①改为「口径判据脚本」，落 CTO 域 —— 它是判据不是产品功能）',
   },
 
   // ───────────────── 第 3 批 · 新建 ─────────────────
   {
     id: '3-1', batch: '第3批', block: 'K9',
     title: '角色预设包（Role Pack）',
-    paths: ['presets/roles/'],
-    pathTBD: true, // 🔴 新目录，归属待裁（CODEOWNERS 无根级 presets/**）
+    paths: ['docs/synova/presets/roles/'],
+    // ✅ 落点已裁（选项③）：用 docs/synova/presets/** 既有规则（=mac）
+    //    ⚠️ 若改判为根级 presets/roles/**（=win），须先在 ownership.yaml 补规则 —— 门禁语义变更，必过 K3
     dependsOn: ['0-9', '1-2'],
     acceptance: [
       { run: 'npx tsx scripts/control-tower/probe-role-pack.ts --role finance', expectExit: 0 },
@@ -605,8 +610,8 @@ export const constructionItems: readonly ConstructionItem[] = [
   {
     id: '3-9', batch: '第3批', block: 'K9',
     title: '生态准入三字段',
-    paths: ['extensions/', 'src/extensions/'],
-    pathTBD: true, // 🔴 "内容声明清单"落点未给
+    paths: ['extensions/'],
+    // ✅ 落点已裁（选项③）：内容声明清单 = 扩展的声明文件，与 extensions/** 同族（win）
     dependsOn: [],
     acceptance: [
       { run: 'npx tsx scripts/control-tower/probe-eco-fields.ts', expectExit: 0 },
@@ -671,7 +676,7 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
     source: 'T3 §二 K2',
   },
   {
-    id: 'K3', name: '哨兵装载与时序落盘（a 类/W1）', items: ['0-3', '2-1', '3-8'],
+    id: 'K3', name: '哨兵装载与时序落盘（a 类/W1）', items: ['0-3', '2-1a', '2-1b', '3-8'],
     dependsOnBlocks: ['K1', 'K2', 'K5'],
     blockAcceptance: [
       {
@@ -691,7 +696,7 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
     source: 'T3 §二 K4',
   },
   {
-    id: 'K5', name: '参数层清单 + 契约注册表（d 类/W4/W5）', items: ['2-2', '2-5', '2-6', '2-7'],
+    id: 'K5', name: '参数层清单 + 契约注册表（d 类/W4/W5）', items: ['2-2', '2-6', '2-7'],
     dependsOnBlocks: ['K4'],
     blockAcceptance: [
       { run: 'npx tsx scripts/control-tower/probe-compute-registry.ts', expectStdoutContains: 'COMPUTE-HHI-v1' },
