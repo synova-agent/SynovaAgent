@@ -878,8 +878,21 @@ if [ -n "$STAGED_SRC" ]; then
     fi
     if [ "$LAYER_FILLED" != "__D707_UNJUDGED__" ]; then
       LAYER_FILLED=$(printf '%s' "$LAYER_FILLED" | tr -d "[:space:]")
-      if [ -z "$LAYER_FILLED" ] || [ ${#LAYER_FILLED} -lt 3 ]; then
+      # #1015-G2 (D1142): 旧判据 `${#LAYER_FILLED} -lt 3` 把**合法值 L1–L5（2 字符）**判成
+      #   「未填写」（scripts/pre-commit-check.sh:881，CTO 复核；V4.2.7 changelog 自称修过
+      #   「L3 过短(2字符)」但这一句仍在）⇒ 逼执行方把值写长来绕判据（合法但误导后人）。
+      #   新判据（判据边界 = 卡面 Done 明文「允许的最短合法值是 L1–L5」）:
+      #     ① 空 → 未填写（**真空值仍须红**，不放松）
+      #     ② ≥3 字符 → 已填写（存量形态：L1-L5 / L4（本体层） / 基础设施 / scripts（控制塔））
+      #     ③ 恰好 2 字符 → 仅当 = L1..L5（大小写不敏感）算已填写；其余 2 字符垃圾仍红
+      #   行为级夹具: tests/control-tower/g6-layer-field.test.sh（真实 gate + 7 用例，含反例）
+      if [ -z "$LAYER_FILLED" ]; then
         TASK_BRIEF_EMPTY="${TASK_BRIEF_EMPTY}  架构层: 未填写\n"
+      elif [ ${#LAYER_FILLED} -lt 3 ]; then
+        case "$LAYER_FILLED" in
+          L1|L2|L3|L4|L5|l1|l2|l3|l4|l5) : ;;
+          *) TASK_BRIEF_EMPTY="${TASK_BRIEF_EMPTY}  架构层: 未填写\n" ;;
+        esac
       fi
     fi
     # Done 标准专项: 至少一条完成标准
