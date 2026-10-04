@@ -486,6 +486,9 @@ export const constructionItems: readonly ConstructionItem[] = [
         created_at: "SQL DEFAULT（datetime now）—— 无需应用层生产者",
         input_digest: '[known-gap] 输入快照摘要（03:193）—— 需 2-1b 写入侧计算或由 compute 层提供',
         def_version: '[known-gap] 该指标定义/公式版本 —— 依赖 2-6 契约注册表（W4＝⑤纯缺口）',
+        value: "2-1b 写入侧：compute 的输出值（就是那个数，archive/25:51）",
+        degraded: "2-1b 写入侧：铁律 24/31 要求降级显式 ⇒ 每个写入点必须给值",
+        run_id: "[known-gap] 运行期上下文（03:191）—— 需 2-1b 写入侧传入当前 run 标识",
       },
     },
     acceptance: [
