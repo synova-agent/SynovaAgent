@@ -129,7 +129,6 @@ export class LoopScheduler {
   private loops = new Map<string, RegisteredLoop>();
   private scheduler: CronSchedulerLike | null = null;
   private enabled = true;
-  private mainAgent: LoopExecutorLike | null = null;
 
   constructor(scheduler?: CronSchedulerLike) {
     this.scheduler = scheduler ?? null;
@@ -139,23 +138,17 @@ export class LoopScheduler {
   }
 
   /**
-   * 注入 MainAgent 实例（D8a），供内置循环执行调用。
-   * #975: 除显式注入外，触发时还会兜底读取进程级绑定（main-agent-binding），
-   * 见 resolveExecutor —— 两条路径注入的是同一个 MainAgent 实例。
-   */
-  setMainAgent(agent: LoopExecutorLike): void {
-    this.mainAgent = agent;
-    log.info('[wiring] MainAgent 已注入 LoopScheduler');
-  }
-
-  /**
-   * #975（0-1 循环点火）: 解析本轮触发要用的执行器。
-   * 优先级: 显式注入（setMainAgent）→ 进程级绑定（server.ts 装配期 bindMainAgent）。
+   * #975（0-1 循环点火）: 解析本轮触发要用的执行器 —— **唯一注入路径 = 进程级绑定**
+   * （src/loops/main-agent-binding.ts:bindMainAgent，由 server.ts 装配期写入）。
+   *
+   * 铁律 37: 原 `LoopScheduler#setMainAgent`（实例注入）实测零调用（`grep -rn "\.setMainAgent(" src/` = 0），
+   * 且与 `src/routes/loops.ts:setMainAgent` 构成"同名陷阱"的另一半 ⇒ 已删除，不做保留式死代码。
+   *
    * @returns 执行器 | null
-   * @degraded 两者皆无 → null（调用方必须 log.warn + 跳过，禁静默）
+   * @degraded 未绑定 → null（调用方必须 log.warn + 跳过，禁静默）
    */
   private resolveExecutor(): LoopExecutorLike | null {
-    return this.mainAgent ?? getBoundMainAgent();
+    return getBoundMainAgent();
   }
 
   /**

@@ -1,7 +1,8 @@
 /**
  * tests/loops/main-agent-binding.test.ts — #975 进程级绑定三态
  *
- * 覆盖: 未绑定（降级可观测，返回 null 不抛）· 绑定可读回同一实例 · 传 null 清除绑定
+ * 契约（铁律 48）: 未绑定 → null（降级可观测，不抛）· 绑定可读回同一实例 · 传 null 清除绑定
+ * 注: 本文件路径 = `src/loops/main-agent-binding.ts` 的配对测试路径（pre-commit 组 2 映射），不可改名。
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import { bindMainAgent, getBoundMainAgent, type LoopExecutorLike } from '../../src/loops/main-agent-binding';

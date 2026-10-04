@@ -130,19 +130,14 @@ describe('#975 — 循环点火（生产装配函数 wireLoopExecution）', () =
     ]);
   });
 
-  it('显式注入优先于进程绑定（setMainAgent 覆盖绑定路径）', async () => {
+  it('装配顺序无关: 先绑定后构造调度器 → 触发即点火（惰性解析）', async () => {
     installDiagnosisStub();
-    const wiring = wireLoopExecution();
-    const explicit = {
-      executeLoopScale: async () => ({ status: 'explicit-injected' }),
-      executeLoop: async () => ({ status: 'explicit-injected-fallback' }),
-    };
+    const wiring = wireLoopExecution();   // 先装配（等价 Bootstrap Phase 2e 之前/之后）
     const capture = new CaptureScheduler();
-    const scheduler = new LoopScheduler(capture);
-    scheduler.setMainAgent(explicit);
+    new LoopScheduler(capture);           // 后构造调度器
     await capture.fire('loop-1-diagnosis');
-    // 显式执行器被调用（MainAgent 未被执行）
     const rec = loopRecord(wiring.mainAgent, 'loop-1');
-    expect(rec!.executionCount).toBe(0);
+    expect(rec!.executionCount).toBe(1);
+    expect(rec!.lastExecution?.scale).toBe('slow');
   });
 });
