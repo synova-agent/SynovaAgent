@@ -594,6 +594,8 @@ export const constructionItems: readonly ConstructionItem[] = [
       'src/contract/',
       'scripts/control-tower/probe-compute-registry.ts',  // 判据交付物（本卡创建）
     ],
+    // 与 PL-04（三层契约）同占 src/contract/ ⇒ 显式声明共写（须串行）
+    sharedWrite: ["PL-04: src/contract/（同上）"],
     // ✅ 落点已裁（选项①）：施工单原只写"新建…解析器"未给目录；src/contract/ 已存在（win 域）
     dependsOn: [],
     acceptance: [
@@ -793,6 +795,23 @@ export const constructionItems: readonly ConstructionItem[] = [
     ],
     status: 'todo',
     source: '施工单.md 3-11',
+  },
+  {
+    id: 'PL-04',
+    worker: 'win', batch: '第2批', block: 'K5',
+    title: '三层契约贯通（写入类型 ↔ 哨兵查询类型 ↔ field-mapping 白名单）',
+    paths: [
+      'src/contract/', 'src/adapters/', 'extensions/ontology/',
+      'docs/synova/coordination/tools/probe-three-layer-contract.ts',  // 判据交付物（本卡创建）
+    ],
+    // PL-04 与 2-6 同占 src/contract/ ⇒ 显式声明共写（须串行）
+    sharedWrite: ["2-6: src/contract/（PL-04 定三层契约形态，2-6 实现契约注册表；同目录须串行）"],
+    dependsOn: ['2-6'],
+    acceptance: [
+      { run: 'npx tsx docs/synova/coordination/tools/probe-three-layer-contract.ts --case cash-runway', expectExit: 0 },
+    ],
+    status: 'todo',
+    source: '边界评估/00-最终方案.md:48（领域智能 20 项之第 3 项，属【必须自建】）；创始人 2026-10-05 裁 A 归入 K5',
   },
   {
     id: '3-12',
