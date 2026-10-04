@@ -312,3 +312,53 @@
 
 ### 变更
 - **check-bridge-files.sh 同步加固** — 独立验证器同样覆盖 packages/ + 相对路径 + 壳包检测
+
+---
+
+## D1149 死件退役 (2026-10-05) — 零调用方门禁 + D3 零执行体
+
+> 依据：任务板 task-4（T5/批4 · 死件退役）。**每删一条先在 PR 正文贴原始证明**（只被 docs/task-brief 提到 ≠ 有调用方）。
+> 卡片给的 12 个候选里实测仅 3 个零调用方；其余 9 个各有一条**可执行**消费路径（CI 已登记夹具 /
+> vitest 集成测试 / 活 skill 指令）⇒ 不删并进例外清单。宁可少删，不许误删（删了会让 12 必需 context 变红）。
+
+### 退役记录（每条三判据 + git 历史可回溯）
+
+**判据定义（a/b/c 三条同时成立才删，任一不成立 ⇒ 保留）**
+- **a) 零可执行调用方**：`grep -rl "<脚本名>" .github/ .claude/ package.json scripts/ | grep -v tests/` 输出仅自身（或仅 task-brief/docs 文本）。
+- **b) 零 CI 执行面**：脚本名及其配对夹具名均不出现在 `.github/workflows/**`；且不在 `ct-test-gate.sh` 配对域
+  （该门禁只覆盖 `scripts/{control-tower,workflow,hooks}/`，由 `scripts/pre-commit-check.sh:617` 调用）。
+- **c) 零活消费者**：全仓 referrer 仅剩 `docs/` / `memory/` / `.claude/task-briefs/`（非执行体）；
+  **不含**活 skill（`.claude/skills/**` 里的 `bash <路径>` 属可执行指令）与 ci.yml 已登记夹具的内容断言。
+- **git 历史可回溯**：`git log --oneline -- <路径>` 非空（本仓保留完整历史，内容可 `git show <sha>:<路径>` 逐字取回）。
+
+| # | 退役件 | a | b | c | git 首末（可回溯） |
+|---|---|---|---|---|---|
+| 1 | `scripts/control-tower/pre-audit-summary.sh`（U8 机器预审汇总，166 行） | ✅ | ✅ | ✅ | D426 建 → D430 热修（2e4715f3d） |
+| 2 | `tests/control-tower/pre-audit-summary.test.sh`（#1 的配对夹具，未登记 ci.yml） | ✅ | ✅ | ✅ | 随 #1 一并退役，[R] 段条目同步摘除（77 条） |
+| 3 | `scripts/check-file-hell.sh`（配置文件地狱防护，24 行） | ✅ **全仓零引用** | ✅ | ✅ | T5 建（2a2ced62a）—— 首行自述「pre-commit 组8附加检查」是**幽灵宣称**（`scripts/pre-commit-check.sh` 零引用） |
+| 4 | `scripts/doc-system/verify-system-registry.sh`（I1/I2/I3 校验器，145 行） | ✅ | ✅ | ✅ | D782 建（de0afd275）—— D3 **零执行体**；夹具内针对它的用例同步摘除，生成器用例 A/A0/A1 保留 |
+
+### 例外清单（**有调用方 ⇒ 不删**，原始输出见 PR 正文 §2）
+
+| 候选 | 不删的原因（可执行消费方） |
+|---|---|
+| `scripts/control-tower/check-gitlinks.sh` | `.github/workflows/ci.yml:534` 登记夹具 `check-gitlinks.test.sh` 内 `bash "$CHECK"` 真实执行（3 例：clean/gitlink/降级） |
+| `scripts/control-tower/check-sentinel-type-net.sh` | `tests/sentinel/d752-type-net-gate.integration.test.ts` 经 `execFileSync('bash',[GATE])` 在 vitest 全量步骤执行（4 例） |
+| `scripts/control-tower/check-k3-report.py` | `.github/workflows/ci.yml:552` 登记夹具执行（T1-T8 八例） |
+| `scripts/control-tower/pre-dispatch-check.sh` | `.claude/skills/{cto-handover,dev-doc-spec}/SKILL.md` 内为**可执行指令**；且 ci.yml 登记夹具 `check-citations.test.sh` 对其内容有两处断言（含「正常」用例引用的 `pre-dispatch-check.sh:10`） |
+| `scripts/check-bridge-files.sh` | `.claude/skills/pr-review/SKILL.md:29` 内为**可执行指令**（`bash scripts/check-architecture.sh && bash scripts/check-bridge-files.sh`）；改该 skill 出本卡写集（且受 G13 `.claude ↔ .dsh` 技能同步门禁约束） |
+| `scripts/check-integrity-startup.sh` | ci.yml 登记夹具 `grep-oP-regression.test.sh` 的 `eq '节点 label'` 接线断言要求该文件存在且含目标模式 |
+| `scripts/check-lessons-learned.sh` | 活门禁 `check-notes-lifecycle.sh`（pre-commit 组 6 区域）的配对夹具 `check-notes-lifecycle.test.sh` 内 `bash "$LESSONS"` 真实执行 ⇒ 删则留 ct-test-gate 地雷 |
+| `scripts/check-tech-debt.sh` | 同 `grep-oP-regression.test.sh`（两处 `eq` 断言：日期模式 / 不误吞短串） |
+| `scripts/doc-system/doc-staleness.sh` | `.github/workflows/ci.yml:544` 登记夹具执行（A/B/B1/C 四例）；且它同时是同一夹具 BOM 待清清单的一项 |
+
+### 未在本卡处理、建议另开卡（越过本卡写集/授权范围）
+
+- **`scripts/doc-system/gen-system-registry.sh`**：与已退役的校验器同属 D782 样板批，实测同样**零 CI 登记、零接线**（零执行体）。
+  本卡未删它（不在卡片清单内）。二选一须 CTO 裁：① 把 gen+校验器真正接线上电；② 一并退役（连 `docs/authority/system-registry.json` 产物）。
+- **9 条「有调用方」候选的净减法路径**：须先动 ci.yml 的登记行 / 活 skill 指令 / vitest 集成测试，
+  均在本卡写集之外（ci.yml 归 T3、skills 出治理域，且受 G13 技能同步门禁约束）⇒ 需独立卡 + 串联合并，不可在单 PR 内自行拆解。
+- **D708 合并级写集对账的 S3 消歧硬约束**：`.claude/task-briefs/*.md` 若同树出现 **2 份含同一 D# 的 brief**
+  → `merge_writeset_gate.py` fail-closed `exit 2`（实测复现，原始输出见 PR 正文 §3）。
+  ⇒ 「同卡 A/B 两支各出一份带同 D# 的 brief」在第二个 PR 上**必然红**（PR head 是合成 merge 提交，
+  合并后 main 已含前一份 brief）。本卡因此**合并为单 PR 单 brief**。后续拆支须用不同 D#，或 B 支 brief 不携带 D# 令牌 + 由 A 支 brief 声明并集。
