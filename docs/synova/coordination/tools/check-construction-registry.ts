@@ -108,7 +108,10 @@ for (const it of constructionItems) {
 //       ⑤ 完全无声明 ⇒ 才回落到 git grep 探针；探针也无命中 ⇒ exit 1（INV-1③）
 for (const it of constructionItems) {
   if (!it.createsTable) continue;
+  // 🔴 2026-10-04 创始人裁 A：可空 + degrade 字段**不要求生产者**（它们靠 degrade 标记显式降级）
+  const nullable = new Set(it.createsTable.nullableDegradedFields ?? []);
   for (const f of it.createsTable.notNullFields) {
+    if (nullable.has(f)) continue; // 明确声明可空的字段不在此判
     const declared = it.createsTable.fieldProducers?.[f];
     if (declared) {
       if (declared.startsWith('[known-gap]')) {

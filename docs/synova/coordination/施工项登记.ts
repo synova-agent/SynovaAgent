@@ -72,6 +72,11 @@ export interface ConstructionItem {
   createsTable?: {
     name: string;
     notNullFields: string[];
+    /** 🔴 **可空 + degrade 语义的字段**（2026-10-04 创始人裁 A 时立）
+     *  用途：无生产者的字段【不得要求 NOT NULL】—— 否则表能建、写不进（T9 物证：exit 19）。
+     *  写入侧契约：缺值 ⇒ 填 null 且该行 `degraded = 1`（禁静默降级 —— 铁律 24/31）。
+     *  门禁行为：本名单内的字段**不要求生产者**（它们靠 degrade 标记显式降级）。 */
+    nullableDegradedFields?: string[];
     /** 🔴 **字段级生产者声明**（2026-10-04 立，治 T7 面 2 反例「无字段→生产者声明位」）
      *  值 = 生产者的【模块/来源】。允许 `[known-gap]` 前缀表示生产者尚未实现。
      *  门禁 INV-1③ 判据：该字段在 origin/main 有写入门径 **或** 此处有声明 ⇒ 通过。 */
@@ -474,36 +479,50 @@ export const constructionItems: readonly ConstructionItem[] = [
     paths: [
       'src/store/',
       'tests/store/metric-readings-schema.test.ts',  // 判据交付物（本卡创建）
+          'tests/store/metric-readings-insert.test.ts',  // 判据交付物（本卡创建）
     ],
     dependsOn: ['2-4', '2-6'],
     createsTable: {
       name: 'metric_readings',
+      // 创始人 2026-10-04 裁 A：**目的是让需求能实现**，故：
+      //    13 字段不是全 NOT NULL —— 3 个无生产者的字段降为可空 + degrade 语义。
+      //    依据（T9 物证，我复现）：13 字段全 NOT NULL 时
+      //      建表 exit 0 ｜ 按 2-1b 意图只填 archive/25 的 10 字段
+      //      ⇒ exit 19 NOT NULL constraint failed: metric_readings.run_id
+      //    ⇒ 表能建、写不进 = 不可用。降可空后能建且能写，缺口留在 degraded 标记（铁律 24/31）。
+      //    注：三个字段的原生场景是 03 号 measurements 表，不是 archive/25 metric_readings；
+      //        合并两张表是否成立仍需另裁 —— 本件先保证写入路径可用。
       notNullFields: [
         'org_id', 'metric_id', 'entity_id', 'value', 'observed_at', 'source_type',
         'is_estimated', 'confidence', 'degraded', 'created_at',
-        'run_id', 'input_digest', 'def_version',
       ],
-      // 🔴 逐字段声明生产者（CTO 2026-10-04 裁定；[known-gap] = 生产者尚未实现，属施工项）
+      // 可空 + degrade 语义（无生产者，不得要求 NOT NULL）。
+      // 写入侧行为：缺则填 null 且把该行 degraded = 1（禁静默 —— 铁律 24/31）。
+      nullableDegradedFields: ['run_id', 'input_digest', 'def_version'],
       fieldProducers: {
         org_id: "producer: 2-1b（哨兵写入侧从调用上下文取 orgId；宪章 H2 强制不得留空）",
         metric_id: "producer: 2-1b（与参数清单 2-2 的 param_id 对齐；archive/25:142 U2）",
         entity_id: "producer: 2-1b（单元粒度，默认 * ；X10 的 N 个单元样本靠它）",
-        observed_at: "producer: 2-1b（取值时点，非写入时点；archive/25:60）",
-        source_type: "[known-gap] enum('compute','42edge','manual','connector') —— 由 2-1b 写入侧按来源填；" +
-          "⚠️ 待裁：与 03:192 的 source 自由串（含 erp）两套枚举需归一（T7 面 2 问 C）",
+        value: "producer: 2-1b（compute 的输出值；archive/25 值字段）",
+        observed_at: "producer: 2-1b（取值时点，非写入时点；archive/25）",
+        source_type: "producer: 2-1b（来源枚举 compute/42edge/manual/connector；⚠️ 与 03 的 source 自由串待归一）",
         is_estimated: "run: 2-1b 写入侧填（默认 0，权威文档15 §3.5）",
         confidence: "run: 2-1b 写入侧按权威文档15 §3.5 填（默认 medium）",
-        created_at: "run: SQL DEFAULT datetime(now) —— 无需应用层生产者",
-        input_digest: '[known-gap] 输入快照摘要（03:193）—— 需 2-1b 写入侧计算或由 compute 层提供',
-        def_version: '[known-gap] 该指标定义/公式版本 —— 依赖 2-6 契约注册表（W4＝⑤纯缺口）',
-        value: "producer: 2-1b（compute 的输出值；archive/25:51）",
         degraded: "run: 2-1b 写入侧按铁律 24/31 填（降级必须显式）",
-        run_id: "[known-gap] 运行期上下文（03:191）—— 需 2-1b 写入侧传入当前 run 标识",
+        created_at: "run: SQL DEFAULT datetime now —— 无需应用层生产者",
+        run_id: "[known-gap] 运行期上下文（03:191）—— 可空 + degrade；生产者待 2-1b 补",
+        input_digest: "[known-gap] 输入快照摘要（03:193）—— 可空 + degrade；生产者待补",
+        def_version: "[known-gap] 该指标定义/公式版本 —— 可空 + degrade；依赖 2-6 契约注册表（W4=纯缺口）",
       },
     },
     acceptance: [
       {
         run: 'npx vitest run tests/store/metric-readings-schema.test.ts',
+        expectExit: 0,
+      },
+      // 治 T9 物证「表能建、写不进」：必须实测【写入路径可用】，不是只验建表
+      {
+        run: 'npx vitest run tests/store/metric-readings-insert.test.ts',
         expectExit: 0,
       },
     ],
