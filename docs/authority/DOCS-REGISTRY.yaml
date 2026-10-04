@@ -377,3 +377,13 @@ documents:
     path: docs/synova/dispatch/D1004-js-yaml-dependency-20260925.md
     status: active
     owner: win-line
+
+  # D1150 资产回收（2026-10-05 治理线）：task-state 索引首次入库。
+  # 登记理由：doc-registry-gate.sh 的排除表不含 task-state/ ⇒ 新文档必须登记，否则 D2 判红。
+  # 归档区 docs/synova/coordination/archive/** 由该门禁 `/archive/` 排除规则豁免，故不逐条登记
+  # （门禁头注原文：`/archive/`「历史归档，只读」⇒「只豁免、不登记」，避免第二真相源）。
+  - id: DOC-0143
+    type: registry
+    path: task-state/INDEX.md
+    status: active
+    owner: gov-line
