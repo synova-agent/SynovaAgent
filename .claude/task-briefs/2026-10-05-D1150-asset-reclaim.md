@@ -47,10 +47,11 @@
    - 候选判据（可复跑）: 文件名带 8 位日期 ∧ 日期 < 202609 ⇒ 71 件；
    - 减去「被 live 文件引用」（`scripts/**`、`docs/authority/**`、`.codex/**`、`docs/synova/presets/**`、coordination 顶层非候选件）4 件 ⇒ **67 件移动**，4 件保留并列例外。
 
-不做什么（含文件路径）：
-- 不改 `ci.yml`、`scripts/pre-commit-check.sh`、`scripts/hooks/**`、`scripts/audit/**`；
-- 不改 `scripts/control-tower/classify-worktrees.py`（D1071 只读红线）；
-- 不动 `.claude/task-briefs/`；
+不做什么（含文件路径；**每条排除项的首个 token 必须含 `/` 或允许的扩展名** —— check-plan-integrity.sh:118-122 只认 `.ts/.sh/.json/.py/.md/.yaml` 或 `/`，`.yml` 不在列表内，故写全路径 `.github/workflows/`）：
+- 不改 `.github/workflows/` 下的 ci.yml（ci.yml 唯一所有者 = T3；本卡不碰）；
+- 不改 `scripts/pre-commit-check.sh`、`scripts/hooks/` 下任何 hook、`scripts/audit/` 下任何审计脚本；
+- 不改 `scripts/control-tower/classify-worktrees.py`（D1071 只读红线，其文件头明写「绝不删除/移动」）；
+- 不动 `.claude/task-briefs/` 既有件（只新增本卡一份）；
 - **不删任何被跟踪源码/文档**（只做 git mv / 索引 / 分类）；
 - 不回收任何「有未推送提交 ∨ 有脏文件 ∨ 在保护名单」的 worktree；
 - wave-2（dirty 仅=hook 产物）**不做**：Lead 2026-10-05 裁决「等 #1075 合并后重扫，不放宽判据」；
@@ -74,14 +75,14 @@
 治理面（非五层架构）：`scripts/control-tower/**` + `task-state/**` + `docs/synova/coordination/**`。
 
 ## Done 标准
-- [ ] 夹具全绿 1: `bash tests/control-tower/reclaim-worktrees.test.sh` → rc=0（PASS=17, FAIL=0）
-- [ ] 夹具全绿 2: `bash tests/control-tower/task-state-retention.test.sh` → rc=0（PASS=20, FAIL=0）
-- [ ] 号分配无冲突: `bash scripts/control-tower/check-name-allocation.sh --id D1999`（对照号）→ rc=0；
+- [ ] 夹具全绿 1: verify: `bash tests/control-tower/reclaim-worktrees.test.sh` → rc=0（PASS=19, FAIL=0）
+- [ ] 夹具全绿 2: verify: `bash tests/control-tower/task-state-retention.test.sh` → rc=0（PASS=20, FAIL=0）
+- [ ] 号分配无冲突: verify: `bash scripts/control-tower/check-name-allocation.sh --id D1999`（对照号）→ rc=0；
       D1150 自身冲突位置唯一 = 本分支（在飞卡自占，属预期）
-- [ ] 登记门禁: `bash scripts/doc-system/doc-registry-gate.sh` → rc=0
-- [ ] 台账棘轮: `bash scripts/control-tower/check-gate-integrity.sh` → `GATE-INTEGRITY: OK`
+- [ ] 登记门禁: verify: `bash scripts/doc-system/doc-registry-gate.sh` → rc=0
+- [ ] 台账棘轮: verify: `bash scripts/control-tower/check-gate-integrity.sh` → `GATE-INTEGRITY: OK`
       （当前 VIOLATION(2) = 2 条新 sealed 测试待 T3 登记 ci.yml，见偏差声明 5）
-- [ ] 合并级: `gh pr checks <PR>` 12 必需 context 全绿且 pending=0（交 Lead 复核后合并）
+- [ ] 合并级: verify: `gh pr checks <PR>` 必需 context 全绿且 pending=0（交 Lead 复核后合并）
 
 #CRITERIA: A
 
