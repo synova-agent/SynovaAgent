@@ -45,7 +45,7 @@ ls extensions/ontology/edge-types/deploys.json # 必须存在
 - 1个manifest.json
 - IM路由扩展逻辑（在已有im.ts上追加代码块）
 - 单元测试文件
-- 哇呢宝贝验证用例
+- 客户A验证用例
 
 ---
 
@@ -568,13 +568,13 @@ export const nciSentinel = {
 };
 ```
 
-### 3.2 哇呢宝贝验证用例
+### 3.2 客户A验证用例
 
 ```typescript
-// tests/e2e/nci-wane-baby.test.ts
+// tests/e2e/nci-client-a.test.ts
 import { describe, it, expect } from 'vitest';
 
-describe('NCI — 哇呢宝贝年卡方案', () => {
+describe('NCI — 客户A年卡方案', () => {
   it('年卡方案检测为中等非共识', async () => {
     // 模拟哇呢数据：年卡方案在会议中被多次提及(>5次), 但零预算分配
     // → 僵尸信号检测触发
@@ -598,7 +598,7 @@ describe('NCI — 哇呢宝贝年卡方案', () => {
 ```bash
 npx tsc --noEmit
 npx vitest run extensions/sentinels/nci/computes/*.test.ts
-npx vitest run tests/e2e/nci-wane-baby.test.ts
+npx vitest run tests/e2e/nci-client-a.test.ts
 npm run check:iron-laws
 ```
 
@@ -611,7 +611,7 @@ git checkout -b feat/nci-phase0-2
 git add extensions/ontology/signal/ src/l4/signal-writer.ts src/l4/signal-writer.test.ts
 git add src/routes/im.ts
 git add extensions/sentinels/nci/
-git add tests/e2e/nci-wane-baby.test.ts
+git add tests/e2e/nci-client-a.test.ts
 git commit -m "feat(nci): Phase 0-2 — Signal entity, IM pipeline, NCI sentinel (8 computes), e2e tests"
 git checkout main && git merge feat/nci-phase0-2
 ```
