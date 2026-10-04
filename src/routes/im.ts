@@ -10,7 +10,7 @@ import { Router, type Request, type Response } from 'express';
 import { createLogger } from '@synova/logger';
 import { handleInboundMessage } from '../l1/im-inbound';
 import { runWithContext } from '../services/request-context';
-import { allowedSensitivities } from '../middleware/auth';
+import { allowedSensitivities, extractAuthFromRequest } from '../middleware/auth';
 
 const log = createLogger('routes/im');
 const router = Router();
@@ -114,12 +114,50 @@ router.post('/api/qa/ask', async (req: Request, res: Response) => {
     if (!question) return res.status(400).json({ ok: false, error: '缺少 question 参数' });
 
     const { answerQuestion } = await import('../l1/qa-router');
-    const result = await answerQuestion({
+
+    /**
+     * D1154 / #984（**可观测面**）— 本端点是知识漏斗的**真消费点**。
+     *
+     * 契约（铁律 47 — 输入/输出/降级）:
+     * - 输入: `req.auth`（jwtAuthMiddleware 验签后注入）；**不读 body 的 userId 作身份**
+     *   （自报字段不可作身份来源，D947 同一姿态）。
+     * - 输出: 已验签 ⇒ 建立请求级上下文（user + authProvider）⇒
+     *   `qa-router.ts:84` 的 `getCurrentFilterClause` 得到 `access.sensitivity IN
+     *   allowedSensitivities(role, clearance)`（**非 deny-all**）⇒ 已认证用户能检索到知识。
+     * - 降级: `req.auth` 不存在 ⇒ **不建立**请求级上下文（等价于「不传 authProvider」）⇒
+     *   漏斗落 deny-all 兜底（`services/request-context.ts:75-85`），**不新增 401/403 门槛**
+     *   —— `tests/l1/qa-router.test.ts` 直连本端点不带 JWT，行为不变式必须保持。
+     *
+     * 白名单规则单一真源 = `middleware/auth.ts` 的 `allowedSensitivities`（不复制第二份）。
+     */
+    const auth = extractAuthFromRequest(req);
+    const ask = () => answerQuestion({
       question,
-      userId: userId || 'web-user',
+      // 身份优先取**验签**结果；无验签身份时保持改造前的 body 回退（行为不变式）
+      userId: auth?.userId ?? (userId || 'web-user'),
       teamId,
       knowledgeLevel: knowledgeLevel as 1 | 2 | 3 | undefined,
     });
+
+    const result = auth
+      ? await runWithContext({
+          user: {
+            userId: auth.userId,
+            identity: { openId: auth.userId, email: `${auth.userId}@${auth.orgId}`, name: auth.userId, source: 'jwt' },
+            auth: { roles: [auth.role], teamId: auth.orgId, tenantId: auth.orgId, sensitivity: 'normal' },
+            permissions: { version: 1, expiresAt: Date.now() + 3600000 },
+          },
+          authProvider: {
+            getPermissionFilter: async (ctx) => ({
+              conditions: [{
+                field: 'access.sensitivity',
+                operator: 'IN' as const,
+                value: allowedSensitivities(ctx.auth.roles[0], ctx.auth.sensitivity),
+              }],
+            }),
+          },
+        }, ask)
+      : await ask();
 
     res.json(result);
   } catch (err: unknown) {

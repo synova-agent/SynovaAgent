@@ -34,6 +34,21 @@
 
 ## 2. L2 实测（三态，原始输出）
 
+> 🔴 **§2 口径更正（D1154，2026-10-05 —— 必读，否则本节会被误读为「用户可见修复」）**
+>
+> 本节三态（0 / 10 / 0）是**进程内语义实测**（真实规则 + 真实过滤器 + 真实语料），
+> **不等于用户可见修复**。本路径
+> `POST /api/im/feishu/webhook` → `handleInboundMessage` → `generateAIReply`
+> **当前不消费知识漏斗**，两条独立实测：
+> - **静态可达性**（本轮复核）: `src/l1/im-inbound.ts` 与其链上模块
+>   （`agent/conversation-engine.ts` · `orchestrator/session-manager.ts` ·
+>   `agent/builtin-tools.ts` · `providers/index.ts`）对
+>   `knowledge-agent` / `KnowledgeStore` / `getCurrentFilterClause` 合计 **0 命中**。
+> - **运行时计数**（复核员实测）: 该链路 **0 次** `KnowledgeStore.search`。
+>
+> ⇒ 本次接线是**为将来消费方就绪的接线**，**不是用户可见修复**。
+> **用户可见修复在 `POST /api/qa/ask`**（本 PR 同批交付），其实测三态另列于 **§9**。
+
 - 语料：`data/synova.db` 的 **一致性快照**（`sqlite3 … ".backup /tmp/b0b/measure984.db"`，**非 cp**）；`knowledge_chunks` **1443 行**，`access_sensitivity` 全为 `normal`
 - 会话身份：复刻 `im.ts:53` 的飞书 sender（`roles:['employee']`, `sensitivity:'normal'`）
 - 查询：`增长`（CJK ⇒ LIKE 分支），`totalHits=20`
@@ -275,4 +290,126 @@ DB 隔离：`SYNOVA_DB_PATH` 指向 `mkdtemp` 临时库，**不触碰仓库 `dat
 **口径（不合并成一句「L2」）**：
 - **语义面 = L2**（§2：真实语料 1443 行，装配前 0 / 装配后 10 / 未认证 0）
 - **接线面 = L2**（本节：真 express + 真 HTTP + 真路由，3 条断言 + 2 组改坏即红）
+
+---
+
+## 9. D1154 — `POST /api/qa/ask` 接线（#984 的**用户可见面**）
+
+> 卡：D1154｜执行：k1-exec｜日期：2026-10-05｜分支：`fix/batch0b-984-im-provider`
+> 写集：`src/routes/im.ts` · `tests/routes/im-authprovider.test.ts` · 本证据件
+> 工位：`.synova-wt-batch0b-t6`（基线 `11d2e4531`，开工前已 `git merge origin/main`）
+
+### 9.1 卡面前提的**部分更正**（我实测，逐条带证据）
+
+| 卡面主张 | 实测 | 判 |
+|---|---|---|
+| `qa-router.ts:84` 调 `getCurrentFilterClause` 但路由无 `runWithContext` 包裹 ⇒ **已认证调用方拿到 0 条** | **合法 JWT + 非白名单路径下不成立**：`jwtAuthMiddleware` **自己**会调 `runWithContext`（`auth.ts:424`，以验签身份建上下文，且 `next()` 在该 ALS 上下文内执行）⇒ 下游**已有**可用 authProvider。<br>实测：**撤掉本路由的包裹**后，带真 JWT 请求 `/api/qa/ask` 仍得 **4 条 / degraded=false**（改坏实验第 1 轮：10 用例**全绿**）。 | ❌ 该路径不成立 |
+| 同上 | **DevMode 自动 admin 分支下成立**：`auth.ts:350-365` 注入 `req.auth = dev-admin` 后**直接 `return next()` —— 不建上下文** ⇒ 下游无上下文 ⇒ 漏斗落 deny-all ⇒ **已认证却 0 条**。<br>实测：该形态下撤掉包裹 ⇒ `knowledgeSources=0` + `degraded=true`；装上 ⇒ `5 条` + `degraded=false`。 | ✅ 成立 |
+
+**结论**：收益成立，但**成因不是「路由完全没包装」**，而是
+**「注入 `req.auth` 的三条路径里只有一条建了上下文」**（验签成功 ✓ / 白名单带 Bearer ✓ /
+DevMode 自动 admin ✗ —— 见 `auth.ts:323-346` · `:350-365` · `:419-465`）。
+路由自建上下文的价值 = **不依赖中间件走哪条分支**，凡有验签身份即保证漏斗可用。
+
+### 9.2 改法（最小、同型）
+
+`src/routes/im.ts` 的 `/api/qa/ask` handler：`answerQuestion(...)` 用 `runWithContext` 包裹。
+- `user` 取自**验签**结果（`extractAuthFromRequest(req)`，唯一可信来源 `req.auth`）；
+  **不读 body 的 `userId` 作身份**（无验签身份时保留原 body 回退，行为不变式）。
+- `authProvider.getPermissionFilter` 复用**同一真源** `allowedSensitivities`（#1011 已导出）。
+- 🔴 `req.auth` 不存在 ⇒ **不建立**请求级上下文（等价「不传 `authProvider`」）
+  ⇒ 保持 deny-all，**不新增 401/403 门槛**（`tests/l1/qa-router.test.ts` 的行为不变式）。
+
+### 9.3 判据（原始输出）
+
+- 语料夹具：**单条 `db.exec()` 批量 INSERT** 5 行（4 `normal` + 1 `restricted`），
+  查询词 `现金流`（CJK ⇒ LIKE 分支）。
+  ⚠️ **不用** `KnowledgeStore.insert()` —— node v24 + better-sqlite3 下会留 `Statement` 垃圾，
+  GC 撞上动态 import 链会 **abort（exit 134）**（复核员实测，我独立复现于 §9.5）。
+- DB 隔离：`SYNOVA_DB_PATH` → `mkdtemp` 临时库（**不触碰仓库 `data/synova.db`**）。
+- 身份：真 `signJwtToken()` + 真 `jwtAuthMiddleware`（`/api/qa/ask` 不在白名单 ⇒ 必须带真 JWT）。
+
+```
+$ node_modules/.bin/vitest run tests/routes/im-authprovider.test.ts
+ ✓ tests/routes/im-authprovider.test.ts (10 tests) 56ms
+ Test Files  1 passed (1)
+      Tests  10 passed (10)          退出码=0
+```
+
+5 条新增用例（D1154 段）覆盖：① 合法 JWT ⇒ 路由**自建** ctx（计数恰 2：中间件 1 + 路由 1）
+② 同一 ctx 重进真漏斗 ⇒ `access.sensitivity IN ['normal']`（非 deny-all）
+③ 用户可见产出：`knowledgeSources=4` / `degraded=false` / restricted 被过滤 / 无「未找到」话术
+④ **DevMode 形态**（`req.auth` 在、中间件不建上下文）⇒ 路由自建 ⇒ 5 条（admin 含 restricted）
+⑤ 未认证 ⇒ **200**（非 401/403）+ 0 条 + `degraded=true` + **未建立**上下文
+＋ 补偿判据：已认证 + 语料无匹配 ⇒ 仍 0 条 + `degraded=true`（= `qa-router.test.ts:96-106` 的语义，见 §9.5）
+
+### 9.4 🔴 判据失效教训（**必须登记**：第一版判据是假绿）
+
+**事实**：第一版新增用例只断言「`H.seen` 里最后一个 ctx 带可用 `authProvider`」。
+**改坏实验（撤掉 `runWithContext` 包裹）⇒ 10 用例全绿** —— 判据**完全没有分辨力**。
+**成因**：合法 JWT 路径下 `jwtAuthMiddleware` 已把 ctx 放进 `H.seen`（`auth.ts:424`），
+该 ctx 的 provider 与路由自建的在结构上等价 ⇒ 断言无法区分「谁建的」。
+
+**修法（两条，均已落地）**：
+1. **计数判据**：`expect(H.seen.length).toBe(2)`（中间件 1 + 路由 1；撤包裹即降为 1）。
+2. **形态判据（不可替代）**：DevMode 分支形态下断言 `H.seen.length === 1`
+   —— 该形态里中间件**不**建上下文，故这 1 次**只能**来自路由。
+
+**修后改坏即红（原始输出）**：
+
+```
+$ # 撤掉 /api/qa/ask 的 runWithContext 包裹
+⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯
+ FAIL  D1154 · #984 可观测面 > 已认证：路由实际传入的 ctx 带**可用的** authProvider（非 deny-all）
+AssertionError: expected 1 to be 2 // Object.is equality
+ FAIL  D1154 · #984 可观测面 > 🔴 判别性本体 · req.auth 存在但**中间件未建上下文**时，路由必须自建
+AssertionError: expected +0 to be 1 // Object.is equality
+      Tests  2 failed | 8 passed (10)     退出码=1
+
+$ # 按 /tmp 备份字节还原
+shasum -a 256 src/routes/im.ts → 6ab145ef87aba4c83ee2b56ce9220ff4abdb1c6561bca76fd03cef3b35110e52（前后一致）
+$ node_modules/.bin/vitest run tests/routes/im-authprovider.test.ts
+      Tests  10 passed (10)               退出码=0
+```
+
+**诚实边界**：改坏态仍有 **8/10 绿** —— 除上述 2 条外，其余用例（含 ③ 用户可见产出）
+**在撤掉本路由包裹时依然通过**（被中间件那次 ctx 满足）。
+⇒ 本 PR 的 D1154 判据中，**只有 2 条具备改前/改后分辨力**，已在用例命名与注释中标出，**不宣称 10 条都具分辨力**。
+
+### 9.5 ⚠️ `tests/l1/qa-router.test.ts` 在本环境**预存崩溃**（与本卡无关，登记）
+
+```
+$ node_modules/.bin/vitest run tests/l1/qa-router.test.ts
+/Users/wane/.nvm/versions/node/v24.19.0/bin/node[…]: void node::RemoveEnvironmentCleanupHook(Isolate *, CleanupHook, void *) at ../src/api/hooks.cc:142
+  #  Assertion failed: (env) != nullptr
+ 4: 0x… Statement::~Statement() [better_sqlite3.node]
+…
+Error: [vitest-pool]: Worker forks emitted error.   →  Worker exited unexpectedly
+退出码=1（换 --pool=threads 同样 exit 134）
+```
+
+**定位为本卡无关（受控实验）**：把 `src/routes/im.ts` **还原为 HEAD**（撤掉本卡全部改动）后
+复跑 **2 次，2/2 同样 abort**（同一断言行、同一 native 栈）。
+**成因（与复核员实测一致）**：该文件 `beforeAll` 用 `KnowledgeStore.insert()`
+（`qa-router.test.ts:26,28`）造夹具 ⇒ 留 `Statement` 垃圾 ⇒ GC 终结器撞上 node 24 的
+`RemoveEnvironmentCleanupHook` 断言。崩溃发生在 `createServer()` 引导期（**早于任何断言**），
+故该文件在本环境**跑不到断言**。
+**登记**：修复属该测试夹具 + `scripts/**` 之外的环境问题，**不在本卡写集**（未改该文件）。
+**补偿**：其锁定的行为不变式（无匹配知识 ⇒ `degraded=true` / 0 条；未认证 ⇒ 不新增 401/403）
+已由 §9.3 用例 ⑤ 与补偿判据在**真 HTTP + 可跑环境**中复现。
+
+### 9.6 类型安全与终态
+
+```
+npx tsc --noEmit：本卡改动前 28 个 error site / 改动后 28 个 —— 逐条 diff 为空（零新增，EXIT=2 为既有红）
+写集终态（工作树 vs 开工前 merge 提交 8c034ef95）：仅 src/routes/im.ts · tests/routes/im-authprovider.test.ts · 本证据件
+```
+
+**未做 / 不宣称**：
+- ⚠️ **不改** `src/l1/qa-router.ts` · `src/middleware/auth.ts` · `src/services/request-context.ts`（卡内硬约束）。
+- ⚠️ **不改** `tests/l1/qa-router.test.ts` 的预存崩溃（§9.5，不在写集）。
+- ⚠️ `git diff --stat origin/main` 会同时列出 **#1011 分支既有差异**（16 份 `docs/**` + `.claude/**` + `src/middleware/auth.ts`），
+  非本卡引入 —— 我的改动以 `git diff 8c034ef95` 为准（仅 3 文件）。
+- ⚠️ 未跑全量 vitest（由产品线跑）。
+
 
