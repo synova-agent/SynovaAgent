@@ -545,6 +545,34 @@ assert_lacks "$OUT" "分配锁" "13.5 未触碰分配锁（不拿锁）"
   || fail "13.5 注入锁目录被清理（进入了锁临界区）"
 echo ""
 
+echo "── 14. #1023: 未标注「吞错兜底」归零（machine-judgeable Done）+ 断言判别性自证 ──"
+# Done 口径（卡面原文）: `grep '|| true' scripts/control-tower/alloc-task-id.sh | grep -v 'swallow-ok'` = 0。
+#   三分类落点: ① 正常空集 → 保留 + `swallow-ok: …`｜② 失败被吞 → 摘掉改显式降级（⚠ degraded 告警）｜③ 清理/trap → 保留 + 注释。
+# 口径用 awk（单进程，恒 rc=0）——不用 `grep|grep -v|wc` 管道: 本测试是 `set -euo pipefail`，
+#   当"未标注=0"时 `grep -v` 无匹配返 1 ⇒ 管道整体非零 ⇒ 测试在**正确状态**下自杀
+#   （本文件首跑即踩：14 段标题打印后立刻退出）。同属 #1023 要消灭的那一类缺陷。
+UNMARKED=$(awk '/\|\| true/ && !/swallow-ok/ {c++} END{print c+0}' "$TOOL")
+[ "$UNMARKED" = "0" ] \
+  && pass "14.1 未标注兜底 = 0（Done 口径达成）" \
+  || fail "14.1 未标注兜底剩余 ${UNMARKED} 处（$(awk '/\|\| true/ && !/swallow-ok/ {print NR": "$0}' "$TOOL" | head -3 | tr '\n' '|')）"
+# 判别性自证（防"断言恒绿"空转）: 给一份人为注入未标注兜底的副本，同一断言必须看见它。
+TMP_COPY="$(mktemp)"; CLEANUP_DIRS+=("$TMP_COPY")
+cp "$TOOL" "$TMP_COPY"
+printf 'echo probe || true\n' >> "$TMP_COPY"
+INJECTED=$(awk '/\|\| true/ && !/swallow-ok/ {c++} END{print c+0}' "$TMP_COPY")
+[ "$INJECTED" = "1" ] \
+  && pass "14.2 断言判别性: 注入 1 行未标注兜底 ⇒ 计数 1（非空转网）" \
+  || fail "14.2 断言看不见注入（空转网，14.1 的绿不可信）—— 实得 ${INJECTED}"
+# ② 类改造的判别性: 关键 git 源必须有「显式降级」而非静默兜底（grep 物理事实）
+for _pat in '_LOCAL_BRANCHES=$(git' '_WT_LIST_RAW=$(git' '_REMOTE_RAW=$(git' '_BR_RAW=$(git'; do
+  if grep -qF "$_pat" "$TOOL"; then
+    pass "14.3 ② 类源改造在位: ${_pat%%=*}（显式区分 git 失败 vs 空集）"
+  else
+    fail "14.3 ② 类源改造缺失: $_pat（git 失败仍与空集混同 = 静默漏源）"
+  fi
+done
+echo ""
+
 echo "═══════════════════════════════════════════════════════════"
 # D938-CI-2: FAIL>0 但 FIRST_FAIL 为空 = 夹具自身缺陷（记名机制失灵），必须显式红，不得静默
 if [ "$FAIL" -gt 0 ] && [ -z "$FIRST_FAIL" ]; then

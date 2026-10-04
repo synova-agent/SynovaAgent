@@ -140,7 +140,7 @@ LOCK_WAIT_SEC=30
 LOCK_POLL=0.2
 # D938 成功哨兵: 只有走过「合法成功退出点」才置 DONE=1（见 _lock_release）。
 #   动机: EXIT trap 退出码 = trap 内最后一条命令的退出码（实测 _lock_release 末句
-#   `rmdir … || true` → 恒 0），且 set -e/set -u 中止时 trap 内 $? 读到 0、ERR trap
+#   `rmdir …` 的失败被兜底成恒 0），且 set -e/set -u 中止时 trap 内 $? 读到 0、ERR trap
 #   不触发 → 脚本报错却 rc=0（fail-open）。哨兵把「没成功」一律判成非 0。
 DONE=0
 
@@ -197,10 +197,10 @@ _run_bounded() {
   local _tenths=$(( secs * 10 )) _i=0
   while kill -0 "$_pid" 2>/dev/null; do  # swallow-ok: 进程已退出=循环正常结束条件，非错误
     if [ "$_i" -ge "$_tenths" ]; then
-      kill -TERM "$_pid" 2>/dev/null || true
+      kill -TERM "$_pid" 2>/dev/null || true               # swallow-ok: 清理路径——进程可能已自行退出，TERM 失败非错误（#1023 ③）
       sleep 0.2
-      kill -KILL "$_pid" 2>/dev/null || true
-      wait "$_pid" 2>/dev/null || true
+      kill -KILL "$_pid" 2>/dev/null || true               # swallow-ok: 清理路径——同上，KILL 失败非错误（#1023 ③）
+      wait "$_pid" 2>/dev/null || true                     # swallow-ok: 清理路径——被信号终止的子进程 wait 恒非零，非错误（#1023 ③）
       return 124
     fi
     sleep 0.1
@@ -217,7 +217,7 @@ _wt_scan() {
   printf '%s\n' $1 \
     | xargs -P 8 -I{} sh -c 'ls -1 "{}"/task-state/D*.json 2>/dev/null' 2>/dev/null \
     | sed -n 's|.*/D\([0-9][0-9]*\)\.json$|\1|p' \
-    | grep -E '^[0-9]+$' | sort -u || true
+    | grep -E '^[0-9]+$' | sort -u || true   # swallow-ok: 无 D*.json 的分片=正常空集（grep 无匹配返 1，pipefail 下需兜底）（#1023 ①）
 }
 
 # ═══ D940: 远端分支权威快照 — **拿锁前**取 ═══
@@ -286,15 +286,28 @@ _occupy_locations() {
   fi
   # ④ 本地分支名
   if [ "${SYNO_ALLOC_NO_BRANCH:-0}" != "1" ] && [ -n "$TS_TOP" ]; then
+    # #1023 ②（原兜底吞掉 git 失败）: 拆成"git 成败显式可判"+"空集兜底"两段——
+    #   原写法把 `for-each-ref` 失败与"无本地分支"压成同一个空串（静默漏源）。铁律 11/31: 显式降级。
+    _LOCAL_BRANCHES=""
+    if ! _LOCAL_BRANCHES=$(git -C "$TS_TOP" for-each-ref --format='%(refname:short)' refs/heads 2>/dev/null); then
+      echo "⚠ degraded: git for-each-ref 失败 — 本地分支名源未纳入本次占用判定（发号前跨位置校验仍兜底）" >&2
+      _LOCAL_BRANCHES=""
+    fi
     while IFS= read -r br; do
       [ -z "$br" ] && continue
       if printf '%s' "$br" | grep -qiE "(^|[^0-9a-z])d${num}([^0-9]|\$)"; then
         printf 'local-branch  %s\n' "$br"
       fi
-    done <<< "$(git -C "$TS_TOP" for-each-ref --format='%(refname:short)' refs/heads 2>/dev/null || true)"
+    done <<< "$_LOCAL_BRANCHES"
   fi
   # ⑤ worktree 目录名（仅约定前缀 synova-wt-*，避免把任意临时目录当占用）
   if [ "${SYNO_ALLOC_NO_WORKTREE:-0}" != "1" ] && [ -n "$TS_TOP" ]; then
+    # #1023 ②（同上）: git 失败不再与"无 worktree"混同；awk 对空输入恒 0，无需兜底。
+    _WT_LIST_RAW=""
+    if ! _WT_LIST_RAW=$(git -C "$TS_TOP" worktree list --porcelain 2>/dev/null); then
+      echo "⚠ degraded: git worktree list 失败 — worktree 目录名源未纳入本次占用判定" >&2
+      _WT_LIST_RAW=""
+    fi
     while IFS= read -r wt; do
       [ -z "$wt" ] && continue
       base="${wt##*/}"
@@ -305,7 +318,7 @@ _occupy_locations() {
       if printf '%s' "$base" | grep -qiE "(^|[^0-9a-z])d${num}([^0-9]|\$)"; then
         printf 'worktree-name  %s\n' "$base"
       fi
-    done <<< "$(git -C "$TS_TOP" worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2}' || true)"
+    done <<< "$(printf '%s\n' "$_WT_LIST_RAW" | awk '/^worktree /{print $2}')"
   fi
   return 0
 }
@@ -349,11 +362,16 @@ REMOTE_USED=""
 if [ "${SYNO_ALLOC_NO_REMOTE:-0}" = "1" ]; then
   :  # 测试注入缝: 禁用 remote 合并（隔离 origin/main 依赖，测本地发号语义）
 elif [ -n "$TS_TOP" ] && git -C "$TS_TOP" ls-tree --name-only origin/main task-state/ >/dev/null 2>&1; then
-  REMOTE_USED=$(git -C "$TS_TOP" ls-tree --name-only origin/main task-state/ 2>/dev/null | sed 's/.*\/D\([0-9]*\)\.json/\1/' | grep -E '^[0-9]+$' || true)
+  # #1023 ②: 上一条 elif 已探"可读"，此处仍显式区分"git 失败"与"空集"（竞态/权限变化时不再静默漏源）。
+  _REMOTE_RAW=""
+  if ! _REMOTE_RAW=$(git -C "$TS_TOP" ls-tree --name-only origin/main task-state/ 2>/dev/null); then
+    echo "⚠ degraded: git ls-tree origin/main 失败 — origin/main 号源未纳入（可能漏号，建议 git fetch）" >&2
+  fi
+  REMOTE_USED=$(printf '%s\n' "$_REMOTE_RAW" | sed 's/.*\/D\([0-9]*\)\.json/\1/' | grep -E '^[0-9]+$' || true)  # swallow-ok: 空集/无匹配=正常（#1023 ①）
 else
   echo "⚠ alloc-task-id: origin/main 不可读——仅按本地 task-state 发号（可能漏号，建议先 git fetch）" >&2
 fi
-USED="$(printf '%s\n%s\n' "$USED" "$REMOTE_USED" | grep -E '^[0-9]+$' || true)"
+USED="$(printf '%s\n%s\n' "$USED" "$REMOTE_USED" | grep -E '^[0-9]+$' || true)"  # swallow-ok: 两源皆空=正常空集（#1023 ①）
 
 # D576（CT-54）: 在途分支/worktree 盲区修复——alloc 只看 origin/main + 本地主 task-state，
 # 看不到其他 worktree / 本地分支 task-state 里「先登记后使用」的壳（D575 撞 D573 在途分支实证：
@@ -368,7 +386,7 @@ else
   if [ -z "$TS_TOP" ]; then
     :  # task-state 目录不在 git 仓库内（测试沙箱/非常规布局）→ 无 worktree 语义，跳过
   elif WORKTREE_LIST=$(git -C "$TS_TOP" worktree list --porcelain 2>/dev/null); then
-    WT_DIRS=$(printf '%s\n' "$WORKTREE_LIST" | awk '/^worktree /{print $2}' | grep -vx "$TS_TOP" || true)
+    WT_DIRS=$(printf '%s\n' "$WORKTREE_LIST" | awk '/^worktree /{print $2}' | grep -vx "$TS_TOP" || true)  # swallow-ok: 只有本仓=全被过滤掉，属正常空集（#1023 ①）
     # ── D1091: 扫描腿改「并行枚举」+ 有界 ─────────────────────────────────────────
     # 历史: D940 已消掉「每文件一个 basename 子进程」（258s），但纯 bash 双循环本体
     #   （457 worktree × ~400 卡 ≈ 18 万次迭代）本机实测仍 **>4 分钟无输出**（CTO 台账第七批①）。
@@ -389,7 +407,7 @@ else
     echo "⚠ alloc-task-id: git worktree list 失败——在途 worktree 占用检查跳过（可能漏号）" >&2
   fi
 fi
-USED="$(printf '%s\n%s\n' "$USED" "$WORKTREE_USED" | grep -E '^[0-9]+$' || true)"
+USED="$(printf '%s\n%s\n' "$USED" "$WORKTREE_USED" | grep -E '^[0-9]+$' || true)"  # swallow-ok: 空集=正常（#1023 ①）
 
 # CT-63: 远端分支名 D# 扫描——Win/Claude 线自编号不走 alloc，分支名是唯一在途信号
 #   （D593/D594 撞号实证：Win 用 D593 做 B-02/B-06，Mac 同时用 D593 做报告落盘）
@@ -401,13 +419,18 @@ if [ "${SYNO_ALLOC_NO_BRANCH:-0}" = "1" ]; then
 else
   # D940返工: TS_TOP 已在远端快照段统算，此处沿用（同归属，不重算）
   if [ -n "$TS_TOP" ]; then
-    BRANCH_IDS=$(git -C "$TS_TOP" branch -r --format='%(refname:short)' 2>/dev/null | grep -ioE 'D[0-9]+' | tr '[:lower:]' '[:upper:]' | sed 's/D//' | grep -E '^[0-9]+$' || true)
+    # #1023 ②: git 失败与"无远端分支 D 号"分离（原兜底把两者压成同一空串）。
+    _BR_RAW=""
+    if ! _BR_RAW=$(git -C "$TS_TOP" branch -r --format='%(refname:short)' 2>/dev/null); then
+      echo "⚠ degraded: git branch -r 失败 — 远端分支号源未纳入 MAX（发号前跨位置校验仍 fail-closed）" >&2
+    fi
+    BRANCH_IDS=$(printf '%s\n' "$_BR_RAW" | grep -ioE 'D[0-9]+' | tr '[:lower:]' '[:upper:]' | sed 's/D//' | grep -E '^[0-9]+$' || true)  # swallow-ok: 无 D 号分支=正常空集（#1023 ①）
     [ -n "$BRANCH_IDS" ] && BRANCH_USED="$BRANCH_IDS"
   fi
 fi
-USED="$(printf '%s\n%s\n' "$USED" "$BRANCH_USED" | grep -E '^[0-9]+$' || true)"
+USED="$(printf '%s\n%s\n' "$USED" "$BRANCH_USED" | grep -E '^[0-9]+$' || true)"  # swallow-ok: 空集=正常（#1023 ①）
 
-ALL_USED=$(printf "%s\n" "$USED" | grep -E '^[0-9]+$' | sort -n | uniq || true)
+ALL_USED=$(printf "%s\n" "$USED" | grep -E '^[0-9]+$' | sort -n | uniq || true)  # swallow-ok: 空集=正常（#1023 ①）
 MAX=$(printf "%s\n" "$ALL_USED" | tail -1 | grep -E '^[0-9]+$' || echo "0")
 # D456: pipefail 下空 task-state 时 tail/grep 非零导致静默退出，显式兜底
 MAX="${MAX:-0}"
