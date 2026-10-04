@@ -529,6 +529,8 @@ jobs:
             tests/control-tower/alloc-task-id-timeout.test.sh \
             tests/control-tower/log-snapshot.test.sh \
             tests/control-tower/classify-worktrees.test.sh \
+            tests/control-tower/reclaim-worktrees.test.sh \
+            tests/control-tower/task-state-retention.test.sh \
             tests/control-tower/verdict-baseline.test.sh \
             tests/control-tower/check-name-allocation.test.sh \
             tests/control-tower/check-gitlinks.test.sh \

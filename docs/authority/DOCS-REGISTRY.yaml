@@ -363,6 +363,19 @@ documents:
     status: active
     owner: line-lead
 
+  # D1150 资产回收（2026-10-05 治理线）：task-state 索引首次入库。
+  # 改号说明：原登记为 DOC-0143，与 #1077（D1147 单套门禁提案件）**重号** ⇒ Lead 2026-10-05 裁决
+  #   保留 #1077 的 0143（其正文/分支已按 435e58263 为 K3 引用冻结），由本件改号 **DOC-0147**；
+  #   并插在 DOC-0140 之后而非尾部追加，避免两 PR 在台账尾部同区冲突。
+  # 登记理由：doc-registry-gate.sh 的排除表不含 task-state/ ⇒ 新文档必须登记，否则 D2 判红。
+  # 归档区 docs/synova/coordination/archive/** 由该门禁 `/archive/` 排除规则豁免，故不逐条登记
+  # （门禁头注原文：`/archive/`「历史归档，只读」⇒「只豁免、不登记」，避免第二真相源）。
+  - id: DOC-0147
+    type: registry
+    path: task-state/INDEX.md
+    status: active
+    owner: gov-line
+
   # ---- Win 线派单件（D1000 身份链 / D1004 js-yaml）2026-10-02 补登记 ----
   # 依据：Mac-CTO 2026-09-25 裁定「正式派单件 = 入库（docs/synova/dispatch/**）」
   # 红因：D2 登记门禁（CI strict）判「有未登记文档 2 个」⇒ 本批补登记
@@ -377,13 +390,3 @@ documents:
     path: docs/synova/dispatch/D1004-js-yaml-dependency-20260925.md
     status: active
     owner: win-line
-
-  # D1150 资产回收（2026-10-05 治理线）：task-state 索引首次入库。
-  # 登记理由：doc-registry-gate.sh 的排除表不含 task-state/ ⇒ 新文档必须登记，否则 D2 判红。
-  # 归档区 docs/synova/coordination/archive/** 由该门禁 `/archive/` 排除规则豁免，故不逐条登记
-  # （门禁头注原文：`/archive/`「历史归档，只读」⇒「只豁免、不登记」，避免第二真相源）。
-  - id: DOC-0143
-    type: registry
-    path: task-state/INDEX.md
-    status: active
-    owner: gov-line
