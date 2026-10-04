@@ -316,6 +316,9 @@ DevMode 自动 admin ✗ —— 见 `auth.ts:323-346` · `:350-365` · `:419-465
 `src/routes/im.ts` 的 `/api/qa/ask` handler：`answerQuestion(...)` 用 `runWithContext` 包裹。
 - `user` 取自**验签**结果（`extractAuthFromRequest(req)`，唯一可信来源 `req.auth`）；
   **不读 body 的 `userId` 作身份**（无验签身份时保留原 body 回退，行为不变式）。
+  ⚠️ **如实定性（复核员实测）**：这是**卫生性收紧，不是安全修复、也不是行为变更** ——
+  `src/l1/qa-router.ts` 对 `answerQuestion({ userId, teamId })` 的 `userId`/`teamId`
+  **零读取**（该两个入参在实现内无任何消费）⇒ 改与不改**无可观测效果**。**不得**计入本卡收益。
 - `authProvider.getPermissionFilter` 复用**同一真源** `allowedSensitivities`（#1011 已导出）。
 - 🔴 `req.auth` 不存在 ⇒ **不建立**请求级上下文（等价「不传 `authProvider`」）
   ⇒ 保持 deny-all，**不新增 401/403 门槛**（`tests/l1/qa-router.test.ts` 的行为不变式）。
@@ -324,8 +327,9 @@ DevMode 自动 admin ✗ —— 见 `auth.ts:323-346` · `:350-365` · `:419-465
 
 - 语料夹具：**单条 `db.exec()` 批量 INSERT** 5 行（4 `normal` + 1 `restricted`），
   查询词 `现金流`（CJK ⇒ LIKE 分支）。
-  ⚠️ **不用** `KnowledgeStore.insert()` —— node v24 + better-sqlite3 下会留 `Statement` 垃圾，
-  GC 撞上动态 import 链会 **abort（exit 134）**（复核员实测，我独立复现于 §9.5）。
+  ⚠️ 环境规则（复核员控制组实测，见 §9.5）：**vitest worker 内不要调 `createServer()`** ——
+  node v24.19.0 下会 abort（exit 134）。本文件全程只用裸 express + `initEngineContext()` ⇒ 可跑。
+  **与 `KnowledgeStore.insert()` 无关**（曾如此归因，已被控制组证伪）。
 - DB 隔离：`SYNOVA_DB_PATH` → `mkdtemp` 临时库（**不触碰仓库 `data/synova.db`**）。
 - 身份：真 `signJwtToken()` + 真 `jwtAuthMiddleware`（`/api/qa/ask` 不在白名单 ⇒ 必须带真 JWT）。
 
@@ -390,11 +394,24 @@ Error: [vitest-pool]: Worker forks emitted error.   →  Worker exited unexpecte
 
 **定位为本卡无关（受控实验）**：把 `src/routes/im.ts` **还原为 HEAD**（撤掉本卡全部改动）后
 复跑 **2 次，2/2 同样 abort**（同一断言行、同一 native 栈）。
-**成因（与复核员实测一致）**：该文件 `beforeAll` 用 `KnowledgeStore.insert()`
-（`qa-router.test.ts:26,28`）造夹具 ⇒ 留 `Statement` 垃圾 ⇒ GC 终结器撞上 node 24 的
-`RemoveEnvironmentCleanupHook` 断言。崩溃发生在 `createServer()` 引导期（**早于任何断言**），
-故该文件在本环境**跑不到断言**。
-**登记**：修复属该测试夹具 + `scripts/**` 之外的环境问题，**不在本卡写集**（未改该文件）。
+
+**🔴 正确归因（复核员控制组实测 —— 本文档早期的「`insert()` 留 Statement 垃圾」归因已被证伪）**
+
+| 控制格 | 夹具形态 | 结果 |
+|---|---|---|
+| 1 | 不调 `insert()`，用**单条 `db.exec()`** 播种 | **仍 abort** ⇒ 与 `insert()` 无关 |
+| 2 | **只调 `createServer()` + 一条空断言**（无任何知识夹具、无请求） | **仍 abort** ⇒ 与知识夹具无关 |
+| 3 | `initEngineContext()` + 裸 express + 真搜索，连跑 4 次 | **4/4 全绿** |
+
+⇒ **触发面 = `createServer()` 引导 + vitest worker 在 node v24.19.0 下的 GC/收尾**
+（native 栈落在 better-sqlite3 的 `Statement::~Statement()` → `node::RemoveEnvironmentCleanupHook`
+断言，但**不是** Statement 泄漏所致：控制格 2 没有任何知识语句同样 abort）。
+崩溃发生在**引导期**、早于任何断言 ⇒ 该文件在本环境**跑不到断言**。
+
+**🔧 给未来夹具写者的规则**：**vitest worker 内不要调 `createServer()`** ——
+用裸 `express()` + `initEngineContext()`（本卡 §9.3 夹具即此形态，全程可跑）。
+
+**登记**：修复属该测试夹具的环境问题，**不在本卡写集**（未改 `tests/l1/qa-router.test.ts`）。
 **补偿**：其锁定的行为不变式（无匹配知识 ⇒ `degraded=true` / 0 条；未认证 ⇒ 不新增 401/403）
 已由 §9.3 用例 ⑤ 与补偿判据在**真 HTTP + 可跑环境**中复现。
 

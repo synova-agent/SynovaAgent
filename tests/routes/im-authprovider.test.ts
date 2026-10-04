@@ -122,9 +122,11 @@ const RESTRICTED_ID = 'kc_d1154_restricted';
 beforeAll(async () => {
   initEngineContext();
 
-  // D1154 语料：**单条 `db.exec()` 批量 INSERT**。
-  //   ⚠️ 不用 `KnowledgeStore.insert()` 造夹具 —— node v24 + better-sqlite3 下会留下
-  //   Statement 垃圾，GC 撞上动态 import 链会 **abort（exit 134）**（复核员实测）。
+  // D1154 语料：**单条 `db.exec()` 批量 INSERT**（一次往返，夹具启动快）。
+  //   ⚠️ 真正的环境规则（复核员控制组实测，见证据件 §9.5）：**vitest worker 内不要调
+  //   `createServer()`** —— 它在 node v24.19.0 下会 abort（exit 134）。本文件全程只用
+  //   裸 express + `initEngineContext()` ⇒ 不触发。**与 `KnowledgeStore.insert()` 无关**
+  //   （曾如此归因，已被控制组证伪：不调 insert() 只调 createServer() 同样 abort）。
   //   先 `createSystemKnowledgeStore()` 让 schema + FTS 触发器就位（与生产构造同路径），
   //   再由 `kc_fts_insert` 触发器同步 `knowledge_chunks_fts`。
   createSystemKnowledgeStore();
@@ -218,8 +220,13 @@ describe('#984 接线面（真 HTTP 入口 → 真 runWithContext）', () => {
 // 为什么这一段才是 #984 的用户可见面：飞书入站链路**不消费知识漏斗**（静态可达性实测：
 //   `src/l1/im-inbound.ts` 及其链上 4 个模块对 knowledge-agent / KnowledgeStore /
 //   getCurrentFilterClause 均 **0 命中**）⇒ §2 的飞书接线是「为将来消费方就绪的接线」。
-//   而 `qa-router.ts:84` 是**真调用** `getCurrentFilterClause` 的消费点，且此前**没有**
-//   `runWithContext` 包裹 ⇒ 已认证调用方恒落 deny-all ⇒ 0 条知识（过度拒绝，用户可见）。
+//   而 `qa-router.ts:84` 是**真调用** `getCurrentFilterClause` 的消费点，此前**没有**
+//   `runWithContext` 包裹。
+//   🔴 如实因果（复核员 J 格实测，勿再简化成「有/无包裹」）：缺陷**只在 DevMode 分支**出现——
+//   `src/middleware/auth.ts:350-365` 注入 `req.auth = dev-admin` 后**直接 `next()`、不建上下文**
+//   ⇒ 下游落 deny-all ⇒ 0 条知识。**合法 JWT 路径不成立**：`jwtAuthMiddleware` 自己会
+//   `runWithContext`（`auth.ts:424`，`next()` 在该 ALS 上下文内执行）⇒ 撤掉本路由包裹后
+//   仍得 4 行 / degraded=false。路由自建上下文的价值＝**不依赖中间件走哪条分支**。
 // ════════════════════════════════════════════════════════════════
 
 interface QaAnswer {
@@ -302,9 +309,12 @@ describe('D1154 · #984 可观测面（POST /api/qa/ask，真 HTTP + 真 JWT + �
     expect(r.status).toBe(200);
     const body = asQaAnswer(r.json);
 
+    // ⚠️ 本 cell 是**合法 JWT** 形态：改造前**即为** 4 行 / degraded=false（`jwtAuthMiddleware`
+    //   已建上下文，见文件上方「如实因果」）⇒ 故这里**不**标「改造前为 0」。
+    //   真·改造前为 0 的是下方 DevMode 形态用例（`🔴 判别性本体`）。
     expect(body.ok).toBe(true);
-    expect(body.degraded).toBe(false);                                    // 改造前为 true
-    expect(body.knowledgeSources.length).toBeGreaterThan(0);              // 改造前为 0
+    expect(body.degraded).toBe(false);
+    expect(body.knowledgeSources.length).toBeGreaterThan(0);
     expect(body.knowledgeSources.length).toBe(NORMAL_IDS.length);         // 恰 4 条 normal
     expect(body.knowledgeSources.map(s => s.id).sort()).toEqual([...NORMAL_IDS].sort());
     // 权限过滤**真生效**（不是"全都放行"）：restricted 那条不得出现
@@ -336,9 +346,11 @@ describe('D1154 · #984 可观测面（POST /api/qa/ask，真 HTTP + 真 JWT + �
 
   it('补偿判据 · 已认证 + 语料无匹配 ⇒ 仍 0 条 + degraded=true（= qa-router.test.ts:96-106 的语义，在本环境可跑）', async () => {
     // 为什么需要这条：`tests/l1/qa-router.test.ts` 锁的正是「无匹配知识 ⇒ degraded=true /
-    //   knowledgeSources 空」。但该文件在本环境**预存崩溃**（见交付回执：node v24 + better-sqlite3
-    //   的 `Statement::~Statement()` GC 终结器触发 `Assertion failed: (env) != nullptr`，
-    //   exit 134；已用「撤我方改动后仍复现 2/2」证明与本卡无关）⇒ 该断言当前跑不到。
+    //   knowledgeSources 空」。但该文件在本环境**预存崩溃**（exit 134，`Assertion failed:
+    //   (env) != nullptr`；已用「撤我方改动后仍复现 2/2」证明与本卡无关）⇒ 该断言当前跑不到。
+    //   真实触发面（复核员控制组实测，见证据件 §9.5）：**`createServer()` 引导 + vitest worker
+    //   在 node v24.19.0 下的 GC/收尾** —— 只调 `createServer()` + 一条空断言、无任何知识夹具、
+    //   无请求，同样 abort。本文件不调 `createServer()` ⇒ 可跑。
     //   此处以**真 HTTP + 真 JWT + 同一查询语义**复现其行为不变式，作为可执行的补偿。
     const token = signJwtToken({ sub: 'u1154-nomatch', role: 'staff', orgId: 'org-d1154' });
     expect(token).not.toBeNull();
