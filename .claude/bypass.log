@@ -2023,3 +2023,4 @@ Binary file .claude/bypass.log matches
 2026-10-04T12:23:26+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=fcb0c25af83103900b8e38b5537253bde61d1582
 2026-10-05T02:34:42+08:00 | BLOCKED | pre-commit FAIL (exit 1) | TASK_ID=D1150 | AGENT=gate-assets
 2026-10-05T02:35:51+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=b41b77b6d34d3a96807985525796f35004c3b92e
+2026-10-05T02:37:32+08:00 | COMMITTED | pre-commit PASS (hook 层登记) | HASH=149a3bfeff5a12dbff239c0f3ab7c9eec8f35110
