@@ -133,6 +133,54 @@ git -C "$SB" add e.txt
 git -C "$SB" -c user.name='' -c user.email='' commit --no-verify -m "feat: no-identity commit E" -- e.txt >/dev/null 2>&1 || true
 git -C "$SB" status --porcelain -- e.txt | grep -q '^A' && ok "降级: 真实提交失败后沙箱状态可继续（e.txt 仍 staged）" || no "沙箱状态被破坏"
 
+
+# ═══════════════════════════════════════════════════════════════
+# D1145: 停跟踪判别性（原独立夹具 bypass-untracked.test.sh 于 D1145 合并至此）
+#   判据（卡 #1073 Done ⑤）: **把停跟踪回退 ⇒ 两分支必冲突重现**。
+#   ① 现状: 不被跟踪 + .gitignore 覆盖 + .gitattributes 无 union 声明
+#   ② 病因重现: 沙箱里【重新跟踪】⇒ 两分支各追加一行 ⇒ merge 必冲突（不冲突=夹具失效，本测试必须红）
+#   ③ 解药: 同沙箱【停跟踪+忽略】⇒ 两分支各追加一行 ⇒ merge 干净且两份内容都在
+# ═══════════════════════════════════════════════════════════════
+echo ""
+echo "── D1145: 停跟踪判别性（改坏即红）──"
+git -C "$REPO" ls-files --error-unmatch .claude/bypass.log >/dev/null 2>&1 \
+  && no "D1145① 仍被跟踪（停跟踪未生效）" || ok "D1145① .claude/bypass.log 不被跟踪"
+grep -qE '^\.claude/bypass\.log$' "$REPO/.gitignore" && ok "D1145① .gitignore 覆盖该路径" || no "D1145① .gitignore 缺条目"
+grep -q '^\.claude/bypass\.log merge=union' "$REPO/.gitattributes" \
+  && no "D1145① .gitattributes 仍声明 merge=union" || ok "D1145① .gitattributes 无 union 声明"
+
+MB="$TMPD/mb"; mkdir -p "$MB"
+if ! git -C "$MB" init -q -b main 2>/dev/null; then  # swallow-ok: 失败即沙箱不可用 → 下方显式点名
+  no "D1145 夹具自身失败: 沙箱 git init 不可用"
+else
+  git -C "$MB" config user.name t; git -C "$MB" config user.email t@t
+  mkdir -p "$MB/.claude"; echo "seed" > "$MB/.claude/bypass.log"; echo "seed" > "$MB/seed.txt"
+  git -C "$MB" add -A >/dev/null 2>&1; git -C "$MB" commit -q -m "seed (tracked)" >/dev/null 2>&1
+  # ② 重新跟踪（= 回退停跟踪）⇒ 必冲突
+  git -C "$MB" checkout -q -b brA
+  echo "A-entry" >> "$MB/.claude/bypass.log"; git -C "$MB" commit -qam "A append" >/dev/null 2>&1
+  git -C "$MB" checkout -q main; git -C "$MB" checkout -q -b brB
+  echo "B-entry" >> "$MB/.claude/bypass.log"; git -C "$MB" commit -qam "B append" >/dev/null 2>&1
+  git -C "$MB" checkout -q brA
+  git -C "$MB" merge brB >/dev/null 2>&1; RC_T=$?
+  [ "$RC_T" -ne 0 ] && ok "D1145② 病因重现: 重新跟踪 ⇒ merge 冲突（rc=${RC_T}）" \
+    || no "D1145② 夹具失效: 重新跟踪却不冲突（判别性丢失，必须红）"
+  git -C "$MB" status --porcelain | grep -qE '^(UU|AA|U|DD)' && ok "D1145② 冲突标记存在（UU/AA）" || no "D1145② 无冲突标记"
+  git -C "$MB" merge --abort >/dev/null 2>&1 || true
+  # ③ 停跟踪 + 忽略 ⇒ merge 干净
+  git -C "$MB" checkout -q main
+  git -C "$MB" rm --cached -q .claude/bypass.log
+  printf '.claude/bypass.log\n' >> "$MB/.gitignore"; git -C "$MB" add .gitignore >/dev/null 2>&1
+  git -C "$MB" commit -q -m "untrack + ignore (D1145)" >/dev/null 2>&1
+  git -C "$MB" status --porcelain | grep -q 'bypass.log' && no "D1145③ 停跟踪后工作树仍出现该文件" || ok "D1145③ 停跟踪后工作树零变更"
+  git -C "$MB" checkout -q -b brC; echo "C-entry" >> "$MB/.claude/bypass.log"
+  git -C "$MB" checkout -q main; git -C "$MB" checkout -q -b brD; echo "D-entry" >> "$MB/.claude/bypass.log"
+  git -C "$MB" checkout -q brC
+  git -C "$MB" merge brD >/dev/null 2>&1; RC_U=$?
+  [ "$RC_U" -eq 0 ] && ok "D1145③ 解药: 停跟踪 ⇒ merge 干净（rc=0）" || no "D1145③ 停跟踪后仍冲突（rc=${RC_U}）"
+  grep -q "^C-entry$" "$MB/.claude/bypass.log" && grep -q "^D-entry$" "$MB/.claude/bypass.log" \
+    && ok "D1145③ 两份本地内容都在（git 不再介入该文件）" || no "D1145③ 本地内容丢失"
+fi
 echo ""
 echo "结果: $PASS 通过, $FAIL 失败"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1
