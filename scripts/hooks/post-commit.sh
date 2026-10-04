@@ -11,21 +11,36 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 MARKER="$ROOT/.claude/last-precommit-success"
 
-# ═══ D735 Stage 1: bypass 账本双写（旧路径权威 + per-session 并存）═══
+# ═══ D1145 / D735 Stage 2: bypass 账本 —— per-session 落点**权威** + 本地兼容镜像 ═══
 # 契约(铁律 47):
 #   @input  — stdin 一行证据文本
-#   @output — 同一行追加到 ① $ROOT/.claude/bypass.log（旧路径；Stage 1 仍是权威，行为不变）
-#                           ② $ROOT/.sessions/<sid>/bypass.log（新落点；.gitignore:83 已忽略）
-#   @degraded — 新落点写入失败 → stderr 显式点名 + 不阻断（旧路径已登记，证据不丢；铁律 11 不静默）
+#   @output — 同一行追加到 ① $ROOT/.sessions/<sid>/bypass.log（**权威**；.sessions/ 已被
+#               .gitignore 忽略 ⇒ 写入不产生任何 git 工作树变更）
+#                           ② $ROOT/.claude/bypass.log（**本地兼容镜像**；D1145 起已停跟踪，
+#               保留仅为旧读者兼容：pre-commit GATEKEEPER / 7c 审计 / check-bypass-log）
+#   @degraded — ① 失败 → 仍写 ②（证据不丢）+ stderr 显式点名（铁律 11：不静默）
 _bypass_append() {
   local line out rc
   line="$(cat)"
-  printf '%s\n' "$line" >> "$ROOT/.claude/bypass.log"
   out="$(bash "$ROOT/scripts/control-tower/bypass-ledger.sh" append "$line" 2>&1)"; rc=$?
   if [ "$rc" -ne 0 ]; then
     echo "  ⚠️  post-commit: per-session 账本写入失败 (exit=$rc): $out" >&2
-    echo "      旧路径已登记（证据不丢）——新落点未写属 Stage 1 并存降级" >&2
+    echo "      回退：仍写本地兼容镜像 .claude/bypass.log（已停跟踪，不污染工作树；证据不丢）" >&2
   fi
+  printf '%s\n' "$line" >> "$ROOT/.claude/bypass.log"
+}
+
+# ═══ D1145: 幂等判据 —— 该 HASH 是否已在账本里（替代原「影子提交 message 防递归」）═══
+# 契约(铁律 47):
+#   @input  $1=commit HASH
+#   @output exit 0=已登记 / 1=未登记（含账本不可读→按"未登记"处理，宁可多记一行不丢证据）
+#   @degraded 账本解析失败 → 回退本地镜像单源
+_ledger_has_hash() {
+  local h="$1" srcs=""
+  srcs="$(bash "$ROOT/scripts/control-tower/bypass-ledger.sh" sources 2>/dev/null)" || srcs=""
+  [ -n "$srcs" ] || srcs="$ROOT/.claude/bypass.log"
+  # shellcheck disable=SC2086  # 有意分词: 换行分隔的多来源列表
+  grep -q "$h" $srcs 2>/dev/null
 }
 
 # ═══ --no-verify 绕过检测 (D366 head 对账 + D421 CT-29 分场景三判) ═══
@@ -83,32 +98,24 @@ if [ -f "$MARKER" ]; then
         esac
         # pass — D366: 不 rm, marker 只由 pre-commit 覆盖 (并发 session 互不误删)
 
-        # ═══ D521/不变量2: COMMITTED 登记（hook 层——commit 后立即成对登记，树永干净）═══
-        # 病根（D537 #4 恢复）: D508 登记只在 synova-commit 路径且在 commit 后追加 →
-        #   bypass.log 永脏 → 挡 merge → 逼裸 git → 对账失败 → D451 补记循环（D520 复盘病根 2）。
-        #   该段在 D530（734ab32e CT-45 merge 豁免）重写 post-commit.sh 时被覆盖丢失——
-        #   post-commit.test.sh 红态（登记段缺失/HASH 未登记/仍脏/影子提交缺失）。
-        # 解法: 任何 commit（裸 git / synova-commit）过检后，hook 立即把本提交 HASH 的
-        #   COMMITTED 行追加 + 成对登记提交（marker message 防递归）——bypass.log 永不脏。
+        # ═══ D1145 / D735 Stage 2: COMMITTED 登记（**无影子提交**）═══
+        # 历史（D521 → D537 #4）: bypass.log 曾是 **git 跟踪文件** ⇒ commit 后必脏 ⇒ hook 只能
+        #   立刻把它 commit 掉（"影子登记提交"）才不挡 merge ⇒ 每个提交都派生一条
+        #   `chore: bypass COMMITTED 登记 (auto hook, D521)`。
+        # 代价（实测）: 9 月 1199 个提交里 327 条（27%）是这种机械提交；126/136 个 open PR
+        #   都改这个文件 ⇒ 两两冲突。
+        # D1145 的解法: 该文件**停跟踪**（.gitignore）⇒ 写入不再产生任何 git 变更 ⇒
+        #   **影子提交整段删除**（不再需要"保持树干净"这个动作）。
+        # 证据链不降级: HASH 经 _bypass_append 写入 per-session 权威账本（+ 本地镜像）。
+        # 幂等: D1145 用 **_ledger_has_hash** 取代原「影子提交 message 防递归」——
+        #   前一版靠"上一条提交 message 是登记提交"来跳过重复登记，本质是借影子的副作用当锁；
+        #   影子移除后该锁消失，同一 HASH 会被迟到/重复的 post-commit 再登记一次（实测 S6b +1 行）。
+        #   现改为按 HASH 幂等：已登记即跳过（与迟到、amend、并发无关）。
         # 只在 PASS_WAY≠0（pre-commit 真跑过）时登记；--no-verify 提交不登记（不洗白绕过）。
-        LAST_MSG=$(git log -1 --format=%s 2>/dev/null || true)
-        case "$LAST_MSG" in
-          *"bypass COMMITTED 登记"*) : ;;  # 登记提交自身 → 跳过（防递归）
-          *)
-            HASH_NOW=$(git rev-parse HEAD 2>/dev/null || true)
-            if [ -n "$HASH_NOW" ]; then
-              echo "$(date -Iseconds) | COMMITTED | pre-commit PASS (hook 层登记) | HASH=$HASH_NOW" | _bypass_append
-              # CT-43（D554）: `-o -m ... -- <path>` 限定登记提交只含 bypass.log——不卷走暂存区遗留文件
-              # （D552 实证: D311 guard 阻断后遗留 staged 文件被本提交整体卷入 8b6deaf4，M8 变体；
-              #   注意 -m 必须在 -- 之前，否则被当 pathspec）
-              if git add "$ROOT/.claude/bypass.log" 2>/dev/null && git commit --no-verify -q -o -m "chore: bypass COMMITTED 登记 (auto hook, D521)" -- "$ROOT/.claude/bypass.log" 2>/dev/null; then
-                :  # 登记提交完成——bypass.log 保持干净
-              else
-                echo "  ⚠️  post-commit: bypass 登记提交失败（identity 未配置?）— 降级，对账时按 D451 补记" >&2
-              fi
-            fi
-            ;;
-        esac
+        HASH_NOW=$(git rev-parse HEAD 2>/dev/null || true)
+        if [ -n "$HASH_NOW" ] && ! _ledger_has_hash "$HASH_NOW"; then
+          echo "$(date -Iseconds) | COMMITTED | pre-commit PASS (hook 层登记) | HASH=$HASH_NOW" | _bypass_append
+        fi
       else
         echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) detected-bypass head-mismatch marker=$MARKER_HEAD parent=$PARENT" | _bypass_append
       fi
