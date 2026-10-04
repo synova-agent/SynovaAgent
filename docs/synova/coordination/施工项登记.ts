@@ -62,7 +62,14 @@ export interface ConstructionItem {
   /** 跨块依赖的施工项 id。空数组 = 无跨块依赖。 */
   dependsOn: string[];
   /** 本项若建表，列出表的 NOT NULL 字段 ⇒ 门禁查每个字段有无生产者（INV-1） */
-  createsTable?: { name: string; notNullFields: string[] };
+  createsTable?: {
+    name: string;
+    notNullFields: string[];
+    /** 🔴 **字段级生产者声明**（2026-10-04 立，治 T7 面 2 反例「无字段→生产者声明位」）
+     *  值 = 生产者的【模块/来源】。允许 `[known-gap]` 前缀表示生产者尚未实现。
+     *  门禁 INV-1③ 判据：该字段在 origin/main 有写入门径 **或** 此处有声明 ⇒ 通过。 */
+    fieldProducers?: Record<string, string>;
+  };
   acceptance: AcceptanceStep[];
   status: 'todo' | 'doing' | 'done';
   /** 出处（院方件 file:行号），供独立核 */
@@ -114,7 +121,11 @@ export function normalizePath(raw: string): string {
 
 export function isModuleShape(paths: readonly string[]): boolean {
   if (paths.length === 0) return false;
-  return paths.every((p) => /^[a-z][\w-]*\/./.test(p));
+  // 判据（2026-10-04，创始人：「开发的颗粒度你来定」）：
+  //   每个 path 必须是【相对路径】且【非空】—— 目录（可单层/可点开头）或文件皆可。
+  //   ⚠️ 不做形态白名单（曾试 `<dir>/…` 与正则两种，都误伤合法项：单层目录 / 点开头目录 / 中文目录）
+  //   ⇒ 保留唯一硬约束：**必须相对**（不以 `/` 开头、不含 `..`）—— 因为绝对路径无法与仓内写集比对。
+  return paths.every((p) => !!p.trim() && !p.startsWith('/') && !p.includes('..'));
 }
 
 
@@ -128,7 +139,12 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '0-1',
     worker: 'win', batch: '第0批', block: 'K1',
     title: '六个业务循环的 cron 是死路（总闸）',
-    paths: ['src/loops/loop-scheduler.ts', 'src/server.ts', 'src/routes/loops.ts'],
+    paths: [
+      'src/loops/loop-scheduler.ts',
+      'src/server.ts',
+      'src/routes/loops.ts',
+      'scripts/control-tower/probe-loops.sh',  // 判据交付物（本卡创建）
+    ],
     dependsOn: [],
     acceptance: [
       { run: 'bash scripts/control-tower/probe-loops.sh', expectStdoutContains: 'MainAgent 已注入' },
@@ -141,7 +157,10 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '0-2',
     worker: 'win', batch: '第0批', block: 'K6',
     title: '进化回写 applied 恒 0（总闸）',
-    paths: ['src/growth/feedback-collector.ts'],
+    paths: [
+      'src/growth/feedback-collector.ts',
+      'tests/growth/evolution-writeback.test.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: [],
     acceptance: [
       // 🔴 原为纯 grep 型（T6 面1 否决点）⇒ 改为穿生产入口：跑一次真实进化回写，断言表行
@@ -155,7 +174,10 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '0-3',
     worker: 'win', batch: '第0批', block: 'K3',
     title: '4 个内建哨兵永远注册不上',
-    paths: ['src/sentinel/builtins.ts'],
+    paths: [
+      'src/sentinel/builtins.ts',
+      'scripts/control-tower/probe-sentinels.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: [],
     acceptance: [
       { run: 'npm run probe:sentinels 2>/dev/null || npx tsx scripts/control-tower/probe-sentinels.ts', expectStdoutContains: 'cashFlow' },
@@ -167,7 +189,11 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '0-4',
     worker: 'win', batch: '第0批', block: 'K4',
     title: '循环的五阀映射指向已废止编号',
-    paths: ['cycles/**/*.cycle.json', 'src/cycles/'],
+    paths: [
+      'cycles/**/*.cycle.json',
+      'src/cycles/',
+      'scripts/control-tower/probe-cycle-edges.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: [],
     acceptance: [
       { run: 'npx tsx scripts/control-tower/probe-cycle-edges.ts', expectExit: 0 },
@@ -191,7 +217,10 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '0-6',
     worker: 'win', batch: '第0批', block: 'K8',
     title: 'Schema 校验器覆盖率 1/40',
-    paths: ['src/l4/sog-schema-validator.ts'],
+    paths: [
+      'src/l4/sog-schema-validator.ts',
+      'scripts/control-tower/probe-diagnosis.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: [],
     acceptance: [
       { run: 'bash -c "npx tsx scripts/control-tower/probe-diagnosis.ts 2>&1 | grep -q \'未覆盖类型\'"', expectExit: 0 },
@@ -203,7 +232,10 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '0-7',
     worker: 'win', batch: '第0批', block: 'K6',
     title: '反馈通道 B 是"无声的洞"',
-    paths: ['src/routes/chat.ts'],
+    paths: [
+      'src/routes/chat.ts',
+      'tests/routes/chat-feedback.test.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: ['2-3'],
     acceptance: [
       { run: 'npx vitest run tests/routes/chat-feedback.test.ts', expectExit: 0 },
@@ -215,7 +247,10 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '0-8',
     worker: 'win', batch: '第0批', block: 'K6',
     title: '参数层 c 类整个模块零引用',
-    paths: ['src/growth/goal-lifecycle.ts'],
+    paths: [
+      'src/growth/goal-lifecycle.ts',
+      'tests/growth/goal-lifecycle-wired-or-retired.test.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: [],
     acceptance: [
       // 二选一（接上 or 废弃）由【脚本内部】判，命令本身必须是 tsx（不落 grep 型）
@@ -241,7 +276,11 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '0-10',
     worker: 'win', batch: '第0批', block: 'K1',
     title: 'fail-open 兜底（0-9 延伸）',
-    paths: ['src/services/request-context.ts', 'src/routes/im.ts'],
+    paths: [
+      'src/services/request-context.ts',
+      'src/routes/im.ts',
+      'tests/security/request-context-failclosed.test.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: ['0-9'],
     acceptance: [
       { run: 'npx vitest run tests/security/request-context-failclosed.test.ts', expectExit: 0 },
@@ -253,7 +292,10 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '0-11',
     worker: 'win', batch: '第0批', block: 'K2',
     title: 'ToolRegistry 双重死门',
-    paths: ['src/tools/tool-registry.ts'],
+    paths: [
+      'src/tools/tool-registry.ts',
+      'scripts/control-tower/probe-tool-policy.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: [],
     acceptance: [
       // 二选一：(a) 装配并走 invoke ⇒ 越权返回 POLICY_DENIED；(b) 删掉 ⇒ 两符号 0 命中
@@ -266,7 +308,10 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '0-12',
     worker: 'win', batch: '第0批', block: 'K9',
     title: 'skills/ 46 个技能文件恒不加载',
-    paths: ['src/agent/skill-lazy-loader.ts'],
+    paths: [
+      'src/agent/skill-lazy-loader.ts',
+      'scripts/control-tower/probe-skills.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: [],
     acceptance: [
       { run: 'bash -c "npx tsx scripts/control-tower/probe-skills.ts | grep -q \'## Available Skills\'"', expectExit: 0 },
@@ -292,7 +337,11 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '1-2',
     worker: 'win', batch: '第1批', block: 'K7',
     title: '输出契约不可版本化',
-    paths: ['src/l3/report-templates.ts', 'extensions/reports/contracts/'],
+    paths: [
+      'src/l3/report-templates.ts',
+      'extensions/reports/contracts/',
+      'tests/l3/report-contract-versioned.test.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: [],
     acceptance: [
       { run: 'npx vitest run tests/l3/report-contract-versioned.test.ts', expectExit: 0 },
@@ -304,7 +353,11 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '1-3',
     worker: 'win', batch: '第1批', block: 'K7',
     title: '客户模板位只有"报告"一种',
-    paths: ['src/l3/report-template-loader.ts', 'extensions/reports/'],
+    paths: [
+      'src/l3/report-template-loader.ts',
+      'extensions/reports/',
+      'tests/l3/report-template-client.test.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: ['1-1', '1-2'],
     acceptance: [
       { run: 'npx vitest run tests/l3/report-template-client.test.ts', expectExit: 0 },
@@ -328,7 +381,10 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '1-5',
     worker: 'win', batch: '第1批', block: 'K7',
     title: 'customer-config 只解析不消费',
-    paths: ['src/routes/diagnosis.ts'],
+    paths: [
+      'src/routes/diagnosis.ts',
+      'tests/routes/customer-config-consumed.test.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: [],
     acceptance: [
       { run: 'npx vitest run tests/routes/customer-config-consumed.test.ts', expectExit: 0 },
@@ -340,7 +396,10 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '1-6',
     worker: 'win', batch: '第1批', block: 'K8',
     title: 'TraversalPermissionFilter 零接线',
-    paths: ['src/l4/traversal-permission-filter.ts'],
+    paths: [
+      'src/l4/traversal-permission-filter.ts',
+      'tests/l4/traversal-permission.test.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: [],
     acceptance: [
       { run: 'npx vitest run tests/l4/traversal-permission.test.ts', expectExit: 0 },
@@ -352,7 +411,11 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '1-7',
     worker: 'win', batch: '第1批', block: 'K1',
     title: '多岗位执法只在 1 处',
-    paths: ['src/middleware/rbac.ts', 'src/routes/'],
+    paths: [
+      'src/middleware/rbac.ts',
+      'src/routes/',
+      'tests/security/rbac-all-routes.test.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: ['0-9'],
     acceptance: [
       { run: 'npx vitest run tests/security/rbac-all-routes.test.ts', expectExit: 0 },
@@ -364,7 +427,10 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '1-8',
     worker: 'win', batch: '第1批', block: 'K4',
     title: '时滞 0/55（承重件 W3，第 1 批最便宜）',
-    paths: ['extensions/ontology/edge-types/*.json'],
+    paths: [
+      'extensions/ontology/edge-types/*.json',
+      'tests/sentinel/edge-lag-consumed.test.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: [],
     acceptance: [
       // 🔴 原为纯 grep 型（T6 面1 否决点）⇒ 改为穿生产入口：跑一次真实哨兵，断言它读到该字段
@@ -377,7 +443,10 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '1-9',
     worker: 'win', batch: '第1批', block: 'K4',
     title: '因果强度 10 条缺字段（承重件 W2）',
-    paths: ['extensions/ontology/edge-types/*.json'],
+    paths: [
+      'extensions/ontology/edge-types/*.json',
+      'tests/loops/direction-monitor.transfer-function.test.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: ['1-8'],
     acceptance: [
       // 🔴 原为纯 grep 型 ⇒ 改为穿生产入口：跑一次方向监测，断言参数【改变了输出】
@@ -392,7 +461,10 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '2-1a',
     worker: 'win', batch: '第2批', block: 'K3',
     title: '测量值时序 · 表定义（承重件 W1 的 schema 侧）',
-    paths: ['src/store/'],
+    paths: [
+      'src/store/',
+      'tests/store/metric-readings-schema.test.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: ['2-4', '2-6'],
     createsTable: {
       name: 'metric_readings',
@@ -401,6 +473,20 @@ export const constructionItems: readonly ConstructionItem[] = [
         'is_estimated', 'confidence', 'degraded', 'created_at',
         'run_id', 'input_digest', 'def_version',
       ],
+      // 🔴 逐字段声明生产者（CTO 2026-10-04 裁定；[known-gap] = 生产者尚未实现，属施工项）
+      fieldProducers: {
+        org_id: '2-1b 写入侧（哨兵）：从调用上下文取 orgId（宪章 H2 强制，不得留空）',
+        metric_id: '2-1b 写入侧：与参数清单 2-2 的 param_id 对齐（archive/25:142 U2 明写"命名统一是前置"）',
+        entity_id: "2-1b 写入侧：单元粒度（默认为 * ，X10 的 N 个单元样本靠它）",
+        observed_at: '2-1b 写入侧：**取值时点**（不是写入时点，archive/25:60）',
+        source_type: "[known-gap] enum('compute','42edge','manual','connector') —— 由 2-1b 写入侧按来源填；" +
+          "⚠️ 待裁：与 03:192 的 source 自由串（含 erp）两套枚举需归一（T7 面 2 问 C）",
+        is_estimated: '2-1b 写入侧：默认 0（权威文档15 §3.5）',
+        confidence: "2-1b 写入侧：默认 medium（权威文档15 §3.5）",
+        created_at: "SQL DEFAULT（datetime now）—— 无需应用层生产者",
+        input_digest: '[known-gap] 输入快照摘要（03:193）—— 需 2-1b 写入侧计算或由 compute 层提供',
+        def_version: '[known-gap] 该指标定义/公式版本 —— 依赖 2-6 契约注册表（W4＝⑤纯缺口）',
+      },
     },
     acceptance: [
       {
@@ -469,7 +555,10 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '2-6',
     worker: 'win', batch: '第2批', block: 'K5',
     title: 'compute 契约注册表不存在（承重件 W4）',
-    paths: ['src/contract/'],
+    paths: [
+      'src/contract/',
+      'scripts/control-tower/probe-compute-registry.ts',  // 判据交付物（本卡创建）
+    ],
     // ✅ 落点已裁（选项①）：施工单原只写"新建…解析器"未给目录；src/contract/ 已存在（win 域）
     dependsOn: [],
     acceptance: [
@@ -499,7 +588,10 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '3-1',
     worker: 'win', batch: '第3批', block: 'K9',
     title: '角色预设包（Role Pack）',
-    paths: ['docs/synova/presets/roles/'],
+    paths: [
+      'docs/synova/presets/roles/',
+      'scripts/control-tower/probe-role-pack.ts',  // 判据交付物（本卡创建）
+    ],
     // ✅ 落点已裁（选项③）：用 docs/synova/presets/** 既有规则（=mac）
     //    ⚠️ 若改判为根级 presets/roles/**（=win），须先在 ownership.yaml 补规则 —— 门禁语义变更，必过 K3
     dependsOn: ['0-9', '1-2'],
@@ -513,7 +605,10 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '3-2',
     worker: 'win', batch: '第3批', block: 'K8',
     title: '岗位级知识层（第四层）',
-    paths: ['src/l4/knowledge-store.ts'],
+    paths: [
+      'src/l4/knowledge-store.ts',
+      'tests/l4/knowledge-scope.test.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: ['0-9'],
     acceptance: [
       { run: 'npx vitest run tests/l4/knowledge-scope.test.ts', expectExit: 0 },
@@ -525,7 +620,10 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '3-3',
     worker: 'win', batch: '第3批', block: 'K9',
     title: '建档通道（"建档" 0 命中）',
-    paths: ['src/onboarding/'],
+    paths: [
+      'src/onboarding/',
+      'scripts/control-tower/probe-onboarding.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: ['3-1', '3-2'],
     acceptance: [
       { run: 'npx tsx scripts/control-tower/probe-onboarding.ts --dry-run', expectExit: 0 },
@@ -537,7 +635,10 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '3-4',
     worker: 'win', batch: '第3批', block: 'K9',
     title: '追问由本体缺口驱动',
-    paths: ['src/onboarding/gap-questioner.ts'],
+    paths: [
+      'src/onboarding/gap-questioner.ts',
+      'tests/onboarding/gap-questioner.test.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: ['3-3'],
     acceptance: [
       { run: 'npx vitest run tests/onboarding/gap-questioner.test.ts', expectExit: 0 },
@@ -561,7 +662,11 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '3-6',
     worker: 'win', batch: '第3批', block: 'K9',
     title: 'agent_readiness 工具',
-    paths: ['extensions/skills/', 'src/agent/'],
+    paths: [
+      'extensions/skills/',
+      'src/agent/',
+      'scripts/control-tower/probe-agent-readiness.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: ['3-5', '0-12'],
     acceptance: [
       { run: 'npx tsx scripts/control-tower/probe-agent-readiness.ts', expectExit: 0 },
@@ -573,7 +678,11 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '3-7',
     worker: 'win', batch: '第3批', block: 'K7',
     title: 'Agent 化矩阵的触发点',
-    paths: ['src/routes/diagnosis.ts', 'src/agent/'],
+    paths: [
+      'src/routes/diagnosis.ts',
+      'src/agent/',
+      'tests/agent/agent-matrix-trigger.test.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: ['3-6'],
     acceptance: [
       { run: 'npx vitest run tests/agent/agent-matrix-trigger.test.ts', expectExit: 0 },
@@ -585,7 +694,11 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '3-8',
     worker: 'win', batch: '第3批', block: 'K3',
     title: 'AI 化机会窗口哨兵（宪章 3.6 报正向）',
-    paths: ['src/sentinel/', 'extensions/sentinels/'],
+    paths: [
+      'src/sentinel/',
+      'extensions/sentinels/',
+      'scripts/control-tower/probe-sentinel.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: ['3-5', '3-6'],
     acceptance: [
       { run: 'npx tsx scripts/control-tower/probe-sentinel.ts agent-opportunity-window', expectExit: 0 },
@@ -597,7 +710,10 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '3-9',
     worker: 'win', batch: '第3批', block: 'K9',
     title: '生态准入三字段',
-    paths: ['extensions/'],
+    paths: [
+      'extensions/',
+      'scripts/control-tower/probe-eco-fields.ts',  // 判据交付物（本卡创建）
+    ],
     // ✅ 落点已裁（选项③）：内容声明清单 = 扩展的声明文件，与 extensions/** 同族（win）
     dependsOn: [],
     acceptance: [
@@ -610,7 +726,11 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '3-10',
     worker: 'win', batch: '第3批', block: 'K10',
     title: 'DSH 三件公共前段（出站网关 / 脱敏监听 / 双 baseURL）',
-    paths: ['.dsh/', 'docs/synova/research/DSH迁移施工图-20260820/'],
+    paths: [
+      '.dsh/',
+      'docs/synova/research/DSH迁移施工图-20260820/',
+      'scripts/control-tower/probe-egress.sh',  // 判据交付物（本卡创建）
+    ],
     dependsOn: [],
     acceptance: [
       { run: 'bash scripts/control-tower/probe-egress.sh', expectExit: 0 },
@@ -622,7 +742,11 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '3-11',
     worker: 'win', batch: '第3批', block: 'K4',
     title: '专业包层（L1.5）机制',
-    paths: ['extensions/', 'src/extensions/'],
+    paths: [
+      'extensions/',
+      'src/extensions/',
+      'tests/extensions/layer-precedence.test.ts',  // 判据交付物（本卡创建）
+    ],
     dependsOn: [],
     acceptance: [
       { run: 'npx vitest run tests/extensions/layer-precedence.test.ts', expectExit: 0 },

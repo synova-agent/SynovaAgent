@@ -28,6 +28,7 @@ import { constructionItems, constructionBlocks, normalizePath, deriveBlockDeps, 
 type Fail = { inv: string; id: string; msg: string };
 const fails: Fail[] = [];
 const notes: string[] = [];
+const gaps: string[] = [];
 
 function sh(cmd: string, args: string[]): { ok: boolean; out: string } {
   try {
@@ -84,13 +85,16 @@ for (const it of constructionItems) {
     const hasProducer = g.ok && g.out.trim().length > 0;
     if (!hasProducer) {
       // 登记件是否有"字段→生产者"声明位？
-      const declared = (it as unknown as { fieldProducers?: Record<string, string> }).fieldProducers?.[f];
+      const declared = it.createsTable.fieldProducers?.[f];
       if (!declared) {
         fails.push({
           inv: 'INV-1③',
           id: it.id,
           msg: `表 ${it.createsTable.name} 的 NOT NULL 字段 "${f}" 【无生产者】且登记件无 fieldProducers 声明位 ⇒ 建不过`,
         });
+      } else if (declared.startsWith('[known-gap]')) {
+        // 声明了但未实现 ⇒ 记【待办】不记【违规】（诚实报告优先于全绿）
+        gaps.push(`${it.id} · ${it.createsTable.name}.${f} — ${declared.replace('[known-gap]', '').trim().slice(0, 70)}`);
       }
     }
   }
@@ -167,6 +171,11 @@ for (const [k, v] of [...byInv.entries()].sort()) {
   if (v.length > 12) console.log(`    … 另有 ${v.length - 12} 处`);
 }
 console.log('');
+if (gaps.length) {
+  console.log(`  ⏳ 已声明但未实现（known-gap，${gaps.length} 处 —— 属施工项，非违规）:`);
+  for (const g of gaps) console.log(`    ${g}`);
+  console.log('');
+}
 for (const n of notes) console.log(`  ℹ️  ${n}`);
 console.log('');
 console.log(`  ══ 合计 ${fails.length} 处违规 ══`);
