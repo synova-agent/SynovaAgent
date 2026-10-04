@@ -21,7 +21,7 @@ interface MockDiagnosisResponse {
 
 function makeMockDiagnosisResponse(): MockDiagnosisResponse {
   return {
-    ceoSummary: '哇呢宝贝作为一家母婴零售企业，面临线上渠道冲击和核心人才流失的双重挑战。当前净利润率仅5%，低于行业平均水平。建议优先优化成本结构并拓展线上渠道。',
+    ceoSummary: '示例企业A作为一家母婴零售企业，面临线上渠道冲击和核心人才流失的双重挑战。当前净利润率仅5%，低于行业平均水平。建议优先优化成本结构并拓展线上渠道。',
     keyFindings: [
       { moduleId: 'financial', finding: '利润率偏低（5%）', severity: 'high', confidence: 0.85 },
       { moduleId: 'talent', finding: '核心人才流失风险', severity: 'high', confidence: 0.78 },
@@ -62,7 +62,7 @@ describe('D99: Full Pipeline E2E — 完整管线集成测试', () => {
 
     expect(data).toBeDefined();
     expect(data.enterprise).toBeDefined();
-    expect(data.enterprise.name).toBe('哇呢宝贝');
+    expect(data.enterprise.name).toBe('示例企业A');
     expect(typeof data.enterprise.headcount).toBe('number');
     expect(data.financial).toBeDefined();
     expect(Array.isArray(data.financial.revenue)).toBe(true);
@@ -313,7 +313,7 @@ describe('D99: Full Pipeline E2E — 完整管线集成测试', () => {
     // 生成 Proposal
     const proposal = generateProposalFromDiagnosis({
       diagnosisId: 'diag-wani-001',
-      title: '哇呢宝贝综合诊断',
+      title: '示例企业A综合诊断',
       department: 'operations',
       confidence: mockResponse.confidence,
       keyRisks: ['利润率偏低', '人才流失'],

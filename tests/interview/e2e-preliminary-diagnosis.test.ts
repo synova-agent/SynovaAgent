@@ -10,7 +10,7 @@ import { estimateGPI } from '../../src/interview/gpi-estimator';
 import { assembleReport } from '../../src/agent/report-assembler';
 
 describe('T11 e2e: 无数据诊断管线', () => {
-  // 模拟 5 角色访谈数据（基于哇呢宝贝风格的真实场景）
+  // 模拟 5 角色访谈数据（基于示例企业A风格的真实场景）
   const mockResponses = [
     // CEO: 战略乐观
     { roleId: 'ceo', questionIndex: 0, answer: '我们产品质量很好，但销售跟不上，市场推广没做到位', confidence: 0.85 },
