@@ -113,6 +113,21 @@ done
 "$PY" "$TOOL" --repo "$TMP/work" --protect "$TMP/wt-d" --recent-minutes 0 --apply >/dev/null 2>&1
 [ $? -eq 0 ] && ok "已无 RECLAIM 时空跑 → exit 0" || no "空跑应 exit 0"
 
+# ── 降级: 注册表有、目录已删（孤儿）→ 逐项降级，整轮仍 rc=0（2026-10-05 实测教训）──
+git -C "$TMP/work" worktree add -q "$TMP/wt-orphan" -b feat/orphan origin/main
+rm -rf "$TMP/wt-orphan"
+ORPH_JSON="$("$PY" "$TOOL" --repo "$TMP/work" --protect "$TMP/wt-d" --recent-minutes 0 --json 2>/dev/null)"
+ORPH_RC=$?
+ORPH="$("$PY" - "$ORPH_JSON" <<'PYEOF2'
+import json,sys
+d=json.loads(sys.argv[1])
+print(d["counts"].get("KEEP_ORPHAN",0))
+PYEOF2
+)"
+[ "$ORPH_RC" -eq 0 ] && ok "孤儿注册项不再中断整轮（rc=0）" || no "孤儿应逐项降级，实际 rc=$ORPH_RC"
+[ "$ORPH" = "1" ] && ok "KEEP_ORPHAN=1（目录已删项被点名，不判 RECLAIM）" || no "KEEP_ORPHAN 应为 1，实为 ${ORPH}"
+git -C "$TMP/work" worktree prune >/dev/null 2>&1
+
 # ── 接线: 工具被本卡文书引用（grep 物理事实，铁律 0-2）──
 if grep -rql "reclaim-worktrees.py" "$REPO/.claude/task-briefs" "$REPO/memory/notes" 2>/dev/null; then
   ok "接线: brief/memory 引用了本工具"

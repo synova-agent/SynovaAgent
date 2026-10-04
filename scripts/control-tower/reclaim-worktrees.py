@@ -36,6 +36,9 @@ scripts/control-tower/reclaim-worktrees.py — D1150 worktree 回收器（分类
             --strict        存在 degraded（目录残留）时也判 exit 1
             SYNO_WT_BASE    等价 --base 的环境注入缝（测试用）
   @output — 逐条: `<分类>  <绝对路径>  branch=<..> head=<..> ahead=<n> dirty=<n> age=<m>min`
+            分类 ∈ RECLAIM / KEEP_PROTECTED / KEEP_RECENT / KEEP_UNPUSHED / KEEP_DIRTY
+                   / KEEP_ORPHAN（注册表有、目录已删 ⇒ git worktree prune，不回收）
+                   / KEEP_PROBE_FAILED（逐项取证失败 ⇒ 转人工，不中断整轮）
             --apply: `→ 回收: <绝对路径>` + remove 结果 +（残留时）清理命令
             汇总: `RECLAIM=n KEEP_UNPUSHED=n KEEP_DIRTY=n KEEP_PROTECTED=n KEEP_RECENT=n`
   @exit   — 0 = 正常（含「0 件可回收」的合法空跑；--apply 全部回收，或仅「元数据已注销 +
@@ -69,6 +72,8 @@ KEEP_UNPUSHED = "KEEP_UNPUSHED"
 KEEP_DIRTY = "KEEP_DIRTY"
 KEEP_PROTECTED = "KEEP_PROTECTED"
 KEEP_RECENT = "KEEP_RECENT"
+KEEP_ORPHAN = "KEEP_ORPHAN"              # 注册表有、目录已删 ⇒ git worktree prune 的对象（绝不"回收"）
+KEEP_PROBE_FAILED = "KEEP_PROBE_FAILED"  # 逐项取证失败 ⇒ 转人工；**不中断整轮**（2026-10-05 实测教训）
 
 
 class CfgError(RuntimeError):
@@ -182,16 +187,35 @@ def newest_activity(path):
 def classify(repo, root, base, protect, recent_minutes):
     """逐 worktree 取证并分类（证据行随行保留，供人复核）。
 
-    分类优先级（先安全后回收）: 保护名单 > 新鲜度 > 未推送提交 > 脏文件 > RECLAIM。
+    分类优先级（先安全后回收）: 孤儿/取证失败 > 保护名单 > 新鲜度 > 未推送提交 > 脏文件 > RECLAIM。
+    2026-10-05 实测教训: 真仓存在「注册表有、目录已删」的孤儿（`/private/tmp/mergetest-1077`），
+    旧实现逐项调 git 取证时抛异常 ⇒ **整轮崩掉（rc=2），一条分类都出不来**。孤儿的正解是
+    `git worktree prune`（或 `check-orphan-worktrees.sh` 报告），不是让分类器陪葬 ⇒ 改为逐项降级。
     """
     import time
     now = time.time()
     rows = []
     for e in worktree_entries(repo):
         path = Path(e["path"]).resolve()
-        ahead = [ln for ln in git(path, "log", "--oneline", f"{base}..HEAD", check=False).stdout.splitlines() if ln.strip()]
-        dirty = [ln for ln in git(path, "status", "--porcelain", check=False).stdout.splitlines() if ln.strip()]
-        age_min = int((now - newest_activity(path)) // 60)
+        ahead, dirty, age_min = [], [], -1
+        if not path.is_dir():
+            kind = KEEP_ORPHAN
+            rows.append({"kind": kind, "path": str(path), "branch": e.get("branch", "(detached)"),
+                         "head": (e.get("head") or "")[:10], "ahead": 0, "dirty": 0, "age_minutes": -1,
+                         "under_workspace_root": str(path).startswith(str(root) + os.sep),
+                         "ahead_lines": [], "dirty_lines": [],
+                         "note": "目录已删但注册项仍在 → git worktree prune（或看 check-orphan-worktrees.sh）"})
+            continue
+        try:
+            ahead = [ln for ln in git(path, "log", "--oneline", f"{base}..HEAD", check=False).stdout.splitlines() if ln.strip()]
+            dirty = [ln for ln in git(path, "status", "--porcelain", check=False).stdout.splitlines() if ln.strip()]
+            age_min = int((now - newest_activity(path)) // 60)
+        except (CfgError, OSError) as exc:
+            rows.append({"kind": KEEP_PROBE_FAILED, "path": str(path), "branch": e.get("branch", "(detached)"),
+                         "head": (e.get("head") or "")[:10], "ahead": -1, "dirty": -1, "age_minutes": -1,
+                         "under_workspace_root": str(path).startswith(str(root) + os.sep),
+                         "ahead_lines": [], "dirty_lines": [], "note": f"逐项取证失败（转人工，不中断整轮）: {exc}"})
+            continue
         if path in protect:
             kind = KEEP_PROTECTED
         elif recent_minutes > 0 and age_min < recent_minutes:
@@ -205,7 +229,7 @@ def classify(repo, root, base, protect, recent_minutes):
         rows.append({
             "kind": kind, "path": str(path), "branch": e.get("branch", "(detached)"),
             "head": (e.get("head") or "")[:10], "ahead": len(ahead), "dirty": len(dirty),
-            "age_minutes": age_min,
+            "age_minutes": age_min, "note": "",
             "under_workspace_root": str(path).startswith(str(root) + os.sep),
             "ahead_lines": ahead, "dirty_lines": dirty,
         })
@@ -273,8 +297,9 @@ def main(argv=None):
         print(f"── worktree 回收分类（repo={root} base={base} 共 {len(rows)} 个）──")
         for r in rows:
             flag = "" if r["under_workspace_root"] else "  [主 worktree 之外]"
-            print(f"  {r['kind']:<14} {r['path']}  branch={r['branch']} head={r['head']} "
-                  f"ahead={r['ahead']} dirty={r['dirty']} age={r['age_minutes']}min{flag}")
+            note = f"  ← {r['note']}" if r.get("note") else ""
+            print(f"  {r['kind']:<18} {r['path']}  branch={r['branch']} head={r['head']} "
+                  f"ahead={r['ahead']} dirty={r['dirty']} age={r['age_minutes']}min{flag}{note}")
         print("── 汇总: " + " ".join(f"{k}={counts[k]}" for k in sorted(counts)))
 
     removed, residual, failed = [], [], []
