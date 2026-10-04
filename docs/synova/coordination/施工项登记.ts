@@ -846,14 +846,14 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
     source: 'T3 §二 K4',
   },
   {
-    id: 'K5', name: '参数层清单 + 契约注册表（d 类/W4/W5）', items: ['2-2', '2-6', '2-7'],
+    id: 'K5', name: '参数层（a/b/c/d 四类，护城河资产本体）', items: ['2-2', '2-6', '2-7', '0-7', '0-8', '2-3', 'PL-04'],
     blockAcceptance: [
       { run: 'npx tsx scripts/control-tower/probe-compute-registry.ts', expectStdoutContains: 'COMPUTE-HHI-v1' },
     ],
     source: 'T3 §二 K5（🔴 无主 —— 待裁，见 §九#1）',
   },
   {
-    id: 'K6', name: '反馈·进化回环（b 类/W6）', items: ['0-2', '0-5', '0-7', '0-8', '1-4', '2-3', '3-12'],
+    id: 'K6', name: '反馈·进化回环（进化侧；参数层 b/c 类已移入 K5）', items: ['0-2', '0-5', '1-4', '3-12'],
     blockAcceptance: [
       // 🔴 原为纯 grep 型（T6 面1 否决点）⇒ 改为穿生产入口：跑一次真实进化回写，断言表行
       { run: 'npx vitest run tests/growth/evolution-writeback.test.ts', expectExit: 0 },
