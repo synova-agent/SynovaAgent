@@ -4,15 +4,24 @@
  *
  * @deprecated — D74 工作台数据 API (routes/workspace-data.ts) 已替代此路由。
  *   旧代码保留不动，D77b 时统一删除。不修改此文件。
+ *
+ * D947（默认安全姿态）— 本文件唯一的例外改动（CTO 裁定 R6「只删自报头 + 行内注明」）:
+ *   删除从 `x-synova-token` 头 / `query.token` 派生部门名的自报身份读取。
+ *   理由: 未验签的自报串不经验签即可自封部门身份（默认放行姿态）。
+ *   注: 本文件头「不修改此文件」的自述与 D947 写集的冲突，已由 CTO R6 裁定覆盖（L-10）。
+ *   功能下线（含本页身份通道整体退役）**另立卡**，不在本卡处理。
  */
 import { Router, type Request, type Response } from 'express';
 
 const router = Router();
 
 router.get('/dept', (_req: Request, res: Response) => {
-  const token = String(_req.headers['x-synova-token'] || _req.query.token || '');
-  const d = token.includes(':') ? token.split(':')[1] : '';
-  const dept = d || 'dept';
+  // D947 R6: 原自报身份读取已删除（不得从 x-synova-token / query.token 派生部门）。
+  //   删除前: const token = String(_req.headers['x-synova-token'] || _req.query.token || '');
+  //           const d = token.includes(':') ? token.split(':')[1] : '';
+  //           const dept = d || 'dept';
+  //   删除后: 仅保留常量兜底（JWT 载荷无部门字段，见 R5 / REV-8 已登记功能回退）。
+  const dept = 'dept';
 
   res.send(`<!DOCTYPE html>
 <html lang="zh-CN">
@@ -72,7 +81,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;backg
 <script>
 const API='';const DEPT='${dept}';let current=null;
 async function loadWs(){
-  try{const r=await fetch(API+'/api/workspaces/mine',{headers:{'x-synova-token':'manager:'+DEPT+':user'}});const d=await r.json();
+  // D947 R6: 原页内 fetch 自带的自报头（自封 manager 身份 + 拼接本页部门常量）已删除
+  //   （删除前该 fetch 自报 manager 身份打自己后端的 API = 生产代码自欺）。
+  //   删除后果：本页无身份通道 ⇒ /api/workspaces/mine 走 fail-closed；
+  //   该行为变化**无测试守护**，属已登记未清项（L-11），功能下线另立卡。
+  //   （注释措辞按 L-15 改写：不逐字复制 P7 判据的正则字面量，原文见 git 历史。）
+  try{const r=await fetch(API+'/api/workspaces/mine');const d=await r.json();
     const el=document.getElementById('ws-list');
     if(!d.workspaces.length){el.innerHTML='<div style=padding:20px;color:var(--dim);font-size:12px;text-align:center>暂无工作区</div>';return}
     el.innerHTML=d.workspaces.map(w=>\`<div class="ws-item\${current===w.id?' active':''}" onclick="selectWs('\${w.id}','\${w.inheritedContext||''}')">

@@ -4,8 +4,24 @@
  * 覆盖 6: ①无认证 401 ②auth.orgId 缺失 400 ORG_REQUIRED ③同租户透传 auth.orgId
  *         ④body 跨租户 403 ⑤快照未传 enterpriseId → auth.orgId 权威（无 default 回退）⑥路径参数跨租户 403
  * 约束: 零 as any（mock 注入 as unknown as）；vi.mock 属单元测试合法（铁律 12 集成测试才禁 mock）
+ *
+ * D947（L-7）: 本文件进入 PR-2 写集的归因 = **N1（夹具硬前置）**，不是 P0
+ *   —— 本文件内的 `x-synova-token` 仅出现在注释与「显式不带头」的 mock 上（侦察 §R6-2），
+ *   删自报通道不会打红本文件。
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+
+// ════════════════════════════════════════════════════════════════
+// D947 N1 硬前置 —— 夹具自证环境已就位，否则判空转（不算通过）
+// ════════════════════════════════════════════════════════════════
+
+beforeAll(() => {
+  process.env.JWT_SECRET = 'd947-test-secret-0123456789';
+  process.env.DEV_MODE = 'false';
+  expect(process.env.JWT_SECRET?.length ?? 0).toBeGreaterThanOrEqual(16);
+  expect(process.env.DEV_MODE).toBe('false');
+});
+
 
 vi.mock('../../src/cycles/cycle-registry', () => ({
   cycleRegistry: { get: vi.fn(), list: vi.fn() },
