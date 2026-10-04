@@ -363,6 +363,31 @@ documents:
     status: active
     owner: line-lead
 
+  # ---- D1153 治理线三件（K3 送审材料 / 密封面差集 / 执行点口径）2026-10-05 补登记 ----
+  # 登记理由：doc-registry-gate.sh 判「本分支新增未登记文档」⇒ D2 登记门禁（CI strict 硬阻断）。
+  # 插在本块（DOC-0140 之后）而非文件尾部，**故意避开 #1077/#1079 在尾部的追加块**，
+  # 以免同一 PR 波次三方改同一处产生文本冲突（#1077 → DOC-0143；#1079 → DOC-0143，见 D1153 报告：两者同号，待 CTO 裁）。
+  - id: DOC-0144
+    type: governance
+    path: docs/synova/coordination/K3-送审-门禁治理波次-20261005.md
+    status: active
+    owner: gov-line
+    note: "D1153-1：本波次两 PR（#1077 435e58263 / #1107 ac1829ca0）K3 送审材料（门禁语义变更必过 K3）"
+
+  - id: DOC-0145
+    type: governance
+    path: docs/synova/coordination/未登记密封面清单-20261005.md
+    status: active
+    owner: gov-line
+    note: "D1153-2：密封面差集 77 条全量清单 + T6「2 行 ci.yml 登记」真载体判定（= PR #1079）"
+
+  - id: DOC-0146
+    type: governance
+    path: docs/synova/coordination/执行点基线-G1-G9.md
+    status: active
+    owner: gov-line
+    note: "D1153-3：执行点口径（一句话定义 + 可复跑命令 E0 + as_of 实测 + 不可比说明）"
+
   # ---- Win 线派单件（D1000 身份链 / D1004 js-yaml）2026-10-02 补登记 ----
   # 依据：Mac-CTO 2026-09-25 裁定「正式派单件 = 入库（docs/synova/dispatch/**）」
   # 红因：D2 登记门禁（CI strict）判「有未登记文档 2 个」⇒ 本批补登记
