@@ -34,6 +34,11 @@ docs/research/*.md
 .claude/gate-hits.log
 .claude/backup-health.json
 
+# D1073 / D735 Stage 2: bypass 证据账本 **停跟踪** —— 运行期产物不入 git（判例 M-05）
+# 病因: 每次提交追加一行 ⇒ 每个分支必带它 ⇒ 两分支必冲突（实测 126/136 个 open PR 都改它）
+# 落点: .sessions/<sid>/bypass.log（bypass-ledger.sh，权威）；.claude/bypass.log 仅本地兼容镜像
+.claude/bypass.log
+
 # D296 (L3-2): 控制塔生成物不入 git — 运行时重新生成, 防止 "git 有、磁盘无" 中间态
 # 重新生成命令: python scripts/audit/check-gates-v2.py && python scripts/audit/self-diagnosis.py
 # 组件信号: 各 control-tower 组件脚本运行后经 emit-signal.py 写入

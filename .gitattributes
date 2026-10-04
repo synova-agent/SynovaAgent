@@ -5,13 +5,10 @@
 .codex/checkpoints/** linguist-generated=true
 .codex/dependency-graph.json linguist-generated=true
 
-# CT-47 / D457: bypass.log append-only 证据日志 — merge=union 自动保留双方
-# 背景: 每个 session 的 synova-commit 都往 bypass.log 追加一行证据，多 PR 并发合并时
-#       必然冲突（D357/D358/D354 三个分支都改了它）。append-only 日志合并 = 取并集，
-#       union 驱动保留双方所有行，每行含唯一 HASH 不会重复，正好适用。
-# 注意: union 驱动需在 .git/config 注册一次（git config merge.union.driver），
-#       见 scripts/control-tower/install-hooks.sh 的自动注册逻辑。
-.claude/bypass.log merge=union
+# D1073 / D735 Stage 2: `.claude/bypass.log merge=union` **已移除**
+# 原因: 该文件停跟踪（.gitignore），不再参与合并 ⇒ union 驱动对它无对象。
+# 教训（M-06）: 即便保留 union，GitHub 服务端也不执行 .gitattributes 自定义驱动
+#   （本地 merge 干净 ≠ 服务端干净）⇒ 「靠合并策略兜冲突」不是根治，停跟踪才是。
 
 # CT-48 / D508 补充（Win PR#128 #8）: reference-map.md append-only 符号地图 — merge=union
 # 背景: grep-refs.sh 每次写 reference-map.md（append-only），merge main 时手工 union
