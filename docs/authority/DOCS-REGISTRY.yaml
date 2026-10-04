@@ -408,3 +408,9 @@ documents:
     path: docs/synova/coordination/2026-10-04-D1142-990-命名权威门禁-预演报告.md
     status: active
     owner: line-lead
+
+  - id: DOC-0148
+    type: governance
+    path: docs/synova/coordination/2026-10-04-D1142-991-坐标系校验器-交付.md
+    status: active
+    owner: line-lead
