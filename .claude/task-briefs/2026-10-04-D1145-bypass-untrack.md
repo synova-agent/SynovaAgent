@@ -59,6 +59,9 @@ c) 决策参考: 参考 Anthropic/DSH（诊断与主路径分离、机制只增�
 | 文件 | 类型 |
 |---|---|
 | .claude/task-briefs/2026-10-04-D1145-bypass-untrack.md | task |
+| .gitattributes | task |
+| .github/workflows/ci.yml | task |
+| .gitignore | task |
 | memory/notes/proposed/2026-10-04-d1145-bypass-untrack.md | task |
 | scripts/control-tower/check-bypass-log.sh | task |
 | scripts/hooks/post-commit.sh | task |
