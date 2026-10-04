@@ -52,6 +52,145 @@ export function getDatabase(): Database.Database {
   return db;
 }
 
+// ═══ D1143 W1: 测量值时序 (metric_readings) ═══
+//
+// 为什么需要这张表: 方向监测要回答"上次判错多少"，前提是**同一 (entity, metric) 有 ≥2 个
+// 时间点读数**——单点快照无法区分"真偏离"与"该指标本来就在波动"。参数标定同理：
+// 先有时序，才有无数据可标的落点（硬顺序: 时序存储 → 参数标定）。
+
+/** 一条测量值读数（结构上兼容 loops 侧 MetricReading，不反向依赖 L3） */
+export interface MetricSeriesPoint {
+  value: number;
+  /** ISO-8601 观测时刻 */
+  observedAt: string;
+}
+
+/** 写一条测量值读数的入参 */
+export interface MetricReadingInput {
+  entityId: string;
+  metric: string;
+  value: number;
+  /** ISO-8601 观测时刻 */
+  observedAt: string;
+  /** 该读数的测量不确定度（可选） */
+  uncertainty?: number;
+  /** 数据来源标签（可选，可追溯） */
+  source?: string;
+}
+
+/** metric_readings 表 + 索引 DDL（幂等） */
+const METRIC_READINGS_DDL = `
+  CREATE TABLE IF NOT EXISTS metric_readings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    entity_id TEXT NOT NULL,
+    metric TEXT NOT NULL,
+    value REAL NOT NULL,
+    uncertainty REAL,
+    observed_at TEXT NOT NULL,
+    source TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_metric_readings_em
+    ON metric_readings(entity_id, metric, observed_at);
+`;
+
+/**
+ * 建测量值时序表（幂等）。
+ *
+ * @input  — better-sqlite3 Database（任意句柄，含测试内存库）
+ * @output — metric_readings 表 + idx_metric_readings_em 索引就位
+ * @degraded — 建表失败 → 抛错由调用方判定（initEngineContext 内 log.warn；测试直接暴露）
+ */
+export function ensureMetricReadingsTable(database: Database.Database): void {
+  database.exec(METRIC_READINGS_DDL);
+}
+
+/**
+ * 写一条测量值读数。
+ *
+ * @input  — entityId + metric + value + observedAt [+ uncertainty + source]
+ * @output — 落库 1 行
+ * @degraded — 库不可写/表缺失 → 抛错（写入失败必须可见，不静默吞）
+ */
+export function recordMetricReading(
+  database: Database.Database,
+  input: MetricReadingInput,
+): void {
+  database
+    .prepare(
+      `INSERT INTO metric_readings (entity_id, metric, value, uncertainty, observed_at, source)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      input.entityId,
+      input.metric,
+      input.value,
+      input.uncertainty ?? null,
+      input.observedAt,
+      input.source ?? null,
+    );
+}
+
+/** 把一行 SQLite 结果收敛成读数（坏行丢弃，不让 unknown 渗进业务） */
+function toMetricSeriesPoint(row: unknown): MetricSeriesPoint | null {
+  if (typeof row !== 'object' || row === null) return null;
+  const r = row as { value?: unknown; observed_at?: unknown };
+  if (typeof r.value !== 'number' || !Number.isFinite(r.value)) return null;
+  if (typeof r.observed_at !== 'string' || r.observed_at.length === 0) return null;
+  return { value: r.value, observedAt: r.observed_at };
+}
+
+/**
+ * 读同一 (entity, metric) 的测量值时序。
+ *
+ * 取**最近** limit 条，再按 observedAt 升序返回（时序语义：旧 → 新）。
+ *
+ * @input  — entityId + metric [+ limit，默认 90]
+ * @output — MetricSeriesPoint[]（无数据 → 空数组）
+ * @degraded — 表缺失/查询失败 → 抛错由调用方处理（loops 侧按"无时序"降级 + 告警）
+ */
+export function readMetricSeries(
+  database: Database.Database,
+  entityId: string,
+  metric: string,
+  limit = 90,
+): MetricSeriesPoint[] {
+  const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 90;
+  const rows = database
+    .prepare(
+      `SELECT value, observed_at FROM (
+         SELECT value, observed_at, id FROM metric_readings
+         WHERE entity_id = ? AND metric = ?
+         ORDER BY observed_at DESC, id DESC
+         LIMIT ?
+       ) ORDER BY observed_at ASC, id ASC`,
+    )
+    .all(entityId, metric, safeLimit);
+
+  const points: MetricSeriesPoint[] = [];
+  for (const row of rows) {
+    const point = toMetricSeriesPoint(row);
+    if (point) points.push(point);
+  }
+  return points;
+}
+
+/**
+ * 构造绑定了库句柄的时序读取器（供 DirectionMonitor 注入）。
+ *
+ * @input  — better-sqlite3 Database
+ * @output — { readSeries(entityId, metric, limit?) }，结构上兼容 loops 侧 MetricSeriesReader
+ * @degraded — 读失败 → 抛错；由 DirectionMonitor.readMetricSeries 捕获并降级为空序列 + 告警
+ */
+export function createMetricSeriesReader(database: Database.Database): {
+  readSeries(entityId: string, metric: string, limit?: number): MetricSeriesPoint[];
+} {
+  return {
+    readSeries: (entityId: string, metric: string, limit?: number) =>
+      readMetricSeries(database, entityId, metric, limit),
+  };
+}
+
 export function initEngineContext(): void {
   // 幂等：SynovaAgent.start() 和 createServer() 都可能调用
   if (_initialized) return;
@@ -128,6 +267,14 @@ export function initEngineContext(): void {
     );
     CREATE INDEX IF NOT EXISTS idx_team_changes_type ON team_changes(change_type, created_at);
   `);
+
+  // D1143 W1: 测量值时序表（幂等）+ 表/索引就位
+  try {
+    ensureMetricReadingsTable(db);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.warn({ err: msg }, 'metric_readings 建表失败 — degraded（时序能力不可用）');
+  }
 
   // Phase 4.4: Schema 版本化迁移（必须在任何 query 前执行）
   try {
