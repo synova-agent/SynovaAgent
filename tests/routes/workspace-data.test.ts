@@ -1,52 +1,129 @@
 /**
  * tests/routes/workspace-data.test.ts — D74 工作台数据 API 端点测试
+ *
+ * D1153 适配（夹具升级；断言只增不减 —— 铁律 48）:
+ *   改前夹具: 裸 `express()` + 本路由，**无任何身份层**；并用
+ *     `(router.default as` + ` any).stack` 做路由内省（铁律 38 禁止形态）。
+ *   改后夹具: 真 `jwtAuthMiddleware` + 真 `rbacMiddleware` + 真签 JWT（`signJwtToken`），
+ *     请求走真 socket。理由: ① 加路由级守卫后「无身份」请求必 403，业务断言不可达
+ *     ② 路由内省改为**真 HTTP 可达性探测**（更强 —— 同时证明路径已注册且可被真实
+ *     请求命中；栈内省只能证明「注册过」）③ 借此移除该 any 断言。
+ *
+ * 判据守恒: 原 3 条断言的语义全部保留并加强——
+ *   · `router.default` 已定义                    → 保留
+ *   · 5 个端点已注册（栈内省 + `length>=4`）      → 改为 5 条路径真 HTTP 可达（200，恰 5 条）
+ *   · `GET /api/workspace/:deptId` 返回 json 结构 → 保留（`ok` / `data` / `data.departmentId`）
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import express from 'express';
+import { request as httpRequest } from 'node:http';
+import type { Server } from 'node:http';
+
+process.env.JWT_SECRET = 'd1153-workspace-data-secret-0123456789';
+process.env.DEV_MODE = 'false';
+
+import { jwtAuthMiddleware, signJwtToken } from '../../src/middleware/auth';
+import { rbacMiddleware } from '../../src/middleware/rbac';
+
+let base = '';
+let server: Server | undefined;
+let token = '';
+
+interface HttpResult { status: number; body: Record<string, unknown> }
+
+function call(method: string, path: string, opts: { body?: unknown } = {}): Promise<HttpResult> {
+  return new Promise<HttpResult>((resolve, reject) => {
+    const payload = opts.body === undefined ? undefined : JSON.stringify(opts.body);
+    const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+    if (payload !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      headers['Content-Length'] = String(Buffer.byteLength(payload));
+    }
+    const url = new URL(`${base}${path}`);
+    const req = httpRequest(
+      { hostname: url.hostname, port: url.port, path: `${url.pathname}${url.search}`, method, headers },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (c: Buffer) => { chunks.push(c); });
+        res.on('end', () => {
+          const raw = Buffer.concat(chunks).toString('utf8');
+          let body: Record<string, unknown> = {};
+          try { body = raw.length > 0 ? (JSON.parse(raw) as Record<string, unknown>) : {}; } catch { body = { __unparsed: raw }; }
+          resolve({ status: res.statusCode ?? 0, body });
+        });
+      },
+    );
+    req.on('error', reject);
+    if (payload !== undefined) req.write(payload);
+    req.end();
+  });
+}
+
+beforeAll(async () => {
+  expect(process.env.JWT_SECRET?.length ?? 0).toBeGreaterThanOrEqual(16);
+  expect(process.env.DEV_MODE).toBe('false');
+  const signed = signJwtToken({ sub: 'admin-d1153', role: 'admin', orgId: 'org-d1153' });
+  expect(signed).not.toBeNull();
+  token = signed ?? '';
+
+  const router = (await import('../../src/routes/workspace-data')).default;
+  const app = express();
+  app.use(express.json());
+  app.use(jwtAuthMiddleware);
+  app.use(rbacMiddleware);
+  app.use(router);
+
+  await new Promise<void>((resolve) => {
+    server = app.listen(0, resolve);
+  });
+  const addr = server?.address();
+  const port = typeof addr === 'object' && addr !== null ? addr.port : 0;
+  base = `http://127.0.0.1:${port}`;
+});
+
+afterAll(() => { server?.close(); });
 
 describe('D74: workspace-data routes — 路由注册', () => {
   it('导出默认 Router 实例', async () => {
-    const router = await import('../../src/routes/workspace-data');
-    expect(router.default).toBeDefined();
-    // Router 实例应有 stack（已注册的路由）
-    expect(Array.isArray((router.default as any).stack)).toBe(true);
+    const mod = await import('../../src/routes/workspace-data');
+    expect(mod.default).toBeDefined();
   });
 
-  it('已注册 5 个端点', async () => {
-    const router = await import('../../src/routes/workspace-data');
-    const stack = (router.default as any).stack as Array<{ route: { path: string; methods: Record<string, boolean> } }>;
-    expect(stack.length).toBeGreaterThanOrEqual(4);
-
-    // 验证路由路径
-    const paths = stack
-      .filter((r) => r.route)
-      .map((r) => ({ path: r.route.path, methods: Object.keys(r.route.methods) }));
-    expect(paths.some((p) => p.path === '/api/workspace/:deptId')).toBe(true);
-    expect(paths.some((p) => p.path === '/api/workspace/:deptId/goals')).toBe(true);
-    expect(paths.some((p) => p.path === '/api/workspace/:deptId/alerts')).toBe(true);
-    expect(paths.some((p) => p.path === '/api/workspace/:deptId/next-action')).toBe(true);
-    expect(paths.some((p) => p.path === '/api/workspace/alerts/:id/dismiss')).toBe(true);
+  it('已注册 5 个端点（真 HTTP 可达性探测，非栈内省）', async () => {
+    const probes: Array<{ label: string; method: string; path: string; body?: unknown }> = [
+      { label: 'GET 全量数据', method: 'GET', path: '/api/workspace/test-dept' },
+      { label: 'GET goals', method: 'GET', path: '/api/workspace/test-dept/goals' },
+      { label: 'GET alerts', method: 'GET', path: '/api/workspace/test-dept/alerts' },
+      { label: 'GET next-action', method: 'GET', path: '/api/workspace/test-dept/next-action' },
+      { label: 'PUT alerts/:id/dismiss', method: 'PUT', path: '/api/workspace/alerts/alert-1/dismiss', body: { reason: '用例' } },
+    ];
+    for (const p of probes) {
+      const res = await call(p.method, p.path, { body: p.body });
+      expect({ label: p.label, status: res.status }).toEqual({ label: p.label, status: 200 });
+    }
   });
 
   it('GET /api/workspace/:deptId 返回 json 结构', async () => {
-    const express = await import('express');
-    const app = express.default();
-    const router = await import('../../src/routes/workspace-data');
-    app.use(router.default);
+    const res = await call('GET', '/api/workspace/test-dept');
+    expect(res.status).toBe(200);
+    const data = res.body;
+    expect(data).toHaveProperty('ok');
+    expect(data).toHaveProperty('data');
+    const payload = data.data as { departmentId?: string };
+    expect(payload).toHaveProperty('departmentId', 'test-dept');
+  });
 
-    // 模拟请求
-    const http = await import('http');
-    const server = http.createServer(app);
-    await new Promise<void>((resolve) => server.listen(0, resolve));
-    const port = (server.address() as any).port;
-
+  it('D1153 守卫在真链路生效: staff 身份读部门工作台 ⇒ 403（业务断言不因加守卫而静默降级）', async () => {
+    const staffToken = signJwtToken({ sub: 'staff-d1153', role: 'staff', orgId: 'org-d1153' });
+    expect(staffToken).not.toBeNull();
+    const saved = token;
+    token = staffToken ?? '';
     try {
-      const response = await fetch(`http://localhost:${port}/api/workspace/test-dept`);
-      const data = await response.json();
-      expect(data).toHaveProperty('ok');
-      expect(data).toHaveProperty('data');
-      expect(data.data).toHaveProperty('departmentId', 'test-dept');
+      const res = await call('GET', '/api/workspace/test-dept');
+      expect(res.status).toBe(403);
+      expect(res.body.code).toBe('RBAC_DENIED');
     } finally {
-      server.close();
+      token = saved;
     }
   });
 });
