@@ -51,7 +51,8 @@ Step 5 WIRE CHECK 是硬门禁：`grep -rn "新函数名" src/` — 零结果 = 
 - 查看基线: `bash scripts/control-tower/baseline-check.sh`
 - 隔离工作区: `git worktree add ../synova-wt-<任务名> <branch>`
 - 保存进度: 先 `git commit`（走 synova-commit），不要 stash
-hook 已检测 `git stash` 并提示（hook-git-detect.sh）。
+`git stash` 拦截能力仍在（`scripts/hooks/hook-git-detect.sh`，D1146 后不再由 PreToolUse 登记点触发，
+改由 `scripts/control-tower/incident-loop.py` 的 R2 机制消费/复现）。
 
 
 **铁律 47. 契约优先。** 新增 compute 函数必须先定义输入/输出/降级契约（JSDoc），再实现。参见 SYNOVA-ARCH-质量与测试体系-20260707.md §二。
@@ -158,24 +159,24 @@ v2.5 的 38 项 pre-commit + 12 脚本 + 3 次 tsc/vitest 重跑，
 v3.0 只设 5 项物理阻断 → V4.4.2 扩展到 7 项 → V5.1.1 扩展到 13 组（D515 起本地软提示 + CI 权威，D516 SYNO_CI strict）。新增：契约优先（铁律47）、测试非空壳（铁律48）。
 **从代码规范执法 → 行为契约执法。测试不是写完代码后的验证——在代码被写出来之前，对和错的标准已经被定义。**
 
-### 执法架构: 五层精简
+### 执法架构: 三层精简（D1146: CC 侧 hook 层已退役）
 
 ```
 📋 任务启动 (人工)   →  task-start.sh — 3 问翻译意图→规格
-🧠 写前注入 (自动)    →  hook-check-memory.sh — 历史教训
-✍️ 写后验证 (自动)    →  verify-incremental.sh — L1 oxlint → L2 tsc → L3 vitest → L4 接线
 🔴 提交阻断 (自动)    →  pre-commit 13 组 — 本地软提示，CI 权威（SYNO_CI strict）
 🚀 推送阻断 (自动)    →  pre-push 门禁 0-5 — 多机同步 + secrets + golden-case + vitest + tag 校验
 ```
 
 | 时机 | 脚本 | 阻断 | 耗时 |
 |------|------|------|------|
-| PreToolUse | hook-check-memory.sh (教训注入) | 不阻断 | <1s |
-| PreToolUse | hook-block-write.sh (task brief 字段) | 🔴 阻断 | <1s |
-| PreToolUse | hook-enforce-v25.sh (loop-state) | 🔴 阻断 | <1s |
-| PostToolUse | verify-incremental.sh (L1→L4) + baseline-check.sh (L5) | 🔴 阻断 | 5-30s |
 | pre-commit | pre-commit-check.sh (13 组) | 本地 ⚠️ 软提示（D515）；CI 权威硬阻断（SYNO_CI strict，D516） | <10s |
 | pre-push | pre-push-check.sh (门禁 0-5) | 🔴 阻断 | <3s |
+
+> **D1146（2026-10-05，CC 退役）**：`.claude/settings.json` 的 `hooks` 段与 `.codex/hooks.json` 共 **11 个登记点已归零**
+> （写前拦截不另起机制），`scripts/hooks/hook-session-start.sh`、`scripts/workflow/hook-post-tool-use.sh`
+> 两个零执行方脚本已删除。原 PreToolUse/PostToolUse 承载的目的改由**提交端**承担：
+> task brief 字段 = pre-commit 组 6 ／ 接线完整性 = 组 4 ／ 权威判定 = CI 12 必需 context。
+> `verify-incremental.sh`、`baseline-check.sh` 仍在仓库内，只能**手工**触发。
 
 ### pre-commit 13 组 (V5.1.1, 组号沿用脚本 echo) — 本地软提示，CI 权威（SYNO_CI=1 时转硬阻断）
 
@@ -269,7 +270,8 @@ npm run workflow:deploy   # 部署后验证
 > - 新 export 未接线 → 不准 commit
 > - 新文件无测试 → 不准 commit
 >
-> SessionStart + PostToolUse hooks 在写代码时持续提醒。
+> **D1146**: SessionStart/PreToolUse/PostToolUse 登记点已归零（见上文"执法架构"），
+> 会话内提醒职责改由 DSH 会话指令承担。
 
 ⚠️ 每次 git push 成功后，必须提醒:
    "部署已完成。请运行: bash scripts/workflow/checkpoint-deploy.sh [服务器URL]"
@@ -290,19 +292,17 @@ crontab -e  # 添加: */30 * * * * bash /path/to/scripts/workflow/checkpoint-run
 
 ---
 
-## 门禁系统 (全部物理强制，零 AI 自律)
+## 门禁系统 (提交端硬阻断 + CI 权威)
 
-### PreToolUse Hook (写代码前)
-- Task brief 存在 + 7 字段质量检查（项目身份/Q1调研/Q2范围/Q3验收/架构层级/文档引用/接口审计）
-- 接口真实性反向验证（grep 确认函数签名真实存在）
-- 例外: `.Codex/task-briefs/` `.Codex/settings` `scripts/workflow/hook-`
-
-### PostToolUse Hook (写代码后)
-- `verify-incremental.sh`: L1 oxlint → L2 tsc --incremental → L3 vitest --changed → L4 接线审计
-- `.Codex/loop-state.json`: 循环计数，最多5轮
-
-> PostToolUse 是 tsc + vitest + baseline 唯一一次执行的位置。pre-commit 和 pre-push 不重复跑。
-> baseline-check.sh：跑基准测试，输出和上次提交对比。有偏差→告警（不阻断，需 agent 说明原因）。
+### PreToolUse / PostToolUse Hook — **已退役**（D1146，2026-10-05）
+- 原 CC 侧写前拦截（task brief 字段检查 + 接口真实性反向验证）与写后验证（`verify-incremental.sh`
+  自动跑 + `.Codex/loop-state.json` 循环计数）随 CC 退役**登记点归零**（11 → 0）——
+  `.claude/settings.json` hooks 段清空、`.codex/hooks.json` 删除。
+- 同一目的改由**提交端**承担：task brief 6 核心字段 = pre-commit 组 6；接线完整性 = 组 4；
+  权威判定 = CI 12 必需 context；会话内提醒 = DSH 会话指令。
+- 手工触发（不再是自动 hook）：`bash scripts/workflow/verify-incremental.sh`（L1 oxlint → L2 tsc
+  → L3 vitest --changed → L4 接线审计）、`bash scripts/control-tower/baseline-check.sh`（基准对比，
+  有偏差仅告警不阻断）。
 
 ### Git Hooks
 
@@ -318,9 +318,9 @@ crontab -e  # 添加: */30 * * * * bash /path/to/scripts/workflow/checkpoint-run
 ## 执行原则
 
 - **先读再改** — 不假设代码内容。读 AGENTS.md + task brief + 全量对齐手册相关章节
-- **task brief 必须先填** — PreToolUse hook 强制。7字段(项目身份/Q1调研/Q2范围/Q3验收/架构层级/文档引用/接口审计) 全部非空才能写代码
-- **接口审计从代码 grep，不凭记忆** — hook 反向验证，虚假接口拒绝写代码
-- **每写一个文件，自动验证** — PostToolUse hook 跑 vitest --related + 接线审计。失败自动进入修正循环
+- **task brief 必须先填** — pre-commit 组 6 强制（D1146 后：原 PreToolUse hook 登记点已退役）。7字段(项目身份/Q1调研/Q2范围/Q3验收/架构层级/文档引用/接口审计) 全部非空才能写代码
+- **接口审计从代码 grep，不凭记忆** — grep 反向验证（原 hook 已退役，改为提交前自检 + CI 组 4），虚假接口拒绝写代码
+- **每写一个文件，自动验证** — 手工跑 `bash scripts/workflow/verify-incremental.sh`（原 PostToolUse hook 登记点已退役）：vitest --related + 接线审计。失败自动进入修正循环
 - **循环最多5轮** — verify-incremental.sh 记录轮次，5轮不过停止等人工
 - **接线审计是硬门禁** — 新 export 必须在生产入口有引用
 - **逐项 commit** — 单模块独立提交，不批量

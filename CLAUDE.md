@@ -402,7 +402,10 @@ evolution/ (SessionLearningEngine, FeedbackCollector, OntologyAdapter)
 > - **正确性：12 处 `grep -c ... || echo 0` 加 `tr -d '\n\r'`**。修复 `[: integer expected`——`grep -c` 无匹配时输出 "0" 且 exit 1，`|| echo 0` 追加第二行 "0"，变量变成 "0\n0"。
 > - **Gatekeeper 误判修复**：只匹配 `detected-bypass` 行，`COMMITTED | pre-commit PASS` 是正常提交标记不算绕过。
 > - **新增门禁**：PreToolUse `hook-bypass-block.sh`（24h 内绕过实时阻断）+ `hook-check-task-scope.sh`（文件 vs Q2 范围）+ pre-commit 组 12 Task Scope 一致性。
+>   （**D1146 标注（2026-10-05）**：CC hook 层已退役、登记点归零——`hook-bypass-block.sh` **从未入库**（历史无此文件），
+>   `hook-check-task-scope.sh` 亦无任何登记点；本行仅存 v4.5.1 当期的变更记录，不代表现行执行体。）
 > - **控制塔跨 session 自动化**：SessionStart/PreToolUse/PostToolUse 全部 hook 移至 `settings.json`（git 追踪），新 clone 即自带完整控制塔。
+>   （**D1146 标注**：该 `settings.json` hooks 段已于 D1146 **整段移除**，11 个登记点归零。）
 > - **全部版本号同步到 V4.5.1**
 >
 > ### V4.5.0 变更 (2026-07-10) — grep 物理门禁 + 侧翼修复自动化
@@ -457,12 +460,16 @@ compute 函数签名统一为 `(store: GraphStoreReader, teamId: string) => Comp
 | **plan.json 结构** | 人类审批 | 文件清单、阶段顺序、deferred checks | 锁定的 plan 覆盖 bash |
 | **agent 自检** | agent | 调用链正确、退化诚实、架构边界、接线完整 | 自检结果写 commit message |
 
-### 执法架构: 五层精简
+### 执法架构: 三层精简（D1146: CC 侧 hook 层已退役）
+
+> **🔴 D1146（2026-10-05，CC 退役）**：本节下方 hook 层**已退役**（`.claude/settings.json` hooks 段 +
+> `.codex/hooks.json` 共 **11 个登记点归零**；`hook-session-start.sh` / `hook-post-tool-use.sh` 已删除）。
+> 下列 hook 行**仅作历史对照，不再点火**；同型处置与替代执行体见 `AGENTS.md`「执法架构: 三层精简」。
 
 ```
 📋 任务启动 (人工)   →  task-start.sh — 6 核心字段 + 可选 plan.json
-🧠 写前注入 (自动)    →  hook-check-memory.sh — 历史教训
-✍️ 写后验证 (自动)    →  verify-incremental.sh — L1 oxlint → L2 tsc → L3 vitest → L4 接线
+🧠 写前注入 (自动)    →  ~~hook-check-memory.sh~~（已退役 D1146）— 历史教训
+✍️ 写后验证 (自动)    →  ~~verify-incremental.sh~~（已退役 D1146，仅可手工触发）— L1→L2→L3→L4 接线
 🔴 提交阻断 (自动)    →  pre-commit 13 组 — 本地软提示，CI 权威（SYNO_CI strict）
 🚀 推送阻断 (自动)    →  pre-push 1 项 — secrets 终扫
 🎯 提交后检测 (自动)  →  post-commit — --no-verify 绕过检测 + 决策建议
@@ -470,10 +477,10 @@ compute 函数签名统一为 `(store: GraphStoreReader, teamId: string) => Comp
 
 | 时机 | 脚本 | 阻断 | 耗时 |
 |------|------|------|------|
-| PreToolUse | hook-check-memory.sh | 不阻断 | <1s |
-| PreToolUse | hook-block-write.sh | 🔴 阻断 | <1s |
-| PreToolUse | hook-enforce-loop.sh | 🔴 阻断 | <1s |
-| PostToolUse | verify-incremental.sh (L1→L4) | 🔴 阻断 | 5-30s |
+| ~~PreToolUse~~（已退役 D1146） | hook-check-memory.sh | 不阻断 | <1s |
+| ~~PreToolUse~~（已退役 D1146） | hook-block-write.sh | 🔴 阻断 | <1s |
+| ~~PreToolUse~~（已退役 D1146） | hook-enforce-loop.sh | 🔴 阻断 | <1s |
+| ~~PostToolUse~~（已退役 D1146） | verify-incremental.sh (L1→L4) | 🔴 阻断 | 5-30s |
 | pre-commit | pre-commit-check.sh (13 组) | 本地 ⚠️ 软提示（D515）；CI 权威硬阻断（SYNO_CI strict，D516） | <10s |
 | post-commit | post-commit (bypass 检测) | 不阻断 | <1s |
 | pre-push | pre-push-check.sh (secrets 终扫) | 🔴 阻断 | <3s |
@@ -648,7 +655,7 @@ npm run workflow:deploy   # 部署后验证
 > - 新文件无测试 → 不准 commit
 > - 🆕 manifest 不完整 / tags 非法 / 硬编码类型回归 → 不准 commit
 >
-> SessionStart + PostToolUse hooks 在写代码时持续提醒。
+> SessionStart + PostToolUse hooks 在写代码时持续提醒。**（D1146 标注：该 hook 层已退役、登记点归零 ⇒ 不再提醒；会话内提醒改由 DSH 会话指令承担。）**
 
 ⚠️ 每次 git push 成功后，必须提醒:
    "部署已完成。请运行: bash scripts/workflow/checkpoint-deploy.sh [服务器URL]"
@@ -669,18 +676,19 @@ crontab -e  # 添加: */30 * * * * bash /path/to/scripts/workflow/checkpoint-run
 
 ---
 
-## 门禁系统 (全部物理强制，零 AI 自律)
+## 门禁系统 (提交端硬阻断 + CI 权威)
 
-### PreToolUse Hook (写代码前)
-- Task brief 存在 + 6 核心字段质量检查（Q0定位/Q1调研/Q2范围/Q3验收/架构层级/Done标准）— V3.8 全面升级 Q0 为项目拼图+文件审计
-- 接口真实性反向验证（grep 确认函数签名真实存在）
-- 例外: `.claude/task-briefs/` `.claude/settings` `scripts/workflow/hook-`
+### PreToolUse Hook — **已退役**（D1146，2026-10-05）
+- 原写前拦截：Task brief 存在 + 6 核心字段质量检查（Q0定位/Q1调研/Q2范围/Q3验收/架构层级/Done标准）
+- 原写前拦截：接口真实性反向验证（grep 确认函数签名真实存在）
+- 原例外: `.claude/task-briefs/` `.claude/settings` `scripts/workflow/hook-`
+- **D1146 后**：两者均随 CC 退役**登记点归零**，同一目的改由**提交端**承担（task brief 字段 = pre-commit 组 6；
+  接线完整性 = 组 4；权威判定 = CI 12 必需 context）。
 
-### PostToolUse Hook (写代码后)
-- `verify-incremental.sh`: L1 oxlint → L2 tsc --incremental → L3 vitest --changed → L4 接线审计
-- `.claude/loop-state.json`: 循环计数，最多5轮
-
-> PostToolUse 是 tsc + vitest 唯一一次执行的位置。pre-commit 和 pre-push 不重复跑。
+### PostToolUse Hook — **已退役**（D1146，2026-10-05）
+- 原自动跑 `verify-incremental.sh`: L1 oxlint → L2 tsc --incremental → L3 vitest --changed → L4 接线审计
+- 原 `.claude/loop-state.json`: 循环计数，最多5轮
+- **D1146 后**：不再自动触发；需用时**手工**跑 `bash scripts/workflow/verify-incremental.sh`。
 
 ### Git Hooks
 
@@ -696,9 +704,9 @@ crontab -e  # 添加: */30 * * * * bash /path/to/scripts/workflow/checkpoint-run
 ## 执行原则
 
 - **先读再改** — 不假设代码内容。读 CLAUDE.md + task brief + 全量对齐手册相关章节
-- **task brief 必须先填** — PreToolUse hook 强制。6核心字段(Q0定位/Q1调研/Q2范围/Q3验收/架构层级/Done标准) 全部非空才能写代码
-- **接口审计从代码 grep，不凭记忆** — hook 反向验证，虚假接口拒绝写代码
-- **每写一个文件，自动验证** — PostToolUse hook 跑 vitest --related + 接线审计。失败自动进入修正循环
+- **task brief 必须先填** — pre-commit 组 6 强制（D1146：原 PreToolUse hook 登记点已退役）。6核心字段(Q0定位/Q1调研/Q2范围/Q3验收/架构层级/Done标准) 全部非空才能写代码
+- **接口审计从代码 grep，不凭记忆** — grep 反向验证（D1146：原 hook 已退役，改为提交前自检 + CI 组 4），虚假接口拒绝写代码
+- **每写一个文件，自动验证** — 手工跑 `bash scripts/workflow/verify-incremental.sh`（D1146：原 PostToolUse hook 登记点已退役）：vitest --related + 接线审计。失败自动进入修正循环
 - **循环最多5轮** — verify-incremental.sh 记录轮次，5轮不过停止等人工
 - **接线审计是硬门禁** — 新 export 必须在生产入口有引用
 - **逐项 commit** — 单模块独立提交，不批量
