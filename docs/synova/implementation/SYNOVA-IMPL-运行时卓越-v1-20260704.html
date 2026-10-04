@@ -144,7 +144,7 @@ interface ValidationReport {
 function validateMigration(
   oldCompute: Function,        // 旧compute函数引用
   newCompute: Function,        // 新compute函数引用
-  testData: GraphStore         // 哇呢宝贝模拟数据
+  testData: GraphStore         // 客户A模拟数据
 ): ValidationReport[] {
   // 对92个compute函数逐一执行：
   // 1. 用旧函数在旧本体数据上运行 → oldOutput
@@ -182,7 +182,7 @@ function validateMigration(
 </table>
 
 <h3>5.2 A/B测试</h3>
-<p>替换后，用哇呢宝贝诊断场景运行新旧两套专家提示词。旧提示词输出 vs 新提示词输出。由人工GA判断新输出是否质量不低于旧输出。如果劣化，回退并人工修正。</p>
+<p>替换后，用客户A诊断场景运行新旧两套专家提示词。旧提示词输出 vs 新提示词输出。由人工GA判断新输出是否质量不低于旧输出。如果劣化，回退并人工修正。</p>
 
 <hr>
 
@@ -288,11 +288,11 @@ export function computeKzIndex(
 <tr><th>层次</th><th>方法</th><th>覆盖</th></tr>
 <tr><td><strong>L1</strong></td><td>每个compute函数的 vitest 单元测试</td><td>92个</td></tr>
 <tr><td><strong>L2</strong></td><td>每个哨兵的集成测试（aggregate.ts调用全部compute函数）</td><td>46个哨兵</td></tr>
-<tr><td><strong>L3</strong></td><td>哇呢宝贝端到端验证——全部46哨兵运行，对比人工诊断的5条核心结论</td><td>46哨兵全量</td></tr>
+<tr><td><strong>L3</strong></td><td>客户A端到端验证——全部46哨兵运行，对比人工诊断的5条核心结论</td><td>46哨兵全量</td></tr>
 <tr><td><strong>L4</strong></td><td>性能基准：两阶段搜索（广度<1秒，深度<5秒）</td><td>性能基线</td></tr>
 </table>
 
-<h3>7.2 哇呢宝贝必须通过的5条诊断</h3>
+<h3>7.2 客户A必须通过的5条诊断</h3>
 <table>
 <tr><th>#</th><th>诊断发现</th><th>哨兵</th><th>预期结果</th></tr>
 <tr><td>1</td><td>砍掉低产会所=年亏134万</td><td>I10</td><td>MC为正；固定成本不可缩减；砍掉后利润下降</td></tr>
@@ -322,7 +322,7 @@ export function computeKzIndex(
 <td>高</td>
 <td>中</td>
 <td>3</td>
-<td>validator的测试数据包含哇呢宝贝全量数据，覆盖正常/边界/异常三种场景。Phase 4的端到端测试作为第二道防线</td>
+<td>validator的测试数据包含客户A全量数据，覆盖正常/边界/异常三种场景。Phase 4的端到端测试作为第二道防线</td>
 </tr>
 <tr style="background:rgba(248,81,73,0.08)">
 <td><strong>三个Claude Code实例的代码风格不一致</strong>：合并时产生大量冲突</td>

@@ -2,7 +2,7 @@
 {"level":50,"time":1788854262688,"pid":62414,"hostname":"MacBook-Pro.local","name":"synova-agent","service":"agent/prompt-assembler","code":"PROMPT_ASSEMBLY_FAILED","expertType":"non-existent-expert","err":"专家manifest不存在: /Users/wane/SynovaAgent/expert/non-existent-expert/manifest.json","msg":"专家manifest加载失败"}
 {"level":50,"time":1788854262694,"pid":62414,"hostname":"MacBook-Pro.local","name":"synova-agent","service":"agent/prompt-assembler","code":"PROMPT_ASSEMBLY_FAILED","expertType":"finance","err":"专家manifest不存在: /Users/wane/SynovaAgent/expert/finance/manifest.json","msg":"专家manifest加载失败"}
 {"level":50,"time":1788854262695,"pid":62414,"hostname":"MacBook-Pro.local","name":"synova-agent","service":"agent/prompt-assembler","code":"PROMPT_ASSEMBLY_FAILED","expertType":"non-existent-expert","err":"专家manifest不存在: /Users/wane/SynovaAgent/expert/non-existent-expert/manifest.json","msg":"专家manifest加载失败"}
- FAIL  tests/e2e/p0-wane-baby.test.ts [ tests/e2e/p0-wane-baby.test.ts ]
+ FAIL  tests/e2e/p0-client-a.test.ts [ tests/e2e/p0-client-a.test.ts ]
  FAIL  tests/circular-dependency.test.ts > No circular dependency: tools ↔ connectors > Given @synova/connector-registry registry.ts, When reading imports, Then imports ToolRegistryInterface from ./types
  FAIL  tests/acceptance/zero-code-industry.test.ts > 零代码接入验收 (pizza-chain) > pizza-chain 特有节点类型被 ontology 加载
  FAIL  tests/acceptance/zero-code-industry.test.ts > 零代码接入验收 (pizza-chain) > queryByTags 可查询 food_service 标签的类型
