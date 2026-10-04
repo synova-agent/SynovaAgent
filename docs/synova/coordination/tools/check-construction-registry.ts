@@ -23,7 +23,19 @@
 
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { constructionItems, constructionBlocks, normalizePath, deriveBlockDeps, isModuleShape } from '../施工项登记.ts';
+import { constructionItems as _ci, constructionBlocks as _cb, normalizePath, deriveBlockDeps, isModuleShape, type Worker } from '../施工项登记.ts';
+
+// 🔴 修 T8 发现（三态 exit 契约未实现）：登记件读不到 / 结构不对 ⇒ exit 2，不是 exit 1
+let constructionItems: typeof _ci;
+let constructionBlocks: typeof _cb;
+try {
+  constructionItems = _ci;
+  constructionBlocks = _cb;
+  if (!Array.isArray(constructionItems) || !Array.isArray(constructionBlocks)) throw new Error('结构不对');
+} catch (e) {
+  process.stderr.write(`  🔴 检查自身失败：登记件读不到或结构不对 — ${e instanceof Error ? e.message : String(e)}\n`);
+  process.exit(2);
+}
 
 type Fail = { inv: string; id: string; msg: string };
 const fails: Fail[] = [];
@@ -95,6 +107,12 @@ for (const it of constructionItems) {
           id: it.id,
           msg: `表 ${it.createsTable.name} 的 NOT NULL 字段 "${f}" 【无生产者】且登记件无 fieldProducers 声明位 ⇒ 建不过`,
         });
+      } else if (!/^(\[known-gap\]|producer:|run:)/.test(declared)) {
+        // 🔴 修 T8 发现（声明即可合规）：值必须是可核形态 —— [known-gap] / producer:<id> / run:<cmd>
+        fails.push({
+          inv: 'INV-1③b', id: it.id,
+          msg: `字段 "${f}" 的声明不是可核形态（须 [known-gap] / producer:<id> / run:<cmd>）：${declared.slice(0, 50)}`,
+        });
       } else if (declared.startsWith('[known-gap]')) {
         // 声明了但未实现 ⇒ 记【待办】不记【违规】（诚实报告优先于全绿）
         gaps.push(`${it.id} · ${it.createsTable.name}.${f} — ${declared.replace('[known-gap]', '').trim().slice(0, 70)}`);
@@ -106,7 +124,10 @@ for (const it of constructionItems) {
 // ════════ INV-2 · 派单可判（原"归属可判" —— 域概念已废止 2026-10-04）════════
 // 新判据：① worker 必须存在（派给谁）② paths 必须非空（落点已定）③ 形状须是模块
 for (const it of constructionItems) {
+  // 🔴 修 T8 发现（worker 取值域未校验）：'zzz-not-a-worker' 曾 → 0 违规
+  const VALID_WORKERS: readonly Worker[] = ['cto', 'win', 'mac', 'k3', 'gov'];
   if (!it.worker) fails.push({ inv: 'INV-2', id: it.id, msg: 'worker 未指定（派给谁）' });
+  else if (!VALID_WORKERS.includes(it.worker)) fails.push({ inv: 'INV-2', id: it.id, msg: `worker "${it.worker}" 不在取值域 ${VALID_WORKERS.join('/')}` });
   if (it.paths.length === 0) {
     if (!it.pathTBD) fails.push({ inv: 'INV-2', id: it.id, msg: '无 paths 且未标 pathTBD' });
   } else if (!isModuleShape(it.paths)) {
@@ -139,6 +160,59 @@ for (const it of constructionItems) {
       }
     }
   }
+}
+
+// ════════ INV-4 · 写集互斥（2026-10-04 立 —— 治 T8 面 3 核心反例）════════
+// 背景：创始人废止"域"后，**写集互斥是唯一的替代物**（废止件 §五③）。
+//       而 T8 实测：登记件自身 35 对写集重叠、执法体一条不查。
+// 分级（按真实语义）：
+//   · **同路径** ⇒ exit 1（两张卡改同一文件，必须显式声明共写并串行）
+//   · 包含 / 相交 ⇒ ℹ️ 报告（宽卡应写窄；这是提示不是违规）
+{
+  type G = { pat: string; item: string; re: RegExp; dir: boolean };
+  const gs: G[] = [];
+  const mkRe = (p: string, dir: boolean): RegExp =>
+    new RegExp(
+      '^' + p.replace(/[*]{2}/g, '\u0000').replace(/[*]/g, '[^/]*').replace(/\u0000/g, '.*')
+        .replace(/[.+^${}()|[\]\\]/g, '\\$&') + (dir ? '(/.*)?$' : '$'),
+    );
+  for (const it of constructionItems) {
+    for (const raw of it.paths) {
+      const pp = normalizePath(raw).replace(/\/$/, '');
+      const dir = pp.endsWith('/**') || !pp.includes('.');
+      gs.push({ pat: pp, item: it.id, re: mkRe(pp, dir), dir });
+    }
+  }
+  const samePath: string[] = [];
+  const softShared: string[] = [];
+  const soft: string[] = [];
+  const seen = new Set<string>();
+  for (const g1 of gs) for (const g2 of gs) {
+    if (g1.item >= g2.item) continue;
+    if (!g1.re.test(g2.pat) && !g2.re.test(g1.pat)) continue;
+    const k = [g1.item, g2.item].sort().join('|') + '|' + [g1.pat, g2.pat].sort().join('~');
+    if (seen.has(k)) continue;
+    seen.add(k);
+    if (g1.pat === g2.pat) samePath.push(`${g1.item} × ${g2.item} 同写 ${g1.pat}`);
+    else soft.push(`${g1.item} × ${g2.item}  ${g1.pat} ／ ${g2.pat}`);
+  }
+  for (const x of samePath) {
+    const id = x.split(' ')[0];
+    // 🔴 修：原先只查一侧（pair 的第一个 id）⇒ 声明在另一侧时漏判
+    //    改为【两侧都查】
+    const ids2 = [x.split(' ')[0], x.split(' ')[2]];
+    const pathPart = x.split('同写 ')[1] ?? '';
+    const declared = ids2.some((iid) =>
+      (constructionItems.find((y) => y.id === iid)?.sharedWrite ?? []).some((w) => w.includes(pathPart)),
+    );
+    if (!declared) {
+      fails.push({ inv: 'INV-4', id, msg: `写集同路径且未声明共写（须加 sharedWrite）：${x}` });
+    } else {
+      softShared.push(x);
+    }
+  }
+  if (soft.length) notes.push(`写集包含/相交 ${soft.length} 对（提示：宽卡应写窄）—— 前 5: ${soft.slice(0, 5).join(' ; ')}`);
+  if (softShared.length) notes.push(`已显式声明共写（须串行）${softShared.length} 对: ${softShared.join(' ; ')}`);
 }
 
 // ════════ 块完整性 ════════

@@ -61,6 +61,11 @@ export interface ConstructionItem {
   pathTBD?: boolean;
   /** 跨块依赖的施工项 id。空数组 = 无跨块依赖。 */
   dependsOn: string[];
+  /** 🔴 **显式声明共写**（2026-10-04 立，治 INV-4 写集同路径）
+   *  格式：`"<另一 item id>: <文件路径>"` —— 声明"本项与该 item 共写此文件，须串行"。
+   *  依据：创始人废止"域"后，**写集互斥是唯一替代物**；而真实项目里确有"两张卡改同一文件"
+   *        的正当情况 ⇒ 不许静默重叠，但允许**显式声明 + 串行**。 */
+  sharedWrite?: string[];
   /** 本项若建表，列出表的 NOT NULL 字段 ⇒ 门禁查每个字段有无生产者（INV-1） */
   createsTable?: {
     name: string;
@@ -155,6 +160,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   },
   {
     id: '0-2',
+    sharedWrite: ["2-3: src/growth/feedback-collector.ts（0-2 改聚合键，2-3 改通道；须串行）"],
     worker: 'win', batch: '第0批', block: 'K6',
     title: '进化回写 applied 恒 0（总闸）',
     paths: [
@@ -290,6 +296,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   },
   {
     id: '0-11',
+    sharedWrite: ["2-4: src/tools/tool-registry.ts（0-11 决策死门去留，2-4 接写入门禁；同一文件须串行）"],
     worker: 'win', batch: '第0批', block: 'K2',
     title: 'ToolRegistry 双重死门',
     paths: [
@@ -379,6 +386,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   },
   {
     id: '1-5',
+    sharedWrite: ["3-7: src/routes/diagnosis.ts（1-5 消费 customer-config，3-7 接 Agent 化触发；须串行）"],
     worker: 'win', batch: '第1批', block: 'K7',
     title: 'customer-config 只解析不消费',
     paths: [
@@ -476,18 +484,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       // 🔴 逐字段声明生产者（CTO 2026-10-04 裁定；[known-gap] = 生产者尚未实现，属施工项）
       fieldProducers: {
         org_id: '2-1b 写入侧（哨兵）：从调用上下文取 orgId（宪章 H2 强制，不得留空）',
-        metric_id: '2-1b 写入侧：与参数清单 2-2 的 param_id 对齐（archive/25:142 U2 明写"命名统一是前置"）',
+        metric_id: "producer: 2-1b —— 与参数清单 2-2 的 param_id 对齐（archive/25:142 U2 明写命名统一是前置）",
         entity_id: "2-1b 写入侧：单元粒度（默认为 * ，X10 的 N 个单元样本靠它）",
         observed_at: '2-1b 写入侧：**取值时点**（不是写入时点，archive/25:60）',
         source_type: "[known-gap] enum('compute','42edge','manual','connector') —— 由 2-1b 写入侧按来源填；" +
           "⚠️ 待裁：与 03:192 的 source 自由串（含 erp）两套枚举需归一（T7 面 2 问 C）",
-        is_estimated: '2-1b 写入侧：默认 0（权威文档15 §3.5）',
-        confidence: "2-1b 写入侧：默认 medium（权威文档15 §3.5）",
+        is_estimated: "run: 2-1b 写入侧填（默认 0，权威文档15 §3.5）",
+        confidence: "run: 2-1b 写入侧按权威文档15 §3.5 填（默认 medium）",
         created_at: "SQL DEFAULT（datetime now）—— 无需应用层生产者",
         input_digest: '[known-gap] 输入快照摘要（03:193）—— 需 2-1b 写入侧计算或由 compute 层提供',
         def_version: '[known-gap] 该指标定义/公式版本 —— 依赖 2-6 契约注册表（W4＝⑤纯缺口）',
         value: "2-1b 写入侧：compute 的输出值（就是那个数，archive/25:51）",
-        degraded: "2-1b 写入侧：铁律 24/31 要求降级显式 ⇒ 每个写入点必须给值",
+        degraded: "run: 2-1b 写入侧按铁律 24/31 填（降级必须显式）",
         run_id: "[known-gap] 运行期上下文（03:191）—— 需 2-1b 写入侧传入当前 run 标识",
       },
     },
@@ -503,6 +511,7 @@ export const constructionItems: readonly ConstructionItem[] = [
 
   {
     id: '2-1b',
+    sharedWrite: ["3-8: src/sentinel/（2-1b 加写入侧，3-8 加新哨兵；同目录须串行）"],
     worker: 'win', batch: '第2批', block: 'K3',
     title: '测量值时序 · 写入侧（承重件 W1 的 writer 侧）',
     paths: ['src/sentinel/'],
@@ -533,6 +542,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   },
   {
     id: '2-3',
+    sharedWrite: ["0-2: src/growth/feedback-collector.ts（同上）"],
     worker: 'win', batch: '第2批', block: 'K6',
     title: '反馈两通道分裂 + 正向值被 DDL 拒',
     paths: ['packages/evolution/', 'src/growth/feedback-collector.ts'],
@@ -545,6 +555,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   },
   {
     id: '2-4',
+    sharedWrite: ["0-11: src/tools/tool-registry.ts（同上）"],
     worker: 'win', batch: '第2批', block: 'K2',
     title: '写入门禁两道未接（是 2-1 的前提）',
     paths: ['src/security/file-guard.ts', 'src/tools/tool-registry.ts'],
@@ -663,6 +674,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   },
   {
     id: '3-6',
+    sharedWrite: ["3-7: src/agent/（3-6 readiness 工具，3-7 触发链；同目录须串行）"],
     worker: 'win', batch: '第3批', block: 'K9',
     title: 'agent_readiness 工具',
     paths: [
@@ -679,6 +691,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   },
   {
     id: '3-7',
+    sharedWrite: ["1-5: src/routes/diagnosis.ts（同上）"],
     worker: 'win', batch: '第3批', block: 'K7',
     title: 'Agent 化矩阵的触发点',
     paths: [
@@ -695,6 +708,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   },
   {
     id: '3-8',
+    sharedWrite: ["2-1b: src/sentinel/（同上）"],
     worker: 'win', batch: '第3批', block: 'K3',
     title: 'AI 化机会窗口哨兵（宪章 3.6 报正向）',
     paths: [
@@ -711,6 +725,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   },
   {
     id: '3-9',
+    sharedWrite: ["3-11: extensions/（同上）"],
     worker: 'win', batch: '第3批', block: 'K9',
     title: '生态准入三字段',
     paths: [
@@ -743,6 +758,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   },
   {
     id: '3-11',
+    sharedWrite: ["3-9: extensions/（3-11 加 L1.5 层，3-9 加声明三字段；同目录须串行）"],
     worker: 'win', batch: '第3批', block: 'K4',
     title: '专业包层（L1.5）机制',
     paths: [
