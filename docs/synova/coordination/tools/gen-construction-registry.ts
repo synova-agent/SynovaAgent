@@ -21,6 +21,7 @@ import {
   constructionItems,
   constructionBlocks,
   type AcceptanceStep,
+  deriveBlockDeps,
 } from '../施工项登记.ts';
 
 function fmtAcceptance(a: readonly AcceptanceStep[]): string {
@@ -41,6 +42,7 @@ function main(): number {
   const outPath = outIdx > -1 ? process.argv[outIdx + 1] : undefined;
 
   const items = constructionItems;
+  const blockDeps = deriveBlockDeps();
   const blocks = constructionBlocks;
 
   // 域分布（由 paths 推导，不是手填）
@@ -88,7 +90,7 @@ function main(): number {
   L.push('|---|---|---|---|---|');
   for (const b of blocks) {
     L.push(
-      `| **${b.id}** | ${b.name} | ${b.items.join(', ')} | ${b.dependsOnBlocks.join(', ') || '无'} | ${fmtAcceptance(b.blockAcceptance)} |`,
+      `| **${b.id}** | ${b.name} | ${b.items.join(', ')} | ${(blockDeps[b.id] ?? []).join(', ') || '无'} | ${fmtAcceptance(b.blockAcceptance)} |`,
     );
   }
   L.push('');

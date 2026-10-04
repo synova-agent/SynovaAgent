@@ -81,7 +81,10 @@ for (const it of constructionItems) {
   if (!it.createsTable) continue;
   for (const f of it.createsTable.notNullFields) {
     // 生产者判据：产品仓里存在写入该字段的证据（INSERT/UPDATE/props 赋值），或【有声明位】
-    const g = sh('git', ['grep', '-l', '-E', `\\b${f}\\b`, 'origin/main', '--', 'src/', 'extensions/', 'packages/']);
+    // 🔴 修 T8 发现：原用 `\\b${f}\\b` —— `\\b` 在本机 git ERE 下【不匹配任何东西】，
+    //    ⇒ hasProducer 恒 false ⇒ "必须有生产者"退化为"fieldProducers 里必须有 key"。
+    //    改为 `(^|[^A-Za-z0-9_])${f}([^A-Za-z0-9_]|$)`（手写词边界，git ERE 可用）。
+    const g = sh('git', ['grep', '-l', '-E', `(^|[^A-Za-z0-9_])${f}([^A-Za-z0-9_]|$)`, 'origin/main', '--', 'src/', 'extensions/', 'packages/']);
     const hasProducer = g.ok && g.out.trim().length > 0;
     if (!hasProducer) {
       // 登记件是否有"字段→生产者"声明位？
@@ -147,6 +150,18 @@ for (const b of constructionBlocks) {
     inBlock.add(i);
   }
   if (b.blockAcceptance.length === 0) fails.push({ inv: 'BLOCK', id: b.id, msg: '无块级完成标准' });
+  // 🔴 修 T8 发现：blockAcceptance 原先只判"非空" ⇒ 块级标准是漏判区
+  //    现把 INV-3 的三条判据同样施于块级标准
+  for (const a of b.blockAcceptance) {
+    const hasExp = a.expectExit !== undefined || a.expectStdoutContains !== undefined || a.expectRowsGt !== undefined;
+    if (!hasExp) fails.push({ inv: 'BLOCK-INV3', id: b.id, msg: '块级标准无 expect' });
+    if (GREP_ONLY.test(a.run)) fails.push({ inv: 'BLOCK-INV3②', id: b.id, msg: `块级标准纯 grep 型 ⇒ ${a.run.slice(0, 60)}` });
+    for (const f of fileRefs(a.run)) {
+      if (!existsInMain(f) && !inOwnWriteSet(f, b.items.flatMap((iid) => constructionItems.find((x) => x.id === iid)?.paths ?? []))) {
+        fails.push({ inv: 'BLOCK-INV3③', id: b.id, msg: `块级标准引用的 "${f}" 不存在且不在块内任一项写集内 ⇒ 跑不起来` });
+      }
+    }
+  }
 }
 for (const it of constructionItems) if (!inBlock.has(it.id)) fails.push({ inv: 'BLOCK', id: it.id, msg: '不属于任何块' });
 
@@ -156,6 +171,25 @@ for (const it of constructionItems) if (!inBlock.has(it.id)) fails.push({ inv: '
   const dep = deriveBlockDeps();
   const n = Object.values(dep).reduce((a, x) => a + x.length, 0);
   notes.push(`块间依赖（自动汇总）: ${n} 条 —— ${Object.entries(dep).filter(([, v]) => v.length).map(([k, v]) => `${k}→[${v.join(',')}]`).join('  ')}`);
+  // 🔴 T8 发现"块级依赖有 2 个环"，CTO 复核后判定：**这 2 个"环"是块分组的产物，不是真环**。
+  //    证据（项级实测）：K3⇄K5 的项级依赖为 2-1a→2-6、2-2→2-1a、2-7→2-1b ⇒ 链 2-6→2-1a→2-2，**无环**；
+  //                    K7⇄K9 为 3-1→1-2、3-7→3-6 ⇒ 两条**互不相连**的线性边，被"块"圈在一起才成环。
+  //    ⇒ 真依赖在**项级**（INV-1 已判，无环）；块级"环"是分组假象 ⇒ 降为 ℹ️ 不记违规。
+  //    （这与"域"同型：拿【分组】当【依赖】会产生假问题。）
+  {
+    const seenB = new Set<string>(), stackB = new Set<string>();
+    const cycles: string[] = [];
+    const walkB = (b: string, path: string[]): void => {
+      if (stackB.has(b)) { cycles.push([...path, b].join(' → ')); return; }
+      if (seenB.has(b)) return;
+      stackB.add(b);
+      for (const m of dep[b as keyof typeof dep] ?? []) walkB(m as string, [...path, b]);
+      stackB.delete(b); seenB.add(b);
+    };
+    for (const b of constructionBlocks) walkB(b.id, []);
+    const uniq = [...new Set(cycles)];
+    if (uniq.length) notes.push(`块级"环"（分组假象，非真环 —— 项级已验无环）: ${uniq.join(' / ')}`);
+  }
 }
 
 // ════════ 报告 ════════
