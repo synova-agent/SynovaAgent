@@ -16,8 +16,9 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   降级 — git 不在 PATH（`command -v` 守卫）⇒ exit 2 + run=true（不可用平台显式 SKIP，不谎报通过）
 #   失败 — 调用非法（未知参数 / 未知 --mode / --mode github 缺 $GITHUB_OUTPUT）⇒ exit 1 + fail-closed run=true
 #   接线 — ci.yml control-tower-tests 真调用分类器 + id: ctsignal + 重活 step 消费 run；
-#          job 恒被调度（无 job 级 if:/paths:）；job 名/matrix/timeout 未改；其余 9 job 保持
-#          无 job 级 if:（分支保护基线不变，仅 checker-review 原有 if: 逐字不变）；
+#          job 恒被调度（无 job 级 if:/paths:）；job 名/matrix/timeout 未改（D1147 后期望值 =
+#          单元素 ubuntu 矩阵 + timeout 14）；其余 6 job 保持无 job 级 if:（分支保护基线不变，
+#          仅 checker-review 原有 if: 逐字不变；D1147 的 2 个 windows 顾问 job 走例外登记面）；
 #          workflow_dispatch + force 输入 + schedule cron 已声明；ctsignal 在重活 step 之前；canary 清单含本测试
 #   判别 — 「路径集收窄即红」①: tests/ 引用的 N 个 scripts/ leaf 必须全部 run=true
 #   判别 — 「路径集收窄即红」②: tests 引用的全体 workflow 文件必须全部 run=true
@@ -238,10 +239,15 @@ else
 fi
 printf '%s' "$CTJOB" | grep -qF "name: Control Tower Gate Tests (\${{ matrix.os }})" \
   && ok "身份不变: job 名未改（必需 context 名依赖）" || no "job 名被改动"
-printf '%s' "$CTJOB" | grep -qF "timeout-minutes: \${{ matrix.os == 'windows-latest' && 106 || 14 }}" \
-  && ok "身份不变: job timeout-minutes 未改" || no "job timeout-minutes 被改动"
-printf '%s' "$CTJOB" | grep -qF 'os: [ubuntu-latest, windows-latest]' \
-  && ok "身份不变: strategy.matrix 未改" || no "strategy.matrix 被改动"
+# D1147（单套门禁 · 批2，2026-10-05）: 下面两处钉子的**期望值**更新（windows 腿降级为顾问 job）——
+#   这是**有意的门禁结构变更，随本卡同批送 K3/CTO 过审**（PR 正文点名），不是"改夹具迁就实现":
+#   钉子的语义（该 job 的矩阵/timeout 必须逐字可核）逐字保留，改的只是期望值。
+#   🔴 判别性保持（改坏即红）: 矩阵加回 windows、或 timeout 改回条件表达式 ⇒ 立刻 no ⇒ exit 1。
+#   收敛为锚定 ERE（比原 `-qF` 更强: `timeout-minutes: 14` 不会被 `140` 之类前缀欺骗）。
+printf '%s' "$CTJOB" | grep -qE '^    timeout-minutes: 14$' \
+  && ok "身份不变: job timeout-minutes 未改（D1147 后期望值 = 14）" || no "job timeout-minutes 被改动（D1147 后期望值 = 14）"
+printf '%s' "$CTJOB" | grep -qE '^        os: \[ubuntu-latest\]$' \
+  && ok "身份不变: strategy.matrix 未改（D1147 后期望值 = 单元素 ubuntu）" || no "strategy.matrix 被改动（D1147 后期望值 = 单元素 ubuntu）"
 printf '%s' "$CTJOB" | grep -q 'steps.docsonly.outputs.docs_only' \
   && ok "判据嵌套: docs-only 内门保留（非替代）" || no "docs-only 内门丢失"
 # 分支保护基线（D1039 队长裁决 → **D1112 语义修正，2026-10-02**）
@@ -259,6 +265,11 @@ printf '%s' "$CTJOB" | grep -q 'steps.docsonly.outputs.docs_only' \
 FROZEN_IF_TEST='${{ !cancelled() }}'
 DOWNSTREAM_NEEDS_JOBS="test golden-case"   # 有 needs: 且承载必需 context 的 job（新增者必须显式登记）
 BASELINE_NO_IF_JOBS="quality architecture test-kit-architecture integration-check audit gate-integrity"
+# D1147: windows 顾问腿 = 有 needs: 但**不承载必需 context**（其 context 名已移出必需集）⇒ 走
+#   「已知无需 !cancelled() 冻结式」的例外登记面（与 checker-review 同栏）。判据未放松:
+#   这两条若被写进必需集，「job 级 if: ⇒ 非 scripts PR 不产 check-run ⇒ 永久 blocked」即复活
+#   （ci.yml 文件末 D1147 段约束 ②）——故必须显式登记在此，而不是静默放过。
+NEEDS_NO_REQUIRED_CTX_JOBS="checker-review test-kit-windows-advisory control-tower-windows-advisory"
 IF_TOUCHED=""
 for j in $BASELINE_NO_IF_JOBS; do
   job_block "$j" | grep -qE '^    if:' && IF_TOUCHED="${IF_TOUCHED} ${j}"
@@ -282,7 +293,7 @@ fi
 NEEDS_UNREG=""
 for j in $(grep -nE '^  [a-z0-9_-]+:$' "$CI" | sed 's/^[0-9]*:  //; s/:$//'); do
   if job_block "$j" | grep -qE "^    needs:"; then
-    case " $DOWNSTREAM_NEEDS_JOBS checker-review " in
+    case " $DOWNSTREAM_NEEDS_JOBS $NEEDS_NO_REQUIRED_CTX_JOBS " in
       *" $j "*) : ;;
       *) NEEDS_UNREG="${NEEDS_UNREG} ${j}" ;;
     esac

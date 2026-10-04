@@ -9,7 +9,10 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   check-run 永不上报 ⇒ PR 永久 blocked（405 "12 of 12 required status checks are expected."）。
 #
 # 覆盖矩阵（铁律 48: 正常/降级/边界 + 接线）:
-#   正常 ① — 真仓默认模式 → exit 0 且 12/12 命中（真机自检）
+#   D1147（单套门禁 · 批2，2026-10-05）: ①/⑤live少一条/⑥ 三处原**写死必需集里的具体 context 名或条数**
+#     （`12/12`、`npm audit`）——必需集是**会变的**（12→9→10…），写死即每次变更都要改夹具。
+#     现改为**从真/夹具基线派生**金丝雀与 N（语义与判别性不变，见各条内注）；本改动随本卡送 K3/CTO 过审。
+#   正常 ① — 真仓默认模式 → exit 0 且 N/N 命中（N 从真基线派生，≥5 下限）（真机自检）
 #   反例 ② — 夹具把 `name: Integration Contract Check` 改一个字符 → **必红（exit 1）且点名该 context**
 #            （判别性: 夹具从真 ci.yml/真基线只读复制，改坏即红）
 #   边界 ③ — 矩阵展开: `Vitest (1/2)/(2/2)`、`Test-Kit …(windows-latest)`、`Control Tower …(ubuntu-latest)`、
@@ -81,11 +84,21 @@ open(path, "w", encoding="utf-8").write(text.replace(old, new, 1))
 PYEOF
 }
 
-# ── ① 正常: 真机自检 12/12 ──
+# ── ① 正常: 真机自检 N/N（N = 真基线数据行数）──
+#   D1147（单套门禁 · 批2）: 原写死 `12/12`。必需集是**会变的**（12→9→10…），写死即每次变更都要改夹具
+#   ⇒ 改为从真基线数出 N，断言 `${N}/${N} 命中`，并加 `N ≥ 5` 下限（防"空/残基线 ⇒ 0/0 假绿"）。
+#   判别性未放松: checker 少报一条即红；"删接线必失效"仍由 ⑧ 反向验证独立把守。
 echo "── ① 正常（真机自检）──"
 runq "$PY" "$C"
 if [ "$RC" -eq 0 ]; then ok "真仓默认模式 → exit 0"; else no "真仓默认模式应 exit 0，实际 $RC: $(echo "$OUT" | tail -2 | tr '\n' '|')"; fi
-echo "$OUT" | grep -q "12/12 命中" && ok "12/12 必需 context 全命中" || no "未打印 12/12 命中: $(echo "$OUT" | tail -3 | tr '\n' '|')"
+N_EXPECTED="$(grep -v '^[[:space:]]*#' "$BASE" | grep -c 'source=branch-protection API' || true)"
+if [ "${N_EXPECTED:-0}" -ge 5 ]; then
+  ok "真基线数据行数 N=${N_EXPECTED}（≥5 下限成立）"
+else
+  no "真基线数据行数异常: ${N_EXPECTED:-0}（应 ≥ 5；空/残基线不得进入 ① 的比较）"
+  N_EXPECTED=0
+fi
+echo "$OUT" | grep -q "${N_EXPECTED}/${N_EXPECTED} 命中" && ok "${N_EXPECTED}/${N_EXPECTED} 必需 context 全命中" || no "未打印 ${N_EXPECTED}/${N_EXPECTED} 命中: $(echo "$OUT" | tail -3 | tr '\n' '|')"
 echo "$OUT" | grep -q "REQUIRED-CONTEXTS: OK" && ok "末行判定 REQUIRED-CONTEXTS: OK" || no "末行判定异常"
 
 # ── ③ 矩阵展开可还原（--verbose 明细；含对象数组 include）──
@@ -186,13 +199,18 @@ runq "$PY" "$C" --root "$TMPD/fix-nodir" --workflows "$TMPD/no-such-workflows"
 [ "$RC" -eq 2 ] && ok "workflows 目录不存在 → exit 2" || no "缺 workflows 目录应 exit 2，实际 $RC"
 
 # ── ⑥ 基线重复登记 → exit 1 ──
+#   D1147: 原用写死的 `npm audit` 当"已在册项"——该 context 已随单套门禁移出必需集 ⇒ 写死即夹具随
+#   必需集变更而失效。改为**从夹具基线自身取第一条登记名**当金丝雀（语义不变: 在册者再登记一次 = 重复），
+#   并把"非空"作为前置断言（防空基线把消息断言变成恒真）。判别性: 重复未被检出 ⇒ rc≠1 ⇒ 红。
 FIXD="$TMPD/fix-dup"
 mk_fixture "$FIXD"
-printf 'npm audit | owner=test | source=branch-protection API | as_of=2026-10-01T00:00:00Z | evidence=fixture\n' \
+DUP_CANARY="$(grep -v '^[[:space:]]*#' "$FIXD/scripts/control-tower/required-checks-baseline.txt" | head -1 | cut -d'|' -f1 | sed -e 's/[[:space:]]*$//')"
+[ -n "$DUP_CANARY" ] || no "⑥ 夹具退化: 未能从夹具基线取到金丝雀 context 名"
+printf '%s | owner=test | source=branch-protection API | as_of=2026-10-01T00:00:00Z | evidence=fixture\n' "$DUP_CANARY" \
   >> "$FIXD/scripts/control-tower/required-checks-baseline.txt"
 runq "$PY" "$C" --root "$FIXD"
-[ "$RC" -eq 1 ] && echo "$OUT" | grep -q "基线重复登记必需 context: npm audit" \
-  && ok "基线重复登记 → exit 1 且点名" || no "重复登记应 exit 1 + 点名，实际 rc=$RC"
+[ "$RC" -eq 1 ] && echo "$OUT" | grep -qF "基线重复登记必需 context: ${DUP_CANARY}" \
+  && ok "基线重复登记 → exit 1 且点名（金丝雀=${DUP_CANARY}）" || no "重复登记应 exit 1 + 点名，实际 rc=$RC"
 
 # ── ④b 跨平台: CRLF 基线 + CRLF workflow → 仍 exit 0（Windows 检出层第一号陷阱）──
 FIXCR="$TMPD/fix-crlf"; mk_fixture "$FIXCR"
@@ -258,16 +276,19 @@ PYEOF
   [ "$RC" -eq 1 ] && echo "$OUT" | grep -qF "live 必需 context 未登记进基线（基线缺 live）: Extra Unregistered Check" \
     && ok "live 多一条 → exit 1 且点名（基线缺 live）" || no "live 多一条应 exit 1 + 点名，实际 rc=$RC"
 
-  "$PY" - "$TMPD/live-ok.json" "$TMPD/live-less.json" <<'PYEOF'
+  # D1147: 金丝雀同样改为**从真基线取第一条登记名**（原写死 `npm audit`，已随单套门禁移出必需集）。
+  LIVE_CANARY="$(grep -v '^[[:space:]]*#' "$BASE" | head -1 | cut -d'|' -f1 | sed -e 's/[[:space:]]*$//')"
+  [ -n "$LIVE_CANARY" ] || no "⑤ 夹具退化: 未能从真基线取到金丝雀 context 名"
+  "$PY" - "$TMPD/live-ok.json" "$TMPD/live-less.json" "$LIVE_CANARY" <<'PYEOF'
 import json, sys
 data = json.load(open(sys.argv[1], encoding="utf-8"))
 ctx = data["required_status_checks"]["contexts"]
-data["required_status_checks"]["contexts"] = [c for c in ctx if c != "npm audit"]
+data["required_status_checks"]["contexts"] = [c for c in ctx if c != sys.argv[3]]
 json.dump(data, open(sys.argv[2], "w", encoding="utf-8"))
 PYEOF
   runq env SYNO_REQUIRED_CONTEXTS_GH="$STUB" STUB_JSON="$TMPD/live-less.json" "$PY" "$C" --root "$FIXA" --api-check
-  [ "$RC" -eq 1 ] && echo "$OUT" | grep -qF "基线登记但 live 已不是必需 context（live 缺基线）: npm audit" \
-    && ok "live 少一条 → exit 1 且点名（live 缺基线）" || no "live 少一条应 exit 1 + 点名，实际 rc=$RC"
+  [ "$RC" -eq 1 ] && echo "$OUT" | grep -qF "基线登记但 live 已不是必需 context（live 缺基线）: ${LIVE_CANARY}" \
+    && ok "live 少一条 → exit 1 且点名（live 缺基线；金丝雀=${LIVE_CANARY}）" || no "live 少一条应 exit 1 + 点名，实际 rc=$RC"
 
   printf 'not-json-at-all\n' > "$TMPD/live-bad.json"
   runq env SYNO_REQUIRED_CONTEXTS_GH="$STUB" STUB_JSON="$TMPD/live-bad.json" "$PY" "$C" --root "$FIXA" --api-check
