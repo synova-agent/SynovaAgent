@@ -1133,7 +1133,7 @@ hr { border:0; border-top:1px solid #30363d; margin:30px 0; }
 <div class="note">
 <strong>第一视角测试（First-Person Test）：</strong>任何专家在给出诊断建议之前，必须先回答"设计者有没有把自己放进最终用户的身体里？最脆弱的时刻能否通过信任测试？"
 
-举例（哇呢宝贝案例）：
+举例（客户A案例）：
 - 战略专家提出"到家月子照护"建议 → 必须回答"如果你是刚生完孩子的母亲，你会让宝宝晚上被带到酒店外另一个空间吗？"
 - 这条规则阻止了表面上"正确"但根本无法通过用户信任测试的建议。
 - 已在 strategy/business_model/marketing 三个专家的RULES.md中注入，并附带哇呢案例作为教学案例。
@@ -1174,11 +1174,11 @@ O8哨兵"组织修复能力"的诊断核心：不是看"修了多少次"，而�
 <tr><td>F5 周转效率</td><td>杜邦分析体系</td><td>DuPont Corporation (1919); Soliman (2008)</td></tr>
 </table>
 
-<h3>2A.9 I10边际经济学 — 哇呢宝贝验证的核心</h3>
+<h3>2A.9 I10边际经济学 — 客户A验证的核心</h3>
 <div class="crit-note">
 <strong>任何客户进入Synova，第一优先级计算的是边际成本和边际收益。</strong>
 
-哇呢宝贝案例的教训：管理层、高管、甚至外部收80万的咨询师都认为"应该砍掉低产会所"——因为用平均会计利润逻辑看，226家月均收入1100元的会所是"亏损的"。但当我们计算边际经济学时：
+客户A案例的教训：管理层、高管、甚至外部收80万的咨询师都认为"应该砍掉低产会所"——因为用平均会计利润逻辑看，226家月均收入1100元的会所是"亏损的"。但当我们计算边际经济学时：
 - 226家低产会所的<strong>变动成本</strong>（取模人员提成25%+会所分成20%+免单成本30元）相对可控
 - 但这226家分摊了工厂28人、运营30人的<strong>固定成本</strong>
 - 砍掉它们 → 固定成本无法等比例缩减 → 年净利润反而下降约134万
@@ -1304,7 +1304,7 @@ function computeCashConversionCycle(fin: {
 <h3>3.2 I10 边际经济学（5个compute函数）</h3>
 
 <div class="note">
-<strong>这些是哇呢宝贝诊断验证过的最关键函数。</strong>任何一个客户进来都要计算边际成本和边际收益。
+<strong>这些是客户A诊断验证过的最关键函数。</strong>任何一个客户进来都要计算边际成本和边际收益。
 </div>
 
 <h4>compute-variable-costs.ts</h4>
@@ -1336,7 +1336,7 @@ function computeVariableCosts(store: GraphStoreReader, teamId: string):
 /**
  * 按客户群计算边际贡献
  * MC_group = Revenue_group - VariableCost_group
- * 在哇呢宝贝案例：高产的150家和低产的226家分群计算
+ * 在客户A案例：高产的150家和低产的226家分群计算
  */
 interface MarginalGroup { groupId:string; revenue:number; variableCost:number; 
   marginalContribution:number; mcRatio:number; isPositive:boolean; }
@@ -1651,9 +1651,9 @@ function computeExploreExploitBalanceV2(store: GraphStoreReader, teamId: string)
 
 <hr>
 
-<h2 id="s7a">七-A、验证案例：哇呢宝贝诊断（P0批次目标输出）</h2>
+<h2 id="s7a">七-A、验证案例：客户A诊断（P0批次目标输出）</h2>
 <div class="crit-note">
-<strong>哇呢宝贝是Synova增长动力学系统的首个端到端验证案例。</strong>9位高管访谈 → 基于增长动力学理论（当时通过上下文注入模拟哨兵+专家） → 诊断报告获得客户"比付80万的外部咨询更准确"的评价。P0批次compute函数实现后，应该能复现该诊断的核心结论。
+<strong>客户A是Synova增长动力学系统的首个端到端验证案例。</strong>9位高管访谈 → 基于增长动力学理论（当时通过上下文注入模拟哨兵+专家） → 诊断报告获得客户"比付80万的外部咨询更准确"的评价。P0批次compute函数实现后，应该能复现该诊断的核心结论。
 </div>
 
 <h3>关键验证结论（P0函数应该能计算出的）</h3>
@@ -1688,7 +1688,7 @@ function computeExploreExploitBalanceV2(store: GraphStoreReader, teamId: string)
 
 <h3>验证步骤</h3>
 <pre><code># P0批次完成后执行
-1. 用哇呢宝贝的实际数据填充模拟GraphStore（Financial/Client/Person/Event节点）
+1. 用客户A的实际数据填充模拟GraphStore（Financial/Client/Person/Event节点）
 2. 运行所有P0哨兵：F1-F5 + I10 + T1-T3 + O1/O8/O9
 3. 产出SentinelFinding[]
 4. 对比手工诊断结论：以上5条核心发现是否被正确触发
@@ -1977,7 +1977,7 @@ export const sentinelNameSentinel = {
 <li><strong>aggregate.ts 调用所有compute函数</strong>——输出SentinelFinding[]格式，每个Finding含id/severity/title/description/evidence/suggestion/detectedAt。</li>
 <li><strong>manifest.json 的computes字段与aggregate.ts中的静态import一致。</strong></li>
 <li><strong>铁律24+31+38</strong>：每个catch有log.warn，返回degraded:true，as any零使用。</li>
-<li><strong>端到端测试（P0必须至少有1个）</strong>：模拟哇呢宝贝数据 → 运行所有P0 compute → 对比手工诊断结论。测试文件：<code>tests/e2e/p0-wane-baby.test.ts</code></li>
+<li><strong>端到端测试（P0必须至少有1个）</strong>：模拟客户A数据 → 运行所有P0 compute → 对比手工诊断结论。测试文件：<code>tests/e2e/p0-client-a.test.ts</code></li>
 </ol>
 
 <h3>9.3 测试文件要求</h3>
@@ -2045,7 +2045,7 @@ describe('computeKzIndex', () => {
 
 <h3>10.3 Day 3-5: P0 I10边际经济学（最关键）</h3>
 <div class="crit-note">
-<strong>这是哇呢宝贝诊断验证过的核心函数。</strong>任何一个客户都要计算边际成本和边际收益。
+<strong>这是客户A诊断验证过的核心函数。</strong>任何一个客户都要计算边际成本和边际收益。
 </div>
 <table>
 <tr><th>顺序</th><th>任务</th><th>文件</th><th>状态</th></tr>
@@ -2072,7 +2072,7 @@ describe('computeKzIndex', () => {
 <tr><td>22</td><td>审查 <code>compute-problem-action-cycle.ts</code></td><td>extensions/sentinels/org-repairability/computes/compute-org-repairability.ts</td><td>✅ 需升级V2</td></tr>
 <tr><td>23</td><td>审查 <code>compute-finkelstein-power-index.ts</code></td><td>extensions/sentinels/power-rigidity/computes/compute-power-rigidity.ts</td><td>✅ 需加Stage豁免</td></tr>
 <tr><td>24</td><td>升级 <code>compute-explore-exploit-balance.ts</code></td><td>extensions/sentinels/explore-exploit-balance/computes/compute-explore-exploit-balance.ts</td><td>⚠ 需V1→V2</td></tr>
-<tr><td>25</td><td>端到端测试</td><td>tests/e2e/p0-wane-baby.test.ts</td><td>⚠ 需新建</td></tr>
+<tr><td>25</td><td>端到端测试</td><td>tests/e2e/p0-client-a.test.ts</td><td>⚠ 需新建</td></tr>
 </table>
 
 <h3>10.6 P0完成后: P1→P2 依次推进</h3>
@@ -2093,7 +2093,7 @@ describe('computeKzIndex', () => {
 <tr><td>三轮研究收敛报告</td><td><a href="D:/novis-backup-20260526/Novis/synova-agent/docs/research/growth-diagnostics/Synova-三轮研究收敛报告-20260703.html">Synova-三轮研究收敛报告-20260703.html</a></td><td>管理经济学+公司金融+博弈论等170+公式来源</td></tr>
 <tr><td>专家文件合并任务</td><td><a href="D:/novis-backup-20260526/Novis/synova-agent/docs/research/growth-diagnostics/expert-files-merge-task.md">expert-files-merge-task.md</a></td><td>10→5文件合并规格</td></tr>
 <tr><td>系统全面自查报告</td><td><a href="D:/novis-backup-20260526/Novis/synova-agent/docs/research/growth-diagnostics/Synova系统全面自查报告-20260702.html">Synova系统全面自查报告-20260702.html</a></td><td>9维度缺陷审计</td></tr>
-<tr><td>哇呢宝贝诊断</td><td><a href="D:/novis-backup-20260526/Novis/synova-agent/docs/research/growth-diagnostics/诊断报告-新生儿纪念品企业-20260627.html">诊断报告-新生儿纪念品企业-20260627.html</a></td><td>真实客户验证案例</td></tr>
+<tr><td>客户A诊断</td><td><a href="D:/novis-backup-20260526/Novis/synova-agent/docs/research/growth-diagnostics/诊断报告-新生儿纪念品企业-20260627.html">诊断报告-新生儿纪念品企业-20260627.html</a></td><td>真实客户验证案例</td></tr>
 <tr><td>专家注册表</td><td><a href="D:/novis-backup-20260526/Novis/synova-agent/expert/expert-registry.yaml">expert/expert-registry.yaml</a></td><td>8位专家声明</td></tr>
 </table>
 
