@@ -134,8 +134,8 @@ install_hook "post-commit"
 # 幂等: 在 clone 与主仓重复运行均无害（local 已设 -> 跳过不覆盖）。
 _ensure_clone_git_config
 
-# CT-47 / D457 + D1073: 注册 union 合并驱动
-# 🔴 D1073 变更: `.claude/bypass.log` 已**停跟踪**（.gitignore）⇒ 它不再是 union 的适用对象。
+# CT-47 / D457 + D1145: 注册 union 合并驱动
+# 🔴 D1145 变更: `.claude/bypass.log` 已**停跟踪**（.gitignore）⇒ 它不再是 union 的适用对象。
 #   本驱动仍保留，因为 `.claude/reference-map.md`（CT-48/D508）仍声明 `merge=union`。
 #   幂等: 重复运行 set 覆盖，无害。
 git config merge.union.driver "git merge-file --union %A %O %B" 2>/dev/null || true  # swallow-ok: git config 失败=非 git 仓库/只读, 降级不阻断

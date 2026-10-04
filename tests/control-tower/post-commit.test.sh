@@ -3,7 +3,7 @@
 export PYTHONIOENCODING=utf-8
 export LC_ALL=C.UTF-8 2>/dev/null || true
 # ═══════════════════════════════════════════════════════════════
-# post-commit.test.sh — D1073 / D735 Stage 2: hook 层 COMMITTED 登记（**无影子提交**）
+# post-commit.test.sh — D1145 / D735 Stage 2: hook 层 COMMITTED 登记（**无影子提交**）
 #
 # 覆盖矩阵（铁律 48 三路径 + 接线）:
 #   正常 — 裸 git commit（marker 新鲜=pre-commit 跑过）→
@@ -30,13 +30,13 @@ ok() { echo "  ✅ $1"; PASS=$((PASS+1)); }
 no() { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
 TMPD="$(mktemp -d)"; trap 'rm -rf "$TMPD"' EXIT
 
-echo "=== D1073 Stage 2: bypass hook 层登记（无影子提交）==="
+echo "=== D1145 Stage 2: bypass hook 层登记（无影子提交）==="
 
 # ── 接线 ──
 if grep -q -- '--no-verify -q -o -m' "$HOOK_SRC"; then
-  no "接线: 影子登记提交段仍在（D1073 要求移除）"
+  no "接线: 影子登记提交段仍在（D1145 要求移除）"
 else
-  ok "接线: 影子登记提交段已移除（D1073）"
+  ok "接线: 影子登记提交段已移除（D1145）"
 fi
 grep -q 'bypass-ledger.sh" append' "$HOOK_SRC" && ok "接线: per-session 账本 append 在位" || no "账本 append 未接线"
 grep -qE '^\.claude/bypass\.log$' "$REPO/.gitignore" && ok "接线: .gitignore 覆盖 .claude/bypass.log（停跟踪）" || no ".gitignore 缺停跟踪条目"
@@ -57,7 +57,7 @@ git -C "$SB" init -q
 git -C "$SB" config user.name t
 git -C "$SB" config user.email t@t
 # 沙箱需具备真实仓的 scripts/ 布局（hook 经 $ROOT 解析 bypass-ledger.sh）——用符号链接复现，
-# 不复制（D1073: 账本落点解析依赖 $ROOT/scripts/control-tower/bypass-ledger.sh）
+# 不复制（D1145: 账本落点解析依赖 $ROOT/scripts/control-tower/bypass-ledger.sh）
 ln -s "$REPO/scripts" "$SB/scripts"
 printf '#!/bin/bash\nexec bash "%s"\n' "$HOOK_SRC" > "$SB/.git/hooks/post-commit"
 chmod +x "$SB/.git/hooks/post-commit"
@@ -81,7 +81,7 @@ SUBJ=$(git -C "$SB" log -1 --format=%s)
 [ "$SUBJ" = "feat: real commit A" ] && ok "HEAD 即真实提交（无影子提交）" || no "HEAD 非真实提交: $SUBJ"
 git -C "$SB" status --porcelain | grep -q 'bypass.log' && no "工作树出现该文件变更（忽略失效）" || ok "工作树对该文件零变更（停跟踪生效）"
 
-# 场景A2: 幂等 — 同一 HEAD 再跑一次 post-commit ⇒ 不重复登记（D1073 由「影子提交防递归」改为「按 HASH 幂等」）
+# 场景A2: 幂等 — 同一 HEAD 再跑一次 post-commit ⇒ 不重复登记（D1145 由「影子提交防递归」改为「按 HASH 幂等」）
 LINES_BEFORE=$(grep -c . "$LEDGER" 2>/dev/null || echo 0)
 (cd "$SB" && SYNO_SESSION_ID=test bash "$HOOK_SRC" >/dev/null 2>&1)
 LINES_AFTER=$(grep -c . "$LEDGER" 2>/dev/null || echo 0)

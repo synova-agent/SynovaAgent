@@ -35,12 +35,24 @@ SYNO_BASE_REF=origin/main bash "$GATE" >/dev/null 2>&1
 rc=$?
 [ "$rc" -eq 0 ] && ok "无新提交对账 → exit 0" || no "无新提交应 exit 0, 实际 $rc"
 
-# ── 边界: bypass.log 缺失 → exit 1 ──
+# ── 边界（D1145 Stage 2 语义）: **全部来源皆空** → exit 1；仅镜像缺失但账本在 → 不判 fail-closed ──
+# 旧语义: 单文件 `.claude/bypass.log` 不存在即 exit 1；停跟踪后该文件在新 clone/CI 不存在属正常态，
+# 故 fail-closed 判据改为「全部来源皆空」。本用例两段都断言，防止语义被改回单文件口径。
 mv "$BYPASS" "$BYPASS.u1bak" 2>/dev/null || true  # swallow-ok: bypass.log 备份/还原操作, 测试隔离可忽略
+# ① 仅镜像缺失（账本来源仍在）→ 不得因"文件不存在"判 fail-closed
+EMPTY_SESS="$(mktemp -d /tmp/d1145-empty-sess.XXXXXX)"
+SYNO_BASE_REF=origin/main bash "$GATE" >/dev/null 2>&1
+rc_partial=$?
+[ "$rc_partial" -ne 1 ] && ok "仅镜像缺失（账本来源仍在）→ 未误判 fail-closed（rc=${rc_partial}）" \
+  || no "仅镜像缺失却判 exit 1（旧单文件口径残留）"
+# ② 全来源皆空（镜像 + per-session 账本都移走）→ exit 1
+LEDGER_PATH="$(bash "$REPO/scripts/control-tower/bypass-ledger.sh" path 2>/dev/null || true)"
+[ -n "$LEDGER_PATH" ] && [ -f "$LEDGER_PATH" ] && mv "$LEDGER_PATH" "$LEDGER_PATH.u1bak"  # swallow-ok: 测试隔离
 SYNO_BASE_REF=origin/main bash "$GATE" >/dev/null 2>&1
 rc=$?
+[ -n "$LEDGER_PATH" ] && [ -f "$LEDGER_PATH.u1bak" ] && mv "$LEDGER_PATH.u1bak" "$LEDGER_PATH"  # swallow-ok: 还原
 cleanup
-[ "$rc" -eq 1 ] && ok "bypass.log 缺失 → exit 1" || no "bypass.log 缺失应 exit 1, 实际 $rc"
+[ "$rc" -eq 1 ] && ok "全部来源皆空 → exit 1（fail-closed）" || no "全部来源皆空应 exit 1, 实际 $rc"
 
 # ── 边界: 显式 SYNO_BASE_REF 不可解析 → exit 1（硬错误, 非 fail-open）──
 SYNO_BASE_REF="nonexistent-ref-xyz" bash "$GATE" >/dev/null 2>&1

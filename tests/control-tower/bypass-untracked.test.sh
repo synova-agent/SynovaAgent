@@ -3,7 +3,7 @@
 export PYTHONIOENCODING=utf-8
 export LC_ALL=C.UTF-8 2>/dev/null || true
 # ═══════════════════════════════════════════════════════════════
-# bypass-untracked.test.sh — D1073「改坏即红」判别性夹具
+# bypass-untracked.test.sh — D1145「改坏即红」判别性夹具
 #
 # 判据（本卡 #1073 Done ⑤）: **把停跟踪回退 ⇒ 两分支必冲突重现**。
 # 三路径:
@@ -23,7 +23,7 @@ ok() { echo "  ✅ $1"; PASS=$((PASS+1)); }
 no() { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
 TMPD="$(mktemp -d)"; trap 'rm -rf "$TMPD"' EXIT
 
-echo "=== D1073: bypass.log 停跟踪 —— 改坏即红判别性 ==="
+echo "=== D1145: bypass.log 停跟踪 —— 改坏即红判别性 ==="
 
 # ── ① 现状断言 ──
 if git -C "$REPO" ls-files --error-unmatch .claude/bypass.log >/dev/null 2>&1; then
@@ -73,7 +73,7 @@ git -C "$SB" checkout -q main
 git -C "$SB" rm --cached -q .claude/bypass.log
 printf '.claude/bypass.log\n' >> "$SB/.gitignore"
 git -C "$SB" add .gitignore >/dev/null 2>&1
-git -C "$SB" commit -q -m "untrack + ignore bypass.log (D1073)" >/dev/null 2>&1
+git -C "$SB" commit -q -m "untrack + ignore bypass.log (D1145)" >/dev/null 2>&1
 if git -C "$SB" status --porcelain | grep -q 'bypass.log'; then
   no "③ 停跟踪提交后工作树仍出现该文件（$(git -C "$SB" status --porcelain | head -2 | tr '\n' ' ')）"
 else

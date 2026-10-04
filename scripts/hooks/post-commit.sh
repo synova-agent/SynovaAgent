@@ -11,12 +11,12 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 MARKER="$ROOT/.claude/last-precommit-success"
 
-# ═══ D1073 / D735 Stage 2: bypass 账本 —— per-session 落点**权威** + 本地兼容镜像 ═══
+# ═══ D1145 / D735 Stage 2: bypass 账本 —— per-session 落点**权威** + 本地兼容镜像 ═══
 # 契约(铁律 47):
 #   @input  — stdin 一行证据文本
 #   @output — 同一行追加到 ① $ROOT/.sessions/<sid>/bypass.log（**权威**；.sessions/ 已被
 #               .gitignore 忽略 ⇒ 写入不产生任何 git 工作树变更）
-#                           ② $ROOT/.claude/bypass.log（**本地兼容镜像**；D1073 起已停跟踪，
+#                           ② $ROOT/.claude/bypass.log（**本地兼容镜像**；D1145 起已停跟踪，
 #               保留仅为旧读者兼容：pre-commit GATEKEEPER / 7c 审计 / check-bypass-log）
 #   @degraded — ① 失败 → 仍写 ②（证据不丢）+ stderr 显式点名（铁律 11：不静默）
 _bypass_append() {
@@ -30,7 +30,7 @@ _bypass_append() {
   printf '%s\n' "$line" >> "$ROOT/.claude/bypass.log"
 }
 
-# ═══ D1073: 幂等判据 —— 该 HASH 是否已在账本里（替代原「影子提交 message 防递归」）═══
+# ═══ D1145: 幂等判据 —— 该 HASH 是否已在账本里（替代原「影子提交 message 防递归」）═══
 # 契约(铁律 47):
 #   @input  $1=commit HASH
 #   @output exit 0=已登记 / 1=未登记（含账本不可读→按"未登记"处理，宁可多记一行不丢证据）
@@ -98,16 +98,16 @@ if [ -f "$MARKER" ]; then
         esac
         # pass — D366: 不 rm, marker 只由 pre-commit 覆盖 (并发 session 互不误删)
 
-        # ═══ D1073 / D735 Stage 2: COMMITTED 登记（**无影子提交**）═══
+        # ═══ D1145 / D735 Stage 2: COMMITTED 登记（**无影子提交**）═══
         # 历史（D521 → D537 #4）: bypass.log 曾是 **git 跟踪文件** ⇒ commit 后必脏 ⇒ hook 只能
         #   立刻把它 commit 掉（"影子登记提交"）才不挡 merge ⇒ 每个提交都派生一条
         #   `chore: bypass COMMITTED 登记 (auto hook, D521)`。
         # 代价（实测）: 9 月 1199 个提交里 327 条（27%）是这种机械提交；126/136 个 open PR
         #   都改这个文件 ⇒ 两两冲突。
-        # D1073 的解法: 该文件**停跟踪**（.gitignore）⇒ 写入不再产生任何 git 变更 ⇒
+        # D1145 的解法: 该文件**停跟踪**（.gitignore）⇒ 写入不再产生任何 git 变更 ⇒
         #   **影子提交整段删除**（不再需要"保持树干净"这个动作）。
         # 证据链不降级: HASH 经 _bypass_append 写入 per-session 权威账本（+ 本地镜像）。
-        # 幂等: D1073 用 **_ledger_has_hash** 取代原「影子提交 message 防递归」——
+        # 幂等: D1145 用 **_ledger_has_hash** 取代原「影子提交 message 防递归」——
         #   前一版靠"上一条提交 message 是登记提交"来跳过重复登记，本质是借影子的副作用当锁；
         #   影子移除后该锁消失，同一 HASH 会被迟到/重复的 post-commit 再登记一次（实测 S6b +1 行）。
         #   现改为按 HASH 幂等：已登记即跳过（与迟到、amend、并发无关）。

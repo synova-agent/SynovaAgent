@@ -3,9 +3,9 @@
 export PYTHONIOENCODING=utf-8
 export LC_ALL=C.UTF-8 2>/dev/null || true
 # ═══════════════════════════════════════════════════════════════
-# clone-shadow-commit.test.sh — **文件名保留（CI 登记名不可漂移）**；被测语义已随 D1073 更新
+# clone-shadow-commit.test.sh — **文件名保留（CI 登记名不可漂移）**；被测语义已随 D1145 更新
 #
-# 🔴 D1073 / D735 Stage 2 变更（原 D540 主题「影子提交」已退役，退役判据 b「使命已完成」）:
+# 🔴 D1145 / D735 Stage 2 变更（原 D540 主题「影子提交」已退役，退役判据 b「使命已完成」）:
 #   原: clone 环境须配 identity，否则 post-commit 的**影子登记提交**失败（L87 降级）；
 #       且须防「影子登记影子」的递归。
 #   现: `.claude/bypass.log` **停跟踪** ⇒ 写入不产生 git 变更 ⇒ 影子提交整段删除 ⇒
@@ -16,7 +16,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #              **无影子提交**（HEAD 即真实提交）；工作树对该文件零变更
 #   C2 降级  — clone **无任何 identity**（useConfigOnly=true + 清空环境）→ 手动触发 post-commit
 #              → **仍成功登记**（新不变量：hook 不再依赖 identity）；无影子提交
-#   C3 幂等  — 同一 HEAD 重跑 post-commit → 账本行数不变（D1073 由「防递归」升级为「按 HASH 幂等」）
+#   C3 幂等  — 同一 HEAD 重跑 post-commit → 账本行数不变（D1145 由「防递归」升级为「按 HASH 幂等」）
 #   C4 隔离  — 双独立 clone，A commit → B 的 HEAD/index 零变化（sha256 指纹，BSD/GNU 可移植）
 #
 # 沙箱: mktemp git 仓库 + 委托 hook 指向真实 post-commit.sh；scripts/ 用符号链接复现真实布局
@@ -26,7 +26,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 set -uo pipefail
 # M13/D521: hook 上下文会导出 GIT_DIR/GIT_WORK_TREE——沙箱 git 命令必须剥掉
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE
-# D1073: 账本 sid 解析优先级 = SYNO_SESSION_ID > DSH_SESSION_ID > 分支名 …
+# D1145: 账本 sid 解析优先级 = SYNO_SESSION_ID > DSH_SESSION_ID > 分支名 …
 # 夹具显式注入，保证落点可预期（不随宿主环境漂移）
 export SYNO_SESSION_ID=clone-test
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -39,10 +39,10 @@ TMPD="$(mktemp -d)"; trap 'rm -rf "$TMPD" 2>/dev/null || true' EXIT
 # 可移植 sha256（macOS/BSD 无 sha256sum；ctrl-tower 模式 5：平台差异显式兜底）
 _sha() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}'; else shasum -a 256 "$1" | awk '{print $1}'; fi; }
 
-echo "=== D1073 Stage 2: clone 环境 bypass 账本登记（无影子提交）==="
+echo "=== D1145 Stage 2: clone 环境 bypass 账本登记（无影子提交）==="
 
 # ── 接线 ──
-grep -q -- '--no-verify -q -o -m' "$HOOK_SRC" && no "接线: 影子提交段仍在" || ok "接线: 影子提交段已移除（D1073）"
+grep -q -- '--no-verify -q -o -m' "$HOOK_SRC" && no "接线: 影子提交段仍在" || ok "接线: 影子提交段已移除（D1145）"
 grep -q 'bypass-ledger.sh" append' "$HOOK_SRC" && ok "接线: per-session 账本 append 在位" || no "接线: 账本 append 缺失"
 grep -q "_ledger_has_hash" "$HOOK_SRC" && ok "接线: 按 HASH 幂等判据在位" || no "接线: 幂等判据缺失"
 

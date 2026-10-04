@@ -1,4 +1,4 @@
-# D1073：bypass.log 停跟踪 + 对账改账本来源（126/136 PR 冲突的单一来源）
+# D1145：bypass.log 停跟踪 + 对账改账本来源（126/136 PR 冲突的单一来源）
 
 > 卡: #1073（p0）｜归属: 治理线｜坐标系: 执行态=开发中｜批次=清仓组阶段0｜命名空间=治理｜验证级别=L2-真跑通｜阻塞源=无
 
@@ -58,14 +58,13 @@ c) 决策参考: 参考 Anthropic/DSH（诊断与主路径分离、机制只增�
 
 | 文件 | 类型 |
 |---|---|
-| .claude/task-briefs/2026-10-04-D1073-bypass-untrack.md | task |
-| .gitattributes | task |
-| .github/workflows/ci.yml | task |
-| .gitignore | task |
-| memory/notes/proposed/2026-10-04-d1073-bypass-untrack.md | task |
+| .claude/task-briefs/2026-10-04-D1145-bypass-untrack.md | task |
+| memory/notes/proposed/2026-10-04-d1145-bypass-untrack.md | task |
 | scripts/control-tower/check-bypass-log.sh | task |
 | scripts/hooks/post-commit.sh | task |
 | scripts/install-hooks.sh | task |
 | tests/control-tower/bypass-untracked.test.sh | task |
+| tests/control-tower/check-bypass-log.test.sh | task |
 | tests/control-tower/clone-shadow-commit.test.sh | task |
 | tests/control-tower/post-commit.test.sh | task |
+

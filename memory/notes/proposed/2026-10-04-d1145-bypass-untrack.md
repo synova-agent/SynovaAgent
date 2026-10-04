@@ -1,4 +1,4 @@
-# D1073 · bypass 证据账本停跟踪 —— 126/136 PR 冲突的单一来源根治
+# D1145 · bypass 证据账本停跟踪 —— 126/136 PR 冲突的单一来源根治
 
 - **状态**: proposed
 - **日期**: 2026-10-04
@@ -19,7 +19,7 @@
   5. **fail-closed 判据收紧面**：check-bypass-log 的"单文件存在"改为"全部来源皆空"才 exit 1
      （旧路径在新 clone/CI 不存在属正常态）。
 - **代价**: 该文件不再进 git ⇒ 绕过史的 git 侧留痕由"文件内容"转为"账本 + 归档副本"；
-  停跟踪前内容已归档库外 `~/Synova-过程档案/2026-10-04-D1073-bypass.log-停跟踪前归档.txt`（2023 行）。
+  停跟踪前内容已归档库外 `~/Synova-过程档案/2026-10-04-D1145-bypass.log-停跟踪前归档.txt`（2023 行）。
 - **证据**: `tests/control-tower/bypass-untracked.test.sh`（改坏即红：回退停跟踪 ⇒ 两分支必冲突重现 rc=1；
   停跟踪 ⇒ merge 干净 rc=0）；`post-commit.test.sh` 15/0；`clone-shadow-commit.test.sh` 13/0；
   `post-commit-marker.test.sh` 18/0；CI 密封清单 58 条全 0。

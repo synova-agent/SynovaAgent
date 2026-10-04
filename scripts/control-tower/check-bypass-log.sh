@@ -7,7 +7,7 @@
 # synova-commit 的 COMMITTED 记录写入，导致版本锚点 tag 与执行证据链同时断裂
 # （tag V4.7.1 孤儿 f685fa0 + dc369fd 无 bypass.log 记录），无人发现（无对账方）。
 #
-# 对账: 对比 <base>..HEAD 全部提交与 bypass 账本的 HASH 条目（D1073 起来源 = per-session
+# 对账: 对比 <base>..HEAD 全部提交与 bypass 账本的 HASH 条目（D1145 起来源 = per-session
 #       权威账本 `.sessions/<sid>/bypass.log` ∪ 本地镜像 `.claude/bypass.log`）；
 #       缺失 → 列出 + exit 1（新提交硬要求）；全部有记录 → exit 0。
 #
@@ -22,8 +22,8 @@ set -uo pipefail
 
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 LOG="$ROOT/.claude/bypass.log"
-# D1073 / D735 Stage 2: 对账来源 = **per-session 权威账本**（`.sessions/<sid>/bypass.log`）
-#   + 本地兼容镜像（`.claude/bypass.log`，D1073 起已停跟踪 ⇒ 新 clone / CI 里不存在属正常态）。
+# D1145 / D735 Stage 2: 对账来源 = **per-session 权威账本**（`.sessions/<sid>/bypass.log`）
+#   + 本地兼容镜像（`.claude/bypass.log`，D1145 起已停跟踪 ⇒ 新 clone / CI 里不存在属正常态）。
 #   union 读保证「账本写在 per-session、镜像不存在」不会误判缺记录。
 LEDGER_SH="$ROOT/scripts/control-tower/bypass-ledger.sh"
 LEDGER_SOURCES="$LOG"
@@ -47,7 +47,7 @@ if [ -n "$_base_remote" ] && [ "$_base_remote" != "$_base_branch" ] && [ "${SYNO
 fi
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RESET='\033[0m'
 
-# D1073 / D735 Stage 2: fail-closed 语义**不变但判据改为「全部来源」**——
+# D1145 / D735 Stage 2: fail-closed 语义**不变但判据改为「全部来源」**——
 #   旧路径停跟踪后，新 clone / CI 里 `.claude/bypass.log` 不存在属正常态；
 #   只有**所有来源都不存在**（= 对账无任何数据源）才 exit 1。
 _existing_sources=0
