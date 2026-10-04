@@ -570,6 +570,7 @@ jobs:
             tests/control-tower/check-required-contexts.test.sh \
             tests/control-tower/check-ontology-edge-fields.test.sh \
             tests/control-tower/g6-layer-field.test.sh \
+            tests/control-tower/install-hooks-safe.test.sh \
             tests/control-tower/ci-signal-classify.test.sh; do
             echo "── $t"
             # D1094 平台跳过名单（分层原则：平台无关的失败不该拖垮整条 Windows 腿；但**显式打印**不静默）
