@@ -1621,6 +1621,40 @@ else
   soft_check "D1144 执法体缺失: docs/synova/coordination/tools/check-construction-registry.ts" "1"
 fi
 
+
+# ═══ 溯源冻结：登记件 ↔ 板 双向可追溯（附加检查；同 D782/D734/D1144 模式）═══
+# 背景（K3 全仓审计实测）: 「登记件正文零卡号 + 板自动化零脚本」⇒ 两份事实源会静默分叉。
+# 判据源: docs/synova/coordination/tools/check-cardmap.ts
+#   正向：登记件每项 ⇒ 板上必须有卡（未投放 ⇒ 违规）
+#   反向：板上形如项号的卡 ⇒ 必须在登记件（孤儿 ⇒ **警告**，多为历史遗留/拆项前旧卡）
+#   分叉：与上次生成的 cardmap.json 比对（卡号变了 ⇒ 违规）
+# 三态: 0=一致 / 1=真分叉 / 2=检查自身失败
+# 性能: gh 游标分页（≤2 页）+ 本地解析；实测 <5s
+echo ""
+echo -e "${CYAN}── 溯源冻结 cardmap (D1144) ──${RESET}"
+CM_TOOL="$ROOT/docs/synova/coordination/tools/check-cardmap.ts"
+if [ -f "$CM_TOOL" ]; then
+  CM_NODE=""
+  if command -v node >/dev/null 2>&1; then CM_NODE="$(command -v node)"
+  else for cand in "$HOME"/.nvm/versions/node/*/bin/node; do [ -x "$cand" ] && CM_NODE="$cand"; done; fi
+  CM_TSX="$ROOT/node_modules/tsx/dist/cli.mjs"
+  if [ -n "$CM_NODE" ] && [ -f "$CM_TSX" ]; then
+    CM_OUT=$("$CM_NODE" "$CM_TSX" "$CM_TOOL" 2>&1)
+    CM_EXIT=$?
+    if [ "$CM_EXIT" -eq 0 ]; then
+      soft_pass "D1144 溯源冻结: 登记件 ↔ 板 双向一致"
+    elif [ "$CM_EXIT" -eq 1 ]; then
+      soft_check "D1144 溯源冻结分叉 (跑 npx tsx docs/synova/coordination/tools/check-cardmap.ts 看逐条)" "$CM_OUT"
+    else
+      soft_check "D1144 cardmap 执行失败 (exit=$CM_EXIT, D328 三态——2 表示检查自身失败)" "$CM_OUT"
+    fi
+  else
+    soft_check "D1144 cardmap: 找不到 node 或 tsx" "1"
+  fi
+else
+  soft_check "D1144 cardmap 工具缺失: docs/synova/coordination/tools/check-cardmap.ts" "1"
+fi
+
 # ═══════════════════════════════════════════════════════════════════
 # 结果
 # ═══════════════════════════════════════════════════════════════════

@@ -1,0 +1,263 @@
+{
+  "ref": "generated-from-board",
+  "projectId": "PVT_kwDOFAmDns4Blb57",
+  "total": 64,
+  "map": {
+    "0-1": {
+      "card": 975,
+      "src": "construction"
+    },
+    "0-2": {
+      "card": 976,
+      "src": "construction"
+    },
+    "0-3": {
+      "card": 977,
+      "src": "construction"
+    },
+    "0-4": {
+      "card": 978,
+      "src": "construction"
+    },
+    "0-5": {
+      "card": 979,
+      "src": "construction"
+    },
+    "0-6": {
+      "card": 980,
+      "src": "construction"
+    },
+    "0-7": {
+      "card": 981,
+      "src": "construction"
+    },
+    "0-8": {
+      "card": 982,
+      "src": "construction"
+    },
+    "0-9": {
+      "card": 983,
+      "src": "construction"
+    },
+    "0-10": {
+      "card": 984,
+      "src": "construction"
+    },
+    "0-11": {
+      "card": 985,
+      "src": "construction"
+    },
+    "0-12": {
+      "card": 986,
+      "src": "construction"
+    },
+    "1-1": {
+      "card": 1061,
+      "src": "construction"
+    },
+    "1-2": {
+      "card": 1062,
+      "src": "construction"
+    },
+    "1-3": {
+      "card": 1063,
+      "src": "construction"
+    },
+    "1-4": {
+      "card": 1058,
+      "src": "construction"
+    },
+    "1-5": {
+      "card": 1064,
+      "src": "construction"
+    },
+    "1-6": {
+      "card": 1066,
+      "src": "construction"
+    },
+    "1-7": {
+      "card": 1051,
+      "src": "construction"
+    },
+    "1-8": {
+      "card": 987,
+      "src": "construction"
+    },
+    "1-9": {
+      "card": 988,
+      "src": "construction"
+    },
+    "2-1a": {
+      "card": 1053,
+      "src": "construction"
+    },
+    "2-1b": {
+      "card": 1054,
+      "src": "construction"
+    },
+    "2-2": {
+      "card": 1047,
+      "src": "construction"
+    },
+    "2-3": {
+      "card": 1059,
+      "src": "construction"
+    },
+    "2-4": {
+      "card": 1052,
+      "src": "construction"
+    },
+    "2-6": {
+      "card": 1048,
+      "src": "construction"
+    },
+    "2-7": {
+      "card": 1049,
+      "src": "construction"
+    },
+    "3-1": {
+      "card": 1068,
+      "src": "construction"
+    },
+    "3-2": {
+      "card": 1067,
+      "src": "construction"
+    },
+    "3-3": {
+      "card": 1069,
+      "src": "construction"
+    },
+    "3-4": {
+      "card": 1070,
+      "src": "construction"
+    },
+    "3-5": {
+      "card": 1057,
+      "src": "construction"
+    },
+    "3-6": {
+      "card": 1071,
+      "src": "construction"
+    },
+    "3-7": {
+      "card": 1065,
+      "src": "construction"
+    },
+    "3-8": {
+      "card": 1055,
+      "src": "construction"
+    },
+    "3-9": {
+      "card": 1072,
+      "src": "construction"
+    },
+    "3-10": {
+      "card": 1050,
+      "src": "construction"
+    },
+    "3-11": {
+      "card": 1056,
+      "src": "construction"
+    },
+    "3-12": {
+      "card": 1060,
+      "src": "construction"
+    },
+    "UD-01": {
+      "card": 1095,
+      "src": "dsh"
+    },
+    "UD-02": {
+      "card": 1096,
+      "src": "dsh"
+    },
+    "UD-03": {
+      "card": 1097,
+      "src": "dsh"
+    },
+    "UD-04": {
+      "card": 1098,
+      "src": "dsh"
+    },
+    "UD-05": {
+      "card": 1099,
+      "src": "dsh"
+    },
+    "UD-07": {
+      "card": 1100,
+      "src": "dsh"
+    },
+    "UD-08": {
+      "card": 1101,
+      "src": "dsh"
+    },
+    "UD-10": {
+      "card": 1102,
+      "src": "dsh"
+    },
+    "UD-11": {
+      "card": 1103,
+      "src": "dsh"
+    },
+    "UD-12": {
+      "card": 1104,
+      "src": "dsh"
+    },
+    "UD-13": {
+      "card": 1105,
+      "src": "dsh"
+    },
+    "UD-14": {
+      "card": 1106,
+      "src": "dsh"
+    },
+    "RS-01": {
+      "card": 1083,
+      "src": "dsh"
+    },
+    "RS-02": {
+      "card": 1084,
+      "src": "dsh"
+    },
+    "RS-03": {
+      "card": 1085,
+      "src": "dsh"
+    },
+    "RS-04": {
+      "card": 1086,
+      "src": "dsh"
+    },
+    "RS-05": {
+      "card": 1087,
+      "src": "dsh"
+    },
+    "RS-06": {
+      "card": 1088,
+      "src": "dsh"
+    },
+    "RS-07": {
+      "card": 1089,
+      "src": "dsh"
+    },
+    "RS-08": {
+      "card": 1090,
+      "src": "dsh"
+    },
+    "RS-09": {
+      "card": 1091,
+      "src": "dsh"
+    },
+    "RS-10": {
+      "card": 1092,
+      "src": "dsh"
+    },
+    "RS-12": {
+      "card": 1094,
+      "src": "dsh"
+    },
+    "RS-11": {
+      "card": 1093,
+      "src": "dsh"
+    }
+  }
+}
