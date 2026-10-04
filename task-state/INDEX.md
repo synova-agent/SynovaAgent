@@ -4,7 +4,7 @@
 > 日期口径 = **最后提交日期**（`git log -1 --format=%cs`）；未跟踪件退化为文件 mtime（标 `(mtime)`）。
 > 覆盖自检: 本文件行数 == task-state 顶层 + archive/ 的 `*.json` 件数（不等即生成器 exit 1）。
 
-**保留（顶层 326 件）**
+**保留（顶层 327 件）**
 
 | D 号 | 日期 | 标题 | 状态 |
 |---|---|---|---|
@@ -49,6 +49,7 @@
 | D1109 | 2026-10-02 | CI 关键路径瘦身（simulate-ci smoke 缩量 + 清单保值断言） | impl_done |
 | D1112 | 2026-10-02 | 治理线一窗：门禁专项吸收与文档治理范围修正 | in_progress |
 | D1116 | 2026-10-02 | T3 timeout 基线重取（ci.yml，n=12 实采样） | impl_done |
+| D1150 | 2026-10-05(mtime) | 资产回收 — worktree 回收器 / task-state 保留策略与索引 / docs 归档（批6） | in_progress |
 | D397 | 2026-09-10 | （原 guard 通用化已砍）产品 loop 卫生 D397'——K3 重定义 | closed |
 | D398 | 2026-09-10 | 组织记忆策略调整（排最后，先看数据——K3 定序） | closed |
 | D411 | 2026-09-10 | control-system-design-docs | closed |
@@ -339,92 +340,92 @@
 
 | D 号 | 日期 | 标题 | 状态 |
 |---|---|---|---|
-| D356 | 2026-10-05(mtime) | P0 哨兵阈值告警接线 + 降级误报修复 | audited |
-| D379 | 2026-10-05(mtime) | path-dependency 哨兵空壳补实现 | audited |
-| D383 | 2026-10-05(mtime) | CTO 2026-08-16 统一批次（哨兵口径/派活/B1/C6 固化/状态机/台账拆分） | audited |
-| D384 | 2026-10-05(mtime) | D383 审计 P1×4 修复批次（写集漂移/D382 撞车/CTO-HEALTH 无源/幂等+测试） | audited |
-| D385 | 2026-10-05(mtime) | K3 审计产物合入仓库（D383 findings 镜像 + 审计报告落库） | audited |
-| D386 | 2026-10-05(mtime) | 修复 sentinel-loader.test.ts 断言容忍规范外哨兵 computes 空（CI Vitest 预存红） | audited |
-| D387 | 2026-10-05(mtime) | CT-34 纯文档提交豁免门禁（pre-commit 白名单 + Secrets 保留） | audited |
-| D389 | 2026-10-05(mtime) | D387 审计产物合入仓库 | audited |
-| D390 | 2026-10-05(mtime) | P1-1 修复：注入缝武装守卫 + 豁免事件 exempt.log 落盘（K3 D387） | audited |
-| D391 | 2026-10-05(mtime) | admin-knowledge.ts:17 L1→L4 跨层修复（CI Architecture 转绿，D309 落地，K3 P2-5 派单） | audited |
-| D392 | 2026-10-05(mtime) | npm audit 豁免落地（CI 黄灯 + 台账/DASHBOARD 记录）+ D387 PASS 补核登记 | audited |
-| D393 | 2026-10-05(mtime) | task-state 状态工件自动派生改造（D393） | audited |
-| D394 | 2026-10-05(mtime) | 事件溯源（哨兵 findings 事件化先做——K3 改切片） | audited |
-| D395 | 2026-10-05(mtime) | Agent Notes 四态（D395-a 开发组织版，1天——K3 拆分） | audited |
-| D396 | 2026-10-05(mtime) | snapshot 测试（黄金用例固化回归门禁——K3 提前 P0 同批） | audited |
-| D399 | 2026-10-05(mtime) | D393 审计 FAIL 修复（自指悖论/spec 双向失真/CTO-HEALTH 可复现/门禁记录入库） | audited |
-| D400 | 2026-10-05(mtime) | D399 复审 CONDITIONAL PASS 收尾（D394-D398/D391 入库 + 纯净重生成 + 注释同步） | audited |
-| D401 | 2026-10-05(mtime) | K3 战略咨询终版 + 分工规划信息落库（台账/TASK-ROUTING/task-state） | audited |
-| D402 | 2026-10-05(mtime) | D391 审计 P1 修复（federated 兜底写入即蒸发 + 补 dev doc/brief） | audited |
-| D403 | 2026-10-05(mtime) | 派活文件落库（4 brief + dev-doc 启动指引 + 认领表） | audited |
-| D404 | 2026-10-05(mtime) | 上下文完整性修复落库（K3 咨询入库 + CT-40/41 + 仪表盘更新） | audited |
-| D405 | 2026-10-05(mtime) | CT-41① CI 状态入仪表盘 | audited |
-| D406 | 2026-10-05(mtime) | D395-a 审计 P1 修复（P1-2 腐化通道优先：check-lessons-learned 改向 + P1-1 层1门禁落点） | audited |
-| D407 | 2026-10-05(mtime) | cto-health-audit-glob-fix | audited |
-| D408 | 2026-10-05(mtime) | cto-closeout-registry-todos | audited |
-| D409 | 2026-10-05(mtime) | cto-taskstate-consistency | audited |
-| D410 | 2026-10-05(mtime) | task-to-progress-auto-redeem | audited |
-| D412 | 2026-10-05(mtime) | u3-artifact-gate | audited |
-| D413 | 2026-10-05(mtime) | u7-ct-test-gate | audited |
-| D414 | 2026-10-05(mtime) | u1-bypass-evidence-chain | audited |
-| D415 | 2026-10-05(mtime) | u2-writeset-reconcile | audited |
-| D416 | 2026-10-05(mtime) | u6-sop-gate | audited |
-| D417 | 2026-10-05(mtime) | u5-secrets-failopen | audited |
-| D419 | 2026-10-05(mtime) | u-founder-truth-mvp | audited |
-| D428 | 2026-10-05(mtime) | CTO 收尾：K3 U1-U8 控制塔升级 15 分支批量合并入 main | audited |
-| D429 | 2026-10-05(mtime) | founder-truth 控制台验证（U1-U8 合并后首跑） | audited |
-| D430 | 2026-10-05(mtime) | A2 机器验证入库接线（测试→证据→完成度，补历史完成度） | audited |
-| D439 | 2026-10-05(mtime) | 控制台重新生成（右边栏数据刷新：D430/D438 后快照更新） | audited |
-| D440 | 2026-10-05(mtime) | 控制台自动生成接 CI（dashboard-auto.yml） | audited |
-| D441 | 2026-10-05(mtime) | D339 quotepath 修复移植到 main（Mac 中文文件名门禁误报根治） | audited |
-| D442 | 2026-10-05(mtime) | GS-03 资本循环场景脚本（erp-standard → cash 对齐 + 阈值触发） | audited |
-| D443 | 2026-10-05(mtime) | GS-02 客户循环场景脚本（crm-standard → customer-demand-shift critical） | audited |
-| D444 | 2026-10-05(mtime) | GS-04 人才循环场景脚本（hr-standard → key-person-risk） | audited |
-| D445 | 2026-10-05(mtime) | GS-05 告警闭环场景脚本（越阈 fixture → sentinel_tickets + 去重键） | audited |
-| D446 | 2026-10-05(mtime) | GS-01 首诊旅程场景脚本（问卷 → 首诊报告 ≤3 天路径） | audited |
-| D447 | 2026-10-05(mtime) | GS-06 进化闭环场景脚本（反馈注入 → loop-3/5 真实执行） | audited |
-| D448 | 2026-10-05(mtime) | GS-07 数据安全场景脚本（敏感数据 → PII 脱敏 + 越权拒绝） | audited |
-| D449 | 2026-10-05(mtime) | GS-08 报告可读场景脚本（GS-01 产物 → 一页纸 + 移动端） | audited |
-| D450 | 2026-10-05(mtime) | GS 场景派活落库（8 任务 D442-D449 + 派活文件） | audited |
-| D451 | 2026-10-05(mtime) | CT-42 session 专属 brief 读侧接线 + D331 补记死循环豁免 | audited |
-| D452 | 2026-10-05(mtime) | 全项目视野修复（方案B）+ 状态对齐 D401/403/404/405 | audited |
-| D453 | 2026-10-05(mtime) | CT-39 CI 红超 24h 自动入待办（信号失效 M1 同型根治） | audited |
-| D454 | 2026-10-05(mtime) | GSS 服务启动原生崩溃修复 env+ESM | audited |
-| D455 | 2026-10-05(mtime) | 修复 D355 残留 — cashBalance↔cash 对齐 + compute filter bug | audited |
-| D456 | 2026-10-05(mtime) | alloc-task-id 并发原子锁（撞号根治，D454/D455 冲突教训） | audited |
-| D457 | 2026-10-05(mtime) | bypass.log 多 PR 合并冲突根治（merge=union） | audited |
-| D458 | 2026-10-05(mtime) | 多 session 并行冲突系统性根治（运行时状态去跟踪 + 版本管理固化） | audited |
-| D459 | 2026-10-05(mtime) | 生成物单点生成门禁（G12d，session 禁改 CI 生成物） | audited |
-| D460 | 2026-10-05(mtime) | LLM-as-a-Verifier 部署 + synova-verify skill（A2 语义预筛） | audited |
-| D461 | 2026-10-05(mtime) | worktree 收尾强制（孤儿检测 + CTO-HEALTH 显示） | audited |
-| D462 | 2026-10-05(mtime) | better-sqlite3 v12 升级（Node 24 兼容，解锁 GS-03/GS-05 服务器启动） | audited |
-| D463 | 2026-10-05(mtime) | GS-05 告警闭环修复：run-once 接 runner 管线 + critical/emergency 自动建工单（选项 A） | audited |
-| D464 | 2026-10-05(mtime) | control-tower-gate-fix | audited |
-| D465 | 2026-10-05(mtime) | CI 门禁 diff 语义补齐（空暂存假绿消除） | audited |
-| D466 | 2026-10-05(mtime) | check-bypass-log 注释同步 + tag-bypass-wiring 测试跨平台修复 | audited |
-| D467 | 2026-10-05(mtime) | 方案1 挪CI——本地软提示+CI权威 | audited |
-| D468 | 2026-10-05(mtime) | 方案3 同步降频（砍 D335 提交前同步） | audited |
-| D472 | 2026-10-05(mtime) | Agent Notes 四态铁律结构化（Stage1-D2） | audited |
-| D473 | 2026-10-05(mtime) | guard 循环卫生+超时（Stage1-D4） | audited |
-| D474 | 2026-10-05(mtime) | snapshot keyless 回放门禁（Stage1-D3） | audited |
-| D483 | 2026-10-05(mtime) | register 认证闭环 切片 A——匿名注册可达（D481 产品发现收尾） | audited |
-| D484 | 2026-10-05(mtime) | register 认证闭环 切片 B——企业邀请注册链路打通（D102 邀请令牌补全） | audited |
-| D486 | 2026-10-05(mtime) | register 认证闭环 端到端测试切片（A/B 真实 server 全链路验证 + 缺口补充） | audited |
-| D487 | 2026-10-05(mtime) | D394 片2-A——GA 诊断会话事件化装配（D500 地基接线，交付物可自证） | audited |
-| D500 | 2026-10-05(mtime) | 事件溯源 session log（Stage1-D1，取代 Win D469 草稿） | audited |
-| D510 | 2026-10-05(mtime) | d504-audit-fix | audited |
-| D514 | 2026-10-05(mtime) | D510 审计返修（3 P1 残留） | audited |
-| D517 | 2026-10-05(mtime) | L1-A 安装包可产出(1-1) | audited |
-| D518 | 2026-10-05(mtime) | L1-A 安装引导单入口(1-5) | audited |
-| D519 | 2026-10-05(mtime) | L1-A Mac 安装实测(1-3) | audited |
-| D522 | 2026-10-05(mtime) | L1-B 服务自启开窗即用(1-4) | audited |
-| D523 | 2026-10-05(mtime) | L1-B Windows 双击安装启动出窗(1-2) | audited |
-| D527 | 2026-10-05(mtime) | L1-C 首诊旅程端到端(1-6) | audited |
-| D528 | 2026-10-05(mtime) | L1-C 升级/重装不丢数据(1-7) | audited |
-| D539 | 2026-10-05(mtime) | session-worktree-isolation | audited |
-| D551 | 2026-10-05(mtime) | ga-calibration-backend-spec | audited |
+| D356 | 2026-10-05 | P0 哨兵阈值告警接线 + 降级误报修复 | audited |
+| D379 | 2026-10-05 | path-dependency 哨兵空壳补实现 | audited |
+| D383 | 2026-10-05 | CTO 2026-08-16 统一批次（哨兵口径/派活/B1/C6 固化/状态机/台账拆分） | audited |
+| D384 | 2026-10-05 | D383 审计 P1×4 修复批次（写集漂移/D382 撞车/CTO-HEALTH 无源/幂等+测试） | audited |
+| D385 | 2026-10-05 | K3 审计产物合入仓库（D383 findings 镜像 + 审计报告落库） | audited |
+| D386 | 2026-10-05 | 修复 sentinel-loader.test.ts 断言容忍规范外哨兵 computes 空（CI Vitest 预存红） | audited |
+| D387 | 2026-10-05 | CT-34 纯文档提交豁免门禁（pre-commit 白名单 + Secrets 保留） | audited |
+| D389 | 2026-10-05 | D387 审计产物合入仓库 | audited |
+| D390 | 2026-10-05 | P1-1 修复：注入缝武装守卫 + 豁免事件 exempt.log 落盘（K3 D387） | audited |
+| D391 | 2026-10-05 | admin-knowledge.ts:17 L1→L4 跨层修复（CI Architecture 转绿，D309 落地，K3 P2-5 派单） | audited |
+| D392 | 2026-10-05 | npm audit 豁免落地（CI 黄灯 + 台账/DASHBOARD 记录）+ D387 PASS 补核登记 | audited |
+| D393 | 2026-10-05 | task-state 状态工件自动派生改造（D393） | audited |
+| D394 | 2026-10-05 | 事件溯源（哨兵 findings 事件化先做——K3 改切片） | audited |
+| D395 | 2026-10-05 | Agent Notes 四态（D395-a 开发组织版，1天——K3 拆分） | audited |
+| D396 | 2026-10-05 | snapshot 测试（黄金用例固化回归门禁——K3 提前 P0 同批） | audited |
+| D399 | 2026-10-05 | D393 审计 FAIL 修复（自指悖论/spec 双向失真/CTO-HEALTH 可复现/门禁记录入库） | audited |
+| D400 | 2026-10-05 | D399 复审 CONDITIONAL PASS 收尾（D394-D398/D391 入库 + 纯净重生成 + 注释同步） | audited |
+| D401 | 2026-10-05 | K3 战略咨询终版 + 分工规划信息落库（台账/TASK-ROUTING/task-state） | audited |
+| D402 | 2026-10-05 | D391 审计 P1 修复（federated 兜底写入即蒸发 + 补 dev doc/brief） | audited |
+| D403 | 2026-10-05 | 派活文件落库（4 brief + dev-doc 启动指引 + 认领表） | audited |
+| D404 | 2026-10-05 | 上下文完整性修复落库（K3 咨询入库 + CT-40/41 + 仪表盘更新） | audited |
+| D405 | 2026-10-05 | CT-41① CI 状态入仪表盘 | audited |
+| D406 | 2026-10-05 | D395-a 审计 P1 修复（P1-2 腐化通道优先：check-lessons-learned 改向 + P1-1 层1门禁落点） | audited |
+| D407 | 2026-10-05 | cto-health-audit-glob-fix | audited |
+| D408 | 2026-10-05 | cto-closeout-registry-todos | audited |
+| D409 | 2026-10-05 | cto-taskstate-consistency | audited |
+| D410 | 2026-10-05 | task-to-progress-auto-redeem | audited |
+| D412 | 2026-10-05 | u3-artifact-gate | audited |
+| D413 | 2026-10-05 | u7-ct-test-gate | audited |
+| D414 | 2026-10-05 | u1-bypass-evidence-chain | audited |
+| D415 | 2026-10-05 | u2-writeset-reconcile | audited |
+| D416 | 2026-10-05 | u6-sop-gate | audited |
+| D417 | 2026-10-05 | u5-secrets-failopen | audited |
+| D419 | 2026-10-05 | u-founder-truth-mvp | audited |
+| D428 | 2026-10-05 | CTO 收尾：K3 U1-U8 控制塔升级 15 分支批量合并入 main | audited |
+| D429 | 2026-10-05 | founder-truth 控制台验证（U1-U8 合并后首跑） | audited |
+| D430 | 2026-10-05 | A2 机器验证入库接线（测试→证据→完成度，补历史完成度） | audited |
+| D439 | 2026-10-05 | 控制台重新生成（右边栏数据刷新：D430/D438 后快照更新） | audited |
+| D440 | 2026-10-05 | 控制台自动生成接 CI（dashboard-auto.yml） | audited |
+| D441 | 2026-10-05 | D339 quotepath 修复移植到 main（Mac 中文文件名门禁误报根治） | audited |
+| D442 | 2026-10-05 | GS-03 资本循环场景脚本（erp-standard → cash 对齐 + 阈值触发） | audited |
+| D443 | 2026-10-05 | GS-02 客户循环场景脚本（crm-standard → customer-demand-shift critical） | audited |
+| D444 | 2026-10-05 | GS-04 人才循环场景脚本（hr-standard → key-person-risk） | audited |
+| D445 | 2026-10-05 | GS-05 告警闭环场景脚本（越阈 fixture → sentinel_tickets + 去重键） | audited |
+| D446 | 2026-10-05 | GS-01 首诊旅程场景脚本（问卷 → 首诊报告 ≤3 天路径） | audited |
+| D447 | 2026-10-05 | GS-06 进化闭环场景脚本（反馈注入 → loop-3/5 真实执行） | audited |
+| D448 | 2026-10-05 | GS-07 数据安全场景脚本（敏感数据 → PII 脱敏 + 越权拒绝） | audited |
+| D449 | 2026-10-05 | GS-08 报告可读场景脚本（GS-01 产物 → 一页纸 + 移动端） | audited |
+| D450 | 2026-10-05 | GS 场景派活落库（8 任务 D442-D449 + 派活文件） | audited |
+| D451 | 2026-10-05 | CT-42 session 专属 brief 读侧接线 + D331 补记死循环豁免 | audited |
+| D452 | 2026-10-05 | 全项目视野修复（方案B）+ 状态对齐 D401/403/404/405 | audited |
+| D453 | 2026-10-05 | CT-39 CI 红超 24h 自动入待办（信号失效 M1 同型根治） | audited |
+| D454 | 2026-10-05 | GSS 服务启动原生崩溃修复 env+ESM | audited |
+| D455 | 2026-10-05 | 修复 D355 残留 — cashBalance↔cash 对齐 + compute filter bug | audited |
+| D456 | 2026-10-05 | alloc-task-id 并发原子锁（撞号根治，D454/D455 冲突教训） | audited |
+| D457 | 2026-10-05 | bypass.log 多 PR 合并冲突根治（merge=union） | audited |
+| D458 | 2026-10-05 | 多 session 并行冲突系统性根治（运行时状态去跟踪 + 版本管理固化） | audited |
+| D459 | 2026-10-05 | 生成物单点生成门禁（G12d，session 禁改 CI 生成物） | audited |
+| D460 | 2026-10-05 | LLM-as-a-Verifier 部署 + synova-verify skill（A2 语义预筛） | audited |
+| D461 | 2026-10-05 | worktree 收尾强制（孤儿检测 + CTO-HEALTH 显示） | audited |
+| D462 | 2026-10-05 | better-sqlite3 v12 升级（Node 24 兼容，解锁 GS-03/GS-05 服务器启动） | audited |
+| D463 | 2026-10-05 | GS-05 告警闭环修复：run-once 接 runner 管线 + critical/emergency 自动建工单（选项 A） | audited |
+| D464 | 2026-10-05 | control-tower-gate-fix | audited |
+| D465 | 2026-10-05 | CI 门禁 diff 语义补齐（空暂存假绿消除） | audited |
+| D466 | 2026-10-05 | check-bypass-log 注释同步 + tag-bypass-wiring 测试跨平台修复 | audited |
+| D467 | 2026-10-05 | 方案1 挪CI——本地软提示+CI权威 | audited |
+| D468 | 2026-10-05 | 方案3 同步降频（砍 D335 提交前同步） | audited |
+| D472 | 2026-10-05 | Agent Notes 四态铁律结构化（Stage1-D2） | audited |
+| D473 | 2026-10-05 | guard 循环卫生+超时（Stage1-D4） | audited |
+| D474 | 2026-10-05 | snapshot keyless 回放门禁（Stage1-D3） | audited |
+| D483 | 2026-10-05 | register 认证闭环 切片 A——匿名注册可达（D481 产品发现收尾） | audited |
+| D484 | 2026-10-05 | register 认证闭环 切片 B——企业邀请注册链路打通（D102 邀请令牌补全） | audited |
+| D486 | 2026-10-05 | register 认证闭环 端到端测试切片（A/B 真实 server 全链路验证 + 缺口补充） | audited |
+| D487 | 2026-10-05 | D394 片2-A——GA 诊断会话事件化装配（D500 地基接线，交付物可自证） | audited |
+| D500 | 2026-10-05 | 事件溯源 session log（Stage1-D1，取代 Win D469 草稿） | audited |
+| D510 | 2026-10-05 | d504-audit-fix | audited |
+| D514 | 2026-10-05 | D510 审计返修（3 P1 残留） | audited |
+| D517 | 2026-10-05 | L1-A 安装包可产出(1-1) | audited |
+| D518 | 2026-10-05 | L1-A 安装引导单入口(1-5) | audited |
+| D519 | 2026-10-05 | L1-A Mac 安装实测(1-3) | audited |
+| D522 | 2026-10-05 | L1-B 服务自启开窗即用(1-4) | audited |
+| D523 | 2026-10-05 | L1-B Windows 双击安装启动出窗(1-2) | audited |
+| D527 | 2026-10-05 | L1-C 首诊旅程端到端(1-6) | audited |
+| D528 | 2026-10-05 | L1-C 升级/重装不丢数据(1-7) | audited |
+| D539 | 2026-10-05 | session-worktree-isolation | audited |
+| D551 | 2026-10-05 | ga-calibration-backend-spec | audited |
 ---
 
-<!-- coverage: retained=326 archived=86 total=412 -->
+<!-- coverage: retained=327 archived=86 total=413 -->

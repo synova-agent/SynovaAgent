@@ -111,11 +111,13 @@
 
 | 文件 | 类型 |
 |---|---|
+| .claude/bypass.log | builtin（hook 运行期产物，自动豁免） |
 | .claude/task-briefs/2026-10-05-D1150-asset-reclaim.md | task |
 | docs/authority/DOCS-REGISTRY.yaml | task |
 | memory/notes/proposed/2026-10-05-d1150-asset-reclaim.md | task |
 | scripts/control-tower/reclaim-worktrees.py | task |
 | scripts/control-tower/task-state-retention.py | task |
+| task-state/D1150.json | task |
 | task-state/INDEX.md | task |
 | task-state/archive/D356.json | task |
 | task-state/archive/D379.json | task |
@@ -205,3 +207,4 @@
 | task-state/archive/D551.json | task |
 | tests/control-tower/reclaim-worktrees.test.sh | task |
 | tests/control-tower/task-state-retention.test.sh | task |
+
