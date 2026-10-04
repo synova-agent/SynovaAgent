@@ -20,7 +20,6 @@ import { writeFileSync } from 'node:fs';
 import {
   constructionItems,
   constructionBlocks,
-  deriveOwner,
   type AcceptanceStep,
 } from '../施工项登记.ts';
 
@@ -48,14 +47,8 @@ function main(): number {
   const dist = new Map<string, number>();
   const unowned: string[] = [];
   for (const it of items) {
-    if (it.paths.length === 0) {
-      unowned.push(it.id);
-      dist.set('(无落点·待裁)', (dist.get('(无落点·待裁)') ?? 0) + 1);
-      continue;
-    }
-    const o = deriveOwner(it.paths) ?? '(推导失败)';
-    if (o === '(推导失败)') unowned.push(it.id);
-    dist.set(o, (dist.get(o) ?? 0) + 1);
+    if (it.paths.length === 0) unowned.push(it.id);
+    dist.set(it.worker, (dist.get(it.worker) ?? 0) + 1);
   }
 
   const L: string[] = [];
@@ -71,11 +64,13 @@ function main(): number {
   L.push('');
   L.push('| 域 | 项数 | 说明 |');
   L.push('|---|---|---|');
+  // 【已废止】原为"域"描述；现为"派给谁"（创始人 2026-10-04 废止域概念）
   const OWNER_DESC: Record<string, string> = {
-    mac: 'Mac DSH — 控制塔/哨兵/桌面/协调文档',
-    win: 'Win Claude — 诊断 L1-L5/本体/扩展',
-    k3: 'Kimi K3 — 审计线（红线）',
-    '(无落点·待裁)': '🔴 落点未定 ⇒ 无主，需 CTO/创始人裁',
+    cto: 'CTO 会话（协调/判据类）',
+    win: 'Win 执行者（诊断 L1-L5/本体/扩展）',
+    mac: 'Mac 执行者（哨兵/控制塔/桌面）',
+    k3: 'K3（审计，独立仓）',
+    gov: '治理执行者（门禁/CI）',
   };
   for (const [k, v] of [...dist.entries()].sort((a, b) => b[1] - a[1])) {
     L.push(`| ${k} | ${v} | ${OWNER_DESC[k] ?? '—'} |`);
@@ -102,7 +97,7 @@ function main(): number {
   L.push('## 三、40 项明细');
   L.push('');
   for (const it of items) {
-    const owner = it.paths.length ? (deriveOwner(it.paths) ?? '🔴推导失败') : '🔴无落点·待裁';
+    const owner = it.worker;
     L.push(`### ${it.id} · ${it.title}`);
     L.push('');
     L.push(`- **批次 / 块**：${it.batch} / ${it.block} ｜ **状态**：${it.status}`);

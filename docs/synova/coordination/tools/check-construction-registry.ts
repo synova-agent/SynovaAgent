@@ -23,7 +23,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { constructionItems, constructionBlocks, deriveOwner, normalizePath } from '../施工项登记.ts';
+import { constructionItems, constructionBlocks, normalizePath, deriveBlockDeps, isModuleShape } from '../施工项登记.ts';
 
 type Fail = { inv: string; id: string; msg: string };
 const fails: Fail[] = [];
@@ -96,13 +96,15 @@ for (const it of constructionItems) {
   }
 }
 
-// ════════ INV-2 · 归属可判 ════════
+// ════════ INV-2 · 派单可判（原"归属可判" —— 域概念已废止 2026-10-04）════════
+// 新判据：① worker 必须存在（派给谁）② paths 必须非空（落点已定）③ 形状须是模块
 for (const it of constructionItems) {
+  if (!it.worker) fails.push({ inv: 'INV-2', id: it.id, msg: 'worker 未指定（派给谁）' });
   if (it.paths.length === 0) {
     if (!it.pathTBD) fails.push({ inv: 'INV-2', id: it.id, msg: '无 paths 且未标 pathTBD' });
-    continue;
+  } else if (!isModuleShape(it.paths)) {
+    fails.push({ inv: 'INV-2', id: it.id, msg: `写集形状不构成模块（须为 <dir>/… 形态）: ${it.paths.join(', ')}` });
   }
-  if (!deriveOwner(it.paths)) fails.push({ inv: 'INV-2', id: it.id, msg: `有 paths 但推导不出 owner` });
 }
 
 // ════════ INV-3 · 标准可执行（穿产品仓 or 在自身写集内）════════
@@ -144,20 +146,12 @@ for (const b of constructionBlocks) {
 }
 for (const it of constructionItems) if (!inBlock.has(it.id)) fails.push({ inv: 'BLOCK', id: it.id, msg: '不属于任何块' });
 
-// 块级依赖：必须与项级 dependsOn 汇总一致（禁手补 —— T7 面 3 反例）
-for (const b of constructionBlocks) {
-  const fromItems = new Set<string>();
-  for (const iid of b.items) {
-    const it = constructionItems.find((x) => x.id === iid);
-    if (!it) continue;
-    for (const d of it.dependsOn) {
-      const dt = constructionItems.find((x) => x.id === d);
-      if (dt && dt.block !== b.id) fromItems.add(dt.block);
-    }
-  }
-  const declared = new Set(b.dependsOnBlocks);
-  for (const x of fromItems) if (!declared.has(x)) fails.push({ inv: 'BLOCK-DEP', id: b.id, msg: `项级依赖含 ${x}，块级 dependsOnBlocks 未声明` });
-  for (const x of declared) if (!fromItems.has(x)) fails.push({ inv: 'BLOCK-DEP', id: b.id, msg: `块级声明了 ${x}，但项级依赖里没有` });
+// 块级依赖：**已改为自动汇总**（2026-10-04 废止手写）⇒ 不再有"手写值与项级不符"这类违规
+// 保留一条断言：自动汇总的结果必须能算出来（否则说明项级依赖有悬空 id）
+{
+  const dep = deriveBlockDeps();
+  const n = Object.values(dep).reduce((a, x) => a + x.length, 0);
+  notes.push(`块间依赖（自动汇总）: ${n} 条 —— ${Object.entries(dep).filter(([, v]) => v.length).map(([k, v]) => `${k}→[${v.join(',')}]`).join('  ')}`);
 }
 
 // ════════ 报告 ════════
@@ -172,6 +166,8 @@ for (const [k, v] of [...byInv.entries()].sort()) {
   for (const x of v.slice(0, 12)) console.log(`    ${x.id.padEnd(6)} ${x.msg}`);
   if (v.length > 12) console.log(`    … 另有 ${v.length - 12} 处`);
 }
+console.log('');
+for (const n of notes) console.log(`  ℹ️  ${n}`);
 console.log('');
 console.log(`  ══ 合计 ${fails.length} 处违规 ══`);
 process.exit(fails.length > 0 ? 1 : 0);
