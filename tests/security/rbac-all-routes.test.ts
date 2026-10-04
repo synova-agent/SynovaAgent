@@ -106,6 +106,7 @@ function call(
           try {
             body = raw.length > 0 ? (JSON.parse(raw) as Record<string, unknown>) : {};
           } catch {
+            // 非 JSON 响应（如 500 文本/空体）⇒ 保留原文供判据报错
             body = { __unparsed: raw };
           }
           resolve({ status: res.statusCode ?? 0, body, raw });

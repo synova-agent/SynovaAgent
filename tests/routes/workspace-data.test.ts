@@ -48,7 +48,10 @@ function call(method: string, path: string, opts: { body?: unknown } = {}): Prom
         res.on('end', () => {
           const raw = Buffer.concat(chunks).toString('utf8');
           let body: Record<string, unknown> = {};
-          try { body = raw.length > 0 ? (JSON.parse(raw) as Record<string, unknown>) : {}; } catch { body = { __unparsed: raw }; }
+          try { body = raw.length > 0 ? (JSON.parse(raw) as Record<string, unknown>) : {}; } catch {
+            // 非 JSON 响应（如 500 文本/空体）⇒ 保留原文供判据报错
+            body = { __unparsed: raw };
+          }
           resolve({ status: res.statusCode ?? 0, body });
         });
       },
