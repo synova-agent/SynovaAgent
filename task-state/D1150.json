@@ -8,6 +8,7 @@
   "write_set": [
     ".claude/task-briefs/2026-10-05-D1150-asset-reclaim.md",
     "docs/authority/DOCS-REGISTRY.yaml",
+    "docs/synova/coordination/archive",
     "memory/notes/proposed/2026-10-05-d1150-asset-reclaim.md",
     "scripts/control-tower/reclaim-worktrees.py",
     "scripts/control-tower/task-state-retention.py",
@@ -188,5 +189,5 @@
     "tests/control-tower/reclaim-worktrees.test.sh",
     "tests/control-tower/task-state-retention.test.sh"
   ],
-  "note": "治理线 gate-assets。PR-1=本文件列出的写集；PR-2（chore/D1150-docs-archive）为 docs/synova/coordination/ 纯改名归档，独立成 PR 以走 check-pr-budget.sh 出库豁免（AM_N=0）。"
+  "note": "治理线 gate-assets。PR-1 = 本文件 write_set 列出的写集 + docs/synova/coordination/archive（PR-2 落点）；PR-2（chore/D1150-docs-archive）= docs/synova/coordination/ 2026-09 之前派单/交付/裁决件 67 件纯改名归档，独立成 PR 以走 check-pr-budget.sh 出库豁免（要求 AM_N=0，仅改名）。"
 }

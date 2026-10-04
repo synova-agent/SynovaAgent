@@ -49,7 +49,7 @@
 | D1109 | 2026-10-02 | CI 关键路径瘦身（simulate-ci smoke 缩量 + 清单保值断言） | impl_done |
 | D1112 | 2026-10-02 | 治理线一窗：门禁专项吸收与文档治理范围修正 | in_progress |
 | D1116 | 2026-10-02 | T3 timeout 基线重取（ci.yml，n=12 实采样） | impl_done |
-| D1150 | 2026-10-05(mtime) | 资产回收 — worktree 回收器 / task-state 保留策略与索引 / docs 归档（批6） | in_progress |
+| D1150 | 2026-10-05 | 资产回收 — worktree 回收器 / task-state 保留策略与索引 / docs 归档（批6） | in_progress |
 | D397 | 2026-09-10 | （原 guard 通用化已砍）产品 loop 卫生 D397'——K3 重定义 | closed |
 | D398 | 2026-09-10 | 组织记忆策略调整（排最后，先看数据——K3 定序） | closed |
 | D411 | 2026-09-10 | control-system-design-docs | closed |
