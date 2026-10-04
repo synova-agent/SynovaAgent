@@ -7,7 +7,7 @@ effective: "2026-09-27"
 owner: CTO
 supersedes:
   - docs/synova/DOCUMENT-CONVENTIONS.md
-  - docs/plans/codex/SYNOVA-哇呢宝贝-文档管理规范-20260805.md
+  - docs/plans/codex/SYNOVA-客户A-文档管理规范-20260805.md
   - docs/synova/DOCUMENT-INVENTORY.md
 ---
 
@@ -271,7 +271,7 @@ decisions/{lifecycle}/{class}/YYYY-MM-DD-topic-title.md
 | 被取代/出库 | 理由 |
 |---|---|
 | `docs/synova/DOCUMENT-CONVENTIONS.md`（v1.1, 20 行） | 路径描述已失效（写 `docs-synova/`，实际 `docs/synova/`）；被本契约取代 |
-| `docs/plans/codex/SYNOVA-哇呢宝贝-文档管理规范-20260805.md` | 第二份文档规范；被本契约取代 |
+| `docs/plans/codex/SYNOVA-客户A-文档管理规范-20260805.md` | 第二份文档规范；被本契约取代 |
 | `docs/synova/DOCUMENT-INVENTORY.md`（957 行） | 2026-08-14 的清单快照，**中文已乱码**，无未来指导价值 ⇒ **出库** |
 
 ---
