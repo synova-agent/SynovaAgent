@@ -39,6 +39,25 @@
 
 > 以下铁律来自 2026-05 至今的全部实际错误。按优先级排列。
 
+### 【元规则】铁律生命周期（2026-10-02 立）
+
+> 依据创始人：「**关于铁律，有些可能过时，你需要仔细斟酌，不能写着铁律就必须这样了**」
+
+```
+① 每条铁律必须登记三样：【载体】+【执行门禁】+【最近复核日】
+② 复核周期：季度（并入文档治理的 G′3 复审面）
+③ 退役判据（任一命中即退役）：
+   a. 载体已不存在（例：铁律 46 的 5 个白名单文件已删）
+   b. 使命已完成（例：engine-core 真 import = 0 ⇒ 迁移封闭）
+   c. 连续两季"零违反且无执行门禁"（软约束＝无约束）
+④ 修订判据：表述与实测覆盖率不符（例：铁律 39 覆盖 src/ 49 目录中的 18 个）
+⑤ 🔴 退役不是删除 ⇒ 移入 `LOOP-ENGINEERING-CHANGELOG.md`（可追溯）
+⑥ 🔴 凡"写着铁律所以必须这样"的论证方式 = 无效；须回到【载体 + 门禁 + 阶段重要性】三判据
+```
+
+**已退役（2026-10-02）**：铁律 **40–45**（TUI，零消费方）｜铁律 **46**（engine-core，使命完成）
+**待修订**：铁律 **39**（五层，覆盖率 37% —— 见下）
+
 ### 零、协作与流程
 
 **铁律 0. 协作对齐前置——先对齐再动手，禁止假设共识。**
@@ -53,6 +72,29 @@ Step 5 WIRE CHECK 是硬门禁：`grep -rn "新函数名" src/` — 零结果 = 
 - 保存进度: 先 `git commit`（走 synova-commit），不要 stash
 hook 已检测 `git stash` 并提示（hook-git-detect.sh）。
 
+**铁律 0-3b. 多机 PR 工作流（D334，2026-08-14 创始人定）。**
+main 是唯一真相。一人一事一分支。合并走 PR。禁止直接 push main（pre-push 门禁 0-2 硬阻断）。
+开工前必须 `git fetch --all && git pull --ff-only`；禁止在 `[behind N]` 状态开工或 push
+（pre-push 门禁 0-1 + 提交端 D335 check-branch-sync 双端硬阻断）。禁止 force push 共享分支。规范全文:
+`docs/synova/coordination/MULTI-MACHINE-PR-WORKFLOW.md`；skill: `git-sync-pr`。
+历史：2026-08-11~13 双机同分支交替 push，Mac tracking ref 过期 4 天误报 ahead、实际落后
+11 commit，险些互相覆盖。
+
+**铁律 0-4. 数据资产备份（D335，2026-08-14 创始人定）。**
+代码有三地备份（GitHub+Mac+Win），数据必须同样有异地副本。`data/synova.db` 每日
+03:30 由 launchd 自动备份到 iCloud Drive（`scripts/backup/backup-db.sh`，sqlite3
+.backup 一致性快照 + integrity_check + 14 份轮转）。禁止直接 cp 数据库（可能拷到
+写一半的库）。新机器开工前验证备份任务存在：`launchctl list | grep synova.backup`。
+
+**铁律 0-5. 多 Agent 协作协议（D336，2026-08-14 创始人定）。**
+四角色两条线：开发线 = Codex+DeepSeek(dev doc) + DeepSeek Harness(架构/基建/PR审查/创新)
++ Claude Code(功能实现)；审计线 = Kimi K3(独立审计)。任务路由查
+`docs/synova/coordination/TASK-ROUTING.md`，协议全文 `docs/synova/coordination/MULTI-AGENT-COLLAB.md`。
+**审计红线（违反=事故）**：DeepSeek Harness 与 Claude Code 永不修改审计脚本
+（scripts/audit/ 等）、永不编写审计标准、禁止自我审计（开发者改过的门禁同样受 K3 审）。
+PR 审查 ≠ 审计：审计结论只认 K3 报告。同一模块同一时间只允许一个角色认领。
+
+
 
 **铁律 47. 契约优先。** 新增 compute 函数必须先定义输入/输出/降级契约（JSDoc），再实现。参见 SYNOVA-ARCH-质量与测试体系-20260707.md §二。
 **铁律 48. 测试不可为空壳。** 测试文件必须有 expect() 断言。空壳测试 → commit 阻断。每个 compute 函数至少覆盖：正常路径 + 降级路径 + 边界条件。
@@ -60,8 +102,6 @@ hook 已检测 `git stash` 并提示（hook-git-detect.sh）。
 **铁律 49（D534 新增）. 决策必须沉淀。** 非平凡变更（治理脚本/铁律/规则文档）的 commit 必须引用 memory/notes/ 四态 Note（commit-msg 物理门禁）；新决策写 proposed/，落地 git mv 到 implemented/，否决 rejected/，过时 archived/。规范见 `memory/notes/README.md`。
 
 ### 一、接线铁律
-
-**铁律 1. 垂直切片交付。** 按用户可见的行为拆，不按技术层拆。
 
 **铁律 1. 垂直切片交付。** 按用户可见的行为拆，不按技术层拆。
 **铁律 4. 交付不完整——写了代码没接线。** 入口 → 交互 → 结果，三环节缺一不可交付。
@@ -74,6 +114,9 @@ hook 已检测 `git stash` 并提示（hook-git-detect.sh）。
 **铁律 9. 关键变更 grep 全仓库传播。** 改完核心定义后检查所有引用。
 **铁律 11. 静默降级禁止。** catch 必须 `log.warn/error` + 返回 `degraded: true`。pre-commit 警告存量。
 **铁律 12. 集成测试 cover 真实路由，不 mock 管线。**
+
+**（原铁律 45 · TUI 退役后保留的通用约定）注释中 `*/` 必须写为 `* /`。**
+否则 esbuild 把 `*/` 识别为块注释结束符 → 编译失败。（历史：`message.tsx` 写 `-/*/+` 导致 esbuild 解析崩溃）
 
 ### 三、错误处理与降级
 
@@ -99,7 +142,16 @@ hook 已检测 `git stash` 并提示（hook-git-detect.sh）。
 V5.2.7 扩展（CT-46）：`as never` / `as unknown as` 同样零容忍（曾逃逸 `getDatabase() as never`）。
 替代：内联类型 `as { field?: string }` / `Record<string, unknown>` / `unknown` + 类型守卫。
 
-**铁律 39. 五层架构边界。** 每层只与相邻层通信：
+**铁律 39. 五层架构边界。**〔⚠️ **2026-10-02 复核：范围有限，勿当全局架构**〕
+
+> 🔴 **实测范围**：五层只映射 `src/` **49 个顶层目录中的 18 个**（**63% 未覆盖**：
+> `providers`/`services`/`security`/`ingest`/`growth`/`init`/`extensions`/`cycles`/`llm`/`loops`/`middleware`/`adapters`/`contract`/`tools`/`config`…）
+> 🔴 **门禁只查 3 类**：`L2→L4` ／ `L1→L*` ／ `L3→L5` ⇒ 其余跨目录边不受约束
+> 🔴 **它没授权 `L4→L3`，门禁也不查** ⇒ 实际已存在（`src/l3/period-utils.ts`，且该文件自证"无跨层违规"）
+> **⇒ 处置**：31 个未归属目录的归层 + 是否改用"下层不可 import 上层"的可机器判规则 ⇒ **归架构专项研究（Q1）**；
+> 研究结论出来前，**本条的适用范围＝"已声明的 18 个目录"，不得引它证明全局架构合规。**
+
+每层只与相邻层通信：
 ```
 L1 交互 (TUI/CLI/Web) → L2
 L2 编排 (ConversationEngine) → L1 + L3
@@ -110,6 +162,58 @@ L5 存储 (SQLite) → L4
 pre-commit `check-architecture.sh` 检测 L2→L4 / L3→L5 跨层违规。
 
 
+
+### 六、【已退役】TUI V2 铁律 40–45（2026-10-02 退役）
+
+> 🔴 **本节于 2026-10-02 退役**（依据创始人：「**TUI 闪烁修复冻结更加过时，TUI 我们不用了**」
+> ＋ 判据「**不能写着铁律就必须这样**」）。
+>
+> **退役判据（实测，四条全中）**：
+> ```
+> ① 载体虽在（patches/ink+5.2.1.patch / src/tui-v2/）⇒ 但【零消费方】：
+>    src/ 里 import tui-v2 的文件数 = 0；package.json 只有两个独立入口（"tui"/"synova"）
+> ② 原铁律自认「无 pre-commit 自动执法」（3 处明写）⇒ 软约束＝无约束
+> ③ PRODUCT-BRIEF 零提桌面端/TUI ⇒ 不在当前交付面
+> ④ 交互面实际是 HTTP routes（服务入口）+ MCP；桌面端是独立 Electron（electron/main.cjs）
+> ```
+> **退役去向**：原 40–45 全文见 `LOOP-ENGINEERING-CHANGELOG.md`（可追溯，不删除）
+> **保留的通用结论一条**：
+> **「注释中的 `*/` 必须写为 `* /`」**（原铁律 45）—— 这是**通用编译陷阱**（esbuild 会把 `*/` 当块注释结束符），与 TUI 无关 ⇒ 已并入 §二 代码质量。
+> **遗留项（另卡）**：`src/tui-v2/**` 与 `deps: ink/ink-text-input` 是否按铁律 37 删除 ⇒ 归产品线出卡（**这是删代码，不是删规则**）。
+
+### 七、架构完整性 — 2026-06-21 新增（engine-core 拆分欺诈事故）
+
+> 以下铁律来自 2026-05 至 2026-06 engine-core 拆分欺诈事故。
+> 核心原则：**桥接文件 ≠ 迁移。声称拆完 = grep 零引用。**
+
+**【已退役】铁律 46（原：禁桥接代理文件 / engine-core 迁移）** —— 2026-10-02 退役
+
+> **退役判据（实测）**：`engine-core` 真 import = **0**（`grep -rnE "from '[^']*engine-core"` 零命中）
+> ⇒ **使命已完成**；且原白名单 8 个文件里 **5 个已不存在**
+> （`engine-core-adapter.ts`/`engine-core-types.ts`/`orchestrator-adapter.ts`/`entity-resolver-l2.ts`/`engine-graph-store.ts`）
+> ⇒ 规则指向的载体消失，**读者会去找不存在的文件**。
+>
+> **保留的通用戒律（去 engine-core 专属）**：
+> **禁止桥接代理文件 —— 迁移必须是代码真搬，不准建 import 代理。**
+> ```
+> 判定：纯桥接 = 文件中非 import/export/注释 的有效代码行数 = 0
+> 声称"已迁移"前必须：grep -r "<旧路径>" src/ --include="*.ts" | grep -v "\.test\."   ⇒ 零结果才算完
+> ```
+> **Why 仍保留**：2026-05~06 曾有 20 个桥接文件伪装成迁移（538 文件原封不动），
+> `tsc` 被骗过（import 路径合法），运行时 17 处 CJS `require()` 在 ESM 下崩溃。**这是通用教训，不限于 engine-core。**
+
+**铁律 47. "拆完了"必须由 grep 物理证明。**
+
+声称任何模块"已拆分/已迁移/已清理"前，必须运行：
+```bash
+grep -r "旧路径/旧包名" src/ --include="*.ts" --include="*.tsx" | grep -v "node_modules" | grep -v "\.test\."
+```
+零结果 = 拆完了。有结果 = 没拆完，继续拆。
+
+**Why**：tsc 零错误 ≠ 拆分完成。import 路径合法可以骗过编译器，骗不过 grep。
+pre-commit 警告：task brief 中声明"已完成拆分"但 grep 仍有旧路径引用。
+
+
 ---
 
 ## 项目身份
@@ -117,6 +221,29 @@ pre-commit `check-architecture.sh` 检测 L2→L4 / L3→L5 跨层违规。
 **产品**: SynovaAgent — 组织数字孪生诊断 + 持续增长导航系统。
 **定位**: 独立 Agent 进程，通过 HTTP API + MCP 对外服务；**桌面端**（Electron，品牌表层，施工图 🟢）：能装/能开/能用 8 验证点已闭环（切片 A/B/C，2026-08-25）。
 **市场**: 5-1000人团队的组织诊断与增长导航。
+
+**L0 进化** (独立于五层，自我迭代):
+```
+evolution/ (SessionLearningEngine, FeedbackCollector, OntologyAdapter)
+两路反馈 → 候选池 → 确认/执行验证 → 写入知识库/权重模型
+分歧记录 → 三个月后自动验证 → 更新/降级
+```
+
+**文件化扩展** (不改代码):
+- `expert/` — 新增专家 = 新建目录 + 8 个文件 → 自动注册
+- `expert/expert-registry.yaml` — 声明哪些专家启用、用什么工具
+- `knowledge/shared/` — 共享知识单源。专家 KNOWLEDGE.md 只引用不复制
+- `theory/` — 理论基础。每个文件对应一个学科模块
+
+**技能扩展**:
+- `skills/` — SKILL.md 定义完整方法论。按需加载。新增 skill = 新建目录 + SKILL.md → ExpertDispatcher 自动发现
+
+**数据安全**:
+- L0 公开摘要 — 所有人可见
+- L1 聚合信号 — GA + 客户可见
+- L2 脱敏证据 — GA + 客户可见（人名/金额已脱敏）
+- L3 原始数据 — 仅客户企业内部 Agent 可见。GA 永久不可见
+
 
 **两大核心系统**:
 1. **GA 按需诊断** — 用户触发，6阶段管道，全部测量器+专家 → 综合诊断报告

@@ -317,13 +317,13 @@ documents:
   # ---- Win 线派单件（D1001/D1002/D1003）----
   # 依据：Mac-CTO 2026-09-25 裁定「正式派单件 = 入库（docs/synova/dispatch/**）」
   # 红因：D2 登记门禁（CI strict）判「有未登记文档 3 个」⇒ 本批补登记
-  - id: DOC-0124
+  - id: DOC-0177
     type: governance
     path: docs/synova/dispatch/D1001-ownership-renderer-tests-20260925.md
     status: active
     owner: win-line
 
-  - id: DOC-0125
+  - id: DOC-0178
     type: governance
     path: docs/synova/dispatch/D1002-workspaces-route-order-f1-20260925.md
     status: active
@@ -363,17 +363,191 @@ documents:
     status: active
     owner: line-lead
 
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0141
+    type: governance
+    path: .github/ISSUE_TEMPLATE/bug.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0142
+    type: governance
+    path: .github/ISSUE_TEMPLATE/feature.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0143
+    type: governance
+    path: .github/ISSUE_TEMPLATE/task.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0144
+    type: governance
+    path: decisions/process/2026-10-01-branch-protection-and-ci-admission.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0145
+    type: governance
+    path: decisions/proposed/process/2026-10-01-branch-protection-emergency-plan.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0146
+    type: governance
+    path: decisions/proposed/process/2026-10-01-cto-role-three-tier.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0147
+    type: governance
+    path: docs/synova/CTO-ROLE.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0149
+    type: governance
+    path: docs/synova/coordination/DSH版本口径与断面-登记-20261001.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0163
+    type: governance
+    path: docs/synova/presets/README.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（CTO 本轮交付物）2026-10-02 ----
+  - id: DOC-0164
+    type: governance
+    path: docs/synova/presets/synova-base/README.md
+    status: active
+    owner: DSH
+
+  # ---- D1120（分工定稿 → B 层决策）2026-10-02 ----
+  - id: DOC-0165
+    type: decision
+    path: decisions/implemented/process/2026-10-02-role-division-final.md
+    status: active
+    owner: DSH
+
+  # ---- D1124（L1 瘦身：模板/抽取清单/总方案）2026-10-02 ----
+  - id: DOC-0166
+    type: governance
+    path: docs/synova/coordination/AGENTS-md-模板-20261002.md
+    status: active
+    owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0167
+    type: instruction
+    path: extensions/sentinels/AGENTS.md
+    status: active
+    owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0168
+    type: instruction
+    path: src/l3/AGENTS.md
+    status: active
+    owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0169
+    type: instruction
+    path: expert/AGENTS.md
+    status: active
+    owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0170
+    type: instruction
+    path: src/l4/AGENTS.md
+    status: active
+    owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0171
+    type: instruction
+    path: scripts/control-tower/AGENTS.md
+    status: active
+    owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0172
+    type: instruction
+    path: .github/AGENTS.md
+    status: active
+    owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0173
+    type: instruction
+    path: docs/AGENTS.md
+    status: active
+    owner: DSH
+
+  # ---- D1125（L2 域级 AGENTS.md A 批 8 份）2026-10-02 ----
+  - id: DOC-0174
+    type: instruction
+    path: tests/control-tower/AGENTS.md
+    status: active
+    owner: DSH
+
+    # ---- 重编号（2026-10-04 合并时）：原 DOC-0141/0142 与 CTO 交付物撞号，按「不填空洞」原则追加到 max+1 ----
   # ---- Win 线派单件（D1000 身份链 / D1004 js-yaml）2026-10-02 补登记 ----
   # 依据：Mac-CTO 2026-09-25 裁定「正式派单件 = 入库（docs/synova/dispatch/**）」
   # 红因：D2 登记门禁（CI strict）判「有未登记文档 2 个」⇒ 本批补登记
-  - id: DOC-0141
+  - id: DOC-0175
     type: governance
     path: docs/synova/dispatch/D1000-win-identity-chain-department-20260924.md
     status: active
     owner: win-line
 
-  - id: DOC-0142
+  - id: DOC-0176
     type: governance
     path: docs/synova/dispatch/D1004-js-yaml-dependency-20260925.md
     status: active
     owner: win-line
+origin/main
+
+  # ---- 补登记（2026-10-04 · CTO 合并 PR #948 时发现：这 5 件已在 main，但登记门禁拦未登记）----
+  - id: DOC-0179
+    type: governance
+    path: docs/synova/dispatch/2026-10-02-PR腐烂清障-派单.md
+    status: active
+    owner: win-line
+
+  - id: DOC-0180
+    type: governance
+    path: docs/synova/dispatch/2026-10-02-T3-timeout基线重取-派单.md
+    status: active
+    owner: win-line
+
+  - id: DOC-0181
+    type: governance
+    path: docs/synova/dispatch/2026-10-02-客户数据撤除-派单.md
+    status: active
+    owner: win-line
+
+  - id: DOC-0182
+    type: governance
+    path: docs/synova/dispatch/D1000-K3审计派单-20260925.md
+    status: active
+    owner: win-line
+
+  - id: DOC-0183
+    type: governance
+    path: docs/synova/dispatch/D1000-派单勘误-20260925.md
+    status: active
+    owner: win-line
+

@@ -1,0 +1,3 @@
+{"id":"D1123","title":"最终分工定稿（路径所有权版，可启动）","status":"in_progress","created":"2026-10-02","branch":"docs/D1122-cto-deliverables-contract",
+"write_set":["decisions/implemented/process/2026-10-02-role-division-final.md","docs/synova/CTO-ROLE.md","task-state/D1123.json",".claude/task-briefs/2026-10-02-D1123-最终分工定稿.md",".claude/bypass.log"],
+"note":"创始人 2026-10-02「最终分工方案必须确定下来，然后要启动了」。学 DSH 形状（22 份 AGENTS.md 路径归属 + 无 CODEOWNERS + 标签强制 + 政策代码 + permissions 显式最小集），保留三级制（前提不同）。归属落到排他代码路径：治理线 .github/**+scripts/control-tower|workflow|doc-system；基座线 DSH 仓只读+src/只读；产品线 src/l3|l4+expert+sentinels+knowledge+theory；CTO 宪法层+ci.yml 语义唯一裁权。新增长期件：8 份能力面 AGENTS.md（各线自维）。"}
