@@ -282,6 +282,11 @@ documents:
 
   # 号段注（D1105 去重）：本批原用 DOC-0119/0120，但 main（#926）已占用 0119-0123
   # ⇒ 合并时人工去重改号 0124/0125（登记门禁不校 id 唯一，靠人工守）
+    - id: DOC-0185
+      type: governance
+      path: docs/synova/coordination/CTO-派单-门禁整体盘点与治理-20261004.md
+      status: active
+      owner: CTO
     - id: DOC-0184
       type: decision
       path: docs/synova/coordination/域概念废止件-20261004.md
