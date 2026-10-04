@@ -317,26 +317,32 @@
 
 ## D1149 死件退役 (2026-10-05) — 零调用方门禁 + D3 零执行体
 
-> 依据：任务板 task-4（T5/批4 · 死件退役）。**每删一条先在 PR 正文贴原始证明**（只被 docs/task-brief 提到 ≠ 有调用方）。
+> 依据：任务板 task-4（T5/批4 · 死件退役）｜ 母卡 **#1046**（治理·门禁整体盘点与治理方案）§三 退役判据 a/b/c。**每删一条先在 PR 正文贴原始证明**（只被 docs/task-brief 提到 ≠ 有调用方）。
 > 卡片给的 12 个候选里实测仅 3 个零调用方；其余 9 个各有一条**可执行**消费路径（CI 已登记夹具 /
 > vitest 集成测试 / 活 skill 指令）⇒ 不删并进例外清单。宁可少删，不许误删（删了会让 12 必需 context 变红）。
 
 ### 退役记录（每条三判据 + git 历史可回溯）
 
-**判据定义（a/b/c 三条同时成立才删，任一不成立 ⇒ 保留）**
-- **a) 零可执行调用方**：`grep -rl "<脚本名>" .github/ .claude/ package.json scripts/ | grep -v tests/` 输出仅自身（或仅 task-brief/docs 文本）。
-- **b) 零 CI 执行面**：脚本名及其配对夹具名均不出现在 `.github/workflows/**`；且不在 `ct-test-gate.sh` 配对域
+**退役判据 a/b/c（取母卡 #1046 §三「铁律生命周期元规则」，创始人 2026-10-02 定；三条任一成立即达退役条件）**
+- **a) 载体已不存在** —— 本批 0 条命中（4 件载体均在仓库中，属主动退役）。
+- **b) 使命已完成** —— 3 条命中（见下表逐条依据：职责已被后续机制覆盖/取代）。
+- **c) 连续两季「零违反且无执行门禁」（软约束 = 无约束）** —— 3 条命中。
+- **退役 ≠ 删除 ⇒ 移入 CHANGELOG（可追溯）** —— 本节即该台账。
+
+**前置证明 P1/P2/P3（三条同时成立才动手；任一不成立 ⇒ 保留，并入例外清单）**
+- **P1) 零可执行调用方**：`grep -rl "<脚本名>" .github/ .claude/ package.json scripts/ | grep -v tests/` 输出仅自身（或仅 task-brief/docs 文本）。
+- **P2) 零 CI 执行面**：脚本名及其配对夹具名均不出现在 `.github/workflows/**`；且不在 `ct-test-gate.sh` 配对域
   （该门禁只覆盖 `scripts/{control-tower,workflow,hooks}/`，由 `scripts/pre-commit-check.sh:617` 调用）。
-- **c) 零活消费者**：全仓 referrer 仅剩 `docs/` / `memory/` / `.claude/task-briefs/`（非执行体）；
+- **P3) 零活消费者**：全仓 referrer 仅剩 `docs/` / `memory/` / `.claude/task-briefs/`（非执行体）；
   **不含**活 skill（`.claude/skills/**` 里的 `bash <路径>` 属可执行指令）与 ci.yml 已登记夹具的内容断言。
 - **git 历史可回溯**：`git log --oneline -- <路径>` 非空（本仓保留完整历史，内容可 `git show <sha>:<路径>` 逐字取回）。
 
-| # | 退役件 | a | b | c | git 首末（可回溯） |
-|---|---|---|---|---|---|
-| 1 | `scripts/control-tower/pre-audit-summary.sh`（U8 机器预审汇总，166 行） | ✅ | ✅ | ✅ | D426 建 → D430 热修（2e4715f3d） |
-| 2 | `tests/control-tower/pre-audit-summary.test.sh`（#1 的配对夹具，未登记 ci.yml） | ✅ | ✅ | ✅ | 随 #1 一并退役，[R] 段条目同步摘除（77 条） |
-| 3 | `scripts/check-file-hell.sh`（配置文件地狱防护，24 行） | ✅ **全仓零引用** | ✅ | ✅ | T5 建（2a2ced62a）—— 首行自述「pre-commit 组8附加检查」是**幽灵宣称**（`scripts/pre-commit-check.sh` 零引用） |
-| 4 | `scripts/doc-system/verify-system-registry.sh`（I1/I2/I3 校验器，145 行） | ✅ | ✅ | ✅ | D782 建（de0afd275）—— D3 **零执行体**；夹具内针对它的用例同步摘除，生成器用例 A/A0/A1 保留 |
+| # | 退役件 | P1 | P2 | P3 | #1046 退役判据 a/b/c | git 首末（可回溯） |
+|---|---|---|---|---|---|---|
+| 1 | `scripts/control-tower/pre-audit-summary.sh`（U8 机器预审汇总，166 行） | ✅ | ✅ | ✅ | **b** 使命已完成（U8 预审职责已被后续门禁链覆盖）+ **c** 零执行门禁 | D426 建 → D430 热修（2e4715f3d） |
+| 2 | `tests/control-tower/pre-audit-summary.test.sh`（#1 的配对夹具，未登记 ci.yml） | ✅ | ✅ | ✅ | **b** 随 #1 一并退役（留着即 D317 同款断裂引用） | 随 #1 一并退役，[R] 段条目同步摘除（77 条） |
+| 3 | `scripts/check-file-hell.sh`（配置文件地狱防护，24 行） | ✅ **全仓零引用** | ✅ | ✅ | **b** 使命已完成（同族检查由 `check-file-driven.sh` 承担）+ **c** | T5 建（2a2ced62a）—— 首行自述「pre-commit 组8附加检查」是**幽灵宣称**（`scripts/pre-commit-check.sh` 零引用） |
+| 4 | `scripts/doc-system/verify-system-registry.sh`（I1/I2/I3 校验器，145 行） | ✅ | ✅ | ✅ | **b** 使命未完成但从未上电（D782 校验侧零接线，见「建议另开卡」）+ **c** | D782 建（de0afd275）—— D3 **零执行体**；夹具内针对它的用例同步摘除，生成器用例 A/A0/A1 保留 |
 
 ### 例外清单（**有调用方 ⇒ 不删**，原始输出见 PR 正文 §2）
 
