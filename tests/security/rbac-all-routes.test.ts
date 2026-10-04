@@ -26,7 +26,7 @@
  *
  * ── 本卡**不做**越权判定（刻意，带注释钉住）──────────────────────────────
  * 组 C 只断言「已认证 ⇒ 非 403 / 业务成功」，**不**断言任何角色级拒绝。
- * 原因: `RbacContext` 无 org/team 维度（`middleware/rbac.ts:129` 的 `department` 恒
+ * 原因: `RbacContext` 无 org/team 维度（`middleware/rbac.ts:127` 的 `department` 恒
  * `undefined`；`extractRbacContext` 连 `req.auth.orgId` 都不携带），而路由不得重算身份
  * （L-4）⇒ 跨部门/跨租户判据**今日无法表达**，只能靠接口变更（另立卡）补齐。
  * 曾尝试叠部门级读判据 ⇒ 恒假 ⇒ `app/js/dashboard.js:35`（deptId = 登录者 orgId）
@@ -414,7 +414,7 @@ describe('C · 已认证 ⇒ 非 403（防「一刀切全拒」；本卡刻意�
    * `app/js/api-client.js:61` 带真 Bearer）:
    * 本卡**必须**让已认证的 manager/staff 读到自己的部门工作台。
    * 曾叠 `canAccessWorkspace({visibility:'department', department: deptId})` ⇒ 因
-   *   `department` 恒 `undefined`（rbac.ts:129）该判据恒假 ⇒ dashboard 静默空面板
+   *   `department` 恒 `undefined`（rbac.ts:127）该判据恒假 ⇒ dashboard 静默空面板
    *   = 过度拒绝（功能回归），已撤。
    * 本钉的意义: 接口补齐部门/租户维度后，若有人重新引入越权判定，本用例即红
    *   —— 强制该变更走复核，而不是静默把 dashboard 弄空。

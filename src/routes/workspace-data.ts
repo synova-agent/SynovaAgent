@@ -25,7 +25,7 @@
  *   路由级是本仓**设计指定的执法点**（`server.ts:375` 明文「拦截责任在路由级守卫（P3）」）。
  *
  * 🔴 **未做（依赖接口变更，另立卡）**: 跨部门/跨租户的**越权**判定。
- *   原因: `RbacContext` 无 org/team 维度（`middleware/rbac.ts:129` 的 `department` 恒
+ *   原因: `RbacContext` 无 org/team 维度（`middleware/rbac.ts:127` 的 `department` 恒
  *   `undefined`，D947/L-32 刻意收窄；`extractRbacContext` 连 `req.auth.orgId` 都不携带），
  *   而路由**不得重算身份**（L-4 硬约束）⇒ 今日**无法表达**该判据。
  *   曾尝试把**部门级读判据**叠在 4 个 `:deptId` 端点上（`{visibility:'department', department: deptId}`）：

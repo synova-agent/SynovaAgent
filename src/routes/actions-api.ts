@@ -8,7 +8,7 @@
  * `authenticated !== true` ⇒ HTTP 403 + 响应体 `code` + `log.warn({code:'RBAC_DENIED'})` 留痕。
  *
  * 🔴 **未做（依赖接口变更，另立卡）**: 跨工作区/跨租户的**越权**判定。
- *   原因同 `workspace-data.ts` 文件头：`RbacContext` 无 org/team 维度（`middleware/rbac.ts:129`
+ *   原因同 `workspace-data.ts` 文件头：`RbacContext` 无 org/team 维度（`middleware/rbac.ts:127`
  *   的 `department` 恒 `undefined`）、且路由不得重算身份（L-4）⇒ 今日**无法表达**该判据。
  *   曾尝试叠读/写判据（部门级读 + `{owner: rbac.userId}` 写）⇒ 判据要么恒假、要么退化为
  *   角色门，对 `app/js/dashboard.js` 的真消费方构成过度拒绝，已撤。
