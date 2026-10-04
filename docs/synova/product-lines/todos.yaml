@@ -355,12 +355,12 @@ manual:
     acceptance: "GA 项从置灰转真实数据渲染（Module-3 后端就绪后）"
   - id: "T-M-04"
     line: 20
-    title: "施工图 Track A 部署轨收尾（哇呢宝贝部署主线）"
+    title: "施工图 Track A 部署轨收尾（客户A部署主线）"
     source: "DSH迁移施工图-20260820 §Track A（最高优先）"
     priority: P0
     owner: "CTO 统筹"
     depends: ["T-M-01", "T-M-02"]
-    acceptance: "哇呢宝贝可实际部署使用（桌面端 L01 8 验证点 ≥6 verified）"
+    acceptance: "客户A可实际部署使用（桌面端 L01 8 验证点 ≥6 verified）"
   - id: "T-M-06"
     line: 20
     title: "施工图 Track B Stage 0-1（部署后启动；D1 事件溯源 spec 已有 D500）"
