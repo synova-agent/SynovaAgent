@@ -43,12 +43,14 @@ C 段棘轮排除非必需 context（判据变更）须 K3，已请 lead 另立�
 ## Q1: 调研 — 业界最佳实践 / Anthropic 决策链 / memory 历史教训
 
 - **第一性原理**：门禁的目标不是"更严"，是**"真拦得住 + 不拦不该拦的"**。两条推论：
-  ① 必需 context 必须**必然上报**（job 级 `if:` 过滤 ⇒ check-run 不存在 ⇒ 永久 blocked ≠ 红，人无从修复）；
+  ① 必需 context 必须**满足 success**。两种失败机制都要认清（独立复核席 2026-10-05 实测订正）：
+     · job 级 `if:` 为 false ⇒ check-run **仍存在**、`conclusion=skipped`（≠ 不存在）；`skipped` ≠ success ⇒ 合并条件不满足；
+     · run 根本没建（`GITHUB_TOKEN` 推送 / workflow 级 paths 过滤）⇒ check-run 恒 0 ⇒ `N of N expected`（D971 的真机制）。
   ② 一个**不可能变红**的必需 context 不是门禁（`npm audit` 双层豁免即此形），把它留在必需集是把
   "必需"二字贬值。⇒ windows 腿的去向只能是"离开必需集"，而不是"留在必需集但恒绿"。
 - **Anthropic 基线**：改门禁结构**必须配判别性夹具**（改坏即红 + 复原后一致）；读不到判据源 ⇒ fail-closed 且不静默
   （铁律 11/24）；三层退出码 0/1/2，禁 `|| true` 吞崩溃（`ctrl-tower-change` 模式 1）。
-- **开源实证（GitHub Actions 官方语义）**：job 级 `if:` 使 job **不被创建** ⇒ 无 check-run；
+- **开源实证（GitHub Actions 官方语义；本仓实测订正）**：job 级 `if:` 为 false ⇒ job `completed/skipped`，其 check-run 仍存在且 `conclusion=skipped`（实测锚点 main tip `1630a5014` 恰 1 条 skipped，指向 run `37183822437` job `111381534143`）；
   `needs:` 下游默认被 `success()` 隐式跳过 ⇒ 必须写显式 `if:`（D1112 的教训，本卡沿用 `!= 'false'` 的 fail-safe 写法）；
   step 级 `continue-on-error: true` ⇒ step `outcome=failure` 但 **job 结论 = success**（本卡 ③ 约束的实现依据）。
 - **memory 历史教训**：D971（必需 context 消失 ⇒ 405 "N of N required status checks are expected"）；
@@ -100,7 +102,7 @@ C 段棘轮排除非必需 context（判据变更）须 K3，已请 lead 另立�
 ⑥ baseline 表按生成命令重放 + 双模式复核。
 
 结果（最终展示）：
-- PR 检查列表：非 scripts PR **不再出现**两条 windows 腿（连 check-run 都没有）；必需 context 9（步骤 2 后 10）全绿；
+- PR 检查列表：非 scripts PR 上两条 windows 腿 = **`conclusion=skipped`**（不占 runner；且**不在必需集** ⇒ 不构成合并条件）；必需 context 9（步骤 2 后 10）全绿且 pending=0；
 - 顾问腿失败可在**公开注解面**（`GET /check-runs/{id}/annotations`）与 job log 检索，且不改任何阻断判定；
 - `python3 scripts/control-tower/check-required-contexts.py --api-check` → `live 9 条与基线逐字一致（双向零差集）`。
 

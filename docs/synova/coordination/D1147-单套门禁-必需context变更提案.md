@@ -13,10 +13,17 @@ task-2 正文里三个数字互相矛盾：subject「12→7」、正文「改前
 
 - 步骤 1 判据原文 = 「`gh pr checks` 里 windows 两腿在非 scripts PR 上**不出现**」
   ⇒ 该 job 必须有 **job 级 `if:`**（否则 check-run 照样产出、只是跳过步骤）；
-- job 级 `if:` + 该 context 仍在必需集 ⇒ 非 scripts PR 不产 check-run ⇒ **永久 blocked**
-  （D971 型：`405 "N of N required status checks are expected."`，原文
-  `docs/synova/coordination/周报-20260922.md:58`；同族断言已固化在
-  `tests/control-tower/ci-signal-classify.test.sh:229-238`「必需 context 恒上报」）。
+- 🔴 **机制订正（独立复核席 2026-10-05 实测 + 本线复现，改文案不改设计）**：
+  job 级 `if:` 为 false 时 **check-run 仍然存在，`conclusion = skipped`**——不是"不产 check-run"。
+  实测锚点（本线亲手复跑）：main tip `1630a5014` 的 check-runs 里恰有 1 条 `skipped`，其 `details_url`
+  指向 run `37183822437` job `111381534143`（= `Checker Review (maker/checker)`，其 job 级 `if:` 在
+  push 事件下为 false），该 job `conclusion=skipped`。
+  与 **D971 的 405 不是同一机制**：D971 是「run 根本没建」（`GITHUB_TOKEN` 推送的分支不触发 workflow /
+  workflow 级 paths 过滤）⇒ check-run 恒 0 ⇒ `N of N expected`。
+  **两者同向**：`skipped` ≠ success ⇒ 必需 context 得不到满足 ⇒ 合并条件不满足。
+  （平台语义层面的"skipped 必需检查必然卡住合并"，本仓尚无 merge_group / docs-only 现场可实测；依据 = 平台语义
+  + 社区同型故障 + 本仓 `tests/control-tower/ci-signal-classify.test.sh:229-238` 的同族风险断言 —— 标为**外部依据**。）
+  ⇒ 步骤 1 判据的严谨表述应写「非 scripts PR 上两腿 `conclusion=skipped` 且**不在必需集**」。
 - ⇒ 两条 windows context **必须同时**离开矩阵与必需集；「改后 12 条」在这条判据下不成立。
 - ⇒ 目标态 = **12 −3 +1 = 10**（移出 `npm audit` + 两条 windows；加入 `Gate Integrity (…)`），
   而 lead 因 #948 的 head 早于 gate-integrity job（10-02 建）而拆成两步执行（见 §3）。
@@ -135,7 +142,7 @@ python3 scripts/control-tower/check-required-contexts.py --api-check   # 会报�
 ```
 
 ⚠️ **合并顺序硬约束**：本 PR **不得早于步骤 1 的 PATCH 合并**（已满足）——若两条 windows context 仍必需而
-本 PR 已把它们的 job 改成条件创建，则**非 scripts PR 永久 blocked**。步骤 2 与合并的顺序无约束 ——
+本 PR 已把它们的 job 改成条件创建，则非 scripts PR 上这两条 context 只剩 `conclusion=skipped` ⇒ 合并条件不满足。步骤 2 与合并的顺序无约束 ——
 但**步骤 2 自身有前置**：抽检 4 个在开 PR 的 head 的 check-runs，`gate-integrity` 命中数 =
 **#948 → 0 条**（head `781412605`，2026-10-04）/ #1029 / #1012 / #1000 → 各 1 条
 ⇒ 此刻把 `Gate Integrity` 写入必需集会让 **#948 永久 blocked**，故触发条件 = **#948 重新 push 或关闭之后**。
@@ -151,7 +158,7 @@ check-runs，被 #948 反例否证；现已按 head 级实测改写。同型教�
 | 约束 | 内容 | 为什么 |
 |---|---|---|
 | ① 路径触发 | 仅 `scripts/**`\|`tests/**` 变更时**创建** job；`origin/main` 不可解析 / schedule / workflow_dispatch ⇒ fail-safe `run=true` | 平台差异只在控制塔域有信息量；非命中 PR 连 check-run 都不产（省 runner、不上必需面） |
-| ② 非必需 | 两个 context 名**不得**再进必需集 | 见 §1：job 级 `if:` + 必需 = 永久 blocked |
+| ② 非必需 | 两个 context 名**不得**再进必需集 | 见 §1：非命中 PR 上它们只有 `conclusion=skipped` ⇒ 必需条件不满足（机制订正后同向） |
 | ③ 恒 success | 重活 step `continue-on-error: true`；**前置步骤（checkout / setup-node）亦 `continue-on-error: true`**；超时给足（job 106 / step 60；test-kit 腿 job 10 —— 见下）；失败经 `steps.*.outcome` 检查 + `::error` 注解 + `::warning` 摘要上看板 | 见下「跨机制发现」 |
 
 **③ 的三条实现细节（复核席 P2 补齐，2026-10-05）** —— 单靠"重活 step continue-on-error"**不够**：
@@ -212,6 +219,8 @@ GET /repos/{owner}/{repo}/check-runs/{id}/annotations    # ::error / ::warning �
 | 8 | canary 清单漂移（恒 0） | `bash scripts/control-tower/check-canary-drift.sh` | 仅存量幽灵项 `tests/win/vitest-log-level.test.sh`（ci.yml 注释里已登记的占位项，非本次引入） |
 | 9 | 清单计数未被改小 | `bash tests/control-tower/simulate-ci.test.sh` | `结果: 10 通过, 0 失败`（rc=0） |
 | 10 | windows 腿只在条件 job 中（静态） | `grep -n "matrix" .github/workflows/ci.yml` + `grep -nE "^  [a-z0-9_-]+:$" -A2` | 两个必需 job 矩阵单元素 `os: [ubuntu-latest]`；`windows-latest` 只出现在 `windows-leg-trigger` / 两个 `*-windows-advisory`（均非必需） |
+| 11 | 触发判据真执行（动态） | **抽出 ci.yml 里该 step 正文**，在临时 git 仓喂 5 种变更集 | ① `docs/x.md` ⇒ `run=false` ② `scripts/y.sh` ⇒ `run=true` ③ `origin/main` 不可解析 ⇒ `run=true`（fail-safe） ④ diff 空（main push）⇒ `run=false` ⑤ `tests/z.test.sh` ⇒ `run=true` |
+| 12 | 「job 级 `if:` false ⇒ check-run 是 `skipped` 而非不存在」（机制订正依据） | `gh api …/commits/1630a5014/check-runs` + 对应 job | `skipped` 条数 = 1，指向 run `37183822437` job `111381534143`（`Checker Review (maker/checker)`），该 job `completed/skipped` |
 
 **改坏即红（判别性证据，全部在 mktemp 隔离树内做，零真实仓库改动）**：
 

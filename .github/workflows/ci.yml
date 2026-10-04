@@ -321,9 +321,10 @@ jobs:
     # 🔴 D1147（单套门禁）: windows 腿移出本矩阵 ⇒ 本 job 只产 1 个 check-run
     #   `Test-Kit Architecture Tests (ubuntu-latest)`。矩阵**保留单元素**（不删 strategy）=
     #   `name:` 里的 `${{ matrix.os }}` 展开机制不变 ⇒ 必需 context 名逐字零风险。
-    #   为什么 windows 腿必须同时离开"矩阵"与"必需集": job 级 if: ⇒ 非 scripts PR 不产
-    #   check-run ⇒ 若该 context 仍在必需集 ⇒ 非 scripts PR 永久 blocked（D971 型；
-    #   同 tests/control-tower/ci-signal-classify.test.sh:229-238 的硬断言）。
+    #   为什么 windows 腿必须同时离开"矩阵"与"必需集": 路径触发用 job 级 if: ⇒ 非命中 PR 上该
+    #   check-run 以 **`conclusion=skipped`** 出现（机制订正见文件末 D1147 段 ①，实测锚点 main tip
+    #   `1630a5014`）⇒ `skipped` ≠ success ⇒ 必需条件不满足 ⇒ 非 scripts PR 卡在合并条件上
+    #   （D971 同族；同 tests/control-tower/ci-signal-classify.test.sh:229-238 的硬断言）。
     strategy:
       fail-fast: false
       matrix:
@@ -922,14 +923,22 @@ jobs:
   #   = control-tower windows 腿中位数 106min（vs ubuntu 14min）⇒ 平台抖动即卡死整条 PR 队列，
   #   与它承载的信息量不成比例。
   # 处置（三条约束，改任一条都要重读本段）:
-  #   ① 触发 = **路径级**: 仅 `scripts/**`|`tests/**` 变更时才**创建** job（job 级 if:）⇒ 非命中
-  #      PR 连 check-run 都不产（不占 runner、不上必需面、`gh pr checks` 里不出现）。
+  #   ① 触发 = **路径级**: 仅 `scripts/**`|`tests/**` 变更时才**执行** job（job 级 if:）⇒ 非命中
+  #      PR 不占 runner、不产生任何判定。
+  #      ⚠️ **机制订正（独立复核席 2026-10-05 实测 + 本线复现，改文案不改设计）**: job 级 `if:` 为 false 时
+  #      **check-run 仍然存在，conclusion = `skipped`**（不是"不产 check-run"）。实测锚点: main tip
+  #      `1630a5014` 的 check-runs 里恰有 1 条 `skipped`，其指向 run 37183822437 job 111381534143
+  #      （`Checker Review (maker/checker)` 的 job 级 if: 在 push 事件下为 false），该 job conclusion = skipped。
+  #      与 D971 的 405 **不是同一机制**: D971 是「run 根本没建」（`GITHUB_TOKEN` 推送的分支不触发
+  #      workflow / workflow 级 paths 过滤）⇒ check-run 恒 0 ⇒ "N of N expected"。两者**同向**：
+  #      `skipped` ≠ success，必需 context 同样得不到满足（平台语义；本仓尚无 merge_group/docs-only 现场可实测，
+  #      依据标注为外部 + 本仓 `tests/control-tower/ci-signal-classify.test.sh:229-238` 的同族风险断言）。
   #      判据载体 = 上一个 job `windows-leg-trigger`（只产结论、不跑测试；origin/main 不可解析 ⇒
   #      fail-safe run=true；schedule/workflow_dispatch ⇒ 安全网无条件 true）。
   #   ② 非必需: 两个顾问 context 名**不得**再进 branch protection 必需集。理由不是"不重要"，
-  #      而是**机制性**: job 级 if: ⇒ 非 scripts PR 不产 check-run ⇒ 该 context 若在必需集
-  #      ⇒ PR 永久 blocked（D971 型 405 "N of N required status checks are expected"；
-  #      同族事故原文 docs/synova/coordination/周报-20260922.md:58）。
+  #      而是**机制性**: 非 scripts PR 上这两条 context 只会以 `conclusion=skipped` 出现（见 ① 订正）
+  #      ⇒ 必需检查得不到 success ⇒ 合并条件不满足（D971 同族后果；事故原文
+  #      docs/synova/coordination/周报-20260922.md:58）。⇒ 路径触发与必需集**不可共存**。
   #   ③ 恒 success（**绝不产 failure 结论**）: 重活 step 用 `continue-on-error: true`，失败经
   #      `steps.*.outcome` 检查 + `::error` 注解 + `::warning` 摘要上看板。
   #      🔴 为什么不能"非必需但可以红"（本卡实测发现的跨机制相互作用）: C 段棘轮
@@ -942,7 +951,8 @@ jobs:
   #     GET /repos/{owner}/{repo}/check-runs/{id}/annotations   ← ::error / ::warning 都在这里
   # ══════════════════════════════════════════════════════════════════════════════════════════
   windows-leg-trigger:
-    # D1147: 触发判据载体。**非必需**（进必需集则非命中 PR 永久 blocked）；无 needs: ⇒ 无 D1112 隐式
+    # D1147: 触发判据载体。**非必需**（进必需集则非命中 PR 上顾问腿只剩 `conclusion=skipped` ⇒ 必需条件
+    #   不满足，见文件末 ① 机制订正）；无 needs: ⇒ 无 D1112 隐式
     #   success() 风险；自身 step 全 fail-safe（唯一失败面 = shell/写出 $GITHUB_OUTPUT 崩）。
     timeout-minutes: 2
     name: Windows Leg Trigger (D1147 path detect)
@@ -976,7 +986,7 @@ jobs:
             echo "D1147: 命中 ^(scripts|tests)/ ⇒ run=true（windows 顾问腿将被创建）"
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
-            echo "D1147: 未命中 scripts/**|tests/** ⇒ run=false（顾问腿不创建 ⇒ 无 check-run；main push 后 diff 为空亦落此支，周期 run 由上方安全网兜底）"
+            echo "D1147: 未命中 scripts/**|tests/** ⇒ run=false（顾问腿的 job 级 if: 为 false ⇒ 其 check-run 以 conclusion=skipped 出现、不占 runner；main push 后 diff 为空亦落此支，周期 run 由上方安全网兜底）"
             echo "run=false" >> "$GITHUB_OUTPUT"
           fi
 
