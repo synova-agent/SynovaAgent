@@ -16,6 +16,14 @@
  *   · W1 — 同 (entity, metric) 的 ≥2 时序读数参与合成观测波动，进一步校准预期范围宽度。
  *   · 未标定（字段缺失 / 占位串 "TBD …" / 缺 uncertainty）→ 退回 DEFAULT_BASELINE 点基线，
  *     与 D1143 之前的行为逐位一致（零回归）。
+ *
+ * 现状边界（诚实声明，勿读成"已端到端贯通"）:
+ *   · **生产尚无 transfer_function 写入方** —— 全仓唯一的 transfer_function 代码就是本文件的
+ *     读取路径；本体层 `extensions/ontology/edge-types/*.json` 的 55 个定义里 0 个是结构化参数，
+ *     且 `src/l4/ontology-loader.ts` 不把该字段写进边 props。
+ *     ⇒ 生产中 probe 只会是 absent/placeholder，`valid` 分支**当前不可达**，行为等价改前。
+ *   · 因此本卡交付的是「**读取路径就绪 + 未标定退默认**」，参数生效需等标定线写回边 props。
+ *   · 是否被判定为"已标定"可由 report 逐边读出：`trackedEdges[].baselineSource`。
  */
 import { createLogger } from "@synova/logger";
 
@@ -101,14 +109,15 @@ export interface TransferFunctionParam {
 
 /**
  * 解析探测结果 — 区分"没标定"与"标定坏了"。
- * 前者是常态（当前 55 个 edge-type JSON 中 46 个为 TBD 占位），不告警；
+ * 前者是常态（实测 extensions/ontology/edge-types/ 55 个 JSON：42 个 TBD 占位串、
+ * 3 个公式串、10 个字段缺失 ⇒ **0 个结构化参数**），不告警；
  * 后者是数据缺陷，必须 log.warn + 进 warnings（铁律 11 静默降级禁止）。
  */
 export type TransferFunctionProbe =
   | { kind: "absent" }
   | { kind: "placeholder" }
   | { kind: "invalid"; reason: string }
-  | { kind: "valid"; param: TransferFunctionParam };
+  | { kind: "valid"; param: TransferFunctionParam; conflict?: string };
 
 /** 维度偏离统计 */
 export interface CategoryDeviation {
@@ -295,6 +304,14 @@ function standardDeviation(values: number[]): number {
   return Math.sqrt(variance);
 }
 
+/** 两条参数是否等价（期望值与不确定度都在浮点容差内） */
+function sameParam(a: TransferFunctionParam, b: TransferFunctionParam): boolean {
+  const eps = 1e-9;
+  return (
+    Math.abs(a.expected - b.expected) < eps && Math.abs(a.uncertainty - b.uncertainty) < eps
+  );
+}
+
 // ═══ DirectionMonitor ═══
 
 /**
@@ -375,6 +392,11 @@ export class DirectionMonitor {
           );
           warnings.push(`${edgeType}: transfer_function 参数不可用 (${probe.reason})`);
         } else if (probe.kind === "valid") {
+          if (probe.conflict) {
+            // 静默择一会让结果随实例顺序漂移 — 必须可见
+            log.warn({ edgeType, conflict: probe.conflict }, "多实例 transfer_function 参数不一致 — 取首条");
+            warnings.push(`${edgeType}: 多实例 transfer_function 参数不一致 (${probe.conflict})`);
+          }
           log.debug(
             { edgeType, expected: probe.param.expected, uncertainty: probe.param.uncertainty },
             "transfer_function 参数已生效",
@@ -505,8 +527,11 @@ export class DirectionMonitor {
   /**
    * 探测边实例上的 transfer_function 参数（D1143 W2 — 参数层入口）。
    *
+   * 多条实例各带参数时取**首个合法**参数；若彼此不一致，把冲突写进 `conflict`
+   * 由调用方告警（静默择一会让结果随数组顺序漂移，属不可接受的不确定性）。
+   *
    * @input  — 边实例数组（props.transfer_function 为标定产物）
-   * @output — Probe: absent | placeholder | invalid{reason} | valid{param}
+   * @output — Probe: absent | placeholder | invalid{reason} | valid{param, conflict?}
    * @degraded — 未标定(absent/placeholder) → 静默退默认；标定坏(invalid) → 调用方 log.warn + warnings
    */
   private probeTransferFunction(
@@ -514,6 +539,8 @@ export class DirectionMonitor {
   ): TransferFunctionProbe {
     let sawPlaceholder = false;
     let firstInvalid: string | null = null;
+    let first: TransferFunctionParam | null = null;
+    let conflicts = 0;
 
     for (const edge of edges) {
       const raw = edge.props ? edge.props["transfer_function"] : undefined;
@@ -526,11 +553,23 @@ export class DirectionMonitor {
       }
 
       const parsed = parseTransferFunctionParam(raw);
-      if (parsed.kind === "valid") return parsed;
+      if (parsed.kind === "valid") {
+        if (first === null) {
+          first = parsed.param;
+        } else if (!sameParam(first, parsed.param)) {
+          conflicts += 1;
+        }
+        continue;
+      }
       if (parsed.kind === "invalid" && firstInvalid === null) firstInvalid = parsed.reason;
       if (parsed.kind === "absent") sawPlaceholder = true;
     }
 
+    if (first !== null) {
+      return conflicts > 0
+        ? { kind: "valid", param: first, conflict: `${conflicts} 条实例参数与首条不一致` }
+        : { kind: "valid", param: first };
+    }
     if (firstInvalid !== null) return { kind: "invalid", reason: firstInvalid };
     if (sawPlaceholder) return { kind: "placeholder" };
     return { kind: "absent" };

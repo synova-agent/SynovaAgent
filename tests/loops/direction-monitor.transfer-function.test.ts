@@ -261,6 +261,38 @@ describe("D1143 W2: transfer_function 消费者 — 参数改变输出", () => {
   });
 
   // ════════════════════════════════════════════════════════════════════
+  // 独立复核 P2-3: 多实例参数不一致不得静默择一
+  // ════════════════════════════════════════════════════════════════════
+
+  it("P2-3: 多实例参数不一致 ⇒ 告警可见；等值 ⇒ 不告警", async () => {
+    const twoInstances = (expecteds: number[]): EdgeStoreReader => ({
+      queryEdges(type) {
+        const key = (type || "").toLowerCase();
+        if (key !== "capital_acquisition") return [];
+        return expecteds.map((e, i) => ({
+          id: `cap-${i}`,
+          type: key.toUpperCase(),
+          from: "node-a",
+          to: "node-b",
+          weight: 0.5,
+          props: { transfer_function: { expected: e, uncertainty: 0.05 } },
+        }));
+      },
+    });
+
+    // 冲突: 0.9 vs 0.3
+    const conflicted = await new DirectionMonitor(twoInstances([0.9, 0.3])).checkDirection("ent-c1");
+    expect(conflicted.warnings.some((w) => w.includes("参数不一致"))).toBe(true);
+    // 仍取首条（顺序确定：首条 = 0.9）
+    expect(findDeviation(conflicted, "capital_acquisition")!.baseline).toBeCloseTo(0.9, 10);
+
+    // 等值: 两条一致 → 不应告警（否则每次诊断都刷噪声）
+    const consistent = await new DirectionMonitor(twoInstances([0.9, 0.9])).checkDirection("ent-c2");
+    expect(consistent.warnings.some((w) => w.includes("参数不一致"))).toBe(false);
+    expect(findDeviation(consistent, "capital_acquisition")!.baseline).toBeCloseTo(0.9, 10);
+  });
+
+  // ════════════════════════════════════════════════════════════════════
   // 降级 / 回归: 未标定路径必须与 D222 逐位一致
   // ════════════════════════════════════════════════════════════════════
 

@@ -371,6 +371,38 @@ describe("D1143 W1: 测量值时序 — 同 (entity, metric) 序列真读且改�
     expect(d.uncertainty).toBeNull();
   });
 
+  it("契约(复核 P1-2): metric 键大小写不敏感 — 大写写入/小写读出必须命中（防静默 0 行）", async () => {
+    const database = freshDb();
+    const values = [0.45, 0.75, 0.45];
+
+    // 写入方按本体口径写**大写**边名（生产可能的写法）
+    values.forEach((v, i) => {
+      recordMetricReading(database, {
+        entityId: ENTITY,
+        metric: EDGE.toUpperCase(),
+        value: v,
+        observedAt: `2026-10-0${i + 1}T00:00:00Z`,
+      });
+    });
+
+    // 消费方按分类表**小写**键读 —— 修复前这里静默返回 0 行
+    const series = readMetricSeries(database, ENTITY, EDGE);
+    expect(series.length).toBe(3);
+    expect(series.map((p) => p.value)).toEqual(values);
+
+    // 反向: 小写写入 / 大写读出同样命中
+    expect(readMetricSeries(database, ENTITY, EDGE.toUpperCase()).length).toBe(3);
+
+    // 端到端: 时序真的进了诊断（否则大小写不一致会整条能力静默失效）
+    const report = await new DirectionMonitor(
+      singleEdgeStore(),
+      createMetricSeriesReader(database),
+    ).checkDirection(ENTITY);
+    const d = capitalDeviation(report)!;
+    expect(d.seriesPoints).toBe(3);
+    expect(d.uncertainty).toBeCloseTo(sampleStd(values), 10);
+  });
+
   it("DB 层: limit 取最近 N 条并按时间升序返回", async () => {
     const database = freshDb();
     for (let i = 0; i < 5; i += 1) {

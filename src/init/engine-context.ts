@@ -145,6 +145,11 @@ function toMetricSeriesPoint(row: unknown): MetricSeriesPoint | null {
  *
  * 取**最近** limit 条，再按 observedAt 升序返回（时序语义：旧 → 新）。
  *
+ * **metric 键大小写不敏感**（D1143 独立复核 P1-2 修复）：写入方按本体口径可能写
+ * `CAPITAL_ACQUISITION`，而消费方（方向监测）按分类表小写键读 —— 若按大小写精确匹配，
+ * 这种不一致会**静默返回 0 行且零告警**，整条时序能力悄悄失效。故此处统一按
+ * `lower(metric)` 匹配，两侧任一写法都能命中。
+ *
  * @input  — entityId + metric [+ limit，默认 90]
  * @output — MetricSeriesPoint[]（无数据 → 空数组）
  * @degraded — 表缺失/查询失败 → 抛错由调用方处理（loops 侧按"无时序"降级 + 告警）
@@ -160,7 +165,7 @@ export function readMetricSeries(
     .prepare(
       `SELECT value, observed_at FROM (
          SELECT value, observed_at, id FROM metric_readings
-         WHERE entity_id = ? AND metric = ?
+         WHERE entity_id = ? AND lower(metric) = lower(?)
          ORDER BY observed_at DESC, id DESC
          LIMIT ?
        ) ORDER BY observed_at ASC, id ASC`,
