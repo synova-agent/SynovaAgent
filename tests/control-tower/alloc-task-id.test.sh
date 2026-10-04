@@ -482,6 +482,69 @@ grep -q 'alloc-task-id.test.sh' "$REPO_DIR/.github/workflows/ci.yml" \
   || fail "接线: 本测试不在 ci.yml 密封清单（CI 不跑 = 摆设，M3 未接线）"
 echo ""
 
+echo "── 13. #1015-G3: --help/-h 是只读帮助，绝不取号/写盘/拿锁（改前 = 落入 _POS 被当任务名 ⇒ 真分配）──"
+# 判据（三态 + 水位不变量，全部机器可判）:
+#   13.1/13.2 --help / -h → exit 0 + 打印用法 + **号段水位不变**（task-state 无新增 + 无 brief 骨架）
+#   13.3      半修封堵: `<真任务名> --help` 同现时仍不得取号（help 短路先于分配）
+#   13.4      反例: 空任务名仍必须 exit 1（防「把用法错也改成 exit 0」的假绿修法）
+#   13.5      不拿锁: 预置陈旧锁目录 → 输出不得出现任何锁告警（未进锁临界区）
+# 改前实测（本夹具首跑即红）: TITLE="--help" ⇒ 分配 D500 + 建壳 1 个。
+HELP_DIR=$(mktemp -d); CLEANUP_DIRS+=("$HELP_DIR")
+
+# 13.1 --help
+D938_SANDBOX "$HELP_DIR/h1"
+RC=0; OUT=$(D938_RUN "$HELP_DIR/h1/ts" "$HELP_DIR/h1/briefs" --help 2>&1) || RC=$?
+assert_exit 0 "$RC" "13.1 --help exit 0（不因缺任务名报错）"
+assert_contains "$OUT" "用法" "13.1 --help 打印用法"
+[ "$(D938_NEWJSON "$HELP_DIR/h1")" = "0" ] \
+  && pass "13.1 --help 未新增 task-state 条目（号段水位不变）" \
+  || fail "13.1 --help 竟登记新号（水位被污染，实增 $(D938_NEWJSON "$HELP_DIR/h1") 个）"
+[ "$(D938_BRIEFS "$HELP_DIR/h1")" = "0" ] \
+  && pass "13.1 --help 未建壳（不写盘）" \
+  || fail "13.1 --help 竟生成 brief 骨架 $(D938_BRIEFS "$HELP_DIR/h1") 个"
+
+# 13.2 -h
+D938_SANDBOX "$HELP_DIR/h2"
+RC=0; OUT=$(D938_RUN "$HELP_DIR/h2/ts" "$HELP_DIR/h2/briefs" -h 2>&1) || RC=$?
+assert_exit 0 "$RC" "13.2 -h exit 0"
+assert_contains "$OUT" "用法" "13.2 -h 打印用法"
+[ "$(D938_NEWJSON "$HELP_DIR/h2")" = "0" ] \
+  && pass "13.2 -h 未新增 task-state 条目" \
+  || fail "13.2 -h 竟登记新号（水位被污染）"
+
+# 13.3 help 优先于任务名（防"只在缺任务名时短路"的半修）
+D938_SANDBOX "$HELP_DIR/h3"
+RC=0; OUT=$(D938_RUN "$HELP_DIR/h3/ts" "$HELP_DIR/h3/briefs" "真任务名" --help 2>&1) || RC=$?
+assert_exit 0 "$RC" "13.3 任务名+--help 同现 rc"
+[ "$(D938_NEWJSON "$HELP_DIR/h3")" = "0" ] \
+  && pass "13.3 任务名+--help 同现未取号（help 短路先于分配）" \
+  || fail "13.3 任务名+--help 同现仍取号（半修：help 未短路）"
+
+# 13.4 反例: 空任务名仍 fail-closed
+D938_SANDBOX "$HELP_DIR/h4"
+RC=0; OUT=$(D938_RUN "$HELP_DIR/h4/ts" "$HELP_DIR/h4/briefs" 2>&1) || RC=$?
+assert_exit 1 "$RC" "13.4 空任务名仍 exit 1（fail-closed 未被 help 修法削弱）"
+[ "$(D938_NEWJSON "$HELP_DIR/h4")" = "0" ] \
+  && pass "13.4 空任务名未取号" \
+  || fail "13.4 空任务名竟取号"
+
+# 13.5 不拿锁: 预置陈旧锁 → 输出不得出现锁告警（--help 在任何锁逻辑之前退出）
+D938_SANDBOX "$HELP_DIR/h5"
+printf 'x' > "$HELP_DIR/h5/lockref"
+touch -t 200001010000 "$HELP_DIR/h5/lockref"
+mkdir -p "$HELP_DIR/h5/lock"
+touch -r "$HELP_DIR/h5/lockref" "$HELP_DIR/h5/lock"
+RC=0; OUT=$(SYNO_LOCK_DIR="$HELP_DIR/h5/lock" SYNO_TASK_STATE_DIR="$HELP_DIR/h5/ts" \
+  SYNO_BRIEF_DIR="$HELP_DIR/h5/briefs" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_WORKTREE=1 \
+  SYNO_ALLOC_NO_BRANCH=1 bash "$TOOL" --help 2>&1) || RC=$?
+assert_exit 0 "$RC" "13.5 持陈旧锁时 --help 仍 exit 0"
+assert_lacks "$OUT" "陈旧锁" "13.5 未触发锁清理（--help 不进临界区）"
+assert_lacks "$OUT" "分配锁" "13.5 未触碰分配锁（不拿锁）"
+[ -d "$HELP_DIR/h5/lock" ] \
+  && pass "13.5 注入锁目录未被清理（确未掌锁）" \
+  || fail "13.5 注入锁目录被清理（进入了锁临界区）"
+echo ""
+
 echo "═══════════════════════════════════════════════════════════"
 # D938-CI-2: FAIL>0 但 FIRST_FAIL 为空 = 夹具自身缺陷（记名机制失灵），必须显式红，不得静默
 if [ "$FAIL" -gt 0 ] && [ -z "$FIRST_FAIL" ]; then

@@ -10,6 +10,7 @@
 # 契约:
 #   @input  — 任务名（必填，--check-id 模式免）; --dry-run 只打印不写; --prefix <P> 命名前缀（D940 ④）
 #             --check-id <D###> 只读校验：只答"该号是否被占"，不拿锁/不写盘/不算 MAX（D940 ③ 复用面）
+#             --help | -h 只打印用法（#1015-G3：短路于一切副作用之前——不取号/不写盘/不拿锁）
 #   @output — stdout: 分配到的 D#（如 D384）; 空壳 task-state/D384.json 已建
 #   @degraded — task-state/ 不可读 → exit 1 + 提示（fail-closed，不盲发号）
 #   @exit   — 0 = 分配成功（空壳已登记）; 非 0 = 失败。D938 成功哨兵：任何没走到
@@ -24,8 +25,8 @@
 #             D940: 1 = 拒绝发号（号已在任一位置被占 / 跨位置校验失败 / task-state 不可读）；
 #             ls-remote 不可达 → stderr `degraded: …` 显式可见 + 仍按可判定位置发号
 #               ls-remote 不可达 → stderr `degraded: …` 显式可见 + 仍按可判定位置发号
-#   @exit   — 0 = 发号成功（或 dry-run 预览且无冲突）
-#             1 = 拒绝发号（号已在任一位置被占 / 跨位置校验失败 / task-state 不可读）
+#   @exit   — 0 = 发号成功（或 dry-run 预览且无冲突；或 --help 打印用法）
+#             1 = 拒绝发号（号已在任一位置被占 / 跨位置校验失败 / task-state 不可读 / 用法错误）
 #             2 = **超时 fail-closed**（D1091 新增：远端腿或 worktree 扫描腿到点未回，
 #                 此时"继续发号"＝在无法校验占用的前提下撞号，故拒绝；见 @degraded）
 #   @error  — 冲突位置逐行点名，标签 ∈ {task-state, origin-main, remote-branch, local-branch, worktree-name}
@@ -43,8 +44,9 @@
 #   测试缝: SYNO_ALLOC_TEST_STALL_SECS（生产不设）＝在腿内 sleep N 秒，用于确定性验证超时路径。
 #
 # D940 变更（跨位置拒绝重号，**补缺口非造轮子**）:
-#   现存能力（不在本卡内）：本地 task-state(:83) ∪ origin/main(:89-91) ∪ worktree task-state(:101-129)
-#     ∪ `git branch -r` 远端分支(:141)；撞车拒绝(:164-168) **仅查本 task-state 目录**。
+#   现存能力（不在本卡内，**按符号锚点引用，行号随改动漂移故不写死**）：本地 task-state 读 max
+#     ∪ origin/main 的 task-state/ 名单 ∪ worktree task-state 扫描（`_wt_scan`）
+#     ∪ `git branch -r` 远端分支号；建壳前撞车拒绝（`STATE_FILE` 已存在即拒）**仅查本 task-state 目录**。
 #   本卡补 4 条:
 #     ① 远端占用改由 `git ls-remote --heads origin` 权威查询（`branch -r` 依赖本地 tracking ref，
 #        未 fetch 即漏号——D736 撞号 / D730 登记项现场复现）。
@@ -66,6 +68,7 @@
 #   bash alloc-task-id.sh "path-dependency 空壳补实现"      # 分配 + 建壳
 #   bash alloc-task-id.sh "task-name" --dry-run             # 只预览下一个号
 #   bash alloc-task-id.sh "task-name" --prefix squad-       # 带命名前缀
+#   bash alloc-task-id.sh --help | -h                       # 只打印用法（#1015-G3：不取号/不写盘/不拿锁）
 # ═══════════════════════════════════════════════════════════════════════════════
 set -euo pipefail
 
@@ -79,9 +82,27 @@ TEMPLATE="$TASK_STATE_DIR/TEMPLATE.json"
 DRY_RUN=false
 PREFIX="${SYNO_ALLOC_PREFIX:-}"          # D940 ④: 命名前缀参数化（默认空 = 现状行为不变）
 CHECK_ID=""                              # D940: --check-id 只读校验模式（不取号/不写盘/不拿锁）
+SHOW_HELP=false                          # #1015-G3: --help/-h 只读帮助（**不得取号/写盘/拿锁**）
+# #1015-G3: 用法文本单一真源 —— `--help` 与「缺任务名」两条路径共用同一段文本（防两处漂移）。
+#   历史（#1015 G-3，CTO 复核）：旧实现无 --help 分支 ⇒ `--help` 落入 `*)` 的 `_POS`
+#   ⇒ 被当任务名 ⇒ **真取号 + 写盘**（已两次误烧号：D1141 等）。修法 = 帮助短路先于一切副作用。
+usage() {
+  cat <<'USAGE'
+用法:
+  bash alloc-task-id.sh "<任务名>" [--dry-run] [--prefix <P>]   # 分配 + 建壳
+  bash alloc-task-id.sh --check-id <D###>                       # 只读校验（不取号/不写盘/不拿锁）
+  bash alloc-task-id.sh --help | -h                             # 打印本用法后退出（不取号/不写盘/不拿锁）
+
+退出码:
+  0 = 成功（含 --help / --dry-run 预览 / --check-id 未占用）
+  1 = 用法错误，或占用/依赖失败（fail-closed，拒绝发放）
+  2 = 拒绝发放（号占用 / 输入非法 / 并发锁不可用），详见 stderr 点名
+USAGE
+}
 _POS=()
 while [ $# -gt 0 ]; do
   case "${1:-}" in
+    -h|--help)  SHOW_HELP=true ;;        # #1015-G3
     --dry-run)  DRY_RUN=true ;;
     --prefix)   shift; PREFIX="${1:-}" ;;
     --prefix=*) PREFIX="${1#--prefix=}" ;;
@@ -91,10 +112,16 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+# #1015-G3: 帮助短路 —— 必须在"读占用表/取锁/算号/写盘"之前退出（判别性：13.3 用例覆盖
+#   「任务名 + --help 同现」的半修形态；13.5 覆盖"不拿锁"）。help 优先于任何其它参数。
+if [ "$SHOW_HELP" = true ]; then
+  usage
+  exit 0
+fi
 TITLE="${_POS[0]:-}"
 # --check-id 免任务名（只读校验）；其余路径任务名必填
 if [ -z "$CHECK_ID" ] && [ -z "$TITLE" ]; then
-  echo "用法: alloc-task-id.sh <任务名> [--dry-run] [--prefix <P>] | alloc-task-id.sh --check-id <D###>" >&2
+  usage >&2
   exit 1
 fi
 
