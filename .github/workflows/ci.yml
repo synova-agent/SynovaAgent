@@ -984,16 +984,25 @@ jobs:
     # D1147 顾问腿①（承接原 `Test-Kit Architecture Tests (windows-latest)` 必需 context 的全部职责）。
     # ⚠️ context 名与旧必需名逐字相同（看板/历史可续读），但**不得**重新入必需集（见上方 ②）。
     # if 写法 = `!= 'false'`（fail-safe: 触发 job 失败/输出为空 ⇒ 照跑，绝不"静默不跑"）。
-    timeout-minutes: 3
+    # 🔴 timeout-minutes = 10（**不由原窗口 3min**）: 复核席 P2 指出 3min 内含 npm ci + vitest on Windows
+    #   ⇒ 超时即 job 级 failure（step 级 continue-on-error **覆盖不到超时**）⇒ 会给 C 段棘轮递刀。
+    #   取值口径 = 房内公式 max(P95×1.5, 中位数×3)，n=12 旧样本中位数 3min ⇒ max(4.5, 9) = 9 ⇒ 取整 10。
+    #   顾问腿放宽超时的代价仅 = 真挂死时多占 runner；收益 = 关掉一条"超时 → failure check-run"通路。
+    timeout-minutes: 10
     name: Test-Kit Architecture Tests (windows-latest)
     needs: windows-leg-trigger
     if: needs.windows-leg-trigger.outputs.run != 'false'
     runs-on: windows-latest
     steps:
+      # 前置步骤也 `continue-on-error: true`（复核席 P2 的另一半）: checkout/setup-node 抖动若让 job 收
+      #   `failure` 结论，同样会经 C 段棘轮拖红 Gate Integrity。前置失败 ⇒ 后续步骤照跑并在注解里显形
+      #   （summary step 会打 warning），而 job 结论恒 success。
       - uses: actions/checkout@v4
+        continue-on-error: true
         with:
           fetch-depth: 0
       - uses: actions/setup-node@v4
+        continue-on-error: true
         with: { node-version: '20', cache: 'npm' }
       # 判定与证据同一步: `continue-on-error` ⇒ step outcome=failure 但 job 结论 = success（恒不产 failure）
       - name: Run ratchet baseline test (05-as-any-audit, advisory)
@@ -1010,8 +1019,10 @@ jobs:
           OUTCOME="${{ steps.advisory.outcome }}"
           if [ "$OUTCOME" = "success" ]; then
             echo "::notice title=advisory:test-kit(win)::windows 顾问腿通过（非必需；不改判定）"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "::warning title=advisory:test-kit(win)::windows 顾问腿未通过 —— **非必需检查，不拦合并**；平台缺陷细节见本 job log 与注解面"
           else
-            echo "::warning title=advisory:test-kit(win)::windows 顾问腿未通过（outcome=${OUTCOME}）——**非必需检查，不拦合并**；平台缺陷细节见本 job log 与注解面"
+            echo "::warning title=advisory:test-kit(win)::windows 顾问腿**未执行**（outcome='${OUTCOME}'）——本次未取得平台信号（非必需，不拦合并）；前置步骤失败时属预期"
           fi
           exit 0
 
@@ -1019,13 +1030,19 @@ jobs:
     # D1147 顾问腿②（承接原 `Control Tower Gate Tests (windows-latest)` 必需 context 的全部职责）。
     # ⚠️ 同上: 名逐字保留、**不得**重新入必需集。
     # 触发 job 失败/输出为空 ⇒ 照跑（fail-safe），绝不静默不跑。
+    # timeout-minutes = 106 = 旧 windows 基线值（口径 max(P95×1.5, 中位数×3)；n=12 中位数 35.2min /
+    #   P95 38.5min ⇒ 105.6 ⇒ 106）；**step 级 60min** 同旧值。复核席 P2: 顾问腿的 job 级超时即
+    #   failure（step 级 continue-on-error 覆盖不到超时）⇒ 必须给足，不缩。
     timeout-minutes: 106
     name: Control Tower Gate Tests (windows-latest)
     needs: windows-leg-trigger
     if: needs.windows-leg-trigger.outputs.run != 'false'
     runs-on: windows-latest
     steps:
+      # 前置步骤 `continue-on-error: true`（复核席 P2）: checkout 抖动若让 job 收 failure 结论，
+      #   同样会经 C 段棘轮拖红 Gate Integrity；置为 advisory ⇒ job 结论恒 success，问题在注解里显形。
       - uses: actions/checkout@v4
+        continue-on-error: true
         with:
           fetch-depth: 0  # verify-parallel 豁免逻辑依赖 origin/main ref（depth=1 时缺失→误红）
       # 密封清单/平台跳过名单与 control-tower-tests(ubuntu) 的重活 step **逐字同源**：
@@ -1131,7 +1148,9 @@ jobs:
           OUTCOME="${{ steps.advisory.outcome }}"
           if [ "$OUTCOME" = "success" ]; then
             echo "::notice title=advisory:control-tower(win)::windows 顾问腿通过（非必需；不改判定）"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "::warning title=advisory:control-tower(win)::windows 顾问腿未通过 —— **非必需检查，不拦合并**；平台缺陷见本 job 的 ::error 注解与 log"
           else
-            echo "::warning title=advisory:control-tower(win)::windows 顾问腿未通过（outcome=${OUTCOME}）——**非必需检查，不拦合并**；平台缺陷见本 job 的 ::error 注解与 log"
+            echo "::warning title=advisory:control-tower(win)::windows 顾问腿**未执行**（outcome='${OUTCOME}'）——本次未取得平台信号（非必需，不拦合并）；前置步骤失败时属预期"
           fi
           exit 0

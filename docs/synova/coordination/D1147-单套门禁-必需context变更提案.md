@@ -152,7 +152,20 @@ check-runs，被 #948 反例否证；现已按 head 级实测改写。同型教�
 |---|---|---|
 | ① 路径触发 | 仅 `scripts/**`\|`tests/**` 变更时**创建** job；`origin/main` 不可解析 / schedule / workflow_dispatch ⇒ fail-safe `run=true` | 平台差异只在控制塔域有信息量；非命中 PR 连 check-run 都不产（省 runner、不上必需面） |
 | ② 非必需 | 两个 context 名**不得**再进必需集 | 见 §1：job 级 `if:` + 必需 = 永久 blocked |
-| ③ 恒 success | 重活 step `continue-on-error: true`；失败经 `steps.*.outcome` 检查 + `::error` 注解 + `::warning` 摘要上看板 | 见下「跨机制发现」 |
+| ③ 恒 success | 重活 step `continue-on-error: true`；**前置步骤（checkout / setup-node）亦 `continue-on-error: true`**；超时给足（job 106 / step 60；test-kit 腿 job 10 —— 见下）；失败经 `steps.*.outcome` 检查 + `::error` 注解 + `::warning` 摘要上看板 | 见下「跨机制发现」 |
+
+**③ 的三条实现细节（复核席 P2 补齐，2026-10-05）** —— 单靠"重活 step continue-on-error"**不够**：
+
+1. **job 级超时不受 step 级 `continue-on-error` 保护**：超时 ⇒ job 收 failure ⇒ 照样给 C 段棘轮递刀。
+   故超时**给足不缩**：control-tower 腿 = 旧 windows 基线（job 106min / step 60min）；
+   test-kit 腿由 3min → **10min**（口径 = 房内公式 max(P95×1.5, 中位数×3)，n=12 旧样本中位数 3min ⇒ max(4.5,9)=9 ⇒ 取整 10）。
+2. **前置步骤抖动同样会产 failure**（checkout 失败 / setup-node 失败 / runner 层面）⇒ 前置步骤全部 `continue-on-error: true`，
+   后续步骤照跑并在**注解**里显形，job 结论恒 success。
+3. **未执行 ≠ 未通过**：收尾 step 三态（success → `::notice`；failure → `::warning` 未通过；
+   其它/空 → `::warning` **未执行**），避免把"没跑到"读成"红"。
+
+**残留风险（诚实声明）**：runner 基础设施层失败（startup_failure / 机器回收 / 平台级取消）**无法**由本卡消除——
+那一路仍会产非 success 结论。故「C 段对账排除非必需 context」不只是洁癖，是**堵死这条残留通路**的根治项（见 §8 第 1 条）。
 
 🔴 **跨机制发现（本卡实测，非推测）**：**"非必需但会红"是陷阱**。
 C 段棘轮 `scripts/control-tower/check-gate-integrity.sh` 的 `run_ci_reds`（L676+）对账时统计 base commit 上
@@ -229,7 +242,15 @@ GET /repos/{owner}/{repo}/check-runs/{id}/annotations    # ::error / ::warning �
 
 ## 8. 我看到但**没做**的（另立卡，越界不做）
 
+> 🔴 **依赖声明（lead 记账，本线不实现）**：第 1 条（**C 段对账排除非必需 context** 的 K3 卡）
+> **必须排在「步骤 2 · 把 `Gate Integrity` 写进必需集」之前**。理由：顾问腿的 failure 通路虽已被 §4 ③
+> 压到最小（给足超时 + 前置步骤 advisory + 三态摘要），但 **runner 基础设施层失败无法消除**；
+> 而 Gate Integrity 一旦成为必需 context，C 段的「未登记 CI 失败」判红就 = 全局阻断。
+> ⇒ 依赖顺序 = ① C 段排除非必需 context 落地（K3）→ ② 步骤 2 的 PATCH。**本 PR 不实现第 1 条。**
+
 1. **C 段棘轮应排除非必需 context**（判据变更，须 K3）—— 否则任何"顾问腿"都与它对冲；本卡只做规避（③ 恒 success）。
+   落点：`scripts/control-tower/check-gate-integrity.sh` 的 `run_ci_reds` 过滤面（须引用必需集来源 =
+   `required-checks-baseline.txt`），并补判别性夹具（"非必需腿 failure 不进对账" 与 "必需腿 failure 仍进对账" 两例）。
 2. `scripts/control-tower/ci-red-baseline.txt:66` 的 `Control Tower Gate Tests (windows-latest)` 条目
    （`conclusion=null(in-progress)` 观测）在顾问腿改造后**永久成死条目**（永不会有 failure 结论）——
    按棘轮只减不增精神应清；该文件不在本卡写集（归批4/线负责人）。
@@ -237,3 +258,6 @@ GET /repos/{owner}/{repo}/check-runs/{id}/annotations    # ::error / ::warning �
    D1147 正是踩在这条边界上（靠人守+夹具守）；建议另立卡把它变成机器判据。
 4. 顾问腿清单与必需腿清单**双份显式维护**（漂移后果 = 顾问信号失真）。抽公共脚本会让 ~58 个测试
    在 ci.yml 里"失登记" ⇒ 棘轮爆红（见 ci.yml 内注），故本卡保留双份；根治需同时改 [R] 登记口径。
+5. **（lead 已路由，本卡不动）** `Checker Review (maker/checker)` 的 job 级 `if:`（ci.yml `checker-review`）
+   **排除了 `merge_group`**，而它是必需 context ⇒ 开 merge queue（M3/D1070）那一刻队列会卡死。
+   已并入 M3 前置清单；本卡**不碰**该 job（避免与 M3 撞车）。
