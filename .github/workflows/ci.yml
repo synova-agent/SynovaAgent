@@ -459,6 +459,20 @@ jobs:
         env:
           SYNO_CI: "1"   # 契约: 1 = HARD（任一 FAIL ⇒ exit 1）
         run: bash docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh
+      # #1015-G1 (D1142): 本体边类型「时滞 / 因果强度」字段回归防线。
+      #   病根: extensions/ontology/edge-types/** 的 action_effect_lag + transfer_function
+      #     （合 110 个字段值；交付在 PR #1002-#1006）此前**仓库内零防线** ——
+      #     `git grep -ln … origin/main -- 'scripts/**' 'tests/**'` 仅命中 K3 审计域，任何 PR 可静默改坏。
+      #   机制: 与 origin/main 基线逐文件比对（字段被删 / 值被清空 / 文件被删 ⇒ exit 1）；
+      #     基线与本树都没有的字段计「待交付」（信息性，不阻断）⇒ 交付一落 main 基线自动抬升，
+      #     防线**自动**生效，零人工台账（避免僵尸豁免掩盖后续删字段）。
+      #   三态（D328）: 0 = 无违规 ｜ 1 = 有违规 ⇒ step 红 ｜ 2 = 检查自身失败
+      #     （基线 ref 不可解析 / git 不可用 / 目录缺失）⇒ **同样红**，绝不静默当通过。
+      #   ref 依赖: 本 job checkout 为 fetch-depth: 0 ⇒ origin/main 可解析（不触发 2）。
+      #   位置: 置于重活之前 = fail-fast（实测 ~0.3s）。
+      - name: Ontology edge fields regression guard (#1015-G1, HARD)
+        shell: bash
+        run: bash scripts/control-tower/check-ontology-edge-fields.sh
       - name: Run hermetic control-tower gate tests
         # T3: step 级 timeout（CTO 定值 60min on windows）；ubuntu 取 13（须 < 其 job 级 14）。
         #   ⚠️ D1109 实测（2026-10-02）：windows 该 step **现值 60min < 同口径公式值 96min**
@@ -554,6 +568,8 @@ jobs:
             tests/control-tower/install-dsh-preset.test.sh \
             tests/control-tower/d956-failmsg.test.sh \
             tests/control-tower/check-required-contexts.test.sh \
+            tests/control-tower/check-ontology-edge-fields.test.sh \
+            tests/control-tower/g6-layer-field.test.sh \
             tests/control-tower/ci-signal-classify.test.sh; do
             echo "── $t"
             # D1094 平台跳过名单（分层原则：平台无关的失败不该拖垮整条 Windows 腿；但**显式打印**不静默）
