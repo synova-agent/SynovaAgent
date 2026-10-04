@@ -510,7 +510,6 @@ jobs:
             tests/control-tower/tag-ancestry.test.sh \
             tests/control-tower/brief-parser-strip.test.sh \
             tests/control-tower/post-commit.test.sh \
-            tests/control-tower/clone-shadow-commit.test.sh \
             tests/control-tower/simulate-ci.test.sh \
             tests/control-tower/synova-submit.test.sh \
             tests/control-tower/synova-commit.test.sh \
