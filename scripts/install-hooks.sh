@@ -134,12 +134,12 @@ install_hook "post-commit"
 # 幂等: 在 clone 与主仓重复运行均无害（local 已设 -> 跳过不覆盖）。
 _ensure_clone_git_config
 
-# CT-47 / D457: 注册 bypass.log 的 union 合并驱动
-# .gitattributes 声明 .claude/bypass.log merge=union，但 git 需知道 union driver 是什么。
-# 这里注册一次，让 append-only 证据日志多 PR 合并自动取并集（不再冲突）。
-# 幂等: 重复运行 set 覆盖，无害。
+# CT-47 / D457 + D1073: 注册 union 合并驱动
+# 🔴 D1073 变更: `.claude/bypass.log` 已**停跟踪**（.gitignore）⇒ 它不再是 union 的适用对象。
+#   本驱动仍保留，因为 `.claude/reference-map.md`（CT-48/D508）仍声明 `merge=union`。
+#   幂等: 重复运行 set 覆盖，无害。
 git config merge.union.driver "git merge-file --union %A %O %B" 2>/dev/null || true  # swallow-ok: git config 失败=非 git 仓库/只读, 降级不阻断
-echo "  ✅ git config merge.union.driver — bypass.log 自动合并"
+echo "  ✅ git config merge.union.driver — reference-map.md 自动合并（bypass.log 已停跟踪，不再适用）"
 
 # D515 项8: git 网络韧性（Codex P9）— 30s 低于 1KB/s 即断，快速失败。
 # 幂等: 重复运行 set 覆盖，无害。慢连接被快速断开后建议直接重试 push。
