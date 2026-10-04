@@ -113,15 +113,33 @@ describe('D74: workspace-data routes — 路由注册', () => {
     expect(payload).toHaveProperty('departmentId', 'test-dept');
   });
 
-  it('D1153 守卫在真链路生效: staff 身份读部门工作台 ⇒ 403（业务断言不因加守卫而静默降级）', async () => {
+  it('D1153 身份门在真链路生效: staff 已认证读部门工作台 ⇒ 200（本卡不做越权判定，勿过度拒绝）', async () => {
     const staffToken = signJwtToken({ sub: 'staff-d1153', role: 'staff', orgId: 'org-d1153' });
     expect(staffToken).not.toBeNull();
     const saved = token;
     token = staffToken ?? '';
     try {
+      // 刻意: 本卡只做身份门（`authenticated !== true` ⇒ 403）。跨部门越权判定依赖
+      //   `RbacContext` 补齐 org/team 维度（另立卡）——曾叠部门级读判据 ⇒ 因
+      //   `department` 恒 undefined 而恒假 ⇒ app/js/dashboard.js:35 的真消费方
+      //   （manager/staff）静默空面板 = 过度拒绝，已撤。
       const res = await call('GET', '/api/workspace/test-dept');
-      expect(res.status).toBe(403);
-      expect(res.body.code).toBe('RBAC_DENIED');
+      expect(res.status).toBe(200);
+      const payload = res.body.data as { departmentId?: string };
+      expect(payload).toHaveProperty('departmentId', 'test-dept');
+    } finally {
+      token = saved;
+    }
+  });
+
+  it('D1153 身份门在真链路生效: 未认证 ⇒ 401（非白名单路径由 jwt 层先行拦截）', async () => {
+    const saved = token;
+    token = '';
+    try {
+      // 路由级 403 的直证在 tests/security/rbac-all-routes.test.ts 组 A
+      //   （只挂 rbacMiddleware，不挂 jwt ⇒ 真 rbacMiddleware 产出 authenticated:false ⇒ 403）。
+      const res = await call('GET', '/api/workspace/test-dept');
+      expect(res.status).toBe(401);
     } finally {
       token = saved;
     }

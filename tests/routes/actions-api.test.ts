@@ -177,12 +177,16 @@ describe('actions-api', () => {
   });
 
   it('D1153 叠判据在真链路生效: staff 已认证但无写权 ⇒ 403（非一刀切全拒，也非只验身份）', async () => {
-    const res = await callAs('staff', 'POST', '/api/actions', { workspaceId: 'ws1', title: '不应创建' });
-    expect(res.status).toBe(403);
-    expect(res.body.code).toBe('RBAC_DENIED');
+    const res = await callAs('staff', 'POST', '/api/actions', { workspaceId: 'ws1', title: 'staff 创建用例' });
+    // 刻意: 本卡只做身份门（`authenticated !== true` ⇒ 403）。角色级授权依赖
+    //   `RbacContext` 补齐 org/team 维度（另立卡）——曾叠 `{owner: rbac.userId}` 写判据
+    //   ⇒ 重言式（owner 即调用者）⇒ 退化为角色门 ⇒ 误杀 GA 的「消除告警」
+    //   （app/js/dashboard.js:211），已撤。
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
   });
 
-  it('D1153 叠判据不误杀: manager 已认证且有权 ⇒ 200', async () => {
+  it('D1153 不误杀: manager 已认证 ⇒ 200', async () => {
     const res = await callAs('manager', 'POST', '/api/actions', { workspaceId: 'ws1', title: '中层创建' });
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);

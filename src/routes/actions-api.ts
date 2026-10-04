@@ -2,16 +2,22 @@
  * actions-api.ts — 行动项 CRUD (PRD §7, v3.5)
  * POST /api/actions → 创建 | GET /api/actions → 列表 | PUT /api/actions/:id/status → 状态流转
  *
- * ── D1153 / #1051（施工单 1-7）— 路由级 RBAC 执法（fail-closed）──────────────
- * 改前病根（实测 as_of 13b294013）: 本文件 3 个端点**零 RBAC 执法**——未认证上下文
+ * ── D1153 / #1051（施工单 1-7）— 路由级 fail-closed 守卫 ─────────────────────
+ * 改前病根（实测 as_of 13b294013）: 本文件 3 个端点**零守卫**——匿名（无验签身份）
  * 即可创建/列举/流转行动项。改后 3 个端点全部消费 `req.rbac`（不重算身份），
- * 身份缺失一律 403 + 留痕；可定位到工作区目标的端点再叠统一判据。
+ * `authenticated !== true` ⇒ HTTP 403 + 响应体 `code` + `log.warn({code:'RBAC_DENIED'})` 留痕。
+ *
+ * 🔴 **未做（依赖接口变更，另立卡）**: 跨工作区/跨租户的**越权**判定。
+ *   原因同 `workspace-data.ts` 文件头：`RbacContext` 无 org/team 维度（`middleware/rbac.ts:129`
+ *   的 `department` 恒 `undefined`）、且路由不得重算身份（L-4）⇒ 今日**无法表达**该判据。
+ *   曾尝试叠读/写判据（部门级读 + `{owner: rbac.userId}` 写）⇒ 判据要么恒假、要么退化为
+ *   角色门，对 `app/js/dashboard.js` 的真消费方构成过度拒绝，已撤。
  * **不新增第二份角色/部门判定**——唯一规则真源是 `middleware/rbac.ts`。
  */
 import { Router, type Request, type Response } from 'express';
 import { createLogger } from '@synova/logger';
 import { listMemory, rememberMemory } from '../services/memory-access-service';
-import { canAccessWorkspace, canModifyWorkspace, type RbacContext } from '../middleware/rbac';
+import { type RbacContext } from '../middleware/rbac';
 
 const log = createLogger('routes/actions-api');
 const router = Router();
@@ -96,12 +102,6 @@ router.post('/api/actions', (req: Request, res: Response) => {
   // D1153/#1051: 身份守卫（先于请求体校验——不向匿名调用方泄漏参数契约）
   const rbac = requireAuthenticatedRbac(req, res);
   if (!rbac) return;
-  // D1153/#1051: 创建动作无既有目标 ⇒ 按「调用者即属主」提交统一判据
-  //   （与 workspaces-api.ts:104 同构）: admin 通过；manager 经 owner 分支通过；
-  //   ga/staff/liaison 拒绝（与 BUILTIN_TEMPLATES 只读口径一致）。
-  if (!canModifyWorkspace(rbac, { owner: rbac.userId })) {
-    return denyRbac(res, 'insufficient_permission', rbac);
-  }
 
   const { workspaceId, title, description, priority } = req.body as Record<string, string>;
   if (!workspaceId || !title) return res.status(400).json({ ok: false, error: 'workspaceId and title required' });
@@ -115,17 +115,10 @@ router.post('/api/actions', (req: Request, res: Response) => {
 });
 
 router.get('/api/actions', (req: Request, res: Response) => {
-  // D1153/#1051: 身份守卫
+  // D1153/#1051: 身份守卫。本卡**不做越权判定** —— 见文件头「未做」段
   const rbac = requireAuthenticatedRbac(req, res);
   if (!rbac) return;
   const wsId = String(req.query.workspaceId || '');
-  // D1153/#1051: 列表按 workspaceId 划范围 ⇒ 目标工作区可定位 ⇒ 叠读判据。
-  // 投影说明: 本文件不持有工作区登记表（无 department/visibility/owner 可查），
-  //   故以 `workspaceId` 作 scope key 提交统一判据（读端点口径与
-  //   workspaces-api.ts:207 的 GET /:id/context 同形——读用 canAccessWorkspace）。
-  if (!canAccessWorkspace(rbac, { visibility: 'department', department: wsId })) {
-    return denyRbac(res, 'insufficient_permission', rbac);
-  }
   // 如果内存为空, 从 AgentMemoryStore 恢复
   if (store.size === 0) {
     try {
@@ -154,12 +147,6 @@ router.put('/api/actions/:id/status', (req: Request, res: Response) => {
   const id = String(req.params.id);
   const item = store.get(id);
   if (!item) return res.status(404).json({ ok: false, error: 'action not found' });
-  // D1153/#1051: 写权限判据绑定**已定位的目标对象**: 范围取 item.workspaceId，
-  //   属主优先取目标自身（未来 ActionItem.owner 落值后即为该属主），
-  //   否则退回「调用者即属主」约定（与创建分支同构）——保证中层 manager 不被误杀。
-  if (!canModifyWorkspace(rbac, { department: item.workspaceId, owner: item.owner ?? rbac.userId })) {
-    return denyRbac(res, 'insufficient_permission', rbac);
-  }
 
   const { status } = req.body as { status?: string };
   if (!status) return res.status(400).json({ ok: false, error: 'status required' });

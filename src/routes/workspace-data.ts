@@ -17,12 +17,21 @@
  *
  * 铁律 24+31: 每个 catch 有 log.warn + degraded 信号
  *
- * ── D1153 / #1051（施工单 1-7）— 路由级 RBAC 执法（fail-closed）──────────────
- * 改前病根（实测 as_of 13b294013）: 本文件 7 个端点**零 RBAC 执法**——全仓
- * `canAccessWorkspace` 调用点仅 1 处（workspaces-api.ts:207）。未认证上下文
- * 仍可读取任一部部门工作台数据。
- * 改后: 7 个端点全部消费 `req.rbac`（不重算身份），身份缺失一律 403 + 留痕；
- *   可定位到部门/工作区目标的端点再叠 `canAccessWorkspace` / `canModifyWorkspace`。
+ * ── D1153 / #1051（施工单 1-7）— 路由级 fail-closed 守卫 ─────────────────────
+ * 改前病根（实测 as_of 13b294013）: 本文件 7 个端点**零守卫**——匿名（无验签身份）
+ * 即可读取任一部部门工作台数据。
+ * 改后: 7 个端点全部消费 `req.rbac`（不重算身份），`authenticated !== true` ⇒
+ *   HTTP 403 + 响应体 `code` + `log.warn({code:'RBAC_DENIED'})` 留痕。
+ *   路由级是本仓**设计指定的执法点**（`server.ts:375` 明文「拦截责任在路由级守卫（P3）」）。
+ *
+ * 🔴 **未做（依赖接口变更，另立卡）**: 跨部门/跨租户的**越权**判定。
+ *   原因: `RbacContext` 无 org/team 维度（`middleware/rbac.ts:129` 的 `department` 恒
+ *   `undefined`，D947/L-32 刻意收窄；`extractRbacContext` 连 `req.auth.orgId` 都不携带），
+ *   而路由**不得重算身份**（L-4 硬约束）⇒ 今日**无法表达**该判据。
+ *   曾尝试把**部门级读判据**叠在 4 个 `:deptId` 端点上（`{visibility:'department', department: deptId}`）：
+ *   因 `department` 恒 `undefined`，该判据**恒假**——连读自己部门也 403，而
+ *   `app/js/dashboard.js:35`（deptId = 登录者 orgId）是真消费方 ⇒ 属**过度拒绝**（功能回归），已撤。
+ *   代价（已知并接受，已登记）: 已认证用户仍可读任意 `:deptId`（= 现状不变）。
  * **不新增第二份角色/部门判定**——唯一规则真源是 `middleware/rbac.ts`（#984 判决书 §3）。
  */
 import { Router, type Request, type Response } from 'express';
@@ -30,7 +39,7 @@ import { createLogger } from '@synova/logger';
 import { buildDepartmentWorkspace } from "../growth/workspace-builder";
 import { feedbackCollector } from "../growth/feedback-collector";
 import type { WorkspaceBuilderDeps } from '../growth/workspace-builder';
-import { canAccessWorkspace, canModifyWorkspace, type RbacContext } from '../middleware/rbac';
+import { type RbacContext } from '../middleware/rbac';
 
 const log = createLogger('routes/workspace-data');
 const router = Router();
@@ -105,14 +114,10 @@ function getDefaultDeps(_req: Request): WorkspaceBuilderDeps {
 // ═══ GET /api/workspace/:deptId — 全量数据 ═══
 
 router.get('/api/workspace/:deptId', (req: Request, res: Response) => {
-  // D1153/#1051: ① 身份守卫（先于任何数据读取）
+  // D1153/#1051: 身份守卫（先于任何数据读取）。本卡**不做越权判定** —— 见文件头「未做」段
   const rbac = requireAuthenticatedRbac(req, res);
   if (!rbac) return;
   const deptId = String(req.params.deptId);
-  // D1153/#1051: ② 目标为部门级工作台 ⇒ 叠统一判据（跨部门读取 fail-closed）
-  if (!canAccessWorkspace(rbac, { visibility: 'department', department: deptId })) {
-    return denyRbac(res, 'insufficient_permission', rbac);
-  }
   try {
     const deps = getDefaultDeps(req);
     const workspace = buildDepartmentWorkspace(deptId, deps);
@@ -134,13 +139,10 @@ router.get('/api/workspace/:deptId', (req: Request, res: Response) => {
 // ═══ GET /api/workspace/:deptId/goals — 活跃 Goal 列表 ═══
 
 router.get('/api/workspace/:deptId/goals', (req: Request, res: Response) => {
-  // D1153/#1051: 身份 + 部门级判据
+  // D1153/#1051: 身份守卫。本卡**不做越权判定** —— 见文件头「未做」段
   const rbac = requireAuthenticatedRbac(req, res);
   if (!rbac) return;
   const deptId = String(req.params.deptId);
-  if (!canAccessWorkspace(rbac, { visibility: 'department', department: deptId })) {
-    return denyRbac(res, 'insufficient_permission', rbac);
-  }
   try {
     const deps = getDefaultDeps(req);
     const workspace = buildDepartmentWorkspace(deptId, deps);
@@ -161,13 +163,10 @@ router.get('/api/workspace/:deptId/goals', (req: Request, res: Response) => {
 // ═══ GET /api/workspace/:deptId/alerts — 告警列表（受 DND 过滤） ═══
 
 router.get('/api/workspace/:deptId/alerts', (req: Request, res: Response) => {
-  // D1153/#1051: 身份 + 部门级判据
+  // D1153/#1051: 身份守卫。本卡**不做越权判定** —— 见文件头「未做」段
   const rbac = requireAuthenticatedRbac(req, res);
   if (!rbac) return;
   const deptId = String(req.params.deptId);
-  if (!canAccessWorkspace(rbac, { visibility: 'department', department: deptId })) {
-    return denyRbac(res, 'insufficient_permission', rbac);
-  }
   try {
     const deps = getDefaultDeps(req);
     const workspace = buildDepartmentWorkspace(deptId, deps);
@@ -195,13 +194,10 @@ router.get('/api/workspace/:deptId/alerts', (req: Request, res: Response) => {
 // ═══ GET /api/workspace/:deptId/next-action — 推荐下一步行动 ═══
 
 router.get('/api/workspace/:deptId/next-action', (req: Request, res: Response) => {
-  // D1153/#1051: 身份 + 部门级判据
+  // D1153/#1051: 身份守卫。本卡**不做越权判定** —— 见文件头「未做」段
   const rbac = requireAuthenticatedRbac(req, res);
   if (!rbac) return;
   const deptId = String(req.params.deptId);
-  if (!canAccessWorkspace(rbac, { visibility: 'department', department: deptId })) {
-    return denyRbac(res, 'insufficient_permission', rbac);
-  }
   try {
     const deps = getDefaultDeps(req);
     const workspace = buildDepartmentWorkspace(deptId, deps);
@@ -221,16 +217,12 @@ router.get('/api/workspace/:deptId/next-action', (req: Request, res: Response) =
 // ═══ D93: PUT /api/workspace/goals/:goalId/target — 中层调整 Goal 目标值 ═══
 
 router.put("/api/workspace/goals/:goalId/target", (req: Request, res: Response) => {
-  // D1153/#1051: 身份守卫 + 写权限判据。
-  // 本端点无既有目标工作区对象可绑定（goalId 不落在本进程的任何 workspace 表里）
-  // ⇒ 按「调用者即属主」提交统一判据（与 workspaces-api.ts:104 的创建分支同构）:
-  //   admin 通过；manager 经 owner 分支通过；ga/staff/liaison 拒绝（与 BUILTIN_TEMPLATES
-  //   的「受约束只读 / 本部门只读 / 全局只读」一致）。本端点语义即「中层调整」⇒ 不引第二份规则。
+  // D1153/#1051: 身份守卫。本卡**不做越权判定** —— 见文件头「未做」段。
+  // 曾尝试叠**写判据**（`{ owner: rbac.userId }` 形式）：把**调用者自己的 id**
+  //   当对象 owner 传 ⇒ `ws.owner === ctx.userId` 恒真，判据退化为角色门（ga/staff/liaison 恒拒）
+  //   ⇒ `app/js/dashboard.js:211` 的 GA「消除告警」被误杀，属过度拒绝，已撤。
   const rbac = requireAuthenticatedRbac(req, res);
   if (!rbac) return;
-  if (!canModifyWorkspace(rbac, { owner: rbac.userId })) {
-    return denyRbac(res, 'insufficient_permission', rbac);
-  }
   try {
     const goalId = String(req.params.goalId);
     const newTarget = req.body?.targetValue;
@@ -257,12 +249,9 @@ router.put("/api/workspace/goals/:goalId/target", (req: Request, res: Response) 
 // ═══ D93: POST /api/workspace/proposals/:proposalId/reject — 中层拒绝 Proposal ═══
 
 router.post("/api/workspace/proposals/:proposalId/reject", (req: Request, res: Response) => {
-  // D1153/#1051: 身份守卫 + 写权限判据（判据绑定同 PUT goals/:goalId/target）
+  // D1153/#1051: 身份守卫。本卡**不做越权判定** —— 见文件头「未做」段
   const rbac = requireAuthenticatedRbac(req, res);
   if (!rbac) return;
-  if (!canModifyWorkspace(rbac, { owner: rbac.userId })) {
-    return denyRbac(res, 'insufficient_permission', rbac);
-  }
   try {
     const proposalId = String(req.params.proposalId);
 
@@ -287,12 +276,9 @@ router.post("/api/workspace/proposals/:proposalId/reject", (req: Request, res: R
 // ═══ PUT /api/workspace/alerts/:id/dismiss — 消除告警 ═══
 
 router.put('/api/workspace/alerts/:id/dismiss', (req: Request, res: Response) => {
-  // D1153/#1051: 身份守卫 + 写权限判据（判据绑定同 PUT goals/:goalId/target）
+  // D1153/#1051: 身份守卫。本卡**不做越权判定** —— 见文件头「未做」段
   const rbac = requireAuthenticatedRbac(req, res);
   if (!rbac) return;
-  if (!canModifyWorkspace(rbac, { owner: rbac.userId })) {
-    return denyRbac(res, 'insufficient_permission', rbac);
-  }
   try {
     const id = String(req.params.id);
     dismissedAlerts.set(id, { dismissedAt: new Date().toISOString() });

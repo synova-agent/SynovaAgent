@@ -24,6 +24,16 @@
  * 撤掉 `workspace-data.ts` / `actions-api.ts` 中**任一**路由的 `requireAuthenticatedRbac`
  * 守卫 ⇒ 组 A 对应用例必红（该路径由 403 变 200）。实测记录见交付回执。
  *
+ * ── 本卡**不做**越权判定（刻意，带注释钉住）──────────────────────────────
+ * 组 C 只断言「已认证 ⇒ 非 403 / 业务成功」，**不**断言任何角色级拒绝。
+ * 原因: `RbacContext` 无 org/team 维度（`middleware/rbac.ts:129` 的 `department` 恒
+ * `undefined`；`extractRbacContext` 连 `req.auth.orgId` 都不携带），而路由不得重算身份
+ * （L-4）⇒ 跨部门/跨租户判据**今日无法表达**，只能靠接口变更（另立卡）补齐。
+ * 曾尝试叠部门级读判据 ⇒ 恒假 ⇒ `app/js/dashboard.js:35`（deptId = 登录者 orgId）
+ * 的 manager/staff 用户静默得到空工作台 = **过度拒绝（功能回归）**，已撤。
+ * ⇒ 下面 C 组的「非 403」钉是**刻意**的：接口补齐（RbacContext 有部门/租户维度）后
+ *   该组应变红，强制越权判定走复核，而不是静默生效。
+ *
  * ── 覆盖（枚举式，非抽样）────────────────────────────────────────────────
  * D1153 射程 10 端点（workspace-data 7 + actions-api 3）
  * ＋ 对照 6 端点（workspaces-api.ts 既有守卫 —— PR-1/D947 P3 已落地的执法点）。
@@ -327,7 +337,7 @@ describe('B · 完整链路（jwt + rbac）：未认证 ⇒ 401（上游身份�
 //   两个方向都断言 ⇒ 同时防「一刀切全拒」的假绿 与「只验身份不验权限」的假绿
 // ════════════════════════════════════════════════════════════════
 
-describe('C · 已认证有权/无权双向矩阵（真 RBAC，非一刀切）', () => {
+describe('C · 已认证 ⇒ 非 403（防「一刀切全拒」；本卡刻意不做越权判定，见文件头）', () => {
   // ── D1153 射程：持有 admin / manager 身份 ⇒ 业务成功 ──
   it.each([
     'GET    /api/workspace/:deptId',
@@ -348,7 +358,7 @@ describe('C · 已认证有权/无权双向矩阵（真 RBAC，非一刀切）',
     expect(res.body.ok).toBe(true);
   });
 
-  it('PUT /api/actions/:id/status · admin 已认证且有权 ⇒ 200（绑定目标对象的写判据）', async () => {
+  it('PUT /api/actions/:id/status · admin 已认证且有权 ⇒ 200（身份守卫 + 对象定位）', async () => {
     const created = await call(full.base, 'POST', '/api/actions', {
       token: TOKEN.admin, body: { workspaceId: uid('ws'), title: '流转用例' },
     });
@@ -371,47 +381,47 @@ describe('C · 已认证有权/无权双向矩阵（真 RBAC，非一刀切）',
     expect(res.body.ok).toBe(true);
   });
 
-  it('GET    /api/workspace/:deptId · liaison / ga ⇒ 200（只读角色经统一判据放行）', async () => {
+  it('GET    /api/workspace/:deptId · liaison / ga ⇒ 200（已认证即可读；本卡不做越权判定）', async () => {
     for (const role of ['liaison', 'ga']) {
       const res = await call(full.base, 'GET', '/api/workspace/d1153-dept', { token: TOKEN[role] });
       expect({ role, status: res.status }).toEqual({ role, status: 200 });
     }
   });
 
-  // ── 已认证但无权 ⇒ 403（证明叠在身份之上的权限判据真的接线了）──
-  it('PUT    /api/workspace/goals/:goalId/target · staff / ga / liaison ⇒ 403（只读角色不得改）', async () => {
+  // ── 刻意钉「已认证 ⇒ 非 403」（含只读角色）──────────────────────────────
+  // 这些不是「有权」的证明，而是**本卡射程边界**的可执行声明: 越权判定依赖
+  //   `RbacContext` 补齐 org/team 维度（另立卡）。接口补齐后本组应变红 → 强制复核。
+  it('PUT    /api/workspace/goals/:goalId/target · staff / ga / liaison ⇒ 非 403（刻意：本卡不做越权判定）', async () => {
     for (const role of ['staff', 'ga', 'liaison']) {
       const res = await call(full.base, 'PUT', `/api/workspace/goals/${uid('goal')}/target`, {
         token: TOKEN[role], body: { targetValue: 1 },
       });
-      expect({ role, status: res.status, code: str(res.body, 'code') })
-        .toEqual({ role, status: 403, code: 'RBAC_DENIED' });
+      expect({ role, status: res.status }).toEqual({ role, status: 200 });
     }
   });
 
-  it('POST   /api/actions · staff ⇒ 403（本部门只读，不得创建）', async () => {
+  it('POST   /api/actions · staff ⇒ 非 403（刻意：本卡不做越权判定）', async () => {
     const res = await call(full.base, 'POST', '/api/actions', {
-      token: TOKEN.staff, body: { workspaceId: 'ws-d1153', title: '不应创建' },
+      token: TOKEN.staff, body: { workspaceId: 'ws-d1153', title: 'staff 创建用例' },
     });
-    expect(res.status).toBe(403);
-    expect(str(res.body, 'code')).toBe('RBAC_DENIED');
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
   });
 
   /**
-   * 单元级后端缺口钉（**已登记回退**，非期望终态）:
-   * `extractRbacContext`（rbac.ts:129）恒置 `department: undefined` —— JWT 载荷
-   * 只有 `sub/role/orgId/jti`（auth.ts:26-33），**无部门声明**。故部门级读判据
-   * `isSameDepartment(undefined, dept)` 对 manager/staff 恒不成立 ⇒ 二者被
-   * fail-closed 挡在部门工作台之外。与 workspaces-api.ts:278 已登记的
-   * 「R5/REV-8: JWT 载荷无 department ⇒ 恒 undefined」同根。
-   * 本钉的意义: 若上游补上部门声明（auth.ts 面，属 #1011 写集），本用例即红
-   * —— 强制该行为变更走复核，而非静默生效。
+   * 部门级读端点（`app/js/dashboard.js:35` 的真消费方 —— deptId = 登录者 orgId，
+   * `app/js/api-client.js:61` 带真 Bearer）:
+   * 本卡**必须**让已认证的 manager/staff 读到自己的部门工作台。
+   * 曾叠 `canAccessWorkspace({visibility:'department', department: deptId})` ⇒ 因
+   *   `department` 恒 `undefined`（rbac.ts:129）该判据恒假 ⇒ dashboard 静默空面板
+   *   = 过度拒绝（功能回归），已撤。
+   * 本钉的意义: 接口补齐部门/租户维度后，若有人重新引入越权判定，本用例即红
+   *   —— 强制该变更走复核，而不是静默把 dashboard 弄空。
    */
-  it('GET    /api/workspace/:deptId · manager / staff ⇒ 403（部门不可判定 ⇒ fail-closed，已登记回退）', async () => {
+  it('GET    /api/workspace/:deptId · manager / staff ⇒ 非 403（真消费方路径，不得过度拒绝）', async () => {
     for (const role of ['manager', 'staff']) {
       const res = await call(full.base, 'GET', '/api/workspace/d1153-dept', { token: TOKEN[role] });
-      expect({ role, status: res.status, code: str(res.body, 'code') })
-        .toEqual({ role, status: 403, code: 'RBAC_DENIED' });
+      expect({ role, status: res.status }).toEqual({ role, status: 200 });
     }
   });
 
