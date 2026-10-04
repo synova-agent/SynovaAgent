@@ -54,7 +54,7 @@ src/sentinel/types.ts增加 traversal?: GraphTraversal 和 teamId?: string。
 
 ## 4. 端到端验证
 
-用哇呢宝贝数据运行全部46个哨兵。预期触发5条核心诊断。
+用客户A数据运行全部46个哨兵。预期触发5条核心诊断。
 
 ## 5. 旧代码删除清单
 
