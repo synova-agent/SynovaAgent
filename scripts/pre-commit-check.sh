@@ -846,6 +846,12 @@ soft_check "铁律 46: 桥接文件欺诈 + 包级 engine-core + 壳包检测" "
 TODAY=$(date +%Y-%m-%d)
 # D296 认领制: 多 session 并发时用认领本提交文件的 brief (跨 session 污染根治)
 BRIEF=$(bash "$ROOT/scripts/workflow/resolve-commit-brief.sh" "$STAGED_ALL" 2>/dev/null || true)
+# D1148 缺陷修复（可核）: 组 12 的 `while IFS= read -r BRIEF; do … done <<< "$ALL_TODAY_BRIEFS"`
+#   会**覆盖** $BRIEF（循环变量复用），使其后所有读 $BRIEF 的检查实际校验的是"今日 brief 列表
+#   里排序最后一份"而非**认领本次提交的那一份**——G12b 可解析性检查因此长年校验错对象
+#   （实证: 注入一份无 #CRITERIA 的认领 brief，G12b 仍判 ✅ = 假绿）。
+#   修法: 解析结果另存 BRIEF_RESOLVED，其后（含闸②）统一读它；$BRIEF 保持原语义供循环使用。
+BRIEF_RESOLVED="$BRIEF"
 CLEANUP_CLAIM=""
 if [ -n "$BRIEF" ] && [ -f "$BRIEF" ]; then
   if grep -qi "已拆\|已迁移\|已清理\|拆分.*完成\|迁移.*完成\|清理.*完成\|完成.*拆分\|完成.*迁移\|完成.*清理" "$BRIEF" 2>/dev/null; then  # swallow-ok: brief 不可读→grep 静默→CLEANUP_CLAIM 空（拆分/迁移裸词不作完成声称，避免误伤工作描述）
@@ -1516,8 +1522,11 @@ if [ -n "$SCOPE_VIOLATION" ]; then
 fi
 
 # ②-2 D313 M3: 附挂 brief 契约检查（同源解析器 + #CRITERIA + 架构层 + Done）
-BRIEF_PARSEABLE_OUT=$(bash "$ROOT/scripts/workflow/check-brief-parseable.sh" "$BRIEF" 2>&1 || true)
-if echo "$BRIEF_PARSEABLE_OUT" | grep -q "❌"; then
+#   D1148 两处修正: ① 对象用 BRIEF_RESOLVED（认领本提交的 brief，不被组 12 循环覆盖）；
+#   ② 三态 fail-closed —— 原实现 `|| true` + 只看 ❌ 字样 ⇒ 被检脚本崩溃(rc≥2)时输出无 ❌
+#      → 静默判过（假绿）。改为捕 rc：非 0（含 1=违规、≥2=检查自身失败）一律计入闸②。
+BRIEF_PARSEABLE_OUT=$(bash "$ROOT/scripts/workflow/check-brief-parseable.sh" "${BRIEF_RESOLVED:-}" 2>&1); BP_RC=$?
+if [ "$BP_RC" -ne 0 ]; then
   DECL2="${DECL2}$(printf '%s\n' "$BRIEF_PARSEABLE_OUT" | grep -v '^[[:space:]]*$' | head -6)\n"
 fi
 
