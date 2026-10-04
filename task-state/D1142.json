@@ -13,6 +13,8 @@
     "scripts/pre-commit-check.sh",
     "scripts/control-tower/check-ontology-edge-fields.sh",
     "scripts/control-tower/check-name-authority.sh",
+    "scripts/control-tower/check-naming-authority.sh",
+    "tests/control-tower/check-naming-authority.test.sh",
     "scripts/control-tower/check-project-coordinates.sh",
     "scripts/install-hooks.sh",
     "tests/control-tower/alloc-task-id.test.sh",
@@ -31,6 +33,7 @@
     "docs/synova/coordination/2026-10-04-D1142-1026-bypass出库裁决包.md",
     "docs/synova/coordination/2026-10-04-D1142-1017-三阈值互斥提案.md",
     "docs/synova/coordination/2026-10-04-D1142-1019-上报CTO.md",
+    "docs/synova/coordination/2026-10-04-D1142-990-命名权威门禁-预演报告.md",
     "docs/synova/coordination/2026-10-04-D1142-回执-R1R5.md"
   ]
 }

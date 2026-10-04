@@ -402,3 +402,9 @@ documents:
     path: docs/synova/coordination/2026-10-04-D1142-1019-上报CTO.md
     status: active
     owner: line-lead
+
+  - id: DOC-0147
+    type: governance
+    path: docs/synova/coordination/2026-10-04-D1142-990-命名权威门禁-预演报告.md
+    status: active
+    owner: line-lead
