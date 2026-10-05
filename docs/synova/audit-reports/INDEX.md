@@ -155,6 +155,13 @@
 | — | tickets-before.j | 未判定（见报告正文） | `k3-repo@749c3b51:docs/synova/audit-reports/D602-ipc-notification-evidence-20260909/logs/tickets-before.json` | — |
 | — | transition-response. | 未判定（见报告正文） | `k3-repo@749c3b51:docs/synova/audit-reports/D602-ipc-notification-evidence-20260909/logs/transition-response.txt` | — |
 | — | red-green-evidence | 未判定（见报告正文） | `k3-repo@749c3b51:docs/synova/audit-reports/D602-ipc-notification-evidence-20260909/red-green-evidence.md` | — |
+| 2026-10-05 | 门禁治理波次-D1145-D1149 | CONDITIONAL PASS×3 + PASS×2（见报告正文总判定表） | `k3-repo@d17d389:audit-reports/2026-10-05-k3-审计报告-门禁治理波次-D1145-D1149.md` | 2026-10-05 |
+
+> **最近批次溯源（D1155，2026-10-05）**：K3 独立仓 `~/synova-k3-audit` @ **`d17d389`**（提交信息："k3: 门禁治理波次审计报告（#1075-#1107，2 PASS + 3 CONDITIONAL，4 项复现）"）；
+> 报告路径 `audit-reports/2026-10-05-k3-审计报告-门禁治理波次-D1145-D1149.md`（**123 行**，正文**不在本仓**，遵本文件 §「不新增正文」规约）；
+> 审计对象锚点：#1075 `e39e566d4`（已合并）｜#1076 `25aefd5de`（已合并）｜#1078 `86469efdc`（已合并）｜#1077 `435e58263`（**已合并** `afde93eae`）｜#1107 `ac1829ca0`；
+> 审计环境：macOS bash 3.2.57（**Windows 侧未实测**，与复核席同局限）；产品仓只读，证据取自 `origin/main` 与两 PR 分支的 git 对象 + `/tmp` 隔离仓复现。
+> 复核命令（本行可核）：`git -C ~/synova-k3-audit log -1 --format=%h -- 'audit-reports/2026-10-05-*'` → `d17d389`。
 
 ## 远端状态（阶段 A 前置复核，2026-09-25 实测）
 
