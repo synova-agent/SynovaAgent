@@ -1,0 +1,25 @@
+{
+  "task_id": "D1015",
+  "title": "阶段1-A check-* 计数口径定版（唯一来源）",
+  "status": "impl_done",
+  "risk": "low",
+  "domain": "mac",
+  "owner": "squad-analyst",
+  "executor": "squad-analyst（DSH 小队成员）/ 独立自验: squad-verifier",
+  "milestone": "治理体系最小充分形态-阶段1",
+  "depends_on": [],
+  "blocked": null,
+  "target": "2026-W40",
+  "spec": ".claude/task-briefs/2026-09-26-D1015-阶段1-A-check-星号-计数口径定版.md",
+  "impl": "docs/synova/coordination/阶段1-check星号-口径-20260926.md",
+  "audit": null,
+  "fix_task_id": null,
+  "write_set": [
+    "docs/synova/coordination/阶段1-check星号-口径-20260926.md",
+    "task-state/D1015.json",
+    ".claude/task-briefs/2026-09-26-D1015-阶段1-A-check-星号-计数口径定版.md"
+  ],
+  "notes": "定版命令 CHECKSTAR_CANONICAL = git ls-tree -r --name-only origin/main -- scripts | grep -E '(^|/)check-[^/]+$' | grep -v '^scripts/audit/' | wc -l；基线 48 @origin/main ee721b0a（as_of 2026-09-26T03:52:30+08:00）；不新增脚本（蓝图 §七-1）。",
+  "note_chord_deleted": "chord 分支（误操作产物，非交付）于 2026-09-26T04:43:36+0800 删除；删除时 sha = 93160cf8a1a8，与 chore/D1015-checkstar-caliber 完全同物（零独有内容）⇒ 零风险；CTO R1 裁定准删，属主执行。",
+  "note_chord_root_cause": "成因：push-d1015.sh 参数未校验（BR=\"${1:-默认}\"），误把 'chord' 当分支名执行了一次 git push HEAD:chord ⇒ 误建分支。与取号器同族（脚本参数未校验）→ 已由队长立卡归阶段 3，本卡不修。"
+}
