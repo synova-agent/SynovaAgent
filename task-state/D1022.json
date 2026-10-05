@@ -5,12 +5,50 @@
   "spec": ".claude/task-briefs/2026-09-26-D1022-T3-CI-止血包.md",
   "impl": null,
   "audit": null,
-  "fix_task_id": null,
+  "fix_task_id": "D1025",
   "write_set": [
     ".github/workflows/ci.yml",
     "docs/synova/coordination/D1022-T3-ci-止血包-20260926.md",
     "task-state/D1022.json"
   ],
+  "note": {
+    "S4_作者动作段": {
+      "动作": "叠加探针（CTO 裁定 R1）：把 T3 分支 merge 进探针分支，用于合前取 ⒜/⒝",
+      "执行者": "squad-ci",
+      "merge_commit": "10ff0c78",
+      "理由": "合前取 doc-only 早退证据（CTO 裁定 R1 指定做法）；结论：该路线不成立（平台语义）",
+      "as_of": "2026-09-26T12:05+08:00",
+      "探针收尾": {
+        "PR": "#847 → closed（附处置评论）",
+        "分支": "chore/D1022-docsonly-probe → 远端 deleted + 本地 deleted（was 8903c459）",
+        "ls_remote_判据": "git ls-remote --heads … | grep -c 'D1022-docsonly-probe' = 0",
+        "as_of": "2026-09-26T12:10+08:00"
+      },
+      "留档_sha_四件": [
+        "8903c4592917544fa536914e93ba406aca40895a（叠加版分支 tip）",
+        "ffbf07e19434（探针首版分支 tip）",
+        "10ff0c78（T3 → 探针分支的 merge commit）",
+        "c562201c720b → ee1098dfa04c → f5adb64c207f（T3 分支 #846 的三个 tip 演进）"
+      ]
+    },
+    "S4_复核验证段": {
+      "授权": "CTO 裁定 R1（叠加探针）+ 最终指令 R2（D1024 证据文档准，立刻落）",
+      "复核结论": "叠加探针实测：T3 的 ci.yml 确已生效（10/10 job 有 detect 步且 success），但全 10 job 跳步=0 ⇒ docs_only=false（叠加分支带 ci.yml 所致）⇒ 合前不可能产出 ⒜/⒝。合后（#846 merge 30f3bcedddcf 入 main）用 ASCII 探针实取：12/12 必需检查 success、run 35s、早退跳步 1–7/job。",
+      "核验_ref_与计数": {
+        "main": "30f3bcedddcf（#846 merge 已在 main 祖先中，核验方式 git merge-base --is-ancestor）",
+        "counts_N": "id: docsonly = 10（N=10）｜grep -c docsonly = 44（N=44 行）｜timeout-minutes = 21（N=21）",
+        "as_of": "2026-09-26T17:59:30+08:00",
+        "观测者": "squad-ci"
+      },
+      "留档_sha_成对": {
+        "CTO_指定": "ed9d248d2739 @ refs/pull/847/merge",
+        "本卡核验结果": "❌ 不一致：GET /repos/…/git/ref/pull/847/merge → 404 Not Found（PR 关闭后 GitHub 删除合并引用）；ed9d248d2739 实际解析为 2026-08-16 的 docs(D356) 审计提交（commit_date 2026-08-16T03:38:22Z），非 #847 合并引用",
+        "可复核替代值": "0e97dd37eb0a @ 2026-09-26T18:31+08:00（路由：GET /repos/tangbaobao520/SynovaAgent/pulls/847 → merge_commit_sha；该值为 PR 关闭时最后记录值，随 base 前进会重算）",
+        "branch_tip": "8903c4592917（refs/heads/chore/D1022-docsonly-probe，已删除前的 tip）",
+        "待裁决": "请 CTO 确认以 0e97dd37eb0a 替代 ed9d248d2739 作为留档 sha"
+      }
+    }
+  },
   "updated_at": "2026-09-26",
   "updated_by": "squad-ci"
 }

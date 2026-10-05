@@ -1,0 +1,63 @@
+{
+  "task_id": "D1013",
+  "title": "【P0】merge_writeset_gate 的 D# 推断缺陷：从 SHA 抠假号 + 扫进 main 历史（判定不确定 · 阻塞全队 PR）",
+  "status": "registered",
+  "risk": "high",
+  "domain": "mac",
+  "owner": "mac-cto-parallel",
+  "executor": "待派（控制塔/门禁域：scripts/control-tower/merge_writeset_gate.py）",
+  "milestone": "治理体系最小充分形态 · 阶段 3 必收口项",
+  "depends_on": [],
+  "blocked": "门禁语义变更 ⇒ 需 Mac-CTO 批准 + K3 审；优先合并通道：fix/D708-merge-writeset-gate → fix/D911-merge-writeset-gate",
+  "target": "2026-W40",
+  "spec": "docs/synova/coordination/阶段0-报告-20260926.md（未清项 13）",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "defect": {
+    "class": "P0 · 判定不确定（同一 PR 重推即换结论）+ 阻塞 main 必需检查",
+    "code_refs": [
+      "scripts/control-tower/merge_writeset_gate.py:150  DID_RE = regex of letter-d + digits",
+      "scripts/control-tower/merge_writeset_gate.py:187  git log --max-count=$FALLBACK_SCAN_DEPTH --format=%s <head>",
+      "scripts/control-tower/merge_writeset_gate.py:444-453  无声明且含 non-doc ⇒ return 2 fail-closed"
+    ],
+    "trigger_paths": [
+      {
+        "id": "A",
+        "name": "从 40 位 SHA 抠假号",
+        "mechanism": "GitHub 合成 merge 提交 subject = Merge <40位 head SHA> into <base SHA>；SHA 十六进制串中的 d+数字 被当成 D#",
+        "repr": "grep -oE '[Dd][0-9]+' on 'Merge a16d839eb0a6d8bbb8f8b43d48839376e8d2c3c1 into ee721b0a...' → d839 / d8 / d48839376 / d2 / d2",
+        "observed": "假号 D839 恰为真卡（task-state/D839.json 声明 7 条）⇒ #832 的 6 个文件全判夹带 ⇒ quality（main 必需检查）failure",
+        "expected_rate": "约 3.12 处/SHA"
+      },
+      {
+        "id": "B",
+        "name": "回退扫描扫进 main 历史",
+        "mechanism": "源② 从 head 起扫最近 N 条提交，短分支必然扫进 origin/main 历史；已合任务的 merge subject 被当成本分支提交",
+        "repr": "parse_did('Merge pull request #804 from tangbaobao520/fix/d956-ci-failmsg') → D956",
+        "observed": "#827 / #834 被判 D956 误绑 ⇒ 2 个交付文档全判夹带 ⇒ D708 三次 run 全 failure"
+      }
+    ],
+    "blast_radius": "D#-less 分支几乎必然误绑；判定随重推闪变 ⇒ 不可作稳定判据；本次命中 #824/#827/#828/#830 四个阶段 0 PR（全部）",
+    "parallel_cto_mitigation": "分支名携带本卡 D# ⇒ infer_did 分支名源①优先命中本卡（#832 chore/D1009-… / #833 chore/D1010-… / #834 chore/D1011-… / #835 chore/D1012-…）。未改门禁逻辑、未删提交、未加豁免。",
+    "structural_fact": "D# 必须在【分支名】里：只写进 commit subject 无效 —— 源② 从 head 起扫，合成 merge subject 永远排在前面。",
+    "fix_requirements": [
+      "解析 D# 前先剥离/忽略 40 位 SHA（或对 d+数字 加词边界/位数上限）",
+      "回退扫描范围不得越过 merge-base（不得扫进 base 分支历史）",
+      "修后须给『伪造 SHA 含假号 ⇒ 不误绑』与『main 历史含 D# merge subject ⇒ 不误绑』两条反例夹具",
+      "属门禁语义变更 ⇒ Mac-CTO 批准 + K3 审"
+    ],
+    "evidence": [
+      "docs/synova/coordination/阶段0-报告-20260926.md 未清项 13",
+      "docs/synova/coordination/阶段0-日志归档-20260926.md §8.4 / §9-12（PR #832）",
+      "docs/synova/coordination/阶段0-积压分类-20260926.md §8.6（PR #834）",
+      "docs/synova/coordination/阶段0-自验报告-20260926.md U19（PR #835）"
+    ]
+  },
+  "write_set": [
+    "task-state/D1013.json",
+    "docs/synova/coordination/阶段0-报告-20260926.md"
+  ],
+  "updated_at": "2026-09-26T02:55:00+08:00",
+  "updated_by": "CTO"
+}

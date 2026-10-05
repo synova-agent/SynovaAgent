@@ -3,14 +3,17 @@
 export PYTHONIOENCODING=utf-8
 export LC_ALL=C.UTF-8 2>/dev/null || true
 # ═══════════════════════════════════════════════════════════════
-# hard-gate-convergence.test.sh — D515 项3: 提交端硬阻断收敛到 4 道（重中之重）
+# hard-gate-convergence.test.sh — D515 项3 / D1148: 提交端硬阻断收敛
 #
 # 10 类历史拦截场景（源自 pre-commit-failures.log 真实案例类别）:
-#   4 保（质量根，硬阻断）: ①as any ②测试配对+expect ③Secrets ④接线物理事实
+#   4 质量根（硬阻断）: ①as any ②测试配对+expect ③Secrets ④接线物理事实
 #     + 特例 G12d 生成物单点 / G13 技能同步（spec 明示保留）
-#   6 放（软提示，不拦本地提交）: ⑤架构边界 ⑥brief 六字段/G12 认领 ⑦契约门禁
-#     ⑧empty catch ⑨plan-integrity/Q2 类 ⑩DiagnosticModule/专家配置
-# 覆盖矩阵: 结构断言（10 场景 hard/soft 归属）+ 行为断言（as any 实拦 / G12 越界实放）
+#   3 声明类硬闸（D1148 合并 15→3）: ①brief schema ②brief↔代码一致性 ③可证伪 Done
+#   旁路（只打印、不判红、不进 gate-hits）: D782 D1/D2、D734 预算、验收 CI、Q0c、
+#     plan-integrity non-Q2、G12c dev doc 写集、G12d 声称↔证据表
+#   退役: opt_check「PRD 对照」（261 次命中/永不阻断，注释指向 D1148）
+#   软提示（不拦本地提交）: 架构边界 ⑥契约门禁 ⑧empty catch ⑩DiagnosticModule/专家配置
+# 覆盖矩阵: 结构断言（硬/旁路/退役归属）+ 行为断言（as any 实拦 / 闸② 实拦 + 沙箱降软）
 # 沙箱: 行为断言在本仓库暂存探针文件，trap 保证清理（禁止 stash，铁律 0-3）
 # ═══════════════════════════════════════════════════════════════
 set -uo pipefail
@@ -33,7 +36,7 @@ trap cleanup EXIT
 
 echo "=== D515 项3: 硬阻断收敛（10 场景：4 保 6 放）==="
 
-# ── 结构断言: 4 保 + 2 特例仍是 hard_check ──
+# ── 结构断言: 4 质量根 + 2 特例仍是 hard_check ──
 KEEP_HARD=(
   'hard_check "as any / as never / as unknown as 零容忍（新增，铁律 38；存量独立清理）"'
   'hard_check "新文件配对: impl 须同 commit 有 test"'
@@ -46,14 +49,75 @@ KEEP_HARD=(
 for k in "${KEEP_HARD[@]}"; do
   grep -qF "$k" "$PC" && ok "保[硬]: $k" || no "质量根被误降级: $k"
 done
-# Secrets 仍硬: par_collect secrets 失败 → HARD_FAIL
-grep -q 'par_collect secrets.*HARD_FAIL' "$PC" && ok "保[硬]: Secrets (par_collect → HARD_FAIL)" || no "Secrets 被降级"
+# D1148: 声明类三闸 —— 生产（真提交）路径硬阻断 = decl_check；夹具沙箱（SYNO_TEST_ARM/
+#   SYNO_BRIEF_DIR/SYNO_GIT_CACHED_* 注入）降软，理由见脚本 _SANDBOX 注释（D749）。
+#   本夹具断言的是"生产路径仍是硬闸"：decl_check 在非沙箱下派发 hard_check。
+KEEP_DECL=(
+  'decl_check "声明闸① brief schema'
+  'decl_check "声明闸② brief↔代码一致性'
+  'decl_check "声明闸③ Done 可证伪'
+)
+for k in "${KEEP_DECL[@]}"; do
+  grep -qF "$k" "$PC" && ok "保[硬/声明闸]: $k" || no "声明类硬闸缺失/被降级: $k"
+done
+# Secrets 仍硬: secrets 收集失败 → HARD_FAIL（D1148: 收集器改 par_collect_quiet 以降噪，
+#   判据口径不变——仍是「失败即 HARD_FAIL」，此处两种收集器形态都接受）
+grep -qE 'par_collect(_quiet)? secrets.*HARD_FAIL' "$PC" && ok "保[硬]: Secrets (收集失败 → HARD_FAIL)" || no "Secrets 被降级"
 
-# ── 结构断言: 6 改软 ──
+# ── 结构断言: D1148 转旁路的检查点必须**真的在旁路**（只打印、不判红、不进 gate-hits）──
+# 断言一律只看**代码行**（= 去掉行首 # 注释后的正文）——退役/转旁路的留痕注释会逐字引用
+#   旧调用形态（"原 `par_collect … || v5_soft "…"` → 转旁路"），拿全文件 grep 会让留痕注释
+#   把反向断言打成假红（本夹具首轮实测踩到）。
+# ⚠️ pipefail 陷阱（实测 rc=141，同类：today-by-name.test.sh 断言 9）：`pc_code | grep -qF …`
+#   的 grep -q 命中即提前退出 → 左侧 grep 收 SIGPIPE(141) → pipefail 把**真实接线判成缺失**。
+#   故 pc_code 只落一次文件，全部断言 grep 文件。
+PC_CODE_FILE="$(mktemp)"
+cleanup_all() { cleanup; rm -f "$PC_CODE_FILE"; }
+trap cleanup_all EXIT
+pc_code() { grep -vE '^[[:space:]]*#' "$PC"; }
+pc_code > "$PC_CODE_FILE" || true
+pcgrep() { grep -qF -- "$1" "$PC_CODE_FILE"; }
+KEEP_BYPASS=(
+  'bypass_run "D782 D1 文档真相'
+  'bypass_run "D782 D2 登记门禁'
+  'bypass_run "D734 PR 预算'
+  'note_check "验收 CI (V3.9, exit='
+  'note_check "plan-integrity: non-Q2 项'
+  'note_check "G12c dev doc 写集验证'
+  'note_check "G12d 声称↔证据对照表'
+)
+for k in "${KEEP_BYPASS[@]}"; do
+  pcgrep "$k" && ok "旁路[观测]: $k" || no "应转旁路却缺失: $k"
+done
+# D1148: q0c 不转旁路而是**并入闸①**（Q0 系列成员）——按此断言（spec: 闸① = …+Q0 系列）
+if pcgrep 'check-q0c-tracking.sh' && pcgrep '${Q0C_MSG}'; then
+  ok "并入闸①: Q0c 取消跟踪（Q0 系列成员，不再是独立执行点）"
+else
+  no "闸① 未收编 Q0c（Q0 系列成员缺失）"
+fi
+# 反向断言: 旁路/收编项不得仍挂在阻断路径上（只看代码行；hard_check/soft_check 命中即判红）
+for bad in 'hard_check "D734' 'soft_check "D1 文档真相' 'v5_soft "验收 CI' 'v5_soft "plan-integrity' 'v5_soft "Q0c'; do
+  if pcgrep "$bad"; then no "旁路项仍在阻断路径: $bad"; else ok "已离开阻断路径: $bad"; fi
+done
+# D1148 退役: opt_check（PRD 对照，261 次命中/永不阻断）检查点 + 死函数必须清零
+if pcgrep 'opt_check'; then no "退役项 opt_check 仍在代码路径（PRD 对照应有注释指向 D1148）"; else ok "退役: opt_check 检查点与死函数清零"; fi
+grep -q 'D1148' "$PC" && ok "退役留痕: 注释指向 D1148" || no "退役未留痕（缺 D1148 注释）"
+# 降噪机制接线: 成功静默开关 + 组 7a 显式保留 ✅（gate-failopen-net.test.sh 判据输入）
+grep -qF 'QUIET_SUCCESS="${SYNO_QUIET_SUCCESS:-1}"' "$PC" && ok "降噪: 成功静默开关赋值接线（整轮可被 SYNO_QUIET_SUCCESS 覆盖）" || no "成功静默开关未接线"
+# 缺省**打印**语义: 静默开关必须来自一次赋值（51 行区），绝不能写进函数条件本体——
+#   否则 `sed -n '42,44p;47p'` 提取的片段（ci-strict-visible.test.sh）里变量为空 ⇒ 断言恒红。
+#   本条即该坑（首轮实测踩到）的物理防线。
+if grep -qF '[ "${SYNO_QUIET_SUCCESS' "$PC_CODE_FILE"; then
+  no "函数条件内联 SYNO_QUIET_SUCCESS（提取片段将静默 ⇒ ci-strict-visible 假红）"
+else
+  ok "静默条件用 \${QUIET_SUCCESS:-0}（缺省=打印，提取片段语义安全）"
+fi
+grep -q 'QUIET_SUCCESS=0 soft_check "禁止 DiagnosticModule' "$PC" && ok "降噪例外: 组 7a ✅ 行显式保留" || no "组 7a ✅ 行被静默（将打破 gate-failopen-net 判别）"
+grep -q 'QUIET_SUCCESS=0 decl_check "声明闸' "$PC" && ok "降噪例外: 三闸 ✅ 行显式保留（收敛可核）" || no "三闸 ✅ 行被静默"
+
+# ── 结构断言: 降级的检查点（软提示，不拦本地提交）──
 KEEP_SOFT=(
   'soft_check "架构边界: 禁止跨层引用 (铁律 39)"'
-  'soft_check "Task Brief: 6 核心字段必须填写 (Q0/Q1/Q2/Q3/架构层/Done)"'
-  'soft_check "G12: task brief Q2 范围一致性"'
   'soft_check "契约门禁: 声明产出须在暂存区"'
   'soft_check "empty catch 无 log (铁律 24+31)"'
   'soft_check "禁止 DiagnosticModule: 新模块须实现 Sentinel 接口"'
@@ -93,24 +157,37 @@ cleanup
 
 # ── 行为断言A4 (CT-46): 裸 as unknown（合法中间态）→ 不拦（exit 0，防过度阻断）──
 # 设计: 追加行到已有跟踪文件（新建 .ts 文件会触发"新文件配对"门禁，测不到组 1 本意）
+# D1148 修（夹具与 D749 语义漂移）: 原实现不加沙箱缝 → 声明三闸（生产路径硬）把未认领的
+#   探针宿主判红，断言实际测的是"G12 是否报未认领"而非"组 1 是否误拦"（改前 6 红之一）。
+#   加 SYNO_TEST_ARM=1 只把**声明三闸**降到沙箱软档；组 1 的 hard_check 不受影响
+#   （A/A2/A3 仍证明组 1 硬拦，故本断言仍只测组 1 边界）。
 PROBE_HOST="$REPO/src/agent/diagnosis-launcher.ts"
 echo "" >> "$PROBE_HOST"
 echo 'const __probeA4 = (x: unknown) => x as unknown; // CT-46 probe' >> "$PROBE_HOST"
 git -C "$REPO" add -- "$PROBE_HOST" >/dev/null 2>&1
-OUTA4=$(cd "$REPO" && SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_WARN=1 \
+OUTA4=$(cd "$REPO" && SYNO_TEST_ARM=1 SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_WARN=1 \
   SYNO_GATE_HITS_LOG="$(mktemp)" bash "$PC" 2>&1); rcA4=$?
 [ "$rcA4" -eq 0 ] && ok "行为A4: 裸 as unknown 不误拦 (exit 0)" || no "行为A4: 应 exit 0, 实际 $rcA4 :: $(echo "$OUTA4" | grep -B2 '提交已拒绝' | head -8)"
 git -C "$REPO" restore --staged --worktree -- "$PROBE_HOST" >/dev/null 2>&1 || true
 cleanup
 
-# ── 行为断言B: G12 越界探针（无 brief 认领的 json）→ 软提示放行（exit 0）──
+# ── 行为断言B (D1148): G12 越界（无 brief 认领的探针）→ **真提交路径硬拦**（声明闸②）──
+# 改前状态: G12 走 decl_check → 非沙箱下已硬拦，但本夹具期望"软放行"（夹具与 D749 语义漂移，
+#   改前 6 红之一）。D1148 spec 明示闸② = brief↔代码一致性 = 硬闸 ⇒ 生产路径必须 exit 1
+#   且点名闸② + 探针文件（报告能力不减）。
 echo '{}' > "$PROBE2"
 git -C "$REPO" add -- "$PROBE2" >/dev/null 2>&1
 OUTB=$(cd "$REPO" && SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_WARN=1 \
   SYNO_GATE_HITS_LOG="$(mktemp)" bash "$PC" 2>&1); rcB=$?
-[ "$rcB" -eq 0 ] && ok "行为B: G12 越界只告警不拦 (exit 0)" || no "行为B: 应 exit 0, 实际 $rcB :: $(echo "$OUTB" | grep -B2 '提交已拒绝' | head -8)"
-echo "$OUTB" | grep -q "V5 软提示" && ok "行为B: 输出含 V5 软提示标记" || no "行为B: 缺软提示标记"
+[ "$rcB" -eq 1 ] && ok "行为B: G12 越界在真提交路径被闸② 硬拦 (exit 1)" || no "行为B: 应 exit 1, 实际 $rcB"
+echo "$OUTB" | grep -q "声明闸②" && ok "行为B: 失败点名声明闸②（M1 类失败不点名的反向防线）" || no "行为B: 未点名闸②"
 echo "$OUTB" | grep -q "tmp-d515-scope-probe.json" && ok "行为B: 越界文件被点名（报告能力不减）" || no "行为B: 越界文件未点名"
+echo "$OUTB" | grep -q "提交已拒绝" && ok "行为B: 硬失败输出「提交已拒绝」标记" || no "行为B: 缺硬失败标记"
+# B2: 沙箱档（夹具注入缝）→ 声明闸降软，不阻断（测试/夹具友好性保留，D749 语义）
+OUTB2=$(cd "$REPO" && SYNO_TEST_ARM=1 SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_WARN=1 \
+  SYNO_GATE_HITS_LOG="$(mktemp)" bash "$PC" 2>&1); rcB2=$?
+[ "$rcB2" -eq 0 ] && ok "行为B2: 沙箱档下闸② 降软不阻断 (exit 0)" || no "行为B2: 应 exit 0, 实际 $rcB2"
+echo "$OUTB2" | grep -q "tmp-d515-scope-probe.json" && ok "行为B2: 沙箱档下仍点名越界文件" || no "行为B2: 沙箱档下未点名"
 cleanup
 
 echo ""

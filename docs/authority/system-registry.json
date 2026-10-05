@@ -4,8 +4,8 @@
     "docs/synova/research/权威文档01-本体层因果体系权威规范-20260714/SYNOVA-RESEARCH-第四章-边节点映射矩阵-v1-0-20260714.md"
   ],
   "generatedBy": "scripts/doc-system/gen-system-registry.sh",
-  "generatedAtCommit": "3622a3d1352482924de1df9093022c791120f201",
-  "generatedAt": "2026-09-16T20:02:14+08:00",
+  "generatedAtCommit": "ff036188077037e8cc354c33bf332cf91d8e0775",
+  "generatedAt": "2026-10-05T03:07:22+08:00",
   "edges": [
     {
       "id": "E-01",
@@ -624,5 +624,5 @@
       "derivedBy": "yaml experts 键计数"
     }
   },
-  "notes": "样板批（D782）: edges 从第四章抽取; coverageGraph/causalChains 待 K3 §8 裁定后补; 校验器 verify-system-registry.sh 消费本文件。"
+  "notes": "样板批（D782）: edges 从第四章抽取; coverageGraph/causalChains 待 K3 §8 裁定后补; 校验器已于 D1149 按零调用方退役（校验侧零执行体，接线见 #1046 批 4）——本文件当前无机器消费者。"
 }

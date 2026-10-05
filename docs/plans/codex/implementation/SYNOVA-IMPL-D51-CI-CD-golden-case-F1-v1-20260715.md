@@ -21,7 +21,7 @@
 ## Current State (2026-07-15 Audit)
 
 - D84: Integration contract check-integration.sh DONE (L1+L2 checks)
-- D85: MVS Golden Dataset wani-baby-v1 DONE (frozen snapshot + checksums)
+- D85: MVS Golden Dataset client-a-v1 DONE (frozen snapshot + checksums)
 - D86: Self-diagnosis check-self-diagnosis.sh DONE (6+1 steps)
 - D49-D52: Deployment batch complete
 - CI pipeline: ci.yml with 7 jobs (quality/test/architecture/check/audit)
@@ -125,5 +125,5 @@ CI Layer (.github/workflows/ci.yml) + Test Fixtures (tests/fixtures/golden-cases
   - S5.2: Golden case maintenance ? freeze static snapshots, experts re-lock on version change
 - Auth Doc #6: Test System Spec ? @contract testing / golden case standards
 - D84: Integration test contracts (check-integration.sh)
-- D85: MVS Golden Dataset (wani-baby-v1 snapshot)
+- D85: MVS Golden Dataset (client-a-v1 snapshot)
 - D86: Self-diagnosis (check-self-diagnosis.sh)

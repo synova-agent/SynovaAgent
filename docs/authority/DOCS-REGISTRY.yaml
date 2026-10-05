@@ -378,32 +378,48 @@ documents:
     status: active
     owner: win-line
 
-  # ---- 产品线协调件（2026-10-04，synova-product-lead；本波新建）----
+  # 红因：D2 登记门禁（CI strict）判「有未登记文档 1 个（本件）」⇒ D1147 同批补登记
   - id: DOC-0143
+    type: governance
+    path: docs/synova/coordination/D1147-单套门禁-必需context变更提案.md
+    status: active
+    owner: line-lead
+    note: "D1147 单套门禁（批2）：必需 context 12→9→10 提案 + PATCH/回滚/复核命令 + 改坏即红证据 + 例外清单"
+
+  # ---- D1160（门禁提案：登记表追加型豁免 + D708 多命中分级）2026-10-05 ----
+  - id: DOC-0186
+    type: governance
+    path: docs/synova/coordination/D1160-门禁提案-登记表追加型豁免与D708多命中分级.md
+    status: active
+    owner: line-lead
+    note: "D1160 门禁提案（落库版 v2.1）：① DOCS-REGISTRY.yaml 追加型豁免（5 约束定稿 + numstat 删除数=0 前置 + 行键求交冲突自动判 + R1-R7 夹具）② D708 多命中判定分级（候选存在于 base 则 exit 1；全部来自本分支则 exit 2）③ 判据纪律（数字三要素含 ref + 读文件须写 ref + 夹具红须来自断言）。待 K3 过审转 CTO 裁；本件不改任何判据。号取 DOC-0186 以规避在飞撞号（同批 6 个 PR 同取 DOC-0144）。"
+
+  # ---- 产品线协调件（2026-10-04，synova-product-lead；本波新建）----
+  - id: DOC-0187
     type: devdoc
     path: docs/synova/product-lines/dispatch/派单-产品线P0波次-D962-D963与第0批承接-20261004.md
     status: active
     owner: synova-product-lead
 
-  - id: DOC-0144
+  - id: DOC-0188
     type: status
     path: docs/synova/product-lines/线状态-产品线-20261004.md
     status: active
     owner: synova-product-lead
 
-  - id: DOC-0145
+  - id: DOC-0189
     type: pitfall
     path: docs/synova/product-lines/升级CTO-派单缺陷与上游前提失实-20261004.md
     status: active
     owner: synova-product-lead
 
-  - id: DOC-0146
+  - id: DOC-0190
     type: status
     path: docs/synova/product-lines/收口-R1R5-产品线P0波次-D1137-20261004.md
     status: active
     owner: synova-product-lead
 
-  - id: DOC-0147
+  - id: DOC-0191
     type: decision
     path: docs/synova/product-lines/CTO裁决-产品线升级件-20261004.md
     status: active

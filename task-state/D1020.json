@@ -1,0 +1,49 @@
+{
+  "task_id": "D1020",
+  "title": "【阶段5·遗留收口】tests/output/** 生成物入仓 + 未 gitignore ⇒ 跑一次测试即脏主树",
+  "status": "registered",
+  "risk": "medium",
+  "domain": "mac",
+  "owner": "mac-cto-parallel",
+  "executor": "待派（需跨 src/ 与 tests/ 两侧；src/** 不在门禁治理线写集内 ⇒ 须协调 src 属主）",
+  "milestone": "阶段 5（与「生成物离库」同批）",
+  "depends_on": [],
+  "blocked": "🔴 前置未满足：读取方确认 + src/mvp-server.ts 写入点属 src/ 写集（本线不可碰）",
+  "target": "2026-W40",
+  "spec": "CTO 追加卡（2026-09-26）：tests/output 生成物入仓 + 未 gitignore",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "facts_verified": {
+    "as_of": "2026-09-26T04:4x+08:00",
+    "tracked_files": [
+      "tests/output/expert-quality-cross-industry.json",
+      "tests/output/expert-quality-report.json",
+      "tests/output/expert-test-results.json"
+    ],
+    "tracked_count": 3,
+    "gitignore": "NOT-IGNORED —— `git check-ignore -v tests/output/expert-quality-cross-industry.json` 无输出（CTO 事实成立）",
+    "write_points": [
+      "src/mvp-server.ts:190-191  fs.mkdirSync('tests/output') + fs.writeFileSync(`tests/output/http-${jobId}.html`, html)",
+      "tests/run-experts-real.ts:208-213  → tests/output/expert-test-results.json",
+      "tests/expert-quality/layer2-judge.test.ts:380-382  → tests/output/expert-quality-cross-industry.json",
+      "tests/run-e2e-pipeline.cjs:148-149  → tests/output/e2e-report.html"
+    ],
+    "reference_count": 11,
+    "readers_analysis": "11 处引用中，现有可见者为**写入方 + 文档提及**（如 tests/expert-quality/README.md:52 描述报告用途）；**未发现程序化读取方**（无 fs.readFileSync/readFile('tests/output/...')）。⇒ 读取方确认这一步**尚需一次针对性 grep 定稿**（判据④ 要求），不得仅凭本行结论动作。",
+    "why_it_matters": "任何 session 跑一次 layer2-judge.test.ts / run-experts-real.ts 即让被跟踪文件变化 ⇒ 主树变脏 ⇒ 与 09-05/09-08 stash 事故 + 主树反复脏同源（M8 共享暂存区竞争家族的温床）"
+  },
+  "judgment_required": [
+    "① `git check-ignore -v tests/output/expert-quality-cross-industry.json` ⇒ 被忽略",
+    "② `git ls-files tests/output | wc -l` = 0",
+    "③ 反例：跑一次 layer2-judge.test.ts ⇒ `git status` 干净",
+    "④ 🔴 前置：先 `grep -rn \"tests/output\" src/ scripts/ tests/` 确认**读取方**；若有 ⇒ **同批改读取方**（移出必与接手同批）"
+  ],
+  "boundary_note": "写入点含 **src/mvp-server.ts:190-191** ⇒ 若需改该写入点，属 `src/**`（本线**不可碰**，见 CTO 边界）⇒ 本卡的完整闭环**必须协调 src 属主**；本线只能做 tests/ 侧与 .gitignore。",
+  "write_set": [
+    "task-state/D1020.json",
+    "task-state/D1017.json"
+  ],
+  "updated_at": "2026-09-26T04:45:00+08:00",
+  "updated_by": "CTO"
+}

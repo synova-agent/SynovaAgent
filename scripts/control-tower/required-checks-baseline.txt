@@ -29,25 +29,28 @@
 #         "$c" "$AS_OF" "$SHA"
 #     done
 #
-# 本次生成取数（实测原始值）:
-#   as_of = 2026-10-01T18:41:11Z
-#   main sha = 4da93b5c3209f87ad8ab092b02fe20f261df3580
-#   contexts_count = 12（= `gh api … --jq ".required_status_checks.contexts | length"`）
+# 本次生成取数（实测原始值；生成命令 = 上方整段重放，**非手抄**）:
+#   as_of = 2026-10-04T18:27:38Z
+#   main sha = 1630a5014b245b9257c28796629c099bd12b76fa
+#   contexts_count = 9（= `gh api … --jq ".required_status_checks.contexts | length"`）
 #
-# 校验命令（本表的两条消费路径）:
-#   python3 scripts/control-tower/check-required-contexts.py             # 本地: 必需集 ⊆ 产出集（0/1/2）
-#   python3 scripts/control-tower/check-required-contexts.py --api-check # live ⇄ 基线 双向比对（0/1/2，只报不改）
-#   配套测试: bash tests/control-tower/check-required-contexts.test.sh
+# 🔴 D1147（单套门禁 · 批2）二步态——本表必须**再次重放**，不是一次到位:
+#   步骤 1（**已落地**，本表即其镜像，12 → 9）: 移出 `npm audit`（恒绿双层豁免 = 纸老虎）
+#     + 两条 windows 腿（已降级为顾问 job `*-windows-advisory`，路径触发/非必需，
+#     见 ci.yml 文件末 D1147 段）。
+#   步骤 2（**待触发**，9 → 10）: 加入 `Gate Integrity (pattern sentinel + injection fixture + ci-reds)`。
+#     触发条件 = PR #948 重新 push（或关闭）之后 —— #948 的 head 早于 gate-integrity job（2026-10-02
+#     建）⇒ 此刻加入必需会让 #948 永久 blocked（D971 家族）。
+#     落法: 由线负责人执行 `gh api -X PATCH …/protection/required_status_checks` 后，
+#     **重放上方生成命令**刷新本表（同一动作，禁手抄）。
+#   两步之间的正当性: 本表是「live 镜像」，不是「目标态声明」——先 PATCH 后重放，镜像才不撒谎。
 # ═══════════════════════════════════════════════════════════════════════════════
-Architecture Check | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
-Checker Review (maker/checker) | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
-Control Tower Gate Tests (ubuntu-latest) | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
-Control Tower Gate Tests (windows-latest) | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
-Golden Case F1 Gate | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
-Integration Contract Check | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
-Test-Kit Architecture Tests (ubuntu-latest) | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
-Test-Kit Architecture Tests (windows-latest) | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
-TypeScript + Lint + Iron Laws | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
-Vitest (1/2) | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
-Vitest (2/2) | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
-npm audit | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-01T18:41:11Z | evidence=synova-agent/SynovaAgent@4da93b5c3209f87ad8ab092b02fe20f261df3580 GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
+Architecture Check | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-04T18:27:38Z | evidence=synova-agent/SynovaAgent@1630a5014b245b9257c28796629c099bd12b76fa GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
+Checker Review (maker/checker) | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-04T18:27:38Z | evidence=synova-agent/SynovaAgent@1630a5014b245b9257c28796629c099bd12b76fa GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
+Control Tower Gate Tests (ubuntu-latest) | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-04T18:27:38Z | evidence=synova-agent/SynovaAgent@1630a5014b245b9257c28796629c099bd12b76fa GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
+Golden Case F1 Gate | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-04T18:27:38Z | evidence=synova-agent/SynovaAgent@1630a5014b245b9257c28796629c099bd12b76fa GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
+Integration Contract Check | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-04T18:27:38Z | evidence=synova-agent/SynovaAgent@1630a5014b245b9257c28796629c099bd12b76fa GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
+Test-Kit Architecture Tests (ubuntu-latest) | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-04T18:27:38Z | evidence=synova-agent/SynovaAgent@1630a5014b245b9257c28796629c099bd12b76fa GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
+TypeScript + Lint + Iron Laws | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-04T18:27:38Z | evidence=synova-agent/SynovaAgent@1630a5014b245b9257c28796629c099bd12b76fa GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
+Vitest (1/2) | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-04T18:27:38Z | evidence=synova-agent/SynovaAgent@1630a5014b245b9257c28796629c099bd12b76fa GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts
+Vitest (2/2) | owner=UNASSIGNED | source=branch-protection API | as_of=2026-10-04T18:27:38Z | evidence=synova-agent/SynovaAgent@1630a5014b245b9257c28796629c099bd12b76fa GET /repos/synova-agent/SynovaAgent/branches/main/protection#required_status_checks.contexts

@@ -1,0 +1,15 @@
+{
+  "task_id": "D1016",
+  "title": "阶段1-K3输入集异机复跑",
+  "status": "claimed",
+  "spec": ".claude/task-briefs/2026-09-26-D1016-阶段1-K3输入集异机复跑.md",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "write_set": [
+    "docs/synova/coordination/阶段1-K3输入集异机复跑-20260926.md",
+    "task-state/D1016.json"
+  ],
+  "updated_at": "2026-09-26",
+  "updated_by": "squad-ci"
+}

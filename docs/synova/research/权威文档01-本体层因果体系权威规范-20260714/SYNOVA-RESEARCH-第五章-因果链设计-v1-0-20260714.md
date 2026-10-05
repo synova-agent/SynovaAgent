@@ -87,7 +87,7 @@ experts:
   - strategy
 wowBabeValidation:
   verified: partial
-  note: "哇呢宝贝cash_runway=18个月(equity=200万/monthly_burn=11万)，CAPITAL_ACQUISITION验证通过。分配环节(current_ratio=1.3)健康。定价环节：客单价稳定但原材料成本上升侵蚀margin。"
+  note: "客户Acash_runway=18个月(equity=200万/monthly_burn=11万)，CAPITAL_ACQUISITION验证通过。分配环节(current_ratio=1.3)健康。定价环节：客单价稳定但原材料成本上升侵蚀margin。"
   gap: "定价→利润再投入的闭环数据不完整"
 ```
 
@@ -120,16 +120,16 @@ sentinels: [financing-constraint, capital-health]
 experts: [finance]
 wowBabeValidation:
   verified: true
-  note: "哇呢宝贝纯股权融资，D/E=0，WACC=Ke≈15%(beta=1.2)。无债权压力但Ke偏高——完全依赖单一融资渠道。"
+  note: "客户A纯股权融资，D/E=0，WACC=Ke≈15%(beta=1.2)。无债权压力但Ke偏高——完全依赖单一融资渠道。"
 ```
 
-#### CC-CAPITAL-03：成本驱动型利润衰减（哇呢宝贝关键发现）
+#### CC-CAPITAL-03：成本驱动型利润衰减（客户A关键发现）
 
 ```yaml
 chainId: cc-capital-03
 version: "1.0.0"
 displayName: 成本驱动型利润衰减链
-description: "哇呢宝贝核心诊断发现：固定成本刚性(72%固定成本比) + 原材料成本上升 → 利润持续衰减。这是5-1000人企业最典型的利润侵蚀模式。"
+description: "客户A核心诊断发现：固定成本刚性(72%固定成本比) + 原材料成本上升 → 利润持续衰减。这是5-1000人企业最典型的利润侵蚀模式。"
 domain: capital
 fracturePoints: [acquire, convert, recycle]
 edgeSequence:
@@ -160,7 +160,7 @@ sentinels:
 experts: [finance, business_model]
 wowBabeValidation:
   verified: true
-  note: "哇呢宝贝2023年利润下滑的根因链：原材料涨价(玻璃/金属)→unit_cost上升15%→fixed_cost_ratio=72%→难以用efficiency_rate抵消→margin_rate从18%降到9%→profit_margin=5%→retention_ratio=10%（绝大部分利润用于维持运营）。这条链是哇呢宝贝案例的核心诊断输出。"
+  note: "客户A2023年利润下滑的根因链：原材料涨价(玻璃/金属)→unit_cost上升15%→fixed_cost_ratio=72%→难以用efficiency_rate抵消→margin_rate从18%降到9%→profit_margin=5%→retention_ratio=10%（绝大部分利润用于维持运营）。这条链是客户A案例的核心诊断输出。"
 ```
 
 #### CC-CAPITAL-04：增长投资传导链
@@ -200,7 +200,7 @@ edgeSequence:
     outputParams: [efficiency_signal]
 sentinels: [competitive-position, niche-squeeze, capital-health]
 experts: [strategy, finance]
-wowBabeValidation: {verified: false, note: "哇呢宝贝无显著增长投资数据——利润用于维持运营而非扩张。"}
+wowBabeValidation: {verified: false, note: "客户A无显著增长投资数据——利润用于维持运营而非扩张。"}
 ```
 
 ### 5.1.2 人才域因果链（3条）
@@ -240,13 +240,13 @@ experts: [org]
 wowBabeValidation: {verified: false, note: "人才数据不足——缺Person节点skill标签和AgentObserver数据。"}
 ```
 
-#### CC-TALENT-02：人才流失传导链（哇呢宝贝关键发现）
+#### CC-TALENT-02：人才流失传导链（客户A关键发现）
 
 ```yaml
 chainId: cc-talent-02
 version: "1.0.0"
 displayName: 人才流失负向循环链
-description: "哇呢宝贝案例发现：产品线萎缩 → 关键岗位闲置 → 人才流失 → 组织知识断层 → 效率进一步下降 → 更弱的产品能力 → 更多流失。"
+description: "客户A案例发现：产品线萎缩 → 关键岗位闲置 → 人才流失 → 组织知识断层 → 效率进一步下降 → 更弱的产品能力 → 更多流失。"
 domain: talent
 fracturePoints: [acquire, convert, recycle]
 edgeSequence:
@@ -279,7 +279,7 @@ sentinels: [key-person-risk, talent-density]
 experts: [org, knowledge]
 wowBabeValidation:
   verified: true
-  note: "哇呢宝贝:OEM业务萎缩 → 对应产线技术团队裁减 → 3位核心工艺工程师离职 → 儿童餐具产品线从研发到量产周期从6个月延长到11个月 → 新品上市延迟 → 门店增长停滞。这条链是人才流失→组织能力侵蚀的典型场景。"
+  note: "客户A:OEM业务萎缩 → 对应产线技术团队裁减 → 3位核心工艺工程师离职 → 儿童餐具产品线从研发到量产周期从6个月延长到11个月 → 新品上市延迟 → 门店增长停滞。这条链是人才流失→组织能力侵蚀的典型场景。"
 ```
 
 #### CC-TALENT-03：激励机制→行为扭曲→执行偏差
@@ -347,16 +347,16 @@ edgeSequence:
     outputParams: [feature_adoption]
 sentinels: [customer-demand-shift, channel-capacity, niche-breadth]
 experts: [marketing, business_model]
-wowBabeValidation: {verified: false, note: "哇呢宝贝门店数据粒度不足以建模这个完整链路。"}
+wowBabeValidation: {verified: false, note: "客户A门店数据粒度不足以建模这个完整链路。"}
 ```
 
-#### CC-CLIENT-02：客户流失负向循环（哇呢宝贝关键发现）
+#### CC-CLIENT-02：客户流失负向循环（客户A关键发现）
 
 ```yaml
 chainId: cc-client-02
 version: "1.0.0"
 displayName: 客户流失负向循环链
-description: "哇呢宝贝案例发现：产品创新停滞 → 门店体验下降 → 客户流失 → 收入下降 → 品牌投资削减 → 品牌认知度下降 → 更少的门店客流 → 更低的收入。"
+description: "客户A案例发现：产品创新停滞 → 门店体验下降 → 客户流失 → 收入下降 → 品牌投资削减 → 品牌认知度下降 → 更少的门店客流 → 更低的收入。"
 domain: client
 fracturePoints: [convert, deliver, recycle]
 edgeSequence:
@@ -389,7 +389,7 @@ sentinels: [customer-demand-shift, brand-health, channel-capacity]
 experts: [marketing, strategy]
 wowBabeValidation:
   verified: true
-  note: "哇呢宝贝:产品从独特的手工设计婴童餐具(2018-2021) → 与竞争对手同质化的OEM贴牌(2022-2023) → 品牌差异度消失 → 门店客户进店率下降40% → 品牌搜索量下降60% → 新增代理商无法招募。这是客户流失→品牌侵蚀→人才吸引力下降的完整负向循环。"
+  note: "客户A:产品从独特的手工设计婴童餐具(2018-2021) → 与竞争对手同质化的OEM贴牌(2022-2023) → 品牌差异度消失 → 门店客户进店率下降40% → 品牌搜索量下降60% → 新增代理商无法招募。这是客户流失→品牌侵蚀→人才吸引力下降的完整负向循环。"
 ```
 
 #### CC-CLIENT-03：外部环境→定价→竞争位势
@@ -426,10 +426,10 @@ sentinels: [environment-rent-dependency, competitive-position, niche-squeeze]
 experts: [strategy]
 wowBabeValidation:
   verified: true
-  note: "哇呢宝贝:2023年母婴市场整体下行(market_growth≈-8%)→env_rent=负值→外部逆风。但哇呢宝贝竞争位势在质量维度仍强——问题是OEM转型削弱了质量差异。"
+  note: "客户A:2023年母婴市场整体下行(market_growth≈-8%)→env_rent=负值→外部逆风。但客户A竞争位势在质量维度仍强——问题是OEM转型削弱了质量差异。"
 ```
 
-#### CC-CLIENT-04：定价决策传导链（哇呢宝贝关键发现）
+#### CC-CLIENT-04：定价决策传导链（客户A关键发现）
 
 ```yaml
 chainId: cc-client-04
@@ -463,7 +463,7 @@ sentinels: [margin-health, unit-economics, competitive-position]
 experts: [finance, marketing]
 wowBabeValidation:
   verified: true
-  note: "哇呢宝贝:unit_cost上升15%→margin从18%降到9%→无法提价(同行均价为对标上限)→profit_margin=5%→无利润再投资→品牌投资预算从年度营收5%降到0。这条链揭示了'成本推动型利润衰减'的完整传导——不是定价策略的错误，而是成本结构刚性导致的被动利润侵蚀。"
+  note: "客户A:unit_cost上升15%→margin从18%降到9%→无法提价(同行均价为对标上限)→profit_margin=5%→无利润再投资→品牌投资预算从年度营收5%降到0。这条链揭示了'成本推动型利润衰减'的完整传导——不是定价策略的错误，而是成本结构刚性导致的被动利润侵蚀。"
 ```
 
 ### 5.1.4 组织域因果链（4条）
@@ -720,7 +720,7 @@ edgeSequence:
     outputParams: [defect_rate]
 sentinels: [data-health, api-coverage]
 experts: [tech]
-wowBabeValidation: {verified: false, note: "哇呢宝贝为轻资产品牌/贸易公司，技术边不显著。"}
+wowBabeValidation: {verified: false, note: "客户A为轻资产品牌/贸易公司，技术边不显著。"}
 ```
 
 #### CC-OPS-03：跨职能协同→创新→产品
@@ -784,7 +784,7 @@ sentinels: [data-health, api-coverage]
 experts: [tech, knowledge]
 wowBabeValidation:
   verified: true
-  note: "哇呢宝贝数据质量评估：completeness≈0.45（主要来自财务报表），freshness≈0.75（月报），accuracy≈0.90。数据不完整是诊断精度受限的根因——品牌/组织/客户链的数据几乎为0。"
+  note: "客户A数据质量评估：completeness≈0.45（主要来自财务报表），freshness≈0.75（月报），accuracy≈0.90。数据不完整是诊断精度受限的根因——品牌/组织/客户链的数据几乎为0。"
 ```
 
 #### CC-RULE-01：规则僵化→适应力→运营灵活度
@@ -809,7 +809,7 @@ edgeSequence:
     outputParams: [defect_rate]
 sentinels: [survival-margin, cash-runway]
 experts: [org, compliance]
-wowBabeValidation: {verified: false, note: "哇呢宝贝为轻组织，合规边不显著。"}
+wowBabeValidation: {verified: false, note: "客户A为轻组织，合规边不显著。"}
 ```
 
 ---
@@ -850,22 +850,22 @@ cc-org-01（权力→效率）→ cc-org-02（信息→决策）→ cc-org-03（
                                                                        cc-learn-01（感知→知识）
 ```
 
-**关键串联路径**（哇呢宝贝全链路验证）：
+**关键串联路径**（客户A全链路验证）：
 
 1. **获取→转化→交付→回流**（正向循环）：cc-scan-01 → cc-capital-01 → cc-ops-01 → cc-client-01 → cc-capital-04
 2. **成本侵蚀路径**（负向循环）：cc-capital-03 → cc-client-04 → cc-client-02 → cc-talent-02
 3. **数据→决策路径**：cc-data-01 → cc-org-02 → cc-org-01
 
-### 5.2.3 哇呢宝贝覆盖率
+### 5.2.3 客户A覆盖率
 
-22条因果链中，11条在哇呢宝贝案例中被验证（有数据支撑或诊断报告确认）：
+22条因果链中，11条在客户A案例中被验证（有数据支撑或诊断报告确认）：
 
 | 状态 | 数量 | 链路 |
 |------|------|------|
 | 已验证（verified: true） | 8 | cc-capital-01(partial), cc-capital-02, cc-capital-03, cc-talent-02, cc-client-02, cc-client-03, cc-client-04, cc-data-01 |
 | 未验证（verified: false） | 14 | cc-capital-04, cc-talent-01, cc-talent-03, cc-client-01, cc-org-01~04, cc-scan-01, cc-learn-01, cc-ops-01~03, cc-rule-01 |
 
-覆盖率：8/22 = 36%。哇呢宝贝作为品牌/贸易公司，数据主要集中在财务和客户域——组织域和运营域的因果链需要更强数据采集后验证。
+覆盖率：8/22 = 36%。客户A作为品牌/贸易公司，数据主要集中在财务和客户域——组织域和运营域的因果链需要更强数据采集后验证。
 
 ---
 
@@ -1125,7 +1125,7 @@ edgeSequence:                     # 有序边序列
 sentinels: [capital-health, cash-runway]  # 关联哨兵
 experts: [finance, strategy]              # 关联专家
 estimatedComputeDuration: <3s             # 预估计算时间（22步×平均100ms）
-wowBabeValidation:             # 哇呢宝贝验证结果（元数据）
+wowBabeValidation:             # 客户A验证结果（元数据）
   verified: true|false|partial
   note: "验证说明"
   gap: "数据缺口说明"         # verified=false时必填

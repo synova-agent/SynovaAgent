@@ -96,6 +96,11 @@
 #   g12 组 12/13 暂存 scripts/*.sh 无任何今日 brief 认领               → Q2 范围一致性
 #   g13 组 13/13 暂存改动 .claude/skills/**（与 .dsh/skills 漂移）     → 技能同步
 #
+# ═══ D1148 追加（两种模式都跑，非 run_scenario 框架）═══
+#   d1148-decl   探针 brief 违反 ①Q0/Q1 空 ②无 #CRITERIA ③Done 无 verify: →
+#                三条声明硬闸必须各自点名（合并前由 9 个检查点承担且多条永不阻断）
+#   d1148-excl   认领者同时把探针文件列进 Q2「不改」→ 闸② 必须点名「Q2 排除项」
+#
 #   用法: bash tests/control-tower/precommit-groups-injection.test.sh
 #         SYNO_PRE_COMMIT_INJECT_FULL=1 bash tests/control-tower/precommit-groups-injection.test.sh
 #   CI:   .github/workflows/ci.yml job `gate-integrity` step 2（抽检即注册）
@@ -577,6 +582,159 @@ for s in $SCEN; do
   run_scenario "$s" "$lbl" "red"
 done
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# D1148: 声明类三闸「注入即红」判别（先红后绿）
+#   三闸（D1148 spec）: ① brief schema（6 字段/骨架/时间戳/Q0 系列）
+#                      ② brief↔代码一致性（Q2 写集 ⊆ 声明 / 排除项 / 可解析）
+#                      ③ Done 可证伪（每个 - [x] 带 verify:）
+#   注入: 一个**同时违反三条**的提交 —— 探针 brief 认领探针脚本（故 BRIEF 非空、
+#         闸② 走「可解析」子判据），brief 的 Q0/Q1 段为空（闸①）且无 #CRITERIA、
+#         Done 项无 verify:（闸③）。
+#   期望: rc=1 且三条闸各自出现 ❌。缺任一条 = 该闸 fail-open 或未接线（本夹具判红）。
+#   判别性说明: 三闸合并前，①②③ 由 9 个独立检查点承担且其中多条永不阻断
+#         （opt_check PRD 对照 261 次命中/0 阻断）——本段就是"合并后仍抓得到"的物理证明。
+# ═══════════════════════════════════════════════════════════════════════════════
+echo "── D1148 声明类三闸注入（①②③ 必须各自点名）──"
+D1148_FAIL=0
+reset_clone
+DECL_BRIEF="$CLONE/.claude/task-briefs/${TODAY}-d1148-decl-probe.md"
+cat > "$DECL_BRIEF" <<EOF
+# Task Brief — D1148 三闸探针（**故意**同时违反 ①②③）
+
+## Q0: 定位 — 项目拼图 + 文件审计
+
+## Q1: 调研 — 业界最佳实践 / Anthropic 决策链 / memory 历史教训
+
+## Q2: 范围 — 正确的最简方案
+做什么:
+- scripts/d1148-decl-probe.sh
+
+不做什么:
+- 不改 scripts/pre-commit-check.sh
+
+## Q3: 验收 — 入口 → 交互 → 结果
+
+## 架构层
+基础设施
+
+## Done 标准
+- [x] 占位完成标准（故意不写 verify 命令）
+EOF
+cat > "$CLONE/scripts/d1148-decl-probe.sh" <<EOF
+#!/bin/bash
+# $MARK d1148 三闸探针（探针 brief 认领本文件）
+exit 0
+EOF
+chmod +x "$CLONE/scripts/d1148-decl-probe.sh"
+git -C "$CLONE" add scripts/d1148-decl-probe.sh
+( cd "$CLONE" && GITHUB_ACTIONS=true SYNO_CI=1 bash scripts/pre-commit-check.sh ) >"$TMP/out.d1148.log" 2>&1
+DECL_RC=$?
+DECL_FAILS="$(strip_ansi < "$TMP/out.d1148.log" | grep '❌' | sed 's/^[[:space:]]*//' || true)"
+DECL_MISS=""
+for g in '声明闸①' '声明闸②' '声明闸③'; do
+  printf '%s\n' "$DECL_FAILS" | grep -q "$g" || DECL_MISS="$DECL_MISS $g"
+done
+if [ "$DECL_RC" -eq 1 ] && [ -z "$DECL_MISS" ]; then
+  echo "  ✅ D1148 三闸注入: rc=1 且 ①②③ 三闸各自点名（无 fail-open）"
+else
+  echo "  ❌ D1148 三闸注入: rc=$DECL_RC 未点名闸:${DECL_MISS:-<无>} —— 三硬闸存在 fail-open 或未接线"
+  printf '%s\n' "$DECL_FAILS" | sed 's/^/     /' | head -10
+  D1148_FAIL=1
+fi
+
+# ── D1148 二次注入: Q2 排除项被判据捕获（闸② 的第二条子判据：写集 ⊆ 声明）──
+#   探针 brief 认领 scripts/d1148-excl-probe.sh，同时在 Q2 明确「不改」它
+#   → 声明与写集自相矛盾，闸② 必须点名（D296 认领制排除项判定的回归防线）。
+echo "── D1148 闸② 排除项注入 ──"
+reset_clone
+EXCL_BRIEF="$CLONE/.claude/task-briefs/${TODAY}-d1148-excl-probe.md"
+cat > "$EXCL_BRIEF" <<EOF
+# Task Brief — D1148 排除项探针
+
+#CRITERIA: A
+
+## Q0: 定位 — 项目拼图 + 文件审计
+### a) 项目拼图
+探针占位。
+### b) 文件审计
+探针占位。
+### c) 决策
+探针占位。
+
+## Q1: 调研 — 业界最佳实践 / Anthropic 决策链 / memory 历史教训
+参考：第一性原理 + 探针语境。
+
+## Q2: 范围 — 正确的最简方案
+做什么:
+- scripts/d1148-excl-probe.sh
+
+不做什么:
+- 不改 scripts/d1148-excl-probe.sh
+
+## Q3: 验收 — 入口 → 交互 → 结果
+入口：探针。处理：探针。结果：占位。
+
+## 架构层
+基础设施
+
+## Done 标准
+- [x] verify: bash scripts/d1148-excl-probe.sh
+EOF
+cat > "$CLONE/scripts/d1148-excl-probe.sh" <<EOF
+#!/bin/bash
+# $MARK d1148 排除项探针（认领者同时声明"不改"它）
+exit 0
+EOF
+chmod +x "$CLONE/scripts/d1148-excl-probe.sh"
+git -C "$CLONE" add scripts/d1148-excl-probe.sh
+( cd "$CLONE" && GITHUB_ACTIONS=true SYNO_CI=1 bash scripts/pre-commit-check.sh ) >"$TMP/out.d1148-excl.log" 2>&1
+EXCL_RC=$?
+EXCL_FAILS="$(strip_ansi < "$TMP/out.d1148-excl.log" | grep '❌' | sed 's/^[[:space:]]*//' || true)"
+if [ "$EXCL_RC" -eq 1 ] && printf '%s\n' "$EXCL_FAILS" | grep -q '声明闸②' \
+   && printf '%s\n' "$EXCL_FAILS" | grep -q 'Q2 排除项'; then
+  echo "  ✅ D1148 闸② 排除项注入: rc=1 且点名「Q2 排除项」"
+else
+  echo "  ❌ D1148 闸② 排除项注入: rc=${EXCL_RC}，闸② 未捕获自相矛盾的排除项"
+  printf '%s\n' "$EXCL_FAILS" | sed 's/^/     /' | head -8
+  D1148_FAIL=1
+fi
+
+# ── D1148 三次注入: 合并提交（无自撰文件）→ 声明三闸**无对象**，不得假红 ──
+#   背景（本卡实测）: 把 main 合并进本分支时，`git diff --cached`（vs 第一父）含**第二父的全部
+#   文件**——旧实现照此解析"认领者"，把 main 侧**别人的 brief** 当成本次对象判可解析性 →
+#   闸② 假红「#CRITERIA 缺失」（本卡真的踩到一次）。本场景在 clone 内造真实合并（side 分支
+#   带一份**故意不完整**的 brief + 一个未认领脚本），用 `--no-commit` 停在 MERGE_HEAD 存在的
+#   提交前状态，断言：rc=0 且**显式打印**跳过行（非假红、也非静默跳过）。
+echo "── D1148 合并提交无自撰文件（不得假红）──"
+reset_clone
+_SIDE_ORIG="$(git -C "$CLONE" rev-parse HEAD)"
+git -C "$CLONE" checkout -q -b d1148-side
+cat > "$CLONE/.claude/task-briefs/${TODAY}-d1148-side-brief.md" <<EOF
+# side 分支 brief（模拟别人线上的**不完整** brief：无 #CRITERIA、无 Done 条目）
+## Q2: 范围
+做什么:
+- scripts/d1148-side-probe.sh
+EOF
+printf '#!/bin/bash\n# %s d1148 side probe\nexit 0\n' "$MARK" > "$CLONE/scripts/d1148-side-probe.sh"
+chmod +x "$CLONE/scripts/d1148-side-probe.sh"
+git -C "$CLONE" add .claude/task-briefs/${TODAY}-d1148-side-brief.md scripts/d1148-side-probe.sh
+git -C "$CLONE" -c user.name=t -c user.email=t@t commit -q -m "side: 模拟 main 侧不完整 brief"
+git -C "$CLONE" checkout -q --detach "$_SIDE_ORIG"
+git -C "$CLONE" -c user.name=t -c user.email=t@t merge --no-commit --no-ff -q d1148-side
+MERGE_HEAD_PRESENT=0
+[ -n "$(git -C "$CLONE" rev-parse -q --verify MERGE_HEAD 2>/dev/null || true)" ] && MERGE_HEAD_PRESENT=1
+( cd "$CLONE" && GITHUB_ACTIONS=true SYNO_CI=1 bash scripts/pre-commit-check.sh ) >"$TMP/out.d1148-merge.log" 2>&1
+MERGE_RC=$?
+MERGE_SKIP_LINE="$(strip_ansi < "$TMP/out.d1148-merge.log" | grep '声明类三闸：合并提交且无自撰文件' || true)"
+if [ "$MERGE_HEAD_PRESENT" -eq 1 ] && [ "$MERGE_RC" -eq 0 ] && [ -n "$MERGE_SKIP_LINE" ]; then
+  echo "  ✅ D1148 合并提交: rc=0 + 显式跳过行（MERGE_HEAD 已就位；非假红非静默）"
+else
+  echo "  ❌ D1148 合并提交: MERGE_HEAD=$MERGE_HEAD_PRESENT rc=$MERGE_RC —— 声明闸把另一父的文件当成本次对象（或跳过未留痕）"
+  strip_ansi < "$TMP/out.d1148-merge.log" | grep '❌' | sed 's/^/     /' | head -6
+  D1148_FAIL=1
+fi
+echo ""
+
 # ═══ [b 面登记] b 面基线演进: 6 →（M9/#741）7 →（D945）8 →（D1028 本卡）13 ═══
 #   判据: b 面 = 仓库内命中 $MARK 的文件数 ≤ 基线；基线外的命中 = 泄漏（判红）。
 #   b 面命中**只允许是引用该标记的文档**，实测 13 条（逐条登记）:
@@ -651,12 +809,13 @@ RC=0
 [ "$BASE_STATUS" = "FAIL" ] && RC=1
 [ "$NOTRED_N" -gt 0 ] && RC=1
 [ "$RESIDUE_FAIL" -ne 0 ] && RC=1
+[ "${D1148_FAIL:-0}" -ne 0 ] && RC=1   # D1148: 声明类三闸注入未红 = fail-open/未接线
 if [ "${SYNO_INJECT_REQUIRE_CLEAN_BASELINE:-0}" = "1" ] && [ "$BASE_STATUS" = "host_state" ]; then
   RC=1
   echo "   [STRICT] SYNO_INJECT_REQUIRE_CLEAN_BASELINE=1 且基线=HOST_STATE → 判红（严格守门模式）"
 fi
 
-echo "GATE_INJECTION_SUMMARY: scenarios=${#NAMES[@]} red_confirmed=$RED_N structural_not_red=$STRUCT_N not_red=$NOTRED_N baseline=$BASE_STATUS probe=$PROBE_STATUS(rc=$PROBE_RC) residue_code=$CODE_RESIDUE residue_repo=$REPO_RESIDUE shim=$SHIM_USED"
+echo "GATE_INJECTION_SUMMARY: scenarios=${#NAMES[@]} red_confirmed=$RED_N structural_not_red=$STRUCT_N not_red=$NOTRED_N baseline=$BASE_STATUS probe=$PROBE_STATUS(rc=$PROBE_RC) residue_code=$CODE_RESIDUE residue_repo=$REPO_RESIDUE shim=$SHIM_USED decl_gates=${D1148_FAIL:-0}"
 if [ "$RC" -eq 0 ]; then
   echo "✅ 注入自测结果：期望红组全部 RED_CONFIRMED，残留断言满足，baseline=${BASE_STATUS}（结论归自验/独立审计，本夹具只出证据）"
   [ "$BASE_STATUS" = "host_state" ] && echo "   ⚠️ 注意：基线非天然绿（宿主 /tmp marker 绝对路径读取，已由探针因果确认）——CI 上新 runner 应为 BASELINE_OK"

@@ -11,6 +11,7 @@
     "csat_trend": "number — 满意度趋势"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "产品售出后的服务支持——活动池中的售后/维护活动影响客户满意度和留存。"
 }

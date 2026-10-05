@@ -11,6 +11,7 @@
     "yield_rate": "number (0-1) — 良品率"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "3-6_months",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "资源转化为产出——活动池中的运营活动将资源转化为产品/服务的价值输出阀（取代原PRODUCES）。"
 }

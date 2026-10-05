@@ -144,3 +144,62 @@ describe('D73 — goal-lifecycle 集成钩子', () => {
     expect(true).toBe(true);
   });
 });
+
+// ═══ #979（0-5）: 因子3 基线偏离 — 删自相矛盾一行后的判别性夹具 ═══
+
+describe('#979 — 因子3 基线偏离可真触发（基线 = 采集期样本均值）', () => {
+  /** 活跃期状态 + 采集期历史样本（均值 = 基线） */
+  function activeState(sampleValues: number[]) {
+    return {
+      baselineStatus: 'active' as const,
+      samples: sampleValues.map((value, i) => ({ value, timestamp: new Date(Date.now() - (i + 1) * 3600_000).toISOString() })),
+      sustainedAlertCycles: 0,
+    };
+  }
+
+  it('正常路径: 声明 baselinePeriod + 采集期样本 → 因子3 触发（描述含"基线偏离"）', async () => {
+    const goal = makeGoal({
+      metrics: [{
+        metricName: 'monthly_revenue', currentValue: 550, targetValue: 800,
+        unit: '万元', computeContractId: 'COMPUTE-REVENUE-v1',
+        baselinePeriod: { start: '2026-08-01', end: '2026-09-01' },
+      }],
+    });
+    const state = activeState([800, 800, 800]); // 基线均值 = 800 → |550-800|/800 = 31.25% > 20%
+    const sentinel = createGoalSentinel(goal, state);
+
+    const result = await sentinel.check({ db: {}, now: new Date(), registry: new FakeRegistry() });
+    expect(result.ok).toBe(true);
+    expect(result.findings.length).toBeGreaterThanOrEqual(1);
+    // 判别性核心: 改坏写入点（baseline 回退为 `? 0 : null`）→ 此断言必红
+    expect(result.findings[0].description).toContain('基线偏离');
+    expect(result.findings[0].severity).toBe('warning'); // 因子1 + 因子3 = 双因子
+  });
+
+  it('边界: 采集期无样本 → 因子3 不判定（不猜基线，无"基线偏离"字段）', async () => {
+    const goal = makeGoal({
+      metrics: [{
+        metricName: 'monthly_revenue', currentValue: 550, targetValue: 800,
+        unit: '万元', computeContractId: 'COMPUTE-REVENUE-v1',
+        baselinePeriod: { start: '2026-08-01', end: '2026-09-01' },
+      }],
+    });
+    const state = activeState([]);
+    const sentinel = createGoalSentinel(goal, state);
+
+    const result = await sentinel.check({ db: {}, now: new Date(), registry: new FakeRegistry() });
+    expect(result.findings.length).toBeGreaterThanOrEqual(1);
+    expect(result.findings[0].description).not.toContain('基线偏离');
+    expect(result.findings[0].severity).toBe('info'); // 仅因子1
+  });
+
+  it('边界: 未声明 baselinePeriod → 因子3 不判定（无基线语义）', async () => {
+    const goal = makeGoal(); // makeGoal 默认 metrics 无 baselinePeriod
+    const state = activeState([800, 800, 800]);
+    const sentinel = createGoalSentinel(goal, state);
+
+    const result = await sentinel.check({ db: {}, now: new Date(), registry: new FakeRegistry() });
+    expect(result.findings.length).toBeGreaterThanOrEqual(1);
+    expect(result.findings[0].description).not.toContain('基线偏离');
+  });
+});

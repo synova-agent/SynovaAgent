@@ -3,7 +3,7 @@ tests/agent/expert-file-loader.integration.test.ts
 tests/data-pipeline.feishu.integration.test.ts
 tests/data-pipeline.ingest.integration.test.ts
 tests/deploy/data-directory.test.ts
-tests/e2e/p0-wane-baby.test.ts
+tests/e2e/p0-client-a.test.ts
 tests/electron/desktop-build.test.ts
 tests/env/env-completion.test.ts
 tests/expert/analytical-lens.test.ts

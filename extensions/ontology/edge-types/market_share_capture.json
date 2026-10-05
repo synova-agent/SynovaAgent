@@ -11,6 +11,7 @@
     "market_growth_rate": "number — 市场增长率"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "从竞品手中夺取或守住份额——企业行动直接影响市场竞争地位。"
 }

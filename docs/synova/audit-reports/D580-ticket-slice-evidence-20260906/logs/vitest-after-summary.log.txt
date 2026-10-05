@@ -1,6 +1,6 @@
  FAIL  tests/data-pipeline.feishu.integration.test.ts [ tests/data-pipeline.feishu.integration.test.ts ]
  FAIL  tests/data-pipeline.ingest.integration.test.ts [ tests/data-pipeline.ingest.integration.test.ts ]
- FAIL  tests/e2e/p0-wane-baby.test.ts [ tests/e2e/p0-wane-baby.test.ts ]
+ FAIL  tests/e2e/p0-client-a.test.ts [ tests/e2e/p0-client-a.test.ts ]
  FAIL  tests/expert/org-theory-injection.test.ts [ tests/expert/org-theory-injection.test.ts ]
  FAIL  tests/sentinels/adaptation-velocity.test.ts [ tests/sentinels/adaptation-velocity.test.ts ]
  FAIL  tests/sentinels/capital-efficiency.test.ts [ tests/sentinels/capital-efficiency.test.ts ]

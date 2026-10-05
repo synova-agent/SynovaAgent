@@ -10,6 +10,7 @@
     "competitive_response_type": "string — 竞争者反应类型(price|product|channel)"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "企业动作的外部回响——企业行动引发市场/竞争反应，通过外部环境变化反馈回感知系统。"
 }
