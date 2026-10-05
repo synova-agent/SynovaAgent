@@ -67,7 +67,7 @@ Tests  29 failed | 4245 passed | 24 skipped (4298)
 | ① 专家测试债 | tests/orchestrator/phase1-diagnosis-wiring.test.ts | 1 | `expect(results.length).toBe(7)` 期待旧 7 专家名（action/business_model/...），实测 6 |
 | ① 专家测试债 | tests/orchestrator/l3-wiring.test.ts、tests/l3/e2e-autonomy.integration.test.ts、tests/l3/graphbridge-wiring.test.ts | 4 | 同源（7 专家派发断言，实测 6） |
 | ② D593 自身测试 | tests/routes/diagnosis-report-persistence.test.ts | 10 | D593（DSH/Mac 线，dev doc `SYNOVA-IMPL-DSH-D593-report-persistence-20260908.md`）自身测试在 main 全红（checkpoint 落盘 0 行）；与 8 样本无关，为 Mac 线在评估时点的"自家套件不绿" |
-| ③ 环境依赖 | tests/e2e/p0-wane-baby.test.ts、tests/electron/use-streaming-conversation.test.ts、tests/acceptance/zero-code-industry.test.ts | 2 | LLM API / Electron GUI / acceptance（vitest.config.ts 注明 CI 排除项） |
+| ③ 环境依赖 | tests/e2e/p0-client-a.test.ts、tests/electron/use-streaming-conversation.test.ts、tests/acceptance/zero-code-industry.test.ts | 2 | LLM API / Electron GUI / acceptance（vitest.config.ts 注明 CI 排除项） |
 
 > 结论：main@742a3416 的测试套件**不是绿的**；但与 8 个被评估样本相关的测试文件全部独立复跑通过（见 §3 逐样本）。基线失败属于仓库级技术债，按管线归属记录于 §5.3。
 

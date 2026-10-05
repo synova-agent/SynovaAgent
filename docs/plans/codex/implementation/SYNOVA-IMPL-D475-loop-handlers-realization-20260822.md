@@ -69,7 +69,7 @@
 * 不改 `src/deploy/bootstrap.ts`（🔵 冻结——接线在 server.ts 之外完成，见 §5）。
 * 不改哨兵（src/sentinel/，DSH 地盘）与 scripts/（DSH 地盘）。
 * 不碰 D470（data-ingest/field-mappings）与 D471（packages/）写集。
-* 不碰 哇呢宝贝客户数据。
+* 不碰 客户A客户数据。
 
 ## 4. 测试要求（测试优先：先写 red → 再实现 green）
 

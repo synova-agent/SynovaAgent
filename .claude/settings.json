@@ -13,7 +13,6 @@
       "Bash(time bash scripts/ci/diagnosis-quality-check.sh)",
       "Bash(git diff *)",
       "Read(//dev/**)",
-      "Bash(cd d:/novis-backup-20260526/Novis/synova-agent && echo \"=== verify-incremental.sh 还原逻辑 ===\" && grep -nE \"checkout|restore|reset|stash\" scripts/workflow/verify-incremental.sh | head -5; echo \"=== settings.json 全部 hook ===\" && grep -n \"command\\\\|hooks\" .claude/settings.json | head -30; echo \"=== 最近文件变更时间 ===\" && stat -c \"%y %n\" src/adapters/sqlite-graph-store.ts tests/l4/synova-graph-store.test.ts 2>/dev/null)",
       "Read(//d/novis-backup-20260526/Novis/synova-agent/**)",
       "Bash(cat \"C:\\\\Users\\\\Administrator\\\\.claude\\\\settings.json\" 2>/dev/null | python3 -c \" *)",
       "Read(//c/Users/Administrator/.claude/**)",
@@ -76,12 +75,10 @@
       "Bash(bash scripts/workflow/resolve-commit-brief.sh 'scripts/control-tower/session_registry.py *)",
       "Bash(touch .claude/task-briefs/D311-multi-session-coordination.md && bash scripts/control-tower/synova-commit --task-id \"D311\" --agent \"claude-code\" --session-id \"2026-08-02-D311-M1\" --message \"test\" --files scripts/control-tower/session_registry.py 2>&1 | grep -A8 \"G12: task brief\" | head -12)",
       "Bash(touch .claude/task-briefs/D312-baseline-tools.md)",
-      "Bash(bash scripts/workflow/resolve-commit-brief.sh 'scripts/hooks/hook-git-detect.sh *)",
       "Bash(chmod +x tests/control-tower/hook-git-detect.test.sh tests/control-tower/ban-stash.test.sh tests/control-tower/baseline-check.test.sh)",
       "Bash(bash tests/control-tower/hook-git-detect.test.sh)",
       "Bash(bash tests/control-tower/ban-stash.test.sh)",
       "Bash(bash tests/control-tower/baseline-check.test.sh)",
-      "Bash(chmod +x scripts/hooks/hook-git-detect.sh scripts/hooks/hook-git-guard.sh)",
       "Bash(chmod +x scripts/control-tower/baseline-check.sh)",
       "Bash(SYNO_CT_DIR=\".codex/control-tower/tmp/bc-ct\" SYNO_TSC_OUTPUT=\".codex/control-tower/tmp/bc-known.txt\" bash scripts/control-tower/baseline-check.sh --tsc --seed)",
       "Bash(SYNO_CT_DIR=\".codex/control-tower/tmp/bc-ct\" SYNO_TSC_OUTPUT=\".codex/control-tower/tmp/bc-new.txt\" bash scripts/control-tower/baseline-check.sh --tsc)",
@@ -96,12 +93,9 @@
       "Bash(SYNO_CT_DIR=\".codex/control-tower/tmp/bc-ct\" SYNO_TSC_OUTPUT=\".codex/control-tower/tmp/bc-new.txt\" bash scripts/control-tower/baseline-check.sh --tsc --update-baseline)",
       "Bash(bash scripts/control-tower/baseline-check.sh --tsc --seed)",
       "Bash(bash scripts/control-tower/baseline-check.sh --tsc)",
-      "Bash(bash scripts/hooks/hook-git-detect.sh)",
       "Bash(bash scripts/workflow/hook-block-write.sh)",
       "Bash(rm -f .claude/session-locked)",
-      "Bash(bash scripts/hooks/hook-git-detect.sh --post)",
       "Bash(bash scripts/control-tower/synova-commit --task-id D312 --agent claude-code --session-id 2026-08-03-D312-M2 --message 'feat\\(D312\\): 控制塔 V4.6.0 M2 hook×git 兼容 + 官方基线工具 + U4 \\(08-02 stash 事故根治\\) *)",
-      "Bash(bash scripts/control-tower/synova-commit --task-id \"D312\" --agent \"claude-code\" --session-id \"2026-08-03-D312-M2\" --message \"test\" --files scripts/hooks/hook-git-detect.sh)",
       "Bash(bash scripts/control-tower/synova-commit --task-id D312 --agent claude-code --session-id 2026-08-03-D312-M2 --message 'fix\\(D312\\): 移除 settings.json 残留 GitHub token \\(secret scanning 推送阻断修复\\) *)",
       "Bash(GIT_SEQUENCE_EDITOR=\"sed -i 's/^pick 785d0ef/edit 785d0ef/'\" git rebase -i 9096993)",
       "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch --force --index-filter ' *)",
@@ -143,7 +137,6 @@
       "Bash(timeout 25 bash tests/control-tower/daemon-smoke.test.sh)",
       "Bash(timeout 30 bash tests/control-tower/daemon-smoke.test.sh)",
       "Bash(timeout 30 bash tests/control-tower/incident-loop.test.sh)",
-      "Bash(rm -rf .codex/control-tower/tmp/bp-* .codex/control-tower/tmp/ws-* .codex/control-tower/tmp/utf8-* .codex/control-tower/tmp/be-* .codex/control-tower/tmp/ds-ct .codex/control-tower/tmp/il-ct .codex/control-tower/tmp/utf8-batch.py 2>/dev/null; echo \"=== 写集确认 ===\"; git status --short | grep -E \"control-tower|workflow|hooks|settings|AGENTS|VERSION|pre-commit|brief\" | grep -v \"^\\\\?\\\\?\" | head -25)",
       "Bash(timeout 40 bash tests/control-tower/hook-git-detect.test.sh)",
       "Bash(timeout 40 bash tests/control-tower/baseline-check.test.sh)",
       "Bash(timeout 45 bash tests/control-tower/baseline-check.test.sh)",
@@ -184,58 +177,5 @@
       "D:\\novis-backup-20260526\\Novis\\synova-agent\\.codex\\control-tower\\tmp"
     ]
   },
-  "model": "deepseek-v4-flash",
-  "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash scripts/hooks/hook-session-start.sh"
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash scripts/workflow/hook-block-write.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash scripts/hooks/hook-git-detect.sh"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash scripts/hooks/hook-git-detect.sh --post"
-          }
-        ]
-      },
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash scripts/workflow/verify-incremental.sh"
-          }
-        ]
-      }
-    ]
-  }
+  "model": "deepseek-v4-flash"
 }

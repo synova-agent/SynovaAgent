@@ -100,7 +100,7 @@ L0  存活探针           50哨兵×5循环 · 进程启动 · 输入消费 · 
 <tr><th style="width:120px">维度</th><th>内容</th></tr>
 <tr><td><strong>测试对象</strong></td><td>完整诊断链路——从本体数据到报告产出</td></tr>
 <tr><td><strong>核心验证</strong></td><td>预设场景 → 一键运行 → 预期哨兵触发 → 报告包含预期发现。E2E 是"固定场景的可重现验证"，不是"任何用户操作都算"</td></tr>
-<tr><td><strong>数据来源</strong></td><td>3-5 个标准化测试场景（哇呢宝贝 / 制造企业 / SaaS 企业）——每个包含本体数据 JSON fixtures + 预期哨兵触发列表 + 预期报告结构</td></tr>
+<tr><td><strong>数据来源</strong></td><td>3-5 个标准化测试场景（客户A / 制造企业 / SaaS 企业）——每个包含本体数据 JSON fixtures + 预期哨兵触发列表 + 预期报告结构</td></tr>
 <tr><td><strong>验收标准</strong></td><td>预期哨兵触发率 ≥90%。误报率 <10%</td></tr>
 <tr><td><strong>执行时机</strong></td><td>pre-push 阶段 + 发布前</td></tr>
 <tr><td><strong>责任人</strong></td><td>开发者 + GA</td></tr>
@@ -111,7 +111,7 @@ L0  存活探针           50哨兵×5循环 · 进程启动 · 输入消费 · 
 <tr><th style="width:120px">维度</th><th>内容</th></tr>
 <tr><td><strong>测试对象</strong></td><td>核心诊断逻辑——代码变更后历史案例的诊断结论是否被意外推翻</td></tr>
 <tr><td><strong>核心验证</strong></td><td>每次代码变更→自动重新诊断 5 个黄金案例→对比"标准诊断结论"→度量偏差</td></tr>
-<tr><td><strong>黄金案例库</strong></td><td>哇呢宝贝（真实：产品结构恶化+渠道效率）/ Netflix（经典模拟：创新转化不足+资源锁定）/ OFO（经典模拟：扩张无制动+信号衰减）/ 制造企业（标准化：成本结构+学习曲线）/ SaaS 企业（标准化：PLG→SLG 单位经济模型）</td></tr>
+<tr><td><strong>黄金案例库</strong></td><td>客户A（真实：产品结构恶化+渠道效率）/ Netflix（经典模拟：创新转化不足+资源锁定）/ OFO（经典模拟：扩张无制动+信号衰减）/ 制造企业（标准化：成本结构+学习曲线）/ SaaS 企业（标准化：PLG→SLG 单位经济模型）</td></tr>
 <tr><td><strong>偏差阈值</strong></td><td>偏差>30% → <span class="tag tr">阻断</span>（核心诊断逻辑退化）。偏差 10-30% → <span class="tag to">告警</span>（需人工审查）。偏差<10% → <span class="tag tg">通过</span></td></tr>
 <tr><td><strong>案例档案格式</strong></td><td>预设本体数据 JSON + 预期哨兵触发列表+严重度 + 预期根因追溯路径（DiagnosisContextNode→42边→compute→Finding）+ 上次验证快照</td></tr>
 <tr><td><strong>执行时机</strong></td><td>每次 PR 合并前（与 L3 E2E 同级）</td></tr>

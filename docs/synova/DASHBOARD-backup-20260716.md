@@ -153,7 +153,7 @@ D82 7 Missing Compute (E-11/E-12/E-21/E-22/E-40/E-41/E-42) [####################
 === D-series System Integration (14th) ===
 D83 Startup Sequence Phase0-5+Rollback  [####################] 100% (Bootstrap+6Phase+13 tests)  [#14 Integration]
 D84 Integration Contract check-integration [####################] 100% (system-registry+L1+L2+CI job)  [#14 Integration]
-D85 MVS Golden Dataset+Regression Test    [####################] 100% (wani-baby-v1 snapshot+5 checksums+regression script)  [#14 Integration]
+D85 MVS Golden Dataset+Regression Test    [####################] 100% (client-a-v1 snapshot+5 checksums+regression script)  [#14 Integration]
 D86 Self-Diagnosis check-self-diagnosis   [####################] 100% (6+1 steps+natural language+json output)  [#14 Integration]
 D87 Terminology Dictionary+Cross-Layer Map [####################] 100% (208-line GLOSSARY+18 terms+12 mappings)  [#14 Integration]
 === D-series Overflow Monitor (14th §4.1.6 refs auth-15) ===
