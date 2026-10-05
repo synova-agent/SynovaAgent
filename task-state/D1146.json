@@ -1,0 +1,25 @@
+{
+  "task_id": "D1146",
+  "title": "CC 退役 — hook 层 11 登记点 → 0",
+  "status": "in_progress",
+  "risk": "medium",
+  "domain": "govl",
+  "owner": "gate-cc-retire",
+  "executor": "dsh-squad",
+  "milestone": "治理批1 · CC 退役（T2/批1）",
+  "spec": ".claude/task-briefs/2026-10-05-D1146-cc-retire.md",
+  "write_set": [
+    ".claude/settings.json",
+    ".codex/hooks.json",
+    "scripts/hooks/hook-session-start.sh",
+    "scripts/workflow/hook-post-tool-use.sh",
+    "AGENTS.md",
+    "CLAUDE.md",
+    ".claude/task-briefs/2026-10-05-D1146-cc-retire.md",
+    "memory/notes/proposed/2026-10-05-d1146-cc-retire.md",
+    "task-state/D1146.json"
+  ],
+  "updated_at": "2026-10-05",
+  "updated_by": "gate-cc-retire",
+  "note": "源 = 任务板 task-1（T2/批1 · Claude Code 退役）。登记点 = .claude/settings.json hooks 段 5 处 + .codex/hooks.json 6 处 = 11。脚本层只删零执行方两个（hook-session-start.sh / hook-post-tool-use.sh）；hook-git-detect.sh 被 incident-loop.py:308 + CI 已登记夹具 incident-loop.test.sh 真跑、hook-check-memory.sh 被 CI 已登记夹具 grep-oP-regression.test.sh 真解析 ⇒ 不删，列例外清单。 追加裁决（Lead）：CLAUDE.md 活段加「已退役 D1146」宣称标注（9 处，只标宣称零行为改动）。已知孤儿：scripts/control-tower/attach.py 唯一生产调用方 = 已删的 hook-session-start.sh ⇒ 移交批 4（不并入本 PR）。"
+}

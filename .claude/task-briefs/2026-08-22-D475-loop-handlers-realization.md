@@ -186,7 +186,7 @@ grep 本任务关键词在 expert/ sentinel/ extensions/ knowledge/ theory/ skil
 - 不改 src/loops/middle-evolution-engine.ts、feedback-collector（D333 已交付，只读消费）
 - 不改 src/loops/loop-trigger-config.ts、src/loops/loop-scheduler.ts（deferred 记录 O3/O4/O5 不修）
 - 不碰 D470（data-ingest-service.ts + tests/agent/data-ingest-service.test.ts + extensions/ontology/）与 D471（packages/）写集
-- 不碰 哇呢宝贝客户数据
+- 不碰 客户A客户数据
 - 不改 src/cycles/overflow-compute.ts、src/cycles/overflow-graph-bridge.ts、src/cycles/cycle-registry.ts（D338 并行改 overflow-graph-bridge.ts，本任务只经公开函数读写）
 - 不改 src/growth/lightweight-diagnosis.ts（其吞 increment 异常 L423-428 由 handler 闭包侧验证，不修本体）
 - 不 bump VERSION.md（运行时行为修复，非门禁/工具行为变化）

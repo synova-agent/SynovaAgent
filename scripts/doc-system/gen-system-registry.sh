@@ -22,7 +22,10 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   @degraded — python3 不可用 / git 不可用（generatedAtCommit 置 null 并 stderr 提示）
 #
 # 关键约束（K3 §10.1）: 必须由生成器产出，禁止手编——generatedBy/generatedAtCommit
-#   两字段为空时 verify-system-registry.sh 判红（防手编伪造）。
+#   两字段为空即判「手编嫌疑」（防手编伪造）。
+#   ⚠️ D1149（2026-10-05）更正: 原句为「两字段为空时 verify-system-registry.sh 判红」——
+#   该校验器已按「零调用方」退役（无 ci.yml 登记 / 无 pre-commit 接线 / 无脚本调用）
+#   ⇒ 该判定当前**无执行体**。生成器自身仍强制写这两字段；接线与否见 #1046 批 4「另开卡」。
 # ═══════════════════════════════════════════════════════════════════════════════
 set +e
 ROOT="${DOC_TRUTH_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}" # swallow-ok:
@@ -111,7 +114,7 @@ doc = {
         "experts": {"value": int(n_exp), "scope": "expert-registry.yaml experts 键计数（v3.0）",
                      "derivedBy": "yaml experts 键计数"},
     },
-    "notes": "样板批（D782）: edges 从第四章抽取; coverageGraph/causalChains 待 K3 §8 裁定后补; 校验器 verify-system-registry.sh 消费本文件。",
+    "notes": "样板批（D782）: edges 从第四章抽取; coverageGraph/causalChains 待 K3 §8 裁定后补; 校验器已于 D1149 按零调用方退役（校验侧零执行体，接线见 #1046 批 4）——本文件当前无机器消费者。",
 }
 os.makedirs(os.path.dirname(out), exist_ok=True)
 with open(out, 'w', encoding='utf-8') as f:

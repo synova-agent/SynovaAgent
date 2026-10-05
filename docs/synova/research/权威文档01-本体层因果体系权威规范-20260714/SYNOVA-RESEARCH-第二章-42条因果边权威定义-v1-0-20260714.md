@@ -28,7 +28,7 @@ noise_ratio = false_positives / total_signals
 **关联的因果链**：CC-SCAN-01（扫描→机会窗口→市场份额增长）
 **硬度**：soft
   **参数覆盖率**：2/4 (50%) — scan_frequency和scan_breadth有代理指标；signal_sensitivity和noise_ratio依赖GA标记
-  **哇呢宝贝验证**：未验证（数据不足——哇呢宝贝无主动扫描行为记录）
+  **客户A验证**：未验证（数据不足——客户A无主动扫描行为记录）
   **缺失数据**：需GA配置扫描行为追踪（团队周报/战略会议记录）。无时间序列扫描数据时，scan_frequency=1, scan_breadth=3作为默认值
 **前置边**：无（输入边——从外部环境直接获取）
 **后置边**：E-02 PASSIVE_SIGNAL（扫描覆盖广度影响被动信号收集效率），E-03 EXTERNAL_ECHO（扫描信号进入外部回响过滤），E-04 PERCEPTION_LEARNING（扫描→感知→学习）
@@ -64,7 +64,7 @@ relevance_weight_i = 1 - decay_rate ^ age_i
 **关联的因果链**：CC-PASSIVE-01（被动信号积累→需求变化检测→产品调整）
 **硬度**：soft
   **参数覆盖率**：3/5 (60%) — passive_signal_i、relevance_weight_i、T可计算；decay_rate和alpha需行业校准
-  **哇呢宝贝验证**：未验证（需外部事件标注数据）
+  **客户A验证**：未验证（需外部事件标注数据）
   **缺失数据**：需GA配置外部事件源（行业新闻/政策变更/竞品动态RSS）。decay_rate默认0.10
 **前置边**：E-01 ACTIVE_SCANNING（扫描广度影响信号收集覆盖面）
 **后置边**：E-35 DATA_FEEDBACK（被动信号进入数据反馈循环），E-03 EXTERNAL_ECHO（信号积累→外部回响评估）
@@ -102,7 +102,7 @@ external_factor_j = (market_growth_j - baseline_growth_j) / baseline_growth_j
 **关联的因果链**：CC-ECHO-01（外部增长→env_rent→收入增长是否可归因于企业自身）
 **硬度**：soft
   **参数覆盖率**：3/5 (60%) — market_growth、baseline_growth、competitor_aggressiveness可获取；w_j和internal_effort需估计
-  **哇呢宝贝验证**：部分验证 — 哇呢宝贝2023年利润下滑，env_rent检测到母婴市场整体下行（market_growth≈-8%），env_rent=负值，说明外部环境逆风是利润下滑的部分原因
+  **客户A验证**：部分验证 — 客户A2023年利润下滑，env_rent检测到母婴市场整体下行（market_growth≈-8%），env_rent=负值，说明外部环境逆风是利润下滑的部分原因
   **缺失数据**：w_j权重需GA基于行业知识设定；internal_effort使用E-23 efficiency_rate代理
 **前置边**：E-01 ACTIVE_SCANNING（扫描提供外部因素列表），E-33 MARKET_COMPETITION（市场竞争数据）
 **后置边**：E-40 REPUTATION_AMPLIFICATION（外部回响通过声誉放大或缓冲），E-42 CROSS_DOMAIN_SPILLOVER（跨域溢出）
@@ -135,8 +135,8 @@ perception_accuracy = 1 - |internal_model - external_reality| / max(|internal_mo
 **消费的专家**：技术专家（感知学习→知识积累→技术能力），知识专家（知识片段与外部现实的对应关系）
 **关联的因果链**：CC-LEARN-01（感知→学习→知识积累→创新）
 **硬度**：heuristic
-  **参数覆盖率**：1/4 (25%) — learning_rate可从E-19消费；perception_accuracy/internal_model/external_reality均为向量计算，无哇呢宝贝数据
-  **哇呢宝贝验证**：未验证（缺少企业认知模型与外部现实的对比数据）
+  **参数覆盖率**：1/4 (25%) — learning_rate可从E-19消费；perception_accuracy/internal_model/external_reality均为向量计算，无客户A数据
+  **客户A验证**：未验证（缺少企业认知模型与外部现实的对比数据）
   **缺失数据**：需GA定义internal_model的维度（如市场规模预估、竞品能力评估、客户需求假设），并周期性收集外部数据形成external_reality对照。当前无法定量计算
 **前置边**：E-01 ACTIVE_SCANNING, E-02 PASSIVE_SIGNAL, E-03 EXTERNAL_ECHO
 **后置边**：E-19 ORG_LEARNING（感知精度直接输入组织学习）
@@ -173,7 +173,7 @@ cash_runway_months = C_available / monthly_burn
 **关联的因果链**：CC-CAPITAL-01（资本获取→配置→转化→回流→再获取）
 **硬度**：hard
   **参数覆盖率**：4/5 (80%) — equity_raised、debt_raised、retained_earnings、monthly_burn均可从Financial节点获取
-  **哇呢宝贝验证**：已验证 — 哇呢宝贝cash_runway=18个月（equity_raised=200万, monthly_burn=11万），预测与GA陈述一致
+  **客户A验证**：已验证 — 客户Acash_runway=18个月（equity_raised=200万, monthly_burn=11万），预测与GA陈述一致
 **前置边**：E-37 PROFIT_REINVEST（留存收益来自利润再投资）
 **后置边**：E-13 CAPITAL_ALLOCATION（获取的资本进入配置阶段），E-06 FINANCING_MIX（资本结构分析）
 
@@ -210,7 +210,7 @@ WACC = (E/V)*Ke + (D/V)*Kd*(1-t)
 **关联的因果链**：CC-FINMIX-01（融资结构→资本成本→投资决策→增长路径选择）
 **硬度**：hard
   **参数覆盖率**：6/7 (86%) — debt_raised/equity_raised/debt_equity_ratio/WACC/Ke/Kd均可计算（需GA设定Rf/beta/Rm/t）
-  **哇呢宝贝验证**：已验证 — 哇呢宝贝纯股权融资，D/E=0，WACC=Ke≈15%（beta=1.2估计），无债权压力
+  **客户A验证**：已验证 — 客户A纯股权融资，D/E=0，WACC=Ke≈15%（beta=1.2估计），无债权压力
   **缺失数据**：Rf（无风险利率）、beta（行业beta）、Rm（市场收益率）需GA在ExternalBaseline节点中配置。默认Rf=3%, beta=1.0, Rm=10%
 **前置边**：E-05 CAPITAL_ACQUISITION（提供debt_raised和equity_raised）
 **后置边**：E-13 CAPITAL_ALLOCATION（WACC影响投资决策和资本配置效率）
@@ -246,7 +246,7 @@ employer_attractiveness = f(brand_strength, compensation_competitiveness, cultur
 **关联的因果链**：CC-TALENT-01（人才获取→人力配置→执行效率→增长）
 **硬度**：soft
   **参数覆盖率**：3/5 (60%) — hires_completed和open_positions可从Person/Team节点计数；market_talent_supply需ExternalBaseline
-  **哇呢宝贝验证**：未验证（哇呢宝贝人才数据不足）
+  **客户A验证**：未验证（客户A人才数据不足）
   **缺失数据**：需GA配置Team节点编制数（open_positions）、ExternalBaseline行业人才供给指数、Person节点入职日期属性。当前使用Person节点创建时间作为入职代理
 **前置边**：E-25 BRAND_CONSTRUCTION（品牌影响雇主吸引力），E-38 TALENT_RETENTION（人才留存影响吸引力口碑）
 **后置边**：E-15 HUMAN_DEPLOYMENT（获取的人才进入人力配置）
@@ -281,7 +281,7 @@ resource_gap = R_required - R_available
 **关联的因果链**：CC-RESOURCE-01（资源获取→资源缺口→运营瓶颈→交付延迟）
 **硬度**：soft
   **参数覆盖率**：2/4 (50%) — R_required可从E-23推导；reliability_i从E-34获取；source_i需GA标注资源清单
-  **哇呢宝贝验证**：未验证（缺资源清单数据）
+  **客户A验证**：未验证（缺资源清单数据）
   **缺失数据**：需GA配置Tool节点分类（供应商/自有/租赁）和可靠性评分。当前使用Risk.riskType='supplier'的节点作为可靠性代理
 **前置边**：E-34 PROCUREMENT_POWER（采购议价能力影响资源获取成本）
 **后置边**：E-13 CAPITAL_ALLOCATION（资源进入配置——分配预算到不同资源来源）
@@ -319,7 +319,7 @@ accuracy = 1 - error_rate
 **关联的因果链**：CC-DATA-01（数据质量→诊断精度→决策质量→执行效果）
 **硬度**：hard
   **参数覆盖率**：4/5 (80%) — completeness可统计；freshness可计算avg_data_age_days；accuracy需GA标记（默认0.95）
-  **哇呢宝贝验证**：已验证 — 哇呢宝贝数据质量评估：completeness≈0.45（财务报表为主，无组织/品牌结构化数据），freshness≈0.75（月报），accuracy≈0.90
+  **客户A验证**：已验证 — 客户A数据质量评估：completeness≈0.45（财务报表为主，无组织/品牌结构化数据），freshness≈0.75（月报），accuracy≈0.90
   **缺失数据**：error_rate需GA在数据导入时标记已知数据问题。默认0.05
 **前置边**：无（直接消费Document节点和外部数据源）
 **后置边**：E-35 DATA_FEEDBACK（数据→反馈→学习闭环）
@@ -365,7 +365,7 @@ allocation_efficiency = productive_allocation / total_allocation
 **关联的因果链**：CC-DEC-01（决策机制→决策质量→配置效率→转化效率→增长）
 **硬度**：soft
   **参数覆盖率**：3/5 (60%) — decision_delay_days可从Process节点计算；allocation_efficiency从E-13消费；productive_allocation需GA标注
-  **哇呢宝贝验证**：未验证
+  **客户A验证**：未验证
   **缺失数据**：需GA在Financial节点上标注cost分类（生产性/非生产性/行政管理）。Process.approval节点需含发起时间和批准时间两个timestamp
 **前置边**：E-14 DECISION_POWER（集中度影响决策延迟）
 **后置边**：E-13 CAPITAL_ALLOCATION（决策→资本配置）
@@ -398,7 +398,7 @@ internal_transaction_cost_ratio = internal_coordination_cost / total_operating_c
 **关联的因果链**：CC-TRUST-01（信任→协作→协同→运营效率）
 **硬度**：heuristic
   **参数覆盖率**：2/3 (67%) — collaboration_frequency可从INTERACTS_WITH边计数；internal_transaction_cost_ratio从E-28获取
-  **哇呢宝贝验证**：未验证（缺组织交互数据）
+  **客户A验证**：未验证（缺组织交互数据）
   **缺失数据**：需AgentObserver采集INTERACTS_WITH边（Person间消息/会议/邮件交互）。当前交互数据几乎为零——无法计算有效trust_level
 **前置边**：E-14 DECISION_POWER（权力集中度影响信任水平）
 **后置边**：E-16 INFO_TRANSMISSION（信任→信息传递真实性），E-28 CROSS_FUNCTIONAL_SYNERGY（信任→跨职能协同）
@@ -431,7 +431,7 @@ power_distribution_vector = [person_i_decision_count / total_decisions]
 **关联的因果链**：CC-POWER-01（权力分布→决策集中度→信息失真→错配风险）
 **硬度**：soft
   **参数覆盖率**：2/3 (67%) — person_i_decision_count和total_decisions可从Process/OWNS统计
-  **哇呢宝贝验证**：未验证（缺Process.approval数据）
+  **客户A验证**：未验证（缺Process.approval数据）
   **缺失数据**：需AgentObserver采集Process.approval节点的OWNS边，标注ownershipType以区分决策权归属
 **前置边**：无（组织基本结构——权力分布从组织结构导出）
 **后置边**：E-14 DECISION_POWER, E-17 INCENTIVE_ALIGNMENT（权力分布→激励设计）
@@ -467,7 +467,7 @@ reallocation_frequency = 再分配次数 / 周期
 **关联因果链**：CC-ALLOC-01（资本获取→资本配置→转化效率→增长）
 **硬度**：hard
 **参数覆盖率**：4/5 (80%) — budget_i、roi_i、total_budget、reallocation_frequency均可从FINANCIAL和PROCESS节点获取；需GA标注成本的生产性/非生产性分类
-**哇呢宝贝验证**：未验证（缺活动级ROI标注数据）
+**客户A验证**：未验证（缺活动级ROI标注数据）
 **缺失数据**：需GA在FINANCIAL节点上标注cost分类（生产性/非生产性/行政管理），并关联到对应的PROCESS活动。当前无活动级成本→ROI映射
 **前置边**：E-05 CAPITAL_ACQUISITION（提供可分配资本），E-06 FINANCING_MIX（WACC影响投资决策），E-10 DECISION_ALLOCATION（决策机制→资本配置）
 **后置边**：E-23 OPERATIONAL_EXECUTION（资本配置→运营执行），E-24 INNOVATION（资本配置→创新投入），E-37 PROFIT_REINVEST（配置效率影响再投资能力）
@@ -500,7 +500,7 @@ decision_quality = 1 / (1 + decision_latency_days / 7) * decision_maker_expertis
 **关联因果链**：CC-POWER-01（权力分布→决策集中度→信息失真→错配风险）
 **硬度**：soft
 **参数覆盖率**：3/4 (75%) — power_gini、decision_quality、decision_latency_days可计算；decision_maker_expertise需从Capability代理
-**哇呢宝贝验证**：未验证（缺PROCESS.approval和OWNS边数据）
+**客户A验证**：未验证（缺PROCESS.approval和OWNS边数据）
 **缺失数据**：需AgentObserver采集PROCESS.approval节点的OWNS边，标注ownershipType区分决策权归属。当前Process数据几乎为零
 **前置边**：E-12 POWER_DISTRIBUTION（权力分布→决策集中度）
 **后置边**：E-10 DECISION_ALLOCATION（决策权力→决策分配），E-17 INCENTIVE_ALIGNMENT（集中度影响激励设计）
@@ -536,7 +536,7 @@ capacity_utilization = assigned_tasks / person_capacity_max
 **关联因果链**：CC-DEPLOY-01（人才获取→人力配置→执行效率→增长）
 **硬度**：soft
 **参数覆盖率**：3/5 (60%) — capacity_utilization可从PERSON/CAPABILITY节点计算；skill_match需GA配置技能标签；task_requirement_vector需从PROCESS推导
-**哇呢宝贝验证**：未验证（缺PERSON技能标签数据）
+**客户A验证**：未验证（缺PERSON技能标签数据）
 **缺失数据**：需GA在PERSON节点上添加skill标签（JSON数组），CAPABILITY节点标注task_requirement向量。当前使用proficiencyLevel作为capacity_utilization代理
 **前置边**：E-07 TALENT_ACQUISITION（获取的人才进入人力配置）
 **后置边**：E-23 OPERATIONAL_EXECUTION（人力配置→运营执行效率），E-38 TALENT_RETENTION（匹配度影响留存率）
@@ -569,7 +569,7 @@ channel_quality = f(communication_channel_density, trust_level)
 **关联因果链**：CC-INFO-01（信息传递→信号保真→决策质量→所有依赖信息的边）
 **硬度**：soft
 **参数覆盖率**：2/4 (50%) — channel_quality可从INTERACTS_WITH聚合；filtering_loss和org_layers需GA配置；signal_fidelity计算得出
-**哇呢宝贝验证**：未验证（缺AGENT和INTERACTS_WITH数据）
+**客户A验证**：未验证（缺AGENT和INTERACTS_WITH数据）
 **缺失数据**：需AgentObserver采集INTERACTS_WITH边（AGENT/Person间消息传递），GA标注组织层级深度。默认filtering_loss=0.10, org_layers=3
 **前置边**：E-09 DATA_ACQUISITION（数据获取→信息源头），E-11 TRUST_CONSTRUCTION（信任→渠道质量）
 **后置边**：E-14 DECISION_POWER（信息失真→决策质量），E-17 INCENTIVE_ALIGNMENT（信息失真→KPI扭曲）
@@ -603,7 +603,7 @@ kpi_strategic_alignment = semantic_similarity(kpi_vector, strategy_vector)
 **关联因果链**：CC-INCENT-01（激励→行为→组织产出→与战略目标的偏差）
 **硬度**：soft
 **参数覆盖率**：2/4 (50%) — kpi_conflict_count可直接从GOAL统计；kpi_strategic_alignment和short_term_bias需语义分析计算
-**哇呢宝贝验证**：未验证（缺GOAL节点OKR数据）
+**客户A验证**：未验证（缺GOAL节点OKR数据）
 **缺失数据**：需GA在GOAL节点上标注goalType='okr'、时间维度（短期/长期），并配置GOAL间的ALIGNS_WITH边。默认kpi_strategic_alignment=0.6, short_term_bias=0.3
 **前置边**：E-14 DECISION_POWER（权力集中度影响KPI定义），E-16 INFO_TRANSMISSION（信息失真→KPI扭曲）
 **后置边**：E-23 OPERATIONAL_EXECUTION（激励扭曲→执行方向偏离），E-38 TALENT_RETENTION（激励→人才留存意愿）
@@ -637,7 +637,7 @@ brake_existence = (has_emergency_override ? 0.3 : 1.0)
 **关联因果链**：CC-RULE-01（规则约束→资源冻结→适应速度→竞争位势）
 **硬度**：soft
 **参数覆盖率**：2/4 (50%) — compliance_burden可从COMPLIANCE节点统计；adaptation_speed可从PROCESS修改频次计算；brake_existence需GA配置
-**哇呢宝贝验证**：未验证（缺COMPLIANCE和PROCESS.modification数据）
+**客户A验证**：未验证（缺COMPLIANCE和PROCESS.modification数据）
 **缺失数据**：需GA配置COMPLIANCE节点（complianceType + status），并在PROCESS节点上追踪修改历史。默认compliance_burden=0.3, adaptation_speed=0.3
 **前置边**：E-14 DECISION_POWER（权力集中度影响规则制定）
 **后置边**：E-22 ROUTINE_RIGIDITY（规则约束→惯例僵化），E-24 INNOVATION（规则刚性→创新抑制）
@@ -671,7 +671,7 @@ AC_n = AC_1 * n^(-b)  （经典学习曲线，b为学习率指数）
 **关联因果链**：CC-LEARN-01（感知→学习→知识积累→创新→竞争力）
 **硬度**：heuristic
 **参数覆盖率**：1/4 (25%) — knowledge_accumulation可从KC节点计数统计；learning_rate需CAPABILITY时间序列（数据不足）；b需长期累积数据
-**哇呢宝贝验证**：未验证（缺CAPABILITY时间序列数据）
+**客户A验证**：未验证（缺CAPABILITY时间序列数据）
 **缺失数据**：需AgentObserver采集CAPABILITY.proficiencyLevel的时间序列（周期性快照），并标注EVENT的failure/success分类。KC创建速率可从GraphStore直接统计，但学习曲线指数b需至少6个月数据
 **前置边**：E-04 PERCEPTION_LEARNING（感知精度→学习起点）
 **后置边**：E-20 KNOWLEDGE_SHARING（学习积累→知识共享），E-24 INNOVATION（学习→创新转化），E-39 KNOWLEDGE_REUSE（学习→知识复用）
@@ -706,7 +706,7 @@ cross_team_diffusion = KC_accessed_by_other_teams / total_KC_accesses
 **关联因果链**：CC-SHARE-01（知识共享→知识可访问→组织学习加速→创新）
 **硬度**：soft
 **参数覆盖率**：2/4 (50%) — KC访问计数可从GraphStore查询；knowledge_silo_ratio可统计；sharing_channel_density需INTERACTS_WITH数据
-**哇呢宝贝验证**：未验证（缺INTERACTS_WITH和KC访问日志数据）
+**客户A验证**：未验证（缺INTERACTS_WITH和KC访问日志数据）
 **缺失数据**：需AgentObserver采集INTERACTS_WITH边（Person/Team间知识传递），并在KC节点上追踪访问日志（who accessed when）。当前KC无访问日志
 **前置边**：E-19 ORG_LEARNING（学习积累→知识共享），E-21 ORG_TRUST（信任→共享意愿）
 **后置边**：E-24 INNOVATION（知识扩散→创新基础），E-39 KNOWLEDGE_REUSE（共享→复用率）
@@ -739,7 +739,7 @@ internal_transaction_cost_ratio = internal_coordination_cost / total_operating_c
 **关联因果链**：CC-TRUST-01（信任→协作→协同→跨职能效率→运营效率）
 **硬度**：heuristic
 **参数覆盖率**：2/3 (67%) — collaboration_frequency可从INTERACTS_WITH边计数；internal_transaction_cost_ratio从E-28获取
-**哇呢宝贝验证**：未验证（缺INTERACTS_WITH组织交互数据）
+**客户A验证**：未验证（缺INTERACTS_WITH组织交互数据）
 **缺失数据**：需AgentObserver采集INTERACTS_WITH边（Person间消息/会议/邮件交互记录）。当前交互数据几乎为零
 **前置边**：E-11 TRUST_CONSTRUCTION（信任构建→信任水平），E-16 INFO_TRANSMISSION（信息传递→信任信号）
 **后置边**：E-20 KNOWLEDGE_SHARING（信任→共享意愿），E-28 CROSS_FUNCTIONAL_SYNERGY（信任→跨职能协同）
@@ -773,7 +773,7 @@ lock_in_strength = routine_age * (1 - adaptation_frequency)
 **关联因果链**：CC-RIGID-01（惯例僵化→适应性下降→竞争力减弱→增长停滞）
 **硬度**：heuristic
 **参数覆盖率**：1/3 (33%) — routine_age可从PROCESS节点创建时间计算（需AgentObserver扩展）；adaptation_frequency和environmental_change_rate需长期数据
-**哇呢宝贝验证**：未验证（缺PROCESS时间序列和修改记录）
+**客户A验证**：未验证（缺PROCESS时间序列和修改记录）
 **缺失数据**：需AgentObserver在PROCESS节点上追踪created_at和modification_count属性。environmental_change_rate需从E-03 EXTERNAL_ECHO的market_growth波动代理。默认adaptation_frequency=0.5
 **前置边**：E-18 RULE_CONSTRAINT（规则约束→惯例固化），E-19 ORG_LEARNING（学习不足→惯例不更新）
 **后置边**：E-24 INNOVATION（惯例僵化→创新抑制），E-28 CROSS_FUNCTIONAL_SYNERGY（惯例→跨职能流程固化）
@@ -808,7 +808,7 @@ unit_cost = total_cost / output_units
 **关联因果链**：CC-EXEC-01（资源投入→执行效率→产出价值→交付能力）
 **硬度**：hard
 **参数覆盖率**：4/5 (80%) — efficiency_rate、defect_rate、capacity_utilization、throughput可从PROCESS和FINANCIAL计算；unit_cost可直接计算
-**哇呢宝贝验证**：未验证（缺PROCESS级产出量和缺陷数据）
+**客户A验证**：未验证（缺PROCESS级产出量和缺陷数据）
 **缺失数据**：需GA在PROCESS节点上标注产出量（output_units）、缺陷数（defect_count）和理论产能（capacity_max）。当前使用FINANCIAL.amount作为产出代理
 **前置边**：E-13 CAPITAL_ALLOCATION（资本配置→运营预算），E-15 HUMAN_DEPLOYMENT（人力配置→执行人员）
 **后置边**：E-30 PRICING（成本结构→定价基础），E-37 PROFIT_REINVEST（执行效率→利润率→再投资能力），E-12 EFFICIENCY_FINANCING（效率→外部融资信号）
@@ -842,7 +842,7 @@ explore_exploit_ratio = exploration_activities / (exploration_activities + explo
 **关联因果链**：CC-INNOV-01（学习→知识积累→创新→新产品→竞争力）
 **硬度**：soft
 **参数覆盖率**：2/4 (50%) — rd_intensity可从FINANCIAL分类统计；新CAPABILITY创建速率可从GraphStore统计；idea_to_launch_conversion和explore_exploit_ratio需GA标注
-**哇呢宝贝验证**：未验证（缺创新活动标注数据）
+**客户A验证**：未验证（缺创新活动标注数据）
 **缺失数据**：需GA在FINANCIAL节点上标注创新类成本，PROCESS节点标注processType包含'innovation'，CAPABILITY节点标注是否为创新产物。默认rd_intensity=0.08, explore_exploit_ratio=0.3
 **前置边**：E-19 ORG_LEARNING（学习→创新基础），E-20 KNOWLEDGE_SHARING（知识扩散→创新输入）
 **后置边**：E-26 PRODUCT_DEFINITION（创新产出→产品定义），E-36 COMPETITIVE_POSITION（创新→竞争位势）
@@ -878,7 +878,7 @@ brand_loyalty = repeat_purchase_rate
 **关联因果链**：CC-BRAND-01（品牌投入→品牌强度→客户获取成本→市场规模）
 **硬度**：soft
 **参数覆盖率**：2/5 (40%) — brand_awareness可从CLIENT计数代理；brand_loyalty依赖重复购买数据；target_market_size需ExternalBaseline；品牌投入分类需GA标注
-**哇呢宝贝验证**：未验证（缺品牌投入和CLIENT行为数据）
+**客户A验证**：未验证（缺品牌投入和CLIENT行为数据）
 **缺失数据**：需GA在ExternalBaseline中配置target_market_size，在CLIENT节点上标注repeat标记，在FINANCIAL节点上分类品牌支出。默认brand_awareness=0.3, brand_loyalty=0.5
 **前置边**：E-27 SERVICE_DELIVERY（交付质量→品牌认知），E-40 REPUTATION_FLYWHEEL（声誉→品牌强化）
 **后置边**：E-07 TALENT_ACQUISITION（品牌→雇主吸引力），E-31 CLIENT_RETENTION（品牌忠诚→客户留存）
@@ -911,7 +911,7 @@ customer_need_alignment = cosine_similarity(product_feature_vector, customer_nee
 **关联因果链**：CC-PROD-01（市场信号→产品定义→产品-市场匹配→市场占有率）
 **硬度**：soft
 **参数覆盖率**：2/4 (50%) — feature_adoption_rate和iteration_speed需GA配置跟踪数据；customer_need_alignment从E-35客户反馈向量推导
-**哇呢宝贝验证**：未验证（缺产品功能和客户需求向量数据）
+**客户A验证**：未验证（缺产品功能和客户需求向量数据）
 **缺失数据**：需GA在CAPABILITY节点上标注产品功能向量，在CLIENT或ExternalBaseline中采集客户需求数据。默认feature_adoption_rate=0.3, iteration_speed=2/周期
 **前置边**：E-24 INNOVATION（创新产出→产品定义），E-35 CUSTOMER_DATA_FEEDBACK（客户数据→需求对齐）
 **后置边**：E-27 SERVICE_DELIVERY（产品定义→服务交付），E-30 PRICING（产品价值→定价基础）
@@ -946,7 +946,7 @@ delivery_speed = 1 / (1 + avg_delivery_delay_days / 3)
 **关联因果链**：CC-DELIVER-01（产品定义→服务交付→客户满意度→客户留存）
 **硬度**：soft
 **参数覆盖率**：2/4 (50%) — delivery_speed可从PROCESS时戳差计算；service_cost可从FINANCIAL计算；customer_satisfaction_proxy和service_completeness需GA配置
-**哇呢宝贝验证**：未验证（缺客户满意度数据）
+**客户A验证**：未验证（缺客户满意度数据）
 **缺失数据**：需GA在CLIENT节点上采集满意度评分和反馈，在PROCESS.deployment节点上标注delivery_completeness。默认customer_satisfaction_proxy=0.6
 **前置边**：E-26 PRODUCT_DEFINITION（产品定义→服务交付内容），E-23 OPERATIONAL_EXECUTION（执行效率→交付速度）
 **后置边**：E-25 BRAND_CONSTRUCTION（交付质量→品牌认知），E-31 CLIENT_RETENTION（交付满意→客户留存）
@@ -980,7 +980,7 @@ internal_coordination_cost = coordination_cost / total_operating_cost
 **关联因果链**：CC-SYNERGY-01（跨团队协作→协同效应→运营效率→组织产出）
 **硬度**：soft
 **参数覆盖率**：2/4 (50%) — cross_team_dependency可从INTERACTS_WITH统计；内部协调成本需GA从PROCESS和FINANCIAL联合计算
-**哇呢宝贝验证**：未验证（缺跨团队协作数据和成本核算）
+**客户A验证**：未验证（缺跨团队协作数据和成本核算）
 **缺失数据**：需AgentObserver采集INTERACTS_WITH边（TEAM→TEAM），GA在PROCESS节点上标注coordination_cost。默认synergy_score=1.0
 **前置边**：E-21 ORG_TRUST（信任→跨职能协同），E-16 INFO_TRANSMISSION（信息传递→跨团队通信）
 **后置边**：E-23 OPERATIONAL_EXECUTION（协同→整体执行效率），E-24 INNOVATION（跨职能知识碰撞→创新）
@@ -1015,7 +1015,7 @@ system_stability = 1 / (1 + tech_incident_count_per_period)
 **关联因果链**：CC-TECH-01（技术投入→基础设施→技术债务→创新速度）
 **硬度**：soft
 **参数覆盖率**：2/5 (40%) — tech_debt_score可从TOOL.version_age代理；system_stability可从RISK事件统计；tech_incident_count直接计数
-**哇呢宝贝验证**：未验证（缺TOOL版本和事故数据）
+**客户A验证**：未验证（缺TOOL版本和事故数据）
 **缺失数据**：需GA在TOOL节点上标注version_age（与最新版本的时间差），在RISK节点上分类riskType='tech'事故。默认tech_debt_score=0.2, system_stability=0.95
 **前置边**：E-08 RESOURCE_ACQUISITION（技术资源→基础设施），E-24 INNOVATION（创新→技术能力提升）
 **后置边**：E-23 OPERATIONAL_EXECUTION（基础设施→运营效率），E-32 CHANNEL_EFFICIENCY（技术→渠道效率）
@@ -1051,7 +1051,7 @@ price_elasticity = ΔQ% / ΔP%
 **关联因果链**：CC-PRICE-01（成本→定价→利润→再投资能力）
 **硬度**：hard
 **参数覆盖率**：4/5 (80%) — price_elasticity和margin_rate可从FINANCIAL计算；unit_cost从E-23消费；competitor_price需ExternalBaseline；willingness_to_pay需GA配置
-**哇呢宝贝验证**：部分验证 — 哇呢宝贝定价弹性中等（母婴市场价格敏感，但细分品质市场有一定溢价空间）
+**客户A验证**：部分验证 — 客户A定价弹性中等（母婴市场价格敏感，但细分品质市场有一定溢价空间）
 **缺失数据**：需GA在ExternalBaseline中配置竞品价格（competitor_price_list），在CLIENT节点上采集支付意愿数据。默认price_elasticity=-1.0, margin_rate=0.25
 **前置边**：E-23 OPERATIONAL_EXECUTION（成本结构→定价基础），E-26 PRODUCT_DEFINITION（产品价值→溢价能力），E-33 MARKET_COMPETITION（竞争→价格压力）
 **后置边**：E-31 CLIENT_RETENTION（价格→客户留存），E-37 PROFIT_REINVEST（利润率→再投资能力）
@@ -1087,7 +1087,7 @@ lifetime_value = avg_revenue_per_client * (1 / (1 - retention_rate))
 **关联因果链**：CC-RETAIN-01（客户体验→客户留存→终身价值→收入稳定性→利润率）
 **硬度**：hard
 **参数覆盖率**：3/4 (75%) — retention_rate、lifetime_value、avg_revenue_per_client可从CLIENT和FINANCIAL计算；churn_risk需客户行为数据
-**哇呢宝贝验证**：未验证（缺客户留存时间序列数据）
+**客户A验证**：未验证（缺客户留存时间序列数据）
 **缺失数据**：需GA在CLIENT节点上追踪first_seen和last_active时间戳，标注churn事件。默认retention_rate=0.85
 **前置边**：E-27 SERVICE_DELIVERY（交付质量→客户留存），E-30 PRICING（价格→留存意愿），E-25 BRAND_CONSTRUCTION（品牌忠诚→留存）
 **后置边**：E-32 CHANNEL_EFFICIENCY（留存→渠道ROI），E-40 REPUTATION_FLYWHEEL（留存→口碑推荐）
@@ -1123,7 +1123,7 @@ channel_attribution = weighted_sum(channel_i * attribution_weight_i)
 **关联因果链**：CC-CHANNEL-01（渠道投入→转化率→获客成本→增长可扩展性）
 **硬度**：soft
 **参数覆盖率**：2/4 (50%) — channel_roi可从FINANCIAL计算；conversion_rate可从CLIENT/PROCESS统计；channel_reach和channel_attribution需GA配置
-**哇呢宝贝验证**：未验证（缺多渠道归因数据）
+**客户A验证**：未验证（缺多渠道归因数据）
 **缺失数据**：需GA配置渠道分类（在FINANCIAL.cost和CLIENT上标注channel_source），渠道触达量数据。默认channel_roi=2.5, conversion_rate=0.05
 **前置边**：E-25 BRAND_CONSTRUCTION（品牌→渠道效率），E-31 CLIENT_RETENTION（留存→渠道ROI）
 **后置边**：E-33 MARKET_COMPETITION（渠道效率→市场渗透），E-36 COMPETITIVE_POSITION（渠道→竞争位势）
@@ -1158,7 +1158,7 @@ competitor_aggressiveness = competitor_event_frequency / period
 **关联因果链**：CC-COMPET-01（市场结构→竞争强度→定价空间→利润可持续性）
 **硬度**：hard
 **参数覆盖率**：3/5 (60%) — HHI和competitive_position可从FINANCIAL计算；competitor_aggressiveness可从EVENT统计；market_size和competitor_shares需ExternalBaseline
-**哇呢宝贝验证**：部分验证 — 哇呢宝贝所在母婴市场HHI偏低（碎片化市场），但细分品质市场有差异化空间
+**客户A验证**：部分验证 — 客户A所在母婴市场HHI偏低（碎片化市场），但细分品质市场有差异化空间
 **缺失数据**：需GA在ExternalBaseline中配置market_size和competitor_market_shares。默认HHI=1500, competitor_aggressiveness=0.5
 **前置边**：E-36 COMPETITIVE_POSITION（竞争位势→竞争压力），E-30 PRICING（定价→市场份额）
 **后置边**：E-03 EXTERNAL_ECHO（市场竞争→外部回响），E-31 CLIENT_RETENTION（竞争→客户流失压力）
@@ -1194,7 +1194,7 @@ procurement_efficiency = procurement_output / procurement_cost
 **关联因果链**：CC-PROCURE-01（采购→供应稳定性→运营成本→利润空间）
 **硬度**：soft
 **参数覆盖率**：2/4 (50%) — supplier_reliability可从RISK事件统计；procurement_cost可从FINANCIAL获取；purchase_volume_ratio和supplier_dependency需ExternalBaseline配置
-**哇呢宝贝验证**：未验证（缺供应商关系数据）
+**客户A验证**：未验证（缺供应商关系数据）
 **缺失数据**：需GA在ExternalBaseline中配置供应商订单占比，在TOOL节点上标注supplier_name和dependency_level。默认bargaining_power=0.5, supplier_reliability=0.9
 **前置边**：E-08 RESOURCE_ACQUISITION（资源获取→供应商基础）
 **后置边**：E-23 OPERATIONAL_EXECUTION（采购→物料供应→执行效率），E-30 PRICING（采购成本→定价成本基础）
@@ -1229,7 +1229,7 @@ feedback_signal = customer_behavior_vector * product_impact_matrix
 **关联因果链**：CC-FEED-01（客户行为→数据采集→分析→产品优化→客户满意度→留存）
 **硬度**：soft
 **参数覆盖率**：2/4 (50%) — analysis_to_action_latency可从EVENT和PROCESS时戳差计算；feedback_quality需GA标记；customer_behavior_vector需全面客户数据采集
-**哇呢宝贝验证**：未验证（缺客户行为数据→产品行动的闭环追踪）
+**客户A验证**：未验证（缺客户行为数据→产品行动的闭环追踪）
 **缺失数据**：需AgentObserver采集CLIENT行为事件→PROCESS.deployment的完整时序链路，GA在DOCUMENT节点上标注分析报告类型。默认feedback_loop_speed=0.5, feedback_quality=0.6
 **前置边**：E-02 PASSIVE_SIGNAL（被动信号→客户反馈数据源），E-09 DATA_ACQUISITION（数据获取→反馈数据基础）
 **后置边**：E-26 PRODUCT_DEFINITION（客户反馈→产品定义），E-19 ORG_LEARNING（反馈→组织学习）
@@ -1264,7 +1264,7 @@ competitive_position_moat = moat_strength * market_share * quality_premium
 **关联因果链**：CC-POSITION-01（七力→竞争位势→市场份额→利润可持续性→再投资能力）
 **硬度**：soft
 **参数覆盖率**：2/5 (40%) — market_share和quality_premium可从FINANCIAL计算；seven_powers_score的七个子项中品牌、切换成本可从E-25/E-31消费，其余需GA评估
-**哇呢宝贝验证**：部分验证 — 哇呢宝贝在细分母婴品质市场有一定品牌和客户关系（switching_cost中等），但规模经济和网络效应弱
+**客户A验证**：部分验证 — 客户A在细分母婴品质市场有一定品牌和客户关系（switching_cost中等），但规模经济和网络效应弱
 **缺失数据**：需GA配置competitor_market_shares（ExternalBaseline），评估scale_economy、network_effect、cornered_resource、process_power、counter_positioning五项（主观评分）。默认seven_powers_score=0.4
 **前置边**：E-33 MARKET_COMPETITION（竞争数据→位势评估），E-25 BRAND_CONSTRUCTION（品牌→位势子项），E-31 CLIENT_RETENTION（留存→切换成本）
 **后置边**：E-40 REPUTATION_FLYWHEEL（位势→声誉飞轮），E-37 PROFIT_REINVEST（位势→利润可投资性）
@@ -1299,7 +1299,7 @@ profit_margin = (revenue - cost) / revenue
 **关联因果链**：CC-REINVEST-01（利润→留存→再投资→资本池→下一轮获取→配置→增长）
 **硬度**：hard
 **参数覆盖率**：4/5 (80%) — retention_ratio、profit_margin、total_profit可从FINANCIAL计算；reinvestment_efficiency需区分再投资带来的增量收入（归因挑战）
-**哇呢宝贝验证**：已验证 — 哇呢宝贝2023年利润留存比≈0.6，再投资于品类扩展和服务提升，利润率约12%
+**客户A验证**：已验证 — 客户A2023年利润留存比≈0.6，再投资于品类扩展和服务提升，利润率约12%
 **缺失数据**：需GA在FINANCIAL节点上区分再投资vs常规运营成本，在PROCESS节点上关联再投资→新收入增量。retention_ratio默认0.5
 **前置边**：E-23 OPERATIONAL_EXECUTION（运营效率→利润率），E-30 PRICING（定价→利润率），E-13 CAPITAL_ALLOCATION（配置效率→再投资方向）
 **后置边**：E-05 CAPITAL_ACQUISITION（留存利润→减少对外融资依赖），E-24 INNOVATION（再投资→创新投入）
@@ -1335,7 +1335,7 @@ compensation_competitiveness = avg_salary_enterprise / avg_salary_market
 **关联因果链**：CC-TALENT-01（人才留存→人才密度→组织能力→执行效率→增长）
 **硬度**：hard
 **参数覆盖率**：3/5 (60%) — retention_rate和turnover_rate可从PERSON节点统计；compensation_competitiveness需ExternalBaseline；avg_replacement_cost和turnover_cost需GA配置
-**哇呢宝贝验证**：未验证（缺PERSON离职/入职时间序列数据）
+**客户A验证**：未验证（缺PERSON离职/入职时间序列数据）
 **缺失数据**：需AgentObserver在PERSON节点上追踪joined_at和departed_at时间戳，GA在ExternalBaseline中配置行业薪酬基准。默认retention_rate=0.85, compensation_competitiveness=0.95
 **前置边**：E-07 TALENT_ACQUISITION（人才获取→人才池），E-15 HUMAN_DEPLOYMENT（人岗匹配→满意度→留存）
 **后置边**：E-41 TALENT_PROTECTION（人才留存→知识保护），E-07 TALENT_ACQUISITION（留存口碑→未来雇主吸引力）
@@ -1371,7 +1371,7 @@ knowledge_decay = avg_days_since_last_access / 365
 **关联因果链**：CC-REUSE-01（知识编码→检索→复用→学习加速→创新→竞争力）
 **硬度**：soft
 **参数覆盖率**：2/4 (50%) — KC访问统计可从GraphStore查询；codification_rate可从DOCUMENT/KC比例统计；knowledge_decay需访问时间序列
-**哇呢宝贝验证**：未验证（缺KC访问日志和DOCUMENT/KC统计）
+**客户A验证**：未验证（缺KC访问日志和DOCUMENT/KC统计）
 **缺失数据**：需AgentObserver在KC节点上追踪access_count和last_accessed_at。DOCUMENT节点需与KC关联映射。当前KC无访问日志
 **前置边**：E-19 ORG_LEARNING（学习→知识产生），E-20 KNOWLEDGE_SHARING（共享→知识可访问→复用）
 **后置边**：E-04 PERCEPTION_LEARNING（复用→感知精度提升），E-24 INNOVATION（知识基础→创新输入）
@@ -1407,7 +1407,7 @@ nps_proxy = (promoters - detractors) / total_responses
 **关联因果链**：CC-FLYWHEEL-01（交付→口碑→声誉→获客成本→增长→更多交付）
 **硬度**：soft
 **参数覆盖率**：2/5 (40%) — referral_prob可从CLIENT统计；acquisition_cost_trajectory可从FINANCIAL计算；nps_proxy和word_of_mouth需GA配置客户调查；brand_damage_recovery_rate需长期跟踪
-**哇呢宝贝验证**：未验证（缺NPS和推荐数据）
+**客户A验证**：未验证（缺NPS和推荐数据）
 **缺失数据**：需GA在CLIENT节点上标注referral_source，配置NPS或客户满意度调查数据采集。默认flywheel_momentum=1.0, referral_prob=0.15
 **前置边**：E-25 BRAND_CONSTRUCTION（品牌→声誉基础），E-31 CLIENT_RETENTION（留存→口碑来源），E-36 COMPETITIVE_POSITION（位势→声誉支撑）
 **后置边**：E-07 TALENT_ACQUISITION（声誉→雇主吸引力），E-05 CAPITAL_ACQUISITION（声誉→融资吸引力）
@@ -1443,7 +1443,7 @@ key_person_score = knowledge_uniqueness * (1 - replaceability)
 **关联因果链**：CC-PROTECT-01（人才留存→知识编码→组织记忆→学习连续性→效率稳定）
 **硬度**：soft
 **参数覆盖率**：2/5 (40%) — knowledge_codification可从KC/PERSON比例统计；backup_ratio需GA标注关键岗位和备份关系；key_person_score需知识独特性评估
-**哇呢宝贝验证**：未验证（缺KC创建者和备份关系数据）
+**客户A验证**：未验证（缺KC创建者和备份关系数据）
 **缺失数据**：需GA在PERSON节点上标注is_key_person和backup_person_ids，在KC节点上追踪created_by属性。默认knowledge_codification=0.5, backup_ratio=0.5
 **前置边**：E-38 TALENT_RETENTION（人才留存→知识保护对象），E-39 KNOWLEDGE_REUSE（复用率→编码价值）
 **后置边**：E-19 ORG_LEARNING（知识保护→学习连续性），E-07 TALENT_ACQUISITION（关键人风险→招聘优先级）
@@ -1480,7 +1480,7 @@ assumption_review_frequency = assumption_review_count / period
 **关联因果链**：CC-ASSUME-01（假设制定→假设监控→假设破裂→资本重分配→资源重新配置→新方向）
 **硬度**：soft
 **参数覆盖率**：2/4 (50%) — assumption_review_frequency可从PROCESS统计；assumption_validity需GOAL假设声明+ExternalBaseline对照；reallocation_sensitivity需GA配置
-**哇呢宝贝验证**：未验证（缺假设声明和系统性审查流程）
+**客户A验证**：未验证（缺假设声明和系统性审查流程）
 **缺失数据**：需GA在GOAL节点上标注假设声明（assumption_description + assumption_value），在ExternalBaseline中配置实际观测值对照。reallocation_sensitivity默认0.5
 **前置边**：E-03 EXTERNAL_ECHO（外部环境变化→假设破裂），E-14 DECISION_POWER（权力结构→假设审查机制）
 **后置边**：E-13 CAPITAL_ALLOCATION（假设破裂→资本重分配），E-18 RULE_CONSTRAINT（假设审查→规则触发紧急制动）

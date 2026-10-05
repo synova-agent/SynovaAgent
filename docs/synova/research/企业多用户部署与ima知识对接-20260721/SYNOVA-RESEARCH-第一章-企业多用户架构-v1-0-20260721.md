@@ -197,7 +197,7 @@ admin 首次启动 Electron
   "ok": true,
   "enterprise": {
     "enterpriseId": "ent_a3f2c1b9_m7k2x9p4",
-    "name": "哇呢宝贝科技有限公司",
+    "name": "客户A科技有限公司",
     "industry": "retail",
     "scale": "11-50",
     "createdAt": "2026-07-21T10:30:00.000Z"
