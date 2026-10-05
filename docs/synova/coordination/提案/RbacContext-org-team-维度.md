@@ -292,3 +292,71 @@ git grep -n "isSameDepartment" -- src/                 # 恒假判据的调用�
 
 - **未改任何代码**（本件是提案）。
 - §2.5 迁移表 P1–P4 的**卡号**仍写的是旧编号（P3 指 #1051、P4 指 §四③）；**未重编为 #1140–#1143** —— 因为 P1–P4 的**切分**是否与 RB-01~04 一一对应**应由 CTO 定**，我不代劳。
+
+---
+
+## 八、§2.x · DSH 蓝本映射（CTO 裁决令 §一 · 创始人点名"要写细，一点不能跑偏"）
+
+> 🔴 **换轴一句话**：DSH 的旋钮回答「**这一个 agent 自己能干什么**」（沙箱/审批）；
+> 我们的旋钮要回答「**这家企业的谁能看什么、能做什么**」（角色/部门/租户）。
+> ⇒ **结构照抄**（策略与执行分离 + 单点解析 + 盖章到调用）；**语义换轴** ——
+> 否则会把 agent 沙箱旋钮照到多租户上（**两个不同的轴**）。
+> 🔴 **换轴点 = 数据边界是「集合」不是「枚举」＋ 多一个 `version`**（§8.4）。
+
+### 8.1 五处映射（逐条对）
+
+| DSH（源码已核） | 我们的对应物 | **不许照抄的地方** |
+|---|---|---|
+| `dsh-permission-presets`：只管选择与默认 —— `lib/index.js:9-15`「A switch records the selected preset, then **writes changed knobs through their canonical setters**」；`:71` 默认是「**default for future sessions**」 | **岗位包**（例：市场总监·标准 / 市场总监·可读财务） | DSH 预设是**用户自己选**；我们的岗位包是**客户管理员配**（配给自己员工，不是员工自选） |
+| `dsh-sandbox-policy`：单一入口 `ctx.sandboxPolicy.resolve()`，`lib/index.js:15-16`「**stamps the mode together with the calling session's workspace root onto each**〔capability call〕」 | **`resolveContext(identity)`**（已写进 §2.2） | DSH 盖「模式 + 工作区根」；我们盖「**orgId + departmentIds + permissions + `version`**」 |
+| `sandbox-mode`（read-only / workspace-write / danger-full-access）**三档枚举** | **数据边界**：`orgId` + `departmentIds` | 🔴 **不是三档** —— 我们的边界是**集合**（多租户 + 多部门） |
+| `dsh-user-approval`：`lib/index.js:25-26`「Service Definition for the **approval capability seam**, covering requests, cancellation, audit, and per-session policy. **Missing answerers fail closed; grants apply only to the requested action.**」 | **动作边界**：`permissions`（`PermissionId[]`） | 🔴 DSH 审批是**运行时问人**；我们的 grants 是**事前配置** ⇒ **两者都要**（RB-05 见 §8.5） |
+| `effective = fold(events) ?? the deployment default`（**事件折叠 + 部署默认，无外部配置存储**） | **文件驱动 + 可配**（创始人第 ⑤ 条） | 🔴 我们**要有外部真源**（文件），因为客户管理员要改 ⇒ **折叠加文件**（不是纯事件） |
+
+### 8.2 三条不变量（**照抄，并标出处** —— 不许只说"我们要求"）
+
+| # | DSH 原文出处 | 我们的判据 |
+|---|---|---|
+| ① | `dsh-user-approval/lib/index.js:26`「**Missing answerers fail closed**」 | `resolveContext` 拿不到 identity / 拿不到 `orgId` ⇒ **拒**（不是放行）—— 对应 **D2（`''` + I2 fail-closed）** |
+| ② | 同句「**grants apply only to the requested action**」 | 人在环的"允许"**只对该一个动作有效**，下一动作**重新问**（RB-05） |
+| ③ | 「two sessions can never see each other's state」（**本版未回溯到具体 file:line，见 §8.6 待办**） | 两个 `orgId` / 两个 `departmentIds` 的上下文**绝不互见** —— 这正是 **RB-01** 的 DSH 出处 |
+
+### 8.3 🔴 我们比 DSH 多的一样（**换轴的关键，不许漏**）
+
+DSH `resolve()` 盖的章是「mode + workspace root」—— **两个字段，都不会变**。
+**我们的章必须多一个 `version`**：
+- 理由：客户的权限配置**会变**（管理员今天给市场总监开了财务、明天关了）
+- ⇒ 若盖章**不带 `version`** ⇒ **一次决策用了哪版权限，事后无法追溯**
+- ⇒ 而我们的产品要求**审计可归属**（RB-01 / 本件 §2.2 的血缘）
+
+⇒ **冻结件的 `resolveContext` 输出 = `{ orgId, departmentIds, permissions[], version }`**
+⇒ 🔴 **验收须有**：「**改了权限之后，旧决策的审计仍指向旧 version**」的判据。
+
+### 8.4 结论（写进 K11 冻结件的一句话）
+
+**结构照抄、语义换轴。换轴点 = 数据边界是「集合」不是「枚举」＋ 多一个 `version` 字段。**
+
+### 8.5 RB-05（人在环）引本节
+
+RB-05 是 §8.2 ①② 的实现，前置 **RB-03**（"批准什么"要落到具体动作）。
+🔴 **不照抄的一点**：DSH 的审批人 = 用户本人；**我们的审批人分两层** ——
+**客户侧**（客户员工被要求批准某动作）审批人**必须是客户方的人**（CTO **不得**代客户批准：越权 + 污染审计）；
+**我们侧**（派单/合并/门禁语义变更）审批人 = CTO，**且排在客户侧之后**（属内部治理效率，非客户交付面）。
+
+### 8.6 本节的 provenance 与待办（如实标）
+
+- 「428 处 / 74 文件」= **CTO 实测，as_of main@`707dd946b`**，**本版未复跑**。
+- §1.2 四姿态 = 独立复核员真 HTTP 实测，**本版未复跑**。
+- 🔴 **待办**：§8.2 ③ 的原文出处**未回溯到 file:line**（本版只拿到转述）⇒ 引它之前须先在
+  `dsh-user-approval` / `dsh-sandbox-policy` 里 grep 到原句，**否则不得标注出处**。
+
+### 8.7 🔴 包名勘误（**双向**，两边都错过）
+
+| 说法 | 事实（`ls` + `package.json` 实测） |
+|---|---|
+| ❌ CTO 裁决令称「`dsh-authorization` **不存在**，真包是 `dsh-user-approval`」 | **两包都存在**：<br>`dsh-authorization` = 「Authorization seam (`ctx.authorization`): plugin-owned flows that **obtain a credential** through a conversation with the human」<br>`dsh-user-approval` = 「User-approval seam (`ctx.approval`): **one-shot permission decisions** dispatched to composed answerers over the approval/request waterfall, **fail-closed by default**」 |
+| ❌ 产品线 v1 把 `dsh-authorization` 放进「人在环**审批**」一格 | **不精确**：它是**凭据获取**（sign-in / code entry / question，三态 `authorized`/`cancelled`/error），**不是审批** |
+
+⇒ **两边各对一半**：CTO 的**归属**正确（审批不变量出自 `dsh-user-approval`，已回溯到
+`dsh-user-approval/lib/index.js:25-26` 与 `lib/types/index.js:2`）；CTO 的**存在性判断**错误（`dsh-authorization` 存在）。
+⇒ 本件**已按正确归属改写**（§8.1 第 4 行）**并保留两包的区别**（审批 ≠ 凭据获取）。
