@@ -110,7 +110,7 @@ Synova是一个驻扎企业的AI诊断Agent，核心问题始终是：**这家�
 | # | 文件名 | 内容 | 预计字数 |
 |---|--------|------|----------|
 | 1 | SYNOVA-RESEARCH-第一章-Skill体系架构与七层分类-20260716.html | L1-L7层级定义、atomic/composite/expert复杂度、九大类别枚举、跨专家Skill设计 | ~8,000 |
-| 2 | SYNOVA-RESEARCH-第二章-专家认知任务分析与Tool原子性-20260716.html | 前置研究：以哇呢宝贝案例观察财务专家认知过程 → 提炼Tool原子性标准 → Skill组合规则 | ~6,000 |
+| 2 | SYNOVA-RESEARCH-第二章-专家认知任务分析与Tool原子性-20260716.html | 前置研究：以客户A案例观察财务专家认知过程 → 提炼Tool原子性标准 → Skill组合规则 | ~6,000 |
 | 3 | SYNOVA-RESEARCH-第三章-Skill文件结构与加载机制-20260716.html | manifest.json schema、SKILL.md结构、SkillLoader加载流程、优先级覆盖机制 | ~7,000 |
 | 4 | SYNOVA-RESEARCH-第四章-Playbook任务剧本体系-20260716.html | Playbook YAML schema、触发条件、步骤定义、条件分支、onFailure(5选项)、PlaybookExecutionRecord | ~7,000 |
 | 5 | SYNOVA-RESEARCH-第五章-本地自适应层设计-20260716.html | 企业参数覆盖表、ContextLoader、双层进化（联邦/本地）、Sentinel阈值本地化、行业模板差异 | ~6,000 |
@@ -125,9 +125,9 @@ Synova是一个驻扎企业的AI诊断Agent，核心问题始终是：**这家�
 
 在系统设计Skill分类体系之前，必须观测一个真实的诊断案例：**财务专家从收到Sentinel Finding到输出诊断结论的完整认知过程**。通过拆解这个过程的每一步，提炼出原子Tool的边界和Skill的组合逻辑。
 
-### 2.2 案例选择：哇呢宝贝现金流危机
+### 2.2 案例选择：客户A现金流危机
 
-**背景设定**: 哇呢宝贝是一家母婴电商（营收800万/年，25人团队），哨兵capital-health发出critical级警报 — 现金跑道不足60天。
+**背景设定**: 客户A是一家母婴电商（营收800万/年，25人团队），哨兵capital-health发出critical级警报 — 现金跑道不足60天。
 
 **观测对象**: 财务专家接收到SentinelFinding后的认知全过程
 
@@ -618,7 +618,7 @@ L5 存储 (store/):
 
 `
 路线A (tech/knowledge专家):  第一章 §3.2-3.5 (层级+复杂度+类别+跨专家)
-路线B (finance专家):         第二章 §2 (前置研究 — 哇呢宝贝案例分析)
+路线B (finance专家):         第二章 §2 (前置研究 — 客户A案例分析)
 路线C (tech专家):            第三章 §4.1-4.3 (Skill文件结构+加载)
 路线D (action专家):          第三章 §4.4-4.6 (Playbook+执行记录)
 路线E (strategy专家):        第五章 §5 (本地自适应层详细设计)
@@ -673,7 +673,7 @@ L5 存储 (store/):
 - [ ] 挂载架构图与 extensions/ 目录结构一致
 
 **第二章 (专家认知任务分析)**:
-- [ ] 哇呢宝贝案例7步认知过程拆解完整
+- [ ] 客户A案例7步认知过程拆解完整
 - [ ] 每步标注涉及的Tool/Skill（代码中真实存在）
 - [ ] 4条设计原则有具体来源（步骤编号）+ 对Skill体系的影响
 - [ ] Tool原子性标准引用 alidateAtomicity() 3条件
