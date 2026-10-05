@@ -24,15 +24,35 @@
 
 ## 一、缺陷物理证据（可复跑）
 
-**判定段原文**（三处副本行号不同、逻辑一致；CTO 引用的是主仓行号）：
+🔴 **断面 = `origin/main@74eb6c44cd05c6f172cd5ce8cc596336821cd9be`（2026-10-06 02:26:25 +0800）**。
+本文**全部** file:line 均以 `git show origin/main:<path>` 逐条核对；核对命令见本表下方（V-01 可复跑）。
+（更正自 v1：v1 误用了**治理线工作树**的行号却未标断面 —— 该工作树当时驻留在另一条分支上，
+`pre-commit-check.sh` 是 1616 行版、main 是 1794 行版，两版行号不可混用。CTO 复核指出的 `:1272-1393` / `:770-775` 即此误（均为该 1616 行版的治理线编号；**main 断面真值见下表**）。）
 
-| 位置 | 文件 | 行 |
+| 元素 | 文件 | 断面行号 |
 |---|---|---|
-| G12 判定段 | `scripts/pre-commit-check.sh` | `origin/main` **1432-1546**（认领池 + 认领判定本体）/ 治理线工作树 1272-1393 / CTO 主仓 1259-1380（三份同逻辑，行号不同）|
-| G12 结论消费 | 同上 | main 已由 **D1148** 并把结论并入合并声明检查 `DECL2`（不再单独 `decl_check`）⇒ 判据本体不变、消费面变了（影响断言写法，见 §四） |
-| 窗口定义 | 同上 | `DAY_WINDOW_RE` = python3 `date.today()` ±1 天 ERE |
-| 兜底失效点 | 同上 | `[ -z "$ALL_TODAY_BRIEFS" ] && ... "$CUR_BRIEF_PATH"`（池空才兜底） |
-| 第二道同日门 | 同上 | `_cb_date != TODAY ⇒ 陈旧的 current-brief，忽略它`（⇒ 选项 (c) 按字面是 no-op） |
+| 认领池 + 认领判定**完整段**（夹具提取范围） | `scripts/pre-commit-check.sh` | **:1432-1545** |
+| `CUR_BRIEF_PATH` 段（session 专属优先 → 全局回退） | 同上 | :1432-1445 |
+| 🔴 第二道同日门 `_cb_date != TODAY ⇒ 陈旧的 current-brief，忽略它` | 同上 | **:1440-1441**（⇒ 选项 (c) 按字面是 no-op） |
+| `TODAY_DASH` | 同上 | :1451 |
+| 窗口定义 `DAY_WINDOW_RE` = python3 `date.today()` ±1 天 ERE | 同上 | **:1461-1465** |
+| `today_files_by_prefix()`（按文件名日期前缀过滤） | 同上 | :1466-1478 |
+| 认领池 `ALL_TODAY_BRIEFS` + 兜底（**池空才**用 `CUR_BRIEF_PATH`） | 同上 | **:1479-1480** |
+| 认领判定 `if` 块（生成 `SCOPE_VIOLATION`） | 同上 | :1483-1545（其中 python 段 :1505-1543） |
+| 结论**消费面**（D1148 并入合并声明检查 `DECL2`，不再单独 `decl_check`） | 同上 | :1568（⇒ 判据本体不变、消费面变了，影响断言写法，见 §四） |
+| 同脚本**第二份**认领实现 = resolver 调用点 | 同上 | **:869** |
+| D718 身份锚点块（强/弱锚点定义；**「不做窗口整体放宽」否决语**） | `scripts/workflow/resolve-commit-brief.sh` | :68-104（否决语 :75；锚点 :77-104） |
+| resolver 候选池 = 窗口 ∪ 强锚点 ∪ 弱锚点 | 同上 | :147-151 |
+| `parse_q2()`（写集解析：:107-110 剥动词前缀 / :113-114 剥括号 / :115-118 剥行号） | `scripts/control-tower/brief_parser.py` | :74-126 |
+| `match_path()` = `(^|/)pat$` | 同上 | :203-205 |
+
+```bash
+# 断面与逐条行号的自核命令（可复跑）
+git show origin/main:scripts/pre-commit-check.sh | wc -l            # → 1794
+git show origin/main:scripts/pre-commit-check.sh | grep -nE '^CUR_BRIEF_PATH=""$|_cb_date=|^DAY_WINDOW_RE=|^today_files_by_prefix\(\)|^ALL_TODAY_BRIEFS=|^if \[ -n "\$ALL_TODAY_BRIEFS" \]|resolve-commit-brief.sh'
+git show origin/main:scripts/workflow/resolve-commit-brief.sh | grep -nE 'D718|^ALL_TODAY=\$\(today_files_by_prefix'
+# 段尾 fi（配对）：awk -v b=<1483> 'NR>b && /^fi$/{print NR; exit}'
+```
 
 **复跑命令**（夹具 + 生产原文，见 §4）：
 
@@ -63,7 +83,7 @@ git diff --name-only origin/main...6c72beb85^ > /tmp/preA2.txt
 **第三态（派单未提，我补）**：`ALL_TODAY_BRIEFS` 为空时整个 G12 块被跳过 ⇒ **fail-open**（`soft_pass`，静默放行）。
 今天 03:0x 实测：本线工作树 brief 最新 10-04、主仓同 ⇒ **本地 G12 什么都不判**；CI 有 10-05/10-06 brief ⇒ **假红**。同一门禁、同一天、两个相反结果。
 
-**同类错误第 3 次（触发 U5）**：D718 `resolve-commit-brief.sh:69-71` 已记载 D664 两次「处置 = 把 brief 改名到执行日」；
+**同类错误第 3 次（触发 U5）**：D718 `resolve-commit-brief.sh:68-104`（D664 处置语在 **:71**）已记载 D664 两次「处置 = 把 brief 改名到执行日」；
 2026-10-06 02:55 提交 `6c72beb85`「为过 G12 窗口改 brief 名 10-04→10-06」= 第 3 次同款手工绕行。
 （附带更正：该提交信息称"非内容变更"，实测写集**新增了 2 行**（两探针的"删除"归属行）+ `loop-execution-wiring.test.ts` 改 1 行 ⇒ "非内容变更"不准确。）
 
@@ -71,9 +91,9 @@ git diff --name-only origin/main...6c72beb85^ > /tmp/preA2.txt
 
 | 选项 | 语义 | 覆盖 | 代价 / 否决理由 |
 |---|---|---|---|
-| **(a) 分支名可解析的 brief** | 池 ∪ {分支名中 D# 对应的 brief} | 分支名带 D# 的本地跨天分支 | **成本极低**：`resolve-commit-brief.sh:79-104,147-151` 已实现（D718）。**但覆盖不了 #1009 型**（`fix/batch0a-gates-l1` 无 D#、无 `task-state/D#.json`） |
+| **(a) 分支名可解析的 brief** | 池 ∪ {分支名中 D# 对应的 brief} | 分支名带 D# 的本地跨天分支 | **成本极低**：`resolve-commit-brief.sh:68-104,147-151` 已实现（D718）。**但覆盖不了 #1009 型**（`fix/batch0a-gates-l1` 无 D#、无 `task-state/D#.json`） |
 | **(b) 放宽窗口到最近 N 天** | 池 = 今天±N | 最广 | **否决**：N 无第一性原理依据；`resolve-commit-brief.sh:75` 明确"不做窗口整体放宽（会把**他人**陈旧 brief 拉回池 → D291/D296 跨 session 误伤复发）"；且本卡夹具案例 D 把"30 天前非本分支 brief 不得认领"钉死（N 必须 ≤29，等于把"跨天多久算跨天"变成魔法数） |
-| **(c) `CUR_BRIEF_PATH` 优先于今日列表** | current-brief 直通 | ≈0 | **按字面是 no-op**：`pre-commit-check.sh:1280-1281` 对 `_cb_date != TODAY` 的 current-brief 直接丢弃；CI 树上无该文件。若要 (c) 生效必须先拆这道同日门 ⇒ 等于顺手把 (a) 的弱锚点补上（resolver 的弱锚点**不**受同日门限制） |
+| **(c) `CUR_BRIEF_PATH` 优先于今日列表** | current-brief 直通 | ≈0 | **按字面是 no-op**：`pre-commit-check.sh:1440-1441` 对 `_cb_date != TODAY` 的 current-brief 直接丢弃；CI 树上无该文件。若要 (c) 生效必须先拆这道同日门 ⇒ 等于顺手把 (a) 的弱锚点补上（resolver 的弱锚点**不**受同日门限制） |
 | **(d) 本提交携带的唯一 brief 入池**（本卡新增） | 池 ∪ {staged `.claude/task-briefs/*.md`，恰 1 份} | **CI/PR 场景**（brief 随提交走） | 低。弱化风险已收窄：只认"**恰 1 份**"，避免一次批量搬动 brief 的 PR 导入多份他人写集 |
 
 ### 推荐：方案 P = (a) ∪ (c 的弱锚点形态) ∪ (d)，且**日期窗口保留**
@@ -113,7 +133,7 @@ G12_PCC_OVERRIDE=<候选修复脚本> bash tests/control-tower/g12-crossday-clai
 - 三态退出码：段锚点缺失 / 提取段语法错 ⇒ `exit 2`（检查自身失败，禁 `|| true` 吞掉）。
   **实测生效一次**：首版把终锚写成 `soft_pass "G12: 所有文件均在 Q2 范围内"`（治理线工作树版本存在），
   而在 `origin/main` 上该行已随 **D1148 结论合并**消失 ⇒ 夹具立刻 `exit 2` 并打印 `FATAL: G12 段锚点未命中（S='1432' E=''）`，
-  **没有**静默变成"全绿"。改锚「认领判定 if 块的配对 `fi`」后两版皆可跑（main 1432-1546）。
+  **没有**静默变成"全绿"。改锚「认领判定 if 块的配对 `fi`」后两版皆可跑（断面 main **:1432-1545**）。
   ⇒ 若当初夹具沿用既有 `g12-day-window.test.sh` 的"重写判定逻辑"写法，这次结构变更**零感知**。
 - `G12_PCC_OVERRIDE=<脚本>` = 判据预演口（K3/CTO 可在落地前核候选判据）。
 - ⚠️ **接入纪律**：夹具**随修复 PR** 落地。修复未落地前它按设计为红 ⇒ **不得单独进 main**（否则 main 恒红）。
@@ -127,6 +147,10 @@ git fetch --all && python3 tests/control-tower/g12-window-impact-scan.py --json 
 ```
 
 实测（**2026-10-06T03:17:26+0800**，窗口 10-05/06/07，base=origin/main，108 个 open 非草稿 PR）：
+
+> 🔴 **本表 = D1162 定稿口径**（CTO 裁决 §2②）。所有回执、PR 正文、上报件**一律引本表**，不引重跑值。
+> 理由：本指标是**活体面**——在飞 PR 被修复/新开会让重跑值漂移（同日 22 分钟后重跑即 60 PR / 307 文件，
+> 因 #1009 类被 A2 式处置）。**多引一次 = 多一个口径**（AGENTS.md 引用纪律）。需要新数时：重跑 → 换时间戳 → 作为**新快照**登记，不覆盖本表。
 
 | 口径 | 数 |
 |---|---|
@@ -172,8 +196,8 @@ TOP 假红面：`#803 feat/d962-2a-merge`（65 代码文件 / 61 假红）、`#6
 
 | # | 形态 | 复跑 | 后果 |
 |---|---|---|---|
-| ① | Q2 写集行用**反引号**包路径（`` - `tests/x.test.sh` ``）⇒ `brief_parser.parse_q2:112-120` 不剥反引号 ⇒ 返回带反引号的"路径" ⇒ `match_path` 恒不匹配 | `python3 scripts/control-tower/brief_parser.py --q2-include <brief>` 看输出是否带 `` ` `` | 认领恒失效 ⇒ **假红**（本卡真实发生：`bash scripts/pre-commit-check.sh` 报 `tests/control-tower/g12-crossday-claim.test.sh (不在 Q2 范围内)`，改裸路径后 `✅ 所有文件均在 Q2 范围内`） |
-| ② | 路径自身含**全角括号**（本卡 brief 名 `...（提案）.md`）⇒ `parse_q2:114` 的 `re.split(r"[（(]")` 把声明**截断**在该括号处 | 同上，看输出是否为被截断的前缀 | 该行声明**部分失效**；`.claude/` 恰被 `skip_re` 跳过故本卡无害，但同样写法放在 `src/`/`tests/` 上即假红 |
+| ① | Q2 写集行用**反引号**包路径（`` - `tests/x.test.sh` ``）⇒ `brief_parser.parse_q2:74-126`（剥壳段 :107-118）不剥反引号 ⇒ 返回带反引号的"路径" ⇒ `match_path` 恒不匹配 | `python3 scripts/control-tower/brief_parser.py --q2-include <brief>` 看输出是否带 `` ` `` | 认领恒失效 ⇒ **假红**（本卡真实发生：`bash scripts/pre-commit-check.sh` 报 `tests/control-tower/g12-crossday-claim.test.sh (不在 Q2 范围内)`，改裸路径后 `✅ 所有文件均在 Q2 范围内`） |
+| ② | 路径自身含**全角括号**（本卡 brief 名 `...（提案）.md`）⇒ `parse_q2:113-114` 的 `re.split(r"[（(]")` 把声明**截断**在该括号处 | 同上，看输出是否为被截断的前缀 | 该行声明**部分失效**；`.claude/` 恰被 `skip_re` 跳过故本卡无害，但同样写法放在 `src/`/`tests/` 上即假红 |
 
 ⇒ 支撑 §3 主张：G12 的"声明→认领"链路需要**判别性夹具**（不是"有断言"）+ **单一语义源**；
 反引号/括号/glob 这类"写法细节"每一个都是静默失效点，靠人工看文档守不住。
@@ -184,6 +208,10 @@ TOP 假红面：`#803 feat/d962-2a-merge`（65 代码文件 / 61 假红）、`#6
 |---|---|---|
 | 首版夹具 | 案例 A/C/D/E 的 brief 用反引号写路径（同 §九①）⇒ 所有 brief 的认领集恒空 ⇒ A 红、C/D "红得对但理由错"（实为"无人认领"而非"排除项生效"/"陈旧未入池"） | 改裸路径后重测：C/D 仍红**且理由正确** |
 | 第二版案例 E | 断言仅"无违规" ⇒ "整段跳过(fail-open)" 与 "被正确认领" **同分** = 非判别性 | 加断言 `ALL_TODAY_BRIEFS` 必须含该跨天 brief ⇒ 修前 E 红、预演后 E 绿 |
+
+| 第三处 | 夹具结果回显写 `行 $S..$E）` —— `$E）` 被 bash 解析成变量名 `E）` ⇒ `unbound variable`（**全角标点紧贴变量**，ctrl-tower-change 模式 2；本卡内**第二次**踩到，首跑夹具时同类） | 改 `${E}`，并对全文件做"`$VAR` 紧贴全角标点"批量加固；回显口径同时修为实际提取范围 `S..E`（原 `$((E+1))` 是 off-by-one，与正文 1432-1545 对不上） |
+
+（同类错误第二次 ⇒ 触发 U5：本条属**我自己的**失误，已在夹具内做机械化加固（不只改这一处），不再靠记性。）
 
 （这两处都是"断言存在但不可判别"的 V-02 类问题 —— 与"日期窗口判错"同源：**判据的输入定义错了，断言再全也测不出**。）
 

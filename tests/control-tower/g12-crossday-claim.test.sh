@@ -75,7 +75,7 @@ run_g12() {
   cp "$bdir"/*.md "$sb/.claude/task-briefs/" 2>/dev/null || true
   cp "$REPO/scripts/control-tower/brief_parser.py" "$sb/scripts/control-tower/"
   ROOT="$sb"; STAGED_ALL="$staged"; TODAY="$D0"
-  # 判据输入契约: 分支名来源 = $SYNO_BRANCH（沙箱可注入；生产缺省 git branch --show-current）
+  # 判据输入契约: 分支名来源 = ${SYNO_BRANCH}（沙箱可注入；生产缺省 git branch --show-current）
   SYNO_BRANCH="$br"; export SYNO_BRANCH
   G12_VIOLATION=""; G12_SKIPPED=0; G12_POOL=""
   decl_check() { :; }; hard_check() { :; }; soft_pass() { :; }; soft_check() { :; }
@@ -139,5 +139,5 @@ if [ -z "$G12_VIOLATION" ]; then ok "本提交携带的 brief 完成认领（主
 rm -rf "$Ff"
 
 rm -f "$REGION"
-echo "结果: $PASS 通过, $FAIL 失败（判定段 = 生产脚本原文 行 $S..$((E+1))）"
+echo "结果: ${PASS} 通过, ${FAIL} 失败（判定段 = 生产脚本原文 行 ${S}..${E}）"
 [ "$FAIL" -eq 0 ]
