@@ -578,6 +578,7 @@ jobs:
             tests/control-tower/install-dsh-preset.test.sh \
             tests/control-tower/d956-failmsg.test.sh \
             tests/control-tower/check-required-contexts.test.sh \
+            tests/control-tower/check-required-contexts-order.test.sh \
             tests/control-tower/ci-signal-classify.test.sh; do
             echo "── $t"
             # D1147: D1094 平台跳过名单随 windows 腿迁出本 job——本矩阵已收敛为单元素 ubuntu
@@ -1126,6 +1127,7 @@ jobs:
             tests/control-tower/install-dsh-preset.test.sh \
             tests/control-tower/d956-failmsg.test.sh \
             tests/control-tower/check-required-contexts.test.sh \
+            tests/control-tower/check-required-contexts-order.test.sh \
             tests/control-tower/ci-signal-classify.test.sh; do
             echo "── $t"
             # D1094 平台跳过名单（**只在顾问腿**；分层原则：平台无关的失败不该污染 Windows 信号，
