@@ -1,7 +1,7 @@
 {
   "ref": "generated-from-board",
   "projectId": "PVT_kwDOFAmDns4Blb57",
-  "total": 68,
+  "total": 72,
   "map": {
     "0-1": {
       "card": 975,
@@ -173,6 +173,22 @@
     },
     "K1-WH": {
       "card": 1126,
+      "src": "construction"
+    },
+    "RB-01": {
+      "card": 1140,
+      "src": "construction"
+    },
+    "RB-02": {
+      "card": 1141,
+      "src": "construction"
+    },
+    "RB-03": {
+      "card": 1142,
+      "src": "construction"
+    },
+    "RB-04": {
+      "card": 1143,
       "src": "construction"
     },
     "3-12": {

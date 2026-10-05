@@ -37,7 +37,7 @@
 
 export type BlockId =
   | 'K1' | 'K2' | 'K3' | 'K4' | 'K5'
-  | 'K6' | 'K7' | 'K8' | 'K9' | 'K10';
+  | 'K6' | 'K7' | 'K8' | 'K9' | 'K10' | 'K11' | 'RETIRED';
 
 /** 验收步：完成标准 = 可执行命令（禁 grep 型 —— T6 面 1 反例） */
 export interface AcceptanceStep {
@@ -435,6 +435,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       'src/routes/',
       'tests/security/rbac-all-routes.test.ts',  // 判据交付物（本卡创建）
     ],
+    sharedWrite: ["RB-01/RB-03: src/middleware/rbac.ts（同文件，须串行 —— RB 系列落地前本项不动该文件）"],
     dependsOn: ['0-9'],
     acceptance: [
       { run: 'npx vitest run tests/security/rbac-all-routes.test.ts', expectExit: 0 },
@@ -858,6 +859,70 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '产品线 K1 窗口上报 + CTO 实测（origin/main@65aa62dea）：jwtAuthMiddleware 全局挂载于 server.ts:344；isWhitelisted() 23 条不含 /api/im/feishu/webhook ⇒ 生产姿态必 401。与 1-7/1-7bis 同族（DevMode 掩盖）。🔴 修复方向不得简单加白名单（公网入口须验签）',
   },
   {
+    id: 'RB-01',
+    worker: 'win', batch: '第1批', block: 'K11',
+    title: '多租户隔离：跨 orgId 读必须被拒（含 DevMode 姿态）',
+    paths: [
+      'src/middleware/auth.ts', 'src/middleware/rbac.ts',
+      'scripts/control-tower/probe-rbac-multitenant.ts',  // 判据交付物（本卡创建）
+    ],
+    sharedWrite: ["0-9(已作废)/1-7/K1-WH: src/middleware/auth.ts（同文件，须串行）"],
+    dependsOn: [],
+    acceptance: [
+      { run: 'npx tsx scripts/control-tower/probe-rbac-multitenant.ts --case cross-org', expectExit: 0 },
+    ],
+    status: 'todo',
+    source: '创始人 2026-10-05：「DevMode 这个肯定是不允许的」+「云端服务肯定是不能 A 客户读 B 客户数据」。判据须在【硬化姿态】与【DevMode 姿态】各跑一次（构造跨 orgId 请求 ⇒ 必被拒），不依赖"真有第二个租户"',
+  },
+  {
+    id: 'RB-02',
+    worker: 'win', batch: '第1批', block: 'K11',
+    title: '部门轴：departmentIds（复数）+ 文件驱动真源 + resolveContext 单一入口',
+    paths: [
+      'src/middleware/auth.ts', 'src/agent/prompt-assembler.ts',
+      'scripts/control-tower/probe-department-axis.ts',  // 判据交付物（本卡创建）
+    ],
+    sharedWrite: ["RB-01: src/middleware/auth.ts（同文件，须串行）", "1-7bis: src/agent/prompt-assembler.ts（若涉）"],
+    dependsOn: ['RB-01'],
+    acceptance: [
+      { run: 'npx tsx scripts/control-tower/probe-department-axis.ts --case multi-dept', expectExit: 0 },
+    ],
+    status: 'todo',
+    source: '创始人 2026-10-05：「中层就会涉及多个部门」⇒ 必须复数；「部门唯一真源赞同文件驱动」（便于不同客户调整）。🔴 提案原稿的 departmentId（单数）作废。改造面：src/ 里 teamId/department 已 428 处 / 74 文件 ⇒ 必须有 resolveContext 单一入口，否则 74 文件各写各的判断',
+  },
+  {
+    id: 'RB-03',
+    worker: 'win', batch: '第2批', block: 'K11',
+    title: '权限项模型：PermissionId[] + 角色为可配包（五档仅出厂默认）',
+    paths: [
+      'src/middleware/rbac.ts',
+      'scripts/control-tower/probe-permission-grants.ts',  // 判据交付物（本卡创建）
+    ],
+    sharedWrite: ["1-7/RB-01: src/middleware/rbac.ts（同文件，须串行）"],
+    dependsOn: ['RB-01'],
+    acceptance: [
+      { run: 'npx tsx scripts/control-tower/probe-permission-grants.ts --case custom-role', expectExit: 0 },
+    ],
+    status: 'todo',
+    source: '创始人 2026-10-05：「有一堆权限可以选择，根据岗位或角色灵活配置，不能根据岗位定死」+ 举例（同是市场总监，A 客户能看财务、B 客户不能）⇒ **不是 RBAC，是 Grant/ACL 模型**（角色只是打包）。五档保留为出厂默认，但**不是类型的一部分**',
+  },
+  {
+    id: 'RB-04',
+    worker: 'win', batch: '第3批', block: 'K11',
+    title: 'BR-3 重构：从 RBAC 档位 → Grants + 客户自定义配置面',
+    paths: [
+      'extensions/', 'src/middleware/rbac.ts',
+      'scripts/control-tower/probe-role-config.ts',  // 判据交付物（本卡创建）
+    ],
+    sharedWrite: ["RB-03: src/middleware/rbac.ts（同文件，须串行）"],
+    dependsOn: ['RB-03'],
+    acceptance: [
+      { run: 'npx tsx scripts/control-tower/probe-role-config.ts --case customer-defined', expectExit: 0 },
+    ],
+    status: 'todo',
+    source: '创始人 2026-10-05：「出厂设置5档，但是客户可以自己配。这个在企业应用里一定要可以调整，就像调整组织架构一样」。本项含客户配置面（文件驱动）',
+  },
+  {
     id: '3-12',
     worker: 'win', batch: '第3批', block: 'K6',
     title: '进化回环 E2/E3（跨客户模式 / 联邦）',
@@ -876,6 +941,14 @@ export const constructionItems: readonly ConstructionItem[] = [
 // ════════════════════════════════════════════════════════════════
 
 export const constructionBlocks: readonly ConstructionBlock[] = [
+  {
+    id: 'K11' as BlockId, name: '权限与多租户（部门轴 / 权限项模型 / 跨租户隔离）',
+    items: ['RB-01', 'RB-02', 'RB-03', 'RB-04'],
+    blockAcceptance: [
+      { run: 'npx tsx scripts/control-tower/probe-rbac-multitenant.ts --case cross-org', expectExit: 0 },
+    ],
+    source: '创始人 2026-10-05 裁：① DevMode 跨租户不可放行（原话「这个肯定是不允许的」）② 未来云端服务涉多租户（「肯定是不能 A 客户读 B 客户数据」）③ 五档出厂默认可客户自配（「像调整组织架构一样」）④ 权限项灵活配置不解岗位定死（飞书式）⑤ 部门真源文件驱动 ⑥ 先冻契约形状分批实现，**缺口必须在面板真实反映**',
+  },
   {
     id: 'RETIRED' as BlockId, name: '已作废项（保留 id 防撞号；不派单）',
     items: ['0-9'],
