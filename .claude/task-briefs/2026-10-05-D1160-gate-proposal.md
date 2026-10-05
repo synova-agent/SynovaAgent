@@ -73,8 +73,6 @@
 | 文件 | 类型 |
 |---|---|
 | .claude/task-briefs/2026-10-05-D1160-gate-proposal.md | task |
-| docs/authority/DOCS-REGISTRY.yaml | task |
 | docs/synova/coordination/D1160-门禁提案-登记表追加型豁免与D708多命中分级.md | task |
 | memory/notes/proposed/2026-10-05-d1160-gate-proposal.md | task |
-| task-state/D1160.json | task |
 
