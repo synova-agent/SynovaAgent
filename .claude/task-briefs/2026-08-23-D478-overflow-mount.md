@@ -179,7 +179,7 @@ grep 本任务关键词在 expert/ sentinel/ extensions/ knowledge/ theory/ skil
 - 不修 tsc 存量错误：server.ts L394/L395 既有错误修复越界，DS5 范围一致，28=28 零新增即可
 - 不做溢出仪表盘前端接入：另排任务
 - 不 bump VERSION.md：S-8 接线修复，非门禁/工具行为变化
-- 不碰 哇呢宝贝客户数据
+- 不碰 客户A客户数据
 
 ## Q3: 验收 — 入口 → 交互 → 结果
 

@@ -106,7 +106,7 @@ class ContextLoader {
 
 - 不修改 SentinelLoader/SkillLoader/PlaybookLoader核心
 - 不修改 D66 的41个Skill manifest
-- 不创建企业覆盖表示例文件（MVS阶段D85创建哇呢宝贝示例）
+- 不创建企业覆盖表示例文件（MVS阶段D85创建客户A示例）
 - 不实现双层进化（联邦/本地）的自动推荐——那是后续研究任务
 
 ---

@@ -29,14 +29,14 @@
 
 ## 做了什么
 
-### 1. data/golden/wani-baby-v1.json — 哇呢宝贝黄金数据集（新建）
+### 1. data/golden/client-a-v1.json — 客户A黄金数据集（新建）
 
 权威文档14 §4.3.1 完整定义。冻结静态快照:
 ```json
 {
-  "datasetVersion": "wani-baby-v1",
+  "datasetVersion": "client-a-v1",
   "enterprise": {
-    "name": "哇呢宝贝",
+    "name": "客户A",
     "industry": "母婴零售",
     "scale": "营收800万/年，25人团队"
   },
@@ -65,11 +65,11 @@
 # Step 1: 加载黄金数据 → POST /api/data/load
 # Step 2: 哨兵扫描 → POST /api/sentinel/scan-all
 # Step 3: 采集输出 → sentinelFindings/causalChainTraces/diagnosisReport/coreAggregates
-# Step 4: SHA-256 checksum对比 → 与 data/golden/checksums/wani-baby-v1-checksums.json
+# Step 4: SHA-256 checksum对比 → 与 data/golden/checksums/client-a-v1-checksums.json
 # Step 5: 生成回归报告 → 标注变化是预期内修复还是非预期退化
 ```
 
-### 3. data/golden/checksums/wani-baby-v1-checksums.json — Checksum基准（新建）
+### 3. data/golden/checksums/client-a-v1-checksums.json — Checksum基准（新建）
 
 首次MVS运行后记录4项checksum:
 - sentinelFindings SHA-256
@@ -107,8 +107,8 @@ L5（存储层: `data/golden/`）+ CI基础设施（`scripts/workflow/check-gold
 
 | 顺序 | 步骤 | 工时 | 文件 |
 |:---:|-------|:---:|------|
-| 1 | wani-baby-v1.json | 2h | data/golden/wani-baby-v1.json |
-| 2 | checksum基准记录 | 0.5h | checksums/wani-baby-v1-checksums.json |
+| 1 | client-a-v1.json | 2h | data/golden/client-a-v1.json |
+| 2 | checksum基准记录 | 0.5h | checksums/client-a-v1-checksums.json |
 | 3 | check-golden-regression.sh | 2h | scripts/workflow/check-golden-regression.sh |
 
 **总工时: 4.5h（半天）**
@@ -118,12 +118,12 @@ L5（存储层: `data/golden/`）+ CI基础设施（`scripts/workflow/check-gold
 ## 完成标准
 
 ```
-[ ] data/golden/wani-baby-v1.json: 完整JSON快照，含Financial/CLIENT/PERSONNEL/ExternalBaseline数据
-[ ] data/golden/wani-baby-v1.json: 文件头含"DO NOT MODIFY — frozen snapshot"注释
+[ ] data/golden/client-a-v1.json: 完整JSON快照，含Financial/CLIENT/PERSONNEL/ExternalBaseline数据
+[ ] data/golden/client-a-v1.json: 文件头含"DO NOT MODIFY — frozen snapshot"注释
 [ ] 6项MVS功能验收全部可通过（基于此数据集）
 [ ] check-golden-regression.sh: 5步流程全部可独立执行
 [ ] check-golden-regression.sh: SHA-256 checksum对比+预期内/非预期退化标注
-[ ] checksums/wani-baby-v1-checksums.json: 4项checksum全部记录
+[ ] checksums/client-a-v1-checksums.json: 4项checksum全部记录
 [ ] zero as any（bash脚本+JSON数据，不适用）
 ```
 

@@ -86,6 +86,6 @@ AI 助手没有「人的记忆」沉淀，新人加入只能自己读仓库。**
 
 - **取代** `docs/synova/DOCUMENT-CONVENTIONS.md`（v1.1，2026-08-14）——
   其路径描述已失效（写 `docs-synova/`，实际为 `docs/synova/`）
-- **取代** `docs/plans/codex/SYNOVA-哇呢宝贝-文档管理规范-20260805.md`（第二份文档规范）
+- **取代** `docs/plans/codex/SYNOVA-客户A-文档管理规范-20260805.md`（第二份文档规范）
 - **出库** `docs/synova/DOCUMENT-INVENTORY.md`（957 行，2026-08-14 的清单快照，中文已乱码，无未来指导价值）
 - **被取代**：无（本决策为首份文档契约）
