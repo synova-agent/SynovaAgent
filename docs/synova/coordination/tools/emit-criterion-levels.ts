@@ -77,7 +77,70 @@ const JSON_OUT = arg('out', '');
 const asOf = adj.asOf ?? new Date().toISOString();
 
 const NL = String.fromCharCode(10);
-const SECTIONS: Array<{ title: string; lines: string[] }> = [{"title":"五、复跑环境（L2/L3/L4 证据的可复跑前置）","lines":["本表每一条 L3/L4 都附「可复跑命令 + 原始输出（含 exit code）」；公共前置只有三步：","","    git -C /Users/wane/SynovaAgent worktree add /tmp/mc origin/main --detach","    ln -s /Users/wane/SynovaAgent/node_modules /tmp/mc/node_modules","    NODE=/Users/wane/.nvm/versions/node/v24.19.0/bin/node ; VITEST=/Users/wane/SynovaAgent/node_modules/.bin/vitest","","之后每条证据命令 = 在 /tmp/mc 下执行 $NODE $VITEST run <该行文件>。","用独立 worktree 的两个理由：① 主仓工作树停在 docs/D1115-b1-br5-closeout（不是 main）⇒ 直接在工作树跑，量到的是别的树；② 该族判据会改仓内文件（3-12 行备注有单跑归因实测）。"]},{"title":"六、引用与取数（哪份文件 + 哪棵树）","lines":["| 引用物 | 具体文件 | 树 / 位置 |","|---|---|---|","| 派单原件 | 《派单 · 板真值标定与回填》2026-10-05（含补 1/2/3） | 会话输入，未入 git |","| 方向锚 | ~/Synova-过程档案/2026-10-03-cto-记录-关键时刻-基座治理结论.md（§十四 活账 + 判据纪律四条） | 档案仓 ~/Synova-过程档案（独立 git 仓，非主仓工作树） |","| 施工项登记件 | docs/synova/coordination/施工项登记.ts（实测 48 项：46 活动 + 1 retired + 1 proposal） | 主仓分支 docs/D1122-cto-deliverables-contract@5f8380d9a —— 不在 main（git cat-file -e origin/main:<path> 实测失败） |","| 借鉴项登记件 | docs/synova/coordination/DSH借鉴项登记.ts（实测 24 项） | 同上（同一分支） |","| 写集可达性（L1） | 各 item 的 paths | 主仓 origin/main（committer date 见文首） |","| 板字段 | GitHub Project #1（PVT_kwDOFAmDns4Blb57） | 非 git（GitHub 侧） |","| 载体 PR 证据 | #1011 / #1012 / #998 / #1007 / #1009 / #1138 | GitHub；merge commit 的祖先性以 origin/main 判 |","","🔴 未引用 ~/山河研究院/** 任何文件（补 2：本件无上游权威件引用；若后续需引，必写清「哪份文件 + 哪棵树」）。","🔴 未引用任何 DSH 包/行为（补 1：本单不涉 DSH）。本件出现的 DSH借鉴项登记.ts 是主仓内的登记件文件名（CTO 派单 §2 指明「49 项 + 24 DSH 项」），不是 DSH 源码引用。"]}];
+const SECTIONS: Array<{ title: string; lines: string[] }> = [
+  {
+    "title": "五、复跑环境（L2/L3/L4 证据的可复跑前置）",
+    "lines": [
+      "本表每一条 L3/L4 都附「可复跑命令 + 原始输出（含 exit code）」；公共前置只有三步：",
+      "",
+      "    git -C /Users/wane/SynovaAgent worktree add /tmp/mc origin/main --detach",
+      "    ln -s /Users/wane/SynovaAgent/node_modules /tmp/mc/node_modules",
+      "    NODE=/Users/wane/.nvm/versions/node/v24.19.0/bin/node ; VITEST=/Users/wane/SynovaAgent/node_modules/.bin/vitest",
+      "",
+      "之后每条证据命令 = 在 /tmp/mc 下执行 $NODE $VITEST run <该行文件>。",
+      "用独立 worktree 的两个理由：① 主仓工作树停在 docs/D1115-b1-br5-closeout（不是 main）⇒ 直接在工作树跑，量到的是别的树；② 该族判据会改仓内文件（3-12 行备注有单跑归因实测）。"
+    ]
+  },
+  {
+    "title": "六、引用与取数（哪份文件 + 哪棵树）",
+    "lines": [
+      "| 引用物 | 具体文件 | 树 / 位置 |",
+      "|---|---|---|",
+      "| 派单原件 | 《派单 · 板真值标定与回填》2026-10-05（含补 1/2/3） | 会话输入，未入 git |",
+      "| 方向锚 | ~/Synova-过程档案/2026-10-03-cto-记录-关键时刻-基座治理结论.md（§十四 活账 + 判据纪律四条） | 档案仓 ~/Synova-过程档案（独立 git 仓，非主仓工作树） |",
+      "| 施工项登记件 | docs/synova/coordination/施工项登记.ts（实测 48 项：46 活动 + 1 retired + 1 proposal） | 主仓分支 docs/D1122-cto-deliverables-contract@5f8380d9a —— 不在 main（git cat-file -e origin/main:<path> 实测失败） |",
+      "| 借鉴项登记件 | docs/synova/coordination/DSH借鉴项登记.ts（实测 24 项） | 同上（同一分支） |",
+      "| 写集可达性（L1） | 各 item 的 paths | 主仓 origin/main（committer date 见文首） |",
+      "| 板字段 | GitHub Project #1（PVT_kwDOFAmDns4Blb57） | 非 git（GitHub 侧） |",
+      "| 载体 PR 证据 | #1011 / #1012 / #998 / #1007 / #1009 / #1138 | GitHub；merge commit 的祖先性以 origin/main 判 |",
+      "",
+      "🔴 未引用 ~/山河研究院/** 任何文件（补 2：本件无上游权威件引用；若后续需引，必写清「哪份文件 + 哪棵树」）。",
+      "🔴 未引用任何 DSH 包/行为（补 1：本单不涉 DSH）。本件出现的 DSH借鉴项登记.ts 是主仓内的登记件文件名（CTO 派单 §2 指明「49 项 + 24 DSH 项」），不是 DSH 源码引用。"
+    ]
+  },
+  {
+    "title": "七、两条 CTO 裁决的落地（2026-10-05）",
+    "lines": [
+      "### 裁决 A · 双判据（主判=正式链接；补充=弱判据）",
+      "",
+      "- ① 主判：closedByPullRequestsReferences（正式链接）—— 唯一驱动自动写板",
+      "- ② 补充：PR **标题/正文** 出现 #N（词边界）—— 一律标「弱判据」，仅在 ① 无结论时启用",
+      "- 实测复跑：② 单独命中 **9 处**；逐条回原文核证后 **≥5 处是假阳**（原文引证）：",
+      "  · 0-4 #978 ← PR #1006 正文「**不可达**（需 #978 解锁）」＝ 提及阻塞源，非载体",
+      "  · 0-11 #985 ← PR #1007 正文「**#985「两符号零调用 = 双重死门」的同款病**」＝ 类比，非载体",
+      "  · 1-7 #1051 ← PR #1144 正文「§2.5 迁移表 P1–P4 仍写旧编号（P3→#1051…）」＝ 交叉引用，非载体",
+      "  · 2-4 #1052 / 3-12 #1060 ← **本单自己的 PR #1154** 的 Refs 归集行 ⇒ 自指假阳",
+      "- ⇒ 落地口径：**② 默认只报不写**（加 --emit-weak 才写）。理由：写板＝断言，而②的假阳率实测过半。",
+      "  ⇒ 本次 9 处全部只报；若 CTO 判「要写」，一条命令即可，无需改码。",
+      "",
+      "### 裁决 B · 两字段共存（执行态=证据面 ｜ 人工过程态=派单信号）",
+      "",
+      "- 新建板字段 **「人工过程态」**（single select：未派单 / 已派单 / 不适用；fieldId PVTSSF_lADOFAmDns4Blb57zhkgh4U）",
+      "- 「执行态」= 证据面（探针自动写）｜「人工过程态」= 派单信号（人填）⇒ **互不覆盖**",
+      "- 本次回填 **28 张「人工过程态=已派单」** = 探针已按证据纠正的 11 张登记件卡 + 探针未覆盖的 17 张",
+      "- 探针**不做** --preserve-dispatch（照裁决：一个 flag 会掩盖语义）"
+    ]
+  },
+  {
+    "title": "八、本单的门禁口径（CI 例外，显式记）",
+    "lines": [
+      "- 🔴 **PR #1154 的 CI 从未触发**：gh pr checks 1154 =「no checks reported」；HEAD commit 的 check-runs total_count = 0",
+      "- ⇒ 本 PR 只走**本地门禁**：pre-commit 13 组全绿（含 Done 可证伪性 4/4）；pre-push 全门禁通过",
+      "  （首次被 golden-case 拦截，因 npx 不在 PATH；补真实工具链后通过 —— **未用 --no-verify**）",
+      "- ⇒ **例外已记**：CI 权威判定缺席，合并前须补跑 CI 或由 CTO 明示豁免"
+    ]
+  }
+];
 function renderSections(ss: Array<{ title: string; lines: string[] }>): string {
   return (ss ?? []).map((s) => NL + "## " + s.title + NL + NL + s.lines.join(NL) + NL).join("");
 }
@@ -159,8 +222,14 @@ const naCount = rows.filter((r) => r.level === '不适用').length;
 const denominator = total - naCount;
 const passRate = denominator > 0 ? ((aboveL1 / denominator) * 100).toFixed(1) : '0';
 const l1Rows = rows.filter((r) => r.level === 'L1-静态可达');
-const emptyWs = l1Rows.filter((r) => r.output.indexOf('写集为空') >= 0).length;
-const partialWs = l1Rows.filter((r) => r.output.indexOf('缺：') >= 0).length;
+const allG = grading.rows as Array<{ writeSet?: Array<{ ok: boolean }>; writeSetAllExist?: boolean }>;
+const wsEmpty = allG.filter((r) => (r.writeSet ?? []).length === 0).length;
+const wsFull = allG.filter((r) => r.writeSetAllExist === true).length;
+const wsPartial = allG.length - wsEmpty - wsFull;
+const emptyWs = wsEmpty;
+const partialWs = wsPartial;
+const l1EmptyWs = l1Rows.filter((r) => r.output.indexOf('写集为空') >= 0).length;
+const l1PartialWs = l1Rows.filter((r) => r.output.indexOf('缺：') >= 0).length;
 
 const Q = String.fromCharCode(96); // 反引号（避免转义地狱）
 let md = '';
@@ -179,7 +248,8 @@ for (const lv of ['L4-正确', 'L3-真跑', 'L2-接线', 'L1-静态可达', '不
 md += '| **合计** | **' + total + '** | 活动项分母 ' + denominator + '（= 总数 − 不适用 ' + naCount + '） |\n\n';
 md += '**判据通过率（L3+L4 / 活动项）= ' + aboveL1 + '/' + denominator + ' = ' + passRate + '%**\n\n';
 md += '- L2-接线 = **0 项** ⇒ **本波次无 L2 定级需要举证**（补 3 要求 L2/L3/L4 每条附可复跑命令 + 原始输出；L2 为空集）。\n';
-md += '- L1 = ' + l1 + ' 项：其中 **' + emptyWs + ' 项写集为空**（DSH 登记件无 paths 字段 ⇒ L1 无对象）、**' + partialWs + ' 项写集部分缺失**（缺的正是本卡"判据交付物"）、**' + (l1 - emptyWs - partialWs) + ' 项写集全额可达但无已跑判据**（未验）。\n\n';
+md += '- **写集面（全 ' + total + ' 项）**：全额可达 ' + wsFull + ' ｜ 部分缺失 ' + wsPartial + ' ｜ 无写集 ' + wsEmpty + '（' + wsFull + '+' + wsPartial + '+' + wsEmpty + '=' + total + '，自洽）\n\n';
+md += '- **L1 子集（' + l1 + ' 项）**：写集为空 ' + l1EmptyWs + ' ｜ 部分缺失 ' + l1PartialWs + ' ｜ 全额可达但无已跑判据 ' + (l1 - l1EmptyWs - l1PartialWs) + '（三类之和 = ' + l1 + '，自洽）\n\n';
 
 md += '## 二、逐项清单（' + total + ' 项）\n\n';
 md += '| 项 | 卡号 | 判据等级 | 证据命令 | 原始输出摘要 | 备注 | 取数时刻 |\n|---|---|---|---|---|---|---|\n';

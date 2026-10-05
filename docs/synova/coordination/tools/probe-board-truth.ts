@@ -76,6 +76,17 @@
  *   🔬 缺陷 1/2 修完后的复跑结论见 `docs/synova/coordination/判据等级定级清单-20261005.md`
  *      （CTO 2026-10-05 旧数 13 处**不得沿用** —— 那是未修缺陷时的不一致数）。
  *
+ * @cto-rulings（2026-10-05 CTO 两条裁决 —— **本版已落地**）
+ *   裁决 A · **双判据**：
+ *     ① `closedByPullRequestsReferences`（正式链接）—— **主判**
+ *     ② PR **标题/正文** `#N`（词边界）—— **弱判据**，会假阳（正文顺带提及也命中），
+ *        命中一律在 basis 标「弱判据」，且**仅在 ① 无结论时**启用
+ *     ⇒ **不许只用②，也不许只用①**。实例：#1051 的载体 PR 正文写 `Refs #1051`（非 Closes）
+ *       ⇒ GitHub 不建正式链接 ⇒ 只有②抓得到。
+ *   裁决 B · **两字段共存**：「执行态」= **证据面**（本探针自动写）；
+ *     「已派单」等人工过程信号移入**独立字段「人工过程态」**（人填）。
+ *     ⇒ 探针**不做** `--preserve-dispatch`（一个 flag 会掩盖语义）；两字段互不覆盖。
+ *
  * @does-not-touch 产品代码。只读 git/GitHub + 写板字段（执行态）。
  */
 
@@ -109,6 +120,8 @@ const EMIT = argv.includes('--emit');
 const SELFTEST = argv.includes('--selftest');
 const NO_FETCH = argv.includes('--no-fetch');
 const NO_TITLE_SUPPLEMENT = argv.includes('--no-title-supplement');
+/** 🔴 弱判据是否允许**写板**（默认否 —— 写板即断言，而弱判据会假阳，实测见下） */
+const WEAK_EMIT = argv.includes('--emit-weak');
 const JSON_OUT = ((): string | null => {
   const a = argv.find((x) => x.startsWith('--json='));
   return a ? a.slice('--json='.length) : null;
@@ -242,7 +255,7 @@ function fetchLinkedPrs(numbers: number[]): Map<number, PrRef[]> {
 }
 
 // ── 标题匹配（**补充**，非主判据）────────────────────────────────
-type PrLite = { number: number; state: string; mergedAt: string | null; head: string; mergeOid: string | null; title: string };
+type PrLite = { number: number; state: string; mergedAt: string | null; head: string; mergeOid: string | null; title: string; body: string };
 let PR_CACHE: PrLite[] | null = null;
 
 function allPrs(): PrLite[] {
@@ -252,7 +265,7 @@ function allPrs(): PrLite[] {
   for (const st of ['open', 'closed']) {
     const r = run('gh', [
       'pr', 'list', '-R', REPO, '--state', st, '--limit', String(PR_LIMIT),
-      '--json', 'number,state,mergedAt,headRefOid,mergeCommit,title',
+      '--json', 'number,state,mergedAt,headRefOid,mergeCommit,title,body',
     ]);
     if (r.status !== 0) die(`PR 快照取不到（state=${st}）：${r.err || r.out}`);
     let arr: Array<Record<string, any>>;
@@ -270,6 +283,7 @@ function allPrs(): PrLite[] {
         head: p.headRefOid,
         mergeOid: p.mergeCommit?.oid ?? null,
         title: p.title ?? '',
+        body: p.body ?? '',
       });
     }
   }
@@ -282,11 +296,17 @@ function allPrs(): PrLite[] {
   return out;
 }
 
-/** **精确匹配 `#<number>`**（词边界；不看 search 的模糊结果） */
-function titleMatchedPrs(number: number): PrLite[] {
+/**
+ * 🔴 **弱判据**（CTO 2026-10-05 裁：双判据，本函数只作**补充**，**不单独用**）
+ * 匹配 `#<number>`（词边界）出现在 PR **标题或正文** —— 覆盖 `Refs #N` 这类
+ * **不产生正式链接**的载体（实例：#1051 的 PR 正文写 `Refs #1051`，#948/#1011 式正式链接为空）。
+ * ⚠️ 会**假阳**：正文里顺带提到的卡号也会命中 ⇒ 命中一律在 basis 里标「弱判据」，
+ *    且仅在主判据（closedByPullRequestsReferences）无结论时才启用。
+ */
+function weakMatchedPrs(number: number): PrLite[] {
   if (NO_TITLE_SUPPLEMENT) return [];
   const re = new RegExp(`#${number}(?![0-9])`);
-  return allPrs().filter((p) => re.test(p.title));
+  return allPrs().filter((p) => re.test(p.title) || re.test(p.body));
 }
 
 // ── 祖先判定（三态；缺陷 5）──────────────────────────────────────
@@ -345,22 +365,22 @@ function derive(card: Card, linked: PrRef[]): Verdict {
     return { state: '进行中', basis: `正式链接 PR #${closed.map((p) => p.number).join(',')} CLOSED 未合` };
   }
 
-  // ③ 标题匹配（补充；仅在 ① 无结论时）
-  const sup = titleMatchedPrs(card.number);
+  // ③ 弱判据补充（标题 + 正文 `#N`；仅在 ① 正式链接无结论时启用）
+  const sup = weakMatchedPrs(card.number);
   const supMerged = sup.filter((p) => p.state === 'MERGED');
   for (const p of supMerged) {
     if (isAncestor(p.mergeOid ?? p.head) === 'yes') {
-      return { state: '已交付', basis: `（标题补充）PR #${p.number} MERGED + 在 origin/main` };
+      return { state: '已交付', basis: `（**弱判据**：PR 标题/正文含 #${card.number}）PR #${p.number} MERGED + 在 origin/main` };
     }
   }
   const supOpen = sup.filter((p) => p.state === 'OPEN');
   if (supOpen.length > 0) {
-    return { state: '进行中', basis: `（标题补充）PR #${supOpen.map((p) => p.number).join(',')} OPEN` };
+    return { state: '进行中', basis: `（**弱判据**：PR 标题/正文含 #${card.number}）PR #${supOpen.map((p) => p.number).join(',')} OPEN` };
   }
   if (supMerged.length > 0) {
     return {
       state: '已交付',
-      basis: `（标题补充）PR #${supMerged.map((p) => p.number).join(',')} MERGED（sha 不可判）`,
+      basis: `（**弱判据**：PR 标题/正文含 #${card.number}）PR #${supMerged.map((p) => p.number).join(',')} MERGED（sha 不可判）`,
     };
   }
   return { state: '未开工', basis: '无任何关联 PR（正式链接 0 / 标题补充 0）' };
@@ -464,6 +484,7 @@ const issueNumbers = items
 const linkedMap = fetchLinkedPrs(issueNumbers);
 
 let diff = 0;
+let weakDiff = 0;
 let checked = 0;
 let missing = 0;
 let unchanged = 0;
@@ -487,11 +508,17 @@ for (const it of items) {
   const v = derive(c, c.number !== null ? linkedMap.get(c.number) ?? [] : []);
   const got = c.state ?? '（未设）';
   const same = v.state === got;
+  const isWeak = v.basis.indexOf('弱判据') >= 0;
   if (same) unchanged++;
   else {
     diff++;
-    rows.push(`  🔴 ${it.id} #${c.number} 板=${got} 证据=${v.state} ｜ ${v.basis}`);
-    if (EMIT && STATE_OPT[v.state]) {
+    if (isWeak) weakDiff++;
+    rows.push(
+      isWeak
+        ? `  ⚠️ ${it.id} #${c.number} 板=${got} 弱判据推=${v.state}（**默认不写板**，须 --emit-weak）｜ ${v.basis}`
+        : `  🔴 ${it.id} #${c.number} 板=${got} 证据=${v.state} ｜ ${v.basis}`,
+    );
+    if (EMIT && STATE_OPT[v.state] && (!isWeak || WEAK_EMIT)) {
       gql(
         `mutation { updateProjectV2ItemFieldValue(input:{projectId:"${PROJECT_ID}",itemId:"${c.itemId}",fieldId:"${STATE_FIELD}",value:{singleSelectOptionId:"${STATE_OPT[v.state]}"}}) { projectV2Item { id } } }`,
       );
@@ -507,8 +534,9 @@ process.stdout.write(
   `  板真值探针 ｜ 登记件 ${items.length} 项（施工活动 + DSH）｜ 板 ${cards.length} 卡 ｜ 已核对 ${checked} ｜ 板上无卡 ${missing}\n`,
 );
 for (const r of rows) process.stdout.write(r + '\n');
+const strongDiff = diff - weakDiff;
 process.stdout.write(
-  `\n  ══ ${diff === 0 ? '✅ 板与证据一致' : `🔴 ${diff} 处不一致${EMIT ? '（已写回）' : '（dry-run，加 --emit 写回）'}`} ｜ 一致 ${unchanged}/${checked} ══\n`,
+  `\n  ══ ${diff === 0 ? '✅ 板与证据一致' : `🔴 ${strongDiff} 处主判据不一致${EMIT ? '（已写回）' : '（dry-run，加 --emit 写回）'} ｜ ⚠️ ${weakDiff} 处弱判据差异（默认只报不写，加 --emit-weak 才写）`} ｜ 一致 ${unchanged}/${checked} ══\n`,
 );
 
 if (JSON_OUT) {
