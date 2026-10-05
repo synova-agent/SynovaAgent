@@ -1,0 +1,22 @@
+{
+  "task_id": "D1157",
+  "title": "P0 假绿根修 — bypass 对账「记录判定」锚到 COMMITTED 记录行的 HASH= 字段",
+  "status": "in_progress",
+  "risk": "medium",
+  "domain": "govl",
+  "owner": "govl-line",
+  "executor": "govl-p0-fix",
+  "milestone": "门禁治理波次 · K3 提案 1（P0，插队批准）",
+  "spec": ".claude/task-briefs/2026-10-05-D1157-P0-假绿根修-bypassanchor.md",
+  "write_set": [
+    "scripts/control-tower/check-bypass-log.sh",
+    "tests/control-tower/check-bypass-log.test.sh",
+    "tests/control-tower/check-bypass-log.beforeafter.sh",
+    ".claude/task-briefs/2026-10-05-D1157-P0-假绿根修-bypassanchor.md",
+    "memory/notes/proposed/2026-10-05-d1157-bypass-hash-anchor.md",
+    "task-state/D1157.json"
+  ],
+  "updated_at": "2026-10-05",
+  "updated_by": "govl-p0-fix",
+  "note": "源 = K3 审计报告 2026-10-05 §二 提案 1（裁决：批准，P0 级修复）+ CTO 插队卡（四条硬约束）。旧判据 `grep -q \"$h\" $LEDGER_SOURCES` 无锚 ⇒ `detected-bypass … parent=<sha>` 冒充记录（假绿）；新判据 = 记录行（时间戳开头 + COMMITTED 字段）的 `HASH=` 值是该 sha 前缀。真实语料实测假绿面 = 76 个 OID。三态退出码与 D1152 三条语义不放宽。**判据变更送审件：走提案 → K3 → CTO 裁，本分支不合并。** 卡面建议的 fix/D1154-p0-bypassanchor 不可用（D1154 已被产品线 brief 占用）⇒ 经 alloc-task-id.sh --check-id 核验取 D1157。"
+}

@@ -18,7 +18,7 @@
   ],
   "impl": {
     "commit": "4d9c7ec3",
-    "summary": "main 红定位+修复: ①Dashboard Auto generate job=dashboard-auto.yml:75 孤儿 fi(PR#592 引入,bash 语法错)→删除; ②Product Progress 聚合job=redeem-progress.py:136 对 str 型 impl AttributeError(7 张存量卡)→显式 WARNING 降级跳过,refresh-all exit 0; ③Vitest 6 文件红中 3 份为测试陈旧(circular-dependency cwd 路径/p0-wane-baby 哨兵合并/import、expert-file-loader registry v3.0 六专家)→对齐; merge_writeset_gate 夹带指引增可粘贴精确豁免行。界外遗留(src 域,报 CTO): zero-code-industry、graphbridge-wiring; layer2-judge 本地红=环境性(.env 网关 404),CI 无 key 走 SKIP 守卫不红。"
+    "summary": "main 红定位+修复: ①Dashboard Auto generate job=dashboard-auto.yml:75 孤儿 fi(PR#592 引入,bash 语法错)→删除; ②Product Progress 聚合job=redeem-progress.py:136 对 str 型 impl AttributeError(7 张存量卡)→显式 WARNING 降级跳过,refresh-all exit 0; ③Vitest 6 文件红中 3 份为测试陈旧(circular-dependency cwd 路径/p0-client-a 哨兵合并/import、expert-file-loader registry v3.0 六专家)→对齐; merge_writeset_gate 夹带指引增可粘贴精确豁免行。界外遗留(src 域,报 CTO): zero-code-industry、graphbridge-wiring; layer2-judge 本地红=环境性(.env 网关 404),CI 无 key 走 SKIP 守卫不红。"
   },
   "audit": null,
   "fix_task_id": null,
