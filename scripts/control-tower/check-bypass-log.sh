@@ -33,6 +33,12 @@
 #   判据顺序（不可反）: 待记录集合 ⇒ 空 ⇒ 0；非空 ⇒ 才查来源/可解析性
 #     （来源全空 ⇒ 1；base 不可解析 ⇒ 显式 1 / 非显式 2 —— 两条 fail-closed 都保留）。
 #   三态不变: 0=无待记录或全部有记录；1=缺记录/来源全空/显式 base 不可解析；2=执行失败。
+#
+# D1157（P0 假绿根修，提案待裁）:
+#   记录判定由「账本任意位置出现该 sha」收紧为「**COMMITTED 记录行的 HASH= 字段值 = 该 sha 前缀**」。
+#   修因: 无锚匹配把 `detected-bypass … parent=<sha>` 也当成记录（假绿）；同时修正反向缺陷——
+#   记录值可为短 sha（实测 10 条 8 位），旧 `grep -q "$h"` 对它们是**假红**。
+#   影响面/回滚/与 K3 提案字面的偏差: 见 .claude/task-briefs/2026-10-05-D1157-*.md。
 # ═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
 
@@ -166,11 +172,42 @@ if [ "$_existing_sources" -eq 0 ]; then
   exit 1
 fi
 
+# ═══ D1157（P0 假绿根修 — 提案，待 K3/CTO 裁）: 记录判定锚到「COMMITTED 记录行的 HASH= 字段」═══
+#   旧判据 `grep -q "$h" $LEDGER_SOURCES` **无锚** ⇒ 该 sha 出现在账本**任何位置**都算"有记录"：
+#   实测 `detected-bypass head-mismatch marker=<sha> parent=<sha>` 的 parent=/marker= 亦被算作记录
+#   （P0 假绿：无自身记录的提交可过闸——夹具①改前 exit 0 已复现）。
+#   新判据（**先读真实行格式再定锚**：行首 / 分隔符 / 字段位置三处都取自实测普查，见 brief §格式普查）:
+#     ① 行首锚: 记录行必以 ISO 时间戳开头。普查 2003 条 distinct 含 `COMMITTED` 的行里，
+#        2002 条以时间戳开头且是记录行；唯一例外是 `LEDGER-RETRACT` **散文行**（提了"COMMITTED
+#        记录"字样），它本就该排除 —— 传散文行里若带上 `HASH=` 即会重新变出假绿，故锚行首而非找子串。
+#     ② 分隔符: 时间戳与 `COMMITTED` 之间可为 ` | `（规范写入器 post-commit.sh:117
+#        `date -Iseconds | COMMITTED | … | HASH=`）或空格（实测 1 条历史行）⇒ 两种都认。
+#     ③ 字段位置: 只认该行 `HASH=<hex>` 字段的**值**，hex 长度有界 7–40。实测值长度分布
+#        8 位 ×10（短 sha）/ 40 位 ×1992 / 44 位 ×1 —— 44 位是"两条记录挤同一行"时把后随
+#        时间戳的 `2026` 吃进来的过捕，无界抽取会**漏认该条真记录**（新假红），故必须设上界。
+#     ⇒ 判定 = 「记录行的 `HASH=` 值是该提交 sha 的**前缀**」（记录可短、提交全长；git 自身缩写语义）。
+#   为何不用 K3 提案字面的 `COMMITTED.*HASH=$sha` 精确等值: 历史 700 条记录值是 8 位短 sha，
+#     精确等值会对它们造**新的假红**（brief §与 K3 提案字面的偏差 三条逐条列出）。
+#   为何不用 `^$h`（行首 = 该 sha）: 行首是时间戳 —— 该锚永不命中（记录 sha 在行尾字段）。
+#   一次性预取集合（而非逐条扫全账本）: pending 通常 1–5 条，账本 distinct 记录 1984 条。
+_REC_RE='^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]+[^ |]*[[:space:]]*\|?[[:space:]]*COMMITTED'
+# shellcheck disable=SC2086  # 有意分词: LEDGER_SOURCES 是换行分隔的多文件列表
+_RECORDED_HASHES="$(grep -hE "$_REC_RE" $LEDGER_SOURCES 2>/dev/null | grep -oE 'HASH=[0-9a-fA-F]{7,40}' | sed 's/^HASH=//' | tr 'A-F' 'a-f' | sort -u)"  # swallow-ok: 来源缺失/无匹配 → 空集 ⇒ 全部按缺记录（fail-closed，不静默放行）
+
+_recorded() {  # <full-sha> → 0=有记录（HASH 字段值是该 sha 前缀）/ 1=无记录
+  local h="$1" v
+  [ -n "$_RECORDED_HASHES" ] || return 1
+  while IFS= read -r v; do
+    [ -n "$v" ] || continue
+    case "$h" in "$v"*) return 0 ;; esac
+  done <<< "$_RECORDED_HASHES"
+  return 1
+}
+
 MISSING=""
 for h in $PENDING; do
-  # D735 Stage 1: 在全部来源里找（旧路径 + per-session）；多文件 grep 任一命中即通过
-  # shellcheck disable=SC2086  # 有意分词: LEDGER_SOURCES 是换行分隔的多文件列表
-  if ! grep -q "$h" $LEDGER_SOURCES 2>/dev/null; then
+  # D735 Stage 1: 全部来源（旧路径 + per-session）**并集**里找；任一来源有记录即通过
+  if ! _recorded "$h"; then
     SUBJ=$(git log -1 --format=%s "$h" 2>/dev/null || echo "$h")
     MISSING="${MISSING}  $SUBJ [${h:0:8}]\n"
   fi
