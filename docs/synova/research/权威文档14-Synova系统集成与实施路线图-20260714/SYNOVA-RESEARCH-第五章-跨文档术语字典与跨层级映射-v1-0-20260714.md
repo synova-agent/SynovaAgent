@@ -44,7 +44,7 @@
 | 15 | 证据链 | 从原始数据到诊断结论的完整溯源路径。EvidencePool + Corroboration。 | 证据链 | — | — | evidence trail, lineage | — |
 | 16 | GA | 企业管理员。配置数据源、审核诊断报告、接受告警、触发诊断。 | GA | GA | GA | enterprise admin, operator | — |
 | 17 | ME（管理经济学） | 博弈论/信息经济学/代理理论的系统化应用。注入到哨兵阈值和专家推理中。 | ME/管理经济学 | — | — | managerial economics, game theory layer | — |
-| 18 | 哇呢宝贝 | Synova的第一个真实企业案例。母婴用品品牌/贸易公司。零基验证的数据来源。 | 哇呢宝贝/哇呢宝贝 | — | — | Wani Baby, WNB, 基准企业 | — |
+| 18 | 客户A | Synova的第一个真实企业案例。母婴用品品牌/贸易公司。零基验证的数据来源。 | 客户A/客户A | — | — | Wani Baby, WNB, 基准企业 | — |
 
 ---
 

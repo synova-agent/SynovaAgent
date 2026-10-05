@@ -85,7 +85,12 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
  BYPASS_LOG="$ROOT/.claude/bypass.log"
  if [ -f "$BYPASS_LOG" ]; then
    TODAY=$(date +%Y-%m-%d)
-   BYPASS_COUNT=$(grep -c "$TODAY" "$BYPASS_LOG" 2>/dev/null | tr -d '\r' || echo 0)
+   # FIX-007: 只数**真绕过**行（`detected-bypass`），与 `scripts/pre-commit-check.sh:242`（V4.5.1 修正）
+   #   同口径。旧判据 `grep -c "$TODAY"` 把当日 `COMMITTED`/`BLOCKED` 登记行一并计入
+   #   ⇒ 3 条**合法提交登记**即误熔断全队（纯假红；陈旧/非绕过 marker 不参与熔断）。
+   #   实测行形态：`… detected-bypass no-precommit-marker`（真绕过）vs
+   #   `… | COMMITTED | pre-commit PASS (hook 层登记) | HASH=…`（合法登记，不计数）。
+   BYPASS_COUNT=$(grep -c "${TODAY}.*detected-bypass" "$BYPASS_LOG" 2>/dev/null || true)
    BYPASS_COUNT=${BYPASS_COUNT//[^0-9]/}
    [ -z "$BYPASS_COUNT" ] && BYPASS_COUNT=0
    if [ "${BYPASS_COUNT:-0}" -ge 3 ]; then

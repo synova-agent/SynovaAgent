@@ -1,0 +1,19 @@
+{
+  "task_id": "D977",
+  "title": "流程：PR 归属规则 R1–R4（新文件承载）+ 派单参数更正",
+  "status": "impl_done",
+  "risk": "medium",
+  "domain": "mac",
+  "owner": "synova-cto",
+  "executor": "cto",
+  "milestone": "流程去单点",
+  "write_set": [
+    "docs/synova/coordination/PR归属与派单参数-20260926.md",
+    ".claude/task-briefs/2026-09-25-D977-pr-ownership-rule.md",
+    "memory/notes/implemented/2026-09-25-pr-ownership-rule.md",
+    "task-state/D977.json"
+  ],
+  "updated_at": "2026-09-26",
+  "updated_by": "synova-cto",
+  "note": "R1 产出者自开 PR / R2 模板六项 / R3 CTO 三件 / R4 队列不经 CTO。不直接改派单模板.md（其归属属 D931/D943 ⇒ D328 拒收，本轮亲历 3 次）；改以新文件承载，指针待 FIX-011 修复后补。附 FIX-010：merge_writeset_gate.py 参数为 --repo-root，无 --repo。"
+}

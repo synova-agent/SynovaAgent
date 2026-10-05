@@ -10,6 +10,7 @@
     "horizon_months": "number — 扫描时间跨度"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "主动扫描外部环境——企业通过市场情报、竞品分析等主动手段感知外部机会与威胁。"
 }

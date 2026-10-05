@@ -11,6 +11,7 @@
     "a_b_testing_maturity": "number (0-1) — A/B测试成熟度"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "客户使用数据引导产品改进(二阶)——客户行为数据反馈改进需求到规格转化和定价策略。"
 }

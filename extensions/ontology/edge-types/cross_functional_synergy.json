@@ -11,6 +11,7 @@
     "conflict_resolution_speed_days": "number — 冲突解决速度"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "3-6_months",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "跨部门协同提升产出质量(二阶)——活动池中的协同效应提升运营执行和创新产出的效率（取代原COUPLES）。"
 }

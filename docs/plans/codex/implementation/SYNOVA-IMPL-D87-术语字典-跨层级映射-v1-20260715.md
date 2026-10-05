@@ -38,7 +38,7 @@
 - 各层别名统一: "断裂点=循环=介入节点", "因果边≠因果链", "哨兵≠告警器"
 
 **18个核心术语:**
-断裂点、因果边、因果链、表达层实体、存储层节点池、哨兵、方案级哨兵、主Agent、compute函数、Skill、Playbook、transfer_function、硬度、Finding、证据链、GA、ME(管理经济学)、哇呢宝贝
+断裂点、因果边、因果链、表达层实体、存储层节点池、哨兵、方案级哨兵、主Agent、compute函数、Skill、Playbook、transfer_function、硬度、Finding、证据链、GA、ME(管理经济学)、客户A
 
 ### 2. docs/synova/GLOSSARY.md — 跨层级映射表（追加）
 

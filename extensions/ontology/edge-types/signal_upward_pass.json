@@ -10,6 +10,7 @@
     "escalation_threshold": "number — 向上汇报触发阈值"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "被动信号向上传递——外部冲击事件通过组织结构逐层传递到决策层注意力的过程。"
 }

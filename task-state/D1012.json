@@ -1,0 +1,16 @@
+{
+  "task_id": "D1012",
+  "title": "阶段0 独立自验（非作者自验报告）",
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "write_set": [
+    "docs/synova/coordination/阶段0-自验报告-20260926.md",
+    "task-state/D1012.json"
+  ],
+  "note": "阶段0 独立自验员（squad-verifier）交付面：①重装 hook / ②日志归档 / ③积压分类 三项的独立自验报告。本卡为解决 D708 P0 暴露面（GitHub 合成 merge 提交 subject 中 40 位 SHA 被 DID_RE 抠出假 D#，致 D#-less 分支被误绑）而补的写集声明。write_set 为 list，逐条列全本 PR 全部被声明文件；.claude/bypass.log 为 post-commit hook 运行期产物（D708 builtin 豁免，不入 write_set）。",
+  "updated_at": "2026-09-26",
+  "updated_by": "squad-verifier"
+}
