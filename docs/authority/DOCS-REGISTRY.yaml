@@ -377,3 +377,11 @@ documents:
     path: docs/synova/dispatch/D1004-js-yaml-dependency-20260925.md
     status: active
     owner: win-line
+
+  # 红因：D2 登记门禁（CI strict）判「有未登记文档 1 个（本件）」⇒ D1147 同批补登记
+  - id: DOC-0143
+    type: governance
+    path: docs/synova/coordination/D1147-单套门禁-必需context变更提案.md
+    status: active
+    owner: line-lead
+    note: "D1147 单套门禁（批2）：必需 context 12→9→10 提案 + PATCH/回滚/复核命令 + 改坏即红证据 + 例外清单"

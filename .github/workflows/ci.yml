@@ -25,8 +25,11 @@ on:
         default: false
   # ③ 周期兜底: 每 7 天（周日 20:00 UTC）无条件全量跑一次 control-tower 重活。
   #   用途: 判据路径集漂移 / 门禁腐化，在"长时间不碰控制塔路径"的静默期也能暴露（最坏延迟 7 天）。
-  #   其余 9 个 job 在本 run 里**保持原始行为（恒跑）**——不额外加 job 级 if:（队长 D1039 裁决:
+  #   其余 job 在本 run 里**保持原始行为（恒跑）**——不额外加 job 级 if:（队长 D1039 裁决:
   #   多 9 处 job 级 if = 把"必需 context 可能被 skip"的风险面从 2 个扩到 12 个，收益仅省 ~326s/周）。
+  #   D1147 新增的 3 个 job 不受此裁决约束: 它们**不承载必需 context**（advisor 腿 + 触发 job），
+  #   故 job 级 if: 不引入"必需 context 被 skip"风险；且它们的门控是**路径触发**（非 schedule 门控），
+  #   在 schedule/dispatch 下按安全网②③ 无条件跑（见文件末 D1147 段）。
   schedule:
     - cron: "0 20 * * 0"
 
@@ -309,15 +312,23 @@ jobs:
     # 公式 = max(P95×1.5, 中位数×3)）：audit 1 / Test-Kit(ubuntu) 1 / Golden Case 2 /
     # Gate Integrity 2 / Test-Kit(windows) 3 / Architecture 6 / Checker Review 6 /
     # Integration 6 / TypeScript+Iron Laws 7 / Vitest 8 / Control Tower(ubuntu) 14 / (windows) 106（D1109 后**未重取**：口径要 n=12 同分布样本，现 n=1）。
-    timeout-minutes: ${{ matrix.os == 'windows-latest' && 3 || 1 }}
+    #   ↳ windows 腿行（Test-Kit(windows) 3）自 D1147 起由**顾问 job** 承载（非必需），见文件末 D1147 段。
+    timeout-minutes: 1
     name: Test-Kit Architecture Tests (${{ matrix.os }})
     # D565 (K3 D489 批 P1, M3 家族): packages/test-kit 是独立 package（自带 lock，
     # 不在 root workspaces）——root Vitest/Architecture job 结构性覆盖不到它，
     # 棘轮基线（05-as-any-audit, as never 基线）此前只在本地执行。双平台接线闭环。
+    # 🔴 D1147（单套门禁）: windows 腿移出本矩阵 ⇒ 本 job 只产 1 个 check-run
+    #   `Test-Kit Architecture Tests (ubuntu-latest)`。矩阵**保留单元素**（不删 strategy）=
+    #   `name:` 里的 `${{ matrix.os }}` 展开机制不变 ⇒ 必需 context 名逐字零风险。
+    #   为什么 windows 腿必须同时离开"矩阵"与"必需集": 路径触发用 job 级 if: ⇒ 非命中 PR 上该
+    #   check-run 以 **`conclusion=skipped`** 出现（机制订正见文件末 D1147 段 ①，实测锚点 main tip
+    #   `1630a5014`）⇒ `skipped` ≠ success ⇒ 必需条件不满足 ⇒ 非 scripts PR 卡在合并条件上
+    #   （D971 同族；同 tests/control-tower/ci-signal-classify.test.sh:229-238 的硬断言）。
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -352,9 +363,12 @@ jobs:
       # （CT-51 队列），修复一个入列一个；全绿后本 job 收敛为跑全目录。
 
   # ══ D1039: control-tower 重活「按需跑」—— 判据唯一载体 = scripts/control-tower/ci-signal-classify.sh ══
-  # 🔴 必需 context 约束（不可违背）: `Control Tower Gate Tests (ubuntu-latest)` 与 `(windows-latest)`
-  #   是 main 分支保护的 12 个必需检查之一（证据: scripts/control-tower/ci-red-baseline.txt:65-66；
-  #   docs/synova/coordination/CI-诊断通道.md:115-116）。
+  # 🔴 必需 context 约束（不可违背）: **本 job 的 `Control Tower Gate Tests (ubuntu-latest)`**
+  #   是 main 分支保护的必需检查之一（D1147 后必需集 9 条，登记表 =
+  #   scripts/control-tower/required-checks-baseline.txt；旧证据 scripts/control-tower/ci-red-baseline.txt:65-66
+  #   与 docs/synova/coordination/CI-诊断通道.md:115-116 成文于 12 条时代，按 D1147 状态读）。
+  #   ⚠️ `(windows-latest)` 自 D1147 起**已不是必需 context**（降级为顾问 job，见文件末 D1147 段）
+  #   —— 它现在**必须**带 job 级 `if:`（路径触发），而正是这一点使它不能是必需 context。
   #   **禁止 job 级 `paths:` 过滤**——job 不被创建 ⇒ 不产生 check-run ⇒ 必需 context 永不报告
   #   ⇒ PR 永久 blocked。同型事故原文: 405 "12 of 12 required status checks are expected."
   #   （docs/synova/coordination/周报-20260922.md:58）；D971「必需检查三路修复」即治此类
@@ -366,7 +380,8 @@ jobs:
   #      git 不可用）⇒ 分类器强制 run=true 全量跑 + stderr 留痕，消费方「可见但不阻断」。
   #   ② 手动强制: workflow_dispatch 触发本身即无条件跑本 job 重活（见下方重活 step 的 if:）；
   #      布尔输入 force_control_tower_tests 为该意图的显式/可审计形式（默认 false）。
-  #   ③ 周期兜底: schedule 每 7 天无条件跑（本 run 里其余 9 个 job 保持原始恒跑行为，不加门控）。
+  #   ③ 周期兜底: schedule 每 7 天无条件跑（本 run 里其余 job 保持原始恒跑行为，不加门控；
+  #      D1147 新增的 3 个 job 亦不加门控，顾问腿在 schedule 下按安全网②③ 无条件跑）。
   # ✎ 触发/不触发清单指针: 路径集（super-set 口径 = 今天会触发全量 CI 且控制塔域可能受影响的）=
   #   .github/workflows/**（全体 workflow，不止 ci.yml —— check-progress-freshness.test.sh:42 真会
   #   grep progress-freshness-watchdog.yml）｜ .gitattributes（*.sh eol=lf 检出层，不覆盖=净回归）
@@ -381,14 +396,21 @@ jobs:
     # as_of=2026-10-02T12:45:00+08:00 / 公式 = max(P95×1.5, 中位数×3)
     #   ⇒ max(38.5×1.5, 35.2×3) = max(57.75, 105.6) = 105.6 ⇒ 取整 106（windows）。
     # ubuntu 分支同表：中位数 274s / P95 301s ⇒ max(451.5, 822) = 822s ⇒ 14min。
-    # 关键 step「Run hermetic control-tower gate tests」= 60min（windows）/ 13min（ubuntu，须 < job 级 14）。
-    timeout-minutes: ${{ matrix.os == 'windows-latest' && 106 || 14 }}
+    # 关键 step「Run hermetic control-tower gate tests」= 13min（须 < job 级 14）。
+    #   ↳ windows 行（106 / step 60min）自 D1147 起由**顾问 job**
+    #     `control-tower-windows-advisory` 承载（非必需），见文件末 D1147 段。
+    timeout-minutes: 14
     name: Control Tower Gate Tests (${{ matrix.os }})
     # D520/任务2: 双平台矩阵——平台问题（CRLF/python3/路径）不再等 Win 实测暴露。
+    #   D1147（单套门禁）: windows 腿移出本矩阵 → 降级为**顾问 job**
+    #   `control-tower-windows-advisory`（仅 scripts/**|tests/** 变更时创建；非必需；红不拦合并）。
+    #   ⚠️ 本 job「恒被调度 + 无 job 级 if:/paths: + 矩阵单元素」是**硬约束**（必需 context
+    #   `Control Tower Gate Tests (ubuntu-latest)` 的唯一产出者）；钉死它的断言在
+    #   tests/control-tower/ci-signal-classify.test.sh:229-244，勿改。
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -460,11 +482,13 @@ jobs:
           SYNO_CI: "1"   # 契约: 1 = HARD（任一 FAIL ⇒ exit 1）
         run: bash docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh
       - name: Run hermetic control-tower gate tests
-        # T3: step 级 timeout（CTO 定值 60min on windows）；ubuntu 取 13（须 < 其 job 级 14）。
-        #   ⚠️ D1109 实测（2026-10-02）：windows 该 step **现值 60min < 同口径公式值 96min**
-        #   （n=10 重活样本：中位数 1910s / P95 2393s）—— 这正是 run 36520361276 被 60min 砍死的原因。
+        # T3: step 级 timeout（ubuntu 取 13，须 < 其 job 级 14）。
+        #   D1147: 原 `${{ matrix.os == 'windows-latest' && 60 || 13 }}` 的 windows 分支随矩阵
+        #   收敛为单元素而死代码 → 收敛为字面量 13（windows 侧 60min 值迁至顾问 job）。
+        #   ⚠️ D1109 实测（2026-10-02，**windows**）：该 step 当时现值 60min < 同口径公式值 96min
+        #   （n=10 重活样本：中位数 1910s / P95 2393s）—— 正是 run 36520361276 被 60min 砍死的原因。
         #   #939 已把实测值降到 739s；按口径须待 n=12「D1109 后」重活样本再重取（现 n=1）。
-        timeout-minutes: ${{ matrix.os == 'windows-latest' && 60 || 13 }}
+        timeout-minutes: 13
         # D1039 判据: 安全网③ schedule ⇒ 无条件跑；安全网② workflow_dispatch ⇒ 无条件跑
         #   （**人工触发永不导致"不跑"**：dispatch on main 时 `git diff origin/main...HEAD` 可为空
         #     ⇒ 判据会得出 run=false，故此处直接强制，不依赖判据）；其余事件 ⇒ 非 docs-only 且
@@ -556,16 +580,10 @@ jobs:
             tests/control-tower/check-required-contexts.test.sh \
             tests/control-tower/ci-signal-classify.test.sh; do
             echo "── $t"
-            # D1094 平台跳过名单（分层原则：平台无关的失败不该拖垮整条 Windows 腿；但**显式打印**不静默）
-            #   背景: 2026-10-01 实测 —— 这两条夹具在 Windows(Git Bash) 下失败，根因是
-            #   classify-worktrees.py / verdict-baseline.py 的 Windows 兼容缺陷（另立卡 D1094 修复）。
-            #   处置: 先在 Windows 腿跳过（ubuntu 腿照跑），修好后同批删除本名单。
-            #   注: 本名单留在 ci.yml 内 ⇒ check-gate-integrity 的密封面登记闸照常认（D1093 教训）。
-            case "${RUNNER_OS:-}:$t" in
-              Windows:tests/control-tower/classify-worktrees.test.sh|Windows:tests/control-tower/verdict-baseline.test.sh)
-                echo "  ⏭ SKIP(Windows): D1094 待修 —— Python 工具 Windows 兼容缺陷（另见卡 note）"
-                continue ;;
-            esac
+            # D1147: D1094 平台跳过名单随 windows 腿迁出本 job——本矩阵已收敛为单元素 ubuntu
+            #   ⇒ `Windows:` 前缀分支恒不命中 = 死代码（铁律 37）。名单现只保留在顾问 job
+            #   `control-tower-windows-advisory`（在那里独占一份，ci.yml 内仍有该名单
+            #   ⇒ D1093「名单留 ci.yml 内则密封面登记闸照常认」的语义不变）。
             # D526: 测试失败输出进 ::error 注解——无 token 也能经 annotations 定位（D521 工具1 语义）
             if ! bash "$t" > /tmp/ct-out.log 2>&1; then
               echo "FAIL: $t"
@@ -896,3 +914,253 @@ jobs:
               echo "::notice title=gate-integrity::$line"
             done
           fi
+
+  # ══════════════════════════════════════════════════════════════════════════════════════════
+  # D1147（单套门禁 · 批2）: windows 腿 = **顾问 job**（路径触发 / 非必需 / 红不拦合并）
+  #
+  # 病根: Mac/Win 都用 DSH ⇒ 门禁只维护一套；windows 腿的价值是「平台差异信号」
+  #   （CRLF / python3 可用性 / 路径），不是「阻塞开关」。此前它是**必需** context，实测代价
+  #   = control-tower windows 腿中位数 106min（vs ubuntu 14min）⇒ 平台抖动即卡死整条 PR 队列，
+  #   与它承载的信息量不成比例。
+  # 处置（三条约束，改任一条都要重读本段）:
+  #   ① 触发 = **路径级**: 仅 `scripts/**`|`tests/**` 变更时才**执行** job（job 级 if:）⇒ 非命中
+  #      PR 不占 runner、不产生任何判定。
+  #      ⚠️ **机制订正（独立复核席 2026-10-05 实测 + 本线复现，改文案不改设计）**: job 级 `if:` 为 false 时
+  #      **check-run 仍然存在，conclusion = `skipped`**（不是"不产 check-run"）。实测锚点: main tip
+  #      `1630a5014` 的 check-runs 里恰有 1 条 `skipped`，其指向 run 37183822437 job 111381534143
+  #      （`Checker Review (maker/checker)` 的 job 级 if: 在 push 事件下为 false），该 job conclusion = skipped。
+  #      与 D971 的 405 **不是同一机制**: D971 是「run 根本没建」（`GITHUB_TOKEN` 推送的分支不触发
+  #      workflow / workflow 级 paths 过滤）⇒ check-run 恒 0 ⇒ "N of N expected"。两者**同向**：
+  #      `skipped` ≠ success，必需 context 同样得不到满足（平台语义；本仓尚无 merge_group/docs-only 现场可实测，
+  #      依据标注为外部 + 本仓 `tests/control-tower/ci-signal-classify.test.sh:229-238` 的同族风险断言）。
+  #      判据载体 = 上一个 job `windows-leg-trigger`（只产结论、不跑测试；origin/main 不可解析 ⇒
+  #      fail-safe run=true；schedule/workflow_dispatch ⇒ 安全网无条件 true）。
+  #   ② 非必需: 两个顾问 context 名**不得**再进 branch protection 必需集。理由不是"不重要"，
+  #      而是**机制性**: 非 scripts PR 上这两条 context 只会以 `conclusion=skipped` 出现（见 ① 订正）
+  #      ⇒ 必需检查得不到 success ⇒ 合并条件不满足（D971 同族后果；事故原文
+  #      docs/synova/coordination/周报-20260922.md:58）。⇒ 路径触发与必需集**不可共存**。
+  #   ③ 恒 success（**绝不产 failure 结论**）: 重活 step 用 `continue-on-error: true`，失败经
+  #      `steps.*.outcome` 检查 + `::error` 注解 + `::warning` 摘要上看板。
+  #      🔴 为什么不能"非必需但可以红"（本卡实测发现的跨机制相互作用）: C 段棘轮
+  #      （scripts/control-tower/check-gate-integrity.sh `run_ci_reds`，L676+）对账时统计 base
+  #      commit 上**全部** `conclusion == failure` 的 check-run（**不问是否必需**）⇒ 一条非必需但
+  #      会红的腿，经 merge_group / 周期 run 落在 main tip 上 ⇒ 下一个 PR 的 C 段判「未登记 CI
+  #      失败」⇒ 把**已入必需的 Gate Integrity** 拖红 ⇒ 间接阻断。顾问红变相成阻断 = 比不做更坏。
+  #      ⇒ 本卡取"恒 success + 注解"；根治（C 段排除非必需 context）属判据变更，须 K3，另立卡。
+  #   看板取数（无需 token，M9 task-11 同款公开注解面，见 gate-integrity 证据步注释）:
+  #     GET /repos/{owner}/{repo}/check-runs/{id}/annotations   ← ::error / ::warning 都在这里
+  # ══════════════════════════════════════════════════════════════════════════════════════════
+  windows-leg-trigger:
+    # D1147: 触发判据载体。**非必需**（进必需集则非命中 PR 上顾问腿只剩 `conclusion=skipped` ⇒ 必需条件
+    #   不满足，见文件末 ① 机制订正）；无 needs: ⇒ 无 D1112 隐式
+    #   success() 风险；自身 step 全 fail-safe（唯一失败面 = shell/写出 $GITHUB_OUTPUT 崩）。
+    timeout-minutes: 2
+    name: Windows Leg Trigger (D1147 path detect)
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.detect.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # 三-dot diff 依赖 origin/main 完整 ref（depth=1 时不可解析）
+      - name: Detect scripts/** or tests/** change (D1147)
+        id: detect
+        shell: bash
+        run: |
+          # 三态语义: 正常 = 写 run=true|false 后 exit 0；其余一切分支一律 fail-safe run=true（绝不误跳）
+          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+            echo "D1147: origin/main 不可解析 ⇒ fail-safe run=true"
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # 安全网②③（对齐 control-tower-tests 口径）: 人工强制 / 周期兜底 ⇒ 无条件 true
+          if [ "${GITHUB_EVENT_NAME:-}" = "schedule" ] || [ "${GITHUB_EVENT_NAME:-}" = "workflow_dispatch" ]; then
+            echo "D1147: event=${GITHUB_EVENT_NAME} ⇒ 安全网无条件 run=true"
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          CHANGED="$(git diff --name-only origin/main...HEAD 2>/dev/null || true)"
+          echo "── D1147 变更集（origin/main...HEAD）"
+          printf '%s\n' "$CHANGED"
+          if printf '%s\n' "$CHANGED" | grep -qE '^(scripts|tests)/'; then
+            echo "D1147: 命中 ^(scripts|tests)/ ⇒ run=true（windows 顾问腿将被创建）"
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "D1147: 未命中 scripts/**|tests/** ⇒ run=false（顾问腿的 job 级 if: 为 false ⇒ 其 check-run 以 conclusion=skipped 出现、不占 runner；main push 后 diff 为空亦落此支，周期 run 由上方安全网兜底）"
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  test-kit-windows-advisory:
+    # D1147 顾问腿①（承接原 `Test-Kit Architecture Tests (windows-latest)` 必需 context 的全部职责）。
+    # ⚠️ context 名与旧必需名逐字相同（看板/历史可续读），但**不得**重新入必需集（见上方 ②）。
+    # if 写法 = `!= 'false'`（fail-safe: 触发 job 失败/输出为空 ⇒ 照跑，绝不"静默不跑"）。
+    # 🔴 timeout-minutes = 10（**不由原窗口 3min**）: 复核席 P2 指出 3min 内含 npm ci + vitest on Windows
+    #   ⇒ 超时即 job 级 failure（step 级 continue-on-error **覆盖不到超时**）⇒ 会给 C 段棘轮递刀。
+    #   取值口径 = 房内公式 max(P95×1.5, 中位数×3)，n=12 旧样本中位数 3min ⇒ max(4.5, 9) = 9 ⇒ 取整 10。
+    #   顾问腿放宽超时的代价仅 = 真挂死时多占 runner；收益 = 关掉一条"超时 → failure check-run"通路。
+    timeout-minutes: 10
+    name: Test-Kit Architecture Tests (windows-latest)
+    needs: windows-leg-trigger
+    if: needs.windows-leg-trigger.outputs.run != 'false'
+    runs-on: windows-latest
+    steps:
+      # 前置步骤也 `continue-on-error: true`（复核席 P2 的另一半）: checkout/setup-node 抖动若让 job 收
+      #   `failure` 结论，同样会经 C 段棘轮拖红 Gate Integrity。前置失败 ⇒ 后续步骤照跑并在注解里显形
+      #   （summary step 会打 warning），而 job 结论恒 success。
+      - uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        continue-on-error: true
+        with: { node-version: '20', cache: 'npm' }
+      # 判定与证据同一步: `continue-on-error` ⇒ step outcome=failure 但 job 结论 = success（恒不产 failure）
+      - name: Run ratchet baseline test (05-as-any-audit, advisory)
+        id: advisory
+        continue-on-error: true
+        working-directory: packages/test-kit
+        run: |
+          npm ci
+          npx vitest run tests/architecture/05-as-any-audit.test.ts
+      - name: Surface advisory outcome (non-blocking, D1147)
+        if: always()
+        shell: bash
+        run: |
+          OUTCOME="${{ steps.advisory.outcome }}"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "::notice title=advisory:test-kit(win)::windows 顾问腿通过（非必需；不改判定）"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "::warning title=advisory:test-kit(win)::windows 顾问腿未通过 —— **非必需检查，不拦合并**；平台缺陷细节见本 job log 与注解面"
+          else
+            echo "::warning title=advisory:test-kit(win)::windows 顾问腿**未执行**（outcome='${OUTCOME}'）——本次未取得平台信号（非必需，不拦合并）；前置步骤失败时属预期"
+          fi
+          exit 0
+
+  control-tower-windows-advisory:
+    # D1147 顾问腿②（承接原 `Control Tower Gate Tests (windows-latest)` 必需 context 的全部职责）。
+    # ⚠️ 同上: 名逐字保留、**不得**重新入必需集。
+    # 触发 job 失败/输出为空 ⇒ 照跑（fail-safe），绝不静默不跑。
+    # timeout-minutes = 106 = 旧 windows 基线值（口径 max(P95×1.5, 中位数×3)；n=12 中位数 35.2min /
+    #   P95 38.5min ⇒ 105.6 ⇒ 106）；**step 级 60min** 同旧值。复核席 P2: 顾问腿的 job 级超时即
+    #   failure（step 级 continue-on-error 覆盖不到超时）⇒ 必须给足，不缩。
+    timeout-minutes: 106
+    name: Control Tower Gate Tests (windows-latest)
+    needs: windows-leg-trigger
+    if: needs.windows-leg-trigger.outputs.run != 'false'
+    runs-on: windows-latest
+    steps:
+      # 前置步骤 `continue-on-error: true`（复核席 P2）: checkout 抖动若让 job 收 failure 结论，
+      #   同样会经 C 段棘轮拖红 Gate Integrity；置为 advisory ⇒ job 结论恒 success，问题在注解里显形。
+      - uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          fetch-depth: 0  # verify-parallel 豁免逻辑依赖 origin/main ref（depth=1 时缺失→误红）
+      # 密封清单/平台跳过名单与 control-tower-tests(ubuntu) 的重活 step **逐字同源**：
+      #   🔴 漂移后果 = 顾问腿少跑/多跑（非阻断，但信号失真）⇒ 改一处必须改两处。
+      #   为何不抽公共脚本: 该清单必须在 ci.yml **全文**内（check-gate-integrity 的 [R] 密封面
+      #   登记闸按"路径出现在 ci.yml 全文"判登记，见 gate-integrity-baseline.txt 段头）——
+      #   抽走即让 ~58 个测试变成"未登记" ⇒ 棘轮爆红。故保留双份显式清单，属已知取舍。
+      # 判定与证据同一步: continue-on-error ⇒ step outcome=failure 但 job 结论 = success（恒不产 failure）。
+      - name: Run sealed control-tower gate tests (advisory, non-blocking)
+        id: advisory
+        continue-on-error: true
+        timeout-minutes: 60   # 原 windows 腿实测值（D1109: n=10 中位数 1910s / P95 2393s）
+        shell: bash
+        run: |
+          FAIL=0
+          for t in \
+            tests/control-tower/verify-parallel.test.sh \
+            tests/control-tower/verify-claims-table.test.sh \
+            tests/control-tower/write-set-check.test.sh \
+            tests/control-tower/post-commit-marker.test.sh \
+            tests/control-tower/ct-test-gate.test.sh \
+            tests/control-tower/task-start-parallel.test.sh \
+            tests/control-tower/fastlane-bypass-only.test.sh \
+            tests/control-tower/gate-stats.test.sh \
+            tests/control-tower/q2-error-locating.test.sh \
+            tests/control-tower/platform-checklist.test.sh \
+            tests/control-tower/tag-ancestry.test.sh \
+            tests/control-tower/brief-parser-strip.test.sh \
+            tests/control-tower/post-commit.test.sh \
+            tests/control-tower/simulate-ci.test.sh \
+            tests/control-tower/synova-submit.test.sh \
+            tests/control-tower/synova-commit.test.sh \
+            tests/control-tower/parallel-main-tree-occupancy.test.sh \
+            tests/control-tower/fastlane-extended.test.sh \
+            tests/control-tower/g12-day-window.test.sh \
+            tests/control-tower/incident-loop.test.sh \
+            tests/control-tower/check-canary-drift.test.sh \
+            tests/control-tower/claim-regex-narrow.test.sh \
+            tests/control-tower/ci-strict-visible.test.sh \
+            tests/control-tower/skeleton-brief-gate.test.sh \
+            tests/control-tower/clone-config-init.test.sh \
+            tests/control-tower/clone-shadow-commit.test.sh \
+            tests/control-tower/verify-parallel-ci.test.sh \
+            tests/control-tower/alloc-task-id.test.sh \
+            tests/control-tower/alloc-task-id-lock.test.sh \
+            tests/control-tower/alloc-task-id-timeout.test.sh \
+            tests/control-tower/log-snapshot.test.sh \
+            tests/control-tower/classify-worktrees.test.sh \
+            tests/control-tower/verdict-baseline.test.sh \
+            tests/control-tower/check-name-allocation.test.sh \
+            tests/control-tower/check-gitlinks.test.sh \
+            tests/control-tower/grep-oP-regression.test.sh \
+            tests/control-tower/scan-fullwidth-vars.test.sh \
+            tests/control-tower/gate-failopen-net.test.sh \
+            tests/control-tower/merge_writeset_gate.test.sh \
+            tests/control-tower/ci-ratchet-base.test.sh \
+            tests/control-tower/verify-doc.test.sh \
+            tests/doc-system/check-doc-truth.test.sh \
+            tests/doc-system/doc-registry-gate.test.sh \
+            tests/doc-system/doc-categories.test.sh \
+            tests/doc-system/doc-staleness.test.sh \
+            tests/doc-system/doc-triage.test.sh \
+            tests/doc-system/generate-chronicle-monthly.test.sh \
+            tests/control-tower/check-citations.test.sh \
+            tests/control-tower/check-progress-freshness.test.sh \
+            tests/control-tower/check-preset-bundles.test.sh \
+            tests/control-tower/check-dsh-anchor.test.sh \
+            tests/control-tower/check-gate-integrity.test.sh \
+            tests/control-tower/check-k3-report.test.sh \
+            tests/control-tower/daily-cto-board-ratio.test.sh \
+            tests/control-tower/install-dsh-preset.test.sh \
+            tests/control-tower/d956-failmsg.test.sh \
+            tests/control-tower/check-required-contexts.test.sh \
+            tests/control-tower/ci-signal-classify.test.sh; do
+            echo "── $t"
+            # D1094 平台跳过名单（**只在顾问腿**；分层原则：平台无关的失败不该污染 Windows 信号，
+            #   但**显式打印**不静默）。背景 2026-10-01 实测: 这两条夹具在 Windows(Git Bash) 下失败，
+            #   根因是 classify-worktrees.py / verdict-baseline.py 的 Windows 兼容缺陷（D1094 修复）。
+            #   注: 名单留在 ci.yml 内 ⇒ check-gate-integrity 的密封面登记闸照常认（D1093 教训）。
+            case "${RUNNER_OS:-}:$t" in
+              Windows:tests/control-tower/classify-worktrees.test.sh|Windows:tests/control-tower/verdict-baseline.test.sh)
+                echo "  ⏭ SKIP(Windows): D1094 待修 —— Python 工具 Windows 兼容缺陷（另见卡 note）"
+                continue ;;
+            esac
+            if ! bash "$t" > /tmp/ct-out-advisory.log 2>&1; then
+              echo "FAIL: $t"
+              tail -8 /tmp/ct-out-advisory.log 2>/dev/null || true
+              echo "::error title=advisory:$t::windows 顾问腿未通过（**非必需检查，不拦合并**；全文见 job log）"
+              FAIL=1
+            fi
+          done
+          # D943: DSH 断面一致性自扫（与 ubuntu 腿同款；CI 无本地 DSH 树 → --no-tree-check）
+          if ! python3 scripts/control-tower/check-dsh-anchor.py --repo . --no-tree-check; then
+            echo "::error title=advisory:check-dsh-anchor::DSH 断面自扫失败（非必需，不拦合并）"
+            FAIL=1
+          fi
+          bash scripts/control-tower/check-canary-drift.sh || true
+          exit $FAIL
+      - name: Surface advisory outcome (non-blocking, D1147)
+        if: always()
+        shell: bash
+        run: |
+          OUTCOME="${{ steps.advisory.outcome }}"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "::notice title=advisory:control-tower(win)::windows 顾问腿通过（非必需；不改判定）"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "::warning title=advisory:control-tower(win)::windows 顾问腿未通过 —— **非必需检查，不拦合并**；平台缺陷见本 job 的 ::error 注解与 log"
+          else
+            echo "::warning title=advisory:control-tower(win)::windows 顾问腿**未执行**（outcome='${OUTCOME}'）——本次未取得平台信号（非必需，不拦合并）；前置步骤失败时属预期"
+          fi
+          exit 0
