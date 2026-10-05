@@ -13,7 +13,7 @@ td{padding:5px 8px;border-bottom:1px solid var(--b);font-size:.74rem;line-height
 .block{border-left:3px solid var(--blue);background:#f8fafd;padding:10px 14px;margin:10px 0;font-size:.84rem}
 </style></head><body><div class="page">
 <h1>第六章：三阶段路线图+经济学逻辑因果验证</h1>
-<p style="color:var(--m)">Phase1/2/3 | 哇呢宝贝+OFO预置验证用例 | 验收标准 | 2026-07-15</p>
+<p style="color:var(--m)">Phase1/2/3 | 客户A+OFO预置验证用例 | 验收标准 | 2026-07-15</p>
 
 <h2>6.1 三阶段路线图</h2>
 <table>
@@ -26,7 +26,7 @@ td{padding:5px 8px;border-bottom:1px solid var(--b);font-size:.74rem;line-height
 <h2>6.2 经济学逻辑因果验证</h2>
 <div class="block"><strong>验证方式</strong>：用标准化静态快照数据输入ME compute，检查economic_interpretation输出是否符合经济学直觉。验收标准：两个案例中≥80%的ME compute输出被认定为"符合经济学逻辑"。失败→标记"需进一步校准"。</div>
 
-<h3>验证用例1：哇呢宝贝（定价+弹性验证）</h3>
+<h3>验证用例1：客户A（定价+弹性验证）</h3>
 <table>
 <tr><th>字段</th><th>内容</th></tr>
 <tr><td><strong>输入数据</strong></td><td>E-30 PRICING: price从10→11（ΔP=+10%），volume从100→85（ΔQ=-15%）。E-31 CLIENT_RETENTION: switching_cost_ratio=0.42。E-33 MARKET_COMPETITION: HHI=2800</td></tr>

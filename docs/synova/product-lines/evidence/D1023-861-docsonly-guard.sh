@@ -118,7 +118,7 @@ report struct "struct-gitignore-root-covered" "t" "$got"
 if printf 'docs/.gitignore\n' | grep -qE "$RE"; then got="t"; else got="f"; fi
 report struct "struct-gitignore-anchor-root-only" "f" "$got"
 
-# ⑥ 行为断言（D1111/A5 + 独立自验 E4 整改）: **fail-safe 计数 = 10**。
+# ⑥ 行为断言（D1111/A5 + 独立自验 E4 整改）: **docs-only detect 的 fail-safe 计数 = 10**。
 #    为什么是这一条而不是「存在任意 ^ 锚」: 独立自验实测（第 2 批 §不一致 1）证明
 #    「存在 ^ 锚」型判据对旧正则**必然 PASS**（旧式本来就有 `^\.gitignore$`/`^LICENSE$`/`^\.gitkeep$`）
 #    ⇒ 判别力 0，是纸老虎，且其注释理由与事实相反。本夹具头注释自己就禁「grep 型静态判据当验收」。
@@ -126,7 +126,19 @@ report struct "struct-gitignore-anchor-root-only" "f" "$got"
 #    本计数 10→9 ⇒ 必红（该变体夹具见验证方 `fixtures/ci-no-failsafe-51.yml`）。
 #    即：它守的是「10 处 detect 必须同样 fail-closed」这条**有后果**的不变量
 #    （唯一一处缺 fail-safe 时，origin/main 不可解析会让那处反方向早退）。
-FAILSAFE_N=$(grep -c 'git rev-parse --verify -q origin/main' "$CI_YML" || true)
+#    ⚠️ D1147（单套门禁 · 批2，2026-10-05）计数口径收紧（**变强，不是放宽**）:
+#      ci.yml 新增了 `windows-leg-trigger` job，其 detect step 也含同款
+#      `git rev-parse --verify -q origin/main` fail-safe（**路径触发**判据，非 docs-only detect）
+#      ⇒ 全文件裸计数会变成 11，从而把"本断言的语义"稀释成"数任意用途的 lookup"。
+#      故本计数**限定在 10 个 `Detect docs-only change (D515)` step 的 step 体内**（awk 按 step 边界定界）:
+#      断言仍是 10（id 不变，D1112/K3 送审件引用继续有效），且不再受无关新增影响。
+FAILSAFE_N=$(awk '
+  /^      - name: Detect docs-only change \(D515\)$/ { inside=1; next }
+  inside && /^      - name: / { inside=0 }
+  inside && /^  [A-Za-z0-9_-]+:$/ { inside=0 }
+  inside && /git rev-parse --verify -q origin\/main/ { n++ }
+  END { printf "%d", n+0 }
+' "$CI_YML")
 FAILSAFE_N=$(printf '%s' "$FAILSAFE_N" | tr -d '[:space:]')
 if [ "$FAILSAFE_N" = "10" ]; then got="10"; else got="$FAILSAFE_N"; fi
 report struct "struct-failsafe-count-10" "10" "$got"

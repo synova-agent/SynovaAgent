@@ -289,8 +289,12 @@ const CHUNK_SENSITIVITY_LEVELS = ['normal', 'sensitive', 'restricted'];
  *
  * @param role - 验签后的角色；'admin' 不受 clearance 限制
  * @param clearance - 上下文声明的敏感度上限
+ *
+ * #984: 导出为**单一真源** —— `routes/im.ts`（飞书/企微入站，无 token 路径）必须
+ * 复用同一份规则建 authProvider；若在此处复制第二份，安全规则就会出现两个副本
+ * （本仓"唯一漏斗"注释反复警告的漂移病根）。
  */
-function allowedSensitivities(role: string, clearance: string): string[] {
+export function allowedSensitivities(role: string, clearance: string): string[] {
   const levels: string[] = [...CHUNK_SENSITIVITY_LEVELS];
   const ceilingIndex = role === 'admin'
     ? levels.length - 1

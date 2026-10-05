@@ -1,0 +1,77 @@
+{
+  "task_id": "D1000",
+  "title": "身份链补全：部门可见性恢复（服务端签发/接收链 + 桌面端身份通道切换）",
+  "status": "claimed",
+  "risk": "high",
+  "domain": "win",
+  "owner_side": "win",
+  "domain_note": "本卡含两个单域切片；顶层 domain 取切片 A（win）。切片域见 slices。",
+  "slices": [
+    { "id": "A", "domain": "win", "owner_side": "win", "scope": "服务端身份链：JwtPayload +department / rbac JWT 分支 / 签发链", "status": "delivered", "head": "59f52e3a" },
+    { "id": "B", "domain": "mac", "owner_side": "win", "cross_domain_reason": "桌面端身份通道切换（electron-renderer/**）属 mac 域；创始人 2026-09-24 授权「两个都在 win 侧执行」", "status": "hold", "blocked_by": "D1001 建议件被 Mac-CTO 采纳并落表" }
+  ],
+  "renumber": "原 D948（与 Mac 侧 D948 = 队列看板每日自动化撞号）→ D1000；Mac-CTO 2026-09-25 裁定批准。正文内 D948 引用一律按 D1000 读；D949→D1001、D950→D1002。",
+  "branch_note": "共享载体分支名沿用 d948 前缀（feat/d948-identity-chain-server / -desktop、docs/d948-plan）不改名以不打断在跑 worktree；卡号以 D1000 为准。",
+  "owner": "win-codex-cto",
+  "executor": "synova-squad-lead（队长，不下场写码）+ 编码 code-a/code-b + 1 独立自验 + 1 独立复核",
+  "branch_a": "feat/d948-identity-chain-server",
+  "branch_b": "feat/d948-identity-chain-desktop",
+  "base_a": "feat/d947-middleware-default-posture @ ef5c8caa（栈式；D947 未合 main）",
+  "depends_on": ["D947"],
+  "blocked": "① 切片 A 已交付 59f52e3a，K3 独立终审已出（audit/k3-20260925-d1000 @ 3cbbca27；7 成立 / 2 不成立 / 1 未闭合），待 CTO 收件闸裁定与合并。② 切片 B 前置：D1001 改判建议件已入库（docs/d948-plan @ cfedc975），待 Mac-CTO 采纳落表；落表前切片 B 不开工。③ 越权分支 fix/d949-ownership-electron-tests @ f828311c 保留为作废样本、不合并。",
+  "target": "2026-W40",
+  "spec": "docs/synova/dispatch/D1000-win-identity-chain-department-20260924.md（派单即规格；§〇之二为改号与字段说明，效力优先）+ 同目录 D1000-派单勘误-20260925.md",
+  "milestone": null,
+  "write_set_a": [
+    "src/middleware/auth.ts",
+    "src/middleware/rbac.ts",
+    "src/routes/auth.ts",
+    "tests/middleware/auth.test.ts",
+    "tests/middleware/rbac.test.ts",
+    "tests/routes/auth.test.ts",
+    "tests/routes/d948-department-visibility.test.ts",
+    ".claude/task-briefs/2026-09-25-D948-slice-a-identity-chain.md",
+    ".claude/bypass.log"
+  ],
+  "write_set_a_note": "9 件 = 8 声明 + 1 hook 副产物（bypass.log，D521 自动登记）。CTO 2026-09-25 实测口径。K3 审计 M-8 指出旧卡写 6 件会把实际改动读成夹带 3 件。",
+  "write_set_b": [
+    "electron-renderer/src/stores/auth-session.ts",
+    "electron-renderer/src/stores/ga-collab.ts",
+    "electron-renderer/src/components/RightPanel.tsx",
+    "electron-renderer/src/components/LoginPanel.tsx",
+    "electron-renderer/src/lib/api.ts",
+    "electron-renderer/src/stores/app-store.ts",
+    "tests/electron/d1000-*.test.ts（P0-a+ 落地后随 mac 域）"
+  ],
+  "functional_regression": {
+    "label": "功能回退（部分恢复，未闭环）",
+    "what": "D947 登记的「JWT 用户部门级可见性恒 deny」在 D1000 切片 A 后仅恢复到签发/验签/RBAC 上下文层；用户可见层未恢复。",
+    "walls": {
+      "W1": "department 无生产写入者（createUser 3 处、updateUser 生产 6 处均不写部门）",
+      "W2": "GET /api/workspaces/mine HTTP 恒 404（/:id 遮蔽）——由 D1002 承接",
+      "W3": "桌面端无部门工作区消费点（useWorkspaces.ts:19-20 明写本地 Mock）"
+    },
+    "downstream_cards": ["D1001", "D1002", "D1004", "W1/W3/W4/W5（待 Mac-CTO 发新号段后立卡）"],
+    "forbidden_wording": "严禁写成「已知限制」或「部门可见性已可用」"
+  },
+  "k3_audit": {
+    "branch": "audit/k3-20260925-d1000",
+    "head": "3cbbca27",
+    "report_blob": "01614bdad3327c49dcc223a81d2be50f0f0db766",
+    "report_size": 49156,
+    "verdict": "7 成立 / 2 不成立 / 1 未闭合（K3 不写「通过」）",
+    "not_established": [
+      "M-1：执行方称 A5b 变异 16 failed，K3 实测 18",
+      "M-6：越权分支与建议件非逐字（规则本体一致，注释/source 不同）"
+    ],
+    "unclosed": [
+      "R-1：未跑全量/CI 未补跑（K3 以配对差分替代覆盖回归面，CI 侧仍未验证）"
+    ]
+  },
+  "impl": null,
+  "audit": "K3 独立终审 2026-09-25（报告 2026-09-25-K3-D1000.md）",
+  "fix_task_id": null,
+  "note": "来源：D947 PLAN-REV2 REV-8 登记的「JWT 用户部门级可见性恒 deny」功能回退。CTO 定稿时 REV-8 把它标成「Mac 域登录链」——经 check-ownership.py 实测系错标（JwtPayload/rbac/routes/auth 全判 win），本件为实体纠正。【行号口径已订正 2026-09-25，旧坐标作废】：rbac.ts JWT 分支为 :127（派单原写 :104-105，实为 RbacContext.authenticated 的 JSDoc 区）；签发点三处 = routes/auth.ts :97（register）/ :134（login）/ :176（refresh，派单原漏列）；ga-collab.ts getSeedToken 为 :99（派单原写 :60）。实测依据（ref=feat/d947-middleware-default-posture）：auth.ts:26-33 JwtPayload 无 department；rbac.ts:127 写死 department: undefined；electron-renderer 零 Bearer、零 /api/auth 调用；RightPanel.tsx:159 与 ga-collab.ts:99 仍在发自报头而服务端已忽略。创始人 2026-09-24 裁定：①客户端自报身份完全不允许 ②默认拒绝 ③提交时就该拦。执行形态：Agent Teams 组队、队长不下场写码、独立自验不得由编码兼任、两切片串行、重型验证串行 ≤1、每条修复带 1 个改坏即红反例、回执含团队成员运行记录。",
+  "updated_at": "2026-09-25",
+  "updated_by": "win-codex-cto"
+}

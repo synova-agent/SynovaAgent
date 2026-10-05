@@ -11,6 +11,7 @@
     "alternative_supplier_count": "number — 替代供应商数量"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "采购时压低供应商价格——采购量和替代选择带来对供应商的议价能力，降低采购成本。"
 }

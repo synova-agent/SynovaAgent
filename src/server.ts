@@ -16,7 +16,7 @@ import { initFileDrivenLoaders } from './init/file-driven-loaders'; // v3.6 Batc
 import { ToolRegistry } from './agent/tools';
 import { KnowledgeInjector, KnowledgeConflictHandler, AtomicWriter } from './agent/index';
 import { BossMailbox } from './agent/boss-mailbox';
-import { rbacMiddleware, extractRbacContext, canAccessWorkspace, canModifyWorkspace } from './middleware/rbac';
+import { rbacMiddleware } from './middleware/rbac'; // D947: 仅保留中间件；装配期空调用已删（见 244 区注释）
 import { jwtAuthMiddleware } from './middleware/auth';
 import authRoutes from './routes/auth';
 import { buildInheritedContext, detectConflicts } from './agent/workspace-service';
@@ -244,9 +244,8 @@ export async function createServer(): Promise<Server> {
   // PRD v1.6 Slice 7: workspace-service 接线
   buildInheritedContext({ parentId: 'init', department: 'dept', title: 'init', source: 'boss_assigned', parentSummary: 'init' });
   detectConflicts([]); // Slice 7 冲突检测初始化
-  const rbacCtx = extractRbacContext({ headers: { 'x-synova-token': 'admin::dev' } }); // Slice 7 RBAC
-  void canAccessWorkspace(rbacCtx, { visibility: 'global' });
-  void canModifyWorkspace(rbacCtx, { visibility: 'global' });
+  // D947/P7: 装配期 RBAC「自欺块」（原 :247-249 —— 硬编码管理员身份字面量 + 两处 `void` 丢弃判定结果）已删除；
+  // 真实责任在 rbacMiddleware 注入 req.rbac（下方路由区）+ 路由级守卫消费 req.rbac（P3）。
 
   const app = express();
 
@@ -363,6 +362,17 @@ export async function createServer(): Promise<Server> {
       res.status(500).json({ ok: false, error: msg, degraded: true });
     }
   });
+  // D947/P4: RBAC 注入点前移（原 :373 → 此处；仍晚于 jwtAuthMiddleware 与 rateLimitMiddleware）
+  app.use(rbacMiddleware);
+  // ── D947/P4 前移理由与不变量（供 K3 核对）─────────────────────────────
+  // ① 前移前 rbac 位于 workspacesApiRoutes 之后 ⇒ 该路由组永远拿不到 req.rbac ⇒ 路由级守卫必然 fail-closed。
+  // ② 前移后本行之前仅剩 5 个路由注册（豁免集，均有既有文档依据）：
+  //    setupGuideGoneRouter(D716 410) · llmConfigRoutes(D575 首启向导) · uploadV2GoneRouter(D590② 410) ·
+  //    authRoutes(登录入口) · 内联 GET /api/status/budget。判据 = P4 判别谓词（非 REV-6 字面 awk）。
+  // ③ 不变量 I4：rbac 不得早于 jwtAuthMiddleware —— 唯一可信来源是 req.auth（验签后注入）。
+  // ④ rbacMiddleware 本体语义不变（仅注入 req.rbac + next()，不做拦截）：/api/knowledge/ask(:372→本行后)、
+  //    /health 与 /api/healthz 均在本行之后，只有「不拦截」时其直达语义才成立；
+  //    拦截责任在路由级守卫（P3），本文件不新增第二份白名单（auth.ts:82 唯一源）。
   app.use(homeRoutes);
   app.use(chatRoutes);
   app.use(workspaceRoutes);
@@ -370,7 +380,6 @@ export async function createServer(): Promise<Server> {
   app.use(workspacesApiRoutes);
   app.use(gaDiagnosisRoutes);
   app.use(knowledgeAskRoutes);
-  app.use(rbacMiddleware);
   app.use(deptWorkspaceRoutes);
   app.use(actionsApiRoutes);
   app.use(dataRoutes);

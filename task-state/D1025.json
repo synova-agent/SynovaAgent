@@ -1,0 +1,30 @@
+{
+  "task_id": "D1025",
+  "title": "CJK 文件名致 docsonly 误判修复（core.quotepath）",
+  "status": "claimed",
+  "spec": ".claude/task-briefs/2026-09-26-D1025-CJK-quotepath-fix.md",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "write_set": [
+    ".github/workflows/ci.yml",
+    "docs/synova/coordination/D1024-condition3-evidence-20260926.md",
+    "task-state/D1025.json"
+  ],
+  "note": {
+    "缺陷": "detect 步用 `git diff --name-only origin/main...HEAD`，CI 侧 core.quotepath 为默认 true ⇒ CJK 路径被加引号转义（行尾为 \"）⇒ 正则 `\\.(md|json)$` 失配 ⇒ 非 ASCII 文件名的 doc-only PR 误判为 docs_only=false（全量跑）",
+    "实证": "run 36235084014（分支 chore/D1024-docsonly-verify，diff 仅 .claude/bypass.log + CJK .md）→ 12 job 跳步=0 全量照跑；同分支 diff 本地（core.quotepath=false）复算两行均属 doc 面",
+    "影响": "失败方向安全（全量跑而非误跳），但属误判且 T3 半数收益失效",
+    "修复_patch_摘要": "detect 步改为 `git -c core.quotepath=false diff --name-only origin/main...HEAD`（备选：checkout 步加 `core.quotepath false`）",
+    "判据": [
+      "① CJK doc-only ⇒ 跳步 > 0 且 run < 1 分钟",
+      "② 非 doc PR ⇒ 行为不变",
+      "③ 反例 doc + 1 个 .ts ⇒ 全量照跑"
+    ],
+    "取证约束": "CI 用 base+head 合并引用的 workflow ⇒ 与条件③ 同：只能『先合后证』（探针分支必须叠加修复后的 ci.yml；探针文件用已跟踪的 ASCII 名，避免 untracked / CJK 两坑）",
+    "as_of": "2026-09-26T18:31+08:00",
+    "观测者": "squad-ci"
+  },
+  "updated_at": "2026-09-26",
+  "updated_by": "squad-ci"
+}

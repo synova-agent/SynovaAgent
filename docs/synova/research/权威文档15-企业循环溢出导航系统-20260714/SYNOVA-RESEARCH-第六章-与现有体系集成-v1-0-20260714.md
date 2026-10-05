@@ -308,7 +308,7 @@ generateGoalFromOverflow() 调用
 | 子循环配置 | 4个静态 `*.cycle.json`（builtin） | 加载15-20个行业模板 + 动态注册 + GA覆盖表 | `CycleRegistry` + `cycle-loader.ts` |
 | 溢出计算 | 手动填写的演示数据 | 自动计算管线 + `overflowFormula` 解析 + 42边参数追踪 | `OverflowMonitorLoop` + `computeOverflow()` |
 | 溢出仪表盘 | 静态渲染的仪表盘行 | 动态生成 + 热力图 + 传导时间线 + WebSocket 推送 | `generateDashboard()` + `OverflowHeatmap` |
-| 投入建议引擎 | 硬编码弹性系数的哇呢宝贝单一模拟 | 动态读取42边弹性系数 + 多子循环排序 + 执行约束检测 | `POST /api/investment/simulate` |
+| 投入建议引擎 | 硬编码弹性系数的客户A单一模拟 | 动态读取42边弹性系数 + 多子循环排序 + 执行约束检测 | `POST /api/investment/simulate` |
 | 溢出→告警推送 | 不推送（MVS阶段无持续运行） | Module-1推送集成 + 安静期协议 + CRITICAL全通道 | §6.3 的推送协议 |
 | 溢出→Goal生成 | 不自动生成（手动创建演示Goal） | 自动触发 + 轻量级Goal + 方案哨兵 | §6.4 的生成链路 |
 | 6th Loop调度 | 不实现（手动触发溢出计算） | CronScheduler注册 + 五循环接口 | §4.2 的5个函数签名 |

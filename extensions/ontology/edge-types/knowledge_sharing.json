@@ -11,6 +11,7 @@
     "tacit_knowledge_loss_rate": "number (0-1) — 隐性知识流失率"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "个体经验转化为团队能力(二阶)——个体知识通过分享机制扩散为团队知识。"
 }

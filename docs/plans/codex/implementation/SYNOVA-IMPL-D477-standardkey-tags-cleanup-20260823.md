@@ -43,7 +43,7 @@
 * 不改 outcome/innovation/risk.json 的 tags 定义本身（本任务只注册标签；若实现者判断某标签语义错误可同步修正，但须 §3.2 回填）。
 * 不改 D476 写集（ga-collaboration/interactive-card/overflow）。
 * 不改 scripts/（DSH 地盘，check-file-driven.sh 只读消费）。
-* 不碰 哇呢宝贝客户数据。
+* 不碰 客户A客户数据。
 
 ## 4. 测试要求（测试优先：先写 red → 再实现 green）
 

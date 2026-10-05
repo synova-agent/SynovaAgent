@@ -11,6 +11,7 @@
     "knowledge_base_completeness": "number (0-1) — 知识库完整度"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "知识复用——项目经验沉淀到知识池，减少重复学习成本。"
 }
