@@ -9,7 +9,7 @@
  FAIL  tests/agent/expert-file-loader.integration.test.ts > ExpertFileLoader — 8段组装集成测试 > Given 完整索引, When loadFromIndex, Then 8 位专家全部加载成功
  FAIL  tests/agent/expert-file-loader.integration.test.ts > ExpertFileLoader — 8段组装集成测试 > Given 已加载专家, Then prompt 包含身份和规则
  FAIL  tests/agent/expert-file-loader.integration.test.ts > ExpertFileLoader — 8段组装集成测试 > Given 已加载专家, When getPrompt, Then prompt 包含必要章节
- FAIL  tests/e2e/p0-wane-baby.test.ts [ tests/e2e/p0-wane-baby.test.ts ]
+ FAIL  tests/e2e/p0-client-a.test.ts [ tests/e2e/p0-client-a.test.ts ]
  FAIL  tests/electron/use-streaming-conversation.test.ts [ tests/electron/use-streaming-conversation.test.ts ]
  FAIL  tests/expert/analytical-lens.test.ts > analytical_lens 完整性 > action IDENTITY.md 存在
  FAIL  tests/expert/analytical-lens.test.ts > analytical_lens 完整性 > business_model IDENTITY.md 存在
@@ -32,7 +32,7 @@
  FAIL  tests/agent/expert-file-loader.integration.test.ts > ExpertFileLoader — 8段组装集成测试 > Given 完整索引, When loadFromIndex, Then 8 位专家全部加载成功
  FAIL  tests/agent/expert-file-loader.integration.test.ts > ExpertFileLoader — 8段组装集成测试 > Given 已加载专家, Then prompt 包含身份和规则
  FAIL  tests/agent/expert-file-loader.integration.test.ts > ExpertFileLoader — 8段组装集成测试 > Given 已加载专家, When getPrompt, Then prompt 包含必要章节
- FAIL  tests/e2e/p0-wane-baby.test.ts [ tests/e2e/p0-wane-baby.test.ts ]
+ FAIL  tests/e2e/p0-client-a.test.ts [ tests/e2e/p0-client-a.test.ts ]
  FAIL  tests/electron/use-streaming-conversation.test.ts [ tests/electron/use-streaming-conversation.test.ts ]
  FAIL  tests/expert/analytical-lens.test.ts > analytical_lens 完整性 > action IDENTITY.md 存在
  FAIL  tests/expert/analytical-lens.test.ts > analytical_lens 完整性 > business_model IDENTITY.md 存在
