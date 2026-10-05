@@ -119,7 +119,7 @@ OUT1="$(gate_in "$B" origin/main)"; RC1=$?
 if [ "$RC1" -eq 0 ]; then
   ok "fresh clone（来源全空 + 无待记录提交）→ exit 0（D1152/② 空集⇒0）"
 else
-  no "fresh clone 应 exit 0, 实际 $RC1（#1075 阻塞根因未修）"; printf '%s\n' "$OUT1" | sed 's/^/     | /'
+  no "fresh clone 应 exit 0, 实际 ${RC1}（#1075 阻塞根因未修）"; printf '%s\n' "$OUT1" | sed 's/^/     | /'
 fi
 
 # ── 用例②（D1152/① 正常）: B 机拉 A 机分支（提交已在 origin）→ 不要求补记 → exit 0 ──
@@ -129,7 +129,7 @@ OUT2="$(gate_in "$B" origin/main)"; RC2=$?
 if [ "$RC2" -eq 0 ]; then
   ok "他机已过闸提交（${A_HASH:0:8} 已是 origin/feat/x 祖先）不再要求本机补记 → exit 0"
 else
-  no "他机已过闸提交被重复要求 → exit $RC2（跨机永久误拦未修）"; printf '%s\n' "$OUT2" | sed 's/^/     | /'
+  no "他机已过闸提交被重复要求 → exit ${RC2}（跨机永久误拦未修）"; printf '%s\n' "$OUT2" | sed 's/^/     | /'
 fi
 
 # ── 用例③（边界，**不许放宽**）: B 机本机新提交 + 来源全空 → exit 1 ──
@@ -140,7 +140,7 @@ OUT3="$(gate_in "$B" origin/main)"; RC3=$?
 if [ "$RC3" -eq 1 ]; then
   ok "本机新提交无记录 + 来源全空 → exit 1（D1145 fail-closed 保留，未放宽）"
 else
-  no "本机新提交无记录应 exit 1, 实际 $RC3（对账被放宽 ⇒ 假绿）"; printf '%s\n' "$OUT3" | sed 's/^/     | /'
+  no "本机新提交无记录应 exit 1, 实际 ${RC3}（对账被放宽 ⇒ 假绿）"; printf '%s\n' "$OUT3" | sed 's/^/     | /'
 fi
 echo "$OUT3" | grep -q "全部来源均为空" && ok "输出点名「全部来源均为空」（不静默）" || no "输出未点名来源全空"
 
@@ -159,7 +159,7 @@ sb_commit "$B" "首次推送分支上的提交" "feat: 首次推送分支（无�
 F1_HASH="$(git -C "$B" rev-parse HEAD)"
 OUT5="$(gate_in "$B" origin/main)"; RC5=$?
 [ "$RC5" -eq 1 ] && ok "origin/feat/first-push 不存在 ⇒ 不过滤 ⇒ 无记录必拦 exit 1（首次推送不免检）" \
-  || no "首次推送分支被免检 → exit $RC5（假绿路径）"
+  || no "首次推送分支被免检 → exit ${RC5}（假绿路径）"
 echo "$OUT5" | grep -q "不可解析" && ok "输出显式说明 ref 不可解析（跳过优化而非静默放行）" \
   || no "输出未显式说明 ref 不可解析"
 
@@ -237,6 +237,76 @@ case_d508() {
   rm -rf "$SB"
 }
 case_d508
+
+# ═══════════════════════════════════════════════════════════════
+# D1157（P0 假绿根修 — 提案待裁）: 记录判定必须锚到「COMMITTED 记录行的 HASH= 字段」
+#   实测行格式（对 140 份真实账本语料 / 118,077 行 / 2501 条 distinct 行普查，见 brief §格式普查）:
+#     记录行  : <ts> | COMMITTED | <描述> | … | HASH=<sha>   ← 2002 条 distinct，**全部**以时间戳开头
+#               · HASH 值**可为短 sha** —— 实测 10 条为 8 位（如 HASH=c30335e2）
+#               · 另有 1 条**空格分隔、无 `|`** 的记录行（2026-08-25T14:12:40Z COMMITTED …）
+#               · 实测 1 条"两条记录挤同一行"⇒ 无界抽取会把后随时间戳的 `2026` 吃进来（44 位过捕）
+#     非记录行: <ts> detected-bypass head-mismatch marker=<sha> parent=<sha>   ← P0 假绿来源
+#     散文行  : <ts> | LEDGER-RETRACT | … 提了"COMMITTED 记录"字样 ← 锚行首排除之（改坏即绿）
+#   本组夹具（判别性: 改坏 ⇒ ①②⑤ 必红；过紧 ⇒ ③④⑥ 必红）:
+#     ① 只有 parent=<sha>（该 sha 无自身记录）⇒ 不算记录 ⇒ **必 exit 1**（改前: 假绿 exit 0）
+#     ② 只有 marker=<sha>                    ⇒ 同上
+#     ③ 负对照: HASH=<8 位短 sha> 的记录行   ⇒ **仍算记录** ⇒ exit 0（防"过紧"误红）
+#     ④ 负对照: 空格分隔（无 `|`）的记录行   ⇒ **仍算记录** ⇒ exit 0
+#     ⑤ 反例: 散文行含 `COMMITTED` + `HASH=<该 sha>`（非记录行）⇒ **不算记录** ⇒ exit 1
+#     ⑥ 负对照: 两条记录挤同一行（40 位在前）⇒ 前一条**仍算记录** ⇒ exit 0（防过捕漏认）
+# ═══════════════════════════════════════════════════════════════
+P0="$TMPD/d1157-p0"
+git init -q -b main "$P0" >/dev/null 2>&1 || no "D1157 夹具自身失败: 沙箱 init 不可用"
+sb_git "$P0"
+echo s > "$P0/seed.txt"; sb_commit "$P0" "D1157 夹具 seed" "seed"
+git -C "$P0" update-ref refs/remotes/origin/main HEAD
+git -C "$P0" checkout -q -b feat/p0
+echo c > "$P0/c.txt"; sb_commit "$P0" "D1157 夹具待记录提交" "feat: 待记录提交（无自身记录）"
+P0_SHA="$(git -C "$P0" rev-parse HEAD)"; P0_SHA8="${P0_SHA:0:8}"
+ZERO40="0000000000000000000000000000000000000000"
+P0_LEDGER="$P0/.claude/bypass.log"; mkdir -p "$P0/.claude"
+echo "  夹具: 待记录提交 ${P0_SHA8}（origin/feat/p0 不存在 ⇒ D1152 过滤关闭 ⇒ 必进待记录集）"
+
+# ① 只有 parent=<sha> → 不算记录
+printf '%s\n' "2026-10-05T00:00:00Z detected-bypass head-mismatch marker=$ZERO40 parent=$P0_SHA" > "$P0_LEDGER"
+OUTP1="$(gate_in "$P0" origin/main)"; RCP1=$?
+[ "$RCP1" -eq 1 ] && ok "D1157① 仅 parent=<sha> 出现 ⇒ 不算记录 ⇒ exit 1（P0 假绿已堵）" \
+  || no "D1157① **假绿仍在**: 账本只有 parent=${P0_SHA8}、无该提交自身记录，门禁却 exit ${RCP1}（应为 1）"
+
+# ② 只有 marker=<sha> → 不算记录
+printf '%s\n' "2026-10-05T00:00:00Z detected-bypass head-mismatch marker=$P0_SHA parent=$ZERO40" > "$P0_LEDGER"
+OUTP2="$(gate_in "$P0" origin/main)"; RCP2=$?
+[ "$RCP2" -eq 1 ] && ok "D1157② 仅 marker=<sha> 出现 ⇒ 不算记录 ⇒ exit 1" \
+  || no "D1157② **假绿仍在**: 账本只有 marker=${P0_SHA8}，门禁却 exit ${RCP2}（应为 1）"
+
+# ③ 负对照: 短 sha 记录仍须被认（实测历史 10 条 8 位 HASH）
+printf '%s\n' "2026-10-05T00:00:00Z | COMMITTED | pre-commit PASS（D451 补记） | TASK_ID=D1157 | AGENT=t | HASH=$P0_SHA8" > "$P0_LEDGER"
+OUTP3="$(gate_in "$P0" origin/main)"; RCP3=$?
+[ "$RCP3" -eq 0 ] && ok "D1157③ 负对照: HASH=<8 位短 sha> 记录 ⇒ 仍算记录 ⇒ exit 0（未过紧）" \
+  || no "D1157③ 过紧误红: 短 sha 记录未被认（exit ${RCP3}，应为 0）"
+
+# ④ 负对照: 空格分隔（无 `|`）的记录行仍须被认（实测历史 1 条）
+printf '%s\n' "2026-08-25T14:12:40Z COMMITTED pre-commit PASS（D451 补记） TASK_ID=D530 AGENT=dsh-cto HASH=$P0_SHA" > "$P0_LEDGER"
+OUTP4="$(gate_in "$P0" origin/main)"; RCP4=$?
+[ "$RCP4" -eq 0 ] && ok "D1157④ 负对照: 无 \`|\` 空格分隔记录行 ⇒ 仍算记录 ⇒ exit 0" \
+  || no "D1157④ 过紧误红: 空格分隔记录行未被认（exit ${RCP4}，应为 0）"
+
+# ⑤ 反例: 散文行（LEDGER-RETRACT 形状）提了 COMMITTED 且带 HASH=<该 sha>
+#    ⇒ 只按"含 COMMITTED 子串"宽松抽取的实现会把它当记录（假绿回归）⇒ 本夹具改坏即红
+printf '%s\n' "2026-10-05T03:22:06+08:00 | LEDGER-RETRACT | 撤销 1 条 COMMITTED 记录（误报，涉及 OID 不在推送分支）HASH=$P0_SHA | USER=t" > "$P0_LEDGER"
+OUTP5="$(gate_in "$P0" origin/main)"; RCP5=$?
+[ "$RCP5" -eq 1 ] && ok "D1157⑤ 散文行提及 COMMITTED+HASH= ⇒ 不算记录 ⇒ exit 1（锚行首生效）" \
+  || no "D1157⑤ **假绿回归**: 散文行（非记录行）被当成记录，门禁 exit ${RCP5}（应为 1）"
+
+# ⑥ 负对照: 两条记录挤同一行（第一字段 40 位），无界抽取会把后随时间戳吃进来 ⇒ 前一条漏认
+P0_OTHER="$(git -C "$P0" rev-parse HEAD~1)"  # seed 提交（另一条 OID，仅用于凑出"挤行"形状）
+# 两条记录行**真正挤成一行**（去掉换行 = 历史实测形状），验第一字段仍被认
+printf '%s' "2026-08-23T12:40:00+00:00 | COMMITTED | pre-commit PASS (merge 补记) | TASK_ID=D506 | AGENT=t | HASH=$P0_SHA" > "$P0_LEDGER"
+printf '%s\n' "2026-08-23T21:40:00+08:00 | COMMITTED | pre-commit PASS (合并引入补记) | TASK_ID=CT | AGENT=t | HASH=$P0_OTHER" >> "$P0_LEDGER.tmp"
+tr -d '\n' < "$P0_LEDGER.tmp" >> "$P0_LEDGER"; rm -f "$P0_LEDGER.tmp"
+OUTP6="$(gate_in "$P0" origin/main)"; RCP6=$?
+[ "$RCP6" -eq 0 ] && ok "D1157⑥ 负对照: 两记录挤一行时前一条仍被认 ⇒ exit 0（HASH 长度有界，未过捕）" \
+  || no "D1157⑥ 过捕漏认: 挤行场景下前一条记录未被认（exit ${RCP6}，应为 0）"
 
 echo ""
 echo "结果: $PASS 通过, $FAIL 失败"
