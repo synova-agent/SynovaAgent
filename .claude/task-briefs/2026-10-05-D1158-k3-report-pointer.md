@@ -1,9 +1,18 @@
-# Task Brief — D1155 K3 报告指针落库（门禁治理波次 D1145–D1149）
+# Task Brief — D1158 K3 报告指针落库（门禁治理波次 D1145–D1149）
 
-> 卡: 治理线 · 文书/取证（Lead 派卡 ②，CTO 一句话授权开 PR）｜线: 治理线（govl）｜日期: 2026-10-05｜执行者: govl-k3-materials
-> 分支: `docs/D1155-k3-report-pointer`｜工作树: `.synova-wt-k3m-c2`（基线 `origin/main` @ `707dd946b`）
+> 卡: 治理线 · 文书/取证（Lead 派卡 ②，CTO 一句话授权开 PR）｜线: 治理线（govl）｜日期: 2026-10-05｜执行者: govl-k3-materials（接手：govl-retract-registry）
+> 分支: `docs/D1158-k3-report-pointer`（原 `docs/D1155-k3-report-pointer`，见下方编号更正）｜工作树: `.synova-wt-k3m-c2`（基线 `origin/main` @ `707dd946b`）
 > 【坐标系】执行态=待复核｜施工批次=批3 门禁治理（本波次收口件）｜服务承重件=审计取证面（非产品面）｜
-> 总闸=#973 无关｜命名空间=D1155｜验证级别=L2（判据可复跑 + D2 登记门禁 rc=0）｜阻塞源=无（**本件不触 `DOCS-REGISTRY.yaml`**）
+> 总闸=#973 无关｜命名空间=D1158｜验证级别=L2（判据可复跑 + D2 登记门禁 rc=0）｜阻塞源=无（**本件不触 `DOCS-REGISTRY.yaml`**）
+
+> ⚠️ **编号更正留痕（2026-10-05，D1155 → D1158；原句/原编号不改删，仅逐处更正）**
+> - **冲突事实**：本件原编号 D1155 与**已并入 main** 的 `.claude/task-briefs/2026-10-05-D1155-产品线-知识审计归属-0-9bis.md`（#1124，merge `65aa62dea`）**撞号**。
+> - **后果**：D708 `merge_writeset_gate.py` 的 S3 声明源 glob `*D1155*.md` 命中 **2 个候选** ⇒ fail-closed `exit 2`
+>   （CI「TypeScript + Lint + Iron Laws」红；本地复现同结论，见下）。
+> - **处置**：**本件让号**（0-9bis 先并入 main ⇒ 先到先得），改号 **D1158** ——
+>   `bash scripts/control-tower/alloc-task-id.sh --check-id D1158` = 未占（**只读校验**，不取号/不写盘）；
+>   D1156 / D1157 已被在飞分支占用（`docs/D1154-D1156-exemption-and-direction` / `fix/D1157-bypass-hash-anchor`）。
+> - **复现命令**：`python3 scripts/control-tower/merge_writeset_gate.py --base origin/main --head HEAD --branch docs/D1155-k3-report-pointer` → `exit 2`（改名前）；改名为 `docs/D1158-…` → `exit 0`。
 
 ## Q0: 定位 — 项目拼图 + 文件审计
 
@@ -36,7 +45,8 @@
 做什么：
 1. `docs/synova/audit-reports/INDEX.md` 追加一行（2026-10-05 / 门禁治理波次-D1145-D1149 / 结论 / `k3-repo@d17d389:audit-reports/…` / 日期）；
 2. 表后追加「最近批次溯源」块（6 行：commit、路径、行数、五个对象锚点、审计环境、复核命令）；
-3. 本 brief 与 Note：`.claude/task-briefs/2026-10-05-D1155-k3-report-pointer.md`、`memory/notes/proposed/2026-10-05-d1155-k3-report-pointer.md`。
+3. 本 brief 与 Note：`.claude/task-briefs/2026-10-05-D1158-k3-report-pointer.md`、`memory/notes/proposed/2026-10-05-d1158-k3-report-pointer.md`
+   （编号更正 D1155 → D1158 时同步更名，见文首留痕）。
 
 不做什么（含文件路径）：
 - **不复制报告正文进本仓**（不新增 `docs/synova/audit-reports/*.md` 正文文件）——遵本目录 INDEX 规约；
@@ -62,6 +72,6 @@
 
 | 文件 | 类型 |
 |---|---|
-| .claude/task-briefs/2026-10-05-D1155-k3-report-pointer.md | task |
+| .claude/task-briefs/2026-10-05-D1158-k3-report-pointer.md | task |
 | docs/synova/audit-reports/INDEX.md | task |
 | memory/notes/proposed/2026-10-05-d1155-k3-report-pointer.md | task |
