@@ -3,6 +3,16 @@
  *
  * 封装完整的 7 态状态机 + PolicyEngine 权限检查 + closeGoal 闭环验证。
  *
+ * @deprecated 未接线（#982 明示不接）。接入点见 #1010（Goal 关闭路径接线）。
+ *
+ * #982（0-8）实测依据（2026-10-04）：本模块在 `src/` 内**零真实 import/零调用**
+ * （`grep -rn "goal-lifecycle" src/` 仅 2 处注释；`closeGoal` / `verifyEffect` / `transitionGoal` 在 src/ 零调用方；
+ * `updateGoalStatus` 全仓唯一调用者 = 本文件自身）⇒ 整条 Goal 关闭路径在生产侧从未接线。
+ * 处置（产品线 2026-10-04 裁定，Done 判据订正为三支）：
+ *   ① 本 `@deprecated` 标注 + 接入点指针（= #1010）——**状态明确、有主**；
+ *   ② 既有 5 个测试文件逐条跑绿 ⇒ **能力未损坏，只是不接线**（非"无残留符号"式删除，禁毁 D71/D76/D254 已验能力）；
+ *   ③ 接线 = 第 1 批 #1010 的工作（跨批次，不在第 0 批止血范围）。
+ *
  * 契约:
  *   @input  — goalId + 目标状态 + actor 信息 + GraphStore + AuditStore + PolicyEngine
  *   @output — void（成功）或 throw Error（失败）

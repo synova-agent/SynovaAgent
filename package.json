@@ -68,7 +68,7 @@
     "nodemailer": "^9.1.1",
     "pino": "9.14.0",
     "pinyin-pro": "^3.29.3",
-    "react": "^18.3.1",
+    "react": "^19.3.0",
     "zod": "4.6.2"
   },
   "devDependencies": {
@@ -80,7 +80,7 @@
     "@types/js-yaml": "^4.0.9",
     "@types/node": "22.19.19",
     "@types/nodemailer": "^8.0.1",
-    "@types/react": "^18.3.18",
+    "@types/react": "^19.3.0",
     "@vitest/coverage-v8": "4.1.8",
     "electron": "^33.4.11",
     "electron-builder": "^25.1.8",

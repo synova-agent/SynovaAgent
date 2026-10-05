@@ -1,0 +1,22 @@
+{
+  "task_id": "D979",
+  "title": "P0 FIX-011：共享治理文件的多卡归属机制（解 D328 劫持误判）",
+  "status": "spec_done",
+  "risk": "high",
+  "domain": "mac",
+  "owner": "ctrl-tower-line",
+  "executor": "parallel-cto",
+  "milestone": "解除三方结构阻塞",
+  "write_set": [
+    "docs/synova/coordination/派单-FIX-011-共享治理文件机制-20260926.md",
+    "scripts/pre-commit-check.sh",
+    "scripts/control-tower/**",
+    "tests/control-tower/**",
+    ".claude/task-briefs/2026-09-26-D979-fix011-shared-file-mechanism.md",
+    "memory/notes/implemented/2026-09-26-fix011-shared-file-mechanism.md",
+    "task-state/D979.json"
+  ],
+  "updated_at": "2026-09-26",
+  "updated_by": "synova-cto",
+  "note": "实测 24h 内 D328 拦 3 次（ci.yml→D954 / D954.json→D954 / 派单模板.md→D931-D943）⇒ FIX-003 后半被迫移出、R1-R4 两轮无法落 main。要求：机制（一对象一文件 或 显式多卡共享声明）+ 改 D328 判定 + 两侧反例（授权通过/非授权仍拒）+ 迁移路径（至少 5 个共享文件）+ K3 审。属主=控制塔线（CTO 发卡）。"
+}

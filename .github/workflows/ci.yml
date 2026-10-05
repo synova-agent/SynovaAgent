@@ -578,6 +578,7 @@ jobs:
             tests/control-tower/install-dsh-preset.test.sh \
             tests/control-tower/d956-failmsg.test.sh \
             tests/control-tower/check-required-contexts.test.sh \
+            tests/control-tower/loop-context.test.sh \
             tests/control-tower/check-required-contexts-order.test.sh \
             tests/control-tower/ci-signal-classify.test.sh; do
             echo "── $t"
@@ -1127,6 +1128,7 @@ jobs:
             tests/control-tower/install-dsh-preset.test.sh \
             tests/control-tower/d956-failmsg.test.sh \
             tests/control-tower/check-required-contexts.test.sh \
+            tests/control-tower/loop-context.test.sh \
             tests/control-tower/check-required-contexts-order.test.sh \
             tests/control-tower/ci-signal-classify.test.sh; do
             echo "── $t"

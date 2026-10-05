@@ -29,8 +29,12 @@ TASK_STATE = REPO / "task-state"
 BRIEF_DIR = REPO / ".claude" / "task-briefs"
 PRODUCT_BRIEF = REPO / ".claude" / "PRODUCT-BRIEF.md"
 BYPASS_LOG = REPO / ".claude" / "bypass.log"
-HTML_OUT = REPO / "docs" / "synova" / "founder-console.html"
-ALERT_OUT = REPO / "docs" / "synova" / "founder-alerts.md"
+# FIX-008: 输出目录可经 `SYNO_FOUNDER_OUT_DIR` 注入（缺省 = 现状 docs/synova，**生产行为不变**）。
+#   动机: 测试直接写仓库内 tracked 生成物（founder-console.html / founder-alerts.md）→ 跑完
+#   工作区变脏（M8 家族「测试副作用碰 tracked 文件」第 3 例，已复现）。夹具改为写 mktemp 隔离目录。
+OUT_DIR = Path(os.environ["SYNO_FOUNDER_OUT_DIR"]) if os.environ.get("SYNO_FOUNDER_OUT_DIR") else (REPO / "docs" / "synova")
+HTML_OUT = OUT_DIR / "founder-console.html"
+ALERT_OUT = OUT_DIR / "founder-alerts.md"
 
 
 def sh(cmd):
@@ -281,6 +285,7 @@ def ci_status():
 def write_alert(rows):
     """主动告警: 有红灯时写告警文件（供创始人/cron 拾取）。返回红灯任务列表。"""
     reds = [r for r in rows if judge(r["claimed"], r["phys"])[0] == "🔴"]
+    OUT_DIR.mkdir(parents=True, exist_ok=True)   # FIX-008: 注入目录可能尚不存在（缺省路径本就存在 → 生产无变化）
     if not reds:
         if ALERT_OUT.exists():
             ALERT_OUT.write_text("✅ 当前无红灯（所有声称均有物理支撑）。\n", encoding="utf-8")
@@ -415,6 +420,7 @@ def main():
     write_alert(rows)
 
     if "--html" in sys.argv:
+        OUT_DIR.mkdir(parents=True, exist_ok=True)   # FIX-008: 同上
         HTML_OUT.write_text(render_html(rows, green, yellow, red, git_ok, ledger, north, ci), encoding="utf-8")
         print("已生成: " + str(HTML_OUT))
         return 1 if red > 0 else (2 if not git_ok else 0)

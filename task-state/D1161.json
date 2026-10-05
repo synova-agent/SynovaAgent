@@ -1,0 +1,20 @@
+{
+  "task_id": "D1161",
+  "title": "密封清单登记 loop-context.test.sh（main 存量红 · Gate Integrity 恒红）",
+  "status": "in_progress",
+  "risk": "low",
+  "domain": "govl",
+  "owner": "govl-line",
+  "executor": "govl-p0-fix",
+  "milestone": "门禁治理波次 · main 存量红消解（Lead 裁 (a)，优先合）",
+  "spec": ".claude/task-briefs/2026-10-06-D1161-密封清单登记-loop-context.test.sh（main-存量红-·-Gate-Integrity-恒红）.md",
+  "write_set": [
+    ".github/workflows/ci.yml",
+    ".claude/task-briefs/2026-10-06-D1161-密封清单登记-loop-context.test.sh（main-存量红-·-Gate-Integrity-恒红）.md",
+    "memory/notes/proposed/2026-10-06-d1161-sealed-list-loop-context.md",
+    "task-state/D1161.json"
+  ],
+  "updated_at": "2026-10-06",
+  "updated_by": "govl-p0-fix",
+  "note": "main 存量红：tests/control-tower/loop-context.test.sh 在 origin/main 但未登记 ci.yml 密封清单 ⇒ 密封面 ratchet 判『基线外新增 1』⇒ GATE-INTEGRITY: VIOLATION(1) ⇒ 所有 PR 的必需 context 恒红。修法 = 两处逐字同源密封清单各追加 1 行（numstat 2 0，纯 append；不动 job name:/结构/判据）。pristine main 复现 + 修后 OK 两段证据见 brief §附一/§二。例外：ci.yml 有在飞写集（#1079/#919/#900/#899）⇒ 自开卡条件④不满足，Lead 裁按最保守解释执行并上报 CTO。"
+}

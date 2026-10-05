@@ -1,0 +1,49 @@
+{
+  "task_id": "D1019",
+  "title": "【P0】取号器无超时兜底：裸 `git ls-remote` 无 timeout（macOS/Windows 皆无 `timeout` 命令）⇒ 取号可挂死",
+  "status": "registered",
+  "risk": "high",
+  "domain": "mac",
+  "owner": "mac-cto-parallel",
+  "executor": "待派（控制塔域：scripts/control-tower/alloc-task-id.sh + tests/control-tower/alloc-task-id-lock.test.sh）",
+  "milestone": "阶段 3（与「换主键 branch 名」同批）",
+  "depends_on": ["D1013"],
+  "blocked": "属控制塔/门禁域变更 ⇒ 需 CTO 批 + K3 审；本轮只立卡",
+  "target": "2026-W40",
+  "spec": "CTO 最终指令 ⒞（2026-09-26）：取号器无超时兜底独立立 P0",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "finding": {
+    "class": "P0 · 同源第 N 次（取号器挂死家族）",
+    "mechanism": {
+      "file_line": [
+        "scripts/control-tower/alloc-task-id.sh:152-159  —— 无 timeout/gtimeout（macOS 与 Windows Git Bash 都没有该命令）时走 else 分支 = 裸 git ls-remote（无超时）",
+        "tests/control-tower/alloc-task-id-lock.test.sh:97-100 —— 启 20 个并发 allocator（未设 SYNO_ALLOC_NO_REMOTE=1，对比 alloc-task-id.test.sh 其并发段设了）+ 末尾 裸 wait（无 pid）⇒ 任一路阻塞即测试永不结束"
+      ]
+    },
+    "reproduced_by": "task-7（squad-ci，D1018 / PR #842）本地复现",
+    "repro_evidence": "对 alloc-task-id-lock.test.sh 施加 90s 上限并 kill 父进程后，其 20 个子进程仍阻塞在 git ls-remote 上 20+ 分钟（pgrep 实测 7 个孤儿，已清理）",
+    "field_occurrences": [
+      "task-7 取号时 alloc-task-id.sh 本地挂 >20 分钟（网络 443 抖动 + HTTP2 framing error 触发无超时等待）⇒ 队员改用只读 --check-id 完成，未手工造号（处置正确）",
+      "更早：D964 两处记录挂死并被手工绕过",
+      "并发放号撞号：D1015 被两条分支同时占用（两人并发取号、各自看不到对方未推送的卡）"
+    ],
+    "impact": "取号是所有新卡的入口：挂死 ⇒ 入口不可用 ⇒ 手工造号/绕过 ⇒ 撞号（D1015 实例）⇒ 交付路径不可信"
+  },
+  "fix_direction_cto": [
+    "alloc-task-id.sh：改用 git -c http.lowSpeedLimit=1 -c http.lowSpeedTime=20 ... 或内建超时（不依赖外部 timeout 命令——macOS/Windows 都没有）",
+    "alloc-task-id-lock.test.sh：裸 wait（无 pid）→ 带 pid 的 wait + 每进程超时"
+  ],
+  "judgment_required": [
+    "在 macOS（无 timeout 命令）上给『仍能在 N 秒内返回』的反例",
+    "给『kill 父进程后无孤儿』的证据（pgrep 计数 = 0）"
+  ],
+  "boundary": "门禁/控制塔语义变更 ⇒ CTO 批 + K3 审；本轮只立卡、不改脚本",
+  "write_set": [
+    "task-state/D1019.json",
+    "task-state/D1017.json"
+  ],
+  "updated_at": "2026-09-26T04:35:00+08:00",
+  "updated_by": "CTO"
+}

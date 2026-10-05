@@ -134,7 +134,7 @@
 * 不改 src/store/ 冻结区（session-store/storage-backend 若需修复 orgId → 记录 deferred 与 DSH 协调，不擅动）。
 * 不改 src/sentinel/、scripts/（DSH 地盘）与 D470/D471/D472 写集。
 * 不实现审计 UI/管理界面（GA 中国墙管理入口另行排期）。
-* 不碰 哇呢宝贝客户数据。
+* 不碰 客户A客户数据。
 
 ## 4. 测试要求（测试优先：先写 red → 再实现 green）
 
