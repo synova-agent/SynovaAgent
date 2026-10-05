@@ -15,6 +15,35 @@ id: DOC-0144
 
 ---
 
+## 🔴 定性声明（**读本件前先读这一句**）
+
+> **本件是【检查件】，不是【门禁】。今日它不阻断任何东西。**
+
+请勿把本件读成"必需 context 已经被看住了"。以下两条为**当前事实**（不是计划，不是期望）：
+
+1. **今日零真实阻断执行方** —— `scripts/control-tower/check-required-contexts-order.py` 的生产调用点 = **0**。
+   逐面排查（全 0）：pre-commit ｜ pre-push ｜ `scripts/hooks/` + `.git/hooks/` ｜ CI `run:` 段（排除密封清单登记行）｜
+   `package.json` ｜ cron / launchd。全仓引用 14 行，逐行落点 = 脚本本体 / 其配对测试 / `task-state` / `.codex` 元数据 /
+   `ci.yml` 两行（**登记的是"测试文件"，不是调用脚本**）⇒ **本器目前只被自己的配对测试执行**，**不挡任何 PR**。
+   复跑命令（读者可直接核）：
+   ```bash
+   grep -rn 'check-required-contexts-order' --include='*.sh' --include='*.yml' --include='*.yaml' \
+        --include='*.py' --include='*.json' --include='*.ts' . | grep -v node_modules
+   ```
+   排查表全文（含每一面的单条命令）= task brief「附二.1」。
+2. **放宽方向无收敛机制** —— 判据刻意不对称（`live ⊆ 登记表 ⇒ OK`）方向成立，但**无棘轮 / 无高水位 / 无历史 / 无状态文件**
+   ⇒ live 从 12 降到 9 之后，一旦 `live == 登记表`，那次弱化就**彻底不可见**（无警报、无收敛要求）。
+   实测：脚本内 `ratchet|高水位|history|\.state` → **0 命中**；唯一写操作 = `tempfile.mkstemp`（读 `git show` 用，随即 `unlink`）
+   ⇒ **无任何持久状态**。实跑：`--base-ref 'afde93eae^'` 逐条点名 3 条放宽项 + 打印动机锚点 #1077 → **`REQUIRED-CONTEXTS-ORDER: OK`（exit 0）**
+   ⇒ 可见性**依赖人主动跑 + 主动读**。
+   **待立卡**：「必需 context 保护高水位 / 只减不增棘轮」（不把"移除必需"改成违规；复刻 `gate-integrity-baseline.txt`
+   的 `[R] 条数` 棘轮形态或持久化高水位报警）—— **语义变更 ⇒ 走 K3**。
+
+> **要让本器真挡人**，须先立"接入哪条链 + 三态码怎么用"的卡 —— 本件**不做**（避免新件变成**暗中生效**的门禁）。
+> 依据：K3 审计 P1①（放宽永久免罪）/ P1②（零真实执行方），复核席已独立复现；处置采 CTO 对 #1107 的先例（如实声明 + 立卡）。
+
+---
+
 ## 一、判据（一句话）
 
 **共享基础设施的分支保护，只允许朝"更松"的方向先行；朝"更紧"的方向必须等携带该变更的 PR 合并之后。**
