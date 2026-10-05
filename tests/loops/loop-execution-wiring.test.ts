@@ -10,7 +10,7 @@
  *
  * ⚠️ 判别性: 装配走**生产函数** `wireLoopExecution()`（src/server.ts）——本文件不复制装配
  * 逻辑。删掉 wireLoopExecution 内的 `bindMainAgent(mainAgent)` 一行 → 本夹具必红（改坏即红；
- * 另见 tests/loops/probes/d9-loop-ignition-probe.ts 的原始 stderr 四步留档）。
+ * 另见 tests/loops/probes/batch0a-probes.ts 的原始 stderr 四步留档（d9/feedback-key 两个独立探针已并入它））。
  *
  * 覆盖: 正常（已装配点火 · 尺度透传）· 降级（未绑定 → 不点火）· 边界（6 个内置 job 全注册）
  */
