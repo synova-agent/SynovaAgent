@@ -19,7 +19,18 @@ const log = createLogger('routes/chat');
 
 const router = Router();
 
-// ═══ API Key 状态检查 ═══
+/**
+ * 引擎 DB 句柄（惰性 + 单点）。
+ * 架构棘轮: L1→L5 动态 import 收敛为**本文件唯一一处**（`tests/architecture/l1-cross-layer-baseline.txt`
+ * 记 `src/routes/chat.ts=1`，棘轮只减不增）。新增 DB 需求请复用本函数，勿再就地 import。
+ * 注: 返回类型由 `getDatabase()` 推断 —— 勿在此写 sqlite 驱动名的内联类型注解（会命中 L1→L5 扫描模式）。
+ */
+async function engineDb() {
+  const { getDatabase } = await import('../init/engine-context');
+  return getDatabase();
+}
+
+/** API Key 状态检查 */
 
 router.get('/api/status', (_req: Request, res: Response) => {
   const config = loadConfig();
@@ -36,8 +47,7 @@ router.get('/api/status', (_req: Request, res: Response) => {
 router.get('/api/user-state', async (_req: Request, res: Response) => {
   try {
     const { SqliteGraphStore } = await import('../adapters/sqlite-graph-store');
-    const { getDatabase } = await import('../init/engine-context');
-    const db = getDatabase();
+    const db = await engineDb();
     const store = new SqliteGraphStore(db) as unknown as { queryNodes(type: string, filters?: Record<string,unknown>, graph?: string): Array<{id:string, props:Record<string,unknown>}> };
     const summaries = store.queryNodes('Goal', { goalType: 'mission' }, 'default')
       .filter(n => (n.props as { name?: string })?.name?.startsWith('Phase0_Interview'));
@@ -66,16 +76,37 @@ router.post('/api/proposal/:id/resolve', async (req: Request, res: Response) => 
   }
   // V4.2.1: 反馈收集 — collectFeedback 持久化用户决策
   // Phase P0-1: 迁移到 @synova/evolution, 增加 orgId
+  // #981（0-7）: ① 补传 memoryStore（不传 ⇒ collectFeedback 的 persisted 恒 false，反馈永不落库）
+  //              ② 禁空吞（原 `.catch(()=>{})` + 无绑定 catch{log.debug} 违铁律 24+31）
+  // 降级契约: 反馈写入失败不阻断提议确认主流程，但必须 log.warn + 在响应里显式回传 degraded（铁律 31）。
+  let feedbackPersisted = false;
+  let feedbackDegraded = false;
   try {
     const { collectFeedback } = await import('@synova/evolution');
-    collectFeedback({
+    // L2 接缝（#981）: 记忆 store 视图由 services/memory-access-service 提供 —— L1 不直触 L4（铁律 39 + 架构棘轮）
+    const { getMemoryWriter } = await import('../services/memory-access-service');
+    const memoryStore = getMemoryWriter();
+    const fb = await collectFeedback({
       orgId: (req.body as Record<string, unknown>)?.orgId as string || 'default',
       actionId: id,
       decision: action === 'confirm' ? 'confirm' : action === 'reject' ? 'reject' : 'modify',
       reason: feedback || undefined,
-    }).catch(() => {});
-  } catch { log.debug('feedback collector unavailable — degraded'); }
-  res.json({ ok: true, proposal: result.proposal });
+    }, memoryStore ?? undefined);
+    feedbackPersisted = fb.persisted;
+    if (!fb.persisted) {
+      feedbackDegraded = true;
+      log.warn({ actionId: id, decision: action }, '反馈未持久化 — memoryStore 写入未生效 (degraded)');
+    }
+  } catch (err: unknown) {
+    feedbackDegraded = true;
+    const msg = err instanceof Error ? err.message : String(err);
+    log.warn({ err: msg, actionId: id }, '反馈收集失败 — degraded（不阻断提议确认）');
+  }
+  res.json({
+    ok: true,
+    proposal: result.proposal,
+    feedback: { persisted: feedbackPersisted, degraded: feedbackDegraded },
+  });
 });
 
 // ═══ Web 对话界面 (GET /chat) ═══
