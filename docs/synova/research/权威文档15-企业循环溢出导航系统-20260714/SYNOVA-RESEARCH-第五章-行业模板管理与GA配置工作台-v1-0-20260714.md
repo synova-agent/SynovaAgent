@@ -227,7 +227,7 @@ GraphStore
         └── type='Enterprise', id='wowbaby'
               │
               └── properties:
-                    ├── name: "哇呢宝贝母婴用品"
+                    ├── name: "客户A母婴用品"
                     ├── industry: "retail-chain"
                     ├── subIndustry: "母婴用品"
                     ├── businessModel: "直营连锁"
