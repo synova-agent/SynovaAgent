@@ -18,13 +18,13 @@ When this test fails, it will find the bugs that unit tests cannot: sentinel Fin
 
 ### 1. tests/e2e/full-pipeline.integration.test.ts -- Single full-pipeline test
 
-**Test: "complete pipeline: wani-baby-v1 data -> diagnosis report -> Goals -> Goal sentinel"**
+**Test: "complete pipeline: client-a-v1 data -> diagnosis report -> Goals -> Goal sentinel"**
 
 Pipeline stages (each with expect() assertions on intermediate output):
 
 ```
 Stage 0: Load golden dataset
-  ??? Read data/golden/wani-baby-v1.json (8244 bytes, real enterprise data)
+  ??? Read data/golden/client-a-v1.json (8244 bytes, real enterprise data)
   ??? Verify JSON structure: enterprise profile + financial + customer + HR data
 
 Stage 1: Data ingestion
@@ -112,7 +112,7 @@ Mock response data: create a mockDiagnosisResponse object in the test file with 
 ```
 [ ] test file: tests/e2e/full-pipeline.integration.test.ts
 [ ] 8 pipeline stages, each with >=2 expect() assertions
-[ ] Golden data loaded from data/golden/wani-baby-v1.json
+[ ] Golden data loaded from data/golden/client-a-v1.json
 [ ] 5 compute functions verified (E-05/E-23/E-31/E-33/E-07)
 [ ] 5 sentinels verified (capital-health/margin-health/competitive-position/talent-density/cash-runway)
 [ ] Signal aggregation: cross-correlation + escalation verified
@@ -130,7 +130,7 @@ Mock response data: create a mockDiagnosisResponse object in the test file with 
 
 ## Auth Doc References
 
-- D85: MVS Golden Dataset (wani-baby-v1)
+- D85: MVS Golden Dataset (client-a-v1)
 - D51: Golden Case F1 Gate
 - D77: Growth Navigation Integration (e2e test pattern)
 - Auth Doc #6: Test System Spec -- integration test standards
