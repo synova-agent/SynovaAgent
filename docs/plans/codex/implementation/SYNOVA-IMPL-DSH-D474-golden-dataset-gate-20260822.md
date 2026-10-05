@@ -1,10 +1,10 @@
 ---
 north-star:
   服务用户: 创始人（push 前机器确认"模型/报告输出可复现，黄金数据集没被改坏"）+ FDE/实现线（改阈值/契约/报告结构时立即被门禁拦截）
-  服务场景: 黄金数据集 wani-baby-v1.json 是"哇呢宝贝真实数据的冻结快照"，但目前只有 check-golden-regression.sh 校验 checksum（数据没被改），**没有一条门禁真正跑代码验证"模型/UI 输出可复现"**——改坏哨兵 aggregate / 报告结构，CI 照样绿
-  模块终态: 黄金数据集接入 pre-push 门禁：push 时跑真实哨兵 aggregate + 报告结构断言 vs wani-baby 冻结快照 diff；新快照可 keyless 录制（跑真实代码生成 → 人工确认冻结），回放即 diff——输出可复现、可回放、可审计
+  服务场景: 黄金数据集 wani-baby-v1.json 是"客户A真实数据的冻结快照"，但目前只有 check-golden-regression.sh 校验 checksum（数据没被改），**没有一条门禁真正跑代码验证"模型/UI 输出可复现"**——改坏哨兵 aggregate / 报告结构，CI 照样绿
+  模块终态: 黄金数据集接入 pre-push 门禁：push 时跑真实哨兵 aggregate + 报告结构断言 vs client-a 冻结快照 diff；新快照可 keyless 录制（跑真实代码生成 → 人工确认冻结），回放即 diff——输出可复现、可回放、可审计
   对齐北星: PRODUCT-BRIEF.md §八「Loop Engineering 需要成为什么」——门禁不查产品对齐的缺口；黄金案例 = 修复断裂场景的最小数据副本（C 线 P1-2 黄金数据集门禁）
-  完成标准: 入口 git push → 处理 golden-case-checker 追加黄金数据集阶段（跑真实 aggregate diff wani-baby）+ check-golden-regression 接线 → 结果：改坏哨兵 aggregate → exit 1 红，恢复 → exit 0 绿（机器可复现）
+  完成标准: 入口 git push → 处理 golden-case-checker 追加黄金数据集阶段（跑真实 aggregate diff client-a）+ check-golden-regression 接线 → 结果：改坏哨兵 aggregate → exit 1 红，恢复 → exit 0 绿（机器可复现）
   当前进度: D396 已交付三层快照（compute/findings/expertReport）+ pre-push/CI 接线（golden-case-checker.ts）；fixtures 11 条含 golden-case-11 示范。缺口：① data/golden/wani-baby-v1.json 的回归脚本零接线（M3）② 无 keyless 录制模式（快照只能手写）③ findingsFnRegistry 空（只示范 compute 层）
 ---
 
@@ -19,7 +19,7 @@ north-star:
 
 # SYNOVA-IMPL-DSH-D474: snapshot keyless 回放 + 黄金数据集门禁
 
-> 一句话问题: D396 把 golden-case-checker 从"自洽 F1"升级为"真跑 compute 的三层快照"，并接上了 pre-push/CI——但**黄金数据集（data/golden/wani-baby-v1.json）这条线没接**：`check-golden-regression.sh` 只校验 checksum（证明"数据没被改"），全仓 grep 无任何 pre-push/CI 调用它（M3 建了不接线）；且快照只能手写（无 keyless 录制）。借鉴 DSH snapshot 测试的 keyless 回放范式（B3），把黄金数据集接入门禁（compute 纯函数 + severity 级对比）+ 录制/回放闭环。**2026-08-22 修正**：wani-baby sentinels 实证为 `{哨兵名: {expected, value}}` 结构（非 FindingSnapshot[]），diff 契约 = severity 级对比；哨兵 aggregate 依赖 GraphStoreReader 不符合同步纯函数契约 → findings 层登记显式 descope（S-10）。
+> 一句话问题: D396 把 golden-case-checker 从"自洽 F1"升级为"真跑 compute 的三层快照"，并接上了 pre-push/CI——但**黄金数据集（data/golden/wani-baby-v1.json）这条线没接**：`check-golden-regression.sh` 只校验 checksum（证明"数据没被改"），全仓 grep 无任何 pre-push/CI 调用它（M3 建了不接线）；且快照只能手写（无 keyless 录制）。借鉴 DSH snapshot 测试的 keyless 回放范式（B3），把黄金数据集接入门禁（compute 纯函数 + severity 级对比）+ 录制/回放闭环。**2026-08-22 修正**：client-a sentinels 实证为 `{哨兵名: {expected, value}}` 结构（非 FindingSnapshot[]），diff 契约 = severity 级对比；哨兵 aggregate 依赖 GraphStoreReader 不符合同步纯函数契约 → findings 层登记显式 descope（S-10）。
 
 ## 1. Authority Doc Verification
 
@@ -33,7 +33,7 @@ north-star:
 
 **来源**: [C 线差距清单](docs/synova/research/C线-世界级基准-20260802/第五章-差距清单与路线图-20260802.md)（L108 一致性声明）
 
-> B 线 P1-1/P1-2/P1-3/P1-5 = 本表 S1-5/S1-6、**黄金数据集门禁（未单列，归 S1-1）**、S5-2、S3-3 ✅ 一致。S1-1 根因命中率：黄金数据集+哇呢宝贝回测。
+> B 线 P1-1/P1-2/P1-3/P1-5 = 本表 S1-5/S1-6、**黄金数据集门禁（未单列，归 S1-1）**、S5-2、S3-3 ✅ 一致。S1-1 根因命中率：黄金数据集+客户A回测。
 
 **来源**: [D396 dev doc](docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D396-golden-case-gate-20260816.md)（§5 接线现状）
 
@@ -45,13 +45,13 @@ north-star:
 
 ## 2. Problem Statement
 
-C 线 S1-1（根因命中率）要求"黄金数据集+哇呢宝贝回测"作为外部验证基准，B 线 P1-2 明确"黄金数据集门禁"。现状：
+C 线 S1-1（根因命中率）要求"黄金数据集+客户A回测"作为外部验证基准，B 线 P1-2 明确"黄金数据集门禁"。现状：
 
-1. **黄金数据集零门禁（M3 建了不接线）**：`scripts/workflow/check-golden-regression.sh` 已存在（checksum 校验 + 字段完整性），但 `grep -rn "check-golden-regression" scripts/ .github/` 只有脚本自身——**pre-push 不跑、CI 不跑**。它校验的是"wani-baby-v1.json 文件没被改"，而真正要防的是"代码改了导致 wani-baby 数据跑出来的诊断输出变了"——checksum 防不住代码回归。
+1. **黄金数据集零门禁（M3 建了不接线）**：`scripts/workflow/check-golden-regression.sh` 已存在（checksum 校验 + 字段完整性），但 `grep -rn "check-golden-regression" scripts/ .github/` 只有脚本自身——**pre-push 不跑、CI 不跑**。它校验的是"wani-baby-v1.json 文件没被改"，而真正要防的是"代码改了导致 client-a 数据跑出来的诊断输出变了"——checksum 防不住代码回归。
 2. **无 keyless 录制模式**：D396 的快照是手写 JSON（golden-case-11 的 compute.snapshot 是人工填的）。DSH snapshot 范式是 keyless——跑真实代码生成快照 → 人工确认冻结 → 回放 diff。没有录制模式，新修复对象的快照全靠手写，门槛高、易错。
 3. **findingsFnRegistry 空转（2026-08-22 修正为背景事实）**：`golden-snapshot-runner.ts:86` `findingsFnRegistry` 是 `{}`——但哨兵 aggregate 依赖 GraphStoreReader + async（financingConstraintSentinel.check 实证签名），不符合同步纯函数契约 → findings 层登记显式 descope（S-10），非本卡可修项。
 
-对齐北星：PRODUCT-BRIEF §八——门禁查语法/安全/接线/架构，不查"产品对齐"；黄金数据集门禁 = 把"哇呢宝贝真实数据 + 期望诊断"变成机器断言，是产品对齐的机器验证。
+对齐北星：PRODUCT-BRIEF §八——门禁查语法/安全/接线/架构，不查"产品对齐"；黄金数据集门禁 = 把"客户A真实数据 + 期望诊断"变成机器断言，是产品对齐的机器验证。
 
 ## 3. Current State（2026-08-22 grep/read 实测）
 
@@ -74,7 +74,7 @@ C 线 S1-1（根因命中率）要求"黄金数据集+哇呢宝贝回测"作为�
 grep -rn "check-golden-regression" scripts/ .github/  # 仅脚本自身注释，零调用
 ```
 
-pre-push 只跑 golden-case-checker（F1 + 三层快照，基于 tests/fixtures/），**不跑 wani-baby 黄金数据集**——黄金数据集与门禁之间没有通路。
+pre-push 只跑 golden-case-checker（F1 + 三层快照，基于 tests/fixtures/），**不跑 client-a 黄金数据集**——黄金数据集与门禁之间没有通路。
 
 ### 3.3 缺陷 B（P1）: 无 keyless 录制模式
 
@@ -95,7 +95,7 @@ pre-push 只跑 golden-case-checker（F1 + 三层快照，基于 tests/fixtures/
 | [scripts/pre-push-check.sh](scripts/pre-push-check.sh) | 修改 | golden-case 区块追加调用 `bash scripts/workflow/check-golden-regression.sh --verify-only`（checksum 校验，黄金数据集完整性）——缺陷 A 接线 |
 | [tests/ci/golden-case-checker.test.ts](tests/ci/golden-case-checker.test.ts) | 修改 | 新增 keyless 录制 + 黄金数据集 severity 对比 + 降级测试（≥8 用例，见 §5） |
 
-> 说明：`check-golden-regression.sh --verify-only` 已有（checksum 校验分支），本次只接 pre-push 调用，不改其逻辑（除非接线暴露缺陷）。wani-baby 数据集的 sentinels/expectedDiagnosis 字段结构已实证（16 个哨兵 dict + expectedDiagnosis.rootCauseEdges/causalChain）。
+> 说明：`check-golden-regression.sh --verify-only` 已有（checksum 校验分支），本次只接 pre-push 调用，不改其逻辑（除非接线暴露缺陷）。client-a 数据集的 sentinels/expectedDiagnosis 字段结构已实证（16 个哨兵 dict + expectedDiagnosis.rootCauseEdges/causalChain）。
 
 ### 4.2 修复模式
 
@@ -125,7 +125,7 @@ export function recordComputeSnapshot(section: ComputeSnapshotSection): { snapsh
 
 ```ts
 /**
- * runGoldenDatasetCheck — 黄金数据集门禁（wani-baby 真实数据 + 期望诊断）
+ * runGoldenDatasetCheck — 黄金数据集门禁（client-a 真实数据 + 期望诊断）
  * 契约（实证 data/golden/wani-baby-v1.json 结构）:
  *   @input  — dataset: GoldenDataset，其中 sentinels: Record<哨兵名, { expected: severity, value: number }>
  *             expectedDiagnosis: { rootCauseEdges, primaryBlocker, severity, causalChain }
@@ -158,7 +158,7 @@ export function recordComputeSnapshot(section: ComputeSnapshotSection): { snapsh
 | 改 F1 判定逻辑（computeF1Score/deriveActual） | K3"只扩用例不改判定"（D396 明令） |
 | 改 check-golden-regression.sh 本体逻辑 | 已有完整 checksum 校验，本次只接线（除非暴露缺陷则回填） |
 | 改 src/ 业务逻辑（compute 阈值/哨兵 aggregate） | 归 D355-D360 实现线（Win Claude），本任务只登记 registry |
-| 全诊断管线端到端跑 wani-baby（起服务） | 归 GSS 场景脚本（D361+），本任务只做数据级快照 |
+| 全诊断管线端到端跑 client-a（起服务） | 归 GSS 场景脚本（D361+），本任务只做数据级快照 |
 | 改 .github/workflows/ci.yml | 接 pre-push 即可（CI golden-case job 已跑同命令） |
 | 批量登记全部哨兵 aggregate | 2026-08-22 修正：哨兵 aggregate 依赖 GraphStoreReader + async（financingConstraintSentinel.check 实证），不符合 findingsFnRegistry 同步纯函数契约——**findings 层登记显式 descope（S-10）**，本卡只登记 compute 纯函数（D396 已示范 computeCashRunway） |
 
@@ -212,7 +212,7 @@ export function recordComputeSnapshot(section: ComputeSnapshotSection): { snapsh
 
 ### 7.3 L2b 降级契约
 
-- wani-baby 数据集缺失/损坏 → runGoldenDatasetCheck degraded:true + stderr（铁律 11/24）
+- client-a 数据集缺失/损坏 → runGoldenDatasetCheck degraded:true + stderr（铁律 11/24）
 - check-golden-regression 在 pre-push 中失败 → exit 1 阻断（不静默吞，铁律 31）
 
 ### 7.4 L2c 边界契约
@@ -254,7 +254,7 @@ export function recordComputeSnapshot(section: ComputeSnapshotSection): { snapsh
 - [D396 dev doc](docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D396-golden-case-gate-20260816.md)
 - [golden-case-checker.ts](scripts/ci/golden-case-checker.ts) / [golden-snapshot-runner.ts](scripts/ci/golden-snapshot-runner.ts)
 - [check-golden-regression.sh](scripts/workflow/check-golden-regression.sh) / [pre-push-check.sh](scripts/pre-push-check.sh)
-- [wani-baby 黄金数据集](data/golden/wani-baby-v1.json) + [checksums](data/golden/checksums/wani-baby-v1-checksums.json)
+- [client-a 黄金数据集](data/golden/wani-baby-v1.json) + [checksums](data/golden/checksums/wani-baby-v1-checksums.json)
 - AGENTS.md 铁律 0-2/11/24/31/35/36/48
 
 ## 11. 自检清单
@@ -263,7 +263,7 @@ export function recordComputeSnapshot(section: ComputeSnapshotSection): { snapsh
 - [x] 三层快照现状实测（golden-snapshot-runner.ts runComputeSnapshot 等 + fixture golden-case-11）
 - [x] findingsFnRegistry 空转实测（:86 `{}`）+ **修正：不强行登记 store 依赖 aggregate**（financingConstraintSentinel.check 签名实证 = (store, teamId, traversal?) → Promise<SentinelFinding[]>，不符合同步纯函数契约 → 显式 descope，S-10）
 - [x] pre-push/CI 接线现状实测（pre-push-check.sh:244 + ci.yml:153）
-- [x] wani-baby 数据结构实证（16 哨兵 dict = {哨兵名: {expected, value}} + expectedDiagnosis.rootCauseEdges/causalChain）——**diff 契约 = severity 级对比，非 findings 集合 diff**
+- [x] client-a 数据结构实证（16 哨兵 dict = {哨兵名: {expected, value}} + expectedDiagnosis.rootCauseEdges/causalChain）——**diff 契约 = severity 级对比，非 findings 集合 diff**
 - [x] 决策参考已记录（keyless 录制形态/接线点/severity 对比契约，§4.2）
 - [x] 测试 red→green 覆盖失败模式（S-5：门禁不响/录制静默失败/severity 漂移）
 - [x] DS 与 dev doc 一一对应（DS1-DS11）；写集表标题紧跟表头（D381 格式契约）

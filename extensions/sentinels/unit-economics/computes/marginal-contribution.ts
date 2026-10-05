@@ -7,7 +7,7 @@
  *
  * D59 ME Enhance: 追加 economic_interpretation 字段
  *
- * 哇呢宝贝验证: 226家低产会所的MC为正（覆盖变动成本后仍有边际贡献）
+ * 客户A验证: 226家低产会所的MC为正（覆盖变动成本后仍有边际贡献）
  * 来源: 管理经济学(托马斯) Ch6 — 边际分析
  *
  * 本体映射: Client节点按segment分组 | REVENUE_FROM::share | COST_DRIVEN_BY

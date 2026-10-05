@@ -4,7 +4,7 @@
  * 模拟砍掉边际贡献最低的N个客户群后的盈亏变化。
  * 依赖: computeMarginalContribution + computeFixedCostRigidity
  *
- * 哇呢宝贝案例:
+ * 客户A案例:
  *   模拟砍掉226家低产月子中心 → 利润反而下降134万
  *   因为固定成本(工厂28人、运营30人)无法随客户群缩减而减少
  *

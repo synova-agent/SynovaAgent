@@ -73,7 +73,7 @@
 * 不改 `scripts/golden-scenarios/GS-02/GS-04` fixture 与 run.sh（DSH 地盘——DSH 在本任务交付后按新字段更新 fixture 并重跑转绿）。
 * 不改 ingest 类型系统（不新增 boolean/array 类型支持，用 status/skills 字符串规避）。
 * 不做 CRM/ERP/HR 直连连接器（D357 后续，等创始人裁决先做哪个系统）。
-* 不碰 哇呢宝贝客户数据。
+* 不碰 客户A客户数据。
 
 ## 4. 测试要求（测试优先：先写 red → 再实现 green）
 
