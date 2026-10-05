@@ -76,6 +76,13 @@ const MD_OUT = arg('md', '');
 const JSON_OUT = arg('out', '');
 const asOf = adj.asOf ?? new Date().toISOString();
 
+const NL = String.fromCharCode(10);
+const SECTIONS: Array<{ title: string; lines: string[] }> = [{"title":"五、复跑环境（L2/L3/L4 证据的可复跑前置）","lines":["本表每一条 L3/L4 都附「可复跑命令 + 原始输出（含 exit code）」；公共前置只有三步：","","    git -C /Users/wane/SynovaAgent worktree add /tmp/mc origin/main --detach","    ln -s /Users/wane/SynovaAgent/node_modules /tmp/mc/node_modules","    NODE=/Users/wane/.nvm/versions/node/v24.19.0/bin/node ; VITEST=/Users/wane/SynovaAgent/node_modules/.bin/vitest","","之后每条证据命令 = 在 /tmp/mc 下执行 $NODE $VITEST run <该行文件>。","用独立 worktree 的两个理由：① 主仓工作树停在 docs/D1115-b1-br5-closeout（不是 main）⇒ 直接在工作树跑，量到的是别的树；② 该族判据会改仓内文件（3-12 行备注有单跑归因实测）。"]},{"title":"六、引用与取数（哪份文件 + 哪棵树）","lines":["| 引用物 | 具体文件 | 树 / 位置 |","|---|---|---|","| 派单原件 | 《派单 · 板真值标定与回填》2026-10-05（含补 1/2/3） | 会话输入，未入 git |","| 方向锚 | ~/Synova-过程档案/2026-10-03-cto-记录-关键时刻-基座治理结论.md（§十四 活账 + 判据纪律四条） | 档案仓 ~/Synova-过程档案（独立 git 仓，非主仓工作树） |","| 施工项登记件 | docs/synova/coordination/施工项登记.ts（实测 48 项：46 活动 + 1 retired + 1 proposal） | 主仓分支 docs/D1122-cto-deliverables-contract@5f8380d9a —— 不在 main（git cat-file -e origin/main:<path> 实测失败） |","| 借鉴项登记件 | docs/synova/coordination/DSH借鉴项登记.ts（实测 24 项） | 同上（同一分支） |","| 写集可达性（L1） | 各 item 的 paths | 主仓 origin/main（committer date 见文首） |","| 板字段 | GitHub Project #1（PVT_kwDOFAmDns4Blb57） | 非 git（GitHub 侧） |","| 载体 PR 证据 | #1011 / #1012 / #998 / #1007 / #1009 / #1138 | GitHub；merge commit 的祖先性以 origin/main 判 |","","🔴 未引用 ~/山河研究院/** 任何文件（补 2：本件无上游权威件引用；若后续需引，必写清「哪份文件 + 哪棵树」）。","🔴 未引用任何 DSH 包/行为（补 1：本单不涉 DSH）。本件出现的 DSH借鉴项登记.ts 是主仓内的登记件文件名（CTO 派单 §2 指明「49 项 + 24 DSH 项」），不是 DSH 源码引用。"]}];
+function renderSections(ss: Array<{ title: string; lines: string[] }>): string {
+  return (ss ?? []).map((s) => NL + "## " + s.title + NL + NL + s.lines.join(NL) + NL).join("");
+}
+
+
 const cardByNumber = new Map<number, any>();
 for (const c of board.cards) if (c.number) cardByNumber.set(c.number, c);
 const probeById = new Map<string, any>();
@@ -171,14 +178,14 @@ for (const lv of ['L4-正确', 'L3-真跑', 'L2-接线', 'L1-静态可达', '不
 }
 md += '| **合计** | **' + total + '** | 活动项分母 ' + denominator + '（= 总数 − 不适用 ' + naCount + '） |\n\n';
 md += '**判据通过率（L3+L4 / 活动项）= ' + aboveL1 + '/' + denominator + ' = ' + passRate + '%**\n\n';
-md += '- L2-接线 = **0 项** —— 本波次活动项无一**只**到"有生产调用点"而未跑（要么未接线，要么判据件已跑）。\n';
+md += '- L2-接线 = **0 项** ⇒ **本波次无 L2 定级需要举证**（补 3 要求 L2/L3/L4 每条附可复跑命令 + 原始输出；L2 为空集）。\n';
 md += '- L1 = ' + l1 + ' 项：其中 **' + emptyWs + ' 项写集为空**（DSH 登记件无 paths 字段 ⇒ L1 无对象）、**' + partialWs + ' 项写集部分缺失**（缺的正是本卡"判据交付物"）、**' + (l1 - emptyWs - partialWs) + ' 项写集全额可达但无已跑判据**（未验）。\n\n';
 
 md += '## 二、逐项清单（' + total + ' 项）\n\n';
 md += '| 项 | 卡号 | 判据等级 | 证据命令 | 原始输出摘要 | 备注 | 取数时刻 |\n|---|---|---|---|---|---|---|\n';
 for (const r of rows) {
   const esc = (s: string): string => s.replace(/[|]/g, '\\|').replace(/\r?\n/g, ' ');
-  md += '| ' + r.id + ' | ' + (r.card ? '#' + r.card : '—') + ' | **' + r.level + '** | ' + esc(r.evidenceCmd).slice(0, 160) + ' | ' + esc(r.output).slice(0, 220) + ' | ' + esc(r.note).slice(0, 320) + ' | ' + r.asOf + ' |\n';
+  md += '| ' + r.id + ' | ' + (r.card ? '#' + r.card : '—') + ' | **' + r.level + '** | ' + esc(r.evidenceCmd) + ' | ' + esc(r.output) + ' | ' + esc(r.note) + ' | ' + r.asOf + ' |\n';
 }
 
 md += '\n## 三、板上「执行态」证据（探针 ' + probe.originMain + ' ｜ 取数 ' + probe.asOf + '）\n\n';
@@ -198,10 +205,12 @@ md += '6. **含 sqlite 断言的卡未做 L3**（0-1/0-2/0-9/1-4/2-1b/2-3/3-5/0-
 md += '7. **探针只覆盖 72/132 张板卡**：其余 60 张（模块卡 K1–K11、子卡 #962-S*、旧卡 #949–#959 等）无登记件项号 ⇒ 探针不判、本表不定级。\n';
 md += '8. **3 张卡「执行态」为空**（#1030 / #1031 / #1032，标题不含项号 ⇒ 非登记件项）⇒ 探针不写。\n';
 md += '9. **派单件两处计数与实物不符（实测更小）**：施工项登记件实测 **48 项**（非 49；46 活动 + 1 retired + 1 proposal）；DSH 登记件实测 **24 项**（其文件头自称 25）⇒ 合计 **72**，与 cardmap.json total=72 一致。\n';
-md += '10. **L3 运行的运行时三元组**（红线 ⑤）：node v24.19.0 @ ' + Q + '/Users/wane/.nvm/versions/node/v24.19.0/bin/node' + Q + ' ｜ vitest @ ' + Q + '/Users/wane/SynovaAgent/node_modules/.bin/vitest' + Q + ' ｜ 取数 ' + asOf + '。DSH 内建 node（' + Q + '/Users/wane/.dsh-trial-017/dsh-runtimes/dsh-primary-runtime/dependencies/node/bin/node' + Q + '，v24.21.0）**跑不了 vitest**（rolldown 原生 binding 签名 Team ID 不匹配，Startup Error）⇒ 改用 nvm node。\n';
+md += '10. **L3 运行的运行时三元组**（红线 ⑤）：node v24.19.0 @ ' + Q + '/Users/wane/.nvm/versions/node/v24.19.0/bin/node' + Q + ' ｜ vitest @ ' + Q + '/Users/wane/SynovaAgent/node_modules/.bin/vitest' + Q + ' ｜ 取数 ' + asOf + '。本机另一运行时 node 无法加载 vitest 原生 binding（签名 Team ID 不匹配）—— 该运行时细节按补 1 不在本件展开，另报 CTO。\n';
 md += '11. **"执行态"语义碰撞（必须先看这条再用板）**：探针按证据推导，会把人工过程态 **已派单 → 未开工**（0-11 #985 / 0-12 #986：确无任何关联 PR）。若 CTO 要保留"已派单"信号，需给探针加 --preserve-dispatch 或给"执行态"加档；**本次按派单件原文执行 --emit（证据优先），故这 2 张会落到"未开工"**。\n';
 md += '12. **板低估 9 张**：0-3 #977 / 0-5 #979 / 0-7 #981 / 0-8 #982 / 1-8 #987 / 1-9 #988 板=已派单而证据=已交付；0-1 #975 / 0-2 #976 / 0-6 #980 板=已派单而证据=进行中（正式链接 PR 已开）。\n';
 md += '13. **探针主判据的已知假阴面（本次实测）**：#1051(1-7) 的载体 PR 用 ' + Q + 'Refs #1051' + Q + ' 而非 ' + Q + 'Closes' + Q + ' ⇒ GitHub 不建正式链接 ⇒ 探针判"未开工"，而代码与判据件都已在 main。**建议**：后续把 PR 正文的 ' + Q + '#N' + Q + ' 引用纳入补充判据（本次未改，避免引入假阳）。\n';
+
+md += renderSections(SECTIONS);
 
 if (MD_OUT) {
   writeFileSync(MD_OUT, md, 'utf-8');
