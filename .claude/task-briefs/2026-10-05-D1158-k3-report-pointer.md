@@ -74,4 +74,5 @@
 |---|---|
 | .claude/task-briefs/2026-10-05-D1158-k3-report-pointer.md | task |
 | docs/synova/audit-reports/INDEX.md | task |
-| memory/notes/proposed/2026-10-05-d1155-k3-report-pointer.md | task |
+| memory/notes/proposed/2026-10-05-d1158-k3-report-pointer.md | task |
+
