@@ -22,6 +22,30 @@ function getStore(): KnowledgeStore {
   return createSystemKnowledgeStore();
 }
 
+// ════════════════════════════════════════════════════════════════
+// D1155 / 0-9bis — 审计归属：消费 req.rbac（L-4），不重算身份
+// ════════════════════════════════════════════════════════════════
+
+/**
+ * 取当前请求的验签 RBAC 上下文。
+ *
+ * 契约（铁律 47 — 输入/输出/降级）:
+ * - 输入: express Request。`req.rbac` 由 `middleware/rbac.rbacMiddleware` 注入
+ *   （挂载点 `server.ts:366`，**早于**本路由的 `server.ts:402`）；
+ *   其唯一可信来源是 `req.auth`（`jwtAuthMiddleware` 验签后写入）。
+ * - 输出: 含 `userId` 的上下文对象，或 `undefined`（中间件未执行 / 未挂载）。
+ * - 降级: 无。**不重算** `extractRbacContext(req)` —— 依 L-4，路由必须消费 `req.rbac`，
+ *   取不到时由调用方回退 `'anonymous'`（保持本路由既有「无身份也放行」姿态不变：
+ *   本卡只修**归属**，不新增任何拒绝门槛）。
+ *
+ * 形态说明: 此处刻意**不 import** `middleware/rbac` 的类型（卡 §架构层「零新增 import」），
+ *   仅声明本路由**实际消费**的最小结构（`userId`）。代价：字段改名无编译期保护
+ *   （会退化为 `undefined` ⇒ 回落 `'anonymous'`，不静默放行）。
+ */
+function readRbac(req: Request): { userId?: string } | undefined {
+  return (req as Request & { rbac?: { userId?: string } }).rbac;
+}
+
 // ═══ 搜索 ═══
 
 router.post('/api/knowledge/search', async (req: Request, res: Response) => {
@@ -36,8 +60,11 @@ router.post('/api/knowledge/search', async (req: Request, res: Response) => {
 
     const { results, stats } = store.search(query, filter, limit || 10);
 
-    // 审计日志 (如果有 userId)
-    const userId = (req as unknown as Record<string, unknown>).userId as string || 'anonymous';
+    // 审计日志 — D1155/0-9bis: 归属取**验签身份**（req.rbac ← req.auth）。
+    //   原实现读的是请求对象上一个**全仓无人写入**的 `userId` 属性（判据：全仓搜「给该属性
+    //   赋值」的语句 ⇒ 零命中）⇒ 该值恒 undefined ⇒ 审计表 `user_id` 恒 `'anonymous'`
+    //   （审计不可归属）。取不到身份时回退 `'anonymous'`（姿态不变：不新增拒绝门槛）。
+    const userId = readRbac(req)?.userId ?? 'anonymous';
     store.auditLog('knowledge_query', userId, query, stats);
 
     res.json({
