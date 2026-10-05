@@ -11,6 +11,7 @@
     "exception_rate": "number (0-1) — 例外率"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "规则约束——治理框架下制定的规则和限制，约束资本分配和人才部署的边界。"
 }

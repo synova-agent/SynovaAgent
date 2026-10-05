@@ -11,6 +11,7 @@
     "social_sentiment_trend": "string — 社交情绪趋势"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "成功交付带来好口碑，好口碑带来更多客户(飞轮)——声誉池驱动客户获取效率提升。"
 }

@@ -11,6 +11,7 @@
     "change_readiness_score": "number (0-1) — 变革准备度"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "惯例刚性阻止调整(二阶、负向)——'我们一直这样做'的惯例增加所有一阶阀的调整阻力。"
 }
