@@ -11,6 +11,7 @@
     "attribution_model": "string — 归因模型"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "品牌投入产生客户信任与溢价——活动池中的品牌/营销活动积累品牌资产。"
 }
