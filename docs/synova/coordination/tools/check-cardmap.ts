@@ -39,7 +39,7 @@ function fetchCards(): Array<{ number: number; title: string }> {
   let cursor: string | null = null;
   for (let page = 0; page < 20; page++) {
     const after = cursor ? `, after: "${cursor}"` : '';
-    const q = `query { node(id:"${PROJECT_ID}") { ... on ProjectV2 { items(first: 100${after}) { pageInfo { hasNextPage endCursor } nodes { content { ... on Issue { number title } } } } } } }`;
+    const q = `query { node(id:"${PROJECT_ID}") { ... on ProjectV2 { items(first: 100${after}) { pageInfo { hasNextPage endCursor } nodes { content { ... on Issue { number title } ... on PullRequest { number title } } } } } } }`;
     let o: {
       data?: {
         node?: {
