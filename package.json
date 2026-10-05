@@ -65,7 +65,7 @@
     "ink": "^5.1.0",
     "ink-text-input": "^6.0.0",
     "neo-blessed": "0.2.0",
-    "nodemailer": "^9.1.1",
+    "nodemailer": "^10.0.11",
     "pino": "9.14.0",
     "pinyin-pro": "^3.29.3",
     "react": "^19.3.0",
