@@ -18,7 +18,7 @@ import type { DiagnosisReport } from '../../src/l3/synova-diagnosis-engine';
 function makeReport(overrides?: Partial<DiagnosisReport>): DiagnosisReport {
   return {
     reportId: 'diag-test-001',
-    teamId: 'wani-baby',
+    teamId: 'client-a',
     generatedAt: '2026-08-23T10:00:00.000Z',
     summary: '现金流缺口与人才密度双重制约增长，建议先稳现金流再补关键岗位。',
     expertReports: [
