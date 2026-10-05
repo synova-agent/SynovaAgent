@@ -118,14 +118,15 @@ export interface RbacContext {
 
 ### 2.2 入口：`resolveContext(identity)`（**唯一投影点**，CTO §二③）
 
-🔴 **为什么必须立这个入口**：现状 `src/` 里 `teamId` / `department` 已散落 **428 处 / 74 文件**
-（**CTO 实测，我未复跑**）—— 不立单一入口 ⇒ **74 个文件各写各的**（分叉）。
+🔴 **为什么必须立这个入口**：现状 `src/` 里 `teamId` / `department` 已散落 —— 🔴 不给手写数（CTO 纪律：数量一律以脚本实况为准）。三方口径实测分歧：
+**428（CTO）/ 346（K3）/ 397（产品线，含子串匹配）**；涉及文件数三方一致 = 71。
+枚举命令：`git grep -lE "teamId|department" origin/main -- src/ | wc -l` ⇒ 71—— 不立单一入口 ⇒ **74 个文件各写各的**（分叉）。
 
 ```ts
 /**
  * 契约（铁律 47：输入 / 输出 / 降级）:
  *   @input  identity —— **验签后**的 `req.auth`（`JwtPayload`，唯一可信来源；L-4 禁止路由重算身份）
- *   @output { orgId, departmentIds, permissions[] } —— **授权判定只许读这三样**
+ *   @output { orgId, departmentIds, permissions[] } —— **授权判定只许读这四样（含 `version`）**
  *   @降级   `orgId` 不可得 ⇒ 返回 `orgId: ''` 且 `permissions: []` ⇒ 下游一律 fail-closed（I2）
  *   @不做什么 不查库、不猜、不用 `undefined` 表达"无限制"（I3）
  */
@@ -133,6 +134,9 @@ export function resolveContext(identity: JwtPayload): {
   orgId: string;
   departmentIds: string[];
   permissions: PermissionId[];
+  /** v3.1（K3 P0 修复）：权限配置版本 —— 见 §8.3。
+   *  必须在此冻结：旧决策的审计要能指向「当时那版权限」。 */
+  version: string;
 };
 ```
 
@@ -154,7 +158,7 @@ if (req.auth) {
 
 | # | 不变量 | 判据（可机器判） |
 |---|---|---|
-| **I1** | 身份维度**只能**来自验签后的 `req.auth`（L-4：路由不得重算身份） | `git grep -nE 'req\.auth' -- src/routes/ \| grep -vE '^[^:]+:[0-9]+:[[:space:]]*(\*\|//\|/\*)'` ⇒ **期望 0**。⚠️ 现值 = **7 命中**（`actions-api.ts:52` · `im.ts:122,127` · `workspace-data.ts:29,66` · `workspaces-api.ts:26,203`），**全部是注释** ⇒ 判据**必须过滤注释行**，否则今天就是红的（原写法「`middleware/auth.ts` 之外零处」自相矛盾：`auth.ts` 本就不在 `src/routes/` 下） |
+| **I1** | 身份维度**只能**来自验签后的 `req.auth`（L-4：路由不得重算身份） | `git grep -nE 'req\.auth' -- src/routes/ \| grep -vE '^[^:]+:[0-9]+:[[:space:]]*(\*\|//\|/\*)'` ⇒ **期望 0**。⚠️ 现值 = **9 命中**（🔴 2026-10-05 K3 审计纠正：v2 写的 7 是 ade9f3c4f 基线时点的数，v3 换基线未刷新 ⇒ 教训：判据里的现值必须随基线刷新，或干脆不写数只给命令）（`actions-api.ts:52` · `im.ts:122,127` · `workspace-data.ts:29,66` · `workspaces-api.ts:26,203`），**全部是注释** ⇒ 判据**必须过滤注释行**，否则今天就是红的（原写法「`middleware/auth.ts` 之外零处」自相矛盾：`auth.ts` 本就不在 `src/routes/` 下） |
 | **I2** | **缺席即拒绝**：`orgId` 不可得 ⇒ 一切跨租户判定 **fail-closed**（不得回退"放行"） | 单测：`extractRbacContext({})` ⇒ `orgId === ''` 且 `canAccessWorkspace` 对其返回 `false` |
 | **I3** | **不得**以 `undefined` 表达"无限制" | **具名测试**（P1 交付）：`canAccessWorkspace({role:'manager', userId:'u', authenticated:true, orgId:''}, {visibility:'department', department:'d1'})` ⇒ **`false`**；且同一函数对 `orgId:'d1'`+`department:'d1'` ⇒ `true`。**「不知」与「不限」必须走不同返回**（原表述无可执行判据，已补） |
 | **I4** | 新维度**不得**引入第二身份通道（禁止新加 `req.userId` 这类影子字段） | `git grep -n "req\.userId\s*=" -- src/` ⇒ 零命中（0-9bis 已立的规矩） |
