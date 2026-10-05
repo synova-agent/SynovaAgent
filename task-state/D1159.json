@@ -1,0 +1,23 @@
+{
+  "task_id": "D1159",
+  "title": "必需context变更顺序检查（#1077 顺序风险 → 机器可判）",
+  "status": "in_progress",
+  "risk": "low",
+  "domain": "govl",
+  "owner": "govl-line",
+  "executor": "govl-p0-fix",
+  "milestone": "门禁治理波次 · K3 缺口第 4 行机器化（新件）",
+  "spec": ".claude/task-briefs/2026-10-05-D1159-必需context变更顺序检查.md",
+  "write_set": [
+    "scripts/control-tower/check-required-contexts-order.py",
+    "tests/control-tower/check-required-contexts-order.test.sh",
+    "docs/synova/coordination/D1159-必需context变更顺序-判据.md",
+    "docs/authority/DOCS-REGISTRY.yaml",
+    ".claude/task-briefs/2026-10-05-D1159-必需context变更顺序检查.md",
+    "memory/notes/proposed/2026-10-05-d1159-required-contexts-order.md",
+    "task-state/D1159.json"
+  ],
+  "updated_at": "2026-10-05",
+  "updated_by": "govl-p0-fix",
+  "note": "源 = K3 审计 2026-10-05 §三 缺口第 4 行 + #1077（afde93eae）顺序风险。判据: live ⊃ base-ref 登记表 ⇒ 收紧先行 exit 1；live ⊆ M ⇒ exit 0（放宽允许先行，逐条点名）；候选登记表变更 = 信息级。三态 0/1/2，复用 check-required-contexts.py 的 live 取数/登记表解析/差集（不重造）。只读（无 PATCH/写方法）。真实例复现: --base-ref 'afde93eae^' ⇒ live=9 ⊂ M=12，点名 3 条。新件，不改任何既有门禁；送 K3 → CTO 裁，本分支不合并。"
+}
