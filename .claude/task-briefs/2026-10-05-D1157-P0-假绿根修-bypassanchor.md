@@ -69,6 +69,10 @@ Synova = AI 诊断 Agent。本任务位于**治理层（控制塔门禁）**，�
   为何不用 `^$h` / 为何不用 K3 字面式的理由）。
 - `tests/control-tower/check-bypass-log.test.sh`：追加 D1157 夹具 ①–⑥（见提案 §三），原 22 条断言不动。
 - `tests/control-tower/check-bypass-log.beforeafter.sh`：新建改坏即红证据生成器（`--paths` 可指向任意版本门禁）。
+- `scripts/hooks/post-commit.sh`：**写入侧同源修正**（CTO 第 2 版裁决并入本批）—— `_ledger_has_hash()` 幂等判据
+  由无锚 `grep -q "$h"` 改为与读取侧**逐字同源**的锚定判据（`D1157-REC-RE-BEGIN/END` 块）；
+  **写入格式（记录行本体）不动**，只动「是否已登记」的判定 ⇒ 消掉「写侧认为已记 / 读侧认为未记」的不对称。
+- `tests/control-tower/post-commit.test.sh`：追加 F1–F4 夹具（同源断言 / 改坏即红独立红例 / H2 绿对照 / 两条负对照）。
 - `.claude/task-briefs/2026-10-05-D1157-P0-假绿根修-bypassanchor.md`：本件（提案 + 普查 + 两段原始输出 + 回滚）。
 - `memory/notes/proposed/2026-10-05-d1157-bypass-hash-anchor.md`：铁律 49 决策 Note。
 
@@ -77,7 +81,8 @@ Synova = AI 诊断 Agent。本任务位于**治理层（控制塔门禁）**，�
 - 不改 `.github/workflows/ci.yml`（**红线：12 必需 context 的唯一产出者**）。
 - 不改 `scripts/control-tower/check-required-contexts.py`（属任务 B，另件）。
 - 不改 `scripts/control-tower/bypass-ledger.sh`（来源合并逻辑不动；本卡只动"读出来怎么判"）。
-- 不改 `scripts/hooks/post-commit.sh`（**写入格式是判据的前提**，本卡只读不写；改它 = 换锚，另卡）。
+- 不改 `scripts/hooks/post-commit.sh` 的**写入格式**（记录行格式 = 判据的前提，本卡不动它）；
+  只改其幂等判据 `_ledger_has_hash()`（CTO 第 2 版裁决明令并入 ⇒ 见「做什么」第 4 条）。
 - 不动 `scripts/audit/**`（K3 域，红线）。
 - 不放宽 D1152 三条语义（fresh clone exit 0 / 本机待推 exit 1 / 首推 ref 缺失不免检）——见提案 §五。
 - 不自行合并、不开 auto-merge（判据变更必须 K3 → CTO）。
@@ -98,6 +103,10 @@ Synova = AI 诊断 Agent。本任务位于**治理层（控制塔门禁）**，�
 - [ ] 同一夹具喂本分支版门禁 → `GATE_EXIT=1 / VERDICT=blocked`（改后已堵）
 - [ ] D1152 三条语义未放宽（fresh clone 0 / 本机待推 1 / 首推 ref 缺失 1，均为既有断言实跑通过）
 - [ ] 三态退出码保持 0/1/2（既有降级断言：缺 base 无 origin → exit 2 实跑通过）
+- [ ] `bash tests/control-tower/post-commit.test.sh` → `结果: 33 通过, 0 失败`（含 F1–F4）
+- [ ] **F2 独立红例**：`origin/main` 版 hook（`git show` 取，遵 H1）+ 账本只有 `parent=<sha>` ⇒ **不补记**（漏记成立）
+- [ ] **F-fixed 绿对照（H2）**：同夹具 + 本支实现 ⇒ **必须补记**（红来自断言，非崩溃）
+- [ ] **F1 同源断言**：写入侧/读取侧 `_REC_RE` 逐字一致（漂移即红）
 - [ ] 真实语料普查数字可复跑（提案 §二命令逐条给出）
 - [ ] 送 K3 过审 + CTO 裁之前**不合并**
 
@@ -295,13 +304,24 @@ K3 §二 提案 1 字面：`改 grep -q "COMMITTED.*HASH=$sha"`。本卡不采�
    （注：CTO 卡面建议的 `fix/D1154-p0-bypassanchor` **不可用** —— D1154 已被产品线
    `.claude/task-briefs/2026-10-05-D1154-产品线-qa-ask权限上下文接线-#984.md` 占用。）
 
+## 收尾清单（**合并后必须立即开卡** —— CTO 第 2 版裁决明令「不许丢」）
+
+> 理由（CTO 原话）：修 P0 只是让它不再**假绿**；**误写入本身仍会发生** ⇒ 修完 P0，「误写入怎么撤回」就变成真问题。
+
+- [ ] **开卡：`LEDGER-RETRACT` 语义**（撤回记录怎么被对账尊重 + 防「洗白式撤回」）—— 口径已由 CTO 给出，逐条引用：
+  1. 撤回**不改历史行**，而是**追加一条 RETRACT 记录**（append-only；账本不接受原地改）。
+  2. RETRACT 必须带**四要素**：撤回者 / 时刻 / 被撤 HASH / 原因。
+  3. 对账时**被 RETRACT 的 HASH 不计入「有记录」**。
+  4. 🔴 **禁令**：RETRACT **不得**用于「我确实绕过了，想洗白」⇒ 判据 = **RETRACT 记录本身必须可被独立复核**
+     （撤回原因须指向具体事件）。
+- [ ] 现状注记（本卡实测）：账本里已存在 1 条 `LEDGER-RETRACT` 散文行（只加注不删行）⇒ 被撤记录**仍算记录**；
+  本卡不动它（属上述卡）。
+
 ## 写集（机器生成，禁手改）
 
 | 文件 | 类型 |
 |---|---|
-| .claude/task-briefs/2026-10-05-D1157-P0-假绿根修-bypassanchor.md | task |
-| memory/notes/proposed/2026-10-05-d1157-bypass-hash-anchor.md | task |
 | scripts/control-tower/check-bypass-log.sh | task |
-| task-state/D1157.json | task |
-| tests/control-tower/check-bypass-log.beforeafter.sh | task |
-| tests/control-tower/check-bypass-log.test.sh | task |
+| scripts/hooks/post-commit.sh | task |
+| tests/control-tower/post-commit.test.sh | task |
+

@@ -190,7 +190,12 @@ fi
 #     精确等值会对它们造**新的假红**（brief §与 K3 提案字面的偏差 三条逐条列出）。
 #   为何不用 `^$h`（行首 = 该 sha）: 行首是时间戳 —— 该锚永不命中（记录 sha 在行尾字段）。
 #   一次性预取集合（而非逐条扫全账本）: pending 通常 1–5 条，账本 distinct 记录 1984 条。
+# 逐字同源块（与 scripts/hooks/post-commit.sh 的写入侧判据同；漂移由
+# tests/control-tower/post-commit.test.sh 的「同源断言」夹具物理把守）。
+# 块内**只允许** BEGIN/END 标记 + 一行 `_REC_RE=…`（提取器取 BEGIN 后首个非注释行）。
+# D1157-REC-RE-BEGIN
 _REC_RE='^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]+[^ |]*[[:space:]]*\|?[[:space:]]*COMMITTED'
+# D1157-REC-RE-END
 # shellcheck disable=SC2086  # 有意分词: LEDGER_SOURCES 是换行分隔的多文件列表
 _RECORDED_HASHES="$(grep -hE "$_REC_RE" $LEDGER_SOURCES 2>/dev/null | grep -oE 'HASH=[0-9a-fA-F]{7,40}' | sed 's/^HASH=//' | tr 'A-F' 'a-f' | sort -u)"  # swallow-ok: 来源缺失/无匹配 → 空集 ⇒ 全部按缺记录（fail-closed，不静默放行）
 

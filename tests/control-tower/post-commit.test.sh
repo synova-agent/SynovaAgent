@@ -263,6 +263,114 @@ else
   grep -q "^C-entry$" "$MB/.claude/bypass.log" && grep -q "^D-entry$" "$MB/.claude/bypass.log" \
     && ok "D1145③ 两份本地内容都在（git 不再介入该文件）" || no "D1145③ 本地内容丢失"
 fi
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# D1157（P0 假绿根修的**写入侧**同源修正 —— CTO 第 2 版裁决并入本批）
+#   病灶: `_ledger_has_hash()` 旧判据 `grep -q "$h" $srcs` **无锚** ⇒ `detected-bypass … parent=<sha>`
+#         也构成"已登记" ⇒ hook **跳过写 COMMITTED 行**（证据链静默缺一条；且与对账器判据不对称）。
+#   H1（判例级硬约束）: 读文件/读状态类断言一律 `git show <ref>:<path>`，**禁读工作树**
+#     （主仓工作树停在 docs/D1115-b1-br5-closeout ⇒ 同一文件内容与主干不同）。
+#   H2（判例级硬约束）: 夹具的"红"必须来自**断言**，不许来自脚本崩溃恰好 return 1；
+#     判据 = 把被测物换成**已知正确实现** ⇒ 夹具必须绿（下方 F-fixed 即该绿对照）。
+#   本组（改坏 ⇒ F2 红；夹具坏或修复不生效 ⇒ F-fixed 红；过紧 ⇒ F4 红）:
+#     F1 同源断言: post-commit.sh 与 check-bypass-log.sh 的 D1157-REC-RE 块**逐字一致**
+#     F2 改坏即红（**独立红例**）: 账本只有 `parent=<C>`（C 无自身记录）⇒ 旧实现**不补记**
+#     F-fixed 绿对照（H2）: 同夹具 + 本支实现 ⇒ **必须补记**
+#     F3 负对照: 已有 C 自身记录 ⇒ 仍跳过（幂等未破）
+#     F4 负对照: 记录值是 8 位短 sha ⇒ 仍算已登记（前缀判定未过紧）
+# ═══════════════════════════════════════════════════════════════════════════════
+echo ""
+echo "── D1157 写入侧判据（幂等锚定 + 同源断言）──"
+
+# 逐字同源块提取（POSIX awk：取 BEGIN 与 END 之间**首个非注释非空行** = `_REC_RE=…`）
+_rec_re_of() { awk '/D1157-REC-RE-BEGIN/{f=1;next} /D1157-REC-RE-END/{f=0} f && $0 !~ /^[[:space:]]*#/ && NF {print; exit}' "$1" 2>/dev/null; }
+REC_RE_HOOK="$(_rec_re_of "$HOOK_SRC")"
+REC_RE_CHECK="$(_rec_re_of "$REPO/scripts/control-tower/check-bypass-log.sh")"
+if [ -n "$REC_RE_HOOK" ] && [ "$REC_RE_HOOK" = "$REC_RE_CHECK" ]; then
+  ok "F1 同源断言: 写入侧/读取侧 _REC_RE 逐字一致"
+else
+  no "F1 同源断言失败: 两侧 _REC_RE 不一致或缺失（写入侧='${REC_RE_HOOK}' 读取侧='${REC_RE_CHECK}'）"
+fi
+
+# 造沙箱并驱动「重跑 hook」场景；$1=hook 实现路径 → stdout 1=账本里补记了 C / 0=没补记
+d1157_probe() {  # <hook-src>
+  local hook="$1" sb tag C
+  tag="$(printf '%s' "$hook" | cksum | tr -dc '0-9')"
+  sb="$TMPD/d1157-$tag"
+  rm -rf "$sb"; mkdir -p "$sb/.claude" "$sb/scripts/hooks" "$sb/scripts/control-tower"
+  git -C "$sb" init -q >/dev/null 2>&1 || { echo "FIXTURE_FAIL init"; return 3; }
+  git -C "$sb" config user.name t; git -C "$sb" config user.email t@t
+  git -C "$sb" config core.hooksPath "$TMPD/empty-hooks"    # 夹具内手动驱动 hook（不让 git 自己触发）
+  cp "$hook" "$sb/scripts/hooks/post-commit.sh"
+  cp "$LEDGER_SRC" "$sb/scripts/control-tower/bypass-ledger.sh"
+  echo seed > "$sb/seed.txt"
+  git -C "$sb" add -A >/dev/null 2>&1 || { echo "FIXTURE_FAIL add"; return 3; }
+  git -C "$sb" commit -qm seed >/dev/null 2>&1 || { echo "FIXTURE_FAIL commit"; return 3; }
+  # ① 待补记提交 C（沙箱无 hook ⇒ 等价 --no-verify：账本里不会自动出现 C 的记录）
+  echo payload > "$sb/payload.txt"
+  git -C "$sb" add -A >/dev/null 2>&1
+  git -C "$sb" commit -qm "feat: C" >/dev/null 2>&1 || { echo "FIXTURE_FAIL commit-C"; return 3; }
+  C="$(git -C "$sb" rev-parse HEAD 2>/dev/null)"
+  [ -n "$C" ] || { echo "FIXTURE_FAIL rev-parse"; return 3; }
+  case "${D1157_LEDGER_SHAPE:-parent-only}" in
+    own-record)
+      printf '%s\n' "2026-10-05T00:00:00Z | COMMITTED | pre-commit PASS (hook 层登记) | HASH=$C" > "$sb/.claude/bypass.log" ;;
+    short-record)
+      printf '%s\n' "2026-10-05T00:00:00Z | COMMITTED | pre-commit PASS | TASK_ID=X | AGENT=t | HASH=${C:0:8}" > "$sb/.claude/bypass.log" ;;
+    *)  # parent-only（默认）：账本**只有**"提到 C 的非记录行"——旧判据的假"已登记"源
+      printf '%s\n' "2026-10-05T00:00:00Z detected-bypass head-mismatch marker=0000000000000000000000000000000000000000 parent=$C" > "$sb/.claude/bypass.log" ;;
+  esac
+  # ② 合法 marker（pre-commit 时 HEAD = C^）⇒ 三判走 PASS_WAY=1（宁可多记一行，不丢证据）
+  printf '%s|%s\n' "$(git -C "$sb" rev-parse HEAD^)" "$(date +%s)" > "$sb/.claude/last-precommit-success"
+  # ③ 手动重跑 hook（HEAD 仍是 C）；沙箱内无 auditor/decide-next ⇒ 无同仓 git 副作用
+  ( cd "$sb" && env SYNO_SESSION_ID=test bash "$sb/scripts/hooks/post-commit.sh" >/dev/null 2>&1 )
+  # ④ 判定：镜像账本里是否出现 C 的 COMMITTED 记录（锚定口径 = 记录行 HASH= 值前缀匹配）
+  if grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]+[^ |]*[[:space:]]*\|?[[:space:]]*COMMITTED' "$sb/.claude/bypass.log" 2>/dev/null \
+     | grep -oE 'HASH=[0-9a-fA-F]{7,40}' | sed 's/^HASH=//' | tr 'A-F' 'a-f' | grep -q "^${C:0:8}"; then
+    echo 1
+  else
+    echo 0
+  fi
+}
+
+# F2: 改坏即红（独立红例）—— 旧实现（**从 ref 取，H1**）在"账本只有 parent=<C>"下**不补记**
+PREFIX_HOOK="$(git -C "$REPO" show origin/main:scripts/hooks/post-commit.sh 2>/dev/null)"
+if [ -z "$PREFIX_HOOK" ]; then
+  no "F2 取数失败: git show origin/main:scripts/hooks/post-commit.sh 无输出（H1 要求读 ref，禁读工作树）"
+else
+  printf '%s\n' "$PREFIX_HOOK" > "$TMPD/post-commit-prefix.sh"
+  if grep -q 'grep -q "\$h" \$srcs' "$TMPD/post-commit-prefix.sh"; then   # 前提：该 ref 判据确为无锚
+    D1157_LEDGER_SHAPE=parent-only; OUT_P="$(d1157_probe "$TMPD/post-commit-prefix.sh")"
+    case "$OUT_P" in
+      0) ok "F2 改坏即红: 旧实现（无锚判据）在 parent-only 账本下**跳过补记** ⇒ 红例成立（漏记）" ;;
+      1) no "F2 **红例失效**: 旧实现竟然补记了（夹具不再体现旧缺陷 ⇒ 判别性丢失，必须红）" ;;
+      *) no "F2 夹具自身失败: ${OUT_P}" ;;
+    esac
+  else
+    no "F2 前提失败: origin/main 的 post-commit.sh 判据已锚定（本夹具需旧实现作红例；请改用本支父提交）"
+  fi
+  # F-fixed（H2 绿对照）: **本支实现**在同夹具下必须**补记**
+  D1157_LEDGER_SHAPE=parent-only; OUT_F="$(d1157_probe "$HOOK_SRC")"
+  case "$OUT_F" in
+    1) ok "F-fixed 绿对照（H2）: 本支实现在同夹具下**补记** C ⇒ 红来自断言而非崩溃" ;;
+    0) no "F-fixed 失败: 本支实现未补记（夹具坏或修复不生效）" ;;
+    *) no "F-fixed 夹具自身失败: ${OUT_F}" ;;
+  esac
+fi
+
+# F3 负对照: 已有自身记录 ⇒ 幂等保持（不重复写）
+D1157_LEDGER_SHAPE=own-record; OUT_O="$(d1157_probe "$HOOK_SRC")"
+case "$OUT_O" in
+  1) ok "F3 负对照: 已有自身记录 ⇒ 仍算已登记（幂等未被打破）" ;;
+  *) no "F3 夹具判据异常: ${OUT_O}（应 1）" ;;
+esac
+# F4 负对照: 8 位短 sha 记录 ⇒ 前缀判定仍算已登记（防过紧）
+D1157_LEDGER_SHAPE=short-record; OUT_S="$(d1157_probe "$HOOK_SRC")"
+case "$OUT_S" in
+  1) ok "F4 负对照: HASH=<8 位短 sha> ⇒ 仍算已登记（前缀判定未过紧）" ;;
+  *) no "F4 夹具判据异常: ${OUT_S}（应 1；过紧会让真记录被重复补记）" ;;
+esac
+
 echo ""
 echo "结果: $PASS 通过, $FAIL 失败"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1
