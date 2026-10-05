@@ -11,6 +11,7 @@
     "perverse_incentive_risk": "number (0-1) — 逆向激励风险"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "激励与目标对齐——激励设计使个人决策与组织目标一致，调节人才部署和资本分配的个人决策。"
 }

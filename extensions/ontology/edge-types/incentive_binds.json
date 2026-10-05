@@ -35,5 +35,7 @@
     "sentinel-revenue-health",
     "sentinel-incentive-alignment"
   ],
+  "action_effect_lag": "unknown",
+  "transfer_function": "TBD — to be defined in compute phase",
   "description": "激励绑定。KPI和薪酬结构对管理层行为的影响。"
 }
