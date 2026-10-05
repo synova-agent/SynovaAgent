@@ -360,3 +360,59 @@ RB-05 是 §8.2 ①② 的实现，前置 **RB-03**（"批准什么"要落到具
 ⇒ **两边各对一半**：CTO 的**归属**正确（审批不变量出自 `dsh-user-approval`，已回溯到
 `dsh-user-approval/lib/index.js:25-26` 与 `lib/types/index.js:2`）；CTO 的**存在性判断**错误（`dsh-authorization` 存在）。
 ⇒ 本件**已按正确归属改写**（§8.1 第 4 行）**并保留两包的区别**（审批 ≠ 凭据获取）。
+
+---
+
+## 九、引用三元组补正（CTO 纪律 §一 · 2026-10-05）
+
+> **纪律**：引用必须回查，且必须写**三元组** —— **① 版本/ref ② 绝对路径 ③ 取数时刻**。
+> **缺任一项 ⇒ 该引用不得进入判据 / 冻结件 / 结论。**
+> 起因：CTO 与产品线就 `dsh-authorization` 存在与否**各执一词且都对** —— 因为**量的不是同一份 DSH**（缺①）。
+
+### 9.1 本件所有 DSH 引用的三元组（一次写全，覆盖 §8 全部引用）
+
+| 项 | 值 |
+|---|---|
+| **① 版本/ref** | `deepseek-harness-pkg` **`0.1.6-alpha.1`**（读自该树 `package.json` 的 `version`） |
+| **② 绝对路径** | `/Users/wane/Library/Application Support/io.github.hairyf.deepseek-harness-desktop/dependencies/dsh/node_modules/@deepseek-ai/` |
+| **③ 取数时刻** | **2026-10-05T17:21:00Z** |
+
+🔴 **版本冲突的事实（必须在件里留档，否则下一个人继续踩）**：工作机上有**三棵 DSH 树**，权限族包数与内容不同：
+
+| 树 | 版本 | 权限族包数 | `dsh-authorization` | `dsh-client-ui-approval` |
+|---|---|---|---|---|
+| app-support `dependencies/dsh`（**本件引用源**） | **`0.1.6-alpha.1`** | **12** | ✅ 有 | ✅ 有 |
+| `~/.dsh-pre-upgrade-015rc1-…/dsh-0.1.2-install` | `0.1.2` | 12 | ✅ 有 | ✅ 有 |
+| CTO 所测「当前安装」 | `0.2.0-rc.2` | 11 | ❌ **无** | — |
+
+⇒ **"`dsh-authorization` 是否存在"没有唯一答案，只有"哪棵树"的答案。**
+⇒ 本件全部结论**只对上面 ① 那棵树成立**；换树须重跑（§9.4 给命令）。
+
+### 9.2 §8.2 ③ 的出处**已回溯**（原标注"未回溯到 file:line"作废 —— 见 §9.3 更正）
+
+| 项 | 值 |
+|---|---|
+| **真包** | `dsh-sandbox-policy`（**不是** `dsh-user-approval` —— 产品线原先搜错了包） |
+| **原句** | 「survives restart by replay, **two sessions can never see each other's state**」 |
+| **file:line** | `dsh-sandbox-policy/lib/index.js:11` · `lib/types/session-mode.d.ts:6` · `lib/invariant.js:7` · `README.md:54,76`（四份逐字一致） |
+| **两版都有?** | ✅ **0.1.6-alpha.1 与 0.1.2 都存在** ⇒ **CTO 假设的"旧版有新版无"不成立**；我上一版回溯不到的真原因是**搜错了包**（我把它归在审批包名下搜） |
+
+🔴 **语义边界（不许照抄的地方，这正好是"换轴"的又一例）**：该句的语境是 **sandbox 会话模式隔离**
+（「each session keeps its own mode」）——**不是多租户权限隔离**。
+⇒ 我们引它只取**机制**（"每会话自持解析结果、互不串"）；**语义换成 orgId/departmentIds**。
+⇒ **不得**写成"DSH 规定租户隔离"。
+
+### 9.3 更正（本节点名作废 §8.2③ 的原标注）
+
+- §8.2 ③ 原写「**本版未回溯到具体 file:line，见 §8.6 待办**」⇒ 🔴 **已回溯，该标注作废**，正确出处见 §9.2。
+- §8.6 待办第 3 条（"引它之前须先 grep 到原句"）⇒ **已执行**，可关闭。
+- **§8.6 保留的待办**：「428 处/74 文件」与「四姿态」两处 **provenance 标注**仍有效（那两条是**别人**的实测，本版仍未复跑）。
+
+### 9.4 换树重跑的命令（下一个人别凭印象）
+
+```bash
+D="<你要引的那棵 DSH 树>/dsh"
+python3 -c "import json;print(json.load(open('$D/package.json'))['version'])"   # ① 版本
+ls "$D/node_modules/@deepseek-ai" | grep -E "permission|sandbox|approval|authorization"  # ② 包清单
+date -u +%Y-%m-%dT%H:%M:%SZ                                                     # ③ 取数时刻
+```
