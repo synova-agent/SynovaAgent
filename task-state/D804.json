@@ -1,0 +1,48 @@
+{
+ "status": "spec_done",
+ "spec": {
+  "path": "docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D804-line1-6-onboarding-20260917.md",
+  "by": "dev-doc (DSH synova-devdoc)",
+  "at": "2026-09-17",
+  "note": "M1「能装能用」线1+线6 spec（八节 S1-S8）。核心结论：① GS-01 自 2026-09-16 起 exit 1 的根因 = S0-1 断言（noauth-401）与 D590 裁决①（/api/diagnosis/consult 免 JWT 白名单，src/middleware/auth.ts L121）口径冲突，非代码缺陷——修法=负向 auth 断言迁靶受控端点 + consult 免 JWT 正向契约断言（决策参考 D1，需 CTO 冻结确认口径变更）；② GS-01 的 evidence_map 键写 L1-1/L1-4，与 product-lines.yaml 验收点 ID（1-1/1-4）不匹配 → calc-progress 精确匹配绑不上，线1/线6 场景证据恒为零——本卡改为 V1 断言原文键；③ 线6 的「问卷」口径 = 首启向导 + 首条诉求（旧 /api/diagnosis/interview 已 D590 裁决② 410，question-bank 零生产调用方）；④ 1-4 转绿按 K3 D715 §四硬条件（重打包 + [preload-check] OK + 渲染层 API 请求双双落 git）；⑤ 切片 6 片（断言契约校准→产物→自启健康→开窗即用→首诊链路→TTFV+证据落盘），写集 13 条 ≤12 文件预算口径内（11 修改 + 2 新建）。",
+  "baseline": {
+   "main": "0f59e514",
+   "dispatch_pr": 618,
+   "dispatch_branch": "docs/dispatch-dsh-standard-20260917"
+  },
+  "gatekeeper": {
+   "command": "bash scripts/control-tower/dev-doc-gatekeeper.sh docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D804-line1-6-onboarding-20260917.md",
+   "exit": 0,
+   "detail": "C1 跳过（无 Edge ID）/ C2 10 路径全过 / C3-C5 过 / C6 提取 13 条"
+  },
+  "writeset_check": {
+   "command_spec_time": "SYNO_DEV_DOC=<doc> bash scripts/workflow/check-dev-doc-write-set.sh <doc>",
+   "declared": 13,
+   "drift": 0,
+   "plain_mode_note": "不带 SYNO_DEV_DOC 时该脚本报 8 条「声明修改但零实际变更」——其设计是实现期门禁（spec 期不改实现文件），与 D725 先例同型；实施期须跑全量口径并全绿"
+  },
+  "handoff": {
+   "target": "win（D773 代行：Mac 侧编码 session）",
+   "reason": "派单 §四 域=win，Mac 代行；实现按 S5 切片 + task-state D747 承接关系待 CTO 裁决（spec 附录 A）"
+  }
+ },
+ "impl": null,
+ "audit": null,
+ "fix_task_id": null,
+ "updated_at": "2026-09-17",
+ "updated_by": "dev-doc",
+ "domain": "win",
+ "target": "2026-W39",
+ "task_id": "D804",
+ "title": "M1 能装能用：线1 桌面端 + 线6 首诊端到端（规格先行）",
+ "owner": "devdoc→mac-coding",
+ "milestone": "M1 能装能用",
+ "depends_on": [],
+ "blocked": null,
+ "acceptance_points": [
+  "dev doc 八节齐备并冻结",
+  "1-1/1-4 断言化 + 6-1/6-2/6-3 端到端",
+  "GS-01 24h 内可复跑 exit 0"
+ ],
+ "next": "阶段1 起：按 S5 切片 0-5 推进（每片独立提交 + 贴原始输出）；切片 3 的 prod 实测为 1-4 转绿唯一判据（未定论项 U1）"
+}

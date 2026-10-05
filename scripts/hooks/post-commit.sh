@@ -32,15 +32,36 @@ _bypass_append() {
 
 # ═══ D1145: 幂等判据 —— 该 HASH 是否已在账本里（替代原「影子提交 message 防递归」）═══
 # 契约(铁律 47):
-#   @input  $1=commit HASH
+#   @input  $1=commit HASH（全长 40 位）
 #   @output exit 0=已登记 / 1=未登记（含账本不可读→按"未登记"处理，宁可多记一行不丢证据）
 #   @degraded 账本解析失败 → 回退本地镜像单源
+#
+# 🔴 D1157（P0 假绿根修的**写入侧**同源修正 —— 判据与 scripts/control-tower/check-bypass-log.sh
+#   的 `D1157-REC-RE` 块**逐字同源**；改一处必须改两处，漂移由
+#   tests/control-tower/post-commit.test.sh 的「同源断言」夹具物理把守）:
+#   旧判据 `grep -q "$h" $srcs` **无锚** ⇒ 该 sha 出现在账本**任何位置**都算"已登记"：
+#   典型冒充源 = `detected-bypass … marker=<sha> parent=<sha>`（关于**别的**提交的字段）
+#   ⇒ hook 误判"已登记"⇒ **跳过写 COMMITTED 行** ⇒ 证据链静默缺一条，
+#     且与修复后的对账器判据**不对称**（写侧认为已记 / 读侧认为未记 ⇒ 推送时被判红）。
+#   新判据 = 只认「COMMITTED 记录行的 `HASH=` 字段值」，且该值是提交 sha 的**前缀**
+#   （记录可短：实测历史 10 条为 8 位短 sha；`HASH=` 值长度有界 7–40，防"两条记录挤一行"过捕）。
+#   定锚依据（真实语料普查 140 份账本 / 118,077 行 / 2,501 distinct）见 brief §格式普查。
+# 逐字同源块（与 check-bypass-log.sh 同；块内只允许 BEGIN/END 标记 + 一行 `_REC_RE=…`）。
+# D1157-REC-RE-BEGIN
+_REC_RE='^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]+[^ |]*[[:space:]]*\|?[[:space:]]*COMMITTED'
+# D1157-REC-RE-END
 _ledger_has_hash() {
-  local h="$1" srcs=""
+  local h="$1" srcs="" rec v
   srcs="$(bash "$ROOT/scripts/control-tower/bypass-ledger.sh" sources 2>/dev/null)" || srcs=""
   [ -n "$srcs" ] || srcs="$ROOT/.claude/bypass.log"
   # shellcheck disable=SC2086  # 有意分词: 换行分隔的多来源列表
-  grep -q "$h" $srcs 2>/dev/null
+  rec="$(grep -hE "$_REC_RE" $srcs 2>/dev/null | grep -oE 'HASH=[0-9a-fA-F]{7,40}' | sed 's/^HASH=//' | tr 'A-F' 'a-f' | sort -u)"  # swallow-ok: 来源缺失/无匹配 → 空集 ⇒ 按"未登记"（宁可多记一行，不丢证据）
+  [ -n "$rec" ] || return 1
+  while IFS= read -r v; do
+    [ -n "$v" ] || continue
+    case "$h" in "$v"*) return 0 ;; esac
+  done <<< "$rec"
+  return 1
 }
 
 # ═══ --no-verify 绕过检测 (D366 head 对账 + D421 CT-29 分场景三判) ═══
