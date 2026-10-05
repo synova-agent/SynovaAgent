@@ -200,7 +200,7 @@ def classify(repo, root, base, protect, recent_minutes):
         ahead, dirty, age_min = [], [], -1
         if not path.is_dir():
             kind = KEEP_ORPHAN
-            rows.append({"kind": kind, "path": str(path), "branch": e.get("branch", "(detached)"),
+            rows.append({"kind": kind, "name": path.name, "path": str(path), "branch": e.get("branch", "(detached)"),
                          "head": (e.get("head") or "")[:10], "ahead": 0, "dirty": 0, "age_minutes": -1,
                          "under_workspace_root": str(path).startswith(str(root) + os.sep),
                          "ahead_lines": [], "dirty_lines": [],
@@ -211,7 +211,7 @@ def classify(repo, root, base, protect, recent_minutes):
             dirty = [ln for ln in git(path, "status", "--porcelain", check=False).stdout.splitlines() if ln.strip()]
             age_min = int((now - newest_activity(path)) // 60)
         except (CfgError, OSError) as exc:
-            rows.append({"kind": KEEP_PROBE_FAILED, "path": str(path), "branch": e.get("branch", "(detached)"),
+            rows.append({"kind": KEEP_PROBE_FAILED, "name": path.name, "path": str(path), "branch": e.get("branch", "(detached)"),
                          "head": (e.get("head") or "")[:10], "ahead": -1, "dirty": -1, "age_minutes": -1,
                          "under_workspace_root": str(path).startswith(str(root) + os.sep),
                          "ahead_lines": [], "dirty_lines": [], "note": f"逐项取证失败（转人工，不中断整轮）: {exc}"})
@@ -227,7 +227,7 @@ def classify(repo, root, base, protect, recent_minutes):
         else:
             kind = RECLAIM
         rows.append({
-            "kind": kind, "path": str(path), "branch": e.get("branch", "(detached)"),
+            "kind": kind, "name": path.name, "path": str(path), "branch": e.get("branch", "(detached)"),
             "head": (e.get("head") or "")[:10], "ahead": len(ahead), "dirty": len(dirty),
             "age_minutes": age_min, "note": "",
             "under_workspace_root": str(path).startswith(str(root) + os.sep),

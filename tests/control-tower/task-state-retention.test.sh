@@ -72,7 +72,8 @@ DRY="$("$PY" "$TOOL" expire --root "$TMP" --days 90 --terminal-days 30 --json 2>
 ARCH="$("$PY" - "$DRY" <<'PYEOF'
 import json,sys
 d=json.loads(sys.argv[1])
-print(",".join(sorted(x.split("/")[-1].replace(".json","") for x in d["archive"])))
+import os
+print(",".join(sorted(os.path.basename(x).replace(".json","") for x in d["archive"])))  # 平台无关（D1150-WIN1）
 print(len(d["keep"]))
 PYEOF
 )"

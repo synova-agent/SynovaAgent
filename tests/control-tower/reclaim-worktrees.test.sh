@@ -74,7 +74,7 @@ import json,sys
 d=json.loads(sys.argv[1])
 c=d["counts"]
 print(f'{c.get("RECLAIM",0)} {c.get("KEEP_UNPUSHED",0)} {c.get("KEEP_DIRTY",0)} {c.get("KEEP_PROTECTED",0)}')
-print(",".join(sorted(r["path"].split("/")[-1] for r in d["worktrees"] if r["kind"]=="RECLAIM")))
+print(",".join(sorted(r["name"] for r in d["worktrees"] if r["kind"]=="RECLAIM")))  # name = 平台无关（修 D1150-WIN1: 旧用 split("/") 在 Windows 恒失败）
 PYEOF
 )"
 REC_CNT="$(echo "$COUNTS" | head -1 | awk '{print $1}')"
@@ -96,7 +96,7 @@ MID="$(git -C "$TMP/work" worktree list | wc -l | tr -d ' ')"
 # ── 正常: --apply 只回收 RECLAIM ──
 "$PY" "$TOOL" --repo "$TMP/work" --protect "$TMP/wt-d" --recent-minutes 0 --apply >/dev/null 2>&1
 AFTER="$(git -C "$TMP/work" worktree list | wc -l | tr -d ' ')"
-REG_LIST="$(git -C "$TMP/work" worktree list --porcelain | grep '^worktree ' | sed 's#.*/##' | sort | tr '\n' ' ')"
+REG_LIST="$(git -C "$TMP/work" worktree list --porcelain | grep '^worktree ' | sed -E 's#.*[/\\]##' | sort | tr '\n' ' ')"
 [ "$AFTER" -eq 4 ] && ok "--apply 回收 1 棵（5 → 4）" || no "--apply 应 5 → 4，实为 $AFTER"
 case "$REG_LIST" in
   *wt-a*) no "wt-a 仍在注册表（${REG_LIST}）" ;;
