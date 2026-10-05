@@ -48,6 +48,8 @@ export interface AcceptanceStep {
   expectStdoutContains?: string;
   /** 断言"运行后数据行数 > N"（穿生产入口的典型判据） */
   expectRowsGt?: { table: string; n: number };
+  /** 断言"运行后数据行数 == N"（**清账型判据** —— 例：不该有 anonymous 行 ⇒ n=0） */
+  expectRowsEq?: { table: string; n: number };
 }
 
 export interface ConstructionItem {
@@ -83,7 +85,7 @@ export interface ConstructionItem {
     fieldProducers?: Record<string, string>;
   };
   acceptance: AcceptanceStep[];
-  status: 'todo' | 'doing' | 'done';
+  status: 'todo' | 'doing' | 'done' | 'retired' | 'proposal';
   /** 出处（院方件 file:行号），供独立核 */
   source: string;
 }
@@ -282,8 +284,8 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx vitest run tests/security/org-isolation-audit.test.ts', expectExit: 0 },
       { run: 'sqlite3 data/synova.db "SELECT COUNT(*) FROM knowledge_audit WHERE filtered_out > 0"', expectRowsGt: { table: 'knowledge_audit', n: 0 } },
     ],
-    status: 'todo',
-    source: '施工单.md 0-9（⚠️ CTO 实测：origin/main 已修一半，剩装配）',
+    status: 'retired',
+    source: '施工单.md 0-9 —— 🔴 **已作废（2026-10-05）**：前提被证伪。auth.ts:354-356 实为 DEV_MODE 自动 admin 分支（非内联空桩）；真 provider 在 :441-459（身份派生非空条件集）。#983 已 CLOSED/NOT_PLANNED 同因。**本项无对象** ⇒ 转 0-9\u0027（知识审计不可归属）',
   },
   {
     id: '0-10',
@@ -294,7 +296,9 @@ export const constructionItems: readonly ConstructionItem[] = [
       'src/routes/im.ts',
       'tests/security/request-context-failclosed.test.ts',  // 判据交付物（本卡创建）
     ],
-    dependsOn: ['0-9'],
+    // 与 K1-WH 同占 src/routes/im.ts ⇒ 显式声明共写（须串行）
+    sharedWrite: ["K1-WH: src/routes/im.ts（同类端点，须串行）"],
+    dependsOn: ['0-9bis'],
     acceptance: [
       { run: 'npx vitest run tests/security/request-context-failclosed.test.ts', expectExit: 0 },
     ],
@@ -631,7 +635,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     ],
     // ✅ 落点已裁（选项③）：用 docs/synova/presets/** 既有规则（=mac）
     //    ⚠️ 若改判为根级 presets/roles/**（=win），须先在 ownership.yaml 补规则 —— 门禁语义变更，必过 K3
-    dependsOn: ['0-9', '1-2'],
+    dependsOn: ['0-9bis', '1-2'],
     acceptance: [
       { run: 'npx tsx scripts/control-tower/probe-role-pack.ts --role finance', expectExit: 0 },
     ],
@@ -646,7 +650,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       'src/l4/knowledge-store.ts',
       'tests/l4/knowledge-scope.test.ts',  // 判据交付物（本卡创建）
     ],
-    dependsOn: ['0-9'],
+    dependsOn: ['0-9bis'],
     acceptance: [
       { run: 'npx vitest run tests/l4/knowledge-scope.test.ts', expectExit: 0 },
     ],
@@ -814,6 +818,46 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '边界评估/00-最终方案.md:48（领域智能 20 项之第 3 项，属【必须自建】）；创始人 2026-10-05 裁 A 归入 K5',
   },
   {
+    id: '0-9bis',
+    worker: 'win', batch: '第0批', block: 'K1',
+    title: '知识审计不可归属（req.userId 恒 undefined ⇒ user_id 恒 anonymous）',
+    paths: ['src/routes/knowledge.ts'],  // 收窄：auth.ts 归 0-9(已废) 遗留，若需改则走提案
+    dependsOn: [],
+    acceptance: [
+      { run: "sqlite3 data/synova.db \"SELECT COUNT(*) FROM knowledge_audit WHERE user_id='anonymous'\"", expectRowsEq: { table: 'knowledge_audit', n: 0 } },
+    ],
+    status: 'todo',
+    source: 'CTO 2026-10-05 实测：auth.ts 零处写 req.userId；knowledge.ts:40 读它并 `|| \'anonymous\'` ⇒ 审计行不可归属。取代已作废的 0-9（前提被证伪）。完成标准②须在【跑一次真 JWT 查询之后】测得',
+  },
+  {
+    id: '1-7bis',
+    worker: 'win', batch: '第1批', block: 'K1',
+    title: 'RbacContext 无 org/team 维度（rbac.ts:127 department 恒 undefined）—— 接口变更，先提案',
+    paths: ['docs/synova/coordination/提案/'],  // 专属子目录，避免与 2-2 写集相撞
+    dependsOn: [],
+    acceptance: [
+      { run: 'test -f docs/synova/coordination/提案/RbacContext-org-team-维度.md', expectExit: 0 },
+    ],
+    status: 'proposal',
+    source: '产品线 2026-10-05 独立复核四姿态实测：DevMode 无 secret 姿态下匿名 200 + 真实工作台数据 ⇒ 1-7 的守卫是身份级非越权级。根因=RbacContext 缺 org/team 维度。CTO 已批立项；**权限模型接口先冻结**（创始人 2026-10-05 裁）',
+  },
+  {
+    id: 'K1-WH',
+    worker: 'win', batch: '第0批', block: 'K1',
+    title: '飞书 webhook 在硬化姿态下必然 401（生产功能不可达）',
+    paths: [
+      'src/middleware/auth.ts', 'src/routes/im.ts',
+      'tests/security/feishu-webhook-signature.test.ts',  // 判据交付物（本卡创建）
+    ],
+    sharedWrite: ["0-9(已作废): src/middleware/auth.ts（本卡接管该文件的写集）", "1-7bis: src/middleware/auth.ts（同族，须串行）"],
+    dependsOn: [],
+    acceptance: [
+      { run: 'npx vitest run tests/security/feishu-webhook-signature.test.ts', expectExit: 0 },
+    ],
+    status: 'todo',
+    source: '产品线 K1 窗口上报 + CTO 实测（origin/main@65aa62dea）：jwtAuthMiddleware 全局挂载于 server.ts:344；isWhitelisted() 23 条不含 /api/im/feishu/webhook ⇒ 生产姿态必 401。与 1-7/1-7bis 同族（DevMode 掩盖）。🔴 修复方向不得简单加白名单（公网入口须验签）',
+  },
+  {
     id: '3-12',
     worker: 'win', batch: '第3批', block: 'K6',
     title: '进化回环 E2/E3（跨客户模式 / 联邦）',
@@ -833,7 +877,15 @@ export const constructionItems: readonly ConstructionItem[] = [
 
 export const constructionBlocks: readonly ConstructionBlock[] = [
   {
-    id: 'K1', name: '接线·点火·权限执行面', items: ['0-1', '0-9', '0-10', '1-7'],
+    id: 'RETIRED' as BlockId, name: '已作废项（保留 id 防撞号；不派单）',
+    items: ['0-9'],
+    blockAcceptance: [
+      { run: 'echo "RETIRED 块：已作废项只留痕，无判据（禁派单）"', expectStdoutContains: 'RETIRED' },
+    ],
+    source: 'CTO 2026-10-05：0-9 前提被证伪 ⇒ 作废（同 #983 CLOSED/NOT_PLANNED）。本块只留痕，不派单、不进任何批次。',
+  },
+  {
+    id: 'K1', name: '接线·点火·权限执行面', items: ['0-1', '0-9bis', '0-10', '1-7', '1-7bis', 'K1-WH'],
     blockAcceptance: [
       { run: 'bash scripts/control-tower/probe-loops.sh', expectStdoutContains: 'MainAgent 已注入' },
     ],

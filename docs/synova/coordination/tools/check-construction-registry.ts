@@ -163,7 +163,7 @@ function fileRefs(run: string): string[] {
 for (const it of constructionItems) {
   if (it.acceptance.length === 0) { fails.push({ inv: 'INV-3', id: it.id, msg: '无 acceptance' }); continue; }
   for (const a of it.acceptance) {
-    const hasExp = a.expectExit !== undefined || a.expectStdoutContains !== undefined || a.expectRowsGt !== undefined;
+    const hasExp = a.expectExit !== undefined || a.expectStdoutContains !== undefined || a.expectRowsGt !== undefined || a.expectRowsEq !== undefined;
     // ⚠️ 必须用 !== undefined —— `!a.expectExit` 会把合法值 0 判为假（T7 之前，我自己踩过，误报 36 处）
     if (!hasExp) fails.push({ inv: 'INV-3', id: it.id, msg: 'acceptance 无 expect' });
     if (GREP_ONLY.test(a.run)) fails.push({ inv: 'INV-3②', id: it.id, msg: `纯 grep 型判据 ⇒ ${a.run.slice(0, 60)}` });
@@ -242,7 +242,7 @@ for (const b of constructionBlocks) {
   // 🔴 修 T8 发现：blockAcceptance 原先只判"非空" ⇒ 块级标准是漏判区
   //    现把 INV-3 的三条判据同样施于块级标准
   for (const a of b.blockAcceptance) {
-    const hasExp = a.expectExit !== undefined || a.expectStdoutContains !== undefined || a.expectRowsGt !== undefined;
+    const hasExp = a.expectExit !== undefined || a.expectStdoutContains !== undefined || a.expectRowsGt !== undefined || a.expectRowsEq !== undefined;
     if (!hasExp) fails.push({ inv: 'BLOCK-INV3', id: b.id, msg: '块级标准无 expect' });
     if (GREP_ONLY.test(a.run)) fails.push({ inv: 'BLOCK-INV3②', id: b.id, msg: `块级标准纯 grep 型 ⇒ ${a.run.slice(0, 60)}` });
     for (const f of fileRefs(a.run)) {
