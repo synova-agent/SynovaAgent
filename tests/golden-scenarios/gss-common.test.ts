@@ -214,6 +214,127 @@ describe('assert（三态语义 + 恒真防护 + evidence 契约）', () => {
   });
 });
 
+describe('GS-01 断言契约回归（D804 切片 0：V1 绑定 + 负向断言迁靶）', () => {
+  const GS01_DIR = path.join(REPO_ROOT, 'scripts', 'golden-scenarios', 'GS-01-first-diagnosis');
+  const GS01_EXPECT = path.join(GS01_DIR, 'expect.json');
+  const GS01_RUN = path.join(GS01_DIR, 'run.sh');
+  const readExpect = () => JSON.parse(fs.readFileSync(GS01_EXPECT, 'utf-8'));
+  // D5（S-12 决策参考）: GS-01 的键空间 = V1 验收点 ID（product-lines.yaml 原文）
+  // ∪ 非 V1 自有标签（鉴权契约 S0-* / 桌面端 L1-*）——禁冒充 V1。
+  const V1_IDS = new Set(['1-1', '1-3', '1-4', '6-1', '6-2']);
+  const NON_V1_LABEL = /^(S\d+-\d+|L1-\d+)$/;
+
+  it('正常: evidence_map 键 ⊆ V1 ID ∪ 非 V1 自有标签，且本片绑定面齐备', () => {
+    const doc = readExpect();
+    const keys = doc.evidence_map.map((m: { acceptance_point: string }) => m.acceptance_point);
+    for (const key of keys) {
+      expect(
+        V1_IDS.has(key) || NON_V1_LABEL.test(key),
+        `验收点键非法（既非 V1 ID 也非非 V1 自有标签）: ${key}`,
+      ).toBe(true);
+    }
+    // 切片 0 绑定面 = 1-1/1-4/6-1（6-2 归切片 5，见 spec §S6 口径）
+    for (const id of ['1-1', '1-4', '6-1']) expect(keys).toContain(id);
+    // 每条验收点必须由真实断言背书（空背书 = 恒真覆盖，见下条）
+    const ids = new Set(doc.assertions.map((a: { id: string }) => a.id));
+    for (const m of doc.evidence_map) {
+      const backed = (m.assertion_ids || []).filter((id: string) => ids.has(id));
+      expect(backed.length, `验收点 ${m.acceptance_point} 无真实断言背书`).toBeGreaterThan(0);
+    }
+  });
+
+  it('降级: 空背书/悬挂引用恒判 pass（引擎行为）→ 契约层全场景拦截', async () => {
+    const mod = await import(path.join(COMMON, 'assert.ts'));
+    // ① 引擎行为实证：验收点若引用零条真实断言，buildEvidence 恒判 pass——即使三条断言全红。
+    //    这正是"恒真覆盖"白送绿的形态（与 assert.ts §2.3 红线"缺 purpose 拒绝执行"同源动机）。
+    const hazards = mod.validateExpectDoc({
+      scenario_id: 'GS-03',
+      evidence_map: [{ acceptance_point: '10-1', assertion_ids: ['NOT_EXIST'] }],
+      assertions: [
+        { id: 'A1', desc: 'a', purpose: 'p1', check: { type: 'file', path: '/nonexistent-d804-a' }, expect: { exists: true } },
+        { id: 'A2', desc: 'b', purpose: 'p2', check: { type: 'file', path: '/nonexistent-d804-b' }, expect: { exists: true } },
+        { id: 'A3', desc: 'c', purpose: 'p3', check: { type: 'file', path: '/nonexistent-d804-c' }, expect: { exists: true } },
+      ],
+    });
+    const hzResults = mod.runAssertions(hazards);
+    expect(hzResults.every((r: { verdict: string }) => r.verdict !== 'pass')).toBe(true);
+    const hzEvidence = mod.buildEvidence(hazards, hzResults, '2026-09-17', '自检');
+    expect(hzEvidence.verdict).toBe('fail');
+    expect(hzEvidence.verdicts[0].verdict).toBe('pass'); // ← 恒真覆盖：场景全红，验收点照样绿
+    expect(hzEvidence.verdicts[0].quote).toBe('');
+
+    // ② 契约层拦截：全场景 expect.json 扫描，空背书/悬挂引用必须为零（防 D804 切片 5 补 6-2 时误加空条目）
+    const scenariosDir = path.join(REPO_ROOT, 'scripts', 'golden-scenarios');
+    const dirs = fs.readdirSync(scenariosDir)
+      .filter((d) => fs.existsSync(path.join(scenariosDir, d, 'expect.json')));
+    expect(dirs.length).toBeGreaterThan(0);
+    const offenders: string[] = [];
+    for (const dir of dirs) {
+      const doc = JSON.parse(fs.readFileSync(path.join(scenariosDir, dir, 'expect.json'), 'utf-8'));
+      const known = new Set(doc.assertions.map((a: { id: string }) => a.id));
+      for (const m of doc.evidence_map) {
+        if ((m.assertion_ids || []).filter((id: string) => known.has(id)).length === 0) {
+          offenders.push(`${dir}:${m.acceptance_point}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('验收修补③: pass 的 detail 携带观测真值（GREEN/RED 可区分），长内容截断、空内容不编造', async () => {
+    const mod = await import(path.join(COMMON, 'assert.ts'));
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'gss-excerpt-'));
+    const statusFile = path.join(tmp, 'status.txt');
+    fs.writeFileSync(statusFile, 'CONSULT_LLM_RED (LLM key 未提供 — 诚实 RED)\n', 'utf-8');
+    const longFile = path.join(tmp, 'long.txt');
+    fs.writeFileSync(longFile, 'x'.repeat(500), 'utf-8');
+    const blankFile = path.join(tmp, 'blank.txt');
+    fs.writeFileSync(blankFile, '   \n', 'utf-8');
+
+    const doc = mod.validateExpectDoc({
+      scenario_id: 'GS-03',
+      evidence_map: [{ acceptance_point: '10-1', assertion_ids: ['A1', 'A2', 'A3'] }],
+      assertions: [
+        { id: 'A1', desc: 'd1', purpose: 'p1', check: { type: 'file', path: statusFile }, expect: { exists: true, contains: 'CONSULT_LLM_' } },
+        { id: 'A2', desc: 'd2', purpose: 'p2', check: { type: 'file', path: longFile }, expect: { exists: true } },
+        { id: 'A3', desc: 'd3', purpose: 'p3', check: { type: 'file', path: blankFile }, expect: { exists: true } },
+      ],
+    });
+    const results = mod.runAssertions(doc);
+    const byId = Object.fromEntries(results.map((r: { id: string; detail: string }) => [r.id, r]));
+    // 正常: 真值进 detail —— GREEN/RED 由此可区分（否则 pass 只证明"形状对"）
+    expect(byId.A1.verdict).toBe('pass');
+    expect(byId.A1.detail).toContain('CONSULT_LLM_RED');
+    // 边界: 长内容截断（不把整个文件灌进证据）
+    expect(byId.A2.detail).toContain('…');
+    expect(byId.A2.detail.length).toBeLessThan(220);
+    // 降级: 无可摘内容 → 不编造观测值（保持原语义）
+    expect(byId.A3.detail).toBe('符合预期');
+    // 端到端: evidence quote 携带真值
+    const ev = mod.buildEvidence(doc, results, '2026-09-17', '自检');
+    expect(ev.verdicts[0].quote).toContain('CONSULT_LLM_RED');
+    fs.rmSync(tmp, { recursive: true, force: true });
+  });
+
+  it('边界: 负向 auth 断言靶点 = 受 JWT 保护端点（D590 裁决① 前提不可回归）', () => {
+    const doc = readExpect();
+    const negatives = doc.assertions.filter((a: { expect?: { contains?: string } }) => a.expect?.contains === '401');
+    expect(negatives.length).toBe(1);
+    // 靶点产物必须来自 run.sh 对受保护端点的那次无 token 探测
+    expect(String(negatives[0].check.path)).toContain('noauth-status.txt');
+    expect(fs.readFileSync(GS01_RUN, 'utf-8')).toContain('$BASE/api/config/dump');
+    // 前提核验（改 src 白名单即红）：白名单含 consult（免 JWT → 不能当负向靶点）、不含 config/dump（受保护）
+    const authSrc = fs.readFileSync(path.join(REPO_ROOT, 'src', 'middleware', 'auth.ts'), 'utf-8');
+    expect(authSrc).toContain("path.startsWith('/api/diagnosis/consult')");
+    expect(authSrc).not.toContain('/api/config/dump');
+    // consult 免 JWT 的正向契约：无 token + 缺 initiator.role → 400 且非 401
+    const consultNoauth = doc.assertions.find((a: { id: string }) => a.id === 'consult-noauth-contract');
+    expect(consultNoauth).toBeDefined();
+    expect(consultNoauth.expect.contains).toBe('400');
+    expect(consultNoauth.expect.notContains).toBe('401');
+  });
+});
+
 describe('bootstrap（真实 spawn + healthz + 状态文件 + 清理）', () => {
   it('假服务就绪探测全链路（不 mock 管线）', async () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'gss-boot-'));

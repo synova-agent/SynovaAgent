@@ -198,6 +198,26 @@ function evaluate(expect: Record<string, unknown>, got: Record<string, unknown>)
 }
 
 // ─── 主引擎 ───
+/**
+ * 观测值摘要 —— 让证据 quote 携带"实际看到什么"。
+ *
+ * 动机（D804 验收修补 ③）：pass 的 detail 原为恒定 `符合预期`，quote 因此只证明
+ * "断言形状对"，不携带真值——GS-01 的 6-1 正是此类：`contains CONSULT_LLM_` 对
+ * GREEN 与 RED 同样通过，README 却声称"GREEN/RED 的值由 evidence quote 呈现"。
+ * 补上观测摘要后该声称才成立（判据不变，只让真值可见）。
+ *
+ * @input  — got: check 执行器原始产出（file→content / http→body / process→stdout）
+ * @output — 单行摘要 `；实际: <≤160 字符>`；无可摘内容或非字符串产出 → 空串
+ * @degraded — 非字符串/空内容 → 空串（不编造观测值；不影响断言判定本身）
+ */
+function observedExcerpt(got: Record<string, unknown>): string {
+  const raw = got.content ?? got.body ?? got.stdout;
+  if (typeof raw !== 'string') return '';
+  const oneLine = raw.replace(/\s+/g, ' ').trim();
+  if (!oneLine) return '';
+  return `；实际: ${oneLine.slice(0, 160)}${oneLine.length > 160 ? '…' : ''}`;
+}
+
 export function runAssertions(doc: ExpectDoc): AssertionResult[] {
   const results: AssertionResult[] = [];
   for (const a of doc.assertions) {
@@ -230,7 +250,8 @@ export function runAssertions(doc: ExpectDoc): AssertionResult[] {
       }
       const ev = evaluate(a.expect, got);
       res.verdict = ev.pass ? 'pass' : 'fail';
-      res.detail = ev.detail;
+      // pass 也带上观测值——evidence quote 必须呈现真值（D804 验收修补 ③）
+      res.detail = ev.pass ? `符合预期${observedExcerpt(got)}` : ev.detail;
     } catch (e) {
       // 查询失败 ≠ 真空 ≠ 通过 —— 三态语义（K3 P0-3 fail-open 教训）
       res.verdict = 'error';

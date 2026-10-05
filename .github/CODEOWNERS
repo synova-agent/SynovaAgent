@@ -50,5 +50,7 @@ VERSION.md                               @tangbaobao520
 .dsh/**                                  @tangbaobao520
 electron/**                              @tangbaobao520
 electron-renderer/**                     @tangbaobao520
+tests/golden-scenarios/**                @tangbaobao520
+tests/electron/**                        @tangbaobao520
 scripts/audit/**                         @tangbaobao520
 docs/synova/audit-reports/**             @tangbaobao520

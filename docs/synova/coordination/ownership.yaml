@@ -176,6 +176,19 @@ rules:
     owner: "mac"
     source: "TASK-ROUTING.md L36"
 
+  # D804 增补（2026-09-17 实测假阳性）: **测试随被测工具链归属**（同 tests/control-tower/** L106
+  #   与 tests/doc-system/** L85 既有派生先例）。D804（M1 线1 桌面端 + 线6 首诊端到端）实测:
+  #   其 spec §12.1 写集在补本条前横跨 mac（scripts/golden-scenarios/**、electron/**）+
+  #   win（tests/golden-scenarios/**、tests/electron/**，均落 ** 兜底）→ D734「一个 PR 只许
+  #   一个域」把该卡每一片（共 6 片）都拦死。判定为假阳性而非真跨域: 干活的是 mac 线，
+  #   测试只是同一工具链的测试（scripts/golden-scenarios/** 与 electron/** 均已显式归 mac）。
+  - glob: "tests/golden-scenarios/**"
+    owner: "mac"
+    source: "派生: 同 scripts/golden-scenarios/**（L103）——测试随工具链归属（tests/control-tower 先例）；D804 实测落兜底误判 win"
+  - glob: "tests/electron/**"
+    owner: "mac"
+    source: "派生: 同 electron/**（L136）——测试随工具链归属（tests/control-tower 先例）；D804 实测落兜底误判 win"
+
   # ═══ Kimi K3 审计红线（L40；其他角色禁碰）═══
   - glob: "scripts/audit/**"
     owner: "k3"

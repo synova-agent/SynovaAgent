@@ -1,49 +1,45 @@
 {
+  "schema": 1,
+  "record_type": "scenario",
   "scenario_id": "GS-01",
-  "evidence_map": [
+  "source": "scripts/golden-scenarios/GS-01-first-diagnosis/expect.runtime.json",
+  "date": "2026-09-17",
+  "verdict": "pass",
+  "verdicts": [
     {
       "acceptance_point": "1-1",
-      "assertion_ids": [
-        "electron-pack-config-valid"
-      ]
+      "verdict": "pass",
+      "quote": "electron-pack-config-valid pass: electron-builder 打包配置有效（backend-spawn + renderer 产物入包）（符合预期；实际: PACK_CONFIG_OK）"
     },
     {
       "acceptance_point": "1-4",
-      "assertion_ids": [
-        "electron-backend-spawn-contract"
-      ]
+      "verdict": "pass",
+      "quote": "electron-backend-spawn-contract pass: backend-spawn 契约无头验证（reused 路径 + buildCommand 双模式）（符合预期；实际: SPAWN_CONTRACT_OK）"
     },
     {
       "acceptance_point": "6-1",
-      "assertion_ids": [
-        "consult-llm-recorded"
-      ]
+      "verdict": "pass",
+      "quote": "consult-llm-recorded pass: D527 LLM 门控 consult 组状态落盘（GREEN=phase_started 0-5 + complete + reportId + GET /report 200 / RED=LLM key 未提供，诚实标注）（符合预期；实际: CONSULT_LLM_RED (LLM key 未提供 — GS01_LLM 未设置，诚实 RED，不伪造全链路绿)）"
     },
     {
       "acceptance_point": "S0-1",
-      "assertion_ids": [
-        "noauth-protected-endpoint-401"
-      ]
+      "verdict": "pass",
+      "quote": "noauth-protected-endpoint-401 pass: 无 JWT 调受保护端点 /api/config/dump → 401（auth fail-closed）（符合预期；实际: 401）"
     },
     {
       "acceptance_point": "S0-2",
-      "assertion_ids": [
-        "consult-noauth-contract",
-        "consult-entry-validated",
-        "reports-endpoint-ok"
-      ]
+      "verdict": "pass",
+      "quote": "consult-noauth-contract pass: 无 JWT 调 consult 缺 initiator.role → 400 且非 401（免 JWT 正向契约）（符合预期；实际: 400） | consult-entry-validated pass: 带 JWT 调 consult 缺 teamId → 400 + VALIDATION_ERROR（入口可达 + 参数契约）（符合预期；实际: {\"ok\":false,\"error\":\"teamId 必填\",\"code\":\"VALIDATION_ERROR\"}） | reports-endpoint-ok pass: GET /api/sentinel/reports → HTTP 200（报告产物端点可达）（符合预期；实际: 200）"
     },
     {
       "acceptance_point": "L1-5",
-      "assertion_ids": [
-        "electron-dual-bootstrap"
-      ]
+      "verdict": "pass",
+      "quote": "electron-dual-bootstrap pass: main.cjs isPackaged 双引导收敛（prod loadFile renderer / dev 服务器页）（符合预期；实际: DUAL_BOOTSTRAP_OK）"
     },
     {
       "acceptance_point": "L1-7",
-      "assertion_ids": [
-        "electron-userdata-dbpath"
-      ]
+      "verdict": "pass",
+      "quote": "electron-userdata-dbpath pass: prod spawn 注入 SYNOVA_DB_PATH=userData（升级/重装不丢数据基础）（符合预期；实际: DBPATH_REDIRECT_OK）"
     }
   ],
   "assertions": [
@@ -51,119 +47,64 @@
       "id": "noauth-protected-endpoint-401",
       "desc": "无 JWT 调受保护端点 /api/config/dump → 401（auth fail-closed）",
       "purpose": "证明鉴权边界 fail-closed 且靶点是真正受 JWT 保护的端点（S0-1；D804 D1：consult 已按 D590 裁决① 进免 JWT 白名单，故负向靶点由 consult 迁至 /api/config/dump——断言须描述已生效契约）",
-      "check": {
-        "type": "file",
-        "path": "__DATA_DIR__/noauth-status.txt"
-      },
-      "expect": {
-        "exists": true,
-        "contains": "401"
-      }
+      "verdict": "pass",
+      "detail": "符合预期；实际: 401"
     },
     {
       "id": "consult-noauth-contract",
       "desc": "无 JWT 调 consult 缺 initiator.role → 400 且非 401（免 JWT 正向契约）",
       "purpose": "证明桌面端零命令行承诺成立：consult 免 JWT 直达（D590 裁决①）且参数校验仍 fail-closed（S0-2；D804 D1 正向面——白名单未生效时此断言必红）",
-      "check": {
-        "type": "file",
-        "path": "__DATA_DIR__/consult-noauth-status.txt"
-      },
-      "expect": {
-        "exists": true,
-        "contains": "400",
-        "notContains": "401"
-      }
+      "verdict": "pass",
+      "detail": "符合预期；实际: 400"
     },
     {
       "id": "consult-entry-validated",
       "desc": "带 JWT 调 consult 缺 teamId → 400 + VALIDATION_ERROR（入口可达 + 参数契约）",
       "purpose": "证明首诊入口可达且参数契约正确（S0-2；问卷/诉求 → 六阶段诊断的入口）",
-      "check": {
-        "type": "file",
-        "path": "__DATA_DIR__/validate-response.json"
-      },
-      "expect": {
-        "exists": true,
-        "contains": "VALIDATION_ERROR"
-      }
+      "verdict": "pass",
+      "detail": "符合预期；实际: {\"ok\":false,\"error\":\"teamId 必填\",\"code\":\"VALIDATION_ERROR\"}"
     },
     {
       "id": "reports-endpoint-ok",
       "desc": "GET /api/sentinel/reports → HTTP 200（报告产物端点可达）",
       "purpose": "证明首诊报告查询端点可用（S0-2；报告产物链路）",
-      "check": {
-        "type": "file",
-        "path": "__DATA_DIR__/reports-status.txt"
-      },
-      "expect": {
-        "exists": true,
-        "contains": "200"
-      }
+      "verdict": "pass",
+      "detail": "符合预期；实际: 200"
     },
     {
       "id": "electron-pack-config-valid",
       "desc": "electron-builder 打包配置有效（backend-spawn + renderer 产物入包）",
       "purpose": "证明 Electron 安装包可携带服务自启模块与 renderer 对话 UI（V1 1-1 打包产物基础，D504；产物存在性断言见切片 1）",
-      "check": {
-        "type": "file",
-        "path": "__DATA_DIR__/electron-pack-check.txt"
-      },
-      "expect": {
-        "exists": true,
-        "contains": "PACK_CONFIG_OK"
-      }
+      "verdict": "pass",
+      "detail": "符合预期；实际: PACK_CONFIG_OK"
     },
     {
       "id": "electron-backend-spawn-contract",
       "desc": "backend-spawn 契约无头验证（reused 路径 + buildCommand 双模式）",
       "purpose": "证明服务自启探活/spawn 契约成立（V1 1-4 开窗即用，CI 无 GUI 可验，D504；healthz 实测段见切片 2）",
-      "check": {
-        "type": "file",
-        "path": "__DATA_DIR__/electron-spawn-check.txt"
-      },
-      "expect": {
-        "exists": true,
-        "contains": "SPAWN_CONTRACT_OK"
-      }
+      "verdict": "pass",
+      "detail": "符合预期；实际: SPAWN_CONTRACT_OK"
     },
     {
       "id": "electron-dual-bootstrap",
       "desc": "main.cjs isPackaged 双引导收敛（prod loadFile renderer / dev 服务器页）",
       "purpose": "证明桌面端安装引导单一入口（L1-5，V1 外，D504；保留为回归，不计分）",
-      "check": {
-        "type": "file",
-        "path": "__DATA_DIR__/electron-bootstrap-check.txt"
-      },
-      "expect": {
-        "exists": true,
-        "contains": "DUAL_BOOTSTRAP_OK"
-      }
+      "verdict": "pass",
+      "detail": "符合预期；实际: DUAL_BOOTSTRAP_OK"
     },
     {
       "id": "electron-userdata-dbpath",
       "desc": "prod spawn 注入 SYNOVA_DB_PATH=userData（升级/重装不丢数据基础）",
       "purpose": "证明数据目录重定向到 userData（L1-7，V1 外，D504；保留为回归，不计分）",
-      "check": {
-        "type": "file",
-        "path": "__DATA_DIR__/electron-dbpath-check.txt"
-      },
-      "expect": {
-        "exists": true,
-        "contains": "DBPATH_REDIRECT_OK"
-      }
+      "verdict": "pass",
+      "detail": "符合预期；实际: DBPATH_REDIRECT_OK"
     },
     {
       "id": "consult-llm-recorded",
       "desc": "D527 LLM 门控 consult 组状态落盘（GREEN=phase_started 0-5 + complete + reportId + GET /report 200 / RED=LLM key 未提供，诚实标注）",
       "purpose": "证明首诊端到端全链路状态被物理记录且不伪造——GS01_LLM=1 时须 GREEN，无 key 时须如实 RED（V1 6-1，D527；断言引擎无条件分支，GREEN/RED 由 evidence quote 呈现 + README 诚实 RED 契约约束）",
-      "check": {
-        "type": "file",
-        "path": "__DATA_DIR__/consult-llm-status.txt"
-      },
-      "expect": {
-        "exists": true,
-        "contains": "CONSULT_LLM_"
-      }
+      "verdict": "pass",
+      "detail": "符合预期；实际: CONSULT_LLM_RED (LLM key 未提供 — GS01_LLM 未设置，诚实 RED，不伪造全链路绿)"
     }
   ]
 }

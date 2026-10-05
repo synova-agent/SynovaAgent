@@ -3,10 +3,15 @@
 # 运行契约（GSS 设计 §2.2 8 条）：fresh-db / bootstrap / inject / trigger / assert / evidence / exit / 幂等
 # 说明（D446，2026-08-21）：
 #   · 首诊链路 = POST /api/diagnosis/consult（SSE 六阶段诊断，D232/D233 前置已就绪）
-#   · 场景验证三个可机器判定的物理契约：
-#     ① 负向：无 JWT → 401（auth 边界，fail-closed）
-#     ② 正常：带 JWT 但缺 teamId → 400 VALIDATION_ERROR（入口可达 + 参数契约）
-#     ③ 产物：GET /api/sentinel/reports → 200 ok（报告查询端点可达）
+#   · 场景验证可机器判定的物理契约：
+#     ① 负向：无 JWT 调受保护端点 /api/config/dump → 401（auth 边界，fail-closed）
+#     ② 正向：无 JWT 调 consult 缺 initiator.role → 400 且非 401（免 JWT 契约，D590 裁决①）
+#     ③ 正常：带 JWT 但缺 teamId → 400 VALIDATION_ERROR（入口可达 + 参数契约）
+#     ④ 产物：GET /api/sentinel/reports → 200 ok（报告查询端点可达）
+#   · D804 切片 0 口径变更（D1，创始人 2026-09-17 批准）：负向 auth 断言靶点由 consult 迁至
+#     /api/config/dump。原靶点在 D590 裁决①（consult 免 JWT 白名单，auth.ts:121）生效后成为
+#     恒定红——断言必须描述"已生效契约"，否则红不指向任何真实缺陷（D804 §现状审计 C1/C2）。
+#     配套：consult 免 JWT 由正向契约断言（②）接管，fail-closed 覆盖不减弱（迁靶 ≠ 删断言）。
 #   · consult 真实六阶段依赖 LLM（非确定性），本场景不硬跑 LLM —— 契约级断言
 #     首诊旅程的入口/校验/产物端点，诚实 RED 明确标注（见 README.md）
 set -euo pipefail
@@ -67,14 +72,26 @@ PORT="$(python3 -c "import json;print(json.load(open('$BOOT_STATE'))['port'])")"
 BASE="http://127.0.0.1:$PORT"
 echo "[GS-01] 服务就绪: $BASE"
 
-# 3. 触发 1（负向）：无 token 调 consult → 401（auth fail-closed）
+# 3. 触发 1（负向·auth 边界）：无 token 调受保护端点 /api/config/dump → 401（fail-closed）
+#    靶点 = src/routes/config.ts:25（server.ts:385 挂载），未进 auth.ts 白名单 → 全局 jwtAuthMiddleware 拦截
+#    （D804 D1：consult 靶点已迁走，理由见文件头"口径变更"）
 curl -sS -o "$DATA_DIR/noauth-response.json" -w "%{http_code}" \
+  "$BASE/api/config/dump" \
+  > "$DATA_DIR/noauth-status.txt" 2>&1 || true
+echo "[GS-01] 无 token /api/config/dump HTTP 状态: $(cat "$DATA_DIR/noauth-status.txt")"
+echo "[GS-01] 无 token 响应: $(cat "$DATA_DIR/noauth-response.json")"
+
+# 3.5 触发 1b（正向·免 JWT 契约）：无 token 缺 initiator.role 调 consult → 400 且非 401
+#     D590 裁决① 正向面：桌面端"配置完 LLM 即可对话"依赖 consult 免 JWT 直达（单机本地信任）。
+#     400 证明入口可达且参数校验仍 fail-closed（diagnosis.ts:200-201）；非 401 证明白名单生效。
+#     白名单回退（consult 重新要求 JWT）时本断言必红——fail-closed 覆盖由此条承接。
+curl -sS -o "$DATA_DIR/consult-noauth-response.json" -w "%{http_code}" \
   -X POST "$BASE/api/diagnosis/consult" \
   -H 'Content-Type: application/json' \
-  -d '{"teamId":"t1","initiator":{"role":"ga"}}' \
-  > "$DATA_DIR/noauth-status.txt" 2>&1 || true
-echo "[GS-01] 无 token consult HTTP 状态: $(cat "$DATA_DIR/noauth-status.txt")"
-echo "[GS-01] 无 token 响应: $(cat "$DATA_DIR/noauth-response.json")"
+  -d '{"teamId":"t1"}' \
+  > "$DATA_DIR/consult-noauth-status.txt" 2>&1 || true
+echo "[GS-01] 无 token consult（缺 initiator.role）HTTP 状态: $(cat "$DATA_DIR/consult-noauth-status.txt")"
+echo "[GS-01] 无 token consult 响应: $(cat "$DATA_DIR/consult-noauth-response.json")"
 
 # 4. 触发 2（正常·入口校验）：带 token 但缺 teamId → 400 VALIDATION_ERROR
 curl -sS -o "$DATA_DIR/validate-response.json" -w "%{http_code}" \
