@@ -11,7 +11,7 @@
 ## 数据流总览（每次任务必回顾）
 
 ```
-原始数据 → 本体层(电子病历) → 7维度×25测量器(compute)
+原始数据 → 本体层(电子病历) → 49 哨兵（45 文件驱动 + 4 内置适配器）
                                      ↓
                     按需(GA触发)          定时(Cron触发)
                     runModules()          Sentinel.check()
@@ -38,6 +38,11 @@
 ## ⚠️ 每次工作前必读 — 铁律速览
 
 > 以下铁律来自 2026-05 至今的全部实际错误。按优先级排列。
+
+> 🔴 **引用纪律（2026-09-26 加）**：本文件中的任何「数量」（组数 / 条数 / 个数）
+> **一律以脚本实况为准，不得作为判据**。需要说明「有多少」时给**枚举命令**，不给手写数。
+> 理由：历史上同一概念出现过 `26/28/29`、`12/13/8/5` 等多口径 —— **每手写一次就多一个口径**。
+> 详见《口径统一通告 v1》（2026-09-26）。
 
 ### 零、协作与流程
 
@@ -129,7 +134,7 @@ L1 交互    → routes/ (API), tui/ (终端), mcp/ (MCP协议)
 L2 编排    → agent/ (ConversationEngine, diagnosis-launcher, sentinel-service)
               orchestrator/ (SubAgentCoordinator, ModuleRunner)
 L3 洞察    → l3/ (ExpertDispatcher, ExpertAutonomy, QualityFirewall)
-              sentinel/ (Runner, SignalAggregator, Registry, 加载器; 45文件驱动哨兵@extensions/sentinels + 4内置适配器)
+              sentinel/ (Runner, SignalAggregator, Registry, 加载器; 45 文件驱动哨兵@extensions/sentinels + 4 内置适配器 = 49)
               expert-platform/ (ExpertStore, Validator)
 L4 本体    → l4/ (GraphBridge, EntityResolver, CommunityReports)
               evidence/ (Collector, Corroboration, EvidenceStore)
