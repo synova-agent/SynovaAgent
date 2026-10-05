@@ -310,7 +310,7 @@ d1157_probe() {  # <hook-src>
   echo payload > "$sb/payload.txt"
   git -C "$sb" add -A >/dev/null 2>&1
   git -C "$sb" commit -qm "feat: C" >/dev/null 2>&1 || { echo "FIXTURE_FAIL commit-C"; return 3; }
-  C="$(git -C "$sb" rev-parse HEAD 2>/dev/null)"
+  C="$(git -C "$sb" rev-parse HEAD 2>/dev/null)"  # swallow-ok: 夹具读取；取不到即下方显式 FIXTURE_FAIL 中止
   [ -n "$C" ] || { echo "FIXTURE_FAIL rev-parse"; return 3; }
   case "${D1157_LEDGER_SHAPE:-parent-only}" in
     own-record)
@@ -325,16 +325,15 @@ d1157_probe() {  # <hook-src>
   # ③ 手动重跑 hook（HEAD 仍是 C）；沙箱内无 auditor/decide-next ⇒ 无同仓 git 副作用
   ( cd "$sb" && env SYNO_SESSION_ID=test bash "$sb/scripts/hooks/post-commit.sh" >/dev/null 2>&1 )
   # ④ 判定：镜像账本里是否出现 C 的 COMMITTED 记录（锚定口径 = 记录行 HASH= 值前缀匹配）
-  if grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]+[^ |]*[[:space:]]*\|?[[:space:]]*COMMITTED' "$sb/.claude/bypass.log" 2>/dev/null \
-     | grep -oE 'HASH=[0-9a-fA-F]{7,40}' | sed 's/^HASH=//' | tr 'A-F' 'a-f' | grep -q "^${C:0:8}"; then
-    echo 1
-  else
-    echo 0
-  fi
+  REC_HIT="$(grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]+[^ |]*[[:space:]]*\|?[[:space:]]*COMMITTED' "$sb/.claude/bypass.log" 2>/dev/null | grep -oE 'HASH=[0-9a-fA-F]{7,40}' | sed 's/^HASH=//' | tr 'A-F' 'a-f' | grep -c "^${C:0:8}" || true)"  # swallow-ok: 账本缺失/无记录 → 计 0（判定不省，见下方 case）
+  case "${REC_HIT:-0}" in
+    0) echo 0 ;;
+    *) echo 1 ;;
+  esac
 }
 
 # F2: 改坏即红（独立红例）—— 旧实现（**从 ref 取，H1**）在"账本只有 parent=<C>"下**不补记**
-PREFIX_HOOK="$(git -C "$REPO" show origin/main:scripts/hooks/post-commit.sh 2>/dev/null)"
+PREFIX_HOOK="$(git -C "$REPO" show origin/main:scripts/hooks/post-commit.sh 2>/dev/null)"  # swallow-ok: 取不到即下方显式判「F2 取数失败」
 if [ -z "$PREFIX_HOOK" ]; then
   no "F2 取数失败: git show origin/main:scripts/hooks/post-commit.sh 无输出（H1 要求读 ref，禁读工作树）"
 else

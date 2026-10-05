@@ -321,7 +321,12 @@ K3 §二 提案 1 字面：`改 grep -q "COMMITTED.*HASH=$sha"`。本卡不采�
 
 | 文件 | 类型 |
 |---|---|
+| .claude/task-briefs/2026-10-05-D1157-P0-假绿根修-bypassanchor.md | task |
+| memory/notes/proposed/2026-10-05-d1157-bypass-hash-anchor.md | task |
 | scripts/control-tower/check-bypass-log.sh | task |
 | scripts/hooks/post-commit.sh | task |
+| task-state/D1157.json | task |
+| tests/control-tower/check-bypass-log.beforeafter.sh | task |
+| tests/control-tower/check-bypass-log.test.sh | task |
 | tests/control-tower/post-commit.test.sh | task |
 
