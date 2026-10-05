@@ -62,7 +62,7 @@ L1 oxlint -> L2 tsc -> L3 vitest --changed -> L4 wiring
 ## Current State (2026-07-20, verified by grep)
 
 - D51: Golden Case F1 Gate DONE (golden-case-checker.ts, 5 cases)
-- D85: MVS Golden Dataset (wani-baby-v1.json) DONE -- real enterprise data
+- D85: MVS Golden Dataset (client-a-v1.json) DONE -- real enterprise data
 - D99: Full pipeline E2E test DONE
 - Existing 5 cases: cashflow-crisis, margin-erosion, churn-surge, talent-drain, competition-attack
 - Golden case format: { id, title, description, frozenAt, input: { sentinelFindings[], graphEdges[] }, expected: { rootCauseEdgeIds[], rootCauseNodeTypes[], severity, matchedEdgeIds[], explanation } }
@@ -146,4 +146,4 @@ Verify: 10/10 pass, 0 failures.
 
 - Auth Doc #6: Test System Spec -- Chapter 5: Regression Baseline System
 - D51: Golden Case F1 Gate (golden-case-checker.ts)
-- D85: MVS Golden Dataset (wani-baby-v1.json -- reference pattern)
+- D85: MVS Golden Dataset (client-a-v1.json -- reference pattern)
