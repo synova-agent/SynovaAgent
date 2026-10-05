@@ -52,14 +52,21 @@
 处理：正文落库 + 登记行追加（纯追加）。
 结果：CTO/K3 可凭「**文件路径 + 行号 + §1.4.a 原文**」直接裁，无需凭记忆。
 
+### Q3.1 定稿修订轮（v2.1 → v2.2，2026-10-05 CTO 裁决后）
+
+入口：同一路径正文（**不新开文件**）；处理：§1.4.a **定稿为路线 ㈠**、㈠ 薄弱点**升格为硬要求**（合成红例，归 `#1131`）、新增 **§五 撞号簇处置**、§1.4.b 补"计数时刻相关"复核、末尾两节重编号；结果：正文与 CTO 裁决**一致**（单一真相源，不留"现行版 + 修订说明"双源）。
+
 ## 架构层: scripts（控制塔/治理面）
 
 ## Done 标准:
 
 - [x] 提案正文含 §1.4.a 四条判据打勾表 verify: `grep -q "A 落本项写集内" docs/synova/coordination/D1160-门禁提案-登记表追加型豁免与D708多命中分级.md`
 - [x] D2 登记门禁通过 verify: `bash scripts/doc-system/doc-registry-gate.sh`
-- [x] D708 声明源收敛且对账通过 verify: `python3 scripts/control-tower/merge_writeset_gate.py --base origin/main --head HEAD --branch docs/gate-proposal`
-- [x] 登记行为纯追加（删除数 = 0） verify: `git diff --numstat origin/main..HEAD -- docs/authority/DOCS-REGISTRY.yaml | grep -qE "^[0-9]+[[:space:]]+0[[:space:]]"`
+- [x] D708 声明源收敛且对账通过 verify: `python3 scripts/control-tower/merge_writeset_gate.py --base origin/main --head HEAD --branch docs/D1160-final`
+- [x] 登记行为纯追加（删除数 = 0） verify: `git diff --numstat origin/main..HEAD -- docs/authority/DOCS-REGISTRY.yaml | grep -qE "^[0-9]+[[:space:]]+0[[:space:]]" || test -z "$(git diff --numstat origin/main..HEAD -- docs/authority/DOCS-REGISTRY.yaml)"`
+- [x] 修订轮不动登记行（本件不触 `DOCS-REGISTRY.yaml`） verify: `test -z "$(git diff --name-only origin/main..HEAD -- docs/authority/DOCS-REGISTRY.yaml)"`
+- [x] ㈠ 定稿已写入且 ㈡ 标为未采用 verify: `grep -q "CTO 已裁 = 路线 ㈠" docs/synova/coordination/D1160-门禁提案-登记表追加型豁免与D708多命中分级.md && grep -q "未采用，留档" docs/synova/coordination/D1160-门禁提案-登记表追加型豁免与D708多命中分级.md`
+- [x] 合成红例硬要求 + 归属 #1131 已写明 verify: `grep -q "#1131 那一批执行" docs/synova/coordination/D1160-门禁提案-登记表追加型豁免与D708多命中分级.md`
 
 ## 写集（机器生成，禁手改）
 
