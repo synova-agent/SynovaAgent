@@ -35,13 +35,20 @@ bad() { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
 
 [ -f "$PCC" ] || { echo "FATAL: 找不到 $PCC"; exit 2; }
 # ── 段锚点（生产脚本结构变更即 exit 2，不静默降级）──
+# 提取范围 = 判定段本体：[CUR_BRIEF_PATH 起] … [认领判定 if 块 的收尾 fi]
+#   · 起锚 `CUR_BRIEF_PATH=""`（认领段入口，两版共用）
+#   · 终锚 = `if [ -n "$ALL_TODAY_BRIEFS" ] && [ -n "$STAGED_ALL" ]` 的**配对 fi**（列 0）
+#   ⇒ 不锚"结论行"（结论如何消费 SCOPE_VIOLATION 是别的卡的事：D1148 已把 G12 结论并入
+#     合并声明检查 DECL2 —— 实测首版夹具锚 `soft_pass "G12: 所有文件均在 Q2 范围内"` 在 main 上
+#      失去锚点并 exit 2，正是 fail-closed 设计生效；改锚判定本体后两版皆可跑）
 S=$(grep -n '^CUR_BRIEF_PATH=""$' "$PCC" | head -1 | cut -d: -f1)
-E=$(grep -n 'soft_pass "G12: 所有文件均在 Q2 范围内"' "$PCC" | head -1 | cut -d: -f1)
-if [ -z "$S" ] || [ -z "$E" ] || [ "$E" -le "$S" ]; then
-  echo "FATAL: G12 段锚点未命中（S='$S' E='$E'）— 生产脚本结构已变，夹具失效需同步"; exit 2
+B=$(awk -v s="${S:-0}" 'NR>s && /^if \[ -n "\$ALL_TODAY_BRIEFS" \] && \[ -n "\$STAGED_ALL" \]/{print NR; exit}' "$PCC")
+E=$(awk -v b="${B:-0}" 'NR>b && /^fi$/{print NR; exit}' "$PCC")
+if [ -z "$S" ] || [ -z "$B" ] || [ -z "$E" ] || [ "$E" -le "$B" ]; then
+  echo "FATAL: G12 段锚点未命中（S='$S' B='$B' E='$E'）— 生产脚本结构已变，夹具失效需同步"; exit 2
 fi
 REGION="$(mktemp /tmp/g12region.XXXXXX)"
-sed -n "${S},$((E+1))p" "$PCC" > "$REGION"
+sed -n "${S},${E}p" "$PCC" > "$REGION"
 bash -n "$REGION" || { echo "FATAL: 提取段语法错误（锚点切偏）"; rm -f "$REGION"; exit 2; }
 
 D0=$(date +%Y-%m-%d)
@@ -71,12 +78,11 @@ run_g12() {
   # 判据输入契约: 分支名来源 = $SYNO_BRANCH（沙箱可注入；生产缺省 git branch --show-current）
   SYNO_BRANCH="$br"; export SYNO_BRANCH
   G12_VIOLATION=""; G12_SKIPPED=0; G12_POOL=""
-  decl_check() { G12_VIOLATION="$2"; }
-  hard_check() { G12_VIOLATION="$2"; }
-  soft_pass()  { case "$1" in *"G12: 所有文件均在 Q2 范围内"*) G12_SKIPPED=1 ;; esac; }
-  soft_check() { :; }
+  decl_check() { :; }; hard_check() { :; }; soft_pass() { :; }; soft_check() { :; }
   # shellcheck disable=SC1090
   . "$REGION"
+  # 判定结果直取变量（不依赖结论如何消费：D1148 后 main 走 DECL2，旧版走 decl_check）
+  G12_VIOLATION="$SCOPE_VIOLATION"
   G12_POOL="$ALL_TODAY_BRIEFS"   # 认领池 — 区分「被认领」与「整段跳过(fail-open)」的判别依据
   rm -rf "$sb"
 }
