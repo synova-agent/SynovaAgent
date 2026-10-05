@@ -1,19 +1,35 @@
-# 提案 · `RbacContext` 补 org/team 维度（1-7bis）
+# 提案 · `RbacContext` 补 org/部门/权限项 维度（1-7bis）— **v3（Grants 模型）**
 
 > 状态: **proposal（提案，不是 todo）** ｜ 执笔: 产品线（synova-product-lead）
-> 日期: 2026-10-05 ｜ 基线: `origin/main` = `ade9f3c4f`
-> 卡: 1-7bis（CTO 派单 K1 第 2 版 §一）｜ 关联: **#1051**（1-7）· BR-3 五角色 RBAC · CTO §四③ 飞书 401
-> 判据（CTO 卡面）: `test -f docs/synova/coordination/提案/RbacContext-org-team-维度.md` ⇒ exit 0
-> ⚠️ **判据级别如实标注 = L1（文件存在）**。本件是**规格交付物**，其实质验收是**内容裁决**（CTO/K3），
->    不可机器判 ⇒ 不冒充 L3-真跑。
+> 日期: 2026-10-05 ｜ 基线: `origin/main` = `707dd946b`（v3 重写基线）
+> 卡: 1-7bis ｜ **本件 ≡ K11 的两项**：
+>   - **RB-01 多租户隔离** → **[#1140]**（跨 `orgId` 读必被拒，含 DevMode 姿态）
+>   - **RB-02 部门轴** → **[#1141]**（`departmentIds` 复数 + 文件驱动 + `resolveContext` 入口）
+>   相邻：**[#1142]** RB-03 权限项模型 · **[#1143]** RB-04 BR-3 重构 ｜ 父 Issue **[#1139]**
+> 关联: **#1051**（1-7）· BR-3 · CTO §四③ 飞书 401
+> 判据: `test -f docs/synova/coordination/提案/RbacContext-org-team-维度.md` ⇒ exit 0（**L1**，实质验收 = 内容裁决）
 > 🔴 本件**不改任何代码**。冻结权在创始人/CTO。
+>
+> ## 🔴 v3 方向级更正（创始人 2026-10-05 裁决 · 必须最先读）
+>
+> **v1/v2 的「冻五档 RBAC」方向是错的，已废弃。**
+> 创始人要点：「同是市场总监，A 客户能看财务、B 客户不能」——**这不是 RBAC 能表达的**：
+> - **RBAC**：角色 → 权限（**档位决定**）
+> - **我们要的**：**权限项是一长串可选清单，角色只是预设的一组勾选**（飞书式）
+>
+> ⇒ **决策：做 Grants（ACL）模型，不做 RBAC 档位模型。**
+> ⇒ **五档仍保留为出厂默认，但不在类型里** —— 它是**配置的初值**，不是类型的一部分。
 
 ---
 
 ## 〇、一句话
 
-`RbacContext` **没有任何组织/部门/租户维度**，且 `department` 被刻意恒置 `undefined`
+`RbacContext` **没有任何组织/部门/权限项维度**，且 `department` 被刻意恒置 `undefined`
 ⇒ 「这个已认证用户是否有权碰这个 `:deptId` / 这个工作区」**在执法侧无法表达**。
+
+🔴 **v3 追加（Grants 模型下更精确）**：现状连「**权限项**」这一轴都没有 —— `RbacContext` 只有 `role`（**单值**）。
+而创始人裁定的模型里，**授权的基本单位是权限项**，角色只是"一组预设勾选"。
+⇒ 缺口是**两轴**：**组织轴**（`orgId` / `departmentIds`）＋ **权限项轴**（`PermissionId[]`）。
 
 🔴 **精确化（勿夸大）**：**租户维度本身今日已可表达** —— `src/middleware/auth.ts:35-40` 的
 `AuthRequestContext = { role, userId, orgId }` 由 `:492-505` 的 `extractAuthFromRequest()`
@@ -70,43 +86,69 @@
 
 ## 二、提案（to-be）
 
-### 2.1 `RbacContext` 增加两个字段（**唯一来源 = 验签后的 `req.auth`**）
+### 2.1 冻结的是**契约形状**（**不冻实现**，CTO §二④）
 
 ```ts
+/** 🆕 v3：权限项标识 —— **授权的基本单位**（Grants）。角色不再直接决定权限。 */
+export type PermissionId = string;   // 值域 = 文件驱动的权限清单（§2.6）
+
 export interface RbacContext {
-  role: WorkspaceRole;
   userId: string;
   authenticated?: boolean;
   gaConstraints?: GAConstraints;
 
-  /** 🆕 租户/组织 ID —— 必填。来源 = req.auth.orgId（验签）。缺失 ⇒ 见 §2.3 fail-closed */
+  /** 🆕 租户/组织 ID —— **必填**。来源 = 验签 `req.auth.orgId`。不可得 ⇒ `''` + fail-closed（I2） */
   orgId: string;
-  /** 🆕 部门 ID —— 可选。来源 = JWT 新增 claim（本提案不预设 claim 名，见 §三 待决 D1） */
-  departmentId?: string;
 
-  /** ⚠️ 保留但**语义冻结**：见 §2.4 */
+  /** 🆕 部门 ID —— **复数**（创始人：「中层就会涉及多个部门」；单数装不下，且将来改单复数会打断所有构造点）。
+   *      来源 = **文件驱动**（§2.6）。语义：`[]` = **无部门**，**不是**"全部"（I3） */
+  departmentIds: string[];
+
+  /** 🆕 权限项清单 —— **授权真源**。由 `role → permissions` **可配映射**解析而出（§2.6） */
+  permissions: PermissionId[];
+
+  /** ⚠️ **保留但降格**：`role` 只是「**出厂默认包的选择器**」，**不再是授权判据本身**。
+   *      五档不进类型语义 —— 它是配置初值（创始人 v3 裁决） */
+  role: WorkspaceRole;
+
+  /** ⚠️ 冻结（I5）：不复活旧语义，见 §2.4 */
   department?: string;
 }
 ```
 
-### 2.2 `extractRbacContext()` 映射（唯一改动点）
+### 2.2 入口：`resolveContext(identity)`（**唯一投影点**，CTO §二③）
+
+🔴 **为什么必须立这个入口**：现状 `src/` 里 `teamId` / `department` 已散落 **428 处 / 74 文件**
+（**CTO 实测，我未复跑**）—— 不立单一入口 ⇒ **74 个文件各写各的**（分叉）。
 
 ```ts
+/**
+ * 契约（铁律 47：输入 / 输出 / 降级）:
+ *   @input  identity —— **验签后**的 `req.auth`（`JwtPayload`，唯一可信来源；L-4 禁止路由重算身份）
+ *   @output { orgId, departmentIds, permissions[] } —— **授权判定只许读这三样**
+ *   @降级   `orgId` 不可得 ⇒ 返回 `orgId: ''` 且 `permissions: []` ⇒ 下游一律 fail-closed（I2）
+ *   @不做什么 不查库、不猜、不用 `undefined` 表达"无限制"（I3）
+ */
+export function resolveContext(identity: JwtPayload): {
+  orgId: string;
+  departmentIds: string[];
+  permissions: PermissionId[];
+};
+```
+
+`extractRbacContext()` 改为**薄壳**（消费 `resolveContext`，自身不再拼装语义）：
+```ts
 if (req.auth) {
-  return {
-    role: req.auth.role as WorkspaceRole,
-    userId: req.auth.sub,
-    orgId: req.auth.orgId,          // 🆕 不再丢弃（与 auth.ts:501 extractAuthFromRequest 同构）
-    departmentId: <待裁 —— 见 §三 D1>,  // 🆕 **本件不预设**其来源；`JwtPayload`(auth.ts:26-33) 今日无该 claim
-    department: undefined,          // ⚠️ 冻结：不复活旧语义（见 §2.4）
-    authenticated: true,
-    gaConstraints: req.auth.gaConstraints,
-  };
+  const { orgId, departmentIds, permissions } = resolveContext(req.auth);
+  return { userId: req.auth.sub, role: req.auth.role as WorkspaceRole,
+           orgId, departmentIds, permissions,
+           authenticated: true, gaConstraints: req.auth.gaConstraints,
+           department: undefined /* I5 冻结 */ };
 }
 ```
-> ⚠️ **D1 未裁之前，`departmentId` 不得落码**：`JwtPayload` 今日**没有** `deptId` 字段，
-> 任何写 `req.auth.deptId` 的样例都**编译不过**（`TS2339`）。本件把该映射留成**显式占位**，
-> 是为了不把「待裁项」伪装成「已定案」。
+> ⚠️ **`departmentIds` 的来源是"待定"而不是"已定"**：`JwtPayload`(`auth.ts:26-33`) 今日**没有**部门 claim。
+> 本件**不预设** claim 名 —— 见 §2.6（文件驱动）与 §三 **D1（已裁：复数 + 文件驱动）**。
+> 任何写 `req.auth.deptId` 的样例都**编译不过**（`TS2339`）。
 
 ### 2.3 不变量（**这是本提案的承重部分**）
 
@@ -124,8 +166,9 @@ if (req.auth) {
 **直接把它填上 = 用一个人的猜测决定全仓授权语义**。故本提案：
 
 - 新增 **`orgId`（必填）** —— 有现成真源（`req.auth.orgId`），**零风险**；
-- 新增 **`departmentId`（可选）** —— 但**不预设**其 JWT claim 名与填充时机（见 §三 待决 D1）；
-- 旧 `department` **语义冻结**（I5），避免"两个部门字段并存"的漂移病根。
+- 新增 **`departmentIds`（复数，文件驱动）** —— 真源按创始人第 ⑤ 条落**文件**，**不预设** JWT claim 名；见 §三 **D1（已裁）**；
+- 旧 `department` **语义冻结**（I5），避免"两个部门字段并存"的漂移病根；
+- 新增 **`permissions: PermissionId[]`** —— Grants 模型的**授权真源**；`role` 降格为**默认包选择器**。
 
 ### 2.5 迁移（分阶段，每阶段可独立回退）
 
@@ -140,7 +183,32 @@ if (req.auth) {
 
 ---
 
-## 三、待决（**给 CTO / K3 的裁决点**，本件不作答）
+### 2.6 授权来源 = **文件驱动** + `role → permissions` **可配映射**（CTO §二①）
+
+按创始人第 ⑤ 条与 Grants 模型：
+
+| 件 | 内容 | 谁能改 |
+|---|---|---|
+| **权限清单**（值域） | **文件驱动**：权限项定义（`id` / 中文名 / 所属域）落文件，不落代码 | 出厂（不可配） |
+| **`role → permissions` 映射** | **文件驱动**：每个角色 = 一组 **预设勾选**（出厂默认包） | ✅ **可配** ← 这正是 Grants 与 RBAC 的**分界** |
+| **用户授权** | 用户的 `permissions[]` = 其角色默认包 **±** 逐项增删 | ✅ 可配 |
+
+🔴 **不冻"五档"** —— 五档 = 出厂默认包，**不进类型**（创始人 v3 裁决）。
+
+---
+
+## 三、待决 D1–D4 —— **CTO 2026-10-05 已全部裁定（最终口径，以此为准）**
+
+| D# | 裁定 | 落地要求 |
+|---|---|---|
+| **D1** | **`departmentId`（单数）作废 ⇒ `departmentIds: string[]`**。依据：创始人「**中层就会涉及多个部门**」⇒ 单数装不下，且将来改单复数会**打断所有构造点**。**部门真源 = 文件驱动**（创始人第 ⑤ 条）。**读法 = 甲**（只补组织轴；**禁**"拿 `orgId` 当部门"）。§2.1 里那个单数字段**已删**（不留空置语义字段） | 类型复数 + 文件驱动 + 禁二次单复数迁移 |
+| **D2** | `orgId` 不可得 ⇒ 返回 **`''`** + **I2 fail-closed** | 🔴 **硬约束**：`''` **必须同时让下游 fail-closed**；须有「`orgId` 缺失 ⇒ 拒」的**改坏即红**夹具 |
+| **D3** | **DevMode 收窄（堵）** —— 创始人原话「**这个肯定是不允许的**」。范围**扩到多租户**：不许跨 `orgId` **且** 不许跨 `departmentIds`。🔴 判据**在【硬化姿态】与【DevMode 姿态】各跑一次**（**不依赖"真有第二个租户"**） | CTO 已自我纠正：「今天不可验 ⇒ 推迟」是**错的** |
+| **D4** | 本提案是 **BR-3 接口前置** ⇒ 但按 **Grants 模型**冻结；冻结期间 BR-3 **不得自定义并行字段** | 与 #1142 / #1143 的先后由 CTO 定 |
+
+### 附：v2 时期的待决表（**已被上方最终裁定覆盖**，留档不删）
+
+## 三（附）、v2 待决表 —— 历史留档
 
 | D# | 待决 | 选项 | 产品线**倾向** | 代价 |
 |---|---|---|---|---|
@@ -199,3 +267,28 @@ git grep -n "isSameDepartment" -- src/                 # 恒假判据的调用�
 若作为 P1 立项依据建议先复跑。
 
 **本版未再经同一复核员复核** —— 上述 6 条即其原话所指，产品线已逐条回查源码，但**内容裁决权仍在 CTO/K3**。
+
+---
+
+## 七、v3 改动清单（**CTO §二 指定的四处 + §一 裁定**，逐条可核）
+
+| # | CTO 要求（§二） | 本版落地 | 位置 |
+|---|---|---|---|
+| ① | **不冻"五档"** ⇒ 冻 `PermissionId[]` 类型 + 授权来源（文件驱动）+ `role → permissions` **可配映射** | 新增 `PermissionId` 类型 + `permissions` 字段；`role` **降格为默认包选择器**；新增 **§2.6 授权来源表** | §2.1 · §2.6 · 抬头 v3 横幅 |
+| ② | `departmentId`（单数） ⇒ **`departmentIds: string[]`** | 单数字段**已删**；改复数；语义写明 **`[]` = 无部门，不是"全部"**（I3） | §2.1 · §2.4 · §三 D1 |
+| ③ | 接口须含 **`resolveContext(identity) → { orgId, departmentIds, permissions[] }`** | 新增 **§2.2**（契约 JSDoc 三件套 + "授权判定只许读这三样"）；`extractRbacContext` 降为**薄壳** | §2.2 |
+| ④ | **不冻实现** ⇒ 只冻**契约形状**（类型 + 签名 + 授权来源），分批实现 | §2.1 标题改为「冻结的是**契约形状**」；§2.5 迁移表保留分阶段 | §2.1 · §2.5 |
+
+**§一 裁定落地**：D1 复数+文件驱动+读法甲 · D2 `''`+fail-closed+改坏即红夹具 · D3 DevMode 收窄且**两姿态各跑一次** · D4 Grants 下作 BR-3 前置。四条已写入 §三 **最终口径**表；v2 旧表留档（§三（附）），不删。
+
+**§三 K11 归位**：本件 ≡ **RB-01 [#1140]** + **RB-02 [#1141]**（父 [#1139]），相邻 [#1142] [#1143]。已在抬头标注。
+
+### 🔴 本版**主动标注**的两处 provenance（防转抄）
+
+1. 「`src/` 里 `teamId`/`department` 散落 **428 处 / 74 文件**」= **CTO 实测**，**本版未复跑**。
+2. §1.2 的四姿态结论 = 独立复核员真 HTTP 实测 + 产品线，**本版仍未复跑**（见 §四 风险 6）。
+
+### 未做（如实列）
+
+- **未改任何代码**（本件是提案）。
+- §2.5 迁移表 P1–P4 的**卡号**仍写的是旧编号（P3 指 #1051、P4 指 §四③）；**未重编为 #1140–#1143** —— 因为 P1–P4 的**切分**是否与 RB-01~04 一一对应**应由 CTO 定**，我不代劳。
