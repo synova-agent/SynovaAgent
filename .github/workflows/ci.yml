@@ -579,6 +579,10 @@ jobs:
             tests/control-tower/d956-failmsg.test.sh \
             tests/control-tower/check-required-contexts.test.sh \
             tests/control-tower/loop-context.test.sh \
+            tests/control-tower/receipt-gate.test.sh \
+            tests/control-tower/dispatch-gate.test.sh \
+            tests/control-tower/gate-hook-entry.test.sh \
+            tests/control-tower/install-cto-gates.test.sh \
             tests/control-tower/ci-signal-classify.test.sh; do
             echo "── $t"
             # D1147: D1094 平台跳过名单随 windows 腿迁出本 job——本矩阵已收敛为单元素 ubuntu

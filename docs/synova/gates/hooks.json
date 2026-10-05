@@ -1,0 +1,28 @@
+{
+  "_comment": "D1163 · CTO 侧双闸登记点（收件闸 / dispatch 闸）。由 scripts/control-tower/install-cto-gates.sh 安装到 <profile>/hooks.json。⚠ 桥在【进程启动时只读一次】⇒ 改完必须重启 DSH。命令串里的 ${CLAUDE_PROJECT_DIR} 由桥展开（配置里写了 projectDir 则解析期展开，否则运行时由桥注入的环境变量展开）；`|| exit 2` 保证「入口缺失」也走出去为阻断位，而不是静默消失。",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/scripts/control-tower/gate-hook-entry.sh\" receipt || exit 2",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "send_message|team_task_create|spawn_teammate|write|edit|bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/scripts/control-tower/gate-hook-entry.sh\" dispatch || exit 2",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}

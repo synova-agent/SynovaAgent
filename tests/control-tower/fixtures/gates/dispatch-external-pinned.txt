@@ -1,0 +1,3 @@
+## §3 交付（GV- 线）
+参考 https://example.com/specs/hooks@3f2a1b9c4d5e6f708192a3b4c5d6e7f8091a2b3c 的实现方式
+Done 标准: 按该钉版文档实现
