@@ -159,3 +159,44 @@ TOP 假红面：`#803 feat/d962-2a-merge`（65 代码文件 / 61 假红）、`#6
 - 不碰 `scripts/audit/**`（K3 域）、不改 `ci.yml` 的 job `name:`（12 必需 context 唯一产出者）。
 - 附带发现（**不在本卡范围**，另立卡建议）：`brief_parser.match_path` 对 glob（如 `scripts/**`）做 `re.escape` ⇒
   **glob 声明实际不生效**（`resolve-commit-brief.sh` 一侧同款）。这会让"声明了 `scripts/**` 的 brief"看起来受保护、实际零覆盖 ⇒ 假绿方向。
+
+## 九、本卡执行中**亲身踩到**的两处同族缺陷（新增实证，非推演）
+
+缺陷家族不是"日期窗口"一条，而是「**声明写法 ↔ 判据解析 不匹配 ⇒ 认领失效**」。本卡在提交自己的件时连着踩到两条，
+两条都**物理可复跑**，且都不在 CTO 派单范围内：
+
+| # | 形态 | 复跑 | 后果 |
+|---|---|---|---|
+| ① | Q2 写集行用**反引号**包路径（`` - `tests/x.test.sh` ``）⇒ `brief_parser.parse_q2:112-120` 不剥反引号 ⇒ 返回带反引号的"路径" ⇒ `match_path` 恒不匹配 | `python3 scripts/control-tower/brief_parser.py --q2-include <brief>` 看输出是否带 `` ` `` | 认领恒失效 ⇒ **假红**（本卡真实发生：`bash scripts/pre-commit-check.sh` 报 `tests/control-tower/g12-crossday-claim.test.sh (不在 Q2 范围内)`，改裸路径后 `✅ 所有文件均在 Q2 范围内`） |
+| ② | 路径自身含**全角括号**（本卡 brief 名 `...（提案）.md`）⇒ `parse_q2:114` 的 `re.split(r"[（(]")` 把声明**截断**在该括号处 | 同上，看输出是否为被截断的前缀 | 该行声明**部分失效**；`.claude/` 恰被 `skip_re` 跳过故本卡无害，但同样写法放在 `src/`/`tests/` 上即假红 |
+
+⇒ 支撑 §3 主张：G12 的"声明→认领"链路需要**判别性夹具**（不是"有断言"）+ **单一语义源**；
+反引号/括号/glob 这类"写法细节"每一个都是静默失效点，靠人工看文档守不住。
+
+## 十、夹具自证的两处非判别性断言（过程留痕，防"绿得不明不白"）
+
+| 时刻 | 现象 | 处置 |
+|---|---|---|
+| 首版夹具 | 案例 A/C/D/E 的 brief 用反引号写路径（同 §九①）⇒ 所有 brief 的认领集恒空 ⇒ A 红、C/D "红得对但理由错"（实为"无人认领"而非"排除项生效"/"陈旧未入池"） | 改裸路径后重测：C/D 仍红**且理由正确** |
+| 第二版案例 E | 断言仅"无违规" ⇒ "整段跳过(fail-open)" 与 "被正确认领" **同分** = 非判别性 | 加断言 `ALL_TODAY_BRIEFS` 必须含该跨天 brief ⇒ 修前 E 红、预演后 E 绿 |
+
+（这两处都是"断言存在但不可判别"的 V-02 类问题 —— 与"日期窗口判错"同源：**判据的输入定义错了，断言再全也测不出**。）
+
+## 十一、本卡执行中撞到的第三处同族：门禁自身失败 ≠ 检查未过（三态退出码）
+
+**现象（可复跑）**：`synova-commit` 提交本卡时 pre-push 被 golden-case F1 门禁拒绝，文案为
+`❌ 黄金案例 F1 门禁失败 — 诊断质量退化解冻` + `修复 golden-case fixture 或诊断管线后重试`。
+**真因**：非交互 shell 的 `PATH` 里没有 nvm 的 `npx`（`bash: npx: command not found`）⇒
+`scripts/pre-push-check.sh:276` 的 `if ! npx tsx scripts/ci/golden-case-checker.ts` 把 **127（检查无法执行）** 与
+**1（检查发现问题）** 混同 ⇒ 报"诊断质量退化"这一**完全错误的原因**，并把"请修 gate 的运行环境"指向"请修诊断管线"。
+
+```bash
+# 复跑（对照）
+bash scripts/pre-push-check.sh origin fix/D1162-g12-crossday-claim   # PATH 无 node → 报 golden-case 失败
+PATH="$HOME/.nvm/versions/node/v22.23.2/bin:$PATH" npx tsx scripts/ci/golden-case-checker.ts  # → 11/11 全通过
+```
+
+**为什么算同族**：A1 的病根是"判据输入（认领者来源）定义错 ⇒ 判错对象"；本条是"判据输入（工具可用性）未区分 ⇒ 报错原因"。
+二者都属门禁**三态退出码**纪律（`0=通过 / 1=违规 / 2=检查自身失败（同样阻断但**必须报自己的原因**）`，ctrl-tower-change 模式 1）。
+**建议（另立卡，不属 A1）**：`pre-push-check.sh` 对 `npx`/`tsx` 缺失走 `exit 2` 分支并显式打印"检查环境缺失（PATH/node）"，
+禁把 127 当"质量退化"上报。**本卡不实施**（改门禁 ⇒ 提案 → K3 → CTO 裁）。
