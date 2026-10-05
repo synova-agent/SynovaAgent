@@ -33,9 +33,10 @@ OUT=$(SYNO_FASTLANE=1 SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_WARN=1 \
   SYNO_GATE_HITS_LOG="$(mktemp)" bash "$PC" 2>&1); rc=$?
 T1=$(date +%s); DUR=$((T1 - T0))
 [ "$rc" -eq 0 ] && ok "快速通道: exit 0" || no "应 exit 0, 实际 $rc"
-echo "$OUT" | grep -q "V5 纯补记快速通道" && ok "输出含快速通道横幅" || no "缺快速通道横幅"
-echo "$OUT" | grep -q "跳过 12 组" && ok "横幅明示跳过 12 组" || no "横幅未明示跳过组数"
-if echo "$OUT" | grep -q "组 1/13"; then no "不应跑 13 组（性能未达标）"; else ok "13 组全跳过（未输出 组 1/13）"; fi
+# (D962 2a① V5.3: 横幅精简——语义断言改为「纯补记放行」标记 + 不进入主检查体)
+echo "$OUT" | grep -q "纯补记放行" && ok "输出含纯补记放行标记" || no "缺纯补记放行标记"
+if echo "$OUT" | grep -q "本地清单通过\|主树占用检测"; then no "不应进入主检查体"; else ok "主检查体全跳过"; fi
+if echo "$OUT" | grep -q "组 1/13\|Loop Engineering"; then no "不应跑 13 组（性能未达标）"; else ok "13 组全跳过"; fi
 [ "$DUR" -lt 10 ] && ok "耗时 ${DUR}s < 10s（原 90-120s）" || no "耗时 ${DUR}s ≥ 10s"
 
 # ── 防绕过: 未设 SYNO_FASTLANE 时不看暂存区自行判定（结构断言）──

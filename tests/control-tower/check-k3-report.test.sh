@@ -9,7 +9,10 @@ t(){ n="$1"; w="$2"; shift 2; "$@" >/tmp/k3t.out 2>&1; rc=$?
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 H=$(git -C "$ROOT" rev-parse HEAD)
 # T1 合格报告
-printf '# K3 报告\n断面: 0.1.7-rc.1 @ 46a7f68b\ncommit: %s\n\n| 判定 | 证据 |\n| PASS | scripts/pre-commit-check.sh:991 |\n\n```bash\nls\n```\n' "${H:0:8}" > "$T/ok.md"
+# task-26: 原夹具证据引用 `scripts/pre-commit-check.sh:991`（V5.2.x 时代行号）；V5.3 瘦身至 564 行后
+#   该行号越界 ⇒ 正向夹具被判 VIOLATION（R3 行号越界），T1 恒红。改指**在库真实行**（:1 = shebang，
+#   恒存在）；R3 判据（行号须存在/不越界）与 T4 负向对照（引用不存在路径 → VIOLATION）均**保持不变**。
+printf '# K3 报告\n断面: 0.1.7-rc.1 @ 46a7f68b\ncommit: %s\n\n| 判定 | 证据 |\n| PASS | scripts/pre-commit-check.sh:1 |\n\n```bash\nls\n```\n' "${H:0:8}" > "$T/ok.md"
 t "T1 合格 = OK" 0 $G "$T/ok.md" --repo "$ROOT"
 # T2 缺断面/对象声明
 printf '# r\ncommit: %s\n\nPASS ｜ 无证据\n' "${H:0:8}" > "$T/nosec.md"

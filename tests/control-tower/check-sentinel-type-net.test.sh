@@ -14,7 +14,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-TOOL="$REPO_DIR/scripts/control-tower/check-sentinel-type-net.sh"
+# (D962-B2: 判定逻辑已合并入 scripts/check-architecture.sh §5，原独立脚本退役；
+#  SYNO_TYPE_NET_ROOT 注入缝原样保留，其余架构段落不受注入影响——沙箱仅作用于 §5)
+TOOL="$REPO_DIR/scripts/check-architecture.sh"
 TMP_DIR="$(mktemp -d /tmp/d752-type-net-tests.XXXXXX)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 

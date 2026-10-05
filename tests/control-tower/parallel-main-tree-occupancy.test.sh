@@ -83,7 +83,7 @@ else
 fi
 
 # ── 降级态: registry 不可读 → 显式降级提示（不硬拦）——接线断言 ──
-grep -q "session-registry 不可读 — 降级放行" "$PC" && ok "降级: registry 不可读显式提示存在" || no "降级提示缺失"
+grep -qE "(session-registry|主树占用检测.{0,4}registry) 不可读 — 降级放行" "$PC" && ok "降级: registry 不可读显式提示存在（V5.3 措辞兼容）" || no "降级提示缺失"
 
 echo ""
 echo "结果: $PASS 通过, $FAIL 失败"

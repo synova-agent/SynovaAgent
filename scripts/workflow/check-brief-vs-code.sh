@@ -54,12 +54,15 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
  DECLARED_FILES=$(python3 "$REPO_ROOT_BCV/scripts/control-tower/brief_parser.py" --q2-include "$BRIEF" 2>/dev/null \
    | grep -v 'node_modules\|\.test\.' | sort -u || true)
  if [ -z "$DECLARED_FILES" ]; then
-   # 兜底: 反引号路径（旧格式 brief 兼容）
-   DECLARED_FILES=$(sed -n '/^## Q2:/,/^## Q3:/p' "$BRIEF" 2>/dev/null \
-     | grep -oE '\`[^\`]+\.[a-z]{2,5}\`' \
-     | sed 's/\`//g' \
-     | grep -v 'node_modules\|\.test\.' \
-     | sort -u || true)
+    # 兜底: 反引号路径（旧格式 brief 兼容）
+    # D962 task-32 R1（跨方言修复）: 原模式依赖『转义反引号 = 字面反引号』，该语义**两方言不一致** ——
+    #   GNU grep 把 \` 当扩展锚点（缓冲区起始）⇒ **实测在 GNU 下恒不匹配**、Q2 兜底抽取恒返空
+    #   （ubuntu 腿=GNU grep；macOS 腿=BSD grep）。改用方括号包裹反引号：POSIX 等价、两方言一致。
+    DECLARED_FILES=$(sed -n '/^## Q2:/,/^## Q3:/p' "$BRIEF" 2>/dev/null \
+      | grep -oE '[`][^`]+\.[a-z]{2,5}[`]' \
+      | sed 's/`//g' \
+      | grep -v 'node_modules\|\.test\.' \
+      | sort -u || true)
  fi
  
  # 实际变更的源文件 (排除 test/non-src)
@@ -71,7 +74,26 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
    | grep -E '\.(ts|tsx|js|json|sh|md|yaml|yml|html|css|py)$' \
    | grep -v 'node_modules\|\.test\.\|\.d\.ts\|package-lock\|\.claude/' \
    | sort -u || true)
- ACTUAL_FILES=$(echo -e "${ACTUAL_FILES_STAGED}\n${ACTUAL_FILES_UNSTAGED}" | sort -u | grep -v '^$' || true)
+ # CI 范围源（D962-B2 自根目录死副本移植，D520/D708 棘轮修复此前落在未被执行的
+ # 根目录 check-brief-vs-code.sh 上）：CI 检出无 staged/unstaged diff，
+ # 基准必须取 merge-base（裸 HEAD..HEAD~1 在刷新分支的合并提交下会把被并入的
+ # main 全部改动判为越界——#520 D721 实证）。无 origin/main → 回退并显式提示（降级可见）。
+ DIFF_BASE=""
+ if MB=$(git merge-base refs/remotes/origin/main HEAD 2>/dev/null) && [ -n "$MB" ]; then
+   DIFF_BASE="$MB"
+ else
+   echo "  origin/main 不可用 — diff 基准回退 HEAD~1（合并提交下会误判越界）"
+ fi
+ if [ -n "$DIFF_BASE" ]; then
+   DIFF_ALL=$(git diff --name-only "$DIFF_BASE"..HEAD 2>/dev/null || true)
+ else
+   DIFF_ALL=$(git diff --name-only HEAD~1..HEAD 2>/dev/null || true)
+ fi
+ ACTUAL_FILES_CI=$(echo "$DIFF_ALL" 2>/dev/null \
+   | grep -E '\.(ts|tsx|js|json|sh|md|yaml|yml|html|css|py)$' \
+   | grep -v 'node_modules\|\.test\.\|\.d\.ts\|package-lock\|\.claude/' \
+   | sort -u || true)
+ ACTUAL_FILES=$(echo -e "${ACTUAL_FILES_STAGED}\n${ACTUAL_FILES_UNSTAGED}\n${ACTUAL_FILES_CI}" | sort -u | grep -v '^$' || true)
  
  # 如果 brief 的 Q2 没有任何文件声明，跳过此检查（允许纯文档/纯配置任务）
  if [ -z "$DECLARED_FILES" ]; then

@@ -13,7 +13,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 # ═══════════════════════════════════════════════════════════════
 set -uo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-GATE="$REPO/scripts/control-tower/check-orphan-worktrees.sh"
+GATE="$REPO/scripts/control-tower/ct-health.sh"
 PASS=0; FAIL=0
 ok() { echo "  ✅ $1"; PASS=$((PASS+1)); }
 no() { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
@@ -27,8 +27,8 @@ else
   no "语法错误"
 fi
 
-# ── 正常: 无孤儿 → exit 0 ──
-bash "$GATE" >/dev/null 2>&1
+# ── 正常: 无孤儿 → exit 0 ──（D962-B2 宿主迁移: 经 ct-health.sh orphan-worktrees 子命令）
+bash "$GATE" orphan-worktrees >/dev/null 2>&1
 rc=$?
 if [ "$rc" -eq 0 ] || [ "$rc" -eq 1 ]; then
   ok "运行正常（exit ${rc}，0=无孤儿/1=有孤儿，均为有效判定）"
@@ -37,7 +37,7 @@ else
 fi
 
 # ── 边界: --json 输出 JSON 结构 ──
-JSON=$(bash "$GATE" --json 2>/dev/null)
+JSON=$(bash "$GATE" orphan-worktrees --json 2>/dev/null)  # swallow-ok: JSON 通道 stderr 非判定面
 if echo "$JSON" | grep -q '"orphan_count"'; then
   ok "--json 输出含 orphan_count 字段"
 else
@@ -51,8 +51,8 @@ else
   no "主 worktree 排除逻辑缺失"
 fi
 
-# ── 降级: git 不可用 → exit 2 逻辑存在 ──
-if grep -q "exit 2" "$GATE" && grep -q "degraded" "$GATE"; then
+# ── 降级: git 不可用 → exit 2 逻辑存在（宿主函数 return 2 + 分发层透传 exit $?）──
+if grep -qE "return 2|exit 2" "$GATE" && grep -q "degraded" "$GATE"; then
   ok "降级 exit 2 逻辑存在"
 else
   no "降级逻辑缺失"

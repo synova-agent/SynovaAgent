@@ -120,8 +120,9 @@ grep -q 'BASE=$(git merge-base refs/remotes/origin/main HEAD' "$CI" \
   && ok "⑧ 基准取自 refs/remotes/origin/main（与 D708 gate 同源）" \
   || no "⑧ 基准未取自 origin/main"
 
-# ⑨ 同族第二处：G12（check-brief-vs-code.sh）的 diff 基准也必须是 merge-base
-G12="$REPO/scripts/check-brief-vs-code.sh"
+# ⑨ 同族第二处：G12（workflow/check-brief-vs-code.sh 真身）的 diff 基准也必须是 merge-base
+# （D962-B2：根目录死副本删除，merge-base 修复移植进 workflow 真身后改指此文件）
+G12="$REPO/scripts/workflow/check-brief-vs-code.sh"
 grep -q 'merge-base refs/remotes/origin/main HEAD' "$G12" \
   && ok "⑨ G12 基准取自 merge-base（合并提交不再误判越界）" \
   || no "⑨ G12 仍用裸 HEAD~1 基准（合并提交下会误报越界）"

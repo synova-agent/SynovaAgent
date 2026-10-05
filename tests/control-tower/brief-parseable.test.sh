@@ -3,7 +3,7 @@
 # brief-parseable.test.sh — D313 M3 brief 契约测试
 #
 # 覆盖（铁律 48：正常/降级/边界）:
-#   1. 模板输出 → check-brief-parseable exit 0（模板同源）
+#   1. 模板输出 → plan-integrity --brief exit 0（模板同源，D962 第二批并入）
 #   2. brief_parser.py --q2-include 从模板输出提取非空路径
 #   3. 模板输出含 #CRITERIA: [A-D]
 #   4. 手造坏 brief（无做什么段/无 #CRITERIA）→ exit 1 指明缺失项
@@ -17,7 +17,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PARSER="$REPO_DIR/scripts/control-tower/brief_parser.py"
-CHECKER="$REPO_DIR/scripts/workflow/check-brief-parseable.sh"
+CHECKER=("$REPO_DIR/scripts/check-plan-integrity.sh" --brief)  # D962 第二批: 判定并入 plan-integrity
 TMP_DIR="$REPO_DIR/.codex/control-tower/tmp"
 DEGRADED_LOG="$REPO_DIR/.codex/control-tower/logs/degraded-events.log"
 
@@ -41,9 +41,9 @@ echo "── 1. 模板同源 ──"
 BRIEF_FILE="$TMP_DIR/bp-template.md" TASK_DESC="D313 test" \
   python3 "$REPO_DIR/scripts/workflow/generate-task-brief.py" 2>/dev/null || true
 if [ -f "$TMP_DIR/bp-template.md" ]; then
-  OUT=$(bash "$CHECKER" "$TMP_DIR/bp-template.md" 2>&1) || true
+  OUT=$(bash "${CHECKER[@]}" "$TMP_DIR/bp-template.md" 2>&1) || true
   EXIT=$?
-  assert_exit 0 "$EXIT" "模板输出通过 check-brief-parseable"
+  assert_exit 0 "$EXIT" "模板输出通过 plan-integrity --brief"
 else
   fail "模板未生成 ($TMP_DIR/bp-template.md)"
 fi
@@ -80,7 +80,7 @@ xxx
 - [ ] 无意义
 EOF
 EXIT=0
-OUT=$(bash "$CHECKER" "$TMP_DIR/bp-bad.md" 2>&1) || EXIT=$?
+OUT=$(bash "${CHECKER[@]}" "$TMP_DIR/bp-bad.md" 2>&1) || EXIT=$?
 assert_exit 1 "$EXIT" "坏 brief → exit 1"
 assert_contains "$OUT" "#CRITERIA" "输出指明 #CRITERIA 缺失"
 echo ""
@@ -88,7 +88,7 @@ echo ""
 # ── 5. brief 不存在 → fail-open ──
 echo "── 5. brief 不存在 fail-open ──"
 EXIT=0
-OUT=$(bash "$CHECKER" "$TMP_DIR/bp-nonexist.md" 2>&1) || EXIT=$?
+OUT=$(bash "${CHECKER[@]}" "$TMP_DIR/bp-nonexist.md" 2>&1) || EXIT=$?
 assert_exit 0 "$EXIT" "brief 不存在 → exit 0（fail-open）"
 echo ""
 
@@ -106,14 +106,14 @@ echo ""
 # ── 7. D317: legacy brief 仅报真实缺失（非 4 项假失败）+ PYBIN 断言 ──
 echo "── 7. D317 legacy brief 回归 + PYBIN ──"
 if [ -f "$REPO_DIR/.claude/task-briefs/2026-08-02-D286-GraphStore-unify.md" ]; then
-  OUT=$(bash "$CHECKER" "$REPO_DIR/.claude/task-briefs/2026-08-02-D286-GraphStore-unify.md" 2>&1) || true
+  OUT=$(bash "${CHECKER[@]}" "$REPO_DIR/.claude/task-briefs/2026-08-02-D286-GraphStore-unify.md" 2>&1) || true
   assert_contains "$OUT" "#CRITERIA 缺失" "legacy brief 报 #CRITERIA 缺失（真实缺失项）"
   assert_not_contains "$OUT" "Q2 不可解析" "legacy brief 不报 Q2 假失败（python 可用时）"
   assert_not_contains "$OUT" "架构层未标注" "legacy brief 不报架构层假失败（D286 有 L4）"
 else
   fail "D286 brief 不存在"
 fi
-assert_contains "$(grep -m1 '^PYBIN=' "$CHECKER" || echo '')" "PYBIN=" "checker 有 PYBIN 解析（D317 跨平台回退）"
+assert_contains "$(grep -m1 'PYBIN=' "${CHECKER[0]}" || echo '')" "PYBIN=" "checker（plan-integrity --brief）有 PYBIN 解析（D317 跨平台回退）"
 echo ""
 
 echo "═══════════════════════════════════════════════════════════"

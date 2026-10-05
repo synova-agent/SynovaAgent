@@ -45,7 +45,6 @@ tests/control-tower/bypass-union-merge.test.sh
 tests/control-tower/calc-k3-stale.test.py
 tests/control-tower/check-bypass-log.test.sh
 tests/control-tower/check-ci-stale-red.test.sh
-tests/control-tower/check-dataflow-alignment.test.sh
 tests/control-tower/check-dev-doc-write-set.test.sh
 tests/control-tower/check-notes-lifecycle.test.sh
 tests/control-tower/check-orphan-worktrees.test.sh
@@ -53,7 +52,6 @@ tests/control-tower/check-ownership.test.sh
 tests/control-tower/check-pr-budget.test.sh
 tests/control-tower/check-secrets.test.sh
 tests/control-tower/check-sentinel-type-net.test.sh
-tests/control-tower/check-test-first.test.sh
 tests/control-tower/ci-strict-mode.test.sh
 tests/control-tower/commit-msg-consistency.test.sh
 tests/control-tower/commit-msg-merge.test.sh

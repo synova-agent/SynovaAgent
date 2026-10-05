@@ -22,8 +22,15 @@ set -uo pipefail
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
 # 注入缝（测试）: SYNO_TEST_ARM=1 + SYNO_CT_STAGED 覆盖暂存区文件列表（武装守卫, 生产忽略）
+# 生产 diff 基缝（task-28 裁定④）: CI runner 无暂存区 ⇒ 用 SYNO_CT_DIFF_BASE...HEAD 变更集
+#   （与 pre-commit 的 SYNO_DIFF_BASE 同口径；仅在 GITHUB_ACTIONS=true 时生效，本地恒走暂存区）
 if [ "${SYNO_TEST_ARM:-0}" = "1" ]; then
   STAGED_ALL="${SYNO_CT_STAGED:-}"
+elif [ "${GITHUB_ACTIONS:-}" = "true" ] && [ -n "${SYNO_CT_DIFF_BASE:-}" ]; then
+  if ! STAGED_ALL="$(git -c core.quotepath=false diff --name-only --diff-filter=ACMR "${SYNO_CT_DIFF_BASE}...HEAD" 2>/dev/null)"; then
+    echo "degraded: git diff ${SYNO_CT_DIFF_BASE}...HEAD 失败（fail-closed，不当作无变更）" >&2
+    exit 2
+  fi
 else
   if ! STAGED_ALL="$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null)"; then
     echo "degraded: git 不可用，无法读取暂存区（fail-closed，不当作无变更）" >&2

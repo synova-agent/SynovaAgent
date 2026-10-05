@@ -33,43 +33,47 @@ trap cleanup EXIT
 
 echo "=== D515 项3: 硬阻断收敛（10 场景：4 保 6 放）==="
 
-# ── 结构断言: 4 保 + 2 特例仍是 hard_check ──
+# ── 结构断言: V5.3 本地硬拦面（D962 2a①——4 保语义迁移为: 本地硬=GATEKEEPER/Secrets/Notes/骨架/主树占用 + CI 转硬=质量根）──
 KEEP_HARD=(
-  'hard_check "as any / as never / as unknown as 零容忍（新增，铁律 38；存量独立清理）"'
-  'hard_check "新文件配对: impl 须同 commit 有 test"'
-  'hard_check "桩测试: 新测试需 ≥3 expect()"'
-  'hard_check "接线审计: 新 export 必须被引用 (物理事实)"'
-  'hard_check "接线深度: 新 export 必须被调用(非仅 import)"'
-  'hard_check "G12d: 生成物单点生成门禁 (D458)"'
-  'hard_check "G13: 技能漂移'
+  'hard_check "主树占用检测 (D537 #2): 主树脏 + 多活跃 session"'
+  'hard_check "骨架 brief 占位符检测（D547）"'
+  '骨架 brief 占位符未填（D547）'
+  'Notes 迁移门禁: proposed/ 僵尸条目 [硬阻断]'
+  'Secrets 扫描失败'
+  '请使用: git synova-commit --task-id'
 )
 for k in "${KEEP_HARD[@]}"; do
   grep -qF "$k" "$PC" && ok "保[硬]: $k" || no "质量根被误降级: $k"
 done
-# Secrets 仍硬: par_collect secrets 失败 → HARD_FAIL
-grep -q 'par_collect secrets.*HARD_FAIL' "$PC" && ok "保[硬]: Secrets (par_collect → HARD_FAIL)" || no "Secrets 被降级"
+# Secrets 仍硬: 失败 → HARD_FAIL++
+grep -qE 'Secrets 扫描失败.*HARD_FAIL' "$PC" && ok "保[硬]: Secrets 失败 → HARD_FAIL" || no "Secrets 被降级"
 
-# ── 结构断言: 6 改软 ──
+# ── 结构断言: 质量根 CI 转硬面（soft_check + SYNO_CI 分支）──
+KEEP_CI_HARD=(
+  'soft_check "as any / as never / as unknown as 零容忍（铁律38）"'
+  'soft_check "铁律46: 桥接/包级 engine-core 引用"'
+  'soft_check "接线审计: 新 export 必须被引用 (铁律4/5)"'
+  'soft_check "G12: Q2 范围一致性（D296/D749）"'
+)
+for k in "${KEEP_CI_HARD[@]}"; do
+  grep -qF "$k" "$PC" && ok "保[CI转硬]: $k" || no "质量根 CI 判定缺失: $k"
+done
 KEEP_SOFT=(
-  'soft_check "架构边界: 禁止跨层引用 (铁律 39)"'
-  'soft_check "Task Brief: 6 核心字段必须填写 (Q0/Q1/Q2/Q3/架构层/Done)"'
-  'soft_check "G12: task brief Q2 范围一致性"'
-  'soft_check "契约门禁: 声明产出须在暂存区"'
-  'soft_check "empty catch 无 log (铁律 24+31)"'
+  'soft_check "硬编码业务数据/类型 (#3 保留·本地)"'
   'soft_check "禁止 DiagnosticModule: 新模块须实现 Sentinel 接口"'
 )
 for k in "${KEEP_SOFT[@]}"; do
   grep -qF "$k" "$PC" && ok "放[软]: $k" || no "未按 spec 降软: $k"
 done
-grep -q 'V5 软提示——CI 为权威，本地不阻断' "$PC" && ok "soft_check 输出标记 V5 软提示" || no "软提示标记缺失"
+grep -qE 'V5 软提示——CI 为权威|软提示——CI 为权威' "$PC" && ok "soft_check 输出标记 V5 软提示" || no "软提示标记缺失"
 grep -q '⚠ V5: \${SOFT_COUNT} 项软提示' "$PC" && ok "结果汇总行存在（X 项软提示）" || no "汇总行缺失"
 
 # ── 行为断言A: as any 探针 → 实际硬拦（exit 1）──
 echo 'export const probeVal = (x: unknown) => x as any;' > "$PROBE1"
 git -C "$REPO" add -- "$PROBE1" >/dev/null 2>&1
-OUTA=$(cd "$REPO" && SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_WARN=1 \
+OUTA=$(cd "$REPO" && SYNO_CI=1 SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_WARN=1 \
   SYNO_GATE_HITS_LOG="$(mktemp)" bash "$PC" 2>&1); rcA=$?
-[ "$rcA" -eq 1 ] && ok "行为A: as any 探针被硬拦 (exit 1)" || no "行为A: 应 exit 1, 实际 $rcA"
+[ "$rcA" -eq 1 ] && ok "行为A: as any 探针 CI strict 硬拦 (exit 1; V5.3 质量根在 CI)" || no "行为A: 应 exit 1, 实际 $rcA"
 echo "$OUTA" | grep -q "as any / as never / as unknown as 零容忍" && ok "行为A: 命中 as any 零容忍检查点" || no "行为A: 未点名 as any"
 echo "$OUTA" | grep -q "提交已拒绝" && ok "行为A: 硬失败输出「提交已拒绝」标记" || no "行为A: 缺硬失败标记"
 cleanup
@@ -77,18 +81,18 @@ cleanup
 # ── 行为断言A2 (CT-46): as never 探针 → 硬拦（mcp L236 同型逃逸）──
 echo 'export const probeNever = (x: unknown) => x as never;' > "$PROBE1"
 git -C "$REPO" add -- "$PROBE1" >/dev/null 2>&1
-OUTA2=$(cd "$REPO" && SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_WARN=1 \
+OUTA2=$(cd "$REPO" && SYNO_CI=1 SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_WARN=1 \
   SYNO_GATE_HITS_LOG="$(mktemp)" bash "$PC" 2>&1); rcA2=$?
-[ "$rcA2" -eq 1 ] && ok "行为A2: as never 探针被硬拦 (exit 1)" || no "行为A2: 应 exit 1, 实际 $rcA2"
+[ "$rcA2" -eq 1 ] && ok "行为A2: as never 探针 CI 硬拦 (exit 1)" || no "行为A2: 应 exit 1, 实际 $rcA2"
 echo "$OUTA2" | grep -q "as any / as never / as unknown as 零容忍" && ok "行为A2: 命中扩展检查点" || no "行为A2: 未点名 as never"
 cleanup
 
 # ── 行为断言A3 (CT-46): as unknown as 双断言链 → 硬拦 ──
 echo 'export const probeDouble = (x: unknown) => x as unknown as string;' > "$PROBE1"
 git -C "$REPO" add -- "$PROBE1" >/dev/null 2>&1
-OUTA3=$(cd "$REPO" && SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_WARN=1 \
+OUTA3=$(cd "$REPO" && SYNO_CI=1 SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_WARN=1 \
   SYNO_GATE_HITS_LOG="$(mktemp)" bash "$PC" 2>&1); rcA3=$?
-[ "$rcA3" -eq 1 ] && ok "行为A3: as unknown as 双断言被硬拦 (exit 1)" || no "行为A3: 应 exit 1, 实际 $rcA3"
+[ "$rcA3" -eq 1 ] && ok "行为A3: as unknown as 双断言 CI 硬拦 (exit 1)" || no "行为A3: 应 exit 1, 实际 $rcA3"
 cleanup
 
 # ── 行为断言A4 (CT-46): 裸 as unknown（合法中间态）→ 不拦（exit 0，防过度阻断）──
@@ -106,10 +110,9 @@ cleanup
 # ── 行为断言B: G12 越界探针（无 brief 认领的 json）→ 软提示放行（exit 0）──
 echo '{}' > "$PROBE2"
 git -C "$REPO" add -- "$PROBE2" >/dev/null 2>&1
-OUTB=$(cd "$REPO" && SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_WARN=1 \
+OUTB=$(cd "$REPO" && SYNO_CI=1 SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_WARN=1 \
   SYNO_GATE_HITS_LOG="$(mktemp)" bash "$PC" 2>&1); rcB=$?
-[ "$rcB" -eq 0 ] && ok "行为B: G12 越界只告警不拦 (exit 0)" || no "行为B: 应 exit 0, 实际 $rcB :: $(echo "$OUTB" | grep -B2 '提交已拒绝' | head -8)"
-echo "$OUTB" | grep -q "V5 软提示" && ok "行为B: 输出含 V5 软提示标记" || no "行为B: 缺软提示标记"
+[ "$rcB" -eq 1 ] && ok "行为B: G12 越界 CI strict 拦截 (exit 1; 本地不跑 G12 属 V5.3 设计)" || no "行为B: 应 exit 1, 实际 $rcB"
 echo "$OUTB" | grep -q "tmp-d515-scope-probe.json" && ok "行为B: 越界文件被点名（报告能力不减）" || no "行为B: 越界文件未点名"
 cleanup
 

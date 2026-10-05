@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# D313 M5 UTF-8 强制: Windows 控制台/子进程统一 UTF-8（D962-B2 补齐存量头块）
+export PYTHONIOENCODING=utf-8
+export LC_ALL=C.UTF-8 2>/dev/null || true
 # ============================================================================
 # diagnosis-quality-check.sh — 诊断质量自动化检查 (D100 Part A)
 #

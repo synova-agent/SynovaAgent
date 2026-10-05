@@ -233,7 +233,58 @@ else
   echo -e "  ${GREEN}✅ 多租户安全: query 调用均传递 graph${RESET}"
 fi
 
+# ═══ 5. D752 哨兵类型网登记硬门禁（D962-B2 自 check-sentinel-type-net.sh 合并迁入）═══
+# 背景（D752, P1）: types.ts 静态 import type 登记是软约束，实测 8/45 未登记长期无人发现。
+# 判定: manifest 存在的活跃哨兵必须在 src/sentinel/types.ts 有 `extensions/sentinels/<name>/`
+#       路径引用（带尾斜杠防前缀碰撞）。豁免与 sentinel-loader.ts L71-73 同源:
+#       shared/ 工具库、_ 前缀归档、非目录条目。归档不改 _ 前缀名 = 点名（倒逼显式化）。
+# 三态: 0 全登记 / 1 缺失（FAIL+1，与架构违规同收口）/ 2 环境降级（fail-closed exit 2）。
+# 注入缝: SYNO_TYPE_NET_ROOT 覆盖仓库根（沙箱夹具用，生产忽略）。
+# LC_ALL=C（原脚本同款防御）: macOS bash 3.2 在 UTF-8 locale 下对本段中文字符串
+# 产生字节级解析错乱（实测变量名尾黏连坏字节 → unbound variable → 假红）。本段数据
+# 全 ASCII（目录名/路径），C locale 字节透传最稳。
+export LC_ALL=C
+export LANG=C
+_ARCH_ROOT="${SYNO_TYPE_NET_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+SENTINELS_DIR="$_ARCH_ROOT/extensions/sentinels"
+TYPE_NET_TYPES_FILE="$_ARCH_ROOT/src/sentinel/types.ts"
+TYPE_NET_RC=0
+if [ ! -d "$SENTINELS_DIR" ] || [ ! -f "$TYPE_NET_TYPES_FILE" ]; then
+  echo -e "  ${YELLOW}⚠ D752 类型网: 哨兵目录或 types.ts 不存在（fail-closed）${RESET}"
+  echo "degraded: D752 类型网输入缺失（$SENTINELS_DIR / $TYPE_NET_TYPES_FILE）" >&2
+  TYPE_NET_RC=2
+else
+  TYPE_NET_MISSING=""
+  TYPE_NET_COUNT=0
+  while IFS= read -r _entry; do
+    [ -z "$_entry" ] && continue
+    TYPE_NET_COUNT=$((TYPE_NET_COUNT + 1))
+    if ! grep -qF "extensions/sentinels/${_entry}/" "$TYPE_NET_TYPES_FILE"; then
+      TYPE_NET_MISSING="${TYPE_NET_MISSING}  ${_entry}\n"
+    fi
+  done < <(cd "$SENTINELS_DIR" && ls -1 | while IFS= read -r e; do
+    [ -d "$e" ] || continue
+    [ "$e" = "shared" ] && continue
+    case "$e" in (_*) continue ;; esac
+    echo "$e"
+  done | sort -u)
+  if [ -n "$TYPE_NET_MISSING" ]; then
+    echo -e "  ${RED}❌ D752 类型网: 以下活跃哨兵未在 src/sentinel/types.ts 登记:${RESET}"
+    echo -e "$TYPE_NET_MISSING"
+    echo -e "     修法: types.ts 类型网区补 import type，或归档为 _ 前缀目录。禁止静默跳过。"
+    FAIL=$((FAIL + 1))
+  else
+    echo -e "  ${GREEN}✅ D752 类型网: ${TYPE_NET_COUNT} 个活跃哨兵全部已登记${RESET}"
+  fi
+fi
+
 echo ""
+
+if [ "$TYPE_NET_RC" -eq 2 ]; then
+  echo -e "  ${RED}架构检查: D752 类型网环境降级（fail-closed，不判绿）— exit 2${RESET}"
+  echo ""
+  exit 2
+fi
 
 if [ "$FAIL" -gt 0 ]; then
   echo -e "  ${RED}架构检查: ${FAIL} 项违规 — 修复后重试 commit${RESET}"

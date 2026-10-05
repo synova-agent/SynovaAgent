@@ -27,20 +27,23 @@ trap 'rm -f "$GATE_HITS_LOG"' EXIT
 
 # 提取被测函数 + 依赖变量（sed 函数范围 + 头部颜色/计数器），source 进本测试进程
  extract_helpers() {
-  sed -n '42,44p;47p' "$GATE"
+  # (D962 2a① V5.3: 旧版按行号 42,44,47 抓取计数/颜色——改为按模式抓取，行号漂移免疫)
+  grep -E '^(HARD_FAIL|RED|YELLOW)=' "$GATE" | head -3
   sed -n '/^soft_check()/,/^}/p' "$GATE"
   sed -n '/^warn_check()/,/^}/p' "$GATE"
-  sed -n '/^v5_soft()/,/^}/p' "$GATE"
   echo 'HARD_FAIL=0; WARN_COUNT=0; SOFT_COUNT=0'
 }
 
 echo "=== D542 CI strict 失败可见性测试 ==="
 
-# ── 接线: D542 标记存在于 soft_check 与 warn_check ──
-if grep -q "D542: CI strict 下必须显示 ❌" "$GATE" && [ "$(grep -c "D542: CI strict 下必须显示" "$GATE")" -ge 2 ]; then
-  ok "接线: soft_check + warn_check 均含 D542 CI 可见性修复"
+# ── 接线: D542 语义在 V5.3 结构中的落点 = soft_check/warn_check CI 分支均输出 ❌（红）──
+# (D962 2a① V5.3: 重写后无逐字 D542 注释——判据改为行为级: 两函数 CI 分支各含 ❌ 输出)
+_ci_red=$(sed -n '/^soft_check()/,/^}/p' "$GATE" | grep -c '❌')
+_wi_red=$(sed -n '/^warn_check()/,/^}/p' "$GATE" | grep -c '❌')
+if [ "$_ci_red" -ge 1 ] && [ "$_wi_red" -ge 1 ]; then
+  ok "接线: soft_check + warn_check CI 分支均显 ❌（D542 语义保全）"
 else
-  no "接线: D542 标记缺失（soft_check/warn_check 至少一处未修）"
+  no "接线: CI 分支 ❌ 缺失（soft=${_ci_red} warn=${_wi_red}）"
 fi
 
 # ── 正常 1: soft_check 本地模式 → ⚠️ + SOFT_COUNT+1，HARD_FAIL 不变 ──

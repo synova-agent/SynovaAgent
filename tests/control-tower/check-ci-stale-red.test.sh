@@ -13,18 +13,18 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 # ═══════════════════════════════════════════════════════════════
 set -uo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-GATE="$REPO/scripts/control-tower/check-ci-stale-red.sh"
+GATE="$REPO/scripts/control-tower/ct-health.sh"
 PASS=0; FAIL=0
 ok() { echo "  ✅ $1"; PASS=$((PASS+1)); }
 no() { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
 
 echo "=== D453/CT-39 check-ci-stale-red 测试 ==="
 
-# ── 接线: gen-cto-health.py 调用了 check-ci-stale-red.sh（铁律 0-2）──
-if grep -q "check-ci-stale-red.sh" "$REPO/scripts/control-tower/gen-cto-health.py" 2>/dev/null; then
-  ok "接线: gen-cto-health.py 调用 check-ci-stale-red.sh"
+# ── 接线: gen-cto-health.py 调用 ct-health.sh ci-stale-red（铁律 0-2；D962-B2 宿主迁移）──
+if grep -q 'ct-health.sh"), "ci-stale-red"' "$REPO/scripts/control-tower/gen-cto-health.py" 2>/dev/null; then
+  ok "接线: gen-cto-health.py 调用 ct-health.sh ci-stale-red"
 else
-  no "接线: gen-cto-health.py 未调用 check-ci-stale-red.sh"
+  no "接线: gen-cto-health.py 未调用 ct-health.sh ci-stale-red"
 fi
 
 # ── 边界: 阈值常量 24h 存在 ──
@@ -34,8 +34,8 @@ else
   no "阈值 24h 常量缺失"
 fi
 
-# ── 边界: 三态退出码逻辑存在（0 无红/1 有 stale/2 降级）──
-if grep -q "exit 0" "$GATE" && grep -q "exit 1" "$GATE" && grep -q "exit 2" "$GATE"; then
+# ── 边界: 三态退出码逻辑存在（0 无红/1 有 stale/2 降级；宿主函数内为 return，分发层透传）──
+if grep -q "return 0" "$GATE" && grep -q "return 1" "$GATE" && grep -qE "return 2|exit 2" "$GATE"; then
   ok "三态退出码（0/1/2）逻辑存在"
 else
   no "三态退出码逻辑缺失"

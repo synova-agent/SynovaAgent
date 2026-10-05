@@ -26,7 +26,8 @@ grep -rn "<新函数名>" src/     # 零结果 = 未接线
 # 测试非空壳（铁律 48）
 grep -c "expect(" <新测试文件>
 # 架构边界（铁律 39）+ engine-core（铁律 46）
-bash scripts/check-architecture.sh && bash scripts/check-bridge-files.sh
+# D962: check-bridge-files.sh 已退役——铁律46 三重扫描由 pre-commit #15 内联逻辑承接，随 33 项迁 CI iron-laws job
+bash scripts/check-architecture.sh
 ```
 
 ### ③ 声称 vs 事实（claim-verifier 精神）

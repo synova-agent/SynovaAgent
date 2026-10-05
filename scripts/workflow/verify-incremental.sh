@@ -189,14 +189,47 @@ if [ -n "$NEW_FILES" ]; then
 fi
 
 # L4b. 增量架构边界 (跨层引用)
+# (D962-B2: 原 check-boundaries-incremental.sh 唯一调用方在此内联，脚本退役——搬家≠减负，
+#  判定逻辑逐字迁入，行为等价)
 CHANGED_SRC2=$(git diff --name-only 2>/dev/null | grep '^src/.*\.ts$' | grep -v '\.test\.' | grep -v '\.d\.ts' || true)
-if [ -n "$CHANGED_SRC2" ]; then
-  if bash "$ROOT/scripts/workflow/check-boundaries-incremental.sh" 2>&1; then
-    :  # passed
-  else
-    echo -e "${RED}[FAIL] 架构边界违规 — 请重构为 L2 桥接服务${RESET}"
-    exit 1
-  fi
+BOUNDARY_VIOLATIONS=0
+while IFS= read -r _bfile; do
+  [ -z "$_bfile" ] && continue
+  [ ! -f "$_bfile" ] && continue
+  _bimports=$(grep "^import\|from" "$_bfile" 2>/dev/null | grep -v "import type" || true)  # swallow-ok: 非文本/已删文件跳过
+  [ -z "$_bimports" ] && continue
+  case "$_bfile" in
+    src/routes/*|src/tui/*|src/l1*/*)
+      if echo "$_bimports" | grep -qE "from '\.\./(l3|l4|l5)/|from '\.\./store/|from '\.\./sentinel/" 2>/dev/null; then
+        echo -e "${RED}[L1→L3/L4/L5] $_bfile 跨层引用:${RESET}"
+        echo "  $(echo "$_bimports" | grep -E "from '\.\./(l3|l4|l5)/|from '\.\./store/|from '\.\./sentinel/")"
+        BOUNDARY_VIOLATIONS=$((BOUNDARY_VIOLATIONS + 1))
+      fi
+      ;;
+    src/agent/*|src/orchestrator/*|src/l2*/*)
+      if echo "$_bfile" | grep -qE "bridge-service|knowledge-bridge|review-service|sentinel-health-service|sentinel-service"; then
+        continue
+      fi
+      if echo "$_bimports" | grep -qE "from '\.\./(l4|l5)/|from '\.\./store/" 2>/dev/null; then
+        echo -e "${RED}[L2→L4/L5] $_bfile 跨层引用:${RESET}"
+        echo "  $(echo "$_bimports" | grep -E "from '\.\./(l4|l5)/|from '\.\./store/")"
+        BOUNDARY_VIOLATIONS=$((BOUNDARY_VIOLATIONS + 1))
+      fi
+      ;;
+    src/l3/*|src/sentinel/*)
+      if echo "$_bimports" | grep -qE "from '\.\./routes/|from '\.\./store/" 2>/dev/null; then
+        echo -e "${RED}[L3→L1/L5] $_bfile 跨层引用:${RESET}"
+        echo "  $(echo "$_bimports" | grep -E "from '\.\./routes/|from '\.\./store/")"
+        BOUNDARY_VIOLATIONS=$((BOUNDARY_VIOLATIONS + 1))
+      fi
+      ;;
+  esac
+done <<< "$CHANGED_SRC2"
+if [ "$BOUNDARY_VIOLATIONS" -gt 0 ]; then
+  echo ""
+  echo "发现 ${BOUNDARY_VIOLATIONS} 处跨层引用。请重构为 L2 桥接服务。"
+  echo -e "${RED}[FAIL] 架构边界违规 — 请重构为 L2 桥接服务${RESET}"
+  exit 1
 fi
 
 # L4c. 暗默失败检查 (新增 catch 无 log)

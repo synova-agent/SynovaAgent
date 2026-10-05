@@ -179,6 +179,25 @@ jobs:
           python3 scripts/control-tower/merge_writeset_gate.py \
             --base origin/main --head HEAD --branch "${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
 
+  # ═══ FIX-013 / D962 2b: 移出 pre-commit 的判定面**同批接手**（活点）═══
+  # D962 2a① 把 34 项判定从本地 pre-commit 移出，交给 CI 权威区（SYNO_CI=1）。
+  # 保护真空: 接手方此前**只存在于 quality job 的一个 step 内**，而 quality 一旦红，
+  #   `needs: quality` 的下游（test 矩阵）整块 skip → 必需检查永不回报（#802/#803/#804/#805
+  #   实测 mergeState=blocked）。故本 job **无 needs**：上游红不牵连，自身独立可绿可红，
+  #   是这些判定面的**真实活点**（接线断言 point 到此，见 tests/control-tower/iron-laws-live-point.test.sh）。
+  iron-laws:
+    name: Iron Laws (gate semantics)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # SYNO_DIFF_BASE=origin/main 的 ...HEAD 三点 diff 需完整历史
+      - name: Iron laws (moved gate semantics; CI authority)
+        run: bash scripts/pre-commit-check.sh
+        env:
+          SYNO_DIFF_BASE: "origin/main"
+          SYNO_CI: "1"   # 软提示转硬——与 quality job 同口径；失败行经 ::error 注解可见
+
   test:
     # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-10-02T12:45:00+08:00；
     # 公式 = max(P95×1.5, 中位数×3)）：audit 1 / Test-Kit(ubuntu) 1 / Golden Case 2 /
@@ -504,6 +523,15 @@ jobs:
             tests/control-tower/ct-test-gate.test.sh \
             tests/control-tower/task-start-parallel.test.sh \
             tests/control-tower/fastlane-bypass-only.test.sh \
+            tests/control-tower/iron-laws-live-point.test.sh \
+            tests/control-tower/iron-laws-selfdiff.test.sh \
+            tests/control-tower/g5-architecture.test.sh \
+            tests/control-tower/g8-file-driven.test.sh \
+            tests/control-tower/g9-contract.test.sh \
+            tests/control-tower/g10-cp3.test.sh \
+            tests/control-tower/ct-health.test.sh \
+            tests/control-tower/check-brief-vs-code.test.sh \
+            tests/control-tower/loop-score.test.sh \
             tests/control-tower/gate-stats.test.sh \
             tests/control-tower/q2-error-locating.test.sh \
             tests/control-tower/platform-checklist.test.sh \
@@ -597,7 +625,11 @@ jobs:
           fi
           # D526: canary 密封清单漂移告警（::warning 可见，不阻断——防误伤；
           #   存量漂移由 K3/人工月度清理，全量密封化是 K3 P2-4 单独立项）
-          bash scripts/control-tower/check-canary-drift.sh || true
+          # task-28 裁定②: 原 `check-canary-drift.sh || true` 退役——逻辑已内联入 ct-health.sh；
+          #   `|| true` 一并清除（不静默吞）：改显式 if + ::warning 注解，退出码仍不阻断本 step。
+          if ! bash scripts/control-tower/ct-health.sh canary-drift; then
+            echo "::warning title=canary-drift::漂移对账非零退出（告警不阻断，K3 P2-4 单独立项）"
+          fi
           exit $FAIL
 
   integration-check:

@@ -56,9 +56,9 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
  echo -e "${CYAN}--- Verification (max 23) ---${RESET}"
  check "verify-incremental.sh 存在" 6 "[ -f '$ROOT/scripts/workflow/verify-incremental.sh' ]"
  check "wire-check.sh 存在" 5 "[ -f '$ROOT/scripts/workflow/wire-check.sh' ]"
- check "check-boundaries-incremental.sh 存在" 5 "[ -f '$ROOT/scripts/workflow/check-boundaries-incremental.sh' ]"
+ # D962-B2: check-boundaries-incremental.sh 内联进 verify-incremental.sh L4b 后退役，移除存在性打分项
  check "check-secrets.sh 存在" 3 "[ -f '$ROOT/scripts/check-secrets.sh' ]"
-check "check-brief-vs-code.sh (Brief vs Code һ����)" 4 "[ -f `$ROOT/scripts/workflow/check-brief-vs-code.sh' ]"
+ check "check-brief-vs-code.sh 存在 (Brief vs Code 一致性)" 4 "[ -f '$ROOT/scripts/workflow/check-brief-vs-code.sh' ]"
  echo ""
  
  # ===== Task Discipline (15) =====
@@ -72,8 +72,8 @@ check "check-brief-vs-code.sh (Brief vs Code һ����)" 4 "[ -f `$ROOT/scr
 # ===== Safety (10) =====
  echo -e "${CYAN}--- Safety (max 10) ---${RESET}"
  check "check-architecture.sh 存在" 3 "[ -f '$ROOT/scripts/check-architecture.sh' ]"
- check "loop-context.sh (熔断�? 存在" 4 "[ -f '$ROOT/scripts/workflow/loop-context.sh' ]"
- check "check-deprecated-mapping.sh 存在" 3 "[ -f '$ROOT/scripts/check-deprecated-mapping.sh' ]"
+ check "loop-context.sh (熔断器) 存在" 4 "[ -f '$ROOT/scripts/workflow/loop-context.sh' ]"
+ # D962-B2: check-deprecated-mapping.sh 退役（防护由 gate-hits/gate-stats 聚合观测承接），移除存在性打分项
  echo ""
  
  # ===== Operability (10) =====

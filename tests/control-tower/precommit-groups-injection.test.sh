@@ -176,6 +176,7 @@ block_of() { # <label> <logfile>
     f {
       if (index($0, "── 组 ") && !index($0, pat)) exit
       if (index($0, "── D782") || index($0, "── PR 预算门禁") || index($0, "── D520/任务3")) exit
+      if (pat !~ /^── 组 / && (index($0, "✅") || index($0, "── "))) exit  # V5.3: 检查名标签的区块止于下一结果/分隔行
       print
     }
   ' "$2"
@@ -188,17 +189,25 @@ fail_lines() { # <label> <logfile> <max>
 }
 
 # 组标签常量（实测 echo 文本；组 11 不存在）
+# (D962 2a① V5.3 适配: pre-commit 无 13 组横幅——标签改 V5.3 检查名; 判定行即含标签的 ❌ 行)
+if grep -q "── 组 1/13" "${REPO_DIR:-$(git rev-parse --show-toplevel)}/scripts/pre-commit-check.sh" 2>/dev/null; then
 LBL_g1="── 组 1/13: 类型安全 + 硬编码数据 ──"
 LBL_g2="── 组 2/13: 测试质量 ──"
 LBL_g3="── 组 3/13: Secrets ──"
 LBL_g4="── 组 4/13: 接线完整性 ──"
 LBL_g5="── 组 5/13: 架构边界 + 桥接文件 ──"
 LBL_g6="── 组 6/13: Task Brief (6 核心字段) ──"
-LBL_g7="── 组 7/13: 架构合规 ──"
+LBL_g7="── 组 7/13: 架构合规 ──"  # 旧版占位（V5.3 分支在下方覆盖）
 LBL_g8="── 组 8/13: 文件驱动架构完整性 (V3.9) ──"
 LBL_g9="── 组 9/13: 契约门禁 ──"
 LBL_g10="── 组 10/13: V3 流水线健康度 ──"
 LBL_g12="── 组 12/13: Task Scope 一致性 ──"
+else
+LBL_g1="as any / as never / as unknown as 零容忍（铁律38）"
+LBL_g2=""  # V5.3: 测试质量判定迁 CI iron-laws（2b 挂载）——结构性不红，见 STRUCTURAL_NOTRED
+LBL_g7="禁止 DiagnosticModule: 新模块须实现 Sentinel 接口"
+LBL_g12="G12: Q2 范围一致性（D296/D749）"
+fi
 LBL_g13="── 组 13/13: 技能同步一致性 ──"
 
 INJ_NOTE=""
@@ -442,6 +451,21 @@ assert_g7_structural() {
     echo "    [structural g7] 7d HAS_HARD 反例探针（行含 'marketing'，期望 cnt>0 即该子检查活着）: cnt=${cnt:-0}"
   fi
   [ "$hit" -eq 1 ]
+}
+
+# 组 2（V5.3）：测试质量判定（新文件配对/expect≥3）迁 CI iron-laws——本地 pre-commit 无该判定面
+# （2b 挂载前"本地不跑、CI 未接"窗口已在 D962-phase2-plan §九登记）。物理验证：副本 pre-commit
+# 中不存在配对/expect 判定模式 + hard-gate-convergence.test.sh 的 CI 转硬面亦无组 2 条目。
+assert_g2_structural() {
+  local pc="$CLONE/scripts/pre-commit-check.sh" pairing expect_n
+  pairing="$(grep -cE '新文件配对|配对.*test|impl 须同 commit' "$pc" 2>/dev/null || true)"
+  expect_n="$(grep -cE 'expect\(\)|≥3 expect|桩测试' "$pc" 2>/dev/null || true)"
+  pairing="${pairing//[^0-9]/}"; expect_n="${expect_n//[^0-9]/}"
+  echo "    [structural g2] V5.3 pre-commit: 配对判定 ${pairing:-0} 处 / expect 判定 ${expect_n:-0} 处（双 0 = 判定面确不在本地）"
+  if [ "${pairing:-0}" -eq 0 ] && [ "${expect_n:-0}" -eq 0 ]; then
+    return 0   # 判定面确已迁出（结构性不可达，非回归）——承接与窗口登记见 phase2-plan
+  fi
+  return 1     # 判定面在却不红 = 真回归，判红
 }
 
 # 组 9：宿主无 python 时 L1099 `python -c` 恒失败 → DECLARED 恒空 → 契约门禁恒绿（结构性假绿）。

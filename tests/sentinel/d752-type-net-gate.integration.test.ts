@@ -19,7 +19,7 @@ import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const GATE = join(REPO_ROOT, 'scripts', 'control-tower', 'check-sentinel-type-net.sh');
+const GATE = join(REPO_ROOT, 'scripts', 'check-architecture.sh'); // D962-B2: 判定合并入 check-architecture.sh §5（SYNO_TYPE_NET_ROOT 注入缝保留）
 
 /** 运行门禁（继承环境 + 可选沙箱根），返回 { code, stdout, stderr } */
 function runGate(root?: string): { code: number; out: string } {

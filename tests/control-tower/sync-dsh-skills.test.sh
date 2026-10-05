@@ -106,10 +106,12 @@ OUT7C=$(SYNO_SKILLS_SRC="$EMPTY_SRC" SYNO_SKILLS_DST="$EMPTY_DST" bash "$SYNC" -
 assert_exit "$?" 0 "T7: 空源 --check exit 0"
 
 # ── T8: 生产接线（wire check, 铁律 0-2 Step 5）──
-if grep -q "sync-dsh-skills.sh" "$PRECOMMIT"; then
-  pass "T8: pre-commit-check.sh 物理调用 sync-dsh-skills.sh"
+# (D962 2a① V5.3: 组 13 判定迁 CI iron-laws——本地 pre-commit 零调用为设计。
+#  接线判据改为: 脚本在位 + --check 语义可用 + CI 活点 = .github/workflows/ci.yml:111 iron-laws（无 needs）
+if [ -f "$REPO_DIR/scripts/workflow/sync-dsh-skills.sh" ] && bash "$REPO_DIR/scripts/workflow/sync-dsh-skills.sh" --check >/dev/null 2>&1; then
+  pass "T8: sync-dsh-skills.sh 在位且 --check 绿（组 13 判定迁 CI，本地调用点随 V5.3 移除）"
 else
-  fail "T8: pre-commit-check.sh 零调用 — 组 13 未接线"
+  fail "T8: sync-dsh-skills.sh 缺失或 --check 红"
 fi
 
 # ── 汇总 ──

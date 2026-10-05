@@ -24,7 +24,7 @@ D535（2026-08-26）循环卫生 — 重复事故提醒（借鉴 DSH repeat-tool
 机制映射:
   R1 → 门禁 verify-parallel.sh / staging_guard.py / wait_manager.py
   R2 → 门禁 hook-git-detect.sh（禁 stash）
-  R3 → 工具 check-brief-parseable.sh / brief_parser.py
+  R3 → 工具 check-plan-integrity.sh --brief / brief_parser.py
   R4 → 基线 baseline-check.sh
 
 fail-open: incident.log 不可写 → degraded 记录不阻断。
@@ -148,7 +148,7 @@ def _bash_env(bash: str) -> dict:
 ROOT_CAUSE_MAP = {
     "R1": {"label": "多会话共享工作区无协调", "mechanism": "门禁", "tools": ["verify-parallel.sh", "staging_guard.py", "wait_manager.py"]},
     "R2": {"label": "hook 与 git 操作冲突", "mechanism": "门禁", "tools": ["hook-git-detect.sh"]},
-    "R3": {"label": "brief 模板与解析器漂移", "mechanism": "工具", "tools": ["check-brief-parseable.sh", "brief_parser.py"]},
+    "R3": {"label": "brief 模板与解析器漂移", "mechanism": "工具", "tools": ["check-plan-integrity.sh --brief", "brief_parser.py"]},
     "R4": {"label": "存量错误无基线豁免", "mechanism": "基线", "tools": ["baseline-check.sh"]},
 }
 

@@ -13,6 +13,58 @@ ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RESET='\033[0m'
 HARD_FAIL=0
 
+# ═══ --brief <path> 模式（D962-B 第二批: check-brief-parseable.sh 加严并入退役——非逐字）═══
+# D313 M3 brief 契约检查: ①Q2 可解析 ②#CRITERIA A-D ③架构层 ④Done≥1 ⑤模板同源自检。
+# 与旧宿主差异（V 自验 轻2 勘误）: 本版加严——#CRITERIA 必填判据、Q2 路径条目 ≥1 为
+# 硬失败项（旧版为模板自检附带的软口径差异）；架构层判据同源（有值即过）。
+# 三态: 0 过 / 1 失败（点名缺失项）/ brief 不存在或 python 不可用 → 0 + degraded 登记（fail-open 可见）。
+if [ "${1:-}" = "--brief" ]; then
+  PARSER="$ROOT/scripts/control-tower/brief_parser.py"
+  DEGRADED_LOG="$ROOT/.codex/control-tower/logs/degraded-events.log"
+  PYBIN=""
+  for _c in python3 python py; do
+    if command -v "$_c" >/dev/null 2>&1; then PYBIN="$_c"; break; fi
+  done
+  if [ -z "$PYBIN" ]; then
+    mkdir -p "$(dirname "$DEGRADED_LOG")"
+    echo "{\"time\": \"$(date -u +%Y-%m-%dT%H:%M:%S+00:00)\", \"component\": \"brief-parseable\", \"reason\": \"python 不可用 — 跳过 (fail-open)\"}" >> "$DEGRADED_LOG" 2>/dev/null || true
+    echo "[brief-parseable] ⚠️  python 不可用 — 跳过 (fail-open)"; exit 0
+  fi
+  BRIEF="${2:-}"
+  if [ -z "$BRIEF" ]; then
+    BRIEF=$(bash "$ROOT/scripts/workflow/resolve-commit-brief.sh" "" 2>/dev/null | head -1 || true)
+  fi
+  if [ -z "$BRIEF" ] || [ ! -f "$BRIEF" ]; then
+    mkdir -p "$(dirname "$DEGRADED_LOG")"
+    echo "{\"time\": \"$(date -u +%Y-%m-%dT%H:%M:%S+00:00)\", \"component\": \"brief-parseable\", \"reason\": \"brief 不存在: ${BRIEF:-none}\"}" >> "$DEGRADED_LOG" 2>/dev/null || true
+    echo "[brief-parseable] ⚠️  brief 不存在 — 跳过 (fail-open)"; exit 0
+  fi
+  FAILURES=""
+  Q2_OUT=$("$PYBIN" "$PARSER" --all "$BRIEF" 2>/dev/null || echo '{"parseable": false}')
+  if echo "$Q2_OUT" | grep -q '"parseable": false'; then
+    FAILURES="  Q2 不可解析（brief_parser 失败）\n"
+  else
+    _INC=$(echo "$Q2_OUT" | "$PYBIN" -c "import json,sys; print(len(json.load(sys.stdin).get('q2_include', [])))" 2>/dev/null || echo 0)
+    [ "${_INC:-0}" -eq 0 ] && FAILURES="${FAILURES}  Q2 做什么 无路径条目（至少 1 条）\n"
+  fi
+  CRITERIA=$(echo "$Q2_OUT" | "$PYBIN" -c "import json,sys; print(json.load(sys.stdin).get('criteria') or '')" 2>/dev/null || echo "")
+  [ -z "$CRITERIA" ] && FAILURES="${FAILURES}  #CRITERIA 缺失（必填 A-D）\n"
+  LAYER=$(echo "$Q2_OUT" | "$PYBIN" -c "import json,sys; print(json.load(sys.stdin).get('layer') or '')" 2>/dev/null || echo "")
+  [ -z "$LAYER" ] && FAILURES="${FAILURES}  架构层未标注（当前: 空）\n"
+  DONE_N=$(echo "$Q2_OUT" | "$PYBIN" -c "import json,sys; print(json.load(sys.stdin).get('done_count', 0))" 2>/dev/null || echo 0)
+  [ "${DONE_N:-0}" -eq 0 ] && FAILURES="${FAILURES}  Done 标准无条目（至少 1 条）\n"
+  TMP_BRIEF="$ROOT/.codex/control-tower/tmp/bp-template-check.md"
+  if BRIEF_FILE="$TMP_BRIEF" TASK_DESC="self-check" "$PYBIN" "$ROOT/scripts/workflow/generate-task-brief.py" > /dev/null 2>&1; then
+    TMP_OUT=$("$PYBIN" "$PARSER" --all "$TMP_BRIEF" 2>/dev/null || echo '{"parseable": false}')
+    echo "$TMP_OUT" | grep -q '"parseable": false' && FAILURES="${FAILURES}  模板输出不可被同源解析器解析（模板-解析器漂移）\n"
+    rm -f "$TMP_BRIEF"
+  fi
+  if [ -n "$FAILURES" ]; then
+    echo "[brief-parseable] ❌ brief 不可解析: $BRIEF"; echo -e "$FAILURES"; exit 1
+  fi
+  echo "[brief-parseable] ✅ brief 可解析: $BRIEF (Q2 ✓ #CRITERIA=$CRITERIA 架构层=$LAYER Done=$DONE_N)"; exit 0
+fi
+
 PLAN_FILE="$ROOT/.claude/plan.json"
 TODAY=$(date +%Y-%m-%d)
 # D296 认领制: 多 session 并发时用认领本提交文件的 brief (跨 session 污染根治)

@@ -10,8 +10,9 @@ PASS=0; FAIL=0
 ok() { echo "  ✅ $1"; PASS=$((PASS+1)); }
 no() { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
 
-# 提取三函数定义并在子 shell 中独立测试（不跑全脚本）
-FUNCS=$(awk '/^(soft_check|v5_soft|warn_check)\(\) \{/,/^\}/' "$PC" | head -80)
+# 提取函数定义并在子 shell 中独立测试（不跑全脚本）
+# (D962 2a① V5.3: v5_soft 已并入 soft_check 统一实现——不再单测)
+FUNCS=$(awk '/^(soft_check|warn_check)\(\) \{/,/^\}/' "$PC" | head -80)
 
 test_fn() {
   local fn="$1" mode="$2" expect="$3"  # expect: hard|soft
@@ -33,7 +34,7 @@ test_fn() {
   return 1
 }
 
-for fn in soft_check v5_soft; do
+for fn in soft_check; do
   test_fn "$fn" 1 hard && ok "$fn SYNO_CI=1 → HARD_FAIL++（CI 转硬）" || no "$fn CI strict 未生效"
   test_fn "$fn" 0 soft && ok "$fn SYNO_CI=0 → 软计数（本地不阻断）" || no "$fn 本地软模式异常"
 done

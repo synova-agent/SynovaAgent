@@ -8,8 +8,8 @@
 #   L1 迁移门禁: 无 D# 引用 → exit 0（不误杀真实提议）
 #   L1 迁移门禁: proposed/ 空 → exit 0（边界）
 #   L1 迁移门禁: task-state/ 不可读 → exit 2 degraded（铁律 11/24 显式降级）
-#   L1 字段契约: check-lessons-learned 新写 Note 头含 状态: 且与目录一致
-#   L1 字段契约: 旧英文头 Note 仍可被 grep 解析（status: 兼容回归）
+#   L1 字段契约: 四态头 Note（直接构造）含 状态: 且 gate 不误杀
+#   L1 字段契约: 旧英文头 Note 仍不被误杀（status: 兼容回归）
 #   L1 回归: commit-msg Note 引用门禁不受影响（D395-a 交付不动）
 #   L2a 接线: pre-commit 组 6 区域真实调用 check-notes-lifecycle.sh
 #   （hook 注入过滤见 hook-check-memory.test.sh — U7/CT-40 配对）
@@ -20,7 +20,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-LESSONS="$REPO_DIR/scripts/check-lessons-learned.sh"
+LESSONS="(D962-B2 已退役: scripts/check-lessons-learned.sh)"
 GATE="$REPO_DIR/scripts/control-tower/check-notes-lifecycle.sh"
 PRE_COMMIT="$REPO_DIR/scripts/pre-commit-check.sh"
 TMP_DIR="/tmp/d472-notes-lifecycle-tests"
@@ -140,25 +140,37 @@ assert_exit 2 "$CODE" "task-state 不可读 → exit 2"
 assert_contains "$OUT" "degraded" "degraded 显式输出"
 echo ""
 
-# ── 6. 字段契约: check-lessons-learned 新写 Note 头含 状态: ──
-echo "── 6. 字段契约: lessons 新写 Note 头含 状态: + 扩展字段 ──"
+# ── 6. 字段契约: 四态头 Note（状态/日期/决策/理由 + 扩展字段）不误杀 ──
+# (D962-B2: check-lessons-learned.sh 退役，写入方夹具改为直接构造 Note，门禁仍验证解析)
+echo "── 6. 字段契约: 四态头 Note 含 状态: + 扩展字段 → gate 接受 ──"
 rm -rf "$TMP_DIR/memory/notes/proposed" "$TMP_DIR/memory/notes/implemented" "$TMP_DIR/memory/notes/archived" "$TMP_DIR/memory/notes/rejected"
 mkdir -p "$TMP_DIR/memory/notes/proposed" "$TMP_DIR/memory/notes/implemented" "$TMP_DIR/memory/notes/archived" "$TMP_DIR/memory/notes/rejected"
+cat > "$TMP_DIR/memory/notes/proposed/2026-09-25-field-contract.md" <<'EOF'
+---
+状态: proposed
+日期: 2026-09-25
+决策: 四态头字段契约测试
+理由: check-lessons-learned 退役后由直接构造验证
+class: TEST_CLASS
+constraint: "true"
+expected: true
+severity: warn
+occurrences: 1
+first_seen: 2026-09-25
+description: 字段契约夹具
+---
+EOF
+NEW_NOTE="$TMP_DIR/memory/notes/proposed/2026-09-25-field-contract.md"
+assert_contains "$(cat "$NEW_NOTE")" "状态: proposed" "新 Note 头含 状态: proposed"
+assert_contains "$(cat "$NEW_NOTE")" "class: TEST_CLASS" "扩展字段 class 保留"
+assert_contains "$(cat "$NEW_NOTE")" "日期:" "新 Note 头含 日期:"
+assert_contains "$(cat "$NEW_NOTE")" "决策:" "新 Note 头含 决策:"
+assert_contains "$(cat "$NEW_NOTE")" "理由:" "新 Note 头含 理由:"
 set +e
-# lessons 用 git rev-parse 定位 ROOT → 必须 cd 进沙箱 git 仓库（ROOT= 环境变量会被脚本内赋值覆盖）
-OUT=$(cd "$TMP_DIR" && bash "$LESSONS" "测试教训" "TEST_CLASS" "true" "true" "描述" 2>&1)
+OUT=$(ROOT="$TMP_DIR" bash "$GATE" 2>&1)
 CODE=$?
 set -e
-NEW_NOTE=$(ls "$TMP_DIR/memory/notes/proposed/"*.md 2>/dev/null | head -1 || true)
-if [ -n "$NEW_NOTE" ]; then
-  assert_contains "$(cat "$NEW_NOTE")" "状态: proposed" "新 Note 头含 状态: proposed"
-  assert_contains "$(cat "$NEW_NOTE")" "class: TEST_CLASS" "扩展字段 class 保留"
-  assert_contains "$(cat "$NEW_NOTE")" "日期:" "新 Note 头含 日期:"
-  assert_contains "$(cat "$NEW_NOTE")" "决策:" "新 Note 头含 决策:"
-  assert_contains "$(cat "$NEW_NOTE")" "理由:" "新 Note 头含 理由:"
-else
-  fail "lessons 未创建新 Note"
-fi
+assert_exit 0 "$CODE" "四态头 + 扩展字段 Note 不被误杀（gate 接受）"
 echo ""
 
 # ── 7. 字段契约: 旧英文头兼容（status: 可解析）──
@@ -177,12 +189,12 @@ first_seen: 2026-08-17
 description: 旧格式回归
 ---
 EOF
-# lessons 去重逻辑应识别同 class 条目（旧英文头可被 grep class 匹配）
+# (D962-B2: lessons 去重逻辑随脚本退役；此处验证旧英文头 Note 不被 gate 误杀)
 set +e
-OUT=$(cd "$TMP_DIR" && bash "$LESSONS" "旧格式重复" "OLD_FORMAT" "true" "true" "重复测试" 2>&1)
+OUT=$(ROOT="$TMP_DIR" bash "$GATE" 2>&1)
 CODE=$?
 set -e
-assert_contains "$OUT" "更新已有条目" "旧英文头被 class 去重识别（兼容）"
+assert_exit 0 "$CODE" "旧英文头 Note 不被误杀（兼容回归）"
 echo ""
 
 # ── 8. 回归: commit-msg Note 引用门禁不受影响 ──

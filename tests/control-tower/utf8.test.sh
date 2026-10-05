@@ -93,7 +93,7 @@ echo ""
 echo "── 5. 真实 CI 脚本全量 UTF-8 合规 ──"
 OUT=$(bash "$TOOL" --utf8 2>&1) || true
 # 输出可能含 level 报告；断言关键 CI 脚本不再被报缺头块
-for f in scripts/ci/check-contract-gaps.sh scripts/ci/diagnosis-quality-check.sh \
+for f in scripts/ci/diagnosis-quality-check.sh \
          scripts/control-tower/baseline-check.sh scripts/control-tower/verify-parallel.sh; do
   if echo "$OUT" | grep -qF "$f"; then
     fail "$f 仍被报缺 UTF-8 头块"

@@ -302,7 +302,10 @@ def analyze_task_state() -> Tuple[list, dict]:
 # 派生判定 (工件优先; json 字段兜底展示但不算真)
         # D399 (P1-2)/D400: spec = glob 扫描 OR json spec.path 兜底（文件必须真实存在——存在即算真, 消除幻影）
         # D412/U3: json spec.path 分支同样过仓库态校验（工作区存在 且 已提交 HEAD）
-        spec_path = (d.get("spec") or {}).get("path")
+        # D962-B2: task-state 实测存在 spec 为字符串的存量 JSON（.get("path") 即崩，
+        #          main 上既有崩溃）——isinstance 守卫，异常数据不拖垮整板生成（铁律 24）
+        _spec = d.get("spec")
+        spec_path = _spec.get("path") if isinstance(_spec, dict) else None
         spec_path_ok = bool(
             spec_path
             and (REPO / spec_path).exists()
@@ -508,7 +511,7 @@ def render(bypass: dict, fail: dict, ledger: dict, tasks: list, ci: dict = None)
     # CT-39: CI 红超 24h 告警（接入 check-ci-stale-red.sh，红常态化信号失效 M1 同型）
     try:
         import subprocess as _sp
-        _sr = _sp.run(["bash", str(REPO / "scripts/control-tower/check-ci-stale-red.sh"), "--json"],
+        _sr = _sp.run(["bash", str(REPO / "scripts/control-tower/ct-health.sh"), "ci-stale-red", "--json"],
                       capture_output=True, text=True, timeout=30, cwd=REPO)
         if _sr.returncode == 1 and _sr.stdout.strip():
             _sd = json.loads(_sr.stdout.strip())
@@ -524,7 +527,7 @@ def render(bypass: dict, fail: dict, ledger: dict, tasks: list, ci: dict = None)
     # worktree 收尾检测（2026-08-21 冻结决策必修项）：孤儿 worktree 有独有提交未合并
     try:
         import subprocess as _sp2
-        _ow = _sp2.run(["bash", str(REPO / "scripts/control-tower/check-orphan-worktrees.sh"), "--json"],
+        _ow = _sp2.run(["bash", str(REPO / "scripts/control-tower/ct-health.sh"), "orphan-worktrees", "--json"],
                        capture_output=True, text=True, timeout=30, cwd=REPO)
         if _ow.returncode == 1 and _ow.stdout.strip():
             _od = json.loads(_ow.stdout.strip())

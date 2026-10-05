@@ -216,7 +216,11 @@ fi
 # D938-v 复核 + CTO 裁定（第三次 reopen）: 本断言原先只覆盖 5 文件（c1 写集 4 + 扫描器自身）
 #   → **判据空转**（连本文件自己的 2 处同类缺陷都照不到）。现按 brief 的 **9 个 task 文件**全覆盖，
 #   并加**条数自检**（窄化即红）—— 使该断言真的等于「本卡写集内 mac 域残留 = 0」。
-D938_WS="scripts/control-tower/alloc-task-id.sh,scripts/control-tower/check-sentinel-type-net.sh,scripts/doc-system/check-doc-truth.sh,scripts/doc-system/doc-truth-probe.sh,scripts/control-tower/scan-fullwidth-vars.sh,tests/control-tower/scan-fullwidth-vars.test.sh,tests/control-tower/alloc-task-id.test.sh,tests/control-tower/alloc-task-id-lock.test.sh,.github/workflows/ci.yml"
+# task-26 改指在库真身: 原第 2 个路径 `scripts/control-tower/check-sentinel-type-net.sh` 已随
+#   D962 2a 退役（plan §一 #33「合并到 check-architecture.sh」）⇒ 扫描器对该路径 fail-closed
+#   （rc=2「路径不存在」）且不打印标签 ⇒ 本断言此前以「标签格式漂移」**误报**。
+#   现替换为承接真身 `scripts/check-architecture.sh`：**判据强度不变**（仍 9 文件全覆盖 + 条数自检）。
+D938_WS="scripts/control-tower/alloc-task-id.sh,scripts/check-architecture.sh,scripts/doc-system/check-doc-truth.sh,scripts/doc-system/doc-truth-probe.sh,scripts/control-tower/scan-fullwidth-vars.sh,tests/control-tower/scan-fullwidth-vars.test.sh,tests/control-tower/alloc-task-id.test.sh,tests/control-tower/alloc-task-id-lock.test.sh,.github/workflows/ci.yml"
 D938_WS_COUNT=$(printf '%s\n' "$D938_WS" | tr ',' '\n' | grep -c . || true)
 echo ""
 echo "── 8. 判据②: 本卡写集内 mac 域残留 = 0（严格判红/绿）──"
@@ -228,7 +232,12 @@ fi
 OUT=$(bash "$SCAN" --domain mac --paths "$D938_WS" 2>&1); RC=$?
 WS=$(grab_ws_resid "$OUT")
 if [ -z "$WS" ]; then
-  no "写集模式未输出「本卡写集内 mac 域残留：…」（标签格式漂移）"
+  # task-26: 区分「标签格式漂移」与「扫描器 fail-closed」——后者 rc=2，此前被误归为前者（诊断黑洞）
+  if [ "$RC" = "2" ]; then
+    no "写集模式未输出标签且扫描器 fail-closed (rc=2): $(printf '%s\n' "$OUT" | grep -m1 '❌' | sed 's/^ *//')"
+  else
+    no "写集模式未输出「本卡写集内 mac 域残留：…」（标签格式漂移，rc=${RC}）"
+  fi
 elif [ "$WS" = "0 0" ]; then
   ok "本卡写集内 mac 域残留 = 0 处 / 0 文件（${D938_WS_COUNT} 文件全覆盖：4 scripts + 扫描器 + 3 测试 + ci.yml）"
 else

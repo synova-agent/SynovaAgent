@@ -8,7 +8,7 @@ scripts/control-tower/attach.py — D314 SessionStart 轻量 attach
     ① session_registry.register（身份登记）
     ② runtime.log + gate.log 写入（日志五件套激活）
     ③ self-health.py 轻量跑（health.json）
-    ④ brief 存在且 brief-filled → check-brief-parseable（brief 契约前置）
+    ④ brief 存在且 brief-filled → check-plan-integrity.sh --brief（brief 契约前置，D962 第二批并入）
     ⑤ incident.log 未闭环提示
     ⑥ 写 session 专属 current-brief（.claude/current-brief.<sid>，D329）
     ⑦ 并行模式检测提示（D307）: registry 有活跃 session 或 --parallel, 且当前
@@ -81,7 +81,7 @@ def _find_git() -> str | None:
 
 
 def _bash_env(bash: str) -> dict:
-    """构造 subprocess 环境 — 同 incident-loop.py: check-brief-parseable 依赖
+    """构造 subprocess 环境 — 同 incident-loop.py: check-plan-integrity --brief 依赖
     cat/grep（Git coreutils）+ python3。MSYS bash PATH 分隔符是 ':'。"""
     root = Path(bash).parent.parent
     if root.name == "usr":
@@ -164,7 +164,8 @@ def _run_parseable(brief: str | None) -> None:
             _degraded("attach.parseable", "bash 不可用 — 跳过 brief 契约检查 (fail-open)")
             return
         subprocess.run(
-            [bash, str(REPO_ROOT / "scripts" / "workflow" / "check-brief-parseable.sh"), brief],
+            # D962-B 第二批: check-brief-parseable.sh 退役，判定逐字并入 check-plan-integrity.sh --brief
+            [bash, str(REPO_ROOT / "scripts" / "check-plan-integrity.sh"), "--brief", brief],
             capture_output=True, timeout=10, env=_bash_env(bash),
         )
     except Exception as exc:

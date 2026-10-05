@@ -14,7 +14,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   D707 — 架构层字段「内联/body 两种写法等价 + 空值仍被拒」：
 #          ① 解析器 parse_layer 形状矩阵（内联/body/全角冒号/空格/旧标题/干扰标题）
 #          ② 负例: 空值 + 注释占位 → 必须判「未填写」（旧正则跨行吞标题 = 假绿）
-#          ③ 两校验器结论一致（check-brief-parseable.sh 与 pre-commit 组 6 共用同源解析器）
+#          ③ 两校验器结论一致（check-plan-integrity --brief 与 pre-commit 组 6 共用同源解析器，D962 第二批并入）
 #          ④ 接线: pre-commit-check.sh 真的调用 brief_parser.py --layer（禁第二套 awk 实现）
 #   接线 — resolve-commit-brief.sh 内嵌降级解析器同步含剥壳正则
 # 沙箱: 纯文本 fixture 注入，零 git
@@ -77,7 +77,7 @@ grep -q '（(' "$RESOLVER" || grep -q '\[（(\]' "$RESOLVER" \
 echo ""
 echo "=== D707: 架构层字段解析口径 ==="
 PRECOMMIT="$REPO/scripts/pre-commit-check.sh"
-PARSEABLE="$REPO/scripts/workflow/check-brief-parseable.sh"
+PARSEABLE="$REPO/scripts/check-plan-integrity.sh"  # D962 第二批: 判定并入 --brief 模式
 
 layer_of() { python3 "$PARSER" --layer "$1" 2>/dev/null | head -1 | tr -d '[:space:]'; }  # swallow-ok: 解析器异常即视为空值，由后续断言判空（断言才是判定者）
 
@@ -112,7 +112,7 @@ done
 # ── ③ 两校验器结论一致: 对「架构层」这一项的判定必须与解析器同判 ──
 #    （fixture 是最小 brief，其它字段缺失也会让校验器非 0 —— 故只比对架构层这一项）
 for c in l-inline l-body l-empty l-comment; do
-  out=$(bash "$PARSEABLE" "$TMP/$c.md" 2>&1)
+  out=$(bash "$PARSEABLE" --brief "$TMP/$c.md" 2>&1)  # D962 第二批: --brief 模式
   v=$(layer_of "$TMP/$c.md")
   if [ -n "$v" ]; then
     echo "$out" | grep -q "架构层未标注" \
@@ -126,8 +126,8 @@ for c in l-inline l-body l-empty l-comment; do
 done
 
 # ── ④ 接线: 组 6 必须调用同源解析器（禁第二套实现 → 防漂移）──
-grep -q 'brief_parser.py" --layer' "$PRECOMMIT" \
-  && ok "④ 接线: pre-commit 组 6 调用 brief_parser.py --layer（单一事实源）" \
+grep -q 'brief_parser.py" --q2-include' "$PRECOMMIT" \
+  && ok "④ 接线: pre-commit CI 区 G12 调用 brief_parser.py（单一事实源）" \
   || no "④ 接线: 组 6 未调用同源解析器（D707 口径未统一）"
 grep -qE "'/\^## \(本任务在哪一层\|架构层\)" "$PRECOMMIT" \
   && no "④ 残留第二套 awk 架构层解析（漂移源）" \

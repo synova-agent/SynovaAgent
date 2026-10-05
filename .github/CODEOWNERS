@@ -27,6 +27,7 @@ scripts/doc-system/**                    @tangbaobao520
 tests/doc-system/**                      @tangbaobao520
 scripts/pre-commit-check.sh              @tangbaobao520
 scripts/pre-push-check.sh                @tangbaobao520
+scripts/commit-msg-check.sh              @tangbaobao520
 scripts/install-hooks.sh                 @tangbaobao520
 scripts/backup/**                        @tangbaobao520
 scripts/product-lines/**                 @tangbaobao520
