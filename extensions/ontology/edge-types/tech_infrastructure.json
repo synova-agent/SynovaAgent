@@ -11,6 +11,7 @@
     "infrastructure_resilience": "number (0-1) — 基础设施韧性"
   },
   "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
   "transfer_function": "TBD — to be defined in compute phase",
   "description": "IT系统/数据平台提升效率(二阶)——技术投资改善多个一阶阀的运行环境（取代原AUGMENTS）。"
 }
