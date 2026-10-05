@@ -74,6 +74,12 @@ SynovaAgent 是一个驻扎企业的 AI 诊断系统。诊断是手段，增长�
   卡 A = D734 预算门禁 **CI 侧接入**（真接一个 step）；卡 B = `check-verifiable-done.sh` 加 **`--brief` 显式传参**
   （K3：闸③ 升硬前必须先改它，否则升硬 = 固化假绿）。
 - **未动 `ci.yml`**：CTO 已驳回对该文件的豁免（实测含删除行、非追加型）；本卡只改**声明**（Q2「不做什么」原样保留），未碰文件一个字节。
+- **依据源补注（2026-10-05，接手：govl-retract-registry）**：两处撤回的**审计依据源** = **K3 报告 §一 Q1**
+  （`2026-10-05-k3-审计报告-门禁治理波次-D1145-D1149.md`，P1，归因 devdoc）。
+  ⚠️ K3 原文把该表述记作「**PR 正文**」；经逐处核，**PR 正文文本零命中**（改前两份快照 —— `/tmp/me-pr1107-body.md`(04:04)、
+  `/tmp/review-pr1107-conclusion.md`(03:51)，均早于 K3 报告 04:09 —— 对 `独立运行|CI 侧接入` 零命中）
+  ⇒ **实际承载件 = PR diff 内的注释块**（`git show ac1829ca0:scripts/pre-commit-check.sh` 可核）。
+  该差异**不构成与审计报告不一致**：K3 的「PR 正文」是**送审件载体口径**；本卡按**实际承载件**逐处留痕，且不改删任一处原句。
 
 ### d) 相关 Note 引用
 - [x] memory/notes/proposed/2026-10-05-d1148-decl-consolidate.md（本任务新建 proposed）

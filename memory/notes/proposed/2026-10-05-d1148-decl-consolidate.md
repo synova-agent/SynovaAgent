@@ -32,6 +32,10 @@
 | `scripts/pre-commit-check.sh` D734 注释块 | 「…PR 级预算仍可由 check-pr-budget.sh 独立运行/**CI 侧接入**。」 | 「**现无阻断执行方**（全树无第二个阻断调用点）」 | `git grep -n check-pr-budget -- .github scripts/ci` **零命中**（rc=1）⇒「CI 侧接入」无据；「独立运行」=手工可跑（同义反复） |
 | 同文件 acceptance-ci 注释块 | 「…**实际阻断记录为零**…」 | 「**现无阻断执行方**」 | 唯一调用点 `pre-commit-check.sh:497` 已旁路；gate-hits '验收 CI' 0 条（历史未触发）；改前 `v5_soft` 在 CI strict 下**可**阻断 ⇒ 原句不精确（非虚构） |
 
+**依据源补注（2026-10-05，接手：govl-retract-registry）**：上表两处的**审计依据源** = **K3 报告 §一 Q1**
+（`2026-10-05-k3-审计报告-门禁治理波次-D1145-D1149.md`，P1，归因 devdoc）。K3 原文记为「**PR 正文**」，
+但**PR 正文文本零命中**（改前双快照核）⇒ **实际承载件 = PR diff 内 `scripts/pre-commit-check.sh` 注释块**（逐处留痕即于该处）。
+
 **例外清单（新增，明写）**：**现无阻断执行方** = ①D734 PR 预算门禁 ②`check-acceptance-ci.sh`
 ⇒ 二者不再阻断任何提交；连带 **"Done 已证"无人做**（闸③ 只验 `verify:` 字符串存在，不执行命令）。
 **立卡内容**：卡 A = D734 CI 侧接入；卡 B = `check-verifiable-done.sh --brief`（K3：闸③ 升硬前必须先改它）。

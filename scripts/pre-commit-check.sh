@@ -1307,6 +1307,8 @@ echo -e "${CYAN}── 组 8/13: 文件驱动架构完整性 (V3.9) ──${RESE
 #     依据（精确口径）: gate-hits 累计落账 '验收 CI' **0 条**（历史未触发过），
 #       但原句把"历史未触发"说成了"阻断力为零"——改前它是 `v5_soft`（CI strict 下**可**阻断），
 #       故原句**不精确**而非纯虚构；"无阻断执行方"是本卡改动后的**事实**（调用点已旁路）。
+#     📌 依据源（本次补注）: K3 报告 §一 Q1（`2026-10-05-k3-审计报告-门禁治理波次-D1145-D1149.md`，P1，归因 devdoc）。
+#       注: K3 把该表述记作「PR 正文」；实测**正文文本零命中**，承载件 = 本 PR diff 内的注释块（见 PR 正文 §9.3 逐处排查）。
 AC_OUT=""
 AC_RC=0
 par_collect acceptance-ci "$PAR_ACCEPTANCE" > "$PAR_DIR/acceptance-ci.captured" 2>&1 || AC_RC=$?
@@ -1705,6 +1707,7 @@ fi
 #             「**CI 侧接入**」= **无据** —— `git grep -n check-pr-budget -- .github scripts/ci`
 #             **零命中**（rc=1，CTO/K3 实测同结论）⇒ CI 侧不存在任何接入。
 #             ⇒ 本文件的 bypass_run 调用点是**唯一**执行点，且已不判红 ⇒ 该门禁当前无阻断执行方。
+#       📌 依据源（本次补注）: K3 报告 §一 Q1（同报告，P1，归因 devdoc，原文「D734 check-pr-budget.sh 独立运行/CI 侧接入」声称无据）。
 #       立卡：D734 预算门禁 CI 侧接入（另卡 A，内容见 D1148 PR 正文 §九）。
 #   回滚: bypass_run → soft_check 一行即恢复提交端阻断力（判据脚本零改动）。
 echo -e "${CYAN}── PR 预算门禁 (D734) ──${RESET}"
