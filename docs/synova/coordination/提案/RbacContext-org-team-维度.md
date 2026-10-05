@@ -119,7 +119,7 @@ export interface RbacContext {
 ### 2.2 入口：`resolveContext(identity)`（**唯一投影点**，CTO §二③）
 
 🔴 **为什么必须立这个入口**：现状 `src/` 里 `teamId` / `department` 已散落 —— 🔴 不给手写数（CTO 纪律：数量一律以脚本实况为准）。三方口径实测分歧：
-**428（CTO）/ 346（K3）/ 397（产品线，含子串匹配）**；涉及文件数三方一致 = 71。
+**428（CTO）/ 346（K3，`git grep -nE "teamId|department"` @707dd946b，scope=src/）/ 397（产品线，含子串匹配）**；涉及文件数三方一致 = 71。**引用前须索要原命令口径**，或改用 K3 的 346/71。
 枚举命令：`git grep -lE "teamId|department" origin/main -- src/ | wc -l` ⇒ 71—— 不立单一入口 ⇒ **74 个文件各写各的**（分叉）。
 
 ```ts
@@ -134,8 +134,10 @@ export function resolveContext(identity: JwtPayload): {
   orgId: string;
   departmentIds: string[];
   permissions: PermissionId[];
-  /** v3.1（K3 P0 修复）：权限配置版本 —— 见 §8.3。
-   *  必须在此冻结：旧决策的审计要能指向「当时那版权限」。 */
+  /** v3.1（K3 P0/P1 修复）：权限配置版本 —— 见 §8.3。
+   *  契约：**string**（不透明令牌，**不假设单调递增** —— 那份假设属配置文件真源，见 §2.6）。
+   *  语义：`version` 变化 ⇒ 该 identity 的 `permissions` **可能已变** ⇒ 旧决策的审计必须记下**决策当时**的 `version`。
+   *  与 §2.6 的关系：`version` 是**文件驱动真源的指纹**（配置文件改一次、`version` 变一次）。 */
   version: string;
 };
 ```
@@ -171,7 +173,7 @@ if (req.auth) {
 
 - 新增 **`orgId`（必填）** —— 有现成真源（`req.auth.orgId`），**零风险**；
 - 新增 **`departmentIds`（复数，文件驱动）** —— 真源按创始人第 ⑤ 条落**文件**，**不预设** JWT claim 名；见 §三 **D1（已裁）**；
-- 旧 `department` **语义冻结**（I5），避免"两个部门字段并存"的漂移病根；
+- 旧 `department` **语义冻结**（I5）。🔴 **K3 审计 P1-3 纠正理由**：v3 原写「避免两个部门字段并存」—— 但 §2.1 **同时保留了 `department?: string`**，所以「避免并存」**在事实上不成立**。**如实理由**：保留它是**构造点迁移代价**（删字段会打断所有直接构造 `RbacContext` 的调用点与夹具）；并存风险靠 I5 单测锁缓解，属**刻意取舍**，不是"消除并存"。
 - 新增 **`permissions: PermissionId[]`** —— Grants 模型的**授权真源**；`role` 降格为**默认包选择器**。
 
 ### 2.5 迁移（分阶段，每阶段可独立回退）
@@ -245,7 +247,9 @@ if (req.auth) {
 
 ```bash
 # 四姿态实测（复核员夹具，git-ignored .k1-review3/）
-git grep -n "orgId" -- src/middleware/rbac.ts          # 现状：RbacContext 内零命中
+git grep -n "orgId" -- src/middleware/rbac.ts          # ⚠️ 实返 2 命中（rbac.ts:122 是 extractRbacContext 的 req 形参类型；:200 是 GA 审计里硬编码 orgId:\'synova\'）
+#    K3 审计 P1-6：正确定性 = 「RbacContext **接口体内**零命中」，不是「该文件零命中」。
+#    附带发现（非本件缺陷，建议登记）：rbac.ts:200 硬编码 \'synova\' 作 GA 审计租户归属。
 sed -n '124,131p' src/middleware/rbac.ts               # department: undefined 的位置
 git grep -n "req\.userId\s*=" -- src/                  # 影子身份通道：零命中（I4 基线）
 git grep -n "isSameDepartment" -- src/                 # 恒假判据的调用面
@@ -299,6 +303,17 @@ git grep -n "isSameDepartment" -- src/                 # 恒假判据的调用�
 
 ---
 
+### 2.7 K3 审计 P2 补注（两条，防实现者踩）
+
+- **P2-1（类型错配）**：§2.2 把输入正式声明为 `JwtPayload`，但薄壳片段读 `req.auth.gaConstraints` ——
+  `JwtPayload`（`auth.ts:26-33`）**无该字段**。现 `rbac.ts:129` 之所以编译过，靠的是 `rbac.ts:122` 的**局部 req 类型**。
+  ⇒ 冻结件正式声明输入后该错配**会被显性化** ⇒ 实现时须**显式补 `gaConstraints` 到输入类型**（或改用局部 req 类型）。
+- **P2-2（双层语义）**：D2「`orgId` 不可得 ⇒ `''`」与 `JwtPayload.orgId: string`（**类型必填**）在类型层**互斥**。
+  ⇒ 冻结件须写明**双层语义**：**类型必填、运行时可为空串**；且 I2 的触发来自运行时越型（如 `extractRbacContext({})`），
+  **不是**类型层能表达的情形 —— 否则 I2 测试「看不出怎么发生」。
+
+---
+
 ## 八、§2.x · DSH 蓝本映射（CTO 裁决令 §一 · 创始人点名"要写细，一点不能跑偏"）
 
 > 🔴 **换轴一句话**：DSH 的旋钮回答「**这一个 agent 自己能干什么**」（沙箱/审批）；
@@ -315,7 +330,7 @@ git grep -n "isSameDepartment" -- src/                 # 恒假判据的调用�
 | `dsh-sandbox-policy`：单一入口 `ctx.sandboxPolicy.resolve()`，`lib/index.js:15-16`「**stamps the mode together with the calling session's workspace root onto each**〔capability call〕」 | **`resolveContext(identity)`**（已写进 §2.2） | DSH 盖「模式 + 工作区根」；我们盖「**orgId + departmentIds + permissions + `version`**」 |
 | `sandbox-mode`（read-only / workspace-write / danger-full-access）**三档枚举** | **数据边界**：`orgId` + `departmentIds` | 🔴 **不是三档** —— 我们的边界是**集合**（多租户 + 多部门） |
 | `dsh-user-approval`：`lib/index.js:25-26`「Service Definition for the **approval capability seam**, covering requests, cancellation, audit, and per-session policy. **Missing answerers fail closed; grants apply only to the requested action.**」 | **动作边界**：`permissions`（`PermissionId[]`） | 🔴 DSH 审批是**运行时问人**；我们的 grants 是**事前配置** ⇒ **两者都要**（RB-05 见 §8.5） |
-| `effective = fold(events) ?? the deployment default`（**事件折叠 + 部署默认，无外部配置存储**） | **文件驱动 + 可配**（创始人第 ⑤ 条） | 🔴 我们**要有外部真源**（文件），因为客户管理员要改 ⇒ **折叠加文件**（不是纯事件） |
+| **原文两处不同，不得混排**：`dsh-sandbox-policy/lib/index.js:10` = `effective = projection state ?? the deployment default`；`README.md:76` = `effective = explicit grant ?? fold(events) ?? deployment default`（K3 审计 P1-1 纠正：本件 v3 曾把后者转述排版成前者） | **文件驱动 + 可配**（创始人第 ⑤ 条） | 🔴 我们**要有外部真源**（文件），因为客户管理员要改 ⇒ **折叠加文件**（不是纯事件） |
 
 ### 8.2 三条不变量（**照抄，并标出处** —— 不许只说"我们要求"）
 
@@ -327,7 +342,8 @@ git grep -n "isSameDepartment" -- src/                 # 恒假判据的调用�
 
 ### 8.3 🔴 我们比 DSH 多的一样（**换轴的关键，不许漏**）
 
-DSH `resolve()` 盖的章是「mode + workspace root」—— **两个字段，都不会变**。
+DSH `resolve()` 盖的章是「mode + workspace root」。🔴 **K3 审计 P1-2 纠正**：**mode 可变**（`dsh-sandbox-policy/README.md:54` 原文 `A session's mode can be switched at runtime`；presets 本身就是切换机制）；**只有 workspace root 不可变**（`SessionHeader.cwd`）。
+⇒ **结论反而更强**：DSH **靠事件折叠 + replay** 追溯「已切换过的 mode」；**我们没有事件流** ⇒ **更需要显式 `version`**。
 **我们的章必须多一个 `version`**：
 - 理由：客户的权限配置**会变**（管理员今天给市场总监开了财务、明天关了）
 - ⇒ 若盖章**不带 `version`** ⇒ **一次决策用了哪版权限，事后无法追溯**
