@@ -1297,8 +1297,16 @@ soft_check "数据流: 路由文件须含 API 调用证据" "${DATA_FLOW_FAIL:-}
 echo -e "${CYAN}── 组 8/13: 文件驱动架构完整性 (V3.9) ──${RESET}"
 # V3.9: 能力验收 CI — 验收测试必须通过 CI
 # D1148 转旁路: 原 `par_collect … || v5_soft "验收 CI (V3.9)"`（软提示，CI 转硬）→ 旁路观测。
-#   理由: 该检查与提交内容弱相关（跑的是 acceptance 用例集，非本次变更），
-#   实际阻断记录为零；保留调用点做观测（失败时 ℹ️ 打印，不改判据、不写 gate-hits）。
+#   理由: 该检查与提交内容弱相关（跑的是 acceptance 用例集，非本次变更）；
+#   保留调用点做观测（失败时 ℹ️ 打印，不改判据、不写 gate-hits）。
+#   ⚠️ 撤回留痕（2026-10-05，CTO 裁决：撤回表述 + 立卡）:
+#     原句：「…实际阻断记录为零…」
+#     改后：**现无阻断执行方** —— 本文件第 497 行的 par_start 是**唯一**调用点
+#       （`git grep -n check-acceptance-ci -- .github scripts/` 除脚本自身仅命中本行），
+#       且该调用点已转旁路 ⇒ `check-acceptance-ci.sh` 的判定结果不再阻断任何提交。
+#     依据（精确口径）: gate-hits 累计落账 '验收 CI' **0 条**（历史未触发过），
+#       但原句把"历史未触发"说成了"阻断力为零"——改前它是 `v5_soft`（CI strict 下**可**阻断），
+#       故原句**不精确**而非纯虚构；"无阻断执行方"是本卡改动后的**事实**（调用点已旁路）。
 AC_OUT=""
 AC_RC=0
 par_collect acceptance-ci "$PAR_ACCEPTANCE" > "$PAR_DIR/acceptance-ci.captured" 2>&1 || AC_RC=$?
@@ -1689,8 +1697,16 @@ fi
 #      路径级口径（同构 ≥10 文件零逻辑改动）仍待 #1017 裁决。
 #   ⚠️ 豁免 ≠ 停用: check-pr-budget.sh 继续执行并打印观测（限额内零输出；超限 ℹ️ 明示）。
 #   接线保留: check-pr-budget.test.sh 依赖本文件含 `check-pr-budget.sh` 字面量 + 横幅未改。
-#   代价（如实记录）: PR 预算超限不再阻断提交端（原 CI strict 下会红）；PR 级预算仍可由
-#     check-pr-budget.sh 独立运行/CI 侧接入。回滚: bypass_run → soft_check 一行即恢复。
+#   代价（如实记录，2026-10-05 撤回后口径）: PR 预算超限**不再被任何门禁阻断**。
+#     ⚠️ 撤回留痕（CTO 裁决：撤回表述 + 立卡，不补完再合）:
+#       原句：「…PR 级预算仍可由 check-pr-budget.sh 独立运行/CI 侧接入。」
+#       改后：现无阻断执行方 —— 全树**没有第二个阻断调用点**。
+#       依据（逐半句核）: 「独立运行」= 任何脚本都能手工跑（同义反复，无信息量）；
+#             「**CI 侧接入**」= **无据** —— `git grep -n check-pr-budget -- .github scripts/ci`
+#             **零命中**（rc=1，CTO/K3 实测同结论）⇒ CI 侧不存在任何接入。
+#             ⇒ 本文件的 bypass_run 调用点是**唯一**执行点，且已不判红 ⇒ 该门禁当前无阻断执行方。
+#       立卡：D734 预算门禁 CI 侧接入（另卡 A，内容见 D1148 PR 正文 §九）。
+#   回滚: bypass_run → soft_check 一行即恢复提交端阻断力（判据脚本零改动）。
 echo -e "${CYAN}── PR 预算门禁 (D734) ──${RESET}"
 if [ -x "$ROOT/scripts/control-tower/check-pr-budget.sh" ] || [ -f "$ROOT/scripts/control-tower/check-pr-budget.sh" ]; then
   bypass_run "D734 PR 预算（D1148 转旁路）" bash "$ROOT/scripts/control-tower/check-pr-budget.sh" --quiet

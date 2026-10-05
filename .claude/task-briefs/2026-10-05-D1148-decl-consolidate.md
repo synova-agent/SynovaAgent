@@ -59,6 +59,22 @@ SynovaAgent 是一个驻扎企业的 AI 诊断系统。诊断是手段，增长�
 - 「D1/D2 转旁路」＝ 保留调用点（`doc-registry-gate.test.sh` W1/W2 依赖）但降为只打印不判红、不进 `gate-hits.log`。代价：D2 登记门禁不再阻断 CI（原 soft→CI strict 转硬）。
 - 「plan-integrity 转旁路」＝ 其 **Q2 排除项**判定并入闸②（去重：G12 已按认领者判排除项；plan.json 侧 principles/approach/memory_refs 降为旁路观测）。代价：plan.json 三项不再阻断。
 
+### e) 撤回留痕 + 「现无阻断执行方」（2026-10-05 CTO 裁决：撤回表述 + 立卡，不补完再合）
+- **撤回 1（D734，无据）**：原句「…PR 级预算仍可由 check-pr-budget.sh 独立运行/CI 侧接入。」
+  → 改后「现无阻断执行方」｜依据：`git grep -n check-pr-budget -- .github scripts/ci` **零命中**（rc=1，CTO/K3 实测同结论）；
+  逐半句核：「独立运行」= 任何脚本都能手工跑（同义反复）；「**CI 侧接入**」= 无据。
+  原句所在处：`scripts/pre-commit-check.sh` D734 注释块（改后同处保留本条留痕）。
+- **撤回 2（acceptance-ci，不精确）**：原句「…实际阻断记录为零…」→ 改后「现无阻断执行方」｜依据：唯一调用点 `pre-commit-check.sh:497`
+  已转旁路；gate-hits 累计 '验收 CI' **0 条**（历史未触发）——但改前它是 `v5_soft`（CI strict 下**可**阻断），
+  原句把"历史未触发"说成"阻断力为零"，属**不精确**而非虚构。
+- **例外清单新增（明写）**：**现无阻断执行方** —— ① D734 PR 预算门禁 ② `check-acceptance-ci.sh`
+  ⇒ 二者判定结果不再阻断任何提交。连带：**"Done 已证"无人做**（闸③ 只验"有 `verify:` 字符串"，**不执行**命令；
+  执行面归「卡 B」）。
+- **立卡内容（卡由 Lead 开，本卡只交内容，见 PR 正文 §九）**：
+  卡 A = D734 预算门禁 **CI 侧接入**（真接一个 step）；卡 B = `check-verifiable-done.sh` 加 **`--brief` 显式传参**
+  （K3：闸③ 升硬前必须先改它，否则升硬 = 固化假绿）。
+- **未动 `ci.yml`**：CTO 已驳回对该文件的豁免（实测含删除行、非追加型）；本卡只改**声明**（Q2「不做什么」原样保留），未碰文件一个字节。
+
 ### d) 相关 Note 引用
 - [x] memory/notes/proposed/2026-10-05-d1148-decl-consolidate.md（本任务新建 proposed）
 

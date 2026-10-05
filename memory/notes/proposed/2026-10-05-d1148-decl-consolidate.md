@@ -25,6 +25,17 @@
 | D734 PR 预算 | 与 D708/D734/G12 阈值互斥（#1017 在办） | 转旁路 |
 | q0c（plan.json cancel/follow_up） | 实测零命中（plan.json 无 cancel 相位） | 并入闸①（Q0 系列成员）；脚本调用降为旁路观测 |
 
+## 撤回留痕（2026-10-05 CTO 裁决：撤回表述 + 立卡，不补完再合）
+
+| 处 | 原句 | 改后 | 依据 |
+|---|---|---|---|
+| `scripts/pre-commit-check.sh` D734 注释块 | 「…PR 级预算仍可由 check-pr-budget.sh 独立运行/**CI 侧接入**。」 | 「**现无阻断执行方**（全树无第二个阻断调用点）」 | `git grep -n check-pr-budget -- .github scripts/ci` **零命中**（rc=1）⇒「CI 侧接入」无据；「独立运行」=手工可跑（同义反复） |
+| 同文件 acceptance-ci 注释块 | 「…**实际阻断记录为零**…」 | 「**现无阻断执行方**」 | 唯一调用点 `pre-commit-check.sh:497` 已旁路；gate-hits '验收 CI' 0 条（历史未触发）；改前 `v5_soft` 在 CI strict 下**可**阻断 ⇒ 原句不精确（非虚构） |
+
+**例外清单（新增，明写）**：**现无阻断执行方** = ①D734 PR 预算门禁 ②`check-acceptance-ci.sh`
+⇒ 二者不再阻断任何提交；连带 **"Done 已证"无人做**（闸③ 只验 `verify:` 字符串存在，不执行命令）。
+**立卡内容**：卡 A = D734 CI 侧接入；卡 B = `check-verifiable-done.sh --brief`（K3：闸③ 升硬前必须先改它）。
+
 ## 关键设计（可核）
 
 1. **成功静默 / 失败点名**：`hard_check`/`soft_check`/`soft_pass` 的成功分支改为
