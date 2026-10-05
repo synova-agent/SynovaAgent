@@ -393,3 +393,10 @@ documents:
     status: active
     owner: line-lead
     note: "D1160 门禁提案（落库版 v2.1）：① DOCS-REGISTRY.yaml 追加型豁免（5 约束定稿 + numstat 删除数=0 前置 + 行键求交冲突自动判 + R1-R7 夹具）② D708 多命中判定分级（候选存在于 base 则 exit 1；全部来自本分支则 exit 2）③ 判据纪律（数字三要素含 ref + 读文件须写 ref + 夹具红须来自断言）。待 K3 过审转 CTO 裁；本件不改任何判据。号取 DOC-0186 以规避在飞撞号（同批 6 个 PR 同取 DOC-0144）。"
+
+  # D1132 交付记录（建两预设包 + 哨兵 skill；PR #—）
+  - id: DOC-0187
+    type: governance
+    path: docs/synova/coordination/交付-D1132-两预设包与哨兵skill-20261003.md
+    status: active
+    owner: line-lead
