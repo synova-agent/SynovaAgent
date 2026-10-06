@@ -394,6 +394,331 @@ assert_contains "$OUT" "D900-tiebreak-current" "身份锚点（分支 D900）bri
 assert_not_contains "$OUT" "D664-tiebreak-older" "陈旧共享 brief 不因字典序靠前而胜出"
 echo ""
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# D1069 追加段（用例 12–24）—— 强锚点优先级 / 认领计数去重 / D# 两级定位
+#
+# 写集说明: D1069 只**追加**本段；上方 1–395 行（用例 1–11 的全部断言与夹具）
+#   字节未动，保持 C4「既有套件全绿」的可判别性。本段独立计数 D_PASS/D_FAIL，
+#   在汇总前折入总计数。
+# 选型说明: 不新建 tests/**/*.test.sh —— 新建 sh/py 测试会触发 M9 密封面棘轮
+#   CI-REGISTRY 违规（check-gate-integrity.sh B 模式；实测「基线外新增 1 /
+#   GATE-INTEGRITY: VIOLATION(1)」）。本文件已在 gate-integrity-baseline.txt:88。
+#
+# 覆盖矩阵（铁律 48：正常 / 降级 / 边界；正反例都断言）
+# ┌──────┬──────┬──────────────────────────────────────────────────────────────┐
+# │ 用例 │ 对应 │ 断言什么（判别性来源 = 修前为何红）                          │
+# ├──────┼──────┼──────────────────────────────────────────────────────────────┤
+# │  12  │  ①   │ 暂存 task-state/D900.json 强锚点 + 竞争者认领数更高(2>1)      │
+# │      │      │ ⇒ 必须返回强锚点 brief；修前 best=2 竞争者胜 ⇒ 红            │
+# │  13  │  ②   │ 无强锚点 + 仅 current-brief 认领 ≥1 ⇒ 返回 current-brief（回归）│
+# │  14  │  ③   │ 两者皆无（无锚点 / 无 current-brief）⇒ P4 窗口内可解析 brief  │
+# │  15  │  ④   │ 规范 4 sed 删 ANCHOR-PRIORITY 缝 → 变异副本返回竞争者；       │
+# │      │      │ 生产脚本对同一输入返回强锚点；两结果必须不等（改坏即红 C3）   │
+# │  16  │  ⑤   │ 同路径 Q2 写 4 次 vs 另一 brief 声明 2 个不同文件且都被暂存   │
+# │      │      │ ⇒ 去重后 2>1 返回后者；修前 4>2 返回前者 ⇒ 红                │
+# │  17  │  ⑥   │ <date>-D471.md（D# 结尾无连字符）+ 分支含 D471 ⇒ 必须命中；   │
+# │      │      │ 修前 glob *-D471-* 不命中 → 落到无关 brief ⇒ 红              │
+# │  18  │  ⑦   │ 负向：无身份锚点的陈旧 brief 认领更多文件 ⇒ 不得劫持          │
+# │      │      │ （D291/D296 保护；候选池不因本修复而扩大）                    │
+# │  19  │ ⑧a   │ 一级压制：次位 D282 提及件 vs 首 token D282 身份件，同数 n=1   │
+# │      │      │ ⇒ 修前旧 glob 双命中 + 字典序 → 09-26 提及件胜出 ⇒ 红          │
+# │  20  │ ⑧b   │ 二级兜底：仅 <date>-D313-x-D314-y.md（无 D314 身份件）+       │
+# │      │      │ 暂存 task-state/D314.json ⇒ 仍须命中（防纯一级过度收敛）      │
+# │  21  │  ⑨   │ 生产接线：脚本含 ANCHOR-PRIORITY 双向标记 + staging_guard.py   │
+# │      │      │ 仍在调用（铁律 0-2 WIRE CHECK）                               │
+# │  22  │  ⑩   │ 反例 C：断言器本身可红（同值判失败）+ 变异 ≠ 生产（防假绿）   │
+# │  23  │  ⑫   │ 二级提及命中不得升格 P0：二级 + 竞争者 2>1 ⇒ 走计数裁决        │
+# │      │      │ （若把二级并入 P0 则直接定案返回提及件 ⇒ 红）                 │
+# │  24  │  ⑬   │ 来源优先级 state > branch：状态锚点 D1061 与分支锚点 D1069    │
+# │      │      │ 不一致 ⇒ 必须取 state 那份；修前 tie→字典序 取分支那份 ⇒ 红   │
+# └──────┴──────┴──────────────────────────────────────────────────────────────┘
+# 隔离: 全部 mktemp -d 沙箱 + git init（零网络、零真实仓库改动），trap 清理。
+# 沙箱镜像结构（用例 15）: <tmp>/scripts/workflow/ + <tmp>/scripts/control-tower/
+#   brief_parser.py —— 脚本以 BASH_SOURCE 相对定位 ../control-tower/brief_parser.py。
+# ═══════════════════════════════════════════════════════════════════════════════
+
+D_PASS=0; D_FAIL=0
+d_pass() { D_PASS=$((D_PASS + 1)); echo "  ✅ $1"; }
+d_fail() { D_FAIL=$((D_FAIL + 1)); echo "  ❌ $1" >&2; }
+d_assert_exit() { # <got> <want> <msg>
+  if [ "$1" -eq "$2" ]; then d_pass "$3 (exit=$1)"; else d_fail "$3 — exit=$1 期望 $2"; fi
+}
+d_assert_contains() { # <haystack> <needle> <msg>
+  if echo "$1" | grep -qF "$2"; then d_pass "$3"; else d_fail "$3 — 未找到: $2"; fi
+}
+d_assert_not_contains() { # <haystack> <needle> <msg>
+  if echo "$1" | grep -qF "$2"; then d_fail "$3 — 不应包含: $2"; else d_pass "$3"; fi
+}
+d_differs() { [ "$1" != "$2" ]; }   # 纯谓词：供用例 21 空跑红通道自检
+d_assert_differs() { # <a> <b> <msg>
+  if d_differs "$1" "$2"; then d_pass "$3"; else d_fail "$3 — 两值相同（检查未生效/假绿）"; fi
+}
+
+D_CLEANUP=""
+d_cleanup() { for d in $D_CLEANUP; do rm -rf "$d"; done; }
+trap d_cleanup EXIT
+d_new_repo() {
+  local d; d=$(mktemp -d)
+  D_CLEANUP="$D_CLEANUP $d"
+  git -C "$d" init -q 2>/dev/null || true
+  mkdir -p "$d/.claude/task-briefs"
+  printf '%s\n' "$d"
+}
+d_run() { # <cwd> <script> [staged] → OUT + EC
+  set +e
+  OUT=$(cd "$1" && bash "$2" "${3:-}" 2>&1)
+  EC=$?
+  set -e
+}
+d_raw() { echo "     [原始输出] exit=$EC out=${OUT:-<空>}"; }
+d_mk_brief() { # <repo> <filename> <criteria|-> <path...>
+  local repo="$1" fn="$2" crit="$3"; shift 3
+  {
+    echo "## Q0: 定位 — 测试夹具"
+    echo ""
+    echo "## Q1: 调研 — 测试夹具"
+    if [ "$crit" != "-" ]; then echo "#CRITERIA: $crit"; fi
+    echo ""
+    echo "## Q2: 范围 — 测试夹具"
+    echo "做什么："
+    for p in "$@"; do echo "- $p"; done
+    echo ""
+    echo "不做什么："
+    echo "- 不改 docs/never-touched.md"
+    echo ""
+    echo "## Q3: 验收 — 测试夹具"
+    echo ""
+    echo "## 架构层: 基础设施"
+    echo "## Done 标准"
+    echo "- [ ] 可验证"
+  } > "$repo/.claude/task-briefs/$fn"
+}
+d_ago() {
+  python3 -c "from datetime import date,timedelta;print((date.today()-timedelta(days=$1)).isoformat())" 2>/dev/null \
+    || date -v-"$1"d +%Y-%m-%d
+}
+D_REAL_PARSER="$REPO_DIR/scripts/control-tower/brief_parser.py"
+D2_GUARD="$REPO_DIR/scripts/control-tower/staging_guard.py"
+A3_AGO=$(d_ago 3)
+
+echo "═══════════════════════════════════════════════════════════"
+echo "  D1069 追加段（用例 12–24）: 强锚点优先级 / 去重计数 / D# 两级定位"
+echo "  resolver = $RESOLVER"
+echo "  TODAY=$TODAY  THREE_AGO=$A3_AGO"
+echo "═══════════════════════════════════════════════════════════"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+echo "── 12 (=①) 三态之「强锚点命中」：暂存 task-state/D900.json + 竞争者认领数更高 → 强锚点定案 ──"
+echo "   判别性：修前 best=2（竞争者 a.sh+b.sh）> 强锚点 brief 的 1 ⇒ 返回竞争者 = 红"
+D_R=$(d_new_repo)
+git -C "$D_R" symbolic-ref HEAD refs/heads/fix/plain-branch >/dev/null 2>&1 || true
+d_mk_brief "$D_R" "${A3_AGO}-D900-strong-anchor.md" A "task-state/D900.json"
+d_mk_brief "$D_R" "${TODAY}-D901-competitor.md" A "scripts/a.sh" "scripts/b.sh"
+d_run "$D_R" "$RESOLVER" "task-state/D900.json
+scripts/a.sh
+scripts/b.sh"
+d_raw
+d_assert_exit "$EC" 0 "12 强锚点场景解析成功"
+d_assert_contains "$OUT" "D900-strong-anchor" "12 强锚点 brief 定案（竞争者认领数更高也不得压过）"
+d_assert_not_contains "$OUT" "D901-competitor" "12 不返回认领数更高的竞争者"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+echo "── 13 (=②) 三态之「弱锚点回退」：无暂存 task-state、分支无 D#，仅 current-brief → 返回它 ──"
+D_R=$(d_new_repo)
+git -C "$D_R" symbolic-ref HEAD refs/heads/fix/plain-branch-2 >/dev/null 2>&1 || true
+d_mk_brief "$D_R" "${TODAY}-D902-weak-cur.md" A "scripts/a.sh"
+d_mk_brief "$D_R" "${TODAY}-D903-other.md" A "scripts/zzz.sh"
+printf '%s\n' "${TODAY}-D902-weak-cur.md" > "$D_R/.claude/current-brief"
+d_run "$D_R" "$RESOLVER" "scripts/a.sh"
+d_raw
+d_assert_exit "$EC" 0 "13 current-brief 认领 ≥1 → 解析成功"
+d_assert_contains "$OUT" "D902-weak-cur" "13 返回 current-brief（弱锚点回退语义保留）"
+d_assert_not_contains "$OUT" "D903-other" "13 不误选窗口内其他 brief"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+echo "── 14 (=③) 三态之「两者皆无」：无任何锚点、无 current-brief，仅窗口内可解析 brief → 回退到它 ──"
+D_R=$(d_new_repo)
+git -C "$D_R" symbolic-ref HEAD refs/heads/fix/plain-branch-3 >/dev/null 2>&1 || true
+d_mk_brief "$D_R" "${TODAY}-D904-window-only.md" A "scripts/zzz.sh"
+d_run "$D_R" "$RESOLVER" "scripts/a.sh"
+d_raw
+d_assert_exit "$EC" 0 "14 无锚点无 current-brief → 回退成功（P4）"
+d_assert_contains "$OUT" "D904-window-only" "14 回退到窗口内可解析 brief"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+echo "── 15 (=④) 改坏即红（C3 判别性夹具，规范 4）：sed 删 ANCHOR-PRIORITY 缝 → 变异副本必返回竞争者 ──"
+echo "   沙箱镜像结构: <tmp>/scripts/workflow/（脚本）+ <tmp>/scripts/control-tower/brief_parser.py"
+D_R=$(d_new_repo)
+git -C "$D_R" symbolic-ref HEAD refs/heads/fix/plain-branch-4 >/dev/null 2>&1 || true
+mkdir -p "$D_R/scripts/workflow" "$D_R/scripts/control-tower"
+cp "$D_REAL_PARSER" "$D_R/scripts/control-tower/brief_parser.py"
+sed '/<<<ANCHOR-PRIORITY-START>>>/,/<<<ANCHOR-PRIORITY-END>>>/d' "$RESOLVER" \
+  > "$D_R/scripts/workflow/resolve-commit-brief-mutated.sh"
+D_MUT="$D_R/scripts/workflow/resolve-commit-brief-mutated.sh"
+echo "   变异副本行数: $(wc -l < "$D_MUT" | tr -d ' ')  生产脚本行数: $(wc -l < "$RESOLVER" | tr -d ' ')"
+d_mk_brief "$D_R" "${A3_AGO}-D905-strong-anchor-mut.md" A "task-state/D905.json"
+d_mk_brief "$D_R" "${TODAY}-D906-competitor-mut.md" A "scripts/a.sh" "scripts/b.sh"
+D_STAGED4="task-state/D905.json
+scripts/a.sh
+scripts/b.sh"
+d_run "$D_R" "$RESOLVER" "$D_STAGED4"
+D_PROD_EC=$EC; D_PROD_OUT=$OUT
+echo "     [绿证 生产脚本] exit=$D_PROD_EC out=${D_PROD_OUT:-<空>}"
+d_run "$D_R" "$D_MUT" "$D_STAGED4"
+D_MUT_EC=$EC; D_MUT_OUT=$OUT
+echo "     [红证 变异副本] exit=$D_MUT_EC out=${D_MUT_OUT:-<空>}"
+d_assert_exit "$D_PROD_EC" 0 "15 生产脚本对复现输入退出 0"
+d_assert_contains "$D_PROD_OUT" "D905-strong-anchor-mut" "15 生产脚本返回强锚点 brief（绿证）"
+d_assert_exit "$D_MUT_EC" 0 "15 变异副本仍可运行（规范 4：删缝后不得语法崩）"
+d_assert_contains "$D_MUT_OUT" "D906-competitor-mut" "15 变异副本返回竞争者 brief（红证：强锚点被移除后必红）"
+d_assert_differs "$D_PROD_OUT" "$D_MUT_OUT" "15/21 变异副本结果 ≠ 生产脚本结果（改坏即红的判别性证明）"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+echo "── 16 (=⑤) 规范 2 判别性：同路径 Q2 写 4 次 vs 另一 brief 声明 2 个不同文件且都被暂存 → 2>1 ──"
+echo "   判别性：修前出现次数 4 > 2 ⇒ 返回 D910-multi-count = 红"
+D_R=$(d_new_repo)
+git -C "$D_R" symbolic-ref HEAD refs/heads/fix/plain-branch-5 >/dev/null 2>&1 || true
+d_mk_brief "$D_R" "${TODAY}-D910-multi-count.md" A "scripts/a.sh" "scripts/a.sh" "scripts/a.sh" "scripts/a.sh"
+d_mk_brief "$D_R" "${TODAY}-D911-dedup-two.md" A "scripts/a.sh" "scripts/b.sh"
+d_run "$D_R" "$RESOLVER" "scripts/a.sh
+scripts/b.sh"
+d_raw
+d_assert_exit "$EC" 0 "16 去重计数场景解析成功"
+d_assert_contains "$OUT" "D911-dedup-two" "16 去重后 2>1 → 声明两个不同文件的 brief 胜出"
+d_assert_not_contains "$OUT" "D910-multi-count" "16 同路径重复写 4 次不得以出现次数获胜（规范 2 不变式）"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+echo "── 17 (=⑥) 规范 3 判别性（边界）：<date>-D471.md（D# 结尾无连字符）+ 分支含 D471 → 必须命中 ──"
+echo "   判别性：修前 glob *-D471-* 不命中该文件名 ⇒ 回退落到无关今日 brief = 红"
+D_R=$(d_new_repo)
+git -C "$D_R" symbolic-ref HEAD refs/heads/fix/D471-no-trailing-hyphen >/dev/null 2>&1 || true
+d_mk_brief "$D_R" "${A3_AGO}-D471.md" A "task-state/D471.json"
+d_mk_brief "$D_R" "${TODAY}-D999-unrelated.md" A "scripts/zzz.sh"
+d_run "$D_R" "$RESOLVER" "scripts/a.sh"
+d_raw
+d_assert_exit "$EC" 0 "17 边界文件名场景解析成功"
+d_assert_contains "$OUT" "D471.md" "17 D# 结尾无连字符的 brief 被分支强锚点命中（规范 3 边界匹配）"
+d_assert_not_contains "$OUT" "D999-unrelated" "17 不落到无关的今日 brief"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+echo "── 18 (=⑦) 负向（防回归）：无身份锚点的陈旧 brief 认领更多文件 ⇒ 不得劫持（D291/D296）──"
+D_R=$(d_new_repo)
+git -C "$D_R" symbolic-ref HEAD refs/heads/fix/plain-branch-7 >/dev/null 2>&1 || true
+d_mk_brief "$D_R" "${A3_AGO}-D920-stale-hijack.md" A "scripts/a.sh" "scripts/b.sh"
+d_mk_brief "$D_R" "${TODAY}-D921-today-wins.md" A "scripts/a.sh"
+d_run "$D_R" "$RESOLVER" "scripts/a.sh
+scripts/b.sh"
+d_raw
+d_assert_exit "$EC" 0 "18 无锚点场景解析成功"
+d_assert_contains "$OUT" "D921-today-wins" "18 窗口内 brief 胜出（候选池不因本修复而扩大）"
+d_assert_not_contains "$OUT" "D920-stale-hijack" "18 无身份锚点的陈旧 brief 未劫持认领（防窗口放宽式退化）"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+echo "── 19 (=⑧a) 规范 3 一级压制：次位 D282 提及件 vs 首 token D282 身份件 + 暂存 task-state/D282.json ──"
+echo "   判别性：修前旧 glob *-D282-* 两者都命中 → 同数 tie-break 按字典序 → 09-26 提及件胜出 = 红"
+D_R=$(d_new_repo)
+git -C "$D_R" symbolic-ref HEAD refs/heads/fix/plain-branch-8a >/dev/null 2>&1 || true
+d_mk_brief "$D_R" "${A3_AGO}-D583-crossref-D282-victim.md" A "task-state/D282.json"
+d_mk_brief "$D_R" "${TODAY}-D282-legit-identity.md" A "task-state/D282.json"
+d_run "$D_R" "$RESOLVER" "task-state/D282.json"
+d_raw
+d_assert_exit "$EC" 0 "19 一级压制场景解析成功"
+d_assert_contains "$OUT" "D282-legit-identity" "19 一级身份集（首 token == 锚点 D#）胜出"
+d_assert_not_contains "$OUT" "D282-victim" "19 次位提及件不得凭字典序压过身份件"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+echo "── 20 (=⑧b) 规范 3 二级兜底：仅 <date>-D313-x-D314-y.md（无 D314 身份件）+ 暂存 task-state/D314.json ──"
+echo "   判别性：防「纯一级」式过度收敛 —— 若二级兜底缺失，该 brief 失去锚点 = 红"
+D_R=$(d_new_repo)
+git -C "$D_R" symbolic-ref HEAD refs/heads/fix/plain-branch-8b >/dev/null 2>&1 || true
+d_mk_brief "$D_R" "${A3_AGO}-D313-merged-D314-cover.md" A "task-state/D314.json"
+d_run "$D_R" "$RESOLVER" "task-state/D314.json"
+d_raw
+d_assert_exit "$EC" 0 "20 二级兜底场景解析成功"
+d_assert_contains "$OUT" "D314-cover" "20 一级为空时二级提及集保住覆盖（合卡 brief 不回归）"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+echo "── 21 (=⑨) 生产接线检查（铁律 0-2 WIRE CHECK）：规范 4 缝存在 + staging_guard.py 仍在调用 ──"
+D_SEAM_START=$(grep -n '<<<ANCHOR-PRIORITY-START>>>' "$RESOLVER" || true)
+D_SEAM_END=$(grep -n '<<<ANCHOR-PRIORITY-END>>>' "$RESOLVER" || true)
+echo "     [原始输出] grep '<<<ANCHOR-PRIORITY-START>>>' $RESOLVER"
+echo "     ${D_SEAM_START:-<无命中>}"
+echo "     [原始输出] grep '<<<ANCHOR-PRIORITY-END>>>' $RESOLVER"
+echo "     ${D_SEAM_END:-<无命中>}"
+if [ -n "$D_SEAM_START" ] && [ -n "$D_SEAM_END" ]; then
+  d_pass "21 生产脚本同时含 ANCHOR-PRIORITY-START/END（规范 4 注入缝存在）"
+else
+  d_fail "21 生产脚本缺 ANCHOR-PRIORITY 注入缝（规范 4 未落地）"
+fi
+D_GUARD_HITS=$(grep -c 'resolve-commit-brief\.sh' "$D2_GUARD" 2>/dev/null | tr -d '\n\r' || true)
+echo "     [原始输出] grep -c 'resolve-commit-brief\.sh' $D2_GUARD → ${D_GUARD_HITS:-0}"
+if [ "${D_GUARD_HITS:-0}" -ge 1 ]; then
+  d_pass "21 staging_guard.py 仍调用 resolve-commit-brief.sh（命中 ${D_GUARD_HITS} 处）"
+else
+  d_fail "21 staging_guard.py 未调用 resolve-commit-brief.sh（消费方接线断裂）"
+fi
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+echo "── 22 (=⑩) 反例 C：断言器本身可红（防「检查没跑却报绿」/ 防假绿）──"
+if d_differs "SAME" "SAME"; then
+  d_fail "22 断言器对相同值判通过（假绿通道存在）"
+else
+  d_pass "22 断言器对相同值判失败（红通道有效）"
+fi
+if d_differs "A" "B"; then
+  d_pass "22 断言器对不同值判通过（绿通道有效）"
+else
+  d_fail "22 断言器对不同值判失败（断言器失效）"
+fi
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+echo "── 23 (=⑫) 规范 1 判别性：二级提及命中**不得**升格 P0 —— 竞争者认领数更高时按计数裁决 ──"
+echo "   判别性：若把二级提及并入 P0，则直接定案返回 D314-cover2 = 红；正确行为 = 计数裁决（2>1）"
+D_R=$(d_new_repo)
+git -C "$D_R" symbolic-ref HEAD refs/heads/fix/plain-branch-12 >/dev/null 2>&1 || true
+d_mk_brief "$D_R" "${A3_AGO}-D313-merged-D314-cover2.md" A "task-state/D314.json"
+d_mk_brief "$D_R" "${TODAY}-D999-competitor2.md" A "scripts/a.sh" "scripts/b.sh"
+d_run "$D_R" "$RESOLVER" "task-state/D314.json
+scripts/a.sh
+scripts/b.sh"
+d_raw
+d_assert_exit "$EC" 0 "23 二级+竞争者场景解析成功"
+d_assert_contains "$OUT" "D999-competitor2" "23 二级锚点不进 P0 → 按去重认领数裁决（2>1）"
+d_assert_not_contains "$OUT" "D314-cover2" "23 二级提及不得升格为 P0 直接定案"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+echo "── 24 (=⑬) 规范 1 来源优先级：state 锚点 > 分支锚点（锚点不一致时必须取 state 那份）──"
+echo "   判别性：两份 brief 同数 n=1 且都被锚定；修前 tie-break 按字典序 → 09-26 的分支件胜出 = 红"
+echo "   （若修后实现「先取分支锚点」，本条同样红 ⇒ 判别 P0 是否真的按来源优先级）"
+D_R=$(d_new_repo)
+git -C "$D_R" symbolic-ref HEAD refs/heads/fix/D1069-branch-anchor >/dev/null 2>&1 || true
+d_mk_brief "$D_R" "${A3_AGO}-D1069-branch-loses.md" A "task-state/D1061.json"
+d_mk_brief "$D_R" "${TODAY}-D1061-state-wins.md" A "task-state/D1061.json"
+d_run "$D_R" "$RESOLVER" "task-state/D1061.json"
+d_raw
+d_assert_exit "$EC" 0 "24 锚点不一致场景解析成功"
+d_assert_contains "$OUT" "D1061-state-wins" "24 暂存 task-state 锚点优先于分支名锚点"
+d_assert_not_contains "$OUT" "D1069-branch-loses" "24 分支锚点不得压过 state 锚点"
+echo ""
+
+echo "  D1069 追加段小计: $D_PASS 通过, $D_FAIL 失败"
+echo ""
+
+PASS=$((PASS + D_PASS))
+FAIL=$((FAIL + D_FAIL))
 echo "═══════════════════════════════════════════════════════════"
 echo "  结果: $PASS 通过, $FAIL 失败"
 if [ "$FAIL" -gt 0 ]; then
