@@ -52,10 +52,58 @@ export interface AcceptanceStep {
   expectRowsEq?: { table: string; n: number };
 }
 
+/** 判据落地方（V5，2026-10-06 立）—— 🔴 **必须 ≠ 实现者**（判例 V-03：独立复核须 fresh context、非作者、非编码者）
+ *
+ *  ⚠️ 与 `worker` **不同轴**：
+ *    · `worker`   = **派给谁做**（实现者；CTO 派单时指定）
+ *    · `verifier` = **判据由谁落地**（核验者；跑判据、签结论的那一方）
+ *  同一项上两者相等 ⇒ 自我认证结构（S5 尽调 §结论3 实测 32/46 项自产自评）。
+ *
+ *  取值：
+ *    · `'cto'`  = 控制塔/CTO 本线（方向级：总闸、承重件）
+ *    · `'win'`  = Win 执行端（⚠️ 与全项 `worker='win'` 相等 ⇒ 自我认证，禁用）
+ *    · `'mac'`  = Mac DSH 线（**控制塔/门禁/流程/证据引擎**类判据件的模块所有者，见 TASK-ROUTING v4 §一）
+ *    · `'k3'`   = K3 独立审计线（安全/权限/多租户/隔离类 —— 审计红线：第三方审）
+ *    · `'gov'`  = 治理线（门禁与控制塔演进）
+ *    · `'none'` = **尚未指派独立核验方** ⇒ 🔴 **风险标记，不得读作"已独立验证"**（判例 P-04）
+ *
+ *  🔴 本字段是**登记值**（登记 ≠ 派单）：由 CTO 派单时确认或覆盖。
+ *     判据阈值「`verifier !== worker` 比例 ≥ 80%」只是"未自我认证"的**必要不充分**条件 ——
+ *     比值达标 **不等于** 判据有效（有效性由 `verification` 承载）。 */
+export type Verifier = 'cto' | 'win' | 'mac' | 'k3' | 'gov' | 'none';
+
+/** 判据实测状态（V3/V4，2026-10-06 立）—— 「可跑性」与「修复前必红」的**实测**结论。
+ *  证据：`docs/synova/product-lines/evidence/V3V4V5/`（原始命令 + 原始输出，禁手写数字）
+ *
+ *  口径（逐条可复跑，脚本见 evidence 目录 `analyze.ts`）：
+ *    · **A** 判据须落本项写集内 —— acceptance 里每个文件路径 ∈ `paths`（或其子路径/通配）
+ *    · **B** 修复前 baseline 上须红 —— 在**未修复**的 ref 上跑，须以断言失败的方式红（exit≠0）
+ *    · **C** 须在出货姿态成立 —— 干净检出/CI 姿态可跑可判（不依赖 gitignored 运行时状态）
+ *    · **D** 改坏即红夹具 —— 由 fixtures 路承担（本登记件不承载） */
+export interface ItemVerification {
+  /** L1 = 静态可达（判据件存在 / 命令可构造，**未实跑**）
+   *  L2 = 真跑通（已在未修复基线上实跑并取得可复核输出）
+   *  🔴 未实跑者一律 L1 —— **不得把"未核"写成"已核"**（判例 V-09） */
+  level: 'L1' | 'L2';
+  /** B 判据实测：`red` = 断言失败（B 成立）｜`green` = 全绿（**B 不成立**）｜`unrunnable` = 判据件缺失，**B 判不了** */
+  baseline: 'red' | 'green' | 'unrunnable';
+  /** 证据指针：`<相对路径>#<item id>` */
+  evidence: string;
+  /** 结论说明（含 A/C 判定与修复动作） */
+  note: string;
+  /** 🔴 **未验声明**（判例 V-09）：非空 ⇒ 本项判据**未被实证**，**禁止**读作"判据已成立"。
+   *  硬约束：`status === 'todo'` 且 `level === 'L1'` ⇒ 本字段**必须**非空且含「未验」字样。 */
+  unverified?: string;
+}
+
 export interface ConstructionItem {
   id: string;
   /** 派给谁（**由 CTO 派单时指定** —— 不是"归属"。域概念已废止 2026-10-04） */
   worker: Worker;
+  /** 判据落地方（**必须 ≠ 实现者** —— V5，2026-10-06）。语义见 `Verifier` 的 JSDoc。 */
+  verifier: Verifier;
+  /** 判据实测状态（L1/L2 + B 结论 + 未验声明 —— V3/V4，2026-10-06）。语义见 `ItemVerification`。 */
+  verification: ItemVerification;
   batch: '第0批' | '第1批' | '第2批' | '第3批';
   block: BlockId;
   title: string;
@@ -152,6 +200,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   {
     id: '0-1',
     worker: 'win', batch: '第0批', block: 'K1',
+    verifier: 'cto',
     title: '六个业务循环的 cron 是死路（总闸）',
     paths: [
       'src/loops/loop-scheduler.ts',
@@ -165,12 +214,19 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'sqlite3 data/synova.db "SELECT COUNT(*) FROM loop_runs WHERE created_at > datetime(\'now\', \'-1 hour\')"', expectRowsGt: { table: 'loop_runs', n: 0 } },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#0-1',
+      note: '判据件 scripts/control-tower/probe-loops.sh 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑；依赖 gitignored 的 data/synova.db ⇒ 干净检出/CI 姿态下 C 结构性不成立',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 0-1 / 现状报告 坏点2',
   },
   {
     id: '0-2',
     sharedWrite: ["2-3: src/growth/feedback-collector.ts（0-2 改聚合键，2-3 改通道；须串行）"],
     worker: 'win', batch: '第0批', block: 'K6',
+    verifier: 'cto',
     title: '进化回写 applied 恒 0（总闸）',
     paths: [
       'src/growth/feedback-collector.ts',
@@ -183,11 +239,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'sqlite3 data/synova.db "SELECT COUNT(*) FROM agent_memory WHERE key LIKE \'%_gaCorrections%\'"', expectRowsGt: { table: 'agent_memory', n: 0 } },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#0-2',
+      note: '判据件 tests/growth/evolution-writeback.test.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑；依赖 gitignored 的 data/synova.db ⇒ 干净检出/CI 姿态下 C 结构性不成立',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 0-2 / 现状报告 坏点3',
   },
   {
     id: '0-3',
     worker: 'win', batch: '第0批', block: 'K3',
+    verifier: 'mac',
     title: '4 个内建哨兵永远注册不上',
     paths: [
       'src/sentinel/builtins.ts',
@@ -198,11 +261,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npm run probe:sentinels 2>/dev/null || npx tsx scripts/control-tower/probe-sentinels.ts', expectStdoutContains: 'cashFlow' },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#0-3',
+      note: '判据件 scripts/control-tower/probe-sentinels.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 0-3 / 现状报告 坏点1',
   },
   {
     id: '0-4',
     worker: 'win', batch: '第0批', block: 'K4',
+    verifier: 'mac',
     title: '循环的五阀映射指向已废止编号',
     paths: [
       'cycles/**/*.cycle.json',
@@ -214,23 +284,37 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx tsx scripts/control-tower/probe-cycle-edges.ts', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#0-4',
+      note: '判据件 scripts/control-tower/probe-cycle-edges.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 0-4 / 现状报告 坏点6',
   },
   {
     id: '0-5',
     worker: 'win', batch: '第0批', block: 'K6',
+    verifier: 'mac',
     title: '目标哨兵"因子3"恒 false',
-    paths: ['src/growth/goal-sentinel.ts'],
+    paths: ['src/growth/goal-sentinel.ts', 'tests/growth/goal-sentinel.test.ts'],  // A 修复：判据件并入本项写集
     dependsOn: [],
     acceptance: [
       { run: 'npx vitest run tests/growth/goal-sentinel.test.ts', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L2', baseline: 'green',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#0-5',
+      note: '判据件 tests/growth/goal-sentinel.test.ts 在本 ref 存在，本会话于未修复基线实跑取到可复核输出（exit 0）；A 修复：判据件已并入本项写集',
+      unverified: '未验：判据在未修复基线上全绿（exit 0）⇒ B 不成立，不能区分未修/已修；须补区分性断言后重判',
+    },
     source: '施工单.md 0-5 / 现状报告 坏点5',
   },
   {
     id: '0-6',
     worker: 'win', batch: '第0批', block: 'K8',
+    verifier: 'mac',
     title: 'Schema 校验器覆盖率 1/40',
     paths: [
       'src/l4/sog-schema-validator.ts',
@@ -241,11 +325,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'bash -c "npx tsx scripts/control-tower/probe-diagnosis.ts 2>&1 | grep -q \'未覆盖类型\'"', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#0-6',
+      note: '判据件 scripts/control-tower/probe-diagnosis.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑；判据含纯 grep 型步骤（判例 V-02 违规，须由本卡改写为断言型）',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 0-6 / 现状报告 坏点4',
   },
   {
     id: '0-7',
     worker: 'win', batch: '第0批', block: 'K6',
+    verifier: 'mac',
     title: '反馈通道 B 是"无声的洞"',
     paths: [
       'src/routes/chat.ts',
@@ -256,11 +347,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx vitest run tests/routes/chat-feedback.test.ts', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L2', baseline: 'green',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#0-7',
+      note: '判据件 tests/routes/chat-feedback.test.ts 在本 ref 存在，本会话于未修复基线实跑取到可复核输出（exit 0）',
+      unverified: '未验：判据在未修复基线上全绿（exit 0）⇒ B 不成立，不能区分未修/已修；须补区分性断言后重判',
+    },
     source: '施工单.md 0-7 / 现状报告 坏点8',
   },
   {
     id: '0-8',
     worker: 'win', batch: '第0批', block: 'K6',
+    verifier: 'mac',
     title: '参数层 c 类整个模块零引用',
     paths: [
       'src/growth/goal-lifecycle.ts',
@@ -272,11 +370,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx vitest run tests/growth/goal-lifecycle-wired-or-retired.test.ts', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#0-8',
+      note: '判据件 tests/growth/goal-lifecycle-wired-or-retired.test.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 0-8 / 现状报告 坏点7',
   },
   {
     id: '0-9',
     worker: 'win', batch: '第0批', block: 'K1',
+    verifier: 'k3',
     title: '知识权限过滤恒 fail-open',
     paths: ['src/middleware/auth.ts'],
     dependsOn: [],
@@ -285,11 +390,17 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'sqlite3 data/synova.db "SELECT COUNT(*) FROM knowledge_audit WHERE filtered_out > 0"', expectRowsGt: { table: 'knowledge_audit', n: 0 } },
     ],
     status: 'retired',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#0-9',
+      note: '已退役（#983 CLOSED/NOT_PLANNED）：前提被证伪 ⇒ 无判据、不参与 A/B/C/D 判定',
+    },
     source: '施工单.md 0-9 —— 🔴 **已作废（2026-10-05）**：前提被证伪。auth.ts:354-356 实为 DEV_MODE 自动 admin 分支（非内联空桩）；真 provider 在 :441-459（身份派生非空条件集）。#983 已 CLOSED/NOT_PLANNED 同因。**本项无对象** ⇒ 转 0-9\u0027（知识审计不可归属）',
   },
   {
     id: '0-10',
     worker: 'win', batch: '第0批', block: 'K1',
+    verifier: 'k3',
     title: 'fail-open 兜底（0-9 延伸）',
     paths: [
       'src/services/request-context.ts',
@@ -303,12 +414,19 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx vitest run tests/security/request-context-failclosed.test.ts', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L2', baseline: 'green',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#0-10',
+      note: '判据件 tests/security/request-context-failclosed.test.ts 在本 ref 存在，本会话于未修复基线实跑取到可复核输出（exit 0）',
+      unverified: '未验：判据在未修复基线上全绿（exit 0）⇒ B 不成立，不能区分未修/已修；须补区分性断言后重判',
+    },
     source: '施工单.md 0-10（⚠️ CTO 实测：request-context 已修，剩 im.ts:53 补传 provider）',
   },
   {
     id: '0-11',
     sharedWrite: ["2-4: src/tools/tool-registry.ts（0-11 决策死门去留，2-4 接写入门禁；同一文件须串行）"],
     worker: 'win', batch: '第0批', block: 'K2',
+    verifier: 'mac',
     title: 'ToolRegistry 双重死门',
     paths: [
       'src/tools/tool-registry.ts',
@@ -320,11 +438,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'bash -c "npx tsx scripts/control-tower/probe-tool-policy.ts | grep -q POLICY_DENIED || git grep -c setPolicyEngine -- src/ | grep -q ^0$"', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#0-11',
+      note: '判据件 scripts/control-tower/probe-tool-policy.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑；判据含纯 grep 型步骤（判例 V-02 违规，须由本卡改写为断言型）',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 0-11 / 现状报告 坏点9 同族',
   },
   {
     id: '0-12',
     worker: 'win', batch: '第0批', block: 'K9',
+    verifier: 'mac',
     title: 'skills/ 46 个技能文件恒不加载',
     paths: [
       'src/agent/skill-lazy-loader.ts',
@@ -335,6 +460,12 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'bash -c "npx tsx scripts/control-tower/probe-skills.ts | grep -q \'## Available Skills\'"', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#0-12',
+      note: '判据件 scripts/control-tower/probe-skills.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑；判据含纯 grep 型步骤（判例 V-02 违规，须由本卡改写为断言型）',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 0-12 / 现状报告 坏点10',
   },
 
@@ -342,18 +473,26 @@ export const constructionItems: readonly ConstructionItem[] = [
   {
     id: '1-1',
     worker: 'win', batch: '第1批', block: 'K7',
+    verifier: 'mac',
     title: '一页纸偏离只告警不拦截',
     paths: ['src/agent/report-assembler.ts', 'scripts/golden-scenarios/'],
     dependsOn: [],
     acceptance: [
-      { run: 'bash scripts/golden-scenarios/run.sh GS-08', expectExit: 0 },
+      { run: 'bash scripts/golden-scenarios/GS-08-report-readable/run.sh', expectExit: 0 },  // V4(b) 修复：原路径 scripts/golden-scenarios/run.sh 从未在任何 ref 存在（phantom path）
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#1-1',
+      note: 'V4(b) 修复：改指本 ref 存在的 GS-08 场景执行器（原 scripts/golden-scenarios/run.sh 系 phantom path，从未在任何 ref 存在）；C 结构成立（场景走 common/fresh-db.ts 临时库，不触真实库）',
+      unverified: '未验：判据件已落本 ref，但本会话沙箱下实跑 exit 1（npx/TMPDIR 写受限，非断言失败）⇒ B 未判',
+    },
     source: '施工单.md 1-1',
   },
   {
     id: '1-2',
     worker: 'win', batch: '第1批', block: 'K7',
+    verifier: 'mac',
     title: '输出契约不可版本化',
     paths: [
       'src/l3/report-templates.ts',
@@ -365,11 +504,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx vitest run tests/l3/report-contract-versioned.test.ts', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#1-2',
+      note: '判据件 tests/l3/report-contract-versioned.test.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 1-2',
   },
   {
     id: '1-3',
     worker: 'win', batch: '第1批', block: 'K7',
+    verifier: 'mac',
     title: '客户模板位只有"报告"一种',
     paths: [
       'src/l3/report-template-loader.ts',
@@ -381,11 +527,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx vitest run tests/l3/report-template-client.test.ts', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#1-3',
+      note: '判据件 tests/l3/report-template-client.test.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 1-3',
   },
   {
     id: '1-4',
     worker: 'win', batch: '第1批', block: 'K6',
+    verifier: 'mac',
     title: '目标"传导到每个人"',
     paths: ['src/growth/goal-types.ts', 'src/growth/goal-store.ts'],
     dependsOn: [],
@@ -393,12 +546,19 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'sqlite3 data/synova.db "SELECT COUNT(*) FROM graph_nodes WHERE node_type LIKE \'goal%\'"', expectRowsGt: { table: 'graph_nodes', n: 0 } },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#1-4',
+      note: '判据不含文件引用（仅数据断言）⇒ A 无从判；依赖 gitignored 的 data/synova.db ⇒ 干净检出/CI 姿态下 C 结构性不成立',
+      unverified: '未验：判据仅数据断言且依赖 gitignored 的 data/synova.db ⇒ 干净检出下无法跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 1-4',
   },
   {
     id: '1-5',
     sharedWrite: ["3-7: src/routes/diagnosis.ts（1-5 消费 customer-config，3-7 接 Agent 化触发；须串行）"],
     worker: 'win', batch: '第1批', block: 'K7',
+    verifier: 'mac',
     title: 'customer-config 只解析不消费',
     paths: [
       'src/routes/diagnosis.ts',
@@ -409,11 +569,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx vitest run tests/routes/customer-config-consumed.test.ts', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#1-5',
+      note: '判据件 tests/routes/customer-config-consumed.test.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 1-5',
   },
   {
     id: '1-6',
     worker: 'win', batch: '第1批', block: 'K8',
+    verifier: 'mac',
     title: 'TraversalPermissionFilter 零接线',
     paths: [
       'src/l4/traversal-permission-filter.ts',
@@ -424,11 +591,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx vitest run tests/l4/traversal-permission.test.ts', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#1-6',
+      note: '判据件 tests/l4/traversal-permission.test.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 1-6',
   },
   {
     id: '1-7',
     worker: 'win', batch: '第1批', block: 'K1',
+    verifier: 'k3',
     title: '多岗位执法只在 1 处',
     paths: [
       'src/middleware/rbac.ts',
@@ -441,11 +615,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx vitest run tests/security/rbac-all-routes.test.ts', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L2', baseline: 'green',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#1-7',
+      note: '判据件 tests/security/rbac-all-routes.test.ts 在本 ref 存在，本会话于未修复基线实跑取到可复核输出（exit 0）',
+      unverified: '未验：判据在未修复基线上全绿（exit 0）⇒ B 不成立，不能区分未修/已修；须补区分性断言后重判',
+    },
     source: '施工单.md 1-7（⚠️ CTO 实测：origin/main 已修 rbac.ts:133-139）',
   },
   {
     id: '1-8',
     worker: 'win', batch: '第1批', block: 'K4',
+    verifier: 'cto',
     title: '时滞 0/55（承重件 W3，第 1 批最便宜）',
     paths: [
       'extensions/ontology/edge-types/*.json',
@@ -457,11 +638,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx vitest run tests/sentinel/edge-lag-consumed.test.ts', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#1-8',
+      note: '判据件 tests/sentinel/edge-lag-consumed.test.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 1-8 / 现状报告 W3',
   },
   {
     id: '1-9',
     worker: 'win', batch: '第1批', block: 'K4',
+    verifier: 'cto',
     title: '因果强度 10 条缺字段（承重件 W2）',
     paths: [
       'extensions/ontology/edge-types/*.json',
@@ -473,6 +661,12 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx vitest run tests/loops/direction-monitor.transfer-function.test.ts', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#1-9',
+      note: '判据件 tests/loops/direction-monitor.transfer-function.test.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 1-9 / 现状报告 W2',
   },
 
@@ -480,6 +674,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   {
     id: '2-1a',
     worker: 'win', batch: '第2批', block: 'K3',
+    verifier: 'cto',
     title: '测量值时序 · 表定义（承重件 W1 的 schema 侧）',
     paths: [
       'src/store/',
@@ -532,6 +727,12 @@ export const constructionItems: readonly ConstructionItem[] = [
       },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#2-1a',
+      note: '判据件 tests/store/metric-readings-schema.test.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单 2-1（拆自 2-1，按 DSH 式「一能力一包」：schema 与 writer 分离，只通过 INSERT 契约相连）',
   },
 
@@ -539,6 +740,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '2-1b',
     sharedWrite: ["3-8: src/sentinel/（2-1b 加写入侧，3-8 加新哨兵；同目录须串行）"],
     worker: 'win', batch: '第2批', block: 'K3',
+    verifier: 'cto',
     title: '测量值时序 · 写入侧（承重件 W1 的 writer 侧）',
     paths: ['src/sentinel/'],
     dependsOn: ['2-1a'],
@@ -549,11 +751,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#2-1b',
+      note: '判据不含文件引用（仅数据断言）⇒ A 无从判；依赖 gitignored 的 data/synova.db ⇒ 干净检出/CI 姿态下 C 结构性不成立',
+      unverified: '未验：判据仅数据断言且依赖 gitignored 的 data/synova.db ⇒ 干净检出下无法跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单 2-1（拆自 2-1）；写入侧 = src/sentinel（mac 域，archive/25 §三：只这三个写入点）',
   },
   {
     id: '2-2',
     worker: 'win', batch: '第2批', block: 'K5',
+    verifier: 'mac',
     title: '参数清单（含 W5 两层结构 layer 字段）—— 2-5 已并入本项',
     paths: ['docs/synova/coordination/'],
     dependsOn: ['2-1a', '2-6'],
@@ -564,12 +773,19 @@ export const constructionItems: readonly ConstructionItem[] = [
       },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#2-2',
+      note: '判据件 docs/synova/coordination/tools/check-param-list.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单 2-2 + 2-5 合并（同一份产物：清单本体 + 其 layer 字段；按选项①「不是独立项，是产物与字段」）',
   },
   {
     id: '2-3',
     sharedWrite: ["0-2: src/growth/feedback-collector.ts（同上）"],
     worker: 'win', batch: '第2批', block: 'K6',
+    verifier: 'mac',
     title: '反馈两通道分裂 + 正向值被 DDL 拒',
     paths: ['packages/evolution/', 'src/growth/feedback-collector.ts'],
     dependsOn: [],
@@ -577,23 +793,37 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'bash -c "sqlite3 data/synova.db \"SELECT COUNT(*) FROM feedback_log WHERE decision=\'confirm\'\" | grep -qv ^0$"', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#2-3',
+      note: '判据不含文件引用（仅数据断言）⇒ A 无从判；依赖 gitignored 的 data/synova.db ⇒ 干净检出/CI 姿态下 C 结构性不成立；判据含纯 grep 型步骤（判例 V-02 违规，须由本卡改写为断言型）',
+      unverified: '未验：判据仅数据断言且依赖 gitignored 的 data/synova.db ⇒ 干净检出下无法跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 2-3',
   },
   {
     id: '2-4',
     sharedWrite: ["0-11: src/tools/tool-registry.ts（同上）"],
     worker: 'win', batch: '第2批', block: 'K2',
+    verifier: 'k3',
     title: '写入门禁两道未接（是 2-1 的前提）',
-    paths: ['src/security/file-guard.ts', 'src/tools/tool-registry.ts'],
+    paths: ['src/security/file-guard.ts', 'src/tools/tool-registry.ts', 'tests/security/file-guard.test.ts'],  // A 修复：判据件并入本项写集
     dependsOn: ['0-11'],
     acceptance: [
       { run: 'npx vitest run tests/security/file-guard.test.ts', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L2', baseline: 'green',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#2-4',
+      note: '判据件 tests/security/file-guard.test.ts 在本 ref 存在，本会话于未修复基线实跑取到可复核输出（exit 0）；A 修复：判据件已并入本项写集',
+      unverified: '未验：判据在未修复基线上全绿（exit 0）⇒ B 不成立，不能区分未修/已修；须补区分性断言后重判',
+    },
     source: '施工单.md 2-4',
   },  {
     id: '2-6',
     worker: 'win', batch: '第2批', block: 'K5',
+    verifier: 'cto',
     title: 'compute 契约注册表不存在（承重件 W4）',
     paths: [
       'src/contract/',
@@ -607,11 +837,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx tsx scripts/control-tower/probe-compute-registry.ts', expectStdoutContains: 'COMPUTE-HHI-v1' },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#2-6',
+      note: '判据件 scripts/control-tower/probe-compute-registry.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 2-6（⚠️ 先定计数口径 U-4）',
   },
   {
     id: '2-7',
     worker: 'win', batch: '第2批', block: 'K5',
+    verifier: 'mac',
     title: 'overall 准度计量口径（"越用越准"的可测判据）',
     paths: ['docs/synova/coordination/tools/'],
     dependsOn: ['2-1b', '2-2', '2-3'],
@@ -622,6 +859,12 @@ export const constructionItems: readonly ConstructionItem[] = [
       },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#2-7',
+      note: '判据件 docs/synova/coordination/tools/probe-accuracy-trend.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单 2-7（原「补在哪」栏为空 ⇒ 按选项①改为「口径判据脚本」，落 CTO 域 —— 它是判据不是产品功能）',
   },
 
@@ -629,6 +872,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   {
     id: '3-1',
     worker: 'win', batch: '第3批', block: 'K9',
+    verifier: 'mac',
     title: '角色预设包（Role Pack）',
     paths: [
       'docs/synova/presets/roles/',
@@ -641,11 +885,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx tsx scripts/control-tower/probe-role-pack.ts --role finance', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#3-1',
+      note: '判据件 scripts/control-tower/probe-role-pack.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 3-1',
   },
   {
     id: '3-2',
     worker: 'win', batch: '第3批', block: 'K8',
+    verifier: 'mac',
     title: '岗位级知识层（第四层）',
     paths: [
       'src/l4/knowledge-store.ts',
@@ -656,11 +907,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx vitest run tests/l4/knowledge-scope.test.ts', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#3-2',
+      note: '判据件 tests/l4/knowledge-scope.test.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 3-2',
   },
   {
     id: '3-3',
     worker: 'win', batch: '第3批', block: 'K9',
+    verifier: 'mac',
     title: '建档通道（"建档" 0 命中）',
     paths: [
       'src/onboarding/',
@@ -671,11 +929,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx tsx scripts/control-tower/probe-onboarding.ts --dry-run', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#3-3',
+      note: '判据件 scripts/control-tower/probe-onboarding.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 3-3',
   },
   {
     id: '3-4',
     worker: 'win', batch: '第3批', block: 'K9',
+    verifier: 'mac',
     title: '追问由本体缺口驱动',
     paths: [
       'src/onboarding/gap-questioner.ts',
@@ -686,11 +951,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx vitest run tests/onboarding/gap-questioner.test.ts', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#3-4',
+      note: '判据件 tests/onboarding/gap-questioner.test.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 3-4（需图非空）',
   },
   {
     id: '3-5',
     worker: 'win', batch: '第3批', block: 'K4',
+    verifier: 'mac',
     title: '作业单元缺两件（实例 + 评估属性）',
     paths: ['extensions/ontology/activity/'],
     dependsOn: [],
@@ -698,12 +970,19 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'bash -c "sqlite3 data/synova.db \"SELECT COUNT(*) FROM graph_nodes WHERE node_type LIKE \'activity/%\'\" | grep -qv ^0$"', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#3-5',
+      note: '判据不含文件引用（仅数据断言）⇒ A 无从判；依赖 gitignored 的 data/synova.db ⇒ 干净检出/CI 姿态下 C 结构性不成立；判据含纯 grep 型步骤（判例 V-02 违规，须由本卡改写为断言型）',
+      unverified: '未验：判据仅数据断言且依赖 gitignored 的 data/synova.db ⇒ 干净检出下无法跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 3-5',
   },
   {
     id: '3-6',
     sharedWrite: ["3-7: src/agent/（3-6 readiness 工具，3-7 触发链；同目录须串行）"],
     worker: 'win', batch: '第3批', block: 'K9',
+    verifier: 'mac',
     title: 'agent_readiness 工具',
     paths: [
       'extensions/skills/',
@@ -715,12 +994,19 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx tsx scripts/control-tower/probe-agent-readiness.ts', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#3-6',
+      note: '判据件 scripts/control-tower/probe-agent-readiness.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 3-6',
   },
   {
     id: '3-7',
     sharedWrite: ["1-5: src/routes/diagnosis.ts（同上）"],
     worker: 'win', batch: '第3批', block: 'K7',
+    verifier: 'mac',
     title: 'Agent 化矩阵的触发点',
     paths: [
       'src/routes/diagnosis.ts',
@@ -732,12 +1018,19 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx vitest run tests/agent/agent-matrix-trigger.test.ts', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#3-7',
+      note: '判据件 tests/agent/agent-matrix-trigger.test.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 3-7',
   },
   {
     id: '3-8',
     sharedWrite: ["2-1b: src/sentinel/（同上）"],
     worker: 'win', batch: '第3批', block: 'K3',
+    verifier: 'mac',
     title: 'AI 化机会窗口哨兵（宪章 3.6 报正向）',
     paths: [
       'src/sentinel/',
@@ -749,12 +1042,19 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx tsx scripts/control-tower/probe-sentinel.ts agent-opportunity-window', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#3-8',
+      note: '判据件 scripts/control-tower/probe-sentinel.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 3-8',
   },
   {
     id: '3-9',
     sharedWrite: ["3-11: extensions/（同上）"],
     worker: 'win', batch: '第3批', block: 'K9',
+    verifier: 'mac',
     title: '生态准入三字段',
     paths: [
       'extensions/',
@@ -766,11 +1066,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx tsx scripts/control-tower/probe-eco-fields.ts', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#3-9',
+      note: '判据件 scripts/control-tower/probe-eco-fields.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 3-9',
   },
   {
     id: '3-10',
     worker: 'win', batch: '第3批', block: 'K10',
+    verifier: 'mac',
     title: 'DSH 三件公共前段（出站网关 / 脱敏监听 / 双 baseURL）',
     paths: [
       '.dsh/',
@@ -782,12 +1089,19 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'bash scripts/control-tower/probe-egress.sh', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#3-10',
+      note: '判据件 scripts/control-tower/probe-egress.sh 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 3-10',
   },
   {
     id: '3-11',
     sharedWrite: ["3-9: extensions/（3-11 加 L1.5 层，3-9 加声明三字段；同目录须串行）"],
     worker: 'win', batch: '第3批', block: 'K4',
+    verifier: 'mac',
     title: '专业包层（L1.5）机制',
     paths: [
       'extensions/',
@@ -799,11 +1113,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx vitest run tests/extensions/layer-precedence.test.ts', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#3-11',
+      note: '判据件 tests/extensions/layer-precedence.test.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '施工单.md 3-11',
   },
   {
     id: 'PL-04',
     worker: 'win', batch: '第2批', block: 'K5',
+    verifier: 'mac',
     title: '三层契约贯通（写入类型 ↔ 哨兵查询类型 ↔ field-mapping 白名单）',
     paths: [
       'src/contract/', 'src/adapters/', 'extensions/ontology/',
@@ -816,11 +1137,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx tsx docs/synova/coordination/tools/probe-three-layer-contract.ts --case cash-runway', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#PL-04',
+      note: '判据件 docs/synova/coordination/tools/probe-three-layer-contract.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '边界评估/00-最终方案.md:48（领域智能 20 项之第 3 项，属【必须自建】）；创始人 2026-10-05 裁 A 归入 K5',
   },
   {
     id: '0-9bis',
     worker: 'win', batch: '第0批', block: 'K1',
+    verifier: 'mac',
     title: '知识审计不可归属（req.userId 恒 undefined ⇒ user_id 恒 anonymous）',
     paths: ['src/routes/knowledge.ts'],  // 收窄：auth.ts 归 0-9(已废) 遗留，若需改则走提案
     dependsOn: [],
@@ -828,11 +1156,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: "sqlite3 data/synova.db \"SELECT COUNT(*) FROM knowledge_audit WHERE user_id='anonymous'\"", expectRowsEq: { table: 'knowledge_audit', n: 0 } },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#0-9bis',
+      note: '判据不含文件引用（仅数据断言）⇒ A 无从判；依赖 gitignored 的 data/synova.db ⇒ 干净检出/CI 姿态下 C 结构性不成立',
+      unverified: '未验：判据仅数据断言且依赖 gitignored 的 data/synova.db ⇒ 干净检出下无法跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: 'CTO 2026-10-05 实测：auth.ts 零处写 req.userId；knowledge.ts:40 读它并 `|| \'anonymous\'` ⇒ 审计行不可归属。取代已作废的 0-9（前提被证伪）。完成标准②须在【跑一次真 JWT 查询之后】测得',
   },
   {
     id: '1-7bis',
     worker: 'win', batch: '第1批', block: 'K1',
+    verifier: 'mac',
     title: 'RbacContext 无 org/team 维度（rbac.ts:127 department 恒 undefined）—— 接口变更，先提案',
     paths: ['docs/synova/coordination/提案/'],  // 专属子目录，避免与 2-2 写集相撞
     dependsOn: [],
@@ -840,11 +1175,17 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'test -f docs/synova/coordination/提案/RbacContext-org-team-维度.md', expectExit: 0 },
     ],
     status: 'proposal',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#1-7bis',
+      note: '提案项（接口变更先提案）：未派单 ⇒ 无判据可跑，A/B/C/D 均不适用',
+    },
     source: '产品线 2026-10-05 独立复核四姿态实测：DevMode 无 secret 姿态下匿名 200 + 真实工作台数据 ⇒ 1-7 的守卫是身份级非越权级。根因=RbacContext 缺 org/team 维度。CTO 已批立项；**权限模型接口先冻结**（创始人 2026-10-05 裁）',
   },
   {
     id: 'K1-WH',
     worker: 'win', batch: '第0批', block: 'K1',
+    verifier: 'k3',
     title: '飞书 webhook 在硬化姿态下必然 401（生产功能不可达）',
     paths: [
       'src/middleware/auth.ts', 'src/routes/im.ts',
@@ -856,11 +1197,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx vitest run tests/security/feishu-webhook-signature.test.ts', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#K1-WH',
+      note: '判据件 tests/security/feishu-webhook-signature.test.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '产品线 K1 窗口上报 + CTO 实测（origin/main@65aa62dea）：jwtAuthMiddleware 全局挂载于 server.ts:344；isWhitelisted() 23 条不含 /api/im/feishu/webhook ⇒ 生产姿态必 401。与 1-7/1-7bis 同族（DevMode 掩盖）。🔴 修复方向不得简单加白名单（公网入口须验签）',
   },
   {
     id: 'RB-01',
     worker: 'win', batch: '第1批', block: 'K11',
+    verifier: 'k3',
     title: '多租户隔离：跨 orgId 读必须被拒（含 DevMode 姿态）',
     paths: [
       'src/middleware/auth.ts', 'src/middleware/rbac.ts',
@@ -872,11 +1220,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx tsx scripts/control-tower/probe-rbac-multitenant.ts --case cross-org', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#RB-01',
+      note: '判据件 scripts/control-tower/probe-rbac-multitenant.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '创始人 2026-10-05：「DevMode 这个肯定是不允许的」+「云端服务肯定是不能 A 客户读 B 客户数据」。判据须在【硬化姿态】与【DevMode 姿态】各跑一次（构造跨 orgId 请求 ⇒ 必被拒），不依赖"真有第二个租户"',
   },
   {
     id: 'RB-02',
     worker: 'win', batch: '第1批', block: 'K11',
+    verifier: 'k3',
     title: '部门轴：departmentIds（复数）+ 文件驱动真源 + resolveContext 单一入口',
     paths: [
       'src/middleware/auth.ts', 'src/agent/prompt-assembler.ts',
@@ -888,11 +1243,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx tsx scripts/control-tower/probe-department-axis.ts --case multi-dept', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#RB-02',
+      note: '判据件 scripts/control-tower/probe-department-axis.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '创始人 2026-10-05：「中层就会涉及多个部门」⇒ 必须复数；「部门唯一真源赞同文件驱动」（便于不同客户调整）。🔴 提案原稿的 departmentId（单数）作废。改造面：src/ 里 teamId/department 已 428 处 / 74 文件 ⇒ 必须有 resolveContext 单一入口，否则 74 文件各写各的判断',
   },
   {
     id: 'RB-03',
     worker: 'win', batch: '第2批', block: 'K11',
+    verifier: 'k3',
     title: '权限项模型：PermissionId[] + 角色为可配包（五档仅出厂默认）',
     paths: [
       'src/middleware/rbac.ts',
@@ -904,11 +1266,18 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx tsx scripts/control-tower/probe-permission-grants.ts --case custom-role', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#RB-03',
+      note: '判据件 scripts/control-tower/probe-permission-grants.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '创始人 2026-10-05：「有一堆权限可以选择，根据岗位或角色灵活配置，不能根据岗位定死」+ 举例（同是市场总监，A 客户能看财务、B 客户不能）⇒ **不是 RBAC，是 Grant/ACL 模型**（角色只是打包）。五档保留为出厂默认，但**不是类型的一部分**',
   },
   {
     id: 'RB-04',
     worker: 'win', batch: '第3批', block: 'K11',
+    verifier: 'k3',
     title: 'BR-3 重构：从 RBAC 档位 → Grants + 客户自定义配置面',
     paths: [
       'extensions/', 'src/middleware/rbac.ts',
@@ -920,18 +1289,31 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx tsx scripts/control-tower/probe-role-config.ts --case customer-defined', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L1', baseline: 'unrunnable',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#RB-04',
+      note: '判据件 scripts/control-tower/probe-role-config.ts 不在本 ref（git cat-file -e 失败），须由本卡创建后才可跑',
+      unverified: '未验：判据件不在本 ref ⇒ 无法在未修复基线上跑，B 无从判（判例 V-09 显式列出，禁写成已核）',
+    },
     source: '创始人 2026-10-05：「出厂设置5档，但是客户可以自己配。这个在企业应用里一定要可以调整，就像调整组织架构一样」。本项含客户配置面（文件驱动）',
   },
   {
     id: '3-12',
     worker: 'win', batch: '第3批', block: 'K6',
+    verifier: 'mac',
     title: '进化回环 E2/E3（跨客户模式 / 联邦）',
-    paths: ['packages/evolution/src/global-analyzer.ts'],
+    paths: ['packages/evolution/src/global-analyzer.ts', 'tests/evolution/global-analyzer.test.ts'],  // A 修复：判据件并入本项写集
     dependsOn: ['2-3'],
     acceptance: [
       { run: 'npx vitest run tests/evolution/global-analyzer.test.ts', expectExit: 0 },
     ],
     status: 'todo',
+    verification: {
+      level: 'L2', baseline: 'green',
+      evidence: 'docs/synova/product-lines/evidence/V3V4V5/per-item.md#3-12',
+      note: '判据件 tests/evolution/global-analyzer.test.ts 在本 ref 存在，本会话于未修复基线实跑取到可复核输出（exit 0）；A 修复：判据件已并入本项写集',
+      unverified: '未验：判据在未修复基线上全绿（exit 0）⇒ B 不成立，不能区分未修/已修；须补区分性断言后重判',
+    },
     source: '施工单.md 3-12（等客户，非技术阻塞）',
   },
 ];
@@ -1008,7 +1390,7 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
   {
     id: 'K7', name: '诊断→报告交付链', items: ['1-1', '1-2', '1-3', '1-5', '3-7'],
     blockAcceptance: [
-      { run: 'bash scripts/golden-scenarios/run.sh GS-08', expectExit: 0 },
+      { run: 'bash scripts/golden-scenarios/GS-08-report-readable/run.sh', expectExit: 0 },  // V4(b) 修复：原路径 scripts/golden-scenarios/run.sh 从未在任何 ref 存在（phantom path）
     ],
     source: 'T3 §二 K7',
   },
