@@ -7,7 +7,7 @@
 ## 一句话
 
 三个门都是**机器可跑**的：违规 ⇒ exit 1 + 具名 token；合法 ⇒ exit 0；检查自身失败 ⇒ exit 2。
-每条判据都有**构造得出来的反例**（`--selftest` 内置 30 个夹具，25/25 规则被覆盖）。
+每条判据都有**构造得出来的反例**（`--selftest` 内置 31 个夹具，25/25 规则被覆盖）。
 
 ## 判据规格来源（CAS 声明）
 
@@ -36,7 +36,7 @@ TOOL=docs/synova/coordination/tools/check-coordination-schema.ts
 
 | # | 判据 | 复跑命令 | 期望 |
 |---|---|---|---|
-| 0 | 判别性自证（**先跑这条**） | `node --experimental-strip-types $TOOL --selftest` | 30 cases / failed=0 / covered_rules=25/25，exit **0** |
+| 0 | 判别性自证（**先跑这条**） | `node --experimental-strip-types $TOOL --selftest` | 31 cases / failed=0 / covered_rules=25/25，exit **0** |
 | 1 | 全树状态（合法 ⇒ 绿） | `node --experimental-strip-types $TOOL` | `SUMMARY ... fail=0`，exit **0** |
 | 2 | 变更集模式（真实仓库） | `node --experimental-strip-types $TOOL --since origin/main` | `fail=0`，exit **0** |
 | 3 | 严格模式（跳过=失败） | `node --experimental-strip-types $TOOL --strict` | 存量 DEBT 与未给 `--since` ⇒ exit **1** |
@@ -77,6 +77,10 @@ TOOL=docs/synova/coordination/tools/check-coordination-schema.ts
 
 **声明形态**：整行（首个非空 token 为 `expectedRevision:`）或 JSON 字段 `expectedRevision`。
 散文里提到该词**不会**触发 —— 避免把研究文档的叙述当声明。
+
+**非法 JSON 怎么处置**（实测仓内有此类文件）：`.json` 解析失败时走**正则兜底**，仍要扫到 `expectedRevision`（`V10-declaration-inside-unparseable-json` 用例证明兜底有效）；兜底也没命中 ⇒ **显式计数** `unparseable_json_skipped=N` 并列出示例。
+两条边界都不越权：**不静默跳过**（跳过必须打印），也**不把「非法 JSON」判成本门违规**（那是别的门的判据 —— 若拿它判红，仓内无关的坏 JSON 会把本门变成误报工厂）。
+同理，目录读不到 ⇒ `WALK_FAILED` + exit 2（扫描空间变小必须显式失败）。
 
 **为什么 `STALE` 只在变更集里判**（重要，别误读）：CAS 是**写时前置条件**（对标 DSH
 `settings.mutate(ns, ops, expectedRevision)`：冲突在 mutate 那一刻判），不是永久不变量。
@@ -172,7 +176,7 @@ bash docs/synova/product-lines/evidence/V10V11V12/run-evidence.sh --check  # 对
 
 | 文件 | 内容 |
 |---|---|
-| `raw/00-selftest.txt` | 30 个夹具逐条（每规则的反例，改坏即红） |
+| `raw/00-selftest.txt` | 31 个夹具逐条（每规则的反例，改坏即红） |
 | `raw/01-state-mode.txt` | 全树状态模式（合法 ⇒ exit 0） |
 | `raw/02-changemode.txt` | `--since origin/main` 变更集模式（真实仓库） |
 | `raw/03-strict.txt` | `--strict`（跳过=失败 ⇒ exit 1） |

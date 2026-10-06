@@ -2,7 +2,7 @@
 $ node --experimental-strip-types docs/synova/coordination/tools/check-coordination-schema.ts --since origin/main --cas-file docs/synova/product-lines/evidence/V10V11V12/README.md
 --- output ---
 [PASS] V10-CAS-ROOT-EXISTS  -- cas-root=.
-[PASS] V10-CAS-PARSE  -- 声明格式合法 declarations=1
+[PASS] V10-CAS-PARSE  -- 声明格式合法 declarations=1 unparseable_json_skipped=0
 [PASS] V10-CAS-SELF  -- no self-referencing declarations
 [PASS] V10-CAS-PRESENT  file=docs/synova/product-lines/evidence/V10V11V12/README.md  -- declarations=1
 [PASS] V10-CAS-STALE  -- declarations-in-changeset=1 all match baseline origin/main

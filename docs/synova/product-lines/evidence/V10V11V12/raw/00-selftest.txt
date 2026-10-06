@@ -8,6 +8,7 @@ SELFTEST ok   V10-dangling                           expect_exit=1 actual_exit=1
 SELFTEST ok   V10-malformed                          expect_exit=1 actual_exit=1
 SELFTEST ok   V10-self-reference                     expect_exit=1 actual_exit=1
 SELFTEST ok   V10-cas-root-missing                   expect_exit=1 actual_exit=1
+SELFTEST ok   V10-declaration-inside-unparseable-json expect_exit=0 actual_exit=0
 SELFTEST ok   V10-cas-file-without-declaration       expect_exit=1 actual_exit=1
 SELFTEST ok   V11-green                              expect_exit=0 actual_exit=0
 SELFTEST ok   V11-archive-but-active                 expect_exit=1 actual_exit=1
@@ -32,5 +33,5 @@ SELFTEST ok   V12-path-ratchet                       expect_exit=1 actual_exit=1
 SELFTEST ok   V12-path-debt-not-blocking             expect_exit=0 actual_exit=0
 SELFTEST ok   V11-root-missing-blocks                expect_exit=1 actual_exit=1
 SELFTEST ok   V12-root-missing-blocks                expect_exit=1 actual_exit=1
-SELFTEST SUMMARY cases=30 failed=0 covered_rules=25/25
+SELFTEST SUMMARY cases=31 failed=0 covered_rules=25/25
 --- exit=0 ---

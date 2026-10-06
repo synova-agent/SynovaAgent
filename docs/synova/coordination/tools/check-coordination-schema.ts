@@ -199,8 +199,10 @@ function walkFiles(rootAbs: string): string[] {
     let entries: fs.Dirent[];
     try {
       entries = fs.readdirSync(cur, { withFileTypes: true });
-    } catch {
-      continue;
+    } catch (err) {
+      // 读不到目录 = 扫描空间静默变小（fail-open）⇒ 显式失败，禁 continue 跳过
+      const e = err as { message?: string };
+      throw new CheckerError('WALK_FAILED', `cannot read directory ${cur}: ${e.message}`);
     }
     for (const ent of entries) {
       const abs = path.join(cur, ent.name);
@@ -247,6 +249,8 @@ interface CasParseResult {
   decls: CasDeclaration[];
   malformed: { file: string; line: number; raw: string; why: string }[];
   present: { file: string; line: number; raw: string }[];
+  /** 非法 JSON 且兜底未命中 ⇒ 本件跳过该文件的扫描；**必须显式计数**（跳过 = 失败的对立面：显式报告） */
+  unparseableJson: { file: string; why: string }[];
 }
 
 /** 从一段文本里抽取 CAS 声明（.md 用整行；.json 用 expectedRevision 字段）。 */
@@ -254,6 +258,7 @@ function parseCasFromText(file: string, text: string): CasParseResult {
   const decls: CasDeclaration[] = [];
   const malformed: { file: string; line: number; raw: string; why: string }[] = [];
   const present: { file: string; line: number; raw: string }[] = [];
+  const unparseableJson: { file: string; why: string }[] = [];
   const lines = text.split(/\r?\n/);
 
   if (file.endsWith('.json')) {
@@ -261,10 +266,24 @@ function parseCasFromText(file: string, text: string): CasParseResult {
       const parsed: unknown = JSON.parse(text);
       collectJsonDecls(parsed, file, decls, malformed, present);
     } catch (err) {
-      // 非法 JSON 不是本门的判据（有别的门负责）；只在没有声明时体现为“无声明”
-      void err;
+      // 非法 JSON 的判据不归本门（有别的门负责），但**不许因此漏掉自己的声明字段**：
+      // 走正则兜底仍能扫到 expectedRevision；扫不到就是真的没有，不是静默跳过。
+      const e = err as { message?: string };
+      const found = /"expectedRevision"\s*:\s*"([^"]*)"/g;
+      let m = found.exec(text);
+      let hits = 0;
+      while (m !== null) {
+        hits += 1;
+        pushJsonDeclFallback(m[1], file, decls, malformed, present);
+        m = found.exec(text);
+      }
+      if (hits === 0) {
+        // 非法 JSON 本身不是本门的判据（别的门负责），但**跳过必须显式**
+        // ⇒ 计入 unparseableJson 并在 V10-CAS-PARSE 的 detail 里打印，绝不静默。
+        unparseableJson.push({ file, why: e.message ?? 'JSON.parse failed' });
+      }
     }
-    return { decls, malformed, present };
+    return { decls, malformed, present, unparseableJson };
   }
 
   for (let i = 0; i < lines.length; i += 1) {
@@ -280,7 +299,23 @@ function parseCasFromText(file: string, text: string): CasParseResult {
     }
     decls.push({ file, line: i + 1, target: spec[1], algo: spec[2].toLowerCase(), digest: spec[3] });
   }
-  return { decls, malformed, present };
+  return { decls, malformed, present, unparseableJson };
+}
+
+function pushJsonDeclFallback(
+  raw: string,
+  file: string,
+  decls: CasDeclaration[],
+  malformed: { file: string; line: number; raw: string; why: string }[],
+  present: { file: string; line: number; raw: string }[],
+): void {
+  present.push({ file, line: 0, raw });
+  const spec = CAS_SPEC_RE.exec(raw);
+  if (spec === null) {
+    malformed.push({ file, line: 0, raw, why: 'expected <path>@<algo>:<12..64 hex>' });
+    return;
+  }
+  decls.push({ file, line: 0, target: spec[1], algo: spec[2].toLowerCase(), digest: spec[3] });
 }
 
 function collectJsonDecls(
@@ -326,6 +361,7 @@ function collectCasFromTree(repoRoot: string, casRootAbs: string, casFile: strin
   const decls: CasDeclaration[] = [];
   const malformed: { file: string; line: number; raw: string; why: string }[] = [];
   const present: { file: string; line: number; raw: string }[] = [];
+  const unparseableJson: { file: string; why: string }[] = [];
   for (const abs of files) {
     const rel = relOf(repoRoot, abs);
     let text: string;
@@ -339,8 +375,9 @@ function collectCasFromTree(repoRoot: string, casRootAbs: string, casFile: strin
     decls.push(...r.decls);
     malformed.push(...r.malformed);
     present.push(...r.present);
+    unparseableJson.push(...r.unparseableJson);
   }
-  return { decls, malformed, present };
+  return { decls, malformed, present, unparseableJson };
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -455,7 +492,15 @@ function checkV10(opts: Options, findings: Finding[]): void {
     findings.push({
       rule: 'V10-CAS-PARSE',
       status: 'PASS',
-      detail: `声明格式合法 declarations=${tree.decls.length + tree.malformed.length}`,
+      detail:
+        `声明格式合法 declarations=${tree.decls.length + tree.malformed.length}` +
+        ` unparseable_json_skipped=${tree.unparseableJson.length}` +
+        (tree.unparseableJson.length > 0
+          ? ` 示例=${tree.unparseableJson
+              .slice(0, 3)
+              .map((u) => u.file)
+              .join(' , ')}（非法 JSON 非本门判据，但跳过已显式计数）`
+          : ''),
     });
   }
 
@@ -1506,6 +1551,32 @@ function selftestCases(): SelfTestCase[] {
     args: ['--cas-root', 'no-such-cas-root'],
     setup: (repo) => {
       baseRepo(repo);
+    },
+  });
+  cases.push({
+    id: 'V10-declaration-inside-unparseable-json',
+    expect: 0,
+    expectIncludes: ['[PASS] V10-CAS-PRESENT', '[PASS] V10-CAS-STALE'],
+    covers: ['V10-CAS-PARSE'],
+    args: [
+      '--cas-root',
+      'docs/synova/coordination',
+      '--since',
+      'HEAD',
+      '--cas-file',
+      'docs/synova/coordination/dispatch.json',
+    ],
+    setup: (repo) => {
+      baseRepo(repo);
+      writeFileAt(repo, SELFTEST_TARGET, '{\n  "task_id": "D0",\n  "status": "spec_done"\n}\n');
+      commitAll(repo, 'base');
+      const h = sha256(fs.readFileSync(path.join(repo, SELFTEST_TARGET)));
+      // 故意非法 JSON（尾逗号）—— 兜底正则仍必须扫到声明，否则就是静默跳过
+      writeFileAt(
+        repo,
+        'docs/synova/coordination/dispatch.json',
+        `{\n  "expectedRevision": "${SELFTEST_TARGET}@sha256:${h}",\n}\n`,
+      );
     },
   });
   cases.push({

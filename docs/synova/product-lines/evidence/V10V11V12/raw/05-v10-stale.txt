@@ -5,7 +5,7 @@
 $ (cd <fixture> && node docs/synova/coordination/tools/check-coordination-schema.ts --repo-root <fixture> --cas-root .cas-empty --since HEAD --cas-file docs/synova/coordination/dispatch.md)
 --- output ---
 [PASS] V10-CAS-ROOT-EXISTS  -- cas-root=.cas-empty
-[PASS] V10-CAS-PARSE  -- 声明格式合法 declarations=1
+[PASS] V10-CAS-PARSE  -- 声明格式合法 declarations=1 unparseable_json_skipped=0
 [PASS] V10-CAS-SELF  -- no self-referencing declarations
 [PASS] V10-CAS-PRESENT  file=docs/synova/coordination/dispatch.md  -- declarations=1
 [FAIL] V10-CAS-STALE  file=docs/synova/coordination/dispatch.md  line=5  token=STALE  -- 写者声明的基线已过期 —— target=docs/synova/coordination/target.json declared=sha256:fb2f08409e390cf9a70096ef876b7c76553056fff6b953f20cb456ae7ffbdcde actual@HEAD=sha256:5ff3473047128e5a9bd297d5f98d7db57e39fc59a4f599ea2473a905b9228762 （重新读取目标版本后再提交；禁静默覆盖）

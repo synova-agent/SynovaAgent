@@ -2,7 +2,7 @@
 $ node --experimental-strip-types docs/synova/coordination/tools/check-coordination-schema.ts --strict
 --- output ---
 [PASS] V10-CAS-ROOT-EXISTS  -- cas-root=.
-[PASS] V10-CAS-PARSE  -- 声明格式合法 declarations=1
+[PASS] V10-CAS-PARSE  -- 声明格式合法 declarations=1 unparseable_json_skipped=6 示例=.codex/audit-reports/D1144.json , .codex/audit-reports/V10V11V12.json , .codex/audit/audit-result.json（非法 JSON 非本门判据，但跳过已显式计数）
 [PASS] V10-CAS-SELF  -- no self-referencing declarations
 [NOT-EVALUATED] V10-CAS-PRESENT  reason=no --cas-file given (presence is only asserted for a named dispatch file)  -- 未指定 --cas-file：不要求“某文件必须有声明”
 [NOT-EVALUATED] V10-CAS-STALE  reason=no --since ref  -- 未给 --since：变更集未定义，无法判断“写者基于的版本”是否已过期

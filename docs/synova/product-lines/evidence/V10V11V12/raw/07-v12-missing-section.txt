@@ -4,7 +4,7 @@
 $ (cd <fixture> && node docs/synova/coordination/tools/check-coordination-schema.ts --repo-root <fixture> --cas-root .cas-empty)
 --- output ---
 [PASS] V10-CAS-ROOT-EXISTS  -- cas-root=.cas-empty
-[PASS] V10-CAS-PARSE  -- 声明格式合法 declarations=0
+[PASS] V10-CAS-PARSE  -- 声明格式合法 declarations=0 unparseable_json_skipped=0
 [PASS] V10-CAS-SELF  -- no self-referencing declarations
 [NOT-EVALUATED] V10-CAS-PRESENT  reason=no --cas-file given (presence is only asserted for a named dispatch file)  -- 未指定 --cas-file：不要求“某文件必须有声明”
 [NOT-EVALUATED] V10-CAS-STALE  reason=no --since ref  -- 未给 --since：变更集未定义，无法判断“写者基于的版本”是否已过期
