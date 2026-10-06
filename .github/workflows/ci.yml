@@ -187,7 +187,15 @@ jobs:
     # 公式 = max(P95×1.5, 中位数×3)）：audit 1 / Test-Kit(ubuntu) 1 / Golden Case 2 /
     # Gate Integrity 2 / Test-Kit(windows) 3 / Architecture 6 / Checker Review 6 /
     # Integration 6 / TypeScript+Iron Laws 7 / Vitest 8 / Control Tower(ubuntu) 14 / (windows) 106（D1109 后**未重取**：口径要 n=12 同分布样本，现 n=1）。
-    timeout-minutes: 8
+    # 🔴 W1d/D1164（治理线，2026-10-06）: 8 → 15。**实测该 job 被自己的 timeout 杀掉**：
+    #   step「Run tests」在**3/3** 条 run 里 conclusion=cancelled（37364788318 / 37421437721 /
+    #   37423639714），每条都在 job 起始后 **~8m15s** 终止 ⇒ 是 timeout 杀，不是测试失败。
+    #   shard 1/2 实测跑到 6m57s 仍被切；同 run 的 shard 2/2「Run tests」只用 46s ⇒ 严重不均。
+    #   ⚠️ 该 job 承载**必需 context** `Vitest (1/2)` ⇒ 非 docs-only PR 因此永久 blocked。
+    #   原基线（注释里 n=12）口径是「只取 success」——而 main 的 run 全是 docs-only（skip），
+    #   样本里根本没有"真跑的非 docs run" ⇒ 8 分钟是**没被真实负载校准过**的值。
+    #   若 15 分钟仍被杀，则不是超时问题而是 shard 不均/测试挂死（另卡）。
+    timeout-minutes: 15
     name: Vitest (${{ matrix.shard }})
     needs: quality
     # D1111/A3 缺陷 B 修（研究院 A3 提案，机械实现）: 上游 quality 红时，job 级无 `if:` ⇒ 本 job
