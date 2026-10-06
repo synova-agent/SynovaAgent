@@ -9,9 +9,10 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   4 质量根（硬阻断）: ①as any ②测试配对+expect ③Secrets ④接线物理事实
 #     + 特例 G12d 生成物单点 / G13 技能同步（spec 明示保留）
 #   3 声明类硬闸（D1148 合并 15→3）: ①brief schema ②brief↔代码一致性 ③可证伪 Done
-#   旁路（只打印、不判红、不进 gate-hits）: 验收 CI、Q0c、plan-integrity non-Q2、
+#   旁路（只打印、不判红、不进 gate-hits）: Q0c、plan-integrity non-Q2、
 #     G12c dev doc 写集、G12d 声称↔证据表
 #   ↳ D1171（P0-5）撤旁路复执法: D782 D1/D2、D734 预算 → v5_soft（本地软/CI strict 硬）
+#   ↳ D1176（K3 整改）: 验收 CI 同转 v5_soft（处置表行#5 理由不成立，唯一调用点无执行方）
 #   退役: opt_check「PRD 对照」（261 次命中/永不阻断，注释指向 D1148）
 #   软提示（不拦本地提交）: 架构边界 ⑥契约门禁 ⑧empty catch ⑩DiagnosticModule/专家配置
 # 覆盖矩阵: 结构断言（硬/旁路/退役归属）+ 行为断言（as any 实拦 / 闸② 实拦 + 沙箱降软）
@@ -79,7 +80,6 @@ pc_code() { grep -vE '^[[:space:]]*#' "$PC"; }
 pc_code > "$PC_CODE_FILE" || true
 pcgrep() { grep -qF -- "$1" "$PC_CODE_FILE"; }
 KEEP_BYPASS=(
-  'note_check "验收 CI (V3.9, exit='
   'note_check "plan-integrity: non-Q2 项'
   'note_check "G12c dev doc 写集验证'
   'note_check "G12d 声称↔证据对照表'
@@ -92,6 +92,7 @@ KEEP_V5SOFT=(
   'v5_soft "D782 D1 文档真相（D1171 撤旁路复执法）"'
   'v5_soft "D782 D2 登记门禁（D1171 撤旁路复执法）"'
   'v5_soft "D734 PR 预算（D1171 撤旁路复执法）"'
+  'v5_soft "验收 CI (V3.9)（D1176 K3 整改复执法）"'
 )
 for k in "${KEEP_V5SOFT[@]}"; do
   pcgrep "$k" && ok "撤旁路[D1171]: $k" || no "应 v5_soft 却缺失/被回退: $k"
@@ -103,7 +104,7 @@ else
   no "闸① 未收编 Q0c（Q0 系列成员缺失）"
 fi
 # 反向断言: 旁路/收编项不得仍挂在阻断路径上（只看代码行；hard_check/soft_check 命中即判红）
-for bad in 'hard_check "D734' 'soft_check "D1 文档真相' 'v5_soft "验收 CI' 'v5_soft "plan-integrity' 'v5_soft "Q0c' 'bypass_run "D782' 'bypass_run "D734'; do
+for bad in 'hard_check "D734' 'soft_check "D1 文档真相' 'v5_soft "plan-integrity' 'v5_soft "Q0c' 'bypass_run "D782' 'bypass_run "D734' 'note_check "验收 CI'; do
   if pcgrep "$bad"; then no "旁路项仍在阻断路径: $bad"; else ok "已离开阻断路径: $bad"; fi
 done
 # D1148 退役: opt_check（PRD 对照，261 次命中/永不阻断）检查点 + 死函数必须清零

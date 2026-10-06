@@ -9,7 +9,7 @@
    ——显式执行 + `v5_soft`（输出保留、本地软提示、CI strict 硬阻断）。
    依据（铁规⑧ "Enforce a decision in the operation that makes it"）: 旁路不判红、CI 不转硬
    = listener 型非执法；D1148 撤回留痕自认 D734「该门禁当前无阻断执行方」。
-2. **旁路家族处置表**（11 处 grep 命中 = 3 调用点 + 定义块 + 留痕注释；旁路观测点家族全量判定）:
+2. **旁路家族处置表**（11 处 grep 命中 = 3 调用点 + 定义块 + 留痕注释；旁路观测点家族全量判定；↳ D1176 K3 整改后 = 4 转 7 留）:
 
 | # | 位置 | 项 | 处置 | 理由 |
 |---|------|----|------|------|
@@ -17,7 +17,7 @@
 | 2 | :1680 | D782 D2 登记门禁 | **转 v5_soft** | 同上；W1/W2 接线断言依赖字面量（保留） |
 | 3 | :1715 | D734 PR 预算 | **转 v5_soft** | P0-5 明令；撤回留痕自认「无阻断执行方」=门禁虚设；阈值不动（归 #1017） |
 | 4 | :1081 | plan-integrity non-Q2 项 | 留（note_check） | plan.json 契约明文 deferred——后续阶段执行是**设计行为**非违规 |
-| 5 | :1316 | 验收 CI (V3.9) | 留（note_check） | 验收以 CI Iron Laws 为权威；本地跑全量验收破 pre-commit <10s 预算 |
+| 5 | :1316 | 验收 CI (V3.9) | **转 v5_soft**（D1176 K3 整改） | K3 判原理由不成立：note_check 无 SYNO_CI 分支且本处是 check-acceptance-ci.sh 全仓唯一调用点 ⇒ "留 = 无执行方"复发（第 3 次）；par_start 并行腿不破 <10s 预算 |
 | 6 | :1617 | G12c dev doc 写集 | 留（note_check） | 同判据已有更强执行点（CI merge_writeset_gate D708），避免双计数 |
 | 7 | :1629 | G12d 声称↔证据表 | 留（note_check） | 对照表产出供 K3 审计消费，无机器可判阈值 |
 | 8 | :1675 | D1 脚本缺失 fallback | 留（note_check） | CI 完整 checkout 不可能命中；存在性另由接线断言（W1/W2）保证 |

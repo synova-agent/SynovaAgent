@@ -1316,7 +1316,14 @@ AC_OUT=""
 AC_RC=0
 par_collect acceptance-ci "$PAR_ACCEPTANCE" > "$PAR_DIR/acceptance-ci.captured" 2>&1 || AC_RC=$?
 AC_OUT="$(cat "$PAR_DIR/acceptance-ci.captured" 2>/dev/null || true)"
-[ "$AC_RC" -ne 0 ] && note_check "验收 CI (V3.9, exit=${AC_RC})（D1148 转旁路）" "$(printf '%s\n' "$AC_OUT" | grep -v '^[[:space:]]*$' | head -3)"
+# D1176（K3 整改，2026-10-07）: 验收 CI 复执法 —— D1148 转旁路时自认「现无阻断执行方」，
+#   K3 审计 #1206 判处置表行#5 理由不成立（"CI Iron Laws 为权威"无据：note_check 无
+#   SYNO_CI 分支，本处是全仓唯一调用点）⇒ 同族第 3 次复发（D503/D1148/本处）。
+#   转回 v5_soft（本地软 / CI strict 硬）；par_start 并行腿 ⇒ 不破 <10s 预算。
+if [ "$AC_RC" -ne 0 ]; then
+  printf '%s\n' "$AC_OUT" | grep -v '^[[:space:]]*$' | head -5 | sed 's/^/     /'
+  v5_soft "验收 CI (V3.9)（D1176 K3 整改复执法）"
+fi
 par_collect_quiet file-driven "$PAR_FILE_DRIVEN" || v5_soft "文件驱动架构完整性 (V3.6)"
 
 # ═══ 组 9/12: 契约门禁 (D257) ═══
