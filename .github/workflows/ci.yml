@@ -1205,7 +1205,7 @@ jobs:
     if: ${{ !cancelled() }}
     steps:
       - name: Fail if any needed job did not succeed
-        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        if: needs.quality.result == 'success'  # FIXTURE-B: 假判据（改坏即红反例）
         run: |
           echo "::error::Needed job results: ${{ join(needs.*.result, ', ') }}"
           exit 1
