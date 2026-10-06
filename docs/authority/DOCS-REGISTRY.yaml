@@ -115,7 +115,7 @@ documents:
     path: "D:/novis-backup-20260526/Novis/全局规划/../README.md"
     status: archived
     owner: founder
-    note: "ClawOrg 文档中心 README（E:\ClawOrg-BOX 时代的目录规范）"
+    note: "ClawOrg 文档中心 README（E:\\ClawOrg-BOX 时代的目录规范）"
 
   # ---- 已登记的关键现有文档（分类打标，九类沉淀索引的一部分）----
   - id: DOC-0101
@@ -282,17 +282,17 @@ documents:
 
   # 号段注（D1105 去重）：本批原用 DOC-0119/0120，但 main（#926）已占用 0119-0123
   # ⇒ 合并时人工去重改号 0124/0125（登记门禁不校 id 唯一，靠人工守）
-    - id: DOC-0124
-      type: decision
-      path: decisions/proposed/process/2026-09-30-preset-landing-must-diff-against-working-peer.md
-      status: draft
-      owner: DSH
+  - id: DOC-0124
+    type: decision
+    path: decisions/proposed/process/2026-09-30-preset-landing-must-diff-against-working-peer.md
+    status: draft
+    owner: DSH
 
-    - id: DOC-0125
-      type: decision
-      path: decisions/proposed/process/2026-09-30-cite-by-section-name-not-line-number.md
-      status: draft
-      owner: DSH
+  - id: DOC-0125
+    type: decision
+    path: decisions/proposed/process/2026-09-30-cite-by-section-name-not-line-number.md
+    status: draft
+    owner: DSH
   # ---- D1105（派单件移交线负责人层）2026-10-01 ----
   # 来源：~/Synova-过程档案/ 整份搬运，内容逐字未改（只加 4 行来源头）。
   # 归层：三级制下这三件**不再归 CTO**，由线负责人承接 ⇒ 入库防"本机一坏无处恢复"。
