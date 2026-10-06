@@ -1,0 +1,22 @@
+{
+  "task_id": "D972",
+  "title": "ownership 测试 58→60 用例（缩卡：落表已交付）+ CODEOWNERS 无 BOM 核查",
+  "status": "in_progress",
+  "risk": "low",
+  "domain": "mac",
+  "owner": "mac-cto",
+  "executor": "并行 CTO 小队（DSH session，coder-b 编码）",
+  "milestone": "M0 治理",
+  "depends_on": [],
+  "write_set": [
+    "tests/control-tower/check-ownership.test.sh",
+    ".claude/task-briefs/2026-09-25-D972-ownership-60-cases.md",
+    "task-state/D972.json",
+    "docs/synova/product-lines/evidence/D972-ownership-60-20260925.md"
+  ],
+  "papers": [],
+  "updated_at": "2026-09-25",
+  "updated_by": "coder-b",
+  "note": "【D972 改号】原 D1011 号落在 CTO 裁决划给 Win 侧的 D1000–D1099 段 ⇒ 按裁决改号 D972（Mac D9xx 段），分支 fix/d1011-ownership-60-cases → fix/d972-ownership-60-cases；无 force push，走 branch -m + git mv + 内容全改（含 tests/control-tower/check-ownership.test.sh 内 5 处 D1011 引用）。\n【D708 夹带修复】write_set 补入本卡自产治理产物 docs/synova/product-lines/evidence/D972-ownership-60-20260925.md（原缺失 ⇒ D708 判夹带 ⇒ quality 红 ⇒ test 被 skip ⇒ 必需 Vitest 永不报告）；brief Q2「做什么」清单同步。\n缩卡：实测 origin/main 的 ownership.yaml 已含 docs/synova/presets/**（L148）与 .dsh/**（L169），卡面「两条 glob 未落」前提已被推翻 ⇒ 不重做落表。.github/CODEOWNERS 实测首 3 字节 23 20 2e（非 ef bb bf）⇒ 无 BOM，未纳入本次 diff。新增覆盖落在真正零覆盖的 .dsh/**（grep 零结果），沿用 §5b D935 判别性夹具同范式（沙箱副本删规则 → 同一断言必红）。presets/** 已被 §5b 覆盖 14 处，故不重复堆用例。verifier 已判绿（他自造夹具删 presets/** 与 .dsh/** 均 exit 1）。",
+  "k3_required": []
+}

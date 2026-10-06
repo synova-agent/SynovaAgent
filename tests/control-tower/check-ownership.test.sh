@@ -8,6 +8,7 @@
 #   3. 真实回归 — CTO 2026-09-13 两次派错线的实写集（D728 / D729）→ 派给 mac 必红
 #   4. 反向验证 — 删掉 ownership.yaml 兜底规则 → 上述两条变绿（证明校验真在读数据）
 #   4c. 判别性夹具 — D935 `docs/synova/presets/**` → mac：正常判 mac；沙箱副本删掉该规则 → 同一断言必红（见 §5b）
+#   4d. 判别性夹具 — D972 `.dsh/**` → mac：同范式（见 §5c）；`.dsh/**` 在 §5c 之前为零覆盖
 #   5. 降级    — yaml 缺失 / yaml 语法非法 → exit 2（fail-closed，不与「通过」混同）
 #   6. 边界    — 无文件参数 / 未知 owner / 尚未创建的文件路径
 #   7. 产物契约 — .github/CODEOWNERS == --emit-codeowners 逐字节（drift 门禁）
@@ -157,6 +158,27 @@ fi
 run_expect 1 "D935 删 presets 规则 → presets 路径派 mac 必红" docs/synova/presets/install-squad-lead.sh --owner mac --yaml "$PRESETS_OFF"
 run_expect 1 "D935 删 presets 规则 → 子目录文件同样必红"      docs/synova/presets/synova-squad-lead/SYSTEM-PROMPT.md --owner mac --yaml "$PRESETS_OFF"
 run_expect 0 "D935 原 yaml 复测仍绿（未污染真实文件）"        docs/synova/presets/install-squad-lead.sh --owner mac --yaml "$YAML"
+
+echo ""
+echo "── 5c. D972 判别性夹具: .dsh→mac（沿用 §5b D935 同范式；删该规则即红 = 判据真读数据）──"
+run_expect 0 "D972 .dsh 路径 = Mac"                    .dsh/skills/squad-discipline/SKILL.md --owner mac
+# 改坏即红: 沙箱副本删掉 .dsh 规则 → 同一路径派 mac 必须 exit 1
+# （若本项恒绿，说明判据是静态/硬编码而非真读数据 —— 反 grep 型静态判据）
+DSH_OFF="$TMPD/ownership-no-dsh.yaml"
+cp "$YAML" "$DSH_OFF"
+"$PYBIN" - "$DSH_OFF" <<'PYEOF'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1])
+t = p.read_text(encoding="utf-8")
+start = t.index('  - glob: ".dsh/**"')
+end = t.index('  - glob: "electron/**"')
+p.write_text(t[:start] + t[end:], encoding="utf-8")
+PYEOF
+# 前置（仅在夹具构造失败时红，正常不计项）：确认规则真被删掉，否则下面「必红」断言是假绿
+if grep -qF 'glob: ".dsh/**"' "$DSH_OFF"; then
+  fail "D972 改坏前置: 沙箱副本里 .dsh 规则未删掉（后续必红断言不可信）"
+fi
+run_expect 1 "D972 删 .dsh 规则 → .dsh 路径派 mac 必红" .dsh/skills/squad-discipline/SKILL.md --owner mac --yaml "$DSH_OFF"
 
 echo ""
 echo "── 6. 降级与边界（fail-closed → exit 2）──"
