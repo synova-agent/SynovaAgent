@@ -21,7 +21,7 @@
       ③ merge_group 下必需 context 永不报告 ⇒ merge queue 卡死，D515 同族）。
 - `tests/control-tower/ci-signal-classify.test.sh`（D1112 冻结表达式登记表同步：checker-review 基线换 D1170 扩集版逐字串；all-checks-passed 登记 DOWNSTREAM_NEEDS_JOBS ⇒ !cancelled() 冻结式获得改坏即红防线——本地 79/0）
 - `memory/notes/proposed/2026-10-07-d1170-all-checks-passed-aggregate.md`：决策 Note（铁律 49）。
-- `.claude/task-briefs/2026-10-07-P0-3聚合必需检查all-checks-passed.md`：本 brief。
+- `.claude/task-briefs/2026-10-07-D1170-P0-3聚合必需检查all-checks-passed.md`：本 brief。
 
 不做什么（含文件路径）：
 - 不修改 scripts/**（如 pre-commit-check.sh、check-required-contexts.py）——含 scripts/audit/** K3 域
@@ -43,7 +43,7 @@
 |---|---|
 | .github/workflows/ci.yml | task |
 | tests/control-tower/ci-signal-classify.test.sh | task |
-| .claude/task-briefs/2026-10-07-P0-3聚合必需检查all-checks-passed.md | task |
+| .claude/task-briefs/2026-10-07-D1170-P0-3聚合必需检查all-checks-passed.md | task |
 | memory/notes/proposed/2026-10-07-d1170-all-checks-passed-aggregate.md | task |
 
 #CRITERIA: D
