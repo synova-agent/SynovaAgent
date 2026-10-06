@@ -355,7 +355,7 @@ d1157_probe() {  # <hook-src>
 #   ⇒ 必需 context `Control Tower Gate Tests (ubuntu-latest)` 对所有后续 PR 恒红。
 #   实测（复核构造的合法注释编辑）: 未加 --reverse 时 FIX_COMMIT 重定位
 #   ⇒ `❌ F2 前提失败: 基线 …^ 的判据已锚定` / 32 通过 1 失败。
-FIX_COMMIT="$(git -C "$REPO" log --reverse --format=%H -1 -S'D1157-REC-RE' origin/main -- scripts/hooks/post-commit.sh 2>/dev/null)  # swallow-ok: 取不到即 FIX_COMMIT 空 ⇒ 下方显式回退 origin/main（有 fail-safe 分支，未静默）"
+FIX_COMMIT="$(git -C "$REPO" log --reverse --format=%H -1 -S'D1157-REC-RE' origin/main -- scripts/hooks/post-commit.sh 2>/dev/null)"  # swallow-ok: 取不到即 FIX_COMMIT 空 ⇒ 下方显式回退 origin/main（有 fail-safe 分支，未静默）
 if [ -n "$FIX_COMMIT" ]; then RED_BASE="${FIX_COMMIT}^"; else RED_BASE="origin/main"; fi
 PREFIX_HOOK="$(git -C "$REPO" show "${RED_BASE}:scripts/hooks/post-commit.sh" 2>/dev/null)"  # swallow-ok: 取不到即下方显式判「F2 取数失败」
 if [ -z "$PREFIX_HOOK" ]; then

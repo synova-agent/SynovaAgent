@@ -61,3 +61,21 @@
   **不在本卡**（属门禁语义变更 ⇒ 提案 → K3 → CTO 裁）——**本卡只记录，不修**。
 - 复核点名的 lock 传递依赖漂移 4 个（`@babel/parser`/`@babel/types`/`magicast`/`tinyrainbow`）**本卡不动**
   （W1 的既成事实，回退会重新引入 ERESOLVE）。
+
+---
+
+## 追加：我自己在追账件里又造了一个 bug（第 8 轮实测抓出）
+
+CI run `37442371264` 的 hermetic job：
+```
+❌ F2 取数失败: git show 9e29d88e…  # swallow-ok: … ^:scripts/hooks/post-commit.sh 无输出
+结果: 31 通过, 1 失败
+```
+**根因**：我上一条把 `# swallow-ok:` 注在**闭合引号之前** ——
+`FIX_COMMIT="$(… 2>/dev/null)  # swallow-ok: …"` 里的**闭合引号落在注释内部** ⇒ 字符串永不闭合
+⇒ bash 把**后续行吞进字符串** ⇒ `FIX_COMMIT` 变成畸形 ref ⇒ `git show` 取数失败。
+**修**：注释移到闭合引号**之外**。
+**判据**：`bash -n` exit 0 ｜ `bash tests/control-tower/post-commit.test.sh` ⇒ **33 通过 / 0 失败**（F2 红例成立，基线 `9e29d88e0^` 正确取到）。
+**教训**：给一行加注释这件事，我连着两次做错（一次是 `$VAR（` 吸收、一次是引号吞行）。
+⇒ 这两次都不是判断错误，是**机械细节**；而现有门禁**抓不到**（本地 `bash -n` 只对**语法**，这里语法是合法的）。
+`bash -n` 对"引号吞掉后续行"**返回 0** —— 即：**这类错只能靠真跑抓到**。已按此在提交前跑了该夹具。
