@@ -1,0 +1,14 @@
+#!/bin/bash
+# run_case.sh <fx_dir> <msg_did> <staged_file> <label>
+# 跑一个 D328 反例，完整输出 + exit code（不截断）
+set -u
+FX="$1"; MSG_DID="$2"; STAGED="$3"; LABEL="$4"
+cd "$FX" || exit 9
+MSG=$(mktemp)
+printf 'fix(%s): 夹具提交\n' "$MSG_DID" > "$MSG"
+echo "────── CASE [$LABEL] msg_did=$MSG_DID staged=$STAGED ──────"
+echo "[resolver 选中] $(bash scripts/workflow/resolve-commit-brief.sh "$STAGED" 2>&1)"
+SYNO_STAGED_FILES="$STAGED" bash scripts/commit-msg-check.sh "$MSG"
+echo "exit=$?"
+rm -f "$MSG"
+echo ""

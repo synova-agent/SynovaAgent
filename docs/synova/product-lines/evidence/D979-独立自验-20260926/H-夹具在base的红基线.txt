@@ -1,0 +1,27 @@
+────── CASE [基线-A(授权声明但未打补丁)] msg_did=D979 staged=docs/synova/coordination/fixture-shared.md ──────
+[resolver 选中] /private/tmp/d979-verify/fx-base/.claude/task-briefs/2026-09-26-D945-fixture.md
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;31m❌ D328: 提交声明(D979)与暂存文件归属(D945)不一致 — 疑似并行劫持[0m
+   认领 brief: /private/tmp/d979-verify/fx-base/.claude/task-briefs/2026-09-26-D945-fixture.md
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+exit=1
+
+────── CASE [基线-B(非授权)] msg_did=D981 staged=docs/synova/coordination/fixture-shared.md ──────
+[resolver 选中] /private/tmp/d979-verify/fx-base/.claude/task-briefs/2026-09-26-D945-fixture.md
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;31m❌ D328: 提交声明(D981)与暂存文件归属(D945)不一致 — 疑似并行劫持[0m
+   认领 brief: /private/tmp/d979-verify/fx-base/.claude/task-briefs/2026-09-26-D945-fixture.md
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+exit=1
+
+────── CASE [基线-C(真劫持)] msg_did=D979 staged=docs/synova/coordination/fixture-plain.md ──────
+[resolver 选中] /private/tmp/d979-verify/fx-base/.claude/task-briefs/2026-09-26-D945-fixture.md
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;31m❌ D328: 提交声明(D979)与暂存文件归属(D945)不一致 — 疑似并行劫持[0m
+   认领 brief: /private/tmp/d979-verify/fx-base/.claude/task-briefs/2026-09-26-D945-fixture.md
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+exit=1
+

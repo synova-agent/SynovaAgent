@@ -1,0 +1,74 @@
+═══════════════════════════════════════════════════════════
+  D328 commit 声明-内容一致性门禁 — 测试
+  SUT: /Users/wane/SynovaAgent/.synova-wt-d979-verify/scripts/commit-msg-check.sh
+═══════════════════════════════════════════════════════════
+
+── 1. 真实劫持场景: 消息 chore(D318) + D320 brief 认领的文件 → exit 1 ──
+  ✅ 用例 1 stage 8 文件 (与 commit message 声明一致)
+  ✅ 劫持拦截 (8 文件 + chore(D318) → 硬阻断) (exit=1)
+
+── 2. 一致场景: 消息 chore(D320) == 认领 brief D# → exit 0 ──
+  ✅ 一致提交放行 (exit=0)
+
+── 3. 消息无 D# (chore: 无 scope) + 认领有 D# → exit 1 ──
+  ✅ 无 D# 声明阻断 (exit=1)
+
+── 4. Merge 提交 → 跳过 exit 0 ──
+  ✅ Merge 豁免 (exit=0)
+
+── 5. 认领 brief 无 D# (basename 无 D 号) → fail-open exit 0 ──
+  ✅ 无 D# brief 跳过 (exit=0)
+
+── 6. 无真实认领 (resolver 回退到无关 brief) → 跳过 exit 0 ──
+  ✅ 无真实认领跳过 (防假阳性) (exit=0)
+
+── 7. Revert 提交 → 跳过 exit 0 ──
+  ✅ Revert 豁免 (D330 补用例) (exit=0)
+
+── 8. 无暂存文件 → fail-open exit 0 ──
+  ✅ 无暂存 fail-open (D330 补用例) (exit=0)
+
+── 9. broken-shim: python 全损坏 → 显式 degraded 提示 (red 基准) ──
+  ✅ broken-shim 显式 degraded 提示 (exit=0)
+  ✅ broken-shim fail-open exit 0 (exit=0)
+
+── 10. broken-shim 劫持: 损坏 python3 前置 → 修复后仍拦截 exit 1 ──
+  ✅ broken-shim 劫持场景显式 degraded 提示 (exit=0)
+  ✅ broken-shim 劫持 fail-open exit 0 (exit=0)
+
+── 11. CT-60: 小写 scope (d320) 一致 → exit 0 ──
+  ✅ 小写 (d320) 声明一致 (CT-60) (exit=0)
+
+── 12. CT-60: scope 后缀 (d320-closeout) → 提取 D320 ──
+  ✅ 后缀 scope 提取 D320 (CT-60) (exit=0)
+
+── 13. CT-60: 小写劫持 (d318) vs 认领 D320 → 仍 exit 1 ──
+  ✅ 小写劫持仍拦 (CT-60) (exit=1)
+
+── 14. FIX-011 反例①: 授权卡改共享件（声明含 D582+D979）→ 放行 ──
+  ✅ 授权卡改共享件放行 (D979 FIX-011) (exit=0)
+  ✅ 输出含放行证据行标题
+  ✅ 证据行含: MSG_DID=D979 CLAIM_DID=D582
+  ✅ 证据行含: FILE=scripts/gov-shared.sh
+  ✅ 证据行含: DECL=# 共享声明: D582, D979
+
+── 15. FIX-011 反例②: 非授权卡改同一共享件（D318 未在声明中）→ 仍拒 ──
+  ✅ 非授权卡仍拦 (D979 FIX-011) (exit=1)
+  ✅ 保留劫持判定文案（未复制放行逻辑绕开）
+  ✅ 原因行点名缺失的 MSG_DID=D318
+
+── 16. FIX-011 判别性夹具: 声明只留本卡自己（D979）→ 放行转拒绝 ──
+  ✅ 双向强制: 单独把自己加进声明不放行（14 与 16 仅声明行不同） (exit=1)
+  ✅ 原因行点名缺失的 CLAIM_DID=D582
+
+── 17. FIX-011 零回归: 消息无 D# + 共享声明齐全 → 仍拒 ──
+  ✅ MSG_DID 空 → 行为与修复前一致（现状零回归） (exit=1)
+  ✅ 保留「提交声明(无)」原判定文案
+
+── 18. FIX-011 逐文件强制: 两共享件其一未声明 → 拒 ──
+  ✅ M 中每个 F 都要双向命中 (exit=1)
+  ✅ 原因行点名未声明的 shared-b.sh
+
+═══════════════════════════════════════════════════════════
+  结果: 30 通过 / 0 失败
+═══════════════════════════════════════════════════════════

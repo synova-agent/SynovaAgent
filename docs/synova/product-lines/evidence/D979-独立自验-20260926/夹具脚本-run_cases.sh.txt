@@ -1,0 +1,50 @@
+#!/bin/bash
+# run_cases.sh <src_tree> <log_file>
+# 逐用例重建夹具（每例独立沙箱，避免状态污染），完整输出 + exit code。
+set -u
+SRC="$1"; LOG="$2"
+: > "$LOG"
+SHARED="docs/synova/coordination/fixture-shared.md"
+PLAIN="docs/synova/coordination/fixture-plain.md"
+ONESIDE="docs/synova/coordination/fixture-oneside.md"
+WRONG="docs/synova/coordination/fixture-wrongclaim.md"
+MISSING="docs/synova/coordination/fixture-never-existed.md"
+JSON="docs/synova/coordination/fixture-json.json"
+BROKEN="docs/synova/coordination/fixture-broken.json"
+FLOW="docs/synova/coordination/fixture-flow.yml"
+
+run() { # run <label> <msg_did> <staged> [pre_cmd]
+  local label="$1" msg_did="$2" staged="$3" pre="${4:-}"
+  local fx; fx="$(mktemp -d /tmp/d979-verify/case.XXXXXX)"
+  bash /tmp/d979-verify/build_fixture2.sh "$SRC" "$fx" >/dev/null
+  if [ -n "$pre" ]; then ( cd "$fx" && eval "$pre" ); fi
+  local msg; msg="$(mktemp)"; printf 'fix(%s): 夹具提交\n' "$msg_did" > "$msg"
+  echo "────── CASE [$label] msg=$msg_did pre=[${pre:-无}] ──────"
+  echo "[staged]"; printf '%s\n' "$staged" | sed 's/^/   /'
+  echo "[resolver 选中] $(cd "$fx" && bash scripts/workflow/resolve-commit-brief.sh "$staged" 2>&1)"
+  ( cd "$fx" && SYNO_STAGED_FILES="$staged" bash scripts/commit-msg-check.sh "$msg" 2>&1 )
+  echo "exit=$?"
+  echo ""
+  rm -f "$msg"
+}
+
+{
+echo "######## 夹具用例集 @ src=$SRC ########"
+echo "### SRC 版本指纹: $(cd "$SRC" && git rev-parse HEAD 2>/dev/null || echo '非git')"
+echo ""
+run "A 授权(单共享件,双向声明)" D979 "$SHARED"
+run "B 非授权(MSG_DID 不在声明)" D981 "$SHARED"
+run "C 真劫持(无声明普通件)" D979 "$PLAIN"
+run "M1 多文件混合(共享件+普通件)" D979 "$SHARED
+$PLAIN"
+run "M2 多文件混合(两个共享件,均声明)" D979 "$SHARED
+$SHARED"
+run "O1 单侧声明(只 D979)" D979 "$ONESIDE"
+run "O2 错认领(声明 D979+D981,认领方 D945)" D979 "$WRONG"
+run "X1 三处皆不可读(missing 文件)" D979 "$MISSING"
+run "DEL 删除态(git rm 共享件, index/worktree 无 → HEAD 回退)" D979 "$SHARED" "git rm -q -f '$SHARED'"
+run "PM 部署残缺(解析器文件缺失 → rc=2)" D979 "$SHARED" "rm -f scripts/control-tower/shared_file_decl.py"
+run "N1 json 结构化载体(task-state/*.json 同型)" D979 "$JSON"
+run "N2 非法 json(声明不可解析 → fail-closed)" D979 "$BROKEN"
+run "N3 yml flow 载体(ci.yml 同型)" D979 "$FLOW"
+} 2>&1 | tee -a "$LOG"

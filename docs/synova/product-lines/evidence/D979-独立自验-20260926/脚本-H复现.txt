@@ -1,0 +1,21 @@
+#!/bin/bash
+# H 前提复核（在 base feebf651 上跑，不依赖 T1）
+# 复现：未打补丁的门禁 = 3 个共享件被判劫持
+# 用法: bash /tmp/d979-verify/h_repro.sh <worktree> <MSG_D#>
+WT="${1:-/Users/wane/SynovaAgent/.synova-wt-d979-verify}"
+MSG_DID="${2:-D977}"
+cd "$WT" || exit 9
+echo "### worktree: $WT"
+echo "### HEAD: $(git rev-parse HEAD)"
+MSG=$(mktemp)
+printf 'fix(%s): 前提复现\n' "$MSG_DID" > "$MSG"
+echo "### commit message file: $MSG"
+echo "### message content:"
+cat "$MSG"
+for f in ".github/workflows/ci.yml" "task-state/D954.json" "docs/synova/coordination/派单模板.md"; do
+  echo ""
+  echo "=== $f ==="
+  SYNO_STAGED_FILES="$f" bash scripts/commit-msg-check.sh "$MSG"
+  echo "exit=$?"
+done
+rm -f "$MSG"

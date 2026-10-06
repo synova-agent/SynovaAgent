@@ -1,0 +1,40 @@
+════════ F1: grep -n "疑似并行劫持" scripts/commit-msg-check.sh ════════
+149:          echo -e "${RED}❌ D328: 提交声明(${MSG_DID:-无})与暂存文件归属($CLAIM_DID)不一致 — 疑似并行劫持${RESET}"
+命中数: 1
+
+════════ F2: scripts/ + tests/ 全量命中该文案的文件 ════════
+scripts/control-tower/shared_file_decl.py:7:`commit-msg-check.sh` 的 D328 判定把**授权修改**误判为「疑似并行劫持」（24h 拦 3 次）。
+scripts/commit-msg-check.sh:149:          echo -e "${RED}❌ D328: 提交声明(${MSG_DID:-无})与暂存文件归属($CLAIM_DID)不一致 — 疑似并行劫持${RESET}"
+tests/control-tower/commit-msg-consistency.test.sh:28:#  15. 反例②: 非授权卡改同一共享件（声明无 MSG_DID）→ 仍拒 exit 1 疑似并行劫持
+tests/control-tower/commit-msg-consistency.test.sh:410:if grep -qF "疑似并行劫持" "$RUN_OUT_FILE" 2>/dev/null; then
+tests/control-tower/commit-msg-consistency.test.sh:413:  fail "缺 疑似并行劫持 文案"
+命中文件数: 3
+
+════════ F3: 逃生舱扫描 ════════
+--- commit-msg-check.sh: SYNO_SKIP|no-verify|NO_VERIFY|D328_SKIP|SKIP_D328 ---
+(0 命中)
+--- shared_file_decl.py: SYNO_SKIP|no-verify|NO_VERIFY|SYNO_|os.environ|getenv ---
+(0 命中)
+
+════════ F4: diff 级新增/删除 exit ════════
+75:+          exit 1
+44:-        exit 1
+
+════════ F5: 脚本内全部 exit 0（确认无新增早期放行口）════════
+12:  exit 0
+20:if echo "$COMMIT_MSG" | grep -qE '^Merge |^Revert '; then exit 0; fi
+204:exit 0
+
+════════ G: 红证不残留 ════════
+grep_exit=1  命中数=0
+
+════════ 被验脚本 = 提交内容（非工作区副本）════════
+[git diff HEAD 空 = 无本地改动]
+worktree sha256: be6b759074c9fceee7faaf37410b1fc9f7cb2b6b0dde54407c9403bade6e3352
+commit  sha256: be6b759074c9fceee7faaf37410b1fc9f7cb2b6b0dde54407c9403bade6e3352
+提交 blob DECL_RC 行:
+  128:        DECL_RC=1
+  134:          DECL_RC=0
+  137:            --root "$DECL_ROOT_W" --files-from - 2>/dev/null) || DECL_RC=$? # swallow-ok: 解析器失败 → 下方按未声明处理（fail-closed），绝不静默放行
+  139:        if [ "$DECL_RC" = 0 ]; then
+  146:          if [ "$DECL_RC" = 2 ]; then

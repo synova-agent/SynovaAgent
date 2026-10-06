@@ -1,0 +1,22 @@
+════════ Z1: MSG_DID 为空（chore 无 scope）+ 共享件声明齐全 → 必须仍拒 ════════
+✅ Commit 格式正确
+   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)
+❌ D328: 提交声明(无)与暂存文件归属(D945)不一致 — 疑似并行劫持
+   认领 brief: /private/tmp/d979-verify/case.xizbgC/.claude/task-briefs/2026-09-26-D945-fixture.md
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+exit=1
+
+════════ Z2: CLAIM_DID == MSG_DID (=D945) → 不进新分支（零回归放行）════════
+✅ Commit 格式正确
+   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)
+✅ D395-a/D534 Note 引用门禁: 无治理/规则区变更（跳过）
+exit=0
+
+════════ 性能：门禁端到端耗时（放行/拒绝各 3 次）════════
+  T1 放行路径 run1: 0.378s
+  T1 放行路径 run2: 0.382s
+  T1 放行路径 run3: 0.371s
+  T1 拒绝路径 run1: 0.365s
+  T1 拒绝路径 run2: 0.364s
+  T1 拒绝路径 run3: 0.364s
+  base 拒绝路径: 0.290s

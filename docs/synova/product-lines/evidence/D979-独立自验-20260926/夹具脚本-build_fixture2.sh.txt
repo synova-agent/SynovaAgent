@@ -1,0 +1,91 @@
+#!/bin/bash
+# build_fixture2.sh <src_tree> <dest>
+# v2：HEAD 已提交（供「删除态 → HEAD 回退」用例）+ 多文件 + 单侧声明/错认领/普通件。
+set -u
+SRC="$1"; DEST="$2"
+rm -rf "$DEST"; mkdir -p "$DEST"
+mkdir -p "$DEST/scripts/workflow" "$DEST/scripts/control-tower" "$DEST/.claude/task-briefs" "$DEST/docs/synova/coordination"
+cp "$SRC/scripts/commit-msg-check.sh" "$DEST/scripts/commit-msg-check.sh"
+cp "$SRC/scripts/workflow/resolve-commit-brief.sh" "$DEST/scripts/workflow/resolve-commit-brief.sh"
+cp "$SRC/scripts/control-tower/brief_parser.py" "$DEST/scripts/control-tower/brief_parser.py"
+cp "$SRC/scripts/control-tower/shared_file_decl.py" "$DEST/scripts/control-tower/shared_file_decl.py" 2>/dev/null || true  # base 树无此文件 → 容忍
+chmod +x "$DEST/scripts/commit-msg-check.sh" "$DEST/scripts/workflow/resolve-commit-brief.sh"
+
+TODAY=$(date +%Y-%m-%d)
+cat > "$DEST/.claude/task-briefs/${TODAY}-D945-fixture.md" <<'EOF'
+# D945 夹具 brief（独立自验自建，不属于任何真实卡）
+
+## Q0: 定位 — 项目拼图 + 文件审计
+自验夹具：验证 D328 共享声明判定。
+
+## Q1: 调研 — 业界最佳实践 / Anthropic 决策链 / memory 历史教训
+参考：第一性原理（放行必须由新代码产生）+ 自建夹具注入。
+
+## Q2: 范围 — 正确的最简方案
+做什么：
+- 修改 docs/synova/coordination/fixture-shared.md
+- 修改 docs/synova/coordination/fixture-plain.md
+- 修改 docs/synova/coordination/fixture-oneside.md
+- 修改 docs/synova/coordination/fixture-wrongclaim.md
+- 修改 docs/synova/coordination/fixture-never-existed.md
+- 修改 docs/synova/coordination/fixture-json.json
+- 修改 docs/synova/coordination/fixture-broken.json
+- 修改 docs/synova/coordination/fixture-flow.yml
+不做什么（含文件路径）：
+- 不改 scripts/commit-msg-check.sh（夹具只读被测脚本）
+
+## Q3: 验收 — 入口 → 交互 → 结果
+入口：SYNO_STAGED_FILES 注入
+处理：commit-msg-check.sh 读 commit message + 文件内共享声明
+结果：授权放行 / 非授权 exit 1
+
+## 架构层: L1
+## Done 标准: 反例①②③ 按预期返回 exit code
+EOF
+
+cat > "$DEST/docs/synova/coordination/fixture-shared.md" <<'EOF'
+# 夹具共享治理文件（D945 / D979 两卡共改）
+
+共享声明：D945, D979
+EOF
+
+cat > "$DEST/docs/synova/coordination/fixture-plain.md" <<'EOF'
+# 夹具普通文件（无共享声明）
+EOF
+
+cat > "$DEST/docs/synova/coordination/fixture-oneside.md" <<'EOF'
+# 夹具单侧声明文件（只声明提交方 D979，未声明认领方 D945）
+
+共享声明：D979
+EOF
+
+cat > "$DEST/docs/synova/coordination/fixture-wrongclaim.md" <<'EOF'
+# 夹具错认领文件（声明 D979 + D981，与实际认领方 D945 不符）
+
+共享声明：D979, D981
+EOF
+
+cat > "$DEST/docs/synova/coordination/fixture-json.json" <<'EOF'
+{
+  "id": "fixture-json",
+  "shared_with": ["D945", "D979"]
+}
+EOF
+
+cat > "$DEST/docs/synova/coordination/fixture-broken.json" <<'EOF'
+{
+  "shared_with": ["D945", "D979"
+EOF
+
+cat > "$DEST/docs/synova/coordination/fixture-flow.yml" <<'EOF'
+# 夹具 yml flow 载体（对应真实共享件 .github/workflows/ci.yml 的载体类型）
+shared_with: [D945, D979]
+EOF
+
+cd "$DEST" || exit 9
+git init -q .
+git config user.email fixture@local
+git config user.name fixture
+git add -A .claude docs scripts >/dev/null 2>&1
+git commit -q -m "fixture: base commit" >/dev/null 2>&1
+echo "fixture built: $DEST  HEAD=$(git rev-parse --short HEAD)"

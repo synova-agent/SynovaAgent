@@ -1,0 +1,26 @@
+════════ 真实共享件 @ T1 fe01c3af（机制只在文件内已有声明时放行）════════
+=== .github/workflows/ci.yml ===
+✅ Commit 格式正确
+   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)
+❌ D328: 提交声明(D979)与暂存文件归属(D945)不一致 — 疑似并行劫持
+   认领 brief: /Users/wane/SynovaAgent/.synova-wt-d979-verify/.claude/task-briefs/2026-09-25-D945-preset-bundle-migration.md
+   DECL_DENY
+   MSG_DID=D979 CLAIM_DID=D945 FILES=1
+   FILE=.github/workflows/ci.yml SOURCE=index DECL=(无) HIT=(无) MISSING=D945,D979
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+exit=1
+=== task-state/D954.json ===
+✅ Commit 格式正确
+   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)
+❌ D328: 提交声明(D979)与暂存文件归属(D954)不一致 — 疑似并行劫持
+   认领 brief: /Users/wane/SynovaAgent/.synova-wt-d979-verify/.claude/task-briefs/2026-09-25-D954-ci-reds-base-ref.md
+   DECL_DENY
+   MSG_DID=D979 CLAIM_DID=D954 FILES=1
+   FILE=task-state/D954.json SOURCE=index DECL=(无) HIT=(无) MISSING=D954,D979
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+exit=1
+=== docs/synova/coordination/派单模板.md ===
+✅ Commit 格式正确
+   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)
+✅ D395-a/D534 Note 引用门禁: 无治理/规则区变更（跳过）
+exit=0

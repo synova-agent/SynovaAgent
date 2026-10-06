@@ -1,0 +1,51 @@
+#!/bin/bash
+# run_D.sh <src_tree> <log>
+# 判别性夹具：停用 T1 新增放行分支 → 反例① 必须变红；恢复 → 必须变绿。
+# 关键：每次变异后跑 `bash -n`，证明「红」来自回到原劫持判定，而非脚本崩溃（假判别性）。
+set -u
+SRC="$1"; LOG="$2"
+FX=/tmp/d979-verify/fx-D
+SHARED="docs/synova/coordination/fixture-shared.md"
+: > "$LOG"
+
+build() { bash /tmp/d979-verify/build_fixture2.sh "$SRC" "$FX" >/dev/null; }
+
+mut() { # mut <file> <old> <new> <tag>
+  python3 - "$FX/scripts/commit-msg-check.sh" "$2" "$3" <<'PY'
+import sys
+p, old, new = sys.argv[1], sys.argv[2], sys.argv[3]
+s = open(p, encoding="utf-8").read()
+s2 = s.replace(old, new)
+if s2 == s:
+    print("MUTATION_TARGET_NOT_FOUND"); sys.exit(9)
+open(p, "w", encoding="utf-8").write(s2)
+print("mutated: %r -> %r" % (old, new))
+PY
+}
+
+case_A() { # case_A <tag>
+  local tag="$1" msg rc
+  msg="$(mktemp)"; printf 'fix(D979): 夹具提交\n' > "$msg"
+  echo "────── [D-$tag] 反例①：授权声明（msg=D979 / 认领=D945）──────"
+  echo "[bash -n 语法]"; ( cd "$FX" && bash -n scripts/commit-msg-check.sh ); echo "bash_n_exit=$?"
+  ( cd "$FX" && SYNO_STAGED_FILES="$SHARED" bash scripts/commit-msg-check.sh "$msg" 2>&1 )
+  rc=$?
+  echo "exit=$rc"
+  echo ""
+  rm -f "$msg"
+}
+
+{
+echo "######## D 条判别性夹具 @ src=$(cd "$SRC" && git rev-parse HEAD) ########"
+build
+case_A "1 原始（未变异）"
+mut "$FX" '[ "$DECL_RC" = 0 ]' '[ "$DECL_RC" = 99 ]'
+case_A "2 变异：放行条件 0→99（停用放行分支，语法保持合法）"
+build
+mut "$FX" 'DECL_RC=0
+          DECL_OUT=' 'DECL_RC=1
+          DECL_OUT='
+case_A "3 变异：DECL_RC 初值 0→1（放行永不成立）"
+build
+case_A "4 恢复后（重建夹具，回到原始）"
+} 2>&1 | tee -a "$LOG"

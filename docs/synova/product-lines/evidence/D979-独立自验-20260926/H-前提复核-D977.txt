@@ -1,0 +1,27 @@
+### worktree: /Users/wane/SynovaAgent/.synova-wt-d979-verify
+### HEAD: feebf65102fc854bc34738a048c5427d066e1ee7
+### commit message file: /var/folders/bs/ltqkv_rd45z6b7p5wq90vv500000gn/T/tmp.oEkBKsLNwz
+### message content:
+fix(D977): 前提复现
+
+=== .github/workflows/ci.yml ===
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;31m❌ D328: 提交声明(D977)与暂存文件归属(D945)不一致 — 疑似并行劫持[0m
+   认领 brief: /Users/wane/SynovaAgent/.synova-wt-d979-verify/.claude/task-briefs/2026-09-25-D945-preset-bundle-migration.md
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+exit=1
+
+=== task-state/D954.json ===
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;31m❌ D328: 提交声明(D977)与暂存文件归属(D954)不一致 — 疑似并行劫持[0m
+   认领 brief: /Users/wane/SynovaAgent/.synova-wt-d979-verify/.claude/task-briefs/2026-09-25-D954-ci-reds-base-ref.md
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+exit=1
+
+=== docs/synova/coordination/派单模板.md ===
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;32m✅ D395-a/D534 Note 引用门禁: 无治理/规则区变更（跳过）[0m
+exit=0

@@ -1,0 +1,187 @@
+######## 夹具用例集 @ src=/Users/wane/SynovaAgent/.synova-wt-d979-verify ########
+### SRC 版本指纹: fe01c3af1f561b5bc45e130624202c740edb925d
+
+────── CASE [A 授权(单共享件,双向声明)] msg=D979 pre=[无] ──────
+[staged]
+   docs/synova/coordination/fixture-shared.md
+[resolver 选中] /private/tmp/d979-verify/case.qMd1rT/.claude/task-briefs/2026-09-26-D945-fixture.md
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;32m✅ D328 共享声明放行（D979 FIX-011 ⒝）: 暂存文件逐文件双向声明命中[0m
+   认领 brief: /private/tmp/d979-verify/case.qMd1rT/.claude/task-briefs/2026-09-26-D945-fixture.md
+   DECL_ALLOW
+   MSG_DID=D979 CLAIM_DID=D945 FILES=1
+   FILE=docs/synova/coordination/fixture-shared.md SOURCE=index DECL=共享声明：D945, D979 HIT=D945,D979 MISSING=(无)
+[0;32m✅ D395-a/D534 Note 引用门禁: 无治理/规则区变更（跳过）[0m
+exit=0
+
+────── CASE [B 非授权(MSG_DID 不在声明)] msg=D981 pre=[无] ──────
+[staged]
+   docs/synova/coordination/fixture-shared.md
+[resolver 选中] /private/tmp/d979-verify/case.N3gHzB/.claude/task-briefs/2026-09-26-D945-fixture.md
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;31m❌ D328: 提交声明(D981)与暂存文件归属(D945)不一致 — 疑似并行劫持[0m
+   认领 brief: /private/tmp/d979-verify/case.N3gHzB/.claude/task-briefs/2026-09-26-D945-fixture.md
+   DECL_DENY
+   MSG_DID=D981 CLAIM_DID=D945 FILES=1
+   FILE=docs/synova/coordination/fixture-shared.md SOURCE=index DECL=共享声明：D945, D979 HIT=D945,D979 MISSING=D981
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+exit=1
+
+────── CASE [C 真劫持(无声明普通件)] msg=D979 pre=[无] ──────
+[staged]
+   docs/synova/coordination/fixture-plain.md
+[resolver 选中] /private/tmp/d979-verify/case.6zvoU8/.claude/task-briefs/2026-09-26-D945-fixture.md
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;31m❌ D328: 提交声明(D979)与暂存文件归属(D945)不一致 — 疑似并行劫持[0m
+   认领 brief: /private/tmp/d979-verify/case.6zvoU8/.claude/task-briefs/2026-09-26-D945-fixture.md
+   DECL_DENY
+   MSG_DID=D979 CLAIM_DID=D945 FILES=1
+   FILE=docs/synova/coordination/fixture-plain.md SOURCE=index DECL=(无) HIT=(无) MISSING=D945,D979
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+exit=1
+
+────── CASE [M1 多文件混合(共享件+普通件)] msg=D979 pre=[无] ──────
+[staged]
+   docs/synova/coordination/fixture-shared.md
+   docs/synova/coordination/fixture-plain.md
+[resolver 选中] /private/tmp/d979-verify/case.OqAIZ2/.claude/task-briefs/2026-09-26-D945-fixture.md
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;31m❌ D328: 提交声明(D979)与暂存文件归属(D945)不一致 — 疑似并行劫持[0m
+   认领 brief: /private/tmp/d979-verify/case.OqAIZ2/.claude/task-briefs/2026-09-26-D945-fixture.md
+   DECL_DENY
+   MSG_DID=D979 CLAIM_DID=D945 FILES=2
+   FILE=docs/synova/coordination/fixture-shared.md SOURCE=index DECL=共享声明：D945, D979 HIT=D945,D979 MISSING=(无)
+   FILE=docs/synova/coordination/fixture-plain.md SOURCE=index DECL=(无) HIT=(无) MISSING=D945,D979
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+exit=1
+
+────── CASE [M2 多文件混合(两个共享件,均声明)] msg=D979 pre=[无] ──────
+[staged]
+   docs/synova/coordination/fixture-shared.md
+   docs/synova/coordination/fixture-shared.md
+[resolver 选中] /private/tmp/d979-verify/case.2M4DUC/.claude/task-briefs/2026-09-26-D945-fixture.md
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;32m✅ D328 共享声明放行（D979 FIX-011 ⒝）: 暂存文件逐文件双向声明命中[0m
+   认领 brief: /private/tmp/d979-verify/case.2M4DUC/.claude/task-briefs/2026-09-26-D945-fixture.md
+   DECL_ALLOW
+   MSG_DID=D979 CLAIM_DID=D945 FILES=2
+   FILE=docs/synova/coordination/fixture-shared.md SOURCE=index DECL=共享声明：D945, D979 HIT=D945,D979 MISSING=(无)
+   FILE=docs/synova/coordination/fixture-shared.md SOURCE=index DECL=共享声明：D945, D979 HIT=D945,D979 MISSING=(无)
+[0;32m✅ D395-a/D534 Note 引用门禁: 无治理/规则区变更（跳过）[0m
+exit=0
+
+────── CASE [O1 单侧声明(只 D979)] msg=D979 pre=[无] ──────
+[staged]
+   docs/synova/coordination/fixture-oneside.md
+[resolver 选中] /private/tmp/d979-verify/case.favxCJ/.claude/task-briefs/2026-09-26-D945-fixture.md
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;31m❌ D328: 提交声明(D979)与暂存文件归属(D945)不一致 — 疑似并行劫持[0m
+   认领 brief: /private/tmp/d979-verify/case.favxCJ/.claude/task-briefs/2026-09-26-D945-fixture.md
+   DECL_DENY
+   MSG_DID=D979 CLAIM_DID=D945 FILES=1
+   FILE=docs/synova/coordination/fixture-oneside.md SOURCE=index DECL=共享声明：D979 HIT=D979 MISSING=D945
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+exit=1
+
+────── CASE [O2 错认领(声明 D979+D981,认领方 D945)] msg=D979 pre=[无] ──────
+[staged]
+   docs/synova/coordination/fixture-wrongclaim.md
+[resolver 选中] /private/tmp/d979-verify/case.upYSr0/.claude/task-briefs/2026-09-26-D945-fixture.md
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;31m❌ D328: 提交声明(D979)与暂存文件归属(D945)不一致 — 疑似并行劫持[0m
+   认领 brief: /private/tmp/d979-verify/case.upYSr0/.claude/task-briefs/2026-09-26-D945-fixture.md
+   DECL_DENY
+   MSG_DID=D979 CLAIM_DID=D945 FILES=1
+   FILE=docs/synova/coordination/fixture-wrongclaim.md SOURCE=index DECL=共享声明：D979, D981 HIT=D979,D981 MISSING=D945
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+exit=1
+
+────── CASE [X1 三处皆不可读(missing 文件)] msg=D979 pre=[无] ──────
+[staged]
+   docs/synova/coordination/fixture-never-existed.md
+[resolver 选中] /private/tmp/d979-verify/case.xqzHgQ/.claude/task-briefs/2026-09-26-D945-fixture.md
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;31m❌ D328: 提交声明(D979)与暂存文件归属(D945)不一致 — 疑似并行劫持[0m
+   认领 brief: /private/tmp/d979-verify/case.xqzHgQ/.claude/task-briefs/2026-09-26-D945-fixture.md
+   DECL_DENY
+   MSG_DID=D979 CLAIM_DID=D945 FILES=1
+   FILE=docs/synova/coordination/fixture-never-existed.md SOURCE=missing DECL=(无) HIT=(无) MISSING=D945,D979 — 三处皆不可读
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+exit=1
+
+────── CASE [DEL 删除态(git rm 共享件, index/worktree 无 → HEAD 回退)] msg=D979 pre=[git rm -q -f 'docs/synova/coordination/fixture-shared.md'] ──────
+[staged]
+   docs/synova/coordination/fixture-shared.md
+[resolver 选中] /private/tmp/d979-verify/case.vGLxVc/.claude/task-briefs/2026-09-26-D945-fixture.md
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;32m✅ D328 共享声明放行（D979 FIX-011 ⒝）: 暂存文件逐文件双向声明命中[0m
+   认领 brief: /private/tmp/d979-verify/case.vGLxVc/.claude/task-briefs/2026-09-26-D945-fixture.md
+   DECL_ALLOW
+   MSG_DID=D979 CLAIM_DID=D945 FILES=1
+   FILE=docs/synova/coordination/fixture-shared.md SOURCE=HEAD DECL=共享声明：D945, D979 HIT=D945,D979 MISSING=(无)
+[0;32m✅ D395-a/D534 Note 引用门禁: 无治理/规则区变更（跳过）[0m
+exit=0
+
+────── CASE [PM 部署残缺(解析器文件缺失 → rc=2)] msg=D979 pre=[rm -f scripts/control-tower/shared_file_decl.py] ──────
+[staged]
+   docs/synova/coordination/fixture-shared.md
+[resolver 选中] /private/tmp/d979-verify/case.0hxB4p/.claude/task-briefs/2026-09-26-D945-fixture.md
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[1;33m⚠ D328 共享声明检查 degraded (rc=2): 无法判定声明集 — 按未声明处理（不静默放行）[0m
+[0;31m❌ D328: 提交声明(D979)与暂存文件归属(D945)不一致 — 疑似并行劫持[0m
+   认领 brief: /private/tmp/d979-verify/case.0hxB4p/.claude/task-briefs/2026-09-26-D945-fixture.md
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+exit=1
+
+────── CASE [N1 json 结构化载体(task-state/*.json 同型)] msg=D979 pre=[无] ──────
+[staged]
+   docs/synova/coordination/fixture-json.json
+[resolver 选中] /private/tmp/d979-verify/case.3JRvEM/.claude/task-briefs/2026-09-26-D945-fixture.md
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;32m✅ D328 共享声明放行（D979 FIX-011 ⒝）: 暂存文件逐文件双向声明命中[0m
+   认领 brief: /private/tmp/d979-verify/case.3JRvEM/.claude/task-briefs/2026-09-26-D945-fixture.md
+   DECL_ALLOW
+   MSG_DID=D979 CLAIM_DID=D945 FILES=1
+   FILE=docs/synova/coordination/fixture-json.json SOURCE=index DECL=shared_with: ["D945", "D979"] HIT=D945,D979 MISSING=(无)
+[0;32m✅ D395-a/D534 Note 引用门禁: 无治理/规则区变更（跳过）[0m
+exit=0
+
+────── CASE [N2 非法 json(声明不可解析 → fail-closed)] msg=D979 pre=[无] ──────
+[staged]
+   docs/synova/coordination/fixture-broken.json
+[resolver 选中] /private/tmp/d979-verify/case.UPBgcf/.claude/task-briefs/2026-09-26-D945-fixture.md
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;31m❌ D328: 提交声明(D979)与暂存文件归属(D945)不一致 — 疑似并行劫持[0m
+   认领 brief: /private/tmp/d979-verify/case.UPBgcf/.claude/task-briefs/2026-09-26-D945-fixture.md
+   DECL_DENY
+   MSG_DID=D979 CLAIM_DID=D945 FILES=1
+   FILE=docs/synova/coordination/fixture-broken.json SOURCE=index DECL=(无) HIT=(无) MISSING=D945,D979
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+exit=1
+
+────── CASE [N3 yml flow 载体(ci.yml 同型)] msg=D979 pre=[无] ──────
+[staged]
+   docs/synova/coordination/fixture-flow.yml
+[resolver 选中] /private/tmp/d979-verify/case.PSXlox/.claude/task-briefs/2026-09-26-D945-fixture.md
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;32m✅ D328 共享声明放行（D979 FIX-011 ⒝）: 暂存文件逐文件双向声明命中[0m
+   认领 brief: /private/tmp/d979-verify/case.PSXlox/.claude/task-briefs/2026-09-26-D945-fixture.md
+   DECL_ALLOW
+   MSG_DID=D979 CLAIM_DID=D945 FILES=1
+   FILE=docs/synova/coordination/fixture-flow.yml SOURCE=index DECL=shared_with: [D945, D979] HIT=D945,D979 MISSING=(无)
+[0;32m✅ D395-a/D534 Note 引用门禁: 无治理/规则区变更（跳过）[0m
+exit=0
+

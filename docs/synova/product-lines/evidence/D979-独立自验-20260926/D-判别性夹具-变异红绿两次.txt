@@ -1,0 +1,55 @@
+######## D 条判别性夹具 @ src=fe01c3af1f561b5bc45e130624202c740edb925d ########
+────── [D-1 原始（未变异）] 反例①：授权声明（msg=D979 / 认领=D945）──────
+[bash -n 语法]
+bash_n_exit=0
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;32m✅ D328 共享声明放行（D979 FIX-011 ⒝）: 暂存文件逐文件双向声明命中[0m
+   认领 brief: /private/tmp/d979-verify/fx-D/.claude/task-briefs/2026-09-26-D945-fixture.md
+   DECL_ALLOW
+   MSG_DID=D979 CLAIM_DID=D945 FILES=1
+   FILE=docs/synova/coordination/fixture-shared.md SOURCE=index DECL=共享声明：D945, D979 HIT=D945,D979 MISSING=(无)
+[0;32m✅ D395-a/D534 Note 引用门禁: 无治理/规则区变更（跳过）[0m
+exit=0
+
+mutated: '[ "$DECL_RC" = 0 ]' -> '[ "$DECL_RC" = 99 ]'
+────── [D-2 变异：放行条件 0→99（停用放行分支，语法保持合法）] 反例①：授权声明（msg=D979 / 认领=D945）──────
+[bash -n 语法]
+bash_n_exit=0
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;31m❌ D328: 提交声明(D979)与暂存文件归属(D945)不一致 — 疑似并行劫持[0m
+   认领 brief: /private/tmp/d979-verify/fx-D/.claude/task-briefs/2026-09-26-D945-fixture.md
+   DECL_ALLOW
+   MSG_DID=D979 CLAIM_DID=D945 FILES=1
+   FILE=docs/synova/coordination/fixture-shared.md SOURCE=index DECL=共享声明：D945, D979 HIT=D945,D979 MISSING=(无)
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+exit=1
+
+mutated: 'DECL_RC=0\n          DECL_OUT=' -> 'DECL_RC=1\n          DECL_OUT='
+────── [D-3 变异：DECL_RC 初值 0→1（放行永不成立）] 反例①：授权声明（msg=D979 / 认领=D945）──────
+[bash -n 语法]
+bash_n_exit=0
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;31m❌ D328: 提交声明(D979)与暂存文件归属(D945)不一致 — 疑似并行劫持[0m
+   认领 brief: /private/tmp/d979-verify/fx-D/.claude/task-briefs/2026-09-26-D945-fixture.md
+   DECL_ALLOW
+   MSG_DID=D979 CLAIM_DID=D945 FILES=1
+   FILE=docs/synova/coordination/fixture-shared.md SOURCE=index DECL=共享声明：D945, D979 HIT=D945,D979 MISSING=(无)
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+exit=1
+
+────── [D-4 恢复后（重建夹具，回到原始）] 反例①：授权声明（msg=D979 / 认领=D945）──────
+[bash -n 语法]
+bash_n_exit=0
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;32m✅ D328 共享声明放行（D979 FIX-011 ⒝）: 暂存文件逐文件双向声明命中[0m
+   认领 brief: /private/tmp/d979-verify/fx-D/.claude/task-briefs/2026-09-26-D945-fixture.md
+   DECL_ALLOW
+   MSG_DID=D979 CLAIM_DID=D945 FILES=1
+   FILE=docs/synova/coordination/fixture-shared.md SOURCE=index DECL=共享声明：D945, D979 HIT=D945,D979 MISSING=(无)
+[0;32m✅ D395-a/D534 Note 引用门禁: 无治理/规则区变更（跳过）[0m
+exit=0
+
