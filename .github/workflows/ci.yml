@@ -94,7 +94,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '20', cache: 'npm' }
         if: steps.docsonly.outputs.docs_only != 'true'
-      - run: npm ci
+      - run: bash scripts/control-tower/install-deps.sh
         if: steps.docsonly.outputs.docs_only != 'true'
       # D703 (K3 W-1) 证据命令机器化: 非 docs-only PR 改动 dev-doc → 按文件名 D 号
       # 回放对应 scripts/ci/verify-dXXX.sh 自证脚本（DS 命令从文档字符串升级为 CI 实跑）。
@@ -229,7 +229,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.docsonly.outputs.docs_only != 'true'
         with: { node-version: '20', cache: 'npm' }
-      - run: npm ci
+      - run: bash scripts/control-tower/install-deps.sh
         if: steps.docsonly.outputs.docs_only != 'true'
       - name: Run tests
         if: steps.docsonly.outputs.docs_only != 'true'
@@ -306,7 +306,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.docsonly.outputs.docs_only != 'true'
         with: { node-version: '20', cache: 'npm' }
-      - run: npm ci
+      - run: bash scripts/control-tower/install-deps.sh
         if: steps.docsonly.outputs.docs_only != 'true'
       - name: Layer boundary check
         if: steps.docsonly.outputs.docs_only != 'true'
@@ -361,7 +361,7 @@ jobs:
       - name: Install test-kit deps
         if: steps.docsonly.outputs.docs_only != 'true'
         working-directory: packages/test-kit
-        run: npm ci
+        run: bash "$GITHUB_WORKSPACE/scripts/control-tower/install-deps.sh" --prefix .
       - name: Run ratchet baseline test (05-as-any-audit)
         if: steps.docsonly.outputs.docs_only != 'true'
         working-directory: packages/test-kit
@@ -587,6 +587,7 @@ jobs:
             tests/control-tower/d956-failmsg.test.sh \
             tests/control-tower/check-required-contexts.test.sh \
             tests/control-tower/loop-context.test.sh \
+            tests/control-tower/install-deps.test.sh \
             tests/control-tower/ci-signal-classify.test.sh; do
             echo "── $t"
             # D1147: D1094 平台跳过名单随 windows 腿迁出本 job——本矩阵已收敛为单元素 ubuntu
@@ -655,7 +656,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.docsonly.outputs.docs_only != 'true'
         with: { node-version: '20', cache: 'npm' }
-      - run: npm ci
+      - run: bash scripts/control-tower/install-deps.sh
         if: steps.docsonly.outputs.docs_only != 'true'
       - name: L1+L2 integration checks
         if: steps.docsonly.outputs.docs_only != 'true'
@@ -690,7 +691,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.docsonly.outputs.docs_only != 'true'
         with: { node-version: '20', cache: 'npm' }
-      - run: npm ci
+      - run: bash scripts/control-tower/install-deps.sh
         if: steps.docsonly.outputs.docs_only != 'true'
       - name: Run checker review
         if: steps.docsonly.outputs.docs_only != 'true'
@@ -764,7 +765,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.docsonly.outputs.docs_only != 'true'
         with: { node-version: '22', cache: 'npm' }
-      - run: npm ci
+      - run: bash scripts/control-tower/install-deps.sh
         if: steps.docsonly.outputs.docs_only != 'true'
       - name: Run golden case F1 gate
         if: steps.docsonly.outputs.docs_only != 'true'
@@ -1029,7 +1030,7 @@ jobs:
         continue-on-error: true
         working-directory: packages/test-kit
         run: |
-          npm ci
+          bash "$GITHUB_WORKSPACE/scripts/control-tower/install-deps.sh" --prefix .
           npx vitest run tests/architecture/05-as-any-audit.test.ts
       - name: Surface advisory outcome (non-blocking, D1147)
         if: always()
@@ -1136,6 +1137,7 @@ jobs:
             tests/control-tower/d956-failmsg.test.sh \
             tests/control-tower/check-required-contexts.test.sh \
             tests/control-tower/loop-context.test.sh \
+            tests/control-tower/install-deps.test.sh \
             tests/control-tower/ci-signal-classify.test.sh; do
             echo "── $t"
             # D1094 平台跳过名单（**只在顾问腿**；分层原则：平台无关的失败不该污染 Windows 信号，

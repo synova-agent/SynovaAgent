@@ -42,7 +42,7 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-      - run: npm ci
+      - run: bash scripts/control-tower/install-deps.sh
       - name: A2 机器验证入库（vitest 全绿 → ci 证据）
         run: |
           if npx vitest run > /tmp/vitest-a2.log 2>&1; then
