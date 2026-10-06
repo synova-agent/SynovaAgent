@@ -48,6 +48,7 @@
 - docs/synova/coordination/TASK-ROUTING.md — W10：CODEOWNERS「强制方式」措辞改实测 + B1 行更正
 - docs/synova/coordination/dsh-division-draft/DIVISION-CHARTER-v4.md — W10：「越界 PR 被 GitHub 拦」划删 + 更正
 - .github/workflows/ci.yml — `test` job `timeout-minutes` 8 → 15（`Vitest (1/2)` 被自己的 timeout 杀掉；3/3 run 实证）
+- tests/electron/backend-spawn.test.ts — afterEach 末尾加 handle 扫描（回收残留 ChildProcess/Server）⇒ forks worker 能退出
 - package-lock.json — 随 lock 重生成（coverage-v8 5.0.2 + 其传递依赖）
 - tests/control-tower/post-commit.test.sh — F2 红例基线改钉「引入 D1157-REC-RE 提交的父提交」+ prefilter 只看非注释行
 - docs/synova/coordination/DSH-断面.json — `known_versions` 补登 `0.1.2-install`、`0.2.0-rc.2`（出处见 note）
