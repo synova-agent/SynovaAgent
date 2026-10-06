@@ -44,6 +44,9 @@
 ## Q2: 范围 — 正确的最简方案
 做什么：
 - package.json — `@vitest/coverage-v8` 4.1.8 → 5.0.2（与 vitest 同版，消 peer 互斥）
+- src/services/email-service.ts — 加 `import type { Transporter }`，`:35` 改用具名类型（消 TS2503；全仓最后 1 条阻断性类型错）
+- docs/synova/coordination/TASK-ROUTING.md — W10：CODEOWNERS「强制方式」措辞改实测 + B1 行更正
+- docs/synova/coordination/dsh-division-draft/DIVISION-CHARTER-v4.md — W10：「越界 PR 被 GitHub 拦」划删 + 更正
 - package-lock.json — 随 lock 重生成（coverage-v8 5.0.2 + 其传递依赖）
 - tests/control-tower/post-commit.test.sh — F2 红例基线改钉「引入 D1157-REC-RE 提交的父提交」+ prefilter 只看非注释行
 - docs/synova/coordination/DSH-断面.json — `known_versions` 补登 `0.1.2-install`、`0.2.0-rc.2`（出处见 note）
