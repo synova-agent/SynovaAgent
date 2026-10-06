@@ -1,0 +1,803 @@
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-tests
+
+···················stderr | packages/test-kit/tests/security/05-injection.test.ts > 注入防护 > src/ 中所有路由的 orgId 参数应经过校验
+⚠ src/routes/actions-api.ts: 使用了 orgId 但可能缺少校验
+⚠ src/routes/admin-knowledge.ts: 使用了 orgId 但可能缺少校验
+⚠ src/routes/audit.ts: 使用了 orgId 但可能缺少校验
+⚠ src/routes/auth.ts: 使用了 orgId 但可能缺少校验
+⚠ src/routes/chat.ts: 使用了 orgId 但可能缺少校验
+⚠ src/routes/config.ts: 使用了 orgId 但可能缺少校验
+⚠ src/routes/conversations.ts: 使用了 orgId 但可能缺少校验
+⚠ src/routes/diagnosis.ts: 使用了 orgId 但可能缺少校验
+⚠ src/routes/enterprise.ts: 使用了 orgId 但可能缺少校验
+⚠ src/routes/ga-admin.ts: 使用了 orgId 但可能缺少校验
+⚠ src/routes/ga-annotations-types.ts: 使用了 orgId 但可能缺少校验
+⚠ src/routes/ga-annotations.ts: 使用了 orgId 但可能缺少校验
+⚠ src/routes/ga-auth.ts: 使用了 orgId 但可能缺少校验
+⚠ src/routes/ga-calibration.ts: 使用了 orgId 但可能缺少校验
+⚠ src/routes/ga-corrections.ts: 使用了 orgId 但可能缺少校验
+⚠ src/routes/im.ts: 使用了 orgId 但可能缺少校验
+⚠ src/routes/notifications.ts: 使用了 orgId 但可能缺少校验
+⚠ src/routes/overflow.ts: 使用了 orgId 但可能缺少校验
+⚠ src/routes/sessions.ts: 使用了 orgId 但可能缺少校验
+⚠ src/routes/solutions.ts: 使用了 orgId 但可能缺少校验
+⚠ src/routes/workspace-data.ts: 使用了 orgId 但可能缺少校验
+
+···xxxx·································stderr | packages/test-kit/tests/security/04-llm-parse-robustness.test.ts > BUG-06: LLM 输出解析健壮性 > markdown 包裹的 JSON 应正确解析
+⚠ 已知限制: markdown 包裹 JSON 解析结果: 0 个工具
+
+···········stderr | packages/test-kit/tests/architecture/02-wiring-audit.test.ts > 铁律 0-2 Step 5: 模块接线验证 > Optional 接线 (信息性) > ReportGraphAdapter: L4 报告从 GraphStore 读取
+⚠ ReportGraphAdapter 未被任何入口引用 — 未接线 — 报告当前通过 Synova 自研引擎渲染
+
+stderr | packages/test-kit/tests/architecture/02-wiring-audit.test.ts > 铁律 0-2 Step 5: 模块接线验证 > Optional 接线 (信息性) > CommunityReports: L4 GraphRAG 社区发现
+⚠ CommunityReports 未被任何入口引用 — Feature flag 默认关闭
+
+stderr | packages/test-kit/tests/architecture/02-wiring-audit.test.ts > 铁律 0-2 Step 5: 模块接线验证 > Optional 接线 (信息性) > ModuleRunner: 并行模块调度器 (Phase 1) — 通过 orchestrator/index.ts re-export
+⚠ ModuleRunner 未被任何入口引用 — 类已导出但未被 synova-agent 生产入口直接引用
+
+stderr | packages/test-kit/tests/architecture/02-wiring-audit.test.ts > 铁律 0-2 Step 5: 模块接线验证 > Optional 接线 (信息性) > PermissionPolicy: API Token 认证 + 权限策略 (类名已在 server.ts 中通过 import 使用)
+⚠ PermissionPolicy 未被任何入口引用 — PermissionPolicy 类名未被直接引用，但 security/index.ts 被整体 import
+
+stderr | packages/test-kit/tests/architecture/02-wiring-audit.test.ts > 铁律 0-2 Step 5: 模块接线验证 > Optional 接线 (信息性) > AgentObserverCollector: Agent 可观测性收集器
+⚠ AgentObserverCollector 未被任何入口引用 — P3 AgentObserver 正在建设中
+
+stderr | packages/test-kit/tests/architecture/02-wiring-audit.test.ts > 铁律 0-2 Step 5: 模块接线验证 > Optional 接线 (信息性) > PythonBridge: Python ↔ TypeScript 跨语言桥接
+⚠ PythonBridge 未被任何入口引用 — P3: 跨语言集成测试覆盖
+
+stderr | packages/test-kit/tests/architecture/02-wiring-audit.test.ts > 铁律 0-2 Step 5: 模块接线验证 > Optional 接线 (信息性) > runPKBLifecycle: PKB 生命周期 (Gear6 调用) — 待接线到 Gear6
+⚠ runPKBLifecycle 未被任何入口引用 — M2: PKB lifecycle 已实现, 待 Gear6 集成
+
+stderr | packages/test-kit/tests/architecture/02-wiring-audit.test.ts > 铁律 0-2 Step 5: 模块接线验证 > Optional 接线 (信息性) > ObserverMCP: MCP Server — 多框架 Agent 可观测性
+⚠ ObserverMCP 未被任何入口引用 — P3: 多框架适配器
+
+x·x································stderr | packages/test-kit/tests/python-bridge/01-synova-worker.test.ts > Python Bridge 集成 > Python 可用且版本 >= 3.10
+⚠ Python 不可用: spawn python ENOENT。跳过 Python Bridge 集成测试。
+
+stderr | packages/test-kit/tests/security/03-resource-leak.test.ts > 资源泄漏扫描 > src/ 中无未关闭的 DB 连接模式
+⚠ 可能未关闭的 DB 连接:
+  src/agent/session-storage-service.ts:43: 可能未关闭的 Database 连接
+  src/agent/synova-agent.ts:10: 可能未关闭的 Database 连接
+  src/init/engine-context.ts:66: 可能未关闭的 Database 连接
+
+stderr | packages/test-kit/tests/python-bridge/01-synova-worker.test.ts > Python Bridge 集成 > __main__.py --help 执行成功
+⚠ Python Bridge 不可用: spawn python ENOENT
+
+·····stderr | packages/test-kit/tests/security/01-empty-catch-audit.test.ts > 铁律 11+24+31: 空 catch 审计 > src/ 中无空 catch 块 (Catch with no log.warn/error)
+⚠ 发现 474 处潜在空 catch:
+  src/adapters/sqlite-graph-store.ts:123: } catch (err: unknown) {
+  src/adapters/sqlite-graph-store.ts:132: } catch (err: unknown) {
+  src/adapters/sqlite-graph-store.ts:153: } catch (err: unknown) {
+  src/adapters/sqlite-graph-store.ts:183: } catch (err: unknown) {
+  src/adapters/sqlite-graph-store.ts:216: } catch (err: unknown) {
+  src/adapters/sqlite-graph-store.ts:255: } catch (err: unknown) {
+  src/adapters/sqlite-graph-store.ts:287: } catch (err: unknown) {
+  src/adapters/sqlite-graph-store.ts:310: } catch (err: unknown) {
+  src/adapters/sqlite-graph-store.ts:329: } catch (err: unknown) {
+  src/adapters/sqlite-graph-store.ts:342: } catch (err: unknown) {
+  src/adapters/sqlite-graph-store.ts:355: } catch (err: unknown) {
+  src/agent/adapter-scanner.ts:82: } catch (err: unknown) {
+  src/agent/atomic-write.ts:70: } catch (err: unknown) {
+  src/agent/atomic-write.ts:82: } catch (err: unknown) {
+  src/agent/atomic-write.ts:90: } catch (err: unknown) {
+  src/agent/boss-mailbox.ts:113: } catch (err: unknown) {
+  src/agent/boss-mailbox.ts:140: } catch (err: unknown) {
+  src/agent/context-compaction.ts:188: } catch (err) {
+  src/agent/context-compaction.ts:197: } catch (retryErr) {
+  src/agent/context-compaction.ts:415: } catch (err) {
+  src/agent/convergence-engine.ts:363: } catch (err: unknown) {
+  src/agent/conversation-engine.ts:600: } catch (err) {
+  src/agent/conversation-engine.ts:756: } catch (err) {
+  src/agent/cross-validator.ts:131: } catch (err: unknown) {
+  src/agent/cross-validator.ts:186: } catch (err: unknown) {
+  src/agent/cycle-conclusion-service.ts:218: } catch (err: unknown) {
+  src/agent/data-ingest-service.ts:62: } catch (err: unknown) {
+  src/agent/data-ingest-service.ts:81: } catch (err: unknown) {
+  src/agent/diagnosis-launcher.ts:115: } catch (err: unknown) {
+  src/agent/expert-file-loader.ts:229: } catch { /* 双重失败 — 跳过 */ }
+  src/agent/expert-router.ts:121: } catch (err: unknown) {
+  src/agent/expert-router.ts:154: } catch (err: unknown) {
+  src/agent/file-scanner.ts:154: } catch (err: unknown) {
+  src/agent/interactive-card.ts:213: } catch (err) {
+  src/agent/knowledge-injector.ts:131: } catch (err: unknown) {
+  src/agent/knowledge-injector.ts:216: } catch (err: unknown) {
+  src/agent/loop-handlers.ts:246: } catch (err: unknown) {
+  src/agent/loop-handlers.ts:275: } catch (err: unknown) {
+  src/agent/loop-handlers.ts:352: } catch (err: unknown) {
+  src/agent/loop-handlers.ts:423: } catch (err: unknown) {
+  src/agent/loop-handlers.ts:482: } catch (err: unknown) {
+  src/agent/loop-handlers.ts:497: } catch (err: unknown) {
+  src/agent/loop-handlers.ts:508: } catch (err: unknown) {
+  src/agent/loop-handlers.ts:515: } catch (retryErr: unknown) {
+  src/agent/loop-handlers.ts:534: } catch (err: unknown) {
+  src/agent/loop-handlers.ts:597: } catch (err: unknown) {
+  src/agent/loop-handlers.ts:711: } catch (err: unknown) {
+  src/agent/main-agent.ts:110: } catch (err: unknown) {
+  src/agent/main-agent.ts:395: } catch (err: unknown) {
+  src/agent/main-agent.ts:425: } catch (err: unknown) {
+  src/agent/post-diagnosis-processor.ts:111: } catch (err: unknown) {
+  src/agent/post-diagnosis-processor.ts:264: } catch (err: unknown) {
+  src/agent/proactive-push.ts:262: } catch (err: unknown) {
+  src/agent/proactive-push.ts:286: } catch (err: unknown) {
+  src/agent/prompt-assembler.ts:614: } catch (err) {
+  src/agent/report-onepager-trace.ts:297: } catch (err: unknown) {
+  src/agent/sentinel-service.ts:417: } catch (err: unknown) {
+  src/agent/sentinel-service.ts:423: } catch (memErr: unknown) {
+  src/agent/sentinel-service.ts:473: } catch (err: unknown) {
+  src/agent/synova-agent.ts:110: } catch (err: unknown) {
+  src/agent/synova-agent.ts:131: } catch (err: unknown) {
+  src/agent/synova-agent.ts:151: } catch (err: unknown) {
+  src/agent/synova-agent.ts:162: } catch (err: unknown) {
+  src/agent/synova-agent.ts:237: } catch (err: unknown) {
+  src/agent/synova-agent.ts:242: } catch (err: unknown) {
+  src/agent/synova-agent.ts:256: } catch (err: unknown) {
+  src/agent/task-decomposer.ts:163: } catch (err: unknown) {
+  src/agent/task-decomposer.ts:256: } catch (err: unknown) {
+  src/agent/tool-loop-executor.ts:81: } catch (err) {
+  src/agent/tools.ts:283: } catch (err) {
+  src/cli/commands/config-cmd.ts:81: } catch {
+  src/cli/commands/config-cmd.ts:100: } catch {
+  src/cli/commands/config-cmd.ts:144: } catch {
+  src/cli/commands/expert.ts:35: } catch (err: unknown) {
+  src/cli/commands/measurer.ts:84: } catch {
+  src/cli-manager.ts:56: } catch (err: unknown) {
+  src/cli-manager.ts:126: } catch {
+  src/cli-manager.ts:152: } catch {
+  src/cli.ts:52: } catch (err: any) {
+  src/cli.ts:243: } catch (err: any) {
+  src/config/customer-config-package.ts:134: } catch (error: unknown) {
+  src/config/customer-config-package.ts:141: } catch (error: unknown) {
+  src/config/customer-config-package.ts:157: } catch {
+  src/config/customer-config-package.ts:180: } catch {
+  src/config/customer-config-package.ts:186: } catch (error: unknown) {
+  src/config/customer-config-package.ts:203: } catch (error: unknown) {
+  src/config/customer-config-package.ts:403: } catch (error: unknown) {
+  src/config-file.ts:122: } catch { /* last-good 也不可用, 使用默认值 */ }
+  src/config-file.ts:178: } catch (err: unknown) {
+  src/connectors/ima.ts:85: } catch (err: unknown) {
+  src/connectors/ima.ts:117: } catch (err: unknown) {
+  src/contract/contract-gate.ts:67: } catch (err: unknown) {
+  src/contract/contract-gate.ts:145: } catch (err) {
+  src/contract/contract-store.ts:74: } catch (err: unknown) {
+  src/contract/contract-store.ts:103: } catch (err: unknown) {
+  src/contract/contract-store.ts:109: } catch (err: unknown) {
+  src/contract/contract-store.ts:135: } catch { continue; }
+  src/contract/contract-store.ts:138: } catch (err: unknown) {
+  src/control-tower/signal-emitter.ts:62: } catch (err: unknown) {
+  src/cron/scheduler.ts:319: } catch (err: unknown) {
+  src/cycles/cross-scale-validator.ts:130: } catch (err: unknown) {
+  src/cycles/overflow-graph-bridge.ts:79: } catch (err: unknown) {
+  src/cycles/overflow-graph-bridge.ts:124: } catch (err: unknown) {
+  src/cycles/overflow-graph-bridge.ts:191: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:313: } catch (rollbackErr: unknown) {
+  src/deploy/bootstrap.ts:543: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:580: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:737: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:752: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:767: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:780: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:835: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:846: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:858: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:870: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:904: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:927: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:939: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:953: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:970: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:980: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:992: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:1004: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:1024: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:1042: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:1066: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:1078: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:1105: } catch (connErr: unknown) {
+  src/deploy/bootstrap.ts:1115: } catch (cronErr: unknown) {
+  src/deploy/bootstrap.ts:1132: } catch (scanErr: unknown) {
+  src/deploy/bootstrap.ts:1138: } catch (cronErr: unknown) {
+  src/deploy/bootstrap.ts:1161: } catch (briefErr: unknown) {
+  src/deploy/bootstrap.ts:1187: } catch (backupErr: unknown) {
+  src/deploy/bootstrap.ts:1214: } catch (policyErr: unknown) {
+  src/deploy/bootstrap.ts:1224: } catch (retentionErr: unknown) {
+  src/deploy/bootstrap.ts:1229: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:1240: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:1250: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:1262: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:1273: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:1282: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:1292: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:1308: } catch (err: unknown) {
+  src/deploy/bootstrap.ts:1328: } catch (err: unknown) {
+  src/deploy/recovery-pack.ts:279: } catch (err: unknown) {
+  src/deploy/recovery-pack.ts:421: } catch (err: unknown) {
+  src/deploy/rollback.ts:88: } catch (err: unknown) {
+  src/deploy/rollback.ts:155: } catch (err: unknown) {
+  src/deploy/startup-check.ts:69: } catch (err: unknown) {
+  src/deploy/watchdog-entry.ts:42: } catch (err) {
+  src/errors/types.ts:664: } catch (_hostileThrownValue) {
+  src/errors/types.ts:674: } catch (_sdkPropertyTrap) {
+  src/errors/types.ts:686: } catch (_sdkPropertyTrap) {
+  src/errors/types.ts:720: } catch (_sdkFailureGetter) {
+  src/errors/types.ts:730: } catch (_sdkMessageGetter) {
+  src/expert-platform/extractor.ts:113: } catch (err: any) {
+  src/growth/action-store.ts:91: } catch (err: unknown) {
+  src/growth/action-store.ts:135: } catch (err: unknown) {
+  src/growth/context-loader.ts:135: } catch (err) {
+  src/growth/decision-record.ts:207: } catch (err: unknown) {
+  src/growth/decision-record.ts:220: } catch (err: unknown) {
+  src/growth/decision-record.ts:232: } catch (err: unknown) {
+  src/growth/decision-record.ts:250: } catch (err: unknown) {
+  src/growth/decision-record.ts:273: } catch (err: unknown) {
+  src/growth/feedback-collector.ts:175: } catch (err: unknown) {
+  src/growth/feedback-collector.ts:226: } catch (inner: unknown) {
+  src/growth/feedback-collector.ts:231: } catch (err: unknown) {
+  src/growth/feedback-collector.ts:280: } catch (err: unknown) {
+  src/growth/feedback-collector.ts:348: } catch (err: unknown) {
+  src/growth/feedback-collector.ts:383: } catch (err: unknown) {
+  src/growth/goal-conflict-detector.ts:137: } catch (err: unknown) {
+  src/growth/goal-lifecycle.ts:196: } catch (err: unknown) {
+  src/growth/goal-lifecycle.ts:263: } catch (err: unknown) {
+  src/growth/goal-sentinel.ts:254: } catch (err: unknown) {
+  src/growth/goal-sentinel.ts:259: } catch (triggerErr: unknown) {
+  src/growth/goal-store.ts:140: } catch (err: unknown) {
+  src/growth/goal-store.ts:156: } catch (err: unknown) {
+  src/growth/goal-store.ts:170: } catch (err: unknown) {
+  src/growth/goal-store.ts:184: } catch (err: unknown) {
+  src/growth/goal-store.ts:256: } catch (err: unknown) {
+  src/growth/knowledge-feedback.ts:324: } catch (err: unknown) {
+  src/growth/knowledge-feedback.ts:361: } catch (err: unknown) {
+  src/growth/knowledge-feedback.ts:450: } catch (err: unknown) {
+  src/growth/lightweight-diagnosis.ts:407: } catch (timeoutErr: unknown) {
+  src/growth/lightweight-diagnosis.ts:425: } catch (incErr: unknown) {
+  src/growth/lightweight-diagnosis.ts:446: } catch (err: unknown) {
+  src/growth/proposal-engine.ts:217: } catch (err: unknown) {
+  src/growth/proposal-engine.ts:322: } catch (err: unknown) {
+  src/growth/proposal-engine.ts:328: } catch (triggerErr: unknown) {
+  src/growth/proposal-store.ts:112: } catch (err: unknown) {
+  src/growth/proposal-store.ts:127: } catch (err: unknown) {
+  src/growth/proposal-store.ts:141: } catch (err: unknown) {
+  src/growth/proposal-store.ts:157: } catch (err: unknown) {
+  src/growth/proposal-store.ts:204: } catch (err: unknown) {
+  src/growth/proposal-store.ts:323: } catch (err: unknown) {
+  src/growth/skill-knowledge.ts:230: } catch (err: unknown) {
+  src/growth/skill-knowledge.ts:289: } catch (err: unknown) {
+  src/growth/user-store.ts:223: } catch (err) {
+  src/growth/user-store.ts:238: } catch (err) {
+  src/growth/workspace-builder.ts:129: } catch (err: unknown) {
+  src/growth/workspace-builder.ts:141: } catch (err: unknown) {
+  src/growth/workspace-builder.ts:154: } catch (err: unknown) {
+  src/growth/workspace-builder.ts:167: } catch (err: unknown) {
+  src/growth/workspace-builder.ts:185: } catch (err: unknown) {
+  src/growth/workspace-builder.ts:207: } catch (err: unknown) {
+  src/index.ts:21: } catch (err) {
+  src/index.ts:23: try { stopSynovaAgentProcess(); } catch { console.debug('stopSynovaAgentProcess 失败 — 进程即将退出, 忽略'); }
+  src/ingest/index.ts:64: } catch (err: unknown) {
+  src/ingest/knowledge-ingest-bridge.ts:69: } catch (err: any) {
+  src/init/engine-context.ts:135: } catch (err: unknown) {
+  src/l1/im-inbound.ts:153: } catch (err: unknown) {
+  src/l1/qa-router.ts:128: } catch (err: unknown) {
+  src/l3/business-model-loader.ts:23: catch (err: any) { errors.push(`${file}: 解析失败`); }
+  src/l3/evidence-retention.ts:190: } catch (err: unknown) {
+  src/l3/evidence-retention.ts:228: } catch (err: unknown) {
+  src/l3/expert-dispatcher.ts:313: } catch { /* skill catalog build failed — degraded */ }
+  src/l3/expert-dispatcher.ts:327: } catch { /* knowledge injection failed — degraded */ }
+  src/l3/expert-dispatcher.ts:654: } catch (err: unknown) {
+  src/l3/framework-loader.ts:54: } catch { /* degraded */ }
+  src/l3/framework-loader.ts:60: } catch {
+  src/l3/ga-collaboration.ts:97: } catch (err: unknown) {
+  src/l3/ga-collaboration.ts:198: } catch (err: unknown) {
+  src/l3/ga-collaboration.ts:232: } catch (err: unknown) {
+  src/l3/knowledge-agent.ts:415: } catch (err: unknown) {
+  src/l3/knowledge-agent.ts:531: } catch (err: unknown) {
+  src/l3/pkb-lifecycle.ts:101: } catch (err: unknown) {
+  src/l3/report-template-loader.ts:143: } catch {
+  src/l3/synova-diagnosis-engine-impl.ts:241: } catch (slErr: unknown) {
+  src/l3/synova-diagnosis-engine-impl.ts:311: } catch (err: unknown) {
+  src/l3/synova-diagnosis-engine-impl.ts:489: } catch (err: unknown) {
+  src/l3/tool-guard.ts:134: } catch (err) {
+  src/l4/adapter-loader.ts:31: catch (err: any) { errors.push(`${entry.name}: 解析失败`); }
+  src/l4/agent-memory-store.ts:154: } catch (err) {
+  src/l4/agent-memory-store.ts:378: } catch {
+  src/l4/agent-memory-store.ts:495: } catch (inner: unknown) {
+  src/l4/agent-memory-store.ts:500: } catch (err: unknown) {
+  src/l4/data-purger.ts:142: } catch (err: unknown) {
+  src/l4/delivery-queue.ts:95: } catch (err: unknown) {
+  src/l4/department-memory-store.ts:207: } catch (err: unknown) {
+  src/l4/graph-bridge.ts:153: } catch (err: any) {
+  src/l4/graph-bridge.ts:183: } catch (err: any) {
+  src/l4/graph-bridge.ts:206: } catch (err: any) {
+  src/l4/graph-bridge.ts:228: } catch (err: any) {
+  src/l4/graph-bridge.ts:249: } catch (err: any) {
+  src/l4/graph-bridge.ts:275: } catch (err: any) {
+  src/l4/knowledge-store.ts:368: } catch (err: unknown) {
+  src/l4/knowledge-store.ts:738: } catch (err: unknown) {
+  src/l4/knowledge-store.ts:754: } catch (err: unknown) {
+  src/l4/traversal-permission-filter.ts:126: } catch (err: unknown) {
+  src/l5/connector-pipeline.ts:69: } catch (err: any) {
+  src/l5/ontology-event-bus.ts:55: } catch (err: any) {
+  src/llm/retry-middleware.ts:290: } catch (err) {
+  src/llm/retry-middleware.ts:370: } catch (err) {
+  src/llm/retry-middleware.ts:456: } catch (err) {
+  src/locale/locale-loader.ts:41: } catch {
+  src/loops/direction-monitor.ts:216: } catch (err: unknown) {
+  src/loops/loop-scheduler.ts:150: } catch (err: unknown) {
+  src/loops/loop-scheduler.ts:167: } catch (err: unknown) {
+  src/loops/loop-scheduler.ts:184: } catch (err: unknown) {
+  src/loops/loop-scheduler.ts:201: } catch (err: unknown) {
+  src/loops/loop-scheduler.ts:218: } catch (err: unknown) {
+  src/loops/loop-scheduler.ts:235: } catch (err: unknown) {
+  src/loops/loop-scheduler.ts:241: } catch (err: unknown) {
+  src/loops/loop-scheduler.ts:365: } catch (jobErr: unknown) {
+  src/loops/loop-scheduler.ts:380: } catch (err: unknown) {
+  src/loops/middle-evolution-engine.ts:655: } catch (err: unknown) {
+  src/notifications/electron-adapter.ts:28: } catch (err: unknown) {
+  src/notifications/notification-loader.ts:66: } catch (err: unknown) {
+  src/orchestrator/context-compressor.ts:152: } catch (err: unknown) {
+  src/orchestrator/context-engine.ts:187: } catch (err) {
+  src/orchestrator/context-engine.ts:250: } catch (parseErr) {
+  src/orchestrator/context-engine.ts:255: } catch (err) {
+  src/orchestrator/context-engine.ts:280: } catch (err) {
+  src/orchestrator/context-engine.ts:337: } catch (err) {
+  src/orchestrator/llm-phase-executor.ts:129: } catch (err: any) {
+  src/orchestrator/llm-phase-executor.ts:148: } catch (err: any) {
+  src/orchestrator/session-manager.ts:90: } catch (err) {
+  src/providers/base.ts:268: } catch (err) {
+  src/providers/llm-provider-loader.ts:32: catch (err: any) { errors.push(`${entry.name}: 解析失败`); }
+  src/routes/adapters.ts:34: } catch (err: unknown) {
+  src/routes/adapters.ts:48: } catch (err: unknown) {
+  src/routes/admin-knowledge.ts:69: } catch (err: unknown) {
+  src/routes/admin-knowledge.ts:84: } catch (err: unknown) {
+  src/routes/admin-knowledge.ts:100: } catch (err: unknown) {
+  src/routes/admin-knowledge.ts:124: } catch (err: unknown) {
+  src/routes/admin-knowledge.ts:143: } catch (err: unknown) {
+  src/routes/admin-knowledge.ts:163: } catch (err: unknown) {
+  src/routes/admin-knowledge.ts:178: } catch (err: unknown) {
+  src/routes/admin-knowledge.ts:198: } catch (err: unknown) {
+  src/routes/agent-observer.ts:113: } catch (err: unknown) {
+  src/routes/audit.ts:58: } catch (err: unknown) {
+  src/routes/audit.ts:86: } catch (err: unknown) {
+  src/routes/auth.ts:102: } catch (err: unknown) {
+  src/routes/auth.ts:140: } catch (err: unknown) {
+  src/routes/auth.ts:198: } catch (err: unknown) {
+  src/routes/auth.ts:241: } catch (err: unknown) {
+  src/routes/auth.ts:286: } catch (err: unknown) {
+  src/routes/chat.ts:100: } catch (err: unknown) {
+  src/routes/chat.ts:357: } catch(e) {
+  src/routes/chat.ts:520: }).catch(function(err) { console.warn('方案确认通知失败 — degraded, 本地状态已更新', err); });
+  src/routes/chat.ts:521: } catch(e) { console.warn('确认请求失败 — degraded:', e); }
+  src/routes/chat.ts:762: } catch(e) {
+  src/routes/chat.ts:859: } catch(e) {
+  src/routes/chat.ts:921: } catch(e) {
+  src/routes/cockpit.ts:55: try { unlinkSync(runner); } catch { /* ignore */ }
+  src/routes/cockpit.ts:56: try { unlinkSync(tmpDir); } catch { /* ignore */ }
+  src/routes/config.ts:44: } catch (error: unknown) {
+  src/routes/conversations.ts:340: } catch (err: unknown) {
+  src/routes/data-lifecycle.ts:49: } catch (err: unknown) {
+  src/routes/data-lifecycle.ts:78: } catch (err: unknown) {
+  src/routes/data-lifecycle.ts:104: } catch (err: unknown) {
+  src/routes/department-workspace.ts:96: }catch(e){
+  src/routes/department-workspace.ts:109: }catch(e){
+  src/routes/department-workspace.ts:119: } catch(e){
+  src/routes/enterprise.ts:121: } catch (err: unknown) {
+  src/routes/enterprise.ts:134: } catch (err: unknown) {
+  src/routes/enterprise.ts:164: } catch (err: unknown) {
+  src/routes/enterprise.ts:177: } catch (err: unknown) {
+  src/routes/enterprise.ts:192: } catch (err: unknown) {
+  src/routes/enterprise.ts:207: } catch (err: unknown) {
+  src/routes/enterprise.ts:259: } catch (err: unknown) {
+  src/routes/enterprise.ts:276: } catch (err: unknown) {
+  src/routes/enterprise.ts:288: } catch (err: unknown) {
+  src/routes/enterprise.ts:312: } catch (err: unknown) {
+  src/routes/enterprise.ts:331: } catch (err: unknown) {
+  src/routes/enterprise.ts:353: } catch (err: unknown) {
+  src/routes/enterprise.ts:373: } catch (err: unknown) {
+  src/routes/enterprise.ts:395: } catch (err: unknown) {
+  src/routes/enterprise.ts:408: } catch (err: unknown) {
+  src/routes/enterprise.ts:423: } catch (err: unknown) {
+  src/routes/enterprise.ts:436: } catch (err: unknown) {
+  src/routes/enterprise.ts:456: } catch (err: unknown) {
+  src/routes/enterprise.ts:471: } catch (err: unknown) {
+  src/routes/enterprise.ts:489: } catch (err: unknown) {
+  src/routes/enterprise.ts:512: } catch (err: unknown) {
+  src/routes/enterprise.ts:527: } catch (err: unknown) {
+  src/routes/enterprise.ts:556: } catch (err: unknown) {
+  src/routes/enterprise.ts:569: } catch (err: unknown) {
+  src/routes/enterprise.ts:593: } catch (err: unknown) {
+  src/routes/enterprise.ts:610: } catch (err: unknown) {
+  src/routes/enterprise.ts:639: } catch (err: unknown) {
+  src/routes/evolution.ts:56: } catch (err: unknown) {
+  src/routes/evolution.ts:81: } catch (err: unknown) {
+  src/routes/evolution.ts:123: } catch (err: unknown) {
+  src/routes/evolution.ts:150: } catch (err: unknown) {
+  src/routes/evolution.ts:201: } catch (err: unknown) {
+  src/routes/evolution.ts:211: catch { res.status(500).json({ ok: false, error: 'feedback failed', degraded: true }); }
+  src/routes/evolution.ts:217: catch { res.status(500).json({ ok: false, error: 'update weight failed', degraded: true }); }
+  src/routes/evolution.ts:221: catch { res.status(500).json({ ok: false, error: 'global analyze failed', degraded: true }); }
+  src/routes/ga-admin.ts:77: } catch (err: unknown) {
+  src/routes/ga-admin.ts:114: } catch (err: unknown) {
+  src/routes/ga-admin.ts:140: } catch (err: unknown) {
+  src/routes/ga-calibration.ts:226: } catch (err: unknown) {
+  src/routes/ga-calibration.ts:299: } catch (err: unknown) {
+  src/routes/ga-calibration.ts:405: } catch (err: unknown) {
+  src/routes/ga-calibration.ts:474: } catch (err: unknown) {
+  src/routes/healthz.ts:172: } catch {
+  src/routes/healthz.ts:215: } catch (err: unknown) {
+  src/routes/healthz.ts:262: } catch (err: unknown) {
+  src/routes/healthz.ts:299: } catch {
+  src/routes/im.ts:96: } catch (err: unknown) {
+  src/routes/import.ts:38: } catch (err: unknown) {
+  src/routes/knowledge-ask.ts:55: } catch { /* KnowledgeStore unavailable — degraded to templates */ }
+  src/routes/knowledge.ts:82: } catch (err: unknown) {
+  src/routes/llm-config.ts:154: } catch (err: unknown) {
+  src/routes/llm-config.ts:217: } catch (err: unknown) {
+  src/routes/loops.ts:108: } catch (err: unknown) {
+  src/routes/loops.ts:126: } catch (err: unknown) {
+  src/routes/loops.ts:144: } catch (err: unknown) {
+  src/routes/notifications.ts:50: } catch (err: unknown) {
+  src/routes/notifications.ts:91: } catch (err: unknown) {
+  src/routes/notifications.ts:104: } catch (err: unknown) {
+  src/routes/notifications.ts:121: } catch (err: unknown) {
+  src/routes/notifications.ts:135: } catch (err: unknown) {
+  src/routes/overflow.ts:62: } catch (err: unknown) {
+  src/routes/overflow.ts:105: } catch (err: unknown) {
+  src/routes/overflow.ts:137: } catch (err: unknown) {
+  src/routes/permissions.ts:82: } catch (err: unknown) {
+  src/routes/permissions.ts:125: } catch (err: unknown) {
+  src/routes/permissions.ts:159: } catch (err: unknown) {
+  src/routes/permissions.ts:189: } catch (err: unknown) {
+  src/routes/reload.ts:70: } catch (err: unknown) {
+  src/routes/sentinel.ts:172: } catch (err: unknown) {
+  src/routes/solutions.ts:82: } catch (err: unknown) {
+  src/routes/solutions.ts:105: } catch (err: unknown) {
+  src/routes/solutions.ts:127: } catch (err: unknown) {
+  src/routes/solutions.ts:160: } catch (err: unknown) {
+  src/routes/solutions.ts:183: } catch (err: unknown) {
+  src/routes/workspace-data.ts:132: } catch (err: unknown) {
+  src/routes/workspace-data.ts:156: } catch (err: unknown) {
+  src/routes/workspace-data.ts:187: } catch (err: unknown) {
+  src/routes/workspace-data.ts:210: } catch (err: unknown) {
+  src/routes/workspace-data.ts:242: } catch (err: unknown) {
+  src/routes/workspace-data.ts:269: } catch (err: unknown) {
+  src/routes/workspace-data.ts:304: } catch (err: unknown) {
+  src/routes/workspace.ts:81: } catch(e){
+  src/routes/workspace.ts:97: } catch(e){
+  src/routes/workspace.ts:106: }catch(e){
+  src/routes/workspace.ts:117: }catch(e){
+  src/security/external-hash-store.ts:88: } catch (err: unknown) {
+  src/security/external-hash-store.ts:112: } catch (err: unknown) {
+  src/security/pre-upload-validator.ts:147: } catch (err: unknown) {
+  src/sentinel/adapters/cpc-sentinel.ts:78: } catch (err: unknown) {
+  src/sentinel/adapters/goal-alignment-sentinel.ts:54: } catch (err: unknown) { return { sentinelId: config.id, ok: false, findings: [], durationMs: Date.now() - startTime, checkedAt, error: (err as Error)?.message || String(err), degraded: true }; }
+  src/sentinel/adapters/integration-health-sentinel.ts:44: } catch { return { sentinelId: config.id, ok: true, findings: [], durationMs: Date.now() - startTime, checkedAt, degraded: true }; }
+  src/sentinel/adapters/integration-health-sentinel.ts:95: } catch (err: unknown) {
+  src/sentinel/runner.ts:298: } catch (err: unknown) {
+  src/sentinel/runner.ts:309: } catch (err: unknown) {
+  src/sentinel/runner.ts:318: } catch (err: unknown) {
+  src/sentinel/runner.ts:507: } catch (err: unknown) {
+  src/sentinel/runner.ts:581: } catch (err: unknown) {
+  src/sentinel/runner.ts:784: } catch (err: unknown) {
+  src/sentinel/runner.ts:826: } catch (err: unknown) {
+  src/sentinel/runner.ts:902: } catch (err: unknown) {
+  src/sentinel/runner.ts:1053: } catch (err: unknown) {
+  src/sentinel/runner.ts:1157: } catch (err: unknown) {
+  src/sentinel/runner.ts:1163: } catch (err: unknown) {
+  src/sentinel/runner.ts:1205: } catch (evErr: unknown) {
+  src/sentinel/runner.ts:1212: } catch (err: unknown) {
+  src/sentinel/runner.ts:1267: } catch (err: unknown) {
+  src/sentinel/runner.ts:1318: } catch (err: unknown) {
+  src/sentinel/runner.ts:1342: } catch (err: unknown) {
+  src/sentinel/runner.ts:1362: } catch (err: unknown) {
+  src/sentinel/runner.ts:1430: } catch (err: unknown) {
+  src/sentinel/runner.ts:1477: } catch (err) {
+  src/sentinel/sentinel-events.ts:100: } catch (err: unknown) {
+  src/sentinel/sentinel-events.ts:122: } catch (err: unknown) {
+  src/sentinel/sentinel-events.ts:130: } catch (retryErr: unknown) {
+  src/sentinel/sentinel-events.ts:176: } catch (err: unknown) {
+  src/server.ts:177: } catch (err: unknown) {
+  src/server.ts:217: } catch (err: unknown) { logger.warn({ err }, '老板信箱获取信号失败 — degraded'); }
+  src/server.ts:231: } catch (e) { logger.warn({ err: e }, '解析行动项失败 — degraded'); return { title: '行动项', status: 'in_progress' as const, detail: '' }; }
+  src/server.ts:235: } catch (err: unknown) { logger.warn({ err }, '老板信箱获取行动项失败 — degraded'); }
+  src/server.ts:241: } catch (err: unknown) { logger.warn({ err }, '老板信箱推送失败 — degraded'); }
+  src/server.ts:314: } catch (err: unknown) {
+  src/server.ts:360: } catch (err: unknown) {
+  src/server.ts:453: } catch (err: unknown) {
+  src/server.ts:481: } catch (err: unknown) {
+  src/services/config-recovery.ts:60: } catch (err: unknown) {
+  src/services/config-recovery.ts:70: } catch (err: unknown) {
+  src/services/config-recovery.ts:137: } catch (err: unknown) {
+  src/services/deepseek-balance.ts:58: } catch (err: unknown) {
+  src/services/email-service.ts:66: } catch (err: unknown) {
+  src/services/email-service.ts:96: } catch (err: unknown) {
+  src/services/graceful-shutdown.ts:148: } catch (err: unknown) {
+  src/services/llm-credential-store.ts:96: } catch (err: unknown) {
+  src/services/llm-credential-store.ts:117: } catch (err: unknown) {
+  src/services/llm-credential-store.ts:155: } catch (err: unknown) {
+  src/services/llm-credential-store.ts:222: } catch (err: unknown) {
+  src/services/memory-access-service.ts:27: } catch (err: unknown) {
+  src/services/memory-access-service.ts:41: } catch (err: unknown) {
+  src/services/memory-access-service.ts:57: } catch (err: unknown) {
+  src/services/memory-access-service.ts:88: } catch (err: unknown) {
+  src/services/resource-monitor.ts:51: try { unlinkSync(runner); } catch { /* ignore */ }
+  src/services/restart-recovery.ts:84: } catch (err: unknown) {
+  src/services/restart-recovery.ts:91: } catch (err: unknown) {
+  src/services/restart-recovery.ts:137: } catch (err: unknown) {
+  src/services/solution-generator.ts:209: } catch (err) {
+  src/services/solution-generator.ts:377: } catch (err) {
+  src/services/stuck-session-detector.ts:94: } catch (err: unknown) {
+  src/services/stuck-session-detector.ts:106: } catch (err: unknown) {
+  src/services/stuck-session-detector.ts:112: } catch (err: unknown) {
+  src/store/schema-migration.ts:83: } catch (err: unknown) {
+  src/store/session-projection.ts:398: } catch (err) {
+  src/store/session-store.ts:255: } catch (migErr) {
+  src/store/session-store.ts:325: } catch (err: unknown) {
+  src/store/session-store.ts:407: } catch (err) {
+  src/store/session-store.ts:456: } catch (err) {
+  src/store/session-store.ts:634: } catch (err: unknown) {
+  src/tui-v2/lib/bootstrap.ts:63: try { execSync('chcp 65001', { timeout: 3000 }); } catch { console.debug('chcp 65001 切换失败 — 非阻塞'); }
+  src/tui-v2/lib/bootstrap.ts:65: } catch { console.debug('chcp 不可用 — 非 Windows 环境'); }
+  src/tui-v2/lib/bootstrap.ts:117: } catch (err) {
+  src/tui-v2/lib/commands.ts:53: try { ctx.db.pragma('wal_checkpoint(TRUNCATE)'); } catch { console.debug('WAL checkpoint 不可用 — 非阻塞'); }
+  src/tui-v2/lib/grapheme.ts:18: } catch { console.debug('Intl.Segmenter 不可用 — 回退到 grapheme-splitter'); }
+
+·stderr | packages/test-kit/tests/security/03-resource-leak.test.ts > 资源泄漏扫描 > src/ 中 setInterval/setTimeout 有对应的 clear 机制
+⚠ 使用定时器的文件 (确认有清理机制):
+  src/agent/conversation-engine.ts
+  src/agent/loop-handlers.ts
+  src/agent/proactive-push.ts
+  src/agent/tool-loop-executor.ts
+  src/agent/tools.ts
+  src/cron/scheduler.ts
+  src/deploy/backup-scheduler.ts
+  src/deploy/bootstrap.ts
+  src/deploy/watchdog-entry.ts
+  src/errors/types.ts
+  src/growth/lightweight-diagnosis.ts
+  src/infra/command-lanes.ts
+  src/l1/im-inbound.ts
+  src/l1-interaction/web-adapter.ts
+  src/l3/expert-dispatcher.ts
+  src/l3/gear6-scheduler.ts
+  src/l4/data-purger.ts
+  src/llm/retry-middleware.ts
+  src/llm/timeout.ts
+  src/mcp/bridge.ts
+  src/middleware/rate-limit.ts
+  src/orchestrator/event-bus.ts
+  src/orchestrator/module-runner.ts
+  src/routes/chat.ts
+  src/routes/department-workspace.ts
+  src/routes/diagnosis.ts
+  src/routes/ga-diagnosis.ts
+  src/routes/ga-evolution.ts
+  src/routes/llm-config.ts
+  src/security/credential-vault.ts
+  src/security/root-hash-publisher.ts
+  src/server.ts
+  src/services/fault-recovery.ts
+  src/services/graceful-shutdown.ts
+  src/services/memory-monitor.ts
+  src/services/retry.ts
+  src/services/runtime-global-handlers.ts
+  src/tui-v2/hooks/use-streaming.ts
+
+··················x····························································stderr | packages/test-kit/tests/security/02-concurrency-safety.test.ts > BUG-05: 模块级全局变量竞态 > src/ 中无模块级全局 interrupted/aborted 变量 (非测试文件)
+⚠ 发现 1 处模块级全局变量:
+  src/cli.ts:30: let interrupted = false
+
+··stderr | packages/test-kit/tests/wire/05-graphbridge-wiring.test.ts > WIRE-02: GraphBridge 6 upsert 方法接线状态 > upsertFromHONA 在生产代码中被引用
+⚠ upsertFromHONA: 1 处生产引用 (已知未接线, WIRE-02)
+
+stderr | packages/test-kit/tests/observer-adapters/01-adapter-files.test.ts > OpenClaw Skill 适配器 > hooks.json 存在且格式正确
+⚠ OpenClaw Skill hooks: {"hooks":{"agent_end":[{"matcher":"*","hooks":[{"type":"command","command":"python3 ${SKILL_ROOT}/report.py","timeout":10}]}]}}
+
+xxxxx·····xxxstderr | packages/test-kit/tests/wire/05-graphbridge-wiring.test.ts > WIRE-02: GraphBridge 6 upsert 方法接线状态 > upsertFromFinancialImpact 在生产代码中被引用
+⚠ upsertFromFinancialImpact: 2 处生产引用 (已知未接线, WIRE-02)
+
+···stderr | packages/test-kit/tests/architecture/04-file-size-audit.test.ts > 铁律 37: 单文件行数审计 > 无 >1000 行源文件 (硬阻断)
+❌ 超大型文件:
+  src/deploy/bootstrap.ts: 1338 行
+  src/sentinel/runner.ts: 1544 行
+
+stderr | packages/test-kit/tests/wire/05-graphbridge-wiring.test.ts > WIRE-02: GraphBridge 6 upsert 方法接线状态 > upsertFromCapabilityGap 在生产代码中被引用
+⚠ upsertFromCapabilityGap: 2 处生产引用 (已知未接线, WIRE-02)
+
+stderr | packages/test-kit/tests/architecture/04-file-size-audit.test.ts > 铁律 37: 单文件行数审计 > 无 >500 行源文件 (建议拆分)
+⚠ 建议拆分的文件:
+  src/agent/convergence-engine.ts: 545 行
+  src/agent/conversation-engine.ts: 907 行
+  src/agent/loop-handlers.ts: 717 行
+  src/agent/prompt-assembler.ts: 709 行
+  src/agent/report-assembler.ts: 534 行
+  src/errors/types.ts: 795 行
+  src/growth/knowledge-feedback.ts: 503 行
+  src/interview/question-bank.ts: 683 行
+  src/l3/expert-dispatcher.ts: 662 行
+  src/l3/knowledge-agent.ts: 582 行
+  src/l3/synova-diagnosis-engine-impl.ts: 585 行
+  src/l4/agent-memory-store.ts: 572 行
+  src/l4/knowledge-store.ts: 779 行
+  src/loops/middle-evolution-engine.ts: 669 行
+  src/mcp/tool-definitions.ts: 501 行
+  src/middleware/auth.ts: 516 行
+  src/routes/chat.ts: 936 行
+  src/routes/diagnosis.ts: 955 行
+  src/routes/enterprise.ts: 647 行
+  src/server.ts: 530 行
+  src/store/session-store.ts: 641 行
+
+x·stderr | packages/test-kit/tests/wire/05-graphbridge-wiring.test.ts > WIRE-02: GraphBridge 6 upsert 方法接线状态 > upsertFromSevenPowers 在生产代码中被引用
+⚠ upsertFromSevenPowers: 2 处生产引用 (已知未接线, WIRE-02)
+
+stderr | packages/test-kit/tests/wire/05-graphbridge-wiring.test.ts > WIRE-02: GraphBridge 6 upsert 方法接线状态 > upsertFromCPC 在生产代码中被引用
+⚠ upsertFromCPC: 2 处生产引用 (已知未接线, WIRE-02)
+
+···
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 16 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/test-kit/tests/e2e/01-diagnosis-journey.test.ts > E2E: 诊断 API 用户旅程 > GET /health → 200 + status:ok
+ FAIL  packages/test-kit/tests/e2e/01-diagnosis-journey.test.ts > E2E: 诊断 API 用户旅程 > GET /api/status → 200 + llmConfigured
+ FAIL  packages/test-kit/tests/e2e/01-diagnosis-journey.test.ts > E2E: 诊断 API 用户旅程 > POST /api/diagnosis/consult → SSE 流式响应
+ FAIL  packages/test-kit/tests/e2e/01-diagnosis-journey.test.ts > E2E: 诊断 API 用户旅程 > GET /api/ontology/graph/:orgId → 200 + 图结构
+ FAIL  packages/test-kit/tests/e2e/01-diagnosis-journey.test.ts > E2E: 诊断 API 用户旅程 > GET /api/sessions → 200 + 会话列表
+ FAIL  packages/test-kit/tests/e2e/02-expert-contribution-journey.test.ts > E2E: 行业专家贡献旅程 > POST /api/expert/contribute → 200 + template
+ FAIL  packages/test-kit/tests/e2e/02-expert-contribution-journey.test.ts > E2E: 行业专家贡献旅程 > GET /api/expert/marketplace → 200 + templates[]
+ FAIL  packages/test-kit/tests/e2e/02-expert-contribution-journey.test.ts > E2E: 行业专家贡献旅程 > POST /api/expert/contribute → 400 (缺少必填字段)
+TypeError: fetch failed
+{
+  stack: 'AggregateError: \n' +
+    '    at internalConnectMultiple (node:net:1339:18)\n' +
+    '    at afterConnectMultiple (node:net:1942:7)',
+  errors: [
+    {
+      stack: 'Error: connect ECONNREFUSED ::1:3099\n' +
+        '    at createConnectionError (node:net:1905:14)\n' +
+        '    at afterConnectMultiple (node:net:1935:16)',
+      message: 'connect ECONNREFUSED ::1:3099',
+      errno: -61,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '::1',
+      port: 3099,
+      constructor: 'Function<Error>',
+      name: 'Error',
+      toString: 'Function<toString>'
+    },
+    {
+      stack: 'Error: connect ECONNREFUSED 127.0.0.1:3099\n' +
+        '    at createConnectionError (node:net:1905:14)\n' +
+        '    at afterConnectMultiple (node:net:1935:16)',
+      message: 'connect ECONNREFUSED 127.0.0.1:3099',
+      errno: -61,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '127.0.0.1',
+      port: 3099,
+      constructor: 'Function<Error>',
+      name: 'Error',
+      toString: 'Function<toString>'
+    }
+  ],
+  code: 'ECONNREFUSED',
+  constructor: 'Function<AggregateError>',
+  name: 'Caused by: AggregateError',
+  message: '',
+  toString: 'Function<toString>',
+  stacks: []
+}
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { errors: [ { stack: 'Error: connect ECONNREFUSED ::1:3099\n    at createConnectionError (node:net:1905:14)\n    at afterConnectMultiple (node:net:1935:16)', message: 'connect ECONNREFUSED ::1:3099', errno: -61, code: 'ECONNREFUSED', syscall: 'connect', address: '::1', port: 3099, constructor: 'Function<Error>', name: 'Error', toString: 'Function<toString>' }, { stack: 'Error: connect ECONNREFUSED 127.0.0.1:3099\n    at createConnectionError (node:net:1905:14)\n    at afterConnectMultiple (node:net:1935:16)', message: 'connect ECONNREFUSED 127.0.0.1:3099', errno: -61, code: 'ECONNREFUSED', syscall: 'connect', address: '127.0.0.1', port: 3099, constructor: 'Function<Error>', name: 'Error', toString: 'Function<toString>' } ], code: 'ECONNREFUSED' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/16]⎯
+
+ FAIL  packages/test-kit/tests/e2e/03-tui-smoke.test.ts > TUI 冒烟测试 > Given LLM healthy, formatWelcome contains SYNOVA ASCII logo
+Error: Cannot find module '/src/tui/welcome' imported from /Users/wane/SynovaAgent/.synova-wt-tests/packages/test-kit/tests/e2e/03-tui-smoke.test.ts
+ ❯ packages/test-kit/tests/e2e/03-tui-smoke.test.ts:13:31
+     11|
+     12|   it('Given LLM healthy, formatWelcome contains SYNOVA ASCII logo', as…
+     13|     const { formatWelcome } = await import('../../../../src/tui/welcom…
+       |                               ^
+     14|     const content = formatWelcome({
+     15|       providerName: 'DeepSeek',
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/16]⎯
+
+ FAIL  packages/test-kit/tests/e2e/03-tui-smoke.test.ts > TUI 冒烟测试 > Given LLM not configured, shows warning
+Error: Cannot find module '/src/tui/welcome' imported from /Users/wane/SynovaAgent/.synova-wt-tests/packages/test-kit/tests/e2e/03-tui-smoke.test.ts
+ ❯ packages/test-kit/tests/e2e/03-tui-smoke.test.ts:36:31
+     34|
+     35|   it('Given LLM not configured, shows warning', async () => {
+     36|     const { formatWelcome } = await import('../../../../src/tui/welcom…
+       |                               ^
+     37|     const content = formatWelcome({
+     38|       providerName: 'deepseek',
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/16]⎯
+
+ FAIL  packages/test-kit/tests/e2e/03-tui-smoke.test.ts > TUI 冒烟测试 > Welcome lines fit standard terminal width (≤100 chars plain)
+Error: Cannot find module '/src/tui/welcome' imported from /Users/wane/SynovaAgent/.synova-wt-tests/packages/test-kit/tests/e2e/03-tui-smoke.test.ts
+ ❯ packages/test-kit/tests/e2e/03-tui-smoke.test.ts:48:31
+     46|
+     47|   it('Welcome lines fit standard terminal width (≤100 chars plain)', a…
+     48|     const { formatWelcome } = await import('../../../../src/tui/welcom…
+       |                               ^
+     49|     const content = formatWelcome({
+     50|       providerName: 'DeepSeek',
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/16]⎯
+
+ FAIL  packages/test-kit/tests/e2e/03-tui-smoke.test.ts > TUI 冒烟测试 > Welcome ends with tips (help commands visible)
+Error: Cannot find module '/src/tui/welcome' imported from /Users/wane/SynovaAgent/.synova-wt-tests/packages/test-kit/tests/e2e/03-tui-smoke.test.ts
+ ❯ packages/test-kit/tests/e2e/03-tui-smoke.test.ts:63:31
+     61|
+     62|   it('Welcome ends with tips (help commands visible)', async () => {
+     63|     const { formatWelcome } = await import('../../../../src/tui/welcom…
+       |                               ^
+     64|     const content = formatWelcome({
+     65|       providerName: 'DeepSeek',
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/16]⎯
+
+ FAIL  packages/test-kit/tests/architecture/01-layer-boundaries.test.ts > 铁律 39: 五层架构边界 > L2 编排层 (src/agent/, src/orchestrator/, src/l2/, src/l2-interfaces/) > 不应 import ../l4/
+AssertionError: expected [ …(2) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "/Users/wane/SynovaAgent/.synova-wt-tests/src/agent/knowledge-bridge-service.ts",
++   "/Users/wane/SynovaAgent/.synova-wt-tests/src/agent/workspace-context-bridge.ts",
++ ]
+
+ ❯ packages/test-kit/tests/architecture/01-layer-boundaries.test.ts:69:32
+     67|                      content.includes(`from "./${prohibited.slice(3)}`…
+     68|             });
+     69|             expect(violations).toEqual([]);
+       |                                ^
+     70|           });
+     71|         }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/16]⎯
+
+ FAIL  packages/test-kit/tests/architecture/02-wiring-audit.test.ts > 铁律 0-2 Step 5: 模块接线验证 > Critical 接线 (必须立即修复) > FederalReporter → 被 [src/server.ts] 引用
+ FAIL  packages/test-kit/tests/architecture/02-wiring-audit.test.ts > 铁律 0-2 Step 5: 模块接线验证 > Critical 接线 (必须立即修复) > createOrchestrationWiring → 被 [src/server.ts] 引用
+AssertionError: expected 0 to be greater than 0
+ ❯ packages/test-kit/tests/architecture/02-wiring-audit.test.ts:28:22
+     26|       it(`${entry.moduleName} → 被 [${entry.expectedEntries.join(', ')}…
+     27|         const refs = countReferences(entry.moduleName, entry.expectedE…
+     28|         expect(refs).toBeGreaterThan(0);
+       |                      ^
+     29|       });
+     30|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/16]⎯
+
+ FAIL  packages/test-kit/tests/architecture/04-file-size-audit.test.ts > 铁律 37: 单文件行数审计 > 无 >1000 行源文件 (硬阻断)
+AssertionError: expected [ …(2) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "src/deploy/bootstrap.ts: 1338 行",
++   "src/sentinel/runner.ts: 1544 行",
++ ]
+
+ ❯ packages/test-kit/tests/architecture/04-file-size-audit.test.ts:29:23
+     27|       console.warn(`❌ 超大型文件:\n  ${oversized.join('\n  ')}`);
+     28|     }
+     29|     expect(oversized).toEqual([]);
+       |                       ^
+     30|   });
+     31|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/16]⎯
+
+
+ Test Files  6 failed | 15 passed (21)
+      Tests  16 failed | 197 passed (213)
+   Start at  14:06:24
+   Duration  919ms (transform 498ms, setup 0ms, import 970ms, tests 1.11s, environment 2ms)
+

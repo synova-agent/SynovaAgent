@@ -1,0 +1,45 @@
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-tests
+
+···{"level":30,"time":1791266780057,"pid":22535,"hostname":"192.168.1.8","name":"synova-agent","service":"connectors/registry","name":"test","label":"Fake test","msg":"Connector 已注册"}
+{"level":30,"time":1791266780058,"pid":22535,"hostname":"192.168.1.8","name":"synova-agent","service":"connectors/registry","name":"test","label":"Fake test","msg":"Connector 已注册"}
+{"level":30,"time":1791266780058,"pid":22535,"hostname":"192.168.1.8","name":"synova-agent","service":"connectors/registry","name":"test","label":"Fake test","msg":"Connector 已注册"}
+{"level":30,"time":1791266780058,"pid":22535,"hostname":"192.168.1.8","name":"synova-agent","service":"connectors/registry","name":"test","label":"Fake test","msg":"Connector 已注册"}
+{"level":40,"time":1791266780058,"pid":22535,"hostname":"192.168.1.8","name":"synova-agent","service":"connectors/registry","name":"test","msg":"Connector 重复注册，将被覆盖"}
+{"level":30,"time":1791266780058,"pid":22535,"hostname":"192.168.1.8","name":"synova-agent","service":"connectors/registry","name":"test","label":"Fake test","msg":"Connector 已注册"}
+{"level":30,"time":1791266780058,"pid":22535,"hostname":"192.168.1.8","name":"synova-agent","service":"connectors/registry","name":"test","label":"Fake test","msg":"Connector 已注册"}
+{"level":30,"time":1791266780058,"pid":22535,"hostname":"192.168.1.8","name":"synova-agent","service":"connectors/registry","name":"test","msg":"Connector 已注销"}
+·······························································································{"level":30,"time":1791266780130,"pid":22536,"hostname":"192.168.1.8","name":"synova-agent","service":"extensions/registry","name":"test-ext","version":"1.0.0","type":"tool","msg":"扩展已激活"}
+{"level":30,"time":1791266780133,"pid":22536,"hostname":"192.168.1.8","name":"synova-agent","service":"extensions/registry","name":"a","version":"1.0.0","type":"tool","msg":"扩展已激活"}
+{"level":30,"time":1791266780133,"pid":22536,"hostname":"192.168.1.8","name":"synova-agent","service":"extensions/registry","name":"b","version":"1.0.0","type":"sog-node","msg":"扩展已激活"}
+{"level":30,"time":1791266780139,"pid":22536,"hostname":"192.168.1.8","name":"synova-agent","service":"extensions/registry","name":"test","version":"1.0.0","type":"tool","msg":"扩展已激活"}
+{"level":30,"time":1791266780139,"pid":22536,"hostname":"192.168.1.8","name":"synova-agent","service":"extensions/registry","name":"test","msg":"扩展已注销"}
+{"level":30,"time":1791266780140,"pid":22536,"hostname":"192.168.1.8","name":"synova-agent","service":"extensions/registry","name":"t1","version":"1.0.0","type":"tool","msg":"扩展已激活"}
+{"level":30,"time":1791266780140,"pid":22536,"hostname":"192.168.1.8","name":"synova-agent","service":"extensions/registry","name":"t2","version":"1.0.0","type":"tool","msg":"扩展已激活"}
+{"level":30,"time":1791266780140,"pid":22536,"hostname":"192.168.1.8","name":"synova-agent","service":"extensions/registry","name":"s1","version":"1.0.0","type":"sog-node","msg":"扩展已激活"}
+························x············
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/sentinels/_extinct/capital-turnover/computes/cash-conversion-cycle.test.ts > computeCashConversionCycle > should warn when CCC > 90 days
+AssertionError: expected 'critical' to be 'warning' // Object.is equality
+
+Expected: "warning"
+Received: "critical"
+
+ ❯ extensions/sentinels/_extinct/capital-turnover/computes/cash-conversion-cycle.test.ts:21:22
+     19|   it('should warn when CCC > 90 days', () => {
+     20|     const r = computeCashConversionCycle({ cogs: 100000, inventory: 80…
+     21|     expect(r.signal).toBe('warning');
+       |                      ^
+     22|     expect(r.cccDays).toBeGreaterThanOrEqual(90);
+     23|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 15 passed (16)
+      Tests  1 failed | 134 passed (135)
+   Start at  14:06:19
+   Duration  1.09s (transform 1.08s, setup 0ms, import 1.82s, tests 188ms, environment 3ms)
+

@@ -1,0 +1,106 @@
+[probe] ci.yml = /tmp/v7v8/ci-patched.yml
+[probe] step   = Run tests (逐字提取)
+[probe] work   = /var/folders/bs/ltqkv_rd45z6b7p5wq90vv500000gn/T//v7-probe.BWPR11
+[probe] extracted step body: 63 lines
+
+── S0: 无失败（对照组）
+   posture=pr  required_exit==0
+   observed_exit=0
+   ✅ 符合必备语义
+   | 变更集基准: merge-base(origin/main, HEAD)=��三点差：仅本 PR 引入的改动）
+   | Test Files  100 passed (100)
+   | Tests  100 passed (100)
+   | EXIT:0
+
+── S1: PR 面 归因外失败：tests/ 内、PR 未改该文件
+   posture=pr  required_exit!=0
+   observed_exit=1
+   ✅ 符合必备语义
+   | 变更集基准: merge-base(origin/main, HEAD)=��三点差：仅本 PR 引入的改动）
+   |  FAIL  tests/l3/graphbridge-wiring.test.ts > GraphBridge > case
+   | AssertionError: expected +0 to be 1
+   |  FAIL  tests/other-unrelated.test.ts > x > y
+   | AssertionError: boom
+   | EXIT:1
+   | ::error::Vitest 阻断（本 PR 引进，或归因外未登记/已过期）:
+   | tests/l3/graphbridge-wiring.test.ts (归因外未登记/已过期)
+   | tests/other-unrelated.test.ts (归因外未登记/已过期)
+   | 
+
+── S2: PR 面 归因外失败：extensions/ 下（路径不含 tests/）
+   posture=pr  required_exit!=0
+   observed_exit=1
+   ✅ 符合必备语义
+   | 变更集基准: merge-base(origin/main, HEAD)=��三点差：仅本 PR 引入的改动）
+   |  FAIL  extensions/sentinels/_extinct/capital-turnover/computes/cash-conversion-cycle.test.ts > c > d
+   | AssertionError: expected critical to be warning
+   | EXIT:1
+   | ::error::Vitest 阻断（本 PR 引进，或归因外未登记/已过期）:
+   | extensions/sentinels/_extinct/capital-turnover/computes/cash-conversion-cycle.test.ts (归因外未登记/已过期)
+   | 
+
+── S3: PR 面 归因外失败：packages/test-kit/tests/ 下
+   posture=pr  required_exit!=0
+   observed_exit=1
+   ✅ 符合必备语义
+   | 变更集基准: merge-base(origin/main, HEAD)=��三点差：仅本 PR 引入的改动）
+   |  FAIL  packages/test-kit/tests/architecture/01-layer-boundaries.test.ts > a > b
+   | AssertionError: layer violation
+   | EXIT:1
+   | ::error::Vitest 阻断（本 PR 引进，或归因外未登记/已过期）:
+   | packages/test-kit/tests/architecture/01-layer-boundaries.test.ts (归因外未登记/已过期)
+   | 
+
+── S4: PR 面 可归因失败（对照组，PR 改了 src/smoke.ts）
+   posture=pr  required_exit!=0
+   observed_exit=1
+   ✅ 符合必备语义
+   | 变更集基准: merge-base(origin/main, HEAD)=��三点差：仅本 PR 引入的改动）
+   |  FAIL  tests/smoke.test.ts > smoke > works
+   | AssertionError: boom
+   | EXIT:1
+   | ::error::Vitest 阻断（本 PR 引进，或归因外未登记/已过期）:
+   | tests/smoke.test.ts (本 PR 引进)
+   | 
+
+── S5: main push 姿态（CHANGED 空）归因外失败
+   posture=main  required_exit!=0
+   observed_exit=1
+   ✅ 符合必备语义
+   | 变更集基准: merge-base(origin/main, HEAD)=��三点差：仅本 PR 引入的改动）
+   |  FAIL  tests/l3/graphbridge-wiring.test.ts > GraphBridge > case
+   | AssertionError: expected +0 to be 1
+   | EXIT:1
+   | ::error::Vitest 阻断（本 PR 引进，或归因外未登记/已过期）:
+   | tests/l3/graphbridge-wiring.test.ts (归因外未登记/已过期)
+   | 
+
+── S6: 归因外失败 + 台账未过期 ⇒ 允许放行
+   posture=pr  required_exit==0
+   observed_exit=0
+   ✅ 符合必备语义
+   | 变更集基准: merge-base(origin/main, HEAD)=��三点差：仅本 PR 引入的改动）
+   |  FAIL  tests/l3/graphbridge-wiring.test.ts > GraphBridge > case
+   | AssertionError: expected +0 to be 1
+   | EXIT:1
+   | ::warning::Vitest 台账内存量红放行（未过期；铁律 11 可见）: tests/l3/graphbridge-wiring.test.ts (登记至 2099-01-01)  
+   | PREEXISTING_RED_FILES:
+   | tests/l3/graphbridge-wiring.test.ts (登记至 2099-01-01)
+   | 
+   | → 这些是真红，已登记 vitest-red-exempt.txt（须烧掉；到期即转红）
+
+── S7: 归因外失败 + 台账已过期 ⇒ 必须红（M-03）
+   posture=pr  required_exit!=0
+   observed_exit=1
+   ✅ 符合必备语义
+   | 变更集基准: merge-base(origin/main, HEAD)=��三点差：仅本 PR 引入的改动）
+   |  FAIL  tests/l3/graphbridge-wiring.test.ts > GraphBridge > case
+   | AssertionError: expected +0 to be 1
+   | EXIT:1
+   | ::error::Vitest 阻断（本 PR 引进，或归因外未登记/已过期）:
+   | tests/l3/graphbridge-wiring.test.ts (归因外未登记/已过期)
+   | 
+
+══ 探针结论 ══
+  必备语义: 8/8 成立；违反 0
+  ⇒ 判据绿：归因外失败会红（放行只走"台账 + 未过期"这一条路）
