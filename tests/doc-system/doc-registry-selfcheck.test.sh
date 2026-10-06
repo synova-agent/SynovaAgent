@@ -137,6 +137,26 @@ OUT=$(rung "$T5"); RC=$?
 chk "glob 无匹配: exit 1" "$RC" "1"
 echo "$OUT" | grep -q "glob 无匹配" && ok "glob 无匹配: 点名" || no "glob 无匹配: 未点名"
 
+# ── 8-10. 🔴 D1187 复核整改回归：三种**写法变体**的重复 ID（修前全部 exit 0 假绿）──
+for V in single_quote block_seq lower_case; do
+  TV=$(mktemp -d); mkroot "$TV"
+  python3 - "$TV" "$V" <<'PY'
+import io,sys
+t,v=sys.argv[1],sys.argv[2]
+p=t+"/docs/authority/DOCS-REGISTRY.yaml"
+s=io.open(p,encoding="utf-8").read()
+add={"single_quote":"  - id: 'DOC-0101'\n    type: x\n    path: docs/x\n    status: active\n    owner: x\n",
+     "block_seq":"  -\n    id: DOC-0101\n    type: x\n    path: docs/x\n    status: active\n    owner: x\n",
+     "lower_case":"  - id: doc-0101\n    type: x\n    path: docs/x\n    status: active\n    owner: x\n"}[v]
+io.open(p,"w",encoding="utf-8").write(s+add)
+PY
+  guard_real
+  OUT=$(rung "$TV"); RC=$?
+  chk "写法变体[$V]: 重复 ID ⇒ exit 1（修前假绿）" "$RC" "1"
+  echo "$OUT" | grep -q "台账 ID 重复" && ok "写法变体[$V]: 点名" || no "写法变体[$V]: 未点名"
+  rm -rf "$TV"
+done
+
 rm -rf "$T" "$T2" "$T3" "$T4" "$T5"
 echo "RESULT: $NP PASS / $NF FAIL"
 [ "$NF" -eq 0 ] || exit 1

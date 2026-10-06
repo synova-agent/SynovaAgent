@@ -97,7 +97,40 @@ fi
 #     含 glob（`*`）的 path **先展开**再判（`WORKLOG-*.md` 是真实形态）。
 #   · 两条都不引入"基线豁免表"——没有存量债就没有豁免表（棘轮台账只减不增，别新开一张）。
 SELF_FAIL=0
-IDS="$(printf '%s\n' "$REG" | sed -n 's/^[[:space:]]*-[[:space:]]*id:[[:space:]]*"\([^"]*\)".*/\1/p; s/^[[:space:]]*-[[:space:]]*id:[[:space:]]*\([^"[:space:]]*\).*/\1/p')"
+# 🔴 D1187 复核整改（D1177 本卡的判别力洞）: 原实现用 **sed 文本级**提取 `- id:` 行
+#   ⇒ 复核实测**三种写法都能绕过**（都报「台账 ID 唯一」exit 0）:
+#     ① 单引号 `- id: 'DOC-0101'`   ② YAML 块序列（`-` 独占一行，下一行 `id: …`，该条**根本不计数**）
+#     ③ 大小写变体 `- id: doc-0101`
+#   ⇒ 枚举写法是"打地鼠"（我这轮已经吃过一次同型教训）⇒ 改用**真解析器**（ruby YAML），
+#     并把 ID **统一小写**比较（`doc-0101` 与 `DOC-0101` 视为同一个 ⇒ 大小写变体也会被抓）。
+#   ⚠️ ruby 缺失 ⇒ **DEGRADED(2) fail-closed**，**不回落**到文本级（回落 = 把已知可绕的实现当兜底）。
+IDS=""; _RY_FAIL=0
+if command -v ruby >/dev/null 2>&1; then
+  IDS="$(ruby -ryaml -e '
+    begin
+      d = YAML.load_file(ARGV[0])
+      docs = (d.is_a?(Hash) ? (d["documents"] || d["docs"] || []) : [])
+      ids = papers = nil
+      if docs.is_a?(Array)
+        ids = docs.map { |x| x.is_a?(Hash) ? x["id"] : nil }
+      elsif docs.is_a?(Hash)
+        ids = docs.keys
+      end
+      puts ids.compact.map { |x| x.to_s.strip.downcase }
+    rescue => e
+      STDERR.puts "ruby 解析失败: #{e.class}: #{e.message[0,80]}"
+      puts "__PARSE_FAIL__"
+    end' "$REGISTRY" 2>/dev/null)" || _RY_FAIL=1
+  case "$IDS" in *"__PARSE_FAIL__"*) _RY_FAIL=1 ;; esac
+else
+  _RY_FAIL=1
+fi
+if [ "$_RY_FAIL" = "1" ]; then
+  echo "  ⚠️ 降级: 无法用 ruby YAML 结构化提取 ID（ruby 缺失或解析失败）⇒ 台账自洽检查不可信"
+  echo "  ❌ 台账自洽: DEGRADED（fail-closed，**不回落**到文本级提取 —— 那会把已知可绕的实现当兜底）"
+  SELF_FAIL=$((SELF_FAIL+1))
+  IDS=""
+fi
 ID_TOTAL="$(printf '%s\n' "$IDS" | grep -c . || true)"
 DUP_IDS="$(printf '%s\n' "$IDS" | grep . | sort | uniq -d || true)"
 if [ -n "$DUP_IDS" ]; then
