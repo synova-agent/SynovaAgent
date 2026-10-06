@@ -227,9 +227,52 @@ else
   echo "  ℹ️  无棘轮文件（$RAT_REL）⇒ 跳过通道④（不静默当通过，已显式说明）"
 fi
 
+# ══════════════════════════════════════════════════════════════════════════════
+# ⑤ **真相源不可用** ⇒ 必须 exit 2，**不得假报违规**
+#   来源：K3 审计 P1（2026-10-06，我复现）：旧实装在非 git 目录里跑出
+#     `exit=1` + `合计 12 处违规`（含 INV-3③ 4 处）—— 把【无法检查】报成了【你违规了】。
+#   这一段是那次的**回归锁**：只要有人把 preflight 去掉，本场景立刻红。
+# ══════════════════════════════════════════════════════════════════════════════
+TMP5="$(mktemp -d 2>/dev/null || true)"
+if [ -z "$TMP5" ] || [ ! -d "$TMP5" ]; then
+  echo "  🔴 检查自身失败：第五个 mktemp -d 失败"
+  exit 2
+fi
+mkdir -p "$TMP5/tools"
+# 故意只放件、**不放 .git**（mktemp -d 不在任何仓内）⇒ 模拟"真相源不可用"
+cp "$REG" "$TMP5/施工项登记.ts"
+cp "$ENF" "$TMP5/tools/check-construction-registry.ts"
+printf '{"type":"module"}\n' > "$TMP5/package.json"
+if git -C "$TMP5" rev-parse --show-toplevel >/dev/null 2>&1; then
+  echo "  🔴 检查自身失败：临时目录竟在某个 git 仓内 ⇒ 本场景无法构造（换 TMPDIR）"
+  rm -rf "$TMP5"
+  exit 2
+fi
+OUT_B5="$(cd "$TMP5" && node --experimental-strip-types tools/check-construction-registry.ts 2>&1)"; RC_B5=$?
+rm -rf "$TMP5"
+if [ "$RC_B5" -ne 2 ]; then
+  echo "  [FAIL] 真相源不可用时应 exit 2，实测 exit=${RC_B5}（旧缺陷即在此：假报违规 exit 1）"
+  FAILED=1
+elif printf '%s' "$OUT_B5" | grep -qE '合计 [0-9]+ 处违规'; then
+  # ⚠️ 只用「合计 N 处违规」这一行作针。**不要**用 `INV-3③` 当针 ——
+  #    执法体自己的报错文案里就写着 `INV-3③`（解释它靠什么判），会命中 = 假通过通道。
+  #    （实测踩到：加 `|INV-3③` 后本场景误报 FAIL。）
+  echo "  [FAIL] exit=2 但仍输出违规行 ⇒ 仍然在把【无法检查】报成【违规】"
+  printf '%s' "$OUT_B5" | tail -6 | sed 's/^/         /'
+  FAILED=1
+else
+  echo "  [PASS] 真相源不可用：exit=2 且**零假违规**"
+fi
+if printf '%s' "$OUT_B5" | grep -qF '真相源不可用'; then
+  echo "  [PASS] 输出含具名原因：'真相源不可用'"
+else
+  echo "  [FAIL] 输出缺具名原因「真相源不可用」（报不出原因 ⇒ 等于要人读栈）"
+  FAILED=1
+fi
+
 echo
 if [ "$FAILED" -eq 0 ]; then
-  echo "  ══ 夹具有效：破坏 ⇒ 红且具名（INV-4 / INV-5 / 棘轮失效）；读不到 ⇒ exit 2；复原 ⇒ 绿 ══"
+  echo "  ══ 夹具有效：破坏 ⇒ 红且具名（INV-4 / INV-5 / 棘轮失效）；读不到 ⇒ exit 2；真相源不可用 ⇒ exit 2；复原 ⇒ 绿 ══"
   exit 0
 fi
 echo "  ══ 夹具失效：执法体没有判别力 ══"

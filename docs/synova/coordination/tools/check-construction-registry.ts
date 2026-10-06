@@ -77,6 +77,28 @@ function inOwnWriteSet(p: string, own: readonly string[]): boolean {
   });
 }
 
+// ════════ 前置：真相源可用性（**必须先于任何判据**）════════
+// 🔴 2026-10-06 · K3 审计 P1（我复现）：旧实装**无 git 环境时假报违规**。
+//   实测：把执法体放进非 git 目录跑 ⇒ 顶层 `exit=1` + `合计 12 处违规`（其中 INV-3③ 4 处）。
+//   机理：`existsInMain()` 底下的 `git cat-file` 失败 ⇒ 一律当"文件不存在" ⇒ INV-3③ 逐条报违规。
+//   ⇒ 灾难性方向错误：**"我没法检查"被报成了"你违规了"**（假违规），
+//     而契约（本文件 @contract 三态）要求的是 **exit 2 = 检查自身失败**。
+//   这与本卡修掉的其它假阴性同族 —— 都是我自己的检查在撒谎。
+//   处置：git 不可用 / `origin/main` 取不到 ⇒ **直接 exit 2 并具名说明**，不进任何判据。
+{
+  const okRepo = sh('git', ['rev-parse', '--show-toplevel']).ok;
+  const okMain = okRepo && sh('git', ['rev-parse', '--verify', 'origin/main']).ok;
+  if (!okRepo || !okMain) {
+    process.stderr.write(
+      `  \u{1F534} 检查自身失败：真相源不可用 — ${!okRepo ? `GIT_ROOT(${GIT_ROOT}) 不是 git 仓` : 'ref origin/main 取不到'}\n` +
+        `      ⇒ 本执法体的 INV-1③/INV-3③/BLOCK-INV3③ 靠 \`git cat-file -e origin/main:<p>\` 判"文件在不在"。\n` +
+        `        该能力缺失时继续跑，会把【无法检查】误报成【文件不存在】⇒ 假违规。故按三态契约 exit 2。\n` +
+        `      修法：在 git 仓内跑，或先 \`git fetch origin main\`（浅克隆需 fetch-depth: 0）。\n`,
+    );
+    process.exit(2);
+  }
+}
+
 const ids = new Set(constructionItems.map((i) => i.id));
 
 /** 真断面（`git rev-parse --short origin/main`）—— 禁硬编码：写死值会随 main 前进变成假陈述（判例 S-05）*/
