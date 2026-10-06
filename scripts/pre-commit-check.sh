@@ -166,7 +166,7 @@ soft_check() {
 
 # ═══ D1148: 旁路观测（bypass）═══
 # 契约(铁律47):
-#   @input  note_check <名称> <发现描述串>;  bypass_run <名称> <命令...>
+#   @input  note_check <名称> <发现描述串>;  bypass_run <名称> <命令...>;  _run_gate <名称> <命令...>
 #   @output 无发现 → 零输出；有发现 → ℹ️ 行 + 最多 3 行明细
 #   @exit   恒 0（旁路不改判据、不置 HARD_FAIL，**不写 gate-hits.log**）
 #   @degraded 命令非零（含 exit≥2 检查自身失败）→ 以 ℹ️ 明示，绝不静默吞掉
@@ -187,6 +187,26 @@ bypass_run() {
   note_check "${_bn} (exit=${_brc})" "$_bo"
   return 0
 }
+
+# ═══ W6/D1166: 门禁执行器（把 bypass_run 的原调用点恢复到「本地软 + CI strict 硬」）═══
+# 背景（CTO 2026-10-06 A 槽 W6）: D1148 把三条门禁从 soft 转成 bypass_run（**只打印、不判红、
+#   连 CI strict 也不转硬**）⇒ 三处「写着阻断、实际旁路」。W6 撤销该旁路。
+# 为什么不用 soft_check: `soft_check <name> <matches>` 第二个参数是**匹配串**，不是命令；
+#   原调用点要执行的是**外部脚本**。故新增本执行器，语义与 `par_collect … || v5_soft …` 完全对齐：
+#   命令非 0 ⇒ 打印其输出（前 5 行，可见）后调 v5_soft ⇒ **本地软提示 / CI(SYNO_CI=1) 硬阻断**。
+# 三态（M-02）: 命令自身 0 ⇒ 无输出无计数；非 0 ⇒ 走 v5_soft 的软/硬分支；脚本缺失 ⇒ 调用点的 else 分支 note_check。
+# 回滚: 把三个调用点的 `_run_gate` 改回 `bypass_run` 即恢复旁路（判据脚本零改动）。
+# W6-RUN-GATE-BEGIN
+_run_gate() {
+  local _gn="$1"; shift
+  local _go _grc
+  _go="$("$@" 2>&1)"; _grc=$?
+  [ "$_grc" -eq 0 ] && return 0
+  printf '%s\n' "$_go" | head -5
+  v5_soft "$_gn"
+  return 0
+}
+# W6-RUN-GATE-END
 
 # D515 项3: par_collect 类软门禁失败时统一提示（判定脚本输出原样打印，不阻断）
 v5_soft() {
@@ -1654,14 +1674,18 @@ fi
 #   与 D2 doc-registry-gate.sh 2026-08 建成即零调用（M3「机制建成未接线」第 3 次复发：
 #   D329 P2-2 首次），W1/W2 接线断言（tests/doc-system/doc-registry-gate.test.sh L64-65）
 #   红 ≥25 天无 runner 可见。本块补调用点。
-# D1148 转旁路（语义变更，如实记录）: 原为 soft_check（本地软提示 + CI strict 转硬）
-#   → 现为 note_check/bypass_run（**只打印、不判红、不进 gate-hits**，CI 也不转硬）。
+# 🔴 W6/D1166 撤销（2026-10-06，治理线 · 门禁语义变更，送审中）: 本块三条原被 D1148 转 bypass_run
+#   （只打印、不判红、**CI 也不转硬**）。现恢复为 `_run_gate` ⇒ **本地软提示 + CI(SYNO_CI=1) 硬阻断**，
+#   并重新进 gate-hits。
+# D1148 转旁路（历史，已被上方 W6 撤销）: 原为 soft_check（本地软提示 + CI strict 转硬）
+#   → 曾为 note_check/bypass_run（**只打印、不判红、不进 gate-hits**，CI 也不转硬）。
 #   理由: 文档登记/真相属**文档域**（D2 登记门禁的覆盖面另有 D2 闸 + doc-system 夹具兜底），
 #     与"本次提交的代码质量"弱相关；批 3 目标是把提交端收敛为质量根 + 三条声明闸。
 #   接线保留（硬要求）: `check-doc-truth.sh` / `doc-registry-gate.sh` 字面量调用点必须留在本文件
 #     —— doc-registry-gate.test.sh W1/W2 是**接线断言**（grep 本文件），删调用点即判红。
 #   代价（如实记录）: 未登记文档 / 导航层文档漂移不再阻断 CI 提交（原 CI strict 下会红）。
-#     回滚方式: 把下方 bypass_run 改回 soft_check 即恢复（判据脚本零改动）。
+#     回滚方式（W6 已执行）: 原 `bypass_run` → `_run_gate`（等价于历史 soft_check 的「本地软 + CI 硬」）。
+#     反向回滚: `_run_gate` → `bypass_run` 即恢复旁路。判据脚本零改动。
 # 为何不动 13 组编号: 「✅ 全部 13 组通过」自声明行是 check-doc-truth.sh C2 的真值
 #   来源，改组数 = 连锁打破 AGENTS/CLAUDE/LOOP 的「13 组」声明（审计 T1 实证该链）。
 # fastlane 通道（bypass.log 单文件提交）不经过本块——该通道语义即最小化，CI 为权威。
@@ -1670,14 +1694,14 @@ echo -e "${CYAN}── D782: 文档真相防线（D1 真相验证 + D2 登记门
 
 # D1: 导航层文档 vs 代码事实（C1 专家数 / C2 门禁组数 / C3 版本轴 / C4 路径存在）
 if [ -f "$ROOT/scripts/doc-system/check-doc-truth.sh" ]; then
-  bypass_run "D782 D1 文档真相（D1148 转旁路）" bash "$ROOT/scripts/doc-system/check-doc-truth.sh"
+  _run_gate "D782 D1 文档真相（W6 撤销 D1148 旁路）" bash "$ROOT/scripts/doc-system/check-doc-truth.sh"
 else
   note_check "D782 D1 文档真相（脚本缺失）" "scripts/doc-system/check-doc-truth.sh 不存在"
 fi
 
 # D2: 新增 .md/.yaml 必须登记 docs/authority/DOCS-REGISTRY.yaml（只拦新不拦旧）
 if [ -f "$ROOT/scripts/doc-system/doc-registry-gate.sh" ]; then
-  bypass_run "D782 D2 登记门禁（D1148 转旁路）" bash "$ROOT/scripts/doc-system/doc-registry-gate.sh"
+  _run_gate "D782 D2 登记门禁（W6 撤销 D1148 旁路）" bash "$ROOT/scripts/doc-system/doc-registry-gate.sh"
 else
   note_check "D782 D2 登记门禁（脚本缺失）" "scripts/doc-system/doc-registry-gate.sh 不存在"
 fi
@@ -1706,13 +1730,14 @@ fi
 #       依据（逐半句核）: 「独立运行」= 任何脚本都能手工跑（同义反复，无信息量）；
 #             「**CI 侧接入**」= **无据** —— `git grep -n check-pr-budget -- .github scripts/ci`
 #             **零命中**（rc=1，CTO/K3 实测同结论）⇒ CI 侧不存在任何接入。
-#             ⇒ 本文件的 bypass_run 调用点是**唯一**执行点，且已不判红 ⇒ 该门禁当前无阻断执行方。
+#             ⇒ 本文件的调用点是**唯一**执行点。【W6/D1166 更正】该点已由 bypass_run 改回 `_run_gate`
+#             ⇒ **阻断执行方已恢复**（本地软 / CI strict 硬）；上文「已不判红」为 D1148 当期状态。
 #       📌 依据源（本次补注）: K3 报告 §一 Q1（同报告，P1，归因 devdoc，原文「D734 check-pr-budget.sh 独立运行/CI 侧接入」声称无据）。
 #       立卡：D734 预算门禁 CI 侧接入（另卡 A，内容见 D1148 PR 正文 §九）。
-#   回滚: bypass_run → soft_check 一行即恢复提交端阻断力（判据脚本零改动）。
+#   回滚: _run_gate → bypass_run 一行即恢复旁路（判据脚本零改动）。【W6 已执行此恢复的**反向**——即恢复阻断力】
 echo -e "${CYAN}── PR 预算门禁 (D734) ──${RESET}"
 if [ -x "$ROOT/scripts/control-tower/check-pr-budget.sh" ] || [ -f "$ROOT/scripts/control-tower/check-pr-budget.sh" ]; then
-  bypass_run "D734 PR 预算（D1148 转旁路）" bash "$ROOT/scripts/control-tower/check-pr-budget.sh" --quiet
+  _run_gate "D734 PR 预算（W6 撤销 D1148 旁路）" bash "$ROOT/scripts/control-tower/check-pr-budget.sh" --quiet
 else
   note_check "D734 PR 预算（脚本缺失）" "scripts/control-tower/check-pr-budget.sh 不存在"
 fi
