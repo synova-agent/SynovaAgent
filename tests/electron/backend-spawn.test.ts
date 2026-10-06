@@ -29,6 +29,34 @@ const require_ = createRequire(import.meta.url);
 const ROOT = path.resolve(__dirname, '../..');
 const backendSpawnPath = path.resolve(__dirname, '../../electron/backend-spawn.cjs');
 
+// ── W1d/D1164（治理线，2026-10-06）: 子进程登记器 + afterEach 兜底回收 ────────────────
+// 病灶（本机实测，非推断）: 本文件多处让 `ensureBackend` **真 spawn** 一个假后端
+//   （桩脚本用 `setInterval(...)` 保活），而 `afterEach` 的 `handles` 只登记了
+//   `fake.close()`（测试进程内的 HTTP server）与 `fs.unlinkSync(stub)`（删桩文件），
+//   **没有登记"杀掉那个子进程"** ⇒ 残留子进程持有的 stdio 句柄让 vitest 的 forks worker
+//   退不出去 ⇒ 原始输出：
+//     `[vitest-pool]: Timeout terminating forks worker for test files …/backend-spawn.test.ts`
+//   ⇒ 本文件所在的 `Vitest (1/2)`（**main 的必需 context**）必被 CI 上限杀掉：
+//     实测 17 个用例 **13.97s 全过**，然后永久挂住 ⇒ 整个非 docs-only PR 永久 blocked。
+// 修法（**单点**，不动 20+ 处调用点）: `createRequire` 走 Node 模块缓存 ⇒
+//   在模块顶层给导出的 `ensureBackend` 套一层登记器，此后所有测试里
+//   `const { ensureBackend } = require_(backendSpawnPath)` 取到的都是被套过的那一份；
+//   `afterEach` 统一 SIGKILL 全部已登记 pid（幂等：已退出 ⇒ ESRCH ⇒ 忽略）。
+// 判别性: 去掉本块 ⇒ `npx vitest run tests/electron/backend-spawn.test.ts` **不再自行退出**
+//   （实测修前挂死 >120s）；保留 ⇒ 正常退出。
+const _spawnMod = require_(backendSpawnPath) as {
+  ensureBackend: (...a: unknown[]) => Promise<{ pid?: number; stop?: () => void } & Record<string, unknown>>;
+};
+const _spawnedPids: number[] = [];
+{
+  const _origEnsure = _spawnMod.ensureBackend;
+  _spawnMod.ensureBackend = async (...args: unknown[]) => {
+    const r = await _origEnsure(...args);
+    if (typeof r?.pid === 'number' && r.pid > 0) _spawnedPids.push(r.pid);
+    return r;
+  };
+}
+
 /** 起一个假后端：healthServer 立即 200；delayServer 探活 N 次后转 200（模拟慢启动） */
 function startFakeServer(delayOkMs = 0): Promise<{ server: http.Server; port: number; close: () => void }> {
   return new Promise((resolve) => {
@@ -77,6 +105,29 @@ const handles: Array<() => void> = [];
 afterEach(() => {
   for (const h of handles.splice(0)) {
     try { h(); } catch { /* cleanup best-effort */ }
+  }
+  // W1d/D1164: 兜底回收残留的**子进程**与**测试用 HTTP server**。
+  // 依据（实测，非推断）: 在 worker 退出前打印 `process._getActiveHandles()` 得到
+  //   `[Pipe,Socket,Socket,ChildProcess,ChildProcess,Server,Socket]`
+  //   ⇒ afterEach 跑完后**仍有 2 个子进程 + 1 个 server 存活**；它们持有的句柄让 vitest
+  //     的 forks worker 退不出去 ⇒ `[vitest-pool]: Timeout terminating forks worker`
+  //   ⇒ 本文件所在的 `Vitest (1/2)`（**main 的必需 context**）被 CI 上限杀掉
+  //     （实测：17 个用例 14.03s 全过，然后永久挂住）。
+  // 为什么按 handle 类型扫、而不是按已登记的 pid: 本文件既有经 `ensureBackend` 的 spawn，
+  //   也有直接用 `spawn`（D522 进程树用例）与"桩里再 spawn 孙进程"的形态 —— 逐个登记必然漏。
+  //   按类型一次扫全，是**单点且不漏**的写法。
+  // 只动 ChildProcess / Server 两类；不动 Pipe（那是 worker 与 pool 的 IPC，动它会自伤）。
+  // `_getActiveHandles` 属 Node 内部 API —— 此处刻意使用，理由：它是唯一能枚举"未被引用计数
+  //   覆盖的残留句柄"的手段，而本用例的目的正是**清理自己造出来的残留**。
+  for (const pid of _spawnedPids.splice(0)) {
+    try { process.kill(pid, 'SIGKILL'); } catch { /* 已退出（ESRCH）或用其它方式回收 */ }
+  }
+  const _P = process as unknown as { _getActiveHandles?: () => unknown[] };
+  for (const h of _P._getActiveHandles?.() ?? []) {
+    const c = h as { kill?: (s?: string) => void; close?: () => void; constructor?: { name?: string } };
+    const kind = c?.constructor?.name;
+    if (kind === 'ChildProcess') { try { c.kill?.('SIGKILL'); } catch { /* 已退出 */ } }
+    else if (kind === 'Server') { try { c.close?.(); } catch { /* 已关闭 */ } }
   }
 });
 
@@ -302,7 +353,8 @@ describe('D522 teardown — stop() 进程树回收契约', () => {
   /** 物理断言辅助: pid 已死（kill(pid,0) 抛 ESRCH/EPERM 以外错误） */
   const assertDead = (pid: number) => {
     let alive = true;
-    try { process.kill(pid, 0); } catch { alive = false; }
+    // 探活探针：ESRCH = 进程已死 —— 这里的"吞"是**预期控制流**，不是静默降级（铁律 24/31 的例外语义）
+    try { process.kill(pid, 0); } catch { alive = false; /* 预期：ESRCH ⇒ 进程已死 */ }
     expect(alive, `pid ${pid} 应已死（kill(pid,0) 应抛 ESRCH）`).toBe(false);
   };
 
@@ -310,7 +362,8 @@ describe('D522 teardown — stop() 进程树回收契约', () => {
   const waitDead = async (pid: number, maxMs: number): Promise<boolean> => {
     const deadline = Date.now() + maxMs;
     while (Date.now() < deadline) {
-      try { process.kill(pid, 0); } catch { return true; }
+      // 同上：ESRCH 是探针的"真值"，非异常路径
+      try { process.kill(pid, 0); } catch { return true; /* 预期：ESRCH ⇒ 已死 */ }
       await new Promise((r) => setTimeout(r, 100));
     }
     return false;
