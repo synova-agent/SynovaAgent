@@ -21,8 +21,11 @@ PASS=0; FAIL=0
 
 t() { if [ "$2" = "$3" ]; then echo "  OK   $1 (=$3)"; PASS=$((PASS+1)); else echo "  FAIL $1 (期望 $2 实际 $3)"; FAIL=$((FAIL+1)); fi; }
 
-FENCE="$(printf '\140\140\140')"
-export FENCE
+# D520 清单1: PYBIN 三级探测（禁裸 python3 —— Windows 可能只有 python/py）
+PYBIN=""
+for _c in python3 python py; do
+  command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1 && PYBIN="$_c" && break
+done
 
 FIX=$(mktemp -d); FIX2=$(mktemp -d); FIX3=$(mktemp -d)
 trap 'rm -rf "$FIX" "$FIX2" "$FIX3"' EXIT
@@ -30,7 +33,7 @@ for d in "$FIX" "$FIX2" "$FIX3"; do mkdir -p "$d/docs/synova"; cp "$REPO/docs/sy
 
 bash "$IMPL" --repo-root "$FIX" --files docs/research/ok.md >/dev/null 2>&1; t "A 白名单命中→0" 0 "$?"
 
-python3 - "$FIX2/docs/synova/DOC-CONTRACT.md" <<'PYEOF'
+"$PYBIN" - "$FIX2/docs/synova/DOC-CONTRACT.md" <<'PYEOF'
 import pathlib, sys
 p = pathlib.Path(sys.argv[1]); s = p.read_text(encoding='utf-8')
 s = s.replace('novis-backup-20260526/**', 'novis-backup-20260526/**\ndocs/synova/research/**', 1)
@@ -39,9 +42,9 @@ PYEOF
 bash "$IMPL" --repo-root "$FIX2" --files docs/synova/research/ok.md >/dev/null 2>&1; t "B 改契约即改行为→1" 1 "$?"
 bash "$IMPL" --repo-root "$FIX" --files docs/synova/research/ok.md >/dev/null 2>&1; t "B 原契约同件仍放行→0" 0 "$?"
 
-python3 - "$FIX3/docs/synova/DOC-CONTRACT.md" "$FENCE" <<'PYEOF'
+"$PYBIN" - "$FIX3/docs/synova/DOC-CONTRACT.md" <<'PYEOF'
 import pathlib, re, sys
-p = pathlib.Path(sys.argv[1]); fence = sys.argv[2]
+p = pathlib.Path(sys.argv[1]); fence = chr(96) * 3
 s = p.read_text(encoding='utf-8')
 s = re.sub(re.escape(fence) + 'doc-contract-blocked.*?' + re.escape(fence), '', s, flags=re.S)
 p.write_text(s, encoding='utf-8')
