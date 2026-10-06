@@ -81,7 +81,7 @@
     "@types/node": "26.6.3",
     "@types/nodemailer": "^8.0.1",
     "@types/react": "^19.3.0",
-    "@vitest/coverage-v8": "5.0.2",
+    "@vitest/coverage-v8": "5.0.3",
     "electron": "^33.4.11",
     "electron-builder": "^25.1.8",
     "patch-package": "^8.0.1",
