@@ -29,6 +29,8 @@ import {
   type ExpertRediagnosisResult,
 } from '../growth/lightweight-diagnosis';
 import type { GraphBridgeLike } from '../growth/goal-types';
+import { propagateGoalToMembers } from '../growth/goal-store';
+import { UserStore } from '../growth/user-store';
 import { SqliteGraphStore } from '../adapters/sqlite-graph-store';
 import { getExpertRegistry } from '../l3/expert-registry';
 import { KnowledgeStore } from './knowledge-bridge-service';
@@ -251,8 +253,42 @@ export async function defaultDiagnosisHandler(scale: ScaleName): Promise<LoopExe
     };
 
     const proposals: string[] = [];
+    // K6/1-4: 目标传导到每个人 —— 活跃目标在循环-1 巡检时下发到该组织每位成员
+    // （per-person GOAL_ASSIGNMENT 节点）。传导失败**不阻断**再诊断主流程（铁律 24/31），
+    // 但必须 log.warn 且把计数写进 output（不静默）。
+    let propagated = 0;
+    let propagationFailures = 0;
     for (const node of active) {
       const goalId = String(node.props.goalId ?? node.id);
+
+      try {
+        const orgId = String(node.props.orgId ?? '').trim();
+        const members = orgId
+          ? new UserStore(store).listByOrg(orgId).map((u) => ({
+            userId: u.userId,
+            role: u.role,
+            deptId: u.department,
+            displayName: u.displayName,
+          }))
+          : [];
+        const propagation = propagateGoalToMembers(goalId, members, store, GROWTH_GRAPH);
+        if (propagation.ok) {
+          propagated += propagation.assignments.length;
+        } else {
+          propagationFailures++;
+          log.warn(
+            { goalId, orgId, code: propagation.code, reason: propagation.reason },
+            '目标传导未完成 — degraded（不阻断再诊断）',
+          );
+        }
+      } catch (err: unknown) {
+        propagationFailures++;
+        log.warn(
+          { err: err instanceof Error ? err.message : String(err), goalId },
+          '目标传导异常 — degraded（不阻断再诊断）',
+        );
+      }
+
       const proposal = await lightweightReDiagnosis(
         { goalId, triggeredBy: 'manual' },
         { getGoal, callExpert, onEscalation: deps?.onEscalation, incrementReDiagnosisCount },
@@ -260,7 +296,9 @@ export async function defaultDiagnosisHandler(scale: ScaleName): Promise<LoopExe
       proposals.push(`${goalId}:${proposal.adjustmentType}`);
     }
 
-    const detail = `诊断循环 [${scale}]: 再诊断 ${proposals.length} 个目标（${proposals.join('; ')}）`;
+    const detail = `诊断循环 [${scale}]: 再诊断 ${proposals.length} 个目标（${proposals.join('; ')}）`
+      + `，目标传导到每人 ${propagated} 条派发`
+      + (propagationFailures > 0 ? `（传导未完成 ${propagationFailures} 个目标）` : '');
     if (incrementFailures.length > 0) {
       log.warn({ scale, failures: incrementFailures.length }, '再诊断计数回写部分失败 — 降级');
       return {

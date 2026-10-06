@@ -11,7 +11,11 @@
  */
 import { randomUUID } from 'crypto';
 import { createLogger } from '@synova/logger';
-import type { Goal, GoalStatus, GraphBridgeLike, AuditStoreLike, TransitionRule } from './goal-types';
+import { GOAL_ASSIGNMENT_NODE_TYPE } from './goal-types';
+import type {
+  Goal, GoalStatus, GraphBridgeLike, AuditStoreLike, TransitionRule,
+  GoalMember, GoalAssignment, GoalCoverage, GoalPropagationResult,
+} from './goal-types';
 import { DecisionRecordStore } from './decision-record';
 
 const log = createLogger('growth/goal-store');
@@ -215,6 +219,238 @@ export function getActiveGoalCount(orgId: string, store: GraphBridgeLike, graph:
  * @param extraProps - 可选。状态变更时同时更新的额外字段（如 metrics, actualDurationDays）
  * @throws Error — 非法转换或前置条件不满足时抛出
  */
+// ═══ 目标传导（1-4：目标传导到每个人） ═══
+
+/**
+ * 从节点 props 读字符串字段（无类型断言；坏数据 → undefined）。
+ */
+function readText(props: Record<string, unknown>, key: string): string | undefined {
+  const value = props[key];
+  return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
+}
+
+/**
+ * 定位 Goal 节点。
+ *
+ * 为什么不能只用 getGoal/getNode：`SqliteGraphStore.createNode` 恒生成 `node-<uuid>`
+ * 作节点 id，而 `Goal.goalId` 只存在 props 里 —— 必须按 props.goalId 反查。
+ * 兼容旧式/内存 store（以其 props.goalId 作节点 id）时回退 getNode。
+ */
+function resolveGoalForPropagation(
+  goalId: string,
+  store: GraphBridgeLike,
+  graph: string,
+): { nodeId: string; orgId: string } | null {
+  const rows = store.queryNodes('GOAL', { goalId }, graph);
+  // 严格匹配：过滤被实现忽略时不得把别的 Goal 当成目标（fail-closed，不猜）
+  const hit = rows.find(r => readText(r.props, 'goalId') === goalId);
+  if (hit) {
+    return { nodeId: hit.id, orgId: readText(hit.props, 'orgId') ?? '' };
+  }
+  const direct = store.getNode(goalId, graph) as { id?: string; props?: Record<string, unknown> } | null;
+  if (direct?.props && readText(direct.props, 'goalId') === goalId) {
+    return { nodeId: direct.id ?? goalId, orgId: readText(direct.props, 'orgId') ?? '' };
+  }
+  return null;
+}
+
+/**
+ * 目标传导到每个成员（1-4）。
+ *
+ * 为每位（去重后的）成员写入一个 `GOAL_ASSIGNMENT` 节点：props 记
+ * goalId/orgId/userId/role/deptId/status/assignedAt，节点 type 以 `goal` 为前缀 ——
+ * 判据 `COUNT(graph_nodes WHERE type LIKE 'goal%') > 0` 直接读得到（列名实测为 `type`）。
+ *
+ * 契约:
+ *   @input  — goalId（createGoal 生成）+ members（成员最小集，通常来自
+ *             UserStore.listByOrg(orgId)）+ store（GraphBridgeLike 依赖注入）
+ *             + graph（默认 'growth'）
+ *   @output — GoalPropagationResult：{ ok, code, expectedMembers, assignments, degraded }
+ *   @degraded — store 抛错（查询/写入）→ 不抛异常，返回 code='STORE_UNAVAILABLE' +
+ *               degraded=true（log.error 留痕，铁律 24/31）；
+ *               目标不存在 / 成员空集 → 拒绝并给错误码，degraded=false
+ */
+export function propagateGoalToMembers(
+  goalId: string,
+  members: readonly GoalMember[],
+  store: GraphBridgeLike,
+  graph: string = 'growth',
+): GoalPropagationResult {
+  const uniqueMembers: GoalMember[] = [];
+  const seen = new Set<string>();
+  for (const member of members) {
+    const userId = typeof member?.userId === 'string' ? member.userId.trim() : '';
+    if (userId.length === 0 || seen.has(userId)) continue;
+    seen.add(userId);
+    uniqueMembers.push({
+      userId,
+      role: member.role,
+      deptId: member.deptId,
+      displayName: member.displayName,
+    });
+  }
+
+  if (uniqueMembers.length === 0) {
+    log.warn({ goalId, membersReceived: members.length }, '目标传导被拒：成员清单为空（EMPTY_MEMBERS）');
+    return {
+      ok: false, code: 'EMPTY_MEMBERS', reason: '成员清单为空',
+      goalId, expectedMembers: 0, assignments: [], degraded: false,
+    };
+  }
+
+  let goalOrgId: string;
+  try {
+    const resolved = resolveGoalForPropagation(goalId, store, graph);
+    if (!resolved) {
+      log.warn({ goalId, members: uniqueMembers.length }, '目标传导被拒：目标不存在（GOAL_NOT_FOUND）');
+      return {
+        ok: false, code: 'GOAL_NOT_FOUND', reason: `Goal ${goalId} 不存在`,
+        goalId, expectedMembers: uniqueMembers.length, assignments: [], degraded: false,
+      };
+    }
+    goalOrgId = resolved.orgId;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.error({ err: msg, goalId }, '目标传导失败：图存储不可用 — degraded');
+    return {
+      ok: false, code: 'STORE_UNAVAILABLE', reason: msg,
+      goalId, expectedMembers: uniqueMembers.length, assignments: [], degraded: true,
+    };
+  }
+
+  const assignedAt = new Date().toISOString();
+  const assignments: GoalAssignment[] = [];
+  for (const member of uniqueMembers) {
+    try {
+      const assignmentId = store.createNode(GOAL_ASSIGNMENT_NODE_TYPE, {
+        goalId,
+        orgId: goalOrgId,
+        userId: member.userId,
+        role: member.role,
+        deptId: member.deptId,
+        displayName: member.displayName,
+        status: 'pending',
+        assignedAt,
+      }, graph);
+      assignments.push({
+        assignmentId,
+        goalId,
+        orgId: goalOrgId,
+        userId: member.userId,
+        role: member.role,
+        deptId: member.deptId,
+        status: 'pending',
+        assignedAt,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      log.error(
+        { err: msg, goalId, userId: member.userId, written: assignments.length, expected: uniqueMembers.length },
+        '目标传导中断：图存储不可用 — degraded（已写入部分保留）',
+      );
+      return {
+        ok: false, code: 'STORE_UNAVAILABLE', reason: msg,
+        goalId, expectedMembers: uniqueMembers.length, assignments, degraded: true,
+      };
+    }
+  }
+
+  log.info({ goalId, count: assignments.length, graph }, '目标已传导到每个成员');
+  return {
+    ok: true, code: 'OK',
+    goalId, expectedMembers: uniqueMembers.length, assignments, degraded: false,
+  };
+}
+
+/**
+ * 列出某 Goal 的全部派发记录（1-4）。
+ *
+ * 契约:
+ *   @input  — goalId + store（GraphBridgeLike）+ graph（默认 'growth'）
+ *   @output — GoalAssignment[]（无记录 → []）
+ *   @degraded — store 抛错 → log.error + 返回 []（调用方与 getGoalCoverage 的
+ *               degraded 标记区分「无记录」与「查不到」，铁律 31）
+ */
+export function listGoalAssignments(
+  goalId: string,
+  store: GraphBridgeLike,
+  graph: string = 'growth',
+): GoalAssignment[] {
+  try {
+    const rows = store.queryNodes(GOAL_ASSIGNMENT_NODE_TYPE, { goalId }, graph);
+    return rows
+      .filter(r => readText(r.props, 'goalId') === goalId)
+      .map(r => ({
+        assignmentId: r.id,
+        goalId,
+        orgId: readText(r.props, 'orgId') ?? '',
+        userId: readText(r.props, 'userId') ?? '',
+        role: readText(r.props, 'role'),
+        deptId: readText(r.props, 'deptId'),
+        status: readText(r.props, 'status') === 'acknowledged' ? ('acknowledged' as const) : ('pending' as const),
+        assignedAt: readText(r.props, 'assignedAt') ?? '',
+      }));
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.error({ err: msg, goalId }, '查询目标派发记录失败 — degraded');
+    return [];
+  }
+}
+
+/**
+ * 计算某 Goal 的逐人覆盖率（1-4 判据 ②：coverage N/N）。
+ *
+ * 契约:
+ *   @input  — goalId + members（应派发成员清单）+ store + graph（默认 'growth'）
+ *   @output — GoalCoverage：{ expected, assigned, ratio, missingUserIds, degraded }
+ *             expected = 成员去重后人数；assigned = 已派发 ∩ 成员
+ *   @degraded — 查询抛错 → degraded=true + log.error + 全员 missing
+ *               （不把「查不到」伪装成「已覆盖」）
+ */
+export function getGoalCoverage(
+  goalId: string,
+  members: readonly GoalMember[],
+  store: GraphBridgeLike,
+  graph: string = 'growth',
+): GoalCoverage {
+  const expectedUserIds: string[] = [];
+  const seen = new Set<string>();
+  for (const member of members) {
+    const userId = typeof member?.userId === 'string' ? member.userId.trim() : '';
+    if (userId.length === 0 || seen.has(userId)) continue;
+    seen.add(userId);
+    expectedUserIds.push(userId);
+  }
+
+  let assignedUserIds = new Set<string>();
+  let degraded = false;
+  try {
+    const rows = store.queryNodes(GOAL_ASSIGNMENT_NODE_TYPE, { goalId }, graph);
+    assignedUserIds = new Set(
+      rows
+        .filter(r => readText(r.props, 'goalId') === goalId)
+        .map(r => readText(r.props, 'userId'))
+        .filter((userId): userId is string => typeof userId === 'string'),
+    );
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.error({ err: msg, goalId }, '计算目标覆盖率失败：图存储不可用 — degraded');
+    degraded = true;
+  }
+
+  const missingUserIds = expectedUserIds.filter(userId => !assignedUserIds.has(userId));
+  const expected = expectedUserIds.length;
+  const assigned = expected - missingUserIds.length;
+  return {
+    goalId,
+    expected,
+    assigned,
+    ratio: expected === 0 ? 0 : assigned / expected,
+    missingUserIds,
+    degraded,
+  };
+}
+
 export function updateGoalStatus(
   goalId: string,
   newStatus: GoalStatus,
