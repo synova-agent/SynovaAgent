@@ -6,10 +6,16 @@
 #   安装期生命周期脚本（preinstall/install/postinstall）= **任意代码执行**。
 #   npm 无 per-package 白名单字段（实测：无 `.npmrc`、无 pnpm 配置；npm 只有全局 `ignore-scripts`），
 #   故 DSH 的 `onlyBuiltDependencies` 在 npm 下**没有原生等价物** ⇒ 本器自建等价语义：
-#     ① `npm ci --ignore-scripts`      ⇒ **默认拒**（任何包的脚本都不跑）
+#     ① `npm ci --ignore-scripts`      ⇒ **默认拒**（npm 的 install 期脚本一律不跑）
+#        🔴 D1172 复核整改（S6，收回过度声称）: 独立复核实测 `--ignore-scripts` **不抑制
+#        `file:`/linked 依赖的 `prepare`**。本仓 `packages/test-kit/package-lock.json` 有 6 条
+#        `link:true`，而 ci.yml 的 packages/test-kit 安装点正是本 PR 改过的必需 context 那一步。
+#        当前那 6 个包都**没有 `prepare`** ⇒ 未武装；但**任何人给它们加一行 `prepare` 即会静默执行**。
+#        ⇒ 本器**不覆盖**该形态（如实登记，不写成"永远不跑脚本"）。
 #     ② 只对 `build-allowlist.txt` 列出的包 `npm rebuild --foreground-scripts` ⇒ **显式放行**
 #     ③ 根自身（`<ROOT>` 行）跑其 `postinstall`（`patch-package`，**铁律 40 冻结项**）
-#   白名单外的包**永远不跑脚本** ⇒ 判据「未列入白名单的 install script ⇒ 装不上」成立。
+#   白名单外的包**不被本器显式重建** ⇒ 判据「未列入白名单的 install script ⇒ 装不上」在
+#   **本器覆盖的形态内**成立（不覆盖 linked 依赖的 `prepare`，见上方 S6 注）。
 #
 # 契约（铁律 47）
 #   @input  --prefix <dir>     安装目录（默认 `.`）—— 本仓有 4 份独立 lock（根 / packages/test-kit /
@@ -32,13 +38,21 @@ set -uo pipefail
 
 OK=0; VIOL=1; DEG=2
 
+# 🔴 D1172 复核整改（S1）: **先清陈旧状态文件**。旧实现在失败时 `>>` 追加 /tmp/install-deps-failed.txt
+#   但**从不清理** ⇒ 自托管 runner 上上一轮的失败会让本轮**误拦**（实测: 干净跑 RC=0，仅放一行
+#   `FAILED_PKG=xxx` 后 RC=1 `VIOLATION(1)`；夹具也被污染: rm 后 14/0，不 rm 则 12/2）。
+rm -f /tmp/install-deps-failed.txt
+
 PREFIX="."
 ALLOWLIST=""
 DRY=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    --prefix)    PREFIX="${2:-}"; shift 2 ;;
-    --allowlist) ALLOWLIST="${2:-}"; shift 2 ;;
+    # 🔴 D1172 复核整改（S3）: 缺值时必须**显式退 2**，否则 `shift 2` 失败 + 无 set -e ⇒ 死循环
+    --prefix)    [ $# -ge 2 ] || { echo "degraded: --prefix 缺参数值" >&2; echo "INSTALL-DEPS: DEGRADED  [--prefix 缺值]"; exit 2; }
+                 PREFIX="${2:-}"; shift 2 ;;
+    --allowlist) [ $# -ge 2 ] || { echo "degraded: --allowlist 缺参数值" >&2; echo "INSTALL-DEPS: DEGRADED  [--allowlist 缺值]"; exit 2; }
+                 ALLOWLIST="${2:-}"; shift 2 ;;
     --dry-plan)  DRY=1; shift ;;
     -h|--help)   sed -n '2,30p' "$0"; exit 0 ;;
     *) echo "用法: install-deps.sh [--prefix <dir>] [--allowlist <path>] [--dry-plan]" >&2; exit $DEG ;;

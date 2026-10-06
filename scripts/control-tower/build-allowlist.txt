@@ -32,19 +32,24 @@
 # better-sqlite3: `install: prebuild-install || node-gyp rebuild --release`
 #   L5 存储层唯一 SQLite 驱动；不编译 ⇒ 任何用数据库的路径都不可用。
 better-sqlite3
-# bcrypt: `install: node-gyp-build`
-#   口令散列；不编译 ⇒ 加载即抛。
-bcrypt
 
 # ── 下载/链接平台二进制的包 ─────────────────────────────────────────────────────
 # electron: `postinstall: node install.js` —— 下载 Electron 运行时二进制。
 #   desktop-build.yml 与 electron/ 依赖它；不跑 ⇒ `electron` 命令无二进制可执行。
 electron
-# esbuild: `postinstall: node install.js` —— 平台二进制在 `@esbuild/<plat>` 包里，
-#   多数情况下不跑脚本也能用；**保留在表内**是因为 vitest/vite 打包链依赖它，
-#   且 lock 标记了 hasInstallScript ⇒ 无脚本可能在某些平台取不到二进制。
-#   ⚠️ 待复核：若实测"不跑脚本也能用"，按本文件上方判据应**移出**本表。
-esbuild
-# fsevents: mac 专用文件监听；lock 标记 hasInstallScript=true 但**包体里没有 install 脚本**
-#   （元数据与包体不一致，实测）。留在表内 = 无害（无脚本可跑）；如实登记该不一致。
-fsevents
+
+# ── 🔴 已移除 3 行（D1172 复核整改，2026-10-06）：bcrypt / esbuild / fsevents ──────
+# 判据（本文件上方 :15-18）：「`npm ci --ignore-scripts` 后该包功能不可用…才配得上白名单；
+#   『装了也能用』的一律不加」。独立复核**逐个实测**后确认这三条**不满足该判据**：
+#   · bcrypt 6.0.0 —— tarball 自带全平台 prebuilds（darwin-x64/arm64、linux-x64 glibc+musl、
+#     linux-arm/arm64、win32-x64/arm64），`npm ci --ignore-scripts` 后 `require('bcrypt')` **可用**
+#     （实测散列值 `$2b$04$…`）。🔴 **本仓自己的旁证**：`desktop-build.yml:68` 原文即写
+#     「bcrypt 6.0.0 是 N-API（prebuildify --napi, install=node-gyp-build）——ABI 无关，**免重建**」。
+#   · esbuild 0.28.1 —— 平台二进制在 `@esbuild/<plat>` 包里；`--ignore-scripts` 后
+#     `--version` / transform / **真 bundle 产出** 全部可用。
+#   · fsevents 2.3.3 —— 包体**无 install 脚本**（lock 的 hasInstallScript=true 与包体不一致），
+#     预编译 `fsevents.node` 随包发；`npm rebuild fsevents` 实测"什么都没跑" ⇒ 该行**空转**。
+# ⇒ 三条**已删除**（白名单每多一行 = 多放宽一次安装期代码执行面）。
+# ⚠️ 未核（V-09）：上述实测在 **darwin-arm64 + node22 + npm10.9.8**；ubuntu / Windows 未核。
+#   若将来在某平台发现这些包**确实**需要脚本 ⇒ 按上方判据**逐行补回并写明平台与证据**。
+

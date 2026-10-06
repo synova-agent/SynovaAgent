@@ -59,6 +59,11 @@ mk_sandbox() { # <dir> [--no-allow-wl]
   local d="$1"
   rm -rf "$d"; mkdir -p "$d/node_modules/allowed-a" "$d/node_modules/allowed-b" "$d/node_modules/evil-pkg" "$d/patches"
   echo "// patch" > "$d/patches/x.patch"
+  # 🔴 D1172 复核整改（B2）: 沙箱包必须是**真包**（含 package.json + postinstall），否则
+  #   "含安装脚本的包"在沙箱里是**空集** ⇒ 负对照（未列白名单的包零 rebuild）会**空过**。
+  for pk in allowed-a allowed-b evil-pkg; do
+    printf '{"name":"%s","version":"1.0.0","private":true,"scripts":{"postinstall":"node -e \"0\""}}\n' "$pk" > "$d/node_modules/$pk/package.json"
+  done
   printf 'allowed-a\nallowed-b\n<ROOT>\n' > "$d/wl.txt"
 }
 
@@ -77,6 +82,12 @@ chk "① allowed-a 被重建" "1" "$(grep -c '^npm rebuild allowed-a --foregroun
 chk "① allowed-b 被重建" "1" "$(grep -c '^npm rebuild allowed-b --foreground-scripts' "$TMPD/npm.log")"
 # 🔴 反例核心断言：未列入白名单的包（存在！）一次 rebuild 都不能有
 chk "① 🔴 未列入白名单的 evil-pkg 零 rebuild" "0" "$(grep -c 'evil-pkg' "$TMPD/npm.log")"
+# 🔴 D1172 复核整改（B2 核心）: 上面那条只 grep 包名字面量 ⇒ **一行裸 `npm rebuild --foreground-scripts`
+#   即可绕过**（裸 rebuild = **全量重建**，日志里不出现任何包名，夹具看不见）。
+#   独立复核实测: 加那一行后夹具仍 `14 PASS / 0 FAIL` ⇒ 判别力不足。
+#   ⇒ 补两条**结构性**断言（不看包名，看调用形态）：
+chk "① 🔴 无「裸 npm rebuild」（= 全量重建 ⇒ 默认拒失效）" "0" "$(grep -cE '^npm rebuild( --foreground-scripts)?$' "$TMPD/npm.log")"
+chk "① npm rebuild 调用次数 == 白名单内已装包数（多一次即越权）" "2" "$(grep -c '^npm rebuild ' "$TMPD/npm.log")"
 chk "① 根 postinstall(patch-package) 被执行" "1" "$(grep -c 'patch-package' "$TMPD/npm.log")"
 
 # ── ② 反例对照：把 evil-pkg 写进白名单 ⇒ 它**必须**被重建 ───────────────────────
@@ -99,13 +110,18 @@ grep -q "DEGRADED" "$TMPD/out" && ok "④ 降级末行显式 DEGRADED" || no "�
 
 # ── ⑤ 接线: ci.yml 里不得再有**裸** `npm ci`（默认拒必须走安装器）──────────────
 CIY=".github/workflows/ci.yml"
-if [ -f "$CIY" ]; then
-  BARE=$(grep -cE '^\s+(- )?run: npm ci\s*$' "$CIY" || true)
-  chk "⑤ ci.yml 裸 npm ci 数 = 0" "0" "$(printf '%s' "$BARE" | tr -d '[:space:]')"
-  grep -q "install-deps.sh" "$CIY" && ok "⑤ ci.yml 已调用安装器" || no "⑤ ci.yml 未调用安装器"
-else
-  echo "  ⚠️ SKIP ⑤: 无 $CIY"
-fi
+# 🔴 D1172 复核整改（S4）: 原判据只匹配单行 `run: npm ci` 且只查 ci.yml ⇒
+#   ① `run: |` 块内的裸 `npm ci` 测不到（本 PR 自己就转换过一个这样的点）；
+#   ② desktop-build.yml / product-progress.yml 完全没查。
+#   ⇒ 改为：剥掉注释后，三个 workflow **全文**搜 `npm ci` / `npm i ` / `npm install` 形态。
+for f in .github/workflows/ci.yml .github/workflows/desktop-build.yml .github/workflows/product-progress.yml; do
+  [ -f "$f" ] || { echo "  ⚠️ SKIP ⑤: 无 $f"; continue; }
+  # 判据 = **会跑脚本**的安装命令；显式带 `--ignore-scripts` 的行不算（那正是本机制本身）
+  BARE=$(grep -v '^\s*#' "$f" | grep -E 'npm ci|npm i |npm install' | grep -vc -- '--ignore-scripts' || true)
+  chk "⑤ ${f##*/} 裸安装命令数 = 0" "0" "$(printf '%s' "$BARE" | tr -d '[:space:]')"
+done
+grep -q "install-deps.sh" .github/workflows/ci.yml && ok "⑤ ci.yml 已调用安装器" || no "⑤ ci.yml 未调用安装器"
+grep -q "install-deps.sh" .github/workflows/desktop-build.yml && ok "⑤ desktop-build.yml 已调用安装器" || no "⑤ desktop-build.yml 未调用安装器"
 
 echo
 echo "RESULT: $PASS_N PASS / $FAIL_N FAIL"

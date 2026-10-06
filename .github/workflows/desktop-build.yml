@@ -61,7 +61,7 @@ jobs:
         working-directory: electron-renderer
         run: |
           set -o pipefail
-          { bash scripts/control-tower/install-deps.sh && npm run build && test -f ../dist/renderer/index.html; } 2>&1 | tee ../step-renderer.log
+          { bash "$GITHUB_WORKSPACE/scripts/control-tower/install-deps.sh" --prefix . && npm run build && test -f ../dist/renderer/index.html; } 2>&1 | tee ../step-renderer.log
           test ${PIPESTATUS[0]} -eq 0
 
       # 构建链步骤3a: 原生依赖准备（D529 定案 v3——彻底不用 @electron/rebuild）:
@@ -77,7 +77,10 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          npm i --no-save node-gyp@12 2>&1 | tee step-prep-nodegyp.log
+          # 🔴 D1172 复核整改（S5）: 独立复核实测 —— `npm i --no-save <含 postinstall 的包>`
+          #   在刚跑过 `npm ci --ignore-scripts` 的工程里**照样执行其 postinstall** ⇒ 这是**默认拒的绕过路径**。
+          #   ⇒ 必须显式 `--ignore-scripts`（node-gyp 无需安装期脚本；它自己就是构建器）。
+          npm i --no-save --ignore-scripts node-gyp@12 2>&1 | tee step-prep-nodegyp.log
           test ${PIPESTATUS[0]} -eq 0
           if ! (cd node_modules/better-sqlite3 && npx prebuild-install -r electron -t 33.4.11 2>&1 | tee ../step-prep-rebuild.log; test ${PIPESTATUS[0]} -eq 0); then
             echo "prebuild-install 失败 → node-gyp@12 源码编译兜底"
