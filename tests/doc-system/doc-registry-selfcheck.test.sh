@@ -54,12 +54,33 @@ mkroot() { # $1 = 目标目录
     ln -s "$f" "$1/docs/authority/$(basename "$f")" 2>/dev/null || true
   done
   cp "$SELF_ROOT/docs/authority/DOCS-REGISTRY.yaml" "$1/docs/authority/DOCS-REGISTRY.yaml"
+  # 🔴 同理：`scripts/` 顶层被软链 ⇒ 若直接改 `$1/scripts/control-tower/doc-registry.json`
+  #   会**穿过软链改到真仓库**（D1177 已因此改坏过一次台账）。⇒ 给这一层也造真目录 + 只拷 JSON。
+  if [ -d "$SELF_ROOT/scripts/control-tower" ]; then
+    rm -rf "$1/scripts"
+    mkdir -p "$1/scripts/control-tower"
+    for f in "$SELF_ROOT"/scripts/*; do [ -e "$f" ] && ln -s "$f" "$1/scripts/$(basename "$f")" 2>/dev/null; done
+    rm -f "$1/scripts/control-tower"
+    mkdir -p "$1/scripts/control-tower"
+    for f in "$SELF_ROOT"/scripts/control-tower/*; do
+      [ -e "$f" ] || continue
+      [ "$(basename "$f")" = "doc-registry.json" ] && continue
+      ln -s "$f" "$1/scripts/control-tower/$(basename "$f")" 2>/dev/null || true
+    done
+    cp "$SELF_ROOT/scripts/control-tower/doc-registry.json" "$1/scripts/control-tower/doc-registry.json"
+  fi
   [ -L "$1/docs/authority" ] && { echo "  ❌ 夹具自检失败: docs/authority 仍是软链 ⇒ 会改到真仓库"; exit 2; }
 }
 REAL_REG="$SELF_ROOT/docs/authority/DOCS-REGISTRY.yaml"
+REAL_JSON="$SELF_ROOT/scripts/control-tower/doc-registry.json"
+REAL_JSON_SUM="$(shasum -a 256 "$REAL_JSON" | awk '{print $1}')"
 REAL_SUM="$(shasum -a 256 "$REAL_REG" | awk '{print $1}')"
 guard_real() { # 🔴 每次篡改后调用：真仓库台账必须**逐字节未变**
   local now; now="$(shasum -a 256 "$REAL_REG" | awk '{print $1}')"
+  local jnow; jnow="$(shasum -a 256 "$REAL_JSON" | awk '{print $1}')"
+  if [ "$jnow" != "$REAL_JSON_SUM" ]; then
+    echo "  ❌ **夹具污染了真仓库 doc-registry.json** —— 立即中止"; exit 2
+  fi
   if [ "$now" != "$REAL_SUM" ]; then
     echo "  ❌ **夹具污染了真仓库台账** —— 立即中止（这是夹具自身的缺陷，不是被测对象的）"
     exit 2
@@ -137,7 +158,40 @@ OUT=$(rung "$T5"); RC=$?
 chk "glob 无匹配: exit 1" "$RC" "1"
 echo "$OUT" | grep -q "glob 无匹配" && ok "glob 无匹配: 点名" || no "glob 无匹配: 未点名"
 
-rm -rf "$T" "$T2" "$T3" "$T4" "$T5"
+# ── 5. D3: JSON docs 路径不存在 ⇒ 必红 ──
+T6=$(mktemp -d); mkroot "$T6"
+python3 - "$T6" <<'PY'
+import io,sys
+p=sys.argv[1]+"/scripts/control-tower/doc-registry.json"
+s=io.open(p,encoding="utf-8").read().replace("docs/synova/coordination/DECISION-REFERENCE.md","docs/NOPE.md",1)
+io.open(p,"w",encoding="utf-8").write(s)
+PY
+guard_real
+OUT=$(rung "$T6"); RC=$?
+chk "D3: JSON path 不存在 ⇒ exit 1" "$RC" "1"
+echo "$OUT" | grep -q "双真源.*路径不存在" && ok "D3: 点名到 docs[key]" || no "D3: 未点名"
+
+# ── 6. D3: alias 指向不存在的 docs key ⇒ 必红 ──
+T7=$(mktemp -d); mkroot "$T7"
+python3 - "$T7" <<'PY'
+import io,sys,json
+p=sys.argv[1]+"/scripts/control-tower/doc-registry.json"
+d=json.load(io.open(p,encoding="utf-8"))
+k=list(d["aliases"])[0]; d["aliases"][k]="NO-SUCH-KEY"
+io.open(p,"w",encoding="utf-8").write(json.dumps(d,ensure_ascii=False,indent=2))
+PY
+guard_real
+OUT=$(rung "$T7"); RC=$?
+chk "D3: alias 悬空 ⇒ exit 1" "$RC" "1"
+echo "$OUT" | grep -q "指向不存在的 docs key" && ok "D3: 点名 alias 悬空" || no "D3: 未点名 alias"
+
+# ── 7. D3 正向: 干净 JSON ⇒ 不误红（且打印交集条数）──
+T8=$(mktemp -d); mkroot "$T8"
+OUT=$(rung "$T8"); RC=$?
+chk "D3 正向: 干净 JSON ⇒ exit 0" "$RC" "0"
+echo "$OUT" | grep -q "双真源: docs 18 条" && ok "D3 正向: 打印真实条数" || no "D3 正向: 未打印"
+
+rm -rf "$T" "$T2" "$T3" "$T4" "$T5" "$T6" "$T7" "$T8"
 echo "RESULT: $NP PASS / $NF FAIL"
 [ "$NF" -eq 0 ] || exit 1
 exit 0

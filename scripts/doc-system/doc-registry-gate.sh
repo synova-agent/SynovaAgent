@@ -155,5 +155,65 @@ else
 fi
 FAIL=$((FAIL+SELF_FAIL))
 
+# ═══ D3 双真源一致性（D1178）: doc-registry.json 自洽 + 与 YAML 台账交叉 ═══════════
+# 🔴 前提更正（判例 P-01: 先核派单方的配方再照做）:
+#   派单原文是「双真源 ⇒ **合并**」。**实测两个源近乎不相交（交集 = 1 条）** —— 它们**用途不同**:
+#     · docs/authority/DOCS-REGISTRY.yaml  = **登记台账**（59 条；本门禁消费）
+#     · scripts/control-tower/doc-registry.json = **权威文档短名 → 路径**（18 docs + 16 aliases；inject-context.py 消费）
+#   ⇒ 强行"合并"会把 `inject-context.py` 的消费面打断，**且解决不了一个真实存在的问题**。
+#   真正的问题是: **两个源互不校验** —— 任一方写错都无人知（JSON 今天恰好是干净的: 18/18 path 存在、
+#   16/16 alias 指向真实 key，但**没有任何检查**保证它明天还是）。⇒ 本段补**交叉一致性**，不合并。
+SELF_BEFORE=$SELF_FAIL   # 只把 **D3 段的增量** 计入 FAIL（否则 D2 的失败会被重复计一次）
+JSON_REG="$ROOT/scripts/control-tower/doc-registry.json"
+if [ -f "$JSON_REG" ]; then
+  PYBIN=""
+  for _c in python3 python py; do command -v "$_c" >/dev/null 2>&1 && { PYBIN="$_c"; break; }; done
+  if [ -z "$PYBIN" ]; then
+    echo "  ⚠️ 降级: 无 python 可用 ⇒ doc-registry.json 一致性检查跳过（显式留痕，不静默）"
+  else
+    D3_OUT="$("$PYBIN" - "$JSON_REG" "$ROOT" "$REGISTRY" <<'PYEOF2' 2>&1
+import json, os, re, sys
+jp, root, yp = sys.argv[1], sys.argv[2], sys.argv[3]
+try:
+    d = json.load(open(jp, encoding="utf-8"))
+except Exception as e:
+    print("FAIL	JSON 解析失败: %s" % e); sys.exit(0)
+docs = d.get("docs") or {}; al = d.get("aliases") or {}
+fails = []
+for k, v in docs.items():
+    if not os.path.exists(os.path.join(root, v.rstrip("/"))):
+        fails.append("docs[%s] 路径不存在: %s" % (k, v))
+for k, v in al.items():
+    if v not in docs:
+        fails.append("aliases[%s] 指向不存在的 docs key: %s" % (k, v))
+# 交叉: 两源同一条路径时必须逐字一致（当前交集只有 1 条，但规则要立住）
+try:
+    ytxt = open(yp, encoding="utf-8").read()
+except Exception:
+    ytxt = ""
+ypaths = set(re.findall(r'^\s*path:\s*"([^"]+)"', ytxt, re.M)) | \
+         set(re.findall(r'^\s*path:\s*([^"\s].*?)\s*$', ytxt, re.M))
+inter = set(v for v in docs.values()) & ypaths
+if fails:
+    for f in fails: print("FAIL	%s" % f)
+else:
+    print("OK	docs %d 条 path 全存在；aliases %d 条全指向真实 key；与 YAML 交集 %d 条（逐字一致）"
+          % (len(docs), len(al), len(inter)))
+PYEOF2
+)"
+    if printf '%s' "$D3_OUT" | grep -q '^FAIL'; then
+      printf '%s\n' "$D3_OUT" | while IFS=$'\t' read -r _ msg; do
+        [ -n "$msg" ] && echo "  ❌ 双真源: $msg"
+      done
+      SELF_FAIL=$((SELF_FAIL+1))
+    else
+      echo "  ✅ 双真源: $(printf '%s' "$D3_OUT" | sed 's/^OK\t//')"
+    fi
+  fi
+else
+  echo "  ⏭️  双真源: doc-registry.json 不存在 ⇒ SKIP（显式，不冒充通过）"
+fi
+FAIL=$((FAIL + SELF_FAIL - SELF_BEFORE))   # 只加 D3 段的增量（SELF_FAIL 的 D2 部分已在上面计过）
+
 echo "── 汇总: 检查 $CHECKED 个文档，$FAIL 个未登记 ──"
 if [ "$FAIL" -eq 0 ]; then echo "  ✅ 登记门禁通过"; exit 0; else echo "  ❌ 登记门禁阻断"; exit 1; fi
