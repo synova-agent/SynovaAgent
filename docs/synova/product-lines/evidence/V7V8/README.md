@@ -90,16 +90,35 @@ bash tests/ci/attribution-ratchet-probe.sh --ci-yml docs/synova/product-lines/ev
 
 ## 🔴 未验 / 例外（主动列，判例 V-09）
 
-1. **CI 侧真实 check-run 未验**：本会话不取 GitHub Actions 运行结果（无网络取证步骤）。
-   V7 的"补丁生效 ⇒ CI 必红"只在**本地等价判据**上证明（逐字提取 ci.yml 的 step 正文 + 受控输入），
-   **真 CI 断言 = 未验**。补丁需治理线落地后另跑一次真 CI 才能收口。
-2. **全量 run 的 exit code 拿不到**：本机 vitest 打印汇总后不退出（实测 post-summary 仍存活 ≥180s，
-   两次复现；S5 亦独立记录 >4min）⇒ 所有全量红绿判据以**汇总计数**为准，非 exit code。
-   小集合（16/21 文件）能干净退出并给出 exit code（见 `raw/v8-groupA-B-run.txt`）。
-3. **`.test.sh` 的"CI 实跑集"是静态提取**（从 `ci.yml` 的 `for t in` 清单 + 显式 `bash tests/...` 提取），
-   **不是**CI 运行实测 ⇒ 标 **L1-静态可达**，不是 L2。
-4. **`extensions/sentinels/_extinct/**` 的 12→3 个测试**：其中 3 个属已退役哨兵的死代码测试。
-   本卡**未删**（删除 = 覆盖缩减，须裁）。
-5. **`packages/test-kit/**` 的归属**：该包自带 `vitest.config.ts` + 自带 lock，`ci.yml` 有专属 job。
-   本卡按卡面指示并入**根 include**（不改 `.github/**` 条件下的唯一可行路径）；
-   "改为扩 test-kit 专属 job 范围"是另一条路，已列入 `ci-patch-proposal.md` 备选。
+> 🔴 **本节是 task-4 的**权威例外清单**，8 条，**永久保留**（Lead 裁决：标 completed 不得洗掉）。
+> 冷启动口径：状态必须能在文件里重建 ⇒ 不依赖任何会话记忆或聊天记录。
+
+| # | 例外项 | 级别 | 为什么没做 / 归属 |
+|---|---|---|---|
+| 1 | **真 CI check-run 断言** | **未验** | 本会话不取 GitHub Actions 运行结果。V7 的"补丁生效 ⇒ CI 必红"只在**本地等价判据**上证明（逐字提取 ci.yml 的 step 正文 + 受控输入）；补丁需治理线落地后另跑一次真 CI 才能收口。|
+| 2 | **全量 run 的 exit code** | **未验** | 本机 vitest 打印汇总后**进程不退出**（实测 post-summary 仍存活 ≥180s，两次复现；S5 独立记录 >4min）⇒ 全量红绿判据一律以**汇总计数**为准，非 exit code。小集合（16/21 文件）能干净退出并给 exit code（`raw/v8-groupA-B-run.txt`）。|
+| 3 | **71 个从不执行的 `.test.sh` 未逐个跑红绿** | **未做** | 跑其中 59 个 CI 实测 13min（`ci.yml:491`），71 个约 15–20min，且多个夹具会**操作 git**（在仓内跑有污染工作树风险）。**这一格是空的，不拿"看起来像夹具"充数**（判例 V-08）。|
+| 4 | **`.test.sh` 的"CI 实跑集"是静态提取** | **L1-静态可达**，非 L2 | 从 `ci.yml` 的 `for t in` 清单 + 显式 `bash tests/...` 提取，**不是** CI 运行实测 ⇒ 不许报成 L2（判例 V-01）。|
+| 5 | **3 个"在 include 但收集 0 条"文件未改** | **未做（须裁）** | `it.runIf(false)` / `describe.skipIf(true)` 让文件整条消失（`raw/set-I-*.txt`）。改它 = 测试**语义**变更 ⇒ 出清单 + 请裁；Lead 裁决：**另立独立卡，本卡不做**。|
+| 6 | **CI 补丁未落地** | **未做（权限外）** | `.github/**` 属 A 槽治理线 ⇒ 只出 `ci-patch-proposal.md`（+43/−19，**0 新脚本**，只加数据文件 `scripts/control-tower/vitest-red-exempt.txt`）。Lead 已上报 CTO。|
+| 7 | **卡面写集路径不可跟踪** | **已改道（非自行扩范围）** | 卡面写 `docs/synova/coordination/evidence/v7v8/**`，实测 `.gitignore:81 evidence/` 命中 ⇒ 不可 `git add`；改落 `.gitignore:84` 豁免的 `product-lines/evidence/`。Lead 通告 + 已把 task-4 写集同步为 `docs/synova/product-lines/evidence/V7V8`。|
+| 8 | **D 号改用 D1168** | **已处置** | 原建议 D1144 实测被占（`alloc-task-id.sh --check-id D1144` → rc=1，远程分支 `docs/D1144-board-truth-calibration`）；D1168 rc=0 空闲。brief 文件名与 commit scope 两侧一致。Lead 已接受。|
+
+### 另附：两条已上报的域外发现（非本卡责任面）
+
+- **`V8 差集=0` 未达成**：剩 20 = 17 条 CI-only `exclude` + 3 个零用例文件。
+  实测 17 条里 **16 条已过期**（13 个文件带 64 条真跑通用例被挡在 CI 外）。
+  改 `exclude` 表 = 改"CI 验证什么" = **判据变更** ⇒ CTO 裁，本卡**一个字未改**。
+- 🔴 **判据件不密闭（真缺陷）**：跑全量测试会重写 `extensions/industries/{saas-tech,test-write}/thresholds.json`
+  的 `aggregatedAt` 时间戳 ⇒ **两个互不相通的 session（本卡 + fixtures-owner 的 3-12 夹具）各自独立撞上同一处**。
+  已 `git checkout` 还原、未进任何提交。Lead 已上报 CTO 开卡。
+
+### 另附：CI 归因说明（本 PR 的 7 个 FAILURE）
+
+**不可归因于本 PR 的 diff**，但我**没有**拿到真实失败步骤（run 尚在进行，log 端点不可读）⇒ **不声称已定位根因**。
+证据链：① `check-gate-integrity.sh` 在本分支与 `origin/main` 上**逐字同输出且都 exit 0**；
+② 同批 PR #1170 / #1169 / #1166（含纯 docs PR）失败形态**逐字相同**（`FAIL=7 CANC=1 SKIP=2 SUCC=4`）；
+③ main tip 的 green 检查跑于 `2026-10-05T18:26Z`，本 PR run 起于 `2026-10-06T06:19Z`（相隔 ~11.5h）；
+④ 失败集与"跑根 `npm ci` 的 job"高度重合（已知 W1/#1159 ERESOLVE，本 PR 未改 `package.json`）。
+⚠️ 唯一天然存疑项：`Vitest (2/2)` 理论上含本 PR include 扩容的贡献面，但按现行棘轮该 7 红**不可归因**⇒ 会被 `exit 0` 放行 ⇒ **与 FAILURE 不符**；**这一条我拿不到 log 印证，列为待查**。
+完整叙述见 PR #1172 的 issue comment（`#issuecomment-6010638208`）。
