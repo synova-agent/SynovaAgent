@@ -6,7 +6,6 @@
   @input  — --root <dir>                     仓库根（默认 git toplevel）
             [--changed <file> ...]           只检查这些文件（**棘轮式**：默认只判新增/改动）
             [--all]                          检查全部（用于**盘点**，默认对存量只报数不判红）
-            [--json <path>]                  可选：把盘点结果落盘
   @output — stdout: `  ✅/❌/ℹ️ <判据>` + 末行 `COORD-HYGIENE: <OK|VIOLATION(n)|DEGRADED>  [摘要]`
   @exit   — 0 = 通过 ｜ 1 = 违规 ｜ 2 = 检查自身失败（降级，fail-closed，同样阻断）
   @degrade— 根不可读 / git 不可用 ⇒ exit 2 + stderr 记原因（铁律 11: 不静默）
@@ -92,8 +91,11 @@ def main():
         mode = "enforce"
     else:
         targets = []
-        mode = "inventory"
-        print("  ℹ️ 盘点模式（`--all` 或未给参）⇒ **存量只报数、不判红**（棘轮式；判红只在 --changed）")
+        # 显式引用 a.all —— 否则 `--all` 就是一个**声明了却从不被读**的死参数（铁律 37）。
+        # 语义: `--all` 与"不给参"都进盘点模式；保留 `--all` 是为了**可读性**（显式表达意图）。
+        mode = "inventory" if a.all or not a.changed else "enforce"
+        print("  ℹ️ 盘点模式（%s）⇒ **存量只报数、不判红**（棘轮式；判红只在 --changed）"
+              % ("--all" if a.all else "未给参"))
 
     fails = []
     # ── R1 禁 INDEX.md ──
