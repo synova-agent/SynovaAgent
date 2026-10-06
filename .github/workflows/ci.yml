@@ -481,6 +481,32 @@ jobs:
         env:
           SYNO_CI: "1"   # 契约: 1 = HARD（任一 FAIL ⇒ exit 1）
         run: bash docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh
+      # ── C2 / [W]:284 —— 跨机预设/技能一致性 diff 腿（**先建议级，不阻断**）──────────────
+      # 规格源: 补充研究-2-Win侧完整规格.md [W]:261（导出指纹四项 + 两文件逐字节比对）/
+      #   [W]:277（§九-7 验收: 两侧各跑各提交、人为改一侧→红）/ [W]:284（§九-14 #14:
+      #   **parity diff 腿先建议级**；升级必需集走 1a/1b 流程）。落地件 = §九-7 的 #7。
+      # 不阻断落地（有意）: 不进下面 for 清单的 FAIL 汇总（清单项判红 ⇒ job 红）；不一致只出
+      #   ::warning 注解 ⇒ 必需 context 不红 —— 这正是 [W]:284「不阻断」的机械含义。
+      # 不挂 if: 门控（有意）: mac.json/win.json 都在 docs/ 下 ⇒ 改它们的 PR 正是 docs-only，
+      #   会被下面重活门的 `docs_only != 'true'` 跳过；diff 腿是纯文本读（无 npm/无网络，
+      #   实测 <0.2s），必须无条件跑到，否则 parity 改动永远无人比对。
+      # 三态: 0 = 一致或对侧合法占位 ｜ 1 = 不一致/形态非法（建议级红）｜ 2 = 降级（文件缺失等）
+      #   —— 三态都只注解、不阻断；降级同样出注解（不静默，铁律 11）。
+      - name: Cross-machine preset/skill parity (advisory, non-blocking)
+        shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash
+        run: |
+          # GitHub 的 run 是 `bash -e {0}` ⇒ 命令替换的非零退出会直接终结 step，
+          # 故 `set +e` 只包住取 rc 的那一步。
+          set +e
+          OUT=$(bash scripts/control-tower/check-preset-parity.sh --check 2>&1)
+          rc=$?
+          set -e
+          printf '%s\n' "$OUT"
+          case "$rc" in
+            0) echo "preset-parity: 一致，或对侧为合法占位（无注解）" ;;
+            1) echo "::warning title=preset-parity::跨机预设/技能指纹不一致 — ADVISORY-RED 建议级（[W]:284 不阻断；详见 docs/synova/parity/README.md）" ;;
+            *) echo "::warning title=preset-parity::检查器降级 rc = $rc （建议级，不阻断；见上方 degraded 行）" ;;
+          esac
       - name: Run hermetic control-tower gate tests
         # T3: step 级 timeout（ubuntu 取 13，须 < 其 job 级 14）。
         #   D1147: 原 `${{ matrix.os == 'windows-latest' && 60 || 13 }}` 的 windows 分支随矩阵
@@ -571,6 +597,7 @@ jobs:
             tests/control-tower/check-citations.test.sh \
             tests/control-tower/check-progress-freshness.test.sh \
             tests/control-tower/check-preset-bundles.test.sh \
+            tests/control-tower/check-preset-parity.test.sh \
             tests/control-tower/check-dsh-anchor.test.sh \
             tests/control-tower/check-gate-integrity.test.sh \
             tests/control-tower/check-k3-report.test.sh \

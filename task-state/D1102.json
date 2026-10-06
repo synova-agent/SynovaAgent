@@ -1,0 +1,14 @@
+{
+  "task_id": "D1102",
+  "title": "X30 v2 · C2 跨机预设/技能一致性检查（parity）",
+  "status": "claimed",
+  "domain": "mac",
+  "owner": "工程线（X30 落地）",
+  "spec": ".claude/task-briefs/2026-10-01-D1102-parity.md",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-01",
+  "updated_by": "harness-登记（X30 v2）",
+  "note": "按 [W]:261/277/284 落地：check-preset-parity.sh 导出四项指纹（16 skill sha256／预设 cordis.patch.yml sha256／断面 tag／bundles 行数）→ parity/{mac,win}.json；--check 逐字节比对＋逐项点名；CI 建议级腿（不阻断）。夹具 49/0 含「改坏即红」「零写入」「判别性变异体」；win.json 明确占位（不伪造）。已知边界：第④项只比行数；周检兜底未接线（落点待 CTO 裁）。"
+}

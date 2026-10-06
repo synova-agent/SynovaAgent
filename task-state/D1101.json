@@ -1,0 +1,14 @@
+{
+  "task_id": "D1101",
+  "title": "X30 v2 落地 · B 组仓内两件制（k3-audit 镜像）",
+  "status": "claimed",
+  "domain": "mac",
+  "owner": "工程线（X30 落地）",
+  "spec": ".claude/task-briefs/2026-10-01-D1101-x30-v2-presets.md",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-01",
+  "updated_by": "harness-登记（X30 v2）",
+  "note": "按《X30落地同步v2》B2：仓内 k3-audit 旧形态（preset.yml+persona-block.yml）改两件制镜像（源=库外 bundle 逐字节）；实测改后与真源 diff 一致。synova-cto 退役暂缓（前置=改道 install-dashboards.sh，[W]:317）⇒ 记缺口。"
+}

@@ -1,0 +1,10 @@
+{
+  "schema": "synova/parity/v1",
+  "placeholder": true,
+  "status": "pending-win",
+  "note": "占位文件 —— 待 Win 侧生成/提交。Win 侧命令: bash scripts/control-tower/check-preset-parity.sh --generate --side win；生成后以真指纹整份替换本文件（不可在本文件上手工填写指纹值）。口径见 docs/synova/parity/README.md §5。",
+  "skills_sha256": null,
+  "preset_cordis_patch_sha256": null,
+  "dsh_anchor_tag": null,
+  "bundles_line_count": null
+}
