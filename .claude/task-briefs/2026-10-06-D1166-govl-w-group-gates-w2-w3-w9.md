@@ -43,6 +43,10 @@
 - scripts/control-tower/ci-signal-classify.sh — W9 注释口径（代码零差异，已 diff 核）
 - tests/control-tower/ci-docsonly-push-guard.test.sh — 新建（W2 判别夹具，含反例）
 - tests/control-tower/aggregate-job-results.test.sh — 新建（W3 判别夹具，含反例）
+- tests/control-tower/check-required-contexts.test.sh
+  🔴 D1176 补声明（D708 实测判夹带）: 本文件在实施中被改（**修 SIGPIPE 竞态** ——
+  `grep -v … | grep -q …` 在 `pipefail` 下返回 141，约 7/10 次假红 ⇒ 改临时文件 + 单次 grep），
+  但 Q2 漏登记 ⇒ D708 判「夹带文件 1 个」。判例 P-06/M-01: 写集**逐条裸精确路径**。
 - tests/control-tower/ci-signal-classify.test.sh — 登记 all-checks-passed 进 DOWNSTREAM_NEEDS_JOBS
 - .claude/task-briefs/2026-10-06-D1166-govl-w-group-gates-w2-w3-w9.md
 - memory/notes/proposed/2026-10-06-d1166-w2-w3-w9.md
