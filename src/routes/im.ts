@@ -5,7 +5,10 @@
  * POST /api/im/wecom/webhook  — 企业微信消息推送
  *
  * 铁律 31: 降级模式 — 消息处理失败仍返回 200 (避免 IM 平台重试风暴)
- *   ⚠️ 该降级只覆盖**已通过签名闸门**的入站消息；闸门本身（K1-WH 段1a）一律 fail-closed。
+ *   ⚠️ 该降级只覆盖**已通过签名闸门**的入站消息。
+ *   ⚠️ 闸门**不是无条件** fail-closed：**已配置** `FEISHU_ENCRYPT_KEY` 时，
+ *      缺签名头 / 缺 rawBody / 验签失败 / 时间窗外 一律 401（见 `guardFeishuWebhook`）；
+ *      **未配置**密钥时按**配置态**放行（无密钥可校验），只落 `log.warn`（见 `:52-58` 与 PR 正文挂账①）。
  */
 import { Router, type Request, type Response } from 'express';
 import { createLogger } from '@synova/logger';
@@ -276,20 +279,26 @@ router.post('/api/qa/ask', async (req: Request, res: Response) => {
 // ═══ 健康检查 ═══
 
 /**
- * 飞书签名闸门自检（供 `GET /api/im/health` 报告闸门是否**真的可用**，而非仅「配置了」）。
+ * 飞书签名闸门**自洽**自检（供 `GET /api/im/health` 报告模块能否自算自验）。
+ *
+ * 🔴 **判别力边界（禁读成「闸门在用」的证据）**：本函数是**同源自算自验的恒真式**
+ * —— 用同一份密钥、同一个探针、同一时刻算出摘要再拿它去验，除非模块自身崩坏，恒为 `true`。
+ * 经独立自验员实测：把闸门改坏三次（M1/M2/M3），本项**每次仍绿**
+ * ⇒ 它**只证明「模块自洽」**，**不**证明「入站闸门真的在拦」。
+ * 「闸门在用」的证据**只有**：判据 ①–⑦（真 HTTP 拒绝路径）+ 判据 ⑧（改坏即红）。
  *
  * 契约（铁律 47 — 输入/输出/降级）:
  * - 输入: **无**。探针为固定字面量，**不接受任何请求输入** ⇒ 不构成验签旁路。
  * - 输出: `{ armed, roundTrip, window }` 三个布尔 ——
- *   `armed` = `FEISHU_ENCRYPT_KEY` 是否非空；`roundTrip` = 按当前密钥「算签名→验签名」是否自洽
- *   （密钥为空串时 `verifyFeishuSignature` 判 `missing_params` ⇒ false，正是要暴露的配置错）；
- *   `window` = 同一固定时刻能否通过 ±1h 窗（应为 true）。
+ *   `armed` = `FEISHU_ENCRYPT_KEY` 是否非空（**这一项有判别力**：能暴露「密钥配了但是空白」）；
+ *   `roundTrip` = 自算自验是否自洽（**恒真式，判别力≈0**，仅表示模块未崩坏）；
+ *   `window` = 同一固定时刻能否通过 ±1h 窗（应为 true，同样近恒真）。
  * - **只回布尔，不回摘要**：摘要由密钥参与哈希，不进日志、不进响应（防离线比对材料外泄）。
  * - 降级: 密钥未配置 ⇒ `armed=false, roundTrip=false`；**不抛**、不返回任何密钥材料。
  *
  * 为什么放在路由层（而不是纯函数模块内）：本函数是 `computeFeishuSignature` /
- * `isWithinTimeWindow` / `verifyFeishuSignature` 的**真实运行时消费者**，
- * 让「闸门已武装」这件事可被运维直接观测（部署后一次 `GET /api/im/health` 即可判定）。
+ * `isWithinTimeWindow` / `verifyFeishuSignature` 的**正当运行时消费者**（让仓内组 4
+ * 「新 export 必须有 src/ 消费者」成立，而不是造空调用或注释式引用）。
  */
 function feishuSignatureGuardSelfCheck(): { armed: boolean; roundTrip: boolean; window: boolean } {
   const encryptKey = process.env.FEISHU_ENCRYPT_KEY || '';

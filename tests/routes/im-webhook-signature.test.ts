@@ -223,13 +223,26 @@ describe('P2-段1 · 飞书回调签名闸门（L2 真 HTTP；断面 = 无 jwt �
     expect(r.body.error).toBe('FEISHU_SIGNATURE_mismatch');
   });
 
-  it('③ timestamp = now − 7200s、签名**正确** ⇒ 401（±1h 时间窗，防重放）', async () => {
+  it('③ timestamp = now − 7200s、签名**正确** ⇒ 401（±1h 只**限定重放视界**；不做 nonce 去重）', async () => {
     const raw = bytes(eventPayload());
     const oldTs = String(Math.floor(Date.now() / 1000) - 7200);
     const r = await post(urlRaw, raw, signedHeaders(raw, { ts: oldTs }));
 
     expect(r.status).toBe(401);
     expect(r.body.error).toBe('FEISHU_SIGNATURE_timestamp_out_of_window');
+  });
+
+  it('③-b **窗口内重放**（同一份逐字节相同请求连发两次）⇒ 200 / 200（本卡**不做** nonce 去重，如实钉住）', async () => {
+    // 🔴 把「±1h 的边界」钉成可执行事实（独立自验员 D5 抓出的过度声称）：
+    //   ±1h 只**限定重放视界**（窗外旧请求被拒），**不防窗口内的重复投递** ——
+    //   本卡不做 nonce 去重、不落已见 nonce 表。要防窗口内重放须新增去重存储
+    //   （新能力，不在本卡范围；见 PR 正文挂账②）。
+    const raw = bytes(eventPayload());
+    const headers = signedHeaders(raw);
+    const first = await post(urlRaw, raw, headers);
+    const second = await post(urlRaw, raw, headers);   // 逐字节相同
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
   });
 
   it('④ 篡改签名头 1 个 hex 字符 ⇒ 401', async () => {

@@ -35,7 +35,7 @@ export type SignatureFailureReason =
   | 'length_mismatch'
   /** 长度相等但内容不等（常数时间比较判定） */
   | 'mismatch'
-  /** 签名正确但时间戳落在 ±windowMs 之外（重放/时钟漂移） */
+  /** 签名正确但时间戳落在 ±windowMs 之外（**超出重放视界** / 时钟漂移；本模块不做 nonce 去重） */
   | 'timestamp_out_of_window';
 
 /** `verifyFeishuSignature` 的返回值（判别式：`ok === true` 时无 `reason`） */
@@ -139,6 +139,9 @@ export function verifyFeishuSignature(
  * - 输出: `true` = 窗内（含边界）；`false` = 窗外。
  * - 降级: **fail-closed** —— 空串 / 非十进制整数 / 负数 / 非安全整数 / `nowMs` 非有限数
  *   ⇒ 一律 `false`（禁「解析不出就放行」）。**不 throw**。
+ * - 边界（如实声明，勿读成「防重放」）: 本函数**只限定重放视界** —— 窗内同一份请求可被
+ *   重复投递且每次都判 `true`（**不做 nonce 去重**，不落已见 nonce 表）。要防窗口内重放
+ *   须新增去重存储（新能力，不在 K1-WH 段1a 范围）。
  */
 export function isWithinTimeWindow(
   timestampSec: string,

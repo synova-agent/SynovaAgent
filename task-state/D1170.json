@@ -1,0 +1,42 @@
+{
+  "task_id": "D1170",
+  "title": "K1-WH 段1：飞书 webhook 路由层验签（sha256 拼接串 + ±1h 重放视界 + 分层判定级尺寸闸，fail-closed）+ 整改轮",
+  "status": "impl_done",
+  "risk": "medium",
+  "spec": {
+    "doc": "任务卡 P2-段1（父卡 #1126）/ PR #1184 / 变更单 task-3（整改轮）",
+    "by": "synova-product-lead",
+    "at": "2026-10-06"
+  },
+  "impl": {
+    "commit": "54c97ece9",
+    "by": "pl-p2-exec",
+    "at": "2026-10-06",
+    "branch": "fix/k1-wh-p2-s1-feishu-signature",
+    "files": [
+      "src/l1/im-webhook-signature.ts",
+      "src/routes/im.ts",
+      "tests/l1/im-webhook-signature.test.ts",
+      "tests/routes/im-webhook-signature.test.ts",
+      "docs/synova/product-lines/evidence/P2段1-飞书验签-原始输出-20261006.md",
+      ".claude/task-briefs/2026-10-06-D1170-飞书webhook签名闸门-1126.md",
+      ".claude/task-briefs/2026-10-06-P2-S1-飞书webhook签名闸门-1126.md",
+      "task-state/D1170.json"
+    ]
+  },
+  "write_set": [
+    "src/l1/im-webhook-signature.ts",
+    "src/routes/im.ts",
+    "tests/l1/im-webhook-signature.test.ts",
+    "tests/routes/im-webhook-signature.test.ts",
+    "docs/synova/product-lines/evidence/P2段1-飞书验签-原始输出-20261006.md",
+    ".claude/task-briefs/2026-10-06-D1170-飞书webhook签名闸门-1126.md",
+    ".claude/task-briefs/2026-10-06-P2-S1-飞书webhook签名闸门-1126.md",
+    "task-state/D1170.json"
+  ],
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-06",
+  "updated_by": "pl-p2-exec",
+  "note": "D1170 = 声明锚点（本 PR 此前无 D#，D708 写集对账无法定位声明源 ⇒ CI 必需 context「TypeScript + Lint + Iron Laws」红在 Merge write-set reconciliation 步）。取号器 alloc-task-id.sh 给出的 D1169 已被占用（PR #1160 在飞），本号由 Lead 实测为空号。write_set 逐条裸精确路径（判例 P-06/M-01：写集只由机器块表达）；旧 brief 路径按 --no-renames 计入变更集，故一并声明。整改轮内容见 brief §B 与证据件 §7/§8（D1 变异器可复现 / D2 自检判别力≈0 如实降级 / D3 文件头自相矛盾 / D4 SHA-256 vs HMAC 真对照 / D5 只限定重放视界且新增 ③-b 钉住 / D6 空转 verify 判据改真命令 / D7 计数 42→44）。断面前提：本卡判据只在「无 jwt 层的真 express + 真 imRouter + listen(0) + 真 fetch」成立；生产姿态仍必 401，放行属段2（#1126）。"
+}

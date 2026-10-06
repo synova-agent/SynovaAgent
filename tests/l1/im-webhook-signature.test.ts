@@ -13,7 +13,7 @@
  *   4d63403d9d10c2c5587315f2e9eb139da332e0f5df31a1420cc68f9bbf1eaeb5
  */
 import { describe, it, expect } from 'vitest';
-import { createHash } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import {
   computeFeishuSignature,
   verifyFeishuSignature,
@@ -41,12 +41,19 @@ describe('computeFeishuSignature — 正常路径（规格逐字：sha256(ts+non
     expect(KAT_HEX).toHaveLength(64);
   });
 
-  it('是 SHA-256 而非 HMAC：与同参数的 HMAC 结果**不**相等', () => {
-    const hmac = createHash('sha256')
+  it('是 SHA-256(拼接串) 而非 HMAC-SHA256(密钥)：与 createHmac(\'sha256\', KEY) 的结果**不**相等', () => {
+    // 🔴 判别力说明（原用例名「而非 HMAC」是**同名不副实**，被独立自验员 D4 抓出）：
+    //   原对照值用 `createHash('sha256')`（**无密钥**）算 ⇒ 它与本模块的差异只证明
+    //   「KEY 参与了哈希输入」，**区分不了** SHA-256 与 HMAC 两种构造。
+    //   真对照 = `createHmac('sha256', KEY)`（KEY 当 HMAC 密钥，而非拼接串的一段）
+    //   —— 同一 KEY、同一 ts/nonce/body，两条构造路径必产出不同摘要。
+    const realHmac = createHmac('sha256', KEY)
       .update(Buffer.concat([Buffer.from(TS + NONCE, 'utf8'), BODY]))
       .digest('hex');
-    // 规格是「encrypt_key 作为拼接串的一段」，不是 HMAC 密钥 ⇒ 两者必不等
-    expect(computeFeishuSignature(TS, NONCE, KEY, BODY)).not.toBe(hmac);
+    const computed = computeFeishuSignature(TS, NONCE, KEY, BODY);
+    expect(computed).toBe(KAT_HEX);        // 与官方规格（拼接串）逐字一致
+    expect(computed).not.toBe(realHmac);   // 且**不是** HMAC 构造的产物
+    expect(realHmac).toHaveLength(64);     // 对照值本身非空（防「两边都空」假绿）
   });
 
   it('拼接段按 UTF-8 字节：ts/nonce/key 各自非 ASCII 时仍与独立算式一致', () => {
@@ -93,7 +100,7 @@ describe('verifyFeishuSignature — 正常路径 + 长度前置', () => {
       .toEqual({ ok: false, reason: 'mismatch' });
   });
 
-  it('timestamp_out_of_window：签名正确但时间戳窗外（重放）⇒ 拒', () => {
+  it('timestamp_out_of_window：签名正确但时间戳窗外（超出重放视界）⇒ 拒', () => {
     expect(verifyFeishuSignature(TS, NONCE, KEY, BODY, KAT_HEX, NOW_MS + 7_200_000))
       .toEqual({ ok: false, reason: 'timestamp_out_of_window' });
     expect(verifyFeishuSignature(TS, NONCE, KEY, BODY, KAT_HEX, NOW_MS + DEFAULT_SIGNATURE_WINDOW_MS))
@@ -161,7 +168,7 @@ describe('isWithinTimeWindow — 边界（±1h 默认；±1ms 相邻）', () => 
     expect(isWithinTimeWindow(TS, NOW_MS - 1001, 1000)).toBe(false);
   });
 
-  it('重放形态（now − 7200s）⇒ false', () => {
+  it('超出重放视界形态（now − 7200s）⇒ false', () => {
     expect(isWithinTimeWindow(TS, NOW_MS + 7_200_000)).toBe(false);
   });
 
