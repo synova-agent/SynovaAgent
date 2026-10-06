@@ -17,6 +17,14 @@
  */
 import { createLogger } from '@synova/logger';
 import nodemailer from 'nodemailer';
+// W1c/D1164（治理线，2026-10-06）: `Transporter` 必须走**具名类型导入**，不能用
+//   `nodemailer.Transporter` —— 后者要求默认导入绑定在**类型位**上充当命名空间，而本树
+//   `nodemailer@10` 自带的类型与 `@types/nodemailer@8` **都只提供具名导出**（均无 `export =`）
+//   ⇒ TS2503「Cannot find namespace 'nodemailer'」。
+//   该错误是 `TypeScript + Lint + Iron Laws`（**main 的必需 context**）唯一的阻断项：
+//   实测 CI 白名单过滤后**全仓只剩这 1 条** error TS（见 D1164 note 的证据表）。
+//   全仓 11/12 条近期 run 该 job 均红 ⇒ 修复前**任何非 docs-only PR 都合不了**。
+import type { Transporter } from 'nodemailer';
 
 const log = createLogger('services/email-service');
 
@@ -32,7 +40,7 @@ export interface SendEmailOptions {
   cc?: string | string[];
 }
 
-let _transporter: nodemailer.Transporter | null = null;
+let _transporter: Transporter | null = null;
 
 function loadConfig(): EmailConfig | null {
   const host = process.env.EMAIL_HOST;

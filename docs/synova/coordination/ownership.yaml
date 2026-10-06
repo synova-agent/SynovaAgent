@@ -204,5 +204,11 @@ rules:
 #   哪条线」的信号。豁免后真跨域（win 代码 + mac 工具链）仍拦住。
 # D782 增补二: 防线产物（DRIFT-LEDGER.md / system-registry.json）——doc-system 工具链（mac）
 #   的运行产物，路径恰在 docs/authority/（兜底判 win）——同 D758 证据目录逻辑: 产物跟工具链走。
-domain_neutral: [".claude/bypass.log", ".claude/gate-hits.log", ".claude/task-briefs/**", "task-state/**", "memory/notes/**", ".codex/**", "docs/synova/product-lines/evidence/**", ".gitignore", "AGENTS.md", "CLAUDE.md", "LOOP.md", "knowledge/shared/README.md", "docs/authority/DRIFT-LEDGER.md", "docs/authority/system-registry.json"]
+# D970 增补（2026-09-25）: .gitattributes 各线共写——实测 `git log --format='%an' -- .gitattributes`
+#   为 2 synova-mac / 1 tangbaobao520 / 1 dsh-cto / 1 ClawOrg（多主体、跨线：D457 union 声明[控制塔]、
+#   D520 CRLF 双平台、D533 audit 豁免、D970 账本出库）。与 .gitignore 的 D774 先例**同型**：
+#   它是仓库级公共配置，谁触发谁改，不构成「这条 PR 属于哪条线」的信号；不豁免则每支碰它的 PR
+#   都被判「变更跨域」卡死（D970 实测：`.gitattributes` 落 win 兜底 → 与 13 件 mac 冲突）。
+#   豁免后真跨域（win 代码 + mac 工具链）仍拦住。
+domain_neutral: [".claude/bypass.log", ".claude/gate-hits.log", ".claude/task-briefs/**", "task-state/**", "memory/notes/**", ".codex/**", "docs/synova/product-lines/evidence/**", ".gitignore", ".gitattributes", "AGENTS.md", "CLAUDE.md", "LOOP.md", "knowledge/shared/README.md", "docs/authority/DRIFT-LEDGER.md", "docs/authority/system-registry.json"]
 
