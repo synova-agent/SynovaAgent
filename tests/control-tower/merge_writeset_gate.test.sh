@@ -150,23 +150,79 @@ OUT=$(run_gate); rc=$?
 [ "$rc" -eq 0 ] && ok "⑤ bypass.log 内置豁免 → exit 0" || no "⑤ bypass.log 被误判夹带: rc=$rc"
 echo "$OUT" | grep -q 'post-commit hook' && ok "⑤ 打印内置豁免理由" || no "⑤ 未打印内置豁免理由"
 
-# ── ⑨ K3 报告指针式内置豁免: docs/synova/audit-reports/** 与 archive/** ──
-# 判据（改坏即红）: 声明写集不含 audit-reports/INDEX.md 时，改前=夹带红，改后=内置豁免绿。
+# ── ⑨ FIX-004 A（P0 收紧）: K3 索引=精确键；archive/=**仅真重命名**（成对反例）──
+# K3 定罪: 原实现 `docs/synova/audit-reports/**` + `archive/**` 为路径级 glob → 任意文件
+#   （含把 src/**.ts 改名搬入）落该目录即**静默豁免** ⇒ 夹带口子。
+# 判据（改坏即红）: 合法场景绿（⒜）/ 滥用场景必红（⒝），两者同夹具对照。
 reset_sandbox ""
 printf 'a\n' > "$SB/src/a.ts"
-mkdir -p "$SB/docs/synova/audit-reports" "$SB/archive/old-docs"
+mkdir -p "$SB/docs/synova/audit-reports"
 printf '| B1 | x | PASS | k3-repo@sha:r.md |\n' > "$SB/docs/synova/audit-reports/INDEX.md"
-printf 'moved\n' > "$SB/archive/old-docs/legacy.md"
-commit_it "feat(D708): k3 index + archive move"
+commit_it "feat(D708): k3 index"
 OUT=$(run_gate); rc=$?
-[ "$rc" -eq 0 ] && ok "⑨ audit-reports/INDEX.md 内置豁免 → exit 0" || { no "⑨ INDEX.md 被误判夹带: rc=$rc"; echo "$OUT" | tail -5; }
-echo "$OUT" | grep -q '指针式索引' && ok "⑨ 打印 audit-reports 豁免理由" || no "⑨ 未打印 audit-reports 豁免理由"
-if echo "$OUT" | grep -q '夹带文件'; then no "⑨ archive/** glob 未生效（仍判夹带）"; else ok "⑨ archive/** glob 豁免 → 不判夹带"; fi
-# 改坏即红: 反证——去掉 audit-reports 豁免键后同场景必须点名夹带（副本 gate 上模拟）
-sed '/audit-reports\/\*\*/d' "$GATE" > "$SB/scripts/control-tower/gate_broken.py"
+[ "$rc" -eq 0 ] && ok "⑨⒜ 合法: audit-reports/INDEX.md 精确键豁免 → exit 0" || { no "⑨⒜ INDEX.md 被误判夹带: rc=$rc"; echo "$OUT" | tail -5; }
+echo "$OUT" | grep -q '仅一行式登记文件 INDEX.md' && ok "⑨⒜ 打印收紧后的豁免理由（精确键）" || no "⑨⒜ 未打印精确键豁免理由"
+
+# ⑨⒝-1 滥用: 同目录**非 INDEX** 文件 → 必红并逐文件点名
+reset_sandbox ""
+printf 'a\n' > "$SB/src/a.ts"; mkdir -p "$SB/docs/synova/audit-reports"
+printf 'payload\n' > "$SB/docs/synova/audit-reports/evil.md"
+commit_it "feat(D708): abuse non-index"
+OUT=$(run_gate); rc=$?
+[ "$rc" -eq 1 ] && ok "⑨⒝-1 滥用: audit-reports/evil.md → exit 1（不再静默豁免）" || no "⑨⒝-1 非 INDEX 文件仍被豁免（口子未堵）: rc=$rc"
+echo "$OUT" | grep -q -- '- docs/synova/audit-reports/evil.md' && ok "⑨⒝-1 逐文件点名夹带" || no "⑨⒝-1 未点名"
+
+# ⑨⒝-2 滥用: 源码文件复制/改名塞进 audit-reports/ → 必红（源与副本都点名）
+reset_sandbox ""
+printf 'export const secret = 1;\n' > "$SB/src/secret.ts"
+mkdir -p "$SB/docs/synova/audit-reports"
+printf 'export const secret = 1;\n' > "$SB/docs/synova/audit-reports/secret.ts"
+commit_it "feat(D708): abuse smuggle src into audit-reports"
+OUT=$(run_gate); rc=$?
+[ "$rc" -eq 1 ] && ok "⑨⒝-2 滥用: 源码夹带进 audit-reports/ → exit 1" || no "⑨⒝-2 源码夹带被放行: rc=$rc"
+{ echo "$OUT" | grep -q -- '- docs/synova/audit-reports/secret.ts' && echo "$OUT" | grep -q -- '- src/secret.ts'; } \
+  && ok "⑨⒝-2 源与副本双点名" || no "⑨⒝-2 未双点名"
+
+# ⑨⒝-3 滥用: **新增**文件直接放 archive/**（非重命名）→ 必红
+reset_sandbox ""
+printf 'a\n' > "$SB/src/a.ts"; mkdir -p "$SB/archive/junk"
+printf 'payload\n' > "$SB/archive/junk/new.md"
+commit_it "feat(D708): abuse new file in archive"
+OUT=$(run_gate); rc=$?
+[ "$rc" -eq 1 ] && ok "⑨⒝-3 滥用: 新增 archive/junk/new.md → exit 1（glob 豁免已撤）" || no "⑨⒝-3 archive 仍无条件豁免（口子未堵）: rc=$rc"
+
+# ⑨⒝-4 滥用: git mv 后**大幅改写**（git 判 A+D，非 R）→ 必红（证明"只能靠真重命名"）
+reset_sandbox ""
+printf 'a\n' > "$SB/src/a.ts"; mkdir -p "$SB/docs"; printf 'original line\n' > "$SB/docs/legacy.md"
+commit_it "docs(D708): add legacy"
+BASE_MV=$(git -C "$SB" rev-parse HEAD)
+mkdir -p "$SB/archive"; git -C "$SB" mv docs/legacy.md archive/legacy.md
+"$PYBIN" -c "open('$SB/archive/legacy.md','w',encoding='utf-8').write('\n'.join('rewritten %d'%i for i in range(40))+'\n')"
+git -C "$SB" add -A >/dev/null 2>&1; git -C "$SB" commit -q -m "docs(D708): mv + heavy rewrite"
+OUT=$( (cd "$SB" && "$PYBIN" "$SB/scripts/control-tower/merge_writeset_gate.py" --repo-root "$SB" --base "$BASE_MV" --head HEAD --branch fix/D708-sandbox 2>&1) ); rc=$?
+[ "$rc" -eq 1 ] && ok "⑨⒝-4 滥用: mv+改写（A+D 非 R）→ exit 1" || no "⑨⒝-4 非 R 的 archive 变更被放行: rc=$rc"
+
+# ⑨⒜-2 合法: 真重命名 git mv → archive/（R）→ 绿，且**源与目标两侧**都打印豁免理由
+reset_sandbox ""
+printf 'a\n' > "$SB/src/a.ts"; mkdir -p "$SB/docs"; printf 'legacy doc content line\n' > "$SB/docs/legacy2.md"
+commit_it "docs(D708): add legacy2"
+BASE_MV2=$(git -C "$SB" rev-parse HEAD)
+mkdir -p "$SB/archive"; git -C "$SB" mv docs/legacy2.md archive/legacy2.md
+git -C "$SB" add -A >/dev/null 2>&1; git -C "$SB" commit -q -m "docs(D708): archive move (pure rename)"
+OUT=$( (cd "$SB" && "$PYBIN" "$SB/scripts/control-tower/merge_writeset_gate.py" --repo-root "$SB" --base "$BASE_MV2" --head HEAD --branch fix/D708-sandbox 2>&1) ); rc=$?
+[ "$rc" -eq 0 ] && ok "⑨⒜-2 合法: 纯重命名 git mv → archive → exit 0" || { no "⑨⒜-2 真重命名被误判夹带: rc=$rc"; echo "$OUT" | tail -6; }
+{ echo "$OUT" | grep -q 'archive/legacy2.md' && echo "$OUT" | grep -q 'docs/legacy2.md'; } \
+  && ok "⑨⒜-2 重命名源与目标两侧均打印豁免（可审计）" || no "⑨⒜-2 未打印两侧豁免"
+echo "$OUT" | grep -q '仅放行 --find-renames 判为 R 的重命名' && ok "⑨⒜-2 打印归档豁免口径（仅 R）" || no "⑨⒜-2 未打印归档豁免口径"
+
+# 改坏即红: 反证——把精确键改回 glob（模拟回退到旧实现）后，非 INDEX 文件必须被点名夹带
+sed 's|"docs/synova/audit-reports/INDEX.md"|"docs/synova/audit-reports/**"|' "$GATE" > "$SB/scripts/control-tower/gate_broken.py"
+reset_sandbox ""
+printf 'a\n' > "$SB/src/a.ts"; mkdir -p "$SB/docs/synova/audit-reports"
+printf 'payload\n' > "$SB/docs/synova/audit-reports/evil.md"
+commit_it "feat(D708): abuse non-index (mutant)"
 OUT2=$( (cd "$SB" && python3 "$SB/scripts/control-tower/gate_broken.py" --repo-root "$SB" --base "$BASE" --head HEAD --branch fix/D708-sandbox 2>&1) )
-echo "$OUT2" | grep -q 'docs/synova/audit-reports/INDEX.md' \
-  && ok "⑨ 改坏即红: 去掉豁免键后 INDEX.md 被点名夹带" || no "⑨ 改坏即红失败（去豁免仍绿 = 门禁失效）"
+if echo "$OUT2" | grep -q 'evil.md'; then no "⑨ 改坏即红失败：glob 变异体仍放行 evil.md（说明断言未守住收紧）"; else ok "⑨ 改坏即红成立：glob 变异体立即放行 evil.md（收紧确有判别力）"; fi
 
 # ── ⑥ 分支豁免: auto/**（CI 生成物分支）──
 BRANCH="auto/dashboard" OUT=$(run_gate); rc=$?

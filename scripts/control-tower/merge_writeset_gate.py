@@ -63,11 +63,17 @@ BUILTIN_EXEMPT: Dict[str, str] = {
     # K3 报告指针式（CTO 治理）：审计报告全文落 K3 独立仓，本仓只落 docs/synova/audit-reports/
     # 下一行索引（INDEX.md）。索引行由任意任务在交付时追加，属跨任务公共登记产物，
     # 不归属任何单一任务写集——声明写集不含它不是夹带。
-    "docs/synova/audit-reports/**": "K3 报告指针式索引（INDEX.md 一行一条），跨任务公共登记产物，不属单一任务写集",
-    # 文档减负归档：历史文档批量 git mv 到 archive/ 前缀（零引用集合），无单一属主任务，
-    # 归档 PR 的写集天然是「被移动的历史文件全集」，逐条声明无意义。
-    "archive/**": "文档减负归档移动（历史文档无单一属主任务，归档路径统一收口）",
+    # FIX-004 A（P0，K3 定罪）：本键**收紧为精确路径**。原 `docs/synova/audit-reports/**`
+    #   是路径级 glob → 任意文件（含把 src/**.ts 复制/改名进来）落该目录即**静默豁免**（夹带口子）。
+    #   只有 INDEX.md 这一行式登记文件是跨任务公共产物；同目录其它文件必须走声明或判夹带。
+    "docs/synova/audit-reports/INDEX.md": "K3 报告指针式索引（仅一行式登记文件 INDEX.md；同目录其它文件不豁免）",
 }
+# 文档减负归档（FIX-004 A 收紧）：**仅对 git diff --find-renames 判定的 R 条目放行**，
+#   且重命名的**源与目标**之中必须有一端落在 archive/ 前缀内。
+#   新增文件、改写内容（A+D，非 R）、单独删除都不吃这条豁免——那正是「把不受控改动塞进 archive/」的夹带形态。
+ARCHIVE_PREFIX = "archive/"
+ARCHIVE_RENAME_REASON = ("文档减负归档（仅放行 --find-renames 判为 R 的重命名；"
+                         "新增/改写/删除不走此豁免）")
 # 分支级跳过
 #   auto/**  —— CI 自动生成的仪表盘分支（无写集语义）
 #   main/master —— 合并后 push：本 gate 的触发点是**合并前**（PR job），
@@ -121,6 +127,25 @@ def changed_files(repo: str, base: str, head: str) -> Tuple[str, List[str]]:
                    f"{mb}..{head}"], repo)
     files = [ln.strip() for ln in out.splitlines() if ln.strip()]
     return mb, files
+
+
+def renamed_paths(repo: str, mb: str, head: str) -> Dict[str, str]:
+    """返回 {R 目标路径: R 源路径}（`--find-renames`）。取不到 → GateError（fail-closed）。
+
+    FIX-004 A: 归档豁免必须**只能**走真重命名——故必须独立取 `--name-status --find-renames`
+    （`changed_files` 用的是 `--no-renames`，只给路径集合，看不出 R/A/D）。解析失败不静默当
+    "无重命名"（那会把 `git mv` 全部打成夹带 = 假红），而是 fail-closed 交调用方判 degraded。
+    """
+    out = run_git(["-c", "core.quotepath=false", "diff", "--name-status", "--find-renames",
+                   f"{mb}..{head}"], repo)
+    pairs: Dict[str, str] = {}
+    for ln in out.splitlines():
+        parts = ln.split("\t")
+        if len(parts) >= 3 and parts[0].startswith("R"):
+            src, dst = parts[1].strip(), parts[2].strip()
+            if src and dst:
+                pairs[dst] = src
+    return pairs
 
 
 # D708 复核修复①: 大小写不敏感。分支名/提交 scope 常见小写（feat/win-d702-…、docs(d702): …），
@@ -413,6 +438,18 @@ def main() -> int:
         _emit(result, args.json)
         return 0
 
+    # ── FIX-004 A: 归档豁免只能走真重命名 → 必须取 R 对（取不到即 degraded，不静默当无重命名）──
+    try:
+        renames = renamed_paths(repo, mb, args.head)
+    except GateError as exc:
+        result["status"] = "degraded"
+        result["reason"] = f"无法判定重命名集: {exc}"
+        _emit(result, args.json)
+        _log_degraded(repo, result["reason"])
+        return 2
+    rename_src_to_dst = {src: dst for dst, src in renames.items()}
+    result["renames"] = len(renames)
+
     # ── D# 推断: --did 显式覆盖 → 分支名 → 回退最近提交 scope（D954）──
     did, did_src, did_diag = infer_did(repo, branch, args.head, args.did)
     result["task_id"] = did
@@ -461,10 +498,21 @@ def main() -> int:
     smuggled: List[str] = []
     exempted: List[dict] = []
     for f in files:
-        # 内置豁免支持精确路径与 glob（如 docs/synova/audit-reports/**、archive/**）
+        # 内置豁免支持精确路径与 glob；FIX-004 A 收紧后仅 .claude/bypass.log 与
+        # docs/synova/audit-reports/INDEX.md（精确键）在册。
         ex_reason = BUILTIN_EXEMPT.get(f) or next(
-            (r for p, r in BUILTIN_EXEMPT.items() if fnmatch.fnmatch(f, p)), None
+            (r for p, r in BUILTIN_EXEMPT.items() if any(c in p for c in "*?[") and fnmatch.fnmatch(f, p)), None
         )
+        # FIX-004 A: 归档豁免**仅限真重命名**——两种且仅两种形态：
+        #   ① f 是 R 的**目标**且落在 archive/ 前缀内（git mv 进归档）
+        #   ② f 是 R 的**源**且其目标落在 archive/ 前缀内（被移动走的旧路径）
+        #   新增文件、改写内容（git 报 A+D 而非 R）、单独删除，一律不吃这条豁免。
+        if ex_reason is None:
+            f_is_rename_target = f in renames                      # renames: 目标 → 源
+            f_is_rename_source = rename_src_to_dst.get(f)          # 源 → 目标
+            if (f_is_rename_target and f.startswith(ARCHIVE_PREFIX)) or \
+               (f_is_rename_source is not None and f_is_rename_source.startswith(ARCHIVE_PREFIX)):
+                ex_reason = ARCHIVE_RENAME_REASON
         if ex_reason:
             exempted.append({"file": f, "reason": ex_reason, "kind": "builtin"})
             continue
