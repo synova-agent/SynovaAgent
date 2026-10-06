@@ -41,9 +41,23 @@ export interface CollectResult {
 
 const store = new Map<string, FeedbackRecord>();
 
+/**
+ * K6/2-3 通道归一 sink —— 本通道（agent_memory）的反馈可选同步落通道 A（feedback_log）。
+ *
+ * 契约（铁律 47）:
+ *   @input  — FeedbackInput（本通道原始形状，含正向值 'confirm'）
+ *   @output — 无返回值（fire-and-forget）
+ *   @degraded — sink 抛错 ⇒ 本函数 log.warn 后继续，`persisted` 语义不变
+ *               （反馈已落本通道，仅同步通道缺失 —— 不静默，铁律 24/31）
+ *
+ * 生产接线: `src/routes/chat.ts` 传 `createEvolutionChannelSink()`
+ * （`src/growth/feedback-collector.ts`）。
+ */
+export type MiddleFeedbackSink = (input: FeedbackInput) => void;
+
 // ═══ 已有函数 ═══
 export async function collectFeedback(
-  input: FeedbackInput, memoryStore?: AgentMemoryStoreLike,
+  input: FeedbackInput, memoryStore?: AgentMemoryStoreLike, middleSink?: MiddleFeedbackSink,
 ): Promise<{ ok: boolean; record: FeedbackRecord; persisted: boolean }> {
   const id = `fb_${Date.now().toString(36)}`;
   const record: FeedbackRecord = { id, orgId: input.orgId, actionId: input.actionId,
@@ -60,6 +74,14 @@ export async function collectFeedback(
         tags: ['user_correction', input.decision, input.sentinelId || 'unknown'], expiresAt: null });
       persisted = true;
     } catch (err: unknown) { log.warn({ err }, 'feedback write failed'); }
+  }
+  // K6/2-3 通道归一: 同步落通道 A（feedback_log）。sink 失败只记警告，不影响本通道语义。
+  if (middleSink) {
+    try {
+      middleSink(input);
+    } catch (err: unknown) {
+      log.warn({ err: err instanceof Error ? err.message : String(err) }, 'middle feedback sink 失败 — 通道 A 缺失（degraded）');
+    }
   }
   return { ok: true, record, persisted };
 }
