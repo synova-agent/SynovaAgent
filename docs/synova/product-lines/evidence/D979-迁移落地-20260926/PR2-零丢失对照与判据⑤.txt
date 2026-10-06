@@ -1,0 +1,70 @@
+════════ D979 T3 / PR2 判据：章节零丢失对照 + 判据⑤ 引用清单 ════════
+拆前版本 = 1938b13b（D979 声明落地 commit，含声明行）
+日期: 2026-09-26 00:58:27 CST
+
+── A. 章节计数（grep '^#' 口径，含代码围栏内注释行）──
+  拆前 派单模板.md 单个文件 : 28
+  拆后 正文目录 5 文件合计  : 55
+    README.md: 23
+    产品.md: 8
+    门禁.md: 8
+    哨兵.md: 8
+    审计.md: 8
+  指针 派单模板.md          : 1
+  说明: 合计 > 拆前，因四个分册各自**完整**携带同一空白骨架（每册可独立照抄）⇒ 是复本不是丢失；丢失与否由 B/C 判定。
+
+── B. 逐行覆盖（零丢失核心证明）：拆前每一非空行必须在正文目录内逐字命中 ──
+  拆前非空行数: 164
+  未覆盖行数  : 0
+  ✅ 零丢失：原始全部非空行均在正文目录内逐字命中
+
+── C. 标题级对照（真实标题，排除代码围栏内 '#' 注释行）──
+  拆前真实标题数: 20    未覆盖标题数: 0
+  ✅ 全部原始标题在正文目录内命中
+
+── D. 判据⑤：grep -rn '派单模板\.md' docs scripts（已剔除本证据目录自引用行；原文见下）──
+  命中总行数: 35
+  其中 scripts/ 命中: 0 行（0 = 无代码依赖）
+  分类计数 + 逐条合规标注：
+    ① 本轮指针/索引（docs/synova/coordination/派单模板.md + 派单模板/*.md）: 8 行 → 合规（指针自身 + 本轮索引/分册来源说明）
+    ② 历史证据记录（docs/synova/product-lines/evidence/**）: 20 行 → 合规（历史事实记录，非运行依赖；被引文件仍存在 ⇒ 不断链）
+    ③ 审计报告（docs/synova/audit-reports/**）: 2 行 → 合规（K3 报告历史记录，同上）
+    ④ coordination 规则/派单件（热点清单引用 + FIX-011 派单件）: 13 行 → 合规（清单条目 + 本轮派单件描述）
+    ⑤ scripts/** : 0 行 → 无代码引用
+
+  ── 逐条原文（scripts/ 命中若有则必须为空）──
+    docs/synova/product-lines/evidence/D940-改动清单.md:26:（同工作树内 c2 的写集 `ci.yml` / `派单模板.md` / `alloc-task-id.test.sh` / `check-name-allocation.test.sh` / 其证据件已由 c2 **自行提交**（`8ff32573`），**非本卡写者、我未触碰**；本卡提交前 `git diff --cached --name-only` 恰为上述 3 个文件。）
+    docs/synova/product-lines/evidence/D940-改动清单.md:374:1. **接线检查**：`check-name-allocation.sh` 为新建可执行脚本，其占用判定**委派** `alloc-task-id.sh --check-id`（单一实现，无第二副本）。**外部接线**（`派单模板.md` 引用该校验器）属 **c2 写集**，我未触碰 → 本卡交付面为"脚本可用 + 契约稳定"，模板接线由 c2 完成。
+    docs/synova/product-lines/evidence/D940-夹具原始输出.md:5:> `docs/synova/coordination/派单模板.md`（新增「〇-b 命名规范」）·
+    docs/synova/product-lines/evidence/D940-夹具原始输出.md:18: M docs/synova/coordination/派单模板.md
+    docs/synova/product-lines/evidence/D940-夹具原始输出.md:28:45	2	docs/synova/coordination/派单模板.md
+    docs/synova/product-lines/evidence/D940-夹具原始输出.md:279:## 5. 验收 5 — `派单模板.md` 命名规范节
+    docs/synova/product-lines/evidence/D940-夹具原始输出.md:282:$ grep -nE "cto-|squad-" docs/synova/coordination/派单模板.md
+    docs/synova/product-lines/evidence/D940-夹具原始输出.md:292:$ git diff --numstat docs/synova/coordination/派单模板.md
+    docs/synova/product-lines/evidence/D940-夹具原始输出.md:293:45	2	docs/synova/coordination/派单模板.md
+    docs/synova/product-lines/evidence/D940-夹具原始输出.md:429: docs/synova/coordination/派单模板.md               |  47 ++-
+    docs/synova/product-lines/evidence/D940-自验.md:230:docs/synova/coordination/派单模板.md
+    docs/synova/product-lines/evidence/D940-自验.md:250:| 模板 `+45/−2` | `git diff --numstat -- 派单模板.md` = `45 2` | ✅ 一致 |
+    docs/synova/product-lines/evidence/D935-20260924/self-verify.md:109:docs/synova/coordination/派单模板.md
+    docs/synova/product-lines/evidence/D935-20260924/self-verify.md:120:EXISTS  : docs/synova/coordination/派单模板.md
+    docs/synova/product-lines/evidence/D935-20260924/self-verify.md:172:     mac  docs/synova/coordination/派单模板.md
+    docs/synova/product-lines/evidence/D935-20260924/self-verify.md:196:mac  docs/synova/coordination/派单模板.md
+    docs/synova/product-lines/evidence/D935-20260924/self-verify.md:208:mac  docs/synova/coordination/派单模板.md
+    docs/synova/product-lines/evidence/D935-20260924/self-verify.md:735:     mac  docs/synova/coordination/派单模板.md
+    docs/synova/product-lines/evidence/D940-收尾与回执-20260924.md:33:| 5 | `docs/synova/coordination/派单模板.md` | 新增「〇-b 命名规范」**+45/−2** |
+    docs/synova/product-lines/evidence/D940-收尾与回执-20260924.md:92:  .github/workflows/ci.yml docs/synova/coordination/派单模板.md
+    docs/synova/coordination/收件闸检查单.md:16:- [ ] 与在飞工作是否冲突？（热点文件单写者：`ci.yml`／`pre-commit-check.sh`／`ownership.yaml`／`派单模板.md`）
+    docs/synova/coordination/派单模板/审计.md:13:> 下方骨架**逐字沿用** `派单模板.md` 原文（零改写）；分册间差异只在上方本类默认值。
+    docs/synova/coordination/派单模板/哨兵.md:11:> 下方骨架**逐字沿用** `派单模板.md` 原文（零改写）；分册间差异只在上方本类默认值。
+    docs/synova/coordination/派单模板/产品.md:13:> 下方骨架**逐字沿用** `派单模板.md` 原文（零改写）；分册间差异只在上方本类默认值。
+    docs/synova/coordination/派单模板/README.md:5:> 本目录 = `docs/synova/coordination/派单模板.md` 的正文（2026-09-26 / D979 目录化）。
+    docs/synova/coordination/派单模板/README.md:6:> **指针文件** `../派单模板.md` 保留为短指针 ⇒ 既有引用不断链。
+    docs/synova/coordination/派单模板/README.md:224:- 热点文件（`ci.yml`／`scripts/pre-commit-check.sh`／`ownership.yaml`／`派单模板.md`）**永远单写者**。
+    docs/synova/coordination/派单模板/门禁.md:10:> - 共享治理件：改动前查 `写前核实 ⑤` + `派单前置 owner 在飞检查`；**热点文件（`ci.yml` / `scripts/pre-commit-check.sh` / `ownership.yaml` / `派单模板.md`）永远单写者**
+    docs/synova/coordination/派单模板/门禁.md:13:> 下方骨架**逐字沿用** `派单模板.md` 原文（零改写）；分册间差异只在上方本类默认值。
+    docs/synova/coordination/派单-FIX-011-共享治理文件机制-20260926.md:13:| `docs/synova/coordination/派单模板.md` | **D931 / D943** | D977 |
+    docs/synova/coordination/派单-FIX-011-共享治理文件机制-20260926.md:22:   - ⒜ **一对象一文件**：如 `号段水位.md` → `号段/水位.yaml`；`派单模板.md` → `派单模板/` 目录（每类派单一文件）
+    docs/synova/coordination/派单-FIX-011-共享治理文件机制-20260926.md:28:4. **迁移路径**：现有共享文件清单（至少：`ci.yml`、`派单模板.md`、`号段水位.md`、`CTO-看板-自动.md`、`派单-哨兵体系整改-20260925.md`）+ 各自新形态 + 分步迁移顺序
+    docs/synova/coordination/派单-FIX-011-共享治理文件机制-20260926.md:46:2. 补 `派单模板.md` 的一行指针 → 指向 `PR归属与派单参数-20260926.md`（FIX-012 的未清项）
+    docs/synova/audit-reports/2026-09-24-K3批次4-PR745-746-747.md:66:- `docs/synova/coordination/CTO-看板-自动.md`（+12）与 `docs/synova/coordination/派单模板.md`（-152，删除）不在 task-state/D943.json write_set（逐文件比对，`git diff --name-only origin/main...HEAD` × write_set 成员检查）。commit 4fd7fcc9 自述"移出3份规范件"是有意为之，但登记未同步 → 本 PR 应被自己的 merge_writeset_gate（D708）判红（intra-PR 未声明变更）。若 PR 正文已豁免须在正文可见。
+    docs/synova/audit-reports/2026-09-25-K3-批次5.md:52:**声称 3：3 份规范件**（规格-M9-门禁三件套-唯一事实源.md / 派单模板.md / 开工指令-Mac小队-D937）——git stat 证实新增/修改。TASK-ROUTING.md 增补 ownership.yaml 唯一源节，指向 `check-ownership.py`（机制在 #745/前批，本文不重审）。

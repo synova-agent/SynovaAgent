@@ -1,0 +1,42 @@
+════════ D979 T3 / 判定2：task-state/D954.json 真实文件 + 真实 index 红→绿（只演示不提交）════════
+分支: feat/d979-dispatch-tpl-dir | 日期: 2026-09-26 00:57:59 CST
+说明: D954.json 不在 T3 写集，且实测有 4 个未合并分支在改它 ⇒ 只演示、不提交；测完 git restore 回收。
+
+── 0. 未合并分支在改它（实测）──
+  e6d62b1985816d954b76392ae2fe86064f8c03df	refs/heads/feat/d752-type-net-gate
+  4866b35e6b6ef2b73803ec3ef715b10b754d93de	refs/heads/feat/m9-gate-integrity
+  2be62e2ed954b17272b10602d3f4f983053885bf	refs/heads/feat/task-board-zombie
+  83d489054f15e1c1497c2b1d00d39c6e43fd8ada	refs/heads/fix/d1007-m9-gate-trio-v2
+  4866b35e6b6ef2b73803ec3ef715b10b754d93de	refs/heads/fix/d954-ci-reds-base-ref
+  e51644638b8c6cc36a43bbbe78bebd90144212f3	refs/heads/fix/m9-gate-trio-v2
+
+── 1. 让 D954.json 进入真实 index（尾随换行，无语义改动）──
+  git diff --cached --name-only → docs/synova/coordination/派单模板.md task-state/D954.json 
+  真实 index 路径（无 SYNO_STAGED_FILES 注入）：bash scripts/commit-msg-check.sh <msg>
+
+── 2. RED（index 版无 shared_with）──
+✅ Commit 格式正确
+   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)
+❌ D328: 提交声明(D979)与暂存文件归属(D954)不一致 — 疑似并行劫持
+   认领 brief: /Users/wane/SynovaAgent/.synova-wt-d979-tpl/.claude/task-briefs/2026-09-25-D954-ci-reds-base-ref.md
+   DECL_DENY
+   MSG_DID=D979 CLAIM_DID=D954 FILES=1
+   FILE=task-state/D954.json SOURCE=index DECL=(无) HIT=(无) MISSING=D954,D979
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+  exit=1
+
+── 3. GREEN（加 "shared_with": ["D954", "D979"] 后 add）──
+  json 有效；shared_with 已加
+✅ Commit 格式正确
+   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)
+✅ D328 共享声明放行（D979 FIX-011 ⒝）: 暂存文件逐文件双向声明命中
+   认领 brief: /Users/wane/SynovaAgent/.synova-wt-d979-tpl/.claude/task-briefs/2026-09-25-D954-ci-reds-base-ref.md
+   DECL_ALLOW
+   MSG_DID=D979 CLAIM_DID=D954 FILES=1
+   FILE=task-state/D954.json SOURCE=index DECL=shared_with: ["D954", "D979"] HIT=D954,D979 MISSING=(无)
+✅ D395-a/D534 Note 引用门禁: 无治理/规则区变更（跳过）
+  exit=0
+
+── 4. 收尾：restore + unstage（工作树无残留）──
+  git status --porcelain → [M  docs/synova/coordination/派单模板.md ?? docs/synova/coordination/派单模板/ ?? docs/synova/product-lines/evidence/D979-迁移落地-20260926/ ]
+  D954.json 与 HEAD 逐字节一致 → 0 处差异（0 = 干净）

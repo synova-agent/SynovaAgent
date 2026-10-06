@@ -1,0 +1,64 @@
+════════ D979 T3 / PR2 证据：共享声明放行（真实文件 · 真实 index · 红→绿→判别性对照）════════
+分支: feat/d979-dispatch-tpl-dir
+栈基: origin/fix/d979-d328-shared-decl @ fe01c3af（= 声明落地前版本）
+声明落地提交:   1938b13b docs(D979): 派单模板.md 落共享声明（D712/D931/D940/D943/D955/D979）— 解锁同窗口并发卡
+日期: 2026-09-26 00:57:51 CST
+夹具: .claude/task-briefs/2026-09-26-D943-tpl-concurrent-fixture.md（untracked，模拟窗口内并发卡 D943；测完即删）
+
+── 0. 前提修正实测（派单件写「7 张认领 / CLAIM_DID=D582」）──
+  Q2/写集真认领的 brief 数 = 5
+    D712	.claude/task-briefs/2026-09-13-D712-desktop-line1-reverification.md
+    D931	.claude/task-briefs/2026-09-23-D931-squad-team-wiring.md
+    D940	.claude/task-briefs/2026-09-24-D940-name-allocation-registry.md
+    D943	.claude/task-briefs/2026-09-24-D943-cto-a-items.md
+    D955	.claude/task-briefs/2026-09-24-D955-d943-docs-anchor.md
+  D# 集合: ['D712', 'D931', 'D940', 'D943', 'D955']
+  D582 brief include = ['scripts/commit-msg-check.sh', 'tests/control-tower/commit-msg-consistency.test.sh', 'memory/notes/implemented/2026-09-06-ct60-d328-case-compat.md', 'docs/synova/coordination/审计发现台账-DSH-CTO.md', 'task-state/D582.json']
+  D582 真认领该文件 -> False （False ⇒ D328 比较前置 GENUINE=0）
+
+── 1. 今日真实状态（无窗口内认领卡、无夹具）：staged = 派单模板.md ──
+$ SYNO_STAGED_FILES="docs/synova/coordination/派单模板.md" bash scripts/commit-msg-check.sh <fix(D979)>
+✅ Commit 格式正确
+   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)
+✅ D328 共享声明放行（D979 FIX-011 ⒝）: 暂存文件逐文件双向声明命中
+   认领 brief: /Users/wane/SynovaAgent/.synova-wt-d979-tpl/.claude/task-briefs/2026-09-26-D943-tpl-concurrent-fixture.md
+   DECL_ALLOW
+   MSG_DID=D979 CLAIM_DID=D943 FILES=1
+   FILE=docs/synova/coordination/派单模板.md SOURCE=index DECL=共享声明: D712, D931, D940, D943, D955, D979 — 本文件为**共享治理件**：任何卡修改本文件时，须把本卡 D# 追加进本行（同时保留历史卡号）；机制见 `docs/synova/coordination/派单-FIX-011-共享治理文件机制-20260926.md`（D979 FIX-011 ⒝，门禁实现 `scripts/control-tower/shared_file_decl.py`）。 HIT=D712,D931,D940,D943,D955,D979 MISSING=(无)
+✅ D395-a/D534 Note 引用门禁: 无治理/规则区变更（跳过）
+  exit=0  ← 无 D328 行 = 该分支未触发（无窗口内认领卡的正常态）
+
+── 2. RED：index = 栈基版本（声明落地前，逐字节） + 窗口内并发卡夹具 ──
+  index blob = ce2b87dc9c56ab46e79149bce07c16f8835fbc98（栈基 blob = ce2b87dc9c56ab46e79149bce07c16f8835fbc98）
+  git show :docs/synova/coordination/派单模板.md | grep -c '^共享声明:'  →  0
+✅ Commit 格式正确
+   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)
+❌ D328: 提交声明(D979)与暂存文件归属(D943)不一致 — 疑似并行劫持
+   认领 brief: /Users/wane/SynovaAgent/.synova-wt-d979-tpl/.claude/task-briefs/2026-09-26-D943-tpl-concurrent-fixture.md
+   DECL_DENY
+   MSG_DID=D979 CLAIM_DID=D943 FILES=1
+   FILE=docs/synova/coordination/派单模板.md SOURCE=index DECL=(无) HIT=(无) MISSING=D943,D979
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+  exit=1
+
+── 3. GREEN：index = 本 PR 的指针文件（含声明行） + 同一夹具同一 staged 集 ──
+  index blob = ad832434ad5bf15a029092071efa6d91c0a5d347
+  git show :docs/synova/coordination/派单模板.md | grep -c '^共享声明:'  →  1
+✅ Commit 格式正确
+   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)
+✅ D328 共享声明放行（D979 FIX-011 ⒝）: 暂存文件逐文件双向声明命中
+   认领 brief: /Users/wane/SynovaAgent/.synova-wt-d979-tpl/.claude/task-briefs/2026-09-26-D943-tpl-concurrent-fixture.md
+   DECL_ALLOW
+   MSG_DID=D979 CLAIM_DID=D943 FILES=1
+   FILE=docs/synova/coordination/派单模板.md SOURCE=index DECL=共享声明: D712, D931, D940, D943, D955, D979 — 本文件为**共享治理件**：任何卡修改本文件时，须把本卡 D# 追加进本行（同时保留历史卡号）；机制见 `docs/synova/coordination/派单-FIX-011-共享治理文件机制-20260926.md`（D979 FIX-011 ⒝，门禁实现 `scripts/control-tower/shared_file_decl.py`）。 HIT=D712,D931,D940,D943,D955,D979 MISSING=(无)
+✅ D395-a/D534 Note 引用门禁: 无治理/规则区变更（跳过）
+  exit=0
+
+── 4. 判别性对照（删掉即报红）：同一夹具，仅把 index 版声明行去掉 ⇒ 必须回 red ──
+❌ D328: 提交声明(D979)与暂存文件归属(D943)不一致 — 疑似并行劫持
+   DECL_DENY
+   MSG_DID=D979 CLAIM_DID=D943 FILES=1
+   FILE=docs/synova/coordination/派单模板.md SOURCE=index DECL=(无) HIT=(无) MISSING=D943,D979
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+  exit（checker）=1
+  恢复 index：共享声明行数 = 1

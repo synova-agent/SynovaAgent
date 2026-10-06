@@ -8,7 +8,10 @@
   "executor": "synova-squad-lead + coder-a（编码）",
   "milestone": "解除三方结构阻塞",
   "spec": ".claude/task-briefs/2026-09-26-D979-fix011-shared-file-mechanism.md",
-  "depends_on": ["D328", "D718"],
+  "depends_on": [
+    "D328",
+    "D718"
+  ],
   "blocked": null,
   "write_set": [
     "scripts/commit-msg-check.sh",
@@ -23,5 +26,5 @@
   "base_head": "feebf651",
   "updated_at": "2026-09-26",
   "updated_by": "coder-a",
-  "note": "write_set 修正（本卡实测，派单件前提#1 不成立）：① D328 判定段真实落点在 scripts/commit-msg-check.sh 第 46–127 行，不在 scripts/pre-commit-check.sh（该文件无 D328 一致性判定段）；② 原 write_set 的 docs/synova/coordination/派单-*.md 与 memory/notes/implemented/2026-09-26-fix011-*.md 非本卡产出（前者已由 CTO 提交、后者已由 CTO 落 implemented/），故移出；③ scripts/control-tower/** 与 tests/control-tower/** 通配收窄为逐文件清单（6 条 = git diff --name-only 实测集）。栈式 PR：base=docs/d979-fix011-shared-file-mechanism（PR #809 分支，head feebf651），非 main。"
+  "note": "write_set 修正（本卡实测，派单件前提#1 不成立）：① D328 判定段真实落点在 scripts/commit-msg-check.sh 第 46–127 行，不在 scripts/pre-commit-check.sh（该文件无 D328 一致性判定段）；② 原 write_set 的 docs/synova/coordination/派单-*.md 与 memory/notes/implemented/2026-09-26-fix011-*.md 非本卡产出（前者已由 CTO 提交、后者已由 CTO 落 implemented/），故移出；③ scripts/control-tower/** 与 tests/control-tower/** 通配收窄为逐文件清单（6 条 = git diff --name-only 实测集）。栈式 PR：base=docs/d979-fix011-shared-file-mechanism（PR #809 分支，head feebf651），非 main。 T3（迁移落地，本分支 feat/d979-dispatch-tpl-dir）：① 派单模板.md 落共享声明行 `共享声明: D712, D931, D940, D943, D955, D979`（5 张实测认领卡 + D979；派单件写\"7 张\"系 git grep 正文提及口径，实测 Q2 认领=5）；② 派单模板.md 目录化 → docs/synova/coordination/派单模板/{README.md,产品.md,门禁.md,哨兵.md,审计.md}，原文件保留为短指针（既有引用不断链）；零丢失证明=逐行覆盖 164 非空行 0 未覆盖 + 真实标题 20 项 0 未覆盖。 未清项登记：task-state/D954.json 本轮仅演示未提交（4 个未合并分支在改它）；resolve-commit-brief.sh 锚点提取把分支名里的 d328 当 D#（实测命中陈旧 brief 2026-09-06-D582-CT-60-D328-*）属该脚本缺陷，不在本卡写集。"
 }
