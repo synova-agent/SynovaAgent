@@ -374,12 +374,21 @@ fi
 # ── ⑧ 生产接线断言（已接线；D1111 线负责人接线: ci.yml gate-integrity job + canary 清单）──
 echo "── ⑧ 接线（真断言 + 反向验证）──"
 CIY="${SYNO_CT_WIRING_CI_YML:-$REPO/.github/workflows/ci.yml}"
+# 🔴 W1a/D1166 修复（2026-10-06，治理线）：本函数此前**不稳定**（同一棵树 10 次里约 7 次误判"接线缺失"）。
+#   根因 = 经典 **SIGPIPE 竞态**：`grep -v … "$f" | grep -q …` 在 `set -o pipefail`（本文件 :50）下，
+#   下游 `grep -q` 命中即退出 ⇒ 上游 `grep -v` 收到 SIGPIPE ⇒ 管道整体退出码 **141** ⇒ 误判接线缺失。
+#   实测（origin/main 的 ci.yml，同命令连跑 10 次）：`141 141 141 0 141 0 141 141 141 0`。
+#   ⇒ 后果: `ct-test-gate.sh:55` 随机把本测试判红 ⇒ pre-commit 随机阻断提交（**门禁自身不可靠**）。
+#   ⇒ 修法（**判定语义一字未改**，只去掉管道）：先把"去注释"落到临时文件，再单条 `grep -q`，无 SIGPIPE。
 wiring_ok() { # $1 = ci.yml 路径；rc 0 = 接线完整（调用 + canary 登记 + run: 段命中，非仅注释）
-  local f="$1"
+  local f="$1" nc
   [ -f "$f" ] || return 1
   grep -q "check-required-contexts" "$f" 2>/dev/null || return 1
   grep -q "check-required-contexts\.test\.sh" "$f" 2>/dev/null || return 1
-  grep -v '^[[:space:]]*#' "$f" | grep -q "check-required-contexts\.py" || return 1
+  nc="${TMPD:-/tmp}/wiring-nocomment.$$.txt"
+  grep -v '^[[:space:]]*#' "$f" > "$nc" 2>/dev/null || return 1
+  grep -q "check-required-contexts\.py" "$nc" || { rm -f "$nc"; return 1; }
+  rm -f "$nc"
   return 0
 }
 if wiring_ok "$CIY"; then

@@ -3,8 +3,13 @@
 # check-required-contexts.py — 必需 context ⇄ job `name:` 展开名 一致性门禁
 #
 # 背景（本器存在的唯一理由）:
-#   main 分支保护的 12 个必需状态检查（legacy branch protection，2026-10-01 实测
-#   contexts_count=12）与 .github/workflows/*.yml 里 job `name:` 的**展开名**之间，
+#   main 分支保护的必需状态检查（legacy branch protection）与 .github/workflows/*.yml 里
+#   job `name:` 的**展开名**之间，
+#   🔴 W9/D1165 口径更正: 原写「12 个 / 2026-10-01 实测 contexts_count=12」——**已过期**。
+#   **现值 = 9 条**（D1147 把 `(windows-latest)` 两腿移出必需集）；真值源 =
+#   `required-checks-baseline.txt:48-56`，2026-10-06 与 `gh api …/branches/main/protection` 逐字一致。
+#   （本器**无硬编码名单**，改的只是这句描述性注释；判定逻辑一字未动。）
+#   对照:
 #   此前**没有任何机器检查**。改一个 job `name:` 的一个字符 ⇒ 必需 context 静默失配
 #   ⇒ 该 check-run 永不上报 ⇒ PR 永久 blocked（D971 同型事故:
 #   `405 "12 of 12 required status checks are expected."`）。本器把这条链变成物理门禁。

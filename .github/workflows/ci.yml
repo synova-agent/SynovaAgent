@@ -61,6 +61,20 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
+          # ── W2/D1165: push 事件**不得**走 docs-only 早退 ──────────────────────────
+          # 依据（实测 as_of 2026-10-06）: main push 时 `git diff --name-only origin/main...HEAD`
+          #   恒为空 ⇒ 下方 `grep -qvE` 无命中（返 1）⇒ 恒判 docs_only=true ⇒ 本 run 内**所有**
+          #   job 的 `npm ci` / tsc / vitest / hermetic 全部 skip，而 job 仍报 success。
+          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；同期 main 的 lock 实际
+          #   必红于 ERESOLVE ⇒ **main 的「绿」是跳过型绿，与 main 自身健康无关**。
+          # 口径: push ⇒ 无条件全量（main 自己的健康必须被验证）；pull_request / merge_group /
+          #   schedule / workflow_dispatch ⇒ 原判据逐字不变（仍走下方白名单）。
+          # 夹具: docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh（10 处同源断言）——
+          #   本行**不新增** `grep -qvE`，故 struct-count-10 / struct-unique-1 不受影响。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ]; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           # 白名单锚定分层（D1111/A5 修: 全部**逐条带路径锚**）:
           #   依据（K3 W-1 原话「无锚点」＋研究院 A5 实测）: 旧式 '\.(md|json)$' 无前缀锚 ⇒
           #   **任何** .json（package.json / tsconfig.json / src/**/*.json）与**任何**深度同名目录
@@ -193,6 +207,8 @@ jobs:
     # D1111/A3 缺陷 B 修（研究院 A3 提案，机械实现）: 上游 quality 红时，job 级无 `if:` ⇒ 本 job
     #   被 skip ⇒ 两个**必需 context**（Vitest (1/2) / (2/2)）不产生 check-run ⇒ GitHub 报
     #   「N of 12 required status checks are expected」⇒ PR 永久 blocked，而不是显示一个红。
+      #   ⚠️ 上文引号内为 **2026-09 事故原文**（金句，不改成现值）；**现值 = 9 条必需 context**
+      #     （D1147 后；真值源 required-checks-baseline.txt:48-56）。
     #   （实证: ci-red-baseline.txt:24 记 `Vitest (1/2)` 已列 owner=CTO-Mac 的存量红。）
     #   修法 = job 级 `if: ${{ !cancelled() }}`：上游失败/未通过时**照跑并如实报红**（红是红，
     #   不再消失）；仅 workflow 被手动取消时不跑（`always()` 会连取消都硬跑，故用 !cancelled()）。
@@ -209,6 +225,20 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
+          # ── W2/D1165: push 事件**不得**走 docs-only 早退 ──────────────────────────
+          # 依据（实测 as_of 2026-10-06）: main push 时 `git diff --name-only origin/main...HEAD`
+          #   恒为空 ⇒ 下方 `grep -qvE` 无命中（返 1）⇒ 恒判 docs_only=true ⇒ 本 run 内**所有**
+          #   job 的 `npm ci` / tsc / vitest / hermetic 全部 skip，而 job 仍报 success。
+          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；同期 main 的 lock 实际
+          #   必红于 ERESOLVE ⇒ **main 的「绿」是跳过型绿，与 main 自身健康无关**。
+          # 口径: push ⇒ 无条件全量（main 自己的健康必须被验证）；pull_request / merge_group /
+          #   schedule / workflow_dispatch ⇒ 原判据逐字不变（仍走下方白名单）。
+          # 夹具: docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh（10 处同源断言）——
+          #   本行**不新增** `grep -qvE`，故 struct-count-10 / struct-unique-1 不受影响。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ]; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
@@ -286,6 +316,20 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
+          # ── W2/D1165: push 事件**不得**走 docs-only 早退 ──────────────────────────
+          # 依据（实测 as_of 2026-10-06）: main push 时 `git diff --name-only origin/main...HEAD`
+          #   恒为空 ⇒ 下方 `grep -qvE` 无命中（返 1）⇒ 恒判 docs_only=true ⇒ 本 run 内**所有**
+          #   job 的 `npm ci` / tsc / vitest / hermetic 全部 skip，而 job 仍报 success。
+          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；同期 main 的 lock 实际
+          #   必红于 ERESOLVE ⇒ **main 的「绿」是跳过型绿，与 main 自身健康无关**。
+          # 口径: push ⇒ 无条件全量（main 自己的健康必须被验证）；pull_request / merge_group /
+          #   schedule / workflow_dispatch ⇒ 原判据逐字不变（仍走下方白名单）。
+          # 夹具: docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh（10 处同源断言）——
+          #   本行**不新增** `grep -qvE`，故 struct-count-10 / struct-unique-1 不受影响。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ]; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
@@ -338,6 +382,20 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
+          # ── W2/D1165: push 事件**不得**走 docs-only 早退 ──────────────────────────
+          # 依据（实测 as_of 2026-10-06）: main push 时 `git diff --name-only origin/main...HEAD`
+          #   恒为空 ⇒ 下方 `grep -qvE` 无命中（返 1）⇒ 恒判 docs_only=true ⇒ 本 run 内**所有**
+          #   job 的 `npm ci` / tsc / vitest / hermetic 全部 skip，而 job 仍报 success。
+          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；同期 main 的 lock 实际
+          #   必红于 ERESOLVE ⇒ **main 的「绿」是跳过型绿，与 main 自身健康无关**。
+          # 口径: push ⇒ 无条件全量（main 自己的健康必须被验证）；pull_request / merge_group /
+          #   schedule / workflow_dispatch ⇒ 原判据逐字不变（仍走下方白名单）。
+          # 夹具: docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh（10 处同源断言）——
+          #   本行**不新增** `grep -qvE`，故 struct-count-10 / struct-unique-1 不受影响。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ]; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
@@ -371,6 +429,7 @@ jobs:
   #   —— 它现在**必须**带 job 级 `if:`（路径触发），而正是这一点使它不能是必需 context。
   #   **禁止 job 级 `paths:` 过滤**——job 不被创建 ⇒ 不产生 check-run ⇒ 必需 context 永不报告
   #   ⇒ PR 永久 blocked。同型事故原文: 405 "12 of 12 required status checks are expected."
+      #   ⚠️ 引号内为 **2026-09 事故原文**；**现值 = 9 条必需 context**（D1147 后，见 required-checks-baseline.txt）。
   #   （docs/synova/coordination/周报-20260922.md:58）；D971「必需检查三路修复」即治此类
   #   （git log 0e8b6420: test/golden-case 改 needs + if: always() + 首步显式 gate）。
   #   ⇒ 本 job **恒被调度**（不加 job 级 if: / paths:），只在 job 内用 step 级 `if:` 门控重活：
@@ -420,6 +479,20 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
+          # ── W2/D1165: push 事件**不得**走 docs-only 早退 ──────────────────────────
+          # 依据（实测 as_of 2026-10-06）: main push 时 `git diff --name-only origin/main...HEAD`
+          #   恒为空 ⇒ 下方 `grep -qvE` 无命中（返 1）⇒ 恒判 docs_only=true ⇒ 本 run 内**所有**
+          #   job 的 `npm ci` / tsc / vitest / hermetic 全部 skip，而 job 仍报 success。
+          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；同期 main 的 lock 实际
+          #   必红于 ERESOLVE ⇒ **main 的「绿」是跳过型绿，与 main 自身健康无关**。
+          # 口径: push ⇒ 无条件全量（main 自己的健康必须被验证）；pull_request / merge_group /
+          #   schedule / workflow_dispatch ⇒ 原判据逐字不变（仍走下方白名单）。
+          # 夹具: docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh（10 处同源断言）——
+          #   本行**不新增** `grep -qvE`，故 struct-count-10 / struct-unique-1 不受影响。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ]; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
@@ -579,6 +652,8 @@ jobs:
             tests/control-tower/d956-failmsg.test.sh \
             tests/control-tower/check-required-contexts.test.sh \
             tests/control-tower/loop-context.test.sh \
+            tests/control-tower/ci-docsonly-push-guard.test.sh \
+            tests/control-tower/aggregate-job-results.test.sh \
             tests/control-tower/ci-signal-classify.test.sh; do
             echo "── $t"
             # D1147: D1094 平台跳过名单随 windows 腿迁出本 job——本矩阵已收敛为单元素 ubuntu
@@ -635,6 +710,20 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
+          # ── W2/D1165: push 事件**不得**走 docs-only 早退 ──────────────────────────
+          # 依据（实测 as_of 2026-10-06）: main push 时 `git diff --name-only origin/main...HEAD`
+          #   恒为空 ⇒ 下方 `grep -qvE` 无命中（返 1）⇒ 恒判 docs_only=true ⇒ 本 run 内**所有**
+          #   job 的 `npm ci` / tsc / vitest / hermetic 全部 skip，而 job 仍报 success。
+          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；同期 main 的 lock 实际
+          #   必红于 ERESOLVE ⇒ **main 的「绿」是跳过型绿，与 main 自身健康无关**。
+          # 口径: push ⇒ 无条件全量（main 自己的健康必须被验证）；pull_request / merge_group /
+          #   schedule / workflow_dispatch ⇒ 原判据逐字不变（仍走下方白名单）。
+          # 夹具: docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh（10 处同源断言）——
+          #   本行**不新增** `grep -qvE`，故 struct-count-10 / struct-unique-1 不受影响。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ]; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
@@ -670,6 +759,20 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
+          # ── W2/D1165: push 事件**不得**走 docs-only 早退 ──────────────────────────
+          # 依据（实测 as_of 2026-10-06）: main push 时 `git diff --name-only origin/main...HEAD`
+          #   恒为空 ⇒ 下方 `grep -qvE` 无命中（返 1）⇒ 恒判 docs_only=true ⇒ 本 run 内**所有**
+          #   job 的 `npm ci` / tsc / vitest / hermetic 全部 skip，而 job 仍报 success。
+          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；同期 main 的 lock 实际
+          #   必红于 ERESOLVE ⇒ **main 的「绿」是跳过型绿，与 main 自身健康无关**。
+          # 口径: push ⇒ 无条件全量（main 自己的健康必须被验证）；pull_request / merge_group /
+          #   schedule / workflow_dispatch ⇒ 原判据逐字不变（仍走下方白名单）。
+          # 夹具: docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh（10 处同源断言）——
+          #   本行**不新增** `grep -qvE`，故 struct-count-10 / struct-unique-1 不受影响。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ]; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
@@ -711,6 +814,20 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
+          # ── W2/D1165: push 事件**不得**走 docs-only 早退 ──────────────────────────
+          # 依据（实测 as_of 2026-10-06）: main push 时 `git diff --name-only origin/main...HEAD`
+          #   恒为空 ⇒ 下方 `grep -qvE` 无命中（返 1）⇒ 恒判 docs_only=true ⇒ 本 run 内**所有**
+          #   job 的 `npm ci` / tsc / vitest / hermetic 全部 skip，而 job 仍报 success。
+          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；同期 main 的 lock 实际
+          #   必红于 ERESOLVE ⇒ **main 的「绿」是跳过型绿，与 main 自身健康无关**。
+          # 口径: push ⇒ 无条件全量（main 自己的健康必须被验证）；pull_request / merge_group /
+          #   schedule / workflow_dispatch ⇒ 原判据逐字不变（仍走下方白名单）。
+          # 夹具: docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh（10 处同源断言）——
+          #   本行**不新增** `grep -qvE`，故 struct-count-10 / struct-unique-1 不受影响。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ]; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
@@ -744,6 +861,20 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
+          # ── W2/D1165: push 事件**不得**走 docs-only 早退 ──────────────────────────
+          # 依据（实测 as_of 2026-10-06）: main push 时 `git diff --name-only origin/main...HEAD`
+          #   恒为空 ⇒ 下方 `grep -qvE` 无命中（返 1）⇒ 恒判 docs_only=true ⇒ 本 run 内**所有**
+          #   job 的 `npm ci` / tsc / vitest / hermetic 全部 skip，而 job 仍报 success。
+          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；同期 main 的 lock 实际
+          #   必红于 ERESOLVE ⇒ **main 的「绿」是跳过型绿，与 main 自身健康无关**。
+          # 口径: push ⇒ 无条件全量（main 自己的健康必须被验证）；pull_request / merge_group /
+          #   schedule / workflow_dispatch ⇒ 原判据逐字不变（仍走下方白名单）。
+          # 夹具: docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh（10 处同源断言）——
+          #   本行**不新增** `grep -qvE`，故 struct-count-10 / struct-unique-1 不受影响。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ]; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
@@ -793,6 +924,20 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
+          # ── W2/D1165: push 事件**不得**走 docs-only 早退 ──────────────────────────
+          # 依据（实测 as_of 2026-10-06）: main push 时 `git diff --name-only origin/main...HEAD`
+          #   恒为空 ⇒ 下方 `grep -qvE` 无命中（返 1）⇒ 恒判 docs_only=true ⇒ 本 run 内**所有**
+          #   job 的 `npm ci` / tsc / vitest / hermetic 全部 skip，而 job 仍报 success。
+          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；同期 main 的 lock 实际
+          #   必红于 ERESOLVE ⇒ **main 的「绿」是跳过型绿，与 main 自身健康无关**。
+          # 口径: push ⇒ 无条件全量（main 自己的健康必须被验证）；pull_request / merge_group /
+          #   schedule / workflow_dispatch ⇒ 原判据逐字不变（仍走下方白名单）。
+          # 夹具: docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh（10 处同源断言）——
+          #   本行**不新增** `grep -qvE`，故 struct-count-10 / struct-unique-1 不受影响。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ]; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
@@ -810,10 +955,11 @@ jobs:
         if: steps.docsonly.outputs.docs_only != 'true'
         run: bash tests/control-tower/precommit-groups-injection.test.sh
       # ── D1111/A1-①: 必需 context ⇄ job `name:` 展开名 一致性门禁（**只读**）──────────────
-      # 补的缺口（D971 同型）: 无人保证「branch protection 的 12 个必需 context 名」与
+      # 补的缺口（D971 同型）: 无人保证「branch protection 的必需 context 名」与
       #   「workflow job `name:` 展开后实际能产出的 check-run 名」一致；改一个字符 ⇒ 必需 context
       #   静默失配 ⇒ check-run 永不上报 ⇒ PR 永久 blocked（405 "N of 12 required status checks are expected")。
-      # 判据载体: scripts/control-tower/required-checks-baseline.txt（12 条）。
+      # 判据载体: scripts/control-tower/required-checks-baseline.txt（🔴 W9/D1165 更正: **9 条**，非 12；
+      #   live 实测见该表 :48-56 与 `gh api repos/.../branches/main/protection`）。
       # 本步**不判**「Gate Integrity 该不该进必需集」（那是语义变更，走 K3→CTO）；只判「名与名一致」。
       # 三态: 0=一致 / 1=违规（exit 1 ⇒ 本 job 红）/ 2=降级（fail-closed）。
       # 🔴 D1111 实测修正: CI 上 `github.token` **无 admin 权限**读 branch protection（本机已登录 gh 时 OK）
@@ -1128,6 +1274,8 @@ jobs:
             tests/control-tower/d956-failmsg.test.sh \
             tests/control-tower/check-required-contexts.test.sh \
             tests/control-tower/loop-context.test.sh \
+            tests/control-tower/ci-docsonly-push-guard.test.sh \
+            tests/control-tower/aggregate-job-results.test.sh \
             tests/control-tower/ci-signal-classify.test.sh; do
             echo "── $t"
             # D1094 平台跳过名单（**只在顾问腿**；分层原则：平台无关的失败不该污染 Windows 信号，
@@ -1166,3 +1314,38 @@ jobs:
             echo "::warning title=advisory:control-tower(win)::windows 顾问腿**未执行**（outcome='${OUTCOME}'）——本次未取得平台信号（非必需，不拦合并）；前置步骤失败时属预期"
           fi
           exit 0
+
+  # ══ W3/D1165: 「跳过=成功」通道根治 —— 聚合 job ══════════════════════════════════════════
+  # 病灶（实测 as_of 2026-10-06）: GitHub 把 job/step 的 `skipped` 当 success-ish ⇒ 不阻断必需
+  #   context ⇒ 「跳过 = 成功」。最近 40 条 run 里 success 的 11 条中，核心 hermetic step 被 skip
+  #   10/11 = **90.9%**；main push 的 run 更是 docs-only 全 skip 而整体 success。
+  # 本 job: 汇总 needs 里每个 job 的**终态结论**，`skipped` 一律判 FAIL（唯一例外 = 下方白名单）。
+  #   `if: always()` ⇒ 上游有 job 失败/取消/跳过时本 job **仍被调度**（否则聚合行自身成空洞）。
+  # 白名单（唯一一条，按 (job, event) **成对**表达）: `checker-review` 在非 pull_request 事件下
+  #   结构上必然 skipped（其自身 `if:` 只认 `github.event_name == 'pull_request'` 与
+  #   `refs/heads/feat/*`；而 push 只在 main 触发、merge_group 的 ref 形如
+  #   `refs/heads/gh-readonly-queue/…`、schedule/dispatch 走默认分支）。理由逐条写死在判定体内。
+  # 🔴 「进必需名单」= **门禁语义变更**（branch protection，另一笔）⇒ K3 过审 + CTO 裁后才加；
+  #   在那之前本 job 本来就跑（非必需），只是不拦合并 —— 本行只加**产出者**，不改任何现有 job 的 name。
+  # 判定体: scripts/control-tower/aggregate-job-results.py（三态 0/1/2 + fail-closed 降级）
+  #   夹具: tests/control-tower/aggregate-job-results.test.sh（含反例；已登记进 control-tower-tests）
+  # ══════════════════════════════════════════════════════════════════════════════════════════
+  all-checks-passed:
+    name: all-checks-passed
+    # `if:` 锁死**冻结表达式**（与 test / golden-case 同栏，见 tests/control-tower/ci-signal-classify.test.sh
+    #   的 DOWNSTREAM_NEEDS_JOBS 登记面）：上游 job 红/失败时本 job **照跑并如实报红**，
+    #   其必需 context（转必需后）**不会消失**。不用 `always()`: 那会在 concurrency 取消的
+    #   被取代 run 上也执行，纯耗 runner；`!cancelled()` 已覆盖"上游红"这一真实门控场景。
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    needs: [quality, test, architecture, test-kit-architecture, control-tower-tests, integration-check, checker-review, audit, golden-case, gate-integrity]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Aggregate dependency job results (skipped = FAIL)
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: python3 scripts/control-tower/aggregate-job-results.py
