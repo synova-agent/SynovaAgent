@@ -263,7 +263,11 @@ printf '%s' "$CTJOB" | grep -q 'steps.docsonly.outputs.docs_only' \
 #     ③ 任何**新** if: 或表达式漂移 ⇒ 必红（本判据仍是判别性棘轮，不是放行开关）
 #   冻结表达式登记表（改它 = 改门禁语义 ⇒ 必须过 K3→CTO；见 PR #935 送审项 S-3）
 FROZEN_IF_TEST='${{ !cancelled() }}'
-DOWNSTREAM_NEEDS_JOBS="test golden-case"   # 有 needs: 且承载必需 context 的 job（新增者必须显式登记）
+DOWNSTREAM_NEEDS_JOBS="test golden-case all-checks-passed"   # 有 needs: 且承载必需 context 的 job（新增者必须显式登记）
+# W3/D1165 登记: `all-checks-passed` = 聚合 job（判定体 scripts/control-tower/aggregate-job-results.py）。
+#   它**尚未**进 branch protection 必需名单（那一步 = 门禁语义变更 ⇒ 另笔 K3→CTO 裁），此处先按
+#   "将承载必需 context" 登记冻结表达式 —— 使这一棘轮现在就把它的 `if:` 核住；
+#   若将来有人把它的 if: 改成/删掉，本行即红（判别性保持）。
 BASELINE_NO_IF_JOBS="quality architecture test-kit-architecture integration-check audit gate-integrity"
 # D1147: windows 顾问腿 = 有 needs: 但**不承载必需 context**（其 context 名已移出必需集）⇒ 走
 #   「已知无需 !cancelled() 冻结式」的例外登记面（与 checker-review 同栏）。判据未放松:

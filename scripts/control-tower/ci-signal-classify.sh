@@ -10,7 +10,9 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #
 # 背景（为什么不能是 job 级 paths: 过滤）:
 #   `Control Tower Gate Tests (ubuntu-latest)` / `(windows-latest)` 是 main 分支保护的
-#   12 个必需检查之一（scripts/control-tower/ci-red-baseline.txt:65-66；
+#   必需检查之一（🔴 W9/D1165 更正: **必需集 9 条**，非 12 —— `(windows-latest)` 自 D1147 起
+#   已降级为顾问 job、非必需；真值源 scripts/control-tower/required-checks-baseline.txt:48-56。
+#   引文见 scripts/control-tower/ci-red-baseline.txt:65-66；
 #   docs/synova/coordination/CI-诊断通道.md:115-116）。job 级路径过滤会让该 job 根本
 #   不被创建 ⇒ 不产生 check-run ⇒ 必需 context 永不报告 ⇒ PR 永久 blocked
 #   （D971 同型事故: 405 "12 of 12 required status checks are expected."，

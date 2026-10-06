@@ -7,7 +7,8 @@
 #
 # 产出: docs/synova/product-lines/{todos.yaml,product-progress.json,product-progress.html}
 # D786 通道设计 (b，2026-09-16): 产物有变化 → 只提交 bot 分支 auto/product-progress（force push），
-#   **不再开 PR**——GITHUB_TOKEN 创建的 PR 不触发任何 workflow，12 个必需检查永不报告 = 永久
+#   **不再开 PR**——GITHUB_TOKEN 创建的 PR 不触发任何 workflow，必需检查永不报告 = 永久
+#   （🔴 W9/D1165 口径更正: **live 必需集 = 9 条**，非 12 —— D1147 已把两条 `(windows-latest)` 腿移出必需集；数字真值源 = `scripts/control-tower/required-checks-baseline.txt:48-56`，2026-10-06 与 `gh api …/branches/main/protection` 逐字一致）
 #   blocked（#404 实证）。合并由 CTO session 用 PAT 显式开 PR + CI 全绿 + API 合并。
 #   链路文档: docs/synova/coordination/CI-诊断通道.md；新鲜度兜底: progress-freshness-watchdog.yml。
 #   无变化 → 什么都不做（幂等）。
@@ -73,7 +74,7 @@ jobs:
           git push origin auto/product-progress --force
           echo ""
           echo "📌 D786 通道设计 (b)：bot 分支已推——GITHUB_TOKEN 创建的 PR 不触发任何 workflow，"
-          echo "   12 个必需检查永不报告 = 永久 blocked（#404 实证，2026-09-07~16）。"
+          echo "   必需检查永不报告 = 永久 blocked（#404 实证，2026-09-07~16；必需集 9 条，见 required-checks-baseline.txt）。"
           echo "   后续由 CTO session 显式完成（链路文档 docs/synova/coordination/CI-诊断通道.md）:"
           echo "   1) 用 PAT 从 auto/product-progress 开 PR（真实凭据 → 必需检查正常报告）"
           echo "   2) CI 全绿后 API squash 合并（合并是 CTO 的工作，D570）"
