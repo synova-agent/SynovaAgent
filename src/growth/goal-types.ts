@@ -180,6 +180,110 @@ export interface TransitionRule {
   precondition?: string;
 }
 
+// ═══ 目标传导（1-4：目标传导到每个人） ═══
+
+/**
+ * 目标传导的成员最小集（1-4）。
+ *
+ * 来源：`UserStore.listByOrg(orgId)` 的 UserRecord（只取传导所需字段），
+ * 用最小结构避免 goal-store 反向依赖 user-store（L2 内部松耦合，依赖注入）。
+ */
+export interface GoalMember {
+  /** 成员唯一标识（= USER 节点 id） */
+  userId: string;
+  /** 角色（可选，来自 UserRecord.role） */
+  role?: string;
+  /** 所属部门（可选，来自 UserRecord.department） */
+  deptId?: string;
+  /** 显示名（可选，来自 UserRecord.displayName） */
+  displayName?: string;
+}
+
+/**
+ * 单人派发节点类型。
+ *
+ * 前缀必须匹配 `goal` —— 1-4 判据 `COUNT(graph_nodes WHERE type LIKE 'goal%') > 0`
+ * 以该前缀为机器可核事实（列名实测为 `type`，见 PLAN-K6 §0）。
+ */
+export const GOAL_ASSIGNMENT_NODE_TYPE = 'GOAL_ASSIGNMENT';
+
+/**
+ * 单人 Goal 派发记录（一个成员一个 GOAL_ASSIGNMENT 节点）。
+ *
+ * @contract assignmentId 为 GraphStore.createNode 返回值（真实库为 `node-<uuid>`）
+ * @contract status 当前只有 pending/acknowledged（进度回流另卡，不在 1-4 范围）
+ */
+export interface GoalAssignment {
+  /** 派发节点 id（GraphStore 生成） */
+  assignmentId: string;
+  /** 源 Goal 标识（Goal.goalId） */
+  goalId: string;
+  /** 目标所属组织 */
+  orgId: string;
+  /** 承接成员标识 */
+  userId: string;
+  /** 成员角色（可选） */
+  role?: string;
+  /** 成员所属部门（可选） */
+  deptId?: string;
+  /** 派发态 */
+  status: 'pending' | 'acknowledged';
+  /** 派发时间（ISO-8601） */
+  assignedAt: string;
+}
+
+/**
+ * 目标传导结果码取值（单一事实源）。
+ *
+ * 文件驱动门禁禁止在 src/ 内新增硬编码类型联合（scripts/check-file-driven.sh 组 8.c）——
+ * 故取值以 `as const` 数组声明，类型由其派生（判别值仍是编译期闭合的 4 态，不弱化类型）。
+ */
+export const GOAL_PROPAGATION_CODES = ['OK', 'GOAL_NOT_FOUND', 'EMPTY_MEMBERS', 'STORE_UNAVAILABLE'] as const;
+
+/** 目标传导结果码（拒绝路径可核，不靠异常字符串） */
+export type GoalPropagationCode = (typeof GOAL_PROPAGATION_CODES)[number];
+
+/**
+ * 目标传导结果。
+ *
+ * @contract ok=false 时 assignments 只含「已成功写入」的部分（不夸大）
+ * @contract degraded=true 只出现在 store 不可用（铁律 24/31：不静默，不抛）
+ */
+export interface GoalPropagationResult {
+  /** 是否全员派发成功 */
+  ok: boolean;
+  /** 结果码（OK / GOAL_NOT_FOUND / EMPTY_MEMBERS / STORE_UNAVAILABLE） */
+  code: GoalPropagationCode;
+  /** 拒绝或降级原因（人类可读） */
+  reason?: string;
+  /** 源 Goal 标识 */
+  goalId: string;
+  /** 去重后的应派发人数 */
+  expectedMembers: number;
+  /** 已写入的派发记录 */
+  assignments: GoalAssignment[];
+  /** 是否降级（store 不可用） */
+  degraded: boolean;
+}
+
+/**
+ * 目标覆盖率（1-4 判据 ②：coverage N/N）。
+ */
+export interface GoalCoverage {
+  /** 源 Goal 标识 */
+  goalId: string;
+  /** 应派发人数（入参成员去重后） */
+  expected: number;
+  /** 已派发人数（交集中的成员） */
+  assigned: number;
+  /** assigned / expected（expected=0 时为 0） */
+  ratio: number;
+  /** 尚未派发的成员标识 */
+  missingUserIds: string[];
+  /** 查询降级标记（store 不可用 → true，铁律 31） */
+  degraded: boolean;
+}
+
 // ═══ GraphStore 轻量接口（供 goal-store 使用） ═══
 
 /**
