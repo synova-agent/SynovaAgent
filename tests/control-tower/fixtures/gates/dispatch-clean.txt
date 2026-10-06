@@ -1,0 +1,4 @@
+## §3 交付（GV- 线）
+请把双闸判据件与安装方案落在 scripts/control-tower/ 下（receipt-gate.sh 为新建文件）
+红线: 不改 .github/workflows/ci.yml 的 job name:
+Done 标准: 两条闸夹具先红后绿

@@ -1,0 +1,1 @@
+已收到，正在跑 tests/control-tower/receipt-gate.test.sh，稍后回报。

@@ -1,0 +1,3 @@
+## §3 交付（GV- 线）
+要改 src/l4/evidence/gate.ts 的判定逻辑（证据层在新路径）
+Done 标准: tsc 通过

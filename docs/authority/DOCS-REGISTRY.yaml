@@ -425,3 +425,18 @@ documents:
     path: docs/synova/coordination/交付-D1132-两预设包与哨兵skill-20261003.md
     status: active
     owner: line-lead
+
+  # ---- D1163（CTO 侧双闸：收件闸 / dispatch 闸 + C 段棘轮提案 + persona 改行）2026-10-06 ----
+  - id: DOC-0193
+    type: governance
+    path: docs/synova/gates/D1163-CTO侧双闸-判据与安装-20261006.md
+    status: active
+    owner: line-lead
+    note: "D1163 判据件+安装件：收件闸（六行信封）与 dispatch 闸（四类引用核验）的机械判据、五处细化及其代价、14 件夹具与 4 套配对测试复跑命令、hooks.json 写法与创始人重启步骤、两条已知限制（reject 不回传 reason / 桥配置进程级）。号取 DOC-0193 规避在飞撞号（同批多 PR 并发取号）。"
+
+  - id: DOC-0194
+    type: governance
+    path: docs/synova/gates/D1163-K3送审件-20261006.md
+    status: active
+    owner: line-lead
+    note: "D1163 K3 送审件：§A 双闸判据变更送审（含先红后绿证据与三条自查）§B Gate Integrity C 段棘轮只统计必需 context 的提案（含『12 必需 context 为陈口径，实测 9』的口径纠正）§C CTO persona 改行（裁者=创始人）。本件不改任何判据。"
