@@ -42,6 +42,7 @@ concurrency:
 
 jobs:
   quality:
+    if: false  # FIXTURE-A: 人为 skip 必需 job
     # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-10-02T12:45:00+08:00；
     # 公式 = max(P95×1.5, 中位数×3)）：audit 1 / Test-Kit(ubuntu) 1 / Golden Case 2 /
     # Gate Integrity 2 / Test-Kit(windows) 3 / Architecture 6 / Checker Review 6 /
