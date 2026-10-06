@@ -1,0 +1,15 @@
+════════ E：PR #829 API 读回 ════════
+number: 829 | state: open | draft: False
+base: docs/d979-lead-closeout @ 9b3e2645c7c27d19563f1e4738e537d789c19a63
+head: docs/d979-transition-annotation @ 29c646f5a8a8c045bb22bf24f303a2ce4618d1a1
+mergeable_state: clean | merged: False
+changed_files: 6 | + 111 - 1
+title: docs(D979): ⒝ 过渡机制三处标注（CTO 裁定二；纯注释零语义）
+base ≠ main → 是 ✅
+正文首行: > **栈式 PR**：base = `docs/d979-lead-closeout`（@`ab27195e`，栈顶），head = `docs/d979-transition-annotation`。**非 main**。
+首行声明栈式 base（含 docs/d979-lead-closeout）→ 是 ✅
+正文前 3 非空行:
+   | > **栈式 PR**：base = `docs/d979-lead-closeout`（@`ab27195e`，栈顶），head = `docs/d979-transition-annotation`。**非 main**。
+   | ## 变更
+   | 依据 **CTO 2026-09-26 裁定二**：「⒝ 共享声明批为**过渡机制**（非终态）—— 三处标注『阶段 3 由行级 blame 取代』，不扩大范围」。
+正文长度: 2401

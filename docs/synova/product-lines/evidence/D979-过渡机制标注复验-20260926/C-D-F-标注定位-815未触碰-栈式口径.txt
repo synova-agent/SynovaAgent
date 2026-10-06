@@ -1,0 +1,62 @@
+════════ C：三处标注定位（head 29c646f5）════════
+── 逐文件 grep -n（三个指定文件）──
+  --- scripts/commit-msg-check.sh
+    29c646f5:scripts/commit-msg-check.sh:59:#     阶段 3 由行级 blame 取代（届时本注释块与本判定分支一并退役；纯标注，不改任何判定/正则/退出码）。
+    本文件命中数: 1
+  --- scripts/control-tower/shared_file_decl.py
+    29c646f5:scripts/control-tower/shared_file_decl.py:12:非终态 —— 阶段 3 由行级 blame 取代（届时本模块与 commit-msg-check.sh 的 ⒝ 放行分支一并退役；
+    本文件命中数: 1
+  --- memory/notes/implemented/2026-09-26-fix011-shared-file-mechanism.md
+    29c646f5:memory/notes/implemented/2026-09-26-fix011-shared-file-mechanism.md:9:**过渡机制（CTO 2026-09-26 裁定二）**：⒝ 显式共享声明批为**过渡机制**，非终态 —— **阶段 3 由行级 blame 取代**（届时声明行/解析器/放行分支一并退役；本次仅三处标注，不改语义）。
+    本文件命中数: 1
+
+── 全仓枚举（git grep -l，head 29c646f5）──
+    29c646f5:docs/synova/product-lines/evidence/D979-过渡机制标注-20260926/零语义证明与diff.txt
+    29c646f5:docs/synova/product-lines/evidence/D979-队长收尾-20260926/CTO裁定执行-20260926.md
+    29c646f5:memory/notes/implemented/2026-09-26-fix011-shared-file-mechanism.md
+    29c646f5:scripts/commit-msg-check.sh
+    29c646f5:scripts/control-tower/shared_file_decl.py
+    29c646f5:task-state/D979.json
+  文件总数: 6
+
+
+── 严格口径：代码/测试目录内（scripts|tests|src|packages|.github）──
+    29c646f5:scripts/commit-msg-check.sh
+    29c646f5:scripts/control-tower/shared_file_decl.py
+  代码区命中文件数: 2
+（应=2：.sh + .py）
+
+── 第四处排查：任一其他「代码文件」是否新增了该串 ──
+      9     + docs/synova/product-lines/evidence/D979-过渡机制标注-20260926/零语义证明与diff.txt
+      1     + memory/notes/implemented/2026-09-26-fix011-shared-file-mechanism.md
+      1     + scripts/commit-msg-check.sh
+      1     + scripts/control-tower/shared_file_decl.py
+      1     + task-state/D979.json
+
+════════ D：#815 分支未被触碰 ════════
+── ls-remote --heads origin | grep d979（原始）──
+    feebf65102fc854bc34738a048c5427d066e1ee7	refs/heads/docs/d979-fix011-shared-file-mechanism
+    9b3e2645c7c27d19563f1e4738e537d789c19a63	refs/heads/docs/d979-lead-closeout
+    ed0f9fe878d0963dc3345c380139a49d5688eb31	refs/heads/docs/d979-migrate-verify-evidence
+    29c646f5a8a8c045bb22bf24f303a2ce4618d1a1	refs/heads/docs/d979-transition-annotation
+    da144d95e3205475bba997993d73ccbf34ce286e	refs/heads/docs/d979-verify-evidence
+    f34f3f555957d555df3d2cf6b1c0cbf41342839f	refs/heads/feat/d979-dispatch-tpl-dir
+    b16a29d78a3be77daaef492f2eaecb2e95239fe4	refs/heads/feat/d979-watermark-gen
+    aa98eb7dd9501bd3d9761531e08d4910dfa4e5c0	refs/heads/fix/d979-d328-shared-decl
+  fix/d979-d328-shared-decl 现值 = aa98eb7dd9501bd3d9761531e08d4910dfa4e5c0
+  期望（T3 结束时）           = aa98eb7d…
+
+── 标注是否落在 #815 分支：aa98eb7d 版本内该串命中数（应全 0）──
+    aa98eb7d:scripts/commit-msg-check.sh → 0 处
+    aa98eb7d:scripts/control-tower/shared_file_decl.py → 0 处
+
+── 标注提交 4b9e08f1 被哪些分支包含 ──
+      origin/docs/d979-transition-annotation
+      ssh/docs/d979-transition-annotation
+  4b9e08f1 是否为 fix/d979-d328-shared-decl 的祖先: 否 ✅（exit=1）
+
+════════ F：D734 ① 口径（栈式计数）════════
+  git rev-list --count origin/main..29c646f5 = 27
+  git diff --name-only origin/main...29c646f5 | wc -l = 35
+
+  origin/main tip = ee721b0a

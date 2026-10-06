@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""T6 独立零语义判定器（verifier 自写；未复用 coder-a 的判定实现或数字）。
+
+用法:
+  zero_semantic.py <repo-relative-file> --base <dir> --head <dir>
+  zero_semantic.py <repo-relative-file> --base <dir> --head-override <path>   # 变异副本比对
+
+判定（按扩展名分派）:
+  .sh  —— 过滤「整行注释(^\\s*#)」与空行后，可执行行序列逐字节比对
+  .py  —— 剥离 docstring（模块/类/函数首个 Expr-Str）后:
+           ① ast.dump 指纹（sha256）
+           ② 非 docstring 源码行序列（同样过滤整行注释与空行）
+  .md  —— 行级增删统计（文档类：只登记增删行）
+
+退出码（ctrl-tower-change 模式 1）: 0=零语义（GREEN） 1=检出语义差异（RED） 2=执行失败
+"""
+import argparse
+import ast
+import difflib
+import hashlib
+import re
+import sys
+from pathlib import Path
+
+COMMENT_RE = re.compile(r"^\s*#")
+
+
+def exec_lines(text: str):
+    """可执行行序列：去空行 + 去整行注释（保留行内注释，因为行内注释也可能夹带语义）。"""
+    return [l.rstrip("\n") for l in text.split("\n") if l.strip() and not COMMENT_RE.match(l)]
+
+
+def _is_doc(node) -> bool:
+    return (
+        isinstance(node, ast.Expr)
+        and isinstance(node.value, ast.Constant)
+        and isinstance(node.value.value, str)
+    )
+
+
+def _strip_docstrings(node) -> None:
+    """递归剥离模块/类/函数级别的 docstring。"""
+    doc_nodes = []
+    if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+        body = list(node.body)
+        if body and _is_doc(body[0]):
+            doc_nodes.append(body[0])
+            node.body = body[1:]
+    for doc in doc_nodes:
+        pass
+    for child in ast.iter_child_nodes(node):
+        _strip_docstrings(child)
+
+
+def _docstring_line_spans(tree) -> set:
+    spans = set()
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            body = getattr(node, "body", [])
+            if body and _is_doc(body[0]):
+                d = body[0]
+                for ln in range(d.lineno, (d.end_lineno or d.lineno) + 1):
+                    spans.add(ln)
+    return spans
+
+
+def py_fingerprint(text: str):
+    tree = ast.parse(text)
+    spans = _docstring_line_spans(tree)
+    _strip_docstrings(tree)
+    fp = hashlib.sha256(ast.dump(tree, annotate_fields=True, include_attributes=False).encode()).hexdigest()
+    lines = []
+    for i, l in enumerate(text.split("\n"), start=1):
+        if i in spans:
+            continue
+        if l.strip() and not COMMENT_RE.match(l):
+            lines.append(l.rstrip("\n"))
+    return fp, lines, spans
+
+
+def sha_seq(seq) -> str:
+    return hashlib.sha256("\n".join(seq).encode()).hexdigest()
+
+
+def show_diff(a, b, label, limit=None):
+    d = list(difflib.unified_diff(a, b, fromfile=f"base/{label}", tofile=f"head/{label}", lineterm="", n=1))
+    if not d:
+        print(f"    （无差异）")
+        return 0
+    shown = d if limit is None else d[:limit]
+    for line in shown:
+        print("      " + line[:200])
+    if limit is not None and len(d) > limit:
+        print(f"      …（差异共 {len(d)} 行，此处仅示前 {limit} 行；完整见对应 -full 日志）")
+    return len(d)
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("rel")
+    ap.add_argument("--base", required=True)
+    ap.add_argument("--head", default=None)
+    ap.add_argument("--head-override", default=None)
+    ap.add_argument("--show", type=int, default=None)
+    args = ap.parse_args()
+
+    base_p = Path(args.base) / args.rel
+    head_p = Path(args.head_override) if args.head_override else Path(args.head) / args.rel
+    if not base_p.is_file() or not head_p.is_file():
+        print(f"DECL_ERR: 文件缺失 base={base_p} head={head_p}", file=sys.stderr)
+        return 2
+    bt = base_p.read_text(encoding="utf-8", errors="replace")
+    ht = head_p.read_text(encoding="utf-8", errors="replace")
+    ext = Path(args.rel).suffix.lower()
+    print(f"── 判定 {args.rel}  [{ext}]")
+    print(f"   base = {base_p}")
+    print(f"   head = {head_p}")
+
+    if ext == ".sh":
+        a, b = exec_lines(bt), exec_lines(ht)
+        print(f"   可执行行数: base={len(a)} head={len(b)}")
+        print(f"   可执行行 sha256: base={sha_seq(a)[:16]}… head={sha_seq(b)[:16]}…")
+        same = a == b
+        if not same:
+            show_diff(a, b, "可执行行", args.show)
+        print(f"   VERDICT: {'GREEN（零语义）' if same else 'RED（检出语义差异）'}")
+        return 0 if same else 1
+
+    if ext == ".py":
+        fa, la, sa = py_fingerprint(bt)
+        fb, lb, sb = py_fingerprint(ht)
+        print(f"   docstring 行: base={len(sa)} head={len(sb)}")
+        print(f"   AST 指纹(剥 docstring 后): base={fa[:24]}… head={fb[:24]}…")
+        print(f"   非 docstring 源码行数: base={len(la)} head={len(lb)}")
+        print(f"   非 docstring 源码行 sha256: base={sha_seq(la)[:16]}… head={sha_seq(lb)[:16]}…")
+        ok = (fa == fb) and (la == lb)
+        if fa != fb:
+            print("   ✗ AST 指纹不同")
+        if la != lb:
+            show_diff(la, lb, "非 docstring 源码行", args.show)
+        print(f"   VERDICT: {'GREEN（零语义）' if ok else 'RED（检出语义差异）'}")
+        return 0 if ok else 1
+
+    # 文档类：只登记增删
+    a, b = bt.split("\n"), ht.split("\n")
+    d = list(difflib.unified_diff(a, b, lineterm="", n=0))
+    added = sum(1 for l in d if l.startswith("+") and not l.startswith("+++"))
+    removed = sum(1 for l in d if l.startswith("-") and not l.startswith("---"))
+    print(f"   行数: base={len(a)} head={len(b)} | 新增 {added} 行 / 删除 {removed} 行")
+    for l in d:
+        if l.startswith(("+", "-")) and not l.startswith(("+++", "---")):
+            print("      " + l[:200])
+    print(f"   VERDICT: {'GREEN（仅新增说明行）' if removed == 0 else 'RED（有删除行）'}")
+    return 0 if removed == 0 else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,63 @@
+#!/bin/bash
+# T6 A 条驱动：零语义判定 + 判别性变异（全部只读仓库，变异仅作用于 /tmp 副本）
+set -u
+B=/tmp/d979-t6/base
+H=/tmp/d979-t6/anno
+J=/tmp/d979-t6/zero_semantic.py
+M=/tmp/d979-t6/mut
+SH=scripts/commit-msg-check.sh
+PY=scripts/control-tower/shared_file_decl.py
+MD=memory/notes/implemented/2026-09-26-fix011-shared-file-mechanism.md
+mkdir -p "$M"; chmod +x "$J"
+
+echo "════════ A1: numstat（base 9b3e2645 → head 29c646f5，三个标注文件）════════"
+git -C "$B" diff --numstat 9b3e2645 29c646f5 -- "$SH" "$PY" "$MD"
+echo "（列含义: 新增 删除 文件；「删除」列必须全 0）"
+echo ""
+echo "════════ A1-b: 逐文件 diff（-U0，全文）════════"
+git -C "$B" diff -U0 9b3e2645 29c646f5 -- "$SH" "$PY" "$MD"
+echo ""
+echo "════════ A2/A3: 我的判定器（base vs head，三个标注文件）════════"
+RC_ALL=0
+for f in "$SH" "$PY" "$MD"; do
+  python3 "$J" "$f" --base "$B" --head "$H"; rc=$?
+  echo "   [判定器 exit=$rc]"; RC_ALL=$((RC_ALL+rc)); echo ""
+done
+echo "三文件判定器 exit 合计 = $RC_ALL（0=全绿）"
+echo ""
+echo "════════ A4-a: 判别性变异 —— .sh 把 [ \"\$DECL_RC\" = 0 ] 改成 = 99（/tmp 副本）════════"
+cp "$H/$SH" "$M/commit-msg-check.sh"
+python3 - <<'PY'
+p='/tmp/d979-t6/mut/commit-msg-check.sh'
+s=open(p,encoding='utf-8').read()
+old='[ "$DECL_RC" = 0 ]'; new='[ "$DECL_RC" = 99 ]'
+n=s.count(old); print(f"  目标串出现 {n} 次（须唯一）"); assert n==1
+open(p,'w',encoding='utf-8').write(s.replace(old,new)); print("  变异已施加")
+PY
+bash -n "$M/commit-msg-check.sh"; echo "  bash -n exit=$?（必须 0 → 排除「崩了才红」）"
+python3 "$J" "$SH" --base "$B" --head-override "$M/commit-msg-check.sh"; echo "   [判定器 exit=$?（期望 1=RED）]"
+echo ""
+echo "════════ A4-b: 恢复 ⇒ 必须报绿 ════════"
+cp "$H/$SH" "$M/commit-msg-check.sh"
+python3 "$J" "$SH" --base "$B" --head-override "$M/commit-msg-check.sh"; echo "   [判定器 exit=$?（期望 0=GREEN）]"
+echo ""
+echo "════════ A4-c: 对照变异（只在 .sh 追加一行注释）⇒ 必须仍绿（排除「改了就红」）════════"
+printf '\n# T6 对照变异：纯注释行，不参与可执行行\n' >> "$M/commit-msg-check.sh"
+bash -n "$M/commit-msg-check.sh"; echo "  bash -n exit=$?"
+python3 "$J" "$SH" --base "$B" --head-override "$M/commit-msg-check.sh"; echo "   [判定器 exit=$?（期望 0=GREEN）]"
+echo ""
+echo "════════ A4-d: .py 真语义变异（return 0 if allowed else 1 → return 0）════════"
+cp "$H/$PY" "$M/shared_file_decl.py"
+python3 - <<'PY'
+p='/tmp/d979-t6/mut/shared_file_decl.py'
+s=open(p,encoding='utf-8').read()
+old='return 0 if allowed else 1'; new='return 0  # T6-MUT: 真语义'
+n=s.count(old); print(f"  目标串出现 {n} 次（须唯一）"); assert n==1
+open(p,'w',encoding='utf-8').write(s.replace(old,new)); print("  变异已施加")
+PY
+python3 -c "import sys; compile(open(sys.argv[1],encoding='utf-8').read(), sys.argv[1], 'exec')" "$M/shared_file_decl.py" && echo "  py 语法编译 OK（compile() 无缓存写 ⇒ 语法合法，非崩溃红）"
+python3 "$J" "$PY" --base "$B" --head-override "$M/shared_file_decl.py"; echo "   [判定器 exit=$?（期望 1=RED）]"
+echo ""
+echo "════════ A4-e: 恢复 .py ⇒ 必须报绿 ════════"
+cp "$H/$PY" "$M/shared_file_decl.py"
+python3 "$J" "$PY" --base "$B" --head-override "$M/shared_file_decl.py"; echo "   [判定器 exit=$?（期望 0=GREEN）]"
