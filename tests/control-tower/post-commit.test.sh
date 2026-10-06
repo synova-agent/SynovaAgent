@@ -333,20 +333,39 @@ d1157_probe() {  # <hook-src>
 }
 
 # F2: 改坏即红（独立红例）—— 旧实现（**从 ref 取，H1**）在"账本只有 parent=<C>"下**不补记**
-PREFIX_HOOK="$(git -C "$REPO" show origin/main:scripts/hooks/post-commit.sh 2>/dev/null)"  # swallow-ok: 取不到即下方显式判「F2 取数失败」
+#
+# 🔴 红例基线修复（2026-10-06，治理线 · W 组 G0 解锁件；改前实测 `❌ F2 **红例失效**`）。
+#   病灶两处（同因：**拿 origin/main 当"旧实现"的来源**）:
+#     ① main 上已无无锚实现可作红例 —— D1157(`9e29d88e0`) 已把锚定判据并进 main；
+#     ② 旧 prefilter 用 `grep -q` 扫**全文（含注释）**判「是不是旧实现」，而 D1157 把旧模式串
+#        **逐字写进了注释**（main 该文件:42 `#   旧判据 \`grep -q "$h" $srcs\` **无锚**`）
+#        ⇒ prefilter 误判「main 仍是旧实现」⇒ 真跑锚定实现 ⇒ 得到"补记" ⇒ 红例恒失效。
+#   后果（非本夹具局部）: 本测试在 CI 密封清单内 ⇒ 必需 context
+#     `Control Tower Gate Tests (ubuntu-latest)` **恒红** ⇒ 一切触及 scripts/**、tests/**、
+#     `.github/workflows/**`、`package.json` 的 PR 永久 blocked（本批实测 #1159/#1132 均红于此）。
+#   ⇒ 修法（**保判别力，不是「改夹具迁就实现」**）:
+#     · 基线改为「**引入 D1157-REC-RE 锚定判据那个提交的父提交**」= 最后的无锚实现
+#       （用 `git log -S` 动态定位，不硬编码 sha；定位不到才退回 origin/main）；
+#     · prefilter 只看**非注释行**（`grep -v '^[[:space:]]*#'`）—— 注释不再能冒充实现。
+#   ⇒ 判别力仍成立（改坏即红）: 把该基线的 `_ledger_has_hash` 换成锚定版 ⇒ 本组立刻 F2 红；
+#     下方 F-fixed 绿对照继续钉「本支实现必须补记」。
+FIX_COMMIT="$(git -C "$REPO" log --format=%H -1 -S'D1157-REC-RE' origin/main -- scripts/hooks/post-commit.sh 2>/dev/null)"
+if [ -n "$FIX_COMMIT" ]; then RED_BASE="${FIX_COMMIT}^"; else RED_BASE="origin/main"; fi
+PREFIX_HOOK="$(git -C "$REPO" show "${RED_BASE}:scripts/hooks/post-commit.sh" 2>/dev/null)"  # swallow-ok: 取不到即下方显式判「F2 取数失败」
 if [ -z "$PREFIX_HOOK" ]; then
-  no "F2 取数失败: git show origin/main:scripts/hooks/post-commit.sh 无输出（H1 要求读 ref，禁读工作树）"
+  no "F2 取数失败: git show ${RED_BASE}:scripts/hooks/post-commit.sh 无输出（H1 要求读 ref，禁读工作树）"
 else
   printf '%s\n' "$PREFIX_HOOK" > "$TMPD/post-commit-prefix.sh"
-  if grep -q 'grep -q "\$h" \$srcs' "$TMPD/post-commit-prefix.sh"; then   # 前提：该 ref 判据确为无锚
+  # 前提：该 ref 判据确为无锚 —— **只看代码行**（注释里的同款字样不算实现；见上方病灶 ②）
+  if grep -v '^[[:space:]]*#' "$TMPD/post-commit-prefix.sh" | grep -q 'grep -q "\$h" \$srcs'; then
     D1157_LEDGER_SHAPE=parent-only; OUT_P="$(d1157_probe "$TMPD/post-commit-prefix.sh")"
     case "$OUT_P" in
-      0) ok "F2 改坏即红: 旧实现（无锚判据）在 parent-only 账本下**跳过补记** ⇒ 红例成立（漏记）" ;;
+      0) ok "F2 改坏即红: 旧实现（无锚判据 @ ${RED_BASE}）在 parent-only 账本下**跳过补记** ⇒ 红例成立（漏记）" ;;
       1) no "F2 **红例失效**: 旧实现竟然补记了（夹具不再体现旧缺陷 ⇒ 判别性丢失，必须红）" ;;
       *) no "F2 夹具自身失败: ${OUT_P}" ;;
     esac
   else
-    no "F2 前提失败: origin/main 的 post-commit.sh 判据已锚定（本夹具需旧实现作红例；请改用本支父提交）"
+    no "F2 前提失败: 基线 ${RED_BASE} 的 post-commit.sh 判据已锚定（本夹具需无锚实现作红例）"
   fi
   # F-fixed（H2 绿对照）: **本支实现**在同夹具下必须**补记**
   D1157_LEDGER_SHAPE=parent-only; OUT_F="$(d1157_probe "$HOOK_SRC")"
