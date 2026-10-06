@@ -220,4 +220,53 @@ router.get('/api/evolution/global/analyze', async (req, res) => {
   try { const { analyzeGlobalPatterns } = await import('@synova/evolution'); res.json({ ok: true, analyzedAt: analyzeGlobalPatterns({ industries: req.query.industries ? (req.query.industries as string).split(',') : undefined }).analyzedAt }); }
   catch { res.status(500).json({ ok: false, error: 'global analyze failed', degraded: true }); }
 });
+
+// ═══ K6/3-12 E2: 跨客户模式发现（生产入口）═══
+/**
+ * 跨客户聚合模式（同一哨兵被 ≥N 个客户纠错 ⇒ 系统级模式）。
+ *
+ * 组织来源：?orgIds=a,b,c 显式指定；缺省时由 store 能力探测（`listOrgs()`）枚举。
+ * 无可用来源 ⇒ 返回 degraded:true（不静默退化到单客户 'default'，铁律 24/31）。
+ * Query params: ?orgIds=org-a,org-b 可选；?minOrgs=N 可选（默认配置门槛）。
+ */
+router.get('/api/evolution/cross-customer/patterns', async (req: Request, res: Response) => {
+  try {
+    const { discoverCrossCustomerPatterns } = await loadL0();
+    const memoryStore = await loadMemoryStore();
+    const rawOrgIds = typeof req.query.orgIds === 'string' ? req.query.orgIds : '';
+    const orgIds = rawOrgIds.split(',').map((s) => s.trim()).filter(Boolean);
+    const rawMinOrgs = typeof req.query.minOrgs === 'string' ? Number.parseInt(req.query.minOrgs, 10) : NaN;
+    const result = await discoverCrossCustomerPatterns(memoryStore, {
+      ...(orgIds.length > 0 ? { orgIds } : {}),
+      ...(Number.isFinite(rawMinOrgs) ? { minOrgs: rawMinOrgs } : {}),
+    });
+    res.json({ ok: true, ...result });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.warn({ err: msg }, '跨客户模式发现失败 — degraded');
+    res.status(500).json({ ok: false, error: msg, degraded: true });
+  }
+});
+
+// ═══ K6/3-12 E3: 联邦匿名统计导入（生产入口）═══
+/**
+ * 导入他实例的匿名统计包（schema/门槛/形状三重校验，不信来源自带 orgCount 门槛结论）。
+ * 传输由调用方负责（本端点只做接收 + 校验 + 转提案），符合 K6/3-12 的诚实边界。
+ * Body: FederatedStatsBundle（见 packages/evolution global-analyzer 的契约）。
+ */
+router.post('/api/evolution/federation/import', async (req: Request, res: Response) => {
+  try {
+    const { importFederatedStats } = await loadL0();
+    const result = importFederatedStats(req.body);
+    if (!result.ok) {
+      res.status(400).json({ ok: false, code: result.code, reason: result.reason, degraded: result.degraded });
+      return;
+    }
+    res.json({ ok: true, applied: result.applied, rejected: result.rejected });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.warn({ err: msg }, '联邦统计导入失败 — degraded');
+    res.status(500).json({ ok: false, error: msg, degraded: true });
+  }
+});
 export default router;
