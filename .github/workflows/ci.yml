@@ -264,7 +264,8 @@ jobs:
             tests/doc-system/generate-chronicle-monthly.test.sh \
             tests/control-tower/check-citations.test.sh \
             tests/control-tower/check-progress-freshness.test.sh \
-            tests/control-tower/check-subprocess-protocol.test.sh; do
+            tests/control-tower/check-subprocess-protocol.test.sh \
+            tests/control-tower/check-deps-injection.test.sh; do
             echo "── $t"
             # D526: 测试失败输出进 ::error 注解——无 token 也能经 annotations 定位（D521 工具1 语义）
             if ! bash "$t" > /tmp/ct-out.log 2>&1; then

@@ -1,0 +1,19 @@
+# deps-injection-baseline.txt — D925 deps 注入标准 存量清单（ratchet：只可缩短）
+#
+# 格式（**每行必带理由**，无理由的行不生效 → 该文件退回"未豁免"，报得更多）:
+#   <仓库相对路径> — <理由>
+#
+# 语义: 列在此处的命中**允许存在**（历史存量，改造属后续卡）；不在清单内的命中 = 新增 →
+#       report 模式打 ::warning，--strict 模式 exit 1。
+#       本文件只可缩短，不可增长（增长 = 开口子，须 CTO 裁定）。
+#
+# 判据 = 变体 B 窄（队长 2026-09-23 核准）：仅"导出编排入口函数
+# (Handler|Runner|Coordinator|Dispatcher) 且直连生产单例闭集且无 setXxxDeps 注入缝"的文件。
+# 命令: bash scripts/control-tower/check-deps-injection.sh --dir .
+#
+# 存量 2 条 —— 截至 2026-09-23 实测:
+#   `git grep -lE '(getFeedbackCollector|getExpertRegistry|getGlobalScheduler|getRegistry|getScheduler)\(' -- src` → 18 文件
+#   其中含注入缝者仅 src/agent/loop-handlers.ts；再按入口函数命名窄化后余 2 文件（即下列两条）
+
+src/l3/expert-dispatcher.ts — 存量：既有编排入口直连 getExpertRegistry()，未提供 setXxxDeps 注入缝（D925 首版只报不拦；补缝改造属后续卡，本卡不改 src/**）
+src/sentinel/runner.ts — 存量：既有编排入口直连生产单例闭集，未提供 setXxxDeps 注入缝（同上，本卡不改 src/**）

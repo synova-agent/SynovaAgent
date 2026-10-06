@@ -37,6 +37,11 @@ description: 活规格撰写（原 📋 synova-devdoc 预设的能力载体，20
 9. **依赖与前置**（前置未满足 → 停，不抢跑）
 10. **风险与上限**（写集互斥、重型验证串行、PR ≤12 文件 + 单域）
 11. **DS 清单**（delivery statements：逐条可核验的交付声明，供 K3 复审）
+12. **可测试性（deps 注入）**（D925）：规格若涉及编排入口模块（`*Handler`/`*Runner`/`*Coordinator`/`*Dispatcher`），
+    本节必须写明——① 本入口需要哪些协作者（deps 接口形状）；② 注入缝签名 `export function setXxxDeps(deps: XxxDeps | null): void`；
+    ③ 生产默认如何**惰性构造**（禁在调用点直连活单例）；④ 测试如何经缝替换。标准全文：
+    `docs/synova/coordination/标准-deps接口与setter注入-20260923.md`；检查器
+    `scripts/control-tower/check-deps-injection.sh`（首版只报不拦）。
 
 ## 验收（撰写完成后自检）
 
