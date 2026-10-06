@@ -1,0 +1,34 @@
+# fixture repo=<tmp>/v10-stale（git init 临时仓；绝对路径不入证据，保证可对账）
+# files:
+#   ./docs/synova/coordination/dispatch.md
+#   ./docs/synova/coordination/target.json
+$ (cd <fixture> && node docs/synova/coordination/tools/check-coordination-schema.ts --repo-root <fixture> --cas-root .cas-empty --since HEAD --cas-file docs/synova/coordination/dispatch.md)
+--- output ---
+[PASS] V10-CAS-ROOT-EXISTS  -- cas-root=.cas-empty
+[PASS] V10-CAS-PARSE  -- 声明格式合法 declarations=1
+[PASS] V10-CAS-SELF  -- no self-referencing declarations
+[PASS] V10-CAS-PRESENT  file=docs/synova/coordination/dispatch.md  -- declarations=1
+[FAIL] V10-CAS-STALE  file=docs/synova/coordination/dispatch.md  line=5  token=STALE  -- 写者声明的基线已过期 —— target=docs/synova/coordination/target.json declared=sha256:fb2f08409e390cf9a70096ef876b7c76553056fff6b953f20cb456ae7ffbdcde actual@HEAD=sha256:5ff3473047128e5a9bd297d5f98d7db57e39fc59a4f599ea2473a905b9228762 （重新读取目标版本后再提交；禁静默覆盖）
+[PASS] V10-CAS-DANGLING  -- declarations-in-changeset=1 all targets resolvable at HEAD
+[PASS] V11-ROOT-EXISTS  -- coord-root=docs/synova/coordination
+[PASS] V11-STATUS-ENUM  -- declaring=1 values in closed set
+[PASS] V11-STATUS-SINGLE  -- declaring=1 each declares <=1 status
+[PASS] V11-STATUS-LOCATION  -- declaring=1 location-consistent
+[PASS] V11-NEW-DOC-STATUS  -- coord changes=1 新增文档均有合法状态行
+[PASS] V11-MOVE-REWRITE  -- archive moves=0 all rewrote status
+[PASS] V11-ARCHIVE-FROZEN  -- changeset=1 无对归档区既有文件的改/删/移出
+[PASS] V11-STATUS-DEBT  -- all coordination documents declare a status
+[PASS] V12-ROOT-EXISTS  -- decisions-root=decisions
+[PASS] V12-FILE-KIND  -- files=0 all .md
+[PASS] V12-STATUS-LINE  -- files=0 状态行唯一且在四态闭集内
+[PASS] V12-DATE-LINE  -- files=0 日期行唯一且与文件名一致
+[PASS] V12-SECTIONS  -- files=0 六段齐全
+[PASS] V12-SECTION-EMPTY  -- files=0 必填节均非空
+[PASS] V12-LIFECYCLE-DIR  -- files=0 状态与目录一致
+[PASS] V12-CLASS-DIR  -- files=0 类别在闭集内
+[PASS] V12-IMPLEMENTED-TONE  -- implemented 决策件无提议腔
+[PASS] V12-PATH-DEBT  -- no decision file lacks a lifecycle segment
+[PASS] V12-PATH-RATCHET  -- added decision files=0
+SUMMARY rules=25 pass=24 fail=1 not_evaluated=0 since=HEAD strict=0
+EXIT 1
+--- exit=1 ---
