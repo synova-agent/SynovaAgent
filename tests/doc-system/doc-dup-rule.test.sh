@@ -78,6 +78,53 @@ OUT=$(DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" 2>&1); rc=$?
 [ "$rc" -eq 0 ] && ok "⑤ /archive/ 排除生效 → exit 0" || no "⑤ 归档区被误判 (rc=$rc)"
 rm -rf "$FIX"
 
+# ── ⑦ FIX-004 B（P1）: 撞名判定加**同目录约束**（跨目录通用名放行）——成对反例 ──
+# K3 定罪: 归一化只取 basename ⇒ 新目录放 README.md 即与仓库任意同名文件「撞名」→ 误拦。
+# ⒜ 合法: 既有 docs/synova/README.md（已提交）＋ 新增 docs/synova/sub/README.md（跨目录通用名）
+mkfix
+printf '# 根 README\n' > "$FIX/docs/synova/README.md"
+git -C "$FIX" add -A >/dev/null 2>&1; git -C "$FIX" commit -q -m "add root readme"
+mkdir -p "$FIX/docs/synova/sub"
+printf '# 子目录 README\n' > "$FIX/docs/synova/sub/README.md"
+printf 'path: docs/synova/sub/README.md\n' >> "$FIX/docs/authority/DOCS-REGISTRY.yaml"
+OUT=$(DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" 2>&1); rc=$?
+[ "$rc" -eq 0 ] && ok "⑦⒜ 合法: 跨目录通用名 README.md → exit 0（不再误拦）" || { no "⑦⒜ 新目录 README 被误拦 (rc=$rc)"; echo "$OUT" | tail -4; }
+
+# ⒝-1 滥用: **同目录**归一化撞名 → 必红（同目录同名 = 真重复）
+printf '# 子规则旧版\n' > "$FIX/docs/synova/sub/RULES-20260101.md"
+git -C "$FIX" add -A >/dev/null 2>&1; git -C "$FIX" commit -q -m "add sub rules old"
+printf '# 子规则新版\n' > "$FIX/docs/synova/sub/RULES-20260926.md"
+printf 'path: docs/synova/sub/RULES-20260926.md\n' >> "$FIX/docs/authority/DOCS-REGISTRY.yaml"
+OUT=$(DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" 2>&1); rc=$?
+[ "$rc" -eq 1 ] && ok "⑦⒝-1 滥用: 同目录归一化撞名 → exit 1" || no "⑦⒝-1 同目录撞名被放行 (rc=$rc)"
+echo "$OUT" | grep -q '同目录' && ok "⑦⒝-1 输出点名同目录撞名" || no "⑦⒝-1 未点名同目录"
+
+# ⒝-2 滥用: 跨目录**非通用名**撞名 → 仍必红（约束不放宽非通用名的跨目录判定）
+rm -f "$FIX/docs/synova/sub/RULES-20260926.md"
+mkdir -p "$FIX/docs/synova/other"
+printf '# 别处规则\n' > "$FIX/docs/synova/other/RULES.md"
+printf 'path: docs/synova/other/RULES.md\n' >> "$FIX/docs/authority/DOCS-REGISTRY.yaml"
+OUT=$(DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" 2>&1); rc=$?
+[ "$rc" -eq 1 ] && ok "⑦⒝-2 滥用: 跨目录非通用名撞名 → exit 1" || no "⑦⒝-2 跨目录非通用名被放行 (rc=$rc)"
+echo "$OUT" | grep -q '跨目录' && ok "⑦⒝-2 输出点名跨目录撞名" || no "⑦⒝-2 未点名跨目录"
+rm -rf "$FIX"
+
+# ── ⑧ FIX-004 C（P1）: 取代声明必须指向**真实存在**的目标 —— 成对反例 ──
+# K3 定罪: 原实现只匹配「取代: <任意非空 token>」⇒ 写一行「取代: 不存在」即放行。
+# ⒜ 合法: 取代目标真实存在（既有 tracked 文件）→ 放行
+mkfix
+printf '取代: docs/synova/RULES-20260101.md\n\n# 规则新版\n' > "$FIX/docs/synova/RULES-20260926.md"
+printf 'path: docs/synova/RULES-20260926.md\n' >> "$FIX/docs/authority/DOCS-REGISTRY.yaml"
+OUT=$(DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" 2>&1); rc=$?
+[ "$rc" -eq 0 ] && ok "⑧⒜ 合法: 取代目标存在 → exit 0" || { no "⑧⒜ 真实取代目标被误拦 (rc=$rc)"; echo "$OUT" | tail -4; }
+
+# ⒝ 滥用: 取代目标不存在（写一行空声明）→ 必红
+printf '取代: docs/synova/DOES-NOT-EXIST-20260926.md\n\n# 规则新版\n' > "$FIX/docs/synova/RULES-20260926.md"
+OUT=$(DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" 2>&1); rc=$?
+[ "$rc" -eq 1 ] && ok "⑧⒝ 滥用: 取代目标不存在 → exit 1" || no "⑧⒝ 空声明仍放行（口子未堵）(rc=$rc)"
+echo "$OUT" | grep -q '取代声明目标不存在' && ok "⑧⒝ 输出点名「取代声明目标不存在」" || no "⑧⒝ 未点名目标不存在"
+rm -rf "$FIX"
+
 echo ""
 echo "  结果: $PASS 通过, $FAIL 失败"
 [ "$FAIL" -eq 0 ] || exit 1

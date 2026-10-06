@@ -76,16 +76,32 @@ tracked = [l for l in os.popen('git -C "%s" ls-files "*.md"' % root).read().spli
 # 新增文件若已 git add（staged），也会出现在 ls-files 中 → 必须先剔除自身，否则自我撞名（误拦实证）
 _newset = set(new)
 tracked = [t for t in tracked if not exclude.search(t) and t not in _newset]
+# FIX-004 C: 取代声明目标校验用的「tracked 全集」（不限 *.md、不受 EXCLUDE 影响）
+_tracked_all = set(l for l in os.popen('git -C "%s" ls-files' % root).read().splitlines() if l.strip())
 existing = {}
 for t in tracked:
     n = norm(t)
     if n:
         existing.setdefault(n, []).append(t)
+# FIX-004 B（P1）: 撞名判定必须加**同目录约束**。
+#   原实现只比归一化 basename ⇒ 新目录里放一个 README.md / index.md 就与仓库里任意
+#   同名文件「撞名」→ 误拦正常文档工作（K3 定罪「新判据是否误拦」）。
+#   规则：① 同目录撞名 → 判（同目录同名即真重复）
+#        ② 跨目录撞名 → 仅**非通用名**判；通用名（README/index/CHANGELOG…）本就按目录各存一份。
+GENERIC_NAMES = {"readme", "index", "changelog", "license", "contributing", "authors",
+                 "makefile", "todo", "summary", "overview"}
+def _same_dir(a, b):
+    return os.path.dirname(a) == os.path.dirname(b)
 for rel in new:
     n = norm(rel)
     hit = None
     if n and n in existing:
-        hit = "归一化名撞名（%s；既有: %s）" % (n, existing[n][0])
+        cands = existing[n]
+        same = [t for t in cands if _same_dir(t, rel)]
+        if same:
+            hit = "归一化名撞名（同目录 %s；既有: %s）" % (n, same[0])
+        elif n not in GENERIC_NAMES:
+            hit = "归一化名撞名（跨目录 %s；既有: %s）" % (n, cands[0])
     if hit is None:
         p = os.path.join(root, rel)
         # 空文件（0 字节）不做指纹比对：空 == 空 无信息量，历史上全是夹具/占位文件（误拦实证）
@@ -110,8 +126,17 @@ for rel in new:
             txt = open(os.path.join(root, rel), encoding="utf-8", errors="replace").read()
         except OSError:
             pass
-        if re.search(r"^[ \t]*(取代|合并|supersedes)[ \t]*[:：][ \t]*\S", txt, re.M):
-            print("DECLARED\t%s\t" % rel)
+        # FIX-004 C（P1）: 取代声明必须**指向真实存在**的被取代对象。
+        #   原实现只匹配「取代: <任意非空 token>」⇒ 写一行「取代: 不存在」即放行
+        #   （K3 定罪「无意义声明绕过」）。现校验目标 ∈ tracked 集合 ∪ 本次新增集合。
+        decl = re.search(r"^[ \t]*(取代|合并|supersedes)[ \t]*[:：][ \t]*(\S+)", txt, re.M)
+        if decl:
+            target = decl.group(2).strip().strip("\"'").strip(chr(96))
+            target = re.sub(r"[（(].*$", "", target).strip()
+            if target and (target in _tracked_all or target in _newset):
+                print("DECLARED\t%s\t%s" % (rel, target))
+            else:
+                print("VIOLATION\t%s\t取代声明目标不存在（tracked 集合无 %s）" % (rel, target or "<空>"))
         else:
             print("VIOLATION\t%s\t%s" % (rel, hit))
 PYEOF
