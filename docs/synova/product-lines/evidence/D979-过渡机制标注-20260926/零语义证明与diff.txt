@@ -1,0 +1,102 @@
+════════ D979 T5 / 过渡机制三处标注：零语义物理证明 ════════
+分支: docs/d979-transition-annotation @ ab27195e（改前基线）| 日期: 2026-09-26 01:58:37 CST
+依据: CTO 2026-09-26 裁定二「⒝ 批为过渡机制 —— 三处标注『阶段 3 由行级 blame 取代』，不扩大范围」
+
+── 验收 1a. git diff 全量（逐行，原文）──
+diff --git a/memory/notes/implemented/2026-09-26-fix011-shared-file-mechanism.md b/memory/notes/implemented/2026-09-26-fix011-shared-file-mechanism.md
+index 755bbb55..fb0982fe 100644
+--- a/memory/notes/implemented/2026-09-26-fix011-shared-file-mechanism.md
++++ b/memory/notes/implemented/2026-09-26-fix011-shared-file-mechanism.md
+@@ -6,3 +6,4 @@
+ **决策（待执行）**：二选一或组合 —— ⒜ **一对象一文件**（如 `号段水位.md`→`号段/水位.yaml`）⒝ **显式多卡共享声明**（文件头/卡内 `共享声明: D931,D943`）。**同时保留真劫持拦截**（非授权卡改共享文件仍拒）。
+ **理由**：治理件天然被反复修改，"文件有历史归属"⇒"任何新卡不能改"是**结构性死结**，不是偶发误判。
+ **边界**：**不得**以放宽门禁换通过；门禁语义变更 ⇒ 必过 K3；同类第 2 次 ⇒ 完成后升级创始人。
++**过渡机制（CTO 2026-09-26 裁定二）**：⒝ 显式共享声明批为**过渡机制**，非终态 —— **阶段 3 由行级 blame 取代**（届时声明行/解析器/放行分支一并退役；本次仅三处标注，不改语义）。
+diff --git a/scripts/commit-msg-check.sh b/scripts/commit-msg-check.sh
+index 4552af38..8094776e 100644
+--- a/scripts/commit-msg-check.sh
++++ b/scripts/commit-msg-check.sh
+@@ -55,6 +55,8 @@ fi
+ #     声明写在被改文件内 = diff 可见；单独把自己加进声明不足以放行）。
+ #     其余一切情形（含 MSG_DID 为空、声明缺失、解析器 rc=2）维持上述原语义 = 零回归。
+ #     解析器: scripts/control-tower/shared_file_decl.py（读取顺序 index→工作区→HEAD）
++#     【过渡机制】CTO 2026-09-26 裁定二（D979）：⒝ 显式共享声明批为**过渡机制**，非终态 ——
++#     阶段 3 由行级 blame 取代（届时本注释块与本判定分支一并退役；纯标注，不改任何判定/正则/退出码）。
+ # 消息文件缺失/异常 → MSG_DID 空 → 一致性检查 fail-open（铁律 24: 显式兜底）
+ # CT-60: scope 大小写/后缀兼容 — docs(d578)/feat(d577-closeout) 均提取 D#。
+ # 背景: 旧正则 \(D[0-9]+\) 只认大写 D 且要求括号内纯 D#——小写 scope
+diff --git a/scripts/control-tower/shared_file_decl.py b/scripts/control-tower/shared_file_decl.py
+index 25f9d2e7..eae2f280 100644
+--- a/scripts/control-tower/shared_file_decl.py
++++ b/scripts/control-tower/shared_file_decl.py
+@@ -8,6 +8,10 @@ brief（认领数最多 + 锚点 + 日期回退）⇒ 共享件的历史归属
+ 本模块提供**显式多卡共享声明**的解析与双向校验：只有被改文件**自己**声明了
+ `MSG_DID` 与 `CLAIM_DID` 双方时，D328 才放行（逐文件可审、diff 可见、禁 blanket 豁免）。
+ 
++【过渡机制】CTO 2026-09-26 裁定二（D979）：本模块（⒝ 显式共享声明解析器）批为**过渡机制**，
++非终态 —— 阶段 3 由行级 blame 取代（届时本模块与 commit-msg-check.sh 的 ⒝ 放行分支一并退役；
++本次仅三处标注，不改任何函数签名/正则/退出码）。
++
+ 契约（铁律 47）:
+   @input  纯解析: (text, path) → 声明集合；I/O 解析: root + 仓库内相对路径 → 声明集合
+           读取顺序 SHARED(F) = 暂存 index（`git show :F`）→ 工作区 → HEAD
+
+── 验收 1b. 逐行判定（位置法判定器：按新文件行号判归属，原始输出）──
+$ git diff --numstat
+  1	0	memory/notes/implemented/2026-09-26-fix011-shared-file-mechanism.md
+  2	0	scripts/commit-msg-check.sh
+  4	0	scripts/control-tower/shared_file_decl.py
+
+  [py] 模块 docstring 新行区间 = L3–L34（位置法：新增行号落在区间内 = docstring）
+  [sh] 判定 = 新增行匹配 ^\s*#（注释）
+
+  ✅ + memory/notes/implemented/2026-09-26-fix011-shared-file-mechanism.md  [新 L9] [文档行(.md)]  **过渡机制（CTO 2026-09-26 裁定二）**：⒝ 显式共享声明批为**过渡机制**，非终态 —— **阶
+  ✅ + scripts/commit-msg-check.sh  [新 L58] [注释行]  #     【过渡机制】CTO 2026-09-26 裁定二（D979）：⒝ 显式共享声明批为**过渡机制**，非终
+  ✅ + scripts/commit-msg-check.sh  [新 L59] [注释行]  #     阶段 3 由行级 blame 取代（届时本注释块与本判定分支一并退役；纯标注，不改任何判定/正则/退出码
+  ✅ + scripts/control-tower/shared_file_decl.py  [新 L11] [docstring 行(新 L11)]  【过渡机制】CTO 2026-09-26 裁定二（D979）：本模块（⒝ 显式共享声明解析器）批为**过渡机制**，
+  ✅ + scripts/control-tower/shared_file_decl.py  [新 L12] [docstring 行(新 L12)]  非终态 —— 阶段 3 由行级 blame 取代（届时本模块与 commit-msg-check.sh 的 ⒝ 放行
+  ✅ + scripts/control-tower/shared_file_decl.py  [新 L13] [docstring 行(新 L13)]  本次仅三处标注，不改任何函数签名/正则/退出码）。
+  ✅ + scripts/control-tower/shared_file_decl.py  [新 L14] [docstring 行(新 L14)]  
+
+  合计新增/删除判定行 = 7；合规（注释/docstring 区间/文档行）= 7；不合规 = 0；删除行 = 0（见上）
+
+── 验收 1c. 强证明：剥离注释/docstring 后逐字节比对（语义指纹）──
+$ .sh：过滤整行注释 + 空行后 diff（期望空 = 可执行行逐字节一致）
+  ✅ 无差异（可执行行逐字节一致）
+$ .py：剥离 docstring 后 ① AST 指纹比对 ② 非 docstring 源码行序列比对
+  ① AST 指纹（剥离 docstring 后）相同 -> True
+  ② 非 docstring 源码行序列相同 -> True
+
+── 验收 2. bash -n scripts/commit-msg-check.sh ──
+  exit=0
+
+── 验收 3. python AST 解析 ──
+  exit=0
+
+── 验收 4. 三套测试【改后】（改前见 PR3 基线；两轮汇总行必须完全一致）──
+  commit-msg-consistency       exit=0 |   结果: 30 通过 / 0 失败
+  shared_file_decl             exit=0 |   结果: 40 通过 / 0 失败
+  gen-watermark                exit=0 |   结果: 36 通过 / 0 失败
+  ── 改前 / 改后 逐项对照 ──
+  commit-msg-consistency       改前[结果: 30 通过 / 0 失败] 改后[结果: 30 通过 / 0 失败] → ✅ 完全一致
+  shared_file_decl             改前[结果: 40 通过 / 0 失败] 改后[结果: 40 通过 / 0 失败] → ✅ 完全一致
+  gen-watermark                改前[结果: 36 通过 / 0 失败] 改后[结果: 36 通过 / 0 失败] → ✅ 完全一致
+
+── 验收 5. CTO 措辞计数（须各 = 1，合计 3）──
+  scripts/commit-msg-check.sh                                            1
+  scripts/control-tower/shared_file_decl.py                              1
+  memory/notes/implemented/2026-09-26-fix011-shared-file-mechanism.md    1
+  合计: 3
+  ── 原文 ──
+    scripts/commit-msg-check.sh:59:#     阶段 3 由行级 blame 取代（届时本注释块与本判定分支一并退役；纯标注，不改任何判定/正则/退出码）。
+    scripts/control-tower/shared_file_decl.py:12:非终态 —— 阶段 3 由行级 blame 取代（届时本模块与 commit-msg-check.sh 的 ⒝ 放行分支一并退役；
+    memory/notes/implemented/2026-09-26-fix011-shared-file-mechanism.md:9:**过渡机制（CTO 2026-09-26 裁定二）**：⒝ 显式共享声明批为**过渡机制**，非终态 —— **阶段 3 由行级 blame 取代**（届时声明行/解析器/放行分支一并退役；本次仅三处标注，不改语义）。
+
+── 验收 6. grep -c '疑似并行劫持' scripts/commit-msg-check.sh ──
+  1
+
+── 验收 7. git diff --stat ──
+ memory/notes/implemented/2026-09-26-fix011-shared-file-mechanism.md | 1 +
+ scripts/commit-msg-check.sh                                         | 2 ++
+ scripts/control-tower/shared_file_decl.py                           | 4 ++++
+ 3 files changed, 7 insertions(+)
