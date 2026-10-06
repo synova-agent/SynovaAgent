@@ -9,7 +9,7 @@
     "at": "2026-10-06"
   },
   "impl": {
-    "commit": "54c97ece9",
+    "commit": "96fce6bcd",
     "by": "pl-p2-exec",
     "at": "2026-10-06",
     "branch": "fix/k1-wh-p2-s1-feishu-signature",
@@ -20,9 +20,9 @@
       "tests/routes/im-webhook-signature.test.ts",
       "docs/synova/product-lines/evidence/P2段1-飞书验签-原始输出-20261006.md",
       ".claude/task-briefs/2026-10-06-D1170-飞书webhook签名闸门-1126.md",
-      ".claude/task-briefs/2026-10-06-P2-S1-飞书webhook签名闸门-1126.md",
       "task-state/D1170.json"
-    ]
+    ],
+    "commit_note": "96fce6bcd = 收口轮之前的 HEAD；本文件随收口提交一并入库（文件不能自指其所在提交），收官 HEAD 见 PR #1184 末次提交"
   },
   "write_set": [
     "src/l1/im-webhook-signature.ts",
@@ -31,12 +31,11 @@
     "tests/routes/im-webhook-signature.test.ts",
     "docs/synova/product-lines/evidence/P2段1-飞书验签-原始输出-20261006.md",
     ".claude/task-briefs/2026-10-06-D1170-飞书webhook签名闸门-1126.md",
-    ".claude/task-briefs/2026-10-06-P2-S1-飞书webhook签名闸门-1126.md",
     "task-state/D1170.json"
   ],
   "audit": null,
   "fix_task_id": null,
   "updated_at": "2026-10-06",
   "updated_by": "pl-p2-exec",
-  "note": "D1170 = 声明锚点（本 PR 此前无 D#，D708 写集对账无法定位声明源 ⇒ CI 必需 context「TypeScript + Lint + Iron Laws」红在 Merge write-set reconciliation 步）。取号器 alloc-task-id.sh 给出的 D1169 已被占用（PR #1160 在飞），本号由 Lead 实测为空号。write_set 逐条裸精确路径（判例 P-06/M-01：写集只由机器块表达）；旧 brief 路径按 --no-renames 计入变更集，故一并声明。整改轮内容见 brief §B 与证据件 §7/§8（D1 变异器可复现 / D2 自检判别力≈0 如实降级 / D3 文件头自相矛盾 / D4 SHA-256 vs HMAC 真对照 / D5 只限定重放视界且新增 ③-b 钉住 / D6 空转 verify 判据改真命令 / D7 计数 42→44）。断面前提：本卡判据只在「无 jwt 层的真 express + 真 imRouter + listen(0) + 真 fetch」成立；生产姿态仍必 401，放行属段2（#1126）。"
+  "note": "D1170 = 声明锚点（本 PR 此前无 D#，D708 写集对账无法定位声明源 ⇒ CI 必需 context「TypeScript + Lint + Iron Laws」红在 Merge write-set reconciliation 步）。取号器 alloc-task-id.sh 给出的 D1169 已被占用（PR #1160 在飞），本号由 Lead 实测为空号。write_set 逐条裸精确路径（判例 P-06/M-01：写集只由机器块表达）。（旧 brief 路径 2026-10-06-P2-S1-… 已 git mv 改名，不再存在于树中，故已于收口轮从声明中移除——声明只列真实存在的路径。）整改轮内容见 brief §B 与证据件 §7/§8（D1 变异器可复现 / D2 自检判别力≈0 如实降级 / D3 文件头自相矛盾 / D4 SHA-256 vs HMAC 真对照 / D5 只限定重放视界且新增 ③-b 钉住 / D6 空转 verify 判据改真命令 / D7 计数 42→44）。断面前提：本卡判据只在「无 jwt 层的真 express + 真 imRouter + listen(0) + 真 fetch」成立；生产姿态仍必 401，放行属段2（#1126）。 收口轮（N1/N2/N3/N4）：N1 im.ts 头部交叉引用改为「符号 + 当前 :74-78 + grep 为准」；N2 brief 口径改为「更实的调用点（非过闸必要条件，组 4a 认同 import 行）」；N3 D6 verify 改单行真命令（逐字提取执行 EXIT=0；base/本树各注入一行 ⇒ EXIT=1，非空转）；N4 本文件去陈旧路径 + 更新 commit。"
 }

@@ -8,7 +8,7 @@
  *   ⚠️ 该降级只覆盖**已通过签名闸门**的入站消息。
  *   ⚠️ 闸门**不是无条件** fail-closed：**已配置** `FEISHU_ENCRYPT_KEY` 时，
  *      缺签名头 / 缺 rawBody / 验签失败 / 时间窗外 一律 401（见 `guardFeishuWebhook`）；
- *      **未配置**密钥时按**配置态**放行（无密钥可校验），只落 `log.warn`（见 `:52-58` 与 PR 正文挂账①）。
+ *      **未配置**密钥时按**配置态**放行（无密钥可校验），只落 `log.warn`（见 `guardFeishuWebhook` 的 `encryptKey === ''` 分支，当前在 :74-78 —— 行号为易逝坐标，以 `grep -n "encryptKey === ''" src/routes/im.ts` 为准；与 PR 正文挂账①）。
  */
 import { Router, type Request, type Response } from 'express';
 import { createLogger } from '@synova/logger';
