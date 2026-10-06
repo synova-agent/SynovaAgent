@@ -87,7 +87,19 @@ def main():
     # 🔴 两种模式**必须分开**（第一版把 `--all` 当成"判全部" ⇒ 存量 74 条违规一次性全红，
     #   正是 D734 教训的重演）。⇒ `--all` = **盘点**（只报数，不判红）；`--changed` = **判红**。
     if a.changed:
-        targets = [x.replace(os.sep, "/") for x in a.changed if x.replace(os.sep, "/").startswith(COORD_REL)]
+        # 🔴 D1184 复核整改（复核实测）: 原过滤 `startswith(COORD_REL)` 会把 `./docs/…` **整条静默丢弃**
+        #   ⇒ targets=[] ⇒ **四条判据全部退化成盘点**，末行还报 **OK**。
+        #   一个字符的路径写法 = 判据全关，且**报绿**（这正是"跳过不报"那一族）。
+        #   ⇒ 先规范化（去 `./`、去重复斜杠），**过滤后为空一律 DEGRADED(2)**，绝不报 OK。
+        norm = [re.sub(r"^(\./)+", "", x.replace(os.sep, "/")) for x in a.changed]
+        targets = [x for x in norm if x.startswith(COORD_REL)]
+        dropped = [x for x in norm if not x.startswith(COORD_REL)]
+        if not targets:
+            die("--changed 过滤后为空（传了 %d 个，都在 %s 之外）⇒ 无法判红，fail-closed"
+                % (len(norm), COORD_REL))
+        if dropped:
+            print("  ⚠️ --changed 中 %d 个不在 %s 下，已忽略（**显式报出**，不静默）: %s"
+                  % (len(dropped), COORD_REL, "; ".join(dropped[:3])))
         mode = "enforce"
     else:
         targets = []
@@ -112,12 +124,22 @@ def main():
 
     # ── R2 篇幅上限 ──
     over = []
+    unreadable = []
     for t in (targets or existing):
         txt = read(root, t)
         if txt is None:
+            # 🔴 D1184: 原先 `continue` **静默跳过** —— 复核实测 `chmod 000` 一篇 60000 字符的文，
+            #   `--changed` 报「均在上限内」exit 0 且 `--all` 少数 1 篇（2 篇 vs 实际 3 篇）。
+            #   这违反本模块自己引用的纪律「跳过必须说出来」，也违反三态口径（自身失败 ⇒ exit 2）。
+            unreadable.append(t)
             continue
         if len(txt) > CEILING_CHARS:
             over.append((t, len(txt)))
+    if unreadable:
+        print("  ⚠️ 降级: %d 个文件读不到（**不计入统计，显式报出**）: %s%s"
+              % (len(unreadable), "; ".join(unreadable[:3]), " …" if len(unreadable) > 3 else ""))
+        if len(unreadable) > max(len(targets or existing) // 2, 0):
+            die("过半文件读不到（%d/%d）⇒ 统计不可信，fail-closed" % (len(unreadable), len(targets or existing)))
     if targets:
         if over:
             fails.extend("R2 超篇幅: %s (%d>%d)" % (t, n, CEILING_CHARS) for t, n in over)

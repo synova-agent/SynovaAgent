@@ -115,6 +115,32 @@ PY
 OUT=$(run "$T" --changed docs/synova/coordination/提案/随手写的.md); RC=$?
 chk "R4: 进子目录 ⇒ exit 0（子目录即合规）" "$RC" "0"
 
+# ── 10. 🔴 复核整改：`./` 前缀**不得**让判据静默全关 ──
+OUT=$(run "$T" --changed ./docs/synova/coordination/huge.md); RC=$?
+chk "复核整改: ./ 前缀 ⇒ 仍判红 exit 1（不再静默丢弃）" "$RC" "1"
+echo "$OUT" | grep -q "huge.md = 30[0-9]* 字符 > 上限" && ok "./ 前缀: 仍点名到具体文件" || no "./ 前缀: 未点名"
+
+# ── 11. 🔴 复核整改：`--changed` 过滤后为空 ⇒ 必须 DEGRADED(2)，**不得报 OK** ──
+OUT=$(run "$T" --changed /tmp/not-in-coordination.md); RC=$?
+chk "复核整改: --changed 全在 coordination 外 ⇒ exit 2" "$RC" "2"
+echo "$OUT" | grep -q "DEGRADED" && ok "复核整改: 末行 DEGRADED（不报 OK）" || no "复核整改: 末行非 DEGRADED"
+
+# ── 12. 🔴 复核整改：不可读文件**必须显式报出**（原为静默 continue）──
+python3 - "$T" <<'PY'
+import io,sys,os
+r=sys.argv[1]+"/docs/synova/coordination"
+p=os.path.join(r,"报告-不可读.md")
+io.open(p,"w",encoding="utf-8").write("x"*30000)
+os.chmod(p,0o000)
+PY
+OUT=$(run "$T" --all); RC=$?
+chk "复核整改: 有不可读文件时盘点仍 exit 0（棘轮式）" "$RC" "0"
+echo "$OUT" | grep -q "读不到" && ok "复核整改: 不可读**显式报出**（不静默）" || no "复核整改: 不可读未报出"
+python3 - "$T" <<'PY'
+import os,sys
+os.chmod(sys.argv[1]+"/docs/synova/coordination/报告-不可读.md",0o644)
+PY
+
 rm -rf "$T"
 echo "RESULT: $NP PASS / $NF FAIL"
 [ "$NF" -eq 0 ] || exit 1
