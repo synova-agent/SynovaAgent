@@ -1,0 +1,28 @@
+# 队长实测（非自验）— 前提复现 3 条 @ 主工作区 /Users/wane/SynovaAgent
+# 日期: 2026-09-25T16:44:11Z | HEAD=b8573c7a | 分支=chore/cto-doc-slim-phase1-writeset-exempt
+# 命令: SYNO_STAGED_FILES=<f> bash scripts/commit-msg-check.sh <msg: fix(D977): 前提复现测试>
+
+═════ 暂存=.github/workflows/ci.yml ═════
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;31m❌ D328: 提交声明(D977)与暂存文件归属(D943)不一致 — 疑似并行劫持[0m
+   认领 brief: /Users/wane/SynovaAgent/.claude/task-briefs/2026-09-24-D943-mechanism.md
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+exit=1
+
+═════ 暂存=task-state/D954.json ═════
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;31m❌ D328: 提交声明(D977)与暂存文件归属(D954)不一致 — 疑似并行劫持[0m
+   认领 brief: /Users/wane/SynovaAgent/.claude/task-briefs/2026-09-25-D954-ci-reds-base-ref.md
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+exit=1
+
+═════ 暂存=docs/synova/coordination/派单模板.md ═════
+[0;32m✅ Commit 格式正确[0m
+[1;33m   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)[0m
+[0;31m❌ D328: 提交声明(D977)与暂存文件归属(D943)不一致 — 疑似并行劫持[0m
+   认领 brief: /Users/wane/SynovaAgent/.claude/task-briefs/2026-09-24-D943-cto-a-items.md
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+exit=1
+
