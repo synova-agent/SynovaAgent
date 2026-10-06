@@ -16,9 +16,10 @@
 做什么：
 - `.github/workflows/ci.yml`（本卡唯一代码写面，两处改动）：
   1. 新增 `all-checks-passed` 聚合 job（needs=8 job 键覆盖 9 条必需 context；skipped/failure/cancelled 均判红；`if: !cancelled()`）。
-  2. P0-2：checker-review 的 job 级 `if:` 扩为 `pull_request || merge_group || refs/heads/main || feat/*`
+  2. P0-2：checker-review 的 job 级 `if:` 扩为（同理由见下） `pull_request || merge_group || refs/heads/main || feat/*`
      （原条件在 main push / merge_group 下整个 job 被 skip ⇒ ① main push「看不见坏」；② 聚合 job 判 skipped=FAIL ⇒ main push 恒红；
       ③ merge_group 下必需 context 永不报告 ⇒ merge queue 卡死，D515 同族）。
+- `tests/control-tower/ci-signal-classify.test.sh`（D1112 冻结表达式登记表同步：checker-review 基线换 D1170 扩集版逐字串；all-checks-passed 登记 DOWNSTREAM_NEEDS_JOBS ⇒ !cancelled() 冻结式获得改坏即红防线——本地 79/0）
 - `memory/notes/proposed/2026-10-07-d1170-all-checks-passed-aggregate.md`：决策 Note（铁律 49）。
 - `.claude/task-briefs/2026-10-07-P0-3聚合必需检查all-checks-passed.md`：本 brief。
 
@@ -41,6 +42,7 @@
 | 文件 | 类型 |
 |---|---|
 | .github/workflows/ci.yml | task |
+| tests/control-tower/ci-signal-classify.test.sh | task |
 | .claude/task-briefs/2026-10-07-P0-3聚合必需检查all-checks-passed.md | task |
 | memory/notes/proposed/2026-10-07-d1170-all-checks-passed-aggregate.md | task |
 

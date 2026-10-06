@@ -263,7 +263,11 @@ printf '%s' "$CTJOB" | grep -q 'steps.docsonly.outputs.docs_only' \
 #     ③ 任何**新** if: 或表达式漂移 ⇒ 必红（本判据仍是判别性棘轮，不是放行开关）
 #   冻结表达式登记表（改它 = 改门禁语义 ⇒ 必须过 K3→CTO；见 PR #935 送审项 S-3）
 FROZEN_IF_TEST='${{ !cancelled() }}'
-DOWNSTREAM_NEEDS_JOBS="test golden-case"   # 有 needs: 且承载必需 context 的 job（新增者必须显式登记）
+DOWNSTREAM_NEEDS_JOBS="test golden-case all-checks-passed"   # 有 needs: 且承载必需 context 的 job（新增者必须显式登记）
+# D1170（2026-10-07，CTO 派单 P0-3，提案待 K3→CTO）: all-checks-passed = 聚合必需检查
+#   （skipped 也判 FAIL）。它 needs 8 个必需 job ⇒ 属「needs 下游 + 承载必需 context」，
+#   必须锁死 !cancelled() 冻结式——这正是「去掉 !cancelled() ⇒ 上游红时检查消失」的
+#   改坏即红防线（fixture/p0-3-c-no-guard 在 GitHub 实测该形态）。
 BASELINE_NO_IF_JOBS="quality architecture test-kit-architecture integration-check audit gate-integrity"
 # D1147: windows 顾问腿 = 有 needs: 但**不承载必需 context**（其 context 名已移出必需集）⇒ 走
 #   「已知无需 !cancelled() 冻结式」的例外登记面（与 checker-review 同栏）。判据未放松:
@@ -282,10 +286,15 @@ done
 [ -z "$IF_TOUCHED" ] \
   && ok "分支保护基线: 上游 6 job 无 if: + needs 下游 2 job 锁死 !cancelled()（表达式冻结，漂移即红）" \
   || no "job 级 if: 偏离登记（新增/漂移 = 必需 context 风险面变化）:${IF_TOUCHED}"
-if job_block checker-review | grep -qF "if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/feat/')"; then
-  ok "分支保护基线: checker-review 的 if: 与基线逐字一致（未加 schedule 门控）"
+# D1170（2026-10-07，CTO 派单 P0-2，提案待 K3→CTO）: checker-review 的 if 扩为
+#   pull_request || merge_group || refs/heads/main || feat/*。
+#   理由: 原表达式在 main push / merge_group 下整个 job 被 skip ⇒ ① all-checks-passed
+#   判 skipped=FAIL ⇒ main push 恒红；② merge_group 语境必需 context 永不报告 ⇒
+#   merge queue 卡死（D515 同族）。行为纯扩集（原四类事件全保留），未加 schedule 门控。
+if job_block checker-review | grep -qF "if: github.event_name == 'pull_request' || github.event_name == 'merge_group' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/feat/')"; then
+  ok "分支保护基线: checker-review 的 if 与基线逐字一致（D1170 扩集版；未加 schedule 门控）"
 else
-  no "checker-review 的 if: 偏离基线（基线 = github.event_name == 'pull_request' || startsWith(…feat/)）"
+  no "checker-review 的 if: 偏离基线（基线 = D1170: pull_request || merge_group || refs/heads/main || feat/*）"
 fi
 # 兜底棘轮（D1112）: 穷举 ci.yml 里**所有**有 `needs:` 的 job，必须逐个登记。
 #   防"新增一个 needs 下游 job 却忘了加 !cancelled()"⇒ 该 job 的必需 context 又会在上游红时消失。
