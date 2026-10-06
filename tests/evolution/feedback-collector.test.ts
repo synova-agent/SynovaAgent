@@ -31,6 +31,28 @@ describe('collectFeedback', () => {
     const result = await collectFeedback({ orgId: 'my-org', actionId: 'act_3', decision: 'confirm' });
     expect(result.record.orgId).toBe('my-org');
   });
+
+  // K6/2-3 通道归一: 第三参 middleSink 把本通道反馈同步给通道 A（feedback_log）。
+  // 契约: sink 收到的就是本通道原始形状（confirm 正向值必须原样传下去 —— 通道 A 此前拒它）。
+  it('middleSink → 收到本通道原始形状（confirm 透传；sink 抛错不影响 persisted 语义）', async () => {
+    const seen: Array<{ orgId: string; actionId: string; decision: string }> = [];
+    const result = await collectFeedback(
+      { orgId: 'sink-org', actionId: 'act_sink', decision: 'confirm', reason: '采纳', sentinelId: 'F1_KZ' },
+      undefined,
+      (input) => { seen.push({ orgId: input.orgId, actionId: input.actionId, decision: input.decision }); },
+    );
+    expect(seen).toEqual([{ orgId: 'sink-org', actionId: 'act_sink', decision: 'confirm' }]);
+    expect(result.ok).toBe(true);
+
+    // 降级: sink 抛错 ⇒ 本通道语义不变（ok/record 正常返回），不向外抛
+    const degraded = await collectFeedback(
+      { orgId: 'sink-org', actionId: 'act_sink_2', decision: 'reject' },
+      undefined,
+      () => { throw new Error('channel A down'); },
+    );
+    expect(degraded.ok).toBe(true);
+    expect(degraded.record.decision).toBe('reject');
+  });
 });
 describe('collectAllFeedback', () => {
   it('collects from 4 sources', async () => {

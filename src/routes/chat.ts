@@ -86,12 +86,15 @@ router.post('/api/proposal/:id/resolve', async (req: Request, res: Response) => 
     // L2 接缝（#981）: 记忆 store 视图由 services/memory-access-service 提供 —— L1 不直触 L4（铁律 39 + 架构棘轮）
     const { getMemoryWriter } = await import('../services/memory-access-service');
     const memoryStore = getMemoryWriter();
+    // K6/2-3 通道归一: 同一决策同时落通道 A（feedback_log）——此前只落通道 B（agent_memory），
+    // GA 的正向值（confirm）在增长侧永远不可见（两通道分裂）。sink 永不抛（内部降级 + log.warn）。
+    const { createEvolutionChannelSink } = await import('../growth/feedback-collector');
     const fb = await collectFeedback({
       orgId: (req.body as Record<string, unknown>)?.orgId as string || 'default',
       actionId: id,
       decision: action === 'confirm' ? 'confirm' : action === 'reject' ? 'reject' : 'modify',
       reason: feedback || undefined,
-    }, memoryStore ?? undefined);
+    }, memoryStore ?? undefined, createEvolutionChannelSink());
     feedbackPersisted = fb.persisted;
     if (!fb.persisted) {
       feedbackDegraded = true;
