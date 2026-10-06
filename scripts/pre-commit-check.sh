@@ -65,9 +65,12 @@ QUIET_SUCCESS="${SYNO_QUIET_SUCCESS:-1}"
 #     声明闸②  brief↔代码一致性  —— Q2 写集 ⊆ 声明（认领制）/ 排除项 / 可解析
 #     声明闸③  Done 可证伪       —— 每个 - [x] 带 verify: 可执行命令
 #   转旁路（note_check / bypass_run: 只打印、不判红、**不进 gate-hits.log**）:
-#     D782 D1 文档真相 / D2 登记门禁、D734 PR 预算、验收 CI、Q0c 取消跟踪、
-#     plan-integrity 的 non-Q2 项（plan.json 契约）、G12c dev doc 写集、G12d 声称↔证据表。
+#     验收 CI、Q0c 取消跟踪、plan-integrity 的 non-Q2 项（plan.json 契约）、
+#     G12c dev doc 写集、G12d 声称↔证据表。
 #     注: 软提示在 CI strict（SYNO_CI=1）转硬；**旁路不转**（语义即"观测"）。
+#   ↳ D1171（P0-5，CTO 派单 Lane B，2026-10-07）: D782 D1/D2 与 D734 三处 bypass_run
+#     撤旁路复执法（v5_soft: 本地软 / CI strict 硬）。旁路家族其余 4 类保留，逐条
+#     理由见各调用点 D1171 处置注释（铁规⑧: 在做出决定的操作里执法）。
 #   退役（删检查点 + 本注释留痕）: opt_check「PRD 对照: Done 标准引用 PRD 章节」（261 命中/0 阻断）。
 #   降噪手段: 成功路径静默（SYNO_QUIET_SUCCESS，缺省 1）——保留失败点名与 CI annotation；
 #     组 7a 以 QUIET_SUCCESS=0 前缀显式保留 ✅ 行（gate-failopen-net.test.sh 判据输入）。
@@ -1661,7 +1664,7 @@ fi
 #   接线保留（硬要求）: `check-doc-truth.sh` / `doc-registry-gate.sh` 字面量调用点必须留在本文件
 #     —— doc-registry-gate.test.sh W1/W2 是**接线断言**（grep 本文件），删调用点即判红。
 #   代价（如实记录）: 未登记文档 / 导航层文档漂移不再阻断 CI 提交（原 CI strict 下会红）。
-#     回滚方式: 把下方 bypass_run 改回 soft_check 即恢复（判据脚本零改动）。
+#     ↳ D1171（P0-5）已撤回该代价: 三处 bypass_run 恢复 v5_soft（本地软/CI 硬），见下方 D1171 注释块。
 # 为何不动 13 组编号: 「✅ 全部 13 组通过」自声明行是 check-doc-truth.sh C2 的真值
 #   来源，改组数 = 连锁打破 AGENTS/CLAUDE/LOOP 的「13 组」声明（审计 T1 实证该链）。
 # fastlane 通道（bypass.log 单文件提交）不经过本块——该通道语义即最小化，CI 为权威。
@@ -1669,15 +1672,29 @@ fi
 echo -e "${CYAN}── D782: 文档真相防线（D1 真相验证 + D2 登记门禁）──${RESET}"
 
 # D1: 导航层文档 vs 代码事实（C1 专家数 / C2 门禁组数 / C3 版本轴 / C4 路径存在）
+# D1171（P0-5，CTO 派单 2026-10-07 Lane B）撤旁路复执法: bypass_run → 显式执行 + v5_soft。
+#   背景: D1148 转旁路时如实记录了代价「该门禁当前无阻断执行方」——旁路**不转硬**
+#   （CI 也不拦）= listener 型非执法（铁规⑧: Enforce a decision in the operation
+#   that makes it）。P0-5 裁决恢复: 本地软提示 / CI strict（SYNO_CI=1）硬阻断。
+#   回滚方式: 把下方 v5_soft 块改回 bypass_run 一行即恢复旁路（判据脚本零改动；
+#   hard-gate-convergence.test.sh 的 KEEP_V5SOFT 断言会同步抓到回退）。
 if [ -f "$ROOT/scripts/doc-system/check-doc-truth.sh" ]; then
-  bypass_run "D782 D1 文档真相（D1148 转旁路）" bash "$ROOT/scripts/doc-system/check-doc-truth.sh"
+  _D1_OUT="$(bash "$ROOT/scripts/doc-system/check-doc-truth.sh" 2>&1)"; _D1_RC=$?
+  if [ "$_D1_RC" -ne 0 ]; then
+    printf '%s\n' "$_D1_OUT" | head -5 | sed 's/^/     /'
+    v5_soft "D782 D1 文档真相（D1171 撤旁路复执法）"
+  fi
 else
   note_check "D782 D1 文档真相（脚本缺失）" "scripts/doc-system/check-doc-truth.sh 不存在"
 fi
 
 # D2: 新增 .md/.yaml 必须登记 docs/authority/DOCS-REGISTRY.yaml（只拦新不拦旧）
 if [ -f "$ROOT/scripts/doc-system/doc-registry-gate.sh" ]; then
-  bypass_run "D782 D2 登记门禁（D1148 转旁路）" bash "$ROOT/scripts/doc-system/doc-registry-gate.sh"
+  _D2_OUT="$(bash "$ROOT/scripts/doc-system/doc-registry-gate.sh" 2>&1)"; _D2_RC=$?
+  if [ "$_D2_RC" -ne 0 ]; then
+    printf '%s\n' "$_D2_OUT" | head -5 | sed 's/^/     /'
+    v5_soft "D782 D2 登记门禁（D1171 撤旁路复执法）"
+  fi
 else
   note_check "D782 D2 登记门禁（脚本缺失）" "scripts/doc-system/doc-registry-gate.sh 不存在"
 fi
@@ -1709,10 +1726,14 @@ fi
 #             ⇒ 本文件的 bypass_run 调用点是**唯一**执行点，且已不判红 ⇒ 该门禁当前无阻断执行方。
 #       📌 依据源（本次补注）: K3 报告 §一 Q1（同报告，P1，归因 devdoc，原文「D734 check-pr-budget.sh 独立运行/CI 侧接入」声称无据）。
 #       立卡：D734 预算门禁 CI 侧接入（另卡 A，内容见 D1148 PR 正文 §九）。
-#   回滚: bypass_run → soft_check 一行即恢复提交端阻断力（判据脚本零改动）。
+#   ↳ D1171（P0-5）已执行撤回: 本块 bypass_run → v5_soft（本地软/CI strict 硬），撤回留痕见上方。
 echo -e "${CYAN}── PR 预算门禁 (D734) ──${RESET}"
 if [ -x "$ROOT/scripts/control-tower/check-pr-budget.sh" ] || [ -f "$ROOT/scripts/control-tower/check-pr-budget.sh" ]; then
-  bypass_run "D734 PR 预算（D1148 转旁路）" bash "$ROOT/scripts/control-tower/check-pr-budget.sh" --quiet
+  _D734_OUT="$(bash "$ROOT/scripts/control-tower/check-pr-budget.sh" --quiet 2>&1)"; _D734_RC=$?
+  if [ "$_D734_RC" -ne 0 ]; then
+    printf '%s\n' "$_D734_OUT" | head -5 | sed 's/^/     /'
+    v5_soft "D734 PR 预算（D1171 撤旁路复执法）"
+  fi
 else
   note_check "D734 PR 预算（脚本缺失）" "scripts/control-tower/check-pr-budget.sh 不存在"
 fi
