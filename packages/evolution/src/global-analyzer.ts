@@ -520,3 +520,508 @@ export function analyzeGlobalPatterns(options?: { since?: string; industries?: s
   return { analyzedAt: new Date().toISOString(), industryCount: options?.industries?.length || 0, proposals: [], nciPatterns: [], degraded: false };
 }
 export function detectNciGlobalPatterns(): NciGlobalPattern[] { return []; }
+
+// ═══ K6/3-12: 跨客户模式发现 (E2) + 联邦匿名统计 (E3) ═══
+//
+// 卡面 3-12「跨客户/联邦回环」:
+//   E2 —— 模式发现不再依赖调用方逐个传 orgId（自动枚举组织）。既有 discoverIndustryPatterns
+//         在未传 orgIds 时退化为 ['default']（只看到一个客户），结构上不可能产出跨客户模式。
+//   E3 —— 单实例把自己的行业统计匿名导出、并从别处导入（联邦学习最小闭环）。
+//
+// 诚实边界（卡面失效条件 4）: 本模块不联网、不读密钥、不引入外部依赖。
+// E3 的传输（文件/HTTP/消息队列）由调用方负责；本模块只做「匿名包构造 → 校验 → 采纳」，
+// 即"注入式联邦源"：入参就是数据源。这样联邦闭环在没有网络凭据的机器上也能被真实执行与验证。
+
+/** K6/3-12 E2: 组织枚举接缝 —— 见 discoverCrossCustomerPatterns 契约。 */
+export type OrgEnumerator = () => string[] | Promise<string[]>;
+
+/**
+ * K6/3-12 E2: store 的可选组织枚举能力（能力探测，不修改 AgentMemoryStoreLike 契约，
+ * 因此不破坏既有实现与既有调用方）。
+ */
+export interface OrgEnumeratingStoreLike {
+  /** @output 组织 ID 列表（可含重复/空串，调用方会清洗）；抛错 ⇒ 调用方 log.warn + degraded:true */
+  listOrgs?: () => string[];
+}
+
+/** K6/3-12 E2: 一条跨客户模式（携带贡献组织清单，可审计到"哪些客户真的纠错过"）。 */
+export interface CrossCustomerPattern {
+  /** 稳定 ID：`xcp_<sentinelId>`（同一哨兵在一次分析中只产出一条） */
+  patternId: string;
+  type: IndustryPattern['type'];
+  sentinelId: string;
+  /** 贡献该模式的组织（去重、字典序升序） */
+  orgIds: string[];
+  orgCount: number;
+  evidence: string;
+  suggestion: string;
+}
+
+/** K6/3-12 E2: 发现结果。含组织枚举账目，使"自动枚举真的发生了"可对账（变异体锚点）。 */
+export interface CrossCustomerDiscoveryResult {
+  /** 按 orgCount 降序、同数按 sentinelId 升序（确定性输出） */
+  patterns: CrossCustomerPattern[];
+  /** 实际枚举到并尝试查询的组织（去重、字典序升序） */
+  orgsConsidered: string[];
+  /** 查询失败被跳过的组织（非空即 degraded） */
+  orgsFailed: string[];
+  /** 无法解析的记忆条目数（corrupt —— 计数 + log.warn，不静默） */
+  unparsableEntries: number;
+  degraded: boolean;
+}
+
+/** K6/3-12 E2: 选项。 */
+export interface DiscoverCrossCustomerOptions {
+  /** 显式组织清单（最高优先；运维/测试用） */
+  orgIds?: string[];
+  /** 注入式枚举器（次优先；无网络，来源由调用方决定） */
+  orgEnumerator?: OrgEnumerator;
+  /** 跨客户门槛，默认 DEFAULT_EVOLUTION_CONFIG.minCorrectionsForThresholdAdjustment (=3) */
+  minOrgs?: number;
+  /** 每个组织读取条目上限，默认 100 */
+  limitPerOrg?: number;
+  /** 记忆类型过滤，默认 'enterprise_fact' */
+  memoryType?: string;
+  /** 记忆标签过滤，默认 ['user_correction'] */
+  tags?: string[];
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+/** 清洗组织清单：去空 → 去重 → 字典序升序（确定性）。 */
+function normalizeOrgIds(orgIds: string[]): string[] {
+  const cleaned = orgIds
+    .filter(id => typeof id === 'string' && id.trim().length > 0)
+    .map(id => id.trim());
+  return [...new Set(cleaned)].sort();
+}
+
+/**
+ * K6/3-12 E2 内部: 解析组织清单（显式 orgIds > 注入 orgEnumerator > store 的 listOrgs 能力探测）。
+ *
+ * 契约（铁律 47）:
+ *   @input  — memoryStore（含可选 listOrgs 能力）、options（见 DiscoverCrossCustomerOptions）
+ *   @output — { ok: true, orgIds } 正常；{ ok: false, orgIds: [], reason } 无可用来源或枚举抛错/为空
+ *   @degraded — ok=false 时调用方置 degraded；本函数内已 log.warn（不静默，铁律 24/31）
+ */
+async function resolveCrossCustomerOrgs(
+  memoryStore: AgentMemoryStoreLike & OrgEnumeratingStoreLike,
+  options: DiscoverCrossCustomerOptions,
+): Promise<{ ok: boolean; orgIds: string[]; reason?: string }> {
+  if (options.orgIds && options.orgIds.length > 0) {
+    return { ok: true, orgIds: normalizeOrgIds(options.orgIds) };
+  }
+
+  if (options.orgEnumerator) {
+    try {
+      const enumerated = await options.orgEnumerator();
+      const orgIds = normalizeOrgIds(Array.isArray(enumerated) ? enumerated : []);
+      if (orgIds.length === 0) {
+        log.warn({}, '跨客户模式 — 注入的组织枚举器返回空清单（degraded，0 组织）');
+        return { ok: false, orgIds: [], reason: 'orgEnumerator returned empty' };
+      }
+      return { ok: true, orgIds };
+    } catch (err: unknown) {
+      log.warn({ err: errorMessage(err) }, '跨客户模式 — 组织枚举器抛错（degraded，0 组织）');
+      return { ok: false, orgIds: [], reason: 'orgEnumerator threw' };
+    }
+  }
+
+  if (typeof memoryStore.listOrgs === 'function') {
+    try {
+      const orgIds = normalizeOrgIds(memoryStore.listOrgs());
+      if (orgIds.length === 0) {
+        log.warn({}, '跨客户模式 — store.listOrgs() 返回空清单（degraded，0 组织）');
+        return { ok: false, orgIds: [], reason: 'listOrgs returned empty' };
+      }
+      return { ok: true, orgIds };
+    } catch (err: unknown) {
+      log.warn({ err: errorMessage(err) }, '跨客户模式 — store.listOrgs() 抛错（degraded，0 组织）');
+      return { ok: false, orgIds: [], reason: 'listOrgs threw' };
+    }
+  }
+
+  log.warn({}, '跨客户模式 — 无组织枚举来源（未传 orgIds/orgEnumerator 且 store 无 listOrgs）⇒ 0 组织（degraded）');
+  return { ok: false, orgIds: [], reason: 'no org enumeration source' };
+}
+
+/**
+ * K6/3-12 E2: 跨客户模式发现 —— 自动枚举组织，找出被 ≥ minOrgs 个不同客户纠错过的哨兵。
+ *
+ * 与 discoverIndustryPatterns 的差别: 后者未传 orgIds 时退化为 ['default']（单客户，结构上
+ * 不可能产出跨客户模式）；本函数要求"自动枚举"能力显式存在，并把枚举账目写进返回值。
+ *
+ * 契约（铁律 47）:
+ *   @input  — memoryStore: AgentMemoryStoreLike（+ 可选 listOrgs() 能力）；
+ *             options.orgIds 显式清单 / options.orgEnumerator 注入枚举器 / options.minOrgs 门槛
+ *             （默认 3）/ options.limitPerOrg（默认 100）/ options.memoryType、tags 记忆过滤
+ *   @output — CrossCustomerDiscoveryResult；patterns 按 orgCount 降序 + sentinelId 升序（确定性）
+ *   @degraded — true ⇔ 组织枚举来源不可用/抛错/为空，或 ≥1 个组织查询失败（两者都 log.warn）。
+ *               单组织失败不阻断其它组织（降级继续）；corrupt 条目计入 unparsableEntries 并 log.warn
+ *   @throws  — 不抛（内部全部收敛为 degraded 结果）
+ */
+export async function discoverCrossCustomerPatterns(
+  memoryStore: AgentMemoryStoreLike & OrgEnumeratingStoreLike,
+  options: DiscoverCrossCustomerOptions = {},
+): Promise<CrossCustomerDiscoveryResult> {
+  const minOrgs = options.minOrgs ?? DEFAULT_EVOLUTION_CONFIG.minCorrectionsForThresholdAdjustment;
+  const limitPerOrg = options.limitPerOrg ?? 100;
+  const memoryType = options.memoryType ?? 'enterprise_fact';
+  const tags = options.tags ?? ['user_correction'];
+
+  const orgs = await resolveCrossCustomerOrgs(memoryStore, options);
+  const degradedByEnumeration = !orgs.ok;
+  const orgsFailed: string[] = [];
+  const sentinelOrgs = new Map<string, Set<string>>();
+  let unparsableEntries = 0;
+
+  for (const orgId of orgs.orgIds) {
+    try {
+      const entries = memoryStore.list({ orgId, type: memoryType, tags, limit: limitPerOrg });
+      for (const entry of entries) {
+        try {
+          const parsed = JSON.parse(entry.value) as { sentinelId?: unknown };
+          const sentinelId = typeof parsed.sentinelId === 'string' ? parsed.sentinelId.trim() : '';
+          if (!sentinelId) {
+            unparsableEntries++;
+            continue;
+          }
+          const seen = sentinelOrgs.get(sentinelId) ?? new Set<string>();
+          seen.add(orgId);
+          sentinelOrgs.set(sentinelId, seen);
+        } catch (err: unknown) {
+          unparsableEntries++;
+          log.warn(
+            { err: errorMessage(err), orgId },
+            '跨客户模式 — 记忆条目无法解析（该条跳过，已计数）',
+          );
+        }
+      }
+    } catch (err: unknown) {
+      orgsFailed.push(orgId);
+      log.warn({ err: errorMessage(err), orgId }, '跨客户模式 — 组织查询失败（降级继续）');
+    }
+  }
+
+  const patterns: CrossCustomerPattern[] = [];
+  for (const [sentinelId, seen] of sentinelOrgs) {
+    const orgIds = [...seen].sort();
+    if (orgIds.length < minOrgs) continue;
+    patterns.push({
+      patternId: `xcp_${sentinelId}`,
+      type: 'threshold_calibration',
+      sentinelId,
+      orgIds,
+      orgCount: orgIds.length,
+      evidence: `${orgIds.length} 个不同客户纠错过此哨兵（${orgIds.join(', ')}）`,
+      suggestion: `此哨兵被 ${orgIds.length} 个客户纠错 — 建议检查通用阈值是否适用于全部客户`,
+    });
+  }
+  patterns.sort((a, b) => b.orgCount - a.orgCount || a.sentinelId.localeCompare(b.sentinelId));
+
+  if (unparsableEntries > 0) {
+    log.warn({ unparsableEntries }, '跨客户模式 — 存在无法解析的记忆条目（已计数，未静默跳过）');
+  }
+
+  const degraded = degradedByEnumeration || orgsFailed.length > 0;
+  log.info(
+    { orgs: orgs.orgIds.length, failed: orgsFailed.length, patterns: patterns.length, degraded },
+    '跨客户模式发现完成',
+  );
+
+  return {
+    patterns,
+    orgsConsidered: orgs.orgIds,
+    orgsFailed,
+    unparsableEntries,
+    degraded,
+  };
+}
+
+// ═══ K6/3-12 E3: 联邦匿名统计导出/导入 ═══
+
+/** K6/3-12 E3: 联邦匿名统计包的 schema 版本（导入侧据此拒绝异构包）。 */
+export const FEDERATED_STATS_SCHEMA_VERSION = 'k6-federated-v1';
+
+/**
+ * K6/3-12 E3: 单个哨兵的统计特征。
+ * 匿名性由形状保证：只有中位数/分位数/参与组织数，没有个体值、没有 orgId、没有客户标识。
+ */
+export interface FederatedSentinelStat {
+  sentinelId: string;
+  orgCount: number;
+  median: number;
+  p25: number;
+  p75: number;
+}
+
+/** K6/3-12 E3: 可跨实例传递的匿名统计包。 */
+export interface FederatedStatsBundle {
+  schemaVersion: string;
+  generatedAt: string;
+  /** 来源实例标识（匿名；不得是 orgId/客户名 —— 导出侧不读取任何客户标识） */
+  sourceId: string;
+  industry: string;
+  /** 导出时采用的 k-匿名门槛（导入侧据此复核，但不信任来源值） */
+  minOrgs: number;
+  sentinelStats: FederatedSentinelStat[];
+}
+
+/** K6/3-12 E3: 导出入参。 */
+export interface ExportFederatedStatsInput {
+  industry: string;
+  sentinelStats: PerSentinelStats[];
+  /** 缺省 'anonymous-instance' */
+  sourceId?: string;
+  /** k-匿名门槛，默认 DEFAULT_EVOLUTION_CONFIG.minOrgsForIndustryAggregation (=5) */
+  minOrgs?: number;
+  /** 便于测试注入时间；缺省 new Date().toISOString() */
+  generatedAt?: string;
+}
+
+export type ExportFederatedStatsCode = 'EMPTY_STATS' | 'K_ANONYMITY_TOO_LOW';
+
+/** K6/3-12 E3: 导出结果（ok=false 时 bundle=null + code + reason，degraded=true）。 */
+export interface ExportFederatedStatsResult {
+  ok: boolean;
+  bundle: FederatedStatsBundle | null;
+  code?: ExportFederatedStatsCode;
+  reason?: string;
+  degraded: boolean;
+}
+
+/**
+ * K6/3-12 E3: 把本地行业统计构造成匿名联邦包（不联网，纯函数）。
+ *
+ * 契约（铁律 47）:
+ *   @input  — industry + sentinelStats（PerSentinelStats[]）+ 可选 sourceId/minOrgs/generatedAt
+ *   @output — { ok: true, bundle } 正常；bundle.sentinelStats 仅含 orgCount >= minOrgs 的哨兵，
+ *             按 sentinelId 升序（确定性），字段只有统计特征（匿名性由形状保证）
+ *   @degraded — true ⇔ 无统计（EMPTY_STATS）或全部哨兵未达 k-匿名门槛（K_ANONYMITY_TOO_LOW）；
+ *               两种都 log.warn（不静默，铁律 24/31）
+ *   @throws  — 不抛
+ */
+export function exportFederatedStats(input: ExportFederatedStatsInput): ExportFederatedStatsResult {
+  const minOrgs = input.minOrgs ?? DEFAULT_EVOLUTION_CONFIG.minOrgsForIndustryAggregation;
+  const all = Array.isArray(input.sentinelStats) ? input.sentinelStats : [];
+
+  if (all.length === 0) {
+    log.warn({ industry: input.industry }, '联邦导出 — 无统计可导出（EMPTY_STATS，degraded）');
+    return { ok: false, bundle: null, code: 'EMPTY_STATS', reason: 'sentinelStats 为空', degraded: true };
+  }
+
+  const qualifying = all.filter(s => s.orgCount >= minOrgs);
+  if (qualifying.length === 0) {
+    log.warn(
+      { industry: input.industry, minOrgs, maxOrgCount: Math.max(...all.map(s => s.orgCount)) },
+      '联邦导出 — 全部哨兵未达 k-匿名门槛（K_ANONYMITY_TOO_LOW，degraded）',
+    );
+    return {
+      ok: false,
+      bundle: null,
+      code: 'K_ANONYMITY_TOO_LOW',
+      reason: `无哨兵满足 orgCount >= ${minOrgs}`,
+      degraded: true,
+    };
+  }
+
+  const sourceId = input.sourceId && input.sourceId.trim().length > 0
+    ? input.sourceId.trim()
+    : 'anonymous-instance';
+
+  const bundle: FederatedStatsBundle = {
+    schemaVersion: FEDERATED_STATS_SCHEMA_VERSION,
+    generatedAt: input.generatedAt ?? new Date().toISOString(),
+    sourceId,
+    industry: input.industry,
+    minOrgs,
+    sentinelStats: qualifying
+      .map(s => ({
+        sentinelId: s.sentinelId,
+        orgCount: s.orgCount,
+        median: s.median,
+        p25: s.p25,
+        p75: s.p75,
+      }))
+      .sort((a, b) => a.sentinelId.localeCompare(b.sentinelId)),
+  };
+
+  log.info(
+    {
+      industry: bundle.industry,
+      exported: bundle.sentinelStats.length,
+      dropped: all.length - qualifying.length,
+      minOrgs,
+    },
+    '联邦匿名统计导出完成',
+  );
+  return { ok: true, bundle, degraded: false };
+}
+
+export type ImportFederatedStatsCode =
+  | 'INVALID_BUNDLE'
+  | 'SCHEMA_MISMATCH'
+  | 'EMPTY_BUNDLE'
+  | 'ALL_REJECTED';
+
+/** K6/3-12 E3: 导入结果（applied/rejected 逐条可对账；rejected>0 ⇒ degraded）。 */
+export interface ImportFederatedStatsResult {
+  ok: boolean;
+  /** 通过校验并采纳的哨兵数 */
+  applied: number;
+  /** 被拒的哨兵数（k-匿名不达标或形状不合法） */
+  rejected: number;
+  /** 采纳后的统计；values: [] —— 匿名包不含个体值，median/p25/p75 即全部信息 */
+  merged: PerSentinelStats[];
+  code?: ImportFederatedStatsCode;
+  reason?: string;
+  degraded: boolean;
+}
+
+/** K6/3-12 E3: 导入选项。 */
+export interface ImportFederatedStatsOptions {
+  /** k-匿名门槛（不信任来源自带值），默认 DEFAULT_EVOLUTION_CONFIG.minOrgsForIndustryAggregation (=5) */
+  minOrgs?: number;
+  /** 期望 schema 版本，默认 FEDERATED_STATS_SCHEMA_VERSION */
+  expectedSchemaVersion?: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+/**
+ * K6/3-12 E3: 校验并采纳一个联邦匿名包（不联网；调用方把"从哪拿到的包"作为入参传入）。
+ *
+ * 契约（铁律 47）:
+ *   @input  — raw: unknown（未信任输入，可能是任意 JSON）+ 可选 minOrgs/expectedSchemaVersion。
+ *             不信任包自带的 minOrgs：k-匿名门槛由导入侧重算。
+ *   @output — { ok, applied, rejected, merged, code?, reason? }；merged 为 PerSentinelStats[]
+ *             （values: []，name=sentinelId），按 sentinelId 升序
+ *   @degraded — true ⇔ 任一哨兵被拒（rejected>0）或整包不可采纳；逐条 log.warn（不静默）
+ *   @throws  — 不抛（未知形状一律收敛为 INVALID_BUNDLE）
+ */
+export function importFederatedStats(
+  raw: unknown,
+  options: ImportFederatedStatsOptions = {},
+): ImportFederatedStatsResult {
+  const minOrgs = options.minOrgs ?? DEFAULT_EVOLUTION_CONFIG.minOrgsForIndustryAggregation;
+  const expectedSchemaVersion = options.expectedSchemaVersion ?? FEDERATED_STATS_SCHEMA_VERSION;
+
+  if (!isRecord(raw)) {
+    log.warn({ receivedType: typeof raw }, '联邦导入 — 载荷不是对象（INVALID_BUNDLE，degraded）');
+    return {
+      ok: false, applied: 0, rejected: 0, merged: [],
+      code: 'INVALID_BUNDLE', reason: '载荷不是对象', degraded: true,
+    };
+  }
+
+  const schemaVersion = raw.schemaVersion;
+  if (typeof schemaVersion !== 'string' || schemaVersion !== expectedSchemaVersion) {
+    log.warn(
+      { schemaVersion: typeof schemaVersion === 'string' ? schemaVersion : null, expectedSchemaVersion },
+      '联邦导入 — schema 版本不匹配（SCHEMA_MISMATCH，degraded）',
+    );
+    return {
+      ok: false, applied: 0, rejected: 0, merged: [],
+      code: 'SCHEMA_MISMATCH', reason: `期望 schemaVersion=${expectedSchemaVersion}`, degraded: true,
+    };
+  }
+
+  const rawStats = raw.sentinelStats;
+  if (!Array.isArray(rawStats)) {
+    log.warn({ receivedType: typeof rawStats }, '联邦导入 — sentinelStats 不是数组（INVALID_BUNDLE，degraded）');
+    return {
+      ok: false, applied: 0, rejected: 0, merged: [],
+      code: 'INVALID_BUNDLE', reason: 'sentinelStats 不是数组', degraded: true,
+    };
+  }
+
+  if (rawStats.length === 0) {
+    log.warn({ industry: raw.industry }, '联邦导入 — 空包（EMPTY_BUNDLE，degraded）');
+    return {
+      ok: false, applied: 0, rejected: 0, merged: [],
+      code: 'EMPTY_BUNDLE', reason: 'sentinelStats 为空', degraded: true,
+    };
+  }
+
+  const merged: PerSentinelStats[] = [];
+  let rejected = 0;
+
+  for (const entry of rawStats) {
+    if (!isRecord(entry)) {
+      rejected++;
+      log.warn({ entryType: typeof entry }, '联邦导入 — 条目不是对象（拒绝该条）');
+      continue;
+    }
+
+    const sentinelId = typeof entry.sentinelId === 'string' ? entry.sentinelId.trim() : '';
+    const orgCount = entry.orgCount;
+    const median = entry.median;
+    const p25 = entry.p25;
+    const p75 = entry.p75;
+
+    if (sentinelId.length === 0
+      || !isFiniteNumber(orgCount)
+      || !isFiniteNumber(median)
+      || !isFiniteNumber(p25)
+      || !isFiniteNumber(p75)) {
+      rejected++;
+      log.warn({ sentinelId, orgCount, median }, '联邦导入 — 条目字段不合法（拒绝该条）');
+      continue;
+    }
+
+    if (orgCount < minOrgs) {
+      rejected++;
+      log.warn(
+        { sentinelId, orgCount, minOrgs },
+        '联邦导入 — 条目未达 k-匿名门槛（拒绝该条，防小样本反推）',
+      );
+      continue;
+    }
+
+    merged.push({
+      sentinelId,
+      name: sentinelId,
+      orgCount,
+      // 匿名包不含个体值 —— 显式留空，避免伪造出"看起来有原始数据"的形状
+      values: [],
+      median,
+      p25,
+      p75,
+    });
+  }
+
+  merged.sort((a, b) => a.sentinelId.localeCompare(b.sentinelId));
+
+  if (merged.length === 0) {
+    log.warn(
+      { candidateCount: rawStats.length, rejected, minOrgs },
+      '联邦导入 — 全部条目被拒（ALL_REJECTED，degraded）',
+    );
+    return {
+      ok: false, applied: 0, rejected, merged: [],
+      code: 'ALL_REJECTED', reason: `全部 ${rejected} 条被拒`, degraded: true,
+    };
+  }
+
+  if (rejected > 0) {
+    log.warn({ applied: merged.length, rejected, minOrgs }, '联邦导入 — 部分条目被拒（部分采纳，degraded）');
+  } else {
+    log.info({ applied: merged.length, industry: raw.industry }, '联邦匿名统计导入完成');
+  }
+
+  return {
+    ok: true,
+    applied: merged.length,
+    rejected,
+    merged,
+    degraded: rejected > 0,
+  };
+}

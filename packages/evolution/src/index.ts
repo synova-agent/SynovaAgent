@@ -66,6 +66,10 @@ export {
   writeIndustryThresholds,
   aggregateAllIndustries,
   discoverIndustryPatterns,
+  // K6/3-12 E2/E3: 跨客户模式发现 + 联邦匿名统计（生产入口 src/routes/evolution.ts）
+  discoverCrossCustomerPatterns,
+  exportFederatedStats,
+  importFederatedStats,
   generateThresholdProposal,
   listProposals,
   approveProposal,
@@ -90,4 +94,15 @@ export type { FeedbackEvent, CollectResult } from './feedback-collector';
 export { collectAllFeedback } from './feedback-collector';
 export { detectBehavioralValidation, aggregateExternalData, detectCostTemplateDrift, detectDiagnosisContradiction, updateSignalSourceWeight } from './org-adapter';
 export type { GlobalAnalysisReport, NciGlobalPattern } from './global-analyzer';
+export type {
+  CrossCustomerPattern,
+  CrossCustomerDiscoveryResult,
+  DiscoverCrossCustomerOptions,
+  FederatedSentinelStat,
+  FederatedStatsBundle,
+  ExportFederatedStatsInput,
+  ExportFederatedStatsResult,
+  ImportFederatedStatsOptions,
+  ImportFederatedStatsResult,
+} from './global-analyzer';
 export { analyzeGlobalPatterns, detectNciGlobalPatterns } from './global-analyzer';
