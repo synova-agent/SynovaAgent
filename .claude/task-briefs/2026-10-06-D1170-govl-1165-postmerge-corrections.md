@@ -36,7 +36,12 @@
 - tests/control-tower/post-commit.test.sh — `git log` 加 **`--reverse`**（取最初引入，免受后续注释编辑重定位）
 - tests/electron/backend-spawn.test.ts — 收回"单点且不漏"；改**进程组回收**（与产品契约 `backend-spawn.cjs:106` 一致）
 - .claude/task-briefs/2026-10-06-D1164-govl-w-group-g0-unblock.md — 删自相矛盾（`:59` 那条排除项措辞已收窄为"仅 W2/W3/W5/W9 部分"）
-- memory/notes/proposed/2026-10-06-d1170-*.md + task-state/D1170.json
+- memory/notes/proposed/2026-10-06-d1170-postmerge-corrections.md — 决策沉淀
+- task-state/D1170.json — 认领登记
+- .claude/task-briefs/2026-10-06-D1170-govl-1165-postmerge-corrections.md — 本件
+  🔴 D1174 修（D708 实测）: 原写作 `memory/notes/proposed/2026-10-06-d1170-*.md + task-state/D1170.json`
+  —— **一行两路径 + 通配符**，解析器不拆 ⇒ 这两个文件被判「写集外夹带」。
+  判例 P-06/M-01: 写集**只由逐条裸精确路径表达**，禁通配符/禁一行多路径/禁装饰符。
 不做什么：
 - 不改 src/services/email-service.ts（复核已确认类型改动等价、运行时零差异）
 - 不改 package.json / package-lock.json（复核确认 W1 修复成立）
