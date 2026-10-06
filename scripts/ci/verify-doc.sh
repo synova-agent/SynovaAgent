@@ -132,7 +132,7 @@ while IFS= read -r cmd; do
       esac
       ;;
     *)
-      reject_cmd "$cmd" "首 token「$FIRST」非白名单（grep/ls/rg/sed/git/npx vitest|tsc/bash verify·test 脚本）"
+      reject_cmd "$cmd" "首 token「${FIRST}」非白名单（grep/ls/rg/sed/git/npx vitest|tsc/bash verify·test 脚本）"
       continue
       ;;
   esac
