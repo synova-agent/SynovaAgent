@@ -31,7 +31,11 @@
 ## Q2: 范围 — 正确的最简方案
 做什么：
 - docs/synova/coordination/D1171-门禁提案-W5-hermetic-step不再skip.md — 新建（提案本体）
-- .claude/task-briefs/2026-10-06-D1171-govl-w5-proposal.md / memory/notes/proposed/2026-10-06-d1171-w5-proposal.md / task-state/D1171.json
+- .claude/task-briefs/2026-10-06-D1171-govl-w5-proposal.md
+- memory/notes/proposed/2026-10-06-d1171-w5-proposal.md
+- task-state/D1171.json
+  🔴 判例 P-06/M-01: 写集**只由逐条裸精确路径**表达 —— 禁一行多路径 / 禁通配符 / 禁装饰符。
+  本行原为一行三路径即违反了该判例（D708 实测判 3 个夹带）。
 不做什么：
 - 不改 .github/workflows/ci.yml（判据未裁，实现无意义）
 - 不改 tests/control-tower/ci-signal-classify.test.sh（夹具期望值须随**裁后**的实现同批改）
