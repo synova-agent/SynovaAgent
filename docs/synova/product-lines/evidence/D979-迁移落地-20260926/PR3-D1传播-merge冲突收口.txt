@@ -1,0 +1,21 @@
+════════ D979 T3 / D1 传播：merge 冲突与收口（原始输出）════════
+日期: 2026-09-26 01:12:56 CST
+
+── 1. merge 结果（PR2 分支 → PR3 分支）──
+  CONFLICT (content): Merge conflict in .claude/task-briefs/2026-09-26-D979-fix011-shared-file-mechanism.md（唯一冲突；.claude/bypass.log 自动合并）
+
+── 2. 冲突段（PR3 侧 = ours，PR2/T1 侧 = theirs）──
+  <<<<<<< HEAD
+  - [x] 声明落到真实共享件：`派单模板.md` 声明行 + 同窗口并发卡夹具红→绿（证据落 evidence/D979-迁移落地-20260926/）— verify: bash tests/control-tower/commit-msg-consistency.test.sh
+  - [x] 号段水位可复算：生成器从 task-state + 分支反查（水位非手写）+ `--check` 幂等 — verify: bash tests/control-tower/gen-watermark.test.sh
+  =======
+  >>>>>>> feat/d979-dispatch-tpl-dir
+
+── 3. 收口口径：保留 **PR3 侧（ours）** = T3 Q2/写集 + 7 条 Done（含 T1 的 5 条新格式）──
+  依据 CTO D1 裁定：'若仍冲突 → 手工保留新形式，别回退'
+
+── 4. 收口后验证（merge commit 96c9754e）──
+  Done 条数(- [x]): 7
+  Q2 认领条目: 8
+  冲突标记残留: 0（0 = 干净）
+  G12b: [check-brief-parseable] ✅ brief 可解析: .claude/task-briefs/2026-09-26-D979-fix011-shared-file-mechanism.md (Q2 ✓ #CRITERIA=A 架构层=控制塔 Done=7)

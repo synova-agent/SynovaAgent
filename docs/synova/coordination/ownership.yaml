@@ -94,6 +94,14 @@ rules:
   - glob: "scripts/install-hooks.sh"
     owner: "mac"
     source: "TASK-ROUTING.md L63 门禁脚本 DSH 专属"
+  # D979 增补（2026-09-26）: commit-msg 门禁脚本漏登记 → 落 `**` 兜底被判 win。
+  #   实测（check-ownership.py）: `win scripts/commit-msg-check.sh`；同族门禁脚本
+  #   （pre-commit-check.sh / pre-push-check.sh / install-hooks.sh）与 scripts/control-tower/**
+  #   均已明列 mac —— 同一门禁链同域，补齐缺口（不改任何既有归属）。
+  #   影响面: D979 三栈 PR（#815 / #820 / PR3）实测报「变更跨域 mac+win」。
+  - glob: "scripts/commit-msg-check.sh"
+    owner: "mac"
+    source: "TASK-ROUTING.md L37「scripts/control-tower/ + scripts/backup/ + **门禁脚本** + docs/synova/coordination/ + DSH 预设与技能 → Mac DSH」+ L63「门禁脚本 + coordination 文档 + VERSION.md → DSH 专属」；同 scripts/pre-commit-check.sh / pre-push-check.sh / install-hooks.sh 先例"
   - glob: "scripts/backup/**"
     owner: "mac"
     source: "TASK-ROUTING.md L37"

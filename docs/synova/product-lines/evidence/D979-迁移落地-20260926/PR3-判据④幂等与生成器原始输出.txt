@@ -1,0 +1,44 @@
+════════ D979 T3 / PR3 判据④：生成物幂等（生成器 vs 仓库）原始输出 ════════
+分支: feat/d979-watermark-gen @ 96c9754e | 日期: 2026-09-26 01:13:40 CST
+
+── 1. 生成器运行（写盘模式）──
+✅ 号段水位已生成（水位=归属段内实测最大 D#）:
+   Mac: 段=D9xx 水位=D980 下一个=D981 段内卡数=54 段外异常=1 历史卡=93
+   Win: 段=D1000–D1099 水位=D1002 下一个=D1003 段内卡数=2 段外异常=0 历史卡=84
+   K3: 段=未定义（原始件只约定 Mac/Win 两段） 水位=D1000 下一个=D1001 段内卡数=32 段外异常=0 历史卡=0
+   段回退命中=17 未归属=218
+   输出目录: /Users/wane/SynovaAgent/.synova-wt-d979-wm/docs/synova/coordination/号段/
+  exit=0
+
+── 2. 幂等证明 A：写盘后与仓库逐字节一致（git diff --exit-code）──
+$ git diff --exit-code -- docs/synova/coordination/号段/
+  exit=0（0 = 生成物 == 已提交内容）
+$ git status --porcelain -- docs/synova/coordination/号段/
+  []（空 = 无漂移）
+
+── 3. 幂等证明 B：--check 模式 ──
+$ bash scripts/control-tower/gen-watermark.sh --check
+✅ 号段水位与仓库逐字节一致（--check 通过）
+  exit=0
+
+── 4. 幂等证明 C：连跑两次（第二次 git diff 仍为空）──
+  连跑两次后 git diff --exit-code exit=0（0 = 幂等）
+
+── 5. 生成器测试套件（沙箱 36 断言）──
+$ bash tests/control-tower/gen-watermark.test.sh
+
+── 11. 边界: task-state 存在但无可解析卡号/坏 json → 未定义 + exit 0 ──
+  ✅ 无卡号不崩（exit 0） (exit=0)
+  ✅ 水位标未定义
+
+── 12. 接线: 号段水位.md 指针目标 == 生成物目录 ──
+  ✅ 指针指向 号段/README.md
+  ✅ 指针披露生成器（可复算）
+
+═══════════════════════════════════════════════════════════
+  结果: 36 通过 / 0 失败
+═══════════════════════════════════════════════════════════
+
+── 6. CT-40 控制塔脚本配对测试门禁 ──
+SYNC-OK: 无控制塔脚本变更(跳过)
+  exit=0

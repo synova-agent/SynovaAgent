@@ -1,0 +1,43 @@
+════════ D979 T3 / PR3 判据⑤：号段水位.md 引用清单 + 门禁复验原始输出 ════════
+分支: feat/d979-watermark-gen @ 96c9754e | 日期: 2026-09-26 01:13:51 CST
+
+── A. 判据⑤：grep -rn '号段水位\.md' docs scripts（剔除本证据目录自引用）──
+  命中总行数: 6
+  其中 scripts/ 命中: 2 行
+  分类: ①本轮指针自身+生成物索引 1 行（合规：指针 + 生成物互指）
+        ②历史证据/派单件记录 5 行（合规：历史记录，被引文件仍存在 ⇒ 不断链）
+  ── 逐条原文 ──
+    docs/synova/coordination/号段/README.md:4:> 本目录是 `../号段水位.md` 的正文（2026-09-26 / D979 目录化）；原文件保留为**短指针** ⇒ 既有引用不断链。
+    docs/synova/coordination/派单-哨兵体系整改-20260925.md:5:**号段说明**: **Mac 段取号：D965–D968**（原取 D1003–D1006 属 Win 段，已作废释放，见 `docs/synova/coordination/号段水位.md` 更正记录）
+    docs/synova/coordination/派单-FIX-011-共享治理文件机制-20260926.md:22:   - ⒜ **一对象一文件**：如 `号段水位.md` → `号段/水位.yaml`；`派单模板.md` → `派单模板/` 目录（每类派单一文件）
+    docs/synova/coordination/派单-FIX-011-共享治理文件机制-20260926.md:28:4. **迁移路径**：现有共享文件清单（至少：`ci.yml`、`派单模板.md`、`号段水位.md`、`CTO-看板-自动.md`、`派单-哨兵体系整改-20260925.md`）+ 各自新形态 + 分步迁移顺序
+    scripts/control-tower/gen-watermark.sh:8:# 背景: `docs/synova/coordination/号段水位.md` 的水位原是**手写**的，2026-09-25 已发生一次
+    scripts/control-tower/gen-watermark.sh:236:        "> 本目录是 `../号段水位.md` 的正文（2026-09-26 / D979 目录化）；原文件保留为**短指针** ⇒ 既有引用不断链。", "",
+
+── B. D2 登记门禁（CTO 授权 A 后）──
+$ bash scripts/doc-system/doc-registry-gate.sh
+  ── 汇总: 检查 0 个文档，0 个未登记 ──
+    ✅ 登记门禁通过
+  exit=0
+
+── C. D734 PR 预算（CTO 授权 B 后）──
+$ bash scripts/control-tower/check-pr-budget.sh --quiet
+  ── PR 预算门禁（D734）: 基线=origin/main 上限=12 文件 / 落后阈值=20 ──
+    ℹ️  D860 治理产物豁免: 7 件不计预算（brief/卡/Note/规格/自验证据，代码文件仍计数）
+    ❌ ① 变更文件数 21 > 上限 12 —— 拆 PR（禁调高上限）
+    ✅ ② 变更单域: ✅ PASS 20 个文件同域: mac（无归属 0，域判定豁免 1）
+    ✅ ③ 落后 origin/main 18 个提交 ≤ 20
+  ❌ FAIL PR 超预算 —— 拆 PR，不要调高上限
+  exit=0
+
+── D. 归属判定（CTO 要求的原始输出）──
+$ python3 scripts/control-tower/check-ownership.py scripts/commit-msg-check.sh --owner mac
+  mac  scripts/commit-msg-check.sh
+  
+  ✅ PASS 1 个文件全部归属 owner=mac（无归属 0）
+  exit=0
+  逐条合规标注:
+    · docs/synova/coordination/号段/README.md:4 —— 生成物索引自述（指向 ../号段水位.md 说明指针关系）✓
+    · docs/synova/coordination/派单-哨兵体系整改-20260925.md:5 —— 历史派单件引用（指向仍存在的指针文件）✓
+    · docs/synova/coordination/派单-FIX-011-*.md:22/28 —— 派单件描述本卡迁移路径（原文引用）✓
+    · scripts/control-tower/gen-watermark.sh:8/236 —— **生成器自身**：① 头注释自述水位来源；② 生成 README 时写入的指针说明文本（非代码依赖；scripts/ 无对该 md 的读取/写入逻辑）✓

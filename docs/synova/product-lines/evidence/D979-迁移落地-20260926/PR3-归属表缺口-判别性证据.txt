@@ -1,0 +1,79 @@
+════════ D979 T3 / PR3 判定④⑥：ownership 归属表缺口修复 + 判别性跨域复验 ════════
+日期: 2026-09-26 01:10:09 CST | 分支: feat/d979-watermark-gen
+
+── 0. 依据原文（TASK-ROUTING.md）──
+  L?: | scripts/control-tower/ + scripts/backup/ + 门禁脚本 + docs/synova/coordination/ + DSH 预设与技能 | **Mac DSH** | 控制塔持续维护 |
+  L?: | 门禁脚本 + coordination 文档 + VERSION.md | DSH 专属 | CODEOWNERS |
+  37:| scripts/control-tower/ + scripts/backup/ + 门禁脚本 + docs/synova/coordination/ + DSH 预设与技能 | **Mac DSH** | 控制塔持续维护 |
+  63:| 门禁脚本 + coordination 文档 + VERSION.md | DSH 专属 | CODEOWNERS |
+
+── 1. 缺口事实（改前）：scripts/commit-msg-check.sh 落 ** 兜底 = win ──
+$ python3 scripts/control-tower/check-ownership.py --yaml <改前副本> scripts/commit-msg-check.sh
+win  scripts/commit-msg-check.sh
+
+✅ PASS 1 个文件同域: win（无归属 0，域判定豁免 0）
+  exit=0
+
+── 2. 判别性对照【改前】：真跨域对（mac 域 + win 域各一）必须仍报跨域 ──
+$ python3 scripts/control-tower/check-ownership.py --yaml <改前副本> scripts/control-tower/x.sh extensions/ds_agent/package.json
+mac  scripts/control-tower/x.sh
+win  extensions/ds_agent/package.json
+
+❌ FAIL 跨域: 变更落在 2 个域 ['mac', 'win'] —— 单个 PR 只许一个域（无归属 0，域判定豁免 0）
+  exit=1
+
+── 3. 修复后：单件判定（scripts/commit-msg-check.sh --owner mac）──
+win  scripts/commit-msg-check.sh
+
+❌ 越域: scripts/commit-msg-check.sh —— 声明 owner=mac，实际 owner=win
+❌ FAIL 越域 1 处（声明 owner=mac）
+  （此处为修复前，下一段是修复后）
+
+── 4. 修复后：单件判定 ──
+$ python3 scripts/control-tower/check-ownership.py scripts/commit-msg-check.sh --owner mac
+mac  scripts/commit-msg-check.sh
+
+✅ PASS 1 个文件全部归属 owner=mac（无归属 0）
+  exit=0
+
+── 5. 修复后：D734 PR 预算（期望 ② 变更单域）──
+$ bash scripts/control-tower/check-pr-budget.sh --quiet
+  ── PR 预算门禁（D734）: 基线=origin/main 上限=12 文件 / 落后阈值=20 ──
+    ℹ️  D860 治理产物豁免: 6 件不计预算（brief/卡/Note/规格/自验证据，代码文件仍计数）
+    ❌ ① 变更文件数 20 > 上限 12 —— 拆 PR（禁调高上限）
+    ✅ ② 变更单域: ✅ PASS 19 个文件同域: mac（无归属 0，域判定豁免 1）
+    ✅ ③ 落后 origin/main 18 个提交 ≤ 20
+  ❌ FAIL PR 超预算 —— 拆 PR，不要调高上限
+  exit=0
+
+── 6. 判别性对照【修复后】：同一真跨域对必须**仍**报跨域（禁削弱）──
+$ python3 scripts/control-tower/check-ownership.py scripts/control-tower/x.sh extensions/ds_agent/package.json
+mac  scripts/control-tower/x.sh
+win  extensions/ds_agent/package.json
+
+❌ FAIL 跨域: 变更落在 2 个域 ['mac', 'win'] —— 单个 PR 只许一个域（无归属 0，域判定豁免 0）
+  exit=1
+$ bash scripts/control-tower/check-pr-budget.sh --files 'scripts/control-tower/x.sh extensions/ds_agent/package.json'（门禁自身注入缝）
+    ✅ ① 变更文件数 2 ≤ 上限 12
+    ❌ ② 变更跨域 —— 一个 PR 只许一个域（D733 ownership.yaml）
+    ✅ ③ 落后检查跳过（--files 注入模式无 git 上下文）
+  ❌ FAIL PR 超预算 —— 拆 PR，不要调高上限
+  exit=0
+
+── 7. 选留项（诚实登记）：D734 ① 文件数 20 > 12 是**栈式 PR 的口径产物**，非 PR3 本体超预算 ──
+$ git diff --name-only origin/main...HEAD | wc -l   # 门禁口径（整栈 vs main）
+        26
+$ git diff --name-only origin/feat/d979-dispatch-tpl-dir...HEAD   # PR3 相对其 PR base 的真实面
+  .claude/bypass.log
+  .claude/task-briefs/2026-09-26-D979-fix011-shared-file-mechanism.md
+  docs/authority/DOCS-REGISTRY.yaml
+  docs/synova/coordination/号段/K3.md
+  docs/synova/coordination/号段/Mac.md
+  docs/synova/coordination/号段/README.md
+  docs/synova/coordination/号段/Win.md
+  docs/synova/coordination/号段水位.md
+  scripts/control-tower/gen-watermark.sh
+  task-state/D979.json
+  tests/control-tower/gen-watermark.test.sh
+  → PR3 本体 11 个文件 ≤ 12；① 报红来自 T1+PR2 的 12 件与本 PR 叠加（栈式 PR 与 'origin/main...HEAD' 口径的固有冲突）。
+  → 自然消解：下方 PR（#815 → #820）先合 main 后，本分支 'origin/main...HEAD' 收敛为 PR3 本体。

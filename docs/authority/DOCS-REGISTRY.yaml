@@ -279,3 +279,32 @@ documents:
     path: .dsh/skills/squad-discipline/SKILL.md
     status: active
     owner: DSH
+
+  # D979 T3（2026-09-26）: 号段水位目录化 → 生成物登记（生成器 scripts/control-tower/gen-watermark.sh）
+  - id: DOC-0119
+    type: registry
+    path: docs/synova/coordination/号段/README.md
+    status: active
+    owner: DSH
+    note: "D979 T3 生成物索引（号段水位目录化；水位=段内实测最大 D#，禁手改）"
+
+  - id: DOC-0120
+    type: registry
+    path: docs/synova/coordination/号段/Mac.md
+    status: active
+    owner: DSH
+    note: "D979 T3 生成物（Mac 段水位）"
+
+  - id: DOC-0121
+    type: registry
+    path: docs/synova/coordination/号段/Win.md
+    status: active
+    owner: DSH
+    note: "D979 T3 生成物（Win 段水位）"
+
+  - id: DOC-0122
+    type: registry
+    path: docs/synova/coordination/号段/K3.md
+    status: active
+    owner: DSH
+    note: "D979 T3 生成物（K3 水位）"
