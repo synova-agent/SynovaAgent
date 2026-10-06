@@ -116,17 +116,39 @@ run_detect() {
   grep -m1 '^docs_only=' "$TMPD/out.txt" 2>/dev/null | sed 's/^docs_only=//' | tr -d '\r\n'  # swallow-ok: 取不到即输出空串，由调用处 report 与期望值比对判 FAIL，未静默
 }
 
-# ① 正例: push ⇒ docs_only=false（守卫生效）
-PUSH_GOT="$(run_detect "$TMPD/detect-0.sh" push)"
-report "push-goes-full" "false" "$PUSH_GOT"
+# 🔴 D1185 复核整改（阻塞点 B）: 原实现**只对 detect-0 做行为验证**，
+#   其余 9 块只靠 struct 的**字符串 grep**。复核的突变 D（把第 3 块守卫里
+#   `echo "docs_only=false"` 改成 `"true"`，**if 行文本一字不动**）在 HARD 下**存活**
+#   ⇒ 8 个承载必需 context 的 job 里只有 1 个被行为验证，同病灶可在另外 7 条上原样复发。
+#   ⇒ 改为**对全部 10 个块逐一做实跑**（push 与 pull_request 两个方向都跑）。
+#   代价: 20 次子 shell 调用（每块 <0.1s），可接受。
 
-# ② 对照: pull_request ⇒ docs_only=true（白名单语义未被本条改坏）
-PR_GOT="$(run_detect "$TMPD/detect-0.sh" pull_request)"
-report "pull-request-docsonly-still-skips" "true" "$PR_GOT"
+# ① 正例: push ⇒ docs_only=false（守卫生效）—— **全部块逐一实跑**
+PUSH_OK=0; PUSH_N=0; PUSH_BAD=""
+for f in "$TMPD"/detect-*.sh; do
+  PUSH_N=$((PUSH_N + 1))
+  G="$(run_detect "$f" push)"
+  if [ "$G" = "false" ]; then PUSH_OK=$((PUSH_OK + 1)); else PUSH_BAD="$PUSH_BAD $(basename "$f"):$G"; fi
+done
+report "push-goes-full-all-blocks" "$PUSH_N" "$PUSH_OK"
+[ -n "$PUSH_BAD" ] && echo "      ↳ 未过的块:$PUSH_BAD"
+
+# ② 对照: pull_request ⇒ docs_only=true（白名单语义未被本改动破坏）—— **全部块**
+PR_OK=0; PR_N=0
+for f in "$TMPD"/detect-*.sh; do
+  PR_N=$((PR_N + 1))
+  [ "$(run_detect "$f" pull_request)" = "true" ] && PR_OK=$((PR_OK + 1))
+done
+report "pull-request-docsonly-still-skips-all-blocks" "$PR_N" "$PR_OK"
 
 # ③ 反例（判别力来源）: 剥掉守卫再跑同一 push 用例 ⇒ 必须 true，否则用例无判别力
-NOSTRIP_GOT="$(run_detect "$TMPD/nostrip-0.sh" push)"
-report "negative-control-guard-stripped-push-skips" "true" "$NOSTRIP_GOT"
+#    （逐块剥壳 ⇒ 与 ① 的逐块实跑对称，保证"红来自断言而非崩溃"）
+NOSTRIP_OK=0; NOSTRIP_N=0
+for f in "$TMPD"/nostrip-*.sh; do
+  NOSTRIP_N=$((NOSTRIP_N + 1))
+  [ "$(run_detect "$f" push)" = "true" ] && NOSTRIP_OK=$((NOSTRIP_OK + 1))
+done
+report "negative-control-guard-stripped-push-skips-all-blocks" "$NOSTRIP_N" "$NOSTRIP_OK"
 
 echo
 echo "RESULT: $PASS_N PASS / $FAIL_N FAIL"

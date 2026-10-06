@@ -562,6 +562,16 @@ jobs:
         env:
           SYNO_CI: "1"   # 契约: 1 = HARD（任一 FAIL ⇒ exit 1）
         run: bash docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh
+      # 🔴 D1185 复核整改（阻塞点 A）: 新夹具**必须单开 HARD step**。
+      #   原只在通用 `for t` 循环里登记（无 SYNO_CI）⇒ 该夹具契约「未设 SYNO_CI = SOFT = exit 0」，
+      #   而循环只判 exit code ⇒ **CI 层恒绿 = 纸老虎**（复核实测 3 个突变在断言层被抓、在 CI 层全绿）。
+      #   同一 job 内已有明文先例判此形态为纸老虎（见上方 D1023 段的注释），本步照该先例补。
+      #   位置: 与 D1023 同置于重活之前（fail-fast；夹具实测 <1s）。
+      - name: W2 docs-only push guard (HARD; push 不得走 docs-only 早退)
+        shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（夹具是 bash 语法）
+        env:
+          SYNO_CI: "1"   # 契约: 1 = HARD（任一 FAIL ⇒ exit 1）
+        run: bash tests/control-tower/ci-docsonly-push-guard.test.sh
       - name: Run hermetic control-tower gate tests
         # T3: step 级 timeout（ubuntu 取 13，须 < 其 job 级 14）。
         #   D1147: 原 `${{ matrix.os == 'windows-latest' && 60 || 13 }}` 的 windows 分支随矩阵
