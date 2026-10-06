@@ -1,0 +1,25 @@
+{
+  "task_id": "D969",
+  "title": "daily-cto-board 配对测试 + 对账探针 runner + 默认 REPO 去硬编码（D969-FIX）",
+  "status": "in_progress",
+  "risk": "high",
+  "domain": "mac",
+  "owner": "mac-cto",
+  "executor": "coder-a（并行 CTO 小队 A，DSH session）",
+  "milestone": "M0 治理",
+  "depends_on": [],
+  "write_set": [
+    ".claude/bypass.log",
+    "scripts/control-tower/daily-cto-board.sh",
+    "tests/control-tower/daily-cto-board.test.sh",
+    ".claude/task-briefs/2026-09-25-D969-daily-cto-board-paired-test.md",
+    "task-state/D969.json",
+    "memory/notes/proposed/2026-09-25-d969-daily-cto-board-default-repo.md",
+    "docs/synova/product-lines/evidence/D969-20260925-回执.md"
+  ],
+  "papers": [],
+  "updated_at": "2026-09-25",
+  "updated_by": "coder-a",
+  "note": "U7/CT-40 配对门禁堵全队本地合 main：daily-cto-board.sh 缺配对测试。本卡补 tests/control-tower/daily-cto-board.test.sh（25 断言）+ 看板加对账探针 runner（D970/D971/D972 接入点）。另折入队长裁定的事故根因修复：默认 REPO 由硬编码 /Users/wane/SynovaAgent 改为「脚本自身所属仓库根」（worktree 内就地写）。非门禁语义变更（不改判定标准，只加测试与接入点），K3 事后审按 batch 口径。write_set 已按 D708 要求含本卡自产全部治理产物（brief / Note / evidence 回执 / task-state 自身）——原 D1008 卡漏声明 evidence 回执，是 PR #791 CI `quality` 红的唯一真因（`❌ 检测到 1 个写集外文件`）。改号 D1008→D969 依 CTO 裁决（Mac 段 D9xx）。",
+  "k3_required": []
+}
