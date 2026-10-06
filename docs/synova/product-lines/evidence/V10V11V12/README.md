@@ -188,5 +188,9 @@ bash docs/synova/product-lines/evidence/V10V11V12/run-evidence.sh --check  # 对
 | `raw/09-truth-source.txt` | `git ls-tree` / `git ls-files` 真相源读数（decisions 件数、CAS 目标 hash） |
 | `raw/10-cas-live.txt` | 本件那行真声明被 V10 在变更集里比对通过 |
 
+另：`ci-存量红-差分.md` —— **本 PR 的 CI 红为何不是本 PR 造成的**（命令生成）：
+该夹具的 baseline 在**干净 `origin/main` 上同样 FAIL**，且 ❌ 集合与本分支逐条相同；
+各 job 走全量路径触发的 `npm ci` 红是 main 的结构性缺陷（#1159 未合，属治理线）。
+
 > 判例对照：S-01②（真相源用 `git show origin/main:`）· S-01③（数字前 `tr -d '\n\r'`）·
 > V-02（禁 grep 型作验收）· V-08（改坏即红）· M-02（三态退出码）· P-04（不做假动作）。
