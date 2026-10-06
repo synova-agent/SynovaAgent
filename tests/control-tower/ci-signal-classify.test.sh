@@ -244,6 +244,16 @@ printf '%s' "$CTJOB" | grep -qF "name: Control Tower Gate Tests (\${{ matrix.os 
 #   钉子的语义（该 job 的矩阵/timeout 必须逐字可核）逐字保留，改的只是期望值。
 #   🔴 判别性保持（改坏即红）: 矩阵加回 windows、或 timeout 改回条件表达式 ⇒ 立刻 no ⇒ exit 1。
 #   收敛为锚定 ERE（比原 `-qF` 更强: `timeout-minutes: 14` 不会被 `140` 之类前缀欺骗）。
+# D1177（K3 整改 P1「needs 覆盖零判据」）: all-checks-passed 的 needs 集必须**逐字锁死**——
+#   改前删掉任一 needs 项（如 golden-case）⇒ 全部夹具仍绿 ⇒ 本卡实质可被静默削弱。
+#   判别性: 增/删/换任一 job 键 ⇒ 本断言红（8 键恰覆盖 9 条必需 context 的对齐表随之物理锁定）。
+AGG_JOB="$(job_block all-checks-passed)"
+AGG_NEEDS_LINE="$(printf '%s' "$AGG_JOB" | grep -E '^    needs:' | head -1 | sed 's/^    //')"
+AGG_EXPECT='needs: [quality, test, architecture, test-kit-architecture, control-tower-tests, integration-check, checker-review, golden-case]'
+[ "$AGG_NEEDS_LINE" = "$AGG_EXPECT" ] \
+  && ok "needs 锁死: all-checks-passed 8 键逐字一致（删/增/换任一 ⇒ 红）" \
+  || no "needs 偏离冻结集: 实际 '${AGG_NEEDS_LINE}' 期望 '${AGG_EXPECT}'"
+
 printf '%s' "$CTJOB" | grep -qE '^    timeout-minutes: 14$' \
   && ok "身份不变: job timeout-minutes 未改（D1147 后期望值 = 14）" || no "job timeout-minutes 被改动（D1147 后期望值 = 14）"
 printf '%s' "$CTJOB" | grep -qE '^        os: \[ubuntu-latest\]$' \

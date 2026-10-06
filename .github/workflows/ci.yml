@@ -1183,9 +1183,15 @@ jobs:
           exit 0
 
   # ═══ P0-3: 聚合必需检查 —— skipped 也判 FAIL ═══
-  # 蓝本: DSH 上游 ci.yml:700-723（dsh-v0.2.0-rc.2，逐字）
-  # 病因: D1164 事故（#905 假绿 —— npm ci 等 6 个重步骤 skip 但 job 报 success）
-  #   ⇒ GitHub required checks 只看 job 结论，无法区分「skip」与「通过」⇒ 假绿合入。
+  # 蓝本: DSH 上游 ci.yml:700-726（dsh-v0.2.0-rc.2；steps 段逐字）
+  # 与蓝本的三处已声明差异（K3 整改 D1177，原「唯一差异」表述不实）:
+  #   ① if 去掉 pull_request 事件限定（CTO 明令——#905 语境为 main push）
+  #   ② name: all checks passed → All Checks Passed（对齐本仓 check-run 命名习惯）
+  #   ③ runs-on: 上游 failover 选择器 → ubuntu-latest（failover 机制本仓未建）
+  # 归因口径（K3 整改订正）: 本 job 治的是 **job 级 skip 族**（job 结论 success/skipped 不可辨，
+  #   D971/D1111/D1147 系）。#905 实为 **step 级 skip**（docs-only 误判 ⇒ job 内重步骤 skip
+  #   但 job=success）——needs.*.result 物理上看不见 step 级 skip，那层归 D1111 路径锚正则/
+  #   D708/D540 管。本 job 是纵深一层，不是「修 #905」。
   # needs = 8 个 job 键，恰覆盖 9 条必需 context（test 是 2-shard 矩阵，覆盖 Vitest 1/2+2/2）。
   # 🔴 不纳入 needs 的（非必需，纳入会把它们的红也变成阻断）:
   #   audit(npm audit) · gate-integrity · windows-leg-trigger
