@@ -25,6 +25,16 @@ json.dump({"current":{"version":"0.1.7-rc.1","head":head,"tag":"dsh-v0.1.7-rc.1"
 PY
 }
 mk "$ROOT" "$HEAD" "$TMP/ok.json"            # 事实源绑定 checkout 自身 → 密闭
+# D1132: 带 discovery 段的事实源（声明路径可 ≠ 候选）——用于 T13/T14/T15
+mkd(){ python3 - "$1" "$2" "$3" "$4" <<'PY'
+import json,sys
+declared,head,out,cand=sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4]
+a={"current":{"version":"0.1.7-rc.1","head":head,"tag":"dsh-v0.1.7-rc.1","path":declared,"recorded_at":"test"},
+   "superseded":[],"known_versions":["0.1.7-rc.1"]}
+if cand: a["discovery"]={"path_candidates":[cand]}
+json.dump(a,open(out,"w",encoding="utf-8"),ensure_ascii=False)
+PY
+}
 mkdir -p "$TMP/empty" "$TMP/s1" "$TMP/s2" "$TMP/s3" "$TMP/s4" "$TMP/s5"
 echo 'DSH = 0.1.9-alpha.9' > "$TMP/s1/a.md"
 echo 'TS: 0.1.7-alpha.2 @ 00102833' > "$TMP/s2/b.md"
@@ -48,5 +58,12 @@ t "T9 树路径不存在 = DEGRADED" 2 $GATE --repo "$ROOT" --anchor "$TMP/ok.js
 t "T10 CI 模式 --no-tree-check（无本地 DSH 树仍只查文档）= OK" 0 $GATE --repo "$ROOT" --anchor "$TMP/ok.json" --no-tree-check --scan-dir "$TMP/empty"
 tg "T11 段外 keyword(superseded) 不豁免 = VIOLATION(1)" 1 "VIOLATION(1)" $GATE --repo "$ROOT" --anchor "$TMP/ok.json" --tree "$ROOT" --scan-dir "$TMP/s4"
 tg "T12 豁免段内逐行显式条目 = OK" 0 "DSH-ANCHOR: OK" $GATE --repo "$ROOT" --anchor "$TMP/ok.json" --tree "$ROOT" --scan-dir "$TMP/s5"
+# ── D1132 新增三例（乙案诊断层 + 声明路径生效回归）──
+mkd "$TMP/nowhere" "$HEAD" "$TMP/decl-missing.json" "$ROOT"
+tg "T13 声明路径不可用 + discovery 有候选 = DEGRADED 且输出含候选清单（自证）" 2 "已探测候选（仅诊断，不据此改判）" $GATE --repo "$ROOT" --anchor "$TMP/decl-missing.json" --scan-dir "$TMP/empty"
+mkd "$TMP/nowhere" "$HEAD" "$TMP/decl-nocand.json" ""
+t  "T14 反例: 声明路径不可用且 discovery 无候选 = 仍 DEGRADED（不得假绿）" 2 $GATE --repo "$ROOT" --anchor "$TMP/decl-nocand.json" --scan-dir "$TMP/empty"
+mk "$ROOT" "$HEAD" "$TMP/decl-ok.json"
+tg "T15 声明路径生效（**不带 --tree**，走事实源 current.path）= OK" 0 "DSH-ANCHOR: OK" $GATE --repo "$ROOT" --anchor "$TMP/decl-ok.json" --scan-dir "$TMP/empty"
 echo "──── 结果: $PASS 通过, $FAIL 失败 ────"
 [ "$FAIL" = "0" ] || exit 1
