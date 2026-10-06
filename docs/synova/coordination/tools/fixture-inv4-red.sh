@@ -156,9 +156,39 @@ for needle in 'INV-5: 1 处' '2-3-NOT-A-REAL-ID'; do
   fi
 done
 
+# ══════════════════════════════════════════════════════════════════════════════
+# ③ 第三态：登记件**读不到** ⇒ 必须 exit 2（不是 0、也不是 1）
+#   依据判例 M-02：0=过 / 1=违规 / **2=检查自身失败（同样阻断）**。
+#   为什么必须有这一段：只测 0/1 两态时，"登记件文件没了"会让执法体走 catch 分支 ——
+#   若那分支写成 exit 0 或 exit 1，门禁就把"没检查"与"检查通过/违规"混成一个信号。
+#   2026-10-06 实测：把执法体单独放进空目录（无登记件）⇒ exit 2 + stderr 具名。
+# ══════════════════════════════════════════════════════════════════════════════
+TMP3="$(mktemp -d 2>/dev/null || true)"
+if [ -z "$TMP3" ] || [ ! -d "$TMP3" ]; then
+  echo "  🔴 检查自身失败：第三个 mktemp -d 失败"
+  exit 2
+fi
+mkdir -p "$TMP3/tools"
+cp "$ENF" "$TMP3/tools/check-construction-registry.ts"   # 故意**不**放登记件
+printf '{"type":"module"}\n' > "$TMP3/package.json"
+OUT_B3="$(run_enf "$TMP3")"; RC_B3=$?
+rm -rf "$TMP3"
+# ⚠️ 必须同时验 exit code 与**行为特征**：只看 exit code 会把"node 起不来/模块找不到"
+#    这类"恰好也是 2"的崩溃当成"三态契约正确"（fixtures-owner 2026-10-06 踩过同款假绿）。
+if [ "$RC_B3" -ne 2 ]; then
+  echo "  [FAIL] 登记件读不到时应 exit 2，实测 exit=${RC_B3} ⇒ 三态契约破了（把"没检查"混成了别的信号）"
+  FAILED=1
+elif ! printf '%s' "$OUT_B3" | grep -qF '检查自身失败'; then
+  echo "  [FAIL] exit=2 但输出无「检查自身失败」具名行 ⇒ 疑似 node 自身崩溃冒充第三态（假绿通道）"
+  printf '%s' "$OUT_B3" | tail -5 | sed 's/^/         /'
+  FAILED=1
+else
+  echo "  [PASS] 第三态：登记件读不到 ⇒ exit=2 且具名「检查自身失败」"
+fi
+
 echo
 if [ "$FAILED" -eq 0 ]; then
-  echo "  ══ 夹具有效：破坏 ⇒ 红且具名（INV-4 与 INV-5 两场景）；复原 ⇒ 绿 ══"
+  echo "  ══ 夹具有效：破坏 ⇒ 红且具名（INV-4 / INV-5）；读不到 ⇒ exit 2；复原 ⇒ 绿 ══"
   exit 0
 fi
 echo "  ══ 夹具失效：执法体没有判别力 ══"
