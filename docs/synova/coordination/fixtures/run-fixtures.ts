@@ -9,6 +9,7 @@
  * @contract（铁律 47）
  *   @input  — `manifest.json`（同目录，逐条夹具登记）+ 一个**可写的工作树**。
  *             必须能 `bash -c <expectRedCommand>`；命令由夹具自带。
+ *             契约 = **离开时与进入时一致**（进入时允许已有无关改动；不得**新增**）。
  *   @output — 三态退出码：
  *              0 = 全部夹具通过（每条：破坏态 exit≠0 **且** 复原态 exit=0）
  *              1 = 有夹具没红（无效夹具 —— 破坏态仍 exit=0）
@@ -161,15 +162,49 @@ function harnessFail(reason: string): never {
 
 /**
  * 已跟踪文件的改动快照（忽略 untracked）。
- * 用途有二：① 开工前拒绝在脏树上跑（否则"复原态"没有意义）；
- *          ② 捕捉**判据自身的非密闭性**（例：3-12 的判据件写 extensions/industries/*.json）。
+ *
+ * 用途有二：
+ *   ① 开工前拒绝在脏树上跑（否则"复原态"没有意义）；
+ *   ② 捕捉**判据自身的非密闭性**（例：3-12 的判据件写 extensions/industries/*.json）。
+ *
+ * ⚠️ 必须排除 **runner 自己的产物**（证据 `.out` 文件是 git 跟踪的，每跑一次就更新一次）。
+ *    不排除的话，runner 会把自己的正常输出当成"外溢改动" ⇒ 自我误判 exit 2。
+ *    （这个缺陷只有在证据文件被提交后才显形 —— 是"验证已提交状态"才抓得到的。）
  */
 function trackedDirty(): string[] {
   const r = spawnSync('git', ['status', '--porcelain', '--untracked-files=no'], {
     cwd: REPO_ROOT, encoding: 'utf8',
   });
   if (r.status !== 0) harnessFail(`git status 失败: ${r.stderr ?? ''}`);
-  return (r.stdout ?? '').split('\n').map((s) => s.trimEnd()).filter(Boolean);
+  return (r.stdout ?? '')
+    .split('\n')
+    .map((s) => s.trimEnd())
+    .filter(Boolean)
+    .filter((line) => {
+      const p = porcelainPath(line);
+      return p === null || !OWN_OUTPUTS.has(p);
+    });
+}
+
+/** 从 `git status --porcelain` 一行里取路径（XY + 空格 + path）。 */
+function porcelainPath(line: string): string | null {
+  const m = /^[ MADRCU?!]{1,2}\s+(.+)$/.exec(line);
+  return m ? m[1] : null;
+}
+
+/** runner 自己的产物（证据文件）—— 不参与"外溢改动"与"收尾干净"判定。 */
+let OWN_OUTPUTS = new Set<string>();
+
+/** 开工时**已经存在**的已跟踪改动 —— 收尾只禁"新增"，不要求开工时是净土。 */
+let PRE_EXISTING_DIRT = new Set<string>();
+
+function registerOwnOutputs(fixtures: Fixture[]): void {
+  OWN_OUTPUTS = new Set(
+    fixtures
+      .map((f) => f.expectRedEvidence)
+      .filter((p) => !isAbsolute(p))
+      .map((p) => p.replace(/^\.\//, '')),
+  );
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -193,10 +228,15 @@ function loadManifest(manifestPath: string): Manifest {
 
 /** 逐条静态校验。任何一条不成立 ⇒ exit 2（拒绝带病开工）。 */
 function preflight(fixtures: Fixture[]): void {
-  // 全局：拒绝在脏树上跑 —— 否则"复原态 exit=0"无法区分是判据还是残留改动。
-  const dirtyTree = trackedDirty();
-  if (dirtyTree.length > 0) {
-    harnessFail(`工作树有未提交的已跟踪改动，拒绝在其上做夹具:\n${dirtyTree.join('\n')}`);
+  // 全局：开工前快照已跟踪改动。
+  //   契约是"**离开时与进入时一致**"，不是"进入时必须是净土" ——
+  //   故这里不因**无关文件**的既有改动拒绝开工（否则正在编辑 runner 时无法跑 runner，
+  //   而那是本工具最常见的自举场景）。收尾只禁**新增**改动。
+  //   真正必须干净的是**被破坏的目标文件**：它脏 ⇒ "复原态 exit=0" 无法区分是判据还是残留。
+  if (PRE_EXISTING_DIRT.size > 0) {
+    log(`\n⚠️ 开工前工作树已有 ${PRE_EXISTING_DIRT.size} 处已跟踪改动（不阻断；收尾只校验"未新增"）:`);
+    for (const line of PRE_EXISTING_DIRT) log(`    ${line}`);
+    log('   ⚠️ 若其中含本次的破坏目标文件，下面会单独阻断。\n');
   }
 
   const seenItems = new Set<string>();
@@ -439,6 +479,8 @@ function main(): void {
     : DEFAULT_MANIFEST_PATH;
 
   const manifest = loadManifest(manifestPath);
+  registerOwnOutputs(manifest.fixtures);
+  PRE_EXISTING_DIRT = new Set(trackedDirty());
 
   if (argv.includes('--list')) {
     log(`manifest: ${manifestPath}`);
@@ -486,11 +528,16 @@ function main(): void {
   if ((diff.stdout ?? '').trim() !== '') {
     harnessFail(`git diff 对被碰文件非空（未复原）:\n${diff.stdout}`);
   }
-  // 全树契约：runner 离开时，已跟踪文件必须与进入时一致（含判据自身造成的外溢改动）。
-  const dirtyAtEnd = trackedDirty();
+  // 全树契约：**相对开工快照**不得新增已跟踪改动（含判据自身造成的外溢改动）。
+  // 自己的证据产物不入此判定（它们是**预期会被更新**的；未提交时下面单独提示）。
+  const dirtyAtEnd = trackedDirty().filter((line) => !PRE_EXISTING_DIRT.has(line));
   if (dirtyAtEnd.length > 0) {
-    harnessFail(`收尾时工作树仍有已跟踪改动 —— runner 未守住"离开时与进入时一致"契约:\n${dirtyAtEnd.join('\n')}`);
+    harnessFail(`收尾时工作树**新增**了已跟踪改动 —— runner 未守住"离开时与进入时一致"契约:\n${dirtyAtEnd.join('\n')}`);
   }
+  const ownChanged = spawnSync('git', ['status', '--porcelain', '--untracked-files=no', '--', ...OWN_OUTPUTS], {
+    cwd: REPO_ROOT, encoding: 'utf8',
+  });
+  const ownChangedList = (ownChanged.stdout ?? '').split('\n').map((s) => s.trimEnd()).filter(Boolean);
 
   // ── 汇总 ──
   const valid = outcomes.filter((o) => o.valid);
@@ -506,6 +553,9 @@ function main(): void {
   if (withSideEffects.length > 0) {
     log('\n⚠️ 判据非密闭观测（已复原；判据件自身的缺陷，不影响夹具判定，但不可当"干净"报）:');
     for (const o of withSideEffects) log(`  · ${o.itemId} → ${o.sideEffects.join(', ')}`);
+  }
+  if (ownChangedList.length > 0) {
+    log(`\nℹ️ 本次刷新了 ${ownChangedList.length} 个证据产物（runner 自己的输出，预期行为；提交前记得 git add）`);
   }
   log(`无法夹具（V-08 显式登记，不计入分母）: ${manifest.notFixtureable.length} 项`);
   log('════════════════════════════════════════════════════════════');

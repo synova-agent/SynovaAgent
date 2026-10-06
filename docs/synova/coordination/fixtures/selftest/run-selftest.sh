@@ -33,6 +33,11 @@ NEUTERED_SENTINEL="NEGATIVE-FIXTURE"
 
 mkdir -p "$EV_DIR"
 
+# 开工快照：契约 = "离开时与进入时一致"，**不是**"进入时必须是净土"。
+# （本人正在编辑 fixtures/** 时跑自检是常见场景；要求净土会让自检无法自举。）
+SNAP_BEFORE="$(mktemp)"
+git status --porcelain --untracked-files=no -- . ':(exclude)'"$EV_DIR" | sort > "$SNAP_BEFORE"
+
 # 任何退出路径都必须把被判据改动过的文件放回去
 cleanup() {
   git checkout -- "$TARGET" 2>/dev/null || true
@@ -139,14 +144,22 @@ else
   fail=1
 fi
 
-# ── 收尾：工作树必须回到原样 ─────────────────────────────────────────────
-dirty=$(git status --porcelain --untracked-files=no)
+# ── 收尾：相对开工快照**不得新增**非证据类改动 ──────────────────────────────
+# 证据 `.out` 是 git 跟踪的，每跑一次自检就会刷新一次 —— 那是**预期行为**，不是残留。
+# 开工前已有的改动也不算残留（那是别人/本人正在进行的工作）。
+dirty=$(git status --porcelain --untracked-files=no -- . ':(exclude)'"$EV_DIR" | sort \
+        | comm -13 "$SNAP_BEFORE" -)
+rm -f "$SNAP_BEFORE"
 if [[ -n "$dirty" ]]; then
-  echo "❌ 收尾：工作树仍有已跟踪改动，自检未复原:"
+  echo "❌ 收尾：自检**新增**了（非证据类）已跟踪改动，未复原:"
   echo "$dirty"
   fail=1
 else
-  echo "✅ 收尾：已跟踪文件与进入时一致（自检未留残留）"
+  echo "✅ 收尾：相对开工快照未新增非证据类改动（自检未留残留）"
+fi
+refreshed=$(git status --porcelain --untracked-files=no -- "$EV_DIR" | wc -l | tr -d ' ')
+if [[ "$refreshed" != "0" ]]; then
+  echo "ℹ️ 本次刷新了 ${refreshed} 个证据产物（预期行为；提交前 git add ${EV_DIR}）"
 fi
 
 if [[ "$fail" == "0" ]]; then

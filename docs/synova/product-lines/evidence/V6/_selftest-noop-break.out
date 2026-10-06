@@ -2,7 +2,7 @@
 # 命令: node --experimental-strip-types docs/synova/coordination/fixtures/run-fixtures.ts --manifest docs/synova/coordination/fixtures/selftest/noop-break.json
 # 语义: find→replace 只增注释、行为零变化 ⇒ 判据不得转红 ⇒ 期望 runner exit 1
 # 若 runner 报 VALID / exit 0，则 runner 把'跑了命令'当'判据有效'，无分辨力。
-# generatedAt: 2026-10-06T06:06:37Z
+# generatedAt: 2026-10-06T06:09:50Z
 
 ════════════════════════════════════════════════════════════
 V6「改坏即红」夹具 runner — 三态退出码 0=全过 / 1=有夹具没红 / 2=检查自身失败
@@ -10,6 +10,20 @@ repo   : /Users/wane/SynovaAgent/.synova-wt-fixtures
 manifest: /Users/wane/SynovaAgent/.synova-wt-fixtures/docs/synova/coordination/fixtures/selftest/noop-break.json
 夹具    : 1 条 | 无法夹具登记: 0 条
 ════════════════════════════════════════════════════════════
+
+⚠️ 开工前工作树已有 10 处已跟踪改动（不阻断；收尾只校验"未新增"）:
+     M docs/synova/coordination/fixtures/run-fixtures.ts
+     M docs/synova/coordination/fixtures/selftest/run-selftest.sh
+     M docs/synova/product-lines/evidence/V6/0-10.out
+     M docs/synova/product-lines/evidence/V6/0-5.out
+     M docs/synova/product-lines/evidence/V6/0-7.out
+     M docs/synova/product-lines/evidence/V6/1-7.out
+     M docs/synova/product-lines/evidence/V6/2-4.out
+     M docs/synova/product-lines/evidence/V6/3-12.out
+     M docs/synova/product-lines/evidence/V6/_negative-fixture-3-12.out
+     M docs/synova/product-lines/evidence/V6/_selftest-unique-miss.out
+   ⚠️ 若其中含本次的破坏目标文件，下面会单独阻断。
+
 
 ─── [1/1] 2-4 ───────────────────────────────
     criterion : 施工项登记.ts#2-4/acceptance[0]
@@ -21,6 +35,8 @@ manifest: /Users/wane/SynovaAgent/.synova-wt-fixtures/docs/synova/coordination/f
 ════════════════════════════════════════════════════════════
 夹具通过率: 0/1
   ❌ INVALID 2-4  broken=0  restored=null
+
+ℹ️ 本次刷新了 1 个证据产物（runner 自己的输出，预期行为；提交前记得 git add）
 无法夹具（V-08 显式登记，不计入分母）: 0 项
 ════════════════════════════════════════════════════════════
 

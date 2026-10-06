@@ -3,7 +3,7 @@
 # breakHow.file  : packages/evolution/src/global-analyzer.ts (lines 123)
 # breakHow       : literal-replace —— 阈值建议的判别条件取反（<20% 才建议）⇒「正常值不得出建议」断言红 ⇒ 跨客户基线聚合的判别逻辑失效，即 3-12 进化回环 E2/E3 的判别面塌陷
 # restoreHow     : runner 内存原文回写 + 收尾 `git diff --stat` 对被碰文件为空校验（run-fixtures.ts try/finally；不依赖 git checkout）
-# generatedAt    : 2026-10-06T06:06:35.337Z
+# generatedAt    : 2026-10-06T06:09:38.690Z
 # runner         : docs/synova/coordination/fixtures/run-fixtures.ts
 # 原始输出（命令 + stdout/stderr 原样，无手写数字）
 # ⚠️ 判据非密闭（side effects）: 跑动中改动了以下**已跟踪文件**，已由 runner 复原：
@@ -26,16 +26,16 @@ $ npx vitest run tests/evolution/global-analyzer.test.ts
 
  Test Files  1 failed (1)
       Tests  1 failed | 3 passed (4)
-   Start at  14:06:34
-   Duration  192ms (transform 66ms, setup 0ms, import 90ms, tests 6ms, environment 0ms)
+   Start at  14:09:37
+   Duration  181ms (transform 64ms, setup 0ms, import 88ms, tests 6ms, environment 0ms)
 --- stderr ---
-{"level":40,"time":1791266794499,"pid":26382,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"test-industry","msg":"行业哨兵数据不足 — 跳过聚合"}
-{"level":40,"time":1791266794501,"pid":26382,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","err":"Bad control character in string literal in JSON at position 63 (line 3 column 42)","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/evolution/default-thresholds.json","msg":"阈值 JSON 加载失败 — 使用 fallback"}
-{"level":30,"time":1791266794502,"pid":26382,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/industries/saas-tech/thresholds.json","thresholdCount":1,"msg":"行业阈值已写入"}
-{"level":30,"time":1791266794502,"pid":26382,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","sentinelCount":1,"suggestions":0,"msg":"行业基线聚合完成"}
-{"level":30,"time":1791266794502,"pid":26382,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/industries/saas-tech/thresholds.json","thresholdCount":1,"msg":"行业阈值已写入"}
-{"level":30,"time":1791266794502,"pid":26382,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","sentinelCount":1,"suggestions":0,"msg":"行业基线聚合完成"}
-{"level":30,"time":1791266794504,"pid":26382,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"test-write","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/industries/test-write/thresholds.json","thresholdCount":0,"msg":"行业阈值已写入"}
+{"level":40,"time":1791266977861,"pid":66558,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"test-industry","msg":"行业哨兵数据不足 — 跳过聚合"}
+{"level":40,"time":1791266977863,"pid":66558,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","err":"Bad control character in string literal in JSON at position 63 (line 3 column 42)","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/evolution/default-thresholds.json","msg":"阈值 JSON 加载失败 — 使用 fallback"}
+{"level":30,"time":1791266977863,"pid":66558,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/industries/saas-tech/thresholds.json","thresholdCount":1,"msg":"行业阈值已写入"}
+{"level":30,"time":1791266977864,"pid":66558,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","sentinelCount":1,"suggestions":0,"msg":"行业基线聚合完成"}
+{"level":30,"time":1791266977864,"pid":66558,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/industries/saas-tech/thresholds.json","thresholdCount":1,"msg":"行业阈值已写入"}
+{"level":30,"time":1791266977864,"pid":66558,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","sentinelCount":1,"suggestions":0,"msg":"行业基线聚合完成"}
+{"level":30,"time":1791266977866,"pid":66558,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"test-write","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/industries/test-write/thresholds.json","thresholdCount":0,"msg":"行业阈值已写入"}
 
 ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
 
@@ -63,16 +63,16 @@ $ npx vitest run tests/evolution/global-analyzer.test.ts
 
  Test Files  1 passed (1)
       Tests  4 passed (4)
-   Start at  14:06:35
-   Duration  187ms (transform 69ms, setup 0ms, import 97ms, tests 5ms, environment 0ms)
+   Start at  14:09:38
+   Duration  177ms (transform 64ms, setup 0ms, import 89ms, tests 5ms, environment 0ms)
 --- stderr ---
-{"level":40,"time":1791266795213,"pid":26562,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"test-industry","msg":"行业哨兵数据不足 — 跳过聚合"}
-{"level":40,"time":1791266795215,"pid":26562,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","err":"Bad control character in string literal in JSON at position 63 (line 3 column 42)","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/evolution/default-thresholds.json","msg":"阈值 JSON 加载失败 — 使用 fallback"}
-{"level":30,"time":1791266795216,"pid":26562,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/industries/saas-tech/thresholds.json","thresholdCount":1,"msg":"行业阈值已写入"}
-{"level":30,"time":1791266795216,"pid":26562,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","sentinelCount":1,"suggestions":0,"msg":"行业基线聚合完成"}
-{"level":30,"time":1791266795216,"pid":26562,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/industries/saas-tech/thresholds.json","thresholdCount":1,"msg":"行业阈值已写入"}
-{"level":30,"time":1791266795216,"pid":26562,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","sentinelCount":1,"suggestions":1,"msg":"行业基线聚合完成"}
-{"level":30,"time":1791266795216,"pid":26562,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"test-write","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/industries/test-write/thresholds.json","thresholdCount":0,"msg":"行业阈值已写入"}
+{"level":40,"time":1791266978557,"pid":66635,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"test-industry","msg":"行业哨兵数据不足 — 跳过聚合"}
+{"level":40,"time":1791266978558,"pid":66635,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","err":"Bad control character in string literal in JSON at position 63 (line 3 column 42)","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/evolution/default-thresholds.json","msg":"阈值 JSON 加载失败 — 使用 fallback"}
+{"level":30,"time":1791266978559,"pid":66635,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/industries/saas-tech/thresholds.json","thresholdCount":1,"msg":"行业阈值已写入"}
+{"level":30,"time":1791266978559,"pid":66635,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","sentinelCount":1,"suggestions":0,"msg":"行业基线聚合完成"}
+{"level":30,"time":1791266978559,"pid":66635,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/industries/saas-tech/thresholds.json","thresholdCount":1,"msg":"行业阈值已写入"}
+{"level":30,"time":1791266978559,"pid":66635,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","sentinelCount":1,"suggestions":1,"msg":"行业基线聚合完成"}
+{"level":30,"time":1791266978559,"pid":66635,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"test-write","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/industries/test-write/thresholds.json","thresholdCount":0,"msg":"行业阈值已写入"}
 
 ════════════════════════════════════════════════════════════
 VERDICT: VALID (破坏态红 + 复原态绿)
