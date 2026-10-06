@@ -87,5 +87,73 @@ else
   while IFS= read -r rel; do check_file "$rel"; done < <(find "$ROOT" -type f \( -name '*.md' -o -name '*.yaml' \) 2>/dev/null | sed "s|^$ROOT/||") # swallow-ok:
 fi
 
+# ═══ CT-D2 自洽检查（D1177）: 台账自身的 ID 唯一 + path 存在 ═══════════════════
+# 背景: 原门禁**只做 substring 登记判定**（`[[ "$REG" == *"$rel"* ]]`），**从不校验台账自身**
+#   ⇒ 重复 ID / 悬空 path 可以长期存在而无人知（实测: 59 条目里 **2 个重复 ID**、
+#      **3 个仓内相对 path 不存在**）。本段补这两条。
+# 🔴 判据设计（避免 D734 式"把存量债一次性转红"）:
+#   · ID 唯一 —— **硬**（实测只有 2 个重复，已在本卡内修掉 ⇒ 从第 1 天起就是绿的）
+#   · path 存在 —— **只查「仓内相对路径」**：绝对路径 / `~` / 盘符（`D:\…`）**不适用仓内存在性**，跳过；
+#     含 glob（`*`）的 path **先展开**再判（`WORKLOG-*.md` 是真实形态）。
+#   · 两条都不引入"基线豁免表"——没有存量债就没有豁免表（棘轮台账只减不增，别新开一张）。
+SELF_FAIL=0
+IDS="$(printf '%s\n' "$REG" | sed -n 's/^[[:space:]]*-[[:space:]]*id:[[:space:]]*"\([^"]*\)".*/\1/p; s/^[[:space:]]*-[[:space:]]*id:[[:space:]]*\([^"[:space:]]*\).*/\1/p')"
+ID_TOTAL="$(printf '%s\n' "$IDS" | grep -c . || true)"
+DUP_IDS="$(printf '%s\n' "$IDS" | grep . | sort | uniq -d || true)"
+if [ -n "$DUP_IDS" ]; then
+  echo "  ❌ 台账 ID 重复（应唯一）:"
+  printf '%s\n' "$DUP_IDS" | while IFS= read -r d; do
+    [ -z "$d" ] && continue
+    echo "       · $d 出现 $(printf '%s\n' "$IDS" | grep -c "^${d}$") 次"
+  done
+  SELF_FAIL=$((SELF_FAIL+1))
+else
+  echo "  ✅ 台账 ID 唯一（$ID_TOTAL 个）"
+fi
+
+# 🔴 逐条取 (status, path) —— **status 参与判定**：
+#   `status: draft` = **尚未编写的规划文档**，path 悬空是**预期**（不是缺陷）⇒ 显式打印 SKIP，
+#   **不静默、也不判红**（与本线 P3 的 R3 SKIP 同一纪律：跳过必须说出来）。
+#   其余 status（active/archived/…）悬空 ⇒ **红**。
+P_CHECKED=0; P_MISSING=0; P_DRAFT_SKIP=0
+while IFS=$'\t' read -r st rel; do
+  [ -z "$rel" ] && continue
+  case "$rel" in
+    /*|~*|[A-Za-z]:*) continue ;;            # 绝对 / home / 盘符 ⇒ 不适用仓内存在性
+  esac
+  if [ "$st" = "draft" ]; then
+    if [ ! -e "$ROOT/$rel" ]; then
+      echo "  ⏭️  台账 path 悬空，但 status=draft（规划中，预期未建）: $rel"
+      P_DRAFT_SKIP=$((P_DRAFT_SKIP+1)); continue
+    fi
+  fi
+  case "$rel" in
+    *'*'*)                                  # glob: 展开后再判（无匹配 ⇒ 悬空）
+      # shellcheck disable=SC2086
+      set -- $ROOT/$rel
+      if [ -e "$1" ]; then P_CHECKED=$((P_CHECKED+1)); else
+        echo "  ❌ 台账 path 悬空（glob 无匹配）: $rel"; P_MISSING=$((P_MISSING+1)); fi
+      continue ;;
+  esac
+  P_CHECKED=$((P_CHECKED+1))
+  [ -e "$ROOT/$rel" ] || { echo "  ❌ 台账 path 悬空: $rel"; P_MISSING=$((P_MISSING+1)); }
+done < <(printf '%s\n' "$REG" | awk '
+  # 🔴 顺序无关：**在新条目出现时才 flush 上一条**。
+  #   原实现"path 之后遇到任意其它行就打印"在 `status:` 排在 `path:` **之后**的条目上
+  #   会把 status 读成空 ⇒ 整段静默失效（实测: 59 条全 status 空 ⇒ 查 0 条）。
+  function flush() { if (path != "") print st "\t" path }
+  /^[[:space:]]*-[[:space:]]*id:/ { flush(); st=""; path=""; next }
+  /^[[:space:]]*status:/ { v=$0; sub(/^[[:space:]]*status:[[:space:]]*/,"",v); gsub(/"/,"",v); st=v; next }
+  /^[[:space:]]*path:/   { v=$0; sub(/^[[:space:]]*path:[[:space:]]*/,"",v); gsub(/^"|"$/,"",v); path=v; next }
+  END { flush() }
+')
+if [ "$P_MISSING" -eq 0 ]; then
+  echo "  ✅ 台账仓内 path 全存在（查 $P_CHECKED 条；绝对/~ /盘符已跳过；draft 悬空 $P_DRAFT_SKIP 条已显式 SKIP）"
+else
+  echo "  ❌ 台账 path 悬空 $P_MISSING 条（共查 $P_CHECKED 条；另有 draft 悬空 $P_DRAFT_SKIP 条已显式 SKIP）"
+  SELF_FAIL=$((SELF_FAIL+1))
+fi
+FAIL=$((FAIL+SELF_FAIL))
+
 echo "── 汇总: 检查 $CHECKED 个文档，$FAIL 个未登记 ──"
 if [ "$FAIL" -eq 0 ]; then echo "  ✅ 登记门禁通过"; exit 0; else echo "  ❌ 登记门禁阻断"; exit 1; fi

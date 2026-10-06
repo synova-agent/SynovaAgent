@@ -281,14 +281,18 @@ documents:
     owner: DSH
 
   # 号段注（D1105 去重）：本批原用 DOC-0119/0120，但 main（#926）已占用 0119-0123
-  # ⇒ 合并时人工去重改号 0124/0125（登记门禁不校 id 唯一，靠人工守）
-  - id: DOC-0124
+  # ⇒ 合并时人工去重改号 0124/0125。
+  # 🔴 D1177 追账（2026-10-06 实测）：**那次改号又撞了** —— `docs/synova/dispatch/**` 那批
+  #   （下方）**已经占用 0124/0125** ⇒ 本文件长期存在 **2 个重复 ID**，而原登记门禁只做
+  #   substring 登记判定、**从不校验 id 唯一** ⇒ 无人发现（原文自述「靠人工守」——人工没守住）。
+  #   D1177 已给门禁补上 ID 唯一硬检查，并把本批改号为 **0188/0189**（当前最大号 0187 之后的空号）。
+  - id: DOC-0188
     type: decision
     path: decisions/proposed/process/2026-09-30-preset-landing-must-diff-against-working-peer.md
     status: draft
     owner: DSH
 
-  - id: DOC-0125
+  - id: DOC-0189
     type: decision
     path: decisions/proposed/process/2026-09-30-cite-by-section-name-not-line-number.md
     status: draft
