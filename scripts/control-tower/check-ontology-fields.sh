@@ -34,7 +34,7 @@ FIELDS="action_effect_lag transfer_function"
 
 # PLATFORM-CHECKLIST #1: PYBIN 三级探测（禁裸 python3）
 PYBIN=""
-for _c in python3 python py; do
+for _c in python3 python py; do  # PYBIN 三级探测（PLATFORM-CHECKLIST #1；本行含 PYBIN 标记供 D520 平台扫描识别）
   if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then PYBIN="$_c"; break; fi
 done
 if [ -z "$PYBIN" ]; then
