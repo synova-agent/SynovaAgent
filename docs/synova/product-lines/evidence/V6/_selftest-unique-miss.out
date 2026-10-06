@@ -1,0 +1,17 @@
+# V6 runner 自检 · 段 B —— 拿不到结论必须 exit 2，绝不静默跳过（判例 M-02）
+# 命令: node --experimental-strip-types docs/synova/coordination/fixtures/run-fixtures.ts --manifest docs/synova/coordination/fixtures/selftest/unique-miss.json
+# 语义: breakHow.find 在目标文件中出现 0 次 ⇒ runner 拒绝猜测定位 ⇒ 期望 runner exit 2
+# generatedAt: 2026-10-06T06:06:38Z
+
+════════════════════════════════════════════════════════════
+V6「改坏即红」夹具 runner — 三态退出码 0=全过 / 1=有夹具没红 / 2=检查自身失败
+repo   : /Users/wane/SynovaAgent/.synova-wt-fixtures
+manifest: /Users/wane/SynovaAgent/.synova-wt-fixtures/docs/synova/coordination/fixtures/selftest/unique-miss.json
+夹具    : 1 条 | 无法夹具登记: 0 条
+════════════════════════════════════════════════════════════
+
+🔴 HARNESS-FAILURE (exit 2): [2-4] breakHow.find 在 src/security/file-guard.ts 中出现 0 次（必须恰好 1 次）—— 拒绝猜测定位
+   ⇒ 未取得结论。**不**把这种情况当成"判据正确"或"判据错误"。
+
+════════════════════════════════════════
+RUNNER EXIT = 2   （期望 2）

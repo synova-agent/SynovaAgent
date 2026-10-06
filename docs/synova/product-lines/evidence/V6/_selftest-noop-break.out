@@ -1,0 +1,30 @@
+# V6 runner 自检 · 段 A —— 无效夹具必须被识别（判例 V-08）
+# 命令: node --experimental-strip-types docs/synova/coordination/fixtures/run-fixtures.ts --manifest docs/synova/coordination/fixtures/selftest/noop-break.json
+# 语义: find→replace 只增注释、行为零变化 ⇒ 判据不得转红 ⇒ 期望 runner exit 1
+# 若 runner 报 VALID / exit 0，则 runner 把'跑了命令'当'判据有效'，无分辨力。
+# generatedAt: 2026-10-06T06:06:37Z
+
+════════════════════════════════════════════════════════════
+V6「改坏即红」夹具 runner — 三态退出码 0=全过 / 1=有夹具没红 / 2=检查自身失败
+repo   : /Users/wane/SynovaAgent/.synova-wt-fixtures
+manifest: /Users/wane/SynovaAgent/.synova-wt-fixtures/docs/synova/coordination/fixtures/selftest/noop-break.json
+夹具    : 1 条 | 无法夹具登记: 0 条
+════════════════════════════════════════════════════════════
+
+─── [1/1] 2-4 ───────────────────────────────
+    criterion : 施工项登记.ts#2-4/acceptance[0]
+    break     : src/security/file-guard.ts — 【runner 自检】语法上改动了、语义上零变化 —— 判据不得转红 ⇒ runner 必须判 INVALID 并 exit 1。若 runner 报 VALID/exit 0，则 runner 无分辨力（把"跑了命令"当"判据有效"）。
+    → 已置破坏态，运行判据…
+    broken  exit=0  (0.9s)
+    ❌ 无效夹具：破坏态 exit=0 ⇒ 该判据**没有**分辨力
+
+════════════════════════════════════════════════════════════
+夹具通过率: 0/1
+  ❌ INVALID 2-4  broken=0  restored=null
+无法夹具（V-08 显式登记，不计入分母）: 0 项
+════════════════════════════════════════════════════════════
+
+⇒ exit 1: 1 条夹具没有转红，判据无分辨力。
+
+════════════════════════════════════════
+RUNNER EXIT = 1   （期望 1）

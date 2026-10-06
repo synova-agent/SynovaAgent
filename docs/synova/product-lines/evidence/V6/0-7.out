@@ -1,0 +1,67 @@
+# V6「改坏即红」夹具证据 — item 0-7
+# criterionRef   : 施工项登记.ts#0-7/acceptance[0]
+# breakHow.file  : src/routes/chat.ts (lines 94)
+# breakHow       : literal-replace —— 去掉 collectFeedback 的第二参 memoryStore（= #981 修复前）⇒ persisted 恒 false，反馈永不落库，即 0-7「反馈通道 B 是无声的洞」原样复现
+# restoreHow     : runner 内存原文回写 + 收尾 `git diff --stat` 对被碰文件为空校验（run-fixtures.ts try/finally；不依赖 git checkout）
+# generatedAt    : 2026-10-06T06:06:29.831Z
+# runner         : docs/synova/coordination/fixtures/run-fixtures.ts
+# 原始输出（命令 + stdout/stderr 原样，无手写数字）
+
+════════════════════════════════════════════════════════════
+[SECTION 1] 破坏态 (BROKEN) — 期望 exit ≠ 0]
+$ npx vitest run tests/routes/chat-feedback.test.ts
+--- exit: 1 | elapsed 0.8s ---
+--- stdout ---
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-fixtures
+
+ ❯ tests/routes/chat-feedback.test.ts (2 tests | 1 failed) 128ms
+     × 正常路径: persisted=true 且真落库 agent_memory（correction_*），主流程 ok 120ms
+     ✓ 降级路径: memoryStore 不可用 → degraded=true + log.warn 留痕 + 仍 ok:true 4ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  14:06:28
+   Duration  364ms (transform 139ms, setup 0ms, import 142ms, tests 128ms, environment 0ms)
+--- stderr ---
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/routes/chat-feedback.test.ts > #981 — POST /api/proposal/:id/resolve 反馈持久化 > 正常路径: persisted=true 且真落库 agent_memory（correction_*），主流程 ok
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/routes/chat-feedback.test.ts:86:38
+     84|     expect(body.ok).toBe(true);
+     85|     // 判别性核心: 去掉 memoryStore 参数 → persisted 恒 false → 此断言必红
+     86|     expect(body.feedback?.persisted).toBe(true);
+       |                                      ^
+     87|     expect(body.feedback?.degraded).toBe(false);
+     88|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+════════════════════════════════════════════════════════════
+[SECTION 2] 复原态 (RESTORED) — 期望 exit = 0]
+$ npx vitest run tests/routes/chat-feedback.test.ts
+--- exit: 0 | elapsed 0.8s ---
+--- stdout ---
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-fixtures
+
+ ✓ tests/routes/chat-feedback.test.ts (2 tests) 99ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  14:06:29
+   Duration  307ms (transform 108ms, setup 0ms, import 119ms, tests 99ms, environment 0ms)
+--- stderr ---
+
+
+════════════════════════════════════════════════════════════
+VERDICT: VALID (破坏态红 + 复原态绿)

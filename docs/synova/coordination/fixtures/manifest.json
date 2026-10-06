@@ -1,0 +1,418 @@
+{
+  "version": "1.0.0",
+  "description": "V6 · D 项「改坏即红」夹具登记 —— 对施工项判据证明「实现改坏 ⇒ 判据转红」。本文件是唯一登记处；**不改** `施工项登记.ts`（另一路唯一写者），由 V9 卡把本 manifest 接进执法体。",
+  "generatedFrom": "判据件取自 origin/main@74eb6c44c；施工项定义取自 docs/D1144-board-truth-calibration:docs/synova/coordination/施工项登记.ts（**只读**，该件尚未落 main）",
+  "fixtureSemantics": "每条夹具跑两段：(1) 破坏态 `expectRedCommand` 必须 exit≠0；(2) 复原态同命令必须 exit=0。缺一即无效夹具（判例 V-08）。破坏方式只有一种（literal-replace）：把 `breakHow.file` 中**恰好出现 1 次**的 `find` 字面量替换为 `replace`；出现次数≠1 ⇒ runner exit 2，拒绝猜测定位。",
+  "exitCodes": {
+    "0": "全部夹具通过",
+    "1": "有夹具没红（无效夹具）",
+    "2": "检查自身失败（判例 M-02，禁吞崩溃）"
+  },
+  "counts": {
+    "registryItems": 48,
+    "registryActiveItems": 46,
+    "registryBlocks": 12,
+    "fixtures": 6,
+    "notFixtureable": 42
+  },
+  "runFixtureabilityScan": {
+    "method": "对每条 acceptance 的 run 命令抽取路径 token，逐一 existsSync（相对 origin/main 工作树）",
+    "finding": "全部 48 项中，**只有 6 项**的判据件已在 origin/main 落地且指向可改坏的实现 —— 即本批夹具的真实上界。其余项判据件为\"本卡创建\"的待建交付物，或判据是运行期数据断言 ⇒ 今日无法构造有效夹具。"
+  },
+  "observedDefects": [
+    {
+      "id": "D-V6-1",
+      "scope": "item 3-12 的判据件 tests/evolution/global-analyzer.test.ts",
+      "kind": "判据非密闭（non-hermetic）",
+      "statement": "该判据每跑一次就改动 2 个**已跟踪**文件（extensions/industries/saas-tech/thresholds.json、extensions/industries/test-write/thresholds.json）⇒ 跑完工作树是脏的。CI 或任何\"测试后工作树应干净\"的门禁会因此误判。",
+      "howFound": "run-fixtures.ts 的 side-effect 检测（进入/离开已跟踪改动快照对比）在 3-12 段报告 2 个外溢改动",
+      "reproduce": "node --experimental-strip-types docs/synova/coordination/fixtures/run-fixtures.ts --only 3-12",
+      "evidence": "docs/synova/product-lines/evidence/V6/3-12.out（头部 side effects 段）",
+      "note": "判据件自己已承认此点（\"The test writes to the real extensions/industries/ directory by default\"），但**未**改为临时目录 ⇒ 缺陷成立。",
+      "status": "已登记，未修（tests/** 不在本卡写集）"
+    },
+    {
+      "id": "D-V6-2",
+      "scope": "item 3-12 判据件的第 4 例「写入临时目录 → JSON 文件可读」",
+      "kind": "断言无分辨力（坏不掉 —— V-08 的近亲）",
+      "statement": "把被测函数 writeIndustryThresholds 的整个写入段空转（不写文件、不记日志）后，判据**仍然 exit 0**。该例的断言 `expect(baseline.industry).toBe('test-write')` 断的是同文件第 68 行写死的字面量，与被测函数无关；同例算出的 filePath 变量从未被使用。",
+      "howFound": "负夹具：置空转态 → 跑判据 → 期望\"若该例有分辨力则必红\"，实测仍绿",
+      "reproduce": "bash docs/synova/coordination/fixtures/selftest/run-selftest.sh",
+      "evidence": "docs/synova/product-lines/evidence/V6/_negative-fixture-3-12.out",
+      "status": "已登记，未修（tests/** 不在本卡写集）"
+    }
+  ],
+  "selftest": {
+    "script": "docs/synova/coordination/fixtures/selftest/run-selftest.sh",
+    "note": "一个只会在\"全过\"时 exit 0 的 runner 不是判据 ⇒ 必须证明 exit 1 / exit 2 真的可达；且自检脚本本身不得假绿（先验 runner banner / HARNESS-FAILURE / vitest 汇总行，再信退出码）。",
+    "cases": [
+      {
+        "case": "A",
+        "manifest": "selftest/noop-break.json",
+        "expect": "runner exit 1",
+        "why": "语义空操作破坏（只加注释）⇒ 判据不得转红 ⇒ 必须判 INVALID",
+        "evidence": "docs/synova/product-lines/evidence/V6/_selftest-noop-break.out"
+      },
+      {
+        "case": "B",
+        "manifest": "selftest/unique-miss.json",
+        "expect": "runner exit 2",
+        "why": "定位串出现 0 次 ⇒ 拒绝猜测定位 ⇒ 拿不到结论（判例 M-02）",
+        "evidence": "docs/synova/product-lines/evidence/V6/_selftest-unique-miss.out"
+      },
+      {
+        "case": "C",
+        "manifest": "（无 —— 直接对实现置空转）",
+        "expect": "criterion exit 0",
+        "why": "证明 3-12 判据第 4 例坏不掉（见 observedDefects D-V6-2）",
+        "evidence": "docs/synova/product-lines/evidence/V6/_negative-fixture-3-12.out"
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "itemId": "0-5",
+      "criterionRef": "施工项登记.ts#0-5/acceptance[0]",
+      "breakHow": {
+        "kind": "literal-replace",
+        "file": "src/growth/goal-sentinel.ts",
+        "lines": "194-196",
+        "find": "          const baseline = metric.baselinePeriod && state.samples.length > 0\n            ? state.samples.reduce((sum, s) => sum + s.value, 0) / state.samples.length\n            : null;",
+        "replace": "          const baseline = metric.baselinePeriod ? 0 : null;",
+        "rationale": "回退为 #979 修复前那一行 —— `baselinePeriod ? 0 : null` 与 computeDeviations 的 `baseline !== 0` 判据互斥 ⇒ 基线恒 0/null ⇒ 因子3 恒 false，即 0-5「目标哨兵因子3恒 false」原样复现"
+      },
+      "expectRedCommand": "npx vitest run tests/growth/goal-sentinel.test.ts",
+      "restoreHow": "runner 内存原文回写 + 收尾 `git diff --stat` 对被碰文件为空校验（run-fixtures.ts try/finally；不依赖 git checkout）",
+      "expectRedEvidence": "docs/synova/product-lines/evidence/V6/0-5.out"
+    },
+    {
+      "itemId": "0-7",
+      "criterionRef": "施工项登记.ts#0-7/acceptance[0]",
+      "breakHow": {
+        "kind": "literal-replace",
+        "file": "src/routes/chat.ts",
+        "lines": "94",
+        "find": "    }, memoryStore ?? undefined);",
+        "replace": "    });",
+        "rationale": "去掉 collectFeedback 的第二参 memoryStore（= #981 修复前）⇒ persisted 恒 false，反馈永不落库，即 0-7「反馈通道 B 是无声的洞」原样复现"
+      },
+      "expectRedCommand": "npx vitest run tests/routes/chat-feedback.test.ts",
+      "restoreHow": "runner 内存原文回写 + 收尾 `git diff --stat` 对被碰文件为空校验（run-fixtures.ts try/finally；不依赖 git checkout）",
+      "expectRedEvidence": "docs/synova/product-lines/evidence/V6/0-7.out"
+    },
+    {
+      "itemId": "0-10",
+      "criterionRef": "施工项登记.ts#0-10/acceptance[0]",
+      "breakHow": {
+        "kind": "literal-replace",
+        "file": "src/services/request-context.ts",
+        "lines": "82",
+        "find": "    return { conditions: [{ field: DENY_ALL_FIELD, operator: 'EQ', value: DENY_ALL_SENTINEL }] };",
+        "replace": "    return { conditions: [] };",
+        "rationale": "deny-all 兜底改回空条件集（fail-open：l4/knowledge-store.ts 对空条件集短路「完全跳过过滤」）⇒ 无请求上下文时不再拒绝。本破坏即该判据件正文自述的判别点「把 deny-all 的返回改成 { conditions: [] } ⇒ 本文件必红」—— 夹具把该声明从\"已实测\"变成可复跑证据"
+      },
+      "expectRedCommand": "npx vitest run tests/security/request-context-failclosed.test.ts",
+      "restoreHow": "runner 内存原文回写 + 收尾 `git diff --stat` 对被碰文件为空校验（run-fixtures.ts try/finally；不依赖 git checkout）",
+      "expectRedEvidence": "docs/synova/product-lines/evidence/V6/0-10.out"
+    },
+    {
+      "itemId": "1-7",
+      "criterionRef": "施工项登记.ts#1-7/acceptance[0]",
+      "breakHow": {
+        "kind": "literal-replace",
+        "file": "src/routes/workspace-data.ts",
+        "lines": "96-98",
+        "find": "  if (rbac && rbac.authenticated === true) return rbac;\r\n  denyRbac(res, 'no_authenticated_identity', rbac);\r\n  return undefined;\r",
+        "replace": "  return rbac;",
+        "rationale": "路由级守卫不再拒绝（恒放行未认证上下文）⇒ 未认证请求由 403 变 200，即 1-7「多岗位执法只在 1 处」在路由层的塌陷。本破坏即该判据件正文自述的判别点「撤掉 requireAuthenticatedRbac 守卫 ⇒ 组 A 对应用例必红」"
+      },
+      "expectRedCommand": "npx vitest run tests/security/rbac-all-routes.test.ts",
+      "restoreHow": "runner 内存原文回写 + 收尾 `git diff --stat` 对被碰文件为空校验（run-fixtures.ts try/finally；不依赖 git checkout）",
+      "expectRedEvidence": "docs/synova/product-lines/evidence/V6/1-7.out"
+    },
+    {
+      "itemId": "2-4",
+      "criterionRef": "施工项登记.ts#2-4/acceptance[0]",
+      "breakHow": {
+        "kind": "literal-replace",
+        "file": "src/security/file-guard.ts",
+        "lines": "94",
+        "find": "    return this.checkBoundary(resolved, 'write');",
+        "replace": "    return { allowed: true, reason: 'fixture: write gate fail-open' };",
+        "rationale": "写入门禁第三层（跨边界检查）改为恒放行 = 门禁未接/fail-open ⇒ 工作目录外的路径可写、系统保护路径亦可写，即 2-4「写入门禁两道未接」"
+      },
+      "expectRedCommand": "npx vitest run tests/security/file-guard.test.ts",
+      "restoreHow": "runner 内存原文回写 + 收尾 `git diff --stat` 对被碰文件为空校验（run-fixtures.ts try/finally；不依赖 git checkout）",
+      "expectRedEvidence": "docs/synova/product-lines/evidence/V6/2-4.out"
+    },
+    {
+      "itemId": "3-12",
+      "criterionRef": "施工项登记.ts#3-12/acceptance[0]",
+      "breakHow": {
+        "kind": "literal-replace",
+        "file": "packages/evolution/src/global-analyzer.ts",
+        "lines": "123",
+        "find": "    if (deviation > 0.2 && stat.orgCount >= DEFAULT_EVOLUTION_CONFIG.minOrgsForIndustryAggregation) {",
+        "replace": "    if (deviation <= 0.2 && stat.orgCount >= DEFAULT_EVOLUTION_CONFIG.minOrgsForIndustryAggregation) {",
+        "rationale": "阈值建议的判别条件取反（<20% 才建议）⇒「正常值不得出建议」断言红 ⇒ 跨客户基线聚合的判别逻辑失效，即 3-12 进化回环 E2/E3 的判别面塌陷"
+      },
+      "expectRedCommand": "npx vitest run tests/evolution/global-analyzer.test.ts",
+      "restoreHow": "runner 内存原文回写 + 收尾 `git diff --stat` 对被碰文件为空校验（run-fixtures.ts try/finally；不依赖 git checkout）",
+      "expectRedEvidence": "docs/synova/product-lines/evidence/V6/3-12.out"
+    }
+  ],
+  "notFixtureable": [
+    {
+      "itemId": "0-1",
+      "status": "todo",
+      "batch": "第0批",
+      "reason": "判据件**未落 origin/main**（scripts/control-tower/probe-loops.sh —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "0-2",
+      "status": "todo",
+      "batch": "第0批",
+      "reason": "判据件**未落 origin/main**（tests/growth/evolution-writeback.test.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "0-3",
+      "status": "todo",
+      "batch": "第0批",
+      "reason": "判据件**未落 origin/main**（scripts/control-tower/probe-sentinels.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "0-4",
+      "status": "todo",
+      "batch": "第0批",
+      "reason": "判据件**未落 origin/main**（scripts/control-tower/probe-cycle-edges.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "0-6",
+      "status": "todo",
+      "batch": "第0批",
+      "reason": "判据件**未落 origin/main**（scripts/control-tower/probe-diagnosis.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "0-8",
+      "status": "todo",
+      "batch": "第0批",
+      "reason": "判据件**未落 origin/main**（tests/growth/goal-lifecycle-wired-or-retired.test.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "0-9",
+      "status": "retired",
+      "batch": "第0批",
+      "reason": "status=retired —— 已作废项，**无判据对象** ⇒ 无实现可破坏"
+    },
+    {
+      "itemId": "0-11",
+      "status": "todo",
+      "batch": "第0批",
+      "reason": "判据件**未落 origin/main**（scripts/control-tower/probe-tool-policy.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "0-12",
+      "status": "todo",
+      "batch": "第0批",
+      "reason": "判据件**未落 origin/main**（scripts/control-tower/probe-skills.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "1-1",
+      "status": "todo",
+      "batch": "第1批",
+      "reason": "判据件**未落 origin/main**（scripts/golden-scenarios/run.sh —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "1-2",
+      "status": "todo",
+      "batch": "第1批",
+      "reason": "判据件**未落 origin/main**（tests/l3/report-contract-versioned.test.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "1-3",
+      "status": "todo",
+      "batch": "第1批",
+      "reason": "判据件**未落 origin/main**（tests/l3/report-template-client.test.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "1-4",
+      "status": "todo",
+      "batch": "第1批",
+      "reason": "判据为**运行期数据行数断言**（sqlite: sqlite3 data/synova.db \"SELECT COUNT(*) FROM graph_nodes WHERE node_type LIKE \\'goal%\\'\"…）—— 断言的是\"库里有没有行\"，不是某段代码的行为 ⇒ 无单一实现文件可改坏；且需活库 + 真实生产入口（第2批 W1 时序前置未落）"
+    },
+    {
+      "itemId": "1-5",
+      "status": "todo",
+      "batch": "第1批",
+      "reason": "判据件**未落 origin/main**（tests/routes/customer-config-consumed.test.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "1-6",
+      "status": "todo",
+      "batch": "第1批",
+      "reason": "判据件**未落 origin/main**（tests/l4/traversal-permission.test.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "1-8",
+      "status": "todo",
+      "batch": "第1批",
+      "reason": "判据件**未落 origin/main**（tests/sentinel/edge-lag-consumed.test.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "1-9",
+      "status": "todo",
+      "batch": "第1批",
+      "reason": "判据件**未落 origin/main**（tests/loops/direction-monitor.transfer-function.test.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "2-1a",
+      "status": "todo",
+      "batch": "第2批",
+      "reason": "判据件**未落 origin/main**（tests/store/metric-readings-schema.test.ts, tests/store/metric-readings-insert.test.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "2-1b",
+      "status": "todo",
+      "batch": "第2批",
+      "reason": "判据为**运行期数据行数断言**（sqlite: sqlite3 data/synova.db \"SELECT COUNT(*) FROM metric_readings WHERE observed_at > datetime(\\'now\\…）—— 断言的是\"库里有没有行\"，不是某段代码的行为 ⇒ 无单一实现文件可改坏；且需活库 + 真实生产入口（第2批 W1 时序前置未落）"
+    },
+    {
+      "itemId": "2-2",
+      "status": "todo",
+      "batch": "第2批",
+      "reason": "判据件**未落 origin/main**（docs/synova/coordination/tools/check-param-list.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "2-3",
+      "status": "todo",
+      "batch": "第2批",
+      "reason": "判据为**运行期数据行数断言**（sqlite: bash -c \"sqlite3 data/synova.db \\\"SELECT COUNT(*) FROM feedback_log WHERE decision=\\'confirm\\'\\\"…）—— 断言的是\"库里有没有行\"，不是某段代码的行为 ⇒ 无单一实现文件可改坏；且需活库 + 真实生产入口（第2批 W1 时序前置未落）"
+    },
+    {
+      "itemId": "2-6",
+      "status": "todo",
+      "batch": "第2批",
+      "reason": "判据件**未落 origin/main**（scripts/control-tower/probe-compute-registry.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "2-7",
+      "status": "todo",
+      "batch": "第2批",
+      "reason": "判据件**未落 origin/main**（docs/synova/coordination/tools/probe-accuracy-trend.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "3-1",
+      "status": "todo",
+      "batch": "第3批",
+      "reason": "判据件**未落 origin/main**（scripts/control-tower/probe-role-pack.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "3-2",
+      "status": "todo",
+      "batch": "第3批",
+      "reason": "判据件**未落 origin/main**（tests/l4/knowledge-scope.test.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "3-3",
+      "status": "todo",
+      "batch": "第3批",
+      "reason": "判据件**未落 origin/main**（scripts/control-tower/probe-onboarding.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "3-4",
+      "status": "todo",
+      "batch": "第3批",
+      "reason": "判据件**未落 origin/main**（tests/onboarding/gap-questioner.test.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "3-5",
+      "status": "todo",
+      "batch": "第3批",
+      "reason": "判据为**运行期数据行数断言**（sqlite: bash -c \"sqlite3 data/synova.db \\\"SELECT COUNT(*) FROM graph_nodes WHERE node_type LIKE \\'activi…）—— 断言的是\"库里有没有行\"，不是某段代码的行为 ⇒ 无单一实现文件可改坏；且需活库 + 真实生产入口（第2批 W1 时序前置未落）"
+    },
+    {
+      "itemId": "3-6",
+      "status": "todo",
+      "batch": "第3批",
+      "reason": "判据件**未落 origin/main**（scripts/control-tower/probe-agent-readiness.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "3-7",
+      "status": "todo",
+      "batch": "第3批",
+      "reason": "判据件**未落 origin/main**（tests/agent/agent-matrix-trigger.test.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "3-8",
+      "status": "todo",
+      "batch": "第3批",
+      "reason": "判据件**未落 origin/main**（scripts/control-tower/probe-sentinel.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "3-9",
+      "status": "todo",
+      "batch": "第3批",
+      "reason": "判据件**未落 origin/main**（scripts/control-tower/probe-eco-fields.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "3-10",
+      "status": "todo",
+      "batch": "第3批",
+      "reason": "判据件**未落 origin/main**（scripts/control-tower/probe-egress.sh —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "3-11",
+      "status": "todo",
+      "batch": "第3批",
+      "reason": "判据件**未落 origin/main**（tests/extensions/layer-precedence.test.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "PL-04",
+      "status": "todo",
+      "batch": "第2批",
+      "reason": "判据件**未落 origin/main**（docs/synova/coordination/tools/probe-three-layer-contract.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "0-9bis",
+      "status": "todo",
+      "batch": "第0批",
+      "reason": "无 acceptance 判据（无可夹具对象）"
+    },
+    {
+      "itemId": "1-7bis",
+      "status": "proposal",
+      "batch": "第1批",
+      "reason": "status=proposal；判据为纯静态存在性检查（`test -f docs/synova/coordination/`）—— L1 静态判据，**坏不掉**（V-02 禁作 grep 型验收作判据）"
+    },
+    {
+      "itemId": "K1-WH",
+      "status": "todo",
+      "batch": "第0批",
+      "reason": "判据件**未落 origin/main**（tests/security/feishu-webhook-signature.test.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "RB-01",
+      "status": "todo",
+      "batch": "第1批",
+      "reason": "判据件**未落 origin/main**（scripts/control-tower/probe-rbac-multitenant.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "RB-02",
+      "status": "todo",
+      "batch": "第1批",
+      "reason": "判据件**未落 origin/main**（scripts/control-tower/probe-department-axis.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "RB-03",
+      "status": "todo",
+      "batch": "第2批",
+      "reason": "判据件**未落 origin/main**（scripts/control-tower/probe-permission-grants.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    },
+    {
+      "itemId": "RB-04",
+      "status": "todo",
+      "batch": "第3批",
+      "reason": "判据件**未落 origin/main**（scripts/control-tower/probe-role-config.ts —— 在施工项登记里标注为\"判据交付物（本卡创建）\"）⇒ 无判据可跑、无实现可破坏"
+    }
+  ]
+}

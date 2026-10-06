@@ -1,0 +1,460 @@
+# V6「改坏即红」夹具证据 — item 1-7
+# criterionRef   : 施工项登记.ts#1-7/acceptance[0]
+# breakHow.file  : src/routes/workspace-data.ts (lines 96-98)
+# breakHow       : literal-replace —— 路由级守卫不再拒绝（恒放行未认证上下文）⇒ 未认证请求由 403 变 200，即 1-7「多岗位执法只在 1 处」在路由层的塌陷。本破坏即该判据件正文自述的判别点「撤掉 requireAuthenticatedRbac 守卫 ⇒ 组 A 对应用例必红」
+# restoreHow     : runner 内存原文回写 + 收尾 `git diff --stat` 对被碰文件为空校验（run-fixtures.ts try/finally；不依赖 git checkout）
+# generatedAt    : 2026-10-06T06:06:32.716Z
+# runner         : docs/synova/coordination/fixtures/run-fixtures.ts
+# 原始输出（命令 + stdout/stderr 原样，无手写数字）
+
+════════════════════════════════════════════════════════════
+[SECTION 1] 破坏态 (BROKEN) — 期望 exit ≠ 0]
+$ npx vitest run tests/security/rbac-all-routes.test.ts
+--- exit: 1 | elapsed 0.7s ---
+--- stdout ---
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-fixtures
+
+ ❯ tests/security/rbac-all-routes.test.ts (46 tests | 9 failed) 55ms
+     ✓ D1153 射程 段枚举数 = 10（端点增删即红，强制同步） 1ms
+     ✓ 既有守卫对照 段枚举数 = 6（端点增删即红，强制同步） 0ms
+     × GET    /api/workspace/:deptId → 403 5ms
+     × GET    /api/workspace/:deptId/goals → 403 3ms
+     × GET    /api/workspace/:deptId/alerts → 403 1ms
+     × GET    /api/workspace/:deptId/next-action → 403 1ms
+     × PUT    /api/workspace/goals/:goalId/target → 403 1ms
+     × POST   /api/workspace/proposals/:proposalId/reject → 403 1ms
+     × PUT    /api/workspace/alerts/:id/dismiss → 403 1ms
+     ✓ POST   /api/actions → 403 1ms
+     ✓ GET    /api/actions → 403 1ms
+     ✓ PUT    /api/actions/:id/status → 403 1ms
+     ✓ POST   /api/workspaces → 403 0ms
+     ✓ PUT    /api/workspaces/:id/status → 403 1ms
+     ✓ POST   /api/workspaces/:id/messages → 403 0ms
+     ✓ POST   /api/workspaces/:id/sub → 403 0ms
+     ✓ PUT    /api/workspaces/:id/merge → 403 1ms
+     ✓ GET    /api/workspaces/:id/context → 403 0ms
+     ✓ GET    /api/workspace/:deptId → 401（无 Authorization 头） 0ms
+     ✓ PUT    /api/workspace/goals/:goalId/target → 401（无 Authorization 头） 0ms
+     ✓ POST   /api/actions → 401（无 Authorization 头） 0ms
+     ✓ GET    /api/actions → 401（无 Authorization 头） 0ms
+     ✓ PUT    /api/actions/:id/status → 401（无 Authorization 头） 0ms
+     ✓ POST   /api/workspaces → 401（无 Authorization 头） 0ms
+     ✓ GET    /api/workspaces/:id/context → 401（无 Authorization 头） 0ms
+     ✓ 防伪凭据：合法结构但签名无效的 Bearer ⇒ 401（验签真发生） 0ms
+     ✓ GET    /api/workspace/:deptId · admin 已认证且有权 ⇒ 200（非 403） 0ms
+     ✓ GET    /api/workspace/:deptId/goals · admin 已认证且有权 ⇒ 200（非 403） 0ms
+     ✓ GET    /api/workspace/:deptId/alerts · admin 已认证且有权 ⇒ 200（非 403） 0ms
+     ✓ GET    /api/workspace/:deptId/next-action · admin 已认证且有权 ⇒ 200（非 403） 0ms
+     ✓ PUT    /api/workspace/goals/:goalId/target · admin 已认证且有权 ⇒ 200（非 403） 0ms
+     ✓ POST   /api/workspace/proposals/:proposalId/reject · admin 已认证且有权 ⇒ 200（非 403） 0ms
+     ✓ PUT    /api/workspace/alerts/:id/dismiss · admin 已认证且有权 ⇒ 200（非 403） 0ms
+     ✓ POST   /api/actions · admin 已认证且有权 ⇒ 200（非 403） 0ms
+     ✓ GET    /api/actions · admin 已认证且有权 ⇒ 200（非 403） 0ms
+     ✓ PUT /api/actions/:id/status · admin 已认证且有权 ⇒ 200（身份守卫 + 对象定位） 2ms
+     ✓ PUT /api/workspace/goals/:goalId/target · manager ⇒ 200（中层写路径不被误杀） 1ms
+     ✓ GET    /api/workspace/:deptId · liaison / ga ⇒ 200（已认证即可读；本卡不做越权判定） 1ms
+     ✓ PUT    /api/workspace/goals/:goalId/target · staff / ga / liaison ⇒ 非 403（刻意：本卡不做越权判定） 1ms
+     ✓ POST   /api/actions · staff ⇒ 非 403（刻意：本卡不做越权判定） 0ms
+     ✓ GET    /api/workspace/:deptId · manager / staff ⇒ 非 403（真消费方路径，不得过度拒绝） 1ms
+     ✓ 对照 · POST /api/workspaces ⇒ 200（admin 建区，夹具闭环） 0ms
+     ✓ 对照 · GET /api/workspaces/:id/context ⇒ 200（既有 canAccessWorkspace 执法点） 1ms
+     ✓ 对照 · 写链路 order: create → status → messages → sub → merge 全 200 2ms
+     × A 组 403 的成因是 rbac.authenticated===false，而非路由根本不存在 1ms
+     × 纵深防御面确实注入了 req.rbac（authenticated=false）；非「中间件未挂载」的侥幸 0ms
+
+ Test Files  1 failed (1)
+      Tests  9 failed | 37 passed (46)
+   Start at  14:06:31
+   Duration  331ms (transform 113ms, setup 0ms, import 188ms, tests 55ms, environment 0ms)
+--- stderr ---
+{"level":40,"time":1791266791763,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"services/memory-access","err":"数据库未初始化，请先调用 initEngineContext()","orgId":"","msg":"记忆查询失败 — degraded"}
+{"level":30,"time":1791266791770,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","id":"ws_muw9zyai","title":"D1153 夹具工作区","owner":"admin-d1153","msg":"工作区已创建"}
+{"level":30,"time":1791266791771,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","id":"ws_sub_muw9zyaj","department":"d1153-dept","parentId":"ws_muw9zyai","owner":"admin-d1153","msg":"子工作区已创建"}
+{"level":40,"time":1791266791772,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"services/memory-access","err":"数据库未初始化，请先调用 initEngineContext()","key":"action_act_muw9zyak","msg":"记忆写入失败 — degraded"}
+{"level":30,"time":1791266791772,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/actions-api","id":"act_muw9zyak","title":"D1153 夹具行动项","msg":"行动项已创建"}
+{"level":40,"time":1791266791775,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266791775,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":40,"time":1791266791781,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266791781,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":40,"time":1791266791782,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266791782,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":40,"time":1791266791783,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266791783,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":40,"time":1791266791784,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266791784,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","record":{"id":"1a5b88de-4e54-4c5b-a1fb-cd9116368e71","enterpriseId":"default","actorId":"unknown","decision":"modify","targetType":"goal","targetId":"goal-d1153","reason":"用例","evidenceRefs":"[\"42\"]","actorRole":"","createdAt":"2026-10-06T06:06:31.784Z"},"msg":"SQLite 未就绪 — 反馈降级（仅内存）"}
+{"level":30,"time":1791266791784,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","goalId":"goal-d1153","newTarget":42,"msg":"Goal 目标值已调整 — 反馈已收集"}
+{"level":40,"time":1791266791785,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266791785,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","record":{"id":"8ca1e887-eed6-4e5b-9be1-55d4a411601d","enterpriseId":"default","actorId":"unknown","decision":"reject_path","targetType":"proposal","targetId":"prop-d1153","reason":"用例","evidenceRefs":"[]","actorRole":"","createdAt":"2026-10-06T06:06:31.785Z"},"msg":"SQLite 未就绪 — 反馈降级（仅内存）"}
+{"level":30,"time":1791266791785,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","proposalId":"prop-d1153","msg":"Proposal 已拒绝 — 反馈已收集"}
+{"level":40,"time":1791266791786,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266791786,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","record":{"id":"e0e0711e-26d2-4182-96f9-f396f127138d","enterpriseId":"default","actorId":"unknown","decision":"reject","targetType":"sentinel_alert","targetId":"alert-d1153","reason":"用例","evidenceRefs":"[]","actorRole":"","createdAt":"2026-10-06T06:06:31.786Z"},"msg":"SQLite 未就绪 — 反馈降级（仅内存）"}
+{"level":30,"time":1791266791786,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","alertId":"alert-d1153","msg":"告警已消除"}
+{"level":40,"time":1791266791788,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266791788,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/actions-api","code":"RBAC_DENIED","reason":"no_authenticated_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 行动项端点（fail-closed，HTTP 403）"}
+{"level":40,"time":1791266791789,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266791789,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/actions-api","code":"RBAC_DENIED","reason":"no_authenticated_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 行动项端点（fail-closed，HTTP 403）"}
+{"level":40,"time":1791266791789,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266791789,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/actions-api","code":"RBAC_DENIED","reason":"no_authenticated_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 行动项端点（fail-closed，HTTP 403）"}
+{"level":40,"time":1791266791790,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266791790,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","code":"WORKSPACE_WRITE_DENIED","reason":"no_verified_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 工作区写操作（fail-closed，403）"}
+{"level":40,"time":1791266791790,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266791790,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","code":"WORKSPACE_WRITE_DENIED","reason":"no_verified_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 工作区写操作（fail-closed，403）"}
+{"level":40,"time":1791266791791,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266791791,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","code":"WORKSPACE_WRITE_DENIED","reason":"no_verified_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 工作区写操作（fail-closed，403）"}
+{"level":40,"time":1791266791791,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266791791,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","code":"WORKSPACE_WRITE_DENIED","reason":"no_verified_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 工作区写操作（fail-closed，403）"}
+{"level":40,"time":1791266791792,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266791792,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","code":"WORKSPACE_WRITE_DENIED","reason":"no_verified_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 工作区写操作（fail-closed，403）"}
+{"level":40,"time":1791266791792,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266791792,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266791792,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","userId":"unauthenticated","reason":"unauthenticated_context","msg":"安全判据: 被拒绝 — 未认证上下文不得访问工作区"}
+{"level":40,"time":1791266791793,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"auth","code":"AUTH_REJECTED","reason":"missing_or_invalid_authorization_header","path":"/api/workspace/d1153-dept","msg":"安全判据: 被拒绝 — 缺 Authorization/Bearer 头（HTTP 401，fail-closed）"}
+{"level":40,"time":1791266791793,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"auth","code":"AUTH_REJECTED","reason":"missing_or_invalid_authorization_header","path":"/api/workspace/goals/goal-d1153/target","msg":"安全判据: 被拒绝 — 缺 Authorization/Bearer 头（HTTP 401，fail-closed）"}
+{"level":40,"time":1791266791794,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"auth","code":"AUTH_REJECTED","reason":"missing_or_invalid_authorization_header","path":"/api/actions","msg":"安全判据: 被拒绝 — 缺 Authorization/Bearer 头（HTTP 401，fail-closed）"}
+{"level":40,"time":1791266791794,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"auth","code":"AUTH_REJECTED","reason":"missing_or_invalid_authorization_header","path":"/api/actions","msg":"安全判据: 被拒绝 — 缺 Authorization/Bearer 头（HTTP 401，fail-closed）"}
+{"level":40,"time":1791266791794,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"auth","code":"AUTH_REJECTED","reason":"missing_or_invalid_authorization_header","path":"/api/actions/act_muw9zyak/status","msg":"安全判据: 被拒绝 — 缺 Authorization/Bearer 头（HTTP 401，fail-closed）"}
+{"level":40,"time":1791266791795,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"auth","code":"AUTH_REJECTED","reason":"missing_or_invalid_authorization_header","path":"/api/workspaces","msg":"安全判据: 被拒绝 — 缺 Authorization/Bearer 头（HTTP 401，fail-closed）"}
+{"level":40,"time":1791266791795,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"auth","code":"AUTH_REJECTED","reason":"missing_or_invalid_authorization_header","path":"/api/workspaces/ws_muw9zyai/context","msg":"安全判据: 被拒绝 — 缺 Authorization/Bearer 头（HTTP 401，fail-closed）"}
+{"level":40,"time":1791266791796,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"auth","code":"AUTH_REJECTED","reason":"Invalid signature","path":"/api/workspace/d1153-dept","msg":"安全判据: 被拒绝 — token 校验失败（HTTP 401，fail-closed）"}
+{"level":40,"time":1791266791796,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":40,"time":1791266791796,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":40,"time":1791266791797,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":40,"time":1791266791797,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":40,"time":1791266791797,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","record":{"id":"7bea1495-3151-42c9-8c75-8c749ae1787d","enterpriseId":"default","actorId":"unknown","decision":"modify","targetType":"goal","targetId":"goal-d1153","reason":"用例","evidenceRefs":"[\"42\"]","actorRole":"","createdAt":"2026-10-06T06:06:31.797Z"},"msg":"SQLite 未就绪 — 反馈降级（仅内存）"}
+{"level":30,"time":1791266791797,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","goalId":"goal-d1153","newTarget":42,"msg":"Goal 目标值已调整 — 反馈已收集"}
+{"level":40,"time":1791266791798,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","record":{"id":"176e1e26-8911-450c-a6b9-82e3fd7402eb","enterpriseId":"default","actorId":"unknown","decision":"reject_path","targetType":"proposal","targetId":"prop-d1153","reason":"用例","evidenceRefs":"[]","actorRole":"","createdAt":"2026-10-06T06:06:31.798Z"},"msg":"SQLite 未就绪 — 反馈降级（仅内存）"}
+{"level":30,"time":1791266791798,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","proposalId":"prop-d1153","msg":"Proposal 已拒绝 — 反馈已收集"}
+{"level":40,"time":1791266791798,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","record":{"id":"42e59194-df74-4d8f-8849-7fa78bf9c428","enterpriseId":"default","actorId":"unknown","decision":"reject","targetType":"sentinel_alert","targetId":"alert-d1153","reason":"用例","evidenceRefs":"[]","actorRole":"","createdAt":"2026-10-06T06:06:31.798Z"},"msg":"SQLite 未就绪 — 反馈降级（仅内存）"}
+{"level":30,"time":1791266791798,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","alertId":"alert-d1153","msg":"告警已消除"}
+{"level":40,"time":1791266791799,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"services/memory-access","err":"数据库未初始化，请先调用 initEngineContext()","key":"action_act_muw9zybb","msg":"记忆写入失败 — degraded"}
+{"level":30,"time":1791266791799,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/actions-api","id":"act_muw9zybb","title":"用例","msg":"行动项已创建"}
+{"level":40,"time":1791266791800,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"services/memory-access","err":"数据库未初始化，请先调用 initEngineContext()","key":"action_act_muw9zybb","msg":"记忆写入失败 — degraded"}
+{"level":30,"time":1791266791800,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/actions-api","id":"act_muw9zybb","title":"流转用例","msg":"行动项已创建"}
+{"level":40,"time":1791266791800,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"services/memory-access","err":"数据库未初始化，请先调用 initEngineContext()","key":"action_act_muw9zybb","msg":"记忆写入失败 — degraded"}
+{"level":30,"time":1791266791801,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/actions-api","id":"act_muw9zybb","status":"confirmed","msg":"行动项状态已更新"}
+{"level":40,"time":1791266791801,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","record":{"id":"d1f9c1cc-4e4e-4a1f-877d-a91597e08ca7","enterpriseId":"default","actorId":"unknown","decision":"modify","targetType":"goal","targetId":"goal-2-muw9zybd","reason":"中层调整","evidenceRefs":"[\"7\"]","actorRole":"","createdAt":"2026-10-06T06:06:31.801Z"},"msg":"SQLite 未就绪 — 反馈降级（仅内存）"}
+{"level":30,"time":1791266791801,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","goalId":"goal-2-muw9zybd","newTarget":7,"msg":"Goal 目标值已调整 — 反馈已收集"}
+{"level":40,"time":1791266791802,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":40,"time":1791266791802,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":40,"time":1791266791803,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","record":{"id":"c804cd2b-6aef-467b-b7e4-9e0e224e6519","enterpriseId":"default","actorId":"unknown","decision":"modify","targetType":"goal","targetId":"goal-3-muw9zybe","reason":"中层调整目标值","evidenceRefs":"[\"1\"]","actorRole":"","createdAt":"2026-10-06T06:06:31.803Z"},"msg":"SQLite 未就绪 — 反馈降级（仅内存）"}
+{"level":30,"time":1791266791803,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","goalId":"goal-3-muw9zybe","newTarget":1,"msg":"Goal 目标值已调整 — 反馈已收集"}
+{"level":40,"time":1791266791803,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","record":{"id":"c3bf79d3-bb2e-4c3e-b636-550030f28cfc","enterpriseId":"default","actorId":"unknown","decision":"modify","targetType":"goal","targetId":"goal-4-muw9zybf","reason":"中层调整目标值","evidenceRefs":"[\"1\"]","actorRole":"","createdAt":"2026-10-06T06:06:31.803Z"},"msg":"SQLite 未就绪 — 反馈降级（仅内存）"}
+{"level":30,"time":1791266791803,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","goalId":"goal-4-muw9zybf","newTarget":1,"msg":"Goal 目标值已调整 — 反馈已收集"}
+{"level":40,"time":1791266791803,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","record":{"id":"8aa1ec60-a866-42e3-9627-413908e1e416","enterpriseId":"default","actorId":"unknown","decision":"modify","targetType":"goal","targetId":"goal-5-muw9zybf","reason":"中层调整目标值","evidenceRefs":"[\"1\"]","actorRole":"","createdAt":"2026-10-06T06:06:31.803Z"},"msg":"SQLite 未就绪 — 反馈降级（仅内存）"}
+{"level":30,"time":1791266791803,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","goalId":"goal-5-muw9zybf","newTarget":1,"msg":"Goal 目标值已调整 — 反馈已收集"}
+{"level":40,"time":1791266791804,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"services/memory-access","err":"数据库未初始化，请先调用 initEngineContext()","key":"action_act_muw9zybg","msg":"记忆写入失败 — degraded"}
+{"level":30,"time":1791266791804,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/actions-api","id":"act_muw9zybg","title":"staff 创建用例","msg":"行动项已创建"}
+{"level":40,"time":1791266791804,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":40,"time":1791266791804,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":30,"time":1791266791805,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","id":"ws_muw9zybh","title":"对照工作区","owner":"admin-d1153","msg":"工作区已创建"}
+{"level":30,"time":1791266791805,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","id":"ws_muw9zybh","title":"对照上下文","owner":"admin-d1153","msg":"工作区已创建"}
+{"level":30,"time":1791266791806,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","id":"ws_muw9zybi","title":"对照写链路","owner":"admin-d1153","msg":"工作区已创建"}
+{"level":30,"time":1791266791806,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","id":"ws_muw9zybi","status":"analyzing","msg":"工作区状态已更新"}
+{"level":30,"time":1791266791807,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","id":"ws_sub_muw9zybj","department":"d1153-dept","parentId":"ws_muw9zybi","owner":"admin-d1153","msg":"子工作区已创建"}
+{"level":30,"time":1791266791807,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","id":"ws_sub_muw9zybj","parentId":"ws_muw9zybi","msg":"子工作区方案已汇入全局"}
+{"level":40,"time":1791266791808,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":40,"time":1791266791808,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266791808,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":40,"time":1791266791808,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266791808,"pid":26116,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 9 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/security/rbac-all-routes.test.ts > A · 未认证 rbac 上下文 ⇒ HTTP 403（逐路由枚举，纵深防御面） > GET    /api/workspace/:deptId → 403
+AssertionError: expected { …(2) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+    "label": "GET    /api/workspace/:deptId",
+-   "status": 403,
++   "status": 200,
+  }
+
+ ❯ tests/security/rbac-all-routes.test.ts:296:52
+    294|     const res = await call(depth.base, c.method, c.path, { body: c.bod…
+    295|     // 403 而非 404：守卫先于资源查找 ⇒ 不因存在性差异泄漏给未认证调用方
+    296|     expect({ label: c.label, status: res.status }).toEqual({ label: c.…
+       |                                                    ^
+    297|     if (c.expectCode) {
+    298|       expect({ label: c.label, code: str(res.body, 'code') }).toEqual(…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯
+
+ FAIL  tests/security/rbac-all-routes.test.ts > A · 未认证 rbac 上下文 ⇒ HTTP 403（逐路由枚举，纵深防御面） > GET    /api/workspace/:deptId/goals → 403
+AssertionError: expected { …(2) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+    "label": "GET    /api/workspace/:deptId/goals",
+-   "status": 403,
++   "status": 200,
+  }
+
+ ❯ tests/security/rbac-all-routes.test.ts:296:52
+    294|     const res = await call(depth.base, c.method, c.path, { body: c.bod…
+    295|     // 403 而非 404：守卫先于资源查找 ⇒ 不因存在性差异泄漏给未认证调用方
+    296|     expect({ label: c.label, status: res.status }).toEqual({ label: c.…
+       |                                                    ^
+    297|     if (c.expectCode) {
+    298|       expect({ label: c.label, code: str(res.body, 'code') }).toEqual(…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯
+
+ FAIL  tests/security/rbac-all-routes.test.ts > A · 未认证 rbac 上下文 ⇒ HTTP 403（逐路由枚举，纵深防御面） > GET    /api/workspace/:deptId/alerts → 403
+AssertionError: expected { …(2) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+    "label": "GET    /api/workspace/:deptId/alerts",
+-   "status": 403,
++   "status": 200,
+  }
+
+ ❯ tests/security/rbac-all-routes.test.ts:296:52
+    294|     const res = await call(depth.base, c.method, c.path, { body: c.bod…
+    295|     // 403 而非 404：守卫先于资源查找 ⇒ 不因存在性差异泄漏给未认证调用方
+    296|     expect({ label: c.label, status: res.status }).toEqual({ label: c.…
+       |                                                    ^
+    297|     if (c.expectCode) {
+    298|       expect({ label: c.label, code: str(res.body, 'code') }).toEqual(…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯
+
+ FAIL  tests/security/rbac-all-routes.test.ts > A · 未认证 rbac 上下文 ⇒ HTTP 403（逐路由枚举，纵深防御面） > GET    /api/workspace/:deptId/next-action → 403
+AssertionError: expected { …(2) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+    "label": "GET    /api/workspace/:deptId/next-action",
+-   "status": 403,
++   "status": 200,
+  }
+
+ ❯ tests/security/rbac-all-routes.test.ts:296:52
+    294|     const res = await call(depth.base, c.method, c.path, { body: c.bod…
+    295|     // 403 而非 404：守卫先于资源查找 ⇒ 不因存在性差异泄漏给未认证调用方
+    296|     expect({ label: c.label, status: res.status }).toEqual({ label: c.…
+       |                                                    ^
+    297|     if (c.expectCode) {
+    298|       expect({ label: c.label, code: str(res.body, 'code') }).toEqual(…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯
+
+ FAIL  tests/security/rbac-all-routes.test.ts > A · 未认证 rbac 上下文 ⇒ HTTP 403（逐路由枚举，纵深防御面） > PUT    /api/workspace/goals/:goalId/target → 403
+AssertionError: expected { …(2) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+    "label": "PUT    /api/workspace/goals/:goalId/target",
+-   "status": 403,
++   "status": 200,
+  }
+
+ ❯ tests/security/rbac-all-routes.test.ts:296:52
+    294|     const res = await call(depth.base, c.method, c.path, { body: c.bod…
+    295|     // 403 而非 404：守卫先于资源查找 ⇒ 不因存在性差异泄漏给未认证调用方
+    296|     expect({ label: c.label, status: res.status }).toEqual({ label: c.…
+       |                                                    ^
+    297|     if (c.expectCode) {
+    298|       expect({ label: c.label, code: str(res.body, 'code') }).toEqual(…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯
+
+ FAIL  tests/security/rbac-all-routes.test.ts > A · 未认证 rbac 上下文 ⇒ HTTP 403（逐路由枚举，纵深防御面） > POST   /api/workspace/proposals/:proposalId/reject → 403
+AssertionError: expected { …(2) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+    "label": "POST   /api/workspace/proposals/:proposalId/reject",
+-   "status": 403,
++   "status": 200,
+  }
+
+ ❯ tests/security/rbac-all-routes.test.ts:296:52
+    294|     const res = await call(depth.base, c.method, c.path, { body: c.bod…
+    295|     // 403 而非 404：守卫先于资源查找 ⇒ 不因存在性差异泄漏给未认证调用方
+    296|     expect({ label: c.label, status: res.status }).toEqual({ label: c.…
+       |                                                    ^
+    297|     if (c.expectCode) {
+    298|       expect({ label: c.label, code: str(res.body, 'code') }).toEqual(…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯
+
+ FAIL  tests/security/rbac-all-routes.test.ts > A · 未认证 rbac 上下文 ⇒ HTTP 403（逐路由枚举，纵深防御面） > PUT    /api/workspace/alerts/:id/dismiss → 403
+AssertionError: expected { …(2) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+    "label": "PUT    /api/workspace/alerts/:id/dismiss",
+-   "status": 403,
++   "status": 200,
+  }
+
+ ❯ tests/security/rbac-all-routes.test.ts:296:52
+    294|     const res = await call(depth.base, c.method, c.path, { body: c.bod…
+    295|     // 403 而非 404：守卫先于资源查找 ⇒ 不因存在性差异泄漏给未认证调用方
+    296|     expect({ label: c.label, status: res.status }).toEqual({ label: c.…
+       |                                                    ^
+    297|     if (c.expectCode) {
+    298|       expect({ label: c.label, code: str(res.body, 'code') }).toEqual(…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯
+
+ FAIL  tests/security/rbac-all-routes.test.ts > D · 判据来源自证（防「判据其实是 mock 绿的」） > A 组 403 的成因是 rbac.authenticated===false，而非路由根本不存在
+AssertionError: expected 200 to be 403 // Object.is equality
+
+- Expected
++ Received
+
+- 403
++ 200
+
+ ❯ tests/security/rbac-all-routes.test.ts:494:27
+    492|     // 同一路径在纵深防御面（无 jwt 层、无 token）⇒ 守卫拒绝
+    493|     const denied = await call(depth.base, 'GET', '/api/workspace/d1153…
+    494|     expect(denied.status).toBe(403);
+       |                           ^
+    495|     expect(str(denied.body, 'code')).toBe('RBAC_DENIED');
+    496|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/9]⎯
+
+ FAIL  tests/security/rbac-all-routes.test.ts > D · 判据来源自证（防「判据其实是 mock 绿的」） > 纵深防御面确实注入了 req.rbac（authenticated=false）；非「中间件未挂载」的侥幸
+AssertionError: expected 200 to be 403 // Object.is equality
+
+- Expected
++ Received
+
+- 403
++ 200
+
+ ❯ tests/security/rbac-all-routes.test.ts:503:31
+    501|     // （无 jwt 层 ⇒ 无 req.auth ⇒ 即便带 Bearer 也是匿名上下文）
+    502|     const withBearer = await call(depth.base, 'GET', '/api/workspace/d…
+    503|     expect(withBearer.status).toBe(403);
+       |                               ^
+    504|     expect(str(withBearer.body, 'code')).toBe('RBAC_DENIED');
+    505|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/9]⎯
+
+════════════════════════════════════════════════════════════
+[SECTION 2] 复原态 (RESTORED) — 期望 exit = 0]
+$ npx vitest run tests/security/rbac-all-routes.test.ts
+--- exit: 0 | elapsed 0.8s ---
+--- stdout ---
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-fixtures
+
+ ✓ tests/security/rbac-all-routes.test.ts (46 tests) 55ms
+
+ Test Files  1 passed (1)
+      Tests  46 passed (46)
+   Start at  14:06:32
+   Duration  347ms (transform 121ms, setup 0ms, import 207ms, tests 55ms, environment 0ms)
+--- stderr ---
+{"level":40,"time":1791266792621,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"services/memory-access","err":"数据库未初始化，请先调用 initEngineContext()","orgId":"","msg":"记忆查询失败 — degraded"}
+{"level":30,"time":1791266792629,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","id":"ws_muw9zyyd","title":"D1153 夹具工作区","owner":"admin-d1153","msg":"工作区已创建"}
+{"level":30,"time":1791266792631,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","id":"ws_sub_muw9zyyf","department":"d1153-dept","parentId":"ws_muw9zyyd","owner":"admin-d1153","msg":"子工作区已创建"}
+{"level":40,"time":1791266792632,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"services/memory-access","err":"数据库未初始化，请先调用 initEngineContext()","key":"action_act_muw9zyyf","msg":"记忆写入失败 — degraded"}
+{"level":30,"time":1791266792632,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/actions-api","id":"act_muw9zyyf","title":"D1153 夹具行动项","msg":"行动项已创建"}
+{"level":40,"time":1791266792634,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266792634,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","code":"RBAC_DENIED","reason":"no_authenticated_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 工作台数据端点（fail-closed，HTTP 403）"}
+{"level":40,"time":1791266792635,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266792635,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","code":"RBAC_DENIED","reason":"no_authenticated_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 工作台数据端点（fail-closed，HTTP 403）"}
+{"level":40,"time":1791266792635,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266792635,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","code":"RBAC_DENIED","reason":"no_authenticated_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 工作台数据端点（fail-closed，HTTP 403）"}
+{"level":40,"time":1791266792636,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266792636,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","code":"RBAC_DENIED","reason":"no_authenticated_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 工作台数据端点（fail-closed，HTTP 403）"}
+{"level":40,"time":1791266792637,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266792637,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","code":"RBAC_DENIED","reason":"no_authenticated_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 工作台数据端点（fail-closed，HTTP 403）"}
+{"level":40,"time":1791266792638,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266792638,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","code":"RBAC_DENIED","reason":"no_authenticated_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 工作台数据端点（fail-closed，HTTP 403）"}
+{"level":40,"time":1791266792639,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266792639,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","code":"RBAC_DENIED","reason":"no_authenticated_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 工作台数据端点（fail-closed，HTTP 403）"}
+{"level":40,"time":1791266792640,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266792640,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/actions-api","code":"RBAC_DENIED","reason":"no_authenticated_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 行动项端点（fail-closed，HTTP 403）"}
+{"level":40,"time":1791266792641,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266792641,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/actions-api","code":"RBAC_DENIED","reason":"no_authenticated_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 行动项端点（fail-closed，HTTP 403）"}
+{"level":40,"time":1791266792642,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266792642,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/actions-api","code":"RBAC_DENIED","reason":"no_authenticated_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 行动项端点（fail-closed，HTTP 403）"}
+{"level":40,"time":1791266792643,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266792643,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","code":"WORKSPACE_WRITE_DENIED","reason":"no_verified_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 工作区写操作（fail-closed，403）"}
+{"level":40,"time":1791266792643,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266792643,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","code":"WORKSPACE_WRITE_DENIED","reason":"no_verified_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 工作区写操作（fail-closed，403）"}
+{"level":40,"time":1791266792644,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266792644,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","code":"WORKSPACE_WRITE_DENIED","reason":"no_verified_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 工作区写操作（fail-closed，403）"}
+{"level":40,"time":1791266792645,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266792645,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","code":"WORKSPACE_WRITE_DENIED","reason":"no_verified_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 工作区写操作（fail-closed，403）"}
+{"level":40,"time":1791266792645,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266792645,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","code":"WORKSPACE_WRITE_DENIED","reason":"no_verified_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 工作区写操作（fail-closed，403）"}
+{"level":40,"time":1791266792646,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266792646,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266792646,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","userId":"unauthenticated","reason":"unauthenticated_context","msg":"安全判据: 被拒绝 — 未认证上下文不得访问工作区"}
+{"level":40,"time":1791266792646,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"auth","code":"AUTH_REJECTED","reason":"missing_or_invalid_authorization_header","path":"/api/workspace/d1153-dept","msg":"安全判据: 被拒绝 — 缺 Authorization/Bearer 头（HTTP 401，fail-closed）"}
+{"level":40,"time":1791266792647,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"auth","code":"AUTH_REJECTED","reason":"missing_or_invalid_authorization_header","path":"/api/workspace/goals/goal-d1153/target","msg":"安全判据: 被拒绝 — 缺 Authorization/Bearer 头（HTTP 401，fail-closed）"}
+{"level":40,"time":1791266792647,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"auth","code":"AUTH_REJECTED","reason":"missing_or_invalid_authorization_header","path":"/api/actions","msg":"安全判据: 被拒绝 — 缺 Authorization/Bearer 头（HTTP 401，fail-closed）"}
+{"level":40,"time":1791266792647,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"auth","code":"AUTH_REJECTED","reason":"missing_or_invalid_authorization_header","path":"/api/actions","msg":"安全判据: 被拒绝 — 缺 Authorization/Bearer 头（HTTP 401，fail-closed）"}
+{"level":40,"time":1791266792648,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"auth","code":"AUTH_REJECTED","reason":"missing_or_invalid_authorization_header","path":"/api/actions/act_muw9zyyf/status","msg":"安全判据: 被拒绝 — 缺 Authorization/Bearer 头（HTTP 401，fail-closed）"}
+{"level":40,"time":1791266792648,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"auth","code":"AUTH_REJECTED","reason":"missing_or_invalid_authorization_header","path":"/api/workspaces","msg":"安全判据: 被拒绝 — 缺 Authorization/Bearer 头（HTTP 401，fail-closed）"}
+{"level":40,"time":1791266792649,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"auth","code":"AUTH_REJECTED","reason":"missing_or_invalid_authorization_header","path":"/api/workspaces/ws_muw9zyyd/context","msg":"安全判据: 被拒绝 — 缺 Authorization/Bearer 头（HTTP 401，fail-closed）"}
+{"level":40,"time":1791266792649,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"auth","code":"AUTH_REJECTED","reason":"Invalid signature","path":"/api/workspace/d1153-dept","msg":"安全判据: 被拒绝 — token 校验失败（HTTP 401，fail-closed）"}
+{"level":40,"time":1791266792650,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":40,"time":1791266792650,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":40,"time":1791266792651,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":40,"time":1791266792651,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":40,"time":1791266792652,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","record":{"id":"97edcbc7-7020-46c6-b5f3-db3adceff453","enterpriseId":"default","actorId":"unknown","decision":"modify","targetType":"goal","targetId":"goal-d1153","reason":"用例","evidenceRefs":"[\"42\"]","actorRole":"","createdAt":"2026-10-06T06:06:32.651Z"},"msg":"SQLite 未就绪 — 反馈降级（仅内存）"}
+{"level":30,"time":1791266792652,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","goalId":"goal-d1153","newTarget":42,"msg":"Goal 目标值已调整 — 反馈已收集"}
+{"level":40,"time":1791266792652,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","record":{"id":"57e451e8-68d8-4004-951b-2cc9e21b3844","enterpriseId":"default","actorId":"unknown","decision":"reject_path","targetType":"proposal","targetId":"prop-d1153","reason":"用例","evidenceRefs":"[]","actorRole":"","createdAt":"2026-10-06T06:06:32.652Z"},"msg":"SQLite 未就绪 — 反馈降级（仅内存）"}
+{"level":30,"time":1791266792652,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","proposalId":"prop-d1153","msg":"Proposal 已拒绝 — 反馈已收集"}
+{"level":40,"time":1791266792654,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","record":{"id":"864027a4-4a55-45a9-bd8f-411ab1d72b40","enterpriseId":"default","actorId":"unknown","decision":"reject","targetType":"sentinel_alert","targetId":"alert-d1153","reason":"用例","evidenceRefs":"[]","actorRole":"","createdAt":"2026-10-06T06:06:32.654Z"},"msg":"SQLite 未就绪 — 反馈降级（仅内存）"}
+{"level":30,"time":1791266792654,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","alertId":"alert-d1153","msg":"告警已消除"}
+{"level":40,"time":1791266792655,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"services/memory-access","err":"数据库未初始化，请先调用 initEngineContext()","key":"action_act_muw9zyz3","msg":"记忆写入失败 — degraded"}
+{"level":30,"time":1791266792655,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/actions-api","id":"act_muw9zyz3","title":"用例","msg":"行动项已创建"}
+{"level":40,"time":1791266792656,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"services/memory-access","err":"数据库未初始化，请先调用 initEngineContext()","key":"action_act_muw9zyz4","msg":"记忆写入失败 — degraded"}
+{"level":30,"time":1791266792656,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/actions-api","id":"act_muw9zyz4","title":"流转用例","msg":"行动项已创建"}
+{"level":40,"time":1791266792657,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"services/memory-access","err":"数据库未初始化，请先调用 initEngineContext()","key":"action_act_muw9zyz4","msg":"记忆写入失败 — degraded"}
+{"level":30,"time":1791266792657,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/actions-api","id":"act_muw9zyz4","status":"confirmed","msg":"行动项状态已更新"}
+{"level":40,"time":1791266792657,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","record":{"id":"afd8cd63-8f7c-43af-a8df-e12f00b07f5e","enterpriseId":"default","actorId":"unknown","decision":"modify","targetType":"goal","targetId":"goal-2-muw9zyz5","reason":"中层调整","evidenceRefs":"[\"7\"]","actorRole":"","createdAt":"2026-10-06T06:06:32.657Z"},"msg":"SQLite 未就绪 — 反馈降级（仅内存）"}
+{"level":30,"time":1791266792657,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","goalId":"goal-2-muw9zyz5","newTarget":7,"msg":"Goal 目标值已调整 — 反馈已收集"}
+{"level":40,"time":1791266792658,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":40,"time":1791266792658,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":40,"time":1791266792659,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","record":{"id":"de123c19-0de1-485f-b0d9-4b8aae81dec3","enterpriseId":"default","actorId":"unknown","decision":"modify","targetType":"goal","targetId":"goal-3-muw9zyz6","reason":"中层调整目标值","evidenceRefs":"[\"1\"]","actorRole":"","createdAt":"2026-10-06T06:06:32.659Z"},"msg":"SQLite 未就绪 — 反馈降级（仅内存）"}
+{"level":30,"time":1791266792659,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","goalId":"goal-3-muw9zyz6","newTarget":1,"msg":"Goal 目标值已调整 — 反馈已收集"}
+{"level":40,"time":1791266792659,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","record":{"id":"afcd1355-ed2f-417c-838d-e756dcb836a7","enterpriseId":"default","actorId":"unknown","decision":"modify","targetType":"goal","targetId":"goal-4-muw9zyz7","reason":"中层调整目标值","evidenceRefs":"[\"1\"]","actorRole":"","createdAt":"2026-10-06T06:06:32.659Z"},"msg":"SQLite 未就绪 — 反馈降级（仅内存）"}
+{"level":30,"time":1791266792659,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","goalId":"goal-4-muw9zyz7","newTarget":1,"msg":"Goal 目标值已调整 — 反馈已收集"}
+{"level":40,"time":1791266792659,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","record":{"id":"5679f65b-7be6-4ef5-90f1-f19f1e8dc799","enterpriseId":"default","actorId":"unknown","decision":"modify","targetType":"goal","targetId":"goal-5-muw9zyz7","reason":"中层调整目标值","evidenceRefs":"[\"1\"]","actorRole":"","createdAt":"2026-10-06T06:06:32.659Z"},"msg":"SQLite 未就绪 — 反馈降级（仅内存）"}
+{"level":30,"time":1791266792659,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","goalId":"goal-5-muw9zyz7","newTarget":1,"msg":"Goal 目标值已调整 — 反馈已收集"}
+{"level":40,"time":1791266792660,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"services/memory-access","err":"数据库未初始化，请先调用 initEngineContext()","key":"action_act_muw9zyz8","msg":"记忆写入失败 — degraded"}
+{"level":30,"time":1791266792660,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/actions-api","id":"act_muw9zyz8","title":"staff 创建用例","msg":"行动项已创建"}
+{"level":40,"time":1791266792660,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":40,"time":1791266792661,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":30,"time":1791266792661,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","id":"ws_muw9zyz9","title":"对照工作区","owner":"admin-d1153","msg":"工作区已创建"}
+{"level":30,"time":1791266792662,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","id":"ws_muw9zyza","title":"对照上下文","owner":"admin-d1153","msg":"工作区已创建"}
+{"level":30,"time":1791266792663,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","id":"ws_muw9zyzb","title":"对照写链路","owner":"admin-d1153","msg":"工作区已创建"}
+{"level":30,"time":1791266792663,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","id":"ws_muw9zyzb","status":"analyzing","msg":"工作区状态已更新"}
+{"level":30,"time":1791266792664,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","id":"ws_sub_muw9zyzc","department":"d1153-dept","parentId":"ws_muw9zyzb","owner":"admin-d1153","msg":"子工作区已创建"}
+{"level":30,"time":1791266792665,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspaces-api","id":"ws_sub_muw9zyzc","parentId":"ws_muw9zyzb","msg":"子工作区方案已汇入全局"}
+{"level":40,"time":1791266792665,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"d1153-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":40,"time":1791266792665,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266792665,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","code":"RBAC_DENIED","reason":"no_authenticated_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 工作台数据端点（fail-closed，HTTP 403）"}
+{"level":40,"time":1791266792666,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1791266792666,"pid":26151,"hostname":"192.168.1.8","name":"synova-agent","service":"routes/workspace-data","code":"RBAC_DENIED","reason":"no_authenticated_identity","userId":"unauthenticated","role":"staff","msg":"安全判据: 被拒绝 — 工作台数据端点（fail-closed，HTTP 403）"}
+
+════════════════════════════════════════════════════════════
+VERDICT: VALID (破坏态红 + 复原态绿)
