@@ -56,7 +56,9 @@ while [ $# -gt 0 ]; do
     --dry-plan)  DRY=1; shift ;;
     -h|--help)   sed -n '2,30p' "$0"; exit 0 ;;
     *) echo "用法: install-deps.sh [--prefix <dir>] [--allowlist <path>] [--dry-plan]" >&2
-       echo "INSTALL-DEPS: DEGRADED  [未知参数: $1]" >&2; exit $DEG ;;
+       # 🔴 D1175 复核整改（N3）: 末行必须在 **stdout**（同 case 块里 `--prefix 缺值`、
+       #   白名单缺失/为空都打 stdout；原实现落在 stderr ⇒ 契约「末行固定三态之一」有破口）
+       echo "INSTALL-DEPS: DEGRADED  [未知参数: $1]"; exit $DEG ;;
   esac
 done
 
@@ -118,7 +120,16 @@ REBUILT=0; ABSENT=0; FAILED=""
 #   的赋值**不回传** ⇒ 末行只能写死 `${ALLOW_N}` ⇒ **伪造的计数**（复核在**必需 context** 上实跑复现:
 #   白名单含未装包、输出 `跳过(缺): electron`，末行却仍报 `rebuilt 2 / absent 0`）。
 #   ⇒ 改**进程替换** `done < <(...)`，循环在当前 shell 执行 ⇒ 计数为真。
-FAILED_LEDGER="$(mktemp "${TMPDIR:-/tmp}/install-deps-failed.XXXXXX")"   # N5: 并发安全（原为全局固定路径）
+# 🔴 D1175 复核整改（N5）: `mktemp` 失败时原实现是 **fail-open**（比 main 更差）——
+#   复核实测: TMPDIR 存在但不可写时，main = `RC=1 VIOLATION(1) [bad-pkg ]`，
+#   而上一版 = **`RC=0 OK [allowlist 1 / rebuilt 0 / absent 0]`**
+#   （mktemp 失败 ⇒ FAILED_LEDGER 空 ⇒ `[ -s "" ]` 恒假 ⇒ 失败包**丢失**）。
+#   违反本脚本自己登记的 M-02 三态纪律 ⇒ 改 **fail-closed**: 取不到台账即 DEGRADED(2) 退出。
+FAILED_LEDGER="$(mktemp "${TMPDIR:-/tmp}/install-deps-failed.XXXXXX" 2>/dev/null)" || FAILED_LEDGER=""
+if [ -z "$FAILED_LEDGER" ] || [ ! -w "$FAILED_LEDGER" ]; then
+  echo "degraded: 无法创建失败台账（TMPDIR=${TMPDIR:-/tmp} 不可写？）" >&2
+  echo "INSTALL-DEPS: DEGRADED  [mktemp 失败 / TMPDIR 不可写]"; exit 2
+fi
 if [ "$ALLOW_N" != "0" ]; then
   while IFS= read -r pkg; do
     [ -z "$pkg" ] && continue

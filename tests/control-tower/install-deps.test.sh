@@ -77,7 +77,9 @@ run_gate() { # run_gate <sandbox> <allowlist> → 设 RC / 输出入 $TMPD/out
 mk_sandbox "$TMPD/sb1"
 run_gate "$TMPD/sb1" "$TMPD/sb1/wl.txt"
 chk "① exit=0" "0" "$RC"
-if head -1 "$TMPD/npm.log" | grep -q -- "--ignore-scripts"; then ok "① 第一步是默认拒（ci --ignore-scripts）"; else no "① 第一步不是默认拒: $(head -1 "$TMPD/npm.log")"; fi
+# 🔴 D1175: 原用**子串**匹配 `grep -q -- "--ignore-scripts"` ⇒ `--ignore-scripts=false` 照样命中
+if head -1 "$TMPD/npm.log" | grep -qE '^npm ci --ignore-scripts( |$)'; then ok "① 第一步是默认拒（ci --ignore-scripts，整行匹配）"; else no "① 第一步不是默认拒: $(head -1 "$TMPD/npm.log")"; fi
+chk "① 第一步不得带 --ignore-scripts=false（= 默认拒被关掉）" "0" "$(head -1 "$TMPD/npm.log" | grep -c -- '--ignore-scripts=false' || true)"
 chk "① allowed-a 被重建" "1" "$(grep -c '^npm rebuild allowed-a --foreground-scripts' "$TMPD/npm.log")"
 chk "① allowed-b 被重建" "1" "$(grep -c '^npm rebuild allowed-b --foreground-scripts' "$TMPD/npm.log")"
 # 🔴 反例核心断言：未列入白名单的包（存在！）一次 rebuild 都不能有
@@ -90,7 +92,16 @@ chk "① 🔴 未列入白名单的 evil-pkg 零 rebuild" "0" "$(grep -c 'evil-p
 #   ⇒ 教训：**枚举黑名单拼写永远有下一个变体**。改为**白名单式**——把 stub 记下的
 #     **整条 npm 调用序列**与期望集合比对：**任何一行不在白名单里 ⇒ 红**。
 #     这一条同时杀掉 M5（裸 rebuild）/ M7（npm i）/ M8（--prefix 前置）以及未来的变体。
-EXPECTED_NPM='^npm ci --ignore-scripts|^npm rebuild (allowed-a|allowed-b) --foreground-scripts|^npx --no-install patch-package'
+# 🔴 D1175 复核整改（B2，第三次复核判阻塞）: 上一版**只有 `^` 没有 `$`** ⇒ 那是**前缀匹配**，
+#   不是白名单。复核构造的两条突变让**默认拒真失效而夹具仍 19/0**：
+#     · M9  `npm ci --ignore-scripts` → `npm ci --ignore-scripts=false`
+#     · M12 `npm ci --ignore-scripts --ignore-scripts=false`
+#   复核用真 npm 10.9.8 + 本地 file: 包（postinstall 写 marker）实证：
+#     `--ignore-scripts` ⇒ marker=not-run；`--ignore-scripts=false` ⇒ **marker=RAN**（exit 0）
+#   ⇒ 加 `$` 锚，并把每条写成**完整行**（含全部 flag）。
+#   ⚠️ 代价（写清楚）: 从此合法地改一个 flag 就会误红 —— 那正是「有意同步期望值」的要求，
+#      不是缺陷；但不要把它当「拼写枚举」来增补：改 flag 必须**同时**改这里。
+EXPECTED_NPM='^npm ci --ignore-scripts --no-audit --no-fund$|^npm rebuild (allowed-a|allowed-b) --foreground-scripts --no-audit --no-fund$|^npx --no-install patch-package$'
 UNEXPECTED="$(grep -vE "$EXPECTED_NPM" "$TMPD/npm.log" || true)"
 chk "① 🔴 白名单外的 npm 调用数 = 0（M5/M7/M8 皆命中此条）" "0" "$(printf '%s' "$UNEXPECTED" | grep -c . || true)"
 chk "① npm rebuild 调用次数 == 白名单内已装包数（多一次即越权）" "2" "$(grep -c '^npm rebuild ' "$TMPD/npm.log")"
