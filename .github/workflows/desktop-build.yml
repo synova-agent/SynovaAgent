@@ -52,7 +52,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          { npm ci && npm run build:backend && test -f dist/backend.mjs; } 2>&1 | tee step-backend.log
+          { bash scripts/control-tower/install-deps.sh && npm run build:backend && test -f dist/backend.mjs; } 2>&1 | tee step-backend.log
           test ${PIPESTATUS[0]} -eq 0
 
       # 构建链步骤2: renderer vite → dist/renderer（首诊 UI）
@@ -61,7 +61,7 @@ jobs:
         working-directory: electron-renderer
         run: |
           set -o pipefail
-          { npm ci && npm run build && test -f ../dist/renderer/index.html; } 2>&1 | tee ../step-renderer.log
+          { bash scripts/control-tower/install-deps.sh && npm run build && test -f ../dist/renderer/index.html; } 2>&1 | tee ../step-renderer.log
           test ${PIPESTATUS[0]} -eq 0
 
       # 构建链步骤3a: 原生依赖准备（D529 定案 v3——彻底不用 @electron/rebuild）:
