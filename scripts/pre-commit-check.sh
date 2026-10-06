@@ -373,6 +373,42 @@ is_doc_only() {
 STAGED_ALL=$(echo "$GIT_CACHED_ALL_NAMES" | grep -v node_modules || true)
 DOC_ONLY=$(is_doc_only "$STAGED_ALL")
 
+# ═══ D1193: DOC-CONTRACT 三闸（格式 / 取代 / 入库）—— 接线点 ═══
+# 位置是判据的一部分: 必须在本块【之后】、CT-34 纯文档早退【之前】。
+#   理由（D1193 实测）: 纯文档提交会在下面 `exit 0`，而闸 3 的对象恰恰是文档提交 ——
+#   把调用点放到早退之后（如 D1/D2 所在的文末区块）等于永不点火。
+# 强度与 D515/D516 一致: 本地 soft（人可见），CI strict（SYNO_CI=1）转硬阻断。
+# 判据来源: docs/synova/DOC-CONTRACT.md 的三个机器可读块（执行体只解析契约，不硬编码）。
+# 条件跳过: 无 md/html 变更时不启动 python（保持 <1s）。
+DOC_CONTRACT_TOUCHED=$(echo "$STAGED_ALL" | grep -E '\.(md|html?)$' || true)
+if [ -z "$DOC_CONTRACT_TOUCHED" ]; then
+  soft_pass "D1193 文档契约三闸: 无文档变更（跳过）"
+elif [ ! -f "$ROOT/scripts/control-tower/check-doc-contract.sh" ]; then
+  soft_check "D1193 文档契约三闸: 执行体缺失（fail-closed）" "scripts/control-tower/check-doc-contract.sh"
+  [ "${SYNO_CI:-0}" = "1" ] && exit 1
+else
+  # CI 空暂存 → 用 base...HEAD（与 GIT_CACHED_* 同源，D390 注入缝语义不变）
+  if [ "${GITHUB_ACTIONS:-}" = "true" ] && [ -n "${SYNO_DIFF_BASE:-}" ]; then
+    _DC_ARGS=(--base "$SYNO_DIFF_BASE")
+  else
+    _DC_ARGS=(--staged)
+  fi
+  DOC_CONTRACT_OUT=$(bash "$ROOT/scripts/control-tower/check-doc-contract.sh" "${_DC_ARGS[@]}" 2>&1) || DOC_CONTRACT_RC=$?
+  DOC_CONTRACT_RC=${DOC_CONTRACT_RC:-0}
+  if [ "$DOC_CONTRACT_RC" -eq 0 ]; then
+    soft_pass "D1193 文档契约三闸: 全过（md+html，判据源=契约 §3）"
+  elif [ "$DOC_CONTRACT_RC" -eq 1 ]; then
+    soft_check "D1193 文档契约三闸: 有违规 — 修正后重试（自跑: bash scripts/control-tower/check-doc-contract.sh ${_DC_ARGS[*]}）" \
+      "$(echo "$DOC_CONTRACT_OUT" | grep -E '^\[FAIL\]|^       - ' | head -8)"
+    # 纯文档提交会走 CT-34 早退分支 exit 0 — 不在此处结算则 CI strict 下本闸等于未接（D1193 实测）
+    [ "${SYNO_CI:-0}" = "1" ] && exit 1
+  else
+    # D328 三态: degraded（判据源读不到）不与通过混同
+    soft_check "D1193 文档契约三闸: 检查本身降级 (exit=$DOC_CONTRACT_RC)" "$(echo "$DOC_CONTRACT_OUT" | tail -3)"
+    [ "${SYNO_CI:-0}" = "1" ] && exit 1
+  fi
+fi
+
 # ── CT-34 纯文档提交: 仅 Secrets 扫描, 豁免其余 12 组 ──
 # 早退分支置于 par_start 之前: 纯文档提交零 par 启动、秒过 (V4.5.1 性能教训)。
 # GATEKEEPER bypass 阻断 (L99-111) 在早退之前 — 绕过审计先于豁免, 不放行 --no-verify 滥用。
