@@ -22,13 +22,14 @@
 """
 import argparse
 import json
-import os
 import re
 import sys
 
 OK, VIOL, DEG = 0, 1, 2
-KIND_RE = re.compile(r"^kind/")
-AREA_RE = re.compile(r"^area/")
+# 🔴 D1188 复核整改: 原为 `^kind/` ⇒ **复核实测 `labels:["kind/","area/","p1"]` 判 OK exit 0**
+#   （标签值全空也满足前缀）⇒ 改为**要求值非空**（`.+`）。GitHub 允许创建名为 `kind/` 的标签 ⇒ 真实可达。
+KIND_RE = re.compile(r"^kind/.+$")
+AREA_RE = re.compile(r"^area/.+$")   # 同上: 值必须非空
 PRIO_RE = re.compile(r"^p([0-3])$")
 
 # 看板字段名（ProjectV2 的 Priority 单选项）
@@ -40,20 +41,6 @@ def _die_degraded(msg):
     print("ISSUE-POLICY: DEGRADED  [%s]" % msg)
     sys.exit(DEG)
 
-
-def _gh_json(path):
-    """用 gh CLI 取 JSON。任何失败 ⇒ 降级。"""
-    import subprocess
-    try:
-        out = subprocess.run(["gh", "api", path], capture_output=True, text=True, timeout=60)
-    except Exception as e:  # noqa: BLE001 — 任何取数失败都属"检查自身失败"
-        _die_degraded("gh 调用异常: %s" % e)
-    if out.returncode != 0:
-        _die_degraded("gh api %s 失败(exit %d): %s" % (path, out.returncode, (out.stderr or "")[:160]))
-    try:
-        return json.loads(out.stdout or "null")
-    except Exception as e:  # noqa: BLE001
-        _die_degraded("载荷非 JSON: %s" % e)
 
 
 def load_live(repo, pr):
@@ -93,7 +80,23 @@ def load_from_json(path):
         _die_degraded("读 --from-json 失败: %s" % e)
     if not isinstance(d, dict):
         _die_degraded("--from-json 顶层应为对象")
-    return {"closing_issues": d.get("closing_issues") or [], "pr_priority": d.get("pr_priority")}
+    # 🔴 D1188 复核整改: 原实现只校验**顶层**类型 ⇒ 嵌套异常（`closing_issues` 是字符串/对象、
+    #   `labels` 里混入数字）会让下游抛未捕获异常 ⇒ **exit 1（被当成"违规"）而不是 2（检查自身失败）**；
+    #   更糟的是 `"not-a-list"` 会被**按字符迭代**，荒诞地打印「关联 Issue 数 = 10」。
+    #   ⇒ 嵌套一律校验；不合法即 DEGRADED(2)。
+    ci = d.get("closing_issues") or []
+    if not isinstance(ci, list):
+        _die_degraded("closing_issues 应为 list，实为 %s" % type(ci).__name__)
+    for i, it in enumerate(ci):
+        if not isinstance(it, dict):
+            _die_degraded("closing_issues[%d] 应为对象，实为 %s" % (i, type(it).__name__))
+        lb = it.get("labels") or []
+        if not isinstance(lb, list) or any(not isinstance(x, str) for x in lb):
+            _die_degraded("closing_issues[%d].labels 应为 str 列表" % i)
+    pp = d.get("pr_priority")
+    if pp is not None and not isinstance(pp, str):
+        _die_degraded("pr_priority 应为 str 或 null，实为 %s" % type(pp).__name__)
+    return {"closing_issues": ci, "pr_priority": pp}
 
 
 def check_labels(issue):
@@ -121,6 +124,10 @@ def main():
     ap.add_argument("--pr", type=int)
     ap.add_argument("--from-json")
     ap.add_argument("--project-json", help="可选的 PR 看板字段快照（含 Priority）")
+    # 🔴 D1188 复核整改: 复核实测 `--project-json {}` 把 R3 从 checked **静默降级**为 skipped，
+    #   而 exit 仍 0、末行仍 OK ⇒ **执法面可静默缩水**。本开关把"R3 未判"本身变成阻断。
+    ap.add_argument("--require-r3", action="store_true",
+                    help="R3 未实际校验（缺 Priority 快照）⇒ 判违规（防静默缩水）")
     a = ap.parse_args()
 
     if a.from_json:
@@ -182,11 +189,16 @@ def main():
         else:
             print("  ✅ R3: PR Priority=%s == 最高优先级关联 Issue 的 %s" % (got, want))
 
+    r3_checked = bool(payload.get("pr_priority")) and bool(prios)
+    if a.require_r3 and not r3_checked:
+        fails.append("R3 未实际校验（--require-r3 下视为违规，防执法面静默缩水）")
+        print("  ❌ R3: 未实际校验，但给了 --require-r3 ⇒ 判违规")
+
     if fails:
         print("ISSUE-POLICY: VIOLATION(%d)  [%s]" % (len(fails), "; ".join(fails)[:200]))
         sys.exit(VIOL)
     print("ISSUE-POLICY: OK  [issues %d / r3 %s]"
-          % (len(issues), "checked" if payload.get("pr_priority") else "skipped"))
+          % (len(issues), "checked" if r3_checked else "skipped(未判 ⇒ 执法面比声明小)"))
     sys.exit(OK)
 
 

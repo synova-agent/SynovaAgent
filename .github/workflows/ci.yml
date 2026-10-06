@@ -569,6 +569,7 @@ jobs:
             tests/control-tower/gate-failopen-net.test.sh \
             tests/control-tower/merge_writeset_gate.test.sh \
             tests/control-tower/ci-ratchet-base.test.sh \
+            tests/control-tower/check-issue-policy.test.sh \
             tests/control-tower/verify-doc.test.sh \
             tests/doc-system/check-doc-truth.test.sh \
             tests/doc-system/doc-registry-gate.test.sh \
@@ -1119,6 +1120,7 @@ jobs:
             tests/control-tower/gate-failopen-net.test.sh \
             tests/control-tower/merge_writeset_gate.test.sh \
             tests/control-tower/ci-ratchet-base.test.sh \
+            tests/control-tower/check-issue-policy.test.sh \
             tests/control-tower/verify-doc.test.sh \
             tests/doc-system/check-doc-truth.test.sh \
             tests/doc-system/doc-registry-gate.test.sh \

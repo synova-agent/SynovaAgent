@@ -67,6 +67,30 @@ echo '[]' > /tmp/ip-arr.json
 OUT=$(run "--from-json /tmp/ip-arr.json"); RC=$?
 chk "降级: 载荷非对象（数组）⇒ exit 2" "$RC" "2"
 
+# ── 🔴 D1188 复核整改回归 ──
+# ① R2 假绿: 标签名对但**值为空**（`kind/`）⇒ 必须红（修前判 OK exit 0）
+cat > /tmp/ip-empty.json <<'JSON'
+{"closing_issues":[{"number":9103,"title":"空值标签","labels":["kind/","area/","p1"]}],"pr_priority":"p1"}
+JSON
+OUT=$(run "--from-json /tmp/ip-empty.json"); RC=$?
+chk "复核整改: kind/ 空值 ⇒ exit 1（修前假绿 OK）" "$RC" "1"
+
+# ② 嵌套 schema 异常 ⇒ exit 2（修前 exit 1，且荒诞打印「关联 Issue 数 = 10」）
+echo '{"closing_issues":"not-a-list"}' > /tmp/ip-nested.json
+OUT=$(run "--from-json /tmp/ip-nested.json"); RC=$?
+chk "复核整改: closing_issues 非 list ⇒ exit 2" "$RC" "2"
+echo '{"closing_issues":[{"number":1,"labels":[123]}]}' > /tmp/ip-lblnum.json
+OUT=$(run "--from-json /tmp/ip-lblnum.json"); RC=$?
+chk "复核整改: labels 混入数字 ⇒ exit 2" "$RC" "2"
+
+# ③ `--require-r3`: R3 未判即阻断（防执法面静默缩水）
+echo '{"closing_issues":[{"number":9004,"title":"无优先级","labels":["kind/feature","area/ci"]}],"pr_priority":null}' > /tmp/ip-noprio.json
+OUT=$(run "--from-json /tmp/ip-noprio.json"); RC=$?
+chk "对照: 不给 --require-r3 且 R3 未判 ⇒ exit 0（但末行标明 skipped）" "$RC" "0"
+echo "$OUT" | grep -q "r3 skipped(未判" && ok "对照: 末行显式标明「未判 ⇒ 执法面比声明小」" || no "对照: 末行未标明"
+OUT=$(run "--from-json /tmp/ip-noprio.json --require-r3"); RC=$?
+chk "复核整改: --require-r3 + R3 未判 ⇒ exit 1" "$RC" "1"
+
 echo "RESULT: $NP PASS / $NF FAIL"
 [ "$NF" -eq 0 ] || exit 1
 exit 0
