@@ -1,14 +1,14 @@
-# V2/V9 证据 · 施工项登记执法体：接线 + 具名归因 + 改坏必红 + 三态
+# V2/V9 证据 · 施工项登记执法体：接线 + 具名归因 + 改坏必红 + 三态 + 棘轮
 
-> as_of: 2026-10-06T14:09:26+08:00 ｜ 分支 HEAD: 125d80a2e ｜ origin/main: 74eb6c44c
+> as_of: 2026-10-06T14:20:47+08:00 ｜ HEAD: a34f8f90a ｜ origin/main: 74eb6c44c
 > 全部为原始命令回显；数字一律来自命令输出，禁手写（判例 S-01③）
 
 ## ① 执法体 · 真登记件（期望 exit 0）
 ```
-$ node --experimental-strip-types --no-warnings docs/synova/coordination/tools/check-construction-registry.ts
   施工项登记执法体 ｜ 项数 48 ｜ 块数 12
   ref: origin/main@74eb6c44c ｜ 实装判据：INV-1 依赖 / INV-2 派单 / INV-3 标准 / INV-4 写集互斥 / INV-5 共写声明引用可判 ｜ BLOCK 块完整性（含 BLOCK-INV3 块级标准复用）
   ⏳ 未实装（不准当已覆盖读）：INV-6 块标准覆盖 —— 现有等价物为 BLOCK + BLOCK-INV3，未单列；其余"ℹ️"行一律非违规
+  ⏳ 存量棘轮：INV-4 对级未声明 7/7 对命中（到期 2026-10-20）—— 可见、有到期日，非静默通过
 
 
 
@@ -16,9 +16,8 @@ $ node --experimental-strip-types --no-warnings docs/synova/coordination/tools/c
 EXIT=0
 ```
 
-## ② 夹具 · 判据的判据（期望 exit 0）
+## ② 夹具 · 判据的判据（期望 exit 0，四场景）
 ```
-$ bash docs/synova/coordination/tools/fixture-inv4-red.sh
   [PASS] 复原态：exit=0（真登记件当前 0 违规）
   [INFO] 已注入 INV-4 违规：删去 0-11 × 2-4 对 src/tools/tool-registry.ts 的两侧共写声明（before=2 → after=0）
   [PASS] 破坏态：exit=1
@@ -29,27 +28,35 @@ $ bash docs/synova/coordination/tools/fixture-inv4-red.sh
   [PASS] INV-5 场景输出含：'INV-5: 1 处'
   [PASS] INV-5 场景输出含：'2-3-NOT-A-REAL-ID'
   [PASS] 第三态：登记件读不到 ⇒ exit=2 且具名「检查自身失败」
+  [PASS] 棘轮通道：失效条目 ⇒ exit=1
+  [PASS] 棘轮通道输出含具名：'INV-4-STALE'
 
-  ══ 夹具有效：破坏 ⇒ 红且具名（INV-4 / INV-5）；读不到 ⇒ exit 2；复原 ⇒ 绿 ══
+  ══ 夹具有效：破坏 ⇒ 红且具名（INV-4 / INV-5 / 棘轮失效）；读不到 ⇒ exit 2；复原 ⇒ 绿 ══
 EXIT=0
 ```
 
-## ③ 夹具自证可伪（不是"永远绿"）—— 三段都实测过
-| 把执法体的哪一条改瞎 | 夹具反应 | 复原后 |
-|---|---|---|
-| INV-4 判据（`if (false) fails.push(...)`） | rc=1，4 条针全 FAIL | rc=0 |
-| INV-5 判据 | rc=1，2 条针全 FAIL | rc=0 |
-| 第三态 `exit(2)` → `exit(0)` | rc=1 | rc=0 |
+## ③ 本卡在执法体里修掉的四个缺陷（都在"具名归因"这条线上）
 
-## ④ 本卡修掉的执法体自身缺陷（V9 要"具名归因"，先得让它不自我拔高）
-- 表头原写 `判据：INV-1 … INV-6 / BLOCK`（7 个名字），实装只有 4 条 + BLOCK；
-  INV-5 此前只进 ℹ️ notes、从不 `fails.push`，INV-6 从未存在 ⇒ 宣称覆盖面 > 实际覆盖面（W6 同型）。
-- `ref: origin/main@1630a5014` 是硬编码（2026-10-04 的值）⇒ 随 main 前进变成假陈述（判例 S-05）。
-- 现：表头由实装判据枚举 + 逐字声明"INV-6 未实装"；ref 改为 `git rev-parse --short origin/main` 实算。
-- 新实装 INV-5：`sharedWrite` 引用的项 id 必须存在（本件实测 0 违规 ⇒ 有牙且当前为真）。
+| # | 缺陷 | 后果 | 修法 |
+|---|---|---|---|
+| 1 | 表头写 `INV-1..INV-6 / BLOCK`，实装只有 4 条 + BLOCK；**INV-5 只进 ℹ️，从不 fails.push**，INV-6 从未存在 | 宣称覆盖面 > 实际覆盖面（W6 同型） | 实装 INV-5；表头改为由实装判据枚举并逐字声明"INV-6 未实装" |
+| 2 | INV-4 的"已声明"判定 = `w.includes(path)`，**只比路径不比 item id** | 一条点名 `RB-01/RB-03` 的声明把 `1-7 × RB-04` 等**没点名对方**的对也洗白（实测 **7 对**） | 改为 **(项A, 项B, 路径) 三元组**判定 |
+| 3 | `mkRe` **先替换通配符再转义** ⇒ 得到匹配字面量的正则 | 凡写集路径含 `*` 的**永远配不上任何东西** ⇒ `1-8 × 1-9 同写 extensions/ontology/edge-types/*.json` 静默消失 | **先转义、后替换**（顺序即正确性）；`*`/`?` 一并进转义集 |
+| 4 | `ref: origin/main@1630a5014` 硬编码（2026-10-04 的值） | 随 main 前进变成**假陈述**（判例 S-05） | 改 `git rev-parse --short origin/main` 实算 |
 
-## ⑤ 反假通过通道（实测抓到并关掉）
-- 针 `INV-4` 曾在**表头**命中（`… / INV-4 写集 / …`）⇒ 把 INV-4 改瞎后断言照样 PASS。
-  已换成只可能出现在违规行的针：`INV-4: 1 处` + `0-11 × 2-4 同写 src/tools/tool-registry.ts` + 违规消息正文。
-- 同理 `INV-5` 裸词在新表头命中 ⇒ 换成 `INV-5: 1 处`。
+> 缺陷 2 的来源：`registry-owner`（task-1）在自查中报出"6 对未声明同路径重叠"。
+> 我独立复算得 **7 对**，后用执法体实跑验证 **7** 为真 —— 他漏的第 7 对正是缺陷 3 造成的（含 `*` 的路径对执法体隐形）。两条缺陷叠在一起才显出这个数。
+
+## ④ 存量棘轮（判例 M-03：只减不增；条目失效/过期即红）
+- 新增 `inv4-pair-declared-baseline.txt`：7 对存量缺口，**带到期日 2026-10-20**。
+- 两条通道都实测过：
+  - **失效即红**：往棘轮塞一行"其实已声明"的对 ⇒ `INV-4-STALE: 1 处` + exit 1
+  - **过期即红**：到期日改到过去 ⇒ `INV-4-EXPIRED: 7 处` + exit 1
+- 夹具第 ④ 场景把"失效即红"固化进 CI（不再只靠一次性手测）。
+- 为什么不在本卡补 `sharedWrite`：登记件是**另一 session 的唯一写集**（task-1），且补声明属派单级裁定 ⇒ 本卡只做"看得见 + 有到期日"。
+
+## ⑤ 反假通过通道（三处实测抓到并关掉）
+- 针 `INV-4` 曾在**表头**命中 ⇒ 把 INV-4 改瞎后断言照样 PASS。改成只可能出现在违规行的针。
+- 针 `INV-5` 同款，改 `INV-5: 1 处`。
 - 第三态只看 exit code 不够（node 崩溃也可能"恰好 2"）⇒ 同时验输出含「检查自身失败」。
+- 夹具副本必须一并复制**棘轮文件**，否则副本里 7 对存量会被当成新违规 ⇒ 夹具会把"环境没复制全"误报成"执法体没判别力"（实测踩到，已修）。

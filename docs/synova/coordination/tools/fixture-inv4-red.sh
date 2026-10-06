@@ -35,6 +35,9 @@ fi
 
 REG_REL='docs/synova/coordination/施工项登记.ts'
 ENF_REL='docs/synova/coordination/tools/check-construction-registry.ts'
+# INV-4 存量棘轮（执法体按 **自身所在目录** 解析它）⇒ 副本目录必须一并复制，
+# 否则副本里"存量 7 对"会当成新违规，夹具会把"环境没复制全"误报成"执法体没判别力"。
+RAT_REL='docs/synova/coordination/tools/inv4-pair-declared-baseline.txt'
 REG="$ROOT/$REG_REL"
 ENF="$ROOT/$ENF_REL"
 
@@ -58,6 +61,7 @@ trap cleanup EXIT
 mkdir -p "$TMP/tools"
 cp "$REG" "$TMP/施工项登记.ts"
 cp "$ENF" "$TMP/tools/check-construction-registry.ts"
+[ -f "$ROOT/$RAT_REL" ] && cp "$ROOT/$RAT_REL" "$TMP/tools/inv4-pair-declared-baseline.txt"
 printf '{"type":"module"}\n' > "$TMP/package.json"
 
 FAILED=0
@@ -130,6 +134,7 @@ fi
 mkdir -p "$TMP2/tools"
 cp "$REG" "$TMP2/施工项登记.ts"
 cp "$ENF" "$TMP2/tools/check-construction-registry.ts"
+[ -f "$ROOT/$RAT_REL" ] && cp "$ROOT/$RAT_REL" "$TMP2/tools/inv4-pair-declared-baseline.txt"
 printf '{"type":"module"}\n' > "$TMP2/package.json"
 B2="$TMP2/施工项登记.ts"
 sed 's|"2-3: src/growth/feedback-collector.ts|"2-3-NOT-A-REAL-ID: src/growth/feedback-collector.ts|' "$B2" > "$B2.1" && mv "$B2.1" "$B2"
@@ -186,9 +191,45 @@ else
   echo "  [PASS] 第三态：登记件读不到 ⇒ exit=2 且具名「检查自身失败」"
 fi
 
+# ══════════════════════════════════════════════════════════════════════════════
+# ④ 棘轮通道：**条目失效即红**（判例 M-03：棘轮台账只减不增；修好即须删除条目）
+#   构造：往副本棘轮里塞一行"其实早就声明了"的对（0-2 × 2-3）⇒ 必须报 INV-4-STALE 且 exit 1。
+#   为什么必须有这一段：没有它，"棘轮只减不增"就只是一句**没人执行**的话
+#   （= 本卡刚修掉的那类病：宣称有牙、实际无牙）。
+# ══════════════════════════════════════════════════════════════════════════════
+if [ -f "$ROOT/$RAT_REL" ]; then
+  TMP4="$(mktemp -d 2>/dev/null || true)"
+  if [ -z "$TMP4" ] || [ ! -d "$TMP4" ]; then
+    echo "  🔴 检查自身失败：第四个 mktemp -d 失败"
+    exit 2
+  fi
+  mkdir -p "$TMP4/tools"
+  cp "$REG" "$TMP4/施工项登记.ts"
+  cp "$ENF" "$TMP4/tools/check-construction-registry.ts"
+  cp "$ROOT/$RAT_REL" "$TMP4/tools/inv4-pair-declared-baseline.txt"
+  printf '0-2\t2-3\tsrc/growth/feedback-collector.ts\n' >> "$TMP4/tools/inv4-pair-declared-baseline.txt"
+  printf '{"type":"module"}\n' > "$TMP4/package.json"
+  OUT_B4="$(run_enf "$TMP4")"; RC_B4=$?
+  rm -rf "$TMP4"
+  if [ "$RC_B4" -ne 1 ]; then
+    echo "  [FAIL] 棘轮条目失效时应 exit 1，实测 exit=${RC_B4} ⇒ 「只减不增」没牙"
+    FAILED=1
+  else
+    echo "  [PASS] 棘轮通道：失效条目 ⇒ exit=1"
+  fi
+  if printf '%s' "$OUT_B4" | grep -qF 'INV-4-STALE'; then
+    echo "  [PASS] 棘轮通道输出含具名：'INV-4-STALE'"
+  else
+    echo "  [FAIL] 棘轮通道输出缺 'INV-4-STALE'（报不出具名 ⇒ 等于要人读日志）"
+    FAILED=1
+  fi
+else
+  echo "  ℹ️  无棘轮文件（$RAT_REL）⇒ 跳过通道④（不静默当通过，已显式说明）"
+fi
+
 echo
 if [ "$FAILED" -eq 0 ]; then
-  echo "  ══ 夹具有效：破坏 ⇒ 红且具名（INV-4 / INV-5）；读不到 ⇒ exit 2；复原 ⇒ 绿 ══"
+  echo "  ══ 夹具有效：破坏 ⇒ 红且具名（INV-4 / INV-5 / 棘轮失效）；读不到 ⇒ exit 2；复原 ⇒ 绿 ══"
   exit 0
 fi
 echo "  ══ 夹具失效：执法体没有判别力 ══"

@@ -22,7 +22,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 // 🔴 修 T8 发现（三态 exit 契约未实现）：登记件读不到 / 结构不对 ⇒ exit 2
 //    ⚠️ 必须用**动态 import**：静态 import 在 try 之前就失败，catch 根本没机会跑
 //       （CTO 自查抓到的 bug：第一版用静态 import，verify 台实测 exit=1 而非 2）
@@ -42,6 +42,8 @@ type Worker = RegMod['constructionItems'][number]['worker'];
 
 type Fail = { inv: string; id: string; msg: string };
 const fails: Fail[] = [];
+// 模块级：INV-4 棘轮摘要（块内赋值、块外报表用 —— 块内 const 在报表段不可见）
+let ratchetSummary = '';
 const notes: string[] = [];
 const gaps: string[] = [];
 
@@ -192,11 +194,24 @@ for (const it of constructionItems) {
 {
   type G = { pat: string; item: string; re: RegExp; dir: boolean };
   const gs: G[] = [];
-  const mkRe = (p: string, dir: boolean): RegExp =>
-    new RegExp(
-      '^' + p.replace(/[*]{2}/g, '\u0000').replace(/[*]/g, '[^/]*').replace(/\u0000/g, '.*')
-        .replace(/[.+^${}()|[\]\\]/g, '\\$&') + (dir ? '(/.*)?$' : '$'),
-    );
+  // 🔴 2026-10-06 修（本项落地实测）：旧实装的**操作顺序反了** —— 先把 `*` 换成 `[^/]*`，
+  //   再把 `[^/]*` 里的 `[ ] ^ *` 当特殊字符转义 ⇒ 得到 `\[^\/\]\*`，
+  //   一个**匹配字面量**的正则。后果：凡写集路径含 `*` 的（例 `extensions/ontology/edge-types/*.json`）
+  //   在 INV-4 里**永远配不上任何东西** ⇒ 该对既不报违规、也不进"相交"提示 = 静默消失。
+  //   实测（旧版）：mkRe('a/*.json').test('a/x.json') === false。
+  //   修法：**先转义、后替换通配**（顺序即正确性）。
+  // ⚠️ `*` 与 `?` 也必须在转义集里：旧版两者都被漏掉
+  //    （旧版是先把 `*` 换成字面量再转义，所以 `*` 恰好躲过；
+  //     改成先转义后替换之后，漏掉 `*` 会让 `**` 原样进正则
+  //     ⇒ 直接抛 SyntaxError: Nothing to repeat。实测路径 cycles/**/*.cycle.json 撞上。）
+  const esc = (x: string): string => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const mkRe = (p: string, dir: boolean): RegExp => {
+    const body = esc(p)
+      .replace(/\\\*\\\*/g, '\u0000')
+      .replace(/\\\*/g, '[^/]*')
+      .replace(/\u0000/g, '.*');
+    return new RegExp('^' + body + (dir ? '(/.*)?$' : '$'));
+  };
   for (const it of constructionItems) {
     for (const raw of it.paths) {
       const pp = normalizePath(raw).replace(/\/$/, '');
@@ -217,20 +232,73 @@ for (const it of constructionItems) {
     if (g1.pat === g2.pat) samePath.push(`${g1.item} × ${g2.item} 同写 ${g1.pat}`);
     else soft.push(`${g1.item} × ${g2.item}  ${g1.pat} ／ ${g2.pat}`);
   }
+  // 🔴 2026-10-06 修（本项落地实测）：旧实装的"已声明"判定 = `w.includes(pathPart)` ——
+  //    **只比路径，不比对方 item id**。后果：一条 `"RB-01/RB-03: src/middleware/rbac.ts"` 会把
+  //    `1-7 × RB-04`、`RB-01 × RB-04` 这类**根本没点名对方**的对也一并"洗白"，
+  //    于是报表写"22 对已显式声明共写（须串行）"，而其中 7 对**实际无对级声明**。
+  //    ⇒ 与 W6「写着有牙、实际旁路」同型，也是本卡刚修掉的那一类。
+  // 正确语义（取自 `施工项登记.ts` 对 sharedWrite 的定义）：
+  //    声明是 **`"<另一 item id>: <文件路径>"`** ⇒ 判据必须是 **(项A, 项B, 路径) 三元组**，
+  //    "任一侧点名了对方 **且** 写到了该路径" 才算声明。
+  const pairDeclared = (a: string, b: string, path: string): boolean => {
+    const side = (x: string, y: string): boolean =>
+      (constructionItems.find((i) => i.id === x)?.sharedWrite ?? []).some((w) => {
+        const mm = /^\s*([^:：]+)[:：]/.exec(w);
+        if (!mm) return false;
+        const named = mm[1].split('/').map((t) => t.trim().replace(/[（(].*$/, '').trim());
+        return named.includes(y) && w.includes(path);
+      });
+    return side(a, b) || side(b, a);
+  };
+
+  // 存量棘轮（判例 M-03：只减不增；**条目失效/过期即红**）。
+  // 为什么需要：本修法会让 7 对既有缺口从"静默通过"变成"违规" ⇒ 若不设棘轮，
+  //   本卡就会把一条从没被enforce过的存量债一次性变成 CI 红。棘轮让"新增即红"、
+  //   "存量可见且有到期日"，而不是把债藏起来（也绝不悄悄加 sharedWrite 充数）。
+  const RATCHET = (() => {
+    const f = new URL('./inv4-pair-declared-baseline.txt', import.meta.url);
+    if (!existsSync(f)) return { expires: '', pairs: new Set<string>() };
+    const txt = readFileSync(f, 'utf-8');
+    const expires = (/#\s*expires:\s*(\d{4}-\d{2}-\d{2})/.exec(txt) ?? [])[1] ?? '';
+    const pairs = new Set<string>();
+    for (const line of txt.split('\n')) {
+      const t = line.trim();
+      if (!t || t.startsWith('#')) continue;
+      const c = t.split('\t');
+      if (c.length >= 3) pairs.add(`${c[0].trim()}\u0000${c[1].trim()}\u0000${c[2].trim()}`);
+    }
+    return { expires, pairs };
+  })();
+  const today = new Date().toISOString().slice(0, 10);
+  const ratchetStale: string[] = [];
+  const ratchetHit = new Set<string>();
+
   for (const x of samePath) {
     const id = x.split(' ')[0];
-    // 🔴 修：原先只查一侧（pair 的第一个 id）⇒ 声明在另一侧时漏判
-    //    改为【两侧都查】
-    const ids2 = [x.split(' ')[0], x.split(' ')[2]];
+    const other = x.split(' ')[2];
     const pathPart = x.split('同写 ')[1] ?? '';
-    const declared = ids2.some((iid) =>
-      (constructionItems.find((y) => y.id === iid)?.sharedWrite ?? []).some((w) => w.includes(pathPart)),
-    );
-    if (!declared) {
-      fails.push({ inv: 'INV-4', id, msg: `写集同路径且未声明共写（须加 sharedWrite）：${x}` });
-    } else {
+    if (pairDeclared(id, other, pathPart)) {
       softShared.push(x);
+      continue;
     }
+    const key = `${id}\u0000${other}\u0000${pathPart}`;
+    if (RATCHET.pairs.has(key)) {
+      ratchetHit.add(key);
+      if (RATCHET.expires && today > RATCHET.expires) {
+        fails.push({ inv: 'INV-4-EXPIRED', id, msg: `存量缺口已过棘轮到期日 ${RATCHET.expires}（须补 sharedWrite 或续期须 CTO 裁）：${x}` });
+      } else {
+        notes.push(`⏳ 存量未声明共写（棘轮到 ${RATCHET.expires || '未设'}）：${x}`);
+      }
+      continue;
+    }
+    fails.push({ inv: 'INV-4', id, msg: `写集同路径且未声明共写（须加 sharedWrite，且须点名对方 item id）：${x}` });
+  }
+  for (const k of RATCHET.pairs) if (!ratchetHit.has(k)) ratchetStale.push(k.split('\u0000').join(' × '));
+  if (RATCHET.pairs.size) {
+    ratchetSummary = `⏳ 存量棘轮：INV-4 对级未声明 ${ratchetHit.size}/${RATCHET.pairs.size} 对命中（到期 ${RATCHET.expires || '未设'}）—— 可见、有到期日，非静默通过`;
+  }
+  for (const st of ratchetStale) {
+    fails.push({ inv: 'INV-4-STALE', id: st.split(' × ')[0], msg: `棘轮条目已失效（该对现已声明共写）⇒ 须删除条目（判例 M-03：棘轮只减不增）：${st}` });
   }
   if (soft.length) notes.push(`写集包含/相交 ${soft.length} 对（提示：宽卡应写窄）—— 前 5: ${soft.slice(0, 5).join(' ; ')}`);
   if (softShared.length) notes.push(`已显式声明共写（须串行）${softShared.length} 对: ${softShared.join(' ; ')}`);
@@ -334,6 +402,7 @@ console.log(
     `BLOCK 块完整性（含 BLOCK-INV3 块级标准复用）`,
 );
 console.log(`  ⏳ 未实装（不准当已覆盖读）：INV-6 块标准覆盖 —— 现有等价物为 BLOCK + BLOCK-INV3，未单列；其余"ℹ️"行一律非违规`);
+if (ratchetSummary) console.log(`  ${ratchetSummary}`);
 console.log('');
 for (const [k, v] of [...byInv.entries()].sort()) {
   console.log(`  ${k}: ${v.length} 处`);
