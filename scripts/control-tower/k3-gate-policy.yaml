@@ -1,0 +1,252 @@
+# k3-gate-policy.yaml — K3 必经合并门禁 · 类目映射（外置、可审、禁硬编码）
+#
+# D923 | 域: mac | 生效: 2026-09-23
+# 消费者: scripts/control-tower/k3-merge-gate.sh
+# 说明文档: docs/synova/coordination/门禁说明-K3必经门禁-20260923.md
+#
+# ═══ CTO 裁定 7-新（本卡起执行）：「理由也必须可核」 ═══
+# 每条规则/每个参数**必须附 reason（为什么）+ evidence（可复现命令 + 实测值）**。
+# **凡未实测的推断，必须写「未实测」**，不得写成结论。K3 与后人可逐条复跑 evidence。
+
+version: 1
+
+# ── 判别对象：只有命中下列三类路径的变更，才要求「卡内有 K3 结论」 ──────────────
+# 原则「宁窄勿宽」（CTO 裁定 6）：误报会诱发绕过（V3.6/V4.5.1 实证）。
+rules:
+
+  A_security:
+    name: "安全 / 鉴权"
+    reason: >
+      `src/security/**` 是本仓信噪比最好的一条：13 文件全部落在生产口径内。
+      对比：整包 `src/routes/**` = 53 文件，其中仅 4 条与鉴权直接相关（误报率 92%），
+      故**只对整包取精确枚举，不取 glob**。
+    evidence:
+      - cmd: "git ls-files 'src/security/*' | wc -l"
+        out: "13"
+      - cmd: "git ls-files 'src/routes/*' | wc -l"
+        out: "53"
+      - cmd: "git ls-files --error-unmatch <下列每条 exact_files>"
+        out: "6/6 EXISTS（2026-09-23 逐条实测）"
+    globs:
+      - "src/security/**"
+    exact_files:
+      - "src/routes/auth.ts"
+      - "src/routes/ga-auth.ts"
+      - "src/routes/permissions.ts"
+      - "src/routes/credentials.ts"
+      - "src/middleware/auth.ts"
+      - "src/middleware/rbac.ts"
+    extra_globs:
+      reason: "packages/engine-auth/** 实测：7 文件（含 package.json + src/*.ts）"
+      evidence: "git ls-files 'packages/engine-auth/*' | wc -l → 7"
+      globs:
+        - "packages/engine-auth/**"
+
+  B_finance:
+    name: "财务计算"
+    reason: >
+      只有 `extensions/sentinels/<domain>/computes/**` 是「真财务计算」。
+      实测：`extensions/sentinels/**/computes/**` 全量 202 个里绝大多数与财务无关
+      （shared 89、unit-economics、software-health、org-repairability、data-health、api-coverage 等），
+      故**取五子域白名单而不是全量 computes glob**。
+      `_extinct/**`（33）是退役代码：全仓仅 12 处引用且**全部**是 `src/sentinel/types.ts` 的 `import type`，
+      无运行时加载路径 ⇒ 显式排除。
+    evidence:
+      - cmd: "for d in capital-health margin-health cash-runway financing-constraint revenue-health; do git ls-files \"extensions/sentinels/$d/computes/*\" | wc -l; done"
+        out: "9 / 7 / 4 / 3 / 1（合计 24）"
+      - cmd: "git ls-files 'extensions/sentinels/_extinct/*/computes/*' | wc -l"
+        out: "33（口径 = computes 层；若用 '_extinct/*' 得 57，口径不同）"
+      - cmd: "git grep -n '_extinct' -- 'src/*' | wc -l"
+        out: "12（全为 import type）"
+    globs:
+      - "extensions/sentinels/capital-health/computes/**"
+      - "extensions/sentinels/margin-health/computes/**"
+      - "extensions/sentinels/cash-runway/computes/**"
+      - "extensions/sentinels/financing-constraint/computes/**"
+      - "extensions/sentinels/revenue-health/computes/**"
+    exclude:
+      - "extensions/sentinels/_extinct/**"
+    exclude_note: >
+      D923 收尾 L9：本键此前**已声明但抽取器从未消费**（声明与实现不一致，属惰性配置）。
+      现已按「声明即生效」在 `k3-merge-gate.sh` 的 `excludes()` + `rule_excluded()` 中实现 ——
+      排除项与**规则标签**绑定（`B_finance.globs|extensions/sentinels/_extinct/**`），
+      命中该规则但落在排除面内的文件不算命中。判据来源见 `reason`（33 个退役文件仅 type-only 引用，无运行时加载路径）。
+      判别性回归：夹具**用例 17**（宽 glob 沙箱下 `_extinct` 不命中 / 子域命中；去掉 `rule_excluded` 分支即失败）。
+
+  C_storage:
+    name: "数据迁移 / 存储"
+    reason: >
+      路径面取 `src/store/**` + `**/*migrat*`；但**路径面对 DDL 变更表达不足**
+      （静态含 DDL 的文件 29 个，无法区分「本次是否改了 DDL」），故 DDL 另用 **pickaxe** 语义
+      （`git diff -G`，只认本次 diff 增删 DDL 行）。
+    evidence:
+      - cmd: "git ls-files 'src/store/*' | wc -l"
+        out: "6"
+      - cmd: "git ls-files '**/*migrat*' | wc -l"
+        out: "9（'**/' 与 '*migrat*' 结果相同 ⇒ 本仓 pathspec 下 '**/' 为 no-op，实测）"
+      - cmd: "git ls-files '*migrat*'"
+        out: "9 条：.claude/task-briefs/2026-06-30-Phase-P0-1-migrate-feedback-collector.md /
+              scripts/migrate-ontology-manifests.py / scripts/migrate-sog-to-ontology.py /
+              src/l4/migration-validator.ts / src/store/migrations/001-graph-nodes-props.ts /
+              src/store/schema-migration.ts / tests/l4/migration-validator.test.ts /
+              tests/store/migrations/001-graph-nodes-props.test.ts / tests/store/schema-migration.test.ts"
+    globs:
+      - "src/store/**"
+      - "**/*migrat*"
+    pickaxe:
+      reason: >
+        只认本次 diff 增删 DDL 行；而「静态含 DDL 的**文件数**」（`git grep -IlE 'CREATE TABLE|ALTER TABLE'`）
+        无法表达「本次是否改了 DDL」——该数本身也随树变化，实测两值：
+        主工作区 @ `9631098c` = **98**；本分支树 @ `bc418ad7` = **104**
+        （差 6 = 本卡自身的文档/判据文件以「数据」形式含该字面量，见本节 `exclude_globs_reason`）。
+      evidence:
+        - cmd: "git log --first-parent --format='%h' -G'CREATE TABLE|ALTER TABLE' main | wc -l"
+          out: "60（全历史）"
+        - cmd: "git log --first-parent --since='30 days ago' --format='%h' -G'CREATE TABLE|ALTER TABLE' main | wc -l"
+          out: "20（近 30 天）"
+        - cmd: "截至 2026-09-23T20:50+0800，在工作树 .synova-wt-d923 @ bc418ad7 按上面两条命令实跑"
+          out: "60 / 20（与 #723 证据记的 60 一致）"
+      evidence_note: >
+        自验修复（F-1，2026-09-23）：本段原写「99 / 28」并注「配方差异见文档『口径钉死』节」——
+        两个问题：① 按上面两条命令**复跑不出来**（实跑 60 / 20）；② 该注引用的说明文档「口径钉死」节
+        **不存在**（`grep -c 口径钉死` 对说明文档 = 0），属**悬空引用**，已删除。
+        **纪律**：改本段任何数字，必须重跑上面两条命令并把输出原样写入（CTO 纪律⑥「理由也必须可核」）。
+      # ── pickaxe 扫描面排除（D923 收尾任务 0 · 缺陷 A 修复）────────────────────
+      # 门禁自身产物以「数据」形式承载 DDL 模式字面量，且**无 DB 执行能力** ⇒ 不可能是真 DDL 变更。
+      # 不排除时：任何触碰门禁文件的 PR 都会被 pickaxe 误红（长期运营缺陷；收尾实测 three_category_hits=2 全来自自身）。
+      exclude_globs:
+        - "scripts/control-tower/k3-*"
+      exclude_globs_reason: >
+        排除面 = 本门禁命名空间 `scripts/control-tower/k3-*`（实测仅 2 个文件：判定器 + 本 policy）。
+        两者正文共 **7 处** DDL 关键字出现（**全部在 policy；判定器 0 处**）—— 计数含本节自身说明行与
+        evidence 命令（属**自指**，无法避免），命中行实测 =
+        `k3-gate-policy.yaml:98 / :103 / :105 / :132 / :134 / :140 / :148`，
+        **逐处都是数据/散文，不是 DDL 语句**（YAML `cmd:` 证据串 ×3、`pattern:` 常量、`known_misses` 散文、本节说明）。
+        且两者**无任何真实 DB/DDL 执行能力**（见下方 evidence 第三条：DB 探测命中 2 处，**均为本判据文本自指**）
+        ⇒ 不可能产生真 DDL 变更。
+        **这不是"为让本分支变绿而加白名单"**：条目须满足「无真实 DB 调用」这一可核条件，
+        新增条目必须同时补 `exclude_globs_evidence` 的命令输出；不满足则不得加入。
+        **自验修复 F-3**：原记「共 5 处 / policy:4 / checker:1」，实测为 **policy:7 / checker:0**；原点行号
+        :93/:95/:97/:105 与实测**全不符**，已改为上面的实测行号。**改动本文件后须重跑下面两条 `-n` 命令并原样更新。**
+      exclude_globs_evidence:
+        - cmd: "git grep -cE 'CREATE TABLE|ALTER TABLE|CREATE INDEX|DROP TABLE|ALTER INDEX' -- 'scripts/control-tower/k3-*'"
+          out: "k3-gate-policy.yaml:7 / k3-merge-gate.sh:0 —— 共 7 处，全在 policy 内（`grep -c` 不列出零命中文件）"
+        - cmd: "git grep -nE 'CREATE TABLE|ALTER TABLE|CREATE INDEX|DROP TABLE|ALTER INDEX' -- 'scripts/control-tower/k3-*'"
+          out: "命中行 = k3-gate-policy.yaml:98 / :103 / :105 / :132 / :134 / :140 / :148（全为数据/注释，非 DDL 语句）"
+        - cmd: "git grep -nE 'sqlite3|better-sqlite3|\\.prepare\\(|\\.exec\\(|new Database|Database\\(' -- 'scripts/control-tower/k3-*' | wc -l"
+          out: "2 —— **两处均为此判据自身的文本（自指）**：k3-gate-policy.yaml:136（该 cmd 串本身）、k3-merge-gate.sh:159（描述本判据的注释）。**无任何真实 DB 调用** ⇒ 语义结论（不可能是真 DDL 变更）不变"
+        - cmd: "git ls-files 'scripts/control-tower/k3-*'"
+          out: "scripts/control-tower/k3-gate-policy.yaml / scripts/control-tower/k3-merge-gate.sh（仅此两个）"
+      pattern: "CREATE TABLE|ALTER TABLE|CREATE INDEX|DROP TABLE|ALTER INDEX"
+
+# ── 已知漏报（显式登记，不隐藏）────────────────────────────────────────────
+known_misses:
+  - id: constant_driven_migration
+    reason: "常量驱动的迁移不改 DDL 文本，pickaxe 抓不到"
+    evidence: "本仓典型形态 src/store/schema-migration.ts:19 = `export const SCHEMA_VERSION = 2;`（已实读）"
+  - id: ddl_forms_not_covered
+    reason: "pickaxe pattern 未覆盖的 DDL 形态：`PRAGMA user_version = N`、`CREATE TRIGGER`、`CREATE VIEW`、`DROP INDEX`；且 pattern 只认「含该文本的行」增删，改 DDL 内部的列定义（如 `ALTER TABLE ... ADD COLUMN` 之外的类型变更）可能漏"
+    evidence: "pattern 常量见本节上文；未逐形态实测覆盖面 ⇒ **本条为未实测推断，仅登记为候选漏报面**，待后续卡实测"
+  - id: sampling_non_three_category
+    reason: "非三类路径的 20% 抽样**永不阻断**（裁定 3），故 93.6% 的非三类 PR 无 K3 强制（记录性覆盖）"
+    evidence: "三类路径实测误伤率 6.4%（30/468，窗口 since 2026-08-24，first-parent 468 提交）见 D923-三类路径名单实测 §四"
+
+# ── 已否决判据（防后人重加）─────────────────────────────────────────────────
+rejected_criteria:
+  - id: "*.sql"
+    reason: "本仓无被跟踪 .sql ⇒ 判据等于空转（100% 漏报）"
+    evidence: "git ls-files '*.sql' | wc -l → 0"
+  - id: "**/*orgid*"
+    reason: "文件名口径 3 条全为文档/brief，生产口径 0（100% 漏报）；内容级口径 129 文件（误报极高）"
+    evidence: "git ls-files '*orgid*' | wc -l → 3；再 grep -E '^(src|packages|extensions)/' → 0"
+  - id: "data/**"
+    reason: "仅 2 个夹具，真实 data/synova.db 未被 git 跟踪 ⇒ 判据空转"
+    evidence: "git ls-files 'data/*' | wc -l → 2"
+  - id: "src/routes/**（整包）"
+    reason: "53 文件中仅 4 条与鉴权直接相关，误报率 92%"
+    evidence: "见 D923-三类路径名单实测 §一 A1 逐行 53 条"
+
+# ── 抽样（非三类路径；**永不阻断，只记录**）────────────────────────────────
+sampling:
+  rate: 0.20
+  reason: >
+    取值 = **CTO 裁定 3 的拍板参数**，不是本卡推导出的最优值。
+    **本仓无实测数据支持「20% 优于 10%」——此项为未实测，如实标注**（新纪律⑥）。
+  verifiable_part:
+    reason: "可核的部分是分母：三类路径在近期 468 个 first-parent 提交中命中 30 次（6.4%）⇒ 93.6% 的提交不进强制路径，抽样只做记录性覆盖"
+    evidence: "见 D923-三类路径名单实测 §四（命令 `git log --first-parent --diff-merges=first-parent --since=2026-08-24 --format='COMMIT %h %ad' --date=short --name-only main`）"
+  deterministic:
+    reason: "按 PR 号取模，同 PR 恒同判、任何人可复算；**不用随机**（随机不可复现，无法审计）"
+    expr: "pr_number % 5 == 0"
+
+# ── 结论归一（存量异构 → 三态）────────────────────────────────────────────
+# 存量 verdict 取值实测（命令 + 口径）：
+#   python3 -c "遍历 task-state/*.json 统计 d['audit'] 非空者的 verdict"
+#   → 10 种非空取值：PASS 123 / CONDITIONAL PASS 25 / FAIL 5 / CONDITIONAL_PASS 3 /
+#     NOT-AUDITABLE 2 / pass 2 / 无 K3（V5.1.3 tag 锚点闭环）1 / DONE 1 /
+#     CTO 验收通过（非 K3）1 / None(verdict=null) 1
+verdict_normalization:
+  PASS:
+    values: ["PASS", "pass"]
+    gate: "green"
+    note: >
+      `pass`（小写，实测 2 张）归一为 PASS —— **归一动作显式可见**（检查器打 ::notice 并具名列出卡号），
+      禁静默归一。具名卡号见说明文档「存量异常值」节。
+  CONDITIONAL_PASS:
+    values: ["CONDITIONAL PASS", "CONDITIONAL_PASS"]
+    gate: "red"
+    reason: "「有条件通过 = 未通过」（创始人 2026-09-20 纪律）"
+  FAIL:
+    values: ["FAIL"]
+    gate: "red"
+    reason: "K3 判失败"
+  NOT_AUDITABLE:
+    values: ["NOT-AUDITABLE", "NOT_AUDITABLE"]
+    gate: "red"
+    reason: "**不可审计 ≠ 通过**：K3 未能完成审计，不能充当通过依据"
+  NOT_K3:
+    values: ["无 K3（V5.1.3 tag 锚点闭环）", "DONE", "CTO 验收通过（非 K3）"]
+    gate: "red"
+    reason: >
+      这些不是 K3 结论（tag 锚点闭环 / 普通完成标记 / CTO 人工验收）。
+      非 K3 结论**不得充当 K3 通过**。
+    exit_hint: "补 K3 结论，或由 CTO 具名豁免（写入卡/PR，可核）"
+  NO_VERDICT:
+    values: ["__missing__", "__null__", "null"]
+    gate: "red"
+    reason: "卡内无 K3 结论 —— **K3 排队中**"
+    exit_hint: "等 K3 出结论；或由 CTO 具名豁免（写入卡/PR，可核）"
+
+# ── 存量面（D923 上线时的已知后果）─────────────────────────────────────────
+# 截至 2026-09-23T20:50+0800（工作树 `.synova-wt-d923` @ `bc418ad7`；主工作区 `9631098c` 同值）。
+# 命令（逐条可复跑；**改任一数字必须连口径一起改**）：
+#   C1 卡数:      ls task-state/*.json | wc -l                       → 347（含 TEMPLATE.json）
+#                 剔除模板: ls task-state/*.json | grep -vc TEMPLATE   → 346
+#   C2 无结论:    python3 -c "…'audit' not in d → 键缺失；d['audit'] is None → null…"  → 键缺失 2 / null 181 / 合计 183
+#   C3 有报告(B): 报告文件名 re.search(r'D(\d+)', basename) 首个 D#  ∩  无结论卡的 **task_id**  → 8
+#   C4 配方C:     报告文件名 re.findall(r'D(\d+)', basename) 任意位置  ∩  同上                → 9
+backlog:
+  task_state_cards: 347
+  no_conclusion_total: 183
+  audit_key_missing: 2
+  audit_null_with_report: 8
+  audit_null_without_report: 173
+  reason: >
+    183 = 2（键缺失）+ 8（null 但有 K3 报告文件）+ 173（null 且无报告）。**校验：2+8+173 = 183 ✓**
+    （自验修复 F-2：原写 `175`，而 `2+8+175 = 185 ≠ 183` —— 算术不闭合，已按实跑改正为 173。）
+    ⚠️ **口径敏感性实证（本卡最重要的方法论产出之一）**：同一问题在**三个维度**换口径就会得到不同数 ——
+    （a）**卡口径**：含 `TEMPLATE.json` = **347 / 183**（与键名 `task_state_cards` 字面一致，本 policy 采用）；
+        剔除模板文件 = **346 / 182**（`ls task-state/*.json | grep -vc TEMPLATE` → 346）。
+    （b）**卡号来源口径**：卡号取 `task-state/*.json` 的 **`task_id`** = **8**（本 policy 采用，且与门禁实现一致：
+        `k3-merge-gate.sh` 的 `read_verdict()` 先按 `task-state/{did}.json`、再按 `task_id` 兜底）；
+        取**文件名**则 = **7**（差 1 的来源：`task-state/D559.json` 的 `task_id` 是 **D558**，文件名与 task_id 不一致）。
+    （c）**报告 D# 匹配口径**：B（首个 D#）= **8 ← 规范口径**；C（任意位置 D#）= **9**
+        （多出的 1 来自复合报告名 `2026-09-20-K3-D850D852.md` 的 D852）。
+    ⇒ **凡此类计数必须连口径一起写**，否则同一集合可以合法地报出 7 / 8 / 9 三个数
+      （独立自验方按「文件名口径 + 剔除模板」报 `346/182/2/7/173` 与 `2/7/8`，**不是算错，是口径不同**；
+       根因就是上面 (a)(b) 两项，已逐条留痕）。
+    采用 B + `task_id` 的理由：与既有唯一约定 `scripts/control-tower/gen-cto-health.py:320` 的
+    `resolve_audit_report` 同源语义（文件名派生），**且与 #723 证据 §六 的 8 张逐张一致**。
+    配方A（文件名破折号锚定 `*-D#-*`）**已删除**：三方实跑得 3 / 7 / 2 三个不同值 ⇒ 该配方本身不稳定，
+    且实现不使用它；**不复现的数不写进 policy**。
+  self_note: "本卡自身 task-state/D923.json = audit:null ⇒ 门禁注册后**本卡也判③红**（已登记于说明文档）"
