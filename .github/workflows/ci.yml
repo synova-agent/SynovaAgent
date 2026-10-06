@@ -575,6 +575,8 @@ jobs:
             tests/doc-system/doc-categories.test.sh \
             tests/doc-system/doc-staleness.test.sh \
             tests/doc-system/doc-triage.test.sh \
+            tests/control-tower/check-doc-contract.test.sh \
+            tests/control-tower/validate_doc_contract.test.sh \
             tests/doc-system/generate-chronicle-monthly.test.sh \
             tests/control-tower/check-citations.test.sh \
             tests/control-tower/check-progress-freshness.test.sh \
@@ -1125,6 +1127,8 @@ jobs:
             tests/doc-system/doc-categories.test.sh \
             tests/doc-system/doc-staleness.test.sh \
             tests/doc-system/doc-triage.test.sh \
+            tests/control-tower/check-doc-contract.test.sh \
+            tests/control-tower/validate_doc_contract.test.sh \
             tests/doc-system/generate-chronicle-monthly.test.sh \
             tests/control-tower/check-citations.test.sh \
             tests/control-tower/check-progress-freshness.test.sh \
