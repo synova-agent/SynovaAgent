@@ -561,3 +561,10 @@ origin/main
     status: active
     owner: win-line
 
+  # D1144 板真值标定与回填（CTO 2026-10-05 派单；回执清单，owner=DSH 执行）
+  - id: DOC-0186
+    type: governance
+    path: docs/synova/coordination/判据等级定级清单-20261005.md
+    status: active
+    owner: DSH
+
