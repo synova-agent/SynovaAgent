@@ -1,0 +1,272 @@
+#!/bin/bash
+# T4 复现驱动：A–G 各段独立落盘（供证据目录）
+# 只写 /tmp/d979-t4/**；仓库工作树仅作只读对照；对 /tmp 临时工作树的改动一律还原。
+set -u
+WT=/Users/wane/SynovaAgent/.synova-wt-d979-verify
+P2=/tmp/d979-t4/pr2
+P3=/tmp/d979-t4/pr3
+L=/tmp/d979-t4/logs
+B2=aa98eb7d; H2=f34f3f55; H3=b16a29d7
+mkdir -p "$L"
+
+clean_p2() { git -C "$P2" checkout HEAD -- . 2>/dev/null; rm -f "$P2/.claude/task-briefs/2026-09-26-D943-cto-a-items.md"; }
+clean_p3() { git -C "$P3" checkout HEAD -- . 2>/dev/null; }
+
+# ───────────────────────── A + B ─────────────────────────
+{
+echo "# A/B：真实 git add + 真实共享件（PR2 head $H2）"
+echo "## 前置：工作树状态"; git -C "$P2" status --porcelain; echo "(空=干净)"
+clean_p2
+echo ""
+echo "## 夹具：真实 D943 brief → 今日日期副本（使真认领进入 resolver ±1 日窗口）"
+cp "$P2/.claude/task-briefs/2026-09-24-D943-cto-a-items.md" "$P2/.claude/task-briefs/2026-09-26-D943-cto-a-items.md"
+F="docs/synova/coordination/派单模板.md"
+echo -n "resolver 选中: "; ( cd "$P2" && bash scripts/workflow/resolve-commit-brief.sh "$F" )
+printf '%s\n' "$F" | ( cd "$P2" && python3 -c "
+import sys
+sys.path.insert(0,'scripts/control-tower')
+from brief_parser import parse_q2, match_path
+B='.claude/task-briefs/2026-09-26-D943-cto-a-items.md'
+staged=[s for s in sys.stdin.read().split('\n') if s.strip()]
+inc=parse_q2(open(B,encoding='utf-8').read()).get('include',[])
+print('CLAIMED_FILES =', [s for s in staged if any(match_path(s,p) for p in inc)])
+" )
+echo ""
+echo "## A1 授权卡（MSG=D979，声明含 D943+D979）+ 真实改动 + 真实 git add"
+printf '\n<!-- T4 复验探针：A1 -->\n' >> "$P2/$F"
+( cd "$P2" && git add -- "$F" && echo "git diff --cached: $(git diff --cached --name-only | tr '\n' ' ')" )
+M=$(mktemp); printf 'docs(D979): T4 真实件双向命中\n' > "$M"
+( cd "$P2" && bash scripts/commit-msg-check.sh "$M" 2>&1 | sed 's/\x1b\[[0-9;]*m//g'; echo "exit=${PIPESTATUS[0]}" )
+echo ""
+echo "## B 第三种卡 D999（不在声明集合）"
+printf 'docs(D999): T4 非授权卡\n' > "$M"
+( cd "$P2" && bash scripts/commit-msg-check.sh "$M" 2>&1 | sed 's/\x1b\[[0-9;]*m//g'; echo "exit=${PIPESTATUS[0]}" )
+echo ""
+echo "## A2 同文件去掉声明行（真实改动）⇒ 期望劫持"
+catchup=$( cd "$P2" && git checkout -- "$F" )
+python3 - "$P2/$F" <<'PY'
+import sys
+p=sys.argv[1]; ls=open(p,encoding='utf-8').read().split('\n')
+assert ls[0].startswith('共享声明'), "第 1 行不是声明行"
+open(p,'w',encoding='utf-8').write('\n'.join(ls[1:])+'\n<!-- T4 复验探针：A2 -->\n')
+print("已移除声明行并追加探针")
+PY
+( cd "$P2" && git add -- "$F" && echo "git diff --cached: $(git diff --cached --name-only | tr '\n' ' ')" )
+printf 'docs(D979): T4 真实件双向命中\n' > "$M"
+( cd "$P2" && bash scripts/commit-msg-check.sh "$M" 2>&1 | sed 's/\x1b\[[0-9;]*m//g'; echo "exit=${PIPESTATUS[0]}" )
+rm -f "$M"; clean_p2
+echo ""
+echo "## 收尾：已还原（下方应为空）"; git -C "$P2" status --porcelain
+} > "$L/A-B-真实件放行与拒绝.log" 2>&1
+
+# ───────────────────────── C ─────────────────────────
+{
+echo "# C：PR2 拆前/拆后零丢失核算（我的算法）"
+echo "## 拆前来源: git show $B2:docs/synova/coordination/派单模板.md"
+echo -n "拆前行数: "; git -C "$WT" show $B2:docs/synova/coordination/派单模板.md | wc -l
+echo -n "拆后指针版行数: "; git -C "$WT" show $H2:docs/synova/coordination/派单模板.md | wc -l
+echo -n "numstat(模板.md): "; git -C "$WT" diff --numstat $B2 $H2 -- docs/synova/coordination/派单模板.md
+echo ""
+python3 - <<PY
+import subprocess
+WT="$WT"; B2="$B2"
+src=subprocess.run(["git","-C",WT,"show",f"{B2}:docs/synova/coordination/派单模板.md"],capture_output=True,text=True,encoding='utf-8').stdout
+files=["README.md","产品.md","哨兵.md","门禁.md","审计.md"]
+base="/tmp/d979-t4/pr2/docs/synova/coordination/派单模板/"
+tgts={f:open(base+f,encoding='utf-8').read() for f in files}
+def norm(l): return " ".join(l.strip().split())
+def ne(t): return [norm(l) for l in t.split("\n") if norm(l)]
+sl=ne(src); tl=[]
+for f in files: tl += [(f,l) for l in ne(tgts[f])]
+tset={}
+for f,l in tl: tset.setdefault(l,[]).append(f)
+cov=[l for l in sl if l in tset]; unc=[l for l in sl if l not in tset]
+print(f"拆前非空行 = {len(sl)}")
+print("拆后非空行 = %d（%s）" % (len(tl), " / ".join(f"{f}:{len(ne(tgts[f]))}" for f in files)))
+print(f"逐行精确命中 = {len(cov)}")
+print(f"未命中 = {len(unc)}（{len(unc)/len(sl)*100:.1f}%）")
+def heads(t): return [l.strip() for l in t.split("\n") if l.strip().startswith("#")]
+sh=heads(src); th=set()
+for f in files: th|=set(heads(tgts[f]))
+print(f"拆前标题 = {len(sh)}；拆后标题集合 = {len(th)}；未覆盖标题 = {len([h for h in sh if h not in th])}")
+for h in sh:
+    if h not in th: print("   MISS:", h)
+if unc:
+    print("--- 未命中行全文 ---")
+    for l in unc: print("   •", l)
+else:
+    print("--- 未命中行: 无 ---")
+PY
+} > "$L/C-零丢失核算.log" 2>&1
+
+# ───────────────────────── D ─────────────────────────
+{
+echo "# D：号段水位幂等 + 判别性（PR3 head $H3）"
+clean_p3
+echo "## D1 写模式（独立跑）"
+( cd "$P3" && bash scripts/control-tower/gen-watermark.sh 2>&1; echo "exit=${PIPESTATUS[0]}" )
+echo ""
+echo "## D1-b 幂等: git diff --exit-code -- docs/synova/coordination/号段/"
+( cd "$P3" && git diff --exit-code -- docs/synova/coordination/号段/ ; echo "exit=$?" )
+echo ""
+echo "## D2 --check 原文"
+( cd "$P3" && bash scripts/control-tower/gen-watermark.sh --check 2>&1; echo "exit=${PIPESTATUS[0]}" )
+echo ""
+echo "## D3-A 判别性：两处渲染路径 wm 写死常量（wm=1）"
+cp "$P3/scripts/control-tower/gen-watermark.sh" /tmp/d979-t4/gen-watermark.orig.sh
+python3 - <<'PY'
+p='/tmp/d979-t4/pr3/scripts/control-tower/gen-watermark.sh'
+lines=open(p,encoding='utf-8').read().split('\n')
+idx=[i for i,l in enumerate(lines) if l.strip()=='wm = inside[-1] if inside else None']
+print("  命中行(1-based):", [i+1 for i in idx])
+assert [i+1 for i in idx]==[196,224,282]
+for i in idx[:2]:
+    lines[i]=('        wm = 1  # T4-MUT-A') if lines[i].startswith('        ') else ('    wm = 1  # T4-MUT-A')
+open(p,'w',encoding='utf-8').write('\n'.join(lines))
+print("  已改行:", [i+1 for i in idx[:2]])
+PY
+( cd "$P3" && bash -n scripts/control-tower/gen-watermark.sh; echo "bash -n exit=$?" )
+( cd "$P3" && bash scripts/control-tower/gen-watermark.sh --check 2>&1; echo "exit=${PIPESTATUS[0]}" )
+echo ""
+echo "## D3-B 对照变异：只改摘要打印行(282) ⇒ 期望仍绿（排除「改了就红」）"
+( cd "$P3" && git checkout HEAD -- scripts/control-tower/gen-watermark.sh )
+python3 - <<'PY'
+p='/tmp/d979-t4/pr3/scripts/control-tower/gen-watermark.sh'
+lines=open(p,encoding='utf-8').read().split('\n')
+idx=[i for i,l in enumerate(lines) if l.strip()=='wm = inside[-1] if inside else None']
+assert [i+1 for i in idx]==[196,224,282]
+lines[281]='        wm = 1  # T4-MUT-B(仅摘要)'
+open(p,'w',encoding='utf-8').write('\n'.join(lines))
+print("  只改 282 行")
+PY
+( cd "$P3" && bash -n scripts/control-tower/gen-watermark.sh; echo "bash -n exit=$?" )
+( cd "$P3" && bash scripts/control-tower/gen-watermark.sh --check 2>&1; echo "exit=${PIPESTATUS[0]}" )
+echo ""
+echo "## D4 还原 ⇒ 回绿"
+( cd "$P3" && git checkout HEAD -- scripts/control-tower/gen-watermark.sh )
+echo -n "残留: "; git -C "$P3" status --porcelain; echo "(空=干净)"
+( cd "$P3" && bash scripts/control-tower/gen-watermark.sh --check 2>&1; echo "exit=${PIPESTATUS[0]}" )
+echo ""
+echo "## D5 水位值独立交叉核算（我自己的反查，复刻生成器口径）"
+( cd "$P3" && python3 - <<'PY'
+import glob,json,os,re,subprocess
+def did(n):
+    m=re.search(r"(?:^|[^A-Za-z0-9])[Dd](\d{3,4})(?!\d)",n); return int(m.group(1)) if m else None
+explicit={}
+for fn in sorted(glob.glob('task-state/*.json')):
+    d=did(os.path.basename(fn))
+    if d is None: continue
+    try: data=json.load(open(fn,encoding='utf-8'))
+    except Exception: data={}
+    blob=" ".join(str(data.get(k,"")) for k in ("domain","owner","executor")).lower()
+    explicit.setdefault(d,set()).update({k for k,kw in (("Mac","mac"),("Win","win"),("K3","k3")) if kw in blob})
+for br in subprocess.run(["git","for-each-ref","--format=%(refname:short)","refs/heads","refs/remotes"],capture_output=True,text=True).stdout.split('\n'):
+    d=did(br)
+    if d is None: continue
+    explicit.setdefault(d,set()).update({k for k,kw in (("Mac","mac"),("Win","win"),("K3","k3")) if kw in br.lower()})
+seg={'Mac':(900,999),'Win':(1000,1099)}; per={'Mac':set(),'Win':set()}; fb=0
+for d,a in explicit.items():
+    if a:
+        for k in a:
+            if k in per: per[k].add(d)
+    else:
+        for k,(lo,hi) in seg.items():
+            if lo<=d<=hi: per[k].add(d); fb+=1; break
+for k,(lo,hi) in seg.items():
+    ins=sorted(x for x in per[k] if lo<=x<=hi)
+    print(f"  我独立反查 {k}: 段内={len(ins)} 最大={max(ins) if ins else None} → 水位=D{max(ins) if ins else '-'}")
+print("  段回退命中(我算) =", fb)
+PY
+)
+} > "$L/D-幂等与判别性.log" 2>&1
+
+# ───────────────────────── E ─────────────────────────
+{
+echo "# E：ownership.yaml 治理表变更判别性（PR3）"
+echo "## E1 逐行 diff（$H2 → $H3）"
+git -C "$WT" diff $H2 $H3 -- docs/synova/coordination/ownership.yaml
+echo ""
+echo "## E1 计数"
+echo -n "numstat(新增/删除): "; git -C "$WT" diff --numstat $H2 $H3 -- docs/synova/coordination/ownership.yaml
+echo -n "base 行数: "; git -C "$WT" show $H2:docs/synova/coordination/ownership.yaml | wc -l
+echo -n "head 行数: "; git -C "$WT" show $H3:docs/synova/coordination/ownership.yaml | wc -l
+for k in '"\*\*"' 'domain_neutral' 'glob:' 'owner:'; do
+  echo -n "  $k  base="; git -C "$WT" show $H2:docs/synova/coordination/ownership.yaml | grep -c "$k" | tr -d '\n'
+  echo -n "  head="; git -C "$WT" show $H3:docs/synova/coordination/ownership.yaml | grep -c "$k"
+done
+echo -n "  base 中 commit-msg-check.sh 规则数: "; git -C "$WT" show $H2:docs/synova/coordination/ownership.yaml | grep -c "commit-msg-check.sh" | tr -d '\n'; echo ""
+echo -n "  head 中 commit-msg-check.sh 规则行: "; git -C "$WT" show $H3:docs/synova/coordination/ownership.yaml | grep -n 'glob: "scripts/commit-msg-check.sh"'
+echo ""
+echo "## E1-a 删掉新增 8 行块后与 base 逐字节比对"
+git -C "$WT" show $H3:docs/synova/coordination/ownership.yaml > /tmp/d979-t4/own-head.yaml
+git -C "$WT" show $H2:docs/synova/coordination/ownership.yaml > /tmp/d979-t4/own-base.yaml
+python3 - <<'PY'
+import hashlib
+head=open('/tmp/d979-t4/own-head.yaml',encoding='utf-8').read().split('\n')
+base=open('/tmp/d979-t4/own-base.yaml',encoding='utf-8').read()
+start=next(i for i,l in enumerate(head) if l.startswith('  # D979 增补'))
+gidx=next(i for i,l in enumerate(head) if l.strip()=='- glob: "scripts/commit-msg-check.sh"')
+assert head[gidx+1].strip()=='owner: "mac"'
+assert head[gidx+2].strip().startswith('source: "TASK-ROUTING.md L37「scripts/control-tower/')
+block=head[start:gidx+3]; rebuilt='\n'.join(head[:start]+head[gidx+3:])
+print(f"  新增块 = {len(block)} 行（{start+1}..{gidx+3}）")
+for l in block: print("   |", l[:120])
+print("  删块后 sha256 =", hashlib.sha256(rebuilt.encode()).hexdigest())
+print("  base   sha256 =", hashlib.sha256(base.encode()).hexdigest())
+print("  逐字节相同 →", "是 ✅" if rebuilt==base else "否 ❌")
+PY
+echo ""
+echo "## E2 真跨域暂存对（mac+win）⇒ 期望 exit 1"
+clean_p3
+printf '\n// T4 探针\n' >> "$P3/src/index.ts"; printf '\n# T4 探针\n' >> "$P3/scripts/commit-msg-check.sh"
+( cd "$P3" && git add -- src/index.ts scripts/commit-msg-check.sh && git diff --cached --name-only && python3 scripts/control-tower/check-ownership.py $(git diff --cached --name-only); echo "exit=$?" )
+echo ""
+echo "## E2-b --owner mac 断言（越域）"
+( cd "$P3" && python3 scripts/control-tower/check-ownership.py --owner mac $(git diff --cached --name-only); echo "exit=$?" )
+echo ""
+echo "## E3 同域暂存对（mac+mac）⇒ 期望 exit 0"
+( cd "$P3" && git checkout HEAD -- src/index.ts && git add -- src/index.ts && printf '\n# T4 探针2\n' >> scripts/pre-commit-check.sh && git add -- scripts/pre-commit-check.sh && git diff --cached --name-only && python3 scripts/control-tower/check-ownership.py $(git diff --cached --name-only); echo "exit=$?" )
+echo ""
+echo "## E-Δ 同文件归属 win→mac（base yaml vs head yaml）"
+( cd "$P3" && git checkout HEAD -- src/index.ts scripts/pre-commit-check.sh scripts/commit-msg-check.sh )
+echo -n "  base yaml: "; ( cd "$P3" && python3 scripts/control-tower/check-ownership.py --yaml /tmp/d979-t4/own-base.yaml scripts/commit-msg-check.sh )
+echo "  head yaml: "; ( cd "$P3" && python3 scripts/control-tower/check-ownership.py --yaml /tmp/d979-t4/own-head.yaml scripts/commit-msg-check.sh )
+echo -n "  收尾残留: "; git -C "$P3" status --porcelain; echo "(空=干净)"
+} > "$L/E-归属表判别性.log" 2>&1
+
+# ───────────────────────── F + G ─────────────────────────
+{
+echo "# F：无 blanket 豁免 / 无后门"
+echo "## F1 DOCS-REGISTRY.yaml（$H2 → $H3）"
+git -C "$WT" diff --numstat $H2 $H3 -- docs/authority/DOCS-REGISTRY.yaml
+git -C "$WT" diff $H2 $H3 -- docs/authority/DOCS-REGISTRY.yaml
+echo "新增条目 id 计数: $(git -C "$WT" diff $H2 $H3 -- docs/authority/DOCS-REGISTRY.yaml | grep -c '^+  - id:')"
+echo "新增行数: $(git -C "$WT" diff --unified=0 $H2 $H3 -- docs/authority/DOCS-REGISTRY.yaml | grep '^+' | grep -vc '^+++')"
+echo "删除行数: $(git -C "$WT" diff --unified=0 $H2 $H3 -- docs/authority/DOCS-REGISTRY.yaml | grep '^-' | grep -vc '^---')"
+echo ""
+echo "## F2 新增行逃生舱扫描"
+for p in "aa98eb7d f34f3f55 PR2" "f34f3f55 b16a29d7 PR3"; do
+  set -- $p; A=$1; B=$2; N=$3
+  echo "--- $N ---"
+  for pat in 'SYNO_SKIP' 'no-verify' 'NO_VERIFY' '|| true' '-e --force'; do
+    echo "    $pat : $(git -C "$WT" diff --unified=0 $A $B | grep '^+' | grep -v '^+++' | grep -cF "$pat" | tr -d '\n\r')"
+  done
+  echo "    新增行总数: $(git -C "$WT" diff --unified=0 $A $B | grep '^+' | grep -vc '^+++')"
+done
+echo "--- '|| true' 命中原文（PR3）---"
+git -C "$WT" diff --unified=0 $H2 $H3 | grep '^+' | grep -v '^+++' | grep -F '|| true' | sed 's/^/    /'
+echo ""
+echo "## F3 门禁本体未被 PR2/PR3 触碰 + 拦截点唯一"
+echo "PR2+PR3 触碰 commit-msg-check.sh 次数: $(git -C "$WT" diff --name-only $B2 $H3 | grep -c 'scripts/commit-msg-check.sh')"
+echo "PR3 head grep -c 疑似并行劫持: $(git -C "$WT" show $H3:scripts/commit-msg-check.sh | grep -c '疑似并行劫持')"
+git -C "$WT" show $H3:scripts/commit-msg-check.sh | grep -n '疑似并行劫持'
+echo ""
+echo "# G：写集越界检查"
+echo "## PR2 改动（$B2 → $H2）"; git -C "$WT" diff --name-status $B2 $H2
+echo "## PR3 改动（$H2 → $H3）"; git -C "$WT" diff --name-status $H2 $H3
+echo ""
+echo "## PR3 对 .claude/task-briefs/ 的改动（声明外文件，内容如下）"
+git -C "$WT" diff $H2 $H3 -- .claude/task-briefs/
+} > "$L/F-G-无后门与写集.log" 2>&1
+
+echo "日志已生成:"; ls -la "$L" | sed 's/^/  /'

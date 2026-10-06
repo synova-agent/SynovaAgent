@@ -1,0 +1,131 @@
+# F：无 blanket 豁免 / 无后门
+## F1 DOCS-REGISTRY.yaml（f34f3f55 → b16a29d7）
+29	0	docs/authority/DOCS-REGISTRY.yaml
+diff --git a/docs/authority/DOCS-REGISTRY.yaml b/docs/authority/DOCS-REGISTRY.yaml
+index 04a08662..e5b4875e 100644
+--- a/docs/authority/DOCS-REGISTRY.yaml
++++ b/docs/authority/DOCS-REGISTRY.yaml
+@@ -279,3 +279,32 @@ documents:
+     path: .dsh/skills/squad-discipline/SKILL.md
+     status: active
+     owner: DSH
++
++  # D979 T3（2026-09-26）: 号段水位目录化 → 生成物登记（生成器 scripts/control-tower/gen-watermark.sh）
++  - id: DOC-0119
++    type: registry
++    path: docs/synova/coordination/号段/README.md
++    status: active
++    owner: DSH
++    note: "D979 T3 生成物索引（号段水位目录化；水位=段内实测最大 D#，禁手改）"
++
++  - id: DOC-0120
++    type: registry
++    path: docs/synova/coordination/号段/Mac.md
++    status: active
++    owner: DSH
++    note: "D979 T3 生成物（Mac 段水位）"
++
++  - id: DOC-0121
++    type: registry
++    path: docs/synova/coordination/号段/Win.md
++    status: active
++    owner: DSH
++    note: "D979 T3 生成物（Win 段水位）"
++
++  - id: DOC-0122
++    type: registry
++    path: docs/synova/coordination/号段/K3.md
++    status: active
++    owner: DSH
++    note: "D979 T3 生成物（K3 水位）"
+新增条目 id 计数: 4
+新增行数: 29
+删除行数: 0
+
+## F2 新增行逃生舱扫描
+--- PR2 ---
+    SYNO_SKIP : 0
+    no-verify : 0
+    NO_VERIFY : 0
+    || true : 0
+    -e --force : 0
+    新增行总数: 721
+--- PR3 ---
+    SYNO_SKIP : 0
+    no-verify : 0
+    NO_VERIFY : 0
+    || true : 1
+    -e --force : 0
+    新增行总数: 877
+--- '|| true' 命中原文（PR3）---
+    +export LC_ALL=C.UTF-8 2>/dev/null || true
+
+## F3 门禁本体未被 PR2/PR3 触碰 + 拦截点唯一
+PR2+PR3 触碰 commit-msg-check.sh 次数: 0
+PR3 head grep -c 疑似并行劫持: 1
+149:          echo -e "${RED}❌ D328: 提交声明(${MSG_DID:-无})与暂存文件归属($CLAIM_DID)不一致 — 疑似并行劫持${RESET}"
+
+# G：写集越界检查
+## PR2 改动（aa98eb7d → f34f3f55）
+M	.claude/bypass.log
+M	docs/synova/coordination/派单模板.md
+A	docs/synova/coordination/派单模板/README.md
+A	docs/synova/coordination/派单模板/产品.md
+A	docs/synova/coordination/派单模板/哨兵.md
+A	docs/synova/coordination/派单模板/审计.md
+A	docs/synova/coordination/派单模板/门禁.md
+A	docs/synova/product-lines/evidence/D979-迁移落地-20260926/PR2-D954真实件-红绿原始输出.txt
+A	docs/synova/product-lines/evidence/D979-迁移落地-20260926/PR2-声明放行-红绿原始输出.txt
+A	docs/synova/product-lines/evidence/D979-迁移落地-20260926/PR2-零丢失对照与判据⑤.txt
+M	task-state/D979.json
+## PR3 改动（f34f3f55 → b16a29d7）
+M	.claude/bypass.log
+M	.claude/task-briefs/2026-09-26-D979-fix011-shared-file-mechanism.md
+M	docs/authority/DOCS-REGISTRY.yaml
+M	docs/synova/coordination/ownership.yaml
+A	docs/synova/coordination/号段/K3.md
+A	docs/synova/coordination/号段/Mac.md
+A	docs/synova/coordination/号段/README.md
+A	docs/synova/coordination/号段/Win.md
+M	docs/synova/coordination/号段水位.md
+A	docs/synova/product-lines/evidence/D979-迁移落地-20260926/PR3-D1传播-merge冲突收口.txt
+A	docs/synova/product-lines/evidence/D979-迁移落地-20260926/PR3-判据④幂等与生成器原始输出.txt
+A	docs/synova/product-lines/evidence/D979-迁移落地-20260926/PR3-判据⑤与门禁复验.txt
+A	docs/synova/product-lines/evidence/D979-迁移落地-20260926/PR3-归属表缺口-判别性证据.txt
+A	scripts/control-tower/gen-watermark.sh
+M	task-state/D979.json
+A	tests/control-tower/gen-watermark.test.sh
+
+## PR3 对 .claude/task-briefs/ 的改动（声明外文件，内容如下）
+diff --git a/.claude/task-briefs/2026-09-26-D979-fix011-shared-file-mechanism.md b/.claude/task-briefs/2026-09-26-D979-fix011-shared-file-mechanism.md
+index 787d6959..44823089 100644
+--- a/.claude/task-briefs/2026-09-26-D979-fix011-shared-file-mechanism.md
++++ b/.claude/task-briefs/2026-09-26-D979-fix011-shared-file-mechanism.md
+@@ -23,6 +23,10 @@
+ - tests/control-tower/commit-msg-consistency.test.sh
+ - .claude/task-briefs/2026-09-26-D979-fix011-shared-file-mechanism.md
+ - task-state/D979.json
++- scripts/control-tower/gen-watermark.sh
++- tests/control-tower/gen-watermark.test.sh
++
++> T3（本卡 Phase 3，迁移落地）另产出文档/证据类文件（`docs/synova/coordination/派单模板/**`、`docs/synova/coordination/号段水位.md`、`docs/synova/coordination/号段/**`、`docs/synova/product-lines/evidence/D979-迁移落地-20260926/**`）—— 权威清单见 `task-state/D979.json` 的 `write_set`（本行仅为说明，不参与代码认领）。
+ 
+ 不做什么（含文件路径）:
+ - 不修改 scripts/pre-commit-check.sh
+@@ -46,6 +50,8 @@
+ | tests/control-tower/commit-msg-consistency.test.sh | task |
+ | .claude/task-briefs/2026-09-26-D979-fix011-shared-file-mechanism.md | task |
+ | task-state/D979.json | task |
++| scripts/control-tower/gen-watermark.sh | task（T3） |
++| tests/control-tower/gen-watermark.test.sh | task（T3） |
+ 
+ ## Q3: 验收
+ - 入口: 任何卡的提交（`git commit` → commit-msg hook → `scripts/commit-msg-check.sh`）
+@@ -72,5 +78,7 @@
+ - [x] 判别性夹具：删掉声明行即报红（非 grep 型静态判据）— verify: bash tests/control-tower/commit-msg-consistency.test.sh
+ - [x] 零回归：既有 13 个一致性用例全绿；MSG_DID 为空 / 无认领 / resolver 失败行为与修复前完全一致 — verify: bash tests/control-tower/commit-msg-consistency.test.sh
+ - [x] 语法与吞错：`bash -n scripts/commit-msg-check.sh` + `check-silent-swallow.sh --diff` 无新增静默吞错 — verify: bash -n scripts/commit-msg-check.sh
++- [x] 声明落到真实共享件：`派单模板.md` 声明行 + 同窗口并发卡夹具红→绿（证据落 evidence/D979-迁移落地-20260926/）— verify: bash tests/control-tower/commit-msg-consistency.test.sh
++- [x] 号段水位可复算：生成器从 task-state + 分支反查（水位非手写）+ `--check` 幂等 — verify: bash tests/control-tower/gen-watermark.test.sh
+ 
+ #CRITERIA: A

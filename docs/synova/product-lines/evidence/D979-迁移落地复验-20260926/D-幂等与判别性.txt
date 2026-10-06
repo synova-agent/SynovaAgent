@@ -1,0 +1,45 @@
+# D：号段水位幂等 + 判别性（PR3 head b16a29d7）
+## D1 写模式（独立跑）
+✅ 号段水位已生成（水位=归属段内实测最大 D#）:
+   Mac: 段=D9xx 水位=D980 下一个=D981 段内卡数=54 段外异常=1 历史卡=93
+   Win: 段=D1000–D1099 水位=D1002 下一个=D1003 段内卡数=2 段外异常=0 历史卡=84
+   K3: 段=未定义（原始件只约定 Mac/Win 两段） 水位=D1000 下一个=D1001 段内卡数=32 段外异常=0 历史卡=0
+   段回退命中=17 未归属=218
+   输出目录: /private/tmp/d979-t4/pr3/docs/synova/coordination/号段/
+exit=0
+
+## D1-b 幂等: git diff --exit-code -- docs/synova/coordination/号段/
+exit=0
+
+## D2 --check 原文
+✅ 号段水位与仓库逐字节一致（--check 通过）
+exit=0
+
+## D3-A 判别性：两处渲染路径 wm 写死常量（wm=1）
+  命中行(1-based): [196, 224, 282]
+  已改行: [196, 224]
+bash -n exit=0
+❌ 号段水位与仓库不一致（--check 漂移）:
+  漂移: /private/tmp/d979-t4/pr3/docs/synova/coordination/号段/K3.md
+  漂移: /private/tmp/d979-t4/pr3/docs/synova/coordination/号段/Mac.md
+  漂移: /private/tmp/d979-t4/pr3/docs/synova/coordination/号段/README.md
+  漂移: /private/tmp/d979-t4/pr3/docs/synova/coordination/号段/Win.md
+   修复: bash scripts/control-tower/gen-watermark.sh 后提交生成物
+gen-watermark: exit=1（1=--check 检出漂移；2=自身失败）
+exit=1
+
+## D3-B 对照变异：只改摘要打印行(282) ⇒ 期望仍绿（排除「改了就红」）
+  只改 282 行
+bash -n exit=0
+✅ 号段水位与仓库逐字节一致（--check 通过）
+exit=0
+
+## D4 还原 ⇒ 回绿
+残留: (空=干净)
+✅ 号段水位与仓库逐字节一致（--check 通过）
+exit=0
+
+## D5 水位值独立交叉核算（我自己的反查，复刻生成器口径）
+  我独立反查 Mac: 段内=54 最大=980 → 水位=D980
+  我独立反查 Win: 段内=2 最大=1002 → 水位=D1002
+  段回退命中(我算) = 17

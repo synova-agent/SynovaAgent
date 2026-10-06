@@ -1,0 +1,45 @@
+# A/B：真实 git add + 真实共享件（PR2 head f34f3f55）
+## 前置：工作树状态
+(空=干净)
+
+## 夹具：真实 D943 brief → 今日日期副本（使真认领进入 resolver ±1 日窗口）
+resolver 选中: /private/tmp/d979-t4/pr2/.claude/task-briefs/2026-09-26-D943-cto-a-items.md
+CLAIMED_FILES = ['docs/synova/coordination/派单模板.md']
+
+## A1 授权卡（MSG=D979，声明含 D943+D979）+ 真实改动 + 真实 git add
+git diff --cached: docs/synova/coordination/派单模板.md 
+✅ Commit 格式正确
+   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)
+✅ D328 共享声明放行（D979 FIX-011 ⒝）: 暂存文件逐文件双向声明命中
+   认领 brief: /private/tmp/d979-t4/pr2/.claude/task-briefs/2026-09-26-D943-cto-a-items.md
+   DECL_ALLOW
+   MSG_DID=D979 CLAIM_DID=D943 FILES=1
+   FILE=docs/synova/coordination/派单模板.md SOURCE=index DECL=共享声明: D712, D931, D940, D943, D955, D979 — 本文件为**共享治理件**：任何卡修改本文件时，须把本卡 D# 追加进本行（同时保留历史卡号）；机制见 `docs/synova/coordination/派单-FIX-011-共享治理文件机制-20260926.md`（D979 FIX-011 ⒝，门禁实现 `scripts/control-tower/shared_file_decl.py`）。 HIT=D712,D931,D940,D943,D955,D979 MISSING=(无)
+✅ D395-a/D534 Note 引用门禁: 无治理/规则区变更（跳过）
+exit=0
+
+## B 第三种卡 D999（不在声明集合）
+✅ Commit 格式正确
+   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)
+❌ D328: 提交声明(D999)与暂存文件归属(D943)不一致 — 疑似并行劫持
+   认领 brief: /private/tmp/d979-t4/pr2/.claude/task-briefs/2026-09-26-D943-cto-a-items.md
+   DECL_DENY
+   MSG_DID=D999 CLAIM_DID=D943 FILES=1
+   FILE=docs/synova/coordination/派单模板.md SOURCE=index DECL=共享声明: D712, D931, D940, D943, D955, D979 — 本文件为**共享治理件**：任何卡修改本文件时，须把本卡 D# 追加进本行（同时保留历史卡号）；机制见 `docs/synova/coordination/派单-FIX-011-共享治理文件机制-20260926.md`（D979 FIX-011 ⒝，门禁实现 `scripts/control-tower/shared_file_decl.py`）。 HIT=D712,D931,D940,D943,D955,D979 MISSING=D999
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+exit=1
+
+## A2 同文件去掉声明行（真实改动）⇒ 期望劫持
+已移除声明行并追加探针
+git diff --cached: docs/synova/coordination/派单模板.md 
+✅ Commit 格式正确
+   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)
+❌ D328: 提交声明(D979)与暂存文件归属(D943)不一致 — 疑似并行劫持
+   认领 brief: /private/tmp/d979-t4/pr2/.claude/task-briefs/2026-09-26-D943-cto-a-items.md
+   DECL_DENY
+   MSG_DID=D979 CLAIM_DID=D943 FILES=1
+   FILE=docs/synova/coordination/派单模板.md SOURCE=index DECL=(无) HIT=(无) MISSING=D943,D979
+   请确认提交的是本任务文件，或拆分暂存区后再提交
+exit=1
+
+## 收尾：已还原（下方应为空）

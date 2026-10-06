@@ -1,0 +1,21 @@
+# 附加：短指针 / DOCS-REGISTRY 登记 / 声明重复行 核查（PR3 head b16a29d7）
+## 号段水位.md 全文（短指针核验）
+# 号段水位（已目录化）→ 正文见 **[号段/README.md](号段/README.md)**
+
+本文件自 2026-09-26（D979）起为**短指针**（正文已迁出，保留文件以防既有引用断链）：
+
+- 正文目录：`docs/synova/coordination/号段/` —— `README.md`（索引 + 段约定 + 归属判定与计数 + 取号前必读 + 2026-09-25 更正记录）与 `Mac.md` / `Win.md` / `K3.md`（每归属一文件）
+- **水位是生成物（禁手改）**：`bash scripts/control-tower/gen-watermark.sh` 从 `task-state/*.json` + 全分支名反查生成；`--check` 校验与仓库逐字节一致（可用于 CI）
+- 既有引用指向本文件 ⇒ **不断链**（点开即到本指针，再一跳进正文）；取号前请按 `号段/README.md` 的「取号前必读」人工复核段归属
+
+## DOCS-REGISTRY 条目唯一性 + 新登记路径存在性
+  总条目数: 43 | 唯一 id 数: 43 | 重复: 无
+  docs/synova/coordination/号段/README.md: 存在 ✅
+  docs/synova/coordination/号段/Mac.md: 存在 ✅
+  docs/synova/coordination/号段/Win.md: 存在 ✅
+  docs/synova/coordination/号段/K3.md: 存在 ✅
+
+## PR2 派单模板/README.md 共享声明行重复现象
+1:共享声明: D712, D931, D940, D943, D955, D979 — 本目录为**共享治理件**：任何卡�
+27:共享声明: D712, D931, D940, D943, D955, D979 — 本文件为**共享治理件**：任何卡�
+  重复行数: 2

@@ -1,0 +1,82 @@
+# E：ownership.yaml 治理表变更判别性（PR3）
+## E1 逐行 diff（f34f3f55 → b16a29d7）
+diff --git a/docs/synova/coordination/ownership.yaml b/docs/synova/coordination/ownership.yaml
+index 68fbaf5b..8739d42a 100644
+--- a/docs/synova/coordination/ownership.yaml
++++ b/docs/synova/coordination/ownership.yaml
+@@ -94,6 +94,14 @@ rules:
+   - glob: "scripts/install-hooks.sh"
+     owner: "mac"
+     source: "TASK-ROUTING.md L63 门禁脚本 DSH 专属"
++  # D979 增补（2026-09-26）: commit-msg 门禁脚本漏登记 → 落 `**` 兜底被判 win。
++  #   实测（check-ownership.py）: `win scripts/commit-msg-check.sh`；同族门禁脚本
++  #   （pre-commit-check.sh / pre-push-check.sh / install-hooks.sh）与 scripts/control-tower/**
++  #   均已明列 mac —— 同一门禁链同域，补齐缺口（不改任何既有归属）。
++  #   影响面: D979 三栈 PR（#815 / #820 / PR3）实测报「变更跨域 mac+win」。
++  - glob: "scripts/commit-msg-check.sh"
++    owner: "mac"
++    source: "TASK-ROUTING.md L37「scripts/control-tower/ + scripts/backup/ + **门禁脚本** + docs/synova/coordination/ + DSH 预设与技能 → Mac DSH」+ L63「门禁脚本 + coordination 文档 + VERSION.md → DSH 专属」；同 scripts/pre-commit-check.sh / pre-push-check.sh / install-hooks.sh 先例"
+   - glob: "scripts/backup/**"
+     owner: "mac"
+     source: "TASK-ROUTING.md L37"
+
+## E1 计数
+numstat(新增/删除): 8	0	docs/synova/coordination/ownership.yaml
+base 行数:      208
+head 行数:      216
+  "\*\*"  base=1  head=1
+  domain_neutral  base=1  head=1
+  glob:  base=43  head=44
+  owner:  base=43  head=44
+  base 中 commit-msg-check.sh 规则数: 0
+  head 中 commit-msg-check.sh 规则行: 102:  - glob: "scripts/commit-msg-check.sh"
+
+## E1-a 删掉新增 8 行块后与 base 逐字节比对
+  新增块 = 8 行（97..104）
+   |   # D979 增补（2026-09-26）: commit-msg 门禁脚本漏登记 → 落 `**` 兜底被判 win。
+   |   #   实测（check-ownership.py）: `win scripts/commit-msg-check.sh`；同族门禁脚本
+   |   #   （pre-commit-check.sh / pre-push-check.sh / install-hooks.sh）与 scripts/control-tower/**
+   |   #   均已明列 mac —— 同一门禁链同域，补齐缺口（不改任何既有归属）。
+   |   #   影响面: D979 三栈 PR（#815 / #820 / PR3）实测报「变更跨域 mac+win」。
+   |   - glob: "scripts/commit-msg-check.sh"
+   |     owner: "mac"
+   |     source: "TASK-ROUTING.md L37「scripts/control-tower/ + scripts/backup/ + **门禁脚本** + docs/synova/coordination/ + DSH 预
+  删块后 sha256 = fe9cd04d787a4bbb02b8d29410af4e6583389b4fee741d896151847fa23f2069
+  base   sha256 = fe9cd04d787a4bbb02b8d29410af4e6583389b4fee741d896151847fa23f2069
+  逐字节相同 → 是 ✅
+
+## E2 真跨域暂存对（mac+win）⇒ 期望 exit 1
+scripts/commit-msg-check.sh
+src/index.ts
+mac  scripts/commit-msg-check.sh
+win  src/index.ts
+
+❌ FAIL 跨域: 变更落在 2 个域 ['mac', 'win'] —— 单个 PR 只许一个域（无归属 0，域判定豁免 0）
+exit=1
+
+## E2-b --owner mac 断言（越域）
+mac  scripts/commit-msg-check.sh
+win  src/index.ts
+
+❌ 越域: src/index.ts —— 声明 owner=mac，实际 owner=win
+❌ FAIL 越域 1 处（声明 owner=mac）
+exit=1
+
+## E3 同域暂存对（mac+mac）⇒ 期望 exit 0
+scripts/commit-msg-check.sh
+scripts/pre-commit-check.sh
+mac  scripts/commit-msg-check.sh
+mac  scripts/pre-commit-check.sh
+
+✅ PASS 2 个文件同域: mac（无归属 0，域判定豁免 0）
+exit=0
+
+## E-Δ 同文件归属 win→mac（base yaml vs head yaml）
+  base yaml: win  scripts/commit-msg-check.sh
+
+✅ PASS 1 个文件同域: win（无归属 0，域判定豁免 0）
+  head yaml: 
+mac  scripts/commit-msg-check.sh
+
+✅ PASS 1 个文件同域: mac（无归属 0，域判定豁免 0）
+  收尾残留: (空=干净)
