@@ -57,6 +57,12 @@ jobs:
       # 跳过 TS+Iron Laws 重检查（只跳 job 内步骤，不跳 job——PR 状态仍可读）。
       # Secrets 由独立 job 扫描，不受影响。混合 PR 正常全量。
       # 注: main push 合并后 diff 为空 → 按纯文档跳过（PR 门已验证，避免空跑）。
+      # 🔴 **D1186 复核整改（2026-10-06）: 本注与新守卫（W2）直接矛盾，已更正** ——
+      #   W2 之后 **push 事件不再走 docs-only 早退**（10 处 `GITHUB_EVENT_NAME` 守卫）。
+      #   本注描述的是 **W2 之前**的行为。留在此处是因为它解释了这个早退当初为什么存在
+      #   （「main push 的 diff 恒为空」这个观察本身是对的 —— 它正是 W2 要治的病根：
+      #    main 因此**从未真跑过** `npm ci`/tsc/vitest，故 main 的「绿」是**跳过型绿**）。
+      #   ⇒ 现在语义已反转: **push 反而必须走全量**，docs-only 早退只保留给 pull_request。
       - name: Detect docs-only change (D515)
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
@@ -65,8 +71,8 @@ jobs:
           # 依据（实测 as_of 2026-10-06）: main push 时 `git diff --name-only origin/main...HEAD`
           #   恒为空 ⇒ 下方 `grep -qvE` 无命中（返 1）⇒ 恒判 docs_only=true ⇒ 本 run 内**所有**
           #   job 的 `npm ci` / tsc / vitest / hermetic 全部 skip，而 job 仍报 success。
-          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；同期 main 的 lock 实际
-          #   必红于 ERESOLVE ⇒ **main 的「绿」是跳过型绿，与 main 自身健康无关**。
+          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；**当时**同期 main（`259cd4003` 及更早）的 lock 实际
+          #   必红于 ERESOLVE。🔴 **D1186 复核定案（2026-10-06）**: 该断言**自 #1165 合入后已不再成立**（`coverage-v8` 4.1.8→5.0.2，现 main 的 `install-deps.sh` 为 SUCCESS）。我实测曾于 `259cd4003` 复现 ERESOLVE；复核于 `9d8e8d18a` 实测 install-deps SUCCESS —— **两者都对，是时间点不同**。保留本段是因为它记录了「**跳过型绿**」这个病灶形态：main 的「绿」是跳过型绿，与 main 自身健康无关；**请勿**据此断言 main 的 lock 现在会红。
           # 口径: push ⇒ 无条件全量（main 自己的健康必须被验证）；pull_request / merge_group /
           #   schedule / workflow_dispatch ⇒ 原判据逐字不变（仍走下方白名单）。
           # 夹具: docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh（10 处同源断言）——
@@ -237,8 +243,8 @@ jobs:
           # 依据（实测 as_of 2026-10-06）: main push 时 `git diff --name-only origin/main...HEAD`
           #   恒为空 ⇒ 下方 `grep -qvE` 无命中（返 1）⇒ 恒判 docs_only=true ⇒ 本 run 内**所有**
           #   job 的 `npm ci` / tsc / vitest / hermetic 全部 skip，而 job 仍报 success。
-          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；同期 main 的 lock 实际
-          #   必红于 ERESOLVE ⇒ **main 的「绿」是跳过型绿，与 main 自身健康无关**。
+          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；**当时**同期 main（`259cd4003` 及更早）的 lock 实际
+          #   必红于 ERESOLVE。🔴 **D1186 复核定案（2026-10-06）**: 该断言**自 #1165 合入后已不再成立**（`coverage-v8` 4.1.8→5.0.2，现 main 的 `install-deps.sh` 为 SUCCESS）。我实测曾于 `259cd4003` 复现 ERESOLVE；复核于 `9d8e8d18a` 实测 install-deps SUCCESS —— **两者都对，是时间点不同**。保留本段是因为它记录了「**跳过型绿**」这个病灶形态：main 的「绿」是跳过型绿，与 main 自身健康无关；**请勿**据此断言 main 的 lock 现在会红。
           # 口径: push ⇒ 无条件全量（main 自己的健康必须被验证）；pull_request / merge_group /
           #   schedule / workflow_dispatch ⇒ 原判据逐字不变（仍走下方白名单）。
           # 夹具: docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh（10 处同源断言）——
@@ -328,8 +334,8 @@ jobs:
           # 依据（实测 as_of 2026-10-06）: main push 时 `git diff --name-only origin/main...HEAD`
           #   恒为空 ⇒ 下方 `grep -qvE` 无命中（返 1）⇒ 恒判 docs_only=true ⇒ 本 run 内**所有**
           #   job 的 `npm ci` / tsc / vitest / hermetic 全部 skip，而 job 仍报 success。
-          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；同期 main 的 lock 实际
-          #   必红于 ERESOLVE ⇒ **main 的「绿」是跳过型绿，与 main 自身健康无关**。
+          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；**当时**同期 main（`259cd4003` 及更早）的 lock 实际
+          #   必红于 ERESOLVE。🔴 **D1186 复核定案（2026-10-06）**: 该断言**自 #1165 合入后已不再成立**（`coverage-v8` 4.1.8→5.0.2，现 main 的 `install-deps.sh` 为 SUCCESS）。我实测曾于 `259cd4003` 复现 ERESOLVE；复核于 `9d8e8d18a` 实测 install-deps SUCCESS —— **两者都对，是时间点不同**。保留本段是因为它记录了「**跳过型绿**」这个病灶形态：main 的「绿」是跳过型绿，与 main 自身健康无关；**请勿**据此断言 main 的 lock 现在会红。
           # 口径: push ⇒ 无条件全量（main 自己的健康必须被验证）；pull_request / merge_group /
           #   schedule / workflow_dispatch ⇒ 原判据逐字不变（仍走下方白名单）。
           # 夹具: docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh（10 处同源断言）——
@@ -394,8 +400,8 @@ jobs:
           # 依据（实测 as_of 2026-10-06）: main push 时 `git diff --name-only origin/main...HEAD`
           #   恒为空 ⇒ 下方 `grep -qvE` 无命中（返 1）⇒ 恒判 docs_only=true ⇒ 本 run 内**所有**
           #   job 的 `npm ci` / tsc / vitest / hermetic 全部 skip，而 job 仍报 success。
-          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；同期 main 的 lock 实际
-          #   必红于 ERESOLVE ⇒ **main 的「绿」是跳过型绿，与 main 自身健康无关**。
+          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；**当时**同期 main（`259cd4003` 及更早）的 lock 实际
+          #   必红于 ERESOLVE。🔴 **D1186 复核定案（2026-10-06）**: 该断言**自 #1165 合入后已不再成立**（`coverage-v8` 4.1.8→5.0.2，现 main 的 `install-deps.sh` 为 SUCCESS）。我实测曾于 `259cd4003` 复现 ERESOLVE；复核于 `9d8e8d18a` 实测 install-deps SUCCESS —— **两者都对，是时间点不同**。保留本段是因为它记录了「**跳过型绿**」这个病灶形态：main 的「绿」是跳过型绿，与 main 自身健康无关；**请勿**据此断言 main 的 lock 现在会红。
           # 口径: push ⇒ 无条件全量（main 自己的健康必须被验证）；pull_request / merge_group /
           #   schedule / workflow_dispatch ⇒ 原判据逐字不变（仍走下方白名单）。
           # 夹具: docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh（10 处同源断言）——
@@ -491,8 +497,8 @@ jobs:
           # 依据（实测 as_of 2026-10-06）: main push 时 `git diff --name-only origin/main...HEAD`
           #   恒为空 ⇒ 下方 `grep -qvE` 无命中（返 1）⇒ 恒判 docs_only=true ⇒ 本 run 内**所有**
           #   job 的 `npm ci` / tsc / vitest / hermetic 全部 skip，而 job 仍报 success。
-          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；同期 main 的 lock 实际
-          #   必红于 ERESOLVE ⇒ **main 的「绿」是跳过型绿，与 main 自身健康无关**。
+          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；**当时**同期 main（`259cd4003` 及更早）的 lock 实际
+          #   必红于 ERESOLVE。🔴 **D1186 复核定案（2026-10-06）**: 该断言**自 #1165 合入后已不再成立**（`coverage-v8` 4.1.8→5.0.2，现 main 的 `install-deps.sh` 为 SUCCESS）。我实测曾于 `259cd4003` 复现 ERESOLVE；复核于 `9d8e8d18a` 实测 install-deps SUCCESS —— **两者都对，是时间点不同**。保留本段是因为它记录了「**跳过型绿**」这个病灶形态：main 的「绿」是跳过型绿，与 main 自身健康无关；**请勿**据此断言 main 的 lock 现在会红。
           # 口径: push ⇒ 无条件全量（main 自己的健康必须被验证）；pull_request / merge_group /
           #   schedule / workflow_dispatch ⇒ 原判据逐字不变（仍走下方白名单）。
           # 夹具: docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh（10 处同源断言）——
@@ -733,8 +739,8 @@ jobs:
           # 依据（实测 as_of 2026-10-06）: main push 时 `git diff --name-only origin/main...HEAD`
           #   恒为空 ⇒ 下方 `grep -qvE` 无命中（返 1）⇒ 恒判 docs_only=true ⇒ 本 run 内**所有**
           #   job 的 `npm ci` / tsc / vitest / hermetic 全部 skip，而 job 仍报 success。
-          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；同期 main 的 lock 实际
-          #   必红于 ERESOLVE ⇒ **main 的「绿」是跳过型绿，与 main 自身健康无关**。
+          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；**当时**同期 main（`259cd4003` 及更早）的 lock 实际
+          #   必红于 ERESOLVE。🔴 **D1186 复核定案（2026-10-06）**: 该断言**自 #1165 合入后已不再成立**（`coverage-v8` 4.1.8→5.0.2，现 main 的 `install-deps.sh` 为 SUCCESS）。我实测曾于 `259cd4003` 复现 ERESOLVE；复核于 `9d8e8d18a` 实测 install-deps SUCCESS —— **两者都对，是时间点不同**。保留本段是因为它记录了「**跳过型绿**」这个病灶形态：main 的「绿」是跳过型绿，与 main 自身健康无关；**请勿**据此断言 main 的 lock 现在会红。
           # 口径: push ⇒ 无条件全量（main 自己的健康必须被验证）；pull_request / merge_group /
           #   schedule / workflow_dispatch ⇒ 原判据逐字不变（仍走下方白名单）。
           # 夹具: docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh（10 处同源断言）——
@@ -782,8 +788,8 @@ jobs:
           # 依据（实测 as_of 2026-10-06）: main push 时 `git diff --name-only origin/main...HEAD`
           #   恒为空 ⇒ 下方 `grep -qvE` 无命中（返 1）⇒ 恒判 docs_only=true ⇒ 本 run 内**所有**
           #   job 的 `npm ci` / tsc / vitest / hermetic 全部 skip，而 job 仍报 success。
-          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；同期 main 的 lock 实际
-          #   必红于 ERESOLVE ⇒ **main 的「绿」是跳过型绿，与 main 自身健康无关**。
+          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；**当时**同期 main（`259cd4003` 及更早）的 lock 实际
+          #   必红于 ERESOLVE。🔴 **D1186 复核定案（2026-10-06）**: 该断言**自 #1165 合入后已不再成立**（`coverage-v8` 4.1.8→5.0.2，现 main 的 `install-deps.sh` 为 SUCCESS）。我实测曾于 `259cd4003` 复现 ERESOLVE；复核于 `9d8e8d18a` 实测 install-deps SUCCESS —— **两者都对，是时间点不同**。保留本段是因为它记录了「**跳过型绿**」这个病灶形态：main 的「绿」是跳过型绿，与 main 自身健康无关；**请勿**据此断言 main 的 lock 现在会红。
           # 口径: push ⇒ 无条件全量（main 自己的健康必须被验证）；pull_request / merge_group /
           #   schedule / workflow_dispatch ⇒ 原判据逐字不变（仍走下方白名单）。
           # 夹具: docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh（10 处同源断言）——
@@ -837,8 +843,8 @@ jobs:
           # 依据（实测 as_of 2026-10-06）: main push 时 `git diff --name-only origin/main...HEAD`
           #   恒为空 ⇒ 下方 `grep -qvE` 无命中（返 1）⇒ 恒判 docs_only=true ⇒ 本 run 内**所有**
           #   job 的 `npm ci` / tsc / vitest / hermetic 全部 skip，而 job 仍报 success。
-          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；同期 main 的 lock 实际
-          #   必红于 ERESOLVE ⇒ **main 的「绿」是跳过型绿，与 main 自身健康无关**。
+          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；**当时**同期 main（`259cd4003` 及更早）的 lock 实际
+          #   必红于 ERESOLVE。🔴 **D1186 复核定案（2026-10-06）**: 该断言**自 #1165 合入后已不再成立**（`coverage-v8` 4.1.8→5.0.2，现 main 的 `install-deps.sh` 为 SUCCESS）。我实测曾于 `259cd4003` 复现 ERESOLVE；复核于 `9d8e8d18a` 实测 install-deps SUCCESS —— **两者都对，是时间点不同**。保留本段是因为它记录了「**跳过型绿**」这个病灶形态：main 的「绿」是跳过型绿，与 main 自身健康无关；**请勿**据此断言 main 的 lock 现在会红。
           # 口径: push ⇒ 无条件全量（main 自己的健康必须被验证）；pull_request / merge_group /
           #   schedule / workflow_dispatch ⇒ 原判据逐字不变（仍走下方白名单）。
           # 夹具: docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh（10 处同源断言）——
@@ -884,8 +890,8 @@ jobs:
           # 依据（实测 as_of 2026-10-06）: main push 时 `git diff --name-only origin/main...HEAD`
           #   恒为空 ⇒ 下方 `grep -qvE` 无命中（返 1）⇒ 恒判 docs_only=true ⇒ 本 run 内**所有**
           #   job 的 `npm ci` / tsc / vitest / hermetic 全部 skip，而 job 仍报 success。
-          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；同期 main 的 lock 实际
-          #   必红于 ERESOLVE ⇒ **main 的「绿」是跳过型绿，与 main 自身健康无关**。
+          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；**当时**同期 main（`259cd4003` 及更早）的 lock 实际
+          #   必红于 ERESOLVE。🔴 **D1186 复核定案（2026-10-06）**: 该断言**自 #1165 合入后已不再成立**（`coverage-v8` 4.1.8→5.0.2，现 main 的 `install-deps.sh` 为 SUCCESS）。我实测曾于 `259cd4003` 复现 ERESOLVE；复核于 `9d8e8d18a` 实测 install-deps SUCCESS —— **两者都对，是时间点不同**。保留本段是因为它记录了「**跳过型绿**」这个病灶形态：main 的「绿」是跳过型绿，与 main 自身健康无关；**请勿**据此断言 main 的 lock 现在会红。
           # 口径: push ⇒ 无条件全量（main 自己的健康必须被验证）；pull_request / merge_group /
           #   schedule / workflow_dispatch ⇒ 原判据逐字不变（仍走下方白名单）。
           # 夹具: docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh（10 处同源断言）——
@@ -947,8 +953,8 @@ jobs:
           # 依据（实测 as_of 2026-10-06）: main push 时 `git diff --name-only origin/main...HEAD`
           #   恒为空 ⇒ 下方 `grep -qvE` 无命中（返 1）⇒ 恒判 docs_only=true ⇒ 本 run 内**所有**
           #   job 的 `npm ci` / tsc / vitest / hermetic 全部 skip，而 job 仍报 success。
-          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；同期 main 的 lock 实际
-          #   必红于 ERESOLVE ⇒ **main 的「绿」是跳过型绿，与 main 自身健康无关**。
+          #   实证: 最近 8 个 main push run 的 `npm ci` **全 skipped**；**当时**同期 main（`259cd4003` 及更早）的 lock 实际
+          #   必红于 ERESOLVE。🔴 **D1186 复核定案（2026-10-06）**: 该断言**自 #1165 合入后已不再成立**（`coverage-v8` 4.1.8→5.0.2，现 main 的 `install-deps.sh` 为 SUCCESS）。我实测曾于 `259cd4003` 复现 ERESOLVE；复核于 `9d8e8d18a` 实测 install-deps SUCCESS —— **两者都对，是时间点不同**。保留本段是因为它记录了「**跳过型绿**」这个病灶形态：main 的「绿」是跳过型绿，与 main 自身健康无关；**请勿**据此断言 main 的 lock 现在会红。
           # 口径: push ⇒ 无条件全量（main 自己的健康必须被验证）；pull_request / merge_group /
           #   schedule / workflow_dispatch ⇒ 原判据逐字不变（仍走下方白名单）。
           # 夹具: docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh（10 处同源断言）——
