@@ -82,11 +82,17 @@ chk "① allowed-a 被重建" "1" "$(grep -c '^npm rebuild allowed-a --foregroun
 chk "① allowed-b 被重建" "1" "$(grep -c '^npm rebuild allowed-b --foreground-scripts' "$TMPD/npm.log")"
 # 🔴 反例核心断言：未列入白名单的包（存在！）一次 rebuild 都不能有
 chk "① 🔴 未列入白名单的 evil-pkg 零 rebuild" "0" "$(grep -c 'evil-pkg' "$TMPD/npm.log")"
-# 🔴 D1172 复核整改（B2 核心）: 上面那条只 grep 包名字面量 ⇒ **一行裸 `npm rebuild --foreground-scripts`
-#   即可绕过**（裸 rebuild = **全量重建**，日志里不出现任何包名，夹具看不见）。
-#   独立复核实测: 加那一行后夹具仍 `14 PASS / 0 FAIL` ⇒ 判别力不足。
-#   ⇒ 补两条**结构性**断言（不看包名，看调用形态）：
-chk "① 🔴 无「裸 npm rebuild」（= 全量重建 ⇒ 默认拒失效）" "0" "$(grep -cE '^npm rebuild( --foreground-scripts)?$' "$TMPD/npm.log")"
+# 🔴 D1173 复核整改（B2 **根修**）: 上一版补的两条是**按拼写**匹配
+#   （`^npm rebuild( --foreground-scripts)?$` / `^npm rebuild `），**不是**按"这次调用会不会跑脚本"。
+#   独立复核用两条新突变击穿它，而夹具仍 19/0：
+#     · M7 `npm i --no-save node-gyp@12`（= 本 PR 自己在 S5 登记的"默认拒绕过路径"形态）
+#     · M8 `npm --prefix . rebuild --foreground-scripts`（语义与 M5 的裸全量重建**相同**，只换拼写）
+#   ⇒ 教训：**枚举黑名单拼写永远有下一个变体**。改为**白名单式**——把 stub 记下的
+#     **整条 npm 调用序列**与期望集合比对：**任何一行不在白名单里 ⇒ 红**。
+#     这一条同时杀掉 M5（裸 rebuild）/ M7（npm i）/ M8（--prefix 前置）以及未来的变体。
+EXPECTED_NPM='^npm ci --ignore-scripts|^npm rebuild (allowed-a|allowed-b) --foreground-scripts|^npx --no-install patch-package'
+UNEXPECTED="$(grep -vE "$EXPECTED_NPM" "$TMPD/npm.log" || true)"
+chk "① 🔴 白名单外的 npm 调用数 = 0（M5/M7/M8 皆命中此条）" "0" "$(printf '%s' "$UNEXPECTED" | grep -c . || true)"
 chk "① npm rebuild 调用次数 == 白名单内已装包数（多一次即越权）" "2" "$(grep -c '^npm rebuild ' "$TMPD/npm.log")"
 chk "① 根 postinstall(patch-package) 被执行" "1" "$(grep -c 'patch-package' "$TMPD/npm.log")"
 

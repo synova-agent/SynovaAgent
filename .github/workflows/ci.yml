@@ -1029,6 +1029,16 @@ jobs:
         id: advisory
         continue-on-error: true
         working-directory: packages/test-kit
+        # 🔴 D1173 复核整改（N1，硬回归）: 本 job 跑在 **windows-latest** 且**未声明 shell:**
+        #   ⇒ 默认 **pwsh**；而 pwsh 里 `$GITHUB_WORKSPACE` 是**未定义的 PowerShell 变量**
+        #   （环境变量在 pwsh 要写 `$env:`）⇒ 展开为**空串** ⇒ 路径变成 `/scripts/...`
+        #   ⇒ `/usr/bin/bash: /scripts/control-tower/install-deps.sh: No such file or directory`
+        #   ⇒ exit 127 + **依赖一个都没装**（随后 vitest 报 ERR_MODULE_NOT_FOUND）。
+        #   实跑证据: run 37444065304 / job 112204580147（head 05bb674f9，event=pull_request）。
+        #   更坏的是本 step `continue-on-error: true` ⇒ job 结论=success ⇒
+        #   check `Test-Kit Architecture Tests (windows-latest)` **假绿**。
+        #   ⇒ 修: 显式 `shell: bash`（bash 里 `$GITHUB_WORKSPACE` 才是环境变量）。
+        shell: bash
         run: |
           bash "$GITHUB_WORKSPACE/scripts/control-tower/install-deps.sh" --prefix .
           npx vitest run tests/architecture/05-as-any-audit.test.ts
