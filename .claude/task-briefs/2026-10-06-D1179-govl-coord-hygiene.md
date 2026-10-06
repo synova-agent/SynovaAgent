@@ -32,6 +32,9 @@
 做什么：
 - scripts/control-tower/check-coordination-hygiene.py
 - tests/control-tower/check-coordination-hygiene.test.sh
+- .github/workflows/ci.yml
+  🔴 补声明（复核整改）: 登记新夹具进**两处密封清单**（Gate Integrity 红已消除）——
+  D526 语义「未列举 = 永不执行」；**登记 ≠ 进必需 context**（既有机械义务 vs 门禁语义变更）。
 - .claude/task-briefs/2026-10-06-D1179-govl-coord-hygiene.md
 - memory/notes/proposed/2026-10-06-d1179-coord-hygiene.md
 - task-state/D1179.json

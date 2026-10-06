@@ -569,10 +569,6 @@ jobs:
             tests/control-tower/gate-failopen-net.test.sh \
             tests/control-tower/merge_writeset_gate.test.sh \
             tests/control-tower/ci-ratchet-base.test.sh \
-            # 🔴 D1184（复核整改）: 登记进密封清单 —— D526 语义「**未列举 = 永不执行**」，
-            #   且 check-gate-integrity.sh --registry-only 会判「新增测试未登记」为 VIOLATION。
-            #   ⚠️ 注意: **登记 ≠ 进必需 context** —— 登记是既有机械义务（与「哪条检查阻断合并」无关），
-            #   两件事此前被我混为一谈（复核指出）。
             tests/control-tower/check-coordination-hygiene.test.sh \
             tests/control-tower/verify-doc.test.sh \
             tests/doc-system/check-doc-truth.test.sh \
@@ -1124,10 +1120,6 @@ jobs:
             tests/control-tower/gate-failopen-net.test.sh \
             tests/control-tower/merge_writeset_gate.test.sh \
             tests/control-tower/ci-ratchet-base.test.sh \
-            # 🔴 D1184（复核整改）: 登记进密封清单 —— D526 语义「**未列举 = 永不执行**」，
-            #   且 check-gate-integrity.sh --registry-only 会判「新增测试未登记」为 VIOLATION。
-            #   ⚠️ 注意: **登记 ≠ 进必需 context** —— 登记是既有机械义务（与「哪条检查阻断合并」无关），
-            #   两件事此前被我混为一谈（复核指出）。
             tests/control-tower/check-coordination-hygiene.test.sh \
             tests/control-tower/verify-doc.test.sh \
             tests/doc-system/check-doc-truth.test.sh \
