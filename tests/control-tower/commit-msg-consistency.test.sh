@@ -22,6 +22,14 @@
 #  10. broken-shim 劫持可追溯: 前置损坏 python3 → 修复前静默放行（exit 0 无提示,
 #      GENUINE 静默归 0）; 修复后 resolver 失败 rc 被捕获 → 显式 degraded 提示
 #      + fail-open exit 0（dev doc §4: 提示+跳过可追溯）
+#   (D979 FIX-011 新增 — 共享治理文件多卡归属 ⒝):
+#  14. 反例①: 授权卡改共享件（被改文件声明含 MSG_DID + CLAIM_DID 双向）→ 放行 exit 0
+#      + 证据行（MSG_DID / CLAIM_DID / 命中文件 / 声明原文）
+#  15. 反例②: 非授权卡改同一共享件（声明无 MSG_DID）→ 仍拒 exit 1 疑似并行劫持
+#  16. 判别性夹具（删掉即报红）: 同 fixture 只留本卡自己的 D# → 放行转拒绝
+#      （证明门禁真读被改文件声明，非 grep 型静态判据）
+#  17. 零回归: MSG_DID 空 + 共享声明齐全 → 仍拒（禁把「提交未声明任务归属」洗成放行）
+#  18. 逐文件强制: 两共享件其一未声明 → 拒（M 中每个 F 都须双向命中）
 #
 # 隔离: 每个用例独立临时 repo（mktemp -d + git init）+ 今日 mtime brief
 #       （文件名带日期前缀 + #CRITERIA — resolver 最终回退路径的筛选条件）。
@@ -349,6 +357,121 @@ git -C "$R13" add src/utils/gen-task-board.ts
 EXIT=$(run_check "$R13" "chore(d318): 小写劫持仍应拦截")
 assert_exit 1 "$EXIT" "小写劫持仍拦 (CT-60)"
 rm -rf "$R13"
+echo ""
+
+# ════════════════════════════════════════════════════════════
+# 用例 14-18: D979 FIX-011 ⒝ 共享治理文件多卡归属
+# 场景: 共享件被历史 owner 卡（D582）的 brief 认领，本卡（D979）改它 →
+#   CLAIM_DID=D582 ≠ MSG_DID=D979。放行条件 = 被认领文件**每个**的声明集
+#   SHARED(F) 同时含 MSG_DID 与 CLAIM_DID（声明写在被改文件内，diff 可见）。
+# ════════════════════════════════════════════════════════════
+
+# 共享件 fixture 构造器（14/15/16 共用，唯一差异 = 声明行内容 → 判别性夹具）
+# <repo> <声明行内容（不含 # 前缀，可为空=无声明）> <brief D#>
+make_shared_fixture() {
+  local repo="$1" decl="$2" owner="${3:-D582}"
+  mkdir -p "$repo/scripts"
+  if [ -n "$decl" ]; then
+    printf '#!/bin/bash\n# %s\necho shared\n' "$decl" > "$repo/scripts/gov-shared.sh"
+  else
+    printf '#!/bin/bash\necho shared\n' > "$repo/scripts/gov-shared.sh"
+  fi
+  write_brief "$repo" "$TODAY-$owner-shared-owner.md" "scripts/gov-shared.sh"
+  git -C "$repo" add scripts/gov-shared.sh
+}
+
+# 用例 14: 反例① — 授权卡（双向声明命中）→ 放行 exit 0 + 证据行
+echo "── 14. FIX-011 反例①: 授权卡改共享件（声明含 D582+D979）→ 放行 ──"
+R14=$(make_repo)
+make_shared_fixture "$R14" "共享声明: D582, D979"
+EXIT=$(run_check "$R14" "fix(D979): 授权卡改共享治理文件")
+assert_exit 0 "$EXIT" "授权卡改共享件放行 (D979 FIX-011)"
+if grep -qF "D328 共享声明放行" "$RUN_OUT_FILE" 2>/dev/null; then
+  pass "输出含放行证据行标题"
+else
+  fail "输出缺放行证据行标题"
+fi
+for needle in "MSG_DID=D979 CLAIM_DID=D582" "FILE=scripts/gov-shared.sh" "DECL=# 共享声明: D582, D979"; do
+  if grep -qF "$needle" "$RUN_OUT_FILE" 2>/dev/null; then
+    pass "证据行含: $needle"
+  else
+    fail "证据行缺: $needle"
+  fi
+done
+rm -rf "$R14"
+echo ""
+
+# 用例 15: 反例② — 非授权卡（声明无 D318）→ 仍拒 exit 1
+echo "── 15. FIX-011 反例②: 非授权卡改同一共享件（D318 未在声明中）→ 仍拒 ──"
+R15=$(make_repo)
+make_shared_fixture "$R15" "共享声明: D582, D979"
+EXIT=$(run_check "$R15" "chore(D318): 非授权卡改共享件")
+assert_exit 1 "$EXIT" "非授权卡仍拦 (D979 FIX-011)"
+if grep -qF "疑似并行劫持" "$RUN_OUT_FILE" 2>/dev/null; then
+  pass "保留劫持判定文案（未复制放行逻辑绕开）"
+else
+  fail "缺 疑似并行劫持 文案"
+fi
+if grep -qF "MISSING=D318" "$RUN_OUT_FILE" 2>/dev/null; then
+  pass "原因行点名缺失的 MSG_DID=D318"
+else
+  fail "原因行未点名缺失 D#"
+fi
+rm -rf "$R15"
+echo ""
+
+# 用例 16: 判别性夹具（删掉即报红）—— 与用例 14 同 fixture，仅声明内容不同
+echo "── 16. FIX-011 判别性夹具: 声明只留本卡自己（D979）→ 放行转拒绝 ──"
+R16=$(make_repo)
+make_shared_fixture "$R16" "共享声明: D979"
+EXIT=$(run_check "$R16" "fix(D979): 声明只写自己（应拒绝）")
+assert_exit 1 "$EXIT" "双向强制: 单独把自己加进声明不放行（14 与 16 仅声明行不同）"
+if grep -qF "MISSING=D582" "$RUN_OUT_FILE" 2>/dev/null; then
+  pass "原因行点名缺失的 CLAIM_DID=D582"
+else
+  fail "原因行未点名缺失 CLAIM_DID"
+fi
+rm -rf "$R16"
+echo ""
+
+# 用例 17: 零回归 — MSG_DID 空 + 共享声明齐全 → 仍拒（不得成为逃生口）
+echo "── 17. FIX-011 零回归: 消息无 D# + 共享声明齐全 → 仍拒 ──"
+R17=$(make_repo)
+make_shared_fixture "$R17" "共享声明: D582, D979"
+EXIT=$(run_check "$R17" "chore: 未声明任务归属")
+assert_exit 1 "$EXIT" "MSG_DID 空 → 行为与修复前一致（现状零回归）"
+if grep -qF "提交声明(无)" "$RUN_OUT_FILE" 2>/dev/null; then
+  pass "保留「提交声明(无)」原判定文案"
+else
+  fail "缺原判定文案"
+fi
+rm -rf "$R17"
+echo ""
+
+# 用例 18: 逐文件强制 — 两共享件其一未声明 → 拒
+echo "── 18. FIX-011 逐文件强制: 两共享件其一未声明 → 拒 ──"
+R18=$(make_repo)
+mkdir -p "$R18/scripts"
+printf '#!/bin/bash\n# 共享声明: D582, D979\n' > "$R18/scripts/shared-a.sh"
+printf '#!/bin/bash\n# 未声明\n' > "$R18/scripts/shared-b.sh"
+cat > "$R18/.claude/task-briefs/$TODAY-D582-shared-two.md" <<EOF
+## Q2: 范围
+做什么：
+- scripts/shared-a.sh
+- scripts/shared-b.sh
+## 架构层: 基础设施
+#CRITERIA: A
+EOF
+touch -d "$TODAY 12:00:00" "$R18/.claude/task-briefs/$TODAY-D582-shared-two.md"
+git -C "$R18" add scripts/shared-a.sh scripts/shared-b.sh
+EXIT=$(run_check "$R18" "fix(D979): 两共享件其一未声明")
+assert_exit 1 "$EXIT" "M 中每个 F 都要双向命中"
+if grep -qF "FILE=scripts/shared-b.sh" "$RUN_OUT_FILE" 2>/dev/null; then
+  pass "原因行点名未声明的 shared-b.sh"
+else
+  fail "原因行未点名未声明文件"
+fi
+rm -rf "$R18"
 echo ""
 
 echo "═══════════════════════════════════════════════════════════"

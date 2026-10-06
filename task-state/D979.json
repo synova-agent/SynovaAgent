@@ -1,22 +1,27 @@
 {
   "task_id": "D979",
   "title": "P0 FIX-011：共享治理文件的多卡归属机制（解 D328 劫持误判）",
-  "status": "spec_done",
+  "status": "impl_done",
   "risk": "high",
   "domain": "mac",
   "owner": "ctrl-tower-line",
-  "executor": "parallel-cto",
+  "executor": "synova-squad-lead + coder-a（编码）",
   "milestone": "解除三方结构阻塞",
+  "spec": ".claude/task-briefs/2026-09-26-D979-fix011-shared-file-mechanism.md",
+  "depends_on": ["D328", "D718"],
+  "blocked": null,
   "write_set": [
-    "docs/synova/coordination/派单-FIX-011-共享治理文件机制-20260926.md",
-    "scripts/pre-commit-check.sh",
-    "scripts/control-tower/**",
-    "tests/control-tower/**",
+    "scripts/commit-msg-check.sh",
+    "scripts/control-tower/shared_file_decl.py",
+    "tests/control-tower/shared_file_decl.test.sh",
+    "tests/control-tower/commit-msg-consistency.test.sh",
     ".claude/task-briefs/2026-09-26-D979-fix011-shared-file-mechanism.md",
-    "memory/notes/implemented/2026-09-26-fix011-shared-file-mechanism.md",
     "task-state/D979.json"
   ],
+  "priority": 1,
+  "base_branch": "docs/d979-fix011-shared-file-mechanism",
+  "base_head": "feebf651",
   "updated_at": "2026-09-26",
-  "updated_by": "synova-cto",
-  "note": "实测 24h 内 D328 拦 3 次（ci.yml→D954 / D954.json→D954 / 派单模板.md→D931-D943）⇒ FIX-003 后半被迫移出、R1-R4 两轮无法落 main。要求：机制（一对象一文件 或 显式多卡共享声明）+ 改 D328 判定 + 两侧反例（授权通过/非授权仍拒）+ 迁移路径（至少 5 个共享文件）+ K3 审。属主=控制塔线（CTO 发卡）。"
+  "updated_by": "coder-a",
+  "note": "write_set 修正（本卡实测，派单件前提#1 不成立）：① D328 判定段真实落点在 scripts/commit-msg-check.sh 第 46–127 行，不在 scripts/pre-commit-check.sh（该文件无 D328 一致性判定段）；② 原 write_set 的 docs/synova/coordination/派单-*.md 与 memory/notes/implemented/2026-09-26-fix011-*.md 非本卡产出（前者已由 CTO 提交、后者已由 CTO 落 implemented/），故移出；③ scripts/control-tower/** 与 tests/control-tower/** 通配收窄为逐文件清单（6 条 = git diff --name-only 实测集）。栈式 PR：base=docs/d979-fix011-shared-file-mechanism（PR #809 分支，head feebf651），非 main。"
 }

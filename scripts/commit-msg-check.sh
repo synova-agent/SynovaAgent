@@ -50,6 +50,11 @@ fi
 #   - 两者都存在且不一致 → exit 1（劫持特征）
 #   - 消息无 D# 但认领 brief 有 D# → exit 1（提交未声明任务归属）
 #   - Merge/Revert（上方已跳）/无暂存/无认领 brief/认领 brief 无 D#/无真实认领 → fail-open
+#   - D979 FIX-011 ⒝（共享治理文件多卡归属）: 被认领文件集合 M 中**每一个** F 的
+#     声明集 SHARED(F) 同时含 MSG_DID 与 CLAIM_DID → 放行（唯一放行口，逐文件双向，
+#     声明写在被改文件内 = diff 可见；单独把自己加进声明不足以放行）。
+#     其余一切情形（含 MSG_DID 为空、声明缺失、解析器 rc=2）维持上述原语义 = 零回归。
+#     解析器: scripts/control-tower/shared_file_decl.py（读取顺序 index→工作区→HEAD）
 # 消息文件缺失/异常 → MSG_DID 空 → 一致性检查 fail-open（铁律 24: 显式兜底）
 # CT-60: scope 大小写/后缀兼容 — docs(d578)/feat(d577-closeout) 均提取 D#。
 # 背景: 旧正则 \(D[0-9]+\) 只认大写 D 且要求括号内纯 D#——小写 scope
@@ -100,25 +105,55 @@ if [ -n "$STAGED_LIST" ]; then
     # D330 (KIMI K3 P1-1): GENUINE 三态 — 输出 0=无真实认领(跳过,G12 兜底) /
     # 1=有真实认领(比较 D#) / 执行失败 rc≠0=degraded 显式提示（不再 || echo 0
     # 把"检查未执行"与"检查通过=无认领"压缩成同一个 0 静默吞掉）
+    # D979 FIX-011: 由 GENUINE 布尔升级为「被认领文件集合 M」（逐文件双向校验的输入）。
+    # 语义不变: 输出为空 ⇔ 无真实认领（跳过，G12 兜底）；非空 ⇔ 有真实认领（比较 D#）。
     GENUINE_RC=0
-    GENUINE=$(echo "$STAGED_LIST" | "$PYBIN" -c "
+    CLAIMED_FILES=$(echo "$STAGED_LIST" | "$PYBIN" -c "
 import re, sys
 sys.path.insert(0, r'$MSG_DIR_W/control-tower')
 from brief_parser import parse_q2, match_path
 staged = [s for s in sys.stdin.read().split('\n') if s.strip()]
 text = open(r'$CLAIM_BRIEF', encoding='utf-8', errors='replace').read()
 inc = parse_q2(text).get('include', [])
-print(1 if any(match_path(s, p) for s in staged for p in inc) else 0)
+print('\n'.join(s for s in staged if any(match_path(s, p) for p in inc)))
 " 2>/dev/null) || GENUINE_RC=$? # swallow-ok: 执行失败 → 三态 degraded 显式提示（dev doc §3.2）
     if [ "$GENUINE_RC" != 0 ]; then
       echo -e "${YELLOW}⚠ D328 一致性检查 degraded: GENUINE 判定执行失败 (rc=$GENUINE_RC)，本次跳过${RESET}"
-    elif [ "$GENUINE" = "1" ]; then
+    elif [ -n "$CLAIMED_FILES" ]; then
       CLAIM_DID=$(basename "$CLAIM_BRIEF" .md | grep -oE 'D[0-9]+' | head -1 || true)
       if [ -n "$CLAIM_DID" ] && { [ -z "$MSG_DID" ] || [ "$CLAIM_DID" != "$MSG_DID" ]; }; then
-        echo -e "${RED}❌ D328: 提交声明(${MSG_DID:-无})与暂存文件归属($CLAIM_DID)不一致 — 疑似并行劫持${RESET}"
-        echo "   认领 brief: $CLAIM_BRIEF"
-        echo "   请确认提交的是本任务文件，或拆分暂存区后再提交"
-        exit 1
+        # ── D979 FIX-011 ⒝: 共享声明放行 —— 唯一放行口 ──
+        # 前提: MSG_DID 非空（双向校验需要两侧 D#）。MSG_DID 为空 → 不做声明判定，
+        # 维持原阻断（现状零回归，禁止把「提交未声明任务归属」洗成放行）。
+        DECL_RC=1
+        DECL_OUT=""
+        if [ -n "$MSG_DID" ]; then
+          # Windows/MSYS: python 不能解析 MSYS 路径 → cygpath -w（对齐 MSG_DIR_W 模式）
+          DECL_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+          DECL_ROOT_W="$(cygpath -w "$DECL_ROOT" 2>/dev/null || echo "$DECL_ROOT")"
+          DECL_RC=0
+          DECL_OUT=$(printf '%s\n' "$CLAIMED_FILES" | "$PYBIN" "$MSG_DIR_W/control-tower/shared_file_decl.py" \
+            --msg-did "$MSG_DID" --claim-did "$CLAIM_DID" \
+            --root "$DECL_ROOT_W" --files-from - 2>/dev/null) || DECL_RC=$? # swallow-ok: 解析器失败 → 下方按未声明处理（fail-closed），绝不静默放行
+        fi
+        if [ "$DECL_RC" = 0 ]; then
+          echo -e "${GREEN}✅ D328 共享声明放行（D979 FIX-011 ⒝）: 暂存文件逐文件双向声明命中${RESET}"
+          echo "   认领 brief: $CLAIM_BRIEF"
+          if [ -n "$DECL_OUT" ]; then
+            echo "$DECL_OUT" | sed 's/^/   /'
+          fi
+        else
+          if [ "$DECL_RC" = 2 ]; then
+            echo -e "${YELLOW}⚠ D328 共享声明检查 degraded (rc=2): 无法判定声明集 — 按未声明处理（不静默放行）${RESET}"
+          fi
+          echo -e "${RED}❌ D328: 提交声明(${MSG_DID:-无})与暂存文件归属($CLAIM_DID)不一致 — 疑似并行劫持${RESET}"
+          echo "   认领 brief: $CLAIM_BRIEF"
+          if [ -n "$DECL_OUT" ]; then
+            echo "$DECL_OUT" | sed 's/^/   /'
+          fi
+          echo "   请确认提交的是本任务文件，或拆分暂存区后再提交"
+          exit 1
+        fi
       fi
     fi
   elif [ "$CLAIM_RC" != 0 ]; then
