@@ -1,0 +1,19 @@
+{
+  "task_id": "D1009",
+  "title": "阶段0-门禁日志归档",
+  "status": "claimed",
+  "spec": ".claude/task-briefs/2026-09-26-D1009-阶段0-门禁日志归档.md",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "write_set": [
+    ".github/workflows/ci.yml",
+    "docs/synova/coordination/阶段0-日志归档-20260926.md",
+    "docs/synova/coordination/gate-logs-20260926/gate-hits.log.txt",
+    "docs/synova/coordination/gate-logs-20260926/degraded-events.log.txt",
+    "docs/synova/coordination/gate-logs-20260926/pre-commit-failures.log.txt",
+    "task-state/D1009.json"
+  ],
+  "updated_at": "2026-09-26",
+  "updated_by": "squad-ci"
+}
