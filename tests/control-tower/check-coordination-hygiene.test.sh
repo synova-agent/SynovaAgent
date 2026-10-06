@@ -49,9 +49,11 @@ echo "$OUT" | grep -q "存量含 INDEX.md" && ok "盘点: 报出 INDEX 存量" |
 python3 - "$T" <<'PY'
 import io,sys,os
 r=sys.argv[1]+"/docs/synova/coordination"
-io.open(os.path.join(r,"small.md"),"w",encoding="utf-8").write("正常一篇短文档。"*40)
+# 用**合规名**（带类别前缀）—— R4 生效后，无前缀的顶层文件本就该红，
+# 所以"不误红"用例必须拿一个**合规文件**来测（否则测的是 R4，不是"不误红"）
+io.open(os.path.join(r,"报告-正常短文档.md"),"w",encoding="utf-8").write("正常一篇短文档。"*40)
 PY
-OUT=$(run "$T" --changed docs/synova/coordination/small.md); RC=$?
+OUT=$(run "$T" --changed docs/synova/coordination/报告-正常短文档.md); RC=$?
 chk "正常文件 --changed: exit 0" "$RC" "0"
 
 # ── 3. 超篇幅 ⇒ 必红且点名 ──
@@ -81,6 +83,37 @@ echo "$OUT" | grep -q "R3: .*dup.md ≈ .*existing.md" && ok "近重复: 点名�
 OUT=$(run /tmp/definitely-not-a-root-$$ --all); RC=$?
 chk "降级: 根不存在 ⇒ exit 2" "$RC" "2"
 echo "$OUT" | grep -q "DEGRADED" && ok "降级: 末行 DEGRADED" || no "降级: 末行非 DEGRADED"
+
+# ── 7. R4 分层：带可识别前缀的顶层文件 ⇒ 合规 ──
+python3 - "$T" <<'PY'
+import io,sys,os
+r=sys.argv[1]+"/docs/synova/coordination"
+io.open(os.path.join(r,"派单-测试-20261006.md"),"w",encoding="utf-8").write("短文档。"*30)
+PY
+OUT=$(run "$T" --changed docs/synova/coordination/派单-测试-20261006.md); RC=$?
+chk "R4: 带前缀的顶层文件 ⇒ exit 0" "$RC" "0"
+echo "$OUT" | grep -q "R4: 本次涉及文件分层合规" && ok "R4: 打印合规" || no "R4: 未打印合规"
+
+# ── 8. R4 分层：**无可识别前缀**的顶层文件 ⇒ 必红且点名 ──
+python3 - "$T" <<'PY'
+import io,sys,os
+r=sys.argv[1]+"/docs/synova/coordination"
+io.open(os.path.join(r,"随手写的东西.md"),"w",encoding="utf-8").write("短文档。"*30)
+PY
+OUT=$(run "$T" --changed docs/synova/coordination/随手写的东西.md); RC=$?
+chk "R4: 无前缀顶层文件 ⇒ exit 1" "$RC" "1"
+echo "$OUT" | grep -q "R4: 顶层平铺且无可识别类别前缀" && ok "R4: 点名" || no "R4: 未点名"
+echo "$OUT" | grep -q "允许的前缀" && ok "R4: 打印允许前缀（可复核）" || no "R4: 未打印允许前缀"
+
+# ── 9. R4 分层：**进子目录** ⇒ 合规 ──
+python3 - "$T" <<'PY'
+import io,sys,os
+d=sys.argv[1]+"/docs/synova/coordination/提案"
+os.makedirs(d,exist_ok=True)
+io.open(os.path.join(d,"随手写的.md"),"w",encoding="utf-8").write("短文档。"*30)
+PY
+OUT=$(run "$T" --changed docs/synova/coordination/提案/随手写的.md); RC=$?
+chk "R4: 进子目录 ⇒ exit 0（子目录即合规）" "$RC" "0"
 
 rm -rf "$T"
 echo "RESULT: $NP PASS / $NF FAIL"

@@ -163,6 +163,38 @@ def main():
                     n += 1
         print("  ℹ️ R3: 存量近重复对 **%d** 对（盘点，不判红）" % n)
 
+    # ── R4 分层（D8）──
+    # 实测: coordination/ 下 **187 个顶层平铺文件** + 11 个子目录；自然分类已存在
+    #   （派单 34 / 编码指令 17 / CTO 7 / 小队派单 5 / K3 5 / 审计派单 4 / 阶段* / D\d+ …）
+    #   但**没有任何约定**要求新文件进子目录或带可识别的类别前缀。
+    # 🔴 棘轮式同前: 只判 `--changed`；存量只盘点。
+    # 🔴 只要求"**带可识别的类别前缀 或 进子目录**"，**不强制搬迁**（搬 187 个文件会打断 D5 那 593 条引用）。
+    FLAT_OK_PREFIX = ("派单", "小队派单", "审计派单", "编码指令", "回执", "提案", "台账",
+                      "报告", "决议", "CTO", "K3", "AUDIT", "阶段")
+    FLAT_OK_RE = re.compile(r"^(D\d+|\d{4}-\d{2}-\d{2}-)")
+    if targets:
+        bad_flat = []
+        for t in targets:
+            rel = t[len(COORD_REL) + 1:]
+            if "/" in rel:          # 已进子目录 ⇒ 合规
+                continue
+            if rel.startswith(FLAT_OK_PREFIX) or FLAT_OK_RE.match(rel):
+                continue
+            bad_flat.append(t)
+        if bad_flat:
+            fails.extend("R4 分层: 顶层平铺且无可识别类别前缀: %s" % x for x in bad_flat)
+            for x in bad_flat[:5]:
+                print("  ❌ R4: 顶层平铺且无可识别类别前缀 —— %s" % os.path.basename(x))
+            print("      允许的前缀: %s ｜ 或进子目录 ｜ 或 D\\d+/YYYY-MM-DD- 开头" % "/".join(FLAT_OK_PREFIX))
+        else:
+            print("  ✅ R4: 本次涉及文件分层合规（子目录 或 可识别前缀）")
+    else:
+        flat = [t for t in existing if "/" not in t[len(COORD_REL) + 1:]]
+        sub = [t for t in existing if "/" in t[len(COORD_REL) + 1:]]
+        bad = [t for t in flat if not (os.path.basename(t).startswith(FLAT_OK_PREFIX) or FLAT_OK_RE.match(os.path.basename(t)))]
+        print("  ℹ️ R4: 存量 顶层平铺 **%d** / 子目录 **%d**；其中无可识别前缀的 **%d**（盘点，不判红）"
+              % (len(flat), len(sub), len(bad)))
+
     if fails:
         print("COORD-HYGIENE: VIOLATION(%d)  [%s]" % (len(fails), "; ".join(fails)[:200]))
         sys.exit(VIOL)
