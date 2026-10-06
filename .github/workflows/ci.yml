@@ -1166,3 +1166,46 @@ jobs:
             echo "::warning title=advisory:control-tower(win)::windows 顾问腿**未执行**（outcome='${OUTCOME}'）——本次未取得平台信号（非必需，不拦合并）；前置步骤失败时属预期"
           fi
           exit 0
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # V2/V9（产品线 2026-10-06）— 施工项登记执法体（**独立 job**：它是"判据的判据"）
+  #
+  # 为什么独立成 job（而不是塞进 quality/architecture）:
+  #   它判的是「别的判据有没有执行方」。若它跟别的检查同生共死，别人的红会掩盖它的红,
+  #   "判据的判据"就退化成"又一个检查"。判例 P-10：只有"不拦就会真出事"的才进主路径。
+  #
+  # 🔴 为什么**不跑 `npm ci`**（本 job 的关键设计，勿"统一"掉）:
+  #   main 当前 `npm ci` 结构性必红 —— `vitest@5.0.2` vs `@vitest/coverage-v8@4.1.8` ERESOLVE
+  #   （修它的 PR #1159 属治理线 W1，尚未合入）。若本 job 依赖 npm ci ⇒ 它永远拿不到信号,
+  #   而"判据的判据"拿不到信号 = 全链路的判据都没人看。
+  #   ⇒ 本 job 只用 runner 自带 node + `--experimental-strip-types`（登记件是纯可擦除 TS:
+  #      实测无 enum/namespace/decorator），**零依赖**。
+  #
+  # 两步各管一段（缺一不可）:
+  #   ① 执法体  —— 在**真登记件**上跑 INV-1..5 + BLOCK：有违规 ⇒ exit 1 ⇒ 本 job 红
+  #   ② 夹具    —— 在**故意改坏的副本**上跑：改坏必须红且报具名项（否则执法体没牙,
+  #                夹具自己 exit 1 ⇒ 本 job 红）。夹具的针全部避开表头词,无假通过通道。
+  #
+  # ⚠️ 本 job 目前**不在** main 的必需 context 名单里（branch protection 是 CTO/admin 面）。
+  #    即：它此刻"会红但不拦合并"。要真正拦合并，需把 `Construction Registry Gate (INV)`
+  #    加进 required status checks（见 #1032 / #1035）。
+  # ═══════════════════════════════════════════════════════════════════════════
+  construction-registry:
+    name: Construction Registry Gate (INV)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # 执法体用 `git cat-file -e origin/main:<path>` 判"判据件在不在真相源"
+          # ⇒ 必须拿到 origin/main ref（浅克隆没有）。
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'   # ≥22.6 才有 --experimental-strip-types；不装依赖,故不配 cache
+      - name: ① 执法体 · INV-1..5 + BLOCK 完整性（有违规 ⇒ 红）
+        shell: bash
+        run: node --experimental-strip-types --no-warnings docs/synova/coordination/tools/check-construction-registry.ts
+      - name: ② 夹具 · 改坏必红（执法体没判别力 ⇒ 红）
+        shell: bash
+        run: bash docs/synova/coordination/tools/fixture-inv4-red.sh

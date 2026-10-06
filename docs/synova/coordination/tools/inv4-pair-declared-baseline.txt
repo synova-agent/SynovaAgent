@@ -1,0 +1,19 @@
+# INV-4 对级未声明共写 —— 存量棘轮（判例 M-03：只减不增；条目失效/过期即红）
+#
+# 语义：`施工项登记.ts` 的 sharedWrite 声明 = "<另一 item id>: <路径>"，
+#       ⇒ 判据是 (项A, 项B, 路径) 三元组。"任一侧点名对方 且 写到该路径" 才算声明。
+#       2026-10-06 修前的实装只比路径、不比 id ⇒ 一条点名 RB-01/RB-03 的声明，
+#       会把 1-7 × RB-04 这类**没点名对方**的对也一并洗白（7 对）。
+#
+# 格式：<项A>\t<项B>\t<路径>   （Tab 分隔；# 开头为注释）
+# 维护：补 sharedWrite 后必须**同步删除**本文件里对应行（否则报 INV-4-STALE）。
+#       只许减，不许增 —— 新增对级缺口应直接是 INV-4 违规。
+#
+# expires: 2026-10-20
+0-9	RB-02	src/middleware/auth.ts
+1-7	RB-04	src/middleware/rbac.ts
+1-8	1-9	extensions/ontology/edge-types/*.json
+3-9	RB-04	extensions
+3-11	RB-04	extensions
+K1-WH	RB-02	src/middleware/auth.ts
+RB-01	RB-04	src/middleware/rbac.ts
