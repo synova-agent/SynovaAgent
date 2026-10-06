@@ -349,7 +349,13 @@ d1157_probe() {  # <hook-src>
 #     · prefilter 只看**非注释行**（`grep -v '^[[:space:]]*#'`）—— 注释不再能冒充实现。
 #   ⇒ 判别力仍成立（改坏即红）: 把该基线的 `_ledger_has_hash` 换成锚定版 ⇒ 本组立刻 F2 红；
 #     下方 F-fixed 绿对照继续钉「本支实现必须补记」。
-FIX_COMMIT="$(git -C "$REPO" log --format=%H -1 -S'D1157-REC-RE' origin/main -- scripts/hooks/post-commit.sh 2>/dev/null)"
+# 🔴 D1170 追账（独立复核实验③ 实测）: 必须加 `--reverse` 取**最初引入**该串的提交。
+#   否则 `git log -S` 取的是**最新**改动计数的提交 —— 将来任何人在该文件注释里再提一次
+#   `D1157-REC-RE`，基线就会被重定位到那个**已锚定**的提交 ⇒ 本夹具恒红
+#   ⇒ 必需 context `Control Tower Gate Tests (ubuntu-latest)` 对所有后续 PR 恒红。
+#   实测（复核构造的合法注释编辑）: 未加 --reverse 时 FIX_COMMIT 重定位
+#   ⇒ `❌ F2 前提失败: 基线 …^ 的判据已锚定` / 32 通过 1 失败。
+FIX_COMMIT="$(git -C "$REPO" log --reverse --format=%H -1 -S'D1157-REC-RE' origin/main -- scripts/hooks/post-commit.sh 2>/dev/null)  # swallow-ok: 取不到即 FIX_COMMIT 空 ⇒ 下方显式回退 origin/main（有 fail-safe 分支，未静默）"
 if [ -n "$FIX_COMMIT" ]; then RED_BASE="${FIX_COMMIT}^"; else RED_BASE="origin/main"; fi
 PREFIX_HOOK="$(git -C "$REPO" show "${RED_BASE}:scripts/hooks/post-commit.sh" 2>/dev/null)"  # swallow-ok: 取不到即下方显式判「F2 取数失败」
 if [ -z "$PREFIX_HOOK" ]; then

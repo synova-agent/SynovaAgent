@@ -56,7 +56,10 @@
 - memory/notes/proposed/2026-10-06-d1164-g0-unblock.md — 决策沉淀（铁律 49）
 - task-state/D1164.json — 认领登记
 不做什么：
-- 不改 .github/workflows/ci.yml（W2/W3/W5/W9 属**门禁语义变更** ⇒ 走 提案→K3→CTO 裁，另笔 D1165）
+- 不改 .github/workflows/ci.yml 的 W2/W3/W5/W9 部分（那四项属**门禁语义变更** ⇒ 走 提案→K3→CTO 裁，另笔 D1165）
+  ⚠️ D1170 追账（S-07 回写）: 本行原写作「不改 .github/workflows/ci.yml」——**与同文件「做什么」段自相矛盾**
+  （那段列了该文件的 `timeout-minutes` 改动，实际也确实改了）。原措辞已按实际写集收窄为上述限制；
+  且该 `timeout-minutes: 8 → 15` 一行已被 D1170 **回退为 8**（独立复核证伪「加超时」这条处置）。
 - 不改 scripts/pre-commit-check.sh（W6/W11 同属门禁语义变更，另笔 D1165）
 - 不改 scripts/audit/**（K3 红线）
 - 不改 scripts/control-tower/check-dsh-anchor.py（本次违例是"事实未登记"，不是检查器判据错——不动判据）
