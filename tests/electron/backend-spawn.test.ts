@@ -353,7 +353,8 @@ describe('D522 teardown — stop() 进程树回收契约', () => {
   /** 物理断言辅助: pid 已死（kill(pid,0) 抛 ESRCH/EPERM 以外错误） */
   const assertDead = (pid: number) => {
     let alive = true;
-    try { process.kill(pid, 0); } catch { alive = false; }
+    // 探活探针：ESRCH = 进程已死 —— 这里的"吞"是**预期控制流**，不是静默降级（铁律 24/31 的例外语义）
+    try { process.kill(pid, 0); } catch { alive = false; /* 预期：ESRCH ⇒ 进程已死 */ }
     expect(alive, `pid ${pid} 应已死（kill(pid,0) 应抛 ESRCH）`).toBe(false);
   };
 
@@ -361,7 +362,8 @@ describe('D522 teardown — stop() 进程树回收契约', () => {
   const waitDead = async (pid: number, maxMs: number): Promise<boolean> => {
     const deadline = Date.now() + maxMs;
     while (Date.now() < deadline) {
-      try { process.kill(pid, 0); } catch { return true; }
+      // 同上：ESRCH 是探针的"真值"，非异常路径
+      try { process.kill(pid, 0); } catch { return true; /* 预期：ESRCH ⇒ 已死 */ }
       await new Promise((r) => setTimeout(r, 100));
     }
     return false;
