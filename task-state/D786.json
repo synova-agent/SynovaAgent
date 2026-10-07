@@ -1,0 +1,13 @@
+{
+  "task_id": "D786",
+  "title": "D774 收口补丁派单：刷新产物落 main + 仪表盘自动更新通道抢救（bot PR 永久 blocked 根因）",
+  "status": "claimed",
+  "spec": "docs/synova/coordination/派单-D774-收口补丁与仪表盘通道抢救-20260915.md",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-09-15",
+  "updated_by": "synova-cto",
+  "domain": "mac",
+  "note": "CTO 验收 D774 时实测: 兑换成果没进 main（main 上 product-progress.json 仍 generated_at 2026-09-12 / 1% / stale 29），而流水线本机实跑真相是 stale 29→27、pending_k3 34→36（Δ-2/Δ+2，CTO 复现两次）。根因 F5/F6: PR #404/#403 均 github-actions[bot] 建、mergeable_state=blocked、check-runs=0/statuses=0（2026-09-07 至今）；main 保护要求 8 个必需检查，而 GH_TOKEN=secrets.GITHUB_TOKEN 建的 PR 不再触发 workflow → 检查永不报告 → 永久 blocked。交付物: T1 刷新产物落 main（product-progress.json + summary + expiry + 新证据）；T2 通道修复（PAT/App token 或「只产分支+显式合并」）+ 产物过期看门狗（generated_at > 3 天告警）。红线: 不动 calc-progress.py 判分规则。"
+}
