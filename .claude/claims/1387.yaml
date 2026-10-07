@@ -1,19 +1,20 @@
 # .claude/claims/1387.yaml — #1387（traversal 早退守卫 · 机制③）写集声明（D708 的 S0 源）
-#   **本文件随批次更新**：B1（3 哨兵，已合 d09cc8f3d）⇒ **B2（本批 5 哨兵）**
-# 依 B1 已验模板（CTO 2026-10-08 放宽停等：改法已固化 ⇒ 可连续做，但每批照常报）
+#   **本文件随批次更新**：B1（3 哨兵，已合 d09cc8f3d）⇒ B2（5 哨兵，已合 e3a06bac4）⇒ **B3（本批 5 哨兵）**
+# 依已验模板（CTO 放宽停等：改法固化 ⇒ 可连做；三条停下条件不松）
 writeset:
   - .claude/claims/1387.yaml
   - .claude/task-briefs/2026-10-08-1387-traversal-fallback-b1.md
   - .claude/task-briefs/2026-10-08-1387-traversal-fallback-b2.md
-  - extensions/sentinels/api-coverage/aggregate.ts
-  - extensions/sentinels/data-health/aggregate.ts
-  - extensions/sentinels/explore-exploit-balance/aggregate.ts
-  - extensions/sentinels/human-agent-boundary/aggregate.ts
-  - extensions/sentinels/make-or-buy/aggregate.ts
-  - tests/sentinel/traversal-fallback-b2.test.ts
+  - .claude/task-briefs/2026-10-08-1387-traversal-fallback-b3.md
+  - extensions/sentinels/moat-dependency/aggregate.ts
+  - extensions/sentinels/niche-breadth/aggregate.ts
+  - extensions/sentinels/niche-squeeze/aggregate.ts
+  - extensions/sentinels/opportunity-window/aggregate.ts
+  - extensions/sentinels/process-ai-readiness/aggregate.ts
+  - tests/sentinel/traversal-fallback-b3.test.ts
 done:
-  - verify: npx vitest run tests/sentinel/traversal-fallback-b2.test.ts
+  - verify: npx vitest run tests/sentinel/traversal-fallback-b3.test.ts
   - verify: npx vitest run tests/sentinel/ tests/store/ tests/l3/ tests/connectors/
-  - verify: test "$(git grep -c "traversal-no-edge" HEAD -- extensions/sentinels/api-coverage/aggregate.ts | tr -d '\n')" -ge 1
+  - verify: test "$(git grep -c "traversal-no-edge" HEAD -- extensions/sentinels/niche-breadth/aggregate.ts | tr -d '\n')" -ge 1
   - verify: npx tsc --noEmit
-note: B2 五哨兵照 B1 模板改为"退回 + 留痕"（旧静默早退零残留）。覆盖面 = 8/17（含 B1 的 3 个）。**V2①-b（不编造）对 B2 是【真空过】**：本批哨兵未接指标级 ⇒ 无 metrics 可编造（该防线对已接线批次有效）。
+note: B3 五哨兵照已验模板改为"退回 + 留痕"（旧静默早退零残留）。覆盖面 = 13/17（B1 3 + B2 5 + B3 5）。**短路声明（CTO 新规）**：V2①-b（不编造 metrics）对本批【对象不具备】⇒ 测不到它要测的东西；该判据对已接线批次（B1/#1375）有效 —— 已在判据文件头 + PR 正文声明。
