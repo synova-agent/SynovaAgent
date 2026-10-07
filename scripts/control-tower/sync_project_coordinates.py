@@ -17,16 +17,27 @@ sync_project_coordinates.py — D1196 (#991/#1212 修复): Issue 坐标系同步
           2 = 检查自身失败（python 依赖缺失/参数错误/API 失败且非 token 问题）——fail-closed
   @degraded 无: API 失败一律 exit 2（不静默），唯一放行路径是「无 token」且显式打印 notice
 
-坐标系字段（7→3 缩水前的现行 7 字段，POST_FIELDS）:
+坐标系字段（D1224 后：解析面 7 项 / 灌板面 3 核心，见 CORE_FIELDS·LEGACY_FIELDS·POST_FIELDS）:
   执行态 / 施工批次 / 服务承重件 / 总闸 / 命名空间 / 验证级别 / 阻塞源
 """
 import json
+import os
 import os
 import re
 import subprocess
 import sys
 
-FIELDS = ["执行态", "施工批次", "服务承重件", "总闸", "命名空间", "验证级别", "阻塞源"]
+# D1224（D-H 7→3）: 与 check-project-coordinates.sh 同一口径 —— 3 核心字段。
+#   LEGACY_FIELDS 仅用于**解析**（老 issue 正文里还有这 4 项时能被认出来，只是不再灌板），
+#   避免"老正文解析失败 ⇒ 当无坐标系块"这类误判（那是 fail-open 的反面：假红）。
+CORE_FIELDS = ["执行态", "施工批次", "阻塞源"]
+LEGACY_FIELDS = ["服务承重件", "总闸", "命名空间", "验证级别"]
+FIELDS = CORE_FIELDS + LEGACY_FIELDS          # 解析面：7 项都认
+POST_FIELDS = CORE_FIELDS                     # 灌板面：只灌 3 项（创始人删板侧字段后无需改码）
+
+# 过渡期逃生缝（与 shell 侧同名同语义）：需要按旧 7 字段口径校验/灌值时置 1
+if os.environ.get("SYNO_COORDS_STRICT_7", "0") == "1":  # noqa: SIM108
+    POST_FIELDS = FIELDS
 ORG = os.environ.get("SYNO_ORG", "synova-agent")
 PROJECT_NUMBER = int(os.environ.get("SYNO_PROJECT_NUMBER", "1"))
 
@@ -42,6 +53,23 @@ def parse_coords(body: str) -> dict:
         if mm:
             got[mm.group(1)] = mm.group(2).strip().split()[0].rstrip("｜|")
     return got
+
+
+def q_field_by_name() -> str:
+    """D1216: 按字段名查 field id 的查询（D1210 修复后唯一来源）。
+
+    提取为独立函数的目的：让夹具能**直接构造**该 query 并断言括号平衡 ——
+    2026-10-07 的事故（5 个 `{` 只 4 个 `}`）正是因为没有可调用的构造点，
+    静态 grep 与运行期用例都抓不到。
+    """
+    return ("query($org:String!,$num:Int!,$name:String!){organization(login:$org){"
+            "projectV2(number:$num){field(name:$name){... on ProjectV2Field{id}}}}}")
+
+
+def assert_query_balanced(q: str) -> None:
+    """契约定理：query 字面量括号必须平衡（不平衡 ⇒ GraphQL 解析失败 ⇒ 每轮 CI 必红）。"""
+    if q.count("{") != q.count("}"):
+        raise ValueError(f"GraphQL query 括号不平衡: {{={q.count('{')} }}={q.count('}')}")
 
 
 def gh_graphql(query: str, **vars_):
@@ -85,8 +113,10 @@ def main(argv):
         number = os.environ.get("ISSUE_NUMBER", "")
 
     coords = parse_coords(body)
-    missing = [f for f in FIELDS if f not in coords]
-    print(f"issue=#{number or '?'} 解析={len(coords)}/{len(FIELDS)} 字段"
+    missing = [f for f in CORE_FIELDS if f not in coords]
+    legacy_hit = [f for f in LEGACY_FIELDS if f in coords]
+    print(f"issue=#{number or '?'} 核心字段={len([f for f in CORE_FIELDS if f in coords])}/{len(CORE_FIELDS)}"
+          f"（遗留字段命中 {len(legacy_hit)}/4）"
           + (f" 缺={('、'.join(missing))}" if missing else " 全齐"))
     if missing:
         print(f"::warning title=project-coordinates::坐标系块缺字段: {'、'.join(missing)}（只写已有字段）")
@@ -100,7 +130,14 @@ def main(argv):
         print("::notice title=project-coordinates::PROJECT_TOKEN 未配置——跳过挂板/灌坐标（不红；配置由创始人裁，卡 #991）")
         return 0
     if dry:
-        print("dry-run: 将写入 " + json.dumps(coords, ensure_ascii=False))
+        # D1224 修正（verifier P2 连带发现）: 原 dry-run 打印**全部解析字段** ⇒
+        # 「灌板面只灌 3 项」这条中心声明**根本无法被观察**（夹具因此写成纸老虎）。
+        # ⇒ dry-run 必须如实反映**将要写入的字段集**（POST_FIELDS 过滤后）。
+        to_write = {k: v for k, v in coords.items() if k in POST_FIELDS}
+        skipped = [k for k in coords if k not in POST_FIELDS]
+        print("dry-run: 将写入 " + json.dumps(to_write, ensure_ascii=False))
+        if skipped:
+            print("dry-run: 不灌（遗留字段）: " + " ".join(skipped))
         return 0
     try:
         q_proj = ("query($org:String!,$num:Int!){organization(login:$org){projectV2(number:$num){"
@@ -117,19 +154,32 @@ def main(argv):
                                   org=ORG, num=int(number))["data"]["organization"]["repository"]["issue"]["id"]
             item_id = gh_graphql(m_add, pid=pid, cid=issue_id)["data"]["addProjectV2ItemById"]["item"]["id"]
             print(f"  ✓ 已挂板 item={item_id[:12]}…")
-        for name, val in coords.items():
-            q_f = ("query($org:String!,$num:Int!){organization(login:$org){projectV2(number:$num){"
-                   f"field(name:\"{name}\"){{... on ProjectV2Field{{id}}}}}}}}")
+        for name, val in ((k, v) for k, v in coords.items() if k in POST_FIELDS):
+            # D1216 修复: ① 原串 5 个 `{` 只 4 个 `}` ⇒ GraphQL 解析失败
+            #   (`Expected NAME, actual: (none) at [1,124]`)，CI 每轮必红；
+            #   ② 改用查询变量传字段名（不再字符串插值）⇒ 规避引号/非 ASCII 转义面。
+            q_f = q_field_by_name()
+            assert_query_balanced(q_f)
             try:
-                fid = gh_graphql(q_f, org=ORG, num=PROJECT_NUMBER)["data"]["organization"]["projectV2"]["field"]["id"]
+                fid = gh_graphql(q_f, org=ORG, num=PROJECT_NUMBER, name=name)[
+                    "data"]["organization"]["projectV2"]["field"]["id"]
             except (KeyError, TypeError):
                 print(f"  ⚠ 字段 {name} 不存在于 Project#{PROJECT_NUMBER}（跳过）")
                 continue
             m_up = ("mutation($pid:ID!,$iid:ID!,$fid:ID!,$val:String!){"
                     "updateProjectV2ItemFieldValue(input:{projectId:$pid,itemId:$iid,fieldId:$fid,"
                     "value:{text:$val}}){projectV2Item{id}}}")
-            gh_graphql(m_up, pid=pid, iid=item_id, fid=fid, val=val)
-            print(f"  ✓ {name} = {val}")
+            # D1216: 字段类型不匹配（如单选字段收到 text 值）属**看板配置面**，
+            # 不是脚本缺陷 ⇒ 只告警不红，避免把每个 issue 事件都染成 CI 红基线。
+            try:
+                gh_graphql(m_up, pid=pid, iid=item_id, fid=fid, val=val)
+                print(f"  ✓ {name} = {val}")
+            except RuntimeError as e:
+                # D1216 收窄（verifier R1/P3）: 只吞「看板配置面」类错误（字段类型不匹配/节点不存在），
+                # 其余（API 故障/权限失效/传输失败）re-raise ⇒ 交顶层 fail-closed（exit 2）。
+                if not re.search(r"does not accept|Cannot coerce|Could not resolve to a node", str(e)):
+                    raise
+                print(f"::warning title=project-coordinates::字段 {name} 写入失败（看板配置面，非脚本缺陷）: {e}")
         print("✅ 坐标系同步完成")
         return 0
     except Exception as e:  # noqa: BLE001 — 顶层统一 fail-closed（exit 2，不静默）

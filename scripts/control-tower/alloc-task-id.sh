@@ -241,8 +241,53 @@ else
   fi
 fi
 
+# ═══ D1219: issue 标题快照 — **过渡件，D# 退役时同批删除此来源** ═══
+# 为什么加: 实测 D1208 被 check-name-allocation.sh 判「可用」，而 issue #1268 的**标题**已带 D1208
+#   ⇒ 号被 issue 卡占用却不可判 ⇒ D# 撞号本日代价第 5 项（命名分配器来源缺失）。
+# 为什么快照 + 注入缝: alloc-task-id.test.sh / check-name-allocation.test.sh 都在 **CI 密封清单**里，
+#   **不得打真网络** ⇒ `SYNO_ALLOC_NO_ISSUES=1` 关源、`SYNO_ALLOC_ISSUES_FILE=<path>` 注入内容。
+# 降级语义（与 REMOTE_BRANCH_REFS 的 fail-closed 超时**有意不同**，见 PR 正文）:
+#   发号器是全队关键路径，网络抖动导致全队发不出号代价 > 偶发漏检一个占用
+#   ⇒ 不可达/超时/无 gh ⇒ **fail-open**：stderr 显式 degraded（铁律 11，禁静默）+ 仍按可判定位置判。
+#   结论措辞随之受限：只报「可判定范围内未见占用」，**不得**报「未占用」。
+ISSUE_SNAPSHOT=""     # 命中格式行: "<number><TAB><title>"
+ISSUE_SRC_STATE="unavailable"
+if [ "${SYNO_ALLOC_NO_ISSUES:-0}" = "1" ]; then
+  ISSUE_SRC_STATE="disabled"
+elif [ -n "${SYNO_ALLOC_ISSUES_FILE:-}" ]; then
+  if [ -r "${SYNO_ALLOC_ISSUES_FILE}" ]; then
+    ISSUE_SNAPSHOT="$(cat "${SYNO_ALLOC_ISSUES_FILE}" 2>/dev/null || true)"
+    ISSUE_SRC_STATE="injected"
+  else
+    echo "degraded: issue 标题源注入文件不可读 (${SYNO_ALLOC_ISSUES_FILE}) — 仅按可判定位置校验" >&2
+    ISSUE_SRC_STATE="unreachable"
+  fi
+elif [ -z "$TS_TOP" ]; then
+  :  # task-state 不在 git 仓库内（测试沙箱/非常规布局）→ 无仓库语境，不在本仓 issue 上判占用
+elif ! command -v gh >/dev/null 2>&1; then
+  echo "degraded: issue 标题源不可达 (未安装 gh) — 仅按可判定位置校验" >&2
+  ISSUE_SRC_STATE="unreachable"
+else
+  _ISS_TO_SECS="${SYNO_ALLOC_ISSUES_TIMEOUT:-15}"
+  _ISS_OUT=""; _ISS_RC=0
+  # D1221: 在 **$TS_TOP**（task-state 所属仓）内取数 —— 对齐本脚本既有原则「占用表全源跟随
+  #   task-state 所属仓库，不得混入 CWD 所在仓」。不加此步时 gh 按 **PWD** 解析仓库：
+  #   沙箱 task-state（自带 git init）会让 PWD=真仓 → 去查**真仓** issue（跨仓污染，
+  #   verifier 实测 10 次真实调用即此来源）。
+  _ISS_OUT="$(_run_bounded "$_ISS_TO_SECS" sh -c 'cd "$1" && shift && exec gh "$@"' _ "$TS_TOP" \
+                issue list --state all --limit 200 \
+                --json number,title --jq '.[] | "\(.number)\t\(.title)"' 2>/dev/null)" || _ISS_RC=$?
+  if [ "$_ISS_RC" -eq 0 ]; then
+    ISSUE_SNAPSHOT="$_ISS_OUT"; ISSUE_SRC_STATE="ok"
+  else
+    echo "degraded: issue 标题源不可达 (gh rc=${_ISS_RC}, 超时=${_ISS_TO_SECS}s) — 仅按可判定位置校验" >&2
+    ISSUE_SRC_STATE="unreachable"
+  fi
+fi
+
 # ── D940 ②③: 跨位置占用校验 — 打印该号已被占用的位置（每行一处；空 = 未占）──
-# 标签固定 5 个: task-state / origin-main / remote-branch / local-branch / worktree-name
+# 标签固定 6 个: task-state / origin-main / remote-branch / local-branch / worktree-name / issue-title
+#   ⚠️ 不变量: 本函数 **stdout = 冲突行契约**（非空即「已占」）⇒ 任何来源说明/诊断一律走 **stderr**。
 _occupy_locations() {
   local num="$1" ref ref_name short br base wt
   # ① 本地 task-state（本目录）
@@ -292,22 +337,52 @@ _occupy_locations() {
       fi
     done <<< "$(git -C "$TS_TOP" worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2}' || true)"
   fi
+  # ⑥ issue 标题（D1219 过渡件 —— **D# 退役时同批删除此来源**）
+  #   匹配面只取 **title 字段**（快照行 = "<number><TAB><title>"）⇒ 不吃 "number":1208 这类
+  #   数字字段的假命中（与 ③④⑤ 同款词界正则）。
+  if [ -n "$ISSUE_SNAPSHOT" ]; then
+    local _in _inum _ititle
+    while IFS= read -r _in; do
+      [ -z "$_in" ] && continue
+      _inum="${_in%%$'\t'*}"
+      _ititle="${_in#*$'\t'}"
+      [ "$_ititle" = "$_in" ] && _ititle=""     # 无 TAB（单字段行）⇒ 无标题可匹配
+      [ -z "$_ititle" ] && continue
+      if printf '%s' "$_ititle" | grep -qiE "(^|[^0-9a-z])d${num}([^0-9]|\$)"; then
+        printf 'issue-title  #%s: %s\n' "$_inum" "$_ititle"
+      fi
+    done <<< "$ISSUE_SNAPSHOT"
+  fi
   return 0
 }
 
 # ── D940: --check-id 只读校验模式 ──
 # 用途: 供 check-name-allocation.sh 复用**同一份**占用判定（避免第二副本 → 必然漂移）。
 # 不拿锁、不写盘、不建壳、不算 MAX（故不受 §一 的表格扫描慢路径影响），只回答"这个号被占了吗"。
-# @exit 0=未占 / 1=已占（逐行输出冲突位置） / 2=输入非法
+# @exit 0=可判定范围内未见占用 / 1=已占（逐行输出冲突位置） / 2=输入非法
+# D1219: **来源说明走 stderr**（stdout 是冲突行契约，非空即已占，不得污染）——
+#   同一命令在有无网络时结论可能不同，故必须留下"本次判定含哪些源"的痕迹（Lead 裁决②额外要求）。
 if [ -n "$CHECK_ID" ]; then
   _CN="${CHECK_ID#[Dd]}"
   case "$_CN" in
     ''|*[!0-9]*) echo "非法卡号 '${CHECK_ID}'（应形如 D942 或 942）" >&2; exit 2 ;;
   esac
+  # 来源说明（stderr）: 让使用者知道本次判定**是否含网络源**（issue-title）
+  _ISS_INCL="no"
+  case "$ISSUE_SRC_STATE" in
+    ok|injected) _ISS_INCL="yes" ;;
+  esac
+  echo "占用判定来源: 本地 task-state / origin-main / remote-branch / local-branch / worktree-name" >&2
+  echo "              + issue-title(含=${_ISS_INCL} 状态=${ISSUE_SRC_STATE}，过渡件：D# 退役时同批删除此来源)" >&2
   _CK_CONFLICTS="$(_occupy_locations "$_CN")"
   if [ -n "$_CK_CONFLICTS" ]; then
     printf '%s\n' "$_CK_CONFLICTS"
     exit 1
+  fi
+  if [ "$_ISS_INCL" = "yes" ]; then
+    echo "结果: 可判定范围内未见占用（含 issue 标题源）" >&2
+  else
+    echo "结果: 可判定范围内未见占用（**不含** issue 标题源 —— 状态=${ISSUE_SRC_STATE}，可能漏检 issue 卡占用）" >&2
   fi
   exit 0
 fi

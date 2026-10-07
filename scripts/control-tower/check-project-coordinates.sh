@@ -5,8 +5,8 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 # ═══════════════════════════════════════════════════════════════════════════════
 # check-project-coordinates.sh — D1175 (#991): 坐标系防漂移校验器
 #
-# 背景: Project #1 的 7 字段坐标系（执行态/施工批次/服务承重件/总闸/命名空间/
-#   验证级别/阻塞源）此前靠手工灌值；卡 #991 要求防漂移校验器（三态、禁降级放行），
+# 背景: Project #1 坐标系此前为 7 字段（执行态/施工批次/服务承重件/总闸/命名空间/
+#   验证级别/阻塞源），D-H（#1229）收敛为 3 字段（执行态/施工批次/阻塞源）；卡 #991 要求防漂移校验器（三态、禁降级放行），
 #   且「先出预演报告再谈进 CI」。
 #
 # 契约（铁律 47）:
@@ -15,7 +15,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #               --from-file <list.txt>（注入缝/单测）: 逐行 "<issue号><TAB><正文>"
 #               （正文换行用 ⏎ 占位，与 gh --jq gsub 同协议）
 #             选项: --enforce 发现漂移 ⇒ exit 1（默认预演模式只报告恒 exit 0）
-#   @output — 逐 issue 一行: ✅ 七字段齐全 / ⚠️ 缺字段点名 / ❌ 无【坐标系】块;
+#   @output — 逐 issue 一行: ✅ 核心字段齐全（+ 遗留字段计数）/ ⚠️ 缺核心字段点名 / ❌ 无【坐标系】块;
 #             结尾汇总「检查 N / 齐全 X / 缺字段 Y / 无块 Z」
 #   @exit   — 0 = 预演完成（不论漂移）或全齐全
 #             1 = --enforce 且存在漂移（缺字段或无坐标系块）
@@ -29,7 +29,17 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 # ═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
 
-FIELDS="执行态 施工批次 服务承重件 总闸 命名空间 验证级别 阻塞源"
+# D1224（D-H 7→3）: 坐标系由 7 字段收敛为 3 核心字段。
+#   创始人删除 Project #1 的板侧字段后，**本文件无需再改**（这正是「过渡兼容」的目的）。
+#   CORE = 必需（缺 ⇒ 判漂移）；LEGACY = 遗留可选（存在不报错，只在汇总里计数，便于观察清理进度）。
+CORE_FIELDS="执行态 施工批次 阻塞源"
+LEGACY_FIELDS="服务承重件 总闸 命名空间 验证级别"
+if [ "${SYNO_COORDS_STRICT_7:-0}" = "1" ]; then
+  # 过渡期逃生缝: 需要按旧口径（7 字段齐全）校验时显式置 1（供历史数据回溯复核）
+  CORE_FIELDS="执行态 施工批次 服务承重件 总闸 命名空间 验证级别 阻塞源"
+  LEGACY_FIELDS=""
+fi
+FIELDS="$CORE_FIELDS"
 
 FROM_FILE=""
 ENFORCE=0
@@ -92,7 +102,7 @@ for line in open(inp, encoding="utf-8"):
         print(f"⚠️ #{num}: 缺字段 {'、'.join(missing)}")
     else:
         n_ok += 1
-        print(f"✅ #{num}: 七字段齐全")
+        print(f"✅ #{num}: 核心字段齐全")
 
 print(f"── 汇总: 检查 {n_all} / 齐全 {n_ok} / 缺字段 {n_miss} / 无块 {n_noblock}")
 open(drift_out, "w", encoding="utf-8").write(str(n_miss + n_noblock))

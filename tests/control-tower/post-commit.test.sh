@@ -94,7 +94,7 @@ SB_OUT=""; SB_ENV=""
   || ok "沙箱 scripts 为独立投放（非真实仓符号链接）"
 DEPLOYED="$(find "$SB/scripts" -type f 2>/dev/null | wc -l | tr -d ' ')"  # swallow-ok: 探测型（空目录即 0）
 [ "$DEPLOYED" = "2" ] && ok "沙箱只投放 2 个被驱动脚本（post-commit.sh + bypass-ledger.sh）" \
-  || no "沙箱投放文件数=$DEPLOYED（应 2 —— 只投放被驱动脚本）"
+  || no "沙箱投放文件数=${DEPLOYED}（应 2 —— 只投放被驱动脚本）"
 [ -e "$SB/scripts/control-tower/external-auditor.sh" ] && no "沙箱内存在 external-auditor（--dispatch 会在同仓跑 git）" \
   || ok "沙箱无 external-auditor（不触发 --dispatch 同仓 git）"
 [ -e "$SB/scripts/workflow/decide-next.sh" ] && no "沙箱内存在 decide-next（后台 git status 会抢 index.lock）" \
@@ -153,7 +153,7 @@ echo "$(git -C "$SB" rev-parse HEAD)|$(date +%s)" > "$MARKER"
 sb_commit "场景B 提交" "feat: real commit B"
 AFTER=$(git -C "$SB" rev-list --count HEAD)
 DELTA=$((AFTER - BEFORE))
-[ "$DELTA" -eq 1 ] && ok "第二个 commit 只 +1（链长无膨胀；旧行为为 +2）" || no "提交数异常: +$DELTA（期望 +1）"
+[ "$DELTA" -eq 1 ] && ok "第二个 commit 只 +1（链长无膨胀；旧行为为 +2）" || no "提交数异常: +${DELTA}（期望 +1）"
 
 # 场景C: marker 缺失（--no-verify 等价）→ 不登记
 rm -f "$MARKER"
@@ -190,7 +190,7 @@ E_BEFORE=$(sb_head)
 git -C "$SB" -c user.name='' -c user.email='' commit --no-verify -m "feat: no-identity commit E" -- e.txt >/dev/null 2>&1; E_RC=$?
 E_AFTER=$(sb_head)
 if [ "$E_RC" -eq 0 ] || [ "$E_BEFORE" != "$E_AFTER" ]; then
-  echo "  ❌ fixture: 场景E 前提不成立 — identity 清空的提交竟然成功（rc=$E_RC）"
+  echo "  ❌ fixture: 场景E 前提不成立 — identity 清空的提交竟然成功（rc=${E_RC}）"
   echo "     判据: 夹具自身失败（不是门禁缺陷）⇒ 中止（exit 3）"
   exit 3
 fi

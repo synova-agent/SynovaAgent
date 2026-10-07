@@ -476,5 +476,5 @@ grep -q '"presets|^docs/synova/presets/"' scripts/control-tower/ci-signal-classi
   || { echo "FAIL: RULES 缺 presets 条目（删规则即红）"; exit 1; }
 _po="$( ( unset SYNO_CT_CLASSIFY_FILES; \
   bash scripts/control-tower/ci-signal-classify.sh --files docs/synova/presets/_probe.yml ) 2>&1 )"
-case "$_po" in *run=true*) ;; *) echo "FAIL: presets 未命中 run=true（输出: $_po）"; exit 1;; esac
+case "$_po" in *run=true*) ;; *) echo "FAIL: presets 未命中 run=true（输出: ${_po}）"; exit 1;; esac
 echo "PASS: presets 哨兵（条目在 + run=true 行为命中）"

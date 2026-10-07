@@ -1,0 +1,11 @@
+{
+  "task_id": "D1221",
+  "title": "alloc issue 源返工：hermetic 不成立 + 故障路径自身崩（卡 #1283）",
+  "status": "claimed",
+  "spec": "返工卡 #1283（Lead 立）· 前序 PR #1281 已合，verifier 事后审计 2×P2 + 1×P3。R1(P2) hermetic 不成立：gh shim 实测 check-name-allocation 10 次 / alloc-task-id 5 次真实 gh issue list（合计 15，与 verifier 数字一致）。根因比预想深：两测试沙箱各自 git init ⇒ TS_TOP 门槛不跳过；且 gh 按 PWD 解析仓库 ⇒ 沙箱去查真仓 issue（跨仓污染）。修两层：① 逐调用点守卫 SYNO_ALLOC_NO_ISSUES=1（19+1 处）② 工具侧 gh 改在 TS_TOP 内取数（对齐 D940 既有原则）。R2(P2) :523/:531/:545/:555 四处 $EXIT（ 全角吞变量名 ⇒ bash3.2+set -u unbound，掩盖真实失败 ⇒ 修 ${EXIT}（；并全目录扫描（17 文件同类，其余 16 不在本卡写集 ⇒ 只报不改）。P3 措辞更正：援引 stdout 接口契约，不再用被证伪的『消费端会误读』。反直觉点（Lead 要求做成断言）：全局 export NO_ISSUES 会压过 ISSUES_FILE ⇒ 关掉源 active 场景 ⇒ 必须逐点守卫；已钉 §13(g) 三条断言 + 变异体实证。自证：本卡号 D1221 被本卡自己的 issue 标题（#1283）命中 —— 新源当场生效。",
+  "impl": "alloc-task-id.sh gh 调用改 sh -c 'cd TS_TOP && gh ...'；两测试逐点守卫；R2 四处修正；§13(g) 反直觉断言。",
+  "audit": null,
+  "fix_task_id": "D1219",
+  "updated_at": "2026-10-07",
+  "updated_by": "line-d-own"
+}
