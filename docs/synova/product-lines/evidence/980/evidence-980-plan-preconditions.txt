@@ -1,9 +1,20 @@
 === 环境 ===
-captured_at_utc = 2026-10-07T17:29:22Z
-origin/main     = ff8596cf30b345a4b042e9dee356e2a2eb0d5923  (ff8596cf3 fix(D1213): K6 回写 — 静默跳过改可见(warn) + 同一哨兵跨行业全调(去 break))
-HEAD            = fc69008b65304665f13547151e33f551c7bbfe06  (fc69008b6 docs(980): 0-6 实施计划（plan，待 CTO 放行）)
+captured_at_utc = 2026-10-07T17:40:34Z
+origin/main     = b96aa0ed3006a54c065652c291a31432aa8afb07  (b96aa0ed3 Merge pull request #1336 from synova-agent/docs/registry-backfill-card-sync)
+HEAD            = 2f3044dc3c5be2d74377f3ccf00d664302fcfda2  (2f3044dc3 docs(980): 前提实测证据 + 第一步交付回执（plan 待放行）)
 branch          = feat/win-0-6-schema-degraded
 worktree        = /d/novis-backup-20260526/Novis/.synova-wt-980
+
+=== P0: 工作树基线（跑探针前必采；跑后须逐字比对 — 计划 §7.1 / 自验 E5）===
+--- git status --porcelain（应仅含本卡治理产物 + reference-map）---
+ M .claude/reference-map.md
+ M docs/synova/product-lines/evidence/980/PLAN-980-0-6-schema-degraded.md
+ M docs/synova/product-lines/evidence/980/capture-980-preconditions.sh
+ M docs/synova/product-lines/evidence/980/evidence-980-plan-preconditions.txt
+?? docs/synova/product-lines/evidence/980/VERIFY-980-plan-verifier-980.md
+行数 = 5
+--- HEAD 与分支 ---
+2f3044dc3c5be2d74377f3ccf00d664302fcfda2
 
 === P1: 静默放行点（卡面声称 :141）===
      1	export function validateNodeProps(nodeType: string, props: Record<string, unknown>): ValidationError[] {
@@ -45,7 +56,7 @@ origin/main:docs/synova/audit/SYNOVA-AUDIT-BASELINE-20260801.txt:209:  src/l4/so
 origin/main:docs/synova/audit/SYNOVA-AUDIT-BASELINE-20260801.txt:840:  src/l4/sog-schema-validator.ts: export PropRule -- WARNING: no callers in src/
 origin/main:docs/synova/audit/SYNOVA-AUDIT-BASELINE-20260801.txt:841:  src/l4/sog-schema-validator.ts: export SchemaRule -- WARNING: no callers in src/
 origin/main:docs/synova/audit/SYNOVA-AUDIT-BASELINE-20260801.txt:842:  src/l4/sog-schema-validator.ts: export validateNodeProps -- WARNING: no callers in src/
-origin/main:docs/synova/coordination/施工项登记.ts:236:      'src/l4/sog-schema-validator.ts',
+origin/main:docs/synova/coordination/施工项登记.ts:333:      'src/l4/sog-schema-validator.ts',
 origin/main:src/l4/graph-bridge.ts:20:import { validateAndLog } from './sog-schema-validator';
 origin/main:src/l4/sog-schema-validator.ts:2: * l4/sog-schema-validator.ts — SOG 数据入库 Schema 校验 (v3.3 20.5)
 origin/main:src/l4/sog-schema-validator.ts:10:const log = createLogger('l4/sog-schema-validator');
@@ -65,7 +76,7 @@ origin/main:src/l4/graph-bridge.ts        = cd2d693ca573f17620022239f345c75e3f56
 === P7: 与在飞 #1322 分支的写集对比 ===
 --- feat/1322-goal-creation-entry 相对 main 的改动文件 ---
 .claude/claims/1322.yaml
-.claude/task-briefs/1322-goal-creation-entry.md
+.claude/task-briefs/2026-10-08-1322-goal-creation-entry.md
 src/growth/goal-store.ts
 src/growth/proposal-engine.ts
 src/growth/proposal-store.ts
@@ -80,6 +91,9 @@ tests/security/rbac-all-routes.test.ts
 --- 我的分支相对 main 的改动文件 ---
 .claude/task-briefs/2026-10-08-win-0-6-schema-degraded.md
 docs/synova/product-lines/evidence/980/PLAN-980-0-6-schema-degraded.md
+docs/synova/product-lines/evidence/980/RECEIPT-980-plan-20261008.md
+docs/synova/product-lines/evidence/980/capture-980-preconditions.sh
+docs/synova/product-lines/evidence/980/evidence-980-plan-preconditions.txt
 memory/notes/proposed/2026-10-08-0-6-schema-degraded-visibility.md
 --- 两集合交集（应为空）---
 

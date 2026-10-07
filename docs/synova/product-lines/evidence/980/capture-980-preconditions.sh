@@ -13,6 +13,14 @@ echo "branch          = $(git symbolic-ref --short HEAD)"
 echo "worktree        = $(pwd)"
 echo ""
 
+echo "=== P0: 工作树基线（跑探针前必采；跑后须逐字比对 — 计划 §7.1 / 自验 E5）==="
+echo "--- git status --porcelain（应仅含本卡治理产物 + reference-map）---"
+git status --porcelain
+echo "行数 = $(git status --porcelain | wc -l)"
+echo "--- HEAD 与分支 ---"
+git rev-parse HEAD
+echo ""
+
 echo "=== P1: 静默放行点（卡面声称 :141）==="
 git show origin/main:src/l4/sog-schema-validator.ts | sed -n '139,142p' | cat -n
 echo "[exit=$?]"
