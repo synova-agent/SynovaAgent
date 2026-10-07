@@ -6,15 +6,33 @@
  * 对标: OpenClaw 三级 Skill 加载 (workspace > user-global > built-in)
  *
  * 铁律 39: L2 编排层 — 管理技能生命周期，不直接操作 L4/L5。
+ *
+ * D986（施工单 0-12）: 此前 `scanFromFiles()` **零调用点** ⇒ `skills/` 46 个技能文件恒不加载
+ *   ⇒ 专家 prompt 恒无 `## Available Skills`。现由 `getSkillLoader()` 首用一次性自加载触发；
+ *   挂载键 = legacy 目录名 + D650 映射后的 v3.0 专家 id（映射单一真源 = `./expert-name-map`，
+ *   与 `src/l3/synova-diagnosis-engine-impl.ts` 共用，禁止各写一份）。
+ *
+ * @follow-up 若将来要求**启动期确定性加载**（而非首用自加载），显式接线点在
+ *   `src/deploy/bootstrap.ts` Phase 2b（SkillLoader 段，约 :417-451）；本模块自加载保持幂等，
+ *   届时重复调用无副作用。
  */
 
 import { createLogger } from '@synova/logger';
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join } from 'path';
+import { LEGACY_TO_EXPERT_ID_MAP } from './expert-name-map';
+import { getAllExpertIds } from './expert-config-loader';
 
 const log = createLogger('agent/skill-lazy-loader');
 
 // ═══ Types ═══
+
+/**
+ * 默认技能目录（D986）。
+ * 口径: `SYNOVA_SKILLS_DIR` 环境变量优先，缺省 `<cwd>/skills`（与 `expert-config-loader.ts:28`
+ * 的 `join(process.cwd(), 'expert', …)` 同约定）。
+ */
+export const DEFAULT_SKILLS_DIR = process.env.SYNOVA_SKILLS_DIR || join(process.cwd(), 'skills');
 
 export interface SkillStub {
   name: string;
@@ -93,6 +111,14 @@ export class SkillLazyLoader {
    *           skills/*.md  (知识文件)
    *
    * 自动从目录名提取 expert category → linkToExpert()
+   *
+   * 契约（铁律 47）:
+   *   @input  — baseDir: 技能根目录（相对 cwd 或绝对；不存在不算错）
+   *   @output — 本次注册成功的技能条数（0 = 目录缺失 / 为空）
+   *   @degraded — 目录不存在 ⇒ `log.debug` + 0；单个分类目录读取失败 ⇒ `log.warn` 后继续其余分类；
+   *               整体失败 ⇒ `log.warn` + 返回已注册条数（**不抛**，铁律 24/31）
+   *   @sideEffect — 挂载键 = legacy 目录名 + D650 映射后的 v3.0 专家 id（映射单一真源 =
+   *                 `./expert-name-map`；目标 id 经 `getAllExpertIds()` 校验，未知则只留 legacy 键）
    */
   scanFromFiles(baseDir: string): number {
     let count = 0;
@@ -137,17 +163,10 @@ export class SkillLazyLoader {
             const skillName = skillFile.name.replace(/\.md$/, '');
             const content = readFileSync(skillPath, 'utf-8');
 
-            // 提取 YAML front matter 中的 name + description
-            const parts = content.split('---');
-            let name = skillName;
-            let description = '';
-            if (parts.length >= 3) {
-              const fm = parts[1];
-              const nameMatch = fm.match(/^name:\s*(.+)$/m);
-              if (nameMatch) name = nameMatch[1].trim().replace(/^"|"$/g, '');
-              const descMatch = fm.match(/^description:\s*(.+)$/m);
-              if (descMatch) description = descMatch[1].trim().replace(/^"|"$/g, '').slice(0, 200);
-            }
+            // D986: front matter 解析（含 YAML 块标量描述 `description: >-` / `|`）
+            const frontMatter = parseFrontMatter(content);
+            const name = frontMatter.name || skillName;
+            let description = (frontMatter.description || '').slice(0, 200);
             if (!description) {
               const firstLine = content.split('\n').filter(l => l.startsWith('#') && !l.startsWith('##'))[0] || '';
               description = firstLine.replace(/^#\s*/, '').slice(0, 200) || skillName;
@@ -163,8 +182,11 @@ export class SkillLazyLoader {
               activationKeywords: keywords,
             });
 
-            // ═══ v2.1: 自动建立 skill→expert 映射 ═══
-            this.linkToExpert(expertType, name);
+            // ═══ v2.1 + D986: 自动建立 skill→expert 映射 ═══
+            // 键 = legacy 目录名（向后兼容旧消费方）+ D650 映射后的 v3.0 专家 id（生产传参口径）
+            for (const expertKey of this.resolveExpertLinks(expertType)) {
+              this.linkToExpert(expertKey, name);
+            }
 
             categoryCount++;
             count++;
@@ -224,6 +246,36 @@ export class SkillLazyLoader {
     }
   }
 
+  /**
+   * 计算某分类目录应挂载的专家键（D986）。
+   *
+   * 契约:
+   *   @input  — dirName: `skills/` 下的一级目录名（= legacy expert category）
+   *   @output — 键数组: 恒含 dirName；若存在 D650 映射且目标 id 在注册表内，再含目标 id
+   *   @degraded — 映射目标不在 `getAllExpertIds()`（`expert/expert-registry.yaml` 为唯一事实源）
+   *               ⇒ 只返回 dirName + `log.warn`，**不回落 host**
+   *               （理由: 技能挂载是「增强」不是「路由」——挂错 = 把无关技能灌进该专家 prompt；
+   *                宁可不挂并留痕，也不静默污染）
+   */
+  private resolveExpertLinks(dirName: string): string[] {
+    const links = [dirName];
+    const mapped = LEGACY_TO_EXPERT_ID_MAP[dirName]
+      ?? LEGACY_TO_EXPERT_ID_MAP[dirName.replace(/-/g, '_')];
+    if (!mapped || mapped === dirName) return links;
+
+    const known = getAllExpertIds();
+    if (known.length === 0) {
+      log.warn({ dirName, mapped }, '专家注册表为空 — 映射键未生效（仅 legacy 挂载）');
+      return links;
+    }
+    if (!known.includes(mapped)) {
+      log.warn({ dirName, mapped, known }, '映射目标不在专家注册表中 — 仅 legacy 挂载');
+      return links;
+    }
+    links.push(mapped);
+    return links;
+  }
+
   /** 获取所有已注册 skill 名称 */
   listNames(): string[] {
     return Array.from(this.stubs.keys());
@@ -231,6 +283,61 @@ export class SkillLazyLoader {
 }
 
 // ═══ Helpers ═══
+
+/**
+ * 解析技能文件头部的 YAML front matter（只取 name / description）。
+ *
+ * 支持三种 YAML 标量形态（实测 `skills/` 内三种都存在）:
+ *   · 单行裸值      `description: 7 Powers 量化引擎——…`
+ *   · 单行引号值    `description: "多源交叉验证——…"`
+ *   · 块标量        `description: >-` / `description: |`（值在后续缩进行）
+ *
+ * 契约:
+ *   @input  — 文件全文
+ *   @output — `{ name?, description? }`（缺项不填；多行块标量以空格拼接为单行）
+ *   @degraded — 无 front matter / 解析不出 ⇒ 返回空对象（调用方回落首行标题，不抛）
+ *   @contract — 不解析 name/description 之外的字段（`when_to_use`/`required_tools` 等由
+ *               `src/skills/**` 体系负责，本加载器只做 prompt 目录注入）
+ */
+function parseFrontMatter(content: string): { name?: string; description?: string } {
+  const result: { name?: string; description?: string } = {};
+  const lines = content.split('\n');
+  if ((lines[0] ?? '').trim() !== '---') return result;
+  const endIndex = lines.findIndex((l, i) => i > 0 && l.trim() === '---');
+  if (endIndex < 0) return result;
+
+  const fm = lines.slice(1, endIndex);
+  for (let i = 0; i < fm.length; i++) {
+    const nameMatch = fm[i].match(/^name:\s*(.+)$/);
+    if (nameMatch && !result.name) {
+      result.name = stripQuotes(nameMatch[1]);
+      continue;
+    }
+    const descMatch = fm[i].match(/^description:\s*(.*)$/);
+    if (!descMatch || result.description) continue;
+
+    const inline = descMatch[1].trim();
+    if (/^[>|][-+]?$/.test(inline)) {
+      // 块标量: 收集其后的缩进行（空行跳过；遇到非缩进行即结束）
+      const chunk: string[] = [];
+      for (let j = i + 1; j < fm.length; j++) {
+        const line = fm[j];
+        if (line.trim() === '') continue;
+        if (!/^\s+\S/.test(line)) break;
+        chunk.push(line.trim());
+      }
+      result.description = chunk.join(' ');
+    } else {
+      result.description = stripQuotes(inline);
+    }
+  }
+  return result;
+}
+
+/** 去掉 YAML 标量两端的引号（单/双引号） */
+function stripQuotes(raw: string): string {
+  return raw.trim().replace(/^["']|["']$/g, '');
+}
 
 /**
  * 从 Markdown 内容中提取关键词 (用于 activationKeywords)。
@@ -249,10 +356,32 @@ function extractKeywords(content: string): string[] {
 // ═══ Singleton ═══
 
 let _skillLoader: SkillLazyLoader | null = null;
+/** D986: 一次性自加载守卫（幂等 —— 重复调用只扫描一次） */
+let _autoScanDone = false;
 
+/**
+ * 取全局 SkillLazyLoader 单例（D986: **首次调用**对 `DEFAULT_SKILLS_DIR` 做一次性自加载）。
+ *
+ * 为什么自加载挂在这里: `scanFromFiles()` 此前零调用点（46 个技能文件恒不加载），
+ * 而本单例正是生产链上唯一被消费的实例 —— `src/l3/expert-dispatcher.ts:311` 调
+ * `getSkillLoader().buildCatalogText(type)` 拼进专家 systemPrompt。首用即加载 = 最小接线面。
+ *
+ * 契约（铁律 47）:
+ *   @input  — 无（目录口径 = `SYNOVA_SKILLS_DIR` 环境变量，缺省 `<cwd>/skills`）
+ *   @output — 单例（索引为空亦为合法返回；`buildCatalogText()` 此时返回 ''）
+ *   @degraded — 目录缺失 / 扫描抛错 ⇒ 空索引 + `log.debug|warn`，**不抛、不阻断**（铁律 24/31）
+ *   @contract — 幂等: 重复调用只扫描一次（`_autoScanDone` 守卫，置位在扫描前，失败不重试）
+ * @follow-up 要求「启动期确定性加载」时，在 `src/deploy/bootstrap.ts` Phase 2b 显式调用本函数
+ *   （或 `scanFromFiles(DEFAULT_SKILLS_DIR)`）——本函数幂等，届时无副作用。
+ */
 export function getSkillLoader(): SkillLazyLoader {
   if (!_skillLoader) {
     _skillLoader = new SkillLazyLoader();
+  }
+  if (!_autoScanDone) {
+    _autoScanDone = true;
+    const count = _skillLoader.scanFromFiles(DEFAULT_SKILLS_DIR);
+    log.info({ count, dir: DEFAULT_SKILLS_DIR }, 'Skill 自加载完成（D986）');
   }
   return _skillLoader;
 }

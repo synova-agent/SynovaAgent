@@ -1,0 +1,16 @@
+writeset:
+  - .claude/claims/986.yaml
+  - memory/notes/proposed/2026-10-08-d986-0-12-skills-auto-load.md
+  - src/agent/expert-name-map.ts
+  - src/agent/skill-lazy-loader.ts
+  - src/l3/synova-diagnosis-engine-impl.ts
+  - scripts/control-tower/probe-skills.ts
+  - tests/agent/expert-name-map.test.ts
+  - tests/agent/skill-lazy-loader.test.ts
+  - tests/agent/skill-lazy-loader.integration.test.ts
+done:
+  - verify: npx tsx scripts/control-tower/probe-skills.ts
+  - verify: npx vitest run tests/agent/skill-lazy-loader.test.ts tests/agent/skill-lazy-loader.integration.test.ts tests/agent/expert-name-map.test.ts
+  - verify: npx vitest run tests/agent tests/l3
+  - verify: npx tsc --noEmit
+note: #986（0-12）skills 恒不加载 → 单例首用自加载 + D650 映射单一真源（src/agent/expert-name-map.ts，与 diagnosis-engine-impl 共用）；6 个未映射目录不自创（待权威定义）。
