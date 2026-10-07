@@ -1,0 +1,11 @@
+{
+  "task_id": "D1204",
+  "title": "ownership 登记制转发现制（目录内嵌标记 + 生成产物 + 漂移门禁）",
+  "status": "claimed",
+  "spec": "卡 #1233 / 父卡 #1221；Lead 2026-10-07 三条裁决：①写集路径更正为 docs/synova/coordination/ownership.yaml（只许 M）②设计批准（8 文件/根标记/扫描发现/生成产物；逐字节漂移即红）③不需 K3；阻断点不补（已知未接线面）。D1204 = 因 alloc-task-id 撞号（D1201 已被 DG-预算制 占用）后按 check-name-allocation.sh 取首个可用号。",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-07",
+  "updated_by": "line-d-own"
+}

@@ -1,11 +1,10 @@
 # .github/CODEOWNERS — 【生成产物，请勿手改】
-# 源: docs/synova/coordination/ownership.yaml（唯一权威；改那里再重跑下面的命令）
+# 真源: 各目录内嵌的 .synova-owner 标记（发现制；本文件由 --emit-codeowners 生成）
 # 生成: python3 scripts/control-tower/check-ownership.py --emit-codeowners > .github/CODEOWNERS
-# 漂移门禁: tests/control-tower/ownership.test.sh 逐字节断言本文件 == 生成结果（D733）
-# 语义: CODEOWNERS「最后匹配者胜出」→ 宽规则在前、例外在后（与 ownership.yaml 同序）。
+# 漂移门禁: check-ownership.py --check-drift 逐字节断言本文件 == 现树生成结果（D1204）
+# 语义: CODEOWNERS「最后匹配者胜出」→ 宽规则在前、例外在后（与产物同序）。
 #
-# 2026-10-07 · 分域已废止（创始人：「不分域。谁有空，谁能做就谁做。」）
-#   ownership.yaml 已改为单域 ⇒ 本文件只剩一条兜底（* → 最终把关人）。
-#   账号体系：改 ownership.yaml 的 github: 段后重跑生成命令即可 —— 本文件不需要手改。
+# 账号体系：在**首次声明该 owner 键**的 .synova-owner 里写 `handle: @账号`，
+#   然后重跑生成命令 —— 本文件不需要手改。
 
 *                                        @tangbaobao520
