@@ -1003,9 +1003,31 @@ hard_check "主树占用检测 (D537 #2): 主树脏 + 多活跃 session" "${_PAR
 
 TASK_BRIEF_MISSING=""
 TASK_BRIEF_EMPTY=""
+# ── D-C 收口（K3 R6 合并核验）: 声明载体双形态 —— claim（.claude/claims/<issue>.yaml）／legacy brief ──
+# 单一开关 SYNO_CLAIM_V2（默认关）: 关时**逐字节**走下方 legacy 散文路径（回滚语义）。
+# 开时若 resolver 返回的是 claim，则 Q0/Q1/Q2/Q3 散文检查**按设计不适用**（claim 是两字段制），
+# 改以 claim 自身 schema 判据（writeset + done 非空且 done 含 verify:，由 claim_store 强制）
+# 替代；并**显式打印**该结论（禁静默空白，铁律 11）。
+CLAIM_V2=0
+case "$(printf '%s' "${SYNO_CLAIM_V2:-}" | tr '[:upper:]' '[:lower:]')" in
+  1|true|on|yes|y) CLAIM_V2=1 ;;
+esac
+IS_CLAIM_DECL=0
+case "${BRIEF:-}" in *.yaml) IS_CLAIM_DECL=1 ;; esac
 if [ -n "$DECL_SRC" ]; then   # D1148: 合并提交且无自撰文件时为空 → 闸① 无对象
   if [ -z "$BRIEF" ]; then
     TASK_BRIEF_MISSING="今日无 task brief。请先运行: bash scripts/workflow/task-start.sh \"任务描述\""
+  elif [ "$CLAIM_V2" = "1" ] && [ "$IS_CLAIM_DECL" = "1" ]; then
+    # claim 载体的合规判据（三态: 0 通过 / 1 违规 / 2 检查自身失败 —— 2 同样阻断）
+    CLAIM_ISSUE="$(basename "$BRIEF" .yaml)"
+    CLAIM_CHK_OUT="$(python3 "$ROOT/scripts/control-tower/claim_store.py" --check "$CLAIM_ISSUE" --root "$ROOT" 2>&1)"
+    CLAIM_CHK_RC=$?
+    echo -e "  ${CYAN}ℹ️  组 6: 声明载体 = claim（${BRIEF##*/}）—— Q0/Q1/Q2/Q3 散文检查按设计不适用${RESET}"
+    if [ "$CLAIM_CHK_RC" -eq 1 ]; then
+      TASK_BRIEF_EMPTY="${TASK_BRIEF_EMPTY}  claim 声明不合规: $(printf '%s' "$CLAIM_CHK_OUT" | head -1)\n"
+    elif [ "$CLAIM_CHK_RC" -ne 0 ]; then
+      TASK_BRIEF_EMPTY="${TASK_BRIEF_EMPTY}  claim 检查自身失败 rc=${CLAIM_CHK_RC}: $(printf '%s' "$CLAIM_CHK_OUT" | head -1)\n"
+    fi
   else
     # v3.9: 兼容 ## Q0: 和 ## Q0 定位: 两种标题格式
     for q in "Q0" "Q1" "Q2" "Q3"; do
