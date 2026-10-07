@@ -1,0 +1,18 @@
+# .synova-owner — 本目录归属标记（发现制）· 卡 #1233（发现制）
+#
+# 【唯一登记点 = 本目录】归属真源就近入目录，中央表只是产物：
+#   · 无标记的目录 → 继承**最近祖先**目录的标记；本文件（仓库根）= 全仓默认
+#   · 某目录需不同归属 → 只在该目录放一个 .synova-owner，**零中央登记**
+#   · 新增/移动/删除目录 ⇒ 标记随目录走，不需要改任何中央文件
+#   · 改完重跑生成命令（产物逐字节漂移 ⇒ exit 1）:
+#       python3 scripts/control-tower/check-ownership.py --emit-ownership  > docs/synova/coordination/ownership.yaml
+#       python3 scripts/control-tower/check-ownership.py --emit-codeowners > .github/CODEOWNERS
+#       python3 scripts/control-tower/check-ownership.py --check-drift     # 自检
+#
+# 格式（严格；未知键/重复键/空值/缺 owner → exit 2 fail-closed）:
+#   owner:  <键>        必填。本目录及其子目录（子目录另有标记者除外）的归属键
+#   handle: @<GitHub>   该 owner 键**首次出现**处必填；子目录同键可省（继承祖先）
+#   note:   <一句话>     选填；写入产物 owners: 段供人读（禁引号/反斜杠）
+owner: maintainer
+handle: @tangbaobao520
+note: 创始人 — 全部路径的最终把关人（分域已废止，不再按角色切分）

@@ -19,7 +19,10 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RESET='\033[0m'
 
 if echo "$COMMIT_MSG" | grep -qE '^Merge |^Revert '; then exit 0; fi
 
-PATTERN='^(feat|fix|chore|docs|test|refactor|perf|style|ci|build)(\([a-zA-Z0-9_.-]+\))?: .{1,140}$'
+# D-C: scope 字符集加 `#` 与数字（`feat(#1234): …`）。**连字符必须置于字符类末位** ——
+#   `\-` 在 BSD grep 的 ERE 字符类里非法（实测 `grep: invalid character range`，
+#   正是 check-gate-integrity.sh 头注释记录的跨方言陷阱）。
+PATTERN='^(feat|fix|chore|docs|test|refactor|perf|style|ci|build)(\([a-zA-Z0-9_.+#-]+\))?: .{1,140}$'
 
 if ! echo "$COMMIT_MSG" | head -1 | LC_ALL=C grep -qE "$PATTERN"; then
   echo ""
@@ -62,6 +65,7 @@ if [ -z "$MSG_DID" ]; then
   # 回退: 非常规格式但首行含独立 (D578)/(d578) 型引用（旧行为兼容，大小写归一）
   MSG_DID=$(head -1 "$1" 2>/dev/null | grep -oE '\([Dd][0-9]+\)' | head -1 | tr -d '()' | tr '[:lower:]' '[:upper:]') || true # swallow-ok: 同上
 fi
+# ── D-C（K3 R5）: issue 形态声明提取 —— 见下方 PYBIN 定义后的 MSG_ISSUE 段 ──
 # D395-a 注入缝: SYNO_STAGED_FILES 覆盖暂存文件集（测试免跑真实 git diff）
 STAGED_LIST="${SYNO_STAGED_FILES:-$(git -c core.quotepath=false diff --cached --name-only 2>/dev/null || true)}"  # D339: 中文文件名不被转义，认领 match_path 正常
 if [ -n "$STAGED_LIST" ]; then
@@ -88,6 +92,16 @@ if [ -n "$STAGED_LIST" ]; then
   if [ -z "$PYBIN" ]; then
     echo -e "${YELLOW}⚠ D328 一致性检查跳过: python 不可用或损坏（fail-open 显式提示，不静默）${RESET}"
   fi
+  # ── D-C（K3 R5）: issue 形态声明提取 —— `feat(#1234): …` ──
+  # 单源: 提取走 claim_store.parse_issue（**不在此复制正则**；claim 库已覆盖
+  #   `#1234` / 分支形态；legacy `docs(d578)` 之类 scope 不产生伪 issue）。
+  # 缺 python / claim_store 时 MSG_ISSUE 留空 → 一致性检查退回 D# 口径（显式、不静默）。
+  MSG_ISSUE=""
+  CLAIM_LIB_D="$MSG_DIR/control-tower/claim_store.py"
+  if [ -n "$PYBIN" ] && [ -f "$CLAIM_LIB_D" ]; then
+    _SCOPE=$(head -1 "$1" 2>/dev/null | sed -E 's/^[a-zA-Z]+\(([^)]*)\).*/\1/' || true)  # swallow-ok: 非常规格式 → scope 文本 = 整行 → 提不到 issue（合法空）
+    MSG_ISSUE=$("$PYBIN" "$CLAIM_LIB_D" --issue-of "$_SCOPE" 2>/dev/null | head -1 || true)  # swallow-ok: 提取失败 → 空 → 退回 D# 口径
+  fi
   # D330 (KIMI K3 P1-1): resolver 内部 PYBIN 探测无可用性验证 — broken-shim 下
   # 它选中损坏 python3 → 解析失败 exit 1（D317 语义: python 不可用 → exit 1）。
   # 捕获 rc: 失败且无 brief → 显式 degraded 提示（dev doc §4: 提示+跳过可追溯,
@@ -113,6 +127,22 @@ print(1 if any(match_path(s, p) for s in staged for p in inc) else 0)
     if [ "$GENUINE_RC" != 0 ]; then
       echo -e "${YELLOW}⚠ D328 一致性检查 degraded: GENUINE 判定执行失败 (rc=$GENUINE_RC)，本次跳过${RESET}"
     elif [ "$GENUINE" = "1" ]; then
+      # ── D-C（K3 R5）: resolver 返回 claim（`.claude/claims/<issue>.yaml`）→ 按 issue 对账 ──
+      # 语义与下方 D# 口径对齐: 两者都存在且不一致 → 劫持；消息未声明 → 未声明任务归属。
+      case "$CLAIM_BRIEF" in
+        *.yaml)
+          CLAIM_ISSUE=$(basename "$CLAIM_BRIEF" .yaml)
+          case "$CLAIM_ISSUE" in
+            ''|*[!0-9]*) CLAIM_ISSUE="" ;;
+          esac
+          if [ -n "$CLAIM_ISSUE" ] && { [ -z "$MSG_ISSUE" ] || [ "$CLAIM_ISSUE" != "$MSG_ISSUE" ]; }; then
+            echo -e "${RED}❌ D328/D-C: 提交声明(#${MSG_ISSUE:-无})与暂存文件 claim(#${CLAIM_ISSUE})不一致 — 疑似并行劫持${RESET}"
+            echo "   认领 claim: $CLAIM_BRIEF"
+            echo "   请确认提交的是本任务文件，或拆分暂存区后再提交"
+            exit 1
+          fi
+          ;;
+        *)
       CLAIM_DID=$(basename "$CLAIM_BRIEF" .md | grep -oE 'D[0-9]+' | head -1 || true)
       if [ -n "$CLAIM_DID" ] && { [ -z "$MSG_DID" ] || [ "$CLAIM_DID" != "$MSG_DID" ]; }; then
         echo -e "${RED}❌ D328: 提交声明(${MSG_DID:-无})与暂存文件归属($CLAIM_DID)不一致 — 疑似并行劫持${RESET}"
@@ -120,6 +150,8 @@ print(1 if any(match_path(s, p) for s in staged for p in inc) else 0)
         echo "   请确认提交的是本任务文件，或拆分暂存区后再提交"
         exit 1
       fi
+          ;;
+      esac
     fi
   elif [ "$CLAIM_RC" != 0 ]; then
     echo -e "${YELLOW}⚠ D328 一致性检查 degraded: 认领 brief 解析失败（resolver rc=${CLAIM_RC}），本次跳过${RESET}"

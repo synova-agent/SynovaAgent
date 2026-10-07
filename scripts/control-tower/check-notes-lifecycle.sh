@@ -60,6 +60,7 @@ extract_d_id() {
 }
 
 # ── 扫描 proposed/ 判僵尸 ──
+UNREGISTERED=""   # E4（K3 R6）: 无 task-state 卡的条目——显式登记，末尾打印迁移期标识
 while IFS= read -r note; do
   [ -z "$note" ] && continue
   [ ! -f "$note" ] && continue
@@ -72,7 +73,11 @@ while IFS= read -r note; do
 
   STATE_FILE="$TASK_STATE_DIR/${D_ID}.json"
   if [ ! -f "$STATE_FILE" ]; then
-    continue  # D# 未登记 task-state → 进行中，放行
+    # E4（K3 R6 禁静默空白）: 原本是**静默 continue**（读不到卡 = 当作"进行中"）。
+    #   迁移期 task-state 停更后，所有新任务都落这条分支 ⇒ 僵尸判定整体失效而**无任何提示**。
+    #   现改为显式登记 + 末尾统一打印迁移期标识（不阻断，但可见）。
+    UNREGISTERED="${UNREGISTERED}${note}"$'\n'
+    continue
   fi
   STATUS=$(grep -oE '"status"[[:space:]]*:[[:space:]]*"[^"]+"' "$STATE_FILE" 2>/dev/null | head -1 | sed -E 's/.*"([^"]+)"$/\1/' || true)
   case "$STATUS" in
@@ -83,6 +88,14 @@ while IFS= read -r note; do
       : ;;  # 其他状态（claimed/audit_pending/audited/fix_needed）→ 进行中，放行
   esac
 done < <(find "$PROPOSED_DIR" -name "*.md" -type f 2>/dev/null | sort || true)
+
+# ── E4（K3 R6）: 迁移期显式降级输出（禁静默空白）──
+if [ -n "${UNREGISTERED:-}" ]; then
+  _un=$(printf '%s' "$UNREGISTERED" | grep -c . | tr -d '\r\n')
+  echo "[迁移期] ${_un} 条 proposed Note 的 D# 无 task-state 卡（旧 D# 卡只读；新任务声明在 .claude/claims/）"
+  echo "           ⇒ 僵尸判定对这批条目**未生效**（不是"通过"，是"无判据对象"）。"
+  printf '%s' "$UNREGISTERED" | sed '/^$/d' | sed 's/^/            - /'
+fi
 
 # ── 输出 ──
 if [ -n "$ZOMBIES" ]; then

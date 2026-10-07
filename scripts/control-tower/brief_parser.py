@@ -46,6 +46,53 @@ except (AttributeError, ValueError):
 WRITE_SET_HEADING = "## 写集"
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# D-C（K3 预审 R1/R4）: claim 格式同源解析 —— `.claude/claims/<issue>.yaml`
+#
+# 为什么放在这里（而不是让 10 个消费点各自识别 claim）:
+#   K3 预审定罪"清单低估消费面"（≥30 文件）——每多一套解析口径就多一条漂移路径。
+#   claim 与 brief 是**同一批消费点**读取的两种声明载体：resolver 返回 claim 路径后，
+#   全部下游（G12 / check-verifiable-done / check-brief-vs-code / commit-msg-check /
+#   staging_guard / merge_writeset_gate）继续经本模块取 include/done ⇒ **单源**。
+# 语义映射:
+#   claim.writeset → include（等价 brief 的 Q2「做什么」/ `## 写集` 机器块）
+#   claim.done[].verify → Done 项（等价 brief 的 `- [x] verify: …`）
+#   exclude 恒为空（claim 两字段制下没有"不做什么"字段；K3 R1 三态表口径）
+# ══════════════════════════════════════════════════════════════════════════════
+CLAIM_TOP_KEY_RE = re.compile(r"^writeset\s*:\s*$", re.M)
+
+
+def is_claim_text(text: str) -> bool:
+    """文本是否是 claim 文件（`.claude/claims/<issue>.yaml`）。
+
+    判据（形态，不依赖文件名——resolver 可能返回任意路径）:
+      · 含顶层 `writeset:` 键，且
+      · 不含 brief 的 `## Q2:` 标题（防 brief 正文里恰好写了 `writeset:` 被误判）
+    """
+    if not text:
+        return False
+    if re.search(r"^##\s*Q2\s*:", text, re.M):
+        return False
+    return CLAIM_TOP_KEY_RE.search(text) is not None
+
+
+def _claim_data(text: str) -> dict:
+    """调用单一 claim 库解析（**不复制解析逻辑** —— 防第二套口径）。
+
+    降级: claim_store 缺失/解析失败 → 返回空声明并**显式**带上 error
+          （调用方见 include 为空即按"声明不可用"处理，绝不静默当"无变更"）。
+    """
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from claim_store import parse_claim, ClaimError  # noqa: E402
+    except ImportError as exc:
+        return {"writeset": [], "done": [], "note": None, "error": f"claim_store 不可用: {exc}"}
+    try:
+        return parse_claim(text, "<claim>")
+    except ClaimError as exc:
+        return {"writeset": [], "done": [], "note": None, "error": str(exc)}
+
+
 def parse_write_set(text: str) -> dict:
     """解析 WRITE-SET 机器块 → {"present": bool, "include": [paths], "builtin": [paths]}。
 
@@ -72,7 +119,12 @@ def parse_write_set(text: str) -> dict:
 
 
 def parse_q2(text: str) -> dict:
-    """Q2 做什么/不做什么 路径提取（语义 = G12 awk 精确对齐）。"""
+    """Q2 做什么/不做什么 路径提取（语义 = G12 awk 精确对齐）。
+
+    D-C: claim 格式 → include = claim.writeset（**同源**，见 is_claim_text 段注释）。
+    """
+    if is_claim_text(text):
+        return {"include": list(_claim_data(text).get("writeset") or []), "exclude": []}
     include: List[str] = []
     exclude: List[str] = []
     in_q2 = False
@@ -127,7 +179,14 @@ def parse_q2(text: str) -> dict:
 
 
 def parse_criteria(text: str) -> Optional[str]:
-    """#CRITERIA 值（A-D）。"""
+    """#CRITERIA 值（A-D）。
+
+    D-C: claim 文件不是 brief（无 #CRITERIA），但既有消费者（resolver 最终回退、
+    check-brief-parseable、merge_writeset_gate）用本函数的**真值**做"声明是否可解析"
+    判定。claim 是合法声明 ⇒ 返回 "D"（与 D-C 批次口径一致）保持该判定为真。
+    """
+    if is_claim_text(text):
+        return "D"
     m = re.search(r"#CRITERIA\s*[:=]\s*([A-D])", text)
     return m.group(1) if m else None
 
@@ -181,12 +240,24 @@ def parse_field_value(text: str, names) -> Optional[str]:
 
 
 def parse_layer(text: str) -> Optional[str]:
-    """架构层标注（`## 架构层:` 与旧 `## 本任务在哪一层` 等价；内联/body 两种写法等价）。"""
+    """架构层标注（`## 架构层:` 与旧 `## 本任务在哪一层` 等价；内联/body 两种写法等价）。
+
+    D-C: claim 两字段制下没有架构层字段；控制塔/门禁类变更恒属基础设施层 ⇒ 返回
+    固定值，使"架构层已填"这类既有判定在 claim 上不误红（K3 R1 三态表口径）。
+    """
+    if is_claim_text(text):
+        return "基础设施"
     return parse_field_value(text, LAYER_FIELD_NAMES)
 
 
 def parse_done(text: str) -> List[str]:
-    """Done 标准下的 - [ ] 项。"""
+    """Done 标准下的 - [ ] 项。
+
+    D-C: claim 格式 → 输出 `- [x] verify: <命令>` 形态（等价 brief 的 Done 项），
+    使 check-verifiable-done.sh 的 "Done 项必须含 verify:" 判据在 claim 上同样成立。
+    """
+    if is_claim_text(text):
+        return [f"- [x] verify: {d['verify']}" for d in _claim_data(text).get("done") or []]
     done = []
     in_done = False
     for line in text.splitlines():

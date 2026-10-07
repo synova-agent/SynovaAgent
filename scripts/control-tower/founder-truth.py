@@ -77,6 +77,23 @@ def collect(offline=False):
     git_ok = committed is not None
     rows = []
     seen = set()
+    # E4（K3 R6 禁静默空白）: 迁移期新任务声明在 .claude/claims/（不进 task-state）。
+    #   只 glob task-state = 新任务**整体缺席**且无任何提示 ⇒ 真相源漏新卡却报"绿"。
+    #   这里并列计入 claim（issue 号口径），并显式打印迁移期标识。
+    _claims_dir = REPO / ".claude" / "claims"
+    if _claims_dir.is_dir():
+        _claim_n = 0
+        for _cp in sorted(_claims_dir.glob("*.yaml")):
+            if not _cp.stem.isdigit():
+                continue
+            _claim_n += 1
+            rows.append({
+                "task_id": f"#{_cp.stem}", "num": None, "claimed": "claimed(claim)",
+                "hist": False, "source": str(_cp.relative_to(REPO)), "migration": True,
+            })
+        if _claim_n:
+            print(f"[迁移期] 本视图含 task-state 存量（旧 D# 只读）；新任务在 .claude/claims/"
+                  f"（本次并列计入 claim {_claim_n} 条）", file=sys.stderr)
     if TASK_STATE.exists():
         for p in sorted(TASK_STATE.glob("*.json")):
             if p.name == "TEMPLATE.json":

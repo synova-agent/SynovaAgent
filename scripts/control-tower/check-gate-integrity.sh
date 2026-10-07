@@ -603,71 +603,95 @@ run_patterns() {
 
 run_registry() {
   info ""
-  info "── B CI 清单登记 gate（密封面 ratchet）──"
+  info "── B CI 密封面发现制 gate（D-F/②：登记制 → 发现制 + 双棘轮）──"
   local tests_dir="${SYNO_TESTS_DIR:-$ROOT/tests}"
   local ci_yml="${SYNO_CI_YML:-$ROOT/.github/workflows/ci.yml}"
   local baseline="${SYNO_GATE_BASELINE:-$ROOT/scripts/control-tower/gate-integrity-baseline.txt}"
+  local sealed="${SYNO_SEALED_TESTS:-$ROOT/scripts/control-tower/sealed-tests.sh}"
 
   [ -d "$tests_dir" ] || degrade "B_TESTS_DIR_MISSING" "registry" "测试目录缺失: $tests_dir"
   [ -f "$ci_yml" ] || degrade "B_CI_YML_MISSING" "registry" "CI 清单缺失: $ci_yml"
   [ -f "$baseline" ] || degrade "B_BASELINE_MISSING" "registry" "ratchet 基线缺失: $baseline"
+  [ -f "$sealed" ] || degrade "B_SEALED_TESTS_MISSING" "registry" "发现制清单提供者缺失: $sealed"
 
   local base_dir; base_dir="$(dirname "${tests_dir%/}")"
   local p
-  find "$tests_dir" -type f \( -name '*.test.sh' -o -name '*.test.py' -o -name '*.test.ts' \) -not -path '*/node_modules/*' > "$TMPD/all_tests_raw.txt" 2>/dev/null   # swallow-ok: find 读目录失败=枚举为空 → 未登记集空 → [R] 条目全判"基线过期"（fail-closed 红，不静默放行）
+  find "$tests_dir" -type f \( -name '*.test.sh' -o -name '*.test.py' -o -name '*.test.ts' \) -not -path '*/node_modules/*' > "$TMPD/all_tests_raw.txt" 2>/dev/null   # swallow-ok: find 读目录失败=枚举为空 → 未覆盖集空（但发现面扫描另行 fail-closed，见下方 sealed-tests 降级）
   while IFS= read -r p; do printf '%s\n' "${p#"$base_dir"/}"; done < "$TMPD/all_tests_raw.txt" | sort -u > "$TMPD/all_tests.txt"
-  # 登记 = 路径出现在 ci.yml **全文**（密封清单 for t in 或任意 job 的 run: 步骤）
-  grep -oE 'tests/[A-Za-z0-9_./-]+\.test\.(sh|py|ts)' "$ci_yml" 2>/dev/null | sort -u > "$TMPD/registered_all.txt"   # swallow-ok: 探测型 grep；无匹配/读失败=登记集空 → 未登记集=全集 → 全红（fail-closed）
   grep -E '\.test\.(sh|py)$' "$TMPD/all_tests.txt" > "$TMPD/all_ci_face.txt" || true
   grep -E '\.test\.ts$' "$TMPD/all_tests.txt" > "$TMPD/all_ts_face.txt" || true
+
+  # ── 发现制取数（唯一权威 = sealed-tests.sh；root 取 tests_dir 的父 ⇒ 夹具/真仓同构）──
+  local sealed_root list_out list_rc scan_n
+  sealed_root="$base_dir"
+  list_out="$(SYNO_GATE_BASELINE="$baseline" bash "$sealed" --list --root "$sealed_root" 2>"$TMPD/sealed.err")"; list_rc=$?
+  scan_n="$(SYNO_GATE_BASELINE="$baseline" bash "$sealed" --scan --root "$sealed_root" 2>/dev/null | grep -c . || true)"
+  SYNO_GATE_BASELINE="$baseline" bash "$sealed" --quarantine --root "$sealed_root" 2>/dev/null | grep . | sort -u > "$TMPD/quarantine.txt" || true
+  printf '%s\n' "$list_out" | grep . | sort -u > "$TMPD/executed_discovery.txt" || true
+  # 字面登记通道（ci.yml 全文）保留：跑在**别处 job** 的测试可用字面路径声明，无需进隔离台账
+  grep -oE 'tests/[A-Za-z0-9_./-]+\.test\.(sh|py|ts)' "$ci_yml" 2>/dev/null | sort -u > "$TMPD/registered_all.txt"   # swallow-ok: 探测型 grep；无匹配=执行集仅由发现面提供（fail-closed 面由 sealed-tests 保证）
   grep -E '\.test\.(sh|py)$' "$TMPD/registered_all.txt" > "$TMPD/registered_ci_face.txt" || true
-  comm -23 "$TMPD/all_ci_face.txt" "$TMPD/registered_ci_face.txt" > "$TMPD/unregistered_ci_face.txt"
+  cat "$TMPD/executed_discovery.txt" "$TMPD/registered_ci_face.txt" | grep . | sort -u > "$TMPD/executed_all.txt" || true
+  cat "$TMPD/executed_all.txt" "$TMPD/quarantine.txt" | grep . | sort -u > "$TMPD/covered.txt" || true
+  # 违规 (a): 全仓密封面 −（执行集 ∪ 隔离台账） ⇒ 未纳入发现面也未登记
+  comm -23 "$TMPD/all_ci_face.txt" "$TMPD/covered.txt" > "$TMPD/uncovered.txt"
+  # 违规 (b): 隔离台账条目文件不存在（旧「条目已登记即过期」判据由发现制的双棘轮取代，见 baseline 头注释）
+  : > "$TMPD/stale_baseline.txt"
+  local q
+  while IFS= read -r q; do
+    [ -n "$q" ] || continue
+    [ -f "$sealed_root/$q" ] || printf '%s\n' "$q" >> "$TMPD/stale_baseline.txt"
+  done < "$TMPD/quarantine.txt"
+  # ts 面仅登记计数（vitest glob 自动覆盖，不计密封面违规）
   comm -23 "$TMPD/all_ts_face.txt" "$TMPD/registered_all.txt" > "$TMPD/unregistered_ts_face.txt"
-
-  # REGISTRY-BASELINE 段 = 未登记测试存量棘轮（PATTERN-BASELINE 段由 A 模式读，此处跳过）
-  awk '
-    BEGIN { sec = "R" }
-    /^[[:space:]]*#/ {
-      line = $0
-      sub(/^[[:space:]]*#[[:space:]]*/, "", line)
-      if (line ~ /^═+[[:space:]]*PATTERN-BASELINE/)  { sec = "P"; next }
-      if (line ~ /^═+[[:space:]]*REGISTRY-BASELINE/) { sec = "R"; next }
-      next
-    }
-    /^[[:space:]]*$/ { next }
-    sec == "R" { print }
-  ' "$baseline" 2>/dev/null | tr -d '\r' | sed 's/[[:space:]]*$//' | sort -u > "$TMPD/baseline.txt"   # swallow-ok: 基线可读性已在上游 -f/-r 校验；无行=空基线 → 未登记项全判"新增"（红，不静默放行）
-
-  comm -23 "$TMPD/unregistered_ci_face.txt" "$TMPD/baseline.txt" > "$TMPD/new_unregistered.txt"
-  comm -13 "$TMPD/unregistered_ci_face.txt" "$TMPD/baseline.txt" > "$TMPD/stale_baseline.txt"
 
   local item
   while IFS= read -r item; do
     [ -n "$item" ] || continue
-    violation "新增测试未登记 CI 密封清单: ${item}"
-  done < "$TMPD/new_unregistered.txt"
+    violation "密封面测试未纳入发现面也未登记: ${item}"
+  done < "$TMPD/uncovered.txt"
   while IFS= read -r item; do
     [ -n "$item" ] || continue
-    violation "基线过期，须删条目: ${item}"
+    violation "隔离台账条目失效（文件不存在，须删条目）: ${item}"
   done < "$TMPD/stale_baseline.txt"
+  # 违规 (c)(d) + 空面: 由 sealed-tests.sh 以 stderr 点名 + exit 1（floor=删测试棘轮 / ceiling=新增隔离棘轮）
+  if [ "$list_rc" -ne 0 ]; then
+    while IFS= read -r item; do
+      [ -n "$item" ] || continue
+      violation "${item}"
+    done < "$TMPD/sealed.err"
+    [ -s "$TMPD/sealed.err" ] || violation "发现制清单取数失败（sealed-tests.sh exit ${list_rc}，无 stderr 明细）"
+  fi
 
-  local n_all n_ci n_ts n_reg n_unreg n_base n_new n_stale
+  local n_all n_ci n_ts n_reg n_unreg n_base n_new n_stale n_exec n_unreg_ts
   n_all=$(wc -l < "$TMPD/all_tests.txt" | tr -d ' ')
   n_ci=$(wc -l < "$TMPD/all_ci_face.txt" | tr -d ' ')
   n_ts=$(wc -l < "$TMPD/all_ts_face.txt" | tr -d ' ')
   n_reg=$(wc -l < "$TMPD/registered_ci_face.txt" | tr -d ' ')
-  n_unreg=$(wc -l < "$TMPD/unregistered_ci_face.txt" | tr -d ' ')
-  n_base=$(wc -l < "$TMPD/baseline.txt" | tr -d ' ')
-  n_new=$(wc -l < "$TMPD/new_unregistered.txt" | tr -d ' ')
+  n_unreg=$(wc -l < "$TMPD/uncovered.txt" | tr -d ' ')
+  n_base=$(wc -l < "$TMPD/quarantine.txt" | tr -d ' ')
+  n_new=$(wc -l < "$TMPD/uncovered.txt" | tr -d ' ')
   n_stale=$(wc -l < "$TMPD/stale_baseline.txt" | tr -d ' ')
-  info "CI-REGISTRY: 测试文件 ${n_all}（密封面 sh/py ${n_ci}；ts 面 ${n_ts}）；ci.yml 登记（密封面）${n_reg}；密封面未登记 ${n_unreg}；基线 ${n_base} 条；基线外新增 ${n_new}；基线过期 ${n_stale}"
-  info "CI-REGISTRY: NOTE unregistered-ts=$(wc -l < "$TMPD/unregistered_ts_face.txt" | tr -d ' ')（vitest glob 自动覆盖，不计密封面违规）"
-  SUM_REG_SEALED="$n_ci"; SUM_REG_LISTED="$n_reg"; SUM_REG_UNREG="$n_unreg"; SUM_REG_BASE="$n_base"
+  n_exec=$(wc -l < "$TMPD/executed_all.txt" | tr -d ' ')
+  n_unreg_ts=$(wc -l < "$TMPD/unregistered_ts_face.txt" | tr -d ' ')
+  # #1227 跟进件: 动态暴露**余量**（= 可被静默删除的测试数；随加测试单调增长 ⇒ 须可见）
+  local floor_n slack_n cap_n
+  floor_n="$(SYNO_GATE_BASELINE="$baseline" bash "$sealed" --face-total --root "$sealed_root" 2>/dev/null || true)"
+  slack_n="$(SYNO_GATE_BASELINE="$baseline" bash "$sealed" --slack --root "$sealed_root" 2>/dev/null || true)"
+  cap_n="$(SYNO_GATE_BASELINE="$baseline" bash "$sealed" --slack-cap --root "$sealed_root" 2>/dev/null || true)"
+  info "CI-REGISTRY: 测试文件 ${n_all}（密封面 sh/py ${n_ci}；ts 面 ${n_ts}）；发现制执行 ${n_exec}（面扫描 ${scan_n} − 隔离 ${n_base}）；未覆盖 ${n_unreg}；台账 ${n_base} 条；台账外新增 ${n_new}；台账失效 ${n_stale}"
+  info "CI-REGISTRY: 余量 slack=${slack_n:-?}（scan ${scan_n} − FACE-TOTAL ${floor_n:-?}，上限 SLACK-CAP ${cap_n:-未设}）—— ≤ 该余量的净删除不可检测（已知代价）"
+  info "CI-REGISTRY: NOTE unregistered-ts=${n_unreg_ts}（vitest glob 自动覆盖，不计密封面违规）；字面登记（密封面）${n_reg}"
+  SUM_REG_SEALED="$n_ci"; SUM_REG_LISTED="$n_exec"; SUM_REG_UNREG="$n_unreg"; SUM_REG_BASE="$n_base"
   if [ "$VERBOSE" = 1 ]; then
     while IFS= read -r item; do
       [ -n "$item" ] || continue
-      vprint "  UNREGISTERED(sealed): ${item}"
-    done < "$TMPD/unregistered_ci_face.txt"
+      vprint "  UNCOVERED(sealed): ${item}"
+    done < "$TMPD/uncovered.txt"
+    while IFS= read -r item; do
+      [ -n "$item" ] || continue
+      vprint "  QUARANTINED(sealed): ${item}"
+    done < "$TMPD/quarantine.txt"
   fi
 }
 
@@ -676,6 +700,10 @@ run_registry() {
 run_ci_reds() { # $1 = check-runs JSON
   local json="$1"
   local red_base="${SYNO_CI_RED_BASELINE:-$ROOT/scripts/control-tower/ci-red-baseline.txt}"
+  # D1198: 参与集来源 = 本仓 ci.yml（单一真值源；SYNO_CT_SCOPE_CIYML 为夹具注入缝）
+  #   ⚠️ 优先沿用既有的 SYNO_CI_YML 注入缝（测试夹具经它传沙箱 ci.yml）；
+  #     否则用本仓 .github/workflows/ci.yml。两者皆无 ⇒ 参与集解析不出 ⇒ fail-closed degrade。
+  local CIYML_FOR_SCOPE="${SYNO_CT_SCOPE_CIYML:-${SYNO_CI_YML:-$ROOT/.github/workflows/ci.yml}}"
   info ""
   info "── C 既有红基线对账（ratchet）──"
   # D954: 对账对象不可确定 → 不判定（显式 SKIPPED，可见；ratchet 未行使 ≠ 通过）
@@ -697,7 +725,86 @@ run_ci_reds() { # $1 = check-runs JSON
 
   local failing="$TMPD/failing_names.txt"
   [ -n "$PYBIN" ] || degrade "C_NO_PYTHON" "ci-reds" "python 不可用（PYBIN 三级探测失败）——check-runs JSON 解析无法执行"
-  if ! "$PYBIN" - "$json" > "$failing" 2>"$TMPD/json.err" <<'PYEOF'
+  # ── D1198: 对账**范围**收紧 —— 只计「参与 PR 判定」的检查 ─────────────────────
+  #   依据（DSH 同构，2026-10-07 CTO 裁定）: DSH 的 `all-checks-passed` 注释原文
+  #     「Wine and the deferred Python runtime targets **live in ci-master.yml and do not
+  #       participate in this PR verdict**. `needs` cannot cross workflow files.」
+  #     ⇒ **非参与型失败不进 PR 判定**，且**不靠登记表**——靠结构边界。
+  #   本法（不新建登记表，派生自 ci.yml 单一真值源）:
+  #     参与集 = `.github/workflows/ci.yml` 中 `all-checks-passed` 的 `needs:` 所列 job 的
+  #              **`name:` 展开名**（`${{ matrix.X }}` 用同 job 块内 strategy.matrix 取值展开）。
+  #   非参与型失败（如 issues 事件触发的工作流）→ **advisory**：打印可见，**不判 violation**。
+  #   ⚠️ 取不到参与集 ⇒ **fail-closed degrade**（不静默放行）。
+  local part_names="$TMPD/participating_names.txt"
+  if [ -n "$PYBIN" ] && [ -f "$CIYML_FOR_SCOPE" ]; then
+    "$PYBIN" - "$CIYML_FOR_SCOPE" > "$part_names" 2>"$TMPD/scope.err" <<'PYSCOPE' || true
+import re
+import sys
+
+path = sys.argv[1]
+try:
+    text = open(path, encoding='utf-8').read()
+except Exception:
+    sys.exit(1)
+
+m = re.search(r'^  all-checks-passed:\s*$', text, re.M)
+if not m:
+    sys.exit(1)
+rest = text[m.end():]
+nxt = re.search(r'^  [a-z0-9-]+:\s*$', rest, re.M)
+block = rest[:nxt.start()] if nxt else rest
+needs = []
+nm = re.search(r'needs:\s*\[([^\]]*)\]', block, re.S)
+if nm:
+    needs = [x.strip() for x in nm.group(1).split(',') if x.strip()]
+if not needs:
+    sys.exit(1)
+
+out = set()
+for key in needs:
+    jm = re.search(r'^  ' + re.escape(key) + r':\s*$', text, re.M)
+    if not jm:
+        continue
+    r2 = text[jm.end():]
+    n2 = re.search(r'^  [a-z0-9-]+:\s*$', r2, re.M)
+    jblock = r2[:n2.start()] if n2 else r2
+    nam = re.search(r'^    name:\s*(.+?)\s*$', jblock, re.M)
+    if not nam:
+        continue
+    jname = nam.group(1).strip().strip('"').strip("'")
+    mvals = {}
+    mm = re.search(r'^      matrix:\s*$', jblock, re.M)
+    if mm:
+        mrest = jblock[mm.end():]
+        mend = re.search(r'^      [a-zA-Z]', mrest, re.M)
+        mblock = mrest[:mend.start()] if mend else mrest
+        for km in re.finditer(r'^        ([A-Za-z0-9_.\-]+):\s*\[([^\]]*)\]\s*$', mblock, re.M):
+            mvals[km.group(1)] = [x.strip().strip('"').strip("'") for x in km.group(2).split(',') if x.strip()]
+        for km in re.finditer(r'^        ([A-Za-z0-9_.\-]+):\s*(\S+)\s*$', mblock, re.M):
+            mvals.setdefault(km.group(1), [km.group(2).strip('"').strip("'")])
+    names = [jname]
+    for var, vals in mvals.items():
+        pat = '${{ matrix.%s }}' % var
+        nxt_names = []
+        for base in names:
+            if pat in base:
+                for v in vals:
+                    nxt_names.append(base.replace(pat, v))
+            else:
+                nxt_names.append(base)
+        names = nxt_names
+    for x in names:
+        print(x)
+PYSCOPE
+  fi
+  local n_part
+  n_part="$(wc -l < "$part_names" 2>/dev/null | tr -d ' \r' || echo 0)"
+  if [ "${n_part:-0}" -eq 0 ]; then
+    degrade "C_SCOPE_UNRESOLVED" "ci-reds" "参与集不可解析（$CIYML_FOR_SCOPE 的 all-checks-passed.needs）——范围不明，fail-closed 不判绿"
+  fi
+  vprint "  参与集（ci.yml all-checks-passed.needs 展开）: ${n_part} 名"
+
+  if ! "$PYBIN" - "$json" "$part_names" > "$failing" 2>"$TMPD/json.err" <<'PYEOF'
 import json
 import sys
 
@@ -714,16 +821,37 @@ runs = data.get('check_runs')
 if not isinstance(runs, list):
     sys.stderr.write("check_runs missing or not list\n")
     sys.exit(3)
-names = sorted({str(r.get('name', '')) for r in runs
-                if isinstance(r, dict) and r.get('conclusion') == 'failure'})
-for name in names:
-    if name:
+
+part = set()
+try:
+    with open(sys.argv[2], encoding='utf-8') as fh:
+        part = {ln.strip() for ln in fh if ln.strip()}
+except Exception:
+    part = set()
+
+fail_all = sorted({str(r.get('name', '')) for r in runs
+                   if isinstance(r, dict) and r.get('conclusion') == 'failure'})
+for name in fail_all:
+    if name and name in part:
         print(name)
+
+for name in fail_all:
+    if name and name not in part:
+        sys.stderr.write("ADVISORY-NONPARTICIPATING\t%s\n" % name)
 PYEOF
   then
+
     local jerr
     jerr="$(tr '\n' ' ' < "$TMPD/json.err" 2>/dev/null | cut -c1-200)"   # swallow-ok: 仅取诊断文本；读不到时 ${jerr:-unknown} 兜底，exit 2 判据不受影响
     degrade "C_JSON_INVALID" "ci-reds" "check-runs JSON 非法: ${json}（${jerr:-unknown}）"
+  fi
+
+  # D1198: 非参与型失败 → **advisory**（打印可见，不判 violation；对齐 DSH「non-participating」语义）
+  if grep -q '^ADVISORY-NONPARTICIPATING' "$TMPD/json.err" 2>/dev/null; then
+    local adv
+    adv="$(grep '^ADVISORY-NONPARTICIPATING' "$TMPD/json.err" | cut -f2 | sort -u | tr '\n' ' ')"
+    info "CI-RED-ADVISORY: 非参与型检查失败（不进 PR 判定；仅可见）: ${adv}"
+    SUM_CIRED_ADV="${adv}"
   fi
 
   local red_norm="$TMPD/red_baseline.txt"

@@ -299,10 +299,25 @@ _GATE_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
 BYPASS_LOG="$ROOT/.claude/bypass.log"
 # 方案1挪CI(D467)后：本地 pre-commit 软提示 + CI 权威，本地 --no-verify 不再是"绕过"（CI 兜底）。
 # GATEKEEPER 检测"本地 --no-verify"只在本地跑；CI 上跳过（否则 CI 检测 git 跟踪的本地 bypass.log 痕迹 → 自阻断）。
+# GATEKEEPER-COUNT-BEGIN（夹具 tests/control-tower/bypass-rewrite-classify.test.sh 按此标记提取本段做行为断言；改格式须同步夹具）
 if [ -f "$BYPASS_LOG" ] && [ "${GITHUB_ACTIONS:-}" != "true" ]; then
   TODAY=$(date +%Y-%m-%d)
   # V4.5.1: 只匹配 detected-bypass 行。COMMITTED 行是正常提交成功标记，不是绕过。
+  # #1270（2026-10-07）: **疑似与确证分离** —— `suspected-rewrite`（rebase/cherry-pick 重写误报）
+  #   单独计数、**保留在台账**（可 grep/可审计，不静默漏判），但不计入"确证绕过"阈值；
+  #   只有确证行（detected-bypass）才触发原有的硬阻断/ACK 语义。
   BYPASS_COUNT=$(grep -c "${TODAY}.*detected-bypass" "$BYPASS_LOG" 2>/dev/null | tr -d '\n\r' || echo 0)
+  SUSPECT_COUNT=$(grep -c "${TODAY}.*suspected-rewrite" "$BYPASS_LOG" 2>/dev/null | tr -d '\n\r' || echo 0)
+  # R1 收口（verifier P2）: 按类分开计数 + 标出**可伪造类**（forgeable=1，状态文件类 mkdir 即可伪造）
+  SUSPECT_RS=$(grep -c "${TODAY}.*suspected-rewrite.*suspect=rebase-state" "$BYPASS_LOG" 2>/dev/null | tr -d '\n\r' || echo 0)
+  SUSPECT_CP=$(grep -c "${TODAY}.*suspected-rewrite.*suspect=cherry-pick-state" "$BYPASS_LOG" 2>/dev/null | tr -d '\n\r' || echo 0)
+  SUSPECT_TS=$(grep -c "${TODAY}.*suspected-rewrite.*suspect=tree-subject-match" "$BYPASS_LOG" 2>/dev/null | tr -d '\n\r' || echo 0)
+  SUSPECT_FG=$(grep -c "${TODAY}.*suspected-rewrite.*forgeable=1" "$BYPASS_LOG" 2>/dev/null | tr -d '\n\r' || echo 0)
+  SUSPECT_KIND_IP=$(grep -c "${TODAY}.*suspected-rewrite.*kind=in-progress" "$BYPASS_LOG" 2>/dev/null | tr -d '\n\r' || echo 0)
+  SUSPECT_KIND_CT=$(grep -c "${TODAY}.*suspected-rewrite.*kind=content" "$BYPASS_LOG" 2>/dev/null | tr -d '\n\r' || echo 0)
+  if [ "${SUSPECT_COUNT:-0}" -gt 0 ]; then
+    echo "[GATEKEEPER] 今日 ${SUSPECT_COUNT} 条 suspected-rewrite（重写误报，台账保留、不计入确证绕过阈值）：kind=in-progress ${SUSPECT_KIND_IP}（rebase-state=${SUSPECT_RS} / cherry-pick-state=${SUSPECT_CP}）/ kind=content ${SUSPECT_KIND_CT}（tree-subject-match=${SUSPECT_TS}）；**可伪造类(forgeable=1)=${SUSPECT_FG}**"
+  fi
   if [ "$BYPASS_COUNT" -gt 0 ]; then
     echo "[GATEKEEPER] 检测到今日 ${BYPASS_COUNT} 次 --no-verify 绕过记录"
     if [ "${SYNO_GATEKEEPER_ACK:-0}" = "1" ]; then
@@ -318,6 +333,7 @@ if [ -f "$BYPASS_LOG" ] && [ "${GITHUB_ACTIONS:-}" != "true" ]; then
     fi
   fi
 fi
+# GATEKEEPER-COUNT-END
 # V4.5.1: 缓存 git diff 结果 — 本机每次 git 调用 ~1s，脚本内 10+ 次调用是超时主因
 # D387 (CT-34): 测试注入缝 (只读, 默认真实 git, fail-closed)
 # D390 (CT-P1-1, K3 D387 P1-1): 武装守卫 — 注入缝仅 SYNO_TEST_ARM=1 时生效。
@@ -987,9 +1003,31 @@ hard_check "主树占用检测 (D537 #2): 主树脏 + 多活跃 session" "${_PAR
 
 TASK_BRIEF_MISSING=""
 TASK_BRIEF_EMPTY=""
+# ── D-C 收口（K3 R6 合并核验）: 声明载体双形态 —— claim（.claude/claims/<issue>.yaml）／legacy brief ──
+# 单一开关 SYNO_CLAIM_V2（默认关）: 关时**逐字节**走下方 legacy 散文路径（回滚语义）。
+# 开时若 resolver 返回的是 claim，则 Q0/Q1/Q2/Q3 散文检查**按设计不适用**（claim 是两字段制），
+# 改以 claim 自身 schema 判据（writeset + done 非空且 done 含 verify:，由 claim_store 强制）
+# 替代；并**显式打印**该结论（禁静默空白，铁律 11）。
+CLAIM_V2=0
+case "$(printf '%s' "${SYNO_CLAIM_V2:-}" | tr '[:upper:]' '[:lower:]')" in
+  1|true|on|yes|y) CLAIM_V2=1 ;;
+esac
+IS_CLAIM_DECL=0
+case "${BRIEF:-}" in *.yaml) IS_CLAIM_DECL=1 ;; esac
 if [ -n "$DECL_SRC" ]; then   # D1148: 合并提交且无自撰文件时为空 → 闸① 无对象
   if [ -z "$BRIEF" ]; then
     TASK_BRIEF_MISSING="今日无 task brief。请先运行: bash scripts/workflow/task-start.sh \"任务描述\""
+  elif [ "$CLAIM_V2" = "1" ] && [ "$IS_CLAIM_DECL" = "1" ]; then
+    # claim 载体的合规判据（三态: 0 通过 / 1 违规 / 2 检查自身失败 —— 2 同样阻断）
+    CLAIM_ISSUE="$(basename "$BRIEF" .yaml)"
+    CLAIM_CHK_OUT="$(python3 "$ROOT/scripts/control-tower/claim_store.py" --check "$CLAIM_ISSUE" --root "$ROOT" 2>&1)"
+    CLAIM_CHK_RC=$?
+    echo -e "  ${CYAN}ℹ️  组 6: 声明载体 = claim（${BRIEF##*/}）—— Q0/Q1/Q2/Q3 散文检查按设计不适用${RESET}"
+    if [ "$CLAIM_CHK_RC" -eq 1 ]; then
+      TASK_BRIEF_EMPTY="${TASK_BRIEF_EMPTY}  claim 声明不合规: $(printf '%s' "$CLAIM_CHK_OUT" | head -1)\n"
+    elif [ "$CLAIM_CHK_RC" -ne 0 ]; then
+      TASK_BRIEF_EMPTY="${TASK_BRIEF_EMPTY}  claim 检查自身失败 rc=${CLAIM_CHK_RC}: $(printf '%s' "$CLAIM_CHK_OUT" | head -1)\n"
+    fi
   else
     # v3.9: 兼容 ## Q0: 和 ## Q0 定位: 两种标题格式
     for q in "Q0" "Q1" "Q2" "Q3"; do

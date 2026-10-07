@@ -251,7 +251,7 @@ def analyze_task_state() -> Tuple[list, dict]:
                              errors="replace", timeout=30, cwd=REPO).stdout
         for line in log.splitlines():
             # impl = 任务有提交（feat/fix/docs/ci 均算交付——提交即完成证据）
-            m = re.search(r"\(D(\d{3})\)", line)
+            m = re.search(r"\(D(\d{3,})\)", line)
             if m:
                 impl_hits.add(int(m.group(1)))
     except Exception:  # noqa: BLE001 — git 不可用 → 派生降级
@@ -273,7 +273,7 @@ def analyze_task_state() -> Tuple[list, dict]:
     impl_dir = REPO / "docs" / "plans" / "codex" / "implementation"
     if impl_dir.exists():
         for f in impl_dir.glob("SYNOVA-IMPL-D*.md"):
-            m = re.search(r"D(\d{3})", f.name)
+            m = re.search(r"D(\d{3,})", f.name)
             if m:
                 (spec_files if _committed(f) else phantom_spec).add(int(m.group(1)))
     audit_files = set()
@@ -281,7 +281,7 @@ def analyze_task_state() -> Tuple[list, dict]:
     audit_dir = REPO / "docs" / "synova" / "audit-reports"
     if audit_dir.exists():
         for f in audit_dir.glob("*.md"):
-            m = re.search(r"D(\d{3})", f.name)
+            m = re.search(r"D(\d{3,})", f.name)
             if m:
                 (audit_files if _committed(f) else phantom_audit).add(int(m.group(1)))
 
@@ -295,14 +295,22 @@ def analyze_task_state() -> Tuple[list, dict]:
             tasks.append({"task_id": p.stem, "title": "?", "status": "broken", "note": "json 解析失败"})
             continue
         tid = d.get("task_id", p.stem)
-        m = re.search(r"D(\d{3})", tid)
+        m = re.search(r"D(\d{3,})", tid)
         num = int(m.group(1)) if m else None
         if num is not None:
             seen_nums.add(num)
 # 派生判定 (工件优先; json 字段兜底展示但不算真)
         # D399 (P1-2)/D400: spec = glob 扫描 OR json spec.path 兜底（文件必须真实存在——存在即算真, 消除幻影）
         # D412/U3: json spec.path 分支同样过仓库态校验（工作区存在 且 已提交 HEAD）
-        spec_path = (d.get("spec") or {}).get("path")
+        # D1215/卡 #1268 — `spec` 形态三态（**实测** str=171 / null=189 / dict=83）：
+        #   旧码 `(d.get("spec") or {}).get("path")` 只容纳 null/dict，命中 **str**
+        #   即 `AttributeError: 'str' object has no attribute 'get'` ⇒ 生成器 rc=1
+        #   ⇒ 配对测试红 ⇒ U7 配对门禁把本脚本的**一切改动**锁死（卡 #1268 现象）。
+        #   契约：**只有 dict 形态提供 json path**；str/null 一律「无 json path」，
+        #   回落到既有 glob 派生（has_spec）。⚠️ 不削弱 D399/D412 守卫 —— path 仍须
+        #   「工作区存在」∧「已提交 HEAD」双过才算真（下方 spec_path_ok 原样保留）。
+        _spec = d.get("spec")
+        spec_path = _spec.get("path") if isinstance(_spec, dict) else None
         spec_path_ok = bool(
             spec_path
             and (REPO / spec_path).exists()
