@@ -8,11 +8,11 @@ writeset:
   - src/sentinel/node-type-resolver.ts
   - src/sentinel/mapped-read.ts
   - src/sentinel/adapters/cash-flow-sentinel.ts
-  - tests/sentinel/node-type-mapping.test.ts
+  - tests/sentinel/node-type-resolver.test.ts
   - tests/sentinel/mapped-read.test.ts
   - tests/sentinel/read-capability.test.ts
 done:
-  - verify: npx vitest run tests/sentinel/node-type-mapping.test.ts tests/sentinel/mapped-read.test.ts
+  - verify: npx vitest run tests/sentinel/node-type-resolver.test.ts tests/sentinel/mapped-read.test.ts
   - verify: npx vitest run tests/sentinel/ tests/store/ tests/l3/
   - verify: test "$(git grep -c "readByMappedTypeFromRawDb" HEAD -- src/sentinel/adapters/cash-flow-sentinel.ts | tr -d '\n')" -ge 1
   - verify: npx tsc --noEmit
