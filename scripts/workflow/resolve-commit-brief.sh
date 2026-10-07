@@ -14,6 +14,18 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   2. 否则 → 今日 brief 中认领暂存文件数最多的 (其他 session 的文件由自己的 brief 认领)
 #   3. 无任何认领 → current-brief (当日); 无 → 今日最新
 #
+# D1231/#1308（与 Q2 口径的关系，写清供 K3 复核）:
+#   · 完整裁决顺序 = 「认领数最多 → 身份锚点（强: 分支名 / 暂存 task-state；弱: current-brief）
+#     → 同日**字典序** → 回退」。认领数**只由 parse_q2 的 include 决定** ⇒ Q2 条目写法直接决定身份。
+#   · Q2 条目若「不可匹配」（反引号包裹 / 行内尾随说明 / 通配符 / 全角分隔符 —— 见
+#     brief_parser.q2_entry_hazard），该 brief 的认领数恒为 0，必然 0:1 输给任何一条裸路径声明；
+#     现象在提交端报「声明与归属不一致」，根因却在 Q2 写法（#1308 实测排查被引偏一轮）。
+#   · 故三件事（本次一并落地）: ① parse_q2 对不可匹配条目打 `Q2-PARSE-WARN`（stderr，带 source:line，
+#     本文件在循环里传 source=basename(brief)）；② 同数且身份锚点全未命中（= 纯字典序裁决）时打
+#     `RESOLVER-TIE`（stderr）——最弱裁决可见化；③ 本文件**不得**再持第二套 Q2 解析实现
+#     （Step B 已删内联副本 30 行；解析器缺失 = 显式 degraded，不猜语义）。
+#   · 契约: stdout 仍只输出 brief 路径（不变）；上列标记一律走 stderr 供消费方判别。
+#
 # 用法: bash resolve-commit-brief.sh "<暂存文件列表 (换行分隔)>"
 #       bash resolve-commit-brief.sh --session <sid> "<暂存文件列表>"  (D329: session 专属 current-brief 优先)
 # 输出: brief 绝对路径; 无可用 brief → exit 1
@@ -206,42 +218,23 @@ if [ -z "$PYBIN" ]; then
   RESULT=""
 else
 RESULT=$("$PYBIN" -c "
-import re, sys
-sys.path.insert(0, r'$ROOT/scripts/control-tower')
+import os, sys
+# D317（本轮补齐）: 解析器是**本脚本的兄弟组件**，必须按脚本自身目录定位（PARSER_DIR_W 变量），
+#   不得用 $ROOT —— 测试隔离（临时 repo）或 ROOT 与脚本异仓库时 $ROOT 下没有解析器。
+#   旧实现误用 $ROOT ⇒ 沙箱里 import 必然失败 ⇒ 静默落到内联副本（夹具测的是副本，不是单源）。
+sys.path.insert(0, r'$PARSER_DIR_W')
 try:
     from brief_parser import parse_q2, match_path
-except ImportError:
-    # fail-open: 解析器缺失 → 降级到内联语义（不阻断认领流程）
-    def parse_q2(text):
-        paths = []
-        in_q2 = in_inc = False
-        for line in text.split('\n'):
-            line = line.rstrip('\r')
-            if re.match(r'^## Q2:', line):
-                in_q2 = True
-                in_inc = False
-                continue
-            if in_q2 and re.match(r'^## ', line):
-                break
-            if in_q2 and re.match(r'^不做什么', line):
-                in_inc = False
-                continue
-            if in_q2 and re.match(r'^做什么', line):
-                in_inc = True
-                continue
-            if in_q2 and in_inc and line.startswith('- '):
-                # D521/不变量3: 与 brief_parser.parse_q2 同步剥壳（动词前缀 + 括号描述）
-                raw = re.sub(r'^(修改|新增|新建|修复|扩展|实现|更新|重构|升级|创建|编写|增加|优化|调整|添加|改)\s*', '', line[2:])
-                p = raw.split(':', 1)[0].split('：', 1)[0].split(' — ', 1)[0].strip()
-                p = re.split(r'[（(]', p, 1)[0].strip()
-                if p:
-                    paths.append(p)
-        # D329: 对齐 brief_parser.parse_q2 契约（返回 dict）——旧实现返回 list，
-        # 调用方 parse_q2(text)['include'] 在解析器缺失路径上 TypeError → 认领恒空
-        # 注意: 本段嵌入 bash 双引号串，python 字符串必须用单引号（勿在注释写双引号）
-        return {'include': paths, 'exclude': []}
-    def match_path(path, pat):
-        return re.search(r'(^|/)' + re.escape(pat) + r'\$', path) is not None
+except ImportError as exc:
+    # ── D1241/Step B（#1308 同批）: 去内联副本 → **显式 degraded** ──
+    # 旧实现在此复制了一整套 parse_q2/match_path（30 行）。副本与单源必然漂移 —— 实测副本缺:
+    #   D543（「path L750」行号后缀剥离）/ D749（`## 写集` 机器块优先）/ claim 分支 /
+    #   D1231（Q2 不可匹配形态告警）⇒ 「两处同修」不是收敛，是**两条口径**。
+    # 「文件同数认领 1:0 误判」正是两套口径并存的温床（#1308 根因段②）。
+    # 语义与本文件其余 python 段一致（锚点回退/日期回退同样 import brief_parser）:
+    #   解析器缺失 ⇒ 降级，不猜语义；调用方按 CLAIM_RC≠0 走显式 degraded 提示（不静默）。
+    sys.stderr.write('RESOLVER-DEGRADED: brief_parser 不可导入（' + str(exc) + '）→ 认领判定跳过\n')
+    sys.exit(3)
 
 staged = [s.strip() for s in '''$STAGED'''.split('\n') if s.strip()]
 briefs = [b for b in '''$ALL_TODAY'''.split('\n') if b.strip()]
@@ -259,7 +252,9 @@ for b in briefs:
         text = open(b, encoding='utf-8').read()
     except OSError:
         continue
-    scope = parse_q2(text)['include']
+    # D1231/#1308: 传 source ⇒ 解析器告警可定位到「哪个 brief 的哪一行」（Q2-PARSE-WARN，stderr）。
+    # 本循环的认领数语义不变: 不可匹配条目照样进 include 列表，只是**不再静默**（告警不改变 n）。
+    scope = parse_q2(text, source=os.path.basename(b))['include']
     n = sum(1 for sf in staged for p in scope if match_path(sf, p))
     claims.append((n, b))
 
@@ -273,6 +268,14 @@ best = max(n for n, _b in claims) if claims else 0
 if best > 0:
     top = [b for n, b in claims if n == best]
     top.sort(key=lambda b: (0 if b in anchored_strong else (1 if b in anchored_weak else 2), b))
+    if len(top) > 1 and not (top[0] in anchored_strong or top[0] in anchored_weak):
+        # ── D1231/#1308 ④: 「同数按**字典序**」是最弱裁决 —— 让它可见 ──
+        # 语义: 认领数并列、且身份锚点（强/弱）全部未命中 ⇒ 胜负纯由文件名字典序决定。
+        # D718 记录的误伤源正是这条（陈旧 brief 字典序靠前 ⇒ 恒胜）。
+        # 只打标记（stderr），**不改变裁决**（仍取 top[0]）——与 RESOLVER-ANCHOR 同型：把
+        # 「身份从哪来」交到消费侧，而不是让它在暗处决定。
+        sys.stderr.write('RESOLVER-TIE: 认领数并列 ' + str(best) + '（候选 ' + str(len(top))
+                         + ' 个，身份锚点均未命中）→ 按字典序取 ' + os.path.basename(top[0]) + '\n')
     print(top[0])
     sys.exit(0)
 
@@ -280,7 +283,10 @@ if best > 0:
 if cur:
     print(cur)
     sys.exit(0)
-" 2>/dev/null || true)
+" || true)
+# D1241/Step B: **不再吞 stderr** —— `Q2-PARSE-WARN`（brief_parser）与 `RESOLVER-DEGRADED`
+#   必须能上到消费方（commit-msg-check.sh 用 2>"\$RESOLVER_ERR" 分流捕获并透传；旧实现的
+#   静默重定向会把「为什么认领是 0」整段丢掉 = #1308 排查被引偏的机制之一）。
 fi
 
 if [ -n "$RESULT" ] && [ -f "$RESULT" ]; then

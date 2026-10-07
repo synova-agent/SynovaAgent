@@ -15,6 +15,23 @@ resolve-commit-brief.sh python）——统一为单一语义，四方共用:
   - strip 后置 `:.*`（半角）/`：.*`（全角）/` — .*`（em dash）
   - match_path = `(^|/)pat$`（resolve-commit-brief.sh matches() 语义）
 
+Q2 条目口径（D1231/#1308 卡面 ②「口径固化」）—— **裸路径、独立成行**:
+  · 正例: `- scripts/control-tower/brief_parser.py`（动词前缀/括号/` L750` 行号后缀可留，剥壳已覆盖）
+  · 反例: ``- `scripts/foo.sh` ``（反引号包裹）、`- scripts/foo.sh 说明`（行内尾随说明）、
+          `- scripts/*.sh`（通配符）、`- task-state／D1.json`（全角分隔符）—— 四类经 match_path 恒不中。
+  命中反例形态 ⇒ **显式告警**（stderr 前缀 `Q2-PARSE-WARN:`，带 source:line + 原文 + 原因），
+  绝不静默（铁律 11）。**不因此失败、也不改输出**：存量 brief 有命中该形态者（实测 19/265，
+  2026-10-08），判红属**判据变更**（须 K3→CTO）；本模块只做「静默 0 匹配 → 可见」的加法。
+  检查半径 = **include（做什么）段**；exclude 段刻意不查（实测 178/265 的 exclude 条目是
+  散文式范围声明，逐条告警=噪音淹没信号；且 exclude 不参与认领/身份裁决，不产生 #1308 型误导）。
+
+与认领裁决逻辑的关系（resolve-commit-brief.sh:「**认领数最多 → 身份锚点 → 字典序**」）:
+  一个 brief 的 include 条目若全不可匹配 ⇒ 它对暂存文件的认领数**恒为 0** ⇒ 在同一次提交里
+  必然 0:1 输给任何一条裸路径声明，随后由「同数/回退」链条（身份锚点 → 同日字典序）决定身份。
+  现象是提交端报「声明与归属不一致」，根因却在 Q2 写法 —— 所以本告警必须带 source（brief 名）
+  与行号：没有它，排查会被引偏到「是不是被劫持了」（#1308 实测成本 ≈ 一次提交往返）。
+  「同数按字典序」这一最弱裁决由 resolver 打 `RESOLVER-TIE:`（stderr）标记，同型可见化。
+
 fail-open: 读不到文件 → {"parseable": false} exit 2，调用方按需降级。
 UTF-8: stdout reconfigure（Windows GBK 兜底）。
 
@@ -118,10 +135,70 @@ def parse_write_set(text: str) -> dict:
     return {"present": True, "include": include, "builtin": builtin}
 
 
-def parse_q2(text: str) -> dict:
+# Q2 裸路径字符集（D1231/#1308）: 字母/数字（含中文，\w 是 Unicode）/ `/` `.` `@` `+` `~` `-`。
+# 反例集（实测恒不中）: 反引号、空白、`*`、全角分隔符 `／`、`（`、`<…>`、引号、`·`。
+_Q2_BARE_PATH_RE = re.compile(r"^[\w./@+~-]+$")
+
+
+def q2_entry_hazard(path: str) -> Optional[str]:
+    """Q2 条目**无法作为裸路径匹配**的形态判据（D1231/#1308 卡面 ①）。
+
+    契约（铁律 47）:
+      @input  — path: parse_q2 从 `- ` 行提取的 token（已过动词前缀/括号/分隔/行号剥壳）
+      @output — 命中原因（str，直接进告警文本）/ None（形态上可作为裸路径）
+      @degrade— 纯字符串判定：无 I/O、无外部依赖、无异常路径（不需要 try）
+
+    判据为什么是**形态**而不是"是否真匹配到暂存文件": 解析器也运行在**没有暂存区**的场合
+      （CI 干净检出、单元测试沙箱、模板自检）⇒ 逐文件存在性校验会引入第二套事实源。
+      这里只判「该 token 作为 match_path 的**字面量**模式（re.escape + `(^|/)pat$`）是否可能命中」。
+    实测形态（每条都有真实 brief 命中，见 PR 证据）:
+      · 反引号      — Markdown 包裹残留（#1308 事故形态；` 进模式 ⇒ 恒不中）
+      · 空白        — 行内尾随说明 / 一行多路径（本仓仅 1 个tracked 路径含空格 ⇒ 基本恒不中）
+      · `*`         — 通配符（match_path 按字面量比较 ⇒ glob 恒不中）
+      · 非裸路径字符 — 全角 `／`、`（`、`<…>`、引号等 ⇒ 恒不中
+    能力边界（不夸大）: 文本级判据，不解析语义；合法但漏判的形态（如尾随半角逗号/句点）
+      由 `_Q2_BARE_PATH_RE` 白名单外的字符覆盖，白名单内字符异常组合不判（宁漏不误伤）。
+    """
+    if "`" in path:
+        return "反引号包裹残留 ⇒ 模式含反引号 ⇒ 恒不中"
+    if re.search(r"\s", path):
+        return "行内空白（疑似尾随说明或一行多路径）⇒ 基本恒不中"
+    if "*" in path:
+        return "通配符 ⇒ match_path 按字面量比较 ⇒ glob 恒不中"
+    if not _Q2_BARE_PATH_RE.match(path):
+        return "含非裸路径字符（全角分隔符/括号/引号等）⇒ 恒不中"
+    return None
+
+
+def _q2_warn(source: Optional[str], lineno: int, raw: str, reason: str, token: str) -> None:
+    """不可匹配 Q2 条目的**显式告警**（铁律 11: 禁静默 0 匹配；#1308 卡面 ①）。
+
+    契约（铁律 47）:
+      @input  — source（brief 路径/名，可空）/ 行号 / 原始条目文本 / 命中原因 / 解析出的 token
+      @output — **stderr** 单行；前缀稳定为 `Q2-PARSE-WARN:`（下游按前缀透传/计数：
+                commit-msg-check.sh 的透传段、tests/control-tower/q2-parse-warn.test.sh 的断言）
+      @side-effect — 仅写 stderr；返回值/异常/退出码均不受影响（告警不是判定）
+
+    为什么 stderr 而非 stdout: stdout 契约 = 每行一个路径（`--q2-include` 有 5 处消费），
+      掺入告警会污染路径流 —— 那比静默更坏（消费者会拿告警当路径去匹配）。
+    为什么告警而非失败: 存量 brief 命中该形态者 19/265（2026-10-08 实测）；判红属**判据变更**
+      （须 K3→CTO）。本卡只做「静默 0 匹配 → 可见」的加法：形态、输出、判定三者全不变。
+    """
+    where = f"{source}:{lineno}" if source else f"第 {lineno} 行"
+    sys.stderr.write(
+        f"Q2-PARSE-WARN: {where} 「{raw}」不是可匹配的裸路径 —— {reason}；"
+        f"解析得 {token}（请改**裸路径、独立成行**，D1231/#1308）\n"
+    )
+
+
+def parse_q2(text: str, source: Optional[str] = None) -> dict:
     """Q2 做什么/不做什么 路径提取（语义 = G12 awk 精确对齐）。
 
     D-C: claim 格式 → include = claim.writeset（**同源**，见 is_claim_text 段注释）。
+    D1231/#1308: `source`（brief 路径/名，可空）只进入**告警定位**，不进返回值契约；
+      include 段命中「不可匹配形态」⇒ stderr 打 `Q2-PARSE-WARN:`（见 q2_entry_hazard/_q2_warn）。
+      返回契约不变（`{"include": [...], "exclude": [...]}`）——存量条目**照样输出**，
+      行为零变更：形态可见化 ≠ 语义变更（判红须 K3→CTO）。
     """
     if is_claim_text(text):
         return {"include": list(_claim_data(text).get("writeset") or []), "exclude": []}
@@ -130,7 +207,7 @@ def parse_q2(text: str) -> dict:
     in_q2 = False
     in_include = False
     in_exclude = False
-    for line in text.splitlines():
+    for lineno, line in enumerate(text.splitlines(), 1):
         line = line.rstrip("\r")
         if re.match(r"^## Q2:", line):
             in_q2 = True
@@ -149,6 +226,7 @@ def parse_q2(text: str) -> dict:
             continue
         if in_q2 and line.startswith("- "):
             raw = line[2:]
+            orig = raw.strip()  # 原文（告警定位用；下方 raw 会被逐步剥壳覆盖）
             # D521/不变量3: 剥壳对称——include 段与 exclude 段同等剥壳
             # （修复: include 不剥动词前缀/括号描述 → 认领失效 → D328 动词前缀误拦
             #   + G12 全角括号误报；剥壳规则不对称是同一病根）
@@ -169,6 +247,11 @@ def parse_q2(text: str) -> dict:
             # 「pre-commit-check.sh」不匹配 → G12 误判越界（D541 CI 红第三处根因）。
             path = re.sub(r"\s+L\d+$", "", path)
             if path:
+                # D1231/#1308: 静默 0 匹配 → 显式告警（只查 include 段，理由见模块 docstring）
+                if not in_exclude:
+                    hazard = q2_entry_hazard(path)
+                    if hazard:
+                        _q2_warn(source, lineno, orig, hazard, path)
                 (exclude if in_exclude else include).append(path)
     ws = parse_write_set(text)
     if ws["present"] and ws["include"]:
@@ -276,8 +359,8 @@ def match_path(path: str, pattern: str) -> bool:
     return re.search(r"(^|/)" + re.escape(pattern) + r"$", path) is not None
 
 
-def parse_all(text: str) -> dict:
-    q2 = parse_q2(text)
+def parse_all(text: str, source: Optional[str] = None) -> dict:
+    q2 = parse_q2(text, source=source)
     return {
         "parseable": True,
         "q2_include": q2["include"],
@@ -345,10 +428,10 @@ def main() -> int:
         return 2
 
     if mode == "q2_include":
-        for p in parse_q2(text)["include"]:
+        for p in parse_q2(text, source=target)["include"]:
             print(p)
     elif mode == "q2_exclude":
-        for p in parse_q2(text)["exclude"]:
+        for p in parse_q2(text, source=target)["exclude"]:
             print(p)
     elif mode == "criteria":
         c = parse_criteria(text)
@@ -357,7 +440,7 @@ def main() -> int:
         l = parse_layer(text)
         print(l if l else "")
     elif mode == "all":
-        print(json.dumps(parse_all(text), ensure_ascii=False))
+        print(json.dumps(parse_all(text, source=target), ensure_ascii=False))
     return 0
 
 
