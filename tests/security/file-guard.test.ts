@@ -4,7 +4,7 @@
  * 铁律 0-2: 每个 public 函数 ≥ 2 用例 (happy + sad)
  */
 import { describe, it, expect } from 'vitest';
-import { FileGuard } from '../../src/security/file-guard';
+import { FileGuard, type FileDecisionEvent } from '../../src/security/file-guard';
 import * as os from 'os';
 import * as path from 'path';
 
@@ -85,5 +85,55 @@ describe('FileGuard.setWorkDir', () => {
     guard.setWorkDir(newDir);
     const result = guard.canWrite(path.join(newDir, 'file.txt'));
     expect(result.allowed).toBe(true);
+  });
+});
+
+describe('FileGuard — #1052 onDecision 回调 + workDir 边界', () => {
+  // CTO 2026-10-08 要求②：边界三条 = workDir 自身允许 / 其子路径允许 / 其外拒绝
+  it('Given workDir 自身, When canWrite, Then allowed=true（边界①）', () => {
+    const dir = path.join(os.tmpdir(), 'fg-1052-self');
+    const guard = new FileGuard(dir);
+    expect(guard.canWrite(dir).allowed).toBe(true);
+  });
+
+  it('Given workDir 子路径, When canWrite, Then allowed=true（边界②）', () => {
+    const dir = path.join(os.tmpdir(), 'fg-1052-child');
+    const guard = new FileGuard(dir);
+    expect(guard.canWrite(path.join(dir, 'nested', 'file.json')).allowed).toBe(true);
+  });
+
+  it('Given workDir 之外且非白名单, When canWrite, Then allowed=false（边界③）', () => {
+    const dir = path.join(os.homedir(), '.synova-1052-outside-probe');
+    const guard = new FileGuard(path.join(os.tmpdir(), 'fg-1052-other'));
+    const result = guard.canWrite(path.join(dir, 'file.json'));
+    expect(result.allowed).toBe(false);
+  });
+
+  it('Given onDecision 装配, When 判定, Then 回调收到同一次判定（含 deny 原因）', () => {
+    const seen: FileDecisionEvent[] = [];
+    const guard = new FileGuard({ workDir: path.join(os.tmpdir(), 'fg-1052-cb'), onDecision: (e) => seen.push(e) });
+    const decision = guard.canWrite('/etc/passwd');
+    expect(seen.length).toBe(1);
+    expect(seen[0].decision).toEqual(decision);
+    expect(seen[0].operation).toBe('write');
+    expect(decision.allowed).toBe(false);
+  });
+
+  it('Given onDecision 抛错, When 判定, Then 决策结果不变且不抛出（铁律 24/31）', () => {
+    const guard = new FileGuard({
+      workDir: path.join(os.tmpdir(), 'fg-1052-throw'),
+      onDecision: () => { throw new Error('审计回调故意失败'); },
+    });
+    // 拒绝路径：审计失败**不放行**
+    const denied = guard.canWrite('/etc/passwd');
+    expect(denied.allowed).toBe(false);
+    // 允许路径：审计失败**不改判为拒绝**
+    const allowed = guard.canWrite(path.join(os.tmpdir(), 'fg-1052-throw', 'ok.txt'));
+    expect(allowed.allowed).toBe(true);
+  });
+
+  it('Given 旧构造形态（字符串 workDir）, When canWrite, Then 兼容不破（回归）', () => {
+    const guard = new FileGuard(path.join(os.tmpdir(), 'fg-1052-legacy'));
+    expect(guard.canWrite(path.join(os.tmpdir(), 'fg-1052-legacy', 'a.txt')).allowed).toBe(true);
   });
 });
