@@ -1,0 +1,10 @@
+writeset:
+  - .claude/claims/1361.yaml
+  - .claude/task-briefs/2026-10-08-1361-helper-precondition.md
+  - memory/notes/implemented/2026-10-08-1361-helper-precondition.md
+  - scripts/control-tower/merge_writeset_gate.py
+  - tests/control-tower/gate-helper-precondition.test.sh
+done:
+  - verify: bash tests/control-tower/gate-helper-precondition.test.sh
+  - verify: bash tests/control-tower/merge_writeset_gate.test.sh
+note: 卡 #1361（D1245）**候选 B**：helper 前提缺失 ⇒ 显式点名（**仅消息层，不改定位策略**）⇒ 非行为变更。helper 定位改脚本相对（候选 A/C）属行为变更，须 K3→CTO 裁，不在本件。
