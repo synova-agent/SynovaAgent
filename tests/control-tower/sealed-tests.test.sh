@@ -82,6 +82,25 @@ R3="$(mkfix 2 none)"
 OUT="$(run_in "$R3" --list)"; rc=$?
 [ "$rc" -eq 0 ] && ok "判别性: 同批下调 FACE-TOTAL ⇒ exit 0（下调通路可达）" || no "判别性: 下调后仍红（rc=${rc}）"
 
+# ── 边界（verifier P2）: 真仓贴边断言 —— FACE-TOTAL 必须 == 当前扫描数（零静默删除余量）──
+FLR_REAL="$(bash "$SUT" --face-total)"
+SCAN_REAL="$(bash "$SUT" --scan | grep -c . || true)"
+if [ "$FLR_REAL" = "$SCAN_REAL" ]; then
+  ok "边界: 真仓 FACE-TOTAL=${FLR_REAL} == --scan=${SCAN_REAL}（删 1 个即红；新增不红）"
+else
+  no "边界: 真仓棘轮未贴边（FACE-TOTAL=${FLR_REAL} vs scan=${SCAN_REAL}）⇒ 存在 $((SCAN_REAL - FLR_REAL)) 单位静默删除余量"
+fi
+
+# ── 边界（贴边态）: floor == scan 时删 1 个 ⇒ 必红（M2c 用 floor 高 1 的形态，覆盖不到本边界）──
+R6="$(mkfix 2 none)"
+rm -f "$R6/tests/control-tower/bb.test.sh"
+OUT="$(run_in "$R6" --list)"; rc=$?
+if [ "$rc" -eq 1 ] && printf '%s\n' "$OUT" | grep -q 'FACE-TOTAL'; then
+  ok "边界: 贴边态（floor 2 / scan 2→删 1）⇒ exit 1（删 1 个即红）"
+else
+  no "边界: 贴边态删 1 未红（rc=${rc}）⇒ 棘轮有静默余量"
+fi
+
 # ── 失败: 新增隔离未上调 QUARANTINE-TOTAL ⇒ 红 ──
 R4="$(mkfix 2 0)"
 printf '# FACE-TOTAL=2\n# QUARANTINE-TOTAL=0\n# ═══ REGISTRY-BASELINE（夹具）═══\ntests/control-tower/aa.test.sh\n' > "$R4/scripts/control-tower/gate-integrity-baseline.txt"
