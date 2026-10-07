@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>SynovaAgent 架构：目标态（院方权威）vs 现状（真代码）</title>
+<style>
+  :root{--bg:#0d1117;--fg:#e6edf3;--dim:#8b949e;--line:#30363d;
+        --tgt:#1f6feb;--now:#238636;--gap:#da3633;--warn:#d29922;}
+  *{box-sizing:border-box}
+  body{margin:0;padding:28px;background:var(--bg);color:var(--fg);
+       font:14px/1.65 -apple-system,"PingFang SC","Helvetica Neue",sans-serif}
+  .wrap{max-width:1400px;margin:0 auto}
+  h1{font-size:23px;margin:0 0 4px}
+  h2{font-size:16px;margin:30px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+  .sub{color:var(--dim);font-size:12.5px;margin-bottom:20px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .col{border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .col.t{border-top:3px solid var(--tgt)}
+  .col.n{border-top:3px solid var(--now)}
+  .col h3{margin:0 0 10px;font-size:15px}
+  .col.t h3{color:#79c0ff} .col.n h3{color:#7ee787}
+  .item{margin:8px 0;padding-left:12px;border-left:2px solid var(--line);font-size:13px}
+  .item b{color:var(--fg)}
+  .item span{color:var(--dim);font-size:12px}
+  table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:#161b22;color:var(--dim);font-weight:600;font-size:12px}
+  td.ok{color:#7ee787} td.no{color:#ff7b72} td.part{color:#e3b341}
+  code{background:#161b22;padding:1px 5px;border-radius:4px;font-size:12px}
+  .box{border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-top:12px;background:#161b22}
+  .g{border-color:var(--gap)} .w{border-color:var(--warn)}
+  .g h4,.w h4{margin:0 0 8px;font-size:13.5px}
+  .g h4{color:#ff7b72} .w h4{color:#e3b341}
+  .g ul,.w ul{margin:0;padding-left:20px;font-size:13px}
+  .g li,.w li{margin:5px 0}
+  .src{color:var(--dim);font-size:11.5px;margin-top:6px}
+</style>
+</head>
+<body>
+<div style="border:2px solid #da3633;background:#2a1113;border-radius:9px;padding:12px 15px;margin-bottom:18px;font-size:13.5px"><b style="color:#ff7b72">🔴 本图不是权威架构图 —— 仅作代码侧盘点参考。</b><br>权威架构总图 = <code>产品宪章.md</code>（<b>v5 现行</b>）第四条 §4.1/§4.2 —— 见 <code>architecture-charter-v5-20261007.html</code>。<br>本图由 CTO 按 <code>git ls-tree</code> 现场量出，<b>用于核对"代码现状 vs 宪章要求"</b>，不得引为架构条款。</div>
+<div class="wrap">
+
+<h1>SynovaAgent 架构：目标态 vs 现状</h1>
+<div class="sub">
+  <b>目标态</b>来源：院方「权威文档 01–18」（`docs/synova/research/`）——
+  索引自述：<i>「这些文档写的是目标态，不是现状描述」「代码现状 ≠ 文档权威」</i><br>
+  <b>现状</b>来源：<code>git ls-tree / git show origin/main</code> 现场量出 ｜ 断面 <code>ec996d5b7</code>（2026-10-07）
+</div>
+
+<!-- ============ 核心模型 ============ -->
+<h2>一、核心模型：「池-阀-流-溢出」（权威文档 01，贯穿 13 份权威）</h2>
+<div class="cols">
+  <div class="col t">
+    <h3>目标态（权威 01 原文）</h3>
+    <div class="item"><b>池 = 存储层</b><br><span>15 节点池 + GraphStore（实体状态、边参数、历史趋势）</span></div>
+    <div class="item"><b>阀 = 计算层</b><br><span>42 条因果边 + compute 函数（每条边的精确数学计算 + 置信度）</span></div>
+    <div class="item"><b>流 = 表达层</b><br><span>因果链设计</span></div>
+    <div class="item"><b>溢出 = 增长导航顶层 Goal</b><br><span>权威 13（已被 20260906 覆盖）</span></div>
+    <div class="item"><b>五循环 = 持续监测器</b><br><span>诊断 / 导航 / GA / 自检 / 知识</span></div>
+    <div class="item"><b>铁律</b><br><span>每层只与相邻层通信；表达层不直接触碰存储层；
+      42 条因果边<b>不存进 GraphStore</b>（GraphStore 只存 SOG-Core 16 种基础边）</span></div>
+  </div>
+  <div class="col n">
+    <h3>现状（我实测）</h3>
+    <div class="item"><b>GraphStore</b> <span>· <code>src/adapters/sqlite-graph-store.ts</code> 存在</span></div>
+    <div class="item"><b>本体节点/边类型</b> <span>· 文档声明「22 节点 + 17 边」（见 <code>CLAUDE.md</code> V4.3.0）<br>
+      而权威 01 说 <b>15 节点池 + 16 种基础边</b> —— <b>两套口径不一致</b></span></div>
+    <div class="item"><b>42 条因果边</b> <span>· <code>src/l4/</code> 25 文件；因果边是否 42 条有待核（未验）</span></div>
+    <div class="item"><b>五循环</b> <span>· 有骨架（<code>src/loops/</code> 4 文件 / <code>src/cycles/</code> 9 文件）<br>
+      🔴 但 <b>6 个内置 cron 循环不点火</b>（见下）</span></div>
+    <div class="item"><b>层目录名与目标态不符</b> <span>· <code>src/l1/</code> 只 4 文件、<code>src/l5/</code> 只 3 文件；
+      没有 <code>src/l2/</code>；真正的层散在 <code>routes/agent/services/store</code></span></div>
+  </div>
+</div>
+
+<!-- ============ Agent 交互蓝图 ============ -->
+<h2>二、Agent 主动交互：6 个 Module（权威文档 05）</h2>
+<div class="cols">
+  <div class="col t">
+    <h3>目标态的 6 个 Module</h3>
+    <div class="item"><b>M1 主动触达引擎</b> <span>· 不等用户问，主动推</span></div>
+    <div class="item"><b>M2 对话式因果探索引擎</b> <span>· 顺着因果链追问</span></div>
+    <div class="item"><b>M3 GA 人机协同与反馈闭环</b> <span>· 人给判断，系统学</span></div>
+    <div class="item"><b>M4 Loop 循环交互体现</b> <span>· 循环跑起来并可见</span></div>
+    <div class="item"><b>M5 Action 闭环设计</b> <span>· 建议→动作→验证</span></div>
+    <div class="item"><b>M6 架构融合与报告形态</b> <span>· 输出成什么样子</span></div>
+  </div>
+  <div class="col n">
+    <h3>现状对应</h3>
+    <div class="item"><b>M1 主动触达</b> <span class="no">🔴 未通 —— 依赖定时系统，而<b>循环不点火</b></span></div>
+    <div class="item"><b>M2 因果探索</b> <span class="part">🟡 有 <code>src/interview/</code>(6) 与 <code>src/l4/</code>，未验是否按因果链</span></div>
+    <div class="item"><b>M3 GA 反馈闭环</b> <span class="ok">✅ 已通 —— <code>feedback-collector.ts</code> 有 15 处 <code>target_id</code>（K6#1202 已合）</span></div>
+    <div class="item"><b>M4 Loop 可见</b> <span class="no">🔴 未通 —— 同 M1</span></div>
+    <div class="item"><b>M5 Action 闭环</b> <span class="part">🟡 有 <code>src/agent/</code> 内相关件，未验</span></div>
+    <div class="item"><b>M6 报告形态</b> <span class="ok">✅ 有 <code>src/l3/</code>(32) + <code>extensions/reports/</code></span></div>
+  </div>
+</div>
+
+<!-- ============ 启动序列 ============ -->
+<h2>三、启动序列 Phase 0→5（权威文档 14）</h2>
+<div class="cols">
+  <div class="col t">
+    <h3>目标态（含时间预算）</h3>
+    <div class="item"><b>Phase 0 基础设施</b> <span>&lt;2s · SQLite连接池→Logger→ConfigLoader→EnvValidator</span></div>
+    <div class="item"><b>Phase 1 存储层</b> <span>&lt;3s · GraphStore建表+迁移→SOG-Core枚举校验→KnowledgeStore</span></div>
+    <div class="item"><b>Phase 2 核心引擎</b> <span>&lt;8s · 2a SentinelLoader（<b>50 哨兵</b>）／2b SkillLoader／2c PlaybookLoader／2d CausalChainLoader</span></div>
+    <div class="item"><b>Phase 3 本体计算层</b> <span>&lt;5s</span></div>
+    <div class="item"><b>Phase 4 专家与安全</b> <span>&lt;5s</span></div>
+    <div class="item"><b>失败策略</b> <span>任一项失败 ⇒ 终止启动（错误码 1）；无基准数据 ⇒ HTTP 起但 <b>503</b></span></div>
+  </div>
+  <div class="col n">
+    <h3>现状</h3>
+    <div class="item"><b>文件驱动加载器</b> <span class="ok">✅ <code>src/init/file-driven-loaders.ts</code> 存在（server.ts 调用）</span></div>
+    <div class="item"><b>哨兵数</b> <span>· 目标 <b>50</b>；现状 <b>46 个活跃目录</b>（<code>extensions/sentinels/</code> 47 − <code>_extinct</code>）</span></div>
+    <div class="item"><b>Phase 分阶段</b> <span class="part">🟡 是否严格按 0→5 分阶段、各阶段时间预算是否达标 —— <b>未验</b></span></div>
+    <div class="item"><b>503 失败策略</b> <span class="part">🟡 未验</span></div>
+    <div class="item"><b>🔴 关键断点</b> <span>启动后 <b>MainAgent 未注入 LoopScheduler</b> ⇒ 循环触发时直接 <code>return</code>（degraded 日志）</span></div>
+  </div>
+</div>
+
+<!-- ============ 差异表 ============ -->
+<h2>四、已确认的偏差（逐条附证据）</h2>
+<table>
+  <tr><th style="width:22%">项</th><th style="width:26%">目标态（权威）</th><th style="width:26%">现状（实测）</th><th style="width:26%">判</th></tr>
+  <tr><td><b>本体节点/边类型数</b></td>
+      <td>15 节点池 + 16 种基础边（权威 01）</td>
+      <td>22 节点 + 17 边（<code>CLAUDE.md</code> V4.3.0 声明）</td>
+      <td class="no">🔴 两套口径不一致 —— 需一次对账定谁对</td></tr>
+  <tr><td><b>哨兵数</b></td>
+      <td>50（权威 14 Phase 2a）</td>
+      <td>46 活跃（47 目录 − <code>_extinct</code>）</td>
+      <td class="part">🟡 差 4 个；是否退役/未建待核</td></tr>
+  <tr><td><b>层目录</b></td>
+      <td>L1–L5 五层各司其职</td>
+      <td><code>src/l1</code>=4 文件、<code>src/l5</code>=3 文件、无 <code>src/l2</code></td>
+      <td class="no">🔴 目录名 ≠ 实际分层，易误导</td></tr>
+  <tr><td><b>定时/主动系统</b></td>
+      <td>M1 主动触达 + M4 Loop 可见 + 五循环监测</td>
+      <td>循环 <b>不点火</b>（<code>.setMainAgent(</code> 调用数 = 0；<code>main-agent-binding.ts</code> 不在 main）</td>
+      <td class="no">🔴 用户收不到"主动发现" —— 这是产品最核心的承诺之一</td></tr>
+  <tr><td><b>GA 反馈闭环</b></td>
+      <td>M3 人机协同与反馈闭环</td>
+      <td><code>feedback-collector.ts</code> 15 处 <code>target_id</code>（已合）</td>
+      <td class="ok">✅ 已通</td></tr>
+  <tr><td><b>42 条因果边</b></td>
+      <td>权威 01 逐条定义 + 第五章因果链设计</td>
+      <td><code>src/l4/</code> 25 文件；是否 42 条已落地</td>
+      <td class="part">🟡 未验（我未逐条核）</td></tr>
+</table>
+
+<!-- ============ 结论 ============ -->
+<div class="box w">
+  <h4>⚠️ 读这张图必须先接受的两个前提（院方索引自己写的）</h4>
+  <ul>
+    <li><b>权威文档写的是「应该是什么样」，不是「现在是什么样」。</b>
+        多份自认存在代码差距（16 附录 15 项：P0 8／P1 5／P2 2；08 第七章 7 个「需新建」模块）。</li>
+    <li><b>真相源是「权威文档系列」，不是 PRD／白皮书／STATUS.md／<code>theory/</code> 目录</b>
+        （创始人 2026-09-14 明确指正：「其他的一些可能不对」）。
+        引用必须带「文件名 + 日期 + 章节号」。</li>
+  </ul>
+</div>
+
+<div class="box g">
+  <h4>🔴 一句话结论</h4>
+  <ul>
+    <li><b>骨架在、朝向对、但两条最核心的"主动"能力没通</b>：
+        「主动触达」（M1）与「循环可见」（M4）都挂在同一个断点上 ——
+        <b>MainAgent 没注入 LoopScheduler ⇒ 定时循环不点火</b>。</li>
+    <li>这不是"没做"，是"做了但没接上"：<code>loop-scheduler.ts</code> 在 main、
+        <code>main-agent-binding.ts</code> 在分支上（<code>fix/batch0a-gates-l1</code>），
+        而 <code>.setMainAgent(</code> 全仓零调用。</li>
+    <li>⇒ 修它 = 把 5 个文件搬进 main（写集最小、依赖零）⇒ <b>M1/M4 同时通</b>。</li>
+  </ul>
+</div>
+
+<div class="src">
+  生成：全部现状数字由 <code>git ls-tree -r --name-only origin/main</code> /
+  <code>git grep</code> / <code>git show origin/main:&lt;path&gt;</code> 现场量出。
+  权威侧引自 <code>docs/synova/research/权威文档0N-*/</code> 原文（未改一字）。
+  两者若有冲突，<b>现状以 main ref 为准，目标态以权威文档为准</b>，本图只做对照。
+</div>
+
+</div>
+</body>
+</html>
