@@ -102,7 +102,7 @@ for line in open(inp, encoding="utf-8"):
         print(f"⚠️ #{num}: 缺字段 {'、'.join(missing)}")
     else:
         n_ok += 1
-        print(f"✅ #{num}: 七字段齐全")
+        print(f"✅ #{num}: 核心字段齐全")
 
 print(f"── 汇总: 检查 {n_all} / 齐全 {n_ok} / 缺字段 {n_miss} / 无块 {n_noblock}")
 open(drift_out, "w", encoding="utf-8").write(str(n_miss + n_noblock))

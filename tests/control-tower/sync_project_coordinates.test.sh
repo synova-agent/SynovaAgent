@@ -118,13 +118,23 @@ echo "  #17.4 except 收窄判定: $narrow"
 
 
 # ── 18. D1224（D-H 7→3）: 解析面 7 项全认 / 灌板面只灌 3 项 ──
+# 18.0 判据函数（verifier P2: 原 18.2 用 grep -qv —— 逐行取反 ⇒ 恒真纸老虎；
+#      原 18.4 只 grep 变异体自己的输出 ⇒ 自指。两处改为「同一判据 + 变异体真喂回」。）
+post_face_is_3only() {
+  printf '%s\n' "$1" | grep -q '"执行态"' || return 1
+  for _legacy in 服务承重件 总闸 命名空间 验证级别; do
+    printf '%s\n' "$1" | grep -q "\"$_legacy\"" && return 1
+  done
+  return 0
+}
+
 # 18.1 老正文（7 字段）⇒ 核心字段 3/3（说明老正文不会被当"无坐标系块"误判）
 OUT="$(ISSUE_NUMBER=9 PROJECT_TOKEN= python3 "$TOOL" --from-body "$SB/full.md" 2>&1)"; rc=$?
 echo "$OUT" | grep -q "核心字段=3/3" && ok "18.1 老正文（7 字段）⇒ 核心字段 3/3（不误判为无块）" || no "18.1 核心字段计数异常 :: $OUT"
 
 # 18.2 灌板面 = 3（dry-run 打印将写入的字段集，不触网）
 OUT="$(ISSUE_NUMBER=9 PROJECT_TOKEN=x python3 "$TOOL" --from-body "$SB/full.md" --dry-run 2>&1)"; rc=$?
-echo "$OUT" | grep -q '"执行态"' && echo "$OUT" | grep -qv '"服务承重件"' && ok "18.2 灌板只含 3 核心字段（遗留 4 项不灌）" || no "18.2 灌板字段集异常 :: $OUT"
+if post_face_is_3only "$OUT"; then ok "18.2 灌板只含 3 核心字段（遗留 4 项不灌）"; else no "18.2 灌板字段集异常 :: $OUT"; fi
 
 # 18.3 STRICT_7 逃生缝: 置 1 ⇒ 灌板面回到 7 项
 OUT="$(SYNO_COORDS_STRICT_7=1 ISSUE_NUMBER=9 PROJECT_TOKEN=x python3 "$TOOL" --from-body "$SB/full.md" --dry-run 2>&1)"; rc=$?
@@ -136,7 +146,7 @@ echo "$OUT" | grep -q '"服务承重件"' && ok "18.3 STRICT_7=1 ⇒ 灌板面�
 MUT18="$SB/mut18.py"
 sed 's/^POST_FIELDS = CORE_FIELDS.*/POST_FIELDS = FIELDS/' "$TOOL" > "$MUT18"
 OUT="$(ISSUE_NUMBER=9 PROJECT_TOKEN=x python3 "$MUT18" --from-body "$SB/full.md" --dry-run 2>&1)"
-if echo "$OUT" | grep -q '"服务承重件"'; then ok "18.4 变异体（POST_FIELDS 退回 7 项）⇒ 遗留字段被灌（判据有判别力）"; else no "18.4 变异体未体现差异 :: $OUT"; fi
+if post_face_is_3only "$OUT"; then no "18.4 变异体未体现差异（退回 7 项后仍判 3-only ⇒ 18.2 是纸老虎）"; else ok "18.4 变异体（POST_FIELDS 退回 7 项）⇒ 同一判据转红（判别力成立）"; fi
 
 echo "结果: $PASS 通过, $FAIL 失败"
 [ "$FAIL" = 0 ] && exit 0 || exit 1

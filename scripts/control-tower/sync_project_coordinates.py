@@ -17,7 +17,7 @@ sync_project_coordinates.py — D1196 (#991/#1212 修复): Issue 坐标系同步
           2 = 检查自身失败（python 依赖缺失/参数错误/API 失败且非 token 问题）——fail-closed
   @degraded 无: API 失败一律 exit 2（不静默），唯一放行路径是「无 token」且显式打印 notice
 
-坐标系字段（7→3 缩水前的现行 7 字段，POST_FIELDS）:
+坐标系字段（D1224 后：解析面 7 项 / 灌板面 3 核心，见 CORE_FIELDS·LEGACY_FIELDS·POST_FIELDS）:
   执行态 / 施工批次 / 服务承重件 / 总闸 / 命名空间 / 验证级别 / 阻塞源
 """
 import json
@@ -130,7 +130,14 @@ def main(argv):
         print("::notice title=project-coordinates::PROJECT_TOKEN 未配置——跳过挂板/灌坐标（不红；配置由创始人裁，卡 #991）")
         return 0
     if dry:
-        print("dry-run: 将写入 " + json.dumps(coords, ensure_ascii=False))
+        # D1224 修正（verifier P2 连带发现）: 原 dry-run 打印**全部解析字段** ⇒
+        # 「灌板面只灌 3 项」这条中心声明**根本无法被观察**（夹具因此写成纸老虎）。
+        # ⇒ dry-run 必须如实反映**将要写入的字段集**（POST_FIELDS 过滤后）。
+        to_write = {k: v for k, v in coords.items() if k in POST_FIELDS}
+        skipped = [k for k in coords if k not in POST_FIELDS]
+        print("dry-run: 将写入 " + json.dumps(to_write, ensure_ascii=False))
+        if skipped:
+            print("dry-run: 不灌（遗留字段）: " + " ".join(skipped))
         return 0
     try:
         q_proj = ("query($org:String!,$num:Int!){organization(login:$org){projectV2(number:$num){"
