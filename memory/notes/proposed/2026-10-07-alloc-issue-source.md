@@ -36,8 +36,11 @@
 占用判定来源: 本地 task-state / origin-main / remote-branch / local-branch / worktree-name
               + issue-title(含=yes 状态=ok，过渡件：D# 退役时同批删除此来源)
 ```
-**走 stderr** —— 因为 `_occupy_locations` 的 **stdout 是冲突行契约**（非空即「已占」），
-来源说明若上 stdout 会被读成"该位置已占用"（契约污染）。此不变量已写进代码注释 + 夹具断言。
+**走 stderr** —— 援引 **stdout 接口契约**：`_occupy_locations` / `--check-id` 的
+`@exit 1=已占（逐行输出冲突位置）` ⇒ stdout 只承载冲突行，来源说明/诊断一律 stderr。
+> **P3 更正（返工 #1283）**：原文「上 stdout 会被读成"该位置已占用"」**理由不成立** ——
+> verifier 核实唯一消费者 `check-name-allocation.sh` **按 rc 分支**、rc=0 时丢弃 stdout。
+> **取舍仍对**，但依据应归**接口契约**，而非"消费端会误读"。
 
 ### 4. 只认 title 字段，不认 number 字段
 快照行 = `<number><TAB><title>`，匹配面**只取 title**（与 ③④⑤ 同款词界正则
@@ -79,3 +82,66 @@ SYNO_ALLOC_NO_ISSUES=1                   … --check-id D9992   # rc=0 + stderr 
 
 - 卡 #1224 / #1222（D-C 标识归一，D# 退役主线）· D1213（D# 身份提取器「散文盲」，另一面）
 - 本日 D# 撞号 5 次代价：互合冲突 / 与 main 撞号 / 污染 D708 写集对账 / 多命中 fail-closed / 本卡来源缺失
+
+
+---
+
+# 返工记录（PR #1281 合并后 verifier 事后审计 → 返工卡 #1283）
+
+## R1（P2）hermetic 不成立 —— 实测 15 次真网络调用
+
+**verifier 数据 + 我复现（gh shim 插桩）**：
+```
+check-name-allocation.test.sh → 10 次真实 gh issue list
+alloc-task-id.test.sh         →  5 次真实 gh issue list
+合计 15 次  （与 verifier 数字逐字一致）
+```
+**根因（比"只有一处守卫"更深）**：两个测试的沙箱**各自 `git init`** ⇒
+`TS_TOP` 非空 ⇒ 我加的 `TS_TOP` 门槛**不跳过**；而 `gh` 按 **PWD** 解析仓库
+⇒ 沙箱 task-state 也会去查 **PWD 所在真仓**的 issue（跨仓污染 + 网络）。
+⇒ **修法两层**：
+1. **逐调用点加守卫** `SYNO_ALLOC_NO_ISSUES=1`（`alloc-task-id.test.sh` 19 处 + 委派侧 `chk()` 1 处）；
+2. **工具侧**：gh 调用改为在 **`$TS_TOP`** 内取数（`sh -c 'cd "$1" && shift && exec gh "$@"'`），
+   对齐既有原则「占用表全源跟随 task-state 所属仓库，不得混入 CWD 所在仓」。
+**修后实测**：两套件真实调用 = **0**；生产路径（真 gh）仍 `含=yes 状态=ok` ✓。
+
+### 🔴 反直觉点（Lead 要求做成断言）
+
+**全局 export `SYNO_ALLOC_NO_ISSUES=1` 会破坏「源 active」场景** —— 因为优先级
+`NO_ISSUES(1) > ISSUES_FILE(2)`：全局关源会把 §13 (a)(b) 依赖的"注入命中"场景一并关掉
+⇒ **把判据放宽了**（正是要防的形态）。⇒ 必须**逐调用点**守卫。
+**已钉成断言（§13(g)，三条）**：① 同命令加全局守卫 ⇒ rc 由 1→0（源被关）
+② 全局守卫下**不可能**命中 issue-title ③ 对照：去掉守卫 ⇒ 源恢复 active（rc=1 + 点名）。
+**判别性**：把优先级翻转（FILE>NO）⇒ 测试 rc=1（已实证）。
+
+### 何时**不该**加守卫（同样重要）
+
+§13(e)（源 active 但**不可达**）**刻意不加** `NO_ISSUES` —— 加了就变成"源 disabled"，
+测的是另一条分支。修 R1 时我的批量加守卫脚本**误伤**了这一处（其 `ISSUES_FILE` 在续行上、
+`bash "$TOOL"` 单行看不到 seam）⇒ 夹具立刻转红并点名，**这正是夹具承重**的体现。
+
+## R2（P2）故障路径本身崩 —— `$VAR（` 全角吞变量名
+
+`:523/:531/:545/:555` 四处 `$EXIT（期望 1）` ⇒ bash 3.2 + `set -u` 下 `EXIT?: unbound variable`
+⇒ **真实失败信息被掩盖**（任一 fail 分支都中招）。已修 `${EXIT}（`。
+**同类第 2 次**（上一次在 `alloc-task-id.sh` 的 `$_ISS_INCL 状态=$ISSUE_SRC_STATE，`）。
+
+**全目录扫描（Lead 要求）** —— 非注释代码行命中 + `set -u` 判定：
+```
+set -u 命中（🔴 会真崩）: 17 个文件 / 我的写集只占 1 个（alloc-task-id.test.sh，已修 4 处）
+  check-citations(5) · check-gate-integrity(1) · check-ownership(1) · check-pr-budget(1)
+  check-preset-bundles(2) · ci-signal-classify(1) · daily-cto-board(2) · external-auditor(2)
+  g12-day-window(1) · incident-loop-hygiene(2) · parallel-main-tree-occupancy(3) · post-commit(3)
+  redeem-task-redeem(1) · session-worktree-isolation(3) · staging_guard(1) · synova-commit(1)
+无 set -u（🟡 静默吞值）: tests/doc-system/doc-contract-property.test.sh(1)
+```
+**其余 16 个文件不在本卡写集** ⇒ 按纪律**只报不改**，已上报 Lead 处置（建议另卡：同类系统性清理）。
+复跑命令：
+```bash
+grep -rEn '\$[A-Za-z_][A-Za-z0-9_]*[（），。：；！？、]' tests/ | grep -v ':\s*#'
+```
+
+## P3（P3）理由不成立，取舍仍对
+
+见上文「来源可追溯」段的更正：援引 **stdout 接口契约**（`--check-id` 的 `@exit 1=逐行输出冲突位置`），
+不再用"消费端会误读 stdout"这一被 verifier 证伪的理由。
