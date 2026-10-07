@@ -11,16 +11,33 @@ validate_doc_contract.py — DOC-CONTRACT 三闸判据内核（D1107 首版 · D
   ③ 判据硬编码在脚本内，与 §3.1 自述「白名单从契约文本动态解析」不符
   ⇒ D1193: 判据全部改为**从契约机器可读块解析**，阻断**优先于**白名单，闸 3 扩到 md+html。
 
+D1204 修的四处（K3 D1193 复核 §R2/§R3 判据逃逸，均为**独立反例实测**）:
+  X1 同名兄弟前缀: `dir/**` 只匹配子树 ⇒ `docs/plans.md`（同名文件非目录）与
+     `docs/synova/coordinationX/y.md` 被放行 ⇒ 阻断侧改**前缀闭包**（match_path closure=True）。
+     方向性: 只给阻断侧开闭包（多拦=fail-closed）；白名单侧保持严格子树
+     （放宽=漏拦，如 `docs/**` 会放过 `docs-old/`）。代价: 同前缀无关路径一并阻断，显式接受。
+  X2 rename 逃逸: 闸 3 只取 `--diff-filter=A` ⇒ `git mv 既有文档 → 阻断目录` 不进清单
+     ⇒ 改 `--diff-filter=ACR` 并取 `--name-status` **目标路径**（rename/copy 行的右侧/末列）。
+  X3 README 索引后门: `**/README.md` 可在任意未授权新目录播种索引
+     ⇒ 同址豁免（README/AGENTS/SKILL）加**同址判定**：父目录须含 ≥1 个非文档文件
+     （「包/目录自己的契约文档随代码走」的原意，不是「任意新目录可用一个 README 开张」）。
+  #1252 过渡表出口机器化: 出口条件从散文改为机器可判（`tracked-count:<路径模式>=<N>`），
+     存量计数**动态派生**（禁双源；声明值只作为可选交叉校验，与实测不符 ⇒ 违规），
+     `transition_hits` + 过渡台账落 artifact（默认 `.codex/control-tower/logs/doc-contract-transition.json`）。
+
 契约（铁律 47 — 先定义再实现）:
   @input  — --staged            本地: git diff --cached（pre-commit 用）
             --base <ref>        CI: git diff <ref>...HEAD（GITHUB_ACTIONS + SYNO_DIFF_BASE 场景）
             --files <路径...>   显式清单（CI/自查）
             --baseline          全量 tracked 文档跑闸 3 + 全量决策跑闸 1/2 ⇒ 出库工作清单
+                                + 过渡台账**复审模式**（已达出口的行在此判红）
             --all-decisions     只全量跑闸 1/2
+            --hits-out <path>   过渡台账 artifact 落点（显式指定 ⇒ 不可写即 degraded exit 2）
             --json              结构化输出
-  @output — 三闸逐条结论 + 违规清单（文件:行 + 原因）+ 过渡命中统计
+  @output — 三闸逐条结论 + 违规清单（文件:行 + 原因）+ 过渡命中统计 + 过渡表台账（存量/出口）
   @exit   — 0 = 全过；1 = 有违规（可阻断）；2 = degraded（判据源不可读 / git 不可用，fail-closed）
   @degraded — 契约三个机器可读块任一缺失/为空 ⇒ exit 2 + stderr
+              过渡表出口判据缺失/不可解析/未知 kind ⇒ exit 2（出口条件必须机器可判，D1204）
               **不把「读不到」当「通过」**（铁律 11/24）
   @error  — 非 UTF-8 决策件 ⇒ 记单条违规，不中断整轮
   @seam   — SYNO_DOC_CONTRACT_ACK=1（+ _REASON）逃生舱: 只降级闸 3，必须落
@@ -30,9 +47,11 @@ validate_doc_contract.py — DOC-CONTRACT 三闸判据内核（D1107 首版 · D
   「取代判定对不对」「文档写得好不好」是语义判断，归 K3 与创始人，脚本不冒充。
 
 判据来源 = docs/synova/DOC-CONTRACT.md 的三个机器可读块:
-  doc-contract-whitelist   ✅ 放行前缀/精确路径
-  doc-contract-blocked     ❌ 阻断清单（**优先于白名单**）
-  doc-contract-transition  过渡放行（阻断清单的例外，带出口条件/责任线/起始存量）
+  doc-contract-whitelist   ✅ 放行前缀/精确路径（严格子树；`**/NAME` = 同址豁免，需同址有代码）
+  doc-contract-blocked     ❌ 阻断清单（**优先于白名单**；`dir/**` 走前缀闭包 = 吃同名兄弟）
+  doc-contract-transition  过渡放行（阻断清单的例外）: 路径 | 人读出口条件 | 责任线 |
+                           机器出口判据(`tracked-count:<路径模式>=<N>`) [| 声明存量(可选,交叉校验)]
+                           —— 存量**动态派生**（禁双源），"已达出口"在 --baseline 复审模式判红
 """
 from __future__ import annotations
 
@@ -53,7 +72,13 @@ BLOCK_WL = "doc-contract-whitelist"
 BLOCK_BL = "doc-contract-blocked"
 BLOCK_TR = "doc-contract-transition"
 DEGRADED_LOG_REL = ".codex/control-tower/logs/degraded-events.log"
+HITS_OUT_REL = ".codex/control-tower/logs/doc-contract-transition.json"  # 过渡台账 artifact（D1204/#1252 ②）
 FENCE = chr(96) * 3
+
+# 过渡表出口判据（机器可判 DSL）: <kind>:<arg>=<want>
+#   tracked-count  = 「匹配 <arg> 路径模式的 tracked 文件数」== <want>（出口即失效）
+RE_EXIT_CHECK = re.compile(r"^(?P<kind>[a-z][a-z-]*):(?P<arg>.+)=(?P<want>-?\d+)$")
+EXIT_CHECK_KINDS = ("tracked-count",)
 
 RE_TITLE = re.compile(r"^#\s*决策[:：]\s*\S")
 RE_STATUS = re.compile(r"^状态[:：]\s*(proposed|implemented|rejected|archived)\s*$")
@@ -105,22 +130,44 @@ def _parse_lines(block: str) -> List[str]:
     return pats
 
 
-def _parse_transition(block: str) -> Dict[str, Dict[str, str]]:
-    out: Dict[str, Dict[str, str]] = {}
+def _parse_transition(block: str) -> Dict[str, Dict]:
+    """过渡表四/五列解析：路径 | 人读出口条件 | 责任线 | 机器出口判据 [| 声明存量]
+
+    列序解析策略（D1204）: 路径从**左**切第一刀（路径不含 `|`）；其余从**右**切 ——
+    因为人读出口条件里会写命令（`git ls-files '...' | wc -l` 含 `|`），从右切才能容它。
+    出口判据不可解析 ⇒ Degraded（出口条件必须机器可判，正是 #1252 ① 的整改点）。
+    """
+    out: Dict[str, Dict] = {}
     for raw in block.splitlines():
         line = raw.strip()
         if not line or line.startswith("#"):
             continue
-        parts = [p.strip() for p in line.split("|")]
-        out[parts[0]] = {
-            "exit": parts[1] if len(parts) > 1 else "",
-            "owner": parts[2] if len(parts) > 2 else "",
-            "as_of": parts[3] if len(parts) > 3 else "",
+        head, sep, tail = line.partition("|")
+        if not sep:
+            raise Degraded("过渡表行缺少字段分隔符 '|'（须 路径|出口条件|责任线|出口判据）: %r" % line[:80])
+        parts = [p.strip() for p in tail.rsplit("|", 3)]
+        if len(parts) < 3:
+            raise Degraded("过渡表行字段不足（须 ≥4 列: 路径|出口条件|责任线|出口判据）: %r" % line[:80])
+        pat = head.strip()
+        exit_h, owner, check_s = parts[0], parts[1], parts[2]
+        m = RE_EXIT_CHECK.match(check_s)
+        if not m:
+            raise Degraded(
+                "过渡表出口判据不可解析（须 <kind>:<arg>=<N>，如 tracked-count:.claude/task-briefs/**=0）: %r" % check_s)
+        if m.group("kind") not in EXIT_CHECK_KINDS:
+            raise Degraded("过渡表出口判据 kind 未知: %s（仅支持 %s）" % (m.group("kind"), "/".join(EXIT_CHECK_KINDS)))
+        if not pat:
+            raise Degraded("过渡表行路径为空: %r" % line[:80])
+        out[pat] = {
+            "exit": exit_h,
+            "owner": owner,
+            "exit_check": {"kind": m.group("kind"), "arg": m.group("arg"), "want": int(m.group("want"))},
+            "declared": parts[3] if len(parts) >= 4 else "",
         }
     return out
 
 
-def parse_contract(repo: Path) -> Tuple[List[str], List[str], Dict[str, Dict[str, str]]]:
+def parse_contract(repo: Path) -> Tuple[List[str], List[str], Dict[str, Dict]]:
     text = read_text(repo / CONTRACT_REL)
     if text is None:
         raise Degraded("契约件非 UTF-8: %s" % CONTRACT_REL)
@@ -139,14 +186,27 @@ def parse_contract(repo: Path) -> Tuple[List[str], List[str], Dict[str, Dict[str
 
 
 # ── 路径匹配（三种形态: 精确 / dir/** / **/file）─────────────────────────────
-def match_path(rel: str, pat: str) -> bool:
+def match_path(rel: str, pat: str, closure: bool = False) -> bool:
+    """路径匹配。
+
+    closure=False（白名单 / 过渡表 / 默认）: `dir/**` = dir 自身 + **整棵子树**，不越出 dir/。
+    closure=True （**仅阻断清单**）: `dir/**` 额外吃「同前缀兄弟」——
+      `docs/plans/**` ⊇ `docs/plans.md`；`docs/synova/coordination/**` ⊇ `docs/synova/coordinationX/y.md`。
+      D1204/X1（K3 §R2 独立反例）: 严格子树下这两条被放行 = P1 逃逸面。
+
+    为什么只给阻断侧开闭包（方向性）:
+      · 阻断侧放宽 ⇒ 多拦，fail-closed（代价: `docs/planning/**` 等同前缀路径一并阻断，显式接受）；
+      · 白名单侧放宽 ⇒ 少拦，等于开后门（`docs/**` 会放过 `docs-old/`）⇒ 白名单恒为严格子树。
+    """
     if not pat:
         return False
     if pat == rel:
         return True
     if pat.endswith("/**"):
         base = pat[:-3].rstrip("/")
-        return rel == base or rel.startswith(base + "/")
+        if rel == base or rel.startswith(base + "/"):
+            return True
+        return bool(closure and base and rel.startswith(base))  # 同前缀兄弟（仅阻断侧）
     if pat.startswith("**/"):
         tail = pat[3:]
         return rel == tail or rel.endswith("/" + tail)
@@ -155,22 +215,55 @@ def match_path(rel: str, pat: str) -> bool:
     return False
 
 
+def is_colocation_exempt(pat: str) -> bool:
+    """`**/NAME` 形态 = 「同址代码文档」豁免（README/AGENTS/SKILL 随代码走，非任意目录可播种）。"""
+    return pat.startswith("**/")
+
+
+def colocated_with_code(repo: Path, rel: str) -> bool:
+    """同址判定（D1204/X3）: 父目录须含 ≥1 个非文档文件。
+
+    K3 §R2 X3 独立反例: 顶层新建 `reports/README.md`（目录内仅此一份 md）被
+    `**/README.md` 放行 = 「索引后门」——可在任意未授权目录用一份 README 开张。
+    契约 §3 该条的原意是「包/目录自己的契约文档**随代码走**」⇒ 判定「这里有没有代码」。
+    非 git 实现（看工作区实况）: 与 add/rename 次序无关；目录不存在 ⇒ 不放行（fail-closed）。
+    """
+    parent = rel.rsplit("/", 1)[0] if "/" in rel else ""
+    d = repo / parent if parent else repo
+    try:
+        if not d.is_dir():
+            return False
+        for child in d.iterdir():
+            if child.is_file() and not child.name.lower().endswith(DOC_EXTS):
+                return True
+    except OSError:
+        return False
+    return False
+
+
 def classify(
     rel: str,
     whitelist: List[str],
     blocked: List[str],
-    transition: Dict[str, Dict[str, str]],
-) -> Tuple[str, str, Dict[str, str]]:
-    """阻断优先于白名单（D1193 修复点①）: 先判 §3 ❌，再看过渡例外，最后才看白名单。"""
+    transition: Dict[str, Dict],
+    repo: Path,
+) -> Tuple[str, str, Dict]:
+    """阻断优先于白名单（D1193 修复点①）: 先判 §3 ❌，再看过渡例外，最后才看白名单。
+
+    D1204: 阻断侧走前缀闭包（X1）；`**/NAME` 白名单条目须同址有代码（X3）。
+    """
     for pat in blocked:
-        if match_path(rel, pat):
+        if match_path(rel, pat, closure=True):
             for tpat, meta in transition.items():
-                if match_path(rel, tpat):
+                if match_path(rel, tpat):  # 过渡例外**不**开闭包: 兄弟名不在例外内（fail-closed）
                     return "transition", tpat, meta
             return "block", pat, {}
     for pat in whitelist:
-        if match_path(rel, pat):
-            return "allow", pat, {}
+        if not match_path(rel, pat):
+            continue
+        if is_colocation_exempt(pat) and not colocated_with_code(repo, rel):
+            continue  # 同址豁免但同址无代码（如新建空目录的 README）⇒ 继续找，找不到就判未命中
+        return "allow", pat, {}
     return "block", "(未命中白名单)", {}
 
 
@@ -192,13 +285,28 @@ def collect_changed(repo: str, staged: bool, base: Optional[str]) -> List[str]:
 
 
 def collect_added(repo: str, staged: bool, base: Optional[str]) -> List[str]:
-    if staged:
-        args = ["diff", "--cached", "--name-only", "--diff-filter=A"]
-    elif base:
-        args = ["diff", "--name-only", "--diff-filter=A", base + "...HEAD"]
-    else:
+    """闸 3 的判据对象 = 「新入路径」（D1204/X2 修复）。
+
+    原实现 `--diff-filter=A` 只认真·新增 ⇒ `git mv 既有文档 → 阻断目录` 的 R(rename)
+    不进清单，实测三闸 PASS（K3 §R2 X2，P1）。
+      · 过滤改 **ACR**: A=新增 / R=重命名（新路径即入库）/ C=复制（新路径同理）
+      · 形态改 `--name-status` 并取**目标路径**（末列）——`R100\told\tnew` 取 new；
+        `A\tpath` 取 path。rename 一行两路径，只取右侧（旧路径已不在树上，判它无意义）。
+    语义边界: **M(修改) 不在清单内** —— 契约 §7「只判新增，存量不返工」不变。
+    """
+    nm = ["--name-status", "--diff-filter=ACR"]
+    if not staged and not base:
         return []
-    return [l for l in run_git(repo, args).splitlines() if l.strip()]
+    args = ["diff", "--cached", *nm] if staged else ["diff", *nm, str(base) + "...HEAD"]
+    out: List[str] = []
+    for line in run_git(repo, args).splitlines():
+        if not line.strip():
+            continue
+        parts = line.split("\t")
+        target = parts[-1].strip()  # A/M→path；R100/C75→右侧目标路径
+        if target:
+            out.append(target)
+    return out
 
 
 def collect_decisions(repo: Path) -> List[str]:
@@ -265,16 +373,17 @@ def gate2_supersede(repo: Path, decision_files: List[str]) -> Dict:
 
 # ── 闸 3 · 入库闸（md + html，只判新增 = 存量不返工，契约 §7）────────────────
 def gate3_inbound(
+    repo: Path,
     files: List[str],
     whitelist: List[str],
     blocked: List[str],
-    transition: Dict[str, Dict[str, str]],
+    transition: Dict[str, Dict],
 ) -> Dict:
     docs = [f for f in files if f.lower().endswith(DOC_EXTS)]
     violations: List[Dict] = []
     hits: "collections.Counter[str]" = collections.Counter()
     for f in docs:
-        kind, why, _meta = classify(f, whitelist, blocked, transition)
+        kind, why, _meta = classify(f, whitelist, blocked, transition, repo)
         if kind == "block":
             violations.append({"file": f, "line": 0, "reason": block_reason(why)})
         elif kind == "transition":
@@ -285,6 +394,93 @@ def gate3_inbound(
         "checked": len(docs),
         "transition_hits": [{"pattern": k, "count": v} for k, v in sorted(hits.items())],
     }
+
+
+# ── 过渡表台账（D1204/#1252: 出口条件机器化 + 存量动态派生，禁双源）──────────
+def collect_tracked(repo: Path) -> Tuple[Optional[List[str]], str]:
+    """全量 tracked 路径（过渡台账的**单一来源**）。
+
+    @return (清单, 失败原因)；非 git 仓库 / 取数失败 ⇒ (None, 原因) —— 调用方
+            必须**显式可见**（stderr warning + artifact 标记），不得当作"通过"。
+    为什么此处不 Degraded: 台账自检不是阻断判据（闸 1-3 才是），非 git 夹具
+            （`--files`/`--all-decisions` 的合成仓）不该被台账项连带 exit 2；
+            真实门禁路径（pre-commit/CI）恒在 git 工作树内 ⇒ 台账恒被评估。
+    """
+    try:
+        return ([l for l in run_git(str(repo), ["ls-files"]).splitlines() if l.strip()], "")
+    except Degraded as exc:
+        return (None, str(exc))
+
+
+def evaluate_transition_table(
+    transition: Dict[str, Dict],
+    tracked: Optional[List[str]],
+    tracked_err: str,
+) -> Dict:
+    """逐行算「动态派生存量 / 出口是否已达 / 声明值与实测是否一致」。
+
+    判据单源（#1252 ③）: 存量**由 tracked 实况派生**，契约里不再写数（§7「数量列一律填 —」）。
+    可选 `declared` 列仅作**交叉校验**: 填了就必须等于实测，否则违规（正是 K3 §R3
+    的 214/215 失配 —— 声明即腐）。
+    """
+    rows: List[Dict] = []
+    declared_violations: List[Dict] = []
+    stale_rows: List[Dict] = []
+    if tracked is None:
+        for pat, meta in sorted(transition.items()):
+            rows.append({
+                "pattern": pat, "owner": meta.get("owner", ""), "exit": meta.get("exit", ""),
+                "exit_check": "%s:%s=%d" % (meta["exit_check"]["kind"], meta["exit_check"]["arg"],
+                                            meta["exit_check"]["want"]),
+                "tracked": None, "declared": meta.get("declared", ""), "exit_met": None,
+            })
+        return {"evaluated": False, "reason": tracked_err, "rows": rows,
+                "declared_violations": declared_violations, "stale_rows": stale_rows}
+    for pat, meta in sorted(transition.items()):
+        ec = meta["exit_check"]
+        n = sum(1 for f in tracked if match_path(f, ec["arg"])) if ec["kind"] == "tracked-count" else -1
+        exit_met = (n == ec["want"])
+        declared = (meta.get("declared") or "").strip()
+        row = {
+            "pattern": pat, "owner": meta.get("owner", ""), "exit": meta.get("exit", ""),
+            "exit_check": "%s:%s=%d" % (ec["kind"], ec["arg"], ec["want"]),
+            "tracked": n, "declared": declared, "exit_met": exit_met,
+        }
+        if declared and declared not in ("—", "-"):
+            row["declared_matches"] = (declared == str(n))
+            if not row["declared_matches"]:
+                declared_violations.append({
+                    "row": pat,
+                    "reason": "声明存量 %s ≠ 实测 %s（禁双源: 删掉声明值，存量由执行体动态派生）" % (declared, n)})
+        rows.append(row)
+        if exit_met:
+            stale_rows.append({"row": pat, "reason":
+                               "已达出口条件（%s 实测 %d == want %d）⇒ 须从契约 §9.1 移除该行（出口即失效，防「临时即永久」）"
+                               % (ec["arg"], n, ec["want"])})
+    return {"evaluated": True, "reason": "", "rows": rows,
+            "declared_violations": declared_violations, "stale_rows": stale_rows}
+
+
+def write_hits_artifact(repo: Path, path_arg: Optional[str], payload: Dict) -> Tuple[Optional[str], str]:
+    """过渡台账 artifact 落盘（#1252 ②: transition_hits 之外还要可复查载体）。
+
+    @return (落盘路径, 失败原因)
+    显式 `--hits-out` = 调用方契约的一部分 ⇒ 不可写即 Degraded（fail-closed）；
+    默认落点不可写（只读检出等）⇒ stderr warning（**显式可见，不静默**），不影响闸判定。
+    """
+    target = Path(path_arg) if path_arg else (repo / HITS_OUT_REL)
+    if not target.is_absolute():
+        target = repo / target
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with target.open("w", encoding="utf-8") as fh:
+            json.dump(payload, fh, ensure_ascii=False, indent=2, sort_keys=True)
+            fh.write("\n")
+    except OSError as exc:
+        if path_arg:
+            raise Degraded("过渡台账 artifact 不可写（--hits-out 显式指定）%s: %s" % (target, exc))
+        return (None, str(exc))
+    return (str(target), "")
 
 
 # ── 逃生舱（铁律 11: 显式降级 + 落盘，不静默）────────────────────────────────
@@ -319,6 +515,8 @@ def main() -> int:
     ap.add_argument("--files", nargs="*", default=None, help="显式新增文件清单（CI/自查）")
     ap.add_argument("--baseline", action="store_true", help="全量 tracked 文档跑闸 3（出库工作清单）")
     ap.add_argument("--all-decisions", action="store_true", help="全量决策件跑闸 1/2")
+    ap.add_argument("--hits-out", default=None,
+                    help="过渡台账 artifact 落点（默认 %s；显式指定 ⇒ 不可写即 exit 2）" % HITS_OUT_REL)
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args()
 
@@ -345,10 +543,22 @@ def main() -> int:
             new_decs = decisions
         g1 = gate1_format(repo, new_decs)
         g2 = gate2_supersede(repo, new_decs)
-        g3 = gate3_inbound(added, whitelist, blocked, transition)
+        g3 = gate3_inbound(repo, added, whitelist, blocked, transition)
         g3 = apply_ack(repo, g3)
+        # 过渡台账: 存量动态派生 + 出口是否已达（判据源 = tracked 实况，非契约里手写的数）
+        tracked, tracked_err = collect_tracked(repo)
+        tt = evaluate_transition_table(transition, tracked, tracked_err)
     except Degraded as exc:
         sys.stderr.write("degraded: %s\n" % exc)
+        if a.hits_out:
+            try:
+                write_hits_artifact(repo, a.hits_out, {
+                    "artifact": "doc-contract-transition", "conclusion": "degraded",
+                    "generated_at": datetime.datetime.now().astimezone().isoformat(),
+                    "repo": str(repo), "reason": str(exc),
+                })
+            except Degraded as exc2:
+                sys.stderr.write("degraded: %s\n" % exc2)
         return 2
 
     if a.baseline:
@@ -361,6 +571,17 @@ def main() -> int:
         mode = "base:" + str(a.base)
     else:
         mode = "none"
+    # 出口已达的行: **复审模式（--baseline）判红**；逐 PR 模式只出 NOTE。
+    #   理由: 台账是**契约自身的棘轮**（"临时即永久"防线），不是每 PR 的判据 ——
+    #   把「本仓过渡行已到出口」判给不相关的夹具/分支会制造与变更无关的假红
+    #   （任何 0 个 task-briefs 的合法夹具都会被连坐）。声明值≠实测（双源腐化）
+    #   则**一律判红**：那是单源纪律问题，任何模式下都是错的。
+    tt_violations = list(tt["declared_violations"]) + (list(tt["stale_rows"]) if a.baseline else [])
+    tt["pass"] = not tt_violations
+    tt["violations"] = tt_violations
+    if not tt["evaluated"]:
+        sys.stderr.write("warning: 过渡表出口判据未评估（非 git 工作树/取数失败）: %s\n" % tt["reason"])
+
     result = {
         "repo": str(repo),
         "mode": mode,
@@ -368,9 +589,32 @@ def main() -> int:
         "gate1_format": g1,
         "gate2_supersede": g2,
         "gate3_inbound": g3,
+        "transition_table": tt,
     }
-    ok = all(result[k]["pass"] for k in ("gate1_format", "gate2_supersede", "gate3_inbound"))
+    ok = all(result[k]["pass"] for k in ("gate1_format", "gate2_supersede", "gate3_inbound", "transition_table"))
     result["conclusion"] = "pass" if ok else "fail"
+
+    # 落盘（#1252 ②）: transition_hits + 存量/出口台账 = 复审时取数的唯一载体
+    if tt["evaluated"] or a.hits_out:
+        payload = {
+            "artifact": "doc-contract-transition",
+            "generated_at": datetime.datetime.now().astimezone().isoformat(),
+            "repo": str(repo),
+            "mode": mode,
+            "conclusion": result["conclusion"],
+            "gate3": {"checked": g3["checked"], "violations": len(g3["violations"]),
+                      "transition_hits": g3.get("transition_hits") or []},
+            "transition_table": {k: tt[k] for k in ("evaluated", "reason", "rows")},
+        }
+        try:
+            path, werr = write_hits_artifact(repo, a.hits_out, payload)
+        except Degraded as exc:
+            # 显式 --hits-out = 调用方契约的一部分 ⇒ 不可写 fail-closed（不许 traceback 变 rc=1 混淆三态）
+            sys.stderr.write("degraded: %s\n" % exc)
+            return 2
+        if werr:
+            sys.stderr.write("warning: 过渡台账 artifact 未落盘（%s）: %s\n" % (repo / HITS_OUT_REL, werr))
+        result["transition_artifact"] = path
 
     if a.json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
@@ -392,6 +636,24 @@ def main() -> int:
             print("过渡放行命中（不算违规；出口条件见契约 §9.1）:")
             for t in th:
                 print("       - %s x%d" % (t["pattern"], t["count"]))
+        if not tt["evaluated"]:
+            print("[NOTE] 过渡台账未评估（非 git 工作树/取数失败）: %s" % tt["reason"])
+        elif tt["rows"]:
+            print("过渡表台账（存量=动态派生，判据源=契约 §9.1 + git ls-files）:")
+            for r in tt["rows"]:
+                print("       - %s  实测存量=%s  want=%s  出口%s  责任线=%s"
+                      % (r["pattern"], r["tracked"],
+                         r["exit_check"].rsplit("=", 1)[-1],
+                         "已达" if r["exit_met"] else "未达", r["owner"]))
+        if tt["violations"]:
+            print("[FAIL] 过渡表台账自检")
+            for v in tt["violations"]:
+                print("       - %s -- %s" % (v["row"], v["reason"]))
+        elif tt["stale_rows"]:
+            print("[NOTE] 已达出口条件的过渡行 %d 条（--baseline 复审模式判红）: %s"
+                  % (len(tt["stale_rows"]), ", ".join(v["row"] for v in tt["stale_rows"])))
+        if result.get("transition_artifact"):
+            print("过渡台账 artifact: %s" % result["transition_artifact"])
         if result["gate3_inbound"].get("acked"):
             print("WARNING: 逃生舱 SYNO_DOC_CONTRACT_ACK=1 已放行 —— 原因=%s（已落 degraded-events.log）"
                   % result["gate3_inbound"].get("ack_reason"))

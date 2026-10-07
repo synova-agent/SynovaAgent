@@ -1,11 +1,12 @@
 ---
 title: "SynovaAgent 文档契约"
-version: "1.1.0"
+version: "1.1.1"
 status: implemented（已生效）
 approved_at: "2026-09-27"
 effective: "2026-09-27"
 amended_at: "2026-10-07"
 amended_by: "D1193 — 闸 3 判据修复（阻断优先 / +html / 契约动态解析）+ 接线；判据正确性待 K3 独立复核"
+amended_by_2: "D1204 — K3 §R2/§R3 逃逸面收敛（X1 阻断侧前缀闭包 / X2 ACR+rename 目标路径 / X3 同址豁免需同址有代码）+ §9.1 出口条件机器化、存量动态派生、过渡台账落 artifact；判据正确性须 K3 独立复核（红线 R-6）"
 owner: CTO
 supersedes:
   - docs/synova/DOCUMENT-CONVENTIONS.md
@@ -196,7 +197,15 @@ decisions/{lifecycle}/{class}/YYYY-MM-DD-topic-title.md
 
 > **优先级（D1193 修复点①）**：**阻断清单优先于白名单**。首版把白名单放在前面，
 > `docs/**` 一击中即放行 ⇒ `BLOCKED_HINTS` 成死代码，§3 ❌ 点名的 coordination/、plans/ **永不触发**。
-> 匹配语义：`dir/**` = 整棵子树；`**/NAME` = 任意层同名文件；否则精确匹配。
+> 匹配语义（D1204 修订，K3 §R2 逃逸面收敛后）：
+> - `dir/**`（**阻断清单侧**）= `dir` 自身 + 整棵子树 + **同前缀兄弟**（前缀闭包）
+>   —— `docs/plans/**` ⊇ `docs/plans.md`；`docs/synova/coordination/**` ⊇ `docs/synova/coordinationX/y.md`。
+>   代价：`docs/planning/**` 等同前缀无关路径一并阻断（多拦=fail-closed，显式接受）。
+> - `dir/**`（**白名单侧**）= 严格子树，**不开闭包** —— 放宽 = 漏拦（`docs/**` 会放过 `docs-old/`）。
+> - `**/NAME`（同址代码文档豁免，仅白名单）= 任意层同名文件，但**须同址有代码**：父目录内至少
+>   一个非文档文件（`.md/.markdown/.html/.htm` 之外）。空目录/仅有一份 README 的新目录**不放行**
+>   （D1204/X3：`reports/README.md` 曾是「索引后门」）。
+> - 其余 = 精确匹配。
 
 <!-- doc-contract:whitelist:begin -->
 ```doc-contract-whitelist
@@ -252,9 +261,14 @@ novis-backup-20260526/**
 ```
 <!-- doc-contract:blocked:end -->
 
-**闸 3 判据对象 = 新增 `.md` + `.html`**（D1193 修复点②：**HTML 不是旁路**——同类内容写成 html
+**闸 3 判据对象 = 「新入 `.md` + `.html`」**（D1193 修复点②：**HTML 不是旁路**——同类内容写成 html
 同样阻断；首版只认 `.md`，实测漏网 `docs/synova/coordination/四问-64格.html`）。
-只判**新增（`--diff-filter=A`）**，存量不返工（§7）；路径用 `git ls-files` 的仓库相对形式。
+只判**新入（`--diff-filter=ACR`）**，存量不返工（§7）；路径用 `git ls-files` 的仓库相对形式。
+- **D1204/X2**：过滤从 `A` 扩到 **`ACR`** 并取 `--name-status` 的目标路径 ——
+  `git mv 既有文档 → 阻断目录` 的 **R(rename)** 旧版不进清单（实测三闸 PASS，P1 逃逸）；
+  `C`(copy) 同为新路径。**`M`(修改) 仍不在清单内**（存量不返工，语义未变）。
+- **D1204/X3**：`**/README.md` · `**/AGENTS.md` · `**/SKILL.md` 的放行**限定在「同址有代码」的目录**
+  —— 见上文匹配语义；新目录用一份 README 播种索引不再放行。
 
 **逃生舱（铁律 11：显式降级 + 落盘，不静默）**：`SYNO_DOC_CONTRACT_ACK=1`（须同时给
 `SYNO_DOC_CONTRACT_ACK_REASON=<原因>`）**只降级闸 3**，闸 1/2 不可豁免；每次放行必须写
@@ -384,18 +398,35 @@ novis-backup-20260526/**
 > 还与 §3 ❌ 行矛盾。本节把过渡做成**显式、可测、带出口条件**：命中的每一件都计入
 > `transition_hits`（**不算违规**，但可计数）⇒ 迁移进度可观测。
 
-| 过渡放行路径 | 为什么暂时放行（不是「忘了」） | 出口条件（达成即从本表移除） | 责任线 | as_of 2026-10-07 存量 |
+| 过渡放行路径 | 为什么暂时放行（不是「忘了」） | 出口条件（**机器可判**，达成即从本表移除） | 责任线 | 存量 |
 |---|---|---|---|---|
-| `.claude/task-briefs/**` | 组 6/12 **物理要求每任务一份 brief**，落点未迁 ⇒ 硬拦 = 必然 `--no-verify`（V3.9 教训：硬阻断有效，但拉红到底必被绕过） | brief 落点迁出仓库（承接卡 D1050 / B2 出库） | 治理线 | 214 |
+| `.claude/task-briefs/**` | 组 6/12 **物理要求每任务一份 brief**，落点未迁 ⇒ 硬拦 = 必然 `--no-verify`（V3.9 教训：硬阻断有效，但拉红到底必被绕过） | `git ls-files '.claude/task-briefs/**' \| wc -l` = **0** —— 机器出口判据 `tracked-count:.claude/task-briefs/**=0`（承接卡 D1050 / B2 出库） | 治理线 | **—**（动态派生） |
+
+**存量列一律填 `—`**（与 §7 同规：**数字不写进契约**）。理由有实证：本表 D1193 接线时写 `214`，
+**合并当刻实测即 `215`**（K3 §R3 判「合并即腐」）。现行存量由执行体**动态派生**
+（`git ls-files` × 本表路径模式）⇒ **判据单源，没有第二处可以腐**。
 
 机器可读源（执行体解析这里，人工表只是同一事实的可读版）：
 
 <!-- doc-contract:transition:begin -->
 ```doc-contract-transition
-# 路径 | 出口条件 | 责任线 | as_of 存量
-.claude/task-briefs/** | brief 落点迁出仓库（D1050/B2 出库） | 治理线 | 214
+# 路径 | 人读出口条件 | 责任线 | 机器出口判据(tracked-count:<路径模式>=<N>) | 声明存量(可选:填了必须=实测)
+.claude/task-briefs/** | brief 落点迁出仓库（D1050/B2 出库）：git ls-files '.claude/task-briefs/**' | wc -l = 0 | 治理线 | tracked-count:.claude/task-briefs/**=0 | —
 ```
 <!-- doc-contract:transition:end -->
+
+**过渡台账 artifact（D1204 / #1252 ②）**：执行体每次运行把 `transition_hits` + 逐行
+`实测存量 / 出口是否已达 / 声明值交叉校验` 落到
+`.codex/control-tower/logs/doc-contract-transition.json`（`--hits-out <path>` 可改落点；
+显式指定而不可写 ⇒ degraded exit 2）。**复审取数只认这个载体** —— stdout 会滚走，artifact 不滚。
+
+**棘轮（防「临时即永久」）**：
+
+- 每轮契约复审必须核 artifact 的 `transition_hits`；连续两轮不下降 ⇒ 该行判「机制失效」上报，
+  而不是继续记作「过渡中」。
+- `exit_met=true`（出口已达）的行在 **`--baseline` 复审模式判红**，逐 PR 模式只出 `[NOTE]`
+  —— 台账是**契约自身的棘轮**，不是每 PR 判据；否则任何「0 个 task-briefs」的合法夹具都被连坐。
+- **声明存量 ≠ 实测 ⇒ 任何模式都判红**（D1193 的 `214 ≠ 215` 即此型；禁双源）。
 
 **其余 §3 阻断清单不设过渡**（`docs/synova/coordination/**`、`docs/plans/**`、
 `docs/synova/audit-reports/**`、`docs/synova/dispatch/**`、归档区、`vendor/**`、`novis-backup-20260526/**`）：
@@ -403,8 +434,8 @@ novis-backup-20260526/**
 且 coordination 与 dispatch 的**接手已存在**（§11 库外档案仓 + PR 正文 + 卡 note，STATE.md §8 在跑）
 ⇒ 照 §3 直接阻断，错误信息点名落点。
 
-**本表的 self-check（防「临时即永久」）**：每轮契约复审必须核 `transition_hits` 计数；
-连续两轮不下降 ⇒ 该行为「机制失效」上报，而不是继续记作「过渡中」。
+**本表的 self-check（防「临时即永久」）**：见上方棘轮三条 —— 计数核在 artifact，
+非下降判定在 `--baseline`，声明值腐化在任何模式都判红。
 
 ---
 

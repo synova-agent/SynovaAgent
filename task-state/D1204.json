@@ -1,0 +1,11 @@
+{
+  "task_id": "D1204",
+  "title": "DOC-CONTRACT 三闸逃逸修复 + 过渡表出口机器化 + SIGPIPE 假红硬化",
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-07",
+  "updated_by": "line-c-doc"
+}
