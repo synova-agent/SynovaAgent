@@ -1,0 +1,11 @@
+{
+  "task_id": "D1238",
+  "title": "docs-only 判定：push 下 base 解析 + 空变更集第三态（卡 #1323）",
+  "status": "claimed",
+  "spec": "卡 #1323（Lead 原写 #1236，已更正）。ci.yml 的 Detect docs-only change (D515) 判定在 push 到 main 时 HEAD==origin/main ⇒ 变更集空 ⇒ grep -qvE 无行命中返 1 ⇒ 落 else ⇒ docs_only=true ⇒ job 早退 ⇒ Gate Integrity / Control Tower 间歇性 skip（近 5 个 main run 的 GATE-INTEGRITY-CHECK = 0,0,0,0,2）。两条定位事实: ① :74 注释已写下该行为（已知行为、分支后果从未被检验，非漏边界）；② 同段对「判据不可读」「origin/main 不可解析」都已 fail-closed，唯独空集没有 ⇒ 修它=补齐既有原则。修法: 9 份同改（该块在 ci.yml 内联 9 份、逐字节同源）——base 解析（push ⇒ github.event.before；全零 SHA/不可解析 ⇒ 显式全量）+ 保留原 origin/main fail-safe 原文（D1023 守卫按该字面量计数 9）+ 新增 $DS_BASE fail-safe + 空变更集显式第三态（::warning + docs_only=false，铁律 11）。夹具: 新文件 docsonly-diff-base.test.sh，从 ci.yml 提取判定块原文执行（零副本）——先红(旧语义 docs_only=true)/后绿/反例(真 docs-only 仍 true)/全零边界/结构断言(push base≠origin/main)/PR 回归 ⇒ 10/10。红线: 未改任何 job name:（ruby 逐条比对 13 个 id+name 一致）。未碰线 B 的 D1023 守卫与 ci-signal-classify 夹具。空白窗口已登记 + 合并后用 workflow_dispatch force_control_tower_tests=true 做 main 全量回扫。",
+  "impl": "ci.yml 9 份判定块同改（base 解析 + 第三态）；新增 tests/control-tower/docsonly-diff-base.test.sh（提取式零副本夹具）。",
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-08",
+  "updated_by": "line-d-own"
+}

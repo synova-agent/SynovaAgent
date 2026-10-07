@@ -136,7 +136,7 @@ run_expect 0 "D758 证据 + Win 代码 + Mac 脚本（跨域不阻断）" --file
 
 echo ""
 echo "── 4. 边界 ──"
-run_expect 0 "0 文件（空写集）" --files ""
+run_expect 0 "0 文件（--files \"\" 显式空写集 ⇒ 接管，不落真实 diff）" --files ""
 run_expect 0 "恰好等于上限" --max-files 2 --files "scripts/control-tower/check-pr-budget.sh tests/control-tower/check-pr-budget.test.sh"
 run_expect 1 "上限 1、写集 2" --max-files 1 --files "scripts/control-tower/check-pr-budget.sh tests/control-tower/check-pr-budget.test.sh"
 
@@ -575,6 +575,40 @@ if [ "$_e" = 1 ] && echo "$OUT" | grep -q "❌ ① D1028 旁路封堵"; then pas
 OUT="$(bash "$MT3" --diff-status "$SET5E" --decl-file "$DCL/ok5exact.md" 2>&1)"; _e=$?
 if echo "$OUT" | grep -q "❌ ① D1028 旁路封堵"; then fail "16.3 变异体3 仍报旁路封堵（夹具不判别）"; else pass "16.3 去掉 DENY_EXACT 判据 → 「旁路封堵」行消失（夹具变红）"; fi
 if echo "$OUT" | grep -q "死代码清理声明生效"; then pass "16.3 变异体3 误放行 DENY_EXACT（⚠️ 生效行出现）—— 证明收紧判据承重"; else fail "16.3 变异体3 未误放行"; fi
+
+echo ""
+echo "── 17. D1235 空写集注入缝（先红后绿 + 反例；来源: #1302 附带发现）──"
+# 为什么**自建沙箱**: 旧口径 `[ -n "$FILES_OVERRIDE" ]` 无法区分「--files \"\"」与「未给 --files」
+#   ⇒ 前者直落**真实三点 diff** ⇒ 该用例的成败取决于**当前工作树的 diff 大小**（>12 即必红，
+#   且误报成「空写集失败」；`git fetch` 令 origin/main 前移后又会自行转绿 ⇒ 表现为"flake"）。
+#   夹具自带 14 文件变更的沙箱仓 ⇒ 与工作树完全解耦、在 CI 中**确定性**红/绿。
+_ESB="$TMPD/empty-set-sb"; mkdir -p "$_ESB"
+git -C "$_ESB" init -q
+git -C "$_ESB" config user.email "t@t"; git -C "$_ESB" config user.name "t"
+: > "$_ESB/base.txt"; git -C "$_ESB" add -A >/dev/null 2>&1; git -C "$_ESB" commit -qm base
+_i=0; while [ "$_i" -lt 14 ]; do _i=$((_i + 1)); printf 'x%s\n' "$_i" > "$_ESB/m$_i.txt"; done
+git -C "$_ESB" add -A >/dev/null 2>&1; git -C "$_ESB" commit -qm "14 files"
+_ES_N="$(git -C "$_ESB" diff --name-only 'HEAD~1...HEAD' | wc -l | tr -d ' ')"
+[ "$_ES_N" = 14 ] && pass "夹具自查: 沙箱三点 diff = 14 文件（> 上限 12 ⇒ 缺省路径必红）" \
+  || fail "夹具自身失真: 沙箱三点 diff=${_ES_N}（应 14）"
+
+# 17.1 先红后绿（判别性本体）: `--files ""` 必须 = **真空写集** ⇒ exit 0
+#      （旧口径此处因直落真实 diff 而 exit 1 —— 本断言即"改坏即红"的取证点）
+_OUT="$(cd "$_ESB" && bash "$TOOL" --base HEAD~1 --files "" 2>&1)"; _rc=$?
+[ "$_rc" = 0 ] && pass "17.1 --files \"\" = 真空写集 ⇒ exit 0（旧口径在此 exit 1）" \
+  || fail "17.1 --files \"\" 未被接管: rc=${_rc}（期望 0）"
+echo "$_OUT" | grep -q "变更文件数 0" && pass "17.2 判据实况: 输出「变更文件数 0」（真空集确已接管）" \
+  || fail "17.2 未走注入缝: $(echo "$_OUT" | grep -o '变更文件数 [0-9]*' | head -1)"
+
+# 17.3 反例（**证明缺省路径未被改坏**）: 不传 --files ⇒ 仍走真实三点 diff ⇒ 14 > 12 ⇒ exit 1
+_OUT2="$(cd "$_ESB" && bash "$TOOL" --base HEAD~1 2>&1)"; _rc2=$?
+[ "$_rc2" = 1 ] && pass "17.3 反例: 不传 --files ⇒ 仍走真实 diff（14>12）⇒ exit 1（缺省路径未变）" \
+  || fail "17.3 反例失真: rc=${_rc2}（期望 1 —— 缺省路径被改坏了）"
+
+# 17.4 与 --diff-status 对称性: 空串同样是「显式提供 ⇒ 接管」（既有一致口径）
+_OUT3="$(cd "$_ESB" && bash "$TOOL" --base HEAD~1 --diff-status "" 2>&1)"; _rc3=$?
+[ "$_rc3" = 0 ] && pass "17.4 对称性: --diff-status \"\" 亦为「显式提供 ⇒ 接管」⇒ exit 0" \
+  || fail "17.4 --diff-status 空串语义不一致: rc=$_rc3"
 
 echo ""
 echo "═══════════════════════════════════════════════════════════"
