@@ -77,8 +77,8 @@ describe('SchemaMigration — 幂等', () => {
 describe('SchemaMigration — v2 迁移 (D355 graph_nodes props)', () => {
   beforeEach(async () => { await loadModules(); });
 
-  it('SCHEMA_VERSION 应为 3（含 D355 + #1053 metric_readings 迁移）', () => {
-    expect(SCHEMA_VERSION).toBe(3);
+  it('SCHEMA_VERSION 应为 4（含 D355 + #1053 metric_readings + #1371 orgs 迁移）', () => {
+    expect(SCHEMA_VERSION).toBe(4);
   });
 
   it('旧库（props_json 无 props）reconcile 后补 props 列并回填数据', () => {

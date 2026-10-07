@@ -11,13 +11,14 @@ import type Database from 'better-sqlite3';
 import { createLogger } from '@synova/logger';
 import { graphNodesPropsMigration } from './migrations/001-graph-nodes-props';
 import { metricReadingsMigration } from './migrations/002-metric-readings';
+import { orgsMigration } from './migrations/003-orgs';
 
 const log = createLogger('store/schema-migration');
 
 // ═══ 常量 ═══
 
 /** 当前 schema 版本。每次新增迁移文件时递增。 */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 // ═══ Migration 定义 ═══
 
@@ -36,6 +37,8 @@ const migrations: Migration[] = [
   graphNodesPropsMigration,
   // #1053（2-1a）: 承重件 W1 —— 测量值时序表 metric_readings（17 列 + 3 索引）
   metricReadingsMigration,
+  // #1371: 租户注册表 orgs（cron org 维度的唯一真源；CTO 2026-10-08 裁）
+  orgsMigration,
 ];
 
 // ═══ reconcileSchema ═══
