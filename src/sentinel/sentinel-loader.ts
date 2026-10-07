@@ -10,7 +10,7 @@ import { readdirSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { pathToFileURL } from 'url';
 import { createLogger } from '@synova/logger';
-import type { SentinelFinding, SentinelCheckResult, SentinelThresholdPair } from './types';
+import type { MetricRow, SentinelFinding, SentinelCheckResult, SentinelThresholdPair } from './types';
 
 import { withOrgScope } from './org-scope';
 const log = createLogger('sentinel/loader');
@@ -303,6 +303,36 @@ export async function registerLoadedSentinels(): Promise<{ registered: number; e
           const findings: SentinelFinding[] = Array.isArray(raw) ? raw : ((raw as Record<string, unknown>)?.findings as SentinelFinding[]) || [];
           // D577 缺陷 C: degraded 传播（aggregate 对象形态返回时），不再硬编码丢失（铁律 31）
           const degraded = !Array.isArray(raw) && (raw as Record<string, unknown>)?.degraded === true;
+          // #1375（A2）：**指标级接线** —— 哨兵只返回结构化 metrics，loader 统一落库
+          const metrics: MetricRow[] = Array.isArray(raw)
+            ? []
+            : ((raw as Record<string, unknown>)?.metrics as MetricRow[] | undefined) ?? [];
+          const runId = `run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+          const defVersion = `${manifest.name}@${manifest.version || '1.0.0'}`;
+          if (metrics.length > 0) {
+            const sink = (context as { metricSink?: (row: Record<string, unknown>) => unknown }).metricSink;
+            if (!sink) {
+              log.warn({ sentinelId: `sentinel-${manifest.name}`, count: metrics.length, degraded: true, reason: 'no-sink' },
+                '有 metrics 但无 sink（该路径未注入）⇒ 跳过写入（显式降级，不静默）');
+            } else {
+              for (const m of metrics) {
+                sink({
+                  orgId: teamId,
+                  metricId: m.metricId,
+                  value: m.value,
+                  unit: m.unit,
+                  entityId: '*',
+                  sourceType: 'compute',
+                  sourceId: m.sourceId ?? `sentinel-${manifest.name}`,
+                  evidenceRef: m.evidenceRef ?? `sentinel:${manifest.name}`,
+                  observedAt: new Date().toISOString(),
+                  runId,
+                  defVersion,
+                  inputDigest: m.inputDigest,
+                });
+              }
+            }
+          }
           const result: SentinelCheckResult = {
             sentinelId: `sentinel-${manifest.name}`,
             ok: true,
@@ -310,6 +340,7 @@ export async function registerLoadedSentinels(): Promise<{ registered: number; e
             durationMs: 0,
             checkedAt: new Date().toISOString(),
           };
+          if (metrics.length > 0) result.metrics = metrics;
           if (degraded) result.degraded = true;
           return result;
         },

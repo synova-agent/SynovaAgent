@@ -75,6 +75,8 @@ export interface SentinelCheckResult {
   durationMs: number;
   /** 检查时间 */
   checkedAt: string;
+  /** #1375：本轮产出的测量值行（loader 统一落库；哨兵不碰库） */
+  metrics?: MetricRow[];
   /** 错误信息 (ok=false 时) */
   error?: string;
   /** 降级标记 (部分数据不可用但仍产出结果) */
@@ -90,6 +92,23 @@ export interface SentinelCheckResult {
 export interface SentinelAggregateResult {
   findings: SentinelFinding[];
   degraded?: boolean;
+  /** #1375（A2）：哨兵只**返回**结构化 metrics，**不碰库**（写库统一在 loader） */
+  metrics?: MetricRow[];
+}
+
+/**
+ * 哨兵产出的**测量值行**（#1375 A2；**结构类型**，不引驱动/表耦合）。
+ * @field inputDigest 可选：**由哨兵**提供（它才知道读了什么输入）；缺省 ⇒ 该行 degraded=1（不编假值）
+ * @invariant 哨兵**不得**写库；写入契约（幂等/只追加/永不抛/显式降级）只在 writer 一处
+ */
+export interface MetricRow {
+  metricId: string;
+  value: number;
+  unit?: string;
+  sourceId?: string;
+  evidenceRef?: string;
+  /** 读入输入的规范化哈希（节点 id + props 稳定序列化）；缺省 ⇒ null ⇒ degraded=1 */
+  inputDigest?: string;
 }
 
 /** 哨兵阈值对（manifest.json thresholds 字段值形态）。warning/critical 数值语义随指标方向而定（高于/低于触发），由各 aggregate 判定式决定。 */
