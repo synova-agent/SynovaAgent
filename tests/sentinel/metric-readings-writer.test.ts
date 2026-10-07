@@ -147,6 +147,8 @@ describe('测量值写入 sink（#1054 / 2-1b · V2/V7）', () => {
     const sink: MetricSink = createMetricSink(db);
     const ctx: SentinelContext = {
       db: stubGraphDb([{ revenue: 1000, cost: 200, operating_expenses: 300, cash_balance: 5000, period: '2026-09' }]),
+      // #1376 必要连带：cash-flow 已改为**显式取用** `context.rawDb`（读能力契约）
+      rawDb: { prepare: () => ({ all: () => [{ props: JSON.stringify({ revenue: 1000, cost: 200, operating_expenses: 300, cash_balance: 5000, period: '2026-09' }) }] }) },
       now: new Date('2026-10-08T00:00:00Z'),
       teamId: 'org-sample',
       metricSink: sink,
@@ -201,6 +203,7 @@ describe('测量值写入 sink（#1054 / 2-1b · V2/V7）', () => {
     const sink: MetricSink = createMetricSink(db);
     const makeCtx = (checkedAt: string, revenue: number): SentinelContext => ({
       db: stubGraphDb([{ revenue, cost: 200, operating_expenses: 300, cash_balance: 5000, period: '2026-09' }]),
+      rawDb: { prepare: () => ({ all: () => [{ props: JSON.stringify({ revenue, cost: 200, operating_expenses: 300, cash_balance: 5000, period: '2026-09' }) }] }) },
       now: new Date(checkedAt),
       teamId: 'org-1',
       metricSink: sink,

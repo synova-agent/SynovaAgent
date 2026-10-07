@@ -38,7 +38,18 @@ function splitDb(db: Database.Database): { prepare(sql: string): { all(): unknow
   };
 }
 function ctxFor(db: Database.Database, teamId?: string): SentinelContext {
-  return { db: splitDb(db), now: new Date('2026-10-08T00:00:00Z'), teamId, metricSink: createMetricSink(db) };
+  // #1376 必要连带：哨兵/helper 已改为显式取用 `context.rawDb`
+  //   rawDb 需【路由】：`graph_nodes` 查询 ⇒ 夹具行；其余 ⇒ 真库（如 orgs / metric_readings）
+  const rawDb = {
+    prepare: (sql: string) => ({
+      all: (...args: unknown[]) => (sql.includes('graph_nodes')
+        ? [{ id: 'n-fixture', type: 'FINANCIAL', props: JSON.stringify({ revenue: 1000, cost: 200, operating_expenses: 300, cash_balance: 5000, period: '2026-09' }) }]
+        : (db.prepare(sql).all(...args) as unknown[])),
+      get: (...args: unknown[]) => db.prepare(sql).get(...args) as unknown,
+      run: (...args: unknown[]) => db.prepare(sql).run(...args) as { changes: number },
+    }),
+  };
+  return { db: splitDb(db), rawDb, now: new Date('2026-10-08T00:00:00Z'), teamId, metricSink: createMetricSink(db) };
 }
 function orgRows(db: Database.Database): string[] {
   const rows = db.prepare('SELECT DISTINCT org_id FROM metric_readings ORDER BY org_id').all() as Array<{ org_id: string }>;
@@ -86,9 +97,9 @@ describe('#1371 租户注册表（只读面 + 编排 + 扇出写路径）', () =
 
   it('V6 discoverTeams（修后）：读数 == 注册表 active 枚举；空注册表 ⇒ []（不再回落 default）', () => {
     addOrg(db, 'org-a'); addOrg(db, 'org-b'); addOrg(db, 'org-susp', 'suspended');
-    expect(discoverTeams({ db: splitDb(db), now: new Date() })).toEqual(['org-a', 'org-b']);
+    expect(discoverTeams({ db: splitDb(db), rawDb: db, now: new Date() })).toEqual(['org-a', 'org-b']);
     const empty = createMemoryDb(); reconcileSchema(empty);
-    expect(discoverTeams({ db: splitDb(empty), now: new Date() })).toEqual([]);
+    expect(discoverTeams({ db: splitDb(empty), rawDb: empty, now: new Date() })).toEqual([]);
   });
 
   // ── 扇出写路径（原 org-fanout.test.ts 的 2 例，逐条保留）──

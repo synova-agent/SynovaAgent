@@ -265,6 +265,9 @@ export async function registerLoadedSentinels(): Promise<{ registered: number; e
           //   注意：用 **ctx.teamId 原值**（不是下面的 'default' 兜底值）作为租户真源 ——
           //   `'default'` 是回落值、不是租户（#1322/#1371 同族）；无值 ⇒ 原样透传 + 计数未隔离。
           const store = withOrgScope(rawStore, ctx.teamId as string | undefined);
+          // #1376: 按需路径的读能力注入（`rawDb` 仅在传入句柄确是 raw 时提供；否则**显式缺席**）
+          const hasQueryNodes = typeof rawStore.queryNodes === 'function';
+          const hasPrepare = typeof (rawStore as { prepare?: unknown }).prepare === 'function';
           const teamId = (ctx.teamId as string) || 'default';
 
           // D577: 阈值注入（唯一生产解析点）—— manifest 基线 + memStore 覆写
@@ -284,6 +287,13 @@ export async function registerLoadedSentinels(): Promise<{ registered: number; e
           }
 
           // D577: 第 4 参注入 thresholds（aggregate 可选参，未声明者零影响）
+          context.graphStore = hasQueryNodes
+            ? (store as { queryNodes(type: string, filters?: Record<string, unknown>, graph?: string): Array<{ id: string; type: string; props: Record<string, unknown> }> })
+            : undefined;
+          context.rawDb = hasPrepare
+            ? (rawStore as { prepare(sql: string): { all(...p: unknown[]): unknown[]; get(...p: unknown[]): unknown; run(...p: unknown[]): { changes: number } } })
+            : undefined;
+
           const checkFn = sentinelObj as {
             check: (store: unknown, teamId: string, traversal?: unknown,
               thresholds?: Record<string, SentinelThresholdPair>) => unknown;

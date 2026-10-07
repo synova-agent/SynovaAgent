@@ -41,7 +41,13 @@ export function swapDbForContext(context: SentinelContext): () => void {
  */
 export function discoverTeams(context: SentinelContext): string[] {
   try {
-    const db = context.db as { prepare(sql: string): { all(): Array<{ team_id: string }> } } | null;
+    // #1376: **显式取用** raw 能力（`context.rawDb`）；缺席 ⇒ 空集 + warn（不静默；空结果 ≠ 隔离成功）
+    const rawDb = context.rawDb;
+    if (!rawDb) {
+      log.warn({ degraded: true, reason: 'rawDb-absent' }, 'rawDb 能力缺席 ⇒ 空集（该路径无 raw 句柄）');
+      return [];
+    }
+    const db = rawDb as { prepare(sql: string): { all(): Array<{ team_id: string }> } } | null;
     if (!db || typeof db.prepare !== 'function') {
       log.debug('db 不可用 — 无租户可枚举（空集，不再回落 default）');
       return [];

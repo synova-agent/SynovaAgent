@@ -1,0 +1,22 @@
+# .claude/claims/1376.yaml — #1376（runner 侧读路径契约错配）写集声明（D708 的 S0 源）
+#
+# 依据：CTO 2026-10-08 放行（方案 A 显式契约；rawDb 用**结构类型**；helpers.discoverTeams 并入本卡）。
+writeset:
+  - .claude/claims/1376.yaml
+  - .claude/task-briefs/2026-10-08-1376-read-capability.md
+  - src/sentinel/types.ts
+  - src/sentinel/runner.ts
+  - src/sentinel/sentinel-loader.ts
+  - src/sentinel/adapters/cash-flow-sentinel.ts
+  - src/sentinel/adapters/goal-alignment-sentinel.ts
+  - src/sentinel/adapters/integration-health-sentinel.ts
+  - src/sentinel/adapters/helpers.ts
+  - tests/sentinel/read-capability.test.ts
+  - tests/sentinel/org-registry.test.ts
+  - tests/sentinel/metric-readings-writer.test.ts
+done:
+  - verify: npx vitest run tests/sentinel/read-capability.test.ts
+  - verify: npx vitest run tests/sentinel/ tests/store/
+  - verify: test "$(git grep -n 'context.db as { prepare' HEAD -- src/sentinel/ | wc -l)" -eq 0   # 旧隐式形状断言零残留（行数口径）
+  - verify: npx tsc --noEmit
+note: 必要连带 2 文件（老测试的 ctx 桩只有 db ⇒ 现哨兵读 rawDb ⇒ 补桩）：org-registry.test.ts（ctxFor 路由 rawDb）/ metric-readings-writer.test.ts（样板 ctx +rawDb）。能力显式化（graphStore/rawDb 结构类型）+ 4 个 raw prepare 调用点改为显式取用（缺席即 warn+降级）；V2 = 经 runner 真路径写出 ≥1 行（修前 0 行）。

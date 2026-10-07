@@ -60,7 +60,12 @@ export const cashFlowSentinel: Sentinel = {
   async check(context: SentinelContext): Promise<SentinelCheckResult> {
     const { now } = context; const checkedAt = now.toISOString(); const startTime = Date.now();
     try {
-      const db = context.db as { prepare(sql: string): { all(): Array<Record<string, unknown>> } } | null;
+      // #1376: **显式取用** raw 能力（`context.rawDb`）；缺席 ⇒ 显式降级（warn + degraded），不静默
+      const rawDb = context.rawDb ?? null;
+      if (!rawDb) {
+        log.warn({ sentinelId: config.id }, 'rawDb 能力缺席（该路径无 raw 句柄）⇒ 降级：跳过财务条目读取');
+      }
+      const db = rawDb as { prepare(sql: string): { all(): Array<Record<string, unknown>> } } | null;
       if (!db) return { sentinelId: config.id, ok: true, findings: [], durationMs: Date.now() - startTime, checkedAt, degraded: true };
 
       // 从 SOG FINANCIAL 节点提取财务条目
