@@ -12,30 +12,12 @@
  *   @not-here ②③④（props 契约对齐 / 消费侧）⇒ **#1381-V2b（p0）**；映射层退役（收口 A）见 #1381 §⑩
  */
 import { createLogger } from '@synova/logger';
-import { loadNodeTypeMapping } from './node-type-resolver';
+import { resolveReadTargets } from './node-type-resolver';   // #1393：**单一解析源**（本模块不再自持解析）
 
 const log = createLogger('sentinel/mapped-read');
 
 interface QueryableReader {
   queryNodes(type: string, filters?: Record<string, unknown>, graph?: string): unknown[];
-}
-
-/** 取该遗留类型的**全部**映射目标（并集读用）。无映射 ⇒ targets=[] + warn。**模块内私有**（避免未接线 export）。 */
-function resolveReadTargets(legacyType: string): { targets: string[]; warn: boolean; reasons: string[] } {
-  const table = loadNodeTypeMapping().entries;
-  let entry = table[legacyType];
-  const seen = new Set<string>([legacyType]);
-  const reasons: string[] = [];
-  while (entry?.aliasOf && !seen.has(entry.aliasOf)) {
-    seen.add(entry.aliasOf);
-    entry = table[entry.aliasOf];
-  }
-  if (!entry) return { targets: [], warn: true, reasons: [`映射表无此条目（${legacyType}）`] };
-  if (!entry.targets || entry.targets.length === 0) {
-    return { targets: [], warn: true, reasons: [entry.reason ?? '语义不决 ⇒ 显式无源'] };
-  }
-  reasons.push(entry.rule ?? '词表直配');
-  return { targets: entry.targets, warn: false, reasons };
 }
 
 /**

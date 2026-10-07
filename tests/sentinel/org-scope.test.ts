@@ -110,9 +110,14 @@ describe('#1374 哨兵读路径租户隔离（数值级）', () => {
     // 计数器为模块级 ⇒ 用**增量**断言（不假设 0）；快照必须在查询【之前】取
     const before = getUnscopedQueryCount();
     // 无 orgId ⇒ **行为**透传（不加过滤）；为计数仍包装 ⇒ 断言【行为】而非对象身份
+    // 有映射的类型（#1393）：**并集读** ⇒ 多次底层调用，但按 id 去重 ⇒ 行数不变
     expect(passthrough.queryNodes('Financial', {})).toHaveLength(2);
-    expect(calls).toBe(1);
-    expect(getUnscopedQueryCount() - before).toBe(1);
+    expect(calls).toBeGreaterThanOrEqual(1);
+    // 无映射类型（Event ⇒ 映射 = null）：**仍 1 次字面量调用**（(c) null 分支）
+    const callsBefore = calls;
+    passthrough.queryNodes('Event', {});
+    expect(calls - callsBefore).toBe(1);
+    expect(getUnscopedQueryCount() - before).toBe(2);   // 计数口径：每次调用 +1（与是否并集无关）
     // ⇒ **被计数** ⇒ 不静默（空结果 ≠ 隔离成功）
   });
 

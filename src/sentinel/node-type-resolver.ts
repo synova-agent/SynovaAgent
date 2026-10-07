@@ -47,6 +47,37 @@ export function loadNodeTypeMapping(): MappingFile {
 }
 
 /**
+ * #1393：**读侧的目标集合**（并集读用）—— **本模块是唯一解析源**（`mapped-read` 与 `org-scope` 共用）
+ *
+ * 契约（铁律 47）:
+ *   @input  legacyType：哨兵字面量（如 `'Financial'` | `'FINANCIAL'`）
+ *   @output { targets：映射目标（可多个，顺序 = 映射文件顺序）; warn; reasons }
+ *   @invariant 🔴 **`warn === true` ⟺ **`targets` 为空**（三分支：无条目 / 无 targets / 有 targets ⇒ 仅前两支 warn）
+ *              —— 调用方（`org-scope`）**只在 `targets.length === 0` 时取 warn**；
+ *              若将来新增"有 targets 但 warn"的分支 ⇒ **调用方会静默丢掉它** ⇒ 故此为**不变量**（CTO 2026-10-08 ⑨）
+ *              ｜`aliasOf` **委托**（只维护一份）｜**不硬编码映射**、不查库、不改 props
+ *   @degraded **无条目 / 无 targets ⇒ `{ targets: [], warn: true, reasons: [...] }`**（fail-closed，不猜）
+ *   @not-here 读侧的**并集拼接与去重**在调用方（`org-scope` 收口点）；补写入者见 #1393 §⑤(iii)
+ */
+export function resolveReadTargets(legacyType: string): { targets: string[]; warn: boolean; reasons: string[] } {
+  const table = loadNodeTypeMapping().entries;
+  let entry = table[legacyType];
+  const seen = new Set<string>([legacyType]);
+  const reasons: string[] = [];
+  // aliasOf：**委托**到被指向的条目（只维护一份；别名解析结果必须与本体一致 —— #1381 判据 V1d）
+  while (entry?.aliasOf && !seen.has(entry.aliasOf)) {
+    seen.add(entry.aliasOf);
+    entry = table[entry.aliasOf];
+  }
+  if (!entry) return { targets: [], warn: true, reasons: [`映射表无此条目（${legacyType}）`] };
+  if (!entry.targets || entry.targets.length === 0) {
+    return { targets: [], warn: true, reasons: [entry.reason ?? '语义不决 ⇒ 显式无源'] };
+  }
+  reasons.push(entry.rule ?? '词表直配');
+  return { targets: entry.targets, warn: false, reasons };
+}
+
+/**
  * 解析遗留类型 → 本体类型。**语义分支**由 props 判定（rule 可测）。
  * @returns target=null + warn=true 表示【显式无源】（不猜、不静默）
  */
