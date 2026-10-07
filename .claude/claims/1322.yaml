@@ -20,11 +20,12 @@ writeset:
   - tests/growth/proposal-store-real-graph.integration.test.ts
   - tests/routes/workspace-goal-creation.integration.test.ts
   - tests/security/rbac-all-routes.test.ts
-  # ⚠️ 越界第 3 处（CTO 裁定 M3 的连带）: generateGoalFromProposal 删回退后，
-  #    该件夹具缺 orgId 会红 ⇒ 补 orgId 一行。已在 PR 正文点名 + 给依据。
-  - tests/e2e/full-pipeline.integration.test.ts
-  - tests/growth/proposal-engine.test.ts
-  - tests/growth/e2e-navigation-loop.integration.test.ts
+# 声明纪律（CTO 复验 M-b + verifier-4 门禁观察「过宽声明 = 预授权未改动路径」）:
+#   本 claim 只列**本 PR 真正改动**的文件。M3（generateGoalFromProposal 删 orgId→department
+#   回退）及其 3 件夹具连带（tests/e2e/full-pipeline.integration.test.ts /
+#   tests/growth/proposal-engine.test.ts / tests/growth/e2e-navigation-loop.integration.test.ts）
+#   **已拆出本 PR**（D734 预算 12 上限；CTO 裁定 Z1），故**不在此声明** ——
+#   由 follow-up PR（fix/1322-orgid-fail-closed）自行声明。
 done:
   - verify: npx vitest run tests/growth/goal-store-real-graph.integration.test.ts tests/growth/proposal-store-real-graph.integration.test.ts tests/routes/workspace-goal-creation.integration.test.ts tests/security/rbac-all-routes.test.ts
   - verify: bash scripts/check-architecture.sh

@@ -447,12 +447,15 @@ describe('C · 已认证 ⇒ 非 403（防「一刀切全拒」；本卡刻意�
     expect((data?.paths as unknown[]).length).toBe(3);
   });
 
-  it('POST /api/workspace/proposals · staff 已认证 ⇒ 201（只读角色不得被一刀切拒绝）', async () => {
+  it('POST /api/workspace/proposals · staff 已认证 ⇒ 201 + 3 条候选（只读角色不得被一刀切拒绝）', async () => {
     const res = await call(full.base, 'POST', '/api/workspace/proposals', {
       token: TOKEN.staff, body: { title: 'RBAC 守护用例（staff）' },
     });
     expect(res.status).toBe(201);
     expect(res.body.ok).toBe(true);
+    const data = res.body.data as Record<string, unknown> | undefined;
+    expect(Array.isArray(data?.paths)).toBe(true);
+    expect((data?.paths as unknown[]).length).toBe(3);
   });
 
   it('POST /api/workspace/proposals/:proposalId/select · admin 已认证 + 提案不存在 ⇒ 404 PROPOSAL_NOT_FOUND（非 403）', async () => {
