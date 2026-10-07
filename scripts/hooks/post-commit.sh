@@ -138,7 +138,52 @@ if [ -f "$MARKER" ]; then
           echo "$(date -Iseconds) | COMMITTED | pre-commit PASS (hook 层登记) | HASH=$HASH_NOW" | _bypass_append
         fi
       else
-        echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) detected-bypass head-mismatch marker=$MARKER_HEAD parent=$PARENT" | _bypass_append
+        # ═══ #1270（2026-10-07，Lead 立案；R1 收口 verifier P2）: **区分「重写」与「真绕过」** ═══
+        #   病根: rebase / cherry-pick 会重放提交，其 parent 必与 marker 里的旧 HEAD 不同
+        #     ⇒ 旧逻辑一律判 detected-bypass（实测当日 8 条误报）。
+        #   🔴 R1 收口（verifier P2，Lead 裁）: `in-progress` 原先**仅看目录存在** ⇒
+        #     ① 陈旧残留（一次中断的 rebase 留下的目录）会把此后所有 mismatch 都降级为 suspected；
+        #     ② `mkdir .git/rebase-merge` 一行即可把真 --no-verify 洗成 suspected ⇒ 阈值不触发。
+        #     ⇒ 现要求**佐证**: 状态文件 `<rebase-{merge,apply}>/orig-head` 存在 **且**
+        #       marker 是该 orig-head 的祖先（该会话确实在 marker 之后重放）才认 in-progress；
+        #       并按类记录 + 标注 `forgeable=1`（状态文件类可被伪造 ⇒ 消费侧可见但不计确证）。
+        #   三类（互斥，按强度排序）:
+        #     rebase-state        : orig-head 佐证通过（forgeable=1）
+        #     cherry-pick-state   : CHERRY_PICK_HEAD 佐证通过（forgeable=1）
+        #     tree-subject-match  : HEAD 与 marker 提交同 subject 同 tree（**内容类，不可靠 mkdir 伪造**，forgeable=0）
+        #   都不命中 ⇒ 维持 detected-bypass（**不许静默漏判**）。
+        REBASE_DIR="$(git rev-parse --git-path rebase-merge 2>/dev/null || true)"
+        REBASE_APPLY="$(git rev-parse --git-path rebase-apply 2>/dev/null || true)"
+        CP_HEAD="$(git rev-parse --git-path CHERRY_PICK_HEAD 2>/dev/null || true)"
+        REWRITE=0; REWRITE_WHY=""; REWRITE_FORGEABLE=0; REWRITE_KIND=""
+        ORIG_HEAD_FILE=""
+        if [ -n "$REBASE_DIR" ] && [ -f "$REBASE_DIR/orig-head" ]; then ORIG_HEAD_FILE="$REBASE_DIR/orig-head"
+        elif [ -n "$REBASE_APPLY" ] && [ -f "$REBASE_APPLY/orig-head" ]; then ORIG_HEAD_FILE="$REBASE_APPLY/orig-head"
+        fi
+        ORIG_HEAD_SHA=""
+        [ -n "$ORIG_HEAD_FILE" ] && ORIG_HEAD_SHA="$(tr -d '[:space:]' < "$ORIG_HEAD_FILE" 2>/dev/null || true)"  # swallow-ok: 读失败⇒空值⇒下一句 ancestry 判否（按"不算 in-progress"处理，宁可判 detected）
+        if [ -n "$ORIG_HEAD_SHA" ] && [ -n "$MARKER_HEAD" ] \
+           && git merge-base --is-ancestor "$MARKER_HEAD" "$ORIG_HEAD_SHA" 2>/dev/null; then
+          REWRITE=1; REWRITE_WHY="rebase-state"; REWRITE_FORGEABLE=1; REWRITE_KIND="in-progress"
+        else
+          CP_SHA=""
+          [ -n "$CP_HEAD" ] && [ -f "$CP_HEAD" ] && CP_SHA="$(tr -d '[:space:]' < "$CP_HEAD" 2>/dev/null || true)"  # swallow-ok: 同上
+          if [ -n "$CP_SHA" ] && [ -n "$MARKER_HEAD" ] \
+             && git merge-base --is-ancestor "$MARKER_HEAD" "$CP_SHA" 2>/dev/null; then
+            REWRITE=1; REWRITE_WHY="cherry-pick-state"; REWRITE_FORGEABLE=1; REWRITE_KIND="in-progress"
+          elif [ -n "$MARKER_HEAD" ] \
+            && [ "$(git show -s --format=%s HEAD 2>/dev/null || true)" = "$(git show -s --format=%s "$MARKER_HEAD" 2>/dev/null || true)" ] \
+            && [ -n "$(git rev-parse 'HEAD^{tree}' 2>/dev/null || true)" ] \
+            && [ "$(git rev-parse 'HEAD^{tree}' 2>/dev/null || true)" = "$(git rev-parse "${MARKER_HEAD}^{tree}" 2>/dev/null || true)" ]; then
+            REWRITE=1; REWRITE_WHY="tree-subject-match"; REWRITE_FORGEABLE=0; REWRITE_KIND="content"
+          fi
+        fi
+        if [ "$REWRITE" -eq 1 ]; then
+          echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) suspected-rewrite head-mismatch marker=$MARKER_HEAD parent=$PARENT suspect=$REWRITE_WHY kind=$REWRITE_KIND forgeable=$REWRITE_FORGEABLE" | _bypass_append
+          echo "  ℹ️  post-commit: head 不一致但判定为**重写**（suspect=$REWRITE_WHY forgeable=$REWRITE_FORGEABLE）—— 记 suspected-rewrite（保留记录，不计入确证绕过阈值）" >&2
+        else
+          echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) detected-bypass head-mismatch marker=$MARKER_HEAD parent=$PARENT" | _bypass_append
+        fi
       fi
     fi
   else

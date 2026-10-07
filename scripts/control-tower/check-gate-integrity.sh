@@ -674,7 +674,13 @@ run_registry() {
   n_stale=$(wc -l < "$TMPD/stale_baseline.txt" | tr -d ' ')
   n_exec=$(wc -l < "$TMPD/executed_all.txt" | tr -d ' ')
   n_unreg_ts=$(wc -l < "$TMPD/unregistered_ts_face.txt" | tr -d ' ')
+  # #1227 跟进件: 动态暴露**余量**（= 可被静默删除的测试数；随加测试单调增长 ⇒ 须可见）
+  local floor_n slack_n cap_n
+  floor_n="$(SYNO_GATE_BASELINE="$baseline" bash "$sealed" --face-total --root "$sealed_root" 2>/dev/null || true)"
+  slack_n="$(SYNO_GATE_BASELINE="$baseline" bash "$sealed" --slack --root "$sealed_root" 2>/dev/null || true)"
+  cap_n="$(SYNO_GATE_BASELINE="$baseline" bash "$sealed" --slack-cap --root "$sealed_root" 2>/dev/null || true)"
   info "CI-REGISTRY: 测试文件 ${n_all}（密封面 sh/py ${n_ci}；ts 面 ${n_ts}）；发现制执行 ${n_exec}（面扫描 ${scan_n} − 隔离 ${n_base}）；未覆盖 ${n_unreg}；台账 ${n_base} 条；台账外新增 ${n_new}；台账失效 ${n_stale}"
+  info "CI-REGISTRY: 余量 slack=${slack_n:-?}（scan ${scan_n} − FACE-TOTAL ${floor_n:-?}，上限 SLACK-CAP ${cap_n:-未设}）—— ≤ 该余量的净删除不可检测（已知代价）"
   info "CI-REGISTRY: NOTE unregistered-ts=${n_unreg_ts}（vitest glob 自动覆盖，不计密封面违规）；字面登记（密封面）${n_reg}"
   SUM_REG_SEALED="$n_ci"; SUM_REG_LISTED="$n_exec"; SUM_REG_UNREG="$n_unreg"; SUM_REG_BASE="$n_base"
   if [ "$VERBOSE" = 1 ]; then
