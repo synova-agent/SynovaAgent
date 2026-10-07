@@ -32,7 +32,7 @@ for _c in python3 python py; do
   if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then PYBIN="$_c"; break; fi
 done
 [ -n "$PYBIN" ] || { echo "  ❌ 无可用 python（检查自身失败）"; exit 2; }
-[ -f "$SUT" ] || { echo "  ❌ SUT 缺失: $SUT（检查自身失败）"; exit 2; }
+[ -f "$SUT" ] || { echo "  ❌ SUT 缺失: ${SUT}（检查自身失败）"; exit 2; }
 
 echo "=== self-health 配对测试（U7/CT-40 · D1225 建立）==="
 
@@ -101,7 +101,7 @@ done <<< "$OUT"
 if [ "$RC" -eq 2 ]; then
   no "python 断言层报告失败（见上方 ❌）"
 elif [ "$RC" -ne 0 ]; then
-  no "python 断言层异常退出 rc=$RC（检查自身失败）"
+  no "python 断言层异常退出 rc=${RC}（检查自身失败）"
 fi
 
 # ── 端到端 + 边界③: 直跑契约（覆盖自身故障 / JSON 结构 / SYNO_CT_DIR 隔离）──
