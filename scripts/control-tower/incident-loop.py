@@ -22,7 +22,7 @@ D535（2026-08-26）循环卫生 — 重复事故提醒（借鉴 DSH repeat-tool
   R4 存量错误无基线豁免
 
 机制映射:
-  R1 → 门禁 verify-parallel.sh / staging_guard.py / wait_manager.py
+  R1 → 门禁 verify-parallel.sh / merge_writeset_gate.py / wait_manager.py
   R2 → 门禁 hook-git-detect.sh（禁 stash）
   R3 → 工具 check-brief-parseable.sh / brief_parser.py
   R4 → 基线 baseline-check.sh
@@ -33,7 +33,7 @@ UTF-8: stdout reconfigure。
 循环卫生契约（D535，详见 docs/synova/coordination/控制塔循环卫生标准-20260826.md）:
   ① subprocess 调用必须带 timeout（默认 30s）— verify 已 timeout=10
   ② 重复事故提醒 — record 同 id 重复返回 reminder（本文件）
-  ③ 防跑偏信号接线 — staging-guard block → synova-commit 调 record 沉淀
+  ③ 防跑偏信号接线 — synova-commit 的暂存归属呈报异常 → 调 record 沉淀
 """
 from __future__ import annotations
 
@@ -146,7 +146,7 @@ def _bash_env(bash: str) -> dict:
     return env
 
 ROOT_CAUSE_MAP = {
-    "R1": {"label": "多会话共享工作区无协调", "mechanism": "门禁", "tools": ["verify-parallel.sh", "staging_guard.py", "wait_manager.py"]},
+    "R1": {"label": "多会话共享工作区无协调", "mechanism": "门禁", "tools": ["verify-parallel.sh", "merge_writeset_gate.py", "wait_manager.py"]},
     "R2": {"label": "hook 与 git 操作冲突", "mechanism": "门禁", "tools": ["hook-git-detect.sh"]},
     "R3": {"label": "brief 模板与解析器漂移", "mechanism": "工具", "tools": ["check-brief-parseable.sh", "brief_parser.py"]},
     "R4": {"label": "存量错误无基线豁免", "mechanism": "基线", "tools": ["baseline-check.sh"]},

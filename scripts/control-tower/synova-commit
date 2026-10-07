@@ -7,8 +7,12 @@
 # 没有 --no-verify 标志。没有绕过开关。
 #
 # D311 M1b (2026-08-02): 暂存区隔离 — git commit 改显式路径（不用 -a），
-# staging-guard.py 校验暂存文件归属（防 D286 卷走 D300 暂存类事故），
 # 提交成功后写集标记 committed + 阶段 CP4。
+# D1223 (2026-10-07): staging_guard.py **退役**（K3 R1「认领制退役」项）——本地不再
+# 预判暂存归属，只做**只读呈报**（单一入口 claim_store.py，取不到即显式降级，铁律 11）。
+# 判据面移交真承重件: ① resolve-commit-brief.sh 防劫持 ② CI D708 写集对账
+# （merge_writeset_gate.py）③ 多会话占用: task-start D515 项1 / pre-commit 组 6 D537 #2 /
+# CI verify-parallel --ci-pr。判据变更点与回滚方式见该 PR 正文。
 #
 # D307 (2026-08-15): worktree 隔离感知 — 链接 worktree 内提交后 finish 提示;
 # session/<sid> 隔离分支跳过 auto-tag/auto-push（finish 合并回主后推送）。
@@ -355,14 +359,14 @@ if [[ "$FASTLANE_TRIGGER" -eq 1 ]]; then
 fi
 
 # ═══ D329: session-id 解析 (M1b 暂存区隔离 + 劫持根治) ═══
-# 身份 = 会话声明的任务，绝不自动采用认领 brief（D320 劫持根因: 自动采用让
-# staging-guard 把被偷文件当"自己的"）。显式 --session-id 优先。
+# 身份 = 会话声明的任务，绝不自动采用认领 brief（D320 劫持根因: 自动采用 = 把被偷文件
+# 当成"自己的"）。显式 --session-id 优先。本口径在 D1223 退役后仍保留——它同时是
+# write-set 登记与 CI D708 对账的身份来源，不随 staging_guard 一起消失。
 if [[ -z "$SESSION_ID" ]]; then
   SESSION_ID="$TASK_ID"
 fi
 SESSION_REGISTRY="$PROJECT_ROOT/scripts/control-tower/session_registry.py"
 SELF_HEALTH="$PROJECT_ROOT/scripts/control-tower/self-health.py"
-STAGING_GUARD="$PROJECT_ROOT/scripts/control-tower/staging_guard.py"
 WAIT_MANAGER="$PROJECT_ROOT/scripts/control-tower/wait_manager.py"
 
 # ═══ D307: worktree 隔离感知 ═══
@@ -390,7 +394,8 @@ for _b in "$PROJECT_ROOT"/.claude/task-briefs/${TASK_ID}.md "$PROJECT_ROOT"/.cla
 done
 
 # 登记本 session（CP2 开发阶段；若已存在则刷新心跳）
-# D329: write-set 登记移到 staging-guard 通过之后（防 --files 预登记"洗白"他人文件）
+# D329: write-set 登记移到归属呈报之后（防 --files 预登记"洗白"他人文件；D1223 后本段
+#   不再阻断，登记前置与否只影响 registry 视图新鲜度，故保持原相对次序不变）。
 if [[ -f "$SESSION_REGISTRY" ]]; then
   python3 "$SESSION_REGISTRY" register --session-id "$SESSION_ID" --brief "$REGISTER_BRIEF" --task-id "$TASK_ID" 2>/dev/null || true
   python3 "$WAIT_MANAGER" phase --session-id "$SESSION_ID" --phase CP2 2>/dev/null || true
@@ -588,75 +593,58 @@ if [[ ${#FILES[@]} -gt 0 ]]; then
   fi
 fi
 
-# ═══ D311: 暂存区隔离 (M1b — 防 D286 卷走 D300 类事故) ═══
-# 校验暂存文件归属: 他人活跃写集 → 硬阻断；自己/无归属 → 放行
-# D331 (P2-5→P1): 裸 python3 + `|| true` 连 guard 崩溃都吞掉（D328 P1-1 同型再犯）
-# → PYBIN 跨平台回退（对齐 commit-msg-check.sh/resolve-commit-brief.sh）+ rc 捕获:
-#   rc==0          → 正常解析 JSON
-#   rc!=0 且 block → 按 block 硬阻断（guard 用 exit 1 表达阻断）
-#   rc!=0 非 JSON  → 显式 degraded 提示（执行异常不静默）
-#   python 不可用  → fail-open 显式提示跳过
-if [[ -f "$STAGING_GUARD" ]]; then
-  STAGED_LIST=$(git -c core.quotepath=false diff --cached --name-only 2>/dev/null || true)  # D339: 中文文件名不被转义
-  if [[ -n "$STAGED_LIST" ]]; then
-    PYBIN=""
-    for _c in python3 python py; do
-      if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then PYBIN="$_c"; break; fi
-    done
-    if [[ -n "$PYBIN" ]]; then
-      set +e
-      GUARD_OUT=$("$PYBIN" "$STAGING_GUARD" --session-id "$SESSION_ID" --staged $STAGED_LIST 2>&1)
-      GUARD_RC=$?
-      set -e
-      if [[ "$GUARD_RC" -ne 0 ]]; then
-        # rc≠0: block 用 exit 1 + JSON（正常阻断）vs 崩溃（非 JSON）→ 区分显式降级
-        GUARD_STATUS=$(echo "$GUARD_OUT" | "$PYBIN" -c "import json,sys; print(json.load(sys.stdin).get('status','degraded'))" 2>/dev/null || echo "degraded")
-        if [[ "$GUARD_STATUS" != "block" ]]; then
-          echo -e "${YELLOW}⚠ staging-guard 执行异常 (rc=$GUARD_RC) — 降级放行，请检查其日志${NC}"
-          echo "$GUARD_OUT" | head -3
-          echo ""
-        fi
-      else
-        GUARD_STATUS=$(echo "$GUARD_OUT" | "$PYBIN" -c "import json,sys; print(json.load(sys.stdin).get('status','degraded'))" 2>/dev/null || echo "degraded")
-      fi
-    else
-      GUARD_STATUS="degraded"
-      echo -e "${YELLOW}⚠ staging-guard 跳过: python 不可用或损坏（fail-open 显式提示，不静默）${NC}"
-    fi
-    if [[ "$GUARD_STATUS" == "block" ]]; then
-      # D535: 防跑偏信号接线 — block 事件自动沉淀到学习闭环（incident-loop）
-      # fail-open: incident-loop 不可用 → 显式提示不阻断（铁律 24/31）
-      if [[ -n "$PYBIN" ]]; then
-        set +e
-        INC_OUT=$("$PYBIN" "$PROJECT_ROOT/scripts/control-tower/incident-loop.py" record \
-          --id "staging-block-$(date +%Y%m%d)" \
-          --symptom "staging-guard block: 暂存区含他人文件" \
-          --root-cause "R1" \
-          --sessions "$SESSION_ID" \
-          --fix "与对应 session 协调或移出文件" 2>&1)
-        INC_RC=$?
-        set -e
-        if [[ "$INC_RC" -eq 0 ]] && echo "$INC_OUT" | grep -q '"reminder"'; then
-          INC_REMINDER=$(echo "$INC_OUT" | "$PYBIN" -c "import json,sys; print(json.load(sys.stdin).get('reminder',''))" 2>/dev/null || echo "$INC_OUT")
-          echo -e "${YELLOW}⚠ 事故频发提醒: ${INC_REMINDER}${NC}"
-        fi
-      fi
-      echo ""
-      echo -e "${RED}❌ 暂存区隔离 (D311 M1b) — 暂存区含他人文件:${NC}"
-      echo "$GUARD_OUT" | python3 -c "
-import json,sys
-d=json.load(sys.stdin)
-for f in d.get('foreign_files',[]):
-    print(f\"  - {f['file']} (属于 session {f.get('owner_session','?')}, brief: {f.get('brief','?')})\")
-" 2>/dev/null || echo "$GUARD_OUT"
-      echo ""
-      echo -e "${RED}  提交已阻断 — 请先与对应 session 协调或移出该文件${NC}"
-      exit 1
-    fi
+# ═══ D311 暂存区隔离 (M1b) — 退役（D1223）: 只读归属呈报，本地不预判 ═══
+# 退役依据（K3 R1「认领制退役」项）: 原两条判据都已有**真承重件**，本地副本 = 第三套
+# 解析口径（K3 R1 定罪形态），故整件退役（scripts/control-tower/staging_guard.py 已删）。
+#   ① 认领制防劫持 → scripts/workflow/resolve-commit-brief.sh（strong-anchor 禁用
+#      + D317 日期回退守卫）
+#   ② 写集对账     → CI 权威 D708（scripts/control-tower/merge_writeset_gate.py；
+#      ci.yml 步骤「Merge write-set reconciliation (D708)」；声明源 S0 = claim.writeset）
+#   ③ 多会话占用   → task-start.sh D515 项1（开工）/ pre-commit 组 6 D537 #2（提交端主树占用）/
+#      CI verify-parallel.sh --ci-pr（inter-PR）——**文件级精度在本级取消**（代价如实登记）
+# 禁静默空白（铁律 11）: 本段**恒定打印**一行退役结论；只读呈报取不到数据时也必须打印
+#   显式降级行（不得静默省略）。
+# 三态（ctrl-tower 模式 1）: 呈报不改变退出码 —— 0/1/2 语义与退役前一致（本段不阻断）。
+# 回滚: revert 本 PR 的 merge commit 即恢复 staging_guard.py 与旧调用段（见 PR 正文「回滚方式」）。
+STAGED_LIST=$(git -c core.quotepath=false diff --cached --name-only 2>/dev/null || true)  # D339: 中文文件名不被转义
+if [[ -n "$STAGED_LIST" ]]; then
+  # 本脚本只定义 RED/GREEN/YELLOW/NC（无 CYAN）—— 结论行用中性色，避免 set -u 下未定义变量。
+  echo -e "ℹ 暂存区隔离 (D311 M1b) 已退役（D1223）—— 本地不预判；判据面 = CI D708 写集对账 + resolver 防劫持"
+  PYBIN=""
+  for _c in python3 python py; do
+    if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then PYBIN="$_c"; break; fi
+  done
+  CLAIM_LIB="$PROJECT_ROOT/scripts/control-tower/claim_store.py"
+  if [[ -z "$PYBIN" ]]; then
+    echo -e "${YELLOW}⚠ 归属呈报降级: python 不可用（python3/python/py 三级探测全失败）— 只读呈报跳过，非静默（铁律 11）${NC}"
+  elif [[ ! -f "$CLAIM_LIB" ]]; then
+    echo -e "${YELLOW}⚠ 归属呈报降级: claim_store.py 缺失（${CLAIM_LIB}）— 只读呈报跳过，非静默（铁律 11）${NC}"
+  else
+    # 单源: claim 归属解析走 claim_store（**不在此复制第二套正则/解析**，K3 R1）
+    CLAIM_FLAG=$("$PYBIN" "$CLAIM_LIB" --flag 2>/dev/null | tr -d '\r\n' || true)
+    set +e
+    CLAIM_OUT=$("$PYBIN" "$CLAIM_LIB" --resolve $STAGED_LIST --root "$PROJECT_ROOT" 2>&1)
+    CLAIM_RC=$?
+    set -e
+    CLAIM_STATUS=$(printf '%s' "$CLAIM_OUT" | "$PYBIN" -c "import json,sys; print(json.load(sys.stdin).get('status','degraded'))" 2>/dev/null || true)
+    CLAIM_STATUS="${CLAIM_STATUS:-degraded}"
+    case "$CLAIM_STATUS" in
+      resolved)
+        CLAIM_ISSUE=$(printf '%s' "$CLAIM_OUT" | "$PYBIN" -c "import json,sys; print(json.load(sys.stdin).get('issue') or '?')" 2>/dev/null | tr -d '\r\n' || true)
+        echo -e "   claim 归属: #${CLAIM_ISSUE:-?}（SYNO_CLAIM_V2=${CLAIM_FLAG:-unknown}）— 写集对账交 CI D708"
+        ;;
+      missing|none)
+        echo -e "   ${YELLOW}claim 归属: 无声明命中（status=${CLAIM_STATUS}）— 迁移期口径继续；写集对账由 CI D708 fail-closed 判定${NC}"
+        ;;
+      *)
+        echo -e "   ${YELLOW}⚠ 归属呈报降级: claim_store rc=$CLAIM_RC status=$CLAIM_STATUS — 显式降级，不静默（铁律 11）${NC}"
+        printf '%s' "$CLAIM_OUT" | head -2 | sed 's/^/     /'
+        ;;
+    esac
   fi
 fi
 
-# ═══ D329: write-set 登记（guard 通过之后 — 防 --files 预登记"洗白"他人文件）═══
+# ═══ D329: write-set 登记（归属呈报之后 — 防 --files 预登记"洗白"他人文件）═══
 if [[ -f "$SESSION_REGISTRY" ]] && [[ ${#FILES[@]} -gt 0 ]]; then
   python3 "$SESSION_REGISTRY" write-set --session-id "$SESSION_ID" --add "${FILES[@]}" 2>/dev/null || true
 fi
