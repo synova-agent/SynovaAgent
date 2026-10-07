@@ -64,6 +64,13 @@ const EXPECTED_INDEXES = [
   'ux_metric_readings_key', 'ix_metric_readings_series', 'ix_metric_readings_source',
 ] as const;
 
+function tableExists(db: Database.Database): boolean {
+  const row = db.prepare(
+    "SELECT COUNT(*) AS n FROM sqlite_master WHERE type='table' AND name='metric_readings'",
+  ).get() as { n: number };
+  return row.n === 1;
+}
+
 interface TableInfoRow { name: string; type: string; notnull: number; dflt_value: string | null; pk: number }
 interface IndexListRow { name: string; unique: number }
 interface IndexInfoRow { name: string; seqno: number }
@@ -169,12 +176,19 @@ describe('metric_readings 表结构（#1053 / 2-1a · V1）', () => {
     expect(indexList(db)).toHaveLength(3);
   });
 
-  it('V6 删除安全：删表 ⇒ 查询报 no such table；再跑 reconcileSchema ⇒ 不抛（版本门控 no-op）', () => {
+  it('V6 删除安全：删表 ⇒ 查询报 no such table；再跑 reconcileSchema ⇒ 不抛【且当前会重建表】（见下注释）', () => {
     db.exec('DROP TABLE metric_readings');
     expect(() => db.prepare('SELECT COUNT(*) FROM metric_readings').get())
       .toThrow(/no such table/i);
-    // 迁移系统为版本门控：schema_version 已到当前版本 ⇒ 重跑是 no-op（不重建，也不抛）
+
+    // 🔴 实测（live 探针，2026-10-08）：再跑 reconcileSchema **不抛，且表被重建** —— 原因不是"版本门控失效"，
+    //   而是**读取器并列缺陷**（#1366）：schema_version 多行同秒 ⇒ reader 取到旧版本 2 < 3 ⇒ 最后一条迁移重跑
+    //   ⇒ `CREATE TABLE IF NOT EXISTS` 把表重建。故本条断言**锁住当前真实行为**（exists === true），
+    //   而非"no-op"（旧注释断言的是**测不到的那一种**，属有背书的假命题 —— R58 同族，已按复核订正）。
+    //   ⚠️ **#1366 修好后本条会翻转**：读取器取到 3 ≥ 3 ⇒ 早退（真 no-op）⇒ 应改为 `expect(tableExists(db)).toBe(false)`。
+    //   #1366 卡面已登记该联动。
     expect(() => reconcileSchema(db)).not.toThrow();
+    expect(tableExists(db)).toBe(true);
   });
 
   it('临时真文件库：同一 DDL 结果一致（mkdtemp；不碰 gitignored data/）', () => {
