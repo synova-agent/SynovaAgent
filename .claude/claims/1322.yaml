@@ -7,21 +7,13 @@
 #
 # 依据：CTO 2026-10-08 放行 + 计划 §1「最终写集」；越界两处已在 PR #1330 正文申报。
 writeset:
-  # 本 claim = **本 PR（M3 follow-up）真正改动**的文件（写准，不预授权）。
-  # #1330 的写集随该 PR 合入 main，已历史化，不再列于此处。
+  # 本 claim = **本 PR（#1322 X2 审计归属哨兵）真正改动**的文件（写准，不预授权）。
+  # 前序 PR（#1330 接线 / #1349 M3 fail-closed）的写集随其合入 main，已历史化。
   - .claude/claims/1322.yaml
   - .claude/task-briefs/2026-10-08-1322-goal-creation-entry.md
-  - src/growth/proposal-engine.ts
-  - tests/e2e/full-pipeline.integration.test.ts
-  - tests/growth/proposal-engine.test.ts
-  - tests/growth/e2e-navigation-loop.integration.test.ts
-# 声明纪律（CTO 复验 M-b + verifier-4 门禁观察「过宽声明 = 预授权未改动路径」）:
-#   本 claim 只列**本 PR 真正改动**的文件。M3（generateGoalFromProposal 删 orgId→department
-#   回退）及其 3 件夹具连带（tests/e2e/full-pipeline.integration.test.ts /
-#   tests/growth/proposal-engine.test.ts / tests/growth/e2e-navigation-loop.integration.test.ts）
-#   **已拆出本 PR**（D734 预算 12 上限；CTO 裁定 Z1），故**不在此声明** ——
-#   由 follow-up PR（fix/1322-orgid-fail-closed）自行声明。
+  - src/growth/proposal-store.ts
+  - tests/growth/proposal-store.test.ts
 done:
-  - verify: npx vitest run tests/growth/goal-store-real-graph.integration.test.ts tests/growth/proposal-store-real-graph.integration.test.ts tests/routes/workspace-goal-creation.integration.test.ts tests/security/rbac-all-routes.test.ts
+  - verify: npx vitest run tests/growth/proposal-store.test.ts
   - verify: bash scripts/check-architecture.sh
-note: B1（真库 id 语义断裂）为本卡新证并随本卡修复；R23 串行：#1290/#1316 待本卡合入后再开。
+note: CTO 裁定 X2 —— 审计归属缺 orgId 写显式哨兵 'unknown' + log.warn（宁标不可归属，不错归属）；根因另立小卡。

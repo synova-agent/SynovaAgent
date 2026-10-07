@@ -86,6 +86,9 @@
 - tests/growth/proposal-engine.test.ts
 - tests/growth/e2e-navigation-loop.integration.test.ts
 
+（X2 审计归属哨兵追加 —— CTO 裁定 X2）
+- tests/growth/proposal-store.test.ts
+
 不做什么（含文件路径）：
 - 不改 `src/l2/proposal-manager.ts`（R20 禁第二入口）｜不改 `src/middleware/rbac.ts`（R22；不扩 `RbacContext`）
 - 不改 `src/adapters/sqlite-graph-store.ts`（隔离载体走 (a) `props.orgId`，不动 schema）
