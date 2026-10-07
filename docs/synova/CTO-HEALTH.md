@@ -1,10 +1,10 @@
 # Synova CTO 健康仪表盘（第③面）
 
-> 打开即真相。生成: 2026-10-07 21:32:34 | 数据源指纹: a06fb3900782
+> 打开即真相。生成: 2026-10-07 21:27:56 | 数据源指纹: 35a2b2a1f5f8
 
 <!-- CTO-HEALTH:AUTO:START -->
 ## CTO 健康仪表盘（第③面）— 自动区
-> 生成: 2026-10-07 21:32:29 | 数据源: bypass.log / pre-commit-failures.log / AUDIT-FINDINGS-LEDGER
+> 生成: 2026-10-07 21:27:54 | 数据源: bypass.log / pre-commit-failures.log / AUDIT-FINDINGS-LEDGER
 
 **总体判定: 🟡 黄 — 历史有 M 模式复发记录 (见 §三; 多为 D328-D331 已闭环项, 需 CTO 确认无新增)**
 
@@ -12,13 +12,13 @@
 
 | 事件 | 全量 | 24h 内 |
 |------|:---:|:---:|
-| COMMITTED（正常提交） | 22 | 22 |
-| BLOCKED（被门禁拒绝） | 4 | 4 |
+| COMMITTED（正常提交） | 3 | 3 |
+| BLOCKED（被门禁拒绝） | 0 | 0 |
 | DEGRADED（降级放行） | 0 | 0 |
 | TIMEOUT（超时） | 0 | 0 |
 | **detected-bypass（真绕过）** | **0** | **0** |
 
-近 7 天事件: 2026-10-07:26
+近 7 天事件: 2026-10-07:3
 
 ✅ 全历史零绕过。
 
@@ -46,76 +46,76 @@
 
 | 任务 | 状态 | spec | impl | audit | FIX |
 |------|------|:---:|:---:|:---:|------|
-| D1000 | impl_done | ✅ | ✅ | — |  |
-| D1001 | impl_done | ✅ | ✅ | — |  |
-| D1002 | impl_done | ✅ | ✅ | — |  |
-| D1003 | impl_done | ✅ | ✅ | — |  |
-| D1004 | impl_done | ✅ | ✅ | — |  |
-| D1007 | impl_done | ✅ | ✅ | — |  |
-| D1010 | impl_done | ✅ | ✅ | — |  |
-| D1011 | impl_done | ✅ | ✅ | — |  |
-| D1012 | impl_done | ✅ | ✅ | — |  |
-| D1013 | impl_done | ✅ | ✅ | — |  |
-| D1014 | impl_done | ✅ | ✅ | — |  |
-| D1015 | impl_done | ✅ | ✅ | — |  |
-| D1016 | impl_done | ✅ | ✅ | — |  |
-| D1017 | impl_done | ✅ | ✅ | — |  |
-| D1018 | impl_done | ✅ | ✅ | — |  |
-| D1019 | impl_done | ✅ | ✅ | — |  |
-| D1020 | spec_done | ✅ | — | — |  |
-| D1022 | spec_done | ✅ | — | — | D1025 |
-| D1023 | spec_done | ✅ | — | — |  |
-| D1025 | spec_done | ✅ | — | — |  |
-| D1030 | claimed | — | — | — |  |
-| D1031 | claimed | — | — | — |  |
-| D1039 | claimed | — | — | — |  |
-| D1040 | impl_done | ✅ | ✅ | — |  |
-| D1041 | impl_done | ✅ | ✅ | — |  |
-| D1042 | impl_done | ✅ | ✅ | — |  |
-| D1043 | impl_done | ✅ | ✅ | — |  |
-| D1044 | impl_done | ✅ | ✅ | — |  |
-| D1049 | impl_done | ✅ | ✅ | — |  |
-| D1050 | claimed | — | — | — |  |
-| D1052 | claimed | — | — | — |  |
-| D1058 | claimed | — | — | — |  |
-| D1059 | claimed | — | — | — |  |
-| D1062 | impl_done | ✅ | ✅ | — |  |
-| D1064 | impl_done | ✅ | ✅ | — |  |
-| D1065 | impl_done | ✅ | ✅ | — |  |
-| D1067 | impl_done | ✅ | ✅ | — |  |
-| D1070 | impl_done | ✅ | ✅ | — |  |
-| D1071 | impl_done | ✅ | ✅ | — |  |
-| D1073 | impl_done | ✅ | ✅ | — |  |
-| D1091 | impl_done | ✅ | ✅ | — |  |
-| D1093 | impl_done | ✅ | ✅ | — |  |
-| D1094 | impl_done | ✅ | ✅ | — |  |
-| D1095 | impl_done | ✅ | ✅ | — |  |
-| D1096 | impl_done | ✅ | ✅ | — |  |
-| D1097 | impl_done | ✅ | ✅ | — |  |
-| D1100 | spec_done | ✅ | — | — |  |
-| D1104 | spec_done | ✅ | — | — |  |
-| D1105 | spec_done | ✅ | — | — |  |
-| D1109 | spec_done | ✅ | — | — |  |
-| D1112 | impl_done | ✅ | ✅ | — |  |
-| D1116 | impl_done | ✅ | ✅ | — |  |
-| D1146 | claimed | — | — | — |  |
-| D1157 | claimed | — | — | — |  |
-| D1160 | claimed | — | — | — |  |
-| D1161 | claimed | — | — | — |  |
-| D1164 | claimed | — | — | — |  |
-| D1168 | claimed | — | — | — |  |
-| D1193 | claimed | — | — | — |  |
-| D1194 | claimed | — | — | — |  |
-| D1197 | claimed | — | — | — |  |
-| D1198 | claimed | — | — | — |  |
-| D1199 | claimed | — | — | — |  |
-| D1200 | claimed | — | — | — |  |
-| D1203 | claimed | — | — | — |  |
-| D1204 | claimed | — | — | — |  |
-| D1206 | claimed | — | — | — |  |
-| D1208 | claimed | — | — | — |  |
-| D1210 | claimed | — | — | — |  |
-| D1215 | claimed | — | — | — |  |
+| D1000 | impl_done | — | ✅ | — |  |
+| D1001 | impl_done | — | ✅ | — |  |
+| D1002 | impl_done | — | ✅ | — |  |
+| D1003 | impl_done | — | ✅ | — |  |
+| D1004 | claimed | — | — | — |  |
+| D1007 | impl_done | — | ✅ | — |  |
+| D1010 | impl_done | — | ✅ | — |  |
+| D1011 | impl_done | — | ✅ | — |  |
+| D1012 | impl_done | — | ✅ | — |  |
+| D1013 | impl_done | — | ✅ | — |  |
+| D1014 | impl_done | — | ✅ | — |  |
+| D1015 | impl_done | — | ✅ | — |  |
+| D1016 | impl_done | — | ✅ | — |  |
+| D1017 | impl_done | — | ✅ | — |  |
+| D1018 | impl_done | — | ✅ | — |  |
+| D1019 | claimed | — | — | — |  |
+| D1020 | claimed | — | — | — |  |
+| D1022 | impl_done | — | ✅ | — | D1025 |
+| D1023 | impl_done | — | ✅ | — |  |
+| D1025 | claimed | — | — | — |  |
+| D1030 | impl_done | — | ✅ | — |  |
+| D1031 | impl_done | — | ✅ | — |  |
+| D1039 | impl_done | — | ✅ | — |  |
+| D1040 | impl_done | — | ✅ | — |  |
+| D1041 | impl_done | — | ✅ | — |  |
+| D1042 | claimed | — | — | — |  |
+| D1043 | impl_done | — | ✅ | — |  |
+| D1044 | impl_done | — | ✅ | — |  |
+| D1049 | impl_done | — | ✅ | — |  |
+| D1050 | impl_done | — | ✅ | — |  |
+| D1052 | impl_done | — | ✅ | — |  |
+| D1058 | impl_done | — | ✅ | — |  |
+| D1059 | impl_done | — | ✅ | — |  |
+| D1062 | impl_done | — | ✅ | — |  |
+| D1064 | impl_done | — | ✅ | — |  |
+| D1065 | impl_done | — | ✅ | — |  |
+| D1067 | impl_done | — | ✅ | — |  |
+| D1070 | claimed | — | — | — |  |
+| D1071 | claimed | — | — | — |  |
+| D1073 | impl_done | — | ✅ | — |  |
+| D1091 | claimed | — | — | — |  |
+| D1093 | impl_done | — | ✅ | — |  |
+| D1094 | claimed | — | — | — |  |
+| D1095 | impl_done | — | ✅ | — |  |
+| D1096 | impl_done | — | ✅ | — |  |
+| D1097 | impl_done | — | ✅ | — |  |
+| D1100 | claimed | — | — | — |  |
+| D1104 | impl_done | — | ✅ | — |  |
+| D1105 | impl_done | — | ✅ | — |  |
+| D1109 | impl_done | — | ✅ | — |  |
+| D1112 | impl_done | — | ✅ | — |  |
+| D1116 | impl_done | — | ✅ | — |  |
+| D1146 | impl_done | — | ✅ | — |  |
+| D1157 | impl_done | — | ✅ | — |  |
+| D1160 | impl_done | — | ✅ | — |  |
+| D1161 | impl_done | — | ✅ | — |  |
+| D1164 | impl_done | — | ✅ | — |  |
+| D1168 | impl_done | — | ✅ | — |  |
+| D1193 | impl_done | — | ✅ | — |  |
+| D1194 | impl_done | — | ✅ | — |  |
+| D1197 | impl_done | — | ✅ | — |  |
+| D1198 | impl_done | — | ✅ | — |  |
+| D1199 | impl_done | — | ✅ | — |  |
+| D1200 | impl_done | — | ✅ | — |  |
+| D1203 | impl_done | — | ✅ | — |  |
+| D1204 | impl_done | — | ✅ | — |  |
+| D1206 | impl_done | — | ✅ | — |  |
+| D1208 | impl_done | — | ✅ | — |  |
+| D1210 | impl_done | — | ✅ | — |  |
+| D1215 | impl_done | — | ✅ | — |  |
 | D356 | audited | ✅ | ✅ | CONDITIONAL_PASS |  |
 | D379 | audited | — | ✅ | CONDITIONAL_PASS |  |
 | D383 | audited | — | ✅ | CONDITIONAL_PASS | D384 |
@@ -491,7 +491,7 @@
 | D979 | audited | — | ✅ | PASS |  |
 | CT-64 | claimed | — | — | — |  |
 
-> 📦 历史任务（已折叠）: **189** 个（git log 全项目派生，非 task-state 登记；13 个有审计报告）
+> 📦 历史任务（已折叠）: **295** 个（git log 全项目派生，非 task-state 登记；13 个有审计报告）
 > 这些是 task-state 未登记、但 git 里确有提交的全项目任务（D5~D398 早期 + Win/Codex 侧），状态按 impl 派生。
 
 ### 六、CI 状态（CT-41①, GitHub API）

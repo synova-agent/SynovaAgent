@@ -81,6 +81,18 @@ cd.parent.mkdir(parents=True, exist_ok=True)
 (tasks, meta, err) = run(cd)
 chk(meta.get("migration_period") is False, "降级: 非法 claim 路径 ⇒ 不误报迁移期", meta)
 
+# ── 正常路径（P3）: task-state 存在时 meta 仍须带 migration 字段 ──
+(cd).unlink() if cd.is_file() else None
+shutil.rmtree(cd, ignore_errors=True); cd.mkdir(parents=True, exist_ok=True)
+for i in (1217, 1218):
+    (cd / f"{i}.yaml").write_text("writeset:\n  - a.sh\ndone:\n  - verify: bash x.sh\n", encoding="utf-8")
+ts = tmp / "task-state"; ts.mkdir(parents=True, exist_ok=True)
+(ts / "D001.json").write_text('{"task_id":"D001","status":"impl_done"}', encoding="utf-8")
+(tasks, meta, err) = run(cd)
+chk("migration_period" in meta, "正常路径: meta 含 migration_period（P3：结构化字段恒在）", meta)
+chk(meta.get("migration_claims") == 2, "正常路径: migration_claims=2（P3 值正确）", meta)
+chk(meta.get("migration_period") is True, "正常路径: migration_period=True（P3）", meta)
+
 # ── 改坏即红（判别力）: 注入「探测失效」（把 claims 计数恒 0）⇒ 正常断言必红 ──
 src = (repo / "scripts" / "control-tower" / "gen-cto-health.py").read_text(encoding="utf-8")
 mut = src.replace('_claim_n = (sum(1 for c in _claims_dir.glob("*.yaml") if c.stem.isdigit())',
