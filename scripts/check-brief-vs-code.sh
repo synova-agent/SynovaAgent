@@ -24,6 +24,13 @@ warn_check() { local name="$1" msg="$2"; if [ -n "$msg" ]; then echo -e "  ${YEL
 TODAY=$(date +%Y-%m-%d)
 echo -e "${CYAN}[check-brief-vs-code] 查找今日 brief (${TODAY})${RESET}"
 BRIEF=$(find "$ROOT/.claude/task-briefs/" -type f -name "${TODAY}*" 2>/dev/null | xargs ls -t 2>/dev/null | head -1)
+# ── D-C（K3 R3 场景 c）: claim 载体兜底 ──
+# `SYNO_CLAIM_V2=1` 且无今日 brief → 由 resolver 定位声明（claim 或在途跨日 brief）。
+# 缺此步时新格式声明**永不进入本器视野** → 全部散文类检查静默空过 = 静默空白（铁律 11）。
+if [ -z "$BRIEF" ] && [ "${SYNO_CLAIM_V2:-}" = "1" ]; then
+  BRIEF=$(bash "$ROOT/scripts/workflow/resolve-commit-brief.sh" \
+    "$(git -c core.quotepath=false diff --name-only 2>/dev/null || true)" 2>/dev/null || true)
+fi
 
 # 也检查 CLAUDE.md 中是否引用 V4.5.1
 FLOW_CONSTRAINT=$(grep "流程约束" "$ROOT/CLAUDE.md" 2>/dev/null | grep -oE 'V[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
@@ -81,6 +88,61 @@ echo -e "${CYAN}═════════════════════�
 echo -e "${CYAN}  Brief vs 代码一致性验证${RESET}"
 echo -e "${CYAN}════════════════════════════════════════════════════════════${RESET}"
 echo ""
+
+# ═══════════════════════════════════════════════════════════════════
+# D-C（K3 R1）: 声明载体 = claim（`.claude/claims/<issue>.yaml`）分支
+#
+# claim 是**两字段制**（writeset + done）——没有 Q0/Q1/Q3 散文项，"散文类检查不适用"
+# 是**设计事实**而非跳过：必须**显式打印**该结论（否则等于静默空白，铁律 11）。
+# claim 上仍然可判、且必须判的只有一条硬判据：**变更集 ⊆ writeset**（G12 的语义）。
+# done 的 verify: 完整性由 claim_store 在解析时强制（见 claim-identity-v2 夹具）。
+# ═══════════════════════════════════════════════════════════════════
+case "$BRIEF" in
+  *.yaml)
+    echo -e "${CYAN}── 声明载体: claim（两字段制: writeset + done）──${RESET}"
+    echo -e "  ${YELLOW}ℹ claim 无 Q0/Q1/Q3 散文项 → 散文类检查按设计不适用（显式声明，非静默跳过）${RESET}"
+    # D520/PLATFORM-CHECKLIST: PYBIN 三级探测 + 可用性验证（禁裸 python3）
+    PYBIN=""
+    for _c in python3 python py; do
+      if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then
+        PYBIN="$_c"; break
+      fi
+    done
+    if [ -z "$PYBIN" ]; then
+      echo -e "  ${RED}❌ claim 写集检查: python 不可用 — 检查自身失败 [同样阻断]${RESET}"
+      exit 2
+    fi
+    CLAIM_INC=$("$PYBIN" "$ROOT/scripts/control-tower/brief_parser.py" --q2-include "$BRIEF" 2>/dev/null)  # swallow-ok: rc 在下两行显式判定（非 0/空 → exit 2 fail-closed）
+    CLAIM_RC=$?
+    if [ "$CLAIM_RC" -ne 0 ] || [ -z "$CLAIM_INC" ]; then
+      echo -e "  ${RED}❌ claim 写集不可解析（rc=${CLAIM_RC}）— 检查自身失败 [同样阻断]${RESET}"
+      exit 2
+    fi
+    OUT_OF_SCOPE=""
+    while IFS= read -r f; do
+      [ -z "$f" ] && continue
+      case "$f" in
+        .claude/bypass.log) continue ;;  # 与 merge_writeset_gate 同款内置豁免（运行期产物）
+      esac
+      hit=0
+      while IFS= read -r pat; do
+        [ -z "$pat" ] && continue
+        case "$f" in
+          "$pat"|*/"$pat") hit=1 ;;
+        esac
+      done <<< "$CLAIM_INC"
+      [ "$hit" -eq 0 ] && OUT_OF_SCOPE="${OUT_OF_SCOPE}  ${f}\n"
+    done <<< "$(echo "$DIFF_ALL" | sed '/^$/d')"
+    hard_check "claim 写集范围一致性" "$OUT_OF_SCOPE"
+    echo ""
+    if [ "$HARD_FAIL" -gt 0 ]; then
+      echo -e "  ${RED}❌ ${HARD_FAIL} 项不一致 — claim 写集与变更集不匹配${RESET}"
+      exit 1
+    fi
+    echo -e "  ${GREEN}✅ claim 写集 ⊆ 声明（变更集全部在 writeset 内）${RESET}"
+    exit 0
+    ;;
+esac
 
 # ═══════════════════════════════════════════════════════════════════
 # Q0a: 项目拼图

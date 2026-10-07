@@ -40,6 +40,49 @@ from session_registry import (  # noqa: E402
 )
 
 
+def _is_claim_path(path: str) -> bool:
+    """声明路径是否为 claim 文件（`.claude/claims/<issue>.yaml`）。"""
+    return path.endswith(".yaml") and Path(path).parent.name == "claims"
+
+
+def _declared_identity(brief: str) -> str:
+    """从**声明路径**取任务身份：claim → `#<issue>`；legacy brief → `D<#>`。
+
+    契约:
+      @input  brief: 声明文件路径（claim .yaml 或 brief .md）
+      @output 归一化身份串（`D329` / `#1234`）；取不到 → ""
+      @降级   无（纯字符串判定）
+    """
+    if _is_claim_path(brief):
+        stem = Path(brief).stem
+        return f"#{stem}" if stem.isdigit() else ""
+    m = re.search(r"D\d+", Path(brief).stem)
+    return m.group(0) if m else ""
+
+
+def _declared_identity_id(session_id: str, brief: str) -> str:
+    """从 session/task-id 取身份，**按声明形态对齐口径**（claim → issue；legacy → D#）。
+
+    为什么按声明形态而不是"两种都试": 若 claim 声明配 D# session（或反之），
+    说明调用方还在旧口径 —— 该场景必须**显式不判定**（返回空 → 跳过），
+    由 G12/commit-msg 的 D328 侧去拦；在 stagin guard 里"跨口径模糊匹配"
+    会产生假阳性阻断（误伤正常提交），比漏拦更贵。
+    """
+    s = session_id or ""
+    if _is_claim_path(brief):
+        try:
+            sys.path.insert(0, str(REPO_ROOT / "scripts" / "control-tower"))
+            from claim_store import parse_issue  # noqa: E402
+            v = parse_issue(s)
+            return f"#{v}" if v else ""
+        except ImportError:
+            # 降级: claim_store 不可用 → 退回内联口径（不静默丢判定）
+            m = re.search(r"#?(\d{1,7})", s)
+            return f"#{m.group(1)}" if m else ""
+    m = re.search(r"D\d+", s)
+    return m.group(0) if m else ""
+
+
 def check_staging(
     reg: SessionRegistry,
     session_id: str,
@@ -87,14 +130,19 @@ def check_staging(
             except Exception:
                 genuine = False
             if genuine:
-                claim_did = re.search(r"D\d+", Path(brief).stem)
-                sess_did = re.search(r"D\d+", session_id or "")
-                # 精确相等（禁 startswith）: D3290 不能匹配 D329；session_id 无 D# → 跳过认领制判定
-                if claim_did and sess_did and claim_did.group(0) != sess_did.group(0):
+                # D-C（K3 预审 R1/R4）: 声明载体双形态 —— claim(`.claude/claims/<issue>.yaml`) /
+                # legacy brief(`…-D<#>-….md`)。**必须两形态都比对**：只比 D# 时 claim 路径
+                # 提不到 D# → 判定被静默跳过（fail-open）＝迁移期劫持防线整体失效。
+                # 单源: issue 提取走 claim_store.parse_issue（不在此复制正则）。
+                claim_id = _declared_identity(brief)
+                sess_id = _declared_identity_id(session_id or "", brief)
+                # 精确相等（禁 startswith）: D3290 不能匹配 D329；任一为空 → 跳过认领制判定
+                if claim_id and sess_id and claim_id != sess_id:
                     result["status"] = "block"
                     result["foreign_files"].append(
-                        {"file": "<staged>", "owner_session": Path(brief).stem,
-                         "brief": brief, "reason": "认领 brief D# 与本 session 任务不一致"}
+                        {"file": "<staged>", "owner_session": claim_id,
+                         "brief": brief,
+                         "reason": f"认领声明 {claim_id} 与本 session 任务 {sess_id} 不一致"}
                     )
     except Exception as exc:  # fail-open: 认领判定异常 → degraded 记录，registry 判定兜底
         log_degraded(reg.degraded_log, "staging-guard", f"claim check degraded: {exc}")

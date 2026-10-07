@@ -103,6 +103,51 @@ briefs_by_id() {
 ANCHORED_STRONG_FILES="$(briefs_by_id "$ANCHOR_IDS_STRONG" | sort -u || true)"
 ANCHORED_WEAK_FILES="$(briefs_by_id "$ANCHOR_IDS_WEAK" | sort -u || true)"
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# D-C（K3 预审 R3/R4）: issue claim 优先 + **存在 claim 即禁用 D# 锚点回退**（防双口径劫持）
+#
+# 病根（K3 预审 §③）: D718 强锚点（分支名/暂存 task-state 里的 D#）**优先于**一切回退。
+#   迁移期旧 D# 分支名（feat/D734-…）仍存在，而任务已改挂 issue 号（#1017）⇒
+#   新格式声明被旧锚点劫持 → d734→D718 同款假红。
+# 修法:
+#   ① `SYNO_CLAIM_V2=1` 且本任务身份能定位到 `.claude/claims/<issue>.yaml` →
+#      **claim-first**：直接返回 claim 文件（解析语义由 brief_parser 的 claim 分支承担）。
+#   ② 无论开关状态，只要 claim 存在 → **跳过末尾的 D# 强锚点回退**（下方 CLAIM_GUARD）。
+#      这是**减法**（移除一条回退）：无 claim 时逐字节零行为变化（rollback-safe）。
+#   ③ claim 不存在 → 逐字节 legacy（迁移期在途 D# 任务照常可提交）。
+# 开关语义（K3 预审 R2）: `SYNO_CLAIM_V2` 控制「claim 是否作为解析源」；
+#   防劫持守卫是减法不随开关回退（否则回滚态自带 R3 那个 P0）。
+# ═══════════════════════════════════════════════════════════════════════════════
+CLAIM_LIB="$RESOLVER_DIR/../control-tower/claim_store.py"
+CLAIM_FILE=""
+ISSUE_HINT="${SYNO_ISSUE_HINT:-}"
+[ -z "$ISSUE_HINT" ] && ISSUE_HINT="$BR_CUR"
+ISSUE_ID=""
+if [ -n "$PYBIN" ] && [ -f "$CLAIM_LIB" ] && [ -n "$ISSUE_HINT" ]; then
+  ISSUE_ID="$("$PYBIN" "$CLAIM_LIB" --root "$ROOT" --issue-of "$ISSUE_HINT" 2>/dev/null | head -1 || true)"  # swallow-ok: 提不到 issue 身份 → 无 claim 分支，纯 legacy（下方零行为变化）
+fi
+if [ -n "$ISSUE_ID" ]; then
+  _CP="$("$PYBIN" "$CLAIM_LIB" --root "$ROOT" --path "$ISSUE_ID" 2>/dev/null | head -1 || true)"  # swallow-ok: 路径查询失败 → 视为无 claim（legacy 继续）
+  [ -n "$_CP" ] && [ -f "$_CP" ] && CLAIM_FILE="$_CP"
+fi
+CLAIM_V2=0
+case "$(printf '%s' "${SYNO_CLAIM_V2:-}" | tr '[:upper:]' '[:lower:]')" in
+  1|true|on|yes|y) CLAIM_V2=1 ;;
+esac
+if [ "$CLAIM_V2" = "1" ] && [ -n "$CLAIM_FILE" ]; then
+  echo "$CLAIM_FILE"
+  exit 0
+fi
+# claim-first ②: 分支/提交提不到 issue 身份时，按**暂存文件写集命中**兜底（仍需开关）。
+# 语义对齐旧认领制（"文件被哪个声明认领就归谁"），但声明载体换成 claim 单库。
+if [ "$CLAIM_V2" = "1" ] && [ -z "$CLAIM_FILE" ] && [ -n "$PYBIN" ] && [ -n "$STAGED" ] && [ -f "$CLAIM_LIB" ]; then
+  _RP="$("$PYBIN" "$CLAIM_LIB" --root "$ROOT" --resolve-path $(printf '%s' "$STAGED") 2>/dev/null | head -1 || true)"  # swallow-ok: 解析失败/无命中 → 回落 legacy 链（下方逐字节旧行为）
+  if [ -n "$_RP" ] && [ -f "$_RP" ]; then
+    echo "$_RP"
+    exit 0
+  fi
+fi
+
 # 今日全部 brief (认领候选) — D366: 文件名日期前缀 (mtime 会被 git pull 刷, 不可靠)
 # D366: 按文件名日期判断"今日" — 替代 find 按 mtime 的今日判定
 # D559 (CT-46 连带): 窗口扩 ±1 天 — CI runner UTC vs brief 日期 UTC+8：北京时间 08-29 写的
@@ -246,7 +291,9 @@ fi
 # D718: 强锚点回退——认领计数为空时，本提交自身身份（分支名 / 暂存 task-state/D#.json）
 # 指向的 brief 优先于「日期最新可解析」。跨日任务若落到下面的纯日期回退，会拿到无关 brief
 # （= D328 判「他人文件」硬阻断，D664 实测）。只认可解析的强锚点 brief，缺失则原样下探。
-if [ -n "$ANCHORED_STRONG_FILES" ] && [ -n "$PYBIN" ]; then
+# D-C（K3 R3/R4）: 存在 issue claim（CLAIM_FILE 非空）→ **禁用**本条 D# 强锚点回退。
+# 理由: 否则迁移期「分支名带旧 D# + 新 claim 并存」时，新声明被旧锚点劫持（预审 §③ 定罪场景）。
+if [ -z "$CLAIM_FILE" ] && [ -n "$ANCHORED_STRONG_FILES" ] && [ -n "$PYBIN" ]; then
   RESULT=$("$PYBIN" -c "
 import sys
 sys.path.insert(0, r'$PARSER_DIR_W')
