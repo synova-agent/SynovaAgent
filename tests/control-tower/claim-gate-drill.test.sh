@@ -25,6 +25,9 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #             且告警点名 `S0 claim 解析失败` ⇒ 证明上面那条机制的**因果**（而非"异 root 读不到"）
 #   B 降级  — claim 畸形（writeset 为空）⇒ `claim-invalid` ⇒ degraded rc=2（fail-closed，拒半套声明）
 #   C 边界  — claim 合法但写集不含变更文件 ⇒ rc=1 夹带（既有对账语义不回归）
+#   A(ii) 身份— 身份字段断言: `task_id_source == claim`（卡 #1224 Done③ 判据 · 正向）
+#   M 变异  — 把 claim 优先降级为 D# 优先（`if claim_path_found:` 中和）⇒ 身份来源必变
+#             ⇒ A(ii) 断言必红（卡 #1224 Done③ 判据 · 判别性）
 #   E 接线  — A 组必须真的走 claim 源（断言 `S0:claim.writeset`），防夹具自己退回 D# legacy 而假绿
 # 语义边界（本件**不**断言的事）:
 #   · 不改判据、不修 helper 定位策略 —— 只把现状与因果钉成可执行断言（返工与否由 Lead/K3 裁）。
@@ -84,6 +87,15 @@ run_gate() {  # <dir> → 输出落 $TMPD/gate.out，printf rc
     --branch feat/9999-drill --issue 9999 >"$TMPD/gate.out" 2>&1
   printf '%s' "$?"
 }
+run_gate_json() {  # <dir> <gate-path> → JSON 落 $TMPD/gate.json，printf rc（<gate-path> 供变异体用沙箱副本）
+  "$PYBIN" "$2" --repo-root "$1" --base main --head HEAD \
+    --branch feat/9999-drill --issue 9999 --json >"$TMPD/gate.json" 2>&1
+  printf '%s' "$?"
+}
+jq_field() {  # <field> → $TMPD/gate.json 里的取值（不引入 jq 依赖）
+  "$PYBIN" -c "import json,sys; d=json.load(open(sys.argv[1],encoding='utf-8',errors='replace')); print(d.get(sys.argv[2]))" \
+    "$TMPD/gate.json" "$1" 2>/dev/null || true  # swallow-ok: JSON 不可解析 → 空串，由断言判红（不静默当通过）
+}
 
 # ── A 正常: helper 树在 repo-root 内（真仓 worktree 等价前提）⇒ pass + S0 claim ──
 SB_A="$TMPD/sb-a"; build_sb "$SB_A" 1; write_claim "$SB_A" "scripts/drill-target.sh"
@@ -99,6 +111,36 @@ else
   no "A claim 通道未生效（rc=${RC_A}）: $(tail -4 "$TMPD/gate.out")"
 fi
 if grep -q '结论: pass' "$TMPD/gate.out"; then ok "A 结论行 pass（无夹带）"; else no "A 结论非 pass"; fi
+
+# ── A(ii) 身份字段（卡 #1224 Done③ 判据 · 正向）: 身份来源必须是 claim ──
+RC_AJ="$(run_gate_json "$SB_A" "$GATE")"
+TID_SRC="$(jq_field task_id_source)"
+ISS_SRC="$(jq_field issue_source)"
+if [ "$RC_AJ" = "0" ] && [ "$TID_SRC" = "claim" ]; then
+  ok "A(ii) 身份来源 = claim（issue_source=${ISS_SRC}）⇒ 新格式身份成立"
+else
+  no "A(ii) 身份来源非 claim（rc=${RC_AJ} task_id_source=${TID_SRC}）"
+fi
+
+# ── M 变异体（卡 #1224 Done③ 判据 · 判别性）: claim 优先降级为 D# 优先 ⇒ 身份必变 ──
+SB_M="$TMPD/sb-m"; build_sb "$SB_M" 1; write_claim "$SB_M" "scripts/drill-target.sh"
+"$PYBIN" - "$SB_M/scripts/control-tower/merge_writeset_gate.py" >"$TMPD/mut-m.log" 2>&1 <<'PYMUTM'
+import sys
+from pathlib import Path
+p = Path(sys.argv[1])
+t = p.read_text(encoding='utf-8')
+anchor = '    if claim_path_found:'
+assert anchor in t, '夹具写集漂移：未找到 claim 优先分支锚点（判据锚点已改名/已重构）'
+p.write_text(t.replace(anchor, '    if False:  # MUTANT: claim 优先被降级为 D# 优先', 1), encoding='utf-8')
+print('M 注入: claim 优先分支已中和')
+PYMUTM
+RC_M="$(run_gate_json "$SB_M" "$SB_M/scripts/control-tower/merge_writeset_gate.py")"
+MUT_SRC="$(jq_field task_id_source)"
+if [ "$MUT_SRC" != "claim" ]; then
+  ok "M 变异体: claim 优先被降级 ⇒ 身份来源变为 ${MUT_SRC} ⇒ A(ii) 断言必红（对 claim 优先被拆有判别力）"
+else
+  no "M 变异体: 身份来源仍为 claim —— 判别力失效（A(ii) 未绑到 claim 优先）"
+fi
 
 # ── E 接线: A 组必须真走 claim 源（若退回 D# legacy，上面那条会红 ⇒ 此处复述口径）──
 if grep -q 'S0:claim.writeset' "$TMPD/gate.out" && ! grep -q 'S3:brief.Q2-include' "$TMPD/gate.out"; then
