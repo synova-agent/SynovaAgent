@@ -605,7 +605,6 @@ rm -f "$_MUT"
 
 # ═══ 17b. S2.4 收紧（K3 #1299 CONDITIONAL PASS §②/§④ 与 L4 缺口）═══
 #   判据: 根级件不豁免（类级堵漏）/ 不可豁免清单硬拦 / schema 漂移 fail-closed / 变异体必红
-OUT="$(bash "$TOOL" --diff-status "$(_mkd 6 docs/archive)3 root-only-$RANDOM.md" 2>&1)"; _e=$?
 OUT="$(bash "$TOOL" --diff-status "$(python3 -c "print(chr(10).join('D\tdocs/archive/f%03d.md'%i for i in range(6))+chr(10)+'D\tROOT-DOC-$RANDOM.md')")" 2>&1)"; _e=$?
 if [ "$_e" = 0 ] && printf '%s' "$OUT" | grep -q "根级件 1 件\*\*不豁免"; then pass "17.7 根级件不豁免（6 契约域豁免 + 1 根级计预算）→ PASS"; else fail "17.7 期望根级计预算 exit=0，实得 exit=$_e"; fi
 OUT="$(bash "$TOOL" --diff-status "$(printf 'D\tPRODUCT-BRIEF.md')" 2>&1)"; _e=$?
@@ -617,7 +616,7 @@ if [ "$_e" = 1 ] && printf '%s' "$OUT" | grep -q "schema 不可解析"; then pas
 rm -rf "$_SB2"
 _MUT2="scripts/control-tower/.mut-s24-prot.sh"; sed 's/^      if printf .%s. "\$_dc_p" | grep -qE "\$S24_PROTECTED_RE"; then$/      if false; then/' "$_TOOLABS" > "$_MUT2"
 OUT="$(bash "$_MUT2" --diff-status "$(printf 'D\tPRODUCT-BRIEF.md')" 2>&1)"; _e=$?
-if [ "$_e" = 0 ]; then pass "17.10 变异体（去掉不可豁免清单判据）→ 17.8 夹具变红，证明该判据承重"; else fail "17.10 变异体仍阻断 → 清单判据不承重（exit=$_e）"; fi
+if [ "$_e" = 0 ]; then pass "17.10 变异体（去掉不可豁免清单判据）→ 17.8 夹具变红，证明该判据承重"; else fail "17.10 变异体仍阻断 → 清单判据不承重（exit=${_e}）"; fi
 rm -f "$_MUT2"
 echo ""
 echo "═══════════════════════════════════════════════════════════"
