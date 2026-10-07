@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>SynovaAgent 架构图（as_of main ec996d5b7 · 2026-10-07）</title>
+<style>
+  :root{
+    --bg:#0d1117; --fg:#e6edf3; --dim:#8b949e; --line:#30363d;
+    --entry:#1f6feb; --engine:#238636; --auto:#9e6a03; --core:#8957e5;
+    --data:#0d419d; --evo:#a371f7; --side:#6e7681;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:32px;background:var(--bg);color:var(--fg);
+       font:14px/1.6 -apple-system,"PingFang SC","Helvetica Neue",sans-serif}
+  h1{font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);font-size:13px;margin-bottom:24px}
+  .wrap{max-width:1280px;margin:0 auto}
+  .band{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;position:relative}
+  .band>.tag{position:absolute;top:-11px;left:14px;background:var(--bg);padding:0 8px;
+             font-size:12px;color:var(--dim);letter-spacing:.5px}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .box{flex:1;min-width:190px;border:1px solid var(--line);border-left:4px solid var(--side);
+       border-radius:8px;padding:10px 12px;background:#161b22}
+  .box .t{font-weight:600;font-size:13px;margin-bottom:4px}
+  .box .d{color:var(--dim);font-size:12px;line-height:1.5}
+  .box .n{color:var(--dim);font-size:11px;float:right;font-weight:400}
+  .entry .box{border-left-color:var(--entry)}
+  .engine .box{border-left-color:var(--engine)}
+  .auto  .box{border-left-color:var(--auto)}
+  .core  .box{border-left-color:var(--core)}
+  .data  .box{border-left-color:var(--data)}
+  .evo   .box{border-left-color:var(--evo)}
+  .arrow{text-align:center;color:var(--dim);font-size:18px;line-height:1;margin:2px 0}
+  .files{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:8px}
+  .file{border:1px dashed var(--line);border-radius:6px;padding:6px 9px;font-size:12px;color:var(--dim)}
+  .file b{color:var(--fg);font-weight:600}
+  .warn{border:1px solid #9e6a03;background:#2b2100;border-radius:8px;padding:12px 14px;margin-top:18px}
+  .warn h3{margin:0 0 8px;font-size:14px;color:#e3b341}
+  .warn ul{margin:0;padding-left:20px}
+  .warn li{margin:4px 0;font-size:13px}
+  .warn code{background:#000;padding:1px 5px;border-radius:4px;font-size:12px}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;color:var(--dim);font-size:12px;margin:18px 0 6px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:middle}
+  .note{color:var(--dim);font-size:12px;margin-top:20px;border-top:1px solid var(--line);padding-top:12px}
+</style>
+</head>
+<body>
+<div style="border:2px solid #da3633;background:#2a1113;border-radius:9px;padding:12px 15px;margin-bottom:18px;font-size:13.5px"><b style="color:#ff7b72">🔴 本图不是权威架构图 —— 仅作代码侧盘点参考。</b><br>权威架构总图 = <code>产品宪章.md</code>（<b>v5 现行</b>）第四条 §4.1/§4.2 —— 见 <code>architecture-charter-v5-20261007.html</code>。<br>本图由 CTO 按 <code>git ls-tree</code> 现场量出，<b>用于核对"代码现状 vs 宪章要求"</b>，不得引为架构条款。</div>
+<div class="wrap">
+
+<h1>SynovaAgent 架构图</h1>
+<div class="sub">
+  断面 <b>as_of origin/main = ec996d5b7</b>（2026-10-07）｜全部数字从 <code>git ls-tree</code> / <code>git show</code> 量出，非抄文档
+</div>
+
+<div class="legend">
+  <span><i style="background:var(--entry)"></i>入口面</span>
+  <span><i style="background:var(--engine)"></i>对话引擎</span>
+  <span><i style="background:var(--auto)"></i>自主系统</span>
+  <span><i style="background:var(--core)"></i>文件驱动（产品核心机制）</span>
+  <span><i style="background:var(--data)"></i>数据层</span>
+  <span><i style="background:var(--evo)"></i>进化回环</span>
+</div>
+
+<!-- 1. 入口 -->
+<div class="band entry"><span class="tag">① 用户从哪进来</span>
+  <div class="row">
+    <div class="box"><span class="n">53 文件</span><div class="t">HTTP API · <code>src/routes/</code></div>
+      <div class="d">诊断触发 / 报告 / 工单 / 知识上传 / 飞书回调…</div></div>
+    <div class="box"><span class="n">19 文件</span><div class="t">终端界面 · <code>src/tui-v2/</code></div>
+      <div class="d">TUI 聊天（<code>npm run tui</code>）</div></div>
+    <div class="box"><span class="n">6 文件</span><div class="t">MCP 协议 · <code>src/mcp/</code></div>
+      <div class="d">外部工具调用</div></div>
+    <div class="box"><span class="n">4 文件</span><div class="t">IM 渠道 · <code>src/l1/</code></div>
+      <div class="d">飞书/企微入站 + 验签 + L0 提示</div></div>
+    <div class="box"><span class="n">electron/</span><div class="t">桌面端</div>
+      <div class="d">Electron 壳（品牌表层）</div></div>
+  </div>
+</div>
+<div class="arrow">▼</div>
+
+<!-- 2. 装配 + 引擎 -->
+<div class="band engine"><span class="tag">② 装配与对话引擎（L2）</span>
+  <div class="row">
+    <div class="box"><span class="n">src/server.ts</span><div class="t">装配点</div>
+      <div class="d">createServer：注入路由 / 中间件 / 文件驱动加载器</div></div>
+    <div class="box"><span class="n">51 文件</span><div class="t"><code>src/agent/</code></div>
+      <div class="d">对话引擎 · 诊断启动器 · 专家配置加载 · 数据接入 · 交叉验证 · 收敛引擎</div></div>
+    <div class="box"><span class="n">18 文件</span><div class="t"><code>src/orchestrator/</code></div>
+      <div class="d">子代理协调 · 模块运行器</div></div>
+    <div class="box"><span class="n">30 文件</span><div class="t"><code>src/services/</code></div>
+      <div class="d">请求上下文 · 记忆监控 · 各类服务</div></div>
+  </div>
+</div>
+<div class="arrow">▼</div>
+
+<!-- 3. 两大自主系统 -->
+<div class="band auto"><span class="tag">③ 三大产品系统</span>
+  <div class="row">
+    <div class="box"><span class="n">诊断</span><div class="t">按需诊断（GA 触发）</div>
+      <div class="d">六阶段管道 → 测量器 + 专家 → 综合报告</div></div>
+    <div class="box"><span class="n">18 文件</span><div class="t">定时哨兵 · <code>src/sentinel/</code></div>
+      <div class="d">Cron → 基线比对 → 异常 → 信号聚合 → 工单</div></div>
+    <div class="box"><span class="n">4 文件</span><div class="t">循环引擎 · <code>src/loops/</code></div>
+      <div class="d">6 个内置 cron 循环（<b>🔴 点火未接，见下</b>）</div></div>
+    <div class="box"><span class="n">9 文件</span><div class="t">周期 · <code>src/cycles/</code></div>
+      <div class="d">周期快照 / 结论服务</div></div>
+  </div>
+</div>
+<div class="arrow">▼</div>
+
+<!-- 4. 文件驱动 -->
+<div class="band core"><span class="tag">④ 文件驱动 —— 产品核心机制（"加文件即生效，不改代码"）</span>
+  <div class="files">
+    <div class="file"><b>expert/</b> 115 文件 · 6 位专家（host / 客户增长 / 组织能力 / 技术基座 / 竞争战略 / 基本效率）</div>
+    <div class="file"><b>extensions/sentinels/</b> 319 文件 · <b>46 个活跃哨兵</b>（47 目录 − <code>_extinct</code>）</div>
+    <div class="file"><b>extensions/skills/</b> 83 文件 · 技能</div>
+    <div class="file"><b>knowledge/</b> 10 文件 · 共享知识单源</div>
+    <div class="file"><b>theory/</b> 5 文件 · 理论基础</div>
+    <div class="file"><b>src/l3/</b> 32 文件 · 洞察层（专家调度 / 自主 / 质量闸门 / 专家平台）</div>
+  </div>
+</div>
+<div class="arrow">▼</div>
+
+<!-- 5. 数据 -->
+<div class="band data"><span class="tag">⑤ 数据层</span>
+  <div class="row">
+    <div class="box"><span class="n">25 文件</span><div class="t"><code>src/l4/</code> 本体（企业知识图谱）</div>
+      <div class="d">22 节点类型 + 17 边类型；GraphBridge / 实体解析</div></div>
+    <div class="box"><span class="n">6 文件</span><div class="t"><code>src/store/</code> 存储（L5）</div>
+      <div class="d">SQLite：会话 / 知识 / 反馈落库</div></div>
+    <div class="box"><span class="n">22 文件</span><div class="t"><code>src/growth/</code></div>
+      <div class="d">目标 / 反馈 / 增长闭环</div></div>
+    <div class="box"><span class="n">13 文件</span><div class="t"><code>src/security/</code></div>
+      <div class="d">PII 脱敏 · 数据边界 · 上传预检</div></div>
+  </div>
+</div>
+<div class="arrow">▼</div>
+
+<!-- 6. 进化 -->
+<div class="band evo"><span class="tag">⑥ 进化回环（L0）</span>
+  <div class="row">
+    <div class="box"><span class="n">98 export</span><div class="t"><code>packages/evolution/</code></div>
+      <div class="d">反馈收集 → 信号聚合 → 回写参数 / 跨客户模式发现</div></div>
+    <div class="box"><span class="n">src/loops/</span><div class="t">middle-evolution-engine</div>
+      <div class="d">进化中间件（已接入）</div></div>
+  </div>
+</div>
+<div class="arrow">▼</div>
+
+<!-- 7. 横切 -->
+<div class="band"><span class="tag">⑦ 横切（12 个 npm 包 · <code>packages/</code> 95 文件）</span>
+  <div class="files">
+    <div class="file"><b>sog-core</b> 67 export · 语义对象图</div>
+    <div class="file"><b>ontology</b> 24 · 本体</div>
+    <div class="file"><b>engine-auth</b> 26 · 认证</div>
+    <div class="file"><b>error-types</b> 19 · 错误分类</div>
+    <div class="file"><b>connector-registry</b> 14 · 连接器</div>
+    <div class="file"><b>extension-registry</b> 9 · 扩展注册</div>
+    <div class="file"><b>logger</b> · 日志</div>
+    <div class="file"><b>knowledge-ingest</b> · 知识导入</div>
+    <div class="file"><b>agent-observer-mcp</b> · 观察者</div>
+    <div class="file"><b>test-kit</b> 21 测试 · 测试工具</div>
+  </div>
+</div>
+
+<!-- 偏差警示 -->
+<div class="warn">
+  <h3>🔴 我量出来的三处「文档 vs 真代码」偏差（这就是为什么图要重画）</h3>
+  <ul>
+    <li><b>层目录名与实际分层不符</b>：<code>src/l1/</code> 只 <b>4 个文件</b>、<code>src/l5/</code> 只 <b>3 个</b>。
+        真正的 L1 在 <code>src/routes</code>(53) + <code>src/tui-v2</code>(19) + <code>src/mcp</code>(6)；
+        真正的 L5 在 <code>src/store</code>(6)。<b>不能按目录名理解架构。</b></li>
+    <li><b>L2 没有 <code>src/l2/</code> 目录</b>：L2 = <code>src/agent</code>(51) + <code>src/orchestrator</code>(18) + <code>src/services</code>(30)。</li>
+    <li><b>两个总闸的真实状态（我已实测）</b>：
+        <b>0-2 反馈回写已通</b>（<code>feedback-collector.ts</code> 有 15 处 <code>target_id</code>）；
+        <b>0-1 循环点火仍未接</b>（<code>src/loops/main-agent-binding.ts</code> 不在 main、
+        <code>.setMainAgent(</code> 调用数 <b>0</b>）⇒ <b>六个定时循环仍不点火</b>。</li>
+    <li><b>体量</b>：<code>src/</code> 450 文件 / 49 顶层目录 ｜ <code>tests/</code> 802 ｜ <code>docs/</code> 1617 ｜
+        <code>extensions/</code> 693 ｜ <code>scripts/</code> 299。（全部经 <code>git ls-tree</code> 逐项复核）</li>
+  </ul>
+</div>
+
+<div class="note">
+  生成方式：全部数字由 <code>git ls-tree -r --name-only origin/main</code>、
+  <code>git grep</code>、<code>git show origin/main:&lt;path&gt;</code> 现场量出（未读工作树）。
+  重跑命令见会话记录。若与本图不符，以 <b>main 的 ref</b> 为准。
+</div>
+
+</div>
+</body>
+</html>
