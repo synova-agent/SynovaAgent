@@ -116,7 +116,13 @@ while [ $# -gt 0 ]; do
       [ $# -ge 2 ] || _die "--paths-file 缺参数"
       PATHS_FILE="$2"; shift 2 ;;
     --domain)
-      [ $# -ge 2 ] || _die "--domain 缺参数"
+      # 🔴 2026-10-07 · 分域已废止（创始人：「不分域。谁有空，谁能做就谁做。」）
+      #   本参数原按 ownership.yaml 的 mac/win/k3 过滤扫描集；ownership.yaml 已单域化
+      #   ⇒ 三域名在数据源里不存在，过滤必然得出零文件。
+      #   处置：**显式 fail-closed**（exit 2）—— 不静默退化为"扫描全仓"（那会把
+      #   「限定域」的语义偷换成「全量」，属静默降级，违铁律 24/31）。
+      #   需要按路径限定扫描范围时请用 `--paths <f1,f2,…>` / `--paths-file <f>`。
+      _die "--domain 已废止（分域 2026-10-07 由创始人取消）—— 请改用 --paths / --paths-file 限定范围；本参数不再做域过滤"
       DOMAIN="$2"; shift 2 ;;
     --json)
       JSON=1; shift ;;
@@ -126,10 +132,7 @@ while [ $# -gt 0 ]; do
       _die "未知参数: $1（--help 看用法）" ;;
   esac
 done
-case "$DOMAIN" in
-  ""|mac|win) ;;
-  *) _die "--domain 只接受 mac|win，实得: $DOMAIN" ;;
-esac
+# （DOMAIN 校验已随 --domain 废止移除 —— 该参数在本脚本永不取到值）
 
 TMPD="$(mktemp -d)" || _die "mktemp 失败"
 trap 'rm -rf "$TMPD"' EXIT
