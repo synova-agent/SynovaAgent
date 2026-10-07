@@ -1,0 +1,12 @@
+{
+  "task_id": "D1210",
+  "title": "D-C 标识与声明归一 claim库+防劫持+D708联动",
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-07",
+  "updated_by": "alloc-task-id",
+  "note": "过渡号分号 D1205→D1210（Lead 分配，解 D708 声明源多命中）"
+}
