@@ -1,0 +1,11 @@
+{
+  "task_id": "D1228",
+  "title": "全角变量陷阱扫描面扩到 tests/**（先登记棘轮基线，含 4 目击者证据）",
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-07",
+  "updated_by": "line-b-ci"
+}
