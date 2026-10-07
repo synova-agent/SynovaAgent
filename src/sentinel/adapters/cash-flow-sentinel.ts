@@ -10,6 +10,7 @@ import type { Sentinel, SentinelCheckResult, SentinelConfig, SentinelContext, Se
   // V4.2.4: financial-snapshot 桥接已删除
 import { discoverTeams } from './helpers';
 import { createLogger } from '@synova/logger';
+import { resolveReadTargets } from '../mapped-read';
 import { writeMetricReadings } from '../metric-readings-writer';
 
 const log = createLogger('sentinel/cashflow');
@@ -65,15 +66,20 @@ export const cashFlowSentinel: Sentinel = {
       if (!rawDb) {
         log.warn({ sentinelId: config.id }, 'rawDb 能力缺席（该路径无 raw 句柄）⇒ 降级：跳过财务条目读取');
       }
-      const db = rawDb as { prepare(sql: string): { all(): Array<Record<string, unknown>> } } | null;
+      const db = rawDb as { prepare(sql: string): { all(...params: unknown[]): Array<Record<string, unknown>> } } | null;
       if (!db) return { sentinelId: config.id, ok: true, findings: [], durationMs: Date.now() - startTime, checkedAt, degraded: true };
 
       // 从 SOG FINANCIAL 节点提取财务条目
       let rawEntries: Array<Record<string, unknown>> = [];
       try {
+        // #1381 V2a（B1）：**经显式映射读** —— 类型轴打通（真源 = 本体轴）
+        const { targets, warn: mapWarn, reasons } = resolveReadTargets('FINANCIAL');
+        if (mapWarn) log.warn({ sentinelId: config.id, reasons, degraded: true, reason: 'no-mapping' }, '无映射 ⇒ 回退遗留字面量（显式）');
+        const readTypes = targets.length > 0 ? targets : ['FINANCIAL'];
+        const placeholders = readTypes.map(() => '?').join(',');
         rawEntries = db.prepare(
-          "SELECT props FROM graph_nodes WHERE type = 'FINANCIAL' AND props IS NOT NULL"
-        ).all();
+          `SELECT props FROM graph_nodes WHERE type IN (${placeholders}) AND props IS NOT NULL`
+        ).all(...readTypes);
       } catch (err) {
         log.warn({ err: err instanceof Error ? err.message : String(err) }, "从 SOG FINANCIAL 节点提取财务条目");
         /* DB 不可用 — 降级 */

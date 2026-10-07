@@ -1,0 +1,19 @@
+# .claude/claims/1381.yaml — #1381（p0 词表断轴 · V2a：类型轴打通）写集声明（D708 的 S0 源）
+#
+# CTO 2026-10-08 裁 a：V2 拆两级 —— 本卡 = V2a（类型轴打通）；V2b（props 契约对齐 + 消费侧）= 另立卡（p0）。
+writeset:
+  - .claude/claims/1381.yaml
+  - .claude/task-briefs/2026-10-08-1381-axis-mapping.md
+  - extensions/ontology/node-type-mapping.json
+  - src/sentinel/node-type-resolver.ts
+  - src/sentinel/mapped-read.ts
+  - src/sentinel/adapters/cash-flow-sentinel.ts
+  - tests/sentinel/node-type-mapping.test.ts
+  - tests/sentinel/mapped-read.test.ts
+  - tests/sentinel/read-capability.test.ts
+done:
+  - verify: npx vitest run tests/sentinel/node-type-mapping.test.ts tests/sentinel/mapped-read.test.ts
+  - verify: npx vitest run tests/sentinel/ tests/store/ tests/l3/
+  - verify: test "$(git grep -c "resolveReadTargets" HEAD -- src/sentinel/adapters/cash-flow-sentinel.ts | tr -d '\n')" -ge 1
+  - verify: npx tsc --noEmit
+note: 真源 = 本体轴（CTO 裁）。映射表 13 条（5 有目标 / 6 null+warn / 2 alias）；解析器 aliasOf 委托 + fail-closed；映射读 = 多目标并集 + 无映射回退遗留字面量（显式 warn）。V2a E2E 走**真实 csv-import**（禁手工 createNode 夹具）。V2b（props 契约对齐 + 消费侧）另立卡 p0。
