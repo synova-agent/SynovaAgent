@@ -1,0 +1,22 @@
+# .claude/claims/1366.yaml — #1366（schema_version 读取器：确定性 + 类型自证）写集声明（D708 的 S0 源）
+#
+# 为什么用 claim：本卡是 **issue 号卡（#1366）**，无 D# 编号 ⇒ D708 的 S1/S2/S3（按 `<D#>*` 定位）找不到声明源，
+#   会把全部改动判「夹带」。`.claude/claims/<issue>.yaml` 是 issue 号任务的正式声明源（S0）。
+# 先例：#1052、#1053、#1322、#1220、#1224、#1358。
+#
+# 依据：CTO 2026-10-08 放行（修法 B2 + 双层防御；写入侧不动有理由；M1–M3 据实测填表；V6 断言翻转联动一并做）。
+writeset:
+  - .claude/claims/1366.yaml
+  - .claude/task-briefs/2026-10-08-1366-schema-version-reader.md
+  - src/store/schema-migration.ts
+  - tests/store/schema-migration-idempotency.test.ts
+  # 联动必办（#1053 登记的）：读取器修好后「删表 ⇒ 再 reconcile」从【重建表】变为【真 no-op】
+  # ⇒ 该用例断言翻转 tableExists(true) → (false)，注释同步改口径。
+  - tests/store/metric-readings-schema.test.ts
+done:
+  - verify: npx vitest run tests/store/schema-migration-idempotency.test.ts
+  - verify: npx vitest run tests/store/
+  - verify: npx vitest run tests/store/ tests/adapters/
+  - verify: test "$(git grep -nE 'ORDER BY updated_at DESC LIMIT 1' HEAD -- src/store/ | grep -vE ':[0-9]+:[[:space:]]*(//|\*)' | wc -l)" -eq 0
+  - verify: npx tsc --noEmit
+note: 修 reconcileSchema 的版本读取：读 = MAX(version) WHERE typeof(version)='integer' + JS 数值守卫（B2+双层）；写侧不动（有理由，见 PR 正文与代码注释）。覆盖面 = 读取点 1 处；tag 写入方 4 处不改。

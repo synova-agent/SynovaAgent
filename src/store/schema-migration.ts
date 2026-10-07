@@ -58,10 +58,27 @@ export function reconcileSchema(db: Database.Database): void {
     )
   `);
 
-  // 读取当前版本
-  const row = db.prepare('SELECT version FROM schema_version ORDER BY updated_at DESC LIMIT 1').get() as
-    { version: number } | undefined;
-  const currentVersion = row?.version ?? 0;
+  // 读取当前版本（#1366）：
+  //   ① **取 MAX 而非 `ORDER BY updated_at DESC LIMIT 1`** —— 后者在**同秒并列**（SQLite 无确定序）时
+  //      会取到**旧**行 ⇒ `currentVersion < SCHEMA_VERSION` ⇒ 最后一条迁移被**重复执行**
+  //      （实测：新库插入 2/3 两行同秒 ⇒ reader 返回 2；二次 reconcile ⇒ schema_version 追加一行）。
+  //   ② **只认数值行**：同表还存**字符串 tag**（`'d93b_actor_role'` / `'d551_target_type'` /
+  //      `'k6_confirm_decision'` / `'d551_memory_type'`，由 feedback-collector / agent-memory-store 写入；
+  //      列声明 `INTEGER NOT NULL` 在 SQLite 无强制 ⇒ 实际存为 TEXT）⇒ 旧写法 `as { version: number }`
+  //      是**单方面断言**：字符串混入后 `currentVersion >= SCHEMA_VERSION` 退化为 NaN 比较（恒 false）
+  //      ⇒ 走"无待执行迁移 ⇒ 只插版本号"分支 ⇒ 每次启动都追加一行（实测已复现）。
+  //   ③ 第二层防御：JS 侧数值守卫（非数值 ⇒ 视为 0），与 SQL 侧 `typeof(version)='integer'` 双保险。
+  //
+  // 🔴 **写入侧不动（两侧一起定后的结论，不是遗漏）**：
+  //   · `MAX(数值)` 对"多行 / 同秒并列"天然免疫 ⇒ **写侧无需改动**即可修正上述两处；
+  //   · 保留"逐迁移一行"（`:75` 初始化路径 + `:84` 每迁移一行）⇒ **保留可审计历史**（哪次跑过哪些迁移）；
+  //   · 反向验证（本卡反例 M3）：**只改写侧**（例如"循环结束后只插一次最终版本"）在**既有库**上
+  //     （已含同秒多行 `[2,3]`）**仍会读旧行** ⇒ 证明读侧才是必要修复；
+  //   · 且"只插最终版本"**不能**解决字符串 tag 面（更晚写入的 tag 仍会是"最新行"）⇒ 读侧守卫必要。
+  const row = db.prepare(
+    "SELECT MAX(version) AS maxVersion FROM schema_version WHERE typeof(version) = 'integer'",
+  ).get() as { maxVersion: number | null } | undefined;
+  const currentVersion = typeof row?.maxVersion === 'number' ? row.maxVersion : 0;
 
   if (currentVersion >= SCHEMA_VERSION) {
     log.debug({ currentVersion, schemaVersion: SCHEMA_VERSION }, 'Schema 已是最新');
