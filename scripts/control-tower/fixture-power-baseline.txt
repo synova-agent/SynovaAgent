@@ -13,3 +13,4 @@
 # 判据（面 3 硬红）: 代码行 `grep -qv`（含 -qvE/-qEv/-vq）输入为 管道/stdin/变量 ⇒ 违规。
 #   字面量文件操作数 ⇒ 合规；对变异体输出取反（MUT/CLONE/COPY）⇒ 仅告警不阻断。
 tests/control-tower/hooks-install.test.sh:43 | owner=line-b-ci | expires=2026-11-07 | reason=列目录后找非 sample 项：stdin+逐行取反在此**是有意的**（卡 #1295 卡面点名豁免，不误伤合法用法）
+tests/control-tower/docsonly-diff-base.test.sh:59 | owner=deepseek-harness-govl | expires=2026-11-07 | reason=该行位于【冻结标本 heredoc 内】（pre-#1326 判定块原文，作为「先红」基准的**数据**，不是本夹具的判据）：标本必须逐字保留旧语义，含 `grep -qvE` 是**被检对象**（P0 修复 D1242 / PR #1334）

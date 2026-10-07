@@ -42,15 +42,32 @@ NEW_BLK="$TMPD/block-new.sh"
 #   ⚠️ 不可用 `git show HEAD:` 取「新版」：本地未提交时 HEAD 仍是旧版 ⇒ 会静默测到旧语义（本夹具首跑即踩）。
 cp "$CI" "$TMPD/ci-new.yml"
 OLD_BLK="$TMPD/block-old.sh"
-git -C "$REPO" show origin/main:.github/workflows/ci.yml > "$TMPD/ci-old.yml" 2>/dev/null || true
 _extract_block "$TMPD/ci-new.yml" > "$NEW_BLK"
-if [ -s "$TMPD/ci-old.yml" ]; then _extract_block "$TMPD/ci-old.yml" > "$OLD_BLK"; fi
+# 🔴 P0 修复（2026-10-08）: 「先红基准」原先**从 `origin/main` 提取旧块** ⇒ **#1326 一合并，
+#   main 上就是修好的版本 ⇒ 基准被合并本身销毁 ⇒ 断言 `A 先红未复现` 必红 ⇒ 卡住所有 PR**。
+#   而 main 上该步骤被 skip（#1180 的 ctsignal 轴）⇒ 这个坏夹具在 main 上看不见、只在 PR 上炸。
+#   ⇒ 改为**自包含内嵌旧块**（取自 #1326 合并前 `9ddd55f28`），**与 main 是否已修无关**。
+cat > "$OLD_BLK" <<'OLD_BLOCK_EOF'
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          if [ -z "$DS_RE" ]; then
+            echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+          fi
+OLD_BLOCK_EOF
 
 echo "=== #1323: docs-only 判定 base 解析 + 空变更集第三态 ==="
 [ -s "$NEW_BLK" ] && ok "提取到新版判定块（$(wc -l < "$NEW_BLK" | tr -d ' ') 行）" \
   || { no "提取新版判定块失败 —— 判据已漂移（提取器需同步）"; }
-[ -s "$OLD_BLK" ] && ok "提取到 origin/main 版判定块（旧语义，供先红取证）" \
-  || no "提取旧版判定块失败（无先红基准）"
+[ -s "$OLD_BLK" ] && ok "内嵌旧版判定块就位（自包含基准，与 main 是否已修无关）" \
+  || no "内嵌旧版判定块缺失（无先红基准）"
 
 # ── 沙箱: 三个提交（C1 docs / C2 +code / C3 +docs-only）──
 _mk_sb() {
@@ -113,6 +130,14 @@ grep -qE 'git diff --name-only "\$DS_BASE"\.\.\.HEAD' "$NEW_BLK" \
 _E="$(_run "$NEW_BLK" "$SB" "$C2" "$C1" pull_request "")"
 [ "$_E" = "false" ] && ok "E 回归: pull_request 下 origin/main...HEAD 含代码 ⇒ false（与旧一致）" \
   || no "E 回归失真: docs_only=${_E:-<无>}（期望 false）"
+
+# ── E 时间无关性（P0 修复的守护断言）: 基准必须是【内嵌】的，不得再依赖 origin/main ──
+# 判据取「实际执行语句」而非其字面（否则 grep 会命中本断言自身的模式串 = 自匹配假红）
+if grep -qE '^[[:space:]]*git -C "\$REPO" show origin/main' "$0" 2>/dev/null; then
+  no "时间无关性: 夹具仍从 origin/main 提取旧块 ⇒ 它一旦被修好，本夹具会自毁（#1326 反噬形态）"
+else
+  ok "时间无关性: 先红基准为内嵌，不依赖 origin/main 当前内容（main 已修亦成立）"
+fi
 
 echo ""
 echo "结果: $PASS 通过, $FAIL 失败"
