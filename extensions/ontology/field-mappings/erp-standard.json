@@ -1,7 +1,7 @@
 {
   "name": "erp-standard",
   "label": "标准ERP导出",
-  "targetNodeType": "Financial",
+  "targetNodeType": "outcome/financial",
   "mappings": [
     { "externalField": "营业收入", "prop": "total_revenue", "type": "number" },
     { "externalField": "经营现金流", "prop": "operating_cashflow", "type": "number" },

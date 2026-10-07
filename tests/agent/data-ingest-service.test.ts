@@ -111,7 +111,7 @@ describe('data-ingest-service — D470 目标 schema 校验', () => {
 
   it('用例3 hr 契约: per-person 字段写入 + 聚合指标跳过非静默 + PII 掩码既有行为', async () => {
     const mapping = requireMapping('hr-standard');
-    expect(mapping.targetNodeType).toBe('Person');   // #1395：hr-standard 属 **B2**（本批 B1 未处理 ⇒ 仍遗留名）
+    expect(mapping.targetNodeType).toBe('resource/person');   // #1395 B2：hr-standard 已对齐本体轴
     for (const [externalField, prop] of [
       ['姓名', 'name'],
       ['知识领域', 'skills'],
@@ -125,7 +125,7 @@ describe('data-ingest-service — D470 目标 schema 校验', () => {
       });
     }
 
-    const schema = await loadNodeSchema('Person');   // #1395：hr-standard 属 B2 ⇒ 遗留名（B1 只支持限定名，双形态兼容）
+    const schema = await loadNodeSchema('resource/person');   // #1395 B2：限定名（双形态兼容保留）
     if (!schema) throw new Error('person.json 未加载 — process.cwd() 必须是仓库根');
     const valid = new Set([...Object.keys(schema.optionalProps), ...schema.requiredProps]);
     for (const p of ['name', 'skills', 'role', 'teamId']) {
@@ -162,7 +162,7 @@ describe('data-ingest-service — D470 目标 schema 校验', () => {
 
     expect(result.ok).toBe(true);
     expect(result.nodesCreated).toBe(2);
-    expect(result.nodeType).toBe('Person');   // #1395：hr-standard 属 **B2**
+    expect(result.nodeType).toBe('resource/person');   // #1395 B2
 
     const node1 = fake.nodes[0].props;
     expect(node1.name).toBe('测试员工');
@@ -232,7 +232,7 @@ describe('data-ingest-service — D470 目标 schema 校验', () => {
     expect(await loadNodeSchema('Operational')).not.toBeNull();
 
     const mapping = requireMapping('erp-standard');
-    expect(mapping.targetNodeType).toBe('Financial');   // #1395：erp-standard 属 **B2**（本批 B1 未处理）
+    expect(mapping.targetNodeType).toBe('outcome/financial');   // #1395 B2（主目标 = 字典 targets[0]）
     const fake = fakeStore();
     const row = {
       营业收入: '1200',
@@ -255,7 +255,7 @@ describe('data-ingest-service — D470 目标 schema 校验', () => {
 
     expect(result.ok).toBe(true);
     expect(result.nodesCreated).toBe(1);
-    expect(result.nodeType).toBe('Financial');   // #1395：erp-standard 属 **B2**（B1 已支持限定名，但该 mapping 待 B2 改）
+    expect(result.nodeType).toBe('outcome/financial');   // #1395 B2：写入类型对齐本体轴（standardKey 段仍为 Financial）
     expect(result.errors).toEqual([]);
     expect(result.warnings).toEqual([]);
     const props = fake.nodes[0].props;
