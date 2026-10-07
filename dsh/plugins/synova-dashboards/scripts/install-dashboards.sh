@@ -12,11 +12,19 @@
 #
 # 生效：重启 dsh web → 刷新浏览器 → 左侧栏出现「项目总览」入口。
 # 回滚：脚本尾部打印卸载步骤（并已备份 package.json）。
+#
+# D1060 变更：目标 profile 可选 —— 桌面端（Electron）用的是自己的 profile，
+#   `$DSH_PROFILE_DIR` 由 profile 启动的 dsh 进程注入（本会话实测 = ~/.dsh-trial-017/profiles/desktop）。
+#   优先级：--profile-dir 参数 > $DSH_PROFILE_DIR > $DSH_HOME/profiles/web（原行为，逐字不变）。
 set -euo pipefail
 
 PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DSH_HOME_DIR="${DSH_HOME:-$HOME/.dsh}"
-PROFILE_DIR="$DSH_HOME_DIR/profiles/web"
+PROFILE_DIR="${DSH_PROFILE_DIR:-$DSH_HOME_DIR/profiles/web}"
+if [ "${1:-}" = "--profile-dir" ]; then
+  PROFILE_DIR="${2:?--profile-dir 需要目录参数}"
+fi
+echo "==> 目标 profile: $PROFILE_DIR"
 PKG_JSON="$PROFILE_DIR/package.json"
 DEST="$PROFILE_DIR/node_modules/@synova/dsh-dashboards"
 PRESET_FILE="$DSH_HOME_DIR/.agent-presets/synova-cto/agent.cordis.yml"

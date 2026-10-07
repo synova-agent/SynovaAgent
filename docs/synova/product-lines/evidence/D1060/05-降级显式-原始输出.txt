@@ -1,0 +1,16 @@
+=== 降级显式 原始输出（治理线路由，task-state 真缺失）===
+2026-09-29 01:26:27 CST
+{
+    "ok": true,
+    "degraded": true,
+    "degraded_sources": [
+        "\u6cbb\u7406\u5361\uff1atask-state \u76ee\u5f55\u4e0d\u5b58\u5728"
+    ],
+    "generated_at": "2026-09-28T17:26:23.079Z",
+    "scope": {
+        "rule": "\u6cbb\u7406\u7ebf = \u4e09\u6761\u673a\u5668\u53ef\u89c1\u4fe1\u53f7\u4e4b\u4e00\uff1a\u2460 domain=doc-governance \u2461 \u6807\u9898\u4ee5 CT- \u5f00\u5934 \u2462 \u6807\u9898/\u91cc\u7a0b\u7891\u542b \u6cbb\u7406|\u95e8\u7981|\u63a7\u5236\u5854\u3002\u9010\u5361\u56de\u4f20\u547d\u4e2d\u4fe1\u53f7\uff0c\u53ef\u590d\u6838\u53ef\u63a8\u7ffb\u3002",
+        "signals": {}
+    },
+    "cards": {
+        "ok": false,
+        "error": "task-state \u76ee\u5f55\u4e0d\u5b58\u5728",

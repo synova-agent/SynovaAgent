@@ -1,7 +1,56 @@
-# @synova/dsh-dashboards — 「项目总览」（DSH Web · **全局挂载 · 单一入口**）
+# @synova/dsh-dashboards — Synova 控制塔可视化（DSH 左侧栏 · 三个入口）
 
-左侧栏一个入口 → 中央只读面板。**入口唯一**：早期版本的右侧栏三仪表盘（`shell.overlay`）
-已并入本面板并**删除**，不再维护第二个入口。
+左侧栏三个入口 → 三张只读面板。**入口各自独立**（D1060「治理线与格子物理分离」）：
+
+| 入口 | 槽位 id / main key | 面板 | 数据源 |
+|---|---|---|---|
+| 📊 项目总览 | `synova-project-overview` | 六区块（下表） | `/synova/pm/ledger` + `/synova/dashboards/data` |
+| 🧰 开发工作台 | `synova-dev-workbench` | ① 四问格子矩阵 ② 今日/本周流水 ③ 待你裁 ④ 阻塞 | `/synova/workbench/data` |
+| ⚖️ 治理线 | `synova-governance-line` | 治理卡列表 + 欠账/待规划 | `/synova/governance/data` |
+
+> 早期版本的右侧栏三仪表盘（`shell.overlay`）**已删除**，不再维护第二个侧面入口。
+
+## D1060 · 面板 A「Synova 开发工作台」
+
+D963（宪章格子面板）的升级：从一个静态格子升级为四区块工作台。**全部数字机器生成，禁手写**。
+
+| 区块 | 内容 | 数据源（Host 端每请求实时取数） |
+|---|---|---|
+| ① 四问格子矩阵 | 16 行（扩展点）× 4 问（加/接/生效/删），四色 + 逐格判据 tooltip | `docs/synova/coordination/宪章三问-48格.json`（D1059 起 64 格） |
+| ② 今日/本周流水 | 今日提交数/清单、本周提交数/清单（自本周一）、PR 未合队列 + 本周已合并清单 | `git log --since` + GitHub PR API（`/pulls` + `/search/issues`） |
+| ③ 待你裁 | 一句话 + 我的倾向 + 等待天数；另列「卡面扫描『需创始人』」 | `product-progress.json#decisions`（上游 `cockpit-override.yaml#pending_decisions`）+ `task-state/*.json` 文本扫描 |
+| ④ 阻塞 | 卡在哪 + 卡了几天 + 需要谁 | `ledger.json#blocked` + `product-progress.json#lines[].blocked`（三要素口径） |
+
+**四色口径**（与 `scripts/control-tower/gen-charter-grid.py:15-16` 同源，禁第二套配色）：
+🟢 生效了 / 🟡 接了但没生效 / 🔴 缺失 / **⚪ 未填**。**空格一律显式 ⚪未填 + 「待办 · 未填判据」**，
+绝不折算成绿（院方 X27：缺失≠通过）。数据源里出现未知 status → 单列 `❔ 未知态`，不改写。
+
+**口径显式**（可核、可推翻，全部随 payload 返回并由面板原样展示）：
+- 阻塞 = 三要素 `{reason, since, needs}` 齐全才计入（`scripts/project/gen-project-board.py:66`）。
+  缺要素的卡面 `blocked` **单列「未申报」并计数**，不静默补、不计入阻塞数。
+- 待你裁 = `status ≠ resolved` 才算待裁；卡面文本扫描结果**单列**（无选项/无倾向 ⇒ 不混进权威表）。
+- 等待天数取该项自带日期锚点；锚点缺失 → `null` → UI 显 `—`（不编天数）。
+
+## D1060 · 面板 B「治理线」（与格子**物理分离**）
+
+两个独立入口、两条独立路由、两块独立降级 —— **不是**同一面板里的两个区块。
+
+| 列 | 含义 | 来源 |
+|---|---|---|
+| 域 | `domain`（缺失显式写 `—（卡面未声明）`） | `task-state/D###.json#domain` |
+| 卡号 | `task_id` | 同上 |
+| 状态 | `status`（活卡/终态分流；默认只看活卡） | 同上 |
+| 服务哪条主线 | 卡面显式 `line` 字段 → 否则文本抽 `线 N` → 否则 `—（卡面未声明）`，**不猜** | `line` / note / blocked / title |
+| 等待天数 | 今天 − `updated_at`（不可解析 → `—`） | `updated_at` |
+
+治理线口径 = 三条**机器可见**信号之一：① `domain=doc-governance` ② 标题以 `CT-` 开头
+③ 标题/里程碑含 `治理|门禁|控制塔`。**逐卡回传命中信号**（面板逐卡显示"凭哪条信号入选"），可复核可推翻。
+
+欠账/待规划来自 `docs/synova/coordination/board-backlog.json`（PLAN-*）。
+`docs/synova/product-lines/todos.yaml`（T-*）**未消费**并在面板上写明原因（插件零依赖，不引 YAML 解析器；
+该源由 task-board-adapter 的 Python 派生器消费）—— 宁可少一个源并列明，也不静默漏源。
+
+## 面板 A（项目总览）六区块
 
 | 面板区块 | 数据 | 数据源（Host 端按请求实时取数，无缓存） |
 |---|---|---|
@@ -57,12 +106,30 @@
 
 ### Host 半（`lib/index.js`，dsh web 进程内 Cordis 插件）
 
-两条**只读** GET 路由：
+四条**只读** GET 路由：
 
 | 路由 | 成功 | 降级 |
 |------|------|------|
 | `GET /synova/pm/ledger` | 200 + `{ ...ledger, ok:true, source:"worktree"\|"origin/main"[, source_detail] }` | 200 + `{ok:false, degraded:true, error, attempts}` |
 | `GET /synova/dashboards/data` | 健康区 payload（`health` 被面板区块 ⑤ 使用） | 200 + `{degraded:true, error}`（每个 section 独立降级） |
+| `GET /synova/workbench/data` | 200 + `{ok, degraded, degraded_sources[], grid, flow, decisions, blocked}`（D1060 面板 A） | 每块独立降级；四块全失败才 `ok:false` |
+| `GET /synova/governance/data` | 200 + `{ok, degraded, degraded_sources[], scope, cards, debt}`（D1060 面板 B） | 两源独立降级（治理卡 / 欠账表） |
+
+D1060 新增的取数器（均纯 Node、无 cordis 依赖、可独立 `node --test`、**全程不抛异常**）：
+
+| 模块 | 职责 |
+|---|---|
+| `lib/repofile.js` | 「工作区 → `origin/main`」二级取数（收敛到一处，避免各源各写一遍导致某个源忘了回退） |
+| `lib/flow.js` | `git log` 今日/本周窗口 + GitHub PR API（`/pulls` 未合队列 + `/search/issues` 本周已合并） |
+| `lib/workbench.js` | 四问格子 / 待你裁 / 阻塞 三块的解析与口径（四色、三要素、状态归一） |
+| `lib/governance.js` | 治理线判定信号 / 「服务哪条主线」/ 活卡终态分流 / 欠账表 |
+
+**PR 取数**（`lib/flow.js`）：token 取自 `~/.dsh/.credentials.yaml`（与 `scripts/project/pr-queue-scan.py` 同源，
+**只进请求头，绝不回传/落盘/打印**；可用 `SYNOVA_GITHUB_TOKEN` 覆盖）。失败两级：
+① GitHub API → ② 仓库内机器生成的 `docs/synova/project/pr-queue.json` 快照（面板显式标注「快照 + 生成时间」，
+且**不伪造「今日/本周已合」**——快照没有合并时间就留空）→ ③ 显式 `degraded`。
+> 为什么合并数走 `/search/issues?is:merged merged:>=周一` 而不是 `GET /pulls?state=closed`：
+> 后者按 updated 排序，最近关闭的多为未合并清理，统计"本周合并数"会**恒为 0 而不报错**（静默假数）。
 
 **账本三级取数**（`lib/ledger.js`，D794 收口）：
 
@@ -78,20 +145,32 @@
 - 账本读取器 `lib/ledger.js` 纯 Node（无 cordis 依赖，可独立测试）；三级**全部不抛异常**，
   降级与回退都会 `logger.warn` 留痕（铁律 24/31：禁静默）。
 - 数据收集器 `lib/collect.js` 同上，逐 section 独立 try/catch。
-- **零写入**：Host 半只 `readFile` + 只读 `git show/ls-tree/log`，不写工作区/仓库/账本。
+- **零写入**：Host 半只 `readFile` + 只读 `git show/ls-tree/log` + 只读 HTTP GET，不写工作区/仓库/账本。
 
 ### Client 半（`lib/client.js`，浏览器）
 
 以 `window.__ModuleLoader__.load` 工厂格式**手写，无需构建**；只 require 静态种子模块
-（react / react/jsx-runtime）。注册**两处**槽位（二者成对、id 相同）：
+（react / react/jsx-runtime）。注册**三对**槽位（每对 id 与 key 相同）：
 
 | 槽位 | 签名 | 用途 |
 |------|------|------|
-| `main`（keyed） | `{key: "synova-project-overview"}` | 项目总览中央面板 |
-| `sidebar.panellist`（list） | `{id: "synova-project-overview", order: 50, label: "项目总览"}` | 左侧栏入口图标（收 owner props `{size, active}`） |
+| `main`（keyed） | `{key: "synova-project-overview"}` / `"synova-dev-workbench"` / `"synova-governance-line"` | 三张中央面板 |
+| `sidebar.panellist`（list） | `{id: 同上, order: 50/51/52, label: "项目总览"/"开发工作台"/"治理线"}` | 左侧栏三个入口图标（收 owner props `{size, active}`） |
+
+> **slot 名出处（不猜，给 file:line）**：编译目录 `packages/extensions/cordis-client-runner/src/client/slot-catalog.ts` —
+> `main` 见该文件 **:1730**（source `packages/client/ui-layout/src/client/index.ts:66`）；
+> `sidebar.panellist` 见该文件 **:2989**（source `packages/client/ui-sidebar/src/client/contract/slots.ts:34`）。
+
+**注册降级显式（Done ⑤）**：三对注册逐个包 `try/catch`。任一 `main` cell 注册失败（slot 不存在 / 版本不足）
+→ `console.error` 留痕 + 该入口图标改显 **⚠**（title 说明原因）—— 不静默消失、不"点了没反应"。
+失败清单另挂在 `exports.__synovaRegistrationDegraded` 供诊断。
 
 样式注入会在每次 `apply` 前移除本插件此前注入的所有 `<style>` 再插当前一份 —— 保证 HMR 后
 不残留旧规则。旧版按固定 key 判重会拒绝重注入（改过 CSS 仍跑旧样式）。
+
+> ⚠ **jsx 签名坑（D1060 真机取证）**：`react/jsx-runtime` 的签名是 `jsx(type, props, key)` ——
+> 第 3 个参数是 **key 不是 children**。曾写成 `jsx("span", {…}, "📊")`，字形被当成 key 丢掉，
+> 三个入口图标**恒为空 span**（真机 DOM：`<span title="项目总览"></span>`）。children 一律写进 props。
 
 > **官方全局面板协议**（依据 `@deepseek-ai/dsh-client-ui-sidebar` README §全局面板入口）：
 > `sidebar.panellist` 的**同一个 id** 寻址 root 作用域 `main` keyed slot 的组件；
@@ -113,51 +192,64 @@
 
 ```bash
 bash dsh/plugins/synova-dashboards/scripts/install-dashboards.sh
-# 生效（两步）：
-#   1) 重启 dsh web：bash dsh/plugins/synova-dashboards/scripts/restart-dsh-web.sh
+# 目标 profile：--profile-dir <dir> > $DSH_PROFILE_DIR > $DSH_HOME/profiles/web（默认）
+#   · 命令行 dsh web      → 默认 ~/.dsh/profiles/web
+#   · 桌面端（Electron）   → $DSH_PROFILE_DIR（本机实测 ~/.dsh-trial-017/profiles/desktop）
+# 生效：
+#   1) 重启守护进程：bash dsh/plugins/synova-dashboards/scripts/restart-dsh-web.sh
 #      （该脚本 kill 占用 3080 的进程 —— 若你在某个 session 里，请从会话外执行）
-#   2) 刷新浏览器 → 左侧栏出现「项目总览」入口
+#   2) 刷新页面 → 左侧栏出现「项目总览 / 开发工作台 / 治理线」三个入口
 ```
 
-安装脚本**幂等**（可重复执行，第二次为 no-op），只写 `$DSH_HOME`，仓库零写入。四步：
-① 复制包到 `~/.dsh/profiles/web/node_modules/@synova/dsh-dashboards`（bundle 名解析锚点）；
+安装脚本**幂等**（可重复执行，第二次为 no-op），只写 profile 目录，仓库零写入。四步：
+① 复制包到 `<profile>/node_modules/@synova/dsh-dashboards`（bundle 名解析锚点）；
 ② 把副本 `cordis.patch.yml` 的 `repoRoot` 改写成本机实际仓库根；
 ③ profile `package.json`：`dependencies` + `dsh.profile.bundles`；
 ④ 删除 synova-cto 预设里的旧 loader 块（避免与 bundle 层重复挂载）。脚本尾部打印回滚步骤，
 并已备份 profile `package.json` 到 `package.json.synova-bak`。
 
-> 注：DSH 的 client 模块扫描在进程启动时缓存包元数据 → **必须重启 dsh web** 才生效
-> （HMR 只热更已知行，不新增包）。用 `dsh --profile web --dump-config` 可重启前先验证合成树。
+> 注：DSH 的 client 模块扫描在进程启动时缓存包元数据。**实测（2026-09-29，桌面端）**：
+> 已装包的内容变更 → `Page.reload(ignoreCache)` 即生效；**新增包**仍需重启守护进程。
+> 用 `dsh --profile <p> --dump-config` 可重启前先验证合成树。
 
 ## 验证
 
 ```bash
-cd dsh/plugins/synova-dashboards && npm test     # 31 条：三级取数 / Host 路由 / 面板渲染 / 拖动缩放记忆 / 折叠记忆 / 裁切修复
+cd dsh/plugins/synova-dashboards && npm test
+# 81 条：账本三级取数 / Host 四条路由 / 项目总览渲染 / 拖动缩放记忆 / 折叠记忆 / 裁切修复
+#        + D1060：四问格子（四色·空格不折算成绿·未知态单列）/ 待你裁 / 阻塞三要素口径 /
+#                  治理线信号与「服务哪条主线」/ PR API 与快照回退 / 注册降级 ⚠ / 图标 children 回归 / 零写入
 
 # 合成树（不启动服务即可证明 bundle 层挂载）
-dsh --profile web --dump-config | grep -A5 "@synova/dsh-dashboards"
+dsh --profile <profile> --dump-config | grep -A5 "@synova/dsh-dashboards"
 
-# 运行中进程验证路由
+# 运行中进程验证四条路由
 curl -s http://127.0.0.1:3080/synova/pm/ledger | head -c 200
 curl -s http://127.0.0.1:3080/synova/dashboards/data | head -c 300
+curl -s http://127.0.0.1:3080/synova/workbench/data | head -c 300
+curl -s http://127.0.0.1:3080/synova/governance/data | head -c 300
 ```
 
 ## 卸载 / 回滚
 
 ```bash
-cp ~/.dsh/profiles/web/package.json.synova-bak ~/.dsh/profiles/web/package.json
-rm -rf ~/.dsh/profiles/web/node_modules/@synova/dsh-dashboards
-# 重启 dsh web
+cp <profile>/package.json.synova-bak <profile>/package.json
+rm -rf <profile>/node_modules/@synova/dsh-dashboards
+# 重启 dsh web / 桌面端
 ```
 
 ## 已知限制
 
-- 安装/升级后需**重启 dsh web**才生效（进程启动时缓存 client 包元数据）。
+- 安装/升级后**新增包**需重启守护进程；已装包改内容刷新页面即可（2026-09-29 桌面端实测）。
 - **`origin/main` 回退要真正生效，前提是 `docs/synova/project/ledger.json` 已提交进 main**。
   该文件目前只存在于工作区（D795 尚未把产物提交进 main）→ 此时工作区文件一旦消失
   （改名/切换分支）仍会走第 3 级显式降级。D795 提交后回退即自动可用（代码路径已由测试覆盖）。
 - 本模块不执行 `git fetch`：`origin/main` ref 若陈旧，回退到的就是陈旧账本。
-- 项目总览面板为**只读视图**：不写工作区/仓库/账本，也不写 localStorage（面板状态仅存在于内存）。
+- 三张面板均为**只读视图**：不写工作区/仓库/账本；localStorage 只存几何/折叠偏好（项目总览 `synova.pm.*`、工作台 `synova.wb.*`、治理线 `synova.gov.*`）。
 - 数据为轮询快照（60s），非推送流。
 - 执行看板取 `ledger.tasks`（D795 由 `task-state/*.json` 派生），不再独立扫 task-state —— 单一真相源，避免两套口径。
+- D1060 面板 B 的「欠账/待规划」只消费 `board-backlog.json`（PLAN-*）；
+  `product-lines/todos.yaml`（T-*）**未消费**（插件零依赖，不引 YAML 解析器），面板上已写明原因。
+- D1060 面板 A 的 PR 取数依赖 `~/.dsh/.credentials.yaml` 的 `GITHUB_TOKEN`；
+  无 token / 断网 → 回退仓库内 `pr-queue.json` 快照并**显式标注**（且不伪造今日/本周已合数）。
 - 重新安装 DSH CLI（npm -g）不影响本插件（装在 profile 层）；profile 目录被删除重建时重跑安装脚本。

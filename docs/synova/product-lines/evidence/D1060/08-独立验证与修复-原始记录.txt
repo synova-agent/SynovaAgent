@@ -1,0 +1,25 @@
+=== 独立验证（子代理，只读，零上下文）===
+时间：2026-09-29 01:30 前后 CST
+范围：8 项声称逐条核 + 未声称问题扫描
+
+裁决：TRUE 7 / FALSE 1（阻塞三要素口径）/ 另发现 8 项未声称问题
+
+FALSE 项：
+  声称『三要素 {reason,since,needs} 齐全才计入阻塞』——实测门槛只施加于卡面 blocked 对象，
+  ledger#blocked 与 product-progress#lines[].blocked 无条件计入；且面板文案宣称缺一不计入 ⇒ 口径声明与实际不符。
+  反例：ledger.blocked=[{id:'B-EMPTY'}] → count:1 reason:'(无原因)'
+
+未声称问题（全部已修 + 加回归测试）：
+  a. ledger 不可读而 progress 可读 → blocked.degraded=true 但 degraded_sources 为空，面板展示残缺列表零信号
+  b. 任务卡坏 JSON 只进 readTaskCards.errors，从不进面板 A payload（治理线可见、A 面静默）
+  c. collectWorkbench 引用不存在的 flow.degraded_sources，且 flow.ok=false 时丢失 git/pr 各自原因
+  d. derived.filled = cells.length - empty，把非对象元素算成『已填』
+  e. EMPTY_STATUSES 死导出（仅测试引用）
+  f. credential_source 把凭据文件绝对路径写进 200 响应体
+  g. 面板标题硬编码『16 行 × 4 问』，列数却取自数据
+  h. {"cells":[]} → ok:true/degraded:false，空矩阵无降级横幅
+  5残. 自定义 fetch 把 Authorization 原文塞进 error → 原样透传 pr.attempts（真实 fetch 不触发，仍加固）
+  CE4. 卡面三要素齐全 + ledger 不可读 → count:0/nc:0（真实阻塞静默消失）
+  CE5. 卡面 blocked 为 true/数字/数组 → 既不计数也不单列（静默丢弃）
+  CE6. 两条无 id、同 reason、不同 since 的阻塞 → 误合为一条
+  CE7. ledger.blocked 混入字符串/null/数字 → 静默跳过
