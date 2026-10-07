@@ -14,6 +14,6 @@ writeset:
 done:
   - verify: npx vitest run tests/sentinel/node-type-mapping.test.ts tests/sentinel/mapped-read.test.ts
   - verify: npx vitest run tests/sentinel/ tests/store/ tests/l3/
-  - verify: test "$(git grep -c "resolveReadTargets" HEAD -- src/sentinel/adapters/cash-flow-sentinel.ts | tr -d '\n')" -ge 1
+  - verify: test "$(git grep -c "readByMappedTypeFromRawDb" HEAD -- src/sentinel/adapters/cash-flow-sentinel.ts | tr -d '\n')" -ge 1
   - verify: npx tsc --noEmit
-note: 真源 = 本体轴（CTO 裁）。映射表 13 条（5 有目标 / 6 null+warn / 2 alias）；解析器 aliasOf 委托 + fail-closed；映射读 = 多目标并集 + 无映射回退遗留字面量（显式 warn）。V2a E2E 走**真实 csv-import**（禁手工 createNode 夹具）。V2b（props 契约对齐 + 消费侧）另立卡 p0。
+note: 真源 = 本体轴（CTO 裁）。映射表 13 条（5 有目标 / 6 null+warn / 2 alias）；解析器 aliasOf 委托 + fail-closed；映射读 = 多目标并集（`readByMappedTypeFromRawDb`，哨兵真调用）+ 无映射回退遗留字面量（显式 warn）。V2a E2E 走**真实 csv-import**（禁手工 createNode 夹具）。V2b（props 契约对齐 + 消费侧）另立卡 p0。

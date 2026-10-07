@@ -11,11 +11,12 @@ import { readFileSync } from 'fs';
 import Database from 'better-sqlite3';
 import { SqliteGraphStore } from '../../src/adapters/sqlite-graph-store';
 import { CsvImportConnector } from '../../src/connectors/csv-import';
-import { resolveReadTargets, readByMappedType } from '../../src/sentinel/mapped-read';
+import { readByMappedTypeFromRawDb } from '../../src/sentinel/mapped-read';
 
 describe('#1381 V2a · 经映射读（类型轴打通）', () => {
+  const db = new Database(':memory:');
   it('🔴 V2a 端到端（真实 csv-import 路径）：导入 ⇒ 落 `resource/money` ⇒ 映射读可定位（≥1 行）', () => {
-    const store = new SqliteGraphStore(new Database(':memory:'));
+    const store = new SqliteGraphStore(db);
     // 真实连接器 + 真实 CSV（禁手工 createNode）
     const connector = new CsvImportConnector(
       { createNode: (type, props, graph) => store.createNode(type, props, graph) },
@@ -34,23 +35,23 @@ describe('#1381 V2a · 经映射读（类型轴打通）', () => {
     expect(raw.length).toBe(2);
 
     // 经映射读：遗留字面量 'FINANCIAL' ⇒ 并集读 [outcome/financial, resource/money]
-    const r = readByMappedType(
-      { queryNodes: (type, filters, graph) => store.queryNodes(type, filters, graph) as unknown[] },
-      'FINANCIAL', {}, 'enterprise',
-    );
+    // 判据打在【cash-flow 同一条函数】上（rawDb 版）⇒ 真路径
+    const rawDb = { prepare: (sql: string) => ({ all: (...args: unknown[]) => db.prepare(sql).all(...args) as unknown[] }) };
+    const r = readByMappedTypeFromRawDb(rawDb, 'FINANCIAL', 'enterprise');
     expect(r.usedTypes).toEqual(['outcome/financial', 'resource/money']);
     expect(r.legacyFallback).toBe(false);
     expect(r.rows.length).toBeGreaterThanOrEqual(2);   // **读侧能定位**
   });
 
-  it('V2a-b 别名一致：resolveReadTargets(大小写两写) ⇒ 同一 targets 集合', () => {
-    expect(resolveReadTargets('FINANCIAL').targets).toEqual(resolveReadTargets('Financial').targets);
-    expect(resolveReadTargets('TOOL').targets).toEqual(resolveReadTargets('Tool').targets);
+  it('V2a-b 别名一致：大小写两写的**读目标集**相同（经已接线入口）', () => {
+    const stub = { prepare: () => ({ all: (..._a: unknown[]) => [] as unknown[] }) };
+    expect(readByMappedTypeFromRawDb(stub, 'FINANCIAL').usedTypes).toEqual(readByMappedTypeFromRawDb(stub, 'Financial').usedTypes);
+    expect(readByMappedTypeFromRawDb(stub, 'TOOL').usedTypes).toEqual(readByMappedTypeFromRawDb(stub, 'Tool').usedTypes);
   });
 
   it('V2a-c 无映射 ⇒ 回退遗留字面量 + 显式 warn（不静默）', () => {
     let asked: string[] = [];
-    const r = readByMappedType({ queryNodes: (t) => { asked.push(t); return []; } }, 'Event');
+    const r = readByMappedTypeFromRawDb({ prepare: () => ({ all: (...a: unknown[]) => { asked.push(String(a[0])); return []; } }) }, 'Event');
     expect(r.legacyFallback).toBe(true);
     expect(r.warn).toBe(true);
     expect(asked).toEqual(['Event']);
@@ -59,9 +60,8 @@ describe('#1381 V2a · 经映射读（类型轴打通）', () => {
   it('V2a-d 哨兵接线（B1）：cash-flow 读路径已改为经映射（源码级核）', () => {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const src = readFileSync('src/sentinel/adapters/cash-flow-sentinel.ts', 'utf-8');
-    // 精确断言（**不是"含函数名"**）：类型列表【由映射结果算出】且查询用它参数化
-    expect(src).toMatch(/const readTypes = targets\.length > 0 \? targets : \['FINANCIAL'\]/);
-    expect(src).toMatch(/\.all\(\.\.\.readTypes\)/);
-    expect(src).toContain("type IN (");
+    // 精确断言：cash-flow 必须**真调用**映射读入口（不是"含函数名"）
+    expect(src).toMatch(/readByMappedTypeFromRawDb\(db, 'FINANCIAL'\)/);
+    expect(src).toMatch(/resolveOntologyTarget\('FINANCIAL'/);
   });
 });
