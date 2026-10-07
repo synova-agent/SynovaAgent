@@ -915,6 +915,23 @@ PYEOF
 # 降级: 测试根不存在 / 0 个夹具文件 / grep 执行失败 ⇒ exit 2（fail-closed，绝不与"零命中"混同）。
 SUM_FIX=""
 
+_qstate() {   # $1=文本 → 输出 s|d|n：结尾是否处于「单引号 / 双引号 / 无引号」串内
+  #   P3-②（卡 #1309）: 只数单引号奇偶会漏判（撇号在**双引号串**内同为奇数），
+  #   且会误判**双引号包裹的样本生成器** ⇒ 改为按字符推进的引用状态机（同时处理两种引号）。
+  local s="$1" st=n i=0 c n
+  n="${#s}"
+  while [ "$i" -lt "$n" ]; do
+    c="${s:$i:1}"
+    case "$st" in
+      n) case "$c" in "'") st=s ;; '"') st=d ;; esac ;;
+      s) [ "$c" = "'" ] && st=n ;;
+      d) [ "$c" = '"' ] && st=n ;;
+    esac
+    i=$((i + 1))
+  done
+  printf '%s' "$st"
+}
+
 _fixture_whitelist_status() { # $1=键（`<路径>:<行号>`）→ 0=命中未过期｜1=未命中｜2=命中但已过期
   # 豁免白名单独立成文件（见 fixture-power-baseline.txt 头部：并入 gate-integrity-baseline.txt 会被
   #   REGISTRY-BASELINE 解析器误当隔离条目 ⇒ 3 处伪违规，实测）。
@@ -978,11 +995,21 @@ run_fixture_power() {
     esac
     # 形态 0（样本生成器）: `grep` 出现在**单引号字符串内**（如 `printf '…#| grep -qv …' > 样本`）
     #   ⇒ 该 grep 是**被写入样本的文本**，不是本行在执行取反 ⇒ 不计违规（否则夹具自指被误伤）。
-    #   判法: grep 之前的单引号个数为奇数 ⇒ 处于单引号串内（本仓夹具用单引号包裹样本，足够精确）。
+    #   判法（P3-② 卡 #1309 收紧）: grep 之前的单引号个数为奇数 **且** 本行含**文件重定向**
+    #     ⇒ 才判「样本生成器」。只数引号会**确定性漏判**：
+    #       `echo "it's fine"; if ls | grep -qv sample; then …` 里撇号在**双引号串内**，同为奇数
+    #       ⇒ 曾被误判"单引号串内"而跳过（verifier 端到端复现，且 `bash -n` 通过 = 真会执行）。
+    #     样本生成器都要写文件（`> 样本`）；纯"含撇号的普通行"无文件重定向 ⇒ 照常判违规。
     _pre="${_text%%grep*}"
-    _q="${_pre//[!\']/}"
-    if [ "$(( ${#_q} % 2 ))" = 1 ]; then
-      vprint "  面3 跳过单引号串内的 grep（样本生成器）: ${_rel}:${_num}"
+    _tailx="${_text#*grep}"
+    # 条件 ⓐ: grep 位于**引号串内**（单/双皆算）—— 状态机判定，避免"只数单引号"的漏判/误判；
+    # 条件 ⓑ: 重定向出现在 **grep 之后**（样本生成器形态 `printf '…| grep -qv …' > 样本`）。
+    #   反例 `ls 2>/dev/null | grep -qv x`（重定向在 grep 之前、且不在引号内）⇒ **不豁免**，照常判违规。
+    _qst="$(_qstate "$_pre")"
+    _redir=0
+    printf '%s' "$_tailx" | grep -qE '>[[:space:]]*[^&[:space:]]' && _redir=1
+    if [ "$_qst" != "n" ] && [ "$_redir" = 1 ]; then
+      vprint "  面3 跳过单引号串内的 grep（样本生成器 + 文件重定向）: ${_rel}:${_num}"
       n_ok=$((n_ok + 1)); continue
     fi
     # 形态 2 判定: grep 之前有管道（stdin） 或 grep 之后操作数含变量/此处字符串
