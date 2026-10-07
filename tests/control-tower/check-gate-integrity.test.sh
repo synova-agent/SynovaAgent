@@ -27,7 +27,7 @@
 #            （#768 CI 实测: 旧夹具拿 ^+++ 当非法 ERE → GNU 下合法 → 该坐标落 STALE 而非"待修违规"
 #             → 5 条断言连锁红 PASS=50 FAIL=5；本机 GNU 仿真 shim 可逐字复现同一组）
 #   健壮 — 失败路径必须能播报: no()/ok() 文案里 `${VAR}` **必须加花括号** —— 全角标点紧贴变量
-#            （`$rc（…）`）在 macOS/bash 3.2 + UTF-8 locale 下被解析成变量名 `rc（` → set -u 下
+#            （`${rc}（…）`）在 macOS/bash 3.2 + UTF-8 locale 下被解析成变量名 `rc（` → set -u 下
 #            unbound variable → **夹具整体崩在断言处、结果行永不产出**（比截断更糟）。11 处已修。
 #   分段 — 双段互不串行: [R] 段 key 不给 A 模式豁免；[P] 段条目不进 registry 面
 #   判别性 — M1 未登记的新非法 ERE（临时脚本）→ 必红（exit 1 + 点名 file:line + 模式原文）
@@ -284,14 +284,23 @@ else
   no "基线过期边界异常: rc=$rc"
 fi
 
-# ── 棘轮 R1: 真仓库 --patterns-only → exit 0（:991 已登记；STALE 语义随平台自适应）──
+# ── 棘轮 R1（**双向期望**，D1206/线B 2026-10-07 改；原为「必有 1 条 [P] 登记」的单向期望）──
+#   真判据 = 「已登记的既有违规不计违规；**陈旧条目（STALE）不得当豁免**」。故期望随真仓库 [P] 段实况自适应:
+#     · [P] 段 N 条 ⇒ rc=0 且 `registered N；STALE(0)`（登记内 ⇒ 不判违规）
+#     · [P] 段清零（#1264 后的健康态）⇒ rc=0 且 `registered 0；STALE(0)`（**棘轮允许清零**，清零≠异常）
+#   ⚠️ 未放宽成「无论 rc 都过」：下方按实况算出 N 并逐字比对；且两条反例仍在——
+#      ③ 反拔牙（STALE 且 expires 已过 ⇒ exit 1）/ M1（未登记的新非法模式 ⇒ exit 1）。
+P_N="$(awk 'BEGIN{s="R"} /^[[:space:]]*#/{l=$0; sub(/^[[:space:]]*#[[:space:]]*/,"",l); if(l ~ /^═+[[:space:]]*PATTERN-BASELINE/){s="P";next} if(l ~ /^═+[[:space:]]*REGISTRY-BASELINE/){s="R";next} next} /^[[:space:]]*$/{next} s=="P"{print}' "$REPO/scripts/control-tower/gate-integrity-baseline.txt" | wc -l | tr -d ' ')"
 OUT="$(SYNO_GATE_DEGRADED_LOG="$SB/logs/real.log" bash "$GATE" --root "$REPO" --patterns-only 2>&1)"; rc=$?
-if [ "$rc" -eq 0 ] && printf '%s\n' "$OUT" | grep -q "PATTERN-BASELINE: registered 1；STALE(0)"; then
-  ok "棘轮: 真仓库 --patterns-only → exit 0（:991 在本平台违规且已登记，registered 1 / STALE 0）"
-elif [ "$rc" -eq 0 ] && printf '%s\n' "$OUT" | grep -q "PATTERN-BASELINE: STALE("; then
-  ok "棘轮: 真仓库 --patterns-only → exit 0 且 :991 记 STALE（= 本平台/GNU 已不再违规；STALE 不影响退出码，按新契约正确）"
+#   平台自适应: 同一 [P] 条目在 BSD 下「仍违规 = registered」，在 GNU 下「已不违规 = STALE」⇒
+#   不变量 = rc=0 且 **账平**: registered + STALE = [P] 条数（条目不许凭空消失、不许被静默放行）。
+SUMMARY="$(printf '%s\n' "$OUT" | grep -oE 'PATTERN-BASELINE: registered [0-9]+；STALE\([0-9]+\)' | head -1)"
+R_N="$(printf '%s' "$SUMMARY" | sed -n 's/.*registered \([0-9]*\).*/\1/p')"
+S_N="$(printf '%s' "$SUMMARY" | sed -n 's/.*STALE(\([0-9]*\)).*/\1/p')"
+if [ "$rc" -eq 0 ] && [ -n "$R_N" ] && [ "$(( ${R_N:-0} + ${S_N:-0} ))" -eq "$P_N" ]; then
+  ok "棘轮: 真仓库 --patterns-only → exit 0（[P] 实况 ${P_N} 条 ⇒ registered ${R_N} + STALE ${S_N} = ${P_N}；清零/方言均合法）"
 else
-  no "棘轮: 真仓库 --patterns-only 非预期: rc=$rc"
+  no "棘轮: 真仓库 --patterns-only 非预期: rc=${rc} summary=[$SUMMARY]（期望 rc=0 且 registered+STALE=[P]条数=${P_N}）"
 fi
 
 # ── 棘轮: PATTERN 条目 expires 过期 → exit 1 ──
