@@ -1,18 +1,17 @@
 {
   "task_id": "D1198",
-  "title": "P0-1 跨客户标识不外泄（k-匿名）",
-  "write_set": [
-    "packages/evolution/src/global-analyzer.ts",
-    "tests/evolution/global-analyzer.test.ts",
-    ".claude/task-briefs/2026-10-07-D1198-P0-1-跨客户标识不外泄.md",
-    ".claude/task-briefs/2026-10-07-D1198-P0三项-跨租户边界.md",
-    "task-state/D1198.json"
-  ],
+  "title": "Gate Integrity 既有红对账：范围收紧到参与 PR 判定的检查",
   "status": "claimed",
   "spec": null,
   "impl": null,
   "audit": null,
   "fix_task_id": null,
   "updated_at": "2026-10-07",
-  "updated_by": "alloc-task-id"
+  "updated_by": "cto",
+  "write_set": [
+    "scripts/control-tower/check-gate-integrity.sh",
+    "tests/control-tower/check-gate-integrity.test.sh",
+    ".claude/task-briefs/2026-10-07-D1198-ci-reds-scope.md",
+    "task-state/D1198.json"
+  ]
 }
