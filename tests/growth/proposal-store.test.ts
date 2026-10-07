@@ -195,6 +195,47 @@ describe('ProposalStore', () => {
     });
   });
 
+  // ═══ #1322 X2（CTO 裁定）: 审计归属 orgId —— 缺值写显式哨兵 'unknown'，绝不回落 department ═══
+  describe('审计归属 orgId（X2 哨兵）', () => {
+    it('正常: 有 orgId ⇒ 审计条目 orgId = 该租户值', async () => {
+      const { createProposal } = await import('../../src/growth/proposal-store');
+      const store = createMockStore().store;
+      const { audit, entries } = createMockAudit();
+      createProposal(makeProposal({ orgId: 'org-x2', department: 'dept-x2' }), store, audit);
+      const entry = entries[0] as Record<string, unknown>;
+      expect(entry.orgId).toBe('org-x2');
+      expect(entry.orgId).not.toBe('dept-x2');
+    });
+
+    it('边界: 缺 orgId ⇒ 审计条目 orgId = \'unknown\'（**不是** department —— 宁标不可归属，不错归属）', async () => {
+      const { createProposal } = await import('../../src/growth/proposal-store');
+      const store = createMockStore().store;
+      const { audit, entries } = createMockAudit();
+      createProposal(makeProposal({ orgId: undefined, department: 'dept-x2' }), store, audit);
+      const entry = entries[0] as Record<string, unknown>;
+      expect(entry.orgId).toBe('unknown');
+      expect(entry.orgId).not.toBe('dept-x2');
+    });
+
+    it('边界: 空白 orgId ⇒ 同样命中哨兵（不把 "" / 空格当租户）', async () => {
+      const { createProposal } = await import('../../src/growth/proposal-store');
+      const store = createMockStore().store;
+      const { audit, entries } = createMockAudit();
+      createProposal(makeProposal({ orgId: '   ', department: 'dept-x2' }), store, audit);
+      expect((entries[0] as Record<string, unknown>).orgId).toBe('unknown');
+    });
+
+    it('正常: 状态转换的审计同样走哨兵口径（有 orgId ⇒ 真值；缺 ⇒ unknown）', async () => {
+      const { createProposal, updateProposalStatus } = await import('../../src/growth/proposal-store');
+      const store = createMockStore().store;
+      const { audit, entries } = createMockAudit();
+      const id = createProposal(makeProposal({ orgId: 'org-x2' }), store, audit);
+      entries.length = 0;
+      updateProposalStatus(id, 'pending_selection', 'tester', {}, store, audit, 'growth');
+      expect((entries[0] as Record<string, unknown>).orgId).toBe('org-x2');
+    });
+  });
+
   describe('isValidProposalTransition', () => {
     it('合法转换', async () => {
       const { isValidProposalTransition } = await import('../../src/growth/proposal-store');

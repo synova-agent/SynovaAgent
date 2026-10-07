@@ -1,0 +1,11 @@
+{
+  "task_id": "D1241",
+  "title": "Q2 解析器口径收敛（去副本 + 显式化 + 措辞两分，#1308 / D-C ③）",
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-08",
+  "updated_by": "line-g-parser（手建：alloc-task-id 自编号，与 Lead 指定号位冲突）"
+}

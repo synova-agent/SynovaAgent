@@ -1,0 +1,19 @@
+# .claude/claims/1322.yaml — #1322 目标创建链接入生产入口 的写集声明（S0 源）
+#
+# 为什么用 claim 而不是 task-state/<D#>.json：本卡是 **issue 号卡（#1322）**，
+# 无 D# 编号 ⇒ D708 门禁的 S1/S2/S3（全部按 `<D#>*` 定位）找不到声明源，
+# 会把全部改动判为「夹带」。`.claude/claims/<issue>.yaml` 是 D-C 归一后为
+# **issue 号任务**提供的正式声明源（`merge_writeset_gate.py` 的 S0，claim 优先）。
+#
+# 依据：CTO 2026-10-08 放行 + 计划 §1「最终写集」；越界两处已在 PR #1330 正文申报。
+writeset:
+  # 本 claim = **本 PR（#1322 X2 审计归属哨兵）真正改动**的文件（写准，不预授权）。
+  # 前序 PR（#1330 接线 / #1349 M3 fail-closed）的写集随其合入 main，已历史化。
+  - .claude/claims/1322.yaml
+  - .claude/task-briefs/2026-10-08-1322-goal-creation-entry.md
+  - src/growth/proposal-store.ts
+  - tests/growth/proposal-store.test.ts
+done:
+  - verify: npx vitest run tests/growth/proposal-store.test.ts
+  - verify: bash scripts/check-architecture.sh
+note: CTO 裁定 X2 —— 审计归属缺 orgId 写显式哨兵 'unknown' + log.warn（宁标不可归属，不错归属）；根因另立小卡。
