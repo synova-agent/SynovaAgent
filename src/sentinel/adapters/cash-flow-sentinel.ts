@@ -110,8 +110,9 @@ export const cashFlowSentinel: Sentinel = {
           period: (p.period || p.月份 || now.toISOString().slice(0, 7)) as string,
           startDate: (p.start_date || p.开始日期 || '') as string,
           endDate: (p.end_date || p.结束日期 || '') as string,
-          revenue: Number(p.revenue) || Number(p.收入) || 0,
-          cost: Number(p.cost) || Number(p.costs) || Number(p.成本) || 0,
+          // #1384 V2b（消费侧）：**优先读本体 schema 字段名**（连接器按本体写）⇒ 旧名回退（显式，不静默）
+          revenue: Number(p.total_revenue) || Number(p.revenue) || Number(p.收入) || 0,
+          cost: Number(p.total_cost) || Number(p.cost) || Number(p.costs) || Number(p.成本) || 0,
           operatingExpenses: Number(p.operating_expenses) || Number(p.运营支出) || 0,
           cashBalance: Number(p.cash_balance) || Number(p.cash) || Number(p.现金) || 0,
           headcount: Number(p.headcount) || Number(p.人数) || 1,
