@@ -40,8 +40,10 @@ D1204 修的四处（K3 D1193 复核 §R2/§R3 判据逃逸，均为**独立反�
               过渡表出口判据缺失/不可解析/未知 kind ⇒ exit 2（出口条件必须机器可判，D1204）
               **不把「读不到」当「通过」**（铁律 11/24）
   @error  — 非 UTF-8 决策件 ⇒ 记单条违规，不中断整轮
-  @seam   — SYNO_DOC_CONTRACT_ACK=1（+ _REASON）逃生舱: 只降级闸 3，必须落
-            .codex/control-tower/logs/degraded-events.log；日志不可写 ⇒ degraded exit 2
+  @seam   — SYNO_DOC_CONTRACT_ACK=1 **须同时给** SYNO_DOC_CONTRACT_ACK_REASON=<原因> 的逃生舱:
+            只降级闸 3；**缺/空白 REASON ⇒ 视同未 ACK**（fail-closed，闸 3 按原判定 + stderr warning
+            + 记「无效 ACK 被拒」进日志）；放行必须落 .codex/control-tower/logs/degraded-events.log，
+            日志不可写 ⇒ degraded exit 2（F1，D1204）
 
 设计哲学（沿用 D1107）: 门禁只做物理可判定的事（段在不在、路径命中不命中）。
   「取代判定对不对」「文档写得好不好」是语义判断，归 K3 与创始人，脚本不冒充。
@@ -496,21 +498,53 @@ def write_hits_artifact(repo: Path, path_arg: Optional[str], payload: Dict) -> T
 
 
 # ── 逃生舱（铁律 11: 显式降级 + 落盘，不静默）────────────────────────────────
-def apply_ack(repo: Path, gate3: Dict) -> Dict:
-    if os.environ.get("SYNO_DOC_CONTRACT_ACK", "") != "1" or gate3["pass"]:
-        return gate3
-    reason = os.environ.get("SYNO_DOC_CONTRACT_ACK_REASON", "").strip() or "(未填 SYNO_DOC_CONTRACT_ACK_REASON)"
-    log = repo / DEGRADED_LOG_REL
+def _append_degraded(log: Path, record: Dict, strict: bool) -> None:
+    """落 degraded-events.log。
+
+    strict=True （**放行**路径）: 不可写 ⇒ Degraded（契约 §3：每次放行必须落盘）。
+    strict=False（**拒绝**路径，如无效 ACK 被拒）: best-effort + 显式 warn（结局本就是 fail-closed 红）。
+    """
+    body = dict(record)
+    body["time"] = datetime.datetime.now().astimezone().isoformat()
     try:
         log.parent.mkdir(parents=True, exist_ok=True)
         with log.open("a", encoding="utf-8") as fh:
-            fh.write(json.dumps({
-                "time": datetime.datetime.now().astimezone().isoformat(),
-                "component": "doc-contract",
-                "reason": "SYNO_DOC_CONTRACT_ACK=1 放行 %d 件: %s" % (len(gate3["violations"]), reason),
-            }, ensure_ascii=False) + "\n")
+            fh.write(json.dumps(body, ensure_ascii=False) + "\n")
     except OSError as exc:
-        raise Degraded("逃生舱日志不可写 %s: %s" % (DEGRADED_LOG_REL, exc))
+        if strict:
+            raise Degraded("逃生舱日志不可写 %s: %s" % (DEGRADED_LOG_REL, exc))
+        sys.stderr.write("warning: 无效 ACK 记录未落盘（%s）: %s\n" % (DEGRADED_LOG_REL, exc))
+
+
+def apply_ack(repo: Path, gate3: Dict) -> Dict:
+    """逃生舱：契约 §3 要求 `SYNO_DOC_CONTRACT_ACK=1` **须同时给** `_REASON=<原因>`。
+
+    F1（D1204 补做；verifier 判 P1:「契约已裁决须同时给，实现缺 REASON 仍放行」）:
+      · **缺/空白 REASON ⇒ 视同未 ACK**（fail-closed：闸 3 按原判定，不豁免）；
+        但不静默 —— stderr 出 warning + 把「无效 ACK 被拒」记进 degraded-events.log（best-effort）。
+      · 只有「ACK=1 且 REASON 非空白」才放行，且**放行必须落盘**：日志不可写 ⇒ degraded exit 2。
+      · 只降级闸 3：闸 1/2 的违规不经此处（契约 §3）。
+    """
+    if os.environ.get("SYNO_DOC_CONTRACT_ACK", "") != "1" or gate3["pass"]:
+        return gate3
+    reason = os.environ.get("SYNO_DOC_CONTRACT_ACK_REASON", "").strip()
+    log = repo / DEGRADED_LOG_REL
+    if not reason:
+        sys.stderr.write(
+            "warning: SYNO_DOC_CONTRACT_ACK=1 但未给 SYNO_DOC_CONTRACT_ACK_REASON（或为空白）"
+            " ⇒ 视同未 ACK（fail-closed，闸 3 按原判定；契约 §3「须同时给」）\n")
+        _append_degraded(log, {
+            "component": "doc-contract",
+            "reason": "ACK 无效被拒（缺 SYNO_DOC_CONTRACT_ACK_REASON）: %d 件违规未被豁免"
+                      % len(gate3["violations"]),
+        }, strict=False)
+        gate3 = dict(gate3)
+        gate3["ack_rejected"] = "缺/空白 SYNO_DOC_CONTRACT_ACK_REASON ⇒ 视同未 ACK"
+        return gate3
+    _append_degraded(log, {
+        "component": "doc-contract",
+        "reason": "SYNO_DOC_CONTRACT_ACK=1 放行 %d 件: %s" % (len(gate3["violations"]), reason),
+    }, strict=True)
     gate3 = dict(gate3)
     gate3["acked"] = True
     gate3["ack_reason"] = reason
@@ -669,6 +703,9 @@ def main() -> int:
         if result["gate3_inbound"].get("acked"):
             print("WARNING: 逃生舱 SYNO_DOC_CONTRACT_ACK=1 已放行 —— 原因=%s（已落 degraded-events.log）"
                   % result["gate3_inbound"].get("ack_reason"))
+        if result["gate3_inbound"].get("ack_rejected"):
+            print("WARNING: 逃生舱 ACK 被拒（%s）—— 闸 3 按原判定（fail-closed）"
+                  % result["gate3_inbound"].get("ack_rejected"))
         print("-" * 62)
         print("结论: %s" % ("PASS 三闸全过" if ok else "FAIL 有违规（exit 1）"))
 

@@ -277,8 +277,10 @@ novis-backup-20260526/**
 - **D1204/X3**：`**/README.md` · `**/AGENTS.md` · `**/SKILL.md` 的放行**限定在「同址有代码」的目录**
   —— 见上文匹配语义；新目录用一份 README 播种索引不再放行。
 
-**逃生舱（铁律 11：显式降级 + 落盘，不静默）**：`SYNO_DOC_CONTRACT_ACK=1`（须同时给
-`SYNO_DOC_CONTRACT_ACK_REASON=<原因>`）**只降级闸 3**，闸 1/2 不可豁免；每次放行必须写
+**逃生舱（铁律 11：显式降级 + 落盘，不静默）**：`SYNO_DOC_CONTRACT_ACK=1` **须同时给**
+`SYNO_DOC_CONTRACT_ACK_REASON=<原因>`。**缺该变量、或值为空白 ⇒ 视同未 ACK**（fail-closed：闸 3 按原判定，
+**不豁免**；同时 stderr 出 warning + 把「无效 ACK 被拒」记进日志 —— 拒绝也要留痕，不许静默）。
+**只降级闸 3**，闸 1/2 不可豁免；每次**放行**必须写
 `.codex/control-tower/logs/degraded-events.log`，日志不可写 ⇒ degraded exit 2。
 
 ### 3.1 三闸的执行体（D1107 建 · D1193 修判据 + 接线）

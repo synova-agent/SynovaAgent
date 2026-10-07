@@ -401,6 +401,62 @@ assert d["transition_table"]["rows"][0]["tracked"] == 1, "tracked count"
     || no "F5 非 git 夹具应 exit 0 + 显式未评估标注，实际 rc=$RC"
 fi
 
+# ── H F1 逃生舱 ACK：契约「须同时给 _REASON」⇒ 缺/空白视同未 ACK（fail-closed）──
+echo "── H 逃生舱 ACK（F1）──"
+FXH="$TMPD/fx-h"; mk_fix "$FXH"
+BLOCKED="docs/synova/coordination/x.md"          # 阻断件（非过渡）
+ACKLOG="$FXH/.codex/control-tower/logs/degraded-events.log"
+
+# H1 对照组: 不带 ACK ⇒ 红（现状不变）
+RC="$(rc_of "$FXH" --files "$BLOCKED")"
+t "H1 无 ACK ⇒ exit 1（对照）" 1 "$RC"
+
+# H2 ACK=1 + REASON ⇒ 放行 + 落盘
+env SYNO_DOC_CONTRACT_ACK=1 SYNO_DOC_CONTRACT_ACK_REASON="fixture: 受控放行" \
+  "$PY" "$V" --repo-root "$FXH" --files "$BLOCKED" >"$LAST" 2>&1
+RC=$?
+[ "$RC" -eq 0 ] && ok "H2 ACK=1 + REASON 非空 ⇒ exit 0（按契约放行）" \
+                || no "H2 应 exit 0，实际 rc=$RC"
+grep -q "doc-contract" "$ACKLOG" 2>/dev/null && ok "H2b 放行已落 degraded-events.log（每次放行必须落盘）" \
+  || no "H2b 放行未落盘"
+
+# H3 ACK=1 **无 REASON** ⇒ 视同未 ACK（红）+ 可见 warning + 拒绝留痕
+env SYNO_DOC_CONTRACT_ACK=1 "$PY" "$V" --repo-root "$FXH" --files "$BLOCKED" >"$LAST" 2>&1
+RC=$?
+[ "$RC" -eq 1 ] && ok "H3 ACK=1 无 REASON ⇒ exit 1（**视同未 ACK**，fail-closed）" \
+                || no "H3 应 exit 1（fail-closed），实际 rc=$RC —— 逃生舱缺 REASON 仍放行 = F1 未修"
+grep -q "视同未 ACK" "$LAST" && ok "H3b 拒绝可见（stderr warning 点名「视同未 ACK」）" \
+  || no "H3b 拒绝未在输出中可见（静默拒绝）"
+grep -q "ACK 无效被拒" "$ACKLOG" 2>/dev/null && ok "H3c 拒绝留痕（日志记「ACK 无效被拒」，不许零字样）" \
+  || no "H3c 拒绝未留痕"
+
+# H4 ACK=1 + REASON 全空白 ⇒ 同样视同未 ACK
+env SYNO_DOC_CONTRACT_ACK=1 SYNO_DOC_CONTRACT_ACK_REASON="   " \
+  "$PY" "$V" --repo-root "$FXH" --files "$BLOCKED" >"$LAST" 2>&1
+RC=$?
+[ "$RC" -eq 1 ] && ok "H4 ACK=1 + REASON 全空白 ⇒ exit 1（strip 后为空同样无效）" \
+                || no "H4 空白 REASON 应 exit 1，实际 rc=$RC"
+
+# H5 闸 1/2 不可豁免: 坏决策件 + ACK+REASON ⇒ 仍红（只降级闸 3）
+FXH2="$TMPD/fx-h2"; mk_fix "$FXH2"; mkdir -p "$FXH2/decisions/process"
+printf '# 决策: 夹具\n\n状态: implemented\n日期: 2026-10-07\n\n## 一句话\n缺其余五段\n' \
+  > "$FXH2/decisions/process/2026-10-07-bad.md"
+env SYNO_DOC_CONTRACT_ACK=1 SYNO_DOC_CONTRACT_ACK_REASON="fixture: 只该降闸 3" \
+  "$PY" "$V" --repo-root "$FXH2" --files "decisions/process/2026-10-07-bad.md" >"$LAST" 2>&1
+RC=$?
+[ "$RC" -eq 1 ] && ok "H5 闸 1/2 违规 + ACK+REASON ⇒ 仍 exit 1（逃生舱只降闸 3）" \
+                || no "H5 闸 1/2 竟被 ACK 豁免，实际 rc=$RC"
+
+# H6 --json 可见性: 被拒的 ACK 在结构化输出里留痕
+env SYNO_DOC_CONTRACT_ACK=1 "$PY" "$V" --repo-root "$FXH" --files "$BLOCKED" --json 2>/dev/null \
+  | "$PY" -c '
+import json, sys
+d = json.load(sys.stdin)
+g = d["gate3_inbound"]
+assert not g.get("acked"), "acked should be absent"
+assert g.get("ack_rejected"), "ack_rejected missing"
+' && ok "H6 --json 留痕 ack_rejected（机器可核，非仅 stderr）" || no "H6 --json 缺 ack_rejected"
+
 echo ""
 echo "doc-contract-property.test.sh: PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ] || exit 1
