@@ -635,6 +635,12 @@ jobs:
           #   ⇒ 面内新增测试**零登记自动纳入执行**；要排除必须写进隔离台账（留痕 + 双棘轮:
           #      FACE-TOTAL 下界 / QUARANTINE-TOTAL 上界）。
           #   rc≠0 = 发现制自身违规（面为空 / 疑似删测试 / 台账失效）⇒ fail-closed 判红，绝不静默跳过。
+          # D1227（卡 #1300）越线者付账: 把 base 交给注入缝（纯 tree 计数，同一运行内测 scan(base) 与 scan(PR)）。
+          #   PR 事件 ⇒ origin/<base>；merge_group/push 无 PR base ⇒ 空 ⇒ 脚本**显式打印「未给 base ⇒ 不判越线」**
+          #   并退化为现状语义（禁静默）。origin/main 不可解析时脚本同样显式说明（见 sealed-tests.sh 判定点）。
+          SEALED_BASE="${GITHUB_BASE_REF:+origin/$GITHUB_BASE_REF}"
+          [ -n "$SEALED_BASE" ] || SEALED_BASE="${SYNO_BASE_REF:-origin/main}"
+          export SYNO_BASE_REF="$SEALED_BASE"
           SEALED_LIST="$(bash scripts/control-tower/sealed-tests.sh --list)" || {
             echo "::error title=sealed-tests::发现制清单取数失败（原因见上）—— fail-closed，不静默跳过"
             exit 1
