@@ -1,0 +1,24 @@
+# .claude/claims/1375.yaml — #1375（48 哨兵指标级接线 · 第一批）写集声明（D708 的 S0 源）
+#
+# CTO 2026-10-08 裁：A2（loader 侧统一落盘；哨兵只返回结构化 metrics，不碰库）
+#                 + B(a)（R4 三列有生产者：run_id/def_version 由 loader，input_digest 由哨兵）
+#                 + C1（按 computes 规模分批：第一批 4 哨兵）
+#                 + D1（键归一化一次覆盖全部别名键：teamId + tid）
+writeset:
+  - .claude/claims/1375.yaml
+  - .claude/task-briefs/2026-10-08-1375-metric-wiring-b1.md
+  - src/sentinel/types.ts
+  - src/sentinel/sentinel-loader.ts
+  - src/sentinel/org-scope.ts
+  - extensions/sentinels/agent-deployment-maturity/aggregate.ts
+  - extensions/sentinels/ai-ecosystem-fit/aggregate.ts
+  - extensions/sentinels/ai-investment-return/aggregate.ts
+  - extensions/sentinels/business-model-coherence/aggregate.ts
+  - tests/sentinel/metric-wiring-batch1.test.ts
+  - tests/sentinel/tenant-filter-keys.test.ts
+done:
+  - verify: npx vitest run tests/sentinel/metric-wiring-batch1.test.ts tests/sentinel/tenant-filter-keys.test.ts
+  - verify: npx vitest run tests/sentinel/ tests/store/ tests/l3/ tests/connectors/
+  - verify: test "$(git grep -c "metricsHolder" HEAD -- extensions/sentinels/business-model-coherence/aggregate.ts | tr -d '\n')" -ge 1
+  - verify: npx tsc --noEmit
+note: 第一批 4 哨兵（computes=1）指标级接线：哨兵只返回 { findings, metrics }（inputDigest 由哨兵给）；loader 统一落库并生成 run_id/def_version ⇒ V2 要求"写出 metric 行 + ≥1 行 degraded=0"。覆盖面 = 4/45（禁写"全部已接"）。

@@ -28,6 +28,13 @@ import { createLogger } from '@synova/logger';
 
 const log = createLogger('sentinel/org-scope');
 
+/**
+ * **租户别名键**（一次枚举；#1375 扩展自 #1374 的 `teamId`）
+ * 口径：全仓 `queryNodes(..., { <key>: ... })` 枚举 ⇒ 见 `tests/sentinel/tenant-filter-keys.test.ts`（判据：非载体键必须登记）
+ * 说明：这些键在**语义上**都指向租户，但**载体**只有 `props.orgId`（R21/R22）⇒ 统一改写。
+ */
+export const TENANT_ALIAS_KEYS = ['teamId', 'tid'] as const;
+
 /** 未隔离读计数（可观测；**空结果 ≠ 隔离成功**） */
 let unscopedQueryCount = 0;
 
@@ -78,10 +85,19 @@ export function withOrgScope<T>(store: T, orgId: string | undefined): T {
     //   （R21/R22；`loop-handlers` / `goal-store` / `data-exporter` 均读 `props.orgId`）。
     //   若不归一化 ⇒ 过滤退化为 `{ teamId, orgId }` 双键 ⇒ 只带 orgId 的数据**全部落空** ⇒
     //   **空结果被误当"隔离成功"**（R61 同族）⇒ 故此处把 `teamId` 键**改写**为 `orgId`（单一载体）。
+    // 🔴 **键归一化（一次枚举全部别名键；#1375 扩展）**
+    //   口径：`git grep -oE "queryNodes\([^)]*\{[^}]*\}"` ⇒ 全仓过滤器键枚举（见 tests/sentinel/tenant-filter-keys.test.ts）：
+    //     载体键 = `orgId`｜**别名键 = TENANT_ALIAS_KEYS**｜其余 = 业务键（如 goalId/status/email…，**非租户键，原样保留**）
+    //   历史：`teamId`（#1374 实测发现）⇒ 本卡扩展覆盖 `tid`（5 文件）——**一次全归一化，避免"改一个漏一个"**。
     const rawFilters = filters ?? {};
-    const { teamId: legacyTeamId, ...rest } = rawFilters as { teamId?: unknown } & Record<string, unknown>;
-    if (legacyTeamId !== undefined) {
-      log.debug({ type }, 'teamId 键归一化为 orgId（#1374 单一载体；R21/R22）');
+    const rest: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(rawFilters)) {
+      if ((TENANT_ALIAS_KEYS as readonly string[]).includes(k)) continue;   // 别名键：丢弃（统一由 orgId 承载）
+      rest[k] = v;
+    }
+    const dropped = Object.keys(rawFilters).filter(k => (TENANT_ALIAS_KEYS as readonly string[]).includes(k));
+    if (dropped.length > 0) {
+      log.debug({ type, dropped }, '租户别名键归一化为 orgId（单一载体；R21/R22）');
     }
     return original(type, { ...rest, orgId: scopedOrg }, graph);
   };
