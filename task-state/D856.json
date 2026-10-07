@@ -1,7 +1,7 @@
 {
   "task_id": "D856",
   "title": "签署态单一权威源 + 派生表 + 不一致检查；重做 #677（0 字节空 blob 拒绝）",
-  "status": "claimed",
+  "status": "impl_done",
   "risk": "high",
   "spec": "DSH 原则②⑥：状态必须机器可核验且只有一个权威源；PR #677 把创始人裁定表落成 0 字节空 blob（main 版 4243B）→ 损坏产物不得进 main。",
   "write_set": [

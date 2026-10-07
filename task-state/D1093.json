@@ -1,7 +1,7 @@
 {
   "task_id": "D1093",
   "title": "PR #908 CI 修复（登记闸 + 文档登记 + swallow-ok）",
-  "status": "claimed",
+  "status": "impl_done",
   "domain": "mac",
   "owner": "工程线（X30 启动窗）",
   "spec": ".claude/task-briefs/2026-10-01-D1093-ci-fixes.md",

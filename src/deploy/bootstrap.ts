@@ -1268,7 +1268,11 @@ export class Bootstrap {
         // 5f: 告警规则引擎 + IM 通道 + 文件守卫 + 沙箱
         try {
           const { getFileGuard } = await import('../security/file-guard');
-          ctx.set('fileGuard', getFileGuard(config.dbPath));
+          // #1052: workDir 必须是**进程工作根**（与 EXPERT_DIR/EXTENSIONS_DIR 同 base）。
+          // 原传 config.dbPath（默认 ./data/synova.db，**文件**路径）⇒ FileGuard.checkBoundary
+          // 的「工作目录内」分支永不为真 ⇒ 接线后几乎全部写入被拒。
+          // CTO 2026-10-08 裁定：workDir = process.cwd()。
+          ctx.set('fileGuard', getFileGuard(process.cwd()));
           log.info('Phase 5f: 文件安全守卫已启动');
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : String(err);

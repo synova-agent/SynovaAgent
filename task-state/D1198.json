@@ -8,7 +8,7 @@
     ".claude/task-briefs/2026-10-07-D1198-P0三项-跨租户边界.md",
     "task-state/D1198.json"
   ],
-  "status": "claimed",
+  "status": "impl_done",
   "spec": null,
   "impl": null,
   "audit": null,

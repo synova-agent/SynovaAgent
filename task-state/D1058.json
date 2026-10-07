@@ -1,7 +1,7 @@
 {
   "task_id": "D1058",
   "title": "派单闸门落地：R8 修复 + §〇 归属/回执/点 id 三项检查",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": null,
   "impl": null,
   "audit": null,

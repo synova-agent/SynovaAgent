@@ -1,7 +1,7 @@
 {
   "task_id": "D819",
   "title": "P0-1+P0-2+D817-F1/F2：工具 schema 进请求体 + tool_call 配对 + 响应侧 tool_calls 映射 + assistant 不重复入上下文",
-  "status": "claimed",
+  "status": "impl_done",
   "risk": "high",
   "spec": "派单即规格：docs/synova/coordination/派单-批十一-P0-1-P0-2-20260918.md §A/D819（含 CTO 实测的四处位置）",
   "write_set": [

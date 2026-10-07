@@ -8,6 +8,13 @@
  *  - Hermes 执行任意 shell 命令 + 文件写入
  *  - Synova 主要风险在连接器子进程读取宿主文件
  *
+ * 🔴 workDir 语义（#1052 / CTO 2026-10-08 裁定）：**进程工作根**，与
+ *   `src/loops/middle-evolution-engine.ts` 的 `EXPERT_DIR`（`join(process.cwd(),'expert')`）
+ *   与 `EXTENSIONS_DIR`（`join(process.cwd(),'extensions','industries')`）**同 base**。
+ *   ⚠️ 曾踩（#1052 取证）：装配点把 `config.dbPath`（默认 `./data/synova.db`，**文件**路径）
+ *   当 workDir 传入 ⇒ `checkBoundary` 的「工作目录内」分支**永不为真** ⇒ 几乎全部写入被拒。
+ *   装配必须传 `process.cwd()`（或与之同 base 的目录），**不得**传文件路径。
+ *
  * 三层防御:
  *   1. 写入拒绝: 系统关键路径禁止写入
  *   2. 读取拒绝: 凭据文件禁止读取
@@ -15,6 +22,9 @@
  */
 import * as path from 'path';
 import * as os from 'os';
+import { createLogger } from '@synova/logger';
+
+const log = createLogger('security/file-guard');
 
 // ═══ Layer 1: 写入拒绝列表 (Hermes FILE_DENYLIST) ═══
 
@@ -67,15 +77,71 @@ export interface FileAccessDecision {
   reason?: string;
 }
 
+/**
+ * 单次判定事件（#1052）——**供调用点在 FileGuard 之外落审计**。
+ *
+ * @contract operation 只取 'read' | 'write'；decision 为本次判定的原始结果（含 allow/deny）
+ * @degraded 不适用（纯数据；无 IO）
+ */
+export interface FileDecisionEvent {
+  path: string;
+  operation: 'read' | 'write';
+  decision: FileAccessDecision;
+}
+
+/**
+ * FileGuard 构造选项（#1052）。
+ *
+ * @input workDir — **进程工作根**（见文件头 workDir 语义）；缺省 `process.cwd()`
+ * @input onDecision — 每次判定后回调（allow 与 deny 都回调）；**本类不触 IO**，
+ *   审计落在**调用点**（CTO 2026-10-08 裁定：不把 IO 塞进 FileGuard）
+ * @output 无（构造）
+ * @degraded **onDecision 抛错 ⇒ 捕获 + log.warn，且不改变本次决策结果**
+ *   —— 审计失败不改判、也不放行（铁律 24/31）
+ */
+export interface FileGuardOptions {
+  workDir?: string;
+  onDecision?: (event: FileDecisionEvent) => void;
+}
+
 export class FileGuard {
   private workDir: string;
+  private readonly onDecision?: (event: FileDecisionEvent) => void;
 
-  constructor(workDir: string = process.cwd()) {
-    this.workDir = path.resolve(workDir);
+  constructor(workDir: string | FileGuardOptions = process.cwd()) {
+    const opts: FileGuardOptions = typeof workDir === 'string' ? { workDir } : workDir;
+    this.workDir = path.resolve(opts.workDir ?? process.cwd());
+    this.onDecision = opts.onDecision;
+  }
+
+  /**
+   * 触发 onDecision 回调（若装配）。
+   *
+   * @contract 回调抛错 ⇒ 捕获 + `log.warn`；**返回值不参与决策**（调用方已定判）
+   * @degraded 回调异常 = degraded，但**决策结果不变**（铁律 24/31）
+   */
+  private fire(event: FileDecisionEvent): void {
+    if (!this.onDecision) return;
+    try {
+      this.onDecision(event);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      log.warn(
+        { err: msg, path: event.path, operation: event.operation },
+        'onDecision 回调异常 — 审计降级，决策结果不变',
+      );
+    }
   }
 
   /** Check if a file can be written to */
   canWrite(filePath: string): FileAccessDecision {
+    const decision = this.decideWrite(filePath);
+    this.fire({ path: path.resolve(filePath), operation: 'write', decision });
+    return decision;
+  }
+
+  /** 写入判定（纯逻辑；不触发回调）——逐字保留既有语义 */
+  private decideWrite(filePath: string): FileAccessDecision {
     const resolved = path.resolve(filePath);
 
     // Layer 1: exact match
@@ -96,6 +162,13 @@ export class FileGuard {
 
   /** Check if a file can be read */
   canRead(filePath: string): FileAccessDecision {
+    const decision = this.decideRead(filePath);
+    this.fire({ path: path.resolve(filePath), operation: 'read', decision });
+    return decision;
+  }
+
+  /** 读取判定（纯逻辑；不触发回调）——逐字保留既有语义 */
+  private decideRead(filePath: string): FileAccessDecision {
     const resolved = path.resolve(filePath);
 
     // Layer 2: credential file patterns
@@ -146,7 +219,18 @@ export class FileGuard {
 
 let _instance: FileGuard | null = null;
 
-export function getFileGuard(workDir?: string, inject?: FileGuard): FileGuard {
+/**
+ * 取 FileGuard 单例（#1052：形参兼容 `string | FileGuardOptions`）。
+ *
+ * @input workDir — **进程工作根**（见文件头语义）；传文件路径会让边界判定失效
+ * @input inject — 测试/装配注入（注入即替换单例）
+ * @output FileGuard 单例
+ * @degraded 无（纯构造）
+ */
+export function getFileGuard(
+  workDir?: string | FileGuardOptions,
+  inject?: FileGuard,
+): FileGuard {
   if (inject) { _instance = inject; return inject; }
   if (!_instance) _instance = new FileGuard(workDir);
   return _instance;

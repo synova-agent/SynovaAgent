@@ -225,6 +225,10 @@ export const constructionItems: readonly ConstructionItem[] = [
     // │ - [ ] **运行时回写复测（未做）**：真实反馈数据流入后，跑一轮进化回写并复核 `agent_memory` / `extensions/` 落盘
     // │ - **判定人**：K3 / 独立复核（**执行方不得自判**）
     // └─ 抄录结束 ┘
+    // 📌 #976 卡面 2026-10-08 订正 —— 登记件侧同步（CTO 2026-10-08 派单第四轮）：
+    //   夹具面复测 = **7 passed**，**口径 = K6 4 + D1197 跨租户 3**；卡面 §⑦ 原写「夹具 4 passed」**已过期**。
+    //   ⚠️ R61 辨析（勿混两个 4）：本块 §⑥ 抄录里的「夹具 **4 failed**」是**反例（改坏即红）**的期望值，
+    //      与「4 passed」（正常路径计数）**不是同一个对象** ⇒ 不得合并、不得互相替换。
     acceptance: [
       // 🔴 原为纯 grep 型（T6 面1 否决点）⇒ 改为穿生产入口：跑一次真实进化回写，断言表行
       { run: 'npx vitest run tests/growth/evolution-writeback.test.ts', expectExit: 0 },
@@ -432,7 +436,11 @@ export const constructionItems: readonly ConstructionItem[] = [
     ],
     // 📌 CTO 2026-10-08 裁定（title）：卡面标题为 GitHub 显示限制下的**截断形态**（结尾 `）—`），本字段为**完整命名** ——
     //   两处**故意不同**，不是「未同步」。理由：登记件是**判据源**，不该被 GitHub 显示限制绑架；卡号的标识作用不依赖标题完整。
-    status: 'todo',
+    // 📌 CTO 2026-10-08 派单（第四轮）·status 订正：#982 **已 CLOSED**（`closedAt = 2026-10-07T18:03:53Z`，R59 裁定关闭）
+    //   ⇒ 按「status 以 GitHub Issue 真实状态为准」回填为 `done`。
+    //   ✅ acceptance 已于第一轮订正：原引 `tests/growth/goal-lifecycle-wired-or-retired.test.ts`（main **不存在**）
+    //      ⇒ 改为卡面 5 个既有测试**逐条**跑（CTO 2026-10-07 裁定收敛）。
+    status: 'done',
     source: '施工单.md 0-8 / 现状报告 坏点7',
   },
   {
@@ -737,7 +745,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       'src/middleware/rbac.ts',
       'tests/security/rbac-all-routes.test.ts',
     ],
-    sharedWrite: ["RB-01/RB-03: src/middleware/rbac.ts（同文件，须串行 —— RB 系列落地前本项不动该文件）"],
+    sharedWrite: ["RB-01/RB-03: src/middleware/rbac.ts（同文件，须串行 —— RB 系列落地前本项不动该文件）", "1-7bis: src/middleware/rbac.ts（同文件，须串行；1-7bis P1 先行）"],
     // 📌 CTO 2026-10-08 裁定（1-7）：改为 ['0-9','1-7bis'] —— 卡面明写 `1-7bis`（RbacContext 无 org/team）是
     //   🔴 **硬阻塞**，登记件漏记 ⇒ **补**（漏列会导致「看起来可开工、实际被卡」）；`0-9` 本轮已回填 `active` ⇒ 保留。
     dependsOn: ['0-9', '1-7bis'],
@@ -805,7 +813,6 @@ export const constructionItems: readonly ConstructionItem[] = [
     status: 'todo',
     source: '施工单.md 1-9 / 现状报告 W2',
   },
-
   // ───────────────── 第 2 批 · 地基 ─────────────────
   {
     id: '2-1a',
@@ -1003,6 +1010,49 @@ export const constructionItems: readonly ConstructionItem[] = [
     ],
     status: 'todo',
     source: '施工单.md 2-4',
+  },
+  {
+    // 🆕 CTO 2026-10-08 派单（回填第四轮）新增项 —— 登记件原 48 项中**无此条**；卡 = #1347。
+    //   ⚠️ id 由回填方按 `bis` 惯例拟定（与 2-4 同族、同挂 K2）；**CTO 未指定 id**，如需改号请裁。
+    //   📌 batch = 「第2批」**与 `2-4` 同批**（CTO 2026-10-08 裁定）：**同一道门的两个面不该分属两批**
+    //      （`2-4` = 文件/边界门；本项 = 角色授权分支）⇒ 否则会出现「门装了一半就进下一批」。
+    //      ⚠️ 写法口径点名：登记件既有写法 = **`'第2批'`**（`batch` 类型 `第0批|第1批|第2批|第3批`，共 9 项用此写法）；
+    //      「第2批-地基」是 **Project #1 板字段的选项名**，**不是**登记件的写法 ⇒ 此处按登记件写。
+    id: '2-4bis',
+    worker: 'win', batch: '第2批', block: 'K2',
+    title: '接通角色授权：setRole() 零调用 ⇒ 执行面授权分支不可达',
+    // 接线点 = 现有 5 处生产实例化点**之一**或其上游装配处（卡 #1347 §③-1）：
+    //   `src/agent/conversation-engine.ts:413` / `src/deploy/bootstrap.ts:831` /
+    //   `src/routes/conversations.ts:119` / `src/routes/conversations.ts:280` / `src/routes/diagnosis.ts:261`
+    //   ⇒ 具体落点未定 ⇒ `pathTBD: true`（门禁报「无主」但不 exit 1）
+    paths: [
+      'src/agent/tools.ts',
+      'src/agent/tool-profiles.ts',
+      'tests/agent/tool-role-wiring.test.ts',  // 判据交付物（本卡创建）
+    ],
+    pathTBD: true,
+    // 🔴 与 `2-4`（#1052 写入门禁两道未接）的关系：**同批但不同文件** —— 本项是 `2-4` 所述「两道」之一
+    //   （「两道」= 写入门禁 + 工具授权）。**两者不许互相假定已完成**：`dependsOn` 互不列对方，
+    //   任一先落都不阻塞另一（文件不重叠：本项在 `src/agent/**`，`2-4` 在 `src/security/file-guard.ts`
+    //   + `src/tools/tool-registry.ts`）。⚠️ `src/tools/tool-registry.ts` 与 `src/agent/tools.ts` 是
+    //   **同名不同物的两个 ToolRegistry 类**，不得混改。
+    dependsOn: [],
+    // 判据（卡 #1347 §⑥）。🔴 计数一律 **R42 口径**（`git grep -l … | wc -l` = 文件数）；**ref 显式写 `origin/main`（R66）**。
+    acceptance: [
+      // 判据交付物（本卡创建）：两角色对照 + `setRole` 接线断言（穿生产入口）
+      { run: 'npx vitest run tests/agent/tool-role-wiring.test.ts', expectExit: 0 },
+      // 接线物理证明：非注释 `setRole(` 行数 ≥ 2（= 定义 + 至少 1 个生产调用）。
+      //   ⚠️ **必须过滤注释行** —— 现值「2 个文件命中」里 **1 个是注释**
+      //      （`src/tools/tool-registry.ts:18/:23` 引用了 #1347）⇒ 不过滤即得**假绿**（R61 同族）。
+      //   本机实跑（ref = origin/main@ce5507826）：不过滤 = 2 文件；过滤后 = **1 行**（仅定义）⇒ 本条现在**红**（正确，工作未做）。
+      { run: 'bash -c \'test "$(git grep -n "setRole(" origin/main -- src/ | grep -vcE "^[^:]+:[^:]+:[0-9]+:[[:space:]]*(\\*|//|/\\*)")" -ge 2\'', expectExit: 0 },
+      // 不新造授权体系（真源副本不增）：`getProfileForRole` 文件数 ≤ 2（现值 2 ✓ 已实跑）
+      { run: 'bash -c "test \"$(git grep -l \'getProfileForRole\' origin/main -- src/ | wc -l)\" -le 2"', expectExit: 0 },
+      // 影子身份通道守卫（I4）：`req.userId =` 文件数 = 0（现值 0 ✓ 已实跑；R64 用 `[[:space:]]` 不用 `\s`）
+      { run: 'bash -c "test \"$(git grep -l \'req\\.userId[[:space:]]*=\' origin/main -- src/ | wc -l)\" -eq 0"', expectExit: 0 },
+    ],
+    status: 'todo',
+    source: '独立复核 2026-10-08 实测：`setRole()`（`src/agent/tools.ts:140` 定义）全仓零调用 ⇒ `_role` 恒 null ⇒ `:169`/`:188` 两个 `if` 恒不进入（与 0-11 拆掉的假门同病）。卡 = #1347；板字段：p1 / 未开工 / 第1批-补齐 / K2 / 不适用 / L2-真跑通 / 无阻塞',
   },
   {
     id: '2-6',
@@ -1379,8 +1429,20 @@ export const constructionItems: readonly ConstructionItem[] = [
     title: '知识审计不可归属（req.userId 恒 undefined ⇒ user_id 恒 anonymous）',
     paths: ['src/routes/knowledge.ts'],  // 收窄：auth.ts 归 0-9(已废) 遗留，若需改则走提案
     dependsOn: [],
+    // 📌 CTO 2026-10-08 派单（第四轮）·acceptance 重订：
+    //   ‼️ 原判据 `WHERE user_id='anonymous'` **恒为 0** —— 该值**永不出现在表中** ⇒ 属【判据真空过】（R61）。
+    //      依据：未认证时注入的 `userId` = `'unauthenticated'`（`src/middleware/rbac.ts:22-23`
+    //      `ANONYMOUS_ROLE='staff'` / `ANONYMOUS_USER='unauthenticated'`；返回点 `:139`），**不是** `'anonymous'`。
+    //   🔎 R61 自查（值 → 真实路径）：真值域只有两个 —— `<jwt.sub>`（真 JWT 路径）与 `'unauthenticated'`（匿名路径）；
+    //      `'anonymous'` **没有产生路径** ⇒ 不可作判据。
+    //   📐 口径 + 时刻（本机只读实跑，ref = origin/main@ce5507826，as_of 2026-10-07T18:29:28Z）：
+    //      `SELECT COUNT(*) … WHERE user_id NOT IN ('anonymous','unauthenticated')` ⇒ **1**（值 = `l3-real-user-1155`）
+    //      `SELECT COUNT(*) … WHERE user_id='unauthenticated'` ⇒ **0**
     acceptance: [
-      { run: "sqlite3 data/synova.db \"SELECT COUNT(*) FROM knowledge_audit WHERE user_id='anonymous'\"", expectRowsEq: { table: 'knowledge_audit', n: 0 } },
+      // 归属可判：审计表出现**真实 sub**（非 anonymous / 非 unauthenticated）
+      { run: "sqlite3 data/synova.db \"SELECT COUNT(*) FROM knowledge_audit WHERE user_id NOT IN ('anonymous','unauthenticated')\"", expectRowsGt: { table: 'knowledge_audit', n: 0 } },
+      // 匿名对照：不带 JWT 的查询落 `'unauthenticated'`（跑过匿名对照后此条成立）
+      { run: "sqlite3 data/synova.db \"SELECT COUNT(*) FROM knowledge_audit WHERE user_id='unauthenticated'\"", expectRowsGt: { table: 'knowledge_audit', n: 0 } },
     ],
     status: 'todo',
     source: 'CTO 2026-10-05 实测：auth.ts 零处写 req.userId；knowledge.ts:40 读它并 `|| \'anonymous\'` ⇒ 审计行不可归属。取代已作废的 0-9（前提被证伪）。完成标准②须在【跑一次真 JWT 查询之后】测得',
@@ -1389,13 +1451,32 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '1-7bis',
     worker: 'win', batch: '第1批', block: 'K1',
     title: 'RbacContext 无 org/team 维度（rbac.ts:127 department 恒 undefined）—— 接口变更，先提案',
-    paths: ['docs/synova/coordination/提案/'],  // 专属子目录，避免与 2-2 写集相撞
+    // 🔴 paths 分两段（CTO 2026-10-08 行使冻结权后扩展）：
+    //   P0（已完成）= 提案件；P1 起（须放行）才可碰 `src/middleware/rbac.ts` + `tests/security/**`。
+    paths: ['docs/synova/coordination/提案/', 'src/middleware/rbac.ts', 'tests/security/**'],
     dependsOn: [],
-    acceptance: [
-      { run: 'test -f docs/synova/coordination/提案/RbacContext-org-team-维度.md', expectExit: 0 },
+    // 🔴 `src/middleware/rbac.ts` 共写方（按事实补齐双向声明，C-02 同法）：
+    //   1-7 / RB-03 / RB-04 均声明该文件 ⇒ **同文件须串行**。本项 **P1 起才可碰**。
+    sharedWrite: [
+      "1-7: src/middleware/rbac.ts（同文件，须串行；本项 P1 先行）",
+      "RB-03: src/middleware/rbac.ts（同上）",
+      "RB-04: src/middleware/rbac.ts（同上）",
     ],
-    status: 'proposal',
-    source: '产品线 2026-10-05 独立复核四姿态实测：DevMode 无 secret 姿态下匿名 200 + 真实工作台数据 ⇒ 1-7 的守卫是身份级非越权级。根因=RbacContext 缺 org/team 维度。CTO 已批立项；**权限模型接口先冻结**（创始人 2026-10-05 裁）',
+    acceptance: [
+      // ── P0（已达成，留档）──
+      { run: 'test -f docs/synova/coordination/提案/RbacContext-org-team-维度.md', expectExit: 0 },
+      // ── P1 可判形态（CTO 2026-10-08 冻结生效 ⇒ P1 可开工；判据 = 卡 #1346 §⑥）──
+      // 判据交付物（本卡创建）：I2「缺席即拒」+ I3「不知 ≠ 不限」+ I5「旧 department 恒 undefined」三态单测
+      { run: 'npx vitest run tests/security/rbac-org-axis.test.ts', expectExit: 0 },
+      // V7 两姿态各跑（硬化姿态 + DevMode 姿态；**不依赖真有第二租户**）—— 既有件承载
+      { run: 'npx vitest run tests/security/rbac-all-routes.test.ts', expectExit: 0 },
+      // I4 守卫（R42 口径 + R66 显式 ref + R64 `[[:space:]]`）：影子身份通道零 —— 现值 0 ✓ 已实跑
+      { run: 'bash -c "test \"$(git grep -l \'req\\.userId[[:space:]]*=\' origin/main -- src/ | wc -l)\" -eq 0"', expectExit: 0 },
+    ],
+    status: 'todo',
+    source: '产品线 2026-10-05 独立复核四姿态实测：DevMode 无 secret 姿态下匿名 200 + 真实工作台数据 ⇒ 1-7 的守卫是身份级非越权级。根因=RbacContext 缺 org/team 维度。CTO 已批立项；**权限模型接口先冻结**（创始人 2026-10-05 裁）。'
+      + '📌 CTO 2026-10-08 **已行使冻结权**：以提案 v3（blob `63685f445`）为准冻结，**P1 可开工**（5 条放行条件见卡 #1346 §③）。'
+      + '⚠️ status 由 `proposal` 改为 `todo`：P0 提案期已交付并冻结 ⇒ 转实现期待开工（口径 = status 以 GitHub Issue 真实状态为准，#1346 现为 OPEN）。',
   },
   {
     id: 'K1-WH',
@@ -1485,7 +1566,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       'src/middleware/rbac.ts',
       'scripts/control-tower/probe-permission-grants.ts',  // 判据交付物（本卡创建）
     ],
-    sharedWrite: ["1-7/RB-01: src/middleware/rbac.ts（同文件，须串行）"],
+    sharedWrite: ["1-7/RB-01: src/middleware/rbac.ts（同文件，须串行）", "1-7bis: src/middleware/rbac.ts（同文件，须串行）"],
     dependsOn: ['RB-01'],
     // ┌─ 卡面 §⑥ 判据（Issue #1142，2026-10-07 断面；全文抄录，机器条目见下方 acceptance）─┐
     // │ 卡面标题：RB-03 · 权限项模型：PermissionId[] + 角色为可配包（五档仅出厂默认）
@@ -1507,7 +1588,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       'extensions/', 'src/middleware/rbac.ts',
       'scripts/control-tower/probe-role-config.ts',  // 判据交付物（本卡创建）
     ],
-    sharedWrite: ["RB-03: src/middleware/rbac.ts（同文件，须串行）"],
+    sharedWrite: ["RB-03: src/middleware/rbac.ts（同文件，须串行）", "1-7bis: src/middleware/rbac.ts（同文件，须串行）"],
     dependsOn: ['RB-03'],
     // ┌─ 卡面 §⑥ 判据（Issue #1143，2026-10-07 断面；全文抄录，机器条目见下方 acceptance）─┐
     // │ 卡面标题：RB-04 · BR-3 重构：从 RBAC 档位 → Grants + 客户自定义配置面
@@ -1582,7 +1663,7 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
     source: 'T3 §二 K1',
   },
   {
-    id: 'K2', name: '写入门禁与工具治理', items: ['0-11', '2-4'],
+    id: 'K2', name: '写入门禁与工具治理', items: ['0-11', '2-4', '2-4bis'],
     blockAcceptance: [
       { run: 'npx vitest run tests/security/file-guard.test.ts', expectExit: 0 },
     ],

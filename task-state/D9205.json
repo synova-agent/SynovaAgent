@@ -1,7 +1,7 @@
 {
   "task_id": "D9205",
   "title": "claim-wiring 夹具分支名解耦+断言补强 1305",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": null,
   "impl": null,
   "audit": null,

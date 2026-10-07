@@ -598,25 +598,54 @@ def collect_declared(repo: str, ts: Optional[str], dd: Optional[str], bf: Option
     D-C（K3 R5）: `claim` = `.claude/claims/<issue>.yaml`（S0 源）。走 `brief_parser`
     **同一实现**（其 claim 分支委托 claim_store 解析）——不新增第三套解析口径。
     claim 解析异常 → 追加告警并把该源置空，由调用方按"声明源为空"的既有 fail-closed 处理。
+
+    D1245（卡 #1361 · **候选 B / 仅消息层，不改定位策略**）: helper 脚本
+      （`brief_parser.py` / `devdoc_writeset.py`）按 `<repo-root>/scripts/control-tower/` 定位，
+      这是**隐性前提**：该树缺失时 `python3 <缺失路径>` 退出码 2（Python "can't open file"），
+      报错观感是"claim 读不到"，真因却是**前提缺失**（#1353 的唯一变量对照已锁死因果）。
+      本处把真因**独立点名**（`_helper_precondition`），既有 `S0/S2 解析失败(…)` 报文字面
+      **保持不变**（#1353 夹具钉着它 ⇒ 避免跨 PR 夹具 churn）。
     """
     entries: List[Tuple[str, str]] = []
     warns: List[str] = []
+    HELPER_MISSING_MARK = "helper 脚本缺失"
+
+    def _helper_precondition(helper: Path, source_label: str) -> bool:
+        """helper 存在？否 ⇒ 追加**前提缺失**告警（独立原因，不与"解析失败"混同）。
+
+        返回 True = 前提满足（调用方可继续跑 helper）；False = 前提缺失（跳过调用，不产假 warn）。
+        报文前缀保留 `… 解析失败(前提缺失)` 形态:
+          · `解析失败` —— 该声明源确实没解析出来（事实不变，退出码/判定不变）；
+          · `(前提缺失)` + 逐句点明 —— 把**真因**从"claim/解析器坏了"改正为"helper 树没带"
+            （#1353 实测的误导面）。保留前缀同时让 #1353 夹具里钉着的稳定串继续匹配
+            ⇒ **跨 PR 零夹具 churn**（它钉的是"该源失败了"，本处改的是"为什么失败"）。
+        """
+        if helper.is_file():
+            return True
+        warns.append(
+            f"{source_label} 解析失败(前提缺失): {HELPER_MISSING_MARK}（{helper}）—— "
+            f"`--repo-root` 指向的树必须带本仓 scripts/ 树（真仓 worktree 天然满足；"
+            f"裸沙箱须先 `cp -R <repo>/scripts <sandbox>/`）。"
+            f"**这是前提缺失，不是「claim 读不到」**（claim_store 自身可读；"
+            f"变更集/merge-base 已正确指向该 root）")
+        return False
 
     if claim:
         py = python_bin()
         bp = Path(repo) / "scripts" / "control-tower" / "brief_parser.py"
-        try:
-            p = subprocess.run([py, str(bp), "--q2-include", claim], capture_output=True,
-                               text=True, encoding="utf-8", errors="replace", timeout=60)
-            got = [ln for ln in (p.stdout or "").splitlines() if ln.strip()]
-            # brief_parser 对畸形 claim 会返回空 + 非零 rc（claim_store exit 2 语义）；
-            # rc≠0 且无输出 ⇒ 显式告警（绝不静默当"声明为空"）
-            if p.returncode != 0 and not got:
-                warns.append(f"S0 claim 解析失败({claim}): brief_parser rc={p.returncode}")
-            for ln in got:
-                entries.append((_clean_entry(ln), CLAIM_SOURCE_LABEL))
-        except (OSError, subprocess.SubprocessError) as exc:
-            warns.append(f"S0 claim 解析失败({claim}): {exc}")
+        if _helper_precondition(bp, "S0 claim"):
+            try:
+                p = subprocess.run([py, str(bp), "--q2-include", claim], capture_output=True,
+                                   text=True, encoding="utf-8", errors="replace", timeout=60)
+                got = [ln for ln in (p.stdout or "").splitlines() if ln.strip()]
+                # brief_parser 对畸形 claim 会返回空 + 非零 rc（claim_store exit 2 语义）；
+                # rc≠0 且无输出 ⇒ 显式告警（绝不静默当"声明为空"）
+                if p.returncode != 0 and not got:
+                    warns.append(f"S0 claim 解析失败({claim}): brief_parser rc={p.returncode}")
+                for ln in got:
+                    entries.append((_clean_entry(ln), CLAIM_SOURCE_LABEL))
+            except (OSError, subprocess.SubprocessError) as exc:
+                warns.append(f"S0 claim 解析失败({claim}): {exc}")
 
     if ts:
         try:
@@ -632,27 +661,29 @@ def collect_declared(repo: str, ts: Optional[str], dd: Optional[str], bf: Option
     if dd:
         py = python_bin()
         helper = Path(repo) / "scripts" / "control-tower" / "devdoc_writeset.py"
-        try:
-            p = subprocess.run([py, str(helper), "--extract", dd], capture_output=True,
-                               text=True, encoding="utf-8", errors="replace", timeout=60)
-            j = json.loads(p.stdout or "{}")
-            for e in (j.get("cleaned") or []):
-                if str(e).strip():
-                    entries.append((_clean_entry(str(e)), "S2:devdoc.写集表"))
-        except (OSError, subprocess.SubprocessError, ValueError) as exc:
-            warns.append(f"S2 解析失败({dd}): {exc}")
+        if _helper_precondition(helper, "S2 devdoc"):
+            try:
+                p = subprocess.run([py, str(helper), "--extract", dd], capture_output=True,
+                                   text=True, encoding="utf-8", errors="replace", timeout=60)
+                j = json.loads(p.stdout or "{}")
+                for e in (j.get("cleaned") or []):
+                    if str(e).strip():
+                        entries.append((_clean_entry(str(e)), "S2:devdoc.写集表"))
+            except (OSError, subprocess.SubprocessError, ValueError) as exc:
+                warns.append(f"S2 解析失败({dd}): {exc}")
 
     if bf:
         py = python_bin()
         bp = Path(repo) / "scripts" / "control-tower" / "brief_parser.py"
-        try:
-            p = subprocess.run([py, str(bp), "--q2-include", bf], capture_output=True,
-                               text=True, encoding="utf-8", errors="replace", timeout=60)
-            for ln in (p.stdout or "").splitlines():
-                if ln.strip():
-                    entries.append((_clean_entry(ln), "S3:brief.Q2-include"))
-        except (OSError, subprocess.SubprocessError) as exc:
-            warns.append(f"S3 解析失败({bf}): {exc}")
+        if _helper_precondition(bp, "S3 brief"):
+            try:
+                p = subprocess.run([py, str(bp), "--q2-include", bf], capture_output=True,
+                                   text=True, encoding="utf-8", errors="replace", timeout=60)
+                for ln in (p.stdout or "").splitlines():
+                    if ln.strip():
+                        entries.append((_clean_entry(ln), "S3:brief.Q2-include"))
+            except (OSError, subprocess.SubprocessError) as exc:
+                warns.append(f"S3 解析失败({bf}): {exc}")
 
     # 去重（保留首个来源）
     seen = set()
@@ -662,6 +693,15 @@ def collect_declared(repo: str, ts: Optional[str], dd: Optional[str], bf: Option
             seen.add(e)
             uniq.append((e, src))
     return uniq, warns
+
+
+def helper_missing_in_warns(warns: List[str]) -> bool:
+    """告警里是否含「helper 脚本缺失」**前提缺失**（D1245/卡 #1361）。
+
+    用途: 调用方在"无任何写集声明 ⇒ fail-closed"分支里**指认真因**——
+      原报文只说「四源皆空」，会被读成"claim 读不到"（#1353 实测的误导面）。
+    """
+    return any("helper 脚本缺失" in w for w in warns)
 
 
 EXEMPT_HEADING_RE = re.compile(r"^#{2,4}\s*写集豁免")
@@ -923,6 +963,16 @@ def main() -> int:
             result["reason"] = ("无任何写集声明（S0 claim.writeset / S1 task-state.write_set / "
                                 "S2 dev doc 写集表 / S3 task brief Q2 四源皆空）"
                                 "且变更含源码文件 → fail-closed 阻断")
+            # D1245（卡 #1361 · 候选 B / 仅消息层）: 若四源皆空的**真因**是 helper 脚本缺失
+            #   （隐性前提未满足），必须点出来 —— 否则该报文会被读成"claim 读不到"
+            #   （#1353 实测的误导面）。判定 = warns 里有前提缺失标记；不改任何判定与退出码。
+            if helper_missing_in_warns(result["warns"]):
+                result["reason"] += (
+                    "\n   ⚠️ **真因: helper 脚本缺失（前提未满足）** —— `--repo-root` 指向的树没带"
+                    "本仓 scripts/ 树（见上方 S0/S2 前提缺失告警）。"
+                    "**不是「claim 读不到」**（claim_store 自身可读；变更集/merge-base 已正确指向该 root）。"
+                    "修法二选一: ① 让 repo-root 带本仓 scripts/ 树（真仓 worktree 天然满足）；"
+                    "② 见卡 #1361 候选 A/C（定位改脚本相对，属行为变更，须 K3→CTO 裁）")
             result["smuggled"] = non_doc
             _emit(result, args.json)
             _log_degraded(repo, result["reason"])

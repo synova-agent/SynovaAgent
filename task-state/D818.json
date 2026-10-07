@@ -1,7 +1,7 @@
 {
   "task_id": "D818",
   "title": "三项开工前核实（研究院任务书的未核实面）：security 余 11 文件 / 数据层未核实 1·2·5·10 / Node 基线",
-  "status": "claimed",
+  "status": "impl_done",
   "risk": "medium",
   "spec": "派单即规格：docs/synova/coordination/派单-批十-第0项-CI生产入口级对话-20260918.md §H（附：三项核实派单）",
   "write_set": [

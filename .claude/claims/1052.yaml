@@ -1,0 +1,23 @@
+# .claude/claims/1052.yaml — #1052 2-4 写入门禁（FileGuard 接线，落点 A+B）写集声明（S0 源）
+#
+# 为什么用 claim 而不是 task-state/<D#>.json：本卡是 **issue 号卡（#1052）**，无 D# 编号
+# ⇒ D708 门禁的 S1/S2/S3（按 `<D#>*` 定位）找不到声明源，会把全部改动判为「夹带」。
+# `.claude/claims/<issue>.yaml` 是为 issue 号任务提供的正式声明源（merge_writeset_gate.py 的 S0）。
+#
+# 依据：CTO 2026-10-08 放行（落点 A+B／审计=调用点复用 AuditService／workDir=process.cwd()／
+#       覆盖面固定声明形态）；越界项一律不列（写准，不预授权）。
+writeset:
+  - .claude/claims/1052.yaml
+  - .claude/task-briefs/2026-10-08-1052-file-guard-wiring.md
+  - src/security/file-guard.ts
+  - src/deploy/bootstrap.ts
+  - src/loops/middle-evolution-engine.ts
+  - src/agent/atomic-write.ts
+  - tests/security/file-guard.test.ts
+  - tests/security/file-guard-wiring.test.ts
+done:
+  - verify: npx vitest run tests/security/file-guard.test.ts tests/security/file-guard-wiring.test.ts
+  - verify: bash scripts/check-architecture.sh
+# 声明纪律（同 #1322 先例 M-b）: 本 claim 只列**本 PR 真正改动**的文件。
+#   不列 `src/tools/tool-registry.ts`（R40：0-11 (b) 已拆门，写集移除）；
+#   不列 `src/agent/tool-profiles.ts`（#1347 真源）；不列 `src/store/**`（2-1a）/ `src/sentinel/**`（2-1b）。

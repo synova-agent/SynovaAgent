@@ -1,7 +1,7 @@
 {
   "task_id": "D1012",
   "title": "阶段0 独立自验（非作者自验报告）",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": null,
   "impl": null,
   "audit": null,

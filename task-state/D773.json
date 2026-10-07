@@ -1,7 +1,7 @@
 {
   "task_id": "D773",
   "title": "Win 域代行规约（临时，至 Win 机回归）+ DSH 卡与 Win 工单执行方改派 Mac",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": null,
   "impl": null,
   "audit": null,

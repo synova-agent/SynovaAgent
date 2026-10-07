@@ -1,7 +1,7 @@
 {
   "task_id": "D834",
   "title": "固化③：项目总览/台账跟踪三层清单（29 线 / 3 前提 / 12 线外 + 9 断线）",
-  "status": "claimed",
+  "status": "impl_done",
   "risk": "medium",
   "spec": "派单即规格：docs/synova/coordination/批十三-断线补卡与固化-20260918.md",
   "write_set": [

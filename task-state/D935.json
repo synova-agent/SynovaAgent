@@ -1,7 +1,7 @@
 {
   "task_id": "D935",
   "title": "M1 ownership presets 域修正（窄卡）",
-  "status": "claimed",
+  "status": "audited",
   "risk": "medium",
   "spec": "CTO 2026-09-24 派单「Mac 侧 WIP=1 第 1 单 — 修 ownership.yaml 域判定」，经前提实测与 CTO 裁定收窄为 A 方案（最小可变更）。缺陷：`docs/synova/presets/**` 未在 ownership.yaml 登记 → 落 `**` 兜底判 `win` → 与同 PR 的 mac 文件混装触发 D734「变更跨域」硬拦 → 实际卡住 PR #727（D931 小队预设接线）。归属权威源 = TASK-ROUTING.md:37「… + coordination + DSH 预设与技能 → Mac DSH」；兄弟路径 .claude/skills/**、.dsh/** 同源同归属，presets 是唯一漏登兄弟。",
   "write_set": [

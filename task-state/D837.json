@@ -1,7 +1,7 @@
 {
   "task_id": "D837",
   "title": "小队模式物理门禁：check-team-protocol.sh（M1–M6 六项检查 + 夹具 + 接线）",
-  "status": "claimed",
+  "status": "impl_done",
   "risk": "high",
   "spec": "机制定义：docs/synova/coordination/小队模式-固化件-v1-20260919.md（M1–M6）",
   "write_set": [

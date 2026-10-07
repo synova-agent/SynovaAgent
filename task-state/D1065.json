@@ -1,7 +1,7 @@
 {
   "task_id": "D1065",
   "title": "FIX bypass.log 跨 PR 弄脏（合并吞吐瓶颈）",
-  "status": "claimed",
+  "status": "impl_done",
   "risk": "high",
   "domain": "mac",
   "owner": "mac-coding",

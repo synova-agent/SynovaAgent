@@ -1,7 +1,7 @@
 {
   "task_id": "D1243",
   "title": "D331 第二段补孤儿豁免：判定改读共享真值（卡 #1312 B 半）",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": "卡 #1312 = 一个缺陷两半（CTO 发现 + Lead 逐行核实）；本卡 = B 半（pre-push-check.sh），A 半在 synova-commit。病灶: D331 两段豁免口径不一致 —— 第一段对非 HEAD 祖先 tag 有 `|| continue` 孤儿豁免，第二段（VERSION.md 最新版本）没有 ⇒ 版本号全局唯一 ⇒ 本机任一同名孤儿 tag ⇒ 全机/全分支/任何 push 全红（D520 实证 ×3，全队 4 人各删过本地 tag）。上位根因（CTO 类级洞察）: 判定面混入本机私有状态 ⇒ 未划清共享真值 vs 本机残留。修法: ① 第二段补孤儿豁免（feature ⇒ 黄色不阻断；main ⇒ 仍硬阻断）② 判定读共享真值 ls-remote --exit-code 三态显式捕获 （0 present/2 absent/其余 unqueryable，不把空与失败混为一谈）③ 报文自证四项 + 解除命令 ④ 成功文案保留子串「孤儿 tag 已豁免」（他线夹具依赖）+ 补豁免范围/清单 ⇒ 名副其实且零跨线改动。夹具（并入 tag-ancestry）: E 正向 / F 反例(main 仍红) / G 本机独有 / G' 共享真值 / H 变异体 ⇒ 21/0；他线 tag-bypass-wiring 与 tag-consistency 均 rc=0。自查留痕: 远端态查询初版放在 ver 赋值之前（local 清空同名变量）⇒ 恒判本机独有，被夹具 G' 当场抓住；另又一次全角陷阱（第 5 次），棘轮当场转红。同类登记（先报不改）: synova-submit.sh:66 / synova-commit:198(本卡 A 半)。",
   "impl": "pre-push-check.sh 第二段补孤儿豁免 + ls-remote 三态 + 自证四项 + 文案名副其实（保留兼容子串）；tag-ancestry.test.sh 扩 5 组用例（含变异体）。",
   "audit": null,

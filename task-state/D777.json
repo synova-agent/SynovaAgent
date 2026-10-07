@@ -1,7 +1,7 @@
 {
   "task_id": "D777",
   "title": "第五批派单：产品推进（线1 收口 + 证据保鲜 + 审计吞吐 + 产品缺口 + DSH 卡）",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": "docs/synova/coordination/派单-第五批-产品推进-20260915.md",
   "impl": null,
   "audit": null,

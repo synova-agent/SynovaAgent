@@ -1,7 +1,7 @@
 {
   "task_id": "D916",
   "title": "D870 K3 审计 P2 收口（4 条 implement 侧）+ CTO 口径订正（P2-1）",
-  "status": "claimed",
+  "status": "impl_done",
   "risk": "low",
   "domain": "mac",
   "owner": "mac-coding",
