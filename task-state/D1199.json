@@ -1,0 +1,17 @@
+{
+  "task_id": "D1199",
+  "title": "P0-2 evolution 10 端点补 RBAC 守卫",
+  "write_set": [
+    "src/routes/evolution.ts",
+    "tests/routes/evolution-rbac.test.ts",
+    ".claude/task-briefs/2026-10-07-D1199-P0-2-evolution-rbac.md",
+    "task-state/D1199.json"
+  ],
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-07",
+  "updated_by": "alloc-task-id"
+}

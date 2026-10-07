@@ -13,8 +13,42 @@
 
 import { Router, type Request, type Response } from 'express';
 import { createLogger } from '@synova/logger';
+import { type RbacContext } from '../middleware/rbac';
 
 const log = createLogger('routes/evolution');
+// ═══════════════════════════════════════════════════════════════
+// D1196 / P0-2: RBAC 守卫（形态照抄 src/routes/actions-api.ts:57-83）
+//
+// 🔴 D1155 判据：必须**消费** `req.rbac`（由鉴权中间件注入），**绝不在此重算身份** ——
+//    客户端自报凭据（x-synova-token / query.token）永不进入 req.rbac。
+// 🔴 未做（诚实边界）：写类端点的**更高角色**分级未实现 —— 仓库现存路由守卫
+//    （actions-api / workspace-data）只有 `authenticated` 一档，无既有角色判定写法可抄，
+//    派单 §四②要求"不要自创" ⇒ 本卡 10 个端点统一按 authenticated 收口，角色分级待 CTO 裁定另立卡。
+// ═══════════════════════════════════════════════════════════════
+
+/** 读取已注入的 RBAC 上下文（不重算、不回落自报凭据） */
+function readRbac(req: Request): RbacContext | undefined {
+  return (req as Request & { rbac?: RbacContext }).rbac;
+}
+
+/** 拒绝并写 403 + RBAC_DENIED（fail-closed） */
+function denyRbac(res: Response, reason: string, rbac?: RbacContext): true {
+  log.warn(
+    { code: 'RBAC_DENIED', reason, userId: rbac?.userId, role: rbac?.role },
+    '安全判据: 被拒绝 — evolution 端点（fail-closed，HTTP 403）',
+  );
+  res.status(403).json({ ok: false, error: 'access denied', code: 'RBAC_DENIED' });
+  return true;
+}
+
+/** 取已认证上下文；`authenticated !== true`（含 undefined）⇒ 403 */
+function requireEvolutionRbac(req: Request, res: Response): RbacContext | undefined {
+  const rbac = readRbac(req);
+  if (rbac && rbac.authenticated === true) return rbac;
+  denyRbac(res, 'no_authenticated_identity', rbac);
+  return undefined;
+}
+
 const router = Router();
 
 // ═══ 辅助：惰性加载 L0 模块 ═══
@@ -44,6 +78,7 @@ async function loadL3API() {
  * Query params: ?status=pending|approved|rejected|applied
  */
 router.get('/api/evolution/proposals', async (req: Request, res: Response) => {
+  if (!requireEvolutionRbac(req, res)) return;   // D1196/P0-2: 未认证 ⇒ 403 RBAC_DENIED
   try {
     const { listProposals } = await loadL0();
     const memoryStore = await loadMemoryStore();
@@ -72,7 +107,8 @@ router.get('/api/evolution/proposals', async (req: Request, res: Response) => {
  * 进化引擎运行状态。返回 metrics 快照 + 操作日志。
  * 零外部依赖，纯内存计数器。
  */
-router.get('/api/evolution/status', async (_req: Request, res: Response) => {
+router.get('/api/evolution/status', async (req: Request, res: Response) => {
+  if (!requireEvolutionRbac(req, res)) return;   // D1196/P0-2: 未认证 ⇒ 403 RBAC_DENIED
   try {
     const { EvolutionMetrics } = await import('@synova/evolution');
     const metrics = EvolutionMetrics.getInstance();
@@ -88,6 +124,7 @@ router.get('/api/evolution/status', async (_req: Request, res: Response) => {
 // ═══ POST /api/evolution/proposals/:id/approve ═══
 
 router.post('/api/evolution/proposals/:id/approve', async (req: Request, res: Response) => {
+  if (!requireEvolutionRbac(req, res)) return;   // D1196/P0-2: 未认证 ⇒ 403 RBAC_DENIED
   const { id } = req.params as { id: string };
   try {
     const { approveProposal, RuleVersionManager } = await loadL0();
@@ -130,6 +167,7 @@ router.post('/api/evolution/proposals/:id/approve', async (req: Request, res: Re
 // ═══ POST /api/evolution/proposals/:id/reject ═══
 
 router.post('/api/evolution/proposals/:id/reject', async (req: Request, res: Response) => {
+  if (!requireEvolutionRbac(req, res)) return;   // D1196/P0-2: 未认证 ⇒ 403 RBAC_DENIED
   const { id } = req.params as { id: string };
   try {
     const { rejectProposal } = await loadL0();
@@ -162,6 +200,7 @@ router.post('/api/evolution/proposals/:id/reject', async (req: Request, res: Res
  * 同时生成 EvolutionProposal 供 GA 审批。
  */
 router.post('/api/evolution/aggregate/:industry', async (req: Request, res: Response) => {
+  if (!requireEvolutionRbac(req, res)) return;   // D1196/P0-2: 未认证 ⇒ 403 RBAC_DENIED
   const { industry } = req.params as { industry: string };
   try {
     const {
@@ -206,17 +245,20 @@ router.post('/api/evolution/aggregate/:industry', async (req: Request, res: Resp
 });
 
 
-router.post('/api/evolution/feedback/collect', async (_req, res) => {
+router.post('/api/evolution/feedback/collect', async (req, res) => {
+  if (!requireEvolutionRbac(req, res)) return;   // D1196/P0-2: 未认证 ⇒ 403 RBAC_DENIED
   try { const { collectAllFeedback } = await import('@synova/evolution'); const r = await collectAllFeedback(); res.json({ ok: true, events: r.events.length }); }
   catch { res.status(500).json({ ok: false, error: 'feedback failed', degraded: true }); }
 });
 router.post('/api/evolution/signal/update-weight', async (req, res) => {
+  if (!requireEvolutionRbac(req, res)) return;   // D1196/P0-2: 未认证 ⇒ 403 RBAC_DENIED
   try { const { updateSignalSourceWeight } = await import('@synova/evolution'); const { teamId, signalId, action } = req.body;
     if (!teamId || !signalId || !action) { res.status(400).json({ ok: false }); return; }
     res.json({ ok: true, newWeight: updateSignalSourceWeight(null, teamId, signalId, action).newWeight }); }
   catch { res.status(500).json({ ok: false, error: 'update weight failed', degraded: true }); }
 });
 router.get('/api/evolution/global/analyze', async (req, res) => {
+  if (!requireEvolutionRbac(req, res)) return;   // D1196/P0-2: 未认证 ⇒ 403 RBAC_DENIED
   try { const { analyzeGlobalPatterns } = await import('@synova/evolution'); res.json({ ok: true, analyzedAt: analyzeGlobalPatterns({ industries: req.query.industries ? (req.query.industries as string).split(',') : undefined }).analyzedAt }); }
   catch { res.status(500).json({ ok: false, error: 'global analyze failed', degraded: true }); }
 });
@@ -230,6 +272,7 @@ router.get('/api/evolution/global/analyze', async (req, res) => {
  * Query params: ?orgIds=org-a,org-b 可选；?minOrgs=N 可选（默认配置门槛）。
  */
 router.get('/api/evolution/cross-customer/patterns', async (req: Request, res: Response) => {
+  if (!requireEvolutionRbac(req, res)) return;   // D1196/P0-2: 未认证 ⇒ 403 RBAC_DENIED
   try {
     const { discoverCrossCustomerPatterns } = await loadL0();
     const memoryStore = await loadMemoryStore();
@@ -255,6 +298,7 @@ router.get('/api/evolution/cross-customer/patterns', async (req: Request, res: R
  * Body: FederatedStatsBundle（见 packages/evolution global-analyzer 的契约）。
  */
 router.post('/api/evolution/federation/import', async (req: Request, res: Response) => {
+  if (!requireEvolutionRbac(req, res)) return;   // D1196/P0-2: 未认证 ⇒ 403 RBAC_DENIED
   try {
     const { importFederatedStats } = await loadL0();
     const result = importFederatedStats(req.body);
