@@ -1,0 +1,15 @@
+# b-followers-baseline.txt — B 类「D#-专属形态」台账（卡 #1224 · D-C 四解析器退场口径）
+#
+# 为什么独立成文件（不并进 gate-integrity-baseline.txt）:
+#   那是**判据/密封面**台账；本件是**跟随面（B 类消费者）的身份形态**台账，语义不同载体分开
+#   （禁双源指"同一口径只写一处"，不是"只能有一个文件"）。
+#
+# 规则:
+#   · B 类 = 经 resolver **间接**消费声明、自身**不判身份**的消费者（卡 #1224 口径）。
+#   · 命中「D#-专属身份派生」且**无** claim/issue 容错 ⇒ 必须登记于此（可见、可归因、可到期）。
+#   · 条目失效（文件不存在 / 命中消失）或 `expires` 到期 ⇒ 夹具判违规（**棘轮只减不增**）。
+#
+# 判据: tests/control-tower/b-followers-claim-consistency.test.sh §2
+# 格式: <仓库相对路径>:<行号或 *> | owner= | expires= | reason=
+scripts/project/pr-queue-scan.py:142 | owner=line-g-parser | expires=2026-11-07 | reason=队列展示面从分支名/标题取 D#（遗留形态；新格式身份 = issue 号）—— 待 C 类「（遗留）」标注或 A 类切换时同步改
+scripts/project/pr-queue-scan.py:454 | owner=line-g-parser | expires=2026-11-07 | reason=task-state/*.json → {D#: card} 只读映射（D 类存量载体）—— 存量迁移完成后应改 claim/issue 键

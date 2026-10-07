@@ -18,6 +18,9 @@ writeset:
   - tests/control-tower/claim-identity-v2.test.py
   - tests/control-tower/claim_store.test.sh
   - tests/control-tower/staging_guard.test.sh
+  - tests/control-tower/b-followers-claim-consistency.test.sh
+  - tests/control-tower/b-followers-baseline.txt
+  - .claude/task-briefs/2026-10-08-1224-b-followers-consistency.md
 done:
   - verify: python3 tests/control-tower/claim-identity-v2.test.py
   - verify: bash tests/control-tower/merge_writeset_gate.test.sh
