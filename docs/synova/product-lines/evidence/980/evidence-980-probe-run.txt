@@ -5,6 +5,17 @@ capture sha256 = 6181e7c9ed8739983490375b0e5f549779c38b108e61e4f3c57f377d4b6f5c9
 validator sha256 = 741f671bba3f66d650763fef2a8e2bbb042e7516851352c12f7b3fb37e0f5167
 HEAD           = c231d80e813a687526ac57085de285bb11be3424
 
+---
+⚠️ 哈希对账说明（独立自验 γ 的 D3 发现，2026-10-08 补记，仅追加、不改上文逐字节记录）：
+· 上表 `capture sha256 = 6181e7c9…` 是**本 run 时刻（02:05:19）**的取值，**忠实**。
+· 之后该脚本在 commit `27099ae9a` 被**追加一行 `# swallow-ok:` 注释**（`+1/-1`，为响应 pre-commit 的
+  [silent-swallow] 软提示）⇒ 现行 sha256 = `759d0709…`，与上表**不匹配**。
+· `probe-diagnosis.ts` 的 `759a115a…` 与 `validator` 的 `741f671b…` **至今匹配**（未被改动）。
+· 影响判定：**注释级漂移**，不影响产物结论；独立自验 γ 已用**现行脚本**独立复跑，`未覆盖类型 40 个` /
+  `count=40` / `written=readBackOk=40` 与本表**完全一致**。
+---
+
+
 ════════ [1] probe-output.txt（人读形态 stdout+stderr，逐字节）════════
 {"level":30,"time":1791396321882,"pid":12664,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
 {"level":30,"time":1791396321884,"pid":12664,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema-migration","version":2,"msg":"迁移 2 完成"}
