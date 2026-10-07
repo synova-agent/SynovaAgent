@@ -1,7 +1,7 @@
 {
   "task_id": "D1194",
   "title": "0-1 循环点火（MainAgent 进程级绑定）",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": null,
   "impl": null,
   "audit": null,

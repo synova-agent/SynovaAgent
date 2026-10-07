@@ -1,7 +1,7 @@
 {
   "task_id": "D839",
   "title": "认领制缺陷：已完成 session 的 brief 不释放声明 → 后续任务被永久锁死（D296/D329 门禁）",
-  "status": "claimed",
+  "status": "impl_done",
   "risk": "high",
   "spec": "实测证据：D838 登记 product-lines.yaml 被 D806 brief 阻断（staging_guard.py 输出 status=block，owner_session=2026-09-18-D806-台账修复-DSH复用可见，reason=认领 brief D# 与本 session 任务不一致）",
   "write_set": [

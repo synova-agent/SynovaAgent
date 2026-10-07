@@ -1,7 +1,7 @@
 {
   "task_id": "D824",
   "title": "T-D12 check-bridge-files 孤儿脚本处置（防回潮门禁本身『写了没接上』）",
-  "status": "claimed",
+  "status": "impl_done",
   "risk": "high",
   "spec": "派单即规格：docs/synova/coordination/批十二-计划与派单-20260918.md（含 CTO 实测位置与验收标准）",
   "write_set": [

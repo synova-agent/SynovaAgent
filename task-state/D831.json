@@ -1,7 +1,7 @@
 {
   "task_id": "D831",
   "title": "P-2 不变量机制（前提清单第 2 项；首批 3 条断言）",
-  "status": "claimed",
+  "status": "impl_done",
   "risk": "high",
   "spec": "派单即规格：docs/synova/coordination/批十三-断线补卡与固化-20260918.md",
   "write_set": [

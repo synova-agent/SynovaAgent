@@ -1,7 +1,7 @@
 {
   "task_id": "D1031",
   "title": "CT系列-gitattributes裸CR清理（L-CR + L-M2 工作树清理）",
-  "status": "claimed",
+  "status": "impl_done",
   "risk": "low",
   "domain": "win",
   "owner": "win",

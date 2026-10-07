@@ -1,7 +1,7 @@
 {
   "task_id": "D1022",
   "title": "T3 CI 止血包（timeouts + docsonly 推广）",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": ".claude/task-briefs/2026-09-26-D1022-T3-CI-止血包.md",
   "impl": null,
   "audit": null,

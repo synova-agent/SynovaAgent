@@ -1,7 +1,7 @@
 {
   "task_id": "D9204",
   "title": "全角括号变量边界清理 片B 六文件 1288",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": null,
   "impl": null,
   "audit": null,

@@ -1,7 +1,7 @@
 {
   "task_id": "D750",
   "title": "修 inferCategory 与 SIGNAL_TO_EXPERT 分类法错配——10 类中 7 类不可达（活缺陷，P0）",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": null,
   "impl": null,
   "audit": null,

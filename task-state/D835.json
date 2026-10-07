@@ -1,7 +1,7 @@
 {
   "task_id": "D835",
   "title": "控制塔卫生 2：D708 写集门禁对 git mv（重命名）来源路径误判为夹带",
-  "status": "claimed",
+  "status": "impl_done",
   "risk": "medium",
   "spec": "派单即规格：本卡 + D817 实证（提交 47ab6037 / CI run 35440735254）",
   "write_set": [

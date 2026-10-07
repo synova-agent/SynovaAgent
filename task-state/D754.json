@@ -1,7 +1,7 @@
 {
   "task_id": "D754",
   "title": "声明/注释漂移——哨兵 route 声明缺失 + runner 注释描述的失效模式与实际不符（P2）",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": "docs/synova/coordination/派单-哨兵欠账-D751-D752-D754-20260914.md §三（Mac 半）+ §四（Win 半台账）",
   "impl": {
     "mac_half": {

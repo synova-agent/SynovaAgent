@@ -1,7 +1,7 @@
 {
   "task_id": "D1160",
   "title": "门禁提案：登记表追加型豁免 + D708 多命中分级",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": null,
   "impl": null,
   "audit": null,

@@ -9,7 +9,7 @@
     ".claude/task-briefs/2026-10-07-D1200-P0-3-跨租户写隔离.md",
     "task-state/D1200.json"
   ],
-  "status": "claimed",
+  "status": "impl_done",
   "spec": null,
   "impl": null,
   "audit": null,

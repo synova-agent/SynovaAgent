@@ -1,7 +1,7 @@
 {
   "task_id": "D838",
   "title": "两条新线的验收点补全 + 11 项缺口验收点起草 + V1 标准变更单（起草件，待创始人确认）",
-  "status": "claimed",
+  "status": "impl_done",
   "risk": "medium",
   "spec": "上游：docs/synova/coordination/草案-新增两线-20260918.md（创始人已确认）+ docs/synova/product-lines/gap-line-mapping.yaml（11 项归线登记）",
   "write_set": [

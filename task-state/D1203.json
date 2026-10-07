@@ -1,7 +1,7 @@
 {
   "task_id": "D1203",
   "title": "Gate Integrity 既有红对账：范围收紧到参与 PR 判定的检查",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": null,
   "impl": null,
   "audit": null,

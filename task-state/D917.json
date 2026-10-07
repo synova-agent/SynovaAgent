@@ -1,7 +1,7 @@
 {
   "task_id": "D917",
   "title": "双 DSH 提升清单（10 条）落地：入库 + 裁定 + 分档派工",
-  "status": "claimed",
+  "status": "impl_done",
   "risk": "medium",
   "domain": "mac",
   "owner": "mac-coding",

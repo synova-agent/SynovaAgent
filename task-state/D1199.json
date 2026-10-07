@@ -7,7 +7,7 @@
     ".claude/task-briefs/2026-10-07-D1199-P0-2-evolution-rbac.md",
     "task-state/D1199.json"
   ],
-  "status": "claimed",
+  "status": "impl_done",
   "spec": null,
   "impl": null,
   "audit": null,

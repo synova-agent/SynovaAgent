@@ -1,7 +1,7 @@
 {
   "task_id": "D771",
   "title": "派单前复核脚本 D370 类崩溃修复（$VAR 全角边界）+ 幻号/欠登记 task-state 补登记",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": null,
   "impl": null,
   "audit": null,

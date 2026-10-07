@@ -1,7 +1,7 @@
 {
   "task_id": "D1044",
   "title": "B1-archive-294-outbound",
-  "status": "claimed",
+  "status": "impl_done",
   "risk": "irreversible-delete",
   "domain": "doc-governance",
   "owner": "synova-squad-lead",

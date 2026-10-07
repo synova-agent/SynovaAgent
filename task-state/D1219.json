@@ -1,7 +1,7 @@
 {
   "task_id": "D1219",
   "title": "alloc-task-id 占用判定补「issue 标题」来源（过渡件，D# 退役时同批删除）",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": "Lead 立卡（过渡专用）。来源：D# 撞号本日 5 次代价的第 5 项（命名分配器来源缺失）。实现点 = alloc-task-id.sh 的 _occupy_locations() 第 6 源 issue-title（**不是** check-name-allocation.sh —— 后者 :113 明文委派 alloc --check-id，改它=造第二副本，Lead 已批更正写集）。降级语义（Lead 裁决②）= fail-open + 三条齐：stderr 显式 degraded / 结论只报「可判定范围内未见占用」/ 注入缝 SYNO_ALLOC_NO_ISSUES=1（hermetic 必需）+ SYNO_ALLOC_ISSUES_FILE 注入内容；另有来源说明走 stderr（stdout 是冲突行契约，不得污染）。🔴 过渡件：**D# 退役时同批删除此来源**（卡面/代码注释/PR 正文三处）。编号留痕：初拟 D1218 → gate 判占用（在途分支 feat/D1218-*）→ 取 D1219。",
   "impl": null,
   "audit": null,

@@ -1,7 +1,7 @@
 {
   "task_id": "D1052",
   "title": "注入夹具 b 面排除 docs（系统性假红修复）",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": ".claude/task-briefs/2026-09-28-D1052-注入夹具-b-面排除-docs（系统性假红修复）.md",
   "impl": null,
   "audit": null,

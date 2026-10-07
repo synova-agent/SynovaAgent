@@ -1,7 +1,7 @@
 {
   "task_id": "D757",
   "title": "哨兵类型欠账修复：3 个未登记哨兵的类型错（D752 门禁暴露）",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": "task-state/D752.json + .claude/task-briefs/2026-09-15-D757-sentinel-type-debt.md",
   "impl": null,
   "audit": null,

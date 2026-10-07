@@ -1,7 +1,7 @@
 {
   "task_id": "D1000",
   "title": "身份链补全：部门可见性恢复（服务端签发/接收链 + 桌面端身份通道切换）",
-  "status": "claimed",
+  "status": "audited",
   "risk": "high",
   "domain": "win",
   "owner_side": "win",

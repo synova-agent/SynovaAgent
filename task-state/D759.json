@@ -1,7 +1,7 @@
 {
   "task_id": "D759",
   "title": "回退 nodemailer 10 依赖升级（主树 tsc 变红）",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": ".claude/task-briefs/2026-09-15-D759-revert-nodemailer10.md",
   "impl": null,
   "audit": null,
