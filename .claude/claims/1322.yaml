@@ -8,7 +8,7 @@
 # 依据：CTO 2026-10-08 放行 + 计划 §1「最终写集」；越界两处已在 PR #1330 正文申报。
 writeset:
   - .claude/claims/1322.yaml
-  - .claude/task-briefs/1322-goal-creation-entry.md
+  - .claude/task-briefs/2026-10-08-1322-goal-creation-entry.md
   - src/growth/goal-store.ts
   - src/growth/proposal-engine.ts
   - src/growth/proposal-store.ts
