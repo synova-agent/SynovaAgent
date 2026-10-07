@@ -1,0 +1,7 @@
+cmd: node_modules/.bin/tsx tests/loops/probes/batch0a-probes.ts
+cwd: /Users/wane/SynovaAgent/.synova-wt-0gate
+HEAD: 9723d23c04bf055c5c706aa291a5238d62223683
+node: v24.19.0
+started_utc: 2026-10-07T17:01:01Z
+probe_exit=0
+ended_utc: 2026-10-07T17:01:02Z

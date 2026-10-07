@@ -1,0 +1,206 @@
+diff --git a/extensions/industries/financial-services/thresholds.json b/extensions/industries/financial-services/thresholds.json
+index daba78f03..62d8251dd 100644
+--- a/extensions/industries/financial-services/thresholds.json
++++ b/extensions/industries/financial-services/thresholds.json
+@@ -2,12 +2,43 @@
+   "industry": "financial-services",
+   "aggregatedAt": "2026-06-30T00:00:00.000Z",
+   "thresholdOverrides": {
+-    "F1_KZ": { "warning": 0.8, "critical": 1.2 },
+-    "F2_runway": { "warning": 24, "critical": 12 },
+-    "F3_revenue_quality": { "warning": 0.5, "critical": 0.3 },
+-    "F4_profit_quality": { "warning": 0.4, "critical": 0.2 },
+-    "F5_cash_conversion": { "warning": 0.7, "critical": 0.5 },
+-    "O1_info_distortion": { "warning": 0.3, "critical": 0.4 },
+-    "T1_software_health": { "warning": 0.6, "critical": 0.8 }
+-  }
+-}
++    "F1_KZ": {
++      "warning": 0.8,
++      "critical": 1.2
++    },
++    "F2_runway": {
++      "warning": 24,
++      "critical": 12
++    },
++    "F3_revenue_quality": {
++      "warning": 0.5,
++      "critical": 0.3
++    },
++    "F4_profit_quality": {
++      "warning": 0.4,
++      "critical": 0.2
++    },
++    "F5_cash_conversion": {
++      "warning": 0.7,
++      "critical": 0.5
++    },
++    "O1_info_distortion": {
++      "warning": 0.3,
++      "critical": 0.4
++    },
++    "T1_software_health": {
++      "warning": 0.6,
++      "critical": 0.8
++    }
++  },
++  "_gaCorrections": [
++    {
++      "key": "F1_KZ",
++      "direction": "up",
++      "adjustPercent": 5,
++      "triggeredAt": "2026-10-07T17:01:02.236Z",
++      "applied": false,
++      "reason": "pending — 1/3 corrections needed"
++    }
++  ]
++}
+\ No newline at end of file
+diff --git a/extensions/industries/general-enterprise/thresholds.json b/extensions/industries/general-enterprise/thresholds.json
+index bb1e98162..c07e5d943 100644
+--- a/extensions/industries/general-enterprise/thresholds.json
++++ b/extensions/industries/general-enterprise/thresholds.json
+@@ -2,14 +2,51 @@
+   "industry": "general-enterprise",
+   "aggregatedAt": "2026-06-30T00:00:00.000Z",
+   "thresholdOverrides": {
+-    "F1_KZ": { "warning": 1.5, "critical": 2.0 },
+-    "F2_runway": { "warning": 12, "critical": 6 },
+-    "F3_revenue_quality": { "warning": 0.3, "critical": 0.15 },
+-    "F4_profit_quality": { "warning": 0.3, "critical": 0.15 },
+-    "F5_cash_conversion": { "warning": 0.5, "critical": 0.3 },
+-    "O1_info_distortion": { "warning": 0.4, "critical": 0.6 },
+-    "O2_explore_exploit": { "warning": 0.3, "critical": 0.5 },
+-    "T1_software_health": { "warning": 0.4, "critical": 0.6 },
+-    "T2_connector_coverage": { "warning": 0.3, "critical": 0.5 }
+-  }
+-}
++    "F1_KZ": {
++      "warning": 1.5,
++      "critical": 2
++    },
++    "F2_runway": {
++      "warning": 12,
++      "critical": 6
++    },
++    "F3_revenue_quality": {
++      "warning": 0.3,
++      "critical": 0.15
++    },
++    "F4_profit_quality": {
++      "warning": 0.3,
++      "critical": 0.15
++    },
++    "F5_cash_conversion": {
++      "warning": 0.5,
++      "critical": 0.3
++    },
++    "O1_info_distortion": {
++      "warning": 0.4,
++      "critical": 0.6
++    },
++    "O2_explore_exploit": {
++      "warning": 0.3,
++      "critical": 0.5
++    },
++    "T1_software_health": {
++      "warning": 0.4,
++      "critical": 0.6
++    },
++    "T2_connector_coverage": {
++      "warning": 0.3,
++      "critical": 0.5
++    }
++  },
++  "_gaCorrections": [
++    {
++      "key": "F1_KZ",
++      "direction": "up",
++      "adjustPercent": 5,
++      "triggeredAt": "2026-10-07T17:01:02.236Z",
++      "applied": false,
++      "reason": "pending — 1/3 corrections needed"
++    }
++  ]
++}
+\ No newline at end of file
+diff --git a/extensions/industries/manufacturing/thresholds.json b/extensions/industries/manufacturing/thresholds.json
+index f7ad5be81..cac3abe55 100644
+--- a/extensions/industries/manufacturing/thresholds.json
++++ b/extensions/industries/manufacturing/thresholds.json
+@@ -2,12 +2,43 @@
+   "industry": "manufacturing",
+   "aggregatedAt": "2026-06-30T00:00:00.000Z",
+   "thresholdOverrides": {
+-    "F1_KZ": { "warning": 1.8, "critical": 2.5 },
+-    "F2_runway": { "warning": 9, "critical": 4 },
+-    "F3_revenue_quality": { "warning": 0.25, "critical": 0.1 },
+-    "F4_profit_quality": { "warning": 0.25, "critical": 0.1 },
+-    "F5_cash_conversion": { "warning": 0.4, "critical": 0.2 },
+-    "O1_info_distortion": { "warning": 0.5, "critical": 0.7 },
+-    "T1_software_health": { "warning": 0.3, "critical": 0.5 }
+-  }
+-}
++    "F1_KZ": {
++      "warning": 1.8,
++      "critical": 2.5
++    },
++    "F2_runway": {
++      "warning": 9,
++      "critical": 4
++    },
++    "F3_revenue_quality": {
++      "warning": 0.25,
++      "critical": 0.1
++    },
++    "F4_profit_quality": {
++      "warning": 0.25,
++      "critical": 0.1
++    },
++    "F5_cash_conversion": {
++      "warning": 0.4,
++      "critical": 0.2
++    },
++    "O1_info_distortion": {
++      "warning": 0.5,
++      "critical": 0.7
++    },
++    "T1_software_health": {
++      "warning": 0.3,
++      "critical": 0.5
++    }
++  },
++  "_gaCorrections": [
++    {
++      "key": "F1_KZ",
++      "direction": "up",
++      "adjustPercent": 5,
++      "triggeredAt": "2026-10-07T17:01:02.236Z",
++      "applied": false,
++      "reason": "pending — 1/3 corrections needed"
++    }
++  ]
++}
+\ No newline at end of file
+diff --git a/extensions/industries/saas-tech/thresholds.json b/extensions/industries/saas-tech/thresholds.json
+index b0ec2ecf0..111f53fbb 100644
+--- a/extensions/industries/saas-tech/thresholds.json
++++ b/extensions/industries/saas-tech/thresholds.json
+@@ -6,5 +6,15 @@
+       "warning": 1.5,
+       "critical": 1.1
+     }
+-  }
++  },
++  "_gaCorrections": [
++    {
++      "key": "F1_KZ",
++      "direction": "up",
++      "adjustPercent": 5,
++      "triggeredAt": "2026-10-07T17:01:02.236Z",
++      "applied": false,
++      "reason": "pending — 1/3 corrections needed"
++    }
++  ]
+ }
+\ No newline at end of file
