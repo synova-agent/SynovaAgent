@@ -112,6 +112,51 @@ rm -rf "$MUT_DIR"
 [ "$CAUGHT" -eq "$TOTAL" ] && ok "改坏即红: 3/3 门控短路全部被抓（行为判定，非自指）" \
   || no "改坏即红: 仅 ${CAUGHT}/${TOTAL} 被抓"
 
+# ═══ D1220（卡 #1222 D-A2）: 组 12 claim 载体覆盖判定 ═══
+#   本卡修的假绿: claim 载体下 ALL_TODAY_BRIEFS 为空 ⇒ 组 12 整段跳过 ⇒ 静默放行。
+echo ""
+echo "── D1220: 组 12 claim 载体覆盖（并集语义 + 假绿封堵）──"
+grep -q '_G12_CLAIM_STATUS' "$PC" && ok "接线[组12]: claim 覆盖判定分支存在" \
+  || no "接线[组12]: claim 分支缺失（假绿未修）"
+grep -q -- '--coverage' "$PC" && ok "接线[组12]: 消费 claim_store --coverage（并集原语，非最佳单 claim）" \
+  || no "接线[组12]: 未消费 --coverage"
+grep -q "staged = '''\$_G12_JUDGE_SET'''" "$PC" && ok "接线[组12]: 判定集合改用余量集（未覆盖文件回落 legacy）" \
+  || no "接线[组12]: 判定集合未改（余量不回落 legacy ⇒ 覆盖不完整）"
+if grep -qF "staged = '''\$STAGED_ALL'''" "$PC"; then
+  no "回退防护[组12]: 判定集合退回 \$STAGED_ALL（claim 覆盖会与 legacy 重复计红）"
+else
+  ok "回退防护[组12]: 旧判定集合 \$STAGED_ALL 已不存在"
+fi
+grep -q '未被任何 claim 声明覆盖' "$PC" && ok "假绿封堵[组12]: 无 legacy 载体 + 未覆盖 ⇒ 显式判红" \
+  || no "假绿封堵[组12]: 缺「无载体即判红」分支 ⇒ claim 模式仍静默放行"
+# 「显式空集」文案的真源在 claim_store（reason），shell 侧只许**原样打印**不得自造说明 ⇒
+#   断言 = shell 打印原语 reason（`_G12_C_REASON`）+ 原语自身有显式空集语义（下方契约断言）。
+grep -q '_G12_C_REASON' "$PC" && ok "显式语义[组12]: 原样打印覆盖原语 reason（含空集语义，禁静默/禁自造）" \
+  || no "显式语义[组12]: 未打印原语 reason（claim 数与覆盖情况不可见）"
+
+# 覆盖原语契约（空集 / 并集 / 自身失败）——直接对 claim_store 断言
+COV_TMP="$(mktemp -d)"; mkdir -p "$COV_TMP/empty" "$COV_TMP/two" "$COV_TMP/bad"
+OUT_EMPTY="$(SYNO_CLAIM_DIR="$COV_TMP/empty" python3 "$CS" --coverage scripts/a.sh 2>/dev/null)"  # swallow-ok: 原语失败即空 JSON → 下方断言直接判红（不静默放行）
+if printf '%s' "$OUT_EMPTY" | grep -q '"claims": 0' && printf '%s' "$OUT_EMPTY" | grep -q '显式空集'; then
+  ok "契约[coverage]: 0 条 claim ⇒ 显式空集（uncovered=全部，非静默）"
+else
+  no "契约[coverage]: 空集语义不清（禁静默）"
+fi
+printf 'writeset:\n  - scripts/a.sh\ndone:\n  - verify: echo a\n' > "$COV_TMP/two/100.yaml"
+printf 'writeset:\n  - src/b.ts\ndone:\n  - verify: echo b\n' > "$COV_TMP/two/200.yaml"
+OUT_TWO="$(SYNO_CLAIM_DIR="$COV_TMP/two" python3 "$CS" --coverage scripts/a.sh src/b.ts scripts/c.sh 2>/dev/null)"  # swallow-ok: 同上
+if printf '%s' "$OUT_TWO" | grep -q '"claims": 2' && printf '%s' "$OUT_TWO" | grep -q '"uncovered": \["scripts/c.sh"\]'; then
+  ok "契约[coverage]: 多 claim **并集**覆盖（多线并发不假红）"
+else
+  no "契约[coverage]: 并集语义错（多线并发会假红）"
+fi
+printf 'writeset: []\ndone: []\n' > "$COV_TMP/bad/300.yaml"
+SYNO_CLAIM_DIR="$COV_TMP/bad" python3 "$CS" --coverage scripts/a.sh >/dev/null 2>&1
+COV_BAD_RC=$?
+[ "$COV_BAD_RC" -eq 2 ] && ok "契约[coverage]: 畸形 claim ⇒ exit 2（检查自身失败，fail-closed）" \
+  || no "契约[coverage]: 畸形 claim 未 exit 2（实得 $COV_BAD_RC ⇒ 会判『无声明』）"
+rm -rf "$COV_TMP"
+
 echo ""
 echo "结果: $PASS 通过, $FAIL 失败"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1

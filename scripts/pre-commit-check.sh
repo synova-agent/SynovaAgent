@@ -1577,7 +1577,60 @@ ALL_TODAY_BRIEFS=$(today_files_by_prefix "$ROOT/.claude/task-briefs/" | sort || 
 [ -z "$ALL_TODAY_BRIEFS" ] && [ -n "$CUR_BRIEF_PATH" ] && ALL_TODAY_BRIEFS="$CUR_BRIEF_PATH"
 SCOPE_VIOLATION=""
 
-if [ -n "$ALL_TODAY_BRIEFS" ] && [ -n "$STAGED_ALL" ]; then
+# ═══ D1220（卡 #1222 D-A2）: 组 12 claim 载体覆盖判定（开关 SYNO_CLAIM_V2，默认关）═══
+#   缺陷（实测，本卡修的就是它）: 组 12 原只认 legacy 散文 brief —— 按 ±1 天窗口 glob
+#     `.claude/task-briefs/*.md`。claim 载体（`.claude/claims/<issue>.yaml`）下 ALL_TODAY_BRIEFS
+#     为空 ⇒ 下面 `if [ -n "$ALL_TODAY_BRIEFS" ] …` 为假 ⇒ **整段跳过、组 12 静默放行**
+#     （假绿：合法 claim 用户失去全部写集约束）。
+#   修法（同源改造，与组 6 的 claim 双形态同构）:
+#     ① 开关 SYNO_CLAIM_V2 关 ⇒ **逐字节 legacy**（回滚 = 关开关，判据零改动）；
+#     ② 开 ⇒ 先以 `claim_store.py --coverage`（**全 claim 并集**；`--resolve` 是最佳单 claim，
+#        多线并发时会假红，故不用）判覆盖；被 claim 覆盖的文件视为已声明；
+#     ③ **未被 claim 覆盖的余量**再走 legacy brief 判定（迁移期双载体并存 ⇒ 取并集，
+#        既不假绿也不假红）；claim 数为 0 时**显式打印空集**并全部回落 legacy（禁静默跳过）；
+#     ④ 三态: claim 检查自身失败（畸形 claim ⇒ rc=2）⇒ 计硬红，不与「通过」混同。
+_G12_JUDGE_SET="${STAGED_ALL}"          # 送 legacy 判定的文件集（缺省=全部）
+_G12_CLAIM_STATUS="off"
+if [ "${CLAIM_V2:-0}" = "1" ] && [ -n "$STAGED_ALL" ]; then
+  _G12_C_OUT="$(printf '%s\n' "$STAGED_ALL" | python3 "$ROOT/scripts/control-tower/claim_store.py" --coverage --root "$ROOT" 2>&1)"
+  _G12_C_RC=$?
+  if [ "$_G12_C_RC" -eq 2 ]; then
+    _G12_CLAIM_STATUS="self-fail"
+    echo -e "  ${RED}❌ 组 12 claim 覆盖判定: 检查自身失败（claim 畸形，rc=2）—— 不得判『无声明』${RESET}"
+    printf '%s\n' "$_G12_C_OUT" | head -3 | sed 's/^/     /'
+    HARD_FAIL=$((HARD_FAIL + 1))
+    log_gate "组 12 claim 覆盖判定（自身失败）" hit
+  elif [ "$_G12_C_RC" -ne 0 ]; then
+    _G12_CLAIM_STATUS="self-fail"
+    echo -e "  ${RED}❌ 组 12 claim 覆盖判定: 无法执行（rc=${_G12_C_RC}）${RESET}"
+    printf '%s\n' "$_G12_C_OUT" | head -3 | sed 's/^/     /'
+    HARD_FAIL=$((HARD_FAIL + 1))
+    log_gate "组 12 claim 覆盖判定（无法执行）" hit
+  else
+    _G12_CLAIM_STATUS="on"
+    _G12_C_REASON="$(printf '%s' "$_G12_C_OUT" | python3 -c "import json,sys;print(json.load(sys.stdin).get('reason',''))" 2>/dev/null || echo "")"
+    _G12_C_REMAIN="$(printf '%s' "$_G12_C_OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+print('\n'.join(d.get('uncovered',[])))" 2>/dev/null || echo "")"
+    # 显式打印（禁静默空白，铁律 11）: claim 数 / 覆盖数 / 余量去向
+    echo -e "  ${CYAN}ℹ️  组 12 claim 载体: ${_G12_C_REASON}${RESET}"
+    _G12_JUDGE_SET="${_G12_C_REMAIN}"
+    if [ -z "$_G12_JUDGE_SET" ]; then
+      echo -e "  ${GREEN}✅ 组 12 claim 载体: 全部暂存文件均被 claim 覆盖（legacy 判定无对象）${RESET}"
+    else
+      echo -e "  ${CYAN}ℹ️  组 12 claim 载体: 余量 $(printf '%s\n' "$_G12_JUDGE_SET" | grep -c .) 个文件回落 legacy brief 判定${RESET}"
+    fi
+  fi
+fi
+
+if [ -n "$_G12_JUDGE_SET" ] && [ "$_G12_CLAIM_STATUS" = "on" ] && [ -z "$ALL_TODAY_BRIEFS" ]; then
+  # ═══ D1220（本卡修的核心假绿）: claim 模式 + **无 legacy 声明载体** ⇒ 余量文件无任何声明 ═══
+  #   原实现: ALL_TODAY_BRIEFS 为空 ⇒ 下面 legacy 块整段跳过 ⇒ **静默放行**（claim 载体用户
+  #   失去全部写集约束）。现改为显式判红。开关关时本分支不可达 ⇒ 逐字节 legacy 不受影响。
+  SCOPE_VIOLATION="$(printf '%s\n' "$_G12_JUDGE_SET" | grep -v '^[[:space:]]*$' \
+    | sed 's/^/  /;s/$/ (未被任何 claim 声明覆盖；且本提交无 legacy brief 载体)\n/')"
+elif [ -n "$_G12_JUDGE_SET" ] && [ -n "$ALL_TODAY_BRIEFS" ]; then
   # 认领制 v2 (D296 复查): 每个文件由**认领它的 brief** 判定通过与排除
   #   - 被 ≥1 个今日 brief 认领 → 通过 (除非认领者自身排除它)
   #   - 未被任何 brief 认领 → 阻断 (不在任何任务范围)
@@ -1601,7 +1654,7 @@ if [ -n "$ALL_TODAY_BRIEFS" ] && [ -n "$STAGED_ALL" ]; then
   # D296 认领制 v2: 按 per-brief TSV 判定, 排除只来自认领该文件的 brief
   SCOPE_VIOLATION=$(python3 -c "
 import re, sys
-staged = '''$STAGED_ALL'''.split('\n')
+staged = '''$_G12_JUDGE_SET'''.split('\n')
 def load_tsv(path):
     out = []
     try:
