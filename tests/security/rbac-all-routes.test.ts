@@ -24,6 +24,12 @@
  * 撤掉 `workspace-data.ts` / `actions-api.ts` 中**任一**路由的 `requireAuthenticatedRbac`
  * 守卫 ⇒ 组 A 对应用例必红（该路径由 403 变 200）。实测记录见交付回执。
  *
+ * ── #1322 补充（只此一条）: `PUT /api/workspace/goals/:goalId/target` 不再是"受理即 200" ──
+ *   它现在**先定位目标（含同租户校验）再真写入**：目标不存在/非本租户 ⇒ 200 + `adjusted:false`
+ *   （同码同形，不泄漏存在性）；图存储缺席 ⇒ 503 + degraded（沿用 overflow 既有语义）。
+ *   本文件相应把该端点移出"恒 200"名单，改断言 **非 403**（原有防护意图不变）。
+ *   变红理由登记: 该端点在 #1322 前返回 `ok:true, adjusted:true` 却**零写入**（卡面现状 4 假受理）。
+ *
  * ── 本卡**不做**越权判定（刻意，带注释钉住）──────────────────────────────
  * 组 C 只断言「已认证 ⇒ 非 403 / 业务成功」，**不**断言任何角色级拒绝。
  * 原因: `RbacContext` 无 org/team 维度（`middleware/rbac.ts:127` 的 `department` 恒
@@ -35,7 +41,7 @@
  *   该组应变红，强制越权判定走复核，而不是静默生效。
  *
  * ── 覆盖（枚举式，非抽样）────────────────────────────────────────────────
- * D1153 射程 10 端点（workspace-data 7 + actions-api 3）
+ * D1153 射程 12 端点（workspace-data 9（#1322 起 +2：提方向 / 选定）+ actions-api 3）
  * ＋ 对照 6 端点（workspaces-api.ts 既有守卫 —— PR-1/D947 P3 已落地的执法点）。
  *
  * ⚠️ 已知残留（非本卡射程，仅登记，勿在此断言——断「bug 存在」会在修复时误红）:
@@ -172,7 +178,7 @@ const uid = (prefix: string): string => `${prefix}-${++seq}-${Date.now().toStrin
 let d1153Routes: RouteCase[] = [];
 let controlRoutes: RouteCase[] = [];
 
-const D1153_ROUTE_COUNT = 10;   // workspace-data 7 + actions-api 3
+const D1153_ROUTE_COUNT = 12;   // workspace-data 9（#1322 +2）+ actions-api 3
 const CONTROL_ROUTE_COUNT = 6;  // workspaces-api 既有守卫（PR-1/D947 P3）
 
 beforeAll(async () => {
@@ -217,7 +223,7 @@ beforeAll(async () => {
 
   // ── 枚举表 ──
   d1153Routes = [
-    // workspace-data.ts — 7 端点
+    // workspace-data.ts — 9 端点（#1322 起 +2: 提方向 / 选定）
     { label: 'GET    /api/workspace/:deptId', method: 'GET', path: '/api/workspace/d1153-dept', expectCode: 'RBAC_DENIED' },
     { label: 'GET    /api/workspace/:deptId/goals', method: 'GET', path: '/api/workspace/d1153-dept/goals', expectCode: 'RBAC_DENIED' },
     { label: 'GET    /api/workspace/:deptId/alerts', method: 'GET', path: '/api/workspace/d1153-dept/alerts', expectCode: 'RBAC_DENIED' },
@@ -225,6 +231,9 @@ beforeAll(async () => {
     { label: 'PUT    /api/workspace/goals/:goalId/target', method: 'PUT', path: '/api/workspace/goals/goal-d1153/target', body: { targetValue: 42, reason: '用例' }, expectCode: 'RBAC_DENIED' },
     { label: 'POST   /api/workspace/proposals/:proposalId/reject', method: 'POST', path: '/api/workspace/proposals/prop-d1153/reject', body: { reason: '用例' }, expectCode: 'RBAC_DENIED' },
     { label: 'PUT    /api/workspace/alerts/:id/dismiss', method: 'PUT', path: '/api/workspace/alerts/alert-d1153/dismiss', body: { reason: '用例' }, expectCode: 'RBAC_DENIED' },
+    // #1322 目标创建链 — 2 端点
+    { label: 'POST   /api/workspace/proposals', method: 'POST', path: '/api/workspace/proposals', body: { title: '用例' }, expectCode: 'RBAC_DENIED' },
+    { label: 'POST   /api/workspace/proposals/:proposalId/select', method: 'POST', path: '/api/workspace/proposals/prop-d1153/select', body: { pathIndex: 0 }, expectCode: 'RBAC_DENIED' },
     // actions-api.ts — 3 端点
     { label: 'POST   /api/actions', method: 'POST', path: '/api/actions', body: { workspaceId: 'ws-d1153', title: '用例' }, expectCode: 'RBAC_DENIED' },
     { label: 'GET    /api/actions', method: 'GET', path: '/api/actions?workspaceId=ws-d1153', expectCode: 'RBAC_DENIED' },
@@ -275,6 +284,8 @@ describe('A · 未认证 rbac 上下文 ⇒ HTTP 403（逐路由枚举，纵深�
       'PUT    /api/workspace/goals/:goalId/target',
       'POST   /api/workspace/proposals/:proposalId/reject',
       'PUT    /api/workspace/alerts/:id/dismiss',
+      'POST   /api/workspace/proposals',
+      'POST   /api/workspace/proposals/:proposalId/select',
       'POST   /api/actions',
       'GET    /api/actions',
       'PUT    /api/actions/:id/status',
@@ -345,7 +356,6 @@ describe('C · 已认证 ⇒ 非 403（防「一刀切全拒」；本卡刻意�
     'GET    /api/workspace/:deptId/goals',
     'GET    /api/workspace/:deptId/alerts',
     'GET    /api/workspace/:deptId/next-action',
-    'PUT    /api/workspace/goals/:goalId/target',
     'POST   /api/workspace/proposals/:proposalId/reject',
     'PUT    /api/workspace/alerts/:id/dismiss',
     'POST   /api/actions',
@@ -374,12 +384,28 @@ describe('C · 已认证 ⇒ 非 403（防「一刀切全拒」；本卡刻意�
     expect(str(res.body.action, 'status')).toBe('confirmed');
   });
 
-  it('PUT /api/workspace/goals/:goalId/target · manager ⇒ 200（中层写路径不被误杀）', async () => {
+  /**
+   * #1322 起本端点的语义变了（这是**设计内的红**，不是回归）:
+   *   · 它不再"受理即返 200" —— 先定位目标（含同租户校验）再真写入；
+   *   · 图存储缺席（本夹具**不挂 `app.locals.graphStore`**）⇒ 503 + `degraded:true`
+   *     （沿用 overflow 路由的既有 503 语义）；
+   *   · 目标不存在/非本租户 ⇒ 200 + `adjusted:false` + `GOAL_NOT_FOUND`（同码同形，不泄漏存在性）。
+   * 本用例保留其**原本的防护意图**（防"一刀切全拒"的功能回归）: 断言 `!== 403`。
+   */
+  it('PUT /api/workspace/goals/:goalId/target · manager ⇒ 非 403（中层写路径不被误杀）', async () => {
     const res = await call(full.base, 'PUT', `/api/workspace/goals/${uid('goal')}/target`, {
       token: TOKEN.manager, body: { targetValue: 7, reason: '中层调整' },
     });
-    expect(res.status).toBe(200);
-    expect(res.body.ok).toBe(true);
+    expect(res.status).not.toBe(403);
+    expect([200, 503]).toContain(res.status);
+  });
+
+  it('PUT /api/workspace/goals/:goalId/target · admin 已认证 ⇒ 非 403（同上前提）', async () => {
+    const res = await call(full.base, 'PUT', '/api/workspace/goals/goal-d1153/target', {
+      token: TOKEN.admin, body: { targetValue: 42, reason: '用例' },
+    });
+    expect(res.status).not.toBe(403);
+    expect([200, 503]).toContain(res.status);
   });
 
   it('GET    /api/workspace/:deptId · liaison / ga ⇒ 200（已认证即可读；本卡不做越权判定）', async () => {
@@ -392,12 +418,13 @@ describe('C · 已认证 ⇒ 非 403（防「一刀切全拒」；本卡刻意�
   // ── 刻意钉「已认证 ⇒ 非 403」（含只读角色）──────────────────────────────
   // 这些不是「有权」的证明，而是**本卡射程边界**的可执行声明: 越权判定依赖
   //   `RbacContext` 补齐 org/team 维度（另立卡）。接口补齐后本组应变红 → 强制复核。
-  it('PUT    /api/workspace/goals/:goalId/target · staff / ga / liaison ⇒ 非 403（刻意：本卡不做越权判定）', async () => {
+  it('PUT    /api/workspace/goals/:goalId/target · staff / ga / liaison ⇒ 非 403（刻意：仍不做角色级越权判定）', async () => {
     for (const role of ['staff', 'ga', 'liaison']) {
       const res = await call(full.base, 'PUT', `/api/workspace/goals/${uid('goal')}/target`, {
         token: TOKEN[role], body: { targetValue: 1 },
       });
-      expect({ role, status: res.status }).toEqual({ role, status: 200 });
+      // 判据仍是「不得一刀切 403」；具体 200/503 由图存储装配情况决定（#1322）
+      expect({ role, isForbidden: res.status === 403 }).toEqual({ role, isForbidden: false });
     }
   });
 
