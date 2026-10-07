@@ -1,0 +1,19 @@
+{
+  "task_id": "D1200",
+  "title": "P0-3-tenant-writeback",
+  "write_set": [
+    "src/growth/feedback-collector.ts",
+    "src/loops/middle-evolution-engine.ts",
+    "tests/growth/evolution-writeback.test.ts",
+    "tests/security/org-isolation-audit.test.ts",
+    ".claude/task-briefs/2026-10-07-D1200-P0-3-跨租户写隔离.md",
+    "task-state/D1200.json"
+  ],
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-07",
+  "updated_by": "alloc-task-id"
+}

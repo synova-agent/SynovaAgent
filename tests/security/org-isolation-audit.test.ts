@@ -19,7 +19,7 @@
  * 10 用例（6 red + 4 绿守卫，对应 dev doc 缺陷 A/B/C/D/F）:
  *   1. feedback 租户契约 — 缺 enterpriseId 拒绝 + 成功路径 degraded:false    RED（缺陷 D）
  *   2. feedback 带 enterpriseId → 只返回该企业（形状无关守卫）              绿（回归守卫）
- *   3. getAggregatedSignals 全局聚合不变（D472 只读依赖，冻结）            绿（守卫）
+ *   3. getAggregatedSignals 按企业隔离（D1197/P0-3 修正 D472 口径）        红→绿（本卡修复）
  *   4. action-store 全部 graph 调用携带 orgId 派生图                        RED（缺陷 A/F）
  *   5. action-store 缺 orgId → fail-closed（零存储调用）                    RED（缺陷 A）
  *   6. graph-traversal 图查询非省略且非空串（含 '' bug + graphOverride）     RED（缺陷 B）
@@ -298,19 +298,25 @@ describe('D338 缺陷 D — feedback 租户契约 fail-closed', () => {
     }
   });
 
-  it('3. getAggregatedSignals 全局聚合不变（D472 只读依赖冻结，一字不动）', () => {
+  it('3. getAggregatedSignals 按企业隔离（D1197/P0-3 修正 D472「全局聚合」口径）', () => {
     const { collector, db } = setup();
     try {
-      // 跨企业同 decision × 3 → 全局聚合 count=3
+      // D1197/P0-3: 聚合必须按 enterprise_id 分组 —— 跨企业各行均未达阈值 3 ⇒ **不得混组**
+      // （旧口径会把这 3 条混成 count=3，进而触发 A 企业数据改写 B 企业配置 = 跨租户写）
       collector.collectFeedback(feedbackInput('e1', 'reject', 'a0'));
       collector.collectFeedback(feedbackInput('e1', 'reject', 'a1'));
       collector.collectFeedback(feedbackInput('e2', 'reject', 'a2'));
+      expect(collector.getAggregatedSignals(3)).toEqual([]);
 
-      const signals = collector.getAggregatedSignals(3);
-      expect(signals).toHaveLength(1);
-      expect(signals[0].decision).toBe('reject');
-      expect(signals[0].count).toBe(3);
-      expect(signals[0].targetIds).toHaveLength(3);
+      // 同一企业补到 3 次 ⇒ 产出且仅产出该企业的信号（企业轴随信号携带）
+      collector.collectFeedback(feedbackInput('e1', 'reject', 'a2'));
+      const single = collector.getAggregatedSignals(3);
+      expect(single).toHaveLength(1);
+      expect(single[0].decision).toBe('reject');
+      expect(single[0].count).toBe(3);
+      expect(single[0].enterpriseId).toBe('e1');
+      expect(single[0].enterpriseIds).toEqual(['e1']);
+      expect(single[0].targetIds).toHaveLength(3);
     } finally {
       db.close();
     }

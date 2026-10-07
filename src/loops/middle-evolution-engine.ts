@@ -90,6 +90,20 @@ export function processFeedbackSignals(signals: AggregatedSignal[]): EvolutionAc
       // 三态（见 AggregatedSignal.entityKey 契约）：undefined=旧生产者 ⇒ 退回旧语义（用 key）；
       // null=显式"组内实体不唯一" ⇒ 不猜实体。
       const entityKey = sig.entityKey === undefined ? sig.key : sig.entityKey;
+      // D1197/P0-3 跨租户写隔离（创始人红线「A 客户不能读 B 客户数据」）：
+      // 阈值配置是**行业级文件**（extensions/industries/*/thresholds.json），没有企业维度；
+      // 因此回写侧的不变量是「**只接受单一企业**的聚合信号」——
+      //   · enterpriseId === null ⇒ **显式多企业混组**：不猜、不写，log.warn + 跳过
+      //   · enterpriseId === undefined ⇒ 早于企业轴的信号生产者（测试替身/旧调用方）⇒ 按旧语义处理
+      //   · enterpriseId 为字符串 ⇒ 该企业（聚合侧 GROUP BY enterprise_id 已保证单企业）
+      // 仅此一处仍不够：**聚合侧必须按企业分组**（D1197 同时修 getAggregatedSignals 的 GROUP BY）。
+      if (sig.enterpriseId === null) {
+        log.warn(
+          { key: sig.key, enterpriseIds: sig.enterpriseIds, count: sig.count },
+          'threshold_adjust 跳过 — 聚合组来自多个企业（enterpriseId=null），拒绝跨租户回写配置',
+        );
+        continue;
+      }
       if (entityKey === null) {
         log.warn(
           { key: sig.key, entityKeys: sig.entityKeys, count: sig.count },
