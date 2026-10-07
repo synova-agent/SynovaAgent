@@ -196,9 +196,16 @@ if [ -n "$PATHS_FILE" ]; then
   done < "$PATHS_FILE"
 fi
 
-SCOPE_DESC="默认 scripts/**"
+SCOPE_DESC="默认 scripts/** + tests/**/*.test.sh"
 if [ -z "$PATHS_ARG" ] && [ -z "$PATHS_FILE" ]; then
   while IFS= read -r _f; do [ -n "$_f" ] && CAND+=("$_f"); done < <(_find_files "$ROOT/scripts")
+  # D1228（2026-10-07）: 扫描面纳入 **tests/**/*.test.sh** —— 本类缺陷在测试面长期无网
+  #   （证据密度: 本轮 4 个独立目击者 / 线 D 扫出 18 文件 / verifier 三次自撞 / 线 B 修 16 文件）。
+  #   仅收 `.test.sh`（.ts/.py 变量名语义不同 ⇒ 不适用）；**棘轮登记处 = 配对夹具** `scan-fullwidth-vars.test.sh`
+  #   （§12d 断言 `--paths tests` 违规 = 0；**本扫描器无独立基线文件** —— 禁双源，D1228 / 卡 #1231 口径）。
+  while IFS= read -r _f; do
+    case "$_f" in *.test.sh) [ -n "$_f" ] && CAND+=("$_f") ;; esac
+  done < <(_find_files "$ROOT/tests")
 else
   SCOPE_DESC="--paths/--paths-file 指定"
 fi
@@ -266,6 +273,23 @@ case "$GREP_RC" in
      _die "grep 执行失败（rc=${GREP_RC}）—— 判自身失败，绝不当作「0 命中」" ;;
 esac
 
+# ── D1228: `\$` 逃逸豁免（防伪缺陷）────────────────────────────────────────────
+#   双引号内 `\$name（` = 字面 `$name（` ⇒ **不展开 ⇒ 不崩**（verifier 最小复现: 转义 rc=0 / 未转义 rc=1）。
+#   若不豁免，扩面后会产出伪缺陷（实例: tests/control-tower/sync_project_coordinates.test.sh:96）。
+#   做法: 每条命中行先把 `\$NAME<punct>` 抹掉再复测模式；复测不中 ⇒ 归「逃逸豁免」桶（可见、不计违规）。
+: > "$TMPD/hits_effective.txt"; : > "$TMPD/hits_escaped.txt"
+while IFS= read -r _h; do
+  [ -n "$_h" ] || continue
+  _r="${_h#*:}"; _t="${_r#*:}"
+  _stripped="$(printf '%s' "$_t" | sed -E 's/\\\$[A-Za-z_][A-Za-z0-9_]*('"$FULLWIDTH_ALT"')//g')"
+  if printf '%s' "$_stripped" | grep -qE "$PATTERN"; then
+    printf '%s\n' "$_h" >> "$TMPD/hits_effective.txt"
+  else
+    printf '%s\n' "$_h" >> "$TMPD/hits_escaped.txt"
+  fi
+done < "$TMPD/hits.txt"
+mv "$TMPD/hits_effective.txt" "$TMPD/hits.txt"
+
 # ── 三桶分类 ─────────────────────────────────────────────────────────────────
 _is_posix_shell() {
   local f="$1" base ext first
@@ -317,6 +341,7 @@ _nclean() {
 N_VIOL="$(_nlines "$TMPD/viol.txt")";        F_VIOL="$(_nfiles "$TMPD/viol.txt")"
 N_COMM="$(_nlines "$TMPD/comm.txt")";        F_COMM="$(_nfiles "$TMPD/comm.txt")"
 N_TRIAGE="$(_nlines "$TMPD/triage.txt")";    F_TRIAGE="$(_nfiles "$TMPD/triage.txt")"
+N_ESCAPED="$(_nlines "$TMPD/hits_escaped.txt")"; F_ESCAPED="$(_nfiles "$TMPD/hits_escaped.txt")"
 N_FILES="${#FILES[@]}"
 
 # 残余口径（供 CTO 标签 `全 <域> 域残余：N 文件` 用）: **非注释命中行**的文件数。

@@ -44,7 +44,7 @@ PASS=0; FAIL=0
 ok() { echo "  ✅ $1"; PASS=$((PASS + 1)); }
 no() { echo "  ❌ $1"; FAIL=$((FAIL + 1)); }
 
-[ -f "$SUT" ] || { echo "  ❌ SUT 缺失: $SUT（检查自身失败）"; exit 2; }
+[ -f "$SUT" ] || { echo "  ❌ SUT 缺失: ${SUT}（检查自身失败）"; exit 2; }
 PYBIN=""
 for _c in python3 python py; do
   if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then PYBIN="$_c"; break; fi
@@ -108,7 +108,7 @@ SB="$TMPD/sb"; build_sb "$SB"
 # ── C1 正常: 新形态 + claim（开关开）⇒ 必须通过 ──
 RC1=$(rc_of "$SB" "$SB/scripts/commit-msg-check.sh" 'feat(#1284): 新形态探针' 'tests/x.test.sh' 1)
 [ "$RC1" -eq 0 ] && ok "C1 新形态 feat(#1284): + claim → exit 0（通过）" \
-  || no "C1 新形态应 exit 0, 实际 exit=$RC1（issue 解析或 scope 字符集回归）"
+  || no "C1 新形态应 exit 0, 实际 exit=${RC1}（issue 解析或 scope 字符集回归）"
 
 # ── C2 边界: 空 scope ⇒ 必须拒绝 ──
 RC2=$(rc_of "$SB" "$SB/scripts/commit-msg-check.sh" 'feat(): 空 scope 探针' 'tests/x.test.sh' 1)
@@ -118,12 +118,12 @@ RC2=$(rc_of "$SB" "$SB/scripts/commit-msg-check.sh" 'feat(): 空 scope 探针' '
 # ── C3 兼容期: 旧形态 + legacy brief ⇒ 必须仍通过 ──
 RC3=$(rc_of "$SB" "$SB/scripts/commit-msg-check.sh" 'chore(D1099): legacy 探针' 'tests/y.test.sh' 1)
 [ "$RC3" -eq 0 ] && ok "C3 旧形态 chore(D1099): + legacy brief → exit 0（兼容期仍通过）" \
-  || no "C3 旧形态应 exit 0, 实际 exit=$RC3（旧 D# 链被误伤）"
+  || no "C3 旧形态应 exit 0, 实际 exit=${RC3}（旧 D# 链被误伤）"
 
 # ── C4 边界: 新形态但暂存不在该 claim 写集 ⇒ 不得白名单化 ──
 RC4=$(rc_of "$SB" "$SB/scripts/commit-msg-check.sh" 'feat(#1284): 越界探针' 'tests/y.test.sh' 1)
 [ "$RC4" -eq 1 ] && ok "C4 新形态 + 暂存不在 claim 写集 → exit 1（fail-closed，不白名单化）" \
-  || no "C4 应 exit 1, 实际 exit=$RC4（新形态被当成免检通道）"
+  || no "C4 应 exit 1, 实际 exit=${RC4}（新形态被当成免检通道）"
 
 # ── C5 边界: 开关关（迁移期默认）⇒ 格式面仍通过（如实记录现行为）──
 RC5=$(rc_of "$SB" "$SB/scripts/commit-msg-check.sh" 'feat(#1284): 开关关探针' 'tests/x.test.sh' 0)
@@ -145,11 +145,11 @@ echo "$MARK" | grep -q 'source=branch-anchor' \
 
 RC6=$(rc_of "$SBB" "$SBB/scripts/commit-msg-check.sh" 'chore(D1230): 分支锚点冲突探针' 'tests/z.test.sh' 1)
 [ "$RC6" -eq 1 ] && ok "C6 分支锚点(D1099) × 消息声明(D1230) 冲突 → exit 1（R4 fail-closed）" \
-  || no "C6 冲突应 exit 1, 实际 exit=$RC6（最弱锚点劫持面复开）"
+  || no "C6 冲突应 exit 1, 实际 exit=${RC6}（最弱锚点劫持面复开）"
 
 RC7=$(rc_of "$SBB" "$SBB/scripts/commit-msg-check.sh" 'chore(D1099): 分支锚点一致探针' 'tests/z.test.sh' 1)
 [ "$RC7" -eq 0 ] && ok "C7 分支锚点(D1099) × 消息声明(D1099) 一致 → exit 0（只拦冲突，不误伤）" \
-  || no "C7 一致应 exit 0, 实际 exit=$RC7（R4 检查误伤一致路径）"
+  || no "C7 一致应 exit 0, 实际 exit=${RC7}（R4 检查误伤一致路径）"
 
 # ── 对照组: 接线断言（缺任一 ⇒ 本件恒绿 = 纸老虎）──
 grep -q 'MSG_ISSUE=' "$SUT" && ok "接线①: SUT 含 MSG_ISSUE 提取点" || no "接线①: MSG_ISSUE 提取点缺失"
@@ -229,7 +229,7 @@ fi
 SB_CTL="$TMPD/sb-ctl"; build_sb "$SB_CTL"
 RC_CTL=$(rc_of "$SB_CTL" "$SB_CTL/scripts/commit-msg-check.sh" 'feat(#1284): 新形态探针' 'tests/x.test.sh' 1)
 [ "$RC_CTL" -eq 0 ] && ok "对照组②（未变异沙箱副本）: C1 exit 0 ⇒ 变异翻转可归因（非沙箱失真）" \
-  || no "对照组② 应 exit 0, 实际 exit=$RC_CTL（沙箱失真，变异体结论不可信）"
+  || no "对照组② 应 exit 0, 实际 exit=${RC_CTL}（沙箱失真，变异体结论不可信）"
 
 echo ""
 echo "结果: $PASS 通过, $FAIL 失败"

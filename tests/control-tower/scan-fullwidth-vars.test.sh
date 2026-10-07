@@ -287,6 +287,45 @@ if [ "$FAIL" -gt 0 ] && [ -z "$FIRST_FAIL" ]; then
   echo "  ❌ SELF-CHECK: FAIL=$FAIL 但 FIRST_FAIL 为空（no() 记名机制缺陷）"
   exit 2
 fi
+# ── 12. D1228: 扫描面扩到 tests/**（默认面）+ `\$` 逃逸豁免 ──────────────────────
+#   金丝雀一律用 `$FW` 拼接构造（本文件自身不得在「代码行」上出现被测形态 —— §7 自清覆盖它）。
+echo "── 12. D1228: 默认面含 tests/** + 逃逸豁免 ──"
+# 12a 结构: 默认面描述必须含 tests
+OUT_DEF="$(bash "$SCAN" 2>&1)"   # swallow-ok: 结构断言只看 SCOPE 描述行；rc 在此不判
+case "$OUT_DEF" in
+  *"默认 scripts/** + tests/**/*.test.sh"*) ok "默认面含 tests/**/*.test.sh（D1228 扩展生效）" ;;
+  *) no "默认面未含 tests（扩面未生效）" ;;
+esac
+# 12b 改坏即红（真执行）: 临时 root 复制扫描器（ROOT 由脚本位置推导）→ tests/ 放金丝雀 ⇒ 默认面必须抓到
+TR="$TMPD/tests-face"; mkdir -p "$TR/scripts/control-tower" "$TR/tests/control-tower"
+cp "$SCAN" "$TR/scripts/control-tower/scan-fullwidth-vars.sh"
+printf '#!/bin/bash\nset -u\necho "值=$D938_FACE_VAR%s应 5）"\n' "$FW" > "$TR/tests/control-tower/canary-face.test.sh"
+OUT_TF="$(bash "$TR/scripts/control-tower/scan-fullwidth-vars.sh" 2>&1)"; RC_TF=$?
+if [ "$RC_TF" -eq 1 ] && printf '%s' "$OUT_TF" | grep -qF 'canary-face.test.sh'; then
+  ok "改坏即红: 默认面在 tests/ 注入变量紧贴全角 ⇒ rc=1 且点名（扩展面真接线）"
+else
+  no "改坏即红失败: 默认面未抓到 tests/ 金丝雀（rc=${RC_TF}）"
+fi
+# 12c 逃逸豁免（防伪缺陷）: 转义形态不崩 ⇒ 不计违规；未转义 ⇒ 必须计违规
+ESC="$TMPD/esc"; mkdir -p "$ESC"
+printf '#!/bin/bash\nset -u\necho "字面 \\$name%s非插值）"\n' "$FW" > "$ESC/escaped.test.sh"
+printf '#!/bin/bash\nset -u\necho "变量 $name%s应 5）"\n' "$FW" > "$ESC/unescaped.test.sh"
+OUT_ESC="$(bash "$SCAN" --paths "$ESC/escaped.test.sh" 2>&1)"; RC_ESC=$?
+OUT_UNE="$(bash "$SCAN" --paths "$ESC/unescaped.test.sh" 2>&1)"; RC_UNE=$?
+if [ "$RC_ESC" -eq 0 ] && [ "$RC_UNE" -eq 1 ]; then
+  ok "逃逸豁免: 转义形态 ⇒ rc=0（伪缺陷已豁免）／未转义 ⇒ rc=1（真缺陷仍抓）"
+else
+  no "逃逸豁免异常: 转义 rc=${RC_ESC}（期望 0）／未转义 rc=${RC_UNE}（期望 1）"
+fi
+# 12d 棘轮（tests 面）: 全 tests 面违规 = 0（新增即红；本类缺陷在测试面已清零）
+OUT_TESTS="$(bash "$SCAN" --paths "$REPO/tests" 2>&1)"   # swallow-ok: 计数取自输出行；rc 由 N_TESTS 判
+N_TESTS="$(grab_viol "$OUT_TESTS" | awk '{print $1}')"
+if [ "${N_TESTS:-1}" = "0" ]; then
+  ok "棘轮: tests/ 面违规 = 0（新增即红；本类缺陷在测试面已清零）"
+else
+  no "棘轮: tests/ 面违规 = ${N_TESTS}（应 0 —— 有新增未修或伪缺陷）"
+fi
+
 echo "  结果: PASS=$PASS FAIL=$FAIL SKIP=$SKIP${FIRST_FAIL:+ FIRST_FAIL=${FIRST_FAIL}}"
 echo "═══════════════════════════════════════════════════════════"
 [ "$SKIP" -gt 0 ] && visible_warn "本测试有 $SKIP 项 SKIP（平台能力缺失，非通过）—— 计数已进入结果行"

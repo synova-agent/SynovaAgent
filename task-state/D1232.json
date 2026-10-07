@@ -1,0 +1,11 @@
+{
+  "task_id": "D1232",
+  "title": "P3 跟进：#1306 悬空注释 + #1307 形态0 引号奇偶确定性漏判",
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-07",
+  "updated_by": "line-b-ci"
+}
