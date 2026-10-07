@@ -23,7 +23,8 @@
 #       bash scripts/control-tower/sealed-tests.sh --quarantine | wc -l   # → QUARANTINE-TOTAL 实况
 #       bash scripts/control-tower/sealed-tests.sh --list       | wc -l   # → ci.yml 两 job 实际执行数
 #     ⚠️ 行尾不得带 ` | owner=…` 之类后缀——本段是**路径清单**，解析器整行取路径。
-# FACE-TOTAL=141   # 贴边：== 当前 --scan 数（任何删除即红，零静默余量）；新增面内测试 ⇒ 可高于此值
+# FACE-TOTAL=143   # 贴边：== 当前 --scan 数（任何删除即红，零静默余量）；新增面内测试 ⇒ 可高于此值
+#   2026-10-07 由 #1267 上调 141 → 143（本 PR 新增 2 个面内夹具 daily-cto-board / redeem-progress）。【合并序依赖：#1259 另加 3 个夹具，后合者按实况重取】
 # QUARANTINE-TOTAL=78
 #     （旧义·D-F/② 之前，仅存历史对照）
 #     违规面 = CI 密封面 = tests/ 下 *.test.sh / *.test.py（旧义: 只有被显式登记才会在 CI 执行）
