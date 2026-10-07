@@ -1,3 +1,262 @@
+# 976 三态原始输出（GREEN / RED / 恢复 / 夹具面 / 连带回归 / 注入 diff）——verbatim 拼接件
+#
+# 说明: 本件为 #976 取证的**原始 vitest 输出全量**（含引擎 pino 日志与断言失败原文），逐字节拼接、未删改、未截断。
+#       每段以 BEGIN/END 标记包裹，标记行内给出原文件名与 sha256（可与报告 §8 对账）。
+#       worktree HEAD=9723d23c04bf055c5c706aa291a5238d62223683  vitest=4.1.8  node=v24.19.0
+#
+===== BEGIN gate2-runtime-run1-GREEN.log.txt  (sha256=cfc25d35a4d42aa06cf1ed319cad06fa88794312ec685d9a03030c23cc201298) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-0gate
+
+{"level":30,"time":1791392538966,"pid":51516,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791392538968,"pid":51516,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+{"level":30,"time":1791392538972,"pid":51516,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392538975,"pid":51516,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392538976,"pid":51516,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","sentinelKey":"ZZ_TEST_K6_RUNTIME","industry":"_test_k6_runtime","warning":"1.5→1.58","msg":"GA 阈值调整已回写"}
+{"level":30,"time":1791392538977,"pid":51516,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","applied":1,"skipped":0,"msg":"进化动作回写完成"}
+stdout | tests/growth/evolution-writeback-runtime.integration.test.ts > K6/0-2 运行时回写（真库 + 注入 feedback_log 行） > 总闸判据: 注入 3 行 reject ⇒ applied=1 + 阈值真变化 + agent_memory 账本计数 > 0
+{
+  "tag": "[GATE-2] runtime writeback",
+  "memoryDbPath": "/var/folders/bs/ltqkv_rd45z6b7p5wq90vv500000gn/T/k6-0-2-runtime-ph4QXy/agent-memory.db",
+  "feedbackDbPath": "/var/folders/bs/ltqkv_rd45z6b7p5wq90vv500000gn/T/k6-0-2-runtime-ph4QXy/feedback-runtime.db",
+  "sql": "SELECT COUNT(*) FROM agent_memory WHERE key LIKE '%_gaCorrections%'",
+  "ledgerBefore": 0,
+  "ledgerAfter": 1,
+  "applied": 1,
+  "skipped": 0,
+  "thresholdWarning": 1.58
+}
+
+{"level":30,"time":1791392538978,"pid":51516,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392538980,"pid":51516,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791392538981,"pid":51516,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+ ✓ tests/growth/evolution-writeback-runtime.integration.test.ts (2 tests) 24ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  01:02:18
+   Duration  214ms (transform 62ms, setup 0ms, import 97ms, tests 24ms, environment 0ms)
+
+vitest_exit=0
+===== END gate2-runtime-run1-GREEN.log.txt =====
+
+===== BEGIN gate2-runtime-run2-RED.log.txt  (sha256=5f0d6821af889ed6ad90cb5880088fbaeabd2bab2c152cbb72fb5de1bdee3b99) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-0gate
+
+{"level":30,"time":1791392544592,"pid":51603,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791392544595,"pid":51603,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+{"level":30,"time":1791392544598,"pid":51603,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392544601,"pid":51603,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392544606,"pid":51603,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392544607,"pid":51603,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791392544608,"pid":51603,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+ ❯ tests/growth/evolution-writeback-runtime.integration.test.ts (2 tests | 1 failed) 20ms
+     × 总闸判据: 注入 3 行 reject ⇒ applied=1 + 阈值真变化 + agent_memory 账本计数 > 0 10ms
+     ✓ 反例(同进程): 旧生产者语义 entityKey=undefined ⇒ 退回复合键 ⇒ 不匹配配置实体 ⇒ applied=0 且无账本行 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/growth/evolution-writeback-runtime.integration.test.ts > K6/0-2 运行时回写（真库 + 注入 feedback_log 行） > 总闸判据: 注入 3 行 reject ⇒ applied=1 + 阈值真变化 + agent_memory 账本计数 > 0
+AssertionError: expected 'reject:sentinel_alert:ga' to be 'ZZ_TEST_K6_RUNTIME' // Object.is equality
+
+Expected: "ZZ_TEST_K6_RUNTIME"
+Received: "reject:sentinel_alert:ga"
+
+ ❯ tests/growth/evolution-writeback-runtime.integration.test.ts:130:52
+    128|     const thresholdAction = actions.find(a => a.type === 'threshold_ad…
+    129|     expect(thresholdAction).toBeDefined();
+    130|     expect(thresholdAction?.parameter.sentinelKey).toBe(TEST_SENTINEL_…
+       |                                                    ^
+    131|
+    132|     // ③ 回写：applied 必须 > 0
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  01:02:24
+   Duration  199ms (transform 55ms, setup 0ms, import 85ms, tests 20ms, environment 0ms)
+
+===== END gate2-runtime-run2-RED.log.txt =====
+
+===== BEGIN gate2-runtime-run3-GREEN-restored.log.txt  (sha256=1b4689ec4a2a632ad303c443d3acc95c401ad17be5c94989642d09b05a1bd152) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-0gate
+
+{"level":30,"time":1791392552353,"pid":51749,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791392552355,"pid":51749,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+{"level":30,"time":1791392552359,"pid":51749,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392552361,"pid":51749,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392552362,"pid":51749,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","sentinelKey":"ZZ_TEST_K6_RUNTIME","industry":"_test_k6_runtime","warning":"1.5→1.58","msg":"GA 阈值调整已回写"}
+{"level":30,"time":1791392552363,"pid":51749,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","applied":1,"skipped":0,"msg":"进化动作回写完成"}
+stdout | tests/growth/evolution-writeback-runtime.integration.test.ts > K6/0-2 运行时回写（真库 + 注入 feedback_log 行） > 总闸判据: 注入 3 行 reject ⇒ applied=1 + 阈值真变化 + agent_memory 账本计数 > 0
+{
+  "tag": "[GATE-2] runtime writeback",
+  "memoryDbPath": "/var/folders/bs/ltqkv_rd45z6b7p5wq90vv500000gn/T/k6-0-2-runtime-jVjIH8/agent-memory.db",
+  "feedbackDbPath": "/var/folders/bs/ltqkv_rd45z6b7p5wq90vv500000gn/T/k6-0-2-runtime-jVjIH8/feedback-runtime.db",
+  "sql": "SELECT COUNT(*) FROM agent_memory WHERE key LIKE '%_gaCorrections%'",
+  "ledgerBefore": 0,
+  "ledgerAfter": 1,
+  "applied": 1,
+  "skipped": 0,
+  "thresholdWarning": 1.58
+}
+
+{"level":30,"time":1791392552365,"pid":51749,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392552367,"pid":51749,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791392552367,"pid":51749,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+ ✓ tests/growth/evolution-writeback-runtime.integration.test.ts (2 tests) 20ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  01:02:32
+   Duration  192ms (transform 57ms, setup 0ms, import 82ms, tests 20ms, environment 0ms)
+
+===== END gate2-runtime-run3-GREEN-restored.log.txt =====
+
+===== BEGIN gate2-fixture-run2-RED.log.txt  (sha256=0b74d673976938614930ff58498030cd1bb4f0328a0792c19cfc373550949766) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-0gate
+
+{"level":30,"time":1791392544987,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791392544991,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+{"level":30,"time":1791392544995,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392544997,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"75917ba3-d79b-4672-8e0a-2b2438e93d33","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392544997,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"839db162-6b03-4bf6-94c1-eac1138e4546","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392544998,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"e930a31f-5fa1-4a2f-bc2b-09ae667d6885","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392544998,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392545006,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392545007,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"5301391b-4b6f-4245-9381-c313a4603692","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545007,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"848b16e6-0e9c-4256-b9f6-1074d4d9b83f","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545007,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"59dbab29-a22c-411d-885f-ee6853fe7603","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545008,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392545011,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392545012,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"6fc7e8d0-be63-4ecb-92e6-250f822a2162","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545013,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"750238b5-7ff6-4741-bb24-d670b114bd3f","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545017,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392545017,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"15b78da6-f70a-4326-bff4-bbeed248f0b0","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545017,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"76612c7a-add8-4ff2-a389-23118485d16c","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545018,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"3dbbefa0-4213-42fc-87b8-e101f5172015","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545018,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392545022,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392545023,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"69f878e3-dd5b-42b3-a25c-0df0c9d82e7e","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545023,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"51d3a0a6-1cc9-4765-9823-aedacda1151e","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545023,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"5f15eadd-2444-4775-8655-ecd03250a77c","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545024,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"1c93e6c9-08ba-45be-a8d7-10c759c57d01","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545028,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392545029,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"cdb69b31-713d-4dd2-9814-0d58d9287bc5","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545029,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"377af48a-65ff-483b-901e-ea73c5e2e206","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545029,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"985f40de-cbef-49fd-bbba-4560f19d26e0","decision":"reject","msg":"反馈已收集"}
+{"level":40,"time":1791392545030,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","key":"reject:sentinel_alert","enterpriseIds":["org-a","org-b"],"count":4,"msg":"threshold_adjust 跳过 — 聚合组来自多个企业（enterpriseId=null），拒绝跨租户回写配置"}
+{"level":30,"time":1791392545032,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791392545032,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+ ❯ tests/growth/evolution-writeback.test.ts (7 tests | 2 failed) 53ms
+     × 正常路径: 同实体 3 次 reject → applied=1 + 阈值真变化 + agent_memory 账本行 12ms
+     ✓ 降级路径: 实体不在任何 thresholds.json ⇒ skipped（applied=0）且不抛 5ms
+     ✓ 边界: <3 次不聚合（未达阈值） 5ms
+     × 边界: 组内实体不唯一（类别级聚合）⇒ entityKey=null，回写侧不猜实体 5ms
+     ✓ 判据②: 两企业各 2 次同类反馈（各未达阈值 3）⇒ 不产生任何 signal 5ms
+     ✓ 企业轴契约: 单企业 3 次 ⇒ 信号携带且仅携带该企业 6ms
+     ✓ 防御性不变量: 多企业混组信号（enterpriseId=null）⇒ 拒绝回写（不猜、不写） 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/growth/evolution-writeback.test.ts > K6/0-2 进化回写（总闸） > 正常路径: 同实体 3 次 reject → applied=1 + 阈值真变化 + agent_memory 账本行
+AssertionError: expected +0 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ tests/growth/evolution-writeback.test.ts:118:28
+    116|     const result = applyEvolutionActions(actions);
+    117|     expect(result.errors).toEqual([]);
+    118|     expect(result.applied).toBe(1);
+       |                            ^
+    119|
+    120|     const updated = JSON.parse(readFileSync(TEST_THRESHOLD_PATH, 'utf-…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/growth/evolution-writeback.test.ts > K6/0-2 进化回写（总闸） > 边界: 组内实体不唯一（类别级聚合）⇒ entityKey=null，回写侧不猜实体
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ tests/growth/evolution-writeback.test.ts:186:62
+    184|
+    185|     const actions = processFeedbackSignals(signals);
+    186|     expect(actions.some(a => a.type === 'threshold_adjust')).toBe(fals…
+       |                                                              ^
+    187|
+    188|     db.close();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 5 passed (7)
+   Start at  01:02:24
+   Duration  218ms (transform 55ms, setup 0ms, import 78ms, tests 53ms, environment 0ms)
+
+===== END gate2-fixture-run2-RED.log.txt =====
+
+===== BEGIN gate2-fixture-run3-GREEN-restored.log.txt  (sha256=5cde05337d5535830e8199f40a2d5ff95c308bc8a5f3b039a108232d66938384) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-0gate
+
+{"level":30,"time":1791392552793,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791392552796,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+{"level":30,"time":1791392552800,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392552802,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"80cb8616-9629-4059-a031-a7c8d95dce41","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552803,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"b406e8d0-669d-468a-bd51-7804891f0e71","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552803,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"969300e6-234f-4162-9f26-3560154bd49f","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552804,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392552805,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","sentinelKey":"ZZ_TEST_K6","industry":"_test_k6","warning":"1.5→1.58","msg":"GA 阈值调整已回写"}
+{"level":30,"time":1791392552806,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","applied":1,"skipped":0,"msg":"进化动作回写完成"}
+{"level":30,"time":1791392552810,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392552810,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"8689ee79-5d87-40ed-84f8-387e457bc6e1","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552811,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"78d97af0-e158-4c84-b4b2-825417a82c87","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552811,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"b814aa68-5b78-4d7f-b232-4e77d7b06817","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552811,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392552815,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392552816,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"76afd3ee-9524-4179-92aa-c094c244c2ee","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552817,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"4b511a3f-8c17-426e-b021-782f7d7eaa9c","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552820,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392552821,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"0c242415-2709-42c2-9e99-c5caae06999b","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552822,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"ff7f4901-05ca-4924-9a35-e5ce394650c3","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552822,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"1b74edbe-b3b2-4ba7-9c9c-8401b0e00494","decision":"reject","msg":"反馈已收集"}
+{"level":40,"time":1791392552822,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","key":"reject:sentinel_alert:","entityKeys":["a-1","a-2","a-3"],"count":3,"msg":"threshold_adjust 跳过 — 聚合组非单一实体（entityKey=null），无法定位配置阈值实体"}
+{"level":30,"time":1791392552826,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392552826,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"70edbd84-9c02-4bcb-b18a-aa6425b30b76","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552827,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"0564597a-a61c-49b3-9da2-cbe56c0630c2","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552827,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"621cec16-e3db-44dd-a19c-c01671431ccf","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552828,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"d2d8c86f-6cce-4d93-973d-06f12f2fe96f","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552833,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392552834,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"ef9f39fd-f286-47c6-bfde-edcf35ee9189","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552834,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"5181383c-74ae-42cb-8872-4f490b0dfc75","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552835,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"ae803bdc-02b1-4b42-8fde-718b462385cc","decision":"reject","msg":"反馈已收集"}
+{"level":40,"time":1791392552835,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","key":"reject:sentinel_alert","enterpriseIds":["org-a","org-b"],"count":4,"msg":"threshold_adjust 跳过 — 聚合组来自多个企业（enterpriseId=null），拒绝跨租户回写配置"}
+{"level":30,"time":1791392552837,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791392552837,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+ ✓ tests/growth/evolution-writeback.test.ts (7 tests) 52ms
+
+ Test Files  1 passed (1)
+      Tests  7 passed (7)
+   Start at  01:02:32
+   Duration  256ms (transform 81ms, setup 0ms, import 109ms, tests 52ms, environment 0ms)
+
+===== END gate2-fixture-run3-GREEN-restored.log.txt =====
+
+===== BEGIN gate2-collateral-regression-GREEN.log.txt  (sha256=fdb9cd23cf6bd7fdc5e8d027b254fef9a619549d5e510b453bab8b459f7678e2) =====
 
  RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-0gate
 
@@ -473,4 +732,22 @@ stdout | tests/growth/evolution-writeback-runtime.integration.test.ts > K6/0-2 �
       Tests  232 passed (232)
    Start at  01:02:52
    Duration  1.93s (transform 1.30s, setup 0ms, import 1.80s, tests 2.64s, environment 2ms)
+
+===== END gate2-collateral-regression-GREEN.log.txt =====
+
+===== BEGIN gate2-run2-RED-middle-evolution-engine.diff  (sha256=8fc9d742ebe0bfc1676e8726029bd7dbe3cb3d847941fe7a3561c75bda5c740c) =====
+diff --git a/src/loops/middle-evolution-engine.ts b/src/loops/middle-evolution-engine.ts
+index 93a9f0730..61058d794 100644
+--- a/src/loops/middle-evolution-engine.ts
++++ b/src/loops/middle-evolution-engine.ts
+@@ -89,7 +89,7 @@ export function processFeedbackSignals(signals: AggregatedSignal[]): EvolutionAc
+       // 组内实体不唯一（entityKey=null）时**不猜实体**：显式告警 + 跳过（铁律 24/31，不静默）。
+       // 三态（见 AggregatedSignal.entityKey 契约）：undefined=旧生产者 ⇒ 退回旧语义（用 key）；
+       // null=显式"组内实体不唯一" ⇒ 不猜实体。
+-      const entityKey = sig.entityKey === undefined ? sig.key : sig.entityKey;
++      const entityKey = sig.key; // BREAK-IT-RED
+       // D1197/P0-3 跨租户写隔离（创始人红线「A 客户不能读 B 客户数据」）：
+       // 阈值配置是**行业级文件**（extensions/industries/*/thresholds.json），没有企业维度；
+       // 因此回写侧的不变量是「**只接受单一企业**的聚合信号」——
+===== END gate2-run2-RED-middle-evolution-engine.diff =====
 
