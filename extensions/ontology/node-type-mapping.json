@@ -17,7 +17,7 @@
       ],
       "rule": "按节点语义分：props 含损益/预算类键（total_revenue / gross_margin / operating_expense）⇒ outcome/financial；props 含存量/现金流类键（cash_balance / revenue / cost / period）⇒ resource/money",
       "ruleTestedBy": [
-        "tests/ontology/node-type-mapping.test.ts（两条分支各一例）"
+        "tests/sentinel/node-type-resolver.test.ts（读侧解析：Financial 两分支）"
       ],
       "evidence": [
         {

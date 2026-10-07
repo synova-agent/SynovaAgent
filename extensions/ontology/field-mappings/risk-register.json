@@ -1,7 +1,7 @@
 {
   "name": "risk-register",
   "label": "风险登记册",
-  "targetNodeType": "Risk",
+  "targetNodeType": "outcome/risk",
   "mappings": [
     { "externalField": "前3客户集中度", "prop": "client_concentration_top3", "type": "number" },
     { "externalField": "关键人Bus Factor", "prop": "key_person_bus_factor", "type": "number" },

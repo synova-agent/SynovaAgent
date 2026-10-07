@@ -1,7 +1,7 @@
 {
   "name": "innovation-pipeline",
   "label": "创新管线数据",
-  "targetNodeType": "Innovation",
+  "targetNodeType": "outcome/innovation",
   "mappings": [
     { "externalField": "新产品上市数", "prop": "new_products_launched", "type": "number" },
     { "externalField": "新专利申请数", "prop": "new_patents_filed", "type": "number" },
