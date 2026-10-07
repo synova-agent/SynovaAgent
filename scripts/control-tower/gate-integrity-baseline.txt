@@ -24,15 +24,16 @@
 #       bash scripts/control-tower/sealed-tests.sh --quarantine | wc -l   # → QUARANTINE-TOTAL 实况
 #       bash scripts/control-tower/sealed-tests.sh --list       | wc -l   # → ci.yml 两 job 实际执行数
 #     ⚠️ 行尾不得带 ` | owner=…` 之类后缀——本段是**路径清单**，解析器整行取路径。
-# FACE-TOTAL=147   # **下界语义**：scan >= 此值 = 通过（新增测试不红）；scan < 此值 = 净删除 ⇒ 红。
+# FACE-TOTAL=151   # **下界语义**：scan >= 此值 = 通过（新增测试不红）；scan < 此值 = 净删除 ⇒ 红。
 #                   # 代价（如实登记）: **≤ 当前余量 (scan − FACE-TOTAL) 的净删除不可检测** —— 「不做逐条登记」的必然代价。
 #                   # 禁止自动重算本值（那会让棘轮彻底失效）；下调须本文件显式改行（= 留痕）。
-# 2026-10-07 D1223 staging_guard 退役 PR（#1291）显式上调 141 → 147（一行、低频，非自动重算）:
-#   实测: CI merge-ref 面扫描 scan=152（本 PR 净变化 0：删 2 执行集内测试 + 增 2 新夹具）
-#         ⇒ 旧值 141 会让余量 = 11 > SLACK-CAP=10 ⇒ 按棘轮规则红（CI 实撞）。
-#   取值: 147 = 152 − 5（取上限一半，给在飞 PR 的测试漂移留余量；**未**重算至 scan：
-#         那会让"净删除不可检测"窗口归零后再被自动重算，棘轮失效）。
-#   校验: bash scripts/control-tower/sealed-tests.sh --list 退出码 0；check-gate-integrity.sh → OK。
+# 2026-10-07 D1225 staging_guard 退役 PR（#1291）棘轮经**合并收敛**到 main 的 151（本行取值 = main）:
+#   沿革: 本 PR 独立核阶段实测 CI merge-ref scan=152，旧下界 141 ⇒ 余量 11 > SLACK-CAP=10（CI 实撞），
+#         曾显式上调为 147。**merge origin/main 时 main 已含 151**（同批另一卡的卡先合）⇒ 取 **151**
+#         （更严的一方胜；未再上调——上调需新证据，禁自动重算）。
+#   合并后自查（Lead 给的三条约束）:
+#     SC=$(bash scripts/control-tower/sealed-tests.sh --scan | wc -l)
+#     ① FACE-TOTAL(151) ≤ SC   ② SC − 151 ≤ SLACK-CAP(10)   ③ 余量取 3~5（CI merge-ref 与本地 scan 差 1~2）
 #   复算命令: bash scripts/control-tower/sealed-tests.sh --scan | wc -l
 # QUARANTINE-TOTAL=77
 # SLACK-CAP=10
@@ -56,10 +57,10 @@
 #     依据：CTO 2026-09-24 裁定——既有红允许存在，但必须显式登记为基线豁免；既有红不许无声存在。
 #
 # 截至: 2026-09-24T10:18:45Z
-# [R] 条数: 77（D1223 staging_guard 退役 · 2026-10-07: 摘除 1 条 tests/control-tower/staging-guard-session.test.py
-#       —— 该件 import 的被测模块 scripts/control-tower/staging_guard.py 已随 D1223 删除，按棘轮语义
+# [R] 条数: 77（D1225 staging_guard 退役 · 2026-10-07: 摘除 1 条 tests/control-tower/staging-guard-session.test.py
+#       —— 该件 import 的被测模块 scripts/control-tower/staging_guard.py 已随 D1225 删除，按棘轮语义
 #       「文件已删=基线过期，须删条目」摘除；QUARANTINE-TOTAL 同批 78→77（棘轮只减不增）。
-#       D1223 同时删除 tests/control-tower/staging_guard.test.sh 与 test-staging-guard.py（均不在 [R] 段：
+#       D1225 同时删除 tests/control-tower/staging_guard.test.sh 与 test-staging-guard.py（均不在 [R] 段：
 #       前者在执行集内、后者不在密封面），并新增 tests/control-tower/staging-guard-retirement.test.sh
 #       （零登记自动进入执行集 = 发现制语义）。
 #       沿革: 78（D-F/② 2026-10-07: +1 = tests/control-tower/precommit-groups-injection.test.sh ——

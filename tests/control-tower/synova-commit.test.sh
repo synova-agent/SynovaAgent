@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tests/control-tower/synova-commit.test.sh — synova-commit 配对测试（U7/CT-40 配对规则）
-# D1223 (2026-10-07): 暂存区隔离件 staging_guard.py **退役** —— 本测试同步断言对齐现行为。
+# D1225 (2026-10-07): 暂存区隔离件 staging_guard.py **退役** —— 本测试同步断言对齐现行为。
 #   隔离职责现由（本测试聚焦 ①；余者在别处覆盖）:
 #     ① synova-commit 的**只读归属呈报**（单一入口 claim_store.py，不阻断；禁静默空白）
 #     ② task-start.sh 开工拦截（D515 项1 → task-start-parallel.test.sh）
@@ -29,7 +29,7 @@ bad() { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
 TMPD="$(mktemp -d)"; trap 'rm -rf "$TMPD"' EXIT
 
 # ① 接线: 退役段存在 —— claim_store 单一入口 + 退役结论恒打印 + 旧调用形态零残留
-grep -q 'claim_store.py' "$SC" && grep -q '已退役（D1223）' "$SC" \
+grep -q 'claim_store.py' "$SC" && grep -q '已退役（D1225）' "$SC" \
   && ok "① 退役段接线存在（claim_store 单一入口 + 结论行）" || bad "① 退役段接线缺失"
 grep -q '判据面 = CI D708 写集对账' "$SC" && ok "① 退役结论文案存在（禁静默空白）" || bad "① 退役结论文案缺失"
 ! grep -q 'STAGING_GUARD=' "$SC" && ! grep -q -- '--staged $STAGED_LIST' "$SC" \
@@ -57,7 +57,7 @@ echo "foreign" > "$SB/x.md"
 git -C "$SB" -c user.name=t -c user.email=t@t add x.md
 OUT=$(cd "$SB" && SYNO_PRE_COMMIT="$STUB" SYNO_GATEKEEPER_ACK=1 \
   bash "$SB/scripts/control-tower/synova-commit" --task-id T-self --agent test --message "test: foreign file" 2>&1); rc=$?
-echo "$OUT" | grep -q "已退役（D1223）" \
+echo "$OUT" | grep -q "已退役（D1225）" \
   && ok "② 退役结论恒打印（非静默空白）" || bad "② 退役结论缺失: $(echo "$OUT" | tail -3)"
 echo "$OUT" | grep -q "暂存区含他人文件" \
   && bad "② 旧阻断文案仍在（退役未生效）" || ok "② 旧阻断路径已撤（本地不预判）"
@@ -81,7 +81,7 @@ if echo "$OUT2" | grep -q "暂存区含他人文件"; then
 else
   ok "③ 自己写集不拦（本地不预判）"
 fi
-# D1223 潜伏缺陷修复（本次触发）: 原写法 `git log | grep -q` 在 `set -o pipefail` 下**假红** ——
+# D1225 潜伏缺陷修复（本次触发）: 原写法 `git log | grep -q` 在 `set -o pipefail` 下**假红** ——
 #   grep -q 命中即退出 → 上游 git 收到 SIGPIPE → 退出码 141 → 管道整体非零 ⇒ "commit 未落"。
 #   触发条件 = 日志行数 >1（② 场景现在会真提交，故 ③ 时日志已有 2 条）⇒ 确定性复现，非随机。
 #   修法: 先取文本再匹配（去管道），消除 SIGPIPE 竞争。

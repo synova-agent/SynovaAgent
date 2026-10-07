@@ -54,5 +54,68 @@ OUT="$(ISSUE_NUMBER=4 PROJECT_TOKEN= python3 "$MUT" --from-body "$SB/full.md" 2>
 if echo "$OUT" | grep -q "解析=7/7 字段"; then no "4.1 变异体未体现差异（仍 7/7）:: $OUT"; else ok "4.1 变异体（字段集改坏）⇒ 齐全用例解析数偏离 7/7（夹具判别性成立）"; fi
 
 echo ""
+# ── 17. D1216 回归: GraphQL query 括号平衡（可真构造 + 变异体）──
+#    历史事故(2026-10-07): field 查询 5 个 `{` 只 4 个 `}` ⇒ CI 每轮红
+#    (`Expected NAME, actual: (none) at [1,124]`)；旧夹具(示例驱动)抓不到。
+q_line="$(python3 - <<'PY'
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("spc", "scripts/control-tower/sync_project_coordinates.py")
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+q = m.q_field_by_name()
+print(q.count("{"), q.count("}"))
+PY
+)"
+echo "  #17.1 真构造 q_field_by_name() ⇒ { 与 } 计数: $q_line"
+if echo "$q_line" | awk 'NF==2 && $1 ~ /^[0-9]+$/ && $1==$2 {found=1} END{exit !found}'; then
+  ok "17.1 真构造 query 括号平衡"
+else
+  no "17.1 query 括号不平衡（GraphQL 必失败）"
+fi
+
+# 变异体: 人为去掉一个右括号 ⇒ assert_query_balanced 必须抛错（证明判据真在判）
+mut="$(python3 - <<'PY'
+import importlib.util
+spec = importlib.util.spec_from_file_location("spc", "scripts/control-tower/sync_project_coordinates.py")
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+try:
+    m.assert_query_balanced(m.q_field_by_name()[:-1])   # 删一个 }
+    print("NOPASS")
+except ValueError:
+    print("RAISED")
+PY
+)"
+echo "  #17.2 变异体(删一个右括号) ⇒ $mut"
+if [ "$mut" = "RAISED" ]; then
+  ok "17.2 变异体：括号不平衡 ⇒ 契约抛错（判别性成立）"
+else
+  no "17.2 变异体未被捕获（判据是纸老虎）"
+fi
+
+# 17.3 字段名走查询变量（不再字符串插值）⇒ 规避引号/非 ASCII 转义面
+if grep -q 'field(name:\$name)' scripts/control-tower/sync_project_coordinates.py; then
+  ok "17.3 字段名走查询变量 \$name（非插值）"
+else
+  no "17.3 仍用字符串插值拼字段名"
+fi
+
+
+# ── 17.4 D1216-R1: except 收窄 —— 非配置面错误必须 re-raise（防"宽吞"回归）──
+narrow="$(python3 - <<'PY'
+import re, pathlib
+src = pathlib.Path("scripts/control-tower/sync_project_coordinates.py").read_text(encoding="utf-8")
+i = src.index("except RuntimeError as e:")
+blk = src[i:i+700]
+pat = r"does not accept|Cannot coerce|Could not resolve to a node"
+ok = ("re.search" in blk and "raise" in blk
+      and re.search(pat, "field does not accept text")
+      and not re.search(pat, "connection reset by peer"))
+print("NARROW" if ok else "WIDE")
+PY
+)"
+echo "  #17.4 except 收窄判定: $narrow"
+[ "$narrow" = "NARROW" ] && ok "17.4 非配置面错误 re-raise（收窄成立）" || no "17.4 except 过宽（会吞传输/权限类失败）"
+
+
 echo "结果: $PASS 通过, $FAIL 失败"
 [ "$FAIL" = 0 ] && exit 0 || exit 1
+

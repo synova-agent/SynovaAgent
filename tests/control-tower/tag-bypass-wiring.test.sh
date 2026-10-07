@@ -3,7 +3,7 @@
 # tag-bypass-wiring.test.sh — D331 D329 审计 P1 修复测试
 #
 # 五合一: tag-祖先校验 + bypass 对账 + 呈报段 PYBIN + --session 能力保留 + write-set task_id
-# 🔴 D1223（2026-10-07）: 暂存区隔离件 staging_guard.py 退役 —— 用例 6/7/8/9/11 的 SUT 随迁:
+# 🔴 D1225（2026-10-07）: 暂存区隔离件 staging_guard.py 退役 —— 用例 6/7/8/9/11 的 SUT 随迁:
 #   6/7/8 改测 synova-commit 的**只读归属呈报段**（同一 PYBIN 三级探测 + 显式降级语义）；
 #   9 从「--session 生产调用点 ≥1」改为「能力保留（可调用）」——其原唯一生产调用方即退役件；
 #     生产接线断言移到 claim 单源（tests/control-tower/staging-guard-retirement.test.sh:R4）；
@@ -20,7 +20,7 @@
 #   7. 呈报段崩溃（非 JSON, rc=3）→ 显式降级提示 + 降级放行（red: || true 吞）
 #   8. 全无 python → 显式降级提示（不静默跳过）
 #   9. --session **能力保留**（resolve-commit-brief.sh 仍实现该 flag）；生产调用点 0 如实打印
-#      （D1223 后原唯一生产调用方已退役；生产接线断言改由 claim 单源夹具承担）
+#      （D1225 后原唯一生产调用方已退役；生产接线断言改由 claim 单源夹具承担）
 #  10. write-set 条目含 task_id（red: 无 → 断言失败）
 #  11. 同任务并行 session 的 task_id 继承（生产者不变量，承接原"不误伤"语义）
 #
@@ -271,13 +271,13 @@ SHIMEOF
   rm -f "$SHIM_BODY" "$SHIM_BODY7" 2>/dev/null || true
 fi
 
-# ── 用例 9: --session 能力保留（D1223 后生产调用点为 0，如实打印）──
-# D1223 迁移说明: 原断言 = 「resolve-commit-brief.sh.*--session 生产调用点 ≥1」。该唯一生产
+# ── 用例 9: --session 能力保留（D1225 后生产调用点为 0，如实打印）──
+# D1225 迁移说明: 原断言 = 「resolve-commit-brief.sh.*--session 生产调用点 ≥1」。该唯一生产
 #   调用方即已退役的 staging_guard.py（D331 P2-2 的接线落点），故原断言在退役后必然 0 命中。
 #   处置（不静默、不假红）: ① 断言**能力仍在**（flag 已实现，未随退役一并删除）；② 生产调用点
 #   计数**打印出来**（0 亦可见）；③ 生产接线断言改由 claim 单源夹具承担
 #   （tests/control-tower/staging-guard-retirement.test.sh:R4 断言 claim_store 为唯一生产入口）。
-echo "── 9. --session 能力保留 + 生产调用点计数（D1223）──"
+echo "── 9. --session 能力保留 + 生产调用点计数（D1225）──"
 if grep -q -- '--session' "$REPO_DIR/scripts/workflow/resolve-commit-brief.sh" 2>/dev/null; then
   pass "--session 能力保留（resolve-commit-brief.sh 仍实现该 flag）"
 else
@@ -286,7 +286,7 @@ fi
 HITS9=$(grep -rn "resolve-commit-brief\.sh\"[^#]*--session" "$REPO_DIR/scripts/" 2>/dev/null || true)
 N9=$(printf '%s' "$HITS9" | grep -c "resolve-commit-brief" || true)
 N9="${N9//[^0-9]/}"; N9="${N9:-0}"
-pass "--session 生产调用点 = ${N9}（D1223 后显式登记；≥1 时请同步复核归属）"
+pass "--session 生产调用点 = ${N9}（D1225 后显式登记；≥1 时请同步复核归属）"
 echo ""
 
 # ── 用例 10: write-set 条目含 task_id ──
@@ -319,7 +319,7 @@ assert_contains "$OUT10" "OK task_id=D331" "输出确认 task_id=D331"
 echo ""
 
 # ── 用例 11: 同任务并行 session 的 task_id 继承（**生产者侧**不变量）──
-# D1223（2026-10-07）迁移说明: 原用例 11 消费已退役的 `staging_guard.check_staging` 做
+# D1225（2026-10-07）迁移说明: 原用例 11 消费已退役的 `staging_guard.check_staging` 做
 #   「同任务写集互认（不误伤）」；该消费者随模块整件退役（判据面移交 CI D708 写集对账）。
 #   本用例改断言其**生产侧**不变量 —— 同任务并行 session 的写集条目必须携带**继承的**
 #   task_id（D331 P2-1）。消费者退役 ≠ 生产者可以不变量：verify-parallel --ci-pr 的归属

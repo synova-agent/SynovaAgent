@@ -48,7 +48,7 @@ set +e
 OUT1=$(cd "$D1" && bash "$AUDITOR" --task-id D661-empty --diff HEAD~1..HEAD 2>&1)
 EC1=$?
 set -e
-if [ "$EC1" -eq 0 ]; then ok "场景1 空 FINDINGS: exit 0（不崩）"; else no "场景1 exit=$EC1（期望 0）"; fi
+if [ "$EC1" -eq 0 ]; then ok "场景1 空 FINDINGS: exit 0（不崩）"; else no "场景1 exit=${EC1}（期望 0）"; fi
 if echo "$OUT1" | grep -q "unbound variable"; then no "场景1 输出含 unbound variable"; else ok "场景1 无 unbound variable"; fi
 if echo "$OUT1" | grep -qE 'P0: 0 \| P1: 0 \| P2: 0'; then ok "场景1 计数全 0"; else no "场景1 计数非全 0"; fi
 if echo "$OUT1" | grep -q '报告:'; then ok "场景1 报告输出正常（全链路走通）"; else no "场景1 无「报告:」行"; fi
@@ -65,7 +65,7 @@ set +e
 OUT2=$(cd "$D2" && bash "$AUDITOR" --task-id D661-detect --diff HEAD~1..HEAD 2>&1)
 EC2=$?
 set -e
-if [ "$EC2" -eq 0 ]; then ok "场景2 检测: exit 0（file_line 无匹配不崩）"; else no "场景2 exit=$EC2（期望 0，疑似 file_line set -e 崩溃）"; fi
+if [ "$EC2" -eq 0 ]; then ok "场景2 检测: exit 0（file_line 无匹配不崩）"; else no "场景2 exit=${EC2}（期望 0，疑似 file_line set -e 崩溃）"; fi
 if echo "$OUT2" | grep -qE 'P0: 2 \| P1: 0 \| P2: 1'; then ok "场景2 检测计数 P0:2 P2:1（as any+空 catch+ TODO）"; else no "场景2 计数异常: $(echo "$OUT2" | grep -oE 'P0: [0-9]+ \| P1: [0-9]+ \| P2: [0-9]+' | head -1)"; fi
 
 # 检测详情在报告文件（auditor PROJECT_ROOT 由 SCRIPT_DIR 固定 → 写真实 repo），非 stdout

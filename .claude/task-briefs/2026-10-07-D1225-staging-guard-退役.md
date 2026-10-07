@@ -1,6 +1,6 @@
-# Task Brief: D1223 staging_guard.py 退役（D-C 标识归一余项 ①）
+# Task Brief: D1225 staging_guard.py 退役（D-C 标识归一余项 ①）
 
-> 生成: 2026-10-07 | 任务: D1223 | 认领: line-f-dc（治理线施工队 D-C 接力位）
+> 生成: 2026-10-07 | 任务: D1225 | 认领: line-f-dc（治理线施工队 D-C 接力位）
 > 父：D-C 标识与声明归一（核心已合 main：#1267/#1275/#1278；本件 = K3 R1「认领制退役」项）
 > 纪律: 判据变更 ⇒ PR 正文单列「判据变更点 / 旧口径 vs 新口径 / 回滚方式」
 
@@ -89,8 +89,8 @@
 
 | 文件 | 类型 |
 |---|---|
-| .claude/task-briefs/2026-10-07-D1223-staging-guard-退役.md | task |
-| memory/notes/proposed/2026-10-07-d1223-staging-guard-retire.md | task |
+| .claude/task-briefs/2026-10-07-D1225-staging-guard-退役.md | task |
+| memory/notes/proposed/2026-10-07-d1225-staging-guard-retire.md | task |
 | scripts/control-tower/staging_guard.py | task |
 | scripts/control-tower/synova-commit | task |
 | scripts/control-tower/self-health.py | task |

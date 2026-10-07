@@ -2,7 +2,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # self-health.test.sh — U7/CT-40 配对测试（scripts/control-tower/self-health.py）
 #
-# 本件随 D1223（staging_guard.py 退役）建立 —— 该退役修改了 self-health.py 的
+# 本件随 D1225（staging_guard.py 退役）建立 —— 该退役修改了 self-health.py 的
 # CORE_COMPONENTS（原列表含已删件 ⇒ 组件完整性维度**恒定 degraded**），按 U7/CT-40
 # 「控制塔脚本变更须配对测试」补建配对件。
 #
@@ -34,7 +34,7 @@ done
 [ -n "$PYBIN" ] || { echo "  ❌ 无可用 python（检查自身失败）"; exit 2; }
 [ -f "$SUT" ] || { echo "  ❌ SUT 缺失: $SUT（检查自身失败）"; exit 2; }
 
-echo "=== self-health 配对测试（U7/CT-40 · D1223 建立）==="
+echo "=== self-health 配对测试（U7/CT-40 · D1225 建立）==="
 
 # ── 接线: 本件确为 ct-test-gate.sh 命名的配对件 ──
 grep -q "control-tower" "$SUT" \

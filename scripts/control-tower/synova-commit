@@ -8,7 +8,7 @@
 #
 # D311 M1b (2026-08-02): 暂存区隔离 — git commit 改显式路径（不用 -a），
 # 提交成功后写集标记 committed + 阶段 CP4。
-# D1223 (2026-10-07): staging_guard.py **退役**（K3 R1「认领制退役」项）——本地不再
+# D1225 (2026-10-07): staging_guard.py **退役**（K3 R1「认领制退役」项）——本地不再
 # 预判暂存归属，只做**只读呈报**（单一入口 claim_store.py，取不到即显式降级，铁律 11）。
 # 判据面移交真承重件: ① resolve-commit-brief.sh 防劫持 ② CI D708 写集对账
 # （merge_writeset_gate.py）③ 多会话占用: task-start D515 项1 / pre-commit 组 6 D537 #2 /
@@ -360,7 +360,7 @@ fi
 
 # ═══ D329: session-id 解析 (M1b 暂存区隔离 + 劫持根治) ═══
 # 身份 = 会话声明的任务，绝不自动采用认领 brief（D320 劫持根因: 自动采用 = 把被偷文件
-# 当成"自己的"）。显式 --session-id 优先。本口径在 D1223 退役后仍保留——它同时是
+# 当成"自己的"）。显式 --session-id 优先。本口径在 D1225 退役后仍保留——它同时是
 # write-set 登记与 CI D708 对账的身份来源，不随 staging_guard 一起消失。
 if [[ -z "$SESSION_ID" ]]; then
   SESSION_ID="$TASK_ID"
@@ -394,7 +394,7 @@ for _b in "$PROJECT_ROOT"/.claude/task-briefs/${TASK_ID}.md "$PROJECT_ROOT"/.cla
 done
 
 # 登记本 session（CP2 开发阶段；若已存在则刷新心跳）
-# D329: write-set 登记移到归属呈报之后（防 --files 预登记"洗白"他人文件；D1223 后本段
+# D329: write-set 登记移到归属呈报之后（防 --files 预登记"洗白"他人文件；D1225 后本段
 #   不再阻断，登记前置与否只影响 registry 视图新鲜度，故保持原相对次序不变）。
 if [[ -f "$SESSION_REGISTRY" ]]; then
   python3 "$SESSION_REGISTRY" register --session-id "$SESSION_ID" --brief "$REGISTER_BRIEF" --task-id "$TASK_ID" 2>/dev/null || true
@@ -593,7 +593,7 @@ if [[ ${#FILES[@]} -gt 0 ]]; then
   fi
 fi
 
-# ═══ D311 暂存区隔离 (M1b) — 退役（D1223）: 只读归属呈报，本地不预判 ═══
+# ═══ D311 暂存区隔离 (M1b) — 退役（D1225）: 只读归属呈报，本地不预判 ═══
 # 退役依据（K3 R1「认领制退役」项）: 原两条判据都已有**真承重件**，本地副本 = 第三套
 # 解析口径（K3 R1 定罪形态），故整件退役（scripts/control-tower/staging_guard.py 已删）。
 #   ① 认领制防劫持 → scripts/workflow/resolve-commit-brief.sh（strong-anchor 禁用
@@ -609,7 +609,7 @@ fi
 STAGED_LIST=$(git -c core.quotepath=false diff --cached --name-only 2>/dev/null || true)  # D339: 中文文件名不被转义
 if [[ -n "$STAGED_LIST" ]]; then
   # 本脚本只定义 RED/GREEN/YELLOW/NC（无 CYAN）—— 结论行用中性色，避免 set -u 下未定义变量。
-  echo -e "ℹ 暂存区隔离 (D311 M1b) 已退役（D1223）—— 本地不预判；判据面 = CI D708 写集对账 + resolver 防劫持"
+  echo -e "ℹ 暂存区隔离 (D311 M1b) 已退役（D1225）—— 本地不预判；判据面 = CI D708 写集对账 + resolver 防劫持"
   PYBIN=""
   for _c in python3 python py; do
     if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then PYBIN="$_c"; break; fi
