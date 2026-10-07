@@ -27,6 +27,7 @@ redeem-progress.py — 任务交付 → 验收点证据自动兑换（A3.5 环�
 from __future__ import annotations
 
 import argparse
+import os
 import json
 import logging
 import re
@@ -44,6 +45,11 @@ log = logging.getLogger("redeem-progress")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 TASK_STATE_DIR = PROJECT_ROOT / "task-state"
+# E4（K3 R6 禁静默空白）: 迁移期声明在 .claude/claims/。task-state 无卡**不等于**无任务 ——
+#   裸跑会返回"0 任务可兑换"（幂等空跑 exit 0），在仪表盘上表现为**静默空白**。
+#   故下方启动时显式打印迁移期标识（不阻断，但可见）。
+# 注入缝（与 SYNO_CLAIM_DIR / TASK_STATE_DIR 同惯例）: 测试隔离用，生产落默认路径
+CLAIMS_DIR = Path(os.environ.get("SYNO_CLAIMS_DIR") or (PROJECT_ROOT / ".claude" / "claims"))
 EVIDENCE_DIR = PROJECT_ROOT / "docs" / "synova" / "product-lines" / "evidence"
 AUDIT_DIR = PROJECT_ROOT / "docs" / "synova" / "audit-reports"
 
@@ -201,6 +207,18 @@ def main() -> int:
     if not args.task_state_dir.is_dir():
         log.error("degraded: task-state 目录不存在 %s", args.task_state_dir)
         return 2
+
+    # E4（K3 R6 禁静默空白）: 迁移期声明在 .claude/claims/。若 claim 库有内容而本次仍只扫
+    #   task-state，则"0 任务可兑换"是**无判据对象**而非"确实没有" ⇒ 显式打印迁移期标识。
+    if CLAIMS_DIR.is_dir():
+        try:
+            _cn = sum(1 for c in CLAIMS_DIR.glob("*.yaml") if c.stem.isdigit())
+        except OSError as exc:  # 铁律 24/31: 显式降级，不静默
+            _cn = 0
+            log.warning("degraded: claim 目录不可读 %s (%s)", CLAIMS_DIR, exc)
+        if _cn:
+            log.info("[迁移期] 本视图含 task-state 存量（旧 D# 只读）；新任务在 .claude/claims/"
+                     "（%d 条，本次**未纳入兑换**——兑换口径迁移随 D-C 落地）", _cn)
 
     total_written = 0
     total_skipped = []
