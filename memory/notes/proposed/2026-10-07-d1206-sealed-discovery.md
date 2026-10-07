@@ -50,3 +50,22 @@
 1. 若发现面执行集在 CI 上出现"该跑没跑"（面内测试被静默漏执行）连续 2 次 ⇒ 关闭发现制回滚到字面清单。
 2. 若 `#1215` 对合法文档产生误拦（例如新根级 .md 被要求登记但语义上属临时件）⇒ 优先扩 `doc-registry-gate.sh` 的 EXCLUDE（判据本体改动需 K3），而不是关掉 step。
 3. 面扩容（新增发现面目录）= 改 `sealed-tests.sh` 的 `SEALED_FACES` 一行 + 同批上调 `FACE-TOTAL`（可见、可审）。
+
+## 五、实施中发现的两处既有耦合（如实登记）
+
+1. **遗留「接线」判据面**: 约 10 个既有夹具把「本测试已接线」判为「路径出现在 ci.yml 全文」并逐个 grep 自身路径
+   （`alloc-task-id` / `check-citations` / `check-gitlinks` / `check-name-allocation` / `simulate-ci` /
+   `scan-fullwidth-vars` / `gate-failopen-net` / `ct-test-gate` / `ci-ratchet-base` …），另有
+   `check-canary-drift.sh` 以「ci.yml canary 清单」为基准报 131 条不在清单。
+   直接删清单 ⇒ 这些夹具必红（首轮 CI 实测 8 个 FAIL + 1 条 drift 警告）。
+   **处置（本卡）**: ci.yml 内保留 **生成物块** `SEALED-MANIFEST-BEGIN/END`（内容 = `--list` 输出的注释化快照），
+   兼容上述遗留 grep；**执行集不取自该块**（仍取自发现制）⇒ 块过期只影响可读性，由 step 内
+   `::warning` 提示重生成（**不判红** ⇒ 新测试零登记仍自动纳入）。
+   遗留面的彻底收敛（把"接线"判据改为发现制成员判定 + 退役 canary-drift 清单基准）属独立清扫，另立卡。
+2. **同判据双跑**: `tests/control-tower/precommit-groups-injection.test.sh` 已被 gate-integrity job 执行；
+   若它也进入发现面执行集 ⇒ 两条腿同跑同一夹具 ⇒ 显式写入隔离台账（`QUARANTINE-TOTAL` 同批 77→78，留痕）。
+
+## 六、窗口内执行集与时间
+
+- `--list` 实测: 67 条（= 既有 66 + 本卡新增 `sealed-tests.test.sh`，面内零登记自动纳入）。
+- 与旧字面清单逐字相同（66 → 66；`comm` 双向差集空），窗口内执行时间不变。

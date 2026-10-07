@@ -614,6 +614,84 @@ jobs:
             echo "::error title=sealed-tests::发现制清单取数失败（原因见上）—— fail-closed，不静默跳过"
             exit 1
           }
+          # ── SEALED-MANIFEST-BEGIN （生成物: bash scripts/control-tower/sealed-tests.sh --list）──
+          #   用途: ① 兼容「接线 = 路径出现在 ci.yml 全文」类既有夹具（逐个 grep 自己的路径）；
+          #        ② 人读清单。**执行集不取自本块**（取自上面的发现制取数）⇒ 本块过期不影响判定，
+          #        只由 step 内的漂移 ::warning 提示重生成（不判红，故新测试零登记仍自动纳入）。
+          #   重生成: bash scripts/control-tower/sealed-tests.sh --list | sed 's/^/          # /'
+          # tests/control-tower/alloc-task-id-lock.test.sh
+          # tests/control-tower/alloc-task-id-timeout.test.sh
+          # tests/control-tower/alloc-task-id.test.sh
+          # tests/control-tower/brief-parser-strip.test.sh
+          # tests/control-tower/check-canary-drift.test.sh
+          # tests/control-tower/check-citations.test.sh
+          # tests/control-tower/check-doc-contract.test.sh
+          # tests/control-tower/check-dsh-anchor.test.sh
+          # tests/control-tower/check-gate-integrity.test.sh
+          # tests/control-tower/check-gitlinks.test.sh
+          # tests/control-tower/check-k3-report.test.sh
+          # tests/control-tower/check-name-allocation.test.sh
+          # tests/control-tower/check-ontology-fields.test.sh
+          # tests/control-tower/check-preset-bundles.test.sh
+          # tests/control-tower/check-progress-freshness.test.sh
+          # tests/control-tower/check-project-coordinates.test.sh
+          # tests/control-tower/check-required-contexts.test.sh
+          # tests/control-tower/ci-ratchet-base.test.sh
+          # tests/control-tower/ci-signal-classify.test.sh
+          # tests/control-tower/ci-strict-visible.test.sh
+          # tests/control-tower/claim-regex-narrow.test.sh
+          # tests/control-tower/classify-worktrees.test.sh
+          # tests/control-tower/clone-config-init.test.sh
+          # tests/control-tower/clone-shadow-commit.test.sh
+          # tests/control-tower/ct-test-gate.test.sh
+          # tests/control-tower/d956-failmsg.test.sh
+          # tests/control-tower/daily-cto-board-ratio.test.sh
+          # tests/control-tower/fastlane-bypass-only.test.sh
+          # tests/control-tower/fastlane-extended.test.sh
+          # tests/control-tower/g12-day-window.test.sh
+          # tests/control-tower/gate-failopen-net.test.sh
+          # tests/control-tower/gate-retirement-report.test.sh
+          # tests/control-tower/gate-stats.test.sh
+          # tests/control-tower/grep-oP-regression.test.sh
+          # tests/control-tower/incident-loop.test.sh
+          # tests/control-tower/install-deps.test.sh
+          # tests/control-tower/install-dsh-preset.test.sh
+          # tests/control-tower/log-snapshot.test.sh
+          # tests/control-tower/loop-context.test.sh
+          # tests/control-tower/merge_writeset_gate.test.sh
+          # tests/control-tower/parallel-main-tree-occupancy.test.sh
+          # tests/control-tower/platform-checklist.test.sh
+          # tests/control-tower/post-commit-marker.test.sh
+          # tests/control-tower/post-commit.test.sh
+          # tests/control-tower/q2-error-locating.test.sh
+          # tests/control-tower/scan-fullwidth-vars.test.sh
+          # tests/control-tower/sealed-tests.test.sh
+          # tests/control-tower/simulate-ci.test.sh
+          # tests/control-tower/skeleton-brief-gate.test.sh
+          # tests/control-tower/sync_project_coordinates.test.sh
+          # tests/control-tower/synova-commit.test.sh
+          # tests/control-tower/synova-submit.test.sh
+          # tests/control-tower/tag-ancestry.test.sh
+          # tests/control-tower/task-start-parallel.test.sh
+          # tests/control-tower/validate_doc_contract.test.sh
+          # tests/control-tower/verdict-baseline.test.sh
+          # tests/control-tower/verify-claims-table.test.sh
+          # tests/control-tower/verify-doc.test.sh
+          # tests/control-tower/verify-parallel-ci.test.sh
+          # tests/control-tower/verify-parallel.test.sh
+          # tests/control-tower/write-set-check.test.sh
+          # tests/doc-system/check-doc-truth.test.sh
+          # tests/doc-system/doc-categories.test.sh
+          # tests/doc-system/doc-registry-gate.test.sh
+          # tests/doc-system/doc-staleness.test.sh
+          # tests/doc-system/doc-triage.test.sh
+          # tests/doc-system/generate-chronicle-monthly.test.sh
+          # ── SEALED-MANIFEST-END ──
+          # 漂移提示（**不判红**）：本块是生成物，过期只影响「人读 + 遗留接线夹具」的可读性。
+          MANIFEST_BLOCK="$(sed -n '/SEALED-MANIFEST-BEGIN/,/SEALED-MANIFEST-END/p' .github/workflows/ci.yml | sed 's/^ *//; s/^# *//' | grep -E '^tests/' | sort -u)"
+          if [ "$MANIFEST_BLOCK" != "$(printf '%s\n' $SEALED_LIST | sort -u)" ]; then
+            echo "::warning title=sealed-manifest::SEALED-MANIFEST 块与发现制执行集不一致（生成物过期）—— 重生成: bash scripts/control-tower/sealed-tests.sh --list | sed 's|^|          # |'（不判红）"
+          fi
           for t in $SEALED_LIST; do
             echo "── $t"
             # D1147: D1094 平台跳过名单随 windows 腿迁出本 job——本矩阵已收敛为单元素 ubuntu
@@ -1125,6 +1203,84 @@ jobs:
             echo "::error title=sealed-tests::发现制清单取数失败（原因见上）—— fail-closed，不静默跳过"
             exit 1
           }
+          # ── SEALED-MANIFEST-BEGIN （生成物: bash scripts/control-tower/sealed-tests.sh --list）──
+          #   用途: ① 兼容「接线 = 路径出现在 ci.yml 全文」类既有夹具（逐个 grep 自己的路径）；
+          #        ② 人读清单。**执行集不取自本块**（取自上面的发现制取数）⇒ 本块过期不影响判定，
+          #        只由 step 内的漂移 ::warning 提示重生成（不判红，故新测试零登记仍自动纳入）。
+          #   重生成: bash scripts/control-tower/sealed-tests.sh --list | sed 's/^/          # /'
+          # tests/control-tower/alloc-task-id-lock.test.sh
+          # tests/control-tower/alloc-task-id-timeout.test.sh
+          # tests/control-tower/alloc-task-id.test.sh
+          # tests/control-tower/brief-parser-strip.test.sh
+          # tests/control-tower/check-canary-drift.test.sh
+          # tests/control-tower/check-citations.test.sh
+          # tests/control-tower/check-doc-contract.test.sh
+          # tests/control-tower/check-dsh-anchor.test.sh
+          # tests/control-tower/check-gate-integrity.test.sh
+          # tests/control-tower/check-gitlinks.test.sh
+          # tests/control-tower/check-k3-report.test.sh
+          # tests/control-tower/check-name-allocation.test.sh
+          # tests/control-tower/check-ontology-fields.test.sh
+          # tests/control-tower/check-preset-bundles.test.sh
+          # tests/control-tower/check-progress-freshness.test.sh
+          # tests/control-tower/check-project-coordinates.test.sh
+          # tests/control-tower/check-required-contexts.test.sh
+          # tests/control-tower/ci-ratchet-base.test.sh
+          # tests/control-tower/ci-signal-classify.test.sh
+          # tests/control-tower/ci-strict-visible.test.sh
+          # tests/control-tower/claim-regex-narrow.test.sh
+          # tests/control-tower/classify-worktrees.test.sh
+          # tests/control-tower/clone-config-init.test.sh
+          # tests/control-tower/clone-shadow-commit.test.sh
+          # tests/control-tower/ct-test-gate.test.sh
+          # tests/control-tower/d956-failmsg.test.sh
+          # tests/control-tower/daily-cto-board-ratio.test.sh
+          # tests/control-tower/fastlane-bypass-only.test.sh
+          # tests/control-tower/fastlane-extended.test.sh
+          # tests/control-tower/g12-day-window.test.sh
+          # tests/control-tower/gate-failopen-net.test.sh
+          # tests/control-tower/gate-retirement-report.test.sh
+          # tests/control-tower/gate-stats.test.sh
+          # tests/control-tower/grep-oP-regression.test.sh
+          # tests/control-tower/incident-loop.test.sh
+          # tests/control-tower/install-deps.test.sh
+          # tests/control-tower/install-dsh-preset.test.sh
+          # tests/control-tower/log-snapshot.test.sh
+          # tests/control-tower/loop-context.test.sh
+          # tests/control-tower/merge_writeset_gate.test.sh
+          # tests/control-tower/parallel-main-tree-occupancy.test.sh
+          # tests/control-tower/platform-checklist.test.sh
+          # tests/control-tower/post-commit-marker.test.sh
+          # tests/control-tower/post-commit.test.sh
+          # tests/control-tower/q2-error-locating.test.sh
+          # tests/control-tower/scan-fullwidth-vars.test.sh
+          # tests/control-tower/sealed-tests.test.sh
+          # tests/control-tower/simulate-ci.test.sh
+          # tests/control-tower/skeleton-brief-gate.test.sh
+          # tests/control-tower/sync_project_coordinates.test.sh
+          # tests/control-tower/synova-commit.test.sh
+          # tests/control-tower/synova-submit.test.sh
+          # tests/control-tower/tag-ancestry.test.sh
+          # tests/control-tower/task-start-parallel.test.sh
+          # tests/control-tower/validate_doc_contract.test.sh
+          # tests/control-tower/verdict-baseline.test.sh
+          # tests/control-tower/verify-claims-table.test.sh
+          # tests/control-tower/verify-doc.test.sh
+          # tests/control-tower/verify-parallel-ci.test.sh
+          # tests/control-tower/verify-parallel.test.sh
+          # tests/control-tower/write-set-check.test.sh
+          # tests/doc-system/check-doc-truth.test.sh
+          # tests/doc-system/doc-categories.test.sh
+          # tests/doc-system/doc-registry-gate.test.sh
+          # tests/doc-system/doc-staleness.test.sh
+          # tests/doc-system/doc-triage.test.sh
+          # tests/doc-system/generate-chronicle-monthly.test.sh
+          # ── SEALED-MANIFEST-END ──
+          # 漂移提示（**不判红**）：本块是生成物，过期只影响「人读 + 遗留接线夹具」的可读性。
+          MANIFEST_BLOCK="$(sed -n '/SEALED-MANIFEST-BEGIN/,/SEALED-MANIFEST-END/p' .github/workflows/ci.yml | sed 's/^ *//; s/^# *//' | grep -E '^tests/' | sort -u)"
+          if [ "$MANIFEST_BLOCK" != "$(printf '%s\n' $SEALED_LIST | sort -u)" ]; then
+            echo "::warning title=sealed-manifest::SEALED-MANIFEST 块与发现制执行集不一致（生成物过期）—— 重生成: bash scripts/control-tower/sealed-tests.sh --list | sed 's|^|          # |'（不判红）"
+          fi
           for t in $SEALED_LIST; do
             echo "── $t"
             # D1094 平台跳过名单（**只在顾问腿**；分层原则：平台无关的失败不该污染 Windows 信号，

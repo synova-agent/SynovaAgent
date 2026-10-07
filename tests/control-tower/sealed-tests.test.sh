@@ -113,7 +113,8 @@ fi
 
 # ── 接线: ci.yml 两腿均取发现制清单（不再有字面 for t in 清单）──
 CI="$REPO/.github/workflows/ci.yml"
-N_DISC="$(grep -c 'sealed-tests.sh --list' "$CI" || true)"
+# 只计**取数执行点**（`SEALED_LIST="$(bash … --list)"`）——生成物块/漂移提示文本里的命令串不算
+N_DISC="$(grep -cF 'SEALED_LIST="$(bash scripts/control-tower/sealed-tests.sh --list)"' "$CI" || true)"
 [ "$N_DISC" -eq 2 ] && ok "接线: ci.yml 两条腿均调用发现制（2 处）" || no "接线: 发现制调用点 = ${N_DISC}（应 2）"
 if grep -qE '^\s+tests/[A-Za-z0-9_./-]+\.test\.(sh|py)[;]? do$' "$CI"; then
   no "接线: ci.yml 仍存字面密封清单（双真相源）"
