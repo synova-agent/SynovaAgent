@@ -27,20 +27,26 @@
 - 母题：**"两套"**（读侧接了本体轴、写侧没接 ⇒ 读写不对称）
 
 ## Q2: 范围 — 正确的最简方案
-做什么：
-- 8 × `extensions/ontology/field-mappings/*.json` — `targetNodeType` → 同名本体轴（Innovation/Financial 用主目标）
-- `extensions/ontology/node-type-mapping.json` — 补 5 条（targets[0] = 主目标；Innovation 双目标）
-- `src/agent/data-ingest-service.ts` — ① `loadNodeTypeSchema` 支持限定名 ② 缺失告警含**候选路径** ③ `standardKey` 段派生保守化
-- `tests/agent/write-side-axis-alignment.test.ts`（新）— V1/V2/V2-b/V3/M4/M3
-- `tests/agent/data-ingest-service.test.ts`（**必要连带**）— 期望对齐本体轴名（6 处）
-- claim + brief
+做什么（**逐文件显式列全**；🔴 **本批 4/8**（D734 预算 ⇒ 机械拆 4+4）：
+- extensions/ontology/field-mappings/competitive-intel.json — targetNodeType → outcome/competitive
+- extensions/ontology/field-mappings/crm-standard.json — targetNodeType → resource/client
+- extensions/ontology/field-mappings/erp-operational.json — targetNodeType → outcome/operational
+- extensions/ontology/field-mappings/external-intel.json — targetNodeType → outcome/external
+- extensions/ontology/node-type-mapping.json — 补 5 条读侧条目（Competitive/Operational/External/Person/Innovation）
+- src/agent/data-ingest-service.ts — loadNodeTypeSchema 支持限定名 + 缺失告警含候选路径 + standardKey 段派生
+- tests/agent/write-side-axis-alignment.test.ts — 新建（V1/V2/V2-b/V3/M4/M3）
+- tests/agent/data-ingest-service.test.ts — 必要连带（期望对齐本体轴名）
+- .claude/claims/1395.yaml — 写集声明
+- .claude/task-briefs/2026-10-08-1395-write-side-axis-alignment.md — 本 brief
+
+下一批（B2，**本批不声称**）：extensions/ontology/field-mappings/erp-standard.json｜hr-standard.json｜innovation-pipeline.json｜risk-register.json
 
 不做什么（逐条含具体文件名）：
-- 不改 `extensions/ontology/field-mappings/csv-money.json`（已是本体轴 `resource/money`，无需动）
-- 不改 `src/l4/graph-bridge.ts`（standardKey 冲突检测属既有路径；本卡**暴露**其缺口但不修）
-- 不改 `extensions/ontology/node-type-mapping.json` 中既有 3 条（Client/Financial/Risk 已正确）
-- 不改 `src/sentinel/org-scope.ts`（#1393 已合）
-- **不**为 `resource/tool` 建写入者（无上游 ⇒ 硬造 = 造数据）
+- 不改 extensions/ontology/field-mappings/csv-money.json（已是本体轴 resource/money）
+- 不改 src/l4/graph-bridge.ts（standardKey 冲突检测属既有路径；本卡只登记其缺口）
+- 不改 src/sentinel/org-scope.ts（#1393 已合）
+- 不改 extensions/sentinels/agent-deployment-maturity/aggregate.ts（#1387 B1 已改）
+- 不建 resource/tool 写入者（无上游 ⇒ 硬造 = 造数据）
 
 范围外约束（非文件级）：三层字段不统一 ⇒ #1398；ingest 绕过冲突检测 ⇒ 另议（本卡只登记）。
 

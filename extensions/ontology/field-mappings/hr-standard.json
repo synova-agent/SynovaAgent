@@ -1,7 +1,7 @@
 {
   "name": "hr-standard",
   "label": "标准HR系统导出",
-  "targetNodeType": "resource/person",
+  "targetNodeType": "Person",
   "mappings": [
     { "externalField": "员工总数", "prop": "headcount", "type": "number" },
     { "externalField": "离职率", "prop": "turnover_rate", "type": "number" },

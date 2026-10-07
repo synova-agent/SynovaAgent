@@ -16,7 +16,10 @@ import { ingestBatch, loadFieldMapping, loadNodeTypeSchema } from '../../src/age
 import { withOrgScope } from '../../src/sentinel/org-scope';
 
 const MAP_DIR = 'extensions/ontology/field-mappings';
-const MAPPINGS = ['competitive-intel', 'crm-standard', 'erp-operational', 'erp-standard', 'external-intel', 'hr-standard', 'innovation-pipeline', 'risk-register'];
+// 🔴 **批次作用域（D734 预算 ⇒ 机械拆 4+4）**：本批 = 前 4 个；
+//   其余 4 个（erp-standard / hr-standard / innovation-pipeline / risk-register）⇒ **下一批 B2**（本批**不声称**）
+const MAPPINGS = ['competitive-intel', 'crm-standard', 'erp-operational', 'external-intel'];
+const NEXT_BATCH = ['erp-standard', 'hr-standard', 'innovation-pipeline', 'risk-register'];
 /** 本体轴类型全集（40）—— 真源：packages/ontology/src/node-types.ts */
 const ONTOLOGY = new Set((readFileSync('packages/ontology/src/node-types.ts', 'utf-8').match(/'[a-z]+\/[a-z_]+'/g) ?? []).map(s => s.replace(/'/g, '')));
 
@@ -26,13 +29,19 @@ function mappingTarget(name: string): string {
 }
 
 describe('#1395 写入侧类型对齐本体轴', () => {
-  it('V1【形态扫描·只证明形态】8 个 mapping 的 targetNodeType ∈ 本体轴（40 类型）', () => {
+  it('V1【形态扫描·只证明形态】本批 4 个 mapping 的 targetNodeType ∈ 本体轴（40）｜覆盖面 4/8（另 4 个待 B2）', () => {
     for (const m of MAPPINGS) {
       const t = mappingTarget(m);
       expect(t.includes('/'), `${m}: ${t} 应为限定名`).toBe(true);
       expect(ONTOLOGY.has(t), `${m}: ${t} 不在本体轴 40 类型内`).toBe(true);
     }
     expect(ONTOLOGY.size).toBe(40);
+    // 覆盖面声明（R178 口径的"显式声明"）：本批 4/8；其余 4 个**未在本批处理**（不得读成"8 个已改"）
+    expect(MAPPINGS.length).toBe(4);
+    for (const n of NEXT_BATCH) {
+      const legacy = JSON.parse(readFileSync(`${MAP_DIR}/${n}.json`, 'utf-8')) as { targetNodeType: string };
+      expect(legacy.targetNodeType.includes('/'), `${n} 属下一批（B2）⇒ 本批不应声称已对齐`).toBe(false);
+    }
   });
 
   it('V3【形态扫描·只证明形态】**两侧同步**：每个 mapping 的目标 ∈ 读侧字典某条目的 targets', () => {
@@ -63,20 +72,20 @@ describe('#1395 写入侧类型对齐本体轴', () => {
   });
 
   it('🔴 V2-b【行为断言】键段不变：目标=本体轴，standardKey 段仍为遗留形态（字节不变）', async () => {
-    // 口径：选**声明了 `period` 的 schema**（`erp-standard → outcome/financial`）；
+    // 口径：选**声明了 `period` 的 schema**（本批 `competitive-intel → outcome/competitive`）；
     //   `resource/client` / `resource/person` 未声明 period ⇒ 白名单丢弃 ⇒ 无 standardKey（**预存在**，另登记）
     const db = new Database(':memory:');
     const store = new SqliteGraphStore(db);
     const mk = () => ({ createNode: (t: string, p: Record<string, unknown>, g: string) => store.createNode(t, p, g) });
-    const row = [{ 营业收入: 1000, 期间: '2026-Q2' }];
-    await ingestBatch(mk(), loadFieldMapping('erp-standard')!, row, 'default');
+    const row = [{ 市场份额: 25, 期间: '2026-Q2' }];
+    await ingestBatch(mk(), loadFieldMapping('competitive-intel')!, row, 'default');
     const first = db.prepare('SELECT type, props FROM graph_nodes LIMIT 1').get() as { type: string; props: string };
-    expect(first.type, '节点类型 = 本体轴').toBe('outcome/financial');
-    expect(JSON.parse(first.props).standardKey ?? '', 'standardKey 段须为遗留形态（键字节不变）').toContain(':Financial:');
+    expect(first.type, '节点类型 = 本体轴').toBe('outcome/competitive');
+    expect(JSON.parse(first.props).standardKey ?? '', 'standardKey 段须为遗留形态（键字节不变）').toContain(':Competitive:');
     // ⚠️ **预存在缺陷（本卡暴露，不属本卡范围）**：`ingestRow` **直接 `store.createNode`**，
     //   而 standardKey 冲突检测在 `src/l4/graph-bridge.ts:77-94`（另一条写入路径）⇒ 本路径**绕过检测** ⇒ 重复导入产生重复行。
     //   本卡的义务：**键字节不变**（下断言）⇒ 幂等语义与改前**完全一致**（缺陷不因本卡变好或变坏）。
-    await ingestBatch(mk(), loadFieldMapping('erp-standard')!, row, 'default');
+    await ingestBatch(mk(), loadFieldMapping('competitive-intel')!, row, 'default');
     const n = (db.prepare('SELECT COUNT(*) AS n FROM graph_nodes').get() as { n: number }).n;
     expect(n, '（登记）本路径无冲突检测 ⇒ 2 行；本卡只保证键不变').toBe(2);
   });

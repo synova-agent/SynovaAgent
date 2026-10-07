@@ -1,4 +1,6 @@
 # .claude/claims/1395.yaml — #1395（写入侧类型对齐本体轴）写集声明（D708 的 S0 源）
+#   **批次作用域（D734 预算 ⇒ 机械拆 4+4）**：本批 B1 = 4 个 mapping；B2 = erp-standard/hr-standard/
+#   innovation-pipeline/risk-register（**下一批**，本批不声称）
 #
 # CTO 2026-10-08 裁：**改动面 8×3**（mapping 目标 + 读侧字典 + loadNodeTypeSchema 支持限定名）
 #                 裁 (a)：写入侧写【主目标】= 读侧字典 targets[0]；多目标由读侧承担（**不写两份 = 不复制数据**）
@@ -9,11 +11,7 @@ writeset:
   - extensions/ontology/field-mappings/competitive-intel.json
   - extensions/ontology/field-mappings/crm-standard.json
   - extensions/ontology/field-mappings/erp-operational.json
-  - extensions/ontology/field-mappings/erp-standard.json
   - extensions/ontology/field-mappings/external-intel.json
-  - extensions/ontology/field-mappings/hr-standard.json
-  - extensions/ontology/field-mappings/innovation-pipeline.json
-  - extensions/ontology/field-mappings/risk-register.json
   - extensions/ontology/node-type-mapping.json
   - src/agent/data-ingest-service.ts
   - tests/agent/write-side-axis-alignment.test.ts
@@ -23,4 +21,4 @@ done:
   - verify: npx vitest run tests/agent/ tests/sentinel/ tests/l3/ tests/ontology/
   - verify: test "$(git grep -c "loadNodeTypeSchema" HEAD -- src/agent/data-ingest-service.ts | tr -d '\n')" -ge 1
   - verify: npx tsc --noEmit
-note: 8 个 mapping 目标 → 同名本体轴（主目标=字典 targets[0]）；读侧字典补 5 条（Competitive/Operational/External/Person/Innovation）；loadNodeTypeSchema 支持限定名 + 候选路径告警。**保守解法**：standardKey 段由限定名末段派生（键字节不变 ⇒ 幂等语义与改前一致）。**暴露的预存在缺陷**：ingest 路径直接 createNode ⇒ 绕过 graph-bridge 的 standardKey 冲突检测 ⇒ 重复导入产生重复行（已在判据 V2-b 中显式登记）。
+note: **本批 4/8**：competitive-intel/crm-standard/erp-operational/external-intel → 同名本体轴（主目标=字典 targets[0]）；读侧字典补 5 条（Competitive/Operational/External/Person/Innovation）；loadNodeTypeSchema 支持限定名 + 候选路径告警。**保守解法**：standardKey 段由限定名末段派生（键字节不变 ⇒ 幂等语义与改前一致）。**暴露的预存在缺陷**：ingest 路径直接 createNode ⇒ 绕过 graph-bridge 的 standardKey 冲突检测 ⇒ 重复导入产生重复行（已在判据 V2-b 中显式登记）。
