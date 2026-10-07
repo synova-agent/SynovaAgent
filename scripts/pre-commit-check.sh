@@ -1054,8 +1054,18 @@ if [ -n "$DECL_SRC" ]; then   # D1148: 合并提交且无自撰文件时为空 �
       TASK_BRIEF_EMPTY="${TASK_BRIEF_EMPTY}  claim 检查自身失败 rc=${CLAIM_CHK_RC}: $(printf '%s' "$CLAIM_CHK_OUT" | head -1)\n"
     fi
   else
-    # v3.9: 兼容 ## Q0: 和 ## Q0 定位: 两种标题格式
-    for q in "Q0" "Q1" "Q2" "Q3"; do
+    # v3.9 兼容 ## Q0: / ## Q0 定位: 两种标题格式；D1220 起只查 Q1–Q3（Q0 项退役，见下）。
+    # ═══ D1220（卡 #1222 D-A2）退役: Q0 段（定位 — 项目拼图 + 文件审计）的「已填写」检查 ═══
+    #   退役判据（载体退役）: Q0 的实质是**人读的项目拼图/文件审计散文**，无机器可判阈值；
+    #     在 claim 载体（writeset + done 两字段制）下该段按设计不适用（#1275 已在组 6 显式打印该结论）。
+    #   替代: claim 载体的 `claim_store.py --check`（writeset 非空 + done 每条含 verify:）。
+    #   口径（本卡最保守解释，如实标注）: **只退 Q0**；Q1 调研 / Q2 范围 / Q3 验收 保留——
+    #     它们分别承载调研依据 / 写集声明 / 验收链路，机器可判性高于 Q0。
+    #     ⚠️ 若需连 Q1–Q3 一并退役（= 6 字段 → 架构层 + Done 两项），删本行数组的两个元素即可；
+    #     该扩展属**更大判据变更**，须另裁（不在本卡范围）。
+    #   代价（如实）: brief 的 Q0 段留空不再被拦（其内容本就不参与任何机器判定）。
+    #   复活须过 K3（判据变更）。关联: memory/notes/proposed/2026-10-07-d1220-da2-retirement.md
+    for q in "Q1" "Q2" "Q3"; do
       SECTION=$(awk "/^## ${q}(:| )/{found=1; next} /^## /{if(found) exit} found" "$BRIEF" 2>/dev/null)
       FILLED=$(echo "$SECTION" | grep -v "^<!--\|^$" | tr -d "[:space:]" | head -1)
       if [ -z "$FILLED" ] || [ ${#FILLED} -lt 3 ]; then
@@ -1110,15 +1120,18 @@ for bf in $(echo "$STAGED_ALL" | grep -E '^\.claude/task-briefs/.*\.md$' || true
 done
 # ↑ D1148: 原 `hard_check "骨架 brief 占位符检测…"` 独立执行点 → 并入闸①（SKEL_BRIEF 变量保留）
 
-# V4.5.1: 时间戳顺序检查 — PreToolUse 发现 brief 未填就写代码时记录证据到 /tmp/
-# 此文件在 git 之外，不能被 git checkout 抹掉。必须显式 rm 才能解除阻断。
-BEFORE_BRIEF_EVI="/tmp/.synova-before-brief"
-BEFORE_BRIEF_MSG=""
-if [ -f "$BEFORE_BRIEF_EVI" ]; then
-  EVI_CONTENT=$(head -5 "$BEFORE_BRIEF_EVI" 2>/dev/null)
-  BEFORE_BRIEF_MSG="代码在 brief 填写前已写入:\n${EVI_CONTENT}\n解决方法: rm ${BEFORE_BRIEF_EVI} && git checkout -- . && bash scripts/workflow/task-start.sh"
-fi
-# ↑ D1148: 原 `soft_check "时间戳顺序…"` 独立执行点 → 并入闸①（BEFORE_BRIEF_MSG 保留）
+# ═══ D1220（卡 #1222 D-A2）退役: 时间戳顺序检查（原 V4.5.1，D1148 并入闸①）═══
+#   原形态: 读**仓库外绝对路径** /tmp/.synova-before-brief（PreToolUse 在「brief 未填就写代码」时写证据），
+#     命中则经闸① 的 BEFORE_BRIEF_MSG 硬阻断。
+#   退役判据: **写者已不存在** —— 该 marker 的唯一写者是 PreToolUse hook，随 **D1146**（CC 退役：
+#     `.claude/settings.json` hooks 段整段移除、11 个登记点归零）消失；全树只剩 reader + 文档 + 夹具
+#     ⇒ 判据恒空 = 死代码（铁律 37）。
+#   附带代价（实测）: 读仓库外绝对路径 ⇒ 宿主机残留 marker 会让 hermetic 夹具假红；
+#     `precommit-groups-injection.test.sh` 因此自带 HOST_STATE 归因 + sed 补丁探针 —— 三件已**同 PR 退役**，
+#     并换成反向断言（把该绝对路径读取加回 ⇒ 判红）。
+#   替代: 无（亦无对象）。「先声明后写码」的顺序语义在 claim 载体下由 writeset 声明承担。
+#   代价（如实）: 本地不再有「写码早于声明」的**顺序证据** —— 但该证据落在 /tmp、可 `rm` 规避，历史上从未可靠。
+#   复活须过 K3（判据变更）且须先恢复写者。关联: memory/notes/proposed/2026-10-07-d1220-da2-retirement.md
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 声明闸① brief schema（D1148 合并 15→3）
@@ -1136,7 +1149,7 @@ Q0C_MSG=""
 if [ "$Q0C_RC" -ne 0 ]; then
   Q0C_MSG="$(printf '%s\n' "$Q0C_OUT" | grep -v '^[[:space:]]*$' | head -4)\n"
 fi
-DECL1="${TASK_BRIEF_MISSING:-}${TASK_BRIEF_EMPTY:-}${SKEL_BRIEF:-}${BEFORE_BRIEF_MSG:-}${Q0C_MSG}"
+DECL1="${TASK_BRIEF_MISSING:-}${TASK_BRIEF_EMPTY:-}${SKEL_BRIEF:-}${Q0C_MSG}"
 # D1148: 三闸**显式保留 ✅ 行**（QUIET_SUCCESS=0 前缀）——让「声明类收敛为三条硬闸」在每次
 #   提交日志里可见（审计可核），代价 3 行输出（总行数预算内）。
 #   合并提交且无自撰文件（DECL_MERGE_SKIP=1）→ 三闸无对象：**显式打一行跳过**（不静默），
@@ -1144,7 +1157,7 @@ DECL1="${TASK_BRIEF_MISSING:-}${TASK_BRIEF_EMPTY:-}${SKEL_BRIEF:-}${BEFORE_BRIEF
 if [ "$DECL_MERGE_SKIP" = "1" ]; then
   echo -e "  ${YELLOW}⏭ 声明类三闸：合并提交且无自撰文件（两父文件各已在各自 PR 受门禁）→ 闸①②③ 无对象，跳过${RESET}"
 else
-  QUIET_SUCCESS=0 decl_check "声明闸① brief schema（6 字段/骨架/时间戳/Q0 系列；D1148 合并 15→3）" "${DECL1:-}"
+  QUIET_SUCCESS=0 decl_check "声明闸① brief schema（Q1–Q3/架构层/Done/骨架/Q0c；D1220 退时间戳+Q0）" "${DECL1:-}"
 fi
 
 # D472: Agent Notes 迁移门禁 — proposed/ 有变更时扫僵尸条目（条件触发保持 <1s，V4.5.1 性能纪律）
@@ -1596,7 +1609,60 @@ ALL_TODAY_BRIEFS=$(today_files_by_prefix "$ROOT/.claude/task-briefs/" | sort || 
 [ -z "$ALL_TODAY_BRIEFS" ] && [ -n "$CUR_BRIEF_PATH" ] && ALL_TODAY_BRIEFS="$CUR_BRIEF_PATH"
 SCOPE_VIOLATION=""
 
-if [ -n "$ALL_TODAY_BRIEFS" ] && [ -n "$STAGED_ALL" ]; then
+# ═══ D1220（卡 #1222 D-A2）: 组 12 claim 载体覆盖判定（开关 SYNO_CLAIM_V2，默认关）═══
+#   缺陷（实测，本卡修的就是它）: 组 12 原只认 legacy 散文 brief —— 按 ±1 天窗口 glob
+#     `.claude/task-briefs/*.md`。claim 载体（`.claude/claims/<issue>.yaml`）下 ALL_TODAY_BRIEFS
+#     为空 ⇒ 下面 `if [ -n "$ALL_TODAY_BRIEFS" ] …` 为假 ⇒ **整段跳过、组 12 静默放行**
+#     （假绿：合法 claim 用户失去全部写集约束）。
+#   修法（同源改造，与组 6 的 claim 双形态同构）:
+#     ① 开关 SYNO_CLAIM_V2 关 ⇒ **逐字节 legacy**（回滚 = 关开关，判据零改动）；
+#     ② 开 ⇒ 先以 `claim_store.py --coverage`（**全 claim 并集**；`--resolve` 是最佳单 claim，
+#        多线并发时会假红，故不用）判覆盖；被 claim 覆盖的文件视为已声明；
+#     ③ **未被 claim 覆盖的余量**再走 legacy brief 判定（迁移期双载体并存 ⇒ 取并集，
+#        既不假绿也不假红）；claim 数为 0 时**显式打印空集**并全部回落 legacy（禁静默跳过）；
+#     ④ 三态: claim 检查自身失败（畸形 claim ⇒ rc=2）⇒ 计硬红，不与「通过」混同。
+_G12_JUDGE_SET="${STAGED_ALL}"          # 送 legacy 判定的文件集（缺省=全部）
+_G12_CLAIM_STATUS="off"
+if [ "${CLAIM_V2:-0}" = "1" ] && [ -n "$STAGED_ALL" ]; then
+  _G12_C_OUT="$(printf '%s\n' "$STAGED_ALL" | python3 "$ROOT/scripts/control-tower/claim_store.py" --coverage --root "$ROOT" 2>&1)"
+  _G12_C_RC=$?
+  if [ "$_G12_C_RC" -eq 2 ]; then
+    _G12_CLAIM_STATUS="self-fail"
+    echo -e "  ${RED}❌ 组 12 claim 覆盖判定: 检查自身失败（claim 畸形，rc=2）—— 不得判『无声明』${RESET}"
+    printf '%s\n' "$_G12_C_OUT" | head -3 | sed 's/^/     /'
+    HARD_FAIL=$((HARD_FAIL + 1))
+    log_gate "组 12 claim 覆盖判定（自身失败）" hit
+  elif [ "$_G12_C_RC" -ne 0 ]; then
+    _G12_CLAIM_STATUS="self-fail"
+    echo -e "  ${RED}❌ 组 12 claim 覆盖判定: 无法执行（rc=${_G12_C_RC}）${RESET}"
+    printf '%s\n' "$_G12_C_OUT" | head -3 | sed 's/^/     /'
+    HARD_FAIL=$((HARD_FAIL + 1))
+    log_gate "组 12 claim 覆盖判定（无法执行）" hit
+  else
+    _G12_CLAIM_STATUS="on"
+    _G12_C_REASON="$(printf '%s' "$_G12_C_OUT" | python3 -c "import json,sys;print(json.load(sys.stdin).get('reason',''))" 2>/dev/null || echo "")"
+    _G12_C_REMAIN="$(printf '%s' "$_G12_C_OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+print('\n'.join(d.get('uncovered',[])))" 2>/dev/null || echo "")"
+    # 显式打印（禁静默空白，铁律 11）: claim 数 / 覆盖数 / 余量去向
+    echo -e "  ${CYAN}ℹ️  组 12 claim 载体: ${_G12_C_REASON}${RESET}"
+    _G12_JUDGE_SET="${_G12_C_REMAIN}"
+    if [ -z "$_G12_JUDGE_SET" ]; then
+      echo -e "  ${GREEN}✅ 组 12 claim 载体: 全部暂存文件均被 claim 覆盖（legacy 判定无对象）${RESET}"
+    else
+      echo -e "  ${CYAN}ℹ️  组 12 claim 载体: 余量 $(printf '%s\n' "$_G12_JUDGE_SET" | grep -c .) 个文件回落 legacy brief 判定${RESET}"
+    fi
+  fi
+fi
+
+if [ -n "$_G12_JUDGE_SET" ] && [ "$_G12_CLAIM_STATUS" = "on" ] && [ -z "$ALL_TODAY_BRIEFS" ]; then
+  # ═══ D1220（本卡修的核心假绿）: claim 模式 + **无 legacy 声明载体** ⇒ 余量文件无任何声明 ═══
+  #   原实现: ALL_TODAY_BRIEFS 为空 ⇒ 下面 legacy 块整段跳过 ⇒ **静默放行**（claim 载体用户
+  #   失去全部写集约束）。现改为显式判红。开关关时本分支不可达 ⇒ 逐字节 legacy 不受影响。
+  SCOPE_VIOLATION="$(printf '%s\n' "$_G12_JUDGE_SET" | grep -v '^[[:space:]]*$' \
+    | sed 's/^/  /;s/$/ (未被任何 claim 声明覆盖；且本提交无 legacy brief 载体)\n/')"
+elif [ -n "$_G12_JUDGE_SET" ] && [ -n "$ALL_TODAY_BRIEFS" ]; then
   # 认领制 v2 (D296 复查): 每个文件由**认领它的 brief** 判定通过与排除
   #   - 被 ≥1 个今日 brief 认领 → 通过 (除非认领者自身排除它)
   #   - 未被任何 brief 认领 → 阻断 (不在任何任务范围)
@@ -1620,7 +1686,7 @@ if [ -n "$ALL_TODAY_BRIEFS" ] && [ -n "$STAGED_ALL" ]; then
   # D296 认领制 v2: 按 per-brief TSV 判定, 排除只来自认领该文件的 brief
   SCOPE_VIOLATION=$(python3 -c "
 import re, sys
-staged = '''$STAGED_ALL'''.split('\n')
+staged = '''$_G12_JUDGE_SET'''.split('\n')
 def load_tsv(path):
     out = []
     try:

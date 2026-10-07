@@ -466,7 +466,18 @@ function applyThresholdAdjust(action: EvolutionAction, result: ApplyActionResult
     }
 
     const overrides = config.thresholdOverrides as Record<string, unknown> | undefined;
-    if (!overrides || !overrides[sentinelKey]) continue;
+    if (!overrides || !overrides[sentinelKey]) {
+      // K6/缺陷①(CTO 2026-10-08): 原为**静默 continue** —— 目标哨兵在 thresholdOverrides
+      //   无实体时既不 warn 也不计数，只在全行业皆无时落一个笼统的 skipped++ ⇒
+      //   「目标名写错 / 配置漏登记」这种可修问题会**永久静默失效**（违铁律 11/24）。
+      //   ⇒ 逐行业 warn（带行业名便于定位）；**不 push errors**（"本行业无此 key"属正常，
+      //     只有"全行业皆无"才是问题，由下方 !found 分支统一记错误）。
+      log.warn(
+        { sentinelKey, industry: industry.name },
+        "GA 阈值调整跳过：本行业 thresholdOverrides 无此哨兵实体（配置漏登记或哨兵名不符）",
+      );
+      continue;
+    }
 
     const entry = overrides[sentinelKey] as Record<string, number>;
     if (!entry || typeof entry.warning !== "number") continue;
@@ -512,10 +523,24 @@ function applyThresholdAdjust(action: EvolutionAction, result: ApplyActionResult
       previousCritical: oldC, newCritical: entry.critical,
       industry: industry.name,
     });
-    break;
+    // K6/缺陷②(CTO 2026-10-08): 原此处 `break` ⇒ **只调第一个命中行业即退出**。
+    //   实测 `F1_KZ` 存在于 4 个行业的 thresholdOverrides（financial-services /
+    //   general-enterprise / manufacturing / saas-tech）⇒ 原实现每轮**静默漏 3 个行业**。
+    //   同一个哨兵阈值必须跨行业一致 ⇒ 去掉 break，遍历全部行业。
+    //   （幂等性：每个行业各自读-改-写自己的 thresholds.json，互不干扰。）
   }
 
-  if (!found) result.skipped++;
+  if (!found) {
+    // K6/缺陷①(CTO 2026-10-08): 全行业皆无该实体 ⇒ 可见性兑现（原为静默 skipped++）。
+    //   ⚠️ 契约保持：**不 push errors** —— 既有用例「降级路径: 实体不在任何 thresholds.json
+    //   ⇒ skipped（applied=0）且不抛」断言 `errors === []`，该语义已冻结，不得擅自改变。
+    //   ⇒ 可见性由上方逐行业 `log.warn` 承担（铁律 11 的 log 面）。
+    log.warn(
+      { sentinelKey, industries: industries.length },
+      "GA 阈值调整未命中任何行业——哨兵名不符或配置全行业漏登记（本次 skipped，不抛错）",
+    );
+    result.skipped++;
+  }
 }
 
 function applyGoalFormulaTweak(action: EvolutionAction, result: ApplyActionResult): void {

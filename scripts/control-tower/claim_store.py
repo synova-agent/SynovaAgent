@@ -453,6 +453,70 @@ def legacy_view(root: Path | str, env: Optional[Dict[str, str]] = None) -> dict:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# D1220（卡 #1222 D-A2）: 组 12 claim 载体的**多 claim 并集覆盖**判定
+#   ⚠️ 与 resolve() 的区别（勿混用）: resolve() = **最佳单 claim**（按命中数取最大，
+#     供「本提交属于哪个 issue」身份解析）；coverage() = **全 claim 并集**（供「每个暂存文件
+#     是否被任一声明覆盖」的范围判定）。多线并发时用 resolve() 判范围会**假红**（他人 claim
+#     覆盖的文件会被判未覆盖）。
+# ══════════════════════════════════════════════════════════════════════════════
+def coverage(root: Path | str, staged: List[str],
+             env: Optional[Dict[str, str]] = None) -> dict:
+    """暂存文件 vs 全部 claim 的**并集**覆盖判定。
+
+    契约（铁律 47）:
+      @input  root; staged = 暂存文件相对路径列表（原序去重后判定）；env（SYNO_CLAIMS_DIR 等）
+      @output {"status": "ok"|"invalid",
+               "claims": <可解析 claim 条数>,
+               "covered": [被任一 claim 覆盖的暂存文件],
+               "uncovered": [未被任何 claim 覆盖的暂存文件],
+               "matched": {issue: [文件...]}（仅列有命中的 claim）,
+               "broken": [畸形 claim 摘要...],
+               "degraded": bool, "reason": str}
+              **并集语义**：一个文件只要被 ≥1 条 claim 的 writeset 覆盖即计入 covered。
+              **显式空集语义（禁静默）**：无 claim 目录/0 条 claim ⇒ claims=0、
+              uncovered=全部 staged、reason 明写「0 条 claim（显式空集）——覆盖判定对全部 N 个
+              暂存文件为『未覆盖』」；**不**返回空结果冒充通过。
+      @exit   — 由 main 映射：ok ⇒ 0；invalid（存在畸形 claim）⇒ 2（检查自身失败，fail-closed）
+      @degraded — 畸形条目 ⇒ degraded=True（检查自身不完整，**不得判「无声明」**）
+      @error   — ClaimError 由 main 统一捕获 ⇒ exit 2（铁律 24/31/32）
+    """
+    staged_u: List[str] = []
+    for s in staged:
+        s = s.strip()
+        if s and s not in staged_u:
+            staged_u.append(s)
+    claims = iter_claims(root, env)
+    broken = [f"{c.get('issue')}: {c.get('error')}"
+              for c in claims if c.get("error")]
+    good = [c for c in claims if not c.get("error")]
+    matched: Dict[str, List[str]] = {}
+    covered_set: set = set()
+    for c in good:
+        hit = [f for f in staged_u if path_in_writeset(f, c["writeset"])]
+        if hit:
+            matched[c["issue"]] = hit
+            covered_set.update(hit)
+    covered = [f for f in staged_u if f in covered_set]
+    uncovered = [f for f in staged_u if f not in covered_set]
+    if broken:
+        return {"status": "invalid", "claims": len(good), "covered": covered,
+                "uncovered": uncovered, "matched": matched, "broken": broken,
+                "degraded": True,
+                "reason": (f"{len(broken)} 条 claim 畸形 ⇒ 覆盖判定不完整"
+                           "（检查自身失败，不得判『无声明』）")}
+    if not good:
+        return {"status": "ok", "claims": 0, "covered": [], "uncovered": uncovered,
+                "matched": {}, "broken": [], "degraded": False,
+                "reason": (f"0 条 claim（显式空集）—— 覆盖判定对全部 {len(staged_u)} 个"
+                           "暂存文件为『未覆盖』（非静默跳过）")}
+    return {"status": "ok", "claims": len(good), "covered": covered,
+            "uncovered": uncovered, "matched": matched, "broken": [],
+            "degraded": False,
+            "reason": (f"{len(good)} 条 claim（并集）；覆盖 {len(covered)}/{len(staged_u)}"
+                       f" 个暂存文件" + (f"，未覆盖 {len(uncovered)} 个" if uncovered else ""))}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # CLI
 # ══════════════════════════════════════════════════════════════════════════════
 def _emit(obj) -> None:
@@ -475,6 +539,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                     help="为暂存文件解析归属 claim（stdin 亦接受）")
     ap.add_argument("--resolve-path", nargs="*", default=None, metavar="STAGED",
                     help="同 --resolve，但**只打印 claim 文件路径**（0=命中，1=无声明，2=自身失败）")
+    ap.add_argument("--coverage", nargs="*", default=None, metavar="STAGED",
+                    help="暂存文件 vs 全部 claim 的**并集**覆盖（JSON；0=ok，2=检查自身失败）")
     ap.add_argument("--issue-of", metavar="TEXT", help="从文本提取 issue 号")
     ap.add_argument("--check", metavar="ISSUE", help="校验单条")
     ap.add_argument("--migration-marker", action="store_true", help="打印迁移期标识")
@@ -551,6 +617,19 @@ def main(argv: Optional[List[str]] = None) -> int:
                 return {"missing": 1, "none": 1, "invalid": 2}.get(r["status"], 2)
             _emit(r)
             return {"resolved": 0, "missing": 1, "none": 1, "invalid": 2}.get(r["status"], 2)
+
+        if args.coverage is not None:
+            raw = args.coverage
+            staged = [s for s in raw if s.strip()]
+            if not staged:
+                try:
+                    if not sys.stdin.isatty():
+                        staged = [s for s in sys.stdin.read().split("\n") if s.strip()]
+                except OSError:
+                    staged = []
+            r = coverage(root, staged)
+            _emit(r)
+            return 2 if r["status"] == "invalid" else 0
 
         if args.check:
             c = load_claim(root, args.check)

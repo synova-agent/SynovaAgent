@@ -74,12 +74,21 @@ STAGED="src/foo.ts"
 CLAIM_FILE_NAME="1217.yaml"
 
 # 行为探针：跑 <脚本> 并返回其输出（注入 claim 载体 + 暂存集 + 沙箱）
-# probe <script> [v2] → stdout；$2=0 时走 legacy（边界负例）
-probe() { # <script> [v2=1]
+# probe <script> [v2] [staged] → stdout；$2=0 走 legacy（边界负例）；$3 覆盖暂存集（缺省 $STAGED）
+probe() { # <script> [v2=1] [staged]
+  local _st="${3:-$STAGED}"
   GITHUB_ACTIONS=true SYNO_TEST_ARM=1 SYNO_CLAIM_V2="${2:-1}" SYNO_CLAIM_DIR="$CLAIM_DIR" \
   SYNO_ISSUE_HINT="1217" \
-  SYNO_GIT_CACHED_ALL_NAMES="$STAGED" SYNO_GIT_CACHED_NAMES="$STAGED" \
+  SYNO_GIT_CACHED_ALL_NAMES="$_st" SYNO_GIT_CACHED_NAMES="$_st" \
   bash "$1" 2>&1 || true
+}
+# 诊断（失败时打印真正原因，免得下次又只看到"证据为空"）
+diag() { # $1=script → BRIEF 解析结果 + 组 6 片段
+  local b
+  b="$(GITHUB_ACTIONS=true SYNO_TEST_ARM=1 SYNO_CLAIM_V2=1 SYNO_CLAIM_DIR="$CLAIM_DIR" \
+       SYNO_ISSUE_HINT=1217 SYNO_GIT_CACHED_ALL_NAMES="${3:-$STAGED}" SYNO_GIT_CACHED_NAMES="${3:-$STAGED}" \
+       bash "$REPO/scripts/workflow/resolve-commit-brief.sh" "${3:-$STAGED}" 2>&1 | head -1)"
+  printf 'resolver_BRIEF=%s ; 分支=%s ; claim_dir=%s' "${b:-<空>}" "$(git -C "$REPO" branch --show-current 2>/dev/null)" "$CLAIM_DIR"
 }
 # 行为证据 = claim 分支**确实执行**的**不可替代**信号（Lead/verifier 要求，替代已退役的 `Q0: 未填写` 信号）：
 #   ① `声明载体 = claim（1217.yaml）` —— **带 claim 文件名** ⇒ legacy 散文路径**不可能**打印（不可替代）
@@ -106,6 +115,39 @@ case "$BR_NOW" in
        no "解耦失败: 分支 ${BR_NOW} 下 claim 证据消失（仍在靠分支名推断 issue）"
      fi ;;
 esac
+# 前置: 组 6 必须**真的运行**（`DECL_SRC` 空 ⇒ 闸① 无对象 ⇒ 组 6 整段不出，会伪装成"证据为空"）
+case "$OUT_PROD" in
+  *"组 6"*) ok "前置: 组 6 实际运行（探针的暂存集过了 src 前缀过滤 ⇒ DECL_SRC 非空）" ;;
+  *) no "前置失败: 组 6 未运行 —— DECL_SRC 为空（闸① 无对象）。暂存集须含 src/|tests/|packages/|scripts/ 前缀文件；$(diag "$PC")" ;;
+esac
+# 🔴 补漏测态（Lead 2026-10-08 派单）—— verifier 当时只用「无 D# 的分支名」验证，未覆盖:
+#   ⓐ 宿主分支名**含 D# 但不是 claim 的 issue**（如 feat/D1220-*）ⓑ 暂存写集**不命中**任何 claim 的 writeset。
+#   该态下 claim-first ① 只能靠 `SYNO_ISSUE_HINT` 命中 ⇒ 这正是"与分支名解耦"的真正承重点。
+OUT_STATE="$(probe "$PC" 1 "scripts/no-claim-writeset.sh")"
+if evidence "$OUT_STATE"; then
+  ok "漏测态（分支含 D# + 暂存写集不命中 claim）：claim 证据仍在 ⇒ 解耦承重点 = SYNO_ISSUE_HINT（非分支名/非 writeset 兜底）"
+else
+  no "漏测态失败：claim 证据消失 —— $(diag "$PC" 1 "scripts/no-claim-writeset.sh")"
+fi
+# ⓑ 判别力: 同一态下**不给 HINT** ⇒ 证据应消失（证明 HINT 是承重点，而非别处顺手成立）
+OUT_NOHINT="$(GITHUB_ACTIONS=true SYNO_TEST_ARM=1 SYNO_CLAIM_V2=1 SYNO_CLAIM_DIR="$CLAIM_DIR" \
+  SYNO_GIT_CACHED_ALL_NAMES="scripts/no-claim-writeset.sh" SYNO_GIT_CACHED_NAMES="scripts/no-claim-writeset.sh" \
+  bash "$PC" 2>&1 || true)"
+if evidence "$OUT_NOHINT"; then
+  ok "承重点判别: 不给 HINT 时证据仍在（分支名/writeset 也能命中）—— 附注，不计失败"
+else
+  ok "承重点判别: 不给 HINT ⇒ 证据消失（该态下确由 SYNO_ISSUE_HINT 承载解耦）"
+fi
+# ⓒ 宿主分支本就带 D# 时，主判据仍须成立（覆盖 verifier 未测态）
+case "$BR_NOW" in
+  *D[0-9]*) if evidence "$OUT_PROD"; then
+              ok "状态矩阵: 宿主分支 ${BR_NOW} 带 D# ⇒ 主判据（claim 证据）仍成立"
+            else
+              no "状态矩阵: 分支 ${BR_NOW} 带 D# ⇒ claim 证据消失 —— $(diag "$PC")"
+            fi ;;
+  *) ok "状态矩阵: 宿主分支 ${BR_NOW} 不含 D#（另一态由 CI 的 PR 分支覆盖；本条为附注）" ;;
+esac
+
 # 差分负例（替代原靠 `Q0: 未填写` 缺席的**空断言**）：legacy 边界下不得出现 claim 载体信号
 OUT_LEGACY="$(probe "$PC" 0)"
 if printf '%s' "$OUT_LEGACY" | grep -q '声明载体 = claim'; then
@@ -150,6 +192,51 @@ done
 rm -rf "$MUT_DIR"
 [ "$CAUGHT" -eq "$TOTAL" ] && ok "改坏即红: ${TOTAL}/${TOTAL} 变异全部被抓（行为判定，非自指）" \
   || no "改坏即红: 仅 ${CAUGHT}/${TOTAL} 被抓"
+
+# ═══ D1220（卡 #1222 D-A2）: 组 12 claim 载体覆盖判定 ═══
+#   本卡修的假绿: claim 载体下 ALL_TODAY_BRIEFS 为空 ⇒ 组 12 整段跳过 ⇒ 静默放行。
+echo ""
+echo "── D1220: 组 12 claim 载体覆盖（并集语义 + 假绿封堵）──"
+grep -q '_G12_CLAIM_STATUS' "$PC" && ok "接线[组12]: claim 覆盖判定分支存在" \
+  || no "接线[组12]: claim 分支缺失（假绿未修）"
+grep -q -- '--coverage' "$PC" && ok "接线[组12]: 消费 claim_store --coverage（并集原语，非最佳单 claim）" \
+  || no "接线[组12]: 未消费 --coverage"
+grep -q "staged = '''\$_G12_JUDGE_SET'''" "$PC" && ok "接线[组12]: 判定集合改用余量集（未覆盖文件回落 legacy）" \
+  || no "接线[组12]: 判定集合未改（余量不回落 legacy ⇒ 覆盖不完整）"
+if grep -qF "staged = '''\$STAGED_ALL'''" "$PC"; then
+  no "回退防护[组12]: 判定集合退回 \$STAGED_ALL（claim 覆盖会与 legacy 重复计红）"
+else
+  ok "回退防护[组12]: 旧判定集合 \$STAGED_ALL 已不存在"
+fi
+grep -q '未被任何 claim 声明覆盖' "$PC" && ok "假绿封堵[组12]: 无 legacy 载体 + 未覆盖 ⇒ 显式判红" \
+  || no "假绿封堵[组12]: 缺「无载体即判红」分支 ⇒ claim 模式仍静默放行"
+# 「显式空集」文案的真源在 claim_store（reason），shell 侧只许**原样打印**不得自造说明 ⇒
+#   断言 = shell 打印原语 reason（`_G12_C_REASON`）+ 原语自身有显式空集语义（下方契约断言）。
+grep -q '_G12_C_REASON' "$PC" && ok "显式语义[组12]: 原样打印覆盖原语 reason（含空集语义，禁静默/禁自造）" \
+  || no "显式语义[组12]: 未打印原语 reason（claim 数与覆盖情况不可见）"
+
+# 覆盖原语契约（空集 / 并集 / 自身失败）——直接对 claim_store 断言
+COV_TMP="$(mktemp -d)"; mkdir -p "$COV_TMP/empty" "$COV_TMP/two" "$COV_TMP/bad"
+OUT_EMPTY="$(SYNO_CLAIM_DIR="$COV_TMP/empty" python3 "$CS" --coverage scripts/a.sh 2>/dev/null)"  # swallow-ok: 原语失败即空 JSON → 下方断言直接判红（不静默放行）
+if printf '%s' "$OUT_EMPTY" | grep -q '"claims": 0' && printf '%s' "$OUT_EMPTY" | grep -q '显式空集'; then
+  ok "契约[coverage]: 0 条 claim ⇒ 显式空集（uncovered=全部，非静默）"
+else
+  no "契约[coverage]: 空集语义不清（禁静默）"
+fi
+printf 'writeset:\n  - scripts/a.sh\ndone:\n  - verify: echo a\n' > "$COV_TMP/two/100.yaml"
+printf 'writeset:\n  - src/b.ts\ndone:\n  - verify: echo b\n' > "$COV_TMP/two/200.yaml"
+OUT_TWO="$(SYNO_CLAIM_DIR="$COV_TMP/two" python3 "$CS" --coverage scripts/a.sh src/b.ts scripts/c.sh 2>/dev/null)"  # swallow-ok: 同上
+if printf '%s' "$OUT_TWO" | grep -q '"claims": 2' && printf '%s' "$OUT_TWO" | grep -q '"uncovered": \["scripts/c.sh"\]'; then
+  ok "契约[coverage]: 多 claim **并集**覆盖（多线并发不假红）"
+else
+  no "契约[coverage]: 并集语义错（多线并发会假红）"
+fi
+printf 'writeset: []\ndone: []\n' > "$COV_TMP/bad/300.yaml"
+SYNO_CLAIM_DIR="$COV_TMP/bad" python3 "$CS" --coverage scripts/a.sh >/dev/null 2>&1
+COV_BAD_RC=$?
+[ "$COV_BAD_RC" -eq 2 ] && ok "契约[coverage]: 畸形 claim ⇒ exit 2（检查自身失败，fail-closed）" \
+  || no "契约[coverage]: 畸形 claim 未 exit 2（实得 $COV_BAD_RC ⇒ 会判『无声明』）"
+rm -rf "$COV_TMP"
 
 echo ""
 echo "结果: $PASS 通过, $FAIL 失败"

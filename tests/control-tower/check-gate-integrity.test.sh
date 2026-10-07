@@ -890,6 +890,36 @@ if [ "$rc" -eq 1 ] && printf '%s' "$OUT" | grep -q '豁免条已过期'; then
 else
   no "M10-3b 过期豁免未判红（rc=${rc}）"
 fi
+# M10-6（P3-② / 卡 #1309）: **撇号型**（双引号串内的撇号）不得被当成"样本生成器"豁免
+#   构造: 用 $GQ 拼接，避免本夹具自身在代码行上出现被测形态（面 3 会扫到本文件）
+GQ="grep -qv"
+printf '%s\n' '#!/bin/bash' "echo \"it's fine\"; if ls | $GQ sample; then echo A; fi" > "$FP_TESTS/apos.test.sh"
+OUT_APOS="$(fp_run "$GATE")"
+if printf '%s' "$OUT_APOS" | grep -q 'apos\.test\.sh:2'; then
+  ok "M10-6 撇号型（双引号串内的撇号 + 管道取反）⇒ **判违规**（P3-② 确定性漏判已修）"
+else
+  no "M10-6 撇号型仍被豁免（漏判未修）"
+fi
+# M10-6b: 真生成器（引号串内 + grep 之后重定向）⇒ 必须**仍豁免**（防收紧过头）
+printf '%s\n' '#!/bin/bash' "printf '%s\\n' 'x | $GQ a' > /tmp/fp-sample.txt" > "$FP_TESTS/gen.test.sh"
+OUT_GEN="$(fp_run "$GATE")"
+if ! printf '%s' "$OUT_GEN" | grep -q 'gen\.test\.sh:2'; then
+  ok "M10-6b 真生成器（引号内 + grep 后重定向）⇒ 仍豁免（收紧未过头）"
+else
+  no "M10-6b 真生成器被误判为违规（收紧过头）"
+fi
+rm -f "$FP_TESTS/gen.test.sh"
+# M10-6c 变异体: 把形态 0 判据退化为「一律跳过」⇒ 撇号型必须重新漏判（夹具抓到）
+MUT_SKIP="$SB/fp/gate-mut-skip.sh"
+sed 's/if \[ "\$_qst" != "n" \] && \[ "\$_redir" = 1 \]; then/if true; then/' "$GATE" > "$MUT_SKIP"
+OUT_MUTS="$(fp_run "$MUT_SKIP")"
+if ! printf '%s' "$OUT_MUTS" | grep -q 'apos\.test\.sh:2'; then
+  ok "M10-6c 变异体（形态 0 退化为一律跳过）⇒ 撇号型重新漏判 ⇒ 夹具能分辨该退化"
+else
+  no "M10-6c 变异体仍抓到撇号型 ⇒ 夹具对形态 0 退化无判别力"
+fi
+rm -f "$FP_TESTS/apos.test.sh"
+
 MUT_GATE="$SB/fp/gate-mutant.sh"
 sed 's/form2=1/form2=0/g' "$GATE" > "$MUT_GATE"
 OUT_M="$(fp_run "$MUT_GATE" SYNO_FIXTURE_POWER_BASELINE="$FP_BASE")"
