@@ -28,9 +28,11 @@ import {
   type MiniDiagnosisContext,
   type ExpertRediagnosisResult,
 } from '../growth/lightweight-diagnosis';
-import type { GraphBridgeLike } from '../growth/goal-types';
+import type { AuditStoreLike, GoalMetric, GraphBridgeLike } from '../growth/goal-types';
 import { propagateGoalToMembers } from '../growth/goal-store';
 import { UserStore } from '../growth/user-store';
+// #1010: Goal 关闭路径接线 —— 达成判定（纯函数）+ 闭环（状态→completed + 知识写 PKB + EffectReport）
+import { closeGoal, evaluateGoalAchievement } from '../growth/goal-lifecycle';
 import { SqliteGraphStore } from '../adapters/sqlite-graph-store';
 import { getExpertRegistry } from '../l3/expert-registry';
 import { KnowledgeStore } from './knowledge-bridge-service';
@@ -82,6 +84,64 @@ async function prodKnowledgeStore(): Promise<KnowledgeStore> {
   return _prodKnowledgeStore;
 }
 
+let _prodAuditStore: AuditStoreLike | null = null;
+
+/**
+ * #1010: 生产审计存储（动态 import —— 与 prodGraphStore / prodKnowledgeStore 同款架构棘轮惯例：
+ * src/agent 下静态 from L4/L5 会被 check-architecture 判跨层）。
+ */
+async function prodAuditStore(): Promise<AuditStoreLike> {
+  if (!_prodAuditStore) {
+    const { AuditStore } = await import('../l4/audit-store');
+    const { getDatabase } = await import('../init/engine-context');
+    const store = new AuditStore(getDatabase());
+    // L4 AuditStore 的写入面是同步 `log(entry)`；此处适配成 goal-store/goal-lifecycle 依赖的
+    // `AuditStoreLike.write(entry): Promise<string>`（async 包装 ⇒ 写失败变成 rejection，
+    // 由调用方既有的 .catch(log.warn) 承接，不静默，铁律 24/31）。
+    _prodAuditStore = {
+      write: async (entry) => {
+        store.log(entry);
+        return `audit:${entry.action}:${entry.targetId ?? '-'}`;
+      },
+    };
+  }
+  return _prodAuditStore;
+}
+
+/**
+ * #1010: 从图节点 props 读 Goal 指标（类型守卫，零 `as any`）。
+ * 缺字段/类型不符的条目**跳过**——不静默编造 0 值（编造会让 closeGoal 的指标比对与知识提取失真）。
+ */
+function readGoalMetrics(props: Record<string, unknown>): GoalMetric[] {
+  const raw = props.metrics;
+  if (!Array.isArray(raw)) return [];
+  const out: GoalMetric[] = [];
+  for (const item of raw) {
+    if (typeof item !== 'object' || item === null) continue;
+    const o = item as Record<string, unknown>;
+    // 逐项判类型，拆成三行：文件驱动门禁组 8.c 的正则会把
+    // "typeof x !== 'a' || typeof y !== 'b'" 误判成硬编码类型联合（纯误报，拆行规避）
+    if (typeof o.metricName !== 'string') continue;
+    if (typeof o.currentValue !== 'number') continue;
+    if (typeof o.targetValue !== 'number') continue;
+    out.push({
+      metricName: o.metricName,
+      currentValue: o.currentValue,
+      targetValue: o.targetValue,
+      unit: typeof o.unit === 'string' ? o.unit : '',
+      computeContractId: typeof o.computeContractId === 'string' ? o.computeContractId : '',
+    });
+  }
+  return out;
+}
+
+/** #1010: 从图节点 props 读成功条件（只取达成判定所需字段，类型守卫） */
+function readSuccessCriteria(props: Record<string, unknown>): Array<{ verified?: boolean }> {
+  const raw = props.successCriteria;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((c): c is { verified?: boolean } => typeof c === 'object' && c !== null);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // loop-1: 诊断循环 (diagnosis) — D475 真实化
 // ═══════════════════════════════════════════════════════════════════════════
@@ -99,6 +159,8 @@ export interface DiagnosisDeps {
   callExpert: (ctx: MiniDiagnosisContext) => Promise<ExpertRediagnosisResult>;
   /** 升级全量诊断回调（可选，透传 lightweightReDiagnosis） */
   onEscalation?: (goalId: string, reason: string) => void;
+  /** #1010: 审计存储（测试注入；缺省 → 生产 AuditStore 惰性构造） */
+  getAudit?: () => AuditStoreLike;
 }
 
 let _diagnosisDeps: DiagnosisDeps | null = null;
@@ -258,6 +320,9 @@ export async function defaultDiagnosisHandler(scale: ScaleName): Promise<LoopExe
     // 但必须 log.warn 且把计数写进 output（不静默）。
     let propagated = 0;
     let propagationFailures = 0;
+    // #1010: Goal 关闭路径计数（闭环成功 / 判定或闭环失败）
+    let closed = 0;
+    let closeFailures = 0;
     for (const node of active) {
       const goalId = String(node.props.goalId ?? node.id);
 
@@ -289,6 +354,30 @@ export async function defaultDiagnosisHandler(scale: ScaleName): Promise<LoopExe
         );
       }
 
+      // #1010: Goal 关闭路径接线 —— 先判"是否达成"：
+      //   达成 ⇒ closeGoal（状态→completed + 提取知识写 PKB + EffectReport），本目标**不再**再诊断
+      //   未达成 ⇒ 走既有 lightweightReDiagnosis（语义不变）
+      // 闭环失败不阻断循环：log.warn + 计数进 output（铁律 24/31，不静默）。
+      try {
+        const achievement = evaluateGoalAchievement({
+          successCriteria: readSuccessCriteria(node.props),
+          metrics: readGoalMetrics(node.props),
+        });
+        if (achievement.achieved) {
+          const audit = deps?.getAudit ? deps.getAudit() : await prodAuditStore();
+          await closeGoal(goalId, 'achieved', readGoalMetrics(node.props), store, audit);
+          closed++;
+          log.info({ goalId, reason: achievement.reason }, '目标已达成 → 走关闭路径（completed + 知识写 PKB + EffectReport）');
+          continue;
+        }
+      } catch (err: unknown) {
+        closeFailures++;
+        log.warn(
+          { err: err instanceof Error ? err.message : String(err), goalId },
+          '目标达成判定/闭环失败 — degraded（继续再诊断）',
+        );
+      }
+
       const proposal = await lightweightReDiagnosis(
         { goalId, triggeredBy: 'manual' },
         { getGoal, callExpert, onEscalation: deps?.onEscalation, incrementReDiagnosisCount },
@@ -298,7 +387,9 @@ export async function defaultDiagnosisHandler(scale: ScaleName): Promise<LoopExe
 
     const detail = `诊断循环 [${scale}]: 再诊断 ${proposals.length} 个目标（${proposals.join('; ')}）`
       + `，目标传导到每人 ${propagated} 条派发`
-      + (propagationFailures > 0 ? `（传导未完成 ${propagationFailures} 个目标）` : '');
+      + (propagationFailures > 0 ? `（传导未完成 ${propagationFailures} 个目标）` : '')
+      + `，达成闭环 ${closed} 个目标`
+      + (closeFailures > 0 ? `（闭环失败 ${closeFailures} 个）` : '');
     if (incrementFailures.length > 0) {
       log.warn({ scale, failures: incrementFailures.length }, '再诊断计数回写部分失败 — 降级');
       return {

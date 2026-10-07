@@ -132,6 +132,48 @@ export function transitionGoal(
  * @param outcome - 达成状态
  * @param actualMetrics - 实际达成的指标值列表
  */
+/** #1010: 达成判定输入（结构子集 —— 完整 Goal 对象可直接传入） */
+export interface GoalAchievementInput {
+  /** 成功条件（读 verified；缺省/非数组 ⇒ 视为无成功条件） */
+  successCriteria?: ReadonlyArray<{ verified?: boolean }>;
+  /** 指标（读 currentValue ≥ targetValue） */
+  metrics?: ReadonlyArray<{ currentValue?: number; targetValue?: number }>;
+}
+
+/** #1010: 达成判定结果 */
+export interface GoalAchievement {
+  /** 是否达成（true ⇒ 调用方走 closeGoal 闭环） */
+  achieved: boolean;
+  /** 判定理由（可入 output/日志，便于审计） */
+  reason: string;
+}
+
+/**
+ * #1010: Goal 达成判定（纯函数，零 IO）—— 生产侧"该不该关"的唯一定义。
+ *
+ * 口径（与 `checkCompletionPreconditions` 同源，**不新增第二套标准**）：
+ *   ① `successCriteria` 非空 ⇒ 全部 `verified === true` 才算达成（GA/外部确认过 ⇒ 可闭环）
+ *   ② 无成功条件 ⇒ 一律**不达成**（不按指标自动关：那会绕过人工确认，也过不了
+ *      `updateGoalStatus` 的 `active→completed` 前置条件；指标只用于再诊断，见 loop-1）
+ *
+ * 契约:
+ *   @input  — GoalAchievementInput（完整 Goal 可直接传入）
+ *   @output — { achieved, reason }
+ *   @degraded — 不适用（纯判定无 IO）；字段缺失/类型不符按"未达成"处理（不猜、不误关）
+ * @诚实边界 — 不产出 `partially_achieved`（那需人工判断，由调用方显式调 closeGoal 传入）
+ */
+export function evaluateGoalAchievement(goal: GoalAchievementInput): GoalAchievement {
+  const criteria = Array.isArray(goal?.successCriteria) ? goal.successCriteria : [];
+  if (criteria.length === 0) {
+    return { achieved: false, reason: '无成功条件 —— 不可机械判定达成，交再诊断/人工确认' };
+  }
+  const unverified = criteria.filter((c) => c?.verified !== true);
+  if (unverified.length > 0) {
+    return { achieved: false, reason: `成功条件仍有 ${unverified.length}/${criteria.length} 项未验证` };
+  }
+  return { achieved: true, reason: `成功条件 ${criteria.length}/${criteria.length} 项已验证` };
+}
+
 export async function closeGoal(
   goalId: string,
   outcome: 'achieved' | 'partially_achieved' | 'not_achieved',
