@@ -1,11 +1,11 @@
 ---
 title: "SynovaAgent 文档契约"
-version: "1.1.0"
+version: "1.1.1"
 status: implemented（已生效）
 approved_at: "2026-09-27"
 effective: "2026-09-27"
 amended_at: "2026-10-07"
-amended_by: "D1193 — 闸 3 判据修复（阻断优先 / +html / 契约动态解析）+ 接线；判据正确性待 K3 独立复核"
+amended_by: "D1193 — 闸 3 判据修复（阻断优先 / +html / 契约动态解析）+ 接线；D1203 — K3 复核整改（阻断条目闭包 / rename 不可绕过 / 去手写计数 + 过渡落盘）；判据正确性待 K3 第二轮复核"
 owner: CTO
 supersedes:
   - docs/synova/DOCUMENT-CONVENTIONS.md
@@ -254,7 +254,18 @@ novis-backup-20260526/**
 
 **闸 3 判据对象 = 新增 `.md` + `.html`**（D1193 修复点②：**HTML 不是旁路**——同类内容写成 html
 同样阻断；首版只认 `.md`，实测漏网 `docs/synova/coordination/四问-64格.html`）。
-只判**新增（`--diff-filter=A`）**，存量不返工（§7）；路径用 `git ls-files` 的仓库相对形式。
+只判**新增**（`--diff-filter=A` + `--no-renames`，见下），存量不返工（§7）；路径用 `git ls-files` 的仓库相对形式。
+
+**阻断条目的覆盖语义（D1203 修 K3 X1a / X2，两条均已实测复现）**：
+
+- `X/**` 覆盖 `X` 本身、`X/` 子树，**以及同名前缀文件 `X.<ext>`**（例：`docs/plans/**` 同时拦 `docs/plans.md`）
+  —— 否则「把过程件写成同名前缀的文件」即可绕开阻断（K3 实测首版放行）；
+- **不**覆盖命名不同的近邻（`docs/plans-archive/`、`docs/synova/coordinationX/` 不在自动覆盖内）：
+  新增「语义同类但命名不同」的目录时，**必须显式登记进上面的阻断清单**，不得依赖匹配器猜名字
+  （猜名字会误拦合法目录 ⇒ 噪音 ⇒ 门禁被绕过，V3.9 教训）；
+- **搬移不可绕过**：`git mv <允许路径> <阻断路径>` 必须被拦。执行体统一带 `--no-renames`，
+  于是 rename 被拆成「删除 + 新增」，新路径必然进入新增清单（K3 实测首版此处三闸 PASS ⇒ 已修，
+  并有回归断言 `J rename 进阻断区`）。
 
 **逃生舱（铁律 11：显式降级 + 落盘，不静默）**：`SYNO_DOC_CONTRACT_ACK=1`（须同时给
 `SYNO_DOC_CONTRACT_ACK_REASON=<原因>`）**只降级闸 3**，闸 1/2 不可豁免；每次放行必须写
@@ -384,16 +395,18 @@ novis-backup-20260526/**
 > 还与 §3 ❌ 行矛盾。本节把过渡做成**显式、可测、带出口条件**：命中的每一件都计入
 > `transition_hits`（**不算违规**，但可计数）⇒ 迁移进度可观测。
 
-| 过渡放行路径 | 为什么暂时放行（不是「忘了」） | 出口条件（达成即从本表移除） | 责任线 | as_of 2026-10-07 存量 |
-|---|---|---|---|---|
-| `.claude/task-briefs/**` | 组 6/12 **物理要求每任务一份 brief**，落点未迁 ⇒ 硬拦 = 必然 `--no-verify`（V3.9 教训：硬阻断有效，但拉红到底必被绕过） | brief 落点迁出仓库（承接卡 D1050 / B2 出库） | 治理线 | 214 |
+| 过渡放行路径 | 为什么暂时放行（不是「忘了」） | 出口条件（**可机器判定**） | 责任线 |
+|---|---|---|---|
+| `.claude/task-briefs/**` | 组 6/12 **物理要求每任务一份 brief**，落点未迁 ⇒ 硬拦 = 必然 `--no-verify`（V3.9 教训：硬阻断有效，但拉红到底必被绕过） | `git ls-files '.claude/task-briefs/**' \| wc -l` = 0（承接卡 D1050 / B2 出库） | 治理线 |
 
-机器可读源（执行体解析这里，人工表只是同一事实的可读版）：
+机器可读源（执行体解析这里；人工表只是同一事实的可读版）：
 
 <!-- doc-contract:transition:begin -->
 ```doc-contract-transition
-# 路径 | 出口条件 | 责任线 | as_of 存量
-.claude/task-briefs/** | brief 落点迁出仓库（D1050/B2 出库） | 治理线 | 214
+# 路径 | 出口条件 | 责任线
+# 存量取数（**不写死数字** —— 引用纪律：数量以脚本实况为准）:
+#   git ls-files '.claude/task-briefs/**' | wc -l
+.claude/task-briefs/** | brief 落点迁出仓库（D1050/B2 出库；判据 = git ls-files 计数归零） | 治理线
 ```
 <!-- doc-contract:transition:end -->
 
@@ -403,8 +416,25 @@ novis-backup-20260526/**
 且 coordination 与 dispatch 的**接手已存在**（§11 库外档案仓 + PR 正文 + 卡 note，STATE.md §8 在跑）
 ⇒ 照 §3 直接阻断，错误信息点名落点。
 
-**本表的 self-check（防「临时即永久」）**：每轮契约复审必须核 `transition_hits` 计数；
-连续两轮不下降 ⇒ 该行为「机制失效」上报，而不是继续记作「过渡中」。
+**本表的 self-check（防「临时即永久」）—— D1203 起可执行**：
+
+执行体每次跑出过渡命中，都会把当次计数追加到 `.claude/doc-contract-transition.log`（JSONL，已 gitignore）。
+复核对账取数：
+
+```bash
+tail -5 .claude/doc-contract-transition.log   # 最近几次过渡命中（component=doc-contract-transition）
+```
+
+判据：连续两轮契约复审该计数不下降 ⇒ 该行按「机制失效」上报，而不是继续记作「过渡中」。
+**数字不进本契约**（引用纪律：数量以脚本实况为准）——首版此处曾写死 214，K3 复核实测**合并当刻即 215**、
+次日 226 ⇒ 手写数字必腐，故删除。
+
+### 9.2 已登记的残余风险（K3 复核交底，不静默丢弃）
+
+| # | 残余风险 | 来源 | 现状与理由 | 何时处理 |
+|---|---|---|---|---|
+| 1 | `**/README.md` 可在**未被阻断的新目录**播种（例：新建 `reports/` + 放 README 当索引） | K3 复核 X3（P2） | **接受**：真防线是 §2.1「禁止新建索引/台账/看板 md」+ review；收紧成「仅已知代码根放行」需要机器判定「目录是否已存在」，属**新机制**而非修 bug | 出现真实复发时再收紧（一次生成，非每错加机制） |
+| 2 | 「语义同类但命名不同」的目录（`coordinationX/`）不在自动覆盖内 | K3 复核 X1b | **接受**：匹配器不猜名字（猜则误拦 `plans-archive/` ⇒ 噪音 ⇒ 绕过）。改由 §3 明文要求「新增同类目录须显式登记阻断清单」 | 常设规则（已写入 §3） |
 
 ---
 

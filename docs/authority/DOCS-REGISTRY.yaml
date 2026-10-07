@@ -425,3 +425,12 @@ documents:
     path: docs/synova/coordination/交付-D1132-两预设包与哨兵skill-20261003.md
     status: active
     owner: line-lead
+
+  # ---- D1203 闸 3 判据加固（K3 复核整改）2026-10-07 ----
+  # D1171 撤旁路复执法后本门禁为「本地软 / CI strict 硬」⇒ 新增决策件必须登记（否则 Iron Laws 红）。
+  - id: DOC-0188
+    type: decision
+    path: decisions/process/2026-10-07-doc-contract-gate-hardening.md
+    status: active
+    owner: DSH
+    note: "D1203：K3 复核（CONDITIONAL PASS）整改 —— ① 阻断条目前缀闭包（K3 X1a）② git mv 不可绕过（K3 X2，--no-renames）③ §9.1 去手写计数 + 过渡命中落盘（K3 R3）；X1b/X3 登记为契约 §9.2 残余风险；契约 v1.1.0 → v1.1.1"

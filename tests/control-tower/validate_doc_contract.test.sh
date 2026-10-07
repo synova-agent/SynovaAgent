@@ -11,6 +11,12 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   D --json 形状                          含 checked / transition_hits
 #   E 闸 1 对缺段决策件判红                夹具决策件缺 决定/后果 → exit 1
 #   F --baseline 可跑且 JSON 可解析        真仓全量
+#   ── D1203（K3 复核整改）性质断言矩阵：边界路径 × 变更形态 ──
+#   G 前缀闭包矩阵     base.md 拦 / base/ 拦 / base-archive/ 不误拦（7 条阻断前缀 × 3 形态）
+#   G2 过渡条目同名前缀仍走过渡（不算违规）
+#   H rename(X2)      git mv 进阻断区：--staged 与 --base 两形态都必须拦
+#   H2 M 形态         改阻断区存量件不返工（exit 0）
+#   I 过渡落盘(R3)    命中写 .claude/doc-contract-transition.log；落盘失败 warn 且不阻断
 # 运行: bash tests/control-tower/validate_doc_contract.test.sh
 # ═══════════════════════════════════════════════════════════════════════════════
 set +e
@@ -65,6 +71,45 @@ rm -rf "$H"
 B=$(bash "$IMPL" --repo-root "$REPO" --baseline --json 2>/dev/null)  # swallow-ok: 夹具只看 JSON 可解析性
 F_OK=no; case "$B" in *'"gate3_inbound"'*) F_OK=yes;; esac
 t "F --baseline JSON 可解析" yes "$F_OK"
+
+# ── D1203 性质断言矩阵（K3 复核 L4 建议：不只补示例，补覆盖路径空间的断言） ──
+# G 前缀闭包：对每条【非过渡】阻断条目 base 断言三形态
+# 注：闭包只对**有白名单父级**的阻断条目才有可观测差异（docs/** 会兜住近邻）——
+#     顶层阻断条目（novis-*）的近邻本来就因“未命中白名单”拦下，所以分开断言。
+for base in docs/synova/coordination docs/synova/audit-reports docs/synova/dispatch docs/plans docs/archive docs/synova/archive; do
+  bash "$IMPL" --repo-root "$FIX" --files "${base}.md" >/dev/null 2>&1; t "G ${base}.md 同名前缀文件→1" 1 "$?"
+  bash "$IMPL" --repo-root "$FIX" --files "${base}/sub/x.md" >/dev/null 2>&1; t "G ${base}/ 子树→1" 1 "$?"
+  bash "$IMPL" --repo-root "$FIX" --files "${base}-archive/x.md" >/dev/null 2>&1; t "G ${base}-archive/ 近邻不误拦→0" 0 "$?"
+done
+bash "$IMPL" --repo-root "$FIX" --files "novis-backup-20260526.md" >/dev/null 2>&1; t "G novis-*.md 同名前缀→1" 1 "$?"
+bash "$IMPL" --repo-root "$FIX" --files "novis-backup-20260526-archive/x.md" >/dev/null 2>&1; t "G novis 近邻→1（非闭包所致，无白名单父级）" 1 "$?"
+bash "$IMPL" --repo-root "$FIX" --files ".claude/task-briefs.md" >/dev/null 2>&1; t "G2 过渡条目同名前缀仍过渡→0" 0 "$?"
+
+# H rename 进阻断区（X2）：staged 与 --base 两形态
+R2=$(mktemp -d); mkdir -p "$R2/docs/synova/coordination" "$R2/scripts"
+cp -R "$REPO/scripts/control-tower" "$R2/scripts/"
+mkdir -p "$R2/docs/synova"; cp "$REPO/docs/synova/DOC-CONTRACT.md" "$R2/docs/synova/"
+printf 'x\n' > "$R2/docs/foo.md"
+( cd "$R2" && git init -q . && git add -A && git -c user.email=t@t -c user.name=t commit -qm init )
+BASE2=$( cd "$R2" && git rev-parse HEAD )
+( cd "$R2" && git mv docs/foo.md docs/synova/coordination/moved.md )
+t "H rename 进阻断区 --staged→1" 1 "$(bash "$R2/scripts/control-tower/check-doc-contract.sh" --repo-root "$R2" --staged >/dev/null 2>&1; echo $?)"
+( cd "$R2" && git -c user.email=t@t -c user.name=t commit -qm moved >/dev/null 2>&1 )
+t "H rename 进阻断区 --base→1" 1 "$(bash "$R2/scripts/control-tower/check-doc-contract.sh" --repo-root "$R2" --base "$BASE2" >/dev/null 2>&1; echo $?)"
+printf 'edit\n' >> "$R2/docs/synova/coordination/moved.md"
+( cd "$R2" && git add docs/synova/coordination/moved.md )
+t "H2 修改阻断区存量件→0（存量不返工）" 0 "$(bash "$R2/scripts/control-tower/check-doc-contract.sh" --repo-root "$R2" --staged >/dev/null 2>&1; echo $?)"
+rm -rf "$R2"
+
+# I 过渡计数落盘（R3） + 落盘失败不静默（铁律 11）
+LOGF="$(mktemp -d)/t.log"
+SYNO_DOC_CONTRACT_LOG="$LOGF" bash "$IMPL" --repo-root "$FIX" --files .claude/task-briefs/a.md >/dev/null 2>&1
+grep -q "doc-contract-transition" "$LOGF" 2>/dev/null && I1=yes || I1=no
+t "I 过渡命中落盘" yes "$I1"
+SYNO_DOC_CONTRACT_LOG=/proc/nonexistent/x.log bash "$IMPL" --repo-root "$FIX" --files .claude/task-briefs/a.md >/dev/null 2>/tmp/d1203-w.txt; I2=$?
+grep -q "^warn:" /tmp/d1203-w.txt && I3=yes || I3=no
+t "I 落盘失败不阻断(exit 0)" 0 "$I2"
+t "I 落盘失败显式 warn" yes "$I3"
 
 echo ""
 echo "validate_doc_contract.test.sh: PASS=$PASS FAIL=$FAIL"

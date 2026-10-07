@@ -1,11 +1,11 @@
 {
   "task_id": "D1193",
   "title": "DOC-CONTRACT 三闸判据修复 + 接线（md+html）",
-  "status": "claimed",
+  "status": "completed",
   "spec": null,
-  "impl": null,
-  "audit": null,
-  "fix_task_id": null,
+  "impl": "PR #1209 merged @87e30720",
+  "audit": "CONDITIONAL PASS（K3 2026-10-07）；报告 ~/synova-k3-audit/audit-reports/2026-10-07-k3-审计报告-D1193-DOC-CONTRACT三闸判据复核.md（INDEX 已登记；报告本体不入产品仓，契约 §10.1/§10.3）",
+  "fix_task_id": "D1203",
   "updated_at": "2026-10-07",
   "updated_by": "dsh"
 }
