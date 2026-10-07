@@ -35,6 +35,7 @@ X（读写匹配）：修 5 行断链 + 空读留痕 + 对照表判据；**不�
 - src/tui-v2/chat.tsx — 同上
 - src/tui-v2/lib/sidebar-aggregator.ts — 注释同步（文档不实描述修正）
 - tests/sentinel/type-casing.test.ts — 新建（V1/V2/V3）
+- tests/l3/business-model-canvas.test.ts — **必要连带**（夹具 `type:'Goal'` → `'GOAL'`）
 - .claude/claims/1379.yaml
 - .claude/task-briefs/2026-10-08-1379-legacy-axis-consistency.md
 
