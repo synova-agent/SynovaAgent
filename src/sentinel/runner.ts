@@ -397,7 +397,8 @@ export class SentinelRunner {
 
   /**
    * #1371: **per-org 写轮**（只写测量值）—— 对注册表中每个 active org 跑一次哨兵并落该 org 的行。
-   * · 不记统计/事件/基线（`executeSentinel` 的 orgId 分支守卫）⇒ 既有 cron 语义不变；
+   * · **不记统计/事件/基线**（统计/事件/基线均在 `executeSentinel` 的 `orgId === undefined` 守卫内）
+   *   ⇒ 既有 cron 统计与**基线**语义逐字不变（基线键只有 sentinelId，无 org 维度；加 org 维度另立卡）；
    * · **无 active org ⇒ 不跑不写**（fail-closed）；
    * · 返回本轮执行过的 org 列表（确定性序，便于判据与日志）。
    */
@@ -1482,10 +1483,13 @@ export class SentinelRunner {
       }
       this.projectRunRecord(record);
       this.totalRuns++;
-      }
 
       // 记录发现
-      // 基线记录 + 对比 (B2)
+      // 基线记录 + 对比 (B2) —— 🔴 #1371 复核订正：本块**必须在守卫内**。
+      //   BaselineStore 的键【只有 sentinelId】（无 org 维度）⇒ per-org 轮若照跑，
+      //   每个 cron tick、每个哨兵会从 1 条变 1+N 条 ⇒ avgFindingCount / baselineReady /
+      //   ratio>2 偏离告警全部被污染，**且跨租户混算**（实测：PROBE-2 baseline.totalRuns 0→2）。
+      //   给 BaselineStore 加 org 维度 = 更大工程 ⇒ 另立卡；**当前口径：基线只由全局轮写**。
       try {
         const baselineStore = getBaselineStore();
         baselineStore.record(sentinel.config.id, result.findings);
@@ -1501,6 +1505,8 @@ export class SentinelRunner {
       } catch (baselineErr: any) {
         log.debug({ err: baselineErr.message }, '[runner] 基线记录失败 (非阻断)');
       }
+      }
+
 
       if (result.findings.length > 0) {
         const critical = result.findings.filter(f => f.severity === 'critical').length;

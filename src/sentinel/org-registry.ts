@@ -32,9 +32,13 @@ export function listActiveOrgs(db: Database.Database): string[] {
       .all() as Array<{ org_id: string }>;
     return rows.map((r) => r.org_id);
   } catch (err: unknown) {
-    log.debug(
-      { err: err instanceof Error ? err.message : String(err) },
-      'orgs 表不可读（未迁移/库不可用）⇒ 空集（调用方 fail-closed 不写）',
+    // 🔴 #1371 复核订正（铁律 11/24）：**不许只 log.debug 静默降级** ——
+    //   查询失败 ⇒ 返回空集 ⇒ cron 不跑任何 org ⇒ **无告警、看起来正常** = 最危险的失败形态。
+    //   ⇒ **warn 级 + 显式降级语义**（调用方据此 fail-closed 不写；运维可见）。
+    const msg = err instanceof Error ? err.message : String(err);
+    log.warn(
+      { err: msg, degraded: true, reason: 'orgs-unreadable' },
+      '租户注册表不可读 ⇒ 空集（降级：cron 不会跑任何 org，且不写任何行）',
     );
     return [];
   }
@@ -55,9 +59,10 @@ export function findOrgsWithDataButNotRegistered(db: Database.Database): { orgId
       .all() as Array<{ org_id: string; n: number }>;
     return { orgIds: rows.map((r) => r.org_id), count: rows.reduce((s, r) => s + r.n, 0) };
   } catch (err: unknown) {
-    log.debug(
-      { err: err instanceof Error ? err.message : String(err) },
-      '对账查询不可用（表缺失等）⇒ 空结果',
+    const msg = err instanceof Error ? err.message : String(err);
+    log.warn(
+      { err: msg, degraded: true, reason: 'orgs-reconcile-unreadable' },
+      '对账查询不可用 ⇒ 空结果（降级：漏采可能不可见）',
     );
     return { orgIds: [], count: 0 };
   }

@@ -17,9 +17,11 @@ writeset:
   - tests/store/metric-readings-schema.test.ts
   - tests/store/schema-migration-idempotency.test.ts
 done:
-  - verify: npx vitest run tests/store/orgs-migration.test.ts
-  - verify: npx vitest run tests/sentinel/org-fanout.test.ts
+  - verify: npx vitest run tests/store/migrations/003-orgs.test.ts
+  - verify: npx vitest run tests/sentinel/org-registry.test.ts
   - verify: npx vitest run tests/sentinel/ tests/store/
-  - verify: test "$(git grep -n "diagnosis_snapshots" HEAD -- src/sentinel/ | grep -vE ':[0-9]+:[[:space:]]*(//|\*)' | wc -l)" -eq 0
+  # ② V6 口径如实化（CTO 2026-10-08 复核订正）：**helpers.ts 内 0 命中**；
+  #    全 src/sentinel/ 尚有 1 处存量 = cash-flow-sentinel.ts:18 的 description 字符串（已登记延后，见 PR 未解决项）
+  - verify: test "$(git grep -n "diagnosis_snapshots" HEAD -- src/sentinel/adapters/helpers.ts | grep -vE ':[0-9]+:[[:space:]]*(//|\*)' | wc -l)" -eq 0   # 排注释（本文件注释里引用了旧表名；R92）
   - verify: npx tsc --noEmit
-note: 【预算瘦身（CTO 裁 a）】延后 2 项（cash-flow-sentinel.ts / cpc-sentinel.ts 的非承重改动）已登记进 PR 未解决项；2 组测试合并（用例数守恒 17）。cron 扇出 = 全局轮不变 + per-org 只写轮（executeForActiveOrgs；无 active org ⇒ 不跑不写）；discoverTeams 改读 orgs（V6=修）；覆盖面 = 行级租户正确 + 零交叉；数值级隔离未接（各 org 取值目前相同 ⇒ 另立卡 p1）。
+note: ④ 覆盖面（CTO 复核订正）：cron 侧 = 行级租户正确（org 扇出生效）；**轮次级未接** ⇒ 44 哨兵在 cron 路径 0 行；**指标级亦未落行**（唯一写行样板 cash-flow 的读路径 raw `prepare` 与 runner 的 GraphStore 不兼容 ⇒ 0 行；已另立 p1 卡）。④ 去重键无 org ⇒ **接派发前必须先给去重键加 org**（今日靠 per-org 轮不进派发面规避）。【预算瘦身（CTO 裁 a）】延后 2 项（cash-flow-sentinel.ts / cpc-sentinel.ts 的非承重改动）已登记进 PR 未解决项；2 组测试合并（用例数守恒 17）。cron 扇出 = 全局轮不变 + per-org 只写轮（executeForActiveOrgs；无 active org ⇒ 不跑不写）；discoverTeams 改读 orgs（V6=修）；覆盖面 = 行级租户正确 + 零交叉；数值级隔离未接（各 org 取值目前相同 ⇒ 另立卡 p1）。
