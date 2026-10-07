@@ -33,6 +33,7 @@
 - src/sentinel/metric-readings-writer.ts — 新建：`recordMetricReading` / `createMetricSink` / `writeRoundReadings` / `writeMetricReadings`（契约 + 幂等 + 降级显式 + 永不抛）
 - src/sentinel/types.ts — `SentinelContext` 增可选 `metricSink`（缺省 = 零行为变化）
 - src/sentinel/sentinel-runner.ts — **teamId 接进 ctx**（A2）+ 可选/引擎回退 sink（诊断主链路径由此落行）
+- src/sentinel/registry.ts — `runAll` 轮边界写轮次级（2 行/哨兵/轮；teamId 来自 ctx）
 - src/sentinel/adapters/cash-flow-sentinel.ts — **指标级样板**：4 个 compute 指标落表（null 不写）
 - tests/sentinel/metric-readings-writer.test.ts — 新建：10 例（正常/幂等/降级/边界/失败面/轮次级/样板指标级/V7 数据可用性/决策锁定夹具/只追加）
 - .claude/claims/1054.yaml — 新建（S0，含 done）

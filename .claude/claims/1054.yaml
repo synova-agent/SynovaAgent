@@ -11,6 +11,7 @@ writeset:
   - src/sentinel/metric-readings-writer.ts
   - src/sentinel/types.ts
   - src/sentinel/sentinel-runner.ts
+  - src/sentinel/registry.ts
   - src/sentinel/adapters/cash-flow-sentinel.ts
   - tests/sentinel/metric-readings-writer.test.ts
 done:
