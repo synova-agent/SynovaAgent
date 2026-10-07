@@ -46,6 +46,20 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #
 # 沙箱: 全部夹具在 mktemp -d 内；真 ci.yml / 真基线只**只读复制**；网络零依赖
 #   （--api-check 的 live 数据由本地 stub gh / 注入缝提供，绝不打真 API）。
+#
+# ── SIGPIPE 假红硬化（#1214 / A8，2026-10-07）─────────────────────────────
+# 病根: 断言写成 `echo "$OUT" | grep -q …` 或 `grep -v … "$f" | grep -q …` 时，
+#   右侧 `grep -q` **命中即提前退出** ⇒ 左侧收到 SIGPIPE(141) ⇒ 本文件 `set -uo pipefail`
+#   把整条管道判成 141 ⇒ `&&/||` 链走错分支 ⇒ **真接线判成接线缺失**（假红）。
+# 实证（旧形态留档；本文件可复跑）:
+#   `set -o pipefail; for i in $(seq 1 40); do grep -v '^[[:space:]]*#' .github/workflows/ci.yml \
+#      | grep -q 'check-required-contexts\.py'; printf '%s ' $?; done`
+#   → 实测 4/40 为 141（K3 独立实测 20/40；CI annotation 同型 broken pipe）。
+#   本文件自身 10 连跑实测 2 次「45 通过 1 失败」，失败项恒为 ⑧ 接线缺失（即 wiring_ok 的管道）。
+# 修法（先例: tests/control-tower/hard-gate-convergence.test.sh 的 PC_CODE_FILE 模式）:
+#   runq 把 stdout/stderr **落盘**，全部断言改为 `grep … "$OUT_FILE"`/`"$ERR_FILE"`；
+#   `grep -v … | grep -q …` 一律改为「先落一份去注释文件，再 grep 该文件」。
+#   回归防线: 本文件全文不再有「左写右早退」的管道（下方 ⑦/wiring_ok 亦同）。
 # ═════════════════════════════════════════════════════════════════════
 set -uo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -58,7 +72,15 @@ no(){ echo "  ❌ $1"; FAIL=$((FAIL+1)); }
 TMPD="$(mktemp -d)"; trap 'rm -rf "$TMPD"' EXIT
 
 OUT=""; ERR=""; RC=0
-runq() { OUT="$("$@" 2>"$TMPD/stderr.txt")"; RC=$?; ERR="$(cat "$TMPD/stderr.txt" 2>/dev/null || true)"; }
+OUT_FILE="$TMPD/stdout.txt"; ERR_FILE="$TMPD/stderr.txt"
+runq() { OUT="$("$@" 2>"$ERR_FILE")"; RC=$?; printf '%s\n' "$OUT" > "$OUT_FILE"; ERR="$(cat "$ERR_FILE" 2>/dev/null || true)"; }
+
+# 取基线首条 context 名（#1214: `grep -v … | head -1` 同族早退管道 —— head 收工即给左侧 SIGPIPE）
+first_ctx_of() { # $1 = 基线文件
+  local f="$1" code="$TMPD/base-code.txt"
+  grep -v '^[[:space:]]*#' "$f" > "$code" || true
+  head -1 "$code" | cut -d'|' -f1 | sed -e 's/[[:space:]]*$//'
+}
 
 if [ -z "$PY" ]; then echo "  ⚠️ python 不可用 — 跳过（fail-open，铁律 11 显式）"; exit 0; fi
 [ -f "$C" ] || { echo "  ❌ 被测脚本缺失: $C"; exit 1; }
@@ -98,15 +120,15 @@ else
   no "真基线数据行数异常: ${N_EXPECTED:-0}（应 ≥ 5；空/残基线不得进入 ① 的比较）"
   N_EXPECTED=0
 fi
-echo "$OUT" | grep -q "${N_EXPECTED}/${N_EXPECTED} 命中" && ok "${N_EXPECTED}/${N_EXPECTED} 必需 context 全命中" || no "未打印 ${N_EXPECTED}/${N_EXPECTED} 命中: $(echo "$OUT" | tail -3 | tr '\n' '|')"
-echo "$OUT" | grep -q "REQUIRED-CONTEXTS: OK" && ok "末行判定 REQUIRED-CONTEXTS: OK" || no "末行判定异常"
+grep -q "${N_EXPECTED}/${N_EXPECTED} 命中" "$OUT_FILE" && ok "${N_EXPECTED}/${N_EXPECTED} 必需 context 全命中" || no "未打印 ${N_EXPECTED}/${N_EXPECTED} 命中: $(echo "$OUT" | tail -3 | tr '\n' '|')"
+grep -q "REQUIRED-CONTEXTS: OK" "$OUT_FILE" && ok "末行判定 REQUIRED-CONTEXTS: OK" || no "末行判定异常"
 
 # ── ③ 矩阵展开可还原（--verbose 明细；含对象数组 include）──
 echo "── ③ 矩阵展开 ──"
 runq "$PY" "$C" --verbose
 for want in "Vitest (1/2)" "Vitest (2/2)" "Test-Kit Architecture Tests (windows-latest)" \
             "Control Tower Gate Tests (ubuntu-latest)" "macos (dmg + zip)"; do
-  echo "$OUT" | grep -qF -- "$want" && ok "展开名可还原: $want" || no "展开名缺失: $want"
+  grep -qF -- "$want" "$OUT_FILE" && ok "展开名可还原: $want" || no "展开名缺失: $want"
 done
 
 # ③b 木块序列 / include 对象数组（合成夹具，独立基线）
@@ -147,7 +169,7 @@ FIXM="$TMPD/fix-matrix"
 mk_fixture "$FIXM"
 if subst "$FIXM/.github/workflows/ci.yml" "shard: [1/2, 2/2]" "shard: [9/9, 2/2]"; then
   runq "$PY" "$C" --root "$FIXM"
-  [ "$RC" -eq 1 ] && echo "$OUT" | grep -qF "Vitest (1/2)" \
+  [ "$RC" -eq 1 ] && grep -qF "Vitest (1/2)" "$OUT_FILE" \
     && ok "矩阵取值改坏 → exit 1 且点名 Vitest (1/2)" \
     || no "矩阵改坏应 exit 1 + 点名，实际 rc=$RC: $(echo "$OUT" | tail -3 | tr '\n' '|')"
 else
@@ -161,12 +183,12 @@ mk_fixture "$FIX1"
 if subst "$FIX1/.github/workflows/ci.yml" "name: Integration Contract Check" "name: Integration Contract Chek"; then
   runq "$PY" "$C" --root "$FIX1"
   [ "$RC" -eq 1 ] && ok "job name 改一字符 → exit 1" || no "应 exit 1，实际 $RC"
-  echo "$OUT" | grep -qF "VIOLATION: 必需 context 无任何 workflow job 产出: Integration Contract Check" \
-    && ok "逐条点名失配 context（Integration Contract Check）" || no "未点名失配 context: $(echo "$OUT" | grep VIOLATION | tr '\n' '|')"
-  echo "$OUT" | grep -qF "REQUIRED-CONTEXTS: VIOLATION(" && ok "末行判定 VIOLATION(n)" || no "末行判定异常"
+  grep -qF "VIOLATION: 必需 context 无任何 workflow job 产出: Integration Contract Check" "$OUT_FILE" \
+    && ok "逐条点名失配 context（Integration Contract Check）" || no "未点名失配 context: $(grep VIOLATION "$OUT_FILE" | tr '\n' '|')"
+  grep -qF "REQUIRED-CONTEXTS: VIOLATION(" "$OUT_FILE" && ok "末行判定 VIOLATION(n)" || no "末行判定异常"
   # ⑥b --reverse 报告模式: 同一夹具不判违规（信息级，exit 0 + NOTE 可见）
   runq "$PY" "$C" --root "$FIX1" --reverse
-  [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "^NOTE: " \
+  [ "$RC" -eq 0 ] && grep -q "^NOTE: " "$OUT_FILE" \
     && ok "--reverse 报告模式不判违规（exit 0 + NOTE 可见）" \
     || no "--reverse 报告模式异常: rc=$RC"
 else
@@ -180,8 +202,8 @@ mkdir -p "$FIXN/.github/workflows"
 cp "$REPO/.github/workflows/ci.yml" "$FIXN/.github/workflows/ci.yml"
 runq "$PY" "$C" --root "$FIXN"
 [ "$RC" -eq 2 ] && ok "基线缺失 → exit 2（非 0 非 1）" || no "基线缺失应 exit 2，实际 $RC"
-echo "$ERR" | grep -q "^degraded: " && ok "stderr 出 degraded:（显式降级）" || no "stderr 缺 degraded 行: $ERR"
-echo "$OUT" | grep -q "REQUIRED-CONTEXTS: DEGRADED" && ok "末行 DEGRADED" || no "末行应 DEGRADED"
+grep -q "^degraded: " "$ERR_FILE" && ok "stderr 出 degraded:（显式降级）" || no "stderr 缺 degraded 行: $ERR"
+grep -q "REQUIRED-CONTEXTS: DEGRADED" "$OUT_FILE" && ok "末行 DEGRADED" || no "末行应 DEGRADED"
 
 FIXE="$TMPD/fix-emptybaseline"
 mk_fixture "$FIXE"
@@ -204,12 +226,12 @@ runq "$PY" "$C" --root "$TMPD/fix-nodir" --workflows "$TMPD/no-such-workflows"
 #   并把"非空"作为前置断言（防空基线把消息断言变成恒真）。判别性: 重复未被检出 ⇒ rc≠1 ⇒ 红。
 FIXD="$TMPD/fix-dup"
 mk_fixture "$FIXD"
-DUP_CANARY="$(grep -v '^[[:space:]]*#' "$FIXD/scripts/control-tower/required-checks-baseline.txt" | head -1 | cut -d'|' -f1 | sed -e 's/[[:space:]]*$//')"
+DUP_CANARY="$(first_ctx_of "$FIXD/scripts/control-tower/required-checks-baseline.txt")"
 [ -n "$DUP_CANARY" ] || no "⑥ 夹具退化: 未能从夹具基线取到金丝雀 context 名"
 printf '%s | owner=test | source=branch-protection API | as_of=2026-10-01T00:00:00Z | evidence=fixture\n' "$DUP_CANARY" \
   >> "$FIXD/scripts/control-tower/required-checks-baseline.txt"
 runq "$PY" "$C" --root "$FIXD"
-[ "$RC" -eq 1 ] && echo "$OUT" | grep -qF "基线重复登记必需 context: ${DUP_CANARY}" \
+[ "$RC" -eq 1 ] && grep -qF "基线重复登记必需 context: ${DUP_CANARY}" "$OUT_FILE" \
   && ok "基线重复登记 → exit 1 且点名（金丝雀=${DUP_CANARY}）" || no "重复登记应 exit 1 + 点名，实际 rc=$RC"
 
 # ── ④b 跨平台: CRLF 基线 + CRLF workflow → 仍 exit 0（Windows 检出层第一号陷阱）──
@@ -233,7 +255,7 @@ echo "── ⑤ --api-check ──"
 FIXA="$TMPD/fix-api"; mk_fixture "$FIXA"
 runq env SYNO_REQUIRED_CONTEXTS_GH="$TMPD/no-such-gh-binary" "$PY" "$C" --root "$FIXA" --api-check
 [ "$RC" -eq 2 ] && ok "gh 不可用（注入缝指向不存在路径）→ exit 2" || no "gh 不可用应 exit 2，实际 $RC"
-echo "$ERR" | grep -q "^degraded: " && ok "gh 不可用时 stderr 出 degraded:（绝不判绿）" || no "缺 degraded 行: $ERR"
+grep -q "^degraded: " "$ERR_FILE" && ok "gh 不可用时 stderr 出 degraded:（绝不判绿）" || no "缺 degraded 行: $ERR"
 
 case "$(uname -s 2>/dev/null || echo unknown)" in
   MINGW*|MSYS*|CYGWIN*|Windows*|unknown) WINLIKE=1 ;;
@@ -245,7 +267,7 @@ if [ "$WINLIKE" -eq 0 ]; then
   printf '#!/bin/sh\necho "gh: not logged in (test shim)" >&2\nexit 4\n' > "$SHIM/gh"
   chmod +x "$SHIM/gh"
   runq env PATH="$SHIM:$PATH" "$PY" "$C" --root "$FIXA" --api-check
-  [ "$RC" -eq 2 ] && echo "$ERR" | grep -q "rc=4" \
+  [ "$RC" -eq 2 ] && grep -q "rc=4" "$ERR_FILE" \
     && ok "PATH 坏 gh shim（rc=4）→ exit 2 + degraded 带 rc" \
     || no "坏 shim 应 exit 2 + degraded(rc=4)，实际 rc=$RC: $ERR"
 
@@ -263,7 +285,7 @@ PYEOF
   printf '#!/bin/sh\ncat "$STUB_JSON"\n' > "$STUB"; chmod +x "$STUB"
 
   runq env SYNO_REQUIRED_CONTEXTS_GH="$STUB" STUB_JSON="$TMPD/live-ok.json" "$PY" "$C" --root "$FIXA" --api-check
-  [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "双向零差集" \
+  [ "$RC" -eq 0 ] && grep -q "双向零差集" "$OUT_FILE" \
     && ok "stub gh: live == 基线 → exit 0（双向零差集）" || no "live==基线应 exit 0，实际 rc=$RC"
 
   "$PY" - "$TMPD/live-ok.json" "$TMPD/live-extra.json" extra <<'PYEOF'
@@ -273,11 +295,11 @@ data["required_status_checks"]["contexts"].append("Extra Unregistered Check")
 json.dump(data, open(sys.argv[2], "w", encoding="utf-8"))
 PYEOF
   runq env SYNO_REQUIRED_CONTEXTS_GH="$STUB" STUB_JSON="$TMPD/live-extra.json" "$PY" "$C" --root "$FIXA" --api-check
-  [ "$RC" -eq 1 ] && echo "$OUT" | grep -qF "live 必需 context 未登记进基线（基线缺 live）: Extra Unregistered Check" \
+  [ "$RC" -eq 1 ] && grep -qF "live 必需 context 未登记进基线（基线缺 live）: Extra Unregistered Check" "$OUT_FILE" \
     && ok "live 多一条 → exit 1 且点名（基线缺 live）" || no "live 多一条应 exit 1 + 点名，实际 rc=$RC"
 
   # D1147: 金丝雀同样改为**从真基线取第一条登记名**（原写死 `npm audit`，已随单套门禁移出必需集）。
-  LIVE_CANARY="$(grep -v '^[[:space:]]*#' "$BASE" | head -1 | cut -d'|' -f1 | sed -e 's/[[:space:]]*$//')"
+  LIVE_CANARY="$(first_ctx_of "$BASE")"
   [ -n "$LIVE_CANARY" ] || no "⑤ 夹具退化: 未能从真基线取到金丝雀 context 名"
   "$PY" - "$TMPD/live-ok.json" "$TMPD/live-less.json" "$LIVE_CANARY" <<'PYEOF'
 import json, sys
@@ -287,17 +309,17 @@ data["required_status_checks"]["contexts"] = [c for c in ctx if c != sys.argv[3]
 json.dump(data, open(sys.argv[2], "w", encoding="utf-8"))
 PYEOF
   runq env SYNO_REQUIRED_CONTEXTS_GH="$STUB" STUB_JSON="$TMPD/live-less.json" "$PY" "$C" --root "$FIXA" --api-check
-  [ "$RC" -eq 1 ] && echo "$OUT" | grep -qF "基线登记但 live 已不是必需 context（live 缺基线）: ${LIVE_CANARY}" \
+  [ "$RC" -eq 1 ] && grep -qF "基线登记但 live 已不是必需 context（live 缺基线）: ${LIVE_CANARY}" "$OUT_FILE" \
     && ok "live 少一条 → exit 1 且点名（live 缺基线；金丝雀=${LIVE_CANARY}）" || no "live 少一条应 exit 1 + 点名，实际 rc=$RC"
 
   printf 'not-json-at-all\n' > "$TMPD/live-bad.json"
   runq env SYNO_REQUIRED_CONTEXTS_GH="$STUB" STUB_JSON="$TMPD/live-bad.json" "$PY" "$C" --root "$FIXA" --api-check
-  [ "$RC" -eq 2 ] && echo "$ERR" | grep -q "输出非 JSON" \
+  [ "$RC" -eq 2 ] && grep -q "输出非 JSON" "$ERR_FILE" \
     && ok "gh 输出非法 JSON → exit 2（fail-closed）" || no "非法 JSON 应 exit 2，实际 rc=$RC"
 
   printf '{"url":"x"}\n' > "$TMPD/live-shape.json"
   runq env SYNO_REQUIRED_CONTEXTS_GH="$STUB" STUB_JSON="$TMPD/live-shape.json" "$PY" "$C" --root "$FIXA" --api-check
-  [ "$RC" -eq 2 ] && echo "$ERR" | grep -q "required_status_checks" \
+  [ "$RC" -eq 2 ] && grep -q "required_status_checks" "$ERR_FILE" \
     && ok "缺 required_status_checks → exit 2（形状不符 fail-closed）" || no "形状不符应 exit 2，实际 rc=$RC"
 else
   echo "  ⚠️ SKIP: Windows 无 POSIX 可执行 shim — PATH 坏 shim / stub gh 用例跳过（注入缝用例已覆盖降级路径）"
@@ -312,9 +334,9 @@ BADGH="$TMPD/no-such-gh-binary"
 runq env SYNO_REQUIRED_CONTEXTS_GH="$BADGH" "$PY" "$C" --root "$FIXAD" --api-check --allow-degraded
 [ "$RC" -eq 0 ] && ok "① 坏 gh + --api-check --allow-degraded → exit 0" \
   || no "① 应 exit 0（降级转 warning），实际 $RC: $(echo "$OUT" | tail -1)"
-echo "$ERR" | grep -q "^degraded: " && ok "① stderr 含 degraded:（降级原因可见）" \
+grep -q "^degraded: " "$ERR_FILE" && ok "① stderr 含 degraded:（降级原因可见）" \
   || no "① stderr 缺 degraded: 行: $ERR"
-echo "$ERR" | grep -q "^warning: " && ok "① stderr 含 warning:（降级被显式标注）" \
+grep -q "^warning: " "$ERR_FILE" && ok "① stderr 含 warning:（降级被显式标注）" \
   || no "① stderr 缺 warning: 行: $ERR"
 
 # ② 同场景**不带旗标** ⇒ exit 2（fail-closed 保留，不因新增旗标而削弱默认路径）
@@ -325,7 +347,7 @@ runq env SYNO_REQUIRED_CONTEXTS_GH="$BADGH" "$PY" "$C" --root "$FIXAD" --api-che
 # ③ 最重要: **静态面违规在降级下仍必红** —— 改坏 job name + 坏 gh + 旗标 ⇒ exit 1（不是 0）
 runq env SYNO_REQUIRED_CONTEXTS_GH="$BADGH" "$PY" "$C" --root "$FIX1" --api-check --allow-degraded
 if [ "$RC" -eq 1 ]; then
-  echo "$OUT" | grep -q "^VIOLATION: " && ok "③ 静态面违规在降级下仍必红（exit 1 + 点名）" \
+  grep -q "^VIOLATION: " "$OUT_FILE" && ok "③ 静态面违规在降级下仍必红（exit 1 + 点名）" \
     || no "③ exit 1 但未点名 VIOLATION"
 else
   no "③ 静态面违规被降级吞掉: 应 exit 1，实测 ${RC}（降级 ≠ 免检；根因+补丁见回执）"
@@ -347,22 +369,25 @@ runq "$PY" "$C" --root "$FIXN" --allow-degraded
 
 # ⑥ 降级必须**可见**（铁律 11 静默降级禁止）: stdout 出 SKIPPED(degraded) 标注
 runq env SYNO_REQUIRED_CONTEXTS_GH="$BADGH" "$PY" "$C" --root "$FIXAD" --api-check --allow-degraded
-echo "$OUT" | grep -q "SKIPPED(degraded)" && ok "⑥ 降级对 stdout 可见（SKIPPED(degraded)，非静默）" \
+grep -q "SKIPPED(degraded)" "$OUT_FILE" && ok "⑥ 降级对 stdout 可见（SKIPPED(degraded)，非静默）" \
   || no "⑥ 降级未在 stdout 标注（静默降级，铁律 11）: $(echo "$OUT" | tail -2 | tr '\n' '|')"
 
 # ── ⑦ 只读红线（静态断言: 无写保护规则调用）──
 echo "── ⑦ 只读红线 ──"
-if grep -v '^[[:space:]]*#' "$C" | grep -qE -- '--method|[[:space:]]-X[[:space:]]|PATCH|PUT|POST|DELETE'; then
+# 去注释后的代码面只落一次文件（禁 `grep -v … | grep -q …`：左侧 SIGPIPE 假红，见文件头 #1214）
+C_CODE_FILE="$TMPD/c-code.txt"
+grep -v '^[[:space:]]*#' "$C" > "$C_CODE_FILE" || true
+if grep -qE -- '--method|[[:space:]]-X[[:space:]]|PATCH|PUT|POST|DELETE' "$C_CODE_FILE"; then
   no "检出写保护规则调用（红线: 只报不改）"
 else
   ok "无 --method/-X + 无 PATCH/PUT/POST/DELETE（只读 branch protection）"
 fi
-grep -v '^[[:space:]]*#' "$C" | grep -q 'gh_bin, "api"' && ok 'gh 调用形态 = gh api <path>（默认 GET，无写方法）' || no "gh 调用形态异常"
+grep -q 'gh_bin, "api"' "$C_CODE_FILE" && ok 'gh 调用形态 = gh api <path>（默认 GET，无写方法）' || no "gh 调用形态异常"
 
 # ── 启动方式（本卡验收命令形如 `bash <file>.py`）──
 echo "── 启动方式 ──"
 runq "$PY" "$C" --help
-[ "$RC" -eq 0 ] && echo "$OUT" | grep -q "用法\|usage" && ok "python 直呼 --help → exit 0" || no "python 直呼 --help 异常 rc=$RC"
+[ "$RC" -eq 0 ] && grep -q "用法\|usage" "$OUT_FILE" && ok "python 直呼 --help → exit 0" || no "python 直呼 --help 异常 rc=$RC"
 if bash "$C" --help >"$TMPD/bash-help.out" 2>&1; then
   ok "bash <file>.py --help → exit 0（双语法首行）"
 elif ! command -v python3 >/dev/null 2>&1; then
@@ -376,10 +401,12 @@ echo "── ⑧ 接线（真断言 + 反向验证）──"
 CIY="${SYNO_CT_WIRING_CI_YML:-$REPO/.github/workflows/ci.yml}"
 wiring_ok() { # $1 = ci.yml 路径；rc 0 = 接线完整（调用 + canary 登记 + run: 段命中，非仅注释）
   local f="$1"
+  local code="$TMPD/wiring-code.txt"   # #1214: 去注释面落盘再 grep（旧形态 `grep -v … | grep -q …` 会 141 假红）
   [ -f "$f" ] || return 1
   grep -q "check-required-contexts" "$f" 2>/dev/null || return 1
   grep -q "check-required-contexts\.test\.sh" "$f" 2>/dev/null || return 1
-  grep -v '^[[:space:]]*#' "$f" | grep -q "check-required-contexts\.py" || return 1
+  grep -v '^[[:space:]]*#' "$f" > "$code" || true
+  grep -q "check-required-contexts\.py" "$code" || return 1
   return 0
 }
 if wiring_ok "$CIY"; then
