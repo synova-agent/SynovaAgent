@@ -36,7 +36,7 @@ ROOT="$(cd "$SELF_DIR/../.." && pwd)"
 MODE=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    --scan|--quarantine|--list|--face-total) MODE="${1#--}" ;;
+    --scan|--quarantine|--list|--face-total|--slack|--slack-cap) MODE="${1#--}" ;;
     --root) shift; [ $# -gt 0 ] || { echo "SEALED-TESTS: --root 缺参数" >&2; exit 2; }; ROOT="$1" ;;
     -h|--help)
       sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
@@ -85,24 +85,31 @@ quarantine() {  # 隔离台账 = REGISTRY-BASELINE 段的数据行（跳过注�
 face_total() {  # 台账登记的发现面总数下界（`# FACE-TOTAL=<n>`，缺省 0 = 不设下界）
   awk '
     /^[[:space:]]*#[[:space:]]*FACE-TOTAL=/ {
-      sub(/^[[:space:]]*#[[:space:]]*FACE-TOTAL=/, "")
-      gsub(/[^0-9]/, "")
-      seen = 1
-      n = $0 + 0
-      if (n > best) best = n
+      line = $0
+      sub(/^[[:space:]]*#[[:space:]]*FACE-TOTAL=/, "", line)
+      if (match(line, /[0-9]+/)) { seen = 1; n = substr(line, RSTART, RLENGTH) + 0; if (n > best) best = n }
     }
     END { if (seen) printf "%d", best; else printf "" }
   ' "$BASELINE" 2>/dev/null | tr -d '[:space:]'   # swallow-ok: 台账不可读已在上游 -f 校验；空=未设下界（不设即不判）
 }
 
+slack_cap() {   # 余量上限（`# SLACK-CAP=<n>`，缺省空 = 不设上限）——#1227 跟进件（Lead 裁 N=10）
+  awk '
+    /^[[:space:]]*#[[:space:]]*SLACK-CAP=/ {
+      line = $0
+      sub(/^[[:space:]]*#[[:space:]]*SLACK-CAP=/, "", line)
+      if (match(line, /[0-9]+/)) { seen = 1; n = substr(line, RSTART, RLENGTH) + 0; if (n > best) best = n }
+    }
+    END { if (seen) printf "%d", best; else printf "" }
+  ' "$BASELINE" 2>/dev/null | tr -d '[:space:]'
+}
+
 quarantine_total() {  # 隔离条目数上界（`# QUARANTINE-TOTAL=<n>`，缺省 0 = 不设上界）
   awk '
     /^[[:space:]]*#[[:space:]]*QUARANTINE-TOTAL=/ {
-      sub(/^[[:space:]]*#[[:space:]]*QUARANTINE-TOTAL=/, "")
-      gsub(/[^0-9]/, "")
-      seen = 1
-      n = $0 + 0
-      if (n > best) best = n
+      line = $0
+      sub(/^[[:space:]]*#[[:space:]]*QUARANTINE-TOTAL=/, "", line)
+      if (match(line, /[0-9]+/)) { seen = 1; n = substr(line, RSTART, RLENGTH) + 0; if (n > best) best = n }
     }
     END { if (seen) printf "%d", best; else printf "" }
   ' "$BASELINE" 2>/dev/null | tr -d '[:space:]'   # swallow-ok: 同上；空=未设上界（不设即不判）
@@ -118,6 +125,8 @@ case "$MODE" in
   scan) printf '%s\n' "$SCAN" | grep . || true ;;
   quarantine) printf '%s\n' "$QUAR" | grep . || true ;;
   face-total) FT="$(face_total)"; [ -n "$FT" ] || FT=0; printf '%s\n' "$FT" ;;
+  slack) FT="$(face_total)"; [ -n "$FT" ] || FT=0; printf '%s\n' "$((SCAN_N - FT))" ;;
+  slack-cap) SC="$(slack_cap)"; [ -n "$SC" ] || SC=0; printf '%s\n' "$SC" ;;
   list)
     LIST="$(comm -23 <(printf '%s\n' "$SCAN" | grep . | sort -u) <(printf '%s\n' "$QUAR" | grep . | sort -u))"
     LIST_N=$(printf '%s\n' "$LIST" | grep -c . || true)
@@ -131,6 +140,19 @@ case "$MODE" in
     if [ -n "$FLOOR" ] && [ "$SCAN_N" -lt "$FLOOR" ]; then
       echo "SEALED-TESTS: 发现面 ${SCAN_N} < 台账下界 ${FLOOR} —— 删测试必须同批显式下调 # FACE-TOTAL（不得静默缩小执行集）" >&2
       VIOL=1
+    fi
+    # 🔴 #1227 跟进件（Lead 裁 2026-10-07）: 动态打印**余量** slack = scan − FACE-TOTAL
+    #   = 「可被静默删除而仍判绿的测试数」（下界语义的必然代价面），并对其设**上限**：
+    #   余量 > SLACK-CAP ⇒ 红（逼周期性**显式上调 floor**——一行、低频，不进每 PR 的中央写集）。
+    #   禁止自动上调（那会让棘轮失效）；上调必须是显式提交 + 理由。
+    if [ -n "$FLOOR" ]; then
+      SLACK=$((SCAN_N - FLOOR))
+      echo "SEALED-TESTS: 余量 slack=${SLACK}（scan=${SCAN_N} − FACE-TOTAL=${FLOOR}）—— **≤ 该余量的净删除不可检测**（已知代价，见契约）" >&2
+      CAP="$(slack_cap)"
+      if [ -n "$CAP" ] && [ "$SLACK" -gt "$CAP" ]; then
+        echo "SEALED-TESTS: 余量 ${SLACK} > 上限 SLACK-CAP=${CAP} —— 请显式上调 # FACE-TOTAL（并同批上调 # SLACK-CAP，一行、低频）；禁止自动上调（会使棘轮失效）" >&2
+        VIOL=1
+      fi
     fi
     # 隔离台账条目必须仍存在（条目失效 = 台账撒谎）
     while IFS= read -r q; do

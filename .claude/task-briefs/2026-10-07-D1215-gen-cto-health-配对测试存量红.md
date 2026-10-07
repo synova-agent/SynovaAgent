@@ -40,7 +40,9 @@
 - `scripts/control-tower/gen-cto-health.py` — `spec` 三形态容纳：**只有 dict 提供 json path**；
   `str`/`null` 一律「无 json path」，回落到既有 glob 派生（`has_spec`）
 - `tests/control-tower/gen-cto-health.test.sh` — ① 全部生成器调用改走 `run_gen`（显式收 rc，
-  失败即打印原始输出 ⇒ 禁静默中止）；② 新增 §6 三形态夹具（沙箱镜像仓内相对结构 + 真 git 仓）
+  失败即打印原始输出 ⇒ 禁静默中止）；② 新增 §6 三形态夹具（沙箱镜像仓内相对结构 + 真 git 仓）；
+  ③ 新增 §7 四位数编号夹具（4 位号 `D1215` 的 impl 提交必须被识别）
+- `scripts/control-tower/gen-cto-health.py` — 4 处 `D(\d{3})` → `D(\d{3,})`（Lead 裁决② 本卡内修）
 - `.claude/task-briefs/2026-10-07-D1215-gen-cto-health-配对测试存量红.md` — 本 brief
 - `task-state/D1215.json` — 台账
 - `memory/notes/proposed/2026-10-07-gen-cto-health-spec-shapes.md` — 决策沉淀（铁律 49）
@@ -51,8 +53,9 @@
 - 不改 `.github/workflows/ci.yml`（密封清单/CI 面）
 - 不改 `scripts/audit/**`（K3 红线）
 - 不改任何 `task-state/*.json` 的既有数据（本卡**不做数据迁移**：容纳形态，不改历史台账）
-- 不修 `gen-cto-health.py:296` 的 `r"D(\d{3})"` 三位数正则（4 位 D# 会被截成 3 位）——
-  属**另一类**问题（编号正则），且当前 `spec_files` 用同一正则、口径自洽，**另卡**，本卡不夹带
+- 不改除 4 处 D# 正则以外的任何正则（如 `数据源指纹: ([0-9a-f]{12})`、日志行匹配）——
+  `grep -n 're\.\(search\|match\|compile\)'` 可枚举；语义已验证为**严格增补**（3 位行为逐例不变）
+- 不改 `scripts/control-tower/ct-test-gate.sh`（U7 配对门禁本体）——**不加豁免、不动判据**
 
 ## Q3: 验收 — 入口 → 交互 → 结果
 入口：`bash tests/control-tower/gen-cto-health.test.sh`
@@ -65,15 +68,18 @@
 ## 写集
 | 文件 | 类型 |
 |---|---|
-| `scripts/control-tower/gen-cto-health.py` | task |
-| `tests/control-tower/gen-cto-health.test.sh` | task |
+| `scripts/control-tower/gen-cto-health.py` | task（spec 三形态 + 4 处 D# 正则 3→3+ 位） |
+| `tests/control-tower/gen-cto-health.test.sh` | task（run_gen 显式收 rc + §6 三形态 + §7 四位号夹具） |
+| `docs/synova/CTO-HEALTH.md` | task（生成器产物刷新 —— Lead 裁决①：仪表盘自 2026-08-29 因本 bug 冻结，属用户可见后果） |
 | `.claude/task-briefs/2026-10-07-D1215-gen-cto-health-配对测试存量红.md` | task |
 | `task-state/D1215.json` | task |
 | `memory/notes/proposed/2026-10-07-gen-cto-health-spec-shapes.md` | task |
 
 ## Done 标准
-- [ ] verify: bash tests/control-tower/gen-cto-health.test.sh ⇒ rc=0 且 结果: PASS=14 FAIL=0
+- [ ] verify: bash tests/control-tower/gen-cto-health.test.sh ⇒ rc=0 且 结果: PASS=16 FAIL=0
 - [ ] verify: python3 scripts/control-tower/gen-cto-health.py ⇒ rc=0（改前 rc=1）
 - [ ] verify: 三形态夹具判别性 —— 把 gen-cto-health.py:305 还原为 (d.get("spec") or {}).get("path") ⇒ 测试 rc=1 且点名 AttributeError
+- [ ] verify: 四位号夹具判别性 —— 把 4 处 D(\\d{3,}) 还原为 D(\\d{3}) ⇒ 测试 rc=1（D1215 变 claimed）
 - [ ] verify: grep -c 'get("spec") or {}' scripts/control-tower/gen-cto-health.py ⇒ 0（旧形态已清除）
+- [ ] verify: grep -c 'D(\\d{3})' scripts/control-tower/gen-cto-health.py ⇒ 0（三位正则已清除）
 - [ ] verify: bash scripts/pre-commit-check.sh ⇒ 13 组通过

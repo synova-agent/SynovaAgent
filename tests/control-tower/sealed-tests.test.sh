@@ -105,14 +105,40 @@ else
   no "边界: 贴边态删 1 未红（rc=${rc}）⇒ 棘轮有静默余量"
 fi
 
-# ── 成本登记（Lead 裁）: 净零变换（删 1 + 加 1）**不可检测** —— 断言其 rc=0 并把代价写进输出 ──
+# ── 成本登记（Lead 裁，2026-10-07 表述修正）: **≤ 当前余量 (scan − FACE-TOTAL) 的净删除不可检测** ──
+#   净零变换（删 1 + 加 1）只是该代价的最常见形态；一般形态 = 任何「净删除 ≤ slack」的变更。
 R7="$(mkfix 2 none)"
 rm -f "$R7/tests/control-tower/aa.test.sh"; printf '#!/bin/bash\n' > "$R7/tests/control-tower/zz.test.sh"
 OUT="$(run_in "$R7" --list)"; rc=$?
 if [ "$rc" -eq 0 ] && printf '%s\n' "$OUT" | grep -q 'zz.test.sh'; then
-  ok "成本登记: 净零变换（删 aa / 加 zz ⇒ scan 不变）判 rc=0 —— **已知不可检测**（下界语义的必然代价，见契约注释）"
+  ok "成本登记: 净零变换（删 aa / 加 zz ⇒ scan 不变 ≤ 余量）判 rc=0 —— **≤ 余量的净删除不可检测**（已知代价）"
 else
   no "成本登记用例异常: rc=${rc}（下界语义下净零变换应为 rc=0）"
+fi
+
+# ── #1227 跟进件: 余量上限 SLACK-CAP（贴上限 ⇒ 绿；超限 ⇒ 红）──
+mc() {  # $1 = floor ; $2 = cap
+  local d="$TMPD/slack-$1-$2"; rm -rf "$d"; mkdir -p "$d/tests/control-tower" "$d/scripts/control-tower"
+  printf '#!/bin/bash\n' > "$d/tests/control-tower/aa.test.sh"
+  printf '#!/bin/bash\n' > "$d/tests/control-tower/bb.test.sh"
+  printf '#!/bin/bash\n' > "$d/tests/control-tower/cc.test.sh"
+  { printf '# FACE-TOTAL=%s\n' "$1"; [ -n "$2" ] && printf '# SLACK-CAP=%s\n' "$2"; printf '# ═══ REGISTRY-BASELINE（夹具）═══\n'; } > "$d/scripts/control-tower/gate-integrity-baseline.txt"
+  printf '%s' "$d"
+}
+R8="$(mc 2 1)"; OUT="$(run_in "$R8" --list)"; rc=$?
+if [ "$rc" -eq 0 ]; then ok "余量上限: slack=1 ≤ SLACK-CAP=1 ⇒ rc=0（贴上限绿）"; else no "余量上限: 贴上限被判红（rc=${rc}）"; fi
+R9="$(mc 2 0)"; OUT="$(run_in "$R9" --list)"; rc=$?
+if [ "$rc" -eq 1 ] && printf '%s\n' "$OUT" | grep -q 'SLACK-CAP'; then
+  ok "余量上限: slack=1 > SLACK-CAP=0 ⇒ rc=1 且点名 SLACK-CAP（超限红）"
+else
+  no "余量上限: 超限未红（rc=${rc}）"
+fi
+# 真仓: 余量可见 + 不超上限
+SL_REAL="$(bash "$SUT" --slack)"; CAP_REAL="$(bash "$SUT" --slack-cap)"
+if [ -n "$SL_REAL" ] && [ "$SL_REAL" -le "$CAP_REAL" ]; then
+  ok "余量可见: 真仓 slack=${SL_REAL} ≤ SLACK-CAP=${CAP_REAL}（动态打印在 --list stderr）"
+else
+  no "余量可见: 真仓 slack='${SL_REAL}' vs cap='${CAP_REAL}'（超限或缺值）"
 fi
 
 # ── 失败: 新增隔离未上调 QUARANTINE-TOTAL ⇒ 红 ──
