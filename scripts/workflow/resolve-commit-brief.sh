@@ -293,6 +293,15 @@ fi
 # （= D328 判「他人文件」硬阻断，D664 实测）。只认可解析的强锚点 brief，缺失则原样下探。
 # D-C（K3 R3/R4）: 存在 issue claim（CLAIM_FILE 非空）→ **禁用**本条 D# 强锚点回退。
 # 理由: 否则迁移期「分支名带旧 D# + 新 claim 并存」时，新声明被旧锚点劫持（预审 §③ 定罪场景）。
+#
+# 🔴 D1230/② 口径（K3 R4「分支名劫持」· 提交端半边）:
+#   **分支名只作"最弱锚点"** —— 它只能补"没有 brief 认领任何暂存文件"这一空档，
+#   不得覆盖任何**由认领/claim 得出的身份**（上面的认领制裁决与 claim-first 段均先于此段）。
+#   本段命中时向 **stderr** 打 `RESOLVER-ANCHOR: source=branch-anchor d=<D#> brief=<path>`
+#   （stdout 契约不变，仍只输出 brief 路径；标记走 stderr 供消费方判"身份来自最弱锚点"）。
+#   **无 claim（迁移期默认态）时的行为写清**: 无 issue 声明时本段**照常生效**（兼容期不误伤旧 D#
+#   跨日任务），但其结果**不是权威身份** —— 消费方（commit-msg-check.sh）必须以
+#   「与提交消息的声明比对」为准，冲突即 fail-closed（见该文件 R4 段）。
 if [ -z "$CLAIM_FILE" ] && [ -n "$ANCHORED_STRONG_FILES" ] && [ -n "$PYBIN" ]; then
   RESULT=$("$PYBIN" -c "
 import sys
@@ -314,6 +323,9 @@ sys.exit(1)
 " 2>/dev/null || true)
   if [ -n "$RESULT" ] && [ -f "$RESULT" ]; then
     echo "$RESULT"
+    # D1230/②: 最弱锚点可见化（stderr；stdout 契约不变）
+    _ANCH_D=$(basename "$RESULT" | grep -oE '[Dd][0-9]+' | head -1 | tr 'a-z' 'A-Z' || true)  # swallow-ok: 文件名提不到 D# → 标记里留空（消费方按"无锚点身份"处理，不静默当一致）
+    echo "RESOLVER-ANCHOR: source=branch-anchor d=${_ANCH_D:-none} brief=$RESULT" >&2
     exit 0
   fi
 fi
