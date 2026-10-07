@@ -1,0 +1,710 @@
+{
+  "schema": "d1061-v-selfverify/1.0",
+  "task": "task-4 (D1061-V · 独立自验)",
+  "verifier": "verifier（独立成员，不兼任编码）",
+  "worktree": "/Users/wane/SynovaAgent/.synova-wt-squad-d1061-verify",
+  "worktree_base_sha": "20b55eba9ce0db5cfa238bd09e02b4732d234af3",
+  "generated_at": "2026-09-29",
+  "conclusion_words_allowed": [
+    "自验结论",
+    "可提请独立审计",
+    "退回（附理由）"
+  ],
+  "note": "本文件永不含『审计通过』。通过与否归 CTO 收件闸 + K3。",
+  "baseline_drift": {
+    "note": "复核期间 origin/main 前移",
+    "from": "20b55eba9ce0db5cfa238bd09e02b4732d234af3",
+    "to": "d9955cfbee3d217dec1734ff87b10bee3ee6192b",
+    "cause": "Merge PR #875；内含 #882 = D1052 注入夹具 b 面排除 docs（N3 修复）",
+    "touched_this_cards_write_set": false,
+    "b_face_baseline_moved": {
+      "old": 14,
+      "new": 15,
+      "new_file": "memory/notes/proposed/2026-09-28-d1052-a-face-selfmatch.md"
+    },
+    "prb_vs_new_main": {
+      "prb_b_face": 14,
+      "main_b_face": 15,
+      "introduced": 0,
+      "relation": "PR-B 的 b 面是当前 main 的严格子集"
+    }
+  },
+  "pr_a": {
+    "branch": "chore/d1061-a-ci-speedup",
+    "remote_sha": "7d1a614c40cd5fe7e95ce4de821909efd7aa5f0a",
+    "pr": "#886",
+    "state": "PUSHED_AND_VERIFIED",
+    "independence_disclosure": {
+      "fact": "coder-a 全程停滞未提交；PR-A 的提交与推送由队长代做（代码作者仍为 coder-a）",
+      "verifier_vs_code_and_commit": "verifier 与两者均非同人 ⇒ 独立性成立",
+      "process_anomaly": "「编码者 ↔ 提交者」不一致，登记为流程事实（非缺陷）"
+    },
+    "redline": {
+      "cmd": "git diff --name-only origin/main...adb83dc6 | grep -E '^(src/|scripts/audit/)'",
+      "hits": 0,
+      "forbidden_four_files_touched": 0,
+      "verdict": "自验结论 = 零越界"
+    },
+    "residue": {
+      "a_face": {
+        "src": 0,
+        "tests": 0,
+        "scripts": 0,
+        ".github": 0
+      },
+      "b_face": {
+        "main_baseline": 15,
+        "pr_a": 17,
+        "pr_a_added": 2,
+        "added_files": [
+          "docs/synova/dispatch/2026-09-29-D1061-CT提速-门禁机制修正.md",
+          "docs/synova/product-lines/evidence/D1061/00-前提实测-原始输出.md"
+        ],
+        "verdict": "自验结论 = 合法（队长追加授权承载的派单件+前提证据，天然含该串；按 #882 docs 排除口径判）",
+        "caveat": "朴素判据「b 必须 == 基线 15」会把 +2 误判为新增残留"
+      }
+    },
+    "write_set": {
+      "files_total": 15,
+      "in_declaration": 11,
+      "governance_artifact": 1,
+      "lead_added_authorized": 2,
+      "out_of_scope": 0,
+      "verdict": "自验结论 = 无越界"
+    },
+    "fixtures_run": [
+      {
+        "file": "tests/control-tower/ct-suite-select.test.sh",
+        "rc": 0,
+        "real_s": 4.97,
+        "ran": true
+      },
+      {
+        "file": "tests/control-tower/simulate-ci-dedup.test.sh",
+        "rc": 0,
+        "real_s": 1.18,
+        "ran": true
+      }
+    ],
+    "swallow_ok_verification": {
+      "comments_count": 9,
+      "redundant": 1,
+      "checker": "scripts/workflow/check-silent-swallow.sh --diff",
+      "input_source": "git diff --cached (STAGED) —— 实现 :104",
+      "vacuous_green_on_committed_pr": "[silent-swallow] ✅ 无新增 .sh — 跳过 (rc=0) —— 不能作为豁免有效证据",
+      "proper_rerun_with_43_files_staged": {
+        "rc": 0,
+        "out": "✅ 无新增静默吞错"
+      },
+      "discriminating_test": {
+        "mutation": "剥掉全部 9 处 # swallow-ok 注释（保留 2>/dev/null）",
+        "rc": 1,
+        "flagged": 8,
+        "sample": "❌ tests/control-tower/ct-suite-select.test.sh: +OUT=$(sel --all 2>/dev/null); RC=$?; N=$(cnt \"$OUT\")",
+        "verdict": "自验结论 = 9 处豁免真实且承重；改坏即红 rc 0→1"
+      },
+      "redundant_note": "第 9 处 PLAT_N= (:180) 已有 || true，命中同行 fallback 自动豁免"
+    },
+    "mutations": [
+      {
+        "id": "A1",
+        "target": "scripts/control-tower/simulate-ci.sh:76",
+        "mutation": "if [ \"$SKIP_NESTED\" -eq 1 ]; then -> if false; then",
+        "baseline_rc": 0,
+        "mutated_rc": 1,
+        "red_assertions": [
+          "CI 环境应 0 条内层执行（rc=0 实跑 2 条）",
+          "CI=true 应 0 条（rc=0 实跑 2 条）",
+          "跳过未打印原因（静默风险）",
+          "degraded 日志缺 N1 事件"
+        ],
+        "verdict": "自验结论 = 判别成立"
+      },
+      {
+        "id": "A2",
+        "target": "scripts/control-tower/simulate-ci.sh:66",
+        "mutation": "IS_CI 判定 -> if false; then",
+        "baseline_inner": 0,
+        "mutated_inner": 2,
+        "verdict": "自验结论 = 判别成立"
+      },
+      {
+        "id": "A3",
+        "target": "scripts/control-tower/ct-suite-select.sh:178",
+        "mutation": "FORCE_FULL=0 -> 1",
+        "baseline_rc": 0,
+        "mutated_rc": 1,
+        "red_count": 7,
+        "red_assertions": [
+          "正常路径应只选 A 域 1 条，实际 3 条",
+          "windows 应 2 条，实际 3",
+          "摘要行缺 selected_of_total",
+          "D2 不符（rc=0 n=3）",
+          "D4 不符（rc=0 n=3）"
+        ],
+        "verdict": "自验结论 = 判别成立"
+      },
+      {
+        "id": "A4",
+        "target": "scripts/control-tower/ct-suite-select.sh:254",
+        "mutation": "if [ \"$SEL_N\" -eq 0 ]; then -> if false; then",
+        "baseline_rc": 0,
+        "mutated_rc": 1,
+        "red_count": 2,
+        "red_assertions": [
+          "D4 不符（rc=0 n=0）"
+        ],
+        "verdict": "自验结论 = 判别成立"
+      },
+      {
+        "id": "A5",
+        "target": "(不改码，直接行为) 映射缺失",
+        "observed": "[D1061-DEGRADED] code=D1 → 回退全量; selected_of_total=54/54 degraded=1; 日志落盘 1 行",
+        "verdict": "自验结论 = 显式回退，非静默 0 条"
+      },
+      {
+        "id": "A6",
+        "target": "scripts/control-tower/simulate-ci.sh 非法值分支",
+        "mutation": "SKIP_NESTED=0 -> 1",
+        "original": "非法值 → 按 full 跑内层 2 条 + 点名「非法…fail-closed 按 full 执行」",
+        "mutant": "非法值 → 静默 skip，内层 0 条，无「非法」告警",
+        "verdict": "自验结论 = 判别成立",
+        "coverage_gap": "simulate-ci-dedup.test.sh 头注释声明该语义但夹具内无对应断言（grep 零命中）→ 目前仅由我的直接行为测试守护"
+      }
+    ],
+    "fixture_fail_loud_behavior": "变异与夹具自身锚点重叠时，夹具打印「变异体①/②锚点未命中（脚本结构已变，夹具须同步）」→ fail-loud，不静默跳过",
+    "ci_yml_wiring": {
+      "call_site": ".github/workflows/ci.yml:427  TESTS=\"$(bash scripts/control-tower/ct-suite-select.sh --changed origin/main...HEAD --platform \"$CT_PLATFORM\" 2>/tmp/ct-select.log)\"",
+      "executed_not_merely_declared": {
+        "cmd": "原样执行该命令（windows 面）",
+        "rc": 0,
+        "stderr": "[D1061-SELECT] mode=select platform=windows changed=15 selected_of_total=54/54 degraded=0"
+      },
+      "single_source_consistency": {
+        "method": "awk '/for t in \\\\/,/; do$/' 提取 job for 块",
+        "catalog": 54,
+        "selector_all": 54,
+        "symmetric_difference": 0,
+        "self_correction": "我先前用整文件 grep 得 47 并误判 7 条 catalog 外条目 → 错，已纠正"
+      },
+      "fail_closed_verified": [
+        {
+          "case": "非法区间 --changed '~1...'",
+          "observed": "D5 变更范围不可解析 → 回退全量; 54/54 degraded=1"
+        },
+        {
+          "case": ".github/workflows/* 变更",
+          "observed": "map 规则 __FULL__（CI 定义自身变更 ⇒ 选择器前提失效）"
+        },
+        {
+          "case": "src/* / packages/*",
+          "observed": "__FULL__（有意不缩小）"
+        }
+      ],
+      "narrowing_real_case": {
+        "range": "9e7ffeb1~1...9e7ffeb1 (docs-only, 4 files)",
+        "observed": "changed=4 selected_of_total=29/54 degraded=0",
+        "verdict": "自验结论 = 真实缩小约 46%"
+      },
+      "contrast_pr_b_range": "54/54（同时命中 5 个 ct 域 + doc-system = 6 域全覆盖，设计内）",
+      "discriminator_boundary": "删除 :427 的调用 → TESTS 空 → 回退全量 → 不会变红（只变慢）；夹具接线断言为 grep 型。失效方向安全（多跑不少跑），登记不判缺陷"
+    },
+    "time_comparison": {
+      "status": "CI 侧不可完成",
+      "evidence": {
+        "runs_by_branch": 0,
+        "runs_by_sha": [
+          0,
+          0,
+          0
+        ],
+        "check_runs_for_sha": 0,
+        "pr_state": "#886 open draft=false mergeable=False mergeable_state=dirty"
+      },
+      "trigger_config": "push.branches:[main]（feature push 不触发）；唯一触发面 = pull_request",
+      "root_cause": "PR 与已前移的 main 冲突 → GitHub 无法构造 PR 合并引用 → 不排 run",
+      "control_case": "PR-B #883 mergeable_state=None → 正常触发 run 36522644152",
+      "local_ab": {
+        "after": {
+          "inner": 0,
+          "wall_s": 0
+        },
+        "before": {
+          "completed_in_60s_window": 0,
+          "unit_costs": {
+            "gate-failopen-net": "73s",
+            "alloc-task-id-lock": ">10min 未完成"
+          }
+        },
+        "caveat": "本地数据不得替代 CI 口径"
+      },
+      "recommendation": "git rebase origin/main 解 dirty 后重推（synchronize 已在触发 types 内）"
+    },
+    "target_verdict": {
+      "run_wall_le_480s": "未达标：635s > 480s（−70.4%）",
+      "win_ct_leg_le_300s": "未达标：630s > 300s（−69.0%，2.1×）"
+    },
+    "verdict": "PR-A：**可提请独立审计**（非 CI 面 + CI 面均已复核）。新 run 36528674633 = success（13/13 job 绿）；两口径 635s/630s（−70.4%/−69.0%）**仍均未达标**（480s/300s）；F1 已修（我独立跑 SYNO_CI=1 pre-commit-check.sh 复现）；F2 真根因=MAP_TSV CRLF，常驻断言经我变异证明具判别力；init.defaultBranch 假设经我独立复算确已证伪。**合并归 CTO，我不判通过。**",
+    "files_total": 18,
+    "ci_run": {
+      "run_id": 36528674633,
+      "event": "pull_request",
+      "sha": "7d1a614c",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-09-29T05:57:54Z",
+      "updated_at": "2026-09-29T06:08:29Z",
+      "supersedes": {
+        "run_id": 36527360094,
+        "note": "旧 run 669s/665s 作废"
+      },
+      "caliber_A_run_wall": {
+        "seconds": 635,
+        "minutes": 10.6,
+        "baseline_median_s": 2146,
+        "delta_pct": -70.4,
+        "target_s": 480,
+        "target_met": false
+      },
+      "caliber_B_windows_ct_leg": {
+        "seconds": 630,
+        "minutes": 10.5,
+        "conclusion": "success",
+        "baseline_median_s": 2035,
+        "delta_pct": -69.0,
+        "target_s": 300,
+        "target_met": false,
+        "leg_over_run_wall_pct": 99.2
+      },
+      "jobs_all": [
+        [
+          630,
+          "Control Tower Gate Tests (windows-latest)",
+          "success"
+        ],
+        [
+          170,
+          "Vitest (1/2)",
+          "success"
+        ],
+        [
+          155,
+          "Vitest (2/2)",
+          "success"
+        ],
+        [
+          129,
+          "TypeScript + Lint + Iron Laws",
+          "success"
+        ],
+        [
+          123,
+          "Architecture Check",
+          "success"
+        ],
+        [
+          111,
+          "Integration Contract Check",
+          "success"
+        ],
+        [
+          107,
+          "Checker Review (maker/checker)",
+          "success"
+        ],
+        [
+          72,
+          "Control Tower Gate Tests (ubuntu-latest)",
+          "success"
+        ],
+        [
+          35,
+          "Test-Kit Architecture Tests (windows-latest)",
+          "success"
+        ],
+        [
+          29,
+          "Golden Case F1 Gate",
+          "success"
+        ],
+        [
+          28,
+          "Gate Integrity (pattern sentinel + injection fixture)",
+          "success"
+        ],
+        [
+          15,
+          "Test-Kit Architecture Tests (ubuntu-latest)",
+          "success"
+        ],
+        [
+          13,
+          "npm audit",
+          "success"
+        ]
+      ],
+      "verdict": "自验结论 = 我独立取数复现（635s/630s，13/13 job success）"
+    },
+    "ci_failures": [
+      {
+        "id": "F1",
+        "job": "TypeScript + Lint + Iron Laws",
+        "group": "V5 平台敏感命令 (D520)",
+        "raw": "❌ V5 平台敏感命令: 新控制塔脚本对照 PLATFORM-CHECKLIST.md (D520): 1 处  [CI strict——软提示在 CI 上为硬阻断]\n   scripts/control-tower/ct-suite-select.sh: 平台敏感命令（见 PLATFORM-CHECKLIST.md）",
+        "root_cause": "scripts/pre-commit-check.sh:1538 判定 = grep -nE '\\bpython3\\b|date \\+%s|date -v|grep -P' 该文件，再 grep -v 'PYBIN|swallow-ok|D520|#' 过滤；ct-suite-select.sh:92 `for _c in python3 python py; do`（PYBIN 三级探测本体的那一行）未含 PYBIN/D520/# → 被点名",
+        "note": "讽刺点：被点名的正是 PLATFORM-CHECKLIST #1 推荐的正确写法；同一门禁在 PR-B 上由 coder-b 用行尾 `# D520: …` 注释消解",
+        "fix": "给该行补 `# D520:` 或含 `PYBIN` 即消解（与 PR-B 同法）",
+        "fixed_at_7d1a614c": {
+          "my_check": "SYNO_CI=1 bash scripts/pre-commit-check.sh（在 7d1a614c 上）→ `:102 ✅ V5 平台敏感命令: 新控制塔脚本对照 PLATFORM-CHECKLIST.md (D520)`；`grep 'ct-suite-select.sh: 平台敏感'` → 零命中",
+          "fix_evidence": "ct-suite-select.sh:96 `for _c in python3 python py; do  # D520: …`；:105 尾注 `# D520: 文案含字面量（非调用）`",
+          "residual_red": "❌ D2 登记门禁: 有未登记文档 2 处（点名 docs/synova/dispatch/2026-09-29-D1061-…md）——**与 F1 无关**，队长已裁定留未清项，CI 侧绿",
+          "verdict": "自验结论 = F1 已修（独立复现）"
+        }
+      },
+      {
+        "id": "F2",
+        "job": "Control Tower Gate Tests (windows-latest)",
+        "test": "tests/control-tower/ct-suite-select.test.sh",
+        "raw": "FAIL: tests/control-tower/ct-suite-select.test.sh\n##[error]  ❌ 正常路径应只选 A 域 1 条，实际 3 条: tests/control-tower/sel-a.test.sh|  ❌ windows 应 2 条，实际 3|  ❌ 摘要行缺 selected_of_total|  ❌ D4 不符（rc=0 n=3）",
+        "signature": "选择器在 Windows 上走了**全量回退**（3/3）而非收窄（1/3）——与 A3 变异（FORCE_FULL=1）同签名",
+        "local_status": "同一夹具在 macOS 上 23 通过 0 失败（我独立跑，见 §十-A-3）",
+        "root_cause": "Windows 特定，未能在 macOS 复现；候选回退码 D1/D2/D3/D5/D6（:160/:169/:183/:198/:236）",
+        "diagnostic_obstacle": "夹具 :108 的正常路径调用用 `2>/dev/null` 吞掉 stderr 的 `[D1061-DEGRADED] code=…` 行——**恰是定位该失败所需的唯一诊断**；即那 9 处 swallow-ok 豁免遮蔽了本次排障关键信息",
+        "action": "需在 Windows 上跑该夹具并保留 stderr（去掉 2>/dev/null 或用 :115/:121 那种 2>file 形式）",
+        "true_root_cause_at_7d1a614c": {
+          "cause": "MAP_TSV 未清 CRLF（PLATFORM-CHECKLIST #2 复发）：Windows python 文本模式输出 \\r\\n → 域名带尾 \\r → 查表落空 → D4 → 回退全量",
+          "fix": "ct-suite-select.sh:128 `MAP_TSV=… | tr -d '\\r'`",
+          "my_mutation_1_INVALID": "首次用 sed 剥 tr -d '\\r' 产生**语法错误**（`MAP_TSV=\"$MAP_TSV\"| tr -d '\\r')\"`）→ 该次失败**因语法错而非语义** ⇒ 判为无效变异，已作废重做（诚实登记）",
+          "my_mutation_2_VALID": {
+            "mutation": "python 精确替换 :128 为 `MAP_TSV=\"$(printf '%s\\n' \"$MAP_TSV\")\"`（bash -n 通过）",
+            "baseline": "26 通过 0 失败",
+            "mutated_rc": 1,
+            "mutated": "25 通过 1 失败",
+            "red_assertion": "❌ CRLF 仿真下选择错误（rc=0 n=3）⇒ 域名带尾 \\r 查表落空 ｜ stderr=[D1061-DEGRADED] code=D4 reason=无域命中：选中 0 条（changed=1）——0 条静默通过被禁 → 回退全量",
+            "reproduces_ci_signature": true
+          },
+          "verdict": "自验结论 = 常驻 CRLF 断言具判别力，且**精确复现 CI 的 F2 签名**（回退全量 3/3）"
+        }
+      }
+    ],
+    "new_facts_verified": [
+      {
+        "id": "1",
+        "claim": "coder-a 本地 A/B: 改前 1545.09s → 改后 0.13s，内层 132→0",
+        "my_reproduction": "改后侧我独立跑 3 次 = 0.30s/0.30s/0.12s，内层 ✅ 行 0（同口径 macOS 代理量）",
+        "local_before_evidence": "gate-failopen-net 单位成本 73s；alloc-task-id-lock >10min 未完成；60s 窗口完成 0 条",
+        "verdict": "自验结论 = 改后侧独立复现成立；改前侧未逐秒复现但与机制一致（权威仍取 CI）"
+      },
+      {
+        "id": "2a",
+        "claim": "dedup 夹具 13 → 15 断言 + 变异体③（非法值改判静默 skip → 必红）",
+        "my_check": "夹具实跑 15 通过 0 失败；我用自有变异（非法值分支→SKIP_NESTED=1）→ rc=1 且新增断言红：`❌ 非法值应 fail-closed 全量（rc=0 实跑 0 条、stderr 无『非法』点名）`",
+        "verdict": "自验结论 = A6 覆盖缺口已闭合且断言具判别力"
+      },
+      {
+        "id": "2b",
+        "claim": "完整性不变式（域并集 == ci.yml catalog，集合相等）",
+        "my_check": "断言实跑 `✅ 完整性不变式: 域并集 == ci.yml catalog（55 条集合相等，零缺口/零孤儿）`（catalog 已随合 main 由 54→55）；我做判别性变异（从 map 的 doc-system 域删 1 条）→ rc=1 `❌ 域并集 ≠ catalog：仅 catalog 有 [tests/doc-system/check-doc-truth.test.sh]；仅域有 []`，已还原",
+        "verdict": "自验结论 = 不变式成立且具判别力（防『某套件永不入选=静默缩小覆盖面』）"
+      },
+      {
+        "id": "3",
+        "claim": "merge main 一度打断 #872 夹具（ci-signal-classify.test.sh），已改排序修复（78/0）",
+        "my_check": "我独立跑 tests/control-tower/ci-signal-classify.test.sh → rc=0 2s，`结果: 78 通过, 0 失败, 0 显式跳过`",
+        "verdict": "自验结论 = 确已恢复"
+      },
+      {
+        "id": "F2-② init.defaultBranch 假设",
+        "lead_hypothesis": "失败源于夹具沙箱 `git init` 的默认分支名",
+        "coder_a_claim": "该假设已被证伪",
+        "my_check": "env 方式强制 `GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=init.defaultBranch GIT_CONFIG_VALUE_0=master` 跑夹具 → rc=0，**26 通过 0 失败**，❌ 行数 0；并用 `git config --get init.defaultBranch` 返回 `master` 证明 env 生效（对照非空转）",
+        "verdict": "自验结论 = 假设**确已证伪**，与 coder-a 结论一致（无分歧需上报）",
+        "note": "当前夹具内未见 init.defaultBranch 的常驻回归探针（grep 零命中）；因假设已证伪，无需常驻守护"
+      }
+    ],
+    "ci_run_selection_set": {
+      "cmd": "bash scripts/control-tower/ct-suite-select.sh --changed origin/main...HEAD --platform windows",
+      "observed": "[D1061-SELECT] mode=select platform=windows changed=18 selected_of_total=55/55 degraded=0",
+      "selection": "__FULL__（55/55）",
+      "mechanism": "PR-A 自身改 `.github/workflows/*` → map 规则 `{\"glob\": \".github/workflows/*\", \"domains\": [\"__FULL__\"]}`（:195/:219 首个命中生效 ⇒ 全量）",
+      "implication": "**630s 是「全量跑」下的数字，不含任何子集裁剪收益**；子集收益仅在非 ci.yml 变更的 PR 上体现（我实测 docs-only → 29/54）"
+    }
+  },
+  "pr_b": {
+    "branch": "chore/d1061-b-gate-mechanism",
+    "verified_sha_initial": "96135a1a5d95e0fcfc69dd1c1ea0047c7f115ceb",
+    "remote_sha_at_rerun": "f116b91148be0087c7fa65b56543f1b32be369c0",
+    "files_total": 16,
+    "redline_scan": {
+      "cmd": "git diff --name-only origin/main...<sha> | grep -E '^(src/|scripts/audit/)'",
+      "hits": 0,
+      "verdict": "自验结论 = 零越界"
+    },
+    "residue_scan": {
+      "cmd_a_face": "git grep -c INJECTED-RED -- <dir>（src/tests/scripts/.github）",
+      "a_face": {
+        "src": 0,
+        "tests": 0,
+        "scripts": 0,
+        ".github": 0
+      },
+      "b_face_total": 14,
+      "b_face_baseline": 14,
+      "b_face_baseline_current_main": 15,
+      "b_face_introduced_by_prb": 0,
+      "verdict": "自验结论 = 零新增（PR-B 的 b 面是当前 main 的严格子集，逐条全在 docs/** 与 memory/**）"
+    },
+    "utf8_scan_baseline_diff": {
+      "cmd": "bash scripts/workflow/check-silent-swallow.sh --utf8",
+      "baseline_origin_main_failures": 17,
+      "pr_b_failures": 16,
+      "introduced": 0,
+      "fixed": [
+        "scripts/control-tower/alloc-task-id.sh"
+      ],
+      "verdict": "自验结论 = PR-B 零新增，且修好 1 条存量；该检查在 main 上本就 rc=1，不能当红绿判据"
+    },
+    "fixtures_run": [
+      {
+        "file": "tests/control-tower/gate-circuit-breaker.test.sh",
+        "rc": 0,
+        "cases": "19 通过/0 失败",
+        "real_s": 2.5,
+        "ran": true
+      },
+      {
+        "file": "tests/control-tower/pre-push-preview.test.sh",
+        "rc": 0,
+        "cases": "16 通过/0 失败",
+        "real_s": 6.42,
+        "ran": true
+      },
+      {
+        "file": "tests/control-tower/brief-parser-cjk-path.test.sh",
+        "rc": 0,
+        "cases": "11 通过/0 失败",
+        "real_s": 2.42,
+        "ran": true
+      },
+      {
+        "file": "tests/control-tower/alloc-task-id.test.sh",
+        "rc": 0,
+        "cases": "全绿",
+        "real_s": 2.47,
+        "ran": true
+      }
+    ],
+    "mutations": [
+      {
+        "id": "B1",
+        "target": "scripts/control-tower/gate-circuit-breaker.sh:157",
+        "mutation": "\"active\": bool(exp_ok and d >= today)} -> \"active\": True}",
+        "baseline_rc": 0,
+        "mutated_rc": 1,
+        "baseline_cases": "19/0",
+        "mutated_cases": "15/4",
+        "red_assertions": [
+          "边界: rc=3（过期必须不跳 = 0）",
+          "边界: 过期无告警",
+          "边界: GATE-HEALTH: status=KNOWN-FAULT known=1 expired=0（应 DEGRADED expired=1）",
+          "边界: DEGRADED rc=0（期望 1）"
+        ],
+        "verdict": "自验结论 = 判别性成立"
+      },
+      {
+        "id": "B2",
+        "target": "scripts/workflow/pre-push-preview.sh:114",
+        "mutation": "BO=\"$(bash \"$CHECK_BRIEF\" \"$BRIEF_FILE\" 2>&1)\"; BRC=$? -> BO=\"\"; BRC=0",
+        "baseline_rc": 0,
+        "mutated_rc": 1,
+        "baseline_cases": "16/0",
+        "mutated_cases": "12/4",
+        "red_assertions": [
+          "边界: 缺 #CRITERIA rc=0（期望 1）",
+          "边界: 未点名 #CRITERIA"
+        ],
+        "verdict": "自验结论 = 判别性成立"
+      },
+      {
+        "id": "B3",
+        "target": "scripts/control-tower/alloc-task-id.sh:389",
+        "mutation": "删 `  \"write_set\": []`",
+        "baseline_rc": 0,
+        "mutated_rc": 1,
+        "baseline_cases": "0 失败",
+        "mutated_cases": "FAIL=2",
+        "red_assertions": [
+          "11b 骨架缺 write_set 键（新卡三源皆空 → D708 fail-closed）",
+          "11b write_set 非空数组/非合法 JSON（骨架契约偏离）"
+        ],
+        "verdict": "自验结论 = 判别性成立"
+      },
+      {
+        "id": "B4",
+        "target": "scripts/control-tower/brief_parser.py:131",
+        "mutation": "if not PATH_SHAPE_RE.match(path): -> if True:",
+        "baseline_rc": 0,
+        "mutated_rc": 1,
+        "baseline_cases": "11/0",
+        "mutated_cases": "9/2",
+        "red_assertions": [
+          "（CJK 路径被截断相关 2 条）"
+        ],
+        "verdict": "自验结论 = 判别性成立"
+      }
+    ],
+    "mutations_targets_still_present_on_final_sha": true,
+    "cto_extra_requirements": {
+      "req1_one_line_command": {
+        "cmd": "bash scripts/workflow/pre-push-preview.sh --fast",
+        "rc": 0,
+        "real_s": 0.73,
+        "target_le_10s": true,
+        "verdict": "自验结论 = 落地"
+      },
+      "req2_health_line": {
+        "cmd": "bash scripts/control-tower/gate-circuit-breaker.sh --health-line",
+        "observed": "GATE-HEALTH: status=OK known=0 expired=0 sources=1 checked_at=2026-09-29T02:34:03Z",
+        "frozen_regex_matched": true,
+        "verdict": "自验结论 = 落地（格式逐字段匹配冻结契约）",
+        "caveat": "全仓 GATE-HEALTH 命中 14 处，无一处为生产消费方 → 有能力无消费方，须记遗留"
+      },
+      "req3_before_after_in_receipt": {
+        "verdict": "待核（B 证据自报；我的变异体复核独立成立）"
+      }
+    },
+    "wiring": {
+      "pre_push_preview_called_by_pre_push_check": {
+        "evidence": "scripts/pre-push-check.sh:467 `if ! bash \"$PREVIEW\" \"--${SYNO_PREVIEW_MODE:-fast}\"; then ... exit 1; fi`",
+        "executed_not_merely_declared": true,
+        "discriminator_status": "夹具层待补（端到端被 golden-case F1 先拦；见 not_done）"
+      },
+      "gate_health_consumers": {
+        "count": 14,
+        "production_consumers": 0,
+        "verdict": "自验结论 = 未接线到消费方（消费方 D963 属另一在飞工作流）→ 记遗留"
+      }
+    },
+    "redlines_bypass": {
+      "detected_bypass_total_hist": 22,
+      "detected_bypass_last": "2026-09-25T00:56:43Z",
+      "detected_bypass_24h": 0,
+      "pr_b_bypass_log_delta": "2 行，均 COMMITTED | pre-commit PASS（非绕过）",
+      "stash_list": 2,
+      "stash_dates": [
+        "2026-09-08",
+        "2026-09-05"
+      ],
+      "stash_provenance": "存量旧债（D597/D575），非 D1061",
+      "reflog_force_hit": "假阳性（enforce_admins）",
+      "verdict": "自验结论 = 本小队零绕过痕迹"
+    }
+  },
+  "premises_recomputed": [
+    {
+      "id": "P1",
+      "cmd": "bash scripts/control-tower/alloc-task-id.sh --check-id D1060",
+      "rc": 1,
+      "output": "remote-branch feat/D1060-synova-workbench / local-branch ... / worktree-name .synova-wt-d1060",
+      "verdict": "独立复现=成立"
+    },
+    {
+      "id": "P6",
+      "cmd": "printf '派单 D1060 与 D1061\\n' | grep -oE 'D[0-9]{3}'",
+      "output": "D106",
+      "verdict": "独立复现=成立"
+    },
+    {
+      "id": "P7",
+      "cmd": "grep -cE '(^|[[:space:]])(export[[:space:]]+)?STAGED_FILES=' scripts/pre-commit-check.sh",
+      "output": "0",
+      "usages": 3,
+      "usage_lines": [
+        1203,
+        1225,
+        1230
+      ],
+      "verdict": "独立复现=成立"
+    },
+    {
+      "id": "residue_baseline",
+      "a_face": "0/0/0/0",
+      "b_face": 14,
+      "verdict": "独立复现=成立（逐条全在 docs/**）"
+    },
+    {
+      "id": "task_state_D1061_write_set",
+      "cmd": "grep -c write_set task-state/D1061.json",
+      "output": "0",
+      "rc": 1,
+      "verdict": "基线=无该键，与卡面一致"
+    }
+  ],
+  "n1_attribution": {
+    "run": 36457345292,
+    "job": 109046960841,
+    "cmd": "curl -sL -H \"Authorization: token $TOK\" .../actions/jobs/109046960841/logs",
+    "parsed": "行首 ISO 时间戳 + CI 自打 `── <test>` 标记间差值",
+    "markers": 44,
+    "inter_marker_total_s": 1591,
+    "simulate_ci_test_s": 1050,
+    "lead_self_report_s": 1051,
+    "share_pct": 66.0,
+    "lead_share_pct": 65,
+    "top5_share_pct": 88.0,
+    "nesting": {
+      "calls": 3,
+      "suites": 44,
+      "inner_executions": 132,
+      "depth": 1,
+      "no_deeper_recursion_proof": "44 条内层套件逐条 grep 'simulate-ci.sh' → 零命中"
+    },
+    "verdict": "自验结论 = 独立复现成立"
+  },
+  "timing_calibers": {
+    "note": "run 墙钟 与 windows CT 腿 分列，禁混用（队长纠正）",
+    "paired_sample_n14": {
+      "run_wall_median_s": 2146,
+      "win_ct_leg_median_s": 2141,
+      "leg_over_wall_pct": 99.8
+    },
+    "lead_sample_n25": {
+      "win_ct_leg_median_s": 2035,
+      "range_s": [
+        1432,
+        2500
+      ]
+    },
+    "targets": {
+      "run_wall": "<=480s (8min)",
+      "win_ct_leg": "<=300s (5min)"
+    },
+    "post_n1_estimate": {
+      "run_wall_s": 1096,
+      "win_ct_leg_s": 1091,
+      "same_run_leg_s": 582
+    },
+    "verdict": "未决 —— N1 单独两口径均达不到目标（约 18min vs 5/8min），须 PR-A 给「N1+选择器」合计实测"
+  },
+  "not_done": [
+    "PR-A 两口径时间对比（CI 侧不可完成：零 CI run；需 rebase 解 dirty 后重跑）",
+    "门禁 8 夹具层判别子（注入失败 preview 桩 → rc 非 0）：已派 coder-b",
+    "PR-B 最终 sha 上的四变异体重跑（靶点已在 f116b911 静态确认仍在）",
+    "A6 语义（非法 SYNO_SIM_NESTED fail-closed）在 dedup 夹具内补断言"
+  ],
+  "incidents": [
+    {
+      "id": "INC-1",
+      "what": "重型验证三实例并发（coder-a×2 + verifier×1）",
+      "action_taken": "verifier 主动让位（kill 自身 + 释放锁）；己方基线可复现，coder-a 前后对比不可复现",
+      "defect_found": "锁=裸目录无属主校验，非属主 rmdir 会释放他人锁",
+      "resolution": "队长已改 owner 校验协议，全员生效"
+    },
+    {
+      "id": "INC-2",
+      "what": "verifier 曾在主树误跑 pre-push-check.sh（worktree add 分支名非法 → cd 失败）",
+      "action_taken": "核实主树 M 文件 mtime=Sep27/28 早于我 10:34 运行 → 非我造成；未改主树任何文件",
+      "discipline": "以后 worktree add 失败先断言 pwd"
+    }
+  ]
+}
