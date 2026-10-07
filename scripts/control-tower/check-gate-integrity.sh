@@ -694,6 +694,10 @@ run_registry() {
 run_ci_reds() { # $1 = check-runs JSON
   local json="$1"
   local red_base="${SYNO_CI_RED_BASELINE:-$ROOT/scripts/control-tower/ci-red-baseline.txt}"
+  # D1198: 参与集来源 = 本仓 ci.yml（单一真值源；SYNO_CT_SCOPE_CIYML 为夹具注入缝）
+  #   ⚠️ 优先沿用既有的 SYNO_CI_YML 注入缝（测试夹具经它传沙箱 ci.yml）；
+  #     否则用本仓 .github/workflows/ci.yml。两者皆无 ⇒ 参与集解析不出 ⇒ fail-closed degrade。
+  local CIYML_FOR_SCOPE="${SYNO_CT_SCOPE_CIYML:-${SYNO_CI_YML:-$ROOT/.github/workflows/ci.yml}}"
   info ""
   info "── C 既有红基线对账（ratchet）──"
   # D954: 对账对象不可确定 → 不判定（显式 SKIPPED，可见；ratchet 未行使 ≠ 通过）
@@ -715,7 +719,86 @@ run_ci_reds() { # $1 = check-runs JSON
 
   local failing="$TMPD/failing_names.txt"
   [ -n "$PYBIN" ] || degrade "C_NO_PYTHON" "ci-reds" "python 不可用（PYBIN 三级探测失败）——check-runs JSON 解析无法执行"
-  if ! "$PYBIN" - "$json" > "$failing" 2>"$TMPD/json.err" <<'PYEOF'
+  # ── D1198: 对账**范围**收紧 —— 只计「参与 PR 判定」的检查 ─────────────────────
+  #   依据（DSH 同构，2026-10-07 CTO 裁定）: DSH 的 `all-checks-passed` 注释原文
+  #     「Wine and the deferred Python runtime targets **live in ci-master.yml and do not
+  #       participate in this PR verdict**. `needs` cannot cross workflow files.」
+  #     ⇒ **非参与型失败不进 PR 判定**，且**不靠登记表**——靠结构边界。
+  #   本法（不新建登记表，派生自 ci.yml 单一真值源）:
+  #     参与集 = `.github/workflows/ci.yml` 中 `all-checks-passed` 的 `needs:` 所列 job 的
+  #              **`name:` 展开名**（`${{ matrix.X }}` 用同 job 块内 strategy.matrix 取值展开）。
+  #   非参与型失败（如 issues 事件触发的工作流）→ **advisory**：打印可见，**不判 violation**。
+  #   ⚠️ 取不到参与集 ⇒ **fail-closed degrade**（不静默放行）。
+  local part_names="$TMPD/participating_names.txt"
+  if [ -n "$PYBIN" ] && [ -f "$CIYML_FOR_SCOPE" ]; then
+    "$PYBIN" - "$CIYML_FOR_SCOPE" > "$part_names" 2>"$TMPD/scope.err" <<'PYSCOPE' || true
+import re
+import sys
+
+path = sys.argv[1]
+try:
+    text = open(path, encoding='utf-8').read()
+except Exception:
+    sys.exit(1)
+
+m = re.search(r'^  all-checks-passed:\s*$', text, re.M)
+if not m:
+    sys.exit(1)
+rest = text[m.end():]
+nxt = re.search(r'^  [a-z0-9-]+:\s*$', rest, re.M)
+block = rest[:nxt.start()] if nxt else rest
+needs = []
+nm = re.search(r'needs:\s*\[([^\]]*)\]', block, re.S)
+if nm:
+    needs = [x.strip() for x in nm.group(1).split(',') if x.strip()]
+if not needs:
+    sys.exit(1)
+
+out = set()
+for key in needs:
+    jm = re.search(r'^  ' + re.escape(key) + r':\s*$', text, re.M)
+    if not jm:
+        continue
+    r2 = text[jm.end():]
+    n2 = re.search(r'^  [a-z0-9-]+:\s*$', r2, re.M)
+    jblock = r2[:n2.start()] if n2 else r2
+    nam = re.search(r'^    name:\s*(.+?)\s*$', jblock, re.M)
+    if not nam:
+        continue
+    jname = nam.group(1).strip().strip('"').strip("'")
+    mvals = {}
+    mm = re.search(r'^      matrix:\s*$', jblock, re.M)
+    if mm:
+        mrest = jblock[mm.end():]
+        mend = re.search(r'^      [a-zA-Z]', mrest, re.M)
+        mblock = mrest[:mend.start()] if mend else mrest
+        for km in re.finditer(r'^        ([A-Za-z0-9_.\-]+):\s*\[([^\]]*)\]\s*$', mblock, re.M):
+            mvals[km.group(1)] = [x.strip().strip('"').strip("'") for x in km.group(2).split(',') if x.strip()]
+        for km in re.finditer(r'^        ([A-Za-z0-9_.\-]+):\s*(\S+)\s*$', mblock, re.M):
+            mvals.setdefault(km.group(1), [km.group(2).strip('"').strip("'")])
+    names = [jname]
+    for var, vals in mvals.items():
+        pat = '${{ matrix.%s }}' % var
+        nxt_names = []
+        for base in names:
+            if pat in base:
+                for v in vals:
+                    nxt_names.append(base.replace(pat, v))
+            else:
+                nxt_names.append(base)
+        names = nxt_names
+    for x in names:
+        print(x)
+PYSCOPE
+  fi
+  local n_part
+  n_part="$(wc -l < "$part_names" 2>/dev/null | tr -d ' \r' || echo 0)"
+  if [ "${n_part:-0}" -eq 0 ]; then
+    degrade "C_SCOPE_UNRESOLVED" "ci-reds" "参与集不可解析（$CIYML_FOR_SCOPE 的 all-checks-passed.needs）——范围不明，fail-closed 不判绿"
+  fi
+  vprint "  参与集（ci.yml all-checks-passed.needs 展开）: ${n_part} 名"
+
+  if ! "$PYBIN" - "$json" "$part_names" > "$failing" 2>"$TMPD/json.err" <<'PYEOF'
 import json
 import sys
 
@@ -732,16 +815,37 @@ runs = data.get('check_runs')
 if not isinstance(runs, list):
     sys.stderr.write("check_runs missing or not list\n")
     sys.exit(3)
-names = sorted({str(r.get('name', '')) for r in runs
-                if isinstance(r, dict) and r.get('conclusion') == 'failure'})
-for name in names:
-    if name:
+
+part = set()
+try:
+    with open(sys.argv[2], encoding='utf-8') as fh:
+        part = {ln.strip() for ln in fh if ln.strip()}
+except Exception:
+    part = set()
+
+fail_all = sorted({str(r.get('name', '')) for r in runs
+                   if isinstance(r, dict) and r.get('conclusion') == 'failure'})
+for name in fail_all:
+    if name and name in part:
         print(name)
+
+for name in fail_all:
+    if name and name not in part:
+        sys.stderr.write("ADVISORY-NONPARTICIPATING\t%s\n" % name)
 PYEOF
   then
+
     local jerr
     jerr="$(tr '\n' ' ' < "$TMPD/json.err" 2>/dev/null | cut -c1-200)"   # swallow-ok: 仅取诊断文本；读不到时 ${jerr:-unknown} 兜底，exit 2 判据不受影响
     degrade "C_JSON_INVALID" "ci-reds" "check-runs JSON 非法: ${json}（${jerr:-unknown}）"
+  fi
+
+  # D1198: 非参与型失败 → **advisory**（打印可见，不判 violation；对齐 DSH「non-participating」语义）
+  if grep -q '^ADVISORY-NONPARTICIPATING' "$TMPD/json.err" 2>/dev/null; then
+    local adv
+    adv="$(grep '^ADVISORY-NONPARTICIPATING' "$TMPD/json.err" | cut -f2 | sort -u | tr '\n' ' ')"
+    info "CI-RED-ADVISORY: 非参与型检查失败（不进 PR 判定；仅可见）: ${adv}"
+    SUM_CIRED_ADV="${adv}"
   fi
 
   local red_norm="$TMPD/red_baseline.txt"

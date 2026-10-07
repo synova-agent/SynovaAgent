@@ -140,6 +140,58 @@ jobs:
             tests/control-tower/alpha.test.sh; do
             bash "$t"
           done
+  # ── D1198 夹具：参与集由 all-checks-passed.needs 派生 ──
+  #   本沙箱必须在 needs 里列出**所有会被判 ratchet 的 mock check 名**，
+  #   否则它们会被判「非参与型」→ 降为 advisory（不判 violation）⇒ 夹具判别力归零。
+  #   键 = job key（须是合法 job 名），其 `name:` 值 = check-run 名（逐字一致）。
+  ci-unit:
+    name: ci-unit
+    steps:
+      - run: 'true'
+  ci-lint:
+    name: ci-lint
+    steps:
+      - run: 'true'
+  ci-ok:
+    name: ci-ok
+    steps:
+      - run: 'true'
+  ci-old:
+    name: ci-old
+    steps:
+      - run: 'true'
+  ci-rogue:
+    name: ci-rogue
+    steps:
+      - run: 'true'
+  checker-review:
+    name: Checker Review
+    steps:
+      - run: 'true'
+  golden-case:
+    name: Golden Case F1 Gate
+    steps:
+      - run: 'true'
+  vitest:
+    name: Vitest (${{ matrix.shard }})
+    strategy:
+      matrix:
+        shard: ['1/2', '2/2']
+    steps:
+      - run: 'true'
+  brand-new-red:
+    name: brand-new-red (x/y)
+    steps:
+      - run: 'true'
+  gate-integrity-name-cn:
+    name: 门禁完整性（gate-integrity）检查 v1.2
+    steps:
+      - run: 'true'
+  all-checks-passed:
+    name: all checks passed
+    needs: [control-tower-tests, ci-unit, ci-lint, ci-ok, ci-old, ci-rogue, checker-review, golden-case, vitest, brand-new-red, gate-integrity-name-cn]
+    steps:
+      - run: 'true'
 EOY
 cat > "$SB/baseline.txt" <<'EOB'
 # 夹具基线（双段）
@@ -202,6 +254,58 @@ if [ "$rc" -eq 0 ] && printf '%s\n' "$OUT" | grep -q "CI-RED-CHECK: 失败检查
   ok "端到端复现: 两条已登记红（含中文/全角括号/点号名）→ exit 0"
 else
   no "端到端复现失败: rc=${rc}（应 2 项全命中）"
+fi
+
+# ── D1198 范围收紧: 非参与型检查失败 → advisory（可见），不判 violation ────────
+#   判据来源: DSH `all-checks-passed` 注释原文「...live in ci-master.yml and do not
+#   participate in this PR verdict. `needs` cannot cross workflow files.」
+#   本法: 参与集 = 沙箱 ci.yml 的 all-checks-passed.needs 展开名。
+#   判别: 同一次跑里，**参与型**未登记红必须判红（M1 已覆盖），
+#        **非参与型**失败必须不判红且点名 advisory（本组）。
+printf '{"check_runs":[{"name":"d1198-foreign-check","conclusion":"failure"},{"name":"ci-ok","conclusion":"success"}]}\n' > "$SB/red-foreign.json"
+OUT="$(RUN "$SCAN_OK" "$SB/tests" "$SB/ci.yml" "$SB/baseline.txt" "$SB/red-baseline.txt" "$SB/logs/c10nonzero.log" --base-ref "$BASE_REF_FIX" --ci-reds "$SB/red-foreign.json" 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then
+  ok "D1198 非参与型失败不判红（exit 0）"
+else
+  no "D1198 非参与型失败被判红: rc=$rc（范围收紧未生效）"
+fi
+if printf '%s\n' "$OUT" | grep -q "CI-RED-ADVISORY"; then
+  ok "D1198 非参与型失败点名 advisory（可见、不静默）"
+else
+  no "D1198 非参与型失败未点名 advisory（visibility 丢失）"
+fi
+if printf '%s\n' "$OUT" | grep -q "d1198-foreign-check"; then
+  ok "D1198 advisory 逐字点名 check 名"
+else
+  no "D1198 advisory 未点名 check 名"
+fi
+if printf '%s\n' "$OUT" | grep -q "CI-RED-CHECK: 失败检查 0 项"; then
+  ok "D1198 非参与型失败不进「失败检查」计数"
+else
+  no "D1198 非参与型失败仍进计数"
+fi
+# 判别性反向: 把同一名字加进 needs ⇒ 必须转为参与型 ⇒ 未登记 ⇒ 判红
+#   夹具 = 在**沙箱 ci.yml 现有内容**上追加一个 job + 并在 needs 尾部追加该 job key
+#   （直接 sed 现文件，不做跨文件片段注入 —— 避免夹具自身出错）
+awk '{print} /^    needs: \[/{ }' "$SB/ci.yml" > "$SB/ci-participating.yml"
+# 追加 job（缩进与沙箱其它 job 一致），并把 job key 加进 needs 行尾
+python3 - "$SB/ci.yml" "$SB/ci-participating.yml" <<'PYADD'
+import re
+import sys
+src, dst = sys.argv[1], sys.argv[2]
+t = open(src, encoding='utf-8').read()
+# 1) needs 行尾追加该 key
+t = re.sub(r'(^    needs: \[[^\]]*?)(\]\s*$)', r'\1, d1198-foreign-check\2', t, count=1, flags=re.M)
+# 2) 在 all-checks-passed: 之前插入同名 job（键=name，确保 check-run 名可解析）
+job = "  d1198-foreign-check:\n    name: d1198-foreign-check\n    steps:\n      - run: 'true'\n"
+t = t.replace("  all-checks-passed:", job + "  all-checks-passed:", 1)
+open(dst, 'w', encoding='utf-8').write(t)
+PYADD
+OUT="$(SYNO_CI_YML="$SB/ci-participating.yml" RUN "$SCAN_OK" "$SB/tests" "$SB/ci-participating.yml" "$SB/baseline.txt" "$SB/red-baseline.txt" "$SB/logs/c11.log" --base-ref "$BASE_REF_FIX" --ci-reds "$SB/red-foreign.json" 2>&1)"; rc=$?
+if printf '%s\n' "$OUT" | grep -q "未登记 CI 失败: d1198-foreign-check"; then
+  ok "D1198 判别性反向: 同一名字进 needs ⇒ 转参与型 ⇒ 未登记即判红"
+else
+  no "D1198 判别性反向失效（进 needs 后仍未判红 = 范围未真读 needs）"
 fi
 
 # ── 向后兼容: 无空格旧格式 `NAME|first_seen=…|expires=…` → exit 0 ──
