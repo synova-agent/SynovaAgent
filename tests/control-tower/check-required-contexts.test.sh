@@ -379,7 +379,13 @@ wiring_ok() { # $1 = ci.yml 路径；rc 0 = 接线完整（调用 + canary 登�
   [ -f "$f" ] || return 1
   grep -q "check-required-contexts" "$f" 2>/dev/null || return 1
   grep -q "check-required-contexts\.test\.sh" "$f" 2>/dev/null || return 1
-  grep -v '^[[:space:]]*#' "$f" | grep -q "check-required-contexts\.py" || return 1
+  # 🔴 #1214（SIGPIPE flake）修: 原写 `grep -v '^#' "$f" | grep -q "…py"`——下游 `grep -q` 命中即早退，
+  #   上游 `grep -v` 收 SIGPIPE ⇒ 在 `set -o pipefail` 下整条 pipeline 返非 0 ⇒ 断言随机判红（实测 3 红/3 绿）。
+  #   修法（线 C #1214 同修的最小形态）: 先落文件再 grep，消除管道早退路径。跨线修改经 Lead 书面授权。
+  local _nc; _nc="$(mktemp)"
+  grep -v '^[[:space:]]*#' "$f" > "$_nc" 2>/dev/null || true   # swallow-ok: 读失败⇒空文件⇒下一句必然 return 1（不静默放行）
+  if ! grep -q "check-required-contexts\.py" "$_nc"; then rm -f "$_nc"; return 1; fi
+  rm -f "$_nc"
   return 0
 }
 if wiring_ok "$CIY"; then
