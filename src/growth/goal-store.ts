@@ -526,8 +526,11 @@ export function updateGoalStatus(
   try {
     // #1010: 用**节点 id** 更新 —— 真实 store 的节点 id ≠ props.goalId，用 goalId 更新是
     // 0 行 UPDATE（静默无效果）；解析失败回退 goalId（旧式/内存 store 语义不变）。
+    // 属性字典以零 cast 方式构造（`as unknown as Record<string, unknown>` 命中铁律 38 新增行门禁）。
     const nodeRef = resolveGoalNodeId(goalId, store, graph) ?? goalId;
-    store.updateNode(nodeRef, updatedProps as unknown as Record<string, unknown>, graph);
+    const propsDict: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(updatedProps)) propsDict[k] = v;
+    store.updateNode(nodeRef, propsDict, graph);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     log.error({ err: msg, goalId, fromStatus, newStatus }, 'Goal 状态更新失败');
