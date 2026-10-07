@@ -53,6 +53,11 @@ fi
 #   - 两者都存在且不一致 → exit 1（劫持特征）
 #   - 消息无 D# 但认领 brief 有 D# → exit 1（提交未声明任务归属）
 #   - Merge/Revert（上方已跳）/无暂存/无认领 brief/认领 brief 无 D#/无真实认领 → fail-open
+# 🔴 D1231/#1308 措辞口径（**判定不变，仍 exit 1**）: 「消息侧零声明」与「双方声明冲突」是
+#   两类原因，不得共用同一句话 ——
+#     确有认领 ∧ 双方都有声明 ∧ 不一致        → 「疑似并行劫持」（唯一该用该措辞的场景）
+#     确有认领 ∧ 消息侧零声明（未声明/解析失败）→ 「认领解析失败（非劫持）」
+#   历史: 旧实现把两类压成一句「疑似并行劫持」，D328 实测把排查引偏一轮（#1308 现象）。
 # 消息文件缺失/异常 → MSG_DID 空 → 一致性检查 fail-open（铁律 24: 显式兜底）
 # CT-60: scope 大小写/后缀兼容 — docs(d578)/feat(d577-closeout) 均提取 D#。
 # 背景: 旧正则 \(D[0-9]+\) 只认大写 D 且要求括号内纯 D#——小写 scope
@@ -113,6 +118,40 @@ if [ -n "$STAGED_LIST" ]; then
   RESOLVER_ERR="$(mktemp)"  # 收敛: 无论下游如何分支，函数末尾统一清理
   CLAIM_BRIEF=$(bash "$MSG_DIR/workflow/resolve-commit-brief.sh" "$STAGED_LIST" 2>"$RESOLVER_ERR" | head -1) || CLAIM_RC=$? # swallow-ok: resolver 失败 → degraded 提示（dev doc §3.2）；stderr 已落文件（不丢诊断）
   ANCHOR_MARK="$(grep -m1 '^RESOLVER-ANCHOR:' "$RESOLVER_ERR" 2>/dev/null || true)"  # swallow-ok: 无标记 = 身份非分支锚点（正常路径），下方面向标记判分支
+  # ── D1231/#1308: 解析器侧「不可匹配 Q2 条目」告警**透传**（只读，不参与判定）──
+  # 为什么必须在这里: 「静默 0 匹配」的**后果**正是在提交端以「认领不一致」暴露；
+  #   原因不带到这里，排查就会被再次引偏（#1308 的 D328 误报即此形态）。
+  # 来源: brief_parser.parse_q2 打到 stderr 的 Q2-PARSE-WARN 行（不污染 stdout 路径契约）。
+  # 不参与判定: 只在确有告警时补充说明；退出码/分支一律不受影响（判定零变更）。
+  # 两档显示（降噪，D1241 实测）: ±1 天窗口内候选 brief 上百，逐条展开=每次提交刷 100+ 行，
+  #   会把真正的判决行淹掉（噪音→忽视→绕过，V4.x 老教训）。故:
+  #     ① 告警属于**本提交任务的 brief**（消息声明的号 / resolver 解析出的 brief）⇒ 逐条展开（5 行上限）
+  #     ② 其余 ⇒ 折叠为一行计数 + 自检命令（可见但不刷屏；「不静默」由计数满足，明细在 CLI 自检）
+  Q2_WARN_N=$(grep -c '^Q2-PARSE-WARN:' "$RESOLVER_ERR" 2>/dev/null | tr -d ' \r' || true)
+  case "${Q2_WARN_N:-0}" in ''|*[!0-9]*) Q2_WARN_N=0 ;; esac
+  if [ "$Q2_WARN_N" -gt 0 ]; then
+    Q2_WARN_BRIEFS=$(grep '^Q2-PARSE-WARN:' "$RESOLVER_ERR" | sed 's/^Q2-PARSE-WARN: //' | sed 's/:[0-9][0-9]* .*//' | sort -u | grep -c . || true)
+    case "${Q2_WARN_BRIEFS:-0}" in ''|*[!0-9]*) Q2_WARN_BRIEFS=0 ;; esac
+    Q2_MINE=""
+    if [ -n "${MSG_DID:-}" ]; then
+      Q2_MINE=$(grep -F -- "$MSG_DID" "$RESOLVER_ERR" 2>/dev/null | grep '^Q2-PARSE-WARN:' || true)  # swallow-ok: 无命中即空（正常路径）→ 走下一档，下方按空判折叠
+    fi
+    if [ -z "$Q2_MINE" ] && [ -n "${MSG_ISSUE:-}" ]; then
+      Q2_MINE=$(grep -F -- "#${MSG_ISSUE}" "$RESOLVER_ERR" 2>/dev/null | grep '^Q2-PARSE-WARN:' || true)  # swallow-ok: 同上
+    fi
+    if [ -z "$Q2_MINE" ] && [ -n "${CLAIM_BRIEF:-}" ]; then
+      Q2_MINE=$(grep -F -- "$(basename "$CLAIM_BRIEF")" "$RESOLVER_ERR" 2>/dev/null | grep '^Q2-PARSE-WARN:' || true)  # swallow-ok: 同上
+    fi
+    if [ -n "$Q2_MINE" ]; then
+      _Q2_MINE_N=$(printf '%s\n' "$Q2_MINE" | grep -c . || true)
+      echo -e "${YELLOW}⚠ D1231/#1308: 本提交任务的 Q2 有不可匹配条目（静默 0 匹配已显式化）:${RESET}"
+      printf '%s\n' "$Q2_MINE" | head -5 | sed 's/^/     /'
+      if [ "${_Q2_MINE_N:-0}" -gt 5 ]; then echo "     …（本任务其余 $((_Q2_MINE_N - 5)) 条省略；全量见 brief_parser.py --q2-include）"; fi
+    else
+      echo -e "${YELLOW}⚠ D1231/#1308: 另有 ${Q2_WARN_N} 条不可匹配 Q2 条目（涉及 ${Q2_WARN_BRIEFS} 个候选 brief，与本提交任务无关 → 折叠）${RESET}"
+      echo "   逐 brief 明细自检: python3 scripts/control-tower/brief_parser.py --q2-include <brief>（stderr 即告警）"
+    fi
+  fi
   if echo "$ANCHOR_MARK" | grep -q 'source=branch-anchor'; then
     # ── R4 fail-closed: 分支名（最弱锚点）与**提交消息声明**冲突 ⇒ 绝不静默采信任一方 ──
     # 口径: 分支名只作最弱锚点；身份以「提交消息声明」为准，冲突即阻断并给出两条修复路径。
@@ -146,27 +185,46 @@ print(1 if any(match_path(s, p) for s in staged for p in inc) else 0)
       echo -e "${YELLOW}⚠ D328 一致性检查 degraded: GENUINE 判定执行失败 (rc=$GENUINE_RC)，本次跳过${RESET}"
     elif [ "$GENUINE" = "1" ]; then
       # ── D-C（K3 R5）: resolver 返回 claim（`.claude/claims/<issue>.yaml`）→ 按 issue 对账 ──
-      # 语义与下方 D# 口径对齐: 两者都存在且不一致 → 劫持；消息未声明 → 未声明任务归属。
+      # 语义与下方 D# 口径对齐（D1231/#1308 措辞口径）: 两者都有声明且不一致 → 「疑似并行劫持」；
+      #   消息侧零声明 → 「认领解析失败（非劫持）」。两类都仍 exit 1（判定零变更）。
       case "$CLAIM_BRIEF" in
         *.yaml)
           CLAIM_ISSUE=$(basename "$CLAIM_BRIEF" .yaml)
           case "$CLAIM_ISSUE" in
             ''|*[!0-9]*) CLAIM_ISSUE="" ;;
           esac
-          if [ -n "$CLAIM_ISSUE" ] && { [ -z "$MSG_ISSUE" ] || [ "$CLAIM_ISSUE" != "$MSG_ISSUE" ]; }; then
-            echo -e "${RED}❌ D328/D-C: 提交声明(#${MSG_ISSUE:-无})与暂存文件 claim(#${CLAIM_ISSUE})不一致 — 疑似并行劫持${RESET}"
-            echo "   认领 claim: $CLAIM_BRIEF"
-            echo "   请确认提交的是本任务文件，或拆分暂存区后再提交"
-            exit 1
+          if [ -n "$CLAIM_ISSUE" ]; then
+            if [ -z "$MSG_ISSUE" ]; then
+              # D1231/#1308 措辞口径: 消息侧零声明 = 「认领解析失败」，**不是**劫持（判定不变，仍 exit 1）
+              echo -e "${RED}❌ D328/D-C: 提交消息未声明 issue 号，无法与暂存文件 claim(#${CLAIM_ISSUE}) 对账 — 认领解析失败（非劫持）${RESET}"
+              echo "   认领 claim: $CLAIM_BRIEF"
+              echo "   修复: 提交消息首行声明本任务 issue 号（如 feat(#1308): …），或确认提交的是本任务文件"
+              exit 1
+            elif [ "$CLAIM_ISSUE" != "$MSG_ISSUE" ]; then
+              # 确有认领 ∧ 双方都有声明 ∧ 不一致 ⇒ 唯一该用「疑似并行劫持」的场景
+              echo -e "${RED}❌ D328/D-C: 提交声明(#${MSG_ISSUE})与暂存文件 claim(#${CLAIM_ISSUE})不一致 — 疑似并行劫持${RESET}"
+              echo "   认领 claim: $CLAIM_BRIEF"
+              echo "   请确认提交的是本任务文件，或拆分暂存区后再提交"
+              exit 1
+            fi
           fi
           ;;
         *)
       CLAIM_DID=$(basename "$CLAIM_BRIEF" .md | grep -oE 'D[0-9]+' | head -1 || true)
-      if [ -n "$CLAIM_DID" ] && { [ -z "$MSG_DID" ] || [ "$CLAIM_DID" != "$MSG_DID" ]; }; then
-        echo -e "${RED}❌ D328: 提交声明(${MSG_DID:-无})与暂存文件归属($CLAIM_DID)不一致 — 疑似并行劫持${RESET}"
-        echo "   认领 brief: $CLAIM_BRIEF"
-        echo "   请确认提交的是本任务文件，或拆分暂存区后再提交"
-        exit 1
+      if [ -n "$CLAIM_DID" ]; then
+        if [ -z "$MSG_DID" ]; then
+          # D1231/#1308 措辞口径: 消息侧零声明 = 「认领解析失败」，**不是**劫持（判定不变，仍 exit 1）
+          echo -e "${RED}❌ D328: 提交消息未声明任务号，无法与暂存文件归属(${CLAIM_DID}) 对账 — 认领解析失败（非劫持）${RESET}"
+          echo "   认领 brief: $CLAIM_BRIEF"
+          echo "   修复: 提交消息首行声明本任务号（Conventional Commits scope 位，如 fix(D1241): …），或确认提交的是本任务文件"
+          exit 1
+        elif [ "$CLAIM_DID" != "$MSG_DID" ]; then
+          # 确有认领 ∧ 双方都有声明 ∧ 不一致 ⇒ 唯一该用「疑似并行劫持」的场景
+          echo -e "${RED}❌ D328: 提交声明(${MSG_DID})与暂存文件归属(${CLAIM_DID})不一致 — 疑似并行劫持${RESET}"
+          echo "   认领 brief: $CLAIM_BRIEF"
+          echo "   请确认提交的是本任务文件，或拆分暂存区后再提交"
+          exit 1
+        fi
       fi
           ;;
       esac
