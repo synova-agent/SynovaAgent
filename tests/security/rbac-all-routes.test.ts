@@ -435,6 +435,34 @@ describe('C · 已认证 ⇒ 非 403（防「一刀切全拒」；本卡刻意�
     expect(str(res.body, 'code')).toBe('ORG_ID_MISSING');
   });
 
+  // ── #1322（CTO 裁定 M4①）: 本 PR 新增的两个端点的「已认证 ⇒ 非一刀切拒绝」守护 ──
+  it('POST /api/workspace/proposals · admin 已认证 ⇒ 201 + 3 条候选（本 PR 新端点）', async () => {
+    const res = await call(full.base, 'POST', '/api/workspace/proposals', {
+      token: TOKEN.admin, body: { title: 'RBAC 守护用例' },
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.ok).toBe(true);
+    const data = res.body.data as Record<string, unknown> | undefined;
+    expect(Array.isArray(data?.paths)).toBe(true);
+    expect((data?.paths as unknown[]).length).toBe(3);
+  });
+
+  it('POST /api/workspace/proposals · staff 已认证 ⇒ 201（只读角色不得被一刀切拒绝）', async () => {
+    const res = await call(full.base, 'POST', '/api/workspace/proposals', {
+      token: TOKEN.staff, body: { title: 'RBAC 守护用例（staff）' },
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.ok).toBe(true);
+  });
+
+  it('POST /api/workspace/proposals/:proposalId/select · admin 已认证 + 提案不存在 ⇒ 404 PROPOSAL_NOT_FOUND（非 403）', async () => {
+    const res = await call(full.base, 'POST', `/api/workspace/proposals/${uid('prop')}/select`, {
+      token: TOKEN.admin, body: { pathIndex: 0 },
+    });
+    expect(res.status).toBe(404);
+    expect(str(res.body, 'code')).toBe('PROPOSAL_NOT_FOUND');
+  });
+
   it('GET    /api/workspace/:deptId · liaison / ga ⇒ 200（已认证即可读；本卡不做越权判定）', async () => {
     for (const role of ['liaison', 'ga']) {
       const res = await call(full.base, 'GET', '/api/workspace/d1153-dept', { token: TOKEN[role] });
