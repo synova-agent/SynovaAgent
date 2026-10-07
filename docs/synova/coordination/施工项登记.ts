@@ -510,7 +510,11 @@ export const constructionItems: readonly ConstructionItem[] = [
     // └─ 抄录结束 ┘
     acceptance: [
       // 二选一：(a) 装配并走 invoke ⇒ 越权返回 POLICY_DENIED；(b) 删掉 ⇒ 两符号 0 命中
-      { run: 'bash -c "npx tsx scripts/control-tower/probe-tool-policy.ts | grep -q POLICY_DENIED || git grep -c setPolicyEngine -- src/ | grep -q ^0$"', expectExit: 0 },
+      // CTO 2026-10-08 裁定（0-11 是**修**，不是保留）：原 `git grep -c … | grep -q ^0$` 的 B 分支**恒失败** ——
+      //   `git grep -c` 是 per-file `path:count` 输出（零命中时**零输出 + exit 1**）⇒ 后续 `grep -q ^0$` 两种情况都不匹配。
+      //   本机实测对照：原式有命中 ⇒ exit 1；无命中 ⇒ exit 1（恒失败）。改为 **R42 口径（文件数用 `-l | wc -l`）**：
+      //   有命中 ⇒ exit 1；无命中 ⇒ exit 0（已实测）。CTO 已同步把正确写法发给执行方 exec-1（#985）。
+      { run: 'test "$(git grep -l \'setPolicyEngine\' -- src/ | wc -l)" -eq 0', expectExit: 0 },
     ],
     // 📌 CTO 2026-10-08 裁定（title）：卡面标题为 GitHub 显示限制下的**截断形态**（结尾 `并让工具执`），本字段为**完整命名** ——
     //   两处**故意不同**，不是「未同步」。理由：登记件是**判据源**，不该被 GitHub 显示限制绑架；卡号的标识作用不依赖标题完整。
@@ -1580,10 +1584,12 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
   {
     id: 'K4', name: '本体·因果边·循环编号', items: ['0-4', '1-8', '1-9', '3-5', '3-11'],
     blockAcceptance: [
-      // ⚠️ 待裁（CTO）：本块标准引 `tests/sentinel/edge-lag-consumed.test.ts` —— 该件在 main **不存在**，
-      //   且其对应项 1-8 的判据本身仍是 `⚠️ 待裁`（卡面改用了既有 check-ontology-fields.sh）⇒ 本块标准随之待裁。
-      // 🔴 原为纯 grep 型（T6 面1 否决点）⇒ 改为穿生产入口：跑一次真实哨兵，断言它读到该字段
-      { run: 'npx vitest run tests/sentinel/edge-lag-consumed.test.ts', expectExit: 0 },
+      // CTO 2026-10-08 裁定（块级 K4）：块判据 = `scripts/control-tower/check-ontology-fields.sh`（exit 0）。
+      //   依据：① 该脚本**实测在 main 存在**（本机实跑 ⇒ `✅ 全部 55 件边类型关键字段齐全` / exit 0）
+      //        ② 1-8（#987）卡面 §⑥ 自陈判据已达成（`action_effect_lag` 55/55 + CI 断言存在 + 改坏即红）
+      //        ③ 与 K4 模块卡 §⑥ 一致。
+      //   ⚠️ 原引 `tests/sentinel/edge-lag-consumed.test.ts` —— **该件在 origin/main 不存在**（全树零命中）。
+      { run: 'bash scripts/control-tower/check-ontology-fields.sh', expectExit: 0 },
     ],
     source: 'T3 §二 K4',
   },
