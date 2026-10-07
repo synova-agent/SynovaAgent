@@ -1,10 +1,10 @@
 # Synova CTO 健康仪表盘（第③面）
 
-> 打开即真相。生成: 2026-10-07 21:23:30 | 数据源指纹: fbc36b350555
+> 打开即真相。生成: 2026-10-07 21:27:56 | 数据源指纹: 35a2b2a1f5f8
 
 <!-- CTO-HEALTH:AUTO:START -->
 ## CTO 健康仪表盘（第③面）— 自动区
-> 生成: 2026-10-07 21:23:27 | 数据源: bypass.log / pre-commit-failures.log / AUDIT-FINDINGS-LEDGER
+> 生成: 2026-10-07 21:27:54 | 数据源: bypass.log / pre-commit-failures.log / AUDIT-FINDINGS-LEDGER
 
 **总体判定: 🟡 黄 — 历史有 M 模式复发记录 (见 §三; 多为 D328-D331 已闭环项, 需 CTO 确认无新增)**
 
@@ -12,13 +12,13 @@
 
 | 事件 | 全量 | 24h 内 |
 |------|:---:|:---:|
-| COMMITTED（正常提交） | 1 | 1 |
+| COMMITTED（正常提交） | 3 | 3 |
 | BLOCKED（被门禁拒绝） | 0 | 0 |
 | DEGRADED（降级放行） | 0 | 0 |
 | TIMEOUT（超时） | 0 | 0 |
 | **detected-bypass（真绕过）** | **0** | **0** |
 
-近 7 天事件: 2026-10-07:1
+近 7 天事件: 2026-10-07:3
 
 ✅ 全历史零绕过。
 
@@ -114,6 +114,7 @@
 | D1204 | impl_done | — | ✅ | — |  |
 | D1206 | impl_done | — | ✅ | — |  |
 | D1208 | impl_done | — | ✅ | — |  |
+| D1210 | impl_done | — | ✅ | — |  |
 | D1215 | impl_done | — | ✅ | — |  |
 | D356 | audited | ✅ | ✅ | CONDITIONAL_PASS |  |
 | D379 | audited | — | ✅ | CONDITIONAL_PASS |  |
@@ -490,7 +491,7 @@
 | D979 | audited | — | ✅ | PASS |  |
 | CT-64 | claimed | — | — | — |  |
 
-> 📦 历史任务（已折叠）: **296** 个（git log 全项目派生，非 task-state 登记；13 个有审计报告）
+> 📦 历史任务（已折叠）: **295** 个（git log 全项目派生，非 task-state 登记；13 个有审计报告）
 > 这些是 task-state 未登记、但 git 里确有提交的全项目任务（D5~D398 早期 + Win/Codex 侧），状态按 impl 派生。
 
 ### 六、CI 状态（CT-41①, GitHub API）

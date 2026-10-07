@@ -29,7 +29,15 @@ fail() { FAIL=$((FAIL + 1)); echo "  ❌ $1" >&2; }
 assert_contains() { if echo "$1" | grep -qF "$2"; then pass "$3"; else fail "$3 — 未找到: $2"; fi; }
 
 TMPD="$(mktemp -d)"
-trap 'rm -rf "$TMPD"' EXIT
+# D1215（Lead 裁决③）—— 本测试**设计上**会改写真实产物（头注释即「直接对真实产物测试」），
+#   但旧版只在「数据源未变」时才不写 ⇒ 每跑一次就把 docs/synova/CTO-HEALTH.md 弄脏
+#   （实测：时间戳必变，且 git 派生计数随分支集合变）⇒ **提交产物后下一跑又脏 = 等于没修**。
+#   头注释早写了「测试后恢复」的意图，本卡把它落实：**开跑前快照 + EXIT trap 无条件还原**
+#   （含失败路径，避免"失败了还把产物改坏"）。
+OUT_SNAPSHOT="$TMPD/CTO-HEALTH.md.orig"
+[ -f "$OUT" ] && cp "$OUT" "$OUT_SNAPSHOT" 2>/dev/null || true
+restore_artifact() { [ -f "$OUT_SNAPSHOT" ] && cp "$OUT_SNAPSHOT" "$OUT" 2>/dev/null || true; }
+trap 'restore_artifact; rm -rf "$TMPD"' EXIT
 
 # D1215/卡 #1268 — **生成器调用统一走此函数**：把 rc 显式交回调用方。
 #   旧写法 `OUT1=$(python3 "$GEN" 2>&1)` 在 `set -euo pipefail` 下遇 rc≠0 会**立即静默中止**
