@@ -1,0 +1,753 @@
+# 976 三态原始输出（GREEN / RED / 恢复 / 夹具面 / 连带回归 / 注入 diff）——verbatim 拼接件
+#
+# 说明: 本件为 #976 取证的**原始 vitest 输出全量**（含引擎 pino 日志与断言失败原文），逐字节拼接、未删改、未截断。
+#       每段以 BEGIN/END 标记包裹，标记行内给出原文件名与 sha256（可与报告 §8 对账）。
+#       worktree HEAD=9723d23c04bf055c5c706aa291a5238d62223683  vitest=4.1.8  node=v24.19.0
+#
+===== BEGIN gate2-runtime-run1-GREEN.log.txt  (sha256=cfc25d35a4d42aa06cf1ed319cad06fa88794312ec685d9a03030c23cc201298) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-0gate
+
+{"level":30,"time":1791392538966,"pid":51516,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791392538968,"pid":51516,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+{"level":30,"time":1791392538972,"pid":51516,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392538975,"pid":51516,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392538976,"pid":51516,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","sentinelKey":"ZZ_TEST_K6_RUNTIME","industry":"_test_k6_runtime","warning":"1.5→1.58","msg":"GA 阈值调整已回写"}
+{"level":30,"time":1791392538977,"pid":51516,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","applied":1,"skipped":0,"msg":"进化动作回写完成"}
+stdout | tests/growth/evolution-writeback-runtime.integration.test.ts > K6/0-2 运行时回写（真库 + 注入 feedback_log 行） > 总闸判据: 注入 3 行 reject ⇒ applied=1 + 阈值真变化 + agent_memory 账本计数 > 0
+{
+  "tag": "[GATE-2] runtime writeback",
+  "memoryDbPath": "/var/folders/bs/ltqkv_rd45z6b7p5wq90vv500000gn/T/k6-0-2-runtime-ph4QXy/agent-memory.db",
+  "feedbackDbPath": "/var/folders/bs/ltqkv_rd45z6b7p5wq90vv500000gn/T/k6-0-2-runtime-ph4QXy/feedback-runtime.db",
+  "sql": "SELECT COUNT(*) FROM agent_memory WHERE key LIKE '%_gaCorrections%'",
+  "ledgerBefore": 0,
+  "ledgerAfter": 1,
+  "applied": 1,
+  "skipped": 0,
+  "thresholdWarning": 1.58
+}
+
+{"level":30,"time":1791392538978,"pid":51516,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392538980,"pid":51516,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791392538981,"pid":51516,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+ ✓ tests/growth/evolution-writeback-runtime.integration.test.ts (2 tests) 24ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  01:02:18
+   Duration  214ms (transform 62ms, setup 0ms, import 97ms, tests 24ms, environment 0ms)
+
+vitest_exit=0
+===== END gate2-runtime-run1-GREEN.log.txt =====
+
+===== BEGIN gate2-runtime-run2-RED.log.txt  (sha256=5f0d6821af889ed6ad90cb5880088fbaeabd2bab2c152cbb72fb5de1bdee3b99) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-0gate
+
+{"level":30,"time":1791392544592,"pid":51603,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791392544595,"pid":51603,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+{"level":30,"time":1791392544598,"pid":51603,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392544601,"pid":51603,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392544606,"pid":51603,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392544607,"pid":51603,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791392544608,"pid":51603,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+ ❯ tests/growth/evolution-writeback-runtime.integration.test.ts (2 tests | 1 failed) 20ms
+     × 总闸判据: 注入 3 行 reject ⇒ applied=1 + 阈值真变化 + agent_memory 账本计数 > 0 10ms
+     ✓ 反例(同进程): 旧生产者语义 entityKey=undefined ⇒ 退回复合键 ⇒ 不匹配配置实体 ⇒ applied=0 且无账本行 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/growth/evolution-writeback-runtime.integration.test.ts > K6/0-2 运行时回写（真库 + 注入 feedback_log 行） > 总闸判据: 注入 3 行 reject ⇒ applied=1 + 阈值真变化 + agent_memory 账本计数 > 0
+AssertionError: expected 'reject:sentinel_alert:ga' to be 'ZZ_TEST_K6_RUNTIME' // Object.is equality
+
+Expected: "ZZ_TEST_K6_RUNTIME"
+Received: "reject:sentinel_alert:ga"
+
+ ❯ tests/growth/evolution-writeback-runtime.integration.test.ts:130:52
+    128|     const thresholdAction = actions.find(a => a.type === 'threshold_ad…
+    129|     expect(thresholdAction).toBeDefined();
+    130|     expect(thresholdAction?.parameter.sentinelKey).toBe(TEST_SENTINEL_…
+       |                                                    ^
+    131|
+    132|     // ③ 回写：applied 必须 > 0
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  01:02:24
+   Duration  199ms (transform 55ms, setup 0ms, import 85ms, tests 20ms, environment 0ms)
+
+===== END gate2-runtime-run2-RED.log.txt =====
+
+===== BEGIN gate2-runtime-run3-GREEN-restored.log.txt  (sha256=1b4689ec4a2a632ad303c443d3acc95c401ad17be5c94989642d09b05a1bd152) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-0gate
+
+{"level":30,"time":1791392552353,"pid":51749,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791392552355,"pid":51749,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+{"level":30,"time":1791392552359,"pid":51749,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392552361,"pid":51749,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392552362,"pid":51749,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","sentinelKey":"ZZ_TEST_K6_RUNTIME","industry":"_test_k6_runtime","warning":"1.5→1.58","msg":"GA 阈值调整已回写"}
+{"level":30,"time":1791392552363,"pid":51749,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","applied":1,"skipped":0,"msg":"进化动作回写完成"}
+stdout | tests/growth/evolution-writeback-runtime.integration.test.ts > K6/0-2 运行时回写（真库 + 注入 feedback_log 行） > 总闸判据: 注入 3 行 reject ⇒ applied=1 + 阈值真变化 + agent_memory 账本计数 > 0
+{
+  "tag": "[GATE-2] runtime writeback",
+  "memoryDbPath": "/var/folders/bs/ltqkv_rd45z6b7p5wq90vv500000gn/T/k6-0-2-runtime-jVjIH8/agent-memory.db",
+  "feedbackDbPath": "/var/folders/bs/ltqkv_rd45z6b7p5wq90vv500000gn/T/k6-0-2-runtime-jVjIH8/feedback-runtime.db",
+  "sql": "SELECT COUNT(*) FROM agent_memory WHERE key LIKE '%_gaCorrections%'",
+  "ledgerBefore": 0,
+  "ledgerAfter": 1,
+  "applied": 1,
+  "skipped": 0,
+  "thresholdWarning": 1.58
+}
+
+{"level":30,"time":1791392552365,"pid":51749,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392552367,"pid":51749,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791392552367,"pid":51749,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+ ✓ tests/growth/evolution-writeback-runtime.integration.test.ts (2 tests) 20ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  01:02:32
+   Duration  192ms (transform 57ms, setup 0ms, import 82ms, tests 20ms, environment 0ms)
+
+===== END gate2-runtime-run3-GREEN-restored.log.txt =====
+
+===== BEGIN gate2-fixture-run2-RED.log.txt  (sha256=0b74d673976938614930ff58498030cd1bb4f0328a0792c19cfc373550949766) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-0gate
+
+{"level":30,"time":1791392544987,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791392544991,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+{"level":30,"time":1791392544995,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392544997,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"75917ba3-d79b-4672-8e0a-2b2438e93d33","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392544997,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"839db162-6b03-4bf6-94c1-eac1138e4546","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392544998,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"e930a31f-5fa1-4a2f-bc2b-09ae667d6885","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392544998,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392545006,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392545007,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"5301391b-4b6f-4245-9381-c313a4603692","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545007,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"848b16e6-0e9c-4256-b9f6-1074d4d9b83f","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545007,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"59dbab29-a22c-411d-885f-ee6853fe7603","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545008,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392545011,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392545012,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"6fc7e8d0-be63-4ecb-92e6-250f822a2162","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545013,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"750238b5-7ff6-4741-bb24-d670b114bd3f","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545017,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392545017,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"15b78da6-f70a-4326-bff4-bbeed248f0b0","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545017,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"76612c7a-add8-4ff2-a389-23118485d16c","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545018,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"3dbbefa0-4213-42fc-87b8-e101f5172015","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545018,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392545022,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392545023,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"69f878e3-dd5b-42b3-a25c-0df0c9d82e7e","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545023,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"51d3a0a6-1cc9-4765-9823-aedacda1151e","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545023,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"5f15eadd-2444-4775-8655-ecd03250a77c","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545024,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"1c93e6c9-08ba-45be-a8d7-10c759c57d01","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545028,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392545029,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"cdb69b31-713d-4dd2-9814-0d58d9287bc5","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545029,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"377af48a-65ff-483b-901e-ea73c5e2e206","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392545029,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"985f40de-cbef-49fd-bbba-4560f19d26e0","decision":"reject","msg":"反馈已收集"}
+{"level":40,"time":1791392545030,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","key":"reject:sentinel_alert","enterpriseIds":["org-a","org-b"],"count":4,"msg":"threshold_adjust 跳过 — 聚合组来自多个企业（enterpriseId=null），拒绝跨租户回写配置"}
+{"level":30,"time":1791392545032,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791392545032,"pid":51607,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+ ❯ tests/growth/evolution-writeback.test.ts (7 tests | 2 failed) 53ms
+     × 正常路径: 同实体 3 次 reject → applied=1 + 阈值真变化 + agent_memory 账本行 12ms
+     ✓ 降级路径: 实体不在任何 thresholds.json ⇒ skipped（applied=0）且不抛 5ms
+     ✓ 边界: <3 次不聚合（未达阈值） 5ms
+     × 边界: 组内实体不唯一（类别级聚合）⇒ entityKey=null，回写侧不猜实体 5ms
+     ✓ 判据②: 两企业各 2 次同类反馈（各未达阈值 3）⇒ 不产生任何 signal 5ms
+     ✓ 企业轴契约: 单企业 3 次 ⇒ 信号携带且仅携带该企业 6ms
+     ✓ 防御性不变量: 多企业混组信号（enterpriseId=null）⇒ 拒绝回写（不猜、不写） 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/growth/evolution-writeback.test.ts > K6/0-2 进化回写（总闸） > 正常路径: 同实体 3 次 reject → applied=1 + 阈值真变化 + agent_memory 账本行
+AssertionError: expected +0 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ tests/growth/evolution-writeback.test.ts:118:28
+    116|     const result = applyEvolutionActions(actions);
+    117|     expect(result.errors).toEqual([]);
+    118|     expect(result.applied).toBe(1);
+       |                            ^
+    119|
+    120|     const updated = JSON.parse(readFileSync(TEST_THRESHOLD_PATH, 'utf-…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/growth/evolution-writeback.test.ts > K6/0-2 进化回写（总闸） > 边界: 组内实体不唯一（类别级聚合）⇒ entityKey=null，回写侧不猜实体
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ tests/growth/evolution-writeback.test.ts:186:62
+    184|
+    185|     const actions = processFeedbackSignals(signals);
+    186|     expect(actions.some(a => a.type === 'threshold_adjust')).toBe(fals…
+       |                                                              ^
+    187|
+    188|     db.close();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 5 passed (7)
+   Start at  01:02:24
+   Duration  218ms (transform 55ms, setup 0ms, import 78ms, tests 53ms, environment 0ms)
+
+===== END gate2-fixture-run2-RED.log.txt =====
+
+===== BEGIN gate2-fixture-run3-GREEN-restored.log.txt  (sha256=5cde05337d5535830e8199f40a2d5ff95c308bc8a5f3b039a108232d66938384) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-0gate
+
+{"level":30,"time":1791392552793,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791392552796,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+{"level":30,"time":1791392552800,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392552802,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"80cb8616-9629-4059-a031-a7c8d95dce41","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552803,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"b406e8d0-669d-468a-bd51-7804891f0e71","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552803,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"969300e6-234f-4162-9f26-3560154bd49f","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552804,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392552805,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","sentinelKey":"ZZ_TEST_K6","industry":"_test_k6","warning":"1.5→1.58","msg":"GA 阈值调整已回写"}
+{"level":30,"time":1791392552806,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","applied":1,"skipped":0,"msg":"进化动作回写完成"}
+{"level":30,"time":1791392552810,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392552810,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"8689ee79-5d87-40ed-84f8-387e457bc6e1","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552811,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"78d97af0-e158-4c84-b4b2-825417a82c87","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552811,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"b814aa68-5b78-4d7f-b232-4e77d7b06817","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552811,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392552815,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392552816,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"76afd3ee-9524-4179-92aa-c094c244c2ee","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552817,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"4b511a3f-8c17-426e-b021-782f7d7eaa9c","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552820,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392552821,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"0c242415-2709-42c2-9e99-c5caae06999b","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552822,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"ff7f4901-05ca-4924-9a35-e5ce394650c3","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552822,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"1b74edbe-b3b2-4ba7-9c9c-8401b0e00494","decision":"reject","msg":"反馈已收集"}
+{"level":40,"time":1791392552822,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","key":"reject:sentinel_alert:","entityKeys":["a-1","a-2","a-3"],"count":3,"msg":"threshold_adjust 跳过 — 聚合组非单一实体（entityKey=null），无法定位配置阈值实体"}
+{"level":30,"time":1791392552826,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392552826,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"70edbd84-9c02-4bcb-b18a-aa6425b30b76","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552827,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"0564597a-a61c-49b3-9da2-cbe56c0630c2","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552827,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"621cec16-e3db-44dd-a19c-c01671431ccf","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552828,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"d2d8c86f-6cce-4d93-973d-06f12f2fe96f","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552833,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392552834,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"ef9f39fd-f286-47c6-bfde-edcf35ee9189","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552834,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"5181383c-74ae-42cb-8872-4f490b0dfc75","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392552835,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"ae803bdc-02b1-4b42-8fde-718b462385cc","decision":"reject","msg":"反馈已收集"}
+{"level":40,"time":1791392552835,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","key":"reject:sentinel_alert","enterpriseIds":["org-a","org-b"],"count":4,"msg":"threshold_adjust 跳过 — 聚合组来自多个企业（enterpriseId=null），拒绝跨租户回写配置"}
+{"level":30,"time":1791392552837,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791392552837,"pid":51752,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+ ✓ tests/growth/evolution-writeback.test.ts (7 tests) 52ms
+
+ Test Files  1 passed (1)
+      Tests  7 passed (7)
+   Start at  01:02:32
+   Duration  256ms (transform 81ms, setup 0ms, import 109ms, tests 52ms, environment 0ms)
+
+===== END gate2-fixture-run3-GREEN-restored.log.txt =====
+
+===== BEGIN gate2-collateral-regression-GREEN.log.txt  (sha256=fdb9cd23cf6bd7fdc5e8d027b254fef9a619549d5e510b453bab8b459f7678e2) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-0gate
+
+{"level":30,"time":1791392573006,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","ownerDeptId":"finance","dimension":"financial","msg":"维度推断完成"}
+{"level":30,"time":1791392573007,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"financial","expertName":"financial","msg":"专家选择完成"}
+{"level":30,"time":1791392573007,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"financial","edges":["CAPITAL_ACQUISITION","CAPITAL_ALLOCATION","CAPITAL_SOURCE_MIX","PROFIT_REINVESTMENT","VALUE_PRICING"],"msg":"因果边选择完成"}
+{"level":30,"time":1791392573007,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","expertName":"financial","timeoutMs":300000,"msg":"开始轻量级再诊断专家评估"}
+{"level":30,"time":1791392573007,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","adjustmentType":"adjust_target","degraded":false,"triggeredBy":"manual","msg":"轻量级再诊断完成"}
+{"level":30,"time":1791392573008,"pid":51986,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/skill-knowledge","skill":"me_pricing_strategy","id":"id_1","msg":"SKILL 知识条目已写入"}
+{"level":30,"time":1791392573008,"pid":51986,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/skill-knowledge","skill":"me_cost_structure","id":"id_1","msg":"SKILL 知识条目已写入"}
+{"level":30,"time":1791392573009,"pid":51986,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/skill-knowledge","skill":"me_market_power","id":"id_1","msg":"SKILL 知识条目已写入"}
+{"level":30,"time":1791392573009,"pid":51986,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/skill-knowledge","skill":"me_investment_decision","id":"id_1","msg":"SKILL 知识条目已写入"}
+{"level":30,"time":1791392573009,"pid":51986,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/skill-knowledge","skill":"me_pricing_strategy","id":"id_1","msg":"SKILL 知识条目已写入"}
+{"level":30,"time":1791392573009,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","ownerDeptId":"finance","dimension":"financial","msg":"维度推断完成"}
+{"level":30,"time":1791392573009,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"financial","expertName":"financial","msg":"专家选择完成"}
+{"level":30,"time":1791392573009,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"financial","edges":["CAPITAL_ACQUISITION","CAPITAL_ALLOCATION","CAPITAL_SOURCE_MIX","PROFIT_REINVESTMENT","VALUE_PRICING"],"msg":"因果边选择完成"}
+{"level":30,"time":1791392573009,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","expertName":"financial","timeoutMs":50,"msg":"开始轻量级再诊断专家评估"}
+{"level":40,"time":1791392573009,"pid":51986,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/skill-knowledge","err":"DB error","skill":"me_cost_structure","msg":"SKILL 知识条目写入失败 — 降级"}
+{"level":30,"time":1791392573009,"pid":51986,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/skill-knowledge","skill":"me_market_power","id":"id_3","msg":"SKILL 知识条目已写入"}
+{"level":30,"time":1791392573010,"pid":51986,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/skill-knowledge","skill":"me_investment_decision","id":"id_4","msg":"SKILL 知识条目已写入"}
+{"level":30,"time":1791392573010,"pid":51986,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/skill-knowledge","msg":"tool_query_knowledge 已注册 (D63 pull-mode)"}
+{"level":30,"time":1791392573010,"pid":51986,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/skill-knowledge","msg":"tool_query_knowledge 已注册 (D63 pull-mode)"}
+{"level":30,"time":1791392573019,"pid":51988,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"1d414896-a0f2-4664-9327-a6b684d21b23","title":"测试提案","msg":"Proposal 已创建"}
+{"level":30,"time":1791392573020,"pid":51988,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"b8ae88d3-921e-4b4f-b7ff-91ac64220071","title":"测试提案","msg":"Proposal 已创建"}
+{"level":30,"time":1791392573020,"pid":51988,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"9bbfd0ca-8c1a-4c11-a30d-23bd13bdf08f","title":"测试提案","msg":"Proposal 已创建"}
+{"level":30,"time":1791392573020,"pid":51988,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"32b9edbb-18e0-4118-8a75-0905e8fc83f9","title":"测试提案","msg":"Proposal 已创建"}
+{"level":30,"time":1791392573021,"pid":51988,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"dafa51ce-f994-41e4-96ae-fa6068c10f65","title":"测试提案","msg":"Proposal 已创建"}
+{"level":30,"time":1791392573021,"pid":51988,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"38a93450-4d06-410d-bbc2-1fabc830d602","title":"测试提案","msg":"Proposal 已创建"}
+{"level":30,"time":1791392573021,"pid":51988,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"bd85ed9f-d9c8-46d6-8628-3ab5e2c39570","title":"测试提案","msg":"Proposal 已创建"}
+{"level":30,"time":1791392573021,"pid":51988,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"91ce8ac1-e763-491f-88cc-687b7f06b2e5","title":"测试提案","msg":"Proposal 已创建"}
+{"level":30,"time":1791392573021,"pid":51988,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"461c5857-3989-402a-a485-cf6847a58d20","title":"测试提案","msg":"Proposal 已创建"}
+{"level":30,"time":1791392573022,"pid":51988,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"975798fb-ca21-4126-a440-9d2cbe738b58","title":"测试提案","msg":"Proposal 已创建"}
+{"level":30,"time":1791392573023,"pid":51988,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"ff657d7f-80c0-4ddb-8dd2-2eb424f93c6e","title":"测试提案","msg":"Proposal 已创建"}
+{"level":40,"time":1791392573023,"pid":51988,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"ff657d7f-80c0-4ddb-8dd2-2eb424f93c6e","defaultIdx":0,"msg":"Proposal 超时，自动选择默认路径"}
+{"level":30,"time":1791392573023,"pid":51988,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"d46d53ee-7487-4f30-91a7-b5918d8daac3","title":"测试提案","msg":"Proposal 已创建"}
+ ✓ tests/growth/proposal-store.test.ts (14 tests) 40ms
+ ✓ tests/growth/skill-knowledge.test.ts (7 tests) 95ms
+{"level":30,"time":1791392573056,"pid":51989,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/knowledge-feedback","goalId":"goal-1","knowledgeId":"kc_test_123","classifier":"execution_failure","msg":"Goal 执行知识已写入 PKB"}
+{"level":40,"time":1791392573058,"pid":51989,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/knowledge-feedback","err":"DB down","goalId":"goal-1","msg":"写入 PKB 失败 — 降级（不阻断 Goal 关闭）"}
+{"level":40,"time":1791392573058,"pid":51989,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/knowledge-feedback","err":"DB down","goalId":"goal-1","msg":"写入 PKB 失败 — 降级（不阻断 Goal 关闭）"}
+{"level":30,"time":1791392573058,"pid":51989,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/knowledge-feedback","goalId":"goal-1","knowledgeId":"kc_1","classifier":"execution_failure","msg":"Goal 执行知识已写入 PKB"}
+{"level":40,"time":1791392573058,"pid":51989,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/knowledge-feedback","err":"fail","goalId":"goal-1","msg":"写入 PKB 失败 — 降级（不阻断 Goal 关闭）"}
+ ✓ tests/growth/knowledge-feedback.test.ts (13 tests) 96ms
+{"level":40,"time":1791392573061,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","expertName":"financial","error":"操作超时 (50ms)","msg":"轻量级再诊断超时 — 升级全量诊断"}
+{"level":30,"time":1791392573062,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","ownerDeptId":"finance","dimension":"financial","msg":"维度推断完成"}
+{"level":30,"time":1791392573062,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"financial","expertName":"financial","msg":"专家选择完成"}
+{"level":30,"time":1791392573062,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"financial","edges":["CAPITAL_ACQUISITION","CAPITAL_ALLOCATION","CAPITAL_SOURCE_MIX","PROFIT_REINVESTMENT","VALUE_PRICING"],"msg":"因果边选择完成"}
+{"level":30,"time":1791392573062,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","expertName":"financial","timeoutMs":300000,"msg":"开始轻量级再诊断专家评估"}
+{"level":30,"time":1791392573062,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","adjustmentType":"escalate_to_full_diagnosis","degraded":true,"triggeredBy":"p0_alert","msg":"轻量级再诊断完成"}
+{"level":40,"time":1791392573062,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","count":3,"msg":"Goal 已达 3 次再诊断上限，自动升级全量诊断"}
+{"level":30,"time":1791392573063,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","ownerDeptId":"finance","dimension":"financial","msg":"维度推断完成"}
+{"level":30,"time":1791392573063,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"financial","expertName":"financial","msg":"专家选择完成"}
+{"level":30,"time":1791392573063,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"financial","edges":["CAPITAL_ACQUISITION","CAPITAL_ALLOCATION","CAPITAL_SOURCE_MIX","PROFIT_REINVESTMENT","VALUE_PRICING"],"msg":"因果边选择完成"}
+{"level":30,"time":1791392573063,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","expertName":"financial","timeoutMs":300000,"msg":"开始轻量级再诊断专家评估"}
+{"level":30,"time":1791392573064,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","adjustmentType":"adjust_target","degraded":false,"triggeredBy":"dispute","msg":"轻量级再诊断完成"}
+{"level":30,"time":1791392573064,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","ownerDeptId":"finance","dimension":"financial","msg":"维度推断完成"}
+{"level":30,"time":1791392573064,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"financial","expertName":"financial","msg":"专家选择完成"}
+{"level":30,"time":1791392573064,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"financial","edges":["CAPITAL_ACQUISITION","CAPITAL_ALLOCATION","CAPITAL_SOURCE_MIX","PROFIT_REINVESTMENT","VALUE_PRICING"],"msg":"因果边选择完成"}
+{"level":30,"time":1791392573064,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","expertName":"financial","timeoutMs":50,"msg":"开始轻量级再诊断专家评估"}
+{"level":30,"time":1791392573064,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","adjustmentType":"adjust_target","degraded":false,"triggeredBy":"manual","msg":"轻量级再诊断完成"}
+{"level":30,"time":1791392573064,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","ownerDeptId":"unknown","dimension":"organizational","msg":"维度推断完成"}
+{"level":30,"time":1791392573064,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"organizational","expertName":"org","msg":"专家选择完成"}
+{"level":30,"time":1791392573064,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"organizational","edges":["TALENT_ACQUISITION","TALENT_DEPLOYMENT","INFORMATION_FLOW","DECISION_AUTHORITY","KNOWLEDGE_SHARING"],"msg":"因果边选择完成"}
+{"level":30,"time":1791392573064,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","expertName":"org","timeoutMs":50,"msg":"开始轻量级再诊断专家评估"}
+{"level":30,"time":1791392573064,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","adjustmentType":"adjust_target","degraded":false,"triggeredBy":"manual","msg":"轻量级再诊断完成"}
+{"level":30,"time":1791392573065,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","ownerDeptId":"Finance","dimension":"financial","msg":"维度推断完成"}
+{"level":30,"time":1791392573065,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"financial","expertName":"financial","msg":"专家选择完成"}
+{"level":30,"time":1791392573065,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"financial","edges":["CAPITAL_ACQUISITION","CAPITAL_ALLOCATION","CAPITAL_SOURCE_MIX","PROFIT_REINVESTMENT","VALUE_PRICING"],"msg":"因果边选择完成"}
+{"level":30,"time":1791392573065,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","expertName":"financial","timeoutMs":50,"msg":"开始轻量级再诊断专家评估"}
+{"level":30,"time":1791392573065,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","adjustmentType":"adjust_target","degraded":false,"triggeredBy":"manual","msg":"轻量级再诊断完成"}
+{"level":30,"time":1791392573066,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","ownerDeptId":"finance","dimension":"financial","msg":"维度推断完成"}
+{"level":30,"time":1791392573066,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"financial","expertName":"financial","msg":"专家选择完成"}
+{"level":30,"time":1791392573066,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"financial","edges":["CAPITAL_ACQUISITION","CAPITAL_ALLOCATION","CAPITAL_SOURCE_MIX","PROFIT_REINVESTMENT","VALUE_PRICING"],"msg":"因果边选择完成"}
+{"level":30,"time":1791392573066,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","expertName":"financial","timeoutMs":50,"msg":"开始轻量级再诊断专家评估"}
+{"level":30,"time":1791392573066,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","adjustmentType":"adjust_target","degraded":false,"triggeredBy":"manual","msg":"轻量级再诊断完成"}
+{"level":30,"time":1791392573066,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","ownerDeptId":"marketing","dimension":"market","msg":"维度推断完成"}
+{"level":30,"time":1791392573066,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"market","expertName":"marketing","msg":"专家选择完成"}
+{"level":30,"time":1791392573066,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"market","edges":["COMPETITIVE_POSITIONING","MARKET_SHARE_CAPTURE","CUSTOMER_DATA_LOOP","CHANNEL_DELIVERY","BRAND_BUILDING"],"msg":"因果边选择完成"}
+{"level":30,"time":1791392573066,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","expertName":"marketing","timeoutMs":50,"msg":"开始轻量级再诊断专家评估"}
+{"level":30,"time":1791392573066,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","adjustmentType":"adjust_target","degraded":false,"triggeredBy":"manual","msg":"轻量级再诊断完成"}
+{"level":30,"time":1791392573066,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","ownerDeptId":"organizational","dimension":"organizational","msg":"维度推断完成"}
+{"level":30,"time":1791392573066,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"organizational","expertName":"org","msg":"专家选择完成"}
+{"level":30,"time":1791392573066,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"organizational","edges":["TALENT_ACQUISITION","TALENT_DEPLOYMENT","INFORMATION_FLOW","DECISION_AUTHORITY","KNOWLEDGE_SHARING"],"msg":"因果边选择完成"}
+{"level":30,"time":1791392573066,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","expertName":"org","timeoutMs":50,"msg":"开始轻量级再诊断专家评估"}
+{"level":30,"time":1791392573066,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","adjustmentType":"adjust_target","degraded":false,"triggeredBy":"manual","msg":"轻量级再诊断完成"}
+{"level":30,"time":1791392573066,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","ownerDeptId":"technology","dimension":"organizational","msg":"维度推断完成"}
+{"level":30,"time":1791392573066,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"organizational","expertName":"org","msg":"专家选择完成"}
+{"level":30,"time":1791392573066,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"organizational","edges":["TALENT_ACQUISITION","TALENT_DEPLOYMENT","INFORMATION_FLOW","DECISION_AUTHORITY","KNOWLEDGE_SHARING"],"msg":"因果边选择完成"}
+{"level":30,"time":1791392573066,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","expertName":"org","timeoutMs":50,"msg":"开始轻量级再诊断专家评估"}
+{"level":30,"time":1791392573066,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","adjustmentType":"adjust_target","degraded":false,"triggeredBy":"manual","msg":"轻量级再诊断完成"}
+{"level":30,"time":1791392573067,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","ownerDeptId":"strategic","dimension":"organizational","msg":"维度推断完成"}
+{"level":30,"time":1791392573067,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"organizational","expertName":"org","msg":"专家选择完成"}
+{"level":30,"time":1791392573067,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"organizational","edges":["TALENT_ACQUISITION","TALENT_DEPLOYMENT","INFORMATION_FLOW","DECISION_AUTHORITY","KNOWLEDGE_SHARING"],"msg":"因果边选择完成"}
+{"level":30,"time":1791392573067,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","expertName":"org","timeoutMs":50,"msg":"开始轻量级再诊断专家评估"}
+{"level":30,"time":1791392573067,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","adjustmentType":"adjust_target","degraded":false,"triggeredBy":"manual","msg":"轻量级再诊断完成"}
+{"level":30,"time":1791392573067,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","ownerDeptId":"operational","dimension":"organizational","msg":"维度推断完成"}
+{"level":30,"time":1791392573067,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"organizational","expertName":"org","msg":"专家选择完成"}
+{"level":30,"time":1791392573067,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"organizational","edges":["TALENT_ACQUISITION","TALENT_DEPLOYMENT","INFORMATION_FLOW","DECISION_AUTHORITY","KNOWLEDGE_SHARING"],"msg":"因果边选择完成"}
+{"level":30,"time":1791392573067,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","expertName":"org","timeoutMs":50,"msg":"开始轻量级再诊断专家评估"}
+{"level":30,"time":1791392573067,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","adjustmentType":"adjust_target","degraded":false,"triggeredBy":"manual","msg":"轻量级再诊断完成"}
+{"level":30,"time":1791392573067,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","ownerDeptId":"finance","dimension":"financial","msg":"维度推断完成"}
+{"level":30,"time":1791392573067,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"financial","expertName":"financial","msg":"专家选择完成"}
+{"level":30,"time":1791392573067,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"financial","edges":["CAPITAL_ACQUISITION","CAPITAL_ALLOCATION","CAPITAL_SOURCE_MIX","PROFIT_REINVESTMENT","VALUE_PRICING"],"msg":"因果边选择完成"}
+{"level":30,"time":1791392573067,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","expertName":"financial","timeoutMs":50,"msg":"开始轻量级再诊断专家评估"}
+{"level":30,"time":1791392573067,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","adjustmentType":"adjust_target","degraded":false,"triggeredBy":"manual","msg":"轻量级再诊断完成"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","ownerDeptId":"market","dimension":"organizational","msg":"维度推断完成"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"organizational","expertName":"org","msg":"专家选择完成"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"organizational","edges":["TALENT_ACQUISITION","TALENT_DEPLOYMENT","INFORMATION_FLOW","DECISION_AUTHORITY","KNOWLEDGE_SHARING"],"msg":"因果边选择完成"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","expertName":"org","timeoutMs":50,"msg":"开始轻量级再诊断专家评估"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","adjustmentType":"adjust_target","degraded":false,"triggeredBy":"manual","msg":"轻量级再诊断完成"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","ownerDeptId":"organizational","dimension":"organizational","msg":"维度推断完成"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"organizational","expertName":"org","msg":"专家选择完成"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"organizational","edges":["TALENT_ACQUISITION","TALENT_DEPLOYMENT","INFORMATION_FLOW","DECISION_AUTHORITY","KNOWLEDGE_SHARING"],"msg":"因果边选择完成"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","expertName":"org","timeoutMs":50,"msg":"开始轻量级再诊断专家评估"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","adjustmentType":"adjust_target","degraded":false,"triggeredBy":"manual","msg":"轻量级再诊断完成"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","ownerDeptId":"technology","dimension":"organizational","msg":"维度推断完成"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"organizational","expertName":"org","msg":"专家选择完成"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"organizational","edges":["TALENT_ACQUISITION","TALENT_DEPLOYMENT","INFORMATION_FLOW","DECISION_AUTHORITY","KNOWLEDGE_SHARING"],"msg":"因果边选择完成"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","expertName":"org","timeoutMs":50,"msg":"开始轻量级再诊断专家评估"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","adjustmentType":"adjust_target","degraded":false,"triggeredBy":"manual","msg":"轻量级再诊断完成"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","ownerDeptId":"strategic","dimension":"organizational","msg":"维度推断完成"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"organizational","expertName":"org","msg":"专家选择完成"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"organizational","edges":["TALENT_ACQUISITION","TALENT_DEPLOYMENT","INFORMATION_FLOW","DECISION_AUTHORITY","KNOWLEDGE_SHARING"],"msg":"因果边选择完成"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","expertName":"org","timeoutMs":50,"msg":"开始轻量级再诊断专家评估"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","adjustmentType":"adjust_target","degraded":false,"triggeredBy":"manual","msg":"轻量级再诊断完成"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","ownerDeptId":"operations","dimension":"operational","msg":"维度推断完成"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"operational","expertName":"operations","msg":"专家选择完成"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"operational","edges":["OPERATIONAL_EXECUTION","EFFICIENCY_ATTRACTION","ROUTINE_RIGIDITY","SERVICE_SUPPORT","SUPPLIER_POWER"],"msg":"因果边选择完成"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","expertName":"operations","timeoutMs":50,"msg":"开始轻量级再诊断专家评估"}
+{"level":30,"time":1791392573068,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","adjustmentType":"adjust_target","degraded":false,"triggeredBy":"manual","msg":"轻量级再诊断完成"}
+{"level":30,"time":1791392573069,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","ownerDeptId":"Finance","dimension":"financial","msg":"维度推断完成"}
+{"level":30,"time":1791392573069,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"financial","expertName":"financial","msg":"专家选择完成"}
+{"level":30,"time":1791392573069,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","dimension":"financial","edges":["CAPITAL_ACQUISITION","CAPITAL_ALLOCATION","CAPITAL_SOURCE_MIX","PROFIT_REINVESTMENT","VALUE_PRICING"],"msg":"因果边选择完成"}
+{"level":30,"time":1791392573069,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","expertName":"financial","timeoutMs":50,"msg":"开始轻量级再诊断专家评估"}
+{"level":30,"time":1791392573069,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","adjustmentType":"adjust_target","degraded":false,"triggeredBy":"manual","msg":"轻量级再诊断完成"}
+{"level":30,"time":1791392573069,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791392573073,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+{"level":30,"time":1791392573075,"pid":51984,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"0447b04d-9311-44e4-a6f6-b5f6398ffb0f","title":"成本结构诊断","msg":"Proposal 已创建"}
+{"level":30,"time":1791392573078,"pid":51984,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"12aea197-ae50-4b54-9a97-06aea00dd5a4","title":"均衡推进: 成本结构诊断","msg":"Goal 已创建"}
+{"level":30,"time":1791392573079,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392573079,"pid":51984,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-engine","goalId":"12aea197-ae50-4b54-9a97-06aea00dd5a4","proposalId":"0447b04d-9311-44e4-a6f6-b5f6398ffb0f","msg":"从 Proposal 生成 Goal"}
+{"level":30,"time":1791392573080,"pid":51984,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"12aea197-ae50-4b54-9a97-06aea00dd5a4","fromStatus":"draft","newStatus":"pending_ga","msg":"Goal 状态已更新"}
+{"level":30,"time":1791392573081,"pid":51984,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"12aea197-ae50-4b54-9a97-06aea00dd5a4","fromStatus":"pending_ga","newStatus":"active","msg":"Goal 状态已更新"}
+{"level":30,"time":1791392573081,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"dead849c-9ecb-4038-99c4-8a571196ec9e","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392573082,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"3bd3cf96-d353-4e1e-aa96-59f6e3341e06","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392573082,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"56ef5d14-effa-433c-a361-858ddfa9cebd","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392573083,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392573084,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","sentinelKey":"ZZ_TEST_K6","industry":"_test_k6","warning":"1.5→1.58","msg":"GA 阈值调整已回写"}
+{"level":30,"time":1791392573085,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","applied":1,"skipped":0,"msg":"进化动作回写完成"}
+{"level":30,"time":1791392573092,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392573092,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"bae55cf3-d134-4c02-9715-e6740c1c6a55","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392573093,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"cdbf8325-fce7-45f1-a0b1-6eb325ae90bd","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392573094,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"85bf8358-5871-4c40-9af2-5b947bdf1b9c","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392573094,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392573095,"pid":51984,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"12aea197-ae50-4b54-9a97-06aea00dd5a4","ownerDeptId":"finance","dimension":"financial","msg":"维度推断完成"}
+{"level":30,"time":1791392573098,"pid":51984,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"12aea197-ae50-4b54-9a97-06aea00dd5a4","dimension":"financial","expertName":"financial","msg":"专家选择完成"}
+{"level":30,"time":1791392573098,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-engine","proposalId":"prop-1","newStatus":"regenerating","needsReDiagnosis":true,"msg":"Proposal 异议已处理"}
+{"level":30,"time":1791392573098,"pid":51984,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"12aea197-ae50-4b54-9a97-06aea00dd5a4","dimension":"financial","edges":["CAPITAL_ACQUISITION","CAPITAL_ALLOCATION","CAPITAL_SOURCE_MIX","PROFIT_REINVESTMENT","VALUE_PRICING"],"msg":"因果边选择完成"}
+{"level":30,"time":1791392573098,"pid":51984,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"12aea197-ae50-4b54-9a97-06aea00dd5a4","expertName":"financial","timeoutMs":100,"msg":"开始轻量级再诊断专家评估"}
+{"level":40,"time":1791392573099,"pid":51985,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-1","count":3,"msg":"Goal 已达 3 次再诊断上限，自动升级全量诊断"}
+{"level":30,"time":1791392573099,"pid":51984,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"12aea197-ae50-4b54-9a97-06aea00dd5a4","adjustmentType":"adjust_target","degraded":false,"triggeredBy":"p0_alert","msg":"轻量级再诊断完成"}
+{"level":30,"time":1791392573100,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+ ✓ tests/growth/lightweight-diagnosis.test.ts (13 tests) 152ms
+{"level":30,"time":1791392573100,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"fa3c5adf-bd43-4071-9aac-c5d6959068c3","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392573101,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"dee3bf72-e523-4085-9826-0afa233d2a93","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392573108,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392573108,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"7cf7fbe6-a4e2-4d71-ab49-2280c9a88b7d","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392573108,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"f02903bc-bc83-4f63-b2d8-615c2b413009","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392573109,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"111b1ffa-8720-405f-ba19-5d44bccb8913","decision":"reject","msg":"反馈已收集"}
+{"level":40,"time":1791392573109,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","key":"reject:sentinel_alert:","entityKeys":["a-1","a-2","a-3"],"count":3,"msg":"threshold_adjust 跳过 — 聚合组非单一实体（entityKey=null），无法定位配置阈值实体"}
+{"level":30,"time":1791392573114,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392573115,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"f2306e65-14d4-45d0-9b6a-4beccc040d56","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392573115,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"134dff92-24df-492c-bb99-8a8d9621fbce","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392573116,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"e9cab744-2390-46f7-a6a1-b4e3fc436999","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392573116,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"c51bf870-4dac-4c0d-b166-ef9cbcb780fe","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392573120,"pid":51984,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"12aea197-ae50-4b54-9a97-06aea00dd5a4","fromStatus":"active","newStatus":"active","msg":"Goal 状态已更新"}
+{"level":30,"time":1791392573120,"pid":51984,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-lifecycle","goalId":"12aea197-ae50-4b54-9a97-06aea00dd5a4","outcome":"partially_achieved","metricComparisons":[{"metricName":"目标达成","target":100,"actual":70,"met":false}],"msg":"Goal 闭环"}
+{"level":30,"time":1791392573120,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392573121,"pid":51984,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"12aea197-ae50-4b54-9a97-06aea00dd5a4","fromStatus":"active","newStatus":"completed","msg":"Goal 状态已更新"}
+{"level":30,"time":1791392573121,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"faabdc96-ea22-4266-993b-1e0b67d1fde0","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392573122,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"ae852a79-e99d-462f-b65c-edeca94099ef","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392573123,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"b41e10ee-9e4a-4902-93eb-7a0fcc9e2b8e","decision":"reject","msg":"反馈已收集"}
+{"level":40,"time":1791392573124,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","key":"reject:sentinel_alert","enterpriseIds":["org-a","org-b"],"count":4,"msg":"threshold_adjust 跳过 — 聚合组来自多个企业（enterpriseId=null），拒绝跨租户回写配置"}
+{"level":30,"time":1791392573126,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791392573126,"pid":51987,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+ ✓ tests/growth/evolution-writeback.test.ts (7 tests) 71ms
+{"level":40,"time":1791392573201,"pid":51984,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-lifecycle","err":"数据库未初始化，请先调用 initEngineContext()","goalId":"12aea197-ae50-4b54-9a97-06aea00dd5a4","msg":"知识提取/PKB 写入失败 — 降级（不阻断 Goal 关闭）"}
+{"level":30,"time":1791392573203,"pid":51984,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"0fad6064-bac0-4e7f-8a63-9be3a8f3e4b0","title":"空诊断","msg":"Proposal 已创建"}
+{"level":30,"time":1791392573202,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","userId":"node-1","email":"alice@co.com","orgId":"org-1","msg":"用户已创建"}
+ ✓ tests/growth/e2e-navigation-loop.integration.test.ts (3 tests) 256ms
+{"level":30,"time":1791392573254,"pid":51990,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"9f0d22ef-c0e3-4d43-806e-b508c0c0792f","title":"测试Goal","msg":"Goal 已创建"}
+{"level":30,"time":1791392573255,"pid":51990,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"9f0d22ef-c0e3-4d43-806e-b508c0c0792f","fromStatus":"draft","newStatus":"pending_ga","msg":"Goal 状态已更新"}
+{"level":30,"time":1791392573255,"pid":51990,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"9f0d22ef-c0e3-4d43-806e-b508c0c0792f","fromStatus":"pending_ga","newStatus":"active","msg":"Goal 状态已更新"}
+{"level":30,"time":1791392573255,"pid":51991,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"fecb7ab4-a792-4ce0-af67-91839092265c","title":"营收下降诊断","msg":"Proposal 已创建"}
+{"level":30,"time":1791392573256,"pid":51990,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"176a9d17-a7b8-4479-b4d9-7915cf913e68","title":"测试Goal","msg":"Goal 已创建"}
+{"level":30,"time":1791392573256,"pid":51990,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"176a9d17-a7b8-4479-b4d9-7915cf913e68","fromStatus":"draft","newStatus":"abandoned","msg":"Goal 状态已更新"}
+{"level":30,"time":1791392573256,"pid":51991,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"60010949-5e15-430f-89cc-6dc98e175212","title":"营收下降诊断","msg":"Proposal 已创建"}
+{"level":30,"time":1791392573256,"pid":51990,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"b2f75c95-d80a-4989-990a-ec77d894be5b","title":"测试Goal","msg":"Goal 已创建"}
+{"level":40,"time":1791392573256,"pid":51990,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-lifecycle","role":"staff","soi":"goal.abandon","denyReason":"deny_default: 无权限","msg":"PolicyEngine 拒绝操作"}
+{"level":30,"time":1791392573256,"pid":51991,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"611bea71-a625-4bce-b0ed-4f645622071a","title":"营收下降诊断","msg":"Proposal 已创建"}
+{"level":30,"time":1791392573256,"pid":51990,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"dc3a2a05-ebf4-4582-92a8-7cd24a6c5745","title":"测试Goal","msg":"Goal 已创建"}
+{"level":30,"time":1791392573256,"pid":51990,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-lifecycle","goalId":"dc3a2a05-ebf4-4582-92a8-7cd24a6c5745","outcome":"achieved","metricComparisons":[{"metricName":"营收","target":15,"actual":15,"met":true}],"msg":"Goal 闭环"}
+{"level":30,"time":1791392573256,"pid":51991,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"46940c18-e37a-4afd-8083-327d475520d2","title":"测试","msg":"Proposal 已创建"}
+{"level":30,"time":1791392573256,"pid":51990,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"dc3a2a05-ebf4-4582-92a8-7cd24a6c5745","fromStatus":"active","newStatus":"completed","msg":"Goal 状态已更新"}
+{"level":30,"time":1791392573257,"pid":51991,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"8bd17133-251b-4087-a3c9-60336a0d9451","title":"稳健: 测试","msg":"Goal 已创建"}
+{"level":30,"time":1791392573257,"pid":51991,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-engine","goalId":"8bd17133-251b-4087-a3c9-60336a0d9451","proposalId":"46940c18-e37a-4afd-8083-327d475520d2","msg":"从 Proposal 生成 Goal"}
+{"level":30,"time":1791392573257,"pid":51991,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"1b2ddfac-cd34-4600-bb3a-f0b67ffc6328","title":"测试","msg":"Proposal 已创建"}
+{"level":30,"time":1791392573258,"pid":51991,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-engine","proposalId":"1b2ddfac-cd34-4600-bb3a-f0b67ffc6328","newStatus":"disputed","needsReDiagnosis":false,"msg":"Proposal 异议已处理"}
+{"level":30,"time":1791392573258,"pid":51991,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"318cddc3-62f6-4af7-bcd7-bf473e5f92cb","title":"测试","msg":"Proposal 已创建"}
+{"level":40,"time":1791392573258,"pid":51991,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-engine","proposalId":"318cddc3-62f6-4af7-bcd7-bf473e5f92cb","changeCount":2,"msg":"变更次数超限，通知 GA 仲裁"}
+{"level":30,"time":1791392573258,"pid":51991,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"4da7537d-690b-429a-ae68-18fedc4c9a92","title":"测试","msg":"Proposal 已创建"}
+ ✓ tests/growth/proposal-engine.test.ts (8 tests) 35ms
+{"level":30,"time":1791392573285,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","userId":"node-1","email":"alice@co.com","orgId":"org-1","msg":"用户已创建"}
+{"level":40,"time":1791392573287,"pid":51990,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-lifecycle","err":"数据库未初始化，请先调用 initEngineContext()","goalId":"dc3a2a05-ebf4-4582-92a8-7cd24a6c5745","msg":"知识提取/PKB 写入失败 — 降级（不阻断 Goal 关闭）"}
+{"level":30,"time":1791392573288,"pid":51990,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"33f4ee75-70dc-4cb0-a960-49e841ebd842","title":"测试Goal","msg":"Goal 已创建"}
+{"level":30,"time":1791392573290,"pid":51990,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"f1c84e71-8c6d-4ed5-9368-a3cf2a416b8d","title":"测试Goal","msg":"Goal 已创建"}
+{"level":30,"time":1791392573290,"pid":51990,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-lifecycle","goalId":"f1c84e71-8c6d-4ed5-9368-a3cf2a416b8d","outcome":"achieved","metricComparisons":[{"metricName":"营收","target":15,"actual":15,"met":true}],"msg":"Goal 闭环"}
+{"level":30,"time":1791392573290,"pid":51990,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"f1c84e71-8c6d-4ed5-9368-a3cf2a416b8d","fromStatus":"active","newStatus":"completed","msg":"Goal 状态已更新"}
+{"level":40,"time":1791392573290,"pid":51990,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-lifecycle","err":"数据库未初始化，请先调用 initEngineContext()","goalId":"f1c84e71-8c6d-4ed5-9368-a3cf2a416b8d","msg":"知识提取/PKB 写入失败 — 降级（不阻断 Goal 关闭）"}
+{"level":30,"time":1791392573291,"pid":51990,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"e2b51871-52c8-4a45-82d7-2f1a5bf14376","title":"测试Goal","msg":"Goal 已创建"}
+{"level":40,"time":1791392573291,"pid":51990,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-lifecycle","goalId":"e2b51871-52c8-4a45-82d7-2f1a5bf14376","daysSinceModification":0,"msg":"Goal 归档: 完成/废弃后仅 0 天（建议等待 30 天）"}
+{"level":30,"time":1791392573291,"pid":51990,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"e2b51871-52c8-4a45-82d7-2f1a5bf14376","fromStatus":"completed","newStatus":"archived","msg":"Goal 状态已更新"}
+{"level":30,"time":1791392573292,"pid":51990,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"353029ac-0603-4911-b4da-26bc02b7f297","title":"测试Goal","msg":"Goal 已创建"}
+ ✓ tests/growth/goal-lifecycle.test.ts (8 tests) 48ms
+{"level":40,"time":1791392573296,"pid":51993,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","record":{"id":"90e081ea-415c-4063-8d60-f4ba597e05eb","enterpriseId":"e1","actorId":"user-1","decision":"reject","targetType":"sentinel_alert","targetId":"alert-1","reason":"误报","evidenceRefs":"[]","actorRole":"","createdAt":"2026-10-07T17:02:53.295Z"},"msg":"SQLite 未就绪 — 反馈降级（仅内存）"}
+{"level":40,"time":1791392573297,"pid":51993,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","record":{"id":"9ebefcd3-45bd-4a65-8e9d-28f5deb970a3","enterpriseId":"e1","actorId":"user-1","decision":"modify","targetType":"goal","targetId":"goal-1","reason":"目标值太高","evidenceRefs":"[\"snapshot-1\"]","actorRole":"","createdAt":"2026-10-07T17:02:53.297Z"},"msg":"SQLite 未就绪 — 反馈降级（仅内存）"}
+{"level":30,"time":1791392573302,"pid":51993,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392573302,"pid":51993,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"5b6a0579-f3f5-4b32-af8f-d2dd5ab05fbc","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392573305,"pid":51993,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392573305,"pid":51993,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"5566db7b-55cb-4643-8749-3ead95cd3703","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392573305,"pid":51993,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"22ad0413-d91b-45b4-ab7e-c97261967c32","decision":"modify","msg":"反馈已收集"}
+{"level":30,"time":1791392573306,"pid":51993,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392573306,"pid":51993,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"b3047b3e-75d7-4a55-9c07-52496ea2aaee","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392573306,"pid":51993,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"0cf41dfe-aac0-4acd-b47d-cf9539e36602","decision":"modify","msg":"反馈已收集"}
+{"level":30,"time":1791392573307,"pid":51993,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392573307,"pid":51993,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"13fb6861-3845-4d1f-bedc-f8f84db5c215","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392573307,"pid":51993,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"9473af1b-3da0-4496-9155-a096f52e4f5e","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392573307,"pid":51993,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"d807ba7b-5090-4f4e-9b29-aed71e19d9e9","decision":"reject","msg":"反馈已收集"}
+{"level":30,"time":1791392573307,"pid":51993,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392573308,"pid":51993,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"75045482-7642-4aaf-bb97-88adcc750eb9","decision":"reject","msg":"反馈已收集"}
+ ✓ tests/growth/feedback-collector.test.ts (9 tests) 15ms
+{"level":40,"time":1791392573337,"pid":51994,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","err":"GraphStore 不可用","deptId":"dept-2","msg":"Step 1: 部门基本信息加载失败 — 降级"}
+{"level":40,"time":1791392573338,"pid":51994,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"empty-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+{"level":40,"time":1791392573338,"pid":51994,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","err":"GraphStore down","deptId":"failing-dept","msg":"Step 1: 部门基本信息加载失败 — 降级"}
+{"level":40,"time":1791392573338,"pid":51994,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","err":"Goal store down","deptId":"failing-dept","msg":"Step 2: 活跃 Goal 加载失败 — 降级"}
+{"level":40,"time":1791392573338,"pid":51994,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","err":"Proposal store down","deptId":"failing-dept","msg":"Step 3: Proposal 加载失败 — 降级"}
+{"level":40,"time":1791392573338,"pid":51994,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","err":"Alert store down","deptId":"failing-dept","msg":"Step 4: 告警加载失败 — 降级"}
+{"level":40,"time":1791392573338,"pid":51994,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","err":"Diagnostic store down","deptId":"failing-dept","msg":"Step 5: 诊断报告加载失败 — 降级"}
+{"level":40,"time":1791392573338,"pid":51994,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/workspace-builder","deptId":"filter-dept","msg":"部门 TEAM 节点未找到，使用 deptId 作为名称"}
+ ✓ tests/growth/workspace-builder.test.ts (5 tests) 73ms
+{"level":30,"time":1791392573368,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","userId":"node-2","email":"bob@co.com","orgId":"org-2","msg":"用户已创建"}
+{"level":30,"time":1791392573409,"pid":51992,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392573412,"pid":51992,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"681ea27e-5c4e-42c2-beba-7e79426acd0d","decision":"confirm","msg":"反馈已收集"}
+{"level":40,"time":1791392573414,"pid":51992,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","record":{"id":"46bc3792-3620-40a9-b239-0406791895f4","enterpriseId":"org-k6","actorId":"ga","decision":"confirm","targetType":"proposal","targetId":"act-2","reason":"","evidenceRefs":"[]","actorRole":"","createdAt":"2026-10-07T17:02:53.414Z"},"msg":"SQLite 未就绪 — 反馈降级（仅内存）"}
+{"level":40,"time":1791392573414,"pid":51992,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","record":{"id":"7f32bdb7-7f77-4b7c-a9c6-3877181874db","enterpriseId":"org-k6","actorId":"ga","decision":"reject","targetType":"proposal","targetId":"act-3","reason":"","evidenceRefs":"[]","actorRole":"","createdAt":"2026-10-07T17:02:53.414Z"},"msg":"SQLite 未就绪 — 反馈降级（仅内存）"}
+{"level":30,"time":1791392573420,"pid":51992,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"migration 'k6_confirm_decision' 完成 — feedback_log.decision 已扩 'confirm'"}
+{"level":30,"time":1791392573420,"pid":51992,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392573420,"pid":51992,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","id":"5be29f58-3fe8-4520-bd50-a6157ee24df7","decision":"confirm","msg":"反馈已收集"}
+{"level":30,"time":1791392573421,"pid":51992,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+ ✓ tests/growth/feedback-channel-unification.test.ts (3 tests) 24ms
+{"level":40,"time":1791392573433,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"adapters/sqlite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791392573434,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791392573434,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791392573436,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"d4f797b7-d571-4c37-8f0a-e93e73c2dc24","title":"把营收增长率提到 15%","msg":"Goal 已创建"}
+{"level":30,"time":1791392573436,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"d4f797b7-d571-4c37-8f0a-e93e73c2dc24","count":3,"graph":"growth","msg":"目标已传导到每个成员"}
+{"level":30,"time":1791392573439,"pid":51995,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":40,"time":1791392573440,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"adapters/sqlite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791392573440,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791392573440,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791392573440,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"cb949c40-d372-4f74-8c90-10fff790fd23","title":"把营收增长率提到 15%","msg":"Goal 已创建"}
+{"level":30,"time":1791392573441,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"cb949c40-d372-4f74-8c90-10fff790fd23","count":3,"graph":"growth","msg":"目标已传导到每个成员"}
+{"level":50,"time":1791392573441,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","err":"graph store unavailable (fixture)","goalId":"goal-x","msg":"目标传导失败：图存储不可用 — degraded"}
+{"level":40,"time":1791392573442,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"adapters/sqlite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791392573442,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791392573442,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791392573442,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"0f36af66-586c-4877-98d3-835af748ece8","title":"把营收增长率提到 15%","msg":"Goal 已创建"}
+{"level":50,"time":1791392573442,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","err":"disk I/O error (fixture)","goalId":"0f36af66-586c-4877-98d3-835af748ece8","userId":"u-1","written":0,"expected":3,"msg":"目标传导中断：图存储不可用 — degraded（已写入部分保留）"}
+{"level":50,"time":1791392573444,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","err":"graph store unavailable (fixture)","goalId":"goal-x","msg":"查询目标派发记录失败 — degraded"}
+{"level":50,"time":1791392573444,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","err":"graph store unavailable (fixture)","goalId":"goal-x","msg":"计算目标覆盖率失败：图存储不可用 — degraded"}
+{"level":30,"time":1791392573442,"pid":51995,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+{"level":40,"time":1791392573444,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"adapters/sqlite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791392573445,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791392573445,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"msg":"迁移 2 完成"}
+{"level":40,"time":1791392573445,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"goal-不存在","members":3,"msg":"目标传导被拒：目标不存在（GOAL_NOT_FOUND）"}
+{"level":40,"time":1791392573445,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"adapters/sqlite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791392573445,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791392573445,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791392573446,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"6926ef03-a2cf-4281-907d-d2990072ac88","title":"把营收增长率提到 15%","msg":"Goal 已创建"}
+{"level":40,"time":1791392573446,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"6926ef03-a2cf-4281-907d-d2990072ac88","membersReceived":0,"msg":"目标传导被拒：成员清单为空（EMPTY_MEMBERS）"}
+{"level":40,"time":1791392573447,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"adapters/sqlite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791392573447,"pid":51995,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1791392573448,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791392573448,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791392573448,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"357a445a-a12b-4328-8de9-fcabb6211a4e","title":"把营收增长率提到 15%","msg":"Goal 已创建"}
+{"level":40,"time":1791392573448,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"357a445a-a12b-4328-8de9-fcabb6211a4e","membersReceived":2,"msg":"目标传导被拒：成员清单为空（EMPTY_MEMBERS）"}
+{"level":40,"time":1791392573448,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"adapters/sqlite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791392573449,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791392573449,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791392573449,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"3b8e34f2-b1ca-4d2e-bfc0-238c52035197","title":"把营收增长率提到 15%","msg":"Goal 已创建"}
+{"level":30,"time":1791392573449,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"3b8e34f2-b1ca-4d2e-bfc0-238c52035197","count":2,"graph":"growth","msg":"目标已传导到每个成员"}
+{"level":30,"time":1791392573452,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791392573452,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791392573453,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"a4c73636-c387-4f76-a630-cf0d93cf3024","title":"K6-W2 传导判据 k6-w2-1791392573452-fb52e2","msg":"Goal 已创建"}
+{"level":30,"time":1791392573452,"pid":51995,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392573453,"pid":51995,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","sentinelKey":"ZZ_TEST_K6_RUNTIME","industry":"_test_k6_runtime","warning":"1.5→1.58","msg":"GA 阈值调整已回写"}
+{"level":30,"time":1791392573453,"pid":51996,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"a4c73636-c387-4f76-a630-cf0d93cf3024","count":3,"graph":"growth","msg":"目标已传导到每个成员"}
+{"level":30,"time":1791392573455,"pid":51995,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","applied":1,"skipped":0,"msg":"进化动作回写完成"}
+ ✓ tests/growth/goal-propagation.test.ts (10 tests) 28ms
+stdout | tests/growth/evolution-writeback-runtime.integration.test.ts > K6/0-2 运行时回写（真库 + 注入 feedback_log 行） > 总闸判据: 注入 3 行 reject ⇒ applied=1 + 阈值真变化 + agent_memory 账本计数 > 0
+{
+  "tag": "[GATE-2] runtime writeback",
+  "memoryDbPath": "/var/folders/bs/ltqkv_rd45z6b7p5wq90vv500000gn/T/k6-0-2-runtime-qxFllj/agent-memory.db",
+  "feedbackDbPath": "/var/folders/bs/ltqkv_rd45z6b7p5wq90vv500000gn/T/k6-0-2-runtime-qxFllj/feedback-runtime.db",
+  "sql": "SELECT COUNT(*) FROM agent_memory WHERE key LIKE '%_gaCorrections%'",
+  "ledgerBefore": 0,
+  "ledgerAfter": 1,
+  "applied": 1,
+  "skipped": 0,
+  "thresholdWarning": 1.58
+}
+
+{"level":30,"time":1791392573461,"pid":51995,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392573465,"pid":51995,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791392573466,"pid":51995,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+ ✓ tests/growth/evolution-writeback-runtime.integration.test.ts (2 tests) 36ms
+{"level":30,"time":1791392573470,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","userId":"node-1","email":"alice@co.com","orgId":"org-1","msg":"用户已创建"}
+{"level":30,"time":1791392573472,"pid":51997,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"e4effeb1-361a-4e42-a018-019bc0243a48","title":"提升营收增长率","msg":"Goal 已创建"}
+{"level":30,"time":1791392573473,"pid":51997,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"0cd7e155-1473-4047-9d55-9db04918e490","title":"提升营收增长率","msg":"Goal 已创建"}
+{"level":30,"time":1791392573473,"pid":51997,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"6e0069ff-809d-4e16-86e5-0bc36da9ccc7","title":"提升营收增长率","msg":"Goal 已创建"}
+{"level":30,"time":1791392573473,"pid":51997,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"44bca3d1-007a-4310-9e74-7df32730f220","title":"提升营收增长率","msg":"Goal 已创建"}
+{"level":30,"time":1791392573473,"pid":51997,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"2bd744d2-e356-402c-b5d0-d91e47f3d7a3","title":"提升营收增长率","msg":"Goal 已创建"}
+{"level":30,"time":1791392573474,"pid":51997,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"7673e90e-ca9b-4d70-86f1-720e89a46e0b","title":"提升营收增长率","msg":"Goal 已创建"}
+{"level":30,"time":1791392573474,"pid":51997,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"8af6956a-2ede-4d2f-9d36-b1dccc339a82","title":"提升营收增长率","msg":"Goal 已创建"}
+{"level":30,"time":1791392573474,"pid":51997,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"aa2cab8c-83e9-4a6b-b1a9-1353ef25308a","title":"提升营收增长率","msg":"Goal 已创建"}
+{"level":30,"time":1791392573474,"pid":51997,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"aa2cab8c-83e9-4a6b-b1a9-1353ef25308a","fromStatus":"draft","newStatus":"pending_ga","msg":"Goal 状态已更新"}
+{"level":30,"time":1791392573475,"pid":51997,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"1e4e3e27-250d-4154-b9b8-53acce317ab1","title":"提升营收增长率","msg":"Goal 已创建"}
+{"level":30,"time":1791392573475,"pid":51997,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"1e4e3e27-250d-4154-b9b8-53acce317ab1","fromStatus":"pending_ga","newStatus":"active","msg":"Goal 状态已更新"}
+{"level":30,"time":1791392573475,"pid":51997,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"93ee43f6-ef09-4585-8ada-a74de8ca8d75","title":"提升营收增长率","msg":"Goal 已创建"}
+{"level":30,"time":1791392573475,"pid":51997,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"a19c22dd-8129-4083-89a2-eccecd33f748","title":"提升营收增长率","msg":"Goal 已创建"}
+{"level":30,"time":1791392573475,"pid":51997,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"a19c22dd-8129-4083-89a2-eccecd33f748","fromStatus":"active","newStatus":"abandoned","msg":"Goal 状态已更新"}
+{"level":30,"time":1791392573475,"pid":51997,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"fdea2b4c-3519-4e6f-a115-0396e9b66b43","title":"提升营收增长率","msg":"Goal 已创建"}
+{"level":30,"time":1791392573475,"pid":51997,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"c539cfc5-3a5a-4bf9-8220-1ad8f7d2810b","title":"提升营收增长率","msg":"Goal 已创建"}
+{"level":30,"time":1791392573475,"pid":51997,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"c539cfc5-3a5a-4bf9-8220-1ad8f7d2810b","fromStatus":"completed","newStatus":"archived","msg":"Goal 状态已更新"}
+{"level":30,"time":1791392573476,"pid":51997,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"e6ee516e-09f1-4ca4-87c5-6be991194c05","title":"提升营收增长率","msg":"Goal 已创建"}
+{"level":30,"time":1791392573476,"pid":51997,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"e6ee516e-09f1-4ca4-87c5-6be991194c05","fromStatus":"draft","newStatus":"pending_ga","msg":"Goal 状态已更新"}
+{"level":30,"time":1791392573477,"pid":51997,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"564cd81d-208b-46e2-b969-8e2b1957aced","title":"提升营收增长率","msg":"Goal 已创建"}
+{"level":30,"time":1791392573477,"pid":51997,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"92bd679c-f71d-4a59-944a-553f209af2f4","title":"提升营收增长率","msg":"Goal 已创建"}
+{"level":30,"time":1791392573477,"pid":51997,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"93b23af6-b928-4422-b979-cc68362fd668","title":"提升营收增长率","msg":"Goal 已创建"}
+ ✓ tests/growth/goal-store.test.ts (17 tests) 9ms
+{"level":30,"time":1791392573481,"pid":51998,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注册"}
+{"level":30,"time":1791392573481,"pid":51998,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-0","sentinelId":"goal-goal-0","msg":"方案哨兵已注册"}
+{"level":30,"time":1791392573481,"pid":51998,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-1","sentinelId":"goal-goal-1","msg":"方案哨兵已注册"}
+{"level":30,"time":1791392573482,"pid":51998,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-2","sentinelId":"goal-goal-2","msg":"方案哨兵已注册"}
+{"level":30,"time":1791392573482,"pid":51998,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-3","sentinelId":"goal-goal-3","msg":"方案哨兵已注册"}
+{"level":30,"time":1791392573482,"pid":51998,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-4","sentinelId":"goal-goal-4","msg":"方案哨兵已注册"}
+{"level":30,"time":1791392573482,"pid":51998,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注册"}
+{"level":30,"time":1791392573482,"pid":51998,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注销"}
+{"level":30,"time":1791392573483,"pid":51998,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","daysSinceCreation":20,"msg":"方案哨兵基线已建立"}
+ ✓ tests/growth/goal-sentinel.test.ts (14 tests) 10ms
+{"level":30,"time":1791392573550,"pid":51999,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","sentinelKey":"ZZ_TEST_D273","industry":"_test_d273","warning":"1.5→1.58","msg":"GA 阈值调整已回写"}
+{"level":40,"time":1791392573551,"pid":51999,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","err":"AgentMemoryStore 未初始化 — 请先调用 getAgentMemoryStore(db)","msg":"企业记忆访问失败"}
+{"level":30,"time":1791392573551,"pid":51999,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","applied":1,"skipped":0,"msg":"进化动作回写完成"}
+{"level":40,"time":1791392573554,"pid":51999,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","err":"AgentMemoryStore 未初始化 — 请先调用 getAgentMemoryStore(db)","msg":"企业记忆访问失败"}
+{"level":30,"time":1791392573559,"pid":51999,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","sentinelKey":"ZZ_TEST_D273","industry":"_test_d273","warning":"1.5→1.58","msg":"GA 阈值调整已回写"}
+{"level":40,"time":1791392573559,"pid":51999,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","err":"AgentMemoryStore 未初始化 — 请先调用 getAgentMemoryStore(db)","msg":"企业记忆访问失败"}
+{"level":30,"time":1791392573560,"pid":51999,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","applied":1,"skipped":0,"msg":"进化动作回写完成"}
+{"level":40,"time":1791392573561,"pid":51999,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","err":"AgentMemoryStore 未初始化 — 请先调用 getAgentMemoryStore(db)","msg":"企业记忆访问失败"}
+{"level":30,"time":1791392573561,"pid":51999,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","goalType":"revenue_growth","weightAdjust":-0.1,"msg":"GA Goal 公式调整已记录 (agent_memory)"}
+{"level":30,"time":1791392573561,"pid":51999,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","applied":1,"skipped":0,"msg":"进化动作回写完成"}
+{"level":40,"time":1791392573561,"pid":51999,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","err":"AgentMemoryStore 未初始化 — 请先调用 getAgentMemoryStore(db)","msg":"企业记忆访问失败"}
+{"level":30,"time":1791392573561,"pid":51999,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","pathKey":"expansion_strategy","rankAdjust":-1,"msg":"GA 路径排名降级已记录 (agent_memory)"}
+{"level":30,"time":1791392573561,"pid":51999,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","applied":1,"skipped":0,"msg":"进化动作回写完成"}
+{"level":40,"time":1791392573561,"pid":51999,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","err":"AgentMemoryStore 未初始化 — 请先调用 getAgentMemoryStore(db)","msg":"企业记忆访问失败"}
+{"level":40,"time":1791392573561,"pid":51999,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","expertKey":"nonexistent","msg":"专家 manifest 不存在 — 置信度降级写入 agent_memory"}
+{"level":30,"time":1791392573561,"pid":51999,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","applied":1,"skipped":0,"msg":"进化动作回写完成"}
+ ✓ tests/loops/ga-correction-feedback.test.ts (7 tests) 20ms
+{"level":30,"time":1791392573572,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","userId":"node-2","email":"bob@co.com","orgId":"org-2","msg":"用户已创建"}
+ ✓ tests/growth/dnd-engine.test.ts (6 tests) 11ms
+ ✓ tests/growth/next-action-engine.test.ts (5 tests) 8ms
+{"level":30,"time":1791392573680,"pid":52001,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/decision-record","id":"node-0","relation":"overriding","msg":"DecisionRecord 已创建"}
+{"level":30,"time":1791392573681,"pid":52001,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/decision-record","id":"node-0","relation":"aligned","msg":"DecisionRecord 已创建"}
+{"level":30,"time":1791392573681,"pid":52001,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/decision-record","id":"node-1","relation":"overriding","msg":"DecisionRecord 已创建"}
+{"level":30,"time":1791392573681,"pid":52001,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/decision-record","id":"node-2","relation":"unrelated","msg":"DecisionRecord 已创建"}
+{"level":30,"time":1791392573681,"pid":52001,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/decision-record","id":"node-0","relation":"overriding","msg":"DecisionRecord 已创建"}
+{"level":30,"time":1791392573681,"pid":52001,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/decision-record","id":"node-0","msg":"DecisionRecord rationale 已修正"}
+{"level":30,"time":1791392573681,"pid":52001,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/decision-record","id":"node-0","relation":"overriding","msg":"DecisionRecord 已创建"}
+{"level":40,"time":1791392573682,"pid":52001,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/decision-record","err":"db down","id":"4d4c91ed-13d8-4ad2-b882-7c38924311dd","msg":"DecisionRecord 创建失败 — degraded"}
+{"level":30,"time":1791392573682,"pid":52001,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/decision-record","id":"node-0","relation":"overriding","msg":"DecisionRecord 已创建"}
+{"level":30,"time":1791392573682,"pid":52001,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/decision-record","id":"node-1","relation":"overriding","msg":"DecisionRecord 已创建"}
+{"level":30,"time":1791392573682,"pid":52001,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/decision-record","id":"node-0","relation":"overriding","msg":"DecisionRecord 已创建"}
+{"level":30,"time":1791392573683,"pid":52001,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"19c0175c-e9ab-4880-aa76-5af0e5d3605f","title":"进军东南亚","msg":"Goal 已创建"}
+{"level":30,"time":1791392573683,"pid":52001,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/decision-record","id":"node-0","goalId":"19c0175c-e9ab-4880-aa76-5af0e5d3605f","msg":"DecisionRecord 已关联分解 Goal"}
+{"level":30,"time":1791392573683,"pid":52001,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"111d3d7a-f993-4d04-b50e-d71b50b0dad1","title":"进军东南亚","msg":"Goal 已创建"}
+{"level":30,"time":1791392573683,"pid":52001,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/decision-record","id":"node-0","relation":"overriding","msg":"DecisionRecord 已创建"}
+{"level":30,"time":1791392573683,"pid":52001,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/decision-record","id":"node-0","goalId":"g-1","msg":"DecisionRecord 已关联分解 Goal"}
+ ✓ tests/growth/decision-record.test.ts (9 tests) 9ms
+{"level":40,"time":1791392573698,"pid":52004,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/context-loader","enterpriseId":"nonexistent-enterprise","path":"/Users/wane/SynovaAgent/.synova-wt-0gate/extensions/skills/custom/nonexistent-enterprise/overrides.json","msg":"企业覆盖表不存在 — 使用空覆盖表"}
+{"level":40,"time":1791392573699,"pid":52004,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/context-loader","enterpriseId":"nonexistent-enterprise","path":"/Users/wane/SynovaAgent/.synova-wt-0gate/extensions/skills/custom/nonexistent-enterprise/overrides.json","msg":"企业覆盖表不存在 — 使用空覆盖表"}
+{"level":40,"time":1791392573699,"pid":52004,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/context-loader","enterpriseId":"nonexistent-enterprise","path":"/Users/wane/SynovaAgent/.synova-wt-0gate/extensions/skills/custom/nonexistent-enterprise/overrides.json","msg":"企业覆盖表不存在 — 使用空覆盖表"}
+{"level":30,"time":1791392573699,"pid":52004,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/context-loader","enterpriseId":"nonexistent-enterprise","msg":"ContextLoader 缓存已清空 — 下次加载将重新读取"}
+{"level":40,"time":1791392573699,"pid":52004,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/context-loader","enterpriseId":"nonexistent-enterprise","path":"/Users/wane/SynovaAgent/.synova-wt-0gate/extensions/skills/custom/nonexistent-enterprise/overrides.json","msg":"企业覆盖表不存在 — 使用空覆盖表"}
+{"level":40,"time":1791392573700,"pid":52004,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/context-loader","sector":"nonexistent-industry","path":"/Users/wane/SynovaAgent/.synova-wt-0gate/extensions/industries/nonexistent-industry/thresholds.json","msg":"行业基准文件不存在 — 返回 null"}
+{"level":40,"time":1791392573700,"pid":52004,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/context-loader","enterpriseId":"nonexistent-enterprise","path":"/Users/wane/SynovaAgent/.synova-wt-0gate/extensions/skills/custom/nonexistent-enterprise/overrides.json","msg":"企业覆盖表不存在 — 使用空覆盖表"}
+{"level":40,"time":1791392573701,"pid":52004,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/context-loader","enterpriseId":"nonexistent-enterprise","path":"/Users/wane/SynovaAgent/.synova-wt-0gate/extensions/skills/custom/nonexistent-enterprise/overrides.json","msg":"企业覆盖表不存在 — 使用空覆盖表"}
+{"level":40,"time":1791392573701,"pid":52004,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/context-loader","enterpriseId":"test-enterprise","path":"/Users/wane/SynovaAgent/.synova-wt-0gate/extensions/skills/custom/test-enterprise/overrides.json","msg":"企业覆盖表不存在 — 使用空覆盖表"}
+{"level":40,"time":1791392573701,"pid":52004,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/context-loader","enterpriseId":"nonexistent-enterprise","path":"/Users/wane/SynovaAgent/.synova-wt-0gate/extensions/skills/custom/nonexistent-enterprise/overrides.json","msg":"企业覆盖表不存在 — 使用空覆盖表"}
+{"level":40,"time":1791392573701,"pid":52004,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/context-loader","enterpriseId":"test-enterprise","path":"/Users/wane/SynovaAgent/.synova-wt-0gate/extensions/skills/custom/test-enterprise/overrides.json","msg":"企业覆盖表不存在 — 使用空覆盖表"}
+ ✓ tests/growth/context-loader.test.ts (11 tests) 6ms
+{"level":30,"time":1791392573711,"pid":52003,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/action-store","actionId":"03433e61-f2cc-407b-851b-a4f41210f113","signalId":"finding-1","msg":"Action 已创建"}
+{"level":40,"time":1791392573712,"pid":52003,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/action-store","signalId":"finding-1","msg":"GraphStore 或 orgId 未配置 — Action 创建降级（仅返回内存对象）"}
+{"level":30,"time":1791392573712,"pid":52003,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/action-store","actionId":"f6bdd4b0-8bf0-40cb-8896-085cb680182e","signalId":"finding-1","msg":"Action 已创建"}
+{"level":30,"time":1791392573713,"pid":52003,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/action-store","actionId":"2e847c62-9469-43e3-b310-2539ef9c8c62","signalId":"finding-1","msg":"Action 已创建"}
+{"level":30,"time":1791392573714,"pid":52003,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/action-store","actionId":"3a438191-315f-4c27-a6d8-04133c19735b","signalId":"finding-1","msg":"Action 已创建"}
+{"level":30,"time":1791392573715,"pid":52003,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/action-store","actionId":"f18e63e2-6447-4790-ad17-ff177c310330","signalId":"finding-1","msg":"Action 已创建"}
+{"level":30,"time":1791392573715,"pid":52003,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/action-store","actionId":"078657bc-9a90-4d3a-8586-47982b5a53d8","signalId":"finding-2","msg":"Action 已创建"}
+{"level":30,"time":1791392573715,"pid":52003,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/action-store","actionId":"164d882e-5984-4cce-9806-af9f1edc7d45","signalId":"finding-1","msg":"Action 已创建"}
+{"level":40,"time":1791392573716,"pid":52003,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/action-store","signalId":"x","msg":"GraphStore 或 orgId 未配置 — Action 查询降级"}
+{"level":40,"time":1791392573716,"pid":52003,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/action-store","department":"x","msg":"GraphStore 或 orgId 未配置 — Action 查询降级"}
+{"level":40,"time":1791392573717,"pid":52003,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/action-store","loopId":"x","executionId":"x","msg":"GraphStore 或 orgId 未配置 — Action 查询降级"}
+{"level":30,"time":1791392573718,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","userId":"node-1","email":"alice@co.com","orgId":"org-1","msg":"用户已创建"}
+ ✓ tests/growth/action-store.test.ts (12 tests) 12ms
+{"level":30,"time":1791392573770,"pid":52007,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注册"}
+{"level":30,"time":1791392573771,"pid":52007,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel-lifecycle","goalId":"goal-001","msg":"方案哨兵已注册 (active)"}
+{"level":30,"time":1791392573771,"pid":52007,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注册"}
+{"level":30,"time":1791392573771,"pid":52007,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel-lifecycle","goalId":"goal-001","msg":"方案哨兵已注册 (active)"}
+{"level":30,"time":1791392573772,"pid":52007,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注销"}
+{"level":30,"time":1791392573772,"pid":52007,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel-lifecycle","goalId":"goal-001","msg":"方案哨兵已注销 (closed)"}
+{"level":30,"time":1791392573772,"pid":52007,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注册"}
+{"level":30,"time":1791392573772,"pid":52007,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel-lifecycle","goalId":"goal-001","msg":"方案哨兵已注册 (active)"}
+{"level":30,"time":1791392573772,"pid":52007,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注销"}
+{"level":30,"time":1791392573772,"pid":52007,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel-lifecycle","goalId":"goal-001","msg":"方案哨兵已暂停"}
+{"level":30,"time":1791392573772,"pid":52007,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注册"}
+{"level":30,"time":1791392573772,"pid":52007,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel-lifecycle","goalId":"goal-001","msg":"方案哨兵已注册 (active)"}
+ ✓ tests/growth/goal-sentinel-lifecycle.test.ts (4 tests) 6ms
+{"level":30,"time":1791392573810,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","userId":"node-2","email":"bob@co.com","orgId":"org-2","msg":"用户已创建"}
+{"level":30,"time":1791392573812,"pid":52010,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392573813,"pid":52010,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392573813,"pid":52010,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392573813,"pid":52010,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392573813,"pid":52010,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":3,"msg":"进化信号处理完成"}
+{"level":30,"time":1791392573815,"pid":52010,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/middle-evolution-engine","actionCount":1,"msg":"进化信号处理完成"}
+ ✓ tests/loops/middle-evolution-engine.test.ts (13 tests) 5ms
+ ✓ tests/growth/knowledge-approval.test.ts (4 tests) 2ms
+{"level":40,"time":1791392573825,"pid":52011,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/knowledge-feedback","err":"AgentMemoryStore 未初始化 — 请先调用 getAgentMemoryStore(db)","status":"improved","msg":"效果验证写入失败 — 降级"}
+ ✓ tests/growth/effect-verification.test.ts (5 tests) 5ms
+{"level":30,"time":1791392573832,"pid":52012,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-conflict-detector","record":{"goalA":"g-a","goalB":"g-b","resolution":"prioritize_a","resolvedAt":"2026-10-07T17:02:53.831Z","resolvedBy":"user-admin"},"msg":"Goal 冲突已解决"}
+ ✓ tests/growth/goal-conflict-detector.test.ts (6 tests) 3ms
+{"level":30,"time":1791392573883,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","userId":"node-1","email":"alice@co.com","orgId":"org-1","msg":"用户已创建"}
+{"level":30,"time":1791392573952,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","userId":"node-1","email":"alice@co.com","orgId":"org-1","msg":"用户已创建"}
+{"level":30,"time":1791392573952,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","userId":"node-1","msg":"用户已更新"}
+{"level":30,"time":1791392574021,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","userId":"node-1","email":"alice@co.com","orgId":"org-1","msg":"用户已创建"}
+{"level":30,"time":1791392574022,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","userId":"node-1","msg":"用户已更新"}
+{"level":30,"time":1791392574091,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","userId":"node-1","email":"alice@co.com","orgId":"org-1","msg":"用户已创建"}
+{"level":30,"time":1791392574161,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","userId":"node-2","email":"bob@co.com","orgId":"org-1","msg":"用户已创建"}
+{"level":30,"time":1791392574232,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","userId":"node-1","email":"test@co.com","orgId":"default","msg":"用户已创建"}
+{"level":30,"time":1791392574303,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","userId":"node-1","email":"d702@co.com","orgId":"org-1","msg":"用户已创建"}
+{"level":30,"time":1791392574303,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","userId":"node-1","msg":"用户已更新"}
+{"level":30,"time":1791392574373,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","userId":"node-1","email":"d702@co.com","orgId":"org-1","msg":"用户已创建"}
+{"level":40,"time":1791392574373,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","err":"injected update failure (D702)","userId":"node-1","msg":"更新用户失败 — 降级"}
+{"level":30,"time":1791392574443,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","userId":"node-1","email":"d702-del@co.com","orgId":"org-1","msg":"用户已创建"}
+{"level":30,"time":1791392574443,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","userId":"node-1","msg":"用户已停用(软删除)"}
+{"level":30,"time":1791392574513,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","userId":"node-1","email":"d702-del@co.com","orgId":"org-1","msg":"用户已创建"}
+{"level":40,"time":1791392574513,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","err":"injected update failure (D702)","userId":"node-1","msg":"删除用户失败 — 降级"}
+{"level":30,"time":1791392574519,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791392574519,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791392574588,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","userId":"node-627f8af0-9d1d-457b-56a0-38602980a231","email":"s15@co.com","orgId":"org-default","msg":"用户已创建"}
+{"level":30,"time":1791392574589,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","userId":"node-627f8af0-9d1d-457b-56a0-38602980a231","msg":"用户已更新"}
+{"level":40,"time":1791392574646,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"adapters/sqlite-graph-store","err":"database is locked","id":"node-627f8af0-9d1d-457b-56a0-38602980a231","msg":"更新图节点失败"}
+{"level":40,"time":1791392574646,"pid":51983,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/user-store","err":"database is locked","userId":"node-627f8af0-9d1d-457b-56a0-38602980a231","msg":"更新用户失败 — 降级"}
+ ✓ tests/growth/user-store.test.ts (17 tests) 1568ms
+
+ Test Files  27 passed (27)
+      Tests  232 passed (232)
+   Start at  01:02:52
+   Duration  1.93s (transform 1.30s, setup 0ms, import 1.80s, tests 2.64s, environment 2ms)
+
+===== END gate2-collateral-regression-GREEN.log.txt =====
+
+===== BEGIN gate2-run2-RED-middle-evolution-engine.diff  (sha256=8fc9d742ebe0bfc1676e8726029bd7dbe3cb3d847941fe7a3561c75bda5c740c) =====
+diff --git a/src/loops/middle-evolution-engine.ts b/src/loops/middle-evolution-engine.ts
+index 93a9f0730..61058d794 100644
+--- a/src/loops/middle-evolution-engine.ts
++++ b/src/loops/middle-evolution-engine.ts
+@@ -89,7 +89,7 @@ export function processFeedbackSignals(signals: AggregatedSignal[]): EvolutionAc
+       // 组内实体不唯一（entityKey=null）时**不猜实体**：显式告警 + 跳过（铁律 24/31，不静默）。
+       // 三态（见 AggregatedSignal.entityKey 契约）：undefined=旧生产者 ⇒ 退回旧语义（用 key）；
+       // null=显式"组内实体不唯一" ⇒ 不猜实体。
+-      const entityKey = sig.entityKey === undefined ? sig.key : sig.entityKey;
++      const entityKey = sig.key; // BREAK-IT-RED
+       // D1197/P0-3 跨租户写隔离（创始人红线「A 客户不能读 B 客户数据」）：
+       // 阈值配置是**行业级文件**（extensions/industries/*/thresholds.json），没有企业维度；
+       // 因此回写侧的不变量是「**只接受单一企业**的聚合信号」——
+===== END gate2-run2-RED-middle-evolution-engine.diff =====
+

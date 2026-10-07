@@ -1,0 +1,18 @@
+writeset:
+  - .claude/claims/1220.yaml
+  - .claude/task-briefs/2026-10-07-D1220-D-A2-第二刀.md
+  - .codex/control-tower/VERSION.md
+  - memory/notes/proposed/2026-10-07-d1220-da2-retirement.md
+  - scripts/control-tower/claim_store.py
+  - scripts/pre-commit-check.sh
+  - task-state/D1220.json
+  - tests/control-tower/hard-gate-convergence.test.sh
+  - tests/control-tower/precommit-claim-wiring.test.sh
+  - tests/control-tower/precommit-groups-injection.test.sh
+done:
+  - verify: bash tests/control-tower/precommit-claim-wiring.test.sh
+  - verify: bash tests/control-tower/hard-gate-convergence.test.sh
+  - verify: bash tests/control-tower/precommit-groups-injection.test.sh
+  - verify: python3 -c "import ast;ast.parse(open('scripts/control-tower/claim_store.py').read())"
+  - verify: bash -n scripts/pre-commit-check.sh
+note: D-A2 第二刀（①③ 退役 + 组 12 claim 化 + claim_store --coverage）。SYNO_CLAIM_V2 默认关 ⇒ 关时逐字节 legacy。

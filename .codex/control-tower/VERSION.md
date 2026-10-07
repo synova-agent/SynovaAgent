@@ -11,6 +11,31 @@
 - MAJOR (第一位): 大改版 — 架构重构/产品化里程碑 → 4.6.0 → 5.0.0
 ```
 
+## V5.2.13 (2026-10-07) — D1220 D-A2 第二刀（①③ 退役 + 组 12 claim 化）（PATCH）
+
+- **① 时间戳顺序检查退役**（原 V4.5.1，D1148 并入闸①）: 判据源 `/tmp/.synova-before-brief` 的唯一写者
+  随 **D1146**（hooks 段整段移除）消失 ⇒ 判据恒空 = 死代码（铁律 37）。**附带处置**: 该判据读仓库外
+  绝对路径 ⇒ `precommit-groups-injection.test.sh` 的 HOST_STATE 归因 + sed 补丁探针三件**随 cause 消失同批退役**，
+  换成**代码行级反向断言**（把该绝对路径读取加回 ⇒ 判红；只筛代码行，防留痕注释假红）。
+- **③ Q0 段检查退役**: 载体退役（claim 两字段制下该段按设计不适用）；替代 = `claim_store --check`。
+  口径（**最保守解释**，如实标注）: **只退 Q0** —— Q1 调研／Q2 范围／Q3 验收 + 架构层 + Done 保留
+  （机器可判性更高）；若要连 Q1–Q3 一并退役（更大判据变更）须另裁，扩展点已在脚本留痕注释写明。
+- **组 12 claim 化（开关 `SYNO_CLAIM_V2` 默认关）**: 修「claim 载体下 `ALL_TODAY_BRIEFS` 为空 ⇒
+  组 12 整段跳过 = **假绿**（合法 claim 用户失去全部写集约束）」。开时先判 claim **并集**覆盖，
+  未被覆盖的余量再回落 legacy brief 判定（迁移期双载体取并集，既不假绿也不假红）；
+  **claim 模式 + 无 legacy 载体 + 有未覆盖 ⇒ 显式判红**（假绿封堵）。关 ⇒ 逐字节 legacy（回滚 = 关开关）。
+- **新原语 `claim_store.py --coverage`**: 多 claim **并集**语义（`--resolve` 是「最佳单 claim」，
+  判范围会在多线并发时**假红**，故不复用）；**显式空集**语义（0 条 claim ⇒ uncovered=全部 + reason 明写，禁静默）；
+  畸形 claim ⇒ **exit 2**（检查自身失败，fail-closed，不判「无声明」）。
+- **夹具**: `precommit-claim-wiring.test.sh` +9 断言（接线／回退防护／假绿封堵／原语三契约）；
+  变异体实测: 判定集合退回 `$STAGED_ALL` ⇒ **20 通过 / 2 失败**（判红）。
+  端到端实测（一次性 worktree）: 旧代码 + claim 模式 + 零 legacy brief ⇒ **假绿**（组 12 静默通过）；
+  新代码同条件 ⇒ **硬红**并点名「未被任何 claim 声明覆盖；且本提交无 legacy brief 载体」。
+- **口径缺口（如实登记，未掩饰）**: 组 6 的 echo 标签仍作「6 核心字段」，实际检查 **5** 项（退 Q0 后）——
+  改标签会连带改 `precommit-groups-injection.test.sh:201` 的 `LBL_g6` 断言 ⇒ 归**文档同步批**拉平。
+- **作者**: line-e-da2（写面: `scripts/pre-commit-check.sh` + `scripts/control-tower/claim_store.py` + 2 夹具 + 本文件）
+
+
 ## V5.2.12 (2026-10-08) — 面 3 形态 0 收紧：引用状态机 + 重定向位置（D1232 P3-② / 卡 #1309）（PATCH）
 
 - **病**：形态 0（样本生成器豁免）原判据 = 「grep 之前单引号个数为奇数」⇒ **确定性漏判**：
@@ -43,7 +68,6 @@
 - **降级（fail-closed）**: 测试根不存在/不可读、0 个夹具文件、grep 执行失败 ⇒ **exit 2**（绝不与"零命中"混同）
 - **夹具**: `tests/control-tower/check-gate-integrity.test.sh` 新增 M10 五例（红/绿/白名单/白名单过期/**变异体**：判据退化后 red 样本必须不再被抓）⇒ 64 → **70 PASS / 0 FAIL**（含形态 0 自指防线）
 - **作者**: line-b-ci（承接 line E 的 /tmp/d1226-plan.md 侦察结论；插桩用行索引 + BEGIN/END 标记）
-
 
 ## V5.2.9 (2026-10-07) — D1219 旁路第三态清场 + 检查自身失败态（六方案 §1 执行体）（PATCH）
 

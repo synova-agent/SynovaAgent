@@ -201,28 +201,76 @@ check_tag_ancestry() {
       TAG_FAIL="${TAG_FAIL}  $t 是 HEAD 祖先但不在 origin/main 上（未合并分支 tag——合并后再打，或删除）\n"
     fi
   done
+  # ── D331/D1243（卡 #1312）: 第二段补「孤儿豁免」+ 判定改读**共享真值** ────────────────────
+  # 病根（与第一段同一个 D520，当年只治了一半）: 第一段对「非 HEAD 祖先的 tag」有 `|| continue`
+  #   孤儿豁免，第二段（VERSION.md 最新版本）**没有** ⇒ VERSION.md 的版本号**全局唯一** ⇒ 本机
+  #   任何一个同名孤儿 tag ⇒ **全机、全分支、任何 push 全红**（D520 实证 ×3，全队 4 人分别删过本地 tag）。
+  # 共享真值 vs 本机残留（CTO 类级洞察 R26/R28/R32 的上位根因）:
+  #   「本地有这个 tag」= **本机私有状态**；「远端有 / 是 HEAD 祖先」= **共享真值**。
+  #   判定不得把本机残留当成对**他人**的阻断理由 ⇒ 远端权威查询用 `ls-remote`（范式同 D1219 发号器）。
+  # 方向: feature ⇒ 孤儿与「tag 未打」同判（**黄色中间态**，不阻断）；main ⇒ 仍硬阻断（锚点断裂客观存在）。
+  _tag_remote_zh() {
+    case "$1" in
+      present)     printf '远端**存在**（共享 tag）' ;;
+      absent)      printf '远端**不存在** ⇒ 本机独有（残留）' ;;
+      *)           printf '远端**不可查**（无 origin/离线）⇒ 无法证明共享态' ;;
+    esac
+  }
   if [[ -f "$VERSION_MD" ]]; then
     ver=$(grep -oE '^## V[0-9]+\.[0-9]+\.[0-9]+' "$VERSION_MD" | head -1 | awk '{print $2}')
     if [[ -n "$ver" ]]; then
+  # ⚠️ 必须在 `ver` **赋值之后**执行: 本函数开头 `local … ver=` 会把外层同名变量清空 ⇒
+  #   放前面会查成空 pattern（refs/tags/）⇒ ls-remote 恒返 2 ⇒ 永远误判「本机独有」（本卡夹具 G′ 当场抓住）。
+  _TAG_REMOTE_STATE="unknown"
+  _LSR_RC=0
+  git ls-remote --exit-code --tags origin "refs/tags/$ver" >/dev/null 2>&1 || _LSR_RC=$?   # 显式捕获 rc（不依赖控制结构里的隐式 $?）
+  case "$_LSR_RC" in
+    0) _TAG_REMOTE_STATE="present" ;;        # 远端确有 → 共享态
+    2) _TAG_REMOTE_STATE="absent" ;;         # ls-remote --exit-code: 2 = 查询成功但无匹配 ⇒ 远端确无
+    *) _TAG_REMOTE_STATE="unqueryable" ;;    # 其余 rc（无 origin / 离线 / 认证失败）⇒ **不可判**，显式降级
+  esac
+  _ORPHAN_SEEN=""
       if ! git tag -l "$ver" | grep -q .; then
         # D521/§6: tag 不存在且推送目标非 main = 合法中间态（tag 在 main 合并后打）
         if [[ -n "${PUSH_BRANCH:-}" && "$PUSH_BRANCH" != "main" ]]; then
           echo -e "  ${YELLOW}⚠️  D331: $ver tag 未打 — feature 推送合法（§6: 合并后补打）${RESET}"
         else
-          TAG_FAIL="${TAG_FAIL}  $ver 缺失（VERSION.md 最新版本无 tag）\n"
+          TAG_FAIL="${TAG_FAIL}  $ver 缺失（VERSION.md 最新版本无 tag）｜已推送=$( [[ $_TAG_REMOTE_STATE == present ]] && echo 是 || echo 否 )｜HEAD 祖先=否｜本机独有=$( [[ $_TAG_REMOTE_STATE == absent ]] && echo 是 || echo 未知 )\n"
         fi
       elif ! git merge-base --is-ancestor "$ver" HEAD 2>/dev/null; then # swallow-ok: if 条件消费 rc（锚点断裂判断）
-        TAG_FAIL="${TAG_FAIL}  $ver 非 HEAD 祖先（VERSION.md 最新版本锚点断裂）\n"
+        # 🔴 孤儿（tag 存在但非 HEAD 祖先）: 与第一段对齐 —— feature 侧**不构成阻断理由**
+        if [[ -n "${PUSH_BRANCH:-}" && "$PUSH_BRANCH" != "main" ]]; then
+          echo -e "  ${YELLOW}⚠️  D331: $ver 是本机孤儿 tag（非 HEAD 祖先）— feature 推送不阻断${RESET}"
+          echo -e "  ${YELLOW}      自证: 已推送=$([[ $_TAG_REMOTE_STATE == present ]] && echo 是 || echo 否)｜HEAD 祖先=否｜$(  _tag_remote_zh "$_TAG_REMOTE_STATE")${RESET}"
+          echo -e "  ${YELLOW}      解除: git tag -d $ver    （若确为正式版本: 在真实提交上重指 git tag -f -a $ver -m \"retag $ver\" <真实提交>）${RESET}"
+          _ORPHAN_SEEN="${_ORPHAN_SEEN} $ver"
+        else
+          TAG_FAIL="${TAG_FAIL}  $ver 非 HEAD 祖先（VERSION.md 最新版本锚点断裂）｜已推送=$( [[ $_TAG_REMOTE_STATE == present ]] && echo 是 || echo 否 )｜HEAD 祖先=否｜本机独有=$( [[ $_TAG_REMOTE_STATE == absent ]] && echo 是 || echo 未知 )\n"
+        fi
       fi
     fi
   fi
   if [[ -n "$TAG_FAIL" ]]; then
     echo -e "  ${RED}❌ D331: 版本 tag 锚点断裂:${RESET}"
     printf '%b' "$TAG_FAIL"
-    echo -e "  ${RED}    请运行 git tag -f -a $ver -m \"retag $ver (D331)\" <真实提交> 重指（或删除孤儿 tag）${RESET}"
+    echo -e "  ${RED}    解除（择一）:${RESET}"
+    echo -e "  ${RED}      ① 该 tag 属本机残留/误打 ⇒ git tag -d $ver${RESET}"
+    echo -e "  ${RED}      ② 该 tag 确为正式版本 ⇒ 在真实提交上重指: git tag -f -a $ver -m \"retag $ver (D331)\" <真实提交>${RESET}"
+    echo -e "  ${RED}    ⚠️ main 上不做孤儿豁免: 版本锚点断裂是**客观事实**，必须修好再推（勿删他人 tag——先确认上面「本机独有」栏）${RESET}"
     return 1
   fi
-  echo -e "  ${GREEN}✅ D331: HEAD 祖先 tag 均为 main 可达（孤儿 tag 已豁免）${RESET}"
+  # 成功文案必须**名副其实**（D1243 修）: 否则它会让人以为已修好而放弃追查（卡 #1312 现场: 撞了 4 次
+  #   都当副作用，因为没人去读第二段）。⇒ 分两种写法，且点名被豁免的孤儿。
+  # 文案兼容性（D1243）: 保留子串「孤儿 tag 已豁免」—— `tag-bypass-wiring.test.sh`（他线夹具）
+  #   按该字面量断言「输出明示豁免（不静默放过）」。⚠️ 旧文案**本身就是自相矛盾的**（第二段并未豁免），
+  #   但那不是该断言要测的东西（它测"豁免要说出来"）⇒ 本卡**改真行为、并保留该措辞**，
+  #   再补上"豁免范围/清单"使其**名副其实**，从而**零跨线改动**地同时满足两边。
+  if [[ -n "${_ORPHAN_SEEN:-}" ]]; then
+    echo -e "  ${GREEN}✅ D331: HEAD 祖先 tag 均为 main 可达（孤儿 tag 已豁免: 第一段 + VERSION.md 段；清单${_ORPHAN_SEEN}）${RESET}"
+    echo -e "  ${GREEN}     清单内为**本机孤儿**，不阻断 feature 推送；解除命令见上方黄色段${RESET}"
+  else
+    echo -e "  ${GREEN}✅ D331: 全部版本 tag 锚点合法（孤儿 tag 已豁免: 本次未出现孤儿）${RESET}"
+  fi
   return 0
 }
 
