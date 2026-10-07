@@ -25,6 +25,14 @@ ATTACH="$REPO/scripts/control-tower/attach.py"
 PASS=0; FAIL=0
 ok() { echo "  ✅ $1"; PASS=$((PASS+1)); }
 no() { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
+
+# D1230（卡 #1302）: brief 名**形态**判据 —— **不写死日期**。
+#   为什么: 沙箱的 brief 由 task-start 按**当天**生成（实测 `2026-10-07-auto.md`），
+#   任何写死日期（旧值 `2026-08-27`）都必然随日期腐化 ⇒ 断言恒红（现象: 25 通过 / 1 失败）。
+#   契约（@input 任意字符串 / @output 0=形如 YYYY-MM-DD-<slug>.md，否则 1）:
+#     零填充 4-2-2 日期 + `-` + 非空 slug + `.md` 结尾。
+#   刻意**不做**的事: 不查日期是否「今天」（形态判据不该依赖运行日），不查具体某天。
+_is_brief_name() { printf '%s' "$1" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}-.+\.md$'; }
 TMPD="$(mktemp -d)"; trap 'rm -rf "$TMPD"' EXIT
 
 echo "=== D539: 会话 worktree 隔离 ==="
@@ -60,7 +68,13 @@ SB1="$TMPD/sb1"; build_repo "$SB1"
 [ "$rc" -eq 0 ] && ok "参数优先: task-start exit 0" || no "参数优先: exit=$rc"
 [ -f "$SB1/.claude/current-brief.D539" ] && ok "参数优先: current-brief.D539 已写" || no "参数优先: current-brief.D539 缺失"
 [ ! -f "$SB1/.claude/current-brief" ] && ok "参数优先: 全局 current-brief 已删除（废除全局）" || no "参数优先: 全局 current-brief 仍存在"
-grep -q '2026-08-27' "$SB1/.claude/current-brief.D539" && ok "参数优先: 含最新 brief 名" || no "参数优先: brief 名异常"
+_bn1="$(cat "$SB1/.claude/current-brief.D539" 2>/dev/null || true)"
+# 不再写死日期: 断言 ① 形态合法 ② 还能解析到沙箱里**真实存在**的 brief（比旧断言更强）
+_is_brief_name "$_bn1" && ok "参数优先: 含最新 brief 名（形态合法: YYYY-MM-DD-*.md，实测 '$_bn1'）" \
+  || no "参数优先: brief 名形态异常（实测 '$_bn1'）"
+[ -n "$_bn1" ] && [ -f "$SB1/.claude/task-briefs/$_bn1" ] \
+  && ok "参数优先: brief 名可解析到真实文件（非仅形态合法）" \
+  || no "参数优先: brief 名指向不存在的文件（实测 '$_bn1'）"
 
 # ── 2. session-id env 回退（DSH_SESSION_ID）→ current-brief.D539env ──
 SB2="$TMPD/sb2"; build_repo "$SB2"
@@ -126,6 +140,26 @@ B_INDEX8_2="$(sha256sum "$SB8/.git/worktrees/wt-b8/index" 2>/dev/null | awk '{pr
 B_CB8_2="$(cat "$SB8/.claude/current-brief.B8" 2>/dev/null || echo none)"  # swallow-ok: 同上方
 [ -n "$B_INDEX8" ] && [ "$B_INDEX8" = "$B_INDEX8_2" ] && ok "物理隔离: B 的 index sha256 零变化（A commit 未污染 B）" || no "物理隔离: B index 被改/缺失"
 [ "$B_CB8" = "$B_CB8_2" ] && ok "物理隔离: B 的 current-brief.B8 零变化" || no "物理隔离: B current-brief 被改"
+
+# ── 9. D1230 判别性: 形态判据必须能**拒错形**（否则是纸老虎；卡 #1302 ③）──
+#   正向已由 §1 覆盖（真实名 ⇒ 形态合法 + 可解析）。此处只喂**必错**输入，
+#   每条都必须被 `_is_brief_name` 拒绝 —— 若哪条被放过，这条夹具即转红。
+_is_brief_name '2026-8-7-auto.md' \
+  && no "判别性: 漏放「日期非零填充」错形（2026-8-7-auto.md）" \
+  || ok "判别性: 拒「日期非零填充」"
+_is_brief_name '2026-08-27' \
+  && no "判别性: 漏放「裸日期、无 slug/后缀」错形（旧写死值形态）" \
+  || ok "判别性: 拒「裸日期」（旧写死值 2026-08-27 的形态）"
+_is_brief_name 'auto.md' \
+  && no "判别性: 漏放「无日期」错形（auto.md）" \
+  || ok "判别性: 拒「无日期」"
+_is_brief_name '2026-10-07-' \
+  && no "判别性: 漏放「有日期无 slug 无后缀」错形" \
+  || ok "判别性: 拒「空 slug / 无 .md」"
+# 正向对照: 真名必须被接受（证明上面不是「一律拒绝」的假判别）
+_is_brief_name '2026-10-07-auto.md' \
+  && ok "判别性: 正对照 —— 真名（2026-10-07-auto.md）被接受" \
+  || no "判别性: 真名被误拒（判据过严 ⇒ 会误拦合法 brief）"
 
 echo ""
 echo "结果: $PASS 通过, $FAIL 失败"
