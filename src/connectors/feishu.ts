@@ -137,7 +137,8 @@ export class FeishuConnector implements DataConnector {
     for (const evt of events) {
       mapping.nodes.push({
         type: NodeType.ACTIVITY_LEARNING /* ONTOLOGY-MIGRATION: NodeType.ACTIVITY_LEARNING has no direct match. Store as edge annotation. */,
-        props: { eventType: evt.eventType, timestamp: evt.timestamp },
+        // #1384 V2b：补 requiredProps `name`（本体 schema）；**语义待核**（#1381 判其为局部先例）
+        props: { name: evt.eventType || 'event', eventType: evt.eventType, timestamp: evt.timestamp },
       });
       for (const relatedId of evt.relatedEntityIds || []) {
         mapping.edges.push({

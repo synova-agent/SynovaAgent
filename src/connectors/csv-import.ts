@@ -15,6 +15,7 @@ import { createLogger } from '@synova/logger';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import { NodeType } from '@synova/ontology';
+import { splitAmountByCategory, resolveEntityType, checkRequiredProps } from './connector-schema';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
@@ -88,6 +89,7 @@ export class CsvImportConnector {
     }
 
     let imported = 0;
+    let unmatchedCount = 0;   // #1384：未识别 category 计数（汇总 warn，避免逐行刷屏）
     for (let i = 1; i < lines.length; i++) {
       try {
         const row = this.parseCSVLine(lines[i]);
@@ -98,11 +100,16 @@ export class CsvImportConnector {
           description: colMap.description !== undefined ? row[colMap.description] : undefined,
         };
         if (!record.date || record.amount === 0) continue;
-        const nodeId = this.graphBridge.createNode(NodeType.RESOURCE_MONEY, {
+        // #1384 V2b：`amount` 按【文件化词表】做语义拆分（未识别 ⇒ null + warn；不猜）
+        const split = splitAmountByCategory(record.category);
+        if (split.field === null) unmatchedCount++;
+        const moneyProps: Record<string, unknown> = {
           date: record.date, amount: record.amount, category: record.category,
           description: record.description || '', source: 'csv-import',
           importedAt: new Date().toISOString(),
-        }, this.graph);
+        };
+        if (split.field !== null) moneyProps[split.field] = record.amount;
+        const nodeId = this.graphBridge.createNode(NodeType.RESOURCE_MONEY, moneyProps, this.graph);
         nodeIds.push(nodeId);
         imported++;
       } catch (rowErr) {
@@ -111,6 +118,19 @@ export class CsvImportConnector {
       }
     }
 
+    // #1384 V2b：写入侧 schema 校验（让声明面约束实际面）+ entity_type 处置（null + warn + 登记）
+    const guard = checkRequiredProps(NodeType.RESOURCE_MONEY, { date: 'probe' });   // 探测 requiredProps（缺 entity_type）
+    const et = resolveEntityType();
+    if (et.warn && guard.missing.length > 0) {
+      log.warn({ degraded: true, reason: 'entity_type-unavailable', requiredPropsMissing: guard.missing },
+        '本体 requiredProps 缺 entity_type（仓内无定义 ⇒ null + warn + 登记；不得造枚举值）');
+      warnings.push('missing requiredProp: ' + guard.missing.join(',') + '（已登记：无写入者/无定义）');
+    }
+    if (unmatchedCount > 0) {
+      log.warn({ unmatchedCount, total: imported, degraded: true, reason: 'category-unmatched' },
+        '未识别 category ⇒ 未落 total_revenue/total_cost（语义不决，不猜）');
+      warnings.push('unmatched category rows: ' + unmatchedCount + '/' + imported);
+    }
     return { imported, nodeIds, degraded: imported === 0, warnings };
   }
 

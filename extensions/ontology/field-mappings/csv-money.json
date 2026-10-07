@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "topic": "CSV 金额列 → 本体 `resource/money` 字段的【语义拆分】（#1384 V2b，p0）",
+  "note": "CTO 2026-10-08 裁：按【节点语义】拆。词表落文件（禁散在代码 if-else）；未识别 category ⇒ null + warn（不猜）。证据：D231:12『客户 CSV 格式灵活』⇒ 无固定模版；tests/connectors/csv-import.test.ts:58 category='revenue'；tests/e2e/customer-flow.e2e.test.ts:83 同一文件内 revenue + cogs ⇒ 同模版混语义。",
+  "targetType": "resource/money",
+  "amountField": "amount",
+  "categoryField": "category",
+  "rules": [
+    {
+      "target": "total_revenue",
+      "semantics": "损益类 · 收入族",
+      "categories": ["revenue", "income", "sales", "turnover", "收入", "营收", "销售收入"]
+    },
+    {
+      "target": "total_cost",
+      "semantics": "损益类 · 成本族",
+      "categories": ["cogs", "cost", "costs", "expense", "expenses", "opex", "成本", "费用", "营业成本"]
+    }
+  ],
+  "unmatched": {
+    "target": null,
+    "warn": true,
+    "reason": "未识别 category（含缺省 'uncategorized'）⇒ 不落字段 + warn（语义不决不猜；同 APP/SOFTWARE/Evidence 处理）"
+  },
+  "entityType": {
+    "value": null,
+    "warn": true,
+    "reason": "本体 `resource/money` 的 requiredProps 含 `entity_type`，但【无任何写入者、仓内无定义/示例/文档】⇒ 拿不准 ⇒ null + warn + 登记（CTO 2026-10-08 裁 b；不得造枚举值）"
+  }
+}

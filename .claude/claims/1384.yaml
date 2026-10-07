@@ -1,0 +1,23 @@
+# .claude/claims/1384.yaml — #1384（V2b 数据契约对齐，p0）写集声明（D708 的 S0 源）
+#
+# CTO 2026-10-08 裁：① amount 按【节点语义】拆（词表落文件；未识别 ⇒ null + warn）
+#                  ② activity/learning【不改类型 + 补 name】+ 语义待核登记
+#                  ③ entity_type ⇒ null + warn + 登记（裁 b；不得造枚举值）
+writeset:
+  - .claude/claims/1384.yaml
+  - .claude/task-briefs/2026-10-08-1384-data-contract.md
+  - extensions/ontology/field-mappings/csv-money.json
+  - src/connectors/connector-schema.ts
+  - src/connectors/csv-import.ts
+  - src/connectors/feishu.ts
+  - src/connectors/nemoclaw.ts
+  - src/connectors/feishu-bridge.ts
+  - src/sentinel/adapters/cash-flow-sentinel.ts
+  - tests/connectors/connector-schema.test.ts
+  - tests/connectors/connector-schema.integration.test.ts
+done:
+  - verify: npx vitest run tests/connectors/
+  - verify: npx vitest run tests/connectors/ tests/sentinel/ tests/store/ tests/l3/
+  - verify: test "$(git grep -c "checkRequiredProps" HEAD -- src/connectors/csv-import.ts | tr -d '\n')" -ge 1
+  - verify: npx tsc --noEmit
+note: A 案（connector 按本体 schema 写）：csv-import 语义拆分（total_revenue/total_cost，词表落 csv-money.json）+ entity_type null+warn+登记；feishu/nemoclaw 补 name；feishu-bridge 遗留轴→本体轴；cash-flow 消费本体字段名（旧名回退）。schema-guard = 写入侧 requiredProps 校验（声明面约束实际面）。V2 成败判据 = 真实 importData ⇒ 哨兵写出 metric 行。

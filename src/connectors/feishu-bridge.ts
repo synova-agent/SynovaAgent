@@ -33,7 +33,8 @@ export async function syncFeishuMembersToSOG(
   // Map to SOG nodes (兜底空值 — SOG Person 必填 name)
   let nodeCount = 0;
   for (const m of result.members) {
-    store.createNode('Person', {
+    // #1384 V2b：遗留轴 'Person' → 本体轴 resource/person（requiredProps `name` 已满足）
+    store.createNode('resource/person', {
       name: m.name || `FeishuUser_${m.id}`,
       email: m.email || '',
       mobile: m.mobile || '',
@@ -45,7 +46,7 @@ export async function syncFeishuMembersToSOG(
     nodeCount++;
 
     for (const deptId of m.departmentIds) {
-      store.createNode('Team', { name: `Department_${deptId}`, sourceId: deptId, source: 'feishu' }, orgId);
+      store.createNode('resource/team', { name: `Department_${deptId}`, sourceId: deptId, source: 'feishu' }, orgId);
     }
   }
 
