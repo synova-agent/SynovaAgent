@@ -241,8 +241,28 @@ def analyze_task_state() -> Tuple[list, dict]:
     """
     tasks = []
     phantom_n = 0
+    # ── E4（K3 R6 禁静默空白）: 迁移期声明在 .claude/claims/（不进 task-state）──
+    # task-state 缺席**不等于无任务** —— 裸 return 会让健康报告"看着干净"而实际漏掉全部新任务。
+    # 故显式标记 degraded + migration 字段与文案（铁律 11：降级必须可见，不许静默）。
+    _claims_dir = REPO / ".claude" / "claims"
+    try:
+        _claim_n = (sum(1 for c in _claims_dir.glob("*.yaml") if c.stem.isdigit())
+                    if _claims_dir.is_dir() else 0)
+    except OSError as exc:  # 铁律 24/31: 目录不可读 → 显式降级，不静默当 0
+        _claim_n = 0
+        print(f"⚠ degraded: claim 目录不可读 {_claims_dir} ({exc})", file=sys.stderr)
+    _mig = {
+        "migration_period": bool(_claim_n),
+        "migration_claims": _claim_n,
+        "migration_note": ("[迁移期] 本视图含 task-state 存量（旧 D# 只读）；"
+                           "新任务在 .claude/claims/" if _claim_n else ""),
+    }
+    if _claim_n:
+        print(f"[迁移期] 本视图含 task-state 存量（旧 D# 只读）；新任务在 .claude/claims/"
+              f"（{_claim_n} 条，本次**未纳入**健康派生）", file=sys.stderr)
     if not TASK_STATE_DIR.exists():
-        return tasks, {"phantom": 0, "repo_degraded": False}
+        return tasks, {"phantom": 0, "repo_degraded": False,
+                       "degraded": bool(_claim_n), **_mig}
     # 一次采集工件索引 (D393: 全量一次, 进程内匹配, 不逐任务起子进程)
     impl_hits = set()  # 含 (D#) 的提交里的 D#
     try:
