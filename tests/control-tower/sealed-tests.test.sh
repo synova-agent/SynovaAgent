@@ -82,13 +82,17 @@ R3="$(mkfix 2 none)"
 OUT="$(run_in "$R3" --list)"; rc=$?
 [ "$rc" -eq 0 ] && ok "判别性: 同批下调 FACE-TOTAL ⇒ exit 0（下调通路可达）" || no "判别性: 下调后仍红（rc=${rc}）"
 
-# ── 边界（verifier P2）: 真仓贴边断言 —— FACE-TOTAL 必须 == 当前扫描数（零静默删除余量）──
+# ── 边界（Lead 裁 2026-10-07，**下界语义**）: scan >= FACE-TOTAL 为通过；scan < FACE-TOTAL（净删除）⇒ 红 ──
+#   ⚠️ 为什么不是「相等/贴边」: 相等会让**任何新增测试的 PR 都必须改中央基线文件** ⇒ 那是登记制的更糟形态
+#      （写集冲突源）。故棘轮只做**下界**：新增不红、净删除红。
+#   ⚠️ 代价（如实登记，不假装能抓）: 净零变换（删 1 个 + 加 1 个）**不可检测**——这是「不做逐条登记」的必然代价。
+#      生产实证: #1259 新增 3 个测试 ⇒ scan 141→144 ⇒ 下界语义下**不红**（旧贴边断言在此必红）。
 FLR_REAL="$(bash "$SUT" --face-total)"
 SCAN_REAL="$(bash "$SUT" --scan | grep -c . || true)"
-if [ "$FLR_REAL" = "$SCAN_REAL" ]; then
-  ok "边界: 真仓 FACE-TOTAL=${FLR_REAL} == --scan=${SCAN_REAL}（删 1 个即红；新增不红）"
+if [ -n "$FLR_REAL" ] && [ "$SCAN_REAL" -ge "$FLR_REAL" ]; then
+  ok "边界: 真仓下界语义成立（scan=${SCAN_REAL} >= FACE-TOTAL=${FLR_REAL}；余量 $((SCAN_REAL - FLR_REAL)) 为新增所致，非判据）"
 else
-  no "边界: 真仓棘轮未贴边（FACE-TOTAL=${FLR_REAL} vs scan=${SCAN_REAL}）⇒ 存在 $((SCAN_REAL - FLR_REAL)) 单位静默删除余量"
+  no "边界: 真仓净删除（scan=${SCAN_REAL} < FACE-TOTAL=${FLR_REAL}）⇒ 应红；或下界缺失（FLR='${FLR_REAL}'）"
 fi
 
 # ── 边界（贴边态）: floor == scan 时删 1 个 ⇒ 必红（M2c 用 floor 高 1 的形态，覆盖不到本边界）──
@@ -99,6 +103,16 @@ if [ "$rc" -eq 1 ] && printf '%s\n' "$OUT" | grep -q 'FACE-TOTAL'; then
   ok "边界: 贴边态（floor 2 / scan 2→删 1）⇒ exit 1（删 1 个即红）"
 else
   no "边界: 贴边态删 1 未红（rc=${rc}）⇒ 棘轮有静默余量"
+fi
+
+# ── 成本登记（Lead 裁）: 净零变换（删 1 + 加 1）**不可检测** —— 断言其 rc=0 并把代价写进输出 ──
+R7="$(mkfix 2 none)"
+rm -f "$R7/tests/control-tower/aa.test.sh"; printf '#!/bin/bash\n' > "$R7/tests/control-tower/zz.test.sh"
+OUT="$(run_in "$R7" --list)"; rc=$?
+if [ "$rc" -eq 0 ] && printf '%s\n' "$OUT" | grep -q 'zz.test.sh'; then
+  ok "成本登记: 净零变换（删 aa / 加 zz ⇒ scan 不变）判 rc=0 —— **已知不可检测**（下界语义的必然代价，见契约注释）"
+else
+  no "成本登记用例异常: rc=${rc}（下界语义下净零变换应为 rc=0）"
 fi
 
 # ── 失败: 新增隔离未上调 QUARANTINE-TOTAL ⇒ 红 ──

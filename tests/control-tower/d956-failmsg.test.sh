@@ -82,7 +82,10 @@ echo "$OUT1" | grep -q 'expect(count).toBe(5)' && ok "中文混排失败行未�
 #   （D956-MSG-START/END 标记，见文件头 + L34）做定位。
 #   判别性保持: 把 D956 段移到 `if ! bash "$t"` 之前（挪出失败分支）⇒ START_LN < BRANCH_IF_LN ⇒ 本用例转红。
 START_LN=$(grep -n '# D956-MSG-START' "$CI" | head -1 | cut -d: -f1)
-BRANCH_IF_LN=$(awk -v s="$START_LN" 'NR < s && /if ! bash "\$t"/ { n = NR } END { print n + 0 }' "$CI")
+#   锚点（D-F/②-fix 2026-10-07 扩展，判别性不变）: 执行器改为**按扩展名分派**后，失败分支形态由
+#     `if ! bash "$t" …` 变为 `if [ "$_RC" -ne 0 ] …`（.py 走 python、.sh 走 bash，rc 统一透传）。
+#     故本处接受**两种**失败分支形态；仍要求 D956 段物理位于该分支**之内**（把段挪到锚点之前 ⇒ 必红）。
+BRANCH_IF_LN=$(awk -v s="$START_LN" 'NR < s && (/if ! bash "\$t"/ || /if \[ "\$_RC" -ne 0 \]/) { n = NR } END { print n + 0 }' "$CI")
 IN_BRANCH=0
 if [ -n "$START_LN" ] && [ "$BRANCH_IF_LN" -gt 0 ] && [ "$START_LN" -gt "$BRANCH_IF_LN" ]; then IN_BRANCH=1; fi
 if [ "$IN_BRANCH" -eq 1 ] && printf '%s\n' "$BLOCK" | grep -q '::error'; then
