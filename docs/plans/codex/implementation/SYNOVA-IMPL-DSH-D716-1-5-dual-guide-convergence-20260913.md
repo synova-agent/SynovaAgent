@@ -10,6 +10,15 @@ north-star:
 
 # SYNOVA-IMPL-DSH-D716-1-5：安装引导单一入口（1-5 双引导收敛）
 
+> ⚠️ **本 spec 已实施完毕，由《DSH 权威手册 v1（2026-09-17）》取代**（`docs/synova/research/DSH权威手册-v1-20260917.md`，见其 §6.5）。
+> **被取代的部分（实测证据）**：
+> ① 「**但旧引导三文件仍在仓库**」→ **三文件已全部删除**（`app/setup.html` / `app/js/setup.js` / `app/css/setup.css` 均 `不存在`）——即写集「3 删除」已执行。
+> ② 「**无任何回归守卫**」→ **两个守卫生成**：`tests/routes/setup-guide-retired.test.ts`、`tests/electron/dual-guide-packaging-guard.test.ts` 均存在。
+> ③ 「src/server.ts 的 **L300** 仍 `app.use('/app', express.static(...))`」→ **L300 现为 `app.locals.agentMemory = agentMemory;`**，静态挂载已不在该行（行号漂移）。
+> ④ 写集「2 修改 + 2 新建 + 3 删除」**全部完成**；`setupGuideGoneRouter` 在 `src/server.ts` 命中 **2** 处（定义 + 挂载）。
+> **本 spec 仅存的阅读价值**：410 显式下线路由的**设计形态**（挂载顺序必须早于静态挂载）、以及「缺陷 C/D（P2，登记不修）」两条——这两条**未在本轮复核，状态未知**。
+> **不要再引用本文的「现状材料」**（`file:line` 已全部漂移）。现状请按 `git ls-files app/` + `grep -n setupGuideGoneRouter src/server.ts` 现查。
+
 > 状态: dev doc（spec） | 2026-09-13 | 优先级 P0 | 证明层级: L1 交互层（HTTP 路由）+ 构建期（Electron 打包配置）
 > 验收点: `docs/synova/product-lines/product-lines.yaml` 线 1 **1-5「安装引导单一入口（双引导收敛）」**（当前 `uncommitted`，D712 场景证据判 `fail`）
 > 归属警示: src/server.ts = **Claude 专属**（`.github/CODEOWNERS` 串行点表）→ 本 spec 由 DSH dev-doc 写，**实施归 Win 线**（Claude Code）

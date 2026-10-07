@@ -1,5 +1,13 @@
 # DSH 源码锚点映射 — B-01~B-08 借鉴卡 × Mac node_modules 实测（0.1.2-rc.1）
 
+> ⚠️ **已由《DSH 权威手册 v1（2026-09-17）》全部取代**（`docs/synova/research/DSH权威手册-v1-20260917.md`）。
+> **全部取代的理由**：本文件的唯一目的是「回答包名 → 源码路径映射 + 三个锚点抽查」，而这三个结论现在全变：
+> ① **§一 版本结论「Mac = 0.1.2-rc.1」已过时** → 现 **0.1.6-alpha.1**（`deepseek-harness-pkg`）；「224 包」→ 现 **246**。
+> ② **§二 映射表全部行号已漂移**：`B-01` error.js 四码区间 **L22–L42 逐字命中**；`route on this, never by parsing message` **L13 逐字命中**（原文含反引号，精确形态为 ``route on this, never by parsing `message` ``——**不带反引号 grep 会零命中，是本批复核踩到的一次假失效**）；`B-03` token-meter「L239 bucketsFrom / L245 四桶」→ 行号已失效（现文件 802 行）；`B-04` pruner「L8 PRUNE_MARKER / L11 thresholdChars / L12 headChars」→ **L8 / L11 / L12 全部逐字命中**（默认值 8192/4096/1024 未变）；`B-08` atomic-write「wx-created lock L11 + rename commit L13」→ **L11 / L13 逐字命中**。
+> ③ **§二 表体「关键文件」列**：`dsh-session-projection` 现同时有 `lib/types/{index,types}.js`；`dsh-compaction` 族文件清单需按手册 §2.5 现验。
+> **仍然有效的部分（一句话）**：§二 开头那句**方法论结论**——「`dsh-*` 是 npm 发布包名；`node_modules/@deepseek-ai/<包名>/lib/` 就是已构建的源码本体，无需映射到 monorepo 目录，直接读构建产物即可」——**经本批 60+ 次现验完全成立**，已原文并入手册 §4.1。
+> **旧的 L 行号请一律改用**：`grep -n '<符号>' "$DSH/<pkg>/lib/<file>.js"`（手册 §4.2 列出三个必须避开的探针陷阱）。
+
 > 产出: CTO（Mac 侧）| 2026-09-07 | 用途: Win Phase 0 前置——Win 台账 f9e97666 发现②（锚点 dsh-* 包名与源码目录未映射）的**Mac 侧解答**
 > 核实源: Mac DSH 运行时依赖 `~/Library/Application Support/io.github.hairyf.deepseek-harness-desktop/dependencies/dsh/node_modules/@deepseek-ai/`（224 包）
 > **版本结论: Mac = 0.1.2-rc.1（新于 Win 0.1.1-rc.2 与旧记 0.1.2-alpha.2）——锚点核验以此为准**

@@ -5,6 +5,12 @@ description: 控制塔脚本变更模式库——改 scripts/control-tower/、sc
 
 # ctrl-tower-change — 控制塔脚本变更模式库
 
+> ⚠️ **已由《DSH 权威手册 v1（2026-09-17）》部分取代**（`docs/synova/research/DSH权威手册-v1-20260917.md`，见其 §3.4 与 §6.6）。
+> **被取代的节**：**§模式 6 第 54 行**「`bash scripts/pre-commit-check.sh` # **12 组**门禁自过」→ 现行为 **13 组**（现验：`grep -oE '组 [0-9]+' scripts/pre-commit-check.sh | sort -u -V` 得 `组 1…10 组 12 组 13`，**组 11 缺号**为历史删除，故口径为 13 组）。
+> **未被取代（模式 1~5 全部仍成立，可直接沿用）**：门禁三态退出码（0 通过 / 1 业务阻断 / 2 执行失败降级，禁 `|| true` 吞崩溃、禁只探存在性不探可用性）、bash+全角标点的变量边界（`${VAR}` 显式花括号）、条件跳过保持 <1s、`grep -c` 防 "0\n0"（`tr -d '\n\r'`）、测试注入与沙箱惯例（`*.test.sh` 放 `tests/control-tower/`、含生产接线检查）。
+> **红线仍全文有效**：`scripts/audit/` 永远禁碰（K3 专属）；逃生舱必须写 `degraded-events.log`；禁止 `taskkill //IM node.exe`。
+> **本技能最相关的新增**：D311 暂存隔离的**认领判定规则**与「如何正确开卡并提交」现成文于手册 **§5**（含 4 条实测证据与 4 条禁令）——改 `synova-commit` / `staging_guard.py` 前必读。
+
 ## 使用时机
 修改任何门禁/工作流脚本（pre-commit-check.sh、check-*.sh、synova-commit、hooks、scripts/workflow/）。改门禁前先加载本技能 + windows-compat（跨平台是硬要求）。
 

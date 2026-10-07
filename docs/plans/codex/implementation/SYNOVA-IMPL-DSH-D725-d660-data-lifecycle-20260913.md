@@ -8,6 +8,26 @@ north-star:
   当前进度: L2 部分达成——D717（分支 feat/mac-d717-product-debt，PR #527 **未合并 main**）已落地"默认 permanent 不按时间删" + degraded 契约 + bootstrap 生产接线；但依据的「蒸馏完成」概念全仓零权威出处（唯一出处是 board-backlog.json 的转述），蒸馏判定无实现、双键门缺失；L4 仍存在活的按时间物理删路径（purgeExpired 零调用方）；L1/L3 零归档机制。本 spec 是「蒸馏完成」的首次权威定义 + 五层阶梯成文 + Win 线实施交接包
 ---
 
+<!-- ⚠️ 已由《DSH 权威手册 v1（2026-09-17）》部分取代（docs/synova/research/DSH权威手册-v1-20260917.md，见其 §6.5）。
+
+被取代的部分（实测证据，来源 B/C）：
+  ① 「D717（PR #527 未合并 main）」→ 已失效：#527 已合并（git merge-base --is-ancestor 退出 0）。
+     连带：本文「基线声明」（origin/main @2bc0f724 + PR #527）已过时；origin/main 现为 0f59e514。
+  ② 「L4 仍存在活的按时间物理删路径（purgeExpired 零调用方）」→ 已失效：purgeExpired 现有 1 个生产调用方。
+  ③ 「expireOld main 零调用方（#527 补 1）」→ 已失效：现 7 个生产调用方。
+  ④ 「autoSediment / runPKBLifecycle 零生产调用方（M3）」→ 已失效：autoSediment 现 2 个生产调用方。
+  ⑤ src/l3/evidence-distillation.ts（本文计划新建的蒸馏判定模块）→ 仍不存在（本 spec 未实施）。
+
+仍然有效的部分（本文的核心资产）：
+  · §5.2 五层保留分级阶梯（L1 permanent-append-only / L2 permanent + 蒸馏判据 / L3 terminal-archive
+    / L4 versioned-immutable / L5 permanent-git）与「唯一允许物理删除的层是 Evidence 且必须已蒸馏」的终态定义
+  · §5.4 双键门设计（TIER + DAYS 双键，任一单键不得启用删除）
+  · §7 可证伪点三条、§5.5 蒸馏判据三选一裁决过程、§6 降级契约（fail-closed 不删）
+  · src/evidence/evidence-store.ts 的 4 个行号引用（L22 / L30 / L74 / L121）经复核 4/4 精确命中，文件行数 128 与本文一致
+
+执行前必做：git fetch --all && git pull --ff-only 后重核所有行号（本文第 15 行自己也这么要求——该要求已被本批复核证明是必要的）。
+-->
+
 <!--
   SYNOVA-IMPL-DSH-D725: D660 数据生命周期五层阶梯（保留分级 / 触发条件 / 降级契约）
   状态: dev doc（spec） | 2026-09-13 | 优先级 P0 | 证明层级: L3 洞察层（保留编排）+ L4 本体（EvidenceStore / AgentMemoryStore）+ L5 存储

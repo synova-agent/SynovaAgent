@@ -5,6 +5,11 @@ description: 控制塔 Windows 跨平台模式库——subprocess 调 bash 的�
 
 # windows-compat — Windows 跨平台模式库
 
+> ✅ **《DSH 权威手册 v1（2026-09-17）》复核结论：本技能全文仍成立，无节被取代**（`docs/synova/research/DSH权威手册-v1-20260917.md`，见其 §6.6）。
+> 复核范围：模式 1（subprocess 调 bash 的自包含环境 `_find_bash`/`_bash_env`）、模式 2（PATH 差异与受限 PATH 确定性测试）、模式 3（UTF-8 强制头块 + `.py` reconfigure + CRLF 的 "0\n0"）、模式 4（静默吞错门禁与 swallow-ok 豁免表）、以及文末 4 条验证命令——**均未见漂移**。
+> 与手册的交叉点：本技能模式 3 的 UTF-8 头块检查器 `check-silent-swallow.sh --utf8` 与 pre-commit 组 2 的 `--diff` 模式，在手册 §3.4「门禁链」中列为现行有效门禁。
+> **本技能模式的普适价值**（手册 §4.2 已收录为「探针陷阱」的同类问题）：文档里的路径/字符串在复制时容易丢失不可见字符或转义——复核任何锚点时**先确认字面量精确形态**（手册附录 A 记录了一次真实假失效：`route on this, never by parsing \`message\`` **不带反引号 grep 会零命中**）。
+
 ## 使用时机
 修改 scripts/control-tower/、scripts/workflow/、scripts/hooks/ 下的 bash/python 脚本，或写涉及 subprocess/UTF-8 的测试时。
 

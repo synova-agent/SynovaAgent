@@ -5,6 +5,20 @@ description: Synova CTO 交接文档——完整上下文（过渡 CTO 交接给
 
 # Synova CTO 交接文档（开工必读，过渡 CTO → 真正 CTO）
 
+> ⚠️ **已由《DSH 权威手册 v1（2026-09-17）》部分取代**（`docs/synova/research/DSH权威手册-v1-20260917.md`，见其 §6.6）。
+> **被取代的节**：
+> ① **§〇b「DSH 源码位置」**——`~/.nvm/versions/node/v24.19.0/lib/node_modules/@deepseek-ai/dsh/` **已失效**。现行唯一权威路径：
+>    `~/Library/Application Support/io.github.hairyf.deepseek-harness-desktop/dependencies/dsh/node_modules/@deepseek-ai/`（包名 `deepseek-harness-pkg`，版本 **0.1.6-alpha.1**，**246** 包）
+> ② **§三 项目是什么**——「8 专家」→ 现 `expert/expert-registry.yaml` = **6** 位；哨兵数未复核。
+> ③ **§七 已建资产清单**——「预设（4 个）」→ 实盘 **11** 个（新增 5 个 `shanhe-*`）；「技能 10 个」→ `.dsh/skills` 现 **13** 个；「pre-push 3 项」→ 现行口径为**门禁 0-5**。
+> ④ **§〇b 三步核查的第 3 步「给出明确代码文件路径 + 函数 + 行号」**——**行号必须现查，不得沿用任何文档里的行号**（手册 §6 实证：同一批锚点跨版本漂移 1~1463 行，且方向不一致）。改用「包 + 文件 + 符号」+ `grep -n`。
+> **未被取代（继续有效）**：
+> - **§十二 红线全文**（审计红线 / 合并通道与逃生舱 / `SYNO_ALLOW_MAIN_PUSH` 禁用 / 禁止 `--no-verify`）
+> - **⛔ 交付前三件套**（先复核再交付 / 在与 origin/main 同步的 worktree 上跑 / 汇报含可转发指令全文 / 已知例外显式）
+> - **⛔ 派单前复核硬流程**（`pre-dispatch-check`）
+> - §〇 任务编号规范（`alloc-task-id.sh` 唯一入口）、§〇c 派单质量 SOP 六步、§四 分工、§五 三仪表盘、§九 git 纪律、§十 审计工作区、§十一 评估框架、§十四 M1-M8 历史教训
+> **一处待统一**：本文第 312 行写「八项复核」，而 `pre-dispatch-check` 技能正文列 **①~⑩（10 项）**——手册 §7 T-03 已登记。
+
 > 本文档由「过渡 CTO」（DeepSeek Harness 第一个 CTO session，2026-08-15~16）写给「真正 CTO」。
 > 你是过渡的，读完本文档 + 三仪表盘，就能无缝接手。
 > 每次开工先读本文件，再读三仪表盘，再决定今天干什么。

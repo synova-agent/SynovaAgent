@@ -10,6 +10,19 @@ north-star:
 
 # SYNOVA-IMPL-DSH-D716-D1：监测契约（状态驱动通知的配置面）schema + loader + 决策接线
 
+> ⚠️ **已由《DSH 权威手册 v1（2026-09-17）》部分取代**（`docs/synova/research/DSH权威手册-v1-20260917.md`，见其 §6.5）。
+> **本 spec 尚未实施——缺口诊断仍然成立**（现验：`monitoring-contract` / `decideNotification` / `sentinel_notification_state` 在 `src/` 命中数均为 **0**）。「通知决策只查 `sentinelId + last_sent_ms`、不读工单状态（M3 缺口）」**仍成立**。
+> **被取代的部分——本文「现状材料」的全部 `file:line` 引用已 100% 失效**：在 `src/sentinel/runner.ts` 抽查 12 个行号（L178/184/212/259/517/588/787/1021/1058/1092/1313/1335），**0 个命中原地**。例：
+> | 旧引用 | 旧称内容 | **现查实际内容** |
+> |---|---|---|
+> | L178 | 工单四态枚举 | `source: 'GA_MANUAL';` |
+> | L259 | `sentinel_tickets` DDL | `return parsed;` |
+> | L1313 | `isNotificationDuplicate()` | `p75: n > 0 ? sorted[Math.floor(n * 0.75)] : 0,` |
+> | L1335 | 通知去重持久化表 | `prepare(sql: string): { get(key: string): { last_sent_ms: number } \| undefined }` |
+>
+> **执行前必须做的第一件事**：把本文所有 `file:line` 改为「<文件> 内 <符号>」并现查（`grep -n '<符号>' src/sentinel/runner.ts`）。**直接照抄本文行号 = 一定走错方向。** 手册 §7 T-08 已登记本 spec 的现状材料重写待办。
+> **仍然有效的部分（本文的核心资产）**：§5.2 契约 schema 与字段字典（含默认值 24h / 7 天 / weekly / one_pager / `["electron"]`）、§5.2-D 六态映射表、§5.2-G 阈值三层优先级（契约 > memStore > manifest）、§5.2-H 行为等价性声明（四条显式差异）、§7 测试设计 T1–T16、§6 降级契约。
+
 > 状态: dev doc（spec） | 2026-09-13 | 优先级 P0 | 证明层级: L3 洞察层（哨兵引擎）
 > 验收点: `docs/synova/product-lines/product-lines.yaml` 线 8 **8-6**（通知按状态驱动 + 监测契约；当前 `uncommitted` / `evidence: []`）
 > 上游裁定: `docs/synova/product-lines/DECISION-D1-状态驱动通知模型-20260912.md`（创始人 2026-09-12 裁定，已生效）
