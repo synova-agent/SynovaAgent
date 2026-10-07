@@ -19,6 +19,7 @@
  */
 import { createLogger } from '@synova/logger';
 import { getAllExpertIds } from '../agent/expert-config-loader';
+import { LEGACY_TO_EXPERT_ID_MAP } from '../agent/expert-name-map';
 import type {
   SynovaDiagnosisEngine,
   InitiatorProfile,
@@ -535,21 +536,9 @@ export class SynovaDiagnosisEngineImpl implements SynovaDiagnosisEngine {
    * @degraded — 映射值或透传 dimension 不在注册表 → 返回 'host'（默认路由专家）
    */
   private mapDimensionToExpert(dimension: string): string {
-    const map: Record<string, string> = {
-      D1: 'competitive-strategy', D2: 'organizational-capability', D3: 'organizational-capability',
-      D4: 'technology-foundation', D5: 'technology-foundation', D6: 'competitive-strategy',
-      D7: 'fundamental-efficiency', // dept=D7 expert mapping
-      strategy: 'competitive-strategy', org: 'organizational-capability',
-      finance: 'fundamental-efficiency', // dept=finance expert
-      tech: 'technology-foundation',
-      marketing: 'customer-growth', // dept=marketing expert
-      action: 'host',
-      business_model: 'competitive-strategy', knowledge: 'host',
-      host: 'host',
-      'fundamental-efficiency': 'fundamental-efficiency', 'customer-growth': 'customer-growth',
-      'organizational-capability': 'organizational-capability', 'technology-foundation': 'technology-foundation',
-      'competitive-strategy': 'competitive-strategy',
-    };
+    // D986: 映射单一真源 = `src/agent/expert-name-map.ts`（与 skills 加载器共用同一常量；
+    //   禁止在本文件内再复制一份 —— 「两套并行的同一件东西」已被反复验证会漂移）。
+    const map: Record<string, string> = LEGACY_TO_EXPERT_ID_MAP;
     const mapped = map[dimension] || dimension;
     return mapped && getAllExpertIds().includes(mapped) ? mapped : 'host';
   }

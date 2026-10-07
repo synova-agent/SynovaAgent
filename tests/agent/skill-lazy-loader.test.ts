@@ -157,4 +157,144 @@ describe('SkillLazyLoader', () => {
       expect(loader.listForExpert('org_expert')).toHaveLength(1);
     });
   });
+
+  // ═══ D986（施工单 0-12）新增: 目录名→专家 id 映射 / 块标量描述 / 幂等 / 降级 ═══
+
+  describe('D986 scanFromFiles(): D650 映射（legacy 名 + v3.0 专家 id 双链）', () => {
+    const mapDir = '/tmp/synova-skill-map-test';
+
+    beforeEach(() => {
+      rmSync(mapDir, { recursive: true, force: true });
+      mkdirSync(join(mapDir, 'strategy'), { recursive: true });
+      writeFileSync(
+        join(mapDir, 'strategy', 'seven-powers.md'),
+        '---\nname: seven-powers\ndescription: 7 Powers 量化引擎\n---\n\n# 7 Powers\n',
+      );
+    });
+
+    afterEach(() => {
+      rmSync(mapDir, { recursive: true, force: true });
+    });
+
+    it('Given skills/strategy/, When scanned, Then 既挂 legacy 名也挂 v3.0 专家 id', () => {
+      const count = loader.scanFromFiles(mapDir);
+      expect(count).toBe(1);
+      expect(loader.listForExpert('strategy').map(s => s.name)).toContain('seven-powers');
+      expect(loader.listForExpert('competitive-strategy').map(s => s.name)).toContain('seven-powers');
+    });
+
+    it('Given skills/org/, Then 映射到 organizational-capability（而非 host）', () => {
+      mkdirSync(join(mapDir, 'org'), { recursive: true });
+      writeFileSync(join(mapDir, 'org', 'bus-factor.md'), '---\nname: bus-factor\ndescription: 巴士因子\n---\n\n# bus-factor\n');
+
+      loader.scanFromFiles(mapDir);
+
+      expect(loader.listForExpert('organizational-capability').map(s => s.name)).toContain('bus-factor');
+      expect(loader.listForExpert('host')).toHaveLength(0);
+    });
+
+    it('Given 无映射的目录名, Then 只挂 legacy 名（不猜、不回落 host）', () => {
+      mkdirSync(join(mapDir, 'cross_validate'), { recursive: true });
+      writeFileSync(join(mapDir, 'cross_validate', 'SKILL.md'), '---\nname: cross_validate\ndescription: 多源交叉验证\n---\n\n## 执行步骤\n');
+
+      loader.scanFromFiles(mapDir);
+
+      expect(loader.listForExpert('cross_validate').map(s => s.name)).toContain('cross_validate');
+      expect(loader.listForExpert('host')).toHaveLength(0);
+    });
+
+    it('Given 连字符目录（business-model）, Then 命中下划线键（business_model → competitive-strategy）', () => {
+      mkdirSync(join(mapDir, 'business-model'), { recursive: true });
+      writeFileSync(join(mapDir, 'business-model', 'value-cycle.md'), '---\nname: value-cycle\ndescription: 价值循环\n---\n\n# value-cycle\n');
+
+      loader.scanFromFiles(mapDir);
+
+      expect(loader.listForExpert('competitive-strategy').map(s => s.name)).toContain('value-cycle');
+    });
+  });
+
+  describe('D986 parseFrontMatter(): YAML 块标量描述', () => {
+    const blockDir = '/tmp/synova-skill-block-test';
+
+    beforeEach(() => {
+      rmSync(blockDir, { recursive: true, force: true });
+      mkdirSync(join(blockDir, 'finance'), { recursive: true });
+      // 三种形态：块标量 `>-` / 块标量 `|` / 单行引号值
+      writeFileSync(
+        join(blockDir, 'finance', 'dupont.md'),
+        '---\nname: dupont-analysis\ndescription: >-\n  杜邦分析——把 ROE 拆成三因子。\n  用于定位利润率与周转率问题。\nwhen_to_use: 财务诊断时\n---\n\n# 杜邦分析\n',
+      );
+      writeFileSync(
+        join(blockDir, 'finance', 'cashflow.md'),
+        '---\nname: cashflow-analysis\ndescription: |\n  现金流分析——\n  经营性/投资性/筹资性三段。\n---\n\n# 现金流分析\n',
+      );
+      writeFileSync(
+        join(blockDir, 'finance', 'unit-economics.md'),
+        '---\nname: unit-economics\ndescription: "单位经济模型——LTV/CAC"\n---\n\n# 单位经济\n',
+      );
+    });
+
+    afterEach(() => {
+      rmSync(blockDir, { recursive: true, force: true });
+    });
+
+    it('Given description 块标量, When scanned, Then 描述不含 `>-`/`|` 标记且非空', () => {
+      loader.scanFromFiles(blockDir);
+      const stubs = loader.listForExpert('finance');
+
+      expect(stubs).toHaveLength(3);
+      for (const s of stubs) {
+        expect(s.description.length).toBeGreaterThan(0);
+        expect(s.description.startsWith('>')).toBe(false);
+        expect(s.description.startsWith('|')).toBe(false);
+      }
+    });
+
+    it('Given 块标量 `>-`, Then 多行拼接为单行描述', () => {
+      loader.scanFromFiles(blockDir);
+      const dupont = loader.listForExpert('finance').find(s => s.name === 'dupont-analysis');
+
+      expect(dupont).toBeDefined();
+      expect(dupont!.description).toContain('杜邦分析');
+      expect(dupont!.description).toContain('周转率');
+    });
+
+    it('Given 单行引号值, Then 去掉引号', () => {
+      loader.scanFromFiles(blockDir);
+      const unit = loader.listForExpert('finance').find(s => s.name === 'unit-economics');
+
+      expect(unit).toBeDefined();
+      expect(unit!.description).toBe('单位经济模型——LTV/CAC');
+    });
+  });
+
+  describe('D986 scanFromFiles(): 幂等与降级', () => {
+    const idemDir = '/tmp/synova-skill-idem-test';
+
+    beforeEach(() => {
+      rmSync(idemDir, { recursive: true, force: true });
+      mkdirSync(join(idemDir, 'tech'), { recursive: true });
+      writeFileSync(join(idemDir, 'tech', 'software-ecosystem-scan.md'), '---\nname: software-ecosystem-scan\ndescription: 软件生态扫描\n---\n\n# 生态扫描\n');
+      mkdirSync(join(idemDir, 'empty-category'), { recursive: true });
+    });
+
+    afterEach(() => {
+      rmSync(idemDir, { recursive: true, force: true });
+    });
+
+    it('Given 同一目录连扫两次, Then 名称集合不翻倍', () => {
+      loader.scanFromFiles(idemDir);
+      const afterFirst = loader.listNames().length;
+      loader.scanFromFiles(idemDir);
+
+      expect(afterFirst).toBe(1);
+      expect(loader.listNames().length).toBe(afterFirst);
+    });
+
+    it('Given 空目录, Then 返回 0 且不抛', () => {
+      mkdirSync(join(idemDir, 'nothing-here'), { recursive: true });
+      expect(() => loader.scanFromFiles(join(idemDir, 'nothing-here'))).not.toThrow();
+      expect(loader.scanFromFiles(join(idemDir, 'nothing-here'))).toBe(0);
+    });
+  });
 });
