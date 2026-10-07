@@ -813,48 +813,6 @@ export const constructionItems: readonly ConstructionItem[] = [
     status: 'todo',
     source: '施工单.md 1-9 / 现状报告 W2',
   },
-
-  {
-    // 🆕 CTO 2026-10-08 派单（回填第四轮）新增项 —— 登记件原 48 项中**无此条**；卡 = #1347。
-    //   ⚠️ id 由回填方按 `bis` 惯例拟定（与 2-4 同族、同挂 K2）；**CTO 未指定 id**，如需改号请裁。
-    //   ⚠️ batch 取「第1批」= 依 CTO 对 #1347 的**挂板字段**（施工批次=第1批-补齐）；
-    //      注意其同族 `2-4` 在登记件里是「第2批」—— 两者不同批，如需对齐请裁。
-    id: '2-4bis',
-    worker: 'win', batch: '第1批', block: 'K2',
-    title: '接通角色授权：setRole() 零调用 ⇒ 执行面授权分支不可达',
-    // 接线点 = 现有 5 处生产实例化点**之一**或其上游装配处（卡 #1347 §③-1）：
-    //   `src/agent/conversation-engine.ts:413` / `src/deploy/bootstrap.ts:831` /
-    //   `src/routes/conversations.ts:119` / `src/routes/conversations.ts:280` / `src/routes/diagnosis.ts:261`
-    //   ⇒ 具体落点未定 ⇒ `pathTBD: true`（门禁报「无主」但不 exit 1）
-    paths: [
-      'src/agent/tools.ts',
-      'src/agent/tool-profiles.ts',
-      'tests/agent/tool-role-wiring.test.ts',  // 判据交付物（本卡创建）
-    ],
-    pathTBD: true,
-    // 🔴 与 `2-4`（#1052 写入门禁两道未接）的关系：**同批但不同文件** —— 本项是 `2-4` 所述「两道」之一
-    //   （「两道」= 写入门禁 + 工具授权）。**两者不许互相假定已完成**：`dependsOn` 互不列对方，
-    //   任一先落都不阻塞另一（文件不重叠：本项在 `src/agent/**`，`2-4` 在 `src/security/file-guard.ts`
-    //   + `src/tools/tool-registry.ts`）。⚠️ `src/tools/tool-registry.ts` 与 `src/agent/tools.ts` 是
-    //   **同名不同物的两个 ToolRegistry 类**，不得混改。
-    dependsOn: [],
-    // 判据（卡 #1347 §⑥）。🔴 计数一律 **R42 口径**（`git grep -l … | wc -l` = 文件数）；**ref 显式写 `origin/main`（R66）**。
-    acceptance: [
-      // 判据交付物（本卡创建）：两角色对照 + `setRole` 接线断言（穿生产入口）
-      { run: 'npx vitest run tests/agent/tool-role-wiring.test.ts', expectExit: 0 },
-      // 接线物理证明：非注释 `setRole(` 行数 ≥ 2（= 定义 + 至少 1 个生产调用）。
-      //   ⚠️ **必须过滤注释行** —— 现值「2 个文件命中」里 **1 个是注释**
-      //      （`src/tools/tool-registry.ts:18/:23` 引用了 #1347）⇒ 不过滤即得**假绿**（R61 同族）。
-      //   本机实跑（ref = origin/main@ce5507826）：不过滤 = 2 文件；过滤后 = **1 行**（仅定义）⇒ 本条现在**红**（正确，工作未做）。
-      { run: 'bash -c \'test "$(git grep -n "setRole(" origin/main -- src/ | grep -vcE "^[^:]+:[^:]+:[0-9]+:[[:space:]]*(\\*|//|/\\*)")" -ge 2\'', expectExit: 0 },
-      // 不新造授权体系（真源副本不增）：`getProfileForRole` 文件数 ≤ 2（现值 2 ✓ 已实跑）
-      { run: 'bash -c "test \"$(git grep -l \'getProfileForRole\' origin/main -- src/ | wc -l)\" -le 2"', expectExit: 0 },
-      // 影子身份通道守卫（I4）：`req.userId =` 文件数 = 0（现值 0 ✓ 已实跑；R64 用 `[[:space:]]` 不用 `\s`）
-      { run: 'bash -c "test \"$(git grep -l \'req\\.userId[[:space:]]*=\' origin/main -- src/ | wc -l)\" -eq 0"', expectExit: 0 },
-    ],
-    status: 'todo',
-    source: '独立复核 2026-10-08 实测：`setRole()`（`src/agent/tools.ts:140` 定义）全仓零调用 ⇒ `_role` 恒 null ⇒ `:169`/`:188` 两个 `if` 恒不进入（与 0-11 拆掉的假门同病）。卡 = #1347；板字段：p1 / 未开工 / 第1批-补齐 / K2 / 不适用 / L2-真跑通 / 无阻塞',
-  },
   // ───────────────── 第 2 批 · 地基 ─────────────────
   {
     id: '2-1a',
@@ -1052,6 +1010,49 @@ export const constructionItems: readonly ConstructionItem[] = [
     ],
     status: 'todo',
     source: '施工单.md 2-4',
+  },
+  {
+    // 🆕 CTO 2026-10-08 派单（回填第四轮）新增项 —— 登记件原 48 项中**无此条**；卡 = #1347。
+    //   ⚠️ id 由回填方按 `bis` 惯例拟定（与 2-4 同族、同挂 K2）；**CTO 未指定 id**，如需改号请裁。
+    //   📌 batch = 「第2批」**与 `2-4` 同批**（CTO 2026-10-08 裁定）：**同一道门的两个面不该分属两批**
+    //      （`2-4` = 文件/边界门；本项 = 角色授权分支）⇒ 否则会出现「门装了一半就进下一批」。
+    //      ⚠️ 写法口径点名：登记件既有写法 = **`'第2批'`**（`batch` 类型 `第0批|第1批|第2批|第3批`，共 9 项用此写法）；
+    //      「第2批-地基」是 **Project #1 板字段的选项名**，**不是**登记件的写法 ⇒ 此处按登记件写。
+    id: '2-4bis',
+    worker: 'win', batch: '第2批', block: 'K2',
+    title: '接通角色授权：setRole() 零调用 ⇒ 执行面授权分支不可达',
+    // 接线点 = 现有 5 处生产实例化点**之一**或其上游装配处（卡 #1347 §③-1）：
+    //   `src/agent/conversation-engine.ts:413` / `src/deploy/bootstrap.ts:831` /
+    //   `src/routes/conversations.ts:119` / `src/routes/conversations.ts:280` / `src/routes/diagnosis.ts:261`
+    //   ⇒ 具体落点未定 ⇒ `pathTBD: true`（门禁报「无主」但不 exit 1）
+    paths: [
+      'src/agent/tools.ts',
+      'src/agent/tool-profiles.ts',
+      'tests/agent/tool-role-wiring.test.ts',  // 判据交付物（本卡创建）
+    ],
+    pathTBD: true,
+    // 🔴 与 `2-4`（#1052 写入门禁两道未接）的关系：**同批但不同文件** —— 本项是 `2-4` 所述「两道」之一
+    //   （「两道」= 写入门禁 + 工具授权）。**两者不许互相假定已完成**：`dependsOn` 互不列对方，
+    //   任一先落都不阻塞另一（文件不重叠：本项在 `src/agent/**`，`2-4` 在 `src/security/file-guard.ts`
+    //   + `src/tools/tool-registry.ts`）。⚠️ `src/tools/tool-registry.ts` 与 `src/agent/tools.ts` 是
+    //   **同名不同物的两个 ToolRegistry 类**，不得混改。
+    dependsOn: [],
+    // 判据（卡 #1347 §⑥）。🔴 计数一律 **R42 口径**（`git grep -l … | wc -l` = 文件数）；**ref 显式写 `origin/main`（R66）**。
+    acceptance: [
+      // 判据交付物（本卡创建）：两角色对照 + `setRole` 接线断言（穿生产入口）
+      { run: 'npx vitest run tests/agent/tool-role-wiring.test.ts', expectExit: 0 },
+      // 接线物理证明：非注释 `setRole(` 行数 ≥ 2（= 定义 + 至少 1 个生产调用）。
+      //   ⚠️ **必须过滤注释行** —— 现值「2 个文件命中」里 **1 个是注释**
+      //      （`src/tools/tool-registry.ts:18/:23` 引用了 #1347）⇒ 不过滤即得**假绿**（R61 同族）。
+      //   本机实跑（ref = origin/main@ce5507826）：不过滤 = 2 文件；过滤后 = **1 行**（仅定义）⇒ 本条现在**红**（正确，工作未做）。
+      { run: 'bash -c \'test "$(git grep -n "setRole(" origin/main -- src/ | grep -vcE "^[^:]+:[^:]+:[0-9]+:[[:space:]]*(\\*|//|/\\*)")" -ge 2\'', expectExit: 0 },
+      // 不新造授权体系（真源副本不增）：`getProfileForRole` 文件数 ≤ 2（现值 2 ✓ 已实跑）
+      { run: 'bash -c "test \"$(git grep -l \'getProfileForRole\' origin/main -- src/ | wc -l)\" -le 2"', expectExit: 0 },
+      // 影子身份通道守卫（I4）：`req.userId =` 文件数 = 0（现值 0 ✓ 已实跑；R64 用 `[[:space:]]` 不用 `\s`）
+      { run: 'bash -c "test \"$(git grep -l \'req\\.userId[[:space:]]*=\' origin/main -- src/ | wc -l)\" -eq 0"', expectExit: 0 },
+    ],
+    status: 'todo',
+    source: '独立复核 2026-10-08 实测：`setRole()`（`src/agent/tools.ts:140` 定义）全仓零调用 ⇒ `_role` 恒 null ⇒ `:169`/`:188` 两个 `if` 恒不进入（与 0-11 拆掉的假门同病）。卡 = #1347；板字段：p1 / 未开工 / 第1批-补齐 / K2 / 不适用 / L2-真跑通 / 无阻塞',
   },
   {
     id: '2-6',
