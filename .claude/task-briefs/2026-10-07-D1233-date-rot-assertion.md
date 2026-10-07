@@ -1,6 +1,13 @@
-# Task Brief — 日期腐化：date-rot 断言不再写死日期（D1230 / 卡 #1302）
+# Task Brief — 日期腐化：date-rot 断言不再写死日期（D1233 / 卡 #1302）
 
-> 卡 **#1302**（Lead 派单）· 编号 **D1230**（用前自查：gate 可用 / main 零文件 / issue 标题零命中）
+> **改号留痕（同族第 3、4 次碰撞，Lead 裁决）**：本件先取 **D1230**（用前三重核验）；line F 的
+> **#1304 于 15:25:53Z 合入，比本件 PR #1305 早 25 秒** ⇒ 按「先合者留号」D1230 归 line F；
+> 拟改 **D1232** 时 Lead 新立的 **#1309 已占 D1232** ⇒ 终取 **D1233**（Lead 核：main 零文件 + issue 标题零命中）。
+> 处置：新分支 `fix/date-rot-d1233` + 新 PR（**不从 #1305 推回**，禁 force push）；3 载体 `git mv` **两轮**
+> + **大小写全覆盖**替换（`[Dd]1230→[Dd]1233`，每轮 10 处，含**代码/夹具**内 2 处注释）。
+> 根因＝「人肉分配全局标识 + 无仲裁」—— 正是 D-C（切 issue 号）最硬的论据。
+
+> 卡 **#1302**（Lead 派单）· 编号 **D1233**（用前自查：gate 可用 / main 零文件 / issue 标题零命中）
 > 从 `origin/main` 开新分支 `fix/date-rot-session-worktree` · 与括号类（#1301/#1288/D9204）**台账分开**
 
 ## Q0: 定位 — 项目拼图 + 文件审计
@@ -33,9 +40,9 @@
 ## Q2: 范围 — 正确的最简方案
 做什么：
 - tests/control-tower/session-worktree-isolation.test.sh
-- .claude/task-briefs/2026-10-07-D1230-date-rot-assertion.md
-- memory/notes/proposed/2026-10-07-d1230-date-rot-assertion.md
-- task-state/D1230.json
+- .claude/task-briefs/2026-10-07-D1233-date-rot-assertion.md
+- memory/notes/proposed/2026-10-07-d1233-date-rot-assertion.md
+- task-state/D1233.json
 
 改动内容（与上方清单对应）：
 1. 测试文件：① 加 `_is_brief_name()` 形态判据（带 @input/@output 契约注释）
@@ -55,6 +62,22 @@
 - **不改** `scripts/workflow/task-start.sh`（被测系统行为本身正确：它就该写当天日期）
 - **不混入**括号类（#1301 / #1288 / D9204）的任何改动
 - 不改 `.github/workflows/ci.yml` / `scripts/pre-commit-check.sh` / `scripts/audit/**`
+
+## 写集（含重命名撤出件 —— Lead ③ 要求）
+
+| 文件 | 类型 |
+|---|---|
+| `tests/control-tower/session-worktree-isolation.test.sh` | task（形态判据 + 双断言 + §9 判别性 5 条） |
+| `.claude/task-briefs/2026-10-07-D1233-date-rot-assertion.md` | brief |
+| `memory/notes/proposed/2026-10-07-d1233-date-rot-assertion.md` | 决定 Note（铁律 49） |
+| `task-state/D1233.json` | 台账 |
+| `.claude/task-briefs/2026-10-07-D1230-date-rot-assertion.md` | task（**重命名撤出件**：首轮改号前路径，本分支内已撤出；origin/main 从未存在） |
+| `memory/notes/proposed/2026-10-07-d1230-date-rot-assertion.md` | task（**重命名撤出件**：同上） |
+| `task-state/D1230.json` | task（**重命名撤出件**：同上） |
+| `.claude/task-briefs/2026-10-07-D1232-date-rot-assertion.md` | task（**重命名撤出件**：中间号，二次改号后撤出） |
+| `task-state/D1232.json` | task（**重命名撤出件**：同上） |
+
+> 撤出件只作**声明留痕**，**不**写进 Q2 的 include 清单（那会撞 Q2「路径可解析」检查——旧路径在本分支不存在）。
 
 ## Q3: 验收 — 入口 → 交互 → 结果
 入口：`bash tests/control-tower/session-worktree-isolation.test.sh`

@@ -181,6 +181,82 @@ else
   ok "接线: ci.yml 已无字面密封清单（单源）"
 fi
 
+# ═══ D1227（卡 #1300）: 越线者付账 ═══════════════════════════════════════════════
+# 沙箱 = **真 git 仓**（base 侧由 ref 树计数 ⇒ 必须能 git ls-tree）；PR 侧 = 工作树。
+mkgitfix() {   # $1=base 侧测试数 $2=工作树测试数 $3=FLOOR $4=CAP $5=载体行（空=无）
+  local nb="$1" nw="$2" floor="$3" cap="$4" carrier="$5"
+  local root="$TMPD/cross-$nb-$nw-$floor-$cap-$(printf '%s' "$carrier" | tr -cd '0-9')"
+  rm -rf "$root"; mkdir -p "$root/tests/control-tower" "$root/scripts/control-tower"
+  ( cd "$root" && git init -q && git config user.email t@e.com && git config user.name t ) >/dev/null 2>&1
+  local i=1
+  while [ "$i" -le "$nb" ]; do printf '#!/bin/bash\n' > "$root/tests/control-tower/b$i.test.sh"; i=$((i+1)); done
+  { printf '# FACE-TOTAL=%s\n' "$floor"; printf '# SLACK-CAP=%s\n' "$cap";     [ -n "$carrier" ] && printf '# INHERITED-OVER-CAP-SINCE=%s\n' "$carrier";     printf '# ═══ REGISTRY-BASELINE（夹具）═══\n'; } > "$root/scripts/control-tower/gate-integrity-baseline.txt"
+  ( cd "$root" && git add -A && git commit -qm base ) >/dev/null 2>&1
+  # PR 侧 = 工作树（可能多于 base）
+  local j=$((nb+1))
+  while [ "$j" -le "$nw" ]; do printf '#!/bin/bash\n' > "$root/tests/control-tower/w$j.test.sh"; j=$((j+1)); done
+  printf '%s' "$root"
+}
+cli() {  # $1=root $2=SYNO_BASE_REF（空=不给）
+  local root="$1" base="$2"
+  if [ -n "$base" ]; then
+    ( cd "$root" && SYNO_BASE_REF="$base" bash "$SUT" --list --root "$root" 2>&1 )
+  else
+    ( cd "$root" && env -u SYNO_BASE_REF bash "$SUT" --list --root "$root" 2>&1 )
+  fi
+}
+
+# ① 越线红: base_slack ≤ CAP 且 pr_slack > CAP
+C1="$(mkgitfix 10 13 8 2 "")"          # base_slack=2 ≤ 2；pr_slack=5 > 2
+OUT="$(cli "$C1" HEAD)"; rc=$?
+if [ "$rc" -eq 1 ] && printf '%s\n' "$OUT" | grep -q '本 PR 使余量越线'; then
+  ok "越线红: base_slack ≤ CAP ∧ pr_slack > CAP ⇒ 红（点名『本 PR 使余量越线』）"
+else
+  no "越线红未生效（rc=${rc}）：$(printf '%s\n' "$OUT" | grep -m1 '余量' | cut -c1-70)"
+fi
+# ② 反例（卡面必须）: 纯继承 over-cap ⇒ **不得红**（只 warning）
+C2="$(mkgitfix 13 13 8 2 "")"          # base_slack=5 > 2；工作树同值 ⇒ 未越线
+OUT="$(cli "$C2" HEAD)"; rc=$?
+if [ "$rc" -eq 0 ] && printf '%s\n' "$OUT" | grep -q '::warning title=sealed-ratchet::'; then
+  ok "反例: 纯继承 over-cap main ⇒ **不红**（rc=0）且出 ::warning（本卡要解决的病）"
+else
+  no "反例失败: 纯继承仍判红或未告警（rc=${rc}）"
+fi
+if printf '%s\n' "$OUT" | grep -q 'INHERITED-OVER-CAP-SINCE='; then
+  ok "载体缺失: 打印**可直接粘贴**的登记行（且不自动写台账）"
+else
+  no "载体缺失时未打印可粘贴行"
+fi
+# ③ 载体超期 ⇒ 升级为红
+C3="$(mkgitfix 13 13 8 2 "2000-01-01")"
+OUT="$(cli "$C3" HEAD)"; rc=$?
+if [ "$rc" -eq 1 ] && printf '%s\n' "$OUT" | grep -q '升级为红'; then
+  ok "载体超期（2000-01-01 > 14 天）⇒ 升级为红"
+else
+  no "载体超期未升级为红（rc=${rc}）"
+fi
+# ④ 未给 base ⇒ 显式打印「不判越线」+ 退化现状语义（禁静默）
+C4="$(mkgitfix 13 13 8 2 "")"
+OUT="$(cli "$C4" "")"; rc=$?
+if [ "$rc" -eq 1 ] && printf '%s\n' "$OUT" | grep -q '未给 base'; then
+  ok "未给 base ⇒ 显式打印『不判越线』并退化现状语义（rc=1，禁静默）"
+else
+  no "未给 base 路径未显式说明（rc=${rc}）"
+fi
+# ⑤ 变异体（同一次运行测量）: 把 base 侧计数换掉 ⇒ 反例应变成越线 ⇒ 夹具对"跨运行比较"回归有判别力
+MUT="$TMPD/sealed-mutant.sh"
+awk '{ if ($0 ~ /^scan_face_at\(\)/) { print "scan_face_at() { printf \"%s\" \"0\"; }"; skip=1; next } if (skip==1 && $0 ~ /^}/) { skip=0; next } if (skip==1) next; print }' "$SUT" > "$MUT" 2>/dev/null
+if ! bash -n "$MUT" >/dev/null 2>&1; then
+  no "变异体生成失败（awk 抽取 scan_face_at 出错）"
+else
+  OUT_M="$( cd "$C2" && SYNO_BASE_REF=HEAD bash "$MUT" --list --root "$C2" 2>&1 )"; rc_m=$?
+  if [ "$rc_m" -eq 1 ] && printf '%s\n' "$OUT_M" | grep -q '本 PR 使余量越线'; then
+    ok "变异体: base 侧计数被替换（等价『跨运行/外部存数』）⇒ 反例变越线 ⇒ 夹具能分辨该退化"
+  else
+    no "变异体未生效（rc=${rc_m}）—— 反例未能暴露『base 侧测量退化』"
+  fi
+fi
+
 echo ""
 echo "结果: $PASS 通过, $FAIL 失败"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1

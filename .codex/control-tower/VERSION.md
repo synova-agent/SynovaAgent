@@ -11,6 +11,17 @@
 - MAJOR (第一位): 大改版 — 架构重构/产品化里程碑 → 4.6.0 → 5.0.0
 ```
 
+## V5.2.11 (2026-10-07) — 棘轮余量上限改判「越线者付账」（D1227 / 卡 #1300）（PATCH）
+
+- **判据（新版，替代 #1227 的旧口径）**: `slack_before ≤ SLACK-CAP ∧ slack_after > SLACK-CAP ⇒ 红`（本 PR 越线 = 余量增长的唯一来源）；
+  否则 `slack_after > SLACK-CAP ⇒ ::warning`（纯继承态）—— 旧口径「纯继承也红」会让**一张无关 PR 承担全批解阻塞**、合并序被棘轮绑架（本轮实测三张同冲突）。
+- **噪声地板（关键）**: `scan(base)` 与 `scan(PR)` **同一次运行内测量** —— base 侧用 `git ls-tree -r` 纯 tree 计数（不 checkout，与工作树同尺度）；跨运行比较会假红（实测 CI 152 vs 本地 150）。
+- **注入缝**: `SYNO_BASE_REF`（CI 侧由 `ci.yml` 传 `origin/<GITHUB_BASE_REF>`，缺省 `origin/main`）；空或不可解析 ⇒ **显式打印「未给 base ⇒ 不判越线」**并退化为现状语义（禁静默、禁假红）。
+- **升级载体**: 台账单行 `# INHERITED-OVER-CAP-SINCE=<YYYY-MM-DD>`；继承态 ⇒ `::warning` + 缺失时**打印可粘贴行**；登记超期（默认 14 天，`INHERITED_CAP_DAYS` 覆写）⇒ **升级为红**。
+- **禁止自动写台账**（只打印可粘贴行）—— 自动上调/自动登记会削弱棘轮。
+- **夹具**: `tests/control-tower/sealed-tests.test.sh` +6（越线红 / **纯继承反例不得红** / 载体缺失粘贴行 / 载体超期升级红 / 未给 base 显式打印 / 变异体：base 侧测量退化必被抓）⇒ 19 → **25 PASS / 0 FAIL**。
+- **作者**: line-b-ci（承接 line E 的 `/tmp/d1227-plan.md` 侦察结论）
+
 ## V5.2.10 (2026-10-07) — D1220 D-A2 第二刀（①③ 退役 + 组 12 claim 化）（PATCH）
 
 - **① 时间戳顺序检查退役**（原 V4.5.1，D1148 并入闸①）: 判据源 `/tmp/.synova-before-brief` 的唯一写者
