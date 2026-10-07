@@ -26,7 +26,7 @@ PASS=0; FAIL=0
 ok() { echo "  ✅ $1"; PASS=$((PASS+1)); }
 no() { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
 
-# D1230（卡 #1302）: brief 名**形态**判据 —— **不写死日期**。
+# D1233（卡 #1302）: brief 名**形态**判据 —— **不写死日期**。
 #   为什么: 沙箱的 brief 由 task-start 按**当天**生成（实测 `2026-10-07-auto.md`），
 #   任何写死日期（旧值 `2026-08-27`）都必然随日期腐化 ⇒ 断言恒红（现象: 25 通过 / 1 失败）。
 #   契约（@input 任意字符串 / @output 0=形如 YYYY-MM-DD-<slug>.md，否则 1）:
@@ -141,7 +141,7 @@ B_CB8_2="$(cat "$SB8/.claude/current-brief.B8" 2>/dev/null || echo none)"  # swa
 [ -n "$B_INDEX8" ] && [ "$B_INDEX8" = "$B_INDEX8_2" ] && ok "物理隔离: B 的 index sha256 零变化（A commit 未污染 B）" || no "物理隔离: B index 被改/缺失"
 [ "$B_CB8" = "$B_CB8_2" ] && ok "物理隔离: B 的 current-brief.B8 零变化" || no "物理隔离: B current-brief 被改"
 
-# ── 9. D1230 判别性: 形态判据必须能**拒错形**（否则是纸老虎；卡 #1302 ③）──
+# ── 9. D1233 判别性: 形态判据必须能**拒错形**（否则是纸老虎；卡 #1302 ③）──
 #   正向已由 §1 覆盖（真实名 ⇒ 形态合法 + 可解析）。此处只喂**必错**输入，
 #   每条都必须被 `_is_brief_name` 拒绝 —— 若哪条被放过，这条夹具即转红。
 _is_brief_name '2026-8-7-auto.md' \
