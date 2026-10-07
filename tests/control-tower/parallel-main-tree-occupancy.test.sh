@@ -57,15 +57,15 @@ ZOMBIES=""
 for i in $(seq 1 13); do ZOMBIES="$ZOMBIES,{\"session_id\":\"z$i\",\"last_seen_at\":\"$OLD_TS\",\"pid\":null}"; done
 JSON="{\"sessions\":[{\"session_id\":\"active-1\",\"last_seen_at\":\"$NOW_TS\",\"pid\":1234}${ZOMBIES}]}"
 N1=$(W=1800 recent_count "$JSON")
-[ "$N1" = "1" ] && ok "单 session（1 近期 + 13 僵尸）→ 计数 1（不拦）" || no "单 session 计数错误: ${N1}（期望 1）"
+[ "$N1" = "1" ] && ok "单 session（1 近期 + 13 僵尸）→ 计数 1（不拦）" || no "单 session 计数错误: $N1（期望 1）"
 # 场景: 2 近期活跃 → 计数 2（拦）
 JSON2="{\"sessions\":[{\"session_id\":\"a1\",\"last_seen_at\":\"$NOW_TS\",\"pid\":1},{\"session_id\":\"a2\",\"last_seen_at\":\"$NOW_TS\",\"pid\":2}]}"
 N2=$(W=1800 recent_count "$JSON2")
-[ "$N2" = "2" ] && ok "双 session（2 近期）→ 计数 2（拦）" || no "双 session 计数错误: ${N2}（期望 2）"
+[ "$N2" = "2" ] && ok "双 session（2 近期）→ 计数 2（拦）" || no "双 session 计数错误: $N2（期望 2）"
 # 场景: 0 近期（全僵尸）→ 计数 0（不拦）
 JSON0="{\"sessions\":[{\"session_id\":\"z\",\"last_seen_at\":\"$OLD_TS\",\"pid\":null}]}"
 N0=$(W=1800 recent_count "$JSON0")
-[ "$N0" = "0" ] && ok "全僵尸 → 计数 0（不拦，pid=None 不误拦）" || no "全僵尸计数错误: ${N0}（期望 0）"
+[ "$N0" = "0" ] && ok "全僵尸 → 计数 0（不拦，pid=None 不误拦）" || no "全僵尸计数错误: $N0（期望 0）"
 
 # ── 放行态: worktree 内不拦（物理隔离）——本测试运行于链接 worktree（.wt-D537），git-dir
 #    含 /.git/worktrees/ → #2 检查应跳过（放行），不触发拦截文案。──

@@ -49,7 +49,7 @@ grep -q "_resolve_session_id" "$TS" && grep -q "_assert_dev_worktree" "$TS" \
 grep -q "worktree-manager.py create" "$TS" \
   && ok "接线: task-start 引用 worktree-manager.py create（生产调用点）" || no "接线: worktree-manager.py create 未引用"
 grep -q 'current-brief\.\$SESSION_ID' "$TS" \
-  && ok "接线: task-start 写 current-brief.\${SESSION_ID}（会话专属）" || no "接线: 会话专属写缺失"
+  && ok "接线: task-start 写 current-brief.\$SESSION_ID（会话专属）" || no "接线: 会话专属写缺失"
 grep -q 'rm -f "$PROJECT_ROOT/.claude/current-brief"' "$TS" \
   && ok "接线: task-start 废除全局 current-brief" || no "接线: 全局未废除"
 
@@ -91,7 +91,7 @@ git -C "$SB4" checkout -q --detach HEAD
 # ── 5. 主树阻断（非豁免）→ exit 1 + stderr 含 worktree-manager.py create ──
 SB5="$TMPD/sb5"; build_repo "$SB5"
 OUT5=$(cd "$SB5" && env -u DSH_SESSION_ID bash "$SB5/scripts/workflow/task-start.sh" "主树任务" 2>&1); rc=$?
-[ "$rc" -eq 1 ] && ok "主树阻断: 主工作区 task-start exit 1" || no "主树阻断: exit=${rc}（应为 1）"
+[ "$rc" -eq 1 ] && ok "主树阻断: 主工作区 task-start exit 1" || no "主树阻断: exit=$rc（应为 1）"
 echo "$OUT5" | grep -q "worktree-manager.py create" && ok "主树阻断: stderr 含 worktree-manager.py create（接线引导）" || no "主树阻断: 缺 worktree 引导"
 echo "$OUT5" | grep -q "主工作区只读" && ok "主树阻断: stderr 含只读提示" || no "主树阻断: 缺只读提示"
 
@@ -100,7 +100,7 @@ SB6="$TMPD/sb6"; build_repo "$SB6"
 git -C "$SB6" worktree add -q "$TMPD/wt6" -b session/B6
 (cd "$TMPD/wt6" && env -u DSH_SESSION_ID SYNO_SKIP_PARALLEL_GUARD=1 \
     bash "$TMPD/wt6/scripts/workflow/task-start.sh" "worktree 任务" >/dev/null 2>&1); rc6=$?
-[ "$rc6" -eq 0 ] && ok "worktree 放行: linked worktree 内 exit 0" || no "worktree 放行: exit=${rc6}（应为 0）"
+[ "$rc6" -eq 0 ] && ok "worktree 放行: linked worktree 内 exit 0" || no "worktree 放行: exit=$rc6（应为 0）"
 [ -f "$TMPD/wt6/.claude/current-brief.B6" ] && ok "worktree 放行: current-brief.B6 已写" || no "worktree 放行: 会话专属写缺失"
 
 # ── 7. SYNO_ALLOW_MAIN 豁免 → exit 0 + degraded-events.log（铁律 11 不静默）──
