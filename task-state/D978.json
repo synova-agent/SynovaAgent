@@ -1,0 +1,19 @@
+{
+  "task_id": "D978",
+  "title": "问题修复台：统一登记 + 分散执行（FIX-001…016）",
+  "status": "impl_done",
+  "risk": "medium",
+  "domain": "mac",
+  "owner": "synova-cto",
+  "executor": "cto",
+  "milestone": "问题可视与闭环",
+  "write_set": [
+    "docs/synova/coordination/问题修复台-20260925.md",
+    ".claude/task-briefs/2026-09-25-D978-fix-ledger.md",
+    "memory/notes/implemented/2026-09-25-fix-ledger.md",
+    "task-state/D978.json"
+  ],
+  "updated_at": "2026-09-25",
+  "updated_by": "synova-cto",
+  "note": "痛点：问题散落在十余处（卡/PR/验收报告/对话）⇒ 创始人无法找到'谁出的问题'。本台为唯一登记处，编号 FIX-### 不占 D# 号段；执行仍归原属主（域权不乱）。CTO 单写者维护。"
+}
