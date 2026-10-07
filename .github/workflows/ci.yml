@@ -71,7 +71,16 @@ jobs:
           #      D1023 守卫在 CI HARD 下断言「内联副本 = 0 且消费点 = 9」）。
           #      逐条分层理由与全量清单见该文件头注释；本处只留**消费**代码。
           #      改判据 ⇒ 改那一个文件（它自身不在白名单分支内 ⇒ 必走全量 CI，自举安全）。
-          #   ⚠️ 空变更集（合并提交 diff 为空）⇒ 无行命中 grep -v ⇒ 仍按 docs-only（原语义保留）。
+          #   🔴 卡 #1323（原号 #1236）更正本条: 曾写「空变更集 ⇒ 仍按 docs-only（原语义保留）」——
+          #      该行为**已被检验为缺陷**：`push` 到 main 时 HEAD == origin/main ⇒ `origin/main...HEAD`
+          #      为空 ⇒ `grep -qvE` 无行命中返 1 ⇒ 落 else ⇒ `docs_only=true` ⇒ **本判定在 main 上永久
+          #      判为早退** ⇒ 若干控制条件同时倒向"跳过"。这是"**已知行为 + 其分支后果从未被检验**"，
+          #      不是"漏了个边界"。⇒ 新语义: ① push 事件 base = `github.event.before`（推送前提交），
+          #      PR/merge_group 维持 `origin/<base_ref>`；② **全零 SHA**（首次 push/force push）或 base
+          #      不可解析 ⇒ 显式全量；③ **空变更集 = 显式第三态**（`::warning` + 按**非** docs-only 处理）
+          #      —— 与同段「判据不可读」「origin/main 不可解析」两处 fail-closed **同向**（不可判 ⇒ 全量）。
+          #   ⚠️ 结构留痕: 本判定块在**本文件内内联 9 份**（逐字节同源；D1023 守卫的「消费点 = 9」；
+          #      本次 9 份**同改**）。「改一处源」的前提不成立 ⇒ 去重属另卡（见 PR 正文例外清单）。
           #   ⚠️ D1111/独立自验 E5: 本处此前**缺** `git rev-parse --verify origin/main`
           #      fail-safe（其余处均有）⇒ origin/main 不可解析时本处会**早退为 docs-only**（方向相反：
           #      别处全量、本处瘦身）。空 diff 时 grep -qvE 返 1 同样早退 ⇒ 两条路径都收敛到「早退」。
@@ -86,16 +95,36 @@ jobs:
           #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
           DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
           DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          # 卡 #1323: base 解析（push 用 github.event.before；全零 SHA/不可解析 ⇒ 显式全量）。详见文件头「docs-only 判定」段。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ] && [ -n "${GITHUB_EVENT_BEFORE:-}" ] \
+             && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            DS_BASE="$GITHUB_EVENT_BEFORE"
+          else
+            DS_BASE="origin/main"
+          fi
           if [ -z "$DS_RE" ]; then
             echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            # fail-safe（D1111 E5 原有，**保留原文**——D1023 守卫按此字面量计数 9 个消费点）:
+            #   origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "::warning title=docs-only base::origin/main 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
+          elif ! git rev-parse --verify -q "$DS_BASE" >/dev/null 2>&1; then
+            # fail-safe（#1323 新增）: push 的 before-sha 不可解析（含全零 SHA 退化）⇒ 全量跑
+            echo "::warning title=docs-only base::base=$DS_BASE 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
-            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            DS_CHANGED="$(git diff --name-only "$DS_BASE"...HEAD 2>/dev/null || true)"   # swallow-ok: 空集/命中两条分支各自显式处置
+            if [ -z "$DS_CHANGED" ]; then
+              # 第三态（铁律 11: 空集 ≠ 纯文档）⇒ 无法判定 ⇒ 显式全量 + 告警，绝不静默归 docs-only
+              echo "::warning title=docs-only empty-diff::base=$DS_BASE 与 HEAD 变更集为**空** ⇒ 无法判定是否纯文档 ⇒ 显式按非 docs-only 处理（全量跑）"
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            elif printf '%s\n' "$DS_CHANGED" | grep -qvE "$DS_RE"; then
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            fi
           fi
       # ═══ #1215 / CT-34 上界（K3 2026-10-07 双卡报告 B 节）: 纯文档 PR 的 **merge 级**登记对账 ═══
       # 缺口: docs-only 早退跳过 Iron Laws（= 提交端 D782 文档真相防线: D1 truth + D2 登记门禁）
@@ -267,16 +296,36 @@ jobs:
           #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
           DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
           DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          # 卡 #1323: base 解析（push 用 github.event.before；全零 SHA/不可解析 ⇒ 显式全量）。详见文件头「docs-only 判定」段。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ] && [ -n "${GITHUB_EVENT_BEFORE:-}" ] \
+             && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            DS_BASE="$GITHUB_EVENT_BEFORE"
+          else
+            DS_BASE="origin/main"
+          fi
           if [ -z "$DS_RE" ]; then
             echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            # fail-safe（D1111 E5 原有，**保留原文**——D1023 守卫按此字面量计数 9 个消费点）:
+            #   origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "::warning title=docs-only base::origin/main 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
+          elif ! git rev-parse --verify -q "$DS_BASE" >/dev/null 2>&1; then
+            # fail-safe（#1323 新增）: push 的 before-sha 不可解析（含全零 SHA 退化）⇒ 全量跑
+            echo "::warning title=docs-only base::base=$DS_BASE 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
-            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            DS_CHANGED="$(git diff --name-only "$DS_BASE"...HEAD 2>/dev/null || true)"   # swallow-ok: 空集/命中两条分支各自显式处置
+            if [ -z "$DS_CHANGED" ]; then
+              # 第三态（铁律 11: 空集 ≠ 纯文档）⇒ 无法判定 ⇒ 显式全量 + 告警，绝不静默归 docs-only
+              echo "::warning title=docs-only empty-diff::base=$DS_BASE 与 HEAD 变更集为**空** ⇒ 无法判定是否纯文档 ⇒ 显式按非 docs-only 处理（全量跑）"
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            elif printf '%s\n' "$DS_CHANGED" | grep -qvE "$DS_RE"; then
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            fi
           fi
       - uses: actions/setup-node@v4
         if: steps.docsonly.outputs.docs_only != 'true'
@@ -374,16 +423,36 @@ jobs:
           #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
           DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
           DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          # 卡 #1323: base 解析（push 用 github.event.before；全零 SHA/不可解析 ⇒ 显式全量）。详见文件头「docs-only 判定」段。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ] && [ -n "${GITHUB_EVENT_BEFORE:-}" ] \
+             && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            DS_BASE="$GITHUB_EVENT_BEFORE"
+          else
+            DS_BASE="origin/main"
+          fi
           if [ -z "$DS_RE" ]; then
             echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            # fail-safe（D1111 E5 原有，**保留原文**——D1023 守卫按此字面量计数 9 个消费点）:
+            #   origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "::warning title=docs-only base::origin/main 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
+          elif ! git rev-parse --verify -q "$DS_BASE" >/dev/null 2>&1; then
+            # fail-safe（#1323 新增）: push 的 before-sha 不可解析（含全零 SHA 退化）⇒ 全量跑
+            echo "::warning title=docs-only base::base=$DS_BASE 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
-            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            DS_CHANGED="$(git diff --name-only "$DS_BASE"...HEAD 2>/dev/null || true)"   # swallow-ok: 空集/命中两条分支各自显式处置
+            if [ -z "$DS_CHANGED" ]; then
+              # 第三态（铁律 11: 空集 ≠ 纯文档）⇒ 无法判定 ⇒ 显式全量 + 告警，绝不静默归 docs-only
+              echo "::warning title=docs-only empty-diff::base=$DS_BASE 与 HEAD 变更集为**空** ⇒ 无法判定是否纯文档 ⇒ 显式按非 docs-only 处理（全量跑）"
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            elif printf '%s\n' "$DS_CHANGED" | grep -qvE "$DS_RE"; then
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            fi
           fi
       - uses: actions/setup-node@v4
         if: steps.docsonly.outputs.docs_only != 'true'
@@ -435,16 +504,36 @@ jobs:
           #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
           DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
           DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          # 卡 #1323: base 解析（push 用 github.event.before；全零 SHA/不可解析 ⇒ 显式全量）。详见文件头「docs-only 判定」段。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ] && [ -n "${GITHUB_EVENT_BEFORE:-}" ] \
+             && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            DS_BASE="$GITHUB_EVENT_BEFORE"
+          else
+            DS_BASE="origin/main"
+          fi
           if [ -z "$DS_RE" ]; then
             echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            # fail-safe（D1111 E5 原有，**保留原文**——D1023 守卫按此字面量计数 9 个消费点）:
+            #   origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "::warning title=docs-only base::origin/main 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
+          elif ! git rev-parse --verify -q "$DS_BASE" >/dev/null 2>&1; then
+            # fail-safe（#1323 新增）: push 的 before-sha 不可解析（含全零 SHA 退化）⇒ 全量跑
+            echo "::warning title=docs-only base::base=$DS_BASE 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
-            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            DS_CHANGED="$(git diff --name-only "$DS_BASE"...HEAD 2>/dev/null || true)"   # swallow-ok: 空集/命中两条分支各自显式处置
+            if [ -z "$DS_CHANGED" ]; then
+              # 第三态（铁律 11: 空集 ≠ 纯文档）⇒ 无法判定 ⇒ 显式全量 + 告警，绝不静默归 docs-only
+              echo "::warning title=docs-only empty-diff::base=$DS_BASE 与 HEAD 变更集为**空** ⇒ 无法判定是否纯文档 ⇒ 显式按非 docs-only 处理（全量跑）"
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            elif printf '%s\n' "$DS_CHANGED" | grep -qvE "$DS_RE"; then
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            fi
           fi
       - uses: actions/setup-node@v4
         if: steps.docsonly.outputs.docs_only != 'true'
@@ -526,16 +615,36 @@ jobs:
           #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
           DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
           DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          # 卡 #1323: base 解析（push 用 github.event.before；全零 SHA/不可解析 ⇒ 显式全量）。详见文件头「docs-only 判定」段。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ] && [ -n "${GITHUB_EVENT_BEFORE:-}" ] \
+             && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            DS_BASE="$GITHUB_EVENT_BEFORE"
+          else
+            DS_BASE="origin/main"
+          fi
           if [ -z "$DS_RE" ]; then
             echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            # fail-safe（D1111 E5 原有，**保留原文**——D1023 守卫按此字面量计数 9 个消费点）:
+            #   origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "::warning title=docs-only base::origin/main 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
+          elif ! git rev-parse --verify -q "$DS_BASE" >/dev/null 2>&1; then
+            # fail-safe（#1323 新增）: push 的 before-sha 不可解析（含全零 SHA 退化）⇒ 全量跑
+            echo "::warning title=docs-only base::base=$DS_BASE 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
-            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            DS_CHANGED="$(git diff --name-only "$DS_BASE"...HEAD 2>/dev/null || true)"   # swallow-ok: 空集/命中两条分支各自显式处置
+            if [ -z "$DS_CHANGED" ]; then
+              # 第三态（铁律 11: 空集 ≠ 纯文档）⇒ 无法判定 ⇒ 显式全量 + 告警，绝不静默归 docs-only
+              echo "::warning title=docs-only empty-diff::base=$DS_BASE 与 HEAD 变更集为**空** ⇒ 无法判定是否纯文档 ⇒ 显式按非 docs-only 处理（全量跑）"
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            elif printf '%s\n' "$DS_CHANGED" | grep -qvE "$DS_RE"; then
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            fi
           fi
       # ── D1039 安全网①: 路径判据（分类器脚本产结论；本 step 只消费结论）──────────────
       #   ⚠️ D1111/独立自验 E6 更正: 此处旧注曾写「路径判据唯一载体 = 分类器脚本」，与事实不符——
@@ -807,16 +916,36 @@ jobs:
           #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
           DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
           DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          # 卡 #1323: base 解析（push 用 github.event.before；全零 SHA/不可解析 ⇒ 显式全量）。详见文件头「docs-only 判定」段。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ] && [ -n "${GITHUB_EVENT_BEFORE:-}" ] \
+             && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            DS_BASE="$GITHUB_EVENT_BEFORE"
+          else
+            DS_BASE="origin/main"
+          fi
           if [ -z "$DS_RE" ]; then
             echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            # fail-safe（D1111 E5 原有，**保留原文**——D1023 守卫按此字面量计数 9 个消费点）:
+            #   origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "::warning title=docs-only base::origin/main 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
+          elif ! git rev-parse --verify -q "$DS_BASE" >/dev/null 2>&1; then
+            # fail-safe（#1323 新增）: push 的 before-sha 不可解析（含全零 SHA 退化）⇒ 全量跑
+            echo "::warning title=docs-only base::base=$DS_BASE 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
-            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            DS_CHANGED="$(git diff --name-only "$DS_BASE"...HEAD 2>/dev/null || true)"   # swallow-ok: 空集/命中两条分支各自显式处置
+            if [ -z "$DS_CHANGED" ]; then
+              # 第三态（铁律 11: 空集 ≠ 纯文档）⇒ 无法判定 ⇒ 显式全量 + 告警，绝不静默归 docs-only
+              echo "::warning title=docs-only empty-diff::base=$DS_BASE 与 HEAD 变更集为**空** ⇒ 无法判定是否纯文档 ⇒ 显式按非 docs-only 处理（全量跑）"
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            elif printf '%s\n' "$DS_CHANGED" | grep -qvE "$DS_RE"; then
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            fi
           fi
       - uses: actions/setup-node@v4
         if: steps.docsonly.outputs.docs_only != 'true'
@@ -856,16 +985,36 @@ jobs:
           #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
           DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
           DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          # 卡 #1323: base 解析（push 用 github.event.before；全零 SHA/不可解析 ⇒ 显式全量）。详见文件头「docs-only 判定」段。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ] && [ -n "${GITHUB_EVENT_BEFORE:-}" ] \
+             && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            DS_BASE="$GITHUB_EVENT_BEFORE"
+          else
+            DS_BASE="origin/main"
+          fi
           if [ -z "$DS_RE" ]; then
             echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            # fail-safe（D1111 E5 原有，**保留原文**——D1023 守卫按此字面量计数 9 个消费点）:
+            #   origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "::warning title=docs-only base::origin/main 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
+          elif ! git rev-parse --verify -q "$DS_BASE" >/dev/null 2>&1; then
+            # fail-safe（#1323 新增）: push 的 before-sha 不可解析（含全零 SHA 退化）⇒ 全量跑
+            echo "::warning title=docs-only base::base=$DS_BASE 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
-            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            DS_CHANGED="$(git diff --name-only "$DS_BASE"...HEAD 2>/dev/null || true)"   # swallow-ok: 空集/命中两条分支各自显式处置
+            if [ -z "$DS_CHANGED" ]; then
+              # 第三态（铁律 11: 空集 ≠ 纯文档）⇒ 无法判定 ⇒ 显式全量 + 告警，绝不静默归 docs-only
+              echo "::warning title=docs-only empty-diff::base=$DS_BASE 与 HEAD 变更集为**空** ⇒ 无法判定是否纯文档 ⇒ 显式按非 docs-only 处理（全量跑）"
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            elif printf '%s\n' "$DS_CHANGED" | grep -qvE "$DS_RE"; then
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            fi
           fi
       - uses: actions/setup-node@v4
         if: steps.docsonly.outputs.docs_only != 'true'
@@ -913,16 +1062,36 @@ jobs:
           #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
           DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
           DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          # 卡 #1323: base 解析（push 用 github.event.before；全零 SHA/不可解析 ⇒ 显式全量）。详见文件头「docs-only 判定」段。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ] && [ -n "${GITHUB_EVENT_BEFORE:-}" ] \
+             && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            DS_BASE="$GITHUB_EVENT_BEFORE"
+          else
+            DS_BASE="origin/main"
+          fi
           if [ -z "$DS_RE" ]; then
             echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            # fail-safe（D1111 E5 原有，**保留原文**——D1023 守卫按此字面量计数 9 个消费点）:
+            #   origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "::warning title=docs-only base::origin/main 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
+          elif ! git rev-parse --verify -q "$DS_BASE" >/dev/null 2>&1; then
+            # fail-safe（#1323 新增）: push 的 before-sha 不可解析（含全零 SHA 退化）⇒ 全量跑
+            echo "::warning title=docs-only base::base=$DS_BASE 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
-            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            DS_CHANGED="$(git diff --name-only "$DS_BASE"...HEAD 2>/dev/null || true)"   # swallow-ok: 空集/命中两条分支各自显式处置
+            if [ -z "$DS_CHANGED" ]; then
+              # 第三态（铁律 11: 空集 ≠ 纯文档）⇒ 无法判定 ⇒ 显式全量 + 告警，绝不静默归 docs-only
+              echo "::warning title=docs-only empty-diff::base=$DS_BASE 与 HEAD 变更集为**空** ⇒ 无法判定是否纯文档 ⇒ 显式按非 docs-only 处理（全量跑）"
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            elif printf '%s\n' "$DS_CHANGED" | grep -qvE "$DS_RE"; then
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            fi
           fi
       - uses: actions/setup-node@v4
         if: steps.docsonly.outputs.docs_only != 'true'
@@ -971,16 +1140,36 @@ jobs:
           #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
           DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
           DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          # 卡 #1323: base 解析（push 用 github.event.before；全零 SHA/不可解析 ⇒ 显式全量）。详见文件头「docs-only 判定」段。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ] && [ -n "${GITHUB_EVENT_BEFORE:-}" ] \
+             && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            DS_BASE="$GITHUB_EVENT_BEFORE"
+          else
+            DS_BASE="origin/main"
+          fi
           if [ -z "$DS_RE" ]; then
             echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            # fail-safe（D1111 E5 原有，**保留原文**——D1023 守卫按此字面量计数 9 个消费点）:
+            #   origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "::warning title=docs-only base::origin/main 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
+          elif ! git rev-parse --verify -q "$DS_BASE" >/dev/null 2>&1; then
+            # fail-safe（#1323 新增）: push 的 before-sha 不可解析（含全零 SHA 退化）⇒ 全量跑
+            echo "::warning title=docs-only base::base=$DS_BASE 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
-            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            DS_CHANGED="$(git diff --name-only "$DS_BASE"...HEAD 2>/dev/null || true)"   # swallow-ok: 空集/命中两条分支各自显式处置
+            if [ -z "$DS_CHANGED" ]; then
+              # 第三态（铁律 11: 空集 ≠ 纯文档）⇒ 无法判定 ⇒ 显式全量 + 告警，绝不静默归 docs-only
+              echo "::warning title=docs-only empty-diff::base=$DS_BASE 与 HEAD 变更集为**空** ⇒ 无法判定是否纯文档 ⇒ 显式按非 docs-only 处理（全量跑）"
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            elif printf '%s\n' "$DS_CHANGED" | grep -qvE "$DS_RE"; then
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            fi
           fi
       - name: Gate integrity pattern sentinel + registration gate
         if: steps.docsonly.outputs.docs_only != 'true'
