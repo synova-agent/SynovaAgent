@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synova.dev/schemas/agent-self-check-v1.json",
+  "title": "Agent Self-Check Schema",
+  "description": "agent 自检的结构化输出。bash 只验证此文件存在且格式合法。语义判断由 agent 负责。",
+  "type": "object",
+  "required": ["timestamp", "checks"],
+  "properties": {
+    "timestamp": { "type": "string" },
+    "phase": { "type": "integer", "description": "关联的 plan.json phase 编号" },
+    "checks": {
+      "type": "object",
+      "required": ["wiring", "exceptions", "types", "tests", "cleanup", "file_driven"],
+      "properties": {
+        "wiring": {
+          "type": "object",
+          "required": ["status", "unwired_exports"],
+          "properties": {
+            "status": { "type": "string", "enum": ["pass", "degraded", "deferred"] },
+            "unwired_exports": { "type": "array", "items": { "type": "string" } },
+            "note": { "type": "string" }
+          }
+        },
+        "exceptions": {
+          "type": "object",
+          "required": ["status"],
+          "properties": {
+            "status": { "type": "string", "enum": ["pass", "issues_found"] },
+            "silent_catches": { "type": "array", "items": { "type": "string" } },
+            "note": { "type": "string" }
+          }
+        },
+        "types": {
+          "type": "object",
+          "required": ["status"],
+          "properties": {
+            "status": { "type": "string", "enum": ["pass", "issues_found"] },
+            "as_any_count": { "type": "integer", "minimum": 0 },
+            "note": { "type": "string" }
+          }
+        },
+        "tests": {
+          "type": "object",
+          "required": ["status"],
+          "properties": {
+            "status": { "type": "string", "enum": ["pass", "degraded", "deferred"] },
+            "files_without_tests": { "type": "array", "items": { "type": "string" } },
+            "stub_tests": { "type": "array", "items": { "type": "string" } },
+            "note": { "type": "string" }
+          }
+        },
+        "cleanup": {
+          "type": "object",
+          "required": ["status"],
+          "properties": {
+            "status": { "type": "string", "enum": ["pass", "issues_found"] },
+            "dead_code": { "type": "array", "items": { "type": "string" } },
+            "engine_core_refs": { "type": "array", "items": { "type": "string" } },
+            "note": { "type": "string" }
+          }
+        },
+        "file_driven": {
+          "type": "object",
+          "required": ["status"],
+          "properties": {
+            "status": { "type": "string", "enum": ["pass", "issues_found"] },
+            "new_hardcoded_types": { "type": "array", "items": { "type": "string" } },
+            "new_enums": { "type": "array", "items": { "type": "string" } },
+            "manifest_incomplete": { "type": "array", "items": { "type": "string" } },
+            "note": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "version": "1.0",
+  "created": "2026-09-08T00:00:00Z",
+  "approved_by": "founder",
+  "current_phase": 2,
+  "principles": [
+    "原则2: 测试先行 red→green，spec DS1-DS8 机器可验契约",
+    "数组整值替换 > 逐元素合并（DSH mergeLayers 范式，哨兵阈值数组禁止产生不可控混合）",
+    "mount 只返回 detached + deep frozen 解析结果，绝不写进程级/全局单例（决策点 3）"
+  ],
+  "approach": "extend",
+  "memory_refs": [
+    "memory/notes/implemented/2026-08-28-d542-ci-strict-visible.md",
+    "memory/notes/implemented/2026-09-06-ct60-d328-case-compat.md"
+  ],
+  "phases": [
+    {
+      "step": 1,
+      "action": "config-layer mechanism exports (mergeLayers/deepEqualJson/configNamespace/LAYER_ORDER/ConfigLayerError + package file constants/mount) have no cross-file src consumers yet — S1-6 customer-config productization is the wiring stage; diagnosis.ts consumes resolveCustomerConfig/discoverCustomerConfigPackages in this commit (group 4a physical hits); wiring deferred, D588/D333 precedent",
+      "files": [
+        "src/config/config-layers.ts",
+        "src/config/customer-config-package.ts",
+        "tests/config/config-layers.test.ts",
+        "tests/config/customer-config-package.test.ts"
+      ],
+      "exports": [
+        "mergeLayers",
+        "deepEqualJson",
+        "configNamespace",
+        "LAYER_ORDER",
+        "ConfigLayerError",
+        "COMPOSITION_FILE",
+        "INDUSTRY_FILE",
+        "WORKSPACE_FILE",
+        "METADATA_FILE",
+        "mountCustomerConfig",
+        "leakedGlobalConfig"
+      ],
+      "checks": { "wiring": "deferred", "test_pairing": "enforce" }
+    },
+    {
+      "step": 2,
+      "action": "consult 生产路径接线（resolveCustomerConfig/discoverCustomerConfigPackages 真实调用，SSE config_resolved + report.customerConfig 可观测），wiring enforce",
+      "files": [
+        "src/routes/diagnosis.ts",
+        "docs/plans/codex/implementation/SYNOVA-IMPL-D599-customer-config-package-20260908.md"
+      ],
+      "checks": { "wiring": "enforce", "test_pairing": "enforce" }
+    }
+  ]
+}

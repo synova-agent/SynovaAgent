@@ -1,0 +1,1 @@
+fix: verify-parallel 已完成任务文档豁免 (V5.0.1, memory/notes/implemented/2026-08-24-v5.0.1-verify-parallel-exempt.md)
