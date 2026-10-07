@@ -322,7 +322,9 @@ clone（基于 origin/main，git clone --local 主工作区 + 修正 origin + gi
    ② **brief 的 `## 写集` 必须含本批所有改动文件**（含 brief/note/task-state）
    ③ **`#CRITERIA` 要选对**（A/B/C/D 的实际 glob，D 是兜底含 `scripts/**`）
    ④ **D708 写集对账**：三声明源（S1 `task-state` write_set ｜ S2 dev doc ｜ S3 brief Q2）
-   ⑤ **D734 PR 预算**：≤12 文件 + 单域（先跑 `check-ownership.py`）
+   ⑤ **D734 PR 预算**：≤12 文件（≤12 是**规模**约束，仍有效）
+      🔴 **「单域」要求已废止**（创始人 2026-10-07「不分域。谁有空，谁能做就谁做。」）
+      ⇒ `ownership.yaml` 已单域化（PR #1238）⇒ 跨域结构上不可能，本项不再有约束力
    ⑥ **D328**：commit 的 `(D####)` 必须与暂存文件归属一致
    + **铁律 49/M7**：非平凡变更必须引用 `memory/notes/` 四态 Note
 
