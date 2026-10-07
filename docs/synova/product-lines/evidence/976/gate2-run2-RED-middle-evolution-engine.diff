@@ -1,0 +1,13 @@
+diff --git a/src/loops/middle-evolution-engine.ts b/src/loops/middle-evolution-engine.ts
+index 93a9f0730..61058d794 100644
+--- a/src/loops/middle-evolution-engine.ts
++++ b/src/loops/middle-evolution-engine.ts
+@@ -89,7 +89,7 @@ export function processFeedbackSignals(signals: AggregatedSignal[]): EvolutionAc
+       // 组内实体不唯一（entityKey=null）时**不猜实体**：显式告警 + 跳过（铁律 24/31，不静默）。
+       // 三态（见 AggregatedSignal.entityKey 契约）：undefined=旧生产者 ⇒ 退回旧语义（用 key）；
+       // null=显式"组内实体不唯一" ⇒ 不猜实体。
+-      const entityKey = sig.entityKey === undefined ? sig.key : sig.entityKey;
++      const entityKey = sig.key; // BREAK-IT-RED
+       // D1197/P0-3 跨租户写隔离（创始人红线「A 客户不能读 B 客户数据」）：
+       // 阈值配置是**行业级文件**（extensions/industries/*/thresholds.json），没有企业维度；
+       // 因此回写侧的不变量是「**只接受单一企业**的聚合信号」——
