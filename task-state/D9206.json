@@ -1,0 +1,11 @@
+{
+  "task_id": "D9206",
+  "title": "D708-identity-inference-guardrails",
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-08",
+  "updated_by": "alloc-task-id"
+}

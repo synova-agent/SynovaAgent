@@ -58,6 +58,7 @@ CT-D（2026-09-27）评估结论 —— **本 gate 不给 `docs/synova/product-l
   编号对账: 本 gate 的路径级内置豁免只有 ② 一条；目录级豁免 0 条（有意）。
 """
 import argparse
+import datetime
 import shutil
 import fnmatch
 import json
@@ -281,6 +282,80 @@ def parse_did(text: str) -> Optional[str]:
             continue
         return m.group(0).upper()
     return None
+
+
+# ── D9206（卡 #1237）: 身份推断护栏所用的两组定义 ──────────────────────────────
+# 「弱锚点」= 可被提交者**任意改写**且不携带"本次变更集"证据的来源：
+#   · branch            —— 分支名里的 D#
+#   · commit-subject    —— 提交标题里的 D#
+# 与之相对，`claim`（.claude/claims/<issue>.yaml）与 `claiming-brief`（写集命中本次
+#   变更集的 brief）都**携带变更集证据**，属强锚点。
+WEAK_ANCHOR_SRCS = ("branch", "commit-subject")
+
+# brief 陈旧阈值（天）: 仅作**佐证**出现在疑似劫持的报告里，**不单独触发**该闸
+#   （单独触发会误伤长期在途的合法任务；判据见卡 #1237 要求 2 的取舍说明）。
+BRIEF_STALE_DAYS = 7
+
+
+def brief_stale_days(brief_path: str) -> Optional[int]:
+    """brief 文件名日期前缀距今天数；取不到 → None（不判、不误导）。"""
+    if not brief_path:
+        return None
+    m = re.match(r"(\d{4})-(\d{2})-(\d{2})-", os.path.basename(brief_path))
+    if not m:
+        return None
+    try:
+        d = datetime.date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+    except ValueError:
+        return None
+    return (datetime.date.today() - d).days
+
+
+def infer_did_from_claiming_brief(repo: str, files: List[str]) -> Tuple[Optional[str], List[str]]:
+    """按「**谁的写集认领了本次变更集**」反查 brief 文件名里的 D#（D9206 优先级档）。
+
+    为什么加这一档（卡 #1237 要求 1）: 卡面定的优先级是
+      **卡号/issue 号 > brief 文件名 > 提交标题**。
+    分支名与提交标题都是**弱锚点**（可任意改写、不携带变更集证据），而"写集命中本次变更集"
+    是**携带证据**的强信号 ⇒ 它必须排在提交标题之前，用于在弱锚点撞上"碰巧同号的旧件"时
+    把身份纠正回来。
+
+    **单源（铁律·不造第二套）**: 认领判定**不在此重新实现** —— 直接调既有的
+      `scripts/workflow/resolve-commit-brief.sh`（全仓唯一的"文件 → 认领 brief"解析器，
+      已被 commit-msg / check-brief-vs-code 等消费）。本函数只做"把它的输出折成 D#"。
+
+    契约（铁律 47）:
+      @input  repo / files（本次变更集，仓库相对路径）
+      @output (D#|None, 诊断行列表)；无命中 → (None, diag)（调用方回落既有推断链）
+      @降级   解析器缺失 / 不可执行 / 超时 / 输出不含 D# → (None, diag)，
+              **诊断行逐条点名**（不静默当作"已尝试且无命中"之外的东西）
+    """
+    diag: List[str] = []
+    resolver = Path(repo) / "scripts" / "workflow" / "resolve-commit-brief.sh"
+    if not resolver.is_file():
+        diag.append(f"源 claiming-brief: 解析器不存在（{resolver}）→ 该档不可用")
+        return None, diag
+    if not files:
+        diag.append("源 claiming-brief: 变更集为空 → 无从认领")
+        return None, diag
+    try:
+        p = subprocess.run(["bash", str(resolver), "\n".join(files)], cwd=repo,
+                           capture_output=True, text=True, encoding="utf-8",
+                           errors="replace", timeout=60)
+    except (OSError, subprocess.SubprocessError) as exc:
+        diag.append(f"源 claiming-brief: 解析器调用失败（{exc}）→ 该档不可用")
+        return None, diag
+    brief = (p.stdout or "").strip().splitlines()
+    brief = brief[0].strip() if brief else ""
+    if not brief:
+        diag.append(f"源 claiming-brief: 解析器无输出（rc={p.returncode}）→ 无 brief 认领本次变更集")
+        return None, diag
+    d = parse_did(Path(brief).stem)
+    if not d:
+        diag.append(f"源 claiming-brief: 认领件 {Path(brief).name} 文件名不含 D# → 该档无身份")
+        return None, diag
+    diag.append(f"源 claiming-brief: {Path(brief).name} → {d}（认领判定经 resolve-commit-brief.sh，单源）")
+    return d, diag
 
 
 def infer_did(repo: str, branch: str, head: str,
@@ -746,6 +821,12 @@ def main() -> int:
         _log_degraded(repo, result["reason"])
         return 2
 
+    def _resolve(did_: Optional[str]):
+        """解析某身份下的声明（S1 task-state / S2 dev doc / S3 brief）。"""
+        ts_, dd_, bf_ = find_declaration_files(repo, did_)
+        declared_, warns_ = collect_declared(repo, ts_, dd_, bf_, claim_path_found)
+        return ts_, dd_, bf_, declared_, warns_
+
     try:
         ts, dd, bf = find_declaration_files(repo, did)
     except AmbiguousDeclaration as exc:
@@ -759,6 +840,33 @@ def main() -> int:
         return 2
     declared, warns = collect_declared(repo, ts, dd, bf, claim_path_found)
     result["warns"].extend(warns)
+
+    # ── D9206（卡 #1237）阶段一: 身份**纠正** —— 弱锚点 ∧ 声明写集零交集 ──
+    # 卡面优先级: 卡号/issue 号 > **brief 文件名** > 提交标题。分支名/提交标题都是**弱锚点**
+    #   （可任意改写、不携带变更集证据）；"写集命中本次变更集"的 brief 才是携带证据的强信号
+    #   ⇒ 在弱锚点明显对不上时，先用它把身份纠正回来（纠正成功则不再触发阶段二的护栏）。
+    _weak_zero_hits = bool(
+        did_src in WEAK_ANCHOR_SRCS and declared
+        and not [f for f in files if any(matches(f, e) for e, _s in declared)])
+    if _weak_zero_hits:
+        alt_did, alt_diag = infer_did_from_claiming_brief(repo, files)
+        did_diag.extend(alt_diag)
+        if alt_did and alt_did != did:
+            try:
+                _ts2, _dd2, _bf2, _dec2, _w2 = _resolve(alt_did)
+            except AmbiguousDeclaration as _exc2:
+                did_diag.append(f"源 claiming-brief: {alt_did} 声明多命中 → 不采用（{_exc2}）")
+                _dec2 = None
+            if _dec2 and [f for f in files if any(matches(f, e) for e, _s in _dec2)]:
+                did, did_src = alt_did, "claiming-brief"
+                ts, dd, bf, declared = _ts2, _dd2, _bf2, _dec2
+                result["warns"].extend(_w2)
+                did_diag.append(f"身份纠正: 弱锚点 → claiming-brief（{alt_did}）⇒ 采用 brief 文件名身份")
+                result["task_id"], result["task_id_source"] = did, did_src
+                result["sources"] = {"claim": claim_path_found, "task_state": ts,
+                                     "dev_doc": dd, "brief": bf}
+
+
     result["sources"] = {"claim": claim_path_found, "task_state": ts,
                          "dev_doc": dd, "brief": bf}
 
@@ -770,6 +878,42 @@ def main() -> int:
         result["warns"].append("PR 正文不可用（--pr-body 未给且无 GITHUB_EVENT_PATH）—— 仅文件声明源生效")
 
     result["declared"] = [{"entry": e, "source": s} for e, s in declared]
+
+    # ── D9206（卡 #1237）阶段二: 身份推断**护栏**（裁决）──
+    # 判据: 身份来源 ∈ 弱锚点 ∧ 声明写集与变更集零交集 ∧ **显式豁免也零命中**
+    #   ⇒ 不静默取用：显式报「疑似…劫持」+ exit 2（degraded = 检查自身不可信）。
+    # 为什么把「显式豁免」也算作证据: 豁免段落（`## 写集豁免` / 声明级逐条）同样是**作者针对
+    #   本次变更集**写下的声明 ⇒ 它命中即说明"这确实是本任务"，不该判劫持（回归夹具 ④/⑨b 实证）。
+    # 反例受保护: 有交集（写集或豁免任一命中）⇒ 不触发本闸 ⇒ 真夹带仍按原语义 exit 1。
+    # 命名常量 = 夹具的稳定锚点（tests/control-tower/d708-identity-guard.test.sh 的变异体按本行
+    #   做「去掉护栏」注入；改名会使变异体构造失败 ⇒ 显式报"判据锚点漂移"而非假绿）。
+    _weak_hits2 = [f for f in files if any(matches(f, e) for e, _s in declared)]
+    _exempt_hits = [f for f in files if any(matches(f, p) for p, _r in explicit)]
+    HIJACK_SUSPECT = bool(did_src in WEAK_ANCHOR_SRCS and declared
+                          and not _weak_hits2 and not _exempt_hits)
+    if HIJACK_SUSPECT:
+        _stale = brief_stale_days(bf)
+        _stale_note = (f"；且该声明件为 {_stale} 天前的历史件（阈值 {BRIEF_STALE_DAYS} 天，仅作佐证）"
+                       if _stale is not None and _stale >= BRIEF_STALE_DAYS else "")
+        _decl_show = bf or ts or dd or "(无声明文件)"
+        result["status"] = "degraded"
+        result["identity_source"] = did_src
+        result["identity_hijack_suspect"] = True
+        result["reason"] = (
+            f"疑似分支名/标题劫持：身份 D# 仅来自**【最弱锚点】{did_src}**（{did}），"
+            f"其声明件 {_decl_show} 的写集与本次变更集**零交集**（变更 {len(files)} 件，命中 0 件）"
+            f"{_stale_note} ⇒ **拒绝静默取用**该声明。\n"
+            f"   ⚠️ 这是**身份推断失败**，不是文件夹带 —— 排查方向请放在\"本任务号取自哪里\"，"
+            f"而非\"哪个文件多出来了\"。\n"
+            f"   修复三选一: ① 分支名/提交标题改用本任务号；"
+            f"② 改用 claim（.claude/claims/<issue>.yaml）声明；"
+            f"③ 若确属本任务，把变更文件写进对应声明写集（或补 `## 写集豁免` 段落）。"
+        )
+        result["declared"] = [{"entry": e, "source": s} for e, s in declared]
+        result["changed"] = files
+        _emit(result, args.json)
+        _log_degraded(repo, result["reason"])
+        return 2
 
     # ── 无声明: 文档范围降级放行；否则 fail-closed ──
     if not declared:
