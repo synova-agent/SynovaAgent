@@ -48,24 +48,69 @@ OUT=$(SYNO_CLAIM_DIR="$TMP/.claude/claims" python3 "$CS" --check 1218 --root "$T
 [ "$RC" -eq 2 ] && ok "降级: 畸形 claim → exit 2（fail-closed）" || no "降级: 畸形 claim rc=$RC 期望 2"
 echo "$OUT" | grep -q 'claim-done-without-verify' && ok "降级: 点名错误码（铁律 32）" || no "降级: 未点名错误码"
 
-# ── 正常: 组 6 在 claim 载体上不再报 4×「未填写」──
-# 门控断言：开关开 + claim 时，Q0..Q3 散文段**不被求值**（源码结构证明 + claim 分支补偿）
-if awk '/elif \[ "\$CLAIM_V2" = "1" \] && \[ "\$IS_CLAIM_DECL" = "1" \]/,/^  else$/' "$PC" | grep -q 'claim_store.py'; then
-  ok "正常: claim 分支以 claim_store --check 补偿（替代散文检查）"
+# ══════════════════════════════════════════════════════════════════════════════
+# 行为判定（verifier P2 修复）：**真跑判据**，不看源码文本
+#
+# 病根：原实现用 awk 文本区段 + grep 存在性做「接线断言」，并自造 sed 变异体后只断言
+#   「sed 生效了」= **自指检查**，从未把变异体喂给判据 ⇒ verifier 自造 3 种门控短路全部漏抓。
+# 修法：在真实临时 claim 目录 + 注入缝下**执行 pre-commit-check.sh**，断言其**输出中
+#   出现 claim 分支的行为证据**（散文检查被跳过 + 显式打印）；三种门控短路 ⇒ 证据消失。
+#
+# 注入缝：SYNO_GIT_CACHED_ALL_NAMES / SYNO_GIT_CACHED_NAMES（暂存集）+ SYNO_CLAIM_DIR（claim 库）
+#   + SYNO_TEST_ARM=1（沙箱降软，避免夹具被其它组硬阻断）；零真实仓写入。
+# ══════════════════════════════════════════════════════════════════════════════
+CLAIM_DIR="$(mktemp -d)"; trap 'rm -rf "$CLAIM_DIR"' EXIT
+printf 'writeset:\n  - src/foo.ts\ndone:\n  - verify: bash x.sh\n' > "$CLAIM_DIR/1217.yaml"
+STAGED="src/foo.ts"
+
+# 行为探针：跑 <脚本> 并返回其输出（注入 claim 载体 + 暂存集 + 沙箱）
+probe() { # <script> → stdout
+  SYNO_TEST_ARM=1 SYNO_CLAIM_V2=1 SYNO_CLAIM_DIR="$CLAIM_DIR" \
+  SYNO_GIT_CACHED_ALL_NAMES="$STAGED" SYNO_GIT_CACHED_NAMES="$STAGED" \
+  bash "$1" 2>&1 || true
+}
+# 行为证据 = claim 分支**确实执行**的两个可观察后果（非文本存在性）：
+#   ① 显式打印「声明载体 = claim」 ② 显式打印「散文检查按设计不适用」
+evidence() { printf '%s' "$1" | grep -q '声明载体 = claim' && printf '%s' "$1" | grep -q '散文检查按设计不适用'; }
+
+OUT_PROD="$(probe "$PC")"
+if evidence "$OUT_PROD"; then
+  ok "行为: 生产脚本在 claim 载体下**实际执行** claim 分支（输出含两处行为证据）"
 else
-  no "正常: claim 分支未接 claim_store（= 4×未填写假红）"
+  no "行为: 生产脚本未出现 claim 分支证据 —— 输出片段: $(printf '%s' "$OUT_PROD" | grep -aE '声明载体|未填写' | head -2)"
+fi
+# 反向：legacy 散文路径在该场景下**不应**再报 4×「未填写」
+if printf '%s' "$OUT_PROD" | grep -q 'Q0: 未填写'; then
+  no "行为: claim 载体下仍走散文检查（报「Q0: 未填写」）"
+else
+  ok "行为: claim 载体下散文检查确实被跳过（无「Q0: 未填写」）"
 fi
 
-# ── 改坏即红: 去掉开关门控 ⇒ 本夹具的「接线」断言必红（判别力证明）──
-# 做法: 对生产脚本副本注入「门控失效」缺陷（把开关条件抹成恒假），
-#       断言副本**不再满足本夹具上方的接线判据** —— 即夹具能抓到该缺陷。
-MUT="$(mktemp)"; sed 's/elif \[ "\$CLAIM_V2" = "1" \] && \[ "\$IS_CLAIM_DECL" = "1" \]; then/elif false; then/' "$PC" > "$MUT"
-if grep -q 'elif false; then' "$MUT" && ! grep -q 'IS_CLAIM_DECL" = "1" ]' "$MUT"; then
-  ok "改坏即红: 注入「门控失效」后接线判据不再成立 ⇒ 夹具能抓到（非纸老虎）"
-else
-  no "改坏即红: 变异体仍满足接线判据（夹具无判别力）"
-fi
-rm -f "$MUT"
+# ── 改坏即红：3 种门控短路 ⇒ 行为证据必须消失（变异体**喂进判据**）──
+MUT_DIR="$(mktemp -d)"
+declare -a MUT_NAMES=("M1: IS_CLAIM_DECL 恒 0" "M2: 载体误判 (*.yamx)" "M3: 门控恒假 (elif false)")
+CAUGHT=0; TOTAL=3
+mutate_and_probe() { # <idx> → 设置 MUT_RC: 0=证据消失(抓到) 1=证据仍在(漏抓)
+  local i="$1" dst="$MUT_DIR/mut$1.sh"
+  case "$i" in
+    1) sed 's/IS_CLAIM_DECL=1 ;;/IS_CLAIM_DECL=0 ;;/' "$PC" > "$dst" ;;
+    2) sed 's/case "${BRIEF:-}" in \*.yaml)/case "${BRIEF:-}" in *.yamx)/' "$PC" > "$dst" ;;
+    3) sed 's/elif \[ "\$CLAIM_V2" = "1" \] && \[ "\$IS_CLAIM_DECL" = "1" \]; then/elif false; then/' "$PC" > "$dst" ;;
+  esac
+  local out; out="$(probe "$dst")"
+  if evidence "$out"; then MUT_RC=1; else MUT_RC=0; fi
+}
+for i in 1 2 3; do
+  MUT_RC=1; mutate_and_probe "$i"
+  if [ "$MUT_RC" -eq 0 ]; then
+    CAUGHT=$((CAUGHT + 1)); ok "改坏即红: ${MUT_NAMES[$((i-1))]} ⇒ 行为证据消失（夹具抓到）"
+  else
+    no "改坏即红: ${MUT_NAMES[$((i-1))]} ⇒ 证据仍在（**漏抓**，夹具无判别力）"
+  fi
+done
+rm -rf "$MUT_DIR"
+[ "$CAUGHT" -eq "$TOTAL" ] && ok "改坏即红: 3/3 门控短路全部被抓（行为判定，非自指）" \
+  || no "改坏即红: 仅 ${CAUGHT}/${TOTAL} 被抓"
 
 echo ""
 echo "结果: $PASS 通过, $FAIL 失败"
