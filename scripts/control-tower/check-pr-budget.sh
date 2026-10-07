@@ -660,7 +660,7 @@ fi
       echo "  ✅ ② 变更单域: $(printf '%s\n' "$DOMAIN_OUT" | grep -E '^✅ PASS' | head -1)"
     else
       echo "  ℹ️  ② 变更跨域（**信息性，不阻断** —— 域不用于分配/阻断）:"
-      printf '%s\n' "$DOMAIN_OUT" | grep -E '^(mac|win|k3|⚠️)' | head -8 | sed 's/^/       /'
+      printf '%s\n' "$DOMAIN_OUT" | grep -vE '^✅' | head -8 | sed 's/^/       /'
     fi
   else
     echo "  ℹ️  ② 域信息跳过（无变更 / 校验器缺失 / python 不可用 —— 不阻断）"
