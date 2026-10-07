@@ -25,6 +25,11 @@ jobs:
       - name: Sync issue coordinates to project board
         env:
           PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          # D1207 修复: 脚本内部走 `gh api graphql`，而 gh 认的是 GH_TOKEN/GITHUB_TOKEN——
+          # 只给 PROJECT_TOKEN 会导致「有 token 但未认证」⇒ GraphQL 失败 ⇒ exit 2 ⇒
+          # 该 failure check-run 落在 main 上 ⇒ 污染 Gate Integrity 的既有红对账，
+          # 使**全仓所有 PR** 同红（2026-10-07 实证: 2 条 sync failure 卡住 4 张 PR）。
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: python3 scripts/control-tower/sync_project_coordinates.py
