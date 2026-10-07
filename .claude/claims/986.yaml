@@ -1,6 +1,8 @@
 writeset:
   - .claude/claims/986.yaml
+  - .claude/task-briefs/2026-10-08-D9210-986-skills-auto-load.md
   - memory/notes/proposed/2026-10-08-d986-0-12-skills-auto-load.md
+  - task-state/D9210.json
   - src/agent/expert-name-map.ts
   - src/agent/skill-lazy-loader.ts
   - src/l3/synova-diagnosis-engine-impl.ts
