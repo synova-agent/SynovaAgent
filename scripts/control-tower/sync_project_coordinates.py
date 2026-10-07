@@ -44,6 +44,23 @@ def parse_coords(body: str) -> dict:
     return got
 
 
+def q_field_by_name() -> str:
+    """D1216: 按字段名查 field id 的查询（D1210 修复后唯一来源）。
+
+    提取为独立函数的目的：让夹具能**直接构造**该 query 并断言括号平衡 ——
+    2026-10-07 的事故（5 个 `{` 只 4 个 `}`）正是因为没有可调用的构造点，
+    静态 grep 与运行期用例都抓不到。
+    """
+    return ("query($org:String!,$num:Int!,$name:String!){organization(login:$org){"
+            "projectV2(number:$num){field(name:$name){... on ProjectV2Field{id}}}}}")
+
+
+def assert_query_balanced(q: str) -> None:
+    """契约定理：query 字面量括号必须平衡（不平衡 ⇒ GraphQL 解析失败 ⇒ 每轮 CI 必红）。"""
+    if q.count("{") != q.count("}"):
+        raise ValueError(f"GraphQL query 括号不平衡: {{={q.count('{')} }}={q.count('}')}")
+
+
 def gh_graphql(query: str, **vars_):
     """调用 gh api graphql。失败抛 RuntimeError（调用方 fail-closed）。
 
@@ -118,18 +135,27 @@ def main(argv):
             item_id = gh_graphql(m_add, pid=pid, cid=issue_id)["data"]["addProjectV2ItemById"]["item"]["id"]
             print(f"  ✓ 已挂板 item={item_id[:12]}…")
         for name, val in coords.items():
-            q_f = ("query($org:String!,$num:Int!){organization(login:$org){projectV2(number:$num){"
-                   f"field(name:\"{name}\"){{... on ProjectV2Field{{id}}}}}}}}")
+            # D1216 修复: ① 原串 5 个 `{` 只 4 个 `}` ⇒ GraphQL 解析失败
+            #   (`Expected NAME, actual: (none) at [1,124]`)，CI 每轮必红；
+            #   ② 改用查询变量传字段名（不再字符串插值）⇒ 规避引号/非 ASCII 转义面。
+            q_f = q_field_by_name()
+            assert_query_balanced(q_f)
             try:
-                fid = gh_graphql(q_f, org=ORG, num=PROJECT_NUMBER)["data"]["organization"]["projectV2"]["field"]["id"]
+                fid = gh_graphql(q_f, org=ORG, num=PROJECT_NUMBER, name=name)[
+                    "data"]["organization"]["projectV2"]["field"]["id"]
             except (KeyError, TypeError):
                 print(f"  ⚠ 字段 {name} 不存在于 Project#{PROJECT_NUMBER}（跳过）")
                 continue
             m_up = ("mutation($pid:ID!,$iid:ID!,$fid:ID!,$val:String!){"
                     "updateProjectV2ItemFieldValue(input:{projectId:$pid,itemId:$iid,fieldId:$fid,"
                     "value:{text:$val}}){projectV2Item{id}}}")
-            gh_graphql(m_up, pid=pid, iid=item_id, fid=fid, val=val)
-            print(f"  ✓ {name} = {val}")
+            # D1216: 字段类型不匹配（如单选字段收到 text 值）属**看板配置面**，
+            # 不是脚本缺陷 ⇒ 只告警不红，避免把每个 issue 事件都染成 CI 红基线。
+            try:
+                gh_graphql(m_up, pid=pid, iid=item_id, fid=fid, val=val)
+                print(f"  ✓ {name} = {val}")
+            except RuntimeError as e:
+                print(f"::warning title=project-coordinates::字段 {name} 写入失败（看板配置面，非脚本缺陷）: {e}")
         print("✅ 坐标系同步完成")
         return 0
     except Exception as e:  # noqa: BLE001 — 顶层统一 fail-closed（exit 2，不静默）

@@ -54,5 +54,50 @@ OUT="$(ISSUE_NUMBER=4 PROJECT_TOKEN= python3 "$MUT" --from-body "$SB/full.md" 2>
 if echo "$OUT" | grep -q "解析=7/7 字段"; then no "4.1 变异体未体现差异（仍 7/7）:: $OUT"; else ok "4.1 变异体（字段集改坏）⇒ 齐全用例解析数偏离 7/7（夹具判别性成立）"; fi
 
 echo ""
+# ── 17. D1216 回归: GraphQL query 括号平衡（可真构造 + 变异体）──
+#    历史事故(2026-10-07): field 查询 5 个 `{` 只 4 个 `}` ⇒ CI 每轮红
+#    (`Expected NAME, actual: (none) at [1,124]`)；旧夹具(示例驱动)抓不到。
+q_line="$(python3 - <<'PY'
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("spc", "scripts/control-tower/sync_project_coordinates.py")
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+q = m.q_field_by_name()
+print(q.count("{"), q.count("}"))
+PY
+)"
+echo "  #17.1 真构造 q_field_by_name() ⇒ { 与 } 计数: $q_line"
+if echo "$q_line" | awk 'NF==2 && $1 ~ /^[0-9]+$/ && $1==$2 {found=1} END{exit !found}'; then
+  ok "17.1 真构造 query 括号平衡"
+else
+  no "17.1 query 括号不平衡（GraphQL 必失败）"
+fi
+
+# 变异体: 人为去掉一个右括号 ⇒ assert_query_balanced 必须抛错（证明判据真在判）
+mut="$(python3 - <<'PY'
+import importlib.util
+spec = importlib.util.spec_from_file_location("spc", "scripts/control-tower/sync_project_coordinates.py")
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+try:
+    m.assert_query_balanced(m.q_field_by_name()[:-1])   # 删一个 }
+    print("NOPASS")
+except ValueError:
+    print("RAISED")
+PY
+)"
+echo "  #17.2 变异体(删一个右括号) ⇒ $mut"
+if [ "$mut" = "RAISED" ]; then
+  ok "17.2 变异体：括号不平衡 ⇒ 契约抛错（判别性成立）"
+else
+  no "17.2 变异体未被捕获（判据是纸老虎）"
+fi
+
+# 17.3 字段名走查询变量（不再字符串插值）⇒ 规避引号/非 ASCII 转义面
+if grep -q 'field(name:\$name)' scripts/control-tower/sync_project_coordinates.py; then
+  ok "17.3 字段名走查询变量 \$name（非插值）"
+else
+  no "17.3 仍用字符串插值拼字段名"
+fi
+
 echo "结果: $PASS 通过, $FAIL 失败"
 [ "$FAIL" = 0 ] && exit 0 || exit 1
+
