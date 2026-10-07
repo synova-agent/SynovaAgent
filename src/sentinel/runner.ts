@@ -17,6 +17,7 @@ import type { Sentinel, SentinelCheckResult, SentinelFinding } from './types';
 import type { Evidence } from '../evidence/types';
 import { getSentinelRegistry } from './registry';
 import { getBaselineStore } from './baseline-store';
+import { createMetricSink, writeRoundReadings } from './metric-readings-writer';
 import { HEALTH_REGISTRY_RATIO_WARNING, HEALTH_FAILURES_WARNING, HEALTH_FAILURES_CRITICAL, HEALTH_UPTIME_IDLE_MS, HEALTH_STALENESS_MULTIPLIER, evaluateSentinelHealth,
   estimateCronIntervalMs,
   SELF_CHECK_SENTINEL_ID,
@@ -1396,13 +1397,19 @@ export class SentinelRunner {
           graphCtx = this.db;
         }
       }
+      // #1054（2-1b）: 注入测量值 sink（runner 持有真实 Database；失败只降级，不影响轮次）
+      const metricSink = createMetricSink(this.db as Database.Database);
       const ctx = {
         db: graphCtx,
         now: new Date(),
         registry: getSentinelRegistry(),
+        metricSink,
       };
 
       const result = await sentinel.check(ctx);
+
+      // #1054（2-1b）轮次级写入（覆盖面 = 其余 44 哨兵；指标级见样板 cash-flow 哨兵）
+      writeRoundReadings(ctx.metricSink, sentinel?.config?.id ?? 'unknown', result);
 
       // D37: 冲突检测注入 — 旁路增强（不阻断，不改变现有 aggregate 行为）
       this.injectConflictFindings(result, graphCtx);

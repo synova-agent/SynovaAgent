@@ -1,0 +1,21 @@
+# .claude/claims/1054.yaml — #1054（2-1b 测量值时序·写入侧）写集声明（D708 的 S0 源）
+#
+# 为什么用 claim：本卡是 **issue 号卡（#1054）**，无 D# 编号 ⇒ D708 的 S1/S2/S3（按 `<D#>*` 定位）找不到声明源。
+# 先例：#1052、#1053、#1366、#1368、#1322、#1220。
+# 依据：CTO 2026-10-08 放行（**裁 C**：A + 1 个有真实 compute 数值的样板哨兵；三条硬要求见卡面）。
+writeset:
+  - .claude/claims/1054.yaml
+  - .claude/task-briefs/2026-10-08-1054-metric-readings-writer.md
+  - src/sentinel/metric-readings-writer.ts
+  - src/sentinel/types.ts
+  - src/sentinel/registry.ts
+  - src/sentinel/runner.ts
+  - src/sentinel/adapters/cash-flow-sentinel.ts
+  # 测试落点 = tests/sentinel/**（CTO 2026-10-08 裁：纳入 claim 写集并显式声明；本仓惯例 36 文件）
+  - tests/sentinel/metric-readings-writer.test.ts
+done:
+  - verify: npx vitest run tests/sentinel/metric-readings-writer.test.ts
+  - verify: npx vitest run tests/sentinel/ tests/store/
+  - verify: npx tsc --noEmit
+  - verify: test "$(git grep -nE '^[^*/]*DELETE[[:space:]]+FROM[[:space:]]+metric_readings' HEAD -- src/ | wc -l)" -eq 0
+note: 写点① 已接：通用 sink（幂等/只追加/降级显式）+ 轮次级（其余哨兵）+ 指标级样板（cash-flow，真实 compute 数值）。覆盖面 = 样板 1 个；其余 44 哨兵暂只有轮次级；写入点②/③ 未接。

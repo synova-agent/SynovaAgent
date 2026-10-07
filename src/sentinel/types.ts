@@ -160,6 +160,12 @@ export interface Sentinel {
 export interface SentinelContext {
   /** 数据库实例 */
   db: unknown;
+  /**
+   * #1054（2-1b）: 测量值写入 sink（可选）。
+   * 未注入 = **零行为变化**（既有 45 哨兵不受影响）；注入方 = 持有真实 Database 的调用点
+   * （`SentinelRunner`）。轮次级由 `registry.runAll` / runner 轮边界写，指标级由样板哨兵写。
+   */
+  metricSink?: import('./metric-readings-writer').MetricSink;
   /** 当前时间 (便于测试时间确定性) */
   now: Date;
   /** 哨兵注册中心 (哨兵间可互查) */
