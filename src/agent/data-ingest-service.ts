@@ -117,31 +117,36 @@ export function loadFinancialSchema(): FinancialSchema {
  * 按目标节点类型加载 JSON Schema 用于字段白名单校验（D470: 契约对齐）。
  *
  * 契约:
- *   输入: targetNodeType（mapping.targetNodeType，单词 PascalCase，如 Client/Person/Operational）
+ *   输入: targetNodeType（本卡 #1395 后为**本体轴限定名**，如 `resource/client` / `outcome/competitive`；
+ *         同时**兼容**遗留单词 PascalCase，如 Client/Person/Operational）
  *   输出: { requiredProps, optionalProps } 或 null
  *   降级: Financial 显式回退 loadFinancialSchema()（向后兼容 legacy 空白名单语义）；
  *         schema 文件缺失/解析失败 → log.warn + null，调用方 fail-open 并记录 warnings 信号。
  *
- * 搜索顺序: resource/{lower(targetNodeType)}.json → outcome/ 同名文件
- * （约定: 文件名全小写 ↔ targetNodeType 单词 PascalCase，当前 8 个映射类型均成立）。
+ * 搜索顺序（#1395）：① **限定名** ⇒ `extensions/ontology/{type}.json`（如 resource/client.json）
+ *                  ② 遗留单词 ⇒ `resource/{lower}.json` → `outcome/{lower}.json`
+ * 降级（不静默）: schema 缺失/解析失败 ⇒ **log.warn（列出候选路径）** + null + 调用方 fail-open 记 warnings。
  */
 export function loadNodeTypeSchema(targetNodeType: string): NodeTypeSchema | null {
   // D470: Financial 回退 financial.json（向后兼容 legacy 空白名单语义）
   if (targetNodeType === 'Financial') {
     return loadFinancialSchema();
   }
-  const fileName = `${targetNodeType.toLowerCase()}.json`;
-  for (const dir of ['resource', 'outcome']) {
-    const path = join(process.cwd(), 'extensions', 'ontology', dir, fileName);
+  // #1395：**限定名**（本体轴，如 `resource/client` / `outcome/financial`）⇒ 直接定位 `extensions/ontology/{type}.json`
+  const candidates = targetNodeType.includes('/')
+    ? [join(process.cwd(), 'extensions', 'ontology', `${targetNodeType}.json`)]
+    : ['resource', 'outcome'].map(dir => join(process.cwd(), 'extensions', 'ontology', dir, `${targetNodeType.toLowerCase()}.json`));
+  for (const path of candidates) {
     if (!existsSync(path)) continue;
     try {
       return JSON.parse(readFileSync(path, 'utf-8')) as NodeTypeSchema;
     } catch (err: unknown) {
-      log.warn({ err, targetNodeType, dir }, '节点类型 Schema 解析失败');
+      log.warn({ err, targetNodeType, path }, '节点类型 Schema 解析失败');
       return null;
     }
   }
-  log.warn({ targetNodeType }, '节点类型 Schema 不存在 — 跳过字段校验（fail-open）');
+  // 🔴 不静默（CTO 2026-10-08）：列出**候选路径**，便于判断"是改了限定名却没建 schema"还是"文件缺失"
+  log.warn({ targetNodeType, candidates }, '节点类型 Schema 不存在 — 跳过字段校验（fail-open，已列候选路径）');
   return null;
 }
 
@@ -205,7 +210,13 @@ export async function ingestRow(
   if (period !== undefined && period !== null) {
     const periodStr = String(period);
     const validFrom = deriveValidFrom(periodStr);
-    props.standardKey = `${graph}:${mapping.targetNodeType}:${periodStr}:${validFrom}`;
+    // #1395（保守解法）：写入**类型**对齐本体轴，但 **standardKey 的段保持不变** ——
+    //   由限定名末段派生遗留段（`resource/client` → `Client`；`outcome/financial` → `Financial`）
+    //   ⇒ 键字节不变 ⇒ **幂等/去重语义不变**（否则同一事实会产出新旧两键 ⇒ 重复行，违"一份事实一个节点"）。
+    const keyScope = mapping.targetNodeType.includes('/')
+      ? mapping.targetNodeType.split('/').pop()!.replace(/^[a-z]/, c => c.toUpperCase())
+      : mapping.targetNodeType;
+    props.standardKey = `${graph}:${keyScope}:${periodStr}:${validFrom}`;
   }
 
   try {

@@ -180,6 +180,72 @@
           "scope": "global"
         }
       ]
+    },
+    "Competitive": {
+      "targets": [
+        "outcome/competitive"
+      ],
+      "rule": "语义直配（Competitive）；**主目标 = targets[0]**（CTO 2026-10-08 裁 (a)：写入侧写主目标，多目标由读侧承担）",
+      "evidence": [
+        {
+          "kind": "writer",
+          "file": "extensions/ontology/field-mappings/competitive-intel.json:4",
+          "scope": "global"
+        }
+      ]
+    },
+    "Operational": {
+      "targets": [
+        "outcome/operational"
+      ],
+      "rule": "语义直配（Operational）；**主目标 = targets[0]**（CTO 2026-10-08 裁 (a)：写入侧写主目标，多目标由读侧承担）",
+      "evidence": [
+        {
+          "kind": "writer",
+          "file": "extensions/ontology/field-mappings/erp-operational.json:4",
+          "scope": "global"
+        }
+      ]
+    },
+    "External": {
+      "targets": [
+        "outcome/external"
+      ],
+      "rule": "语义直配（External）；**主目标 = targets[0]**（CTO 2026-10-08 裁 (a)：写入侧写主目标，多目标由读侧承担）",
+      "evidence": [
+        {
+          "kind": "writer",
+          "file": "extensions/ontology/field-mappings/external-intel.json:4",
+          "scope": "global"
+        }
+      ]
+    },
+    "Person": {
+      "targets": [
+        "resource/person"
+      ],
+      "rule": "语义直配（Person）；**主目标 = targets[0]**（CTO 2026-10-08 裁 (a)：写入侧写主目标，多目标由读侧承担）",
+      "evidence": [
+        {
+          "kind": "writer",
+          "file": "extensions/ontology/field-mappings/hr-standard.json:4",
+          "scope": "global"
+        }
+      ]
+    },
+    "Innovation": {
+      "targets": [
+        "outcome/innovation",
+        "activity/innovation"
+      ],
+      "rule": "语义直配（Innovation）；**主目标 = targets[0]**（CTO 2026-10-08 裁 (a)：写入侧写主目标，多目标由读侧承担）",
+      "evidence": [
+        {
+          "kind": "writer",
+          "file": "extensions/ontology/field-mappings/innovation-pipeline.json:4",
+          "scope": "global"
+        }
+      ]
     }
   },
   "inlineMigrationsTranscribed": [

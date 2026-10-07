@@ -77,7 +77,7 @@ describe('data-ingest-service — D470 目标 schema 校验', () => {
 
     expect(result.ok).toBe(true);
     expect(result.nodesCreated).toBe(1);
-    expect(result.nodeType).toBe('Client');
+    expect(result.nodeType).toBe('resource/client');   // #1395：写入侧对齐本体轴
     // red 点: 修复前 financial 白名单跳过全部业务字段 → revenue undefined → 失败
     expect(fake.nodes[0].props.revenue).toBe(1200);
     expect(fake.nodes[0].props.status).toBe('active');
@@ -95,14 +95,14 @@ describe('data-ingest-service — D470 目标 schema 校验', () => {
 
   it('用例2 crm 契约: 映射与 Client schema 双向对齐（静态）', async () => {
     const mapping = requireMapping('crm-standard');
-    expect(mapping.targetNodeType).toBe('Client');
+    expect(mapping.targetNodeType).toBe('resource/client');   // #1395
 
     const revenue = mapping.mappings.find((m) => m.prop === 'revenue');
     expect(revenue).toEqual({ externalField: '收入', prop: 'revenue', type: 'number' });
     const status = mapping.mappings.find((m) => m.prop === 'status');
     expect(status).toEqual({ externalField: '客户状态', prop: 'status', type: 'string' });
 
-    const schema = await loadNodeSchema('Client');
+    const schema = await loadNodeSchema('resource/client');   // #1395：限定名
     if (!schema) throw new Error('client.json 未加载 — process.cwd() 必须是仓库根');
     expect(schema.requiredProps).toContain('name');
     expect(schema.optionalProps).toHaveProperty('revenue', 'number');
@@ -111,7 +111,7 @@ describe('data-ingest-service — D470 目标 schema 校验', () => {
 
   it('用例3 hr 契约: per-person 字段写入 + 聚合指标跳过非静默 + PII 掩码既有行为', async () => {
     const mapping = requireMapping('hr-standard');
-    expect(mapping.targetNodeType).toBe('Person');
+    expect(mapping.targetNodeType).toBe('resource/person');   // #1395
     for (const [externalField, prop] of [
       ['姓名', 'name'],
       ['知识领域', 'skills'],
@@ -125,7 +125,7 @@ describe('data-ingest-service — D470 目标 schema 校验', () => {
       });
     }
 
-    const schema = await loadNodeSchema('Person');
+    const schema = await loadNodeSchema('resource/person');   // #1395：限定名
     if (!schema) throw new Error('person.json 未加载 — process.cwd() 必须是仓库根');
     const valid = new Set([...Object.keys(schema.optionalProps), ...schema.requiredProps]);
     for (const p of ['name', 'skills', 'role', 'teamId']) {
@@ -162,7 +162,7 @@ describe('data-ingest-service — D470 目标 schema 校验', () => {
 
     expect(result.ok).toBe(true);
     expect(result.nodesCreated).toBe(2);
-    expect(result.nodeType).toBe('Person');
+    expect(result.nodeType).toBe('resource/person');   // #1395
 
     const node1 = fake.nodes[0].props;
     expect(node1.name).toBe('测试员工');
@@ -232,7 +232,7 @@ describe('data-ingest-service — D470 目标 schema 校验', () => {
     expect(await loadNodeSchema('Operational')).not.toBeNull();
 
     const mapping = requireMapping('erp-standard');
-    expect(mapping.targetNodeType).toBe('Financial');
+    expect(mapping.targetNodeType).toBe('outcome/financial');   // #1395（主目标 = 字典 targets[0]）
     const fake = fakeStore();
     const row = {
       营业收入: '1200',
@@ -255,7 +255,7 @@ describe('data-ingest-service — D470 目标 schema 校验', () => {
 
     expect(result.ok).toBe(true);
     expect(result.nodesCreated).toBe(1);
-    expect(result.nodeType).toBe('Financial');
+    expect(result.nodeType).toBe('outcome/financial');   // #1395：写入类型对齐本体轴（standardKey 段仍为 Financial）
     expect(result.errors).toEqual([]);
     expect(result.warnings).toEqual([]);
     const props = fake.nodes[0].props;

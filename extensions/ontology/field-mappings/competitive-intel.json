@@ -1,7 +1,7 @@
 {
   "name": "competitive-intel",
   "label": "竞争情报数据",
-  "targetNodeType": "Competitive",
+  "targetNodeType": "outcome/competitive",
   "mappings": [
     { "externalField": "市场份额排名", "prop": "market_share_rank", "type": "number" },
     { "externalField": "份额变动", "prop": "market_share_delta", "type": "number" },
