@@ -201,6 +201,11 @@ _write_summary_block() { # $1=path $2=verdict；rc=写入结果（0=成功）
     else
       printf -- '- CI-REGISTRY: 密封面=%s 登记=%s 未登记=%s 基线=%s\n' "$SUM_REG_SEALED" "$SUM_REG_LISTED" "$SUM_REG_UNREG" "$SUM_REG_BASE"
     fi
+    if [ -z "$SUM_FIX" ]; then
+      printf -- '- FIXTURE-POWER: not run\n'
+    else
+      printf -- '- FIXTURE-POWER: %s\n' "$SUM_FIX"
+    fi
     printf -- '- CI-RED-CHECK: %s\n' "${SUM_CIRED:-SKIPPED}"
     printf -- '- GATE-INTEGRITY: %s\n' "$2"
   } >> "$1" 2>/dev/null   # swallow-ok: 返回值即判据（调用方按 rc 走显式 degrade），非静默吞错
@@ -237,6 +242,7 @@ usage() {
 用法: bash scripts/control-tower/check-gate-integrity.sh [--patterns-only|--registry-only] [--ci-reds <json>] [--base-ref <ref>] [--verbose]
   --patterns-only   仅 A 模式哨兵（grep 方言语法验证）
   --registry-only   仅 B CI 登记 gate
+  --fixture-power-only 仅面 3 夹具判别力（grep -qv 逐行取反）
   --ci-reds <json>  追加 C 既有红基线对账（GitHub check-runs JSON）
   --base-ref <ref>  C 段对账对象（**取 base，不取当前提交**；如 PR base.sha / origin/main）
                     缺省时 C 段显式 SKIPPED（不判定 ≠ 通过）；不可解析 → exit 2
@@ -897,13 +903,121 @@ PYEOF
   SUM_CIRED="失败检查 ${n_fail} 项；基线命中 ${matched} 项；处置逾期 ${n_due} 项"
 }
 
+# ═══ 面 3: 夹具判别力（D1226 / 卡 #1295）BEGIN ══════════════════════════════════
+# 缺陷类: 代码行里的 `grep -qv`（变体 -qvE/-qEv/-vq），其输入为
+#   ① 管道/stdin（`cmd | grep -qv pat`、`<<< "$V"`）或 ② 变量操作数（`grep -qv pat "$FILE"`）
+#   ⇒ **逐行取反 + 多行输入 = 任一行不匹配即 rc=0** ⇒ 几乎恒真（纸老虎夹具；#1293 的 18.2 先例）。
+# 判据（形态 2 = 硬）: ① / ② ⇒ **违规**；字面量文件操作数（单文件、语义明确）⇒ **合规**；
+#   形态 3（对变异体自身输出 grep：行内含 MUT/CLONE/COPY）⇒ **仅告警清单，不阻断**
+#   （与合法正向断言同形，硬判必误报）。
+# 豁免: 同一基线文件内的 FIXTURE-POWER-BASELINE 段，每条 `<路径后缀> | owner= | expires= | reason=`；
+#   后缀匹配（兼容沙箱路径）；expires 到期 ⇒ 违红（防拔牙）。
+# 降级: 测试根不存在 / 0 个夹具文件 / grep 执行失败 ⇒ exit 2（fail-closed，绝不与"零命中"混同）。
+SUM_FIX=""
+
+_fixture_whitelist_status() { # $1=键（`<路径>:<行号>`）→ 0=命中未过期｜1=未命中｜2=命中但已过期
+  # 豁免白名单独立成文件（见 fixture-power-baseline.txt 头部：并入 gate-integrity-baseline.txt 会被
+  #   REGISTRY-BASELINE 解析器误当隔离条目 ⇒ 3 处伪违规，实测）。
+  local key="$1" f="${SYNO_FIXTURE_POWER_BASELINE:-$ROOT/scripts/control-tower/fixture-power-baseline.txt}"
+  [ -f "$f" ] || return 1
+  local today seen_valid=0 seen_expired=0 m expires
+  today="$(date -u +%Y-%m-%d)"
+  while IFS= read -r _l; do
+    case "$_l" in ''|'#'*) continue ;; esac
+    m="${_l%%|*}"
+    while case "$m" in *' ') m="${m% }" ;; *) false ;; esac; do :; done
+    case "$key" in
+      *"$m") ;;
+      *) continue ;;
+    esac
+    expires="$(printf '%s' "$_l" | sed -n 's/.*expires=\([0-9][0-9-]*\).*/\1/p')"
+    if [ -n "$expires" ] && [ "$expires" \< "$today" ]; then seen_expired=1; else seen_valid=1; fi
+  done < "$f"
+  [ "$seen_valid" = 1 ] && return 0
+  [ "$seen_expired" = 1 ] && return 2
+  return 1
+}
+
+run_fixture_power() {
+  local tests_dir="${SYNO_TESTS_DIR:-$ROOT/tests}"
+  [ -d "$tests_dir" ] || degrade "FIXTURE_POWER_DIR" "fixture" "测试根不存在: ${tests_dir}"
+  [ -r "$tests_dir" ] || degrade "FIXTURE_POWER_DIR" "fixture" "测试根不可读: ${tests_dir}"
+  local files=() n_files=0
+  while IFS= read -r _f; do [ -n "$_f" ] && files+=("$_f"); done < <(find "$tests_dir" -type f \
+      \( -name '*.test.sh' -o -name '*.test.py' -o -name '*.test.ts' \) 2>/dev/null | LC_ALL=C sort)
+  n_files="${#files[@]}"
+  [ "$n_files" -gt 0 ] || degrade "FIXTURE_POWER_EMPTY" "fixture" "测试根内 0 个夹具文件（*.test.sh|*.test.py|*.test.ts）: ${tests_dir}"
+
+  local gre='grep[[:space:]]+-[A-Za-z]*q[A-Za-z]*v|grep[[:space:]]+-[A-Za-z]*v[A-Za-z]*q'
+  local hits="${TMPDIR:-/tmp}/gate-fixture-power.$$"
+  grep -nHE -e "$gre" ${files[@]+"${files[@]}"} > "$hits" 2>/dev/null
+  local grc=$?
+  case "$grc" in
+    0) : ;;
+    1) : > "$hits" ;;
+    *) rm -f "$hits"; degrade "FIXTURE_POWER_GREP" "fixture" "grep 执行失败（rc=${grc}）—— 判自身失败，绝不当作零命中" ;;
+  esac
+
+  local n_viol=0 n_warn=0 n_wl=0 n_ok=0
+  while IFS= read -r _ln; do
+    [ -n "$_ln" ] || continue
+    local _f _num _text _head _tail _rel _key _st
+    _f="${_ln%%:*}"
+    _num="$(printf '%s' "${_ln#*:}" | cut -d: -f1)"
+    _text="${_ln#*:}"; _text="${_text#*:}"
+    _rel="${_f#"$ROOT"/}"
+    case "$(printf '%s' "$_text" | sed 's/^[[:space:]]*//')" in
+      '#'*) vprint "  面3 跳过注释行 ${_rel}:${_num}"; continue ;;
+    esac
+    _key="${_rel}:${_num}"
+    # 形态 3: 变异体/克隆体样本相关 ⇒ 仅告警
+    case "$_text" in
+      *MUT*|*CLONE*|*COPY*)
+        info "  FIXTURE-POWER-WARN: ${_key}（形态3：疑似对变异体输出取反 —— 与合法正向断言同形，仅告警不阻断）"
+        n_warn=$((n_warn + 1)); continue ;;
+    esac
+    # 形态 0（样本生成器）: `grep` 出现在**单引号字符串内**（如 `printf '…#| grep -qv …' > 样本`）
+    #   ⇒ 该 grep 是**被写入样本的文本**，不是本行在执行取反 ⇒ 不计违规（否则夹具自指被误伤）。
+    #   判法: grep 之前的单引号个数为奇数 ⇒ 处于单引号串内（本仓夹具用单引号包裹样本，足够精确）。
+    _pre="${_text%%grep*}"
+    _q="${_pre//[!\']/}"
+    if [ "$(( ${#_q} % 2 ))" = 1 ]; then
+      vprint "  面3 跳过单引号串内的 grep（样本生成器）: ${_rel}:${_num}"
+      n_ok=$((n_ok + 1)); continue
+    fi
+    # 形态 2 判定: grep 之前有管道（stdin） 或 grep 之后操作数含变量/此处字符串
+    _head="${_text%%grep*}"; _tail="${_text#*grep}"
+    local form2=0
+    case "$_head" in *'|'*) form2=1 ;; esac
+    case "$_tail" in *'"$'*|*'${'*|*'<<<'*) form2=1 ;; esac
+    if [ "$form2" = 1 ]; then
+      _fixture_whitelist_status "$_key"; _st=$?
+      case "$_st" in
+        0) info "  FIXTURE-POWER-WHITELIST: ${_key}（显式豁免，不判违规）"; n_wl=$((n_wl + 1)) ;;
+        2) violation "FIXTURE-POWER: ${_key} 豁免条已过期（expires 到期 ⇒ 须复核或删条目）｜原文: $(printf '%s' "$_text" | sed 's/^[[:space:]]*//')"
+           n_viol=$((n_viol + 1)) ;;
+        *) violation "FIXTURE-POWER: ${_key} 逐行取反 + stdin/变量输入（几乎恒真，判别力为假）｜原文: $(printf '%s' "$_text" | sed 's/^[[:space:]]*//')"
+           n_viol=$((n_viol + 1)) ;;
+      esac
+      continue
+    fi
+    n_ok=$((n_ok + 1))
+    vprint "  面3 合规（字面量文件操作数）: ${_key}"
+  done < "$hits"
+  rm -f "$hits"
+  info "FIXTURE-POWER: 扫描 ${n_files} 个夹具（*.test.sh|py|ts）；违规 ${n_viol}；豁免 ${n_wl}；告警 ${n_warn}；字面量合规 ${n_ok}"
+  SUM_FIX="扫描 ${n_files}；违规 ${n_viol}；豁免 ${n_wl}；告警 ${n_warn}"
+}
+# ═══ 面 3 END ═════════════════════════════════════════════════════════════════
+
 # ═══ 主流程 ═══════════════════════════════════════════════════════════════════
 
-DO_PATTERNS=0; DO_REGISTRY=0; CI_REDS=""; BASE_REF=""; VERBOSE=0
+DO_PATTERNS=0; DO_REGISTRY=0; DO_FIXTURE=0; CI_REDS=""; BASE_REF=""; VERBOSE=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --patterns-only) DO_PATTERNS=1 ;;
     --registry-only) DO_REGISTRY=1 ;;
+    --fixture-power-only) DO_FIXTURE=1 ;;
     --ci-reds)
       CI_REDS="${2:-}"
       [ -n "$CI_REDS" ] || { usage >&2; degrade "USAGE_ARGS" "args" "--ci-reds 缺少 <json> 参数"; }
@@ -924,12 +1038,13 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
-if [ "$DO_PATTERNS" = 0 ] && [ "$DO_REGISTRY" = 0 ]; then DO_PATTERNS=1; DO_REGISTRY=1; fi
+if [ "$DO_PATTERNS" = 0 ] && [ "$DO_REGISTRY" = 0 ] && [ "$DO_FIXTURE" = 0 ]; then DO_PATTERNS=1; DO_REGISTRY=1; DO_FIXTURE=1; fi
 
-info "GATE-INTEGRITY-CHECK: patterns=${DO_PATTERNS} registry=${DO_REGISTRY} ci_reds=$([ -n "$CI_REDS" ] && echo 1 || echo 0) base_ref=${BASE_REF:-<未提供>} root=${ROOT}"
+info "GATE-INTEGRITY-CHECK: patterns=${DO_PATTERNS} registry=${DO_REGISTRY} fixture=${DO_FIXTURE} ci_reds=$([ -n "$CI_REDS" ] && echo 1 || echo 0) base_ref=${BASE_REF:-<未提供>} root=${ROOT}"
 
 [ "$DO_PATTERNS" = 1 ] && run_patterns
 [ "$DO_REGISTRY" = 1 ] && run_registry
+[ "$DO_FIXTURE" = 1 ] && run_fixture_power
 if [ -n "$CI_REDS" ]; then
   run_ci_reds "$CI_REDS"
 else

@@ -22,6 +22,21 @@
 - **夹具**: `tests/control-tower/sealed-tests.test.sh` +6（越线红 / **纯继承反例不得红** / 载体缺失粘贴行 / 载体超期升级红 / 未给 base 显式打印 / 变异体：base 侧测量退化必被抓）⇒ 19 → **25 PASS / 0 FAIL**。
 - **作者**: line-b-ci（承接 line E 的 `/tmp/d1227-plan.md` 侦察结论）
 
+## V5.2.10 (2026-10-07) — 面 3 夹具判别力：禁 `grep -qv` 逐行取反（D1226 / 卡 #1295）（PATCH）
+
+- **新增面 3（`check-gate-integrity.sh`）**: 扫描 `tests/**/*.test.sh|py|ts` 的代码行 `grep -qv`（含 `-qvE/-qEv/-vq` 变体）
+  - 输入为 **管道/stdin/变量** ⇒ **违规**（逐行取反 + 多行 ⇒ 任一行不匹配即 rc=0 ⇒ 判别力为假，纸老虎夹具）
+  - **字面量文件操作数** ⇒ 合规（单文件语义明确）
+  - **形态 3**（对变异体输出取反：行内含 MUT/CLONE/COPY）⇒ **仅告警清单，不阻断**（与合法正向断言同形，硬判必误报）
+- **豁免白名单独立成文件** `scripts/control-tower/fixture-power-baseline.txt`（格式同 PATTERN-BASELINE：`<路径后缀> | owner= | expires= | reason=`）
+  - 实测教训: 并入 `gate-integrity-baseline.txt` 会被 **REGISTRY-BASELINE 解析器**误当隔离台账条目 ⇒ 3 处伪违规
+  - `expires` 到期 ⇒ 硬红（防拔牙）；覆写缝 `SYNO_FIXTURE_POWER_BASELINE`（沙箱用）
+- **旗标**: `--fixture-power-only`（仅面 3）；默认三面同跑；`GATE-INTEGRITY-CHECK` 行增 `fixture=` 字段；step summary 增 `- FIXTURE-POWER:`
+- **降级（fail-closed）**: 测试根不存在/不可读、0 个夹具文件、grep 执行失败 ⇒ **exit 2**（绝不与"零命中"混同）
+- **夹具**: `tests/control-tower/check-gate-integrity.test.sh` 新增 M10 五例（红/绿/白名单/白名单过期/**变异体**：判据退化后 red 样本必须不再被抓）⇒ 64 → **70 PASS / 0 FAIL**（含形态 0 自指防线）
+- **作者**: line-b-ci（承接 line E 的 /tmp/d1226-plan.md 侦察结论；插桩用行索引 + BEGIN/END 标记）
+
+
 ## V5.2.9 (2026-10-07) — D1219 旁路第三态清场 + 检查自身失败态（六方案 §1 执行体）（PATCH）
 
 - **① 旁路第三态清场 3 处**（卡 #1225；立法条文见 `docs/synova/coordination/版本管理规范-控制塔.md` §七）：
