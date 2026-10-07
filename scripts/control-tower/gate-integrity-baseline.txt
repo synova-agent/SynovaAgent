@@ -3,7 +3,30 @@
 # 判定逻辑见 scripts/control-tower/check-gate-integrity.sh 头注释；两段各由一模式读取。
 #
 # [R] REGISTRY-BASELINE 段 —— B 模式（CI 密封清单登记 gate）读:
-#     违规面 = CI 密封面 = tests/ 下 *.test.sh / *.test.py（只有被显式登记才会在 CI 执行）
+#     🔴 D-F/②（卡 #1227，2026-10-07）语义升级：**登记制 → 发现制**。本段含义随之变更如下（旧义见本文件 git 历史）:
+#       旧义 = "未在 ci.yml 显式登记的密封面测试清单"（新增未登记 ⇒ 违规）
+#       新义 = **隔离台账（quarantine）** = "被显式排除在发现面执行集之外"的测试清单
+#       · 发现面（FACES）与执行集（= 面扫描 − 本段）由
+#         `scripts/control-tower/sealed-tests.sh` 唯一提供（ci.yml 两个 job 与 B 段都向它取数）
+#       · 面内**新增测试零登记即自动纳入执行**（旧义下必须逐条登记进 ci.yml）
+#       · 要排除某个测试 ⇒ 只能写进本段（留痕 + 受下方两道棘轮约束）
+#     违规判据（B 段实测）:
+#       (a) 全仓密封面测试 ∉（执行集 ∪ ci.yml 字面登记 ∪ 本段）      → 违规（未纳入发现面也未登记）
+#       (b) 本段条目指向不存在的文件                                → 违规（台账过期，须删条目）
+#       (c) 面扫描数 < FACE-TOTAL（下方下界）                        → 违规（疑似删测试：删测试须同批显式下调）
+#       (d) 本段条目数 > QUARANTINE-TOTAL（下方上界）                → 违规（新增隔离须同批显式上调 = 留痕）
+#     两道棘轮（**注释行，非数据行**；sealed-tests.sh 与 B 段都读它）:
+#         `# FACE-TOTAL=<n>`        发现面扫描数**下界**（只允许显式下调，不许静默缩面）
+#         `# QUARANTINE-TOTAL=<n>`  隔离条目数**上界**（只允许显式上调，不许静默加隔离）
+#     生成/核对命令（D-F/② 起）:
+#       bash scripts/control-tower/sealed-tests.sh --scan       | wc -l   # → FACE-TOTAL 实况
+#       bash scripts/control-tower/sealed-tests.sh --quarantine | wc -l   # → QUARANTINE-TOTAL 实况
+#       bash scripts/control-tower/sealed-tests.sh --list       | wc -l   # → ci.yml 两 job 实际执行数
+#     ⚠️ 行尾不得带 ` | owner=…` 之类后缀——本段是**路径清单**，解析器整行取路径。
+# FACE-TOTAL=141   # 贴边：== 当前 --scan 数（任何删除即红，零静默余量）；新增面内测试 ⇒ 可高于此值
+# QUARANTINE-TOTAL=78
+#     （旧义·D-F/② 之前，仅存历史对照）
+#     违规面 = CI 密封面 = tests/ 下 *.test.sh / *.test.py（旧义: 只有被显式登记才会在 CI 执行）
 #     登记判定 = 路径出现在 .github/workflows/ci.yml **全文**（密封 for t in 区块或任意 job 的 run: 步骤）
 #     段内条目 = 截至生成时刻的"未登记"全清单；新增未登记 → 违规；条目已登记/文件已删 → 违规（基线过期）
 #     生成命令（base = origin/fix/d938-alloc-task-id 416b4667）:
@@ -20,7 +43,9 @@
 #     依据：CTO 2026-09-24 裁定——既有红允许存在，但必须显式登记为基线豁免；既有红不许无声存在。
 #
 # 截至: 2026-09-24T10:18:45Z
-# [R] 条数: 77（2026-10-05 D1149 死件退役: 随 scripts/control-tower/pre-audit-summary.sh 一并删除其夹具
+# [R] 条数: 78（D-F/② 2026-10-07: +1 = tests/control-tower/precommit-groups-injection.test.sh ——
+#       它已被 gate-integrity job 的抽检 step 执行（M9 设计），纳入发现面会让同判据双跑 ⇒ 显式隔离；
+#       QUARANTINE-TOTAL 同批 77→78。沿革: 2026-10-05 D1149 死件退役，随 scripts/control-tower/pre-audit-summary.sh 一并删除其夹具
 #       tests/control-tower/pre-audit-summary.test.sh → 摘除 1 条 [R] 条目。按棘轮语义「文件已删=基线过期，须删条目」
 #       清理，非判据放宽。沿革: 78 = 79 未登记 − 1（2026-09-25 删过期条目 tests/control-tower/install-dsh-preset.test.sh，
 #       origin/main:.github/workflows/ci.yml:272 已登记它））
@@ -38,7 +63,7 @@
 #         awk 'BEGIN{s="R"} /^[[:space:]]*#/{l=$0; sub(/^[[:space:]]*#[[:space:]]*/,"",l); if(l ~ /^═+[[:space:]]*PATTERN-BASELINE/){s="P";next} if(l ~ /^═+[[:space:]]*REGISTRY-BASELINE/){s="R";next} next} /^[[:space:]]*$/{next} s=="R"{print}' <本文件> | wc -l   # → 78
 #         awk 'BEGIN{s="R"} /^[[:space:]]*#/{l=$0; sub(/^[[:space:]]*#[[:space:]]*/,"",l); if(l ~ /^═+[[:space:]]*PATTERN-BASELINE/){s="P";next} if(l ~ /^═+[[:space:]]*REGISTRY-BASELINE/){s="R";next} next} /^[[:space:]]*$/{next} s=="P"{print}' <本文件> | wc -l   # → 1
 #
-# ═══ REGISTRY-BASELINE（未登记测试的存量棘轮；B 模式读）═══
+# ═══ REGISTRY-BASELINE（隔离台账 quarantine；D-F/② 起 = 发现面执行集的显式排除项；B 模式读）═══
 tests/control-tower/attach.test.sh
 tests/control-tower/backup-db.test.sh
 tests/control-tower/ban-stash.test.sh
@@ -110,6 +135,7 @@ tests/control-tower/weekly-selfcheck.test.sh
 tests/control-tower/worktree-manager.test.py
 tests/control-tower/worktree-manager.test.sh
 tests/control-tower/writeset-c6-gatekeeper.test.sh
+tests/control-tower/precommit-groups-injection.test.sh
 tests/desktop/verify-package-signature.test.sh
 tests/doc-system/doc-truth-probe.test.sh
 tests/doc-system/system-registry.test.sh

@@ -45,7 +45,13 @@ def parse_coords(body: str) -> dict:
 
 
 def gh_graphql(query: str, **vars_):
-    """调用 gh api graphql。失败抛 RuntimeError（调用方 fail-closed）。"""
+    """调用 gh api graphql。失败抛 RuntimeError（调用方 fail-closed）。
+
+    D1207: 前置检查 gh 可用 + 认证态（GH_TOKEN/GITHUB_TOKEN）——否则错误信息会指向
+    GraphQL 语法，实际根因是「未认证」，排障成本极高（2026-10-07 全仓红事故即此）。
+    """
+    if not (os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")):
+        raise RuntimeError("gh 认证缺失: 需 GH_TOKEN 或 GITHUB_TOKEN（仅设 PROJECT_TOKEN 不足以让 gh 认证）")
     args = ["gh", "api", "graphql", "-f", f"query={query}"]
     for k, v in vars_.items():
         args += (["-F", f"{k}={v}"] if isinstance(v, int) else ["-f", f"{k}={v}"])
