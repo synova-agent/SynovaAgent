@@ -71,7 +71,7 @@ describe('business-model-canvas', () => {
   it('价值主张缺失收入 → 检测价值-收入矛盾', () => {
     const store = makeStore(
       [
-        { id: 'g1', type: 'Goal', props: { goalType: 'mission', description: '为客户提供极致体验' } },
+        { id: 'g1', type: 'GOAL', props: { goalType: 'mission', description: '为客户提供极致体验' } },
         { id: 'c1', type: 'Client', props: { name: '客户A', entityType: 'external' } },
       ],
       [
@@ -112,7 +112,7 @@ describe('business-model-canvas', () => {
       [
         { id: 'c1', type: 'Client', props: { name: '企业客户', entityType: 'external' } },
         { id: 'c2', type: 'Client', props: { name: '个人用户', entityType: 'external' } },
-        { id: 'g1', type: 'Goal', props: { goalType: 'mission', description: '让企业协作更高效' } },
+        { id: 'g1', type: 'GOAL', props: { goalType: 'mission', description: '让企业协作更高效' } },
         { id: 'f1', type: 'Financial', props: { financialType: 'revenue', amount: 500000, currency: 'CNY', name: '订阅收入' } },
         { id: 'f2', type: 'Financial', props: { financialType: 'revenue', amount: 100000, currency: 'CNY', name: '服务收入' } },
         { id: 'f3', type: 'Financial', props: { financialType: 'cost', name: '研发成本' } },

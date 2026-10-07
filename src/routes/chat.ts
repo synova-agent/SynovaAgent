@@ -49,7 +49,7 @@ router.get('/api/user-state', async (_req: Request, res: Response) => {
     const { SqliteGraphStore } = await import('../adapters/sqlite-graph-store');
     const db = await engineDb();
     const store = new SqliteGraphStore(db) as unknown as { queryNodes(type: string, filters?: Record<string,unknown>, graph?: string): Array<{id:string, props:Record<string,unknown>}> };
-    const summaries = store.queryNodes('Goal', { goalType: 'mission' }, 'default')
+    const summaries = store.queryNodes('GOAL', { goalType: 'mission' }, 'default')
       .filter(n => (n.props as { name?: string })?.name?.startsWith('Phase0_Interview'));
     res.json({
       ok: true,

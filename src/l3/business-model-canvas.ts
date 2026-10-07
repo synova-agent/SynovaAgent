@@ -108,7 +108,7 @@ export function computeCanvas(store: GraphStore, orgId: string): BusinessModelCa
   const customerSegmentsHealth = 1 - concentrationRisk;
 
   // ── 2. 价值主张 ──
-  const goalNodes = store.queryNodes('Goal', {}, graph);
+  const goalNodes = store.queryNodes('GOAL', {}, graph);
   const valueProps = goalNodes.map(n => ({
     id: n.id,
     description: (n.props as Record<string, unknown>)?.description as string || '',

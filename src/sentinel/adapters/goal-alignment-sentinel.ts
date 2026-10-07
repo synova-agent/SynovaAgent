@@ -37,11 +37,16 @@ export const goalalignmentSentinel: Sentinel = {
             const p = typeof r.props === 'string' ? JSON.parse(r.props as string) : (r.props || {});
             goals.push({ id: r.id as string, name: (p.name || r.id) as string, level: (p.level || p.scope || 'unknown') as string, parentId: p.parentGoalId as string | undefined });
           }
-          const teamRows = db.prepare("SELECT id, props FROM graph_nodes WHERE type = 'TEAM' AND props IS NOT NULL").all();
+          const teamRows = db.prepare("SELECT id, props FROM graph_nodes WHERE type = 'Team' AND props IS NOT NULL").all();
           for (const r of teamRows) { const p = typeof r.props === 'string' ? JSON.parse(r.props as string) : (r.props || {}); teams_list.push({ id: r.id as string, name: (p.name || r.id) as string }); }
         } catch (err) { log.warn({ err }, '目标/团队数据读取失败 — degraded'); }
       }
-      if (goals.length === 0 && teams_list.length === 0) return { sentinelId: config.id, ok: true, findings: [], durationMs: Date.now() - startTime, checkedAt, degraded: true };
+      if (goals.length === 0 && teams_list.length === 0) {
+        // #1379 V3：**能力在、数据读不到**（与"能力缺席"不同类）⇒ 显式 warn，不静默
+        log.warn({ sentinelId: config.id, degraded: true, reason: 'empty-read', types: ['GOAL', 'Team'] },
+          '读路径可用但 0 行 ⇒ 降级（静默空读会伪装成"无异常"）');
+        return { sentinelId: config.id, ok: true, findings: [], durationMs: Date.now() - startTime, checkedAt, degraded: true };
+      }
       // 检查：团队级目标是否有父目标（对齐到组织目标）
       const orgGoals = goals.filter(g => g.level === 'org' || g.level === 'organization');
       const teamGoals = goals.filter(g => g.level === 'team');

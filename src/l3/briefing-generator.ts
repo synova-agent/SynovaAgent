@@ -59,7 +59,7 @@ export class BriefingGenerator {
 
     try {
       // Goals
-      const goals = this.graphStore.queryNodes('Goal', { status: 'active' }, orgId);
+      const goals = this.graphStore.queryNodes('GOAL', { status: 'active' }, orgId);
       for (const g of goals) {
         const progress = Number(g.props?.progress || 0) * 100;
         briefing.goals.push({
