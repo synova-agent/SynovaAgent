@@ -21,11 +21,12 @@
 - scripts/control-tower/check-ownership.py
 - tests/control-tower/check-ownership.test.sh
 - .claude/task-briefs/2026-10-07-D1195-no-domain-cleanup.md
+- scripts/control-tower/scan-fullwidth-vars.sh
+- tests/control-tower/scan-fullwidth-vars.test.sh
 - task-state/D1195.json
 
 不做什么：
 - 不改 scripts/control-tower/check-pr-budget.sh（其域判定读数据源，数据单域后自然失效）
-- 不改 scripts/control-tower/scan-fullwidth-vars.sh（其 --domain 过滤同上）
 - 不改 scripts/audit/self-diagnosis.py
 
 ## Q3:
