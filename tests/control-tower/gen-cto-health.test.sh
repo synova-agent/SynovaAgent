@@ -143,6 +143,30 @@ for _t in D901 D902; do
 done
 echo ""
 
+echo "── 7. 🔴 4 位编号: impl 提交必须被识别（D1215/卡 #1268 同族，4 处正则同修）──"
+# 旧码 4 处用 `D(\d{3})`：三位正则把 D1215 读成 121，且 commit 主体的 `(D1215)` 因要求
+# 紧跟 `)` 而**完全匹配不上** ⇒ 该任务的 impl 提交被**静默漏掉** ⇒ 仪表盘状态少报
+# （实测 old: claimed ／ new: impl_done）。本夹具锚定「4 位号必须被解析」。
+SB2="$TMPD/sandbox4"
+mkdir -p "$SB2/scripts/control-tower" "$SB2/task-state" "$SB2/docs/synova"
+cp "$GEN" "$SB2/scripts/control-tower/" 2>/dev/null || true
+printf '{"task_id":"D1215","title":"四位数任务","spec":null,"status":"claimed"}\n' > "$SB2/task-state/D1215.json"
+( cd "$SB2" && git init -q . && git add -A \
+  && git -c user.email=t@t -c user.name=t commit -qm "feat(D1215): 四位数任务提交" ) >/dev/null 2>&1 || true
+SB2_OUT="$( ( cd "$SB2" && python3 scripts/control-tower/gen-cto-health.py --dry-run 2>&1 ) )" || true
+if printf '%s' "$SB2_OUT" | grep -qE '\| D1215 \| impl_done \|'; then
+  pass "4 位号 D1215 的 impl 提交被识别（status=impl_done；三位正则下实测为 claimed）"
+else
+  fail "4 位号 D1215 的 impl 提交未被识别（三位正则回归？）"
+  printf '%s\n' "$SB2_OUT" | grep -E '\| D121' | sed 's/^/      | /' >&2
+fi
+if grep -qE 'D\(\\d\{3,\}\)' "$GEN"; then
+  pass "4 处 D# 正则均为 3+ 位（D(\\d{3,})）"
+else
+  fail "仍存在三位 D# 正则 D(\\d{3})（4 位号会被截断/漏匹配）"
+fi
+echo ""
+
 echo "═══════════════════════════════════════════════════════════"
 echo "  结果: PASS=$PASS FAIL=$FAIL"
 echo "═══════════════════════════════════════════════════════════"
