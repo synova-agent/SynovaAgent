@@ -1,0 +1,32 @@
+{
+  "task_id": "D947",
+  "title": "Win 首模块：src/middleware/** 默认安全姿态（默认拒绝 / 真实权限过滤 / 工作区检查接线 / 鉴权中间件顺序）",
+  "status": "claimed",
+  "risk": "high",
+  "domain": "win",
+  "owner": "win-codex-cto",
+  "executor": "synova-squad-lead（队长，不下场写码）+ ≤2 编码 + 1 独立自验",
+  "branch": "feat/d947-middleware-default-posture",
+  "worktree": ".synova-wt-d947-middleware",
+  "base": "origin/main f25e61eb",
+  "milestone": null,
+  "depends_on": [],
+  "blocked": "① 判据 3 目标符号待 CTO 裁定（server.ts:248 canAccessWorkspace / :249 canModifyWorkspace / 两者都修）② 六项 plan 待 CTO 复核放行 ③ push 无凭据（SSH 无密钥、HTTPS 无 PAT）→ 卡暂只能本地留存，无法按号段纪律「取到即推 origin」",
+  "target": "2026-W40",
+  "spec": "docs/synova/coordination/派单-W0与首模块-Win侧-20260923.md（派单即规格；未触发独立 dev doc：单域 + ≤12 文件 + 无跨层）",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "write_set": [
+    "src/middleware/**",
+    "src/routes/**",
+    "src/server.ts",
+    "tests/middleware/**",
+    "tests/routes/**",
+    "task-state/D947.json",
+    ".claude/task-briefs/2026-09-24-D947-*.md"
+  ],
+  "note": "号段 D947–D951 由 Mac-CTO 2026-09-24 发放（D945 已占、D946 作变更标记，故避开）。取号前按固化 I §十-2 比对 task-state/远端与本地分支/worktree 名，三项均无冲突；写集 6 文件经 check-ownership.py 实测全部 owner=win。派单 W0 四条：# W0-1 达成（HEAD=1a1cccc8 与 origin/main 一致、技能 SYNC-OK 19 个）；W0-2 13 组通过（但实测发现 python3 假别名致部分子项空转，已持久修复后重跑，多暴露 1 个硬阻断）；W0-3 原判据读 ~/.dsh/.agent-presets/**（上游已作废）→ CTO 已裁定换为 bundle/plugin 查询 + 新会话可见；W0-4 主树在 main。模块性质：非 DSH 借鉴项（src/middleware 零 DSH 引用；getPermissionFilter/canAccessWorkspace/rbacMiddleware/WorkspaceRole/DEFAULT_ROLE 在 DSH 0.1.7-rc.1 上游 0 命中；唯一外部参考为 OpenClaw sanitize-check）。",
+  "updated_at": "2026-09-24",
+  "updated_by": "win-codex-cto"
+}
