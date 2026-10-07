@@ -18,6 +18,7 @@ import type { Evidence } from '../evidence/types';
 import { getSentinelRegistry } from './registry';
 import { getBaselineStore } from './baseline-store';
 import { createMetricSink, type MetricSink } from './metric-readings-writer';
+import { getUnscopedQueryCount, resetUnscopedQueryCount } from './org-scope';
 import { listActiveOrgs, executeForActiveOrgs, findOrgsWithDataButNotRegistered } from './org-registry';
 import { HEALTH_REGISTRY_RATIO_WARNING, HEALTH_FAILURES_WARNING, HEALTH_FAILURES_CRITICAL, HEALTH_UPTIME_IDLE_MS, HEALTH_STALENESS_MULTIPLIER, evaluateSentinelHealth,
   estimateCronIntervalMs,
@@ -1411,6 +1412,15 @@ export class SentinelRunner {
         await this.executeSentinel(sentinel);
         // #1371: org 维度扇出 —— **per-org 写轮**（只写测量值；无 active org ⇒ 不跑不写，fail-closed）
         await this.runOrgWriteRound(sentinel.config.id);
+        // #1374: 本轮若有【未隔离读】（无 org 维度）⇒ warn 可见 + 复位计数（读数由 scopedQuery 收口统计）
+        const unscoped = getUnscopedQueryCount();
+        if (unscoped > 0) {
+          log.warn(
+            { sentinelId: sentinel.config.id, unscopedQueries: unscoped },
+            '[runner] 本轮存在未隔离读（无 orgId）—— 见 #1374：该哨兵/读路径未接租户收口',
+          );
+        }
+        resetUnscopedQueryCount();
       },
     );
     this.cronJobIds.set(sentinel.config.id, cronJobId);

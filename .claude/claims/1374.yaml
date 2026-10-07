@@ -1,0 +1,18 @@
+# .claude/claims/1374.yaml — #1374（哨兵读路径租户隔离·数值级）写集声明（D708 的 S0 源）
+#
+# 依据：CTO 2026-10-08 放行（方案 A 收口 + 三条硬约束 + 出口条款）。
+# ⚠️ 批文留痕：CTO 曾批跨块写集 `src/l4/**`；**实测发现过滤能力现成**（`sqlite-graph-store.ts:193-204`
+#    的 `queryNodes(type, filters)` 内部已拼 `json_extract(props,'$.<key>')`）⇒ **未使用该批文**（PR 正文同载）。
+writeset:
+  - .claude/claims/1374.yaml
+  - .claude/task-briefs/2026-10-08-1374-org-scope.md
+  - src/sentinel/org-scope.ts
+  - src/sentinel/sentinel-loader.ts
+  - src/sentinel/runner.ts
+  - tests/sentinel/org-scope.test.ts
+done:
+  - verify: npx vitest run tests/sentinel/org-scope.test.ts
+  - verify: npx vitest run tests/sentinel/ tests/store/
+  - verify: test "$(git grep -nE "entity_id.*org|orgId.*entity_id" HEAD -- src/sentinel/ | wc -l)" -eq 0
+  - verify: npx tsc --noEmit
+note: 收口 = withOrgScope（sentinel-loader 单点包装 ⇒ 覆盖 43 个 queryNodes 读路径）；**键归一化 teamId→orgId**（否则双键 ⇒ 数据全落空 ⇒ 空结果被误当隔离成功）；未隔离读计数接进 runner 作业体（warn + 复位）。覆盖面 = 43/45（活跃哨兵 45，现场取 + loadSentinels 互证）；数值级隔离随本卡生效。
