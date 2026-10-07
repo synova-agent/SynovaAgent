@@ -3,6 +3,32 @@
 > 生成: 2026-10-08 01:16:22 | 分支: feat/win-0-6-schema-degraded | as any: 0
 > 工作树: D:\novis-backup-20260526\Novis\.synova-wt-980（独立工作树） | 基线 origin/main@9e9e4bd9d3c5844c51de48e2c42f25d2d2e904ea
 
+## 写集
+
+| 文件 | 说明 |
+|------|------|
+| src/l4/sog-schema-validator.ts | 实现：静默放行 → 可见降级 |
+| tests/l4/sog-schema-validator.test.ts | 单元测试（7 用例 / 45 断言） |
+| tests/l4/sog-schema-validator.integration.test.ts | 真 SQLite 集成测试（4 用例 / 28 断言） |
+| docs/synova/product-lines/evidence/980/PLAN-980-0-6-schema-degraded.md | 计划件 |
+| docs/synova/product-lines/evidence/980/RECEIPT-980-plan-20261008.md | 第一步交付回执 |
+| docs/synova/product-lines/evidence/980/capture-980-preconditions.sh | 前提实测脚本 |
+| docs/synova/product-lines/evidence/980/evidence-980-plan-preconditions.txt | 前提实测原始输出 |
+| docs/synova/product-lines/evidence/980/VERIFY-980-plan-verifier-980.md | 独立自验报告（计划阶段） |
+| docs/synova/product-lines/evidence/980/probe-diagnosis.ts | 探针实体（待线窗搬移） |
+| docs/synova/product-lines/evidence/980/capture-980-probe.sh | 探针复跑包装 |
+| docs/synova/product-lines/evidence/980/evidence-980-probe-run.txt | 探针原始 run 落仓 |
+| docs/synova/product-lines/evidence/980/ENV-980-better-sqlite3-workaround.md | 环境变通落仓记录 |
+| docs/synova/product-lines/evidence/980/VERIFY-980-env-verifier-980-env.md | 独立自验报告（环境/地雷） |
+| docs/synova/product-lines/evidence/980/VERIFY-980-acceptance-verifier-980-accept.md | 独立自验报告（判据复现） |
+| docs/synova/product-lines/evidence/980/assemble-evidence.sh | 探针证据组装脚本 |
+| memory/notes/proposed/2026-10-08-0-6-schema-degraded-visibility.md | 决策 Note（D534） |
+| .claude/task-briefs/2026-10-08-win-0-6-schema-degraded.md | 本 brief 自身 |
+
+> 无 `builtin`（运行期产物）行。
+
+
+
 ## 项目身份（每次重读 — 源自 CLAUDE.md §项目身份）
 
 SynovaAgent 是一个驻扎企业的 AI 诊断系统。
@@ -89,12 +115,17 @@ L1 入口: POST /api/diagnosis/consult / Cron→Sentinel.check() / GET /chat / M
 - `src/l4/sog-schema-validator.ts`：`:141` 静默放行 → 显式降级（元素 `degraded` 标记 + 去重聚合计数 + 边沿触发 `log.warn`）；`validateAndLog` 显式区分"校验失败"与"降级"（自验 E2）；新增 `getUncoveredTypeStats` / `resetUncoveredTypeStats`
 - `tests/l4/sog-schema-validator.test.ts`（新建，单元：正常/降级/边界 + 聚合去重 + 文案 + **validateAndLog 返回值三态**）
 - `tests/l4/sog-schema-validator.integration.test.ts`（新建，真 SQLite `/tmp`；R26 强制）
-- `scripts/control-tower/probe-diagnosis.ts`（新建，判据交付物；**待治理线窗时隙**）
+- `scripts/control-tower/probe-diagnosis.ts`（新建，判据交付物；**待治理线窗时隙**；本轮先落 `docs/synova/product-lines/evidence/980/probe-diagnosis.ts`）
 - `docs/synova/product-lines/evidence/980/PLAN-980-0-6-schema-degraded.md`（本卡计划件）
 - `docs/synova/product-lines/evidence/980/capture-980-preconditions.sh`（前提实测可复跑脚本）
 - `docs/synova/product-lines/evidence/980/evidence-980-plan-preconditions.txt`（前提实测原始输出）
 - `docs/synova/product-lines/evidence/980/RECEIPT-980-plan-20261008.md`（第一步交付回执）
 - `docs/synova/product-lines/evidence/980/VERIFY-980-plan-verifier-980.md`（**独立自验员产出**，非队长写）
+- `docs/synova/product-lines/evidence/980/probe-diagnosis.ts`（探针实体，待线窗搬移）
+- `docs/synova/product-lines/evidence/980/capture-980-probe.sh`（探针复跑包装）
+- `docs/synova/product-lines/evidence/980/evidence-980-probe-run.txt`（探针原始 run 输出落仓）
+- `docs/synova/product-lines/evidence/980/VERIFY-980-env-verifier-980-env.md`（**独立自验α产出**，非队长写）
+- `docs/synova/product-lines/evidence/980/ENV-980-better-sqlite3-workaround.md`（环境变通落仓记录，M5/C-6 补缺）
 - `.claude/task-briefs/2026-10-08-win-0-6-schema-degraded.md`（本 brief 自身）
 - `memory/notes/proposed/2026-10-08-0-6-schema-degraded-visibility.md`（决策 Note，D534 纪律）
 
@@ -111,7 +142,7 @@ L1 入口: POST /api/diagnosis/consult / Cron→Sentinel.check() / GET /chat / M
 处理（中间步骤）：探针在 `/tmp` 建真 SQLite → `SqliteGraphStore` → `createGraphBridge` 包装 → 逐类型写节点（40 斜杠 + 8 大写）→ `validateAndLog` 命中未覆盖类型 → 聚合计数 + 边沿告警 → 读 `getUncoveredTypeStats()`
 结果（最终展示在哪）：stdout 出现 `未覆盖类型 N 个`（N = 去重聚合数）+ 类型清单；`store.createNode` 仍返回 nodeId（不阻断）；日志行含 `nodeType` 可定位
 
-## 架构层: L4
+## 架构层: L4（本体层 — SOG Schema 校验器）
 
 ## Done 标准
 - [ ] 入口可触达: `bash -c "npx tsx scripts/control-tower/probe-diagnosis.ts 2>&1 | grep -q '未覆盖类型'"` ⇒ exit 0
