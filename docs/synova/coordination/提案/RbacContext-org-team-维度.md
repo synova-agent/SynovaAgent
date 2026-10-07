@@ -391,6 +391,9 @@ RB-05 是 §8.2 ①② 的实现，前置 **RB-03**（"批准什么"要落到具
 
 ### 9.1 本件所有 DSH 引用的三元组（一次写全，覆盖 §8 全部引用）
 
+> 🔴 **2026-10-06 更新（CTO §一 裁定 + 本件第四轴）**：下表 ① **作废**（它写的是"某棵树 package.json 的版本"，非权威身份）。
+> **正确写法见新增 §10**。本段下方原表**留痕不删**。
+
 | 项 | 值 |
 |---|---|
 | **① 版本/ref** | `deepseek-harness-pkg` **`0.1.6-alpha.1`**（读自该树 `package.json` 的 `version`） |
@@ -435,4 +438,70 @@ D="<你要引的那棵 DSH 树>/dsh"
 python3 -c "import json;print(json.load(open('$D/package.json'))['version'])"   # ① 版本
 ls "$D/node_modules/@deepseek-ai" | grep -E "permission|sandbox|approval|authorization"  # ② 包清单
 date -u +%Y-%m-%dT%H:%M:%SZ                                                     # ③ 取数时刻
+```
+
+
+---
+
+## 十、DSH 断面判据（CTO 2026-10-06 裁定 + 第四轴 · 取代 §9.1 的 ①）
+
+> 起因：本件 §9 写的 ①「版本 0.1.6-alpha.1」**不构成唯一断面** —— 实测本机同一字符串指向**三棵树**，
+> 且 `find -type d -name "@deepseek-ai"` **漏 asar**（单文件归档，非目录）⇒ 我量的树**根本不是运行中的那棵**。
+> CTO 已认错并给定判据；本节按该判据重写。
+
+### 10.1 判"我用哪棵 DSH"的**唯一正确入口**（照抄，不许自创）
+
+```bash
+echo $DSH_HOME                                   # ① 本机 = /Users/wane/.dsh-trial-017
+cat "$DSH_HOME/dsh-runtimes/dsh-primary-runtime/runtime.json"   # ② 权威身份
+#    desktopVersion = 0.2.0-rc.2
+#    payloadDigest  = 4d666314315930103a0d7baa9f50b7a197b549c4e96d1b47c9ba12596235e6ca
+# ③ 代码根 = /Applications/DeepSeek Harness.app/Contents/Resources/app.asar/dsh/
+```
+🔴 **禁用** `find -type d -name "@deepseek-ai"` 判"有哪些树" —— **它漏 asar**。
+🔴 **版本号只从 `runtime.json` 取，不从目录名取**（本机实测目录名与包内 version **三个都不一致**）。
+
+### 10.2 🔴 第四轴（本件新增，**引 DSH 事实必须写**）
+
+| 轴 | 值 | 为什么必须有 |
+|---|---|---|
+| ① `desktopVersion` | `0.2.0-rc.2` | 权威身份（CTO §一） |
+| ② `payloadDigest` | `4d666314…` | 唯一可判（同上） |
+| ③ 代码根路径 | `…/app.asar/dsh/` | 实际运行的产物 |
+| **④ 产物类别** | **运行物(asar) / 原文源(未压缩树) / 两者都不是** | 🆕 **实测必需** |
+| ⑤ 取数时刻 | UTC 时间戳 | R1 |
+
+**为什么加第④轴（原始实测）**：同样四句引文，在**三个产物**里结果不同 ——
+
+| 引文 | asar（**真正在跑的**） | profile 未压缩树 | 我原先引的 `dependencies/dsh` |
+|---|---|---|---|
+| `stamps the mode together with the calling session…` | ✅ 2 处 | ✅ `dsh-sandbox-policy/lib/index.js:16` | ✅ |
+| `two sessions can never see each other's state` | ✅ 2 处 | ✅ 同上 `:11` | ✅ |
+| `A switch records the selected preset…` | **❌ 0 处** | ✅ `dsh-permission-presets/lib/index.js:10` | ✅ |
+| `Missing answerers fail closed; grants apply…` | **❌ 0 处** | `dsh-user-approval/lib/types/index.js` | ✅ |
+
+⇒ **asar 是构建产物，JSDoc/注释被剥离** ⇒
+🔴 **硬约束**：**凡引用 JSDoc 原文/行号，必须标注"原文取自未压缩树（同 `payloadDigest`）"，且不得声称该行号在 asar 内存在。**
+
+### 10.3 由此纠正本件 §8.1 第 5 行（**我按 K3 改反了**）
+
+K3 P1-1 判本件「§8.1 第 5 行引文失精确」，理由是 `index.js:10` 为 `effective = projection state ?? …`。
+**实测（profile 未压缩树）**：
+```
+dsh-sandbox-policy/lib/index.js:10   effective = fold(events) ?? the deployment default
+dsh-sandbox-policy/lib/index.js:11   survives restart by replay, two sessions can never see each other's state,
+dsh-sandbox-policy/README.md:29      effective = explicit grant ?? fold(events) ?? …
+```
+⇒ **`:10` 就是 `fold(events)` 那版** —— **本件原写法在这棵树上是对的；按 K3 的改法反而引入新错**。
+⇒ **根因不是谁读错，是三方各自读的树都没写清**（本件 / K3 / CTO 各一次，同族）。
+⇒ **本节即该族的根治**：**写清四条，则任何一方都能复现或推翻。**
+
+### 10.4 复跑（换树/换产物都照这条）
+
+```bash
+R="$DSH_HOME/dsh-runtimes/dsh-primary-runtime/runtime.json"
+python3 -c "import json;d=json.load(open('$R'));print(d['desktopVersion'],d['payloadDigest'])"
+date -u +%Y-%m-%dT%H:%M:%SZ
+# 原文源（未压缩，可给行号）：$DSH_HOME/profiles/node_modules/@deepseek-ai/
+# 运行物（asar，注释已剥离，**不给行号**）：/Applications/DeepSeek Harness.app/Contents/Resources/app.asar/dsh/
 ```
