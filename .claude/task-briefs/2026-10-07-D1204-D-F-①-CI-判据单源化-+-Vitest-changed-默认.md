@@ -77,7 +77,8 @@ nightly/人工 ⇒ 全量；③ D1023 守卫（`SYNO_CI=1` HARD）断言单源�
 | `docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh` | 改（守卫同步） |
 | `.gitattributes` | 改（LF 冻结 1 行） |
 | `memory/notes/proposed/2026-10-07-d1204-ci-criteria-single-source.md` | 新建（决策 Note） |
-| `.claude/task-briefs/2026-10-07-D1204-*.md` · `task-state/D1204.json` | 新建（流程） |
+| `.claude/task-briefs/2026-10-07-D1204-D-F-①-CI-判据单源化-+-Vitest-changed-默认.md` | 新建（流程） |
+| `task-state/D1204.json` | 新建（认领） |
 
 ## Done 标准:
 - [ ] verify: `grep -cF 'docs/.+\.(md|json|html)' .github/workflows/ci.yml` ⇒ 0（内联副本清零）

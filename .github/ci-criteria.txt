@@ -11,12 +11,15 @@
 #   消费: ci.yml 的每个 `Detect docs-only change (D515)` step 内:
 #           DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt || true)"
 #           DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
-#           … git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"
-#         返 0 ⇒ docs_only=false（走全量）；返 1 ⇒ docs_only=true（早退/瘦身）
+#           [ -z "$DS_RE" ] ⇒ 显式 docs_only=false（fail-closed）
+#           ! origin/main 可解析 ⇒ 显式 docs_only=false（fail-closed）
+#           有非白名单变更（grep -qvE 返 0）⇒ docs_only=false（走全量）
+#           否则 ⇒ docs_only=true（早退/瘦身）
 #   输出: 仅一行键值；无注释以外的结构
-#   降级: 文件缺失 / 缺键 / 读失败 ⇒ DS_RE 为空 ⇒ `grep -qvE ''` 对**任意行**返 0
-#         ⇒ docs_only=false（全量跑）＝ **fail-safe（绝不误跳）**，并打 ::warning 留痕
-#         （与各 step 内 `origin/main` 不可解析时的降级方向**一致**：先全量，后瘦身）
+#   降级: 文件缺失 / 缺键 / 读失败 ⇒ 各消费点**显式**置 docs_only=false（全量跑）+ ::warning 留痕
+#         🔴 不依赖 `grep -qvE` 的隐式返回：实测 `printf x | grep -qvE ''` 返 **1**
+#         （空正则匹配每行，-v 反选后无输出）⇒ 若靠它收敛，正常路径会掉进 else ⇒
+#         docs_only=true（早退）= **fail-OPEN**。故 D-F/①-fix（独立复核 R1）后各点改为显式分支。
 #   守卫: docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh
 #         （CI 落点 = control-tower-tests job，SYNO_CI=1 ⇒ HARD）断言:
 #           ① 本文件恰 1 行键（多行/缺键即红）

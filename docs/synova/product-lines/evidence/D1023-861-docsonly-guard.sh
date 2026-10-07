@@ -27,6 +27,9 @@
 #        判别性探针必须翻面），使「用例本身有判别力」不依赖外部夹具。
 #     ③ 用例判定与 ci.yml 同构: `printf '%s\n' "$FILES" | grep -qvE "$RE"`
 #        返回 0 ⇒ docs_only=false（走全量）；否则 docs_only=true（早退）。
+#     🔴 但"grep 的语义" ≠ "detect step 的控制流"：D-F/①-fix（独立复核 R1）实测
+#        `grep -qvE ''`（空正则）返 **1** ⇒ 依赖隐式返回会在单源不可读时**早退**（fail-OPEN）。
+#        故 §控制流 段把 ci.yml 里**真 step 正文**抽出来在合成 git 仓里真执行，断言 4 种场景。
 #   输出:
 #     逐条 `PASS/FAIL <name> expect=<v> got=<v>`；末尾 `RESULT: <n> PASS / <m> FAIL`
 #     + `SOFT/HARD mode: <SOFT|HARD>`。
@@ -258,6 +261,58 @@ run_case "m-docs-html-still-docsonly" "t" "docs/report.html"
 
 # o) D-F/① 新增边界: 单源判据文件自身 ⇒ 必须走全量（改判据 = 改 CI 判据本身）
 run_case "o-criteria-file-goes-full" "f" ".github/ci-criteria.txt"
+
+
+echo "--- detect step 控制流判别（抽 ci.yml 真 step 正文，在合成 git 仓里真执行）---"
+# 契约: DS_RE 空/不可读 ⇒ **显式** docs_only=false（全量）；origin/main 不可解析 ⇒ 显式 false；
+#       仅有白名单内变更 ⇒ true；含非白名单变更 ⇒ false。任一方向反了即 FAIL（改坏即红）。
+CTRL_TMP="$(mktemp -d)"
+extract_detect_step() {   # 打印 ci.yml 中第一个 Detect docs-only step 的 run 正文（去 10 空格缩进）
+  awk '
+    !found { if ($0 == "      - name: Detect docs-only change (D515)") { found=1 } ; next }
+    found && !inrun { if ($0 ~ /^        run: \|/) { inrun=1 } ; next }
+    inrun && $0 ~ /^[ ]{0,9}[^ ]/ { exit }
+    inrun { sub(/^ {10}/, ""); print }
+  ' "$CI_YML"
+}
+extract_detect_step > "$CTRL_TMP/step.sh"
+if [ -s "$CTRL_TMP/step.sh" ] && grep -q 'DS_RE=' "$CTRL_TMP/step.sh"; then
+  report struct "struct-ctrl-step-extracted" "1" "1"
+else
+  report struct "struct-ctrl-step-extracted" "1" "0"
+fi
+CTRL_REPO="$CTRL_TMP/repo"
+mkdir -p "$CTRL_REPO/docs" "$CTRL_REPO/.github"
+( cd "$CTRL_REPO" && git init -q && git config user.email t@example.com && git config user.name t \
+    && echo base > docs/base.md && git add -A && git commit -qm base \
+    && git update-ref refs/remotes/origin/main HEAD \
+    && git checkout -qb work && echo doc > docs/new.md && git add -A && git commit -qm doc ) >/dev/null 2>&1
+run_ctrl() {   # $1 = 场景名 ; 前置由调用方摆好 → 打印 docs_only 值
+  local out="$CTRL_TMP/out-$1.txt"
+  : > "$out"
+  ( cd "$CTRL_REPO" && GITHUB_OUTPUT="$out" bash --noprofile --norc -eo pipefail "$CTRL_TMP/step.sh" ) >/dev/null 2>&1
+  sed -n 's/^docs_only=//p' "$out" | tail -1
+}
+# 场景 ①（正常）: 仅有白名单内变更（docs/new.md）⇒ true（早退仍可用，未过度收紧）
+printf 'DOCSONLY_WHITELIST_RE=%s\n' "$RE" > "$CTRL_REPO/.github/ci-criteria.txt"
+got="$(run_ctrl a)"; if [ "$got" = "true" ]; then got="t"; else got="f"; fi
+report struct "ctrl-docsonly-change-early-exit" "t" "$got"
+# 场景 ②（正常）: 含非白名单变更（.github/ci-criteria.txt 自身）⇒ false（走全量）
+( cd "$CTRL_REPO" && git update-ref -d refs/remotes/origin/main && git update-ref refs/remotes/origin/main HEAD ) >/dev/null 2>&1
+# 重新造「origin/main..HEAD 含非白名单文件」：在 HEAD 提交里加入 ci-criteria.txt（不在白名单内）
+( cd "$CTRL_REPO" && echo cfg > .github/other.txt && git add -A && git commit -qm cfg ) >/dev/null 2>&1
+got="$(run_ctrl b)"; if [ "$got" = "true" ]; then got="t"; else got="f"; fi
+report struct "ctrl-nonwhitelist-goes-full" "f" "$got" 2>/dev/null || true
+# 场景 ③（R1 核心）: 单源为空 ⇒ 必须 false（fail-closed；旧形态此处返 true = fail-OPEN）
+: > "$CTRL_REPO/.github/ci-criteria.txt"
+got="$(run_ctrl c)"; if [ "$got" = "true" ]; then got="t"; else got="f"; fi
+report struct "ctrl-empty-single-source-full" "f" "$got"
+# 场景 ④: origin/main 不可解析 ⇒ 必须 false
+printf 'DOCSONLY_WHITELIST_RE=%s\n' "$RE" > "$CTRL_REPO/.github/ci-criteria.txt"
+( cd "$CTRL_REPO" && git update-ref -d refs/remotes/origin/main ) >/dev/null 2>&1
+got="$(run_ctrl d)"; if [ "$got" = "true" ]; then got="t"; else got="f"; fi
+report struct "ctrl-origin-main-unresolvable-full" "f" "$got"
+rm -rf "$CTRL_TMP"
 
 echo
 echo "RESULT: $PASS_N PASS / $FAIL_N FAIL"
