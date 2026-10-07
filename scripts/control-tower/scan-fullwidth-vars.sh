@@ -201,7 +201,8 @@ if [ -z "$PATHS_ARG" ] && [ -z "$PATHS_FILE" ]; then
   while IFS= read -r _f; do [ -n "$_f" ] && CAND+=("$_f"); done < <(_find_files "$ROOT/scripts")
   # D1228（2026-10-07）: 扫描面纳入 **tests/**/*.test.sh** —— 本类缺陷在测试面长期无网
   #   （证据密度: 本轮 4 个独立目击者 / 线 D 扫出 18 文件 / verifier 三次自撞 / 线 B 修 16 文件）。
-  #   仅收 `.test.sh`（.ts/.py 变量名语义不同 ⇒ 不适用）；基线见 scan-fullwidth-vars-baseline.txt（只减不增）。
+  #   仅收 `.test.sh`（.ts/.py 变量名语义不同 ⇒ 不适用）；**棘轮登记处 = 配对夹具** `scan-fullwidth-vars.test.sh`
+  #   （§12d 断言 `--paths tests` 违规 = 0；**本扫描器无独立基线文件** —— 禁双源，D1228 / 卡 #1231 口径）。
   while IFS= read -r _f; do
     case "$_f" in *.test.sh) [ -n "$_f" ] && CAND+=("$_f") ;; esac
   done < <(_find_files "$ROOT/tests")
