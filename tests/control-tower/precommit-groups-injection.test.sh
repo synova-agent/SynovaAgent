@@ -492,21 +492,12 @@ run_scenario() {
   local st detail
   if [ "$expect" = "green" ]; then
     # 绿基线口径 = 全输出（非单区块）：任一 ❌ 或 rc!=0 都算基线不绿
-    local sole_fails sole_n
-    sole_fails="$(strip_ansi < "$out" | grep '❌' | grep -v '组未通过' || true)"
-    sole_n="$(printf '%s\n' "$sole_fails" | grep -c . || true)"
+    # D1220（卡 #1222 D-A2）退役: 原「唯一 ❌ = 时间戳顺序 ⇒ BASELINE_HOST_STATE」归因分支已删。
+    #   原因: 那条红来自 pre-commit-check.sh 读取**仓库外绝对路径** /tmp/.synova-before-brief；
+    #   该判据本身已退役（写者随 D1146 消失 ⇒ 死判据）⇒ 宿主污染源随之消失 ⇒ 归因分支与因果探针一并退役
+    #   （cause 消失则处置成死代码）。不变式改由下方反向断言守护（把该绝对路径读取加回 ⇒ 判红）。
     if [ "$rc" -eq 0 ] && [ -z "$all_fails" ]; then
       st="BASELINE_OK"; detail="rc=0, 全输出无 ❌"
-    elif [ "$rc" -ne 0 ] && [ "${sole_n:-0}" -eq 1 ] \
-      && printf '%s' "$sole_fails" | grep -q '时间戳顺序' \
-      && [ -f /tmp/.synova-before-brief ]; then
-      # 宿主 /tmp 泄漏：唯一红来自仓库外宿主状态（见头部注释），非内容违规
-      st="BASELINE_HOST_STATE"
-      HOST_STATE=1
-      detail="唯一 ❌ = 时间戳顺序（宿主 /tmp/.synova-before-brief，pre-commit-check.sh L910 绝对路径）——hermetic 被宿主状态打破"
-      echo "   [HOST-STATE] 宿主 marker 内容首行: $(head -1 /tmp/.synova-before-brief 2>/dev/null)"   # swallow-ok: 宿主 marker 可能不存在（缺失即不判 HOST_STATE，属预期状态），读失败取空串继续
-      echo "   [HOST-STATE] 路径来源: $(grep -n 'BEFORE_BRIEF_EVI=' "$CLONE/scripts/pre-commit-check.sh" | head -1)"
-      echo "   [HOST-STATE] remediation: 由该 marker 的属主 session 执行 rm /tmp/.synova-before-brief（本夹具不动宿主文件）"
     else
       st="BASELINE_FAIL"
       detail="rc=$rc; 首个 ❌: $(echo "$all_fails" | head -1)"
@@ -543,28 +534,17 @@ run_scenario() {
 echo "── 场景 0: baseline (干净副本，无任何注入) ──"
 run_scenario "baseline" "── 组 1/13" "green"
 
-# ── 因果隔离探针（仅当基线被判 HOST_STATE；只改副本里的绝对路径，用于把"宿主污染"从猜测变成证据）──
-if [ "$HOST_STATE" -eq 1 ]; then
-  echo "── 因果隔离探针: 把**副本** pre-commit-check.sh L910 的 /tmp 绝对路径改为仓库相对后重跑 ──"
-  sed -i.bak 's|BEFORE_BRIEF_EVI="/tmp/.synova-before-brief"|BEFORE_BRIEF_EVI="$ROOT/.claude/.before-brief-probe"|' "$CLONE/scripts/pre-commit-check.sh"
-  if grep -q 'BEFORE_BRIEF_EVI="\$ROOT/.claude/.before-brief-probe"' "$CLONE/scripts/pre-commit-check.sh"; then
-    ( cd "$CLONE" && GITHUB_ACTIONS=true SYNO_CI=1 bash scripts/pre-commit-check.sh ) >"$TMP/out.baseline-localized.log" 2>&1
-    PROBE_RC=$?
-    if [ "$PROBE_RC" -eq 0 ]; then
-      PROBE_STATUS="CAUSE_CONFIRMED"
-      BASE_STATUS="host_state"
-      echo "   探针 rc=0 → 因果确认：干净副本的**内容基线为绿**，唯一红来自宿主 /tmp marker 的绝对路径读取"
-    else
-      PROBE_STATUS="CAUSE_NOT_CONFIRMED"
-      BASE_STATUS="FAIL"
-      echo "   探针 rc=${PROBE_RC}（≠0）→ 归因不成立：基线红不止宿主 marker（按 BASELINE_FAIL 处理）"
-      strip_ansi < "$TMP/out.baseline-localized.log" | grep '❌' | head -5 | sed 's/^/     /'
-    fi
-  else
-    PROBE_STATUS="PATCH_FAILED"; BASE_STATUS="FAIL"
-    echo "   ❌ 探针补丁未生效（未匹配到 L910 原文）→ 无法归因，按 BASELINE_FAIL 处理"
-  fi
-  reset_clone   # 撤销副本上的探针补丁（下一场景另有一层 reset）
+# ── D1220（卡 #1222 D-A2）: 时间戳顺序判据退役后的**不变式反向断言** ──
+#   原三件（HOST_STATE 归因 + 因果隔离探针 + sed 补丁副本）随 cause 消失而退役：那条红来自
+#   pre-commit-check.sh 读取仓库外绝对路径 /tmp/.synova-before-brief（写者随 D1146 消失 = 死判据）。
+#   本断言取代之：**该绝对路径读取若被加回 ⇒ 判红**（宿主污染会复发且无人知；同时守护「退役不能被静默回退」）。
+PROBE_STATUS="retired_d1220"; PROBE_RC="n/a"
+# ⚠️ 只看**代码行**（留痕注释逐字引用旧路径/旧变量名，全文件 grep 会假红——T11a 同类坑）
+if grep -vE '^[[:space:]]*#' "$REPO_DIR/scripts/pre-commit-check.sh" | grep -qE 'BEFORE_BRIEF_EVI|/tmp/\.synova-before-brief'; then
+  echo "   ❌ D1220 不变式: 时间戳顺序判据（宿主 /tmp 绝对路径读取）被加回 —— 宿主污染将复发"
+  RC=1
+else
+  echo "   ✅ D1220 不变式: 时间戳顺序判据已退役且未被加回（宿主污染源消失；原归因分支与探针随之退役）"
 fi
 echo ""
 
