@@ -1,26 +1,44 @@
 /**
- * src/tools/tool-registry.ts — D65+D68 Tool 注册表 + 原子性验证 + 权限门禁
+ * src/tools/tool-registry.ts — D65 Tool 定义注册表 + D68 原子性验证（规范面）
  *
- * D65 基础: register/get/unregister/list/invoke
- * D68 扩展: validateAtomicity / invoke PolicyEngine 门禁 / getToolsBySkill / 审计日志
+ * 🔴 2026-10-08（#985 / 施工项 0-11）: 本类的「执行 + 权限门禁」面**已拆除**。
+ *    被拆的两半 = 原**权限引擎注入点**（旧 `:119`）与**工具执行入口**（旧 `:170`）——
+ *    实测为**双重死门**：`git grep -n "tool-registry" -- src/ tests/ packages/`
+ *    除本文件与自身测试外**零命中**（生产导入者 = 0）⇒ 该注入点与执行入口在**生产侧
+ *    零装配、零调用** ⇒ 属「看着在、其实不拦」的假门
+ *    ⇒ 按《施工单》0-11「**不留假门**」裁定 **选 (b)：删除**
+ *    （连同审计回调、门禁专用类型与全局单例；被拆符号的实名见卡面 #985 与 git log）。
+ *
+ *    施工单原拟注释「门禁由 Goal 链路承载」**经实测不成立**（其载体
+ *    `src/growth/goal-lifecycle.ts` 为 `@deprecated 未接线`，接入点 #1010）——
+ *    此处按实测记录，不把假前提写进代码。**真实门禁位置（本次实测；勿再造第二套）**：
+ *      · 工具执行   `src/agent/tools.ts:186 execute()`
+ *      · 角色授权   `src/agent/tool-profiles.ts`（消费点 `src/agent/tools.ts:170-171` / `:189-190`）
+ *      · 运行时守卫 `src/l3/tool-guard.ts`（接 `src/agent/tool-loop-executor.ts:38` / `:205` / `:351`）
+ *      · 写入门禁   施工项 2-4（#1052，`src/security/file-guard.ts`）
+ *
+ *    若未来要做权威文档12 第五章 §六的三元组（role, dataLevel, SOI）逐次仲裁，属**新卡**：
+ *    须先合并两套 `ToolRegistry`（旧注「Phase 2 考虑整合」即指该事）。
  *
  * 与 src/agent/tools.ts 的 ToolRegistry 不同：
- * 后者是对话引擎的工具系统（有 execute/toOpenAITools/executeParallel），
- * 前者是纯工具定义注册表 + 原子性验证 + 权限模型。
- * 两者独立运行，Phase 2 考虑整合。
+ * 后者是对话引擎的工具系统（有 execute/toOpenAITools/executeParallel + 角色 profile 过滤），
+ * 本类只做**工具定义注册 + 原子性验证** —— 权威文档12 第五章「Tool原子性定义（D68规范）」
+ * 直接引用 `ToolRegistry.validateAtomicity()`，同章 §七记 34-tool 目录仍有 7 个 Tool 待建
+ * ⇒ 本类为**规范载体**，故保留（不是假门）。
+ *
+ * 契约（铁律 47）:
+ *   @input    — ToolDef（name / version / description / fn / inputSchema / outputType
+ *               ＋ 原子性可选字段 contractId / hasTests / skills）
+ *   @output   — register/get/unregister/list 返回定义或其状态；
+ *               validateAtomicity(tool) ⇒ AtomicityResult { atomic, checks{...}, details[] }
+ *   @degraded — **无**（纯内存 Map + 纯函数，不触 IO/DB ⇒ 无降级路径；铁律 24/31 不适用）
+ *   @not-here — 执行与权限仲裁**不在本类**（见上方四处真实门禁）
  *
  * 设计原则:
  *   - 不改 D65 register/get 签名
  *   - validateAtomicity 纯函数 — 不依赖外部状态
- *   - PolicyEngine 拒绝不阻塞系统 — 返回错误对象而非 throw
- *   - 审计日志写入失败降级（fire-and-forget + log.warn）
  *   - 零 as any
  */
-import { createLogger } from '@synova/logger';
-import type { PolicyDecision } from '../security/policy-engine';
-import type { AuditEntryInput } from '../l4/audit-store';
-
-const log = createLogger('tools/registry');
 
 // ═══ Types ═══
 
@@ -58,38 +76,10 @@ export interface AtomicityResult {
   details: string[];
 }
 
-/** 调用策略上下文 — 提交给 PolicyEngine 的三元组 */
-export interface ToolPolicyContext {
-  /** 请求者角色 */
-  role: string;
-  /** 请求的数据等级 */
-  dataLevel: string;
-  /** 请求的标准操作指令 */
-  soi: string;
-}
-
-/** 调用日志条目 */
-export interface ToolCallLogEntry {
-  toolName: string;
-  callerRole: string;
-  soi: string;
-  allowed: boolean;
-  denyReason?: string;
-  timestamp: string;
-}
-
-// ═══ PolicyEngine 类型（避免直接依赖 PolicyEngine 类） ═══
-
-export interface ToolPolicyEngine {
-  evaluate(req: { role: string; dataLevel: string; soi: string }): PolicyDecision;
-}
-
 // ═══ Registry ═══
 
 export class ToolRegistry {
   private tools = new Map<string, ToolDef>();
-  private policyEngine: ToolPolicyEngine | null = null;
-  private auditStore: { write(entry: AuditEntryInput): Promise<string> } | null = null;
 
   /** 注册一个工具定义。同名时覆盖已有。 */
   register(tool: ToolDef): void {
@@ -109,22 +99,6 @@ export class ToolRegistry {
   /** 返回全部已注册工具。 */
   list(): ToolDef[] {
     return [...this.tools.values()];
-  }
-
-  // ═══ D68 扩展 ═══
-
-  /**
-   * 设置 PolicyEngine 实例（可选 — 未设置时跳过权限检查）。
-   */
-  setPolicyEngine(engine: ToolPolicyEngine): void {
-    this.policyEngine = engine;
-  }
-
-  /**
-   * 设置审计日志存储（可选 — 未设置时仅 log.warn）。
-   */
-  setAuditStore(store: { write(entry: AuditEntryInput): Promise<string> }): void {
-    this.auditStore = store;
   }
 
   /**
@@ -160,51 +134,6 @@ export class ToolRegistry {
   }
 
   /**
-   * 调用已注册的工具，带 PolicyEngine 权限门禁。
-   *
-   * @param name - 工具名称
-   * @param params - 输入参数
-   * @param policy - 可选的策略上下文（未提供时跳过权限检查）
-   * @returns 工具执行结果，或 null（工具不存在），或 {error, denyReason}（权限拒绝）
-   */
-  invoke(name: string, params: Record<string, unknown>, policy?: ToolPolicyContext): unknown {
-    const tool = this.tools.get(name);
-    if (!tool) return null;
-
-    // PolicyEngine 门禁
-    if (policy && this.policyEngine) {
-      const decision = this.policyEngine.evaluate({
-        role: policy.role,
-        dataLevel: policy.dataLevel,
-        soi: policy.soi,
-      });
-
-      if (!decision.allow) {
-        const logEntry: ToolCallLogEntry = {
-          toolName: name,
-          callerRole: policy.role,
-          soi: policy.soi,
-          allowed: false,
-          denyReason: decision.denyReason,
-          timestamp: new Date().toISOString(),
-        };
-
-        log.warn({ ...logEntry }, 'Tool 调用被 PolicyEngine 拒绝');
-
-        // 异步写入审计日志（fire-and-forget，失败仅 log.warn）
-        this.writeAuditLog(name, policy, decision.denyReason || 'unknown');
-
-        return { error: 'POLICY_DENIED', denyReason: decision.denyReason };
-      }
-    }
-
-    // 允许执行
-    const result = tool.fn(params);
-
-    return result;
-  }
-
-  /**
    * 按 Skill 名称反向查询所有被该 Skill 复用的工具。
    *
    * @param skillName - Skill 名称（如 'analyze-break-even'）
@@ -215,29 +144,4 @@ export class ToolRegistry {
       t => Array.isArray(t.skills) && t.skills.includes(skillName),
     );
   }
-
-  /**
-   * 异步写入审计日志（fire-and-forget）。
-   */
-  private writeAuditLog(toolName: string, policy: ToolPolicyContext, denyReason: string): void {
-    if (!this.auditStore) return;
-
-    const entry: AuditEntryInput = {
-      orgId: 'synova',
-      actorId: `role:${policy.role}`,
-      actorRole: policy.role,
-      action: `tool.invoke.deny`,
-      targetType: 'tool',
-      targetId: toolName,
-      newValue: JSON.stringify({ soi: policy.soi, denyReason }),
-    };
-
-    this.auditStore.write(entry).catch((err: unknown) => {
-      const msg = err instanceof Error ? err.message : String(err);
-      log.warn({ err: msg }, '审计日志写入失败 — 降级');
-    });
-  }
 }
-
-/** 全局单例实例 */
-export const toolRegistry = new ToolRegistry();
