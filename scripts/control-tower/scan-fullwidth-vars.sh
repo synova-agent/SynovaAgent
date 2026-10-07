@@ -235,7 +235,9 @@ _owners() {
     *)   cat "$TMPD/own.err" >&2
          return 9 ;;
   esac
-  printf '%s\n' "$_out" | awk '/^(mac|win|k3)[[:space:]]/{o=$1; sub(/^(mac|win|k3)[[:space:]]+/,""); print o "\t" $0}'
+  # 🔴 2026-10-07: 原为 `/^(mac|win|k3)[[:space:]]/`（硬编码三域名）。分域废止后 owner 键任意
+    #   ⇒ 改为「任意非空首字段」，否则单域下 owner=maintainer 会被整行丢弃（域过滤静默失败）。
+    printf '%s\n' "$_out" | awk 'NF>=2{o=$1; sub(/^[^[:space:]]+[[:space:]]+/,""); print o "\t" $0}'
   return 0
 }
 

@@ -121,9 +121,13 @@ if echo "$OUT" | grep -q "禁调高上限"; then pass "输出禁调高上限"; e
 run_expect 0 "--max-files 20 时同写集放行" --max-files 20 --files "a1.ts a2.ts a3.ts a4.ts a5.ts a6.ts a7.ts a8.ts a9.ts a10.ts a11.ts a12.ts a13.ts"
 
 echo ""
-echo "── 3. 跨域: 变更落两个域 → exit 0（信息性，不阻断）──"
-run_expect 0 "跨域不阻断: Mac 脚本 + Win src 混合" --files "scripts/control-tower/check-pr-budget.sh src/server.ts"
-if echo "$OUT" | grep -q "变更跨域"; then pass "跨域输出点名"; else fail "跨域未点名"; fi
+echo "── 3. 单域（2026-10-07 分域废止后）：跨域结构上不可能 → exit 0 ──"
+# 🔴 原断言为「变更跨域」+ exit 0（信息性）。分域废止后 ownership.yaml 单域
+#    ⇒ 任意路径组合恒同域 ⇒ 「跨域」永不出现在输出里。
+#    改用**正面判据**：必须点名「变更单域」（证明域判定仍在跑，非静默跳过）。
+run_expect 0 "混合路径不阻断（单域）" --files "scripts/control-tower/check-pr-budget.sh src/server.ts"
+if echo "$OUT" | grep -q "变更单域"; then pass "输出点名「变更单域」（域判定在跑）"; else fail "未点名单域（疑似域判定被静默跳过）"; fi
+# （不设「域不用于分配/阻断」断言：该注记只在**跨域**分支打印；单域走 PASS 分支，见上一条正面判据。）
 # 域判定豁免: bypass.log（各线都写的簿记）不应把单域 PR 误判成跨域
 run_expect 0 "bypass.log 豁免后仍单域" --files ".claude/bypass.log scripts/control-tower/check-pr-budget.sh"
 # D758: PR #538 实测形态——Win 的 1-5 双引导 + 它自己的验收证据，曾被判跨域卡死
