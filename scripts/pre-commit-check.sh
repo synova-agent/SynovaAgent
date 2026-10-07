@@ -299,10 +299,18 @@ _GATE_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
 BYPASS_LOG="$ROOT/.claude/bypass.log"
 # 方案1挪CI(D467)后：本地 pre-commit 软提示 + CI 权威，本地 --no-verify 不再是"绕过"（CI 兜底）。
 # GATEKEEPER 检测"本地 --no-verify"只在本地跑；CI 上跳过（否则 CI 检测 git 跟踪的本地 bypass.log 痕迹 → 自阻断）。
+# GATEKEEPER-COUNT-BEGIN（夹具 tests/control-tower/bypass-rewrite-classify.test.sh 按此标记提取本段做行为断言；改格式须同步夹具）
 if [ -f "$BYPASS_LOG" ] && [ "${GITHUB_ACTIONS:-}" != "true" ]; then
   TODAY=$(date +%Y-%m-%d)
   # V4.5.1: 只匹配 detected-bypass 行。COMMITTED 行是正常提交成功标记，不是绕过。
+  # #1270（2026-10-07）: **疑似与确证分离** —— `suspected-rewrite`（rebase/cherry-pick 重写误报）
+  #   单独计数、**保留在台账**（可 grep/可审计，不静默漏判），但不计入"确证绕过"阈值；
+  #   只有确证行（detected-bypass）才触发原有的硬阻断/ACK 语义。
   BYPASS_COUNT=$(grep -c "${TODAY}.*detected-bypass" "$BYPASS_LOG" 2>/dev/null | tr -d '\n\r' || echo 0)
+  SUSPECT_COUNT=$(grep -c "${TODAY}.*suspected-rewrite" "$BYPASS_LOG" 2>/dev/null | tr -d '\n\r' || echo 0)
+  if [ "${SUSPECT_COUNT:-0}" -gt 0 ]; then
+    echo "[GATEKEEPER] 今日 ${SUSPECT_COUNT} 条 suspected-rewrite（重写误报：rebase/cherry-pick 重放提交）——台账保留，不计入确证绕过阈值"
+  fi
   if [ "$BYPASS_COUNT" -gt 0 ]; then
     echo "[GATEKEEPER] 检测到今日 ${BYPASS_COUNT} 次 --no-verify 绕过记录"
     if [ "${SYNO_GATEKEEPER_ACK:-0}" = "1" ]; then
@@ -318,6 +326,7 @@ if [ -f "$BYPASS_LOG" ] && [ "${GITHUB_ACTIONS:-}" != "true" ]; then
     fi
   fi
 fi
+# GATEKEEPER-COUNT-END
 # V4.5.1: 缓存 git diff 结果 — 本机每次 git 调用 ~1s，脚本内 10+ 次调用是超时主因
 # D387 (CT-34): 测试注入缝 (只读, 默认真实 git, fail-closed)
 # D390 (CT-P1-1, K3 D387 P1-1): 武装守卫 — 注入缝仅 SYNO_TEST_ARM=1 时生效。

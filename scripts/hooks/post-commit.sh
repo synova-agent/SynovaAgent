@@ -138,7 +138,36 @@ if [ -f "$MARKER" ]; then
           echo "$(date -Iseconds) | COMMITTED | pre-commit PASS (hook 层登记) | HASH=$HASH_NOW" | _bypass_append
         fi
       else
-        echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) detected-bypass head-mismatch marker=$MARKER_HEAD parent=$PARENT" | _bypass_append
+        # ═══ #1270（2026-10-07，Lead 立案）: **先区分「重写」与「真绕过」** ═══
+        #   病根: rebase / cherry-pick 会重放提交，其 parent 必与 marker 里的旧 HEAD 不同
+        #     ⇒ 旧逻辑一律判 detected-bypass（实测当日 8 条误报，把正常 rebase 记成 --no-verify）。
+        #   信号① `in-progress`: rebase/cherry-pick/am 进行中（.git/{rebase-merge,rebase-apply,CHERRY_PICK_HEAD} 存在）
+        #   信号② `same-tree-subject`: HEAD 与 marker 提交 **同 subject 同 tree**（纯重写副本：parent 变、内容未变）
+        #   命中任一 ⇒ 记 `suspected-rewrite`（**记录保留、可见**，但不计入"确证绕过"阈值——
+        #     gatekeeper 消费侧 pre-commit-check.sh 按前缀分离计数）；都不命中 ⇒ 维持 detected-bypass。
+        #   🔴 不许静默漏判: suspected 也是**一条记录**，只是分类不同（可 grep、可审计）。
+        REBASE_DIR="$(git rev-parse --git-path rebase-merge 2>/dev/null || true)"
+        REBASE_APPLY="$(git rev-parse --git-path rebase-apply 2>/dev/null || true)"
+        CP_HEAD="$(git rev-parse --git-path CHERRY_PICK_HEAD 2>/dev/null || true)"
+        REWRITE=0; REWRITE_WHY=""
+        if [ -n "$REBASE_DIR" ] && [ -d "$REBASE_DIR" ]; then
+          REWRITE=1; REWRITE_WHY="in-progress"
+        elif [ -n "$REBASE_APPLY" ] && [ -d "$REBASE_APPLY" ]; then
+          REWRITE=1; REWRITE_WHY="in-progress"
+        elif [ -n "$CP_HEAD" ] && [ -f "$CP_HEAD" ]; then
+          REWRITE=1; REWRITE_WHY="in-progress"
+        elif [ -n "$MARKER_HEAD" ] \
+          && [ "$(git show -s --format=%s HEAD 2>/dev/null || true)" = "$(git show -s --format=%s "$MARKER_HEAD" 2>/dev/null || true)" ] \
+          && [ -n "$(git rev-parse 'HEAD^{tree}' 2>/dev/null || true)" ] \
+          && [ "$(git rev-parse 'HEAD^{tree}' 2>/dev/null || true)" = "$(git rev-parse "${MARKER_HEAD}^{tree}" 2>/dev/null || true)" ]; then
+          REWRITE=1; REWRITE_WHY="same-tree-subject"
+        fi
+        if [ "$REWRITE" -eq 1 ]; then
+          echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) suspected-rewrite head-mismatch marker=$MARKER_HEAD parent=$PARENT suspect=$REWRITE_WHY" | _bypass_append
+          echo "  ℹ️  post-commit: head 不一致但判定为**重写**（suspect=$REWRITE_WHY）—— 记 suspected-rewrite（保留记录，不计入确证绕过阈值）" >&2
+        else
+          echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) detected-bypass head-mismatch marker=$MARKER_HEAD parent=$PARENT" | _bypass_append
+        fi
       fi
     fi
   else

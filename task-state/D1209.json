@@ -1,0 +1,11 @@
+{
+  "task_id": "D1209",
+  "title": "R1 跟进件 余量上限与可见性 + #1270 重写/绕过分类",
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-07",
+  "updated_by": "alloc-task-id"
+}
