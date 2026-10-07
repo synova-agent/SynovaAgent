@@ -225,10 +225,27 @@ else
   fail "T9: 顺序错误 (bypass L$BYPASS_LINE, is_doc_only L$DOC_LINE)"
 fi
 
-if grep -q "check-dev-doc-write-set.sh" "$PRECOMMIT"; then
-  pass "T11: G12c check-dev-doc-write-set.sh 保留全量路径 (D383 P1-1 写集验证不回退)"
+# D1219（卡 #1225 旁路清场）: G12c 本地执行点已退役（第三态清零，立法 §7.1-2）。
+#   退役依据 = 同判据在 CI 有**更强**执行点。⇒ 本断言由「字面量存在」改为三段：
+#     ① 代码路径**不再**调用（注意: 只筛代码行——留痕注释逐字引用旧形态，全文件 grep 会假绿）；
+#     ② 留痕可核（注释层仍指向 D1219 + 脚本名，可回溯）；
+#     ③ **替代真实存在**（ci.yml 含 D708 写集对账 step）——把「替代存在」做成物理断言，
+#        变异体 = 从 ci.yml 删该 step ⇒ 本断言红（退役依据失效 ⇒ 退役不成立）。
+if grep -vE '^[[:space:]]*#' "$PRECOMMIT" | grep -q "check-dev-doc-write-set.sh"; then
+  fail "T11a: G12c 仍被代码路径调用 — 退役未落地 (D1219)"
 else
-  fail "T11: G12c 调用块缺失 — 写集验证回退"
+  pass "T11a: G12c 本地执行点已退役（代码路径零调用, D1219）"
+fi
+if grep -q "check-dev-doc-write-set.sh" "$PRECOMMIT" && grep -q "D1219" "$PRECOMMIT"; then
+  pass "T11b: G12c 退役留痕可核（注释指向 D1219 + 脚本名）"
+else
+  fail "T11b: G12c 退役未留痕（注释层缺 D1219 或脚本名）"
+fi
+CI_YML="$REPO_DIR/.github/workflows/ci.yml"
+if grep -q "Merge write-set reconciliation (D708)" "$CI_YML"; then
+  pass "T11c: 替代真实存在 — ci.yml 含 D708 写集对账 step"
+else
+  fail "T11c: 替代不成立 — ci.yml 缺 D708 写集对账 step（退役依据失效）"
 fi
 
 # ── 5. 汇总 ──

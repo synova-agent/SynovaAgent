@@ -65,7 +65,11 @@ STAGED="src/foo.ts"
 
 # 行为探针：跑 <脚本> 并返回其输出（注入 claim 载体 + 暂存集 + 沙箱）
 probe() { # <script> → stdout
-  SYNO_TEST_ARM=1 SYNO_CLAIM_V2=1 SYNO_CLAIM_DIR="$CLAIM_DIR" \
+  # D1220（卡 #1222）: 补 SYNO_ISSUE_HINT —— 原探针**与分支名耦合**：resolver 先按分支推断 issue
+  #   （如 feat/D1220-* → 1220）再在注入的 SYNO_CLAIM_DIR 里找 <issue>.yaml；注入的是 1217.yaml，
+  #   分支不为 1217 时命中失败 ⇒ 走 legacy 回退 ⇒ 组 6 claim 证据消失 ⇒ 本夹具在**别的卡的分支上必假红**
+  #   （实测：detach 于 origin/main 时绿、在 feat/D1220-* 上红）。显式给 hint ⇒ 探针 hermetic，与分支名解耦。
+  SYNO_TEST_ARM=1 SYNO_CLAIM_V2=1 SYNO_CLAIM_DIR="$CLAIM_DIR" SYNO_ISSUE_HINT=1217 \
   SYNO_GIT_CACHED_ALL_NAMES="$STAGED" SYNO_GIT_CACHED_NAMES="$STAGED" \
   bash "$1" 2>&1 || true
 }
