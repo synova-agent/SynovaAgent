@@ -2,21 +2,20 @@
  * sentinel/adapters/cash-flow-sentinel.ts — 现金流哨兵 (D1)
  * @state: real — V4.2.4: 内联 computeCashFlowMetrics 替代已删除桥接
  *
- * 数据源: SOG FINANCIAL 节点（graph_nodes，props JSON）。
- *   ⚠️ 2026-10-08 订正：原描述写「+ diagnosis_snapshots」，实测该表**在真库不存在**且本哨兵**从未读它**（读的是 graph_nodes）
- *   ⇒ 属过期/不实引用，已删除（同 #1371 的 V6 面：死依赖清干净）。
+ * 数据源: SOG FINANCIAL 节点 + diagnosis_snapshots。
   // V4.2.4: financial-snapshot 桥接已删除，内联实现
  */
 
 import type { Sentinel, SentinelCheckResult, SentinelConfig, SentinelContext, SentinelFinding } from '../types';
   // V4.2.4: financial-snapshot 桥接已删除
+import { discoverTeams } from './helpers';
 import { createLogger } from '@synova/logger';
 import { writeMetricReadings } from '../metric-readings-writer';
 
 const log = createLogger('sentinel/cashflow');
 
 const config: SentinelConfig = {
-  id: 'sentinel-cash-flow', name: '现金流', description: '现金流预测/跑道/应收逾期。数据源: SOG FINANCIAL 节点。', category: 'risk', priority: 'P0', mode: 'cron', cron: '0 9 * * *', requiredDataSources: ['sog_graph'], confidenceModel: 'statistical', version: '2.0.0',
+  id: 'sentinel-cash-flow', name: '现金流', description: '现金流预测/跑道/应收逾期。数据源: SOG FINANCIAL 节点 + diagnosis_snapshots。', category: 'risk', priority: 'P0', mode: 'cron', cron: '0 9 * * *', requiredDataSources: ['sog_graph'], confidenceModel: 'statistical', version: '2.0.0',
 };
 
 /** 内联现金流指标计算 (V4.2.4: 替代已删除的 financial-snapshot 桥接) */
@@ -118,10 +117,7 @@ export const cashFlowSentinel: Sentinel = {
       // 🔴 #1054（2-1b）写点①·**指标级**（样板哨兵）：把"这次判定用的输入取值"落 metric_readings。
       //   metric_id = compute 的真实指标名；value = 本次 compute 取值（这正是 archive/25 §三 写点①的语义）。
       //   覆盖面：**仅本样板哨兵**；其余 44 哨兵暂只有轮次级（见 metric-readings-writer.ts 头注）。
-      // #1371: 无 teamId（全局轮）⇒ 不写（fail-closed；`'default'` 不是租户）——与 #1054 A2 同一条原则
-      if (!context.teamId) {
-        // 无 org 维度：跳过指标级写入（该轮只作全局判定）
-      } else writeMetricReadings(
+      writeMetricReadings(
         context.metricSink,
         {
           orgId: context.teamId ?? 'default',

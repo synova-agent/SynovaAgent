@@ -10,11 +10,7 @@ writeset:
   - src/sentinel/org-registry.ts
   - src/sentinel/runner.ts
   - src/sentinel/adapters/helpers.ts
-  - src/sentinel/adapters/cash-flow-sentinel.ts
-  - src/sentinel/adapters/cpc-sentinel.ts
-  - tests/store/orgs-migration.test.ts
   - tests/store/migrations/003-orgs.test.ts
-  - tests/sentinel/org-fanout.test.ts
   - tests/sentinel/org-registry.test.ts
   # 必要连带（新迁移 ⇒ 3 处「迁移条数/版本字面量」断言失效；CTO 2026-10-08 已批）
   - tests/store/schema-migration.test.ts
@@ -26,4 +22,4 @@ done:
   - verify: npx vitest run tests/sentinel/ tests/store/
   - verify: test "$(git grep -n "diagnosis_snapshots" HEAD -- src/sentinel/ | grep -vE ':[0-9]+:[[:space:]]*(//|\*)' | wc -l)" -eq 0
   - verify: npx tsc --noEmit
-note: cron 扇出 = 全局轮不变 + per-org 只写轮（executeForActiveOrgs；无 active org ⇒ 不跑不写）；discoverTeams 改读 orgs（V6=修）；覆盖面 = 行级租户正确 + 零交叉；数值级隔离未接（各 org 取值目前相同 ⇒ 另立卡 p1）。
+note: 【预算瘦身（CTO 裁 a）】延后 2 项（cash-flow-sentinel.ts / cpc-sentinel.ts 的非承重改动）已登记进 PR 未解决项；2 组测试合并（用例数守恒 17）。cron 扇出 = 全局轮不变 + per-org 只写轮（executeForActiveOrgs；无 active org ⇒ 不跑不写）；discoverTeams 改读 orgs（V6=修）；覆盖面 = 行级租户正确 + 零交叉；数值级隔离未接（各 org 取值目前相同 ⇒ 另立卡 p1）。
