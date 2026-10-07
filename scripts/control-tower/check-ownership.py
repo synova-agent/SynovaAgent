@@ -12,13 +12,13 @@ check-ownership.py — 路径归属查询/校验器（ownership.yaml 的唯一�
 一句话: 回答「这个写集属于哪条线？派给 X 线是否越域？」——把只写在
         docs/synova/coordination/TASK-ROUTING.md 里的人读域划分，变成可机器判定的门禁。
 
-背景（D733 派单 §一）: 域划分此前零机器消费者，Codeowners 26 条规则里 Win 域靠 `src/`
+背景（D733 派单 §一）: **（域划分已于 2026-10-07 废止，以下为历史沿革）** 域划分此前零机器消费者，Codeowners 26 条规则里 Win 域靠 `src/`
 兜底且排在 Mac 例外之后（CODEOWNERS 语义 = 最后匹配者胜出 → 例外被吞）。后果是
 CTO 2026-09-13 两次派错线（D728/D729 写集 100% 落 Win 域却派给 Mac 线）。
 
 契约（铁律 47）:
   @input  — 位置参数 FILE...: 待校验文件路径（仓库相对，允许尚未创建的文件，如 src/evidence/x.ts）
-            选项 --owner {mac|win|k3}  断言每个文件归属该 owner（越域 → exit 1）
+            选项 --owner <键>      断言每个文件归属该 owner（键见 ownership.yaml owners: 段；不符 → exit 1）
                  --yaml PATH            ownership.yaml 路径（默认 docs/synova/coordination/ownership.yaml）
                  --emit-codeowners      生成 .github/CODEOWNERS 全文到 stdout（不校验文件）
                  --quiet                只输出结论行，不打逐文件明细
