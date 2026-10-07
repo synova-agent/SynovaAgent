@@ -425,3 +425,34 @@ documents:
     path: docs/synova/coordination/交付-D1132-两预设包与哨兵skill-20261003.md
     status: active
     owner: line-lead
+
+  # ---- 产品线协调件（2026-10-04，synova-product-lead；本波新建）----
+  - id: DOC-0188
+    type: devdoc
+    path: docs/synova/product-lines/dispatch/派单-产品线P0波次-D962-D963与第0批承接-20261004.md
+    status: active
+    owner: synova-product-lead
+
+  - id: DOC-0189
+    type: status
+    path: docs/synova/product-lines/线状态-产品线-20261004.md
+    status: active
+    owner: synova-product-lead
+
+  - id: DOC-0190
+    type: pitfall
+    path: docs/synova/product-lines/升级CTO-派单缺陷与上游前提失实-20261004.md
+    status: active
+    owner: synova-product-lead
+
+  - id: DOC-0191
+    type: status
+    path: docs/synova/product-lines/收口-R1R5-产品线P0波次-D1137-20261004.md
+    status: active
+    owner: synova-product-lead
+
+  - id: DOC-0192
+    type: decision
+    path: docs/synova/product-lines/CTO裁决-产品线升级件-20261004.md
+    status: active
+    owner: cto
