@@ -19,8 +19,8 @@
  *        `_role` 初值 `null`、仅 `:141` 赋值；5 处生产实例化
  *        `conversation-engine.ts:413` / `bootstrap.ts:831` / `routes/conversations.ts:119,280`
  *        / `routes/diagnosis.ts:261` 均未设置）
- *        ⇒ **该分支在生产不可达**；「接通角色授权（角色来源 = 认证上下文）」属**新卡**
- *          （CTO 2026-10-08 裁定另立，编号待分配）
+ *        ⇒ **该分支在生产不可达**；「接通角色授权（角色来源 = 认证上下文）」属**新卡
+ *          #1347**（《接通角色授权：`setRole()` 零调用 ⇒ 执行面授权分支不可达》，CTO 2026-10-08 立）
  *      · 角色授权表 `src/agent/tool-profiles.ts`（规则源在位）——其两个消费点
  *        `src/agent/tools.ts:170-171`（listTools 过滤）与 `:189-190`（execute 拒绝）
  *        **同属 `_role === null` 路径** ⇒ 当前**不构成生产授权**
