@@ -1,0 +1,11 @@
+{
+  "task_id": "D1208",
+  "title": "ownership 登记制转发现制（目录内嵌标记 + 生成产物 + 漂移门禁）",
+  "status": "claimed",
+  "spec": "卡 #1233 / 父卡 #1221；Lead 2026-10-07 三条裁决：①写集路径更正为 docs/synova/coordination/ownership.yaml（只许 M）②设计批准（根标记/扫描发现/生成产物；逐字节漂移即红）③阻断点由 Lead 排入 ci.yml 注册批。【D# 撞号留痕·本日第 3 次】初取 D1204（被线 B《D-F/① CI 判据单源化》占用）→ 改 D1207（被 main 上 《project-coordinates-auth-hotfix》占用）→ 定 **D1208**。三处均按 check-name-allocation.sh 复核后仍撞，因 alloc-task-id.sh 读 max→写 max+1 无原子性（其 :88-89 自述，D454/D455 同型）。⇒ 代码/产物/标记已改为只引「卡 #1233」（D# 退役方向，见 #1222 D-C），D# 仅留在本过渡期机械件。他人 D1204.json 原样保留未改。",
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-07",
+  "updated_by": "line-d-own"
+}

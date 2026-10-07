@@ -27,7 +27,7 @@
 #            （#768 CI 实测: 旧夹具拿 ^+++ 当非法 ERE → GNU 下合法 → 该坐标落 STALE 而非"待修违规"
 #             → 5 条断言连锁红 PASS=50 FAIL=5；本机 GNU 仿真 shim 可逐字复现同一组）
 #   健壮 — 失败路径必须能播报: no()/ok() 文案里 `${VAR}` **必须加花括号** —— 全角标点紧贴变量
-#            （`$rc（…）`）在 macOS/bash 3.2 + UTF-8 locale 下被解析成变量名 `rc（` → set -u 下
+#            （`${rc}（…）`）在 macOS/bash 3.2 + UTF-8 locale 下被解析成变量名 `rc（` → set -u 下
 #            unbound variable → **夹具整体崩在断言处、结果行永不产出**（比截断更糟）。11 处已修。
 #   分段 — 双段互不串行: [R] 段 key 不给 A 模式豁免；[P] 段条目不进 registry 面
 #   判别性 — M1 未登记的新非法 ERE（临时脚本）→ 必红（exit 1 + 点名 file:line + 模式原文）
@@ -112,6 +112,7 @@ RUN() { # $1=scan $2=tests_dir $3=ci_yml $4=baseline $5=red_baseline $6=degraded
   SYNO_TESTS_DIR="$tests" \
   SYNO_CI_YML="$ciyml" \
   SYNO_GATE_BASELINE="$base" \
+  SYNO_SEALED_TESTS="${SEALED_FIX:-}" \
   SYNO_CI_RED_BASELINE="$redbase" \
   SYNO_GATE_DEGRADED_LOG="$dlog" \
   bash "$GATE" --root "$REPO" "$@"
@@ -381,20 +382,29 @@ fi
 # ── 边界: 基线过期（幽灵条目）→ exit 1 ──
 printf '# 基线\ntests/control-tower/beta.test.sh\ntests/control-tower/ghost.test.sh\n' > "$SB/baseline-stale.txt"
 OUT="$(RUN "$SCAN_OK" "$SB/tests" "$SB/ci.yml" "$SB/baseline-stale.txt" "$SB/red-baseline.txt" "$SB/logs/e3.log" --registry-only 2>&1)"; rc=$?
-if [ "$rc" -eq 1 ] && printf '%s\n' "$OUT" | grep -q "VIOLATION: 基线过期，须删条目: tests/control-tower/ghost.test.sh"; then
+if [ "$rc" -eq 1 ] && printf '%s\n' "$OUT" | grep -q "VIOLATION: 隔离台账条目失效（文件不存在，须删条目）: tests/control-tower/ghost.test.sh"; then
   ok "边界: 基线幽灵条目 → exit 1（基线过期）"
 else
   no "基线过期边界异常: rc=$rc"
 fi
 
-# ── 棘轮 R1: 真仓库 --patterns-only → exit 0（:991 已登记；STALE 语义随平台自适应）──
+# ── 棘轮 R1（**双向期望**，D1206/线B 2026-10-07 改；原为「必有 1 条 [P] 登记」的单向期望）──
+#   真判据 = 「已登记的既有违规不计违规；**陈旧条目（STALE）不得当豁免**」。故期望随真仓库 [P] 段实况自适应:
+#     · [P] 段 N 条 ⇒ rc=0 且 `registered N；STALE(0)`（登记内 ⇒ 不判违规）
+#     · [P] 段清零（#1264 后的健康态）⇒ rc=0 且 `registered 0；STALE(0)`（**棘轮允许清零**，清零≠异常）
+#   ⚠️ 未放宽成「无论 rc 都过」：下方按实况算出 N 并逐字比对；且两条反例仍在——
+#      ③ 反拔牙（STALE 且 expires 已过 ⇒ exit 1）/ M1（未登记的新非法模式 ⇒ exit 1）。
+P_N="$(awk 'BEGIN{s="R"} /^[[:space:]]*#/{l=$0; sub(/^[[:space:]]*#[[:space:]]*/,"",l); if(l ~ /^═+[[:space:]]*PATTERN-BASELINE/){s="P";next} if(l ~ /^═+[[:space:]]*REGISTRY-BASELINE/){s="R";next} next} /^[[:space:]]*$/{next} s=="P"{print}' "$REPO/scripts/control-tower/gate-integrity-baseline.txt" | wc -l | tr -d ' ')"
 OUT="$(SYNO_GATE_DEGRADED_LOG="$SB/logs/real.log" bash "$GATE" --root "$REPO" --patterns-only 2>&1)"; rc=$?
-if [ "$rc" -eq 0 ] && printf '%s\n' "$OUT" | grep -q "PATTERN-BASELINE: registered 1；STALE(0)"; then
-  ok "棘轮: 真仓库 --patterns-only → exit 0（:991 在本平台违规且已登记，registered 1 / STALE 0）"
-elif [ "$rc" -eq 0 ] && printf '%s\n' "$OUT" | grep -q "PATTERN-BASELINE: STALE("; then
-  ok "棘轮: 真仓库 --patterns-only → exit 0 且 :991 记 STALE（= 本平台/GNU 已不再违规；STALE 不影响退出码，按新契约正确）"
+#   平台自适应: 同一 [P] 条目在 BSD 下「仍违规 = registered」，在 GNU 下「已不违规 = STALE」⇒
+#   不变量 = rc=0 且 **账平**: registered + STALE = [P] 条数（条目不许凭空消失、不许被静默放行）。
+SUMMARY="$(printf '%s\n' "$OUT" | grep -oE 'PATTERN-BASELINE: registered [0-9]+；STALE\([0-9]+\)' | head -1)"
+R_N="$(printf '%s' "$SUMMARY" | sed -n 's/.*registered \([0-9]*\).*/\1/p')"
+S_N="$(printf '%s' "$SUMMARY" | sed -n 's/.*STALE(\([0-9]*\)).*/\1/p')"
+if [ "$rc" -eq 0 ] && [ -n "$R_N" ] && [ "$(( ${R_N:-0} + ${S_N:-0} ))" -eq "$P_N" ]; then
+  ok "棘轮: 真仓库 --patterns-only → exit 0（[P] 实况 ${P_N} 条 ⇒ registered ${R_N} + STALE ${S_N} = ${P_N}；清零/方言均合法）"
 else
-  no "棘轮: 真仓库 --patterns-only 非预期: rc=$rc"
+  no "棘轮: 真仓库 --patterns-only 非预期: rc=${rc} summary=[$SUMMARY]（期望 rc=0 且 registered+STALE=[P]条数=${P_N}）"
 fi
 
 # ── 棘轮: PATTERN 条目 expires 过期 → exit 1 ──
@@ -562,14 +572,63 @@ else
   no "M5 判别性失败: rc=$rc"
 fi
 
-# ── 判别性 M2: 从基线删 1 条仍存在的未登记项 → 必红 ──
-printf '# 基线\n' > "$SB/baseline-m2.txt"
-OUT="$(RUN "$SCAN_OK" "$SB/tests" "$SB/ci.yml" "$SB/baseline-m2.txt" "$SB/red-baseline.txt" "$SB/logs/m2.log" --registry-only 2>&1)"; rc=$?
-if [ "$rc" -eq 1 ] && printf '%s\n' "$OUT" | grep -q "VIOLATION: 新增测试未登记 CI 密封清单: tests/control-tower/beta.test.sh"; then
-  ok "M2: 基线删条 → exit 1（原基线内未登记项被点名为新增）"
+# ── 判别性 M2（D-F/② 发现制）: 零登记新增自动纳入 / 面外新增必红 / 删测试须显式降棘轮 ──
+#   沙箱基线: 隔离 beta + 发现面下界 FACE-TOTAL=2（0 = 不设下界，此处刻意设 2 以行使棘轮）
+DISCOVERY_BASE="$SB/baseline-discovery.txt"
+printf '# 夹具基线（发现制）\n# FACE-TOTAL=2\n# ═══ REGISTRY-BASELINE（夹具：beta 隔离）═══\ntests/control-tower/beta.test.sh\n# ═══ PATTERN-BASELINE（空）═══\n' > "$DISCOVERY_BASE"
+
+# M2a: 面内新增测试（零登记：不出现在 ci.yml、不在隔离台账）⇒ 自动纳入执行 ⇒ exit 0
+printf '#!/bin/bash\n' > "$SB/tests/control-tower/gamma.test.sh"
+OUT="$(RUN "$SCAN_OK" "$SB/tests" "$SB/ci.yml" "$DISCOVERY_BASE" "$SB/red-baseline.txt" "$SB/logs/m2a.log" --registry-only 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ] && printf '%s\n' "$OUT" | grep -q "发现制执行"; then
+  ok "M2a 发现制: 面内新增零登记 ⇒ 自动纳入 ⇒ exit 0"
 else
-  no "M2 判别性失败: rc=$rc"
+  no "M2a 发现制失败: rc=$rc"
 fi
+
+# M2b: 面外新增（tests/project/，不属发现面）⇒ 必红并点名
+mkdir -p "$SB/tests/project"; printf '#!/bin/bash\n' > "$SB/tests/project/delta.test.sh"
+OUT="$(RUN "$SCAN_OK" "$SB/tests" "$SB/ci.yml" "$DISCOVERY_BASE" "$SB/red-baseline.txt" "$SB/logs/m2b.log" --registry-only 2>&1)"; rc=$?
+if [ "$rc" -eq 1 ] && printf '%s\n' "$OUT" | grep -q "VIOLATION: 密封面测试未纳入发现面也未登记: tests/project/delta.test.sh"; then
+  ok "M2b 发现制: 面外新增零登记 ⇒ exit 1 + 点名（不静默放行）"
+else
+  no "M2b 判别性失败: rc=$rc"
+fi
+
+# M2b-mutant: 把 provider 换成「旧口径」= --scan 只回 ci.yml 里出现的名字
+#   ⇒ M2a 的同一场景（面内新增 gamma）必红 —— 证明判据真在「扫描发现面」而不是「数 ci.yml 名字」
+cat > "$SB/sealed-old-rule.sh" <<'EOS'
+#!/bin/bash
+ROOT=""; MODE=""
+while [ $# -gt 0 ]; do case "$1" in --scan|--quarantine|--list|--face-total) MODE="${1#--}";; --root) shift; ROOT="$1";; esac; shift; done
+CIY="$ROOT/ci.yml"
+case "$MODE" in
+  scan|list) grep -oE 'tests/[A-Za-z0-9_./-]+\.test\.(sh|py)' "$CIY" 2>/dev/null | sort -u ;;  # swallow-ok: 夹具桩——ci.yml 缺失即空集（旧口径本就如此）
+  quarantine) : ;;
+  face-total) echo 0 ;;
+esac
+EOS
+OUT="$(SEALED_FIX="$SB/sealed-old-rule.sh" RUN "$SCAN_OK" "$SB/tests" "$SB/ci.yml" "$DISCOVERY_BASE" "$SB/red-baseline.txt" "$SB/logs/m2bm.log" --registry-only 2>&1)"; rc=$?
+if [ "$rc" -eq 1 ] && printf '%s\n' "$OUT" | grep -q "VIOLATION: 密封面测试未纳入发现面也未登记: tests/control-tower/gamma.test.sh"; then
+  ok "M2b-mutant: 旧口径（只数 ci.yml 名字）⇒ 面内新增必红 ⇒ 判据判别性成立"
+else
+  no "M2b-mutant 失败（旧口径下未红 ⇒ 判据可能是纸老虎）: rc=$rc"
+fi
+
+# M2c: 删一个面内测试、**不下调** FACE-TOTAL ⇒ 必红（删测试棘轮；防静默缩小执行集）
+rm -f "$SB/tests/control-tower/gamma.test.sh" "$SB/tests/project/delta.test.sh"
+printf '# 夹具基线（发现制，下界 3 高于实况）\n# FACE-TOTAL=3\n# ═══ REGISTRY-BASELINE（夹具）═══\ntests/control-tower/beta.test.sh\n# ═══ PATTERN-BASELINE（空）═══\n' > "$SB/baseline-floor.txt"
+OUT="$(RUN "$SCAN_OK" "$SB/tests" "$SB/ci.yml" "$SB/baseline-floor.txt" "$SB/red-baseline.txt" "$SB/logs/m2c.log" --registry-only 2>&1)"; rc=$?
+if [ "$rc" -eq 1 ] && printf '%s\n' "$OUT" | grep -q "VIOLATION: SEALED-TESTS: 发现面"; then
+  ok "M2c 删测试棘轮: 删面内测试且未下调 FACE-TOTAL ⇒ exit 1（点名 floor）"
+else
+  no "M2c 判别性失败（删测试未红 = 棘轮失效）: rc=$rc"
+fi
+
+# M2d: 同一删除形态 + **同批显式下调** FACE-TOTAL ⇒ 绿（棘轮下调通路可达，不是恒红）
+printf '# 夹具基线（发现制，下界已下调）\n# FACE-TOTAL=2\n# ═══ REGISTRY-BASELINE（夹具）═══\ntests/control-tower/beta.test.sh\n# ═══ PATTERN-BASELINE（空）═══\n' > "$SB/baseline-floor2.txt"
+OUT="$(RUN "$SCAN_OK" "$SB/tests" "$SB/ci.yml" "$SB/baseline-floor2.txt" "$SB/red-baseline.txt" "$SB/logs/m2d.log" --registry-only 2>&1)"; rc=$?
+[ "$rc" -eq 0 ] && ok "M2d 棘轮下调通路: 删除 + 同批下调 FACE-TOTAL ⇒ exit 0" || no "M2d 失败: rc=$rc"
 
 # ── 回归 M6: 相邻引号段拼接模式不得被截断成假违规（真实形态，逐字节复刻 dev-doc-gatekeeper.sh:109）──
 cat > "$SB/scripts/m6-scan.sh" <<'EOM'

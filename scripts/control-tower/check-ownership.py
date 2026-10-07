@@ -6,7 +6,7 @@ check-ownership.py — 路径归属查询/校验器（发现制：目录内嵌 .
 一句话: 回答「这个路径属于谁？」——归属真源是**目录自身**的 `.synova-owner` 标记，
         不是任何中央登记表。中央产物（ownership.yaml / CODEOWNERS）由本脚本**生成**。
 
-背景（D1204 / 卡 #1233「登记制 → 发现制」）:
+背景（卡 #1233「登记制 → 发现制」）:
   创始人裁定原则 **登记点 = 汇聚点 = 冲突点**。旧形态把全仓归属写进一份中央
   `ownership.yaml` ⇒ 每建一个新目录都要改同一份文件（D806/D914/D935/D911 同型事故 ≥4 次），
   该文件既是登记点也是合并冲突点。现改为**目录内嵌发现制**（参考 DSH 上游形态：门禁与
@@ -322,7 +322,7 @@ def resolve_owner(rules, path: str):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 生成产物（D1204：yaml 与 CODEOWNERS 均为产物，逐字节可比）
+# 生成产物（卡 #1233：yaml 与 CODEOWNERS 均为产物，逐字节可比）
 # ══════════════════════════════════════════════════════════════════════════════
 
 _OWNERSHIP_HEADER = [
@@ -397,7 +397,7 @@ def emit_codeowners(rules, github) -> str:
         "# .github/CODEOWNERS — 【生成产物，请勿手改】",
         "# 真源: 各目录内嵌的 %s 标记（发现制；本文件由 --emit-codeowners 生成）" % MARKER_NAME,
         "# 生成: python3 scripts/control-tower/check-ownership.py --emit-codeowners > .github/CODEOWNERS",
-        "# 漂移门禁: check-ownership.py --check-drift 逐字节断言本文件 == 现树生成结果（D1204）",
+        "# 漂移门禁: check-ownership.py --check-drift 逐字节断言本文件 == 现树生成结果（卡 #1233）",
         "# 语义: CODEOWNERS「最后匹配者胜出」→ 宽规则在前、例外在后（与产物同序）。",
         "#",
         "# 账号体系：在**首次声明该 owner 键**的 .synova-owner 里写 `handle: @账号`，",
@@ -476,7 +476,7 @@ def check_drift(repo_root: Path = REPO_ROOT, verbose: bool = True) -> int:
 def main(argv) -> int:
     ap = argparse.ArgumentParser(
         prog="check-ownership.py",
-        description="路径归属查询/校验（发现制 D1204）：标记缺失=继承；产物漂移 exit 1；检查自身失败 exit 2",
+        description="路径归属查询/校验（发现制，卡 #1233）：标记缺失=继承；产物漂移 exit 1；检查自身失败 exit 2",
     )
     ap.add_argument("files", nargs="*", help="待校验文件（仓库相对路径）")
     ap.add_argument("--owner", default=None, help="声明 owner；逐文件断言归属")

@@ -6,7 +6,7 @@
 #   创始人原话：「不分域。谁有空，谁能做就谁做。」
 #   ⇒ ownership.yaml 改为**单域**（全路径同一 owner）⇒ 原「越域 / 跨域」断言失去对象。
 #
-# 🔴 2026-10-07 · D1204 登记制→发现制（卡 #1233）
+# 🔴 2026-10-07 · 卡 #1233 登记制→发现制
 #   创始人裁定「登记点 = 汇聚点 = 冲突点」⇒ 归属真源就近入目录（`.synova-owner`），
 #   中央 ownership.yaml / CODEOWNERS 降级为**生成产物**。本文件补判别性夹具：
 #     §9  新目录**零中央登记**即被识别（且未触碰任何中央文件）
@@ -201,7 +201,7 @@ if grep -qE '^[[:space:]]+territory:' "$YAML"; then fail "仍有 territory: 字�
 if grep -qE '^[[:space:]]+(mac|win|k3):' "$YAML"; then fail "仍有 mac/win/k3 owner 键（分域残留）"; else pass "无 mac/win/k3 owner 键（分域残留已清）"; fi
 
 echo ""
-echo "── 9. 🔴 发现制: 新增目录零中央登记即被识别（D1204 夹具①）──"
+echo "── 9. 🔴 发现制: 新增目录零中央登记即被识别（卡 #1233 夹具①）──"
 # 沙箱：镜像仓内相对结构 —— check-ownership.py 的 REPO_ROOT = 自身 ../..（同 check-pr-budget.test.sh:96）
 SANDBOX="$TMPD/sandbox"
 SBL_TOOL="scripts/control-tower/check-ownership.py"   # ⚠️ 必须是**沙箱内相对路径**：REPO_ROOT 由脚本自身位置反推
@@ -240,7 +240,7 @@ echo "$OUT" | grep -q "^maintainer src/brandnew/deep/f.ts" \
   || fail "新增目录被迫改中央文件（登记制未真正退役）"
 
 echo ""
-echo "── 10. 🔴 改坏即红: 改/删归属标记 ⇒ exit 1（D1204 夹具②）──"
+echo "── 10. 🔴 改坏即红: 改/删归属标记 ⇒ exit 1（卡 #1233 夹具②）──"
 # 10a: 新增**本目录**标记改归属，产物未重生成 ⇒ 漂移 exit 1
 printf 'owner: k3\nhandle: @auditor\n' > "$SANDBOX/src/brandnew/.synova-owner"
 ( cd "$SANDBOX" && git add -A ) >/dev/null 2>&1
@@ -267,7 +267,7 @@ sb src/brandnew/keep.ts > "$TMPD/f10c.out" 2>&1; _e=$?
   || { fail "删标记后未红 — 期望 exit=1 实际 $_e"; sed 's/^/      | /' >&2 < "$TMPD/f10c.out"; }
 
 echo ""
-echo "── 11. 🔴 生成命令可复跑 + 逐字节漂移即红（D1204 夹具③）──"
+echo "── 11. 🔴 生成命令可复跑 + 逐字节漂移即红（卡 #1233 夹具③）──"
 if mk_sandbox; then pass "夹具③沙箱重置就绪"; else fail "夹具③沙箱重置失败"; fi
 sb --emit-ownership  > "$TMPD/own.1" 2>/dev/null
 sb --emit-ownership  > "$TMPD/own.2" 2>/dev/null
