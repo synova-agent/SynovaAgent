@@ -170,6 +170,33 @@ describe('测量值写入 sink（#1054 / 2-1b · V2/V7）', () => {
     expect(sample?.degraded).toBe(1); // R4 无生产者 ⇒ 降级显式
   });
 
+  it('🔴 A2 判据：runSentinelForTeam(teamId, store) 写出的行 org_id == 传入 teamId（且 ≠ default）', async () => {
+    const sink = createMetricSink(db);
+    const store = stubGraphDb([{ revenue: 1000, cost: 200, operating_expenses: 300, cash_balance: 5000, period: '2026-09' }]);
+    const { runSentinelForTeam } = await import('../../src/sentinel/sentinel-runner');
+    const { getSentinelRegistry } = await import('../../src/sentinel/registry');
+    // 注册样板哨兵（`runAll` 遍历注册表；用后 unregister，避免污染其它用例）
+    const registry = getSentinelRegistry();
+    registry.register(cashFlowSentinel);
+
+    try {
+      await runSentinelForTeam('org-A2', store, { metricSink: sink });
+    } finally {
+      registry.unregister(cashFlowSentinel.config.id);
+    }
+
+    const all = rows(db);
+    expect(all.length).toBeGreaterThan(0); // 该路径**确实落行**（不是零写入）
+    expect(all.every(r => r.org_id === 'org-A2')).toBe(true);
+    expect(all.every(r => r.org_id !== 'default')).toBe(true);
+  });
+
+  it('🔴 A2/M1 判据：无 teamId ⇒ fail-closed **零行**（不写错租户行、不回退 default）', () => {
+    const sink = createMetricSink(db);
+    writeRoundReadings(sink, 'some-sentinel', { findings: [1], durationMs: 5, checkedAt: '2026-10-08T00:00:00Z' }, undefined);
+    expect(rows(db)).toHaveLength(0); // 无 org 维度 ⇒ 宁可不落行
+  });
+
   it('V7 数据可用性：两段 observed_at ⇒ 可算差值（时序是参数标定的前提）', async () => {
     const sink: MetricSink = createMetricSink(db);
     const makeCtx = (checkedAt: string, revenue: number): SentinelContext => ({

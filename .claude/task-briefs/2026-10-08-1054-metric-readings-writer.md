@@ -32,8 +32,7 @@
 做什么：
 - src/sentinel/metric-readings-writer.ts — 新建：`recordMetricReading` / `createMetricSink` / `writeRoundReadings` / `writeMetricReadings`（契约 + 幂等 + 降级显式 + 永不抛）
 - src/sentinel/types.ts — `SentinelContext` 增可选 `metricSink`（缺省 = 零行为变化）
-- src/sentinel/registry.ts — `runAll` 轮边界写轮次级（2 行/哨兵/轮）
-- src/sentinel/runner.ts — ctx 注入 sink + 直调 check 后写轮次级（生产接线点）
+- src/sentinel/sentinel-runner.ts — **teamId 接进 ctx**（A2）+ 可选/引擎回退 sink（诊断主链路径由此落行）
 - src/sentinel/adapters/cash-flow-sentinel.ts — **指标级样板**：4 个 compute 指标落表（null 不写）
 - tests/sentinel/metric-readings-writer.test.ts — 新建：10 例（正常/幂等/降级/边界/失败面/轮次级/样板指标级/V7 数据可用性/决策锁定夹具/只追加）
 - .claude/claims/1054.yaml — 新建（S0，含 done）
@@ -43,6 +42,7 @@
 - 不改 src/store/migrations/001-graph-nodes-props.ts（迁移内容，2-1a 已交付）
 - 不改 src/store/migrations/002-metric-readings.ts（表定义，属 #1053 写集）
 - 不改 src/security/file-guard.ts（文件写门禁，2-4 已合；本卡无文件写入面）
+- 不改 src/sentinel/runner.ts（**无 org 维度 ⇒ fail-closed 不写**；该文件净变更 = 0）
 - 不改 src/tools/tool-registry.ts（其执行/权限面已在 0-11 拆除）
 
 范围外约束（非文件级，不列入排除清单）：其余 44 哨兵的**指标级**接线 = 后续卡（本卡在覆盖面声明里列为**未覆盖面**）。
@@ -52,6 +52,9 @@
 处理：sink 在轮边界写轮次级行；样板哨兵在判定点写指标级行（`metric_id` = compute 指标名、`value` = 本次取值）。
 结果：`metric_readings` 出现**指标级**行（样板 1 个哨兵）⇒ 可供 before/after 差值（标定前提）。
 **覆盖面**：指标级写入已接（覆盖面 = 样板哨兵 1 个；其余 44 个哨兵暂只有轮次级；写入点②/③ 未接）。
+**轮次级只在 `runSentinelForTeam`（诊断主链）路径落行**；以下 **3 条路径零写入**（点名，不许沉默）：
+① `runSentinelOnce` 降级直连（`src/agent/sentinel-service.ts`；经 HTTP/MCP 暴露）② `SentinelRunner` cron/`runOnce`（无 org 维度 ⇒ fail-closed）③ 周报 boss-mailbox（`server.ts` 的 `runAll({db,now,registry})`）。
+**标定供数口径（写死）**：`metric_id NOT LIKE 'SENTINEL-%'`。
 
 ## Q4 契约与测试:
 - 契约：`recordMetricReading` 五段 JSDoc（@input/@output/@degraded/@invariant/@not-here）；**永不抛**（失败 ⇒ `{written:false,degraded:true,reason}` + log.warn）

@@ -7,10 +7,22 @@
  *   · 表定义 = #1053（2-1a，已合 `b3f1c99c5`）：`metric_readings` 17 列 + 3 索引 + 表级不变量 CHECK
  *   · 硬顺序【权】：「指标时序存储必须先于参数标定」（`产品宪章.md:229`）⇒ 本写入侧存在的理由 = 给标定供数
  *
- * 覆盖面（本卡交付边界，逐字；CTO 2026-10-08 裁 C 时指定形态）:
+ * 覆盖面（本卡交付边界，逐字；CTO 2026-10-08 裁 C + 复核订正）:
  *   **指标级写入已接（覆盖面 = 样板哨兵 1 个；其余 44 个哨兵暂只有轮次级；写入点②/③ 未接）**
  *   —— 样板 = `src/sentinel/adapters/cash-flow-sentinel.ts`（有真实 compute 数值）；
  *   —— 其余 44 哨兵的指标级接线 = **后续卡**（本卡只交 sink + 轮次级 + 1 样板）。
+ *
+ *   🔴 **轮次级可落行的路径（实测点名，CTO 2026-10-08 裁 M1：不许放大覆盖）**：
+ *      · ✅ **只在这条路径落行**：`runSentinelForTeam(teamId, store)` → `registry.runAll`
+ *        （`sentinel-runner.ts`；teamId 已接入 ctx ⇒ `org_id == 传入 teamId`）
+ *      · ❌ 以下路径 **零写入**（已点名，不许沉默）：
+ *        ① `runSentinelOnce` 降级直连（`src/agent/sentinel-service.ts` 的 ctx 无 sink；经 HTTP `routes/sentinel.ts` + MCP 暴露）
+ *        ② `SentinelRunner` cron/`runOnce`（**无 org 维度** ⇒ 本模块 fail-closed **不写**，不再回退 `'default'`）
+ *        ③ 周报 boss-mailbox（`server.ts` 的 `runAll({db,now,registry})`，无 sink）
+ *
+ *   🔴 **标定供数口径（CTO 2026-10-08 裁 A3，写死为机器可过滤）**：
+ *      标定/趋势查询**必须**带 `metric_id NOT LIKE 'SENTINEL-%'` —— 轮次级（`SENTINEL-*`）**不作标定供数**；
+ *      仅写文字约定不够（数据层无标记），故把口径写成 SQL 可判形态。
  *
  * 契约（铁律 47）:
  *   @input    db（better-sqlite3 Database，表需已由 reconcileSchema 建好）；row 见 MetricReadingInput
@@ -154,15 +166,22 @@ export function writeRoundReadings(
   teamId?: string,
 ): void {
   if (!sink) return;
+  // 🔴 org_id 是唯一索引业务键的一部分 ⇒ **无租户维度时 fail-closed：不写**（CTO 2026-10-08 裁 A2：
+  //    "org_id 退化为常量 = 跨租户串数据的种子"；标定数据串租户 = 最坏的一种错）⇒ 宁可不落行，不写错租户行。
+  if (teamId === undefined || teamId === '') {
+    log.debug({ sentinelId }, '无 teamId（org 维度未接）⇒ 跳过轮次级写入（fail-closed）');
+    return;
+  }
   const observedAt = result.checkedAt ?? new Date().toISOString();
   const base = {
-    orgId: teamId ?? 'default',
+    orgId: teamId,
     observedAt,
     entityId: '*',
     sourceType: 'compute' as const,
     sourceId: `SENTINEL-${sentinelId}`,
     evidenceRef: `sentinel:${sentinelId}`,
-    degraded: result.degraded ?? false,
+    // A4: 只在结果【显式】给出 degraded 时才主张（`?? false` 会伪造"调用方主张 false"⇒ 触发纠正告警）
+    degraded: result.degraded,
   };
   sink({ ...base, metricId: `SENTINEL-FINDINGS-${sentinelId}`, value: result.findings?.length ?? 0 });
   sink({ ...base, metricId: `SENTINEL-DURATION-${sentinelId}`, value: result.durationMs ?? 0, unit: 'ms' });

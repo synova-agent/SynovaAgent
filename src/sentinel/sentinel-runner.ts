@@ -12,6 +12,7 @@
 import { createLogger } from '@synova/logger';
 import { getSentinelRegistry, formatFindingsForLLM } from './registry';
 import type { SentinelFinding, SentinelContext } from './types';
+import { createMetricSink, type MetricSink } from './metric-readings-writer';
 
 const log = createLogger('sentinel/runner');
 
@@ -29,13 +30,34 @@ interface GraphStoreReader {
 export async function runSentinelForTeam(
   teamId: string,
   store: GraphStoreReader,
+  options?: { metricSink?: MetricSink },
 ): Promise<SentinelFinding[]> {
   const registry = getSentinelRegistry();
   // 构造 SentinelContext — db 字段携带 GraphStore
+  // 🔴 #1054（2-1b）A2（CTO 2026-10-08 裁）：**teamId 必须接进 ctx** —— 否则测量值行的 `org_id`
+  //    退化为常量 `'default'`，而 `org_id` 是唯一索引业务键的一部分 ⇒ 跨租户串数据的种子。
+  //    （同一缺口的旁证：`src/mcp/tool-definitions.ts` 注释已指出"teamId 传 runSentinelForTeam，
+  //      实际跑全量且丢 D577 阈值注入的 teamId 上下文"。）
+  // 尽力从引擎上下文取 Database 造 sink（失败 ⇒ undefined ⇒ 不写；**不抛**，铁律 24/31）
+  let sink: MetricSink | undefined = options?.metricSink;
+  if (!sink) {
+    try {
+      const { getDatabase } = await import('../init/engine-context');
+      sink = createMetricSink(getDatabase());
+    } catch (err: unknown) {
+      log.debug(
+        { err: err instanceof Error ? err.message : String(err) },
+        '引擎库不可用 ⇒ 测量值 sink 未注入（不写，不抛）',
+      );
+    }
+  }
+
   const context: SentinelContext = {
     db: store,
     now: new Date(),
     registry,
+    teamId,
+    metricSink: sink,
   };
   return registry.runAll(context);
 }
