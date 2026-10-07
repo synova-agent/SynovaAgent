@@ -61,11 +61,11 @@ echo ""
 
 echo "=== P7: 与在飞 #1322 分支的写集对比 ==="
 echo "--- feat/1322-goal-creation-entry 相对 main 的改动文件 ---"
-git diff --name-only origin/main...origin/feat/1322-goal-creation-entry 2>/dev/null || echo "(分支 ref 不可解析)"
+git diff --name-only origin/main...origin/feat/1322-goal-creation-entry 2>/dev/null || echo "(分支 ref 不可解析)"  # swallow-ok: 下一句有显式文字回退，非静默
 echo "--- 我的分支相对 main 的改动文件 ---"
 git diff --name-only origin/main...HEAD
 echo "--- 两集合交集（应为空）---"
-comm -12 <(git diff --name-only origin/main...origin/feat/1322-goal-creation-entry 2>/dev/null | sort) <(git diff --name-only origin/main...HEAD | sort) || true
+comm -12 <(git diff --name-only origin/main...origin/feat/1322-goal-creation-entry 2>/dev/null | sort) <(git diff --name-only origin/main...HEAD | sort) || true  # swallow-ok: 上句已显式回退"(分支 ref 不可解析)"，此处为空集即"不可解析"的可视结果
 echo ""
 
 echo "=== P8: 架构规则相关（layer boundary 不新增跨层 import）==="

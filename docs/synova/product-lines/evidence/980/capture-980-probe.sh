@@ -21,7 +21,7 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null)"
+REPO_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null)"  # swallow-ok: 失败有显式 FATAL 分支（下一行），非静默
 if [ -z "${REPO_ROOT:-}" ]; then
   echo "FATAL: 无法解析仓库根（git rev-parse --show-toplevel 失败）" >&2
   exit 2
