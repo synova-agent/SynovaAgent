@@ -14,6 +14,8 @@
     "scripts/control-tower/check-ownership.py",
     "tests/control-tower/check-ownership.test.sh",
     ".claude/task-briefs/2026-10-07-D1195-no-domain-cleanup.md",
-    "task-state/D1195.json"
+    "task-state/D1195.json",
+    "scripts/control-tower/scan-fullwidth-vars.sh",
+    "tests/control-tower/scan-fullwidth-vars.test.sh"
   ]
 }
