@@ -1,0 +1,18 @@
+{
+  "task_id": "D1195",
+  "title": "P0-1 跨客户标识不外泄（k-匿名）",
+  "write_set": [
+    "packages/evolution/src/global-analyzer.ts",
+    "tests/evolution/global-analyzer.test.ts",
+    ".claude/task-briefs/2026-10-07-D1195-P0-1-跨客户标识不外泄.md",
+    ".claude/task-briefs/2026-10-07-D1195-P0三项-跨租户边界.md",
+    "task-state/D1195.json"
+  ],
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-07",
+  "updated_by": "alloc-task-id"
+}
