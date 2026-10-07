@@ -251,7 +251,7 @@ def analyze_task_state() -> Tuple[list, dict]:
                              errors="replace", timeout=30, cwd=REPO).stdout
         for line in log.splitlines():
             # impl = 任务有提交（feat/fix/docs/ci 均算交付——提交即完成证据）
-            m = re.search(r"\(D(\d{3})\)", line)
+            m = re.search(r"\(D(\d{3,})\)", line)
             if m:
                 impl_hits.add(int(m.group(1)))
     except Exception:  # noqa: BLE001 — git 不可用 → 派生降级
@@ -273,7 +273,7 @@ def analyze_task_state() -> Tuple[list, dict]:
     impl_dir = REPO / "docs" / "plans" / "codex" / "implementation"
     if impl_dir.exists():
         for f in impl_dir.glob("SYNOVA-IMPL-D*.md"):
-            m = re.search(r"D(\d{3})", f.name)
+            m = re.search(r"D(\d{3,})", f.name)
             if m:
                 (spec_files if _committed(f) else phantom_spec).add(int(m.group(1)))
     audit_files = set()
@@ -281,7 +281,7 @@ def analyze_task_state() -> Tuple[list, dict]:
     audit_dir = REPO / "docs" / "synova" / "audit-reports"
     if audit_dir.exists():
         for f in audit_dir.glob("*.md"):
-            m = re.search(r"D(\d{3})", f.name)
+            m = re.search(r"D(\d{3,})", f.name)
             if m:
                 (audit_files if _committed(f) else phantom_audit).add(int(m.group(1)))
 
@@ -295,7 +295,7 @@ def analyze_task_state() -> Tuple[list, dict]:
             tasks.append({"task_id": p.stem, "title": "?", "status": "broken", "note": "json 解析失败"})
             continue
         tid = d.get("task_id", p.stem)
-        m = re.search(r"D(\d{3})", tid)
+        m = re.search(r"D(\d{3,})", tid)
         num = int(m.group(1)) if m else None
         if num is not None:
             seen_nums.add(num)

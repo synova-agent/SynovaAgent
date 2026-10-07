@@ -29,7 +29,15 @@ fail() { FAIL=$((FAIL + 1)); echo "  ❌ $1" >&2; }
 assert_contains() { if echo "$1" | grep -qF "$2"; then pass "$3"; else fail "$3 — 未找到: $2"; fi; }
 
 TMPD="$(mktemp -d)"
-trap 'rm -rf "$TMPD"' EXIT
+# D1215（Lead 裁决③）—— 本测试**设计上**会改写真实产物（头注释即「直接对真实产物测试」），
+#   但旧版只在「数据源未变」时才不写 ⇒ 每跑一次就把 docs/synova/CTO-HEALTH.md 弄脏
+#   （实测：时间戳必变，且 git 派生计数随分支集合变）⇒ **提交产物后下一跑又脏 = 等于没修**。
+#   头注释早写了「测试后恢复」的意图，本卡把它落实：**开跑前快照 + EXIT trap 无条件还原**
+#   （含失败路径，避免"失败了还把产物改坏"）。
+OUT_SNAPSHOT="$TMPD/CTO-HEALTH.md.orig"
+[ -f "$OUT" ] && cp "$OUT" "$OUT_SNAPSHOT" 2>/dev/null || true
+restore_artifact() { [ -f "$OUT_SNAPSHOT" ] && cp "$OUT_SNAPSHOT" "$OUT" 2>/dev/null || true; }
+trap 'restore_artifact; rm -rf "$TMPD"' EXIT
 
 # D1215/卡 #1268 — **生成器调用统一走此函数**：把 rc 显式交回调用方。
 #   旧写法 `OUT1=$(python3 "$GEN" 2>&1)` 在 `set -euo pipefail` 下遇 rc≠0 会**立即静默中止**
@@ -141,6 +149,30 @@ for _t in D901 D902; do
     fail "${_t} 形态归属判定异常"; printf '%s\n' "$SB_OUT" | grep -E "\| ${_t} " | sed 's/^/      | /' >&2
   fi
 done
+echo ""
+
+echo "── 7. 🔴 4 位编号: impl 提交必须被识别（D1215/卡 #1268 同族，4 处正则同修）──"
+# 旧码 4 处用 `D(\d{3})`：三位正则把 D1215 读成 121，且 commit 主体的 `(D1215)` 因要求
+# 紧跟 `)` 而**完全匹配不上** ⇒ 该任务的 impl 提交被**静默漏掉** ⇒ 仪表盘状态少报
+# （实测 old: claimed ／ new: impl_done）。本夹具锚定「4 位号必须被解析」。
+SB2="$TMPD/sandbox4"
+mkdir -p "$SB2/scripts/control-tower" "$SB2/task-state" "$SB2/docs/synova"
+cp "$GEN" "$SB2/scripts/control-tower/" 2>/dev/null || true
+printf '{"task_id":"D1215","title":"四位数任务","spec":null,"status":"claimed"}\n' > "$SB2/task-state/D1215.json"
+( cd "$SB2" && git init -q . && git add -A \
+  && git -c user.email=t@t -c user.name=t commit -qm "feat(D1215): 四位数任务提交" ) >/dev/null 2>&1 || true
+SB2_OUT="$( ( cd "$SB2" && python3 scripts/control-tower/gen-cto-health.py --dry-run 2>&1 ) )" || true
+if printf '%s' "$SB2_OUT" | grep -qE '\| D1215 \| impl_done \|'; then
+  pass "4 位号 D1215 的 impl 提交被识别（status=impl_done；三位正则下实测为 claimed）"
+else
+  fail "4 位号 D1215 的 impl 提交未被识别（三位正则回归？）"
+  printf '%s\n' "$SB2_OUT" | grep -E '\| D121' | sed 's/^/      | /' >&2
+fi
+if grep -qE 'D\(\\d\{3,\}\)' "$GEN"; then
+  pass "4 处 D# 正则均为 3+ 位（D(\\d{3,})）"
+else
+  fail "仍存在三位 D# 正则 D(\\d{3})（4 位号会被截断/漏匹配）"
+fi
 echo ""
 
 echo "═══════════════════════════════════════════════════════════"
