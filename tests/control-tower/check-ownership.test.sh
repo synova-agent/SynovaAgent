@@ -343,7 +343,7 @@ grep -q "产物漂移" "$TMPD/noroot.out" && pass "点名漂移（真源消失 =
 for _emit in --emit-ownership --emit-codeowners; do
   sb "$_emit" > "$TMPD/emit-noroot.out" 2>&1; _e=$?
   [ "$_e" = 2 ] && pass "根标记缺失 ⇒ ${_emit} exit 2（生成面拒绝产出，不产半成品）" \
-    || { fail "根标记缺失 ${_emit} — 期望 exit=2 实际 $_e（生成面与校验面未对齐）"; sed 's/^/      | /' >&2 < "$TMPD/emit-noroot.out"; }
+    || { fail "根标记缺失 ${_emit} — 期望 exit=2 实际 ${_e}（生成面与校验面未对齐）"; sed 's/^/      | /' >&2 < "$TMPD/emit-noroot.out"; }
 done
 if sb --emit-ownership 2>/dev/null | grep -qE '^[[:space:]]*- glob:'; then
   fail "根标记缺失时 --emit-ownership 仍吐出规则段（半成品泄漏）"

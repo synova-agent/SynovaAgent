@@ -73,7 +73,7 @@ RC=$?
 if [ "$RC" -eq 0 ] && [ ! -f "$TMP/t2/evidence/task-D991.json" ] && printf '%s' "$OUT" | grep -q "k3_only"; then
   pass "T2 k3_only 点（1-8）跳过不兑换 + 显式提及"
 else
-  fail "T2 k3_only 应被跳过（rc=$RC out=$OUT）"
+  fail "T2 k3_only 应被跳过（rc=$RC out=${OUT}）"
 fi
 
 # ── T3: calc 存量降级（假 k3 → task_redeem → 点非 verified）──
