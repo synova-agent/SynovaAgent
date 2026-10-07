@@ -17,6 +17,8 @@ import type { Sentinel, SentinelCheckResult, SentinelFinding } from './types';
 import type { Evidence } from '../evidence/types';
 import { getSentinelRegistry } from './registry';
 import { getBaselineStore } from './baseline-store';
+import { createMetricSink, type MetricSink } from './metric-readings-writer';
+import { listActiveOrgs, executeForActiveOrgs, findOrgsWithDataButNotRegistered } from './org-registry';
 import { HEALTH_REGISTRY_RATIO_WARNING, HEALTH_FAILURES_WARNING, HEALTH_FAILURES_CRITICAL, HEALTH_UPTIME_IDLE_MS, HEALTH_STALENESS_MULTIPLIER, evaluateSentinelHealth,
   estimateCronIntervalMs,
   SELF_CHECK_SENTINEL_ID,
@@ -221,6 +223,8 @@ export type TransitionResult =
 export class SentinelRunner {
   private scheduler: CronScheduler;
   private db: unknown;
+  /** #1371: 测量值 sink（仅 per-org 轮注入；全局轮不注入 ⇒ #1054 的 fail-closed 语义保持） */
+  private metricSink: MetricSink;
   private records = new Map<string, SentinelRunRecord[]>();
   private cronJobIds = new Map<string, string>();
   private totalRuns = 0;
@@ -236,6 +240,7 @@ export class SentinelRunner {
   constructor(scheduler: CronScheduler, db: unknown) {
     this.scheduler = scheduler;
     this.db = db;
+    this.metricSink = createMetricSink(db as Database.Database);
     this.NOTIFICATION_DEDUP_MS = SentinelRunner.resolveNotificationDedupMs();
   }
 
@@ -334,6 +339,19 @@ export class SentinelRunner {
       return;
     }
 
+    // #1371 V5 对账（CTO 裁③「防静默漏采」）：有测量值数据但不在 orgs 注册表的租户 ⇒ 启动期显式告警
+    try {
+      const rogue = findOrgsWithDataButNotRegistered(this.db as Database.Database);
+      if (rogue.count > 0) {
+        log.warn(
+          { orgIds: rogue.orgIds, rows: rogue.count },
+          '[runner] 对账告警：存在「有数据但不在 orgs 注册表」的 org（注册表可能漏采；请核对开通流程）',
+        );
+      }
+    } catch (err: unknown) {
+      log.debug({ err: err instanceof Error ? err.message : String(err) }, '[runner] org 对账不可用（非阻断）');
+    }
+
     for (const { sentinel, cron } of cronSentinels) {
       this.scheduleSentinel(sentinel, cron);
     }
@@ -375,6 +393,24 @@ export class SentinelRunner {
       return null;
     }
     return this.executeSentinel(sentinel);
+  }
+
+  /**
+   * #1371: **per-org 写轮**（只写测量值）—— 对注册表中每个 active org 跑一次哨兵并落该 org 的行。
+   * · **不记统计/事件/基线**（统计/事件/基线均在 `executeSentinel` 的 `orgId === undefined` 守卫内）
+   *   ⇒ 既有 cron 统计与**基线**语义逐字不变（基线键只有 sentinelId，无 org 维度；加 org 维度另立卡）；
+   * · **无 active org ⇒ 不跑不写**（fail-closed）；
+   * · 返回本轮执行过的 org 列表（确定性序，便于判据与日志）。
+   */
+  async runOrgWriteRound(sentinelId: string): Promise<string[]> {
+    const sentinel = getSentinelRegistry().get(sentinelId);
+    if (!sentinel) {
+      log.warn({ sentinelId }, '[runner] org 写轮：哨兵未找到');
+      return [];
+    }
+    return executeForActiveOrgs(this.db as Database.Database, async (orgId) => {
+      await this.executeSentinel(sentinel, orgId);
+    });
   }
 
   /** 获取运行统计 */
@@ -1372,7 +1408,10 @@ export class SentinelRunner {
       `Sentinel: ${sentinel.config.name}`,
       cron,
       async () => {
+        // 全局轮（与既有行为逐字一致：统计/事件/基线/通知面全在）
         await this.executeSentinel(sentinel);
+        // #1371: org 维度扇出 —— **per-org 写轮**（只写测量值；无 active org ⇒ 不跑不写，fail-closed）
+        await this.runOrgWriteRound(sentinel.config.id);
       },
     );
     this.cronJobIds.set(sentinel.config.id, cronJobId);
@@ -1380,7 +1419,11 @@ export class SentinelRunner {
     log.info({ sentinelId: sentinel.config.id, cron }, '[runner] 哨兵已调度');
   }
 
-  private async executeSentinel(sentinel: Sentinel): Promise<SentinelCheckResult> {
+  /**
+   * @param orgId #1371：给定 ⇒ **per-org 写轮**（ctx 带 teamId + sink；**只写**，不记统计/事件/基线 ⇒ 不影响既有 cron 语义）；
+   *              缺省 ⇒ **全局轮**（与既有行为逐字一致；sink 不注入 ⇒ 写入面 fail-closed）
+   */
+  private async executeSentinel(sentinel: Sentinel, orgId?: string): Promise<SentinelCheckResult> {
     const startTime = Date.now();
     try {
       // V4.2.9: 构造上下文 — 包装 raw SQLite 为 GraphStore 供哨兵 queryNodes()
@@ -1400,6 +1443,9 @@ export class SentinelRunner {
         db: graphCtx,
         now: new Date(),
         registry: getSentinelRegistry(),
+        // #1371: org 维度 —— 有 orgId 才注入 sink（无 org ⇒ 不写；#1054 的 fail-closed 语义不变）
+        teamId: orgId,
+        metricSink: orgId !== undefined ? this.metricSink : undefined,
       };
 
       const result = await sentinel.check(ctx);
@@ -1417,6 +1463,9 @@ export class SentinelRunner {
       }
 
       // 记录运行
+      // #1371: **per-org 写轮不记统计/事件/基线** —— 否则 cron 统计与事件流会按 org 数翻倍，
+      //   且通知面（由 records 派生）会跨租户重复 ⇒ 破坏既有 cron 语义。
+      if (orgId === undefined) {
       const record: SentinelRunRecord = {
         sentinelId: sentinel.config.id,
         sentinelName: sentinel.config.name,
@@ -1436,7 +1485,11 @@ export class SentinelRunner {
       this.totalRuns++;
 
       // 记录发现
-      // 基线记录 + 对比 (B2)
+      // 基线记录 + 对比 (B2) —— 🔴 #1371 复核订正：本块**必须在守卫内**。
+      //   BaselineStore 的键【只有 sentinelId】（无 org 维度）⇒ per-org 轮若照跑，
+      //   每个 cron tick、每个哨兵会从 1 条变 1+N 条 ⇒ avgFindingCount / baselineReady /
+      //   ratio>2 偏离告警全部被污染，**且跨租户混算**（实测：PROBE-2 baseline.totalRuns 0→2）。
+      //   给 BaselineStore 加 org 维度 = 更大工程 ⇒ 另立卡；**当前口径：基线只由全局轮写**。
       try {
         const baselineStore = getBaselineStore();
         baselineStore.record(sentinel.config.id, result.findings);
@@ -1452,6 +1505,8 @@ export class SentinelRunner {
       } catch (baselineErr: any) {
         log.debug({ err: baselineErr.message }, '[runner] 基线记录失败 (非阻断)');
       }
+      }
+
 
       if (result.findings.length > 0) {
         const critical = result.findings.filter(f => f.severity === 'critical').length;

@@ -73,11 +73,13 @@ describe('#1366 迁移读取器：确定性 + 类型自证', () => {
 
   it('V1 全新库：二次 reconcile **不新增行**（修前 = 3 行 / 修后 = 2 行）', () => {
     reconcileSchema(db);
-    expect(versionRowCount(db)).toBe(2); // 迁移 2 + 迁移 3 各一行
+    const afterFirst = versionRowCount(db);
+    // ⚠️ 与"迁移条数"解耦：只断言「≥2 行」（每次迁移一行）与「最大数值版本 = 当前版本」
+    expect(afterFirst).toBeGreaterThanOrEqual(2);
     expect(numericMax(db)).toBe(SCHEMA_VERSION);
 
     reconcileSchema(db); // 第二次：修前会因同秒并列读旧版本而**再跑一次**最后一条迁移
-    expect(versionRowCount(db)).toBe(2);
+    expect(versionRowCount(db)).toBe(afterFirst); // 核心判据 = 不增长（不写死条数）
     expect(numericMax(db)).toBe(SCHEMA_VERSION);
   });
 
@@ -96,9 +98,10 @@ describe('#1366 迁移读取器：确定性 + 类型自证', () => {
 
   it('V2b 同秒并列（既有库形态）：二次 reconcile 不新增行', () => {
     // 种入"既有库"：两行数值版本 + 相同 updated_at（复刻真实并列）
+    // 既有库形态：做到"当前版本已记录"为止（动态取 SCHEMA_VERSION，避免写死迁移条数）
     seedVersionTable(db, [
-      { version: 2, updatedAt: '2026-10-07 18:49:17' },
-      { version: 3, updatedAt: '2026-10-07 18:49:17' },
+      { version: SCHEMA_VERSION - 1, updatedAt: '2026-10-07 18:49:17' },
+      { version: SCHEMA_VERSION, updatedAt: '2026-10-07 18:49:17' },
     ]);
     const before = versionRowCount(db);
 
@@ -118,7 +121,7 @@ describe('#1366 迁移读取器：确定性 + 类型自证', () => {
   it('边界：空库（无 schema_version 表）⇒ 建表 + 全量迁移 + 版本号 = SCHEMA_VERSION', () => {
     reconcileSchema(db);
     expect(numericMax(db)).toBe(SCHEMA_VERSION);
-    expect(versionRowCount(db)).toBe(2);
+    expect(versionRowCount(db)).toBeGreaterThanOrEqual(2); // 与迁移条数解耦
   });
 
   it('幂等（三连跑）：行数不再增长（读数稳定 = 缺陷已修的可观测代理）', () => {
