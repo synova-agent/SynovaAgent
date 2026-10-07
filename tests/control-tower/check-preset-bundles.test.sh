@@ -134,7 +134,7 @@ if [ -f "$REAL_LEGACY/agent.cordis.yml" ] && [ -f "$REAL_LEGACY/preset.yml" ]; t
     fail "T3: --emit 产物与仓库源不同（生成器不可复现）"
   fi
 else
-  echo "  ⊘ T3 降级为结构断言: 本机无真实 legacy 源（$REAL_LEGACY）"
+  echo "  ⊘ T3 降级为结构断言: 本机无真实 legacy 源（${REAL_LEGACY}）"
   printf -- '- id: persona\n  name: %s\n' "'@deepseek-ai/dsh-persona'" > "$LEG_E/.agent-presets/$PID/agent.cordis.yml"
   printf 'name: T\n' > "$LEG_E/.agent-presets/$PID/preset.yml"
   printf 'description: D\n' >> "$LEG_E/.agent-presets/$PID/preset.yml"
@@ -278,7 +278,7 @@ PY
 echo "── 沙箱隔离自证: 夹具全程只碰 mktemp，不碰真实 home / 真实仓库源 ──"
 REAL_PROFILE="${DSH_HOME:-$HOME/.dsh-trial-017}/profiles/desktop"
 if [ "$PROF" = "$REAL_PROFILE" ] || [ "$SRC" = "$REPO_SRC" ] || [ "$LEG" = "${DSH_HOME:-$HOME/.dsh-trial-017}" ]; then
-  fail "沙箱隔离失效: 注入缝指向真实路径（PROF=$PROF SRC=$SRC LEG=$LEG）"
+  fail "沙箱隔离失效: 注入缝指向真实路径（PROF=$PROF SRC=$SRC LEG=${LEG}）"
 else
   pass "沙箱隔离: 注入缝全部指向 mktemp 副本（真实 home/仓库源零写入）"
 fi
