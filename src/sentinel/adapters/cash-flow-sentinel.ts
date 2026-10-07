@@ -10,6 +10,8 @@ import type { Sentinel, SentinelCheckResult, SentinelConfig, SentinelContext, Se
   // V4.2.4: financial-snapshot 桥接已删除
 import { discoverTeams } from './helpers';
 import { createLogger } from '@synova/logger';
+import { readByMappedTypeFromRawDb } from '../mapped-read';
+import { resolveOntologyTarget } from '../node-type-resolver';
 import { writeMetricReadings } from '../metric-readings-writer';
 
 const log = createLogger('sentinel/cashflow');
@@ -65,15 +67,25 @@ export const cashFlowSentinel: Sentinel = {
       if (!rawDb) {
         log.warn({ sentinelId: config.id }, 'rawDb 能力缺席（该路径无 raw 句柄）⇒ 降级：跳过财务条目读取');
       }
-      const db = rawDb as { prepare(sql: string): { all(): Array<Record<string, unknown>> } } | null;
+      const db = rawDb as { prepare(sql: string): { all(...params: unknown[]): Array<Record<string, unknown>> } } | null;
       if (!db) return { sentinelId: config.id, ok: true, findings: [], durationMs: Date.now() - startTime, checkedAt, degraded: true };
 
       // 从 SOG FINANCIAL 节点提取财务条目
       let rawEntries: Array<Record<string, unknown>> = [];
       try {
-        rawEntries = db.prepare(
-          "SELECT props FROM graph_nodes WHERE type = 'FINANCIAL' AND props IS NOT NULL"
-        ).all();
+        // #1381 V2a（B1）：**经显式映射读**（并集读逻辑单点：mapped-read）
+        const mapped = readByMappedTypeFromRawDb(db, 'FINANCIAL');
+        rawEntries = mapped.rows as Array<Record<string, unknown>>;
+        if (mapped.legacyFallback) {
+          log.warn({ sentinelId: config.id, usedTypes: mapped.usedTypes, degraded: true, reason: 'no-mapping' },
+            '无映射 ⇒ 回退遗留字面量（显式）');
+        }
+        // 归类（本体轴语义）：首行 props 判定该批数据落在哪个本体类型（用于观测，不静默）
+        const firstProps = rawEntries.length > 0
+          ? (() => { const p0 = rawEntries[0].props; return typeof p0 === 'string' ? JSON.parse(p0) as Record<string, unknown> : (p0 as Record<string, unknown>) ?? {}; })()
+          : {};
+        const classified = resolveOntologyTarget('FINANCIAL', firstProps);
+        log.debug({ sentinelId: config.id, usedTypes: mapped.usedTypes, classified: classified.target, warn: classified.warn }, '映射读归类');
       } catch (err) {
         log.warn({ err: err instanceof Error ? err.message : String(err) }, "从 SOG FINANCIAL 节点提取财务条目");
         /* DB 不可用 — 降级 */

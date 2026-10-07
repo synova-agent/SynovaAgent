@@ -32,9 +32,10 @@ describe('#1376 runner 侧读能力', () => {
   it('V2 🔴 经 runner 真路径写出 ≥1 行（R61 防护）：runOrgWriteRound ⇒ 每 org 落 metric 行', async () => {
     const raw = new Database(':memory:');
     const store = new SqliteGraphStore(raw);                  // 建 schema + 迁移（含 orgs）
-    // 财务数据（cash-flow 读 graph_nodes.props；租户载体 = props.orgId）
-    store.createNode('FINANCIAL', { orgId: 'org-A', revenue: 1000, cost: 200, operating_expenses: 300, cash_balance: 5000, period: '2026-09' });
-    store.createNode('FINANCIAL', { orgId: 'org-B', revenue: 2000, cost: 500, operating_expenses: 300, cash_balance: 8000, period: '2026-09' });
+    // 财务数据（cash-flow 经**映射**读本体轴；租户载体 = props.orgId）
+    //   ⚠️ #1381 必要连带：类型由 'FINANCIAL'（**生产中无写入者**）改为本体轴 'resource/money'
+    store.createNode('resource/money', { orgId: 'org-A', revenue: 1000, cost: 200, operating_expenses: 300, cash_balance: 5000, period: '2026-09' });
+    store.createNode('resource/money', { orgId: 'org-B', revenue: 2000, cost: 500, operating_expenses: 300, cash_balance: 8000, period: '2026-09' });
     const { CronScheduler } = await import('../../src/cron/scheduler');
     const { SentinelRunner } = await import('../../src/sentinel/runner');
     const { getSentinelRegistry } = await import('../../src/sentinel/registry');
