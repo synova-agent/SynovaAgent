@@ -138,9 +138,16 @@ else
   no "④ 提取失败: gatekeeper 计数段无 suspected 计数（语义分离未落地）"
 fi
 TODAY="$(date +%Y-%m-%d)"
-run_gk() {   # $1 = bypass.log 内容 ; 输出 rc + stdout
-  local logf="$TMPD/bl.txt"; printf '%s\n' "$1" > "$logf"
-  ( ROOT="$SB"; BYPASS_LOG="$logf"; TODAY="$TODAY"; unset SYNO_GATEKEEPER_ACK; . "$TMPD/gk.sh" ) 2>&1
+run_gk() {   # $1 = bypass.log 内容 ; 输出 rc + stdout（$2=github|local，缺省 local）
+  # 🔴 夹具构造修正（CI 首轮实测 ④a/④b 落空）: 该段本身是**本地专属**——
+  #   条件含 `[ "${GITHUB_ACTIONS:-}" != "true" ]` ⇒ 在 CI runner 上（GITHUB_ACTIONS=true）**整段按设计跳过**。
+  #   故夹具必须显式声明语境：local（置空 GITHUB_ACTIONS）行使本地语义；github 用于钉住"CI 上跳过"这条语义本身。
+  local logf="$TMPD/bl.txt" mode="${2:-local}"; printf '%s\n' "$1" > "$logf"
+  if [ "$mode" = "github" ]; then
+    ( ROOT="$SB"; BYPASS_LOG="$logf"; TODAY="$TODAY"; GITHUB_ACTIONS=true; unset SYNO_GATEKEEPER_ACK; . "$TMPD/gk.sh" ) 2>&1
+  else
+    ( ROOT="$SB"; BYPASS_LOG="$logf"; TODAY="$TODAY"; GITHUB_ACTIONS=""; unset SYNO_GATEKEEPER_ACK; . "$TMPD/gk.sh" ) 2>&1
+  fi
   return $?
 }
 OUT="$(run_gk "${TODAY}T00:00:00Z suspected-rewrite head-mismatch marker=aaa parent=bbb suspect=rebase-state kind=in-progress forgeable=1")"; rc=$?
@@ -155,6 +162,13 @@ if [ "$rc" -ne 0 ] && printf '%s' "$OUT" | grep -q '检测到今日 1 次'; then
   ok "④b 有确证行 ⇒ 仍硬阻断（rc=${rc}）—— 分离未放过真绕过"
 else
   no "④b 确证行未阻断（rc=${rc}）"
+fi
+
+OUT="$(run_gk "${TODAY}T00:00:00Z detected-bypass head-mismatch marker=aaa parent=bbb" github)"; rc=$?
+if [ "$rc" -eq 0 ]; then
+  ok "④c CI 语境（GITHUB_ACTIONS=true）⇒ gatekeeper 段**按设计跳过**（rc=0；本地专属语义被钉住）"
+else
+  no "④c CI 语境未按设计跳过（rc=${rc}）—— 若有意改成 CI 也阻断，须同步改判据与注释"
 fi
 
 echo ""
