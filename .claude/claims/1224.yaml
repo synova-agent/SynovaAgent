@@ -4,9 +4,9 @@ writeset:
   - memory/notes/proposed/2026-10-07-d1205-claim-single-source.md
   - docs/authority/DOCS-REGISTRY.yaml
   - docs/synova/coordination/D-C-标识归一-触及面清单.md
-  - scripts/check-brief-vs-code.sh
   - scripts/check-verifiable-done.sh
   - scripts/commit-msg-check.sh
+  - scripts/check-brief-vs-code.sh
   - scripts/control-tower/brief_parser.py
   - scripts/control-tower/gate-integrity-baseline.txt
   - scripts/control-tower/claim_store.py
