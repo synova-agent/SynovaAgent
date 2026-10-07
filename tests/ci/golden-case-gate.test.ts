@@ -21,22 +21,22 @@ function readFile(relPath: string): string {
   return fs.readFileSync(fullPath, 'utf-8');
 }
 
-describe('D300 接线 — pre-push 门禁调用方', () => {
-  const prepush = readFile('scripts/pre-push-check.sh');
+describe('D300 接线 — CI 门禁调用方（D-A/D1202: pre-push 侧已退役，权威在 CI）', () => {
+  const ci = readFile('.github/workflows/ci.yml');
 
-  it('pre-push-check.sh 包含 golden-case-checker 调用（F1 门禁接线）', () => {
-    expect(prepush).toContain('golden-case-checker');
-    // 必须是可执行调用（tsx 运行），且失败时阻断 push
-    // 注: checker 以仓库根相对路径调用 (npx tsx scripts/ci/golden-case-checker.ts)
-    expect(prepush).toMatch(/npx\s+tsx\s+scripts\/ci\/golden-case-checker\.ts/);
-    expect(prepush).toMatch(/exit 1/);
+  it('ci.yml golden-case job 存在（合并级必需 context 之一）', () => {
+    expect(ci).toContain('golden-case:');
+    expect(ci).toContain('Golden Case F1 Gate');
   });
 
-  it('pre-push-check.sh 包含 diagnosis-quality-check 调用（结构检查接线）', () => {
-    expect(prepush).toContain('diagnosis-quality-check');
-    // 注: 与其他门禁一致使用 $SCRIPT_DIR 定位同目录脚本 (bash "$SCRIPT_DIR/ci/diagnosis-quality-check.sh")
-    expect(prepush).toMatch(/bash\s+\"\$SCRIPT_DIR\/ci\/diagnosis-quality-check\.sh\"/);
-    expect(prepush).toMatch(/exit 1/);
+  it('ci.yml golden-case job 调用 golden-case-checker 与诊断质量检查', () => {
+    expect(ci).toContain('golden-case-checker');
+    expect(ci).toContain('diagnosis-quality-check.sh');
+  });
+
+  it('pre-push 侧已退役（D-A: 本地不再重复跑 60s+ 的黄金面）', () => {
+    const prepush = readFile('scripts/pre-push-check.sh');
+    expect(prepush).not.toContain('npx tsx scripts/ci/golden-case-checker.ts');
   });
 });
 
