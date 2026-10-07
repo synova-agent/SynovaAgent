@@ -11,11 +11,22 @@
  *
  *    施工单原拟注释「门禁由 Goal 链路承载」**经实测不成立**（其载体
  *    `src/growth/goal-lifecycle.ts` 为 `@deprecated 未接线`，接入点 #1010）——
- *    此处按实测记录，不把假前提写进代码。**真实门禁位置（本次实测；勿再造第二套）**：
- *      · 工具执行   `src/agent/tools.ts:186 execute()`
- *      · 角色授权   `src/agent/tool-profiles.ts`（消费点 `src/agent/tools.ts:170-171` / `:189-190`）
+ *    此处按实测记录，不把假前提写进代码。
+ *
+ *    ⚠️ **「门禁」现状（2026-10-08 实测 + 独立复核；勿据此断言已有防护）**：
+ *      · 工具执行面 `src/agent/tools.ts:186 execute()` 存在**条件**授权分支
+ *        `:188-194`（`if (this._role)`）——但 `setRole()` 全仓**零调用方**（仅定义 `:140`；
+ *        `_role` 初值 `null`、仅 `:141` 赋值；5 处生产实例化
+ *        `conversation-engine.ts:413` / `bootstrap.ts:831` / `routes/conversations.ts:119,280`
+ *        / `routes/diagnosis.ts:261` 均未设置）
+ *        ⇒ **该分支在生产不可达**；「接通角色授权（角色来源 = 认证上下文）」属**新卡**
+ *          （CTO 2026-10-08 裁定另立，编号待分配）
+ *      · 角色授权表 `src/agent/tool-profiles.ts`（规则源在位）——其两个消费点
+ *        `src/agent/tools.ts:170-171`（listTools 过滤）与 `:189-190`（execute 拒绝）
+ *        **同属 `_role === null` 路径** ⇒ 当前**不构成生产授权**
  *      · 运行时守卫 `src/l3/tool-guard.ts`（接 `src/agent/tool-loop-executor.ts:38` / `:205` / `:351`）
- *      · 写入门禁   施工项 2-4（#1052，`src/security/file-guard.ts`）
+ *        —— 循环/重复失败/参数校验，**可触达**（非授权门）
+ *      · 写入门禁 施工项 2-4（#1052，`src/security/file-guard.ts`）—— **未开工**
  *
  *    若未来要做权威文档12 第五章 §六的三元组（role, dataLevel, SOI）逐次仲裁，属**新卡**：
  *    须先合并两套 `ToolRegistry`（旧注「Phase 2 考虑整合」即指该事）。
@@ -32,7 +43,7 @@
  *   @output   — register/get/unregister/list 返回定义或其状态；
  *               validateAtomicity(tool) ⇒ AtomicityResult { atomic, checks{...}, details[] }
  *   @degraded — **无**（纯内存 Map + 纯函数，不触 IO/DB ⇒ 无降级路径；铁律 24/31 不适用）
- *   @not-here — 执行与权限仲裁**不在本类**（见上方四处真实门禁）
+ *   @not-here — 执行与权限仲裁**不在本类**（见上方「门禁现状」：其中**授权分支当前不可达**）
  *
  * 设计原则:
  *   - 不改 D65 register/get 签名
