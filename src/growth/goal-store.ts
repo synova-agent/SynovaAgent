@@ -154,7 +154,12 @@ export function createGoal(goal: Goal, store: GraphBridgeLike, audit: AuditStore
  */
 export function getGoal(goalId: string, store: GraphBridgeLike, graph: string = 'growth'): Goal | null {
   try {
-    const node = store.getNode(goalId, graph) as { id: string; type: string; props: Record<string, unknown> } | null;
+    // #1010: 解析顺序改为 props.goalId 反查优先（见 resolveGoalNodeId）—— 真实 SqliteGraphStore
+    // 的节点 id 恒为 `node-<uuid>`，而 goalId 只存在于 props；只按节点 id 查会让
+    // getGoal/updateGoalStatus/closeGoal 整条关闭路径在生产 store 上"查不到自己的 Goal"。
+    // 解析失败回退 goalId（旧式/内存 store 语义不变）。
+    const nodeRef = resolveGoalNodeId(goalId, store, graph) ?? goalId;
+    const node = store.getNode(nodeRef, graph) as { id: string; type: string; props: Record<string, unknown> } | null;
     if (!node) return null;
     return node.props as unknown as Goal;
   } catch (err: unknown) {
@@ -167,6 +172,37 @@ export function getGoal(goalId: string, store: GraphBridgeLike, graph: string = 
 /**
  * 按部门 ID 列出所有 Goal。
  */
+/**
+ * #1010: 解析 Goal 的**图节点 id**（updateGoalStatus / closeGoal 关闭路径的解析器）。
+ *
+ * 为什么需要：真实 `SqliteGraphStore.createNode` 恒生成 `node-<uuid>` 作节点 id，而 Goal 的
+ * 业务标识 `goalId` 只存在 props 里 ⇒ 用 goalId 调 `updateNode` 是 0 行 UPDATE（静默无效果）。
+ * 解析顺序与 `getGoal` 同源：props.goalId 反查（严格匹配）→ 节点 id 兜底（旧式/内存 store）。
+ *
+ * 契约:
+ *   @input  — goalId + store（GraphBridgeLike）+ graph
+ *   @output — 节点 id；未找到 → null（调用方决定降级，不抛）
+ *   @degraded — store 查询抛错 → log.warn + 继续尝试兜底路径；两条路都失败 → null（不静默成功）
+ */
+export function resolveGoalNodeId(goalId: string, store: GraphBridgeLike, graph: string = 'growth'): string | null {
+  try {
+    const rows = store.queryNodes('GOAL', { goalId }, graph);
+    const hit = rows.find((r) => readText(r.props, 'goalId') === goalId);
+    if (hit) return hit.id;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.warn({ err: msg, goalId }, 'Goal 节点解析 props 反查失败 — 回退节点 id 兜底（degraded）');
+  }
+  try {
+    const node = store.getNode(goalId, graph) as { id?: string } | null;
+    if (node) return node.id ?? goalId;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.warn({ err: msg, goalId }, 'Goal 节点解析兜底失败 — 返回 null（调用方按降级处理）');
+  }
+  return null;
+}
+
 export function listGoalsByDept(deptId: string, store: GraphBridgeLike, graph: string = 'growth'): Goal[] {
   try {
     const nodes = store.queryNodes('GOAL', { ownerDeptId: deptId }, graph);
@@ -488,7 +524,13 @@ export function updateGoalStatus(
   // 3. 更新节点（含 extraProps，保证原子性）
   const updatedProps = { ...goal, ...extraProps, status: newStatus, lastModifiedAt: new Date().toISOString() };
   try {
-    store.updateNode(goalId, updatedProps as unknown as Record<string, unknown>, graph);
+    // #1010: 用**节点 id** 更新 —— 真实 store 的节点 id ≠ props.goalId，用 goalId 更新是
+    // 0 行 UPDATE（静默无效果）；解析失败回退 goalId（旧式/内存 store 语义不变）。
+    // 属性字典以零 cast 方式构造（`as unknown as Record<string, unknown>` 命中铁律 38 新增行门禁）。
+    const nodeRef = resolveGoalNodeId(goalId, store, graph) ?? goalId;
+    const propsDict: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(updatedProps)) propsDict[k] = v;
+    store.updateNode(nodeRef, propsDict, graph);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     log.error({ err: msg, goalId, fromStatus, newStatus }, 'Goal 状态更新失败');
