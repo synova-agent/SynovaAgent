@@ -1,0 +1,11 @@
+{
+  "task_id": "D1215",
+  "title": "gen-cto-health 配对测试存量红（卡死该脚本的一切改动）",
+  "status": "claimed",
+  "spec": "卡 #1268 / 批次 门禁减法2（存量红清理）。编号说明：原取 D1208（与卡面一致），但 D1208 已被同批 ownership 任务（卡 #1233）占用 ⇒ 经 Lead 裁定改 D1215（三重核验：分配器可用 / main 零文件 / issue 标题零命中）；产物同时引卡 #1268。根因（实测复现，非环境依赖）：① gen-cto-health.py:305 只容纳 spec 为 dict/null，task-state 实测三形态 str=171/null=189/dict=83 ⇒ 命中 str 即 AttributeError ⇒ rc=1；② test.sh:43 `OUT1=$(python3 $GEN 2>&1)` 在 set -e 下遇 rc≠0 静默中止，traceback 被吞 ⇒ 零诊断。修法：脚本容纳三形态（不削弱 D399/D412 的「存在+已提交 HEAD」双守卫）+ 测试全部调用走 run_gen 显式收 rc + §6 三形态沙箱夹具（含真 git 仓）。不给配对门禁加豁免、不动判据。",
+  "impl": "gen-cto-health.py:305 改 `_spec = d.get(\"spec\"); spec_path = _spec.get(\"path\") if isinstance(_spec, dict) else None`；test.sh 加 run_gen()/dump_tail() 并把全部生成器调用改走之；新增 §6 三形态夹具。",
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-07",
+  "updated_by": "line-d-own"
+}

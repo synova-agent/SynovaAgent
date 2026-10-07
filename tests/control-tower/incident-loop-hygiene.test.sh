@@ -53,7 +53,7 @@ OUT2=$(SYNO_CT_DIR="$CT_DIR" python3 "$TOOL" record --id "INC-HYG-001" --symptom
 assert_contains "$OUT2" '"status": "duplicate"' "L1 二次 record → status: duplicate（幂等保持）"
 assert_contains "$OUT2" '"reminder"' "L1 二次 record → 含 reminder 字段（非静默 duplicate）"
 RC2=$(echo "$OUT2" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('repeat_count', 0))" 2>/dev/null || echo 0)
-if [ "$RC2" -ge 2 ]; then pass "L1 二次 record → repeat_count=$RC2（>=2）"; else fail "L1 repeat_count — 期望 >=2 实际=$RC2"; fi
+if [ "$RC2" -ge 2 ]; then pass "L1 二次 record → repeat_count=${RC2}（>=2）"; else fail "L1 repeat_count — 期望 >=2 实际=$RC2"; fi
 echo ""
 
 # ─── L1-2. 边界: 首 record → recorded 无 reminder ───
@@ -66,7 +66,7 @@ echo ""
 N1=$(wc -l < "$CT_DIR/logs/incident.log" 2>/dev/null | tr -d ' \n' || echo 0)
 SYNO_CT_DIR="$CT_DIR" python3 "$TOOL" record --id "INC-HYG-002" --symptom "测试事故2" --root-cause "R2" --sessions "TEST" --fix "修复" --version "4.6.0" >/dev/null 2>&1 || true
 N2=$(wc -l < "$CT_DIR/logs/incident.log" 2>/dev/null | tr -d ' \n' || echo 0)
-if [ "$N1" = "$N2" ]; then pass "L1 幂等: 重复 record 不追加行（$N1 → $N2）"; else fail "L1 幂等 — 行数变化 $N1 → $N2"; fi
+if [ "$N1" = "$N2" ]; then pass "L1 幂等: 重复 record 不追加行（$N1 → ${N2}）"; else fail "L1 幂等 — 行数变化 $N1 → $N2"; fi
 echo ""
 
 # ─── L1-4. 降级: INCIDENT_LOG 不可写 → degraded ───

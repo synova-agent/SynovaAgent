@@ -1,0 +1,28 @@
+writeset:
+  - .claude/claims/1224.yaml
+  - .claude/task-briefs/2026-10-07-D1205-D-C-标识与声明归一-claim库+防劫持+D708联动.md
+  - .claude/task-briefs/2026-10-07-D1210-D-C-标识与声明归一.md
+  - memory/notes/proposed/2026-10-07-d1205-claim-single-source.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - docs/synova/coordination/D-C-标识归一-触及面清单.md
+  - scripts/check-verifiable-done.sh
+  - scripts/commit-msg-check.sh
+  - scripts/control-tower/brief_parser.py
+  - scripts/control-tower/gate-integrity-baseline.txt
+  - scripts/control-tower/claim_store.py
+  - scripts/control-tower/merge_writeset_gate.py
+  - scripts/control-tower/staging_guard.py
+  - scripts/workflow/resolve-commit-brief.sh
+  - task-state/D1205.json
+  - task-state/D1210.json
+  - tests/control-tower/claim-identity-v2.test.py
+  - tests/control-tower/claim_store.test.sh
+  - tests/control-tower/staging_guard.test.sh
+done:
+  - verify: python3 tests/control-tower/claim-identity-v2.test.py
+  - verify: bash tests/control-tower/merge_writeset_gate.test.sh
+  - verify: bash tests/control-tower/resolve-commit-brief.test.sh
+  - verify: bash tests/control-tower/brief-parser-strip.test.sh
+  - verify: bash tests/control-tower/claim_store.test.sh
+  - verify: bash tests/control-tower/staging_guard.test.sh
+note: D-C 标识与声明归一（K3 R1-R7 核心切片）。迁移期开关 SYNO_CLAIM_V2 默认关；旧 D# 链只读保留。

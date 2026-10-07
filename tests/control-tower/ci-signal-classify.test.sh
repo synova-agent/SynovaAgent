@@ -244,6 +244,16 @@ printf '%s' "$CTJOB" | grep -qF "name: Control Tower Gate Tests (\${{ matrix.os 
 #   钉子的语义（该 job 的矩阵/timeout 必须逐字可核）逐字保留，改的只是期望值。
 #   🔴 判别性保持（改坏即红）: 矩阵加回 windows、或 timeout 改回条件表达式 ⇒ 立刻 no ⇒ exit 1。
 #   收敛为锚定 ERE（比原 `-qF` 更强: `timeout-minutes: 14` 不会被 `140` 之类前缀欺骗）。
+# D1177（K3 整改 P1「needs 覆盖零判据」）: all-checks-passed 的 needs 集必须**逐字锁死**——
+#   改前删掉任一 needs 项（如 golden-case）⇒ 全部夹具仍绿 ⇒ 本卡实质可被静默削弱。
+#   判别性: 增/删/换任一 job 键 ⇒ 本断言红（8 键恰覆盖 9 条必需 context 的对齐表随之物理锁定）。
+AGG_JOB="$(job_block all-checks-passed)"
+AGG_NEEDS_LINE="$(printf '%s' "$AGG_JOB" | grep -E '^    needs:' | head -1 | sed 's/^    //')"
+AGG_EXPECT='needs: [quality, test, architecture, test-kit-architecture, control-tower-tests, integration-check, checker-review, golden-case]'
+[ "$AGG_NEEDS_LINE" = "$AGG_EXPECT" ] \
+  && ok "needs 锁死: all-checks-passed 8 键逐字一致（删/增/换任一 ⇒ 红）" \
+  || no "needs 偏离冻结集: 实际 '${AGG_NEEDS_LINE}' 期望 '${AGG_EXPECT}'"
+
 printf '%s' "$CTJOB" | grep -qE '^    timeout-minutes: 14$' \
   && ok "身份不变: job timeout-minutes 未改（D1147 后期望值 = 14）" || no "job timeout-minutes 被改动（D1147 后期望值 = 14）"
 printf '%s' "$CTJOB" | grep -qE '^        os: \[ubuntu-latest\]$' \
@@ -263,7 +273,11 @@ printf '%s' "$CTJOB" | grep -q 'steps.docsonly.outputs.docs_only' \
 #     ③ 任何**新** if: 或表达式漂移 ⇒ 必红（本判据仍是判别性棘轮，不是放行开关）
 #   冻结表达式登记表（改它 = 改门禁语义 ⇒ 必须过 K3→CTO；见 PR #935 送审项 S-3）
 FROZEN_IF_TEST='${{ !cancelled() }}'
-DOWNSTREAM_NEEDS_JOBS="test golden-case"   # 有 needs: 且承载必需 context 的 job（新增者必须显式登记）
+DOWNSTREAM_NEEDS_JOBS="test golden-case all-checks-passed"   # 有 needs: 且承载必需 context 的 job（新增者必须显式登记）
+# D1170（2026-10-07，CTO 派单 P0-3，提案待 K3→CTO）: all-checks-passed = 聚合必需检查
+#   （skipped 也判 FAIL）。它 needs 8 个必需 job ⇒ 属「needs 下游 + 承载必需 context」，
+#   必须锁死 !cancelled() 冻结式——这正是「去掉 !cancelled() ⇒ 上游红时检查消失」的
+#   改坏即红防线（fixture/p0-3-c-no-guard 在 GitHub 实测该形态）。
 BASELINE_NO_IF_JOBS="quality architecture test-kit-architecture integration-check audit gate-integrity"
 # D1147: windows 顾问腿 = 有 needs: 但**不承载必需 context**（其 context 名已移出必需集）⇒ 走
 #   「已知无需 !cancelled() 冻结式」的例外登记面（与 checker-review 同栏）。判据未放松:
@@ -282,10 +296,15 @@ done
 [ -z "$IF_TOUCHED" ] \
   && ok "分支保护基线: 上游 6 job 无 if: + needs 下游 2 job 锁死 !cancelled()（表达式冻结，漂移即红）" \
   || no "job 级 if: 偏离登记（新增/漂移 = 必需 context 风险面变化）:${IF_TOUCHED}"
-if job_block checker-review | grep -qF "if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/feat/')"; then
-  ok "分支保护基线: checker-review 的 if: 与基线逐字一致（未加 schedule 门控）"
+# D1170（2026-10-07，CTO 派单 P0-2，提案待 K3→CTO）: checker-review 的 if 扩为
+#   pull_request || merge_group || refs/heads/main || feat/*。
+#   理由: 原表达式在 main push / merge_group 下整个 job 被 skip ⇒ ① all-checks-passed
+#   判 skipped=FAIL ⇒ main push 恒红；② merge_group 语境必需 context 永不报告 ⇒
+#   merge queue 卡死（D515 同族）。行为纯扩集（原四类事件全保留），未加 schedule 门控。
+if job_block checker-review | grep -qF "if: github.event_name == 'pull_request' || github.event_name == 'merge_group' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/feat/')"; then
+  ok "分支保护基线: checker-review 的 if 与基线逐字一致（D1170 扩集版；未加 schedule 门控）"
 else
-  no "checker-review 的 if: 偏离基线（基线 = github.event_name == 'pull_request' || startsWith(…feat/)）"
+  no "checker-review 的 if: 偏离基线（基线 = D1170: pull_request || merge_group || refs/heads/main || feat/*）"
 fi
 # 兜底棘轮（D1112）: 穷举 ci.yml 里**所有**有 `needs:` 的 job，必须逐个登记。
 #   防"新增一个 needs 下游 job 却忘了加 !cancelled()"⇒ 该 job 的必需 context 又会在上游红时消失。
@@ -324,11 +343,15 @@ else
 fi
 grep -q 'src/x.ts' "$OUT" && ok "可审计: 输出列出未命中明细" || no "未列出未命中明细"
 
-# ── 12. 本测试真被 CI 执行（清单项，非注释提及）──
-if grep -qE 'tests/control-tower/ci-signal-classify\.test\.sh(; do)?[[:space:]]*$' "$CI"; then
-  ok "canary 清单含本测试（不是只写在注释里）"
+# ── 12. 本测试真被 CI 执行（D-F/② 发现制：面内即执行，不再依赖 ci.yml 字面登记）──
+if printf '%s' "${CTJOB:-}" | grep -q 'sealed-tests.sh --list'; then
+  if bash "$REPO/scripts/control-tower/sealed-tests.sh" --list | grep -q '^tests/control-tower/ci-signal-classify.test.sh$'; then
+    ok "canary 发现制: 本测试在发现面执行集内（零登记自动纳入，不是只写在注释里）"
+  else
+    no "canary 发现制: 本测试不在发现面执行集内 ⇒ 本测试在 CI 无人执行"
+  fi
 else
-  no "canary 清单未含本测试 ⇒ 本测试在 CI 无人执行"
+  no "canary 接线: control-tower-tests 未调用发现制清单提供者（sealed-tests.sh --list）"
 fi
 
 # ── 13. 判别性: GH Actions errexit 语义（`shell: bash` 实为 bash --noprofile --norc -eo pipefail）──
@@ -388,6 +411,62 @@ else
   skip "fixture" "step 正文未使用「|| RC=赋值」写法（或已改用其他 errexit 安全写法）⇒ 红向证明不适用"
 fi
 
+# ══ #1215 / CT-34 上界（K3 2026-10-07 双卡报告 B 节）: 纯文档 PR 的 merge 级登记对账 ══
+#   接线判据（字面 + 行为双轨）:
+#     L1 ci.yml quality job 内存在该 step；L2 `if:` 恰为 docs_only == 'true'；
+#     L3 真调用 scripts/doc-system/doc-registry-gate.sh 且该脚本在盘上；
+#     L4 判别性: 把 `== 'true'` 翻成 `!= 'true'` ⇒ 本节断言必须转红（防"接线了但条件写反"）
+#     L5 行为: 在同一命令下造「本分支新增未登记 .md」⇒ exit 1 并点名；登记后 ⇒ exit 0
+REC_NAME="Docs registry reconciliation (docs-only PRs, #1215)"
+extract_reconcile_step() {   # $1 = ci.yml → 打印该 step 正文
+  awk -v want="      - name: ${REC_NAME}" '
+    !found { if ($0 == want) { found=1; print; } ; next }
+    found && $0 ~ /^      - (name:|uses:|run:)/ { exit }
+    found { print }
+  ' "$1"
+}
+REC_STEP="$(extract_reconcile_step "$CI")"
+[ -n "$REC_STEP" ] && ok "#1215 接线: ci.yml 存在 merge 级登记对账 step" || no "#1215 接线: step 缺失（纯文档 PR 登记对账无人执行）"
+printf '%s\n' "$REC_STEP" | grep -qF "if: steps.docsonly.outputs.docs_only == 'true'" \
+  && ok "#1215 接线: 只在 docs-only 分支跑（非 docs-only 不重复跑，避免同判据双跑）" \
+  || no "#1215 接线: if 条件异常（须恰为 docs_only == 'true'）"
+printf '%s\n' "$REC_STEP" | grep -qF 'bash scripts/doc-system/doc-registry-gate.sh' \
+  && ok "#1215 接线: 真调用 doc-registry-gate.sh" || no "#1215 接线: 未调用登记门禁脚本"
+[ -f "$REPO/scripts/doc-system/doc-registry-gate.sh" ] \
+  && ok "#1215 接线: 被调脚本在盘上（非死引用）" || no "#1215 接线: doc-registry-gate.sh 不存在"
+# L4 判别性（变异体）: if 写反 ⇒ 断言必须失败
+printf '%s\n' "$REC_STEP" | sed "s/== 'true'/!= 'true'/" > "$TMPD/rec-step-mutant.txt"
+printf '%s\n' "$REC_STEP" > "$TMPD/rec-step-real.txt"
+if cmp -s "$TMPD/rec-step-real.txt" "$TMPD/rec-step-mutant.txt"; then
+  no "#1215 判别性: 变异体注入未生效（须改动 if 条件）"
+elif grep -qF "if: steps.docsonly.outputs.docs_only == 'true'" "$TMPD/rec-step-mutant.txt"; then
+  no "#1215 判别性: 变异体注入未生效（须改动 if 条件）"
+else
+  ok "#1215 判别性: if 写反（!= 'true'）⇒ L2 断言必红（非空壳）"
+fi
+# L5 行为: 合成"纯文档 PR"（base=main，head=feat 新增未登记 .md）⇒ 门禁必红并点名；登记后转绿
+DR="$TMPD/docsrec"
+if command -v git >/dev/null 2>&1; then
+  mkdir -p "$DR/docs/authority" "$DR/docs"
+  printf 'documents:\n  - id: T1\n    type: prd\n    path: docs/keep.md\n' > "$DR/docs/authority/DOCS-REGISTRY.yaml"
+  printf 'x\n' > "$DR/docs/keep.md"
+  ( cd "$DR" && git init -q && git config user.email t@example.com && git config user.name t \
+      && git add -A && git commit -qm base && git branch -M main \
+      && git checkout -qb feat && printf 'new\n' > docs/new-unregistered.md && git add -A && git commit -qm add ) >/dev/null 2>&1
+  OUTDR="$( cd "$DR" && DOC_TRUTH_ROOT="$DR" bash "$REPO/scripts/doc-system/doc-registry-gate.sh" 2>&1 )"; rcdr=$?
+  if [ "$rcdr" -eq 1 ] && printf '%s\n' "$OUTDR" | grep -q 'docs/new-unregistered.md'; then
+    ok "#1215 行为: 新增未登记 .md ⇒ exit 1 + 点名文件（merge 级红成立）"
+  else
+    no "#1215 行为: 未登记新增未判红（rc=${rcdr}）"
+  fi
+  ( cd "$DR" && printf '  - id: T2\n    type: prd\n    path: docs/new-unregistered.md\n' >> docs/authority/DOCS-REGISTRY.yaml \
+      && git add -A && git commit -qm register ) >/dev/null 2>&1
+  OUTDR2="$( cd "$DR" && DOC_TRUTH_ROOT="$DR" bash "$REPO/scripts/doc-system/doc-registry-gate.sh" 2>&1 )"; rcdr2=$?
+  [ "$rcdr2" -eq 0 ] && ok "#1215 行为: 登记齐 ⇒ exit 0（红→绿通路可达，非恒红）" || no "#1215 行为: 登记后仍红（rc=${rcdr2}）"
+else
+  skip "fixture" "git 不可用 ⇒ #1215 行为用例跳过（CI 恒有 git）"
+fi
+
 echo ""
 echo "结果: $PASS 通过, $FAIL 失败, $SKIP 显式跳过"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1
@@ -397,5 +476,5 @@ grep -q '"presets|^docs/synova/presets/"' scripts/control-tower/ci-signal-classi
   || { echo "FAIL: RULES 缺 presets 条目（删规则即红）"; exit 1; }
 _po="$( ( unset SYNO_CT_CLASSIFY_FILES; \
   bash scripts/control-tower/ci-signal-classify.sh --files docs/synova/presets/_probe.yml ) 2>&1 )"
-case "$_po" in *run=true*) ;; *) echo "FAIL: presets 未命中 run=true（输出: $_po）"; exit 1;; esac
+case "$_po" in *run=true*) ;; *) echo "FAIL: presets 未命中 run=true（输出: ${_po}）"; exit 1;; esac
 echo "PASS: presets 哨兵（条目在 + run=true 行为命中）"

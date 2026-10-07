@@ -1,9 +1,12 @@
 ---
 title: "SynovaAgent 文档契约"
-version: "1.0.0"
+version: "1.1.1"
 status: implemented（已生效）
 approved_at: "2026-09-27"
 effective: "2026-09-27"
+amended_at: "2026-10-07"
+amended_by: "D1193 — 闸 3 判据修复（阻断优先 / +html / 契约动态解析）+ 接线；判据正确性待 K3 独立复核"
+amended_by_2: "D1204（承接 D1203/PR#1255 整改 + K3 §R2/§R3 剩余逃逸面）—— 阻断条目闭包边界收紧到 `.`（X1a）/ `--no-renames` 使 `git mv` 不可绕过（X2）/ `**/NAME` 同址豁免须同址有代码（X3）/ §9.1 出口条件机器可判（tracked-count DSL，不可解析 ⇒ exit 2）+ 存量动态派生（禁双源）+ 过渡台账追加落 `.claude/doc-contract-transition.log` / §9.2 登记 X1b 残余风险；判据正确性须 K3 第二轮独立复核（红线 R-6）"
 owner: CTO
 supersedes:
   - docs/synova/DOCUMENT-CONVENTIONS.md
@@ -188,30 +191,119 @@ decisions/{lifecycle}/{class}/YYYY-MM-DD-topic-title.md
 |---|---|---|---|
 | **闸 1 · 格式闸** | 决策文件：头三行（标题/状态/日期）+ **六段**齐全 + 状态与所在目录交叉校验 | pre-commit + CI | 阻断 |
 | **闸 2 · 取代闸** | 新增决策必须输出「同主题候选 + 全/部分取代判定」 | PR 模板 + CI | 阻断 |
-| **闸 3 · 入库闸** | **新增 `.md` 必须命中白名单**，否则阻断 | pre-commit + CI | 阻断 |
+| **闸 3 · 入库闸** | **新增 `.md`/`.html` 必须命中白名单且不命中阻断清单**，否则阻断 | pre-commit + CI | 阻断 |
 
-**闸 3 白名单**：
-✅ 入口四份：README.md / AGENTS.md / CLAUDE.md / docs/synova/STATE.md
-✅ docs/**/*.md                    （C 层长期）
-✅ decisions/**/*.md               （B 层决策）
-🔴 **豁免类（P0-1 修复 · 2026-09-26 R2 补全 5 类）**：**文件驱动扩展资产 + 知识资产**
-   —— 加了专家/技能/知识 = 新建目录 + 文件就自动注册（见 CLAUDE.md「文件驱动扩展」），
-   **这些是产品运行时的资产，不是「过程文档」** ⇒ **必须放行**，否则契约生效即阻断扩展机制。
-   | 路径 | 实测 md 数 | 为什么放行 |
-   |---|---|---|
-   | `expert/**/*.md` | 95 | 专家方法论（文件驱动） |
-   | `extensions/skills/**/*.md` | 41 | 扩展技能（文件驱动） |
-   | `.claude/skills/**/*.md` · `.dsh/skills/**/*.md` | 34 | **技能本体**（非纯文档；组 13 要求两份一致） |
-   | `knowledge/**/*.md` | 10 | 共享知识单源 |
-   | `theory/**/*.md` | 5 | 理论基础 |
-   | `scripts/golden-scenarios/**/*.md` | 9 | GSS 契约要求 git 跟踪 |
-   | **合计** | **194** | —— |
+**闸 3 白名单 / 阻断清单**（**判据以本节三个机器可读块为准，执行体只解析这里，不硬编码**）：
 
-> ⚠️ 上表 7 个数字为 **as_of 2026-09-26 的快照（来源 K3 R2 实测），非判据**。
-> 现行值请跑枚举命令（`git ls-files <路径> | grep -c "\.md$"`）。
-✅ 证据类路径（P0-2 修复）：**证据 md 一律走 `docs/**/evidence/**`**
-   ⇒ 特例：`scripts/golden-scenarios/evidence/**`（GSS 契约要求 git 跟踪，见 .gitignore:82）**放行**
-❌ 其余一律阻断（coordination/ · task-briefs/ · reports/ · 派单 · 纪要 · 分类 · 看板 · 探针留档）
+> **优先级（D1193 修复点①）**：**阻断清单优先于白名单**。首版把白名单放在前面，
+> `docs/**` 一击中即放行 ⇒ `BLOCKED_HINTS` 成死代码，§3 ❌ 点名的 coordination/、plans/ **永不触发**。
+> 匹配语义（D1193 建 · D1204 收敛 K3 §R2 逃逸面）：
+> - `dir/**`（**阻断清单侧**）= `dir` 自身 + 整棵子树 + **同名前缀文件** `dir.<ext>`
+>   —— `docs/plans/**` ⊇ `docs/plans.md`（否则「把过程件写成同名前缀的文件」即绕开阻断）。
+>   边界**收紧到 `.`**：`docs/plans-archive/`、`docs/synova/coordinationX/` **不在**自动覆盖内 ——
+>   匹配器**不猜名字**（猜近邻会误拦合法目录 ⇒ 噪音 ⇒ 门禁被绕过，V3.9 教训）。
+>   ⇒ **新增「语义同类但命名不同」的目录时，必须显式登记进上面的阻断清单**，不得依赖匹配器猜。
+> - `dir/**`（**白名单侧**）= 严格子树，**不开闭包** —— 放宽 = 漏拦（`docs/**` 会放过 `docs-old/`）。
+> - `dir/**`（**过渡表**）= 严格子树，**同样不开闭包** —— 例外表应窄于它所例外的阻断条目
+>   （`.claude/task-briefs.md` 不是「目录里的 brief」，仍按阻断判）。
+> - `**/NAME`（同址代码文档豁免，仅白名单）= 任意层同名文件，但**须同址有代码**：父目录内至少
+>   一个非文档文件（`.md/.markdown/.html/.htm` 之外）。空目录/仅有一份 README 的新目录**不放行**
+>   （D1204/X3：`reports/README.md` 曾是「索引后门」）。
+> - 其余 = 精确匹配。
+
+<!-- doc-contract:whitelist:begin -->
+```doc-contract-whitelist
+README.md
+AGENTS.md
+CLAUDE.md
+docs/synova/STATE.md
+docs/**
+decisions/**
+expert/**
+extensions/skills/**
+.claude/skills/**
+.dsh/skills/**
+knowledge/**
+theory/**
+scripts/golden-scenarios/**
+skills/**
+memory/notes/**
+app/**
+electron-renderer/**
+.github/**
+**/README.md
+**/AGENTS.md
+**/SKILL.md
+```
+<!-- doc-contract:whitelist:end -->
+
+- ✅ **入口四份** / **C 层 `docs/**`** / **B 层 `decisions/**`**
+- 🔴 **豁免类（文件驱动扩展资产 + 知识资产）**——加了专家/技能/知识 = 新建目录 + 文件就自动注册
+  （见 CLAUDE.md「文件驱动扩展」），**这些是产品运行时资产，不是过程文档** ⇒ 必须放行：
+  `expert/**` · `extensions/skills/**` · `.claude/skills/**` · `.dsh/skills/**` · `knowledge/**` ·
+  `theory/**` · `scripts/golden-scenarios/**` · **`skills/**`（顶层；D1193 补登——CLAUDE.md 声明它是
+  文件驱动扩展资产，首版白名单漏登，实测 46 件被误判违规）**
+- 🔴 **`memory/notes/**`**：§9 过渡期白名单（退出判据见 §9 第一行）
+- 🔴 **同址代码文档** `**/README.md` · `**/AGENTS.md` · `**/SKILL.md`——包/目录自己的契约文档随代码走
+  （DSH 同款「per-package README」；首版把 `packages/*/README.md` 等误判为违规）
+- 🔴 **产品运行时资产** `app/**` · `electron-renderer/**`——前端页面是**源码**不是文档，
+  `.gitignore:14-18` 早已放行，闸 3 不得把它们当文档拦
+- ✅ **证据类路径**：证据 md 一律走 `docs/**/evidence/**`；特例 `scripts/golden-scenarios/evidence/**` 放行
+
+**🔴 阻断清单**（命中即阻断，**先于白名单**；唯一过渡例外见 §9.1）：
+
+<!-- doc-contract:blocked:begin -->
+```doc-contract-blocked
+.claude/task-briefs/**
+docs/synova/coordination/**
+docs/synova/audit-reports/**
+docs/synova/dispatch/**
+docs/plans/**
+docs/archive/**
+docs/synova/archive/**
+novis-backup-20260526/**
+```
+<!-- doc-contract:blocked:end -->
+
+**闸 3 判据对象 = 「新入 `.md` + `.html`」**（D1193 修复点②：**HTML 不是旁路**——同类内容写成 html
+同样阻断；首版只认 `.md`，实测漏网 `docs/synova/coordination/四问-64格.html`）。
+只判**新入（`--diff-filter=A` + `--no-renames`）**，存量不返工（§7）；路径用 `git ls-files` 的仓库相对形式。
+- **D1204/X2**：变更集统一带 **`--no-renames`** —— git 默认把 `git mv` 记为 R(rename)，而 `--diff-filter=A`
+  不匹配 R ⇒ 既有文档被搬进阻断区可静默通过（旧版实测三闸 PASS，P1 逃逸）。`--no-renames` 把 R 拆成
+  「删除 + 新增」，**新路径必然进入新增清单**。回归断言见 `tests/doc-system/doc-contract-property.test.sh`
+  的 **C3**（R→阻断区，`--staged`/`--base` 双腿）与 **C5**（R→同名前缀，X1×R 交叉）。
+  ⚠ 事实边界：**闸 1/2 的可观测行为不变**（其变更集本就用 `--diff-filter=ACMR`，R 已在集内）；
+  `--no-renames` 只影响取数形态，**没有**「闸 1/2 因此重核 lifecycle 目录」的副作用。
+- **D1204/X3**：`**/README.md` · `**/AGENTS.md` · `**/SKILL.md` 的放行**限定在「同址有代码」的目录**
+  —— 见上文匹配语义；新目录用一份 README 播种索引不再放行。
+
+**逃生舱（铁律 11：显式降级 + 落盘，不静默）**：`SYNO_DOC_CONTRACT_ACK=1` **须同时给**
+`SYNO_DOC_CONTRACT_ACK_REASON=<原因>`。**缺该变量、或值为空白 ⇒ 视同未 ACK**（fail-closed：闸 3 按原判定，
+**不豁免**；同时 stderr 出 warning + 把「无效 ACK 被拒」记进日志 —— 拒绝也要留痕，不许静默）。
+**只降级闸 3**，闸 1/2 不可豁免；每次**放行**必须写
+`.codex/control-tower/logs/degraded-events.log`，日志不可写 ⇒ degraded exit 2。
+
+### 3.1 三闸的执行体（D1107 建 · D1193 修判据 + 接线）
+
+> 契约 §3 自述「机器可核」，但 D1107 实测**全仓零执行体**（`grep -rn "DOC-CONTRACT" scripts/ .github/` = 0，
+> 阳性对照 `pre-commit-check` = 45）。D1107 补了执行体但**不接线**；D1193 修判据并接线。
+
+| 闸 | 执行体 | 触发点 | 现状 |
+|---|---|---|---|
+| 格式闸 / 取代闸 / 入库闸 | `bash scripts/control-tower/check-doc-contract.sh`<br>（`--staged` / `--base` / `--files` / `--baseline` / `--all-decisions` / `--json`；内核 `validate_doc_contract.py`） | pre-commit（**位于纯文档早退之前**）+ CI（`SYNO_CI=1` 转硬阻断） | 🟢 **已接线（D1193）** |
+
+**D1193 修的三处（均为 D1107 首版实测缺口）**：
+
+1. **阻断优先于白名单** —— 首版先匹配白名单前缀，`docs/**` 一击中即放行 ⇒ 阻断清单成死代码，
+   §3 ❌ 点名的 coordination/、plans/ **永不触发**（实测这两条路径判 pass）。现改为：阻断 → 过渡例外 → 白名单。
+2. **闸 3 扩到 `.md` + `.html`** —— 首版只认 md，HTML 成侧门（实测漏网 `docs/synova/coordination/四问-64格.html`）。
+3. **判据全部解析自 §3 的三个机器可读块** —— 不再硬编码；块缺失 ⇒ degraded exit 2（不静默放行）。
+
+**为什么必须接在「纯文档早退」之前**：pre-commit 的 CT-34/D387「纯文档提交豁免 12 组」会在组 1 之前
+`exit 0`，而闸 3 的对象**恰恰是文档提交** ⇒ 接在其后等于永不点火（D1193 实测）。代价：纯路径判定，<1s。
+
+**独立性声明（红线 R-6）**：执行体由 D1107/D1193 作者新增与修改 ⇒ **判据正确性须 K3 独立复核**；
+作者侧附红/绿夹具与生产接线断言，但**夹具自测 ≠ 独立验证**。
 
 ---
 
@@ -307,6 +399,70 @@ decisions/{lifecycle}/{class}/YYYY-MM-DD-topic-title.md
 **⇒ 一条总原则**（已在多处适用）：**「移出」必与「接手」同批** —— 移走一个机制之前，接手它的机制必须先就位。
 
 **⇒ 这也是契约自身的第一个实战教训**：契约不能只定义"想要的终态"，还必须定义"**从现状到终态的路上，与既有机制如何共存**"。
+
+### 9.1 闸 3 的过渡放行表（D1193 接线同批定）
+
+> **为什么需要**：闸 3 一支起来，与**仍在物理生产**的机制直接对撞。D1107 首版把这批路径
+> 「不判成新违规」，但只写在一段注释里、且靠白名单前缀顺序**意外**放行——不显式、不可测，
+> 还与 §3 ❌ 行矛盾。本节把过渡做成**显式、可测、带出口条件**：命中的每一件都计入
+> `transition_hits`（**不算违规**，但可计数）⇒ 迁移进度可观测。
+
+| 过渡放行路径 | 为什么暂时放行（不是「忘了」） | 出口条件（**机器可判**，达成即从本表移除） | 责任线 | 存量 |
+|---|---|---|---|---|
+| `.claude/task-briefs/**` | 组 6/12 **物理要求每任务一份 brief**，落点未迁 ⇒ 硬拦 = 必然 `--no-verify`（V3.9 教训：硬阻断有效，但拉红到底必被绕过） | `git ls-files '.claude/task-briefs/**' \| wc -l` = **0** —— 机器出口判据 `tracked-count:.claude/task-briefs/**=0`（承接卡 D1050 / B2 出库） | 治理线 | **—**（动态派生） |
+
+**存量列一律填 `—`**（与 §7 同规：**数字不写进契约**）。理由有实证：本表 D1193 接线时写 `214`，
+**合并当刻实测即 `215`**（K3 §R3 判「合并即腐」）。现行存量由执行体**动态派生**
+（`git ls-files` × 本表路径模式）⇒ **判据单源，没有第二处可以腐**。
+
+机器可读源（执行体解析这里，人工表只是同一事实的可读版）：
+
+<!-- doc-contract:transition:begin -->
+```doc-contract-transition
+# 路径 | 人读出口条件 | 责任线 | 机器出口判据(tracked-count:<路径模式>=<N>) | 声明存量(可选:填了必须=实测)
+.claude/task-briefs/** | brief 落点迁出仓库（D1050/B2 出库）：git ls-files '.claude/task-briefs/**' | wc -l = 0 | 治理线 | tracked-count:.claude/task-briefs/**=0 | —
+```
+<!-- doc-contract:transition:end -->
+
+**过渡台账落盘（D1204 / #1252 ② · K3 §R3）**：执行体在有过渡命中 / `--baseline` 复审 / 显式 `--hits-out` 时，
+把 `transition_hits` + 逐行 `实测存量 / 出口是否已达 / 声明值交叉校验` **追加**一行 JSON（JSONL）到
+`.claude/doc-contract-transition.log`。**复审取数只认这个载体** —— stdout 会滚走，台账不滚：
+
+```bash
+tail -3 .claude/doc-contract-transition.log   # 最近几次过渡命中与台账（component/artifact=doc-contract-transition）
+```
+
+- **落点与轮转（写给下一个人）**：该文件被 `.gitignore:8` 的 `*.log` 命中 ⇒ **不进提交，不是漏提交**；
+  追加写、**无自动轮转**（体积 ≈ 每命中一次一行，需清理时手删或接 logrotate）。
+  落点优先级：`--hits-out <path>` > 环境缝 `SYNO_DOC_CONTRACT_LOG` > 默认 `.claude/doc-contract-transition.log`；
+  **显式 `--hits-out` 不可写 ⇒ degraded exit 2**，默认/环境缝落点不可写 ⇒ 显式 warn（不阻断——这是对账指标不是门禁）。
+
+**棘轮（防「临时即永久」）**：
+
+- 每轮契约复审必须核 artifact 的 `transition_hits`；连续两轮不下降 ⇒ 该行判「机制失效」上报，
+  而不是继续记作「过渡中」。
+- `exit_met=true`（出口已达）的行在 **`--baseline` 复审模式判红**，逐 PR 模式只出 `[NOTE]`
+  —— 台账是**契约自身的棘轮**，不是每 PR 判据；否则任何「0 个 task-briefs」的合法夹具都被连坐。
+- **声明存量 ≠ 实测 ⇒ 任何模式都判红**（D1193 的 `214 ≠ 215` 即此型；禁双源）。
+
+**其余 §3 阻断清单不设过渡**（`docs/synova/coordination/**`、`docs/plans/**`、
+`docs/synova/audit-reports/**`、`docs/synova/dispatch/**`、归档区、`vendor/**`、`novis-backup-20260526/**`）：
+`origin/main` 近 7 天实测新增 = coordination 15 / dispatch 3 / plans 0 / audit-reports 0，
+且 coordination 与 dispatch 的**接手已存在**（§11 库外档案仓 + PR 正文 + 卡 note，STATE.md §8 在跑）
+⇒ 照 §3 直接阻断，错误信息点名落点。
+
+**本表的 self-check（防「临时即永久」）**：见上方棘轮三条 —— 计数核在 ledger（`.claude/doc-contract-transition.log`），
+非下降判定在 `--baseline`，声明值腐化在任何模式都判红。
+
+### 9.2 已登记的残余风险（K3 复核交底，不静默丢弃）
+
+| # | 残余风险 | 来源 | 现状与理由 | 何时处理 |
+|---|---|---|---|---|
+| 1 | 「语义同类但**命名不同**」的目录（例：`docs/synova/coordinationX/`）不在阻断条目的自动覆盖内 | K3 复核 **X1b**（P1 面） | **接受**：匹配器不猜名字 —— 无边界前缀匹配会误拦 `docs/plans-archive/` 等同前缀合法目录 ⇒ 噪音 ⇒ 门禁被绕过（V3.9 教训）。改由 §3 明文要求「新增同类目录须**显式登记**阻断清单」 | **类关闭在卡 #1261**：把 `docs/**` 白名单收窄为**正列表**（登记制），届时该类不再依赖阻断清单逐个点名 |
+
+> 记号约定：**X1a** = 同名前缀**文件**（`docs/plans.md`，已由闭包堵）｜**X1b** = 命名不同的近邻目录（本表第 1 条）。
+> **X3**（`**/README.md` 在新目录播种）原在 D1203 读法下也登记为残余风险，**D1204 已改判为「修」**
+> （同址豁免须同址有代码，见 §3）⇒ 不再列入本表。
 
 ---
 

@@ -1,54 +1,10 @@
 # .github/CODEOWNERS — 【生成产物，请勿手改】
-# 源: docs/synova/coordination/ownership.yaml（唯一权威；改那里再重跑下面的命令）
+# 真源: 各目录内嵌的 .synova-owner 标记（发现制；本文件由 --emit-codeowners 生成）
 # 生成: python3 scripts/control-tower/check-ownership.py --emit-codeowners > .github/CODEOWNERS
-# 漂移门禁: tests/control-tower/ownership.test.sh 逐字节断言本文件 == 生成结果（D733）
-# 语义: CODEOWNERS「最后匹配者胜出」→ 宽规则在前、例外在后（与 ownership.yaml 同序）。
+# 漂移门禁: check-ownership.py --check-drift 逐字节断言本文件 == 现树生成结果（卡 #1233）
+# 语义: CODEOWNERS「最后匹配者胜出」→ 宽规则在前、例外在后（与产物同序）。
 #
-# owner 账号体系待创始人定（2026-08-16 B1 落地）：当前全部指向主账号 @tangbaobao520
-# （兜底 = 创始人最终把关）。建议建三个团队 @synova-dsh / @synova-claude / @synova-k3，
-# 改 ownership.yaml 的 github: 段后重跑生成命令即可 —— 本文件不需要手改。
+# 账号体系：在**首次声明该 owner 键**的 .synova-owner 里写 `handle: @账号`，
+#   然后重跑生成命令 —— 本文件不需要手改。
 
-# win 领地（显式列出）: src/**、extensions/**、packages/**、synova_worker/**、docs/plans/**
 *                                        @tangbaobao520
-extensions/**                            @tangbaobao520
-packages/**                              @tangbaobao520
-synova_worker/**                         @tangbaobao520
-docs/plans/**                            @tangbaobao520
-src/sentinel/**                          @tangbaobao520
-tests/sentinel/**                        @tangbaobao520
-src/cron/**                              @tangbaobao520
-src/mcp/**                               @tangbaobao520
-src/agent/sentinel-service*              @tangbaobao520
-src/agent/sentinel-health-service.ts     @tangbaobao520
-scripts/control-tower/**                 @tangbaobao520
-scripts/workflow/**                      @tangbaobao520
-scripts/hooks/**                         @tangbaobao520
-scripts/doc-system/**                    @tangbaobao520
-tests/doc-system/**                      @tangbaobao520
-scripts/pre-commit-check.sh              @tangbaobao520
-scripts/pre-push-check.sh                @tangbaobao520
-scripts/install-hooks.sh                 @tangbaobao520
-scripts/backup/**                        @tangbaobao520
-scripts/product-lines/**                 @tangbaobao520
-scripts/golden-scenarios/**              @tangbaobao520
-tests/control-tower/**                   @tangbaobao520
-docs/synova/coordination/**              @tangbaobao520
-docs/synova/product-lines/**             @tangbaobao520
-scripts/project/**                       @tangbaobao520
-tests/project/**                         @tangbaobao520
-docs/synova/project/**                   @tangbaobao520
-docs/synova/dispatch/**                  @tangbaobao520
-docs/authority/**                        @tangbaobao520
-docs/synova/research/**                  @tangbaobao520
-docs/synova/presets/**                   @tangbaobao520
-.github/workflows/**                     @tangbaobao520
-.github/CODEOWNERS                       @tangbaobao520
-VERSION.md                               @tangbaobao520
-.claude/task-briefs/**                   @tangbaobao520
-.claude/skills/**                        @tangbaobao520
-.claude/settings.json                    @tangbaobao520
-.dsh/**                                  @tangbaobao520
-electron/**                              @tangbaobao520
-electron-renderer/**                     @tangbaobao520
-scripts/audit/**                         @tangbaobao520
-docs/synova/audit-reports/**             @tangbaobao520

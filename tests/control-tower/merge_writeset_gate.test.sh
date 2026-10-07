@@ -147,10 +147,14 @@ OUT=$(run_gate); rc=$?
 [ "$rc" -eq 0 ] && ok "④ 显式豁免生效 → exit 0" || no "④ 豁免未生效: rc=$rc"
 echo "$OUT" | grep -q 'sandbox 豁免演示' && ok "④ 打印豁免理由" || no "④ 未打印豁免理由"
 # 反例: 豁免条目无理由 → 不生效（门禁不许被无声改软）
+# D9206 口径隔离: 本段的**被测语义**是"无理由豁免不生效"，与身份推断无关。
+#   新护栏（弱锚点 ∧ 写集零交集 ⇒ 疑似劫持 exit 2）会**先于**豁免判定命中同一地形，
+#   从而遮蔽本断言 ⇒ 用 `--did D708`（**显式=强锚点**）钉住身份，使本用例只测豁免语义。
+#   护栏自身的行为由 tests/control-tower/d708-identity-guard.test.sh（A/B/D 三组）覆盖。
 reset_sandbox $'## 写集豁免\n- src/c_undeclared.ts'
 printf 'c\n' > "$SB/src/c_undeclared.ts"; commit_it "feat(D708): unreasoned exempt"
-OUT=$(run_gate); rc=$?
-[ "$rc" -eq 1 ] && ok "④ 反例: 无理由的豁免不生效 → exit 1" || no "④ 无理由豁免被放行（门禁变软）"
+OUT=$(run_gate --did D708); rc=$?
+[ "$rc" -eq 1 ] && ok "④ 反例: 无理由的豁免不生效 → exit 1（身份经 --did 隔离）" || no "④ 无理由豁免被放行（门禁变软）"
 
 # ── ⑤ 内置豁免: bypass.log（post-commit hook 每次追加的证据账本）──
 reset_sandbox ""
@@ -189,9 +193,11 @@ mkdir -p "$SB/docs/synova/coordination"
 printf 'z\n' > "$SB/docs/synova/coordination/D708-中文设计稿-20260912.md"
 mkbrief ""
 commit_it "docs(D708): cjk filename"
-OUT=$(run_gate); rc=$?
+# D9206 口径隔离: 本段测的是 **quotepath/CJK 路径原样点名**，与身份推断无关
+#   ⇒ 用 `--did D708`（强锚点）钉住身份，避免被新护栏（弱锚点 ∧ 零交集 ⇒ exit 2）遮蔽。
+OUT=$(run_gate --did D708); rc=$?
 if [ "$rc" -eq 1 ] && echo "$OUT" | grep -q 'D708-中文设计稿-20260912.md'; then
-  ok "⑨b CJK 文件名被正确判为夹带并原样点名（quotepath 已关）"
+  ok "⑨b CJK 文件名被正确判为夹带并原样点名（quotepath 已关；身份经 --did 隔离）"
 else
   no "⑨b CJK 文件名处理异常: rc=$rc :: $(echo "$OUT" | grep -a 夹带 | head -2)"
 fi

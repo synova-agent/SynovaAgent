@@ -62,39 +62,86 @@ jobs:
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
           # 白名单锚定分层（D1111/A5 修: 全部**逐条带路径锚**）:
-          #   依据（K3 W-1 原话「无锚点」＋研究院 A5 实测）: 旧式 '\.(md|json)$' 无前缀锚 ⇒
+          #   依据（K3 W-1 原话「无锚点」＋研究院 A5 实测）: 旧式无锚点正则 ⇒
           #   **任何** .json（package.json / tsconfig.json / src/**/*.json）与**任何**深度同名目录
           #   （src/task-state/**）都被判「纯文档」⇒ 10 个 job 空转、必需 context 假绿。
           #   本窗实测: 全仓 .json 共 981 件，旧正则下**全部**走 docs-only（含 tsconfig/eslintrc）。
-          #   新式规则（逐条可判；判据文本在**本文件内 10 处内联副本**，必须逐字一致——
-          #   单一真值源收敛属重构（另卡），本窗只保证「10 处同源 + 夹具判别」）:
-          #     ① ^docs/.+\.(md|json|html)$  —— docs 下文档面（.html 纳入见 DOC-CONTRACT §3 / D1111-D2）
-          #     ② ^(task-state|memory|decisions)/ —— 过程/决策载体（内容不影响构建与运行时）
-          #     ③ ^(\.claude|\.dsh)/skills/ —— 技能本体（非纯文档，但内容是提示词，不影响构建）
-          #     ④ ^[^/]+\.md$               —— **仅仓库根**的 .md（含 ^ 锚；否则 [^/]+ 会跨 '/' 误命中深层）
-          #     ⑤ ^(LICENSE|\.gitignore|\.gitkeep)$ —— 根级治理文件（仅根）
-          #   ⚠️ 有意 **不** 放行: 其余 .claude/**（settings.json/hooks.json 可改门禁本身）、
-          #      expert/** 与 knowledge/**（运行时资产）、src/**、scripts/**、.github/**、根级 .json
-          #   ⚠️ 空变更集（合并提交 diff 为空）⇒ 无行命中 grep -v ⇒ 仍按 docs-only（原语义保留）。
-          #   ⚠️ D1111/独立自验 E5: 本处（唯一一处）此前**缺** `git rev-parse --verify origin/main`
-          #      fail-safe（其余 9 处均有）⇒ origin/main 不可解析时本处会**早退为 docs-only**（方向相反：
+          #   🔴 D-F/①（卡 #1227）: 判据文本**不再内联**——唯一真值源 =
+          #      `.github/ci-criteria.txt` 的 `DOCSONLY_WHITELIST_RE`（本文件内零内联副本，
+          #      D1023 守卫在 CI HARD 下断言「内联副本 = 0 且消费点 = 9」）。
+          #      逐条分层理由与全量清单见该文件头注释；本处只留**消费**代码。
+          #      改判据 ⇒ 改那一个文件（它自身不在白名单分支内 ⇒ 必走全量 CI，自举安全）。
+          #   🔴 卡 #1323（原号 #1236）更正本条: 曾写「空变更集 ⇒ 仍按 docs-only（原语义保留）」——
+          #      该行为**已被检验为缺陷**：`push` 到 main 时 HEAD == origin/main ⇒ `origin/main...HEAD`
+          #      为空 ⇒ `grep -qvE` 无行命中返 1 ⇒ 落 else ⇒ `docs_only=true` ⇒ **本判定在 main 上永久
+          #      判为早退** ⇒ 若干控制条件同时倒向"跳过"。这是"**已知行为 + 其分支后果从未被检验**"，
+          #      不是"漏了个边界"。⇒ 新语义: ① push 事件 base = `github.event.before`（推送前提交），
+          #      PR/merge_group 维持 `origin/<base_ref>`；② **全零 SHA**（首次 push/force push）或 base
+          #      不可解析 ⇒ 显式全量；③ **空变更集 = 显式第三态**（`::warning` + 按**非** docs-only 处理）
+          #      —— 与同段「判据不可读」「origin/main 不可解析」两处 fail-closed **同向**（不可判 ⇒ 全量）。
+          #   ⚠️ 结构留痕: 本判定块在**本文件内内联 9 份**（逐字节同源；D1023 守卫的「消费点 = 9」；
+          #      本次 9 份**同改**）。「改一处源」的前提不成立 ⇒ 去重属另卡（见 PR 正文例外清单）。
+          #   ⚠️ D1111/独立自验 E5: 本处此前**缺** `git rev-parse --verify origin/main`
+          #      fail-safe（其余处均有）⇒ origin/main 不可解析时本处会**早退为 docs-only**（方向相反：
           #      别处全量、本处瘦身）。空 diff 时 grep -qvE 返 1 同样早退 ⇒ 两条路径都收敛到「早退」。
-          #      ⇒ 现补 fail-safe，与其余 9 处**同一判据、同一降级方向**（不可解析 ⇒ 全量，绝不误跳）。
-          # D1023/P1 修: .gitattributes/.gitmodules 移出白名单 —— .gitattributes 是 CI 运行时
+          #      ⇒ 已补 fail-safe，与其余各处**同一判据、同一降级方向**（不可解析 ⇒ 全量，绝不误跳）。
+          # D1023/P1 修: .gitattributes/.gitmodules 不在白名单 —— .gitattributes 是 CI 运行时
           #   语义载体（*.sh eol=lf、merge=union、scripts/audit/** -text），改它即改 CI 本身
           #   须走全量；.gitmodules 仓库不存在，留着 = 新增子模块+文档即零验证入库。
-          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          # 🔴 D-F/①-fix（独立复核 R1，2026-10-07）: 单源读不到时**显式**置 docs_only=false（全量）。
+          #   实测 `printf x | grep -qvE ''` 返 **1**（空正则匹配每行，-v 反选后无输出）⇒ 若依赖该
+          #   隐式返回，正常路径会掉进 else ⇒ docs_only=true（早退）＝ **fail-OPEN**。
+          #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          # 卡 #1323: base 解析（push 用 github.event.before；全零 SHA/不可解析 ⇒ 显式全量）。详见文件头「docs-only 判定」段。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ] && [ -n "${GITHUB_EVENT_BEFORE:-}" ] \
+             && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            DS_BASE="$GITHUB_EVENT_BEFORE"
+          else
+            DS_BASE="origin/main"
+          fi
+          if [ -z "$DS_RE" ]; then
+            echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
+          elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+            # fail-safe（D1111 E5 原有，**保留原文**——D1023 守卫按此字面量计数 9 个消费点）:
+            #   origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "::warning title=docs-only base::origin/main 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          elif ! git rev-parse --verify -q "$DS_BASE" >/dev/null 2>&1; then
+            # fail-safe（#1323 新增）: push 的 before-sha 不可解析（含全零 SHA 退化）⇒ 全量跑
+            echo "::warning title=docs-only base::base=$DS_BASE 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
-            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            DS_CHANGED="$(git diff --name-only "$DS_BASE"...HEAD 2>/dev/null || true)"   # swallow-ok: 空集/命中两条分支各自显式处置
+            if [ -z "$DS_CHANGED" ]; then
+              # 第三态（铁律 11: 空集 ≠ 纯文档）⇒ 无法判定 ⇒ 显式全量 + 告警，绝不静默归 docs-only
+              echo "::warning title=docs-only empty-diff::base=$DS_BASE 与 HEAD 变更集为**空** ⇒ 无法判定是否纯文档 ⇒ 显式按非 docs-only 处理（全量跑）"
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            elif printf '%s\n' "$DS_CHANGED" | grep -qvE "$DS_RE"; then
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            fi
           fi
+      # ═══ #1215 / CT-34 上界（K3 2026-10-07 双卡报告 B 节）: 纯文档 PR 的 **merge 级**登记对账 ═══
+      # 缺口: docs-only 早退跳过 Iron Laws（= 提交端 D782 文档真相防线: D1 truth + D2 登记门禁）
+      #   ⇒ 未登记的新 docs/*.md 可在纯文档 PR 里零检查入库（K3 物理复现: 探针 + SYNO_CI=1 ⇒ rc=0）。
+      # 修法: 仅在 docs_only == 'true' 分支补跑 **D2 登记门禁**（scripts/doc-system/doc-registry-gate.sh）——
+      #   它按 base..HEAD 新增文档对账 docs/authority/DOCS-REGISTRY.yaml；PR 语境能读完整 diff（fetch-depth: 0）。
+      # 判定: 新 .md 未登记 ⇒ 本 step 红 ⇒ 本 job 承载的必需 context 红（merge 级阻断 + 逐个点名文件）。
+      #   非 docs-only PR **不重复跑**（它们已在 Iron Laws 的 D782 块内硬阻断，避免同判据双跑）。
+      # 排除面（生成物/历史区/证据区/审计报告等，无需登记）见 scripts/doc-system/doc-registry-gate.sh 头注释 EXCLUDE。
+      # 三态: 0=全登记 / 1=有未登记（红）/ 2=调用错误（红）；台账缺失 ⇒ 脚本自身显式降级 exit 0（不误伤）。
+      - name: Docs registry reconciliation (docs-only PRs, #1215)
+        if: steps.docsonly.outputs.docs_only == 'true'
+        run: bash scripts/doc-system/doc-registry-gate.sh
       - uses: actions/setup-node@v4
         with: { node-version: '20', cache: 'npm' }
         if: steps.docsonly.outputs.docs_only != 'true'
-      - run: npm ci
+      - run: bash scripts/control-tower/install-deps.sh
         if: steps.docsonly.outputs.docs_only != 'true'
       # D703 (K3 W-1) 证据命令机器化: 非 docs-only PR 改动 dev-doc → 按文件名 D 号
       # 回放对应 scripts/ci/verify-dXXX.sh 自证脚本（DS 命令从文档字符串升级为 CI 实跑）。
@@ -178,16 +225,49 @@ jobs:
       #      与 ⑩c（还原旧正则即失效 ⇒ 判别性）。
       - name: Merge write-set reconciliation (D708)
         if: steps.docsonly.outputs.docs_only != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
+          # #1284（2026-10-07）: **接 --pr-body**。旧形态只能从 GITHUB_EVENT_PATH（事件体快照）读正文，
+          #   而 GitHub **re-run 重放原事件快照、不重抓正文** ⇒ 「改正文 → 重跑」永远无效
+          #   （#1273 实证：正文 13:45 加豁免，重跑 attempt 2 读到的仍是 13:31 旧正文）。
+          #   本步显式取一次**当前**正文落文件再传参；取不到 ⇒ **显式降级**（::warning，禁静默）。
+          set -uo pipefail
+          PR_BODY_FILE="${RUNNER_TEMP:-/tmp}/d708-pr-body.md"
+          BODY_ARGS=()
+          if [ -n "${PR_NUMBER:-}" ]; then
+            if gh pr view "$PR_NUMBER" --json body --jq .body > "$PR_BODY_FILE" 2>/tmp/d708-body.err; then
+              BODY_ARGS=(--pr-body "$PR_BODY_FILE")
+              echo "D708 正文来源: gh pr view #${PR_NUMBER} —— **当前**正文（re-run 亦刷新，非事件体快照）"
+              # 可见证据: 让「解析到的豁免行」进日志（旧形态日志里只有模板文案，看不出喂没喂到输入）
+              if grep -qE '^#{2,4}[[:space:]]*写集豁免' "$PR_BODY_FILE"; then
+                echo "D708 正文含「写集豁免」段，逐条豁免行（原样打印，供审计）:"
+                sed -n '/^#\{2,4\}[[:space:]]*写集豁免/,/^#\{1,4\}[[:space:]]/p' "$PR_BODY_FILE" | grep -n '^- ' | head -20 || true
+              fi
+            else
+              echo "::warning title=d708-pr-body::gh pr view #${PR_NUMBER} 取正文失败 ⇒ 回退事件体快照（可能过期，re-run 场景尤甚）；stderr: $(tr '\n' ' ' < /tmp/d708-body.err 2>/dev/null | head -c 200)"
+            fi
+          else
+            echo "::notice title=d708-pr-body::本事件无 PR 正文可取（merge_group/push ⇒ event.pull_request 为空）⇒ 仅声明文件源生效；PR 正文的「写集豁免」段在此路径**不适用**（显式说明，非静默跳过）"
+          fi
           python3 scripts/control-tower/merge_writeset_gate.py \
-            --base origin/main --head HEAD --branch "${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+            --base origin/main --head HEAD --branch "${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}" ${BODY_ARGS[@]+"${BODY_ARGS[@]}"}
 
   test:
     # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-10-02T12:45:00+08:00；
     # 公式 = max(P95×1.5, 中位数×3)）：audit 1 / Test-Kit(ubuntu) 1 / Golden Case 2 /
     # Gate Integrity 2 / Test-Kit(windows) 3 / Architecture 6 / Checker Review 6 /
     # Integration 6 / TypeScript+Iron Laws 7 / Vitest 8 / Control Tower(ubuntu) 14 / (windows) 106（D1109 后**未重取**：口径要 n=12 同分布样本，现 n=1）。
-    timeout-minutes: 8
+    # 🔴 W1d/D1164（治理线，2026-10-06）: 8 → 15。**实测该 job 被自己的 timeout 杀掉**：
+    #   step「Run tests」在**3/3** 条 run 里 conclusion=cancelled（37364788318 / 37421437721 /
+    #   37423639714），每条都在 job 起始后 **~8m15s** 终止 ⇒ 是 timeout 杀，不是测试失败。
+    #   shard 1/2 实测跑到 6m57s 仍被切；同 run 的 shard 2/2「Run tests」只用 46s ⇒ 严重不均。
+    #   ⚠️ 该 job 承载**必需 context** `Vitest (1/2)` ⇒ 非 docs-only PR 因此永久 blocked。
+    #   原基线（注释里 n=12）口径是「只取 success」——而 main 的 run 全是 docs-only（skip），
+    #   样本里根本没有"真跑的非 docs run" ⇒ 8 分钟是**没被真实负载校准过**的值。
+    #   若 15 分钟仍被杀，则不是超时问题而是 shard 不均/测试挂死（另卡）。
+    timeout-minutes: 15
     name: Vitest (${{ matrix.shard }})
     needs: quality
     # D1111/A3 缺陷 B 修（研究院 A3 提案，机械实现）: 上游 quality 红时，job 级无 `if:` ⇒ 本 job
@@ -209,19 +289,48 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
-          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          # 🔴 D-F/①-fix（独立复核 R1，2026-10-07）: 单源读不到时**显式**置 docs_only=false（全量）。
+          #   实测 `printf x | grep -qvE ''` 返 **1**（空正则匹配每行，-v 反选后无输出）⇒ 若依赖该
+          #   隐式返回，正常路径会掉进 else ⇒ docs_only=true（早退）＝ **fail-OPEN**。
+          #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          # 卡 #1323: base 解析（push 用 github.event.before；全零 SHA/不可解析 ⇒ 显式全量）。详见文件头「docs-only 判定」段。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ] && [ -n "${GITHUB_EVENT_BEFORE:-}" ] \
+             && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            DS_BASE="$GITHUB_EVENT_BEFORE"
+          else
+            DS_BASE="origin/main"
+          fi
+          if [ -z "$DS_RE" ]; then
+            echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
+          elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+            # fail-safe（D1111 E5 原有，**保留原文**——D1023 守卫按此字面量计数 9 个消费点）:
+            #   origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "::warning title=docs-only base::origin/main 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          elif ! git rev-parse --verify -q "$DS_BASE" >/dev/null 2>&1; then
+            # fail-safe（#1323 新增）: push 的 before-sha 不可解析（含全零 SHA 退化）⇒ 全量跑
+            echo "::warning title=docs-only base::base=$DS_BASE 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
-            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            DS_CHANGED="$(git diff --name-only "$DS_BASE"...HEAD 2>/dev/null || true)"   # swallow-ok: 空集/命中两条分支各自显式处置
+            if [ -z "$DS_CHANGED" ]; then
+              # 第三态（铁律 11: 空集 ≠ 纯文档）⇒ 无法判定 ⇒ 显式全量 + 告警，绝不静默归 docs-only
+              echo "::warning title=docs-only empty-diff::base=$DS_BASE 与 HEAD 变更集为**空** ⇒ 无法判定是否纯文档 ⇒ 显式按非 docs-only 处理（全量跑）"
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            elif printf '%s\n' "$DS_CHANGED" | grep -qvE "$DS_RE"; then
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            fi
           fi
       - uses: actions/setup-node@v4
         if: steps.docsonly.outputs.docs_only != 'true'
         with: { node-version: '20', cache: 'npm' }
-      - run: npm ci
+      - run: bash scripts/control-tower/install-deps.sh
         if: steps.docsonly.outputs.docs_only != 'true'
       - name: Run tests
         if: steps.docsonly.outputs.docs_only != 'true'
@@ -234,12 +343,33 @@ jobs:
           BASE=$(git merge-base refs/remotes/origin/main HEAD 2>/dev/null || git merge-base origin/main HEAD 2>/dev/null || echo "")
           if [ -n "$BASE" ]; then
             CHANGED=$(git diff --name-only "$BASE"..HEAD 2>/dev/null || echo "")
-            echo "变更集基准: merge-base(origin/main, HEAD)=$BASE（三点差：仅本 PR 引入的改动）"
+            echo "变更集基准: merge-base(origin/main, HEAD)=${BASE}（三点差：仅本 PR 引入的改动）"
           else
             CHANGED=$(git diff --name-only HEAD~1..HEAD 2>/dev/null || git diff --name-only origin/main..HEAD 2>/dev/null || echo "")
             echo "::warning::origin/main 不可用，回退 HEAD~1..HEAD 判据（合并提交下会误判存量失败为新增）"
           fi
-          OUTPUT=$(npx vitest run --shard=${{ matrix.shard }} --reporter=verbose 2>&1; echo "EXIT:$?")
+          # D-E/②（卡 #1226 · 创始人 2026-10-07 批准方案七⑥）: 默认 **`--changed`**——
+          #   只跑「本 PR 影响面」的测试（vitest 内部即 `git diff --name-only <since>...HEAD`
+          #   + 反向 import 图闭包，与上面 BASE 三点差同口径）；**nightly / 人工触发 ⇒ 全量**。
+          #   降级方向（一律「多跑」，绝不「少跑」）:
+          #     · event 非 PR/push（schedule/workflow_dispatch）⇒ 全量
+          #     · BASE 不可解析 ⇒ 全量（可见 ::warning）
+          #     · `--passWithNoTests` **必需**：changed 模式下选中 0 个测试是合法结果
+          #       （否则 vitest 在 shard 校验处抛 `--shard <count> must be ...` ⇒ 必需 context 假红）
+          RUN_MODE=changed
+          if [ "${GITHUB_EVENT_NAME:-}" = "schedule" ] || [ "${GITHUB_EVENT_NAME:-}" = "workflow_dispatch" ]; then
+            RUN_MODE=full
+          fi
+          if [ "$RUN_MODE" = "changed" ] && [ -z "$BASE" ]; then
+            RUN_MODE=full
+            echo "::warning title=vitest mode::BASE 不可解析 ⇒ 回退全量（绝不误跳）"
+          fi
+          echo "vitest 运行模式: ${RUN_MODE}（event=${GITHUB_EVENT_NAME:-unknown} shard=${{ matrix.shard }} base=${BASE:0:8}）"
+          if [ "$RUN_MODE" = "changed" ]; then
+            OUTPUT=$(npx vitest run --changed "$BASE" --passWithNoTests --shard=${{ matrix.shard }} --reporter=verbose 2>&1; echo "EXIT:$?")
+          else
+            OUTPUT=$(npx vitest run --shard=${{ matrix.shard }} --reporter=verbose 2>&1; echo "EXIT:$?")
+          fi
           echo "$OUTPUT"
           EXIT_CODE=$(echo "$OUTPUT" | grep "EXIT:" | sed 's/.*EXIT://')
           if [ "$EXIT_CODE" = "0" ]; then exit 0; fi
@@ -286,19 +416,48 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
-          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          # 🔴 D-F/①-fix（独立复核 R1，2026-10-07）: 单源读不到时**显式**置 docs_only=false（全量）。
+          #   实测 `printf x | grep -qvE ''` 返 **1**（空正则匹配每行，-v 反选后无输出）⇒ 若依赖该
+          #   隐式返回，正常路径会掉进 else ⇒ docs_only=true（早退）＝ **fail-OPEN**。
+          #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          # 卡 #1323: base 解析（push 用 github.event.before；全零 SHA/不可解析 ⇒ 显式全量）。详见文件头「docs-only 判定」段。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ] && [ -n "${GITHUB_EVENT_BEFORE:-}" ] \
+             && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            DS_BASE="$GITHUB_EVENT_BEFORE"
+          else
+            DS_BASE="origin/main"
+          fi
+          if [ -z "$DS_RE" ]; then
+            echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
+          elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+            # fail-safe（D1111 E5 原有，**保留原文**——D1023 守卫按此字面量计数 9 个消费点）:
+            #   origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "::warning title=docs-only base::origin/main 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          elif ! git rev-parse --verify -q "$DS_BASE" >/dev/null 2>&1; then
+            # fail-safe（#1323 新增）: push 的 before-sha 不可解析（含全零 SHA 退化）⇒ 全量跑
+            echo "::warning title=docs-only base::base=$DS_BASE 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
-            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            DS_CHANGED="$(git diff --name-only "$DS_BASE"...HEAD 2>/dev/null || true)"   # swallow-ok: 空集/命中两条分支各自显式处置
+            if [ -z "$DS_CHANGED" ]; then
+              # 第三态（铁律 11: 空集 ≠ 纯文档）⇒ 无法判定 ⇒ 显式全量 + 告警，绝不静默归 docs-only
+              echo "::warning title=docs-only empty-diff::base=$DS_BASE 与 HEAD 变更集为**空** ⇒ 无法判定是否纯文档 ⇒ 显式按非 docs-only 处理（全量跑）"
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            elif printf '%s\n' "$DS_CHANGED" | grep -qvE "$DS_RE"; then
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            fi
           fi
       - uses: actions/setup-node@v4
         if: steps.docsonly.outputs.docs_only != 'true'
         with: { node-version: '20', cache: 'npm' }
-      - run: npm ci
+      - run: bash scripts/control-tower/install-deps.sh
         if: steps.docsonly.outputs.docs_only != 'true'
       - name: Layer boundary check
         if: steps.docsonly.outputs.docs_only != 'true'
@@ -338,14 +497,43 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
-          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          # 🔴 D-F/①-fix（独立复核 R1，2026-10-07）: 单源读不到时**显式**置 docs_only=false（全量）。
+          #   实测 `printf x | grep -qvE ''` 返 **1**（空正则匹配每行，-v 反选后无输出）⇒ 若依赖该
+          #   隐式返回，正常路径会掉进 else ⇒ docs_only=true（早退）＝ **fail-OPEN**。
+          #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          # 卡 #1323: base 解析（push 用 github.event.before；全零 SHA/不可解析 ⇒ 显式全量）。详见文件头「docs-only 判定」段。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ] && [ -n "${GITHUB_EVENT_BEFORE:-}" ] \
+             && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            DS_BASE="$GITHUB_EVENT_BEFORE"
+          else
+            DS_BASE="origin/main"
+          fi
+          if [ -z "$DS_RE" ]; then
+            echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
+          elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+            # fail-safe（D1111 E5 原有，**保留原文**——D1023 守卫按此字面量计数 9 个消费点）:
+            #   origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "::warning title=docs-only base::origin/main 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          elif ! git rev-parse --verify -q "$DS_BASE" >/dev/null 2>&1; then
+            # fail-safe（#1323 新增）: push 的 before-sha 不可解析（含全零 SHA 退化）⇒ 全量跑
+            echo "::warning title=docs-only base::base=$DS_BASE 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
-            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            DS_CHANGED="$(git diff --name-only "$DS_BASE"...HEAD 2>/dev/null || true)"   # swallow-ok: 空集/命中两条分支各自显式处置
+            if [ -z "$DS_CHANGED" ]; then
+              # 第三态（铁律 11: 空集 ≠ 纯文档）⇒ 无法判定 ⇒ 显式全量 + 告警，绝不静默归 docs-only
+              echo "::warning title=docs-only empty-diff::base=$DS_BASE 与 HEAD 变更集为**空** ⇒ 无法判定是否纯文档 ⇒ 显式按非 docs-only 处理（全量跑）"
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            elif printf '%s\n' "$DS_CHANGED" | grep -qvE "$DS_RE"; then
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            fi
           fi
       - uses: actions/setup-node@v4
         if: steps.docsonly.outputs.docs_only != 'true'
@@ -353,7 +541,7 @@ jobs:
       - name: Install test-kit deps
         if: steps.docsonly.outputs.docs_only != 'true'
         working-directory: packages/test-kit
-        run: npm ci
+        run: bash "$GITHUB_WORKSPACE/scripts/control-tower/install-deps.sh" --prefix .
       - name: Run ratchet baseline test (05-as-any-audit)
         if: steps.docsonly.outputs.docs_only != 'true'
         working-directory: packages/test-kit
@@ -420,14 +608,43 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
-          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          # 🔴 D-F/①-fix（独立复核 R1，2026-10-07）: 单源读不到时**显式**置 docs_only=false（全量）。
+          #   实测 `printf x | grep -qvE ''` 返 **1**（空正则匹配每行，-v 反选后无输出）⇒ 若依赖该
+          #   隐式返回，正常路径会掉进 else ⇒ docs_only=true（早退）＝ **fail-OPEN**。
+          #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          # 卡 #1323: base 解析（push 用 github.event.before；全零 SHA/不可解析 ⇒ 显式全量）。详见文件头「docs-only 判定」段。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ] && [ -n "${GITHUB_EVENT_BEFORE:-}" ] \
+             && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            DS_BASE="$GITHUB_EVENT_BEFORE"
+          else
+            DS_BASE="origin/main"
+          fi
+          if [ -z "$DS_RE" ]; then
+            echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
+          elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+            # fail-safe（D1111 E5 原有，**保留原文**——D1023 守卫按此字面量计数 9 个消费点）:
+            #   origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "::warning title=docs-only base::origin/main 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          elif ! git rev-parse --verify -q "$DS_BASE" >/dev/null 2>&1; then
+            # fail-safe（#1323 新增）: push 的 before-sha 不可解析（含全零 SHA 退化）⇒ 全量跑
+            echo "::warning title=docs-only base::base=$DS_BASE 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
-            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            DS_CHANGED="$(git diff --name-only "$DS_BASE"...HEAD 2>/dev/null || true)"   # swallow-ok: 空集/命中两条分支各自显式处置
+            if [ -z "$DS_CHANGED" ]; then
+              # 第三态（铁律 11: 空集 ≠ 纯文档）⇒ 无法判定 ⇒ 显式全量 + 告警，绝不静默归 docs-only
+              echo "::warning title=docs-only empty-diff::base=$DS_BASE 与 HEAD 变更集为**空** ⇒ 无法判定是否纯文档 ⇒ 显式按非 docs-only 处理（全量跑）"
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            elif printf '%s\n' "$DS_CHANGED" | grep -qvE "$DS_RE"; then
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            fi
           fi
       # ── D1039 安全网①: 路径判据（分类器脚本产结论；本 step 只消费结论）──────────────
       #   ⚠️ D1111/独立自验 E6 更正: 此处旧注曾写「路径判据唯一载体 = 分类器脚本」，与事实不符——
@@ -520,73 +737,130 @@ jobs:
         #   该用例自身含时序守卫（无修复的分支 ⇒ SKIP），断言 vitest.config.ts 收敛 LOG_LEVEL=warn。
         run: |
           FAIL=0
-          for t in \
-            tests/control-tower/verify-parallel.test.sh \
-            tests/control-tower/verify-claims-table.test.sh \
-            tests/control-tower/write-set-check.test.sh \
-            tests/control-tower/post-commit-marker.test.sh \
-            tests/control-tower/ct-test-gate.test.sh \
-            tests/control-tower/task-start-parallel.test.sh \
-            tests/control-tower/fastlane-bypass-only.test.sh \
-            tests/control-tower/gate-stats.test.sh \
-            tests/control-tower/q2-error-locating.test.sh \
-            tests/control-tower/platform-checklist.test.sh \
-            tests/control-tower/tag-ancestry.test.sh \
-            tests/control-tower/brief-parser-strip.test.sh \
-            tests/control-tower/post-commit.test.sh \
-            tests/control-tower/simulate-ci.test.sh \
-            tests/control-tower/synova-submit.test.sh \
-            tests/control-tower/synova-commit.test.sh \
-            tests/control-tower/parallel-main-tree-occupancy.test.sh \
-            tests/control-tower/fastlane-extended.test.sh \
-            tests/control-tower/g12-day-window.test.sh \
-            tests/control-tower/incident-loop.test.sh \
-            tests/control-tower/check-canary-drift.test.sh \
-            tests/control-tower/claim-regex-narrow.test.sh \
-            tests/control-tower/ci-strict-visible.test.sh \
-            tests/control-tower/skeleton-brief-gate.test.sh \
-            tests/control-tower/clone-config-init.test.sh \
-            tests/control-tower/clone-shadow-commit.test.sh \
-            tests/control-tower/verify-parallel-ci.test.sh \
-            tests/control-tower/alloc-task-id.test.sh \
-            tests/control-tower/alloc-task-id-lock.test.sh \
-            tests/control-tower/alloc-task-id-timeout.test.sh \
-            tests/control-tower/log-snapshot.test.sh \
-            tests/control-tower/classify-worktrees.test.sh \
-            tests/control-tower/verdict-baseline.test.sh \
-            tests/control-tower/check-name-allocation.test.sh \
-            tests/control-tower/check-gitlinks.test.sh \
-            tests/control-tower/grep-oP-regression.test.sh \
-            tests/control-tower/scan-fullwidth-vars.test.sh \
-            tests/control-tower/gate-failopen-net.test.sh \
-            tests/control-tower/merge_writeset_gate.test.sh \
-            tests/control-tower/ci-ratchet-base.test.sh \
-            tests/control-tower/verify-doc.test.sh \
-            tests/doc-system/check-doc-truth.test.sh \
-            tests/doc-system/doc-registry-gate.test.sh \
-            tests/doc-system/doc-categories.test.sh \
-            tests/doc-system/doc-staleness.test.sh \
-            tests/doc-system/doc-triage.test.sh \
-            tests/doc-system/generate-chronicle-monthly.test.sh \
-            tests/control-tower/check-citations.test.sh \
-            tests/control-tower/check-progress-freshness.test.sh \
-            tests/control-tower/check-preset-bundles.test.sh \
-            tests/control-tower/check-dsh-anchor.test.sh \
-            tests/control-tower/check-gate-integrity.test.sh \
-            tests/control-tower/check-k3-report.test.sh \
-            tests/control-tower/daily-cto-board-ratio.test.sh \
-            tests/control-tower/install-dsh-preset.test.sh \
-            tests/control-tower/d956-failmsg.test.sh \
-            tests/control-tower/check-required-contexts.test.sh \
-            tests/control-tower/loop-context.test.sh \
-            tests/control-tower/ci-signal-classify.test.sh; do
+          # ── D-F/②（卡 #1227）: 执行集 = **发现制**，不再逐条登记 ──────────────────
+          #   发现面（tests/control-tower、tests/doc-system）由
+          #   scripts/control-tower/sealed-tests.sh 唯一声明；执行集 = 面扫描 − 隔离台账
+          #   （gate-integrity-baseline.txt 的 REGISTRY-BASELINE 段）。
+          #   ⇒ 面内新增测试**零登记自动纳入执行**；要排除必须写进隔离台账（留痕 + 双棘轮:
+          #      FACE-TOTAL 下界 / QUARANTINE-TOTAL 上界）。
+          #   rc≠0 = 发现制自身违规（面为空 / 疑似删测试 / 台账失效）⇒ fail-closed 判红，绝不静默跳过。
+          # D1227（卡 #1300）越线者付账: 把 base 交给注入缝（纯 tree 计数，同一运行内测 scan(base) 与 scan(PR)）。
+          #   PR 事件 ⇒ origin/<base>；merge_group/push 无 PR base ⇒ 空 ⇒ 脚本**显式打印「未给 base ⇒ 不判越线」**
+          #   并退化为现状语义（禁静默）。origin/main 不可解析时脚本同样显式说明（见 sealed-tests.sh 判定点）。
+          SEALED_BASE="${GITHUB_BASE_REF:+origin/$GITHUB_BASE_REF}"
+          [ -n "$SEALED_BASE" ] || SEALED_BASE="${SYNO_BASE_REF:-origin/main}"
+          export SYNO_BASE_REF="$SEALED_BASE"
+          SEALED_LIST="$(bash scripts/control-tower/sealed-tests.sh --list)" || {
+            echo "::error title=sealed-tests::发现制清单取数失败（原因见上）—— fail-closed，不静默跳过"
+            exit 1
+          }
+          # ── SEALED-MANIFEST-BEGIN （生成物: bash scripts/control-tower/sealed-tests.sh --list）──
+          #   用途: ① 兼容「接线 = 路径出现在 ci.yml 全文」类既有夹具（逐个 grep 自己的路径）；
+          #        ② 人读清单。**执行集不取自本块**（取自上面的发现制取数）⇒ 本块过期不影响判定。
+          #   漂移策略: **只对『块内有、执行集无』（陈旧方向）告警**；新增测试方向**不告警**——
+          #        否则每个加测试的 PR 都要手改本生成物（= 变相登记制）。重生成命令见卡 note。
+          # tests/control-tower/alloc-task-id-lock.test.sh
+          # tests/control-tower/alloc-task-id-timeout.test.sh
+          # tests/control-tower/alloc-task-id.test.sh
+          # tests/control-tower/brief-parser-strip.test.sh
+          # tests/control-tower/check-canary-drift.test.sh
+          # tests/control-tower/check-citations.test.sh
+          # tests/control-tower/check-doc-contract.test.sh
+          # tests/control-tower/check-dsh-anchor.test.sh
+          # tests/control-tower/check-gate-integrity.test.sh
+          # tests/control-tower/check-gitlinks.test.sh
+          # tests/control-tower/check-k3-report.test.sh
+          # tests/control-tower/check-name-allocation.test.sh
+          # tests/control-tower/check-ontology-fields.test.sh
+          # tests/control-tower/check-preset-bundles.test.sh
+          # tests/control-tower/check-progress-freshness.test.sh
+          # tests/control-tower/check-project-coordinates.test.sh
+          # tests/control-tower/check-required-contexts.test.sh
+          # tests/control-tower/ci-ratchet-base.test.sh
+          # tests/control-tower/ci-signal-classify.test.sh
+          # tests/control-tower/ci-strict-visible.test.sh
+          # tests/control-tower/claim-regex-narrow.test.sh
+          # tests/control-tower/classify-worktrees.test.sh
+          # tests/control-tower/clone-config-init.test.sh
+          # tests/control-tower/clone-shadow-commit.test.sh
+          # tests/control-tower/ct-test-gate.test.sh
+          # tests/control-tower/d956-failmsg.test.sh
+          # tests/control-tower/daily-cto-board-ratio.test.sh
+          # tests/control-tower/fastlane-bypass-only.test.sh
+          # tests/control-tower/fastlane-extended.test.sh
+          # tests/control-tower/g12-day-window.test.sh
+          # tests/control-tower/gate-failopen-net.test.sh
+          # tests/control-tower/gate-retirement-report.test.sh
+          # tests/control-tower/gate-stats.test.sh
+          # tests/control-tower/grep-oP-regression.test.sh
+          # tests/control-tower/incident-loop.test.sh
+          # tests/control-tower/install-deps.test.sh
+          # tests/control-tower/install-dsh-preset.test.sh
+          # tests/control-tower/log-snapshot.test.sh
+          # tests/control-tower/loop-context.test.sh
+          # tests/control-tower/merge_writeset_gate.test.sh
+          # tests/control-tower/parallel-main-tree-occupancy.test.sh
+          # tests/control-tower/platform-checklist.test.sh
+          # tests/control-tower/post-commit-marker.test.sh
+          # tests/control-tower/post-commit.test.sh
+          # tests/control-tower/q2-error-locating.test.sh
+          # tests/control-tower/scan-fullwidth-vars.test.sh
+          # tests/control-tower/sealed-tests.test.sh
+          # tests/control-tower/simulate-ci.test.sh
+          # tests/control-tower/skeleton-brief-gate.test.sh
+          # tests/control-tower/sync_project_coordinates.test.sh
+          # tests/control-tower/synova-commit.test.sh
+          # tests/control-tower/synova-submit.test.sh
+          # tests/control-tower/tag-ancestry.test.sh
+          # tests/control-tower/task-start-parallel.test.sh
+          # tests/control-tower/validate_doc_contract.test.sh
+          # tests/control-tower/verdict-baseline.test.sh
+          # tests/control-tower/verify-claims-table.test.sh
+          # tests/control-tower/verify-doc.test.sh
+          # tests/control-tower/verify-parallel-ci.test.sh
+          # tests/control-tower/verify-parallel.test.sh
+          # tests/control-tower/write-set-check.test.sh
+          # tests/doc-system/check-doc-truth.test.sh
+          # tests/doc-system/doc-categories.test.sh
+          # tests/doc-system/doc-registry-gate.test.sh
+          # tests/doc-system/doc-staleness.test.sh
+          # tests/doc-system/doc-triage.test.sh
+          # tests/doc-system/generate-chronicle-monthly.test.sh
+          # ── SEALED-MANIFEST-END ──
+          # 漂移提示（**不判红**）：本块是生成物，过期只影响「人读 + 遗留接线夹具」的可读性。
+          MANIFEST_BLOCK="$(sed -n '/SEALED-MANIFEST-BEGIN/,/SEALED-MANIFEST-END/p' .github/workflows/ci.yml | sed 's/^ *//; s/^# *//' | grep -E '^tests/' | sort -u)"
+          # 只报**陈旧方向**（块内有、执行集无）；新增方向静默——新增测试不得要求人手改生成物（Lead 裁 2026-10-07）
+          MANIFEST_STALE="$(comm -23 <(printf '%s\n' "$MANIFEST_BLOCK") <(printf '%s\n' $SEALED_LIST | sort -u) | tr '\n' ' ')"
+          if [ -n "${MANIFEST_STALE// /}" ]; then
+            echo "::warning title=sealed-manifest::SEALED-MANIFEST 块含执行集外的陈旧条目（生成物需重生成）: ${MANIFEST_STALE}——重生成: bash scripts/control-tower/sealed-tests.sh --list | sed 's|^|          # |'（不判红）"
+          fi
+          FAIL=0
+          # PY 三级探测（D520 平台适配：禁裸 python3）——供执行器对 .py 夹具分派
+          SEALED_PYBIN=""
+          for _c in python3 python py; do
+            if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then SEALED_PYBIN="$_c"; break; fi
+          done
+          for t in $SEALED_LIST; do
             echo "── $t"
-            # D1147: D1094 平台跳过名单随 windows 腿迁出本 job——本矩阵已收敛为单元素 ubuntu
-            #   ⇒ `Windows:` 前缀分支恒不命中 = 死代码（铁律 37）。名单现只保留在顾问 job
-            #   `control-tower-windows-advisory`（在那里独占一份，ci.yml 内仍有该名单
-            #   ⇒ D1093「名单留 ci.yml 内则密封面登记闸照常认」的语义不变）。
-            # D526: 测试失败输出进 ::error 注解——无 token 也能经 annotations 定位（D521 工具1 语义）
-            if ! bash "$t" > /tmp/ct-out.log 2>&1; then
+            # SEALED-RUNNER-BEGIN（夹具按标记提取本段做行为断言；改格式须同步 tests/control-tower/sealed-runner-dispatch.test.sh）
+            #   D-F/②-fix（Lead 裁 2026-10-07）: 执行器**按扩展名分派**——`.py` 用 python 解释器跑，
+            #   其余用 bash 跑。旧实现一律 `bash "$t"` ⇒ `.py` 夹具必然 `import: command not found`（CI 实测）。
+            #   PY 三级探测（D520 平台适配：禁裸 python3）；缺解释器 ⇒ 显式 FAIL（fail-closed，不静默跳过）。
+            _RC=0
+            case "$t" in
+              *.py)
+                if [ -z "$SEALED_PYBIN" ]; then
+                  echo "FAIL: ${t}（缺 python 解释器：python3/python/py 三级探测全失败）"
+                  echo "::error title=$t::sealed-runner 缺 python 解释器 ⇒ .py 夹具无法执行（fail-closed）"
+                  FAIL=1
+                  continue
+                fi
+                "$SEALED_PYBIN" "$t" > /tmp/ct-out.log 2>&1 || _RC=$? ;;
+              *)
+                bash "$t" > /tmp/ct-out.log 2>&1 || _RC=$? ;;
+            esac
+            # SEALED-RUNNER-END
+            if [ "$_RC" -ne 0 ]; then
               echo "FAIL: $t"
               # D956-MSG-START（夹具 tests/control-tower/d956-failmsg.test.sh 按此标记提取本段做行为断言，改格式须同步夹具）
               # D956①: 失败断言行优先入窗——FAIL|❌|not ok 命中行先入，不被 tail 窗挤掉
@@ -635,19 +909,48 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
-          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          # 🔴 D-F/①-fix（独立复核 R1，2026-10-07）: 单源读不到时**显式**置 docs_only=false（全量）。
+          #   实测 `printf x | grep -qvE ''` 返 **1**（空正则匹配每行，-v 反选后无输出）⇒ 若依赖该
+          #   隐式返回，正常路径会掉进 else ⇒ docs_only=true（早退）＝ **fail-OPEN**。
+          #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          # 卡 #1323: base 解析（push 用 github.event.before；全零 SHA/不可解析 ⇒ 显式全量）。详见文件头「docs-only 判定」段。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ] && [ -n "${GITHUB_EVENT_BEFORE:-}" ] \
+             && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            DS_BASE="$GITHUB_EVENT_BEFORE"
+          else
+            DS_BASE="origin/main"
+          fi
+          if [ -z "$DS_RE" ]; then
+            echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
+          elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+            # fail-safe（D1111 E5 原有，**保留原文**——D1023 守卫按此字面量计数 9 个消费点）:
+            #   origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "::warning title=docs-only base::origin/main 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          elif ! git rev-parse --verify -q "$DS_BASE" >/dev/null 2>&1; then
+            # fail-safe（#1323 新增）: push 的 before-sha 不可解析（含全零 SHA 退化）⇒ 全量跑
+            echo "::warning title=docs-only base::base=$DS_BASE 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
-            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            DS_CHANGED="$(git diff --name-only "$DS_BASE"...HEAD 2>/dev/null || true)"   # swallow-ok: 空集/命中两条分支各自显式处置
+            if [ -z "$DS_CHANGED" ]; then
+              # 第三态（铁律 11: 空集 ≠ 纯文档）⇒ 无法判定 ⇒ 显式全量 + 告警，绝不静默归 docs-only
+              echo "::warning title=docs-only empty-diff::base=$DS_BASE 与 HEAD 变更集为**空** ⇒ 无法判定是否纯文档 ⇒ 显式按非 docs-only 处理（全量跑）"
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            elif printf '%s\n' "$DS_CHANGED" | grep -qvE "$DS_RE"; then
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            fi
           fi
       - uses: actions/setup-node@v4
         if: steps.docsonly.outputs.docs_only != 'true'
         with: { node-version: '20', cache: 'npm' }
-      - run: npm ci
+      - run: bash scripts/control-tower/install-deps.sh
         if: steps.docsonly.outputs.docs_only != 'true'
       - name: L1+L2 integration checks
         if: steps.docsonly.outputs.docs_only != 'true'
@@ -661,7 +964,12 @@ jobs:
     timeout-minutes: 6
     name: Checker Review (maker/checker)
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/feat/')
+    # P0-2（2026-10-07 治理线）: 原 `pull_request || feat/*` 会把 main push / merge_group 整个
+    # job 吞掉（skip）⇒ ① main push 语境 CI「看不见坏」（#905 假绿正是 main push 语境）；
+    # ② all-checks-passed 判 skipped=FAIL ⇒ 每次 main push 恒红；③ merge_group 下必需
+    # context 永不报告 ⇒ merge queue 卡死（D515 同族，见文件头 merge_group 注释）。
+    # 故扩为: pull_request | merge_group | main push | feat/*（原有行为全保留）。
+    if: github.event_name == 'pull_request' || github.event_name == 'merge_group' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/feat/')
     steps:
       - uses: actions/checkout@v4
         with:
@@ -670,19 +978,48 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
-          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          # 🔴 D-F/①-fix（独立复核 R1，2026-10-07）: 单源读不到时**显式**置 docs_only=false（全量）。
+          #   实测 `printf x | grep -qvE ''` 返 **1**（空正则匹配每行，-v 反选后无输出）⇒ 若依赖该
+          #   隐式返回，正常路径会掉进 else ⇒ docs_only=true（早退）＝ **fail-OPEN**。
+          #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          # 卡 #1323: base 解析（push 用 github.event.before；全零 SHA/不可解析 ⇒ 显式全量）。详见文件头「docs-only 判定」段。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ] && [ -n "${GITHUB_EVENT_BEFORE:-}" ] \
+             && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            DS_BASE="$GITHUB_EVENT_BEFORE"
+          else
+            DS_BASE="origin/main"
+          fi
+          if [ -z "$DS_RE" ]; then
+            echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
+          elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+            # fail-safe（D1111 E5 原有，**保留原文**——D1023 守卫按此字面量计数 9 个消费点）:
+            #   origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "::warning title=docs-only base::origin/main 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          elif ! git rev-parse --verify -q "$DS_BASE" >/dev/null 2>&1; then
+            # fail-safe（#1323 新增）: push 的 before-sha 不可解析（含全零 SHA 退化）⇒ 全量跑
+            echo "::warning title=docs-only base::base=$DS_BASE 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
-            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            DS_CHANGED="$(git diff --name-only "$DS_BASE"...HEAD 2>/dev/null || true)"   # swallow-ok: 空集/命中两条分支各自显式处置
+            if [ -z "$DS_CHANGED" ]; then
+              # 第三态（铁律 11: 空集 ≠ 纯文档）⇒ 无法判定 ⇒ 显式全量 + 告警，绝不静默归 docs-only
+              echo "::warning title=docs-only empty-diff::base=$DS_BASE 与 HEAD 变更集为**空** ⇒ 无法判定是否纯文档 ⇒ 显式按非 docs-only 处理（全量跑）"
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            elif printf '%s\n' "$DS_CHANGED" | grep -qvE "$DS_RE"; then
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            fi
           fi
       - uses: actions/setup-node@v4
         if: steps.docsonly.outputs.docs_only != 'true'
         with: { node-version: '20', cache: 'npm' }
-      - run: npm ci
+      - run: bash scripts/control-tower/install-deps.sh
         if: steps.docsonly.outputs.docs_only != 'true'
       - name: Run checker review
         if: steps.docsonly.outputs.docs_only != 'true'
@@ -691,37 +1028,11 @@ jobs:
         if: steps.docsonly.outputs.docs_only != 'true'
         run: bash scripts/workflow/check-brief-vs-code.sh --strict || true
 
-  audit:
-    # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-10-02T12:45:00+08:00；
-    # 公式 = max(P95×1.5, 中位数×3)）：audit 1 / Test-Kit(ubuntu) 1 / Golden Case 2 /
-    # Gate Integrity 2 / Test-Kit(windows) 3 / Architecture 6 / Checker Review 6 /
-    # Integration 6 / TypeScript+Iron Laws 7 / Vitest 8 / Control Tower(ubuntu) 14 / (windows) 106（D1109 后**未重取**：口径要 n=12 同分布样本，现 n=1）。
-    timeout-minutes: 1
-    name: npm audit
-    runs-on: ubuntu-latest
-    # 2026-08-16 创始人裁决豁免（台账登记）：33 漏洞（32 high/1 critical）在 node-gyp
-    # 编译链，非产品运行时；Synova 本地部署，攻击面不成立。豁免登记备案，
-    # 触发升级条件 = 上云/公网化。CI 保留扫描（黄灯），失败不阻断合并。
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Detect docs-only change (D515)
-        id: docsonly
-        shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
-        run: |
-          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
-            echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
-            echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "docs_only=true" >> "$GITHUB_OUTPUT"
-          fi
-      - run: npm audit --audit-level=high || echo "npm audit 已豁免 (2026-08-16 创始人裁决, 见台账)"
-        if: steps.docsonly.outputs.docs_only != 'true'
+  # ═══ D-E/③（创始人 2026-10-07 批准）: npm audit job 退役 ═══
+  # 退役依据: continue-on-error + 2026-08-16 创始人裁决豁免（33 漏洞在 node-gyp 编译链，
+  #   非运行时攻击面）⇒ 黄灯挂 50 天零消费方；每日占 ~1 分钟 runner 与一个 check-run 噪音。
+  # 退役方式: 删 job 块 + 本注释留痕。复活条件: 上云/公网化（原豁免触发升级条件）⇒ 新卡重建。
+  # 残留职责: 依赖面安全回归由 CI 外的定期人工审计 + 上云前专项承接。
 
   golden-case:
     # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-10-02T12:45:00+08:00；
@@ -744,19 +1055,48 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
-          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          # 🔴 D-F/①-fix（独立复核 R1，2026-10-07）: 单源读不到时**显式**置 docs_only=false（全量）。
+          #   实测 `printf x | grep -qvE ''` 返 **1**（空正则匹配每行，-v 反选后无输出）⇒ 若依赖该
+          #   隐式返回，正常路径会掉进 else ⇒ docs_only=true（早退）＝ **fail-OPEN**。
+          #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          # 卡 #1323: base 解析（push 用 github.event.before；全零 SHA/不可解析 ⇒ 显式全量）。详见文件头「docs-only 判定」段。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ] && [ -n "${GITHUB_EVENT_BEFORE:-}" ] \
+             && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            DS_BASE="$GITHUB_EVENT_BEFORE"
+          else
+            DS_BASE="origin/main"
+          fi
+          if [ -z "$DS_RE" ]; then
+            echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
+          elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+            # fail-safe（D1111 E5 原有，**保留原文**——D1023 守卫按此字面量计数 9 个消费点）:
+            #   origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "::warning title=docs-only base::origin/main 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          elif ! git rev-parse --verify -q "$DS_BASE" >/dev/null 2>&1; then
+            # fail-safe（#1323 新增）: push 的 before-sha 不可解析（含全零 SHA 退化）⇒ 全量跑
+            echo "::warning title=docs-only base::base=$DS_BASE 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
-            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            DS_CHANGED="$(git diff --name-only "$DS_BASE"...HEAD 2>/dev/null || true)"   # swallow-ok: 空集/命中两条分支各自显式处置
+            if [ -z "$DS_CHANGED" ]; then
+              # 第三态（铁律 11: 空集 ≠ 纯文档）⇒ 无法判定 ⇒ 显式全量 + 告警，绝不静默归 docs-only
+              echo "::warning title=docs-only empty-diff::base=$DS_BASE 与 HEAD 变更集为**空** ⇒ 无法判定是否纯文档 ⇒ 显式按非 docs-only 处理（全量跑）"
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            elif printf '%s\n' "$DS_CHANGED" | grep -qvE "$DS_RE"; then
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            fi
           fi
       - uses: actions/setup-node@v4
         if: steps.docsonly.outputs.docs_only != 'true'
         with: { node-version: '22', cache: 'npm' }
-      - run: npm ci
+      - run: bash scripts/control-tower/install-deps.sh
         if: steps.docsonly.outputs.docs_only != 'true'
       - name: Run golden case F1 gate
         if: steps.docsonly.outputs.docs_only != 'true'
@@ -793,14 +1133,43 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
-          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          # 🔴 D-F/①-fix（独立复核 R1，2026-10-07）: 单源读不到时**显式**置 docs_only=false（全量）。
+          #   实测 `printf x | grep -qvE ''` 返 **1**（空正则匹配每行，-v 反选后无输出）⇒ 若依赖该
+          #   隐式返回，正常路径会掉进 else ⇒ docs_only=true（早退）＝ **fail-OPEN**。
+          #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          # 卡 #1323: base 解析（push 用 github.event.before；全零 SHA/不可解析 ⇒ 显式全量）。详见文件头「docs-only 判定」段。
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ] && [ -n "${GITHUB_EVENT_BEFORE:-}" ] \
+             && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            DS_BASE="$GITHUB_EVENT_BEFORE"
+          else
+            DS_BASE="origin/main"
+          fi
+          if [ -z "$DS_RE" ]; then
+            echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
+          elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+            # fail-safe（D1111 E5 原有，**保留原文**——D1023 守卫按此字面量计数 9 个消费点）:
+            #   origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
+            echo "::warning title=docs-only base::origin/main 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          elif ! git rev-parse --verify -q "$DS_BASE" >/dev/null 2>&1; then
+            # fail-safe（#1323 新增）: push 的 before-sha 不可解析（含全零 SHA 退化）⇒ 全量跑
+            echo "::warning title=docs-only base::base=$DS_BASE 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
-            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            DS_CHANGED="$(git diff --name-only "$DS_BASE"...HEAD 2>/dev/null || true)"   # swallow-ok: 空集/命中两条分支各自显式处置
+            if [ -z "$DS_CHANGED" ]; then
+              # 第三态（铁律 11: 空集 ≠ 纯文档）⇒ 无法判定 ⇒ 显式全量 + 告警，绝不静默归 docs-only
+              echo "::warning title=docs-only empty-diff::base=$DS_BASE 与 HEAD 变更集为**空** ⇒ 无法判定是否纯文档 ⇒ 显式按非 docs-only 处理（全量跑）"
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            elif printf '%s\n' "$DS_CHANGED" | grep -qvE "$DS_RE"; then
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            fi
           fi
       - name: Gate integrity pattern sentinel + registration gate
         if: steps.docsonly.outputs.docs_only != 'true'
@@ -968,26 +1337,21 @@ jobs:
         id: detect
         shell: bash
         run: |
-          # 三态语义: 正常 = 写 run=true|false 后 exit 0；其余一切分支一律 fail-safe run=true（绝不误跳）
-          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            echo "D1147: origin/main 不可解析 ⇒ fail-safe run=true"
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          # 安全网②③（对齐 control-tower-tests 口径）: 人工强制 / 周期兜底 ⇒ 无条件 true
+          # 🔴 v2.0/方案七⑤（创始人 2026-10-07 批准）: windows 顾问腿**改 nightly 专属**。
+          #   实测依据（run 37589330830）: 该腿 796s = 全 run 墙钟 809s 的 98%——非必需腿却
+          #   支配全 CI 时长（其余全部 job ≤153s）。
+          #   语义变更（如实记录，原 D1147 路径触发被本项取代）:
+          #     · schedule（每周日）/ workflow_dispatch（人工）⇒ run=true
+          #     · 其余一切事件（PR / main push）⇒ run=false ⇒ 顾问腿 check-run 以 skipped 出现
+          #   代价: PR 期即时 Windows 平台信号丢失 ⇒ 回归最迟下周日夜曝光；
+          #         需即时信号时用 workflow_dispatch 手动触发（保留口子，不废能力）。
+          #   保留原 fail-safe 精神: 任何判断异常都倾向**跑**而非静默跳过——但本项是显式
+          #   语义降频（非误跳），故只在 schedule/dispatch 下为 true，并在日志显式留痕。
           if [ "${GITHUB_EVENT_NAME:-}" = "schedule" ] || [ "${GITHUB_EVENT_NAME:-}" = "workflow_dispatch" ]; then
-            echo "D1147: event=${GITHUB_EVENT_NAME} ⇒ 安全网无条件 run=true"
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          CHANGED="$(git diff --name-only origin/main...HEAD 2>/dev/null || true)"
-          echo "── D1147 变更集（origin/main...HEAD）"
-          printf '%s\n' "$CHANGED"
-          if printf '%s\n' "$CHANGED" | grep -qE '^(scripts|tests)/'; then
-            echo "D1147: 命中 ^(scripts|tests)/ ⇒ run=true（windows 顾问腿将被创建）"
+            echo "v2.0-⑤: event=${GITHUB_EVENT_NAME} ⇒ run=true（nightly 专属 + 人工口）"
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
-            echo "D1147: 未命中 scripts/**|tests/** ⇒ run=false（顾问腿的 job 级 if: 为 false ⇒ 其 check-run 以 conclusion=skipped 出现、不占 runner；main push 后 diff 为空亦落此支，周期 run 由上方安全网兜底）"
+            echo "v2.0-⑤: event=${GITHUB_EVENT_NAME} ⇒ run=false（windows 顾问腿已改 nightly 专属；需即时信号请 workflow_dispatch）"
             echo "run=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -1021,7 +1385,7 @@ jobs:
         continue-on-error: true
         working-directory: packages/test-kit
         run: |
-          npm ci
+          bash "$GITHUB_WORKSPACE/scripts/control-tower/install-deps.sh" --prefix .
           npx vitest run tests/architecture/05-as-any-audit.test.ts
       - name: Surface advisory outcome (non-blocking, D1147)
         if: always()
@@ -1058,9 +1422,9 @@ jobs:
           fetch-depth: 0  # verify-parallel 豁免逻辑依赖 origin/main ref（depth=1 时缺失→误红）
       # 密封清单/平台跳过名单与 control-tower-tests(ubuntu) 的重活 step **逐字同源**：
       #   🔴 漂移后果 = 顾问腿少跑/多跑（非阻断，但信号失真）⇒ 改一处必须改两处。
-      #   为何不抽公共脚本: 该清单必须在 ci.yml **全文**内（check-gate-integrity 的 [R] 密封面
-      #   登记闸按"路径出现在 ci.yml 全文"判登记，见 gate-integrity-baseline.txt 段头）——
-      #   抽走即让 ~58 个测试变成"未登记" ⇒ 棘轮爆红。故保留双份显式清单，属已知取舍。
+      #   🔴 D-F/②（卡 #1227）: 该注释所述「清单必须在 ci.yml 全文内」的前提**已废止**——
+      #   B 段登记闸改为**发现制**（面内即算纳入，见 gate-integrity-baseline.txt 段头 + sealed-tests.sh）。
+      #   ⇒ 双份字面清单已删除，两腿共用**同一发现制取数**（单源），漂移风险归零。
       # 判定与证据同一步: continue-on-error ⇒ step outcome=failure 但 job 结论 = success（恒不产 failure）。
       - name: Run sealed control-tower gate tests (advisory, non-blocking)
         id: advisory
@@ -1069,77 +1433,132 @@ jobs:
         shell: bash
         run: |
           FAIL=0
-          for t in \
-            tests/control-tower/verify-parallel.test.sh \
-            tests/control-tower/verify-claims-table.test.sh \
-            tests/control-tower/write-set-check.test.sh \
-            tests/control-tower/post-commit-marker.test.sh \
-            tests/control-tower/ct-test-gate.test.sh \
-            tests/control-tower/task-start-parallel.test.sh \
-            tests/control-tower/fastlane-bypass-only.test.sh \
-            tests/control-tower/gate-stats.test.sh \
-            tests/control-tower/q2-error-locating.test.sh \
-            tests/control-tower/platform-checklist.test.sh \
-            tests/control-tower/tag-ancestry.test.sh \
-            tests/control-tower/brief-parser-strip.test.sh \
-            tests/control-tower/post-commit.test.sh \
-            tests/control-tower/simulate-ci.test.sh \
-            tests/control-tower/synova-submit.test.sh \
-            tests/control-tower/synova-commit.test.sh \
-            tests/control-tower/parallel-main-tree-occupancy.test.sh \
-            tests/control-tower/fastlane-extended.test.sh \
-            tests/control-tower/g12-day-window.test.sh \
-            tests/control-tower/incident-loop.test.sh \
-            tests/control-tower/check-canary-drift.test.sh \
-            tests/control-tower/claim-regex-narrow.test.sh \
-            tests/control-tower/ci-strict-visible.test.sh \
-            tests/control-tower/skeleton-brief-gate.test.sh \
-            tests/control-tower/clone-config-init.test.sh \
-            tests/control-tower/clone-shadow-commit.test.sh \
-            tests/control-tower/verify-parallel-ci.test.sh \
-            tests/control-tower/alloc-task-id.test.sh \
-            tests/control-tower/alloc-task-id-lock.test.sh \
-            tests/control-tower/alloc-task-id-timeout.test.sh \
-            tests/control-tower/log-snapshot.test.sh \
-            tests/control-tower/classify-worktrees.test.sh \
-            tests/control-tower/verdict-baseline.test.sh \
-            tests/control-tower/check-name-allocation.test.sh \
-            tests/control-tower/check-gitlinks.test.sh \
-            tests/control-tower/grep-oP-regression.test.sh \
-            tests/control-tower/scan-fullwidth-vars.test.sh \
-            tests/control-tower/gate-failopen-net.test.sh \
-            tests/control-tower/merge_writeset_gate.test.sh \
-            tests/control-tower/ci-ratchet-base.test.sh \
-            tests/control-tower/verify-doc.test.sh \
-            tests/doc-system/check-doc-truth.test.sh \
-            tests/doc-system/doc-registry-gate.test.sh \
-            tests/doc-system/doc-categories.test.sh \
-            tests/doc-system/doc-staleness.test.sh \
-            tests/doc-system/doc-triage.test.sh \
-            tests/doc-system/generate-chronicle-monthly.test.sh \
-            tests/control-tower/check-citations.test.sh \
-            tests/control-tower/check-progress-freshness.test.sh \
-            tests/control-tower/check-preset-bundles.test.sh \
-            tests/control-tower/check-dsh-anchor.test.sh \
-            tests/control-tower/check-gate-integrity.test.sh \
-            tests/control-tower/check-k3-report.test.sh \
-            tests/control-tower/daily-cto-board-ratio.test.sh \
-            tests/control-tower/install-dsh-preset.test.sh \
-            tests/control-tower/d956-failmsg.test.sh \
-            tests/control-tower/check-required-contexts.test.sh \
-            tests/control-tower/loop-context.test.sh \
-            tests/control-tower/ci-signal-classify.test.sh; do
+          # ── D-F/②（卡 #1227）: 执行集 = **发现制**，不再逐条登记 ──────────────────
+          #   发现面（tests/control-tower、tests/doc-system）由
+          #   scripts/control-tower/sealed-tests.sh 唯一声明；执行集 = 面扫描 − 隔离台账
+          #   （gate-integrity-baseline.txt 的 REGISTRY-BASELINE 段）。
+          #   ⇒ 面内新增测试**零登记自动纳入执行**；要排除必须写进隔离台账（留痕 + 双棘轮:
+          #      FACE-TOTAL 下界 / QUARANTINE-TOTAL 上界）。
+          #   rc≠0 = 发现制自身违规（面为空 / 疑似删测试 / 台账失效）⇒ fail-closed 判红，绝不静默跳过。
+          SEALED_LIST="$(bash scripts/control-tower/sealed-tests.sh --list)" || {
+            echo "::error title=sealed-tests::发现制清单取数失败（原因见上）—— fail-closed，不静默跳过"
+            exit 1
+          }
+          # ── SEALED-MANIFEST-BEGIN （生成物: bash scripts/control-tower/sealed-tests.sh --list）──
+          #   用途: ① 兼容「接线 = 路径出现在 ci.yml 全文」类既有夹具（逐个 grep 自己的路径）；
+          #        ② 人读清单。**执行集不取自本块**（取自上面的发现制取数）⇒ 本块过期不影响判定。
+          #   漂移策略: **只对『块内有、执行集无』（陈旧方向）告警**；新增测试方向**不告警**——
+          #        否则每个加测试的 PR 都要手改本生成物（= 变相登记制）。重生成命令见卡 note。
+          # tests/control-tower/alloc-task-id-lock.test.sh
+          # tests/control-tower/alloc-task-id-timeout.test.sh
+          # tests/control-tower/alloc-task-id.test.sh
+          # tests/control-tower/brief-parser-strip.test.sh
+          # tests/control-tower/check-canary-drift.test.sh
+          # tests/control-tower/check-citations.test.sh
+          # tests/control-tower/check-doc-contract.test.sh
+          # tests/control-tower/check-dsh-anchor.test.sh
+          # tests/control-tower/check-gate-integrity.test.sh
+          # tests/control-tower/check-gitlinks.test.sh
+          # tests/control-tower/check-k3-report.test.sh
+          # tests/control-tower/check-name-allocation.test.sh
+          # tests/control-tower/check-ontology-fields.test.sh
+          # tests/control-tower/check-preset-bundles.test.sh
+          # tests/control-tower/check-progress-freshness.test.sh
+          # tests/control-tower/check-project-coordinates.test.sh
+          # tests/control-tower/check-required-contexts.test.sh
+          # tests/control-tower/ci-ratchet-base.test.sh
+          # tests/control-tower/ci-signal-classify.test.sh
+          # tests/control-tower/ci-strict-visible.test.sh
+          # tests/control-tower/claim-regex-narrow.test.sh
+          # tests/control-tower/classify-worktrees.test.sh
+          # tests/control-tower/clone-config-init.test.sh
+          # tests/control-tower/clone-shadow-commit.test.sh
+          # tests/control-tower/ct-test-gate.test.sh
+          # tests/control-tower/d956-failmsg.test.sh
+          # tests/control-tower/daily-cto-board-ratio.test.sh
+          # tests/control-tower/fastlane-bypass-only.test.sh
+          # tests/control-tower/fastlane-extended.test.sh
+          # tests/control-tower/g12-day-window.test.sh
+          # tests/control-tower/gate-failopen-net.test.sh
+          # tests/control-tower/gate-retirement-report.test.sh
+          # tests/control-tower/gate-stats.test.sh
+          # tests/control-tower/grep-oP-regression.test.sh
+          # tests/control-tower/incident-loop.test.sh
+          # tests/control-tower/install-deps.test.sh
+          # tests/control-tower/install-dsh-preset.test.sh
+          # tests/control-tower/log-snapshot.test.sh
+          # tests/control-tower/loop-context.test.sh
+          # tests/control-tower/merge_writeset_gate.test.sh
+          # tests/control-tower/parallel-main-tree-occupancy.test.sh
+          # tests/control-tower/platform-checklist.test.sh
+          # tests/control-tower/post-commit-marker.test.sh
+          # tests/control-tower/post-commit.test.sh
+          # tests/control-tower/q2-error-locating.test.sh
+          # tests/control-tower/scan-fullwidth-vars.test.sh
+          # tests/control-tower/sealed-tests.test.sh
+          # tests/control-tower/simulate-ci.test.sh
+          # tests/control-tower/skeleton-brief-gate.test.sh
+          # tests/control-tower/sync_project_coordinates.test.sh
+          # tests/control-tower/synova-commit.test.sh
+          # tests/control-tower/synova-submit.test.sh
+          # tests/control-tower/tag-ancestry.test.sh
+          # tests/control-tower/task-start-parallel.test.sh
+          # tests/control-tower/validate_doc_contract.test.sh
+          # tests/control-tower/verdict-baseline.test.sh
+          # tests/control-tower/verify-claims-table.test.sh
+          # tests/control-tower/verify-doc.test.sh
+          # tests/control-tower/verify-parallel-ci.test.sh
+          # tests/control-tower/verify-parallel.test.sh
+          # tests/control-tower/write-set-check.test.sh
+          # tests/doc-system/check-doc-truth.test.sh
+          # tests/doc-system/doc-categories.test.sh
+          # tests/doc-system/doc-registry-gate.test.sh
+          # tests/doc-system/doc-staleness.test.sh
+          # tests/doc-system/doc-triage.test.sh
+          # tests/doc-system/generate-chronicle-monthly.test.sh
+          # ── SEALED-MANIFEST-END ──
+          # 漂移提示（**不判红**）：本块是生成物，过期只影响「人读 + 遗留接线夹具」的可读性。
+          MANIFEST_BLOCK="$(sed -n '/SEALED-MANIFEST-BEGIN/,/SEALED-MANIFEST-END/p' .github/workflows/ci.yml | sed 's/^ *//; s/^# *//' | grep -E '^tests/' | sort -u)"
+          # 只报**陈旧方向**（块内有、执行集无）；新增方向静默——新增测试不得要求人手改生成物（Lead 裁 2026-10-07）
+          MANIFEST_STALE="$(comm -23 <(printf '%s\n' "$MANIFEST_BLOCK") <(printf '%s\n' $SEALED_LIST | sort -u) | tr '\n' ' ')"
+          if [ -n "${MANIFEST_STALE// /}" ]; then
+            echo "::warning title=sealed-manifest::SEALED-MANIFEST 块含执行集外的陈旧条目（生成物需重生成）: ${MANIFEST_STALE}——重生成: bash scripts/control-tower/sealed-tests.sh --list | sed 's|^|          # |'（不判红）"
+          fi
+          FAIL=0
+          # PY 三级探测（D520 平台适配：禁裸 python3）——供执行器对 .py 夹具分派
+          SEALED_PYBIN=""
+          for _c in python3 python py; do
+            if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then SEALED_PYBIN="$_c"; break; fi
+          done
+          for t in $SEALED_LIST; do
             echo "── $t"
             # D1094 平台跳过名单（**只在顾问腿**；分层原则：平台无关的失败不该污染 Windows 信号，
             #   但**显式打印**不静默）。背景 2026-10-01 实测: 这两条夹具在 Windows(Git Bash) 下失败，
             #   根因是 classify-worktrees.py / verdict-baseline.py 的 Windows 兼容缺陷（D1094 修复）。
-            #   注: 名单留在 ci.yml 内 ⇒ check-gate-integrity 的密封面登记闸照常认（D1093 教训）。
             case "${RUNNER_OS:-}:$t" in
               Windows:tests/control-tower/classify-worktrees.test.sh|Windows:tests/control-tower/verdict-baseline.test.sh)
                 echo "  ⏭ SKIP(Windows): D1094 待修 —— Python 工具 Windows 兼容缺陷（另见卡 note）"
                 continue ;;
             esac
-            if ! bash "$t" > /tmp/ct-out-advisory.log 2>&1; then
+            # SEALED-RUNNER-BEGIN（夹具按标记提取本段做行为断言；改格式须同步 tests/control-tower/sealed-runner-dispatch.test.sh）
+            #   D-F/②-fix（Lead 裁 2026-10-07）: 执行器**按扩展名分派**——`.py` 用 python 解释器跑，
+            #   其余用 bash 跑。旧实现一律 `bash "$t"` ⇒ `.py` 夹具必然 `import: command not found`（CI 实测）。
+            #   PY 三级探测（D520 平台适配：禁裸 python3）；缺解释器 ⇒ 显式 FAIL（fail-closed，不静默跳过）。
+            _RC=0
+            case "$t" in
+              *.py)
+                if [ -z "$SEALED_PYBIN" ]; then
+                  echo "FAIL: ${t}（缺 python 解释器：python3/python/py 三级探测全失败）"
+                  echo "::error title=$t::sealed-runner 缺 python 解释器 ⇒ .py 夹具无法执行（fail-closed）"
+                  FAIL=1
+                  continue
+                fi
+                "$SEALED_PYBIN" "$t" > /tmp/ct-out-advisory.log 2>&1 || _RC=$? ;;
+              *)
+                bash "$t" > /tmp/ct-out-advisory.log 2>&1 || _RC=$? ;;
+            esac
+            # SEALED-RUNNER-END
+            if [ "$_RC" -ne 0 ]; then
               echo "FAIL: $t"
               tail -8 /tmp/ct-out-advisory.log 2>/dev/null || true
               echo "::error title=advisory:$t::windows 顾问腿未通过（**非必需检查，不拦合并**；全文见 job log）"
@@ -1166,3 +1585,38 @@ jobs:
             echo "::warning title=advisory:control-tower(win)::windows 顾问腿**未执行**（outcome='${OUTCOME}'）——本次未取得平台信号（非必需，不拦合并）；前置步骤失败时属预期"
           fi
           exit 0
+
+  # ═══ P0-3: 聚合必需检查 —— skipped 也判 FAIL ═══
+  # 蓝本: DSH 上游 ci.yml:700-726（dsh-v0.2.0-rc.2；steps 段逐字）
+  # 与蓝本的三处已声明差异（K3 整改 D1177，原「唯一差异」表述不实）:
+  #   ① if 去掉 pull_request 事件限定（CTO 明令——#905 语境为 main push）
+  #   ② name: all checks passed → All Checks Passed（对齐本仓 check-run 命名习惯）
+  #   ③ runs-on: 上游 failover 选择器 → ubuntu-latest（failover 机制本仓未建）
+  # 归因口径（K3 整改订正）: 本 job 治的是 **job 级 skip 族**（job 结论 success/skipped 不可辨，
+  #   D971/D1111/D1147 系）。#905 实为 **step 级 skip**（docs-only 误判 ⇒ job 内重步骤 skip
+  #   但 job=success）——needs.*.result 物理上看不见 step 级 skip，那层归 D1111 路径锚正则/
+  #   D708/D540 管。本 job 是纵深一层，不是「修 #905」。
+  # needs = 8 个 job 键，恰覆盖 9 条必需 context（test 是 2-shard 矩阵，覆盖 Vitest 1/2+2/2）。
+  # 🔴 不纳入 needs 的（非必需，纳入会把它们的红也变成阻断）:
+  #   audit(npm audit) · gate-integrity · windows-leg-trigger
+  #   · test-kit-windows-advisory · control-tower-windows-advisory
+  # 🔴 与 DSH 蓝本的唯一差异: 去掉 `github.event_name == 'pull_request'`
+  #   理由: push 到 main 同样必须被拦（#905 的假绿正是发生在 main push 语境）。
+  # ⚠️ 上界（必须留档）: 本 job 挡不住「PR 自己改 ci.yml 把本 job 改成恒绿」——
+  #   PR 事件跑的是 PR 头分支里的 workflow（#905 事故机制）；只保证 (a) skip 掉必需
+  #   job ⇒ 必红；(b) 改实现 ⇒ 挡不住（需 pull_request_target，下一张卡）。
+  all-checks-passed:
+    name: All Checks Passed
+    runs-on: ubuntu-latest
+    # 注: needs 必须单行 —— check-required-contexts.py 的 YAML 子集解析器不支持续行
+    #     （多行会 fail-closed degrade ⇒ required-contexts 全量检查降级失败）。
+    needs: [quality, test, architecture, test-kit-architecture, control-tower-tests, integration-check, checker-review, golden-case]
+    if: ${{ !cancelled() }}
+    steps:
+      - name: Fail if any needed job did not succeed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: |
+          echo "::error::Needed job results: ${{ join(needs.*.result, ', ') }}"
+          exit 1
+      - name: All checks passed
+        run: echo "All needed jobs succeeded (${{ join(needs.*.result, ', ') }})"

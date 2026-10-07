@@ -204,6 +204,11 @@ _is_closed_doc() {
     if grep -qE '"status"[[:space:]]*:[[:space:]]*"audited"' "$REPO_DIR/task-state/$did.json" 2>/dev/null; then
       return 0
     fi
+  elif [ -d "$REPO_DIR/.claude/claims" ]; then
+    # E4（K3 R6 禁静默空白）: 无 task-state 卡**且**仓库已启用 claim 库（迁移期）
+    #   ⇒ 这条"无卡"不能再被当作"历史任务"静默放行信号 4。显式打印，供人判读。
+    printf '[迁移期] %s 无 task-state 卡（旧 D# 只读；新任务声明在 .claude/claims/）— 关闭判定退化，按未关闭处理\n' \
+      "$did" >&2
   fi
   if ls "$REPO_DIR"/docs/synova/audit-reports/*-"$did"-*.md >/dev/null 2>&1; then return 0; fi  # swallow-ok: 无匹配=不豁免，glob 失败非错误
   if ls "$REPO_DIR"/docs/synova/audit-reports/*-"$did".md >/dev/null 2>&1; then return 0; fi    # swallow-ok: 同上

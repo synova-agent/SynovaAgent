@@ -23,7 +23,8 @@
 | `scripts/`（control-tower/workflow/hooks/product-lines/golden-scenarios）、`.github/workflows/`、`src/mcp/`、`electron/`+`electron-renderer/`、`docs/synova/coordination/`、DSH 预设与技能 | **Mac DSH** |
 
 **互不重叠保证（三层物理/惯例）**：
-1. `CODEOWNERS`（机器强制）：`src/server.ts`+门禁+coordination+VERSION.md 有 owner，越界 PR 被 GitHub 拦
+1. ~~`CODEOWNERS`（机器强制）：`src/server.ts`+门禁+coordination+VERSION.md 有 owner，越界 PR 被 GitHub 拦~~
+   🔴 **W10/D1167 实测更正（2026-10-06）: 本句不成立** —— `require_code_owner_reviews=false` + 43 条规则全指向同一 owner ⇒ **越界 PR 不会被 GitHub 拦**。CODEOWNERS 现为**领地声明**（可对账），非强制。处置方向见 `TASK-ROUTING.md` §串行点 的实测注（要开须先建三团队，且属门禁语义变更 ⇒ 提案→K3→CTO 裁）。
 2. 认领制 D296（组 12）：文件级认领，写错范围被 pre-commit 拒
 3. 写集重叠检查（pre-push verify-parallel）：出 doc 方声明写集，两边写集重叠 → 停手问创始人
 

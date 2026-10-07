@@ -83,10 +83,38 @@ export function processFeedbackSignals(signals: AggregatedSignal[]): EvolutionAc
       s.decision === 'reject' && s.targetType === 'sentinel_alert' && s.count >= 3,
     );
     for (const sig of thresholdSignals) {
+      // K6/0-2: 阈值回写必须落到**配置实体**（thresholds.json 的 thresholdOverrides[sentinelKey]）。
+      // 此前用 sig.key（类别级 decision:target_type:actor_role）当 sentinelKey ⇒ 永远查不到实体
+      // ⇒ found=false ⇒ skipped++ ⇒ applied 恒 0 ⇒ loop-3 永远 degraded（总闸关死）。
+      // 组内实体不唯一（entityKey=null）时**不猜实体**：显式告警 + 跳过（铁律 24/31，不静默）。
+      // 三态（见 AggregatedSignal.entityKey 契约）：undefined=旧生产者 ⇒ 退回旧语义（用 key）；
+      // null=显式"组内实体不唯一" ⇒ 不猜实体。
+      const entityKey = sig.entityKey === undefined ? sig.key : sig.entityKey;
+      // D1197/P0-3 跨租户写隔离（创始人红线「A 客户不能读 B 客户数据」）：
+      // 阈值配置是**行业级文件**（extensions/industries/*/thresholds.json），没有企业维度；
+      // 因此回写侧的不变量是「**只接受单一企业**的聚合信号」——
+      //   · enterpriseId === null ⇒ **显式多企业混组**：不猜、不写，log.warn + 跳过
+      //   · enterpriseId === undefined ⇒ 早于企业轴的信号生产者（测试替身/旧调用方）⇒ 按旧语义处理
+      //   · enterpriseId 为字符串 ⇒ 该企业（聚合侧 GROUP BY enterprise_id 已保证单企业）
+      // 仅此一处仍不够：**聚合侧必须按企业分组**（D1197 同时修 getAggregatedSignals 的 GROUP BY）。
+      if (sig.enterpriseId === null) {
+        log.warn(
+          { key: sig.key, enterpriseIds: sig.enterpriseIds, count: sig.count },
+          'threshold_adjust 跳过 — 聚合组来自多个企业（enterpriseId=null），拒绝跨租户回写配置',
+        );
+        continue;
+      }
+      if (entityKey === null) {
+        log.warn(
+          { key: sig.key, entityKeys: sig.entityKeys, count: sig.count },
+          'threshold_adjust 跳过 — 聚合组非单一实体（entityKey=null），无法定位配置阈值实体',
+        );
+        continue;
+      }
       actions.push({
         type: 'threshold_adjust',
         reason: `哨兵 ${sig.key} 被标注为 false alarm ${sig.count} 次，阈值可能过高`,
-        parameter: { sentinelKey: sig.key, adjustPercent: 5, direction: 'up' },
+        parameter: { sentinelKey: entityKey, entityKeys: sig.entityKeys, adjustPercent: 5, direction: 'up' },
         confidence: Math.min(sig.count / 10, 0.9),
         triggeredAt: sig.latestTimestamp,
       });
@@ -396,7 +424,10 @@ function logCorrection(key: string, actionType: string, details: Record<string, 
     const store = getAgentMemoryStore();
     store.remember({
       orgId: "synova",
-      key: `ga-correction-${key}-${Date.now()}`,
+      // K6/0-2: 纠错账本键带 `_gaCorrections` 标识 —— 与 thresholds.json / expert manifest
+      // 内的 `_gaCorrections` 数组同源，使**已回写的纠错**可在 agent_memory 侧对账
+      // （总闸可验证：applied 不再恒 0 的证据面）。
+      key: `_gaCorrections:${actionType}:${key}:${Date.now()}`,
       value: JSON.stringify({ actionType, ...details }),
       type: "fact",
       confidence: 0.7,
@@ -452,6 +483,10 @@ function applyThresholdAdjust(action: EvolutionAction, result: ApplyActionResult
       config._gaCorrections = corrections;
       writeFileSync(thresholdPath, JSON.stringify(config, null, 2), "utf-8");
       result.skipped++; found = true;
+      logCorrection(sentinelKey, action.type, {
+        direction: action.parameter.direction, adjustPercent, applied: false,
+        pendingCount: sameKey.length + 1, minTriggerCount: MIN_TRIGGER_COUNT,
+      });
       continue;
     }
 
@@ -471,6 +506,12 @@ function applyThresholdAdjust(action: EvolutionAction, result: ApplyActionResult
     writeFileSync(thresholdPath, JSON.stringify(config, null, 2), "utf-8");
     log.info({ sentinelKey, industry: industry.name, warning: `${oldW}→${entry.warning}` }, "GA 阈值调整已回写");
     result.applied++; found = true;
+    logCorrection(sentinelKey, action.type, {
+      direction: action.parameter.direction, adjustPercent, applied: true,
+      previousWarning: oldW, newWarning: entry.warning,
+      previousCritical: oldC, newCritical: entry.critical,
+      industry: industry.name,
+    });
     break;
   }
 

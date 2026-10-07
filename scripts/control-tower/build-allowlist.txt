@@ -1,0 +1,55 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# build-allowlist.txt — 允许在**依赖安装期**执行生命周期脚本的包（W12/D1167）
+#
+# 契约（W12）
+#   · 只有本表列出的包，会被 `scripts/control-tower/install-deps.sh` **显式重建**
+#     （`npm rebuild <pkg> --foreground-scripts`）。
+#   · **白名单外一律不跑**：安装走 `npm ci --ignore-scripts` ⇒ 任何包含
+#     `hasInstallScript` 的包，其 install/preinstall/postinstall **永不执行**（默认拒）。
+#   · 这不是"优化"，是**供应链姿态**：安装期脚本 = 任意代码执行；默认拒 ⇒ 只有显式放行的才跑。
+#
+# 格式
+#   · 一行一个 **npm 包名**（不是路径，不写 `node_modules/` 前缀）；`#` 开头为注释；空行忽略。
+#   · 特殊行 `<ROOT>` = **本仓自身**的 `postinstall`（见下方说明，它不是 node_modules 里的包）。
+#
+# 新增一行的代价（写清楚，防"顺手加一行"）
+#   · 每加一行 = 放宽一次供应链面 ⇒ 必须在本文件写明**为什么非它不可** + **怎么验证它真的需要脚本**。
+#   · 判据形态：`npm ci --ignore-scripts` 后该包**功能不可用**（如二进制缺失/原生模块未编译），
+#     才配得上白名单；"装了也能用"的一律不加。
+#
+# 实测依据（as_of 2026-10-06，口径 = `package-lock.json` 的 `hasInstallScript` 字段）
+#   根 lock 共 6 条：<ROOT> / bcrypt / better-sqlite3 / electron / esbuild / fsevents
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ── 本仓自身的 postinstall ──────────────────────────────────────────────────────
+# 理由: `package.json:12` = `"postinstall": "patch-package"` —— 它把 `patches/ink+5.2.1.patch`
+#   应用到 `node_modules/ink`（TUI 防闪烁）。**这是铁律 40 的冻结项**（AGENTS.md/CLAUDE.md
+#   「闪烁修复不可回退」明文要求该行存在）。不放行 ⇒ 补丁静默失效 ⇒ TUI 闪烁回归。
+# 验证: 删掉本行跑安装 ⇒ `node_modules/ink/build/ink.js` 不含补丁标记（可 grep 断言）。
+<ROOT>
+
+# ── 原生模块（编译产物缺失 ⇒ 运行时直接崩）──────────────────────────────────────
+# better-sqlite3: `install: prebuild-install || node-gyp rebuild --release`
+#   L5 存储层唯一 SQLite 驱动；不编译 ⇒ 任何用数据库的路径都不可用。
+better-sqlite3
+
+# ── 下载/链接平台二进制的包 ─────────────────────────────────────────────────────
+# electron: `postinstall: node install.js` —— 下载 Electron 运行时二进制。
+#   desktop-build.yml 与 electron/ 依赖它；不跑 ⇒ `electron` 命令无二进制可执行。
+electron
+
+# ── 🔴 已移除 3 行（D1172 复核整改，2026-10-06）：bcrypt / esbuild / fsevents ──────
+# 判据（本文件上方 :15-18）：「`npm ci --ignore-scripts` 后该包功能不可用…才配得上白名单；
+#   『装了也能用』的一律不加」。独立复核**逐个实测**后确认这三条**不满足该判据**：
+#   · bcrypt 6.0.0 —— tarball 自带全平台 prebuilds（darwin-x64/arm64、linux-x64 glibc+musl、
+#     linux-arm/arm64、win32-x64/arm64），`npm ci --ignore-scripts` 后 `require('bcrypt')` **可用**
+#     （实测散列值 `$2b$04$…`）。🔴 **本仓自己的旁证**：`desktop-build.yml:68` 原文即写
+#     「bcrypt 6.0.0 是 N-API（prebuildify --napi, install=node-gyp-build）——ABI 无关，**免重建**」。
+#   · esbuild 0.28.1 —— 平台二进制在 `@esbuild/<plat>` 包里；`--ignore-scripts` 后
+#     `--version` / transform / **真 bundle 产出** 全部可用。
+#   · fsevents 2.3.3 —— 包体**无 install 脚本**（lock 的 hasInstallScript=true 与包体不一致），
+#     预编译 `fsevents.node` 随包发；`npm rebuild fsevents` 实测"什么都没跑" ⇒ 该行**空转**。
+# ⇒ 三条**已删除**（白名单每多一行 = 多放宽一次安装期代码执行面）。
+# ⚠️ 未核（V-09）：上述实测在 **darwin-arm64 + node22 + npm10.9.8**；ubuntu / Windows 未核。
+#   若将来在某平台发现这些包**确实**需要脚本 ⇒ 按上方判据**逐行补回并写明平台与证据**。
+

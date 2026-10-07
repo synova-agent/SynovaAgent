@@ -100,6 +100,10 @@ BASE="origin/main"
 MAX_FILES=12
 MAX_BEHIND=20
 FILES_OVERRIDE=""
+FILES_SET=0                     # D1235: 与 DIFF_STATUS_SET 同款「是否**显式提供**」标志。
+                                #   旧口径 `[ -n "$FILES_OVERRIDE" ]` 无法区分「--files ""」与「未给 --files」
+                                #   ⇒ 前者会**直落真实三点 diff** ⇒ 用例在 diff>12 的工作树上必红，
+                                #   且误报成「空写集失败」。夹具: check-pr-budget.test.sh §空写集注入缝。
 DIFF_STATUS=""
 DIFF_STATUS_SET=0
 DECL_FILE=""
@@ -110,7 +114,7 @@ while [ $# -gt 0 ]; do
     --base)        BASE="${2:-}"; shift 2 ;;
     --max-files)   MAX_FILES="${2:-}"; shift 2 ;;
     --max-behind)  MAX_BEHIND="${2:-}"; shift 2 ;;
-    --files)       FILES_OVERRIDE="${2:-}"; shift 2 ;;
+    --files)       FILES_OVERRIDE="${2:-}"; FILES_SET=1; shift 2 ;;
     --diff-status) DIFF_STATUS="${2:-}"; DIFF_STATUS_SET=1; shift 2 ;;
     --decl-file)   DECL_FILE="${2:-}"; shift 2 ;;
     --quiet)       QUIET=1; shift ;;
@@ -134,8 +138,10 @@ BEHIND=""
 if [ "$DIFF_STATUS_SET" -eq 1 ]; then
   INJECT_MODE=1
   STATUS_TEXT="$DIFF_STATUS"
-elif [ -n "$FILES_OVERRIDE" ]; then
+elif [ "$FILES_SET" -eq 1 ]; then
   INJECT_MODE=1
+  # D1235: 判据从「值非空」改为「**是否显式提供**」——`--files ""` = 真空写集（与 `--diff-status ""` 对称）。
+  # 语义: 提供即接管（空串 ⇒ 变更集为空 ⇒ 0 文件 ≤ 上限 ⇒ exit 0）；未提供才走真实三点 diff。
   # --files 语义不变（视为 A/M）。用 awk 加状态列而非 sed —— BSD sed 的替换侧不认 \t
   STATUS_TEXT="$(printf '%s\n' "$FILES_OVERRIDE" | tr ' ' '\n' | sed '/^$/d' | awk '{printf "M\t%s\n", $0}')"
 else
@@ -660,7 +666,7 @@ fi
       echo "  ✅ ② 变更单域: $(printf '%s\n' "$DOMAIN_OUT" | grep -E '^✅ PASS' | head -1)"
     else
       echo "  ℹ️  ② 变更跨域（**信息性，不阻断** —— 域不用于分配/阻断）:"
-      printf '%s\n' "$DOMAIN_OUT" | grep -E '^(mac|win|k3|⚠️)' | head -8 | sed 's/^/       /'
+      printf '%s\n' "$DOMAIN_OUT" | grep -vE '^✅' | head -8 | sed 's/^/       /'
     fi
   else
     echo "  ℹ️  ② 域信息跳过（无变更 / 校验器缺失 / python 不可用 —— 不阻断）"

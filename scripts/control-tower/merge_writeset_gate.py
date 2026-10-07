@@ -58,6 +58,7 @@ CT-D（2026-09-27）评估结论 —— **本 gate 不给 `docs/synova/product-l
   编号对账: 本 gate 的路径级内置豁免只有 ② 一条；目录级豁免 0 条（有意）。
 """
 import argparse
+import datetime
 import shutil
 import fnmatch
 import json
@@ -77,6 +78,28 @@ except (AttributeError, ValueError):
 BUILTIN_EXEMPT: Dict[str, str] = {
     ".claude/bypass.log": "post-commit hook 每次提交追加的证据账本（运行期产物，与写集无关）",
 }
+# ── D-C（K3 预审 R5）: issue 号身份提取（与 commit 规范 `feat(#N): …` 同批）──
+# 为什么必须同批: 提交规范换成 `feat(#1197): …` 后，本 gate 旧实现只认 D# 形态
+#   （`DID_RE`）⇒ 新提交的**对账锚点消失**，S1/S2/S3 三源全空 → 写集对账静默失效。
+# 单源: 提取与 claim 载入都走 `claim_store`（**不复制正则**）——K3 R1 定罪"每多一套
+#   解析口径就多一条漂移路径"，本 gate 是第 15 个消费点，必须同源。
+# 降级: claim_store 不可导入 → issue 通道整体不可用 + 显式告警（**不静默当"无 issue"**）
+try:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from claim_store import (  # noqa: E402
+        ClaimError as _ClaimError,
+        claim_path as _claim_path,
+        load_claim as _load_claim,
+        parse_issue as _parse_issue,
+    )
+    _CLAIM_STORE_OK = True
+    _CLAIM_STORE_ERR = ""
+except ImportError as _exc:  # pragma: no cover - 仅在部署不完整时命中
+    _CLAIM_STORE_OK = False
+    _CLAIM_STORE_ERR = str(_exc)
+
+CLAIM_SOURCE_LABEL = "S0:claim.writeset"
+
 # 分支级跳过
 #   auto/**  —— CI 自动生成的仪表盘分支（无写集语义）
 #   main/master —— 合并后 push：本 gate 的触发点是**合并前**（PR job），
@@ -261,6 +284,80 @@ def parse_did(text: str) -> Optional[str]:
     return None
 
 
+# ── D9206（卡 #1237）: 身份推断护栏所用的两组定义 ──────────────────────────────
+# 「弱锚点」= 可被提交者**任意改写**且不携带"本次变更集"证据的来源：
+#   · branch            —— 分支名里的 D#
+#   · commit-subject    —— 提交标题里的 D#
+# 与之相对，`claim`（.claude/claims/<issue>.yaml）与 `claiming-brief`（写集命中本次
+#   变更集的 brief）都**携带变更集证据**，属强锚点。
+WEAK_ANCHOR_SRCS = ("branch", "commit-subject")
+
+# brief 陈旧阈值（天）: 仅作**佐证**出现在疑似劫持的报告里，**不单独触发**该闸
+#   （单独触发会误伤长期在途的合法任务；判据见卡 #1237 要求 2 的取舍说明）。
+BRIEF_STALE_DAYS = 7
+
+
+def brief_stale_days(brief_path: str) -> Optional[int]:
+    """brief 文件名日期前缀距今天数；取不到 → None（不判、不误导）。"""
+    if not brief_path:
+        return None
+    m = re.match(r"(\d{4})-(\d{2})-(\d{2})-", os.path.basename(brief_path))
+    if not m:
+        return None
+    try:
+        d = datetime.date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+    except ValueError:
+        return None
+    return (datetime.date.today() - d).days
+
+
+def infer_did_from_claiming_brief(repo: str, files: List[str]) -> Tuple[Optional[str], List[str]]:
+    """按「**谁的写集认领了本次变更集**」反查 brief 文件名里的 D#（D9206 优先级档）。
+
+    为什么加这一档（卡 #1237 要求 1）: 卡面定的优先级是
+      **卡号/issue 号 > brief 文件名 > 提交标题**。
+    分支名与提交标题都是**弱锚点**（可任意改写、不携带变更集证据），而"写集命中本次变更集"
+    是**携带证据**的强信号 ⇒ 它必须排在提交标题之前，用于在弱锚点撞上"碰巧同号的旧件"时
+    把身份纠正回来。
+
+    **单源（铁律·不造第二套）**: 认领判定**不在此重新实现** —— 直接调既有的
+      `scripts/workflow/resolve-commit-brief.sh`（全仓唯一的"文件 → 认领 brief"解析器，
+      已被 commit-msg / check-brief-vs-code 等消费）。本函数只做"把它的输出折成 D#"。
+
+    契约（铁律 47）:
+      @input  repo / files（本次变更集，仓库相对路径）
+      @output (D#|None, 诊断行列表)；无命中 → (None, diag)（调用方回落既有推断链）
+      @降级   解析器缺失 / 不可执行 / 超时 / 输出不含 D# → (None, diag)，
+              **诊断行逐条点名**（不静默当作"已尝试且无命中"之外的东西）
+    """
+    diag: List[str] = []
+    resolver = Path(repo) / "scripts" / "workflow" / "resolve-commit-brief.sh"
+    if not resolver.is_file():
+        diag.append(f"源 claiming-brief: 解析器不存在（{resolver}）→ 该档不可用")
+        return None, diag
+    if not files:
+        diag.append("源 claiming-brief: 变更集为空 → 无从认领")
+        return None, diag
+    try:
+        p = subprocess.run(["bash", str(resolver), "\n".join(files)], cwd=repo,
+                           capture_output=True, text=True, encoding="utf-8",
+                           errors="replace", timeout=60)
+    except (OSError, subprocess.SubprocessError) as exc:
+        diag.append(f"源 claiming-brief: 解析器调用失败（{exc}）→ 该档不可用")
+        return None, diag
+    brief = (p.stdout or "").strip().splitlines()
+    brief = brief[0].strip() if brief else ""
+    if not brief:
+        diag.append(f"源 claiming-brief: 解析器无输出（rc={p.returncode}）→ 无 brief 认领本次变更集")
+        return None, diag
+    d = parse_did(Path(brief).stem)
+    if not d:
+        diag.append(f"源 claiming-brief: 认领件 {Path(brief).name} 文件名不含 D# → 该档无身份")
+        return None, diag
+    diag.append(f"源 claiming-brief: {Path(brief).name} → {d}（认领判定经 resolve-commit-brief.sh，单源）")
+    return d, diag
+
+
 def infer_did(repo: str, branch: str, head: str,
               override: Optional[str] = None,
               merge_base: str = "") -> Tuple[Optional[str], str, List[str]]:
@@ -363,6 +460,86 @@ def infer_did(repo: str, branch: str, head: str,
     return None, "none", diag
 
 
+def infer_issue_identity(repo: str, branch: str, head: str,
+                         override: str = "",
+                         merge_base: str = "") -> Tuple[Optional[str], str, List[str], Optional[str]]:
+    """推断 issue 身份并定位 `.claude/claims/<issue>.yaml`（K3 R5；**claim 优先**）。
+
+    契约（铁律 47）:
+      @input  repo/branch/head/override(`--issue`)/merge_base
+      @output (issue|None, 来源, 诊断行, claim 路径|None)
+      @降级   claim_store 不可用 → 返回 (None, "unavailable", diag, None)，
+              **并在诊断里点名**（不静默退化到"无 issue"——那会让 S0 静默消失）
+    顺序: `--issue` 显式 → 分支名 → 提交 subject（跳过合成 merge 与登记影子提交）。
+    优先级规则（**K3 R3 防劫持**）: 只要本次身份能定位到 claim 文件，调用方即**不得**
+      再走 D# 推断链——否则迁移期「分支名带旧 D# + 新 claim 并存」时新声明被旧锚点劫持。
+    """
+    diag: List[str] = []
+    if not _CLAIM_STORE_OK:
+        diag.append(f"源 claim_store: 不可用（{_CLAIM_STORE_ERR}）→ S0 声明源整体不可用")
+        return None, "unavailable", diag, None
+
+    def _finish(issue: str, src: str) -> Tuple[Optional[str], str, List[str], Optional[str]]:
+        p = _claim_path(Path(repo), issue)
+        if not p.is_file():
+            diag.append(f"源 {src}: issue #{issue} 无 claim 文件（{p} 不存在）→ 回落 legacy D# 链")
+            return None, "none", diag, None
+        try:
+            _load_claim(Path(repo), issue)  # 畸形即抛 ClaimError（不静默用半套声明）
+        except _ClaimError as exc:
+            diag.append(f"源 {src}: claim #{issue} 畸形（{exc}）→ fail-closed")
+            return issue, "claim-invalid", diag, str(p)
+        diag.append(f"源 {src}: claim #{issue} 存在（{p}）→ S0 声明源，**禁用 D# 锚点**（K3 R3）")
+        return issue, src, diag, str(p)
+
+    def _try(text: str, src: str) -> Optional[str]:
+        try:
+            return _parse_issue(text or "")
+        except Exception as exc:  # claim_store 契约: 非法输入抛 ClaimError
+            diag.append(f"源 {src}: {text!r} 提取异常（{exc}）")
+            return None
+
+    if override:
+        iss = _try(override, "explicit")
+        if iss:
+            diag.append(f"源 explicit: --issue {override!r} → #{iss}")
+            return _finish(iss, "explicit")
+
+    iss = _try(branch or "", "branch")
+    if iss:
+        diag.append(f"源 branch: 分支名 {branch!r} → #{iss}")
+        return _finish(iss, "branch")
+    diag.append(f"源 branch: 分支名 {branch!r} 不含 issue 号")
+
+    start = head
+    try:
+        meta = run_git(["log", "-1", "--format=%s%x00%P", head], repo)
+        _subj, _, _parents = meta.partition("\x00")
+        _subj = _subj.strip()
+        _plist = _parents.split()
+        if is_synthetic_merge_subject(_subj) and len(_plist) >= 2:
+            start = f"{head}^2"
+    except GateError as exc:
+        diag.append(f"源 commit-subject: 无法读取 HEAD 元信息（{exc}）")
+    rev_spec = f"{merge_base}..{start}" if merge_base else start
+    try:
+        out = run_git(["log", "--first-parent", f"--max-count={FALLBACK_SCAN_DEPTH}",
+                       "--format=%s", rev_spec], repo)
+    except GateError as exc:
+        diag.append(f"源 commit-subject: 无法读取提交历史（{exc}）→ issue 推断不可用")
+        return None, "none", diag, None
+    for subj in out.splitlines():
+        subj = subj.strip()
+        if not subj or is_synthetic_merge_subject(subj) or REGISTRATION_SUBJECT_RE.search(subj):
+            continue
+        iss = _try(subj, "commit-subject")
+        if iss:
+            diag.append(f"源 commit-subject: 命中 {_redact_hex(subj)!r} → #{iss}")
+            return _finish(iss, "commit-subject")
+    diag.append("源 commit-subject: 最近提交内未出现 issue 形态（`#N`）")
+    return None, "none", diag, None
+
+
 def find_declaration_files(repo: str, did: Optional[str]) -> Tuple[Optional[str], Optional[str], Optional[str]]:
     """按 S1/S2/S3 定位声明文件（task-state / dev doc / brief）。
 
@@ -414,10 +591,32 @@ def _clean_entry(raw: str) -> str:
     return s
 
 
-def collect_declared(repo: str, ts: Optional[str], dd: Optional[str], bf: Optional[str]) -> Tuple[List[Tuple[str, str]], List[str]]:
-    """返回 ([(条目, 来源)] , 告警列表)。源解析失败只记告警，不静默。"""
+def collect_declared(repo: str, ts: Optional[str], dd: Optional[str], bf: Optional[str],
+                     claim: Optional[str] = None) -> Tuple[List[Tuple[str, str]], List[str]]:
+    """返回 ([(条目, 来源)] , 告警列表)。源解析失败只记告警，不静默。
+
+    D-C（K3 R5）: `claim` = `.claude/claims/<issue>.yaml`（S0 源）。走 `brief_parser`
+    **同一实现**（其 claim 分支委托 claim_store 解析）——不新增第三套解析口径。
+    claim 解析异常 → 追加告警并把该源置空，由调用方按"声明源为空"的既有 fail-closed 处理。
+    """
     entries: List[Tuple[str, str]] = []
     warns: List[str] = []
+
+    if claim:
+        py = python_bin()
+        bp = Path(repo) / "scripts" / "control-tower" / "brief_parser.py"
+        try:
+            p = subprocess.run([py, str(bp), "--q2-include", claim], capture_output=True,
+                               text=True, encoding="utf-8", errors="replace", timeout=60)
+            got = [ln for ln in (p.stdout or "").splitlines() if ln.strip()]
+            # brief_parser 对畸形 claim 会返回空 + 非零 rc（claim_store exit 2 语义）；
+            # rc≠0 且无输出 ⇒ 显式告警（绝不静默当"声明为空"）
+            if p.returncode != 0 and not got:
+                warns.append(f"S0 claim 解析失败({claim}): brief_parser rc={p.returncode}")
+            for ln in got:
+                entries.append((_clean_entry(ln), CLAIM_SOURCE_LABEL))
+        except (OSError, subprocess.SubprocessError) as exc:
+            warns.append(f"S0 claim 解析失败({claim}): {exc}")
 
     if ts:
         try:
@@ -543,6 +742,9 @@ def main() -> int:
     ap.add_argument("--did", default="",
                     help="显式指定任务 D#（最高优先级，来源记为 explicit）；"
                          "缺省时按 分支名 → 提交 subject 回退推断")
+    ap.add_argument("--issue", default="",
+                    help="显式指定 issue 号（K3 R5；`#N` 或纯数字）。"
+                         "存在 `.claude/claims/<issue>.yaml` 时优先于 D# 链（防双口径劫持）")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
 
@@ -583,8 +785,31 @@ def main() -> int:
         _emit(result, args.json)
         return 0
 
-    # ── D# 推断: --did 显式覆盖 → 分支名 → 回退最近提交 scope（D954；CT-C 收口随机性）──
-    did, did_src, did_diag = infer_did(repo, branch, args.head, args.did, mb)
+    # ── D-C（K3 R3/R5）: issue 身份 **优先于** D# 链 ──
+    # 触发条件 = 本提交身份能定位到 `.claude/claims/<issue>.yaml`。一旦成立：
+    #   · S0 声明源 = claim（同批接入写集对账，堵"`feat(#N)` 后对账锚点消失"）
+    #   · **不再**走 D# 推断链（防迁移期旧 D# 锚点劫持新 claim，预审 §③ 定罪场景）
+    # 不成立（无 claims 目录 / 无对应 claim）→ 逐字节 legacy D# 链（在途 D# 任务零回归）
+    claim_path_found: Optional[str] = None
+    issue, issue_src, issue_diag, claim_path_found = infer_issue_identity(
+        repo, branch, args.head, args.issue, mb)
+    result["issue"] = issue
+    result["issue_source"] = issue_src
+    result["issue_diag"] = issue_diag
+    if issue_src == "claim-invalid":
+        result["status"] = "degraded"
+        result["reason"] = (f"claim #{issue} 畸形（{claim_path_found}）→ fail-closed"
+                            f"（拒绝用半套声明对账；修好声明文件或走 legacy D# 链）")
+        _emit(result, args.json)
+        _log_degraded(repo, result["reason"])
+        return 2
+
+    if claim_path_found:
+        did, did_src, did_diag = None, "claim", [
+            f"claim #{issue} 生效 → S0 声明源；D# 推断链**未执行**（K3 R3 防劫持）"]
+    else:
+        # ── D# 推断: --did 显式覆盖 → 分支名 → 回退最近提交 scope（D954；CT-C 收口随机性）──
+        did, did_src, did_diag = infer_did(repo, branch, args.head, args.did, mb)
     result["task_id"] = did
     result["task_id_source"] = did_src
     result["task_id_diag"] = did_diag
@@ -595,6 +820,12 @@ def main() -> int:
         _emit(result, args.json)
         _log_degraded(repo, result["reason"])
         return 2
+
+    def _resolve(did_: Optional[str]):
+        """解析某身份下的声明（S1 task-state / S2 dev doc / S3 brief）。"""
+        ts_, dd_, bf_ = find_declaration_files(repo, did_)
+        declared_, warns_ = collect_declared(repo, ts_, dd_, bf_, claim_path_found)
+        return ts_, dd_, bf_, declared_, warns_
 
     try:
         ts, dd, bf = find_declaration_files(repo, did)
@@ -607,9 +838,37 @@ def main() -> int:
         _emit(result, args.json)
         _log_degraded(repo, result["reason"])
         return 2
-    declared, warns = collect_declared(repo, ts, dd, bf)
+    declared, warns = collect_declared(repo, ts, dd, bf, claim_path_found)
     result["warns"].extend(warns)
-    result["sources"] = {"task_state": ts, "dev_doc": dd, "brief": bf}
+
+    # ── D9206（卡 #1237）阶段一: 身份**纠正** —— 弱锚点 ∧ 声明写集零交集 ──
+    # 卡面优先级: 卡号/issue 号 > **brief 文件名** > 提交标题。分支名/提交标题都是**弱锚点**
+    #   （可任意改写、不携带变更集证据）；"写集命中本次变更集"的 brief 才是携带证据的强信号
+    #   ⇒ 在弱锚点明显对不上时，先用它把身份纠正回来（纠正成功则不再触发阶段二的护栏）。
+    _weak_zero_hits = bool(
+        did_src in WEAK_ANCHOR_SRCS and declared
+        and not [f for f in files if any(matches(f, e) for e, _s in declared)])
+    if _weak_zero_hits:
+        alt_did, alt_diag = infer_did_from_claiming_brief(repo, files)
+        did_diag.extend(alt_diag)
+        if alt_did and alt_did != did:
+            try:
+                _ts2, _dd2, _bf2, _dec2, _w2 = _resolve(alt_did)
+            except AmbiguousDeclaration as _exc2:
+                did_diag.append(f"源 claiming-brief: {alt_did} 声明多命中 → 不采用（{_exc2}）")
+                _dec2 = None
+            if _dec2 and [f for f in files if any(matches(f, e) for e, _s in _dec2)]:
+                did, did_src = alt_did, "claiming-brief"
+                ts, dd, bf, declared = _ts2, _dd2, _bf2, _dec2
+                result["warns"].extend(_w2)
+                did_diag.append(f"身份纠正: 弱锚点 → claiming-brief（{alt_did}）⇒ 采用 brief 文件名身份")
+                result["task_id"], result["task_id_source"] = did, did_src
+                result["sources"] = {"claim": claim_path_found, "task_state": ts,
+                                     "dev_doc": dd, "brief": bf}
+
+
+    result["sources"] = {"claim": claim_path_found, "task_state": ts,
+                         "dev_doc": dd, "brief": bf}
 
     explicit = collect_explicit_exempt(repo, ts, dd, bf)
     pr_text = resolve_pr_body_text(args.pr_body)
@@ -620,13 +879,50 @@ def main() -> int:
 
     result["declared"] = [{"entry": e, "source": s} for e, s in declared]
 
+    # ── D9206（卡 #1237）阶段二: 身份推断**护栏**（裁决）──
+    # 判据: 身份来源 ∈ 弱锚点 ∧ 声明写集与变更集零交集 ∧ **显式豁免也零命中**
+    #   ⇒ 不静默取用：显式报「疑似…劫持」+ exit 2（degraded = 检查自身不可信）。
+    # 为什么把「显式豁免」也算作证据: 豁免段落（`## 写集豁免` / 声明级逐条）同样是**作者针对
+    #   本次变更集**写下的声明 ⇒ 它命中即说明"这确实是本任务"，不该判劫持（回归夹具 ④/⑨b 实证）。
+    # 反例受保护: 有交集（写集或豁免任一命中）⇒ 不触发本闸 ⇒ 真夹带仍按原语义 exit 1。
+    # 命名常量 = 夹具的稳定锚点（tests/control-tower/d708-identity-guard.test.sh 的变异体按本行
+    #   做「去掉护栏」注入；改名会使变异体构造失败 ⇒ 显式报"判据锚点漂移"而非假绿）。
+    _weak_hits2 = [f for f in files if any(matches(f, e) for e, _s in declared)]
+    _exempt_hits = [f for f in files if any(matches(f, p) for p, _r in explicit)]
+    HIJACK_SUSPECT = bool(did_src in WEAK_ANCHOR_SRCS and declared
+                          and not _weak_hits2 and not _exempt_hits)
+    if HIJACK_SUSPECT:
+        _stale = brief_stale_days(bf)
+        _stale_note = (f"；且该声明件为 {_stale} 天前的历史件（阈值 {BRIEF_STALE_DAYS} 天，仅作佐证）"
+                       if _stale is not None and _stale >= BRIEF_STALE_DAYS else "")
+        _decl_show = bf or ts or dd or "(无声明文件)"
+        result["status"] = "degraded"
+        result["identity_source"] = did_src
+        result["identity_hijack_suspect"] = True
+        result["reason"] = (
+            f"疑似分支名/标题劫持：身份 D# 仅来自**【最弱锚点】{did_src}**（{did}），"
+            f"其声明件 {_decl_show} 的写集与本次变更集**零交集**（变更 {len(files)} 件，命中 0 件）"
+            f"{_stale_note} ⇒ **拒绝静默取用**该声明。\n"
+            f"   ⚠️ 这是**身份推断失败**，不是文件夹带 —— 排查方向请放在\"本任务号取自哪里\"，"
+            f"而非\"哪个文件多出来了\"。\n"
+            f"   修复三选一: ① 分支名/提交标题改用本任务号；"
+            f"② 改用 claim（.claude/claims/<issue>.yaml）声明；"
+            f"③ 若确属本任务，把变更文件写进对应声明写集（或补 `## 写集豁免` 段落）。"
+        )
+        result["declared"] = [{"entry": e, "source": s} for e, s in declared]
+        result["changed"] = files
+        _emit(result, args.json)
+        _log_degraded(repo, result["reason"])
+        return 2
+
     # ── 无声明: 文档范围降级放行；否则 fail-closed ──
     if not declared:
         non_doc = [f for f in files if not DOC_SCOPE_RE.search(f)]
         if non_doc:
             result["status"] = "degraded"
-            result["reason"] = ("无任何写集声明（S1 task-state.write_set / S2 dev doc 写集表 / "
-                                "S3 task brief Q2 三源皆空）且变更含源码文件 → fail-closed 阻断")
+            result["reason"] = ("无任何写集声明（S0 claim.writeset / S1 task-state.write_set / "
+                                "S2 dev doc 写集表 / S3 task brief Q2 四源皆空）"
+                                "且变更含源码文件 → fail-closed 阻断")
             result["smuggled"] = non_doc
             _emit(result, args.json)
             _log_degraded(repo, result["reason"])
@@ -640,9 +936,25 @@ def main() -> int:
     # ── 逐文件判定 ──
     smuggled: List[str] = []
     exempted: List[dict] = []
+    # D-C: 自身声明文件的**仓库相对路径**（变更集是相对路径，绝对/相对直接比较永不相等）
+    claim_rel = ""
+    if claim_path_found:
+        try:
+            claim_rel = os.path.relpath(claim_path_found, repo).replace("\\", "/")
+        except ValueError:  # 跨盘符（Windows）→ 无法转相对 → 退化为不豁免（保守）
+            claim_rel = ""
     for f in files:
         if f in BUILTIN_EXEMPT:
             exempted.append({"file": f, "reason": BUILTIN_EXEMPT[f], "kind": "builtin"})
+            continue
+        # D-C: 本 PR **自身的声明文件**（`.claude/claims/<issue>.yaml`）视为运行期产物豁免。
+        # 理由: 声明文件是"对账所需的输入"，不是本 PR 的交付内容 —— 若要求它写进自己的
+        #   writeset，就成了循环依赖（先有声明才能声明）。豁免**只针对本 PR 解析到的那一个
+        #   文件路径**（非目录级），与 BUILTIN_EXEMPT 的 .claude/bypass.log 同型且更紧。
+        #   其他 claim（别人的声明）仍在管辖内 —— 改写他人声明必被拦。
+        if claim_rel and f.replace("\\", "/") == claim_rel:
+            exempted.append({"file": f, "kind": "claim-self",
+                             "reason": "本 PR 自身的声明文件（对账输入，非交付物）"})
             continue
         hit = next(((e, s) for e, s in declared if matches(f, e)), None)
         if hit:

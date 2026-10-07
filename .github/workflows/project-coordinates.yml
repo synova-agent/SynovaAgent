@@ -1,0 +1,35 @@
+name: Project Coordinates Sync
+
+# D1196: 逻辑全部移入 scripts/control-tower/sync_project_coordinates.py（薄壳 workflow）。
+# 症状修复: 2026-10-07 首版 workflow 内联中文 output 键 + 多段 heredoc ⇒ GitHub startup failure
+#   （run 37591189894: push 事件 0 秒、零 job）。DSH 式做法 = workflow 只做胶水，逻辑进脚本。
+# 依赖 org secret PROJECT_TOKEN；未配置 ⇒ 脚本打印 notice 并 exit 0（跳过且不红，卡 #991 明令）。
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+
+concurrency:
+  group: project-coordinates-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync issue coordinates to project board
+        env:
+          PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          # D1207 修复: 脚本内部走 `gh api graphql`，而 gh 认的是 GH_TOKEN/GITHUB_TOKEN——
+          # 只给 PROJECT_TOKEN 会导致「有 token 但未认证」⇒ GraphQL 失败 ⇒ exit 2 ⇒
+          # 该 failure check-run 落在 main 上 ⇒ 污染 Gate Integrity 的既有红对账，
+          # 使**全仓所有 PR** 同红（2026-10-07 实证: 2 条 sync failure 卡住 4 张 PR）。
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: python3 scripts/control-tower/sync_project_coordinates.py

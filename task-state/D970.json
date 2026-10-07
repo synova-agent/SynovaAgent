@@ -1,0 +1,76 @@
+{
+  "task_id": "D970",
+  "title": "D735 Stage 2 — bypass 证据账本出库（停写旧路径 + 删影子登记提交 + 冻结归档保全证据链 + Gatekeeper/组7c 读面同步）",
+  "status": "in_progress",
+  "risk": "high",
+  "domain": "mac",
+  "owner": "mac-cto",
+  "executor": "coder-a（并行 CTO 小队 A，DSH session）",
+  "milestone": "M0 治理",
+  "depends_on": [],
+  "write_set": [
+    ".claude/bypass.log",
+    ".gitattributes",
+    ".gitignore",
+    "docs/authority/bypass-ledger-archive/README.md",
+    "docs/authority/bypass-ledger-archive/bypass-ledger-frozen-2026-09-25.txt",
+    "docs/synova/coordination/ownership.yaml",
+    "docs/synova/product-lines/evidence/D970-20260925-回执.md",
+    "memory/notes/implemented/2026-09-14-bypass-ledger-out-of-git.md",
+    "memory/notes/proposed/2026-09-14-bypass-ledger-out-of-git.md",
+    "scripts/control-tower/bypass-ledger.sh",
+    "scripts/control-tower/check-bypass-log.sh",
+    "scripts/hooks/post-commit.sh",
+    "scripts/pre-commit-check.sh",
+    "tests/control-tower/bypass-ledger.test.sh",
+    "tests/control-tower/bypass-union-merge.test.sh",
+    "tests/control-tower/check-bypass-log.test.sh",
+    "tests/control-tower/post-commit-marker.test.sh",
+    "tests/control-tower/post-commit.test.sh",
+    "tests/control-tower/pre-commit-bypass-read.test.sh",
+    ".claude/task-briefs/2026-09-25-D970-bypass-ledger-stage2.md",
+    "task-state/D970.json"
+  ],
+  "papers": [],
+  "updated_at": "2026-09-25",
+  "updated_by": "coder-a",
+  "note": "本卡 = 5 条 dirty PR 的唯一根因修复（GitHub 服务端不认 merge=union；实测 5 条 PR union 在场 rc=0 / 移除后全 rc=1，冲突文件只有 .claude/bypass.log）。证据链保全选「甲：冻结归档」；跨机缺口显式登记。CTO 批准扩写集：①三个断言旧契约的测试；② scripts/pre-commit-check.sh 只改读面（否则 Gatekeeper/组 7c 静默失能，铁律 11）；③ docs/synova/coordination/ownership.yaml 把 .gitattributes 判 domain_neutral（D774 .gitignore 先例同型）。**预算：原单支 14 件 > 上限 12（且 `.gitattributes` 落 win 兜底致跨域）⇒ 按 CTO 裁决拆两支 PR（甲′）**：PR-2 `docs/d970-archive-and-ownership`（归档产物 + neutral 规则，先合）+ PR-1 `fix/d970-bypass-ledger-stage2`（核心修复，恰 12 件）——本 write_set 覆盖**两支全部文件**（D708 口径）。门禁语义变更 ⇒ K3 事后审必经，本卡不写「通过」。",
+  "k3_required": [
+    "scripts/control-tower/check-bypass-log.sh",
+    "scripts/hooks/post-commit.sh",
+    "scripts/pre-commit-check.sh",
+    "docs/synova/coordination/ownership.yaml"
+  ],
+  "pr_split": {
+    "reason": "D734 PR 预算：原单支 14 件 > 上限 12，且 .gitattributes 落 win 兜底致「变更跨域」",
+    "rule": "禁调高上限（D734）；按 CTO 裁决拆甲′两支",
+    "pr2_first": {
+      "branch": "docs/d970-archive-and-ownership",
+      "files": [
+        "docs/synova/coordination/ownership.yaml",
+        "docs/authority/bypass-ledger-archive/README.md",
+        "docs/authority/bypass-ledger-archive/bypass-ledger-frozen-2026-09-25.txt"
+      ],
+      "budget_self_check": "✅ PASS PR 预算内（4 文件）/ ✅ 变更单域: mac / 夹带 0"
+    },
+    "pr1_second": {
+      "branch": "fix/d970-bypass-ledger-stage2",
+      "files": [
+        ".gitattributes",
+        ".gitignore",
+        "scripts/control-tower/bypass-ledger.sh",
+        "scripts/control-tower/check-bypass-log.sh",
+        "scripts/hooks/post-commit.sh",
+        "scripts/pre-commit-check.sh",
+        "tests/control-tower/bypass-ledger.test.sh",
+        "tests/control-tower/bypass-union-merge.test.sh",
+        "tests/control-tower/check-bypass-log.test.sh",
+        "tests/control-tower/post-commit-marker.test.sh",
+        "tests/control-tower/post-commit.test.sh",
+        "tests/control-tower/pre-commit-bypass-read.test.sh"
+      ],
+      "budget_self_check": "✅ ① 变更文件数 12 ≤ 上限 12 / ✅ ③ 落后 0；② 待 PR-2 合入后转绿（实测覆盖 PR-2 的 ownership.yaml → ✅ PASS PR 预算内（12 文件）+ ✅ 变更单域: mac）"
+    },
+    "order": "PR-2 先合（② 判定读 ownership.yaml），PR-1 后合；两支 task-state/brief 内容一致，合并无冲突"
+  }
+}

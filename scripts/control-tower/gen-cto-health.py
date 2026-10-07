@@ -241,8 +241,28 @@ def analyze_task_state() -> Tuple[list, dict]:
     """
     tasks = []
     phantom_n = 0
+    # ── E4（K3 R6 禁静默空白）: 迁移期声明在 .claude/claims/（不进 task-state）──
+    # task-state 缺席**不等于无任务** —— 裸 return 会让健康报告"看着干净"而实际漏掉全部新任务。
+    # 故显式标记 degraded + migration 字段与文案（铁律 11：降级必须可见，不许静默）。
+    _claims_dir = REPO / ".claude" / "claims"
+    try:
+        _claim_n = (sum(1 for c in _claims_dir.glob("*.yaml") if c.stem.isdigit())
+                    if _claims_dir.is_dir() else 0)
+    except OSError as exc:  # 铁律 24/31: 目录不可读 → 显式降级，不静默当 0
+        _claim_n = 0
+        print(f"⚠ degraded: claim 目录不可读 {_claims_dir} ({exc})", file=sys.stderr)
+    _mig = {
+        "migration_period": bool(_claim_n),
+        "migration_claims": _claim_n,
+        "migration_note": ("[迁移期] 本视图含 task-state 存量（旧 D# 只读）；"
+                           "新任务在 .claude/claims/" if _claim_n else ""),
+    }
+    if _claim_n:
+        print(f"[迁移期] 本视图含 task-state 存量（旧 D# 只读）；新任务在 .claude/claims/"
+              f"（{_claim_n} 条，本次**未纳入**健康派生）", file=sys.stderr)
     if not TASK_STATE_DIR.exists():
-        return tasks, {"phantom": 0, "repo_degraded": False}
+        return tasks, {"phantom": 0, "repo_degraded": False,
+                       "degraded": bool(_claim_n), **_mig}
     # 一次采集工件索引 (D393: 全量一次, 进程内匹配, 不逐任务起子进程)
     impl_hits = set()  # 含 (D#) 的提交里的 D#
     try:
@@ -251,7 +271,7 @@ def analyze_task_state() -> Tuple[list, dict]:
                              errors="replace", timeout=30, cwd=REPO).stdout
         for line in log.splitlines():
             # impl = 任务有提交（feat/fix/docs/ci 均算交付——提交即完成证据）
-            m = re.search(r"\(D(\d{3})\)", line)
+            m = re.search(r"\(D(\d{3,})\)", line)
             if m:
                 impl_hits.add(int(m.group(1)))
     except Exception:  # noqa: BLE001 — git 不可用 → 派生降级
@@ -273,7 +293,7 @@ def analyze_task_state() -> Tuple[list, dict]:
     impl_dir = REPO / "docs" / "plans" / "codex" / "implementation"
     if impl_dir.exists():
         for f in impl_dir.glob("SYNOVA-IMPL-D*.md"):
-            m = re.search(r"D(\d{3})", f.name)
+            m = re.search(r"D(\d{3,})", f.name)
             if m:
                 (spec_files if _committed(f) else phantom_spec).add(int(m.group(1)))
     audit_files = set()
@@ -281,7 +301,7 @@ def analyze_task_state() -> Tuple[list, dict]:
     audit_dir = REPO / "docs" / "synova" / "audit-reports"
     if audit_dir.exists():
         for f in audit_dir.glob("*.md"):
-            m = re.search(r"D(\d{3})", f.name)
+            m = re.search(r"D(\d{3,})", f.name)
             if m:
                 (audit_files if _committed(f) else phantom_audit).add(int(m.group(1)))
 
@@ -295,14 +315,22 @@ def analyze_task_state() -> Tuple[list, dict]:
             tasks.append({"task_id": p.stem, "title": "?", "status": "broken", "note": "json 解析失败"})
             continue
         tid = d.get("task_id", p.stem)
-        m = re.search(r"D(\d{3})", tid)
+        m = re.search(r"D(\d{3,})", tid)
         num = int(m.group(1)) if m else None
         if num is not None:
             seen_nums.add(num)
 # 派生判定 (工件优先; json 字段兜底展示但不算真)
         # D399 (P1-2)/D400: spec = glob 扫描 OR json spec.path 兜底（文件必须真实存在——存在即算真, 消除幻影）
         # D412/U3: json spec.path 分支同样过仓库态校验（工作区存在 且 已提交 HEAD）
-        spec_path = (d.get("spec") or {}).get("path")
+        # D1215/卡 #1268 — `spec` 形态三态（**实测** str=171 / null=189 / dict=83）：
+        #   旧码 `(d.get("spec") or {}).get("path")` 只容纳 null/dict，命中 **str**
+        #   即 `AttributeError: 'str' object has no attribute 'get'` ⇒ 生成器 rc=1
+        #   ⇒ 配对测试红 ⇒ U7 配对门禁把本脚本的**一切改动**锁死（卡 #1268 现象）。
+        #   契约：**只有 dict 形态提供 json path**；str/null 一律「无 json path」，
+        #   回落到既有 glob 派生（has_spec）。⚠️ 不削弱 D399/D412 守卫 —— path 仍须
+        #   「工作区存在」∧「已提交 HEAD」双过才算真（下方 spec_path_ok 原样保留）。
+        _spec = d.get("spec")
+        spec_path = _spec.get("path") if isinstance(_spec, dict) else None
         spec_path_ok = bool(
             spec_path
             and (REPO / spec_path).exists()
@@ -370,7 +398,10 @@ def analyze_task_state() -> Tuple[list, dict]:
             "audit": audit_txt_hist,
             "fix": "",
         })
-    return tasks, {"phantom": phantom_n, "repo_degraded": repo_degraded}
+    # verifier P3: **正常路径**也要带 migration 字段 —— 否则读结构化字段的下游在
+    # 「task-state 存在」这条主路径上看不出迁移期是否生效（信息只在 stderr，可被丢弃）。
+    # 字段恒在（无 claim 时 migration_period=False），语义与缺席路径一致。
+    return tasks, {"phantom": phantom_n, "repo_degraded": repo_degraded, **_mig}
 
 
 def analyze_ci() -> dict:

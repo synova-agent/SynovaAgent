@@ -1,5 +1,14 @@
 # 任务路由表（v4，2026-08-16 创始人定稿）
 
+> 🔴 **2026-10-07 创始人明令废止分域**：「**不分域不分域不分域…谁有空，谁能做就谁做。**」
+> ⇒ **本表的"角色域归属"不再是派单依据。** 派单只按**写集**排期：
+>    **同写集 ⇒ 串行；不同写集 ⇒ 并行。** 不再因为"这个文件不归你的线"而退回或改派。
+> ⇒ 本表**保留**的用途只剩两个：① 历史追溯（当时为什么这么分）② 熟悉度参考（谁改过这个面）。
+> ⇒ **仍生效的四条**（与"域"无关）：① `scripts/audit/**` 归 K3（审计独立性）
+>    ② 改「哪条检查阻断合并」须 提案→K3→CTO　③ 禁 `--no-verify`/`--admin`/force　④ 量真值用 ref，禁读工作树
+> ⇒ 详见 `2026-10-07-CTO-裁定-取消分域.md`（库外档案仓）。
+
+
 > 派活前查这张表。同一模块同一时间只允许一个角色认领（防撞车）。
 > **本 v4 以创始人与 Mac DSH 的沟通为准，覆盖 v3（Win 版）。** 完整分工见 [DIVISION-CHARTER-v4.md](dsh-division-draft/DIVISION-CHARTER-v4.md)。
 > 状态标注：`进行中·<角色>` → `已完成·<角色·日期>`。
@@ -59,10 +68,26 @@
 
 | 点 | 规则 | 强制方式 |
 |----|------|---------|
-| `src/server.ts` | Claude 专属（DSH 不碰，mcp/ 内部除外） | CODEOWNERS |
-| 门禁脚本 + coordination 文档 + VERSION.md | DSH 专属 | CODEOWNERS |
+| `src/server.ts` | Claude 专属（DSH 不碰，mcp/ 内部除外） | 惯例（⚠️ 无机器强制）｜W10 |
+| 门禁脚本 + coordination 文档 + VERSION.md | DSH 专属 | 惯例（⚠️ 无机器强制）｜W10 |
 | `package.json`/锁文件 | 每批只有一个 agent 改依赖，dev doc 写集声明 | 惯例 |
 | 写集重叠 | 出 doc 方声明写集；verify-parallel 查重叠；重叠 → 停手问创始人 | 机器（pre-push） |
+
+> 🔴 **W10/D1167 实测更正（2026-10-06，治理线）——本表此前高估了 CODEOWNERS 的强制力。**
+> `gh api repos/synova-agent/SynovaAgent/branches/main/protection` 实测：
+> `require_code_owner_reviews = false`、`required_approving_review_count = 0`。
+> 且 `.github/CODEOWNERS` 的 43 条生效规则**全部指向同一个 owner**（`@tangbaobao520`）——
+> 三个团队账号（`@synova-dsh` / `@synova-claude` / `@synova-k3`）**尚未创建**。
+> `.github/workflows/**` 里对它**零引用**（无任何 CI 检查它）。
+> ⇒ **CODEOWNERS 当前阻断力 = 0**：它是一份**已生成、可对账**的领地声明，**不是**机器强制。
+> ⇒ 上表「强制方式」列已按实测改为「惯例」；**真·机器强制**只剩写集重叠检查（pre-push verify-parallel）
+> 与 pre-commit 的 Task Scope 一致性（组 12）。
+> ⇒ 若要恢复强制力，需两件事同时做（**均属门禁语义变更 ⇒ 提案 → K3 → CTO 裁**）：
+> ① 开 `require_code_owner_reviews`；② 先建三个团队账号并改 `ownership.yaml` 的 `github:` 段
+> 后重跑 `python3 scripts/control-tower/check-ownership.py --emit-codeowners`（否则开了也等于没开——
+> 所有路径同一个 owner，谁改都算"owner 批准"）。
+> 参考：创始人 2026-10-06 计划「明确不做」表列 `CODEOWNERS 文件本身`（采纳 DSH 做法：不用 CODEOWNERS，
+> 改自建可计算权重）——本注与该方向一致，只是把措辞先改成与实测相符。
 
 ### PR 审查路由
 
@@ -84,7 +109,7 @@
 
 | # | 自动化 | 状态 |
 |---|--------|:---:|
-| B1 | CODEOWNERS（地盘机器强制） | 待建（DSH） |
+| B1 | CODEOWNERS（地盘**声明**，**非**机器强制） | ⚠️ 文件已在（54 行/43 规则）但**阻断力 0**（`require_code_owner_reviews=false`，实测 2026-10-06；见上方注） |
 | B2 | Auto-merge | 待建（创始人一键） |
 | B3 | A7 审计派发 | ✅ D371 已建 |
 | B4 | 进度页自动刷新 | ✅ D371/D372 已建 |

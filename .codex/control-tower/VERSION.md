@@ -11,6 +11,63 @@
 - MAJOR (第一位): 大改版 — 架构重构/产品化里程碑 → 4.6.0 → 5.0.0
 ```
 
+## V5.2.11 (2026-10-07) — 棘轮余量上限改判「越线者付账」（D1227 / 卡 #1300）（PATCH）
+
+- **判据（新版，替代 #1227 的旧口径）**: `slack_before ≤ SLACK-CAP ∧ slack_after > SLACK-CAP ⇒ 红`（本 PR 越线 = 余量增长的唯一来源）；
+  否则 `slack_after > SLACK-CAP ⇒ ::warning`（纯继承态）—— 旧口径「纯继承也红」会让**一张无关 PR 承担全批解阻塞**、合并序被棘轮绑架（本轮实测三张同冲突）。
+- **噪声地板（关键）**: `scan(base)` 与 `scan(PR)` **同一次运行内测量** —— base 侧用 `git ls-tree -r` 纯 tree 计数（不 checkout，与工作树同尺度）；跨运行比较会假红（实测 CI 152 vs 本地 150）。
+- **注入缝**: `SYNO_BASE_REF`（CI 侧由 `ci.yml` 传 `origin/<GITHUB_BASE_REF>`，缺省 `origin/main`）；空或不可解析 ⇒ **显式打印「未给 base ⇒ 不判越线」**并退化为现状语义（禁静默、禁假红）。
+- **升级载体**: 台账单行 `# INHERITED-OVER-CAP-SINCE=<YYYY-MM-DD>`；继承态 ⇒ `::warning` + 缺失时**打印可粘贴行**；登记超期（默认 14 天，`INHERITED_CAP_DAYS` 覆写）⇒ **升级为红**。
+- **禁止自动写台账**（只打印可粘贴行）—— 自动上调/自动登记会削弱棘轮。
+- **夹具**: `tests/control-tower/sealed-tests.test.sh` +6（越线红 / **纯继承反例不得红** / 载体缺失粘贴行 / 载体超期升级红 / 未给 base 显式打印 / 变异体：base 侧测量退化必被抓）⇒ 19 → **25 PASS / 0 FAIL**。
+- **作者**: line-b-ci（承接 line E 的 `/tmp/d1227-plan.md` 侦察结论）
+
+## V5.2.10 (2026-10-07) — 面 3 夹具判别力：禁 `grep -qv` 逐行取反（D1226 / 卡 #1295）（PATCH）
+
+- **新增面 3（`check-gate-integrity.sh`）**: 扫描 `tests/**/*.test.sh|py|ts` 的代码行 `grep -qv`（含 `-qvE/-qEv/-vq` 变体）
+  - 输入为 **管道/stdin/变量** ⇒ **违规**（逐行取反 + 多行 ⇒ 任一行不匹配即 rc=0 ⇒ 判别力为假，纸老虎夹具）
+  - **字面量文件操作数** ⇒ 合规（单文件语义明确）
+  - **形态 3**（对变异体输出取反：行内含 MUT/CLONE/COPY）⇒ **仅告警清单，不阻断**（与合法正向断言同形，硬判必误报）
+- **豁免白名单独立成文件** `scripts/control-tower/fixture-power-baseline.txt`（格式同 PATTERN-BASELINE：`<路径后缀> | owner= | expires= | reason=`）
+  - 实测教训: 并入 `gate-integrity-baseline.txt` 会被 **REGISTRY-BASELINE 解析器**误当隔离台账条目 ⇒ 3 处伪违规
+  - `expires` 到期 ⇒ 硬红（防拔牙）；覆写缝 `SYNO_FIXTURE_POWER_BASELINE`（沙箱用）
+- **旗标**: `--fixture-power-only`（仅面 3）；默认三面同跑；`GATE-INTEGRITY-CHECK` 行增 `fixture=` 字段；step summary 增 `- FIXTURE-POWER:`
+- **降级（fail-closed）**: 测试根不存在/不可读、0 个夹具文件、grep 执行失败 ⇒ **exit 2**（绝不与"零命中"混同）
+- **夹具**: `tests/control-tower/check-gate-integrity.test.sh` 新增 M10 五例（红/绿/白名单/白名单过期/**变异体**：判据退化后 red 样本必须不再被抓）⇒ 64 → **70 PASS / 0 FAIL**（含形态 0 自指防线）
+- **作者**: line-b-ci（承接 line E 的 /tmp/d1226-plan.md 侦察结论；插桩用行索引 + BEGIN/END 标记）
+
+
+## V5.2.9 (2026-10-07) — D1219 旁路第三态清场 + 检查自身失败态（六方案 §1 执行体）（PATCH）
+
+- **① 旁路第三态清场 3 处**（卡 #1225；立法条文见 `docs/synova/coordination/版本管理规范-控制塔.md` §七）：
+  `note_check "plan-integrity: non-Q2 项"` → **删**（D1171 自认「设计行为非违规」= 零判据价值；plan.json 的 Q2 半边仍由 `PI_Q2` → 闸② 消费）；
+  `note_check "G12c dev doc 写集验证"` → **删本地**（替代 = CI `Merge write-set reconciliation (D708)` 独立 step，**替代存在性已被 T11c 物理断言**）；
+  `note_check "G12d 声称↔证据对照表"` → **归档**（生成器 `verify-claims-table.sh` 保留在库、改按需调用：无机器可判阈值 ⇒ 属报告生成器非门禁）。
+  ⇒ 代码路径 `note_check "` 仅剩 `bypass_run` **休眠函数体**（调用点早已清零，回滚路径保留）。
+- **② 新机制「检查自身失败态」**：新增 `self_fail_missing_script()`（单一实现，非 3 处内联副本）——
+  三态纪律 **0=通过 / 1=违规 / 2=检查自身失败（同样阻断）**。三处「脚本缺失 fallback」由 note_check 改接本函数：
+  D782 D1 文档真相 / D782 D2 登记门禁 / D734 PR 预算。
+  强度: 本地与 CI **同等阻断**（自身失败态**不适用** `v5_soft` 本地软提示面）；按铁律 11 落
+  `degraded-events.log`（`component=pre-commit-<闸名>`, `reason=script-missing`）以与「内容违规」区分。
+  **被替代的旧形态是假绿**：把「判定脚本不存在」降级为只打印 ⇒ **检查消失被判作通过**。
+- **③ 判据变更配套夹具（先红后绿 + 变异体）**：`hard-gate-convergence.test.sh` 的 `KEEP_BYPASS`
+  由「断言存在」**反转为反向断言** + 新增自身失败态 4 断言 + 脚本缺失不再走旁路 3 断言
+  （红证据 52/11 → 绿 63/0）；`doc-commit-exempt.test.sh` T11 拆为 T11a（代码路径零调用）/
+  T11b（留痕可核）/ T11c（**替代真实存在**，grep ci.yml 的 D708 step）。
+  变异体实测: 加回 `note_check "G12c` ⇒ 62/1；把 D1 fallback 改回 note_check ⇒ 61/2；
+  删 ci.yml 的 D708 step（**副本**，真文件属线 B 未碰）⇒ T11c 判红。
+- **口径更正（防虚报）**: 本卡验收原写「常规提交 <30s」——**实测早已达标**（单 scripts 新文件最坏
+  **4.122s** / 空暂存 1.732s / 纯文档 1.104s），真实痛点是**误拦率与判据噪音**（v2.0 依据 ~87%）。
+  ⇒ 本条不构成性能改进，禁作卖点。
+- **已知缺口（如实登记，不伪造同步面）**: §一.4 要求「一处定义三处同步」= VERSION.md + `version.log` + tag；
+  本树**无 `.codex/control-tower/version.log`**（V5.2.7/V5.2.8 亦未产出）；且 **tag 按 §6/D521 于「合并后补打」**
+  ——D331 门禁实测拦截未合并分支上的版本 tag（`V5.2.9 是 HEAD 祖先但不在 origin/main 上`），
+  故本 PATCH 推送时交付面 = VERSION.md 条目（tag 由合并在 main 后补，或合并方补）。
+  ⇒ 机器可读日志面的缺失另行立卡（不在此处发明格式）。
+- **未纳入本 PATCH（移交）**: 退役清单另两项按 Lead 裁决**不在本卡**——②骨架占位检测（裸删会重开 D547
+  全局阻断 ⇒ 挂 D-C）、④`#CRITERIA` 强制（唯一真门禁，claim schema 增可选 `criteria` 字段 ⇒ 移交 D-C）。
+- **作者**: line-e-da2（写面: `scripts/pre-commit-check.sh` + 2 夹具 + 本文件）
+
 ## V5.2.8 (2026-09-13) — D703 dev-doc 证据命令回放机制（verify-doc.sh + CI Replay 步骤 + canary 清单追加）（PATCH）
 
 - **① 新机制**: `scripts/ci/verify-doc.sh` —— 通用回放器，提取 dev doc §6/§8 的 DS 证据命令（grep/git/npx vitest/npx tsc 白名单；含 `; & $ < > 反引号` 的命令拒绝执行），逐条在干净工作树回放，任一失败 exit 1；`scripts/ci/verify-d703.sh` 为本卡自证脚本（对本批 D702/D703/D704 三份 spec 逐条回放，不可机器化项显式 SKIP + 理由）。

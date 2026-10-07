@@ -1,0 +1,11 @@
+{
+  "task_id": "D1235",
+  "title": "D734 空写集注入缝：--files \"\" 不再直落真实 diff（卡 #1302 附带发现）",
+  "status": "claimed",
+  "spec": "卡 #1302 附带发现（Lead 派单「先只报定位」，定位被采纳后批准修法）· 门禁语义变更，编入 K3 批五。根因: scripts/control-tower/check-pr-budget.sh:137 旧判据 `[ -n \"$FILES_OVERRIDE\" ]` 无法区分 「--files \"\"」与「未给 --files」⇒ 前者直落**真实三点 diff** ⇒ 该用例成败取决于**开发者工作树 diff 大小**（>12 必红且**误报成「空写集」失败**；fetch 令 main 前移后自动转绿 ⇒ 伪装成 flake）。同文件 --diff-status 早已用 DIFF_STATUS_SET ⇒ 属同文件不一致，修法=对齐。修: FILES_SET=0 + --files 置 1 + 判据改 [ \"$FILES_SET\" -eq 1 ]（3 处）。夹具: test §17 自建 14 文件沙箱（与工作树解耦）: 17.1 先红后绿 · 17.2 判据实况「变更文件数 0」· 17.3 反例（不传 --files ⇒ 仍走真实 diff ⇒ exit 1）· 17.4 与 --diff-status 对称 · 夹具自查。取证: SYNO_BUDGET_SRC=原工具 ⇒ rc=1（干净报 ❌17.1/❌17.2，不再崩）；修后 197/197。自我留痕: 本次又踩全角陷阱（rc=$_rc（ ⇒ :599 unbound），被棘轮+夹具抓住，已修 3 处，棘轮回 0。",
+  "impl": "check-pr-budget.sh 判据改 _SET 式；test §17 五条夹具（先红后绿+反例+对称+自查）；:139 用例名改写。",
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-08",
+  "updated_by": "line-d-own"
+}

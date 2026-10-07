@@ -210,102 +210,44 @@ else
   no "自清失败: $V 违规（rc=${RC}）—— 检测器或夹具自身带病（本文件曾漏扫自身，被 D938-v 抓到）"
 fi
 
-# ── 8. 判据②（CTO 裁定 A1 后口径）: **本卡写集内** mac 域残留 = 0 ──────────────
-# 卡面原文「mac 域已清 / 残留 0」在全 mac 域不可达（写集外 6 文件、超 PR 预算 12 → 裁定不扩写集）。
-# 故判红/绿的口径改为「本卡写集内残留 0」；**全 mac 域残余只作登记信息打印，不是失败条件**。
-# D938-v 复核 + CTO 裁定（第三次 reopen）: 本断言原先只覆盖 5 文件（c1 写集 4 + 扫描器自身）
-#   → **判据空转**（连本文件自己的 2 处同类缺陷都照不到）。现按 brief 的 **9 个 task 文件**全覆盖，
-#   并加**条数自检**（窄化即红）—— 使该断言真的等于「本卡写集内 mac 域残留 = 0」。
-D938_WS="scripts/control-tower/alloc-task-id.sh,scripts/control-tower/check-sentinel-type-net.sh,scripts/doc-system/check-doc-truth.sh,scripts/doc-system/doc-truth-probe.sh,scripts/control-tower/scan-fullwidth-vars.sh,tests/control-tower/scan-fullwidth-vars.test.sh,tests/control-tower/alloc-task-id.test.sh,tests/control-tower/alloc-task-id-lock.test.sh,.github/workflows/ci.yml"
-D938_WS_COUNT=$(printf '%s\n' "$D938_WS" | tr ',' '\n' | grep -c . || true)
+# ── 8. 🔴 分域废止（2026-10-07 创始人授权）: --domain 必须 fail-closed ────────────
+# 原 §8/§8b/§9 断言 `--domain mac|win` 的域过滤与「全 mac/win 域残余」标签。
+# 分域废止 ⇒ ownership.yaml 单域化 ⇒ 三域名（mac/win/k3）在数据源里不存在，
+#   域过滤必然零文件。处置 = **显式 fail-closed**（exit 2），不静默退化为全量扫描
+#   （否则「限定域」被偷换成「全量」= 静默降级，违铁律 24/31）。
 echo ""
-echo "── 8. 判据②: 本卡写集内 mac 域残留 = 0（严格判红/绿）──"
-if [ "$D938_WS_COUNT" = "9" ]; then
-  ok "写集断言覆盖面 = ${D938_WS_COUNT} 文件（brief 的 task 文件全集：4 scripts + 扫描器 + 3 测试 + ci.yml）"
-else
-  fail "写集断言只覆盖 ${D938_WS_COUNT} 文件（须 9）—— 窄化即判据空转（D938-v 实测过）"
-fi
-OUT=$(bash "$SCAN" --domain mac --paths "$D938_WS" 2>&1); RC=$?
-WS=$(grab_ws_resid "$OUT")
-if [ -z "$WS" ]; then
-  no "写集模式未输出「本卡写集内 mac 域残留：…」（标签格式漂移）"
-elif [ "$WS" = "0 0" ]; then
-  ok "本卡写集内 mac 域残留 = 0 处 / 0 文件（${D938_WS_COUNT} 文件全覆盖：4 scripts + 扫描器 + 3 测试 + ci.yml）"
-else
-  # 红形态必须**点名 file:line**（否则判别信息丢失 —— 只有一句「仍有违规」等于没信号）
-  no "本卡写集内 mac 域残留 = ${WS}（应为 '0 0'）—— 本卡写集内仍有违规，逐行清单如下:"
-  printf '%s\n' "$OUT" | sed -n '/^【违规（代码行）】/,/^【注释行/p' | sed 's/^/      /' >&2
-fi
-[ "$RC" = "0" ] && ok "写集模式零违规 → rc=0" || no "写集模式应 rc=0，实得 ${RC}"
-
-# ── 8b. 登记信息: 全 mac 域残余（**scripts/ 半径内**，棘轮上限，非失败条件）──────
-echo ""
-echo "── 8b. 登记: 全 mac 域残余（棘轮上限 ${MAC_RES_BASELINE} 文件 / ${MAC_VIOL_BASELINE} 处）──"
-OUT=$(bash "$SCAN" --domain mac 2>&1); RC=$?
-MF=$(grab_mac_files "$OUT")
-if [ -z "$MF" ]; then
-  no "未输出「全 mac 域残余：…」标签（CTO 要求的两段标签缺失）"
-else
-  M_FILES=${MF% *}; M_LINES=${MF#* }
-  if [ "$M_FILES" -le "$MAC_RES_BASELINE" ] && [ "$M_LINES" -le "$MAC_VIOL_BASELINE" ]; then
-    ok "全 mac 域残余 $M_FILES 文件 / $M_LINES 处 ≤ 上限 $MAC_RES_BASELINE / $MAC_VIOL_BASELINE"
-  else
-    no "全 mac 域残余 ${M_FILES} 文件 / ${M_LINES} 处 > 上限 ${MAC_RES_BASELINE} / ${MAC_VIOL_BASELINE}（**回退/新增**，真红）"
-  fi
-  if [ "$M_LINES" -gt 0 ]; then
-    visible_warn "全 mac 域残余 $M_FILES 文件 / $M_LINES 处（写集外，按 CTO 裁定 A1 归新 mac 卡，本卡不动）—— 见 --domain mac 逐行清单"
-  fi
-  [ "$RC" = "1" ] && ok "全 mac 域有残余时 rc=1" || no "全 mac 域有残余应 rc=1，实得 ${RC}"
-fi
-# 半径注记（防 K3 把 scripts/ 半径误读成全仓口径）: 默认半径 = scripts/**，不含 tests/**
+echo "── 8. --domain 已废止: 必须 fail-closed（exit 2，不静默退化）──"
+for _d in mac win k3 bogus; do
+  bash "$SCAN" --domain "$_d" >/dev/null 2>&1; _rc=$?
+  [ "$_rc" = "2" ] && ok "--domain $_d → rc=2（fail-closed）" || no "--domain $_d 应 rc=2，实得 $_rc"
+done
 OUT=$(bash "$SCAN" --domain mac 2>&1)
-if printf '%s\n' "$OUT" | grep -q "scripts/ 半径内"; then
-  ok "残余标签带半径注记「scripts/ 半径内」（默认半径不含 tests/**，防误读为全仓口径）"
+if printf '%s\n' "$OUT" | grep -q "已废止"; then
+  ok "--domain 的拒绝信息点名「已废止」（不静默）"
 else
-  no "残余标签缺半径注记 —— 会被误读为全仓口径（tests/** 另有存量，不在本卡半径内）"
+  no "--domain 拒绝信息未点名废止原因"
 fi
-if printf '%s\n' "$OUT" | grep -qE '^扫描集: .*（默认 scripts/\*\*）'; then
-  ok "扫描集口径行明示默认半径 scripts/**"
+if printf '%s\n' "$OUT" | grep -qE "\-\-paths"; then
+  ok "--domain 的拒绝信息给出替代路径（--paths/--paths-file）"
 else
-  no "扫描集口径行未明示默认半径"
+  no "--domain 拒绝信息未给替代方案"
 fi
 
-# ── 9. 接口冒烟: --domain win（供 Win 侧新卡消费）────────────────────────────
+# ── 9. 无 --domain 时扫描器正常（范围限定改用 --paths）────────────────────────
 echo ""
-echo "── 9. 接口: --domain win（Win 卡可直接复用；棘轮上限 $WIN_FILE_BASELINE 文件）──"
-OUT=$(bash "$SCAN" --domain win 2>&1); RC=$?
-WF=$(grab_win_files "$OUT")
-if [ -z "$WF" ]; then
-  no "--domain win 未输出可解析的文件数（接口格式漂移）"
+echo "── 9. 无 --domain: 扫描器正常工作，范围限定走 --paths ──"
+OUT=$(bash "$SCAN" --paths "$SELF_TS" 2>&1); RC=$?
+# 本测试自身可能含本缺陷类命中（它是判据的一部分）⇒ 只断言「可跑通、非 fail-closed」
+[ "$RC" -le 1 ] && ok "--paths 单文件(本测试自身) -> rc=${RC} (可跑通，非 fail-closed 的 2)" || no "--paths 不应 rc=2 (fail-closed)，实得 ${RC}"
+if printf '%s\n' "$OUT" | grep -qE "^扫描集: .*域过滤=无（全量）"; then
+  ok "扫描集口径行明示「域过滤=无（全量）」"
 else
-  if [ "$WF" -ge 1 ] && [ "$WF" -le "$WIN_FILE_BASELINE" ]; then
-    ok "win 待处理 $WF 文件 ∈ [1, $WIN_FILE_BASELINE]（域过滤生效）"
-  elif [ "$WF" -eq 0 ]; then
-    no "win 文件数 0 —— 域过滤可能失效（或 Win 卡已全清；若已全清请复核本断言与密封清单）"
-  else
-    no "win 文件数 $WF > 上限 ${WIN_FILE_BASELINE}（**新增缺陷**，真红）"
-  fi
-  if [ "$WF" -lt "$WIN_FILE_BASELINE" ] && [ "$WF" -ge 1 ]; then
-    visible_warn "win 域已少于基线 ${WIN_FILE_BASELINE}（现 ${WF}）→ Win 侧新卡可能已落地，请复核本测试上限与密封清单"
-  fi
+  no "扫描集口径行未明示域过滤状态（疑似静默）"
 fi
-WL=$(grab_win_full "$OUT")
-if [ -z "$WL" ]; then
-  no "未输出「全 win 域残余：…」标签（CTO 要求的两段标签缺失）"
+if printf '%s\n' "$OUT" | grep -q "scripts/ 半径内"; then
+  no "写集模式下不应打印「全 X 域残余（scripts/ 半径内）」标签（防把子集数字挂全域名义）"
 else
-  ok "全 win 域残余标签存在：${WL}（文件 / 违规处）"
-fi
-# 域过滤真伪: win 模式列出的每个违规文件必须**确属 win**
-WIN_FILES=$(printf '%s\n' "$OUT" | sed -n '/^【违规（代码行）】/,/^【注释行/p' | sed -n 's/^  \([^ ]*\):[0-9][0-9]*:.*$/\1/p' | sort -u)
-WIN_N=$(printf '%s\n' "$WIN_FILES" | grep -c . || true)
-if [ -n "$PYBIN" ] && [ "$WIN_N" -ge 1 ]; then
-  if printf '%s\n' "$WIN_FILES" | (cd "$REPO" && xargs "$PYBIN" "$REPO/scripts/control-tower/check-ownership.py" --owner win --quiet >/dev/null 2>&1); then
-    ok "域过滤真伪: win 模式列出的 $WIN_N 个文件经 check-ownership.py --owner win 复核全部属 win"
-  else
-    no "域过滤串味: win 模式列出的文件里有非 win 归属（check-ownership.py --owner win 失败）"
-  fi
-else
-  skip "无 python 或无违规文件 → 归属复核跳过（域判定能力缺失，非通过）"
+  ok "写集模式不打印全域残余标签（子集/全域不混）"
 fi
 
 # ── 10. --json 机器可读 ──────────────────────────────────────────────────────
@@ -345,6 +287,45 @@ if [ "$FAIL" -gt 0 ] && [ -z "$FIRST_FAIL" ]; then
   echo "  ❌ SELF-CHECK: FAIL=$FAIL 但 FIRST_FAIL 为空（no() 记名机制缺陷）"
   exit 2
 fi
+# ── 12. D1228: 扫描面扩到 tests/**（默认面）+ `\$` 逃逸豁免 ──────────────────────
+#   金丝雀一律用 `$FW` 拼接构造（本文件自身不得在「代码行」上出现被测形态 —— §7 自清覆盖它）。
+echo "── 12. D1228: 默认面含 tests/** + 逃逸豁免 ──"
+# 12a 结构: 默认面描述必须含 tests
+OUT_DEF="$(bash "$SCAN" 2>&1)"   # swallow-ok: 结构断言只看 SCOPE 描述行；rc 在此不判
+case "$OUT_DEF" in
+  *"默认 scripts/** + tests/**/*.test.sh"*) ok "默认面含 tests/**/*.test.sh（D1228 扩展生效）" ;;
+  *) no "默认面未含 tests（扩面未生效）" ;;
+esac
+# 12b 改坏即红（真执行）: 临时 root 复制扫描器（ROOT 由脚本位置推导）→ tests/ 放金丝雀 ⇒ 默认面必须抓到
+TR="$TMPD/tests-face"; mkdir -p "$TR/scripts/control-tower" "$TR/tests/control-tower"
+cp "$SCAN" "$TR/scripts/control-tower/scan-fullwidth-vars.sh"
+printf '#!/bin/bash\nset -u\necho "值=$D938_FACE_VAR%s应 5）"\n' "$FW" > "$TR/tests/control-tower/canary-face.test.sh"
+OUT_TF="$(bash "$TR/scripts/control-tower/scan-fullwidth-vars.sh" 2>&1)"; RC_TF=$?
+if [ "$RC_TF" -eq 1 ] && printf '%s' "$OUT_TF" | grep -qF 'canary-face.test.sh'; then
+  ok "改坏即红: 默认面在 tests/ 注入变量紧贴全角 ⇒ rc=1 且点名（扩展面真接线）"
+else
+  no "改坏即红失败: 默认面未抓到 tests/ 金丝雀（rc=${RC_TF}）"
+fi
+# 12c 逃逸豁免（防伪缺陷）: 转义形态不崩 ⇒ 不计违规；未转义 ⇒ 必须计违规
+ESC="$TMPD/esc"; mkdir -p "$ESC"
+printf '#!/bin/bash\nset -u\necho "字面 \\$name%s非插值）"\n' "$FW" > "$ESC/escaped.test.sh"
+printf '#!/bin/bash\nset -u\necho "变量 $name%s应 5）"\n' "$FW" > "$ESC/unescaped.test.sh"
+OUT_ESC="$(bash "$SCAN" --paths "$ESC/escaped.test.sh" 2>&1)"; RC_ESC=$?
+OUT_UNE="$(bash "$SCAN" --paths "$ESC/unescaped.test.sh" 2>&1)"; RC_UNE=$?
+if [ "$RC_ESC" -eq 0 ] && [ "$RC_UNE" -eq 1 ]; then
+  ok "逃逸豁免: 转义形态 ⇒ rc=0（伪缺陷已豁免）／未转义 ⇒ rc=1（真缺陷仍抓）"
+else
+  no "逃逸豁免异常: 转义 rc=${RC_ESC}（期望 0）／未转义 rc=${RC_UNE}（期望 1）"
+fi
+# 12d 棘轮（tests 面）: 全 tests 面违规 = 0（新增即红；本类缺陷在测试面已清零）
+OUT_TESTS="$(bash "$SCAN" --paths "$REPO/tests" 2>&1)"   # swallow-ok: 计数取自输出行；rc 由 N_TESTS 判
+N_TESTS="$(grab_viol "$OUT_TESTS" | awk '{print $1}')"
+if [ "${N_TESTS:-1}" = "0" ]; then
+  ok "棘轮: tests/ 面违规 = 0（新增即红；本类缺陷在测试面已清零）"
+else
+  no "棘轮: tests/ 面违规 = ${N_TESTS}（应 0 —— 有新增未修或伪缺陷）"
+fi
+
 echo "  结果: PASS=$PASS FAIL=$FAIL SKIP=$SKIP${FIRST_FAIL:+ FIRST_FAIL=${FIRST_FAIL}}"
 echo "═══════════════════════════════════════════════════════════"
 [ "$SKIP" -gt 0 ] && visible_warn "本测试有 $SKIP 项 SKIP（平台能力缺失，非通过）—— 计数已进入结果行"
