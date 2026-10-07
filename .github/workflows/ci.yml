@@ -196,9 +196,34 @@ jobs:
       #      与 ⑩c（还原旧正则即失效 ⇒ 判别性）。
       - name: Merge write-set reconciliation (D708)
         if: steps.docsonly.outputs.docs_only != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
+          # #1284（2026-10-07）: **接 --pr-body**。旧形态只能从 GITHUB_EVENT_PATH（事件体快照）读正文，
+          #   而 GitHub **re-run 重放原事件快照、不重抓正文** ⇒ 「改正文 → 重跑」永远无效
+          #   （#1273 实证：正文 13:45 加豁免，重跑 attempt 2 读到的仍是 13:31 旧正文）。
+          #   本步显式取一次**当前**正文落文件再传参；取不到 ⇒ **显式降级**（::warning，禁静默）。
+          set -uo pipefail
+          PR_BODY_FILE="${RUNNER_TEMP:-/tmp}/d708-pr-body.md"
+          BODY_ARGS=()
+          if [ -n "${PR_NUMBER:-}" ]; then
+            if gh pr view "$PR_NUMBER" --json body --jq .body > "$PR_BODY_FILE" 2>/tmp/d708-body.err; then
+              BODY_ARGS=(--pr-body "$PR_BODY_FILE")
+              echo "D708 正文来源: gh pr view #${PR_NUMBER} —— **当前**正文（re-run 亦刷新，非事件体快照）"
+              # 可见证据: 让「解析到的豁免行」进日志（旧形态日志里只有模板文案，看不出喂没喂到输入）
+              if grep -qE '^#{2,4}[[:space:]]*写集豁免' "$PR_BODY_FILE"; then
+                echo "D708 正文含「写集豁免」段，逐条豁免行（原样打印，供审计）:"
+                sed -n '/^#\{2,4\}[[:space:]]*写集豁免/,/^#\{1,4\}[[:space:]]/p' "$PR_BODY_FILE" | grep -n '^- ' | head -20 || true
+              fi
+            else
+              echo "::warning title=d708-pr-body::gh pr view #${PR_NUMBER} 取正文失败 ⇒ 回退事件体快照（可能过期，re-run 场景尤甚）；stderr: $(tr '\n' ' ' < /tmp/d708-body.err 2>/dev/null | head -c 200)"
+            fi
+          else
+            echo "::notice title=d708-pr-body::本事件无 PR 正文可取（merge_group/push ⇒ event.pull_request 为空）⇒ 仅声明文件源生效；PR 正文的「写集豁免」段在此路径**不适用**（显式说明，非静默跳过）"
+          fi
           python3 scripts/control-tower/merge_writeset_gate.py \
-            --base origin/main --head HEAD --branch "${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+            --base origin/main --head HEAD --branch "${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}" ${BODY_ARGS[@]+"${BODY_ARGS[@]}"}
 
   test:
     # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-10-02T12:45:00+08:00；

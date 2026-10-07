@@ -1,0 +1,11 @@
+{
+  "task_id": "D1222",
+  "title": "D708 写集豁免机制半接线（ci.yml 从不传 --pr-body；重跑重放旧事件体 ⇒ 豁免永久不生效）",
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-07",
+  "updated_by": "line-b-ci"
+}
