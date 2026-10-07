@@ -176,19 +176,18 @@ describe('metric_readings 表结构（#1053 / 2-1a · V1）', () => {
     expect(indexList(db)).toHaveLength(3);
   });
 
-  it('V6 删除安全：删表 ⇒ 查询报 no such table；再跑 reconcileSchema ⇒ 不抛【且当前会重建表】（见下注释）', () => {
+  it('V6 删除安全：删表 ⇒ 查询报 no such table；再跑 reconcileSchema ⇒ 【真 no-op（不重建）】', () => {
     db.exec('DROP TABLE metric_readings');
     expect(() => db.prepare('SELECT COUNT(*) FROM metric_readings').get())
       .toThrow(/no such table/i);
 
-    // 🔴 实测（live 探针，2026-10-08）：再跑 reconcileSchema **不抛，且表被重建** —— 原因不是"版本门控失效"，
-    //   而是**读取器并列缺陷**（#1366）：schema_version 多行同秒 ⇒ reader 取到旧版本 2 < 3 ⇒ 最后一条迁移重跑
-    //   ⇒ `CREATE TABLE IF NOT EXISTS` 把表重建。故本条断言**锁住当前真实行为**（exists === true），
-    //   而非"no-op"（旧注释断言的是**测不到的那一种**，属有背书的假命题 —— R58 同族，已按复核订正）。
-    //   ⚠️ **#1366 修好后本条会翻转**：读取器取到 3 ≥ 3 ⇒ 早退（真 no-op）⇒ 应改为 `expect(tableExists(db)).toBe(false)`。
-    //   #1366 卡面已登记该联动。
+    // 语义（#1366 落地后的**真**行为）：读取器取 `MAX(数值版本)` ⇒ 3 ≥ SCHEMA_VERSION ⇒ **早退**，
+    //   不执行任何迁移 ⇒ 表**不会**被重建（版本门控 = no-op）。断言锁住该行为。
+    // 历史（#1366 修前，已作为反例留档）：旧读取器在同秒并列下取到旧版本 2 < 3 ⇒ 最后一条迁移重跑
+    //   ⇒ `CREATE TABLE IF NOT EXISTS` 把表**重建**（exists === true）—— 那时本条断言的是 true，
+    //   属"锁住缺陷行为"；#1366 修复后按登记联动翻转为 false（本行即翻转结果）。
     expect(() => reconcileSchema(db)).not.toThrow();
-    expect(tableExists(db)).toBe(true);
+    expect(tableExists(db)).toBe(false);
   });
 
   it('临时真文件库：同一 DDL 结果一致（mkdtemp；不碰 gitignored data/）', () => {
