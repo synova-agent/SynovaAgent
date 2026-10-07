@@ -22,12 +22,17 @@
  * @gate（四条不变量，由 `tools/check-construction-registry.ts` 执行 —— **不是 .py**）
  *   ⚠️ 该执法体**尚未接线**（CI/pre-commit 不调用）⇒ 当前"0 违规"是本机结论，**非门禁结论**（见 #1035）
  *   ⚠️ 2026-10-08 实测补记：`tools/check-construction-registry.ts` 在 origin/main **不存在**（全树零命中）
- *      ⇒ 连"本机结论"也须先建该文件（本条只记事实，建档另行派工）
+ *      ⇒ "**声称有执法体、实际没有**"（CTO 2026-10-08 裁：归 **#1137（判据入仓）/ #1150（引用路径必须已落 main）** 族；
+ *        本处只保留**事实记录**，**不另立卡**）。
  *   INV-1 依赖可判：dependsOn 每个 id 存在、不成环；建表项的每个 NOT NULL 字段须有**可核声明**
  *   INV-2 派单可判：worker 有值且在取值域内；paths 非空且为相对路径（`isModuleShape`）
  *   INV-3 标准可执行：每条 acceptance 须有 expect；**禁纯 grep 型**；引用的文件须存在或在写集内
  *   INV-4 写集互斥：写集**同路径** ⇒ exit 1，除非经 `sharedWrite` 显式声明共写（须串行）
  *   三态 exit：0=过 / 1=违规 / 2=检查自身失败
+ *
+ * 📌 **卡与项非一一对应**（CTO 2026-10-08 裁定）：本件是**施工项账**，不是卡账。
+ *    有卡无项 = 卡面细化（卡比项细正常）；有项无卡 = **待立卡**（未入卡 = 未交办）。
+ *    当前：`0-9bis` / `1-7bis` 有项无卡（CTO 已裁立卡）；8 张卡有前缀无项，本件不动。
  *
  * @ref origin/main@9e9e4bd9d（**2026-10-08 卡面→登记件回填断面**；原 1630a5014 / 2026-10-04 14:47）
  *      回填依据：CTO 2026-10-08 裁定（C-01 / C-02 / C-03=R4 / 内部自不一致 5 条 / status 以 GitHub 为准 / title 以卡面为准）
@@ -183,7 +188,8 @@ export const constructionItems: readonly ConstructionItem[] = [
     acceptance: [
       { run: 'bash -c "node_modules/.bin/tsx tests/loops/probes/batch0a-probes.ts 2> /tmp/batch0a.stderr.log; grep -c \'D9] MainAgent 未注入\' /tmp/batch0a.stderr.log | grep -q ^0$"', expectExit: 0 },
     ],
-    // ⚠️ 待裁（CTO，条件 2）：卡面标题在 GitHub 被**截断**（结尾 `（\`src/s`）⇒ 卡面标题本身有误，**保留登记件原值**，见 PR §保留待裁
+    // 📌 CTO 2026-10-08 裁定（title）：卡面标题为 GitHub 显示限制下的**截断形态**（结尾 `（\`src/s`），本字段为**完整命名** ——
+    //   两处**故意不同**，不是「未同步」。理由：登记件是**判据源**，不该被 GitHub 显示限制绑架；卡号的标识作用不依赖标题完整。
     status: 'todo',
     source: '施工单.md 0-1 / 现状报告 坏点2',
   },
@@ -212,7 +218,8 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx vitest run tests/growth/evolution-writeback.test.ts', expectExit: 0 },
       { run: 'sqlite3 data/synova.db "SELECT COUNT(*) FROM agent_memory WHERE key LIKE \'%_gaCorrections%\'"', expectRowsGt: { table: 'agent_memory', n: 0 } },
     ],
-    // ⚠️ 待裁（CTO，条件 2）：卡面标题被**截断**（结尾 `已在 \`:381\` 的 `）⇒ 保留登记件原值
+    // 📌 CTO 2026-10-08 裁定（title）：卡面标题为 GitHub 显示限制下的**截断形态**（结尾 `已在 \`:381\` 的 `），本字段为**完整命名** ——
+    //   两处**故意不同**，不是「未同步」。理由：登记件是**判据源**，不该被 GitHub 显示限制绑架；卡号的标识作用不依赖标题完整。
     // GitHub CLOSED；修复 `d872c09a6`（PR #1202）已入 main ⇒ 按 GitHub 订正（CTO 2026-10-08 条件 3）。⚠️ 卡面 §⑥ 记「运行时回写复测（未做）」—— done ≠ 复测已做
     // ⚠️ 待裁（CTO）：卡面 §⑤ 列 `0-1`(#975, OPEN) 为上游（「两闸皆通，第 2 批才有落点」）；登记件 dependsOn=[] ⇒ 口径级差异，未裁故**保留原值**（见 PR §保留待裁）
     status: 'done',
@@ -249,7 +256,8 @@ export const constructionItems: readonly ConstructionItem[] = [
     acceptance: [
       { run: 'npm run probe:sentinels 2>/dev/null || npx tsx scripts/control-tower/probe-sentinels.ts', expectStdoutContains: 'cashFlow' },
     ],
-    // ⚠️ 待裁（CTO，条件 2）：卡面标题被**截断**（结尾 `；或统`）⇒ 保留登记件原值
+    // 📌 CTO 2026-10-08 裁定（title）：卡面标题为 GitHub 显示限制下的**截断形态**（结尾 `；或统`），本字段为**完整命名** ——
+    //   两处**故意不同**，不是「未同步」。理由：登记件是**判据源**，不该被 GitHub 显示限制绑架；卡号的标识作用不依赖标题完整。
     // GitHub CLOSED 2026-10-05；修复本体已入 main ⇒ 按 GitHub 订正。⚠️ 卡面 §⑤ 记「唯一缺口 = 启动输出作证（ncomments:0）」
     status: 'done',
     source: '施工单.md 0-3 / 现状报告 坏点1',
@@ -285,7 +293,8 @@ export const constructionItems: readonly ConstructionItem[] = [
     acceptance: [
       { run: 'npx tsx scripts/control-tower/probe-cycle-edges.ts', expectExit: 0 },
     ],
-    // ⚠️ 待裁（CTO，条件 2）：卡面标题被**截断**（结尾 `权威`）⇒ 保留登记件原值
+    // 📌 CTO 2026-10-08 裁定（title）：卡面标题为 GitHub 显示限制下的**截断形态**（结尾 `权威`），本字段为**完整命名** ——
+    //   两处**故意不同**，不是「未同步」。理由：登记件是**判据源**，不该被 GitHub 显示限制绑架；卡号的标识作用不依赖标题完整。
     status: 'todo',
     source: '施工单.md 0-4 / 现状报告 坏点6',
   },
@@ -309,7 +318,8 @@ export const constructionItems: readonly ConstructionItem[] = [
     acceptance: [
       { run: 'npx vitest run tests/growth/goal-sentinel.test.ts', expectExit: 0 },
     ],
-    // ⚠️ 待裁（CTO，条件 2）：卡面标题被**截断**（结尾 `）——`）⇒ 保留登记件原值
+    // 📌 CTO 2026-10-08 裁定（title）：卡面标题为 GitHub 显示限制下的**截断形态**（结尾 `）——`），本字段为**完整命名** ——
+    //   两处**故意不同**，不是「未同步」。理由：登记件是**判据源**，不该被 GitHub 显示限制绑架；卡号的标识作用不依赖标题完整。
     // GitHub CLOSED；修复 `ab8450a57`（PR #1012）已入 main ⇒ 按 GitHub 订正
     status: 'done',
     source: '施工单.md 0-5 / 现状报告 坏点5',
@@ -338,7 +348,8 @@ export const constructionItems: readonly ConstructionItem[] = [
     acceptance: [
       { run: 'bash -c "npx tsx scripts/control-tower/probe-diagnosis.ts 2>&1 | grep -q \'未覆盖类型\'"', expectExit: 0 },
     ],
-    // ⚠️ 待裁（CTO，条件 2）：卡面标题被**截断**（结尾 `——不阻`）⇒ 保留登记件原值
+    // 📌 CTO 2026-10-08 裁定（title）：卡面标题为 GitHub 显示限制下的**截断形态**（结尾 `——不阻`），本字段为**完整命名** ——
+    //   两处**故意不同**，不是「未同步」。理由：登记件是**判据源**，不该被 GitHub 显示限制绑架；卡号的标识作用不依赖标题完整。
     status: 'todo',
     source: '施工单.md 0-6 / 现状报告 坏点4',
   },
@@ -408,7 +419,8 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'npx vitest run tests/growth/e2e-navigation-loop.integration.test.ts', expectExit: 0 },
       { run: 'npx vitest run tests/growth/goal-sentinel.test.ts', expectExit: 0 },
     ],
-    // ⚠️ 待裁（CTO，条件 2）：卡面标题被**截断**（结尾 `）—`）⇒ 保留登记件原值
+    // 📌 CTO 2026-10-08 裁定（title）：卡面标题为 GitHub 显示限制下的**截断形态**（结尾 `）—`），本字段为**完整命名** ——
+    //   两处**故意不同**，不是「未同步」。理由：登记件是**判据源**，不该被 GitHub 显示限制绑架；卡号的标识作用不依赖标题完整。
     status: 'todo',
     source: '施工单.md 0-8 / 现状报告 坏点7',
   },
@@ -462,7 +474,8 @@ export const constructionItems: readonly ConstructionItem[] = [
     acceptance: [
       { run: 'npx vitest run tests/security/request-context-failclosed.test.ts', expectExit: 0 },
     ],
-    // ⚠️ 待裁（CTO，条件 2）：卡面标题被**截断**（结尾 `→ 返回不`）⇒ 保留登记件原值
+    // 📌 CTO 2026-10-08 裁定（title）：卡面标题为 GitHub 显示限制下的**截断形态**（结尾 `→ 返回不`），本字段为**完整命名** ——
+    //   两处**故意不同**，不是「未同步」。理由：登记件是**判据源**，不该被 GitHub 显示限制绑架；卡号的标识作用不依赖标题完整。
     // GitHub CLOSED 2026-10-04；两处修复均已落 main ⇒ 按 GitHub 订正
     // ⚠️ 待裁（CTO）：登记件 dependsOn 含 `0-9bis`（**该项无对应卡**）；卡面 §⑤ 未提 ⇒ 未裁故**保留原值**
     status: 'done',
@@ -490,7 +503,8 @@ export const constructionItems: readonly ConstructionItem[] = [
       // 二选一：(a) 装配并走 invoke ⇒ 越权返回 POLICY_DENIED；(b) 删掉 ⇒ 两符号 0 命中
       { run: 'bash -c "npx tsx scripts/control-tower/probe-tool-policy.ts | grep -q POLICY_DENIED || git grep -c setPolicyEngine -- src/ | grep -q ^0$"', expectExit: 0 },
     ],
-    // ⚠️ 待裁（CTO，条件 2）：卡面标题被**截断**（结尾 `并让工具执`）⇒ 保留登记件原值
+    // 📌 CTO 2026-10-08 裁定（title）：卡面标题为 GitHub 显示限制下的**截断形态**（结尾 `并让工具执`），本字段为**完整命名** ——
+    //   两处**故意不同**，不是「未同步」。理由：登记件是**判据源**，不该被 GitHub 显示限制绑架；卡号的标识作用不依赖标题完整。
     status: 'todo',
     source: '施工单.md 0-11 / 现状报告 坏点9 同族',
   },
@@ -512,7 +526,8 @@ export const constructionItems: readonly ConstructionItem[] = [
     acceptance: [
       { run: 'bash -c "npx tsx scripts/control-tower/probe-skills.ts | grep -q \'## Available Skills\'"', expectExit: 0 },
     ],
-    // ⚠️ 待裁（CTO，条件 2）：卡面标题被**截断**（结尾 `或把 skills/ 迁到 Pha`）⇒ 保留登记件原值
+    // 📌 CTO 2026-10-08 裁定（title）：卡面标题为 GitHub 显示限制下的**截断形态**（结尾 `或把 skills/ 迁到 Pha`），本字段为**完整命名** ——
+    //   两处**故意不同**，不是「未同步」。理由：登记件是**判据源**，不该被 GitHub 显示限制绑架；卡号的标识作用不依赖标题完整。
     status: 'todo',
     source: '施工单.md 0-12 / 现状报告 坏点10',
   },
@@ -790,9 +805,13 @@ export const constructionItems: readonly ConstructionItem[] = [
       //   R4 依据 = archive/25 的 14 列 + `run_id` / `input_digest` / `def_version` 三个可空降级列。
       //   原登记件只列 13 字段（缺 `id` / `unit` / `source_id` / `evidence_ref`）⇒ 本处补齐到 17。
       //   🔴 本字段被门禁 INV-1 直接消费 ⇒ 改动等于改判据源（PR 正文已写明「CTO 裁定 R4」并附 17 列清单）。
-      //   ⚠️ 新增 4 列的分列归属：`id` = 主键（SQL 侧生成，无需应用层生产者）；
-      //      `unit` / `source_id` / `evidence_ref` 的 NULL 约束以 2-1a 建表实现为准
-      //      （卡面 §③ 只把 10 列标「必填」、3 列标「可空」，未对新增 4 列表态）。
+      //   ── CTO 2026-10-08 补裁（第 5 条）：NULL 约束分列，**定死如下** ──
+      //     17 列 = archive/25 的 14 列（**各自按原始 DDL 的约束**）
+      //           + R4 的【3 个可空降级列】= `run_id` / `input_digest` / `def_version`
+      //     ⇒ `nullableDegradedFields` = ['run_id','input_digest','def_version']（**不是** `unit`/`source_id`/`evidence_ref`）
+      //     `unit` / `source_id` / `evidence_ref` 属 archive/25 的**原始 14 列**，其约束**以 archive/25 的 DDL 为准**
+      //       ⇒ 不在可空降级集，列入 `notNullFields`（`id` = 主键）。
+      //     ⚠️ 本字段被门禁 INV-1 直接消费 ⇒ 分列错会污染判据，故此处按裁定定死、不再留「待实现为准」的模糊表述。
       notNullFields: [
         // R4 新增 4 列（原登记件缺）：`id`（主键）+ archive/25 的 `unit` / `source_id` / `evidence_ref`
         'id', 'org_id', 'metric_id', 'entity_id', 'value', 'unit', 'observed_at',
@@ -1216,11 +1235,15 @@ export const constructionItems: readonly ConstructionItem[] = [
     // │ - [ ] **反例（改坏即红）**：把三字段从加载器接口移除 ⇒ `V1`/`V2` 必红
     // │ - **判定人**：K3 / 独立复核（**执行方不得自判**）
     // └─ 抄录结束 ┘
-    // CTO 2026-10-08 裁定（内部自不一致 #5）：卡面 §⑤/§⑥ 称「**28 个** manifest 的 `$schema` 悬空」；
-    //   dry-run 现场实测（口径必须写明）= **27**（口径 A：`git ls-tree -r origin/main extensions/ | grep manifest.json` 共 135 个，
-    //   其中含 `"$schema": "https://synova.dev/schemas/extension-manifest-v1.json"` 者 27 个）／**29**（口径 B：全树含该 URL 的文件数）。
-    //   本件采用 **27（口径 A = `extensions/**/manifest.json`）**；卡面原文的 28 待其自身订正。
+    // 口径订正（CTO 2026-10-08 要求写明口径；**数字复核后订正回 28**）：
+    //   ‼️ 本件 dry-run 曾报「卡面 28 有误、应为 27」—— **该 27 是测量假象，卡面 28 正确**。
+    //      假象成因：把 135 个 manifest 直接串接后 `grep -c`，某文件缺行尾换行 ⇒ 两处命中并成 1 行 ⇒ 少算 1。
+    //   权威口径 = **口径 A（`extensions/**/manifest.json` 的【文件数】）**：
+    //     `git grep -l '"$schema": *"https://synova.dev/schemas/extension-manifest-v1.json"' origin/main -- 'extensions/**/manifest.json' | wc -l` ⇒ **28**
+    //     （总 manifest = 135 个；每个命中文件恰好 1 处 ⇒ 行数与文件数同值，但**只有文件数口径才抗串接假象**）
+    //   另一口径 = 口径 B（全树含该 URL 的文件数）= **29**（比口径 A 多 1 个非 manifest 文件）。本件采用 **口径 A = 28**，与卡面一致。
     //   ✓ 同卡「manifest = 135」实测 135 —— 已核。
+    //   📌 卡面 #1072 已同步写入本口径（数字保持 28，未改）。
     acceptance: [
       { run: 'npx tsx scripts/control-tower/probe-eco-fields.ts', expectExit: 0 },
     ],
