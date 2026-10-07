@@ -3,7 +3,7 @@
 export PYTHONIOENCODING=utf-8
 export LC_ALL=C.UTF-8 2>/dev/null || true
 # ═══════════════════════════════════════════════════════════════════════════════
-# Loop Engineering V4.7.6+D334 — pre-push (同步检查 + secrets + golden-case + vitest 改基 + 并行协调)
+# Loop Engineering v2.0-D-A — pre-push (D334 同步检查 + secrets + 快检；golden/vitest 归 CI)
 #
 # 设计原则:
 #   - pre-commit 已跑 12 组物理阻断 + 格式检查 → 不重复
@@ -239,7 +239,7 @@ fi
 
 echo ""
 echo "═══════════════════════════════════════════════════════════"
-echo "  Loop Engineering V4.5.1 — pre-push (secrets + golden-case + vitest)"
+echo "  Loop Engineering v2.0-D-A — pre-push (D334 同步 + secrets + 快检)"
 echo "═══════════════════════════════════════════════════════════"
 echo ""
 
@@ -266,75 +266,17 @@ bash "$SCRIPT_DIR/check-secrets.sh" || {
   exit 1
 }
 
-# ═══ 门禁 2: 黄金数据集 F1 门禁 (D300, A线 C-G1) ═══
-# 权威文档09 §5.2: 冻结静态快照跑完整诊断 → F1-Score 匹配 (关键边命中率+
-# 根因节点匹配率+告警级别一致率 三者均=100% 门禁通过)。D51 交付评分器、
-# D100 交付质量检查但从未接线 → 防无声退化失效 (C-G1)。pre-commit <5s
-# 约束不满足 tsx 诊断管线 → 挂 pre-push (可容忍 10-60s)。
-echo ""
-echo -e "${CYAN}── golden-case F1 门禁 (D300) ─────────────────────────${RESET}"
-if ! npx tsx scripts/ci/golden-case-checker.ts; then
-  echo ""
-  echo -e "  ${RED}❌ 黄金案例 F1 门禁失败 — 诊断质量退化解冻, 见上方 diff${RESET}"
-  echo "  修复 golden-case fixture 或诊断管线后重试。"
-  exit 1
-fi
-# D474: 黄金数据集完整性（checksum 校验 — 数据没被改坏；代码回归由 golden-case-checker 阶段 5 真跑 compute 兜底）
-if ! bash "$SCRIPT_DIR/workflow/check-golden-regression.sh" --verify-only; then
-  echo ""
-  echo -e "  ${RED}❌ 黄金数据集 checksum 不匹配 — wani-baby-v1.json 可能被修改, 推送已拒绝${RESET}"
-  echo "  冻结快照不可改。若确需更新, 走黄金数据集更新流程（keyless 录制 + 人工确认冻结）。"
-  exit 1
-fi
-if ! bash "$SCRIPT_DIR/ci/diagnosis-quality-check.sh"; then
-  echo ""
-  echo -e "  ${RED}❌ 诊断结构质量检查失败 — 推送已拒绝${RESET}"
-  echo "  修复 expert PROMPT.md 结构或检查脚本后重试。"
-  exit 1
-fi
-
-# ═══ 门禁 3: vitest 改基增量回归 (D311 M1 — 只测本次推送提交; D334 动态改基) ═══
-# D300 事故: 并行 session 的工作区中间态让 vitest --changed 退化成全量且失败。
-# D311 改基: 用远端引用..HEAD 只测本次推送的提交，不测工作区杂散变更。
-# D334 修复: BASE_REF 从硬编码 origin/feat/prompt-architecture 改为
-#   $PUSH_REMOTE/$PUSH_BRANCH——PR 工作流下每台机器分支名不同, 硬编码失效。
-echo ""
-echo -e "${CYAN}── vitest 改基增量回归 (D311+D334, $PUSH_REMOTE/$PUSH_BRANCH..HEAD) ──${RESET}"
-BASE_REF=""
-if [[ -n "$PUSH_REMOTE" && -n "$PUSH_BRANCH" ]]; then
-  BASE_REF="$PUSH_REMOTE/$PUSH_BRANCH"
-fi
-if [[ -z "$BASE_REF" ]] || ! git rev-parse --verify "$BASE_REF" > /dev/null 2>&1; then
-  # 远程引用缺失 → 降级提示 + 尝试 fetch + HEAD^ 兜底（fail-open，不静默）
-  echo -e "  ${YELLOW}⚠️  远程分支引用缺失 (${BASE_REF:-<none>}) — 尝试 git fetch 或 HEAD^ 兜底${RESET}"
-  if [[ -n "$PUSH_REMOTE" && -n "$PUSH_BRANCH" ]]; then
-    git fetch "$PUSH_REMOTE" "$PUSH_BRANCH" 2>/dev/null || true
-  else
-    git fetch origin 2>/dev/null || true
-  fi
-  BASE_REF="HEAD^"
-fi
-UNPUSHED=$(git rev-list --count "$BASE_REF..HEAD" 2>/dev/null || echo "0")
-if [[ "$UNPUSHED" -eq 0 || "$UNPUSHED" = "0" ]]; then
-  echo -e "  ${GREEN}✅ 无未推送提交 — 跳过 vitest 增量 (D311 改基)${RESET}"
-elif ! git rev-parse --verify "$BASE_REF..HEAD" > /dev/null 2>&1; then
-  echo -e "  ${YELLOW}⚠️  HEAD 为根提交 — 跳过 vitest 增量 (D311 改基)${RESET}"
-else
-  CHANGED_TS=$(git diff --name-only "$BASE_REF"..HEAD 2>/dev/null | grep -E '\.(ts|tsx|js|jsx)$' || true)
-  if [[ -z "$CHANGED_TS" ]]; then
-    echo -e "  ${GREEN}✅ 本次推送无 TS 变更 ($UNPUSHED 提交) — 跳过 vitest 增量 (D311 改基)${RESET}"
-  else
-    if ! npx vitest run --changed "$BASE_REF..HEAD" 2>&1 | tail -3; then
-      echo ""
-      echo -e "  ${YELLOW}⚠️  vitest 改基增量有失败 — 请检查后重试推送${RESET}"
-      npx vitest run --changed "$BASE_REF..HEAD" --reporter=verbose 2>&1 | grep "FAIL " | head -5
-      echo ""
-      echo -e "  ${RED}❌ vitest 增量回归未通过 — 推送已拒绝 (D311 改基)${RESET}"
-      echo "  修复测试失败后重试, 或在紧急情况下使用 --no-verify 绕过。"
-      exit 1
-    fi
-  fi
-fi
+# ═══ D-A（v2.0 方案三，创始人 2026-10-07 批准）: 门禁 2/3 退役 ═══
+# 退役对象: 门禁 2（golden-case F1 + checksum + 诊断结构质量，实测 60s+）
+#          门禁 3（vitest 改基增量回归，实测可变 30-120s）
+# 依据: 两者在 CI 均已权威执行——
+#   · golden 三件: ci.yml `golden-case` job（9 必需 context 之一，合并级硬拦）
+#   · vitest:      ci.yml `Vitest (1/2)(2/2)`（必需 context）
+#   本地重复跑 = 每次 push 多 1-3 分钟 + npx 环境依赖（今晚实测 npx 缺失造成的假红一次）。
+#   保留: 门禁 0（多机同步/防覆盖 D334）+ 1（secrets）+ 4/5/6/tag/7（全部 <5s 或仅告警）。
+#   门禁 7（bypass 账本对账）**特意保留**——它今晚真实拦下一次 `--no-verify` 污染，
+#   且为纯 grep、零耗时（偏离"只留 D334+secrets"的字面口径，理由与代价已在此留痕）。
+# 回滚: 从 git 历史取回本块即恢复（判据脚本零改动）。
 
 # ═══ 门禁 4: 工作区中间态保护 (D311 M1 — 警告不阻断) ═══
 # push 只推已提交内容（改基已消除污染），但未提交的他人 src/ 改动需显式提示。
