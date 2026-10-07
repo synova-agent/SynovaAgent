@@ -24,7 +24,7 @@
 #       bash scripts/control-tower/sealed-tests.sh --quarantine | wc -l   # → QUARANTINE-TOTAL 实况
 #       bash scripts/control-tower/sealed-tests.sh --list       | wc -l   # → ci.yml 两 job 实际执行数
 #     ⚠️ 行尾不得带 ` | owner=…` 之类后缀——本段是**路径清单**，解析器整行取路径。
-# FACE-TOTAL=141   # **下界语义**：scan >= 此值 = 通过（新增测试不红）；scan < 此值 = 净删除 ⇒ 红。
+# FACE-TOTAL=151   # **下界语义**：scan >= 此值 = 通过（新增测试不红）；scan < 此值 = 净删除 ⇒ 红。
 #                   # 代价（如实登记）: **≤ 当前余量 (scan − FACE-TOTAL) 的净删除不可检测** —— 「不做逐条登记」的必然代价。
 #                   # 禁止自动重算本值（那会让棘轮彻底失效）；下调须本文件显式改行（= 留痕）。
 # QUARANTINE-TOTAL=78

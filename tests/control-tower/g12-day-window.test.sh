@@ -56,7 +56,7 @@ HIT_OLD=$(echo "$LIST" | grep -c "${D3}-D103-old.md" || true)
 HIT_FAR=$(echo "$LIST" | grep -c "${D4}-D104-far.md" || true)
 HIT_TXT=$(echo "$LIST" | grep -c "README.txt" || true)
 
-[ "$HIT_D1" -eq 1 ] && ok "昨日 brief（${D1}）被认领" || bad "昨日未认领（HIT=$HIT_D1）"
+[ "$HIT_D1" -eq 1 ] && ok "昨日 brief（${D1}）被认领" || bad "昨日未认领（HIT=${HIT_D1}）"
 [ "$HIT_D0" -eq 1 ] && ok "今日 brief（${D0}）被认领" || bad "今日未认领"
 [ "$HIT_D2" -eq 1 ] && ok "明日 brief（${D2}）被认领" || bad "明日未认领"
 [ "$HIT_OLD" -eq 0 ] && ok "前天（${D3}）窗口外不认领" || bad "前天误认领"
