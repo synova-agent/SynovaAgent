@@ -1,214 +1,35 @@
-# ownership.yaml — Synova 模块所有权（机器可读唯一源）· D733
+# ownership.yaml — Synova 模块所有权（机器可读唯一源）
 #
-# 来源: docs/synova/coordination/TASK-ROUTING.md v4 §一 模块所有权表（L27-L40）
-#       + §串行点（L58-L65）+ §PR 审查路由（L67-L71）
+# 🔴 2026-10-07 · 创始人授权清理「分域」
+#   原文件按 mac / win / k3 三域划分（42 条 glob），消费于：
+#     · check-ownership.py 的 --owner 断言（越域 exit 1）
+#     · check-pr-budget.sh 的单域判定（**变更跨 >1 域 ⇒ exit 1**）
+#   创始人 2026-10-07 明令：「不分域。谁有空，谁能做就谁做。」并授权本批清掉数据源。
+#   ⇒ 本文件改为**单域**：全部路径归同一个 owner ⇒ 「跨域」在结构上不可能发生。
+#   ⇒ 保留本文件的原因：CODEOWNERS 仍需由它生成（`.github/CODEOWNERS` 是生成产物）。
+#
 # 消费者: scripts/control-tower/check-ownership.py
-#   · 派单/PR 域校验:  python3 scripts/control-tower/check-ownership.py <文件...> --owner mac
+#   · 归属查询:  python3 scripts/control-tower/check-ownership.py <文件...>
 #   · 生成 CODEOWNERS: python3 scripts/control-tower/check-ownership.py --emit-codeowners
-# 语义: 规则**按顺序求值，最后匹配者胜出** —— 与 .github/CODEOWNERS 的官方语义一致，
-#       因此宽规则（含兜底）写在前面，例外写在后面。改完本文件必须重跑 --emit-codeowners，
-#       drift 由 tests/control-tower/ownership.test.sh 逐字节断言。
-# 注意: 无规则匹配（例如有人删掉 default 规则）→ check-ownership.py 明示「无归属」但不阻断。
-#       这是刻意设计（保证「删默认规则 → 变绿」这一反向验证可做）；结构性兜底由测试断言
-#       「default 规则必须恰有一条」来守。
-version: 1
+# 语义: 规则**按顺序求值，最后匹配者胜出** —— 与 .github/CODEOWNERS 官方语义一致。
+#       改完本文件必须重跑 --emit-codeowners（drift 由测试逐字节断言）。
+#
+# ⚠️ 已废止（仅留痕，勿再引用）:
+#   · 三域 owner 键 `mac` / `win` / `k3`
+#   · 每条规则的 `owner:` 字段（单域下恒同值 ⇒ 无信息量）
+#   · `territory:` 字段（原用于「Win 域必须显式列出」，域概念废止后无意义）
+#   ⇒ 出处：`docs/synova/coordination/TASK-ROUTING.md` v4 §一（已由本批加废止头注）
 
 # owner 语义（人读；机器只用 key）
 owners:
-  mac: "Mac DSH — 控制塔 / 哨兵线 / 桌面端 / 产品线 / 协调文档"
-  win: "Win Claude Code — 诊断体系 L1-L5 / 本体 / 扩展（Codex 出 dev doc）"
-  k3: "Kimi K3 — 审计线（其他角色禁碰，红线）"
+  maintainer: "创始人 — 全部路径的最终把关人（分域已废止，不再按角色切分）"
 
-# CODEOWNERS 落地账号（三团队建好后只改这里 + 重跑 --emit-codeowners）
+# CODEOWNERS 落地账号
 github:
-  mac: "@tangbaobao520"
-  win: "@tangbaobao520"
-  k3: "@tangbaobao520"
+  maintainer: "@tangbaobao520"
 
 rules:
-  # ═══ Win Claude Code 领地（宽 → 窄：最后匹配者胜出，故兜底在最前）═══
-  # 兜底即 Win 域本体: TASK-ROUTING.md L38「src/（除 sentinel/cron/mcp 外）L1-L5 +
-  # extensions/ + packages/ + synova_worker/」= Win，L39 计划库 = Codex(Win)。
-  # src/** 由本兜底给出归属，**故不另设 src/** 规则**：否则删掉兜底后 src/ 仍被
-  # src/** 命中，派单 §一 的反向验证（删默认规则 → 两条验收变绿）无法成立。
-  # 显式列出: Win 的非 src 领地逐条列在下方（extensions / packages / synova_worker / docs/plans）。
+  # ═══ 单域兜底（Unique rule：全路径同 owner ⇒ 跨域不可能）═══
   - glob: "**"
-    owner: "win"
+    owner: "maintainer"
     default: true
-    territory: ["src/**", "extensions/**", "packages/**", "synova_worker/**", "docs/plans/**"]
-    source: "TASK-ROUTING.md L38/L39（Win 域兜底: src/ 除下列 Mac 例外 + 未列明路径）"
-
-  - glob: "extensions/**"
-    owner: "win"
-    source: "TASK-ROUTING.md L38"
-  - glob: "packages/**"
-    owner: "win"
-    source: "TASK-ROUTING.md L38"
-  - glob: "synova_worker/**"
-    owner: "win"
-    source: "TASK-ROUTING.md L38"
-  - glob: "docs/plans/**"
-    owner: "win"
-    source: "TASK-ROUTING.md L39 计划库（Claude 线 dev doc）= Codex(Win)；路径映射见 MULTI-AGENT-COLLAB.md L62"
-
-  # ═══ Mac DSH 例外（必须排在 src/** 之后才生效）═══
-  - glob: "src/sentinel/**"
-    owner: "mac"
-    source: "TASK-ROUTING.md L31 哨兵体系核心"
-  - glob: "tests/sentinel/**"
-    owner: mac
-    source: "TASK-ROUTING.md §31（哨兵体系核心=Mac，其测试随域）"
-  - glob: "src/cron/**"
-    owner: "mac"
-    source: "TASK-ROUTING.md L31"
-  - glob: "src/mcp/**"
-    owner: "mac"
-    source: "TASK-ROUTING.md L35 MCP 企业接入"
-  - glob: "src/agent/sentinel-service*"
-    owner: "mac"
-    source: "TASK-ROUTING.md L31"
-  - glob: "src/agent/sentinel-health-service.ts"
-    owner: "mac"
-    source: "派生: TASK-ROUTING.md L31 行内系统边界（哨兵服务体系）—— 路由表未逐文件列名，待 CTO 确认"
-  - glob: "scripts/control-tower/**"
-    owner: "mac"
-    source: "TASK-ROUTING.md L37 控制塔持续维护"
-  - glob: "scripts/workflow/**"
-    owner: "mac"
-    source: "TASK-ROUTING.md L37 + L63 门禁脚本 DSH 专属"
-  - glob: "scripts/hooks/**"
-    owner: "mac"
-    source: "TASK-ROUTING.md L63 门禁脚本 DSH 专属"
-  - glob: "scripts/doc-system/**"
-    owner: "mac"
-    source: "派生: TASK-ROUTING.md L37+L63——文档真相防线（check-doc-truth/doc-registry-gate，DSH 2026-08 建）与门禁同族；此前落 ** 兜底误判 win（D782 实测）"
-  - glob: "tests/doc-system/**"
-    owner: "mac"
-    source: "派生: 同 scripts/doc-system/**（门禁的测试随门禁归属，同 tests/control-tower 先例）；D782 PR-2/PR-4 CI 实测落兜底误判 win"
-  - glob: "scripts/pre-commit-check.sh"
-    owner: "mac"
-    source: "TASK-ROUTING.md L63 门禁脚本 DSH 专属"
-  - glob: "scripts/pre-push-check.sh"
-    owner: "mac"
-    source: "TASK-ROUTING.md L63 门禁脚本 DSH 专属"
-  - glob: "scripts/install-hooks.sh"
-    owner: "mac"
-    source: "TASK-ROUTING.md L63 门禁脚本 DSH 专属"
-  - glob: "scripts/backup/**"
-    owner: "mac"
-    source: "TASK-ROUTING.md L37"
-  - glob: "scripts/product-lines/**"
-    owner: "mac"
-    source: "TASK-ROUTING.md L32 产品进度线（Codex 已交还）"
-  - glob: "scripts/golden-scenarios/**"
-    owner: "mac"
-    source: "TASK-ROUTING.md L33"
-  - glob: "tests/control-tower/**"
-    owner: "mac"
-    source: "派生: TASK-ROUTING.md L37/L63（门禁脚本的测试随门禁脚本归属）"
-  - glob: "docs/synova/coordination/**"
-    owner: "mac"
-    source: "TASK-ROUTING.md L37 + L63 coordination 文档 DSH 专属"
-  - glob: "docs/synova/product-lines/**"
-    owner: "mac"
-    source: "TASK-ROUTING.md L32"
-  # D806 增补（2026-09-18）: 26 线完成度看板工具链的 project/ 三路径。
-  #   D793/D795 新建 scripts/project + tests/project + docs/synova/project 时漏补本表，
-  #   落 `**` 兜底被判 win —— 与 DIVISION-CHARTER-v4 §四「26 线产品完成度 → Mac DSH
-  #   （scripts/product-lines/ + 进度页）」矛盾，且兄弟路径 scripts/product-lines/** 与
-  #   docs/synova/product-lines/** 均已明列 mac。同工具链同域，补齐缺口（不改任何既有归属）。
-  - glob: "scripts/project/**"
-    owner: "mac"
-    source: "DIVISION-CHARTER-v4 §四 26 线产品完成度=Mac DSH（D795 派生器 gen-project-board.py）"
-  - glob: "tests/project/**"
-    owner: "mac"
-    source: "派生: 同 scripts/project/**（测试随被测工具归属，同 tests/control-tower/** 惯例）"
-  - glob: "docs/synova/project/**"
-    owner: "mac"
-    source: "DIVISION-CHARTER-v4 §四（26 线 V1 验收标准 + ledger.json + 可视版 = D793/D795 产物）"
-  # D914 增补（2026-09-22）: CTO 治理文档三目录漏登记 → 落 `**` 兜底被判 win。
-  #   实测（`check-ownership.py`）: docs/synova/dispatch/** = win、docs/authority/** = win、
-  #   docs/synova/research/** = win —— 而兄弟路径 docs/synova/coordination/**、
-  #   docs/synova/product-lines/** 均已明列 mac。同批 PR 混装即触发 D733「变更跨域」，
-  #   已实际卡住 PR #703/#705/#706。三类文档全部是 CTO/研究线产出，归 mac（不改任何既有归属）。
-  - glob: "docs/synova/dispatch/**"
-    owner: "mac"
-    source: "CTO 派单件规范路径（2026-09-21 起）；同 docs/synova/coordination/** 惯例"
-  - glob: "docs/authority/**"
-    owner: "mac"
-    source: "CTO 权威层（DOCS-REGISTRY.yaml + 创始人裁定/总纲）；TASK-ROUTING.md L37"
-  - glob: "docs/synova/research/**"
-    owner: "mac"
-    source: "研究院交办件入库路径（D849/D912）；研究线=Mac DSH"
-  # D935 增补（2026-09-24）: DSH 预设与技能目录 docs/synova/presets/** 漏登记 → 落 `**` 兜底
-  #   判 win，与同写集的 mac 文件混装即被 D734 判「变更跨域」硬拦（D931 实测，卡住 PR #727）。
-  #   权威源 TASK-ROUTING.md L37「… + coordination + DSH 预设与技能 → Mac DSH」；兄弟路径
-  #   .claude/task-briefs/**、.claude/skills/**、.claude/settings.json、.dsh/** 均同源同归属
-  #   （见上方 Mac 例外区）。不改任何既有归属。
-  - glob: "docs/synova/presets/**"
-    owner: "mac"
-    source: "TASK-ROUTING.md L37 DSH 预设与技能"
-  - glob: ".github/workflows/**"
-    owner: "mac"
-    source: "TASK-ROUTING.md L34 场景回归 CI、产品进度 CI"
-  - glob: ".github/CODEOWNERS"
-    owner: "mac"
-    source: "TASK-ROUTING.md L37/L63（本表自身的机器强制层，与控制塔同归属）"
-  - glob: "VERSION.md"
-    owner: "mac"
-    source: "TASK-ROUTING.md L63 VERSION.md DSH 专属"
-  - glob: ".claude/task-briefs/**"
-    owner: "mac"
-    source: "TASK-ROUTING.md L37 DSH 预设与技能"
-  - glob: ".claude/skills/**"
-    owner: "mac"
-    source: "TASK-ROUTING.md L37 DSH 预设与技能"
-  - glob: ".claude/settings.json"
-    owner: "mac"
-    source: "TASK-ROUTING.md L37 DSH 预设与技能"
-  - glob: ".dsh/**"
-    owner: "mac"
-    source: "TASK-ROUTING.md L37 DSH 预设与技能"
-  - glob: "electron/**"
-    owner: "mac"
-    source: "TASK-ROUTING.md L36 Electron 一体化"
-  - glob: "electron-renderer/**"
-    owner: "mac"
-    source: "TASK-ROUTING.md L36"
-
-  # ═══ Kimi K3 审计红线（L40；其他角色禁碰）═══
-  - glob: "scripts/audit/**"
-    owner: "k3"
-    source: "TASK-ROUTING.md L40（红线：其他角色禁碰）"
-  - glob: "docs/synova/audit-reports/**"
-    owner: "k3"
-    source: "TASK-ROUTING.md L49 两轨产物都进 docs/synova/audit-reports/"
-
-# ═══ 域判定豁免（D734 单域判定用；不影响 --owner 断言，也不影响 CODEOWNERS 落 owner）═══
-# 这些路径**每条线都会写自己的那一份**，不构成「这条 PR 属于哪条线」的信号。
-# 实测依据（D734 开工前抽样 origin 上 3 个真实分支）: .claude/bypass.log 出现在
-# **每一个** 分支（post-commit hook 自动登记，D521）；Win 线分支同样带
-# .claude/task-briefs/<自己的 brief>.md（解析为 mac）→ 不豁免则每个 Win PR 都被判跨域。
-# 兜底不适用: 这些路径在 rules 里本就有 owner（供 CODEOWNERS 用），只是不计入单域判定。
-# D758 增补（2026-09-15 实测假阳性）: docs/synova/product-lines/evidence/** —— 验收证据
-# **跟着干活的那条线走**，目录名自带域（D716-win-* / D716-mac-*）。它在 rules 里归 mac，
-# 只因「产品线工具链是 Mac 的」（TASK-ROUTING L32），而证据不是工具链。
-# 实证: PR #538（Win 的 1-5 双引导）变更 9 文件，其中唯一被判 mac 的就是它自己的验收证据
-# docs/synova/product-lines/evidence/D716-win-20260913/1-5-dual-guide-win-evidence.txt
-# → 被判「变更跨域」卡死；#511/#534 同族。豁免后真跨域（Win 代码 + Mac 工具链）仍拦住。
-# D774: .gitignore 各线共写（D519 mac / D581 win / D665 / D718 历史多域提交）——同 D758 证据目录豁免同型，防单域判定把每个碰它的 PR 误判跨域
-# D782 增补（2026-09-15 实测假阳性）: 根目录导航文档 AGENTS/CLAUDE/LOOP + knowledge/shared/README ——
-#   它们是 check-doc-truth.sh 的被检对象（导航层，K3 审计 §7.1 D1 口径），任何线的代码/口径
-#   变化都可能要求它们同步（本次 registry v3.0 专家换代 7→6，mac 线防线启用要求文档对齐）。
-#   它们此前落 ** 兜底被判 win，但导航文档的同步需求跟着触发方走，不构成「这条 PR 属于
-#   哪条线」的信号。豁免后真跨域（win 代码 + mac 工具链）仍拦住。
-# D782 增补二: 防线产物（DRIFT-LEDGER.md / system-registry.json）——doc-system 工具链（mac）
-#   的运行产物，路径恰在 docs/authority/（兜底判 win）——同 D758 证据目录逻辑: 产物跟工具链走。
-# D970 增补（2026-09-25）: .gitattributes 各线共写——实测 `git log --format='%an' -- .gitattributes`
-#   为 2 synova-mac / 1 tangbaobao520 / 1 dsh-cto / 1 ClawOrg（多主体、跨线：D457 union 声明[控制塔]、
-#   D520 CRLF 双平台、D533 audit 豁免、D970 账本出库）。与 .gitignore 的 D774 先例**同型**：
-#   它是仓库级公共配置，谁触发谁改，不构成「这条 PR 属于哪条线」的信号；不豁免则每支碰它的 PR
-#   都被判「变更跨域」卡死（D970 实测：`.gitattributes` 落 win 兜底 → 与 13 件 mac 冲突）。
-#   豁免后真跨域（win 代码 + mac 工具链）仍拦住。
-domain_neutral: [".claude/bypass.log", ".claude/gate-hits.log", ".claude/task-briefs/**", "task-state/**", "memory/notes/**", ".codex/**", "docs/synova/product-lines/evidence/**", ".gitignore", ".gitattributes", "AGENTS.md", "CLAUDE.md", "LOOP.md", "knowledge/shared/README.md", "docs/authority/DRIFT-LEDGER.md", "docs/authority/system-registry.json"]
-
