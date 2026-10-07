@@ -65,7 +65,7 @@ echo "════════════════════════�
 echo ""
 
 echo "── 1. 正常分配 → D500 + 建壳 ──"
-OUT=$(SYNO_TASK_STATE_DIR="$TMP_DIR/task-state" SYNO_BRIEF_DIR="$TMP_DIR/task-briefs" SYNO_ALLOC_NO_REMOTE=1 bash "$TOOL" "测试任务A" 2>&1)
+OUT=$(SYNO_TASK_STATE_DIR="$TMP_DIR/task-state" SYNO_BRIEF_DIR="$TMP_DIR/task-briefs" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_ISSUES=1 bash "$TOOL" "测试任务A" 2>&1)
 assert_contains "$OUT" "D500" "分配 D500 (max=499 → +1=500 起步)"
 assert_contains "$OUT" "已登记" "登记提示"
 if [ -f "$TMP_DIR/task-state/D500.json" ]; then pass "空壳已建"; else fail "空壳未建"; fi
@@ -73,12 +73,12 @@ if grep -q '"status": "claimed"' "$TMP_DIR/task-state/D500.json"; then pass "sta
 echo ""
 
 echo "── 2. 连续分配 → D501 (单调递增) ──"
-OUT=$(SYNO_TASK_STATE_DIR="$TMP_DIR/task-state" SYNO_BRIEF_DIR="$TMP_DIR/task-briefs" SYNO_ALLOC_NO_REMOTE=1 bash "$TOOL" "测试任务B" 2>&1)
+OUT=$(SYNO_TASK_STATE_DIR="$TMP_DIR/task-state" SYNO_BRIEF_DIR="$TMP_DIR/task-briefs" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_ISSUES=1 bash "$TOOL" "测试任务B" 2>&1)
 assert_contains "$OUT" "D501" "第二次分配 D501"
 echo ""
 
 echo "── 3. dry-run → 只预览不建壳 ──"
-OUT=$(SYNO_TASK_STATE_DIR="$TMP_DIR/task-state" SYNO_BRIEF_DIR="$TMP_DIR/task-briefs" SYNO_ALLOC_NO_REMOTE=1 bash "$TOOL" "预览任务" --dry-run 2>&1)
+OUT=$(SYNO_TASK_STATE_DIR="$TMP_DIR/task-state" SYNO_BRIEF_DIR="$TMP_DIR/task-briefs" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_ISSUES=1 bash "$TOOL" "预览任务" --dry-run 2>&1)
 assert_contains "$OUT" "D502" "dry-run 预览 D502"
 assert_contains "$OUT" "dry-run" "dry-run 标注"
 if [ ! -f "$TMP_DIR/task-state/D502.json" ]; then pass "dry-run 未建壳"; else fail "dry-run 竟建壳了"; fi
@@ -86,7 +86,7 @@ echo ""
 
 echo "── 4. 空任务名 → exit 1 + 用法 ──"
 EXIT=0
-OUT=$(SYNO_TASK_STATE_DIR="$TMP_DIR/task-state" SYNO_BRIEF_DIR="$TMP_DIR/task-briefs" SYNO_ALLOC_NO_REMOTE=1 bash "$TOOL" 2>&1) || EXIT=$?
+OUT=$(SYNO_TASK_STATE_DIR="$TMP_DIR/task-state" SYNO_BRIEF_DIR="$TMP_DIR/task-briefs" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_ISSUES=1 bash "$TOOL" 2>&1) || EXIT=$?
 assert_exit 1 "$EXIT" "空名拒绝"
 assert_contains "$OUT" "用法" "用法提示"
 echo ""
@@ -96,7 +96,7 @@ echo "── 5. 撞车防护逻辑存在（并发竞态防御；单进程不可�
 # 单测验证防护代码存在 + 正常流程不误触发。
 if grep -q '已存在\|STATE_FILE' "$TOOL"; then pass "防护逻辑存在 (建壳前检查)"; else fail "防护逻辑缺失"; fi
 EXIT=0
-OUT=$(SYNO_TASK_STATE_DIR="$TMP_DIR/task-state" SYNO_BRIEF_DIR="$TMP_DIR/task-briefs" SYNO_ALLOC_NO_REMOTE=1 bash "$TOOL" "正常任务" 2>&1) || EXIT=$?
+OUT=$(SYNO_TASK_STATE_DIR="$TMP_DIR/task-state" SYNO_BRIEF_DIR="$TMP_DIR/task-briefs" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_ISSUES=1 bash "$TOOL" "正常任务" 2>&1) || EXIT=$?
 assert_exit 0 "$EXIT" "正常流程不误触发 (exit 0)"
 echo ""
 
@@ -114,7 +114,7 @@ printf '{"task_id":"D600","status":"claimed"}\n' > "$F6/w/task-state/D600.json"
 git -C "$F6/w" update-ref refs/remotes/origin/main HEAD
 rm -f "$F6/w/task-state/D600.json"   # 本地抹掉 → 只剩 origin/main 占用 600
 OUT=$(SYNO_TASK_STATE_DIR="$F6/w/task-state" SYNO_BRIEF_DIR="$F6/briefs" \
-      SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_NO_BRANCH=1 bash "$TOOL" "空目录测试" 2>&1)
+      SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_NO_BRANCH=1 SYNO_ALLOC_NO_ISSUES=1 bash "$TOOL" "空目录测试" 2>&1)
 GOT=$(echo "$OUT" | grep -oE 'D[0-9]+' | head -1 | sed 's/D//')
 if [ "$GOT" = "601" ]; then
   pass "origin/main 合并: 本地空 + 夹具 origin/main 占 D600 → 发 D601（不漏号，经 TS_TOP 归属）"
@@ -131,7 +131,7 @@ echo '{"task_id":"D499","status":"claimed"}' > "$CT63_DIR/task-state/D499.json"
 cd "$CT63_DIR" && git init -q && git add -A && git -c user.name=t -c user.email=t@t commit -q -m init
 git update-ref refs/remotes/origin/feat/d605-test HEAD
 cd "$REPO_DIR"
-OUT=$(SYNO_TASK_STATE_DIR="$CT63_DIR/task-state" SYNO_BRIEF_DIR="$CT63_DIR/briefs" SYNO_ALLOC_NO_REMOTE=1 bash "$TOOL" "CT63" 2>&1)
+OUT=$(SYNO_TASK_STATE_DIR="$CT63_DIR/task-state" SYNO_BRIEF_DIR="$CT63_DIR/briefs" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_ISSUES=1 bash "$TOOL" "CT63" 2>&1)
 GOT=$(echo "$OUT" | grep -oE 'D[0-9]+' | head -1 | sed 's/D//')
 if [ -n "$GOT" ] && [ "$GOT" -gt 605 ]; then pass "CT-63: 分支 d605 → 发 D$GOT > 605"; else fail "CT-63: 发 D$GOT 应 > 605"; fi
 rm -rf "$CT63_DIR"
@@ -145,7 +145,7 @@ echo '{"task_id":"D499","status":"claimed"}' > "$CT63B_DIR/task-state/D499.json"
 cd "$CT63B_DIR" && git init -q && git add -A && git -c user.name=t -c user.email=t@t commit -q -m init
 git update-ref refs/remotes/origin/feat/d605-test HEAD
 cd "$REPO_DIR"
-OUT=$(SYNO_TASK_STATE_DIR="$CT63B_DIR/task-state" SYNO_BRIEF_DIR="$CT63B_DIR/briefs" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_BRANCH=1 bash "$TOOL" "CT63B" 2>&1)
+OUT=$(SYNO_TASK_STATE_DIR="$CT63B_DIR/task-state" SYNO_BRIEF_DIR="$CT63B_DIR/briefs" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_BRANCH=1 SYNO_ALLOC_NO_ISSUES=1 bash "$TOOL" "CT63B" 2>&1)
 GOT=$(echo "$OUT" | grep -oE 'D[0-9]+' | head -1 | sed 's/D//')
 if [ -n "$GOT" ] && [ "$GOT" -eq 500 ]; then pass "CT-63 NO_BRANCH: 发 D$GOT = 500"; else fail "CT-63 NO_BRANCH: 发 D$GOT 应 = 500"; fi
 rm -rf "$CT63B_DIR"
@@ -169,7 +169,7 @@ D938_RUN() {  # $1=task-state 目录 $2=brief 目录 $3..=透传参数
   local _ts="$1" _br="$2"; shift 2
   SYNO_TASK_STATE_DIR="$_ts" SYNO_BRIEF_DIR="$_br" \
     SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_NO_BRANCH=1 \
-    bash "$TOOL" "$@"
+    SYNO_ALLOC_NO_ISSUES=1 bash "$TOOL" "$@"
 }
 D938_SANDBOX() {  # $1=目录 → 建 ts + 预置 D499
   mkdir -p "$1/ts"
@@ -308,7 +308,7 @@ assert_exit 0 "$RC" "9.6 dry-run 合法提前退出 rc"
 assert_contains "$OUT" "dry-run" "9.6 dry-run 标注"
 [ ! -s "$D938_DIR/dry.err" ] && pass "9.6 dry-run stderr 空" || fail "9.6 dry-run stderr 非空"
 RC=0; OUT=$(SYNO_TASK_STATE_DIR="$D938_DIR/legal/ts" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_WORKTREE=1 \
-  SYNO_ALLOC_NO_BRANCH=1 bash "$TOOL" "守卫测试" 2>"$D938_DIR/guard.err") || RC=$?
+  SYNO_ALLOC_NO_BRANCH=1 SYNO_ALLOC_NO_ISSUES=1 bash "$TOOL" "守卫测试" 2>"$D938_DIR/guard.err") || RC=$?
 assert_exit 0 "$RC" "9.7 D718 守卫合法提前退出 rc（防哨兵误伤）"
 assert_contains "$(cat "$D938_DIR/guard.err")" "跳过 brief 骨架生成" "9.7 守卫仍按降级路径告警"
 echo ""
@@ -342,7 +342,7 @@ if [ -n "$PROBE_PY" ] && ( cd "$PROBE_DIR" && "$PROBE_PY" -c "import os;os.path.
 echo "  平台探针: python(${PROBE_PY:-none}) 相对路径 stat → ${PROBE_REL_OK}（1=可执行陈旧分支）"
 RC=0; OUT=$( cd "$PROBE_DIR" && SYNO_LOCK_DIR="lock" SYNO_TASK_STATE_DIR="$PROBE_DIR/sb/ts" \
   SYNO_BRIEF_DIR="$PROBE_DIR/sb/briefs" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_WORKTREE=1 \
-  SYNO_ALLOC_NO_BRANCH=1 bash "$TOOL" "陈旧锁探针" 2>&1 ) || RC=$?
+  SYNO_ALLOC_NO_BRANCH=1 SYNO_ALLOC_NO_ISSUES=1 bash "$TOOL" "陈旧锁探针" 2>&1 ) || RC=$?
 if [ "$PROBE_REL_OK" = "1" ]; then
   assert_exit 0 "$RC" "10.1 陈旧锁被清理后照常发号 rc"
   if [ ! -d "$PROBE_DIR/lock" ]; then
@@ -371,10 +371,10 @@ fi
 P1="$PROBE_DIR/p1"; P2="$PROBE_DIR/p2"; D938_SANDBOX "$P1"; D938_SANDBOX "$P2"
 ( SYNO_LOCK_DIR="$P1/lock" SYNO_TASK_STATE_DIR="$P1/ts" SYNO_BRIEF_DIR="$P1/briefs" \
     SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_NO_BRANCH=1 \
-    bash "$TOOL" "并发甲" > "$PROBE_DIR/o1" 2>&1; echo $? > "$PROBE_DIR/r1" ) &
+    SYNO_ALLOC_NO_ISSUES=1 bash "$TOOL" "并发甲" > "$PROBE_DIR/o1" 2>&1; echo $? > "$PROBE_DIR/r1" ) &
 ( SYNO_LOCK_DIR="$P2/lock" SYNO_TASK_STATE_DIR="$P2/ts" SYNO_BRIEF_DIR="$P2/briefs" \
     SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_NO_BRANCH=1 \
-    bash "$TOOL" "并发乙" > "$PROBE_DIR/o2" 2>&1; echo $? > "$PROBE_DIR/r2" ) &
+    SYNO_ALLOC_NO_ISSUES=1 bash "$TOOL" "并发乙" > "$PROBE_DIR/o2" 2>&1; echo $? > "$PROBE_DIR/r2" ) &
 wait || true  # swallow-ok: 两个 rc 已各自落文件，wait 的聚合状态无意义
 R1="$(tr -d ' \r' < "$PROBE_DIR/r1" 2>/dev/null || echo 9)"; R2="$(tr -d ' \r' < "$PROBE_DIR/r2" 2>/dev/null || echo 9)"
 assert_exit 0 "${R1:-9}" "10.2 并发甲（独立锁目录）rc"
@@ -415,7 +415,7 @@ else
   fail "前置不成立: branch -r 命中=$BLIND 应为 0；ls-remote 命中=$SEEN 应为 2 —— 夹具未能复现「未 fetch」，后续断言无意义"
 fi
 EXIT=0
-OUT=$(SYNO_TASK_STATE_DIR="$W9/task-state" SYNO_BRIEF_DIR="$F9/briefs" bash "$TOOL" "判别性-未fetch远端占942" 2>&1) || EXIT=$?
+OUT=$(SYNO_TASK_STATE_DIR="$W9/task-state" SYNO_BRIEF_DIR="$F9/briefs" SYNO_ALLOC_NO_ISSUES=1 bash "$TOOL" "判别性-未fetch远端占942" 2>&1) || EXIT=$?
 assert_ne0 "$EXIT" "未 fetch 的远端分支占用 → 拒绝（fail-closed，不发放）"
 assert_contains "$OUT" "docs/d942-cto-fixation" "点名冲突位置（远端分支全 ref 原文）"
 assert_lacks "$OUT" "已登记:" "拒绝时不建壳"
@@ -441,7 +441,7 @@ else
 fi
 EXIT=0
 OUT=$(SYNO_TASK_STATE_DIR="$M10/task-state" SYNO_BRIEF_DIR="$F10/briefs" \
-      SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_BRANCH=1 bash "$TOOL" "判别性-worktree名占942" 2>&1) || EXIT=$?
+      SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_BRANCH=1 SYNO_ALLOC_NO_ISSUES=1 bash "$TOOL" "判别性-worktree名占942" 2>&1) || EXIT=$?
 GOT10=$(printf '%s\n' "$OUT" | grep -oE '(^|[^A-Za-z0-9])D942([^0-9]|$)' | sed -n '1p' | grep -oE 'D942' || true)
 if [ "$EXIT" != "0" ]; then
   assert_contains "$OUT" ".synova-wt-squad-d942" "拒绝并点名冲突位置（worktree 名原文）"
@@ -463,7 +463,7 @@ printf '{"task_id":"D941","status":"claimed"}\n' > "$F11/task-state/D941.json"
 printf '{"task_id":"D942","status":"claimed"}\n' > "$F11/task-state/D942.json"
 EXIT=0
 OUT=$(SYNO_TASK_STATE_DIR="$F11/task-state" SYNO_BRIEF_DIR="$F11/briefs" \
-      SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_NO_BRANCH=1 bash "$TOOL" "回归-task-state占942" 2>&1) || EXIT=$?
+      SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_NO_BRANCH=1 SYNO_ALLOC_NO_ISSUES=1 bash "$TOOL" "回归-task-state占942" 2>&1) || EXIT=$?
 FIRST11=$(printf '%s\n' "$OUT" | sed -n '1p')
 case "$FIRST11" in
   D942) fail "task-state 已占 942，却发放了 D942" ;;
@@ -493,7 +493,7 @@ fi
 # 改坏即红: 若删掉 --help 分支（回到旧 case），--help 被当任务名 ⇒ 真取号+建空壳 ⇒
 #   exit 0 但沙箱 task-state 多出一个 D*.json（断言「零新增文件」即红）。
 _g3dir="$(mktemp -d)"; mkdir -p "$_g3dir/task-state"; printf '{}' > "$_g3dir/task-state/TEMPLATE.json"
-_g3out="$(SYNO_TASK_STATE_DIR="$_g3dir/task-state" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_NO_BRANCH=1 bash "$TOOL" --help 2>&1)"; _g3rc=$?
+_g3out="$(SYNO_TASK_STATE_DIR="$_g3dir/task-state" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_NO_BRANCH=1 SYNO_ALLOC_NO_ISSUES=1 bash "$TOOL" --help 2>&1)"; _g3rc=$?
 if [ "$_g3rc" = 0 ] && echo "$_g3out" | grep -q "只读校验"; then
   pass "G3.1 --help exit 0 且打印用法"
 else
@@ -501,7 +501,7 @@ else
 fi
 _g3n="$(find "$_g3dir/task-state" -name 'D*.json' | wc -l | tr -d ' ')"
 [ "$_g3n" = 0 ] && pass "G3.2 --help 零副作用（不建空壳/不烧号）" || fail "G3.2 --help 真取号了（新增 ${_g3n} 个空壳）"
-SYNO_TASK_STATE_DIR="$_g3dir/task-state" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_NO_BRANCH=1 bash "$TOOL" -h >/dev/null 2>&1
+SYNO_TASK_STATE_DIR="$_g3dir/task-state" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_NO_BRANCH=1 SYNO_ALLOC_NO_ISSUES=1 bash "$TOOL" -h >/dev/null 2>&1
 _g3n2="$(find "$_g3dir/task-state" -name 'D*.json' | wc -l | tr -d ' ')"
 [ "$_g3n2" = 0 ] && pass "G3.3 -h 同样零副作用" || fail "G3.3 -h 真取号了"
 rm -rf "$_g3dir"
@@ -520,7 +520,7 @@ printf '1268\tD9991 · 假 issue 卡（夹具）\n9999\t无关标题\n' > "$_ISS
 EXIT=0
 OUT=$(env SYNO_TASK_STATE_DIR="$_SB6/task-state" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_BRANCH=1 \
       SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_ISSUES_FILE="$_ISSC" bash "$TOOL" --check-id D9991 2>/dev/null) || EXIT=$?
-[ "$EXIT" = 1 ] && pass "注入命中 ⇒ rc=1（第 6 源真参与判定）" || fail "注入命中 rc=$EXIT（期望 1）"
+[ "$EXIT" = 1 ] && pass "注入命中 ⇒ rc=1（第 6 源真参与判定）" || fail "注入命中 rc=${EXIT}（期望 1）"
 echo "$OUT" | grep -q "^issue-title  #1268: D9991" && pass "stdout 点名 issue-title + issue 号 + 标题" \
   || fail "stdout 未点名 issue-title: $(echo "$OUT" | head -3)"
 
@@ -528,7 +528,7 @@ echo "$OUT" | grep -q "^issue-title  #1268: D9991" && pass "stdout 点名 issue-
 ERR6="$TMP_DIR/iss-miss.err"; EXIT=0
 OUT=$(env SYNO_TASK_STATE_DIR="$_SB6/task-state" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_BRANCH=1 \
       SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_ISSUES_FILE="$_ISSC" bash "$TOOL" --check-id D9992 2>"$ERR6") || EXIT=$?
-[ "$EXIT" = 0 ] && pass "注入不命中 ⇒ rc=0" || fail "注入不命中 rc=$EXIT（期望 0）"
+[ "$EXIT" = 0 ] && pass "注入不命中 ⇒ rc=0" || fail "注入不命中 rc=${EXIT}（期望 0）"
 grep -q "含=yes" "$ERR6" && pass "来源说明明示「含=yes」（本次判定含网络源，可追溯）" \
   || fail "来源说明未明示含=yes: $(head -3 "$ERR6")"
 grep -qE "可判定范围内未见占用" "$ERR6" && pass "结论措辞 = 「可判定范围内未见占用」（禁报「未占用」）" \
@@ -542,17 +542,19 @@ ERR6b="$TMP_DIR/iss-off.err"; EXIT=0
 OUT=$(env SYNO_TASK_STATE_DIR="$_SB6/task-state" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_BRANCH=1 \
       SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_NO_ISSUES=1 bash "$TOOL" --check-id D9991 2>"$ERR6b") || EXIT=$?
 [ "$EXIT" = 0 ] && pass "SYNO_ALLOC_NO_ISSUES=1 ⇒ rc=0（离线不判该源，hermetic 可跑）" \
-  || fail "禁用缝后仍 rc=$EXIT（期望 0）"
+  || fail "禁用缝后仍 rc=${EXIT}（期望 0）"
 grep -q "含=no" "$ERR6b" && pass "禁用缝 ⇒ 来源说明「含=no」+ 告警可能漏检 issue 卡占用" \
   || fail "禁用缝未在来源说明体现: $(head -3 "$ERR6b")"
 
 # (e) 降级路径（注入文件不可读）⇒ **显式 degraded**（禁静默）+ fail-open 仍可判定
+#   ⚠️ 本处**刻意不加** SYNO_ALLOC_NO_ISSUES —— 要测的是「源 active 但不可达」，
+#   加了守卫就变成「源 disabled」，测的是另一条分支（见 (g) 的反直觉断言）。
 ERR6c="$TMP_DIR/iss-deg.err"; EXIT=0
 OUT=$(env SYNO_TASK_STATE_DIR="$_SB6/task-state" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_BRANCH=1 \
       SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_ISSUES_FILE="$_SB6/nope-does-not-exist" \
       bash "$TOOL" --check-id D9993 2>"$ERR6c") || EXIT=$?
 [ "$EXIT" = 0 ] && pass "源不可读 ⇒ 仍 rc=0（fail-open：发号器关键路径不被网络腿拖死）" \
-  || fail "源不可读 rc=$EXIT（期望 fail-open 0）"
+  || fail "源不可读 rc=${EXIT}（期望 fail-open 0）"
 grep -q "degraded: issue 标题源" "$ERR6c" && pass "不可读 ⇒ stderr 显式 degraded（铁律 11，不静默）" \
   || fail "未显式降级: $(head -3 "$ERR6c")"
 
@@ -560,6 +562,28 @@ grep -q "degraded: issue 标题源" "$ERR6c" && pass "不可读 ⇒ stderr 显�
 [ "$(grep -c 'D# 退役时同批删除此来源' "$TOOL")" -ge 1 ] \
   && pass "代码注释在位: 「D# 退役时同批删除此来源」（月度盘点可核）" \
   || fail "缺过渡件删除条件声明"
+
+# (g) 🔴 反直觉断言（Lead 裁决 R1 要求）：**全局守卫会破坏「源 active」场景** ⇒ 故必须逐调用点守卫。
+#   机制: 优先级 NO_ISSUES(1) > ISSUES_FILE(2)。若在测试里图省事全局 export SYNO_ALLOC_NO_ISSUES=1，
+#   则第 13 节 (a)(b) 依赖的「源 active / 注入命中」场景会被一并关掉 ⇒ 判据被放宽（正是要防的形态）。
+#   本夹具把该反直觉事实**钉成断言**：同一条命令，加全局守卫后 rc 由 1→0 且不再点名 issue-title。
+_G_RC=0
+OUT=$(env SYNO_TASK_STATE_DIR="$_SB6/task-state" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_BRANCH=1 \
+      SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_NO_ISSUES=1 SYNO_ALLOC_ISSUES_FILE="$_ISSC" \
+      bash "$TOOL" --check-id D9991 2>/dev/null) || _G_RC=$?
+[ "$_G_RC" = 0 ] && pass "反直觉: 全局守卫 NO_ISSUES=1 压过 ISSUES_FILE ⇒ 源 active 场景被关（rc 1→0）" \
+  || fail "全局守卫下 rc=$_G_RC（期望 0；若为 1 说明优先级假设错，本断言需重写）"
+echo "$OUT" | grep -q "issue-title" \
+  && fail "全局守卫下仍报 issue-title（优先级 NO>FILE 不成立？）" \
+  || pass "反直觉: 全局守卫下**不可能**命中 issue-title（⇒ 逐调用点守卫是唯一正解）"
+# 反向对照: 同一命令去掉全局守卫 ⇒ 源恢复 active（rc=1 + 点名）——证"被关掉"确系守卫所致，非别因
+_H_RC=0
+OUT2=$(env SYNO_TASK_STATE_DIR="$_SB6/task-state" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_BRANCH=1 \
+       SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_ISSUES_FILE="$_ISSC" \
+       bash "$TOOL" --check-id D9991 2>/dev/null) || _H_RC=$?
+[ "$_H_RC" = 1 ] && echo "$OUT2" | grep -q "issue-title" \
+  && pass "对照: 去掉全局守卫 ⇒ 源恢复 active（rc=1 + 点名 issue-title）" \
+  || fail "对照失败: rc=$_H_RC（去守卫后源未恢复）"
 echo ""
 
 echo "  结果: PASS=$PASS FAIL=$FAIL${FIRST_FAIL:+ FIRST_FAIL=${FIRST_FAIL}}"
