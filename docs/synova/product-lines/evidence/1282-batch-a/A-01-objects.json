@@ -1,5 +1,5 @@
 {
- "evidence_id": "D1204/A-01",
+ "evidence_id": "1282/A-01",
  "task": "Batch A 出库 —— 对象清单冻结 + 逐件 sha256（承接前冻结，用于 1:1 对账）",
  "produced_by": "DSH",
  "produced_at_utc": "2026-10-07T11:49:20Z",
@@ -761,5 +761,6 @@
    "bytes": 4114,
    "sha256": "bdc7f71d7a64bbfd537f88795ebcd6f4b5eaa778d07d3a28a4cb23c2bfc28889"
   }
- ]
+ ],
+ "card": "#1282"
 }
