@@ -84,9 +84,30 @@ KEEP_BYPASS=(
   'note_check "G12c dev doc 写集验证'
   'note_check "G12d 声称↔证据对照表'
 )
+# D1219（卡 #1225 旁路清场）: 三条 note_check 第三态已退役（立法 §7.1-2 禁旁路第三态）
+#   ⇒ 由「断言存在」**反转为「断言不在代码路径」**（反向断言 = 改坏即红：加回任一 note_check ⇒ 本夹具红）。
 for k in "${KEEP_BYPASS[@]}"; do
-  pcgrep "$k" && ok "旁路[观测]: $k" || no "应转旁路却缺失: $k"
+  if pcgrep "$k"; then no "退役项仍在代码路径（D1219 禁第三态）: $k"; else ok "已退役[第三态清零]: $k"; fi
 done
+# 退役留痕可核（防「删了就算」：注释层仍须指向 D1219）
+grep -q 'D1219' "$PC" && ok "退役留痕: 注释指向 D1219" || no "退役未留痕（缺 D1219 注释）"
+# D1219: 三处「脚本缺失 fallback」→ **检查自身失败态**（同样阻断；禁降级为旁路观测 = 假绿）
+KEEP_SELF_FAIL=(
+  'self_fail_missing_script "D782 D1 文档真相"'
+  'self_fail_missing_script "D782 D2 登记门禁"'
+  'self_fail_missing_script "D734 PR 预算"'
+)
+for k in "${KEEP_SELF_FAIL[@]}"; do
+  pcgrep "$k" && ok "自身失败态[D1219]: $k" || no "脚本缺失 fallback 未改自身失败态: $k"
+done
+for bad in 'note_check "D782 D1' 'note_check "D782 D2' 'note_check "D734 PR 预算（脚本缺失）'; do
+  if pcgrep "$bad"; then no "脚本缺失仍走旁路观测（禁静默放行）: $bad"; else ok "已离开旁路观测: $bad"; fi
+done
+if pcgrep 'self_fail_missing_script() {'; then
+  ok "自身失败态实现: 单一函数（非 3 处内联副本）"
+else
+  no "自身失败态实现缺失（self_fail_missing_script 未定义）"
+fi
 # ── D1171（P0-5）: 三处撤旁路复执法 —— 必须 v5_soft（本地软/CI strict 硬）──
 KEEP_V5SOFT=(
   'v5_soft "D782 D1 文档真相（D1171 撤旁路复执法）"'

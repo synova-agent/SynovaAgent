@@ -47,33 +47,40 @@ grep -n 'note_check "' scripts/pre-commit-check.sh
 
 ```bash
 grep -c 'bypass_run "' scripts/pre-commit-check.sh   # 期望 0（定义块/留痕注释保留）
-grep -n 'note_check "' scripts/pre-commit-check.sh   # 期望 0（第三态清零）
-grep -c 'script-missing' scripts/pre-commit-check.sh # 期望 3（三条 fallback 显式登记）
+# 「第三态清零」= **静态调用点**清零（不是字样清零——bypass_run 休眠函数体内含 note_check，见 §四 口径更正）
+grep -vE '^[[:space:]]*#' scripts/pre-commit-check.sh | grep -c 'note_check "'   # 期望 1（仅休眠函数体）
+grep -c 'self_fail_missing_script' scripts/pre-commit-check.sh                   # 期望 4（1 定义 + 3 调用）
 ```
 
-## 三、序列阻塞（如实记录，2026-10-07）
+## 三、序列与落地（2026-10-07 更新）
 
-本卡 6 处处置**全部位于 `scripts/pre-commit-check.sh`**，该文件同时被两处 in-flight 改动占用：
+本文档半**先**交付；代码半随后**同分支第二个 commit**（stacked PR，base = 文档半分支）。
 
-- PR **#1275**（组 6 改接 claim，`SYNO_CLAIM_V2` 默认关）——OPEN，3 项检查 pending；
-- PR **#1272**（线 B：GATEKEEPER 段 +9 行）——OPEN 且 **CI 红**（`All Checks Passed` FAIL +
-  `Control Tower Gate Tests (ubuntu-latest)` FAIL）。
+- 阻塞件历史：PR #1272（线 B GATEKEEPER 段，**13:33:20Z 已合**）；PR #1275（组 6 改接 claim）**当时仍 OPEN**。
+- 代码半 6 处锚点全部位于 `scripts/pre-commit-check.sh` 的 **:1136 / :1679 / :1691 / :1747 / :1758 / :1797**（rebase 后行号），
+  与 #1275 的唯一 hunk（`@@ -987,9 +987,31 @@`，组 6 块）**不重叠** ⇒ 合并序安全，无需保留双方意图的冲突处理。
+- 卡 #1225 保持 OPEN，直至 K3/CTO 裁 + 合并。
 
-⇒ 按「不许并发改共享热文件」纪律：**本 PR 只交付文档半**（§七 条文 + 本 Note）；
-代码半（6 处处置 + 3× fallback）**延后至上述两者合入**，届时**保留双方意图**（组 6 claim 化 + GATEKEEPER 计数段）。
-卡 #1225 保持 OPEN，直至代码半落地。
+## 四、执行体状态
 
-## 四、执行体状态（未接线登记）
-
-- §7.1-2（禁第三态）：**未接线** —— 执行体 = 第三节所述清场改造，尚未落地。
+- §7.1-2（禁第三态）：**✅ 执行体已落地**（代码半同 PR）——
+  3 处第三态清场（plan-integrity non-Q2 删 / G12c 删本地 / G12d 归档）+ 三处「脚本缺失 fallback」
+  改「检查自身失败态」（单一实现 `self_fail_missing_script()`，本地与 CI 同等阻断）。
 - §7.2（防双源）：**未接线** —— 结构性判据为手工可复跑命令，未接入 CI。
-  未接线原因（如实）：新增 CI 测试须登记于 `.github/workflows/ci.yml`（**线 B 所有，本线禁碰**），
-  且密封面登记台账 `scripts/control-tower/gate-integrity-baseline.txt` 同时在飞 PR #1272 的写集内。
+  未接线原因（如实）：新增 CI 测试须登记于 `.github/workflows/ci.yml`（**线 B 所有，本线禁碰**）。
 - §7.1-3（搬家＝判据变更）：**现行**（K3 送审 + CTO 裁决的人判流程）。
 
-> ⚠️ 本 PR **无 CI 执行的改坏即红夹具**：改动面为 docs/ + memory/notes/（纯文档，CT-34 早退路径），
-> 新增测试文件会触发「未登记测试」红且登记面被在飞 PR 占用。替代证据 = §7.2 判据的**变异体实测**
-> （整块复制 ⇒ 计数 2 ⇒ 判违规；撤销 ⇒ 1 ⇒ 绿），原始输出贴 PR 正文。此为**声明式偏离**，列入例外清单。
+**判据口径更正（原稿写错，此处修正）**：§二 的 `grep -n 'note_check "'` **不可能到 0** ——
+`bypass_run` **休眠函数体**（`:190`）内含 `note_check "${_bn} (exit=${_brc})"`，且该函数是立法 §7.1-2
+明示保留的回滚路径。⇒ 正确口径为：
+```bash
+grep -vE '^[[:space:]]*#' scripts/pre-commit-check.sh | grep -c 'note_check "'   # 期望 1（仅休眠函数体）
+```
+「第三态清零」的判据是**静态调用点**清零（3 处命名调用点消失），不是**字样**清零。
+
+**夹具（本 PR 已改用真夹具，不再是声明式偏离）**：`hard-gate-convergence.test.sh` 的 `KEEP_BYPASS`
+反转为反向断言 + 自身失败态 4 断言（红 52/11 → 绿 63/0）；`doc-commit-exempt.test.sh` T11a/T11b/T11c
+（T11c 把「替代真实存在」做成物理断言：grep `ci.yml` 的 D708 step）。三条变异体实测见 PR 正文。
 
 ## 五、退出条件
 
