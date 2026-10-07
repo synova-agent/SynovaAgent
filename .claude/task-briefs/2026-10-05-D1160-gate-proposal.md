@@ -66,6 +66,9 @@
 - [x] 登记行为纯追加（删除数 = 0） verify: `git diff --numstat origin/main..HEAD -- docs/authority/DOCS-REGISTRY.yaml | grep -qE "^[0-9]+[[:space:]]+0[[:space:]]" || test -z "$(git diff --numstat origin/main..HEAD -- docs/authority/DOCS-REGISTRY.yaml)"`
 - [x] 修订轮不动登记行（本件不触 `DOCS-REGISTRY.yaml`） verify: `test -z "$(git diff --name-only origin/main..HEAD -- docs/authority/DOCS-REGISTRY.yaml)"`
 - [x] ㈠ 定稿已写入且 ㈡ 标为未采用 verify: `grep -q "CTO 已裁 = 路线 ㈠" docs/synova/coordination/D1160-门禁提案-登记表追加型豁免与D708多命中分级.md && grep -q "未采用，留档" docs/synova/coordination/D1160-门禁提案-登记表追加型豁免与D708多命中分级.md`
+- [x] K3 第 2 批 P1 硬化已写入（⑥ 键结构断言 + §1.4.c + R8 反例） verify: `grep -q "K3 第 2 批 P1" docs/synova/coordination/D1160-门禁提案-登记表追加型豁免与D708多命中分级.md && grep -q "key-set-change" docs/synova/coordination/D1160-门禁提案-登记表追加型豁免与D708多命中分级.md`
+- [x] `R3″`/`R8` 不得互相兜底已声明 verify: `grep -q "不得互相兜底" docs/synova/coordination/D1160-门禁提案-登记表追加型豁免与D708多命中分级.md`
+- [x] `R8` 归因已收敛为 ⑥-2 only（⑥-1 不触发）+ 夹具须点名 token verify: `grep -q "归因必须是 ⑥-2" docs/synova/coordination/D1160-门禁提案-登记表追加型豁免与D708多命中分级.md && grep -q "输出含 \`duplicate-key\`" docs/synova/coordination/D1160-门禁提案-登记表追加型豁免与D708多命中分级.md`
 - [x] 合成红例硬要求 + 归属 #1131 已写明 verify: `grep -q "#1131 那一批执行" docs/synova/coordination/D1160-门禁提案-登记表追加型豁免与D708多命中分级.md`
 
 ## 写集（机器生成，禁手改）
