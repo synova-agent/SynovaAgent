@@ -80,11 +80,16 @@ jobs:
           #   语义载体（*.sh eol=lf、merge=union、scripts/audit/** -text），改它即改 CI 本身
           #   须走全量；.gitmodules 仓库不存在，留着 = 新增子模块+文档即零验证入库。
           # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
-          #   读失败/缺键 ⇒ DS_RE 空 ⇒ `grep -qvE ''` 对任意行返 0 ⇒ docs_only=false（全量，绝不误跳）。
-          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一行显式降级（告警 + 走全量）
+          # 🔴 D-F/①-fix（独立复核 R1，2026-10-07）: 单源读不到时**显式**置 docs_only=false（全量）。
+          #   实测 `printf x | grep -qvE ''` 返 **1**（空正则匹配每行，-v 反选后无输出）⇒ 若依赖该
+          #   隐式返回，正常路径会掉进 else ⇒ docs_only=true（早退）＝ **fail-OPEN**。
+          #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
           DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
-          [ -n "$DS_RE" ] || echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）"
-          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+          if [ -z "$DS_RE" ]; then
+            echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
@@ -218,14 +223,19 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
-          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          # 🔴 D-F/①-fix（独立复核 R1，2026-10-07）: 单源读不到时**显式**置 docs_only=false（全量）。
+          #   实测 `printf x | grep -qvE ''` 返 **1**（空正则匹配每行，-v 反选后无输出）⇒ 若依赖该
+          #   隐式返回，正常路径会掉进 else ⇒ docs_only=true（早退）＝ **fail-OPEN**。
+          #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          if [ -z "$DS_RE" ]; then
+            echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
-          #   读失败/缺键 ⇒ DS_RE 空 ⇒ `grep -qvE ''` 对任意行返 0 ⇒ docs_only=false（全量，绝不误跳）。
-          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一行显式降级（告警 + 走全量）
-          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
-          [ -n "$DS_RE" ] || echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）"
           elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
@@ -320,14 +330,19 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
-          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          # 🔴 D-F/①-fix（独立复核 R1，2026-10-07）: 单源读不到时**显式**置 docs_only=false（全量）。
+          #   实测 `printf x | grep -qvE ''` 返 **1**（空正则匹配每行，-v 反选后无输出）⇒ 若依赖该
+          #   隐式返回，正常路径会掉进 else ⇒ docs_only=true（早退）＝ **fail-OPEN**。
+          #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          if [ -z "$DS_RE" ]; then
+            echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
-          #   读失败/缺键 ⇒ DS_RE 空 ⇒ `grep -qvE ''` 对任意行返 0 ⇒ docs_only=false（全量，绝不误跳）。
-          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一行显式降级（告警 + 走全量）
-          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
-          [ -n "$DS_RE" ] || echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）"
           elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
@@ -376,14 +391,19 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
-          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          # 🔴 D-F/①-fix（独立复核 R1，2026-10-07）: 单源读不到时**显式**置 docs_only=false（全量）。
+          #   实测 `printf x | grep -qvE ''` 返 **1**（空正则匹配每行，-v 反选后无输出）⇒ 若依赖该
+          #   隐式返回，正常路径会掉进 else ⇒ docs_only=true（早退）＝ **fail-OPEN**。
+          #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          if [ -z "$DS_RE" ]; then
+            echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
-          #   读失败/缺键 ⇒ DS_RE 空 ⇒ `grep -qvE ''` 对任意行返 0 ⇒ docs_only=false（全量，绝不误跳）。
-          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一行显式降级（告警 + 走全量）
-          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
-          [ -n "$DS_RE" ] || echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）"
           elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
@@ -462,14 +482,19 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
-          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          # 🔴 D-F/①-fix（独立复核 R1，2026-10-07）: 单源读不到时**显式**置 docs_only=false（全量）。
+          #   实测 `printf x | grep -qvE ''` 返 **1**（空正则匹配每行，-v 反选后无输出）⇒ 若依赖该
+          #   隐式返回，正常路径会掉进 else ⇒ docs_only=true（早退）＝ **fail-OPEN**。
+          #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          if [ -z "$DS_RE" ]; then
+            echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
-          #   读失败/缺键 ⇒ DS_RE 空 ⇒ `grep -qvE ''` 对任意行返 0 ⇒ docs_only=false（全量，绝不误跳）。
-          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一行显式降级（告警 + 走全量）
-          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
-          [ -n "$DS_RE" ] || echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）"
           elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
@@ -688,14 +713,19 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
-          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          # 🔴 D-F/①-fix（独立复核 R1，2026-10-07）: 单源读不到时**显式**置 docs_only=false（全量）。
+          #   实测 `printf x | grep -qvE ''` 返 **1**（空正则匹配每行，-v 反选后无输出）⇒ 若依赖该
+          #   隐式返回，正常路径会掉进 else ⇒ docs_only=true（早退）＝ **fail-OPEN**。
+          #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          if [ -z "$DS_RE" ]; then
+            echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
-          #   读失败/缺键 ⇒ DS_RE 空 ⇒ `grep -qvE ''` 对任意行返 0 ⇒ docs_only=false（全量，绝不误跳）。
-          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一行显式降级（告警 + 走全量）
-          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
-          [ -n "$DS_RE" ] || echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）"
           elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
@@ -732,14 +762,19 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
-          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          # 🔴 D-F/①-fix（独立复核 R1，2026-10-07）: 单源读不到时**显式**置 docs_only=false（全量）。
+          #   实测 `printf x | grep -qvE ''` 返 **1**（空正则匹配每行，-v 反选后无输出）⇒ 若依赖该
+          #   隐式返回，正常路径会掉进 else ⇒ docs_only=true（早退）＝ **fail-OPEN**。
+          #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          if [ -z "$DS_RE" ]; then
+            echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
-          #   读失败/缺键 ⇒ DS_RE 空 ⇒ `grep -qvE ''` 对任意行返 0 ⇒ docs_only=false（全量，绝不误跳）。
-          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一行显式降级（告警 + 走全量）
-          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
-          [ -n "$DS_RE" ] || echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）"
           elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
@@ -784,14 +819,19 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
-          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          # 🔴 D-F/①-fix（独立复核 R1，2026-10-07）: 单源读不到时**显式**置 docs_only=false（全量）。
+          #   实测 `printf x | grep -qvE ''` 返 **1**（空正则匹配每行，-v 反选后无输出）⇒ 若依赖该
+          #   隐式返回，正常路径会掉进 else ⇒ docs_only=true（早退）＝ **fail-OPEN**。
+          #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          if [ -z "$DS_RE" ]; then
+            echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
-          #   读失败/缺键 ⇒ DS_RE 空 ⇒ `grep -qvE ''` 对任意行返 0 ⇒ docs_only=false（全量，绝不误跳）。
-          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一行显式降级（告警 + 走全量）
-          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
-          [ -n "$DS_RE" ] || echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）"
           elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
@@ -837,14 +877,19 @@ jobs:
         id: docsonly
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
-          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          # 🔴 D-F/①-fix（独立复核 R1，2026-10-07）: 单源读不到时**显式**置 docs_only=false（全量）。
+          #   实测 `printf x | grep -qvE ''` 返 **1**（空正则匹配每行，-v 反选后无输出）⇒ 若依赖该
+          #   隐式返回，正常路径会掉进 else ⇒ docs_only=true（早退）＝ **fail-OPEN**。
+          #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          if [ -z "$DS_RE" ]; then
+            echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
-          #   读失败/缺键 ⇒ DS_RE 空 ⇒ `grep -qvE ''` 对任意行返 0 ⇒ docs_only=false（全量，绝不误跳）。
-          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一行显式降级（告警 + 走全量）
-          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
-          [ -n "$DS_RE" ] || echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）"
           elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else

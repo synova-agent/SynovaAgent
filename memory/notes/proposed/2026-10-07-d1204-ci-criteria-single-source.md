@@ -22,8 +22,16 @@ ci.yml 的 9 个 `Detect docs-only change (D515)` step 只**消费**（`grep -m1
 守卫改判：单源键恰 1 行 ∧ ci.yml 内联副本 = 0 ∧ 单引号内联形态 = 0 ∧ 消费点 = 9 ∧ detect step = 9
 ∧ fail-safe 计数 = 9 ∧ 14 条行为用例（含 `.gitattributes`/`.gitmodules` 边界、锚点边界、`.html` 纳入）。
 
-**降级方向**（与各处 `origin/main` 不可解析时同向）: 读不到键 ⇒ `DS_RE` 空 ⇒ `grep -qvE ''` 命中任意行
-⇒ `docs_only=false`（**全量**）＋ `::warning` 留痕 ⇒ 绝不误跳。
+**降级方向**: 读不到键 ⇒ 各 detect step **显式**置 `docs_only=false`（**全量**）＋ `::warning` 留痕 ⇒ 绝不误跳。
+🔴 **R1 更正（独立复核 verifier 2026-10-07，P1 真缺陷，我方与 K3 均未发现）**: 初版实现把「空 `DS_RE`」
+  的期望方向写成了「`grep -qvE ''` 返 0 ⇒ false」，**事实相反** —— 实测 `printf x | grep -qvE ''` 返 **1**
+  （空正则匹配每行，`-v` 反选后无输出），且该读取代码被**误放进 `if` 块内**（正常路径 `DS_RE` 从未赋值）
+  ⇒ 真实行为是 `docs_only=true`（早退）= **fail-OPEN**（重活 step 全被 skip，只是被 D1023 守卫 step
+  无 `if:` 恒跑兜住才没假绿）。修法: ① 单源读取移出 `if`；② 空值/不可解析一律**显式** false（不依赖
+  grep 隐式语义）；③ 9 处 warning 文案改为与实况同向；④ 守卫新增 4 条**控制流真执行**断言
+  （抽 ci.yml 真 step 正文在合成 git 仓跑），其中 `ctrl-empty-single-source-full` 正是本缺陷的判别器
+  （用旧形态 ci.yml 复跑 ⇒ 该断言转红）。教训: **别把 grep 的隐式退出码当控制流判据写进注释与文档**，
+  期望值必须由真执行夹具钉住。
 
 **顺带修正的验收命令缺陷**: 原验收写法 `grep -c 'docs/.+\.(md|json|html)' ci.yml` 在 BRE 下对
 含转义的原文**恒 0 命中**（纸老虎，改前改后都返 0）。真判据 = `grep -cF 'docs/.+\.(md|json|html)' ci.yml` = 0。
