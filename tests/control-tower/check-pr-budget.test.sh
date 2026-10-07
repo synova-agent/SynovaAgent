@@ -602,6 +602,23 @@ _MUT="scripts/control-tower/.mut-budget.sh"; sed 's/^        0) DOC_CONTRACT_EXE
 OUT="$(bash "$_MUT" --diff-status "$(_mkd 13 knowledge)" 2>&1)"; _e=$?
 if [ "$_e" = 0 ]; then pass "17.6 变异体（去掉 b' 判据）→ 17.4 夹具变红，证明该判据承重"; else fail "17.6 变异体仍阻断 → b' 判据不承重"; fi
 rm -f "$_MUT"
+
+# ═══ 17b. S2.4 收紧（K3 #1299 CONDITIONAL PASS §②/§④ 与 L4 缺口）═══
+#   判据: 根级件不豁免（类级堵漏）/ 不可豁免清单硬拦 / schema 漂移 fail-closed / 变异体必红
+OUT="$(bash "$TOOL" --diff-status "$(_mkd 6 docs/archive)3 root-only-$RANDOM.md" 2>&1)"; _e=$?
+OUT="$(bash "$TOOL" --diff-status "$(python3 -c "print(chr(10).join('D\tdocs/archive/f%03d.md'%i for i in range(6))+chr(10)+'D\tROOT-DOC-$RANDOM.md')")" 2>&1)"; _e=$?
+if [ "$_e" = 0 ] && printf '%s' "$OUT" | grep -q "根级件 1 件\*\*不豁免"; then pass "17.7 根级件不豁免（6 契约域豁免 + 1 根级计预算）→ PASS"; else fail "17.7 期望根级计预算 exit=0，实得 exit=$_e"; fi
+OUT="$(bash "$TOOL" --diff-status "$(printf 'D\tPRODUCT-BRIEF.md')" 2>&1)"; _e=$?
+if [ "$_e" = 1 ] && printf '%s' "$OUT" | grep -q "不可豁免清单命中"; then pass "17.8 PRODUCT-BRIEF.md 单删 → 命中不可豁免清单，绝不豁免（exit 1）"; else fail "17.8 期望 exit=1+清单命中，实得 exit=$_e"; fi
+_SB2="$(mktemp -d)"; mkdir -p "$_SB2/scripts/control-tower"; cp "$_TOOLABS" "$_SB2/scripts/control-tower/"
+printf '#!/bin/bash\necho "{\\"mode\\":\\"files\\"}"\nexit 1\n' > "$_SB2/scripts/control-tower/check-doc-contract.sh"; chmod +x "$_SB2/scripts/control-tower/check-doc-contract.sh"
+OUT="$(cd "$_SB2" && bash scripts/control-tower/check-pr-budget.sh --diff-status "$(_mkd 13 vendor/x)" 2>&1)"; _e=$?
+if [ "$_e" = 1 ] && printf '%s' "$OUT" | grep -q "schema 不可解析"; then pass "17.9 执行体 schema 漂移 → 判「无法判定」fail-closed（不误放）"; else fail "17.9 期望 exit=1+schema 判据，实得 exit=$_e"; fi
+rm -rf "$_SB2"
+_MUT2="scripts/control-tower/.mut-s24-prot.sh"; sed 's/^      if printf .%s. "\$_dc_p" | grep -qE "\$S24_PROTECTED_RE"; then$/      if false; then/' "$_TOOLABS" > "$_MUT2"
+OUT="$(bash "$_MUT2" --diff-status "$(printf 'D\tPRODUCT-BRIEF.md')" 2>&1)"; _e=$?
+if [ "$_e" = 0 ]; then pass "17.10 变异体（去掉不可豁免清单判据）→ 17.8 夹具变红，证明该判据承重"; else fail "17.10 变异体仍阻断 → 清单判据不承重（exit=$_e）"; fi
+rm -f "$_MUT2"
 echo ""
 echo "═══════════════════════════════════════════════════════════"
 if [ "$FAIL" -eq 0 ]; then
