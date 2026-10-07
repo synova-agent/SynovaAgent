@@ -1,0 +1,11 @@
+{
+  "task_id": "D9207",
+  "title": "0-1/0-2 两总闸取证（探针三态留档 + 运行时回写复测）",
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-08",
+  "updated_by": "alloc-task-id"
+}
