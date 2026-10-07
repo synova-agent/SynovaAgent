@@ -174,6 +174,8 @@ export const constructionItems: readonly ConstructionItem[] = [
     dependsOn: [],
     // CTO 2026-10-08 裁定（内部自不一致 #2）：原引 `loop_runs` 表 —— 该表在 origin/main **全树零命中**，判据根本跑不通。
     //   已按卡面 #975 判据订正为「探针 + 三态」；**不得自行换表名**（CTO 明令）。
+    //   ⚠️ 计数口径（CTO 2026-10-08 要求写明）：本条的 `grep -c` 作用在**单个文件**（/tmp/batch0a.stderr.log）
+    //      ⇒ 口径 = **行数**，不存在「多文件串接致两处命中并成一行」的少算风险（对照 3-9 的 27⇄28 假象）。
     //   V1 = 探针不再输出 `[D9] MainAgent 未注入 — 跳过 loop-1..6 (degraded)`（期望 0 命中）；
     //   V2 = 探针 stdout `bound:true` / `loop1ExecutionCount:1` / `loop1Scale:"slow"`（非命令型，见下方 §⑥ 抄录）。
     // ┌─ 卡面 §⑥ 判据（Issue #975，2026-10-07 断面；全文抄录，机器条目见下方 acceptance）─┐
@@ -428,7 +430,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     id: '0-9',
     worker: 'win', batch: '第0批', block: 'K1',
     title: '0-9 知识权限过滤：复测 + 根因收口',
-    paths: ['src/middleware/auth.ts'],
+    paths: ['src/l4/knowledge-store.ts', 'tests/l4/**'],  // CTO 2026-10-08 裁定取 (a)
     dependsOn: [],
     // ┌─ 卡面 §⑥ 判据（Issue #983，2026-10-07 断面；全文抄录，机器条目见下方 acceptance）─┐
     // │ 卡面标题：0-9 知识权限过滤：复测 + 根因收口
@@ -446,7 +448,9 @@ export const constructionItems: readonly ConstructionItem[] = [
       { run: 'sqlite3 data/synova.db "SELECT COUNT(*) FROM knowledge_audit WHERE filtered_out > 0"', expectRowsGt: { table: 'knowledge_audit', n: 0 } },
     ],
     // CTO 2026-10-08 裁定（条件 3）：原 `retired` ⇒ 改 `active`。原 retired 的理由「前提被证伪」只对 auth.ts **写入侧空桩**成立；对**消费端短路**（knowledge-store.ts:195/:335 空条件集跳过过滤 ⇒ filtered_out 恒 0）不成立
-    // ⚠️ 待裁（CTO）：卡面 §④「可碰」二选一 —— (a) `src/l4/knowledge-store.ts` + `tests/l4/**`；(b) `scripts/control-tower/**`（并入治理线窗）。两分支无实测可依以择一 ⇒ **保留原值**，见 PR §保留待裁
+    // 📌 CTO 2026-10-08 裁定（0-9）：取 **(a)** —— 根因短路的对象就在 `src/l4/knowledge-store.ts`
+    //   （`:335`「空条件 ⇒ 不过滤」，blame 停在 2026-06-05）；(b) 的探针属**判据交付物**不是根因修复，
+    //   且会引入治理线窗串行（白增摩擦）。若最终确需探针 ⇒ 作为 (a) 的**附加**提出并**先报治理线窗**，主写集 = (a)。
     status: 'active',
     source: '施工单.md 0-9 —— 🔴 **已作废（2026-10-05）**：前提被证伪。auth.ts:354-356 实为 DEV_MODE 自动 admin 分支（非内联空桩）；真 provider 在 :441-459（身份派生非空条件集）。#983 已 CLOSED/NOT_PLANNED 同因。**本项无对象** ⇒ 转 0-9\u0027（知识审计不可归属）',
   },
@@ -491,7 +495,12 @@ export const constructionItems: readonly ConstructionItem[] = [
       'scripts/control-tower/probe-tool-policy.ts',  // 判据交付物（本卡创建）
     ],
     dependsOn: [],
-    // ⚠️ 待裁（CTO，C-13）：卡面 §⑥ 判据已行为化（越权 ⇒ POLICY_DENIED 且落审计）但**未给可执行命令**；登记件原值为 grep 型（与登记件自身 INV-3「禁纯 grep 型」冲突）⇒ **保留原值**，见 PR §保留待裁。
+    // ⚠️ 待裁（CTO，C-13）：卡面 §⑥ 判据已行为化（越权 ⇒ POLICY_DENIED 且落审计）但**未给可执行命令**；
+    //   登记件原值为 grep 型（与登记件自身 INV-3「禁纯 grep 型」冲突）⇒ **保留原值**，见 PR §保留待裁。
+    // 🔴 口径 + 缺陷记录（CTO 2026-10-08 要求「串接后计数」型判据须标口径；本条更严重）：
+    //   `git grep -c setPolicyEngine -- src/` 是 **per-file 计数**，输出形如 `src/xxx.ts:1`（每行一个 `path:count`），
+    //   **不是总数**；实测有命中 ⇒ `src/tools/tool-registry.ts:1`（exit 0）；无命中 ⇒ 零输出 + exit 1。
+    //   ⇒ 后续 `grep -q ^0$` 两种情况**都不匹配** ⇒ **B 分支恒失败**：本 command 在 (b) 路线下永远跑不通。（A 分支不受影响。）
     // ┌─ 卡面 §⑥ 判据（Issue #985，2026-10-07 断面；全文抄录，机器条目见下方 acceptance）─┐
     // │ 卡面标题：0-11 二选一：(a) 装配 setPolicyEngine(new PolicyEngine()) 并让工具执
     // │ - [ ] 选 (a)：越权调用返回 `POLICY_DENIED` **且落审计**（非静默）
@@ -501,7 +510,11 @@ export const constructionItems: readonly ConstructionItem[] = [
     // └─ 抄录结束 ┘
     acceptance: [
       // 二选一：(a) 装配并走 invoke ⇒ 越权返回 POLICY_DENIED；(b) 删掉 ⇒ 两符号 0 命中
-      { run: 'bash -c "npx tsx scripts/control-tower/probe-tool-policy.ts | grep -q POLICY_DENIED || git grep -c setPolicyEngine -- src/ | grep -q ^0$"', expectExit: 0 },
+      // CTO 2026-10-08 裁定（0-11 是**修**，不是保留）：原 `git grep -c … | grep -q ^0$` 的 B 分支**恒失败** ——
+      //   `git grep -c` 是 per-file `path:count` 输出（零命中时**零输出 + exit 1**）⇒ 后续 `grep -q ^0$` 两种情况都不匹配。
+      //   本机实测对照：原式有命中 ⇒ exit 1；无命中 ⇒ exit 1（恒失败）。改为 **R42 口径（文件数用 `-l | wc -l`）**：
+      //   有命中 ⇒ exit 1；无命中 ⇒ exit 0（已实测）。CTO 已同步把正确写法发给执行方 exec-1（#985）。
+      { run: 'test "$(git grep -l \'setPolicyEngine\' -- src/ | wc -l)" -eq 0', expectExit: 0 },
     ],
     // 📌 CTO 2026-10-08 裁定（title）：卡面标题为 GitHub 显示限制下的**截断形态**（结尾 `并让工具执`），本字段为**完整命名** ——
     //   两处**故意不同**，不是「未同步」。理由：登记件是**判据源**，不该被 GitHub 显示限制绑架；卡号的标识作用不依赖标题完整。
@@ -594,8 +607,8 @@ export const constructionItems: readonly ConstructionItem[] = [
       'tests/l3/report-template-client.test.ts',  // 判据交付物（本卡创建）
     ],
     dependsOn: ['1-1', '1-2'],
-    // ⚠️ 待裁（CTO）：判据文件名 —— 卡面 §④ 写 `report-template-loader.test.ts`、§⑥ 跑 `report-template-client.test.ts`，
-    //   两候选在 main 均不存在 ⇒ 本条**保留登记件原值**，见 PR §保留待裁。
+    // 📌 CTO 2026-10-08 裁定（1-3）：**以 §⑥ 为准 ⇒ 判据文件名 = `tests/l3/report-template-client.test.ts`**（本卡创建）。
+    //   理由：判据是验收口径、**写集服务于判据**；两候选在 main 均不存在 ⇒ 必须新建；命名取 `client` 更贴本卡主题（「客户模板位」）。
     // ┌─ 卡面 §⑥ 判据（Issue #1063，2026-10-07 断面；全文抄录，机器条目见下方 acceptance）─┐
     // │ 卡面标题：1-3 · 客户模板位只有"报告"一种
     // │ - [ ] 客户丢入其一页纸 ⇒ **按其版式渲染**；缺必填 → **被拦**
@@ -606,7 +619,8 @@ export const constructionItems: readonly ConstructionItem[] = [
     acceptance: [
       { run: 'npx vitest run tests/l3/report-template-client.test.ts', expectExit: 0 },
     ],
-    // ⚠️ 待裁（CTO）：卡面 §④ 写 `tests/l3/report-template-loader.test.ts`，§⑥ 却跑 `report-template-client.test.ts`（**卡面内部自相冲突**），两候选在 main 均不存在 ⇒ **保留原值**，见 PR §保留待裁
+    // 📌 CTO 2026-10-08 裁定（1-3）：判据文件名 = `tests/l3/report-template-client.test.ts`（判据交付物，本卡创建）
+    //   ⇒ 写集与 §⑥ 判据**同路径**；卡面 #1063 §④ 已同步订正（同一条纪律：卡面说错了也要改）
     status: 'todo',
     source: '施工单.md 1-3',
   },
@@ -931,7 +945,9 @@ export const constructionItems: readonly ConstructionItem[] = [
     //   ⇒ 已换成**等价可判写法**：第 1 项 = 卡面 §⑥ V1 逐字命令（经生产入口 `collectFeedback` + `createEvolutionChannelSink` 写入 decision=confirm 且读得回）；
     //   第 2 项 = 原 SQL 保留 + 改用 `expectRowsGt`（结构性期望，无 grep）。
     //   ⚠️ 卡面 §⑥ V3「回滚」为 **P14 硬要求、当前 main 必红**（迁移末尾 DROP 旧表、无 `feedback_log_pre_k6_confirm_decision` 副本）——非命令型，见下方抄录。
-    //   ⚠️ 待裁（CTO）：该 P14 硬要求是否正式写入本项完成标准，见 PR §保留待裁。
+    //   📌 CTO 2026-10-08 裁定（2-3）：P14 回滚**正式写入本项完成标准**（不是可选增强）。
+    //     判据 = ① 迁移前副本存在（同 commit、同一份数据）② 按旧 CHECK 反向重建**可成功**。
+    //     依据：宪章 P14「改与退必须是同一份数据」是**硬要求**（与 R5 / D1 一致）。
     // ┌─ 卡面 §⑥ 判据（Issue #1059，2026-10-07 断面；全文抄录，机器条目见下方 acceptance）─┐
     // │ 卡面标题：2-3 · 反馈两通道分裂 + 正向值被 DDL 拒
     // │ - [ ] `V1` **正反馈可写入（原判据语义，可跑形态）**：`npx vitest run tests/growth/feedback-channel-unification.test.ts` ⇒ exit 0；断言"经生产入口（`collectFeedback` + `createEvolutionChannelSink`）写入 `decision='confirm'` 成功且读得回"
@@ -944,6 +960,11 @@ export const constructionItems: readonly ConstructionItem[] = [
     // │ - **判定人**：K3 / 独立复核（**执行方不得自判**）
     // └─ 抄录结束 ┘
     acceptance: [
+      // P14-① （CTO 2026-10-08 裁）：迁移前副本表存在且非空（= 同一份数据的载体）。
+      //   ⚠️ 该表在**迁移之后**才存在；当前 main 尚未实现 ⇒ 本条**现为红**（预期，由本卡修）。
+      { run: 'sqlite3 data/synova.db "SELECT COUNT(*) FROM feedback_log_pre_k6_confirm_decision"', expectRowsGt: { table: 'feedback_log_pre_k6_confirm_decision', n: 0 } },
+      // P14-② （CTO 2026-10-08 裁）：按旧 CHECK 反向重建**可成功** + 行数/内容逐行一致
+      //   ⇒ 由 V1 同一夹具的回滚用例断言（卡面 §⑥ V3；反例②：换载体「归档到 agent_memory 再重建」⇒ 必红）。
       { run: 'npx vitest run tests/growth/feedback-channel-unification.test.ts', expectExit: 0 },
       { run: 'sqlite3 data/synova.db "SELECT COUNT(*) FROM feedback_log WHERE decision=\'confirm\'"', expectRowsGt: { table: 'feedback_log', n: 0 } },
     ],
@@ -1329,7 +1350,9 @@ export const constructionItems: readonly ConstructionItem[] = [
     acceptance: [
       { run: 'npx tsx docs/synova/coordination/tools/probe-three-layer-contract.ts --case cash-runway', expectExit: 0 },
     ],
-    // ⚠️ 待裁（CTO）：卡面 §④ 把末条放宽为 `docs/synova/coordination/`（目录级）；登记件为单文件。放宽会与 2-2 / 2-7 / 1-7bis 写集重叠（INV-4）⇒ **保留原值**，见 PR §保留待裁
+    // 📌 CTO 2026-10-08 裁定（PL-04）：**不放宽，按登记件单文件为准**。
+    //   理由：INV-4（写集互斥）是**硬不变量**；目录级放宽会与 2-2 / 2-7 / 1-7bis 制造**假阳性冲突**，
+    //   而判据交付物只需一个文件。将来确需多文件 ⇒ **逐文件列出，不用目录级**（与 R21 一致）。
     status: 'todo',
     source: '边界评估/00-最终方案.md:48（领域智能 20 项之第 3 项，属【必须自建】）；创始人 2026-10-05 裁 A 归入 K5',
   },
@@ -1534,7 +1557,10 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
   {
     id: 'K1', name: '接线·点火·权限执行面', items: ['0-1', '0-9bis', '0-10', '1-7', '1-7bis', 'K1-WH'],
     blockAcceptance: [
-      { run: 'bash scripts/control-tower/probe-loops.sh', expectStdoutContains: 'MainAgent 已注入' },
+      // 块标准原为 `bash scripts/control-tower/probe-loops.sh` —— **该件在 origin/main 不存在**（全树零命中）。
+      // 已按 CTO 2026-10-08 对 0-1 的裁定（内部自不一致 #2）同步为卡面 #975 的探针判据。
+      { run: 'bash -c "node_modules/.bin/tsx tests/loops/probes/batch0a-probes.ts 2> /tmp/batch0a.stderr.log; grep -c \'D9] MainAgent 未注入\' /tmp/batch0a.stderr.log | grep -q ^0$"', expectExit: 0 },
+      // 口径：`grep -c` 作用在单文件 ⇒ 行数口径（无串接少算风险）。
     ],
     source: 'T3 §二 K1',
   },
@@ -1558,8 +1584,12 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
   {
     id: 'K4', name: '本体·因果边·循环编号', items: ['0-4', '1-8', '1-9', '3-5', '3-11'],
     blockAcceptance: [
-      // 🔴 原为纯 grep 型（T6 面1 否决点）⇒ 改为穿生产入口：跑一次真实哨兵，断言它读到该字段
-      { run: 'npx vitest run tests/sentinel/edge-lag-consumed.test.ts', expectExit: 0 },
+      // CTO 2026-10-08 裁定（块级 K4）：块判据 = `scripts/control-tower/check-ontology-fields.sh`（exit 0）。
+      //   依据：① 该脚本**实测在 main 存在**（本机实跑 ⇒ `✅ 全部 55 件边类型关键字段齐全` / exit 0）
+      //        ② 1-8（#987）卡面 §⑥ 自陈判据已达成（`action_effect_lag` 55/55 + CI 断言存在 + 改坏即红）
+      //        ③ 与 K4 模块卡 §⑥ 一致。
+      //   ⚠️ 原引 `tests/sentinel/edge-lag-consumed.test.ts` —— **该件在 origin/main 不存在**（全树零命中）。
+      { run: 'bash scripts/control-tower/check-ontology-fields.sh', expectExit: 0 },
     ],
     source: 'T3 §二 K4',
   },
@@ -1582,7 +1612,9 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
   {
     id: 'K7', name: '诊断→报告交付链', items: ['1-1', '1-2', '1-3', '1-5', '3-7'],
     blockAcceptance: [
-      { run: 'bash scripts/golden-scenarios/run.sh GS-08', expectExit: 0 },
+      // CTO 裁定 C-01（2026-10-08）同批订正：原写 `scripts/golden-scenarios/run.sh` —— **该路径不存在**
+      //   （main 上只有逐场景脚本；见 scripts/golden-scenarios/README.md §运行契约）。
+      { run: 'bash scripts/golden-scenarios/GS-08-report-readable/run.sh', expectExit: 0 },
     ],
     source: 'T3 §二 K7',
   },
@@ -1591,7 +1623,9 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
     blockAcceptance: [
       // 🔴 修 T9 面 1 反例「K8 块标准串到 K1」：原为 org-isolation-audit（= K1 的项 0-9 判据）
       //    ⇒ K8 三项一件未做也能绿。改为 K8 自己三项的合并判据。
-      { run: 'npx vitest run tests/l4/traversal-permission.test.ts', expectExit: 0 },
+      // 判据文件名订正（与 1-6 同）：原 `traversal-permission.test.ts` 在 main **不存在**
+      //   ⇒ 改用既有 `tests/l4/traversal-permission-filter.test.ts`（卡面 1-6 §⑤ 已自陈该文件不存在）。
+      { run: 'npx vitest run tests/l4/traversal-permission-filter.test.ts', expectExit: 0 },
       { run: 'npx vitest run tests/l4/knowledge-scope.test.ts', expectExit: 0 },
     ],
     source: 'T3 §二 K8（blockAcceptance 已按 T9 面1 反例改：禁串块）',
