@@ -1,6 +1,6 @@
 {
   "task_id": "D1197",
-  "title": "清分域：ownership.yaml 单域化 + CODEOWNERS 重生成 + 校验器/测试同步",
+  "title": "清分域：scan/budget 的最后三域名残留",
   "status": "claimed",
   "spec": null,
   "impl": null,
@@ -9,13 +9,10 @@
   "updated_at": "2026-10-07",
   "updated_by": "cto",
   "write_set": [
-    ".github/CODEOWNERS",
-    "docs/synova/coordination/ownership.yaml",
-    "scripts/control-tower/check-ownership.py",
-    "tests/control-tower/check-ownership.test.sh",
-    ".claude/task-briefs/2026-10-07-D1197-no-domain-cleanup.md",
-    "task-state/D1197.json",
     "scripts/control-tower/scan-fullwidth-vars.sh",
-    "tests/control-tower/scan-fullwidth-vars.test.sh"
+    "scripts/control-tower/check-pr-budget.sh",
+    "tests/control-tower/check-pr-budget.test.sh",
+    ".claude/task-briefs/2026-10-07-D1197-no-domain-cleanup.md",
+    "task-state/D1197.json"
   ]
 }
