@@ -1,18 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-check-ownership.py — 模块域归属校验器（D733；ownership.yaml 的唯一机器消费者）
+check-ownership.py — 路径归属查询/校验器（ownership.yaml 的唯一机器消费者）
+#
+# 🔴 2026-10-07 · 创始人授权清理「分域」：
+#   原职责 = 「模块域归属校验器」（判 mac/win/k3 三域 + 跨域即 exit 1）；
+#   分域已废止（创始人：「不分域。谁有空，谁能做就谁做。」）⇒ ownership.yaml 改为单域，
+#   「跨域」在结构上不可能发生。本脚本保留的用途 = **归属查询** 与 **CODEOWNERS 生成**。
+#   ⚠️ `--owner` 的三值断言（mac/win/k3）随之废止 —— 见 :190 附近注释。
 
 一句话: 回答「这个写集属于哪条线？派给 X 线是否越域？」——把只写在
         docs/synova/coordination/TASK-ROUTING.md 里的人读域划分，变成可机器判定的门禁。
 
-背景（D733 派单 §一）: 域划分此前零机器消费者，Codeowners 26 条规则里 Win 域靠 `src/`
+背景（D733 派单 §一）: **（域划分已于 2026-10-07 废止，以下为历史沿革）** 域划分此前零机器消费者，Codeowners 26 条规则里 Win 域靠 `src/`
 兜底且排在 Mac 例外之后（CODEOWNERS 语义 = 最后匹配者胜出 → 例外被吞）。后果是
 CTO 2026-09-13 两次派错线（D728/D729 写集 100% 落 Win 域却派给 Mac 线）。
 
 契约（铁律 47）:
   @input  — 位置参数 FILE...: 待校验文件路径（仓库相对，允许尚未创建的文件，如 src/evidence/x.ts）
-            选项 --owner {mac|win|k3}  断言每个文件归属该 owner（越域 → exit 1）
+            选项 --owner <键>      断言每个文件归属该 owner（键见 ownership.yaml owners: 段；不符 → exit 1）
                  --yaml PATH            ownership.yaml 路径（默认 docs/synova/coordination/ownership.yaml）
                  --emit-codeowners      生成 .github/CODEOWNERS 全文到 stdout（不校验文件）
                  --quiet                只输出结论行，不打逐文件明细
@@ -159,9 +165,9 @@ def emit_codeowners(rules, github) -> str:
         "# 漂移门禁: tests/control-tower/ownership.test.sh 逐字节断言本文件 == 生成结果（D733）",
         "# 语义: CODEOWNERS「最后匹配者胜出」→ 宽规则在前、例外在后（与 ownership.yaml 同序）。",
         "#",
-        "# owner 账号体系待创始人定（2026-08-16 B1 落地）：当前全部指向主账号 @tangbaobao520",
-        "# （兜底 = 创始人最终把关）。建议建三个团队 @synova-dsh / @synova-claude / @synova-k3，",
-        "# 改 ownership.yaml 的 github: 段后重跑生成命令即可 —— 本文件不需要手改。",
+        "# 2026-10-07 · 分域已废止（创始人：「不分域。谁有空，谁能做就谁做。」）",
+        "#   ownership.yaml 已改为单域 ⇒ 本文件只剩一条兜底（* → 最终把关人）。",
+        "#   账号体系：改 ownership.yaml 的 github: 段后重跑生成命令即可 —— 本文件不需要手改。",
         "",
     ]
     width = max(len(CODEOWNERS_GLOB_FOR_CATCHALL if r["glob"] == "**" else str(r["glob"])) for r in rules)
@@ -185,7 +191,10 @@ def main(argv) -> int:
         description="模块域归属校验（D733）：越域 exit 1，检查执行失败 exit 2",
     )
     ap.add_argument("files", nargs="*", help="待校验文件（仓库相对路径）")
-    ap.add_argument("--owner", choices=["mac", "win", "k3"], default=None, help="声明 owner；逐文件断言归属")
+    # 🔴 2026-10-07: 原 `--owner` 只收 mac/win/k3 三值（越域 ⇒ exit 1）。分域废止后 owner 恒为
+    #   ownership.yaml 的单一 owner 键 ⇒ 三值断言无意义且会误报。现放开为「任意 owner 键」：
+    #   传了仍逐文件断言（对单域必然全中），不传则只判「全部同域」（单域下恒成立）。
+    ap.add_argument("--owner", default=None, help="声明 owner；逐文件断言归属（单域下恒为 ownership.yaml 的那个键）")
     ap.add_argument("--yaml", default=str(DEFAULT_YAML), help="ownership.yaml 路径")
     ap.add_argument("--emit-codeowners", action="store_true", help="生成 CODEOWNERS 全文到 stdout")
     ap.add_argument("--quiet", action="store_true", help="只输出结论行")
@@ -198,7 +207,7 @@ def main(argv) -> int:
         return EXIT_OK
 
     if not args.files:
-        _die("未给出待校验文件（用法: check-ownership.py <文件...> [--owner mac|win|k3]）")
+        _die("未给出待校验文件（用法: check-ownership.py <文件...> [--owner <键>]）—— owner 键见 ownership.yaml 的 owners: 段")
 
     rows = []          # (path, owner|None)
     violations = []    # (path, expected, actual)

@@ -9,8 +9,10 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   4 质量根（硬阻断）: ①as any ②测试配对+expect ③Secrets ④接线物理事实
 #     + 特例 G12d 生成物单点 / G13 技能同步（spec 明示保留）
 #   3 声明类硬闸（D1148 合并 15→3）: ①brief schema ②brief↔代码一致性 ③可证伪 Done
-#   旁路（只打印、不判红、不进 gate-hits）: D782 D1/D2、D734 预算、验收 CI、Q0c、
-#     plan-integrity non-Q2、G12c dev doc 写集、G12d 声称↔证据表
+#   旁路（只打印、不判红、不进 gate-hits）: Q0c、plan-integrity non-Q2、
+#     G12c dev doc 写集、G12d 声称↔证据表
+#   ↳ D1171（P0-5）撤旁路复执法: D782 D1/D2、D734 预算 → v5_soft（本地软/CI strict 硬）
+#   ↳ D1176（K3 整改）: 验收 CI 同转 v5_soft（处置表行#5 理由不成立，唯一调用点无执行方）
 #   退役: opt_check「PRD 对照」（261 次命中/永不阻断，注释指向 D1148）
 #   软提示（不拦本地提交）: 架构边界 ⑥契约门禁 ⑧empty catch ⑩DiagnosticModule/专家配置
 # 覆盖矩阵: 结构断言（硬/旁路/退役归属）+ 行为断言（as any 实拦 / 闸② 实拦 + 沙箱降软）
@@ -78,16 +80,22 @@ pc_code() { grep -vE '^[[:space:]]*#' "$PC"; }
 pc_code > "$PC_CODE_FILE" || true
 pcgrep() { grep -qF -- "$1" "$PC_CODE_FILE"; }
 KEEP_BYPASS=(
-  'bypass_run "D782 D1 文档真相'
-  'bypass_run "D782 D2 登记门禁'
-  'bypass_run "D734 PR 预算'
-  'note_check "验收 CI (V3.9, exit='
   'note_check "plan-integrity: non-Q2 项'
   'note_check "G12c dev doc 写集验证'
   'note_check "G12d 声称↔证据对照表'
 )
 for k in "${KEEP_BYPASS[@]}"; do
   pcgrep "$k" && ok "旁路[观测]: $k" || no "应转旁路却缺失: $k"
+done
+# ── D1171（P0-5）: 三处撤旁路复执法 —— 必须 v5_soft（本地软/CI strict 硬）──
+KEEP_V5SOFT=(
+  'v5_soft "D782 D1 文档真相（D1171 撤旁路复执法）"'
+  'v5_soft "D782 D2 登记门禁（D1171 撤旁路复执法）"'
+  'v5_soft "D734 PR 预算（D1171 撤旁路复执法）"'
+  'v5_soft "验收 CI (V3.9)（D1176 K3 整改复执法）"'
+)
+for k in "${KEEP_V5SOFT[@]}"; do
+  pcgrep "$k" && ok "撤旁路[D1171]: $k" || no "应 v5_soft 却缺失/被回退: $k"
 done
 # D1148: q0c 不转旁路而是**并入闸①**（Q0 系列成员）——按此断言（spec: 闸① = …+Q0 系列）
 if pcgrep 'check-q0c-tracking.sh' && pcgrep '${Q0C_MSG}'; then
@@ -96,7 +104,7 @@ else
   no "闸① 未收编 Q0c（Q0 系列成员缺失）"
 fi
 # 反向断言: 旁路/收编项不得仍挂在阻断路径上（只看代码行；hard_check/soft_check 命中即判红）
-for bad in 'hard_check "D734' 'soft_check "D1 文档真相' 'v5_soft "验收 CI' 'v5_soft "plan-integrity' 'v5_soft "Q0c'; do
+for bad in 'hard_check "D734' 'soft_check "D1 文档真相' 'v5_soft "plan-integrity' 'v5_soft "Q0c' 'bypass_run "D782' 'bypass_run "D734' 'note_check "验收 CI'; do
   if pcgrep "$bad"; then no "旁路项仍在阻断路径: $bad"; else ok "已离开阻断路径: $bad"; fi
 done
 # D1148 退役: opt_check（PRD 对照，261 次命中/永不阻断）检查点 + 死函数必须清零
@@ -189,6 +197,28 @@ OUTB2=$(cd "$REPO" && SYNO_TEST_ARM=1 SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_W
 [ "$rcB2" -eq 0 ] && ok "行为B2: 沙箱档下闸② 降软不阻断 (exit 0)" || no "行为B2: 应 exit 0, 实际 $rcB2"
 echo "$OUTB2" | grep -q "tmp-d515-scope-probe.json" && ok "行为B2: 沙箱档下仍点名越界文件" || no "行为B2: 沙箱档下未点名"
 cleanup
+
+cleanup
+
+# ── 行为断言C (D1171/P0-5): 未登记 .md 探针 → CI strict 下 D782 D2 硬拦；本地软放 ──
+# 改坏即红闭环: 若把 D2 的 v5_soft 块改回 bypass_run（旁路），C1 即红（旁路不判红 ⇒ exit 0）。
+# 探针用根级 .yaml 而非 docs/*.md: CT-34 纯文档早退（豁免 12 组）会把纯文档提交挡在
+#   D782 块之前——.yaml 不在白名单 ⇒ 走全量路径 ⇒ 到达 D2 判定点（首轮实测踩到）。
+PROBE3="$REPO/tmp-d1171-unregistered-probe.yaml"
+cleanup3() { git -C "$REPO" restore --staged -- "$PROBE3" >/dev/null 2>&1 || true
+  git -C "$REPO" rm --cached -q -- "$PROBE3" >/dev/null 2>&1 || true; rm -f "$PROBE3"; }
+trap cleanup3 EXIT
+printf 'probe: d1171\n' > "$PROBE3"
+git -C "$REPO" add -- "$PROBE3" >/dev/null 2>&1
+OUTC=$(cd "$REPO" && SYNO_CI=1 SYNO_TEST_ARM=1 SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_WARN=1 \
+  SYNO_GATE_HITS_LOG="$(mktemp)" bash "$PC" 2>&1); rcC=$?
+[ "$rcC" -eq 1 ] && ok "行为C1: 未登记 .md 在 CI strict 下被 D2 硬拦 (exit 1)" || no "行为C1: 应 exit 1, 实际 $rcC :: $(echo "$OUTC" | grep -B2 '提交已拒绝' | head -6)"
+echo "$OUTC" | grep -q "D782 D2 登记门禁" && ok "行为C1: 点名 D782 D2 登记门禁" || no "行为C1: 未点名 D2"
+OUTC2=$(cd "$REPO" && SYNO_TEST_ARM=1 SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_WARN=1 \
+  SYNO_GATE_HITS_LOG="$(mktemp)" bash "$PC" 2>&1); rcC2=$?
+[ "$rcC2" -eq 0 ] && ok "行为C2: 本地（非 CI strict）同一探针软放行 (exit 0)" || no "行为C2: 应 exit 0, 实际 $rcC2"
+echo "$OUTC2" | grep -q "D782 D2 登记门禁" && ok "行为C2: 本地仍点名 D2（报告可见，软提示）" || no "行为C2: 本地未点名 D2（静默 = 违铁律 11）"
+cleanup3
 
 echo ""
 echo "结果: $PASS 通过, $FAIL 失败"

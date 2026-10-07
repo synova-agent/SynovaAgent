@@ -575,6 +575,8 @@ jobs:
             tests/doc-system/doc-categories.test.sh \
             tests/doc-system/doc-staleness.test.sh \
             tests/doc-system/doc-triage.test.sh \
+            tests/control-tower/check-doc-contract.test.sh \
+            tests/control-tower/validate_doc_contract.test.sh \
             tests/doc-system/generate-chronicle-monthly.test.sh \
             tests/control-tower/check-citations.test.sh \
             tests/control-tower/check-progress-freshness.test.sh \
@@ -588,6 +590,10 @@ jobs:
             tests/control-tower/check-required-contexts.test.sh \
             tests/control-tower/loop-context.test.sh \
             tests/control-tower/install-deps.test.sh \
+            tests/control-tower/check-project-coordinates.test.sh \
+            tests/control-tower/check-ontology-fields.test.sh \
+            tests/control-tower/sync_project_coordinates.test.sh \
+            tests/control-tower/gate-retirement-report.test.sh \
             tests/control-tower/ci-signal-classify.test.sh; do
             echo "── $t"
             # D1147: D1094 平台跳过名单随 windows 腿迁出本 job——本矩阵已收敛为单元素 ubuntu
@@ -670,7 +676,12 @@ jobs:
     timeout-minutes: 6
     name: Checker Review (maker/checker)
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/feat/')
+    # P0-2（2026-10-07 治理线）: 原 `pull_request || feat/*` 会把 main push / merge_group 整个
+    # job 吞掉（skip）⇒ ① main push 语境 CI「看不见坏」（#905 假绿正是 main push 语境）；
+    # ② all-checks-passed 判 skipped=FAIL ⇒ 每次 main push 恒红；③ merge_group 下必需
+    # context 永不报告 ⇒ merge queue 卡死（D515 同族，见文件头 merge_group 注释）。
+    # 故扩为: pull_request | merge_group | main push | feat/*（原有行为全保留）。
+    if: github.event_name == 'pull_request' || github.event_name == 'merge_group' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/feat/')
     steps:
       - uses: actions/checkout@v4
         with:
@@ -700,37 +711,11 @@ jobs:
         if: steps.docsonly.outputs.docs_only != 'true'
         run: bash scripts/workflow/check-brief-vs-code.sh --strict || true
 
-  audit:
-    # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-10-02T12:45:00+08:00；
-    # 公式 = max(P95×1.5, 中位数×3)）：audit 1 / Test-Kit(ubuntu) 1 / Golden Case 2 /
-    # Gate Integrity 2 / Test-Kit(windows) 3 / Architecture 6 / Checker Review 6 /
-    # Integration 6 / TypeScript+Iron Laws 7 / Vitest 8 / Control Tower(ubuntu) 14 / (windows) 106（D1109 后**未重取**：口径要 n=12 同分布样本，现 n=1）。
-    timeout-minutes: 1
-    name: npm audit
-    runs-on: ubuntu-latest
-    # 2026-08-16 创始人裁决豁免（台账登记）：33 漏洞（32 high/1 critical）在 node-gyp
-    # 编译链，非产品运行时；Synova 本地部署，攻击面不成立。豁免登记备案，
-    # 触发升级条件 = 上云/公网化。CI 保留扫描（黄灯），失败不阻断合并。
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Detect docs-only change (D515)
-        id: docsonly
-        shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
-        run: |
-          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
-            echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
-            echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "docs_only=true" >> "$GITHUB_OUTPUT"
-          fi
-      - run: npm audit --audit-level=high || echo "npm audit 已豁免 (2026-08-16 创始人裁决, 见台账)"
-        if: steps.docsonly.outputs.docs_only != 'true'
+  # ═══ D-E/③（创始人 2026-10-07 批准）: npm audit job 退役 ═══
+  # 退役依据: continue-on-error + 2026-08-16 创始人裁决豁免（33 漏洞在 node-gyp 编译链，
+  #   非运行时攻击面）⇒ 黄灯挂 50 天零消费方；每日占 ~1 分钟 runner 与一个 check-run 噪音。
+  # 退役方式: 删 job 块 + 本注释留痕。复活条件: 上云/公网化（原豁免触发升级条件）⇒ 新卡重建。
+  # 残留职责: 依赖面安全回归由 CI 外的定期人工审计 + 上云前专项承接。
 
   golden-case:
     # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-10-02T12:45:00+08:00；
@@ -977,26 +962,21 @@ jobs:
         id: detect
         shell: bash
         run: |
-          # 三态语义: 正常 = 写 run=true|false 后 exit 0；其余一切分支一律 fail-safe run=true（绝不误跳）
-          if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            echo "D1147: origin/main 不可解析 ⇒ fail-safe run=true"
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          # 安全网②③（对齐 control-tower-tests 口径）: 人工强制 / 周期兜底 ⇒ 无条件 true
+          # 🔴 v2.0/方案七⑤（创始人 2026-10-07 批准）: windows 顾问腿**改 nightly 专属**。
+          #   实测依据（run 37589330830）: 该腿 796s = 全 run 墙钟 809s 的 98%——非必需腿却
+          #   支配全 CI 时长（其余全部 job ≤153s）。
+          #   语义变更（如实记录，原 D1147 路径触发被本项取代）:
+          #     · schedule（每周日）/ workflow_dispatch（人工）⇒ run=true
+          #     · 其余一切事件（PR / main push）⇒ run=false ⇒ 顾问腿 check-run 以 skipped 出现
+          #   代价: PR 期即时 Windows 平台信号丢失 ⇒ 回归最迟下周日夜曝光；
+          #         需即时信号时用 workflow_dispatch 手动触发（保留口子，不废能力）。
+          #   保留原 fail-safe 精神: 任何判断异常都倾向**跑**而非静默跳过——但本项是显式
+          #   语义降频（非误跳），故只在 schedule/dispatch 下为 true，并在日志显式留痕。
           if [ "${GITHUB_EVENT_NAME:-}" = "schedule" ] || [ "${GITHUB_EVENT_NAME:-}" = "workflow_dispatch" ]; then
-            echo "D1147: event=${GITHUB_EVENT_NAME} ⇒ 安全网无条件 run=true"
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          CHANGED="$(git diff --name-only origin/main...HEAD 2>/dev/null || true)"
-          echo "── D1147 变更集（origin/main...HEAD）"
-          printf '%s\n' "$CHANGED"
-          if printf '%s\n' "$CHANGED" | grep -qE '^(scripts|tests)/'; then
-            echo "D1147: 命中 ^(scripts|tests)/ ⇒ run=true（windows 顾问腿将被创建）"
+            echo "v2.0-⑤: event=${GITHUB_EVENT_NAME} ⇒ run=true（nightly 专属 + 人工口）"
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
-            echo "D1147: 未命中 scripts/**|tests/** ⇒ run=false（顾问腿的 job 级 if: 为 false ⇒ 其 check-run 以 conclusion=skipped 出现、不占 runner；main push 后 diff 为空亦落此支，周期 run 由上方安全网兜底）"
+            echo "v2.0-⑤: event=${GITHUB_EVENT_NAME} ⇒ run=false（windows 顾问腿已改 nightly 专属；需即时信号请 workflow_dispatch）"
             echo "run=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -1125,6 +1105,8 @@ jobs:
             tests/doc-system/doc-categories.test.sh \
             tests/doc-system/doc-staleness.test.sh \
             tests/doc-system/doc-triage.test.sh \
+            tests/control-tower/check-doc-contract.test.sh \
+            tests/control-tower/validate_doc_contract.test.sh \
             tests/doc-system/generate-chronicle-monthly.test.sh \
             tests/control-tower/check-citations.test.sh \
             tests/control-tower/check-progress-freshness.test.sh \
@@ -1138,6 +1120,10 @@ jobs:
             tests/control-tower/check-required-contexts.test.sh \
             tests/control-tower/loop-context.test.sh \
             tests/control-tower/install-deps.test.sh \
+            tests/control-tower/check-project-coordinates.test.sh \
+            tests/control-tower/check-ontology-fields.test.sh \
+            tests/control-tower/sync_project_coordinates.test.sh \
+            tests/control-tower/gate-retirement-report.test.sh \
             tests/control-tower/ci-signal-classify.test.sh; do
             echo "── $t"
             # D1094 平台跳过名单（**只在顾问腿**；分层原则：平台无关的失败不该污染 Windows 信号，
@@ -1176,3 +1162,38 @@ jobs:
             echo "::warning title=advisory:control-tower(win)::windows 顾问腿**未执行**（outcome='${OUTCOME}'）——本次未取得平台信号（非必需，不拦合并）；前置步骤失败时属预期"
           fi
           exit 0
+
+  # ═══ P0-3: 聚合必需检查 —— skipped 也判 FAIL ═══
+  # 蓝本: DSH 上游 ci.yml:700-726（dsh-v0.2.0-rc.2；steps 段逐字）
+  # 与蓝本的三处已声明差异（K3 整改 D1177，原「唯一差异」表述不实）:
+  #   ① if 去掉 pull_request 事件限定（CTO 明令——#905 语境为 main push）
+  #   ② name: all checks passed → All Checks Passed（对齐本仓 check-run 命名习惯）
+  #   ③ runs-on: 上游 failover 选择器 → ubuntu-latest（failover 机制本仓未建）
+  # 归因口径（K3 整改订正）: 本 job 治的是 **job 级 skip 族**（job 结论 success/skipped 不可辨，
+  #   D971/D1111/D1147 系）。#905 实为 **step 级 skip**（docs-only 误判 ⇒ job 内重步骤 skip
+  #   但 job=success）——needs.*.result 物理上看不见 step 级 skip，那层归 D1111 路径锚正则/
+  #   D708/D540 管。本 job 是纵深一层，不是「修 #905」。
+  # needs = 8 个 job 键，恰覆盖 9 条必需 context（test 是 2-shard 矩阵，覆盖 Vitest 1/2+2/2）。
+  # 🔴 不纳入 needs 的（非必需，纳入会把它们的红也变成阻断）:
+  #   audit(npm audit) · gate-integrity · windows-leg-trigger
+  #   · test-kit-windows-advisory · control-tower-windows-advisory
+  # 🔴 与 DSH 蓝本的唯一差异: 去掉 `github.event_name == 'pull_request'`
+  #   理由: push 到 main 同样必须被拦（#905 的假绿正是发生在 main push 语境）。
+  # ⚠️ 上界（必须留档）: 本 job 挡不住「PR 自己改 ci.yml 把本 job 改成恒绿」——
+  #   PR 事件跑的是 PR 头分支里的 workflow（#905 事故机制）；只保证 (a) skip 掉必需
+  #   job ⇒ 必红；(b) 改实现 ⇒ 挡不住（需 pull_request_target，下一张卡）。
+  all-checks-passed:
+    name: All Checks Passed
+    runs-on: ubuntu-latest
+    # 注: needs 必须单行 —— check-required-contexts.py 的 YAML 子集解析器不支持续行
+    #     （多行会 fail-closed degrade ⇒ required-contexts 全量检查降级失败）。
+    needs: [quality, test, architecture, test-kit-architecture, control-tower-tests, integration-check, checker-review, golden-case]
+    if: ${{ !cancelled() }}
+    steps:
+      - name: Fail if any needed job did not succeed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: |
+          echo "::error::Needed job results: ${{ join(needs.*.result, ', ') }}"
+          exit 1
+      - name: All checks passed
+        run: echo "All needed jobs succeeded (${{ join(needs.*.result, ', ') }})"

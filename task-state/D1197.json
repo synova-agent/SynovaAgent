@@ -1,0 +1,18 @@
+{
+  "task_id": "D1197",
+  "title": "清分域：scan/budget 的最后三域名残留",
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-07",
+  "updated_by": "cto",
+  "write_set": [
+    "scripts/control-tower/scan-fullwidth-vars.sh",
+    "scripts/control-tower/check-pr-budget.sh",
+    "tests/control-tower/check-pr-budget.test.sh",
+    ".claude/task-briefs/2026-10-07-D1197-no-domain-cleanup.md",
+    "task-state/D1197.json"
+  ]
+}

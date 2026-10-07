@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+sync_project_coordinates.py — D1196 (#991/#1212 修复): Issue 坐标系同步（薄壳脚本）
+
+背景: 2026-10-07 合并的 project-coordinates.yml 首跑即 startup failure（push 事件 0 秒无 job）
+  ⇒ 判定为 workflow 内联复杂逻辑（含中文 output 键/多段 heredoc）不被 GitHub 接受。
+  本卡把逻辑全部移入本脚本（DSH 式：workflow 只做胶水），workflow 侧只剩 checkout + 一条 run。
+
+契约（铁律 47）:
+  @input  env: PROJECT_TOKEN（缺 ⇒ 跳过且 exit 0，卡 #991 明令「未配 token 跳过且不红」）
+               ISSUE_NUMBER（issue 号）; ISSUE_BODY（issue 正文，可为空）
+          argv: --from-body <file>（离线注入缝：从文件读正文，单测用；不触网）
+               --dry-run（只解析并打印将写入的字段，不调 API）
+  @output stdout: 解析结果 + 每字段写入结果；缺字段 warning 点名（不猜值）
+  @exit   0 = 成功或「无 token 跳过」（两者都不应使 workflow 红）
+          2 = 检查自身失败（python 依赖缺失/参数错误/API 失败且非 token 问题）——fail-closed
+  @degraded 无: API 失败一律 exit 2（不静默），唯一放行路径是「无 token」且显式打印 notice
+
+坐标系字段（7→3 缩水前的现行 7 字段，POST_FIELDS）:
+  执行态 / 施工批次 / 服务承重件 / 总闸 / 命名空间 / 验证级别 / 阻塞源
+"""
+import json
+import os
+import re
+import subprocess
+import sys
+
+FIELDS = ["执行态", "施工批次", "服务承重件", "总闸", "命名空间", "验证级别", "阻塞源"]
+ORG = os.environ.get("SYNO_ORG", "synova-agent")
+PROJECT_NUMBER = int(os.environ.get("SYNO_PROJECT_NUMBER", "1"))
+
+
+def parse_coords(body: str) -> dict:
+    """从 issue 正文解析【坐标系】块的字段值。返回 {字段: 值}（缺失字段不出现）。"""
+    m = re.search(r"【坐标系】(.*?)(?:\n\s*\n|\Z)", body or "", re.S)
+    if not m:
+        return {}
+    got = {}
+    for line in m.group(1).splitlines():
+        mm = re.match(r"\s*(" + "|".join(map(re.escape, FIELDS)) + r")\s*[:：]\s*(\S.*)", line)
+        if mm:
+            got[mm.group(1)] = mm.group(2).strip().split()[0].rstrip("｜|")
+    return got
+
+
+def gh_graphql(query: str, **vars_):
+    """调用 gh api graphql。失败抛 RuntimeError（调用方 fail-closed）。"""
+    args = ["gh", "api", "graphql", "-f", f"query={query}"]
+    for k, v in vars_.items():
+        args += (["-F", f"{k}={v}"] if isinstance(v, int) else ["-f", f"{k}={v}"])
+    p = subprocess.run(args, capture_output=True, text=True, timeout=60)
+    if p.returncode != 0:
+        raise RuntimeError(f"gh graphql 失败: {p.stderr.strip()[:300]}")
+    return json.loads(p.stdout or "{}")
+
+
+def main(argv):
+    from_body = None
+    dry = False
+    i = 0
+    while i < len(argv):
+        if argv[i] == "--from-body":
+            i += 1
+            from_body = argv[i]
+        elif argv[i] == "--dry-run":
+            dry = True
+        else:
+            print(f"❌ 未知参数 {argv[i]}", file=sys.stderr)
+            return 2
+        i += 1
+
+    if from_body:
+        with open(from_body, encoding="utf-8") as f:
+            body = f.read()
+        number = os.environ.get("ISSUE_NUMBER", "0")
+    else:
+        body = os.environ.get("ISSUE_BODY", "")
+        number = os.environ.get("ISSUE_NUMBER", "")
+
+    coords = parse_coords(body)
+    missing = [f for f in FIELDS if f not in coords]
+    print(f"issue=#{number or '?'} 解析={len(coords)}/{len(FIELDS)} 字段"
+          + (f" 缺={('、'.join(missing))}" if missing else " 全齐"))
+    if missing:
+        print(f"::warning title=project-coordinates::坐标系块缺字段: {'、'.join(missing)}（只写已有字段）")
+
+    if not coords:
+        print("::notice title=project-coordinates::正文无【坐标系】块——无字段可写（不红）")
+        return 0
+
+    token = os.environ.get("PROJECT_TOKEN", "")
+    if not token:
+        print("::notice title=project-coordinates::PROJECT_TOKEN 未配置——跳过挂板/灌坐标（不红；配置由创始人裁，卡 #991）")
+        return 0
+    if dry:
+        print("dry-run: 将写入 " + json.dumps(coords, ensure_ascii=False))
+        return 0
+    try:
+        q_proj = ("query($org:String!,$num:Int!){organization(login:$org){projectV2(number:$num){"
+                  "id items(first:100){nodes{id content{... on Issue{number}}}}}}}")
+        data = gh_graphql(q_proj, org=ORG, num=PROJECT_NUMBER)
+        proj = data["data"]["organization"]["projectV2"]
+        pid, items = proj["id"], proj["items"]["nodes"]
+        item_id = next((n["id"] for n in items if (n.get("content") or {}).get("number") == int(number or 0)), None)
+        if not item_id:
+            m_add = ("mutation($pid:ID!,$cid:ID!){addProjectV2ItemById(input:{projectId:$pid,contentId:$cid})"
+                     "{item{id}}}")
+            issue_id = gh_graphql("query($org:String!,$num:Int!){organization(login:$org){"
+                                  "repository(name:\"SynovaAgent\"){issue(number:$num){id}}}}",
+                                  org=ORG, num=int(number))["data"]["organization"]["repository"]["issue"]["id"]
+            item_id = gh_graphql(m_add, pid=pid, cid=issue_id)["data"]["addProjectV2ItemById"]["item"]["id"]
+            print(f"  ✓ 已挂板 item={item_id[:12]}…")
+        for name, val in coords.items():
+            q_f = ("query($org:String!,$num:Int!){organization(login:$org){projectV2(number:$num){"
+                   f"field(name:\"{name}\"){{... on ProjectV2Field{{id}}}}}}}}")
+            try:
+                fid = gh_graphql(q_f, org=ORG, num=PROJECT_NUMBER)["data"]["organization"]["projectV2"]["field"]["id"]
+            except (KeyError, TypeError):
+                print(f"  ⚠ 字段 {name} 不存在于 Project#{PROJECT_NUMBER}（跳过）")
+                continue
+            m_up = ("mutation($pid:ID!,$iid:ID!,$fid:ID!,$val:String!){"
+                    "updateProjectV2ItemFieldValue(input:{projectId:$pid,itemId:$iid,fieldId:$fid,"
+                    "value:{text:$val}}){projectV2Item{id}}}")
+            gh_graphql(m_up, pid=pid, iid=item_id, fid=fid, val=val)
+            print(f"  ✓ {name} = {val}")
+        print("✅ 坐标系同步完成")
+        return 0
+    except Exception as e:  # noqa: BLE001 — 顶层统一 fail-closed（exit 2，不静默）
+        print(f"❌ 同步失败: {e}", file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

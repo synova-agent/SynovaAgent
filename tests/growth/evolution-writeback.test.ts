@@ -188,3 +188,80 @@ describe('K6/0-2 进化回写（总闸）', () => {
     db.close();
   });
 });
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// D1197 / P0-3: 跨租户写隔离 —— 聚合必须按企业分组（创始人红线「A 客户不能读 B 客户数据」）
+//
+// 缺陷面：① 聚合 `GROUP BY` 缺 `enterprise_id` ⇒ 多企业反馈混组；
+//        ② 回写遍历所有行业目录 ⇒ 无企业过滤。串联后 A 企业反馈可触发 B 企业配置改写。
+// 本组用例：判据②（不混组）+ 企业轴契约 + 防御性不变量（多企业信号拒写）。
+// 改坏即红：把 `GROUP BY` 去掉 `enterprise_id` ⇒ 判据②必红（4 条混成一组 count=4 ≥ 3）。
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('D1197/P0-3: 跨租户写隔离（聚合按企业分组）', () => {
+  it('判据②: 两企业各 2 次同类反馈（各未达阈值 3）⇒ 不产生任何 signal', () => {
+    cleanupThresholdFixture();
+    setupThresholdFixture(2);
+
+    const db = openDb('feedback-cross-tenant.db');
+    const collector = new FeedbackCollector();
+    collector.setDatabase(db);
+
+    const seed: Array<[string, number]> = [['org-a', 2], ['org-b', 2]];
+    for (const [enterpriseId, times] of seed) {
+      for (let i = 0; i < times; i++) {
+        collector.collectFeedback({
+          enterpriseId, actorId: 'ga', decision: 'reject',
+          targetType: 'sentinel_alert', targetId: TEST_SENTINEL_KEY, reason: '误报',
+        });
+      }
+    }
+
+    // 旧实现（GROUP BY 不含 enterprise_id）会把 4 条混成一组 count=4 ≥ 3 ⇒ 误触发跨租户回写
+    const signals = collector.getAggregatedSignals(3);
+    expect(signals).toEqual([]);
+
+    const result = applyEvolutionActions(processFeedbackSignals(signals));
+    expect(result.applied).toBe(0);
+
+    db.close();
+  });
+
+  it('企业轴契约: 单企业 3 次 ⇒ 信号携带且仅携带该企业', () => {
+    cleanupThresholdFixture();
+    setupThresholdFixture(2);
+
+    const db = openDb('feedback-single-tenant.db');
+    const collector = new FeedbackCollector();
+    collector.setDatabase(db);
+    for (let i = 0; i < 3; i++) {
+      collector.collectFeedback({
+        enterpriseId: 'org-a', actorId: 'ga', decision: 'reject',
+        targetType: 'sentinel_alert', targetId: TEST_SENTINEL_KEY,
+      });
+    }
+
+    const signals = collector.getAggregatedSignals(3);
+    expect(signals.length).toBe(1);
+    expect(signals[0].enterpriseId).toBe('org-a');
+    expect(signals[0].enterpriseIds).toEqual(['org-a']);
+
+    db.close();
+  });
+
+  it('防御性不变量: 多企业混组信号（enterpriseId=null）⇒ 拒绝回写（不猜、不写）', () => {
+    cleanupThresholdFixture();
+    setupThresholdFixture(2);
+
+    const handBuilt = [{
+      key: 'reject:sentinel_alert', decision: 'reject' as const, targetType: 'sentinel_alert' as const,
+      actorRoles: [], entityKey: TEST_SENTINEL_KEY, entityKeys: [TEST_SENTINEL_KEY],
+      enterpriseId: null, enterpriseIds: ['org-a', 'org-b'],
+      count: 4, latestTimestamp: new Date().toISOString(), targetIds: [TEST_SENTINEL_KEY],
+    }];
+
+    const actions = processFeedbackSignals(handBuilt);
+    expect(actions.some(a => a.type === 'threshold_adjust')).toBe(false);
+  });
+});

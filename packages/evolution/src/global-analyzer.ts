@@ -544,14 +544,20 @@ export interface OrgEnumeratingStoreLike {
   listOrgs?: () => string[];
 }
 
-/** K6/3-12 E2: 一条跨客户模式（携带贡献组织清单，可审计到"哪些客户真的纠错过"）。 */
+/**
+ * K6/3-12 E2: 一条跨客户模式。
+ *
+ * 🔴 D1195/P0-1 边界（创始人红线「A 客户不能读 B 客户数据」）：本结构**只带客户数量**
+ * （`orgCount`），**绝不回传客户标识** —— 贡献客户清单仅存在于 `discoverCrossCustomerPatterns`
+ * 的内部局部变量中，不进任何返回值/日志。
+ */
 export interface CrossCustomerPattern {
   /** 稳定 ID：`xcp_<sentinelId>`（同一哨兵在一次分析中只产出一条） */
   patternId: string;
   type: IndustryPattern['type'];
   sentinelId: string;
   /** 贡献该模式的组织（去重、字典序升序） */
-  orgIds: string[];
+  /** 参与该模式的客户数（k-匿名：**不回传客户标识**，见 discoverCrossCustomerPatterns 契约） */
   orgCount: number;
   evidence: string;
   suggestion: string;
@@ -561,10 +567,13 @@ export interface CrossCustomerPattern {
 export interface CrossCustomerDiscoveryResult {
   /** 按 orgCount 降序、同数按 sentinelId 升序（确定性输出） */
   patterns: CrossCustomerPattern[];
-  /** 实际枚举到并尝试查询的组织（去重、字典序升序） */
-  orgsConsidered: string[];
-  /** 查询失败被跳过的组织（非空即 degraded） */
-  orgsFailed: string[];
+  /**
+   * 实际枚举到并尝试查询的客户**数量**（k-匿名：客户标识仅存在于内部局部变量，
+   * **绝不进返回体/日志** —— 创始人红线「A 客户不能读 B 客户数据」）
+   */
+  orgsConsideredCount: number;
+  /** 查询失败被跳过的客户**数量**（> 0 即 degraded；同样不回传标识） */
+  orgsFailedCount: number;
   /** 无法解析的记忆条目数（corrupt —— 计数 + log.warn，不静默） */
   unparsableEntries: number;
   degraded: boolean;
@@ -713,9 +722,8 @@ export async function discoverCrossCustomerPatterns(
       patternId: `xcp_${sentinelId}`,
       type: 'threshold_calibration',
       sentinelId,
-      orgIds,
       orgCount: orgIds.length,
-      evidence: `${orgIds.length} 个不同客户纠错过此哨兵（${orgIds.join(', ')}）`,
+      evidence: `${orgIds.length} 个不同客户纠错过此哨兵`,
       suggestion: `此哨兵被 ${orgIds.length} 个客户纠错 — 建议检查通用阈值是否适用于全部客户`,
     });
   }
@@ -733,8 +741,8 @@ export async function discoverCrossCustomerPatterns(
 
   return {
     patterns,
-    orgsConsidered: orgs.orgIds,
-    orgsFailed,
+    orgsConsideredCount: orgs.orgIds.length,
+    orgsFailedCount: orgsFailed.length,
     unparsableEntries,
     degraded,
   };

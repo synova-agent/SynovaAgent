@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Synova 架构总图（宪章 v5 第四条 · 现行有效）</title>
+<style>
+  :root{--bg:#0d1117;--fg:#e6edf3;--dim:#8b949e;--line:#30363d;
+        --rt:#6e7681;--cyc:#1f6feb;--ont:#238636;--sen:#9e6a03;--par:#da3633;
+        --nav:#8957e5;--con:#0d419d;--evo:#a371f7;--ok:#7ee787;--half:#e3b341;--nod:#ff7b72;}
+  *{box-sizing:border-box}
+  body{margin:0;padding:28px;background:var(--bg);color:var(--fg);
+       font:14px/1.65 -apple-system,"PingFang SC","Helvetica Neue",sans-serif}
+  .wrap{max-width:1180px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--dim);font-size:12.5px;margin-bottom:20px}
+  .flow{display:grid;grid-template-columns:1fr;gap:9px;margin:18px 0}
+  .box{border:1px solid var(--line);border-left:5px solid var(--dim);border-radius:9px;
+       padding:11px 14px;background:#161b22;position:relative}
+  .box .h{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+  .box .t{font-weight:600;font-size:14px}
+  .box .st{font-size:11.5px;color:var(--dim);white-space:nowrap}
+  .box .d{color:var(--dim);font-size:12.5px;margin-top:5px}
+  .box .d b{color:var(--fg)}
+  .rt{border-left-color:var(--rt)} .cyc{border-left-color:var(--cyc)}
+  .ont{border-left-color:var(--ont)} .sen{border-left-color:var(--sen)}
+  .par{border-left-color:var(--par);background:#2a1113}
+  .nav{border-left-color:var(--nav)} .con{border-left-color:var(--con)}
+  .evo{border-left-color:var(--evo);background:#1c1526}
+  .arrow{text-align:center;color:var(--dim);font-size:15px;line-height:1;margin:-2px 0}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;color:var(--dim);font-size:12px;margin:20px 0 4px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:middle}
+  .states{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-top:10px}
+  .st-box{border:1px solid var(--line);border-radius:7px;padding:8px 11px;font-size:12.5px}
+  .st-box b{display:block;margin-bottom:3px}
+  code{background:#161b22;padding:1px 5px;border-radius:4px;font-size:12px}
+  .warn{border:1px solid #9e6a03;background:#2b2100;border-radius:9px;padding:13px 15px;margin-top:18px}
+  .warn h3{margin:0 0 8px;font-size:14px;color:#e3b341}
+  .warn ul{margin:0;padding-left:20px;font-size:13px} .warn li{margin:5px 0}
+  .note{color:var(--dim);font-size:12px;margin-top:20px;border-top:1px solid var(--line);padding-top:12px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+  .two div{border:1px solid var(--line);border-radius:8px;padding:11px 13px;font-size:13px}
+  .two b{color:#79c0ff}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Synova 架构总图</h1>
+<div class="sub">
+  <b>来源</b>：`产品宪章.md`（**v5，现行有效**）第四条 §4.1 + §4.2 逐字 ｜
+  <b>效力</b>：【裁】＝创始人裁定 ｜【权】＝仓库权威/院方已定 ｜ 状态栏为宪章自标
+</div>
+
+<div class="two">
+  <div><b>【下行流】企业 → 系统</b>：描述、观测、判断<br>
+    <code>⓪连接器 → ①循环 / ②本体 → ③哨兵 → ④参数 → ⑤导航 → 交付</code></div>
+  <div><b>【上行流】系统 → 系统</b>：校正、抽象、进化<br>
+    <code>⑥进化回环：读"系统输出 vs 实际结果"的差 → 改写 ① ② ③ ④ ⑤</code></div>
+</div>
+
+<div class="legend">
+  <span><i style="background:var(--nav)"></i>⑤ 导航</span>
+  <span><i style="background:var(--par)"></i>④ 参数（护城河）</span>
+  <span><i style="background:var(--sen)"></i>③ 哨兵</span>
+  <span><i style="background:var(--ont)"></i>② 本体</span>
+  <span><i style="background:var(--cyc)"></i>① 循环</span>
+  <span><i style="background:var(--con)"></i>⓪ 连接器</span>
+  <span><i style="background:var(--evo)"></i>⑥ 进化回环</span>
+  <span><i style="background:var(--rt)"></i>−1 运行时</span>
+</div>
+
+<!-- 图上：导航在最上（下行流自下而上供应它） -->
+<div class="flow">
+
+  <div class="box nav">
+    <div class="h"><span class="t">⑤ 导航层 Navigation ＝ 企业目标全生命周期</span><span class="st">【权·新权威 20260906】｜现状 ③半成品</span></div>
+    <div class="d">
+      <b>8 环节</b>：设定→分解→对齐→执行→跟踪→纠偏→验证→回流<br>
+      <b>3 来源</b>：诊断驱动 / 决策驱动 / 外部驱动　　<b>3 对齐</b>：纵向父子 / 横向依赖 / 约束注入<br>
+      <b>4 适配</b>：OKR / KPI / MBO / 无正式体系　　<b>3 执行主体</b>：老板 / <b>中层（最大用户群）</b> / 个人<br>
+      ★ 偏差检测<b>不新造系统</b>：＝哨兵拿"计划/目标的预期"当基线去比
+    </div>
+  </div>
+  <div class="arrow">▲</div>
+
+  <div class="box par">
+    <div class="h"><span class="t">④ 参数层 Parameters ← ★★ 护城河所在，【裁：尚未开发】★★</span><span class="st">现状 ⑤⑤⑥⑤</span></div>
+    <div class="d">
+      <b>存四类</b>：a 哨兵测量值（指标×时间）<b>⑤</b> ｜ b 决策台账 <b>③</b>（三通道分裂）｜
+      c 结果与验证 <b>⑤</b> ｜ d 标定参数（护城河资产本体）<b>⑤</b><br>
+      🔴 <b>【权】硬顺序</b>：<b>指标时序存储必须先于参数标定</b>（「参数标定需要历史测量值，先做参数库会无数据可标」）
+    </div>
+  </div>
+  <div class="arrow">▲</div>
+
+  <div class="box sen">
+    <div class="h"><span class="t">③ 哨兵层 Sentinels ＝ 观测器（四职责）【裁】</span><span class="st">现状 ① / ⑤</span></div>
+    <div class="d">
+      <b>报异常 ｜ 报正向 ｜ 存取值留时序 ｜ 存决策结果</b><br>
+      🔴 只有"报异常"成立；报正向 = <b>⑤</b>；存时序 = <b>⑤</b>；存决策结果 = <b>③</b>
+    </div>
+  </div>
+  <div class="arrow">▲</div>
+
+  <div class="box ont">
+    <div class="h"><span class="t">② 本体层 Ontology ＝ 状态的结构【裁】拆三件</span><span class="st">现状 ③ / ⑥</span></div>
+    <div class="d">
+      <b>Schema</b>（形状·我们定）｜ <b>实例</b>（内容·每客户一份数据）｜ <b>扩展</b>（行业+专业）<br>
+      节点、边、因果；<b>GOAL 与【计划】均为图节点</b>【裁】　🔴 Schema 覆盖 1/40（⑥）
+    </div>
+  </div>
+  <div class="arrow">▲</div>
+
+  <div class="box cyc">
+    <div class="h"><span class="t">① 循环层 Cycles ＝ 状态的动力学【裁】与本体并列</span><span class="st">现状 ③ / ⑥</span></div>
+    <div class="d">
+      <b>池节点四分类</b> input / conversion / output / <b>reflow</b><br>
+      五阀映射 ＋ <code>action_effect_lag</code>（时滞）＋ 溢出公式 ＋ 跨循环传导<br>
+      🔴 循环写 <code>E-1.1</code>、代码边是 <code>edge/snake</code> ⇒ <b>零交集</b>（⑥）；且 <code>reflow</code> 全仓 0 命中
+    </div>
+  </div>
+  <div class="arrow">▲</div>
+
+  <div class="box rt">
+    <div class="h"><span class="t">−1 运行时 Runtime</span><span class="st">现状 ①</span></div>
+    <div class="d">
+      <b>DSH 提供</b>（循环/工具/会话/沙箱/审批/压缩/编排）；<b>我们只做领域层</b><br>
+      <b>运行时是可替换的</b>；客户看到的是 Synova【裁】
+    </div>
+  </div>
+
+  <div class="box con">
+    <div class="h"><span class="t">⓪ 连接器 Connectors（横切·输入口）</span><span class="st">现状 ③半成品</span></div>
+    <div class="d">
+      <b>常驻采集为主</b>【裁】· <b>周期人工提供为必要分支</b>【裁】（如财务）<br>
+      <b>由模型缺口驱动</b>：先看清缺哪个字段，再去接哪个口
+    </div>
+  </div>
+
+  <div class="box evo">
+    <div class="h"><span class="t">⑥ 进化回环 Evolution（上行流）</span><span class="st">现状 ②③⑤⑤</span></div>
+    <div class="d">
+      读：<b>系统输出 vs 实际结果的差</b> ── 写：<b>改 ① ② ③ ④ ⑤</b><br>
+      <b>E1 同客户进化 ｜ E2 跨客户模式进化 ｜ E3 联邦进化（v2）</b><br>
+      ★ 三层共同铁律：<b>范式可沉淀、数据不可搬</b>
+    </div>
+  </div>
+
+</div>
+
+<div class="warn">
+  <h3>🔴 宪章自标的四处"硬不成立"（这是权威判断，不是我的推断）</h3>
+  <ul>
+    <li><b>4.4 唯一硬规则 三条都不成立</b>：③是唯一允许写④的角色 ／ ④是唯一允许被⑤读的判断来源 ／ ⑥是唯一允许改①②③④⑤的角色
+      ⇒ ④无表可写；⑥点火断（L1）；写入门禁两道未接</li>
+    <li><b>1.3 性质二「说得出为什么」不成立</b>：因果强度 42 条边全 <code>TBD</code>；时滞 55 条边 0 命中；Schema 覆盖 1/40</li>
+    <li><b>1.4 性质三「越待越懂你」不成立</b>：参数层四类存储无一达标；
+      <b>进化回环三层全断</b>——L1 点火（循环不执行）· L2 燃料（<code>feedback_log</code> 0 行）· L3 最后一厘米（键错配 ⇒ <code>applied</code> 恒 0）</li>
+    <li><b>1.2 性质一「不等被问」引擎今天不点火</b>：主动推送链代码完整，但主动链四表全 0 行（⑧零使用）；
+      六个业务循环 cron 是死路（⑥坏点）</li>
+  </ul>
+</div>
+
+<div class="st-box" style="margin-top:14px">
+  <b>八态用语（宪章原标题）</b>
+  ① 健康 ｜ ② 写了没接 ｜ ③ 半成品 ｜ ④ 跑偏 ｜ ⑤ 纯缺口 ｜ ⑥ 坏点（接了但恒不生效）｜ ⑦ 待核 ｜
+  <b>⑧ 零使用</b>（代码与接线都完整，但从未因真实使用产生过数据）
+</div>
+
+<div class="note">
+  逐字取自 <code>~/山河研究院/04-技术研究/专题研究/CTO委托-基座治理/产品宪章.md</code>（v5 现行）§4.1 / §4.2。
+  版本谱系：v1 已废止 ｜ v3 首个生效版 ｜ v4 加现状栏+第八态 ｜ <b>v5 ＝现行</b>。
+  架构检验标准 = 第三条 <b>P1「一切皆为内容：新增＝加文件；若必须改宿主代码 ⇒ 该处未完成」</b>。
+</div>
+
+</div>
+</body>
+</html>
