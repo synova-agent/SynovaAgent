@@ -50,7 +50,7 @@
 
 ## 关联
 
-- 卡：D1223（本件）／父 D-C 标识归一
+- 卡：D1225（本件）／父 D-C 标识归一
 - K3：R1「认领制退役」项
 - 夹具：`tests/control-tower/staging-guard-retirement.test.sh`（6 结构断言 + 5 变异体 + 对照组）
 - 承接件：`tests/control-tower/merge_writeset_gate.test.sh`（D708 本体判据，不在本卡写集）

@@ -27,7 +27,7 @@
 # FACE-TOTAL=147   # **下界语义**：scan >= 此值 = 通过（新增测试不红）；scan < 此值 = 净删除 ⇒ 红。
 #                   # 代价（如实登记）: **≤ 当前余量 (scan − FACE-TOTAL) 的净删除不可检测** —— 「不做逐条登记」的必然代价。
 #                   # 禁止自动重算本值（那会让棘轮彻底失效）；下调须本文件显式改行（= 留痕）。
-# 2026-10-07 D1223 staging_guard 退役 PR（#1291）显式上调 141 → 147（一行、低频，非自动重算）:
+# 2026-10-07 D1225 staging_guard 退役 PR（#1291）显式上调 141 → 147（一行、低频，非自动重算）:
 #   实测: CI merge-ref 面扫描 scan=152（本 PR 净变化 0：删 2 执行集内测试 + 增 2 新夹具）
 #         ⇒ 旧值 141 会让余量 = 11 > SLACK-CAP=10 ⇒ 按棘轮规则红（CI 实撞）。
 #   取值: 147 = 152 − 5（取上限一半，给在飞 PR 的测试漂移留余量；**未**重算至 scan：
@@ -56,10 +56,10 @@
 #     依据：CTO 2026-09-24 裁定——既有红允许存在，但必须显式登记为基线豁免；既有红不许无声存在。
 #
 # 截至: 2026-09-24T10:18:45Z
-# [R] 条数: 77（D1223 staging_guard 退役 · 2026-10-07: 摘除 1 条 tests/control-tower/staging-guard-session.test.py
-#       —— 该件 import 的被测模块 scripts/control-tower/staging_guard.py 已随 D1223 删除，按棘轮语义
+# [R] 条数: 77（D1225 staging_guard 退役 · 2026-10-07: 摘除 1 条 tests/control-tower/staging-guard-session.test.py
+#       —— 该件 import 的被测模块 scripts/control-tower/staging_guard.py 已随 D1225 删除，按棘轮语义
 #       「文件已删=基线过期，须删条目」摘除；QUARANTINE-TOTAL 同批 78→77（棘轮只减不增）。
-#       D1223 同时删除 tests/control-tower/staging_guard.test.sh 与 test-staging-guard.py（均不在 [R] 段：
+#       D1225 同时删除 tests/control-tower/staging_guard.test.sh 与 test-staging-guard.py（均不在 [R] 段：
 #       前者在执行集内、后者不在密封面），并新增 tests/control-tower/staging-guard-retirement.test.sh
 #       （零登记自动进入执行集 = 发现制语义）。
 #       沿革: 78（D-F/② 2026-10-07: +1 = tests/control-tower/precommit-groups-injection.test.sh ——

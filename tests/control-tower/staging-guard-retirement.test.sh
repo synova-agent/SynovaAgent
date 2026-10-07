@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════════════════════════════
-# staging-guard-retirement.test.sh — D1223 staging_guard.py 退役 + 替身真实性夹具
+# staging-guard-retirement.test.sh — D1225 staging_guard.py 退役 + 替身真实性夹具
 #
 # 承继: 已退役的 tests/control-tower/staging_guard.test.sh（其被测模块已删）。
 # 本件不测已删模块的行为，而测**「退役」这件事本身是否成立**：
@@ -41,7 +41,7 @@ for _c in python3 python py; do
 done
 [ -n "$PYBIN" ] || { echo "  ❌ 无可用 python（检查自身失败）"; exit 2; }
 
-echo "=== staging_guard 退役夹具（D1223 · 替代真实 + 改坏即红）==="
+echo "=== staging_guard 退役夹具（D1225 · 替代真实 + 改坏即红）==="
 
 WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 CHECKER="$WORK/check.py"
@@ -165,7 +165,7 @@ chk(gate_exists and bool(ci_calls), "R3",
 # ── ③ 处置落地 a: synova-commit 走 claim 单源 + 退役结论在**代码行**恒打印（禁静默空白）──
 scp, sc = read("scripts/control-tower/synova-commit")
 has_claim = bool(ref_hits(scp, sc, re.compile(re.escape("claim_store.py"))))
-notice = [(i, ln) for i, ln in code_lines(scp, sc) if "D1223" in ln and "退役" in ln]
+notice = [(i, ln) for i, ln in code_lines(scp, sc) if "D1225" in ln and "退役" in ln]
 old_call = ref_hits(scp, sc, re.compile(r"--staged\s+\$STAGED_LIST"))
 chk(bool(sc) and has_claim and bool(notice) and not old_call, "R4",
     "消费点 synova-commit: claim_store 单源读取 + 退役结论恒打印（代码行） + 旧调用形态零残留")
@@ -294,7 +294,7 @@ import sys
 from pathlib import Path
 p = Path(sys.argv[1]) / "scripts/control-tower/synova-commit"
 t = p.read_text(encoding="utf-8")
-p.write_text(t.replace("已退役（D1223）", "已退役"), encoding="utf-8")
+p.write_text(t.replace("已退役（D1225）", "已退役"), encoding="utf-8")
 PY
 expect_mut "M2 退役结论字面量被删" "R4" "M2"
 

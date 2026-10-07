@@ -37,7 +37,7 @@ SIGNALS_DIR = REPO_ROOT / ".codex" / "signals"
 VERSION_MD = CT_DIR / "VERSION.md"
 HEALTH_OUT = CT_DIR / "health.json"
 
-# 核心组件清单（存在性检查；D1223 退役 staging_guard.py ⇒ 11 个）
+# 核心组件清单（存在性检查；D1225 退役 staging_guard.py ⇒ 11 个）
 CORE_COMPONENTS = [
     "scripts/control-tower/session_registry.py",
     "scripts/control-tower/wait_manager.py",
