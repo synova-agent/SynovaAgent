@@ -1,0 +1,31 @@
+# D1051 T5 探针：注册「会抛的模板」是否触发 fallback（独立复核，成员 V）
+# 目的：核验成员 C 关键信息②「注册一个会抛的模板不会触发 fallback（被 registry.render 吞成字符串）」
+
+## 复现命令
+cd /Users/wane/SynovaAgent/.synova-wt-d1051-verify
+NODE_PATH=/Users/wane/SynovaAgent/node_modules npx tsx --tsconfig tsconfig.json docs/synova/product-lines/evidence/D1051/23b-probe-throwing-template.ts
+
+## 探针原始输出（exit=0）
+[PROBE-RESULT] {
+  "probe": "throwing-template（不覆写 registry.render）",
+  "httpStatus": 200,
+  "framePresent": true,
+  "degraded": true,
+  "reason": "RENDER_DEGRADED",
+  "markdownStartsWith": "# org-d1051-probe 诊断详细报告（降级：模板渲染失败，纯文本输出）\n\n探针：增长卡点在精加工工序产能。\n",
+  "markdownHasDegradedMark": true,
+  "markdownHasSwallowString": true,
+  "verdict": "FALLBACK 仍被触发（C 的「不会触发 fallback」不成立）"
+}
+
+## 相关产品代码（原始 grep）
+$ grep -n "模板渲染失败\|未找到模板" src/l3/report-templates.ts src/agent/report-assembler.ts
+src/l3/report-templates.ts:332:    if (!template) return `未找到模板: ${templateName}`;
+src/l3/report-templates.ts:336:      log.warn({ err, template: templateName }, '模板渲染失败');
+src/l3/report-templates.ts:337:      return `模板渲染失败: ${err.message}`;
+src/agent/report-assembler.ts:307:  const lines = [`# ${report.teamId} 诊断摘要（降级：模板渲染失败，纯文本输出）`, ''];
+src/agent/report-assembler.ts:327: *                （「模板渲染失败」/「未找到模板」前缀——模板文案后续修改可能引入
+src/agent/report-assembler.ts:346:    if (rendered.startsWith('模板渲染失败') || rendered.startsWith('未找到模板')) {
+src/agent/report-assembler.ts:712:  const lines = [`# ${report.teamId} 诊断详细报告（降级：模板渲染失败，纯文本输出）`, ''];
+src/agent/report-assembler.ts:727: *   @degraded — ① registry 抛错 / 返回「模板渲染失败」/「未找到模板」→ log.warn + 纯文本 fallback
+src/agent/report-assembler.ts:740:    if (rendered.startsWith('模板渲染失败') || rendered.startsWith('未找到模板')) {

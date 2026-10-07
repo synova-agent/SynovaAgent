@@ -1,0 +1,115 @@
+{
+  "artifact": "D1051 改坏即红实测（独立复核，成员 V）",
+  "method": "每例：pre-green → 精确文本注入(恰1处, 带 INJECTED-RED-n 标记) → 同命令须红 → git checkout -- 复原(sha 校验) → 再跑须绿；原始日志见 logs-break-red/",
+  "generatedAt": "2026-09-28T18:10:04+08:00",
+  "head": "05f343a3459b19e32e85181ec9d6d533a806e1fe",
+  "casesRun": [
+    "R6",
+    "R6c"
+  ],
+  "verdictCounts": {
+    "PASS": 2
+  },
+  "cases": [
+    {
+      "id": "R6",
+      "title": "对话帧渲染降级检测恒 false（degraded / reason='RENDER_DEGRADED' 静默化）——T4 补测后覆核",
+      "assertion": "补测后：「⑦ 渲染降级路径 → 帧 degraded:true + reason:RENDER_DEGRADED」必须报红；「⑧ 对照（防恒真）」不得连带红",
+      "injection": {
+        "file": "src/routes/conversations.ts",
+        "old": "function isDegradedRender(markdown: string): boolean {\n  return markdown.includes('（降级：');\n}",
+        "new": "function isDegradedRender(markdown: string): boolean {\n  return false; // INJECTED-RED-6 渲染降级检测恒 false（degraded/RENDER_DEGRADED 静默化）\n}",
+        "marker": "INJECTED-RED-6",
+        "occurrences": 1,
+        "markerPresent": true
+      },
+      "verifyCommand": "npx vitest run tests/routes/conversations-report-view.test.ts",
+      "preInjectionFileSha256": "c289dad65f45b15efe2f26b385ba4d1bccb0c4a31908bb167e247873b6bba0a4",
+      "preGreen": {
+        "exit": 0,
+        "testFiles": "Test Files  1 passed (1)",
+        "tests": "Tests  8 passed (8)"
+      },
+      "red": {
+        "exit": 1,
+        "testFiles": "Test Files  1 failed (1)",
+        "tests": "Tests  1 failed | 7 passed (8)",
+        "failingTests": [
+          "× ⑦ 渲染降级路径 → 帧 degraded:true + reason:RENDER_DEGRADED（R6 判别性：isDegradedRender 恒 false 即红） 109ms",
+          "FAIL  tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ⑦ 渲染降级路径 → 帧 degraded:true + reason:RENDER_DEGRADED（R6 判别性：isDegradedRender 恒 false 即红）"
+        ],
+        "expectMatched": [
+          "⑦ 渲染降级路径"
+        ],
+        "expectGreenStillGreen": [
+          "⑧ 对照"
+        ],
+        "expectGreenCollateralFailures": []
+      },
+      "revert": {
+        "restoredSha256": "c289dad65f45b15efe2f26b385ba4d1bccb0c4a31908bb167e247873b6bba0a4",
+        "shaRestored": true
+      },
+      "revertGreen": {
+        "exit": 0,
+        "testFiles": "Test Files  1 passed (1)",
+        "tests": "Tests  8 passed (8)"
+      },
+      "verdict": "PASS",
+      "detail": "注入即红，失败用例命中 ['⑦ 渲染降级路径']；对照组保持绿 ['⑧ 对照']"
+    },
+    {
+      "id": "R6c",
+      "title": "降级标记静默化（detailedReportFallback 的「（降级：」被抹掉）→ ⑦ 亦须红（第二独立注入源）",
+      "assertion": "第二注入源（独立于 R6 的判定点）：帧 degraded 判定依赖 fallback 文面「（降级：」——抹掉后 ⑦ 必须报红",
+      "injection": {
+        "file": "src/agent/report-assembler.ts",
+        "old": "  const lines = [`# ${report.teamId} 诊断详细报告（降级：模板渲染失败，纯文本输出）`, ''];",
+        "new": "  const lines = [`# ${report.teamId} 诊断详细报告（模板不可用，纯文本输出）`, '']; // INJECTED-RED-6c 降级标记静默化（对话帧侧）",
+        "marker": "INJECTED-RED-6c",
+        "occurrences": 1,
+        "markerPresent": true
+      },
+      "verifyCommand": "npx vitest run tests/routes/conversations-report-view.test.ts",
+      "preInjectionFileSha256": "3aad21787156f8df3a46702467751be4af9f1447a8a2c0d2bc7ccb27f0608b5c",
+      "preGreen": {
+        "exit": 0,
+        "testFiles": "Test Files  1 passed (1)",
+        "tests": "Tests  8 passed (8)"
+      },
+      "red": {
+        "exit": 1,
+        "testFiles": "Test Files  1 failed (1)",
+        "tests": "Tests  1 failed | 7 passed (8)",
+        "failingTests": [
+          "× ⑦ 渲染降级路径 → 帧 degraded:true + reason:RENDER_DEGRADED（R6 判别性：isDegradedRender 恒 false 即红） 115ms",
+          "FAIL  tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ⑦ 渲染降级路径 → 帧 degraded:true + reason:RENDER_DEGRADED（R6 判别性：isDegradedRender 恒 false 即红）"
+        ],
+        "expectMatched": [
+          "⑦ 渲染降级路径"
+        ],
+        "expectGreenStillGreen": [],
+        "expectGreenCollateralFailures": []
+      },
+      "revert": {
+        "restoredSha256": "3aad21787156f8df3a46702467751be4af9f1447a8a2c0d2bc7ccb27f0608b5c",
+        "shaRestored": true
+      },
+      "revertGreen": {
+        "exit": 0,
+        "testFiles": "Test Files  1 passed (1)",
+        "tests": "Tests  8 passed (8)"
+      },
+      "verdict": "PASS",
+      "detail": "注入即红，失败用例命中 ['⑦ 渲染降级路径']"
+    }
+  ],
+  "rawLogs": [
+    "R6-1-pre-green.log.txt",
+    "R6-2-injected-red.log.txt",
+    "R6-3-revert-green.log.txt",
+    "R6c-1-pre-green.log.txt",
+    "R6c-2-injected-red.log.txt",
+    "R6c-3-revert-green.log.txt"
+  ]
+}

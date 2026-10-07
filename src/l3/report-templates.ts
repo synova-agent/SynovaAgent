@@ -36,6 +36,15 @@ export interface ReportData {
   cycleConclusions?: string[];
   /** D791 S4: 行动建议条目正文（不含 `- ` 前缀；每条自带 `[src:report:...#recommendation:<i>]` 指针）。 */
   actionItems?: string[];
+  /**
+   * D1051 W2: 详细报告章节（结论 / 根因 / 专家完整推理 / 行动建议 / 数据时点）。
+   *
+   * **标题随数据走**（§4.5 Q7 子裁定 (i)）：`title` 与 `body` 同源，由 L2
+   * （`src/agent/report-assembler.ts`）装配时一并写入；本文件（L3）只做哑渲染，
+   * **不新增任何模块依赖**（不依赖 L2 的章节标题常量，避免 L3→L2 反向依赖成环）。
+   * 条条 `[degraded]` 空态行由装配侧写入 `body`（本文件亦对空 `body` 兜底）。
+   */
+  chapters?: Array<{ title: string; body: string[] }>;
 }
 
 // ═══ Built-in Templates ═══
@@ -238,13 +247,68 @@ const EXECUTIVE_SUMMARY: ReportTemplate = {
   },
 };
 
+// ═══ D1051: 详细报告模板（第 4 个——完全诊断各章节）═══
+
+/**
+ * D1051 W2: `detailed_report` —— 详细报告（完整诊断各章节，markdown）。
+ *
+ * 契约（铁律 47）:
+ *   @input  — data: ReportData（`chapters` 承载章节；`orgId` 作头行；`extra.reportId` 作尾行）
+ *   @output — markdown：`## <orgId> 诊断详细报告` 头行 + 逐章（标题 + 条目行）+ `📎 报告 ID:` 尾行
+ *   @degraded — ① `chapters` 缺席/空 → 单行 `[degraded]` 说明（不静默产出空壳报告）
+ *               ② 单章 `title` 缺失 → 占位标题；单章 `body` 空 → 该章 `[degraded]` 说明行
+ *               ③ `extra.reportId` 缺失 → 尾行显示「(缺省)」（不伪造 ID）
+ *   哑渲染器：本模板**不新增任何模块依赖**（除文件既有 logger），章节标题完全来自
+ *   `chapters[].title` 数据（§4.5 Q7 子裁定 (i)）——L3 零新增依赖。
+ *   确定性：不含渲染时刻；同输入 → 同输出。
+ */
+const DETAILED_REPORT: ReportTemplate = {
+  name: 'detailed_report',
+  description: '详细报告 — 完整诊断各章节（结论 / 根因 / 专家完整推理 / 行动建议 / 数据时点）',
+  render(data: ReportData): string {
+    const lines: string[] = [];
+    lines.push(`## ${data.orgId} 诊断详细报告`);
+    lines.push('');
+
+    const rawChapters: unknown = data.chapters;
+    const chapters: unknown[] = Array.isArray(rawChapters) ? rawChapters : [];
+    if (chapters.length === 0) {
+      lines.push(`- ${DEGRADED_MARK_S2} 无章节数据（chapters 缺席或为空）`);
+      lines.push('');
+    } else {
+      for (const raw of chapters) {
+        // 内联类型窄化（铁律 38 替代形态）——注册表数据可能来自 JSON 归档，不盲信形状
+        const chapter = typeof raw === 'object' && raw !== null
+          ? (raw as { title?: unknown; body?: unknown })
+          : {};
+        const title = toStringOrEmpty(chapter.title);
+        lines.push(title !== '' ? title : '### （未命名章节）');
+        const body: unknown[] = Array.isArray(chapter.body) ? chapter.body : [];
+        const kept = body
+          .map(item => toStringOrEmpty(item))
+          .filter(item => item.trim() !== '');
+        if (kept.length === 0) {
+          lines.push(`- ${DEGRADED_MARK_S2} 本章无内容`);
+        } else {
+          for (const item of kept) lines.push(`- ${item}`);
+        }
+        lines.push('');
+      }
+    }
+
+    const reportId = toStringOrEmpty(data.extra?.reportId);
+    lines.push(`📎 报告 ID: ${reportId !== '' ? reportId : '(缺省)'}`);
+    return lines.join('\n');
+  },
+};
+
 // ═══ ReportTemplateRegistry ═══
 
 export class ReportTemplateRegistry {
   private templates = new Map<string, ReportTemplate>();
 
   constructor() {
-    for (const t of [DAILY_BRIEFING, WEEKLY_SUMMARY, EXECUTIVE_SUMMARY]) {
+    for (const t of [DAILY_BRIEFING, WEEKLY_SUMMARY, EXECUTIVE_SUMMARY, DETAILED_REPORT]) {
       this.templates.set(t.name, t);
     }
   }

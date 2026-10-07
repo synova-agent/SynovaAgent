@@ -1,0 +1,35 @@
+# D1051 tsc --noEmit 基线对比（原始输出，成员 V）
+# 生成方式: 见下方「复现命令」段；全部数字来自命令输出，无手写
+
+## 复现命令
+cd /Users/wane/SynovaAgent/.synova-wt-d1051-verify && npx tsc --noEmit   # → 26a-tsc-head.log
+git worktree add /Users/wane/SynovaAgent/.synova-wt-d1051-verify-base d8590040
+(cd /Users/wane/SynovaAgent/.synova-wt-d1051-verify-base && npx tsc --noEmit)   # → 26b-tsc-baseline-d8590040.log
+git worktree remove /Users/wane/SynovaAgent/.synova-wt-d1051-verify-base --force
+
+## 行数（含 npm notice 噪声）
+head:     31 行
+baseline: 36 行
+baseline 中 npm notice 噪声行数: 5
+
+## 剔除 npm notice 后的错误集比对（期望：0 行差异 = 逐行相同）
+head 错误行数(clean):     31
+baseline 错误行数(clean): 31
+$ diff <(sort baseline-clean) <(sort head-clean) → 0 行差异（错误集逐行相同 ⇒ 存量，非本卡引入）
+
+## 错误文件分布（head，唯一来源=命令输出）
+   4 extensions/sentinels/_extinct/competitive-moat-structural
+   3 extensions/sentinels/_extinct/market-lifecycle
+   3 extensions/sentinels/_extinct/competitive-dynamics
+   3 extensions/sentinels/_extinct/adaptation-velocity
+   2 src
+   2 extensions/sentinels/_extinct/structural-change
+   2 extensions/sentinels/_extinct/connector-coverage
+   2 extensions/sentinels/_extinct/competitive-moat-perceptual
+   2 extensions/sentinels/_extinct/capital-turnover
+   2 extensions/sentinels/_extinct/capital-structure
+   2 extensions/sentinels/_extinct/capital-efficiency
+   1 src/connectors
+   1   The types returned by 'executeLoop
+   1     Type 'Promise<LoopExecutionRecord>' is not assignable to type 'Promise<{ ok: boolean; error?: string | undefined; }>'.
+   1       Property 'ok' is missing in type 'LoopExecutionRecord' but required in type '{ ok: boolean; error?: string | undefined; }'.

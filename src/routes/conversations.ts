@@ -41,6 +41,13 @@ import { SessionManager } from '../orchestrator/session-manager';
 import { registerBuiltinTools } from '../agent/builtin-tools';
 import { ToolRegistry } from '../agent/tools';
 import { WebViewAdapter } from '../l1-interaction/web-adapter';
+// D1051 W5: 呈现粒度轴判别（L1→L2 相邻依赖合法——DR-1 裁定：呈现轴落 L2）
+import {
+  DEFAULT_REPORT_VIEW_DEPTH,
+  normalizeReportViewDepth,
+  resolveViewDepthFromUtterance,
+  type ReportViewDepth,
+} from '../agent/report-depth';
 
 const log = createLogger('routes/conversations');
 const router = Router();
@@ -88,6 +95,18 @@ function isEngineStateLike(v: unknown): v is EngineState {
  * @returns SessionStore 实例；db 缺失/谓词窄化失败/构造抛错 → null（调用方 503 fail-closed）
  */
 // 返回类型由动态 import 推断（完整 SessionStore 类），零静态 L5 类型引用
+/**
+ * D1051 W5: L5 存储模块动态加载**单点**（D563 既有通道，语义不变）。
+ *
+ * Why 单点: `scripts/check-architecture.sh` 的 L1→L5 棘轮**按行计数**；
+ * 若两处各自写一条 L5 动态引入，本文件命中数会从基线 1 抬到 2
+ * ⇒ CI strict（SYNO_CI=1）下成为「基线外新增」硬阻断。
+ * 收敛为单点后本文件恒为 1 处 L1→L5（与基线一致），且两调用方共用同一模块实例语义。
+ */
+async function loadSessionStoreModule() {
+  return import('../store/session-store');
+}
+
 async function resolveStore(req: Request) {
   const orchestrationDb = (req.app.locals.orchestration as { db?: unknown } | undefined)?.db;
   if (!orchestrationDb) {
@@ -95,7 +114,7 @@ async function resolveStore(req: Request) {
     return null;
   }
   try {
-    const { SessionStore: SessionStoreImpl, isSqliteDatabase } = await import('../store/session-store');
+    const { SessionStore: SessionStoreImpl, isSqliteDatabase } = await loadSessionStoreModule();
     if (!isSqliteDatabase(orchestrationDb)) {
       log.warn('orchestration.db 非 SQLite 句柄（D563 谓词窄化失败）— STORE_UNAVAILABLE');
       return null;
@@ -151,6 +170,190 @@ async function buildDiagnosisEngine(): Promise<DiagnosisEngine> {
     },
   };
   return engine;
+}
+
+// ═══ D1051 W5: 对话调深度（确定性判别 → 取报告 → 渲染 → 旁挂 report_view 帧）═══
+
+/** 会话存储类型（`resolveStore` 推断——L1 零静态 L5 类型引用，D563 通道同款） */
+type ConversationStore = NonNullable<Awaited<ReturnType<typeof resolveStore>>>;
+
+/**
+ * D1051: 取 app.locals.graphStore（src/server.ts:282 注入；缺席 = Bootstrap 降级，非异常）。
+ * 类型位置读取（L1 类型位置豁免）——不直触 L4 实现（diagnosis.ts:706 同款）。
+ */
+function readGraphStore(req: Request): unknown {
+  const locals = req.app.locals as { graphStore?: unknown };
+  return locals.graphStore;
+}
+
+/**
+ * D1051 W5: `report_view` 帧载荷（**additive**——新帧类型对旧客户端是未知帧，破面为零）。
+ * 末帧仍为 `end`、**不得出现 `error` 帧**（spec §5.5 硬约束）。
+ */
+interface ReportViewFrame {
+  type: 'report_view';
+  sessionId: string;
+  depth: ReportViewDepth;
+  reportId: string | null;
+  markdown: string | null;
+  degraded: boolean;
+  reason?: 'NO_REPORT' | 'RENDER_DEGRADED';
+}
+
+/**
+ * D1051 W5: 渲染产物是否为降级纯文本回退。
+ *
+ * 判据（**文面契约**）：`report-assembler` 的两个 fallback 文案均含「（降级：」
+ * （`onePagerFallback` / `detailedReportFallback`），正常模板产物不含该子串。
+ * 两渲染器**永不抛出**（whole-body catch 契约），故"渲染失败"只能从产物文面判别——
+ * 此为唯一可判点。
+ */
+function isDegradedRender(markdown: string): boolean {
+  return markdown.includes('（降级：');
+}
+
+/**
+ * D1051 W5: 归档回退取报告——② 号取源（① 本轮诊断产物优先，见 `emitReportViewFrame`）。
+ *
+ * 契约（铁律 47）:
+ *   @input  — store（会话存储）；orgId（跨 org 报告不得误用）
+ *   @output — { report, reportId } | null（null = 无可用归档 → 调用方走 NO_REPORT 诚实降级）
+ *   @degraded — 列表失败 / 检查点缺失 / 形状非法 → log.warn + null（不伪造报告，铁律 24/31）
+ *
+ * 取源顺序：`listDiagnosisReports({limit:20,offset:0})` → `teamId===orgId` 过滤 →
+ * `completedAt` 最新 → `getDiagnosisCheckpoint(reportId)` → `isDiagnosisReportArchive` 窄化。
+ */
+async function readLatestArchivedReport(
+  store: ConversationStore,
+  orgId: string,
+): Promise<{ report: unknown; reportId: string } | null> {
+  try {
+    if (!store.listDiagnosisReports) return null;
+    const listed = store.listDiagnosisReports({ limit: 20, offset: 0 });
+    if (!listed.ok) {
+      log.warn({ orgId, error: listed.error }, '归档列表读取失败 — report_view 走 NO_REPORT 降级');
+      return null;
+    }
+    const mine = listed.reports.filter(r => r.teamId === orgId);
+    if (mine.length === 0) return null;
+    const latest = mine.reduce((best, cur) => (cur.completedAt > best.completedAt ? cur : best));
+
+    const checkpoint = store.getDiagnosisCheckpoint ? store.getDiagnosisCheckpoint(latest.reportId) : null;
+    if (!checkpoint || checkpoint.phase !== 5) return null;
+    const { isDiagnosisReportArchive } = await loadSessionStoreModule();
+    if (!isDiagnosisReportArchive(checkpoint.partialReport)) {
+      log.warn({ reportId: latest.reportId }, '归档 partial_report 形状非法 — 不伪造报告（degraded）');
+      return null;
+    }
+    return { report: checkpoint.partialReport.report, reportId: checkpoint.partialReport.reportId };
+  } catch (err: unknown) {
+    log.warn({ err, orgId }, '归档报告读取失败 — report_view 走 NO_REPORT 降级');
+    return null;
+  }
+}
+
+/**
+ * D1051 W5: 对话调深度——确定性判别 → 取报告 → 渲染 → 旁挂 `report_view` 帧。
+ *
+ * 契约（铁律 47）:
+ *   @input  — req（读 graphStore）；message（用户原文）；sessionId / orgId；store；adapter；
+ *             freshReport（本轮 `diagnosisResult.report`，可缺席——非诊断轮次恒缺席）
+ *   @output — 未命中深度词 → **不发帧**（零行为变化）；命中 → 发 1 个 `report_view` 帧
+ *   @degraded — 无报告（两取源皆空）→ `markdown:null, degraded:true, reason:'NO_REPORT'`（不伪造）；
+ *               渲染落 fallback → `degraded:true, reason:'RENDER_DEGRADED'`（markdown 仍送达
+ *               fallback 纯文本——内容真实、标记诚实）；本函数任何异常均内部吞并 + log.warn，
+ *               **绝不中断流、绝不产生 `error` 帧**（spec §5.5 硬约束）
+ *
+ * 报告取源顺序：① 本轮 `diagnosisResult.report`（`phaseComplete` 且未断线时在场）；
+ * ② 归档最新（`readLatestArchivedReport`）；③ 均无 → NO_REPORT。
+ * 确定性：判别为纯关键词表（零 LLM/零随机/零时刻）；同长度词码点序稳定。
+ */
+async function emitReportViewFrame(params: {
+  req: Request;
+  message: string;
+  sessionId: string;
+  orgId: string;
+  store: ConversationStore;
+  adapter: WebViewAdapter;
+  freshReport: unknown;
+}): Promise<void> {
+  try {
+    const verdict = resolveViewDepthFromUtterance(params.message);
+    if (!verdict.matched) {
+      log.debug({ sessionId: params.sessionId }, '本轮消息未命中深度词 — 不发 report_view 帧（零行为变化）');
+      return;
+    }
+    const viewDepth: ReportViewDepth = normalizeReportViewDepth(verdict.depth) ?? DEFAULT_REPORT_VIEW_DEPTH;
+
+    const { isRenderableDiagnosisReport, renderReportView, assembleOnePagerInputsForOrg } =
+      await import('../agent/report-assembler');
+
+    // ① 本轮诊断产物
+    let report: unknown = params.freshReport;
+    let reportId: string | null = null;
+    if (isRenderableDiagnosisReport(report)) {
+      reportId = report.reportId;
+    } else {
+      // ② 归档最新（诊断早已完成、用户后来说「讲细一点」的主场景）
+      const archived = await readLatestArchivedReport(params.store, params.orgId);
+      report = archived?.report ?? null;
+      reportId = archived?.reportId ?? null;
+    }
+
+    // ③ 均无 → 诚实降级（不伪造报告）
+    if (!isRenderableDiagnosisReport(report)) {
+      log.warn({ sessionId: params.sessionId, orgId: params.orgId }, '无可用报告 — report_view 诚实降级 NO_REPORT');
+      const noReportFrame: ReportViewFrame = {
+        type: 'report_view',
+        sessionId: params.sessionId,
+        depth: viewDepth,
+        reportId: null,
+        markdown: null,
+        degraded: true,
+        reason: 'NO_REPORT',
+      };
+      params.adapter.sendFrame({ ...noReportFrame });
+      return;
+    }
+
+    // one_pager 方向才需四槽位入参（详版不需要）
+    const inputs = viewDepth === 'one_pager'
+      ? await assembleOnePagerInputsForOrg(params.orgId, readGraphStore(params.req))
+      : undefined;
+
+    // 两渲染器永不抛出；仍兜一层（渲染异常不得中断流、不得产生 error 帧）
+    let markdown: string | null;
+    let degraded = false;
+    let reason: ReportViewFrame['reason'];
+    try {
+      const rendered = renderReportView(report, viewDepth, inputs);
+      markdown = rendered;
+      if (isDegradedRender(rendered)) {
+        degraded = true;
+        reason = 'RENDER_DEGRADED';
+        log.warn({ sessionId: params.sessionId, viewDepth }, 'report_view 渲染落 fallback — RENDER_DEGRADED（degraded 显式标记）');
+      }
+    } catch (err: unknown) {
+      log.warn({ err, sessionId: params.sessionId, viewDepth }, 'report_view 渲染异常 — RENDER_DEGRADED（不中断流）');
+      markdown = null;
+      degraded = true;
+      reason = 'RENDER_DEGRADED';
+    }
+
+    const frame: ReportViewFrame = {
+      type: 'report_view',
+      sessionId: params.sessionId,
+      depth: viewDepth,
+      reportId,
+      markdown,
+      degraded,
+      ...(reason === undefined ? {} : { reason }),
+    };
+    params.adapter.sendFrame({ ...frame });
+  } catch (err: unknown) {
+    // 硬约束：本帧任何失败都不得产生 error 帧 / 不得中断流（spec §5.5）
+    log.warn({ err }, 'report_view 帧发射失败 — degraded（不中断流，不产生 error 帧）');
+  }
 }
 
 /** 两条路由共用的对话 handler（spec §5.2-A：单 handler，入口差异仅在 sessionId 来源） */
@@ -270,6 +473,8 @@ async function handleConversationMessage(req: Request, res: Response, pathSessio
 
     // ⑪ phaseComplete → 诊断桥（spec §5.4 决策 6：不桥接 = 引擎回复文案假绿 M2 模式）。
     //    断线后不再启动诊断（客户端已离场，避免孤儿 LLM 消耗；已落库内容不丢）。
+    // D1051: freshReport 承接本轮诊断产物，供 ⑫ 前 report_view 帧优先取源（非诊断轮恒 undefined）
+    let freshReport: unknown = undefined;
     if (result.phaseComplete && !disconnected) {
       const diagnosisEngine = await buildDiagnosisEngine();
       const engineCtx: EngineContext = {
@@ -292,6 +497,7 @@ async function handleConversationMessage(req: Request, res: Response, pathSessio
       (engineCtx as { sessionStore?: SessionStoreLike }).sessionStore = store;
       const launcher = new DiagnosisLauncher(engineCtx, diagnosisEngine);
       const diagnosisResult = await launcher.startDiagnosis(orgId, 'GA', (evt) => adapter.emitDiagnosisEvent(evt));
+      freshReport = diagnosisResult?.report;
       // D593: 对话桥报告落盘（写路径第二路线，spec §5.1/§5.2-A）——与 consult 路线同形
       // （checkpoint 表 phase=5 行，键=reportId），source='conversation'（无 consultId——
       // 对话会话无该概念）。写失败 log.warn 不阻断 SSE（报告已随 complete 帧送达，铁律 24/31）。
@@ -334,6 +540,12 @@ async function handleConversationMessage(req: Request, res: Response, pathSessio
     } else if (result.phaseComplete && disconnected) {
       log.warn({ sessionId }, '访谈完成但客户端已断开 — 跳过诊断启动（回复已落库）');
     }
+
+    // ⑪.5 D1051: 对话调深度 —— 确定性判别 → 取报告 → 渲染 → 旁挂 `report_view` 帧。
+    //     独立于 phaseComplete（"诊断早已完成、用户后来说「讲细一点」"是主场景，
+    //     挂 complete 帧会在该场景缺席）。硬约束：末帧仍为 `end`、不得产生 `error` 帧
+    //     （本调用内部全吞异常 + log.warn，spec §5.5）。
+    await emitReportViewFrame({ req, message, sessionId, orgId, store, adapter, freshReport });
 
     // ⑫ 终帧 + 关流（心跳随 close 清除）
     adapter.sendFrame({ type: 'end' });

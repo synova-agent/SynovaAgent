@@ -22,9 +22,16 @@ import {
   buildReportPointer,
   collectSlotLines,
   stripPointers,
+  DEGRADED_MARK,
   ONEPAGER_SLOT_TITLES,
   type PointerResolver,
 } from './report-onepager-trace';
+// D1051 W3: 呈现轴（L2 同层——`ReportDepth` 本就定义于本文件 `:31`，映射表零跨层边）
+import {
+  DETAILED_REPORT_CHAPTER_TITLES,
+  VIEW_TO_ONEPAGER_DEPTH,
+  type ReportViewDepth,
+} from './report-depth';
 
 const log = createLogger('agent/report-assembler');
 
@@ -530,4 +537,286 @@ export function buildFindingPointerResolver(reports: unknown): PointerResolver |
     if (sentinelId !== '' && checkedAt !== '') keys.add(`${sentinelId}@${checkedAt}`);
   }
   return (_kind, ref) => keys.has(ref);
+}
+
+// ═══ D1051 W3: 详细报告（3-2）+ 呈现轴分发器（3-3）+ 装配映射 ═══
+
+/** 详细报告模板名（注册在 `src/l3/report-templates.ts` 的第 4 个模板） */
+const DETAILED_REPORT_TEMPLATE = 'detailed_report';
+
+/**
+ * 装配轴映射表唯一落点（`ReportDepth` 定义于本文件 `:31`——与 W1 同层取值，**零跨层边**）。
+ * 呈现轴（几章多少字）与装配轴（装配多少层数据）正交，本表是两者唯一的转换点。
+ */
+export const VIEW_TO_ASSEMBLE_DEPTH: Readonly<Record<ReportViewDepth, ReportDepth>> = {
+  one_pager: 'ceo',
+  detailed: 'expert',
+};
+
+/**
+ * D1051 W3: 完整诊断报告形状守卫（渲染边界自查——checkpoint 归档的 report 可能来自
+ * JSON 反序列化，不盲信形状，铁律 38）。数组项内部字段交由渲染器 whole-body catch 兜底。
+ *
+ * 契约（铁律 47）:
+ *   @input  — v: unknown（任意来源，不信任）
+ *   @output — 类型谓词；true = 可安全交给 renderReportView 渲染
+ *   @degraded — false（形状不符）→ 调用方转译为诚实降级文案/404，不伪造章节
+ */
+export function isRenderableDiagnosisReport(v: unknown): v is DiagnosisReport {
+  if (typeof v !== 'object' || v === null) return false;
+  const o = v as Record<string, unknown>;
+  return (
+    typeof o.reportId === 'string' &&
+    typeof o.teamId === 'string' &&
+    typeof o.generatedAt === 'string' &&
+    typeof o.summary === 'string' &&
+    Array.isArray(o.expertReports) &&
+    Array.isArray(o.rootCauses) &&
+    Array.isArray(o.recommendations) &&
+    typeof o.raw === 'object' && o.raw !== null
+  );
+}
+
+/** reportId 缺失 → 空串（指针省略，不伪造——`conclusionPointer` 同源先例）。 */
+function detailedPointer(reportId: string, fragment: string): string {
+  return reportId === '' ? '' : buildReportPointer('report', `${reportId}#${fragment}`);
+}
+
+/**
+ * D1051: DiagnosisReport → 详细报告 ReportData 映射（**章节数据源 100% 既有字段**，
+ * 零新指标 / 零新窗口 / 零新比率）。
+ *
+ * 契约（铁律 47）:
+ *   @input  — report: DiagnosisReport
+ *   @output — ReportData（`chapters` 承载五章，标题取自 `DETAILED_REPORT_CHAPTER_TITLES` 单源；
+ *             `extra.reportId` 供模板尾行；其余必填字段给中性空值——本模板不消费它们）
+ *   @degraded — 无 I/O 纯映射（单章数据缺失 → 该章 `body` 写入 `[degraded]` 说明行，不静默，
+ *               铁律 24/31）；异常由 renderDetailedReport whole-body catch 兜底
+ */
+function toDetailedReportData(report: DiagnosisReport): ReportData {
+  const reportId = typeof report.reportId === 'string' ? report.reportId : '';
+  const titles = DETAILED_REPORT_CHAPTER_TITLES;
+
+  const chapters: Array<{ title: string; body: string[] }> = [];
+
+  // ── 章 1: 结论（report.summary，经 enforceReport 散文化——与一页纸 S1 语义对齐：结论可溯源）──
+  const summaryText = enforceReport(toStringOrEmpty(report.summary)).text;
+  chapters.push({
+    title: titles[0],
+    body: summaryText.trim() === ''
+      ? [`${DEGRADED_MARK} 无结论内容可溯源`]
+      : [`${summaryText}${detailedPointer(reportId, 'summary')}`],
+  });
+
+  // ── 章 2: 根因（**降序全量**，非 Top-N——这是「详细」的判别点）──
+  const rootCauses = [...report.rootCauses].sort((a, b) => b.confidence - a.confidence);
+  const rootLines: string[] = [];
+  rootCauses.forEach((rc, i) => {
+    const description = toStringOrEmpty(rc.description).trim();
+    if (description === '') return;
+    rootLines.push(`${description}（维度 ${toStringOrEmpty(rc.dimension)}，置信度 ${rc.confidence}）${detailedPointer(reportId, `rootcause:${i}`)}`);
+  });
+  chapters.push({
+    title: titles[1],
+    body: rootLines.length === 0 ? [`${DEGRADED_MARK} 无根因记录`] : rootLines,
+  });
+
+  // ── 章 3: 专家完整推理（expert + 全部 findings + confidence）──
+  const expertLines: string[] = [];
+  report.expertReports.forEach((er, i) => {
+    const expert = toStringOrEmpty(er.expert).trim();
+    const findings = Array.isArray(er.findings) ? er.findings.map(f => toStringOrEmpty(f)).filter(f => f.trim() !== '') : [];
+    const head = expert === '' ? '（未署名专家）' : expert;
+    const body = findings.length === 0 ? '无 finding 记录' : findings.join('；');
+    expertLines.push(`${head}（置信度 ${er.confidence}）：${body}${detailedPointer(reportId, `expert:${i}`)}`);
+  });
+  chapters.push({
+    title: titles[2],
+    body: expertLines.length === 0 ? [`${DEGRADED_MARK} 无专家报告记录`] : expertLines,
+  });
+
+  // ── 章 4: 行动建议（**全量**，含 priority / expert）──
+  const actionLines: string[] = [];
+  report.recommendations.forEach((rec, i) => {
+    const action = toStringOrEmpty(rec.action).trim();
+    if (action === '') return;
+    const meta: string[] = [];
+    const priority = toStringOrEmpty(rec.priority);
+    const expert = toStringOrEmpty(rec.expert);
+    if (priority !== '') meta.push(`优先级 ${priority}`);
+    if (expert !== '') meta.push(expert);
+    const metaPart = meta.length > 0 ? `（${meta.join('｜')}）` : '';
+    actionLines.push(`${action}${metaPart}${detailedPointer(reportId, `recommendation:${i}`)}`);
+  });
+  chapters.push({
+    title: titles[3],
+    body: actionLines.length === 0 ? [`${DEGRADED_MARK} 无行动建议记录`] : actionLines,
+  });
+
+  // ── 章 5: 数据时点（`generatedAt` **逐字透传**——不解析、不换算、不主张 3-9 时间窗口径）──
+  const generatedAt = toStringOrEmpty(report.generatedAt).trim();
+  chapters.push({
+    title: titles[4],
+    body: generatedAt === ''
+      ? [`${DEGRADED_MARK} 报告缺数据时点`]
+      : [
+          `报告数据时点：${generatedAt}`,
+          '本行为既有字段透传，不主张 3-9 时间窗口径（周/月聚合视图归 D828）。',
+        ],
+  });
+
+  return {
+    orgId: toStringOrEmpty(report.teamId),
+    date: generatedAt,
+    goals: [],
+    alerts: [],
+    obstacles: [],
+    recommendations: [],
+    extra: { reportId },
+    chapters,
+  };
+}
+
+/**
+ * 详细报告条目行缺指针计数（§5.3 ③ 留痕用——只 `log.warn`，不改写输出）。
+ *
+ * 口径：末章「数据时点」按设计**不带指针**（既有字段透传），不参与计数；
+ * `[degraded]` 空态行是降级说明而非条目，亦不参与。
+ *
+ * @input markdown 渲染产物；pointerlessChapterTitle 免检章标题（由装配产物的末章标题传入，
+ *        不在此处重复引用章节标题常量——保证本函数对章序变化免疫）
+ * @output 缺指针条目行数（0 = 全覆盖）
+ */
+function countPointerlessItemLines(markdown: string, pointerlessChapterTitle: string): number {
+  let missing = 0;
+  let inPointerlessChapter = false;
+  for (const raw of markdown.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (line.startsWith('### ')) {
+      inPointerlessChapter = line === pointerlessChapterTitle;
+      continue;
+    }
+    if (inPointerlessChapter) continue;
+    if (!line.startsWith('- ')) continue;
+    if (line.includes(DEGRADED_MARK)) continue;
+    if (!line.includes('[src:')) missing += 1;
+  }
+  return missing;
+}
+
+/**
+ * D1051: 详细报告纯文本降级文案（含「降级」标记——铁律 24/31 降级信号传播）。
+ * 与 `onePagerFallback` 同构；**不伪造章节**（诚实说明模板不可用）。
+ */
+function detailedReportFallback(report: DiagnosisReport): string {
+  const lines = [`# ${report.teamId} 诊断详细报告（降级：模板渲染失败，纯文本输出）`, ''];
+  lines.push(report.summary || '诊断完成');
+  for (const rc of report.rootCauses.slice(0, 5)) lines.push(`- 根因: ${rc.description}`);
+  for (const rec of report.recommendations.slice(0, 5)) lines.push(`- 建议: ${rec.action}`);
+  return lines.join('\n');
+}
+
+/**
+ * D1051: 渲染详细报告（完整诊断各章节，markdown）。
+ *
+ * 契约（铁律 47）:
+ *   @input  — report: DiagnosisReport（完整引擎形状；调用方须先经 isRenderableDiagnosisReport 窄化）
+ *   @output — markdown 字符串（`## <teamId> 诊断详细报告` 头行 + `DETAILED_REPORT_CHAPTER_TITLES`
+ *             五章；每章非空或含 `[degraded]` 说明行；条目行带可解析溯源指针
+ *             `[src:report:<reportId>#…]`；`📎 报告 ID: <reportId>` 尾行）
+ *   @degraded — ① registry 抛错 / 返回「模板渲染失败」/「未找到模板」→ log.warn + 纯文本 fallback
+ *                （含「降级」标记）
+ *             ② 单章数据缺失 → 该章 `[degraded]` 说明行（其余章照常）
+ *             ③ 渲染成功但条目行缺指针 → log.warn（不改写输出）
+ *   本函数永不抛出（whole-body catch——路由与对话帧两处消费点依赖此契约）。
+ *   确定性：输出**禁含渲染时刻**（同输入 → 字节级同输出，幂等重跑前提）。
+ *   不走 tone-enforcer 于整体产物（结构化 markdown 非散文，同 renderOnePager 先例；
+ *   仅章 1 的正文经 `enforceReport` 散文化，与既有 `assembleReport` 语义一致）。
+ */
+export function renderDetailedReport(report: DiagnosisReport): string {
+  try {
+    const data = toDetailedReportData(report);
+    const rendered = getReportTemplateRegistry().render(DETAILED_REPORT_TEMPLATE, data);
+    if (rendered.startsWith('模板渲染失败') || rendered.startsWith('未找到模板')) {
+      log.warn({ template: DETAILED_REPORT_TEMPLATE }, '详细报告模板渲染降级返回 — fallback 纯文本');
+      return detailedReportFallback(report);
+    }
+    // 末章（数据时点）按设计不带指针——免检章标题取自装配产物，对章序变化免疫
+    const chapters = Array.isArray(data.chapters) ? data.chapters : [];
+    const lastChapter = chapters.length > 0 ? chapters[chapters.length - 1] : undefined;
+    const missing = countPointerlessItemLines(rendered, lastChapter === undefined ? '' : lastChapter.title);
+    if (missing > 0) {
+      log.warn(
+        { missingPointerLines: missing },
+        '详细报告条目行溯源指针覆盖不足 — degraded（覆盖审计留痕，铁律 24/31）',
+      );
+    }
+    return rendered;
+  } catch (err: unknown) {
+    log.warn({ err }, '详细报告渲染失败 — degraded（纯文本降级）');
+    return detailedReportFallback(report);
+  }
+}
+
+/**
+ * D1051: 呈现深度分发器（3-2 端点 / 3-3 对话帧两入口共用——**保证两入口同深度同产物**）。
+ *
+ * 契约（铁律 47）:
+ *   @input  — report；viewDepth: ReportViewDepth（呈现轴，非装配轴）；inputs?: OnePagerInputs
+ *             （仅 `one_pager` 方向消费；`detailed` 方向忽略——详版不需要四槽位入参）
+ *   @output — markdown 字符串（one_pager → renderOnePager 产物；detailed → renderDetailedReport 产物）
+ *   @degraded — 透传被分发渲染器的降级语义（两渲染器均**永不抛出**）
+ *   确定性：同输入同输出；分发本身零逻辑分支副作用。
+ */
+export function renderReportView(
+  report: DiagnosisReport,
+  viewDepth: ReportViewDepth,
+  inputs?: OnePagerInputs,
+): string {
+  if (viewDepth === 'detailed') return renderDetailedReport(report);
+  return renderOnePager(report, VIEW_TO_ONEPAGER_DEPTH[viewDepth], inputs);
+}
+
+/**
+ * D1051: S2/S3 装配（**唯一实现**——消除 L1 两路由各自装配的重复面，F4）。
+ *
+ * 契约（铁律 47）:
+ *   @input  — orgId: string（= 报告 teamId）；graphStore?: unknown（缺席 → S3 槽位降级）
+ *   @output — Promise<OnePagerInputs>（两字段各自独立可选——缺席即模板侧 `[degraded]` 空态行）
+ *   @degraded — 任一来源失败/为空 → 对应字段不设置 + log.warn（不静默、不阻断渲染，铁律 24/31）
+ *
+ * 分层：本函数属 L2；S2 经 L2 只读面 `getSentinelExpertReports`（模块单例，无需 req）、
+ * S3 经 L2 派生服务 `buildCycleConclusions`（L1 不再直触 cycles/l4，铁律 39）。
+ * 两依赖走**动态 import**：与既有 L1 装配点同款通道，且不改变本模块静态依赖图。
+ */
+export async function assembleOnePagerInputsForOrg(
+  orgId: string,
+  graphStore?: unknown,
+): Promise<OnePagerInputs> {
+  let findingReports: unknown = [];
+  try {
+    const sentinel = await import('./sentinel-service');
+    findingReports = sentinel.getSentinelExpertReports().reports;
+  } catch (err: unknown) {
+    log.warn({ err, orgId }, '关键证据来源读取失败 — S2 槽位降级（输入缺席 → [degraded] 空态行）');
+  }
+
+  let cycleLines: string[] = [];
+  try {
+    const cycleService = await import('./cycle-conclusion-service');
+    const conclusions = await cycleService.buildCycleConclusions(orgId, graphStore);
+    cycleLines = conclusions.lines.map(line => line.text);
+    if (cycleLines.length === 0) {
+      log.warn({ orgId, reason: conclusions.reason }, '循环结论为空 — S3 槽位走 [degraded] 空态行');
+    }
+  } catch (err: unknown) {
+    log.warn({ err, orgId }, '循环结论派生失败 — S3 槽位降级（输入缺席 → [degraded] 空态行）');
+  }
+
+  // 「空即缺席」规则单源在 assembleOnePagerInputs（保证「生产 HTTP 产物 ≡ 本地同输入渲染」等价）
+  const inputs = assembleOnePagerInputs(findingReports, cycleLines);
+  if (inputs.evidenceHighlights === undefined) {
+    log.warn({ orgId }, '哨兵无 finding 记录 — S2 槽位走 [degraded] 空态行（不静默省略）');
+  }
+  return inputs;
 }

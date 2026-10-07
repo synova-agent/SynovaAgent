@@ -1,0 +1,36 @@
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-d1051-verify
+
+ ❯ tests/routes/diagnosis-report-depth.test.ts (7 tests | 1 failed) 315ms
+     ✓ ⓪ Q5 等价性四条：注入面与生产同形（可判而非声明） 1ms
+     ✓ ① 归档产物可读：无 depth 的 markdown → 200 text/markdown（现状语义不变） 70ms
+     ✓ ② 零回归判别（J2）：不带 depth 的产物 === `?depth=one_pager` 的产物（字节相等） 9ms
+     × ③ 3-2 详细报告：`?depth=detailed` → 200 + 五章齐备 + 头回执 detailed 7ms
+     ✓ ④ 非法 depth → 200 + X-Report-Depth-Degraded: UNKNOWN_DEPTH + 落回一页纸（DS4 不静默） 22ms
+     ✓ ⑤ JSON 分支不变：`?format=json`（含任何 depth）不加深度头、不新增字段 7ms
+     ✓ ⑥ 未知 reportId → 404 诚实语义不变 2ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 passed (7)
+   Start at  18:01:54
+   Duration  486ms (transform 230ms, setup 0ms, import 92ms, tests 315ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/routes/diagnosis-report-depth.test.ts > D1051 W4: 报告呈现深度端点（真实路由 + 真实 HTTP） > ③ 3-2 详细报告：`?depth=detailed` → 200 + 五章齐备 + 头回执 detailed
+AssertionError: expected 'one_pager' to be 'detailed' // Object.is equality
+
+Expected: "detailed"
+Received: "one_pager"
+
+ ❯ tests/routes/diagnosis-report-depth.test.ts:187:52
+    185|     expect(res.status).toBe(200);
+    186|     expect(res.headers.get('content-type')).toContain('text/markdown');
+    187|     expect(res.headers.get('x-report-view-depth')).toBe('detailed');
+       |                                                    ^
+    188|     // 非法降级头不得出现（合法入参 → 无降级）
+    189|     expect(res.headers.get('x-report-depth-degraded')).toBeNull();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

@@ -1,0 +1,319 @@
+{
+  "artifact": "D1051 改坏即红实测（独立复核，成员 V）",
+  "method": "每例：pre-green → 精确文本注入(恰1处, 带 INJECTED-RED-n 标记) → 同命令须红 → git checkout -- 复原(sha 校验) → 再跑须绿；原始日志见 logs-break-red/",
+  "generatedAt": "2026-09-28T18:02:11+08:00",
+  "head": "f47f90982b4dec10e407bd806e851aaad4f47fb4",
+  "verdictCounts": {
+    "PASS": 5,
+    "PASS-NO-RED-EXPECTED": 1
+  },
+  "cases": [
+    {
+      "id": "R1",
+      "title": "显式深度短路（?depth=detailed 被强制回浅层）",
+      "assertion": "「?depth=detailed → 200 + 五章齐备 + 头回执 detailed」必须报红",
+      "injection": {
+        "file": "src/routes/diagnosis.ts",
+        "old": "  const viewDepth: ReportViewDepth = normalizedDepth ?? DEFAULT_REPORT_VIEW_DEPTH;",
+        "new": "  const viewDepth: ReportViewDepth = DEFAULT_REPORT_VIEW_DEPTH; // INJECTED-RED-1 显式深度短路（强制浅层）",
+        "marker": "INJECTED-RED-1",
+        "occurrences": 1,
+        "markerPresent": true
+      },
+      "verifyCommand": "npx vitest run tests/routes/diagnosis-report-depth.test.ts",
+      "preInjectionFileSha256": "6ad91a7de72c284ff63d1a83565d341605a14d95a98de6da3075189943c69fc4",
+      "preGreen": {
+        "exit": 0,
+        "testFiles": "Test Files  1 passed (1)",
+        "tests": "Tests  7 passed (7)"
+      },
+      "red": {
+        "exit": 1,
+        "testFiles": "Test Files  1 failed (1)",
+        "tests": "Tests  1 failed | 6 passed (7)",
+        "failingTests": [
+          "× ③ 3-2 详细报告：`?depth=detailed` → 200 + 五章齐备 + 头回执 detailed 7ms",
+          "FAIL  tests/routes/diagnosis-report-depth.test.ts > D1051 W4: 报告呈现深度端点（真实路由 + 真实 HTTP） > ③ 3-2 详细报告：`?depth=detailed` → 200 + 五章齐备 + 头回执 detailed"
+        ],
+        "expectMatched": [
+          "③ 3-2 详细报告"
+        ]
+      },
+      "revert": {
+        "restoredSha256": "6ad91a7de72c284ff63d1a83565d341605a14d95a98de6da3075189943c69fc4",
+        "shaRestored": true
+      },
+      "revertGreen": {
+        "exit": 0,
+        "testFiles": "Test Files  1 passed (1)",
+        "tests": "Tests  7 passed (7)"
+      },
+      "verdict": "PASS",
+      "detail": "注入即红，失败用例命中 ['③ 3-2 详细报告']"
+    },
+    {
+      "id": "R2",
+      "title": "默认深度反转（不带 depth 时走 detailed）",
+      "assertion": "「不带 depth 的产物 === ?depth=one_pager 产物（字节相等）」必须报红",
+      "injection": {
+        "file": "src/routes/diagnosis.ts",
+        "old": "  const viewDepth: ReportViewDepth = normalizedDepth ?? DEFAULT_REPORT_VIEW_DEPTH;",
+        "new": "  const viewDepth: ReportViewDepth = normalizedDepth ?? 'detailed'; // INJECTED-RED-2 默认深度反转",
+        "marker": "INJECTED-RED-2",
+        "occurrences": 1,
+        "markerPresent": true
+      },
+      "verifyCommand": "npx vitest run tests/routes/diagnosis-report-depth.test.ts",
+      "preInjectionFileSha256": "6ad91a7de72c284ff63d1a83565d341605a14d95a98de6da3075189943c69fc4",
+      "preGreen": {
+        "exit": 0,
+        "testFiles": "Test Files  1 passed (1)",
+        "tests": "Tests  7 passed (7)"
+      },
+      "red": {
+        "exit": 1,
+        "testFiles": "Test Files  1 failed (1)",
+        "tests": "Tests  4 failed | 3 passed (7)",
+        "failingTests": [
+          "× ① 归档产物可读：无 depth 的 markdown → 200 text/markdown（现状语义不变） 71ms",
+          "× ② 零回归判别（J2）：不带 depth 的产物 === `?depth=one_pager` 的产物（字节相等） 15ms",
+          "× ③ 3-2 详细报告：`?depth=detailed` → 200 + 五章齐备 + 头回执 detailed 7ms",
+          "× ④ 非法 depth → 200 + X-Report-Depth-Degraded: UNKNOWN_DEPTH + 落回一页纸（DS4 不静默） 4ms",
+          "FAIL  tests/routes/diagnosis-report-depth.test.ts > D1051 W4: 报告呈现深度端点（真实路由 + 真实 HTTP） > ① 归档产物可读：无 depth 的 markdown → 200 text/markdown（现状语义不变）",
+          "FAIL  tests/routes/diagnosis-report-depth.test.ts > D1051 W4: 报告呈现深度端点（真实路由 + 真实 HTTP） > ② 零回归判别（J2）：不带 depth 的产物 === `?depth=one_pager` 的产物（字节相等）",
+          "FAIL  tests/routes/diagnosis-report-depth.test.ts > D1051 W4: 报告呈现深度端点（真实路由 + 真实 HTTP） > ③ 3-2 详细报告：`?depth=detailed` → 200 + 五章齐备 + 头回执 detailed",
+          "FAIL  tests/routes/diagnosis-report-depth.test.ts > D1051 W4: 报告呈现深度端点（真实路由 + 真实 HTTP） > ④ 非法 depth → 200 + X-Report-Depth-Degraded: UNKNOWN_DEPTH + 落回一页纸（DS4 不静默）"
+        ],
+        "expectMatched": [
+          "② 零回归判别"
+        ]
+      },
+      "revert": {
+        "restoredSha256": "6ad91a7de72c284ff63d1a83565d341605a14d95a98de6da3075189943c69fc4",
+        "shaRestored": true
+      },
+      "revertGreen": {
+        "exit": 0,
+        "testFiles": "Test Files  1 passed (1)",
+        "tests": "Tests  7 passed (7)"
+      },
+      "verdict": "PASS",
+      "detail": "注入即红，失败用例命中 ['② 零回归判别']"
+    },
+    {
+      "id": "R3",
+      "title": "详细报告渲染器删章节（行动建议章不再产出）",
+      "assertion": "「详细报告五章齐备」必须报红",
+      "injection": {
+        "file": "src/agent/report-assembler.ts",
+        "old": "  chapters.push({\n    title: titles[3],\n    body: actionLines.length === 0 ? [`${DEGRADED_MARK} 无行动建议记录`] : actionLines,\n  });",
+        "new": "  if (false) chapters.push({ // INJECTED-RED-3 删掉行动建议章\n    title: titles[3],\n    body: actionLines.length === 0 ? [`${DEGRADED_MARK} 无行动建议记录`] : actionLines,\n  });",
+        "marker": "INJECTED-RED-3",
+        "occurrences": 1,
+        "markerPresent": true
+      },
+      "verifyCommand": "npx vitest run tests/agent/report-detailed.test.ts",
+      "preInjectionFileSha256": "3aad21787156f8df3a46702467751be4af9f1447a8a2c0d2bc7ccb27f0608b5c",
+      "preGreen": {
+        "exit": 0,
+        "testFiles": "Test Files  1 passed (1)",
+        "tests": "Tests  15 passed (15)"
+      },
+      "red": {
+        "exit": 1,
+        "testFiles": "Test Files  1 failed (1)",
+        "tests": "Tests  5 failed | 10 passed (15)",
+        "failingTests": [
+          "× ① 五章标题字面齐备 + 头行 + 尾行报告 ID 5ms",
+          "× ④ 行动建议全量 + 数据时点逐字透传（不换算、不解析） 1ms",
+          "× ⑤ 条目行带可解析溯源指针 [src:report:<reportId>#…]（五类片段齐备） 1ms",
+          "× ⑥ 空 rootCauses / 空 expertReports / 空 recommendations → 各章 [degraded] 且不抛（J6） 1ms",
+          "× ⑮ 单元素/恰临界：1 根因 1 专家 1 建议不触发任何 [degraded] 0ms",
+          "FAIL  tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——正常路径 > ① 五章标题字面齐备 + 头行 + 尾行报告 ID",
+          "FAIL  tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——正常路径 > ④ 行动建议全量 + 数据时点逐字透传（不换算、不解析）",
+          "FAIL  tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——正常路径 > ⑤ 条目行带可解析溯源指针 [src:report:<reportId>#…]（五类片段齐备）",
+          "FAIL  tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——降级路径 > ⑥ 空 rootCauses / 空 expertReports / 空 recommendations → 各章 [degraded] 且不抛（J6）",
+          "FAIL  tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——边界条件 > ⑮ 单元素/恰临界：1 根因 1 专家 1 建议不触发任何 [degraded]"
+        ],
+        "expectMatched": [
+          "① 五章标题字面齐备"
+        ]
+      },
+      "revert": {
+        "restoredSha256": "3aad21787156f8df3a46702467751be4af9f1447a8a2c0d2bc7ccb27f0608b5c",
+        "shaRestored": true
+      },
+      "revertGreen": {
+        "exit": 0,
+        "testFiles": "Test Files  1 passed (1)",
+        "tests": "Tests  15 passed (15)"
+      },
+      "verdict": "PASS",
+      "detail": "注入即红，失败用例命中 ['① 五章标题字面齐备']"
+    },
+    {
+      "id": "R4",
+      "title": "对话意图判定短路（深度词恒不命中）",
+      "assertion": "「讲细一点 → report_view.depth=detailed」与 W1 词表命中必须报红",
+      "injection": {
+        "file": "src/agent/report-depth.ts",
+        "old": "  for (const entry of UTTERANCE_KEYWORD_TABLE) {\n    if (text.includes(entry.keyword)) {",
+        "new": "  for (const entry of UTTERANCE_KEYWORD_TABLE) {\n    if (false && text.includes(entry.keyword)) { // INJECTED-RED-4 对话意图判定短路",
+        "marker": "INJECTED-RED-4",
+        "occurrences": 1,
+        "markerPresent": true
+      },
+      "verifyCommand": "npx vitest run tests/routes/conversations-report-view.test.ts tests/agent/report-depth.test.ts",
+      "preInjectionFileSha256": "ff751f46628729e6629214b6b42bfaaae9ed2b3ed7d0ecc3c70d9735e6857149",
+      "preGreen": {
+        "exit": 0,
+        "testFiles": "Test Files  2 passed (2)",
+        "tests": "Tests  20 passed (20)"
+      },
+      "red": {
+        "exit": 1,
+        "testFiles": "Test Files  2 failed (2)",
+        "tests": "Tests  10 failed | 10 passed (20)",
+        "failingTests": [
+          "× ④ 词表两方向全部命中正确方向（detailed 9 词 / one_pager 8 词，逐词断言） 3ms",
+          "× ⑤ 句子内嵌词也命中（includes 语义，非全等匹配） 0ms",
+          "× ⑩ 最长匹配优先：`讲细一点` 命中 detailed 且 keyword 恰为 `讲细一点`（J4） 0ms",
+          "× ⑪ 最长匹配优先：`再详细一点`（5 字，全表最长）不被 `详细`（2 字）截断 0ms",
+          "× ⑫ 同长词码点字典序稳定：跨方向同长命中时判定唯一且可预期 0ms",
+          "× ① 「讲细一点」→ report_view 帧，depth=detailed，markdown 含详版章节（3-3 正向） 134ms",
+          "× ② 「说人话」→ report_view 帧，depth=one_pager，markdown 为四槽位一页纸（3-3 反向） 95ms",
+          "× ④ 不伪造（DS12）：无可用报告 → degraded:true + reason=NO_REPORT + markdown=null 103ms",
+          "× ⑤ 同源同构（DS11）：帧内 markdown ≡ HTTP `?depth=detailed` 产物 184ms",
+          "× ⑥ 幂等：同一会话连发两次「讲细一点」→ 两帧 markdown 字节相等（无时刻污染） 142ms",
+          "FAIL  tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——正常路径 > ④ 词表两方向全部命中正确方向（detailed 9 词 / one_pager 8 词，逐词断言）",
+          "FAIL  tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——正常路径 > ⑤ 句子内嵌词也命中（includes 语义，非全等匹配）",
+          "FAIL  tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——边界条件 > ⑩ 最长匹配优先：`讲细一点` 命中 detailed 且 keyword 恰为 `讲细一点`（J4）",
+          "FAIL  tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——边界条件 > ⑪ 最长匹配优先：`再详细一点`（5 字，全表最长）不被 `详细`（2 字）截断",
+          "FAIL  tests/agent/report-depth.test.ts > D1051 W1: 呈现粒度轴——边界条件 > ⑫ 同长词码点字典序稳定：跨方向同长命中时判定唯一且可预期",
+          "FAIL  tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ① 「讲细一点」→ report_view 帧，depth=detailed，markdown 含详版章节（3-3 正向）",
+          "FAIL  tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ② 「说人话」→ report_view 帧，depth=one_pager，markdown 为四槽位一页纸（3-3 反向）",
+          "FAIL  tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ④ 不伪造（DS12）：无可用报告 → degraded:true + reason=NO_REPORT + markdown=null",
+          "FAIL  tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ⑤ 同源同构（DS11）：帧内 markdown ≡ HTTP `?depth=detailed` 产物",
+          "FAIL  tests/routes/conversations-report-view.test.ts > D1051 W5: 对话调深度（report_view 帧，真实路由 + 真实 HTTP） > ⑥ 幂等：同一会话连发两次「讲细一点」→ 两帧 markdown 字节相等（无时刻污染）"
+        ],
+        "expectMatched": [
+          "① 「讲细一点」"
+        ]
+      },
+      "revert": {
+        "restoredSha256": "ff751f46628729e6629214b6b42bfaaae9ed2b3ed7d0ecc3c70d9735e6857149",
+        "shaRestored": true
+      },
+      "revertGreen": {
+        "exit": 0,
+        "testFiles": "Test Files  2 passed (2)",
+        "tests": "Tests  20 passed (20)"
+      },
+      "verdict": "PASS",
+      "detail": "注入即红，失败用例命中 ['① 「讲细一点」']"
+    },
+    {
+      "id": "R5",
+      "title": "degraded 静默化（详细报告 fallback 的降级标记被抹掉）",
+      "assertion": "「注册表缺 detailed_report → 落 fallback 且含降级标记」必须报红",
+      "injection": {
+        "file": "src/agent/report-assembler.ts",
+        "old": "  const lines = [`# ${report.teamId} 诊断详细报告（降级：模板渲染失败，纯文本输出）`, ''];",
+        "new": "  const lines = [`# ${report.teamId} 诊断详细报告（模板不可用，纯文本输出）`, '']; // INJECTED-RED-5 degraded 标记静默化",
+        "marker": "INJECTED-RED-5",
+        "occurrences": 1,
+        "markerPresent": true
+      },
+      "verifyCommand": "npx vitest run tests/agent/report-detailed.test.ts",
+      "preInjectionFileSha256": "3aad21787156f8df3a46702467751be4af9f1447a8a2c0d2bc7ccb27f0608b5c",
+      "preGreen": {
+        "exit": 0,
+        "testFiles": "Test Files  1 passed (1)",
+        "tests": "Tests  15 passed (15)"
+      },
+      "red": {
+        "exit": 1,
+        "testFiles": "Test Files  1 failed (1)",
+        "tests": "Tests  2 failed | 13 passed (15)",
+        "failingTests": [
+          "× ⑧ 注册表缺 detailed_report → 落 fallback 并含降级标记（J1 判别性夹具） 4ms",
+          "× ⑨ registry.render 抛错 → 返回含降级标记的字符串，永不抛出（DS7） 1ms",
+          "FAIL  tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——降级路径 > ⑧ 注册表缺 detailed_report → 落 fallback 并含降级标记（J1 判别性夹具）",
+          "FAIL  tests/agent/report-detailed.test.ts > D1051 W3: 详细报告渲染——降级路径 > ⑨ registry.render 抛错 → 返回含降级标记的字符串，永不抛出（DS7）"
+        ],
+        "expectMatched": [
+          "⑧ 注册表缺 detailed_report"
+        ]
+      },
+      "revert": {
+        "restoredSha256": "3aad21787156f8df3a46702467751be4af9f1447a8a2c0d2bc7ccb27f0608b5c",
+        "shaRestored": true
+      },
+      "revertGreen": {
+        "exit": 0,
+        "testFiles": "Test Files  1 passed (1)",
+        "tests": "Tests  15 passed (15)"
+      },
+      "verdict": "PASS",
+      "detail": "注入即红，失败用例命中 ['⑧ 注册表缺 detailed_report']"
+    },
+    {
+      "id": "R6",
+      "title": "对话帧渲染降级检测恒 false（degraded / reason='RENDER_DEGRADED' 静默化）",
+      "assertion": "留痕探针（非验收判据）：若注入后仍绿 ⇒ 该路径（report_view 帧 degraded/reason 字段）在既有套件中零断言覆盖 = 覆盖盲区；若红 ⇒ 已被间接覆盖",
+      "injection": {
+        "file": "src/routes/conversations.ts",
+        "old": "function isDegradedRender(markdown: string): boolean {\n  return markdown.includes('（降级：');\n}",
+        "new": "function isDegradedRender(markdown: string): boolean {\n  return false; // INJECTED-RED-6 渲染降级检测恒 false（degraded/RENDER_DEGRADED 静默化）\n}",
+        "marker": "INJECTED-RED-6",
+        "occurrences": 1,
+        "markerPresent": true
+      },
+      "verifyCommand": "npx vitest run tests/routes/conversations-report-view.test.ts",
+      "preInjectionFileSha256": "c289dad65f45b15efe2f26b385ba4d1bccb0c4a31908bb167e247873b6bba0a4",
+      "preGreen": {
+        "exit": 0,
+        "testFiles": "Test Files  1 passed (1)",
+        "tests": "Tests  6 passed (6)"
+      },
+      "red": {
+        "exit": 0,
+        "testFiles": "Test Files  1 passed (1)",
+        "tests": "Tests  6 passed (6)",
+        "failingTests": [],
+        "expectMatched": []
+      },
+      "revert": {
+        "restoredSha256": "c289dad65f45b15efe2f26b385ba4d1bccb0c4a31908bb167e247873b6bba0a4",
+        "shaRestored": true
+      },
+      "revertGreen": {
+        "exit": 0,
+        "testFiles": "Test Files  1 passed (1)",
+        "tests": "Tests  6 passed (6)"
+      },
+      "verdict": "PASS-NO-RED-EXPECTED",
+      "detail": "留痕探针：注入后仍绿 ⇒ 该路径在既有套件中零断言覆盖 = 覆盖盲区（非验收判据失效，另记局限）"
+    }
+  ],
+  "rawLogs": [
+    "R1-1-pre-green.log.txt",
+    "R1-2-injected-red.log.txt",
+    "R1-3-revert-green.log.txt",
+    "R2-1-pre-green.log.txt",
+    "R2-2-injected-red.log.txt",
+    "R2-3-revert-green.log.txt",
+    "R3-1-pre-green.log.txt",
+    "R3-2-injected-red.log.txt",
+    "R3-3-revert-green.log.txt",
+    "R4-1-pre-green.log.txt",
+    "R4-2-injected-red.log.txt",
+    "R4-3-revert-green.log.txt",
+    "R5-1-pre-green.log.txt",
+    "R5-2-injected-red.log.txt",
+    "R5-3-revert-green.log.txt",
+    "R6-1-pre-green.log.txt",
+    "R6-2-injected-red.log.txt",
+    "R6-3-revert-green.log.txt"
+  ]
+}

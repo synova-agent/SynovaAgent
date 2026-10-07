@@ -1,0 +1,10 @@
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-d1051-verify
+
+ ✓ tests/agent/report-detailed.test.ts (15 tests) 7ms
+
+ Test Files  1 passed (1)
+      Tests  15 passed (15)
+   Start at  18:01:59
+   Duration  152ms (transform 51ms, setup 0ms, import 70ms, tests 7ms, environment 0ms)
+
