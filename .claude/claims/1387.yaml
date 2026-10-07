@@ -1,20 +1,19 @@
 # .claude/claims/1387.yaml — #1387（traversal 早退守卫 · 机制③）写集声明（D708 的 S0 源）
-#   **本文件随批次更新**：B1（3 哨兵，已合 d09cc8f3d）⇒ B2（5 哨兵，已合 e3a06bac4）⇒ **B3（本批 5 哨兵）**
-# 依已验模板（CTO 放宽停等：改法固化 ⇒ 可连做；三条停下条件不松）
+#   **随批次更新**：B1（d09cc8f3d）⇒ B2（e3a06bac4）⇒ B3（5c70aa4f9）⇒ **B4（本批 = 收尾，17/17）**
 writeset:
   - .claude/claims/1387.yaml
   - .claude/task-briefs/2026-10-08-1387-traversal-fallback-b1.md
   - .claude/task-briefs/2026-10-08-1387-traversal-fallback-b2.md
   - .claude/task-briefs/2026-10-08-1387-traversal-fallback-b3.md
-  - extensions/sentinels/moat-dependency/aggregate.ts
-  - extensions/sentinels/niche-breadth/aggregate.ts
-  - extensions/sentinels/niche-squeeze/aggregate.ts
-  - extensions/sentinels/opportunity-window/aggregate.ts
-  - extensions/sentinels/process-ai-readiness/aggregate.ts
-  - tests/sentinel/traversal-fallback-b3.test.ts
+  - .claude/task-briefs/2026-10-08-1387-traversal-fallback-b4.md
+  - extensions/sentinels/resource-misallocation/aggregate.ts
+  - extensions/sentinels/routine-mutation/aggregate.ts
+  - extensions/sentinels/strategy-capability-fit/aggregate.ts
+  - extensions/sentinels/value-capture/aggregate.ts
+  - tests/sentinel/traversal-fallback-b4.test.ts
 done:
-  - verify: npx vitest run tests/sentinel/traversal-fallback-b3.test.ts
+  - verify: npx vitest run tests/sentinel/traversal-fallback-b4.test.ts
   - verify: npx vitest run tests/sentinel/ tests/store/ tests/l3/ tests/connectors/
-  - verify: test "$(git grep -c "traversal-no-edge" HEAD -- extensions/sentinels/niche-breadth/aggregate.ts | tr -d '\n')" -ge 1
+  - verify: test "$(git grep -rlE "if \(!r\.nodes\[0\]\) return \[\]" HEAD -- extensions/sentinels/ | grep -v _extinct | wc -l | tr -d '\n')" -eq 0
   - verify: npx tsc --noEmit
-note: B3 五哨兵照已验模板改为"退回 + 留痕"（旧静默早退零残留）。覆盖面 = 13/17（B1 3 + B2 5 + B3 5）。**短路声明（CTO 新规）**：V2①-b（不编造 metrics）对本批【对象不具备】⇒ 测不到它要测的东西；该判据对已接线批次（B1/#1375）有效 —— 已在判据文件头 + PR 正文声明。
+note: B4 = 机制③ **收尾批**（17/17）。收尾证据三项入判据：① 17/17 逐哨兵点名 ② 4 批判据指针（PR + 判据文件） ③ **旧形态全局零残留** regex（+ 防"扫空目录"假过：断言扫描文件数 >40）。短路声明：V2①-b 对本批对象不具备（未接指标级）⇒ 对已接线批次有效。
