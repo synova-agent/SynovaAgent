@@ -1,0 +1,19 @@
+# .claude/claims/1393.yaml — #1393（映射经收口点覆盖 extensions 哨兵）写集声明（D708 的 S0 源）
+#
+# CTO 2026-10-08 裁：§六 (A)（遍历一并映射）+ (c)（有映射 ⇒ 并集；映射 = null ⇒ 保留字面量 + warn）
+#                 + ⑧ 重复行判据（去重 + 断言）+ ⑨ 不变量入契约（warn === true ⟺ targets 为空）
+writeset:
+  - .claude/claims/1393.yaml
+  - .claude/task-briefs/2026-10-08-1393-mapping-via-wrapper.md
+  - src/sentinel/node-type-resolver.ts
+  - src/sentinel/mapped-read.ts
+  - src/sentinel/org-scope.ts
+  - tests/sentinel/mapping-via-wrapper.test.ts
+  - tests/sentinel/org-scope.test.ts
+  - tests/sentinel/tenant-filter-keys.test.ts
+done:
+  - verify: npx vitest run tests/sentinel/mapping-via-wrapper.test.ts tests/sentinel/org-scope.test.ts tests/sentinel/tenant-filter-keys.test.ts
+  - verify: npx vitest run tests/sentinel/ tests/store/ tests/l3/ tests/connectors/
+  - verify: test "$(git grep -c "resolveReadTargets" HEAD -- src/sentinel/org-scope.ts | tr -d '\n')" -ge 1
+  - verify: npx tsc --noEmit
+note: 三件事共用收口点（租户过滤 #1374 + 键归一化 #1375 B1 + 类型映射本卡）；唯一解析源（mapped-read 私有实现已删）；并集含字面量（不丢语义）；按 id 去重（防御）。§② 观测：17 哨兵中 5 个可能因映射变多数据（Agent/Financial → 本体轴有写入者），其余属数据面（Tool/Client 目标无写入者、Event/Process 映射 null）⇒ 如实报"部分改善，主因仍是数据面"。

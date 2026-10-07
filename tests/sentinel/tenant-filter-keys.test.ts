@@ -72,14 +72,22 @@ describe('#1375 过滤器键：一次枚举 + 非载体键登记', () => {
     expect(found.has('teamId')).toBe(true);
   });
 
-  it('V-d1 归一化一次覆盖【全部别名键】：teamId 与 tid 都被改写为 orgId（且业务键保留）', () => {
+  it('V-d1 归一化一次覆盖【全部别名键】：**每一次调用**的 filters 都已归一化（含 #1393 并集读后的多次调用）', () => {
     const seen: Array<Record<string, unknown>> = [];
     const scoped = withOrgScope({
       queryNodes: (_t: string, filters?: Record<string, unknown>) => { seen.push(filters ?? {}); return []; },
     }, 'org-A');
     scoped.queryNodes('Agent', { tid: 'x', goalId: 'g1' });
     scoped.queryNodes('Tool', { teamId: 'y', status: 'active' });
-    expect(seen[0]).toEqual({ goalId: 'g1', orgId: 'org-A' });      // tid 被丢弃、业务键保留
-    expect(seen[1]).toEqual({ status: 'active', orgId: 'org-A' });  // teamId 被丢弃
+    expect(seen.length).toBeGreaterThan(0);
+    for (const f of seen) {
+      // ① 别名键一律不出现（teamId/tid 被丢弃）
+      for (const k of TENANT_ALIAS_KEYS) expect(f).not.toHaveProperty(k);
+      // ② 载体键恒为 ctx 值（单一真源）
+      expect(f.orgId).toBe('org-A');
+    }
+    // ③ 业务键保留（示例：goalId / status）
+    expect(seen.some(f => f.goalId === 'g1')).toBe(true);
+    expect(seen.some(f => f.status === 'active')).toBe(true);
   });
 });

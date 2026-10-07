@@ -25,6 +25,7 @@
  *      `(org_id, metric_id, entity_id, observed_at)` 会把同 org 同指标压成一行 ⇒ 多租户互相覆盖）。
  */
 import { createLogger } from '@synova/logger';
+import { resolveReadTargets } from './node-type-resolver';   // #1393：单一解析源
 
 const log = createLogger('sentinel/org-scope');
 
@@ -72,34 +73,48 @@ export function withOrgScope<T>(store: T, orgId: string | undefined): T {
   const original = store.queryNodes.bind(store) as QueryFn;
 
   const scopedQuery: QueryFn = (type, filters, graph) => {
+    // ── 维度①：租户过滤 + 键归一化（**可选**：无 orgId ⇒ 跳过该维度，但**不影响类型映射**）──
+    let baseFilters: Record<string, unknown> | undefined = filters;
     if (scopedOrg === undefined) {
       unscopedQueryCount++;
       log.debug({ type, total: unscopedQueryCount }, '未隔离读（无 orgId）—— 计数，不静默');
-      return original(type, filters, graph);
+    } else {
+      const given = filters?.orgId;
+      if (given !== undefined && given !== scopedOrg) {
+        log.warn({ type, given, ctx: scopedOrg }, '调用方 orgId 与 ctx.teamId 冲突 ⇒ 以 ctx 为准（单一真源）');
+      }
+      const rawFilters = filters ?? {};
+      const rest: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(rawFilters)) {
+        if ((TENANT_ALIAS_KEYS as readonly string[]).includes(k)) continue;   // 别名键：丢弃（统一由 orgId 承载）
+        rest[k] = v;
+      }
+      const dropped = Object.keys(rawFilters).filter(k => (TENANT_ALIAS_KEYS as readonly string[]).includes(k));
+      if (dropped.length > 0) log.debug({ type, dropped }, '租户别名键归一化为 orgId（单一载体；R21/R22）');
+      baseFilters = { ...rest, orgId: scopedOrg };
     }
-    const given = filters?.orgId;
-    if (given !== undefined && given !== scopedOrg) {
-      log.warn({ type, given, ctx: scopedOrg }, '调用方 orgId 与 ctx.teamId 冲突 ⇒ 以 ctx 为准（单一真源）');
+
+    // ── 维度②：**类型映射**（#1393；**与租户无关，恒生效** —— 三件事共用本收口点）──
+    //   裁 (c)：有映射 ⇒ 并集读（字面量 ∪ 映射目标）；映射 = null ⇒ 保留字面量读 + warn（读空归 #1379 V3）
+    const { targets, reasons } = resolveReadTargets(type);
+    if (targets.length === 0) {
+      log.warn({ type, reasons, degraded: true, reason: 'no-mapping' }, '无映射 ⇒ 保留字面量读（(c) null 分支）');
+      return original(type, baseFilters, graph);
     }
-    // 🔴 **键归一化**（#1374 实测发现）：哨兵普遍传 `{ teamId }`，而本仓租户载体是 **`props.orgId`**
-    //   （R21/R22；`loop-handlers` / `goal-store` / `data-exporter` 均读 `props.orgId`）。
-    //   若不归一化 ⇒ 过滤退化为 `{ teamId, orgId }` 双键 ⇒ 只带 orgId 的数据**全部落空** ⇒
-    //   **空结果被误当"隔离成功"**（R61 同族）⇒ 故此处把 `teamId` 键**改写**为 `orgId`（单一载体）。
-    // 🔴 **键归一化（一次枚举全部别名键；#1375 扩展）**
-    //   口径：`git grep -oE "queryNodes\([^)]*\{[^}]*\}"` ⇒ 全仓过滤器键枚举（见 tests/sentinel/tenant-filter-keys.test.ts）：
-    //     载体键 = `orgId`｜**别名键 = TENANT_ALIAS_KEYS**｜其余 = 业务键（如 goalId/status/email…，**非租户键，原样保留**）
-    //   历史：`teamId`（#1374 实测发现）⇒ 本卡扩展覆盖 `tid`（5 文件）——**一次全归一化，避免"改一个漏一个"**。
-    const rawFilters = filters ?? {};
-    const rest: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(rawFilters)) {
-      if ((TENANT_ALIAS_KEYS as readonly string[]).includes(k)) continue;   // 别名键：丢弃（统一由 orgId 承载）
-      rest[k] = v;
+    // ⑧ 重复行：按 `id` 去重（防御性；判据另断言"结果 id 不重复"）
+    const seenIds = new Set<string>();
+    const rows: unknown[] = [];
+    for (const t of [type, ...targets]) {
+      for (const row of (original(t, baseFilters, graph) as Array<{ id?: string }>)) {
+        const id = row?.id;
+        if (typeof id === 'string') {
+          if (seenIds.has(id)) continue;
+          seenIds.add(id);
+        }
+        rows.push(row);
+      }
     }
-    const dropped = Object.keys(rawFilters).filter(k => (TENANT_ALIAS_KEYS as readonly string[]).includes(k));
-    if (dropped.length > 0) {
-      log.debug({ type, dropped }, '租户别名键归一化为 orgId（单一载体；R21/R22）');
-    }
-    return original(type, { ...rest, orgId: scopedOrg }, graph);
+    return rows as ReturnType<QueryFn>;
   };
 
   const scoped: T = Object.create(store as object);
