@@ -242,6 +242,30 @@ class TestB_LegacyDidNoHijack(Base):
         self.assertTrue(out.strip().endswith("1234.yaml"),
                         f"claim 必须胜过 D# 锚点 brief；实得 {out.strip()}")
 
+    def test_b4_date_fallback_also_guarded(self):
+        """强锚点守卫之外，**D317 日期回退同样受守卫**（verifier 插桩发现后补）。
+
+        病根形态：守卫生效了，但解析器继续走到 D317 日期回退（原本无守卫）⇒
+        回滚态（开关关 + 仓库有 claim）仍会拿到一个**日期最新但与本任务无关**的 brief。
+        夹具 = 让日期回退成为**唯一**可返回路径，断言生产**不返回**它。
+        """
+        self.write_claim(1234)
+        (self.repo / ".claude" / "task-briefs" / "2026-10-07-unrelated.md").write_text(
+            "## Q2: 范围\n做什么:\n- docs/unrelated.md\n\n## 架构层: 基础设施\n#CRITERIA: A\n",
+            encoding="utf-8")
+        self.stage_edit()
+        self.commit_all("chore: fixture")
+        subprocess.run(["git", "-C", str(self.repo), "checkout", "-q", "-b", "feat/1234-identity"],
+                       check=True, capture_output=True)
+        (self.repo / "scripts" / "c.sh").write_text("echo c\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(self.repo), "add", "scripts/c.sh"], check=True,
+                       capture_output=True)
+
+        rc, out, _ = self.resolve("scripts/c.sh")   # 开关 OFF = 回滚态
+        self.assertNotIn("unrelated", out,
+                         f"回滚态不得经日期回退返回无关 brief（R4 承诺）: {out.strip()!r}")
+        self.assertNotEqual(rc, 0, "无 claim 命中且日期回退受守卫 ⇒ 必须 fail-closed（非 0）")
+
     def test_b3_pure_legacy_path_unchanged(self):
         """无 claim 的纯 legacy D# 任务 → 旧行为（零回归）。"""
         self._legacy_brief("D999")
@@ -420,6 +444,31 @@ class TestD_Mutants(Base):
         self.assertEqual([], obj_mut.get("declared", []),
                          f"变异体应失去全部声明源: {obj_mut.get('declared')}")
 
+
+    def test_d5_removing_date_fallback_guard_reintroduces_wrong_brief(self):
+        """删掉 D317 日期回退守卫 → 回滚态复现「拿到无关 brief」。"""
+        mutant = self._mutate(
+            self.tool_resolver, self.repo / "scripts" / "workflow" / "resolver-mutant-d5.sh",
+            'if [ -n "$CLAIM_FILE" ]; then\n  exit 1\nfi\nRESULT=$("$PYBIN" -c "',
+            'RESULT=$("$PYBIN" -c "')
+        self.write_claim(1234)
+        (self.repo / ".claude" / "task-briefs" / "2026-10-07-unrelated.md").write_text(
+            "## Q2: 范围\n做什么:\n- docs/unrelated.md\n\n## 架构层: 基础设施\n#CRITERIA: A\n",
+            encoding="utf-8")
+        self.stage_edit()
+        self.commit_all("chore: fixture")
+        subprocess.run(["git", "-C", str(self.repo), "checkout", "-q", "-b", "feat/1234-identity"],
+                       check=True, capture_output=True)
+        (self.repo / "scripts" / "c.sh").write_text("echo c\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(self.repo), "add", "scripts/c.sh"], check=True,
+                       capture_output=True)
+
+        rc_prod, out_prod, _ = self.resolve("scripts/c.sh")
+        rc_mut, out_mut, _ = self.resolve("scripts/c.sh", tool=mutant)
+        self.assertNotIn("unrelated", out_prod, out_prod)
+        self.assertIn("unrelated", out_mut,
+                      f"变异体应经日期回退拿到无关 brief（夹具判别力证明）: {out_mut.strip()!r}")
+        self.assertNotEqual(rc_prod, rc_mut)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

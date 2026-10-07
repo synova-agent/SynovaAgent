@@ -328,6 +328,15 @@ fi
 if [ -z "$PYBIN" ]; then
   exit 1
 fi
+# D-C（K3 R3/R4 收口，verifier 插桩发现）: **D317 日期回退同样要受防劫持守卫**。
+# 病根: 强锚点回退加了守卫，但"日期回退"这条**无守卫** ⇒ 回滚态（开关关 + 仓库有 claim）
+#   仍会走到这里挑一个**日期最新**的 brief —— 即"守卫生效了，但解析器继续走到无守卫路径"，
+#   回滚态与头注承诺（"存在 claim 即不劫持"）不一致。一处守卫补全，开关语义不变。
+# CLAIM_FILE 非空（本任务身份可定位到 claim）⇒ 不再做日期猜测：宁可 exit 1（fail-closed，
+#   由调用方按三态处理），也不返回一个**与本次任务无关**的 brief。
+if [ -n "$CLAIM_FILE" ]; then
+  exit 1
+fi
 RESULT=$("$PYBIN" -c "
 import os, re, sys
 sys.path.insert(0, r'$PARSER_DIR_W')
