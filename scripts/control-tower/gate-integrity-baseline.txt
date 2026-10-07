@@ -49,7 +49,14 @@
 #       tests/control-tower/pre-audit-summary.test.sh → 摘除 1 条 [R] 条目。按棘轮语义「文件已删=基线过期，须删条目」
 #       清理，非判据放宽。沿革: 78 = 79 未登记 − 1（2026-09-25 删过期条目 tests/control-tower/install-dsh-preset.test.sh，
 #       origin/main:.github/workflows/ci.yml:272 已登记它））
-# [P] 条数: 1（唯一既有非法模式 scripts/pre-commit-check.sh:991；归 D937，本卡不改该文件）
+# [P] 条数: 0（2026-10-07 摘除唯一一条：scripts/pre-commit-check.sh:991。
+#      摘除理由（棘轮只减不增 + 该条已 STALE 于 bsd 与 gnu 两平台）:
+#        · 该坐标所指的非法 ERE 已随文件演进消失——现 :991 为 `if [ -z "$BRIEF" ]; then`，
+#          不再是 `grep -Ev "...|^+++|..."`；`check-gate-integrity.sh --patterns-only`
+#          实测 `PATTERN-BASELINE: STALE`（本平台已不再违规）。
+#        · 规则明文「条目已不再违规 → exit 1（须删条目）」；且 expires=2026-10-08，
+#          过期未摘即硬红（明日零点起全批红）⇒ 按「删条目」处置，非判据放宽。
+#        · 复跑: bash scripts/control-tower/check-gate-integrity.sh --patterns-only → GATE-INTEGRITY: OK）
 # 注意: 本卡新增的 2 个夹具（tests/control-tower/check-gate-integrity.test.sh、
 #       tests/control-tower/precommit-groups-injection.test.sh）**不入 [R] 段**——由 m9-coder-b 登记进 ci.yml。
 #       [P] 段条目条数 ≠ 0（后者含 [P] 数据行）；段内计数用下方命令:
@@ -139,4 +146,3 @@ tests/project/pr-queue-scan.test.sh
 # ═══ PATTERN-BASELINE（既有非法 grep 模式的存量登记，新增即拦；A 模式读）═══
 # 格式：<脚本相对路径>:<行号> | owner=<D#/角色> | expires=YYYY-MM-DD | evidence=<引用>
 # 规则：命中条目的既有违规不判违规；不在段内的新非法模式必红；条目过期 → exit 1；条目已不再违规 → exit 1（须删条目）
-scripts/pre-commit-check.sh:991 | owner=D937 | expires=2026-10-08 | evidence=fix/d937-gate-failopen「组 7a 非法 ERE」
