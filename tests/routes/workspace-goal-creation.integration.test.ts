@@ -77,7 +77,13 @@ async function call(
   });
   const raw = await res.text();
   let body: Record<string, unknown> = {};
-  try { body = raw.length > 0 ? (JSON.parse(raw) as Record<string, unknown>) : {}; } catch { body = { __unparsed: raw }; }
+  try {
+    body = raw.length > 0 ? (JSON.parse(raw) as Record<string, unknown>) : {};
+  } catch (parseErr: unknown) {
+    // 非 JSON 响应（如 503 空体/文本）⇒ 保留原文供判据报错，不静默（铁律 24/31）
+    console.warn('[d1322] 响应非 JSON，保留原文供判据:', res.status, parseErr);
+    body = { __unparsed: raw };
+  }
   return { status: res.status, body };
 }
 

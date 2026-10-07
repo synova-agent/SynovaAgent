@@ -126,6 +126,20 @@ export function resolveEntityNode(
   return null;
 }
 
+/**
+ * props 是否可视为 Goal。
+ *
+ * 用**类型谓词**而非 `as unknown as Goal`（铁律 38 / CT-46 零容忍，且 CI 组 1 按新增行硬阻断）。
+ * 只用 `goalId` 作形状锚：其余 27 个字段由 `createGoal` 的写入契约保证（`goal-types.ts:89-144`），
+ * 在此重复校验会把「契约变更」变成静默 null，反而更难查。
+ *
+ * @contract 参数为 `unknown` ⇒ 谓词类型 `Goal` 天然可赋（无需双重断言）
+ */
+function isGoalProps(value: unknown): value is Goal {
+  return typeof value === 'object' && value !== null
+    && typeof (value as { goalId?: unknown }).goalId === 'string';
+}
+
 // ═══ CRUD 操作 ═══
 
 /**
@@ -200,8 +214,8 @@ export function createGoal(goal: Goal, store: GraphBridgeLike, audit: AuditStore
 export function getGoal(goalId: string, store: GraphBridgeLike, graph: string = 'growth'): Goal | null {
   try {
     const resolved = resolveEntityNode('GOAL', 'goalId', goalId, store, graph);
-    if (!resolved) return null;
-    return resolved.props as unknown as Goal;
+    if (!resolved || !isGoalProps(resolved.props)) return null;
+    return resolved.props;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     log.error({ err: msg, goalId }, '获取 Goal 失败');
@@ -509,10 +523,10 @@ export function updateGoalStatus(
     const msg = err instanceof Error ? err.message : String(err);
     log.error({ err: msg, goalId }, '获取 Goal 失败');
   }
-  if (!resolved) {
+  if (!resolved || !isGoalProps(resolved.props)) {
     throw new Error(`Goal ${goalId} 不存在`);
   }
-  const goal = resolved.props as unknown as Goal;
+  const goal = resolved.props;
 
   const fromStatus = goal.status;
 
@@ -539,7 +553,7 @@ export function updateGoalStatus(
   //    #1322 B1: 必须写**图节点 id**（真库为 `node-<uuid>`）；写实体 id 会更新 0 行且不报错。
   const updatedProps = { ...goal, ...extraProps, status: newStatus, lastModifiedAt: new Date().toISOString() };
   try {
-    store.updateNode(resolved.nodeId, updatedProps as unknown as Record<string, unknown>, graph);
+    store.updateNode(resolved.nodeId, { ...updatedProps }, graph);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     log.error({ err: msg, goalId, fromStatus, newStatus }, 'Goal 状态更新失败');

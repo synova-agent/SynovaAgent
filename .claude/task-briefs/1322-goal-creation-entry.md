@@ -66,6 +66,21 @@
 - `workspace-data.ts`：真装配 graphStore/orgId、`enterpriseId:"default"`×3 修、`PUT …/target` 假受理修、新增 2 个 proposals 端点、空 orgId fail-closed 403、审计薄适配器、文件头「未做」段同步。
 - `tests/growth/goal-store-real-graph.integration.test.ts`、`tests/growth/proposal-store-real-graph.integration.test.ts`、`tests/routes/workspace-goal-creation.integration.test.ts`（新）。
 - `tests/security/rbac-all-routes.test.ts` 枚举表同步（**经 CTO 批准的写集越界**，`:175`/`:219-232`）。
+**本卡最终写集（逐条，供 pre-commit 组 12 解析）**：
+- src/growth/goal-store.ts
+- src/growth/proposal-store.ts
+- src/growth/proposal-types.ts
+- src/growth/proposal-engine.ts
+- src/growth/workspace-types.ts
+- src/growth/workspace-builder.ts
+- src/routes/workspace-data.ts
+- tests/growth/goal-store-real-graph.integration.test.ts
+- tests/growth/proposal-store-real-graph.integration.test.ts
+- tests/routes/workspace-goal-creation.integration.test.ts
+- tests/security/rbac-all-routes.test.ts
+- .claude/claims/1322.yaml
+- .claude/task-briefs/1322-goal-creation-entry.md
+
 **不做什么（含文件路径）**：
 - 不改 `src/l2/proposal-manager.ts`（R20 禁第二入口）｜不改 `src/middleware/rbac.ts`（R22；不扩 `RbacContext`）
 - 不改 `src/adapters/sqlite-graph-store.ts`（隔离载体走 (a) `props.orgId`，不动 schema）

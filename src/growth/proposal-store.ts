@@ -58,6 +58,18 @@ export function isValidProposalTransition(from: ProposalStatus, to: ProposalStat
   return PROPOSAL_TRANSITIONS.some(r => r.from === from && r.to === to);
 }
 
+/**
+ * props 是否可视为 Proposal。
+ *
+ * 同 goal-store 的 `isGoalProps`：用**类型谓词**替代 `as unknown as Proposal`
+ * （铁律 38 / CT-46 零容忍；CI 组 1 对新增行硬阻断）。形状锚只取 `proposalId`，
+ * 其余字段由 `createProposal` 的写入契约保证（`proposal-types.ts`）。
+ */
+function isProposalProps(value: unknown): value is Proposal {
+  return typeof value === 'object' && value !== null
+    && typeof (value as { proposalId?: unknown }).proposalId === 'string';
+}
+
 // ═══ CRUD 操作 ═══
 
 /**
@@ -127,8 +139,8 @@ export function createProposal(
 export function getProposal(proposalId: string, store: GraphBridgeLike, graph: string = 'growth'): Proposal | null {
   try {
     const resolved = resolveEntityNode('PROPOSAL', 'proposalId', proposalId, store, graph);
-    if (!resolved) return null;
-    return resolved.props as unknown as Proposal;
+    if (!resolved || !isProposalProps(resolved.props)) return null;
+    return resolved.props;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     log.error({ err: msg, proposalId }, '获取 Proposal 失败');
@@ -190,10 +202,10 @@ export function updateProposalStatus(
     const msg = err instanceof Error ? err.message : String(err);
     log.error({ err: msg, proposalId }, '获取 Proposal 失败');
   }
-  if (!resolved) {
+  if (!resolved || !isProposalProps(resolved.props)) {
     throw new Error(`Proposal ${proposalId} 不存在`);
   }
-  const proposal = resolved.props as unknown as Proposal;
+  const proposal = resolved.props;
 
   const fromStatus = proposal.status;
 
@@ -214,7 +226,7 @@ export function updateProposalStatus(
   };
 
   try {
-    store.updateNode(resolved.nodeId, updatedProps as unknown as Record<string, unknown>, graph);
+    store.updateNode(resolved.nodeId, { ...updatedProps }, graph);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     log.error({ err: msg, proposalId, fromStatus, newStatus }, 'Proposal 状态更新失败');
