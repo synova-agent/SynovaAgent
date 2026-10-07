@@ -2,7 +2,12 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # tag-bypass-wiring.test.sh — D331 D329 审计 P1 修复测试
 #
-# 五合一: tag-祖先校验 + bypass 对账 + guard PYBIN + --session 接线 + write-set task_id
+# 五合一: tag-祖先校验 + bypass 对账 + 呈报段 PYBIN + --session 能力保留 + write-set task_id
+# 🔴 D1225（2026-10-07）: 暂存区隔离件 staging_guard.py 退役 —— 用例 6/7/8/9/11 的 SUT 随迁:
+#   6/7/8 改测 synova-commit 的**只读归属呈报段**（同一 PYBIN 三级探测 + 显式降级语义）；
+#   9 从「--session 生产调用点 ≥1」改为「能力保留（可调用）」——其原唯一生产调用方即退役件；
+#     生产接线断言移到 claim 单源（tests/control-tower/staging-guard-retirement.test.sh:R4）；
+#   11 从「消费侧同任务互认」改为**生产者侧** task_id 继承不变量。
 # 覆盖（铁律 48: 正常/降级/边界; 铁律 0-2: red→green 已证）:
 #   1. 孤儿 tag（非 HEAD 祖先）→ pre-push 硬阻断 exit 1（red: 无检查 → exit 0）
 #   2. VERSION.md 最新版本 tag 非祖先 → exit 1
@@ -10,14 +15,14 @@
 #   4. bypass 对账: 记录存在 → exit 0
 #   5. bypass 对账 base 边界: 无 base 无 origin → fail-open exit 0 显式跳过;
 #      SYNO_BASE_REF 显式不可解析 → exit 1
-#   6. synova-commit guard PYBIN 回退: python3 缺失 → shim python 执行 guard
+#   6. synova-commit 呈报段 PYBIN 回退: python3 缺失 → shim python 执行呈报
 #      （red: 裸 python3 静默 → 无 shim 调用）
-#   7. guard 崩溃（非 JSON, rc=3）→ 显式 degraded 提示 + 降级放行（red: || true 吞）
-#   8. 全无 python → fail-open 显式提示（不静默跳过）
-#   9. --session 生产接线: grep resolve-commit-brief.sh.*--session ≥1 生产调用点
-#      （red: 零调用方 → 断言失败）
+#   7. 呈报段崩溃（非 JSON, rc=3）→ 显式降级提示 + 降级放行（red: || true 吞）
+#   8. 全无 python → 显式降级提示（不静默跳过）
+#   9. --session **能力保留**（resolve-commit-brief.sh 仍实现该 flag）；生产调用点 0 如实打印
+#      （D1225 后原唯一生产调用方已退役；生产接线断言改由 claim 单源夹具承担）
 #  10. write-set 条目含 task_id（red: 无 → 断言失败）
-#  11. 同任务并行 session 写集互认（staging_guard 不误伤；red: 误 block）
+#  11. 同任务并行 session 的 task_id 继承（生产者不变量，承接原"不误伤"语义）
 #
 # 隔离: mktemp -d 临时 repo + git init; SYNO_TAG_ONLY=1 → pre-push 只跑 tag 检查
 #       （D319 一致性 + D331 祖先）; SYNO_PRE_COMMIT 指向不存在文件 → synova-commit
@@ -218,7 +223,7 @@ SHIMEOF
   }
 
   # ── 用例 6: PYBIN 回退 — python3 缺失 → shim python 执行 guard ──
-  echo "── 6. guard PYBIN 回退 (python3 缺失 → python shim) ──"
+  echo "── 6. 呈报段 PYBIN 回退 (python3 缺失 → python shim) ──"
   R6=$(mktemp -d)
   new_repo "$R6" "V9.9.9"
   echo "x" > "$R6/x.md"  # 不提交 — synova-commit 的 git add 暂存新文件
@@ -227,26 +232,26 @@ SHIMEOF
   printf 'touch "%s"\nexec "%s" "$@"\n' "$SHIM_MARKER" "$REAL_PY_BIN" > "$SHIM_BODY"
   run_guard_case "$SHIM_BODY" "$R6" "test: guard pybin"
   assert_exit "$EC" 2 "降级路径 commit 完成 (exit 2)"
-  if [ -f "$SHIM_MARKER" ]; then pass "guard 经 shim python 执行（PYBIN 回退生效）"; else fail "guard 未经 shim 执行 — PYBIN 未回退"; fi
+  if [ -f "$SHIM_MARKER" ]; then pass "呈报段经 shim python 执行（PYBIN 回退生效）"; else fail "呈报段未经 shim 执行 — PYBIN 未回退"; fi
   LOG6=$(git -C "$R6" log --oneline 2>/dev/null | head -1) # swallow-ok: 测试日志读取（无提交时预期非零）
   assert_contains "$LOG6" "guard pybin" "提交已创建"
   echo ""
 
   # ── 用例 7: guard 崩溃（非 JSON rc=3）→ 显式 degraded 提示 + 放行 ──
-  echo "── 7. guard 崩溃 → 显式 degraded（不静默吞）──"
+  echo "── 7. 呈报段崩溃 → 显式 degraded（不静默吞）──"
   SHIM_BODY7=$(mktemp)
   printf 'echo "CRASHED (shim)"\nexit 3\n' > "$SHIM_BODY7"
   echo "v2" >> "$R6/x.md"  # 复用 R6：追加变更让 git add 有新内容可暂存
   run_guard_case "$SHIM_BODY7" "$R6" "test: guard crash"
-  assert_exit "$EC" 2 "guard 崩溃 → 降级放行 (exit 2)"
-  assert_contains "$OUT" "staging-guard 执行异常" "显式 degraded 提示出现（非静默）"
+  assert_exit "$EC" 2 "呈报段崩溃 → 降级放行 (exit 2)"
+  assert_contains "$OUT" "归属呈报降级" "显式 degraded 提示出现（非静默）"
   LOG7=$(git -C "$R6" log --oneline 2>/dev/null | head -1) # swallow-ok: 测试日志读取（无提交时预期非零）
   assert_contains "$LOG7" "guard crash" "崩溃后提交仍完成"
   echo ""
 
   # ── 用例 8: 全无可用 python → fail-open 显式提示 ──
   # 影子 shim（python3/python/py 全部 -c 探测失败）→ PYBIN 空 → 显式跳过提示
-  echo "── 8. 全无 python → fail-open 显式提示 ──"
+  echo "── 8. 全无 python → 显式降级提示 ──"
   R8=$(mktemp -d)
   SHIM8_DIR=$(mktemp -d)
   for _s in python3 python py; do
@@ -261,20 +266,27 @@ SHIMEOF
   EC8=$?
   set -e
   assert_exit "$EC8" 2 "全无 python → 降级放行 (exit 2)"
-  assert_contains "$OUT8" "staging-guard 跳过" "显式提示 staging-guard 跳过（不静默）"
+  assert_contains "$OUT8" "归属呈报降级: python 不可用" "显式提示 python 不可用降级（不静默）"
   echo ""
   rm -f "$SHIM_BODY" "$SHIM_BODY7" 2>/dev/null || true
 fi
 
-# ── 用例 9: --session 生产接线 grep ≥1 ──
-echo "── 9. --session 生产接线（grep ≥1 调用点）──"
+# ── 用例 9: --session 能力保留（D1225 后生产调用点为 0，如实打印）──
+# D1225 迁移说明: 原断言 = 「resolve-commit-brief.sh.*--session 生产调用点 ≥1」。该唯一生产
+#   调用方即已退役的 staging_guard.py（D331 P2-2 的接线落点），故原断言在退役后必然 0 命中。
+#   处置（不静默、不假红）: ① 断言**能力仍在**（flag 已实现，未随退役一并删除）；② 生产调用点
+#   计数**打印出来**（0 亦可见）；③ 生产接线断言改由 claim 单源夹具承担
+#   （tests/control-tower/staging-guard-retirement.test.sh:R4 断言 claim_store 为唯一生产入口）。
+echo "── 9. --session 能力保留 + 生产调用点计数（D1225）──"
+if grep -q -- '--session' "$REPO_DIR/scripts/workflow/resolve-commit-brief.sh" 2>/dev/null; then
+  pass "--session 能力保留（resolve-commit-brief.sh 仍实现该 flag）"
+else
+  fail "--session 能力被删（退役不应带走 resolver 的 flag）"
+fi
 HITS9=$(grep -rn "resolve-commit-brief\.sh\"[^#]*--session" "$REPO_DIR/scripts/" 2>/dev/null || true)
 N9=$(printf '%s' "$HITS9" | grep -c "resolve-commit-brief" || true)
-if [ "$N9" -ge 1 ]; then
-  pass "--session 生产调用点 ≥1 ($N9 命中)"
-else
-  fail "--session 生产调用点 = 0（零接线）"
-fi
+N9="${N9//[^0-9]/}"; N9="${N9:-0}"
+pass "--session 生产调用点 = ${N9}（D1225 后显式登记；≥1 时请同步复核归属）"
 echo ""
 
 # ── 用例 10: write-set 条目含 task_id ──
@@ -306,32 +318,39 @@ assert_exit "$EC10" 0 "write-set 条目含 task_id"
 assert_contains "$OUT10" "OK task_id=D331" "输出确认 task_id=D331"
 echo ""
 
-# ── 用例 11: 同任务并行 session 写集互认（不误伤）──
-echo "── 11. 同任务 session 写集互认 ──"
+# ── 用例 11: 同任务并行 session 的 task_id 继承（**生产者侧**不变量）──
+# D1225（2026-10-07）迁移说明: 原用例 11 消费已退役的 `staging_guard.check_staging` 做
+#   「同任务写集互认（不误伤）」；该消费者随模块整件退役（判据面移交 CI D708 写集对账）。
+#   本用例改断言其**生产侧**不变量 —— 同任务并行 session 的写集条目必须携带**继承的**
+#   task_id（D331 P2-1）。消费者退役 ≠ 生产者可以不变量：verify-parallel --ci-pr 的归属
+#   判定仍读该字段，字段缺失 = 同任务识别能力静默消失。
+echo "── 11. 同任务 session task_id 继承（生产者不变量）──"
 R11=$(mktemp -d)
 new_repo "$R11" "V9.9.9"
 R11_W=$(cygpath -w "$R11" 2>/dev/null || echo "$R11")
 set +e
 OUT11=$(cd "$R11" && python3 - "$R11_W" "$REPO_DIR_W" <<'PYEOF'
-import sys
+import json, sys
 from pathlib import Path
 sys.path.insert(0, sys.argv[2] + "/scripts/control-tower")
 from session_registry import SessionRegistry
-from staging_guard import check_staging
 tmp = Path(sys.argv[1])
 reg = SessionRegistry(registry_path=tmp / "registry.json", lock_dir=tmp / "locks", degraded_log=tmp / "deg.log")
 reg.register("A", str(tmp / "brief-a.md"), task_id="D331")
 reg.write_set("A", add=["src/x.ts"])
 reg.register("B", str(tmp / "brief-b.md"), task_id="D331")
-res = check_staging(reg, "B", ["src/x.ts"])
-assert res["status"] != "block", "同任务文件被误判 block: %r" % res
-print("OK status=" + res["status"])
+reg.write_set("B", add=["src/y.ts"])
+data = json.loads((tmp / "registry.json").read_text(encoding="utf-8"))
+entries = [(w["file"], w.get("task_id")) for s in data["sessions"] for w in s.get("write_set", [])]
+assert len(entries) == 2, "写集条目数异常: %r" % entries
+assert all(t == "D331" for _, t in entries), "task_id 未继承（同任务识别失效）: %r" % entries
+print("OK entries=" + str(sorted(entries)))
 PYEOF
 )
 EC11=$?
 set -e
-assert_exit "$EC11" 0 "同任务写集互认（不误伤）"
-assert_contains "$OUT11" "OK status=" "输出确认放行"
+assert_exit "$EC11" 0 "同任务写集 task_id 继承（生产者不变量）"
+assert_contains "$OUT11" "OK entries=" "输出确认 task_id 继承"
 echo ""
 
 # ── 清理 ──

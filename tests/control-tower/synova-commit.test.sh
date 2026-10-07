@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # tests/control-tower/synova-commit.test.sh — synova-commit 配对测试（U7/CT-40 配对规则）
-# D525: 断言对齐 D508 后现行为——D507 内联并行门禁段已移除，隔离职责由
-#   ① D311 staging_guard（他人活跃写集 → 硬阻断；guard 崩溃 → 显式降级）
-#   ② task-start.sh 开工拦截（D515 项1，另有 task-start-parallel.test.sh 覆盖）
-#   本测试聚焦 ①；②不重复覆盖。
+# D1225 (2026-10-07): 暂存区隔离件 staging_guard.py **退役** —— 本测试同步断言对齐现行为。
+#   隔离职责现由（本测试聚焦 ①；余者在别处覆盖）:
+#     ① synova-commit 的**只读归属呈报**（单一入口 claim_store.py，不阻断；禁静默空白）
+#     ② task-start.sh 开工拦截（D515 项1 → task-start-parallel.test.sh）
+#     ③ 提交端主树占用（pre-commit 组 6 D537 #2）+ CI D708 写集对账（→ merge_writeset_gate.test.sh）
 # 覆盖（铁律 48 三路径 + 接线）:
-#   ① 接线: staging_guard 调用段存在（--session-id/--staged）
-#   ② 行为(拦): 他人活跃写集文件被暂存 → synova-commit exit 1 + 点名文件与归属
+#   ① 接线: 退役段存在（claim_store 单一入口 + 退役结论恒打印；旧调用形态零残留）
+#   ② 行为(退役): 他人活跃写集文件被暂存 → **本地不再阻断**，且必打印退役结论（非静默空白）
 #   ③ 行为(放): 自己登记的写集文件 → 不拦（提交继续，degraded pre-commit 下 commit 完成）
-#   ④ 降级: guard 执行异常路径有显式提示（非静默 fail-open 无痕）
-#   ⑤ 判定语义: guard status JSON 解析（block/ok/坏输入）
+#   ④ 降级: claim_store/py 不可用路径有显式降级提示（非静默 fail-open 无痕）
+#   ⑤ 判定语义: claim status JSON 解析（resolved/missing/坏输入）
 #   ── D706（本节新增）── 部分提交丢弃删除项
 #   ⑥ 跨调用: 门禁拒绝后暂存态仍在 → 第二次提交必须真的把删除项写进树
 #      （原缺陷: git commit -- <pathspec> 对「索引已删除 + .gitignore 命中 + 磁盘仍存在」
@@ -27,12 +28,13 @@ ok()  { echo "  ✅ $1"; PASS=$((PASS+1)); }
 bad() { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
 TMPD="$(mktemp -d)"; trap 'rm -rf "$TMPD"' EXIT
 
-# ① 接线: staging_guard 段存在（D508 后并行隔离的实际承载者）
-grep -q 'STAGING_GUARD="\$PROJECT_ROOT/scripts/control-tower/staging_guard.py"' "$SC" \
-  && grep -q -- '--session-id "$SESSION_ID" --staged' "$SC" \
-  && ok "① staging_guard 接线存在（D311 段）" || bad "① staging_guard 接线缺失"
-grep -q "暂存区隔离 (D311 M1b)" "$SC" && ok "① 阻断点名文案存在" || bad "① 阻断文案缺失"
-grep -q "降级放行，请检查其日志" "$SC" && ok "④ guard 崩溃显式降级提示（非静默）" || bad "④ 降级静默"
+# ① 接线: 退役段存在 —— claim_store 单一入口 + 退役结论恒打印 + 旧调用形态零残留
+grep -q 'claim_store.py' "$SC" && grep -q '已退役（D1225）' "$SC" \
+  && ok "① 退役段接线存在（claim_store 单一入口 + 结论行）" || bad "① 退役段接线缺失"
+grep -q '判据面 = CI D708 写集对账' "$SC" && ok "① 退役结论文案存在（禁静默空白）" || bad "① 退役结论文案缺失"
+! grep -q 'STAGING_GUARD=' "$SC" && ! grep -q -- '--staged $STAGED_LIST' "$SC" \
+  && ok "① 旧调用形态零残留（无 STAGING_GUARD 变量 / 无 --staged 调用）" || bad "① 旧调用形态残留"
+grep -q "归属呈报降级" "$SC" && ok "④ 呈报降级显式提示（非静默）" || bad "④ 降级静默"
 
 # ── 沙箱: 复制 scripts（REPO_ROOT=沙箱 → registry/guard/bypass.log 全落沙箱内）──
 # 注意: staging_guard 从脚本位置解析 registry（不吃 SYNO_CT_DIR）——隔离靠整目录复制而非 env
@@ -50,16 +52,20 @@ STUB="$TMPD/stub-precommit.sh"; printf '#!/bin/bash\nexit 0\n' > "$STUB"; chmod 
 python3 "$SB/scripts/control-tower/session_registry.py" register --session-id other-sess --brief "" --task-id D999 >/dev/null 2>&1
 python3 "$SB/scripts/control-tower/session_registry.py" write-set --session-id other-sess --add x.md >/dev/null 2>&1
 
-# ② 行为(拦): 他人写集文件 → exit 1 + 点名
+# ② 行为(退役): 他人写集文件 → **本地不再阻断**，但必须打印显式退役结论（禁静默空白）
 echo "foreign" > "$SB/x.md"
 git -C "$SB" -c user.name=t -c user.email=t@t add x.md
 OUT=$(cd "$SB" && SYNO_PRE_COMMIT="$STUB" SYNO_GATEKEEPER_ACK=1 \
   bash "$SB/scripts/control-tower/synova-commit" --task-id T-self --agent test --message "test: foreign file" 2>&1); rc=$?
-[ "$rc" -eq 1 ] && ok "② 他人写集 → exit 1（并行劫持阻断）" || bad "② 应拦, 实际 exit=$rc"
-echo "$OUT" | grep -q "x.md" && echo "$OUT" | grep -q "other-sess" \
-  && ok "② 点名文件与归属 session" || bad "② 未点名: $(echo "$OUT" | grep -a '❌' | head -2)"
+echo "$OUT" | grep -q "已退役（D1225）" \
+  && ok "② 退役结论恒打印（非静默空白）" || bad "② 退役结论缺失: $(echo "$OUT" | tail -3)"
+echo "$OUT" | grep -q "暂存区含他人文件" \
+  && bad "② 旧阻断文案仍在（退役未生效）" || ok "② 旧阻断路径已撤（本地不预判）"
+# 只读呈报必须给出结论行（三类之一），不得静默省略
+echo "$OUT" | grep -qE "claim 归属|归属呈报降级" \
+  && ok "② 只读归属呈报已输出（claim_store 单一入口）" || bad "② 呈报静默: $(echo "$OUT" | grep -a 'claim' | head -2)"
 
-# 清理 ② 的暂存（场景隔离——否则 x.md 仍会被 guard 拦，属正确行为但非本场景语义）
+# 清理 ② 的暂存（场景隔离——保留暂存会让 ③ 的场景不纯净）
 git -C "$SB" -c user.name=t -c user.email=t@t restore --staged x.md 2>/dev/null || git -C "$SB" rm -q --cached x.md 2>/dev/null || true
 rm -f "$SB/x.md"
 
@@ -70,24 +76,31 @@ echo "own" > "$SB/y.md"
 git -C "$SB" -c user.name=t -c user.email=t@t add y.md
 OUT2=$(cd "$SB" && SYNO_PRE_COMMIT="$TMPD/missing-precommit" \
   bash "$SB/scripts/control-tower/synova-commit" --task-id T-self --agent test --message "test: own file" 2>&1); rc2=$?
-if echo "$OUT2" | grep -q "暂存区隔离"; then
+if echo "$OUT2" | grep -q "暂存区含他人文件"; then
   bad "③ 自己写集被误拦"
 else
-  ok "③ 自己写集不拦（guard 放行）"
+  ok "③ 自己写集不拦（本地不预判）"
 fi
-git -C "$SB" log --oneline 2>/dev/null | grep -q "test: own file" \
-  && ok "③ commit 实际完成（链路走通）" || bad "③ commit 未落: rc=$rc2 :: $(echo "$OUT2" | tail -2)"
+# D1225 潜伏缺陷修复（本次触发）: 原写法 `git log | grep -q` 在 `set -o pipefail` 下**假红** ——
+#   grep -q 命中即退出 → 上游 git 收到 SIGPIPE → 退出码 141 → 管道整体非零 ⇒ "commit 未落"。
+#   触发条件 = 日志行数 >1（② 场景现在会真提交，故 ③ 时日志已有 2 条）⇒ 确定性复现，非随机。
+#   修法: 先取文本再匹配（去管道），消除 SIGPIPE 竞争。
+LOG3="$(git -C "$SB" log --oneline 2>/dev/null)"
+case "$LOG3" in
+  *"test: own file"*) ok "③ commit 实际完成（链路走通）" ;;
+  *) bad "③ commit 未落: rc=$rc2 :: $(echo "$OUT2" | tail -2)" ;;
+esac
 
-# ⑤ 判定语义: guard status JSON 解析（block/degraded 兜底——与 synova-commit 内联判定同语义）
-python3 - <<'PY' && ok "⑤ status JSON 判定语义（block/ok/坏输入）" || bad "⑤ 判定语义错误"
+# ⑤ 判定语义: claim status JSON 解析（resolved/missing/坏输入 → degraded 兜底，与退役段同语义）
+python3 - <<'PY' && ok "⑤ claim status JSON 判定语义（resolved/missing/坏输入）" || bad "⑤ 判定语义错误"
 import json, sys
 def status(payload):
     try:
         return json.loads(payload).get("status", "degraded")
     except Exception:
         return "degraded"
-assert status('{"status":"block","foreign_files":[]}') == "block"
-assert status('{"status":"ok"}') == "ok"
+assert status('{"status":"resolved","issue":"1223"}') == "resolved"
+assert status('{"status":"missing"}') == "missing"
 assert status('NOT JSON') == "degraded"
 assert status('{}') == "degraded"
 sys.exit(0)
@@ -122,7 +135,7 @@ D706_RUN --task-id T706 --agent test --message "chore(D706): 摘除 vendor/widge
 STILL_AFTER=$(git -C "$SB7" ls-tree -r HEAD --name-only 2>/dev/null | grep -c 'vendor/widget.txt' || true)
 [ "$STILL_BEFORE" -eq 1 ] && [ "$STILL_AFTER" -eq 0 ] \
   && ok "⑥ 删除项真的进了提交树（ls-tree 1→0；原缺陷为 1→1 静默丢删除）" \
-  || bad "⑥ D706 未修: 提交前=$STILL_BEFORE 提交后=$STILL_AFTER（期望 1→0）"
+  || bad "⑥ D706 未修: 提交前=${STILL_BEFORE} 提交后=${STILL_AFTER}（期望 1→0）"
 # 精确断言: 目标提交必须以**删除态(D)**记录该路径
 # （弱断言「树里出现过该路径」会命中 init 提交 → 假绿，故限定 diff-filter=D + 指定提交）
 _D706C=$(git -C "$SB7" log --format=%H -1 --grep="摘除 vendor/widget.txt" 2>/dev/null)
