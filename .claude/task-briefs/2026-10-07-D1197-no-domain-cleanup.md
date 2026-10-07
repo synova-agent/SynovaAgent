@@ -23,6 +23,7 @@
 - .claude/task-briefs/2026-10-07-D1197-no-domain-cleanup.md
 - scripts/control-tower/scan-fullwidth-vars.sh
 - tests/control-tower/scan-fullwidth-vars.test.sh
+- scripts/control-tower/check-ownership.py（用法串订正）
 - task-state/D1197.json
 
 不做什么：
