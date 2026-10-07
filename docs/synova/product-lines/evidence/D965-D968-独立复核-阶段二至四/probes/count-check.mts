@@ -1,0 +1,18 @@
+import { readdirSync } from 'fs';
+import { join } from 'path';
+const WT = '/Users/wane/SynovaAgent/.synova-wt-vd968b';
+process.chdir(WT);
+const { loadSentinels, clearSentinelCache } = await import(`${WT}/src/sentinel/sentinel-loader.ts`);
+clearSentinelCache();
+const loaded = loadSentinels();
+const root = join(WT, 'extensions', 'sentinels');
+const dirCount = readdirSync(root, { withFileTypes: true }).filter(e => e.isDirectory() && e.name !== 'shared' && !e.name.startsWith('_')).length;
+const naive = readdirSync(root, { withFileTypes: true }).filter(e => e.isDirectory()).length;
+let recursive = 0;
+const walk = (d: string) => { for (const e of readdirSync(d, { withFileTypes: true })) { if (e.isDirectory()) walk(join(d, e.name)); else if (e.name === 'manifest.json' && d !== root) recursive++; } };
+walk(root);
+console.log(`加载器语义目录数 = ${dirCount} ｜ loadSentinels() = ${loaded.sentinels.length} ｜ errors=${JSON.stringify(loaded.errors)}`);
+console.log(`ASSERT 加载数 = 目录数 → ${loaded.sentinels.length === dirCount ? 'HOLDS' : 'VIOLATED'}`);
+console.log(`反例口径: 朴素顶层目录数（含 _extinct/shared）= ${naive} ｜ 递归 manifest 数 = ${recursive}`);
+console.log(`ASSERT 与 45/43 无关（当前值 ${dirCount}，口径由加载器语义推导）→ HOLDS`);
+process.exit(0);

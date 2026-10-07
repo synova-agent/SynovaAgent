@@ -1,0 +1,317 @@
+[
+  {
+    "name": "agent-deployment-maturity",
+    "qn": 3,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 0
+  },
+  {
+    "name": "ai-ecosystem-fit",
+    "qn": 2,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 0
+  },
+  {
+    "name": "ai-investment-return",
+    "qn": 2,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 0
+  },
+  {
+    "name": "api-coverage",
+    "qn": 2,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 2
+  },
+  {
+    "name": "business-model-coherence",
+    "qn": 6,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 6
+  },
+  {
+    "name": "capital-health",
+    "qn": 1,
+    "qe": 0,
+    "tv": 0,
+    "storeKw": 2
+  },
+  {
+    "name": "cash-runway",
+    "qn": 3,
+    "qe": 0,
+    "tv": 4,
+    "storeKw": 15
+  },
+  {
+    "name": "channel-capacity",
+    "qn": 4,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 4
+  },
+  {
+    "name": "competitive-moat",
+    "qn": 1,
+    "qe": 0,
+    "tv": 0,
+    "storeKw": 3
+  },
+  {
+    "name": "competitive-position",
+    "qn": 1,
+    "qe": 0,
+    "tv": 0,
+    "storeKw": 3
+  },
+  {
+    "name": "customer-demand-shift",
+    "qn": 2,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 2
+  },
+  {
+    "name": "data-health",
+    "qn": 6,
+    "qe": 1,
+    "tv": 1,
+    "storeKw": 8
+  },
+  {
+    "name": "environment-rent-dependency",
+    "qn": 2,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 2
+  },
+  {
+    "name": "explore-exploit-balance",
+    "qn": 4,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 4
+  },
+  {
+    "name": "financing-constraint",
+    "qn": 2,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 2
+  },
+  {
+    "name": "growth-quality",
+    "qn": 2,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 2
+  },
+  {
+    "name": "human-agent-boundary",
+    "qn": 3,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 0
+  },
+  {
+    "name": "incentive-alignment",
+    "qn": 3,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 3
+  },
+  {
+    "name": "info-distortion",
+    "qn": 3,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 3
+  },
+  {
+    "name": "internal-transaction-cost",
+    "qn": 4,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 4
+  },
+  {
+    "name": "key-person-risk",
+    "qn": 1,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 2
+  },
+  {
+    "name": "knowledge-accessibility",
+    "qn": 3,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 3
+  },
+  {
+    "name": "make-or-buy",
+    "qn": 2,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 2
+  },
+  {
+    "name": "margin-health",
+    "qn": 2,
+    "qe": 0,
+    "tv": 2,
+    "storeKw": 12
+  },
+  {
+    "name": "moat-dependency",
+    "qn": 4,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 4
+  },
+  {
+    "name": "network-power",
+    "qn": 5,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 5
+  },
+  {
+    "name": "niche-breadth",
+    "qn": 3,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 3
+  },
+  {
+    "name": "niche-squeeze",
+    "qn": 3,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 3
+  },
+  {
+    "name": "opportunity-window",
+    "qn": 3,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 3
+  },
+  {
+    "name": "org-repairability",
+    "qn": 2,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 2
+  },
+  {
+    "name": "path-dependency",
+    "qn": 3,
+    "qe": 3,
+    "tv": 0,
+    "storeKw": 10
+  },
+  {
+    "name": "power-rigidity",
+    "qn": 3,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 3
+  },
+  {
+    "name": "process-ai-readiness",
+    "qn": 3,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 0
+  },
+  {
+    "name": "resource-misallocation",
+    "qn": 4,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 4
+  },
+  {
+    "name": "revenue-health",
+    "qn": 4,
+    "qe": 0,
+    "tv": 3,
+    "storeKw": 7
+  },
+  {
+    "name": "routine-diffusion",
+    "qn": 3,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 3
+  },
+  {
+    "name": "routine-mutation",
+    "qn": 3,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 3
+  },
+  {
+    "name": "sentinel-forecast-accuracy",
+    "qn": 0,
+    "qe": 0,
+    "tv": 0,
+    "storeKw": 0
+  },
+  {
+    "name": "sentinel-pricing-strategy",
+    "qn": 0,
+    "qe": 0,
+    "tv": 0,
+    "storeKw": 0
+  },
+  {
+    "name": "software-health",
+    "qn": 4,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 2
+  },
+  {
+    "name": "strategy-capability-fit",
+    "qn": 3,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 3
+  },
+  {
+    "name": "talent-density",
+    "qn": 2,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 2
+  },
+  {
+    "name": "time-penetration",
+    "qn": 2,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 2
+  },
+  {
+    "name": "unit-economics",
+    "qn": 3,
+    "qe": 2,
+    "tv": 2,
+    "storeKw": 4
+  },
+  {
+    "name": "value-capture",
+    "qn": 2,
+    "qe": 0,
+    "tv": 1,
+    "storeKw": 2
+  }
+]

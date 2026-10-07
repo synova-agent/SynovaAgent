@@ -1,0 +1,34 @@
+import Database from 'better-sqlite3';
+import { mkdirSync, writeFileSync, rmSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
+const WT = '/Users/wane/SynovaAgent/.synova-wt-vd968b';
+process.chdir(WT);
+const FIX = join(tmpdir(), 'vd968-dbg'); rmSync(FIX, { recursive: true, force: true });
+for (const [name, breakEntry] of [['good', false], ['broken', true]] as Array<[string, boolean]>) {
+  const dir = join(FIX, name); mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'manifest.json'), JSON.stringify({ name: `vd968-${name}`, version: '1.0.0', type: 'sentinel', displayName: name, description: 'd', schedule: '0 9 * * *', expert: 'fundamental-efficiency', priority: 'P2', computes: [], thresholds: {}, aggregation: 'worst_first', context: { requiredDataSources: [], dataAccess: { allowedDimensions: [], sensitiveAccess: 'read' } }, entryPoint: './aggregate.ts', exportKey: 'vi' }));
+  if (!breakEntry) writeFileSync(join(dir, 'aggregate.ts'), 'export const vi = { async check() { return []; } };\n');
+}
+process.env.SENTINELS_FIXTURE_DIR = FIX;
+const { loadSentinels, clearSentinelCache, registerLoadedSentinels } = await import(`${WT}/src/sentinel/sentinel-loader.ts`);
+const { destroySentinelRegistry, getSentinelRegistry } = await import(`${WT}/src/sentinel/registry.ts`);
+const { evaluateSentinelHealth } = await import(`${WT}/src/sentinel/self-check.ts`);
+const { reconcileSchema } = await import(`${WT}/src/store/schema-migration.ts`);
+const { createSentinelEventsTable } = await import(`${WT}/src/sentinel/sentinel-events.ts`);
+const { CronScheduler } = await import(`${WT}/src/cron/scheduler.ts`);
+const { SentinelRunner } = await import(`${WT}/src/sentinel/runner.ts`);
+clearSentinelCache(); destroySentinelRegistry();
+console.log('# load =', loadSentinels().sentinels.length);
+console.log('# register =', JSON.stringify(await registerLoadedSentinels()));
+console.log('# registry =', getSentinelRegistry().count());
+const db = new Database(':memory:'); reconcileSchema(db); createSentinelEventsTable(db);
+const runner = new SentinelRunner(new CronScheduler(db), db);
+const state = await (runner as any).collectHealthState();
+console.log('# collectHealthState =', JSON.stringify(state));
+const ev = evaluateSentinelHealth(state);
+console.log('# evaluateSentinelHealth.healthy =', ev.healthy, '| findings =', JSON.stringify(ev.findings.map(f => [f.id, f.severity])));
+await (runner as any).runSelfCheck();
+const rows = db.prepare('SELECT seq, event_type, sentinel_id FROM sentinel_events ORDER BY seq').all();
+console.log('# 全部事件 =', JSON.stringify(rows));
+db.close(); rmSync(FIX, { recursive: true, force: true }); process.exit(0);
