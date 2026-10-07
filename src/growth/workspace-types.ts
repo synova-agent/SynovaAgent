@@ -61,6 +61,32 @@ export interface ActiveGoal {
     /** 基线偏离标志 */
     baselineDeviation: boolean;
   };
+  /**
+   * Goal 的量化指标（#1322 新增）。
+   *
+   * 读回面硬要求（卡 M4）：`GET /api/workspace/:deptId/goals` 必须能读回
+   * `metrics[].targetValue` —— 改前 ActiveGoal 无此字段 ⇒ 就算落图成功也**读不出来**。
+   * 只暴露回答「目标值是多少」所需的最小字段；`computeContractId` / `baselinePeriod`
+   * 属 #1316 版本化与时序域，不在本卡读回面。
+   */
+  metrics?: ActiveGoalMetric[];
+}
+
+/**
+ * 工作台读回面的最小指标视图（#1322）。
+ *
+ * @contract 字段是 `GoalMetric` 的子集（`goal-types.ts:46-59`），只保留读回必需的 4 个；
+ *   不复制 `computeContractId`（compute 绑定关系由图中 props 单一真源承载）。
+ */
+export interface ActiveGoalMetric {
+  /** 指标名称，来自 GoalMetric.metricName */
+  metricName: string;
+  /** 当前实测值，来自 GoalMetric.currentValue */
+  currentValue: number;
+  /** 目标值，来自 GoalMetric.targetValue */
+  targetValue: number;
+  /** 单位，来自 GoalMetric.unit */
+  unit: string;
 }
 
 // ═══ WorkspaceAlert ═══

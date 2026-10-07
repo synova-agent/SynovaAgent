@@ -27,6 +27,15 @@ export interface DiagnosisReportLike {
   diagnosisId: string;
   title: string;
   department: string;
+  /**
+   * 所属组织（租户）ID —— #1322 新增。
+   *
+   * @contract **唯一合法来源是验签后的 `req.auth.orgId`**（路由侧注入，
+   *   `src/middleware/auth.ts:492-503` 的 `extractAuthFromRequest`）；
+   *   **绝不接受客户端 body 传入**（否则租户隔离判据可被伪造）。
+   * @contract 缺省 undefined ⇒ 走旧行为（proposal.orgId 不写），仅为存量调用方兼容。
+   */
+  orgId?: string;
   confidence: number;
   keyRisks: string[];
   triggeringSentinels: string[];
@@ -115,6 +124,8 @@ export function generateProposalFromDiagnosis(
 
   const proposal: Proposal = {
     proposalId: '',
+    // #1322: 租户由调用方（路由）从验签身份注入；缺省 undefined ⇒ 不写该字段（旧行为）
+    orgId: report.orgId,
     diagnosisReportId: report.diagnosisId,
     title: report.title,
     department: report.department,
@@ -141,6 +152,22 @@ export function generateProposalFromDiagnosis(
 }
 
 /**
+ * 目标创建的可选覆盖项（#1322）。
+ *
+ * 为什么需要：`metrics[0].targetValue` 的引擎默认值是常量 100，**不可分辨**
+ * 「真写入了用户提的值」与「写死常量」⇒ V1/V2 判据会失去判别力。
+ * 由调用方把「用户提的目标值」透传进来，读回面才有可核的期望值。
+ */
+export interface GoalCreationOverrides {
+  /** 目标值（缺省 100，与原行为逐字一致） */
+  targetValue?: number;
+  /** 单位（缺省 '%'） */
+  unit?: string;
+  /** 指标名（缺省 '目标达成'） */
+  metricName?: string;
+}
+
+/**
  * 从选中的 Proposal 路径生成 Goal。
  *
  * 消费 D71 createGoal，将选中路径转换为可执行的 Goal。
@@ -148,12 +175,16 @@ export function generateProposalFromDiagnosis(
  * @param proposal - 已选路径的 Proposal
  * @param store - GraphBridge 实例
  * @param audit - AuditStore 实例
- * @returns 生成的 Goal ID 列表
+ * @param opts - 可选。目标值/单位/指标名覆盖（见 GoalCreationOverrides）
+ * @returns 生成的 Goal ID 列表（**实体 id**；图节点 id 为 `node-<uuid>`，二者不同）
+ * @degraded 无降级：store 抛错 → log.error + 抛 `生成 Goal 失败: <msg>`
+ *   （**刻意不改**：把创建失败伪装成成功会直接毁掉 V1 的判别力）
  */
 export function generateGoalFromProposal(
   proposal: Proposal,
   store: GraphBridgeLike,
   audit: AuditStoreLike,
+  opts?: GoalCreationOverrides,
 ): string[] {
   if (proposal.status !== 'confirmed' && proposal.status !== 'executing') {
     throw new Error(`只能从 confirmed/executing 状态的 Proposal 生成 Goal（当前: ${proposal.status}）`);
@@ -179,9 +210,12 @@ export function generateGoalFromProposal(
   };
 
   // 创建 Goal
+  // #1322 修正（卡 §③3 / 现状 7）：orgId 是**租户**，department 是**部门** —— 二者不可互换。
+  //   proposal.orgId 由路由从 req.auth.orgId 注入（唯一合法来源）；
+  //   `?? proposal.department` 仅为兼容 #1322 之前写入的存量 Proposal（无 orgId 字段）。
   const goal: Goal = {
     goalId: '',
-    orgId: proposal.department,
+    orgId: proposal.orgId ?? proposal.department,
     proposalId: proposal.proposalId,
     diagnosisId: proposal.diagnosisReportId,
     title: `${path.label}: ${proposal.title}`.substring(0, 100),
@@ -194,10 +228,10 @@ export function generateGoalFromProposal(
       ? new Date(new Date(proposal.timeline.confirmedAt).getTime() + 90 * 24 * 60 * 60 * 1000).toISOString()
       : new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
     metrics: [{
-      metricName: '目标达成',
+      metricName: opts?.metricName ?? '目标达成',
       currentValue: 0,
-      targetValue: 100,
-      unit: '%',
+      targetValue: opts?.targetValue ?? 100,
+      unit: opts?.unit ?? '%',
       computeContractId: 'COMPUTE-GOAL-ACHIEVEMENT-v1',
     }],
     successCriteria: [],

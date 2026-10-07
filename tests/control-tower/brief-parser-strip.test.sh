@@ -16,7 +16,8 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #          ② 负例: 空值 + 注释占位 → 必须判「未填写」（旧正则跨行吞标题 = 假绿）
 #          ③ 两校验器结论一致（check-brief-parseable.sh 与 pre-commit 组 6 共用同源解析器）
 #          ④ 接线: pre-commit-check.sh 真的调用 brief_parser.py --layer（禁第二套 awk 实现）
-#   接线 — resolve-commit-brief.sh 内嵌降级解析器同步含剥壳正则
+#   接线 — resolve-commit-brief.sh **无第二套解析实现**（import brief_parser 单源；副本回潮即红）
+#          + 解析器缺失走显式 degraded（D1241/Step B 去内联副本，断言由「副本同步」反转而来）
 # 沙箱: 纯文本 fixture 注入，零 git
 # ═══════════════════════════════════════════════════════════════
 set -uo pipefail
@@ -67,11 +68,20 @@ echo "$INCLUDES" | grep -qx "src/plain/already-bare.py" && ok "裸路径原样�
 echo "$EXCLUDES" | grep -qx "scripts/audit/" && ok "exclude 剥「不改 + （）」保持" || no "exclude 剥壳回归"
 echo "$EXCLUDES" | grep -qx "src/immutable/core.ts" && ok "exclude 剥「不动」保持" || no "exclude 不动回归"
 
-# ── 接线: resolve-commit-brief.sh 内嵌降级解析器同步 ──
-grep -qE "修改\|新增\|新建\|修复\|扩展\|实现\|更新\|重构" "$RESOLVER" \
-  && ok "接线: resolver 内嵌解析器含 include 动词前缀剥壳" || no "resolver 内嵌解析器未同步剥壳"
-grep -q '（(' "$RESOLVER" || grep -q '\[（(\]' "$RESOLVER" \
-  && ok "接线: resolver 内嵌解析器含括号剥壳" || no "resolver 括号剥壳缺失"
+# ── 接线: resolver **不得**持第二套解析实现（D1241/Step B 去副本 ⇒ 断言反转）──
+# 旧断言（"内嵌降级解析器同步含剥壳正则"）守护的是**一份副本**；副本与单源必然漂移
+# （实测副本缺 D543 行号剥离 / D749 写集机器块优先 / claim 分支 / D1231 Q2 告警）。
+# 正确的不变量 = **只有一套实现**：resolver 出现 `def parse_q2` 即红（副本回潮）。
+grep -q 'def parse_q2' "$RESOLVER" \
+  && no "接线: resolver 出现第二套 parse_q2 实现（内联副本回潮 = 口径漂移源）" \
+  || ok "接线: resolver 无内联 parse_q2 副本（单一事实源，D1241/Step B）"
+grep -q 'from brief_parser import parse_q2' "$RESOLVER" \
+  && ok "接线: resolver 经 import brief_parser 取单源解析（非副本）" \
+  || no "接线: resolver 未 import 单源解析器（Step B 接线缺失）"
+# 降级路径必须显式（不得再以"内联语义"静默兜底）
+grep -q 'RESOLVER-DEGRADED' "$RESOLVER" \
+  && ok "接线: 解析器缺失 → 显式 degraded 标记（不持副本兜底）" \
+  || no "接线: 解析器缺失路径无显式 degraded 标记（静默降级风险）"
 
 # ═══ D707: 架构层字段口径统一（内联/body 等价 + 空值必拒）═══
 echo ""

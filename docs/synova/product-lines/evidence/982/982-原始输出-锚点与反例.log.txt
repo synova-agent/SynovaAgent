@@ -1,0 +1,174 @@
+# #982 锚点（V1/V3）与反例（V4）—— verbatim 拼接件
+#
+===== BEGIN V1-V3.anchors.txt  (sha256=e9479ff6604ba571eeb068c415afa4618ac15b74e94fb15241979bee44f59bb6) =====
+$ git show origin/main:src/growth/goal-lifecycle.ts | sed -n "1,12p"   # V1 @deprecated 头
+/**
+ * src/growth/goal-lifecycle.ts — Goal 生命周期管理
+ *
+ * 封装完整的 7 态状态机 + PolicyEngine 权限检查 + closeGoal 闭环验证。
+ *
+ * @deprecated 未接线（#982 明示不接）。接入点见 #1010（Goal 关闭路径接线）。
+ *
+ * #982（0-8）实测依据（2026-10-04）：本模块在 `src/` 内**零真实 import/零调用**
+ * （`grep -rn "goal-lifecycle" src/` 仅 2 处注释；`closeGoal` / `verifyEffect` / `transitionGoal` 在 src/ 零调用方；
+ * `updateGoalStatus` 全仓唯一调用者 = 本文件自身）⇒ 整条 Goal 关闭路径在生产侧从未接线。
+ * 处置（产品线 2026-10-04 裁定，Done 判据订正为三支）：
+ *   ① 本 `@deprecated` 标注 + 接入点指针（= #1010）——**状态明确、有主**；
+
+$ gh issue view 1010 -R synova-agent/SynovaAgent --json state   # V3
+#1010 OPEN  Goal 关闭路径接线：updateGoalStatus 唯一调用者是它自己（#982 接入点）
+===== END V1-V3.anchors.txt =====
+
+===== BEGIN V4-RED.log  (sha256=1f21a7428aeba24ff45bf83dc610f54534c08ac5e6aee5711a3509a28d420e1b) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-b977
+
+ ❯ tests/growth/goal-lifecycle.test.ts (8 tests | 8 failed) 14ms
+       × draft → pending_ga → active 完整流转 6ms
+       × draft → abandoned（创建者废弃） 2ms
+       × PolicyEngine 拒绝 → 抛出 Error 1ms
+       × 闭环 Goal → 状态变为 completed 2ms
+       × 非 active 状态 → 抛出 Error 1ms
+       × 闭环后记录 actualDurationDays 1ms
+       × completed → archived 1ms
+       × active 状态 → 抛出 Error（不可归档） 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/growth/goal-lifecycle.test.ts > GoalLifecycle > transitionGoal > draft → pending_ga → active 完整流转
+Error: Cannot find module '/src/growth/goal-lifecycle' imported from /Users/wane/SynovaAgent/.synova-wt-b977/tests/growth/goal-lifecycle.test.ts
+ ❯ tests/growth/goal-lifecycle.test.ts:68:34
+     66|   describe('transitionGoal', () => {
+     67|     it('draft → pending_ga → active 完整流转', async () => {
+     68|       const { transitionGoal } = await import('../../src/growth/goal-l…
+       |                                  ^
+     69|       const { store, audit, policy } = createMocks();
+     70|       const id = createGoal(makeGoal({ status: 'draft' }), store, audi…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  tests/growth/goal-lifecycle.test.ts > GoalLifecycle > transitionGoal > draft → abandoned（创建者废弃）
+Error: Cannot find module '/src/growth/goal-lifecycle' imported from /Users/wane/SynovaAgent/.synova-wt-b977/tests/growth/goal-lifecycle.test.ts
+ ❯ tests/growth/goal-lifecycle.test.ts:80:34
+     78|
+     79|     it('draft → abandoned（创建者废弃）', async () => {
+     80|       const { transitionGoal } = await import('../../src/growth/goal-l…
+       |                                  ^
+     81|       const { store, audit, policy } = createMocks();
+     82|       const id = createGoal(makeGoal({ status: 'draft' }), store, audi…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  tests/growth/goal-lifecycle.test.ts > GoalLifecycle > transitionGoal > PolicyEngine 拒绝 → 抛出 Error
+Error: Cannot find module '/src/growth/goal-lifecycle' imported from /Users/wane/SynovaAgent/.synova-wt-b977/tests/growth/goal-lifecycle.test.ts
+ ❯ tests/growth/goal-lifecycle.test.ts:89:34
+     87|
+     88|     it('PolicyEngine 拒绝 → 抛出 Error', async () => {
+     89|       const { transitionGoal } = await import('../../src/growth/goal-l…
+       |                                  ^
+     90|       const { store, audit } = createMocks();
+     91|       const policy: PolicyEngineLike = {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  tests/growth/goal-lifecycle.test.ts > GoalLifecycle > closeGoal > 闭环 Goal → 状态变为 completed
+Error: Cannot find module '/src/growth/goal-lifecycle' imported from /Users/wane/SynovaAgent/.synova-wt-b977/tests/growth/goal-lifecycle.test.ts
+ ❯ tests/growth/goal-lifecycle.test.ts:103:29
+    101|   describe('closeGoal', () => {
+    102|     it('闭环 Goal → 状态变为 completed', async () => {
+    103|       const { closeGoal } = await import('../../src/growth/goal-lifecy…
+       |                             ^
+    104|       const { store, audit, policy } = createMocks();
+    105|       const id = createGoal(makeGoal({ status: 'active', successCriter…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  tests/growth/goal-lifecycle.test.ts > GoalLifecycle > closeGoal > 非 active 状态 → 抛出 Error
+Error: Cannot find module '/src/growth/goal-lifecycle' imported from /Users/wane/SynovaAgent/.synova-wt-b977/tests/growth/goal-lifecycle.test.ts
+ ❯ tests/growth/goal-lifecycle.test.ts:112:29
+    110|
+    111|     it('非 active 状态 → 抛出 Error', async () => {
+    112|       const { closeGoal } = await import('../../src/growth/goal-lifecy…
+       |                             ^
+    113|       const { store, audit } = createMocks();
+    114|       const id = createGoal(makeGoal({ status: 'draft' }), store, audi…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  tests/growth/goal-lifecycle.test.ts > GoalLifecycle > closeGoal > 闭环后记录 actualDurationDays
+Error: Cannot find module '/src/growth/goal-lifecycle' imported from /Users/wane/SynovaAgent/.synova-wt-b977/tests/growth/goal-lifecycle.test.ts
+ ❯ tests/growth/goal-lifecycle.test.ts:120:29
+    118|
+    119|     it('闭环后记录 actualDurationDays', async () => {
+    120|       const { closeGoal } = await import('../../src/growth/goal-lifecy…
+       |                             ^
+    121|       const { store, audit } = createMocks();
+    122|       // 设置 createdAt 为 90 天前，确保 actualDurationDays > 0
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  tests/growth/goal-lifecycle.test.ts > GoalLifecycle > archiveGoal > completed → archived
+Error: Cannot find module '/src/growth/goal-lifecycle' imported from /Users/wane/SynovaAgent/.synova-wt-b977/tests/growth/goal-lifecycle.test.ts
+ ❯ tests/growth/goal-lifecycle.test.ts:134:31
+    132|   describe('archiveGoal', () => {
+    133|     it('completed → archived', async () => {
+    134|       const { archiveGoal } = await import('../../src/growth/goal-life…
+       |                               ^
+    135|       const { store, audit, policy } = createMocks();
+    136|       const id = createGoal(makeGoal({ status: 'completed', lastModifi…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+ FAIL  tests/growth/goal-lifecycle.test.ts > GoalLifecycle > archiveGoal > active 状态 → 抛出 Error（不可归档）
+Error: Cannot find module '/src/growth/goal-lifecycle' imported from /Users/wane/SynovaAgent/.synova-wt-b977/tests/growth/goal-lifecycle.test.ts
+ ❯ tests/growth/goal-lifecycle.test.ts:143:31
+    141|
+    142|     it('active 状态 → 抛出 Error（不可归档）', async () => {
+    143|       const { archiveGoal } = await import('../../src/growth/goal-life…
+       |                               ^
+    144|       const { store, audit } = createMocks();
+    145|       const id = createGoal(makeGoal({ status: 'active' }), store, aud…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  8 failed (8)
+   Start at  01:56:07
+   Duration  186ms (transform 46ms, setup 0ms, import 71ms, tests 14ms, environment 0ms)
+
+===== END V4-RED.log =====
+
+===== BEGIN V4-GREEN-restored.log  (sha256=4a06936c3fc6f3fe0aa9555137f6f4b7deae2a52244ddfc890141850552404fd) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-b977
+
+{"level":30,"time":1791395768637,"pid":47785,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"bd3e7b32-c7b4-4bb0-87f7-95dc10ff02bb","title":"测试Goal","msg":"Goal 已创建"}
+{"level":30,"time":1791395768638,"pid":47785,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"bd3e7b32-c7b4-4bb0-87f7-95dc10ff02bb","fromStatus":"draft","newStatus":"pending_ga","msg":"Goal 状态已更新"}
+{"level":30,"time":1791395768638,"pid":47785,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"bd3e7b32-c7b4-4bb0-87f7-95dc10ff02bb","fromStatus":"pending_ga","newStatus":"active","msg":"Goal 状态已更新"}
+{"level":30,"time":1791395768639,"pid":47785,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"41a12160-de64-4f51-8403-3ce167b915fe","title":"测试Goal","msg":"Goal 已创建"}
+{"level":30,"time":1791395768639,"pid":47785,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"41a12160-de64-4f51-8403-3ce167b915fe","fromStatus":"draft","newStatus":"abandoned","msg":"Goal 状态已更新"}
+{"level":30,"time":1791395768639,"pid":47785,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"3c2b2f4f-3e36-4fa4-9e96-de92038427d7","title":"测试Goal","msg":"Goal 已创建"}
+{"level":40,"time":1791395768639,"pid":47785,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-lifecycle","role":"staff","soi":"goal.abandon","denyReason":"deny_default: 无权限","msg":"PolicyEngine 拒绝操作"}
+{"level":30,"time":1791395768639,"pid":47785,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"a0dc5f78-c5b6-4e9d-8aaf-fc1dd5f7905b","title":"测试Goal","msg":"Goal 已创建"}
+{"level":30,"time":1791395768639,"pid":47785,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-lifecycle","goalId":"a0dc5f78-c5b6-4e9d-8aaf-fc1dd5f7905b","outcome":"achieved","metricComparisons":[{"metricName":"营收","target":15,"actual":15,"met":true}],"msg":"Goal 闭环"}
+{"level":30,"time":1791395768639,"pid":47785,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"a0dc5f78-c5b6-4e9d-8aaf-fc1dd5f7905b","fromStatus":"active","newStatus":"completed","msg":"Goal 状态已更新"}
+{"level":40,"time":1791395768712,"pid":47785,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-lifecycle","err":"数据库未初始化，请先调用 initEngineContext()","goalId":"a0dc5f78-c5b6-4e9d-8aaf-fc1dd5f7905b","msg":"知识提取/PKB 写入失败 — 降级（不阻断 Goal 关闭）"}
+{"level":30,"time":1791395768713,"pid":47785,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"cacc2adf-522a-486e-8d70-008a00dabfb0","title":"测试Goal","msg":"Goal 已创建"}
+{"level":30,"time":1791395768713,"pid":47785,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"d5520b27-fd80-4ca5-b1ba-7c7ad5a66f68","title":"测试Goal","msg":"Goal 已创建"}
+{"level":30,"time":1791395768713,"pid":47785,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-lifecycle","goalId":"d5520b27-fd80-4ca5-b1ba-7c7ad5a66f68","outcome":"achieved","metricComparisons":[{"metricName":"营收","target":15,"actual":15,"met":true}],"msg":"Goal 闭环"}
+{"level":30,"time":1791395768713,"pid":47785,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"d5520b27-fd80-4ca5-b1ba-7c7ad5a66f68","fromStatus":"active","newStatus":"completed","msg":"Goal 状态已更新"}
+{"level":40,"time":1791395768713,"pid":47785,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-lifecycle","err":"数据库未初始化，请先调用 initEngineContext()","goalId":"d5520b27-fd80-4ca5-b1ba-7c7ad5a66f68","msg":"知识提取/PKB 写入失败 — 降级（不阻断 Goal 关闭）"}
+{"level":30,"time":1791395768714,"pid":47785,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"056417f0-2f90-4a1c-a04d-b71f02e63722","title":"测试Goal","msg":"Goal 已创建"}
+{"level":40,"time":1791395768714,"pid":47785,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-lifecycle","goalId":"056417f0-2f90-4a1c-a04d-b71f02e63722","daysSinceModification":0,"msg":"Goal 归档: 完成/废弃后仅 0 天（建议等待 30 天）"}
+{"level":30,"time":1791395768714,"pid":47785,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"056417f0-2f90-4a1c-a04d-b71f02e63722","fromStatus":"completed","newStatus":"archived","msg":"Goal 状态已更新"}
+{"level":30,"time":1791395768714,"pid":47785,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"b55d08ad-5afd-43b9-a0b7-63890893ceb7","title":"测试Goal","msg":"Goal 已创建"}
+ ✓ tests/growth/goal-lifecycle.test.ts (8 tests) 97ms
+
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+   Start at  01:56:08
+   Duration  259ms (transform 119ms, setup 0ms, import 68ms, tests 97ms, environment 0ms)
+
+===== END V4-GREEN-restored.log =====
+

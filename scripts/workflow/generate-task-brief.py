@@ -119,6 +119,9 @@ grep 本任务关键词在 expert/ sentinel/ extensions/ knowledge/ theory/ skil
 - [ ] memory/notes/<四态>/YYYY-MM-DD-<主题>.md（本任务决策沉淀到哪条 Note；无则新建 proposed）
 
 ## Q2: 范围 — 正确的最简方案是什么？
+（Q2 条目口径 D1231/#1308：每行一个裸路径、独立成行。正例: scripts/foo.sh
+  反例: 把路径写成反引号包裹 / 同行加说明 / 用通配符 / 用全角分隔符 —— 后者认领数恒 0，
+  解析器会在 stderr 打 Q2-PARSE-WARN: <brief>:<行号>（自检: brief_parser.py --q2-include <brief>））
 
 做什么：
 不做什么：

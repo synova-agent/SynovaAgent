@@ -1,0 +1,147 @@
+# #981（0-7 反馈通道 B「无声的洞」）三态原始输出 —— verbatim 拼接件（GREEN → 反例 RED → 恢复 GREEN）
+#
+# 说明: 每段以 BEGIN/END 包裹并标注原文件 sha256；逐字节拼接、未删改、未截断。
+#       worktree HEAD=e567179ad175e9f7cddc3f9a6cd4c6d689556eae  node=v24.19.0
+#
+===== BEGIN run-meta.txt  (sha256=94dd1be6ab58f55c2f2b08dcbaeb5685b92680d6b6562b0b60985c45cb8b145d) =====
+cmd: node_modules/.bin/vitest run tests/routes/chat-feedback.test.ts --reporter=verbose
+cwd: /Users/wane/SynovaAgent/.synova-wt-b977
+HEAD: e567179ad175e9f7cddc3f9a6cd4c6d689556eae
+started: 2026-10-07T17:53:01Z
+===== END run-meta.txt =====
+
+===== BEGIN GREEN.test.log  (sha256=3b98fad4d23803425f76211110313a62dafef44c4368f5b343b5d4087c93c867) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-b977
+
+ ✓ tests/routes/chat-feedback.test.ts > #981 — POST /api/proposal/:id/resolve 反馈持久化 > 正常路径: persisted=true 且真落库 agent_memory（correction_*），主流程 ok 121ms
+ ✓ tests/routes/chat-feedback.test.ts > #981 — POST /api/proposal/:id/resolve 反馈持久化 > 降级路径: memoryStore 不可用 → degraded=true + log.warn 留痕 + 仍 ok:true 3ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  01:53:01
+   Duration  422ms (transform 122ms, setup 0ms, import 199ms, tests 128ms, environment 0ms)
+
+===== END GREEN.test.log =====
+
+===== BEGIN RED-chat.diff  (sha256=7aba923f804e2fb002e90c06953ae18b968dd09ed6f9a38ee09786bc9f8aaceb) =====
+diff --git a/src/routes/chat.ts b/src/routes/chat.ts
+index ff0085d60..537cf78c6 100644
+--- a/src/routes/chat.ts
++++ b/src/routes/chat.ts
+@@ -94,7 +94,7 @@ router.post('/api/proposal/:id/resolve', async (req: Request, res: Response) =>
+       actionId: id,
+       decision: action === 'confirm' ? 'confirm' : action === 'reject' ? 'reject' : 'modify',
+       reason: feedback || undefined,
+-    }, memoryStore ?? undefined, createEvolutionChannelSink());
++    }, undefined /* BREAK-IT-RED (#981 V5): 去掉 memoryStore 实参 = 修复前形态 */, createEvolutionChannelSink());
+     feedbackPersisted = fb.persisted;
+     if (!fb.persisted) {
+       feedbackDegraded = true;
+===== END RED-chat.diff =====
+
+===== BEGIN RED.test.log  (sha256=f1e08dca95abc9c309a948caa783ba299af80604754f544a88bcf51aba08d01f) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-b977
+
+ × tests/routes/chat-feedback.test.ts > #981 — POST /api/proposal/:id/resolve 反馈持久化 > 正常路径: persisted=true 且真落库 agent_memory（correction_*），主流程 ok 102ms
+   → expected false to be true // Object.is equality
+ ✓ tests/routes/chat-feedback.test.ts > #981 — POST /api/proposal/:id/resolve 反馈持久化 > 降级路径: memoryStore 不可用 → degraded=true + log.warn 留痕 + 仍 ok:true 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/routes/chat-feedback.test.ts > #981 — POST /api/proposal/:id/resolve 反馈持久化 > 正常路径: persisted=true 且真落库 agent_memory（correction_*），主流程 ok
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/routes/chat-feedback.test.ts:86:38
+     84|     expect(body.ok).toBe(true);
+     85|     // 判别性核心: 去掉 memoryStore 参数 → persisted 恒 false → 此断言必红
+     86|     expect(body.feedback?.persisted).toBe(true);
+       |                                      ^
+     87|     expect(body.feedback?.degraded).toBe(false);
+     88|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  01:53:06
+   Duration  350ms (transform 114ms, setup 0ms, import 129ms, tests 108ms, environment 0ms)
+
+===== END RED.test.log =====
+
+===== BEGIN GREEN-restored.test.log  (sha256=457eebdf23b05dede8c741c27aa38506b645df8d785bb574a12621c3eb609699) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-b977
+
+ ✓ tests/routes/chat-feedback.test.ts > #981 — POST /api/proposal/:id/resolve 反馈持久化 > 正常路径: persisted=true 且真落库 agent_memory（correction_*），主流程 ok 133ms
+ ✓ tests/routes/chat-feedback.test.ts > #981 — POST /api/proposal/:id/resolve 反馈持久化 > 降级路径: memoryStore 不可用 → degraded=true + log.warn 留痕 + 仍 ok:true 3ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  01:53:16
+   Duration  410ms (transform 137ms, setup 0ms, import 168ms, tests 139ms, environment 0ms)
+
+===== END GREEN-restored.test.log =====
+
+===== BEGIN test-assertions.txt  (sha256=27f9951dc3717486d18e479999d974e9666c3d85e3942d51fb81944444d4d065) =====
+$ sed -n "73,95p" tests/routes/chat-feedback.test.ts   # 正常路径判别性断言（V2/V4/V5）
+  });
+
+  it('正常路径: persisted=true 且真落库 agent_memory（correction_*），主流程 ok', async () => {
+    const res = await fetch(`${base}/api/proposal/prop-1/resolve`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'confirm', feedback: '同意该提议', orgId: 'org-1' }),
+    });
+    const body = await res.json() as { ok: boolean; feedback?: { persisted: boolean; degraded: boolean } };
+
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    // 判别性核心: 去掉 memoryStore 参数 → persisted 恒 false → 此断言必红
+    expect(body.feedback?.persisted).toBe(true);
+    expect(body.feedback?.degraded).toBe(false);
+
+    // 真落库证据（不看布尔自证）
+    const rows = db.prepare(
+      "SELECT COUNT(*) AS n FROM agent_memory WHERE key LIKE 'correction_%' AND org_id = 'org-1'",
+    ).get() as { n: number };
+    expect(rows.n).toBe(1);
+
+    db.close();
+
+$ sed -n "108,121p" tests/routes/chat-feedback.test.ts  # 降级路径判别性断言（V3）
+    const body = await res.json() as { ok: boolean; feedback?: { persisted: boolean; degraded: boolean } };
+
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);                    // 不阻断主流程
+    expect(body.feedback?.persisted).toBe(false);
+    expect(body.feedback?.degraded).toBe(true);
+    // 铁律 24: 失败必须留痕（不得空吞）——L2 接缝与路由各自留痕，任一即可（改坏为静默 ⇒ 必红）
+    expect(logCapture.warns.length).toBeGreaterThanOrEqual(1);
+    expect(logCapture.warns.some((w) => {
+      const m = String(w.msg);
+      return m.includes('记忆写入视图不可用') || m.includes('反馈未持久化') || m.includes('反馈收集失败');
+    })).toBe(true);
+
+    db.close();
+===== END test-assertions.txt =====
+
+===== BEGIN anchors.txt  (sha256=5dea68045f4654225ac3c7e1ea2c06fb9ab87ab44b047b99cccb46e465305bc2) =====
+$ git cat-file -e origin/main:tests/routes/chat-feedback.test.ts && echo "test file ∈ main: YES"
+test file ∈ main: YES
+$ git merge-base --is-ancestor ac2c11157 origin/main && echo "ac2c11157 ∈ main: YES"
+ac2c11157 ∈ main: YES
+$ git merge-base --is-ancestor cc6b01e62 origin/main && echo "cc6b01e62 ∈ main: YES"
+cc6b01e62 ∈ main: YES
+$ git grep -n "catch(()=>{})" origin/main -- src/routes/chat.ts
+origin/main:src/routes/chat.ts:80:  //              ② 禁空吞（原 `.catch(()=>{})` + 无绑定 catch{log.debug} 违铁律 24+31）
+===== END anchors.txt =====
+
