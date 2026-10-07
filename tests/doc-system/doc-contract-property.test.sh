@@ -326,7 +326,7 @@ d = json.load(sys.stdin)
 rows = d["transition_table"]["rows"]
 print(rows[0]["tracked"] if rows else "none")')"
   REAL="$(cd "$D" && git ls-files '.claude/task-briefs/**' | wc -l | tr -d ' ')"
-  t "E4 存量动态派生 == git ls-files 实况（$REAL）" "$REAL" "$GOT"
+  t "E4 存量动态派生 == git ls-files 实况（${REAL}）" "$REAL" "$GOT"
 
   # E5 声明值 ≠ 实测 ⇒ 红（K3 §R3 的 214/215 失配同型）
   D="$TMPD/e5"; mk_brief_fix "$D" 2 "214"

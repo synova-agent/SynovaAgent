@@ -1,0 +1,11 @@
+{
+  "task_id": "D9204",
+  "title": "全角括号变量边界清理 片B 六文件 1288",
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-07",
+  "updated_by": "alloc-task-id"
+}

@@ -267,7 +267,7 @@ OUT="$(RUN "$SCAN_OK" "$SB/tests" "$SB/ci.yml" "$SB/baseline.txt" "$SB/red-basel
 if [ "$rc" -eq 0 ]; then
   ok "D1198 非参与型失败不判红（exit 0）"
 else
-  no "D1198 非参与型失败被判红: rc=$rc（范围收紧未生效）"
+  no "D1198 非参与型失败被判红: rc=${rc}（范围收紧未生效）"
 fi
 if printf '%s\n' "$OUT" | grep -q "CI-RED-ADVISORY"; then
   ok "D1198 非参与型失败点名 advisory（可见、不静默）"

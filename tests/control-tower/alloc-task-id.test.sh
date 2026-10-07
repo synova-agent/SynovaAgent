@@ -572,7 +572,7 @@ OUT=$(env SYNO_TASK_STATE_DIR="$_SB6/task-state" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALL
       SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_NO_ISSUES=1 SYNO_ALLOC_ISSUES_FILE="$_ISSC" \
       bash "$TOOL" --check-id D9991 2>/dev/null) || _G_RC=$?
 [ "$_G_RC" = 0 ] && pass "反直觉: 全局守卫 NO_ISSUES=1 压过 ISSUES_FILE ⇒ 源 active 场景被关（rc 1→0）" \
-  || fail "全局守卫下 rc=$_G_RC（期望 0；若为 1 说明优先级假设错，本断言需重写）"
+  || fail "全局守卫下 rc=${_G_RC}（期望 0；若为 1 说明优先级假设错，本断言需重写）"
 echo "$OUT" | grep -q "issue-title" \
   && fail "全局守卫下仍报 issue-title（优先级 NO>FILE 不成立？）" \
   || pass "反直觉: 全局守卫下**不可能**命中 issue-title（⇒ 逐调用点守卫是唯一正解）"
@@ -583,7 +583,7 @@ OUT2=$(env SYNO_TASK_STATE_DIR="$_SB6/task-state" SYNO_ALLOC_NO_REMOTE=1 SYNO_AL
        bash "$TOOL" --check-id D9991 2>/dev/null) || _H_RC=$?
 [ "$_H_RC" = 1 ] && echo "$OUT2" | grep -q "issue-title" \
   && pass "对照: 去掉全局守卫 ⇒ 源恢复 active（rc=1 + 点名 issue-title）" \
-  || fail "对照失败: rc=$_H_RC（去守卫后源未恢复）"
+  || fail "对照失败: rc=${_H_RC}（去守卫后源未恢复）"
 echo ""
 
 echo "  结果: PASS=$PASS FAIL=$FAIL${FIRST_FAIL:+ FIRST_FAIL=${FIRST_FAIL}}"
