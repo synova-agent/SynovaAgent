@@ -1,0 +1,319 @@
+# #977（0-3 装载器）三态原始输出 —— verbatim 拼接件（GREEN → 变异 RED → 恢复 GREEN）
+#
+# 说明: 每段以 BEGIN/END 包裹并标注原文件 sha256；逐字节拼接、未删改、未截断。
+#       探针: tests/sentinel/probes/977-loader-registration.ts（零产品代码改动）
+#       worktree HEAD=44d4a721bacc26bb840860a2c595a56ceb821587  node=v24.19.0
+#
+===== BEGIN run-meta.txt  (sha256=9637f18d830ad42fda1daf4d6816ba83d074df7c65e3eb95a046adbfc1855d8c) =====
+cmd: node_modules/.bin/tsx tests/sentinel/probes/977-loader-registration.ts
+cwd: /Users/wane/SynovaAgent/.synova-wt-b977
+HEAD: 44d4a721bacc26bb840860a2c595a56ceb821587
+node: v24.19.0
+started: 2026-10-07T17:47:58Z
+===== END run-meta.txt =====
+
+===== BEGIN GREEN.stdout.json  (sha256=0376edcdc19eeac7ce25c31edc4945e68fd0decfb505955792b622d85a4dfda6) =====
+{
+  "probe": "#977",
+  "scannedAdapterFiles": 4,
+  "registryCount": 4,
+  "registryIds": [
+    "sentinel-cash-flow",
+    "sentinel-cpc",
+    "sentinel-goal-alignment",
+    "sentinel-integration-health"
+  ],
+  "perAdapter": [
+    {
+      "file": "cash-flow-sentinel.ts",
+      "derivedKey": "cashFlow",
+      "derivedKeyMatchesProbe": true,
+      "registeredId": "sentinel-cash-flow",
+      "presentInRegistry": true
+    },
+    {
+      "file": "cpc-sentinel.ts",
+      "derivedKey": "cpc",
+      "derivedKeyMatchesProbe": true,
+      "registeredId": "sentinel-cpc",
+      "presentInRegistry": true
+    },
+    {
+      "file": "goal-alignment-sentinel.ts",
+      "derivedKey": "goalAlignment",
+      "derivedKeyMatchesProbe": true,
+      "registeredId": "sentinel-goal-alignment",
+      "presentInRegistry": true
+    },
+    {
+      "file": "integration-health-sentinel.ts",
+      "derivedKey": "integrationHealth",
+      "derivedKeyMatchesProbe": true,
+      "registeredId": "sentinel-integration-health",
+      "presentInRegistry": true
+    }
+  ],
+  "allFourPresent": true
+}
+===== END GREEN.stdout.json =====
+
+===== BEGIN GREEN.stderr.log  (sha256=1f4db437aa49106b168a202c6ea2c8b319b16f657fb1c1c21bb66233eebb8785) =====
+{"level":30,"time":1791395279247,"pid":4466,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-cash-flow","name":"现金流","category":"risk","msg":"哨兵已注册"}
+{"level":40,"time":1791395279247,"pid":4466,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"cash-flow-sentinel.ts","exportKey":"cashFlowSentinel","preferredKey":"cashFlow","sentinelId":"sentinel-cash-flow","msg":"[builtins] cash-flow-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (cashFlowSentinel)"}
+{"level":30,"time":1791395279250,"pid":4466,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-cpc","name":"协作协议完备性 (CPC)","category":"capability","msg":"哨兵已注册"}
+{"level":40,"time":1791395279250,"pid":4466,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"cpc-sentinel.ts","exportKey":"cpcSentinel","preferredKey":"cpc","sentinelId":"sentinel-cpc","msg":"[builtins] cpc-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (cpcSentinel)"}
+{"level":30,"time":1791395279287,"pid":4466,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-goal-alignment","name":"目标对齐度","category":"capability","msg":"哨兵已注册"}
+{"level":40,"time":1791395279287,"pid":4466,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"goal-alignment-sentinel.ts","exportKey":"goalalignmentSentinel","preferredKey":"goalAlignment","sentinelId":"sentinel-goal-alignment","msg":"[builtins] goal-alignment-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (goalalignmentSentinel)"}
+{"level":30,"time":1791395279289,"pid":4466,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-integration-health","name":"集成健康度","category":"health","msg":"哨兵已注册"}
+{"level":40,"time":1791395279289,"pid":4466,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"integration-health-sentinel.ts","exportKey":"integrationHealthSentinel","preferredKey":"integrationHealth","sentinelId":"sentinel-integration-health","msg":"[builtins] integration-health-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (integrationHealthSentinel)"}
+{"level":30,"time":1791395279290,"pid":4466,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","registered":4,"total":4,"cronCount":4,"scanned":4,"msg":"[builtins] 哨兵自动注册完成"}
+===== END GREEN.stderr.log =====
+
+===== BEGIN RED.stdout.json  (sha256=28a42ea05920d89f082fa3011e2216b6eeb7636579ceff18362f5e0d18eaa81a) =====
+{
+  "probe": "#977",
+  "scannedAdapterFiles": 4,
+  "registryCount": 0,
+  "registryIds": [],
+  "perAdapter": [
+    {
+      "file": "cash-flow-sentinel.ts",
+      "derivedKey": "cashFlow",
+      "derivedKeyMatchesProbe": true,
+      "registeredId": "sentinel-cash-flow",
+      "presentInRegistry": false
+    },
+    {
+      "file": "cpc-sentinel.ts",
+      "derivedKey": "cpc",
+      "derivedKeyMatchesProbe": true,
+      "registeredId": "sentinel-cpc",
+      "presentInRegistry": false
+    },
+    {
+      "file": "goal-alignment-sentinel.ts",
+      "derivedKey": "goalAlignment",
+      "derivedKeyMatchesProbe": true,
+      "registeredId": "sentinel-goal-alignment",
+      "presentInRegistry": false
+    },
+    {
+      "file": "integration-health-sentinel.ts",
+      "derivedKey": "integrationHealth",
+      "derivedKeyMatchesProbe": true,
+      "registeredId": "sentinel-integration-health",
+      "presentInRegistry": false
+    }
+  ],
+  "allFourPresent": false
+}
+===== END RED.stdout.json =====
+
+===== BEGIN RED.stderr.log  (sha256=592b62853f4a29ec699d4aa91bbca22b870dc826188456dfd537ee9d3e93c777) =====
+{"level":50,"time":1791395284503,"pid":9498,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"cash-flow-sentinel.ts","exportNames":["cashFlowSentinel"],"msg":"[builtins] cash-flow-sentinel.ts 未导出哨兵结构对象 (导出项: cashFlowSentinel)"}
+{"level":50,"time":1791395284506,"pid":9498,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"cpc-sentinel.ts","exportNames":["cpcSentinel"],"msg":"[builtins] cpc-sentinel.ts 未导出哨兵结构对象 (导出项: cpcSentinel)"}
+{"level":50,"time":1791395284521,"pid":9498,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"goal-alignment-sentinel.ts","exportNames":["goalalignmentSentinel"],"msg":"[builtins] goal-alignment-sentinel.ts 未导出哨兵结构对象 (导出项: goalalignmentSentinel)"}
+{"level":50,"time":1791395284522,"pid":9498,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"integration-health-sentinel.ts","exportNames":["integrationHealthSentinel"],"msg":"[builtins] integration-health-sentinel.ts 未导出哨兵结构对象 (导出项: integrationHealthSentinel)"}
+{"level":30,"time":1791395284522,"pid":9498,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","registered":0,"total":0,"cronCount":0,"scanned":4,"msg":"[builtins] 哨兵自动注册完成"}
+===== END RED.stderr.log =====
+
+===== BEGIN RED-builtins.diff  (sha256=81689324f98c53e75ed07efaa6be2a4d014b70f058da30f622857427c1c9eab3) =====
+diff --git a/src/sentinel/builtins.ts b/src/sentinel/builtins.ts
+index 00790ba1c..eb2a3854b 100644
+--- a/src/sentinel/builtins.ts
++++ b/src/sentinel/builtins.ts
+@@ -88,11 +88,7 @@ function resolveSentinelExport(mod: Record<string, unknown>, filename: string):
+   if (isSentinelShape(preferred)) {
+     return { exportKey: preferredKey, sentinel: preferred, viaStructuralScan: false };
+   }
+-  for (const [exportKey, value] of Object.entries(mod)) {
+-    if (isSentinelShape(value)) {
+-      return { exportKey, sentinel: value, viaStructuralScan: true };
+-    }
+-  }
++  // BREAK-IT-RED (#977 V3): 兜底分支已停用 —— 只认文件名推导键
+   return null;
+ }
+ 
+===== END RED-builtins.diff =====
+
+===== BEGIN RED-builtins-test.log  (sha256=785e5d208268d9a28c87786a27e68394daf5e1e61031cdabcae9fd84af075c92) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-b977
+
+{"level":50,"time":1791395289293,"pid":14125,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"cash-flow-sentinel.ts","exportNames":["cashFlowSentinel"],"msg":"[builtins] cash-flow-sentinel.ts 未导出哨兵结构对象 (导出项: cashFlowSentinel)"}
+{"level":50,"time":1791395289307,"pid":14125,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"cpc-sentinel.ts","exportNames":["cpcSentinel"],"msg":"[builtins] cpc-sentinel.ts 未导出哨兵结构对象 (导出项: cpcSentinel)"}
+{"level":50,"time":1791395289373,"pid":14125,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"goal-alignment-sentinel.ts","exportNames":["goalalignmentSentinel"],"msg":"[builtins] goal-alignment-sentinel.ts 未导出哨兵结构对象 (导出项: goalalignmentSentinel)"}
+{"level":50,"time":1791395289381,"pid":14125,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"integration-health-sentinel.ts","exportNames":["integrationHealthSentinel"],"msg":"[builtins] integration-health-sentinel.ts 未导出哨兵结构对象 (导出项: integrationHealthSentinel)"}
+{"level":30,"time":1791395289381,"pid":14125,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","registered":0,"total":0,"cronCount":0,"scanned":4,"msg":"[builtins] 哨兵自动注册完成"}
+{"level":50,"time":1791395289384,"pid":14125,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"cash-flow-sentinel.ts","exportNames":["cashFlowSentinel"],"msg":"[builtins] cash-flow-sentinel.ts 未导出哨兵结构对象 (导出项: cashFlowSentinel)"}
+{"level":50,"time":1791395289384,"pid":14125,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"cpc-sentinel.ts","exportNames":["cpcSentinel"],"msg":"[builtins] cpc-sentinel.ts 未导出哨兵结构对象 (导出项: cpcSentinel)"}
+{"level":50,"time":1791395289384,"pid":14125,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"goal-alignment-sentinel.ts","exportNames":["goalalignmentSentinel"],"msg":"[builtins] goal-alignment-sentinel.ts 未导出哨兵结构对象 (导出项: goalalignmentSentinel)"}
+{"level":50,"time":1791395289384,"pid":14125,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"integration-health-sentinel.ts","exportNames":["integrationHealthSentinel"],"msg":"[builtins] integration-health-sentinel.ts 未导出哨兵结构对象 (导出项: integrationHealthSentinel)"}
+{"level":30,"time":1791395289384,"pid":14125,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","registered":0,"total":0,"cronCount":0,"scanned":4,"msg":"[builtins] 哨兵自动注册完成"}
+{"level":50,"time":1791395289385,"pid":14125,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"cash-flow-sentinel.ts","exportNames":["cashFlowSentinel"],"msg":"[builtins] cash-flow-sentinel.ts 未导出哨兵结构对象 (导出项: cashFlowSentinel)"}
+{"level":50,"time":1791395289385,"pid":14125,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"cpc-sentinel.ts","exportNames":["cpcSentinel"],"msg":"[builtins] cpc-sentinel.ts 未导出哨兵结构对象 (导出项: cpcSentinel)"}
+{"level":50,"time":1791395289385,"pid":14125,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"goal-alignment-sentinel.ts","exportNames":["goalalignmentSentinel"],"msg":"[builtins] goal-alignment-sentinel.ts 未导出哨兵结构对象 (导出项: goalalignmentSentinel)"}
+{"level":50,"time":1791395289385,"pid":14125,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"integration-health-sentinel.ts","exportNames":["integrationHealthSentinel"],"msg":"[builtins] integration-health-sentinel.ts 未导出哨兵结构对象 (导出项: integrationHealthSentinel)"}
+{"level":30,"time":1791395289385,"pid":14125,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","registered":0,"total":0,"cronCount":0,"scanned":4,"msg":"[builtins] 哨兵自动注册完成"}
+ ❯ tests/sentinel/builtins.test.ts (3 tests | 3 failed) 107ms
+     × Given 生产入口 registerBuiltinSentinels → 4 个内置适配器必须全部真注册上 (#977 回归护栏) 105ms
+     × Given 注册后 → 每个哨兵有唯一 ID 和有效类别 1ms
+     × Given 两次调用 registerBuiltinSentinels → 覆盖旧哨兵不抛异常 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/sentinel/builtins.test.ts > registerBuiltinSentinels > Given 生产入口 registerBuiltinSentinels → 4 个内置适配器必须全部真注册上 (#977 回归护栏)
+AssertionError: expected 0 to be greater than 0
+ ❯ tests/sentinel/builtins.test.ts:49:24
+     47|     const ids = getSentinelRegistry().list().map(s => s.config.id);
+     48|
+     49|     expect(ids.length).toBeGreaterThan(0);              // 防「空列表空转绿」
+       |                        ^
+     50|     for (const expected of BUILTIN_ADAPTER_IDS) {
+     51|       expect(ids).toContain(expected);                  // 退回「只按文件名推导」…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/sentinel/builtins.test.ts > registerBuiltinSentinels > Given 注册后 → 每个哨兵有唯一 ID 和有效类别
+AssertionError: expected 0 to be greater than 0
+ ❯ tests/sentinel/builtins.test.ts:60:25
+     58|     await registerBuiltinSentinels();
+     59|     const list = getSentinelRegistry().list();
+     60|     expect(list.length).toBeGreaterThan(0); // #977: 空列表曾使本断言空转通过
+       |                         ^
+     61|
+     62|     const ids = new Set<string>();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/sentinel/builtins.test.ts > registerBuiltinSentinels > Given 两次调用 registerBuiltinSentinels → 覆盖旧哨兵不抛异常
+AssertionError: expected 0 to be greater than 0
+ ❯ tests/sentinel/builtins.test.ts:77:24
+     75|     await registerBuiltinSentinels();
+     76|     const afterFirst = getSentinelRegistry().count();
+     77|     expect(afterFirst).toBeGreaterThan(0); // #977: 0 → 0 也是「相等」，不加这条就…
+       |                        ^
+     78|     await registerBuiltinSentinels();
+     79|     expect(getSentinelRegistry().count()).toBe(afterFirst);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed (3)
+   Start at  01:48:09
+   Duration  315ms (transform 130ms, setup 0ms, import 78ms, tests 107ms, environment 0ms)
+
+===== END RED-builtins-test.log =====
+
+===== BEGIN GREEN-restored.stdout.json  (sha256=0376edcdc19eeac7ce25c31edc4945e68fd0decfb505955792b622d85a4dfda6) =====
+{
+  "probe": "#977",
+  "scannedAdapterFiles": 4,
+  "registryCount": 4,
+  "registryIds": [
+    "sentinel-cash-flow",
+    "sentinel-cpc",
+    "sentinel-goal-alignment",
+    "sentinel-integration-health"
+  ],
+  "perAdapter": [
+    {
+      "file": "cash-flow-sentinel.ts",
+      "derivedKey": "cashFlow",
+      "derivedKeyMatchesProbe": true,
+      "registeredId": "sentinel-cash-flow",
+      "presentInRegistry": true
+    },
+    {
+      "file": "cpc-sentinel.ts",
+      "derivedKey": "cpc",
+      "derivedKeyMatchesProbe": true,
+      "registeredId": "sentinel-cpc",
+      "presentInRegistry": true
+    },
+    {
+      "file": "goal-alignment-sentinel.ts",
+      "derivedKey": "goalAlignment",
+      "derivedKeyMatchesProbe": true,
+      "registeredId": "sentinel-goal-alignment",
+      "presentInRegistry": true
+    },
+    {
+      "file": "integration-health-sentinel.ts",
+      "derivedKey": "integrationHealth",
+      "derivedKeyMatchesProbe": true,
+      "registeredId": "sentinel-integration-health",
+      "presentInRegistry": true
+    }
+  ],
+  "allFourPresent": true
+}
+===== END GREEN-restored.stdout.json =====
+
+===== BEGIN GREEN-restored.stderr.log  (sha256=aede7972fe14970a6d78554b992104899e90cceb0d6820cae90957c02df3739e) =====
+{"level":30,"time":1791395289783,"pid":14533,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-cash-flow","name":"现金流","category":"risk","msg":"哨兵已注册"}
+{"level":40,"time":1791395289783,"pid":14533,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"cash-flow-sentinel.ts","exportKey":"cashFlowSentinel","preferredKey":"cashFlow","sentinelId":"sentinel-cash-flow","msg":"[builtins] cash-flow-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (cashFlowSentinel)"}
+{"level":30,"time":1791395289784,"pid":14533,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-cpc","name":"协作协议完备性 (CPC)","category":"capability","msg":"哨兵已注册"}
+{"level":40,"time":1791395289784,"pid":14533,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"cpc-sentinel.ts","exportKey":"cpcSentinel","preferredKey":"cpc","sentinelId":"sentinel-cpc","msg":"[builtins] cpc-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (cpcSentinel)"}
+{"level":30,"time":1791395289797,"pid":14533,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-goal-alignment","name":"目标对齐度","category":"capability","msg":"哨兵已注册"}
+{"level":40,"time":1791395289797,"pid":14533,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"goal-alignment-sentinel.ts","exportKey":"goalalignmentSentinel","preferredKey":"goalAlignment","sentinelId":"sentinel-goal-alignment","msg":"[builtins] goal-alignment-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (goalalignmentSentinel)"}
+{"level":30,"time":1791395289798,"pid":14533,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-integration-health","name":"集成健康度","category":"health","msg":"哨兵已注册"}
+{"level":40,"time":1791395289798,"pid":14533,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"integration-health-sentinel.ts","exportKey":"integrationHealthSentinel","preferredKey":"integrationHealth","sentinelId":"sentinel-integration-health","msg":"[builtins] integration-health-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (integrationHealthSentinel)"}
+{"level":30,"time":1791395289798,"pid":14533,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","registered":4,"total":4,"cronCount":4,"scanned":4,"msg":"[builtins] 哨兵自动注册完成"}
+===== END GREEN-restored.stderr.log =====
+
+===== BEGIN GREEN-builtins-test.log  (sha256=2f00ddd1b233cbe1820c80a1d055aba092c95a985a18992861793bf4e68989f4) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-b977
+
+{"level":30,"time":1791395290231,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-cash-flow","name":"现金流","category":"risk","msg":"哨兵已注册"}
+{"level":40,"time":1791395290232,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"cash-flow-sentinel.ts","exportKey":"cashFlowSentinel","preferredKey":"cashFlow","sentinelId":"sentinel-cash-flow","msg":"[builtins] cash-flow-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (cashFlowSentinel)"}
+{"level":30,"time":1791395290236,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-cpc","name":"协作协议完备性 (CPC)","category":"capability","msg":"哨兵已注册"}
+{"level":40,"time":1791395290236,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"cpc-sentinel.ts","exportKey":"cpcSentinel","preferredKey":"cpc","sentinelId":"sentinel-cpc","msg":"[builtins] cpc-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (cpcSentinel)"}
+{"level":30,"time":1791395290284,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-goal-alignment","name":"目标对齐度","category":"capability","msg":"哨兵已注册"}
+{"level":40,"time":1791395290284,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"goal-alignment-sentinel.ts","exportKey":"goalalignmentSentinel","preferredKey":"goalAlignment","sentinelId":"sentinel-goal-alignment","msg":"[builtins] goal-alignment-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (goalalignmentSentinel)"}
+{"level":30,"time":1791395290288,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-integration-health","name":"集成健康度","category":"health","msg":"哨兵已注册"}
+{"level":40,"time":1791395290288,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"integration-health-sentinel.ts","exportKey":"integrationHealthSentinel","preferredKey":"integrationHealth","sentinelId":"sentinel-integration-health","msg":"[builtins] integration-health-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (integrationHealthSentinel)"}
+{"level":30,"time":1791395290288,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","registered":4,"total":4,"cronCount":4,"scanned":4,"msg":"[builtins] 哨兵自动注册完成"}
+{"level":30,"time":1791395290290,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-cash-flow","name":"现金流","category":"risk","msg":"哨兵已注册"}
+{"level":40,"time":1791395290290,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"cash-flow-sentinel.ts","exportKey":"cashFlowSentinel","preferredKey":"cashFlow","sentinelId":"sentinel-cash-flow","msg":"[builtins] cash-flow-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (cashFlowSentinel)"}
+{"level":30,"time":1791395290290,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-cpc","name":"协作协议完备性 (CPC)","category":"capability","msg":"哨兵已注册"}
+{"level":40,"time":1791395290290,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"cpc-sentinel.ts","exportKey":"cpcSentinel","preferredKey":"cpc","sentinelId":"sentinel-cpc","msg":"[builtins] cpc-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (cpcSentinel)"}
+{"level":30,"time":1791395290290,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-goal-alignment","name":"目标对齐度","category":"capability","msg":"哨兵已注册"}
+{"level":40,"time":1791395290290,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"goal-alignment-sentinel.ts","exportKey":"goalalignmentSentinel","preferredKey":"goalAlignment","sentinelId":"sentinel-goal-alignment","msg":"[builtins] goal-alignment-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (goalalignmentSentinel)"}
+{"level":30,"time":1791395290290,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-integration-health","name":"集成健康度","category":"health","msg":"哨兵已注册"}
+{"level":40,"time":1791395290290,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"integration-health-sentinel.ts","exportKey":"integrationHealthSentinel","preferredKey":"integrationHealth","sentinelId":"sentinel-integration-health","msg":"[builtins] integration-health-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (integrationHealthSentinel)"}
+{"level":30,"time":1791395290290,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","registered":4,"total":4,"cronCount":4,"scanned":4,"msg":"[builtins] 哨兵自动注册完成"}
+{"level":30,"time":1791395290291,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-cash-flow","name":"现金流","category":"risk","msg":"哨兵已注册"}
+{"level":40,"time":1791395290291,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"cash-flow-sentinel.ts","exportKey":"cashFlowSentinel","preferredKey":"cashFlow","sentinelId":"sentinel-cash-flow","msg":"[builtins] cash-flow-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (cashFlowSentinel)"}
+{"level":30,"time":1791395290291,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-cpc","name":"协作协议完备性 (CPC)","category":"capability","msg":"哨兵已注册"}
+{"level":40,"time":1791395290291,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"cpc-sentinel.ts","exportKey":"cpcSentinel","preferredKey":"cpc","sentinelId":"sentinel-cpc","msg":"[builtins] cpc-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (cpcSentinel)"}
+{"level":30,"time":1791395290291,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-goal-alignment","name":"目标对齐度","category":"capability","msg":"哨兵已注册"}
+{"level":40,"time":1791395290291,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"goal-alignment-sentinel.ts","exportKey":"goalalignmentSentinel","preferredKey":"goalAlignment","sentinelId":"sentinel-goal-alignment","msg":"[builtins] goal-alignment-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (goalalignmentSentinel)"}
+{"level":30,"time":1791395290291,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-integration-health","name":"集成健康度","category":"health","msg":"哨兵已注册"}
+{"level":40,"time":1791395290291,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"integration-health-sentinel.ts","exportKey":"integrationHealthSentinel","preferredKey":"integrationHealth","sentinelId":"sentinel-integration-health","msg":"[builtins] integration-health-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (integrationHealthSentinel)"}
+{"level":30,"time":1791395290291,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","registered":4,"total":4,"cronCount":4,"scanned":4,"msg":"[builtins] 哨兵自动注册完成"}
+{"level":40,"time":1791395290291,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-cash-flow","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1791395290291,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-cash-flow","name":"现金流","category":"risk","msg":"哨兵已注册"}
+{"level":40,"time":1791395290291,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"cash-flow-sentinel.ts","exportKey":"cashFlowSentinel","preferredKey":"cashFlow","sentinelId":"sentinel-cash-flow","msg":"[builtins] cash-flow-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (cashFlowSentinel)"}
+{"level":40,"time":1791395290291,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-cpc","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1791395290291,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-cpc","name":"协作协议完备性 (CPC)","category":"capability","msg":"哨兵已注册"}
+{"level":40,"time":1791395290291,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"cpc-sentinel.ts","exportKey":"cpcSentinel","preferredKey":"cpc","sentinelId":"sentinel-cpc","msg":"[builtins] cpc-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (cpcSentinel)"}
+{"level":40,"time":1791395290291,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-goal-alignment","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1791395290291,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-goal-alignment","name":"目标对齐度","category":"capability","msg":"哨兵已注册"}
+{"level":40,"time":1791395290291,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"goal-alignment-sentinel.ts","exportKey":"goalalignmentSentinel","preferredKey":"goalAlignment","sentinelId":"sentinel-goal-alignment","msg":"[builtins] goal-alignment-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (goalalignmentSentinel)"}
+{"level":40,"time":1791395290291,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-integration-health","msg":"哨兵已注册 — 覆盖旧实例"}
+{"level":30,"time":1791395290291,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-integration-health","name":"集成健康度","category":"health","msg":"哨兵已注册"}
+{"level":40,"time":1791395290291,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","filename":"integration-health-sentinel.ts","exportKey":"integrationHealthSentinel","preferredKey":"integrationHealth","sentinelId":"sentinel-integration-health","msg":"[builtins] integration-health-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (integrationHealthSentinel)"}
+{"level":30,"time":1791395290291,"pid":14721,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/builtins","registered":4,"total":4,"cronCount":4,"scanned":4,"msg":"[builtins] 哨兵自动注册完成"}
+ ✓ tests/sentinel/builtins.test.ts (3 tests) 73ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  01:48:10
+   Duration  235ms (transform 86ms, setup 0ms, import 55ms, tests 73ms, environment 0ms)
+
+===== END GREEN-builtins-test.log =====
+

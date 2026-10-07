@@ -1,0 +1,388 @@
+# #984（0-10 fail-open 兜底 → fail-closed）三态原始输出 —— verbatim 拼接件（GREEN → V5a/V5b 反例 RED → 恢复 GREEN）
+#
+# 说明: 每段以 BEGIN/END 包裹并标注原文件 sha256；逐字节拼接、未删改、未截断。
+#       worktree HEAD=f238b3dd625b75044b73014529362317bca91ff3  node=v24.19.0
+#
+===== BEGIN run-meta.txt  (sha256=813881cfe115c5d8c1abe87ee4ed120168715539a791a8a1acebf10af255277f) =====
+cmd: node_modules/.bin/vitest run tests/security/request-context-failclosed.test.ts tests/routes/im-authprovider.test.ts --reporter=verbose
+HEAD: f238b3dd625b75044b73014529362317bca91ff3
+started: 2026-10-07T17:54:28Z
+===== END run-meta.txt =====
+
+===== BEGIN GREEN.test.log  (sha256=bdb4fe006f72e3cd5076f94eda184814e8bfef4b144a09b8d99c1fd4f081d9ba) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-b977
+
+ ✓ tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 无上下文 ⇒ conditions 非空（空集 = knowledge-store.ts:335 短路 = fail-open） 1ms
+ ✓ tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 无上下文 ⇒ 条件集是**钉死的**拒绝型三元组（字段名不存在于任何权限列） 0ms
+ ✓ tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 无上下文 ⇒ 与 resourceType 无关（边界: 多资源类型一律拒绝） 0ms
+ ✓ tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 无上下文 ⇒ 留痕 RBAC_DENIED + reason=no_request_context（P5「被拒绝」态可断言） 0ms
+ ✓ tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 有 user、无 authProvider ⇒ 同样非空 deny-all + RBAC_DENIED 1ms
+ ✓ tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 有 user、无 authProvider ⇒ 上下文确实已建立（非「没跑进 runWithContext」的假绿） 0ms
+ ✓ tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 有 user、有 authProvider ⇒ 返回 provider 的条件对象本体（toBe 同一性）且零附加日志 0ms
+ ✓ tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 有 user、有 authProvider ⇒ provider 收到的 resourceType 与 action 契约不变（首参透传） 0ms
+ ✓ tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 信任边界: provider 自身返回空条件集时**原样透传**（漏斗只在上下文缺失时 fail-closed） 0ms
+{"level":30,"time":1791395668989,"pid":15225,"hostname":"192.168.1.8","name":"synova-agent","service":"services/config-file","path":"/Users/wane/SynovaAgent/.synova-wt-b977/synova.json","msg":"配置文件加载成功"}
+{"level":30,"time":1791395668989,"pid":15225,"hostname":"192.168.1.8","name":"synova-agent","service":"config","port":18790,"source":"synova.json","msg":"使用文件配置"}
+{"level":30,"time":1791395668989,"pid":15225,"hostname":"192.168.1.8","name":"synova-agent","service":"services/config-recovery","path":"/Users/wane/SynovaAgent/.synova-wt-b977/synova.json","size":693,"msg":"配置校验通过"}
+{"level":40,"time":1791395668989,"pid":15225,"hostname":"192.168.1.8","name":"synova-agent","service":"config","msg":"⚠️  未设置 LLM_API_KEY 且未设置 OPENCLAW_GATEWAY_HOST"}
+{"level":40,"time":1791395668989,"pid":15225,"hostname":"192.168.1.8","name":"synova-agent","service":"config","msg":"   诊断功能将不可用。设置 LLM_API_KEY 或 OPENCLAW_GATEWAY_HOST 后重启。"}
+{"level":30,"time":1791395668989,"pid":15225,"hostname":"192.168.1.8","name":"synova-agent","service":"config","port":3099,"devMode":false,"dbPath":"/var/folders/bs/ltqkv_rd45z6b7p5wq90vv500000gn/T/synova-984-vYZPln/test.db","model":"deepseek-v4-flash","llmConfigured":false,"msg":"配置加载完成"}
+{"level":30,"time":1791395668994,"pid":15225,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791395668994,"pid":15225,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791395668994,"pid":15225,"hostname":"192.168.1.8","name":"synova-agent","service":"init/engine-context","path":"/var/folders/bs/ltqkv_rd45z6b7p5wq90vv500000gn/T/synova-984-vYZPln/test.db","msg":"SQLite 数据库已打开"}
+{"level":30,"time":1791395668994,"pid":15225,"hostname":"192.168.1.8","name":"synova-agent","service":"init/engine-context","msg":"EngineContext 注入完成 (SQLite 持久化存储模式)"}
+{"level":30,"time":1791395668995,"pid":15225,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+{"level":30,"time":1791395669021,"pid":15225,"hostname":"192.168.1.8","name":"synova-agent","service":"l1/im-inbound","userId":"feishu:ou_test_984_sender","msg":"新用户已缓存"}
+{"level":30,"time":1791395669022,"pid":15225,"hostname":"192.168.1.8","name":"synova-agent","service":"l1/im-inbound","sessionId":"sess_muyeq8m6_dfbk","userId":"feishu:ou_test_984_sender","msg":"新 IM 会话已创建"}
+{"level":40,"time":1791395669033,"pid":15225,"hostname":"192.168.1.8","name":"synova-agent","service":"services/request-context","code":"RBAC_DENIED","resourceType":"KnowledgeChunk","reason":"no_request_context","msg":"安全判据: 被拒绝 — 无请求上下文（漏斗兜底 fail-closed，返回拒绝型非空条件集）"}
+{"level":30,"time":1791395669048,"pid":15225,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+{"level":30,"time":1791395669051,"pid":15225,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+{"level":30,"time":1791395669053,"pid":15225,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+{"level":30,"time":1791395669056,"pid":15225,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+{"level":40,"time":1791395669056,"pid":15225,"hostname":"192.168.1.8","name":"synova-agent","service":"services/request-context","code":"RBAC_DENIED","resourceType":"KnowledgeChunk","reason":"no_request_context","msg":"安全判据: 被拒绝 — 无请求上下文（漏斗兜底 fail-closed，返回拒绝型非空条件集）"}
+{"level":40,"time":1791395669057,"pid":15225,"hostname":"192.168.1.8","name":"synova-agent","service":"services/request-context","code":"RBAC_DENIED","resourceType":"KnowledgeChunk","reason":"no_request_context","msg":"安全判据: 被拒绝 — 无请求上下文（漏斗兜底 fail-closed，返回拒绝型非空条件集）"}
+{"level":30,"time":1791395669058,"pid":15225,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+{"level":40,"time":1791395669059,"pid":15225,"hostname":"192.168.1.8","name":"synova-agent","service":"auth","code":"AUTH_DEV_MODE_GRANT","reason":"jwt_secret_not_configured","msg":"安全判据: 开发姿态放行（DEV_MODE=true 且无 JWT_SECRET）——非生产路径；生产须 DEV_MODE=false 并配置 JWT_SECRET"}
+{"level":30,"time":1791395669059,"pid":15225,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+ ✓ tests/routes/im-authprovider.test.ts > #984 接线面（真 HTTP 入口 → 真 runWithContext） > 已认证飞书入站：路由实际传入的 ctx 带**可用的** authProvider 35ms
+ ✓ tests/routes/im-authprovider.test.ts > #984 接线面（真 HTTP 入口 → 真 runWithContext） > 把路由用过的 ctx 重进真漏斗：得到 sensitivity 条件，而非 deny-all 0ms
+ ✓ tests/routes/im-authprovider.test.ts > #984 接线面（真 HTTP 入口 → 真 runWithContext） > 未认证（无请求上下文）：真实漏斗返回 deny-all 非空条件集（安全不回归） 0ms
+ ✓ tests/routes/im-authprovider.test.ts > D1154 · #984 可观测面（POST /api/qa/ask，真 HTTP + 真 JWT + 真语料） > 已认证：路由实际传入的 ctx 带**可用的** authProvider（非 deny-all） 17ms
+ ✓ tests/routes/im-authprovider.test.ts > D1154 · #984 可观测面（POST /api/qa/ask，真 HTTP + 真 JWT + 真语料） > 已认证：把路由用过的 ctx 重进真漏斗 ⇒ 得到 sensitivity 条件，而非 deny-all 2ms
+ ✓ tests/routes/im-authprovider.test.ts > D1154 · #984 可观测面（POST /api/qa/ask，真 HTTP + 真 JWT + 真语料） > 已认证：用户可见产出 —— knowledgeSources > 0 且 degraded=false，受限条目被过滤 2ms
+ ✓ tests/routes/im-authprovider.test.ts > D1154 · #984 可观测面（POST /api/qa/ask，真 HTTP + 真 JWT + 真语料） > 未认证：不新增 401/403 门槛，行为不变式 —— 200 + deny-all（0 条 + degraded=true） 2ms
+ ✓ tests/routes/im-authprovider.test.ts > D1154 · #984 可观测面（POST /api/qa/ask，真 HTTP + 真 JWT + 真语料） > 未认证：真漏斗仍是 deny-all（非空拒绝型条件集，安全不回归） 0ms
+ ✓ tests/routes/im-authprovider.test.ts > D1154 · #984 可观测面（POST /api/qa/ask，真 HTTP + 真 JWT + 真语料） > 补偿判据 · 已认证 + 语料无匹配 ⇒ 仍 0 条 + degraded=true（= qa-router.test.ts:96-106 的语义，在本环境可跑） 1ms
+ ✓ tests/routes/im-authprovider.test.ts > D1154 · #984 可观测面（POST /api/qa/ask，真 HTTP + 真 JWT + 真语料） > 🔴 判别性本体 · req.auth 存在但**中间件未建上下文**时，路由必须自建（DevMode 分支形态） 2ms
+
+ Test Files  2 passed (2)
+      Tests  19 passed (19)
+   Start at  01:54:28
+   Duration  382ms (transform 236ms, setup 0ms, import 291ms, tests 78ms, environment 0ms)
+
+===== END GREEN.test.log =====
+
+===== BEGIN RED-a-request-context.diff  (sha256=2cedd08de2a4553cc70aecfb740f5c4b72d00699f28ad832134f0dad4d018f74) =====
+diff --git a/src/services/request-context.ts b/src/services/request-context.ts
+index 921e68cb1..7233d9765 100644
+--- a/src/services/request-context.ts
++++ b/src/services/request-context.ts
+@@ -79,7 +79,7 @@ export async function getCurrentFilterClause(resourceType: string): Promise<Filt
+       { code: 'RBAC_DENIED', resourceType, reason: 'no_request_context' },
+       '安全判据: 被拒绝 — 无请求上下文（漏斗兜底 fail-closed，返回拒绝型非空条件集）',
+     );
+-    return { conditions: [{ field: DENY_ALL_FIELD, operator: 'EQ', value: DENY_ALL_SENTINEL }] };
++    return { conditions: [] }; // BREAK-IT-RED (#984 V5a): 空集 = knowledge-store 短路 = fail-open
+   }
+   return ctx.authProvider.getPermissionFilter(ctx.user, resourceType, 'read');
+ }
+===== END RED-a-request-context.diff =====
+
+===== BEGIN RED-a.test.log  (sha256=2443b9d81098abac8781632090816727f903fcd01911e6b31da36607c6330a9f) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-b977
+
+ × tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 无上下文 ⇒ conditions 非空（空集 = knowledge-store.ts:335 短路 = fail-open） 3ms
+   → expected 0 to be greater than 0
+ × tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 无上下文 ⇒ 条件集是**钉死的**拒绝型三元组（字段名不存在于任何权限列） 3ms
+   → expected [] to deeply equal [ { …(3) } ]
+ × tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 无上下文 ⇒ 与 resourceType 无关（边界: 多资源类型一律拒绝） 1ms
+   → expected { Object (resourceType, n) } to deeply equal { Object (resourceType, n) }
+ ✓ tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 无上下文 ⇒ 留痕 RBAC_DENIED + reason=no_request_context（P5「被拒绝」态可断言） 0ms
+ × tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 有 user、无 authProvider ⇒ 同样非空 deny-all + RBAC_DENIED 1ms
+   → expected [] to deeply equal [ { …(3) } ]
+ × tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 有 user、无 authProvider ⇒ 上下文确实已建立（非「没跑进 runWithContext」的假绿） 0ms
+   → expected 0 to be greater than 0
+ ✓ tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 有 user、有 authProvider ⇒ 返回 provider 的条件对象本体（toBe 同一性）且零附加日志 1ms
+ ✓ tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 有 user、有 authProvider ⇒ provider 收到的 resourceType 与 action 契约不变（首参透传） 0ms
+ ✓ tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 信任边界: provider 自身返回空条件集时**原样透传**（漏斗只在上下文缺失时 fail-closed） 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 无上下文 ⇒ conditions 非空（空集 = knowledge-store.ts:335 短路 = fail-open）
+AssertionError: expected 0 to be greater than 0
+ ❯ tests/security/request-context-failclosed.test.ts:92:38
+     90|     const filter = await getCurrentFilterClause('KnowledgeChunk');
+     91|     expect(Array.isArray(filter.conditions)).toBe(true);
+     92|     expect(filter.conditions.length).toBeGreaterThan(0);
+       |                                      ^
+     93|   });
+     94|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 无上下文 ⇒ 条件集是**钉死的**拒绝型三元组（字段名不存在于任何权限列）
+AssertionError: expected [] to deeply equal [ { …(3) } ]
+
+- Expected
++ Received
+
+- [
+-   {
+-     "field": "__d947_no_authenticated_context",
+-     "operator": "EQ",
+-     "value": "__d947_deny_all__",
+-   },
+- ]
++ []
+
+ ❯ tests/security/request-context-failclosed.test.ts:97:31
+     95|   it('无上下文 ⇒ 条件集是**钉死的**拒绝型三元组（字段名不存在于任何权限列）', async () => {
+     96|     const filter = await getCurrentFilterClause('KnowledgeChunk');
+     97|     expect(filter.conditions).toEqual([
+       |                               ^
+     98|       { field: DENY_ALL_FIELD, operator: 'EQ', value: DENY_ALL_SENTINE…
+     99|     ]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 无上下文 ⇒ 与 resourceType 无关（边界: 多资源类型一律拒绝）
+AssertionError: expected { Object (resourceType, n) } to deeply equal { Object (resourceType, n) }
+
+- Expected
++ Received
+
+  {
+-   "n": true,
++   "n": false,
+    "resourceType": "KnowledgeChunk",
+  }
+
+ ❯ tests/security/request-context-failclosed.test.ts:112:10
+    110|       const filter = await getCurrentFilterClause(resourceType);
+    111|       expect({ resourceType, n: filter.conditions.length > 0 })
+    112|         .toEqual({ resourceType, n: true });
+       |          ^
+    113|     }
+    114|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 有 user、无 authProvider ⇒ 同样非空 deny-all + RBAC_DENIED
+AssertionError: expected [] to deeply equal [ { …(3) } ]
+
+- Expected
++ Received
+
+- [
+-   {
+-     "field": "__d947_no_authenticated_context",
+-     "operator": "EQ",
+-     "value": "__d947_deny_all__",
+-   },
+- ]
++ []
+
+ ❯ tests/security/request-context-failclosed.test.ts:134:31
+    132|       getCurrentFilterClause('KnowledgeChunk'));
+    133|
+    134|     expect(filter.conditions).toEqual([
+       |                               ^
+    135|       { field: DENY_ALL_FIELD, operator: 'EQ', value: DENY_ALL_SENTINE…
+    136|     ]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 有 user、无 authProvider ⇒ 上下文确实已建立（非「没跑进 runWithContext」的假绿）
+AssertionError: expected 0 to be greater than 0
+ ❯ tests/security/request-context-failclosed.test.ts:147:40
+    145|       expect(getCurrentAuthProvider()).toBeUndefined();
+    146|       const filter = await getCurrentFilterClause('KnowledgeChunk');
+    147|       expect(filter.conditions.length).toBeGreaterThan(0);
+       |                                        ^
+    148|     });
+    149|   });
+ ❯ tests/security/request-context-failclosed.test.ts:141:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed | 4 passed (9)
+   Start at  01:54:39
+   Duration  261ms (transform 77ms, setup 0ms, import 106ms, tests 11ms, environment 0ms)
+
+===== END RED-a.test.log =====
+
+===== BEGIN RED-b-im.diff  (sha256=8adf0a10127465c0f7580e99657c9587da887bf1c1d318ac0d6298076b28ec31) =====
+diff --git a/src/routes/im.ts b/src/routes/im.ts
+index 06f0afaad..86c4a99df 100644
+--- a/src/routes/im.ts
++++ b/src/routes/im.ts
+@@ -58,15 +58,7 @@ router.post('/api/im/feishu/webhook', async (req: Request, res: Response) => {
+     const imUser = { userId: senderId, identity: { openId: senderId, email: '', name: senderId, source: 'feishu' }, auth: { roles: ['employee'], teamId: 'default', tenantId: 'default', sensitivity: 'normal' }, permissions: { version: 1, expiresAt: Date.now() + 3600000 } };
+     const result = await runWithContext({
+       user: imUser,
+-      authProvider: {
+-        getPermissionFilter: async (ctx) => ({
+-          conditions: [{
+-            field: 'access.sensitivity',
+-            operator: 'IN' as const,
+-            value: allowedSensitivities(ctx.auth.roles[0], ctx.auth.sensitivity),
+-          }],
+-        }),
+-      },
++      // BREAK-IT-RED (#984 V5b): 删掉 authProvider（只传 user ⇒ 落回 deny-all）
+     }, async () => {
+       return handleInboundMessage(store as unknown as Parameters<typeof handleInboundMessage>[0], piiScrubber, {
+         platform: 'feishu',
+===== END RED-b-im.diff =====
+
+===== BEGIN RED-b.test.log  (sha256=c83fdc585b7c9220547eff0edd97873e3c1fdac5b37d05ba262f1c0d30c7a7ce) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-b977
+
+{"level":30,"time":1791395684151,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"services/config-file","path":"/Users/wane/SynovaAgent/.synova-wt-b977/synova.json","msg":"配置文件加载成功"}
+{"level":30,"time":1791395684152,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"config","port":18790,"source":"synova.json","msg":"使用文件配置"}
+{"level":30,"time":1791395684152,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"services/config-recovery","path":"/Users/wane/SynovaAgent/.synova-wt-b977/synova.json","size":693,"msg":"配置校验通过"}
+{"level":40,"time":1791395684153,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"config","msg":"⚠️  未设置 LLM_API_KEY 且未设置 OPENCLAW_GATEWAY_HOST"}
+{"level":40,"time":1791395684153,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"config","msg":"   诊断功能将不可用。设置 LLM_API_KEY 或 OPENCLAW_GATEWAY_HOST 后重启。"}
+{"level":30,"time":1791395684153,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"config","port":3099,"devMode":false,"dbPath":"/var/folders/bs/ltqkv_rd45z6b7p5wq90vv500000gn/T/synova-984-ioLAmW/test.db","model":"deepseek-v4-flash","llmConfigured":false,"msg":"配置加载完成"}
+{"level":30,"time":1791395684157,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791395684157,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791395684157,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"init/engine-context","path":"/var/folders/bs/ltqkv_rd45z6b7p5wq90vv500000gn/T/synova-984-ioLAmW/test.db","msg":"SQLite 数据库已打开"}
+{"level":30,"time":1791395684157,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"init/engine-context","msg":"EngineContext 注入完成 (SQLite 持久化存储模式)"}
+{"level":30,"time":1791395684159,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+{"level":30,"time":1791395684181,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"l1/im-inbound","userId":"feishu:ou_test_984_sender","msg":"新用户已缓存"}
+{"level":30,"time":1791395684181,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"l1/im-inbound","sessionId":"sess_muyeqkb9_g4hv","userId":"feishu:ou_test_984_sender","msg":"新 IM 会话已创建"}
+{"level":40,"time":1791395684194,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"services/request-context","code":"RBAC_DENIED","resourceType":"KnowledgeChunk","reason":"no_request_context","msg":"安全判据: 被拒绝 — 无请求上下文（漏斗兜底 fail-closed，返回拒绝型非空条件集）"}
+{"level":40,"time":1791395684196,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"services/request-context","code":"RBAC_DENIED","resourceType":"KnowledgeChunk","reason":"no_request_context","msg":"安全判据: 被拒绝 — 无请求上下文（漏斗兜底 fail-closed，返回拒绝型非空条件集）"}
+{"level":30,"time":1791395684211,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+{"level":30,"time":1791395684214,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+{"level":30,"time":1791395684216,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+{"level":30,"time":1791395684217,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+{"level":40,"time":1791395684217,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"services/request-context","code":"RBAC_DENIED","resourceType":"KnowledgeChunk","reason":"no_request_context","msg":"安全判据: 被拒绝 — 无请求上下文（漏斗兜底 fail-closed，返回拒绝型非空条件集）"}
+{"level":40,"time":1791395684218,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"services/request-context","code":"RBAC_DENIED","resourceType":"KnowledgeChunk","reason":"no_request_context","msg":"安全判据: 被拒绝 — 无请求上下文（漏斗兜底 fail-closed，返回拒绝型非空条件集）"}
+{"level":30,"time":1791395684218,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+{"level":40,"time":1791395684221,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"auth","code":"AUTH_DEV_MODE_GRANT","reason":"jwt_secret_not_configured","msg":"安全判据: 开发姿态放行（DEV_MODE=true 且无 JWT_SECRET）——非生产路径；生产须 DEV_MODE=false 并配置 JWT_SECRET"}
+{"level":30,"time":1791395684221,"pid":15440,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+ × tests/routes/im-authprovider.test.ts > #984 接线面（真 HTTP 入口 → 真 runWithContext） > 已认证飞书入站：路由实际传入的 ctx 带**可用的** authProvider 33ms
+   → expected undefined to be truthy
+ × tests/routes/im-authprovider.test.ts > #984 接线面（真 HTTP 入口 → 真 runWithContext） > 把路由用过的 ctx 重进真漏斗：得到 sensitivity 条件，而非 deny-all 2ms
+   → expected '__d947_no_authenticated_context' to be 'access.sensitivity' // Object.is equality
+ ✓ tests/routes/im-authprovider.test.ts > #984 接线面（真 HTTP 入口 → 真 runWithContext） > 未认证（无请求上下文）：真实漏斗返回 deny-all 非空条件集（安全不回归） 0ms
+ ✓ tests/routes/im-authprovider.test.ts > D1154 · #984 可观测面（POST /api/qa/ask，真 HTTP + 真 JWT + 真语料） > 已认证：路由实际传入的 ctx 带**可用的** authProvider（非 deny-all） 16ms
+ ✓ tests/routes/im-authprovider.test.ts > D1154 · #984 可观测面（POST /api/qa/ask，真 HTTP + 真 JWT + 真语料） > 已认证：把路由用过的 ctx 重进真漏斗 ⇒ 得到 sensitivity 条件，而非 deny-all 2ms
+ ✓ tests/routes/im-authprovider.test.ts > D1154 · #984 可观测面（POST /api/qa/ask，真 HTTP + 真 JWT + 真语料） > 已认证：用户可见产出 —— knowledgeSources > 0 且 degraded=false，受限条目被过滤 1ms
+ ✓ tests/routes/im-authprovider.test.ts > D1154 · #984 可观测面（POST /api/qa/ask，真 HTTP + 真 JWT + 真语料） > 未认证：不新增 401/403 门槛，行为不变式 —— 200 + deny-all（0 条 + degraded=true） 1ms
+ ✓ tests/routes/im-authprovider.test.ts > D1154 · #984 可观测面（POST /api/qa/ask，真 HTTP + 真 JWT + 真语料） > 未认证：真漏斗仍是 deny-all（非空拒绝型条件集，安全不回归） 0ms
+ ✓ tests/routes/im-authprovider.test.ts > D1154 · #984 可观测面（POST /api/qa/ask，真 HTTP + 真 JWT + 真语料） > 补偿判据 · 已认证 + 语料无匹配 ⇒ 仍 0 条 + degraded=true（= qa-router.test.ts:96-106 的语义，在本环境可跑） 2ms
+ ✓ tests/routes/im-authprovider.test.ts > D1154 · #984 可观测面（POST /api/qa/ask，真 HTTP + 真 JWT + 真语料） > 🔴 判别性本体 · req.auth 存在但**中间件未建上下文**时，路由必须自建（DevMode 分支形态） 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/routes/im-authprovider.test.ts > #984 接线面（真 HTTP 入口 → 真 runWithContext） > 已认证飞书入站：路由实际传入的 ctx 带**可用的** authProvider
+AssertionError: expected undefined to be truthy
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ❯ tests/routes/im-authprovider.test.ts:186:31
+    184|     expect(ctx?.user).toBeTruthy();
+    185|     // 🔴 接线判据本体：改造前此处为 undefined（handler 无 runWithContext 包裹）
+    186|     expect(ctx?.authProvider).toBeTruthy();
+       |                               ^
+    187|     if (!ctx?.user || !ctx?.authProvider) throw new Error('ctx 缺 user/…
+    188|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/routes/im-authprovider.test.ts > #984 接线面（真 HTTP 入口 → 真 runWithContext） > 把路由用过的 ctx 重进真漏斗：得到 sensitivity 条件，而非 deny-all
+AssertionError: expected '__d947_no_authenticated_context' to be 'access.sensitivity' // Object.is equality
+
+Expected: "access.sensitivity"
+Received: "__d947_no_authenticated_context"
+
+ ❯ tests/routes/im-authprovider.test.ts:205:40
+    203|     const filter = await runWithContext(ctx, () => getCurrentFilterCla…
+    204|     expect(filter.conditions.length).toBeGreaterThan(0);
+    205|     expect(filter.conditions[0].field).toBe('access.sensitivity');
+       |                                        ^
+    206|     expect(filter.conditions[0].value).toEqual(['normal']);
+    207|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 8 passed (10)
+   Start at  01:54:43
+   Duration  362ms (transform 164ms, setup 0ms, import 194ms, tests 73ms, environment 0ms)
+
+===== END RED-b.test.log =====
+
+===== BEGIN GREEN-restored.test.log  (sha256=cfb61a14f67ee82fe4508fb9ead9c0b9afa98606f4e1c875558bc0d134b505e8) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-b977
+
+ ✓ tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 无上下文 ⇒ conditions 非空（空集 = knowledge-store.ts:335 短路 = fail-open） 1ms
+ ✓ tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 无上下文 ⇒ 条件集是**钉死的**拒绝型三元组（字段名不存在于任何权限列） 0ms
+ ✓ tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 无上下文 ⇒ 与 resourceType 无关（边界: 多资源类型一律拒绝） 0ms
+ ✓ tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 无上下文 ⇒ 留痕 RBAC_DENIED + reason=no_request_context（P5「被拒绝」态可断言） 0ms
+ ✓ tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 有 user、无 authProvider ⇒ 同样非空 deny-all + RBAC_DENIED 1ms
+ ✓ tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 有 user、无 authProvider ⇒ 上下文确实已建立（非「没跑进 runWithContext」的假绿） 0ms
+ ✓ tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 有 user、有 authProvider ⇒ 返回 provider 的条件对象本体（toBe 同一性）且零附加日志 0ms
+ ✓ tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 有 user、有 authProvider ⇒ provider 收到的 resourceType 与 action 契约不变（首参透传） 0ms
+ ✓ tests/security/request-context-failclosed.test.ts > 0-10 · 漏斗兜底（getCurrentFilterClause）fail-closed 不变量回归锁 > 信任边界: provider 自身返回空条件集时**原样透传**（漏斗只在上下文缺失时 fail-closed） 0ms
+{"level":30,"time":1791395688942,"pid":15543,"hostname":"192.168.1.8","name":"synova-agent","service":"services/config-file","path":"/Users/wane/SynovaAgent/.synova-wt-b977/synova.json","msg":"配置文件加载成功"}
+{"level":30,"time":1791395688942,"pid":15543,"hostname":"192.168.1.8","name":"synova-agent","service":"config","port":18790,"source":"synova.json","msg":"使用文件配置"}
+{"level":30,"time":1791395688942,"pid":15543,"hostname":"192.168.1.8","name":"synova-agent","service":"services/config-recovery","path":"/Users/wane/SynovaAgent/.synova-wt-b977/synova.json","size":693,"msg":"配置校验通过"}
+{"level":40,"time":1791395688943,"pid":15543,"hostname":"192.168.1.8","name":"synova-agent","service":"config","msg":"⚠️  未设置 LLM_API_KEY 且未设置 OPENCLAW_GATEWAY_HOST"}
+{"level":40,"time":1791395688943,"pid":15543,"hostname":"192.168.1.8","name":"synova-agent","service":"config","msg":"   诊断功能将不可用。设置 LLM_API_KEY 或 OPENCLAW_GATEWAY_HOST 后重启。"}
+{"level":30,"time":1791395688943,"pid":15543,"hostname":"192.168.1.8","name":"synova-agent","service":"config","port":3099,"devMode":false,"dbPath":"/var/folders/bs/ltqkv_rd45z6b7p5wq90vv500000gn/T/synova-984-FKe3W5/test.db","model":"deepseek-v4-flash","llmConfigured":false,"msg":"配置加载完成"}
+{"level":30,"time":1791395688946,"pid":15543,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791395688946,"pid":15543,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791395688946,"pid":15543,"hostname":"192.168.1.8","name":"synova-agent","service":"init/engine-context","path":"/var/folders/bs/ltqkv_rd45z6b7p5wq90vv500000gn/T/synova-984-FKe3W5/test.db","msg":"SQLite 数据库已打开"}
+{"level":30,"time":1791395688947,"pid":15543,"hostname":"192.168.1.8","name":"synova-agent","service":"init/engine-context","msg":"EngineContext 注入完成 (SQLite 持久化存储模式)"}
+{"level":30,"time":1791395688947,"pid":15543,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+{"level":30,"time":1791395688970,"pid":15543,"hostname":"192.168.1.8","name":"synova-agent","service":"l1/im-inbound","userId":"feishu:ou_test_984_sender","msg":"新用户已缓存"}
+{"level":30,"time":1791395688970,"pid":15543,"hostname":"192.168.1.8","name":"synova-agent","service":"l1/im-inbound","sessionId":"sess_muyeqo0a_nhz2","userId":"feishu:ou_test_984_sender","msg":"新 IM 会话已创建"}
+{"level":40,"time":1791395688979,"pid":15543,"hostname":"192.168.1.8","name":"synova-agent","service":"services/request-context","code":"RBAC_DENIED","resourceType":"KnowledgeChunk","reason":"no_request_context","msg":"安全判据: 被拒绝 — 无请求上下文（漏斗兜底 fail-closed，返回拒绝型非空条件集）"}
+{"level":30,"time":1791395688993,"pid":15543,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+{"level":30,"time":1791395688997,"pid":15543,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+{"level":30,"time":1791395688998,"pid":15543,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+{"level":30,"time":1791395689000,"pid":15543,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+{"level":40,"time":1791395689000,"pid":15543,"hostname":"192.168.1.8","name":"synova-agent","service":"services/request-context","code":"RBAC_DENIED","resourceType":"KnowledgeChunk","reason":"no_request_context","msg":"安全判据: 被拒绝 — 无请求上下文（漏斗兜底 fail-closed，返回拒绝型非空条件集）"}
+{"level":40,"time":1791395689001,"pid":15543,"hostname":"192.168.1.8","name":"synova-agent","service":"services/request-context","code":"RBAC_DENIED","resourceType":"KnowledgeChunk","reason":"no_request_context","msg":"安全判据: 被拒绝 — 无请求上下文（漏斗兜底 fail-closed，返回拒绝型非空条件集）"}
+{"level":30,"time":1791395689002,"pid":15543,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+{"level":40,"time":1791395689004,"pid":15543,"hostname":"192.168.1.8","name":"synova-agent","service":"auth","code":"AUTH_DEV_MODE_GRANT","reason":"jwt_secret_not_configured","msg":"安全判据: 开发姿态放行（DEV_MODE=true 且无 JWT_SECRET）——非生产路径；生产须 DEV_MODE=false 并配置 JWT_SECRET"}
+{"level":30,"time":1791395689004,"pid":15543,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+ ✓ tests/routes/im-authprovider.test.ts > #984 接线面（真 HTTP 入口 → 真 runWithContext） > 已认证飞书入站：路由实际传入的 ctx 带**可用的** authProvider 29ms
+ ✓ tests/routes/im-authprovider.test.ts > #984 接线面（真 HTTP 入口 → 真 runWithContext） > 把路由用过的 ctx 重进真漏斗：得到 sensitivity 条件，而非 deny-all 0ms
+ ✓ tests/routes/im-authprovider.test.ts > #984 接线面（真 HTTP 入口 → 真 runWithContext） > 未认证（无请求上下文）：真实漏斗返回 deny-all 非空条件集（安全不回归） 0ms
+ ✓ tests/routes/im-authprovider.test.ts > D1154 · #984 可观测面（POST /api/qa/ask，真 HTTP + 真 JWT + 真语料） > 已认证：路由实际传入的 ctx 带**可用的** authProvider（非 deny-all） 16ms
+ ✓ tests/routes/im-authprovider.test.ts > D1154 · #984 可观测面（POST /api/qa/ask，真 HTTP + 真 JWT + 真语料） > 已认证：把路由用过的 ctx 重进真漏斗 ⇒ 得到 sensitivity 条件，而非 deny-all 3ms
+ ✓ tests/routes/im-authprovider.test.ts > D1154 · #984 可观测面（POST /api/qa/ask，真 HTTP + 真 JWT + 真语料） > 已认证：用户可见产出 —— knowledgeSources > 0 且 degraded=false，受限条目被过滤 2ms
+ ✓ tests/routes/im-authprovider.test.ts > D1154 · #984 可观测面（POST /api/qa/ask，真 HTTP + 真 JWT + 真语料） > 未认证：不新增 401/403 门槛，行为不变式 —— 200 + deny-all（0 条 + degraded=true） 2ms
+ ✓ tests/routes/im-authprovider.test.ts > D1154 · #984 可观测面（POST /api/qa/ask，真 HTTP + 真 JWT + 真语料） > 未认证：真漏斗仍是 deny-all（非空拒绝型条件集，安全不回归） 0ms
+ ✓ tests/routes/im-authprovider.test.ts > D1154 · #984 可观测面（POST /api/qa/ask，真 HTTP + 真 JWT + 真语料） > 补偿判据 · 已认证 + 语料无匹配 ⇒ 仍 0 条 + degraded=true（= qa-router.test.ts:96-106 的语义，在本环境可跑） 2ms
+ ✓ tests/routes/im-authprovider.test.ts > D1154 · #984 可观测面（POST /api/qa/ask，真 HTTP + 真 JWT + 真语料） > 🔴 判别性本体 · req.auth 存在但**中间件未建上下文**时，路由必须自建（DevMode 分支形态） 1ms
+
+ Test Files  2 passed (2)
+      Tests  19 passed (19)
+   Start at  01:54:48
+   Duration  361ms (transform 216ms, setup 0ms, import 271ms, tests 70ms, environment 0ms)
+
+===== END GREEN-restored.test.log =====
+
+===== BEGIN invariants.txt  (sha256=202e627bd8e4478db8d741d2d9714f28d955fc76fdec9b11a2a4d232a46444c5) =====
+$ sed -n "75,84p" src/services/request-context.ts   # V3 拒绝型三元组（钉死哨兵）
+export async function getCurrentFilterClause(resourceType: string): Promise<FilterClause> {
+  const ctx = storage.getStore();
+  if (!ctx?.user || !ctx?.authProvider) {
+    log.warn(
+      { code: 'RBAC_DENIED', resourceType, reason: 'no_request_context' },
+      '安全判据: 被拒绝 — 无请求上下文（漏斗兜底 fail-closed，返回拒绝型非空条件集）',
+    );
+    return { conditions: [{ field: DENY_ALL_FIELD, operator: 'EQ', value: DENY_ALL_SENTINEL }] };
+  }
+  return ctx.authProvider.getPermissionFilter(ctx.user, resourceType, 'read');
+
+$ grep -n "code: .RBAC_DENIED" src/services/request-context.ts   # V2 留痕
+79:      { code: 'RBAC_DENIED', resourceType, reason: 'no_request_context' },
+===== END invariants.txt =====
+

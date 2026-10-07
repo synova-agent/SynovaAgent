@@ -1,0 +1,148 @@
+# #982（0-8 参数层 c 类零引用 → 明示不接 + 接入点）V2 判据原始输出 —— verbatim 拼接件
+#
+# 说明: 判据 = 卡面 5 个既有测试**逐条**跑（不许合并成一次跑，卡面原文）；每段 BEGIN/END 包裹并标注 sha256。
+#       worktree HEAD=83e032cb798c39851cf2db5a83b076b6419e228c  node=v24.19.0
+#
+===== BEGIN run-meta.txt  (sha256=1d1273279f0bf5f1fe68d684c3d653c08150d43568ab0267c763cabe20537f6c) =====
+HEAD: 83e032cb798c39851cf2db5a83b076b6419e228c
+started: 2026-10-07T17:55:58Z
+===== END run-meta.txt =====
+
+===== BEGIN V2-GREEN.report.txt  (sha256=3e0dd4384081207c6cf7bd6963cac77805ea88b23dffad1c82e0228d6bb33dd5) =====
+=== [1] tests/growth/goal-lifecycle.test.ts ===
+exit=0
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+=== [2] tests/integration/goal-lifecycle.integration.test.ts ===
+exit=0
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+=== [3] tests/growth/effect-verification.test.ts ===
+exit=0
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+=== [4] tests/growth/e2e-navigation-loop.integration.test.ts ===
+exit=0
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+=== [5] tests/growth/goal-sentinel.test.ts ===
+exit=0
+ Test Files  1 passed (1)
+      Tests  14 passed (14)
+===== END V2-GREEN.report.txt =====
+
+===== BEGIN V2-GREEN-1.log  (sha256=fbdb2736937b5900cdec5129b038ea046ae690f3f9ef4c8e7aa6f07c2016bde0) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-b977
+
+{"level":30,"time":1791395759554,"pid":44879,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"5617730b-523c-4985-8c51-e2442a5c5ff9","title":"测试Goal","msg":"Goal 已创建"}
+{"level":30,"time":1791395759556,"pid":44879,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"5617730b-523c-4985-8c51-e2442a5c5ff9","fromStatus":"draft","newStatus":"pending_ga","msg":"Goal 状态已更新"}
+{"level":30,"time":1791395759556,"pid":44879,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"5617730b-523c-4985-8c51-e2442a5c5ff9","fromStatus":"pending_ga","newStatus":"active","msg":"Goal 状态已更新"}
+{"level":30,"time":1791395759557,"pid":44879,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"8c4ab070-6b99-4e6c-a188-32a2d0eeeb54","title":"测试Goal","msg":"Goal 已创建"}
+{"level":30,"time":1791395759558,"pid":44879,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"8c4ab070-6b99-4e6c-a188-32a2d0eeeb54","fromStatus":"draft","newStatus":"abandoned","msg":"Goal 状态已更新"}
+{"level":30,"time":1791395759558,"pid":44879,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"8e81ab18-4016-46eb-a87f-e23cfa6f2f87","title":"测试Goal","msg":"Goal 已创建"}
+{"level":40,"time":1791395759558,"pid":44879,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-lifecycle","role":"staff","soi":"goal.abandon","denyReason":"deny_default: 无权限","msg":"PolicyEngine 拒绝操作"}
+{"level":30,"time":1791395759558,"pid":44879,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"d77eb546-a9f7-43d2-8433-8c376dbbdc0b","title":"测试Goal","msg":"Goal 已创建"}
+{"level":30,"time":1791395759559,"pid":44879,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-lifecycle","goalId":"d77eb546-a9f7-43d2-8433-8c376dbbdc0b","outcome":"achieved","metricComparisons":[{"metricName":"营收","target":15,"actual":15,"met":true}],"msg":"Goal 闭环"}
+{"level":30,"time":1791395759559,"pid":44879,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"d77eb546-a9f7-43d2-8433-8c376dbbdc0b","fromStatus":"active","newStatus":"completed","msg":"Goal 状态已更新"}
+{"level":40,"time":1791395759693,"pid":44879,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-lifecycle","err":"数据库未初始化，请先调用 initEngineContext()","goalId":"d77eb546-a9f7-43d2-8433-8c376dbbdc0b","msg":"知识提取/PKB 写入失败 — 降级（不阻断 Goal 关闭）"}
+{"level":30,"time":1791395759694,"pid":44879,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"8b7366d0-0a81-452f-8ef3-325a84fd5338","title":"测试Goal","msg":"Goal 已创建"}
+{"level":30,"time":1791395759696,"pid":44879,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"41c259f5-7ebc-4aa7-8ddb-a469464deeff","title":"测试Goal","msg":"Goal 已创建"}
+{"level":30,"time":1791395759696,"pid":44879,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-lifecycle","goalId":"41c259f5-7ebc-4aa7-8ddb-a469464deeff","outcome":"achieved","metricComparisons":[{"metricName":"营收","target":15,"actual":15,"met":true}],"msg":"Goal 闭环"}
+{"level":30,"time":1791395759696,"pid":44879,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"41c259f5-7ebc-4aa7-8ddb-a469464deeff","fromStatus":"active","newStatus":"completed","msg":"Goal 状态已更新"}
+{"level":40,"time":1791395759696,"pid":44879,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-lifecycle","err":"数据库未初始化，请先调用 initEngineContext()","goalId":"41c259f5-7ebc-4aa7-8ddb-a469464deeff","msg":"知识提取/PKB 写入失败 — 降级（不阻断 Goal 关闭）"}
+{"level":30,"time":1791395759697,"pid":44879,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"569e2e62-1030-487e-9023-e56918668f33","title":"测试Goal","msg":"Goal 已创建"}
+{"level":40,"time":1791395759697,"pid":44879,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-lifecycle","goalId":"569e2e62-1030-487e-9023-e56918668f33","daysSinceModification":0,"msg":"Goal 归档: 完成/废弃后仅 0 天（建议等待 30 天）"}
+{"level":30,"time":1791395759697,"pid":44879,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"569e2e62-1030-487e-9023-e56918668f33","fromStatus":"completed","newStatus":"archived","msg":"Goal 状态已更新"}
+{"level":30,"time":1791395759697,"pid":44879,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"0198a938-8266-4e6d-b87e-297d200f56a9","title":"测试Goal","msg":"Goal 已创建"}
+ ✓ tests/growth/goal-lifecycle.test.ts (8 tests) 175ms
+
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+   Start at  01:55:59
+   Duration  424ms (transform 205ms, setup 0ms, import 108ms, tests 175ms, environment 0ms)
+
+===== END V2-GREEN-1.log =====
+
+===== BEGIN V2-GREEN-2.log  (sha256=69ab27dc6d93eea14c48112a14bab26f522a979c7e9299cea504e87d038e4c43) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-b977
+
+{"level":30,"time":1791395760489,"pid":44957,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"922e54a6-2e99-4466-9345-e1dc836a0c5c","title":"提升营收增长率","msg":"Goal 已创建"}
+{"level":30,"time":1791395760491,"pid":44957,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"922e54a6-2e99-4466-9345-e1dc836a0c5c","sentinelId":"goal-922e54a6-2e99-4466-9345-e1dc836a0c5c","msg":"方案哨兵已注册"}
+{"level":40,"time":1791395760535,"pid":44957,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"goal-test-1","count":3,"msg":"Goal 已达 3 次再诊断上限，自动升级全量诊断"}
+{"level":30,"time":1791395760536,"pid":44957,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"93cd5b28-735a-4613-953e-6ef66f521a4f","title":"提升营收增长率","msg":"Goal 已创建"}
+ ✓ tests/integration/goal-lifecycle.integration.test.ts (5 tests) 120ms
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  01:56:00
+   Duration  581ms (transform 313ms, setup 0ms, import 290ms, tests 120ms, environment 0ms)
+
+===== END V2-GREEN-2.log =====
+
+===== BEGIN V2-GREEN-3.log  (sha256=7710b5ed7baf08be0176e6864847111827e7ca716e5c0226eba7b7892989e60d) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-b977
+
+{"level":40,"time":1791395761334,"pid":45409,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/knowledge-feedback","err":"AgentMemoryStore 未初始化 — 请先调用 getAgentMemoryStore(db)","status":"improved","msg":"效果验证写入失败 — 降级"}
+ ✓ tests/growth/effect-verification.test.ts (5 tests) 6ms
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  01:56:00
+   Duration  350ms (transform 138ms, setup 0ms, import 192ms, tests 6ms, environment 0ms)
+
+===== END V2-GREEN-3.log =====
+
+===== BEGIN V2-GREEN-4.log  (sha256=3eb5e841cb66574b482bcf0578a07cd444ab1c2763c15fccea45a50d608a6793) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-b977
+
+{"level":30,"time":1791395761996,"pid":45795,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"945ed526-401e-47cf-bdd8-ebe3420bdfb0","title":"成本结构诊断","msg":"Proposal 已创建"}
+{"level":30,"time":1791395761998,"pid":45795,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"ff5ebd23-b61e-48b9-b115-9d3a9d92a93f","title":"均衡推进: 成本结构诊断","msg":"Goal 已创建"}
+{"level":30,"time":1791395761998,"pid":45795,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-engine","goalId":"ff5ebd23-b61e-48b9-b115-9d3a9d92a93f","proposalId":"945ed526-401e-47cf-bdd8-ebe3420bdfb0","msg":"从 Proposal 生成 Goal"}
+{"level":30,"time":1791395761998,"pid":45795,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"ff5ebd23-b61e-48b9-b115-9d3a9d92a93f","fromStatus":"draft","newStatus":"pending_ga","msg":"Goal 状态已更新"}
+{"level":30,"time":1791395761998,"pid":45795,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"ff5ebd23-b61e-48b9-b115-9d3a9d92a93f","fromStatus":"pending_ga","newStatus":"active","msg":"Goal 状态已更新"}
+{"level":30,"time":1791395762026,"pid":45795,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"ff5ebd23-b61e-48b9-b115-9d3a9d92a93f","ownerDeptId":"finance","dimension":"financial","msg":"维度推断完成"}
+{"level":30,"time":1791395762026,"pid":45795,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"ff5ebd23-b61e-48b9-b115-9d3a9d92a93f","dimension":"financial","expertName":"financial","msg":"专家选择完成"}
+{"level":30,"time":1791395762026,"pid":45795,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"ff5ebd23-b61e-48b9-b115-9d3a9d92a93f","dimension":"financial","edges":["CAPITAL_ACQUISITION","CAPITAL_ALLOCATION","CAPITAL_SOURCE_MIX","PROFIT_REINVESTMENT","VALUE_PRICING"],"msg":"因果边选择完成"}
+{"level":30,"time":1791395762026,"pid":45795,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"ff5ebd23-b61e-48b9-b115-9d3a9d92a93f","expertName":"financial","timeoutMs":100,"msg":"开始轻量级再诊断专家评估"}
+{"level":30,"time":1791395762027,"pid":45795,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/lightweight-diagnosis","goalId":"ff5ebd23-b61e-48b9-b115-9d3a9d92a93f","adjustmentType":"adjust_target","degraded":false,"triggeredBy":"p0_alert","msg":"轻量级再诊断完成"}
+{"level":30,"time":1791395762056,"pid":45795,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"ff5ebd23-b61e-48b9-b115-9d3a9d92a93f","fromStatus":"active","newStatus":"active","msg":"Goal 状态已更新"}
+{"level":30,"time":1791395762056,"pid":45795,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-lifecycle","goalId":"ff5ebd23-b61e-48b9-b115-9d3a9d92a93f","outcome":"partially_achieved","metricComparisons":[{"metricName":"目标达成","target":100,"actual":70,"met":false}],"msg":"Goal 闭环"}
+{"level":30,"time":1791395762056,"pid":45795,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"ff5ebd23-b61e-48b9-b115-9d3a9d92a93f","fromStatus":"active","newStatus":"completed","msg":"Goal 状态已更新"}
+{"level":40,"time":1791395762199,"pid":45795,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-lifecycle","err":"数据库未初始化，请先调用 initEngineContext()","goalId":"ff5ebd23-b61e-48b9-b115-9d3a9d92a93f","msg":"知识提取/PKB 写入失败 — 降级（不阻断 Goal 关闭）"}
+{"level":30,"time":1791395762200,"pid":45795,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"760f232b-0208-4932-b672-2484cae6b481","title":"空诊断","msg":"Proposal 已创建"}
+ ✓ tests/growth/e2e-navigation-loop.integration.test.ts (3 tests) 304ms
+     ✓ 完整链路: 诊断→Proposal→Goal→哨兵→再诊断→知识回流  302ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  01:56:01
+   Duration  496ms (transform 263ms, setup 0ms, import 49ms, tests 304ms, environment 0ms)
+
+===== END V2-GREEN-4.log =====
+
+===== BEGIN V2-GREEN-5.log  (sha256=7af90720b0ec842f1ed50dab09c5a6f98791d560565fe9163a3428c9e5fe65ff) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-b977
+
+{"level":30,"time":1791395762971,"pid":45987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395762973,"pid":45987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-0","sentinelId":"goal-goal-0","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395762974,"pid":45987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-1","sentinelId":"goal-goal-1","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395762974,"pid":45987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-2","sentinelId":"goal-goal-2","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395762974,"pid":45987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-3","sentinelId":"goal-goal-3","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395762974,"pid":45987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-4","sentinelId":"goal-goal-4","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395762975,"pid":45987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395762975,"pid":45987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注销"}
+{"level":30,"time":1791395762976,"pid":45987,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","daysSinceCreation":20,"msg":"方案哨兵基线已建立"}
+ ✓ tests/growth/goal-sentinel.test.ts (14 tests) 15ms
+
+ Test Files  1 passed (1)
+      Tests  14 passed (14)
+   Start at  01:56:02
+   Duration  367ms (transform 86ms, setup 0ms, import 125ms, tests 15ms, environment 0ms)
+
+===== END V2-GREEN-5.log =====
+

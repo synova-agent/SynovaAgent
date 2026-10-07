@@ -1,0 +1,151 @@
+# #979（0-5 目标哨兵「因子3」恒 false）三态原始输出 —— verbatim 拼接件（GREEN → 反例 RED → 恢复 GREEN）
+#
+# 说明: 每段以 BEGIN/END 包裹并标注原文件 sha256；逐字节拼接、未删改、未截断。
+#       worktree HEAD=403de1cc69059282487705fc29d0bc27333582d1  node=v24.19.0  vitest=4.x
+#
+===== BEGIN run-meta.txt  (sha256=69de4313ba4e433d1e879aed30f9b373587a45c1360f6beddb3a534f34cfb57d) =====
+cmd: node_modules/.bin/vitest run tests/growth/goal-sentinel.test.ts
+cwd: /Users/wane/SynovaAgent/.synova-wt-b977
+HEAD: 403de1cc69059282487705fc29d0bc27333582d1
+started: 2026-10-07T17:51:14Z
+===== END run-meta.txt =====
+
+===== BEGIN GREEN.test.log  (sha256=2f7636d396304fad155402303c95c3bb82e471856c25d92c164591ab8e79cb23) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-b977
+
+{"level":30,"time":1791395475304,"pid":58502,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395475305,"pid":58502,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-0","sentinelId":"goal-goal-0","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395475305,"pid":58502,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-1","sentinelId":"goal-goal-1","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395475305,"pid":58502,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-2","sentinelId":"goal-goal-2","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395475305,"pid":58502,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-3","sentinelId":"goal-goal-3","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395475305,"pid":58502,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-4","sentinelId":"goal-goal-4","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395475306,"pid":58502,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395475306,"pid":58502,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注销"}
+{"level":30,"time":1791395475309,"pid":58502,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","daysSinceCreation":20,"msg":"方案哨兵基线已建立"}
+ ✓ tests/growth/goal-sentinel.test.ts (14 tests) 13ms
+
+ Test Files  1 passed (1)
+      Tests  14 passed (14)
+   Start at  01:51:15
+   Duration  207ms (transform 45ms, setup 0ms, import 77ms, tests 13ms, environment 0ms)
+
+===== END GREEN.test.log =====
+
+===== BEGIN RED-goal-sentinel.diff  (sha256=698b3c3a929304623e61c6df27be26db3c78f96ef519fef438b872f4a6429b3d) =====
+diff --git a/src/growth/goal-sentinel.ts b/src/growth/goal-sentinel.ts
+index ca97b18d2..d27441f07 100644
+--- a/src/growth/goal-sentinel.ts
++++ b/src/growth/goal-sentinel.ts
+@@ -191,9 +191,8 @@ export function createGoalSentinel(
+           //  原实现 `metric.baselinePeriod ? 0 : null` 与 computeDeviations 的 `baseline !== null && baseline !== 0`
+           //  判据互斥 ⇒ 基线恒为 0/null ⇒ 因子3 恒 false（自相矛盾一行，已删）。
+           //  契约: metric 未声明 baselinePeriod（无基线语义）或采集期无样本 → null（因子3 不判定，不猜值）。
+-          const baseline = metric.baselinePeriod && state.samples.length > 0
+-            ? state.samples.reduce((sum, s) => sum + s.value, 0) / state.samples.length
+-            : null;
++          // BREAK-IT-RED (#979 反例): 还原自相矛盾一行
++          const baseline = metric.baselinePeriod ? 0 : null;
+           const sampleValues = state.samples.map(s => s.value);
+           const deviation = computeDeviations(
+             metric.currentValue,
+===== END RED-goal-sentinel.diff =====
+
+===== BEGIN RED.test.log  (sha256=c444ccf4f0d6ac335a740479c09247cee165ca7b015bbc1e19d4cb28b3c49d82) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-b977
+
+{"level":30,"time":1791395494690,"pid":76571,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395494690,"pid":76571,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-0","sentinelId":"goal-goal-0","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395494690,"pid":76571,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-1","sentinelId":"goal-goal-1","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395494690,"pid":76571,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-2","sentinelId":"goal-goal-2","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395494690,"pid":76571,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-3","sentinelId":"goal-goal-3","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395494690,"pid":76571,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-4","sentinelId":"goal-goal-4","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395494691,"pid":76571,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395494691,"pid":76571,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注销"}
+{"level":30,"time":1791395494692,"pid":76571,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","daysSinceCreation":20,"msg":"方案哨兵基线已建立"}
+ ❯ tests/growth/goal-sentinel.test.ts (14 tests | 1 failed) 10ms
+     ✓ 无偏离: 实际值接近目标值 → 0因子触发 1ms
+     ✓ 单因子偏离: 阈值偏离>10% 0ms
+     ✓ 双因子偏离: 阈值+趋势 0ms
+     ✓ 三因子偏离: 阈值+趋势+基线 0ms
+     ✓ 趋势偏离: 不足3采样点不触发 0ms
+     ✓ 注册方案哨兵: 命名空间goal-{goalId} 2ms
+     ✓ 超过5个上限 → 抛出异常 1ms
+     ✓ 注销方案哨兵 0ms
+     ✓ 新建Goal → baselineStatus=collecting 1ms
+     ✓ ≥14天 → baselineStatus=active 0ms
+     ✓ transitionGoal接受sentinelRegistry可选参数 0ms
+     × 正常路径: 声明 baselinePeriod + 采集期样本 → 因子3 触发（描述含"基线偏离"） 3ms
+     ✓ 边界: 采集期无样本 → 因子3 不判定（不猜基线，无"基线偏离"字段） 0ms
+     ✓ 边界: 未声明 baselinePeriod → 因子3 不判定（无基线语义） 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/growth/goal-sentinel.test.ts > #979 — 因子3 基线偏离可真触发（基线 = 采集期样本均值） > 正常路径: 声明 baselinePeriod + 采集期样本 → 因子3 触发（描述含"基线偏离"）
+AssertionError: expected 'monthly_revenue: 实际=550, 目标=800, 阈值偏离…' to contain '基线偏离'
+
+Expected: "基线偏离"
+Received: "monthly_revenue: 实际=550, 目标=800, 阈值偏离=31.3%"
+
+ ❯ tests/growth/goal-sentinel.test.ts:175:44
+    173|     expect(result.findings.length).toBeGreaterThanOrEqual(1);
+    174|     // 判别性核心: 改坏写入点（baseline 回退为 `? 0 : null`）→ 此断言必红
+    175|     expect(result.findings[0].description).toContain('基线偏离');
+       |                                            ^
+    176|     expect(result.findings[0].severity).toBe('warning'); // 因子1 + 因子3 …
+    177|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 13 passed (14)
+   Start at  01:51:34
+   Duration  169ms (transform 38ms, setup 0ms, import 61ms, tests 10ms, environment 0ms)
+
+===== END RED.test.log =====
+
+===== BEGIN GREEN-restored.test.log  (sha256=33db1ad1ce0fd2f06c3ece8e390f0154acd5d806a52547708fcc5eb2647a1106) =====
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-b977
+
+{"level":30,"time":1791395499608,"pid":81098,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395499609,"pid":81098,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-0","sentinelId":"goal-goal-0","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395499609,"pid":81098,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-1","sentinelId":"goal-goal-1","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395499609,"pid":81098,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-2","sentinelId":"goal-goal-2","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395499609,"pid":81098,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-3","sentinelId":"goal-goal-3","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395499609,"pid":81098,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-4","sentinelId":"goal-goal-4","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395499610,"pid":81098,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注册"}
+{"level":30,"time":1791395499610,"pid":81098,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注销"}
+{"level":30,"time":1791395499611,"pid":81098,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","daysSinceCreation":20,"msg":"方案哨兵基线已建立"}
+ ✓ tests/growth/goal-sentinel.test.ts (14 tests) 7ms
+
+ Test Files  1 passed (1)
+      Tests  14 passed (14)
+   Start at  01:51:39
+   Duration  157ms (transform 33ms, setup 0ms, import 51ms, tests 7ms, environment 0ms)
+
+===== END GREEN-restored.test.log =====
+
+===== BEGIN review-grep.txt  (sha256=a714d78250e760501cb41036fa7d030749a467ce92fe563cc3605ab4a1e25138) =====
+$ git grep -n "baselinePeriod ? 0 : null" origin/main -- src/growth/
+origin/main:src/growth/goal-sentinel.ts:191:          //  原实现 `metric.baselinePeriod ? 0 : null` 与 computeDeviations 的 `baseline !== null && baseline !== 0`
+$ git grep -nE "^\s*const baseline = metric\.baselinePeriod \? 0 : null" origin/main -- src/growth/
+(空 = 旧矛盾表达式不在可执行代码中)
+===== END review-grep.txt =====
+
+===== BEGIN source-snippet.txt  (sha256=e024154584f6f95931fea83bbe95504a146ec442d7899c0ab8233525c2664590) =====
+$ git show origin/main:src/growth/goal-sentinel.ts | sed -n "188,197p"
+        // 活跃期: 对每个指标执行三因子偏离检测
+        for (const metric of goal.metrics) {
+          // 因子3 基线（#979 修复）: 基线 = 采集期历史样本均值。
+          //  原实现 `metric.baselinePeriod ? 0 : null` 与 computeDeviations 的 `baseline !== null && baseline !== 0`
+          //  判据互斥 ⇒ 基线恒为 0/null ⇒ 因子3 恒 false（自相矛盾一行，已删）。
+          //  契约: metric 未声明 baselinePeriod（无基线语义）或采集期无样本 → null（因子3 不判定，不猜值）。
+          const baseline = metric.baselinePeriod && state.samples.length > 0
+            ? state.samples.reduce((sum, s) => sum + s.value, 0) / state.samples.length
+            : null;
+          const sampleValues = state.samples.map(s => s.value);
+===== END source-snippet.txt =====
+
