@@ -98,6 +98,24 @@ else
   no "17.3 仍用字符串插值拼字段名"
 fi
 
+
+# ── 17.4 D1216-R1: except 收窄 —— 非配置面错误必须 re-raise（防"宽吞"回归）──
+narrow="$(python3 - <<'PY'
+import re, pathlib
+src = pathlib.Path("scripts/control-tower/sync_project_coordinates.py").read_text(encoding="utf-8")
+i = src.index("except RuntimeError as e:")
+blk = src[i:i+700]
+pat = r"does not accept|Cannot coerce|Could not resolve to a node"
+ok = ("re.search" in blk and "raise" in blk
+      and re.search(pat, "field does not accept text")
+      and not re.search(pat, "connection reset by peer"))
+print("NARROW" if ok else "WIDE")
+PY
+)"
+echo "  #17.4 except 收窄判定: $narrow"
+[ "$narrow" = "NARROW" ] && ok "17.4 非配置面错误 re-raise（收窄成立）" || no "17.4 except 过宽（会吞传输/权限类失败）"
+
+
 echo "结果: $PASS 通过, $FAIL 失败"
 [ "$FAIL" = 0 ] && exit 0 || exit 1
 

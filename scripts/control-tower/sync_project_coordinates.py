@@ -155,6 +155,10 @@ def main(argv):
                 gh_graphql(m_up, pid=pid, iid=item_id, fid=fid, val=val)
                 print(f"  ✓ {name} = {val}")
             except RuntimeError as e:
+                # D1216 收窄（verifier R1/P3）: 只吞「看板配置面」类错误（字段类型不匹配/节点不存在），
+                # 其余（API 故障/权限失效/传输失败）re-raise ⇒ 交顶层 fail-closed（exit 2）。
+                if not re.search(r"does not accept|Cannot coerce|Could not resolve to a node", str(e)):
+                    raise
                 print(f"::warning title=project-coordinates::字段 {name} 写入失败（看板配置面，非脚本缺陷）: {e}")
         print("✅ 坐标系同步完成")
         return 0
