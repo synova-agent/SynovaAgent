@@ -16,6 +16,7 @@
     ".claude/task-briefs/2026-10-07-D1197-no-domain-cleanup.md",
     "task-state/D1197.json",
     "scripts/control-tower/scan-fullwidth-vars.sh",
-    "tests/control-tower/scan-fullwidth-vars.test.sh"
+    "tests/control-tower/scan-fullwidth-vars.test.sh",
+    "tests/control-tower/check-pr-budget.test.sh"
   ]
 }
