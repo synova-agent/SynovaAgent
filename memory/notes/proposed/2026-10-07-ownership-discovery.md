@@ -84,6 +84,31 @@ python3 scripts/control-tower/check-ownership.py --check-drift   # exit 0 逐字
 git ls-files .synova-owner                                    # 恰 1 行（根标记）
 ```
 
+## 标识沿革与 D# 撞号（本日第 3 次，附门禁连带缺陷）
+
+本任务编号被 `alloc-task-id.sh` 连撞三次，均按 `check-name-allocation.sh` 复核后仍撞：
+
+| 取值 | 撞上谁 | 发现时点 |
+|---|---|---|
+| D1201 | `DG-预算制报告`（已在 main） | 取号即复核发现 |
+| D1204 | 线 B《D-F/① CI 判据单源化》（PR #1262 合入） | **merge main 时 add/add 冲突**才发现 |
+| D1207 | main 上《project-coordinates-auth-hotfix》 | merge 后 `git diff` 才发现 |
+| **D1208** | —（定稿） | — |
+
+根因：`alloc-task-id.sh:88-89` 自述「读 max→写 max+1 无原子性」（D454/D455 同型），
+且**看不见尚未落在 main 的他线在飞编号**。
+
+**门禁连带缺陷（本次新发现，值得进判据库）**：commit 主体含 D1204（历史不可改、禁 force push）
+⇒ D708 `merge_writeset_gate.infer_did` 的 ② 提交主体回退**取到 D1204** ⇒ 载入 **main 上线 B 的 D1204 brief**
+的声明写集 ⇒ 本 PR 的 8 个文件被全部判为「写集外夹带」而 **block**（CI 实测 + 本地复现同结论）。
+即：**一次撞号会同时污染「写集对账」这道合并级门禁**，且报错指向上游任务的声明写集，排障成本高。
+闭环修法（本 PR 采用）：`git log` 新→旧、② 取**最新**含 D# 的提交主体 ⇒ 顶端补一条主体含 D1208 的
+提交即正确锚回本任务 brief（已本地验证由 block 转 pass）。
+
+**收敛决定**：既然 D# 正在退役（#1222 D-C「D# 退役换 GitHub issue 号」），
+**代码/产物/标记已改为只引「卡 #1233」**（撞号免疫）；D# 仅留在过渡期机械件（brief 文件名 + 台账）。
+Note 文件名亦去掉 D# 后缀（与既有约定一致，如 `2026-10-07-gate-reduction-v2.md`）。
+
 ## 相关
 
 - 卡 #1233（D-I）· 父卡 #1221（门禁减法 v2.0）· plan `.claude/plan-v2-remaining.md` 线 D
