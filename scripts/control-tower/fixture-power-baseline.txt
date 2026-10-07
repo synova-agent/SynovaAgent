@@ -1,0 +1,16 @@
+# fixture-power-baseline.txt — 面 3（夹具判别力，D1226 / 卡 #1295）**豁免白名单**
+#
+# 为什么独立成文件（不并入 gate-integrity-baseline.txt）:
+#   实测——并入后该条目会被同文件内的 **REGISTRY-BASELINE 解析器** 当成隔离台账条目读取，
+#   产出 3 处伪违规（「隔离台账条目失效」「文件不存在」「隔离条目 > 上界」）。
+#   豁免白名单与棘轮台账是两种语义：前者="此合法用法别误伤"，后者="存量违规登记"。
+#   同**格式**（`<路径后缀> | owner= | expires= | reason=`）不同**载体**，避免段边界歧义（禁双源指口径，不是指文件）。
+#
+# 规则:
+#   · 仅豁免「有权使用 stdin + 逐行取反」的**合法正向断言**；
+#   · expires 到期 ⇒ 面 3 判违规（防拔牙，硬红）；
+#   · 路径按**后缀匹配**（兼容沙箱路径）。
+# 判据（面 3 硬红）: 代码行 `grep -qv`（含 -qvE/-qEv/-vq）输入为 管道/stdin/变量 ⇒ 违规。
+#   字面量文件操作数 ⇒ 合规；对变异体输出取反（MUT/CLONE/COPY）⇒ 仅告警不阻断。
+tests/control-tower/hooks-install.test.sh:43 | owner=line-b-ci | expires=2026-11-07 | reason=列目录后找非 sample 项：stdin+逐行取反在此**是有意的**（卡 #1295 卡面点名豁免，不误伤合法用法）
+tests/control-tower/docsonly-diff-base.test.sh:59 | owner=deepseek-harness-govl | expires=2026-11-07 | reason=该行位于【冻结标本 heredoc 内】（pre-#1326 判定块原文，作为「先红」基准的**数据**，不是本夹具的判据）：标本必须逐字保留旧语义，含 `grep -qvE` 是**被检对象**（P0 修复 D1242 / PR #1334）
