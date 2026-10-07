@@ -107,7 +107,7 @@ if [ -n "$STAGED_LIST" ]; then
   # 捕获 rc: 失败且无 brief → 显式 degraded 提示（dev doc §4: 提示+跳过可追溯,
   # 不再静默放行）
   CLAIM_RC=0
-  # D1223/②（K3 R4「分支名劫持」· 提交端半边）: 解析器把"身份来自最弱锚点（分支名）"这一事实
+  # D1230/②（K3 R4「分支名劫持」· 提交端半边）: 解析器把"身份来自最弱锚点（分支名）"这一事实
   #   打到 **stderr**（stdout 契约不变）⇒ 本处必须**分流捕获**（旧实现把 stderr 整段丢弃 ⇒ 标记被吞，
   #   于是"分支名锚点"与"认领身份"在消费侧不可区分 = 劫持面不可见）。
   RESOLVER_ERR="$(mktemp)"  # 收敛: 无论下游如何分支，函数末尾统一清理
@@ -118,7 +118,7 @@ if [ -n "$STAGED_LIST" ]; then
     # 口径: 分支名只作最弱锚点；身份以「提交消息声明」为准，冲突即阻断并给出两条修复路径。
     ANCHOR_DID=$(printf '%s' "$ANCHOR_MARK" | grep -oE 'd=[Dd][0-9]+' | head -1 | sed 's/^d=//' | tr 'a-z' 'A-Z' || true)  # swallow-ok: 提不到 → 空，下方条件自然短路（不误伤）
     if [ -n "$MSG_DID" ] && [ -n "$ANCHOR_DID" ] && [ "$MSG_DID" != "$ANCHOR_DID" ]; then
-      echo -e "${RED}❌ D1223/R4: 分支名锚点(${ANCHOR_DID})与提交消息声明(${MSG_DID})冲突 — 疑似分支名劫持${RESET}"
+      echo -e "${RED}❌ D1230/R4: 分支名锚点(${ANCHOR_DID})与提交消息声明(${MSG_DID})冲突 — 疑似分支名劫持${RESET}"
       echo "   身份最弱锚点 = 分支名（只补\"无任何 brief 认领暂存文件\"的空档，不得覆盖消息声明）"
       echo "   锚点 brief: $CLAIM_BRIEF"
       echo "   修复二选一: ①改分支名到本任务号；②消息声明改与分支一致（或补齐本任务的 brief 认领）"

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════════════════════════════
-# commit-msg-issue-form.test.sh — D1223/② 提交端「issue 新形态」配对夹具
+# commit-msg-issue-form.test.sh — D1230/② 提交端「issue 新形态」配对夹具
 #
 # SUT: scripts/commit-msg-check.sh（D-C 单库 R5 的提交端消费点）
 #
@@ -17,7 +17,7 @@
 #   C3 兼容  — `chore(D1099): …` + legacy brief → exit 0（**旧形态在兼容期仍通过**）
 #   C4 边界  — `feat(#1284): …` 但暂存文件**不在**该 claim 写集 → exit 1（新形态不得白名单化）
 #   C5 边界  — 开关关（迁移期默认）+ 新形态 → 格式面通过（观察口径，不断言身份判定）
-#   C6 边界  — 分支名锚点(D1099) 与消息声明(D1223) **冲突**、且无 claim → exit 1（R4 fail-closed）
+#   C6 边界  — 分支名锚点(D1099) 与消息声明(D1230) **冲突**、且无 claim → exit 1（R4 fail-closed）
 #   C7 边界  — 分支名锚点(D1099) 与消息声明(D1099) **一致** → exit 0（不误伤；R4 只拦冲突）
 #   M1 变异  — 中和 MSG_ISSUE 提取（issue 号解析被删）⇒ **C1 必红**（判别性核心）
 #   M2 变异  — 从格式门禁字符类移除 `#` ⇒ **C1 必红**（字符集是硬条件，不是装饰）
@@ -53,7 +53,7 @@ done
 
 TMPD="$(mktemp -d)"; trap 'rm -rf "$TMPD"' EXIT
 
-echo "=== 提交端 issue 新形态夹具（D1223/② · 新旧兼容 + 判别性）==="
+echo "=== 提交端 issue 新形态夹具（D1230/② · 新旧兼容 + 判别性）==="
 
 # ── 沙箱构造: scripts/ 全量 + claim(#1284) + legacy brief(D1099) ──
 build_sb() {
@@ -143,8 +143,8 @@ echo "$MARK" | grep -q 'source=branch-anchor' \
   && ok "接线④: 解析器在分支锚点回退时打 RESOLVER-ANCHOR 标记（C6 判据的硬条件）" \
   || no "接线④: 未打最弱锚点标记 — C6 将判在别的路径上（假绿风险）: ${MARK}"
 
-RC6=$(rc_of "$SBB" "$SBB/scripts/commit-msg-check.sh" 'chore(D1223): 分支锚点冲突探针' 'tests/z.test.sh' 1)
-[ "$RC6" -eq 1 ] && ok "C6 分支锚点(D1099) × 消息声明(D1223) 冲突 → exit 1（R4 fail-closed）" \
+RC6=$(rc_of "$SBB" "$SBB/scripts/commit-msg-check.sh" 'chore(D1230): 分支锚点冲突探针' 'tests/z.test.sh' 1)
+[ "$RC6" -eq 1 ] && ok "C6 分支锚点(D1099) × 消息声明(D1230) 冲突 → exit 1（R4 fail-closed）" \
   || no "C6 冲突应 exit 1, 实际 exit=$RC6（最弱锚点劫持面复开）"
 
 RC7=$(rc_of "$SBB" "$SBB/scripts/commit-msg-check.sh" 'chore(D1099): 分支锚点一致探针' 'tests/z.test.sh' 1)
@@ -218,7 +218,7 @@ assert old in t, "未找到 stderr 分流捕获点（夹具写集漂移）"
 p.write_text(t.replace(old, '2>/dev/null | head -1', 1), encoding="utf-8")  # swallow-ok: 变异注入的**被测字符串**字面量（本行不吞任何错误）
 print("M3 注入: 恢复丢弃 stderr（吞掉 RESOLVER-ANCHOR 标记）", file=sys.stderr)  # swallow-ok: 注入日志文本，改写后不含被扫字面量
 PYM3
-RC_M3=$(rc_of "$SB_M3" "$SB_M3/scripts/commit-msg-check.sh" 'chore(D1223): 分支锚点冲突探针' 'tests/z.test.sh' 1)
+RC_M3=$(rc_of "$SB_M3" "$SB_M3/scripts/commit-msg-check.sh" 'chore(D1230): 分支锚点冲突探针' 'tests/z.test.sh' 1)
 if [ "$RC_M3" -ne 1 ]; then
   ok "变异体 M3 R4 冲突检查被删: C6 已翻转（exit=$RC_M3 ≠ 1）⇒ 夹具对劫持面复开有判别力"
 else

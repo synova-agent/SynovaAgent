@@ -35,6 +35,6 @@
 
 ## 关联
 
-- 卡：D1223（② 件）／父 #1224（D-C）／栈基 #1291
+- 卡：D1230（② 件）／父 #1224（D-C）／基线 origin/main（含 ① 件 #1303）
 - 夹具：`tests/control-tower/commit-msg-issue-form.test.sh`（C1-C7 + 接线×4 + 变异体 M1/M2/M3 + 对照组×2）
 - 遗留承接：D-D 线（`merge_writeset_gate.py` 的 `infer_did()` 顺位）
