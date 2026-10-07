@@ -1,0 +1,16 @@
+# .claude/claims/1350.yaml — #1350 本体边体系提案（目标层级边 + 计划边 ⇒ 词表 55→57）的写集声明（S0 源）
+#
+# 为什么用 claim：`alloc-task-id.sh` 已 DEPRECATED（创始人 2026-10-08 批准 · U5）——
+# 新任务一律以 **issue 号**作身份（GitHub 全局分配 ⇒ 撞号类别消失）。本任务是提案文档，
+# 无 D# ⇒ 走 `.claude/claims/<issue>.yaml`（D-C 归一后的 issue 号声明源）。
+#
+# 依据：R8 / R17 / R23（`#1317` CTO 裁定台账）；本 claim 只列**本 PR 真正改动**的文件。
+writeset:
+  - .claude/claims/1350.yaml
+  - .claude/task-briefs/2026-10-08-1350-edge-vocab-proposal.md
+  - docs/synova/coordination/提案/本体边体系-目标层级边与计划边-20261008.md
+done:
+  - verify: bash scripts/control-tower/check-ontology-fields.sh
+  - verify: bash -c 'n=$(git diff --name-only origin/main...HEAD | grep -c "^extensions/ontology/edge-types/" || true); echo "edge-types 越界文件数=$n"; [ "$n" = "0" ]'
+  - verify: bash -c 'git diff --name-only origin/main...HEAD'
+note: 本 PR **只新增一份提案文档 + 本任务的身份载体**；零代码、零 edge-types JSON 改动（落地是 #1290/#1316 的活）。K3 → CTO 裁定前不落地。
