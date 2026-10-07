@@ -93,6 +93,36 @@ face_total() {  # 台账登记的发现面总数下界（`# FACE-TOTAL=<n>`，�
   ' "$BASELINE" 2>/dev/null | tr -d '[:space:]'   # swallow-ok: 台账不可读已在上游 -f 校验；空=未设下界（不设即不判）
 }
 
+_days_since() {   # $1=<YYYY-MM-DD> → 距今天数（BSD `date -j -f` / GNU `date -d` 双形态；都不可用 ⇒ 打印 -1）
+  local d="$1" then_s="" now_s=""
+  now_s="$(date -u +%s 2>/dev/null || echo "")"
+  then_s="$(date -u -j -f "%Y-%m-%d" "$d" +%s 2>/dev/null || true)"      # swallow-ok: BSD 形态；失败走 GNU 形态
+  [ -n "$then_s" ] || then_s="$(date -u -d "$d" +%s 2>/dev/null || echo "")"   # swallow-ok: GNU 形态；失败交下一行显式报 -1
+  if [ -z "$then_s" ] || [ -z "$now_s" ]; then printf '%s' "-1"; return 0; fi
+  printf '%s' "$(( (now_s - then_s) / 86400 ))"
+}
+
+scan_face_at() {   # $1=<git ref>；在**同一树尺度**下数发现面内测试（不 checkout ⇒ 与工作树测量同口径）
+  #   #1227/D1227（卡 #1300）: 「越线者付账」判据要求 scan(base) 与 scan(PR) **同一次运行内测量**——
+  #   跨运行比较会假红（实测: CI 面 152 vs 本地 150）。此处纯 tree 计数 ⇒ 与 scan_face 同尺度。
+  local ref="$1"
+  [ -n "$ref" ] || return 1
+  git -C "$ROOT" rev-parse -q --verify "${ref}^{commit}" >/dev/null 2>&1 || return 1
+  git -C "$ROOT" ls-tree -r --name-only "$ref" 2>/dev/null \
+    | grep -E '^tests/(control-tower|doc-system)/.*\.test\.(sh|py)$' | wc -l | tr -d ' \r'
+}
+
+inherited_since() {   # 台账单行载体 `# INHERITED-OVER-CAP-SINCE=<YYYY-MM-DD>`（缺省空 = 未登记继承态）
+  awk '
+    /^[[:space:]]*#[[:space:]]*INHERITED-OVER-CAP-SINCE=/ {
+      line = $0
+      sub(/^[[:space:]]*#[[:space:]]*INHERITED-OVER-CAP-SINCE=/, "", line)
+      if (match(line, /[0-9]{4}-[0-9]{2}-[0-9]{2}/)) { seen = 1; v = substr(line, RSTART, RLENGTH) }
+    }
+    END { if (seen) printf "%s", v; else printf "" }
+  ' "$BASELINE" 2>/dev/null | tr -d '[:space:]'   # swallow-ok: 台账不可读已在上游 -f 校验；空=未登记
+}
+
 slack_cap() {   # 余量上限（`# SLACK-CAP=<n>`，缺省空 = 不设上限）——#1227 跟进件（Lead 裁 N=10）
   awk '
     /^[[:space:]]*#[[:space:]]*SLACK-CAP=/ {
@@ -150,8 +180,48 @@ case "$MODE" in
       echo "SEALED-TESTS: 余量 slack=${SLACK}（scan=${SCAN_N} − FACE-TOTAL=${FLOOR}）—— **≤ 该余量的净删除不可检测**（已知代价，见契约）" >&2
       CAP="$(slack_cap)"
       if [ -n "$CAP" ] && [ "$SLACK" -gt "$CAP" ]; then
-        echo "SEALED-TESTS: 余量 ${SLACK} > 上限 SLACK-CAP=${CAP} —— 请显式上调 # FACE-TOTAL（并同批上调 # SLACK-CAP，一行、低频）；禁止自动上调（会使棘轮失效）" >&2
-        VIOL=1
+        # 🔴 D1227（卡 #1300，Lead 2026-10-07 改版）**越线者付账**:
+        #   slack_before ≤ CAP ∧ slack_after > CAP ⇒ **红**（本 PR 让余量越线 = 增长的唯一来源）
+        #   否则 slack_after > CAP ⇒ **warning**（纯继承态；登记载体 `# INHERITED-OVER-CAP-SINCE=`）
+        #   —— 旧口径（纯继承也红）会让**一张无关 PR 承担全批解阻塞**，合并序被棘轮绑架（本轮实测三张同冲突）。
+        BASE_REF_SEAM="${SYNO_BASE_REF:-}"
+        if [ -z "$BASE_REF_SEAM" ]; then
+          # 禁静默：未给 base ⇒ 不判越线（退化现状语义），但**显式打印**
+          echo "SEALED-TESTS: 未给 base（SYNO_BASE_REF 空）⇒ 不判『越线』，按现状语义处理（余量 > 上限即红）" >&2
+          echo "SEALED-TESTS: 余量 ${SLACK} > 上限 SLACK-CAP=${CAP} —— 请显式上调 # FACE-TOTAL；禁止自动上调（会使棘轮失效）" >&2
+          VIOL=1
+        else
+          BASE_N="$(scan_face_at "$BASE_REF_SEAM" 2>/dev/null || echo "")"
+          if [ -z "$BASE_N" ]; then
+            echo "SEALED-TESTS: base ref 不可解析（SYNO_BASE_REF=${BASE_REF_SEAM}）⇒ 不判『越线』；按现状语义处理（禁静默降级）" >&2
+            echo "SEALED-TESTS: 余量 ${SLACK} > 上限 SLACK-CAP=${CAP} —— 请显式上调 # FACE-TOTAL" >&2
+            VIOL=1
+          else
+            SLACK_BEFORE=$((BASE_N - FLOOR))
+            echo "SEALED-TESTS: 越线判定 base=${BASE_REF_SEAM} base_scan=${BASE_N} base_slack=${SLACK_BEFORE} ／ pr_scan=${SCAN_N} pr_slack=${SLACK}（同一运行内测量）" >&2
+            if [ "$SLACK_BEFORE" -le "$CAP" ]; then
+              echo "SEALED-TESTS: 余量 ${SLACK} > 上限 SLACK-CAP=${CAP} 且 **本 PR 使余量越线**（base_slack=${SLACK_BEFORE} ≤ ${CAP}）—— 请显式上调 # FACE-TOTAL（一行、低频）；禁止自动上调（会使棘轮失效）" >&2
+              VIOL=1
+            else
+              # 纯继承态: warning + 载体；载体缺失 ⇒ 打印可粘贴行；载体超期 ⇒ 升级为红（N=14 天，Lead 裁）
+              SINCE="$(inherited_since)"
+              if [ -z "$SINCE" ]; then
+                echo "::warning title=sealed-ratchet::继承 over-cap main（base_slack=${SLACK_BEFORE} > SLACK-CAP=${CAP}，本 PR 未越线）—— 请补登记行: # INHERITED-OVER-CAP-SINCE=$(date -u +%Y-%m-%d)（可直接粘贴到台账）" >&2
+                echo "SEALED-TESTS: 继承态未登记载体 ⇒ 打印可粘贴行（**不自动写台账**，防削弱棘轮）: # INHERITED-OVER-CAP-SINCE=$(date -u +%Y-%m-%d)" >&2
+              else
+                _age_days="$(_days_since "$SINCE")"
+                echo "::warning title=sealed-ratchet::继承 over-cap main 已登记（since=${SINCE}，本 PR 未越线）—— 余量继续增长将升级为红" >&2
+                echo "SEALED-TESTS: 继承态登记 since=${SINCE}（年龄以天计，升级阈值 INHERITED-OVER-CAP-DAYS=${INHERITED_CAP_DAYS}）" >&2
+                if [ "$_age_days" = "-1" ]; then
+                  echo "SEALED-TESTS: 继承态年龄不可计算（date 形态不支持）⇒ 不升级为红；登记 since=${SINCE} 须人工核" >&2
+                elif [ "$_age_days" -gt "${INHERITED_CAP_DAYS:-14}" ]; then
+                  echo "SEALED-TESTS: 继承态已超期 ${_age_days} 天 > ${INHERITED_CAP_DAYS:-14} 天 ⇒ **升级为红**（请显式上调 # FACE-TOTAL 并删除该登记行）" >&2
+                  VIOL=1
+                fi
+              fi
+            fi
+          fi
+        fi
       fi
     fi
     # 隔离台账条目必须仍存在（条目失效 = 台账撒谎）
