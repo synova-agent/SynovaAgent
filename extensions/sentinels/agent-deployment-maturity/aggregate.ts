@@ -13,12 +13,35 @@ export const AgentDeploymentMaturitySentinel = {
 
     try {
       // @deprecated — 语义迁移由D15处理
-      if (traversal) { const r = traversal.traverse([tid], ['DEPLOYS']); if (!r.nodes[0]) return []; }
+      // #1387（机制③）：**无匹配边 ⇒ 退回旧路径 + 留痕**（照 business-model-coherence 的"带回退"模板）；
+      //   🔴 **留痕粒度边界（CTO 2026-10-08 裁）**：
+      //     ① 无匹配边 = "我走了备用路径"（**正常**）⇒ `log.warn` + 退回；**不置 `result.degraded`**
+      //     ② 退回后**也读空** = "我没有数据"（**降级**）⇒ 归 **#1379 V3** 规则 ⇒ 【那时才】置 `degraded`
+      //   ⇒ 故此处 warn 却不置 degraded：**前者该留痕不该降级，后者才该降级**（下一个人不必再问"为什么"）
+      if (traversal) {
+        try {
+          const r = traversal.traverse([tid], ['DEPLOYS']);
+          if (!r.nodes[0]) {
+            log.warn({ sentinelId: 'sentinel-agent-deployment-maturity', degraded: true, reason: 'traversal-no-edge', edge: 'DEPLOYS' },
+              '图遍历无匹配边 ⇒ 退回旧路径（store 读）；退回后若读空 ⇒ 按 #1379 V3 置 degraded');
+          }
+        } catch (err: unknown) {
+          log.warn({ err: err instanceof Error ? err.message : String(err), sentinelId: 'sentinel-agent-deployment-maturity', degraded: true, reason: 'traversal-error', edge: 'DEPLOYS' },
+            '图遍历失败 ⇒ 退回旧路径（不抛、不早退）');
+        }
+      }
       const agents = s.queryNodes("Agent",{tid});
       const tools = s.queryNodes("Tool",{tid});
       const monitoredAgents = agents.filter(a => a.props.monitored === true).length;
       const recentErrors = tools.filter(t => t.props.error === true || t.props.failing === true).length;
       const totalOps = tools.length || 1;
+      // #1387 + #1379 V3（CTO 裁定）：**退回后也读空 ⇒ 机制②（读空）** ⇒ 留痕 + 置 degraded + **不产出 metrics**
+      //   （不得让 compute 的默认值把『没有数据』算成一个分数 —— 那是**编造**，M3 防线）
+      if (agents.length === 0 && tools.length === 0) {
+        log.warn({ sentinelId: 'sentinel-agent-deployment-maturity', degraded: true, reason: 'empty-read', types: ['Agent','Tool'] },
+          '退回旧路径后仍读空 ⇒ 降级（无数据 ≠ 正常；不发 metrics）');
+        return { findings: [], metrics: [], degraded: true };
+      }
       const r = computeAgentDeploymentMaturity({
         agentCount: agents.length,
         autonomyLevel: 2,

@@ -1,0 +1,18 @@
+# .claude/claims/1387.yaml — #1387（traversal 早退守卫 · 机制③）B1 写集声明（D708 的 S0 源）
+#
+# CTO 2026-10-08 裁：**无匹配边 ⇒ 退回旧路径 + 留痕**（照 business-model-coherence 的"带回退"模板）；
+#   留痕粒度边界：① 无匹配边 = 走备用路径（正常）⇒ log.warn（不置 result.degraded）
+#                 ② 退回后也读空 = 没有数据（降级）⇒ 归 #1379 V3 ⇒ 那时才置 degraded
+writeset:
+  - .claude/claims/1387.yaml
+  - .claude/task-briefs/2026-10-08-1387-traversal-fallback-b1.md
+  - extensions/sentinels/agent-deployment-maturity/aggregate.ts
+  - extensions/sentinels/ai-ecosystem-fit/aggregate.ts
+  - extensions/sentinels/ai-investment-return/aggregate.ts
+  - tests/sentinel/traversal-fallback-b1.test.ts
+done:
+  - verify: npx vitest run tests/sentinel/traversal-fallback-b1.test.ts
+  - verify: npx vitest run tests/sentinel/ tests/store/ tests/l3/ tests/connectors/
+  - verify: test "$(git grep -c "traversal-no-edge" HEAD -- extensions/sentinels/agent-deployment-maturity/aggregate.ts | tr -d '\n')" -ge 1
+  - verify: npx tsc --noEmit
+note: B1 三哨兵（与 #1375 第一批对齐）改为"退回 + 留痕"；**旧静默早退零残留**（判据断言）。附带修复：空读不再让 compute 默认值编造分数（归 #1379 V3）。覆盖面 = 3/17（禁写"全部已改"）。
