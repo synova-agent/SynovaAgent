@@ -1,0 +1,18 @@
+{
+ "evidence_id": "D1204/A-02",
+ "task": "承接就位 + 1:1 对账（承接先于移出 = D1050-B2 范式）",
+ "produced_at_utc": "2026-10-07T13:46:57.727Z",
+ "archive_repo": "/Users/wane/Synova-过程档案",
+ "dest_root": "/Users/wane/Synova-过程档案/出库-主仓",
+ "total": 122,
+ "newly_copied": 111,
+ "preexisting_identical": 10,
+ "conflicts_not_overwritten": 1,
+ "conflict_paths": [
+  "docs/synova/archive/SYNOVA-IMPL-哨兵计算本体映射-v3-20260703.html"
+ ],
+ "index_row_appended": true,
+ "note": "经创始人批准提权执行；本程仅复制+登记，未删主仓任何文件",
+ "archive_commit": "f3ae481da9ce710522347f8726bab6dd1b2a1b5d",
+ "commit_message": "docs(D1204): Batch A 出库承接 121 件（逐件 sha256 1:1 对账）"
+}

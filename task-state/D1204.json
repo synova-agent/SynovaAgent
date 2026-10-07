@@ -1,0 +1,11 @@
+{
+  "task_id": "D1204",
+  "title": "文档契约出库 Batch A（122 候选 → 承接入档 → 主仓移出 121 件）",
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-07",
+  "updated_by": "dsh"
+}
