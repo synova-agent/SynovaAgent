@@ -594,6 +594,18 @@ _brief_generation_failed() {
 if [ -n "${NEW_ID:-}" ] && [ ! -f "$BRIEF_FILE" ]; then
   mkdir -p "$BRIEF_DIR" || _brief_generation_failed "目录创建失败: $BRIEF_DIR"
   cat > "$BRIEF_FILE" <<SKEL || _brief_generation_failed "写入失败: $BRIEF_FILE"
+<!--
+🔴 DEPRECATED 提示（U5，创始人 2026-10-08 批准）—— 本 brief 由 alloc-task-id.sh 生成，而该脚本已弃用。
+   弃用理由: 它读【本机 watermark】⇒ 跨机/并行 session **必然撞号**（6 个独立目击者，含 Lead 本人
+             与 WIN 侧"5 个号全被占 ⇒ 多花 3 轮 CI、重开 4 次 PR"）；撞号后果 = D708 声明源多命中
+             ⇒ exit 2 fail-closed ⇒ 整条 PR 卡死。
+   替代方案: **用 issue 号作身份**（GitHub 全局分配 ⇒ 撞号类别直接消失）：
+             PR 正文引用 #<issue> + .claude/claims/<issue>.yaml 作声明载体。
+             （注: 本行刻意不用反引号 —— 本 heredoc 未加引号，反引号会被当【命令替换】执行 ⇒ 文案被吞）
+   迁移期:   本脚本仍可用（不硬失败），但**新任务不应再取 D#**；完整迁移随 D-C 一次性通告。
+   为何写在这里（而非只打 stderr）: **产物即文档** —— 与调用环境（终端/脚本/CI）无关，
+             且这是 worker 第一眼会读到的文件；stderr 提示仅在交互终端可见（TTY 门控）。
+-->
 # Task Brief: ${NEW_ID} ${TITLE}
 
 > 生成: $(date +%Y-%m-%d) | 任务: ${NEW_ID} | 认领: <agent>
