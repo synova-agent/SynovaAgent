@@ -1,7 +1,7 @@
 {
   "task_id": "D1018",
   "title": "P0定位-密封测试挂点",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": ".claude/task-briefs/2026-09-26-D1018-P0定位-密封测试挂点.md",
   "impl": null,
   "audit": null,

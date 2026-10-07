@@ -1,7 +1,7 @@
 {
   "task_id": "D1003",
   "title": "文档/产物治理：Windows 工具陷阱固化（docs/tools.md）+ A 类一次性产物清理登记（18 件，跨域拆单）",
-  "status": "claimed",
+  "status": "impl_done",
   "risk": "low",
   "domain": "win",
   "owner_side": "win",

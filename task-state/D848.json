@@ -1,7 +1,7 @@
 {
   "task_id": "D848",
   "title": "账本漂移门禁：证据/状态变更合并后必须重算 ledger 派生器（K3 D815 P1 归因）",
-  "status": "claimed",
+  "status": "impl_done",
   "risk": "high",
   "spec": "K3 审计 D815（docs/synova/audit-reports/2026-09-18-K3-line10.md）P1：main 已提交的 ledger.json（5b1df207）停留在线10=1/6，而 D803 证据 09-17 已合入 → 派单背景数字靠人转述而非账本自证。CTO 独立复算：跑派生器后线10 = 6/6、全局 v1_passed 25→27（degraded=false）——即账本可由机器重算，只是**没人/没机制在证据合并后重跑**。",
   "write_set": [

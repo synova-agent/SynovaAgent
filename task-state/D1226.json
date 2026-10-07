@@ -1,7 +1,7 @@
 {
   "task_id": "D1226",
   "title": "夹具判别力机器防线：禁用 grep -qv 逐行取反（自指变异体同类第 2 次）",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": null,
   "impl": null,
   "audit": null,

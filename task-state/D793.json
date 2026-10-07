@@ -1,7 +1,7 @@
 {
  "task_id": "D793",
  "title": "项目管理方案：26 线 V1 验收标准（断言版）+ 四视图派生器（S0a/S0b/S2）",
- "status": "claimed",
+ "status": "impl_done",
  "spec": "docs/synova/project/26线-V1验收标准-草案v0.1-20260917.md",
  "impl": null,
  "audit": null,

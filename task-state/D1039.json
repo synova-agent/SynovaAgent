@@ -1,7 +1,7 @@
 {
   "task_id": "D1039",
   "title": "A4-CI成本收口 — control-tower-tests 按需跑（ci.yml 路径门控 + 可测分类器）",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": ".claude/task-briefs/2026-09-28-D1039-A4-CI成本收口.md",
   "impl": null,
   "audit": null,

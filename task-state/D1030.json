@@ -1,7 +1,7 @@
 {
   "task_id": "D1030",
   "title": "CT系列-门禁推断随机性根治（CT-C P0 + CT-A2 多命中 fail-closed + CT-D 豁免粒度 + CT-D2 doc-registry CI fail-open）",
-  "status": "claimed",
+  "status": "impl_done",
   "risk": "high",
   "domain": "mac",
   "owner": "mac-coding",

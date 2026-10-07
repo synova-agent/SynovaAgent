@@ -1,7 +1,7 @@
 {
   "task_id": "D720",
   "title": "四线派单 brief 落 main（D715-D718 由骨架填实）+ 主树残留判定",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": null,
   "impl": null,
   "audit": null,

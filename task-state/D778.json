@@ -1,7 +1,7 @@
 {
   "task_id": "D778",
   "title": "交付物复核门禁：派单文档 pre-commit 强制 pre-dispatch-check + CTO 交付三件套固化",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": "docs/synova/coordination/编码指令-D778-派单复核门禁-20260915.md",
   "impl": null,
   "audit": null,

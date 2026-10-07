@@ -1,7 +1,7 @@
 {
   "task_id": "D854",
   "title": "D811 条件闭环 + CT-70 立卡（tests/project 在 CI 上是绿色假象）",
-  "status": "claimed",
+  "status": "impl_done",
   "risk": "high",
   "spec": "D811 CTO 验收退回态：(1) 报告写 pr-queue.json 在 docs/synova/coordination/，实测在 docs/synova/project/；(2) ledger 快照 queue_length=46 陈旧（现 40）→ 与 D848 同族；(3) 团队自曝 CT-70：tests/project/** 在 ci.yml 命中 0 → 46 条断言不在 CI 跑，必须立卡修复。",
   "write_set": [

@@ -1,7 +1,7 @@
 {
   "task_id": "D1004",
   "title": "js-yaml 未声明依赖收口（package.json 只声明 @types，运行时包缺失）",
-  "status": "claimed",
+  "status": "impl_done",
   "risk": "low",
   "domain": "win",
   "owner_side": "win",

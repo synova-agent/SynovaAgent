@@ -1,7 +1,7 @@
 {
   "task_id": "D1059",
   "title": "宪章格子升四问（48→64）+ 生成器对齐 + D963 规格更新",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": ".claude/task-briefs/2026-09-29-D1059-宪章格子升四问-64格-生成器对齐.md",
   "impl": null,
   "audit": null,

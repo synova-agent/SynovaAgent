@@ -1,7 +1,7 @@
 {
   "task_id": "D758",
   "title": "证据目录域判定豁免（D734 假阳性修复）",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": ".claude/task-briefs/2026-09-15-D758-evidence-domain-neutral.md",
   "impl": null,
   "audit": null,

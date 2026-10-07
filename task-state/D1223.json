@@ -1,7 +1,7 @@
 {
   "task_id": "D1223",
   "title": "全目录扫描：17 个文件存「变量吞全角括号」在 set -u 下崩溃（掩盖真实失败信息）",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": null,
   "impl": null,
   "audit": null,

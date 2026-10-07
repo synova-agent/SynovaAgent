@@ -1,7 +1,7 @@
 {
   "task_id": "D1023",
   "title": "CI docs-only 白名单补全 + P1 补修（.gitattributes/.gitmodules 移出、锚定分层注释、判别性夹具）",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": ".claude/task-briefs/2026-09-26-D1023-ci-docsonly-whitelist.md",
   "impl": null,
   "audit": null,

@@ -1,7 +1,7 @@
 {
   "task_id": "D1016",
   "title": "阶段1-K3输入集异机复跑",
-  "status": "claimed",
+  "status": "impl_done",
   "spec": ".claude/task-briefs/2026-09-26-D1016-阶段1-K3输入集异机复跑.md",
   "impl": null,
   "audit": null,

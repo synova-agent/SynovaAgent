@@ -1,5 +1,5 @@
 {
- "status": "claimed",
+ "status": "impl_done",
  "spec": "派单 §B.1（判据可枚举，无需 dev doc）",
  "impl": null,
  "audit": null,
