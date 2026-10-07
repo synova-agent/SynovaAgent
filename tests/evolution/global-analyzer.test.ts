@@ -8,7 +8,7 @@
  *
  * 变异体锚点（改坏即红）:
  *   M3-12 —— 把「自动枚举 org」退回单组织（例如退回 ['default']）⇒ E2 首个用例的
- *            orgsConsidered / patterns 断言立刻变红（见回执里的绿/红两段原始输出）。
+ *            orgsConsideredCount / patterns 断言立刻变红（见回执里的绿/红两段原始输出）。
  *
  * 导入路径说明: index.ts 不在 K6/3-12 写集内（不越界改文件），故新增 API 走源文件深路径导入。
  */
@@ -183,12 +183,12 @@ describe('global-analyzer', () => {
       const result: CrossCustomerDiscoveryResult = await discoverCrossCustomerPatterns(store);
 
       // 变异体 M3-12 锚点: 枚举账目必须等于被枚举到的 3 个组织
-      expect(result.orgsConsidered).toEqual(['org-1', 'org-2', 'org-3']);
+      expect(result.orgsConsideredCount).toBe(3);
       expect(result.degraded).toBe(false);
       expect(result.patterns).toHaveLength(1);
       expect(result.patterns[0].sentinelId).toBe('F1_KZ');
       expect(result.patterns[0].orgCount).toBe(3);
-      expect(result.patterns[0].orgIds).toEqual(['org-1', 'org-2', 'org-3']);
+      expect('orgIds' in result.patterns[0]).toBe(false);
       expect(result.patterns[0].patternId).toBe('xcp_F1_KZ');
     });
 
@@ -207,7 +207,7 @@ describe('global-analyzer', () => {
         minOrgs: 2,
       });
 
-      expect(result.orgsConsidered).toEqual(['org-a', 'org-b', 'org-c']);
+      expect(result.orgsConsideredCount).toBe(3);
       expect(result.degraded).toBe(false);
       expect(result.patterns.map(p => p.sentinelId)).toEqual(['F1_KZ', 'T2_connector_coverage']);
       expect(result.patterns[0].orgCount).toBe(3);
@@ -229,7 +229,7 @@ describe('global-analyzer', () => {
         orgEnumerator: async () => ['org-1', 'org-2', 'org-3'],
       });
 
-      expect(result.orgsConsidered).toEqual(['org-1', 'org-2', 'org-3']);
+      expect(result.orgsConsideredCount).toBe(3);
       expect(result.patterns).toHaveLength(1);
       expect(listOrgsCalls).toBe(0);
     });
@@ -248,7 +248,7 @@ describe('global-analyzer', () => {
       const result = await discoverCrossCustomerPatterns(store);
 
       expect(result.degraded).toBe(true);
-      expect(result.orgsFailed).toEqual(['org-broken']);
+      expect(result.orgsFailedCount).toBe(1);
       expect(result.patterns).toHaveLength(1);
       expect(result.patterns[0].orgCount).toBe(3);
     });
@@ -261,7 +261,7 @@ describe('global-analyzer', () => {
       });
 
       expect(result.degraded).toBe(true);
-      expect(result.orgsConsidered).toEqual([]);
+      expect(result.orgsConsideredCount).toBe(0);
       expect(result.patterns).toEqual([]);
     });
 
@@ -273,7 +273,7 @@ describe('global-analyzer', () => {
       const result = await discoverCrossCustomerPatterns(store);
 
       expect(result.degraded).toBe(true);
-      expect(result.orgsConsidered).toEqual([]);
+      expect(result.orgsConsideredCount).toBe(0);
       expect(result.patterns).toEqual([]);
     });
 
@@ -283,7 +283,7 @@ describe('global-analyzer', () => {
       const result = await discoverCrossCustomerPatterns(store);
 
       expect(result.degraded).toBe(true);
-      expect(result.orgsConsidered).toEqual([]);
+      expect(result.orgsConsideredCount).toBe(0);
       expect(result.patterns).toEqual([]);
     });
 
@@ -314,7 +314,7 @@ describe('global-analyzer', () => {
 
       const result = await discoverCrossCustomerPatterns(store);
 
-      expect(result.orgsConsidered).toEqual(['org-1', 'org-2', 'org-3']);
+      expect(result.orgsConsideredCount).toBe(3);
       expect(result.unparsableEntries).toBe(2);
       expect(result.patterns).toHaveLength(1);
     });
@@ -538,3 +538,44 @@ function fedStat(sentinelId: string, orgCount: number, median: number): PerSenti
     p75: median + 0.1,
   };
 }
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// D1195 / P0-1: 跨客户标识**不外泄**（k-匿名）—— 创始人红线「A 客户不能读 B 客户数据」
+//
+// 判据（改坏即红）：把结果整体 JSON 序列化后，**不得出现任何一个客户标识**；
+//   且 patterns[] 里不存在 orgIds 字段、evidence 字符串里也不含标识。
+//   改回旧实现（回传 orgIds / orgsConsidered 明文）⇒ 本用例必红。
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('D1195/P0-1: 跨客户标识不外泄（k-匿名）', () => {
+  it('返回体序列化后不含任何客户标识（orgIds / orgsConsidered / orgsFailed 均不得明文）', async () => {
+    const ORGS = ['tenant-alpha', 'tenant-beta', 'tenant-gamma'];
+
+    const result = await discoverCrossCustomerPatterns(
+      {
+        list: () => [{
+          value: JSON.stringify({ sentinelId: 'F1_KZ' }),
+          tags: ['user_correction'],
+          type: 'enterprise_fact',
+          key: 'k1',
+        }],
+        listOrgs: () => ORGS,
+      },
+      { minOrgs: 3 },
+    );
+
+    // 功能仍成立：3 个客户 ⇒ 1 条模式
+    expect(result.patterns.length).toBe(1);
+    expect(result.patterns[0].orgCount).toBe(3);
+    expect(result.orgsConsideredCount).toBe(3);
+
+    // 🔴 隔离判据：整个返回体序列化后不得出现任一客户标识
+    const serialized = JSON.stringify(result);
+    for (const orgId of ORGS) {
+      expect(serialized).not.toContain(orgId);
+    }
+    expect('orgIds' in result.patterns[0]).toBe(false);
+    expect(result.patterns[0].evidence).not.toContain('tenant-');
+  });
+});
