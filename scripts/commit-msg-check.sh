@@ -107,7 +107,25 @@ if [ -n "$STAGED_LIST" ]; then
   # 捕获 rc: 失败且无 brief → 显式 degraded 提示（dev doc §4: 提示+跳过可追溯,
   # 不再静默放行）
   CLAIM_RC=0
-  CLAIM_BRIEF=$(bash "$MSG_DIR/workflow/resolve-commit-brief.sh" "$STAGED_LIST" 2>/dev/null | head -1) || CLAIM_RC=$? # swallow-ok: resolver 失败 → degraded 提示（dev doc §3.2）
+  # D1230/②（K3 R4「分支名劫持」· 提交端半边）: 解析器把"身份来自最弱锚点（分支名）"这一事实
+  #   打到 **stderr**（stdout 契约不变）⇒ 本处必须**分流捕获**（旧实现把 stderr 整段丢弃 ⇒ 标记被吞，
+  #   于是"分支名锚点"与"认领身份"在消费侧不可区分 = 劫持面不可见）。
+  RESOLVER_ERR="$(mktemp)"  # 收敛: 无论下游如何分支，函数末尾统一清理
+  CLAIM_BRIEF=$(bash "$MSG_DIR/workflow/resolve-commit-brief.sh" "$STAGED_LIST" 2>"$RESOLVER_ERR" | head -1) || CLAIM_RC=$? # swallow-ok: resolver 失败 → degraded 提示（dev doc §3.2）；stderr 已落文件（不丢诊断）
+  ANCHOR_MARK="$(grep -m1 '^RESOLVER-ANCHOR:' "$RESOLVER_ERR" 2>/dev/null || true)"  # swallow-ok: 无标记 = 身份非分支锚点（正常路径），下方面向标记判分支
+  if echo "$ANCHOR_MARK" | grep -q 'source=branch-anchor'; then
+    # ── R4 fail-closed: 分支名（最弱锚点）与**提交消息声明**冲突 ⇒ 绝不静默采信任一方 ──
+    # 口径: 分支名只作最弱锚点；身份以「提交消息声明」为准，冲突即阻断并给出两条修复路径。
+    ANCHOR_DID=$(printf '%s' "$ANCHOR_MARK" | grep -oE 'd=[Dd][0-9]+' | head -1 | sed 's/^d=//' | tr 'a-z' 'A-Z' || true)  # swallow-ok: 提不到 → 空，下方条件自然短路（不误伤）
+    if [ -n "$MSG_DID" ] && [ -n "$ANCHOR_DID" ] && [ "$MSG_DID" != "$ANCHOR_DID" ]; then
+      echo -e "${RED}❌ D1230/R4: 分支名锚点(${ANCHOR_DID})与提交消息声明(${MSG_DID})冲突 — 疑似分支名劫持${RESET}"
+      echo "   身份最弱锚点 = 分支名（只补\"无任何 brief 认领暂存文件\"的空档，不得覆盖消息声明）"
+      echo "   锚点 brief: $CLAIM_BRIEF"
+      echo "   修复二选一: ①改分支名到本任务号；②消息声明改与分支一致（或补齐本任务的 brief 认领）"
+      rm -f "$RESOLVER_ERR" 2>/dev/null || true
+      exit 1
+    fi
+  fi
   if [ -n "$CLAIM_BRIEF" ] && [ -f "$CLAIM_BRIEF" ] && [ -n "$PYBIN" ]; then
     # 防假阳性: 仅当 resolver 返回的 brief 真实认领了 ≥1 个暂存文件才比较 D#；
     # 走最终回退（无真实认领）时跳过——未认领场景由 G12 兜底阻断。
@@ -156,6 +174,7 @@ print(1 if any(match_path(s, p) for s in staged for p in inc) else 0)
   elif [ "$CLAIM_RC" != 0 ]; then
     echo -e "${YELLOW}⚠ D328 一致性检查 degraded: 认领 brief 解析失败（resolver rc=${CLAIM_RC}），本次跳过${RESET}"
   fi
+  rm -f "$RESOLVER_ERR" 2>/dev/null || true
 fi
 
 # ── D395-a + D534: Note 引用门禁（非平凡变更的 commit 须引用 Note）──
