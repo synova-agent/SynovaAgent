@@ -31,7 +31,18 @@ if a=$("$PYBIN" scripts/control-tower/check-dsh-anchor.py --repo . 2>&1); then l
 else rc=$?; line "❌ DSH 断面: $(echo "$a"|tail -1) (rc=$rc)"; red=1; fi
 # 2) 卡状态
 tot=$(ls task-state/D*.json 2>/dev/null | wc -l | tr -d ' ')
-line "卡总数: ${tot:-0}（在制按 task-state+worktree 判定）"
+# E4（K3 R6 禁静默空白）: 迁移期新任务声明在 .claude/claims/，不进 task-state。
+#   只数 task-state = 卡总数停在存量而**看不出来**（静默空白）⇒ 并列显示 + 显式迁移期标识。
+_mig=""
+if [ -d .claude/claims ]; then
+  _nc=$("$PYBIN" scripts/control-tower/claim_store.py --count 2>/dev/null || echo "?")  # swallow-ok: 计数失败 → 打出 ? 与降级文案（不静默当 0）
+  case "$_nc" in
+    ''|*[!0-9]*) _mig=" + claim ?（计数降级: claim_store 不可用，**非 0**）｜[迁移期] 本视图含 task-state 存量（旧 D# 只读）；新任务在 .claude/claims/" ;;
+    0) _mig="" ;;
+    *) _mig=" + claim ${_nc}｜[迁移期] 本视图含 task-state 存量（旧 D# 只读）；新任务在 .claude/claims/" ;;
+  esac
+fi
+line "卡总数: ${tot:-0}${_mig:-（在制按 task-state+worktree 判定）}"
 # 3) 工作树（在制槽位）
 wt=$(git worktree list 2>/dev/null | wc -l | tr -d ' ')
 line "工作树数: ${wt:-0}"
