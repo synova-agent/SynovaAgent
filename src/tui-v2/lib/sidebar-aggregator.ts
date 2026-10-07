@@ -4,7 +4,7 @@
  * 收拢 4 路数据源 → 生成不可变 SidebarSnapshot → SidePanel 纯渲染。
  *
  * 数据源:
- *   goals:     BriefingGenerator → GraphStore.queryNodes('Goal')
+ *   goals:     BriefingGenerator → GraphStore.queryNodes('GOAL')
  *   obstacles: DiagnosisEvent.findings → 去重合并
  *   experts:   DiagnosisEvent + ExpertRouter 状态
  *   legacy:    DiagnosisEvent.alerts → 历史追踪

@@ -1,0 +1,20 @@
+# .claude/claims/1379.yaml — #1379（遗留轴内一致性：读写匹配）写集声明（D708 的 S0 源）
+#
+# 依据：CTO 2026-10-08 改判 X —— 【一致 = 读写匹配】（可判、有功能收益）；Y（轴内单一风格）并入 #1381。
+writeset:
+  - .claude/claims/1379.yaml
+  - .claude/task-briefs/2026-10-08-1379-legacy-axis-consistency.md
+  - src/sentinel/adapters/goal-alignment-sentinel.ts
+  - src/sentinel/adapters/cash-flow-sentinel.ts
+  - src/l3/briefing-generator.ts
+  - src/l3/business-model-canvas.ts
+  - src/routes/chat.ts
+  - src/tui-v2/chat.tsx
+  - src/tui-v2/lib/sidebar-aggregator.ts
+  - tests/sentinel/type-casing.test.ts
+done:
+  - verify: npx vitest run tests/sentinel/type-casing.test.ts
+  - verify: npx vitest run tests/sentinel/ tests/store/
+  - verify: test "$(git grep -nE "type *= *'TEAM'|queryNodes\('Goal'|type *= *'Goal'" HEAD -- src/ extensions/ | grep -vE ':[0-9]+:[[:space:]]*(\*|//)' | wc -l)" -eq 0
+  - verify: npx tsc --noEmit
+note: X 范围 = 5 行修断链（'TEAM'→'Team' 1 处；'Goal'→'GOAL' 4 处）+ V3 空读必留痕（两处哨兵）+ 对照表判据（读侧字面量 ⇒ 同名写入者 or 无源登记）。孤轴（Financial/Tool/Risk/Capability/Evidence/Agent/Event/Client/Process）显式登记归 #1381。Y（轴内单一风格）并入 #1381，避免改两次。

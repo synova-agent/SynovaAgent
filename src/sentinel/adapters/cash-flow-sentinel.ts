@@ -80,6 +80,9 @@ export const cashFlowSentinel: Sentinel = {
       }
 
       if (rawEntries.length === 0) {
+        // #1379 V3：**能力在、数据读不到** ⇒ 显式 warn（不静默）
+        log.warn({ sentinelId: config.id, degraded: true, reason: 'empty-read', type: 'FINANCIAL' },
+          '读路径可用但 0 行 ⇒ 降级（静默空读会伪装成"无异常"；FNANCIAL 目前【无写入者】，见 #1381）');
         return { sentinelId: config.id, ok: true, findings: [], durationMs: Date.now() - startTime, checkedAt, degraded: true };
       }
 
