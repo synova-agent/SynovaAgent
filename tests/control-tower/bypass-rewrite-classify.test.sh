@@ -75,26 +75,59 @@ fi
 make_nonancestor "$TREE_A" "s" >/dev/null
 printf '%s|%s\n' "$A" "$(git -C "$SB" show -s --format=%ct "$A")" > "$SB/.claude/last-precommit-success"
 run_hook
-if mirror | grep -q 'suspected-rewrite head-mismatch' && mirror | grep -q 'suspect=same-tree-subject'; then
-  ok "② 重写·同 tree 同 subject ⇒ suspected-rewrite（suspect=same-tree-subject），记录保留可见"
+if mirror | grep -q 'suspected-rewrite head-mismatch' && mirror | grep -q 'suspect=tree-subject-match' && mirror | grep -q 'forgeable=0'; then
+  ok "② 重写·同 tree 同 subject ⇒ suspected-rewrite（suspect=tree-subject-match，**内容类 forgeable=0**）"
 elif mirror | grep -q 'detected-bypass'; then
   no "② 判成真绕过（误报未消）：$(mirror | tail -1)"
 else
   no "② 无记录写出（静默漏判）：$(mirror | tail -1)"
 fi
 
-# ── 用例 ③（边界）: rebase 进行中 ⇒ suspected-rewrite … suspect=in-progress（与内容无关）──
+# ── 用例 ③（边界）: rebase 进行中 + **佐证通过** ⇒ suspected-rewrite … suspect=rebase-state ──
+#   R1 收口（verifier P2）: 仅「目录存在」不算 —— 须 orig-head 存在且 marker 是其祖先。
 : > "$SB/.claude/bypass.log"
 mkdir -p "$SB/.git/rebase-merge"
+# orig-head = 重写前的分支头（A 的后代 ⇒ marker A 是它的祖先）✓ 佐证通过
+ORIG="$(cd "$SB" && git commit-tree "$TREE_OTHER" -p "$A" -m "pre-rewrite-head")"
+printf '%s\n' "$ORIG" > "$SB/.git/rebase-merge/orig-head"
 make_nonancestor "$TREE_OTHER" "yet-another-subject" >/dev/null
 run_hook
-rmdir "$SB/.git/rebase-merge" 2>/dev/null || true
-if mirror | grep -q 'suspected-rewrite head-mismatch' && mirror | grep -q 'suspect=in-progress'; then
-  ok "③ rebase 进行中 ⇒ suspected-rewrite（suspect=in-progress；按信号①判定）"
+rm -rf "$SB/.git/rebase-merge"
+if mirror | grep -q 'suspected-rewrite head-mismatch' && mirror | grep -q 'suspect=rebase-state' && mirror | grep -q 'kind=in-progress' && mirror | grep -q 'forgeable=1'; then
+  ok "③ rebase 进行中（orig-head 佐证通过）⇒ suspected-rewrite（suspect=rebase-state，forgeable=1）"
 elif mirror | grep -q 'detected-bypass'; then
-  no "③ rebase 进行中仍判真绕过（误报未消）：$(mirror | tail -1)"
+  no "③ 佐证通过的 in-progress 被判 detected（漏判重写）：$(mirror | tail -1)"
 else
   no "③ 无记录写出：$(mirror | tail -1)"
+fi
+
+# ── 用例 ⑤（R1 核心反例）: **陈旧** .git/rebase-merge 残留（无 orig-head）+ 真绕过 ⇒ 必须 detected ──
+#   旧实现只看目录存在 ⇒ 一条中断的 rebase 会把此后所有 mismatch 洗成 suspected（verifier 实测污染）。
+: > "$SB/.claude/bypass.log"
+mkdir -p "$SB/.git/rebase-merge"          # 残留目录（无 orig-head）
+make_nonancestor "$TREE_OTHER" "stale-dir-true-bypass" >/dev/null
+run_hook
+rm -rf "$SB/.git/rebase-merge"
+if mirror | grep -q 'detected-bypass head-mismatch'; then
+  ok "⑤ 陈旧 rebase-merge 残留（无佐证）+ 真绕过 ⇒ **detected-bypass**（不得降级为 suspected）"
+else
+  no "⑤ 陈旧残留把真绕过洗成 suspected（R1 未收口）：$(mirror | tail -1)"
+fi
+
+# ── 用例 ⑥（R1 核心反例）: 伪造佐证（orig-head 与 marker 无祖先关系）+ 真绕过 ⇒ 必须 detected ──
+: > "$SB/.claude/bypass.log"
+mkdir -p "$SB/.git/rebase-merge"
+( cd "$SB" && git checkout -q --orphan "fake-$RANDOM" && git rm -rq --cached . >/dev/null 2>&1; \
+  echo f > "fake-$RANDOM.txt" && git add -A && git commit -qm "unrelated-orig" ) >/dev/null 2>&1
+UNREL="$(git -C "$SB" rev-parse HEAD)"
+printf '%s\n' "$UNREL" > "$SB/.git/rebase-merge/orig-head"     # 佐证不成立: A 非 UNREL 祖先
+make_nonancestor "$TREE_OTHER" "forged-state-true-bypass" >/dev/null
+run_hook
+rm -rf "$SB/.git/rebase-merge"
+if mirror | grep -q 'detected-bypass head-mismatch'; then
+  ok "⑥ 伪造佐证（orig-head 与 marker 无祖先关系）+ 真绕过 ⇒ **detected-bypass**（不可用 mkdir 洗白）"
+else
+  no "⑥ 伪造佐证即把真绕过洗成 suspected（可绕过）：$(mirror | tail -1)"
 fi
 
 # ── 用例 ④（降级/分离）: gatekeeper 计数段 —— 只有 suspected ⇒ 不阻断；有确证 ⇒ 阻断 ──
@@ -110,9 +143,10 @@ run_gk() {   # $1 = bypass.log 内容 ; 输出 rc + stdout
   ( ROOT="$SB"; BYPASS_LOG="$logf"; TODAY="$TODAY"; unset SYNO_GATEKEEPER_ACK; . "$TMPD/gk.sh" ) 2>&1
   return $?
 }
-OUT="$(run_gk "${TODAY}T00:00:00Z suspected-rewrite head-mismatch marker=aaa parent=bbb suspect=in-progress")"; rc=$?
-if [ "$rc" -eq 0 ] && printf '%s' "$OUT" | grep -q 'suspected-rewrite（重写误报'; then
-  ok "④a 只有 suspected ⇒ **不阻断**（rc=0）且计数可见"
+OUT="$(run_gk "${TODAY}T00:00:00Z suspected-rewrite head-mismatch marker=aaa parent=bbb suspect=rebase-state kind=in-progress forgeable=1")"; rc=$?
+if [ "$rc" -eq 0 ] && printf '%s' "$OUT" | grep -q 'suspected-rewrite（重写误报' \
+   && printf '%s' "$OUT" | grep -q 'rebase-state=1' && printf '%s' "$OUT" | grep -q '可伪造类(forgeable=1)=1'; then
+  ok "④a 只有 suspected ⇒ **不阻断**（rc=0）且**按类可见**（rebase-state=1 / 可伪造类=1）"
 else
   no "④a suspected 仍阻断或无可见计数（rc=${rc}）：$(printf '%s' "$OUT" | tail -1)"
 fi

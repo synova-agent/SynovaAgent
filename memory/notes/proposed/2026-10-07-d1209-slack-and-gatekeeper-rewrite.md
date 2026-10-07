@@ -22,12 +22,20 @@
 ## 二、gatekeeper：重写 vs 真绕过
 
 - 病根: `post-commit.sh` 在 head 不一致时**一律**记 `detected-bypass`；`git rebase` 重放提交的 parent 必与 marker 的旧 HEAD 不同 ⇒ 误报（实测当日 8 条，人工 ACK 放行 2 次）。
-- 修法（两信号，命中任一即判「重写」）:
-  1. `in-progress`: `.git/{rebase-merge,rebase-apply,CHERRY_PICK_HEAD}` 存在（重写进行中）；
-  2. `same-tree-subject`: HEAD 与 marker 提交 **同 subject 同 tree**（纯重写副本：parent 变、内容未变）。
-- 记录形态: `suspected-rewrite head-mismatch marker=… parent=… suspect=<why>`；**记录保留、可 grep、可审计**（不静默漏判）。
+- 修法（三信号，按强度排序；**R1 收口 verifier P2 后加佐证**）:
+  1. `rebase-state`: `<.git/rebase-{merge,apply}>/orig-head` 存在 **且** marker 是该 orig-head 的祖先
+     （= 该会话确实在 marker 之后重放）—— **可伪造类（forgeable=1）**；
+  2. `cherry-pick-state`: `CHERRY_PICK_HEAD` 存在 **且** marker 是其祖先 —— **可伪造类（forgeable=1）**；
+  3. `tree-subject-match`: HEAD 与 marker 提交 **同 subject 同 tree**（纯重写副本）—— **内容类（forgeable=0）**。
+- 🔴 R1 收口原因（verifier P2）: 初版 `in-progress` **仅看目录存在** ⇒
+  ① 一次中断的 rebase 残留目录会把此后所有 mismatch 降级为 suspected；
+  ② `mkdir .git/rebase-merge` 一行即可把真 `--no-verify` 洗成 suspected ⇒ 阈值不触发（可绕过）。
+  收口 = **佐证 + 分类 + forgeable 标注**（两类字段使"可伪造类"可被单独统计与审计）。
+- 记录形态: `suspected-rewrite head-mismatch marker=… parent=… suspect=<why> forgeable=0|1`；
+  **记录保留、可 grep、可审计**（不静默漏判）；消费侧按类分开计数并显式打印 **可伪造类计数**。
 - 消费侧（`pre-commit-check.sh` GATEKEEPER-COUNT 段）**双计数**: 仅 `detected-bypass` 触发硬阻断/ACK 语义；`suspected-rewrite` 仅打印可见计数。
-- 退出条件: 若出现「真绕过被误分类为 suspected」的实证 ⇒ 立即收紧信号②（例如要求 tree 相同**且** diff 相同）或取消信号②只保留信号①。
+- 退出条件: 若出现「真绕过被误分类为 suspected」的实证 ⇒ 立即收紧信号③（例如要求 tree 相同**且** diff 相同）或取消状态类信号（1/2）只保留内容类（3）。
+- 判别性证据（夹具内自证）: 去掉佐证（回退到"只看目录存在"）⇒ 用例⑤（陈旧残留）与⑥（伪造佐证）**必红**；已实测。
 
 ## 三、回滚
 

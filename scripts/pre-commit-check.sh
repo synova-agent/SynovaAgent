@@ -308,8 +308,15 @@ if [ -f "$BYPASS_LOG" ] && [ "${GITHUB_ACTIONS:-}" != "true" ]; then
   #   只有确证行（detected-bypass）才触发原有的硬阻断/ACK 语义。
   BYPASS_COUNT=$(grep -c "${TODAY}.*detected-bypass" "$BYPASS_LOG" 2>/dev/null | tr -d '\n\r' || echo 0)
   SUSPECT_COUNT=$(grep -c "${TODAY}.*suspected-rewrite" "$BYPASS_LOG" 2>/dev/null | tr -d '\n\r' || echo 0)
+  # R1 收口（verifier P2）: 按类分开计数 + 标出**可伪造类**（forgeable=1，状态文件类 mkdir 即可伪造）
+  SUSPECT_RS=$(grep -c "${TODAY}.*suspected-rewrite.*suspect=rebase-state" "$BYPASS_LOG" 2>/dev/null | tr -d '\n\r' || echo 0)
+  SUSPECT_CP=$(grep -c "${TODAY}.*suspected-rewrite.*suspect=cherry-pick-state" "$BYPASS_LOG" 2>/dev/null | tr -d '\n\r' || echo 0)
+  SUSPECT_TS=$(grep -c "${TODAY}.*suspected-rewrite.*suspect=tree-subject-match" "$BYPASS_LOG" 2>/dev/null | tr -d '\n\r' || echo 0)
+  SUSPECT_FG=$(grep -c "${TODAY}.*suspected-rewrite.*forgeable=1" "$BYPASS_LOG" 2>/dev/null | tr -d '\n\r' || echo 0)
+  SUSPECT_KIND_IP=$(grep -c "${TODAY}.*suspected-rewrite.*kind=in-progress" "$BYPASS_LOG" 2>/dev/null | tr -d '\n\r' || echo 0)
+  SUSPECT_KIND_CT=$(grep -c "${TODAY}.*suspected-rewrite.*kind=content" "$BYPASS_LOG" 2>/dev/null | tr -d '\n\r' || echo 0)
   if [ "${SUSPECT_COUNT:-0}" -gt 0 ]; then
-    echo "[GATEKEEPER] 今日 ${SUSPECT_COUNT} 条 suspected-rewrite（重写误报：rebase/cherry-pick 重放提交）——台账保留，不计入确证绕过阈值"
+    echo "[GATEKEEPER] 今日 ${SUSPECT_COUNT} 条 suspected-rewrite（重写误报，台账保留、不计入确证绕过阈值）：kind=in-progress ${SUSPECT_KIND_IP}（rebase-state=${SUSPECT_RS} / cherry-pick-state=${SUSPECT_CP}）/ kind=content ${SUSPECT_KIND_CT}（tree-subject-match=${SUSPECT_TS}）；**可伪造类(forgeable=1)=${SUSPECT_FG}**"
   fi
   if [ "$BYPASS_COUNT" -gt 0 ]; then
     echo "[GATEKEEPER] 检测到今日 ${BYPASS_COUNT} 次 --no-verify 绕过记录"
