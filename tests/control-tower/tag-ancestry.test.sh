@@ -45,8 +45,11 @@ run_check() { # <repo> → OUT + EC
 # ── 场景A: 孤儿 tag（不可达提交）→ 不拦 ──
 RA="$TMPD/ra"; mk "$RA"
 git -C "$RA" -c user.name=t -c user.email=t@t commit -q --allow-empty -m feat
-ORPHAN=$(git -C "$RA" commit-tree $(git -C "$RA" rev-parse HEAD^{tree}) -m orphan-blob)
-git -C "$RA" tag V4.7.1 "$ORPHAN"   # 孤儿提交（非 HEAD 祖先、非 main 祖先）
+ORPHAN=$(git -C "$RA" -c user.name=t -c user.email=t@t commit-tree $(git -C "$RA" rev-parse HEAD^{tree}) -m orphan-blob)
+git -C "$RA" -c tag.gpgsign=false tag V4.7.1 "$ORPHAN"   # 孤儿提交（非 HEAD 祖先、非 main 祖先）
+# 夹具自证（D1243）: 该 tag 必须**真被创建** —— 否则「不拦」必然通过 ⇒ **假绿**
+#   （CI runner 无全局 git identity 时 `commit-tree` 返回空 ⇒ tag 建不成，本文件两处均踩过）
+if [ -z "$(git -C "$RA" tag -l V4.7.1)" ]; then no "夹具自身失真: 场景 A 孤儿 tag 未创建（假绿）"; else ok "场景 A 夹具自证: 孤儿 tag V4.7.1 已创建"; fi
 git -C "$RA" tag V9.9.9 refs/remotes/origin/main  # 正常版本 tag 在 main 上（隔离 D319，只测孤儿豁免）
 run_check "$RA"
 [ "$EC" -eq 0 ] && ok "孤儿 tag（V4.7.1 类）不拦本分支 push" || no "孤儿 tag 仍拦: EC=$EC"
@@ -95,7 +98,7 @@ mk_orphan() { # <dir> — base + origin/main + VERSION.md(V9.9.9) + feat + **同
   git -C "$R" update-ref refs/remotes/origin/main HEAD
   printf '## V9.9.9 (test)\n' > "$R/.codex/control-tower/VERSION.md"
   git -C "$R" -c user.name=t -c user.email=t@t commit -q --allow-empty -m feat
-  local O; O=$(git -C "$R" commit-tree "$(git -C "$R" rev-parse HEAD^{tree})" -m orphan-blob)
+  local O; O=$(git -C "$R" -c user.name=t -c user.email=t@t commit-tree "$(git -C "$R" rev-parse HEAD^{tree})" -m orphan-blob)
   # ⚠️ 夹具自证（CI 与本地 git 配置不同 ⇒ 必须显式关签名并**断言 tag 真被创建**）:
   #   runner 若 `tag.gpgsign=true`/其他 config ⇒ `git tag` 失败 → tag 不存在 → 脚本走「tag 未打」分支
   #   ⇒ 本夹具的报文断言全假红（实测: CI 只红报文类断言、不红 "仍被拦"）。⇒ `-c tag.gpgsign=false` + 断言。
