@@ -96,11 +96,14 @@ echo "--- 提取到的正则（按出现顺序，去空行） ---"
 printf '%s\n' "$RE_ALL" | grep . | nl -ba || true
 echo "--- 结构断言 ---"
 
-# ① 提取条数 = 10（ci.yml 中恰好 10 个 Detect docs-only 步骤）
-if [ "$RE_COUNT" = "10" ]; then got="10"; else got="$RE_COUNT"; fi
-report struct "struct-count-10" "10" "$got"
+# ① 提取条数 = 9（D1195/2026-10-07: audit job 退役 ⇒ 原 10 处合法降为 9 处；
+#   该 job 是 docs-only 块载体之一。期望值随 ci.yml 结构变更同步——保留"精确计数"语义，
+#   不改成"≥1"（那会失去"新增重复副本即红"的漂移守卫能力）。下次增删载体须同改此处。
+EXPECT_DOCS_ONLY_COPIES=9
+if [ "$RE_COUNT" = "$EXPECT_DOCS_ONLY_COPIES" ]; then got="$EXPECT_DOCS_ONLY_COPIES"; else got="$RE_COUNT"; fi
+report struct "struct-count-${EXPECT_DOCS_ONLY_COPIES}" "$EXPECT_DOCS_ONLY_COPIES" "$got"
 
-# ② 唯一模式数 = 1（10 处模式必须完全一致，防单处漂移）
+# ② 唯一模式数 = 1（各处模式必须完全一致，防单处漂移）
 if [ "$RE_UNIQ_COUNT" = "1" ]; then got="1"; else got="$RE_UNIQ_COUNT"; fi
 report struct "struct-unique-1" "1" "$got"
 
@@ -140,8 +143,9 @@ FAILSAFE_N=$(awk '
   END { printf "%d", n+0 }
 ' "$CI_YML")
 FAILSAFE_N=$(printf '%s' "$FAILSAFE_N" | tr -d '[:space:]')
-if [ "$FAILSAFE_N" = "10" ]; then got="10"; else got="$FAILSAFE_N"; fi
-report struct "struct-failsafe-count-10" "10" "$got"
+# D1195（2026-10-07）: audit job 退役 ⇒ 载体数 10 → 9，与本文件 ① 同步。
+if [ "$FAILSAFE_N" = "$EXPECT_DOCS_ONLY_COPIES" ]; then got="$EXPECT_DOCS_ONLY_COPIES"; else got="$FAILSAFE_N"; fi
+report struct "struct-failsafe-count-${EXPECT_DOCS_ONLY_COPIES}" "$EXPECT_DOCS_ONLY_COPIES" "$got"
 
 echo "--- 用例断言（判定与 ci.yml 同构: grep -qvE 返 0 ⇒ docs_only=false）---"
 
