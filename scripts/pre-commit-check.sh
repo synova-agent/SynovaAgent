@@ -191,6 +191,31 @@ bypass_run() {
   return 0
 }
 
+# ═══ D1219（卡 #1225 旁路清场）: 检查自身失败态 ═══
+# 三态纪律: 0=通过 / 1=违规 / 2=**检查自身失败**（同样阻断）。本函数实现第 3 态。
+# 为什么需要它（被替代的旧形态 = 假绿）: 旧写法把「判定脚本不存在」降级为 note_check 观测
+#   （只打印、不判红、CI 也不转硬）⇒ **检查消失被判作通过**。这不是「宽松」，是判据失效。
+# 与「违规」的区别（报告可分辨）: 违规红 = 命中描述；自身失败红 = 显式标注「检查自身失败（脚本缺失）」，
+#   并按铁律 11 落 degraded-events.log（component=pre-commit-<闸名>, reason=script-missing）。
+# 强度: 本地与 CI **同等阻断**（本地唯一软提示面是 v5_soft；自身失败态不适用软提示——
+#   「工具坏了」比「内容不合规」更需要立刻可见，禁 `|| true` 吞崩溃）。
+# 契约（铁律 47）:
+#   @input  — $1=闸名（报告用）; $2=缺失脚本的仓库相对路径（信息用）
+#   @output — stderr/stdout 显式红行 + HARD_FAIL 自增 + degraded-events.log 追加一行
+#   @exit   — 无（由本脚本末尾按 HARD_FAIL 统一退出；本仓约定：任一硬红 ⇒ 脚本 exit 1）
+#   @degraded — 日志写失败静默（统计/审计落盘非门禁本体，不改变已计入的 HARD_FAIL）
+self_fail_missing_script() {
+  local _name="$1" _path="$2"
+  echo -e "  ${RED}❌ ${_name}: 检查自身失败（脚本缺失，非内容违规）— ${_path} 不存在${RESET}"
+  echo "     修复: 恢复该脚本；或若已合法退役，同 PR 移除本调用点 + 过 K3（判据变更）"
+  HARD_FAIL=$((HARD_FAIL + 1))
+  [ "${SYNO_CI:-0}" = "1" ] && echo "::error title=IronLaws:${_name}::检查自身失败（脚本缺失）: ${_path}"
+  log_gate "$_name" hit
+  mkdir -p "$ROOT/.codex/control-tower/logs" 2>/dev/null || true
+  echo "{\"time\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"component\": \"pre-commit-${_name}\", \"reason\": \"script-missing\", \"path\": \"${_path}\"}" \
+    >> "$ROOT/.codex/control-tower/logs/degraded-events.log" 2>/dev/null || true
+}
+
 # D515 项3: par_collect 类软门禁失败时统一提示（判定脚本输出原样打印，不阻断）
 v5_soft() {
   # D516/K3 P0-1: SYNO_CI strict 模式——CI 上（SYNO_CI=1）软提示转硬阻断。
@@ -1155,7 +1180,14 @@ if [ "$PI_RC" -ne 0 ]; then
   else
     PI_Q2="$(printf '%s\n' "$PI_OUT" | grep -A3 'Q2 排除项' || true)"
     [ -n "$PI_Q2" ] && PI_Q2="${PI_Q2}\n"
-    note_check "plan-integrity: non-Q2 项（plan.json 契约，D1148 转旁路）" "$(printf '%s\n' "$PI_OUT" | grep -v 'Q2 排除项' | grep -v '^[[:space:]]*$' | head -3)"
+    # ═══ D1219（卡 #1225 旁路清场）退役: 原 `note_check "plan-integrity: non-Q2 项…"` 已删 ═══
+    #   退役判据: D1171 处置表自认「plan.json 契约明文 deferred = **设计行为非违规**」⇒ 零判据价值
+    #     （永不阻断的观测点 = 立法 §7.1-2 所禁的「旁路第三态」）。
+    #   替代: 无（亦不需要）——plan.json 的 **Q2 半边**仍由上方 PI_Q2 → 闸② 消费，未损失判据；
+    #     principles/approach/memory_refs 三项目本就不参与任何阻断。
+    #   代价（如实）: 该三项的观测串不再打印（历史上从未阻断过任何提交 ⇒ 代价为零判据力，
+    #     仅损失「提交输出里的一段人读信息」）。
+    #   复活须过 K3（判据变更）。关联: memory/notes/proposed/2026-10-07-d1219-position-legislation.md
   fi
 fi
 
@@ -1691,28 +1723,28 @@ while IFS= read -r line; do
 done <<< "$(git diff --cached --name-status 2>/dev/null)"
 hard_check "G12d: 生成物单点生成门禁 (D458)" "${GENERATED_VIOLATION:-}"
 
-# D313 M3b: 附挂 dev doc 写集验证（暂存含 SYNOVA-IMPL-*.md 时）
-# D1148 转旁路: 原 soft_check（CI 转硬）→ 旁路观测（只打印、不判红、不进 gate-hits）。
-#   调用点保留（doc-commit-exempt.test.sh T11 / check-dev-doc-write-set.test.sh 接线断言依赖）
-#   —— `check-dev-doc-write-set.sh` 字面量必须在源码中存在。
-if echo "$STAGED_ALL" | grep -qE 'docs/plans/codex/implementation/SYNOVA-IMPL-.*\.md'; then
-  DEV_DOC_OUT=$(bash "$ROOT/scripts/workflow/check-dev-doc-write-set.sh" 2>&1 || true)
-  if echo "$DEV_DOC_OUT" | grep -q "❌"; then
-    note_check "G12c dev doc 写集验证 (D313 M3b)（D1148 转旁路）" "$DEV_DOC_OUT"
-  fi
-fi
+# ═══ D1219（卡 #1225 旁路清场）退役: G12c dev doc 写集验证（原 D313 M3b / D1148 转旁路）═══
+#   原形态: 暂存含 SYNOVA-IMPL-*.md 时执行 `scripts/workflow/check-dev-doc-write-set.sh`，
+#     失败走 note_check 观测（只打印、不判红、CI 也不转硬）。
+#   退役判据: ① 立法 §7.1-2 禁旁路第三态；② 同判据在 CI 有**更强**执行点 —— D708 写集对账
+#     （`.github/workflows/ci.yml` 的 `Merge write-set reconciliation (D708)` 独立 step），
+#     双计数只会制造重复阻断且 D708 口径更准。
+#   替代: D708（CI，独立 step）。替代的**存在性已被物理断言**——
+#     tests/control-tower/doc-commit-exempt.test.sh T11c 直接 grep ci.yml 的该 step；
+#     删掉该 step ⇒ T11c 红 ⇒ 本退役依据失效即暴露（退役不可悬空）。
+#   代价（如实）: 本地提交端不再提前告警 dev doc 写集漂移（改由 CI 拦）。
+#   留痕: 本注释保留脚本名 `check-dev-doc-write-set.sh` 供 T11b 回溯；字样不再出现在**代码路径**。
+#   复活须过 K3（判据变更）。关联: memory/notes/proposed/2026-10-07-d1219-position-legislation.md
 
-# U4 (D423): 附挂声称↔证据对照表校验（暂存含 SYNOVA-IMPL-*.md 时；脚本内部按有无「交付声明」节跳过）
-CLAIMS_DOCS=$(echo "$STAGED_ALL" | grep -E 'docs/plans/codex/implementation/SYNOVA-IMPL-.*\.md' || true)
-if [ -n "$CLAIMS_DOCS" ]; then
-  CLAIMS_OUT=$(bash "$ROOT/scripts/control-tower/verify-claims-table.sh" $CLAIMS_DOCS 2>&1)
-  CLAIMS_EXIT=$?
-  # D1148 转旁路: 三种出口（0 过 / 1 不完整 / ≥2 执行失败）全部只观测不判红——
-  #   减少一组与主闸重叠的判定；原 ≥2 的 hard_check 一并降为旁路（不静默：ℹ️ 明示 exit）。
-  if [ "$CLAIMS_EXIT" -ne 0 ]; then
-    note_check "G12d 声称↔证据对照表 (U4 D423, exit=${CLAIMS_EXIT})（D1148 转旁路）" "$CLAIMS_OUT"
-  fi
-fi
+# ═══ D1219 退役: G12d 声称↔证据对照表（原 U4/D423；D1148 转旁路）═══
+#   原形态: 暂存含 SYNOVA-IMPL-*.md 时执行 `scripts/control-tower/verify-claims-table.sh`，
+#     三种出口（0 过 / 1 不完整 / ≥2 执行失败）**全部只观测不判红**。
+#   退役判据: 该产物是供 **K3 审计消费**的对照表、**无机器可判阈值** ⇒ 本质是报告生成器而非门禁；
+#     留在提交路径 = 每次提交付生成成本换零阻断力（立法 §7.1-2 禁第三态）。
+#   替代: **归档** —— 生成器（静态格式校验器，不预跑命令）保留在库内，改为按需调用:
+#     `bash scripts/control-tower/verify-claims-table.sh <dev-doc>...`（K3/CTO 复核时手工跑）。
+#   代价（如实）: 提交端不再自动校验对照表**格式**（语义正确性本就无机器判据，靠 K3 人读）。
+#   复活须过 K3（判据变更）。关联: memory/notes/proposed/2026-10-07-d1219-position-legislation.md
 
 # ═══ 组 13/13: 技能同步一致性 (.claude/skills ↔ .dsh/skills, D370) ═══
 # 背景: DSH 技能发现根 .dsh/skills（rank 100）不读 .claude/skills → 单源复制 + 漂移门禁。
@@ -1766,7 +1798,8 @@ if [ -f "$ROOT/scripts/doc-system/check-doc-truth.sh" ]; then
     v5_soft "D782 D1 文档真相（D1171 撤旁路复执法）"
   fi
 else
-  note_check "D782 D1 文档真相（脚本缺失）" "scripts/doc-system/check-doc-truth.sh 不存在"
+  # D1219（卡 #1225）: 原 note_check 观测（不阻断 = 检查消失被判作通过/假绿）→ 检查自身失败态。
+  self_fail_missing_script "D782 D1 文档真相" "scripts/doc-system/check-doc-truth.sh"
 fi
 
 # D2: 新增 .md/.yaml 必须登记 docs/authority/DOCS-REGISTRY.yaml（只拦新不拦旧）
@@ -1777,7 +1810,9 @@ if [ -f "$ROOT/scripts/doc-system/doc-registry-gate.sh" ]; then
     v5_soft "D782 D2 登记门禁（D1171 撤旁路复执法）"
   fi
 else
-  note_check "D782 D2 登记门禁（脚本缺失）" "scripts/doc-system/doc-registry-gate.sh 不存在"
+  # D1219（卡 #1225）: 同上——D2 是「新增 .md/.yaml 必须登记」的提交端唯一执行点，
+  #   脚本缺失若只观测 ⇒ 未登记件全放行（后果重于 D1）。
+  self_fail_missing_script "D782 D2 登记门禁" "scripts/doc-system/doc-registry-gate.sh"
 fi
 
 # ═══ D734: PR 预算门禁（附加检查；不并入传统 13 组编号）═══
@@ -1816,7 +1851,8 @@ if [ -x "$ROOT/scripts/control-tower/check-pr-budget.sh" ] || [ -f "$ROOT/script
     v5_soft "D734 PR 预算（D1171 撤旁路复执法）"
   fi
 else
-  note_check "D734 PR 预算（脚本缺失）" "scripts/control-tower/check-pr-budget.sh 不存在"
+  # D1219（卡 #1225）: 存在性另有 check-pr-budget.test.sh 保证，但那不能替代**运行期** fail-closed。
+  self_fail_missing_script "D734 PR 预算" "scripts/control-tower/check-pr-budget.sh"
 fi
 
 # ── D520/任务3: 平台敏感命令软检查（V5 软提示——新增脚本须对照 PLATFORM-CHECKLIST.md）──
