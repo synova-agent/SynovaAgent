@@ -1,6 +1,6 @@
 {
-  "task_id": "D1204",
-  "title": "D-F/① CI 判据单源化 + Vitest changed 默认",
+  "task_id": "D1206",
+  "title": "D-F/② 密封清单发现制 + #1215 纯文档 merge 级登记对账",
   "status": "claimed",
   "spec": null,
   "impl": null,

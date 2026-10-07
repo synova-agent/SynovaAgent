@@ -59,7 +59,9 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 # 修法（先例: tests/control-tower/hard-gate-convergence.test.sh 的 PC_CODE_FILE 模式）:
 #   runq 把 stdout/stderr **落盘**，全部断言改为 `grep … "$OUT_FILE"`/`"$ERR_FILE"`；
 #   `grep -v … | grep -q …` 一律改为「先落一份去注释文件，再 grep 该文件」。
-#   回归防线: 本文件全文不再有「左写右早退」的管道（下方 ⑦/wiring_ok 亦同）。
+#   回归防线: 本文件全文不再有「左写左早退」的管道（⑦ 与 wiring_ok 亦同）。
+#   归属: wiring_ok 第三句的最小修由 **#1262（线 B，Lead 书面授权的跨线最小修）** 落地 ——
+#     合并时**以已合版本为准**，本线不保留重复实现；本线保留其余 23 处管道 + first_ctx_of + 本节说明。
 # ═════════════════════════════════════════════════════════════════════
 set -uo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -401,12 +403,16 @@ echo "── ⑧ 接线（真断言 + 反向验证）──"
 CIY="${SYNO_CT_WIRING_CI_YML:-$REPO/.github/workflows/ci.yml}"
 wiring_ok() { # $1 = ci.yml 路径；rc 0 = 接线完整（调用 + canary 登记 + run: 段命中，非仅注释）
   local f="$1"
-  local code="$TMPD/wiring-code.txt"   # #1214: 去注释面落盘再 grep（旧形态 `grep -v … | grep -q …` 会 141 假红）
   [ -f "$f" ] || return 1
   grep -q "check-required-contexts" "$f" 2>/dev/null || return 1
   grep -q "check-required-contexts\.test\.sh" "$f" 2>/dev/null || return 1
-  grep -v '^[[:space:]]*#' "$f" > "$code" || true
-  grep -q "check-required-contexts\.py" "$code" || return 1
+  # 🔴 #1214（SIGPIPE flake）修: 原写 `grep -v '^#' "$f" | grep -q "…py"`——下游 `grep -q` 命中即早退，
+  #   上游 `grep -v` 收 SIGPIPE ⇒ 在 `set -o pipefail` 下整条 pipeline 返非 0 ⇒ 断言随机判红（实测 3 红/3 绿）。
+  #   修法（线 C #1214 同修的最小形态）: 先落文件再 grep，消除管道早退路径。跨线修改经 Lead 书面授权。
+  local _nc; _nc="$(mktemp)"
+  grep -v '^[[:space:]]*#' "$f" > "$_nc" 2>/dev/null || true   # swallow-ok: 读失败⇒空文件⇒下一句必然 return 1（不静默放行）
+  if ! grep -q "check-required-contexts\.py" "$_nc"; then rm -f "$_nc"; return 1; fi
+  rm -f "$_nc"
   return 0
 }
 if wiring_ok "$CIY"; then
