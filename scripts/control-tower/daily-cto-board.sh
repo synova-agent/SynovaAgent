@@ -5,7 +5,9 @@ set -uo pipefail
 
 # D520/V5 平台敏感命令规避：Windows 可能无 python3.exe（仅 python / py -3）
 PYBIN="$(command -v python3 2>/dev/null || command -v python 2>/dev/null || echo python3)"
-REPO="${SYNO_REPO:-/Users/wane/SynovaAgent}"
+# 既有债修复（verifier P3）: 原为硬编码 /Users/wane/SynovaAgent（全仓唯一一处）→
+#   改为「cwd 所属工作树根」形态；SYNO_REPO 注入缝保留（测试/异机可用）。
+REPO="${SYNO_REPO:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 OUT="$REPO/docs/synova/coordination/CTO-看板-自动.md"
 LOG="$REPO/.codex/control-tower/logs/daily-board.log"
 mkdir -p "$(dirname "$LOG")" "$(dirname "$OUT")"
@@ -35,7 +37,20 @@ tot=$(ls task-state/D*.json 2>/dev/null | wc -l | tr -d ' ')
 #   只数 task-state = 卡总数停在存量而**看不出来**（静默空白）⇒ 并列显示 + 显式迁移期标识。
 _mig=""
 if [ -d .claude/claims ]; then
-  _nc=$("$PYBIN" scripts/control-tower/claim_store.py --count 2>/dev/null || echo "?")  # swallow-ok: 计数失败 → 打出 ? 与降级文案（不静默当 0）
+  # verifier P1: 原调用 `claim_store.py --count` **该参数不存在**（实测 rc=2
+  #   unrecognized arguments）⇒ `|| echo "?"` 恒生效 ⇒ `+ claim N` 分支不可达死码。
+  #   改为直接调用库函数 `iter_claims`（同样单一事实源，不新增 CLI 面）：
+  #   畸形条目存在 → 打 `?`（显式降级，**不静默当 0**，铁律 11）。
+  _nc=$("$PYBIN" -c "
+import sys
+sys.path.insert(0, 'scripts/control-tower')
+try:
+    from claim_store import iter_claims
+    cs = list(iter_claims('.'))
+except Exception:
+    print('?'); raise SystemExit
+print('?' if any(c.get('error') for c in cs) else len(cs))
+" 2>/dev/null || echo "?")  # swallow-ok: 解释器/库不可用 → 打出 ? 与降级文案（不静默当 0）
   case "$_nc" in
     ''|*[!0-9]*) _mig=" + claim ?（计数降级: claim_store 不可用，**非 0**）｜[迁移期] 本视图含 task-state 存量（旧 D# 只读）；新任务在 .claude/claims/" ;;
     0) _mig="" ;;

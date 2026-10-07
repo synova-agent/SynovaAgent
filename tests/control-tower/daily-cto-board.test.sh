@@ -49,10 +49,29 @@ else
 fi
 rm -rf "$T1"
 
-# ── 正常: 有 claim 库 → 迁移期标识 + 计数 ──
+# ── 正常: 有 claim 库 → 迁移期标识 + **真值计数 `+ claim N`**（verifier P1：死码判别）──
+# 关键: 把**真实** claim_store.py 放进临时仓（看板按 cwd/REPO 相对调用它），
+#       否则只会走降级分支 —— 那样 `+ claim N` 分支永远测不到（正是 verifier 指出的死码盲区）。
 T2="$(mk_repo)"
 printf '{}' > "$T2/task-state/D001.json"
-mkdir -p "$T2/.claude/claims"
+mkdir -p "$T2/.claude/claims" "$T2/scripts/control-tower"
+if [ -f "$REPO/scripts/control-tower/claim_store.py" ]; then
+  cp "$REPO/scripts/control-tower/claim_store.py" "$T2/scripts/control-tower/claim_store.py"
+  HAVE_STORE=1
+else
+  # 契约替身（contract double）：核心库此刻只在 #1259 分支上（本分支从 main 起）。
+  #   看板与库的契约面只有 `iter_claims(root)` 一个函数 —— 用替身即可**今天就**行使
+  #   真值分支（`+ claim N`），避免"分支未合 ⇒ 死码测不到"的无限等待。
+  #   #1259 合入后 HAVE_STORE=1，自动改用**真实**库（本段成为死支，不影响判别力）。
+  HAVE_STORE=0
+  cat > "$T2/scripts/control-tower/claim_store.py" <<'PYSTUB'
+def iter_claims(root=None, env=None):
+    return [
+        {"issue": "1224", "path": "stub/1224.yaml", "writeset": ["a.sh"], "done": [{"verify": "bash x.sh"}], "note": None},
+        {"issue": "1225", "path": "stub/1225.yaml", "writeset": ["b.sh"], "done": [{"verify": "bash x.sh"}], "note": None},
+    ]
+PYSTUB
+fi
 printf 'writeset:\n  - scripts/a.sh\ndone:\n  - verify: bash x.sh\n' > "$T2/.claude/claims/1224.yaml"
 printf 'writeset:\n  - scripts/b.sh\ndone:\n  - verify: bash x.sh\n' > "$T2/.claude/claims/1225.yaml"
 rc="$(run_board "$T2")"
@@ -60,10 +79,11 @@ O="$(out_of "$T2")"
 if [ -f "$O" ]; then
   grep -q '迁移期' "$O" && ok "正常: 有 claim → 打迁移期标识" || no "正常: 缺迁移期标识（=静默空白）"
   grep -q 'claim' "$O" && ok "正常: 卡总数并列 claim 计数" || no "正常: 未并列 claim 计数"
-  # 本分支（PR-C）未含 claim_store.py ⇒ 走降级分支；若已含则走计数分支。
-  # 两条都必须**显式**（禁静默当 0）—— 断言二者必居其一且可辨。
-  grep -qE 'claim (2|\[0-9\])' "$O" || grep -q '计数降级' "$O" \
-    && ok "正常: claim 计数为真值或显式降级（非静默 0）" || no "正常: claim 计数不可辨: $(grep 'claim' "$O" | head -1)"
+  # 真值分支必须**可达且取到 N=2`（若该分支不可达 —— 如原 `--count` 死码 —— 这里就红）
+  # 库可用（HAVE_STORE=1，真实库）或替身（HAVE_STORE=0）都走同一分支，判别力一致。
+  grep -q '+ claim 2' "$O" \
+    && ok "正常: 真值分支可达 → 输出「+ claim 2」（死码判别）" \
+    || no "正常: 未走真值分支（疑似死码）: $(grep -o 'claim[^｜]*' "$O" | head -1)"
   [ "$rc" = "1" ] || [ "$rc" = "0" ] && ok "正常: 退出码为业务态 0/1（非 2 degraded）" || no "正常: 退出码异常 rc=$rc"
 else
   no "正常: 看板未生成（$O）"
