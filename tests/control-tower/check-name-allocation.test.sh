@@ -92,7 +92,10 @@ printf '{"task_id":"D941","status":"claimed"}\n' > "$WB/task-state/D941.json"
     && git remote add origin "$FB/nonexistent-origin.git" )
 
 # chk: 在夹具 repo **内部**执行（cwd 必须在此，ls-remote 才解析到夹具的 origin）
-chk() { local d="$1"; shift; OUT=$( cd "$d" && SYNO_TASK_STATE_DIR="$d/task-state" bash "$TOOL" "$@" 2>&1 ); RC=$?; }
+# D1221: 加 issue 源守卫 —— 本测试不测该源，但沙箱自带 git init ⇒ 不关则每次
+#   经 gh 去打**真仓** issue（verifier 实测 10 次真实网络调用）。
+chk() { local d="$1"; shift; OUT=$( cd "$d" && SYNO_TASK_STATE_DIR="$d/task-state" \
+    SYNO_ALLOC_NO_ISSUES=1 bash "$TOOL" "$@" 2>&1 ); RC=$?; }
 has() { printf '%s' "$OUT" | grep -qF "$1"; }
 
 echo ""

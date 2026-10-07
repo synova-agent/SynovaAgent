@@ -60,28 +60,28 @@ MD
 "$PY" "$C" "$TMPD/v1.md" --repo "$REPO" --owner test > "$TMPD/v1.out" 2>&1; rc=$?
 [ "$rc" -eq 1 ] && grep -q "CITE_FILE_NOT_FOUND" "$TMPD/v1.out" \
   && ok "违规: 中文名文档不存在 → exit 1 + CITE_FILE_NOT_FOUND（原 ASCII 字符集静默漏检）" \
-  || no "违规: 中文名文档不存在未被抓（rc=$rc）"
+  || no "违规: 中文名文档不存在未被抓（rc=${rc}）"
 
 cat > "$TMPD/v2.md" <<'MD'
 scripts/control-tower/pre-dispatch-check.sh:99999
 MD
 "$PY" "$C" "$TMPD/v2.md" --repo "$REPO" --owner test > "$TMPD/v2.out" 2>&1; rc=$?
 [ "$rc" -eq 1 ] && grep -q "CITE_LINE_OUT_OF_RANGE" "$TMPD/v2.out" \
-  && ok "违规: 行号越界 → exit 1 + CITE_LINE_OUT_OF_RANGE" || no "违规: 行号越界未被抓（rc=$rc）"
+  && ok "违规: 行号越界 → exit 1 + CITE_LINE_OUT_OF_RANGE" || no "违规: 行号越界未被抓（rc=${rc}）"
 
 cat > "$TMPD/v3.md" <<'MD'
 docs/synova/coordination/DECISION-REFERENCE.md:40-12
 MD
 "$PY" "$C" "$TMPD/v3.md" --repo "$REPO" --owner test > "$TMPD/v3.out" 2>&1; rc=$?
 [ "$rc" -eq 1 ] && grep -q "CITE_BAD_RANGE" "$TMPD/v3.out" \
-  && ok "违规: 区间倒置 → exit 1 + CITE_BAD_RANGE" || no "违规: 区间倒置未被抓（rc=$rc）"
+  && ok "违规: 区间倒置 → exit 1 + CITE_BAD_RANGE" || no "违规: 区间倒置未被抓（rc=${rc}）"
 
 cat > "$TMPD/v4.md" <<'MD'
 外部权威: dsh-不存在包/lib/index.js:12
 MD
 "$PY" "$C" "$TMPD/v4.md" --repo "$REPO" --external-root "$ROOT" --owner test > "$TMPD/v4.out" 2>&1; rc=$?
 [ "$rc" -eq 1 ] && grep -q "CITE_FILE_NOT_FOUND" "$TMPD/v4.out" \
-  && ok "违规: 伪造外部权威（dsh- 前缀但仓外根无此包）→ exit 1" || no "违规: 伪造外部权威未被抓（rc=$rc）"
+  && ok "违规: 伪造外部权威（dsh- 前缀但仓外根无此包）→ exit 1" || no "违规: 伪造外部权威未被抓（rc=${rc}）"
 
 # 归因字段（违规从不匿名）
 grep -q "owner=test" "$TMPD/v1.out" && ok "可归因: 违规记录含 owner" || no "可归因: 违规记录缺 owner"
@@ -112,7 +112,7 @@ cat > "$TMPD/e3.md" <<'MD'
 - docs/synova/coordination/不存在-豁免测试.md:1
 MD
 "$PY" "$C" "$TMPD/e3.md" --repo "$REPO" >/dev/null 2>&1; rc=$?
-[ "$rc" -eq 1 ] && ok "边界: 豁免无理由 → 仍违规（无理由不生效）" || no "边界: 无理由豁免被放行（rc=$rc）"
+[ "$rc" -eq 1 ] && ok "边界: 豁免无理由 → 仍违规（无理由不生效）" || no "边界: 无理由豁免被放行（rc=${rc}）"
 
 # 不截断（原 head -25 漏洞回归防线）
 : > "$TMPD/e4.md"

@@ -270,7 +270,12 @@ elif ! command -v gh >/dev/null 2>&1; then
 else
   _ISS_TO_SECS="${SYNO_ALLOC_ISSUES_TIMEOUT:-15}"
   _ISS_OUT=""; _ISS_RC=0
-  _ISS_OUT="$(_run_bounded "$_ISS_TO_SECS" gh issue list --state all --limit 200 \
+  # D1221: 在 **$TS_TOP**（task-state 所属仓）内取数 —— 对齐本脚本既有原则「占用表全源跟随
+  #   task-state 所属仓库，不得混入 CWD 所在仓」。不加此步时 gh 按 **PWD** 解析仓库：
+  #   沙箱 task-state（自带 git init）会让 PWD=真仓 → 去查**真仓** issue（跨仓污染，
+  #   verifier 实测 10 次真实调用即此来源）。
+  _ISS_OUT="$(_run_bounded "$_ISS_TO_SECS" sh -c 'cd "$1" && shift && exec gh "$@"' _ "$TS_TOP" \
+                issue list --state all --limit 200 \
                 --json number,title --jq '.[] | "\(.number)\t\(.title)"' 2>/dev/null)" || _ISS_RC=$?
   if [ "$_ISS_RC" -eq 0 ]; then
     ISSUE_SNAPSHOT="$_ISS_OUT"; ISSUE_SRC_STATE="ok"
