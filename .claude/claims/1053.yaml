@@ -1,0 +1,29 @@
+# .claude/claims/1053.yaml — #1053（2-1a 指标时序存储·表定义）写集声明（D708 的 S0 源）
+#
+# 为什么用 claim 而不是 task-state/<D#>.json：本卡是 **issue 号卡（#1053）**，无 D# 编号
+# ⇒ D708 门禁的 S1/S2/S3（按 `<D#>*` 定位）找不到声明源，会把全部改动判为「夹带」。
+# `.claude/claims/<issue>.yaml` 是为 issue 号任务提供的正式声明源（merge_writeset_gate.py 的 S0）。
+# 先例：#1052（PR #1354）、#1322、#1220、#1224、#1358。
+#
+# 依据：CTO 2026-10-08 放行（三项待裁全裁：① unit/source_id/evidence_ref = 可空；② id =
+#       INTEGER PRIMARY KEY AUTOINCREMENT；③ 表级不变量 CHECK = 加）。
+writeset:
+  - .claude/claims/1053.yaml
+  - .claude/task-briefs/2026-10-08-1053-metric-readings-schema.md
+  - src/store/migrations/002-metric-readings.ts
+  - src/store/schema-migration.ts
+  - tests/store/metric-readings-schema.test.ts
+  - tests/store/metric-readings-insert.test.ts
+  - tests/store/migrations/002-metric-readings.test.ts
+  # ⚠️ 必要连带（超出卡面 §④ 逐条列举，但属机制强制）：SCHEMA_VERSION 2→3 使既有断言
+  #    「schema_version 首行 = SCHEMA_VERSION」在**多迁移**下失效（首行是 2、最新是 3）
+  #    ⇒ 同文件内 3 处版本断言改为「成员 + 最大值」口径（仅断言形态，不改被测行为）。
+  #    详见本 PR 正文「必要连带」段 + 「读取器并列」发现。
+  - tests/store/schema-migration.test.ts
+done:
+  - verify: npx vitest run tests/store/metric-readings-schema.test.ts
+  - verify: npx vitest run tests/store/metric-readings-insert.test.ts
+  - verify: npx vitest run tests/store/
+  - verify: test "$(git grep -nE '^[^*/]*(UPDATE[[:space:]]+metric_readings|DELETE[[:space:]]+FROM[[:space:]]+metric_readings)' HEAD -- src/ packages/ | wc -l)" -eq 0
+  - verify: npx tsc --noEmit
+note: 承重件 W1（护城河第一块砖）的 schema 侧：metric_readings 17 列 + 3 索引 + 唯一约束 + 不变量 CHECK。覆盖面 = 表结构；写入侧未接（2-1b #1054）；查询/聚合未接。本 PR 不写一行数据。
