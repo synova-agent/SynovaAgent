@@ -81,8 +81,15 @@ if echo "$OUT2" | grep -q "暂存区含他人文件"; then
 else
   ok "③ 自己写集不拦（本地不预判）"
 fi
-git -C "$SB" log --oneline 2>/dev/null | grep -q "test: own file" \
-  && ok "③ commit 实际完成（链路走通）" || bad "③ commit 未落: rc=$rc2 :: $(echo "$OUT2" | tail -2)"
+# D1223 潜伏缺陷修复（本次触发）: 原写法 `git log | grep -q` 在 `set -o pipefail` 下**假红** ——
+#   grep -q 命中即退出 → 上游 git 收到 SIGPIPE → 退出码 141 → 管道整体非零 ⇒ "commit 未落"。
+#   触发条件 = 日志行数 >1（② 场景现在会真提交，故 ③ 时日志已有 2 条）⇒ 确定性复现，非随机。
+#   修法: 先取文本再匹配（去管道），消除 SIGPIPE 竞争。
+LOG3="$(git -C "$SB" log --oneline 2>/dev/null)"
+case "$LOG3" in
+  *"test: own file"*) ok "③ commit 实际完成（链路走通）" ;;
+  *) bad "③ commit 未落: rc=$rc2 :: $(echo "$OUT2" | tail -2)" ;;
+esac
 
 # ⑤ 判定语义: claim status JSON 解析（resolved/missing/坏输入 → degraded 兜底，与退役段同语义）
 python3 - <<'PY' && ok "⑤ claim status JSON 判定语义（resolved/missing/坏输入）" || bad "⑤ 判定语义错误"
