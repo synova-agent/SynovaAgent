@@ -128,10 +128,21 @@ export interface ProposalTimeline {
  * @contract status 只能是 11 态之一，受状态转换规则约束
  * @contract paths 长度为 3（正好 3 条可选路径）
  * @contract selectedPathIndex 在 0-2 范围内，仅 selected+ 状态非空
+ * @contract orgId（#1322 新增）为**租户 id**，唯一合法来源是验签后的 `req.auth.orgId`；
+ *   与 `department`（部门）**不是一回事** —— 缺省 undefined 表示旧数据（无租户标注），
+ *   消费方需 fail-closed 或走 department 兼容回退（见 proposal-engine.ts 的注释）。
  */
 export interface Proposal {
   /** 唯一标识 */
   proposalId: string;
+  /**
+   * 所属组织（租户）ID。
+   *
+   * #1322 新增：真身份有 orgId（`middleware/auth.ts:29` 的 JwtPayload.orgId），但
+   * Proposal 此前不带 ⇒ 无法表达「这条提案属于哪个租户」⇒ 跨租户"选定"无法拒绝。
+   * 缺省 undefined 仅为兼容存量/测试夹具，**新写入一律由路由从 `req.auth` 注入**。
+   */
+  orgId?: string;
   /** 来源诊断报告 ID */
   diagnosisReportId: string;
   /** 提案标题 */

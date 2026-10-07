@@ -85,6 +85,47 @@ export function checkCompletionPreconditions(goal: Goal): { valid: boolean; reas
   return { valid: true };
 }
 
+// ═══ 实体 id → 图节点 id 解析（跨 store 共用件） ═══
+
+/**
+ * 把「实体 id」（props 里的 goalId/proposalId）解析为「图节点 id」。
+ *
+ * 为什么必须两层：真库 `SqliteGraphStore.createNode` 恒生成 `node-<uuid>` 作主键
+ * （`src/adapters/sqlite-graph-store.ts:139,144`），实体 id 只落在 props 里；而
+ * `getNode/updateNode` 按主键定位（同文件 `:295-314` / `:318-330`）⇒ 只用
+ * `getNode(goalId)` 对真库**恒 null**，`getGoal/getProposal/updateXStatus` 随之全失效。
+ *
+ * 为什么放本文件（而非 goal-types.ts / 新文件）：goal-types.ts 自陈「纯类型定义，
+ * 无运行时逻辑」，塞运行时代码会自毁其契约；本文件已有同型私有件
+ * `resolveGoalForPropagation`，共用件与它同址最省。
+ *
+ * 契约:
+ *   @input  — type（'GOAL'|'PROPOSAL'）+ idField（'goalId'|'proposalId'）
+ *             + entityId + store（GraphBridgeLike）+ graph
+ *   @output — { nodeId, props }；命中不到 → null（**fail-closed，不猜**）
+ *   @degraded — **无降级**：store 抛错原样上抛，由调用方既有的 try/catch 处理；
+ *               绝不返回"最像的那个"（错配 = 写错节点，比报错更坏）
+ *   @note 顺序不可反：① queryNodes 严格匹配（真库路径）② 回退 getNode 严格匹配
+ *         （兼容以 props 值为节点 id 的旧式/内存 store —— 既有 mock 测试全靠它）
+ */
+export function resolveEntityNode(
+  type: string,
+  idField: string,
+  entityId: string,
+  store: GraphBridgeLike,
+  graph: string,
+): { nodeId: string; props: Record<string, unknown> } | null {
+  const rows = store.queryNodes(type, { [idField]: entityId }, graph);
+  const hit = rows.find(r => readText(r.props, idField) === entityId);
+  if (hit) return { nodeId: hit.id, props: hit.props };
+
+  const direct = store.getNode(entityId, graph) as { id?: string; props?: Record<string, unknown> } | null;
+  if (direct?.props && readText(direct.props, idField) === entityId) {
+    return { nodeId: direct.id ?? entityId, props: direct.props };
+  }
+  return null;
+}
+
 // ═══ CRUD 操作 ═══
 
 /**
@@ -150,13 +191,17 @@ export function createGoal(goal: Goal, store: GraphBridgeLike, audit: AuditStore
 
 /**
  * 按 goalId 获取 Goal。
+ *
+ * 走 `resolveEntityNode`：真库节点主键是 `node-<uuid>`，`goalId` 只在 props 里
+ * （见该函数 JSDoc）⇒ 改前 `store.getNode(goalId)` 对真库**恒 null**。
+ *
  * @returns Goal 对象，不存在时返回 null
  */
 export function getGoal(goalId: string, store: GraphBridgeLike, graph: string = 'growth'): Goal | null {
   try {
-    const node = store.getNode(goalId, graph) as { id: string; type: string; props: Record<string, unknown> } | null;
-    if (!node) return null;
-    return node.props as unknown as Goal;
+    const resolved = resolveEntityNode('GOAL', 'goalId', goalId, store, graph);
+    if (!resolved) return null;
+    return resolved.props as unknown as Goal;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     log.error({ err: msg, goalId }, '获取 Goal 失败');
@@ -235,23 +280,18 @@ function readText(props: Record<string, unknown>, key: string): string | undefin
  * 为什么不能只用 getGoal/getNode：`SqliteGraphStore.createNode` 恒生成 `node-<uuid>`
  * 作节点 id，而 `Goal.goalId` 只存在 props 里 —— 必须按 props.goalId 反查。
  * 兼容旧式/内存 store（以其 props.goalId 作节点 id）时回退 getNode。
+ *
+ * 解析本体已抽为共用件 `resolveEntityNode`（#1322 B1）；本函数语义逐字不变：
+ * orgId 仍取自**同一份命中的 props**（不再二次查询，故不会漂移）。
  */
 function resolveGoalForPropagation(
   goalId: string,
   store: GraphBridgeLike,
   graph: string,
 ): { nodeId: string; orgId: string } | null {
-  const rows = store.queryNodes('GOAL', { goalId }, graph);
-  // 严格匹配：过滤被实现忽略时不得把别的 Goal 当成目标（fail-closed，不猜）
-  const hit = rows.find(r => readText(r.props, 'goalId') === goalId);
-  if (hit) {
-    return { nodeId: hit.id, orgId: readText(hit.props, 'orgId') ?? '' };
-  }
-  const direct = store.getNode(goalId, graph) as { id?: string; props?: Record<string, unknown> } | null;
-  if (direct?.props && readText(direct.props, 'goalId') === goalId) {
-    return { nodeId: direct.id ?? goalId, orgId: readText(direct.props, 'orgId') ?? '' };
-  }
-  return null;
+  const resolved = resolveEntityNode('GOAL', 'goalId', goalId, store, graph);
+  if (!resolved) return null;
+  return { nodeId: resolved.nodeId, orgId: readText(resolved.props, 'orgId') ?? '' };
 }
 
 /**
@@ -459,10 +499,20 @@ export function updateGoalStatus(
   graph: string = 'growth',
   extraProps?: Partial<Goal>,
 ): void {
-  const goal = getGoal(goalId, store, graph);
-  if (!goal) {
+  // #1322 B1: 一次解析同时拿到 props 与**图节点 id**。
+  // 语义与改前等价：store 抛错 → log.error 后仍抛「Goal <id> 不存在」（不泄漏底层错误、
+  // 不静默）；定位不到 → 同一文案。
+  let resolved: { nodeId: string; props: Record<string, unknown> } | null = null;
+  try {
+    resolved = resolveEntityNode('GOAL', 'goalId', goalId, store, graph);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.error({ err: msg, goalId }, '获取 Goal 失败');
+  }
+  if (!resolved) {
     throw new Error(`Goal ${goalId} 不存在`);
   }
+  const goal = resolved.props as unknown as Goal;
 
   const fromStatus = goal.status;
 
@@ -485,10 +535,11 @@ export function updateGoalStatus(
     }
   }
 
-  // 3. 更新节点（含 extraProps，保证原子性）
+  // 3. 更新节点（含 extraProps，保证原子性）。
+  //    #1322 B1: 必须写**图节点 id**（真库为 `node-<uuid>`）；写实体 id 会更新 0 行且不报错。
   const updatedProps = { ...goal, ...extraProps, status: newStatus, lastModifiedAt: new Date().toISOString() };
   try {
-    store.updateNode(goalId, updatedProps as unknown as Record<string, unknown>, graph);
+    store.updateNode(resolved.nodeId, updatedProps as unknown as Record<string, unknown>, graph);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     log.error({ err: msg, goalId, fromStatus, newStatus }, 'Goal 状态更新失败');

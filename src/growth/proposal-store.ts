@@ -13,6 +13,8 @@ import { randomUUID } from 'crypto';
 import { createLogger } from '@synova/logger';
 import type { GraphBridgeLike, AuditStoreLike } from './goal-types';
 import type { Proposal, ProposalStatus, ProposalTimeline, ProposalTransitionRule } from './proposal-types';
+// #1322 B1: 实体 id → 图节点 id 的共用解析件（与 goal-store 同源，避免两份实现漂移）
+import { resolveEntityNode } from './goal-store';
 
 const log = createLogger('growth/proposal-store');
 
@@ -96,7 +98,7 @@ export function createProposal(
     log.info({ proposalId, title: proposal.title }, 'Proposal 已创建');
 
     audit.write({
-      orgId: proposal.department,
+      orgId: proposal.orgId ?? proposal.department,
       actorId: `system:proposal-store`,
       actorRole: 'system',
       action: 'proposal.created',
@@ -118,12 +120,15 @@ export function createProposal(
 
 /**
  * 按 ID 获取 Proposal。
+ *
+ * #1322 B1: 走 `resolveEntityNode`（真库节点主键是 `node-<uuid>`，`proposalId` 只在
+ * props 里）⇒ 改前 `store.getNode(proposalId)` 对真库**恒 null**。
  */
 export function getProposal(proposalId: string, store: GraphBridgeLike, graph: string = 'growth'): Proposal | null {
   try {
-    const node = store.getNode(proposalId, graph) as { id: string; type: string; props: Record<string, unknown> } | null;
-    if (!node) return null;
-    return node.props as unknown as Proposal;
+    const resolved = resolveEntityNode('PROPOSAL', 'proposalId', proposalId, store, graph);
+    if (!resolved) return null;
+    return resolved.props as unknown as Proposal;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     log.error({ err: msg, proposalId }, '获取 Proposal 失败');
@@ -176,10 +181,19 @@ export function updateProposalStatus(
   audit: AuditStoreLike,
   graph: string,
 ): void {
-  const proposal = getProposal(proposalId, store, graph);
-  if (!proposal) {
+  // #1322 B1: 一次解析同时拿到 props 与**图节点 id**（语义与改前等价：
+  // store 抛错 → log.error 后仍抛「Proposal <id> 不存在」，不泄漏底层错误、不静默）。
+  let resolved: { nodeId: string; props: Record<string, unknown> } | null = null;
+  try {
+    resolved = resolveEntityNode('PROPOSAL', 'proposalId', proposalId, store, graph);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.error({ err: msg, proposalId }, '获取 Proposal 失败');
+  }
+  if (!resolved) {
     throw new Error(`Proposal ${proposalId} 不存在`);
   }
+  const proposal = resolved.props as unknown as Proposal;
 
   const fromStatus = proposal.status;
 
@@ -200,7 +214,7 @@ export function updateProposalStatus(
   };
 
   try {
-    store.updateNode(proposalId, updatedProps as unknown as Record<string, unknown>, graph);
+    store.updateNode(resolved.nodeId, updatedProps as unknown as Record<string, unknown>, graph);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     log.error({ err: msg, proposalId, fromStatus, newStatus }, 'Proposal 状态更新失败');
@@ -208,7 +222,7 @@ export function updateProposalStatus(
   }
 
   audit.write({
-    orgId: proposal.department,
+    orgId: proposal.orgId ?? proposal.department,
     actorId: actor,
     actorRole: 'system',
     action: `proposal.status.${fromStatus}→${newStatus}`,
