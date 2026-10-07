@@ -108,26 +108,43 @@ while IFS='|' read -r p want why; do
   t "$why [$p]" "$want" "$(verdict "$FXA" "$p")"
 done <<'MATRIX'
 docs/plans/x.md|block|子树（D1193 既有语义）
-docs/plans.md|block|X1 同名兄弟**文件**（旧实测放行=P1）
-docs/plans.html|block|X1 同名兄弟（html 形态）
-docs/plansX/y.md|block|X1 同前缀兄弟目录
+docs/plans.md|block|X1a 同名前缀**文件**（旧实测放行=P1）
+docs/plans.html|block|X1a 同名前缀（html 形态）
+docs/plans-X/y.md|allow|闭包边界: 近邻目录**不误拦**（匹配器不猜名字，见契约 §9.2）
+docs/plans-old/z.md|allow|同上（`-old` 近邻）
+docs/planning/z.md|allow|同上（`planning` 不落在 `.` 边界内）
 docs/synova/coordination/moved.md|block|子树
-docs/synova/coordination.md|block|X1 同名兄弟
-docs/synova/coordinationX/y.md|block|X1 同前缀兄弟（旧实测放行=P1）
-docs/synova/audit-reportsX/y.md|block|X1 另一条阻断行同型
-docs/plans-old/z.md|block|闭包代价: 同前缀无关路径一并阻断（显式接受，fail-closed）
-docs/planning/z.md|allow|口径边界: planning 不是 plans 的前缀 ⇒ 不受闭包影响
+docs/synova/coordination.md|block|X1a 同名前缀
+docs/synova/coordinationX/y.md|allow|**X1b 已知未关闭面**（契约 §9.2 登记；类关闭=卡 #1261）
+docs/synova/audit-reports.md|block|X1a 另一条阻断行同型
 docs/x.md|allow|白名单子树（不受阻断侧闭包影响）
 docs-old/x.md|block|白名单**不开闭包**（否则 docs/** 放过 docs-old/ = 开后门）
 appendix/x.md|block|白名单不开闭包（app/** 不放宽）
 decisions/process/x.md|allow|B 层决策
 .github/workflows/x.yml|allow|CI 源码
 .claude/task-briefs/a.md|transition|§9.1 过渡例外（不算违规）
+.claude/task-briefs.md|block|过渡例外**不开闭包**: 同名前缀文件不算 brief（fail-closed）
 reports/README.md|block|X3 索引后门（同址无代码）
 reports/AGENTS.md|block|X3 同族（AGENTS）
 reports/SKILL.md|block|X3 同族（SKILL）
 reports/notes-2026.md|block|未授权新目录的普通 md（对照: 与 README 同判）
+novis-backup-20260526.md|block|X1a（顶层阻断条目，无白名单父级）
+novis-backup-20260526-archive/x.md|block|近邻但**无白名单父级** ⇒ 仍拦（非闭包所致）
 MATRIX
+
+# ── A2 系统化闭包矩阵（全阻断条目 × 三形态；承接 D1203 的同类断言并扩到 dot 边界语义）──
+echo "── A2 闭包矩阵（全阻断条目）──"
+# 有白名单父级的阻断条目（docs/**）: 子树 .md 同名前缀 拦 ／ -archive 近邻放行（不猜名字）
+for base in docs/synova/coordination docs/synova/audit-reports docs/synova/dispatch docs/plans docs/archive docs/synova/archive; do
+  t "A2 ${base}.md 同名前缀文件⇒拦" block "$(verdict "$FXA" "${base}.md")"
+  t "A2 ${base}/sub/x.md 子树⇒拦" block "$(verdict "$FXA" "${base}/sub/x.md")"
+  t "A2 ${base}-archive/x.md 近邻⇒不误拦" allow "$(verdict "$FXA" "${base}-archive/x.md")"
+done
+# 无白名单父级的阻断条目: 近邻也拦（原因不是闭包，而是「未命中白名单」——分开断言防口径混淆）
+t "A2 .claude/task-briefs.md 同名前缀⇒拦" block "$(verdict "$FXA" ".claude/task-briefs.md")"
+t "A2 .claude/task-briefs-archive/x.md 近邻⇒拦（无白名单父级）" block "$(verdict "$FXA" ".claude/task-briefs-archive/x.md")"
+t "A2 novis-backup-20260526.md 同名前缀⇒拦" block "$(verdict "$FXA" "novis-backup-20260526.md")"
+t "A2 novis-backup-20260526-archive/x.md 近邻⇒拦（无白名单父级）" block "$(verdict "$FXA" "novis-backup-20260526-archive/x.md")"
 
 # ── B X3 的两半: 同址无代码 ⇒ 拦；同址有代码 ⇒ 仍放行 ───────────────────────
 echo "── B X3 同址豁免（防一锅端）──"
@@ -227,7 +244,7 @@ else
 
   # D1 X1 变异: 阻断侧前缀闭包 → 关掉
   mutate "$V" "$MUT/m1.py" \
-    'return bool(closure and base and rel.startswith(base))  # 同前缀兄弟（仅阻断侧）' \
+    'return bool(closure and base and rel.startswith(base + "."))  # 同名前缀文件（仅阻断侧）' \
     'return False  # MUTANT: 闭包关闭' >/dev/null 2>&1 \
     && { "$PY" "$MUT/m1.py" --repo-root "$FXM" --files docs/plans.md >"$LAST" 2>&1
          [ $? -eq 0 ] && ok "D1 变异体（闭包关）⇒ docs/plans.md 逃逸复现（夹具判别性成立）" \
@@ -236,12 +253,12 @@ else
 
   # D2 X2 变异: --diff-filter=ACR → A
   mutate "$V" "$MUT/m2.py" \
-    'nm = ["--name-status", "--diff-filter=ACR"]' \
-    'nm = ["--name-status", "--diff-filter=A"]  # MUTANT' >/dev/null 2>&1 \
+    '_DIFF_COMMON = ["--name-only", "--no-renames"]' \
+    '_DIFF_COMMON = ["--name-only"]  # MUTANT: 还原 rename 检测' >/dev/null 2>&1 \
     && { D="$TMPD/m2fix"; mk_git_fix "$D"
          ( cd "$D" && git mv docs/old.md docs/synova/coordination/moved.md ) >/dev/null 2>&1
          "$PY" "$MUT/m2.py" --repo-root "$D" --staged >"$LAST" 2>&1
-         [ $? -eq 0 ] && ok "D2 变异体（filter=A）⇒ rename 逃逸复现（X2 夹具判别性成立）" \
+         [ $? -eq 0 ] && ok "D2 变异体（还原 rename 检测）⇒ rename 逃逸复现（X2 夹具判别性成立）" \
                       || no "D2 变异体未复现 rename 逃逸"; } \
     || no "D2 变异失败（须同步变异靶）"
 
@@ -338,24 +355,34 @@ PYEOF
     || no "G 应 exit 2 + 点名，实际 rc=$RC"
 
   # ── F 过渡台账落 artifact ────────────────────────────────────────────────
-  echo "── F 过渡台账 artifact（#1252 ②）──"
+  echo "── F 过渡台账落盘（#1252 ② · K3 §R3）──"
   D="$TMPD/f1"; mk_brief_fix "$D" 1 ""
   rc_of "$D" --files .claude/task-briefs/b1.md >/dev/null
-  ART="$D/.codex/control-tower/logs/doc-contract-transition.json"
+  ART="$D/.claude/doc-contract-transition.log"
   if [ -f "$ART" ]; then
-    ok "F1 默认落点写出 artifact（$ART#）"
-    "$PY" -c '
+    ok "F1 默认落点写出台账（.claude/doc-contract-transition.log，*.log 已 gitignore）"
+    # JSONL 追加: 取最后一行断言（每轮一条，历史不丢）
+    tail -1 "$ART" | "$PY" -c '
 import json, sys
-d = json.load(open(sys.argv[1], encoding="utf-8"))
+d = json.load(sys.stdin)
 assert d["artifact"] == "doc-contract-transition", "artifact tag"
 hits = d["gate3"]["transition_hits"]
 assert any(h["pattern"] == ".claude/task-briefs/**" for h in hits), "transition_hits missing"
 assert d["transition_table"]["rows"][0]["tracked"] == 1, "tracked count"
-' "$ART" && ok "F2 artifact 含 transition_hits + 动态存量（可复查载体）" \
-          || no "F2 artifact 内容缺项"
+' && ok "F2 台账含 transition_hits + 动态存量（可复查载体；JSONL 追加）" \
+          || no "F2 台账内容缺项"
+    rc_of "$D" --files .claude/task-briefs/b1.md >/dev/null
+    [ "$(wc -l < "$ART" | tr -d ' ')" -ge 2 ] && ok "F2b 追加写（同场景再跑一次 ⇒ 行数增加）" \
+      || no "F2b 未追加（JSONL 历史丢失）"
   else
-    no "F1 未落 artifact（默认落点）"
+    no "F1 未落台账（默认落点）"
   fi
+
+  SEAM="$TMPD/seam.log"
+  env SYNO_DOC_CONTRACT_LOG="$SEAM" "$PY" "$V" --repo-root "$D" \
+    --files .claude/task-briefs/b1.md >"$LAST" 2>&1
+  [ -s "$SEAM" ] && ok "F3b 环境缝 SYNO_DOC_CONTRACT_LOG 生效（承接 D1203 注入缝）" \
+                 || no "F3b 环境缝未生效"
 
   OUTP="$TMPD/explicit-hits.json"
   rc_of "$D" --files .claude/task-briefs/b1.md --hits-out "$OUTP" >/dev/null

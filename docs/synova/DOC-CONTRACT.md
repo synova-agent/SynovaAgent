@@ -6,7 +6,7 @@ approved_at: "2026-09-27"
 effective: "2026-09-27"
 amended_at: "2026-10-07"
 amended_by: "D1193 — 闸 3 判据修复（阻断优先 / +html / 契约动态解析）+ 接线；判据正确性待 K3 独立复核"
-amended_by_2: "D1204 — K3 §R2/§R3 逃逸面收敛（X1 阻断侧前缀闭包 / X2 ACR+rename 目标路径 / X3 同址豁免需同址有代码）+ §9.1 出口条件机器化、存量动态派生、过渡台账落 artifact；判据正确性须 K3 独立复核（红线 R-6）"
+amended_by_2: "D1204（承接 D1203/PR#1255 整改 + K3 §R2/§R3 剩余逃逸面）—— 阻断条目闭包边界收紧到 `.`（X1a）/ `--no-renames` 使 `git mv` 不可绕过（X2）/ `**/NAME` 同址豁免须同址有代码（X3）/ §9.1 出口条件机器可判（tracked-count DSL，不可解析 ⇒ exit 2）+ 存量动态派生（禁双源）+ 过渡台账追加落 `.claude/doc-contract-transition.log` / §9.2 登记 X1b 残余风险；判据正确性须 K3 第二轮独立复核（红线 R-6）"
 owner: CTO
 supersedes:
   - docs/synova/DOCUMENT-CONVENTIONS.md
@@ -197,11 +197,15 @@ decisions/{lifecycle}/{class}/YYYY-MM-DD-topic-title.md
 
 > **优先级（D1193 修复点①）**：**阻断清单优先于白名单**。首版把白名单放在前面，
 > `docs/**` 一击中即放行 ⇒ `BLOCKED_HINTS` 成死代码，§3 ❌ 点名的 coordination/、plans/ **永不触发**。
-> 匹配语义（D1204 修订，K3 §R2 逃逸面收敛后）：
-> - `dir/**`（**阻断清单侧**）= `dir` 自身 + 整棵子树 + **同前缀兄弟**（前缀闭包）
->   —— `docs/plans/**` ⊇ `docs/plans.md`；`docs/synova/coordination/**` ⊇ `docs/synova/coordinationX/y.md`。
->   代价：`docs/planning/**` 等同前缀无关路径一并阻断（多拦=fail-closed，显式接受）。
+> 匹配语义（D1193 建 · D1204 收敛 K3 §R2 逃逸面）：
+> - `dir/**`（**阻断清单侧**）= `dir` 自身 + 整棵子树 + **同名前缀文件** `dir.<ext>`
+>   —— `docs/plans/**` ⊇ `docs/plans.md`（否则「把过程件写成同名前缀的文件」即绕开阻断）。
+>   边界**收紧到 `.`**：`docs/plans-archive/`、`docs/synova/coordinationX/` **不在**自动覆盖内 ——
+>   匹配器**不猜名字**（猜近邻会误拦合法目录 ⇒ 噪音 ⇒ 门禁被绕过，V3.9 教训）。
+>   ⇒ **新增「语义同类但命名不同」的目录时，必须显式登记进上面的阻断清单**，不得依赖匹配器猜。
 > - `dir/**`（**白名单侧**）= 严格子树，**不开闭包** —— 放宽 = 漏拦（`docs/**` 会放过 `docs-old/`）。
+> - `dir/**`（**过渡表**）= 严格子树，**同样不开闭包** —— 例外表应窄于它所例外的阻断条目
+>   （`.claude/task-briefs.md` 不是「目录里的 brief」，仍按阻断判）。
 > - `**/NAME`（同址代码文档豁免，仅白名单）= 任意层同名文件，但**须同址有代码**：父目录内至少
 >   一个非文档文件（`.md/.markdown/.html/.htm` 之外）。空目录/仅有一份 README 的新目录**不放行**
 >   （D1204/X3：`reports/README.md` 曾是「索引后门」）。
@@ -263,10 +267,13 @@ novis-backup-20260526/**
 
 **闸 3 判据对象 = 「新入 `.md` + `.html`」**（D1193 修复点②：**HTML 不是旁路**——同类内容写成 html
 同样阻断；首版只认 `.md`，实测漏网 `docs/synova/coordination/四问-64格.html`）。
-只判**新入（`--diff-filter=ACR`）**，存量不返工（§7）；路径用 `git ls-files` 的仓库相对形式。
-- **D1204/X2**：过滤从 `A` 扩到 **`ACR`** 并取 `--name-status` 的目标路径 ——
-  `git mv 既有文档 → 阻断目录` 的 **R(rename)** 旧版不进清单（实测三闸 PASS，P1 逃逸）；
-  `C`(copy) 同为新路径。**`M`(修改) 仍不在清单内**（存量不返工，语义未变）。
+只判**新入（`--diff-filter=A` + `--no-renames`）**，存量不返工（§7）；路径用 `git ls-files` 的仓库相对形式。
+- **D1204/X2**：变更集统一带 **`--no-renames`** —— git 默认把 `git mv` 记为 R(rename)，而 `--diff-filter=A`
+  不匹配 R ⇒ 既有文档被搬进阻断区可静默通过（旧版实测三闸 PASS，P1 逃逸）。`--no-renames` 把 R 拆成
+  「删除 + 新增」，**新路径必然进入新增清单**。回归断言见 `tests/doc-system/doc-contract-property.test.sh`
+  的 **C3**（R→阻断区，`--staged`/`--base` 双腿）与 **C5**（R→同名前缀，X1×R 交叉）。
+  ⚠ 事实边界：**闸 1/2 的可观测行为不变**（其变更集本就用 `--diff-filter=ACMR`，R 已在集内）；
+  `--no-renames` 只影响取数形态，**没有**「闸 1/2 因此重核 lifecycle 目录」的副作用。
 - **D1204/X3**：`**/README.md` · `**/AGENTS.md` · `**/SKILL.md` 的放行**限定在「同址有代码」的目录**
   —— 见上文匹配语义；新目录用一份 README 播种索引不再放行。
 
@@ -415,10 +422,18 @@ novis-backup-20260526/**
 ```
 <!-- doc-contract:transition:end -->
 
-**过渡台账 artifact（D1204 / #1252 ②）**：执行体每次运行把 `transition_hits` + 逐行
-`实测存量 / 出口是否已达 / 声明值交叉校验` 落到
-`.codex/control-tower/logs/doc-contract-transition.json`（`--hits-out <path>` 可改落点；
-显式指定而不可写 ⇒ degraded exit 2）。**复审取数只认这个载体** —— stdout 会滚走，artifact 不滚。
+**过渡台账落盘（D1204 / #1252 ② · K3 §R3）**：执行体在有过渡命中 / `--baseline` 复审 / 显式 `--hits-out` 时，
+把 `transition_hits` + 逐行 `实测存量 / 出口是否已达 / 声明值交叉校验` **追加**一行 JSON（JSONL）到
+`.claude/doc-contract-transition.log`。**复审取数只认这个载体** —— stdout 会滚走，台账不滚：
+
+```bash
+tail -3 .claude/doc-contract-transition.log   # 最近几次过渡命中与台账（component/artifact=doc-contract-transition）
+```
+
+- **落点与轮转（写给下一个人）**：该文件被 `.gitignore:8` 的 `*.log` 命中 ⇒ **不进提交，不是漏提交**；
+  追加写、**无自动轮转**（体积 ≈ 每命中一次一行，需清理时手删或接 logrotate）。
+  落点优先级：`--hits-out <path>` > 环境缝 `SYNO_DOC_CONTRACT_LOG` > 默认 `.claude/doc-contract-transition.log`；
+  **显式 `--hits-out` 不可写 ⇒ degraded exit 2**，默认/环境缝落点不可写 ⇒ 显式 warn（不阻断——这是对账指标不是门禁）。
 
 **棘轮（防「临时即永久」）**：
 
@@ -434,8 +449,18 @@ novis-backup-20260526/**
 且 coordination 与 dispatch 的**接手已存在**（§11 库外档案仓 + PR 正文 + 卡 note，STATE.md §8 在跑）
 ⇒ 照 §3 直接阻断，错误信息点名落点。
 
-**本表的 self-check（防「临时即永久」）**：见上方棘轮三条 —— 计数核在 artifact，
+**本表的 self-check（防「临时即永久」）**：见上方棘轮三条 —— 计数核在 ledger（`.claude/doc-contract-transition.log`），
 非下降判定在 `--baseline`，声明值腐化在任何模式都判红。
+
+### 9.2 已登记的残余风险（K3 复核交底，不静默丢弃）
+
+| # | 残余风险 | 来源 | 现状与理由 | 何时处理 |
+|---|---|---|---|---|
+| 1 | 「语义同类但**命名不同**」的目录（例：`docs/synova/coordinationX/`）不在阻断条目的自动覆盖内 | K3 复核 **X1b**（P1 面） | **接受**：匹配器不猜名字 —— 无边界前缀匹配会误拦 `docs/plans-archive/` 等同前缀合法目录 ⇒ 噪音 ⇒ 门禁被绕过（V3.9 教训）。改由 §3 明文要求「新增同类目录须**显式登记**阻断清单」 | **类关闭在卡 #1261**：把 `docs/**` 白名单收窄为**正列表**（登记制），届时该类不再依赖阻断清单逐个点名 |
+
+> 记号约定：**X1a** = 同名前缀**文件**（`docs/plans.md`，已由闭包堵）｜**X1b** = 命名不同的近邻目录（本表第 1 条）。
+> **X3**（`**/README.md` 在新目录播种）原在 D1203 读法下也登记为残余风险，**D1204 已改判为「修」**
+> （同址豁免须同址有代码，见 §3）⇒ 不再列入本表。
 
 ---
 

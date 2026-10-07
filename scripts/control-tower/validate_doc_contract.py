@@ -23,7 +23,7 @@ D1204 修的四处（K3 D1193 复核 §R2/§R3 判据逃逸，均为**独立反�
      （「包/目录自己的契约文档随代码走」的原意，不是「任意新目录可用一个 README 开张」）。
   #1252 过渡表出口机器化: 出口条件从散文改为机器可判（`tracked-count:<路径模式>=<N>`），
      存量计数**动态派生**（禁双源；声明值只作为可选交叉校验，与实测不符 ⇒ 违规），
-     `transition_hits` + 过渡台账落 artifact（默认 `.codex/control-tower/logs/doc-contract-transition.json`）。
+     `transition_hits` + 过渡台账落盘（默认 `.claude/doc-contract-transition.log`，JSONL 追加，已 gitignore）。
 
 契约（铁律 47 — 先定义再实现）:
   @input  — --staged            本地: git diff --cached（pre-commit 用）
@@ -72,7 +72,7 @@ BLOCK_WL = "doc-contract-whitelist"
 BLOCK_BL = "doc-contract-blocked"
 BLOCK_TR = "doc-contract-transition"
 DEGRADED_LOG_REL = ".codex/control-tower/logs/degraded-events.log"
-HITS_OUT_REL = ".codex/control-tower/logs/doc-contract-transition.json"  # 过渡台账 artifact（D1204/#1252 ②）
+TRANSITION_LOG_REL = ".claude/doc-contract-transition.log"  # 过渡台账（JSONL 追加；`.gitignore:8 *.log` 已忽略 ⇒ 不是漏提交）
 FENCE = chr(96) * 3
 
 # 过渡表出口判据（机器可判 DSL）: <kind>:<arg>=<want>
@@ -190,13 +190,17 @@ def match_path(rel: str, pat: str, closure: bool = False) -> bool:
     """路径匹配。
 
     closure=False（白名单 / 过渡表 / 默认）: `dir/**` = dir 自身 + **整棵子树**，不越出 dir/。
-    closure=True （**仅阻断清单**）: `dir/**` 额外吃「同前缀兄弟」——
-      `docs/plans/**` ⊇ `docs/plans.md`；`docs/synova/coordination/**` ⊇ `docs/synova/coordinationX/y.md`。
-      D1204/X1（K3 §R2 独立反例）: 严格子树下这两条被放行 = P1 逃逸面。
+    closure=True （**仅阻断清单**）: `dir/**` 额外吃「同名前缀**文件**」`dir.<ext>` ——
+      `docs/plans/**` ⊇ `docs/plans.md`（K3 §R2 X1a；旧实测放行 = P1 逃逸）。
+      边界**收紧到 `.`**：`docs/plans-archive/x.md`、`docs/synova/coordinationX/y.md`
+      不在自动覆盖内 —— 匹配器**不猜名字**（猜近邻会误拦合法目录 ⇒ 噪音 ⇒ 门禁被绕过，V3.9 教训）。
+      命名不同的同类目录须**显式登记**进阻断清单（契约 §3 明文规则；X1b 类关闭见卡 #1261）。
 
     为什么只给阻断侧开闭包（方向性）:
-      · 阻断侧放宽 ⇒ 多拦，fail-closed（代价: `docs/planning/**` 等同前缀路径一并阻断，显式接受）；
+      · 阻断侧放宽 ⇒ 多拦，fail-closed；
       · 白名单侧放宽 ⇒ 少拦，等于开后门（`docs/**` 会放过 `docs-old/`）⇒ 白名单恒为严格子树。
+    为什么**过渡表也不开闭包**: 例外表应窄于它所例外的阻断条目 —— `.claude/task-briefs.md`
+      不是「目录里的 brief」，仍按阻断判（fail-closed）。
     """
     if not pat:
         return False
@@ -206,7 +210,7 @@ def match_path(rel: str, pat: str, closure: bool = False) -> bool:
         base = pat[:-3].rstrip("/")
         if rel == base or rel.startswith(base + "/"):
             return True
-        return bool(closure and base and rel.startswith(base))  # 同前缀兄弟（仅阻断侧）
+        return bool(closure and base and rel.startswith(base + "."))  # 同名前缀文件（仅阻断侧）
     if pat.startswith("**/"):
         tail = pat[3:]
         return rel == tail or rel.endswith("/" + tail)
@@ -274,39 +278,38 @@ def block_reason(why: str) -> str:
 
 
 # ── 变更集 ──────────────────────────────────────────────────────────────────
+# D1204（K3 §R2 X2）: 一律带 `--no-renames` —— git 默认把 `git mv` 记为 R(rename)，
+#   而 `--diff-filter=A` 不匹配 R ⇒ 既有文档被搬进阻断区可静默通过（实测三闸 PASS）。
+#   `--no-renames` 把 R 拆成 D(旧) + A(新)，于是**新路径必然进入新增清单** ⇒ 闸 3 能拦「移入阻断区」。
+#   事实边界: 闸 1/2 的可观测行为**不变** —— 其变更集本就用 `--diff-filter=ACMR`（R 已在集内，
+#   `--name-only` 给出目标路径）；`--no-renames` 只影响取数形态，**没有**「闸 1/2 因此重核
+#   lifecycle 目录」的副作用（D1203 决策件曾如此声称，K3 verifier 实测不成立 ⇒ 此处照事实写）。
+_DIFF_COMMON = ["--name-only", "--no-renames"]
+
+
 def collect_changed(repo: str, staged: bool, base: Optional[str]) -> List[str]:
     if staged:
-        args = ["diff", "--cached", "--name-only", "--diff-filter=ACMR"]
+        args = ["diff", "--cached", *_DIFF_COMMON, "--diff-filter=ACMR"]
     elif base:
-        args = ["diff", "--name-only", "--diff-filter=ACMR", base + "...HEAD"]
+        args = ["diff", *_DIFF_COMMON, "--diff-filter=ACMR", base + "...HEAD"]
     else:
         return []
     return [l for l in run_git(repo, args).splitlines() if l.strip()]
 
 
 def collect_added(repo: str, staged: bool, base: Optional[str]) -> List[str]:
-    """闸 3 的判据对象 = 「新入路径」（D1204/X2 修复）。
+    """闸 3 的判据对象 = 「新入路径」（D1204/X2）。
 
-    原实现 `--diff-filter=A` 只认真·新增 ⇒ `git mv 既有文档 → 阻断目录` 的 R(rename)
-    不进清单，实测三闸 PASS（K3 §R2 X2，P1）。
-      · 过滤改 **ACR**: A=新增 / R=重命名（新路径即入库）/ C=复制（新路径同理）
-      · 形态改 `--name-status` 并取**目标路径**（末列）——`R100\told\tnew` 取 new；
-        `A\tpath` 取 path。rename 一行两路径，只取右侧（旧路径已不在树上，判它无意义）。
+    `--no-renames` + `--diff-filter=A` ⇒ rename 被拆成 D+A，新路径进集（见上）。
     语义边界: **M(修改) 不在清单内** —— 契约 §7「只判新增，存量不返工」不变。
     """
-    nm = ["--name-status", "--diff-filter=ACR"]
-    if not staged and not base:
+    if staged:
+        args = ["diff", "--cached", *_DIFF_COMMON, "--diff-filter=A"]
+    elif base:
+        args = ["diff", *_DIFF_COMMON, "--diff-filter=A", base + "...HEAD"]
+    else:
         return []
-    args = ["diff", "--cached", *nm] if staged else ["diff", *nm, str(base) + "...HEAD"]
-    out: List[str] = []
-    for line in run_git(repo, args).splitlines():
-        if not line.strip():
-            continue
-        parts = line.split("\t")
-        target = parts[-1].strip()  # A/M→path；R100/C75→右侧目标路径
-        if target:
-            out.append(target)
-    return out
+    return [l for l in run_git(repo, args).splitlines() if l.strip()]
 
 
 def collect_decisions(repo: Path) -> List[str]:
@@ -462,20 +465,29 @@ def evaluate_transition_table(
 
 
 def write_hits_artifact(repo: Path, path_arg: Optional[str], payload: Dict) -> Tuple[Optional[str], str]:
-    """过渡台账 artifact 落盘（#1252 ②: transition_hits 之外还要可复查载体）。
+    """过渡台账落盘（#1252 ② / K3 §R3: `transition_hits` 之外还要「可复查载体」）。
 
+    落点解析优先级: `--hits-out <path>` > 环境缝 `SYNO_DOC_CONTRACT_LOG` > 默认
+    `<repo>/.claude/doc-contract-transition.log`。
+    写入形态: **追加**一行 JSON（JSONL）—— 每轮复审取一次数，历史不丢（对账要的是趋势）。
+    轮转期望: 无自动轮转；体积 ≈ 每命中一次一行，需清理时手删或接 logrotate。
     @return (落盘路径, 失败原因)
     显式 `--hits-out` = 调用方契约的一部分 ⇒ 不可写即 Degraded（fail-closed）；
-    默认落点不可写（只读检出等）⇒ stderr warning（**显式可见，不静默**），不影响闸判定。
+    默认/环境缝落点不可写 ⇒ stderr warning（**显式可见，不静默**），不影响闸判定（对账指标 ≠ 门禁）。
     """
-    target = Path(path_arg) if path_arg else (repo / HITS_OUT_REL)
+    env = os.environ.get("SYNO_DOC_CONTRACT_LOG", "").strip()
+    if path_arg:
+        target = Path(path_arg)
+    elif env:
+        target = Path(env)
+    else:
+        target = repo / TRANSITION_LOG_REL
     if not target.is_absolute():
         target = repo / target
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
-        with target.open("w", encoding="utf-8") as fh:
-            json.dump(payload, fh, ensure_ascii=False, indent=2, sort_keys=True)
-            fh.write("\n")
+        with target.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n")
     except OSError as exc:
         if path_arg:
             raise Degraded("过渡台账 artifact 不可写（--hits-out 显式指定）%s: %s" % (target, exc))
@@ -516,7 +528,7 @@ def main() -> int:
     ap.add_argument("--baseline", action="store_true", help="全量 tracked 文档跑闸 3（出库工作清单）")
     ap.add_argument("--all-decisions", action="store_true", help="全量决策件跑闸 1/2")
     ap.add_argument("--hits-out", default=None,
-                    help="过渡台账 artifact 落点（默认 %s；显式指定 ⇒ 不可写即 exit 2）" % HITS_OUT_REL)
+                    help="过渡台账落点（默认 %s；显式指定 ⇒ 不可写即 exit 2）" % TRANSITION_LOG_REL)
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args()
 
@@ -550,15 +562,14 @@ def main() -> int:
         tt = evaluate_transition_table(transition, tracked, tracked_err)
     except Degraded as exc:
         sys.stderr.write("degraded: %s\n" % exc)
-        if a.hits_out:
-            try:
-                write_hits_artifact(repo, a.hits_out, {
-                    "artifact": "doc-contract-transition", "conclusion": "degraded",
-                    "generated_at": datetime.datetime.now().astimezone().isoformat(),
-                    "repo": str(repo), "reason": str(exc),
-                })
-            except Degraded as exc2:
-                sys.stderr.write("degraded: %s\n" % exc2)
+        try:
+            write_hits_artifact(repo, a.hits_out, {
+                "artifact": "doc-contract-transition", "conclusion": "degraded",
+                "generated_at": datetime.datetime.now().astimezone().isoformat(),
+                "repo": str(repo), "reason": str(exc),
+            })
+        except Degraded as exc2:
+            sys.stderr.write("degraded: %s\n" % exc2)
         return 2
 
     if a.baseline:
@@ -594,8 +605,9 @@ def main() -> int:
     ok = all(result[k]["pass"] for k in ("gate1_format", "gate2_supersede", "gate3_inbound", "transition_table"))
     result["conclusion"] = "pass" if ok else "fail"
 
-    # 落盘（#1252 ②）: transition_hits + 存量/出口台账 = 复审时取数的唯一载体
-    if tt["evaluated"] or a.hits_out:
+    # 落盘（#1252 ② / K3 §R3）: transition_hits + 存量/出口台账 = 复审取数的唯一载体。
+    # 写入时机（保持日志精简）: 有过渡命中 / --baseline 复审 / 显式 --hits-out。
+    if (g3.get("transition_hits") or a.baseline or a.hits_out) and (tt["evaluated"] or a.hits_out):
         payload = {
             "artifact": "doc-contract-transition",
             "generated_at": datetime.datetime.now().astimezone().isoformat(),
@@ -613,7 +625,7 @@ def main() -> int:
             sys.stderr.write("degraded: %s\n" % exc)
             return 2
         if werr:
-            sys.stderr.write("warning: 过渡台账 artifact 未落盘（%s）: %s\n" % (repo / HITS_OUT_REL, werr))
+            sys.stderr.write("warning: 过渡台账未落盘（%s）: %s\n" % (repo / TRANSITION_LOG_REL, werr))
         result["transition_artifact"] = path
 
     if a.json:
