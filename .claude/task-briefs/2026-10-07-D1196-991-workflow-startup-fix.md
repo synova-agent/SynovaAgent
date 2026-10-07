@@ -31,6 +31,7 @@
 | 文件 | 类型 |
 |---|---|
 | .github/workflows/project-coordinates.yml | task |
+| .github/workflows/ci.yml | task |
 | scripts/control-tower/sync_project_coordinates.py | task |
 | tests/control-tower/sync_project_coordinates.test.sh | task |
 | memory/notes/proposed/2026-10-07-d1196-workflow-thin-shell.md | task |
