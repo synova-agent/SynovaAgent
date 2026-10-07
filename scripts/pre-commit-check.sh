@@ -1855,6 +1855,27 @@ else
   self_fail_missing_script "D734 PR 预算" "scripts/control-tower/check-pr-budget.sh"
 fi
 
+# ═══ D796: 交付纪律三闸（附加检查；不并入 13 组编号——同 D782/D734 接入模式）═══
+# 背景: 创始人 2026-09-17 三次点名同类问题复发（交付未进 git / 改在别人的分支 / 派单缺件），
+#   本仓 V3.9 教训「信息注入型检查对 agent 不可见，软机制 0% 有效」→ 三条改为物理检查：
+#   C1 工作区归属（禁在别人任务分支/main 上改代码）｜C2 完工落库（标完工必须有 PR/branch + 写集路径已 git 跟踪 + brief 前置）
+#   ｜C3 派单四件套（worktree+分支 / brief 前置 / 写集机器生成 / PR 完工）。
+# 本地软提示 + CI 权威（SYNO_CI=1 时 soft_check 自动转硬，D515/D516 分工）；
+# 文件集用 GIT_CACHED_ALL_NAMES（CI 下 honor SYNO_DIFF_BASE，否则 CI 无暂存区会假跳过）。
+if [ -f "$ROOT/scripts/control-tower/check-delivery-discipline.sh" ]; then
+  DIS_OUT=$(bash "$ROOT/scripts/control-tower/check-delivery-discipline.sh" --repo "$ROOT" --files "$GIT_CACHED_ALL_NAMES" 2>&1)
+  DIS_RC=$?
+  if [ "$DIS_RC" -eq 0 ]; then
+    soft_pass "D796 交付纪律三闸: $(echo "$DIS_OUT" | tail -1 | sed 's/^DISCIPLINE-OK: //')"
+  elif [ "$DIS_RC" -eq 2 ]; then
+    soft_check "D796 交付纪律三闸: 降级(exit 2)——显式留痕，不静默当绿（CI strict 阻断）" "$DIS_OUT"
+  else
+    soft_check "D796 交付纪律三闸未过——交付必须 commit+push+开 PR；代码只在任务自己的分支/worktree 改；派单含四件套" "$DIS_OUT"
+  fi
+else
+  soft_check "D796 交付纪律三闸: 脚本缺失 scripts/control-tower/check-delivery-discipline.sh" "1"
+fi
+
 # ── D520/任务3: 平台敏感命令软检查（V5 软提示——新增脚本须对照 PLATFORM-CHECKLIST.md）──
 # 只查本次新增（A）的 scripts/control-tower|workflow 下的 .sh/.py 文件：
 #   裸 python3（非 PYBIN 模式）/ date +%s / date -v / grep -P → 提示见 checklist。
