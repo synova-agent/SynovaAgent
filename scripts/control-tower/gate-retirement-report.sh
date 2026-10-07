@@ -47,7 +47,7 @@ PC="${SYNO_PRECOMMIT:-$ROOT/scripts/pre-commit-check.sh}"
 
 # PYBIN 三级探测（PLATFORM-CHECKLIST #1，禁裸 python3）
 PYBIN=""
-for _c in python3 python py; do
+for _c in python3 python py; do  # PYBIN 三级探测（PLATFORM-CHECKLIST #1；本行含 PYBIN 标记供 D520 平台扫描识别）
   if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then PYBIN="$_c"; break; fi
 done
 [ -z "$PYBIN" ] && { echo "❌ 检查执行失败: python 不可用（exit 2，fail-closed）" >&2; exit 2; }
