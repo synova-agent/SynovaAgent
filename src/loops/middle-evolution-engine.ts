@@ -17,6 +17,8 @@
 import { createLogger } from '@synova/logger';
 import type { AggregatedSignal } from '../growth/feedback-collector';
 import { getAgentMemoryStore } from '../l4/agent-memory-store';
+import { getFileGuard, type FileAccessDecision } from '../security/file-guard';
+import { AuditService } from '../services/audit-service';
 
 const log = createLogger('loops/middle-evolution-engine');
 
@@ -403,11 +405,40 @@ function readExpertManifest(expertType: string): Record<string, unknown> | null 
 }
 
 /**
- * 回写 expert/{type}/manifest.json。
- */
+* 写入前过 FileGuard 门（#1052 / 施工项 2-4）。
+*
+* @input targetPath — 目标绝对路径
+* @output FileAccessDecision —— allowed=true 调用方继续写；allowed=false 调用方**不得**写
+* @degraded 审计不可用（AuditService 未初始化）⇒ 其内部 `log.warn` 后跳过，
+*   门禁判定**不变**（铁律 24/31：审计失败不改判、也不放行）
+*
+* 覆盖面声明：本门只覆盖**进化产物写**（本文件 3 处）；全仓写原语 24 文件，其余未拦
+*   （CTO 2026-10-08 裁定：覆盖面必须显式声明）。
+*/
+function guardWrite(targetPath: string): FileAccessDecision {
+  const decision = getFileGuard().canWrite(targetPath);
+  if (decision.allowed) return decision;
+  log.warn({ path: targetPath, reason: decision.reason }, '写入被 FileGuard 拒绝 — 跳过写入（#1052）');
+  // 审计落点在**调用点**（CTO 裁定：不把 IO 塞进 FileGuard）；复用既有唯一审计通道
+  AuditService.log({
+    orgId: 'system',
+    actorId: 'system:file-guard',
+    actorRole: 'system',
+    action: 'file_write_denied',
+    targetType: 'file',
+    targetId: targetPath,
+    newValue: JSON.stringify({ reason: decision.reason, caller: 'loops/middle-evolution-engine' }),
+  });
+  return decision;
+}
+
+/**
+* 回写 expert/{type}/manifest.json。
+*/
 function writeExpertManifest(expertType: string, data: Record<string, unknown>): boolean {
   try {
     const path = join(EXPERT_DIR, expertType, "manifest.json");
+    if (!guardWrite(path).allowed) return false; // #1052: 越界/受保护路径 ⇒ 不写
     writeFileSync(path, JSON.stringify(data, null, 2), "utf-8");
     return true;
   } catch (err) {
@@ -492,6 +523,11 @@ function applyThresholdAdjust(action: EvolutionAction, result: ApplyActionResult
         reason: `pending — ${sameKey.length + 1}/${MIN_TRIGGER_COUNT} corrections needed`,
       });
       config._gaCorrections = corrections;
+      const gatePending = guardWrite(thresholdPath); // #1052
+      if (!gatePending.allowed) {
+        result.errors.push(`${industry.name}: 写入被门禁拒绝 — ${gatePending.reason ?? 'unknown'}`);
+        continue;
+      }
       writeFileSync(thresholdPath, JSON.stringify(config, null, 2), "utf-8");
       result.skipped++; found = true;
       logCorrection(sentinelKey, action.type, {
@@ -514,6 +550,11 @@ function applyThresholdAdjust(action: EvolutionAction, result: ApplyActionResult
       newWarning: entry.warning, newCritical: entry.critical,
     });
     config._gaCorrections = corrections;
+      const gateApplied = guardWrite(thresholdPath); // #1052
+      if (!gateApplied.allowed) {
+        result.errors.push(`${industry.name}: 写入被门禁拒绝 — ${gateApplied.reason ?? 'unknown'}`);
+        continue;
+      }
     writeFileSync(thresholdPath, JSON.stringify(config, null, 2), "utf-8");
     log.info({ sentinelKey, industry: industry.name, warning: `${oldW}→${entry.warning}` }, "GA 阈值调整已回写");
     result.applied++; found = true;

@@ -9,6 +9,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { createLogger } from '@synova/logger';
+import { getFileGuard } from '../security/file-guard';
 
 const log = createLogger('agent/atomic-write');
 
@@ -49,6 +50,15 @@ export class AtomicWriter {
     validate?: (content: string) => boolean,
   ): AtomicWriteResult {
     const targetPath = path.join(this.rootDir, relativePath);
+
+    // #1052（B 项：接口就位）：写入前过 FileGuard 门。
+    // 覆盖面声明：本方法只覆盖自身调用方；今日 `write()` 零生产调用 ⇒ **不作穿入口判据**（铁律 4/5）。
+    const gate = getFileGuard().canWrite(targetPath);
+    if (!gate.allowed) {
+      const err = `写入被 FileGuard 拒绝: ${gate.reason ?? 'unknown'}`;
+      log.warn({ targetPath, err }, '原子写入被门禁拒绝 — 不落盘');
+      return { success: false, targetPath, error: err };
+    }
     const tmpPath = targetPath + '.tmp';
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupPath = path.join(
