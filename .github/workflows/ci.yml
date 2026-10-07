@@ -672,7 +672,12 @@ jobs:
     timeout-minutes: 6
     name: Checker Review (maker/checker)
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/feat/')
+    # P0-2（2026-10-07 治理线）: 原 `pull_request || feat/*` 会把 main push / merge_group 整个
+    # job 吞掉（skip）⇒ ① main push 语境 CI「看不见坏」（#905 假绿正是 main push 语境）；
+    # ② all-checks-passed 判 skipped=FAIL ⇒ 每次 main push 恒红；③ merge_group 下必需
+    # context 永不报告 ⇒ merge queue 卡死（D515 同族，见文件头 merge_group 注释）。
+    # 故扩为: pull_request | merge_group | main push | feat/*（原有行为全保留）。
+    if: github.event_name == 'pull_request' || github.event_name == 'merge_group' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/feat/')
     steps:
       - uses: actions/checkout@v4
         with:
@@ -1180,3 +1185,38 @@ jobs:
             echo "::warning title=advisory:control-tower(win)::windows 顾问腿**未执行**（outcome='${OUTCOME}'）——本次未取得平台信号（非必需，不拦合并）；前置步骤失败时属预期"
           fi
           exit 0
+
+  # ═══ P0-3: 聚合必需检查 —— skipped 也判 FAIL ═══
+  # 蓝本: DSH 上游 ci.yml:700-726（dsh-v0.2.0-rc.2；steps 段逐字）
+  # 与蓝本的三处已声明差异（K3 整改 D1177，原「唯一差异」表述不实）:
+  #   ① if 去掉 pull_request 事件限定（CTO 明令——#905 语境为 main push）
+  #   ② name: all checks passed → All Checks Passed（对齐本仓 check-run 命名习惯）
+  #   ③ runs-on: 上游 failover 选择器 → ubuntu-latest（failover 机制本仓未建）
+  # 归因口径（K3 整改订正）: 本 job 治的是 **job 级 skip 族**（job 结论 success/skipped 不可辨，
+  #   D971/D1111/D1147 系）。#905 实为 **step 级 skip**（docs-only 误判 ⇒ job 内重步骤 skip
+  #   但 job=success）——needs.*.result 物理上看不见 step 级 skip，那层归 D1111 路径锚正则/
+  #   D708/D540 管。本 job 是纵深一层，不是「修 #905」。
+  # needs = 8 个 job 键，恰覆盖 9 条必需 context（test 是 2-shard 矩阵，覆盖 Vitest 1/2+2/2）。
+  # 🔴 不纳入 needs 的（非必需，纳入会把它们的红也变成阻断）:
+  #   audit(npm audit) · gate-integrity · windows-leg-trigger
+  #   · test-kit-windows-advisory · control-tower-windows-advisory
+  # 🔴 与 DSH 蓝本的唯一差异: 去掉 `github.event_name == 'pull_request'`
+  #   理由: push 到 main 同样必须被拦（#905 的假绿正是发生在 main push 语境）。
+  # ⚠️ 上界（必须留档）: 本 job 挡不住「PR 自己改 ci.yml 把本 job 改成恒绿」——
+  #   PR 事件跑的是 PR 头分支里的 workflow（#905 事故机制）；只保证 (a) skip 掉必需
+  #   job ⇒ 必红；(b) 改实现 ⇒ 挡不住（需 pull_request_target，下一张卡）。
+  all-checks-passed:
+    name: All Checks Passed
+    runs-on: ubuntu-latest
+    # 注: needs 必须单行 —— check-required-contexts.py 的 YAML 子集解析器不支持续行
+    #     （多行会 fail-closed degrade ⇒ required-contexts 全量检查降级失败）。
+    needs: [quality, test, architecture, test-kit-architecture, control-tower-tests, integration-check, checker-review, golden-case]
+    if: ${{ !cancelled() }}
+    steps:
+      - name: Fail if any needed job did not succeed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: |
+          echo "::error::Needed job results: ${{ join(needs.*.result, ', ') }}"
+          exit 1
+      - name: All checks passed
+        run: echo "All needed jobs succeeded (${{ join(needs.*.result, ', ') }})"
