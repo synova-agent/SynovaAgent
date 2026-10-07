@@ -207,7 +207,7 @@ def main(argv) -> int:
         return EXIT_OK
 
     if not args.files:
-        _die("未给出待校验文件（用法: check-ownership.py <文件...> [--owner mac|win|k3]）")
+        _die("未给出待校验文件（用法: check-ownership.py <文件...> [--owner <键>]）—— owner 键见 ownership.yaml 的 owners: 段")
 
     rows = []          # (path, owner|None)
     violations = []    # (path, expected, actual)
