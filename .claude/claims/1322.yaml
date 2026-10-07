@@ -1,0 +1,32 @@
+# .claude/claims/1322.yaml — #1322 目标创建链接入生产入口 的写集声明（S0 源）
+#
+# 为什么用 claim 而不是 task-state/<D#>.json：本卡是 **issue 号卡（#1322）**，
+# 无 D# 编号 ⇒ D708 门禁的 S1/S2/S3（全部按 `<D#>*` 定位）找不到声明源，
+# 会把全部改动判为「夹带」。`.claude/claims/<issue>.yaml` 是 D-C 归一后为
+# **issue 号任务**提供的正式声明源（`merge_writeset_gate.py` 的 S0，claim 优先）。
+#
+# 依据：CTO 2026-10-08 放行 + 计划 §1「最终写集」；越界两处已在 PR #1330 正文申报。
+writeset:
+  - .claude/claims/1322.yaml
+  - .claude/task-briefs/2026-10-08-1322-goal-creation-entry.md
+  - src/growth/goal-store.ts
+  - src/growth/proposal-engine.ts
+  - src/growth/proposal-store.ts
+  - src/growth/proposal-types.ts
+  - src/growth/workspace-builder.ts
+  - src/growth/workspace-types.ts
+  - src/routes/workspace-data.ts
+  - tests/growth/goal-store-real-graph.integration.test.ts
+  - tests/growth/proposal-store-real-graph.integration.test.ts
+  - tests/routes/workspace-goal-creation.integration.test.ts
+  - tests/security/rbac-all-routes.test.ts
+# 声明纪律（CTO 复验 M-b + verifier-4 门禁观察「过宽声明 = 预授权未改动路径」）:
+#   本 claim 只列**本 PR 真正改动**的文件。M3（generateGoalFromProposal 删 orgId→department
+#   回退）及其 3 件夹具连带（tests/e2e/full-pipeline.integration.test.ts /
+#   tests/growth/proposal-engine.test.ts / tests/growth/e2e-navigation-loop.integration.test.ts）
+#   **已拆出本 PR**（D734 预算 12 上限；CTO 裁定 Z1），故**不在此声明** ——
+#   由 follow-up PR（fix/1322-orgid-fail-closed）自行声明。
+done:
+  - verify: npx vitest run tests/growth/goal-store-real-graph.integration.test.ts tests/growth/proposal-store-real-graph.integration.test.ts tests/routes/workspace-goal-creation.integration.test.ts tests/security/rbac-all-routes.test.ts
+  - verify: bash scripts/check-architecture.sh
+note: B1（真库 id 语义断裂）为本卡新证并随本卡修复；R23 串行：#1290/#1316 待本卡合入后再开。

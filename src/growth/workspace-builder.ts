@@ -49,6 +49,15 @@ export interface WorkspaceBuilderDeps {
   /** 按部门查询活跃 Goal，返回 ActiveGoal[]（含偏离状态） */
   getGoalsByDept?: (deptId: string) => ActiveGoal[];
 
+  /**
+   * 按**组织（租户）**查询活跃 Goal（#1322，R21）。
+   *
+   * 为什么必须另立入口而不是复用 getGoalsByDept：租户隔离载体是 `props.orgId`
+   * （卡 R21），而 `getGoalsByDept` 的契约是「按部门」——把 org 语义塞进它 = 名实不符，
+   * 调用方再也无法从签名判断到底按哪个维度过滤。两者并存：传 `opts.orgId` 时优先本入口。
+   */
+  getGoalsByOrg?: (orgId: string) => ActiveGoal[];
+
   /** 按部门查询待处理 Proposal */
   getProposalsByDept?: (deptId: string) => PendingProposal[];
 
@@ -88,7 +97,7 @@ function extractDeptName(props: Record<string, unknown>): string {
  *
  * 5 步聚合，每步独立 try-catch:
  *   1. 部门基本信息 — GraphStore.queryNodes('resource/team')
- *   2. 活跃 Goal — getGoalsByDept
+ *   2. 活跃 Goal — getGoalsByOrg（租户，#1322）｜无 orgId 时回退 getGoalsByDept（部门）
  *   3. 待处理 Proposal — getProposalsByDept
  *   4. 告警 — getAlertsByDept (免打扰过滤)
  *   5. 诊断报告 — getDiagnosticsByDept
@@ -97,12 +106,17 @@ function extractDeptName(props: Record<string, unknown>): string {
  * @param deptId  部门 ID
  * @param deps    外部依赖（GraphStore + 查询函数）
  * @param graph   图名称（默认 'growth'）
+ * @param opts    可选。#1322 新增 `orgId`（**租户过滤唯一载体**，R21：`props.orgId`）；
+ *                传入时 Step 2 优先走 `deps.getGoalsByOrg`，未装配则**显式记降级**（不静默）。
  * @returns DepartmentWorkspace
+ * @degraded 单步失败 → degradedModules 留痕；`opts.orgId` 有值而 `getGoalsByOrg` 缺席
+ *           同样记降级（铁律 31：不把「没查」伪装成「没有」）
  */
 export function buildDepartmentWorkspace(
   deptId: string,
   deps: WorkspaceBuilderDeps,
   graph: string = 'growth',
+  opts?: { orgId?: string },
 ): DepartmentWorkspace {
   const degraded: DegradedEntry[] = [];
   let deptName = deptId;
@@ -133,8 +147,25 @@ export function buildDepartmentWorkspace(
   }
 
   // ── Step 2: 活跃 Goal ──
+  // #1322: 传了 opts.orgId ⇒ 走租户维度（R21）。绝不在缺少 getGoalsByOrg 时回落到
+  //   「不按租户查」——那会把多客户串账重新引回来；宁可置空 + 显式降级。
   let activeGoals: ActiveGoal[] = [];
-  if (deps.getGoalsByDept) {
+  const orgId = opts?.orgId;
+  if (orgId) {
+    if (deps.getGoalsByOrg) {
+      try {
+        activeGoals = deps.getGoalsByOrg(orgId);
+        log.debug({ orgId, count: activeGoals.length }, '活跃 Goal 已加载（按租户）');
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        log.warn({ err: msg, orgId }, 'Step 2: 活跃 Goal 加载失败 — 降级');
+        degraded.push({ step: 'active_goals', error: msg });
+      }
+    } else {
+      log.warn({ orgId }, 'Step 2: getGoalsByOrg 未装配 — 活跃 Goal 置空（degraded）');
+      degraded.push({ step: 'active_goals', error: 'getGoalsByOrg 未装配（租户维度不可查）' });
+    }
+  } else if (deps.getGoalsByDept) {
     try {
       activeGoals = deps.getGoalsByDept(deptId);
       log.debug({ deptId, count: activeGoals.length }, '活跃 Goal 已加载');
