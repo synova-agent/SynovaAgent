@@ -483,7 +483,7 @@ if echo "$OUT" | grep -q "未读到「## 死代码清理声明」段落"; then p
 { echo "### 死代码清理声明"; for _p in $P5; do echo "- $_p — 铁律 37: 零引用"; done; echo "#### 段终止"; } > "$DCL/h3.md"
 run_expect 0 "15.9 三级标题（###）也被识别 → exit 0" --diff-status "$SET5D" --decl-file "$DCL/h3.md"
 OUT="$(SYNO_DR_DECL_FILE="$DCL/only4.md" bash "$TOOL" --diff-status "$SET5D" --decl-file "$DCL/ok5.md" 2>&1)"; _e=$?
-if [ "$_e" = 0 ]; then pass "15.9b --decl-file 优先于 \$SYNO_DR_DECL_FILE（显式注入缝权威）"; else fail "15.9b 注入缝优先级错 — 期望 0 实际 $_e"; echo "$OUT" | sed 's/^/      | /' >&2; fi
+if [ "$_e" = 0 ]; then pass "15.9b --decl-file 优先于 \${SYNO_DR_DECL_FILE}（显式注入缝权威）"; else fail "15.9b 注入缝优先级错 — 期望 0 实际 $_e"; echo "$OUT" | sed 's/^/      | /' >&2; fi
 OUT="$(SYNO_DR_DECL_FILE="$DCL/ok5.md" bash "$TOOL" --diff-status "$SET5D" 2>&1)"; _e=$?
 if [ "$_e" = 0 ]; then pass "15.9c \$SYNO_DR_DECL_FILE 单独可用 → exit 0"; else fail "15.9c 环境变量注入缝失效 — 期望 0 实际 $_e"; echo "$OUT" | sed 's/^/      | /' >&2; fi
 
