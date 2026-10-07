@@ -42,30 +42,44 @@
 - **发现用 `git ls-files` 而非 walk 文件系统**：免疫 worktree / `node_modules` / `.pnpm-store`
   里同名标记的**假发现**（本仓工作目录内挂有大量 worktree）；且新标记 `git add` 后即被看见
   （提交端门禁的准确语义）；同时免 BSD/GNU `find` 差异（PLATFORM-CHECKLIST）。
+  ⇒ **重要边界：只认 git index 中的标记，untracked 标记一律不生效**（verifier 实测钉死；
+  夹具 §12b 正反双证：untracked ⇒ 不生效且 rc=0；`git add` 后 ⇒ 即生效且未重生成产物则 rc=1）。
 - **标记缺失不是错误，产物不一致才是**：继承是正常语义 ⇒ 「删标记」的红来自**漂移**，
   而非「无归属」。这把"忘了登记"从静默变成必红。
-- **根标记缺失判 exit 1（违规）而非 exit 2**：树与产物不一致是**仓库状态的错**，
-  不是校验器自己坏了 —— 且本卡判据②明定「删/改标记 ⇒ exit 1」。
+- **根标记缺失：校验面 exit 1 / 生成面 exit 2**（R1 整改，取舍显式化）：
+  · **校验面**（默认 / `--owner` / `--check-drift`）⇒ **1**：树与产物不一致是**仓库状态的错**，
+    不是校验器自己坏了 —— 且本卡判据②明定「删/改标记 ⇒ exit 1」。
+  · **生成面**（`--emit-ownership` / `--emit-codeowners`）⇒ **2**：生成器**产不出有效产物**
+    （无 `**` 兜底），按 D328「绝不与通过混同」拒绝产出。
+  · 整改前实测不一致：`--emit-codeowners` 已是 2，而 `--emit-ownership` **rc=0 且吐出无兜底的
+    ownership.yaml**（静默劣化）⇒ 现两入口统一走 `has_catchall()` 守卫，**半成品不再泄漏**。
 - **保留 `--yaml PATH` 作为显式覆盖缝**：既有测试与夹具靠它注入多 owner 副本，
   用以证明判定**真读数据**（反 grep 型静态恒绿）；默认路径则走发现制（真接线）。
 - **不新增阻断点**（Lead 裁决）：v2.0 方向是减法。漂移门禁落在校验器自身默认路径
-  （已被 2 个既有调用方消费，非假接线），**不**接入 pre-commit / ci.yml 阻断面。
+  （已被 2 个既有调用方消费，非假接线），**不**由本卡接入 pre-commit / ci.yml 阻断面。
 
-## 已知未接线面（诚实留痕，不虚称已接线）
+## 已知未接线面（诚实留痕，不虚称已接线）→ R2 已裁「接」
 
 - `check-ownership.py` 今日**无阻断型消费者**：
   `check-pr-budget.sh` ② 段自 2026-09-29 起为「信息性，不阻断」；
-  `scan-fullwidth-vars.sh` 显式把 exit 1 当正常。⇒ 漂移虽判 exit 1，**当前不阻断合并**。
-- 若要接阻断面，需在 `scripts/pre-commit-check.sh`（线 A 写面）或
-  `.github/workflows/ci.yml`（线 B 写面）加一行 —— 本卡不越界，交 Lead 派单。
+  `scan-fullwidth-vars.sh` 显式把 exit 1 当正常。⇒ 漂移虽判 exit 1，**本卡落地时点尚不阻断合并**。
+- **Lead 2026-10-07 裁决（R2）= 接**，接入点定为 **`.github/workflows/ci.yml` 的 Gate Integrity job
+  加一步**（blocking —— 它守的是生成物真源）；该文件属**线 B 写集**，由 Lead 在**统一注册 PR** 里
+  一并落，本卡不越界。**这是判据变更，由 Lead 出 K3 送审件。**
+- 本卡为此提供的保证（CI 环境可复跑，实测）：
+  ```
+  # 干净 clone（CI 等价：无 untracked、无 worktree 状态）+ 最小 env + /usr/bin/python3
+  $ for i in 1..5; do env -i PATH=/usr/bin:/bin python3 .../check-ownership.py --check-drift; done
+  rc=0 ×5  （确定性，无环境依赖；退出码契约 = 0 新鲜 / 1 漂移 / 2 自身失败）
+  ```
 - `tests/control-tower/check-ownership.test.sh` **未登记 CI 密封清单**
   （`grep -c check-ownership .github/workflows/ci.yml` = 0，走 ci-registry 基线豁免）
-  ⇒ 本卡夹具目前**不在 CI 执行**，只在本地/按需执行；是否登记由 Lead 决定。
+  ⇒ 本卡夹具目前**不在 CI 执行**；是否登记由 Lead 在注册批决定。
 
 ## 判据（可复跑）
 
 ```bash
-bash tests/control-tower/check-ownership.test.sh              # 73 项全绿（原 34 项）
+bash tests/control-tower/check-ownership.test.sh              # 83 项全绿（原 34 项）
 python3 scripts/control-tower/check-ownership.py --check-drift   # exit 0 逐字节新鲜
 git ls-files .synova-owner                                    # 恰 1 行（根标记）
 ```

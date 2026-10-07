@@ -13,7 +13,8 @@
 #     §10 改/删归属标记 ⇒ exit 1（改坏即红）；重生成 ⇒ 可复绿；owner 真变（反静态恒绿）
 #     §11 生成命令幂等可复跑 + **逐字节**漂移即红（不是"内容等价即过"）
 #     §12 标记格式非法一律 fail-closed → exit 2（未知键/重复键/空值/缺 owner/缺 handle/二义）
-#     §13 根标记缺失 ⇒ exit 1（真源消失是**违规**，不是"检查自己坏了"）
+#     §12b 发现面边界: **只认 git-tracked 标记**（untracked 不生效；git add 后即生效）
+#     §13 根标记缺失 ⇒ **校验面 exit 1 / 生成面 exit 2**（两面各自一致；生成面不产半成品）
 #
 # **保留**（判据能力不降级）:
 #   · 单域正例 / 反向验证（删兜底 → 变绿 + 无归属明示）/ 降级 fail-closed
@@ -337,6 +338,44 @@ sb --check-drift > "$TMPD/noroot.out" 2>&1; _e=$?
 [ "$_e" = 1 ] && pass "删除根标记 ⇒ --check-drift exit 1（不静默放过）" \
   || { fail "根标记删除后未红 — 期望 exit=1 实际 $_e"; sed 's/^/      | /' >&2 < "$TMPD/noroot.out"; }
 grep -q "产物漂移" "$TMPD/noroot.out" && pass "点名漂移（真源消失 = 违规，非「检查失败」exit 2）" || fail "未点名漂移"
+# R1（verifier P3）: 「校验面 exit 1 / 生成面 exit 2」两面各自一致，且**生成面不得静默产半成品**
+#   —— 整改前实测：--emit-ownership 在无根标记时 rc=0 且产出**无兜底**的 ownership.yaml（静默劣化）。
+for _emit in --emit-ownership --emit-codeowners; do
+  sb "$_emit" > "$TMPD/emit-noroot.out" 2>&1; _e=$?
+  [ "$_e" = 2 ] && pass "根标记缺失 ⇒ ${_emit} exit 2（生成面拒绝产出，不产半成品）" \
+    || { fail "根标记缺失 ${_emit} — 期望 exit=2 实际 $_e（生成面与校验面未对齐）"; sed 's/^/      | /' >&2 < "$TMPD/emit-noroot.out"; }
+done
+if sb --emit-ownership 2>/dev/null | grep -qE '^[[:space:]]*- glob:'; then
+  fail "根标记缺失时 --emit-ownership 仍吐出规则段（半成品泄漏）"
+else
+  pass "根标记缺失时 --emit-ownership 零规则段输出（无半成品泄漏）"
+fi
+sb --check-drift >/dev/null 2>&1; _e=$?
+[ "$_e" = 1 ] && pass "同一状态下校验面仍为 exit 1（两面分工：1=仓库错 / 2=产不出）" \
+  || fail "校验面应为 exit 1，实际 $_e"
+
+echo ""
+echo "── 12b. 🔴 发现面边界: 只认 git-tracked 标记（untracked 一律不生效）──"
+if mk_sandbox; then pass "发现面沙箱就绪"; else fail "发现面沙箱失败"; fi
+mkdir -p "$SANDBOX/src/ghost"
+printf 'g\n' > "$SANDBOX/src/ghost/g.ts"
+( cd "$SANDBOX" && git add -A ) >/dev/null 2>&1
+# 只落文件、**不 git add** ⇒ 发现制必须看不见它（契约 §@发现面）
+printf 'owner: ghostkey\nhandle: @ghost\n' > "$SANDBOX/src/ghost/.synova-owner"
+sb --emit-ownership > "$TMPD/ghost.out" 2>&1; _e=$?
+[ "$_e" = 0 ] && pass "untracked 标记: --emit-ownership 仍 exit 0" || fail "untracked 标记导致生成失败 (exit=$_e)"
+grep -q "ghostkey" "$TMPD/ghost.out" && fail "untracked 标记被当成真源（契约破了：发现面必须只认 index）" \
+  || pass "untracked 标记**不生效**（发现面 = git index，契约②钉死）"
+sb --check-drift >/dev/null 2>&1; _e=$?
+[ "$_e" = 0 ] && pass "untracked 标记不引起漂移（rc=0 —— 与 verifier 实测一致）" || fail "untracked 标记引起漂移 (exit=$_e)"
+# 反向: git add 后**必须**生效（否则等于"登记了没反应"）
+( cd "$SANDBOX" && git add -A ) >/dev/null 2>&1
+sb --emit-ownership > "$TMPD/ghost2.out" 2>&1
+grep -q "ghostkey" "$TMPD/ghost2.out" && pass "git add 后标记**即生效**（提交端语义：add 即登记）" \
+  || fail "git add 后标记仍未生效（登记无反应）"
+sb --check-drift >/dev/null 2>&1; _e=$?
+[ "$_e" = 1 ] && pass "tracked 标记但产物未重生成 ⇒ 漂移 exit 1（改坏即红闭环）" \
+  || fail "tracked 新增标记未触发漂移 (exit=$_e)"
 
 echo ""
 echo "── 14. 生产接线（铁律 0-2 WIRE CHECK）──"

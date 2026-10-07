@@ -28,11 +28,24 @@ check-ownership.py — 路径归属查询/校验器（发现制：目录内嵌 .
             --emit-ownership / --emit-codeowners → 产物全文（UTF-8 + LF，与仓内文件逐字节可比）；
             漂移诊断走 **stderr**（保持 stdout 可被 scan-fullwidth-vars.sh `_owners()` 逐行解析）
   @exit   — 0 = 归属解析成功（含无标记目录继承成功）；或未声明 owner 时全部同域
-            1 = 越域（声明 owner ≠ 实际归属）/ 产物漂移（含标记被改删、根标记缺失、产物未重生成）
-            2 = 检查执行失败（非 git 仓/标记语法错/handle 缺失或冲突/无输入/解析器不可用）—— fail-closed
+            **校验路径**（默认 / `--owner` / `--check-drift`）:
+              1 = 越域（声明 owner ≠ 实际归属）**或产物漂移**（标记被改删致产物过期、
+                  产物未重生成、**根标记缺失**——树与产物不一致是仓库状态的错，不是校验器坏了）
+              2 = 检查自身失败（非 git 仓/标记语法错/handle 缺失或冲突/无输入/解析器不可用）—— fail-closed
+            **生成路径**（`--emit-ownership` / `--emit-codeowners`）:
+              0 = 产出成功；**2 = 无法产出有效产物（无 `**` 兜底规则，如根标记缺失）—— 拒绝产半成品，不静默**
+              （与校验路径的 1 是**两个面**：校验面问"仓库对不对"，生成面问"我能不能产出"。
+                R1 取舍：P3 整改后两面各自一致——生成面**两**入口均 2，校验面均 1。）
   @degraded — 无规则匹配的文件 → stdout 「⚠️ 无归属规则」明示 + 不计阻断（不静默）；
               其余失败一律 exit 2，绝不与「通过」混同（D328 三态）。
               记法：**标记缺失不是错误**（继承是正常语义）；**产物与树不一致才是违规**（exit 1）。
+  @发现面（重要边界，verifier 实测钉死）—— 发现制**只认 git index 中的标记**：
+              判据载体 = `git ls-files`（读 index）⇒ **untracked 的 .synova-owner 一律不生效**
+              （`--emit-ownership` 不含它、`--check-drift` 仍 rc=0）。这是**刻意设计**，不是缺陷：
+                ① 提交端门禁的准确语义 = "本次要提交的东西"，故 `git add` 后即生效；
+                ② CI 在干净 checkout（HEAD）上跑 ⇒ tracked 即真源；
+                ③ 免疫 worktree / node_modules / `.pnpm-store` 里同名标记造成的**假发现**。
+              反例（不得据此判红）: 只 `mktemp` 落文件而**未 `git add`** ⇒ 发现制看不见它（夹具 §12b 钉死）。
   @error  — 不抛异常给调用方；全部经退出码表达（Ctrl-tower 模式 1）
 """
 from __future__ import annotations
@@ -333,13 +346,26 @@ _OWNERSHIP_HEADER = [
 ]
 
 
+def has_catchall(rules) -> bool:
+    """规则表是否含 `**` 兜底（产物有效性的唯一硬条件）。
+
+    @input  — rules: list[dict]
+    @output — bool；无兜底 ⇒ 产物对未覆盖路径无归属 ⇒ 生成面拒绝产出（exit 2）
+    @degraded — 无（纯函数）
+    """
+    return any(str(r.get("glob")) == "**" for r in rules)
+
+
 def emit_ownership(rules, github, notes) -> str:
     """由发现结果生成 ownership.yaml 全文。
 
     @input  — rules / github / notes（见 markers_to_rules）
     @output — 文本（UTF-8，LF 结尾）；与本文件**逐字节**可比（漂移门禁的基准）
-    @degraded — 无（纯函数；缺 handle 在 markers_to_rules 已 fail-closed）
+    @degraded — 无 `**` 兜底（如根标记缺失）⇒ exit 2 **拒绝产出**（不产注定漂移的半成品）；
+                缺 handle 在 markers_to_rules 已 fail-closed
     """
+    if not has_catchall(rules):
+        _die("无可生成的兜底规则（根 %s 标记缺失？）→ 拒绝产出无兜底的 ownership.yaml" % MARKER_NAME)
     out = list(_OWNERSHIP_HEADER)
     if any(notes[k] for k in notes):
         out.append("owners:")
@@ -378,8 +404,8 @@ def emit_codeowners(rules, github) -> str:
         "#   然后重跑生成命令 —— 本文件不需要手改。",
         "",
     ]
-    if not rules:
-        _die("无可生成的规则（%s 标记缺失或全被塌缩）→ 拒绝产出空 CODEOWNERS" % MARKER_NAME)
+    if not has_catchall(rules):
+        _die("无可生成的兜底规则（根 %s 标记缺失？）→ 拒绝产出无兜底的 CODEOWNERS" % MARKER_NAME)
     width = max(len(CODEOWNERS_GLOB_FOR_CATCHALL if r["glob"] == "**" else str(r["glob"])) for r in rules)
     width = max(width, 40)
     for r in rules:
@@ -402,10 +428,12 @@ def check_drift(repo_root: Path = REPO_ROOT, verbose: bool = True) -> int:
                 标记解析/发现失败 → exit 2（由 discover 抛出）
     """
     rules, github, notes = discover(repo_root)
-    if not any(r.get("default") for r in rules):
+    if not has_catchall(rules):
         # 根标记缺失 ⇒ 全仓默认归属无从确定 ⇒ 产物必然与树不一致。
         # 判**违规（exit 1）而非检查失败（exit 2）**：树/产物不一致是仓库状态的错，
         # 不是校验器自己坏了（D328 三态的分界；且「删标记 ⇒ exit 1」是本卡判据②）。
+        # ⚠️ 与**生成面**（--emit-* ⇒ exit 2）是两个面：校验面问"仓库对不对"，
+        #    生成面问"我能不能产出"（R1 整改后两面各自一致，见模块头 @exit）。
         print("❌ 产物漂移: 根 %s 标记缺失 ⇒ 无兜底规则（全仓归属真源消失）" % MARKER_NAME, file=sys.stderr)
         print("   ⇒ 恢复根标记（owner:/handle:）后重跑生成命令", file=sys.stderr)
         return EXIT_VIOLATION
