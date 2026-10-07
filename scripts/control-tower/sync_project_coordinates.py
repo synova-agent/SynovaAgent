@@ -22,11 +22,22 @@ sync_project_coordinates.py — D1196 (#991/#1212 修复): Issue 坐标系同步
 """
 import json
 import os
+import os
 import re
 import subprocess
 import sys
 
-FIELDS = ["执行态", "施工批次", "服务承重件", "总闸", "命名空间", "验证级别", "阻塞源"]
+# D1224（D-H 7→3）: 与 check-project-coordinates.sh 同一口径 —— 3 核心字段。
+#   LEGACY_FIELDS 仅用于**解析**（老 issue 正文里还有这 4 项时能被认出来，只是不再灌板），
+#   避免"老正文解析失败 ⇒ 当无坐标系块"这类误判（那是 fail-open 的反面：假红）。
+CORE_FIELDS = ["执行态", "施工批次", "阻塞源"]
+LEGACY_FIELDS = ["服务承重件", "总闸", "命名空间", "验证级别"]
+FIELDS = CORE_FIELDS + LEGACY_FIELDS          # 解析面：7 项都认
+POST_FIELDS = CORE_FIELDS                     # 灌板面：只灌 3 项（创始人删板侧字段后无需改码）
+
+# 过渡期逃生缝（与 shell 侧同名同语义）：需要按旧 7 字段口径校验/灌值时置 1
+if os.environ.get("SYNO_COORDS_STRICT_7", "0") == "1":  # noqa: SIM108
+    POST_FIELDS = FIELDS
 ORG = os.environ.get("SYNO_ORG", "synova-agent")
 PROJECT_NUMBER = int(os.environ.get("SYNO_PROJECT_NUMBER", "1"))
 
@@ -102,8 +113,10 @@ def main(argv):
         number = os.environ.get("ISSUE_NUMBER", "")
 
     coords = parse_coords(body)
-    missing = [f for f in FIELDS if f not in coords]
-    print(f"issue=#{number or '?'} 解析={len(coords)}/{len(FIELDS)} 字段"
+    missing = [f for f in CORE_FIELDS if f not in coords]
+    legacy_hit = [f for f in LEGACY_FIELDS if f in coords]
+    print(f"issue=#{number or '?'} 核心字段={len([f for f in CORE_FIELDS if f in coords])}/{len(CORE_FIELDS)}"
+          f"（遗留字段命中 {len(legacy_hit)}/4）"
           + (f" 缺={('、'.join(missing))}" if missing else " 全齐"))
     if missing:
         print(f"::warning title=project-coordinates::坐标系块缺字段: {'、'.join(missing)}（只写已有字段）")
@@ -134,7 +147,7 @@ def main(argv):
                                   org=ORG, num=int(number))["data"]["organization"]["repository"]["issue"]["id"]
             item_id = gh_graphql(m_add, pid=pid, cid=issue_id)["data"]["addProjectV2ItemById"]["item"]["id"]
             print(f"  ✓ 已挂板 item={item_id[:12]}…")
-        for name, val in coords.items():
+        for name, val in ((k, v) for k, v in coords.items() if k in POST_FIELDS):
             # D1216 修复: ① 原串 5 个 `{` 只 4 个 `}` ⇒ GraphQL 解析失败
             #   (`Expected NAME, actual: (none) at [1,124]`)，CI 每轮必红；
             #   ② 改用查询变量传字段名（不再字符串插值）⇒ 规避引号/非 ASCII 转义面。

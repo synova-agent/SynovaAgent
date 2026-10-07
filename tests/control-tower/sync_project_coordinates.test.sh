@@ -26,7 +26,7 @@ printf '无坐标系块的正文\n' > "$SB/none.md"
 echo "=== D1196: sync_project_coordinates 薄壳脚本 ==="
 
 OUT="$(ISSUE_NUMBER=1 PROJECT_TOKEN= python3 "$TOOL" --from-body "$SB/full.md" 2>&1)"; rc=$?
-[ $rc = 0 ] && echo "$OUT" | grep -q "解析=7/7 字段" && ok "1.1 七字段齐全 ⇒ 解析 7/7，exit 0" || no "1.1 rc=$rc :: $OUT"
+[ $rc = 0 ] && echo "$OUT" | grep -q "核心字段=3/3" && ok "1.1 七字段齐全 ⇒ 解析 7/7，exit 0" || no "1.1 rc=$rc :: $OUT"
 echo "$OUT" | grep -q "warning" && no "1.2 齐全时不应有 warning" || ok "1.2 齐全时无 warning"
 echo "$OUT" | grep -q "PROJECT_TOKEN 未配置" && ok "1.3 无 token ⇒ notice（跳过且不红）" || no "1.3 缺 notice"
 
@@ -51,7 +51,7 @@ s = s.replace('FIELDS = ["执行态",', 'FIELDS = ["__不存在的字段__",')
 open(sys.argv[2], 'w', encoding='utf-8').write(s)
 PY
 OUT="$(ISSUE_NUMBER=4 PROJECT_TOKEN= python3 "$MUT" --from-body "$SB/full.md" 2>&1)"; rc=$?
-if echo "$OUT" | grep -q "解析=7/7 字段"; then no "4.1 变异体未体现差异（仍 7/7）:: $OUT"; else ok "4.1 变异体（字段集改坏）⇒ 齐全用例解析数偏离 7/7（夹具判别性成立）"; fi
+if echo "$OUT" | grep -q "核心字段=3/3"; then no "4.1 变异体未体现差异（仍 7/7）:: $OUT"; else ok "4.1 变异体（字段集改坏）⇒ 齐全用例解析数偏离 7/7（夹具判别性成立）"; fi
 
 echo ""
 # ── 17. D1216 回归: GraphQL query 括号平衡（可真构造 + 变异体）──
@@ -115,6 +115,28 @@ PY
 echo "  #17.4 except 收窄判定: $narrow"
 [ "$narrow" = "NARROW" ] && ok "17.4 非配置面错误 re-raise（收窄成立）" || no "17.4 except 过宽（会吞传输/权限类失败）"
 
+
+
+# ── 18. D1224（D-H 7→3）: 解析面 7 项全认 / 灌板面只灌 3 项 ──
+# 18.1 老正文（7 字段）⇒ 核心字段 3/3（说明老正文不会被当"无坐标系块"误判）
+OUT="$(ISSUE_NUMBER=9 PROJECT_TOKEN= python3 "$TOOL" --from-body "$SB/full.md" 2>&1)"; rc=$?
+echo "$OUT" | grep -q "核心字段=3/3" && ok "18.1 老正文（7 字段）⇒ 核心字段 3/3（不误判为无块）" || no "18.1 核心字段计数异常 :: $OUT"
+
+# 18.2 灌板面 = 3（dry-run 打印将写入的字段集，不触网）
+OUT="$(ISSUE_NUMBER=9 PROJECT_TOKEN=x python3 "$TOOL" --from-body "$SB/full.md" --dry-run 2>&1)"; rc=$?
+echo "$OUT" | grep -q '"执行态"' && echo "$OUT" | grep -qv '"服务承重件"' && ok "18.2 灌板只含 3 核心字段（遗留 4 项不灌）" || no "18.2 灌板字段集异常 :: $OUT"
+
+# 18.3 STRICT_7 逃生缝: 置 1 ⇒ 灌板面回到 7 项
+OUT="$(SYNO_COORDS_STRICT_7=1 ISSUE_NUMBER=9 PROJECT_TOKEN=x python3 "$TOOL" --from-body "$SB/full.md" --dry-run 2>&1)"; rc=$?
+echo "$OUT" | grep -q '"服务承重件"' && ok "18.3 STRICT_7=1 ⇒ 灌板面含遗留字段（逃生缝生效）" || no "18.3 STRICT_7 未生效 :: $OUT"
+
+
+
+# 18.4 变异体（改坏即红）: 把 POST_FIELDS 退回 FIELDS ⇒ 18.2 的断言必须失败
+MUT18="$SB/mut18.py"
+sed 's/^POST_FIELDS = CORE_FIELDS.*/POST_FIELDS = FIELDS/' "$TOOL" > "$MUT18"
+OUT="$(ISSUE_NUMBER=9 PROJECT_TOKEN=x python3 "$MUT18" --from-body "$SB/full.md" --dry-run 2>&1)"
+if echo "$OUT" | grep -q '"服务承重件"'; then ok "18.4 变异体（POST_FIELDS 退回 7 项）⇒ 遗留字段被灌（判据有判别力）"; else no "18.4 变异体未体现差异 :: $OUT"; fi
 
 echo "结果: $PASS 通过, $FAIL 失败"
 [ "$FAIL" = 0 ] && exit 0 || exit 1
