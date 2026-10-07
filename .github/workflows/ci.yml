@@ -590,6 +590,7 @@ jobs:
             tests/control-tower/check-required-contexts.test.sh \
             tests/control-tower/loop-context.test.sh \
             tests/control-tower/install-deps.test.sh \
+            tests/control-tower/check-project-coordinates.test.sh \
             tests/control-tower/check-ontology-fields.test.sh \
             tests/control-tower/ci-signal-classify.test.sh; do
             echo "── $t"
@@ -1148,6 +1149,7 @@ jobs:
             tests/control-tower/check-required-contexts.test.sh \
             tests/control-tower/loop-context.test.sh \
             tests/control-tower/install-deps.test.sh \
+            tests/control-tower/check-project-coordinates.test.sh \
             tests/control-tower/check-ontology-fields.test.sh \
             tests/control-tower/ci-signal-classify.test.sh; do
             echo "── $t"

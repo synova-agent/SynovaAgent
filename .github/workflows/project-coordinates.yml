@@ -1,0 +1,107 @@
+name: Project Coordinates Sync
+
+# D1175 (#991): Issue 创建/编辑时自动挂 Project 板 + 灌 7 字段坐标系。
+# 规格: docs/synova/CTO-ROLE.md §7.3（字段表）/ §7.3.1（安全）
+# ⚠️ 依赖 org secret PROJECT_TOKEN（现为空）——未配置时本 workflow **跳过且不红**
+#   （卡 #991 明令: 未配 token 则跳过且不红；token 由创始人裁）。
+# 只读复核红线: 读板禁用 gh project item-list（默认 30 条上限陷阱）⇒ GraphQL totalCount。
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+  # projects 写权限须由 token 提供（GITHUB_TOKEN 对 org project 不足）——见 token 检查步
+
+concurrency:
+  group: project-coordinates-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check PROJECT_TOKEN availability (skip-not-fail)
+        id: tok
+        env:
+          PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+        run: |
+          if [ -z "$PROJECT_TOKEN" ]; then
+            echo "::notice title=project-coordinates::org secret PROJECT_TOKEN 未配置——跳过挂板/灌坐标（不红；配置由创始人裁，卡 #991）"
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Parse coordinates block from issue body
+        id: coords
+        if: steps.tok.outputs.available == 'true'
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          # 解析 issue 正文【坐标系】块的 7 字段（执行态｜施工批次｜服务承重件｜总闸｜命名空间｜验证级别｜阻塞源）
+          printf '%s' "$ISSUE_BODY" > /tmp/issue-body.md
+          python3 - <<'PY'
+          import re, sys
+          body = open('/tmp/issue-body.md', encoding='utf-8').read()
+          m = re.search(r"【坐标系】(.*?)(?:\n\n|\Z)", body, re.S)
+          fields = {}
+          if m:
+              for line in m.group(1).splitlines():
+                  mm = re.match(r"\s*(执行态|施工批次|服务承重件|总闸|命名空间|验证级别|阻塞源)\s*[:：]\s*(\S.*)", line)
+                  if mm:
+                      fields[mm.group(1)] = mm.group(2).strip().split()[0].rstrip('｜|')
+          names = ["执行态","施工批次","服务承重件","总闸","命名空间","验证级别","阻塞源"]
+          missing = [n for n in names if n not in fields]
+          with open('/tmp/coords.env','w',encoding='utf-8') as f:
+              for k,v in fields.items():
+                  f.write(f"FIELD_{k}={v}\n")
+          print(f"parsed={len(fields)} missing={len(missing)}")
+          if missing:
+              print("::warning title=project-coordinates::坐标系块缺字段: " + "、".join(missing) + "——只灌已有字段")
+          PY
+          # 导出为 step output（字段名含中文，走 GITHUB_OUTPUT 文件）
+          if [ -f /tmp/coords.env ]; then
+            while IFS='=' read -r k v; do echo "$k=$v" >> "$GITHUB_OUTPUT"; done < /tmp/coords.env
+          fi
+      - name: Add issue to project and update fields
+        if: steps.tok.outputs.available == 'true'
+        env:
+          PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          ISSUE_NODE_ID: ${{ github.event.issue.node_id }}
+          FIELD_执行态: ${{ steps.coords.outputs.FIELD_执行态 }}
+          FIELD_施工批次: ${{ steps.coords.outputs.FIELD_施工批次 }}
+          FIELD_服务承重件: ${{ steps.coords.outputs.FIELD_服务承重件 }}
+          FIELD_总闸: ${{ steps.coords.outputs.FIELD_总闸 }}
+          FIELD_命名空间: ${{ steps.coords.outputs.FIELD_命名空间 }}
+          FIELD_验证级别: ${{ steps.coords.outputs.FIELD_验证级别 }}
+          FIELD_阻塞源: ${{ steps.coords.outputs.FIELD_阻塞源 }}
+        run: |
+          set -euo pipefail
+          ORG=synova-agent; PROJECT=1
+          AUTH="Authorization: Bearer ${PROJECT_TOKEN}"
+          # ① 找/建 project item（幂等: 已在板上则复用）
+          ITEM_ID="$(gh api graphql -f query='
+            query($org:String!,$num:Int!){ organization(login:$org){ projectV2(number:$num){
+              items(first:100, query:"'"${ISSUE_NODE_ID}"'"){ totalCount nodes{ id content{ ... on Issue{ id } } } } } } }' \
+            -f org="$ORG" -F num="$PROJECT" --jq '.data.organization.projectV2.items.nodes[0].id // empty' 2>/dev/null || true)"
+          if [ -z "$ITEM_ID" ]; then
+            ITEM_ID="$(gh api graphql -f query='
+              mutation($pid:ID!,$cid:ID!){ addProjectV2ItemById(input:{projectId:$pid, contentId:$cid}){ item{ id } } }' \
+              -f pid="PVT_$(gh api graphql -f query='query($org:String!,$num:Int!){ organization(login:$org){ projectV2(number:$num){ id } } }' -f org="$ORG" -F num="$PROJECT" --jq '.data.organization.projectV2.id')" \
+              -f cid="$ISSUE_NODE_ID" --jq '.data.addProjectV2ItemById.item.id')"
+          fi
+          echo "item=$ITEM_ID"
+          # ② 逐字段灌值（先取 fieldId，再 update；空值跳过）
+          for FN in 执行态 施工批次 服务承重件 总闸 命名空间 验证级别 阻塞源; do
+            VAL="$(eval echo "\${FIELD_${FN}:-}")"
+            [ -z "$VAL" ] && continue
+            FID="$(gh api graphql -f query='query($org:String!,$num:Int!){ organization(login:$org){ projectV2(number:$num){ field(name:"'"${FN}"'"){ ... on ProjectV2Field{ id } } } } }' -f org="$ORG" -F num="$PROJECT" --jq '.data.organization.projectV2.field.id')"
+            [ -z "$FID" ] && { echo "::warning title=project-coordinates::字段 ${FN} 不存在于 Project#${PROJECT}"; continue; }
+            gh api graphql -f query='mutation($pid:ID!,$iid:ID!,$fid:ID!,$val:String!){ updateProjectV2ItemFieldValue(input:{projectId:$pid, itemId:$iid, fieldId:$fid, value:{text:$val}}){ projectV2Item{ id } } }' \
+              -f pid="PVT_$(gh api graphql -f query='query($org:String!,$num:Int!){ organization(login:$org){ projectV2(number:$num){ id } } }' -f org="$ORG" -F num="$PROJECT" --jq '.data.organization.projectV2.id')" \
+              -f iid="$ITEM_ID" -f fid="$FID" -f val="$VAL" >/dev/null
+            echo "  ✓ ${FN}=${VAL}"
+          done
+          echo "✅ 坐标系同步完成（缺字段见上方 warning）"
