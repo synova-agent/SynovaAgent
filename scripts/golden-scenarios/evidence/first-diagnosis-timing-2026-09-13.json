@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "record_type": "first-diagnosis-timing",
+  "task": "D527",
+  "generated_at": "2026-09-13T09:42:43",
+  "mode": "prod",
+  "milestones_ms": {
+    "install_start": 1789263755085,
+    "install_done": 1789263756303,
+    "app_launch": 1789263756571,
+    "healthz_200": 1789263763714,
+    "first_diagnosis_ready": 1789263763753
+  },
+  "total_sec": 8.7,
+  "target_sec": 1800,
+  "verdict": "WITHIN_TARGET",
+  "failures": [],
+  "note": "30 分钟为目标值非硬断言——超时如实记录（P2-2）；dev 模式 install 段为 null"
+}
