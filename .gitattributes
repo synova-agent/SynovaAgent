@@ -21,6 +21,10 @@
 *.sh text eol=lf
 *.py text eol=lf
 
+# D-F/①（卡 #1227）: CI 判据单一真值源强制 LF——该文件是**被 grep -E 消费的正则文本**，
+# 行尾 CR 会随 `$` 锚写进正则（Windows 检出层 ⇒ 判据静默漂移）。消费端另有 `%$'\r'` 兜底。
+.github/ci-criteria.txt text eol=lf
+
 # D533: K3 红线保护 — 审计脚本永不参与 CRLF 规范化（scripts/audit/ 禁碰）
 scripts/audit/** -text
 
