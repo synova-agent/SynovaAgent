@@ -1449,8 +1449,16 @@ export class SentinelRunner {
           graphCtx = this.db;
         }
       }
+      // #1376: 读能力注入（**显式命名**）——`graphStore` = 语义读；`rawDb` = raw SQL 逃生口（仅当 this.db 确是 raw 句柄）
+      const rawDb = (typeof this.db === 'object' && this.db !== null && typeof (this.db as { prepare?: unknown }).prepare === 'function')
+        ? (this.db as { prepare(sql: string): { all(...p: unknown[]): unknown[]; get(...p: unknown[]): unknown; run(...p: unknown[]): { changes: number } } })
+        : undefined;
       const ctx = {
         db: graphCtx,
+        graphStore: (typeof graphCtx === 'object' && graphCtx !== null && typeof (graphCtx as { queryNodes?: unknown }).queryNodes === 'function')
+          ? (graphCtx as { queryNodes(type: string, filters?: Record<string, unknown>, graph?: string): Array<{ id: string; type: string; props: Record<string, unknown> }> })
+          : undefined,
+        rawDb,
         now: new Date(),
         registry: getSentinelRegistry(),
         // #1371: org 维度 —— 有 orgId 才注入 sink（无 org ⇒ 不写；#1054 的 fail-closed 语义不变）

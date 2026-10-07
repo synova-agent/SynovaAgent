@@ -23,7 +23,10 @@ export const integrationHealthSentinel: Sentinel = {
   async check(context: SentinelContext): Promise<SentinelCheckResult> {
     const { now } = context; const checkedAt = now.toISOString(); const startTime = Date.now();
     try {
-      const db = context.db as { prepare(sql: string): { all(): Array<Record<string, unknown>> } } | null;
+      // #1376: **显式取用** raw 能力；缺席 ⇒ 显式降级（warn + degraded）
+      const rawDb = context.rawDb ?? null;
+      if (!rawDb) log.warn({ sentinelId: config.id }, 'rawDb 能力缺席 ⇒ 降级：跳过集成健康读取');
+      const db = rawDb as { prepare(sql: string): { all(): Array<Record<string, unknown>> } } | null;
       if (!db) { return { sentinelId: config.id, ok: true, findings: [], durationMs: 0, checkedAt, degraded: true }; }
 
       let systems: Array<{ id: string; name: string; mcpSupport: string; apiAccess: string; hasConnector: boolean }> = [];

@@ -23,7 +23,10 @@ export const goalalignmentSentinel: Sentinel = {
     const { now } = context; const checkedAt = now.toISOString(); const startTime = Date.now();
     try {
       const teams = discoverTeams(context);
-      const db = context.db as { prepare(sql: string): { all(): Array<Record<string, unknown>> } } | null;
+      // #1376: **显式取用** raw 能力；缺席 ⇒ 显式降级（warn + degraded）
+      const rawDb = context.rawDb ?? null;
+      if (!rawDb) log.warn({ sentinelId: config.id }, 'rawDb 能力缺席 ⇒ 降级：跳过 GOAL/TEAM 读取');
+      const db = rawDb as { prepare(sql: string): { all(): Array<Record<string, unknown>> } } | null;
       const allFindings: SentinelFinding[] = [];
       const goals: Array<{ id: string; name: string; level: string; parentId?: string }> = [];
       const teams_list: Array<{ id: string; name: string }> = [];
