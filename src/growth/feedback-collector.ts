@@ -189,6 +189,17 @@ export interface AggregatedSignal {
   entityKey?: string | null;
   /** K6/0-2: 组内全部去重 target_id（诊断/对账用） */
   entityKeys?: string[];
+  /**
+   * D1197/P0-3: 组内 target_id 唯一时的**所属企业**（单一企业）。
+   *
+   * 🔴 创始人红线「A 客户不能读 B 客户数据」：聚合侧必须按企业隔离（`GROUP BY enterprise_id`），
+   * 否则多企业反馈会被混成一组、进而由 A 企业数据触发 B 企业配置的改写。
+   * 三态：`string` = 该企业（新收集器的正常形态）／`null` = **显式多企业混组**（回写侧禁止猜测）／
+   * `undefined` = 早于企业轴的信号生产者（测试替身/旧调用方），回写侧按旧语义处理。
+   */
+  enterpriseId?: string | null;
+  /** D1197/P0-3: 组内全部去重企业（诊断/对账用） */
+  enterpriseIds?: string[];
 }
 
 // ═══ SQLite DDL ═══
@@ -516,9 +527,9 @@ export class FeedbackCollector {
 
     try {
       const rows = this.db.prepare(`
-        SELECT decision, target_type, actor_role, COUNT(*) as count, MAX(created_at) as latest, GROUP_CONCAT(target_id, ',') as targets
+        SELECT decision, target_type, actor_role, enterprise_id, COUNT(*) as count, MAX(created_at) as latest, GROUP_CONCAT(target_id, ',') as targets
         FROM feedback_log
-        GROUP BY decision, target_type, actor_role
+        GROUP BY enterprise_id, decision, target_type, actor_role
         HAVING count >= @threshold
         ORDER BY count DESC
       `).all({ threshold }) as Array<Record<string, unknown>>;
@@ -534,6 +545,9 @@ export class FeedbackCollector {
           actorRoles: ((r.actor_role as string) || '').split(',').filter(Boolean),
           entityKey: entityKeys.length === 1 ? entityKeys[0] : null,
           entityKeys,
+          // D1197/P0-3: 企业轴（GROUP BY 已含 enterprise_id ⇒ 单组恒单企业；此处给出契约字段）
+          enterpriseId: typeof r.enterprise_id === 'string' && r.enterprise_id.length > 0 ? r.enterprise_id : null,
+          enterpriseIds: typeof r.enterprise_id === 'string' && r.enterprise_id.length > 0 ? [r.enterprise_id] : [],
           count: r.count as number,
           latestTimestamp: r.latest as string,
           targetIds,
