@@ -506,6 +506,62 @@ _g3n2="$(find "$_g3dir/task-state" -name 'D*.json' | wc -l | tr -d ' ')"
 [ "$_g3n2" = 0 ] && pass "G3.3 -h 同样零副作用" || fail "G3.3 -h 真取号了"
 rm -rf "$_g3dir"
 
+echo ""
+echo "── 13. D1219: 第 6 源「issue 标题」（过渡件 —— D# 退役时同批删除此来源）──"
+# 隔离: ①本地 task-state 走空沙箱 + ②SYNO_ALLOC_NO_REMOTE + ③④⑤ 关 —— 只留第 6 源可观测。
+# 沙箱**自带 git 仓**（第 6 源与 ②④⑤ 同款要求 TS_TOP 仓库语境；无仓库语境时该源跳过）。
+_SB6="$(mktemp -d)"; CLEANUP_DIRS+=("$_SB6")
+mkdir -p "$_SB6/task-state"
+( cd "$_SB6" && git init -q . ) >/dev/null 2>&1 || true
+_ISSC="$TMP_DIR/issue-snapshot.tsv"
+printf '1268\tD9991 · 假 issue 卡（夹具）\n9999\t无关标题\n' > "$_ISSC"
+
+# (a) 注入命中 ⇒ rc=1 且 **stdout 点名 issue-title**
+EXIT=0
+OUT=$(env SYNO_TASK_STATE_DIR="$_SB6/task-state" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_BRANCH=1 \
+      SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_ISSUES_FILE="$_ISSC" bash "$TOOL" --check-id D9991 2>/dev/null) || EXIT=$?
+[ "$EXIT" = 1 ] && pass "注入命中 ⇒ rc=1（第 6 源真参与判定）" || fail "注入命中 rc=$EXIT（期望 1）"
+echo "$OUT" | grep -q "^issue-title  #1268: D9991" && pass "stdout 点名 issue-title + issue 号 + 标题" \
+  || fail "stdout 未点名 issue-title: $(echo "$OUT" | head -3)"
+
+# (b) 注入不命中 ⇒ rc=0；stderr 明示「含=yes」；结论措辞受限
+ERR6="$TMP_DIR/iss-miss.err"; EXIT=0
+OUT=$(env SYNO_TASK_STATE_DIR="$_SB6/task-state" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_BRANCH=1 \
+      SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_ISSUES_FILE="$_ISSC" bash "$TOOL" --check-id D9992 2>"$ERR6") || EXIT=$?
+[ "$EXIT" = 0 ] && pass "注入不命中 ⇒ rc=0" || fail "注入不命中 rc=$EXIT（期望 0）"
+grep -q "含=yes" "$ERR6" && pass "来源说明明示「含=yes」（本次判定含网络源，可追溯）" \
+  || fail "来源说明未明示含=yes: $(head -3 "$ERR6")"
+grep -qE "可判定范围内未见占用" "$ERR6" && pass "结论措辞 = 「可判定范围内未见占用」（禁报「未占用」）" \
+  || fail "结论措辞不符: $(head -3 "$ERR6")"
+
+# (c) 契约不变量: 来源说明只能走 stderr —— stdout 是**冲突行契约**（非空即已占）
+[ -z "$OUT" ] && pass "stdout 严格为空（来源说明未污染冲突行契约）" || fail "stdout 被污染: $OUT"
+
+# (d) 禁用缝 ⇒ 「含=no」+ 不判该源（hermetic 离线必需）
+ERR6b="$TMP_DIR/iss-off.err"; EXIT=0
+OUT=$(env SYNO_TASK_STATE_DIR="$_SB6/task-state" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_BRANCH=1 \
+      SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_NO_ISSUES=1 bash "$TOOL" --check-id D9991 2>"$ERR6b") || EXIT=$?
+[ "$EXIT" = 0 ] && pass "SYNO_ALLOC_NO_ISSUES=1 ⇒ rc=0（离线不判该源，hermetic 可跑）" \
+  || fail "禁用缝后仍 rc=$EXIT（期望 0）"
+grep -q "含=no" "$ERR6b" && pass "禁用缝 ⇒ 来源说明「含=no」+ 告警可能漏检 issue 卡占用" \
+  || fail "禁用缝未在来源说明体现: $(head -3 "$ERR6b")"
+
+# (e) 降级路径（注入文件不可读）⇒ **显式 degraded**（禁静默）+ fail-open 仍可判定
+ERR6c="$TMP_DIR/iss-deg.err"; EXIT=0
+OUT=$(env SYNO_TASK_STATE_DIR="$_SB6/task-state" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_BRANCH=1 \
+      SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_ISSUES_FILE="$_SB6/nope-does-not-exist" \
+      bash "$TOOL" --check-id D9993 2>"$ERR6c") || EXIT=$?
+[ "$EXIT" = 0 ] && pass "源不可读 ⇒ 仍 rc=0（fail-open：发号器关键路径不被网络腿拖死）" \
+  || fail "源不可读 rc=$EXIT（期望 fail-open 0）"
+grep -q "degraded: issue 标题源" "$ERR6c" && pass "不可读 ⇒ stderr 显式 degraded（铁律 11，不静默）" \
+  || fail "未显式降级: $(head -3 "$ERR6c")"
+
+# (f) 过渡件声明在位（Lead 裁决③：卡面/代码/PR 三处；此处查**代码**）
+[ "$(grep -c 'D# 退役时同批删除此来源' "$TOOL")" -ge 1 ] \
+  && pass "代码注释在位: 「D# 退役时同批删除此来源」（月度盘点可核）" \
+  || fail "缺过渡件删除条件声明"
+echo ""
+
 echo "  结果: PASS=$PASS FAIL=$FAIL${FIRST_FAIL:+ FIRST_FAIL=${FIRST_FAIL}}"
 echo "═══════════════════════════════════════════════════════════"
 # 失败摘要（**必须留在最后一行**：CI 只截 tail -8 进 ::error 注解）
