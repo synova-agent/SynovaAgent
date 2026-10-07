@@ -12,6 +12,7 @@ import { pathToFileURL } from 'url';
 import { createLogger } from '@synova/logger';
 import type { SentinelFinding, SentinelCheckResult, SentinelThresholdPair } from './types';
 
+import { withOrgScope } from './org-scope';
 const log = createLogger('sentinel/loader');
 
 export interface SentinelManifest {
@@ -259,7 +260,11 @@ export async function registerLoadedSentinels(): Promise<{ registered: number; e
         async check(context) {
           // 将 SentinelContext.db 作为 GraphStore 传给 aggregate
           const ctx = context as unknown as Record<string, unknown>;
-          const store = (context.db ?? {}) as Record<string, unknown>;
+          const rawStore = (context.db ?? {}) as Record<string, unknown>;
+          // #1374 租户收口：**单点包装** —— 43 个 queryNodes 读路径一次性获得 `props.orgId` 过滤；
+          //   注意：用 **ctx.teamId 原值**（不是下面的 'default' 兜底值）作为租户真源 ——
+          //   `'default'` 是回落值、不是租户（#1322/#1371 同族）；无值 ⇒ 原样透传 + 计数未隔离。
+          const store = withOrgScope(rawStore, ctx.teamId as string | undefined);
           const teamId = (ctx.teamId as string) || 'default';
 
           // D577: 阈值注入（唯一生产解析点）—— manifest 基线 + memStore 覆写
