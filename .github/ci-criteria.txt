@@ -1,0 +1,43 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# ci-criteria.txt — CI 判据「单一真值源」（D-F/① · 卡 #1227 · 父卡 #1221）
+#
+# 为什么存在: docs-only 早退白名单正则此前在 .github/workflows/ci.yml 内联 9 份
+#   （D1111/A5 时代刻意保留的「同源多副本」）；改一处漏一处即判据漂移——某个 job
+#   悄悄走全量、或悄悄早退，两侧都无人可见。本文件是**唯一**副本：
+#   ci.yml 只**消费**（9 个 detect step 各读一次），不再复制正则文本。
+#
+# 消费契约（铁律 47）
+#   输入: 本文件；键 `DOCSONLY_WHITELIST_RE=<ERE>`（应恰 1 行；多行取首行并判违规）
+#   消费: ci.yml 的每个 `Detect docs-only change (D515)` step 内:
+#           DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt || true)"
+#           DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+#           … git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"
+#         返 0 ⇒ docs_only=false（走全量）；返 1 ⇒ docs_only=true（早退/瘦身）
+#   输出: 仅一行键值；无注释以外的结构
+#   降级: 文件缺失 / 缺键 / 读失败 ⇒ DS_RE 为空 ⇒ `grep -qvE ''` 对**任意行**返 0
+#         ⇒ docs_only=false（全量跑）＝ **fail-safe（绝不误跳）**，并打 ::warning 留痕
+#         （与各 step 内 `origin/main` 不可解析时的降级方向**一致**：先全量，后瘦身）
+#   守卫: docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh
+#         （CI 落点 = control-tower-tests job，SYNO_CI=1 ⇒ HARD）断言:
+#           ① 本文件恰 1 行键（多行/缺键即红）
+#           ② ci.yml 内**内联副本 = 0**（回退成内联即红）
+#           ③ 消费点计数 = 9（与 `Detect docs-only change (D515)` step 数一致）
+#           ④ fail-safe（origin/main 不可解析 ⇒ 全量）计数 = 9
+#           ⑤ 行为用例 14 条（含 D1023/P1 的 .gitattributes/.gitmodules 边界、
+#              D1111/A5 的锚点边界、.html 纳入）
+#
+# 白名单分层（逐条带路径锚；无锚点正则会让 src/**/*.json、深层同名目录全部误早退）:
+#   ① docs/ 下的 .md/.json/.html —— 文档面（.html 纳入见 DOC-CONTRACT §3 / D1111-D2）
+#   ② task-state/ | memory/ | decisions/ —— 过程/决策载体（内容不影响构建与运行时）
+#   ③ .claude/skills/ | .dsh/skills/ —— 技能本体（是提示词，不影响构建）
+#   ④ 仅**仓库根**的 .md（带 ^ 锚；否则 [^/]+ 会跨 '/' 误命中深层）
+#   ⑤ 仅根级治理文件 LICENSE / .gitignore / .gitkeep
+#   有意**不**放行: 其余 .claude/**（settings.json/hooks.json 可改门禁本身）、
+#     expert/** 与 knowledge/**（运行时资产）、src/**、scripts/**、.github/**、根级 .json
+#   D1023/P1: .gitattributes（CI 运行时语义载体: *.sh eol=lf / merge=union / audit -text）
+#     与 .gitmodules（子模块引入 = 外部代码零验证入库）**不放行**。
+#
+# 变更本文件 = 变更 CI 判据 ⇒ **本文件路径不在任何白名单分支内** ⇒ 改它必走全量 CI
+#   （自举安全：想放宽早退面的人无法靠"顺手改判据文件"绕过全量）。
+# ═══════════════════════════════════════════════════════════════════════════════
+DOCSONLY_WHITELIST_RE=^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$

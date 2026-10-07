@@ -62,31 +62,32 @@ jobs:
         shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
         run: |
           # 白名单锚定分层（D1111/A5 修: 全部**逐条带路径锚**）:
-          #   依据（K3 W-1 原话「无锚点」＋研究院 A5 实测）: 旧式 '\.(md|json)$' 无前缀锚 ⇒
+          #   依据（K3 W-1 原话「无锚点」＋研究院 A5 实测）: 旧式无锚点正则 ⇒
           #   **任何** .json（package.json / tsconfig.json / src/**/*.json）与**任何**深度同名目录
           #   （src/task-state/**）都被判「纯文档」⇒ 10 个 job 空转、必需 context 假绿。
           #   本窗实测: 全仓 .json 共 981 件，旧正则下**全部**走 docs-only（含 tsconfig/eslintrc）。
-          #   新式规则（逐条可判；判据文本在**本文件内 10 处内联副本**，必须逐字一致——
-          #   单一真值源收敛属重构（另卡），本窗只保证「10 处同源 + 夹具判别」）:
-          #     ① ^docs/.+\.(md|json|html)$  —— docs 下文档面（.html 纳入见 DOC-CONTRACT §3 / D1111-D2）
-          #     ② ^(task-state|memory|decisions)/ —— 过程/决策载体（内容不影响构建与运行时）
-          #     ③ ^(\.claude|\.dsh)/skills/ —— 技能本体（非纯文档，但内容是提示词，不影响构建）
-          #     ④ ^[^/]+\.md$               —— **仅仓库根**的 .md（含 ^ 锚；否则 [^/]+ 会跨 '/' 误命中深层）
-          #     ⑤ ^(LICENSE|\.gitignore|\.gitkeep)$ —— 根级治理文件（仅根）
-          #   ⚠️ 有意 **不** 放行: 其余 .claude/**（settings.json/hooks.json 可改门禁本身）、
-          #      expert/** 与 knowledge/**（运行时资产）、src/**、scripts/**、.github/**、根级 .json
+          #   🔴 D-F/①（卡 #1227）: 判据文本**不再内联**——唯一真值源 =
+          #      `.github/ci-criteria.txt` 的 `DOCSONLY_WHITELIST_RE`（本文件内零内联副本，
+          #      D1023 守卫在 CI HARD 下断言「内联副本 = 0 且消费点 = 9」）。
+          #      逐条分层理由与全量清单见该文件头注释；本处只留**消费**代码。
+          #      改判据 ⇒ 改那一个文件（它自身不在白名单分支内 ⇒ 必走全量 CI，自举安全）。
           #   ⚠️ 空变更集（合并提交 diff 为空）⇒ 无行命中 grep -v ⇒ 仍按 docs-only（原语义保留）。
-          #   ⚠️ D1111/独立自验 E5: 本处（唯一一处）此前**缺** `git rev-parse --verify origin/main`
-          #      fail-safe（其余 9 处均有）⇒ origin/main 不可解析时本处会**早退为 docs-only**（方向相反：
+          #   ⚠️ D1111/独立自验 E5: 本处此前**缺** `git rev-parse --verify origin/main`
+          #      fail-safe（其余处均有）⇒ origin/main 不可解析时本处会**早退为 docs-only**（方向相反：
           #      别处全量、本处瘦身）。空 diff 时 grep -qvE 返 1 同样早退 ⇒ 两条路径都收敛到「早退」。
-          #      ⇒ 现补 fail-safe，与其余 9 处**同一判据、同一降级方向**（不可解析 ⇒ 全量，绝不误跳）。
-          # D1023/P1 修: .gitattributes/.gitmodules 移出白名单 —— .gitattributes 是 CI 运行时
+          #      ⇒ 已补 fail-safe，与其余各处**同一判据、同一降级方向**（不可解析 ⇒ 全量，绝不误跳）。
+          # D1023/P1 修: .gitattributes/.gitmodules 不在白名单 —— .gitattributes 是 CI 运行时
           #   语义载体（*.sh eol=lf、merge=union、scripts/audit/** -text），改它即改 CI 本身
           #   须走全量；.gitmodules 仓库不存在，留着 = 新增子模块+文档即零验证入库。
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          #   读失败/缺键 ⇒ DS_RE 空 ⇒ `grep -qvE ''` 对任意行返 0 ⇒ docs_only=false（全量，绝不误跳）。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一行显式降级（告警 + 走全量）
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          [ -n "$DS_RE" ] || echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）"
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
+          elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
@@ -220,8 +221,12 @@ jobs:
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          #   读失败/缺键 ⇒ DS_RE 空 ⇒ `grep -qvE ''` 对任意行返 0 ⇒ docs_only=false（全量，绝不误跳）。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一行显式降级（告警 + 走全量）
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          [ -n "$DS_RE" ] || echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）"
+          elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
@@ -247,7 +252,28 @@ jobs:
             CHANGED=$(git diff --name-only HEAD~1..HEAD 2>/dev/null || git diff --name-only origin/main..HEAD 2>/dev/null || echo "")
             echo "::warning::origin/main 不可用，回退 HEAD~1..HEAD 判据（合并提交下会误判存量失败为新增）"
           fi
-          OUTPUT=$(npx vitest run --shard=${{ matrix.shard }} --reporter=verbose 2>&1; echo "EXIT:$?")
+          # D-E/②（卡 #1226 · 创始人 2026-10-07 批准方案七⑥）: 默认 **`--changed`**——
+          #   只跑「本 PR 影响面」的测试（vitest 内部即 `git diff --name-only <since>...HEAD`
+          #   + 反向 import 图闭包，与上面 BASE 三点差同口径）；**nightly / 人工触发 ⇒ 全量**。
+          #   降级方向（一律「多跑」，绝不「少跑」）:
+          #     · event 非 PR/push（schedule/workflow_dispatch）⇒ 全量
+          #     · BASE 不可解析 ⇒ 全量（可见 ::warning）
+          #     · `--passWithNoTests` **必需**：changed 模式下选中 0 个测试是合法结果
+          #       （否则 vitest 在 shard 校验处抛 `--shard <count> must be ...` ⇒ 必需 context 假红）
+          RUN_MODE=changed
+          if [ "${GITHUB_EVENT_NAME:-}" = "schedule" ] || [ "${GITHUB_EVENT_NAME:-}" = "workflow_dispatch" ]; then
+            RUN_MODE=full
+          fi
+          if [ "$RUN_MODE" = "changed" ] && [ -z "$BASE" ]; then
+            RUN_MODE=full
+            echo "::warning title=vitest mode::BASE 不可解析 ⇒ 回退全量（绝不误跳）"
+          fi
+          echo "vitest 运行模式: $RUN_MODE（event=${GITHUB_EVENT_NAME:-unknown} shard=${{ matrix.shard }} base=${BASE:0:8}）"
+          if [ "$RUN_MODE" = "changed" ]; then
+            OUTPUT=$(npx vitest run --changed "$BASE" --passWithNoTests --shard=${{ matrix.shard }} --reporter=verbose 2>&1; echo "EXIT:$?")
+          else
+            OUTPUT=$(npx vitest run --shard=${{ matrix.shard }} --reporter=verbose 2>&1; echo "EXIT:$?")
+          fi
           echo "$OUTPUT"
           EXIT_CODE=$(echo "$OUTPUT" | grep "EXIT:" | sed 's/.*EXIT://')
           if [ "$EXIT_CODE" = "0" ]; then exit 0; fi
@@ -297,8 +323,12 @@ jobs:
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          #   读失败/缺键 ⇒ DS_RE 空 ⇒ `grep -qvE ''` 对任意行返 0 ⇒ docs_only=false（全量，绝不误跳）。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一行显式降级（告警 + 走全量）
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          [ -n "$DS_RE" ] || echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）"
+          elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
@@ -349,8 +379,12 @@ jobs:
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          #   读失败/缺键 ⇒ DS_RE 空 ⇒ `grep -qvE ''` 对任意行返 0 ⇒ docs_only=false（全量，绝不误跳）。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一行显式降级（告警 + 走全量）
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          [ -n "$DS_RE" ] || echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）"
+          elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
@@ -431,8 +465,12 @@ jobs:
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          #   读失败/缺键 ⇒ DS_RE 空 ⇒ `grep -qvE ''` 对任意行返 0 ⇒ docs_only=false（全量，绝不误跳）。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一行显式降级（告警 + 走全量）
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          [ -n "$DS_RE" ] || echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）"
+          elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
@@ -653,8 +691,12 @@ jobs:
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          #   读失败/缺键 ⇒ DS_RE 空 ⇒ `grep -qvE ''` 对任意行返 0 ⇒ docs_only=false（全量，绝不误跳）。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一行显式降级（告警 + 走全量）
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          [ -n "$DS_RE" ] || echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）"
+          elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
@@ -693,8 +735,12 @@ jobs:
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          #   读失败/缺键 ⇒ DS_RE 空 ⇒ `grep -qvE ''` 对任意行返 0 ⇒ docs_only=false（全量，绝不误跳）。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一行显式降级（告警 + 走全量）
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          [ -n "$DS_RE" ] || echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）"
+          elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
@@ -741,8 +787,12 @@ jobs:
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          #   读失败/缺键 ⇒ DS_RE 空 ⇒ `grep -qvE ''` 对任意行返 0 ⇒ docs_only=false（全量，绝不误跳）。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一行显式降级（告警 + 走全量）
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          [ -n "$DS_RE" ] || echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）"
+          elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
@@ -790,8 +840,12 @@ jobs:
           if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
             # fail-safe: origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          # D1111/A5: 全部逐条带路径锚；判据原文与理由见第 1 个 Detect docs-only 步骤（quality job）
-          elif git diff --name-only origin/main...HEAD | grep -qvE '^docs/.+\.(md|json|html)$|^(task-state|memory|decisions)/|^(\.claude|\.dsh)/skills/|^[^/]+\.md$|^(LICENSE|\.gitignore|\.gitkeep)$'; then
+          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
+          #   读失败/缺键 ⇒ DS_RE 空 ⇒ `grep -qvE ''` 对任意行返 0 ⇒ docs_only=false（全量，绝不误跳）。
+          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一行显式降级（告警 + 走全量）
+          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
+          [ -n "$DS_RE" ] || echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）"
+          elif git diff --name-only origin/main...HEAD | grep -qvE "$DS_RE"; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
