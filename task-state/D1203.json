@@ -1,0 +1,17 @@
+{
+  "task_id": "D1203",
+  "title": "Gate Integrity 既有红对账：范围收紧到参与 PR 判定的检查",
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-07",
+  "updated_by": "cto",
+  "write_set": [
+    "scripts/control-tower/check-gate-integrity.sh",
+    "tests/control-tower/check-gate-integrity.test.sh",
+    ".claude/task-briefs/2026-10-07-D1203-ci-reds-scope.md",
+    "task-state/D1203.json"
+  ]
+}
