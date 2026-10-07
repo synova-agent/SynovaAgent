@@ -425,11 +425,3 @@ documents:
     path: docs/synova/coordination/交付-D1132-两预设包与哨兵skill-20261003.md
     status: active
     owner: line-lead
-
-  # ---- D-C 标识与声明归一（治理线 A / #1224 / D1205）2026-10-07 ----
-  - id: DOC-0188
-    type: governance
-    path: docs/synova/coordination/D-C-标识归一-触及面清单.md
-    status: active
-    owner: line-a-identity
-    note: "K3 变更前预审整改件：R1 触及面 36 条三态表（声明解析面 10 + task-state 消费面 26）+ R6 迁移期禁静默空白机制（--migration-marker / --legacy-view）+ 例外清单。号取 DOC-0188 以规避在飞撞号（同批 6 个 PR 同取 DOC-0144）。"
