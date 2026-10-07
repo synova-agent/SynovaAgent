@@ -27,7 +27,8 @@
  * ── #1322 补充（只此一条）: `PUT /api/workspace/goals/:goalId/target` 不再是"受理即 200" ──
  *   它现在**先定位目标（含同租户校验）再真写入**：目标不存在/非本租户 ⇒ 200 + `adjusted:false`
  *   （同码同形，不泄漏存在性）；图存储缺席 ⇒ 503 + degraded（沿用 overflow 既有语义）。
- *   本文件相应把该端点移出"恒 200"名单，改断言 **非 403**（原有防护意图不变）。
+ *   本文件相应把该端点移出"恒 200"名单，改断言**真实契约**：不存在/跨租户 ⇒
+ *   200 + `adjusted:false` + `GOAL_NOT_FOUND`（同形防泄漏）；无 orgId ⇒ 403 + `ORG_ID_MISSING`。
  *   变红理由登记: 该端点在 #1322 前返回 `ok:true, adjusted:true` 却**零写入**（卡面现状 4 假受理）。
  *
  * ── 本卡**不做**越权判定（刻意，带注释钉住）──────────────────────────────
@@ -76,6 +77,9 @@ process.env.DEV_MODE = 'false';
 import { jwtAuthMiddleware, signJwtToken } from '../../src/middleware/auth';
 import { rbacMiddleware } from '../../src/middleware/rbac';
 import workspaceDataRoutes from '../../src/routes/workspace-data';
+// #1322（CTO 裁定 #1）: PUT …/target 的判据要落在「目标不存在」分支 ⇒ 夹具需注入**真**图存储
+import Database from 'better-sqlite3';
+import { SqliteGraphStore } from '../../src/adapters/sqlite-graph-store';
 import actionsApiRoutes from '../../src/routes/actions-api';
 import workspacesApiRoutes from '../../src/routes/workspaces-api';
 
@@ -140,11 +144,17 @@ function tokenFor(role: string): string {
 }
 
 /** 起始一个真 HTTP 服务；`withJwt=false` ⇒ 只有 rbac 注入层（纵深防御面） */
-function serve(router: express.Router[], withJwt: boolean): Promise<{ base: string; close: () => void }> {
+function serve(
+  router: express.Router[],
+  withJwt: boolean,
+  graphStore?: SqliteGraphStore,
+): Promise<{ base: string; close: () => void }> {
   const app = express();
   app.use(express.json());
   if (withJwt) app.use(jwtAuthMiddleware);
   app.use(rbacMiddleware);
+  // #1322: 与生产同形（server.ts:331 `app.locals.graphStore`）——不注入则 PUT …/target 走 503 分支
+  if (graphStore) app.locals.graphStore = graphStore;
   for (const r of router) app.use(r);
   return new Promise((resolve) => {
     const server: Server = app.listen(0, () => {
@@ -187,7 +197,9 @@ beforeAll(async () => {
   expect(process.env.DEV_MODE).toBe('false');
 
   depth = await serve([workspaceDataRoutes, actionsApiRoutes, workspacesApiRoutes], false);
-  full = await serve([workspaceDataRoutes, actionsApiRoutes, workspacesApiRoutes], true);
+  // full 面注入真 SqliteGraphStore（内存库，空图 ⇒ 目标必然"不存在"）
+  full = await serve([workspaceDataRoutes, actionsApiRoutes, workspacesApiRoutes], true,
+    new SqliteGraphStore(new Database(':memory:')));
   TOKEN = {
     admin: tokenFor('admin'),
     manager: tokenFor('manager'),
@@ -385,27 +397,42 @@ describe('C · 已认证 ⇒ 非 403（防「一刀切全拒」；本卡刻意�
   });
 
   /**
-   * #1322 起本端点的语义变了（这是**设计内的红**，不是回归）:
-   *   · 它不再"受理即返 200" —— 先定位目标（含同租户校验）再真写入；
-   *   · 图存储缺席（本夹具**不挂 `app.locals.graphStore`**）⇒ 503 + `degraded:true`
-   *     （沿用 overflow 路由的既有 503 语义）；
-   *   · 目标不存在/非本租户 ⇒ 200 + `adjusted:false` + `GOAL_NOT_FOUND`（同码同形，不泄漏存在性）。
-   * 本用例保留其**原本的防护意图**（防"一刀切全拒"的功能回归）: 断言 `!== 403`。
+   * #1322（CTO 裁定 #1）：本端点语义变了 —— **不再是"受理即 200"**，而是
+   * 「先定位目标（含同租户校验）再真写入」。断言按**真实契约逐条写实**（不再用「非 403」弱谓词）：
+   *   · 有 orgId + 目标不存在/非本租户 ⇒ **200** + `adjusted:false` + `GOAL_NOT_FOUND`
+   *     （两种情形**同码同形** ⇒ 不向别租户泄漏"该 id 是否存在"）；
+   *   · 无 orgId ⇒ **403** + `ORG_ID_MISSING`（`verifyJwtToken` 不校验 orgId，由路由兜底 fail-closed）；
+   *   · 图存储缺席 ⇒ 503 + `degraded:true`（本件 full 面已注入真库，故覆盖在下一组 503 用例里）。
+   * 原「中层写路径不被误杀」的防护意图以**更强的形式**保留：断言具体成功码与业务字段。
    */
-  it('PUT /api/workspace/goals/:goalId/target · manager ⇒ 非 403（中层写路径不被误杀）', async () => {
+  it('PUT /api/workspace/goals/:goalId/target · 目标不存在 ⇒ 200 + adjusted:false + GOAL_NOT_FOUND', async () => {
     const res = await call(full.base, 'PUT', `/api/workspace/goals/${uid('goal')}/target`, {
       token: TOKEN.manager, body: { targetValue: 7, reason: '中层调整' },
     });
-    expect(res.status).not.toBe(403);
-    expect([200, 503]).toContain(res.status);
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    const data = res.body.data as Record<string, unknown> | undefined;
+    expect(data?.adjusted).toBe(false);
+    expect(data?.reason).toBe('GOAL_NOT_FOUND');
   });
 
-  it('PUT /api/workspace/goals/:goalId/target · admin 已认证 ⇒ 非 403（同上前提）', async () => {
+  it('PUT /api/workspace/goals/:goalId/target · admin 有 orgId 且 id 不存在 ⇒ 同上（同形）', async () => {
     const res = await call(full.base, 'PUT', '/api/workspace/goals/goal-d1153/target', {
       token: TOKEN.admin, body: { targetValue: 42, reason: '用例' },
     });
-    expect(res.status).not.toBe(403);
-    expect([200, 503]).toContain(res.status);
+    expect(res.status).toBe(200);
+    expect((res.body.data as Record<string, unknown> | undefined)?.adjusted).toBe(false);
+    expect((res.body.data as Record<string, unknown> | undefined)?.reason).toBe('GOAL_NOT_FOUND');
+  });
+
+  it('PUT /api/workspace/goals/:goalId/target · 无 orgId 的合法签名 ⇒ 403 + ORG_ID_MISSING（fail-closed）', async () => {
+    const noOrg = signJwtToken({ sub: 'no-org-d1153', role: 'admin', orgId: '' }) ?? '';
+    expect(noOrg).not.toBe('');
+    const res = await call(full.base, 'PUT', `/api/workspace/goals/${uid('goal')}/target`, {
+      token: noOrg, body: { targetValue: 1 },
+    });
+    expect(res.status).toBe(403);
+    expect(str(res.body, 'code')).toBe('ORG_ID_MISSING');
   });
 
   it('GET    /api/workspace/:deptId · liaison / ga ⇒ 200（已认证即可读；本卡不做越权判定）', async () => {
@@ -418,13 +445,15 @@ describe('C · 已认证 ⇒ 非 403（防「一刀切全拒」；本卡刻意�
   // ── 刻意钉「已认证 ⇒ 非 403」（含只读角色）──────────────────────────────
   // 这些不是「有权」的证明，而是**本卡射程边界**的可执行声明: 越权判定依赖
   //   `RbacContext` 补齐 org/team 维度（另立卡）。接口补齐后本组应变红 → 强制复核。
-  it('PUT    /api/workspace/goals/:goalId/target · staff / ga / liaison ⇒ 非 403（刻意：仍不做角色级越权判定）', async () => {
+  it('PUT    /api/workspace/goals/:goalId/target · staff / ga / liaison ⇒ 200 + adjusted:false（仍不做角色级越权判定）', async () => {
     for (const role of ['staff', 'ga', 'liaison']) {
       const res = await call(full.base, 'PUT', `/api/workspace/goals/${uid('goal')}/target`, {
         token: TOKEN[role], body: { targetValue: 1 },
       });
-      // 判据仍是「不得一刀切 403」；具体 200/503 由图存储装配情况决定（#1322）
-      expect({ role, isForbidden: res.status === 403 }).toEqual({ role, isForbidden: false });
+      // 强谓词：不是「非 403」，而是**具体成功码 + 业务字段**（CTO 裁定 #1）
+      expect({ role, status: res.status }).toEqual({ role, status: 200 });
+      expect({ role, adjusted: (res.body.data as Record<string, unknown> | undefined)?.adjusted })
+        .toEqual({ role, adjusted: false });
     }
   });
 
