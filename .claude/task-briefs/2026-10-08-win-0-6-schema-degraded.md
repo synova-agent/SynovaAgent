@@ -91,6 +91,9 @@ L1 入口: POST /api/diagnosis/consult / Cron→Sentinel.check() / GET /chat / M
 - `tests/l4/sog-schema-validator.integration.test.ts`（新建，真 SQLite `/tmp`）
 - `scripts/control-tower/probe-diagnosis.ts`（新建，判据交付物；**待治理线窗时隙**）
 - `docs/synova/product-lines/evidence/980/PLAN-980-0-6-schema-degraded.md`（本卡计划件）
+- `docs/synova/product-lines/evidence/980/capture-980-preconditions.sh`（前提实测可复跑脚本）
+- `docs/synova/product-lines/evidence/980/evidence-980-plan-preconditions.txt`（前提实测原始输出）
+- `docs/synova/product-lines/evidence/980/RECEIPT-980-plan-20261008.md`（第一步交付回执）
 - `.claude/task-briefs/2026-10-08-win-0-6-schema-degraded.md`（本 brief 自身）
 - `memory/notes/proposed/2026-10-08-0-6-schema-degraded-visibility.md`（决策 Note，D534 纪律）
 
