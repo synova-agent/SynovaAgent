@@ -1,0 +1,21 @@
+{
+  "task_id": "D1194",
+  "title": "0-1 循环点火（MainAgent 进程级绑定）",
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-07",
+  "updated_by": "alloc-task-id",
+  "write_set": [
+    "src/loops/main-agent-binding.ts",
+    "src/loops/loop-scheduler.ts",
+    "src/server.ts",
+    "tests/loops/main-agent-binding.test.ts",
+    "tests/loops/loop-execution-wiring.test.ts",
+    "tests/loops/probes/batch0a-probes.ts",
+    ".claude/task-briefs/2026-10-07-D1194-0-1-loop-ignition.md",
+    "task-state/D1194.json"
+  ]
+}
