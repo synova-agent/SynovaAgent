@@ -488,6 +488,24 @@ if [ "$FAIL" -gt 0 ] && [ -z "$FIRST_FAIL" ]; then
   echo "  ❌ SELF-CHECK: FAIL=$FAIL 但 FIRST_FAIL 为空（fail() 记名机制缺陷）"
   exit 2
 fi
+
+# ── D1173 (#1015 G-3): --help/-h 零副作用 ──
+# 改坏即红: 若删掉 --help 分支（回到旧 case），--help 被当任务名 ⇒ 真取号+建空壳 ⇒
+#   exit 0 但沙箱 task-state 多出一个 D*.json（断言「零新增文件」即红）。
+_g3dir="$(mktemp -d)"; mkdir -p "$_g3dir/task-state"; printf '{}' > "$_g3dir/task-state/TEMPLATE.json"
+_g3out="$(SYNO_TASK_STATE_DIR="$_g3dir/task-state" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_NO_BRANCH=1 bash "$TOOL" --help 2>&1)"; _g3rc=$?
+if [ "$_g3rc" = 0 ] && echo "$_g3out" | grep -q "只读校验"; then
+  pass "G3.1 --help exit 0 且打印用法"
+else
+  fail "G3.1 --help 应 exit 0 打印用法 — 实际 rc=$_g3rc"
+fi
+_g3n="$(find "$_g3dir/task-state" -name 'D*.json' | wc -l | tr -d ' ')"
+[ "$_g3n" = 0 ] && pass "G3.2 --help 零副作用（不建空壳/不烧号）" || fail "G3.2 --help 真取号了（新增 ${_g3n} 个空壳）"
+SYNO_TASK_STATE_DIR="$_g3dir/task-state" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_NO_BRANCH=1 bash "$TOOL" -h >/dev/null 2>&1
+_g3n2="$(find "$_g3dir/task-state" -name 'D*.json' | wc -l | tr -d ' ')"
+[ "$_g3n2" = 0 ] && pass "G3.3 -h 同样零副作用" || fail "G3.3 -h 真取号了"
+rm -rf "$_g3dir"
+
 echo "  结果: PASS=$PASS FAIL=$FAIL${FIRST_FAIL:+ FIRST_FAIL=${FIRST_FAIL}}"
 echo "═══════════════════════════════════════════════════════════"
 # 失败摘要（**必须留在最后一行**：CI 只截 tail -8 进 ::error 注解）

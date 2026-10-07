@@ -87,6 +87,18 @@ while [ $# -gt 0 ]; do
     --prefix=*) PREFIX="${1#--prefix=}" ;;
     --check-id) shift; CHECK_ID="${1:-}" ;;
     --check-id=*) CHECK_ID="${1#--check-id=}" ;;
+    # D1173 (#1015 G-3): --help/-h 原落入 *) 被当任务名 ⇒ 真取号+烧号+建空壳。
+    #   帮助是只读操作，必须零副作用（不拿锁/不写盘/不发号）。
+    --help|-h)
+      cat <<'USAGE'
+用法:
+  alloc-task-id.sh <任务名>                # 分配下一个 D# + 建空壳登记（唯一取号入口）
+  alloc-task-id.sh <任务名> --dry-run      # 只预览下一个号，不写盘
+  alloc-task-id.sh <任务名> --prefix <P>   # 带命名前缀（worktree/分支命名复用）
+  alloc-task-id.sh --check-id <D###>       # 只读校验某号是否被占（不取号/不写盘/不拿锁）
+  alloc-task-id.sh --help | -h             # 本帮助（零副作用: 不拿锁/不写盘/不发号）
+USAGE
+      exit 0 ;;
     *)          _POS+=("$1") ;;
   esac
   shift
