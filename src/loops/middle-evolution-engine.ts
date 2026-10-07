@@ -412,7 +412,8 @@ function readExpertManifest(expertType: string): Record<string, unknown> | null 
 * @degraded 审计不可用（AuditService 未初始化）⇒ 其内部 `log.warn` 后跳过，
 *   门禁判定**不变**（铁律 24/31：审计失败不改判、也不放行）
 *
-* 覆盖面声明：本门只覆盖**进化产物写**（本文件 3 处）；全仓写原语 24 文件，其余未拦
+* 覆盖面声明（口径 = `src/` 内，R42 文件数）：本门只覆盖**本文件 3 处写点**；
+*   `src/` 内写原语 **24** 文件，**其余 23 未拦**（同模式仓库范围 99 文件，不属本卡覆盖面）
 *   （CTO 2026-10-08 裁定：覆盖面必须显式声明）。
 */
 function guardWrite(targetPath: string): FileAccessDecision {

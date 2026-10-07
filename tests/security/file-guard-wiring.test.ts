@@ -7,7 +7,8 @@
  *     是否真的过门、拒绝是否**不写**且**落审计**（铁律 4/5：入口 → 交互 → 结果）。
  *
  * 覆盖面声明（CTO 2026-10-08 裁定，固定形态）：
- *   **写入门禁已接（覆盖面 = 进化产物写 3 处；全仓写原语 24 文件，其余未拦）**
+ *   **写入门禁已接（覆盖面 = 本文件 `src/loops/middle-evolution-engine.ts` 3 处；
+ *   `src/` 内写原语 24 文件，其余 23 未拦）**
  *
  * 契约（铁律 47）
  *   @input   — 夹具 `extensions/industries/_test_1052_file_guard/thresholds.json`
