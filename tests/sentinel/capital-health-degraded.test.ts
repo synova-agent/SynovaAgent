@@ -47,9 +47,19 @@ const completeFinancial = () => storeWith([
   },
 ]);
 
+// #1375 B3b（必要连带）：capital-health 现返回 { findings, metrics }（A2 形态）
+//   ⇒ 用包装函数归一化（**只改函数名**，不动既有断言与多行调用结构）
+async function checkFindings(
+  store: Parameters<typeof capitalHealthSentinel.check>[0],
+  tid: string,
+): Promise<Awaited<ReturnType<typeof capitalHealthSentinel.check>> extends readonly unknown[] ? unknown[] : unknown[]> {
+  const r = await capitalHealthSentinel.check(store, tid);
+  return (Array.isArray(r) ? r : (r as { findings: unknown[] }).findings) as unknown[];
+}
+
 describe('D356 P1-3: capital-health 缺字段不默认为 0', () => {
   it('部分字段注入不产 critical，改发 degraded 提示（修复前产 2 critical → red）', async () => {
-    const findings = await capitalHealthSentinel.check(partialFinancial(), 't1');
+    const findings = await checkFindings(partialFinancial(), 't1');
 
     // 修复前: ICR ebit=0/interest=0 → icr=0 < 1.5 critical + 资产周转率 totalAssets=0 → 0 < 0.5 critical → red
     expect(findings.filter(f => f.severity === 'critical')).toHaveLength(0);
@@ -63,7 +73,7 @@ describe('D356 P1-3: capital-health 缺字段不默认为 0', () => {
   });
 
   it('完整字段仍正常产出 finding（回归: 字段校验不误伤真数据）', async () => {
-    const findings = await capitalHealthSentinel.check(completeFinancial(), 't1');
+    const findings = await checkFindings(completeFinancial(), 't1');
 
     // D/E=4 > 2.5 + ICR=0.33 < 1.5 → 真实 critical（与修复前一致）
     expect(findings.some(f => f.severity === 'critical')).toBe(true);
@@ -71,7 +81,7 @@ describe('D356 P1-3: capital-health 缺字段不默认为 0', () => {
   });
 
   it('无 Financial 节点返回空 findings（维持 K3 T2-b 空库基线行为）', async () => {
-    const findings = await capitalHealthSentinel.check(storeWith([]), 't1');
+    const findings = await checkFindings(storeWith([]), 't1');
     expect(findings).toHaveLength(0);
   });
 
@@ -82,7 +92,7 @@ describe('D356 P1-3: capital-health 缺字段不默认为 0', () => {
       },
     };
 
-    const findings = await capitalHealthSentinel.check(broken, 't1');
+    const findings = await checkFindings(broken, 't1');
 
     expect(findings.filter(f => f.severity === 'critical')).toHaveLength(0);
     expect(findings.length).toBeGreaterThan(0);
@@ -101,7 +111,7 @@ describe('D356 P1-3: capital-health 缺字段不默认为 0', () => {
       },
     ]);
 
-    const findings = await capitalHealthSentinel.check(zeroValued, 't1');
+    const findings = await checkFindings(zeroValued, 't1');
 
     // 入口校验放行（字段存在）→ 指标层分母 0 全部 degrade → 无 ch-degraded
     expect(findings.some(f => f.id.startsWith('ch-degraded'))).toBe(false);
