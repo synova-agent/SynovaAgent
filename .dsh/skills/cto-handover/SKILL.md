@@ -164,7 +164,10 @@ C-12 **话术红线**：**不宣称"越用越准 / 自我进化"**（S5-1 未闭
    - 模块在 🔵 借 DSH → 派单必须写"借鉴 DSH 的哪个包/范式，Stage 3 后替换"
    - 模块在 🟢 死守（如 electron/ 品牌表层）→ 检查任务涉及的**通用管道**（进程管理/会话/调度/LLM 适配）有无 DSH 范式可借鉴（§4"长期借鉴不引代码"）
    - 无借鉴 → 派单显式写"无 DSH 借鉴（原因）"，防执行方猜测
-3. **读 DSH 源码给文件参考**：有可借鉴 → 必须给出**明确代码文件路径 + 函数 + 行号**（如 `dsh-subprocess-local/lib/index.js` 的 `signalTree()` L757），禁止只写"参考 DSH 思路"不给文件
+3. **读 DSH 源码给文件参考**：有可借鉴 → 必须给出**包名 + 文件 + 符号**（行号只在**现查后**附，禁止照抄历史行号）。**必须附现验命令**（以本地现行安装为准，见 `docs/synova/coordination/DSH锚点重锚审计-20260917.md` §三）：
+   `f="$DSH/node_modules/@deepseek-ai/<pkg>/<file>"; [ -f "$f" ] && grep -n '<symbol>' "$f"`
+   示范（现行有效）：`@deepseek-ai/dsh-subprocess-local` → `lib/index.js` 的 `signalChildGroup`（历史锚点 `signalTree()` L757 已于 0.1.6 失效，勿用）
+   现验失败 → 该借鉴作废、重找，**不许"差不多就抄"**（M6 版本锚点断裂教训）
 
 **DSH 源码位置**：`~/.nvm/versions/node/v24.19.0/lib/node_modules/@deepseek-ai/dsh/`（lib/ + node_modules/@deepseek-ai/*）
 
