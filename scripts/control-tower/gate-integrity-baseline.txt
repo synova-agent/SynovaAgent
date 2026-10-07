@@ -13,7 +13,7 @@
 #     违规判据（B 段实测）:
 #       (a) 全仓密封面测试 ∉（执行集 ∪ ci.yml 字面登记 ∪ 本段）      → 违规（未纳入发现面也未登记）
 #       (b) 本段条目指向不存在的文件                                → 违规（台账过期，须删条目）
-#       (c) 面扫描数 < FACE-TOTAL（下方下界）                        → 违规（疑似删测试：删测试须同批显式下调）
+#       (c) 面扫描数 < FACE-TOTAL（下方下界）                        → 违规（净删除；新增不红——下界语义）
 #       (d) 本段条目数 > QUARANTINE-TOTAL（下方上界）                → 违规（新增隔离须同批显式上调 = 留痕）
 #     两道棘轮（**注释行，非数据行**；sealed-tests.sh 与 B 段都读它）:
 #         `# FACE-TOTAL=<n>`        发现面扫描数**下界**（只允许显式下调，不许静默缩面）
@@ -23,7 +23,9 @@
 #       bash scripts/control-tower/sealed-tests.sh --quarantine | wc -l   # → QUARANTINE-TOTAL 实况
 #       bash scripts/control-tower/sealed-tests.sh --list       | wc -l   # → ci.yml 两 job 实际执行数
 #     ⚠️ 行尾不得带 ` | owner=…` 之类后缀——本段是**路径清单**，解析器整行取路径。
-# FACE-TOTAL=141   # 贴边：== 当前 --scan 数（任何删除即红，零静默余量）；新增面内测试 ⇒ 可高于此值
+# FACE-TOTAL=141   # **下界语义**：scan >= 此值 = 通过（新增测试不红）；scan < 此值 = 净删除 ⇒ 红。
+#                   # 代价（如实登记）: 净零变换（删 1 + 加 1）不可检测 —— 「不做逐条登记」的必然代价。
+#                   # 禁止自动重算本值（那会让棘轮彻底失效）；下调须本文件显式改行（= 留痕）。
 # QUARANTINE-TOTAL=78
 #     （旧义·D-F/② 之前，仅存历史对照）
 #     违规面 = CI 密封面 = tests/ 下 *.test.sh / *.test.py（旧义: 只有被显式登记才会在 CI 执行）

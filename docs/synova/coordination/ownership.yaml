@@ -1,35 +1,27 @@
-# ownership.yaml — Synova 模块所有权（机器可读唯一源）
+# ownership.yaml — 【生成产物，请勿手改】
 #
-# 🔴 2026-10-07 · 创始人授权清理「分域」
-#   原文件按 mac / win / k3 三域划分（42 条 glob），消费于：
-#     · check-ownership.py 的 --owner 断言（越域 exit 1）
-#     · check-pr-budget.sh 的单域判定（**变更跨 >1 域 ⇒ exit 1**）
-#   创始人 2026-10-07 明令：「不分域。谁有空，谁能做就谁做。」并授权本批清掉数据源。
-#   ⇒ 本文件改为**单域**：全部路径归同一个 owner ⇒ 「跨域」在结构上不可能发生。
-#   ⇒ 保留本文件的原因：CODEOWNERS 仍需由它生成（`.github/CODEOWNERS` 是生成产物）。
-#
-# 消费者: scripts/control-tower/check-ownership.py
-#   · 归属查询:  python3 scripts/control-tower/check-ownership.py <文件...>
-#   · 生成 CODEOWNERS: python3 scripts/control-tower/check-ownership.py --emit-codeowners
-# 语义: 规则**按顺序求值，最后匹配者胜出** —— 与 .github/CODEOWNERS 官方语义一致。
-#       改完本文件必须重跑 --emit-codeowners（drift 由测试逐字节断言）。
+# 真源: 各目录内嵌的 .synova-owner 标记（**发现制** —— 归属登记点 = 目录自身）
+#   语义: 无标记的目录继承**最近祖先**标记；根标记 = 全仓默认。
+#   新增/移动目录 ⇒ 零中央登记；改归属 ⇒ 只改所在目录的标记，不动本文件。
+# 生成: python3 scripts/control-tower/check-ownership.py --emit-ownership \
+#         > docs/synova/coordination/ownership.yaml
+# 漂移门禁: python3 scripts/control-tower/check-ownership.py --check-drift（**逐字节**断言）
+# 规则语义: 按顺序求值，**最后匹配者胜出**（与 .github/CODEOWNERS 官方语义一致）
+#   ⇒ 产物按「宽 → 窄」深度升序排列：越具体的目录写在越后面。
 #
 # ⚠️ 已废止（仅留痕，勿再引用）:
-#   · 三域 owner 键 `mac` / `win` / `k3`
-#   · 每条规则的 `owner:` 字段（单域下恒同值 ⇒ 无信息量）
-#   · `territory:` 字段（原用于「Win 域必须显式列出」，域概念废止后无意义）
-#   ⇒ 出处：`docs/synova/coordination/TASK-ROUTING.md` v4 §一（已由本批加废止头注）
+#   · 2026-10-07 前本文件是**手改登记表**（每次新目录都要改它）⇒ 登记点=汇聚点=冲突点，
+#     D806/D914/D935/D911 同型事故 ≥4 次。现降级为产物。
+#   · 三域 owner 键 `mac` / `win` / `k3`、`domain_neutral:` 段、`territory:` 字段
+#     —— 随创始人 2026-10-07「不分域」废止。
 
-# owner 语义（人读；机器只用 key）
 owners:
   maintainer: "创始人 — 全部路径的最终把关人（分域已废止，不再按角色切分）"
 
-# CODEOWNERS 落地账号
 github:
   maintainer: "@tangbaobao520"
 
 rules:
-  # ═══ 单域兜底（Unique rule：全路径同 owner ⇒ 跨域不可能）═══
   - glob: "**"
     owner: "maintainer"
     default: true
