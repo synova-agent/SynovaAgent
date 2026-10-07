@@ -34,8 +34,10 @@
   **4.122s** / 空暂存 1.732s / 纯文档 1.104s），真实痛点是**误拦率与判据噪音**（v2.0 依据 ~87%）。
   ⇒ 本条不构成性能改进，禁作卖点。
 - **已知缺口（如实登记，不伪造同步面）**: §一.4 要求「一处定义三处同步」= VERSION.md + `version.log` + tag；
-  本树**无 `.codex/control-tower/version.log`**（V5.2.7/V5.2.8 亦未产出）⇒ 本 PATCH 只同步 VERSION.md + tag，
-  机器可读日志面的缺失另行立卡（不在此处发明格式）。
+  本树**无 `.codex/control-tower/version.log`**（V5.2.7/V5.2.8 亦未产出）；且 **tag 按 §6/D521 于「合并后补打」**
+  ——D331 门禁实测拦截未合并分支上的版本 tag（`V5.2.9 是 HEAD 祖先但不在 origin/main 上`），
+  故本 PATCH 推送时交付面 = VERSION.md 条目（tag 由合并在 main 后补，或合并方补）。
+  ⇒ 机器可读日志面的缺失另行立卡（不在此处发明格式）。
 - **未纳入本 PATCH（移交）**: 退役清单另两项按 Lead 裁决**不在本卡**——②骨架占位检测（裸删会重开 D547
   全局阻断 ⇒ 挂 D-C）、④`#CRITERIA` 强制（唯一真门禁，claim schema 增可选 `criteria` 字段 ⇒ 移交 D-C）。
 - **作者**: line-e-da2（写面: `scripts/pre-commit-check.sh` + 2 夹具 + 本文件）
