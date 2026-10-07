@@ -1,0 +1,19 @@
+{
+  "task_id": "D1195",
+  "title": "清分域：ownership.yaml 单域化 + CODEOWNERS 重生成 + 校验器/测试同步",
+  "status": "claimed",
+  "spec": null,
+  "impl": null,
+  "audit": null,
+  "fix_task_id": null,
+  "updated_at": "2026-10-07",
+  "updated_by": "cto",
+  "write_set": [
+    ".github/CODEOWNERS",
+    "docs/synova/coordination/ownership.yaml",
+    "scripts/control-tower/check-ownership.py",
+    "tests/control-tower/check-ownership.test.sh",
+    ".claude/task-briefs/2026-10-07-D1195-no-domain-cleanup.md",
+    "task-state/D1195.json"
+  ]
+}
