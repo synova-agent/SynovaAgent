@@ -7,19 +7,14 @@
 #
 # 依据：CTO 2026-10-08 放行 + 计划 §1「最终写集」；越界两处已在 PR #1330 正文申报。
 writeset:
+  # 本 claim = **本 PR（M3 follow-up）真正改动**的文件（写准，不预授权）。
+  # #1330 的写集随该 PR 合入 main，已历史化，不再列于此处。
   - .claude/claims/1322.yaml
   - .claude/task-briefs/2026-10-08-1322-goal-creation-entry.md
-  - src/growth/goal-store.ts
   - src/growth/proposal-engine.ts
-  - src/growth/proposal-store.ts
-  - src/growth/proposal-types.ts
-  - src/growth/workspace-builder.ts
-  - src/growth/workspace-types.ts
-  - src/routes/workspace-data.ts
-  - tests/growth/goal-store-real-graph.integration.test.ts
-  - tests/growth/proposal-store-real-graph.integration.test.ts
-  - tests/routes/workspace-goal-creation.integration.test.ts
-  - tests/security/rbac-all-routes.test.ts
+  - tests/e2e/full-pipeline.integration.test.ts
+  - tests/growth/proposal-engine.test.ts
+  - tests/growth/e2e-navigation-loop.integration.test.ts
 # 声明纪律（CTO 复验 M-b + verifier-4 门禁观察「过宽声明 = 预授权未改动路径」）:
 #   本 claim 只列**本 PR 真正改动**的文件。M3（generateGoalFromProposal 删 orgId→department
 #   回退）及其 3 件夹具连带（tests/e2e/full-pipeline.integration.test.ts /
