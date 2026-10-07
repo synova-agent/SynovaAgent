@@ -113,3 +113,7 @@
       verify: `npx vitest run tests/routes/workspace-goal-creation.integration.test.ts -t "降级"`
 - [x] 回归：既有相关测试全绿 + `tsc --noEmit` 0 error + 架构门禁通过
       verify: `npx vitest run tests/routes tests/growth tests/integration/wiring-integration.test.ts && npx tsc --noEmit && bash scripts/check-architecture.sh`
+#CRITERIA: B
+<!-- #CRITERIA: A/B/C/D 条件归属（v3-FINAL），必填；pre-commit G10 + hook-block-write CP1 + pre-doc-audit CP2 消费 -->
+<!-- 归属理由: 本卡主体 = 增长导航体系（src/growth/**，条件 B）。src/routes/workspace-data.ts 属条件 C
+     —— 跨条件属有意（本卡正是把 B 的能力接到 C 的入口），G10 软告警可预期。 -->
