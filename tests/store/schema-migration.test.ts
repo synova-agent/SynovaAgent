@@ -42,8 +42,11 @@ describe('SchemaMigration — 初始化', () => {
     const db = createTestDb();
     reconcileSchema(db);
 
-    const row = db.prepare('SELECT version FROM schema_version').get() as any;
-    expect(row.version).toBe(SCHEMA_VERSION);
+    const rows = db.prepare('SELECT version FROM schema_version').all() as Array<{ version: number }>;
+    // ⚠️ #1053 起迁移 ≥2 条 ⇒ schema_version 每次迁移插一行；首行不再等于最新版本
+    //   （且同秒写入时 `ORDER BY updated_at DESC` 无法区分 ⇒ 详见 #1053 回执的"读取器并列"发现）
+    expect(rows.map(r => r.version)).toContain(SCHEMA_VERSION);
+    expect(Math.max(...rows.map(r => r.version))).toBe(SCHEMA_VERSION);
   });
 });
 
@@ -55,8 +58,8 @@ describe('SchemaMigration — 幂等', () => {
     reconcileSchema(db);
     reconcileSchema(db);
 
-    const row = db.prepare('SELECT version FROM schema_version').get() as any;
-    expect(row.version).toBe(SCHEMA_VERSION);
+    const rows = db.prepare('SELECT version FROM schema_version').all() as Array<{ version: number }>;
+    expect(Math.max(...rows.map(r => r.version))).toBe(SCHEMA_VERSION);
   });
 
   it('已有 schema_version 表应跳过创建', () => {
@@ -74,8 +77,8 @@ describe('SchemaMigration — 幂等', () => {
 describe('SchemaMigration — v2 迁移 (D355 graph_nodes props)', () => {
   beforeEach(async () => { await loadModules(); });
 
-  it('SCHEMA_VERSION 应为 2（含 D355 迁移）', () => {
-    expect(SCHEMA_VERSION).toBe(2);
+  it('SCHEMA_VERSION 应为 3（含 D355 + #1053 metric_readings 迁移）', () => {
+    expect(SCHEMA_VERSION).toBe(3);
   });
 
   it('旧库（props_json 无 props）reconcile 后补 props 列并回填数据', () => {

@@ -2,7 +2,7 @@
  * store/schema-migration.ts — Schema 版本化迁移 (Phase 3.2)
  *
  * 提供 reconcileSchema 函数，统一管理 SQLite 数据库 schema 变更。
- * 迁移文件命名: src/store/migrations/001_*.ts
+ * 迁移文件命名: src/store/migrations/00N-*.ts
  *
  * 铁律 24: 降级路径有 log.warn
  * 铁律 38: 纯类型安全
@@ -10,13 +10,14 @@
 import type Database from 'better-sqlite3';
 import { createLogger } from '@synova/logger';
 import { graphNodesPropsMigration } from './migrations/001-graph-nodes-props';
+import { metricReadingsMigration } from './migrations/002-metric-readings';
 
 const log = createLogger('store/schema-migration');
 
 // ═══ 常量 ═══
 
 /** 当前 schema 版本。每次新增迁移文件时递增。 */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 // ═══ Migration 定义 ═══
 
@@ -33,6 +34,8 @@ export interface Migration {
 const migrations: Migration[] = [
   // D355: 旧库 graph_nodes 以 props_json 存储属性 → 补 props 列并回填（K3 P0-3）
   graphNodesPropsMigration,
+  // #1053（2-1a）: 承重件 W1 —— 测量值时序表 metric_readings（17 列 + 3 索引）
+  metricReadingsMigration,
 ];
 
 // ═══ reconcileSchema ═══
