@@ -112,8 +112,6 @@ describe('ProposalEngine', () => {
 
       const propId = createProposal({
         proposalId: '', diagnosisReportId: 'diag-1', title: '测试',
-        // #1322: Proposal.orgId 是**租户**（非部门）；CTO 裁定后无 orgId 即 fail-closed
-        orgId: 'org-test',
         department: 'dept-a',
         paths: [{ label: '稳健', riskLevel: 'low', expectedImpact: '改善', tradeoffs: '低', recommendationReason: '保守', isDefault: true, goals: [] }],
         context: { diagnosisConfidence: 0.7, keyRisks: [], triggeringSentinels: [] },
@@ -126,7 +124,6 @@ describe('ProposalEngine', () => {
 
       const goalIds = generateGoalFromProposal({
         proposalId: propId, diagnosisReportId: 'diag-1', title: '测试',
-        orgId: 'org-test',
         department: 'dept-a',
         paths: [{ label: '稳健', riskLevel: 'low', expectedImpact: '改善', tradeoffs: '低', recommendationReason: '保守', isDefault: true, goals: [] }],
         context: { diagnosisConfidence: 0.7, keyRisks: [], triggeringSentinels: [] },

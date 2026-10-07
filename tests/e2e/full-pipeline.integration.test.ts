@@ -313,8 +313,6 @@ describe('D99: Full Pipeline E2E — 完整管线集成测试', () => {
     // 生成 Proposal
     const proposal = generateProposalFromDiagnosis({
       diagnosisId: 'diag-wani-001',
-      // #1322: 租户（无 orgId ⇒ generateGoalFromProposal fail-closed）
-      orgId: 'wani-baby',
       title: '哇呢宝贝综合诊断',
       department: 'operations',
       confidence: mockResponse.confidence,

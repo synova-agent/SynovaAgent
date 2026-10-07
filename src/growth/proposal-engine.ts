@@ -211,22 +211,11 @@ export function generateGoalFromProposal(
 
   // 创建 Goal
   // #1322 修正（卡 §③3 / 现状 7）：orgId 是**租户**，department 是**部门** —— 二者不可互换。
-  //   proposal.orgId 由调用方从验签身份注入（唯一合法来源）。
-  // 🔴 CTO 复核必改（残余风险）: **已删除 `?? proposal.department` 回退** —— 那是
-  //   「命名错位复发口」（orgId 位被 department 顶替），与 D338「缺 orgId → null，
-  //   绝不回落全局」同型；新 HTTP 路径够不到它，但非 HTTP 调用方会复发。
-  //   无 orgId ⇒ **显式 fail-closed**：拒绝生成 + log.warn（不静默、不猜、不回落）。
-  const orgId = proposal.orgId;
-  if (typeof orgId !== 'string' || orgId.trim().length === 0) {
-    log.warn(
-      { proposalId: proposal.proposalId, department: proposal.department },
-      'Proposal 缺少 orgId —— 拒绝生成 Goal（fail-closed，不回落 department）',
-    );
-    throw new Error(`Proposal ${proposal.proposalId} 缺少 orgId，拒绝生成 Goal（fail-closed）`);
-  }
+  //   proposal.orgId 由路由从 req.auth.orgId 注入（唯一合法来源）；
+  //   `?? proposal.department` 仅为兼容 #1322 之前写入的存量 Proposal（无 orgId 字段）。
   const goal: Goal = {
     goalId: '',
-    orgId,
+    orgId: proposal.orgId ?? proposal.department,
     proposalId: proposal.proposalId,
     diagnosisId: proposal.diagnosisReportId,
     title: `${path.label}: ${proposal.title}`.substring(0, 100),

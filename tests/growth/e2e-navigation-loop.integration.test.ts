@@ -66,8 +66,6 @@ describe('D77: 增长导航 e2e — 全链路', () => {
     const report = {
       diagnosisId: 'diag-1',
       title: '成本结构诊断',
-      // #1322: 租户由调用方注入（唯一合法来源）；无 orgId ⇒ fail-closed
-      orgId: 'org-e2e',
       department: 'finance',
       confidence: 0.85,
       keyRisks: ['利润下滑风险'],
