@@ -419,16 +419,23 @@ function guardWrite(targetPath: string): FileAccessDecision {
   const decision = getFileGuard().canWrite(targetPath);
   if (decision.allowed) return decision;
   log.warn({ path: targetPath, reason: decision.reason }, '写入被 FileGuard 拒绝 — 跳过写入（#1052）');
-  // 审计落点在**调用点**（CTO 裁定：不把 IO 塞进 FileGuard）；复用既有唯一审计通道
-  AuditService.log({
-    orgId: 'system',
-    actorId: 'system:file-guard',
-    actorRole: 'system',
-    action: 'file_write_denied',
-    targetType: 'file',
-    targetId: targetPath,
-    newValue: JSON.stringify({ reason: decision.reason, caller: 'loops/middle-evolution-engine' }),
-  });
+  // 审计落点在**调用点**（CTO 裁定：不把 IO 塞进 FileGuard）；复用既有唯一审计通道。
+  // 🔴 必须自兜（CTO 2026-10-08 复核必落⑤）：threshold 两个分支**无外层 try** ⇒ 审计层抛错
+  //   会中断整轮 applyEvolutionActions，违反本函数契约「审计失败不改判、也不放行」。
+  try {
+    AuditService.log({
+      orgId: 'system',
+      actorId: 'system:file-guard',
+      actorRole: 'system',
+      action: 'file_write_denied',
+      targetType: 'file',
+      targetId: targetPath,
+      newValue: JSON.stringify({ reason: decision.reason, caller: 'loops/middle-evolution-engine' }),
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.warn({ path: targetPath, err: msg }, '拒绝审计写入异常 — 降级（决策不变，仍不写）');
+  }
   return decision;
 }
 

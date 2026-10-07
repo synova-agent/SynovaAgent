@@ -15,6 +15,9 @@ writeset:
   - src/agent/atomic-write.ts
   - tests/security/file-guard.test.ts
   - tests/security/file-guard-wiring.test.ts
+done:
+  - verify: npx vitest run tests/security/file-guard.test.ts tests/security/file-guard-wiring.test.ts
+  - verify: bash scripts/check-architecture.sh
 # 声明纪律（同 #1322 先例 M-b）: 本 claim 只列**本 PR 真正改动**的文件。
 #   不列 `src/tools/tool-registry.ts`（R40：0-11 (b) 已拆门，写集移除）；
 #   不列 `src/agent/tool-profiles.ts`（#1347 真源）；不列 `src/store/**`（2-1a）/ `src/sentinel/**`（2-1b）。
