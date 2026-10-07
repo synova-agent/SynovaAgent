@@ -1,17 +1,17 @@
 # .claude/claims/1375.yaml — #1375（48 哨兵指标级接线）写集声明（D708 的 S0 源）
-#   **随批次更新**：B1（4，f795a0dc7）⇒ B2（3，aaee6b53c）⇒ **B3a（本批 3：单 compute 形态）**
+#   **随批次更新**：B1（4，f795a0dc7）⇒ B2（3，aaee6b53c）⇒ B3a（3，39264b8d2）⇒ **B3b（本批 3：多 compute）**
 writeset:
   - .claude/claims/1375.yaml
-  - .claude/task-briefs/2026-10-08-1375-metric-wiring-b1.md
-  - .claude/task-briefs/2026-10-08-1375-metric-wiring-b2.md
   - .claude/task-briefs/2026-10-08-1375-metric-wiring-b3a.md
-  - extensions/sentinels/environment-rent-dependency/aggregate.ts
-  - extensions/sentinels/financing-constraint/aggregate.ts
-  - extensions/sentinels/value-capture/aggregate.ts
-  - tests/sentinel/metric-wiring-b3.test.ts
+  - .claude/task-briefs/2026-10-08-1375-metric-wiring-b3b.md
+  - extensions/sentinels/capital-health/aggregate.ts
+  - extensions/sentinels/growth-quality/aggregate.ts
+  - extensions/sentinels/margin-health/aggregate.ts
+  - tests/sentinel/metric-wiring-b3b.test.ts
+  - tests/sentinel/capital-health-degraded.test.ts
 done:
-  - verify: npx vitest run tests/sentinel/metric-wiring-b3.test.ts
+  - verify: npx vitest run tests/sentinel/metric-wiring-b3b.test.ts tests/sentinel/capital-health-degraded.test.ts
   - verify: npx vitest run tests/sentinel/ tests/store/ tests/l3/ tests/connectors/
-  - verify: test "$(git grep -c "metricsHolder" HEAD -- extensions/sentinels/value-capture/aggregate.ts | tr -d '\n')" -ge 1
+  - verify: test "$(git grep -c "metricsHolder.push" HEAD -- extensions/sentinels/margin-health/aggregate.ts | tr -d '\n')" -ge 5
   - verify: npx tsc --noEmit
-note: B3 原裁"全取 6"，实测其中 3 个为**多 compute 形态**（capital-health/growth-quality/margin-health）⇒ 需先定"哪个值作指标"的规则 ⇒ 本批只接 3 个单 compute（environment-rent-dependency/financing-constraint/value-capture），另 3 个待规则（已报 CTO）。**判据随前置卡重算**（#1393 并集读 ⇒ "可读"= 字面量有写入者 或 映射目标有写入者）。B3 复核数差口径：B2 口径（computes=1，候选 20）⇒ 18 含读不到；B3 口径（全部未接线，候选 31）⇒ 25 含读不到（**同一判据、不同集合**）。
+note: B3b = 多 compute 3 哨兵，按 CTO 裁 (a) **每 compute 一行**（capital-health 7 ｜ growth-quality 2 ｜ margin-health 5）。**根因修复**：三处**标识符形态返回**（`return findings;`，capital-health:444｜growth-quality:74｜margin-health:303）此前未被识别/转换 ⇒ loader 按裸数组处理 ⇒ metrics 恒不流 ⇒ 端到端 0 行。判据 V2 加固为**逐哨兵**断言（防"多哨兵合计"掩盖单哨兵 0 行）。
