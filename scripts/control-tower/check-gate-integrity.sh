@@ -603,71 +603,89 @@ run_patterns() {
 
 run_registry() {
   info ""
-  info "── B CI 清单登记 gate（密封面 ratchet）──"
+  info "── B CI 密封面发现制 gate（D-F/②：登记制 → 发现制 + 双棘轮）──"
   local tests_dir="${SYNO_TESTS_DIR:-$ROOT/tests}"
   local ci_yml="${SYNO_CI_YML:-$ROOT/.github/workflows/ci.yml}"
   local baseline="${SYNO_GATE_BASELINE:-$ROOT/scripts/control-tower/gate-integrity-baseline.txt}"
+  local sealed="${SYNO_SEALED_TESTS:-$ROOT/scripts/control-tower/sealed-tests.sh}"
 
   [ -d "$tests_dir" ] || degrade "B_TESTS_DIR_MISSING" "registry" "测试目录缺失: $tests_dir"
   [ -f "$ci_yml" ] || degrade "B_CI_YML_MISSING" "registry" "CI 清单缺失: $ci_yml"
   [ -f "$baseline" ] || degrade "B_BASELINE_MISSING" "registry" "ratchet 基线缺失: $baseline"
+  [ -f "$sealed" ] || degrade "B_SEALED_TESTS_MISSING" "registry" "发现制清单提供者缺失: $sealed"
 
   local base_dir; base_dir="$(dirname "${tests_dir%/}")"
   local p
-  find "$tests_dir" -type f \( -name '*.test.sh' -o -name '*.test.py' -o -name '*.test.ts' \) -not -path '*/node_modules/*' > "$TMPD/all_tests_raw.txt" 2>/dev/null   # swallow-ok: find 读目录失败=枚举为空 → 未登记集空 → [R] 条目全判"基线过期"（fail-closed 红，不静默放行）
+  find "$tests_dir" -type f \( -name '*.test.sh' -o -name '*.test.py' -o -name '*.test.ts' \) -not -path '*/node_modules/*' > "$TMPD/all_tests_raw.txt" 2>/dev/null   # swallow-ok: find 读目录失败=枚举为空 → 未覆盖集空（但发现面扫描另行 fail-closed，见下方 sealed-tests 降级）
   while IFS= read -r p; do printf '%s\n' "${p#"$base_dir"/}"; done < "$TMPD/all_tests_raw.txt" | sort -u > "$TMPD/all_tests.txt"
-  # 登记 = 路径出现在 ci.yml **全文**（密封清单 for t in 或任意 job 的 run: 步骤）
-  grep -oE 'tests/[A-Za-z0-9_./-]+\.test\.(sh|py|ts)' "$ci_yml" 2>/dev/null | sort -u > "$TMPD/registered_all.txt"   # swallow-ok: 探测型 grep；无匹配/读失败=登记集空 → 未登记集=全集 → 全红（fail-closed）
   grep -E '\.test\.(sh|py)$' "$TMPD/all_tests.txt" > "$TMPD/all_ci_face.txt" || true
   grep -E '\.test\.ts$' "$TMPD/all_tests.txt" > "$TMPD/all_ts_face.txt" || true
+
+  # ── 发现制取数（唯一权威 = sealed-tests.sh；root 取 tests_dir 的父 ⇒ 夹具/真仓同构）──
+  local sealed_root list_out list_rc scan_n
+  sealed_root="$base_dir"
+  list_out="$(SYNO_GATE_BASELINE="$baseline" bash "$sealed" --list --root "$sealed_root" 2>"$TMPD/sealed.err")"; list_rc=$?
+  scan_n="$(SYNO_GATE_BASELINE="$baseline" bash "$sealed" --scan --root "$sealed_root" 2>/dev/null | grep -c . || true)"
+  SYNO_GATE_BASELINE="$baseline" bash "$sealed" --quarantine --root "$sealed_root" 2>/dev/null | grep . | sort -u > "$TMPD/quarantine.txt" || true
+  printf '%s\n' "$list_out" | grep . | sort -u > "$TMPD/executed_discovery.txt" || true
+  # 字面登记通道（ci.yml 全文）保留：跑在**别处 job** 的测试可用字面路径声明，无需进隔离台账
+  grep -oE 'tests/[A-Za-z0-9_./-]+\.test\.(sh|py|ts)' "$ci_yml" 2>/dev/null | sort -u > "$TMPD/registered_all.txt"   # swallow-ok: 探测型 grep；无匹配=执行集仅由发现面提供（fail-closed 面由 sealed-tests 保证）
   grep -E '\.test\.(sh|py)$' "$TMPD/registered_all.txt" > "$TMPD/registered_ci_face.txt" || true
-  comm -23 "$TMPD/all_ci_face.txt" "$TMPD/registered_ci_face.txt" > "$TMPD/unregistered_ci_face.txt"
+  cat "$TMPD/executed_discovery.txt" "$TMPD/registered_ci_face.txt" | grep . | sort -u > "$TMPD/executed_all.txt" || true
+  cat "$TMPD/executed_all.txt" "$TMPD/quarantine.txt" | grep . | sort -u > "$TMPD/covered.txt" || true
+  # 违规 (a): 全仓密封面 −（执行集 ∪ 隔离台账） ⇒ 未纳入发现面也未登记
+  comm -23 "$TMPD/all_ci_face.txt" "$TMPD/covered.txt" > "$TMPD/uncovered.txt"
+  # 违规 (b): 隔离台账条目文件不存在（旧「条目已登记即过期」判据由发现制的双棘轮取代，见 baseline 头注释）
+  : > "$TMPD/stale_baseline.txt"
+  local q
+  while IFS= read -r q; do
+    [ -n "$q" ] || continue
+    [ -f "$sealed_root/$q" ] || printf '%s\n' "$q" >> "$TMPD/stale_baseline.txt"
+  done < "$TMPD/quarantine.txt"
+  # ts 面仅登记计数（vitest glob 自动覆盖，不计密封面违规）
   comm -23 "$TMPD/all_ts_face.txt" "$TMPD/registered_all.txt" > "$TMPD/unregistered_ts_face.txt"
-
-  # REGISTRY-BASELINE 段 = 未登记测试存量棘轮（PATTERN-BASELINE 段由 A 模式读，此处跳过）
-  awk '
-    BEGIN { sec = "R" }
-    /^[[:space:]]*#/ {
-      line = $0
-      sub(/^[[:space:]]*#[[:space:]]*/, "", line)
-      if (line ~ /^═+[[:space:]]*PATTERN-BASELINE/)  { sec = "P"; next }
-      if (line ~ /^═+[[:space:]]*REGISTRY-BASELINE/) { sec = "R"; next }
-      next
-    }
-    /^[[:space:]]*$/ { next }
-    sec == "R" { print }
-  ' "$baseline" 2>/dev/null | tr -d '\r' | sed 's/[[:space:]]*$//' | sort -u > "$TMPD/baseline.txt"   # swallow-ok: 基线可读性已在上游 -f/-r 校验；无行=空基线 → 未登记项全判"新增"（红，不静默放行）
-
-  comm -23 "$TMPD/unregistered_ci_face.txt" "$TMPD/baseline.txt" > "$TMPD/new_unregistered.txt"
-  comm -13 "$TMPD/unregistered_ci_face.txt" "$TMPD/baseline.txt" > "$TMPD/stale_baseline.txt"
 
   local item
   while IFS= read -r item; do
     [ -n "$item" ] || continue
-    violation "新增测试未登记 CI 密封清单: ${item}"
-  done < "$TMPD/new_unregistered.txt"
+    violation "密封面测试未纳入发现面也未登记: ${item}"
+  done < "$TMPD/uncovered.txt"
   while IFS= read -r item; do
     [ -n "$item" ] || continue
-    violation "基线过期，须删条目: ${item}"
+    violation "隔离台账条目失效（文件不存在，须删条目）: ${item}"
   done < "$TMPD/stale_baseline.txt"
+  # 违规 (c)(d) + 空面: 由 sealed-tests.sh 以 stderr 点名 + exit 1（floor=删测试棘轮 / ceiling=新增隔离棘轮）
+  if [ "$list_rc" -ne 0 ]; then
+    while IFS= read -r item; do
+      [ -n "$item" ] || continue
+      violation "${item}"
+    done < "$TMPD/sealed.err"
+    [ -s "$TMPD/sealed.err" ] || violation "发现制清单取数失败（sealed-tests.sh exit ${list_rc}，无 stderr 明细）"
+  fi
 
-  local n_all n_ci n_ts n_reg n_unreg n_base n_new n_stale
+  local n_all n_ci n_ts n_reg n_unreg n_base n_new n_stale n_exec n_unreg_ts
   n_all=$(wc -l < "$TMPD/all_tests.txt" | tr -d ' ')
   n_ci=$(wc -l < "$TMPD/all_ci_face.txt" | tr -d ' ')
   n_ts=$(wc -l < "$TMPD/all_ts_face.txt" | tr -d ' ')
   n_reg=$(wc -l < "$TMPD/registered_ci_face.txt" | tr -d ' ')
-  n_unreg=$(wc -l < "$TMPD/unregistered_ci_face.txt" | tr -d ' ')
-  n_base=$(wc -l < "$TMPD/baseline.txt" | tr -d ' ')
-  n_new=$(wc -l < "$TMPD/new_unregistered.txt" | tr -d ' ')
+  n_unreg=$(wc -l < "$TMPD/uncovered.txt" | tr -d ' ')
+  n_base=$(wc -l < "$TMPD/quarantine.txt" | tr -d ' ')
+  n_new=$(wc -l < "$TMPD/uncovered.txt" | tr -d ' ')
   n_stale=$(wc -l < "$TMPD/stale_baseline.txt" | tr -d ' ')
-  info "CI-REGISTRY: 测试文件 ${n_all}（密封面 sh/py ${n_ci}；ts 面 ${n_ts}）；ci.yml 登记（密封面）${n_reg}；密封面未登记 ${n_unreg}；基线 ${n_base} 条；基线外新增 ${n_new}；基线过期 ${n_stale}"
-  info "CI-REGISTRY: NOTE unregistered-ts=$(wc -l < "$TMPD/unregistered_ts_face.txt" | tr -d ' ')（vitest glob 自动覆盖，不计密封面违规）"
-  SUM_REG_SEALED="$n_ci"; SUM_REG_LISTED="$n_reg"; SUM_REG_UNREG="$n_unreg"; SUM_REG_BASE="$n_base"
+  n_exec=$(wc -l < "$TMPD/executed_all.txt" | tr -d ' ')
+  n_unreg_ts=$(wc -l < "$TMPD/unregistered_ts_face.txt" | tr -d ' ')
+  info "CI-REGISTRY: 测试文件 ${n_all}（密封面 sh/py ${n_ci}；ts 面 ${n_ts}）；发现制执行 ${n_exec}（面扫描 ${scan_n} − 隔离 ${n_base}）；未覆盖 ${n_unreg}；台账 ${n_base} 条；台账外新增 ${n_new}；台账失效 ${n_stale}"
+  info "CI-REGISTRY: NOTE unregistered-ts=${n_unreg_ts}（vitest glob 自动覆盖，不计密封面违规）；字面登记（密封面）${n_reg}"
+  SUM_REG_SEALED="$n_ci"; SUM_REG_LISTED="$n_exec"; SUM_REG_UNREG="$n_unreg"; SUM_REG_BASE="$n_base"
   if [ "$VERBOSE" = 1 ]; then
     while IFS= read -r item; do
       [ -n "$item" ] || continue
-      vprint "  UNREGISTERED(sealed): ${item}"
-    done < "$TMPD/unregistered_ci_face.txt"
+      vprint "  UNCOVERED(sealed): ${item}"
+    done < "$TMPD/uncovered.txt"
+    while IFS= read -r item; do
+      [ -n "$item" ] || continue
+      vprint "  QUARANTINED(sealed): ${item}"
+    done < "$TMPD/quarantine.txt"
   fi
 }
 
