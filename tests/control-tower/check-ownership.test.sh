@@ -1,10 +1,20 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════════════
-# check-ownership.test.sh — ownership 机器化测试（ownership.yaml + check-ownership.py）
+# check-ownership.test.sh — ownership 机器化测试（发现制 .synova-owner + 生成产物 + 漂移门禁）
 #
 # 🔴 2026-10-07 · 分域废止后的重写（创始人授权清「分域」）
 #   创始人原话：「不分域。谁有空，谁能做就谁做。」
 #   ⇒ ownership.yaml 改为**单域**（全路径同一 owner）⇒ 原「越域 / 跨域」断言失去对象。
+#
+# 🔴 2026-10-07 · 卡 #1233 登记制→发现制
+#   创始人裁定「登记点 = 汇聚点 = 冲突点」⇒ 归属真源就近入目录（`.synova-owner`），
+#   中央 ownership.yaml / CODEOWNERS 降级为**生成产物**。本文件补判别性夹具：
+#     §9  新目录**零中央登记**即被识别（且未触碰任何中央文件）
+#     §10 改/删归属标记 ⇒ exit 1（改坏即红）；重生成 ⇒ 可复绿；owner 真变（反静态恒绿）
+#     §11 生成命令幂等可复跑 + **逐字节**漂移即红（不是"内容等价即过"）
+#     §12 标记格式非法一律 fail-closed → exit 2（未知键/重复键/空值/缺 owner/缺 handle/二义）
+#     §12b 发现面边界: **只认 git-tracked 标记**（untracked 不生效；git add 后即生效）
+#     §13 根标记缺失 ⇒ **校验面 exit 1 / 生成面 exit 2**（两面各自一致；生成面不产半成品）
 #
 # **保留**（判据能力不降级）:
 #   · 单域正例 / 反向验证（删兜底 → 变绿 + 无归属明示）/ 降级 fail-closed
@@ -13,6 +23,10 @@
 #   · §3 判别性夹具: **非单域必须 exit 1**（证明判定真读数据，非静态恒绿）
 #   · §4 显式豁免仍被**明示**（单域下 domain-neutral 不再是域信号）
 #   · §7 结构契约: 恰 1 条 default + 恰 1 条 glob + **无分域残留**（owner:/territory:/mac|win|k3 键）
+#
+# 沙箱说明: §9-§13 用 mktemp 沙箱并镜像仓内相对结构 —— check-ownership.py 的 REPO_ROOT
+#   由**脚本自身位置**反推（check-ownership.py:50-51），故沙箱内必须以**沙箱相对路径**
+#   调用（SBL_TOOL）；若误用真仓绝对路径，沙箱夹具会静默退化到真仓（实测踩过）。
 #
 set -uo pipefail
 
@@ -187,11 +201,198 @@ if grep -qE '^[[:space:]]+territory:' "$YAML"; then fail "仍有 territory: 字�
 if grep -qE '^[[:space:]]+(mac|win|k3):' "$YAML"; then fail "仍有 mac/win/k3 owner 键（分域残留）"; else pass "无 mac/win/k3 owner 键（分域残留已清）"; fi
 
 echo ""
-echo "── 8. 生产接线（铁律 0-2 WIRE CHECK）──"
+echo "── 9. 🔴 发现制: 新增目录零中央登记即被识别（卡 #1233 夹具①）──"
+# 沙箱：镜像仓内相对结构 —— check-ownership.py 的 REPO_ROOT = 自身 ../..（同 check-pr-budget.test.sh:96）
+SANDBOX="$TMPD/sandbox"
+SBL_TOOL="scripts/control-tower/check-ownership.py"   # ⚠️ 必须是**沙箱内相对路径**：REPO_ROOT 由脚本自身位置反推
+sb() { ( cd "$SANDBOX" && "$PYBIN" "$SBL_TOOL" "$@" ); }
+mk_sandbox() {
+  rm -rf "$SANDBOX"
+  mkdir -p "$SANDBOX/scripts/control-tower" "$SANDBOX/scripts/product-lines" \
+           "$SANDBOX/docs/synova/coordination" "$SANDBOX/.github" "$SANDBOX/src" || return 1
+  cp "$TOOL" "$SANDBOX/scripts/control-tower/" || return 1
+  cp "$REPO_DIR/scripts/product-lines/productline_yaml.py" "$SANDBOX/scripts/product-lines/" || return 1
+  cp "$REPO_DIR/.synova-owner" "$SANDBOX/.synova-owner" || return 1
+  printf 'a\n' > "$SANDBOX/src/a.ts"
+  ( cd "$SANDBOX" && git init -q . && git add -A ) >/dev/null 2>&1 || return 1
+  sb --emit-ownership  > "$SANDBOX/docs/synova/coordination/ownership.yaml" || return 1
+  sb --emit-codeowners > "$SANDBOX/.github/CODEOWNERS" || return 1
+  return 0
+}
+if mk_sandbox; then
+  pass "发现制沙箱就绪（根标记 + 产物，零中央登记起点）"
+else
+  fail "发现制沙箱构建失败（无法验证夹具①②③）"
+fi
+# 9a: 全新目录 + 全新文件 —— **不触碰任何中央文件**
+mkdir -p "$SANDBOX/src/brandnew/deep"
+printf 'x\n' > "$SANDBOX/src/brandnew/deep/f.ts"
+printf 'k\n' > "$SANDBOX/src/brandnew/keep.ts"
+( cd "$SANDBOX" && git add -A ) >/dev/null 2>&1
+OUT="$(sb src/brandnew/deep/f.ts 2>&1)"; _e=$?
+[ "$_e" = 0 ] && pass "新目录零中央登记 → 被识别且 exit 0（夹具①）" \
+  || { fail "新目录未被识别 (exit=$_e)"; echo "$OUT" | sed 's/^/      | /' >&2; }
+echo "$OUT" | grep -q "^maintainer src/brandnew/deep/f.ts" \
+  && pass "新目录归属 = 继承最近祖先（根标记 maintainer）" \
+  || fail "新目录归属解析错误: $(echo "$OUT" | head -1)"
+( cd "$SANDBOX" && git diff --quiet -- docs/synova/coordination/ownership.yaml .github/CODEOWNERS ) \
+  && pass "新增目录未触碰任何中央文件（登记点 = 目录自身）" \
+  || fail "新增目录被迫改中央文件（登记制未真正退役）"
+
+echo ""
+echo "── 10. 🔴 改坏即红: 改/删归属标记 ⇒ exit 1（卡 #1233 夹具②）──"
+# 10a: 新增**本目录**标记改归属，产物未重生成 ⇒ 漂移 exit 1
+printf 'owner: k3\nhandle: @auditor\n' > "$SANDBOX/src/brandnew/.synova-owner"
+( cd "$SANDBOX" && git add -A ) >/dev/null 2>&1
+sb src/brandnew/keep.ts > "$TMPD/f10a.out" 2>&1; _e=$?
+[ "$_e" = 1 ] && pass "改标记（未重生成产物）⇒ exit 1（改坏即红）" \
+  || { fail "改标记后未红 — 期望 exit=1 实际 $_e"; sed 's/^/      | /' >&2 < "$TMPD/f10a.out"; }
+grep -q "产物漂移" "$TMPD/f10a.out" && pass "漂移点名「产物漂移」（不静默）" || fail "漂移未点名"
+# 10b: 重生成 → green，且归属**真的**变成 k3（反静态恒绿：判定真读标记）
+sb --emit-ownership  > "$SANDBOX/docs/synova/coordination/ownership.yaml"
+sb --emit-codeowners > "$SANDBOX/.github/CODEOWNERS"
+OUT="$(sb src/brandnew/keep.ts 2>&1)"; _e=$?
+[ "$_e" = 0 ] && pass "重生成产物后 → exit 0（红色可复绿）" \
+  || { fail "重生成后仍红 (exit=$_e)"; echo "$OUT" | sed 's/^/      | /' >&2; }
+echo "$OUT" | grep -q "^k3 " && pass "本地标记真生效（owner 变 k3 —— 反静态恒绿）" \
+  || fail "本地标记未生效（owner 未变 ⇒ 判定可疑为静态）"
+grep -qE '^src/brandnew/\*\* +@auditor' "$SANDBOX/.github/CODEOWNERS" \
+  && pass "产物 CODEOWNERS 出现本目录行（只动所在目录，未动中央登记）" \
+  || fail "CODEOWNERS 未反映本目录标记"
+# 10c: 删除标记（回到继承）⇒ 产物未重生成 ⇒ exit 1
+rm -f "$SANDBOX/src/brandnew/.synova-owner"
+( cd "$SANDBOX" && git add -A ) >/dev/null 2>&1
+sb src/brandnew/keep.ts > "$TMPD/f10c.out" 2>&1; _e=$?
+[ "$_e" = 1 ] && pass "删标记 ⇒ exit 1（改坏即红）" \
+  || { fail "删标记后未红 — 期望 exit=1 实际 $_e"; sed 's/^/      | /' >&2 < "$TMPD/f10c.out"; }
+
+echo ""
+echo "── 11. 🔴 生成命令可复跑 + 逐字节漂移即红（卡 #1233 夹具③）──"
+if mk_sandbox; then pass "夹具③沙箱重置就绪"; else fail "夹具③沙箱重置失败"; fi
+sb --emit-ownership  > "$TMPD/own.1" 2>/dev/null
+sb --emit-ownership  > "$TMPD/own.2" 2>/dev/null
+if diff -q "$TMPD/own.1" "$TMPD/own.2" >/dev/null 2>&1; then
+  pass "生成命令幂等（连续两次逐字节一致 = 可复跑）"
+else
+  fail "生成命令非幂等（两次输出不同 ⇒ 产物不可复现）"
+fi
+sb --check-drift >/dev/null 2>&1; _e=$?
+[ "$_e" = 0 ] && pass "干净树 --check-drift exit 0" || fail "干净树漂移 (exit=$_e)"
+cp "$SANDBOX/docs/synova/coordination/ownership.yaml" "$TMPD/yaml.bak"
+printf '\n# 手工追加一行（模拟手改产物）\n' >> "$SANDBOX/docs/synova/coordination/ownership.yaml"
+sb --check-drift > "$TMPD/drift.out" 2>&1; _e=$?
+[ "$_e" = 1 ] && pass "手工改产物 1 字节 ⇒ --check-drift exit 1（**逐字节**，非等价即过）" \
+  || { fail "手改产物未红 — 期望 exit=1 实际 $_e"; sed 's/^/      | /' >&2 < "$TMPD/drift.out"; }
+grep -q "产物漂移" "$TMPD/drift.out" && pass "漂移诊断点名文件与行号" || fail "漂移诊断未点名"
+cp "$TMPD/yaml.bak" "$SANDBOX/docs/synova/coordination/ownership.yaml"
+sb --check-drift >/dev/null 2>&1; _e=$?
+[ "$_e" = 0 ] && pass "还原后 --check-drift exit 0（漂移可修可复跑）" || fail "还原后仍红 (exit=$_e)"
+# 11c: 真仓双产物新鲜（生产面；对齐 §6 的 CODEOWNERS 侧）
+OUT="$("$PYBIN" "$TOOL" --check-drift 2>&1)"; _e=$?
+[ "$_e" = 0 ] && pass "真仓: ownership.yaml + CODEOWNERS 逐字节新鲜" \
+  || { fail "真仓产物漂移 (exit=$_e)"; echo "$OUT" | sed 's/^/      | /' >&2; }
+"$PYBIN" "$TOOL" --emit-ownership > "$TMPD/ownership.gen" 2>/dev/null
+if diff -q "$TMPD/ownership.gen" "$YAML" >/dev/null 2>&1; then
+  pass "drift: docs/synova/coordination/ownership.yaml == --emit-ownership（逐字节）"
+else
+  fail "drift: ownership.yaml 漂移 —— 重跑 --emit-ownership > docs/synova/coordination/ownership.yaml"
+fi
+
+echo ""
+echo "── 12. 标记格式契约: 非法标记一律 fail-closed → exit 2 ──"
+if mk_sandbox; then pass "格式契约沙箱就绪"; else fail "格式契约沙箱失败"; fi
+FMT="$SANDBOX/src/fmt"
+mkdir -p "$FMT"; printf 'z\n' > "$FMT/x.ts"
+fmt_case() {  # $1=描述 $2=期望 $3=标记内容
+  printf '%b' "$3" > "$FMT/.synova-owner"
+  ( cd "$SANDBOX" && git add -A ) >/dev/null 2>&1
+  OUT="$(sb src/fmt/x.ts 2>&1)"; local _e=$?
+  [ "$_e" = "$2" ] && pass "标记格式: $1 (exit=$2)" \
+    || { fail "标记格式: $1 — 期望 exit=$2 实际 $_e"; echo "$OUT" | sed 's/^/      | /' >&2; }
+  printf '%s' "$OUT" > "$TMPD/fmt.$2.out"
+}
+fmt_case "未知键 → exit 2" 2 'owner: maintainer\nbogus: 1\n'
+grep -q "未知标记键" "$TMPD/fmt.2.out" && pass "点名「未知标记键」" || fail "未点名未知键"
+fmt_case "重复键 → exit 2" 2 'owner: maintainer\nowner: k3\n'
+grep -q "重复键" "$TMPD/fmt.2.out" && pass "点名「重复键」" || fail "未点名重复键"
+fmt_case "空值 → exit 2" 2 'owner:\n'
+grep -q "值为空" "$TMPD/fmt.2.out" && pass "点名「值为空」" || fail "未点名空值"
+fmt_case "缺 owner 键 → exit 2" 2 'handle: @x\n'
+grep -q "缺 \`owner:\`" "$TMPD/fmt.2.out" && pass "点名「缺 owner」" || fail "未点名缺 owner"
+fmt_case "非 键:值 行 → exit 2" 2 'justtext\n'
+grep -q "非法标记行" "$TMPD/fmt.2.out" && pass "点名「非法标记行」" || fail "未点名非法行"
+fmt_case "新 owner 键缺 handle → exit 2" 2 'owner: newkey\n'
+grep -q "无 handle" "$TMPD/fmt.2.out" && pass "点名「无 handle」（产不出 CODEOWNERS 即 fail-closed）" || fail "未点名缺 handle"
+# handle 二义：根标记已声明 maintainer→@tangbaobao520，深处置不同 handle ⇒ exit 2
+fmt_case "同键 handle 二义 → exit 2" 2 'owner: maintainer\nhandle: @somebody-else\n'
+grep -q "二义" "$TMPD/fmt.2.out" && pass "点名「handle 二义」（禁静默取一）" || fail "未点名二义"
+# 合法标记（同键、无 handle、无冗余）⇒ 不阻断，且因 owner 未变而不产生漂移
+fmt_case "合法冗余标记（继承同键，无 handle）→ exit 0" 0 'owner: maintainer\n'
+
+echo ""
+echo "── 13. 根标记缺失 ⇒ 漂移 exit 1（真源消失必须红，不得静默降级）──"
+if mk_sandbox; then pass "根标记缺失沙箱就绪"; else fail "根标记缺失沙箱失败"; fi
+rm -f "$SANDBOX/.synova-owner"
+( cd "$SANDBOX" && git add -A ) >/dev/null 2>&1
+sb --check-drift > "$TMPD/noroot.out" 2>&1; _e=$?
+[ "$_e" = 1 ] && pass "删除根标记 ⇒ --check-drift exit 1（不静默放过）" \
+  || { fail "根标记删除后未红 — 期望 exit=1 实际 $_e"; sed 's/^/      | /' >&2 < "$TMPD/noroot.out"; }
+grep -q "产物漂移" "$TMPD/noroot.out" && pass "点名漂移（真源消失 = 违规，非「检查失败」exit 2）" || fail "未点名漂移"
+# R1（verifier P3）: 「校验面 exit 1 / 生成面 exit 2」两面各自一致，且**生成面不得静默产半成品**
+#   —— 整改前实测：--emit-ownership 在无根标记时 rc=0 且产出**无兜底**的 ownership.yaml（静默劣化）。
+for _emit in --emit-ownership --emit-codeowners; do
+  sb "$_emit" > "$TMPD/emit-noroot.out" 2>&1; _e=$?
+  [ "$_e" = 2 ] && pass "根标记缺失 ⇒ ${_emit} exit 2（生成面拒绝产出，不产半成品）" \
+    || { fail "根标记缺失 ${_emit} — 期望 exit=2 实际 $_e（生成面与校验面未对齐）"; sed 's/^/      | /' >&2 < "$TMPD/emit-noroot.out"; }
+done
+if sb --emit-ownership 2>/dev/null | grep -qE '^[[:space:]]*- glob:'; then
+  fail "根标记缺失时 --emit-ownership 仍吐出规则段（半成品泄漏）"
+else
+  pass "根标记缺失时 --emit-ownership 零规则段输出（无半成品泄漏）"
+fi
+sb --check-drift >/dev/null 2>&1; _e=$?
+[ "$_e" = 1 ] && pass "同一状态下校验面仍为 exit 1（两面分工：1=仓库错 / 2=产不出）" \
+  || fail "校验面应为 exit 1，实际 $_e"
+
+echo ""
+echo "── 12b. 🔴 发现面边界: 只认 git-tracked 标记（untracked 一律不生效）──"
+if mk_sandbox; then pass "发现面沙箱就绪"; else fail "发现面沙箱失败"; fi
+mkdir -p "$SANDBOX/src/ghost"
+printf 'g\n' > "$SANDBOX/src/ghost/g.ts"
+( cd "$SANDBOX" && git add -A ) >/dev/null 2>&1
+# 只落文件、**不 git add** ⇒ 发现制必须看不见它（契约 §@发现面）
+printf 'owner: ghostkey\nhandle: @ghost\n' > "$SANDBOX/src/ghost/.synova-owner"
+sb --emit-ownership > "$TMPD/ghost.out" 2>&1; _e=$?
+[ "$_e" = 0 ] && pass "untracked 标记: --emit-ownership 仍 exit 0" || fail "untracked 标记导致生成失败 (exit=$_e)"
+grep -q "ghostkey" "$TMPD/ghost.out" && fail "untracked 标记被当成真源（契约破了：发现面必须只认 index）" \
+  || pass "untracked 标记**不生效**（发现面 = git index，契约②钉死）"
+sb --check-drift >/dev/null 2>&1; _e=$?
+[ "$_e" = 0 ] && pass "untracked 标记不引起漂移（rc=0 —— 与 verifier 实测一致）" || fail "untracked 标记引起漂移 (exit=$_e)"
+# 反向: git add 后**必须**生效（否则等于"登记了没反应"）
+( cd "$SANDBOX" && git add -A ) >/dev/null 2>&1
+sb --emit-ownership > "$TMPD/ghost2.out" 2>&1
+grep -q "ghostkey" "$TMPD/ghost2.out" && pass "git add 后标记**即生效**（提交端语义：add 即登记）" \
+  || fail "git add 后标记仍未生效（登记无反应）"
+sb --check-drift >/dev/null 2>&1; _e=$?
+[ "$_e" = 1 ] && pass "tracked 标记但产物未重生成 ⇒ 漂移 exit 1（改坏即红闭环）" \
+  || fail "tracked 新增标记未触发漂移 (exit=$_e)"
+
+echo ""
+echo "── 14. 生产接线（铁律 0-2 WIRE CHECK）──"
 if grep -q "check-ownership.py" "$CODEOWNERS" 2>/dev/null; then
   pass "接线: CODEOWNERS 头声明由 check-ownership.py 生成（产物消费成立）"
 else
   fail "接线: CODEOWNERS 未声明生成来源"
+fi
+if grep -qE '^owner: ' "$REPO_DIR/.synova-owner" 2>/dev/null; then
+  pass "接线: 根标记 .synova-owner 存在且声明 owner（发现制真源在仓内）"
+else
+  fail "接线: 根标记 .synova-owner 缺失或缺 owner 键"
+fi
+if grep -qE '\.synova-owner' "$YAML"; then
+  pass "接线: 产物 ownership.yaml 自述真源为 .synova-owner（真源↔产物可追）"
+else
+  fail "接线: 产物未自述真源"
 fi
 
 echo ""
