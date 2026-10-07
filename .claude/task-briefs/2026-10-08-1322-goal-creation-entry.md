@@ -81,6 +81,11 @@
 - .claude/claims/1322.yaml
 - .claude/task-briefs/2026-10-08-1322-goal-creation-entry.md
 
+（M3 follow-up 追加，随 #1330 之后拆出 —— 见 PR 正文）
+- tests/e2e/full-pipeline.integration.test.ts
+- tests/growth/proposal-engine.test.ts
+- tests/growth/e2e-navigation-loop.integration.test.ts
+
 不做什么（含文件路径）：
 - 不改 `src/l2/proposal-manager.ts`（R20 禁第二入口）｜不改 `src/middleware/rbac.ts`（R22；不扩 `RbacContext`）
 - 不改 `src/adapters/sqlite-graph-store.ts`（隔离载体走 (a) `props.orgId`，不动 schema）
