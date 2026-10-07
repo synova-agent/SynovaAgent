@@ -1,0 +1,7 @@
+{
+  "_comment": "P3 夹具: 2 个 kind/* + 无 area/* + 2 个 p* ⇒ R2 三处违例",
+  "closing_issues": [
+    {"number": 9001, "title": "坏标签", "labels": ["kind/feature", "kind/bug-fix", "p0", "p2"]}
+  ],
+  "pr_priority": "p0"
+}
