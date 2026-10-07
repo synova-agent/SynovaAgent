@@ -1,0 +1,19 @@
+{
+  "task_id": "D980",
+  "title": "工程派单：治理体系最小充分形态（并行 CTO 统筹六阶段）",
+  "status": "spec_done",
+  "risk": "high",
+  "domain": "mac",
+  "owner": "parallel-cto",
+  "executor": "parallel-cto",
+  "milestone": "回归主线前的门禁与遗留彻底修复",
+  "write_set": [
+    "docs/synova/coordination/派单-治理体系最小充分形态-工程派单-20260926.md",
+    ".claude/task-briefs/2026-09-26-D980-gov-minimal-dispatch.md",
+    "memory/notes/implemented/2026-09-26-gov-minimal-dispatch.md",
+    "task-state/D980.json"
+  ],
+  "updated_at": "2026-09-26",
+  "updated_by": "synova-cto",
+  "note": "唯一蓝图=synova-research@main 研究院 v1.3（9 件 5,193 行）。六阶段 0-6 + 每阶段判据 + 冻结规则 + 例外上报 + R1-R4 + 红线 8 条。角色：并行 CTO 统筹执行；Mac-CTO 只保留收件闸/K3派单/门禁语义批准 + 主线；K3 每阶段抽验。"
+}
