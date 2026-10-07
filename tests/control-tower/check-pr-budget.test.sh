@@ -576,6 +576,32 @@ OUT="$(bash "$MT3" --diff-status "$SET5E" --decl-file "$DCL/ok5exact.md" 2>&1)";
 if echo "$OUT" | grep -q "❌ ① D1028 旁路封堵"; then fail "16.3 变异体3 仍报旁路封堵（夹具不判别）"; else pass "16.3 去掉 DENY_EXACT 判据 → 「旁路封堵」行消失（夹具变红）"; fi
 if echo "$OUT" | grep -q "死代码清理声明生效"; then pass "16.3 变异体3 误放行 DENY_EXACT（⚠️ 生效行出现）—— 证明收紧判据承重"; else fail "16.3 变异体3 未误放行"; fi
 
+
+# ═══ 17. S2.4 文档契约出库豁免（创始人 2026-10-07 裁决：门禁须按文档契约给文档治理豁免）═══
+#   判据: a'（剔除 D860 治理产物后纯 D/R）∧ b'（全部路径被契约判为出库域 = 闸 3 违规）
+#   边界: 非出库域不放行 / 含增改不放行 / 执行体缺失 fail-closed / 变异体必红
+_mkd() { python3 -c "import sys;n=int(sys.argv[1]);p=sys.argv[2];print(chr(10).join('D\t'+p+'/f%03d.md'%i for i in range(n)))" "$1" "$2"; }
+_BFIX="$(printf 'A\t.claude/task-briefs/2026-10-07-1282-x.md')"
+_TOOLABS="$(cd "$(dirname "$TOOL")" && pwd)/$(basename "$TOOL")"
+OUT="$(bash "$TOOL" --diff-status "$(_mkd 99 docs/archive)
+$_BFIX" 2>&1)"; _e=$?
+if [ "$_e" = 0 ] && printf '%s' "$OUT" | grep -q "S2.4 文档契约出库豁免生效"; then pass "17.1 契约出库域 99 件纯删除 + brief → 豁免生效（原为红）"; else fail "17.1 期望豁免 exit=0，实得 exit=$_e"; fi
+OUT="$(bash "$TOOL" --diff-status "$(_mkd 12 vendor/mcp-servers)
+$_BFIX" 2>&1)"; _e=$?
+if [ "$_e" = 0 ] && printf '%s' "$OUT" | grep -q "S2.4"; then pass "17.2 白名单外契约出库域（vendor）12 件 + brief → 豁免生效"; else fail "17.2 期望豁免 exit=0，实得 exit=$_e"; fi
+OUT="$(bash "$TOOL" --diff-status "$(_mkd 5 docs/archive)
+M	docs/archive/changed.md" 2>&1)"; _e=$?
+if [ "$_e" = 0 ] && printf '%s' "$OUT" | grep -q "文档契约出库豁免未生效"; then pass "17.3 含 1 件修改 → 不豁免（note 显式，不静默）"; else fail "17.3 期望不豁免 exit=0，实得 exit=$_e"; fi
+OUT="$(bash "$TOOL" --diff-status "$(_mkd 13 knowledge)" 2>&1)"; _e=$?
+if [ "$_e" = 1 ]; then pass "17.4 非出库域 13 件纯删除 → 不豁免 → 13>12 阻断"; else fail "17.4 期望 exit=1，实得 $_e"; fi
+_SB="$(mktemp -d)"; mkdir -p "$_SB/scripts/control-tower"; cp "$_TOOLABS" "$_SB/scripts/control-tower/"
+OUT="$(cd "$_SB" && bash scripts/control-tower/check-pr-budget.sh --diff-status "$(_mkd 20 vendor/x)" 2>&1)"; _e=$?
+if [ "$_e" = 1 ] && printf '%s' "$OUT" | grep -q "无法判定"; then pass "17.5 fail-closed: 执行体缺失 → 不豁免且显式说明"; else fail "17.5 期望 exit=1+无法判定，实得 exit=$_e"; fi
+rm -rf "$_SB"
+_MUT="scripts/control-tower/.mut-budget.sh"; sed 's/^        0) DOC_CONTRACT_EXEMPT=1;/        *) DOC_CONTRACT_EXEMPT=1;/' "$_TOOLABS" > "$_MUT"
+OUT="$(bash "$_MUT" --diff-status "$(_mkd 13 knowledge)" 2>&1)"; _e=$?
+if [ "$_e" = 0 ]; then pass "17.6 变异体（去掉 b' 判据）→ 17.4 夹具变红，证明该判据承重"; else fail "17.6 变异体仍阻断 → b' 判据不承重"; fi
+rm -f "$_MUT"
 echo ""
 echo "═══════════════════════════════════════════════════════════"
 if [ "$FAIL" -eq 0 ]; then

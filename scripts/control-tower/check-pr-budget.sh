@@ -410,6 +410,7 @@ OUTBOUND_ALLOW_RE='^(\.claude/task-briefs/|docs/plans/|docs/synova/coordination/
 OUTBOUND_DENY_RE='^(src/|scripts/|\.github/|tests/|extensions/|expert/)'
 OUTBOUND_DENY_EXACT_RE='^docs/synova/coordination/(ownership\.yaml|AUDIT-PROTOCOL\.md)$'
 OUTBOUND_EXEMPT=0
+OUTBOUND_EXEMPT_SRC=""   # allowlist(D1028) | doc-contract(S2.4)
 OUTBOUND_DENY_HARD=0
 OUTSIDE_N=0
 OUTSIDE_LIST=""
@@ -453,6 +454,7 @@ done < <(printf '%s\n' "$ALL_TAGGED")
 if [ "$ALL_N" -gt 0 ]; then
   if [ "$AM_N" -eq 0 ] && [ "$OUTSIDE_N" -eq 0 ] && [ "$DENY_N" -eq 0 ]; then
     OUTBOUND_EXEMPT=1
+    OUTBOUND_EXEMPT_SRC="allowlist"
   else
     echo "  ℹ️  出库豁免不适用（D1028 路径级豁免未生效）:"
     if [ "$AM_N" -eq 0 ]; then
@@ -533,6 +535,65 @@ fi
 #     故保留目录级豁免 + 上述两条约束。两者不是"口径不一致"，是不同语义。
 GOV_PREFIX_RE='^(\.claude/task-briefs/|task-state/|memory/notes/|docs/plans/|docs/synova/product-lines/evidence/)'
 GOV_EXT_RE='\.(md|json|ya?ml|txt)$'
+# ── S2.4 文档契约出库豁免（创始人 2026-10-07 裁决：门禁须按文档契约给文档治理提供豁免）──
+# 判据源 = docs/synova/DOC-CONTRACT.md（D1193 建立的机器可读块）→ 经执行体 check-doc-contract.sh 判定。
+#   ⓐ' 剔除 D860 治理产物（brief/卡/Note/规格/证据）后，剩余变更全部为 D/R（纯删除/重命名）；
+#   ⓑ' 每个剩余路径都被契约执行体判为**闸 3 违规** —— 即契约 §7 认定的出库域（本就不该入库）。
+# 效果: 出库豁免生效（**不调高 --max-files 上限**，只承认契约已判定的出库动作）。
+# 与 D1028 的分工: D1028 = 写死的路径前缀白名单（新建目录必漏，每次新任务要改门禁）；
+#   本条 = 契约驱动（扩出库域只需改契约，门禁不变）——治「把运行期产物变成改门禁」的病。
+# fail-closed: 执行体缺失 / 契约件不可读 / 输出不可解析 ⇒ 不豁免（逐条显式说明，不静默）。
+DOC_CONTRACT_EXEMPT=0
+DOC_CONTRACT_N=0
+DOC_CONTRACT_MISSING_N=0
+DOC_CONTRACT_NOTE=""
+if [ "$ALL_N" -gt 0 ] && [ "$OUTBOUND_EXEMPT" -eq 0 ]; then
+  _dc_repo="$(cd "$SCRIPT_DIR/../.." 2>/dev/null && pwd)"
+  _dc_am=0
+  _dc_args=()
+  while IFS="$TAB" read -r _dc_st _dc_p; do
+    [ -z "$_dc_p" ] && continue
+    if printf '%s' "$_dc_p" | grep -qE "$GOV_PREFIX_RE" && printf '%s' "$_dc_p" | grep -qE "$GOV_EXT_RE"; then continue; fi
+    case "$_dc_st" in
+      D|R) _dc_args+=("$_dc_p") ;;
+      *)   _dc_am=$((_dc_am + 1)) ;;
+    esac
+  done < <(printf '%s\n' "$ALL_TAGGED")
+  DOC_CONTRACT_N="${#_dc_args[@]}"
+  if [ "$_dc_am" -ne 0 ]; then
+    DOC_CONTRACT_NOTE="a' 不满足: 剔除治理产物后仍有 ${_dc_am} 件增/改"
+  elif [ "$DOC_CONTRACT_N" -eq 0 ]; then
+    DOC_CONTRACT_NOTE="a' 不满足: 无剩余 D/R 路径可判"
+  elif [ -z "$PYBIN" ] || [ ! -x "$_dc_repo/scripts/control-tower/check-doc-contract.sh" ]; then
+    DOC_CONTRACT_NOTE="b' 无法判定: 契约执行体或 python 不可用（fail-closed，不豁免）"
+  else
+    _dc_json="$(mktemp)"
+    _dc_rc=0
+    # 三态语义: 执行体「有违规」= 业务态 exit 1（不是崩溃）→ 显式接住，不裸调。
+    bash "$_dc_repo/scripts/control-tower/check-doc-contract.sh" --repo-root "$_dc_repo" --files "${_dc_args[@]}" --json > "$_dc_json" 2>/dev/null || _dc_rc=$?
+    _dc_missing="$(printf '%s\n' "${_dc_args[@]}" | "$PYBIN" -c 'import json,sys
+try: d=json.load(open(sys.argv[1]))
+except Exception: print("DEGRADED"); sys.exit(0)
+v={x.get("file") for x in d.get("gate3_inbound",{}).get("violations",[])}
+print(sum(1 for p in sys.stdin.read().split(chr(10)) if p and p not in v))' "$_dc_json" 2>/dev/null)"
+    rm -f "$_dc_json"
+    if [ "$_dc_rc" -eq 2 ]; then
+      DOC_CONTRACT_NOTE="b' 无法判定: 契约件不可读（degraded，fail-closed）"
+    else
+      case "$_dc_missing" in
+        ""|DEGRADED) DOC_CONTRACT_NOTE="b' 无法判定: 执行体输出不可解析（fail-closed，不豁免）" ;;
+        0) DOC_CONTRACT_EXEMPT=1; OUTBOUND_EXEMPT=1; OUTBOUND_EXEMPT_SRC="doc-contract" ;;
+        *) DOC_CONTRACT_MISSING_N="$_dc_missing"; DOC_CONTRACT_NOTE="b' 不满足: ${_dc_missing} 件不在契约出库域（闸 3 未判违规）" ;;
+      esac
+    fi
+  fi
+  if [ "$DOC_CONTRACT_EXEMPT" -eq 1 ]; then
+    echo "  ✅ S2.4 文档契约出库豁免生效（${DOC_CONTRACT_N} 件：契约判定为出库域 + 纯删除/重命名）"
+    echo "     判据源: docs/synova/DOC-CONTRACT.md（机器可读块）→ check-doc-contract.sh --files"
+  elif [ -n "$DOC_CONTRACT_NOTE" ]; then
+    echo "  ℹ️  文档契约出库豁免未生效（S2.4）：${DOC_CONTRACT_NOTE}"
+  fi
+fi
 EVIDENCE_PREFIX='docs/synova/product-lines/evidence/'
 COUNTED=""
 GOV_OTHER=""
@@ -588,7 +649,11 @@ FAILED=0
 
 # ── ① 变更文件数 ≤ 上限（或 D1028 出库豁免生效 / 旁路封堵 FAIL）──
 if [ "$OUTBOUND_EXEMPT" -eq 1 ]; then
-  echo "  ✅ ① D734 出库豁免生效（$((N_DEL + N_REN)) 件纯删除/重命名，全部落出库白名单）"
+  if [ "$OUTBOUND_EXEMPT_SRC" = "doc-contract" ]; then
+    echo "  ✅ ① D734 出库豁免生效（${DOC_CONTRACT_N} 件纯删除/重命名，全部为文档契约判定的出库域 / S2.4）"
+  else
+    echo "  ✅ ① D734 出库豁免生效（$((N_DEL + N_REN)) 件纯删除/重命名，全部落出库白名单）"
+  fi
   # §Q2.S4 裁定: 无 `## 出库声明` 时豁免仍生效，只给 ⚠️（本脚本读不到 PR 正文，禁做硬条件）
   echo "  ⚠️  未读到「## 出库声明」（pre-commit 读不到 PR 正文）—— 请在 PR 描述补「## 出库声明」批次段，合并级对账见 D708"
 elif [ "$N_FILES" -le "$MAX_FILES" ]; then

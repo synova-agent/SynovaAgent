@@ -434,3 +434,11 @@ documents:
     status: active
     owner: line-c-doc
     note: "D1204：K3 D1193 复核（CONDITIONAL PASS）判据收敛 —— ① 阻断条目前缀闭包，边界收紧到 `.`（K3 X1a 已堵；X1b `coordinationX/` 按裁登记为残余风险，类关闭见卡 #1261）② `--no-renames` 使 `git mv` 不可绕过（K3 X2，--staged/--base 双腿断言）③ `**/NAME` 同址豁免须同址有代码（K3 X3 已堵）④ §9.1 出口条件机器可判（tracked-count DSL，不可解析 ⇒ exit 2）+ 存量动态派生（禁双源）+ 过渡台账追加落 `.claude/doc-contract-transition.log`；契约 v1.1.0 → v1.1.1"
+
+  # ---- #1296 D734 出库豁免契约化（S2.4 契约驱动）2026-10-07 ----
+  - id: DOC-0189
+    type: decision
+    path: decisions/process/2026-10-07-doc-contract-outbound-budget-exemption.md
+    status: active
+    owner: line-mac
+    note: "#1296：创始人裁决「门禁按文档契约给文档治理豁免」⇒ check-pr-budget.sh 新增 S2.4：判据源唯一为 DOC-CONTRACT 执行体，契约判为出库域（闸3违规）的路径纯删除时不占 PR 预算；不调高 --max-files；fail-closed。并列 D1028，不取代。"
