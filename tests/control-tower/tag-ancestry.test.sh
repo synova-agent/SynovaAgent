@@ -96,7 +96,19 @@ mk_orphan() { # <dir> — base + origin/main + VERSION.md(V9.9.9) + feat + **同
   printf '## V9.9.9 (test)\n' > "$R/.codex/control-tower/VERSION.md"
   git -C "$R" -c user.name=t -c user.email=t@t commit -q --allow-empty -m feat
   local O; O=$(git -C "$R" commit-tree "$(git -C "$R" rev-parse HEAD^{tree})" -m orphan-blob)
-  git -C "$R" tag V9.9.9 "$O"          # 孤儿: 非 HEAD 祖先（第二段原先在此拦死）
+  # ⚠️ 夹具自证（CI 与本地 git 配置不同 ⇒ 必须显式关签名并**断言 tag 真被创建**）:
+  #   runner 若 `tag.gpgsign=true`/其他 config ⇒ `git tag` 失败 → tag 不存在 → 脚本走「tag 未打」分支
+  #   ⇒ 本夹具的报文断言全假红（实测: CI 只红报文类断言、不红 "仍被拦"）。⇒ `-c tag.gpgsign=false` + 断言。
+  git -C "$R" -c tag.gpgsign=false tag V9.9.9 "$O"   # 孤儿: 非 HEAD 祖先（第二段原先在此拦死）
+  if [ -z "$(git -C "$R" tag -l V9.9.9)" ]; then
+    no "夹具自身失真: 孤儿 tag V9.9.9 未创建成功（runner git config 差异？）"
+    return 1
+  fi
+  if git -C "$R" merge-base --is-ancestor V9.9.9 HEAD 2>/dev/null; then
+    no "夹具自身失真: V9.9.9 竟是 HEAD 祖先（孤儿构造失败）"
+    return 1
+  fi
+  return 0
 }
 run_push() { # <repo> <branch> → OUT + EC（stdin 喂 refs/heads/<branch>）
   local R="$1" B="$2" S; S="$(git -C "$R" rev-parse HEAD)"
@@ -106,7 +118,13 @@ run_push() { # <repo> <branch> → OUT + EC（stdin 喂 refs/heads/<branch>）
 # ── 场景 E（本卡新增·正向）: 同名孤儿 tag + **feature** 推送 → 黄（不阻断）──
 RE="$TMPD/re"; mk_orphan "$RE"
 run_push "$RE" "feat/x"
-[ "$EC" -eq 0 ] && ok "E 本机孤儿 tag + feature 推送 → 不阻断（EC=0，黄）" || no "E 本机孤儿仍被拦: EC=${EC}（第二段缺豁免）"
+if [ "$EC" -eq 0 ] && echo "$OUT" | grep -q "本机孤儿 tag"; then
+  ok "E 本机孤儿 tag + feature 推送 → 不阻断（EC=0，黄）"
+else
+  no "E 本机孤儿仍被拦或未走孤儿分支: EC=${EC}；原始输出↓"
+  printf '%s\n' "$OUT" | head -12 | sed 's/^/      | /' >&2
+  echo "      诊断: tag=$(git -C "$RE" tag -l V9.9.9 | tr -d '\n')｜祖先=$(git -C "$RE" merge-base --is-ancestor V9.9.9 HEAD 2>/dev/null && echo 是 || echo 否)｜VERSION.md=$([ -f "$RE/.codex/control-tower/VERSION.md" ] && echo 在 || echo 缺)" >&2
+fi
 echo "$OUT" | grep -q "本机孤儿 tag" && ok "E 报文点名「本机孤儿 tag」（不再让人以为是副作用）" || no "E 未点名孤儿"
 echo "$OUT" | grep -qE "自证: 已推送=.*HEAD 祖先=否" && ok "E 自证在位（已推送/HEAD 祖先/远端态）" || no "E 缺自证"
 echo "$OUT" | grep -q "解除: git tag -d V9.9.9" && ok "E 给「解除命令」（原先不给 ⇒ 无人敢删他人 tag）" || no "E 缺解除命令"
