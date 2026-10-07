@@ -22,6 +22,12 @@ scripts/control-tower/claim_store.py — D-C 声明归一 · 单一 claim 库（
   @降级  绝不静默：任何降级都带 reason + degraded=True，并由调用方决定阻断
          （铁律 11 静默降级禁止；铁律 24/31）
 
+⚠️ **两字段版无 `exclude`（"不做什么"）字段** —— 这不是遗漏，是收敛的代价：
+   排除项语义**不在此处**，由 D708 写集对账单点承担（`merge_writeset_gate.py`：
+   「声明 ⊇ 变更集」+ `## 写集豁免` 段落）。**下一个人不要以为排除项在本库被检查过**
+   —— K3 预审 R1 三态表口径 + 本 PR 正文「例外清单」双处留痕。
+   （若将来要恢复 exclude 语义，属于 claim schema 变更 ⇒ 判据变更 ⇒ 需 K3 过审。）
+
 YAML 子集（**故意不收 PyYAML 依赖**——CI runner 与精简 Git 环境无该包，
   第三方依赖缺失会退化成"声明读不到" = 另一条静默路径）:
     writeset:
