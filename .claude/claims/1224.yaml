@@ -1,5 +1,6 @@
 writeset:
   - .claude/claims/1224.yaml
+  - .claude/task-briefs/2026-10-07-D1205-D-C-标识与声明归一-claim库+防劫持+D708联动.md
   - .claude/task-briefs/2026-10-07-D1210-D-C-标识与声明归一.md
   - memory/notes/proposed/2026-10-07-d1205-claim-single-source.md
   - docs/authority/DOCS-REGISTRY.yaml
@@ -13,6 +14,7 @@ writeset:
   - scripts/control-tower/staging_guard.py
   - scripts/workflow/resolve-commit-brief.sh
   - task-state/D1205.json
+  - task-state/D1210.json
   - tests/control-tower/claim-identity-v2.test.py
   - tests/control-tower/claim_store.test.sh
   - tests/control-tower/staging_guard.test.sh
