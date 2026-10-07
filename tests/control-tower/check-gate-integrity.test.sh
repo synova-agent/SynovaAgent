@@ -850,6 +850,70 @@ if [ "$FAIL" -gt 0 ] && [ -z "$FIRST_FAIL" ]; then
   echo "  ❌ SELF-CHECK: FAIL=$FAIL 但 FIRST_FAIL 为空（no() 记名机制缺陷）"
   exit 2
 fi
+# ═══ M10: 面 3（夹具判别力，D1226 / 卡 #1295）—— 红/绿/白名单 + 变异体 ═══════════
+echo ""
+echo "── M10: 面 3 夹具判别力（grep -qv 逐行取反）──"
+FP_TESTS="$SB/fp/tests"; mkdir -p "$FP_TESTS"
+FP_BASE="$SB/fp/fixture-power-baseline.txt"; : > "$FP_BASE"
+printf '#!/bin/bash\nif printf "a\\nb\\n" | grep -qv a; then echo hit; fi\n' > "$FP_TESTS/red.test.sh"
+printf '#!/bin/bash\ngrep -qv nevermatch ./literal-file.txt\n' > "$FP_TESTS/green.test.sh"
+fp_run() { # $1=gate 路径；其余=环境覆盖
+  local g="$1"; shift
+  env SYNO_GATE_SCAN_SCRIPTS="$SCAN_OK" SYNO_TESTS_DIR="$FP_TESTS" SYNO_CI_YML="$SB/ci.yml" \
+  SYNO_GATE_BASELINE="$SB/baseline.txt" SYNO_CI_RED_BASELINE="$SB/red-baseline.txt" \
+  SYNO_GATE_DEGRADED_LOG="$SB/logs/m10.log" "$@" \
+  bash "$g" --root "$REPO" --fixture-power-only 2>&1
+}
+: > "$SB/logs/m10.log" 2>/dev/null || true
+OUT="$(fp_run "$GATE")"; rc=$?
+if [ "$rc" -eq 1 ] && printf '%s' "$OUT" | grep -q 'FIXTURE-POWER: .*red\.test\.sh:2'; then
+  ok "M10-1 红: 管道 + 逐行取反 ⇒ 违规且点名 red.test.sh:2"
+else
+  no "M10-1 未判红（rc=${rc}）"
+fi
+if ! printf '%s' "$OUT" | grep -q 'green\.test\.sh'; then
+  ok "M10-2 绿: 字面量文件操作数 ⇒ 不判违规（防误伤）"
+else
+  no "M10-2 误判字面量形态为违规（假阳性）"
+fi
+printf 'red.test.sh:2 | owner=test | expires=2099-01-01 | reason=M10 沙箱豁免\n' > "$FP_BASE"
+OUT="$(fp_run "$GATE" SYNO_FIXTURE_POWER_BASELINE="$FP_BASE")"; rc=$?
+if [ "$rc" -eq 0 ] && printf '%s' "$OUT" | grep -q 'FIXTURE-POWER-WHITELIST'; then
+  ok "M10-3 白名单: 显式豁免 ⇒ 不判违规（豁免可见）"
+else
+  no "M10-3 白名单未生效（rc=${rc}）"
+fi
+printf 'red.test.sh:2 | owner=test | expires=2000-01-01 | reason=M10 过期豁免\n' > "$FP_BASE"
+OUT="$(fp_run "$GATE" SYNO_FIXTURE_POWER_BASELINE="$FP_BASE")"; rc=$?
+if [ "$rc" -eq 1 ] && printf '%s' "$OUT" | grep -q '豁免条已过期'; then
+  ok "M10-3b 白名单过期 ⇒ 违规（expires 防拔牙）"
+else
+  no "M10-3b 过期豁免未判红（rc=${rc}）"
+fi
+MUT_GATE="$SB/fp/gate-mutant.sh"
+sed 's/form2=1/form2=0/g' "$GATE" > "$MUT_GATE"
+OUT_M="$(fp_run "$MUT_GATE" SYNO_FIXTURE_POWER_BASELINE="$FP_BASE")"
+if ! printf '%s' "$OUT_M" | grep -q 'FIXTURE-POWER: .*red\.test\.sh:2'; then
+  ok "M10-4 变异体: 判据退化（form2=1→0）⇒ red 样本不再被抓（夹具能分辨判据退化，非只证补丁生效）"
+else
+  no "M10-4 变异体仍抓到 red 样本 ⇒ 夹具对判据退化无判别力（自指坑）"
+fi
+# M10-5 形态 0: 样本生成器（grep 出现在**单引号串内**，是被写入样本的文本）⇒ 不计违规
+#   （自指防线：本夹具自身的样本构造行即此形态，若判红则门禁会误伤夹具）
+cat > "$FP_TESTS/gen.test.sh" <<'EOG'
+#!/bin/bash
+printf '%s\n' 'x | grep -qv a' > /tmp/sample.txt
+EOG
+OUT="$(fp_run "$GATE")"
+if ! printf '%s' "$OUT" | grep -q 'gen\.test\.sh'; then
+  ok "M10-5 形态 0: 单引号串内的样本生成行 ⇒ 不计违规（自指防线）"
+else
+  no "M10-5 样本生成行被误判为违规（会误伤夹具自身）"
+fi
+rm -f "$FP_TESTS/gen.test.sh"
+
+: > "$FP_BASE"
+
 echo "=== 结果: PASS=${PASS} FAIL=${FAIL}${FIRST_FAIL:+ FIRST_FAIL=${FIRST_FAIL}} ==="
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
