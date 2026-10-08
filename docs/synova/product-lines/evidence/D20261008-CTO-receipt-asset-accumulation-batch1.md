@@ -29,7 +29,8 @@
 
 **均未合并**（卡面判定人为 CTO/K3；纪律：K3 终审前不得合并）。`main` 受保护：required checks **9 项** + `enforce_admins=true` + required reviews，`allow_auto_merge=false`。
 
-### 🔴 PR #1438 红因 = D734 PR 预算（**结构冲突，非缺陷**）
+### 🔴 PR #1438 红因 = D734 PR 预算（**结构冲突，非缺陷**；且**红项唯一**）
+**更正**：早稿把 D708 与 D734 并列为"两个门禁"不准确 —— 实测 **本 PR 的 D708 是通过的**（`S0:claim.writeset` 解析成功，56 路径逐条命中，唯一豁免 = 本 claim 自身）。**CI 红项逐行确认只有 D734**；`All Checks Passed` 只是 9 项必需检查的**聚合门**，因 D734 红而连带红。
 ```
 上限=12 文件；本 PR 白名单外路径 56 件 = .claude/claims/1430.yaml(1) + extensions/ontology/edge-types/*.json(55)
 ```
@@ -37,7 +38,14 @@
 **逐一判定不适用**：`## 死代码清理声明`（动机是删除件；本件是增改）｜D1028 出库白名单（要求 AM_SET 空 + 零 DENY）｜`--max-files`（改口径 = 卡红线明禁）｜`## 写集豁免`（属 D708，另一门禁）。
 **⇒ 需 CTO 裁定**：(a) 为「内容资产批（N 文件 × 单字段）」立预算豁免规则；(b) 拆 5 个 PR（A=11edge+claim=12 ✅／B/C/D=11 each／E=11edge+证据+3治理=12 ✅）。**我建议 (a)，但按"不做一次性特例"纪律，规则须由 CTO 立，不由我开口子。** 已发 PR 评论。
 
-### 🔴 PR #1441 红因 = D708 写集对账（身份推断失败）
+**队长为 #1430 主动排除的"内容遗漏"风险（已闭环）**：`causal_strength` 在整树只出现 **57 处** = 55 个 edge JSON + 本卡证据件 + 本卡 brief。逐项排查：**无独立 edge schema 文件**（`git ls-files | grep -iE 'edge.*(schema|validator)'` ⇒ 空）；**无 optionalProps 键白名单**；**`edge-consumption-map.json` 不需同步**（其 `edges` 是 55 个 **`label`→消费方** 的边级映射，不是字段清单）。⇒ **本卡"只加字段"落点完整，不存在"漏登记致字段失效"。**
+
+### 🔴 PR #1441 红因 = D708 写集对账（身份推断失败）—— 与 #1430 的**对照实验**
+| 卡 | 本地 D708 结论（同一命令 `--base 0c7d77523`） | 原因 |
+|---|---|---|
+| #1430 | ✅ `结论: pass — 提交文件集 ⊆ 声明写集（无夹带）`（声明写集 **58 条**） | `S0:claim.writeset` 解析成功 |
+| #978 | ❌ 声明写集**（空）** ⇒ **7 件判夹带** | 身份提取失败 ⇒ **claim 文件在仓库里但加载不了** |
+
 链：`claim_store.py:86` `ISSUE_RE = r"#(\d{1,7})(?![0-9])"` **需字面 `#`** → 三条 subject 均 `fix(978):`（缺 `#`）→ `parse_issue` = None → 分支名亦不被 `BRANCH_ISSUE_RE` 兜住 → **声明写集空** → 6 个 `cycle.json` + probe 共 **7 件判"夹带"**。
 
 **我尝试的修复与它被拦下的经过（如实申报）**：我**已重写三条 subject 为 `fix(#978): …`**（树逐字未变：`git diff --stat backup-978-pre-amend HEAD` = 空；对 base 的 diff 逐一一致），推送时被 **门禁 0-1（D334 分叉阻断）**拒绝：
