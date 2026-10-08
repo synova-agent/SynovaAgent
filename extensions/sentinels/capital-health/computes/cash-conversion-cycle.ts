@@ -13,6 +13,7 @@
  *   （D358 降级传播修复: degraded 不产阈值结论；原实现 degraded 分支 signal 'critical'）
  * 边界: CCC 恰好 91（刚过 warning 线）→ warning
  */
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408：输入有效性检查
 export interface CCCResult {
   cccDays: number;
   dio: number;
@@ -30,6 +31,9 @@ export function computeCashConversionCycle(fin: {
   accounts_payable: number;
   total_revenue: number;
 }): CCCResult {
+  // #1408：输入有效性检查（**显式声明本 compute 的必需字段**；缺字段/NaN/非有限 ⇒ 降级 + warnings）
+  const _inputIssues = checkFiniteInputs(fin, ['cogs', 'inventory', 'receivables', 'accounts_payable', 'total_revenue']);
+  if (_inputIssues.length > 0) return { cccDays: 0, dio: 0, dso: 0, dpo: 0, signal: 'healthy', degraded: true, warnings: _inputIssues };
   const warnings: string[] = [];
 
   if (fin.total_revenue <= 0 && fin.cogs <= 0) {

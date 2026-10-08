@@ -10,7 +10,10 @@
  *   total_revenue=0 亦降级（无收入不得产出周转率结论）。
  * 边界: 周转率恰好 0.8（warning 阈值线）→ 不降级
  */
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408：输入有效性检查
 export interface CapitalTurnoverResult {
+  /** #1408：输入有效性等告警（缺字段/NaN/非有限 ⇒ 非空） */
+  warnings?: string[];
   /** 营收 / 投入资本 */
   turnover: number;
   totalRevenue: number;
@@ -23,6 +26,9 @@ export function computeCapitalTurnover(financials: Array<{
   total_debt?: number;
   equity?: number;
 }>): CapitalTurnoverResult {
+  // #1408：输入有效性检查（**显式声明本 compute 的必需字段**；缺字段/NaN/非有限 ⇒ 降级 + warnings）
+  const _inputIssues = checkFiniteInputs(financials, ['total_revenue']);
+  if (_inputIssues.length > 0) return { turnover: 0, totalRevenue: 0, totalCapital: 0, degraded: true, warnings: _inputIssues };
   if (financials.length === 0) {
     return { turnover: 0, totalRevenue: 0, totalCapital: 0, degraded: true };
   }
