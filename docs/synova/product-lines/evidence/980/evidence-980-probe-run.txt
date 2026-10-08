@@ -1,0 +1,106 @@
+=== #980 探针原始 run 输出（落仓副本，逐字节取自 /tmp/synova-980-probe-out/20261008-020519）===
+run_dir        = /tmp/synova-980-probe-out/20261008-020519
+probe sha256   = 759a115ae3f96ecfd0dad0ffdbfada053d46dae4054a3c8758f6d1cb3cd89ae5
+capture sha256 = 6181e7c9ed8739983490375b0e5f549779c38b108e61e4f3c57f377d4b6f5c9b
+validator sha256 = 741f671bba3f66d650763fef2a8e2bbb042e7516851352c12f7b3fb37e0f5167
+HEAD           = c231d80e813a687526ac57085de285bb11be3424
+
+---
+⚠️ 哈希对账说明（独立自验 γ 的 D3 发现，2026-10-08 补记，仅追加、不改上文逐字节记录）：
+· 上表 `capture sha256 = 6181e7c9…` 是**本 run 时刻（02:05:19）**的取值，**忠实**。
+· 之后该脚本在 commit `27099ae9a` 被**追加一行 `# swallow-ok:` 注释**（`+1/-1`，为响应 pre-commit 的
+  [silent-swallow] 软提示）⇒ 现行 sha256 = `759d0709…`，与上表**不匹配**。
+· `probe-diagnosis.ts` 的 `759a115a…` 与 `validator` 的 `741f671b…` **至今匹配**（未被改动）。
+· 影响判定：**注释级漂移**，不影响产物结论；独立自验 γ 已用**现行脚本**独立复跑，`未覆盖类型 40 个` /
+  `count=40` / `written=readBackOk=40` 与本表**完全一致**。
+---
+
+
+════════ [1] probe-output.txt（人读形态 stdout+stderr，逐字节）════════
+{"level":30,"time":1791396321882,"pid":12664,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791396321884,"pid":12664,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema-migration","version":2,"msg":"迁移 2 完成"}
+{"level":40,"time":1791396321884,"pid":12664,"hostname":"PC-202605261327","name":"synova-agent","service":"l4/sog-schema-validator","nodeType":"activity/production","uncoveredTypes":["activity/production"],"uncoveredTypesCount":1,"msg":"未覆盖类型 — 静默放行 (degraded)"}
+{"level":40,"time":1791396321890,"pid":12664,"hostname":"PC-202605261327","name":"synova-agent","service":"l4/sog-schema-validator","nodeType":"resource/agent","uncoveredTypes":["activity/production","activity/acquisition","activity/innovation","activity/coordination","activity/learning","activity/governance","activity/maintenance","activity/compliance","outcome/financial","outcome/market","outcome/operational","outcome/people","outcome/innovation","outcome/risk","outcome/competitive","outcome/external","resource/money","resource/person","resource/team","resource/agent"],"uncoveredTypesCount":20,"msg":"未覆盖类型 20 个"}
+{"level":40,"time":1791396321893,"pid":12664,"hostname":"PC-202605261327","name":"synova-agent","service":"l4/sog-schema-validator","nodeType":"external/baseline","uncoveredTypes":["activity/production","activity/acquisition","activity/innovation","activity/coordination","activity/learning","activity/governance","activity/maintenance","activity/compliance","outcome/financial","outcome/market","outcome/operational","outcome/people","outcome/innovation","outcome/risk","outcome/competitive","outcome/external","resource/money","resource/person","resource/team","resource/agent","resource/tool","resource/knowledge","resource/client","resource/brand","resource/data","resource/ip","resource/location","resource/channel","resource/supplier","pool/capital","pool/human_capital","pool/equipment_capacity","pool/knowledge","pool/brand","pool/reputation","pool/data","pool/revenue","pool/sensing","pool/activity","external/baseline"],"uncoveredTypesCount":40,"msg":"未覆盖类型 40 个"}
+写入 40 个类型节点（ALL_NODE_TYPES 去重），成功返回 nodeId 且可读回 = 40 OK
+未覆盖类型 40 个
+- activity/production
+- activity/acquisition
+- activity/innovation
+- activity/coordination
+- activity/learning
+- activity/governance
+- activity/maintenance
+- activity/compliance
+- outcome/financial
+- outcome/market
+- outcome/operational
+- outcome/people
+- outcome/innovation
+- outcome/risk
+- outcome/competitive
+- outcome/external
+- resource/money
+- resource/person
+- resource/team
+- resource/agent
+- resource/tool
+- resource/knowledge
+- resource/client
+- resource/brand
+- resource/data
+- resource/ip
+- resource/location
+- resource/channel
+- resource/supplier
+- pool/capital
+- pool/human_capital
+- pool/equipment_capacity
+- pool/knowledge
+- pool/brand
+- pool/reputation
+- pool/data
+- pool/revenue
+- pool/sensing
+- pool/activity
+- external/baseline
+
+════════ [2] status-before.txt ════════
+ M .claude/reference-map.md
+ M src/l4/sog-schema-validator.ts
+?? docs/synova/product-lines/evidence/980/capture-980-probe.sh
+?? docs/synova/product-lines/evidence/980/probe-diagnosis.ts
+?? tests/l4/sog-schema-validator.integration.test.ts
+?? tests/l4/sog-schema-validator.test.ts
+════════ [2b] status-after.txt ════════
+ M .claude/reference-map.md
+ M src/l4/sog-schema-validator.ts
+?? docs/synova/product-lines/evidence/980/capture-980-probe.sh
+?? docs/synova/product-lines/evidence/980/probe-diagnosis.ts
+?? tests/l4/sog-schema-validator.integration.test.ts
+?? tests/l4/sog-schema-validator.test.ts
+──────── status-diff.txt 字节数 = 0（0 = 前后逐字一致）────────
+
+════════ [3] hashes-before.txt ════════
+2e71fae85f1674ed326dc22f8829a99930c3435163438d9ed3727a853613e7a7 *extensions/industries/financial-services/thresholds.json
+e788884b942858b66b856a1fe83b62f476331254c4b2ffd5cb021332b92cbb72 *extensions/industries/general-enterprise/thresholds.json
+424e913e2dd3c7724e117a17e736e2900d5c4492a3bf7b71ba54a1a749e6316d *extensions/industries/manufacturing/thresholds.json
+32e52162a40036100e18ddefe177242e5ba3ae24aba538a330f1e335e06d4d0c *extensions/industries/retail-ecommerce/thresholds.json
+226580f686c30c4ddb6700f83b3bc8825855442dbe25bf179520eaf1585344bc *extensions/industries/saas-tech/thresholds.json
+43ec789b79a3f5ac91794d36f81b9f7afd1565d81ff7b49ff5a6206474083aea *extensions/industries/test-write/thresholds.json
+════════ [3b] hashes-after.txt ════════
+2e71fae85f1674ed326dc22f8829a99930c3435163438d9ed3727a853613e7a7 *extensions/industries/financial-services/thresholds.json
+e788884b942858b66b856a1fe83b62f476331254c4b2ffd5cb021332b92cbb72 *extensions/industries/general-enterprise/thresholds.json
+424e913e2dd3c7724e117a17e736e2900d5c4492a3bf7b71ba54a1a749e6316d *extensions/industries/manufacturing/thresholds.json
+32e52162a40036100e18ddefe177242e5ba3ae24aba538a330f1e335e06d4d0c *extensions/industries/retail-ecommerce/thresholds.json
+226580f686c30c4ddb6700f83b3bc8825855442dbe25bf179520eaf1585344bc *extensions/industries/saas-tech/thresholds.json
+43ec789b79a3f5ac91794d36f81b9f7afd1565d81ff7b49ff5a6206474083aea *extensions/industries/test-write/thresholds.json
+──────── hashes-diff.txt 字节数 = 0（0 = 6/6 一致）────────
+
+════════ [4] probe-output.json（--json 形态，逐字节）════════
+{"level":30,"time":1791396323658,"pid":16912,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791396323659,"pid":16912,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema-migration","version":2,"msg":"迁移 2 完成"}
+{"level":40,"time":1791396323660,"pid":16912,"hostname":"PC-202605261327","name":"synova-agent","service":"l4/sog-schema-validator","nodeType":"activity/production","uncoveredTypes":["activity/production"],"uncoveredTypesCount":1,"msg":"未覆盖类型 — 静默放行 (degraded)"}
+{"level":40,"time":1791396323665,"pid":16912,"hostname":"PC-202605261327","name":"synova-agent","service":"l4/sog-schema-validator","nodeType":"resource/agent","uncoveredTypes":["activity/production","activity/acquisition","activity/innovation","activity/coordination","activity/learning","activity/governance","activity/maintenance","activity/compliance","outcome/financial","outcome/market","outcome/operational","outcome/people","outcome/innovation","outcome/risk","outcome/competitive","outcome/external","resource/money","resource/person","resource/team","resource/agent"],"uncoveredTypesCount":20,"msg":"未覆盖类型 20 个"}
+{"level":40,"time":1791396323670,"pid":16912,"hostname":"PC-202605261327","name":"synova-agent","service":"l4/sog-schema-validator","nodeType":"external/baseline","uncoveredTypes":["activity/production","activity/acquisition","activity/innovation","activity/coordination","activity/learning","activity/governance","activity/maintenance","activity/compliance","outcome/financial","outcome/market","outcome/operational","outcome/people","outcome/innovation","outcome/risk","outcome/competitive","outcome/external","resource/money","resource/person","resource/team","resource/agent","resource/tool","resource/knowledge","resource/client","resource/brand","resource/data","resource/ip","resource/location","resource/channel","resource/supplier","pool/capital","pool/human_capital","pool/equipment_capacity","pool/knowledge","pool/brand","pool/reputation","pool/data","pool/revenue","pool/sensing","pool/activity","external/baseline"],"uncoveredTypesCount":40,"msg":"未覆盖类型 40 个"}
+{"written":40,"readBackOk":40,"count":40,"uncoveredTypes":["activity/production","activity/acquisition","activity/innovation","activity/coordination","activity/learning","activity/governance","activity/maintenance","activity/compliance","outcome/financial","outcome/market","outcome/operational","outcome/people","outcome/innovation","outcome/risk","outcome/competitive","outcome/external","resource/money","resource/person","resource/team","resource/agent","resource/tool","resource/knowledge","resource/client","resource/brand","resource/data","resource/ip","resource/location","resource/channel","resource/supplier","pool/capital","pool/human_capital","pool/equipment_capacity","pool/knowledge","pool/brand","pool/reputation","pool/data","pool/revenue","pool/sensing","pool/activity","external/baseline"],"nodeIds":["node-77c5090f-254e-4bab-c0ef-bca386b75679","node-346a4f0a-b58e-4ff1-14a3-908175559dc6","node-eaa72485-4f99-492a-daa4-f60e2fef3395","node-166869b2-0ead-4d15-be02-0eeb91a3bd84","node-87d91f61-7910-4235-aadd-92380ccd68b7","node-c624656a-90a0-40a4-0552-6924a6611e05","node-12caa1b9-63c6-4b7e-021e-7389d8f1b69d","node-35fa7763-1e2d-487c-cf58-e4a5d0a55db2","node-48d44a9e-daab-4a37-e4c1-ffa5a366c14b","node-499a5c7a-d3b5-4983-7523-b806fa3674a9","node-ff157f81-092b-4beb-42ae-0d60a1f24a5c","node-ae50b78a-0399-429f-6e79-06aac26ecb2a","node-1ad4cf0c-f974-470e-be12-888bf539c8c4","node-30a4c4fa-5317-4b8d-e5de-4711523f185e","node-5e8f60e9-d7a3-424a-adb0-307a878406a4","node-2d5e2964-6352-4bdc-e395-1a013d7223ca","node-d70031ad-d572-41a6-b3d7-45ec89256882","node-c34be5ad-abe1-42fe-2dcf-b044cf5411a2","node-1b2b512d-b414-43d0-9e41-46c3d3364fb5","node-90173501-de34-4678-d922-4d1a5c3b3a94","node-dbc98b46-2a43-4f8e-bc4a-2c22560f88cd","node-a7ac0f2e-2cd9-4989-ec6c-3f29bc34e925","node-e2a603b4-12d8-4d4e-e3aa-5e672dc36d53","node-4f491564-3e8a-4e9e-feb8-36263009068b","node-d774547b-f251-421c-41a9-5c426ed1873d","node-e8b70afb-ae75-471b-c8a1-823df30fbd7b","node-2dea7bfd-647c-478b-ca5a-ba5fbb40124a","node-57615dc4-7f23-4df3-9ac1-4ea0a333ff6f","node-615cf12a-6df2-46a6-553c-0c6d55abeded","node-543abac0-1483-4965-7f32-ab74ef24fcda","node-530cee30-751a-43be-c4df-db6796c1e2f2","node-ae250344-a097-42fa-bbbf-83b61487ae3a","node-dec76ad5-8ab2-4083-72d9-62f68736f8be","node-4eb7e86a-e323-492f-4377-5d826e60a2ba","node-1269c8ac-6ab6-4425-e47b-ae24248ef862","node-1807689e-4f81-4365-93ff-a6d6828dfa52","node-70c27450-a7f3-4676-a838-57e4ab954832","node-643ccb4f-7476-4775-d9a7-51b3eeee604f","node-adc458fd-adbe-4e99-3138-98fd3287be59","node-1fdd6945-f899-400e-1ae6-3b72c46dcc53"]}
