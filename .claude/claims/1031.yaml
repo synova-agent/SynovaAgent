@@ -1,0 +1,14 @@
+# .claude/claims/1031.yaml — #1031（模块 K4 本体·因果边）本体参数桥 · 写集声明（S0 源，issue 号卡）
+# 先例：.claude/claims/1045.yaml / 980.yaml（claim 优先于 D# 链；K3 R3 防劫持）
+# 纪律：只列本 PR 真正改动的文件，不预授权。
+writeset:
+  - .claude/claims/1031.yaml
+  - .claude/task-briefs/2026-10-09-1031-ontology-param-bridge.md
+  - src/l4/ontology-loader.ts
+  - tests/l4/ontology-loader-param-bridge-1031.test.ts
+  - docs/synova/product-lines/evidence/1031-injection-contract.md
+  - docs/synova/product-lines/evidence/1031-delivery.md
+done:
+  - verify: npx vitest run tests/l4/ontology-loader-param-bridge-1031.test.ts
+  - verify: npx tsc --noEmit
+note: 本体参数桥（类型层 → 实例层；CTO 乙案：判据②改落点=注入面断言，写集剔除 src/loops/direction-monitor.ts）；覆盖力降档已显式写入交付件；独立自验未做（待派）
