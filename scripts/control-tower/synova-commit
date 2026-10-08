@@ -340,7 +340,7 @@ fi
 #   ① 纯 bypass.log（原 D515）
 #   ② merge commit（MERGE_HEAD 存在，同 D328/D513 豁免语义——merge 无新声明）
 #   ③ 纯补记组合（--files 全部为证据/簿记文件，无代码/脚本）
-# ⚠️ 判定只看 --files 显式列表，不裸看暂存区（D414 会自动 add bypass.log 进正常提交）。
+# ⚠️ 判定只看 --files 显式列表，不裸看暂存区（原「自动 add bypass.log 进正常提交」机制已由 N17 删除，见提交段 N17 注释）。
 #   普通提交（含任何 src/scripts/packages/tests/.github/.claude/skills 代码）仍全量 13 组
 #   （防 fastlane 误放行——证据/簿记白名单外的文件一律走全量）。
 FASTLANE_TRIGGER=0
@@ -784,15 +784,10 @@ if [[ $PRECOMMIT_EXIT -eq 0 ]]; then
   # D214: 发射 gatekeeper 信号
   python3 "$SCRIPT_DIR/emit-signal.py" gatekeeper green "all_checks_pass" 2>/dev/null || true
 
-  # U1a/D414: bypass.log 证据链随提交入库（修 M4 "写了没提交"——:601 追加 COMMITTED 但从不 add，
-  #   证据链只在工作区不进 git、换 worktree/clone 即断）。commit 前把 bypass.log 变更并入本次提交。
-  if [ -f "$BYPASS_LOG" ] && ! git diff --quiet -- "$BYPASS_LOG" 2>/dev/null; then
-    git add "$BYPASS_LOG" 2>/dev/null || true
-    if [[ ${#FILES[@]} -gt 0 ]]; then
-      FILES+=(".claude/bypass.log")  # --files 模式: 显式并入提交文件集
-    fi
-    echo "  ℹ D414: bypass.log 证据链随本次提交入库"
-  fi
+  # N17（CTO Round8 §四「准删」）：原 U1a「bypass.log 证据链随提交入库」分支已删除 ——
+  #   证据账本已由 D1145 阶段 0「停跟踪」从根消除：.claude/bypass.log 未跟踪 + 已忽略（.gitignore:40）
+  #   ⇒ `git diff --quiet -- <path>` 对未跟踪文件恒 rc=0 ⇒ 原分支永不进入，属死代码（铁律 37）。
+  #   现行证据链：.sessions/<sid>/bypass.log（权威，bypass-ledger.sh）+ git 历史对账。
 
   # D706: --files 模式前置断言 — staged ⊆ FILES（防 D329「--files 洗白他人暂存」）
   if [[ ${#FILES[@]} -gt 0 ]]; then
