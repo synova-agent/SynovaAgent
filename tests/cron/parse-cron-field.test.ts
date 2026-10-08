@@ -9,8 +9,33 @@
  * 判据覆盖（卡面 §⑥ V1）：`* /n` · `a-b` · `a-b/n` · 列表混用 · 越界裁剪 · 非法片段
  * 反例（改坏必红）：删掉步进/区间分支 ⇒ 本文件 red（负向对照见交付评论原始输出）。
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { parseCronField, nextCronTime } from '../../src/cron/scheduler';
+
+/**
+ * 捕获 cron/scheduler 的 `log.warn`（降级可见性 + 迭代次数的**确定性**判据来源）。
+ *
+ * 为什么必须捕获日志而不是量墙钟：`expect(elapsedMs).toBeLessThan(50)` 这类负载型断言在
+ * 忙碌 CI 上会假红（V-04：本机通过 ≠ CI 通过）。改断**迭代次数**（`iterations` / 有无该字段），
+ * 既与机器负载无关，又正好是本卡「有界 + 不静默」的语义本体。
+ */
+const logCapture = vi.hoisted(() => {
+  const calls: Array<{ level: string; meta?: Record<string, unknown>; msg?: unknown }> = [];
+  return { calls };
+});
+
+vi.mock('@synova/logger', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@synova/logger')>();
+  const record = (level: string) => (meta?: Record<string, unknown>, msg?: unknown) => {
+    logCapture.calls.push({ level, meta, msg });
+  };
+  return {
+    ...actual,
+    createLogger: () => ({
+      info: record('info'), warn: record('warn'), error: record('error'), debug: record('debug'),
+    }),
+  };
+});
 
 /** 集合 → 升序数组（断言可读性） */
 const arr = (s: Set<number>): number[] => [...s].sort((a, b) => a - b);
@@ -149,15 +174,20 @@ describe('#1454 V1 · nextCronTime 消费解析结果（B1 的成本判据在此
     );
   });
 
-  it('无效表达式 ⇒ 兜底为「下一个整点」，且恒 > from（不再静默 2 年全扫）', () => {
-    const t0 = Date.now();
+  it('无效表达式 ⇒ 兜底为「下一个整点」，且**零次迭代**（确定性：不看墙钟）', () => {
+    logCapture.calls.length = 0;
     const fb = nextCronTime('*/0 * * * *', from);
-    const elapsedMs = Date.now() - t0;
     expect(fb.getTime()).toBe(new Date(2026, 0, 15, 11, 0, 0).getTime());
     expect(fb.getTime()).toBeGreaterThan(from.getTime());
     expect(fb.getTime() - from.getTime()).toBeLessThanOrEqual(3_600_000);
-    // 空集 ⇒ 立即返回；修前该路径要扫满 2 年窗（~168ms 级）
-    expect(elapsedMs).toBeLessThan(50);
+
+    // 🔴 确定性判据（原为 `expect(elapsedMs).toBeLessThan(50)` —— 负载型断言在 CI 上会假红，V-04）：
+    // 空集路径**根本不进搜索循环** ⇒ 其 warn 里**没有 `iterations` 字段**（区别于「窗内无匹配」那条）。
+    // 这是本卡「有界」语义的直接证据，且与机器负载无关。
+    expect(logCapture.calls).toHaveLength(1);
+    expect(logCapture.calls[0].level).toBe('warn');
+    expect(logCapture.calls[0].meta).toMatchObject({ cron: '*/0 * * * *', fields: 5 });
+    expect(logCapture.calls[0].meta).not.toHaveProperty('iterations');
   });
 
   it('字段数 ≠ 5 ⇒ 兜底（不再按缺省字段静默匹配）', () => {
@@ -169,14 +199,26 @@ describe('#1454 V1 · nextCronTime 消费解析结果（B1 的成本判据在此
     );
   });
 
-  it('窗内无匹配（2 月 31 日）⇒ 兜底 + 上界内返回（成本上界 = min(窗宽, SCAN_BUDGET)）', () => {
-    const t0 = Date.now();
+  it('窗内无匹配（2 月 31 日）⇒ 兜底，且迭代次数**有上界**（确定性：断迭代数，不断墙钟）', () => {
+    logCapture.calls.length = 0;
     const fb = nextCronTime('0 0 31 2 *', from);
-    const elapsedMs = Date.now() - t0;
     expect(fb.getTime()).toBeGreaterThan(from.getTime());
     expect(fb.getTime() - from.getTime()).toBeLessThanOrEqual(3_600_000);
-    // 这条路径**成本未变低**（仍扫满 2 年窗）—— 断言只锁「必定返回」与「有界」，
-    // 不锁具体耗时，避免在不同机器上变成 flaky 判据。
-    expect(elapsedMs).toBeLessThan(5_000);
+
+    // 这条路径成本**未变低**（仍扫满窗宽）—— 断言只锁「有界 + 不静默」：
+    const meta = logCapture.calls.at(-1)?.meta as { iterations?: number; budget?: number } | undefined;
+    expect(meta?.iterations).toBeGreaterThan(1_000_000); // 确实扫了整窗（不是提前退出）
+    expect(meta?.iterations).toBeLessThanOrEqual(1_100_000); // SCAN_BUDGET（src/cron/scheduler.ts:24）
+    expect(meta?.budget).toBe(1_100_000);
+    expect(logCapture.calls.at(-1)?.level).toBe('warn'); // 不静默
+  });
+
+  it('深匹配合法表达式不被预算截断：2 月 29 日 ⇒ 命中 2028-02-29（约 2 年后仍在窗内）', () => {
+    // 独立复核给的对照表达式（V2 「SCAN_BUDGET 是真上界」判据）：2026-03-01 起，下一个 2/29 是 2028-02-29。
+    const fromMar = new Date(2026, 2, 1, 12, 0, 0);
+    logCapture.calls.length = 0;
+    const hit = nextCronTime('0 0 29 2 *', fromMar);
+    expect(hit.getTime()).toBe(new Date(2028, 1, 29, 0, 0, 0).getTime());
+    expect(logCapture.calls).toHaveLength(0); // 命中 ⇒ 无 warn（不是兜底）
   });
 });

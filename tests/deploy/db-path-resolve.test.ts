@@ -21,6 +21,7 @@ import type { AddressInfo } from 'net';
 import express from 'express';
 import healthzRoutes from '../../src/routes/healthz';
 import { getDataDirectory, resolveDbPath } from '../../src/deploy/data-directory';
+import { loadConfig } from '../../src/config';
 
 /** 造一个「至少前 16 字节合法」的 SQLite 文件，字节数可精确控制（用于判别来源） */
 function writeFakeSqliteDb(filePath: string, sizeBytes: number): void {
@@ -159,5 +160,58 @@ describe('#1454 V3 · healthz 走真实路由读同一库（三档判别）', ()
     const db = await fetchDatabaseCheck();
     expect(db.status).toBe('degraded');
     expect(db.detail).toContain('数据库文件不存在');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 档③ 对照（独立复核 2026-10-09 提出的覆盖缺口）
+//
+// 复核结论：卡面 B4「健康检查读同一个库」在**两个 env 都未设**时仍未同源 ——
+//   healthz 档③ = 平台数据目录（getDataDirectory()）
+//   运行时档③ = `src/config.ts:104-105` ⇒ './data/synova.db'（**CWD 相对**），
+//              由 `src/init/engine-context.ts:66 new Database(config.dbPath)` 真正打开
+// ⇒ 属**存量、非本卡引入**（卡面 §④ 明确排除 src/config.ts：不反向改基准去迁就 healthz），
+//   但**原交付测试对这条不可见**（没有任何一条把 resolveDbPath() 与 loadConfig().dbPath 对照）。
+// 本组用例的作用：把「档③不同源」从「没人知道」变成「**测试里写着**」——
+//   这正是卡面 V3 的判据边界，也是「覆盖缺口比缺陷更值得修」的那条。
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('#1454 V3 · 与运行时 `loadConfig().dbPath` 逐档对照（含档③已知存量分歧）', () => {
+  /** loadConfig() 读 CWD/synova.json（ConfigRecovery 在「损坏」时有写回路径）⇒ 用例前后快照复原，保证不污染被 git 跟踪的配置文件 */
+  const CONFIG_FILE = path.join(process.cwd(), 'synova.json');
+  let cfgSnapshot: string | null = null;
+
+  beforeEach(() => {
+    cfgSnapshot = fs.existsSync(CONFIG_FILE) ? fs.readFileSync(CONFIG_FILE, 'utf-8') : null;
+  });
+  afterEach(() => {
+    if (cfgSnapshot !== null) fs.writeFileSync(CONFIG_FILE, cfgSnapshot, 'utf-8');
+    restoreEnv();
+  });
+
+  it('档①/档②：resolveDbPath() 与 loadConfig().dbPath **同源**（文件级相等；跨平台用 path.resolve 比较）', () => {
+    applyEnv({ SYNOVA_DB_PATH: '/tmp/synova-x.db', SYNOVA_DATA_DIR: '/tmp/synova-d' });
+    expect(path.resolve(resolveDbPath())).toBe(path.resolve(loadConfig().dbPath));
+
+    applyEnv({ SYNOVA_DB_PATH: undefined, SYNOVA_DATA_DIR: '/tmp/synova-d' });
+    expect(path.resolve(resolveDbPath())).toBe(path.resolve(loadConfig().dbPath));
+  });
+
+  it('【已知存量·非契约】档③：两 env 全空 ⇒ healthz 走平台目录、运行时走 CWD 相对 ⇒ **不同源**', () => {
+    applyEnv({ SYNOVA_DB_PATH: undefined, SYNOVA_DATA_DIR: undefined });
+    const healthzPath = resolveDbPath();
+    const runtimePath = loadConfig().dbPath;
+
+    // 运行时真值锚（src/config.ts:104-105）：若 config 侧改了档③，本行先红 —— 提醒同步本卡的边界声明
+    expect(runtimePath).toBe('./data/synova.db');
+    expect(path.resolve(runtimePath)).toBe(path.resolve('./data/synova.db'));
+
+    // 现状（**存量、非本卡引入**，且已在交付件「未决项」披露）：不是同一个库
+    expect(healthzPath).not.toBe(runtimePath);
+    expect(path.resolve(healthzPath)).not.toBe(path.resolve(runtimePath));
+
+    // 边界复述（`src/deploy/data-directory.ts` 的 @invariant 只声明档①/档② 同源）：
+    //   若有人把档③对齐（真修好）⇒ **本用例会红** ⇒ 请把断言改为相等并删掉「已知存量」标注。
+    //   这是刻意的注意力机制，不是把缺陷钉成永久契约。
   });
 });
