@@ -3,6 +3,7 @@ writeset:
   - .claude/task-briefs/2026-10-09-1466-BC清理族.md
   - scripts/control-tower/probe-delivery-hygiene.sh
   - .dockerignore
+  - .gitignore
   - src/routes/diagnosis-upload-v2.ts
   - tests/test-http-route.ts
   - tests/control-tower/probe-delivery-hygiene.test.sh

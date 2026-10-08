@@ -26,7 +26,10 @@ ok() { echo "  ✅ $1"; PASS=$((PASS+1)); }
 no() { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
 
 FIX="$(mktemp -d "${TMPDIR:-/tmp}/probe-dh-XXXXXX")"
-cleanup() { rm -rf "$FIX"; }
+# 🔴 可重入: 所有中间文件必须落在**本次运行私有**的 scratch 目录内 —— 曾用固定路径
+#    "$RUN/out"，两个并发运行（如本地 + 独立复核员同时跑）互相覆盖 ⇒ 随机假红/假绿（实测踩到）。
+RUN="$(mktemp -d "${TMPDIR:-/tmp}/probe-dh-run-XXXXXX")"
+cleanup() { rm -rf "$FIX" "$RUN"; }
 trap cleanup EXIT
 
 g() { env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE git -C "$FIX" "$@"; }
@@ -81,7 +84,7 @@ DI
   g -c user.email=t@t -c user.name=t commit -q -m "fixture"
 }
 
-run() { bash "$PROBE" --repo "$FIX" --ref HEAD "$@" >/tmp/probe-dh.out 2>&1; echo $?; }
+run() { bash "$PROBE" --repo "$FIX" --ref HEAD "$@" >"$RUN/out" 2>&1; echo $?; }
 
 echo "=== probe-delivery-hygiene 测试 ==="
 
@@ -91,38 +94,38 @@ if bash -n "$PROBE" 2>/dev/null; then ok "语法合法（bash -n）"; else no "�
 # ── 正常路径 ──
 mkfix
 rc=$(run)
-if [ "$rc" -eq 0 ]; then ok "正常路径: 夹具三判据全绿 → exit 0"; else no "正常路径应 exit 0，实际 $rc"; sed 's/^/     /' /tmp/probe-dh.out; fi
-if grep -q 'V2 PASS' /tmp/probe-dh.out; then ok "V2 正常: 幸存集合 == src/ 闭包"; else no "V2 未 PASS"; fi
+if [ "$rc" -eq 0 ]; then ok "正常路径: 夹具三判据全绿 → exit 0"; else no "正常路径应 exit 0，实际 $rc"; sed 's/^/     /' "$RUN/out"; fi
+if grep -q 'V2 PASS' "$RUN/out"; then ok "V2 正常: 幸存集合 == src/ 闭包"; else no "V2 未 PASS"; fi
 
 # ── 反例 V1-a 日期快照 ──
 mkfix; printf '<html>snap</html>\n' > "$FIX/app/dash-20260101.html"
 g add -A >/dev/null 2>&1; g -c user.email=t@t -c user.name=t commit -q -m snap
 rc=$(run)
-if [ "$rc" -eq 1 ] && grep -q 'V1-a 日期快照' /tmp/probe-dh.out; then ok "反例 V1-a: 日期快照 → exit 1 且点名"; else no "反例 V1-a 未判红 (rc=$rc)"; fi
+if [ "$rc" -eq 1 ] && grep -q 'V1-a 日期快照' "$RUN/out"; then ok "反例 V1-a: 日期快照 → exit 1 且点名"; else no "反例 V1-a 未判红 (rc=$rc)"; fi
 
 # ── 反例 V1-b 交付面 0 字节件 ──
 mkfix; : > "$FIX/app/empty.css"
 g add -A >/dev/null 2>&1; g -c user.email=t@t -c user.name=t commit -q -m zero
 rc=$(run)
-if [ "$rc" -eq 1 ] && grep -q 'V1-b 0 字节空件' /tmp/probe-dh.out; then ok "反例 V1-b: app/ 0 字节件 → exit 1 且点名"; else no "反例 V1-b 未判红 (rc=$rc)"; fi
+if [ "$rc" -eq 1 ] && grep -q 'V1-b 0 字节空件' "$RUN/out"; then ok "反例 V1-b: app/ 0 字节件 → exit 1 且点名"; else no "反例 V1-b 未判红 (rc=$rc)"; fi
 
 # ── 反例 V1-c 占位符桩件 ──
 mkfix; printf 'dummy' > "$FIX/app/favicon.ico"
 g add -A >/dev/null 2>&1; g -c user.email=t@t -c user.name=t commit -q -m stub
 rc=$(run)
-if [ "$rc" -eq 1 ] && grep -q 'V1-c 占位符桩二进制' /tmp/probe-dh.out; then ok "反例 V1-c: 5B dummy ico → exit 1 且点名"; else no "反例 V1-c 未判红 (rc=$rc)"; fi
+if [ "$rc" -eq 1 ] && grep -q 'V1-c 占位符桩二进制' "$RUN/out"; then ok "反例 V1-c: 5B dummy ico → exit 1 且点名"; else no "反例 V1-c 未判红 (rc=$rc)"; fi
 
 # ── 反例 V1-d 0 字节源码件 ──
 mkfix; : > "$FIX/src/routes/ghost.ts"
 g add -A >/dev/null 2>&1; g -c user.email=t@t -c user.name=t commit -q -m ghost
 rc=$(run)
-if [ "$rc" -eq 1 ] && grep -q 'V1-d 0 字节空源码/测试件' /tmp/probe-dh.out; then ok "反例 V1-d: src/ 0 字节件 → exit 1 且点名"; else no "反例 V1-d 未判红 (rc=$rc)"; fi
+if [ "$rc" -eq 1 ] && grep -q 'V1-d 0 字节空源码/测试件' "$RUN/out"; then ok "反例 V1-d: src/ 0 字节件 → exit 1 且点名"; else no "反例 V1-d 未判红 (rc=$rc)"; fi
 
 # ── 反例 V2-① 闭包件被排除（安全方向：客户镜像缺件）──
-mkfix; grep -v '!scripts/control-tower/enterprise-fact-store.ts' "$FIX/.dockerignore" > /tmp/di-broken
+mkfix; grep -v '!scripts/control-tower/enterprise-fact-store.ts' "$FIX/.dockerignore" > "$RUN/di-broken"
 g add -A >/dev/null 2>&1
-rc=$(bash "$PROBE" --repo "$FIX" --ref HEAD --dockerignore /tmp/di-broken >/tmp/probe-dh.out 2>&1; echo $?)
-if [ "$rc" -eq 1 ] && grep -q 'V2-①闭包件被排除' /tmp/probe-dh.out; then ok "反例 V2-①: 去掉一条反选 → exit 1（启动关键件点名）"; else no "反例 V2-① 未判红 (rc=$rc)"; fi
+rc=$(bash "$PROBE" --repo "$FIX" --ref HEAD --dockerignore "$RUN/di-broken" >"$RUN/out" 2>&1; echo $?)
+if [ "$rc" -eq 1 ] && grep -q 'V2-①闭包件被排除' "$RUN/out"; then ok "反例 V2-①: 去掉一条反选 → exit 1（启动关键件点名）"; else no "反例 V2-① 未判红 (rc=$rc)"; fi
 
 # ── 反例 V2-② 非闭包件仍在交付面（剥离方向）──
 mkfix; printf 'scripts/control-tower/does-not-exist\n' >> /dev/null
@@ -134,25 +137,25 @@ open(p,"w",encoding="utf-8").write(s)
 PY
 g add -A >/dev/null 2>&1; g -c user.email=t@t -c user.name=t commit -q -m noexcl
 rc=$(run)
-if [ "$rc" -eq 1 ] && grep -q 'V2-②非闭包件仍在交付面' /tmp/probe-dh.out; then ok "反例 V2-②: 撤掉排除面 → exit 1（非客户功能件点名）"; else no "反例 V2-② 未判红 (rc=$rc)"; fi
+if [ "$rc" -eq 1 ] && grep -q 'V2-②非闭包件仍在交付面' "$RUN/out"; then ok "反例 V2-②: 撤掉排除面 → exit 1（非客户功能件点名）"; else no "反例 V2-② 未判红 (rc=$rc)"; fi
 
 # ── 反例 V3-a 被追踪的 .synova-wt-* ──
 mkfix; mkdir -p "$FIX/.synova-wt-1466"; printf 'x\n' > "$FIX/.synova-wt-1466/f"
 g add -Af >/dev/null 2>&1; g -c user.email=t@t -c user.name=t commit -q -m wt
 rc=$(run)
-if [ "$rc" -eq 1 ] && grep -q 'V3-a 仓库内被追踪的' /tmp/probe-dh.out; then ok "反例 V3-a: 被追踪的工作树残留 → exit 1（-f 强制入库模拟）"; else no "反例 V3-a 未判红 (rc=$rc)"; fi
+if [ "$rc" -eq 1 ] && grep -q 'V3-a 仓库内被追踪的' "$RUN/out"; then ok "反例 V3-a: 被追踪的工作树残留 → exit 1（-f 强制入库模拟）"; else no "反例 V3-a 未判红 (rc=$rc)"; fi
 
 # ── 反例 V3-b .gitignore 未覆盖 ──
 mkfix; printf 'node_modules/\n' > "$FIX/.gitignore"
 g add -A >/dev/null 2>&1; g -c user.email=t@t -c user.name=t commit -q -m noignore
 rc=$(run)
-if [ "$rc" -eq 1 ] && grep -q 'V3-b .gitignore 未覆盖' /tmp/probe-dh.out; then ok "反例 V3-b: .gitignore 缺守卫 → exit 1（行为化 check-ignore 实测）"; else no "反例 V3-b 未判红 (rc=$rc)"; fi
+if [ "$rc" -eq 1 ] && grep -q 'V3-b .gitignore 未覆盖' "$RUN/out"; then ok "反例 V3-b: .gitignore 缺守卫 → exit 1（行为化 check-ignore 实测）"; else no "反例 V3-b 未判红 (rc=$rc)"; fi
 
 # ── 降级/三态（M-02）──
 mkfix
-rc=$(bash "$PROBE" --repo "$FIX" --ref no-such-ref >/tmp/probe-dh.out 2>&1; echo $?)
-if [ "$rc" -eq 2 ] && grep -q 'ref 不可解析' /tmp/probe-dh.out; then ok "三态: ref 不可解析 → exit 2（不静默放行）"; else no "三态 ref 未 exit 2 (rc=$rc)"; fi
-rc=$(bash "$PROBE" --repo "$FIX/../definitely-missing-$$" --ref HEAD >/tmp/probe-dh.out 2>&1; echo $?)
+rc=$(bash "$PROBE" --repo "$FIX" --ref no-such-ref >"$RUN/out" 2>&1; echo $?)
+if [ "$rc" -eq 2 ] && grep -q 'ref 不可解析' "$RUN/out"; then ok "三态: ref 不可解析 → exit 2（不静默放行）"; else no "三态 ref 未 exit 2 (rc=$rc)"; fi
+rc=$(bash "$PROBE" --repo "$FIX/../definitely-missing-$$" --ref HEAD >"$RUN/out" 2>&1; echo $?)
 if [ "$rc" -eq 2 ]; then ok "三态: --repo 目录不存在 → exit 2"; else no "三态 --repo 未 exit 2 (rc=$rc)"; fi
 
 # ── 等价性交叉验证: 探针模拟器 vs git 自家 ignore 引擎（独立第二实现） ──
@@ -166,8 +169,8 @@ g add -A >/dev/null 2>&1; g -c user.email=t@t -c user.name=t commit -q -m xcheck
 # 范围对齐: 只比 scripts/control-tower/**（探针对象域），不把 app//src/ 一并拉进来比
 GISV="$( cd "$FIX" && find scripts/control-tower -type f | sort \
   | env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE git check-ignore --no-index --stdin 2>/dev/null \
-  | sort -u > /tmp/gi-x-$$.txt; find scripts/control-tower -type f | sort > /tmp/all-x-$$.txt; \
-  comm -23 /tmp/all-x-$$.txt /tmp/gi-x-$$.txt )"
+  | sort -u > "$RUN/gi-x.txt"; find scripts/control-tower -type f | sort > "$RUN/all-x.txt"; \
+  comm -23 "$RUN/all-x.txt" "$RUN/gi-x.txt" )"
 PRSV="$(bash "$PROBE" --repo "$FIX" --ref HEAD --json 2>/dev/null | python3 -c 'import json,sys;print("\n".join(sorted(json.load(sys.stdin)["v2"]["survivors"])))')"
 if [ "$(printf '%s\n' "$GISV" | sort)" = "$(printf '%s\n' "$PRSV" | sort)" ] && [ -n "$GISV" ]; then
   ok "等价性: git ignore 引擎幸存集合 == 探针模拟器幸存集合（$(printf '%s\n' "$GISV" | grep -c . ) 件，双实现互证）"
@@ -193,7 +196,7 @@ else no "边界: --explain 缺不可达差额"; fi
 mkfix; printf 'scripts/control-tower/[abc]\n' >> "$FIX/.dockerignore"
 g add -A >/dev/null 2>&1; g -c user.email=t@t -c user.name=t commit -q -m charclass
 rc=$(run)
-if [ "$rc" -eq 2 ] && grep -q '未实现的语义' /tmp/probe-dh.out; then ok "边界: 字符类语义 → exit 2（不静默当成懂）"; else no "边界: 字符类未 exit 2 (rc=$rc)"; fi
+if [ "$rc" -eq 2 ] && grep -q '未实现的语义' "$RUN/out"; then ok "边界: 字符类语义 → exit 2（不静默当成懂）"; else no "边界: 字符类未 exit 2 (rc=$rc)"; fi
 
 echo
 echo "结果: $PASS 通过, $FAIL 失败"

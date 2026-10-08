@@ -6,9 +6,13 @@
 #         acceptance: { run: 'bash scripts/control-tower/probe-delivery-hygiene.sh', expectExit: 0 }
 #
 # ── 契约（铁律 47）────────────────────────────────────────────────────────────
-#   @input   --ref <git-ref>        判据源 ref（**默认 HEAD = 当前提交**，使分支态/PR 态/合并后态
-#                                   一致可判；`--ref origin/main` = 已落主干态真相源。判例 R66/S-01：
-#                                   一律走显式 git ref，禁用工作树 `cat` 当真相源）
+#   @input   --ref <git-ref>        判据源 ref。**默认 `origin/main` = 已落主干态真相源**
+#                                   （判例 R66/S-01 + 独立复核裁决：默认值不得指向被检对象自身，
+#                                    否则「修前红 → 修后绿」的判别性被旁路）；
+#                                   `--ref HEAD` = 分支态自检（选项）。
+#                                   ⚠ 本卡 PR 态下两者**不等价**（分支领先 3 提交）：
+#                                     `--ref origin/main` 预期红（判据在正确工作）／`--ref HEAD` 绿。
+#                                   一律走显式 git ref，禁用工作树 `cat` 当真相源。
 #            --repo <path>          判据对象仓库（默认 = 本脚本所在仓库；V-08 夹具注入缝）
 #            --dockerignore <path>  覆盖 .dockerignore 载体路径（默认从 <ref> 取；
 #                                   该注入点 = V-08「改坏即红」反例的构造入口）
@@ -46,8 +50,8 @@
 #     并把「整目录归零」的差额显式列在 --explain（判例 V-09：不可达项必须显式列出，不许写成已核）。
 #
 # 用法:
-#   bash scripts/control-tower/probe-delivery-hygiene.sh                      # 判当前提交（默认）
-#   bash scripts/control-tower/probe-delivery-hygiene.sh --ref origin/main    # 判已落主干态
+#   bash scripts/control-tower/probe-delivery-hygiene.sh                      # 判已落主干态（默认=真相源）
+#   bash scripts/control-tower/probe-delivery-hygiene.sh --ref HEAD           # 判分支态（自检）
 #   bash scripts/control-tower/probe-delivery-hygiene.sh --json
 #   bash scripts/control-tower/probe-delivery-hygiene.sh --dockerignore /tmp/broken.dockerignore   # V-08 反例
 #   bash scripts/control-tower/probe-delivery-hygiene.sh --explain
@@ -58,7 +62,9 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ROOT_OVERRIDE=""      # --repo <path>：判据对象仓库（测试夹具注入缝；默认 = 本脚本所在仓库）
-REF="HEAD"          # 默认判当前提交（分支/PR/合并后一致可判）；--ref origin/main = 已落主干态真相源
+# 真相源（判例 R66/S-01：**不得以被检对象自身为默认 ref**）。默认指向已落主干态 ⇒ 保留
+# 「修前红 → 修后绿」判别性；--ref HEAD 供分支态自检（合并后两者等价）。
+REF="origin/main"
 JSON_OUT=0
 DI_OVERRIDE=""
 EXPLAIN=0
