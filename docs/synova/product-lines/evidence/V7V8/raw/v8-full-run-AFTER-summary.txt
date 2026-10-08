@@ -1,0 +1,23 @@
+9921: Test Files  8 failed | 616 passed | 1 skipped (637)
+9922:      Tests  18 failed | 4807 passed | 8 skipped (4967)
+9923:     Errors  12 errors
+9925:   Duration  35.66s (transform 23.73s, setup 0ms, import 48.68s, tests 72.38s, environment 114ms)
+--- FAIL lines ---
+ FAIL  tests/l3/graphbridge-wiring.test.ts > GraphBridge → ModuleRunner.afterRun → Phase 1 > Given a failing module, When afterRun with GraphBridge, Then only successful modules create nodes
+ FAIL  packages/test-kit/tests/e2e/01-diagnosis-journey.test.ts > E2E: 诊断 API 用户旅程 > GET /health → 200 + status:ok
+ FAIL  packages/test-kit/tests/e2e/01-diagnosis-journey.test.ts > E2E: 诊断 API 用户旅程 > GET /api/status → 200 + llmConfigured
+ FAIL  packages/test-kit/tests/e2e/01-diagnosis-journey.test.ts > E2E: 诊断 API 用户旅程 > POST /api/diagnosis/consult → SSE 流式响应
+ FAIL  packages/test-kit/tests/e2e/01-diagnosis-journey.test.ts > E2E: 诊断 API 用户旅程 > GET /api/ontology/graph/:orgId → 200 + 图结构
+ FAIL  packages/test-kit/tests/e2e/01-diagnosis-journey.test.ts > E2E: 诊断 API 用户旅程 > GET /api/sessions → 200 + 会话列表
+ FAIL  packages/test-kit/tests/e2e/02-expert-contribution-journey.test.ts > E2E: 行业专家贡献旅程 > POST /api/expert/contribute → 200 + template
+ FAIL  packages/test-kit/tests/e2e/02-expert-contribution-journey.test.ts > E2E: 行业专家贡献旅程 > GET /api/expert/marketplace → 200 + templates[]
+ FAIL  packages/test-kit/tests/e2e/02-expert-contribution-journey.test.ts > E2E: 行业专家贡献旅程 > POST /api/expert/contribute → 400 (缺少必填字段)
+ FAIL  packages/test-kit/tests/e2e/03-tui-smoke.test.ts > TUI 冒烟测试 > Given LLM healthy, formatWelcome contains SYNOVA ASCII logo
+ FAIL  packages/test-kit/tests/e2e/03-tui-smoke.test.ts > TUI 冒烟测试 > Given LLM not configured, shows warning
+ FAIL  packages/test-kit/tests/e2e/03-tui-smoke.test.ts > TUI 冒烟测试 > Welcome lines fit standard terminal width (≤100 chars plain)
+ FAIL  packages/test-kit/tests/e2e/03-tui-smoke.test.ts > TUI 冒烟测试 > Welcome ends with tips (help commands visible)
+ FAIL  packages/test-kit/tests/architecture/01-layer-boundaries.test.ts > 铁律 39: 五层架构边界 > L2 编排层 (src/agent/, src/orchestrator/, src/l2/, src/l2-interfaces/) > 不应 import ../l4/
+ FAIL  packages/test-kit/tests/architecture/02-wiring-audit.test.ts > 铁律 0-2 Step 5: 模块接线验证 > Critical 接线 (必须立即修复) > FederalReporter → 被 [src/server.ts] 引用
+ FAIL  packages/test-kit/tests/architecture/02-wiring-audit.test.ts > 铁律 0-2 Step 5: 模块接线验证 > Critical 接线 (必须立即修复) > createOrchestrationWiring → 被 [src/server.ts] 引用
+ FAIL  packages/test-kit/tests/architecture/04-file-size-audit.test.ts > 铁律 37: 单文件行数审计 > 无 >1000 行源文件 (硬阻断)
+ FAIL  extensions/sentinels/_extinct/capital-turnover/computes/cash-conversion-cycle.test.ts > computeCashConversionCycle > should warn when CCC > 90 days

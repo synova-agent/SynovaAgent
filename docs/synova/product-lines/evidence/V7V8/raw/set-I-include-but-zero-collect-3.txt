@@ -1,0 +1,3 @@
+tests/e2e/diagnosis-pipeline.e2e.test.ts
+tests/e2e/pde-diagnosis.e2e.test.ts
+tests/sentinel/threshold-manifest-flip.test.ts

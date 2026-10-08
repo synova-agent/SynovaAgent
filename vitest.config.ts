@@ -25,7 +25,15 @@ export default defineConfig({
     //   *.test.ts → 单元测试 (纯函数, 无 I/O)
     //   *.integration.test.ts → 集成测试 (API + DB, 真实 SQLite)
     //   *.e2e.test.ts → 端到端测试 (完整用户旅程)
-    include: ['./tests/**/*.test.ts', './tests/**/*.integration.test.ts'],
+    include: [
+      './tests/**/*.test.ts',
+      './tests/**/*.integration.test.ts',
+      // V8（#1032）: 以下三类 .test.ts 此前不匹配任何 include ⇒ 无 runner 收集 ⇒ 死测试。
+      //   实测（origin/main 74eb6c44c）: 全仓 656 个 *.test.ts(x)，include 只覆盖 tests/ 下 619 个，
+      //   其余 37 个没有任何 runner 会执行（ci.yml 只在 test-kit job 跑其中 1 个）。
+      './packages/*/tests/**/*.test.ts',
+      './extensions/**/*.test.ts',
+    ],
     exclude: process.env.CI
       ? [
           'tests/acceptance/**',  // "零 .ts 文件修改" depends on uncommitted state

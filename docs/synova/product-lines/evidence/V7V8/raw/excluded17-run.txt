@@ -1,0 +1,329 @@
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-tests
+
+ ✓ tests/circular-dependency.test.ts (5 tests) 3ms
+{"level":40,"time":1791267227053,"pid":85309,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/industry-loader","dir":"test-write","msg":"行业目录缺 manifest.json — 跳过"}
+{"level":30,"time":1791267227053,"pid":85309,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/industry-loader","count":6,"msg":"行业模板加载完成"}
+ ✓ tests/e2e/auth-register-flow.e2e.test.ts (4 tests | 4 skipped) 40ms
+{"level":30,"time":1791267227074,"pid":85309,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/ontology-loader","nodes":29,"edges":56,"msg":"本体类型加载完成"}
+ ✓ tests/routes/ga-evolution.test.ts (3 tests) 100ms
+{"level":30,"time":1791267227118,"pid":85312,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/loader","count":45,"errors":0,"msg":"哨兵加载完成"}
+{"level":30,"time":1791267227119,"pid":85312,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/signal-aggregator","totalFindings":2,"signals":2,"critical":1,"msg":"[aggregator] 信号聚合完成"}
+ ❯ tests/acceptance/zero-code-industry.test.ts (5 tests | 3 failed) 163ms
+     ✓ pizza-chain 行业模板被自动发现 46ms
+     × pizza-chain 特有节点类型被 ontology 加载 24ms
+     × queryByTags 可查询 food_service 标签的类型 1ms
+     × 新增行业零 .ts 文件修改 87ms
+     ✓ 基础 ontology 仍正常加载 (17 node + 14 edge) 0ms
+ ✓ tests/e2e/sse-diagnosis.integration.test.ts (3 tests) 107ms
+{"level":40,"time":1791267227230,"pid":85311,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/entity-resolver","err":{},"msg":"语义匹配不可用 — degraded"}
+{"level":30,"time":1791267227231,"pid":85311,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/entity-resolver","autoMerged":0,"queuedForReview":1,"ignored":0,"msg":"L3 实体解析完成"}
+{"level":30,"time":1791267227232,"pid":85311,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/entity-resolver","autoMerged":1,"queuedForReview":0,"ignored":0,"msg":"L3 实体解析完成"}
+{"level":30,"time":1791267227232,"pid":85311,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/entity-resolver","autoMerged":0,"queuedForReview":0,"ignored":1,"msg":"L3 实体解析完成"}
+{"level":30,"time":1791267227232,"pid":85311,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/entity-resolver","autoMerged":0,"queuedForReview":0,"ignored":0,"msg":"L3 实体解析完成"}
+{"level":30,"time":1791267227233,"pid":85311,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/entity-resolver","autoMerged":0,"queuedForReview":0,"ignored":0,"msg":"L3 实体解析完成"}
+ ✓ tests/e2e/entity-resolution-e2e.test.ts (5 tests) 193ms
+stderr | tests/e2e/conversation-flow.e2e.test.ts
+[D592] server 未启动（http://localhost:3099 探活失败）——请经 docs/synova/product-lines/evidence/D592-run-e2e.sh 运行；本段用例将显式 skip
+
+ ✓ tests/e2e/conversation-flow.e2e.test.ts (8 tests | 8 skipped) 40ms
+{"level":30,"time":1791267227313,"pid":85312,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-store","proposalId":"10fdccff-82f0-475f-b01b-b426a650642d","title":"哇呢宝贝综合诊断","msg":"Proposal 已创建"}
+{"level":30,"time":1791267227314,"pid":85312,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"0f677dcf-eb94-4921-b43e-0383d063cc4b","title":"均衡推进: 哇呢宝贝综合诊断","msg":"Goal 已创建"}
+{"level":30,"time":1791267227315,"pid":85312,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/proposal-engine","goalId":"0f677dcf-eb94-4921-b43e-0383d063cc4b","proposalId":"10fdccff-82f0-475f-b01b-b426a650642d","msg":"从 Proposal 生成 Goal"}
+{"level":30,"time":1791267227315,"pid":85312,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-store","goalId":"2c482f8e-4518-4596-b452-478ef519a1f8","title":"提升利润率","msg":"Goal 已创建"}
+ ✓ tests/e2e/full-pipeline.integration.test.ts (10 tests) 323ms
+{"level":40,"time":1791267227360,"pid":85316,"hostname":"192.168.1.8","name":"synova-agent","service":"ingest","err":{},"msg":"数据库未初始化 — 执行懒初始化"}
+ ✓ tests/e2e/customer-flow.e2e.test.ts (5 tests) 35ms
+{"level":30,"time":1791267227361,"pid":85316,"hostname":"192.168.1.8","name":"synova-agent","service":"services/config-file","path":"/Users/wane/SynovaAgent/.synova-wt-tests/synova.json","msg":"配置文件加载成功"}
+{"level":30,"time":1791267227362,"pid":85316,"hostname":"192.168.1.8","name":"synova-agent","service":"config","port":18790,"source":"synova.json","msg":"使用文件配置"}
+{"level":30,"time":1791267227362,"pid":85316,"hostname":"192.168.1.8","name":"synova-agent","service":"services/config-recovery","path":"/Users/wane/SynovaAgent/.synova-wt-tests/synova.json","size":693,"msg":"配置校验通过"}
+{"level":30,"time":1791267227362,"pid":85316,"hostname":"192.168.1.8","name":"synova-agent","service":"config","port":3099,"devMode":true,"dbPath":":memory:","model":"deepseek-v4-flash","llmConfigured":false,"msg":"配置加载完成"}
+{"level":30,"time":1791267227370,"pid":85316,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791267227370,"pid":85316,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791267227370,"pid":85316,"hostname":"192.168.1.8","name":"synova-agent","service":"init/engine-context","path":":memory:","msg":"SQLite 数据库已打开"}
+{"level":30,"time":1791267227370,"pid":85316,"hostname":"192.168.1.8","name":"synova-agent","service":"init/engine-context","msg":"EngineContext 注入完成 (SQLite 持久化存储模式)"}
+{"level":40,"time":1791267227382,"pid":85316,"hostname":"192.168.1.8","name":"synova-agent","service":"adapters/sqlite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791267227385,"pid":85316,"hostname":"192.168.1.8","name":"synova-agent","service":"ingest","filePath":"/Users/wane/SynovaAgent/.synova-wt-tests/docs/INDEX.md","orgId":"test-org","entities":50,"docId":"doc_muwa9aeu","msg":"文件已录入本体"}
+{"level":30,"time":1791267227385,"pid":85316,"hostname":"192.168.1.8","name":"synova-agent","service":"test:ingest","filePath":"/Users/wane/SynovaAgent/.synova-wt-tests/docs/INDEX.md","fileType":"txt","entityCount":50,"relationCount":10,"summary":"# Docs Index — 2026-06-14\n\n## 核心文档\n- [SYNOVA-MASTER-全量对齐手册-20260610.html](SYNOVA-MASTER-全量对齐手册-20260610.html) — **Synova 全量对齐手册（内部唯一真相源）**：产品·理论·架构·工程，21 章全量覆盖\n- [research/RESEARCH-REPORT-人+Agent混合组织能力模型-20260610.html](research/RESEARCH-REPORT-人+Agent混合组织能力模型-20260610.html) — 28篇文献，六维理论框架v0.1\n- [research/TECH-PLAN-六维混合组织能力模型工程实现方案-20260610.html](research/TECH-PLAN-六维混合组织能力模型工程实现方案-20260610.html) — 端到端数据链，4个Collector，6个测量器\n\n## 哨兵系统 (2026-06-14 更新: 23哨兵)\n- [SENTINEL-PANORAMA.md](SENTINEL-PANORAMA.","sogCreated":true,"degraded":false,"msg":"INDEX.md 摄入结果"}
+{"level":30,"time":1791267227385,"pid":85316,"hostname":"192.168.1.8","name":"synova-agent","service":"test:ingest","fileType":"txt","contentLen":500,"entities":50,"relations":10,"sogCreated":true,"degraded":false,"msg":"INDEX.md 摄入结果"}
+{"level":40,"time":1791267227387,"pid":85316,"hostname":"192.168.1.8","name":"synova-agent","service":"adapters/sqlite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791267227389,"pid":85316,"hostname":"192.168.1.8","name":"synova-agent","service":"ingest","filePath":"/Users/wane/SynovaAgent/.synova-wt-tests/docs/07-TEST-STRATEGY-20260605.md","orgId":"test-org","entities":50,"docId":"doc_muwa9aez","msg":"文件已录入本体"}
+{"level":30,"time":1791267227389,"pid":85316,"hostname":"192.168.1.8","name":"synova-agent","service":"test:ingest","filePath":"/Users/wane/SynovaAgent/.synova-wt-tests/docs/07-TEST-STRATEGY-20260605.md","fileType":"txt","entityCount":50,"relationCount":10,"summary":"# Synova 全维度测试方案\n\n> 设计目标：从历史 47+ 次事故中提取教训，建立\"任何代码开发都能被测试捕获\"的顶级测试体系。\n> 历史错误溯源：25 条铁律、4 次接线失败、6 次跨层违例、15 次空 catch、3 次 API Key 泄漏、2 次端口冲突。\n\n---\n\n## 一、测试金字塔（五层）\n\n```\n         ╱╲\n        ╱  ╲          E2E 用户旅程测试\n       ╱    ╲         ─────────────────\n      ╱      ╲       集成接线测试 (Wire Check)\n     ╱        ╲      ─────────────────\n    ╱          ╲     API 契约测试 + Architecture Lint\n   ╱            ╲   ─────────────────\n  ╱              ╲  单元测试 + 模块间契约测试\n ╱╲              ╲ ─────────────────\n╱╲╲          ","sogCreated":true,"degraded":false,"msg":"TEST-STRATEGY 摄入结果"}
+{"level":30,"time":1791267227389,"pid":85316,"hostname":"192.168.1.8","name":"synova-agent","service":"test:ingest","entityCount":50,"sogCreated":true,"degraded":false,"msg":"TEST-STRATEGY"}
+{"level":40,"time":1791267227390,"pid":85316,"hostname":"192.168.1.8","name":"synova-agent","service":"adapters/sqlite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791267227392,"pid":85316,"hostname":"192.168.1.8","name":"synova-agent","service":"ingest","filePath":"/Users/wane/SynovaAgent/.synova-wt-tests/docs/SYNOVA-ROADMAP.html","orgId":"test-org","entities":50,"docId":"doc_muwa9af2","msg":"文件已录入本体"}
+{"level":30,"time":1791267227392,"pid":85316,"hostname":"192.168.1.8","name":"synova-agent","service":"test:ingest","filePath":"/Users/wane/SynovaAgent/.synova-wt-tests/docs/SYNOVA-ROADMAP.html","fileType":"unknown","entityCount":50,"relationCount":10,"summary":"<!DOCTYPE html>\n<html lang=\"zh-CN\">\n<head><meta charset=\"UTF-8\"><title>Synova 战略迭代路线</title>\n<style>\n:root{--bg:#0b0b12;--card:#12121c;--border:#2a2a3a;--text:#e0e0e0;--dim:#888;--accent:#6c5ce7;--green:#2ecc71;--orange:#f39c12;--red:#e74c3c}\n*{box-sizing:border-box;margin:0;padding:0}\nbody{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.7;padding:40px;max-width:1000px;margin:0 auto}\nh1{font-size","sogCreated":true,"degraded":false,"msg":"DEVELOPMENT-PLAN 摄入结果"}
+{"level":30,"time":1791267227392,"pid":85316,"hostname":"192.168.1.8","name":"synova-agent","service":"test:ingest","fileType":"unknown","summaryLen":500,"msg":"HTML 解析验证"}
+{"level":40,"time":1791267227393,"pid":85316,"hostname":"192.168.1.8","name":"synova-agent","service":"knowledge-ingest","err":{"errno":-2,"code":"ENOENT","syscall":"open","path":"/tmp/nonexistent-file.pdf"},"filePath":"/tmp/nonexistent-file.pdf","msg":"文件读取失败"}
+ ✓ tests/data-pipeline.ingest.integration.test.ts (4 tests) 172ms
+{"level":30,"time":1791267227425,"pid":85328,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/ontology-loader","nodes":29,"edges":55,"msg":"本体类型加载完成"}
+ ✓ tests/l4/ontology-loader.test.ts (8 tests) 9ms
+{"level":40,"time":1791267227441,"pid":85326,"hostname":"192.168.1.8","name":"synova-agent","service":"test:data-pipeline","FEISHU_APP_ID":"missing","FEISHU_APP_SECRET":"missing","msg":"FEISHU_* env 未设置, 飞书测试将跳过"}
+ ✓ tests/e2e/p0-wane-baby.test.ts (9 tests) 3ms
+{"level":30,"time":1791267227489,"pid":85329,"hostname":"192.168.1.8","name":"synova-agent","service":"l2/proposal-manager","id":"prop_muwa9ahr_fdpw","type":"alert_create","msg":"提议已创建 (SQLite)"}
+{"level":30,"time":1791267227490,"pid":85329,"hostname":"192.168.1.8","name":"synova-agent","service":"l2/proposal-manager","id":"prop_muwa9ahr_fdpw","action":"confirm","msg":"提议已处理"}
+{"level":30,"time":1791267227491,"pid":85329,"hostname":"192.168.1.8","name":"synova-agent","service":"l2/proposal-manager","id":"prop_muwa9ahv_tjzh","type":"alert_create","msg":"提议已创建 (SQLite)"}
+{"level":30,"time":1791267227491,"pid":85329,"hostname":"192.168.1.8","name":"synova-agent","service":"l2/proposal-manager","id":"prop_muwa9ahv_tjzh","action":"reject","msg":"提议已处理"}
+{"level":30,"time":1791267227491,"pid":85329,"hostname":"192.168.1.8","name":"synova-agent","service":"l2/proposal-manager","id":"prop_muwa9ahv_mjf6","type":"goal_update","msg":"提议已创建 (SQLite)"}
+{"level":30,"time":1791267227491,"pid":85329,"hostname":"192.168.1.8","name":"synova-agent","service":"l2/proposal-manager","id":"prop_muwa9ahv_mjf6","action":"opinion","msg":"提议已处理"}
+{"level":30,"time":1791267227492,"pid":85329,"hostname":"192.168.1.8","name":"synova-agent","service":"l2/proposal-manager","id":"prop_muwa9ahw_9s1n","type":"obstacle_add","msg":"提议已创建 (SQLite)"}
+{"level":30,"time":1791267227492,"pid":85329,"hostname":"192.168.1.8","name":"synova-agent","service":"l2/proposal-manager","id":"prop_muwa9ahw_bqrg","type":"alert_create","msg":"提议已创建 (SQLite)"}
+{"level":30,"time":1791267227492,"pid":85329,"hostname":"192.168.1.8","name":"synova-agent","service":"l2/proposal-manager","id":"prop_muwa9ahw_fjpt","type":"goal_create","msg":"提议已创建 (SQLite)"}
+{"level":30,"time":1791267227492,"pid":85329,"hostname":"192.168.1.8","name":"synova-agent","service":"l2/proposal-manager","id":"prop_muwa9ahw_z1wo","type":"alert_create","msg":"提议已创建 (SQLite)"}
+{"level":30,"time":1791267227492,"pid":85329,"hostname":"192.168.1.8","name":"synova-agent","service":"l2/proposal-manager","id":"prop_muwa9ahw_bqrg","action":"confirm","msg":"提议已处理"}
+{"level":30,"time":1791267227492,"pid":85329,"hostname":"192.168.1.8","name":"synova-agent","service":"l2/proposal-manager","id":"prop_muwa9ahw_fjpt","action":"reject","msg":"提议已处理"}
+{"level":30,"time":1791267227492,"pid":85329,"hostname":"192.168.1.8","name":"synova-agent","service":"l2/proposal-manager","id":"prop_muwa9ahw_z1wo","action":"opinion","msg":"提议已处理"}
+ ✓ tests/e2e/proposal-flow-e2e.test.ts (5 tests) 10ms
+ ✓ tests/e2e/checkpoint-e2e.test.ts (4 tests) 4ms
+ ✓ tests/data-pipeline.feishu.integration.test.ts (3 tests | 2 skipped) 52ms
+{"level":30,"time":1791267227681,"pid":85319,"hostname":"192.168.1.8","name":"synova-agent","service":"agent/conversation-engine","msg":"无 DeepSeek 备用凭据 — failover 未启用（保持单 provider）"}
+{"level":30,"time":1791267227682,"pid":85319,"hostname":"192.168.1.8","name":"synova-agent","service":"orchestrator/context-engine","strategyCount":1,"activeStrategy":"context-strategy/default","msg":"ContextEngine 初始化完成"}
+{"level":30,"time":1791267227684,"pid":85319,"hostname":"192.168.1.8","name":"synova-agent","service":"contract/gate","total":0,"failures":0,"degraded":false,"msg":"契约门禁检查完成"}
+{"level":30,"time":1791267227684,"pid":85319,"hostname":"192.168.1.8","name":"synova-agent","service":"agent/diagnosis-launcher","teamId":"default","initiatorRole":"CEO","msg":"启动六阶段诊断"}
+{"level":40,"time":1791267227684,"pid":85319,"hostname":"192.168.1.8","name":"synova-agent","service":"security/safety-guardrails","missing":[1,2,3,4,5],"msg":"NRA-02: 诊断阶段未完全覆盖"}
+{"level":30,"time":1791267227685,"pid":85319,"hostname":"192.168.1.8","name":"synova-agent","service":"l3/synova-engine","teamId":"default","concerns":["组织健康状况评估"],"msg":"Phase 0: 访谈数据就绪"}
+{"level":30,"time":1791267227685,"pid":85319,"hostname":"192.168.1.8","name":"synova-agent","service":"l3/synova-engine","teamId":"default","msg":"Phase 1: 数据采集（Synova 自研引擎 — 后续接入数据源）"}
+{"level":30,"time":1791267227688,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"agent/workspace-service","msg":"WorkspaceService 已初始化"}
+{"level":30,"time":1791267227741,"pid":85319,"hostname":"192.168.1.8","name":"synova-agent","service":"l3/synova-engine","teamId":"default","contentLength":39,"msg":"Phase 2: LLM 响应就绪"}
+{"level":30,"time":1791267227741,"pid":85319,"hostname":"192.168.1.8","name":"synova-agent","service":"l3/synova-engine","teamId":"default","totalDurationMs":57,"hypotheses":0,"rootCauses":0,"msg":"诊断完成"}
+{"level":30,"time":1791267227741,"pid":85319,"hostname":"192.168.1.8","name":"synova-agent","service":"agent/diagnosis-launcher","teamId":"default","durationMs":57,"degraded":0,"msg":"诊断完成"}
+{"level":30,"time":1791267227742,"pid":85319,"hostname":"192.168.1.8","name":"synova-agent","service":"agent/conversation-engine","msg":"无 DeepSeek 备用凭据 — failover 未启用（保持单 provider）"}
+{"level":30,"time":1791267227742,"pid":85319,"hostname":"192.168.1.8","name":"synova-agent","service":"orchestrator/context-engine","strategyCount":1,"activeStrategy":"context-strategy/default","msg":"ContextEngine 初始化完成"}
+{"level":30,"time":1791267227742,"pid":85319,"hostname":"192.168.1.8","name":"synova-agent","service":"contract/gate","total":0,"failures":0,"degraded":false,"msg":"契约门禁检查完成"}
+{"level":30,"time":1791267227742,"pid":85319,"hostname":"192.168.1.8","name":"synova-agent","service":"agent/diagnosis-launcher","teamId":"default","initiatorRole":"CEO","msg":"启动六阶段诊断"}
+{"level":40,"time":1791267227742,"pid":85319,"hostname":"192.168.1.8","name":"synova-agent","service":"security/safety-guardrails","missing":[1,2,3,4,5],"msg":"NRA-02: 诊断阶段未完全覆盖"}
+{"level":30,"time":1791267227742,"pid":85319,"hostname":"192.168.1.8","name":"synova-agent","service":"agent/diagnosis-launcher","teamId":"default","durationMs":0,"degraded":1,"msg":"诊断完成"}
+ ✓ tests/e2e/diagnosis-pipeline.test.ts (2 tests) 63ms
+{"level":40,"time":1791267227747,"pid":85319,"hostname":"192.168.1.8","name":"synova-agent","service":"services/background-review","err":"Cannot read properties of undefined (reading 'length')","msg":"质量审查失败 — degraded"}
+{"level":40,"time":1791267227747,"pid":85319,"hostname":"192.168.1.8","name":"synova-agent","service":"services/background-review","err":"Cannot read properties of undefined (reading 'length')","msg":"模式提取失败 — degraded"}
+{"level":40,"time":1791267227747,"pid":85319,"hostname":"192.168.1.8","name":"synova-agent","service":"services/background-review","err":"Cannot read properties of undefined (reading 'length')","msg":"质量审查失败 — degraded"}
+{"level":40,"time":1791267227747,"pid":85319,"hostname":"192.168.1.8","name":"synova-agent","service":"services/background-review","err":"Cannot read properties of undefined (reading 'length')","msg":"模式提取失败 — degraded"}
+{"level":30,"time":1791267228287,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"services/config-file","path":"/Users/wane/SynovaAgent/.synova-wt-tests/synova.json","msg":"配置文件加载成功"}
+{"level":30,"time":1791267228287,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"config","port":18790,"source":"synova.json","msg":"使用文件配置"}
+{"level":30,"time":1791267228287,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"services/config-recovery","path":"/Users/wane/SynovaAgent/.synova-wt-tests/synova.json","size":693,"msg":"配置校验通过"}
+{"level":30,"time":1791267228288,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"config","port":0,"devMode":true,"dbPath":":memory:","model":"deepseek-v4-flash","llmConfigured":false,"msg":"配置加载完成"}
+{"level":30,"time":1791267228288,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"deploy/bootstrap","port":0,"devMode":true,"msg":"配置已加载"}
+{"level":30,"time":1791267228288,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"services/config-file","path":"/Users/wane/SynovaAgent/.synova-wt-tests/synova.json","msg":"配置文件加载成功"}
+{"level":30,"time":1791267228288,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"config","port":18790,"source":"synova.json","msg":"使用文件配置"}
+{"level":30,"time":1791267228288,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"services/config-recovery","path":"/Users/wane/SynovaAgent/.synova-wt-tests/synova.json","size":693,"msg":"配置校验通过"}
+{"level":30,"time":1791267228288,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"config","port":0,"devMode":true,"dbPath":":memory:","model":"deepseek-v4-flash","llmConfigured":false,"msg":"配置加载完成"}
+{"level":30,"time":1791267228290,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791267228291,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"store/schema-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791267228291,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"init/engine-context","path":":memory:","msg":"SQLite 数据库已打开"}
+{"level":30,"time":1791267228291,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"init/engine-context","msg":"EngineContext 注入完成 (SQLite 持久化存储模式)"}
+{"level":30,"time":1791267228291,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"deploy/bootstrap","msg":"数据库已初始化 (SQLite WAL)"}
+{"level":30,"time":1791267228291,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"services/audit-service","msg":"审计服务已初始化"}
+{"level":30,"time":1791267228291,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"deploy/bootstrap","msg":"审计服务已初始化"}
+{"level":30,"time":1791267228292,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"deploy/bootstrap","msg":"编排层已初始化 (EventBus + PhaseStateMachine + SessionManager)"}
+{"level":30,"time":1791267228292,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"deploy/bootstrap","phase":"infrastructure","durationMs":6,"msg":"Phase 0 完成"}
+{"level":40,"time":1791267228299,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"deploy/rollback","path":"/Users/wane/Library/Application Support/Synova/data/_snapshots/pre-schema-migration","msg":"快照已存在，跳过创建"}
+{"level":40,"time":1791267228304,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"adapters/sqlite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791267228307,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"deploy/bootstrap","msg":"GraphStore + OntologyEventBus 已初始化"}
+{"level":30,"time":1791267228307,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1791267228308,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+{"level":30,"time":1791267228308,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"deploy/bootstrap","msg":"AgentMemoryStore 已初始化"}
+{"level":30,"time":1791267228308,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"deploy/bootstrap","phase":"storage","durationMs":16,"msg":"Phase 1 完成"}
+{"level":30,"time":1791267228308,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 2d: CausalChainLoader — 预留接口，未实现 (D83 范围)"}
+{"level":30,"time":1791267228310,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/loader","count":45,"errors":0,"msg":"哨兵加载完成"}
+{"level":30,"time":1791267228316,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-agent-deployment-maturity","name":"T7 Agent部署成熟度","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228320,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-ai-ecosystem-fit","name":"T6 AI软件生态匹配度","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228323,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-ai-investment-return","name":"T8 AI投入产出比","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228330,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-api-coverage","name":"API可达性与协议覆盖","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228334,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-business-model-coherence","name":"商业模式一致性","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228354,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-capital-health","name":"资本健康","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228369,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"l4/ontology-loader","nodes":29,"edges":55,"msg":"本体类型加载完成"}
+{"level":40,"time":1791267228369,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/loader","sentinel":"cash-runway","nodeType":"Financial","msg":"哨兵依赖的节点类型在本体中不存在 — degraded"}
+{"level":30,"time":1791267228369,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-cash-runway","name":"现金流哨兵","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228374,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-channel-capacity","name":"O6","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228376,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-competitive-moat","name":"竞争护城河","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228378,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-competitive-position","name":"竞争定位","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228385,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-customer-demand-shift","name":"客户需求迁移","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228391,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-data-health","name":"数据健康度","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228396,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-environment-rent-dependency","name":"环境红利依赖性","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228400,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-explore-exploit-balance","name":"O1","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228402,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-financing-constraint","name":"融资约束指数","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228409,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-growth-quality","name":"增长质量指数","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228413,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-human-agent-boundary","name":"T9 人Agent混合边界效率","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228418,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-incentive-alignment","name":"O3","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228423,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-info-distortion","name":"O7","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228427,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-internal-transaction-cost","name":"内部交易成本增长率","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1791267228432,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/loader","sentinel":"key-person-risk","nodeType":"Financial","msg":"哨兵依赖的节点类型在本体中不存在 — degraded"}
+{"level":30,"time":1791267228432,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-key-person-risk","name":"关键人风险哨兵","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228438,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-knowledge-accessibility","name":"O4","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228441,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-make-or-buy","name":"自制外购决策健康度","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1791267228460,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/loader","sentinel":"margin-health","nodeType":"Financial","msg":"哨兵依赖的节点类型在本体中不存在 — degraded"}
+{"level":30,"time":1791267228460,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-margin-health","name":"利润健康","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228464,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-moat-dependency","name":"护城河依赖度","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228468,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-network-power","name":"网络权力指数","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228472,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-niche-breadth","name":"生态位宽度与深度","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228478,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-niche-squeeze","name":"生态位挤压指数","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228483,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-opportunity-window","name":"结构性机会窗口","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228486,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-org-repairability","name":"O8","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228491,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-path-dependency","name":"路径依赖 (Path Dependency)","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228495,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-power-rigidity","name":"O9","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228499,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-process-ai-readiness","name":"T5 流程AI化就绪度","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228505,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-resource-misallocation","name":"S3","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1791267228510,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/loader","sentinel":"revenue-health","nodeType":"Financial","msg":"哨兵依赖的节点类型在本体中不存在 — degraded"}
+{"level":30,"time":1791267228510,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-revenue-health","name":"收入健康哨兵","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228516,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-routine-diffusion","name":"O5","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228520,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-routine-mutation","name":"O2","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228522,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-sentinel-forecast-accuracy","name":"预测精度哨兵","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228524,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-sentinel-pricing-strategy","name":"定价策略哨兵","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228533,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-software-health","name":"软件资产健康度","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228538,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-strategy-capability-fit","name":"S1","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228543,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-talent-density","name":"O10","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228546,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-time-penetration","name":"时间穿透力","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228560,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-unit-economics","name":"单位经济可持续性","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228563,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-value-capture","name":"价值捕获效率","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1791267228564,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"sentinel/loader","registered":45,"errors":0,"msg":"文件驱动哨兵已注册"}
+{"level":30,"time":1791267228564,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"deploy/bootstrap","sentinels":45,"registered":45,"msg":"Phase 2a: SentinelLoader 完成"}
+{"level":30,"time":1791267228570,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"skill/loader","count":41,"errors":0,"msg":"Skill 加载完成"}
+{"level":30,"time":1791267228572,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"skill/loader","registered":41,"errors":0,"msg":"文件驱动 Skill 已注册"}
+{"level":30,"time":1791267228572,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"deploy/bootstrap","skills":41,"registered":41,"msg":"Phase 2b: SkillLoader 完成"}
+{"level":30,"time":1791267228582,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"playbook/loader","count":21,"errors":0,"msg":"Playbook 加载完成"}
+{"level":30,"time":1791267228584,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"playbook/loader","registered":21,"errors":0,"msg":"Playbook 已注册"}
+{"level":30,"time":1791267228584,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"deploy/bootstrap","playbooks":21,"registered":21,"msg":"Phase 2c: PlaybookLoader 完成"}
+{"level":40,"time":1791267228610,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"cron/scheduler","msg":"ALTER TABLE trigger_type 已存在或失败 — 跳过"}
+{"level":40,"time":1791267228610,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"cron/scheduler","msg":"ALTER TABLE event_types 已存在或失败 — 跳过"}
+{"level":40,"time":1791267228610,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"cron/scheduler","msg":"ALTER TABLE last_event_at 已存在或失败 — 跳过"}
+{"level":30,"time":1791267228613,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/loop-scheduler","msg":"[D9] loop-4-self-check 已注册 (0 0 * * *)"}
+{"level":30,"time":1791267228617,"pid":85332,"hostname":"192.168.1.8","name":"synova-agent","service":"loops/loop-scheduler","msg":"[D9] loop-5-knowledge 已注册 (0 0 * * 0)"}
+
+  #  /Users/wane/.nvm/versions/node/v24.19.0/bin/node[85332]: void node::RemoveEnvironmentCleanupHook(Isolate *, CleanupHook, void *) at ../src/api/hooks.cc:142
+  #  Assertion failed: (env) != nullptr
+
+----- Native stack trace -----
+
+ 1: 0x1041d5594 node::Assert(node::AssertionInfo const&) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+ 2: 0x1063bc318 node::RemoveEnvironmentCleanupHook(v8::Isolate*, void (*)(void*), void*) (.cold.1) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+ 3: 0x1040bf200 node::AddEnvironmentCleanupHookInternal(v8::Isolate*, void (*)(void*, void (*)(void*), void*), void*) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+ 4: 0x138267af8 Statement::~Statement() [/Users/wane/SynovaAgent/node_modules/better-sqlite3/build/Release/better_sqlite3.node]
+ 5: 0x138267b80 Statement::~Statement() [/Users/wane/SynovaAgent/node_modules/better-sqlite3/build/Release/better_sqlite3.node]
+ 6: 0x104639b44 v8::internal::GlobalHandles::InvokeFirstPassWeakCallbacks() [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+ 7: 0x1046b0f40 v8::internal::Heap::PerformGarbageCollection(v8::internal::GarbageCollector, v8::internal::GarbageCollectionReason, char const*) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+ 8: 0x1046c380c v8::internal::Heap::CollectGarbage(v8::internal::AllocationSpace, v8::internal::GarbageCollectionReason, v8::GCCallbackFlags)::$_1::operator()() const [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+ 9: 0x1046c3350 void heap::base::Stack::SetMarkerAndCallbackImpl<v8::internal::Heap::CollectGarbage(v8::internal::AllocationSpace, v8::internal::GarbageCollectionReason, v8::GCCallbackFlags)::$_1>(heap::base::Stack*, void*, void const*) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+10: 0x105077be0 PushAllRegistersAndIterateStack [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+11: 0x1046ad1b8 v8::internal::Heap::CollectGarbage(v8::internal::AllocationSpace, v8::internal::GarbageCollectionReason, v8::GCCallbackFlags) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+12: 0x1046a1ec4 v8::internal::HeapAllocator::AllocateRawWithRetryOrFailSlowPath(int, v8::internal::AllocationType, v8::internal::AllocationOrigin, v8::internal::AllocationAlignment) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+13: 0x1046835a4 v8::internal::Factory::NewFillerObject(int, v8::internal::AllocationAlignment, v8::internal::AllocationType, v8::internal::AllocationOrigin) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+14: 0x104b12d9c v8::internal::Runtime_AllocateInYoungGeneration(int, unsigned long*, v8::internal::Isolate*) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+15: 0x10516a234 Builtins_CEntry_Return1_ArgvOnStack_NoBuiltinExit [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+16: 0x10510ce90 Builtins_DatePrototypeValueOf [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+17: 0x1051bb038 Builtins_OrdinaryToPrimitive_Number_Inline [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+18: 0x1051bafb4 Builtins_OrdinaryToPrimitive_Number [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+19: 0x10510d03c Builtins_DatePrototypeToPrimitive [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+20: 0x1051baba4 Builtins_NonPrimitiveToPrimitive_Number [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+21: 0x1051b9418 Builtins_NonNumberToNumeric [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+22: 0x1051d36ac Builtins_LessThanOrEqual [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+23: 0x1281ba77c 
+24: 0x1050ccbec Builtins_InterpreterEntryTrampoline [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+25: 0x1050ccbec Builtins_InterpreterEntryTrampoline [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+26: 0x1050ccbec Builtins_InterpreterEntryTrampoline [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+27: 0x1050cd400 Builtins_InterpreterPushArgsThenFastConstructFunction [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+28: 0x10525d628 Builtins_ConstructHandler [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+29: 0x1050ccbec Builtins_InterpreterEntryTrampoline [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+30: 0x10510b7e8 Builtins_AsyncFunctionAwaitResolveClosure [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+31: 0x1051e0e58 Builtins_PromiseFulfillReactionJob [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+32: 0x1050fabd0 Builtins_RunMicrotasks [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+33: 0x1050ca7b0 Builtins_JSRunMicrotasksEntry [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+34: 0x1045f3690 v8::internal::(anonymous namespace)::Invoke(v8::internal::Isolate*, v8::internal::(anonymous namespace)::InvokeParams const&) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+35: 0x1045f3f04 v8::internal::(anonymous namespace)::InvokeWithTryCatch(v8::internal::Isolate*, v8::internal::(anonymous namespace)::InvokeParams const&) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+36: 0x1045f4040 v8::internal::Execution::TryRunMicrotasks(v8::internal::Isolate*, v8::internal::MicrotaskQueue*) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+37: 0x104622de4 v8::internal::MicrotaskQueue::RunMicrotasks(v8::internal::Isolate*) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+38: 0x104623744 v8::internal::MicrotaskQueue::PerformCheckpoint(v8::Isolate*) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+39: 0x1050ce94c Builtins_CallApiCallbackOptimizedNoProfiling [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+40: 0x12813ce90 
+41: 0x1050ca8cc Builtins_JSEntryTrampoline [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+42: 0x1050ca570 Builtins_JSEntry [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+43: 0x1045f36d8 v8::internal::(anonymous namespace)::Invoke(v8::internal::Isolate*, v8::internal::(anonymous namespace)::InvokeParams const&) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+44: 0x1045f303c v8::internal::Execution::Call(v8::internal::Isolate*, v8::internal::DirectHandle<v8::internal::Object>, v8::internal::DirectHandle<v8::internal::Object>, v8::base::Vector<v8::internal::DirectHandle<v8::internal::Object> const>) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+45: 0x1044679c0 v8::Function::Call(v8::Isolate*, v8::Local<v8::Context>, v8::Local<v8::Value>, int, v8::Local<v8::Value>*) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+46: 0x1040b3180 node::InternalCallbackScope::Close() [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+47: 0x1040b33b0 node::InternalMakeCallback(node::Environment*, v8::Local<v8::Object>, v8::Local<v8::Object>, v8::Local<v8::Function>, int, v8::Local<v8::Value>*, node::async_context, v8::Local<v8::Value>) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+48: 0x1040cbf80 node::AsyncWrap::MakeCallback(v8::Local<v8::Function>, int, v8::Local<v8::Value>*) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+49: 0x104331e5c node::StreamBase::CallJSOnreadMethod(long, v8::Local<v8::ArrayBuffer>, unsigned long, node::StreamBase::StreamBaseJSChecks) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+50: 0x1043335f0 node::EmitToJSStreamListener::OnStreamRead(long, uv_buf_t const&) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+51: 0x104338ec0 node::LibuvStreamWrap::OnUvRead(long, uv_buf_t const*) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+52: 0x1043395f0 node::LibuvStreamWrap::ReadStart()::$_1::__invoke(uv_stream_s*, long, uv_buf_t const*) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+53: 0x1050b4434 uv__stream_io [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+54: 0x1050bbc68 uv__io_poll [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+55: 0x1050a7e9c uv_run [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+56: 0x1040b46a8 node::SpinEventLoopInternal(node::Environment*) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+57: 0x1042307d8 node::NodeMainInstance::Run() [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+58: 0x1041827e0 node::Start(int, char**) [/Users/wane/.nvm/versions/node/v24.19.0/bin/node]
+59: 0x180241d54 start [/usr/lib/dyld]
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/acceptance/zero-code-industry.test.ts > 零代码接入验收 (pizza-chain) > pizza-chain 特有节点类型被 ontology 加载
+AssertionError: expected undefined to be defined
+ ❯ tests/acceptance/zero-code-industry.test.ts:62:22
+     60|     const { ontology } = loadOntology();
+     61|     const ovenType = ontology.nodeTypes.find(n => n.label === '厨房设备');
+     62|     expect(ovenType).toBeDefined();
+       |                      ^
+     63|     expect(ovenType!.tags).toContain('food_service');
+     64|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/acceptance/zero-code-industry.test.ts > 零代码接入验收 (pizza-chain) > queryByTags 可查询 food_service 标签的类型
+AssertionError: expected 0 to be greater than or equal to 1
+ ❯ tests/acceptance/zero-code-industry.test.ts:69:26
+     67|     const { getTypesByTags } = await import('../../src/l4/ontology-loa…
+     68|     const { nodes } = getTypesByTags(['food_service']);
+     69|     expect(nodes.length).toBeGreaterThanOrEqual(1); // oven node
+       |                          ^
+     70|   });
+     71|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/acceptance/zero-code-industry.test.ts > 零代码接入验收 (pizza-chain) > 新增行业零 .ts 文件修改
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ tests/acceptance/zero-code-industry.test.ts:75:30
+     73|     const diff = execSync('git diff --name-only', { encoding: 'utf-8' …
+     74|     const tsChanges = diff.split('\n').filter(f => f.endsWith('.ts') &…
+     75|     expect(tsChanges.length).toBe(0);
+       |                              ^
+     76|   });
+     77|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: [vitest-pool]: Worker forks emitted error.
+ ❯ EventEmitter.<anonymous> ../node_modules/vitest/dist/chunks/cli-api.BfdDOPPI.js:3446:22
+ ❯ EventEmitter.emit node:events:509:28
+ ❯ ChildProcess.emitUnexpectedExit ../node_modules/vitest/dist/chunks/cli-api.BfdDOPPI.js:3013:22
+ ❯ ChildProcess.emit node:events:509:28
+ ❯ Process.ChildProcess._handle.onexit node:internal/child_process:295:12
+
+Caused by: Error: Worker exited unexpectedly
+ ❯ ChildProcess.emitUnexpectedExit ../node_modules/vitest/dist/chunks/cli-api.BfdDOPPI.js:3012:33
+ ❯ ChildProcess.emit node:events:509:28
+ ❯ Process.ChildProcess._handle.onexit node:internal/child_process:295:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  1 failed | 15 passed (17)
+      Tests  3 failed | 66 passed | 14 skipped (92)
+     Errors  1 error
+   Start at  14:13:46
+   Duration  1.89s (transform 2.17s, setup 0ms, import 2.24s, tests 1.32s, environment 2ms)
+
+[vitest-pool]: Timeout terminating forks worker for test files /Users/wane/SynovaAgent/.synova-wt-tests/tests/e2e/ima-knowledge-e2e.test.ts.

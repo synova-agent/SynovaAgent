@@ -1,0 +1,19 @@
+9010: Test Files  1 failed | 586 passed | 1 skipped (600)
+9011:      Tests  1 failed | 4477 passed | 8 skipped (4619)
+9012:     Errors  12 errors
+9014:   Duration  49.03s (transform 31.77s, setup 0ms, import 72.89s, tests 103.30s, environment 160ms)
+--- FAIL lines ---
+ FAIL  tests/l3/graphbridge-wiring.test.ts > GraphBridge → ModuleRunner.afterRun → Phase 1 > Given a failing module, When afterRun with GraphBridge, Then only successful modules create nodes
+--- worker terminations ---
+Timeout terminating forks worker for test files /Users/wane/SynovaAgent/.synova-wt-tests/tests/agent-observer/report.integration.test.ts.
+Timeout terminating forks worker for test files /Users/wane/SynovaAgent/.synova-wt-tests/tests/agent/tool-loop-tool-pairing.integration.test.ts.
+Timeout terminating forks worker for test files /Users/wane/SynovaAgent/.synova-wt-tests/tests/deploy/bootstrap.test.ts.
+Timeout terminating forks worker for test files /Users/wane/SynovaAgent/.synova-wt-tests/tests/integration/production-entry-conversation.integration.test.ts.
+Timeout terminating forks worker for test files /Users/wane/SynovaAgent/.synova-wt-tests/tests/l1/qa-router.test.ts.
+Timeout terminating forks worker for test files /Users/wane/SynovaAgent/.synova-wt-tests/tests/metrics.test.ts.
+Timeout terminating forks worker for test files /Users/wane/SynovaAgent/.synova-wt-tests/tests/routes/llm-config.test.ts.
+Timeout terminating forks worker for test files /Users/wane/SynovaAgent/.synova-wt-tests/tests/routes/middleware-order.test.ts.
+Timeout terminating forks worker for test files /Users/wane/SynovaAgent/.synova-wt-tests/tests/routes/workspace-access-write-endpoint.test.ts.
+Timeout terminating forks worker for test files /Users/wane/SynovaAgent/.synova-wt-tests/tests/sentinel/ga-manual-injection.test.ts.
+Timeout terminating forks worker for test files /Users/wane/SynovaAgent/.synova-wt-tests/tests/sessions-api.test.ts.
+Timeout terminating forks worker for test files /Users/wane/SynovaAgent/.synova-wt-tests/tests/smoke.test.ts.
