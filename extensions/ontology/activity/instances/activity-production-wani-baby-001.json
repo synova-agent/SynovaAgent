@@ -1,0 +1,59 @@
+{
+  "$schema": "https://synova.dev/schemas/ontology-instance-v1.json",
+  "instanceVersion": "activity-production-wani-baby-001",
+  "type": "activity/production",
+  "graph": "wani-baby",
+  "name": "门店零售交付",
+  "sourceRef": "data/golden/wani-baby-v1.json (sha256 f2f4cee40f982488abdab707beb125c3712969b66b63c93c20c3f8f271988bab)",
+  "_notes": [
+    "#1057 的第一个作业实例。**不是新节点类型**（宪章 P4）：type 引用既有 $id activity/production。",
+    "值来源逐字段见 _provenance：derived: = 派生自 golden 冻结数据集的具名字段；handfill: = 手填占位，待访谈核实。",
+    "本文件放 instances/ 子目录而非 activity/ 平铺层 —— loader 的 scanDir 平铺扫描不递归，实例不会被加载成第 9 个节点类型。"
+  ],
+  "_semantics": {
+    "headcount": "该作业单元投入人数（人）",
+    "hours_per_run": "单次运行占用工时（小时）",
+    "runs_per_period": "评估周期（月）内运行次数（次/月）",
+    "unit_labor_cost": "单位人工成本（元/次）",
+    "error_rate": "差错率（0-1）",
+    "structuredness": "流程结构化程度评分（0-1，越高越易 Agent 化）",
+    "error_tolerance": "容错度评分（0-1，越高越易 Agent 化）",
+    "data_reachability": "数据可得性评分（0-1，越高越易 Agent 化）",
+    "agent_readiness_score": "Agent 就绪度评分（0-1）—— 消费方为 3-6，本卡只落手填示例值，不锁死算法",
+    "agent_type_recommendation": "建议的 Agent 化形态（自由文本，待 3-6 收口枚举）"
+  },
+  "props": {
+    "name": "门店零售交付",
+    "output_type": "零售订单交付（线下门店为主 + 小程序商城）",
+    "production_mode": "线下门店(65%) + 小程序商城(25%) + 社群团购(10%)",
+    "cycle_time_hours": 24,
+    "capacity_utilization": 0.65,
+    "headcount": 10,
+    "hours_per_run": 10,
+    "runs_per_period": 30,
+    "unit_labor_cost": 88,
+    "error_rate": 0.02,
+    "structuredness": 0.55,
+    "error_tolerance": 0.35,
+    "data_reachability": 0.2,
+    "agent_readiness_score": 0.45,
+    "agent_type_recommendation": "copilot — 辅助型 Agent（商品推荐/补货建议，人工确认后放行）"
+  },
+  "_provenance": {
+    "name": "handfill: 作业单元名（门店零售交付），由 enterprise.businessModel + client.mainChannel 归纳入手",
+    "output_type": "derived: enterprise.businessModel（B2C零售 母婴用品60%+儿童服饰25%+玩具教育15%）",
+    "production_mode": "derived: client.mainChannel(线下门店65%) / secondaryChannel(小程序商城25%) / tertiaryChannel(社群团购10%)",
+    "cycle_time_hours": "handfill: 下单到交付 24h（占位，待访谈核实）",
+    "capacity_utilization": "derived(近似): client.mainChannel 线下占比 0.65 作占位（语义近似，待访谈核实）",
+    "headcount": "derived: personnel.departments.sales = 10",
+    "hours_per_run": "handfill: 门店日均营业 10 小时（占位，待访谈核实）",
+    "runs_per_period": "handfill: 每日一轮 × 30 天（占位，待访谈核实）",
+    "unit_labor_cost": "handfill: 88 元/次（占位，待访谈核实）",
+    "error_rate": "handfill: 0.02（占位，待访谈核实）",
+    "structuredness": "handfill: 0.55（占位，待访谈核实）",
+    "error_tolerance": "handfill: 0.35（占位，待访谈核实）",
+    "data_reachability": "derived(近似): edges['E-4.6'].value = 0.20（CUSTOMER_DATA_LOOP，confidence=low）—— 语义近似，待访谈核实",
+    "agent_readiness_score": "handfill: 0.45 示例值；计算口径属 3-6（agent_readiness），本卡不锁死算法",
+    "agent_type_recommendation": "handfill: copilot；枚举口径属 3-6，待收口"
+  }
+}
