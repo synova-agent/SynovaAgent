@@ -9,6 +9,7 @@
  * 输出(降级): 空数组 / 总资本=0 / 单侧资本缺失（equity 或 debt 为 0 → partial）→ degraded
  * 边界: equity=debt → creditSpread 取 0.03 档（D358 对齐: 负债 ≥ 权益即取高信用利差档）
  */
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408：输入有效性检查
 export interface WaccResult {
   wacc: number;
   costOfEquity: number;
@@ -32,6 +33,9 @@ export function computeWacc(
   financials: Array<{ equity: number; total_debt: number; tax_rate: number }>,
   params?: WaccParams,
 ): WaccResult {
+  // #1408：输入有效性检查（**显式声明本 compute 的必需字段**；缺字段/NaN/非有限 ⇒ 降级 + warnings）
+  const _inputIssues = checkFiniteInputs(financials, ['equity', 'total_debt', 'tax_rate']);
+  if (_inputIssues.length > 0) return { wacc: 0, costOfEquity: 0, costOfDebt: 0, equityWeight: 0, debtWeight: 0, degraded: true, warnings: _inputIssues };
   const warnings: string[] = [];
   const rf = params?.riskFree ?? 0.03;
   const rm = params?.marketReturn ?? 0.10;

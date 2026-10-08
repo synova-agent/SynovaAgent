@@ -12,7 +12,10 @@
  *   分母 0 → degrade，aggregate 门控 !degraded。
  * 边界: 周转天数恰好 60（warning 阈值线）→ 不降级
  */
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408：输入有效性检查
 export interface ReceivableTurnoverResult {
+  /** #1408：输入有效性等告警（缺字段/NaN/非有限 ⇒ 非空） */
+  warnings?: string[];
   turnoverRatio: number;
   daysOutstanding: number;
   totalRevenue: number;
@@ -24,6 +27,9 @@ export function computeReceivableTurnover(financials: Array<{
   total_revenue: number;
   receivables: number;
 }>): ReceivableTurnoverResult {
+  // #1408：输入有效性检查（**显式声明本 compute 的必需字段**；缺字段/NaN/非有限 ⇒ 降级 + warnings）
+  const _inputIssues = checkFiniteInputs(financials, ['total_revenue', 'receivables']);
+  if (_inputIssues.length > 0) return { turnoverRatio: 0, daysOutstanding: 0, totalRevenue: 0, avgReceivables: 0, degraded: true, warnings: _inputIssues };
   if (financials.length === 0) {
     return {
       turnoverRatio: 0, daysOutstanding: 0, totalRevenue: 0, avgReceivables: 0, degraded: true,

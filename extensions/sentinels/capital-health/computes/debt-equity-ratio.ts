@@ -10,7 +10,10 @@
  *   分母 0 → degrade，aggregate 门控 !degraded。
  * 边界: 负债显式 0 → D/E 0 且不降级（无负债企业）
  */
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408：输入有效性检查
 export interface DebtEquityResult {
+  /** #1408：输入有效性等告警（缺字段/NaN/非有限 ⇒ 非空） */
+  warnings?: string[];
   debtEquity: number;
   longTermDebtRatio: number;
   totalDebt: number;
@@ -23,6 +26,9 @@ export function computeDebtEquityRatio(financials: Array<{
   long_term_debt: number;
   equity: number;
 }>): DebtEquityResult {
+  // #1408：输入有效性检查（**显式声明本 compute 的必需字段**；缺字段/NaN/非有限 ⇒ 降级 + warnings）
+  const _inputIssues = checkFiniteInputs(financials, ['total_debt', 'equity']);
+  if (_inputIssues.length > 0) return { debtEquity: 0, longTermDebtRatio: 0, totalDebt: 0, totalEquity: 0, degraded: true, warnings: _inputIssues };
   if (financials.length === 0) {
     return {
       debtEquity: 0, longTermDebtRatio: 0, totalDebt: 0, totalEquity: 0, degraded: true,
