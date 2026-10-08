@@ -38,6 +38,7 @@
  *
  * 铁律 39（L3 洞察层 → 仅经类型与 logger 依赖 L5 语义，不 import 存储实现）/ 38（零不安全断言）
  */
+import { checkFiniteInputs } from './assert-finite-inputs';   // #1408：值有效性（共享助手）
 import type Database from 'better-sqlite3';
 import { createLogger } from '@synova/logger';
 
@@ -111,6 +112,19 @@ function hasAllR4(row: MetricReadingInput): boolean {
  * 写一行测量值。**永不抛错**（写入失败 ⇒ 返回 degraded + reason，调用方哨兵轮次不受影响）。
  */
 function recordMetricReading(db: Database.Database, row: MetricReadingInput): MetricReadingResult {
+  // #1408（CTO 裁 (A) 约束一）：值必须有限 —— 非有限（NaN/Infinity）⇒ 跳过该行（不落库）
+  //   + log.warn（含行标识）+ 计数留痕。理由：落 NaN 进库会污染标定；且这是落库侧收口
+  //   （一处守住全部写入者，含未接线的 139 个 compute）；与 compute 侧检查职责不同（语义级 vs 值级），不是第二套。
+  // #1408：复用**共享助手**（`src/sentinel/assert-finite-inputs.ts`）—— 与扩展侧 compute 同一份逻辑
+  const _valueIssues = checkFiniteInputs({ value: row.value }, ['value']);
+  if (_valueIssues.length > 0) {
+    nonFiniteSkipped++;
+    log.warn(
+      { metricId: row.metricId, orgId: row.orgId, sourceId: row.sourceId, value: String(row.value), nonFiniteSkipped },
+      `非有限值 ⇒ 跳过该行，不落库（${_valueIssues.join('; ')}；留痕：行标识 + 累计跳过数）`,
+    );
+    return { written: false, degraded: true, reason: `non-finite value: ${String(row.value)}` };
+  }
   if (row.sourceType !== undefined && !METRIC_SOURCE_TYPES.includes(row.sourceType)) {
     // 取值域外 ⇒ 不落库（表 CHECK 也会拒），显式降级 + 理由（铁律 24/31）
     log.warn({ metricId: row.metricId, sourceType: row.sourceType }, 'source_type 不在取值域 — 拒绝写入');
@@ -150,6 +164,9 @@ function recordMetricReading(db: Database.Database, row: MetricReadingInput): Me
 }
 
 /** 从 Database 造一个 sink（生产接线点用） */
+/** #1408：非有限值被跳过的累计数（仅留痕，不参与判定；便于审计“跳过多少行”） */
+let nonFiniteSkipped = 0;
+
 export function createMetricSink(db: Database.Database): MetricSink {
   return (row: MetricReadingInput) => recordMetricReading(db, row);
 }
