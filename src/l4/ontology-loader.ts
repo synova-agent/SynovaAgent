@@ -28,9 +28,24 @@ export interface EdgeTypeDef {
   allowedFrom: string[];
   allowedTo: string[];
   requiredProps?: string[];
+  /**
+   * 可选属性声明表。注意 `causal_strength` 的**权威归属就在这里**
+   * （#1031 实测 as_of 5a6591c4a：55/55 落在 `optionalProps` 内，顶层无此键）
+   * ⇒ 参数桥按 `optionalProps.causal_strength` 取源，不设顶层回退。
+   */
   optionalProps?: Record<string, unknown>;
   consumed_by_sentinels?: string[];
   description: string;
+  /**
+   * #1031 参数桥：`transfer_function` 参数槽（实测 55/55 位于顶层）。
+   * 类型为 `unknown` —— 值来自 JSON 反序列化，必须运行时做类型守卫（铁律 38：不用 any 谎报类型）。
+   */
+  transfer_function?: unknown;
+  /**
+   * #1031 参数桥：`action_effect_lag` 时滞（实测 55/55 位于顶层）。
+   * 值域收口属卡 #1134，本桥只做非空字符串原样透传。
+   */
+  action_effect_lag?: unknown;
 }
 
 export interface LoadedOntology {
@@ -141,6 +156,250 @@ export function validateEdgeEndpoints(edgeLabel: string, fromLabel: string, toLa
   return rule.from.includes(fromLabel) && rule.to.includes(toLabel);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// #1031 参数桥：类型层（EdgeTypeDef）→ 实例层（edge.props）
+//
+// 背景：本 loader 读全 55 个边类型 JSON，但历史上只取 label/allowedFrom/allowedTo
+//   三个字段（见下方 edgeEndpointMap 构建）⇒ `transfer_function` / `causal_strength` /
+//   `action_effect_lag` 停留在类型层，**到不了边实例的 props**（声明层 ↔ 实例层无桥）。
+//
+// 契约（铁律 47；全文 docs/synova/product-lines/evidence/1031-injection-contract.md）：
+//   注入点 — 读取时按 label 查类型层（不碰 createEdge / 不碰 EdgeStoreReader 实现）
+//   谁注入 — 本 loader 暴露的读取面 + 纯注入函数
+//   形状   — 同形透传（identity），不包装 / 不改名 / 不换算
+//   降级   — 非 resolved 一律 **不写入 props**（键保持不存在）+ degraded + 显式 log.warn
+//            ⇒ 与读取方（D1143 `edge.props ? edge.props[key] : undefined`）的降级行为兼容：
+//              本桥只增不减、只写真值，不写 null、不伪造结构化空对象。
+//
+// 🔴 覆盖力边界（乙案显式降档，不许当成"下游输出已改变"）：
+//   本桥覆盖「参数**落到哪**」，**不覆盖**「参数**改变下游计算**」——后者需 DirectionMonitor
+//   接入调度（第三卡）。原卡判据②（DirectionMonitor 输出必须不同）在 main 上不可执行：
+//   src/loops/direction-monitor.ts 在 main 仅 291 行，读取路径所属分支 feat/D1143-param-consumer-w2
+//   （PR #1029）未合入 main（实测 as_of 5a6591c4a）。
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * P-3 值域 —— 因果/强度参数的合法值形态。
+ *
+ * 🔴 出处声明：派单件引证的 `docs/synova/coordination/CTO-固化-II-研究院权威结论-20260924.md:93`（"G-3"）
+ * 经实测**不存在**（该目录同名家族仅 `CTO-固化-最终方向与在制任务-20260924.md`，全文 67 行，零命中）
+ * ⇒ 本值域**由卡 #1031 提出 + 待治理线/K3 确认**，不冒用 G-3 出处。
+ */
+export type ParamValue = number | { param: number } | { ref: string };
+
+/** 参数桥读取的键（顺序固定；as_of 5a6591c4a 实测 55/55 三者齐备）。 */
+export const EDGE_PARAM_KEYS = ['transfer_function', 'causal_strength', 'action_effect_lag'] as const;
+
+export type EdgeParamKey = typeof EDGE_PARAM_KEYS[number];
+
+/**
+ * 单字段解析状态（六态穷举）：
+ * - `resolved`         合法的 P-3 值（或 action_effect_lag 非空字符串）⇒ 注入
+ * - `placeholder`      占位串（TBD / to be defined …）⇒ 不注入，等标定（真值属另卡）
+ * - `declaration_only` 描述类型/值域的声明串（如 causal_strength 的 `number (0-1) — …`）⇒ 槽存在、值待标定
+ * - `prose_formula`    散文公式串（非 P-3 值域）⇒ 不注入
+ * - `absent`           类型层无此键
+ * - `malformed`        出现但不是上述任何一类（null / 数组 / 缺 param|ref 的对象 / 空串 …）
+ */
+export type EdgeParamStatus =
+  | 'resolved'
+  | 'placeholder'
+  | 'declaration_only'
+  | 'prose_formula'
+  | 'absent'
+  | 'malformed';
+
+export interface EdgeParamResolution {
+  key: EdgeParamKey;
+  status: EdgeParamStatus;
+  /** 仅 `resolved` 为 true —— 唯一允许进实例层的情况 */
+  injectable: boolean;
+  /** 仅 `injectable` 时存在 —— 将写入 `edge.props[key]` 的值（同形透传） */
+  value?: ParamValue | string;
+  /** 类型层原值，原样保留（永不丢失，供审计/标定） */
+  raw?: unknown;
+  /** 声明串 / 占位串 / 散文原文 —— 标定靶与降级诊断用 */
+  declaredAs?: string;
+  /** 人可读判定理由（审计可核） */
+  reason: string;
+}
+
+export interface EdgeTypeParams {
+  label: string;
+  /** 恒 3 条，顺序 = EDGE_PARAM_KEYS（缺字段也报 absent，不漏项） */
+  params: EdgeParamResolution[];
+  /** 仅 resolved 的键值对 —— 可直接并入 edge.props */
+  props: Record<string, unknown>;
+  degraded: boolean;
+  /** 未解析项逐条点名（`<label>.<key>: <status> — <reason>`） */
+  issues: string[];
+}
+
+/** 占位族：命中即 `placeholder`（大小写与空白归一后判定） */
+const PLACEHOLDER_RE = /\b(tbd|to be defined|todo|pending|n\/a)\b/i;
+
+/** 声明族：串首为类型关键字 ⇒ 描述的是「类型/值域」而非「值」 */
+const DECLARATION_RE = /^(number|string|boolean|integer|object|array)\b/i;
+
+/** P-3 值域运行时类型守卫（不谎报类型：JSON 反序列化结果一律先过守卫） */
+function isValidParamValue(raw: unknown): raw is ParamValue {
+  if (typeof raw === 'number') return Number.isFinite(raw);
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return false;
+  const obj = raw as Record<string, unknown>;
+  const hasParam = 'param' in obj;
+  const hasRef = 'ref' in obj;
+  // 两者都有 = 歧义形态；两者都无 = 既非形参也非引用 ⇒ 都不是 P-3 值域
+  if (hasParam === hasRef) return false;
+  if (hasParam) {
+    const v = obj.param;
+    return typeof v === 'number' && Number.isFinite(v);
+  }
+  const v = obj.ref;
+  return typeof v === 'string' && v.trim().length > 0;
+}
+
+/**
+ * 按字段的**实测归属位置**取原值 —— 三个字段归属不同，不可用一条通用逻辑糊过去：
+ * `transfer_function` / `action_effect_lag` 在顶层；`causal_strength` 在 `optionalProps` 内。
+ */
+function readRawParam(def: EdgeTypeDef, key: EdgeParamKey): unknown {
+  if (key === 'transfer_function') return def.transfer_function;
+  if (key === 'action_effect_lag') return def.action_effect_lag;
+  const op = def.optionalProps;
+  return op ? op.causal_strength : undefined;
+}
+
+/** 单字段解析（纯函数：无 IO / 无时钟 / 无随机） */
+function resolveParam(def: EdgeTypeDef, key: EdgeParamKey): EdgeParamResolution {
+  const raw = readRawParam(def, key);
+
+  if (raw === undefined) {
+    return { key, status: 'absent', injectable: false, reason: '类型层无此字段（键不存在）' };
+  }
+
+  // action_effect_lag —— 时滞枚举，非空字符串即合法（值域收口属 #1134，本桥不裁定）
+  if (key === 'action_effect_lag') {
+    if (typeof raw === 'string' && raw.trim().length > 0) {
+      return {
+        key, status: 'resolved', injectable: true, value: raw, raw,
+        reason: '时滞枚举：非空字符串原样透传（值域收口属 #1134）',
+      };
+    }
+    return { key, status: 'malformed', injectable: false, raw, reason: '时滞须为非空字符串' };
+  }
+
+  // transfer_function / causal_strength —— P-3 值域
+  if (isValidParamValue(raw)) {
+    return {
+      key, status: 'resolved', injectable: true, value: raw, raw,
+      reason: 'P-3 值域：number | {param:number} | {ref:string}',
+    };
+  }
+
+  if (typeof raw === 'string') {
+    const text = raw.trim();
+    if (text.length === 0) {
+      return { key, status: 'malformed', injectable: false, raw: text, reason: '空字符串' };
+    }
+    if (PLACEHOLDER_RE.test(text)) {
+      return {
+        key, status: 'placeholder', injectable: false, raw: text, declaredAs: text,
+        reason: '占位串：待标定替换为 P-3 值域（真值属另卡，本桥不伪造）',
+      };
+    }
+    if (DECLARATION_RE.test(text)) {
+      return {
+        key, status: 'declaration_only', injectable: false, raw: text, declaredAs: text,
+        reason: '声明串：描述类型/值域而非值（槽存在、值待标定）',
+      };
+    }
+    return {
+      key, status: 'prose_formula', injectable: false, raw: text, declaredAs: text,
+      reason: '散文字符串：非 P-3 值域，不可注入（规范化待治理线裁定）',
+    };
+  }
+
+  return {
+    key, status: 'malformed', injectable: false, raw,
+    reason: '非 P-3 值域（须为 number | {param:number} | {ref:string}）',
+  };
+}
+
+/**
+ * 读取面（纯）：把单个边类型定义的参数解析为「类型层 → 实例层」可注入的形态。
+ *
+ * @input  def — 单个边类型定义（来自 edge-types JSON，或测试构造的 mock）
+ * @output label / params（恒 3 条）/ props（仅 resolved）/ degraded / issues
+ * @degrade 任一字段非 resolved ⇒ `degraded:true` + `issues[]` + **一条聚合 `log.warn`**（不静默）
+ * @invariant 纯函数；不改入参；不写假值；缺字段也报 `absent`
+ */
+export function readEdgeTypeParams(def: EdgeTypeDef): EdgeTypeParams {
+  const params = EDGE_PARAM_KEYS.map(key => resolveParam(def, key));
+
+  const props: Record<string, unknown> = {};
+  const issues: string[] = [];
+  for (const p of params) {
+    if (p.injectable) props[p.key] = p.value;
+    else issues.push(`${def.label}.${p.key}: ${p.status} — ${p.reason}`);
+  }
+
+  const degraded = issues.length > 0;
+  if (degraded) {
+    log.warn(
+      { label: def.label, issues },
+      '边类型参数未解析 — 不注入实例层（degraded，非静默）',
+    );
+  }
+
+  return { label: def.label, params, props, degraded, issues };
+}
+
+/** 按 label 的结果记忆化（与 `cache` 同生命周期，由 `clearOntologyCache()` 一并失效） */
+const paramCache = new Map<string, EdgeTypeParams>();
+
+/**
+ * 读取面（按 label 查类型层）—— 卡面 §步骤1 a) 选定的注入点。
+ *
+ * @input  label — 边类型 label（如 `'CONSTRAINS'`）
+ * @output 该 label 的 `EdgeTypeParams`；label 在类型层不存在 ⇒ `null`
+ * @degrade 同 `readEdgeTypeParams`；结果按 label 记忆化 ⇒ 同一 label 只告警一次
+ */
+export function getEdgeTypeParams(label: string): EdgeTypeParams | null {
+  const hit = paramCache.get(label);
+  if (hit) return hit;
+
+  const { ontology } = loadOntology();
+  const def = ontology.edgeTypes.find(e => e.label === label);
+  if (!def) return null;
+
+  const result = readEdgeTypeParams(def);
+  paramCache.set(label, result);
+  return result;
+}
+
+/**
+ * 注入面（纯）：把类型层参数并入一份既有边实例 props。
+ *
+ * @input  props — 既有边实例 props（**不被修改**）；def — 边类型定义
+ * @output `{ props: 新对象, injected: 注入的键名[], degraded, issues }`
+ * @degrade 同 `readEdgeTypeParams`；未解析字段**不写入** ⇒ 对应键保持不存在
+ *          （读取方 `edge.props ? edge.props[key] : undefined` 的降级行为因此不变）
+ * @invariant 差值只来自参数：纯函数、无时钟/无顺序/无随机，且非参数键原样保留
+ */
+export function applyEdgeTypeParams(
+  props: Record<string, unknown>,
+  def: EdgeTypeDef,
+): { props: Record<string, unknown>; injected: string[]; degraded: boolean; issues: string[] } {
+  const resolved = readEdgeTypeParams(def);
+  return {
+    props: { ...props, ...resolved.props },
+    injected: Object.keys(resolved.props),
+    degraded: resolved.degraded,
+    issues: resolved.issues,
+  };
+}
+
 export function clearOntologyCache(): void {
   cache = null;
+  paramCache.clear();
 }
