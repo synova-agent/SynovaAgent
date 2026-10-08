@@ -60,8 +60,13 @@ if [ "$_BRIEF_OURS" = "0" ] && [ -n "${BRIEF:-}" ] && [ -f "$BRIEF" ]; then
   fi
   # ③ 身份令牌命中文件名（issue 号 / D#，取自分支或提交主题）
   if [ "$_BRIEF_OURS" = "0" ]; then
-    _TOK=$(_SYNO_BR="${SYNO_ISSUE_HINT:-$(git branch --show-current 2>/dev/null || true)}"; \
-           printf '%s' "$_SYNO_BR" | grep -oE '[0-9]{1,7}' | head -1 || true)
+    # D1251a（verifier 报的残余风险）: token 取【3–7 位】数字 —— 否则 `fix/2-small` ⇒ token=2
+    #   ⇒ 任何文件名含 "2" 的 brief 都命中"本任务件" ⇒ **误严**（正是本次全仓红的病因形态）。
+    #   本仓任务号/D# 序号不会是个位数（HIST: 观测到的最小为 3 位）。
+    _SYNO_BR="${SYNO_ISSUE_HINT:-$(git branch --show-current 2>/dev/null || true)}"
+    _TOK=$(printf '%s' "$_SYNO_BR" | grep -oE '(^|[-_/])[0-9]{3,7}([-_/]|$)' | grep -oE '[0-9]{3,7}' | head -1 || true)
+    # D# 形态（分支名，如 feat/D999-…）：数字锚定会排除它（D 紧邻数字），故单列一条
+    [ -z "$_TOK" ] && _TOK=$(printf '%s' "$_SYNO_BR" | grep -oE 'D[0-9]+' | head -1 || true)
     [ -z "$_TOK" ] && _TOK=$(_SYNO_S=$(git log -1 --pretty=%s 2>/dev/null || true); \
                             printf '%s' "$_SYNO_S" | grep -oE 'D[0-9]+' | head -1 || true)
     if [ -n "$_TOK" ] && printf '%s' "$_BN" | grep -qF "$_TOK"; then _BRIEF_OURS=1; fi
