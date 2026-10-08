@@ -34,6 +34,9 @@
 #   V2 客户构建产物零 control-tower —— **口径**：零【非 src/ 依赖闭包】件
 #      🌐 BC-7 原文「control-tower 面引入 Python 依赖**且非客户功能**」⇒ 判据语义 =
 #         交付面不得含【非客户功能】件；凡被 src/ 运行期引用者按定义即客户功能承重件。
+#      🔴 口径改述（独立复核追加② 2026-10-09）：11 件实为 **10 件链路可达 + 1 件目录策略保留**
+#         （views/pipeline_health.py 无生产引用者，只靠「from views ⇒ 整个 views/ 目录」目录规则进闭包）
+#         ⇒ 不再笼统称「零非客户功能件」。
 #      判据 = 客户构建上下文幸存集合 **双向等于** src/ 闭包：
 #        方向①安全：闭包 ⊆ 幸存（少一件 ⇒ 客户镜像启动/降级路径断 ⇒ FAIL）
 #        方向②剥离：幸存 ⊆ 闭包（多一件 ⇒ 非客户功能污染交付面 ⇒ FAIL）
@@ -476,6 +479,7 @@ if [ "$EXPLAIN" -eq 1 ]; then
   echo
   echo "── V2 口径与不可达差额（判例 V-09：显式列出，不许写成已核）──"
   echo "BC-7 原文「control-tower 面引入 Python 依赖且非客户功能」⇒ 判据语义 = 交付面零【非客户功能】件。"
+  echo "口径改述（独立复核追加②）：11 件 = 10 件链路可达 + 1 件目录策略保留（views/pipeline_health.py 无生产引用者）。"
   echo "「整目录归零」不可达，因 src/ 对 scripts/control-tower/ 有 load-bearing 引用："
   echo "  src/l4/agent-memory-store.ts:20      静态 value import → enterprise-fact-store.ts（静态 import 缺件 = 启动崩）"
   echo "  src/deploy/bootstrap.ts:1125         await import      → conflict-scanner.ts（缺件 = cron 降级，不崩）"
