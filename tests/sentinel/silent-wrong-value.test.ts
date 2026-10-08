@@ -19,6 +19,7 @@ import { computeGrossMargin } from '../../extensions/sentinels/margin-health/com
 import { computeCostPerHead } from '../../extensions/sentinels/margin-health/computes/compute-cost-per-head';
 import { computeAssetTurnover } from '../../extensions/sentinels/capital-health/computes/asset-turnover';
 import { computeDebtEquityRatio } from '../../extensions/sentinels/capital-health/computes/debt-equity-ratio';
+import { computeCashRunway } from '../../extensions/sentinels/financing-constraint/computes/cash-runway';
 
 /** 本批接线集合（**声称**；由 V3 用扫描核） */
 const WIRED_THIS_BATCH = [
@@ -177,5 +178,56 @@ describe('#1408 静默错误值（批 A：margin-health 的 5 个 compute）', (
     expect(countCallLines('* checkFiniteInputs(x, [\'a\']); // JSDoc 里出现'), 'JSDoc 行不得计为调用').toBe(0);
     expect(countCallLines("import { checkFiniteInputs } from './assert-finite-inputs';"), 'import 行不得计为调用').toBe(0);
     expect(countCallLines("const _inputIssues = checkFiniteInputs(financials, ['a']);"), '真实调用计 1').toBe(1);
+  });
+
+  it('🔴 V1-c【行为·**批 C1 自己的实测样例**】cash-runway / kz-index：NaN、缺字段 ⇒ degraded + warnings', () => {
+    const nan = computeCashRunway([{ cash: Number.NaN, operatingExpense: 100 }]);
+    expect(nan.degraded, 'NaN ⇒ 必须降级').toBe(true);
+    expect(nan.warnings.join(' '), 'NaN ⇒ 必须留痕').toContain('非有限数');
+    const missing = computeCashRunway([{ cash: 100 } as unknown as { cash: number; operatingExpense: number }]);
+    expect(missing.degraded, '缺字段 ⇒ 必须降级').toBe(true);
+    expect(missing.warnings.join(' ')).toContain('缺字段');
+  });
+
+  it('V2-c【行为】批 C1 正常入参 ⇒ **不得误报**（cash-runway 有值 ⇒ 不降级）', () => {
+    const ok = computeCashRunway([{ cash: 1200, operatingExpense: 100 }]);
+    expect(ok.degraded, '正常入参 ⇒ 不得降级').toBe(false);
+    expect(ok.warnings.filter(w => w.includes('缺字段') || w.includes('非有限数'))).toEqual([]);
+  });
+
+  it('V3-c【形态扫描·**只证明形态**】批 C1 覆盖率：已调用集合 == 声称的 6 个（扫调用、排注释、排 import）', () => {
+    const dirs = [
+      'extensions/sentinels/financing-constraint/computes', 'extensions/sentinels/growth-quality/computes',
+      'extensions/sentinels/value-capture/computes', 'extensions/sentinels/environment-rent-dependency/computes',
+    ];
+    const called: string[] = [];
+    for (const d of dirs) {
+      for (const f of readdirSync(d).filter(x => x.endsWith('.ts') && !x.endsWith('.test.ts'))) {
+        if (countCallLines(readFileSync(join(d, f), 'utf-8')) > 0) called.push(f);
+      }
+    }
+    expect(new Set(called), '批 C1 已调用集合应恰为 6 个').toEqual(new Set([
+      'cash-runway.ts', 'kz-index.ts', 'cash-conversion-rate.ts', 'organic-growth-pct.ts',
+      'value-capture-score.ts', 'rent-dependency-index.ts',
+    ]));
+  });
+
+  it('🔴 V4-c【行为·端到端】growth-quality 产出 ≥1 行且值均为有限数', async () => {
+    const db = new Database(':memory:');
+    const store = new SqliteGraphStore(db);
+    store.createNode('resource/money', {
+      orgId: 'org-1408c', total_revenue: 1000, revenue: 1000, previousRevenue: 800, acquisitionRevenue: 50,
+      gross_margin: 400, cogs: 600, cost: 600, total_cost: 600, netProfit: 120, netIncome: 120,
+      operating_cashflow: 150, operatingCashFlow: 150, operating_expense: 200, operatingExpense: 200,
+      total_debt: 300, totalDebt: 300, equity: 500, cash: 120, netPpe: 200, total_assets: 800,
+    });
+    const sink = createMetricSink(db);
+    const s = getSentinelRegistry().get('sentinel-growth-quality');
+    expect(s, 'growth-quality 应在注册表').toBeTruthy();
+    const res = await s!.check({ db: store, metricSink: sink, teamId: 'org-1408c', now: new Date('2026-10-08T00:00:00Z') });
+    expect(res.ok).toBe(true);
+    const rows = db.prepare('SELECT metric_id, value FROM metric_readings').all() as Array<{ metric_id: string; value: number }>;
+    expect(rows.length, '应产出 ≥1 行').toBeGreaterThan(0);
+    for (const r of rows) expect(Number.isFinite(r.value), `${r.metric_id} 必须为有限数`).toBe(true);
   });
 });

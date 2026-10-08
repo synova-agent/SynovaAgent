@@ -1,5 +1,9 @@
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408：输入有效性检查
 export interface CaptureResult { captureIndex: number; grossMargin: number; profitRetention: number; signals: string[]; degraded: boolean; }
 export function computeValueCaptureScore(financials: Array<{ revenue: number; cost: number; netProfit: number; previousRevenue: number }>): CaptureResult {
+  // #1408：输入有效性检查（本 compute 自己声明必需字段）
+  const _inputIssues = checkFiniteInputs(financials, ['revenue', 'cost', 'netProfit', 'previousRevenue']);
+  if (_inputIssues.length > 0) return { ...{ captureIndex: 0, grossMargin: 0, profitRetention: 0, signals: ['无数据'], degraded: true }, signals: _inputIssues };
   if (financials.length === 0) return { captureIndex: 0, grossMargin: 0, profitRetention: 0, signals: ['无数据'], degraded: true };
   const totalRev = financials.reduce((s, f) => s + f.revenue, 0);
   const totalCost = financials.reduce((s, f) => s + f.cost, 0);

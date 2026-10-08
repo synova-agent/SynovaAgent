@@ -12,11 +12,13 @@
  *   @not-here 检查的**覆盖面**由"调用点扫描"判（见 `tests/sentinel/silent-wrong-value.test.ts` V3）——
  *             **清单不手写（会漂）；声明必须手写（只有本人知道）**
  */
-export function checkFiniteInputs(
-  input: Record<string, unknown> | Array<Record<string, unknown>>,
+export function checkFiniteInputs<T extends object>(
+  input: T | ReadonlyArray<T>,
   fields: readonly string[],
 ): string[] {
-  const rows: Array<Record<string, unknown>> = Array.isArray(input) ? input : [input];
+  // 泛型化（#1408 批 C）：接受**任意对象/对象数组**（含 interface 类型 —— 它们没有隐式索引签名）
+  //   内部**单点窄化**为 `Record<string, unknown>`（普通 `as`，非 `as unknown as`）
+  const rows = (Array.isArray(input) ? input : [input]) as ReadonlyArray<Record<string, unknown>>;
   const issues: string[] = [];
   // #1408：**空数组不在此处报** —— 交回各 compute 自己的"无数据"守卫（**不改既有降级语义/消息**）
   if (rows.length === 0) return issues;
@@ -28,7 +30,7 @@ export function checkFiniteInputs(
       continue;
     }
     for (const f of fields) {
-      const v = (row as Record<string, unknown>)[f];
+      const v = row[f];
       if (v === undefined || v === null) {
         issues.push(`缺字段: ${where}${f}`);
         continue;

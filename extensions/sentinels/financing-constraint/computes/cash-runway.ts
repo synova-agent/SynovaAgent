@@ -7,6 +7,7 @@
  * 阈值: <6月严重 | 6-12月预警 | >12月健康
  * 本体映射: Financial::cash, Financial::operatingExpense(时序)
  */
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408：输入有效性检查
 export interface CashRunwayResult {
   runwayMonths: number;
   monthlyBurn: number;
@@ -18,6 +19,9 @@ export interface CashRunwayResult {
 export function computeCashRunway(
   financials: Array<{ cash: number; operatingExpense: number }>,
 ): CashRunwayResult {
+  // #1408：输入有效性检查（本 compute 自己声明必需字段）
+  const _inputIssues = checkFiniteInputs(financials, ['cash', 'operatingExpense']);
+  if (_inputIssues.length > 0) return { runwayMonths: 0, monthlyBurn: 0, signal: 'critical', degraded: true, warnings: _inputIssues };
   const warnings: string[] = [];
 
   if (financials.length === 0) {

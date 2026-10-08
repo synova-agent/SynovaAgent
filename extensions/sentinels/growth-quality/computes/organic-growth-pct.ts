@@ -4,7 +4,10 @@
  * 营收增长中剔除并购/汇率等因素后的有机增长比例。
  * 低有机增长 = 增长依赖外部收购而非内生能力。
  */
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408：输入有效性检查
 export interface OrganicGrowthResult {
+  /** #1408：输入有效性等告警 */
+  warnings?: string[];
   organicPct: number;
   totalGrowth: number;
   organicGrowth: number;
@@ -16,6 +19,9 @@ export function computeOrganicGrowthPct(financials: Array<{
   previousRevenue: number;
   acquisitionRevenue: number;
 }>): OrganicGrowthResult {
+  // #1408：输入有效性检查（本 compute 自己声明必需字段）
+  const _inputIssues = checkFiniteInputs(financials, ['revenue', 'previousRevenue', 'acquisitionRevenue']);
+  if (_inputIssues.length > 0) return { ...{ organicPct: 0.5, totalGrowth: 0, organicGrowth: 0, degraded: true }, warnings: _inputIssues };
   if (financials.length < 2) {
     return { organicPct: 0.5, totalGrowth: 0, organicGrowth: 0, degraded: true };
   }
