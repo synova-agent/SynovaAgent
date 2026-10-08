@@ -1,1 +1,24 @@
-{"$id":"resource/person","label":"PERSON","tags":["resource","human","core"],"requiredProps":["name"],"optionalProps":{"email":"string","role":"string","skills":"string","domains":"array","teamId":"string","competency_vector":"string","tenure_months":"number","is_key_person":"boolean"},"description":"人力资源。组织内的个人，包含技能向量和关键人标记。"}
+{
+  "$id": "resource/person",
+  "label": "PERSON",
+  "tags": [
+    "resource",
+    "human",
+    "core"
+  ],
+  "requiredProps": [
+    "name"
+  ],
+  "optionalProps": {
+    "email": "string",
+    "role": "string",
+    "skills": "string",
+    "domains": "array",
+    "teamId": "string",
+    "competency_vector": "string",
+    "tenure_months": "number",
+    "is_key_person": "boolean"
+  },
+  "description": "人力资源。组织内的个人，包含技能向量和关键人标记。",
+  "_note": "历史例外（#1398 登记）：`optionalProps.teamId` 是本 schema 内唯一的 camelCase 键。**不要为了命名一致性改它** —— `teamId` 是租户别名键（`TENANT_ALIAS_KEYS`，见 #1374 键归一化 / #1375 B1 覆盖面），改动会牵连租户过滤面（收益=命名一致，代价=动租户）。"
+}

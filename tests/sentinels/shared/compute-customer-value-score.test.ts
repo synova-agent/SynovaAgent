@@ -3,18 +3,18 @@ import { computeCustomerValueScore } from '../../../extensions/sentinels/shared/
 
 describe('computeCustomerValueScore', () => {
   it('normal: high-value customer', () => {
-    const r = computeCustomerValueScore({ revenue: 500000, tenureMonths: 36, churnRisk: 0.1, referralCount: 5 });
+    const r = computeCustomerValueScore({ revenue: 500000, tenure_months: 36, churn_risk: 0.1, referralCount: 5 });
     expect(r.degraded).toBe(false);
     expect(r.value).toBeGreaterThan(50);
   });
 
   it('degraded: invalid input', () => {
-    const r = computeCustomerValueScore({ revenue: -1, tenureMonths: 0, churnRisk: 0, referralCount: 0 });
+    const r = computeCustomerValueScore({ revenue: -1, tenure_months: 0, churn_risk: 0, referralCount: 0 });
     expect(r.degraded).toBe(true);
   });
 
   it('boundary: zero revenue', () => {
-    const r = computeCustomerValueScore({ revenue: 0, tenureMonths: 12, churnRisk: 0.5, referralCount: 0 });
+    const r = computeCustomerValueScore({ revenue: 0, tenure_months: 12, churn_risk: 0.5, referralCount: 0 });
     expect(r.degraded).toBe(false);
     expect(r.components.revenueScore).toBe(0);
   });
