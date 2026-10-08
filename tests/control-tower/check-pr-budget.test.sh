@@ -576,6 +576,69 @@ OUT="$(bash "$MT3" --diff-status "$SET5E" --decl-file "$DCL/ok5exact.md" 2>&1)";
 if echo "$OUT" | grep -q "❌ ① D1028 旁路封堵"; then fail "16.3 变异体3 仍报旁路封堵（夹具不判别）"; else pass "16.3 去掉 DENY_EXACT 判据 → 「旁路封堵」行消失（夹具变红）"; fi
 if echo "$OUT" | grep -q "死代码清理声明生效"; then pass "16.3 变异体3 误放行 DENY_EXACT（⚠️ 生效行出现）—— 证明收紧判据承重"; else fail "16.3 变异体3 未误放行"; fi
 
+
+# ═══ 17. D1172 (#1017) 同构批量豁免 —— 五条件 + 判别性（改坏即红）═══
+# 口径: 全 M ≥10 同扩展 churn 相等 ≤6 + 「## 同构批量声明」精确路径全覆盖(≥1 依据) ⇒ 豁免 ① 文件数上限
+D17="$(mktemp -d)"
+mk_iso_decl() {  # $1=列表文件数 $2=输出；逐条精确路径 + 依据
+  local n="$1" out="$2" i
+  { echo "## 同构批量声明"
+    for i in $(seq 1 "$n"); do echo "- a/iso$(printf '%02d' "$i").json — #1017 同构批量（55 文件同字段补齐同型）"; done
+  } > "$out"
+}
+mk_ds() { local n="$1" i; for i in $(seq 1 "$n"); do printf 'M\ta/iso%02d.json\n' "$i"; done; }
+mk_ns() { local n="$1" a="$2" r="$3" i; for i in $(seq 1 "$n"); do printf '%s\t%s\ta/iso%02d.json\n' "$a" "$r" "$i"; done; }
+
+DS13="$(mk_ds 13)"; NS13="$(mk_ns 13 1 1)"
+mk_iso_decl 13 "$D17/ok13.md"
+
+# 17.1 生效: 13 M 同扩展 churn=2 声明全覆盖 ⇒ exit 0（旧口径必红）
+OUT="$(bash "$TOOL" --diff-status "$DS13" --numstat "$NS13" --iso-decl-file "$D17/ok13.md" 2>&1)"; _e=$?
+if [ "$_e" = 0 ] && echo "$OUT" | grep -q "D1172 同构批量豁免生效"; then pass "17.1 13 件同构批量+声明 ⇒ 豁免生效 exit 0（#948 形态解锁）"; else fail "17.1 应豁免 exit 0 — 实际 $_e"; echo "$OUT" | sed 's/^/      | /' >&2; fi
+
+# 17.2 反例: 无声明来源（--iso-decl-file 不可读，注入缝权威不回退）⇒ 不豁免 exit 1
+OUT="$(bash "$TOOL" --diff-status "$DS13" --numstat "$NS13" --iso-decl-file "$D17/nonexistent.md" 2>&1)"; _e=$?
+[ "$_e" = 1 ] && pass "17.2 声明来源不可读 ⇒ 照旧红（注入缝不回退）" || fail "17.2 应 exit 1 实际 $_e"
+
+# 17.3 反例: 含新增 A ⇒ 不豁免（零新增文件硬条件）
+DSA="$(printf '%sM\ta/iso01.json\n'; mk_ds 12 | tail -n +2; printf 'A\ta/iso13.json\n')"
+OUT="$(bash "$TOOL" --diff-status "$DSA" --numstat "$NS13" --iso-decl-file "$D17/ok13.md" 2>&1)"; _e=$?
+if [ "$_e" = 1 ] && echo "$OUT" | grep -q "非 M 状态"; then pass "17.3 含 A ⇒ 不豁免且点名非 M 状态" || fail x; else fail "17.3 应 exit 1 实际 $_e"; fi
+
+# 17.4 反例: churn 不等（首件 2+1）⇒ 不豁免
+NSU="$(mk_ns 13 1 1 | sed '1s/^1\t1/2\t1/')"
+OUT="$(bash "$TOOL" --diff-status "$DS13" --numstat "$NSU" --iso-decl-file "$D17/ok13.md" 2>&1)"; _e=$?
+[ "$_e" = 1 ] && pass "17.4 churn 不等 ⇒ 照旧红" || fail "17.4 应 exit 1 实际 $_e"
+
+# 17.5 反例: churn=8 > 6 ⇒ 不豁免
+NS8="$(mk_ns 13 4 4)"
+OUT="$(bash "$TOOL" --diff-status "$DS13" --numstat "$NS8" --iso-decl-file "$D17/ok13.md" 2>&1)"; _e=$?
+[ "$_e" = 1 ] && pass "17.5 churn 8 > 6 ⇒ 照旧红" || fail "17.5 应 exit 1 实际 $_e"
+
+# 17.6 反例: 声明缺 1 条 ⇒ 不豁免
+DCL12="$D17/short12.md"; mk_iso_decl 12 "$DCL12"
+OUT="$(bash "$TOOL" --diff-status "$DS13" --numstat "$NS13" --iso-decl-file "$DCL12" 2>&1)"; _e=$?
+if [ "$_e" = 1 ] && echo "$OUT" | grep -q "同构批量声明未覆盖"; then pass "17.6 声明缺 1 条 ⇒ 不豁免且点名"; else fail "17.6 应 exit 1 实际 $_e"; fi
+
+# 17.7 反例: 混扩展名 ⇒ 不豁免
+DSM="$(printf 'M\tsrc/x.ts\n'; mk_ds 12)"
+OUT="$(bash "$TOOL" --diff-status "$DSM" --numstat "$(printf '1\t1\tsrc/x.ts\n'; mk_ns 12 1 1)" --iso-decl-file "$D17/ok13.md" 2>&1)"; _e=$?
+if [ "$_e" = 1 ]; then pass "17.7 混扩展名 ⇒ 照旧红"; else fail "17.7 应 exit 1 实际 $_e"; echo "$OUT" | sed 's/^/      | /' >&2; fi
+
+# 17.8 判别性（变异体4: ISO_OK 恒置 0 = 撤掉豁免 ⇒ 17.1 生效场景必变红）
+MUT4="$(mktemp -d)"; mkdir -p "$MUT4/scripts/control-tower"
+sed 's/if \[ "\$_iso_all_m" -eq 1 \]; then ISO_OK=1; fi/ISO_OK=0/' "$TOOL" > "$MUT4/scripts/control-tower/check-pr-budget.sh"
+MT4="$MUT4/scripts/control-tower/check-pr-budget.sh"
+if bash -n "$MT4" 2>/dev/null && grep -q "ISO_OK=0" "$MT4" && ! grep -q 'then ISO_OK=1' "$MT4"; then
+  OUT="$(bash "$MT4" --diff-status "$DS13" --numstat "$NS13" --iso-decl-file "$D17/ok13.md" 2>&1)"; _e=$?
+  if [ "$_e" = 1 ]; then pass "17.8 变异体4（ISO_OK 恒 0）⇒ 生效场景变红（夹具判别性成立）"; else fail "17.8 变异体4 未变红 — 实际 $_e"; fi
+else
+  fail "17.8 变异体4 生成失败（锚点漂移须同步修）"
+fi
+
+rm -rf "$D17"
+
+echo ""
 echo ""
 echo "── 17. D1235 空写集注入缝（先红后绿 + 反例；来源: #1302 附带发现）──"
 # 为什么**自建沙箱**: 旧口径 `[ -n "$FILES_OVERRIDE" ]` 无法区分「--files \"\"」与「未给 --files」

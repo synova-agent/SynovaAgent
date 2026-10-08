@@ -71,6 +71,20 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #               域校验器缺失/python 不可用 → exit 2（这两类是检查本身坏了，不与通过混同）
 #   @error  — 不抛；全部经退出码表达（ctrl-tower 模式 1）
 #
+# D1172（#1017 路径级口径，2026-10-07，提案待 K3→CTO）—— `## 同构批量声明` 豁免:
+#   病根: D708 要求声明 ⊇ 变更集、G12 要求 brief Q2 ⊇ 变更集、D734 要求 ≤ MAX_FILES ——
+#     三者对「归集型/同构批量 PR」物理互斥 ⇒ 越守规矩越红（#948 实测 31 件；#1017）。
+#   口径（五条同时成立才豁免 ① 文件数上限，其余判据照旧）:
+#     ⓐ 变更集全部为 M（零新增 A / 零复制 C / 零删除 D / 零重命名 R —— 「零新增文件」）
+#     ⓑ M 件数 ≥ 10 且全部同扩展名（同构代理 1）
+#     ⓒ 每件 churn（numstat added+removed）完全相等 且 ≤ 6（同构代理 2 = 零逻辑改动的
+#        机器可判代理；不等/超限即普通 PR，照旧计数）
+#     ⓓ `## 同构批量声明`（来源链同 D1028-A2v2: --iso-decl-file / $SYNO_ISO_DECL_FILE /
+#        brief 链当日窗口）逐条精确路径 ⊇ 变更集（禁通配）且 ≥1 条依据非空
+#     ⓔ 域信息/落后告警/旁路封堵等其余判据不受本豁免影响（豁免 ≠ 放行一切）
+#   注入缝: --numstat "<numstat 文本>"（与 --diff-status 配套测 ⓒ；真 git 模式自动取
+#     git diff --numstat BASE...HEAD）。豁免生效 ⇒ ① 打 ✅+⚠️+全量清单（不静默）。
+#
 # D1028 出库白/黑名单（§Q2.S2 冻结规格，逐字）:
 #   ✅ OUTBOUND_ALLOW_RE   — 出库白名单前缀（纯归档/出库批次允许）
 #   ❌ OUTBOUND_DENY_RE    — 拒绝名单前缀（代码/门禁/测试/扩展域，绝不豁免）
@@ -107,6 +121,8 @@ FILES_SET=0                     # D1235: 与 DIFF_STATUS_SET 同款「是否**�
 DIFF_STATUS=""
 DIFF_STATUS_SET=0
 DECL_FILE=""
+ISO_DECL_FILE="${SYNO_ISO_DECL_FILE:-}"
+NUMSTAT_OVERRIDE=""
 QUIET=0
 
 while [ $# -gt 0 ]; do
@@ -117,6 +133,8 @@ while [ $# -gt 0 ]; do
     --files)       FILES_OVERRIDE="${2:-}"; FILES_SET=1; shift 2 ;;
     --diff-status) DIFF_STATUS="${2:-}"; DIFF_STATUS_SET=1; shift 2 ;;
     --decl-file)   DECL_FILE="${2:-}"; shift 2 ;;
+    --iso-decl-file) ISO_DECL_FILE="${2:-}"; shift 2 ;;
+    --numstat)     NUMSTAT_OVERRIDE="${2:-}"; shift 2 ;;
     --quiet)       QUIET=1; shift ;;
     *) echo "❌ check-pr-budget: 未知参数 $1" >&2; exit 2 ;;
   esac
@@ -600,8 +618,93 @@ if [ "$OUTBOUND_EXEMPT" -eq 1 ]; then
 elif [ "$N_FILES" -le "$MAX_FILES" ]; then
   echo "  ✅ ① 变更文件数 $N_FILES ≤ 上限 $MAX_FILES"
 else
-  echo "  ❌ ① 变更文件数 $N_FILES > 上限 $MAX_FILES —— 拆 PR（禁调高上限）"
-  FAILED=1
+  # ═══ D1172 (#1017) 同构批量豁免判定（仅超限才尝试；未生效 ⇒ 照旧红）═══
+  ISO_OK=0; ISO_WHY=""
+  _iso_all_m=1; _iso_ext=""
+  while IFS=$'\t' read -r _t _ip; do
+    [ -z "${_ip:-}" ] && continue
+    case "$_t" in
+      M*) _e="${_ip##*.}"; [ "$_e" = "$_ip" ] && _e="(无扩展名)"
+          if [ -z "$_iso_ext" ]; then _iso_ext="$_e"; elif [ "$_iso_ext" != "$_e" ]; then ISO_WHY="扩展名不一（${_iso_ext} vs ${_e}）"; _iso_all_m=2; fi ;;
+      *)  _iso_all_m=0; break ;;
+    esac
+  done < <(printf '%s\n' "$ALL_TAGGED")
+  if [ "$_iso_all_m" -eq 0 ]; then ISO_WHY="变更集含非 M 状态（A/C/D/R —— 零新增文件是硬条件）"; fi
+  if [ "$_iso_all_m" -ne 2 ] && [ "$_iso_all_m" -eq 1 ]; then
+    if [ "$N_FILES" -lt 10 ]; then ISO_WHY="M 件数 ${N_FILES} < 10"; _iso_all_m=3; fi
+  fi
+  if [ "$_iso_all_m" -eq 1 ]; then
+    # ⓒ churn 同构（numstat: added<TAB>removed<TAB>path）
+    if [ -n "$NUMSTAT_OVERRIDE" ]; then _NS="$NUMSTAT_OVERRIDE"
+    else _NS="$(git -c core.quotepath=false diff --numstat "$BASE...HEAD" 2>/dev/null || true)"; fi
+    # 只保留本次 M 集内路径的 numstat 行
+    _NS_FILTERED=""
+    while IFS=$'\t' read -r _a _r _np; do
+      [ -z "${_np:-}" ] && continue
+      case "$AM_PATHS" in *"$_np"*) _NS_FILTERED="${_NS_FILTERED}${_a}${TAB}${_r}${TAB}${_np}${NL}" ;; esac
+    done < <(printf '%s\n' "$_NS")
+    _churn=""; _churn_bad=0
+    while IFS=$'\t' read -r _a _r _np; do
+      [ -z "${_np:-}" ] && continue
+      _c=$(( ${_a:-0} + ${_r:-0} ))
+      if [ -z "$_churn" ]; then _churn="$_c"
+      elif [ "$_churn" != "$_c" ]; then _churn_bad=1; fi
+      if [ "$_c" -gt 6 ]; then _churn_bad=2; fi
+    done < <(printf '%s\n' "$_NS_FILTERED")
+    if [ "$_churn_bad" -ne 0 ] || [ -z "$_churn" ]; then
+      ISO_WHY="churn 非同构或 >6（每件 added+removed 须相等且 ≤6）"; _iso_all_m=4
+    fi
+  fi
+  if [ "$_iso_all_m" -eq 1 ]; then
+    # ⓓ 同构批量声明: --iso-decl-file 权威 / env / brief 链当日窗口
+    _ISO_SOURCES=""
+    if [ -n "$ISO_DECL_FILE" ]; then
+      [ -f "$ISO_DECL_FILE" ] && _ISO_SOURCES="$ISO_DECL_FILE" || _ISO_SOURCES=""
+    elif [ -n "${SYNO_ISO_DECL_FILE:-}" ] && [ -f "${SYNO_ISO_DECL_FILE:-}" ]; then
+      _ISO_SOURCES="$SYNO_ISO_DECL_FILE"
+    else
+      _root="$(git rev-parse --show-toplevel 2>/dev/null | tr -d '\r\n' || true)"
+      if [ -n "$_root" ] && [ -d "$_root/.claude/task-briefs" ]; then
+        _d1="$(date -v-1d +%F 2>/dev/null || date -d yesterday +%F 2>/dev/null || true)"
+        _d2="$(date +%F)"
+        for _bf in "$_root"/.claude/task-briefs/*.md; do
+          [ -e "$_bf" ] || continue
+          _b="${_bf##*/}"
+          case " $_d1 $_d2 " in *" ${_b:0:10} "*) _ISO_SOURCES="${_ISO_SOURCES}${_bf}${NL}" ;; esac
+        done
+      fi
+    fi
+    _ISO_DECL_PATHS=""; _ISO_DECL_REASON=0
+    if [ -z "$_ISO_SOURCES" ]; then ISO_WHY="未找到「## 同构批量声明」来源"; _iso_all_m=5
+    else
+      while IFS= read -r _srcf; do
+        [ -z "$_srcf" ] && continue
+        awk 'BEGIN{in_sec=0} /^#{2,4}[[:space:]]*同构批量声明/{in_sec=1;next} /^#{1,4}[[:space:]]/{in_sec=0} in_sec && /^- /{
+          line=substr($0,3); n=split(line, seg, " — "); p=seg[1]; gsub(/^[[:space:]]+|[[:space:]]+$/, "", p);
+          if (p ~ /[*?]/) next; print p; if (n>=2 && seg[2] ~ /[^[:space:]]/) print "__HAS_REASON__"
+        }' "$_srcf" 2>/dev/null | while read -r _l; do echo "$_l"; done >> /tmp/.synova-iso-decl.$$  # swallow-ok: 声明文件读失败=无该来源条目（下方有/无声明分支显式处理）
+      done < <(printf '%s\n' "$_ISO_SOURCES")
+      if [ -s /tmp/.synova-iso-decl.$$ ]; then
+        _ISO_DECL_PATHS="$(grep -v '^__HAS_REASON__$' /tmp/.synova-iso-decl.$$ | sort -u)"
+        grep -q '^__HAS_REASON__$' /tmp/.synova-iso-decl.$$ && _ISO_DECL_REASON=1
+        rm -f /tmp/.synova-iso-decl.$$
+      else rm -f /tmp/.synova-iso-decl.$$; fi
+      _missing="$(printf '%s\n' "$AM_PATHS" | sed '/^$/d' | while IFS= read -r _mp; do
+        printf '%s\n' "$_ISO_DECL_PATHS" | grep -Fxq -- "$_mp" || echo "$_mp"; done)"
+      if [ -n "$_missing" ]; then ISO_WHY="同构批量声明未覆盖 ${_missing%%$NL*} 等（须逐条精确路径）"; _iso_all_m=6
+      elif [ "$_ISO_DECL_REASON" -ne 1 ]; then ISO_WHY="声明无依据（至少 1 条「— <依据>」非空）"; _iso_all_m=7; fi
+    fi
+  fi
+  if [ "$_iso_all_m" -eq 1 ]; then ISO_OK=1; fi
+  if [ "$ISO_OK" -eq 1 ]; then
+    echo "  ✅ ① D1172 同构批量豁免生效: ${N_FILES} 件全部 M / 同扩展名 / churn=${_churn} / 声明全覆盖"
+    echo "  ⚠️  豁免只解除文件数上限（≤${MAX_FILES}）;其余判据照旧;完整清单见「## 同构批量声明」（#1017 口径）"
+    FAILED=0
+  else
+    echo "  ❌ ① 变更文件数 $N_FILES > 上限 $MAX_FILES —— 拆 PR（禁调高上限）"
+    echo "      ℹ️  D1172 同构批量豁免不适用: ${ISO_WHY:-未知原因}"
+    FAILED=1
+  fi
 fi
 if [ "$DECL_EFFECTIVE" -eq 1 ]; then
   # D1028-A2v2: 声明生效 = 解除旁路封堵（**不豁免预算** —— 这批路径仍在 COUNTED/N_FILES 里）
