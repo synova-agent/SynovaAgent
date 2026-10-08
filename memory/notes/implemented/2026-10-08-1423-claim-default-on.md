@@ -70,3 +70,23 @@ bash tests/control-tower/precommit-claim-wiring.test.sh     # 46 通过 0 失败
   ⇒ 正是被禁止的后果。存量清零后另卡再删。
 - 不改 `alloc-task-id.sh`（Lead 负责：新号断流 + 通告）。
 - 不改 `ci.yml` / `scripts/audit/**` / `check-gate-integrity.sh`。
+
+## 追加（CI 面）: 分离头检出下 claim 不可达 —— "新格式只在本机成立"的真因
+
+**现象**：本 PR 的 CI `TypeScript + Lint + Iron Laws` / `Gate Integrity` 红，首错
+`❌ Done 可证伪性: 声明 …/2026-10-08-1398-field-truth-source-b1b.md 无 Done 条目`。
+
+**实测判据链（三步，可复跑）**：
+1. CI 的 PR 检出是**分离头（detached HEAD）** ⇒ `git branch --show-current` 为空 ⇒
+   resolver 的 `ISSUE_HINT` 为空 ⇒ **本任务 claim 在 CI 不可达**（本地有分支名 ⇒ 可达 ⇒ **只在本机成立**）。
+2. resolver 遂走**日期回退**（D317 兜底）⇒ 取一份**与本 PR 无关**的今日 brief 当声明：
+   CI（合并树）取到 `2026-10-08-1398-*.md`（该 brief 无 Done 条目 ⇒ 判 Done 失败）；本地分离头复现取到 `1408-*.md`。
+3. ⇒ **与"我的 Done 段格式"无关、也与开关翻面无因果**（该回退在开关两种状态下都会发生）。
+
+**修法（同批，判据变更面 ④）**：`resolve-commit-brief.sh` 的 `ISSUE_HINT` 在为空时补
+**`GITHUB_HEAD_REF`**（GH Actions 的 PR **源分支**名）—— 实测：分离头 + `GITHUB_HEAD_REF=feat/<issue>-…`
+⇒ 返回 **claim** ✓；不带 hint ⇒ 退回无关 brief ✓（判别成立）。
+**刻意不用 `GITHUB_REF_NAME`**：PR 下它是 `<PR号>/merge`，**PR 号 ≠ issue 号** ⇒ 会指向错 claim（比没有更坏）。
+
+**对存量 D# 的影响：零**。D# 分支名（如 `feat/D1245-…`）不产 issue 号 ⇒ 不命中 claim ⇒ 逐字节 legacy ✓
+（创始人约束"保存量 D#"仍成立）。

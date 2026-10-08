@@ -134,6 +134,17 @@ CLAIM_LIB="$RESOLVER_DIR/../control-tower/claim_store.py"
 CLAIM_FILE=""
 ISSUE_HINT="${SYNO_ISSUE_HINT:-}"
 [ -z "$ISSUE_HINT" ] && ISSUE_HINT="$BR_CUR"
+# 卡 #1423（判据④ 端到端 / D1245 同族）: **CI 的 PR 检出是分离头（detached HEAD）** ——
+#   `git branch --show-current` 为空 ⇒ $BR_CUR 空 ⇒ 本任务 claim 在 CI 里**不可达**
+#   ⇒ 退回"日期回退"，取一份**与本 PR 无关**的今日 brief 当声明 ⇒ "新格式只在本机成立"
+#   （实测: CI 上被 2026-10-08-1398-*.md / 本地被 1408-*.md 抢走 ⇒ 判 Done 失败/误判）。
+#   修法: GH Actions 提供 PR **源分支**名（GITHUB_HEAD_REF，形如 `feat/1423-claim-default-on`）
+#   ⇒ 补作 hint，使 claim 在 CI 亦可解析。
+#   ⚠️ 刻意**不用** GITHUB_REF_NAME: PR 下它是 `<PR号>/merge`，**PR 号 ≠ issue 号**
+#     ⇒ 会指向错误的 claim（比没有更坏）。
+if [ -z "$ISSUE_HINT" ] && [ -n "${GITHUB_HEAD_REF:-}" ]; then
+  ISSUE_HINT="$GITHUB_HEAD_REF"
+fi
 ISSUE_ID=""
 if [ -n "$PYBIN" ] && [ -f "$CLAIM_LIB" ] && [ -n "$ISSUE_HINT" ]; then
   ISSUE_ID="$("$PYBIN" "$CLAIM_LIB" --root "$ROOT" --issue-of "$ISSUE_HINT" 2>/dev/null | head -1 || true)"  # swallow-ok: 提不到 issue 身份 → 无 claim 分支，纯 legacy（下方零行为变化）

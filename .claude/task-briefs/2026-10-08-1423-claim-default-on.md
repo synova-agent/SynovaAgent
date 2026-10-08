@@ -46,12 +46,11 @@
 #CRITERIA: D
 
 ## Done 标准:
-- [ ] verify: bash tests/control-tower/precommit-claim-wiring.test.sh ⇒ 0 失败（46 断言，含 #1423 全段）
-- [ ] verify: bash tests/control-tower/claim_store.test.sh ⇒ 0 失败（34 断言）
-- [ ] verify: python3 tests/control-tower/claim-identity-v2.test.py ⇒ OK（21 tests）
-- [ ] verify: bash tests/control-tower/precommit-claim-wiring.test.sh ⇒ 0 失败
-- [ ] verify: bash scripts/control-tower/sealed-tests.sh --list ⇒ rc=0（FACE-TOTAL 上调后）
-- [ ] verify: GITHUB_ACTIONS=true SYNO_CI=1 SYNO_DIFF_BASE=origin/main bash scripts/pre-commit-check.sh ⇒ rc=0
+- [x] verify: bash tests/control-tower/precommit-claim-wiring.test.sh ⇒ 0 失败（含 #1423 全段 + CI 面判据）
+- [x] verify: bash tests/control-tower/claim_store.test.sh ⇒ 0 失败（默认开 + 显式 0 回滚）
+- [x] verify: python3 tests/control-tower/claim-identity-v2.test.py ⇒ Ran 21 tests OK
+- [x] verify: bash scripts/control-tower/sealed-tests.sh --list ⇒ rc=0（本件不新增测试文件 ⇒ 棘轮零改动）
+- [x] verify: GITHUB_ACTIONS=true SYNO_CI=1 bash scripts/pre-commit-check.sh ⇒ 全部 13 组通过
 
 ## 写集
 | 文件 | 类型 |

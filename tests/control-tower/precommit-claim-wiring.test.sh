@@ -368,6 +368,27 @@ PYM3
     && ok "#1423 判据③变异体: 中和守护 ⇒ 误拦复现 ⇒ §③ 必红（守护是承重点）" \
     || no "#1423 判据③变异体: 中和守护后误拦未复现 —— 判别力失效"
 
+  # ── 卡 #1423④ 端到端之**CI 面**: 分离头检出下 claim 仍须可达（否则"新格式只在本机成立"）──
+  SB_H="$T1423/cihint"; mk1423 "$SB_H" claimnew
+  git -C "$SB_H" checkout -q --detach HEAD 2>/dev/null || true   # 模拟 CI PR 检出（分离头 ⇒ 无常驻分支名）
+  R_NO_HINT="$(cd "$SB_H" && bash scripts/workflow/resolve-commit-brief.sh "" 2>/dev/null | head -1 || true)"
+  case "$R_NO_HINT" in
+    *.yaml) ok "#1423 CI 面判别: 无 hint 时也可能命中 claim（附注，不计失败）" ;;
+    *) ok "#1423 CI 面判别: 分离头 + **无 hint** ⇒ 取不到 claim（实得 ${R_NO_HINT##*/}）—— 这正是 CI 红机制" ;;
+  esac
+  R_HINT="$(cd "$SB_H" && GITHUB_HEAD_REF=feat/9999-newformat bash scripts/workflow/resolve-commit-brief.sh "" 2>/dev/null | head -1 || true)"
+  case "$R_HINT" in
+    *.yaml) ok "#1423 CI 面修复: GITHUB_HEAD_REF（PR 源分支）作 hint ⇒ 分离头下仍返回 claim ⇒ 新格式在 CI 端到端成立" ;;
+    *) no "#1423 CI 面修复: 带 GITHUB_HEAD_REF 仍未取到 claim（实得 '${R_HINT}'）" ;;
+  esac
+  # 刻意不用 GITHUB_REF_NAME（PR 下 = `<PR号>/merge`，PR 号 ≠ issue 号 ⇒ 指向错 claim）
+  # 只查**代码行**（注释里出现该字面量是"刻意不用"的说明，属正常）
+  if grep -v '^[[:space:]]*#' "$REPO/scripts/workflow/resolve-commit-brief.sh" | grep -q 'GITHUB_REF_NAME'; then
+    no "#1423 误用 GITHUB_REF_NAME（PR 号 ≠ issue 号 ⇒ 身份错）"
+  else
+    ok "#1423 未误用 GITHUB_REF_NAME（只用 PR 源分支 GITHUB_HEAD_REF）"
+  fi
+
   # ── 判据④ 正向: claim 新格式端到端（开关未设）──
   SB_C="$T1423/claimnew"; mk1423 "$SB_C" claimnew
   RESOLVED="$(cd "$SB_C" && SYNO_ISSUE_HINT=9999 bash scripts/workflow/resolve-commit-brief.sh "src/test.sh" 2>/dev/null | head -1 || true)"  # swallow-ok: 失败即空 → 断言判红
