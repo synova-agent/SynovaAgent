@@ -1,0 +1,766 @@
+{
+ "evidence_id": "1282/A-01",
+ "task": "Batch A 出库 —— 对象清单冻结 + 逐件 sha256（承接前冻结，用于 1:1 对账）",
+ "produced_by": "DSH",
+ "produced_at_utc": "2026-10-07T11:49:20Z",
+ "base": {
+  "branch": "chore/mac-doc-outbound-batch-a",
+  "head_sha": "f0b447df992b9e38e0f2d52d50faa2d905cd86b0",
+  "origin_main_sha": "f0b447df992b9e38e0f2d52d50faa2d905cd86b0"
+ },
+ "selection": {
+  "source": "check-doc-contract.sh --baseline 出库候选 236 件",
+  "three_method_recheck": {
+   "法1_精确路径被S之外引用": 114,
+   "法2_短名被活脚本点名": 11,
+   "法3_目录级消费者": "5 处，均为放行/跳过/遍历语义，非阻断（见 A-03 附录）"
+  },
+  "hold": 114,
+  "safe": 122
+ },
+ "counts": {
+  "B1-报告": 29,
+  "B10-运行态": 1,
+  "B2-派单": 2,
+  "B5-归档区": 68,
+  "B6-根级遗留": 8,
+  "B7-死备份": 6,
+  "B8-vendor": 6,
+  "B9-遗留资产": 2
+ },
+ "objects": [
+  {
+   "path": ".codex/control-tower/logs/stage1-cont-d534-d535-evidence.md",
+   "batch": "B10-运行态",
+   "bytes": 1322,
+   "sha256": "bd2110c62a80af8b6517d127b6f835d2401dfe8fda0669bd5203b509a312a503"
+  },
+  {
+   "path": "ARCHITECTURE-COMPARISON-现状vs理想-20260603.md",
+   "batch": "B6-根级遗留",
+   "bytes": 32979,
+   "sha256": "ef5f445e0131962ec42d16c1bce2c6aba8cf00d8c54fdb9a8b3163ca8d88b2f1"
+  },
+  {
+   "path": "AUDIT-BRIEF-第三方审计委托书-20260602.md",
+   "batch": "B6-根级遗留",
+   "bytes": 19464,
+   "sha256": "2d635eebc8153cf23a1118abfa6ba1f23957c3ca207f975e8f66ddb767d51f11"
+  },
+  {
+   "path": "AUDIT-BRIEF-第三方审计委托书-20260603-V2.html",
+   "batch": "B6-根级遗留",
+   "bytes": 29981,
+   "sha256": "9e5d15422e5128ed5eefa26066fb2468829620b412ca1c3d4b86ea55a15ed5f3"
+  },
+  {
+   "path": "AUDIT-REPORT-第三方代码审计报告-20260602.md",
+   "batch": "B6-根级遗留",
+   "bytes": 22306,
+   "sha256": "1c62b803fc5f67026ecaa43a6ab9f49193d63cde0f57e0cf3ac26c81f3b0e605"
+  },
+  {
+   "path": "AUDIT-REPORT-第三方独立审计报告-20260603-V2.html",
+   "batch": "B6-根级遗留",
+   "bytes": 16469,
+   "sha256": "5ddbcbe76bd480363523134dcc4224f064bcd1359bdcf842c37bbc1cb77ee702"
+  },
+  {
+   "path": "AUDIT-REPORT-第三方独立审计报告-20260603-V3.html",
+   "batch": "B6-根级遗留",
+   "bytes": 37572,
+   "sha256": "a1dd89a92a99211ebda2c16cf4edf81f856fe89c1885b956f0fc2a261a68275e"
+  },
+  {
+   "path": "GAP-ANALYSIS-架构裁决vs代码实际-20260603.html",
+   "batch": "B6-根级遗留",
+   "bytes": 18544,
+   "sha256": "8a9f9d9e5fd8cd57a45a73cdb59a447b3b1c99646ab497de52015ae382aa83bc"
+  },
+  {
+   "path": "TUI-V2-修复汇报.md",
+   "batch": "B6-根级遗留",
+   "bytes": 6389,
+   "sha256": "7c6202f666a5eca587a4a4f576844872e06081615721effcf9cc2f6c174f9b13"
+  },
+  {
+   "path": "docs/archive/Loop-Engineering-V4.0-方案-20260623.md",
+   "batch": "B5-归档区",
+   "bytes": 5688,
+   "sha256": "076e5ac07230ad25317a9474f48a79354b848babcfbf521a65fd25fd2ba4c058"
+  },
+  {
+   "path": "docs/archive/Loop-Engineering-改进点-20260624.md",
+   "batch": "B5-归档区",
+   "bytes": 8329,
+   "sha256": "68af4740e7805f5c59d56684459a37c45c79f03cf26e9d1b0df3ff087bb896f2"
+  },
+  {
+   "path": "docs/archive/REMEDIATION-PLAN-20260603.md",
+   "batch": "B5-归档区",
+   "bytes": 4773,
+   "sha256": "1468ff639095d232deafda0a34be0b73055ac7155b344f506b4570179c6a782b"
+  },
+  {
+   "path": "docs/archive/SYNOVA-IMPL-DSH-D382-doc-commit-exempt-20260816.md",
+   "batch": "B5-归档区",
+   "bytes": 26757,
+   "sha256": "c81bf48d9cd87b0c50e018ecb9e81049f7b49583786cab44cfb87b0d78d9d648"
+  },
+  {
+   "path": "docs/archive/SYNOVA-IMPL-DSH-D544-leftbar-acceptance-20260828.md",
+   "batch": "B5-归档区",
+   "bytes": 38817,
+   "sha256": "f9c393a22089c595cee628d96581571d4a07f9913ef0f9a05fc713eae1a04f39"
+  },
+  {
+   "path": "docs/archive/SYNOVA-IMPL-DSH-D546-sentinel-findings-event-20260828.md",
+   "batch": "B5-归档区",
+   "bytes": 34271,
+   "sha256": "ac8c33be3b53e92eace876a673a197f0bc894d958dc2804155aeb287bae38549"
+  },
+  {
+   "path": "docs/archive/loop-engineering-v4-physics-only-零AI自律工程.md",
+   "batch": "B5-归档区",
+   "bytes": 12904,
+   "sha256": "216467704c5066b4648e0da62f3fe320c824ee71f4aeadac7f27667b970f0a8f"
+  },
+  {
+   "path": "docs/archive/loop-engineering-v4.0-zero-ai-discipline-零AI自律工程.md",
+   "batch": "B5-归档区",
+   "bytes": 8055,
+   "sha256": "2f0066ab665202565c45db6499e13dfc824783ab771d4ebabb700627db5a4fa1"
+  },
+  {
+   "path": "docs/archive/v3/LOOP-ENGINEERING-SETUP-GUIDE.md",
+   "batch": "B5-归档区",
+   "bytes": 11028,
+   "sha256": "6e8171c1f646fa52328212f69d68c4c05b29212262cffd36c60a8db54b069f25"
+  },
+  {
+   "path": "docs/archive/v3/SLICE-SUMMARY-20260620.md",
+   "batch": "B5-归档区",
+   "bytes": 5164,
+   "sha256": "ac0b4fac2ceda351f0f24f189609e807bc90d76abea267263ca8b3737a6d50d5"
+  },
+  {
+   "path": "docs/synova/archive/2026-05-06/AUDIT-RESEARCH-vs-CODE-20260607.html",
+   "batch": "B5-归档区",
+   "bytes": 13129,
+   "sha256": "cb3b28ddeff57c0fc5680efa87c1ee6919bac30a02f145a517a9ea43e2006756"
+  },
+  {
+   "path": "docs/synova/archive/2026-05-06/AUDIT-RESEARCH-vs-CODE-20260608.html",
+   "batch": "B5-归档区",
+   "bytes": 10677,
+   "sha256": "600e1642f5c1248a0c8357c53a2105eba8cb68174da34f4af4228fce43d60918"
+  },
+  {
+   "path": "docs/synova/archive/2026-05-06/COMPARISON-OpenClaw-vs-SynovaAgent-20260615.html",
+   "batch": "B5-归档区",
+   "bytes": 57305,
+   "sha256": "ad7ec5fad484698fab44debc53fd180717863a8836e2eaed34bed894c18c2e91"
+  },
+  {
+   "path": "docs/synova/archive/2026-05-06/DESIGN-PROPOSAL-交互设计-20260619.html",
+   "batch": "B5-归档区",
+   "bytes": 30253,
+   "sha256": "7bf437a8918231a2f1fc8e8a5d61b9e93e0d4d79c60b0cd00513b018497b3fc9"
+  },
+  {
+   "path": "docs/synova/archive/2026-05-06/DEVELOPMENT-PLAN-20260606.html",
+   "batch": "B5-归档区",
+   "bytes": 32749,
+   "sha256": "541e4da0931f645d50e0463091309979d1095129c3e9373460fa66d267c2df31"
+  },
+  {
+   "path": "docs/synova/archive/2026-05-06/SYNOVA-MASTER-全量对齐手册-20260610.html",
+   "batch": "B5-归档区",
+   "bytes": 253718,
+   "sha256": "038b472cc629d6a4e2ada50eb2f2a516cc9cd3d9aa928b2cb7b7e2d12fe260af"
+  },
+  {
+   "path": "docs/synova/archive/2026-05-06/SYNOVA-PROMPT-ARCHITECTURE-全量设计-20260614.html",
+   "batch": "B5-归档区",
+   "bytes": 75153,
+   "sha256": "6ce414574cb024db5658b8fc19dfb33693aee7071d4e32ae5e80f1bebeb4f5fb"
+  },
+  {
+   "path": "docs/synova/archive/2026-05-06/SYNOVA-PROMPT-IMPL-PLAN-Anthropic-20260614.html",
+   "batch": "B5-归档区",
+   "bytes": 13650,
+   "sha256": "dba495400b4fe2c5aff77b2aa9ccfca7f985c614b3e3156e0e5db93a793e6dd7"
+  },
+  {
+   "path": "docs/synova/archive/2026-05-06/SYNOVA-ROADMAP.html",
+   "batch": "B5-归档区",
+   "bytes": 6991,
+   "sha256": "02eb3cccc52d1a6d1f3a7214be12a2ca61fdab98d3e8c154239dacfe928210e2"
+  },
+  {
+   "path": "docs/synova/archive/2026-05-06/SYNOVA-THEORY-v2.1-20260619.html",
+   "batch": "B5-归档区",
+   "bytes": 85238,
+   "sha256": "98c821bbfcf074cf08e1419d8ab624b22253b0a2a15f7da08e2b47c194881736"
+  },
+  {
+   "path": "docs/synova/archive/2026-05-06/SYNOVA-完整技术分析报告-20260606.html",
+   "batch": "B5-归档区",
+   "bytes": 29434,
+   "sha256": "cf8c0ffd0b78bb599ba09e56155d486d586cb970d11bc358abe0c41407296800"
+  },
+  {
+   "path": "docs/synova/archive/2026-05-06/SYNOVA-管理经济学-知识体系设计-20260623.html",
+   "batch": "B5-归档区",
+   "bytes": 26984,
+   "sha256": "4c6dbc8036baa65fe341c7282fec662bf6ecf8afe912f9af9f5fffdaf1d7c5a1"
+  },
+  {
+   "path": "docs/synova/archive/2026-05-06/TEST-KIT-STRATEGY-20260605.html",
+   "batch": "B5-归档区",
+   "bytes": 27089,
+   "sha256": "9a185fa1884180c10923f59b13b578f5996136658243073d9d57554efac02f16"
+  },
+  {
+   "path": "docs/synova/archive/2026-05-06/specs/DOCUMENT-MANAGEMENT-SPEC.html",
+   "batch": "B5-归档区",
+   "bytes": 6650,
+   "sha256": "b25f91bec123e5881a16286b6429213a25ed66cbf2601b1159912d0d8dec8679"
+  },
+  {
+   "path": "docs/synova/archive/2026-07-07/RESEARCH-REPORT-人+Agent混合组织能力模型-20260610.html",
+   "batch": "B5-归档区",
+   "bytes": 46579,
+   "sha256": "7fcb37ef10e14d34bd52c36da3d1b37197ae5ade875048116187248a67138eaa"
+  },
+  {
+   "path": "docs/synova/archive/2026-07-07/TECH-PLAN-六维混合组织能力模型工程实现方案-20260610.html",
+   "batch": "B5-归档区",
+   "bytes": 27698,
+   "sha256": "34d3e32637d6d0084e78c0fbdcd1cbe5226001532a02461abf4f0484537dae17"
+  },
+  {
+   "path": "docs/synova/archive/2026-09-26-DOCUMENT-CONVENTIONS-superseded.md",
+   "batch": "B5-归档区",
+   "bytes": 1331,
+   "sha256": "2eaa02bf029b8d9bf48b17a290d6a1f2c5c57ffc84dd8134b9fb534f34f3cb34"
+  },
+  {
+   "path": "docs/synova/archive/AGENT-可观测性-Observability-20260605.html",
+   "batch": "B5-归档区",
+   "bytes": 14227,
+   "sha256": "36e9a226952a8dcf94b2e63ea1ab7aac97c2e0eb42e484e075517901de7e2d4e"
+  },
+  {
+   "path": "docs/synova/archive/AGENT-生态对接-EcosystemIntegration-20260605.html",
+   "batch": "B5-归档区",
+   "bytes": 10154,
+   "sha256": "f05616a9446a89a10a474508bdfb437d2cec3d06d5b134428af318d1342dd472"
+  },
+  {
+   "path": "docs/synova/archive/AGENT-遥测修正-TelemetryRevised-20260605.html",
+   "batch": "B5-归档区",
+   "bytes": 11538,
+   "sha256": "aea996f5636f6e0db48e037b1cc85a296613de5313b66633ed23c1da3ef6089f"
+  },
+  {
+   "path": "docs/synova/archive/AGENT-遥测技术-TelemetryTech-20260605.html",
+   "batch": "B5-归档区",
+   "bytes": 14477,
+   "sha256": "ead25807bd70c6e6349e546fdff5311204a874f4e54eee95ba08df7658ee430d"
+  },
+  {
+   "path": "docs/synova/archive/DEPLOY-部署交付-DeployDelivery-20260604.html",
+   "batch": "B5-归档区",
+   "bytes": 8225,
+   "sha256": "ed3a977d6081dc863400ce4d7d812024b36a68baa9a51ce9cbe4e6564c28a20c"
+  },
+  {
+   "path": "docs/synova/archive/HERMES-工具差距-ToolGap-20260605.html",
+   "batch": "B5-归档区",
+   "bytes": 14754,
+   "sha256": "6e353a2bc43dbd472e63b3fabc1eb1b694e048c4422e1eff100d15eb4d0fbd3b"
+  },
+  {
+   "path": "docs/synova/archive/HERMES-架构对比-ArchComparison-20260604.html",
+   "batch": "B5-归档区",
+   "bytes": 21116,
+   "sha256": "138728250963ebe222c994af2261cf86c1183a08fe0a462d0fd64a1ed8a4bd2c"
+  },
+  {
+   "path": "docs/synova/archive/HERMES-采纳计划-AdoptionPlan-20260604.html",
+   "batch": "B5-归档区",
+   "bytes": 34849,
+   "sha256": "315fa6c1f7cf9d8284ba1889b62242c2acd2045cbc271fb2abd14a0e05b63c3e"
+  },
+  {
+   "path": "docs/synova/archive/L1-交互层-InteractionDeepDive-20260604.html",
+   "batch": "B5-归档区",
+   "bytes": 14766,
+   "sha256": "2089d5b5c9b157816daa3e84399bf9c74ab9358d76946d91c86b3d8a0483707e"
+  },
+  {
+   "path": "docs/synova/archive/L1-用户体验-UserExperience-20260604.html",
+   "batch": "B5-归档区",
+   "bytes": 31437,
+   "sha256": "152876183f57d7156a065b0d644c9ae11a80d57788a099ff923947694c88170c"
+  },
+  {
+   "path": "docs/synova/archive/L2-编排层-OrchestrationReAudit-20260604.html",
+   "batch": "B5-归档区",
+   "bytes": 16708,
+   "sha256": "673dff75b42c3c9e2de725b4c09530384203c7da755ac54bd5645aed4549a800"
+  },
+  {
+   "path": "docs/synova/archive/L3-专家工具-ExpertTools-20260605.html",
+   "batch": "B5-归档区",
+   "bytes": 19058,
+   "sha256": "9623fc2ae71f858c6daaf718b929f12279fa9dd6143cdb9ca634f508502f9563"
+  },
+  {
+   "path": "docs/synova/archive/L3-分析层-AnalysisOptimization-20260604.html",
+   "batch": "B5-归档区",
+   "bytes": 17174,
+   "sha256": "8b1a75d906386e05f7991c914ce804331f0b52366118eae3efcd93c52f492b4a"
+  },
+  {
+   "path": "docs/synova/archive/L4-本体层-OntologyMaster-20260603.html",
+   "batch": "B5-归档区",
+   "bytes": 50838,
+   "sha256": "680455c7523967e6b6bb7c7db25f4f643cb1271b5982e8bfd111028ecf089412"
+  },
+  {
+   "path": "docs/synova/archive/L5-OpenClaw借鉴-OpenClawPatterns-20260604.html",
+   "batch": "B5-归档区",
+   "bytes": 20455,
+   "sha256": "196436123ddedf27e1e6ef0cd9aa41f64159f5760503712e809cd959ec43fada"
+  },
+  {
+   "path": "docs/synova/archive/L5-代码审查-CodeReview-20260604.html",
+   "batch": "B5-归档区",
+   "bytes": 13531,
+   "sha256": "0945ebcf6e667d78fc09a0170b01ce329c48fc346d39c676df65133d33023dc2"
+  },
+  {
+   "path": "docs/synova/archive/L5-企业沙箱-EnterpriseSandbox-20260605.html",
+   "batch": "B5-归档区",
+   "bytes": 22281,
+   "sha256": "facba396e8a0c260f5e7ef9021f536d332a986c00ad4fc5b7cdc5059bd0de6da"
+  },
+  {
+   "path": "docs/synova/archive/L5-安全沙箱-SecuritySandbox-20260604.html",
+   "batch": "B5-归档区",
+   "bytes": 6678,
+   "sha256": "effbc7e559f18026ce65023a8f2f6a65a3cb094efd5a06e02c4562c5bc493bfa"
+  },
+  {
+   "path": "docs/synova/archive/L5-数据层-DataLayerDeepDive-20260604.html",
+   "batch": "B5-归档区",
+   "bytes": 19299,
+   "sha256": "a81422cce66ab4f22da840c352fe6d5af20491ec3c66720cc991b8b68a369774"
+  },
+  {
+   "path": "docs/synova/archive/L5-数据层综合-DataLayerComprehensive-20260604.html",
+   "batch": "B5-归档区",
+   "bytes": 41900,
+   "sha256": "1f4bce570656d59fc7ef85d6ba943f590631c9a158fd38277eb2bfb62301cf33"
+  },
+  {
+   "path": "docs/synova/archive/L5-连接器架构-ConnectorArch-20260604.html",
+   "batch": "B5-归档区",
+   "bytes": 4123,
+   "sha256": "bc8b558a8c0b9a96ce32aa54b1f8f0dfad6fd13f852fe5b2261e83fb878751cc"
+  },
+  {
+   "path": "docs/synova/archive/LLM-DeepSeek优化-DeepSeekV4Opt-20260604.html",
+   "batch": "B5-归档区",
+   "bytes": 18182,
+   "sha256": "b7e3deaef77e437bd66ac35c52d28efbdebaf3a63ab8cd68b97fa661dd0b878c"
+  },
+  {
+   "path": "docs/synova/archive/LLM-Provider兼容-ProviderCompat-20260604.html",
+   "batch": "B5-归档区",
+   "bytes": 11402,
+   "sha256": "0f4a7aa043549aeff0a8fea4d69c46900b34f81ce31fd95ccf31a447ad1fa34b"
+  },
+  {
+   "path": "docs/synova/archive/LLM-Provider扩展-ProviderExtension-20260605.html",
+   "batch": "B5-归档区",
+   "bytes": 9904,
+   "sha256": "12bfbf9dba7ffc63e2286b8f89a53c91f51fbc65ca105b304439dfd3654759b6"
+  },
+  {
+   "path": "docs/synova/archive/STRATEGIC-ROADMAP-已废弃-20260605.html",
+   "batch": "B5-归档区",
+   "bytes": 25250,
+   "sha256": "1df8250e33a083a6ef74fd096a5a15c90f3112ed9d8192d9553a1a067f2dc634"
+  },
+  {
+   "path": "docs/synova/archive/SYNOVA-DESIGN-增长诊断完整方案-v2-20260703.html",
+   "batch": "B5-归档区",
+   "bytes": 229237,
+   "sha256": "b2acb0bd035a6ed9e100f0f8e3f61491960673aa9c055486d1a1d63f7cc60dd2"
+  },
+  {
+   "path": "docs/synova/archive/SYNOVA-DESIGN-本体层重构方案-v1-20260630.html",
+   "batch": "B5-归档区",
+   "bytes": 71171,
+   "sha256": "04800c48e129da3879ab7daaf167a9a8c54a7eeb5a06eba375f79e923ef58a94"
+  },
+  {
+   "path": "docs/synova/archive/SYNOVA-IMPL-哨兵计算本体映射-v3-20260703.html",
+   "batch": "B5-归档区",
+   "bytes": 149832,
+   "sha256": "13cc71d5faf656572b7439cc9b301909be7d2059a4ae1dc189a140da0e6161bd"
+  },
+  {
+   "path": "docs/synova/archive/SYNOVA-PRD-交互设计-20260620.html",
+   "batch": "B5-归档区",
+   "bytes": 97778,
+   "sha256": "f26bd40348a099dce362069fe49a66a9e522a4c2db00c986a42ad525df86e177"
+  },
+  {
+   "path": "docs/synova/archive/SYNOVA-PRD-交互设计-v2-20260630.html",
+   "batch": "B5-归档区",
+   "bytes": 63701,
+   "sha256": "3f06a96a23e3ee22b0a8971306bc533631f0a516460d7a2721bfbba0f39638b1"
+  },
+  {
+   "path": "docs/synova/archive/SYNOVA-代码审计-CodeAudit-20260605.html",
+   "batch": "B5-归档区",
+   "bytes": 22990,
+   "sha256": "1a2575e37fc6a7ba5025096676ba214356db50e7b9f39d8d7da057a1eda8a661"
+  },
+  {
+   "path": "docs/synova/archive/SYNOVA-决策确认-Decisions-20260604.html",
+   "batch": "B5-归档区",
+   "bytes": 12398,
+   "sha256": "5208c048e9595e70506bca8b164797f3a468bb35880ec98c1a042dc124062921"
+  },
+  {
+   "path": "docs/synova/archive/SYNOVA-剩余13项-Remaining13Items-20260604.html",
+   "batch": "B5-归档区",
+   "bytes": 30150,
+   "sha256": "ff8763cd0d42e7993005580dd320eec3ebd67d498ad399078ecfb66d13f183cf"
+  },
+  {
+   "path": "docs/synova/archive/SYNOVA-可扩展性-Extensibility-20260604.html",
+   "batch": "B5-归档区",
+   "bytes": 14111,
+   "sha256": "c7168eea24d27c820f03ee2a3e4d26f2655ddce350723bd2804075e4e389ad99"
+  },
+  {
+   "path": "docs/synova/archive/SYNOVA-战略复盘-StrategicRetro-20260604.html",
+   "batch": "B5-归档区",
+   "bytes": 14042,
+   "sha256": "c42c3a7784a0268dd1a4d258a5e1d5018614fdc5ad4969fd3bbe80b6c3d30c8e"
+  },
+  {
+   "path": "docs/synova/archive/SYNOVA-技术栈-TechStack-20260604.html",
+   "batch": "B5-归档区",
+   "bytes": 22803,
+   "sha256": "4842277dadfa84a8b4fc0b0143e3e0272408a91d67df59c2206509beb701701b"
+  },
+  {
+   "path": "docs/synova/archive/SYNOVA-架构耦合-ArchCoupling-20260605.html",
+   "batch": "B5-归档区",
+   "bytes": 7211,
+   "sha256": "2d04f7a47af3745aefa9e77865275a3c7ffe8f614b5f1bf14e5a8c5a6ef10a9d"
+  },
+  {
+   "path": "docs/synova/archive/SYNOVA-稳定性-Stability-20260604.html",
+   "batch": "B5-归档区",
+   "bytes": 14753,
+   "sha256": "536e65f25978cb9efc66cf7b6775a6a5180f44c52bff0ce9cc14a7f94bd9d72f"
+  },
+  {
+   "path": "docs/synova/archive/SYNOVA-综合研究-ComprehensiveReport-20260604.html",
+   "batch": "B5-归档区",
+   "bytes": 27441,
+   "sha256": "40e27ec5c049a48dd9e54f527387e0cc10839e7f420f7775e345c549ae3f3547"
+  },
+  {
+   "path": "docs/synova/archive/SYNOVA-自由探索-Freestyle-20260604.html",
+   "batch": "B5-归档区",
+   "bytes": 15727,
+   "sha256": "acf7527887addb0302b826814b12cf8eda23be2e850e96160340d6d4bb2bfc8b"
+  },
+  {
+   "path": "docs/synova/archive/SYNOVA_FULL_AUDIT_v2.html",
+   "batch": "B5-归档区",
+   "bytes": 38407,
+   "sha256": "ea0807027d2831419f3621c6bddfec3a9da69560f83fc2cc842002607923549b"
+  },
+  {
+   "path": "docs/synova/audit-reports/2026-08-16-D307.md",
+   "batch": "B1-报告",
+   "bytes": 16493,
+   "sha256": "b7b199f488b314ed2cfe0b905eb3d4b5461fa10c95ca72fd5f24b58269e19958"
+  },
+  {
+   "path": "docs/synova/audit-reports/2026-08-16-D356.md",
+   "batch": "B1-报告",
+   "bytes": 11503,
+   "sha256": "94d2f2bf6eaf4c7bd4ce10bee9b7ffa4a12717704ec20fb2f61361d6984710f6"
+  },
+  {
+   "path": "docs/synova/audit-reports/2026-08-16-D363-llm-failover-delivery.md",
+   "batch": "B1-报告",
+   "bytes": 6641,
+   "sha256": "738fb22df51a5f5c62d20f48ce5f177bed4f97250914ad0f301c34043132666d"
+  },
+  {
+   "path": "docs/synova/audit-reports/2026-08-16-D363.md",
+   "batch": "B1-报告",
+   "bytes": 13863,
+   "sha256": "0262950593caa4763e8121a6dad64daa624a119564db7d4aa30d221a04bbdeda"
+  },
+  {
+   "path": "docs/synova/audit-reports/2026-08-17-product-lines-verification.md",
+   "batch": "B1-报告",
+   "bytes": 18826,
+   "sha256": "61a1945d90c0dfd7e3d0dd93110ce44b7e75d19a1d8f82d8399ad98208ae6203"
+  },
+  {
+   "path": "docs/synova/audit-reports/2026-08-20-D357.md",
+   "batch": "B1-报告",
+   "bytes": 5441,
+   "sha256": "b2d9f2304c758dbe734d402f7813b3ea3a246a34775b362057c1d8133edf29c6"
+  },
+  {
+   "path": "docs/synova/audit-reports/2026-08-20-D358.md",
+   "batch": "B1-报告",
+   "bytes": 7560,
+   "sha256": "db8e0e9d26c63aed5b7ce87d4998fed143f548950858bb83eb36e191d29f5d4d"
+  },
+  {
+   "path": "docs/synova/audit-reports/2026-09-24-K3批次3-PR737-739-741-743.md",
+   "batch": "B1-报告",
+   "bytes": 14281,
+   "sha256": "be27a6f1806516263946b43b330900b4284dbfaac83fa5a6b6781212784b3d99"
+  },
+  {
+   "path": "docs/synova/audit-reports/2026-09-26-D979.md",
+   "batch": "B1-报告",
+   "bytes": 32311,
+   "sha256": "52bedd2cbfb9e2e581a87c9c954cba52aa68265d9bb860670c42ff98d0511bf7"
+  },
+  {
+   "path": "docs/synova/audit-reports/2026-09-26-K3-A批-D962FIX收口.md",
+   "batch": "B1-报告",
+   "bytes": 35359,
+   "sha256": "67f61b645a980a29dfc7969982d2aa3264f909c9e727dfbe03d331941adc8c87"
+  },
+  {
+   "path": "docs/synova/audit-reports/2026-09-26-K3-B批-阶段0.md",
+   "batch": "B1-报告",
+   "bytes": 18925,
+   "sha256": "403979ca4f20045a6bcb0b51371ecf0057c318dd431511af76697a6f1576cbbf"
+  },
+  {
+   "path": "docs/synova/audit-reports/2026-09-26-K3-C批-D979过渡链.md",
+   "batch": "B1-报告",
+   "bytes": 21437,
+   "sha256": "dd46894e07d8a161b6f5f883c888ed9da6ae23624fd67ef3cb0c04384de88e49"
+  },
+  {
+   "path": "docs/synova/audit-reports/AGENT-INFRASTRUCTURE-AUDIT-20260814.md",
+   "batch": "B1-报告",
+   "bytes": 11998,
+   "sha256": "824a9c307d3703db5760907f84d7444d8788263e117928711233d8f18c7fffd0"
+  },
+  {
+   "path": "docs/synova/audit-reports/D577-sentinel-threshold-wiring-evidence-20260905/DS8-flip-physical-verification.md",
+   "batch": "B1-报告",
+   "bytes": 2885,
+   "sha256": "bc1a4e5ba03ebbe63832a2658151ce733c60ece71c237aed1f1b751029c9125f"
+  },
+  {
+   "path": "docs/synova/audit-reports/D577-sentinel-threshold-wiring-evidence-20260905/README.md",
+   "batch": "B1-报告",
+   "bytes": 2431,
+   "sha256": "576a16f771f5c492b361f0cdd5dfa79654146a78319d82a6dadcbff05918807f"
+  },
+  {
+   "path": "docs/synova/audit-reports/D577-sentinel-threshold-wiring-evidence-20260905/T1-T10-red-green-evidence.md",
+   "batch": "B1-报告",
+   "bytes": 3788,
+   "sha256": "cc233312d5680ff935d0a7851503c6688d72a234fc143772e158d88e0ec571c4"
+  },
+  {
+   "path": "docs/synova/audit-reports/D577-sentinel-threshold-wiring-evidence-20260905/wiring-and-hygiene-grep-evidence.md",
+   "batch": "B1-报告",
+   "bytes": 6433,
+   "sha256": "d9da9e505321c53a23450d387272bceac10d8f4e3cdaafa5af281070b8344296"
+  },
+  {
+   "path": "docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/README.md",
+   "batch": "B1-报告",
+   "bytes": 6735,
+   "sha256": "521827aaed6ee2a77ed60ba86ce5ea5ffd64a7105924e31a9eaef54e5bcece86"
+  },
+  {
+   "path": "docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/finding-id-consumers-grep-evidence.md",
+   "batch": "B1-报告",
+   "bytes": 7108,
+   "sha256": "d93e161b58aff102b75c3b417667c7d2d698d028bc72058a3459c030c83ed92e"
+  },
+  {
+   "path": "docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/red-green-evidence.md",
+   "batch": "B1-报告",
+   "bytes": 8958,
+   "sha256": "34c9057648c8981120a5003cc944f87ce81c257a8965b9465b9688930f49b0a4"
+  },
+  {
+   "path": "docs/synova/audit-reports/D580-ticket-slice-evidence-20260906/wiring-and-write-set-evidence.md",
+   "batch": "B1-报告",
+   "bytes": 11789,
+   "sha256": "59087bbfc60745ec5f078c58c9703e4e31a6364721e53dcd83f425e2640758fc"
+  },
+  {
+   "path": "docs/synova/audit-reports/D590-chat-sse-evidence-20260908/README.md",
+   "batch": "B1-报告",
+   "bytes": 3543,
+   "sha256": "d2dd94532c02f27852a607301caa2e1d1cff9a91d7bc8c8299afe138c3ed4195"
+  },
+  {
+   "path": "docs/synova/audit-reports/D591-desktop-chat-wiring-evidence-20260908/README.md",
+   "batch": "B1-报告",
+   "bytes": 4481,
+   "sha256": "39a2426393dd3c33d4ae255031d1cfdf7c5879206782b2da4a7574cdf504418a"
+  },
+  {
+   "path": "docs/synova/audit-reports/D593-FIX-restore-evidence-20260909/README.md",
+   "batch": "B1-报告",
+   "bytes": 1561,
+   "sha256": "609c98c79d725071b075e49363815fbc3c0cffe83385d88758b3588f38bcd9db"
+  },
+  {
+   "path": "docs/synova/audit-reports/D593-report-persistence-evidence-20260908/README.md",
+   "batch": "B1-报告",
+   "bytes": 2747,
+   "sha256": "71d374402fbe41a88f80113b7d5dab50e4f798037826d94edcfe109283881c3b"
+  },
+  {
+   "path": "docs/synova/audit-reports/D602-ipc-notification-evidence-20260909/README.md",
+   "batch": "B1-报告",
+   "bytes": 6107,
+   "sha256": "e3aa2ca7ebd45c18bab6cb238fdafb9a1a2cfe3e96fa1923d6ae379528c4658c"
+  },
+  {
+   "path": "docs/synova/audit-reports/D602-ipc-notification-evidence-20260909/ds4-transition-evidence.md",
+   "batch": "B1-报告",
+   "bytes": 3846,
+   "sha256": "fee3232870c6ff7ff42a8c35e7ea0dc6eca9fb2c109418ffcb9546018b5656b3"
+  },
+  {
+   "path": "docs/synova/audit-reports/D602-ipc-notification-evidence-20260909/ds5-sse-error-evidence.md",
+   "batch": "B1-报告",
+   "bytes": 3381,
+   "sha256": "39252527ed38882140af56d4d9fa20d0921433a984cd3d9fbf62ef8c24fb2042"
+  },
+  {
+   "path": "docs/synova/audit-reports/D602-ipc-notification-evidence-20260909/red-green-evidence.md",
+   "batch": "B1-报告",
+   "bytes": 3647,
+   "sha256": "73228e9a8b4a83e856bea3268dd89edb7d63ddc49c7132d1e579571811c81356"
+  },
+  {
+   "path": "docs/synova/dispatch/2026-10-02-PR腐烂清障-派单.md",
+   "batch": "B2-派单",
+   "bytes": 4829,
+   "sha256": "95f185a09bf97de0b4c8fd446491b4bdd6978e76a973f24fc23bba701e8e8a67"
+  },
+  {
+   "path": "docs/synova/dispatch/2026-10-02-客户数据撤除-派单.md",
+   "batch": "B2-派单",
+   "bytes": 6389,
+   "sha256": "38678e466d75e18f0ee1c294d5a5e4674d011a2f54019476f408726e011da59d"
+  },
+  {
+   "path": "novis-backup-20260526/Novis/synova-agent/docs/plans/codex/implementation/SYNOVA-AUDIT-JTBD增量gap分析-20260706.md",
+   "batch": "B7-死备份",
+   "bytes": 26157,
+   "sha256": "17ed79f0750dda098480c4466c45faca6dc9b12f13fb260d7d4cc38aa93a8fce"
+  },
+  {
+   "path": "novis-backup-20260526/Novis/synova-agent/docs/plans/codex/implementation/SYNOVA-IMPL-对标补全-v1-20260703.md",
+   "batch": "B7-死备份",
+   "bytes": 12454,
+   "sha256": "06be06d2b88b825e337e0844aa60044614ae0627c9b730c30ce8ef56ce012084"
+  },
+  {
+   "path": "novis-backup-20260526/Novis/synova-agent/docs/plans/codex/jtbd-research/SYNOVA-RESEARCH-JTBD-Phase2-PartAB-因果信息需求-20260706.md",
+   "batch": "B7-死备份",
+   "bytes": 676,
+   "sha256": "e946021913e34eb77a03319ed4c73fb99e907cc94e4dac071d19270382c6febe"
+  },
+  {
+   "path": "novis-backup-20260526/Novis/synova-agent/docs/plans/codex/文件驱动架构-执行任务-20260624.md",
+   "batch": "B7-死备份",
+   "bytes": 0,
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "path": "novis-backup-20260526/Novis/synova-agent/docs/research/LITERATURE-REVIEW-OrgDiagnosis-Theoretical-Foundations-20260624.md",
+   "batch": "B7-死备份",
+   "bytes": 29181,
+   "sha256": "9a4d9bb1c45f795c584369cd63228b74021894b5288256541f4de22c5ba47749"
+  },
+  {
+   "path": "novis-backup-20260526/Novis/synova-agent/docs/research/LITERATURE-REVIEW-组织诊断理论基础-20260624.md",
+   "batch": "B7-死备份",
+   "bytes": 27097,
+   "sha256": "eab58f6ce9cb06b2cd5ae7d4b5e89b2c922cbd18b97ed097d3788d9a83a98ab8"
+  },
+  {
+   "path": "synthesis/CORE_EQUATION.md",
+   "batch": "B9-遗留资产",
+   "bytes": 1492,
+   "sha256": "902cc39b2eee471f81888372b4c730f4f6543a0a21ffff8e0fa82c517cd655da"
+  },
+  {
+   "path": "synthesis/REPORT_STRUCTURE.md",
+   "batch": "B9-遗留资产",
+   "bytes": 1975,
+   "sha256": "a628fc57025410170e32a472ed35bc7219edc5793deaf34b35e3e653640f340c"
+  },
+  {
+   "path": "vendor/mcp-servers/HANDOFF.md",
+   "batch": "B8-vendor",
+   "bytes": 1114,
+   "sha256": "977d840a02ea1fb409084efcbcd3e4abd3fdf682cc659dc8877ed559eda80b7d"
+  },
+  {
+   "path": "vendor/mcp-servers/SKILL-SECURITY-SCAN.md",
+   "batch": "B8-vendor",
+   "bytes": 1296,
+   "sha256": "a97fc2fc97d1e8d0fc101d4aff58150675c59f2496cc07846b5a44df081a4835"
+  },
+  {
+   "path": "vendor/mcp-servers/SKILL-SOURCES.md",
+   "batch": "B8-vendor",
+   "bytes": 1678,
+   "sha256": "fc7c03093dd50d99bf871506e6ee2403d5e665510b412c685eedc52b042fe22c"
+  },
+  {
+   "path": "vendor/mcp-servers/SKILLS-NOTES.md",
+   "batch": "B8-vendor",
+   "bytes": 1119,
+   "sha256": "24c78c947611ed22488d6edbf1d59a1442ae8c5cb8fa5d6ee64631bf5e094e2b"
+  },
+  {
+   "path": "vendor/pandoc-skill/CHANGELOG.md",
+   "batch": "B8-vendor",
+   "bytes": 3185,
+   "sha256": "df7821ac30a52d76e96a1adbe3e79705333e0e0470e260030f3dd66ce73131f2"
+  },
+  {
+   "path": "vendor/pandoc-skill/商业计划书-Synova.md",
+   "batch": "B8-vendor",
+   "bytes": 4114,
+   "sha256": "bdc7f71d7a64bbfd537f88795ebcd6f4b5eaa778d07d3a28a4cb23c2bfc28889"
+  }
+ ],
+ "card": "#1282"
+}
