@@ -1,7 +1,11 @@
 # .claude/claims/1045.yaml — #1045（模块 K10）登记件补项 · 写集声明（S0 源，issue 号卡）
-# 先例：.claude/claims/980.yaml / 1052.yaml（issue 号卡 claim 优先于 D# 链）
+# 先例：.claude/claims/980.yaml / 1052.yaml（claim 优先于 D# 链；K3 R3 防劫持）
 # 纪律：只列本 PR 真正改动的文件，不预授权。
 writeset:
   - .claude/claims/1045.yaml
   - .claude/task-briefs/2026-10-09-1045-registry-k10-supplement.md
   - docs/synova/coordination/施工项登记.ts
+done:
+  - verify: npx tsx -e "import('./docs/synova/coordination/施工项登记.ts').then(m=>{const a=m.constructionItems;const w=['B-RUNTIME','B3B7','BS-5','EXT-WIRE','BC-CLEAN','BS-6','B2-GRAPH'];if(w.filter(x=>a.some(i=>i.id===x)).length!==7)process.exit(1)})"
+  - verify: bash scripts/control-tower/merge_writeset_gate.py --base origin/main --head HEAD --branch chore/1045-registry-k10-supplement
+note: 登记件 K10/K4 补 7 项（三读判据源补链）；BS-6=proposal 待创始人裁
