@@ -4,13 +4,13 @@
  * 契约ID: COMPUTE-COMPETITOR-PRICING-LANDSCAPE-v1
  * 模块: l4-competition
  * 消费边: SUBSTITUTES
- * 输入: competitors: Array<{ name: string; price: number; marketShare?: number }>
+ * 输入: competitors: Array<{ name: string; price: number; market_share?: number }>
  * 输出(正常): { value: PriceAnalysis, confidence:'high', evidence:[], degraded:false }
  */
 export interface CompetitorPrice {
   name: string;
   price: number;
-  marketShare?: number;
+  market_share?: number;
 }
 
 export interface PriceAnalysis {

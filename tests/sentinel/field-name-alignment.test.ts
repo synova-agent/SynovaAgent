@@ -8,19 +8,19 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'fs';
 import { execSync } from 'child_process';
-import { computeCustomerValueScore } from '../../extensions/sentinels/shared/computes/l2-value/compute-customer-value-score';
-import { computeOperationalExecution } from '../../extensions/sentinels/shared/computes/l3-output/compute-operational-execution';
+import { computeLearningRate } from '../../extensions/sentinels/shared/computes/l2-value/compute-learning-rate';
+import { computeCompetitorPricingLandscape } from '../../extensions/sentinels/shared/computes/l4-competition/compute-competitor-pricing-landscape';
 
-/** 本批 A 类字段（camel → 真源 snake） */
+/** 本批（**1b**）A 类字段（camel → 真源 snake）；1a 的三个**已合入 main**（dfac2ef66） */
 const BATCH_1A = [
-  { camel: 'churnRisk', snake: 'churn_risk', file: 'extensions/sentinels/shared/computes/l2-value/compute-customer-value-score.ts' },
-  { camel: 'tenureMonths', snake: 'tenure_months', file: 'extensions/sentinels/shared/computes/l2-value/compute-customer-value-score.ts' },
-  { camel: 'defectRate', snake: 'defect_rate', file: 'extensions/sentinels/shared/computes/l3-output/compute-operational-execution.ts' },
+  { camel: 'marketShare', snake: 'market_share', file: 'extensions/sentinels/shared/computes/l4-competition/compute-competitor-pricing-landscape.ts' },
+  { camel: 'routineRigidity', snake: 'routine_rigidity', file: 'extensions/sentinels/shared/computes/l2-internal/compute-routine-rigidity.ts' },
 ] as const;
 /** 显式豁免（**逐条登记**，禁静默排除） */
 const EXEMPT = [
-  { name: 'marketShare', why: '批 1b（A 类）—— 本批未处理，已登记' },
-  { name: 'routineRigidity', why: '批 1b（A 类）—— 本批未处理，已登记' },
+  { name: 'churnRisk', why: '批 1a **已合入 main**（dfac2ef66）' },
+  { name: 'tenureMonths', why: '批 1a 已合入 main' },
+  { name: 'defectRate', why: '批 1a 已合入 main' },
   { name: 'referralCount', why: 'B 类（真源无对应；compute 内部参数）⇒ 不改' },
   { name: 'efficiencyRate', why: 'B 类（真源无对应；compute 内部参数）⇒ 不改' },
 ] as const;
@@ -38,33 +38,25 @@ describe('#1398 批 1a · A 类字段名对齐真源（去掉运行时归一化�
     // 真源侧：`churn_risk` / `tenure_months` 在 client schema 里；`defect_rate` 属生产类（非 client）
     expect(TRUTH_PROPS.has('churn_risk'), 'client schema 应声明 churn_risk').toBe(true);
     expect(TRUTH_PROPS.has('tenure_months'), 'client schema 应声明 tenure_months').toBe(true);
-    expect(EXEMPT.length, '豁免必须逐条登记（禁静默）').toBe(4);
+    expect(EXEMPT.length, '豁免必须逐条登记（禁静默）').toBe(5);
   });
 
-  it('🔴 V2【行为断言·具体样例】真源名 ⇒ 算出；旧 camel 名 ⇒ **实测 null 且 degraded=false（静默！）**', () => {
-    // 实测（本机 ref=origin/main@f86445c9c 的批 1a 分支）：
-    //   真源名 ⇒ computeCustomerValueScore.value=79（components 全填）｜computeOperationalExecution.value=0.784
-    //   旧 camel 名 ⇒ 两者 value=**NaN**，且 **degraded=false、warnings 为空** ⇒ **静默**
-    //   （⚠️ 探针首测显示 null 是 `JSON.stringify(NaN)` 的假象 ⇒ 已更正为 NaN）
-    const ok = computeCustomerValueScore({ revenue: 100_000, tenure_months: 24, churn_risk: 0.1, referralCount: 3 });
-    expect(ok.degraded).toBe(false);
-    expect(ok.value, '真源名 ⇒ 有数值').toBe(79);
-    expect(ok.components.retentionScore, '真源名 ⇒ 组件已填').toBe(18);
+  it('🔴 V2【行为断言·**本批自己的实测样例**】旧名 ⇒ **静默默认值 0.5**（正名 0.3）；竞品字段本次无分歧（如实报）', () => {
+    // 实测（本批，n=1 的行为样例；非频次观测）：
+    //   computeLearningRate：真源名 ⇒ routine_rigidity=0.3；旧 camel 名 ⇒ **实测 0.5（默认值）且 degraded=false** ⇒ **静默替代**
+    //   computeCompetitorPricingLandscape：真源名 与 旧名 ⇒ **返回值实测【无分歧】**（该字段本次未影响产出）⇒ 如实登记
+    const lrGood = computeLearningRate({ unitCostT0: 100, unitCostT: 80, cumulativeOutput: 200, routine_rigidity: 0.3 });
+    expect(lrGood.routine_rigidity, '真源名 ⇒ 用传入值').toBe(0.3);
+    expect(lrGood.degraded).toBe(false);
+    const lrStale = computeLearningRate({ unitCostT0: 100, unitCostT: 80, cumulativeOutput: 200, routineRigidity: 0.3 } as unknown as Parameters<typeof computeLearningRate>[0]);
+    expect(lrStale.routine_rigidity, '旧名 ⇒ **实测 0.5 = 默认值**（静默替代）').toBe(0.5);
+    expect(lrStale.degraded, '旧名 ⇒ **实测 degraded=false**（无信号）').toBe(false);
 
-    const stale = computeCustomerValueScore({ revenue: 100_000, tenureMonths: 24, churnRisk: 0.1 } as unknown as Parameters<typeof computeCustomerValueScore>[0]);
-    // ⚠️ 测量假象更正：探针里 `JSON.stringify(NaN)` → `null` ⇒ 实测真值是 **NaN**（不是 null）
-    expect(Number.isNaN(stale.value), '旧名 ⇒ **实测 NaN**（读不到）').toBe(true);
-    expect(Number.isNaN(stale.components.loyaltyScore), '旧名 ⇒ 组件实测 NaN').toBe(true);
-
-    const oe = computeOperationalExecution({ efficiencyRate: 0.8, defect_rate: 0.02 });
-    expect(oe.degraded).toBe(false);
-    expect(oe.value, 'defect_rate（真源名）⇒ 有数值').toBe(0.784);
-    const oeStale = computeOperationalExecution({ efficiencyRate: 0.8, defectRate: 0.02 } as unknown as Parameters<typeof computeOperationalExecution>[0]);
-    expect(Number.isNaN(oeStale.value), '旧名 ⇒ **实测 NaN**').toBe(true);
-    // 🔴 发现（登记）：旧名产生 null **但不置 degraded、不给 warnings** ⇒ **静默读到 null**
-    //   ⇒ 这正是本卡"名字必须对齐真源"的价值：**不齐时没有任何信号**
-    expect(oeStale.degraded, '旧名 ⇒ 实测 degraded=false（静默）').toBe(false);
-    expect(oeStale.warnings.length, '旧名 ⇒ 实测无告警（静默）').toBe(0);
+    const cplGood = computeCompetitorPricingLandscape([{ name: 'A', price: 100, market_share: 0.3 }], 90);
+    const cplStale = computeCompetitorPricingLandscape([{ name: 'A', price: 100, marketShare: 0.3 }] as unknown as Parameters<typeof computeCompetitorPricingLandscape>[0], 90);
+    // 比**稳定部分**（排除 computedAt 时间戳）
+    expect(JSON.stringify(cplStale.value), '竞品字段：value **实测无分歧**（如实登记）').toBe(JSON.stringify(cplGood.value));
+    expect(cplStale.degraded, '竞品字段：degraded 实测亦无分歧').toBe(cplGood.degraded);
   });
 
   it('V3【形态扫描·只证明形态 + 豁免逐条登记】A 类旧名在 extensions/** 零残留（排除项已列明）', () => {

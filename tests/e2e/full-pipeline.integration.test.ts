@@ -105,7 +105,7 @@ describe('D99: Full Pipeline E2E — 完整管线集成测试', () => {
 
     // E-33: computeCompetitivePositioning
     const { computeCompetitivePositioning: computeCP } = await import('../../extensions/sentinels/shared/computes/l4-capture/compute-competitive-positioning');
-    const compResult = computeCP({ marketShare: 0.08, revenueGrowth: 0.12, customerCount: 5000 });
+    const compResult = computeCP({ market_share: 0.08, revenueGrowth: 0.12, customerCount: 5000 });
     expect(compResult).toBeDefined();
     expect(typeof compResult.value).toBe('number');
 
