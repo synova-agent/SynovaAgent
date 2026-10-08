@@ -1,18 +1,12 @@
 # .claude/claims/1395.yaml — #1395（写入侧类型对齐本体轴）写集声明（D708 的 S0 源）
-#   **随批次更新**：B1（4 mapping + 字典 + schema 限定名，已合 ee4b2b60f）⇒ **B2（本批：余 4 个 mapping，8/8 收尾）**
+#   **本 PR = 收尾同步**：补齐 #1395 未同步的契约测试（main 上遗留红，CTO 2026-10-08 裁 (a) 单独小 PR）
 writeset:
   - .claude/claims/1395.yaml
-  - .claude/task-briefs/2026-10-08-1395-write-side-axis-b2.md
-  - extensions/ontology/field-mappings/erp-standard.json
-  - extensions/ontology/field-mappings/hr-standard.json
-  - extensions/ontology/field-mappings/innovation-pipeline.json
-  - extensions/ontology/field-mappings/risk-register.json
-  - extensions/ontology/node-type-mapping.json
-  - tests/agent/write-side-axis-alignment.test.ts
-  - tests/agent/data-ingest-service.test.ts
+  - .claude/task-briefs/2026-10-08-1395-l4-contract-sync.md
+  - tests/contract/l4-contract.test.ts
 done:
-  - verify: npx vitest run tests/agent/write-side-axis-alignment.test.ts tests/agent/data-ingest-service.test.ts
-  - verify: npx vitest run tests/agent/ tests/sentinel/ tests/l3/ tests/ontology/
-  - verify: test "$(git grep -c "outcome/financial" HEAD -- extensions/ontology/field-mappings/erp-standard.json | tr -d '\n')" -ge 1
+  - verify: npx vitest run tests/contract/l4-contract.test.ts
+  - verify: npx vitest run tests/contract/ tests/sentinel/ tests/sentinels/
+  - verify: bash -c 'grep -c "resource/client" tests/contract/l4-contract.test.ts'
   - verify: npx tsc --noEmit
-note: B2 = 收尾批（8/8）：erp-standard→outcome/financial｜hr-standard→resource/person｜innovation-pipeline→outcome/innovation｜risk-register→outcome/risk。**判据作用域切 B2**（含 B1 已合的 4 个做 8/8 覆盖声明）。**就地修**：读侧字典 Financial 条目的 ruleTestedBy 悬空引用（指向不存在的 tests/ontology/node-type-mapping.test.ts）→ 改指 tests/sentinel/node-type-resolver.test.ts。
+note: #1395 改了写侧 targetNodeType（Client→resource/client 等）但未同步本契约测试 ⇒ main 上 5 failed/8 passed（独立发现）。本 PR 同步 5 处断言：3 处 target 断言 → 本体轴；2 处 roundtrip → **双侧锚点**（写侧本体轴直查命中 + 经收口点用遗留名命中，#1393 并集读）。
