@@ -7,7 +7,7 @@
  *   ① 按 TUI_1348_FAULT=reject|null 在**本进程内**替换 ConversationEngine.prototype.startDiagnosis
  *      —— 只注入「:418 调用点（无 event handler）失败」，让「:438 调用点（带 event handler）」保持挂起，
  *         以复刻真实的「探针已失败、界面仍停在假进度」场景；
- *   ② 可选把 TUI 的 LOG_LEVEL 恢复为 info（bootstrap.ts:55 在生产路径把日志压成 silent），
+ *   ② 可选把 TUI 的 LOG_LEVEL 恢复为 info（src/tui-v2/lib/bootstrap.ts:50 在生产路径把日志压成 silent），
  *      使 warn/error 能落进 PTY 原始输出（证据 ①）；
  *   ③ 最后 **动态 import 真实生产入口** src/tui-v2/chat.tsx —— main()/bootstrap()/ink render 全走真身。
  *
