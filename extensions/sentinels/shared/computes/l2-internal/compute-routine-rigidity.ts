@@ -32,7 +32,7 @@ export function computeRoutineRigidity(input: RoutineRigidityInput) {
   return {
     value,
     confidence,
-    evidence: [`adjustmentFlexibility: ${clamped}`, `routineRigidity: ${value.toFixed(3)}`],
+    evidence: [`adjustmentFlexibility: ${clamped}`, `routine_rigidity: ${value.toFixed(3)}`],
     degraded: false,
     warnings,
   };

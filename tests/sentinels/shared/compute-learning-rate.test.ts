@@ -15,7 +15,7 @@ describe('computeLearningRate', () => {
     expect(r.learningRate).toBeLessThan(0.5);
     expect(r.experienceElasticity).toBeGreaterThan(0);
     expect(r.experienceElasticity).toBeLessThan(1);
-    expect(r.routineRigidity).toBe(0.5); // default
+    expect(r.routine_rigidity).toBe(0.5); // default
     expect(r.confidence).toBe('medium');
   });
 
@@ -56,7 +56,7 @@ describe('computeLearningRate', () => {
       unitCostT0: 100,
       unitCostT: 98,
       cumulativeOutput: 10000,
-      routineRigidity: 0.9,
+      routine_rigidity: 0.9,
     });
     expect(r.degraded).toBe(false);
     expect(r.learningRate).toBeGreaterThan(0);

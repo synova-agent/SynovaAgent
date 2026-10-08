@@ -4,8 +4,8 @@
  * 契约ID: COMPUTE-LEARNING-RATE-v1
  * 模块: l2-value
  * 消费边: CUMULATIVE_LEARNING
- * 输入: unitCostT0(number), unitCostT(number), cumulativeOutput(number), routineRigidity?(number 0-1)
- * 输出(正常): { learningRate, experienceElasticity, routineRigidity, confidence, evidence, economicInterpretation, degraded:false }
+ * 输入: unitCostT0(number), unitCostT(number), cumulativeOutput(number), routine_rigidity?(number 0-1)
+ * 输出(正常): { learningRate, experienceElasticity, routine_rigidity, confidence, evidence, economicInterpretation, degraded:false }
  * 输出(降级): { learningRate:0, ... economicInterpretation, degraded:true, warnings:['...'] }
  *
  * D59 ME Enhance: 追加 economic_interpretation 字段
@@ -29,7 +29,7 @@ export interface LearningRateInput {
   unitCostT0: number;
   unitCostT: number;
   cumulativeOutput: number;
-  routineRigidity?: number;
+  routine_rigidity?: number;
 }
 
 /** 管理经济学语义解读 */
@@ -45,7 +45,7 @@ export interface LearningRateInterpretation {
 export interface LearningRateResult {
   learningRate: number;
   experienceElasticity: number;
-  routineRigidity: number;
+  routine_rigidity: number;
   confidence: 'high' | 'medium' | 'low';
   evidence: string[];
   /** D59: 管理经济学语义解读 */
@@ -57,12 +57,12 @@ export interface LearningRateResult {
 export function computeLearningRate(input: LearningRateInput): LearningRateResult {
   const warnings: string[] = [];
   const { unitCostT0, unitCostT, cumulativeOutput } = input;
-  const routineRigidity = input.routineRigidity ?? 0.5;
+  const routine_rigidity = input.routine_rigidity ?? 0.5;
 
   // 降级：无效输入
   if (cumulativeOutput < 2) {
     return {
-      learningRate: 0, experienceElasticity: 0, routineRigidity,
+      learningRate: 0, experienceElasticity: 0, routine_rigidity,
       confidence: 'low', evidence: [],
       economicInterpretation: {
         learningRateInterpretation: 'negative',
@@ -75,7 +75,7 @@ export function computeLearningRate(input: LearningRateInput): LearningRateResul
   }
   if (unitCostT0 <= 0 || unitCostT <= 0) {
     return {
-      learningRate: 0, experienceElasticity: 0, routineRigidity,
+      learningRate: 0, experienceElasticity: 0, routine_rigidity,
       confidence: 'low', evidence: [],
       economicInterpretation: {
         learningRateInterpretation: 'negative',
@@ -103,7 +103,7 @@ export function computeLearningRate(input: LearningRateInput): LearningRateResul
   ];
 
   // 检测惯例刚性阻碍学习
-  if (routineRigidity > 0.8 && learningRate < 0.05) {
+  if (routine_rigidity > 0.8 && learningRate < 0.05) {
     warnings.push('惯例刚性高(>0.8)且学习率低(<0.05)——惯例刚性可能阻碍了学习');
   }
 
@@ -122,7 +122,7 @@ export function computeLearningRate(input: LearningRateInput): LearningRateResul
     costReductionForecast: experienceElasticity > 0
       ? `累计产出翻倍时成本预计下降${(experienceElasticity * 100).toFixed(1)}%`
       : '成本未呈现下降趋势',
-    organizationalImplication: routineRigidity > 0.8
+    organizationalImplication: routine_rigidity > 0.8
       ? '惯例刚性较高可能阻碍学习效应，建议引入外部知识或流程再造'
       : '学习效应正常发挥，可继续当前生产组织方式',
   };
@@ -132,7 +132,7 @@ export function computeLearningRate(input: LearningRateInput): LearningRateResul
   return {
     learningRate: Math.round(learningRate * 10000) / 10000,
     experienceElasticity: Math.round(experienceElasticity * 10000) / 10000,
-    routineRigidity,
+    routine_rigidity,
     confidence,
     evidence,
     economicInterpretation,
