@@ -10,7 +10,7 @@
  *   分母 0 → degrade（D358 决策 5: 堵 0/0 假值）
  * 边界: gross_margin 显式 0（无毛利企业）→ value 0 且不降级（显式 0 ≠ 缺失）
  */
-import { checkFiniteInputs } from '../../shared/computes/assert-finite-inputs';   // #1408：输入有效性检查
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408：输入有效性检查
 export interface GrossMarginResult {
   /** 毛利率 (gross_profit / total_revenue)，0-1 */
   value: number;

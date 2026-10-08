@@ -5,8 +5,8 @@ writeset:
   - .claude/claims/1408.yaml
   - .claude/task-briefs/2026-10-08-1408-silent-wrong-value-a.md
   - src/sentinel/metric-readings-writer.ts
-  - extensions/sentinels/shared/computes/assert-finite-inputs.ts
-  - tests/sentinels/shared/assert-finite-inputs.test.ts
+  - src/sentinel/assert-finite-inputs.ts
+  - tests/sentinel/assert-finite-inputs.test.ts
   - extensions/sentinels/margin-health/computes/compute-cost-per-head.ts
   - extensions/sentinels/margin-health/computes/compute-fixed-variable-ratio.ts
   - extensions/sentinels/margin-health/computes/compute-gross-margin.ts
@@ -14,7 +14,7 @@ writeset:
   - extensions/sentinels/margin-health/computes/compute-profit-margin-change.ts
   - tests/sentinel/silent-wrong-value.test.ts
 done:
-  - verify: npx vitest run tests/sentinel/silent-wrong-value.test.ts tests/sentinels/shared/assert-finite-inputs.test.ts
+  - verify: npx vitest run tests/sentinel/silent-wrong-value.test.ts tests/sentinel/assert-finite-inputs.test.ts
   - verify: npx vitest run tests/sentinels/ tests/sentinel/ tests/l4/ tests/agent/ tests/adapters/
   - verify: bash -c 'grep -rl "checkFiniteInputs(" extensions/sentinels/margin-health/computes/ | wc -l'
   - verify: npx tsc --noEmit

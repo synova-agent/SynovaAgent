@@ -10,7 +10,7 @@
  *   分母 0 → degrade（D358 决策 5: 堵 0/0 假值）
  * 边界: total_cost 显式 0 → value 0 且不降级（零成本≠无数据）
  */
-import { checkFiniteInputs } from '../../shared/computes/assert-finite-inputs';   // #1408：输入有效性检查
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408：输入有效性检查
 export interface CostPerHeadResult {
   /** 人均成本 */
   value: number;

@@ -10,7 +10,7 @@
  *   分母 0 → degrade（D358 决策 5: 堵 0/0 假值）
  * 边界: operatingExpenses 显式 0 → 净利率 = 毛利率
  */
-import { checkFiniteInputs } from '../../shared/computes/assert-finite-inputs';   // #1408：输入有效性检查
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408：输入有效性检查
 export interface ProfitMarginResult {
   /** 净利率 ((gross_margin − operatingExpenses) / total_revenue)，可为负 */
   value: number;

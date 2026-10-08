@@ -3,7 +3,7 @@
  * 口径：被测对象 = **助手返回的问题清单**（纯函数，无副作用）。
  */
 import { describe, it, expect } from 'vitest';
-import { checkFiniteInputs } from '../../../extensions/sentinels/shared/computes/assert-finite-inputs';
+import { checkFiniteInputs } from '../../src/sentinel/assert-finite-inputs';
 
 describe('#1408 checkFiniteInputs（输入有效性检查助手）', () => {
   it('正常入参 ⇒ 空清单（**不得误报**）', () => {

@@ -28,8 +28,8 @@
 ## Q2: 范围 — 正确的最简方案
 做什么（逐文件一行；**含 CTO 裁 (A) 的落库侧收口**）：
 - src/sentinel/metric-readings-writer.ts — **非有限值 ⇒ 跳过 + warn（含行标识）+ 计数留痕**（CTO 裁 (A) 约束一：**跳过，不落库**）
-- extensions/sentinels/shared/computes/assert-finite-inputs.ts — 新建助手（纯函数，返回问题清单）
-- tests/sentinels/shared/assert-finite-inputs.test.ts — 配对单测
+- src/sentinel/assert-finite-inputs.ts — 新建助手（纯函数，返回问题清单）
+- tests/sentinel/assert-finite-inputs.test.ts — 配对单测
 - extensions/sentinels/margin-health/computes/compute-cost-per-head.ts — 显式调用（`['total_cost','head_count']`）
 - extensions/sentinels/margin-health/computes/compute-fixed-variable-ratio.ts — 显式调用（`['total_revenue','gross_margin']`）
 - extensions/sentinels/margin-health/computes/compute-gross-margin.ts — 同上
@@ -66,7 +66,7 @@
 ## 架构层: 扩展 computes（`extensions/sentinels/shared/**` + `margin-health/**`）
 
 ## Done 标准
-- [ ] verify: npx vitest run tests/sentinel/silent-wrong-value.test.ts tests/sentinels/shared/assert-finite-inputs.test.ts
+- [ ] verify: npx vitest run tests/sentinel/silent-wrong-value.test.ts tests/sentinel/assert-finite-inputs.test.ts
 - [ ] verify: npx vitest run tests/sentinels/ tests/sentinel/ tests/l4/ tests/agent/ tests/adapters/
 - [ ] verify: bash -c 'grep -rl "checkFiniteInputs(" extensions/sentinels/margin-health/computes/ | wc -l'
 - [ ] verify: npx tsc --noEmit

@@ -9,7 +9,7 @@
  * 输出(降级): 空数组 / fixed_cost 全缺 / 总成本=0 → { value: 0, degraded: true, warnings: [...] }
  * 边界: fixed_cost 显式 0 → value 0 且不降级（无固定成本≠无数据）
  */
-import { checkFiniteInputs } from '../../shared/computes/assert-finite-inputs';   // #1408：输入有效性检查
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408：输入有效性检查
 export interface FixedVariableRatioResult {
   /** 固定成本占比 (fixed_cost / total_cost)，0-1 */
   value: number;
