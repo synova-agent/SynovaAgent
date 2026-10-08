@@ -45,7 +45,10 @@ run env SYNO_SESSION_ID="a/b c" bash "$TOOL" path
 if echo "$OUT" | grep -qE "a_b_c/bypass.log"; then pass "会话标识归一（/ 与空格 → _）"; else fail "未归一: $OUT"; fi
 run env -u SYNO_SESSION_ID -u DSH_SESSION_ID -u SYNO_TASK_ID -u TASK_ID bash "$TOOL" path
 if echo "$OUT" | grep -q "\.sessions/"; then pass "无 env 时回退（分支或目录名）仍落 .sessions/"; else fail "回退失败: $OUT"; fi
-if echo "$OUT" | grep -q "$REPO_DIR/.sessions/"; then pass "落点在仓库 .sessions/ 下"; else fail "落点不在 .sessions/: $OUT"; fi
+# D1164: 账本根 = 主仓仓根（git-common-dir 派生）。主仓态下 == REPO_DIR；
+# 链接 worktree 态下 REPO_DIR 是 worktree 根 ⇒ 用主仓根断言（与实现同源口径，两端一致）。
+_MAIN_ROOT="$(dirname "$(cd "$REPO_DIR" && git rev-parse --path-format=absolute --git-common-dir)")"
+if echo "$OUT" | grep -q "$_MAIN_ROOT/.sessions/"; then pass "落点在主仓 .sessions/ 下（D1164）"; else fail "落点不在主仓 .sessions/: $OUT"; fi
 
 echo ""
 echo "── 2. append: 创建 + 追加 ──"

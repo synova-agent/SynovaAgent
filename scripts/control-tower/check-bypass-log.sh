@@ -1,4 +1,7 @@
 #!/bin/bash
+# D313 M5 UTF-8 强制: Windows 控制台/子进程统一 UTF-8（D1164 补齐——本卡触碰文件须达标）
+export PYTHONIOENCODING=utf-8
+export LC_ALL=C.UTF-8 2>/dev/null || true
 # ═══════════════════════════════════════════════════════════════════════════════
 # check-bypass-log.sh — D331 (L4-2 / P1-2): bypass.log 执行证据链对账
 #
@@ -50,7 +53,22 @@ LOG="$ROOT/.claude/bypass.log"
 LEDGER_SH="$ROOT/scripts/control-tower/bypass-ledger.sh"
 LEDGER_SOURCES="$LOG"
 if [ -f "$LEDGER_SH" ]; then
-  _SRC_OUT="$(bash "$LEDGER_SH" sources 2>/dev/null)" || _SRC_OUT="$LOG"  # swallow-ok: 解析器失败即回退旧路径（显式赋值，非静默跳过对账）
+  # D1164: 账本解析器（sources）exit 2 = 检查自身失败（账本根不可解析）—— 与
+  #   「提交无记录」（业务违规）语义不同，必须具名分开报，不得静默降级为
+  #   「回退旧路径 → 全部来源皆空 → 拒推」（假红：把脚本故障误报成证据缺失）。
+  _SRC_ERR="$(mktemp)"; _SRC_OUT=""
+  _RED='\033[0;31m'; _RESET='\033[0m'
+  if _SRC_OUT="$(bash "$LEDGER_SH" sources 2>"$_SRC_ERR")"; then
+    :
+  elif [ $? -eq 2 ]; then
+    echo -e "${_RED}❌ bypass 账本根不可解析（bypass-ledger exit 2，检查自身失败 ≠ 提交无记录）:${_RESET}" >&2
+    sed 's/^/  /' "$_SRC_ERR" >&2
+    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) check-bypass-log degraded: bypass-ledger sources exit 2（账本根不可解析）" >> "$ROOT/.claude/degraded-events.log" 2>/dev/null || true
+    rm -f "$_SRC_ERR"; exit 2
+  else
+    _SRC_OUT="$LOG"   # swallow-ok: 解析器非 2 失败即回退旧路径（显式赋值，非静默跳过对账；D1164 前的既有语义）
+  fi
+  rm -f "$_SRC_ERR"
   [ -n "$_SRC_OUT" ] && LEDGER_SOURCES="$_SRC_OUT"
 fi
 BASE="${SYNO_BASE_REF:-${1:-origin/feat/prompt-architecture}}"
