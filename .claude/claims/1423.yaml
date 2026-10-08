@@ -1,29 +1,26 @@
 writeset:
-  # ── 卡 #1423 · 开关翻面（line-g-parser 侧）──
   - .claude/claims/1423.yaml
+  - .claude/task-briefs/2026-10-08-1423-禁新建D#-存量只读.md
   - .claude/task-briefs/2026-10-08-1423-claim-default-on.md
   - memory/notes/implemented/2026-10-08-1423-claim-default-on.md
+  - scripts/check-brief-vs-code.sh
+  - scripts/check-verifiable-done.sh
+  - scripts/control-tower/alloc-task-id.sh
   - scripts/control-tower/claim_store.py
   - scripts/pre-commit-check.sh
   - scripts/workflow/resolve-commit-brief.sh
-  - scripts/check-verifiable-done.sh
-  - scripts/check-brief-vs-code.sh
-  - tests/control-tower/claim_store.test.sh
-  - tests/control-tower/claim-identity-v2.test.py
-  - tests/control-tower/precommit-claim-wiring.test.sh
-  - tests/control-tower/precommit-groups-injection.test.sh
-  # ── 卡 #1423 · 取号路径 refuse（Lead 侧）──
-  - scripts/control-tower/alloc-task-id.sh
-  - tests/control-tower/alloc-task-id.test.sh
   - tests/control-tower/alloc-task-id-lock.test.sh
   - tests/control-tower/alloc-task-id-timeout.test.sh
-  - .claude/task-briefs/2026-10-08-1423-禁新建D#-存量只读.md
+  - tests/control-tower/alloc-task-id.test.sh
+  - tests/control-tower/claim-identity-v2.test.py
+  - tests/control-tower/claim_store.test.sh
+  - tests/control-tower/precommit-claim-wiring.test.sh
 done:
-  - "verify: bash tests/control-tower/precommit-claim-wiring.test.sh ⇒ 0 失败（含 #1423 全段 + CI 面判据）"
-  - "verify: bash tests/control-tower/claim_store.test.sh ⇒ 0 失败（默认开 + 显式 0 回滚）"
-  - "verify: python3 tests/control-tower/claim-identity-v2.test.py ⇒ Ran 21 tests OK"
-  - "verify: bash tests/control-tower/alloc-task-id.test.sh ⇒ PASS=76 FAIL=0"
-  - "verify: bash tests/control-tower/alloc-task-id-lock.test.sh ⇒ 7/0 且 alloc-task-id-timeout.test.sh ⇒ 9/0"
-  - "verify: bash scripts/control-tower/check-name-allocation.test.sh ⇒ 21/0"
-  - "verify: bash scripts/control-tower/alloc-task-id.test.sh --check-id 保留可用（D3 断言）"
-note: D-C 切换（创始人 2026-10-08）：禁【新建】D#（一步到位）＋存量只读兼容（不影响在飞合并）。本 claim 两半 —— 开关默认翻「开」+ 存量 D# 反例守护（line-g-parser）／取号路径 refuse（Lead）。
+  - "verify: bash tests/control-tower/alloc-task-id.test.sh ⇒ 76/0（新号断流 + 存量只读）"
+  - "verify: bash tests/control-tower/alloc-task-id-lock.test.sh ⇒ 7/0 ｜ -timeout ⇒ 9/0"
+  - "verify: python3 tests/control-tower/claim-identity-v2.test.py ⇒ OK"
+  - "verify: bash tests/control-tower/precommit-claim-wiring.test.sh ⇒ 29/0"
+  - "verify: bash tests/control-tower/claim_store.test.sh ⇒ 33/0"
+  - "verify: bash tests/control-tower/precommit-groups-injection.test.sh ⇒ baseline=ok"
+  - "verify: CI 条件 GITHUB_ACTIONS=true SYNO_CI=1 bash scripts/pre-commit-check.sh ⇒ 13/13"
+note: D-C 切换两件（禁新建 D# #1425 ／ 翻开关 #1426）+ 2026-10-08 热修收敛（撤销候选过滤，改以"载体分口径"治后果）
