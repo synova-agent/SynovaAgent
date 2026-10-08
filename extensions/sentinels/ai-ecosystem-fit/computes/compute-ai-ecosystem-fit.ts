@@ -9,7 +9,10 @@
  * - platformCoverage: 企业支持的 AI 平台 / 主流平台总数
  * - devEcosystem: 开发者生态支持度 [0,1]
  */
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408：输入有效性检查
 export interface EcosystemFitResult {
+  /** #1408：输入有效性等告警（缺字段/NaN/非有限 ⇒ 非空） */
+  warnings?: string[];
   score: number;
   apiCompatibility: number;
   platformsCovered: number;
@@ -24,6 +27,9 @@ export function computeAiEcosystemFit(params: {
   totalPlatforms: number;
   devEcosystemScore: number;
 }): EcosystemFitResult {
+  // #1408：输入有效性检查（**params 对象型** ⇒ 逐字段名与 params 逐字一致）
+  const _inputIssues = checkFiniteInputs(params, ['apiCompatible', 'totalApis', 'platformsCovered', 'totalPlatforms', 'devEcosystemScore']);
+  if (_inputIssues.length > 0) return { ...{ score: 0.5, apiCompatibility: 0, platformsCovered: 0, devEcosystem: 0, degraded: true }, warnings: _inputIssues };
   const { apiCompatible, totalApis, platformsCovered, totalPlatforms, devEcosystemScore } = params;
   if (totalApis === 0 || totalPlatforms === 0) return { score: 0.5, apiCompatibility: 0, platformsCovered: 0, devEcosystem: 0, degraded: true };
   const apiCompatScore = totalApis > 0 ? apiCompatible / totalApis : 0;

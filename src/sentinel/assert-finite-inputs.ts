@@ -43,3 +43,31 @@ export function checkFiniteInputs<T extends object>(
   }
   return issues;
 }
+
+/**
+ * **存在性**维度（与 `checkFiniteInputs` 同族；#1408 批 C2a）——
+ *   `undefined`/`null` 才算缺；**不要求数值**（供 string / boolean 字段使用，如 `type`｜`props`｜`category`｜`inHouse`）。
+ *
+ * 为什么把它**显式化**（而不是继续混在 `checkFiniteInputs` 的返回文案里）：
+ *   ① "缺字段"这一维度**今天本就在用** ⇒ 显式化后**可被单独断言**（`toEqual(['缺字段: x'])`）
+ *   ② `nodes` 数组型 compute（如 model-consistency-score / make-or-buy-score）**数值检查不适用**，
+ *      但"**缺字段**"仍必须有信号 ⇒ **不适用 ≠ 不管**（两件事，不可混为一谈）
+ * @invariant 同族：不改返回值语义｜各 compute 显式调用｜不抛异常｜不猜字段名
+ */
+export function checkRequiredFields<T extends object>(
+  input: T | ReadonlyArray<T>,
+  fields: readonly string[],
+): string[] {
+  const rows = (Array.isArray(input) ? input : [input]) as ReadonlyArray<Record<string, unknown>>;
+  const issues: string[] = [];
+  if (rows.length === 0 && fields.length > 0) return ['无输入行（rows 为空）'];
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const where = Array.isArray(input) ? `#${i}.` : '';
+    if (row === null || typeof row !== 'object') { issues.push(`${where}入参非对象`); continue; }
+    for (const f of fields) {
+      if (row[f] === undefined || row[f] === null) issues.push(`缺字段: ${where}${f}`);
+    }
+  }
+  return issues;
+}

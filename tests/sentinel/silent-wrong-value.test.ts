@@ -20,6 +20,8 @@ import { computeCostPerHead } from '../../extensions/sentinels/margin-health/com
 import { computeAssetTurnover } from '../../extensions/sentinels/capital-health/computes/asset-turnover';
 import { computeDebtEquityRatio } from '../../extensions/sentinels/capital-health/computes/debt-equity-ratio';
 import { computeCashRunway } from '../../extensions/sentinels/financing-constraint/computes/cash-runway';
+import { computeAgentDeploymentMaturity } from '../../extensions/sentinels/agent-deployment-maturity/computes/compute-agent-deployment-maturity';
+import { computeAiInvestmentReturn } from '../../extensions/sentinels/ai-investment-return/computes/compute-ai-investment-return';
 
 /** 本批接线集合（**声称**；由 V3 用扫描核） */
 const WIRED_THIS_BATCH = [
@@ -230,4 +232,46 @@ describe('#1408 静默错误值（批 A：margin-health 的 5 个 compute）', (
     expect(rows.length, '应产出 ≥1 行').toBeGreaterThan(0);
     for (const r of rows) expect(Number.isFinite(r.value), `${r.metric_id} 必须为有限数`).toBe(true);
   });
+
+  it('🔴 V1-d【行为·**批 C2a 自己的实测样例**】params 对象型：NaN / 缺字段 ⇒ degraded + warnings', () => {
+    const nan = computeAiInvestmentReturn({ costSaved: Number.NaN, revenueUplift: 100, totalInvestment: 50, paybackMonths: 12 });
+    expect(nan.degraded, 'NaN ⇒ 必须降级').toBe(true);
+    expect(nan.warnings?.join(' '), 'NaN ⇒ 必须留痕').toContain('非有限数');
+    const missing = computeAgentDeploymentMaturity({
+      agentCount: 3, autonomyLevel: 2, monitoredAgents: 2, totalAgents: 3, recentErrors: 1,
+    } as unknown as Parameters<typeof computeAgentDeploymentMaturity>[0]);
+    expect(missing.degraded, '缺字段 ⇒ 必须降级').toBe(true);
+    expect(missing.warnings?.join(' ')).toContain('缺字段');
+  });
+
+  it('V2-d【行为】params 对象型正常入参 ⇒ **不得误报**', () => {
+    const ok = computeAiInvestmentReturn({ costSaved: 300, revenueUplift: 200, totalInvestment: 1000, paybackMonths: 12 });
+    expect(ok.degraded, '正常入参 ⇒ 不得降级').toBe(false);
+    expect((ok.warnings ?? []).filter(w => w.includes('缺字段') || w.includes('非有限数'))).toEqual([]);
+  });
+
+  it('V3-d【形态扫描·**只证明形态**】批 C2a 覆盖率：已调用集合 == 声称的 3 个（扫调用、排注释、排 import）', () => {
+    const dirs = [
+      'extensions/sentinels/agent-deployment-maturity/computes',
+      'extensions/sentinels/ai-ecosystem-fit/computes',
+      'extensions/sentinels/ai-investment-return/computes',
+    ];
+    const called: string[] = [];
+    for (const d of dirs) {
+      for (const f of readdirSync(d).filter(x => x.endsWith('.ts') && !x.endsWith('.test.ts'))) {
+        if (countCallLines(readFileSync(join(d, f), 'utf-8')) > 0) called.push(f);
+      }
+    }
+    expect(new Set(called), '批 C2a 已调用集合应恰为 3 个').toEqual(new Set([
+      'compute-agent-deployment-maturity.ts', 'compute-ai-ecosystem-fit.ts', 'compute-ai-investment-return.ts',
+    ]));
+  });
+
+  // 🔴 V4-d【端到端】**本批不可判 —— 已登记，不写假判据**（R109：判据要有真对象）
+  //   实测（本批，夹具 = `Tool{tid,aiEnabled,costSaving,revenueUplift,investment}`）：
+  //     · `queryNodes('Tool',{tid})` ⇒ **1**（夹具可读 ✓）
+  //     · `sentinel-ai-investment-return.check(...)` ⇒ `{ok:true, findings:0, degraded:true}` ⇒ **metric_readings 0 行**
+  //   ⇒ ⇒ **"接线 ≠ 端到端可产出"**（同 #1375 B3b 的已知族：接线对、数据到、仍 0 行）
+  //   ⇒ 出口：按 CTO 裁定"夹具/产出条件不足 ⇒ **停下报我，不硬凑**" ⇒ 本批**不写**该判据，**登记**于此
+
 });

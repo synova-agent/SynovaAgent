@@ -3,7 +3,7 @@
  * 口径：被测对象 = **助手返回的问题清单**（纯函数，无副作用）。
  */
 import { describe, it, expect } from 'vitest';
-import { checkFiniteInputs } from '../../src/sentinel/assert-finite-inputs';
+import { checkFiniteInputs, checkRequiredFields } from '../../src/sentinel/assert-finite-inputs';
 
 describe('#1408 checkFiniteInputs（输入有效性检查助手）', () => {
   it('正常入参 ⇒ 空清单（**不得误报**）', () => {
@@ -23,5 +23,11 @@ describe('#1408 checkFiniteInputs（输入有效性检查助手）', () => {
   });
   it('不抛异常（null/非对象行 ⇒ 记一条清单，不崩）', () => {
     expect(checkFiniteInputs([null as unknown as Record<string, unknown>], ['v'])).toEqual(['#0.入参非对象']);
+  });
+  it('🔴 存在性维度（checkRequiredFields）：缺 type/props ⇒ 有信号；**不要求数值**（boolean/string 亦可）', () => {
+    expect(checkRequiredFields({ type: 'BusinessModel', props: {} }, ['type', 'props'])).toEqual([]);
+    expect(checkRequiredFields({ props: {} }, ['type', 'props'])).toEqual(['缺字段: type']);
+    expect(checkRequiredFields([{ category: 'core', inHouse: false }], ['category', 'inHouse']), 'false 是合法值（存在性只看 undefined/null）').toEqual([]);
+    expect(checkRequiredFields([{ category: 'core' }], ['category', 'inHouse'])).toEqual(['缺字段: #0.inHouse']);
   });
 });
