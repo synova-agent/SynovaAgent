@@ -35,6 +35,24 @@ const WIRED_BATCH_B = [
 /** margin-health 内【不适用】的（无 props 数值入参：图遍历形态） */
 const NOT_APPLICABLE = ['compute-incentive-bind.ts', 'compute-metric-bind-divergence.ts'];
 
+/**
+ * 🔴 2026-10-08 类级复查（CTO 要求）：**"是否存在 X"的判断必须精确** ——
+ *   本卡两次踩到"同名串骗过判断"（writer import 被注释骗过｜接口扩写被注释骗过）
+ * ⇒ 本助手：判"这一行是否是【调用】" = 匹配调用形状 **且** 排除注释行 **且** 排除 import 行
+ *   （**扫"出现" ≠ 扫"调用"；扫"注释" ≠ 扫"代码"**）
+ */
+export function isCallLine(line: string): boolean {
+  const t = line.trim();
+  if (t.startsWith('//') || t.startsWith('*') || t.startsWith('/*')) return false;   // 注释行
+  if (/^import\b/.test(t)) return false;                                            // import 行
+  return /checkFiniteInputs\s*\(/.test(t);                                          // 调用形状
+}
+
+/** 统计一份源码里**调用行**的条数（供断言与复查用） */
+export function countCallLines(content: string): number {
+  return content.split('\n').filter(isCallLine).length;
+}
+
 beforeAll(async () => {
   const { sentinels } = loadSentinels();
   await registerLoadedSentinels(sentinels);
@@ -69,7 +87,7 @@ describe('#1408 静默错误值（批 A：margin-health 的 5 个 compute）', (
     const files = readdirSync(dir).filter(f => f.endsWith('.ts') && !f.endsWith('.test.ts'));
     // 🔴 扫【**调用**】而非【出现】—— 排除 import 行（否则"只 import 未调用"会假绿；M1 实测过这个漏洞）
     const called = files.filter(f => readFileSync(join(dir, f), 'utf-8')
-      .split('\n').some(l => /checkFiniteInputs\(/.test(l) && !/^\s*import\b/.test(l)));
+      .split('\n').some(isCallLine));
     expect(new Set(called), '已调用集合应恰为本批声称的 5 个（多/少都算漂）').toEqual(new Set(WIRED_THIS_BATCH));
     const pending = files.filter(f => !called.includes(f) && !NOT_APPLICABLE.includes(f));
     expect(pending, 'margin-health 内既未调用、又非"不适用"的 ⇒ 必须为空（本批 5 调用 + 2 不适用 = 7）').toEqual([]);
@@ -130,7 +148,7 @@ describe('#1408 静默错误值（批 A：margin-health 的 5 个 compute）', (
   it('V3-b【形态扫描·**只证明形态**】批 B 覆盖率：已调用集合 == 声称的 9 个（扫**调用**，排除 import 行）', () => {
     const files = readdirSync(WIRED_BATCH_B_DIR).filter(f => f.endsWith('.ts') && !f.endsWith('.test.ts'));
     const called = files.filter(f => readFileSync(join(WIRED_BATCH_B_DIR, f), 'utf-8')
-      .split('\n').some(l => /checkFiniteInputs\(/.test(l) && !/^\s*import\b/.test(l)));
+      .split('\n').some(isCallLine));
     expect(new Set(called), '批 B 已调用集合应恰为 9 个').toEqual(new Set(WIRED_BATCH_B));
     expect(files.length - called.length, 'capital-health 内未调用者应为 0（本批全接线）').toBe(0);
   });
@@ -152,5 +170,12 @@ describe('#1408 静默错误值（批 A：margin-health 的 5 个 compute）', (
     const rows = db.prepare('SELECT metric_id, value FROM metric_readings').all() as Array<{ metric_id: string; value: number }>;
     expect(rows.length, '应产出 ≥1 行').toBeGreaterThan(0);
     for (const r of rows) expect(Number.isFinite(r.value), `${r.metric_id} 必须为有限数`).toBe(true);
+  });
+
+  it('🔴 V3-c【行为·**精度自证**】"是否存在调用"的判断：注释行/import 行**不得**计为调用（防同名串假绿）', () => {
+    expect(countCallLines('// 这里提到 checkFiniteInputs( 但只是注释'), '注释行不得计为调用').toBe(0);
+    expect(countCallLines('* checkFiniteInputs(x, [\'a\']); // JSDoc 里出现'), 'JSDoc 行不得计为调用').toBe(0);
+    expect(countCallLines("import { checkFiniteInputs } from './assert-finite-inputs';"), 'import 行不得计为调用').toBe(0);
+    expect(countCallLines("const _inputIssues = checkFiniteInputs(financials, ['a']);"), '真实调用计 1').toBe(1);
   });
 });
