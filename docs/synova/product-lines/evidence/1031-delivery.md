@@ -8,10 +8,17 @@
 - commit 链：`dca0b7b2f` feat（实现）→ `26e2b22b4` docs（本收尾件）→ `dfe12ce7c` chore（claim，治理产物）
 - 契约件（前置）：`docs/synova/product-lines/evidence/1031-injection-contract.md`
 
-### 0-⓪ 分支级最终 diff（**以本小节为准**；§1 的两段 stat 是 **commit-1 时点**，已被本小节取代）
+### 0-⓪ 分支级最终 diff（**以本节为准**；§1 的两段 stat 是 **commit-1 时点**，已被本节取代）
+
+> ⚠️ **自指边界（显式声明）**：本文件无法一字不差地写出"包含本文件自身修改的那次提交之后"的 stat——
+> 每次补写本文件都会再改一次 stat（自指悖论）。因此：
+> - 下图是 **commit-3（claim 提交）时点**的快照；
+> - **分支最终 HEAD 与最终 stat 以现场复跑为准**：`git diff --stat 5a6591c4a..HEAD`（命令原样给出，可复现）；
+> - **卡上回执 `.k4-publish/WIN-1031-delivery.md` 给出最终值**（它是仓库外文件，不受自指约束）。
+> 复现口径始终是 **base = `5a6591c4a3d4c9816895fb7f55a8a97b1c71a7e4`**。
 
 ```
-$ git diff --stat 5a6591c4a3d4c9816895fb7f55a8a97b1c71a7e4..HEAD
+$ git diff --stat 5a6591c4a3d4c9816895fb7f55a8a97b1c71a7e4..HEAD     # commit-3 时点
  .claude/claims/1031.yaml                           |  14 +
  .../2026-10-09-1031-ontology-param-bridge.md       |  59 +++
  .../synova/product-lines/evidence/1031-delivery.md | 218 +++++++++++
@@ -29,7 +36,8 @@ $ git diff --numstat 5a6591c4a..HEAD
 417	0	tests/l4/ontology-loader-param-bridge-1031.test.ts
 ```
 
-- **PR 预算复核（最终）**：全部 **6** 件；其中**治理产物 2 件**（`.claude/claims/1031.yaml`、`.claude/task-briefs/2026-10-09-1031-ontology-param-bridge.md`）
+- **PR 预算复核**：文件总数 **6**（仅本文件的增删会使其上下浮动）；其中**治理产物 2 件**
+  （`.claude/claims/1031.yaml`、`.claude/task-briefs/2026-10-09-1031-ontology-param-bridge.md`）
   **不计入** ⇒ **计入门禁 4 件** ≤ 12 ✅；单域 ✅（治理产物豁免依据：lead 全队授权 + D1174 先例）。
 - **全文件删除行 = 0**（含 `src/`）⇒ 纯增量。
 - **pre-commit 13 组**：✅ 全部通过（组 12 Task Scope 一致性在补 brief 后由 ❌ 转 ✅）。
