@@ -1,0 +1,15 @@
+# .claude/claims/1373.yaml — #1373（ticket-store 夹具偶发 forks-teardown 断言）写集声明（D708 的 S0 源）
+#
+# CTO 2026-10-08 裁 (A)：改判为【测试基础设施面已知风险】+ 采纳**已测缓解（拆文件）**
+#   要求：① 缓解须可复跑（n≥10/文件，目标 0 崩）② 根因登记**分两层**（现象层已知 / 机制层未定）
+writeset:
+  - .claude/claims/1373.yaml
+  - .claude/task-briefs/2026-10-08-1373-fixture-teardown.md
+  - tests/sentinel/ticket-store.test.ts
+  - tests/sentinel/ticket-store-2.test.ts
+done:
+  - verify: npx vitest run tests/sentinel/ticket-store.test.ts tests/sentinel/ticket-store-2.test.ts
+  - verify: npx vitest run tests/sentinel/ tests/store/ tests/l3/
+  - verify: bash -c 'for f in tests/sentinel/ticket-store.test.ts tests/sentinel/ticket-store-2.test.ts; do c=0; for i in $(seq 1 10); do npx vitest run $f 2>&1 | grep -q "Assertion failed" && c=$((c+1)); done; echo "$f 崩 $c/10"; done'
+  - verify: npx tsc --noEmit
+note: 缓解 = 拆文件（各 6 例）⇒ 实测 **各 0/10**；**根因未修**（现象层 = 累积效应：最小形状 0/10｜前半 0/10｜后半 0/10｜全文件 4/10；机制层 = native 析构落在 env teardown 之后，**未定**）。(a) 卫生改进随附（句柄跟踪 + 先置空单例再关 + afterEach 兜底）—— **不构成修复**。
