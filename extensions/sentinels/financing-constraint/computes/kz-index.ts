@@ -6,6 +6,7 @@
  *
  * 阈值: >2.0 = 确定受约束; 1.0-2.0 = 可能约束; <0 = 不受约束
  */
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408：输入有效性检查
 export interface KzIndexResult {
   kzIndex: number;
   cfRatio: number;     // CF/K
@@ -22,6 +23,9 @@ export function computeKzIndex(financials: Array<{
   equity: number;
   cash: number;
 }>): KzIndexResult {
+  // #1408：输入有效性检查（本 compute 自己声明必需字段）
+  const _inputIssues = checkFiniteInputs(financials, ['operatingCashFlow', 'netPpe', 'totalDebt', 'equity', 'cash']);
+  if (_inputIssues.length > 0) return { ...{ kzIndex: 0, cfRatio: 0, leverage: 0, cashRatio: 0, degraded: true }, warnings: _inputIssues };
   if (financials.length === 0) {
     return { kzIndex: 0, cfRatio: 0, leverage: 0, cashRatio: 0, degraded: true, warnings: ['无财务数据'] };
   }

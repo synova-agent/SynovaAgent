@@ -4,6 +4,7 @@
  * 评估企业对政策补贴/资源禀赋/市场壁垒等外部红利的依赖程度。
  * 依赖程度高 = 环境变化时企业脆弱性高。
  */
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408：输入有效性检查
 export interface RentDependencyResult {
   index: number;  // 0-1, 越高越依赖
   signals: string[];
@@ -16,6 +17,9 @@ export interface FinancialIndicator {
 }
 
 export function computeRentDependencyIndex(financials: FinancialIndicator[]): RentDependencyResult {
+  // #1408：输入有效性检查（本 compute 自己声明必需字段）
+  const _inputIssues = checkFiniteInputs(financials, ['value']);   // FinancialIndicator = {type(字符串判别符), value(数值)} ⇒ 只声明【数值字段】（type 纳入会误报）
+  if (_inputIssues.length > 0) return { index: 0.5, signals: _inputIssues, degraded: true };
   if (financials.length === 0) {
     return { index: 0.5, signals: ['无财务数据-默认中等依赖'], degraded: true };
   }

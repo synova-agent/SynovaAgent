@@ -4,7 +4,10 @@
  * 净利润中有多少转化为经营现金流。
  * 转化率 < 0.7 表示应收账款或存货积压问题。
  */
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408：输入有效性检查
 export interface CashConversionResult {
+  /** #1408：输入有效性等告警 */
+  warnings?: string[];
   rate: number;
   operatingCashFlow: number;
   netIncome: number;
@@ -16,6 +19,9 @@ export function computeCashConversionRate(financials: Array<{
   netIncome: number;
   revenue: number;
 }>): CashConversionResult {
+  // #1408：输入有效性检查（本 compute 自己声明必需字段）
+  const _inputIssues = checkFiniteInputs(financials, ['operatingCashFlow', 'netIncome', 'revenue']);
+  if (_inputIssues.length > 0) return { ...{ rate: 0, operatingCashFlow: 0, netIncome: 0, degraded: true }, warnings: _inputIssues };
   if (financials.length === 0) {
     return { rate: 0, operatingCashFlow: 0, netIncome: 0, degraded: true };
   }

@@ -1,13 +1,20 @@
 # .claude/claims/1408.yaml — #1408 写集声明（D708 的 S0 源）
-#   批 A（#1413 已合 9493640f9）｜批 B（#1414 已合 23a0f0d7b）
-#   **本 PR = 类级复查修复**（CTO 要求：批 C 前先做"存在性判断"复查；发现第三处 ⇒ 一并修）
+#   批 A（#1413 已合 9493640f9）｜批 B（#1414 已合 23a0f0d7b）｜类级复查（#1416 已合 a2a2c31c3）
+#   **本 PR = 批 C1**：6 个 compute 接线 + 助手签名泛型化（接受 interface 类型）
 writeset:
   - .claude/claims/1408.yaml
-  - .claude/task-briefs/2026-10-08-1408-existence-check-precision.md
+  - .claude/task-briefs/2026-10-08-1408-silent-wrong-value-c1.md
+  - src/sentinel/assert-finite-inputs.ts
+  - extensions/sentinels/financing-constraint/computes/cash-runway.ts
+  - extensions/sentinels/financing-constraint/computes/kz-index.ts
+  - extensions/sentinels/growth-quality/computes/cash-conversion-rate.ts
+  - extensions/sentinels/growth-quality/computes/organic-growth-pct.ts
+  - extensions/sentinels/value-capture/computes/value-capture-score.ts
+  - extensions/sentinels/environment-rent-dependency/computes/rent-dependency-index.ts
   - tests/sentinel/silent-wrong-value.test.ts
 done:
-  - verify: npx vitest run tests/sentinel/silent-wrong-value.test.ts
+  - verify: npx vitest run tests/sentinel/silent-wrong-value.test.ts tests/sentinel/assert-finite-inputs.test.ts
   - verify: npx vitest run tests/sentinels/ tests/sentinel/ tests/l4/ tests/agent/ tests/adapters/
-  - verify: bash -c 'grep -c "isCallLine" tests/sentinel/silent-wrong-value.test.ts'
+  - verify: bash -c 'grep -rn "checkFiniteInputs(" extensions/sentinels/{financing-constraint,growth-quality,value-capture,environment-rent-dependency}/computes/*.ts | grep -vE ":[0-9]+:\s*(//|\*|/\*)" | grep -vE ":[0-9]+:\s*import\b" | wc -l'
   - verify: npx tsc --noEmit
-note: 类级复查（存在性判断精度）：① V3 覆盖率扫描（2 处）未排除注释 ⇒ **第三处**，已修（isCallLine：排注释 + 排 import + 匹配调用形状）② claim 的 verify 命令同盲区 ⇒ 改 comment-proof 口径。归因实验：旧谓词 + 仅注释提及 ⇒ **V3 红（集合 6≠5）**；新谓词 ⇒ 绿 ⇒ 精度修复有物理证据。
+note: 批 C1 = 6 compute 接线（**字段名逐字对上真实契约**：kz-index 用 camel 五字段｜cash-runway 用 operatingExpense｜cash-conversion-rate 用 operatingCashFlow/netIncome/revenue｜organic-growth-pct 用 revenue/previousRevenue/acquisitionRevenue｜rent-dependency-index 只声明 value（type 是字符串判别符，纳入会误报））。助手签名**泛型化**（接受 interface 类型 ⇒ 修 FinancialIndicator[] 不可赋值问题；内部单点窄化，**非 as unknown as**）。
