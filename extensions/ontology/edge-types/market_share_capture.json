@@ -6,6 +6,7 @@
   "allowedTo": ["outcome/market"],
   "requiredProps": ["market_share_change", "competitive_intensity", "growth_strategy_type"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "share_gain_source": "string — 份额来源(organic|acquisition|price_war)",
     "competitor_response_aggressiveness": "number (0-1) — 竞品反应强度",
     "market_growth_rate": "number — 市场增长率"

@@ -6,6 +6,7 @@
   "allowedTo": ["pool/activity"],
   "requiredProps": ["rigidity_index", "adjustment_resistance"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "routine_age_months": "number — 惯例存续月数",
     "past_success_bias": "number (0-1) — 过往成功偏差",
     "change_readiness_score": "number (0-1) — 变革准备度"

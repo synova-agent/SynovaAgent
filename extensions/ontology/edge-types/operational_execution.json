@@ -6,6 +6,7 @@
   "allowedTo": ["outcome/financial", "outcome/operational"],
   "requiredProps": ["efficiency_rate", "defect_rate", "output_volume"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "capacity_utilization": "number (0-1) — 产能利用率",
     "cycle_time_hours": "number — 周期时间",
     "yield_rate": "number (0-1) — 良品率"

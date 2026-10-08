@@ -6,6 +6,7 @@
   "allowedTo": ["pool/knowledge"],
   "requiredProps": ["knowledge_loss_rate", "retention_impact_factor"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "succession_planning_score": "number (0-1) — 继任规划评分",
     "critical_knowledge_at_risk": "number — 关键知识风险数",
     "documentation_transfer_rate": "number (0-1) — 文档交接率"
