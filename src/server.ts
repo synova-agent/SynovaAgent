@@ -6,6 +6,7 @@
  * 不引入 Novis 的任何依赖。
  */
 import express, { Router } from 'express';
+import { wrapStandardKeyGuard } from './adapters/standard-key-guard';   // #1403：注入前包一次
 import * as path from 'path';
 import cors from 'cors';
 import type { Server } from 'http';
@@ -328,7 +329,8 @@ export async function createServer(): Promise<Server> {
   // 可选组件
   if (connectorToolRegistry) container.connectorToolRegistry = connectorToolRegistry;
   app.locals.container = container;
-  if (graphStore) app.locals.graphStore = graphStore;
+  // #1403：注入前**包一次标准键写入守卫**（一处收口 ⇒ 所有经 app.locals.graphStore 的写入路径共用；仅此一处改动）
+  if (graphStore) app.locals.graphStore = wrapStandardKeyGuard(graphStore);
   // D603 跨层修复（簇4）: 注入 Bootstrap Phase 0 单例 SessionStore — routes/sessions
   // 消费注入实例（未注入环境回退 L2 兜底装配），L1 不再自建 SessionStore(getDatabase())。
   app.locals.sessionStore = services.sessionStore;
