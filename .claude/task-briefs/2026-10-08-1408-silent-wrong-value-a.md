@@ -38,6 +38,11 @@
 - tests/sentinel/silent-wrong-value.test.ts — V1/V2/V3/V4
 - .claude/claims/1408.yaml + .claude/task-briefs/2026-10-08-1408-silent-wrong-value-a.md
 
+
+> 🔴 本 PR 内的两处移动（`git mv`；声明闸②按「删+增」看 ⇒ 旧路径也须列明）：
+> - extensions/sentinels/shared/computes/assert-finite-inputs.ts → src/sentinel/assert-finite-inputs.ts
+> - tests/sentinels/shared/assert-finite-inputs.test.ts → tests/sentinel/assert-finite-inputs.test.ts
+
 不做什么（逐条含具体文件名）：
 - 不改 extensions/sentinels/margin-health/computes/compute-incentive-bind.ts（图遍历形态 ⇒ **不适用**，已登记）
 - 不改 extensions/sentinels/margin-health/computes/compute-metric-bind-divergence.ts（同上）
