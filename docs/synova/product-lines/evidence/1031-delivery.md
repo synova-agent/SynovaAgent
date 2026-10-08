@@ -129,7 +129,13 @@ dca0b7b2f feat(#1031): 本体参数桥 — 类型层参数可注入边实例 pro
 
 > 🔴 **声明：以下为编码员自测结论，不是自验结论。**
 > 按小队纪律「自验不得由编码兼任」，本卡的**独立自验必须由另一名成员执行**。
-> **截至本件落笔，lead 尚未为本卡建独立自验任务行 ⇒ 独立自验 = 未做**，本卡**不得**标 `可提请独立审计`。
+>
+> **本件初版落笔时**：lead 尚未为本卡建独立自验任务行 ⇒ 独立自验 = 未做，本卡不得标 `可提请独立审计`。
+>
+> ✅ **【后续更新 2026-10-09】**：独立自验**已执行完毕**，结论 = **通过（可提请独立审计）**。
+> 自验员**未沿用**本件任何结论，独立复跑并**补跑了我未跑的基线 tsc 对照**（见 §2.2 更新行），
+> 且**抓出本件两处证据级错误 E-1/E-2**（见 §3.4）—— 这正是"自验不得由编码兼任"起作用之处。
+> **最终判据状态以自验员结论与 K3 终审为准；本件不自行宣布通过。**
 
 判据逐条 ↔ 原始输出（全部为**真跑**，非 grep 静态判据）：
 
@@ -196,8 +202,9 @@ $ grep -cE 'ontology-loader|1031' .k4-publish/v4/tsc-full.txt
 - 判「存量」的依据（两条，非"看起来像"）：① §1 已证 `src/` 改动**删除行数 = 0**（纯增量，additive 类型改动不可能在下游造错）；
   ② 唯一同时出现在错误集与 ontology-loader 下游引用集里的文件是 `src/mcp/tool-definitions.ts`，其错误为
   `TS2307 Cannot find module '@modelcontextprotocol/sdk/types.js'`（**依赖缺失，与本次改动无关**）。
-- ⚠️ **未跑基线对照**（未在 base commit 上重跑 tsc 计数）⇒ 本件只声称"改动文件 0 错误 + 纯增量"，
-  **不声称**"34 条经基线比对确认全部为存量"。该对照留给独立自验。
+- ✅ **【更新 2026-10-09·独立自验员补跑】**：自验员**补跑了基线对照** ⇒ **34 条经实测确认为存量**，
+  改动文件 **0 命中**，**无新错误种类**。⇒ 我原口径（只声称弱结论 + 明确声明未跑对照）**被自验证实**；
+  自验员**未据为己见强加于编码员**，而是独立复现后确认 —— 本条按自验结论更新，**归属自验员**。
 - ⚠️ 另注：`tsconfig.json:29-30` `include=["src/**"]` + `exclude=["tests"]` ⇒ **测试文件根本不进 tsc 程序**（存量项目特性，非本卡引入）。
 
 ### 2.3 真实 55 件 L2-真跑读数（桥跑在真实 JSON 上）
@@ -224,7 +231,7 @@ action_effect_lag  顶层 55/55 : "unknown" ×50 + 3-6_months ×2 + immediate ×
 | **U-2** | 🔴 **与既有已落库门禁语义互斥**（本卡新发现） | `scripts/control-tower/check-ontology-fields.sh:80` **硬要求 `transfer_function` 为非空字符串**（`:33` 冻结字段集 `action_effect_lag transfer_function`）。⇒ 一旦按 P-3 标定成 `number`，**既有门禁立刻 exit 1**；且该脚本 `:16` 自述「新增必查字段 = 判据变更 ⇒ 提案 → K3 → CTO」。**必须与 schema 门禁一并改，不是"搬走一条断言"** |
 | **U-3** | **真值标定**（52 条占位串 → 数字/`{param}`/`{ref}`） | 卡面明示属①，另卡 |
 | **U-4** | **散文公式 3 条**（`brand_builds`/`couples`/`cumulative_learning`）的规范化 | 是否包成 `{ref:<公式原文>}` 属**语义发明**，本卡不擅作主张 |
-| **U-5** | **G-3 引证不可核** | 派单件引证 `docs/synova/coordination/CTO-固化-II-研究院权威结论-20260924.md:93` **文件不存在**（近邻件 67 行、零命中）⇒ 本卡 schema **不冒用 G-3 出处**，自署名「本卡提出 + 待治理线/K3 确认」 |
+| **U-5** | **G-3 引证不可核** | 派单件引证 `docs/synova/coordination/CTO-固化-II-研究院权威结论-20260924.md:93` **文件不存在**。近邻件 `CTO-固化-最终方向与在制任务-20260924.md` **实测 91 行 / 67 非空行**（`wc -l` = 91）⇒ `:93` 物理不可能存在；该近邻件**命中 1 处**（`:5` 把不存在的件列为「**配套件（必读）**」），正文对 `transfer_function`/`G-3`/`占位` 三模式 0 命中。⇒ 本卡 schema **不冒用 G-3 出处**，自署名「本卡提出 + 待治理线/K3 确认」。**更正留痕见 §3.4** |
 | **U-6** | `action_effect_lag` 值域收口（`unknown` 是否越权威枚举） | 属 **#1134**；本卡只做非空字符串原样透传 |
 | **U-7** | **`causal_strength` 真值** | 55/55 仅描述串 ⇒ 本卡只能让「**声明**」可读（`status=declaration_only` + `declaredAs`），**值**须待 U-3。**本卡不伪造值** |
 
@@ -242,6 +249,41 @@ action_effect_lag  顶层 55/55 : "unknown" ×50 + 3-6_months ×2 + immediate ×
 3. 记忆化（`paramCache`）与 `loadOntology` 的 `cache` 同生命周期；若未来有热重载改 JSON，须调 `clearOntologyCache()`（测试已覆盖该生命周期）。
 4. 本卡改动**纯增量**，但 `EdgeTypeDef` 新增 2 个可选字段属**接口面扩张**，独立自验应确认无既有消费者受影响（本件已附 `loadOntology`/`getTypesByTags`/`validateEdgeEndpoints` 回归断言全绿）。
 
+### 3.4 📌 更正留痕（独立自验发现的**证据级**错误 —— 保留不删）
+
+> **纪律：结论对 ≠ 证据可错。** 本卡结论正确，但支持它的两条事实写错了 ⇒ 由**独立自验员**实测更正，
+> 本件**保留原始错写 + 更正过程**，供 K3 判定"引证笔误"而非"该权威根本不存在"。
+
+| # | 我初版写的 | 独立自验实测 | 错因（根因，非"手滑"） |
+|---|---|---|---|
+| **E-1** | 近邻件「全文 **67** 行」 | **91** 行（`wc -l` = 91；**67 是非空行数** `grep -cve '^[[:space:]]*$'`） | 我用 PowerShell `Measure-Object -Line` 并把它当「总行数」读。**该 cmdlet 只计非空行**——同一文件实测 `Measure-Object -Line` = **67**、`wc -l` = **91**（差 24 个空行） |
+| **E-2** | 近邻件「**零**命中」 | **命中 1 处**：`:5` 把那份不存在的件列为「**配套件（必读）**」 | 「零命中」是我**三模式 grep**（`transfer_function\|G-3\|占位`）的 0 结果 —— 复跑该口径确实 0；但我把**限定语抹掉**写成无限定的「零命中」，语义被放大成"文件里什么都没提它" |
+
+**结论不变**：`docs/synova/coordination/CTO-固化-II-研究院权威结论-20260924.md` 在 `origin/main` **确实不存在**
+（`git ls-tree -r --name-only origin/main -- docs/synova/coordination/ | grep 固化` ⇒ 仅 `CTO-固化-最终方向与在制任务-20260924.md` 一件），
+⇒ `:93` 物理不可能存在 ⇒ **G-3 引证不可核**成立。
+
+**连带更正（同一自验批次，属仓库级发现，本卡不处置）**：该不存在件在 `origin/main` 被 **8** 个文件引用
+（`git grep -l 'CTO-固化-II-研究院权威结论-20260924' origin/main | wc -l` ⇒ 8）：
+`.claude/task-briefs/2026-09-24-D942-cto-fixation.md`、`.claude/task-briefs/2026-09-24-D943-mechanism.md`、
+`.claude/task-briefs/2026-09-24-D955-d943-docs-anchor.md`、`docs/synova/coordination/CTO-固化-最终方向与在制任务-20260924.md`、
+`docs/synova/presets/synova-k3-audit/persona-block.yml`、`docs/synova/product-lines/evidence/1452-batch-d/A-01-objects.json`、
+`memory/notes/implemented/2026-09-25-research-institute-baseline.md`、`task-state/D955.json`。
+⚠️ 与 lead 转述的「**9** 个文件」有差：实测 **8**；且 **`task-state/D943.json` 不在引用集内**
+（该文件存在，但 `git grep -c <件名> origin/main -- task-state/D943.json` ⇒ 0），
+而 lead 未列的 `1452-batch-d/A-01-objects.json` **在**引用集内。**已回报 lead 供 CTO 报告取准。**
+
+### 3.5 判别性夹具方法学（自验员踩坑后下发全队，本卡遵从情况）
+
+> 全队新纪律：**「破坏后先跑 `tsc` 确认无 `TS1xxx`，再跑夹具」** —— 否则可能把"文件没解析"当成"判别性成立"。
+
+**本卡 V4 两处夹具实测不受此坑影响**（证据而非自述）：
+- 两处破坏均为**语法合法**形态（`if (c) { } else { … }` 空块 / `if (c) { /*注释*/ }`），非「`if (...) <注释>` 紧接 `else`」的非法形态；
+- 决定性证据：破坏后 vitest **确实跑了测试并报断言失败**（V4-A 报 `AssertionError: expected undefined to be 'unknown'`；
+  V4-B 报 `expected 0 to be 1` 的 `- 1 / + 0` 断言 diff），**不是** `no tests` 类空跑；
+- 且两次破坏的**红色条数**分别为 10 / 5，与"注入/日志各自的作用面"精确对应 ⇒ 非"整片红"。
+- 遗留诚实点：破坏期间我**未**跑 `tsc`；上述结论由**断言级证据**支撑，不依赖 tsc。后续夹具按新纪律补跑 tsc。
+
 ---
 
 ## 4. 自检 5 问（写完必答）
@@ -254,4 +296,10 @@ action_effect_lag  顶层 55/55 : "unknown" ×50 + 3-6_months ×2 + immediate ×
 
 ---
 
-**签署：执行人@k4-coder-f｜编码员自测完成｜🔴 独立自验未做（待派）｜未合并**
+**签署：执行人@k4-coder-f｜编码员自测完成｜独立自验已执行（结论=通过/可提请独立审计，归自验员）｜🔴 未合并（待 GitHub 通路恢复 + CTO/K3 放行；K3 复审通过前不得合并）**
+
+> 📌 **本件修订记录（非 amend，历史可核）**
+> - `dca0b7b2f` feat 实现 → `26e2b22b4` docs 收尾三件 → `dfe12ce7c` chore claim → `69200d62e` docs 数字对齐 → `e5da80f58` docs 自指边界
+> - **`e5da80f58` 之后追加 doc-only 更正提交（本行所在）**：依独立自验 L1 发现更正 **E-1/E-2**（§3.4），
+>   并把"独立自验未做"更新为"已执行/通过"（§2、§2.2、§3 签名）。
+>   **一律新增提交、不 amend** —— `e5da80f58` 保持可核。
