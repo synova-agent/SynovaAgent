@@ -1,0 +1,18 @@
+writeset:
+  - .claude/claims/1471.yaml
+  - .claude/task-briefs/2026-10-09-1471-BatchG出库.md
+  - docs/synova/product-lines/evidence/1471-batch-g/**
+  - docs/synova/architecture*
+  - docs/synova/architecture/**
+  - docs/synova/business/**
+  - docs/synova/research/**
+  - docs/plans/codex/strategy/**
+  - docs/plans/codex/jtbd-research/**
+  - docs/DECISION-文件优先设计范式转型-20260615.md
+  - docs/SYNOVA-TECH-PLAN-PRD-v1.6.md
+done:
+  - "verify: bash scripts/control-tower/check-doc-contract.sh --baseline --json ⇒ 候选 81 → 约 5-10"
+  - "verify: bash -c 'test -f docs/authority/ARCHITECTURE.md -a -f docs/authority/PRD.md -a -f INDEX.md' ⇒ 活引用件零误删"
+  - "verify: bash scripts/pre-commit-check.sh ⇒ 13 组通过"
+note: 出库 Batch G（卡 #1471，创始人「架构也是旧的了」）：旧架构/设计/权威档 109 件承接（76 新复制 + 33 冲突按主仓版刷新）后移出；活引用 12 件扣留。
+
