@@ -1,0 +1,33 @@
+# .claude/claims/1057.yaml — #1057（3-5 作业单元缺两件）写集声明（S0 源）
+#
+# 为什么用 claim 而不是 task-state/<D#>.json：#1057 是 **issue 号卡**，无 D# 编号
+# ⇒ D708 门禁的 S1/S2/S3（按 <D#>* 定位）找不到声明源，会把全部改动判为「夹带」。
+# `.claude/claims/<issue>.yaml` 是为 issue 号任务提供的正式声明源（merge_writeset_gate.py 的 S0）。
+# CI 凭证（2026-10-09 实测）：brief 走日期窗口（±1 天），跨日即失效 ⇒ claim 是日期无关的载体。
+#
+# 注意：claim_store.match_path 是**精确匹配**（re.search(r"(^|/)" + re.escape(pattern) + r"$")），
+#       不支持目录前缀/glob ⇒ 逐件列出（本卡 12 件）。
+#
+# 声明纪律：只列本卡真正改动的文件。
+# 不列 src/**（卡面禁碰）、不列 extensions/ontology/tags.json（现阶段 #1436 独占）、
+# 不列 extensions/ontology/{pool,external,edge-types}/**（#1436/#1134 在飞）、不列 scripts/audit/**（审计红线）。
+# .k4-publish/**（读卡确认 / 交付件 / PUBLISH.sh）被 .gitignore 忽略 ⇒ 不进 git、不进本声明。
+writeset:
+  - .claude/claims/1057.yaml
+  - .claude/task-briefs/2026-10-09-1057-activity-instance-props.md
+  - docs/synova/product-lines/evidence/1057-activity-instance-props.md
+  - extensions/ontology/activity/acquisition.json
+  - extensions/ontology/activity/compliance.json
+  - extensions/ontology/activity/coordination.json
+  - extensions/ontology/activity/governance.json
+  - extensions/ontology/activity/innovation.json
+  - extensions/ontology/activity/instances/activity-production-wani-baby-001.json
+  - extensions/ontology/activity/learning.json
+  - extensions/ontology/activity/maintenance.json
+  - extensions/ontology/activity/production.json
+  - tests/l4/activity-instance-1057.test.ts
+done:
+  - "verify: npx vitest run tests/l4/activity-instance-1057.test.ts ⇒ 11 passed / 2 skipped（exit 0；真机口径段未设 env 时跳过）"
+  - "verify: SYNOVA_1057_INPLACE_DB=<真机 data/synova.db> npx vitest run tests/l4/activity-instance-1057.test.ts ⇒ 12 passed / 1 skipped（在位读数 activity/* 0→1）"
+  - "verify: 删实例文件 ⇒ 5 failed；复原 ⇒ 11 passed（改坏即红判别性夹具）"
+note: "3-5 作业单元缺两件（实例 + 评估属性）；不新建节点类型（宪章 P4）；不建边（真机 graph_triples 缺 props 列，#1455 在修）；封禁期不 push/不开 PR。"
