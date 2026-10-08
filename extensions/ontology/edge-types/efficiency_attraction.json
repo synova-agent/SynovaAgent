@@ -6,6 +6,7 @@
   "allowedTo": ["pool/capital"],
   "requiredProps": ["asset_utilization_rate", "operating_margin"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "roa_trend": "number — 资产回报率趋势",
     "capital_efficiency_ratio": "number — 资本效率比率"
   },

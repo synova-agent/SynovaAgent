@@ -6,6 +6,7 @@
   "allowedTo": ["outcome/operational","outcome/financial"],
   "requiredProps": ["learning_rate", "experience_elasticity"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "routine_rigidity": "number (0-1) — 演化经济学的惯例刚性参数",
     "cumulative_output": "number — 累计产出量",
     "unit_cost_t0": "number — 初始单位成本"

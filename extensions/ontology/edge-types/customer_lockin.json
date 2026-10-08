@@ -6,6 +6,7 @@
   "allowedTo": ["outcome/market"],
   "requiredProps": ["switching_cost", "retention_rate", "lock_in_strength"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "nps_score": "number — NPS评分",
     "multi_product_adoption": "number — 多产品采用数",
     "contract_term_months": "number — 合同期限"

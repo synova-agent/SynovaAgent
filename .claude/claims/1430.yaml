@@ -1,0 +1,74 @@
+# .claude/claims/1430.yaml — #1430（W2+W3 内容资产）写集声明（S0 源）
+#
+# 为什么用 claim 而不是 task-state/<D#>.json：本卡是 **issue 号卡（#1430）**，无 D# 编号
+# ⇒ D708 门禁的 S1/S2/S3（按 `<D#>*` 定位）找不到声明源，会把全部改动判为「夹带」。
+# `.claude/claims/<issue>.yaml` 是为 issue 号任务提供的正式声明源（merge_writeset_gate.py 的 S0）。
+#
+# 依据：卡面 #1430 写集「可碰：extensions/ontology/edge-types/*.json（加字段）」；
+#       本轮只加字段不标值（W2 进度不变 = 3 条有公式 / 52 条 TBD）。
+# 注意：claim_store.match_path 是精确匹配（re.search(r"(^|/)" + re.escape(pattern) + r"$")），
+#       不支持目录前缀/glob ⇒ 55 件必须逐条列出。
+writeset:
+  - .claude/claims/1430.yaml
+  - .claude/task-briefs/2026-10-08-1430-w2-w3-content.md
+  - extensions/ontology/edge-types/assumption_triggered_reallocation.json
+  - extensions/ontology/edge-types/augments.json
+  - extensions/ontology/edge-types/brand_building.json
+  - extensions/ontology/edge-types/brand_builds.json
+  - extensions/ontology/edge-types/capital_acquisition.json
+  - extensions/ontology/edge-types/capital_allocation.json
+  - extensions/ontology/edge-types/capital_source_mix.json
+  - extensions/ontology/edge-types/channel_delivery.json
+  - extensions/ontology/edge-types/competitive_positioning.json
+  - extensions/ontology/edge-types/constrains.json
+  - extensions/ontology/edge-types/couples.json
+  - extensions/ontology/edge-types/cross_functional_synergy.json
+  - extensions/ontology/edge-types/cumulative_learning.json
+  - extensions/ontology/edge-types/customer_data_loop.json
+  - extensions/ontology/edge-types/customer_lockin.json
+  - extensions/ontology/edge-types/data_collection.json
+  - extensions/ontology/edge-types/decision_authority.json
+  - extensions/ontology/edge-types/decision_concentrates.json
+  - extensions/ontology/edge-types/demand_to_spec.json
+  - extensions/ontology/edge-types/deploys.json
+  - extensions/ontology/edge-types/efficiency_attraction.json
+  - extensions/ontology/edge-types/environmental_scan.json
+  - extensions/ontology/edge-types/equipment_acquisition.json
+  - extensions/ontology/edge-types/external_assumption.json
+  - extensions/ontology/edge-types/external_feedback.json
+  - extensions/ontology/edge-types/funds.json
+  - extensions/ontology/edge-types/incentive_alignment.json
+  - extensions/ontology/edge-types/incentive_binds.json
+  - extensions/ontology/edge-types/information_flow.json
+  - extensions/ontology/edge-types/innovation_output.json
+  - extensions/ontology/edge-types/knowledge_reuse.json
+  - extensions/ontology/edge-types/knowledge_sharing.json
+  - extensions/ontology/edge-types/locks_in.json
+  - extensions/ontology/edge-types/market_share_capture.json
+  - extensions/ontology/edge-types/operational_execution.json
+  - extensions/ontology/edge-types/organizational_learning.json
+  - extensions/ontology/edge-types/procurement_bargaining.json
+  - extensions/ontology/edge-types/produces.json
+  - extensions/ontology/edge-types/profit_reinvestment.json
+  - extensions/ontology/edge-types/reputation_attraction.json
+  - extensions/ontology/edge-types/reputation_flywheel.json
+  - extensions/ontology/edge-types/retention_protects_knowledge.json
+  - extensions/ontology/edge-types/routine_rigidity.json
+  - extensions/ontology/edge-types/rule_constraint.json
+  - extensions/ontology/edge-types/sensing_calibration.json
+  - extensions/ontology/edge-types/service_support.json
+  - extensions/ontology/edge-types/signal_transmits.json
+  - extensions/ontology/edge-types/signal_upward_pass.json
+  - extensions/ontology/edge-types/talent_acquisition.json
+  - extensions/ontology/edge-types/talent_deployment.json
+  - extensions/ontology/edge-types/talent_filter.json
+  - extensions/ontology/edge-types/talent_retention.json
+  - extensions/ontology/edge-types/tech_infrastructure.json
+  - extensions/ontology/edge-types/trust_friction_reduction.json
+  - extensions/ontology/edge-types/value_pricing.json
+  - docs/synova/product-lines/evidence/D1430-w2-w3-content-20261008.md
+done:
+  - verify: bash scripts/control-tower/check-ontology-fields.sh
+  - verify: npx tsx scripts/validate-ontology.ts
+# 声明纪律：只列本 PR 真正改动的文件。不列 src/**（卡面明令不改 compute）、不列 packages/ontology/**、
+# 不列 extensions/ontology/node-types/**、不列 scripts/audit/**（审计红线）。
