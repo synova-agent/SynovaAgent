@@ -5,15 +5,116 @@
  * POST /api/im/wecom/webhook  — 企业微信消息推送
  *
  * 铁律 31: 降级模式 — 消息处理失败仍返回 200 (避免 IM 平台重试风暴)
+ *   ⚠️ 该降级只覆盖**已通过签名闸门**的入站消息。
+ *   ⚠️ 闸门**不是无条件** fail-closed：**已配置** `FEISHU_ENCRYPT_KEY` 时，
+ *      缺签名头 / 缺 rawBody / 验签失败 / 时间窗外 一律 401（见 `guardFeishuWebhook`）；
+ *      **未配置**密钥时按**配置态**放行（无密钥可校验），只落 `log.warn`（见 `guardFeishuWebhook` 的 `encryptKey === ''` 分支，当前在 :74-78 —— 行号为易逝坐标，以 `grep -n "encryptKey === ''" src/routes/im.ts` 为准；与 PR 正文挂账①）。
  */
 import { Router, type Request, type Response } from 'express';
 import { createLogger } from '@synova/logger';
 import { handleInboundMessage } from '../l1/im-inbound';
 import { runWithContext } from '../services/request-context';
 import { allowedSensitivities, extractAuthFromRequest } from '../middleware/auth';
+import { computeFeishuSignature, DEFAULT_SIGNATURE_WINDOW_MS, isWithinTimeWindow, verifyFeishuSignature } from '../l1/im-webhook-signature';
 
 const log = createLogger('routes/im');
 const router = Router();
+
+// ═══ 飞书回调签名闸门（K1-WH 段1a；父卡 #1126）══════════════════════════════════
+//
+// 断面：本闸门只在**路由层**成立。真入口 `src/server.ts:329` 的
+//   `express.json({ limit: '10mb' })` 已**先缓冲**请求体 ⇒ 下方 64KB / 1MB 是
+//   **判定级**闸门（按 `content-length` 判决），**不是内存级预闸**；
+//   内存级前置闸门需段2 在全局 parser **之前**早挂载（段1b，与在飞 #1009 串行）。
+//
+// 配置态（`FEISHU_ENCRYPT_KEY`）:
+//   - **未配置** ⇒ 无密钥可校验签名 ⇒ 保持改造前行为（放行）+ 每次请求 `log.warn`
+//     （**不静默**，铁律 11）。若此处一律 401，会把仓内既存消费者
+//     `tests/routes/im-authprovider.test.ts`（#984 接线面，非本卡写集）由 200 打成 401
+//     —— 那是写集外的破坏性变更，且属段2 的配置面决定。
+//   - **已配置** ⇒ 全程 **fail-closed**：缺签名头 / 缺 `rawBody` / 验签失败 / 时间窗外
+//     一律 401；分层尺寸闸（未认证通道 64KB / 已认证通道 1MB）一律 413。
+//
+// `challenge`（`type: 'url_verification'`）姿态 = **不默认豁免验签**：
+//   官方原文把 URL 验证排除在验签之外（"excluding request URL verification"）；
+//   本卡**选**「encryptKey 已配置时 challenge 也验签」，**代价** = 若飞书首发 challenge
+//   不带签名头，首次配置需临时开关 `FEISHU_CHALLENGE_SKIP_SIGNATURE=true`（默认关，
+//   每次命中落 `log.warn`）；**移除条件** = 飞书控制台回调地址配置完成后必须删除该变量
+//   （它只豁免 challenge，不豁免事件消息，也不放开其余 fail-closed 分支）。
+const FEISHU_UNAUTHENTICATED_MAX_BYTES = 64 * 1024;
+const FEISHU_AUTHENTICATED_MAX_BYTES = 1024 * 1024;
+
+type FeishuGuardResult = { ok: true } | { ok: false; status: 401 | 413; code: string };
+
+function feishuHeader(req: Request, name: string): string {
+  const v = req.headers[name];
+  return typeof v === 'string' ? v : '';
+}
+
+/** 判定级体量：优先 `content-length` 头；缺失/非法时回退已捕获的 rawBody 字节数 */
+function feishuContentLength(req: Request): number {
+  const declared = feishuHeader(req, 'content-length');
+  if (declared !== '') {
+    const n = Number(declared);
+    if (Number.isFinite(n) && n >= 0) return n;
+  }
+  const raw = (req as Request & { rawBody?: Buffer }).rawBody;
+  return Buffer.isBuffer(raw) ? raw.length : 0;
+}
+
+function guardFeishuWebhook(req: Request, isChallenge: boolean): FeishuGuardResult {
+  const path = req.path;
+  const encryptKey = process.env.FEISHU_ENCRYPT_KEY || '';
+  const timestamp = feishuHeader(req, 'x-lark-request-timestamp');
+  const nonce = feishuHeader(req, 'x-lark-request-nonce');
+  const signature = feishuHeader(req, 'x-lark-signature');
+  const hasSignatureHeaders = timestamp !== '' && nonce !== '' && signature !== '';
+  const contentLength = feishuContentLength(req);
+
+  if (encryptKey === '') {
+    log.warn({ code: 'FEISHU_ENCRYPT_KEY_UNCONFIGURED', path },
+      '飞书回调未配置 FEISHU_ENCRYPT_KEY — 无密钥可校验签名，按改造前行为放行');
+    return { ok: true };
+  }
+
+  if (isChallenge && process.env.FEISHU_CHALLENGE_SKIP_SIGNATURE === 'true') {
+    log.warn({ code: 'FEISHU_CHALLENGE_SIGNATURE_SKIPPED', path },
+      'challenge 豁免验签开关生效 — 完成回调地址配置后必须删除 FEISHU_CHALLENGE_SKIP_SIGNATURE');
+    return { ok: true };
+  }
+
+  // ① 未认证通道（未带签名头）的判定级尺寸闸 —— 先于任何验签工作
+  if (!hasSignatureHeaders && contentLength > FEISHU_UNAUTHENTICATED_MAX_BYTES) {
+    return { ok: false, status: 413, code: 'FEISHU_UNAUTHENTICATED_BODY_TOO_LARGE' };
+  }
+  if (!hasSignatureHeaders) {
+    return { ok: false, status: 401, code: 'FEISHU_SIGNATURE_HEADERS_MISSING' };
+  }
+
+  const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
+  // 🔴 单一判决点：签名 + 时间窗 + `rawBody` 形态**全部**由 `verifyFeishuSignature` 判
+  //   （不在此处短路 —— 卡 F4-⑧ 要求「单行改坏 ⇒ ②③④⑤ 一起变绿」，
+  //    任何前置短路都会让改坏即红失效）。`rawBody` 缺席时**仍调用** verify，
+  //    其 `missing_params` 分支即 fail-closed 拒绝；不得「拿不到就放行」。
+  const verdict = verifyFeishuSignature(
+    timestamp, nonce, encryptKey, rawBody as Buffer, signature, Date.now(),
+  );
+  if (!verdict.ok) {
+    // `rawBody` 缺席是**两段之间的接缝**（该字段由段2 的早挂载提供，本卡不替段2 预设形态），
+    // 单独给专用 code 便于运维区分「早挂载缺席」与「签名不对」。
+    const code = !Buffer.isBuffer(rawBody) && verdict.reason === 'missing_params'
+      ? 'FEISHU_RAW_BODY_MISSING'
+      : `FEISHU_SIGNATURE_${verdict.reason ?? 'rejected'}`;
+    return { ok: false, status: 401, code };
+  }
+
+  // ② 已认证通道的判定级尺寸闸（验签通过后放宽到 1MB）
+  if (contentLength > FEISHU_AUTHENTICATED_MAX_BYTES) {
+    return { ok: false, status: 413, code: 'FEISHU_AUTHENTICATED_BODY_TOO_LARGE' };
+  }
+
+  return { ok: true };
+}
 
 // ═══ 飞书 Webhook ═══
 
@@ -22,7 +123,15 @@ router.post('/api/im/feishu/webhook', async (req: Request, res: Response) => {
     const payload = req.body;
     const challenge = payload?.challenge || payload?.header?.challenge;
 
-    // URL 验证 (飞书首次配置时发送)
+    // 🔴 签名闸门（先于 challenge 分支 —— challenge 不默认豁免，见上方姿态说明）
+    const guard = guardFeishuWebhook(req, Boolean(challenge));
+    if (!guard.ok) {
+      log.warn({ code: guard.code, path: req.path, status: guard.status }, '飞书回调被签名闸门拒绝');
+      res.status(guard.status).json({ ok: false, error: guard.code });
+      return;
+    }
+
+    // URL 验证 (飞书首次配置时发送) —— 已过上方闸门（encryptKey 已配置时须带合法签名）
     if (challenge) {
       log.info('飞书 Webhook URL 验证');
       res.status(200).json({ challenge });
@@ -169,6 +278,42 @@ router.post('/api/qa/ask', async (req: Request, res: Response) => {
 
 // ═══ 健康检查 ═══
 
+/**
+ * 飞书签名闸门**自洽**自检（供 `GET /api/im/health` 报告模块能否自算自验）。
+ *
+ * 🔴 **判别力边界（禁读成「闸门在用」的证据）**：本函数是**同源自算自验的恒真式**
+ * —— 用同一份密钥、同一个探针、同一时刻算出摘要再拿它去验，除非模块自身崩坏，恒为 `true`。
+ * 经独立自验员实测：把闸门改坏三次（M1/M2/M3），本项**每次仍绿**
+ * ⇒ 它**只证明「模块自洽」**，**不**证明「入站闸门真的在拦」。
+ * 「闸门在用」的证据**只有**：判据 ①–⑦（真 HTTP 拒绝路径）+ 判据 ⑧（改坏即红）。
+ *
+ * 契约（铁律 47 — 输入/输出/降级）:
+ * - 输入: **无**。探针为固定字面量，**不接受任何请求输入** ⇒ 不构成验签旁路。
+ * - 输出: `{ armed, roundTrip, window }` 三个布尔 ——
+ *   `armed` = `FEISHU_ENCRYPT_KEY` 是否非空（**这一项有判别力**：能暴露「密钥配了但是空白」）；
+ *   `roundTrip` = 自算自验是否自洽（**恒真式，判别力≈0**，仅表示模块未崩坏）；
+ *   `window` = 同一固定时刻能否通过 ±1h 窗（应为 true，同样近恒真）。
+ * - **只回布尔，不回摘要**：摘要由密钥参与哈希，不进日志、不进响应（防离线比对材料外泄）。
+ * - 降级: 密钥未配置 ⇒ `armed=false, roundTrip=false`；**不抛**、不返回任何密钥材料。
+ *
+ * 为什么放在路由层（而不是纯函数模块内）：本函数是 `computeFeishuSignature` /
+ * `isWithinTimeWindow` / `verifyFeishuSignature` 的**正当运行时消费者**（让仓内组 4
+ * 「新 export 必须有 src/ 消费者」成立，而不是造空调用或注释式引用）。
+ */
+function feishuSignatureGuardSelfCheck(): { armed: boolean; roundTrip: boolean; window: boolean } {
+  const encryptKey = process.env.FEISHU_ENCRYPT_KEY || '';
+  const nowMs = Date.now();
+  const timestamp = String(Math.floor(nowMs / 1000));
+  const nonce = 'guard-self-check';
+  const probeBody = Buffer.from('{"guard_self_check":true}', 'utf8');
+  const expected = computeFeishuSignature(timestamp, nonce, encryptKey, probeBody);
+  return {
+    armed: encryptKey !== '',
+    roundTrip: verifyFeishuSignature(timestamp, nonce, encryptKey, probeBody, expected, nowMs).ok,
+    window: isWithinTimeWindow(timestamp, nowMs, DEFAULT_SIGNATURE_WINDOW_MS),
+  };
+}
+
 router.get('/api/im/health', async (_req: Request, res: Response) => {
   try {
     const { getIMRegistry } = await import('../l1/im-channel');
@@ -178,8 +323,10 @@ router.get('/api/im/health', async (_req: Request, res: Response) => {
       ok: true,
       activeChannel: active?.platform || null,
       registeredChannels: imReg.list().map((c: { platform: string }) => c.platform),
+      // K1-WH 段1a: 入站验签闸门姿态（只回布尔 + 窗宽，不含任何密钥材料）
+      feishuSignatureGuard: feishuSignatureGuardSelfCheck(),
     });
-  } catch { log.debug('IM 健康检查 — 无活跃通道'); res.json({ ok: true, activeChannel: null, registeredChannels: [] });
+  } catch { log.debug('IM 健康检查 — 无活跃通道'); res.json({ ok: true, activeChannel: null, registeredChannels: [], feishuSignatureGuard: feishuSignatureGuardSelfCheck() });
   }
 });
 
