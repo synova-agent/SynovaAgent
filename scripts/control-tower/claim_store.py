@@ -107,15 +107,25 @@ _TRUTHY = {"1", "true", "on", "yes", "y"}
 
 
 def claim_v2_enabled(env: Optional[Dict[str, str]] = None) -> bool:
-    """`SYNO_CLAIM_V2` 是否启用（K3 R2 单一开关，**默认关**）。
+    """`SYNO_CLAIM_V2` 是否启用（K3 R2 单一开关，**默认开** —— 卡 #1423）。
 
     契约:
       @input  env: 环境字典（缺省 os.environ；测试注入）
       @output True = claim-v2 路径生效；False = 逐字节 legacy（回滚态）
       @降级   无
+
+    口径（创始人 2026-10-08 裁决「一步到位」，卡 #1423）:
+      · **未设** ⇒ True（默认开：新任务走 issue 号身份）；
+      · 显式 truthy（1/true/on/yes/y）⇒ True；
+      · **其它任何值**（含 0/off/false）⇒ False = **唯一回滚点**（回滚 = 显式关）。
+      ⚠️ 存量 D# 任务**只读兼容**：无 claim 的动作全照旧（逐字节 legacy）——
+         flip 不得让带 D# 的在飞任务 fail-closed（#1423 判据③ 反例）。
     """
     e = os.environ if env is None else env
-    return str(e.get("SYNO_CLAIM_V2", "")).strip().lower() in _TRUTHY
+    raw = str(e.get("SYNO_CLAIM_V2", "")).strip().lower()
+    if not raw:
+        return True  # 未设 = 默认开（#1423）
+    return raw in _TRUTHY
 
 
 def claim_dir(root: Optional[Path | str] = None, env: Optional[Dict[str, str]] = None) -> Path:

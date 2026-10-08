@@ -1,0 +1,17 @@
+writeset:
+  - .claude/claims/1423.yaml
+  - .claude/task-briefs/2026-10-08-1423-claim-default-on.md
+  - memory/notes/implemented/2026-10-08-1423-claim-default-on.md
+  - scripts/control-tower/claim_store.py
+  - scripts/pre-commit-check.sh
+  - scripts/workflow/resolve-commit-brief.sh
+  - scripts/check-verifiable-done.sh
+  - scripts/check-brief-vs-code.sh
+  - tests/control-tower/claim_store.test.sh
+  - tests/control-tower/claim-identity-v2.test.py
+  - tests/control-tower/precommit-claim-wiring.test.sh
+done:
+  - verify: bash tests/control-tower/claim-default-on.test.sh
+  - verify: bash tests/control-tower/precommit-claim-wiring.test.sh
+  - verify: python3 tests/control-tower/claim-identity-v2.test.py
+note: 卡 #1423（D-C 最后一刀）SYNO_CLAIM_V2 默认翻"开"（创始人 2026-10-08「一步到位」）+ 存量 D# 反例守护（窗口外 brief 并入 legacy 判定）；判据变更面见 Note。

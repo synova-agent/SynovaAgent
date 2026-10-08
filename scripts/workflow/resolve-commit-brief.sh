@@ -142,9 +142,13 @@ if [ -n "$ISSUE_ID" ]; then
   _CP="$("$PYBIN" "$CLAIM_LIB" --root "$ROOT" --path "$ISSUE_ID" 2>/dev/null | head -1 || true)"  # swallow-ok: 路径查询失败 → 视为无 claim（legacy 继续）
   [ -n "$_CP" ] && [ -f "$_CP" ] && CLAIM_FILE="$_CP"
 fi
-CLAIM_V2=0
+# 卡 #1423（创始人 2026-10-08「一步到位」裁决）: **默认开** ——
+#   未设/真值 ⇒ 开；显式 0|false|off|no|n ⇒ 关（**唯一回滚点**）。
+#   口径与单一事实源 claim_store.claim_v2_enabled 逐字对齐。
+CLAIM_V2=1
 case "$(printf '%s' "${SYNO_CLAIM_V2:-}" | tr '[:upper:]' '[:lower:]')" in
-  1|true|on|yes|y) CLAIM_V2=1 ;;
+  ''|1|true|on|yes|y) CLAIM_V2=1 ;;
+  *) CLAIM_V2=0 ;;
 esac
 if [ "$CLAIM_V2" = "1" ] && [ -n "$CLAIM_FILE" ]; then
   echo "$CLAIM_FILE"
