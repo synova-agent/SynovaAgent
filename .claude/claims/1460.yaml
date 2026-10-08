@@ -1,0 +1,10 @@
+writeset:
+  - .claude/claims/1460.yaml
+  - .claude/task-briefs/2026-10-09-1460-checker-review-SIGPIPE.md
+  - scripts/checker-review.sh
+done:
+  - "verify: bash -eo pipefail scripts/checker-review.sh ⇒ rc=0"
+  - "verify: bash -x -eo pipefail scripts/checker-review.sh ⇒ rc=0"
+  - "verify: bash -c 'grep -c "| head" scripts/checker-review.sh' ⇒ 0"
+note: checker-review.sh SIGPIPE 假红修复（head 管道改 awk 截断）；main 的 Checker Review 红即由此引起。
+
