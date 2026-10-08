@@ -6,6 +6,7 @@
   "allowedTo": ["pool/knowledge"],
   "requiredProps": ["sharing_frequency", "knowledge_transfer_effectiveness"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "documentation_coverage": "number (0-1) — 文档覆盖率",
     "mentoring_hours_per_quarter": "number — 师徒指导时间",
     "tacit_knowledge_loss_rate": "number (0-1) — 隐性知识流失率"

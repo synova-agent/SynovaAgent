@@ -6,6 +6,7 @@
   "allowedTo": ["pool/sensing"],
   "requiredProps": ["competitor_aggressiveness", "response_lag", "feedback_completeness"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "market_share_change": "number — 市场份额变化率",
     "competitive_response_type": "string — 竞争者反应类型(price|product|channel)"
   },

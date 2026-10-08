@@ -19,6 +19,7 @@
     "counterfactual_test_exists"
   ],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "single_channel_concentration": {
       "type": "number",
       "minimum": 0,

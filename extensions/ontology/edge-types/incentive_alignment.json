@@ -6,6 +6,7 @@
   "allowedTo": ["pool/activity"],
   "requiredProps": ["incentive_power", "goal_alignment_score", "horizon_match_months"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "variable_pay_ratio": "number (0-1) — 可变薪酬占比",
     "long_term_incentive_ratio": "number (0-1) — 长期激励占比",
     "perverse_incentive_risk": "number (0-1) — 逆向激励风险"

@@ -6,6 +6,7 @@
   "allowedTo": ["pool/equipment_capacity"],
   "requiredProps": ["units_acquired", "total_capacity_added", "avg_utilization_rate"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "equipment_type": "string — 设备类型(hardware|software|facility)",
     "depreciation_period_months": "number — 折旧周期",
     "maintenance_cost_ratio": "number (0-1) — 维护成本占比"

@@ -6,6 +6,7 @@
   "allowedTo": ["outcome/innovation"],
   "requiredProps": ["rd_spend", "new_product_count", "patent_filed"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "innovation_success_rate": "number (0-1) — 创新成功率",
     "time_to_market_months": "number — 上市时间",
     "rd_pipeline_value": "number — 研发管线价值"
