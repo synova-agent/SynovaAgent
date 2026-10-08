@@ -1,10 +1,13 @@
 writeset:
   - scripts/control-tower/alloc-task-id.sh
   - tests/control-tower/alloc-task-id.test.sh
+  - tests/control-tower/alloc-task-id-lock.test.sh
+  - tests/control-tower/alloc-task-id-timeout.test.sh
   - .claude/claims/1423.yaml
   - .claude/task-briefs/2026-10-08-1423-禁新建D#-存量只读.md
 done:
   - "verify: bash tests/control-tower/alloc-task-id.test.sh ⇒ PASS=76 FAIL=0"
+  - "verify: bash tests/control-tower/alloc-task-id-lock.test.sh ⇒ 7/0 且 alloc-task-id-timeout.test.sh ⇒ 9/0"
   - "verify: bash scripts/control-tower/check-name-allocation.test.sh ⇒ 21/0"
   - "verify: bash scripts/control-tower/alloc-task-id.test.sh --check-id 保留可用（D3 断言）"
 note: D-C 切换：禁【新建】D#（一步到位）＋ 存量只读兼容（不影响在飞合并）—— 创始人 2026-10-08 裁决

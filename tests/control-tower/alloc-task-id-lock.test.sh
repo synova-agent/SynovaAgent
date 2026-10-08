@@ -20,6 +20,8 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #          现按 CTO 裁定 a 改为「动」，**动的是并发隔离（消费新缝），不是退出码语义**，
 #          §5 的三条「不动」证据仍成立且保留（它们证明的是 A′ 对本测试断言无影响）。
 # ═══════════════════════════════════════════════════════════════
+# D-C 切换（创始人 2026-10-08）: 本夹具验证【取号引擎/锁/超时】本身，非"新建任务取号"语义
+#   ⇒ 显式置 SYNO_ALLOC_LEGACY_OK=1（测试逃生缝；生产不设 = 取号一律拒绝）
 set -uo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 GATE="$REPO/scripts/control-tower/alloc-task-id.sh"
@@ -54,7 +56,7 @@ done
 PROBE_REL_OK=0
 if [ -n "$PROBE_PY" ] && ( cd "$STALE_DIR" && "$PROBE_PY" -c "import os;os.path.getmtime('ref')" >/dev/null 2>&1 ); then PROBE_REL_OK=1; fi
 echo "  平台探针: python(${PROBE_PY:-none}) 相对路径 stat → ${PROBE_REL_OK}（1=可执行陈旧分支）"
-STALE_OUT=$( cd "$STALE_DIR" && SYNO_LOCK_DIR="lock" bash "$GATE" "缝探针" --dry-run 2>&1 || true)
+STALE_OUT=$( cd "$STALE_DIR" && SYNO_LOCK_DIR="lock" SYNO_ALLOC_LEGACY_OK=1 bash "$GATE" "缝探针" --dry-run 2>&1 || true)
 if [ "$PROBE_REL_OK" = "1" ]; then
   if [ ! -d "$STALE_DIR/lock" ]; then
     ok "接线: 消费 SYNO_LOCK_DIR 注入缝（注入锁目录运行后被清理 = 路径特异行为判别）"
@@ -79,7 +81,7 @@ fi
 #   （本机实测 3m13.9s–3m46.7s），跑间方差会让本断言间歇性拿到空输出（实测 flaky 一次）。
 #   关掉后与方言/环境无关，且断言语义不变（dry-run 仍不得在真实 task-state 建壳）。
 DRY=$(SYNO_LOCK_DIR="$LOCK_ROOT/dry" SYNO_ALLOC_NO_REMOTE=1 SYNO_ALLOC_NO_WORKTREE=1 SYNO_ALLOC_NO_BRANCH=1 \
-  bash "$GATE" "test-dry" --dry-run 2>/dev/null | head -1)  # swallow-ok: dry-run 探测，stderr 干扰无碍
+  SYNO_ALLOC_LEGACY_OK=1 bash "$GATE" "test-dry" --dry-run 2>/dev/null | head -1)  # swallow-ok: dry-run 探测，stderr 干扰无碍
 if echo "$DRY" | grep -q "dry-run"; then
   ok "dry-run 不建壳（输出: ${DRY}）"
 else
@@ -95,7 +97,7 @@ SANDBOX=$(mktemp -d)
 BRIEFS_BEFORE=$(ls "$REPO/.claude/task-briefs/" 2>/dev/null | wc -l | tr -d ' ')  # swallow-ok: 目录缺失=0 份，非错误
 for i in $(seq 1 20); do
   SYNO_TASK_STATE_DIR="$SANDBOX" SYNO_BRIEF_DIR="$SANDBOX/briefs" SYNO_LOCK_DIR="$SANDBOX/lock" \
-    bash "$GATE" "并发测试-$i" >/dev/null 2>&1 &
+    SYNO_ALLOC_LEGACY_OK=1 bash "$GATE" "并发测试-$i" >/dev/null 2>&1 &
 done
 wait
 # 统计沙箱里生成的号
