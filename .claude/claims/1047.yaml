@@ -1,0 +1,18 @@
+# .claude/claims/1047.yaml — #1047（2-2 参数清单）写集声明（S0 源）
+#
+# issue 号卡无 D# ⇒ 用 .claude/claims/<issue>.yaml 作为 D708 门禁的 S0 声明源。
+#
+# 依据：卡面 #1047 写集「可碰：docs/synova/coordination/」「绝不能碰：src/**（纯文档产物）」；
+#       卡面 §①b 联动件：接收 #1430 抽出的 3 条公式边参数并预留 causal_strength 空位。
+writeset:
+  - .claude/claims/1047.yaml
+  - .claude/task-briefs/2026-10-08-1047-param-list.md
+  - docs/synova/coordination/2-2-参数清单-v1-20261008.md
+  - docs/synova/coordination/tools/check-param-list.ts
+  - docs/synova/product-lines/evidence/D1047-param-list-20261008.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  # ↑ 队长落盘（DOC-0190 登记条目，修 D782 登记门禁 D2）：本卡过 CI 所必需 ⇒ 计入本卡写集
+  #   先例：7a7de21ec「登记册入台账 DOC-0189 + claim 补登（修 D2 登记门禁 / D708 身份）」
+done:
+  - verify: npx tsx docs/synova/coordination/tools/check-param-list.ts
+# 声明纪律：只列本 PR 真正改动的文件。不列 src/**（纯文档产物，卡面明令）。

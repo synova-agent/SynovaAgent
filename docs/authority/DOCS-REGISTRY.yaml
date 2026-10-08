@@ -445,3 +445,10 @@ documents:
     owner: line-win-dsh-lead
     note: "#980 执行期产出：6 项偏离（D-1 判据加严并存 / D-2 超登记 paths / D-3 收窄不碰 graph-bridge / D-4 卡面 bridge.createNode 与代码实况不符 / D-5 探针文案为判别力承重件 / D-6 判据落点在治理区待搬移）+ 6 项仓库级缺口（G-1 测试文件零类型门禁 / G-2 全量 tsc 存量红 28 条 / G-3 Test-Kit 必需检查只跑 1 文件 / G-4 未登记存量存疑 1 件 / G-5 本地 stash 存量 28 条 / G-6 自动 tag 落 feature 分支被 D331 拦）；含「就绪补丁」（探针搬移 3 处改动 + 搬移后必跑判据）。只登记不决策，立卡与指派归 CTO。"
 
+
+  - id: DOC-0190
+    type: registry
+    path: docs/synova/coordination/2-2-参数清单-v1-20261008.md
+    status: active
+    owner: synova-squad-lead
+    note: "#1047 2-2 参数清单：145 条 × 19 字段（五域 覆盖 + layer 四层分栏），值留空；判据 docs/synova/coordination/tools/check-param-list.ts（exit 0）"
