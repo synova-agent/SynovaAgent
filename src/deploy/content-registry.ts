@@ -262,7 +262,11 @@ const CONTENT_TYPES: readonly ContentTypeEntry[] = [
       'loader 死（src/providers/llm-provider-loader.ts 零调用者，实测 `grep -rn "llm-provider-loader|' +
       'loadLLMProviders" src/ packages/` 仅自身命中）＋生产走 src/providers 硬编码类 ⇒ ' +
       '「第四处两套并行」。修法二选一（接活文件驱动系 / 退役硬编码类）属架构变更，按 CTO 预裁待裁。' +
-      '🔴 本表**刻意不登记其 loader**：未裁前不把它接进 boot 装配面。',
+      '🔴 本表**刻意不登记其 loader**：未裁前不把它接进 boot 装配面。' +
+      '🔴 决策前提勘误（2026-10-09 复核，**别把侧 A 当既有资产**）：10 个 `adapter.ts` **不是**可接活的' +
+      '脚手架 —— 实测 `grep -c "^export"` ×10 **全为 0**、文件第一字节即 `//`、整文件是**一行注释**' +
+      '（`export const …Adapter = {…}` 那句在注释体内），真 `import()` 实测 `EXPORTS=[]` ×10。' +
+      '⇒ 「接活文件驱动系」的真实成本 = **从零写 10 个适配器**，非「接上已有实现」。',
   },
   {
     type: 'industry-template',

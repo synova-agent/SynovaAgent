@@ -194,7 +194,14 @@ async function main(): Promise<number> {
     ok(`全部 ${report.loaded} 项装配成功`);
   }
 
-  // 声明的 init/verify 必须**真被执行**（比 RESOLVE 的 typeof 更强：证明调用链通）
+  // 声明的 init/verify 是否**被记账为已执行** —— 判据口径（2026-10-09 复核勘误，**禁过度声称**）：
+  //   本段读的是**被检模块自报的 `verified` 记账**（`initContentTypes` 在调用成功后写入该数组）。
+  //   ⇒ 探针本身**不能区分「执行了」与「声称执行了」**：若被检模块只记账、不真调用，
+  //     本段仍判绿（复核员 M4 实测证实：删真实调用而保留记账 ⇒ `failures=0`）。
+  //   ⇒ 故「调用链通」的**独立证据来自生产入口实跑**（`initFileDrivenLoaders()` ⇒
+  //     `loadBusinessModels()` 返回 6 个模型 + loader 日志 `count:6`），**不来自本段**。
+  //   本段的价值 = **回归护栏**（改动后记账丢失/减项即红），**不是**执行性证明。
+  //   判别力边界已如实记入交付件 `.synova-out/WIN-1465-交付.md`。
   for (const e of loadable) {
     const loader = e.loader;
     if (loader === undefined) continue;
