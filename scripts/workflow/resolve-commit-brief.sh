@@ -216,38 +216,7 @@ today_files_by_suffix() {
   done
   return 0
 }
-# ── D1248 热修（2026-10-08）: 日期窗口候选**必须按身份过滤** ──────────────────
-#   实证（main 红 / 注入自测 baseline FAIL）: 身份不可用或不可比时，日期窗口会抓走**别人的**当日
-#     brief 去判定 —— 实测抓到 2026-10-08-1398-*（Done 全未勾选）与 2026-10-08-1408-*（**无 Done 条目**）
-#     ⇒ 判「Done 可证伪」失败 ⇒ **与本任务无关的红**，波及所有身份不可比的语境（沙箱 / push-to-main）。
-#   判据（**严格收窄**）: 仅当**能算出身份令牌**（issue 号 或 D#）时，才取日期窗口并**按令牌过滤**；
-#     算不出令牌 ⇒ 候选留空 ⇒ 调用方按「无 brief」处理（check-verifiable-done.sh:52 已有该语义）。
-#   ⚠️ 不删回退本身（同日 brief 的正常认领仍依赖它）；只把它的**充分条件**显式化。
-# 令牌 = **并集**（issue 号 ∪ 分支名里的 D# ∪ 提交主题里的 D#）—— 只要求"能对上任一身份形态"
-#   ⚠️ 用并集而非单值: 仅取一种会打断另一条路径（实测: 只取 issue 号 ⇒ legacy D# 任务取不到 brief ⇒ 回归）
-_TOKS=""
-if [ -n "${ISSUE_HINT:-}" ]; then
-  _n=$(printf '%s' "$ISSUE_HINT" | grep -oE '[0-9]{1,7}' | head -1 || true)
-  [ -n "$_n" ] && _TOKS="$_n"
-fi
-for _src in "${BR_CUR:-}" "$(git -C "$ROOT" log -1 --pretty=%s 2>/dev/null || true)"; do
-  _d=$(printf '%s' "$_src" | grep -oE 'D[0-9]+' | head -1 || true)
-  if [ -n "$_d" ]; then
-    case "|$_TOKS|" in *"|$_d|"*) ;; *) _TOKS="${_TOKS:+$_TOKS|}$_d" ;; esac
-  fi
-done
-_CANDS=$(today_files_by_prefix "$ROOT/.claude/task-briefs/" | sort || true)
-_NCANDS=$(printf '%s\n' "$_CANDS" | grep -c . || true)
-if [ "$_NCANDS" = "1" ]; then
-  # 唯一候选 ⇒ 无歧义 ⇒ 沿用旧行为（**零回归**：单 brief/日 的 legacy 用法依赖它）
-  ALL_TODAY="$_CANDS"
-elif [ -n "$_TOKS" ]; then
-  # 多候选 ⇒ **必须**按身份过滤，否则会抓走别人的 brief（main 红实证）
-  ALL_TODAY=$(printf '%s\n' "$_CANDS" | grep -E "$_TOKS" || true)
-else
-  # 多候选且身份不可得 ⇒ **不得猜** ⇒ 留空（调用方按「无 brief」跳过）
-  ALL_TODAY=""
-fi
+ALL_TODAY=$(today_files_by_prefix "$ROOT/.claude/task-briefs/" | sort || true)
 # D718: 并入身份锚点 brief（强+弱）——跨日任务即使文件名日期在窗口外也能被认领
 if [ -n "$ANCHORED_STRONG_FILES$ANCHORED_WEAK_FILES" ]; then
   ALL_TODAY="$(printf '%s\n%s\n%s\n' "$ALL_TODAY" "$ANCHORED_STRONG_FILES" "$ANCHORED_WEAK_FILES" | grep -v '^$' | sort -u || true)"
