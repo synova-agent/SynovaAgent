@@ -1,0 +1,11 @@
+{
+ "evidence_id": "1471/A-02",
+ "task": "Batch G 承接 + 1:1 对账（含 33 冲突按主仓版刷新）",
+ "archive_commit": "fbfd328626",
+ "archive_refresh_commit": "30672e2e2d",
+ "frozen": 109,
+ "newly_copied": 76,
+ "preexisting_identical": 0,
+ "conflicts_refreshed_from_main": 33,
+ "note": "冲突件按 main 版刷新档案副本（main 是唯一真相），刷新后 1:1 成立 ⇒ 109 全部可移出"
+}
