@@ -259,15 +259,21 @@ jobs:
     # 公式 = max(P95×1.5, 中位数×3)）：audit 1 / Test-Kit(ubuntu) 1 / Golden Case 2 /
     # Gate Integrity 2 / Test-Kit(windows) 3 / Architecture 6 / Checker Review 6 /
     # Integration 6 / TypeScript+Iron Laws 7 / Vitest 8 / Control Tower(ubuntu) 14 / (windows) 106（D1109 后**未重取**：口径要 n=12 同分布样本，现 n=1）。
-    # 🔴 W1d/D1164（治理线，2026-10-06）: 8 → 15。**实测该 job 被自己的 timeout 杀掉**：
-    #   step「Run tests」在**3/3** 条 run 里 conclusion=cancelled（37364788318 / 37421437721 /
-    #   37423639714），每条都在 job 起始后 **~8m15s** 终止 ⇒ 是 timeout 杀，不是测试失败。
-    #   shard 1/2 实测跑到 6m57s 仍被切；同 run 的 shard 2/2「Run tests」只用 46s ⇒ 严重不均。
-    #   ⚠️ 该 job 承载**必需 context** `Vitest (1/2)` ⇒ 非 docs-only PR 因此永久 blocked。
-    #   原基线（注释里 n=12）口径是「只取 success」——而 main 的 run 全是 docs-only（skip），
-    #   样本里根本没有"真跑的非 docs run" ⇒ 8 分钟是**没被真实负载校准过**的值。
-    #   若 15 分钟仍被杀，则不是超时问题而是 shard 不均/测试挂死（另卡）。
-    timeout-minutes: 15
+    # 🔴 W1e/D1170 追账回退（治理线，2026-10-06）: 15 → **8**（回到基线值）。
+    #   缘由（独立复核用三组 run 证伪了「加超时」这条处置）：
+    #     · commit 76abd97da **只改了** 8→15 ⇒ run 37426081446 仍 `cancelled`，时长 **15m15s**
+    #       ⇒ 上限抬高只是把被杀时点从 8m15s 挪到 15m15s，**问题没解决**。
+    #     · 真修复（W1e: tests/electron/backend-spawn.test.ts 回收残留子进程）之后：
+    #       run 37430245010 ⇒ Vitest(1/2) **success 2m44s**；run 37431855746 ⇒ **success 1m46s**
+    #       （shard 2/2 2m43s）⇒ **8 分钟绰绰有余**。
+    #     · 且原基线口径（本段上方 :46-48「只取 success；n=12；公式 max(P95×1.5, 中位数×3)」）
+    #       在真修复后的新负载下应**降**不升 ⇒ 保留 15 与注释里的口径互相打架（M-04）。
+    #   ⇒ 保留 15 的唯一实测效果 = 未来任何一次挂死**多烧 7 分钟**（15m15s vs 8m16s），2 个 shard 各烧一次。
+    #   历史（不要再走一遍）: 该 job 曾被自己的 timeout 杀掉 —— step「Run tests」在 37364788318 /
+    #     37421437721 / 37423639714 三条 run 里 conclusion=cancelled，均在 job 起始后 ~8m15s 终止；
+    #     shard 1/2 跑到 6m57s 仍被切而 shard 2/2 只用 46s。**真因是 worker 拆除卡死（W1e 已修），
+    #     不是超时值不够** —— 这条正是「加超时」被证伪的地方。
+    timeout-minutes: 8
     name: Vitest (${{ matrix.shard }})
     needs: quality
     # D1111/A3 缺陷 B 修（研究院 A3 提案，机械实现）: 上游 quality 红时，job 级无 `if:` ⇒ 本 job

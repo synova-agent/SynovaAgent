@@ -115,18 +115,33 @@ afterEach(() => {
   //     （实测：17 个用例 14.03s 全过，然后永久挂住）。
   // 为什么按 handle 类型扫、而不是按已登记的 pid: 本文件既有经 `ensureBackend` 的 spawn，
   //   也有直接用 `spawn`（D522 进程树用例）与"桩里再 spawn 孙进程"的形态 —— 逐个登记必然漏。
-  //   按类型一次扫全，是**单点且不漏**的写法。
+  //   按类型一次扫全，是**单点**的写法。
+  //   🔴 D1170 追账（独立复核实验④ 实测）: **并非不漏** —— `kind==='ChildProcess'` 只覆盖
+  //     **直接子进程**；桩里再 spawn 孙进程那种形态的**孙进程不在本扫描半径内**
+  //     （实测: PR 扫描后 直接子进程存活=false / 孙进程存活=**true**；补 `process.kill(-pid)` 组杀后才 false）。
+  //     产品自己的回收契约用的是**进程组**（`electron/backend-spawn.cjs:106` `process.kill(-pid, sig)`），
+  //     ⇒ 本兜底原先比产品契约更弱。现改为「先组杀、失败再单杀」以对齐。
+  //   ⚠️ 安全性态: 本段误杀半径依赖 vitest 的 pool/isolate **默认值**（`vitest.config.ts` 未显式钉）；
+  //     若将来设 isolate:false / singleFork:true，本段会变成**跨测试文件的全局 kill** ⇒ 那时必须改。
   // 只动 ChildProcess / Server 两类；不动 Pipe（那是 worker 与 pool 的 IPC，动它会自伤）。
   // `_getActiveHandles` 属 Node 内部 API —— 此处刻意使用，理由：它是唯一能枚举"未被引用计数
   //   覆盖的残留句柄"的手段，而本用例的目的正是**清理自己造出来的残留**。
   for (const pid of _spawnedPids.splice(0)) {
-    try { process.kill(pid, 'SIGKILL'); } catch { /* 已退出（ESRCH）或用其它方式回收 */ }
+    // 先按**进程组**杀（与产品契约 electron/backend-spawn.cjs:106 一致；detached 子进程是组长），
+    // 失败再退回单 pid（非组长会 EPERM/ESRCH）。两步都失败 ⇒ 已退出。
+    try { process.kill(-pid, 'SIGKILL'); }
+    catch { try { process.kill(pid, 'SIGKILL'); } catch { /* 已退出（ESRCH） */ } }
   }
   const _P = process as unknown as { _getActiveHandles?: () => unknown[] };
   for (const h of _P._getActiveHandles?.() ?? []) {
     const c = h as { kill?: (s?: string) => void; close?: () => void; constructor?: { name?: string } };
     const kind = c?.constructor?.name;
-    if (kind === 'ChildProcess') { try { c.kill?.('SIGKILL'); } catch { /* 已退出 */ } }
+    if (kind === 'ChildProcess') {
+      // 只覆盖直接子进程（孙进程见上方追账注）；组杀优先、单杀兜底
+      const pidOf = (c as { pid?: number }).pid;
+      try { if (typeof pidOf === 'number' && pidOf > 0) process.kill(-pidOf, 'SIGKILL'); else c.kill?.('SIGKILL'); }
+      catch { try { c.kill?.('SIGKILL'); } catch { /* 已退出 */ } }
+    }
     else if (kind === 'Server') { try { c.close?.(); } catch { /* 已关闭 */ } }
   }
 });
