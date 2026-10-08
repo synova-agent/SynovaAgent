@@ -1,0 +1,15 @@
+# .claude/claims/1412.yaml — #1412（守卫收口补全）写集声明（D708 的 S0 源）
+#   CTO 2026-10-08 裁 **(C)**：把守卫放进**适配器**（**默认开** + 显式 opt-out）
+#   理由：把"覆盖"从【枚举构造点】变成【默认行为】（13 处今天数得完，明天新增的数不完）
+writeset:
+  - .claude/claims/1412.yaml
+  - .claude/task-briefs/2026-10-08-1412-adapter-default-guard.md
+  - src/adapters/sqlite-graph-store.ts
+  - tests/adapters/standard-key-guard.test.ts
+  - tests/agent/write-side-axis-alignment.test.ts
+done:
+  - verify: npx vitest run tests/adapters/standard-key-guard.test.ts tests/agent/write-side-axis-alignment.test.ts
+  - verify: npx vitest run tests/adapters/ tests/l4/ tests/agent/ tests/sentinel/ tests/sentinels/ tests/contract/
+  - verify: bash -c 'grep -rn "standardKeyGuard: false" src/ --include="*.ts" | wc -l'
+  - verify: npx tsc --noEmit
+note: 适配器默认带守卫（复用 wrapStandardKeyGuard ⇒ **无第二套逻辑**）+ `SqliteGraphStoreOptions.standardKeyGuard`（默认 true；opt-out **显式可 grep**）。影响面核：生产侧仅 data-ingest-service 写 standardKey（无裸语义依赖）；测试侧 2 个显式 opt-out（保留裸语义对照）。判据 V1 默认覆盖（不枚举）｜V2 opt-out 裸语义｜V3 不同键 2 行｜V4-new 生产路径零 opt-out（**排除注释行**）。

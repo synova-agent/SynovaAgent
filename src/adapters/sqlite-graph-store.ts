@@ -17,6 +17,7 @@
 import type Database from "better-sqlite3";
 import { createLogger } from "@synova/logger";
 import { reconcileSchema } from "../store/schema-migration";
+import { wrapStandardKeyGuard } from "./standard-key-guard";   // #1412 (C)：默认守卫（复用，不造第二套）
 
 const log = createLogger("adapters/sqlite-graph-store");
 
@@ -100,11 +101,23 @@ interface GraphEdgeRow {
  * 查询边   → SELECT FROM graph_triples WHERE graph=? [AND predicate=? ...] AND valid_to IS NULL
  * 删除     → 软删除：UPDATE SET valid_to = datetime('now')
  */
+export interface SqliteGraphStoreOptions {
+  /**
+   * **标准键写入守卫**（#1412 (C)）：**默认 true** —— 同 `props.standardKey` 先查后写（不重复插入）。
+   * 🔴 设为关闭（`false`）的唯一合法场景 = **测试需要"裸语义"**；审计口径：**生产路径必须零 opt-out**（判据见 tests/adapters/standard-key-guard.test.ts 的 V4-new）。
+   */
+  standardKeyGuard?: boolean;
+}
+
 export class SqliteGraphStore {
   private db: Database.Database;
+  /** #1412 (C)：默认守卫（**默认行为**，不依赖"枚举构造点"） */
+  private standardKeyGuardEnabled: boolean;
+  private guardedCreateNode!: (type: string, props: Record<string, unknown>, graph: string) => string;
 
-  constructor(db: Database.Database) {
+  constructor(db: Database.Database, options?: SqliteGraphStoreOptions) {
     this.db = db;
+    this.standardKeyGuardEnabled = options?.standardKeyGuard !== false;
     this.enableWAL();
     this.initSchema();
     // D355: schema 版本化迁移（幂等）。fail-closed: 不 catch — 迁移失败必须阻止启动
@@ -137,6 +150,26 @@ export class SqliteGraphStore {
 
   /** 创建节点，返回节点 ID */
   createNode(
+    type: string,
+    props: Record<string, unknown>,
+    graph: string = "default",
+  ): string {
+    // #1412 (C)：**默认带守卫**（复用共享守卫 ⇒ 无第二套逻辑；只有显式 opt-out 才走裸写）
+    if (this.standardKeyGuardEnabled) {
+      if (!this.guardedCreateNode) {
+        this.guardedCreateNode = wrapStandardKeyGuard({
+          createNode: (t, p, g) => this._insertNodeRaw(t, p, g),
+          queryNodes: (t, f, g) => this.queryNodes(t, f, g),
+          updateNode: (id, p, g) => this.updateNode(id, p, g),
+        }).createNode;
+      }
+      return this.guardedCreateNode(type, props, graph);
+    }
+    return this._insertNodeRaw(type, props, graph);
+  }
+
+  /** 裸写入（无守卫）—— 仅供 opt-out 与守卫内部使用 */
+  private _insertNodeRaw(
     type: string,
     props: Record<string, unknown>,
     graph: string = "default",
