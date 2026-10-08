@@ -1,0 +1,23 @@
+writeset:
+  - .claude/claims/1466.yaml
+  - .claude/task-briefs/2026-10-09-1466-BC清理族.md
+  - scripts/control-tower/probe-delivery-hygiene.sh
+  - .dockerignore
+  - src/routes/diagnosis-upload-v2.ts
+  - tests/test-http-route.ts
+  - tests/control-tower/probe-delivery-hygiene.test.sh
+  - app/favicon.ico
+done:
+  - "verify: bash scripts/control-tower/probe-delivery-hygiene.sh ⇒ exit 0（V1/V2/V3 三判据全绿）"
+  - "verify: bash scripts/control-tower/probe-delivery-hygiene.sh --ref HEAD ⇒ exit 0（分支态自证，不靠合并后 origin/main）"
+  - "verify: bash scripts/control-tower/probe-delivery-hygiene.sh --dockerignore <去掉一条反选行的样本> ⇒ exit 1（V-08 改坏即红）"
+  - "verify: git cat-file -s origin/main:src/routes/diagnosis-upload-v2.ts ⇒ 0（基线为 0 字节死壳，本卡删除）"
+  - "verify: bash scripts/control-tower/probe-delivery-hygiene.sh --ref HEAD ⇒ V2 零违规，客户构建上下文 control-tower 幸存 95→11 件（84 件出交付面）"
+note: >-
+  BC 清理族（卡 #1466，登记件 BC-CLEAN）。四项实测结论：
+  ① BC-3 日期快照 —— 已由 #1457（9783411a3，2026-10-09T02:34）落地，本卡零动作（5404 LOC / 44.86% 复算与卡面一致）；
+  ② BC-4 0 字节空壳 —— 删 src/routes/diagnosis-upload-v2.ts + tests/test-http-route.ts（D590 b54a0fb6a 清空未删，零引用）；
+  ③ BC-7 —— .dockerignore 剥离非 src/ 闭包的 control-tower 件（95→11），整目录归零不可达（src/ 4 处 load-bearing 引用，须 CTO 裁）；
+  ④ BC-8 —— .gitignore:90 已有 .synova-wt-*、仓库/CI 面零残留；本机 109 个 .synova-wt-* 全为活工作区，按卡面红线不删。
+  附带：app/favicon.ico（5 B 字面量 dummy 占位符）出交付面。
+  未核（V-09）：本机无 docker ⇒ V2 为 .dockerignore 语义子集模拟，真 docker build 未核。
