@@ -9,7 +9,7 @@ import { computeMarginVsBenchmark } from '../../../extensions/sentinels/margin-h
 describe('computeMarginVsBenchmark', () => {
   it('should compute gap vs default benchmark (25%)', () => {
     const r = computeMarginVsBenchmark([
-      { total_revenue: 200000, gross_margin: 120000, operatingExpenses: 40000 },
+      { total_revenue: 200000, gross_margin: 120000, operating_expense: 40000 },
     ]);
     expect(r.degraded).toBe(false);
     expect(r.profitMargin).toBe(0.4);
@@ -18,7 +18,7 @@ describe('computeMarginVsBenchmark', () => {
 
   it('should compute with custom benchmark', () => {
     const r = computeMarginVsBenchmark([
-      { total_revenue: 100000, gross_margin: 60000, operatingExpenses: 30000 },
+      { total_revenue: 100000, gross_margin: 60000, operating_expense: 30000 },
     ], { benchmark: 0.15 });
     expect(r.degraded).toBe(false);
     expect(r.profitMargin).toBe(0.3);

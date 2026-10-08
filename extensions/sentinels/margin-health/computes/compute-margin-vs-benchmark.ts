@@ -28,7 +28,7 @@ export function computeMarginVsBenchmark(
   financials: Array<{
     total_revenue: number;
     gross_margin: number;
-    operatingExpenses: number;
+    operating_expense: number;
   }>,
   input: { benchmark?: number } = {},
 ): MarginVsBenchmarkResult {

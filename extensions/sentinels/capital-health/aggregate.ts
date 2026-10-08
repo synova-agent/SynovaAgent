@@ -70,7 +70,7 @@ interface NormalizedFinancial {
   total_debt: number;
   equity: number;
   operating_cashflow: number;
-  operatingExpenses: number;
+  operating_expense: number;
   interest_expense?: number;
   short_term_debt?: number;
   long_term_debt?: number;
@@ -134,7 +134,7 @@ export const capitalHealthSentinel = {
         total_debt: Number(n.props.total_debt) || 0,
         equity: Number(n.props.equity) || 0,
         operating_cashflow: Number(n.props.operating_cashflow) || 0,
-        operatingExpenses: Number(n.props.operating_expense) || 0,
+        operating_expense: Number(n.props.operating_expense) || 0,
         interest_expense: hasValue(n.props.interest_expense) ? Number(n.props.interest_expense) : undefined,
         short_term_debt: hasValue(n.props.short_term_debt) ? Number(n.props.short_term_debt) : undefined,
         long_term_debt: hasValue(n.props.long_term_debt) ? Number(n.props.long_term_debt) : undefined,
@@ -156,7 +156,7 @@ export const capitalHealthSentinel = {
         const roicRecords = financials.map(f => ({
           total_revenue: f.total_revenue,
           cogs: f.total_revenue - (f.gross_margin as number),
-          operatingExpenses: f.operatingExpenses,
+          operating_expense: f.operating_expense,
           total_debt: f.total_debt,
           equity: f.equity,
           wacc_override: undefined as number | undefined,

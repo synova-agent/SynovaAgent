@@ -2,8 +2,8 @@
  * capital-health/computes/roic-wacc-spread.ts — ROIC/WACC 差距计算（D358 迁自 _extinct/capital-efficiency）
  *
  * 契约ID: COMPUTE-ROIC-WACC-SPREAD-v1（迁移版 — 算法冻结，字段名 snake 化）
- * 输入: financials: Array<{ total_revenue; cogs; operatingExpenses; total_debt?; equity?; wacc_override? }>
- *   ROIC = NOPAT / 投入资本；NOPAT ≈ total_revenue − cogs − operatingExpenses（简化）
+ * 输入: financials: Array<{ total_revenue; cogs; operating_expense; total_debt?; equity?; wacc_override? }>
+ *   ROIC = NOPAT / 投入资本；NOPAT ≈ total_revenue − cogs − operating_expense（简化）
  *   WACC = wacc_override ?? 0.10（默认行业值）
  * 输出(正常): { spread: roic − wacc, roic, wacc, degraded: false, warnings: [...] }
  * 输出(降级): 空数组 / total_revenue=0 / 投入资本=0 → degraded
@@ -24,7 +24,7 @@ export interface RoicWaccResult {
 export function computeRoicWaccSpread(financials: Array<{
   total_revenue: number;
   cogs: number;
-  operatingExpenses: number;
+  operating_expense: number;
   total_debt?: number;
   equity?: number;
   wacc_override?: number;
@@ -38,7 +38,7 @@ export function computeRoicWaccSpread(financials: Array<{
 
   const totalRev = financials.reduce((s, f) => s + f.total_revenue, 0);
   const totalCost = financials.reduce(
-    (s, f) => s + f.cogs + (f.operatingExpenses || 0), 0,
+    (s, f) => s + f.cogs + (f.operating_expense || 0), 0,
   );
   const totalCapital = financials.reduce(
     (s, f) => s + (f.total_debt || 0) + (f.equity || 0), 0,

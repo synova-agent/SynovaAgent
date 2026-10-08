@@ -53,12 +53,12 @@ describe('#1375 B3b · 指标级接线（3 个多 compute 哨兵 · 每 compute 
     const store = new SqliteGraphStore(db);
     // 本体轴财务数据（#1393 后经收口点并集读命中 resource/money）
     // 夹具按**各 compute 的输入契约**构造（实测自各 computes 的 JSDoc `输入:` 行）：
-    //   margin-health: total_revenue/gross_margin/cogs/operatingExpenses/total_debt/equity/total_cost/head_count
+    //   margin-health: total_revenue/gross_margin/cogs/operating_expense/total_debt/equity/total_cost/head_count
     //   growth-quality: operating_cashflow/netIncome/revenue/previousRevenue/organicGrowth/acquisitionRevenue
     //   capital-health: total_assets/current_assets/inventory/receivables/accounts_payable/short_term_debt/tax_rate/ebit/interest_expense
     store.createNode('resource/money', {
       orgId: 'org-b3b',
-      total_revenue: 1000, gross_margin: 400, cogs: 600, total_cost: 600, operating_expense: 200, operatingExpenses: 200,
+      total_revenue: 1000, gross_margin: 400, cogs: 600, total_cost: 600, operating_expense: 200, operating_expense: 200,
       netProfit: 120, netIncome: 120, profitMargin: 0.12,
       operating_cashflow: 150, operatingCashFlow: 150,
       equity: 5000, total_debt: 3000, short_term_debt: 800, long_term_debt: 2200,

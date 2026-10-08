@@ -22,11 +22,11 @@ const config: SentinelConfig = {
 
 /** 内联现金流指标计算 (V4.2.4: 替代已删除的 financial-snapshot 桥接) */
 function computeCashFlowMetrics(
-  entries: Array<{ revenue: number; cost: number; operatingExpenses: number; cashBalance: number; period: string }>
+  entries: Array<{ revenue: number; cost: number; operating_expense: number; cashBalance: number; period: string }>
 ): { cashFlowHealth: 'critical' | 'tight' | 'healthy'; netMargin: number; revenueYoYGrowth: number | null; grossMargin: number } {
   const totalRevenue = entries.reduce((s, e) => s + (e.revenue || 0), 0);
   const totalCost = entries.reduce((s, e) => s + (e.cost || 0), 0);
-  const totalOpEx = entries.reduce((s, e) => s + (e.operatingExpenses || 0), 0);
+  const totalOpEx = entries.reduce((s, e) => s + (e.operating_expense || 0), 0);
   const totalCash = entries.reduce((s, e) => s + (e.cashBalance || 0), 0);
   const count = entries.length;
 
@@ -101,7 +101,7 @@ export const cashFlowSentinel: Sentinel = {
       // 映射 SOG props → 内部财务条目
       const entries: Array<{
         period: string; startDate: string; endDate: string;
-        revenue: number; cost: number; operatingExpenses: number;
+        revenue: number; cost: number; operating_expense: number;
         cashBalance: number; headcount: number; operatingCashFlow: number | undefined;
       }> = [];
       for (const r of rawEntries) {
@@ -113,7 +113,7 @@ export const cashFlowSentinel: Sentinel = {
           // #1384 V2b（消费侧）：**优先读本体 schema 字段名**（连接器按本体写）⇒ 旧名回退（显式，不静默）
           revenue: Number(p.total_revenue) || Number(p.revenue) || Number(p.收入) || 0,
           cost: Number(p.total_cost) || Number(p.cost) || Number(p.costs) || Number(p.成本) || 0,
-          operatingExpenses: Number(p.operating_expenses) || Number(p.运营支出) || 0,
+          operating_expense: Number(p.operating_expenses) || Number(p.运营支出) || 0,
           cashBalance: Number(p.cash_balance) || Number(p.cash) || Number(p.现金) || 0,
           headcount: Number(p.headcount) || Number(p.人数) || 1,
           operatingCashFlow: Number(p.operating_cash_flow) || Number(p.cashflow) || Number(p.经营现金流) || undefined,
@@ -128,7 +128,7 @@ export const cashFlowSentinel: Sentinel = {
 
       // 计算跑道
       const totalCash = entries.reduce((s, e) => s + (e.cashBalance || 0), 0);
-      const monthlyBurn = entries.reduce((s, e) => s + (e.operatingExpenses || 0), 0) / Math.max(entries.length, 1);
+      const monthlyBurn = entries.reduce((s, e) => s + (e.operating_expense || 0), 0) / Math.max(entries.length, 1);
       const runwayMonths = monthlyBurn > 0 ? totalCash / monthlyBurn : (totalCash > 0 ? Infinity : 0);
 
       // 生成 findings

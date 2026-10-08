@@ -102,7 +102,7 @@ export const marginHealthSentinel = {
       const financials = finNodes.map(n => ({
         total_revenue: Number(n.props.total_revenue) || 0,
         gross_margin: Number(n.props.gross_margin) || 0,
-        operatingExpenses: Number(n.props.operating_expense) || 0,
+        operating_expense: Number(n.props.operating_expense) || 0,
         fixed_cost: hasValue(n.props.fixed_cost) ? Number(n.props.fixed_cost) : undefined,
       }));
 
@@ -170,14 +170,14 @@ export const marginHealthSentinel = {
         log.warn({ teamId, warnings: fr.warnings }, '固定成本占比降级 — 跳过该指标');
       }
 
-      // 3. 人均成本（Person 节点计数上移本层; 总成本 = COGS + operatingExpenses）
+      // 3. 人均成本（Person 节点计数上移本层; 总成本 = COGS + operating_expense）
       const personNodes = store.queryNodes('Person', { teamId })
         .filter(n => n.type === 'Person' || n.type === 'person');
       if (personNodes.length === 0) {
         log.warn({ teamId }, '无 Person 节点 — 人均成本降级，跳过该指标');
       } else {
         const totalCost = financials.reduce(
-          (s, f) => s + (f.total_revenue - f.gross_margin) + f.operatingExpenses, 0,
+          (s, f) => s + (f.total_revenue - f.gross_margin) + f.operating_expense, 0,
         );
         const cph = computeCostPerHead({ total_cost: totalCost, head_count: personNodes.length });
       if (!cph.degraded) metricsHolder.push({ metricId: 'MARGIN-HEALTH-COST-PER-HEAD', value: Number(cph.value) || 0, unit: 'ratio', sourceId: 'sentinel-margin-health', inputDigest });
