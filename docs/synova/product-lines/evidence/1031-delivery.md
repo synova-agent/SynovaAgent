@@ -4,8 +4,35 @@
 - 执行人：`@k4-coder-f`（编码员）｜队长：lead｜裁定：**CTO 乙案**
 - 工作树：`D:\novis-backup-20260526\Novis\.synova-wt-1031`｜分支 `fix/1031-ontology-param-bridge`
 - 基线：`origin/main = 5a6591c4a3d4c9816895fb7f55a8a97b1c71a7e4`（worktree 与该点同步，无 behind/ahead）
-- **交付 commit：`dca0b7b2f93f107a2af4e239a10635222c439ef9`**
+- **分支 HEAD（最终）：`dfe12ce7c3b766352530e3965eed7703fcbf1b6d`**
+- commit 链：`dca0b7b2f` feat（实现）→ `26e2b22b4` docs（本收尾件）→ `dfe12ce7c` chore（claim，治理产物）
 - 契约件（前置）：`docs/synova/product-lines/evidence/1031-injection-contract.md`
+
+### 0-⓪ 分支级最终 diff（**以本小节为准**；§1 的两段 stat 是 **commit-1 时点**，已被本小节取代）
+
+```
+$ git diff --stat 5a6591c4a3d4c9816895fb7f55a8a97b1c71a7e4..HEAD
+ .claude/claims/1031.yaml                           |  14 +
+ .../2026-10-09-1031-ontology-param-bridge.md       |  59 +++
+ .../synova/product-lines/evidence/1031-delivery.md | 218 +++++++++++
+ .../evidence/1031-injection-contract.md            | 208 ++++++++++
+ src/l4/ontology-loader.ts                          | 259 +++++++++++++
+ tests/l4/ontology-loader-param-bridge-1031.test.ts | 417 +++++++++++++++++++++
+ 6 files changed, 1175 insertions(+)
+
+$ git diff --numstat 5a6591c4a..HEAD
+14	0	.claude/claims/1031.yaml
+59	0	.claude/task-briefs/2026-10-09-1031-ontology-param-bridge.md
+218	0	docs/synova/product-lines/evidence/1031-delivery.md
+208	0	docs/synova/product-lines/evidence/1031-injection-contract.md
+259	0	src/l4/ontology-loader.ts
+417	0	tests/l4/ontology-loader-param-bridge-1031.test.ts
+```
+
+- **PR 预算复核（最终）**：全部 **6** 件；其中**治理产物 2 件**（`.claude/claims/1031.yaml`、`.claude/task-briefs/2026-10-09-1031-ontology-param-bridge.md`）
+  **不计入** ⇒ **计入门禁 4 件** ≤ 12 ✅；单域 ✅（治理产物豁免依据：lead 全队授权 + D1174 先例）。
+- **全文件删除行 = 0**（含 `src/`）⇒ 纯增量。
+- **pre-commit 13 组**：✅ 全部通过（组 12 Task Scope 一致性在补 brief 后由 ❌ 转 ✅）。
 
 ---
 
@@ -50,6 +77,9 @@ and the repository exists.
 
 ## 1. M6-① diff（`git diff --stat` 原始输出，禁手写）
 
+> ⏱ 本节的 stat 是 **commit-1（实现提交）时点快照**，保留以示"提交时的真实写集"；
+> **分支最终数字见 §0-⓪**（6 件 / +1175）。
+
 ```
 $ git diff --stat 5a6591c4a3d4c9816895fb7f55a8a97b1c71a7e4..HEAD
  .../2026-10-09-1031-ontology-param-bridge.md       |  59 +++
@@ -80,9 +110,10 @@ dca0b7b2f feat(#1031): 本体参数桥 — 类型层参数可注入边实例 pro
 ⇒ `src/` 改动 **删除行数 = 0**（`clearOntologyCache()` 的 `paramCache.clear()` 为纯插入，原 3 行未动）
 ⇒ **类型改动纯增量**，不可能在其它文件引入类型错误。
 
-**写集合规**：实际改动文件 ∈ 声明写集（`src/l4/ontology-loader.ts` / `tests/l4/ontology-loader-param-bridge-1031.test.ts` / `docs/synova/product-lines/evidence/1031-*.md`）。
-🔴 唯一越出的是 **流程件** `.claude/task-briefs/2026-10-09-1031-ontology-param-bridge.md` —— **pre-commit 组 12 硬阻断强制要求**（无 brief ⇒ 无法提交）。
-**该越界已主动上报 lead**，非产品代码写集扩张。
+**写集合规**：产品代码改动文件 ∈ 声明写集（`src/l4/ontology-loader.ts` / `tests/l4/ontology-loader-param-bridge-1031.test.ts` / `docs/synova/product-lines/evidence/1031-*.md`）✅。
+流程/治理产物 2 件（`.claude/task-briefs/2026-10-09-1031-ontology-param-bridge.md` + `.claude/claims/1031.yaml`）：
+**组件 12 物理强制要求**（无 brief ⇒ 提交被硬阻断；实测：首轮 commit 被组 12 拦下，补 brief 后转绿），
+且经 **lead 全队授权**（治理产物不计入 PR 预算，D1174 先例）⇒ **不算越界**。
 
 ---
 
