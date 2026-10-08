@@ -104,6 +104,26 @@ const EDGE_LAG_ALLOWED_SET: readonly string[] = [...EDGE_LAG_ENUM, EDGE_LAG_DEGR
 /**
  * 真仓基线（as_of `origin/main = 5a6591c4a`）。
  * 🔴 这是**棘轮**：任何真仓值漂移都会让 A 组转红 —— 这是"防漂移"判据的分辨力来源。
+ *
+ * ═══ 🔴 下游「棘轮同步」移交义务（**#1350 落地前必读**）═══════════════════════
+ * 本夹具以 **55 / 50 / 5** 为基线常量。**#1350**（本体边体系提案 · 词表 **55 → 57**，
+ * 新增 `GOAL_DECOMPOSES_TO` + `PLAN_COMMITS_TO` 两件边，按 CTO #1350 W3 口径
+ * **初始 = `unknown`**）落地时 ⇒ **必须同步**：
+ *
+ *     BASELINE_TOTAL    55 → 57
+ *     BASELINE_DEGRADED 50 → 52   （两件新边按 W3 口径为 `unknown`）
+ *     BASELINE_IN_ENUM   5 →  5   （不变：新边不进枚举）
+ *
+ * 并**重新跑本夹具确认绿**。不同步 ⇒ **A1 / A2 / F1 必红**（这是**棘轮的正确行为**：
+ * 逼后续卡显式确认"新增两件也走 `unknown`"，而不是被静默继承）。
+ *
+ * ⚠️ **B 组不受影响**（勿误以为漏改）：沙箱取样 = 真仓**前 5 件（字典序 `a…c` 段）**，
+ * 而 `goal_decomposes_to` / `plan_commits_to` 的首字母 `g` / `p` **排在其后**
+ * ⇒ `SANDBOX_SAMPLE_N/DEGRADED/IN_ENUM`（5/4/1）**不变**。
+ * 同理 E 组（零出现成员）与 F3（`$id` 分歧 5 件）**不受影响**。
+ *
+ * 📌 记录：本条移交义务由自验员在 Phase 2 复核中提出（其自验结论文件 §三 遗留项 L2），
+ * 原夹具**未写明**该义务 ⇒ 本注释即补写的收口。
  */
 const BASELINE_TOTAL = 55;
 const BASELINE_DEGRADED = 50;

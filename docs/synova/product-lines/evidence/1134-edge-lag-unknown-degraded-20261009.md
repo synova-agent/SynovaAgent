@@ -197,6 +197,20 @@ VITEST_EXIT=0
 
 ### 5.2 改坏即红 · 两腿原始输出（**零真仓写入**，tmpdir 沙箱，55 件全集）
 
+> ### 🔴 判据归属先厘清（自验员 Phase 2 遗留项 **L1** 的收口）
+> **本卡「改坏即红」的**权威判据**是【仓内夹具 §B】（`tests/l4/edge-lag-unknown-degraded-1134.test.ts`），
+> 它执行**真断言**（`expect(() => …).toThrow()`，B2/B3/B4），随 `vitest` 真跑并以 **exit code** 为准。**
+>
+> 下列 `.k4-publish/redproof.sh` 输出是**补充读数对照**（沙箱 + 55 件全集，便于独立审计一眼看到 50→51）；
+> 🔴 **它位于「待发布件区」、不在仓内**，故**不作为本卡的仓内判据**。
+> 📌 **L1 已修**：该脚本原版**只打印读数、无断言**（自验员据此**正当地拒绝采信**它 —— 该结论**保持原样、不得改写**）；
+> 现版**已加真断言并以 exit code 为准**（`VERDICT=PASS/FAIL` + `REDPROOF_EXIT=0/1`，含"本脚本自身零写入真仓"的 before/after 增量断言）。
+>
+> **另有自验员的独立红腿（更强，非作者产物）**：在自开可弃工作树内**真改真仓 1 件**
+> （`capital_acquisition.json`：`immediate → unknown`，**1/55 = 1.8%**）⇒
+> **`11 failed | 19 passed`，`RED_LEG_EXIT=1`**；`git checkout --` 还原 ⇒ **`30 passed`，`GREEN_LEG_EXIT=0`**。
+> 出处：`1134-verify-conclusion-20261009.md` §一 判据 2。**该独立红腿是本卡最强的判别性证据。**
+
 命令：`bash .k4-publish/redproof.sh`（脚本全文随交付件；沙箱 = `mktemp -d` + 55 件逐字副本）
 
 ```
@@ -218,17 +232,34 @@ LAG_MISSING_FIELD=0
 DEGRADED=false
 DERIVED_DEGRADED_COUNT=51
 
-════════ 判别性判定（棘轮基线 = 夹具常量）════════
-  夹具棘轮基线:  BASELINE_TOTAL=55  BASELINE_DEGRADED=50  BASELINE_IN_ENUM=5
-  绿腿读数:      EDGE_TYPES_LOADED=55  LAG_UNKNOWN=50  LAG_IN_ENUM=5   ⇒ 与棘轮相等 ⇒ 断言通过（绿）
-  红腿读数:      EDGE_TYPES_LOADED=55  LAG_UNKNOWN=51  LAG_IN_ENUM=4   ⇒ 偏离棘轮   ⇒ 断言必抛（红）
+════════ 棘轮断言（真跑，非打印）════════
+  基线: TOTAL=55  UNKNOWN=50  IN_ENUM=5
+── 绿腿应等于基线 ──
+  ✅ EDGE_TYPES_LOADED = 55（期望 55）
+  ✅ LAG_UNKNOWN = 50（期望 50）
+  ✅ LAG_IN_ENUM = 5（期望 5）
+── 红腿应等于基线 + 漂移 1 件（unknown +1 / 枚举 -1）──
+  ✅ EDGE_TYPES_LOADED = 55（期望 55）
+  ✅ LAG_UNKNOWN = 51（期望 51）
+  ✅ LAG_IN_ENUM = 4（期望 4）
 
-  ⇒ 判据有分辨力：改动 1/55 件（1.8%）即被观测到；真仓未被写入。
+════════ 判别性判定 ════════
+  ✅ 有分辨力：改动 1/55 件（1.8%）即被观测到（unknown 50 → 51）
+
+════════ 真仓洁净度（本脚本自身零写入）════════
+  ✅ 本脚本未改动真仓任何文件（before/after 增量 = 0）
+
+VERDICT=PASS  REDPROOF_EXIT=0
 ```
 
-🔴 **注意红腿的 `DEGRADED=false`**：生产装载器自身的 `degraded` **只表"加载错误"、不表字段值**
-（`src/l4/ontology-loader.ts:111` `degraded: errors.length > 0`）。
-⇒ 即使 51 件未标定，装载器仍返回 `degraded=false` —— 这正是**字段级降级必须由本审计承载**的实测依据（夹具 §D3）。
+🔴 **注意红腿的 `DEGRADED=false`**：生产装载器自身的 `degraded` **只表"加载错误"、不表字段值** —— 源码原文：
+
+```ts
+// src/l4/ontology-loader.ts:111
+return { ontology, degraded: errors.length > 0, errors };
+```
+
+⇒ 即使 51 件未标定，装载器仍返回 `degraded=false` —— 这正是**字段级降级必须由本卡审计承载**的**物理依据**（不是设计偏好；夹具 §D3 专门断言这条边界）。
 
 ---
 
@@ -381,6 +412,19 @@ $ grep -rn ontology tests/control-tower/gate-integrity-baseline.txt
   与 G-3 的 `number|{param}` schema **互斥** ⇒ 非本卡范围，已由队长合并上报。
 - **未决项 U7（前提来源）**：队长读数「136 个 open PR 中 `extensions/ontology/edge-types` 命中 **0 处**」
   依赖 GitHub API；**账号封禁期本件无法独立复跑** ⇒ **采信队长读数并标注来源**，**未据为己测**。
+- **未决项 U10（🔴 棘轮移交义务 · 本卡自带，下游 #1350 必读）**：
+  本卡夹具以 **55 / 50 / 5** 为棘轮基线常量（`tests/l4/edge-lag-unknown-degraded-1134.test.ts` `BASELINE_TOTAL/DEGRADED/IN_ENUM`）。
+  **#1350**（本体边体系提案 · 词表 **55 → 57**，新增 `GOAL_DECOMPOSES_TO` + `PLAN_COMMITS_TO`，
+  按 CTO #1350 W3 口径**初始 = `unknown`**）落地时 ⇒ **必须同步**：
+  `BASELINE_TOTAL 55→57`、`BASELINE_DEGRADED 50→52`、`BASELINE_IN_ENUM 5→5`（不变），
+  **并重新跑本夹具确认绿**；不同步 ⇒ **A1 / A2 / F1 必红**。
+  - **性质**：这是**棘轮的正确行为**（逼后续卡显式确认"新增两件也走 `unknown`"，而非被静默继承），
+    **不是本卡缺陷**；缺的是「移交义务**落在产物里**」——本注释与夹具内注释即补写的收口。
+  - **影响面已界定**：**B 组不受影响** —— 沙箱取样 = 真仓**前 5 件（字典序 `a…c` 段）**，
+    而两件新边首字母 `g` / `p` **排在其后** ⇒ `SANDBOX_SAMPLE_N/DEGRADED/IN_ENUM`（5/4/1）不变；
+    **E 组**（零出现成员）与 **F3**（`$id` 分歧 5 件）**亦不受影响**。
+  - **来源**：独立自验员 Phase 2 复核提出（其自验结论文件 `1134-verify-conclusion-20261009.md` §三 遗留项 **L2**），
+    队长 2026-10-09 裁「**夹具注释 + 卡面两处都写**」⇒ 本件与夹具注释为代码侧收口，卡面侧由队长写入 #1350 处置记录。
 
 ---
 
@@ -445,3 +489,18 @@ git ls-tree -r --name-only origin/main | grep -c edge-lag-consumed
 
 **`可提请独立审计`** —— 本件不作"通过"判定。**通过与否归 CTO 收件闸 + K3 终审。**
 本 PR **未合并、不自行合并**（小队红线：K3 复审通过前不得合并）。
+
+### 12.1 独立自验（Phase 2）状态 —— 按 head 分区，**禁跨 head 引用**
+
+| head | 内容 | 自验结论 |
+|---|---|---|
+| `8bb00b0ba…` | 初版（30 用例 + 交付件 + 治理产物） | **通过（可提请独立审计）** —— 独立自验员 `k4-verifier`（**非编码兼任**），
+其自验结论文件 `1134-verify-conclusion-20261009.md`（4/4 判据独立复跑成立；另附其自造 7 条独立用例 K1–K7，共 37 passed） |
+| **本注释版（追加 commit）** | 仅**注释与文档**改动：夹具棘轮常量处补 **#1350 移交义务**注释（收口自验员 L2）＋本件补 **U10** ＋§5.2 判据归属与 L1 收口 | 🔴 **须重新自验**（针对新 head）。**不得沿用 `8bb00b0ba` 的结论充数** |
+
+**自验员提出的两条遗留项处置**（其结论原文**不得改写**）：
+- **L1**（`redproof.sh` 只打印读数、不执行断言 ⇒ 他**正当地拒用**为「改坏即红」证据）：
+  已按队长裁定 (a) **给脚本加真断言**（exit code 为准）；并在本件 §5.2 **厘清判据归属** ——
+  **本卡仓内权威判据 = 夹具 §B（真断言，随 vitest 真跑）**，`redproof.sh` 仅为**待发布件区的补充读数对照**。
+  🔴 自验员拒用该脚本的原结论**保持原样**。
+- **L2**（`#1350` 棘轮移交义务未落在产物里）：已补夹具注释 + 本件 **U10**；卡面侧由队长写入批次报告（#1350 因 PR #1351 在飞、停等 CTO 裁定，不直接改其卡面）。
