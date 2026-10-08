@@ -6,6 +6,7 @@
   "allowedTo": ["pool/capital"],
   "requiredProps": ["assumption_violation_severity", "reallocation_trigger_threshold"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "reallocation_lag_days": "number — 重新配置滞后期",
     "scenario_planning_readiness": "number (0-1) — 情景规划准备度",
     "capital_reallocation_flexibility": "number (0-1) — 资本配置灵活度"

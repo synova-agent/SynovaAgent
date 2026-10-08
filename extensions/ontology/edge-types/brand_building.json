@@ -6,6 +6,7 @@
   "allowedTo": ["pool/brand"],
   "requiredProps": ["brand_investment", "awareness_lift", "lag_months"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "premium_ratio_change": "number — 溢价率变化",
     "nps_change": "number — NPS变化",
     "attribution_model": "string — 归因模型"

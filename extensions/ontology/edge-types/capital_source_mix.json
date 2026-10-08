@@ -6,6 +6,7 @@
   "allowedTo": ["pool/capital"],
   "requiredProps": ["debt_equity_ratio", "source_diversification"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "target_capital_structure": "string — 目标资本结构",
     "dividend_policy": "string — 分红政策",
     "concentration_risk": "number (0-1) — 资金来源集中度风险"

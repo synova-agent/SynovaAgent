@@ -6,6 +6,7 @@
   "allowedTo": ["pool/capital"],
   "requiredProps": ["capital_raised", "cost_of_capital"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "funding_round_type": "string — 融资轮次(seed|series_a|series_b|debt|equity)",
     "days_to_close": "number — 融资完成天数",
     "due_diligence_depth": "number (0-1) — 尽调深度"

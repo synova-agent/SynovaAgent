@@ -6,6 +6,7 @@
   "allowedTo": ["outcome/market"],
   "requiredProps": ["channel_coverage", "delivery_cost_ratio", "reach_efficiency"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "channel_count": "number — 渠道数量",
     "partner_quality_score": "number (0-1) — 伙伴质量",
     "channel_conflict_index": "number (0-1) — 渠道冲突指数"
