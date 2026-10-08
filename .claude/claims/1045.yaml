@@ -1,0 +1,7 @@
+# .claude/claims/1045.yaml — #1045（模块 K10）登记件补项 · 写集声明（S0 源，issue 号卡）
+# 先例：.claude/claims/980.yaml / 1052.yaml（issue 号卡 claim 优先于 D# 链）
+# 纪律：只列本 PR 真正改动的文件，不预授权。
+writeset:
+  - .claude/claims/1045.yaml
+  - .claude/task-briefs/2026-10-09-1045-registry-k10-supplement.md
+  - docs/synova/coordination/施工项登记.ts
