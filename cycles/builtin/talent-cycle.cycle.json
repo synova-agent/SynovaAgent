@@ -5,10 +5,10 @@
   "version": "1.0.0",
   "applicableIndustries": [],
   "nodes": [
-    { "id": "hiring", "label": "人才招聘", "type": "flow", "initialValue": 3, "unit": "人/季度", "edgeRefs": ["E-1.5"] },
-    { "id": "training", "label": "人才培养", "type": "flow", "initialValue": 12, "unit": "小时/人/年", "edgeRefs": ["E-2.7"] },
-    { "id": "retention", "label": "人才留存", "type": "stock", "initialValue": 0.72, "unit": "比率", "edgeRefs": ["E-5.2"] },
-    { "id": "knowledge", "label": "知识资产", "type": "stock", "initialValue": 0.25, "unit": "复用率", "edgeRefs": ["E-5.3"] }
+    { "id": "hiring", "label": "人才招聘", "type": "flow", "initialValue": 3, "unit": "人/季度", "edgeRefs": ["edge/talent_acquisition"] },
+    { "id": "training", "label": "人才培养", "type": "flow", "initialValue": 12, "unit": "小时/人/年", "edgeRefs": ["edge/cumulative_learning"] },
+    { "id": "retention", "label": "人才留存", "type": "stock", "initialValue": 0.72, "unit": "比率", "edgeRefs": ["edge/talent_retention"] },
+    { "id": "knowledge", "label": "知识资产", "type": "stock", "initialValue": 0.25, "unit": "复用率", "edgeRefs": ["edge/knowledge_reuse"] }
   ],
   "edges": [
     { "from": "hiring", "to": "training", "polarity": "+", "delay": 1, "weight": 0.5 },
@@ -24,10 +24,10 @@
   },
   "dataMaturity": "medium",
   "mapping": [
-    { "nodeId": "hiring", "edgeId": "E-1.5", "weight": 0.7 },
-    { "nodeId": "training", "edgeId": "E-2.7", "weight": 0.8 },
-    { "nodeId": "retention", "edgeId": "E-5.2", "weight": 1.0 },
-    { "nodeId": "knowledge", "edgeId": "E-5.3", "weight": 0.9 }
+    { "nodeId": "hiring", "edgeId": "edge/talent_acquisition", "weight": 0.7 },
+    { "nodeId": "training", "edgeId": "edge/cumulative_learning", "weight": 0.8 },
+    { "nodeId": "retention", "edgeId": "edge/talent_retention", "weight": 1.0 },
+    { "nodeId": "knowledge", "edgeId": "edge/knowledge_reuse", "weight": 0.9 }
   ],
   "crossCyclePropagation": [
     { "targetCycleId": "customer-cycle", "viaEdge": "knowledge→service", "strength": 0.3 }

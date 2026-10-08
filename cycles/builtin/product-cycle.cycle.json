@@ -5,10 +5,10 @@
   "version": "1.0.0",
   "applicableIndustries": [],
   "nodes": [
-    { "id": "rnd", "label": "研发投入", "type": "flow", "initialValue": 120, "unit": "万元/年", "edgeRefs": ["E-3.7"] },
-    { "id": "delivery", "label": "交付质量", "type": "stock", "initialValue": 0.75, "unit": "评分", "edgeRefs": ["E-3.1"] },
-    { "id": "feedback", "label": "客户反馈", "type": "flow", "initialValue": 0.4, "unit": "NPS", "edgeRefs": ["E-4.6"] },
-    { "id": "iteration", "label": "迭代速度", "type": "parameter", "initialValue": 12, "unit": "天/周期", "edgeRefs": ["E-3.6"] }
+    { "id": "rnd", "label": "研发投入", "type": "flow", "initialValue": 120, "unit": "万元/年", "edgeRefs": ["edge/capital_allocation"] },
+    { "id": "delivery", "label": "交付质量", "type": "stock", "initialValue": 0.75, "unit": "评分", "edgeRefs": ["edge/operational_execution"] },
+    { "id": "feedback", "label": "客户反馈", "type": "flow", "initialValue": 0.4, "unit": "NPS", "edgeRefs": ["edge/external_feedback"] },
+    { "id": "iteration", "label": "迭代速度", "type": "parameter", "initialValue": 12, "unit": "天/周期", "edgeRefs": ["edge/cross_functional_synergy"] }
   ],
   "edges": [
     { "from": "rnd", "to": "delivery", "polarity": "+", "delay": 2, "weight": 0.7 },
@@ -24,10 +24,10 @@
   },
   "dataMaturity": "high",
   "mapping": [
-    { "nodeId": "rnd", "edgeId": "E-3.7", "weight": 0.8 },
-    { "nodeId": "delivery", "edgeId": "E-3.1", "weight": 1.0 },
-    { "nodeId": "feedback", "edgeId": "E-4.6", "weight": 0.9 },
-    { "nodeId": "iteration", "edgeId": "E-3.6", "weight": 0.7 }
+    { "nodeId": "rnd", "edgeId": "edge/capital_allocation", "weight": 0.8 },
+    { "nodeId": "delivery", "edgeId": "edge/operational_execution", "weight": 1.0 },
+    { "nodeId": "feedback", "edgeId": "edge/external_feedback", "weight": 0.9 },
+    { "nodeId": "iteration", "edgeId": "edge/cross_functional_synergy", "weight": 0.7 }
   ],
   "crossCyclePropagation": [
     { "targetCycleId": "cash-cycle", "viaEdge": "delivery→revenue", "strength": 0.6 }

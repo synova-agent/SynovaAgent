@@ -1,0 +1,26 @@
+# .claude/claims/978.yaml — #978（0-4 循环编号映射）写集声明（S0 源）
+#
+# 为什么需要：本卡是 **issue 号卡（#978）**，无 D# 编号 ⇒ D708 门禁的 S1/S2/S3
+#   （按 `<D#>*` 定位）找不到声明源，会把全部改动判为「夹带」。
+#   `.claude/claims/<issue>.yaml` 是为 issue 号任务提供的正式声明源（merge_writeset_gate.py 的 S0）。
+#
+# 依据：卡面 #978 §九 写集「可碰：cycles/builtin/*.cycle.json、cycles/industry/*/*.cycle.json、
+#       scripts/control-tower/probe-cycle-edges.ts（判据交付物，须并入治理线窗）」。
+# 注意：claim_store.match_path 是精确匹配（re.search(r"(^|/)" + re.escape(pattern) + r"$")），
+#       不支持目录前缀/glob ⇒ 逐条列出。
+writeset:
+  - .claude/claims/978.yaml
+  - .claude/task-briefs/2026-10-08-978-cycle-edge-id-rewrite.md
+  - cycles/builtin/cash-cycle.cycle.json
+  - cycles/builtin/customer-cycle.cycle.json
+  - cycles/builtin/product-cycle.cycle.json
+  - cycles/builtin/talent-cycle.cycle.json
+  - cycles/industry/retail-ecommerce/store-replication.cycle.json
+  - cycles/industry/saas-tech/arr-growth.cycle.json
+  - scripts/control-tower/probe-cycle-edges.ts
+  - docs/synova/product-lines/evidence/D978-cycle-id-map-20261008.md
+  - memory/notes/proposed/2026-10-08-0-4-cycle-edge-id-rewrite.md
+done:
+  - verify: npx tsx scripts/control-tower/probe-cycle-edges.ts
+# 声明纪律：只列本 PR 真正改动的文件。不列 src/cycles/**、src/agent/loop-handlers.ts（卡面「绝不能碰」）；
+#   不列 scripts/audit/**（审计红线）；不列 scripts/workflow/system-registry.json（跨基 35 条，卡面 §四.5 明令不动）。
