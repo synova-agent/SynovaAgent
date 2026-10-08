@@ -1,0 +1,12 @@
+# .claude/claims/1134.yaml — #1134（模块 K4 · W3 时滞值侧）edge-lag unknown 标 degraded + 落审计 · 写集声明（S0 源，issue 号卡）
+# 先例：.claude/claims/980.yaml / 1052.yaml（claim 优先于 brief；K3 R3 防劫持）
+# 纪律：只列本 PR 真正改动的文件，不预授权。
+writeset:
+  - .claude/claims/1134.yaml
+  - .claude/task-briefs/2026-10-09-1134-edge-lag-unknown-degraded.md
+  - tests/l4/edge-lag-unknown-degraded-1134.test.ts
+  - docs/synova/product-lines/evidence/1134-edge-lag-unknown-degraded-20261009.md
+done:
+  - verify: npx vitest run tests/l4/edge-lag-unknown-degraded-1134.test.ts
+  - verify: bash scripts/control-tower/merge_writeset_gate.py --base origin/main --head HEAD --branch fix/1134-edge-lag-enum
+note: 乙路线（unknown=显式降级标记 ⇒ 不纳入枚举）；交付=防线/审计侧（具名审计行+派生 degraded 计数+棘轮 50+改坏即红，零真仓写入）；读取侧 emitter 不在本卡写集（未决项，与 1-8 验收件同批）
