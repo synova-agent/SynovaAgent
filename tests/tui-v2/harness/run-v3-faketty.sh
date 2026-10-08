@@ -31,7 +31,7 @@ export LLM_BASE_URL="http://127.0.0.1:${STUB_PORT}/v1"
 export LLM_MODEL="stub-model"
 
 : > "$STUB_LOG"
-node "$WT/tests/tui-v2/harness/llm-stub-server.mjs" > "${OUTPFX}.stub-server.log" 2>&1 &
+"${TUI_NODE_BIN:-node}" "$WT/tests/tui-v2/harness/llm-stub-server.mjs" > "${OUTPFX}.stub-server.log" 2>&1 &
 STUB_PID=$!
 sleep 1
 
@@ -44,7 +44,7 @@ fi
 TUI_1348_OUT="${OUTPFX}.frames.txt" \
 TUI_1348_FAULT="$MODE" \
 TUI_1348_LOG_VISIBLE="${TUI_1348_LOG_VISIBLE:-1}" \
-node ${TUI_NODE_FLAGS:-} "$WT/node_modules/tsx/dist/cli.mjs" "$WT/tests/tui-v2/harness/run-prod-faketty.ts" \
+"${TUI_NODE_BIN:-node}" ${TUI_NODE_FLAGS:-} "$WT/node_modules/tsx/dist/cli.mjs" "$WT/tests/tui-v2/harness/run-prod-faketty.ts" \
   > "${OUTPFX}.console.txt" 2>&1
 RC=$?
 
