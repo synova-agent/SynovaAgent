@@ -1,18 +1,33 @@
-# .claude/claims/1398.yaml — #1398（三层字段真源对齐）写集声明（D708 的 S0 源）
-#   **随批次更新**：1a（churnRisk/tenureMonths/defectRate，已合 dfac2ef66）⇒ **批 1b（本批：marketShare/routineRigidity）**
-#   CTO 2026-10-08 裁 (a) 范围坍缩 + **去掉运行时归一化**；要求：**每批都要有自己的"改名前实测"对照**
+# .claude/claims/1398.yaml — #1398（字段真源对齐）写集声明（D708 的 S0 源）
+#   1a（dfac2ef66）/1b（b022f5646）已合 ⇒ **本 PR = 批 2（operatingExpenses → operating_expense）**
+#   ⚠️ **本批声明面实测 21 文件 > 预算 12** ⇒ 已报 CTO 裁拆分（禁调高上限）
 writeset:
-  - .claude/claims/1398.yaml
-  - .claude/task-briefs/2026-10-08-1398-field-truth-source-b1b.md
-  - extensions/sentinels/shared/computes/l4-competition/compute-competitor-pricing-landscape.ts
-  - extensions/sentinels/shared/computes/l2-internal/compute-routine-rigidity.ts
-  - extensions/sentinels/shared/computes/l2-value/compute-learning-rate.ts
-  - tests/sentinels/shared/compute-learning-rate.test.ts
-  - tests/e2e/full-pipeline.integration.test.ts
+  - extensions/sentinels/capital-health/aggregate.ts
+  - extensions/sentinels/capital-health/computes/roic-wacc-spread.ts
+  - extensions/sentinels/margin-health/aggregate.ts
+  - extensions/sentinels/margin-health/computes/compute-cost-per-head.ts
+  - extensions/sentinels/margin-health/computes/compute-fixed-variable-ratio.ts
+  - extensions/sentinels/margin-health/computes/compute-margin-vs-benchmark.ts
+  - extensions/sentinels/margin-health/computes/compute-profit-margin-change.ts
+  - src/sentinel/adapters/cash-flow-sentinel.ts
   - tests/sentinel/field-name-alignment.test.ts
+  - tests/sentinel/guard-field-alignment.test.ts
+  - tests/sentinel/metric-wiring-b3b.test.ts
+  - tests/sentinels/capital-efficiency.test.ts
+  - tests/sentinels/capital-efficiency/capital-efficiency.test.ts
+  - tests/sentinels/capital-efficiency/roic-wacc-spread.test.ts
+  - tests/sentinels/capital-health/roic-wacc-spread.test.ts
+  - tests/sentinels/cost-health/compute-fixed-variable-ratio.test.ts
+  - tests/sentinels/margin-health/compute-fixed-variable-ratio.test.ts
+  - tests/sentinels/margin-health/compute-margin-vs-benchmark.test.ts
+  - tests/sentinels/margin-health/compute-profit-margin-change.test.ts
+  - tests/sentinels/profit-health/compute-margin-vs-benchmark.test.ts
+  - tests/sentinels/profit-health/compute-profit-margin-change.test.ts
+  - .claude/claims/1398.yaml
+  - .claude/task-briefs/2026-10-08-1398-field-truth-source-b2.md
 done:
-  - verify: npx vitest run tests/sentinel/field-name-alignment.test.ts tests/sentinels/shared/ tests/e2e/
+  - verify: npx vitest run tests/sentinel/field-name-alignment.test.ts tests/sentinel/guard-field-alignment.test.ts
   - verify: npx vitest run tests/sentinels/ tests/sentinel/ tests/e2e/
-  - verify: bash -c 'git grep -n -E "\b(marketShare|routineRigidity)\b" HEAD -- extensions/ | grep -v "_extinct/" | grep -v "/skills/" | wc -l'
+  - verify: bash -c 'grep -rl operatingExpenses --include="*.ts" src/ tests/ extensions/ | grep -v _extinct | wc -l'
   - verify: npx tsc --noEmit
-note: 批 1b = A 类 2 字段改名（真源名 market_share / routine_rigidity）。**本批自己的实测对照**：routineRigidity 旧名 ⇒ **静默用默认值 0.5**（正名 0.3）且 degraded=false ⇒ **无信号**；marketShare ⇒ 本次返回值**实测无分歧**（如实登记，不夸大）。注：compute-hhi.ts **无字段问题**（入参是 number[]）⇒ 不在批次内（已核）。
+note: 批 2 改名（真源名 operating_expense）+ 全声明面同步（含 src/sentinel/adapters/cash-flow-sentinel.ts 与 12 个调用方测试）+ 守卫判据（(a) 案：显式声明 + 强制对齐真源；**反向不可判**已写入覆盖面）。实测：旧名 ⇒ NaN（一处）/**错数 -0.05**（一处），两者 degraded=false。

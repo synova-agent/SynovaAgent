@@ -4,7 +4,7 @@
  * 契约ID: COMPUTE-COST-PER-HEAD-v1（迁移版 — 算法冻结，数据获取上移 aggregate）
  * 输入: input: { total_cost: number; head_count: number }
  *   数据获取（Financial 节点总成本归一化 + Person 节点计数）由 aggregate 层完成，
- *   本函数为纯函数。total_cost = COGS + operatingExpenses。
+ *   本函数为纯函数。total_cost = COGS + operating_expense。
  * 输出(正常): { value: 人均成本, evidence: ['总成本: N', '人数: N'], degraded: false, warnings: [] }
  * 输出(降级): head_count=0 → { value: 0, degraded: true, warnings: [...] }
  *   分母 0 → degrade（D358 决策 5: 堵 0/0 假值）

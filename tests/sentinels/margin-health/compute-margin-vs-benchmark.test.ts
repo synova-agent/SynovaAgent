@@ -13,7 +13,7 @@ import { computeMarginVsBenchmark } from '../../../extensions/sentinels/margin-h
 describe('D358 compute-margin-vs-benchmark（迁自 _extinct/profit-health）', () => {
   it('正常: 利润率 −0.1 vs 基准 0.25 → gap −0.35', () => {
     const r = computeMarginVsBenchmark(
-      [{ total_revenue: 100, gross_margin: 30, operatingExpenses: 40 }],
+      [{ total_revenue: 100, gross_margin: 30, operating_expense: 40 }],
       {},
     );
     expect(r.degraded).toBe(false);
@@ -23,7 +23,7 @@ describe('D358 compute-margin-vs-benchmark（迁自 _extinct/profit-health）', 
 
   it('正常: 自定义 benchmark 0.1 → gap −0.2', () => {
     const r = computeMarginVsBenchmark(
-      [{ total_revenue: 100, gross_margin: 30, operatingExpenses: 40 }],
+      [{ total_revenue: 100, gross_margin: 30, operating_expense: 40 }],
       { benchmark: 0.1 },
     );
     expect(r.gap).toBeCloseTo(-0.2, 4);
@@ -37,7 +37,7 @@ describe('D358 compute-margin-vs-benchmark（迁自 _extinct/profit-health）', 
 
   it('降级: total_revenue=0 → degraded，gap=0', () => {
     const r = computeMarginVsBenchmark(
-      [{ total_revenue: 0, gross_margin: 0, operatingExpenses: 0 }],
+      [{ total_revenue: 0, gross_margin: 0, operating_expense: 0 }],
       {},
     );
     expect(r.degraded).toBe(true);
@@ -47,7 +47,7 @@ describe('D358 compute-margin-vs-benchmark（迁自 _extinct/profit-health）', 
   it('边界: 利润率恰等于基准 → gap 0，不降级', () => {
     // 毛利 45 − 费用 20 = 25 → 利润率 0.25 = 默认基准
     const r = computeMarginVsBenchmark(
-      [{ total_revenue: 100, gross_margin: 45, operatingExpenses: 20 }],
+      [{ total_revenue: 100, gross_margin: 45, operating_expense: 20 }],
       {},
     );
     expect(r.degraded).toBe(false);

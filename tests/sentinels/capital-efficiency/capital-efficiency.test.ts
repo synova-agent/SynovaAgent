@@ -13,7 +13,7 @@ describe('computeRoicWaccSpread', () => {
 
   it('高利润应产生正价差', () => {
     const r = computeRoicWaccSpread([
-      { total_revenue: 1000, cogs: 400, operatingExpenses: 200, total_debt: 200, equity: 300 },
+      { total_revenue: 1000, cogs: 400, operating_expense: 200, total_debt: 200, equity: 300 },
     ]);
     expect(r.roic).toBeGreaterThan(r.wacc);
     expect(r.degraded).toBe(false);
@@ -21,7 +21,7 @@ describe('computeRoicWaccSpread', () => {
 
   it('自定义 WACC（wacc_override）', () => {
     const r = computeRoicWaccSpread([
-      { total_revenue: 100, cogs: 90, operatingExpenses: 20, total_debt: 50, equity: 50, wacc_override: 0.15 },
+      { total_revenue: 100, cogs: 90, operating_expense: 20, total_debt: 50, equity: 50, wacc_override: 0.15 },
     ]);
     expect(r.wacc).toBe(0.15);
   });

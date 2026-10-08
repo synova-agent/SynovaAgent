@@ -2,8 +2,8 @@
  * margin-health/computes/compute-fixed-variable-ratio.ts — 固定成本占比计算（D358 迁自 _extinct/cost-health）
  *
  * 契约ID: COMPUTE-FIXED-VARIABLE-RATIO-v1（迁移版 — 算法冻结，数据获取上移 aggregate）
- * 输入: financials: Array<{ total_revenue; gross_margin; operatingExpenses; fixed_cost? }>
- *   COGS = total_revenue − gross_margin（毛利润金额制）；总成本 = COGS + operatingExpenses。
+ * 输入: financials: Array<{ total_revenue; gross_margin; operating_expense; fixed_cost? }>
+ *   COGS = total_revenue − gross_margin（毛利润金额制）；总成本 = COGS + operating_expense。
  *   fixed_cost 为 erp 契约外扩展字段（snake_case），缺失 → 本指标降级（缺失≠0）。
  * 输出(正常): { value: fixed_cost/total_cost(0-1), degraded: false }
  * 输出(降级): 空数组 / fixed_cost 全缺 / 总成本=0 → { value: 0, degraded: true, warnings: [...] }
@@ -22,7 +22,7 @@ export interface FixedVariableRatioResult {
 export function computeFixedVariableRatio(financials: Array<{
   total_revenue: number;
   gross_margin: number;
-  operatingExpenses: number;
+  operating_expense: number;
   fixed_cost?: number;
 }>): FixedVariableRatioResult {
   if (financials.length === 0) {
@@ -42,7 +42,7 @@ export function computeFixedVariableRatio(financials: Array<{
       hasFixedCost = true;
     }
     const cogs = f.total_revenue - f.gross_margin;
-    totalCost += cogs + f.operatingExpenses;
+    totalCost += cogs + f.operating_expense;
   }
 
   if (!hasFixedCost) {
