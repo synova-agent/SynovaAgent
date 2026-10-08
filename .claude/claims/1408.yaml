@@ -1,22 +1,13 @@
-# .claude/claims/1408.yaml — #1408（静默错误值）写集声明（D708 的 S0 源）
-#   批 A（#1413，已合 9493640f9）：margin-health 5 compute + src/sentinel/assert-finite-inputs.ts + writer 侧闸
-#   本 PR = **批 B**：capital-health 9 compute（形态已定 ⇒ 机械重复 + 本批自己的实测样例 + 覆盖率随批更新）
+# .claude/claims/1408.yaml — #1408 写集声明（D708 的 S0 源）
+#   批 A（#1413 已合 9493640f9）｜批 B（#1414 已合 23a0f0d7b）
+#   **本 PR = 类级复查修复**（CTO 要求：批 C 前先做"存在性判断"复查；发现第三处 ⇒ 一并修）
 writeset:
   - .claude/claims/1408.yaml
-  - .claude/task-briefs/2026-10-08-1408-silent-wrong-value-b.md
-  - extensions/sentinels/capital-health/computes/asset-turnover.ts
-  - extensions/sentinels/capital-health/computes/capital-turnover.ts
-  - extensions/sentinels/capital-health/computes/cash-conversion-cycle.ts
-  - extensions/sentinels/capital-health/computes/debt-equity-ratio.ts
-  - extensions/sentinels/capital-health/computes/debt-structure.ts
-  - extensions/sentinels/capital-health/computes/interest-coverage.ts
-  - extensions/sentinels/capital-health/computes/receivable-turnover.ts
-  - extensions/sentinels/capital-health/computes/roic-wacc-spread.ts
-  - extensions/sentinels/capital-health/computes/wacc.ts
+  - .claude/task-briefs/2026-10-08-1408-existence-check-precision.md
   - tests/sentinel/silent-wrong-value.test.ts
 done:
   - verify: npx vitest run tests/sentinel/silent-wrong-value.test.ts
   - verify: npx vitest run tests/sentinels/ tests/sentinel/ tests/l4/ tests/agent/ tests/adapters/
-  - verify: bash -c 'grep -rl "checkFiniteInputs(" extensions/sentinels/capital-health/computes/ | wc -l'
+  - verify: bash -c 'grep -c "isCallLine" tests/sentinel/silent-wrong-value.test.ts'
   - verify: npx tsc --noEmit
-note: 批 B = capital-health 9 compute **全部接线**（各显式声明必需字段）；5 个结果接口小幅扩契约（+`warnings?: string[]`，使信号可观测）；判据随批更新（V1-b 行为样例/V2-b 不误报/V3-b 覆盖率/V4-b 端到端有限数）。
+note: 类级复查（存在性判断精度）：① V3 覆盖率扫描（2 处）未排除注释 ⇒ **第三处**，已修（isCallLine：排注释 + 排 import + 匹配调用形状）② claim 的 verify 命令同盲区 ⇒ 改 comment-proof 口径。归因实验：旧谓词 + 仅注释提及 ⇒ **V3 红（集合 6≠5）**；新谓词 ⇒ 绿 ⇒ 精度修复有物理证据。
