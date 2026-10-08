@@ -36,6 +36,7 @@ import { readFileSync, readdirSync, existsSync, mkdirSync, rmSync } from 'fs';
 import { createHash } from 'crypto';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import type Database from 'better-sqlite3';
 import { SqliteGraphStore } from '../../src/adapters/sqlite-graph-store';
 import { loadOntology } from '../../src/l4/ontology-loader';
 
@@ -136,34 +137,32 @@ CREATE TABLE graph_triples (
 );
 `;
 
-interface SqliteHandle {
-  exec(sql: string): unknown;
-  prepare(sql: string): {
-    run(...args: unknown[]): unknown;
-    get(...args: unknown[]): unknown;
-    all(...args: unknown[]): unknown[];
-  };
-  pragma(sql: string): unknown;
-  close(): void;
-}
+/**
+ * 库句柄类型 = better-sqlite3 的**真实** `Database`（不用自造结构体）：
+ * 自造接口缺 `memory/readonly/name/open/…` ⇒ 传给 `new SqliteGraphStore(db)` 会 TS2345。
+ * 仓库 tsconfig.json 的 `exclude` 含 `tests` ⇒ 全局 tsc 对测试**零覆盖**，必须单文件跑才看得出来：
+ *   npx tsc --noEmit --module esnext --moduleResolution bundler --target es2022 --strict \
+ *     --skipLibCheck --esModuleInterop --resolveJsonModule tests/l4/activity-instance-1057.test.ts
+ */
+type Db = Database.Database;
 
 /** better-sqlite3 是 CJS 包：沿用仓库既有 l4 测试的 require 取用方式（同 tests/l4/synova-graph-store.test.ts） */
 const BetterSqlite3 = require('better-sqlite3');
 
-function openLegacyDb(dbPath: string): SqliteHandle {
-  const db = new BetterSqlite3(dbPath) as SqliteHandle;
+function openLegacyDb(dbPath: string): Db {
+  const db = new BetterSqlite3(dbPath) as Db;
   db.exec(LEGACY_DDL);
   return db;
 }
 
-const columnsOf = (db: SqliteHandle, table: string): string[] =>
+const columnsOf = (db: Db, table: string): string[] =>
   (db.pragma(`table_info(${table})`) as Array<{ name: string }>).map((c) => c.name);
 
-const tableNames = (db: SqliteHandle): string[] =>
+const tableNames = (db: Db): string[] =>
   (db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as Array<{ name: string }>)
     .map((r) => r.name);
 
-const activityCount = (db: SqliteHandle): number =>
+const activityCount = (db: Db): number =>
   (db.prepare("SELECT COUNT(*) AS c FROM graph_nodes WHERE type LIKE 'activity/%'").get() as { c: number }).c;
 
 describe('#1057 作业单元：8 类目评估属性覆盖（判据② 面 1：schema）', () => {
@@ -332,7 +331,7 @@ describe('#1057 判据① 真实写入路径（hermetic：旧形态库 → 迁�
 // ═══ 新库对照（hermetic，恒跑）：initSchema 建表直含 props ⇒ 迁移 001 空转 ═══
 describe('#1057 判据① 新库对照（:memory: 全新库）', () => {
   it('全新库：initSchema 建表即含 props 列 ⇒ 同一写入路径计数 = 1（对照真机库需要 001 真加列）', () => {
-    const db = new BetterSqlite3(':memory:') as SqliteHandle;
+    const db = new BetterSqlite3(':memory:') as Db;
     try {
       const store = new SqliteGraphStore(db);
       const cols = columnsOf(db, 'graph_nodes');
@@ -360,7 +359,7 @@ const inplaceIt = INPLACE_DB ? it : it.skip;
 
 describe('#1057 判据① 真机在位（data/synova.db；before/after 原始读数）', () => {
   inplaceIt('真机在位：before → 生产路径构造（自愈迁移）→ createNode → after 判据 SQL', () => {
-    const db = new BetterSqlite3(INPLACE_DB as string) as SqliteHandle;
+    const db = new BetterSqlite3(INPLACE_DB as string) as Db;
     try {
       const before = {
         cols: columnsOf(db, 'graph_nodes'),
@@ -410,7 +409,7 @@ const realIt = REAL_DB ? it : it.skip;
 
 describe('#1057 判据① 真机口径（一致性快照；原件只读零写入）', () => {
   realIt('真机 data/synova.db → VACUUM INTO 快照 → 迁移 → 真实写入 → 判据 SQL 计数 ≥ 1', async () => {
-    const src = new BetterSqlite3(REAL_DB as string, { readonly: true, fileMustExist: true }) as SqliteHandle & {
+    const src = new BetterSqlite3(REAL_DB as string, { readonly: true, fileMustExist: true }) as Db & {
       backup(dest: string): Promise<void>;
     };
     const snapDir = join(REPO_ROOT, 'data', '1057-snapshot');
@@ -438,7 +437,7 @@ describe('#1057 判据① 真机口径（一致性快照；原件只读零写入
     expect(existsSync(snap)).toBe(true);
     const sha = createHash('sha256').update(readFileSync(snap)).digest('hex');
 
-    const db = new BetterSqlite3(snap) as SqliteHandle;
+    const db = new BetterSqlite3(snap) as Db;
     try {
       const store = new SqliteGraphStore(db);
       const inst = loadInstance();

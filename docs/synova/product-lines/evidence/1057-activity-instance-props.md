@@ -185,6 +185,27 @@ BEFORE = AFTER，**逐列完全相同、未被本次写入触碰**：
 
 （"2 skipped" = 两个真机口径段落未设 env 时的正常跳过。）
 
+### 5.1 判别性夹具自检协议（队长 2026-10-09 纪律；本卡事后补齐，并**据以修掉一个真缺陷**）
+
+**为什么必须两小步都过**：① 仓库 `tsconfig.json` 的 `exclude` 含 `tests` ⇒ 全局 `tsc --noEmit` 对夹具**零覆盖**，必须单文件跑；② 破坏若让语法非法，vitest 报 `no tests / exit 1` ⇒ **抄 exit code 会把"文件没解析"当成"判别性成立"**。
+
+**结果一（本协议当场抓出并修掉 4 处真类型错误 TS2345）**：原用自造结构体 `SqliteHandle` 当库句柄，缺 `memory/readonly/name/open/…` ⇒ 传给 `new SqliteGraphStore(db)` 报 TS2345；**全局 tsc 永远看不见**（`tests` 被 exclude）。已修：改用 `better-sqlite3` 真实类型 `type Db = Database.Database`（零 `as any` / `as unknown as`）。
+
+**结果二（破坏态，两小步 + exit code 原始读数）**
+```
+期望用例数（源文件真值）: it( 11 + realIt( 1 + inplaceIt( 1 = 13
+步骤①-b 单文件 tsc（破坏态）: TSC_DAMAGED_EXIT=2  TS1xxx 计数 = 0  本测试文件诊断数 = 0
+        （余下 3 条 TS2307 全在 src/**，是 @synova/logger 为 vitest alias 所致的单文件编译假象，非本卡缺陷）
+步骤②-b vitest 收集数: Test Files 1 failed (1) ｜ Tests 5 failed | 6 passed | 2 skipped (13)
+        ⇒ 收集数 13 == 期望 13（**不是 no tests**），且逐用例行有具名 ×/✓/↓
+失败证据: AssertionError: expected false to be true ｜ Error: [1057] 实例文件不存在: …activity-production-wani-baby-001.json
+步骤③ 两小步都过后才读 exit code: VITEST_DAMAGED_EXIT=1
+复原: sha256 = 9c9aa30a629a91a875f390198afca950ba09e1674f5011ae30bcb3105a8f292e（与破坏前逐字一致）
+绿腿复跑: tsc TS1xxx=0 / 本文件诊断=0 ｜ Tests 11 passed | 2 skipped (13)
+```
+⇒ 判别性成立：**收集数满 + 断言真失败**，不是"解析失败被当成红"。
+**遗留（控制塔域，本卡不碰）**：给 `tests/` 建专用 tsconfig ⇒ 提案→K3→CTO。
+
 ---
 
 ## 6. 写集互斥 / 冲突扫描（M2；完整输出，标注「共 N 处」）
