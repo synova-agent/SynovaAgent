@@ -6,6 +6,7 @@
   "allowedTo": ["pool/knowledge"],
   "requiredProps": ["reuse_rate", "knowledge_durability_months"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "codification_effort_hours": "number — 知识编码工时",
     "reuse_saving_percentage": "number (0-1) — 复用节省比例",
     "knowledge_base_completeness": "number (0-1) — 知识库完整度"

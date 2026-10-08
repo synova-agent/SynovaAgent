@@ -24,6 +24,7 @@
     "lock_type"
   ],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "switching_cost_created": "number",
     "lock_durability_years": "number",
     "peer_edge_id": "string"
