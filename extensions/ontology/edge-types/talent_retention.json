@@ -6,6 +6,7 @@
   "allowedTo": ["pool/human_capital"],
   "requiredProps": ["retention_rate", "avg_tenure_months", "satisfaction_score"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "voluntary_turnover_rate": "number (0-1) — 主动离职率",
     "key_talent_loss_rate": "number (0-1) — 关键人才流失率",
     "exit_interview_feedback": "string — 离职访谈摘要"

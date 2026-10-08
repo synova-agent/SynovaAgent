@@ -6,6 +6,7 @@
   "allowedTo": ["pool/revenue"],
   "requiredProps": ["price_point", "unit_sales", "revenue_realized"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "pricing_power_index": "number (0-1) — 定价权指数",
     "price_elasticity": "number — 价格弹性",
     "discount_rate": "number (0-1) — 折扣率"
