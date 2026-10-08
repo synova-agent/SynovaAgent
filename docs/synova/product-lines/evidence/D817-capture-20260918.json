@@ -3,7 +3,7 @@
   "record_type": "production-entry-capture",
   "task": "D817",
   "title": "CI 能跑一次生产入口级对话（验证基础设施，全部验收的公共前置）",
-  "captured_date": "2026-09-19",
+  "captured_date": "2026-10-08",
   "generated_by": "tests/integration/production-entry-conversation.integration.test.ts",
   "volatile_fields_excluded": [
     "mock 端口",
@@ -22,14 +22,15 @@
   "upstream": {
     "kind": "fake-llm-upstream",
     "host": "127.0.0.1",
-    "request_count": 2,
+    "request_count": 3,
     "body_keys_union": [
       "model",
       "messages",
       "temperature",
-      "max_tokens"
+      "max_tokens",
+      "tools"
     ],
-    "saw_tool_result_message": false,
+    "saw_tool_result_message": true,
     "requests": [
       {
         "index": 0,
@@ -39,13 +40,14 @@
           "model",
           "messages",
           "temperature",
-          "max_tokens"
+          "max_tokens",
+          "tools"
         ],
         "messages_roles": [
           "system",
           "user"
         ],
-        "has_tools_field": false,
+        "has_tools_field": true,
         "has_tool_result_message": false
       },
       {
@@ -56,17 +58,39 @@
           "model",
           "messages",
           "temperature",
-          "max_tokens"
+          "max_tokens",
+          "tools"
         ],
         "messages_roles": [
           "system",
           "user",
           "assistant",
+          "tool"
+        ],
+        "has_tools_field": true,
+        "has_tool_result_message": true
+      },
+      {
+        "index": 2,
+        "method": "POST",
+        "path": "/v1/chat/completions",
+        "body_keys": [
+          "model",
+          "messages",
+          "temperature",
+          "max_tokens",
+          "tools"
+        ],
+        "messages_roles": [
+          "system",
+          "user",
+          "assistant",
+          "tool",
           "assistant",
           "user"
         ],
-        "has_tools_field": false,
-        "has_tool_result_message": false
+        "has_tools_field": true,
+        "has_tool_result_message": true
       }
     ]
   },
@@ -94,17 +118,19 @@
   "assertions": {
     "http_status": 200,
     "content_type": "text/event-stream",
-    "upstream_request_count": 2,
+    "upstream_request_count": 3,
     "outbound_body_keys": [
       "model",
       "messages",
       "temperature",
-      "max_tokens"
+      "max_tokens",
+      "tools"
     ],
     "outbound_messages_roles": [
       "system",
       "user",
       "assistant",
+      "tool",
       "assistant",
       "user"
     ],
@@ -114,25 +140,25 @@
     "p0_1_tools_field": {
       "assertion": "出站请求体含 tools（工具 schema 进请求体）",
       "machine_criterion": "upstream.body_keys_union 含 'tools'",
-      "observed": false,
-      "expected_now": "false —— P0-1 未修；本卡以 it.fails 证词化，修好后必须删除 it.fails 改正向断言",
-      "evidence_source": "src/providers/base.ts:139-146（body 只落 model/messages/temperature/max_tokens）"
+      "observed": true,
+      "expected_now": "true —— D819 已修（tools 透传到 provider 边界）；本项为正向断言",
+      "evidence_source": "src/providers/base.ts（body 组装透传 opts.tools）"
     },
     "d817_f1_tool_loop_not_driven": {
       "assertion": "工具循环被真实驱动（工具被真实执行且结果喂回模型）",
       "machine_criterion": "任一出站请求 messages 含 role='tool'（或 SSE token 帧含 '[工具调用: '）",
-      "observed": false,
-      "expected_now": "false —— 响应侧 tool_calls 未映射到 ChatResult.toolCalls；it.fails 证词化",
-      "evidence_source": "src/providers/base.ts:215-238（chat() 只取 choices[0].message.content）+ tool-loop-executor.ts:265",
-      "note": "D817 执行时新发现（派单只列了 request 侧 P0-1）；产物零 src/** 改动，留证待 CTO/创始人裁决"
+      "observed": true,
+      "expected_now": "true —— D819 已映射响应侧 tool_calls 到 ChatResult.toolCalls；本项为正向断言",
+      "evidence_source": "src/providers/base.ts chat()（choices[0].message.tool_calls → ChatResult.toolCalls）",
+      "note": "D817 执行时新发现（派单只列了 request 侧 P0-1）；D819 修复后翻转"
     },
     "d817_f2_duplicate_assistant": {
       "assertion": "出站上下文不得重复 assistant 回复（同一条助手消息只应入上下文一次）",
       "machine_criterion": "任一出站请求 messages 角色序列不含 'assistant,assistant'（连续两条 assistant）",
-      "observed": true,
-      "expected_now": "true（重复存在）—— it.fails 证词化；修好后翻转为红，必须删除 it.fails",
-      "evidence_source": "tool-loop-executor.ts:270 推 assistant + conversation-engine.ts:785 再推一次（streaming 路径双推）",
-      "note": "D817 执行时新发现：出站上下文膨胀一倍（第 1 轮 = [system,user]；第 2 轮 = [system,user,assistant,assistant,user]）"
+      "observed": false,
+      "expected_now": "false（不再重复）—— D819 已去重：工具循环只推中间态 assistant，终态由 ConversationEngine 唯一写入",
+      "evidence_source": "tool-loop-executor.ts（删除两处终态 push）+ conversation-engine.ts:785/790（终态 owner）",
+      "note": "D817 执行时新发现：旧行为出站上下文膨胀一倍（第 1 轮 = [system,user]；第 2 轮 = [system,user,assistant,assistant,user]）"
     }
   }
 }
