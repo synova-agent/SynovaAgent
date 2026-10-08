@@ -5,10 +5,10 @@
   "version": "1.0.0",
   "applicableIndustries": ["retail-ecommerce"],
   "nodes": [
-    { "id": "pilot", "label": "单店验证", "type": "stock", "initialValue": 1, "unit": "店", "edgeRefs": ["E-1.1"] },
-    { "id": "replication", "label": "门店复制", "type": "flow", "initialValue": 2, "unit": "店/年", "edgeRefs": ["E-1.6"] },
-    { "id": "coverage", "label": "区域覆盖", "type": "stock", "initialValue": 2, "unit": "城市", "edgeRefs": ["E-4.3"] },
-    { "id": "scaleEfficiency", "label": "规模效率", "type": "parameter", "initialValue": 0.85, "unit": "指数", "edgeRefs": ["E-1.8"] }
+    { "id": "pilot", "label": "单店验证", "type": "stock", "initialValue": 1, "unit": "店", "edgeRefs": ["edge/capital_allocation"] },
+    { "id": "replication", "label": "门店复制", "type": "flow", "initialValue": 2, "unit": "店/年", "edgeRefs": ["edge/equipment_acquisition"] },
+    { "id": "coverage", "label": "区域覆盖", "type": "stock", "initialValue": 2, "unit": "城市", "edgeRefs": ["edge/channel_delivery"] },
+    { "id": "scaleEfficiency", "label": "规模效率", "type": "parameter", "initialValue": 0.85, "unit": "指数", "edgeRefs": ["edge/efficiency_attraction"] }
   ],
   "edges": [
     { "from": "pilot", "to": "replication", "polarity": "+", "delay": 2, "weight": 0.9 },
@@ -24,10 +24,10 @@
   },
   "dataMaturity": "medium",
   "mapping": [
-    { "nodeId": "pilot", "edgeId": "E-1.1", "weight": 0.8 },
-    { "nodeId": "replication", "edgeId": "E-1.6", "weight": 0.7 },
-    { "nodeId": "coverage", "edgeId": "E-4.3", "weight": 0.6 },
-    { "nodeId": "scaleEfficiency", "edgeId": "E-1.8", "weight": 0.9 }
+    { "nodeId": "pilot", "edgeId": "edge/capital_allocation", "weight": 0.8 },
+    { "nodeId": "replication", "edgeId": "edge/equipment_acquisition", "weight": 0.7 },
+    { "nodeId": "coverage", "edgeId": "edge/channel_delivery", "weight": 0.6 },
+    { "nodeId": "scaleEfficiency", "edgeId": "edge/efficiency_attraction", "weight": 0.9 }
   ],
   "crossCyclePropagation": [
     { "targetCycleId": "cash-cycle", "viaEdge": "coverage→revenue", "strength": 0.5 }

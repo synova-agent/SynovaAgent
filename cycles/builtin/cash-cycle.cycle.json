@@ -5,9 +5,9 @@
   "version": "1.0.0",
   "applicableIndustries": [],
   "nodes": [
-    { "id": "revenue", "label": "营收", "type": "flow", "initialValue": 800, "unit": "万元/年", "edgeRefs": ["E-4.1"] },
-    { "id": "cost", "label": "总成本", "type": "flow", "initialValue": 760, "unit": "万元/年", "edgeRefs": ["E-2.1"] },
-    { "id": "profit", "label": "利润", "type": "stock", "initialValue": 40, "unit": "万元", "edgeRefs": ["E-5.1"] },
+    { "id": "revenue", "label": "营收", "type": "flow", "initialValue": 800, "unit": "万元/年", "edgeRefs": ["edge/value_pricing"] },
+    { "id": "cost", "label": "总成本", "type": "flow", "initialValue": 760, "unit": "万元/年", "edgeRefs": ["edge/capital_allocation"] },
+    { "id": "profit", "label": "利润", "type": "stock", "initialValue": 40, "unit": "万元", "edgeRefs": ["edge/profit_reinvestment"] },
     { "id": "reinvestment", "label": "再投资", "type": "flow", "initialValue": 20, "unit": "万元/年" }
   ],
   "edges": [
@@ -24,9 +24,9 @@
   },
   "dataMaturity": "high",
   "mapping": [
-    { "nodeId": "revenue", "edgeId": "E-4.1", "weight": 1.0 },
-    { "nodeId": "cost", "edgeId": "E-2.1", "weight": 1.0 },
-    { "nodeId": "profit", "edgeId": "E-5.1", "weight": 0.9 }
+    { "nodeId": "revenue", "edgeId": "edge/value_pricing", "weight": 1.0 },
+    { "nodeId": "cost", "edgeId": "edge/capital_allocation", "weight": 1.0 },
+    { "nodeId": "profit", "edgeId": "edge/profit_reinvestment", "weight": 0.9 }
   ],
   "crossCyclePropagation": [
     { "targetCycleId": "talent-cycle", "viaEdge": "profit→salary", "strength": 0.4 }

@@ -5,9 +5,9 @@
   "version": "1.0.0",
   "applicableIndustries": ["saas-tech"],
   "nodes": [
-    { "id": "newArr", "label": "新客户ARR", "type": "flow", "initialValue": 500, "unit": "万元/年", "edgeRefs": ["E-4.1"] },
-    { "id": "expansionArr", "label": "扩展ARR", "type": "flow", "initialValue": 200, "unit": "万元/年", "edgeRefs": ["E-5.4"] },
-    { "id": "churnArr", "label": "流失ARR", "type": "flow", "initialValue": 150, "unit": "万元/年", "edgeRefs": ["E-4.2"] },
+    { "id": "newArr", "label": "新客户ARR", "type": "flow", "initialValue": 500, "unit": "万元/年", "edgeRefs": ["edge/value_pricing"] },
+    { "id": "expansionArr", "label": "扩展ARR", "type": "flow", "initialValue": 200, "unit": "万元/年", "edgeRefs": ["edge/reputation_flywheel"] },
+    { "id": "churnArr", "label": "流失ARR", "type": "flow", "initialValue": 150, "unit": "万元/年", "edgeRefs": ["edge/customer_lockin"] },
     { "id": "netArr", "label": "净新ARR", "type": "stock", "initialValue": 550, "unit": "万元/年" },
     { "id": "valuation", "label": "估值", "type": "parameter", "initialValue": 8.0, "unit": "倍ARR" },
     { "id": "salesInvestment", "label": "销售投入", "type": "flow", "initialValue": 300, "unit": "万元/年" }
@@ -28,10 +28,10 @@
   },
   "dataMaturity": "high",
   "mapping": [
-    { "nodeId": "newArr", "edgeId": "E-4.1", "weight": 0.9 },
-    { "nodeId": "expansionArr", "edgeId": "E-5.4", "weight": 0.7 },
-    { "nodeId": "churnArr", "edgeId": "E-4.2", "weight": 1.0 },
-    { "nodeId": "salesInvestment", "edgeId": "E-1.1", "weight": 0.6 }
+    { "nodeId": "newArr", "edgeId": "edge/value_pricing", "weight": 0.9 },
+    { "nodeId": "expansionArr", "edgeId": "edge/reputation_flywheel", "weight": 0.7 },
+    { "nodeId": "churnArr", "edgeId": "edge/customer_lockin", "weight": 1.0 },
+    { "nodeId": "salesInvestment", "edgeId": "edge/capital_allocation", "weight": 0.6 }
   ],
   "crossCyclePropagation": [
     { "targetCycleId": "talent-cycle", "viaEdge": "valuation→hiring", "strength": 0.4 }

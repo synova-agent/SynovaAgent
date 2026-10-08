@@ -5,10 +5,10 @@
   "version": "1.0.0",
   "applicableIndustries": [],
   "nodes": [
-    { "id": "acquisition", "label": "客户获取", "type": "flow", "initialValue": 180, "unit": "人/月", "edgeRefs": ["E-4.3"] },
-    { "id": "retention", "label": "客户留存", "type": "stock", "initialValue": 3200, "unit": "人", "edgeRefs": ["E-4.2"] },
-    { "id": "ltv", "label": "客户终身价值", "type": "parameter", "initialValue": 420, "unit": "元", "edgeRefs": ["E-5.4"] },
-    { "id": "cac", "label": "获客成本", "type": "parameter", "initialValue": 68, "unit": "元", "edgeRefs": ["E-4.1"] }
+    { "id": "acquisition", "label": "客户获取", "type": "flow", "initialValue": 180, "unit": "人/月", "edgeRefs": ["edge/channel_delivery"] },
+    { "id": "retention", "label": "客户留存", "type": "stock", "initialValue": 3200, "unit": "人", "edgeRefs": ["edge/customer_lockin"] },
+    { "id": "ltv", "label": "客户终身价值", "type": "parameter", "initialValue": 420, "unit": "元", "edgeRefs": ["edge/reputation_flywheel"] },
+    { "id": "cac", "label": "获客成本", "type": "parameter", "initialValue": 68, "unit": "元", "edgeRefs": ["edge/value_pricing"] }
   ],
   "edges": [
     { "from": "acquisition", "to": "retention", "polarity": "+", "delay": 1, "weight": 0.6 },
@@ -23,10 +23,10 @@
   },
   "dataMaturity": "medium",
   "mapping": [
-    { "nodeId": "acquisition", "edgeId": "E-4.3", "weight": 1.0 },
-    { "nodeId": "retention", "edgeId": "E-4.2", "weight": 1.0 },
-    { "nodeId": "ltv", "edgeId": "E-5.4", "weight": 0.8 },
-    { "nodeId": "cac", "edgeId": "E-4.1", "weight": 0.6 }
+    { "nodeId": "acquisition", "edgeId": "edge/channel_delivery", "weight": 1.0 },
+    { "nodeId": "retention", "edgeId": "edge/customer_lockin", "weight": 1.0 },
+    { "nodeId": "ltv", "edgeId": "edge/reputation_flywheel", "weight": 0.8 },
+    { "nodeId": "cac", "edgeId": "edge/value_pricing", "weight": 0.6 }
   ],
   "crossCyclePropagation": [
     { "targetCycleId": "cash-cycle", "viaEdge": "ltv→revenue", "strength": 0.5 }
