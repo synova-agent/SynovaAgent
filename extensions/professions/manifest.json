@@ -1,0 +1,1 @@
+{"$schema":"https://synova.dev/schemas/extension-manifest-v1.json","name":"professions","version":"1.0.0","type":"profession-package-layer","displayName":"专业包层（L1.5 · 第三方维护 · 可跨客户复用）","entryPoint":"../../src/extensions/profession-layer.ts","exportKey":"loadProfessionPackages","professions":1}

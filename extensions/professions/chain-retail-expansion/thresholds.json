@@ -1,0 +1,12 @@
+{
+  "profession": "chain-retail-expansion",
+  "displayName": "连锁零售门店扩张方法论",
+  "thresholdOverrides": {
+    "F1_KZ": { "warning": 1.6, "critical": 1.2 },
+    "T2_connector_coverage": { "warning": 0.35, "critical": 0.55 }
+  },
+  "expansionGate": {
+    "minStoresForStandardization": 8,
+    "singleStorePaybackMonths": 18
+  }
+}

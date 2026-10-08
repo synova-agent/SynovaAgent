@@ -1,0 +1,1 @@
+{"$schema":"https://synova.dev/schemas/extension-manifest-v1.json","name":"chain-retail-expansion","version":"1.0.0","type":"profession-package","displayName":"连锁零售门店扩张方法论","entryPoint":"thresholds.json"}
