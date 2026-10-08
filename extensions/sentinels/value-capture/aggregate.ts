@@ -35,9 +35,12 @@ export const valueCaptureSentinel = {
       metricsHolder = r.degraded ? [] : [{ metricId: 'VALUE-CAPTURE-INDEX', value: Number(r.captureIndex) || 0, unit: 'ratio', sourceId: 'sentinel-value-capture', inputDigest: createHash('sha256').update(JSON.stringify(financials)).digest('hex').slice(0, 16) }];;
       if (r.degraded) { log.warn({ teamId }, 'compute degraded — skipping threshold'); return { findings: [], metrics: [] }; }
       log.debug({ captureIndex: r.captureIndex }, '价值捕获计算完成');
-      if (r.captureIndex < 0.2) return [{ id: `i6-crit`, severity: 'critical', title: `价值捕获效率低 (${(r.captureIndex*100).toFixed(0)}%)`, description: '利润留存和定价能力不足。', evidence: [`捕获指数: ${(r.captureIndex*100).toFixed(0)}%`, `毛利率: ${(r.grossMargin*100).toFixed(0)}%`, `净利润率: ${(r.profitRetention*100).toFixed(0)}%`], suggestion: '审查定价策略和成本结构。', detectedAt: checkedAt }];
-      if (r.captureIndex < 0.4) return [{ id: `i6-warn`, severity: 'warning', title: `价值捕获效率偏低 (${(r.captureIndex*100).toFixed(0)}%)`, description: '价值转化能力需提升。', evidence: [`捕获指数: ${(r.captureIndex*100).toFixed(0)}%`, ...r.signals], suggestion: '优化定价和毛利率。', detectedAt: checkedAt }];
+      // 🔴 #1419（第 5 形态「告警分支吞指标」修复）：**告警分支也必须带 metricsHolder** ——
+      //   原为裸数组返回 ⇒ loader 的 Array.isArray(raw) ⇒ metrics 恒空 ⇒ **告警态无指标行**
+      //   （标定最需要的恰是异常/低值样本 ⇒ 原形态与标定目标方向相反）
+      if (r.captureIndex < 0.2) return { findings: [{ id: `i6-crit`, severity: 'critical', title: `价值捕获效率低 (${(r.captureIndex*100).toFixed(0)}%)`, description: '利润留存和定价能力不足。', evidence: [`捕获指数: ${(r.captureIndex*100).toFixed(0)}%`, `毛利率: ${(r.grossMargin*100).toFixed(0)}%`, `净利润率: ${(r.profitRetention*100).toFixed(0)}%`], suggestion: '审查定价策略和成本结构。', detectedAt: checkedAt }], metrics: metricsHolder };
+      if (r.captureIndex < 0.4) return { findings: [{ id: `i6-warn`, severity: 'warning', title: `价值捕获效率偏低 (${(r.captureIndex*100).toFixed(0)}%)`, description: '价值转化能力需提升。', evidence: [`捕获指数: ${(r.captureIndex*100).toFixed(0)}%`, ...r.signals], suggestion: '优化定价和毛利率。', detectedAt: checkedAt }], metrics: metricsHolder };
       return { findings: [], metrics: metricsHolder };
-    } catch (err: unknown) { log.error({ err }, '[value-capture] 失败'); return [{ id: `i6-error`, severity: 'warning', title: '检测异常', description: `${(err as Error)?.message || String(err)}`, evidence: [], suggestion: '检查数据源。', detectedAt: checkedAt }]; }
+    } catch (err: unknown) { log.error({ err }, '[value-capture] 失败'); return { findings: [{ id: `i6-error`, severity: 'warning', title: '检测异常', description: `${(err as Error)?.message || String(err)}`, evidence: [], suggestion: '检查数据源。', detectedAt: checkedAt }], metrics: metricsHolder }; }
   },
 };

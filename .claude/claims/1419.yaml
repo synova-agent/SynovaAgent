@@ -1,0 +1,13 @@
+# .claude/claims/1419.yaml — #1419（产出面排查）写集声明（D708 的 S0 源）
+#   第一交付（清单）已完成 ⇒ 本 PR = (c) 修复：**第 5 形态「告警分支吞指标」**
+writeset:
+  - .claude/claims/1419.yaml
+  - .claude/task-briefs/2026-10-08-1419-alert-branch-metrics.md
+  - extensions/sentinels/value-capture/aggregate.ts
+  - tests/sentinels/value-capture.test.ts
+done:
+  - verify: npx vitest run tests/sentinels/value-capture.test.ts
+  - verify: npx vitest run tests/sentinels/ tests/sentinel/ tests/l4/ tests/agent/ tests/adapters/
+  - verify: bash -c 'grep -c "metrics: metricsHolder" extensions/sentinels/value-capture/aggregate.ts'
+  - verify: npx tsc --noEmit
+note: 两态判据（正常态/告警态都须 ≥1 行 + **两态同数**）+ 干净单分支反例（只把 <0.4 改回裸数组 ⇒ 告警态红、正常态绿）。
