@@ -1,0 +1,24 @@
+# .claude/claims/1048.yaml — #1048（2-6 compute 契约注册表最小件）写集声明（S0 源）
+#
+# 为什么用 claim 而不是 task-state/<D#>.json：本卡是 **issue 号卡（#1048）**，无 D# 编号
+# ⇒ D708 门禁的 S1/S2/S3（按 `<D#>*` 定位）找不到声明源，会把全部改动判为「夹带」。
+#
+# 依据：卡面 #1048 写集「可碰：src/contract/、scripts/control-tower/probe-compute-registry.ts」；
+#       组 2b（测试配对）物理要求同 commit 有 tests/contract/compute-registry.test.ts；
+#       组 4a（接线）要求新 export 被 src/ 内既有文件引用 ⇒ 改 src/contract/contract-gate.ts（同写集内）。
+# 注意：claim_store.match_path = re.search(r"(^|/)" + re.escape(pattern) + r"$") ⇒ 精确匹配、不支持 glob。
+writeset:
+  - src/contract/compute-registry.ts
+  - src/contract/contract-gate.ts
+  - scripts/control-tower/probe-compute-registry.ts
+  - tests/contract/compute-registry.test.ts
+  - docs/synova/product-lines/evidence/D1048-contract-registry-20261008.md
+  - .claude/claims/1048.yaml
+  - .claude/task-briefs/2026-10-08-1048-contract-registry.md
+  - memory/notes/proposed/2026-10-08-1048-compute-contract-registry.md
+done:
+  - verify: npx tsx scripts/control-tower/probe-compute-registry.ts
+  - verify: npx vitest run tests/contract/compute-registry.test.ts tests/contract/contract-gate.test.ts
+  - verify: bash scripts/control-tower/check-ontology-fields.sh
+# 声明纪律：只列本 PR 真正改动的文件。不列 src/sentinel/**、不列 src/store/**（卡面「绝不能碰」）；
+#   不列 scripts/audit/**（审计红线）；不改「哪条检查阻断合并」。
