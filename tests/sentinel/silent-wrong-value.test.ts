@@ -22,6 +22,8 @@ import { computeDebtEquityRatio } from '../../extensions/sentinels/capital-healt
 import { computeCashRunway } from '../../extensions/sentinels/financing-constraint/computes/cash-runway';
 import { computeAgentDeploymentMaturity } from '../../extensions/sentinels/agent-deployment-maturity/computes/compute-agent-deployment-maturity';
 import { computeAiInvestmentReturn } from '../../extensions/sentinels/ai-investment-return/computes/compute-ai-investment-return';
+import { computeMakeOrBuyScore } from '../../extensions/sentinels/make-or-buy/computes/make-or-buy-score';
+import { computeModelCoherence } from '../../extensions/sentinels/business-model-coherence/computes/model-consistency-score';
 
 /** 本批接线集合（**声称**；由 V3 用扫描核） */
 const WIRED_THIS_BATCH = [
@@ -48,7 +50,7 @@ export function isCallLine(line: string): boolean {
   const t = line.trim();
   if (t.startsWith('//') || t.startsWith('*') || t.startsWith('/*')) return false;   // 注释行
   if (/^import\b/.test(t)) return false;                                            // import 行
-  return /checkFiniteInputs\s*\(/.test(t);                                          // 调用形状
+  return /checkFiniteInputs\s*\(|checkRequiredFields\s*\(/.test(t);                 // 调用形状（**含批 C2b 的存在性助手**）
 }
 
 /** 统计一份源码里**调用行**的条数（供断言与复查用） */
@@ -180,6 +182,7 @@ describe('#1408 静默错误值（批 A：margin-health 的 5 个 compute）', (
     expect(countCallLines('* checkFiniteInputs(x, [\'a\']); // JSDoc 里出现'), 'JSDoc 行不得计为调用').toBe(0);
     expect(countCallLines("import { checkFiniteInputs } from './assert-finite-inputs';"), 'import 行不得计为调用').toBe(0);
     expect(countCallLines("const _inputIssues = checkFiniteInputs(financials, ['a']);"), '真实调用计 1').toBe(1);
+    expect(countCallLines("const _m = checkRequiredFields(nodes, ['type','props']);"), '存在性助手调用同样计 1').toBe(1);
   });
 
   it('🔴 V1-c【行为·**批 C1 自己的实测样例**】cash-runway / kz-index：NaN、缺字段 ⇒ degraded + warnings', () => {
@@ -274,4 +277,36 @@ describe('#1408 静默错误值（批 A：margin-health 的 5 个 compute）', (
   //   ⇒ ⇒ **"接线 ≠ 端到端可产出"**（同 #1375 B3b 的已知族：接线对、数据到、仍 0 行）
   //   ⇒ 出口：按 CTO 裁定"夹具/产出条件不足 ⇒ **停下报我，不硬凑**" ⇒ 本批**不写**该判据，**登记**于此
 
+
+  it('🔴 V1-e【行为·**批 C2b 自己的实测样例**】存在性维度：缺 inHouse / 缺 type ⇒ 有信号 + 降级', () => {
+    const mb = computeMakeOrBuyScore([{ category: 'core' } as unknown as { category: string; inHouse: boolean }]);
+    expect(mb.degraded, 'make-or-buy 缺 inHouse ⇒ 降级').toBe(true);
+    expect(mb.signals?.join(' ') ?? '', '⇒ 留痕').toContain('缺字段');
+    const mc = computeModelCoherence([{ props: {} } as unknown as { type: string; props: Record<string, unknown> }]);
+    expect(mc.degraded, 'model-coherence 缺 type ⇒ 降级').toBe(true);
+    expect(mc.signals.join(' '), '⇒ 留痕').toContain('缺字段');
+  });
+
+  it('V2-e【行为】批 C2b 正常入参 ⇒ **不得误报**', () => {
+    const ok = computeMakeOrBuyScore([{ category: 'core', inHouse: true }]);
+    expect(ok.degraded, '正常 ⇒ 不得降级').toBe(false);
+    expect((ok.signals ?? []).filter(x => x.includes('缺字段'))).toEqual([]);
+  });
+
+  it('V3-e【形态扫描·**只证明形态**】批 C2b 覆盖率：已调用集合 == 声称的 4 个（扫调用、排注释、排 import）', () => {
+    const dirs = [
+      'extensions/sentinels/business-model-coherence/computes', 'extensions/sentinels/make-or-buy/computes',
+      'extensions/sentinels/knowledge-accessibility/computes', 'extensions/sentinels/talent-density/computes',
+    ];
+    const called: string[] = [];
+    for (const d of dirs) {
+      for (const f of readdirSync(d).filter(x => x.endsWith('.ts') && !x.endsWith('.test.ts'))) {
+        if (countCallLines(readFileSync(join(d, f), 'utf-8')) > 0) called.push(f);
+      }
+    }
+    expect(new Set(called), '批 C2b 已调用集合应恰为 4 个').toEqual(new Set([
+      'model-consistency-score.ts', 'make-or-buy-score.ts',
+      'compute-knowledge-accessibility.ts', 'compute-talent-density.ts',
+    ]));
+  });
 });

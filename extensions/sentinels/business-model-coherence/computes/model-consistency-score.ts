@@ -4,8 +4,13 @@
  * - 收入模式 vs 成本结构(Cost): 毛利是否合理
  * - 成本结构 vs 核心能力(Cap): 成本是否投入在关键能力
  */
+import { checkRequiredFields } from '../../../../src/sentinel/assert-finite-inputs';   // #1408 批 C2b：存在性维度
 export interface CoherenceResult { score: number; vpRevFit: number; revCostFit: number; costCapFit: number; signals: string[]; degraded: boolean; }
 export function computeModelCoherence(nodes: Array<{ type: string; props: Record<string, unknown> }>): CoherenceResult {
+  // #1408 批 C2b：**结构/存在性**检查 —— 本类型**无数值字段可查**（category:string｜inHouse:boolean｜type:string｜props:object）
+  //   ⇒ **不适用 ≠ 不管**：缺字段仍必须有信号（CTO 2026-10-08 裁）
+  const _missing = checkRequiredFields(nodes, ['type', 'props']);
+  if (_missing.length > 0) return Object.assign({}, { score: 0, vpRevFit: 0, revCostFit: 0, costCapFit: 0, signals: ['无数据'], degraded: true }, { signals: _missing });
   if (nodes.length === 0) return { score: 0, vpRevFit: 0, revCostFit: 0, costCapFit: 0, signals: ['无数据'], degraded: true };
   const signals: string[] = [];
   const hasVP = nodes.some(n => n.type === 'BusinessModel' || n.props.valueProposition);

@@ -7,7 +7,10 @@
  * 输入: Document(文档), KnowledgeChunk(知识片段), Capability(能力), Person(人员)
  * 输出: 可调用性评分（0-1，越高越健康）
  */
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408 批 C2b：标量参数型 ⇒ 入口显式命名成对象
 export interface AccessibilityResult {
+  /** #1408：输入有效性等告警 */
+  warnings?: string[];
   score: number;                    // 0-1, 知识可调用性评分
   documentedRate: number;           // 知识被文档化的比例
   knowledgeNodes: number;           // 知识节点总数（Document+KnowledgeChunk）
@@ -22,6 +25,9 @@ export function computeKnowledgeAccessibility(
   capabilityCount: number,  // Capability 节点数量
   personCount: number       // Person 节点数量
 ): AccessibilityResult {
+  // #1408 批 C2b：**标量参数型** ⇒ 入口**显式命名成对象**（需求声明必须手写：只有本人知道那几个标量叫什么）
+  const _inputIssues = checkFiniteInputs({ docCount, knowledgeCount, capabilityCount, personCount }, ['docCount', 'knowledgeCount', 'capabilityCount', 'personCount']);
+  if (_inputIssues.length > 0) return { score: 0.5, documentedRate: 0, knowledgeNodes: 0, personNodes: 0, assessment: 'insufficient', degraded: true, warnings: _inputIssues };
   const knowledgeNodes = docCount + knowledgeCount + capabilityCount;
 
   if (knowledgeNodes === 0 && personCount === 0) {
