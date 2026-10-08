@@ -607,7 +607,10 @@ exit 0
 EOF
 chmod +x "$CLONE/scripts/d1148-decl-probe.sh"
 git -C "$CLONE" add scripts/d1148-decl-probe.sh
-( cd "$CLONE" && GITHUB_ACTIONS=true SYNO_CI=1 bash scripts/pre-commit-check.sh ) >"$TMP/out.d1148.log" 2>&1
+# 卡 #1423: 本场景测的是 **legacy 三闸**（brief 载体）语义 ⇒ 必须**显式回滚**（SYNO_CLAIM_V2=0）。
+#   否则 claim-first 默认生效时，resolver 会按分支 issue 取到副本里的真 claim ⇒ 注入的探针 brief
+#   根本不进判定 ⇒ 三闸不点火（假红形态 = 判据被绕过，不是闸坏）。
+( cd "$CLONE" && GITHUB_ACTIONS=true SYNO_CI=1 SYNO_CLAIM_V2=0 bash scripts/pre-commit-check.sh ) >"$TMP/out.d1148.log" 2>&1
 DECL_RC=$?
 DECL_FAILS="$(strip_ansi < "$TMP/out.d1148.log" | grep '❌' | sed 's/^[[:space:]]*//' || true)"
 DECL_MISS=""
@@ -667,7 +670,8 @@ exit 0
 EOF
 chmod +x "$CLONE/scripts/d1148-excl-probe.sh"
 git -C "$CLONE" add scripts/d1148-excl-probe.sh
-( cd "$CLONE" && GITHUB_ACTIONS=true SYNO_CI=1 bash scripts/pre-commit-check.sh ) >"$TMP/out.d1148-excl.log" 2>&1
+# 卡 #1423: 同上 —— 本场景测 legacy 闸②（排除项子判据）⇒ 显式回滚态。
+( cd "$CLONE" && GITHUB_ACTIONS=true SYNO_CI=1 SYNO_CLAIM_V2=0 bash scripts/pre-commit-check.sh ) >"$TMP/out.d1148-excl.log" 2>&1
 EXCL_RC=$?
 EXCL_FAILS="$(strip_ansi < "$TMP/out.d1148-excl.log" | grep '❌' | sed 's/^[[:space:]]*//' || true)"
 if [ "$EXCL_RC" -eq 1 ] && printf '%s\n' "$EXCL_FAILS" | grep -q '声明闸②' \

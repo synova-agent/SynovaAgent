@@ -90,3 +90,20 @@ bash tests/control-tower/precommit-claim-wiring.test.sh     # 46 通过 0 失败
 
 **对存量 D# 的影响：零**。D# 分支名（如 `feat/D1245-…`）不产 issue 号 ⇒ 不命中 claim ⇒ 逐字节 legacy ✓
 （创始人约束"保存量 D#"仍成立）。
+
+## 追加（注入自测面）: claim-first 默认生效 ⇒ 遮住 legacy 三闸（判据变更面 ⑤）
+
+**现象**：CI `Gate Integrity`（注入自测）红 —— `❌ D1148 三闸注入: rc=0 未点名闸`、
+`❌ 闸② 排除项注入: rc=1，闸② 未捕获`。
+
+**机制**：`precommit-groups-injection.test.sh` 的两个 D1148 场景注入的是**legacy brief 探针**，
+但副本里带有真 `.claude/claims/*`，而探针运行时的分支名含 issue ⇒ resolver 在**默认开**下
+claim-first 取到**真 claim** ⇒ 探针 brief 根本不进判定 ⇒ 三闸不点火（**判据被绕过**的假红形态，
+不是闸坏了）。
+
+**修法（夹具侧，判据不改）**：两处注入**钉显式回滚态** `SYNO_CLAIM_V2=0` —— 本场景本就测
+legacy 三闸语义 ⇒ 显式声明载体形态，语义更清晰。实测：`decl_gates=0`、`期望红组全部 RED_CONFIRMED`、
+`baseline=ok` ✓。
+
+**判据变更面（K3 批八）新增第 ⑤ 条**：`tests/control-tower/precommit-groups-injection.test.sh`
+两处注入显式回滚态（不改判据，只固定被测载体形态）。

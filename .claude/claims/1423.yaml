@@ -11,6 +11,7 @@ writeset:
   - tests/control-tower/claim_store.test.sh
   - tests/control-tower/claim-identity-v2.test.py
   - tests/control-tower/precommit-claim-wiring.test.sh
+  - tests/control-tower/precommit-groups-injection.test.sh
   # ── 卡 #1423 · 取号路径 refuse（Lead 侧）──
   - scripts/control-tower/alloc-task-id.sh
   - tests/control-tower/alloc-task-id.test.sh

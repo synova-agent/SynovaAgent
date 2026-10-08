@@ -25,6 +25,7 @@
 - tests/control-tower/claim_store.test.sh
 - tests/control-tower/claim-identity-v2.test.py
 - tests/control-tower/precommit-claim-wiring.test.sh
+- tests/control-tower/precommit-groups-injection.test.sh
 - memory/notes/implemented/2026-10-08-1423-claim-default-on.md
 - .claude/task-briefs/2026-10-08-1423-claim-default-on.md
 - .claude/claims/1423.yaml
@@ -47,6 +48,7 @@
 
 ## Done 标准:
 - [x] verify: bash tests/control-tower/precommit-claim-wiring.test.sh ⇒ 0 失败（含 #1423 全段 + CI 面判据）
+- [x] verify: bash tests/control-tower/precommit-groups-injection.test.sh ⇒ 期望红组全部 RED_CONFIRMED、decl_gates=0、baseline=ok
 - [x] verify: bash tests/control-tower/claim_store.test.sh ⇒ 0 失败（默认开 + 显式 0 回滚）
 - [x] verify: python3 tests/control-tower/claim-identity-v2.test.py ⇒ Ran 21 tests OK
 - [x] verify: bash scripts/control-tower/sealed-tests.sh --list ⇒ rc=0（本件不新增测试文件 ⇒ 棘轮零改动）
@@ -63,6 +65,7 @@
 | tests/control-tower/claim_store.test.sh | task（默认断言翻面 + 回滚断言） |
 | tests/control-tower/claim-identity-v2.test.py | task（默认断言翻面 + 3 处回滚态显式关） |
 | tests/control-tower/precommit-claim-wiring.test.sh | task（默认断言翻面 + 回滚断言） |
+| tests/control-tower/precommit-groups-injection.test.sh | task（D1148 两处注入钉显式回滚态：claim-first 默认生效会遮住 legacy 三闸） |
 | memory/notes/implemented/2026-10-08-1423-claim-default-on.md | task（决策沉淀，铁律 49） |
 | .claude/task-briefs/2026-10-08-1423-claim-default-on.md | task（自身） |
 | .claude/claims/1423.yaml | task（新格式声明载体） |
