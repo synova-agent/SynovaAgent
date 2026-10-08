@@ -68,7 +68,10 @@ SELF_REL="scripts/control-tower/scan-fullwidth-vars.sh"
 OWNERSHIP_PY="$ROOT/scripts/control-tower/check-ownership.py"
 
 # 检测形态: `$VAR` 紧贴全角标点（6 字符类，全部经 bash 3.2 实测确认触发）
-FULLWIDTH_ALT='（|）|：|，|。|；|、'
+# 🔴 D1183 补（复核实测）: 原字符类**缺 `「」`** ⇒ 对仍含 `$FIRST」` 的文件报「0 处违规 / exit 0」
+#   ⇒ 「扫描器绿 = 修完了」是**假绿**（并因此让同一族缺陷在 verify-doc.sh:135 存活）。
+#   补全 CJK 成对标点（含方头括号/引号/书名号），与注释自称的字符数对齐。
+FULLWIDTH_ALT='（|）|：|，|。|；|、|「|」|『|』|《|》|【|】|“|”|‘|’'
 PATTERN='\$[A-Za-z_][A-Za-z0-9_]*('"$FULLWIDTH_ALT"')'
 
 EXIT_OK=0

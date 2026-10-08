@@ -53,7 +53,7 @@ if [ -z "$CMDS" ]; then
   exit 0
 fi
 
-echo "verify-doc: 回放 $DOC_ARG（共 $(printf '%s\n' "$CMDS" | wc -l | tr -d ' ') 条命令）"
+echo "verify-doc: 回放 ${DOC_ARG}（共 $(printf '%s\n' "$CMDS" | wc -l | tr -d ' ') 条命令）"
 cd "$ROOT" || exit 1
 
 N_OK=0; N_FAIL=0; N_SKIP=0; N_REJECT=0
@@ -132,7 +132,7 @@ while IFS= read -r cmd; do
       esac
       ;;
     *)
-      reject_cmd "$cmd" "首 token「$FIRST」非白名单（grep/ls/rg/sed/git/npx vitest|tsc/bash verify·test 脚本）"
+      reject_cmd "$cmd" "首 token「${FIRST}」非白名单（grep/ls/rg/sed/git/npx vitest|tsc/bash verify·test 脚本）"
       continue
       ;;
   esac
@@ -154,7 +154,7 @@ while IFS= read -r cmd; do
       esac
     done
     if [ -n "$BAD_PATH" ]; then
-      echo "  [FAIL] 引用不存在的测试文件/路径: $BAD_PATH（W2 事故形态，快速失败不进入 vitest）"
+      echo "  [FAIL] 引用不存在的测试文件/路径: ${BAD_PATH}（W2 事故形态，快速失败不进入 vitest）"
       N_FAIL=$((N_FAIL+1))
       continue
     fi
@@ -166,10 +166,10 @@ while IFS= read -r cmd; do
   if [ "$FIRST" = "grep" ]; then
     # grep exit 1 = 零命中 = 命令执行成功（缺失类断言的合法结果）；exit ≥2 = 引用错误
     if [ "$RC" -le 1 ]; then
-      echo "  [OK] exit $RC（grep 零命中属合法结果）"
+      echo "  [OK] exit ${RC}（grep 零命中属合法结果）"
       N_OK=$((N_OK+1))
     else
-      echo "  [FAIL] exit $RC（grep 引用错误，如文件不存在）— $(printf '%s' "$OUT" | head -2 | tr '\n' ' ')"
+      echo "  [FAIL] exit ${RC}（grep 引用错误，如文件不存在）— $(printf '%s' "$OUT" | head -2 | tr '\n' ' ')"
       N_FAIL=$((N_FAIL+1))
     fi
   else
