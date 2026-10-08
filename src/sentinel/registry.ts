@@ -18,14 +18,40 @@ const log = createLogger('sentinel/registry');
 export class SentinelRegistryImpl implements SentinelRegistry {
   private sentinels = new Map<string, Sentinel>();
 
+  /** #1463 B7：重复注册被跳过的累计次数（可观测计数；修前该信号为「静默覆盖」） */
+  private duplicateSkips = 0;
+
+  /**
+   * 注册哨兵（**幂等**，#1463 B7）。
+   *
+   * 契约（铁律 47）：
+   * - 输入：`sentinel` — 满足 `Sentinel` 结构的实例
+   * - 输出：`void`（接口 `SentinelRegistry.register` 签名不变）；副作用 = 首次登记 / 重复则跳过并计数
+   * - 降级：不适用（无 I/O、不抛异常；非法结构不在本函数校验范围内）
+   *
+   * 语义（2026-10-09 由「覆盖旧实例」改为「显式跳过」）：
+   *   同 id 二次注册 ⇒ **保留首登实例**、`duplicateSkips += 1`、按 warn 记一条带累计数的日志。
+   *   为什么改：生产有**两个**调用点登记同一批 45 个文件驱动哨兵
+   *   （src/init/file-driven-loaders.ts、src/deploy/bootstrap.ts）⇒ 实测刷 45 条「覆盖旧实例」。
+   *   两个调用点 import 的是**同一模块实例**（ESM 按 URL 缓存）⇒ 跳过与覆盖在实例同一性上等价，
+   *   但「跳过」不再让「谁赢了」这件事变得不可见（P-03：声称必须与事实一致）。
+   */
   register(sentinel: Sentinel): void {
     const id = sentinel.config.id;
     if (this.sentinels.has(id)) {
-      log.warn({ sentinelId: id }, '哨兵已注册 — 覆盖旧实例');
+      this.duplicateSkips += 1;
+      log.warn({ sentinelId: id, skipped: this.duplicateSkips },
+        '哨兵重复注册 — 跳过 (幂等)');
+      return;
     }
     this.sentinels.set(id, sentinel);
     log.info({ sentinelId: id, name: sentinel.config.name, category: sentinel.config.category },
       '哨兵已注册');
+  }
+
+  /** #1463 B7：累计被跳过的重复注册次数（与修前「覆盖」日志行数可直接对照） */
+  getDuplicateSkipCount(): number {
+    return this.duplicateSkips;
   }
 
   unregister(id: string): void {

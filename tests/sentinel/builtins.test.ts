@@ -71,7 +71,8 @@ describe('registerBuiltinSentinels', () => {
     }
   });
 
-  it('Given 两次调用 registerBuiltinSentinels → 覆盖旧哨兵不抛异常', async () => {
+  // #1463 B7：措辞随语义从「覆盖」改为「幂等跳过」（断言不变：数量恒等 + 不抛异常）
+  it('Given 两次调用 registerBuiltinSentinels → 幂等跳过旧哨兵不抛异常', async () => {
     await registerBuiltinSentinels();
     const afterFirst = getSentinelRegistry().count();
     expect(afterFirst).toBeGreaterThan(0); // #977: 0 → 0 也是「相等」，不加这条就是空转绿

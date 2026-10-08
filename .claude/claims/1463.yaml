@@ -1,0 +1,14 @@
+writeset:
+  - .claude/claims/1463.yaml
+  - .claude/task-briefs/2026-10-09-1463-B3B7-sentinel-registration.md
+  - src/sentinel/builtins.ts
+  - src/sentinel/registry.ts
+  - src/sentinel/sentinel-loader.ts
+  - tests/sentinel/builtin-registration.test.ts
+  - tests/sentinel/builtins.test.ts
+  - tests/sentinel/registry.test.ts
+done:
+  - verify: npx vitest run tests/sentinel/builtin-registration.test.ts
+  - verify: npx vitest run tests/sentinel/registry.test.ts tests/sentinel/builtins.test.ts tests/sentinel/sentinel-loader.test.ts
+  - verify: npx tsc --noEmit
+note: #1463 B3+B7（登记件 id B3B7）。B3：builtins.ts 路径→ESM 说明符由 `replace(/\\/g,'/')` 改为 `pathToFileURL()`（抽 toImportSpecifier 唯一真源，sentinel-loader 同用不重复实现）——Windows 盘符形态产 d: 协议被 loader 拒绝，POSIX 形态偶然可用故仅 Windows 可见。B7：registry.register 同 id 二次注册由「覆盖旧实例」改为「显式跳过 + getDuplicateSkipCount() 计数」；loader 汇总日志补 skipped 字段（修补前第二次调用谎报 registered=45 的不一致）。

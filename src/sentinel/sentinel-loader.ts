@@ -8,9 +8,10 @@
  */
 import { readdirSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
-import { pathToFileURL } from 'url';
 import { createLogger } from '@synova/logger';
 import type { MetricRow, SentinelFinding, SentinelCheckResult, SentinelThresholdPair } from './types';
+// #1463 B3：路径 → ESM 说明符的唯一真源（与 builtins.ts 共用，禁各自实现）
+import { toImportSpecifier } from './builtins';
 
 import { withOrgScope } from './org-scope';
 const log = createLogger('sentinel/loader');
@@ -189,6 +190,13 @@ export async function registerLoadedSentinels(): Promise<{ registered: number; e
   const errors = [...loadErrors];
   let registered = 0;
 
+  // 动态导入 registry 避免循环依赖（#1463 B7：提到循环外，只导一次）
+  const { getSentinelRegistry } = await import('./registry');
+  const registry = getSentinelRegistry();
+  // #1463 B7：注册已幂等（重复 = 跳过），本函数按调用记账本次跳过了几个，
+  // 使完成的日志不把「尝试登记 45 个」谎报成「新登记 45 个」（P-03 声称必须与事实一致）。
+  const skipsBefore = registry.getDuplicateSkipCount();
+
   for (const { manifest, dir } of sentinels) {
     try {
       const entryPath = join(dir, manifest.entryPoint || './aggregate.ts');
@@ -197,7 +205,7 @@ export async function registerLoadedSentinels(): Promise<{ registered: number; e
         continue;
       }
 
-      const mod = await import(pathToFileURL(entryPath).href);
+      const mod = await import(toImportSpecifier(entryPath));
       const sentinelObj = mod[manifest.exportKey || 'default'];
       if (!sentinelObj || typeof sentinelObj.check !== 'function') {
         errors.push(`哨兵 ${manifest.name} 缺少 check() 方法`);
@@ -236,10 +244,7 @@ export async function registerLoadedSentinels(): Promise<{ registered: number; e
         } catch (err) { log.warn({ err, sentinel: manifest.name }, 'dependsOn 检查失败 — degraded'); }
       }
 
-      // 动态导入 registry 避免循环依赖
-      const { getSentinelRegistry } = await import('./registry');
-      const registry = getSentinelRegistry();
-
+      // 动态导入 registry 避免循环依赖（已在函数首部导入，此处复用同一实例）
       registry.register({
         config: {
           id: `sentinel-${manifest.name}`,
@@ -354,6 +359,11 @@ export async function registerLoadedSentinels(): Promise<{ registered: number; e
     }
   }
 
-  if (registered > 0) log.info({ registered, errors: errors.length }, '文件驱动哨兵已注册');
+  // #1463 B7：`registered` = 本次**尝试**登记数；`skipped` = 其中被幂等跳过（已注册过）的数。
+  // 两个数一起报，才不会被读成「新登记 registered 个」（修前第二次调用谎报 registered=45）。
+  const skipped = registry.getDuplicateSkipCount() - skipsBefore;
+  if (registered > 0 || skipped > 0) {
+    log.info({ registered, skipped, errors: errors.length }, '文件驱动哨兵已注册');
+  }
   return { registered, errors };
 }
