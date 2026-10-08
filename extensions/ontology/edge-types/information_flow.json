@@ -6,6 +6,7 @@
   "allowedTo": ["pool/activity"],
   "requiredProps": ["info_fidelity", "transmission_latency_days"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "info_availability_score": "number (0-1) — 信息可获取性",
     "decision_relevance": "number (0-1) — 信息决策相关性",
     "push_vs_pull_ratio": "number — 推送 vs 拉取比例"

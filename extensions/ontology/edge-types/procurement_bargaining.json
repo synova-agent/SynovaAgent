@@ -6,6 +6,7 @@
   "allowedTo": ["outcome/financial"],
   "requiredProps": ["purchase_volume", "supplier_concentration", "bargaining_power"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "avg_discount_rate": "number (0-1) — 平均折扣率",
     "contract_duration_months": "number — 合同期限",
     "alternative_supplier_count": "number — 替代供应商数量"

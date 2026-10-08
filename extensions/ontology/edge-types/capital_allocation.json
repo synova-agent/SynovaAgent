@@ -6,6 +6,7 @@
   "allowedTo": ["pool/activity"],
   "requiredProps": ["allocation_amount", "allocation_ratio"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "roi_by_activity": "object — 各活动ROI分布",
     "allocation_frequency": "string — 分配频率(quarterly|annual|continuous)",
     "decision_process": "string — 决策流程(top_down|bottom_up|hybrid)"

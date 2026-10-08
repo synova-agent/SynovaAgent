@@ -6,6 +6,7 @@
   "allowedTo": ["activity/production","activity/acquisition","activity/innovation","activity/coordination","activity/learning","activity/governance","activity/maintenance","activity/compliance"],
   "requiredProps": ["coupling_strength", "coupling_direction"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "coupling_lag_days": "number — 耦合效应的滞后天数",
     "inertia": "number (0-1) — 耦合惯性（越高越难解耦）",
     "cross_flywheel_revenue_ratio": "number (0-1) — 跨飞轮收入占比"

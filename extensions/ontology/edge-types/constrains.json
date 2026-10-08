@@ -23,6 +23,7 @@
     "magnitude"
   ],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "constraint_period": "string",
     "adaptation_required": {
       "type": "number",

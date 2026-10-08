@@ -6,6 +6,7 @@
   "allowedTo": ["pool/data"],
   "requiredProps": ["collection_coverage", "data_quality", "collection_frequency_days"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "data_categories": "array — 采集的数据类别",
     "automation_level": "number (0-1) — 采集自动化程度",
     "storage_duration_days": "number — 数据保留天数"

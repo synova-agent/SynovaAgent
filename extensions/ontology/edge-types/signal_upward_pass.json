@@ -6,6 +6,7 @@
   "allowedTo": ["pool/sensing"],
   "requiredProps": ["upward_filter_loss", "n_layers"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "signal_to_noise_ratio": "number (0-1) — 信噪比",
     "escalation_threshold": "number — 向上汇报触发阈值"
   },

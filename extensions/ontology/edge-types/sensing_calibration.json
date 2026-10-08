@@ -6,6 +6,7 @@
   "allowedTo": ["pool/sensing"],
   "requiredProps": ["learning_from_past_misjudgments", "forgetting_rate"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "calibration_interval_days": "number — 校准周期",
     "bias_correction_strength": "number (0-1) — 偏差修正强度"
   },

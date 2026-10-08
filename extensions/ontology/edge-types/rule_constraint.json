@@ -6,6 +6,7 @@
   "allowedTo": ["pool/activity"],
   "requiredProps": ["constraint_strength", "scope_coverage"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "rule_type": "string — 规则类型(compliance|policy|regulation)",
     "enforcement_rigor": "number (0-1) — 执法严格度",
     "exception_rate": "number (0-1) — 例外率"

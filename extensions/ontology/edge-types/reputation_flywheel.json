@@ -6,6 +6,7 @@
   "allowedTo": ["outcome/market"],
   "requiredProps": ["referral_rate", "word_of_mouth_velocity"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "online_review_score": "number (0-1) — 在线评分",
     "media_mention_volume": "number — 媒体提及量",
     "social_sentiment_trend": "string — 社交情绪趋势"

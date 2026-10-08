@@ -6,6 +6,7 @@
   "allowedTo": ["pool/capital"],
   "requiredProps": ["profit_margin", "reinvestment_rate"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "dividend_payout_ratio": "number (0-1) — 分红支付率",
     "reinvestment_roi": "number — 再投资回报率",
     "capital_allocation_efficiency": "number (0-1) — 资本配置效率"

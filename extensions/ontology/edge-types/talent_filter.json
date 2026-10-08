@@ -6,6 +6,7 @@
   "allowedTo": ["pool/human_capital"],
   "requiredProps": ["selection_threshold", "filter_criteria"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "diversity_target": "number (0-1) — 多样性目标",
     "cultural_fit_weight": "number (0-1) — 文化匹配权重",
     "experience_minimum_years": "number — 最低经验年限"

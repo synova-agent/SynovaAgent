@@ -6,6 +6,7 @@
   "allowedTo": ["pool/activity"],
   "requiredProps": ["learning_rate", "knowledge_integration_capability"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "experience_elasticity": "number — 经验弹性",
     "lessons_learned_application_rate": "number (0-1) — 经验应用率",
     "cross_project_learning_score": "number (0-1) — 跨项目学习得分"

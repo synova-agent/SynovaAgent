@@ -23,6 +23,7 @@
     "allocation_period"
   ],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "expected_roi": {
       "type": "number"
     },

@@ -6,6 +6,7 @@
   "allowedTo": ["pool/activity"],
   "requiredProps": ["market_demand_signal", "spec_translation_fidelity"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "customer_voice_integration": "number (0-1) — 客户声音整合度",
     "requirement_stability_index": "number (0-1) — 需求稳定性指数",
     "spec_change_frequency": "number — 规格变更频率"
