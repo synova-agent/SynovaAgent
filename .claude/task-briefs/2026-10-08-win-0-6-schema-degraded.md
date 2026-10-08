@@ -27,6 +27,7 @@
 | docs/synova/product-lines/evidence/980/assemble-evidence.sh | 探针证据组装脚本 |
 | docs/synova/product-lines/evidence/980/ENV-980-better-sqlite3-workaround.md | 环境变通落仓记录 |
 | memory/notes/proposed/2026-10-08-0-6-schema-degraded-visibility.md | 决策 Note（D534） |
+| .claude/claims/980.yaml | 写集声明（S0 源；issue 号卡无 D# ⇒ D708 唯一可解析声明源） |
 | .claude/task-briefs/2026-10-08-win-0-6-schema-degraded.md | 本 brief 自身 |
 
 > 无 `builtin`（运行期产物）行。

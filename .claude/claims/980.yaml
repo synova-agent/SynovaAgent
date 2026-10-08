@@ -1,0 +1,41 @@
+# .claude/claims/980.yaml — #980 / 0-6（K8，第0批-止血）写集声明（S0 源）
+#
+# 为什么用 claim 而不是 task-state/<D#>.json：本卡是 **issue 号卡（#980）**，无 D# 编号
+# ⇒ D708 门禁的 S1/S2/S3（按 `<D#>*` 定位）找不到声明源；且本分支历史里含字符串「（D3）」
+#   （出自 commit `8800203f4` 的消息「…探针 run 哈希漂移补记（D3）」）⇒ 被 legacy D# 链
+#   误推断为 **D3** ⇒ `find_declaration_files` 命中 27 个 `SYNOVA-IMPL-*D3*.md` 候选
+#   ⇒ `AmbiguousDeclaration` ⇒ exit 2（CI run 37671862424 实见）。
+# 本文件即该情形的正式解法：`.claude/claims/<issue>.yaml` = S0 声明源，
+#   存在时 **优先于 D# 链**（`merge_writeset_gate.py` §833-835：claim 存在 ⇒ 禁用 D# 锚点）。
+# 先例：`.claude/claims/1052.yaml`（同族 issue 号卡，CTO 2026-10-08 放行）。
+#
+# 声明纪律（同 #1052 先例）：本 claim **只列本 PR 真正改动**的文件，不预授权、不含排除项
+#   （两字段版无 exclude 字段 —— 排除项语义由 D708 对账单点承担）。
+writeset:
+  - .claude/claims/980.yaml
+  - .claude/task-briefs/2026-10-08-win-0-6-schema-degraded.md
+  - docs/synova/coordination/#980-待归口登记册-20261008.md
+  - docs/synova/product-lines/evidence/980/ENV-980-better-sqlite3-workaround.md
+  - docs/synova/product-lines/evidence/980/PLAN-980-0-6-schema-degraded.md
+  - docs/synova/product-lines/evidence/980/RECEIPT-980-plan-20261008.md
+  - docs/synova/product-lines/evidence/980/REGRESS-980-summary-20261008.md
+  - docs/synova/product-lines/evidence/980/VERIFY-980-acceptance-verifier-980-accept.md
+  - docs/synova/product-lines/evidence/980/VERIFY-980-env-verifier-980-env.md
+  - docs/synova/product-lines/evidence/980/VERIFY-980-plan-verifier-980.md
+  - docs/synova/product-lines/evidence/980/VERIFY-980-regress-verifier-980-regress.md
+  - docs/synova/product-lines/evidence/980/assemble-evidence.sh
+  - docs/synova/product-lines/evidence/980/capture-980-preconditions.sh
+  - docs/synova/product-lines/evidence/980/capture-980-probe.sh
+  - docs/synova/product-lines/evidence/980/evidence-980-plan-preconditions.txt
+  - docs/synova/product-lines/evidence/980/evidence-980-probe-run.txt
+  - docs/synova/product-lines/evidence/980/probe-diagnosis.ts
+  - memory/notes/proposed/2026-10-08-0-6-schema-degraded-visibility.md
+  - src/l4/sog-schema-validator.ts
+  - tests/l4/sog-schema-validator.integration.test.ts
+  - tests/l4/sog-schema-validator.test.ts
+done:
+  - verify: bash -c "npx tsx docs/synova/product-lines/evidence/980/probe-diagnosis.ts 2>&1 | grep -q '未覆盖类型'"
+  - verify: npx vitest run tests/l4/sog-schema-validator.test.ts tests/l4/sog-schema-validator.integration.test.ts
+  - verify: bash scripts/check-architecture.sh
+  - verify: bash scripts/control-tower/merge_writeset_gate.py --base origin/main --head HEAD --branch feat/win-0-6-schema-degraded
+note: #980/0-6 可见降级；判据落点待治理线窗搬移（登记册 D-6）
