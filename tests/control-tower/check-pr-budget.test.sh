@@ -614,10 +614,32 @@ printf '#!/bin/bash\necho "{\\"mode\\":\\"files\\"}"\nexit 1\n' > "$_SB2/scripts
 OUT="$(cd "$_SB2" && bash scripts/control-tower/check-pr-budget.sh --diff-status "$(_mkd 13 vendor/x)" 2>&1)"; _e=$?
 if [ "$_e" = 1 ] && printf '%s' "$OUT" | grep -q "schema 不可解析"; then pass "17.9 执行体 schema 漂移 → 判「无法判定」fail-closed（不误放）"; else fail "17.9 期望 exit=1+schema 判据，实得 exit=$_e"; fi
 rm -rf "$_SB2"
-_MUT2="scripts/control-tower/.mut-s24-prot.sh"; sed 's/^      if printf .%s. "\$_dc_p" | grep -qE "\$S24_PROTECTED_RE"; then$/      if false; then/' "$_TOOLABS" > "$_MUT2"
+_MUT2="scripts/control-tower/.mut-s24-prot.sh"; sed 's/^      if printf .%s. "\$_dc_norm" | grep -qiE "\$S24_PROTECTED_RE"; then$/      if false; then/' "$_TOOLABS" > "$_MUT2"
 OUT="$(bash "$_MUT2" --diff-status "$(printf 'D\tPRODUCT-BRIEF.md')" 2>&1)"; _e=$?
 if [ "$_e" = 0 ]; then pass "17.10 变异体（去掉不可豁免清单判据）→ 17.8 夹具变红，证明该判据承重"; else fail "17.10 变异体仍阻断 → 清单判据不承重（exit=${_e}）"; fi
 rm -f "$_MUT2"
+
+# ═══ 17c. K3 delta 复审 FAIL 后的修复验收（P0 计数≠执法 / 归一与大小写 / 清单漏面）═══
+#   判据: 部分豁免下非豁免件必须受上限约束；路径须归一 + 大小写不敏感；变异体必红
+_mkroot() { python3 -c "import sys;n=int(sys.argv[1]);p=sys.argv[2];print(chr(10).join('D\t'+p+'%02d.md'%i for i in range(n)))" "$1" "$2"; }
+_mkrootu() { python3 -c "import sys;n=int(sys.argv[1]);print(chr(10).join('D\tFOO-%02d.MD'%i for i in range(n)))" "$1"; }
+_mkdot() { python3 -c "import sys;n=int(sys.argv[1]);print(chr(10).join('D\t./evil-%02d.md'%i for i in range(n)))" "$1"; }
+OUT="$(bash "$TOOL" --diff-status "$(_mkd 12 docs/archive)
+$(_mkroot 13 ROOT-)" 2>&1)"; _e=$?
+if [ "$_e" = 1 ] && printf '%s' "$OUT" | grep -q "部分豁免"; then pass "17.11 P0 先行红夹具: 12 契约域 + 13 根级 → exit 1（非豁免件受上限约束）"; else fail "17.11 期望 exit=1+部分豁免行，实得 exit=${_e}"; fi
+OUT="$(bash "$TOOL" --diff-status "$(_mkrootu 13)" 2>&1)"; _e=$?
+if [ "$_e" = 1 ]; then pass "17.12 根级判据大小写归一: FOO.MD ×13 → 整体按根级计预算 → exit 1"; else fail "17.12 大写扩展名绕过（exit=${_e}）"; fi
+OUT="$(bash "$TOOL" --diff-status "$(_mkdot 13)" 2>&1)"; _e=$?
+if [ "$_e" = 1 ]; then pass "17.13 路径归一: ./evil.md ×13 → 按根级计预算 → exit 1"; else fail "17.13 前导 ./ 绕过（exit=${_e}）"; fi
+OUT="$(bash "$TOOL" --diff-status "$(printf 'D\t./PRODUCT-BRIEF.md')" 2>&1)"; _e=$?
+if [ "$_e" = 1 ] && printf '%s' "$OUT" | grep -q "不可豁免清单命中"; then pass "17.14 清单不因前导 ./ 或大写绕过（./PRODUCT-BRIEF.md → exit 1）"; else fail "17.14 清单被绕过（exit=${_e}）"; fi
+OUT="$(bash "$TOOL" --diff-status "$(printf 'D\t.claude/agents/architecture-auditor.md')" 2>&1)"; _e=$?
+if [ "$_e" = 1 ]; then pass "17.15 K3 ② 漏面补收: .claude/agents/** 与 .claude/PRODUCT-BRIEF.md 进不可豁免清单"; else fail "17.15 .claude 关键件仍可豁免（exit=${_e}）"; fi
+_MUT3="scripts/control-tower/.mut-s24-cap.sh"; sed 's/^    if \[ "${N_FILES:-0}" -gt "\$MAX_FILES" \]; then$/    if false; then/' "$_TOOLABS" > "$_MUT3"
+OUT="$(bash "$_MUT3" --diff-status "$(_mkd 12 docs/archive)
+$(_mkroot 13 ROOT-)" 2>&1)"; _e=$?
+if [ "$_e" = 0 ]; then pass "17.16 变异体（去掉上限比较）→ 17.11 夹具变红，证明 P0 修复承重"; else fail "17.16 变异体仍阻断 → 上限比较不承重（exit=${_e}）"; fi
+rm -f "$_MUT3"
 echo ""
 echo "═══════════════════════════════════════════════════════════"
 if [ "$FAIL" -eq 0 ]; then

@@ -546,7 +546,7 @@ GOV_EXT_RE='\.(md|json|ya?ml|txt)$'
 #   · **不可豁免清单命中 ⇒ 绝不豁免（exit 1）** —— deny 方向硬编码可接受（同 D1028 DENY 名单）。
 # 效果: 非根级出库域件豁免（不调高 --max-files）；fail-closed（执行体缺失 / 契约 exit2 / JSON schema 漂移 ⇒ 不豁免）。
 # 遗留: 普通化解法（出库声明 + CTO 复核防线）按 K3 L4 建议另卡。
-S24_PROTECTED_RE='^(README\.md|AGENTS\.md|CLAUDE\.md|docs/synova/STATE\.md|PRODUCT-BRIEF\.md|INDEX\.md|START-HERE\.md|CHRONICLE\.md|LOOP\.md|MEMORY\.md|SPEC\.md|TECH_DEBT\.md|VERSION\.md|CHANGELOG\.md|LOOP-ENGINEERING-CHANGELOG\.md|loop-run-log\.md|\.codex/control-tower/VERSION\.md|docs/synova/audit-reports/2026-08-15-D366\.md|docs/synova/audit-reports/2026-08-24-D515\.md|docs/synova/audit-reports/2026-09-20-K3-D854\.md)$'
+S24_PROTECTED_RE='^(README\.md|AGENTS\.md|CLAUDE\.md|docs/synova/STATE\.md|PRODUCT-BRIEF\.md|INDEX\.md|START-HERE\.md|CHRONICLE\.md|LOOP\.md|MEMORY\.md|SPEC\.md|TECH_DEBT\.md|VERSION\.md|CHANGELOG\.md|LOOP-ENGINEERING-CHANGELOG\.md|loop-run-log\.md|\.claude/PRODUCT-BRIEF\.md|\.claude/agents/.*|\.codex/control-tower/VERSION\.md|docs/synova/audit-reports/2026-08-15-D366\.md|docs/synova/audit-reports/2026-08-24-D515\.md|docs/synova/audit-reports/2026-09-20-K3-D854\.md)$'
 S24_ROOT_RE='^[^/]+\.(md|html|markdown|htm)$'
 DOC_CONTRACT_EXEMPT=0
 DOC_CONTRACT_N=0
@@ -563,11 +563,14 @@ while IFS="$TAB" read -r _dc_st _dc_p; do
   if printf '%s' "$_dc_p" | grep -qE "$GOV_PREFIX_RE" && printf '%s' "$_dc_p" | grep -qE "$GOV_EXT_RE"; then continue; fi
   # K3 §④: 拒绝名单路径归 D1028 封堵面（终态「绝不豁免」）→ S2.4 不接管，避免同帧字面矛盾。
   if printf '%s' "$_dc_p" | grep -qE "$OUTBOUND_DENY_RE" || printf '%s' "$_dc_p" | grep -qE "$OUTBOUND_DENY_EXACT_RE"; then continue; fi
+  # K3 delta③: 路径必须先归一（strip 前导 `./`），且清单/根级判据**大小写不敏感** ——
+  #   否则 `FOO.MD`（大写扩展名）与 `./evil.md`（前导 ./）都绕过根级防线与不可豁免清单。
+  _dc_norm="$(printf '%s' "$_dc_p" | sed -E 's#^(\./)+##')"
   case "$_dc_st" in
     D|R)
-      if printf '%s' "$_dc_p" | grep -qE "$S24_PROTECTED_RE"; then
-        DOC_CONTRACT_PROT_N=$((DOC_CONTRACT_PROT_N + 1)); _dc_prot_list="${_dc_prot_list}${_dc_p}${NL}"
-      elif printf '%s' "$_dc_p" | grep -qE "$S24_ROOT_RE"; then
+      if printf '%s' "$_dc_norm" | grep -qiE "$S24_PROTECTED_RE"; then
+        DOC_CONTRACT_PROT_N=$((DOC_CONTRACT_PROT_N + 1)); _dc_prot_list="${_dc_prot_list}${_dc_norm}${NL}"
+      elif printf '%s' "$_dc_norm" | grep -qiE "$S24_ROOT_RE"; then
         DOC_CONTRACT_ROOT_N=$((DOC_CONTRACT_ROOT_N + 1))
       else
         _dc_args+=("$_dc_p")
@@ -597,7 +600,11 @@ try: d=json.load(open(sys.argv[1]))
 except Exception: print("DEGRADED"); sys.exit(0)
 if not isinstance(d, dict) or not isinstance(d.get("gate3_inbound"), dict) or not isinstance(d["gate3_inbound"].get("violations"), list):
     print("DEGRADED"); sys.exit(0)
-v={x.get("file") for x in d["gate3_inbound"]["violations"]}
+v=set()
+for x in d["gate3_inbound"]["violations"]:
+    if not isinstance(x, dict) or not isinstance(x.get("file"), str):
+        print("DEGRADED"); sys.exit(0)
+    v.add(x["file"])
 print(sum(1 for p in sys.stdin.read().split(chr(10)) if p and p not in v))' "$_dc_json" 2>/dev/null)"
     rm -f "$_dc_json"
     if [ "$_dc_rc" -eq 2 ]; then
@@ -681,6 +688,11 @@ FAILED=0
 if [ "$OUTBOUND_EXEMPT" -eq 1 ]; then
   if [ "$OUTBOUND_EXEMPT_SRC" = "doc-contract" ]; then
     echo "  ✅ ① D734 出库豁免生效（S2.4：${DOC_CONTRACT_N} 件非根级契约出库域；根级 ${DOC_CONTRACT_ROOT_N} 件照常计预算）"
+    # K3 delta① P0: 部分豁免下「非豁免件」仍必须受上限约束 —— 计数 ≠ 执法（原缺此比较 ⇒ 12 契约域 + 13 根级 rc=0）。
+    if [ "${N_FILES:-0}" -gt "$MAX_FILES" ]; then
+      echo "  ❌ ① S2.4 部分豁免: 非豁免件 ${N_FILES} 件 > 上限 ${MAX_FILES} —— 拆 PR（禁调高上限）"
+      FAILED=1
+    fi
   else
     echo "  ✅ ① D734 出库豁免生效（$((N_DEL + N_REN)) 件纯删除/重命名，全部落出库白名单）"
   fi
