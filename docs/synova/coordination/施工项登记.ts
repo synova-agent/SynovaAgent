@@ -1629,6 +1629,131 @@ export const constructionItems: readonly ConstructionItem[] = [
     status: 'done',
     source: '施工单.md 3-12（等客户，非技术阻塞）',
   },
+    {
+      // K10 补项（CTO 2026-10-09）——烟测断点族/边界C/规范 v0.1 派生卡，登记以供 Win/K3/验收三读
+      id: 'B-RUNTIME',
+      worker: 'win', batch: '第0批', block: 'K10',
+      title: '运行时断点修复 B1/B4/B5/B8（cron */n 解析·143s 启动阻塞 + healthz 同源 + fsutil + loop-3 口径）',
+      paths: [
+        'src/cron/**',
+        'src/routes/healthz.ts',
+        'src/deploy/data-directory.ts',
+        'tests/cron/**',  // 判据交付物（本卡创建）
+      ],
+      dependsOn: [],
+      // 卡面：Issue #1454（金标准补全版，含 #1448 架构图；CTO 2026-10-09）
+      acceptance: [
+        { run: 'npx vitest run tests/cron/parse-cron-field.test.ts', expectExit: 0 },
+      ],
+      status: 'todo',
+      source: 'PR #1437 断点清单 B1/B4/B5/B8（CTO 验收裁定归 K10）',
+    },
+    {
+      id: 'B3B7',
+      worker: 'win', batch: '第0批', block: 'K10',
+      title: 'B3+B7：Windows 哨兵注册 protocol d: + 45 次重复注册幂等',
+      paths: [
+        'src/sentinel/**',
+        'tests/sentinel/builtin-registration.test.ts',  // 判据交付物（本卡创建）
+      ],
+      dependsOn: [],
+      acceptance: [
+        { run: 'npx vitest run tests/sentinel/builtin-registration.test.ts', expectExit: 0 },
+      ],
+      status: 'todo',
+      source: 'PR #1437 断点清单 B3(P1)/B7(P3)；卡面 Issue #1463',
+    },
+    {
+      id: 'BS-5',
+      worker: 'win', batch: '第1批', block: 'K10',
+      title: 'BS-5 交付打包卫生：Dockerfile 路径 + 三处版本号统一 + sourcemap 泄漏核查',
+      paths: [
+        'Dockerfile',
+        'package.json',
+        'scripts/build/**',
+        'scripts/control-tower/probe-packaging.sh',  // 判据交付物（本卡创建）
+      ],
+      dependsOn: [],
+      acceptance: [
+        { run: 'bash scripts/control-tower/probe-packaging.sh', expectExit: 0 },
+      ],
+      status: 'todo',
+      source: '边界C §3.1 BS-5（rc.1 复核）；卡面 Issue #1464',
+    },
+    {
+      id: 'EXT-WIRE',
+      worker: 'win', batch: '第1批', block: 'K10',
+      title: 'extensions 接线族：4 项生产不可达 + content-registry（type→loader 唯一真源）+ 4 存量 manifest 补漏',
+      paths: [
+        'src/deploy/content-registry.ts',  // 判据交付物（本卡创建·规范 §5.2 修法）
+        'src/init/file-driven-loaders.ts',
+        'extensions/llm-providers/manifest.json',
+        'extensions/business-models/manifest.json',
+        'extensions/engine/manifest.json',
+        'extensions/tools/manifest.json',
+        'extensions/context-strategies/manifest.json',
+        'extensions/implementation-patterns/manifest.json',
+        'extensions/policies/manifest.json',
+        'extensions/security/manifest.json',
+        'scripts/control-tower/probe-content-registry.ts',  // 判据交付物（本卡创建）
+      ],
+      dependsOn: [],
+      sharedWrite: ["0-12: src/init/file-driven-loaders.ts（若 0-12 侧也改装载——须串行）"],
+      acceptance: [
+        { run: 'npx tsx scripts/control-tower/probe-content-registry.ts', expectExit: 0 },
+      ],
+      status: 'todo',
+      source: 'extensions内容面规范-v0.1 §5.1/§5.2/§5.4；卡面 Issue #1465',
+    },
+    {
+      id: 'BC-CLEAN',
+      worker: 'win', batch: '第1批', block: 'K10',
+      title: 'BC 清理族：日期快照移出交付 + 0 字节空文件删 + control-tower 剥离客户交付 + 工作树残留清理',
+      paths: [
+        'app/**',
+        '.gitignore',
+        'scripts/control-tower/probe-delivery-hygiene.sh',  // 判据交付物（本卡创建）
+      ],
+      dependsOn: [],
+      acceptance: [
+        { run: 'bash scripts/control-tower/probe-delivery-hygiene.sh', expectExit: 0 },
+      ],
+      status: 'todo',
+      source: '边界C §3.4 BC-3/4/7/8；卡面 Issue #1466',
+    },
+    {
+      id: 'BS-6',
+      worker: 'win', batch: '第1批', block: 'K10',
+      title: 'BS-6 pre-upload-validator fail-closed 改造【待创始人裁 A/B 后转 todo】',
+      paths: [
+        'src/security/pre-upload-validator.ts',
+        'tests/security/pre-upload-validator.test.ts',  // 判据交付物（本卡创建）
+      ],
+      dependsOn: [],
+      // 🔴 proposal：边界C 原文要求创始人裁「宁漏报不误阻」铁律是否维持（卡面 Issue #1467 已写 A/B 两分支判据）
+      acceptance: [
+        { run: 'npx vitest run tests/security/pre-upload-validator.test.ts', expectExit: 0 },
+      ],
+      status: 'proposal',
+      source: '边界C §3.1 BS-6 + §2.6 三条静默失效路径；卡面 Issue #1467',
+    },
+    {
+      id: 'B2-GRAPH',
+      worker: 'win', batch: '第0批', block: 'K4',
+      title: 'B2（P1）图边查询 no such column: props —— 50 次失败致哨兵 compute 连环降级',
+      paths: [
+        'src/l4/**',
+        'src/store/**',
+        'tests/l4/edge-query.test.ts',  // 判据交付物（本卡创建）
+      ],
+      dependsOn: [],
+      sharedWrite: ["1-10: src/l4/ontology-loader.ts（若同碰——本项只改查询列，桥归 1-10）"],
+      acceptance: [
+        { run: 'npx vitest run tests/l4/edge-query.test.ts', expectExit: 0 },
+      ],
+      status: 'todo',
+      source: 'PR #1437 断点清单 B2(P1)；卡面 Issue #1455',
+    },
 ];
 
 // ════════════════════════════════════════════════════════════════
@@ -1680,7 +1805,7 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
     source: 'T3 §二 K3',
   },
   {
-    id: 'K4', name: '本体·因果边·循环编号', items: ['0-4', '1-8', '1-9', '3-5', '3-11'],
+    id: 'K4', name: '本体·因果边·循环编号', items: ['0-4', '1-8', '1-9', '3-5', '3-11', 'B2-GRAPH'],
     blockAcceptance: [
       // CTO 2026-10-08 裁定（块级 K4）：块判据 = `scripts/control-tower/check-ontology-fields.sh`（exit 0）。
       //   依据：① 该脚本**实测在 main 存在**（本机实跑 ⇒ `✅ 全部 55 件边类型关键字段齐全` / exit 0）
@@ -1736,7 +1861,7 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
     source: 'T3 §二 K9',
   },
   {
-    id: 'K10', name: '平台交付与运行时（DSH）', items: ['3-10'],
+    id: 'K10', name: '平台交付与运行时（DSH）', items: ['3-10', 'B-RUNTIME', 'B3B7', 'BS-5', 'EXT-WIRE', 'BC-CLEAN', 'BS-6'],
     blockAcceptance: [
       { run: 'bash scripts/control-tower/probe-egress.sh', expectExit: 0 },
     ],
