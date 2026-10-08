@@ -1,0 +1,582 @@
+{
+ "batch": "F",
+ "card": "#1457",
+ "as_of": "2026-10-08T17:53:24.268Z",
+ "mainsha": "990c1b488b60b8dd1e0ea11c31534e002e246ac5",
+ "count": 114,
+ "copied": 98,
+ "same": 2,
+ "conflicts": 14,
+ "objects": [
+  {
+   "path": "docs/plans/codex/implementation/SYNOVA-IMPL-运行时卓越-v1-20260704.html",
+   "bytes": 23490,
+   "sha256": "b47d6109fbacfc7c6e5f25efb2cb833ba2568bdee99fbd1752d3f7458b2619e4"
+  },
+  {
+   "path": "docs/plans/codex/jtbd-research/SYNOVA-RESEARCH-JTBD-场景基础画像-20260706.html",
+   "bytes": 47136,
+   "sha256": "3df79cf41f84eeebc8743addeaf4221c569001f165193d9c15d095d0d9710441"
+  },
+  {
+   "path": "docs/plans/codex/jtbd-research/SYNOVA-RESEARCH-JTBD-综合研究报告-20260706.html",
+   "bytes": 23914,
+   "sha256": "0bc36fc7264d38ee5cec540388c99ab0b4245efdd11f1f93ae1dfc2917e86f2d"
+  },
+  {
+   "path": "docs/plans/codex/strategy/SYNOVA-WHITEPAPER-NCI非共识检测白皮书-20260705.html",
+   "bytes": 47237,
+   "sha256": "dc3e13df893b60aec67b77a6241a27eed0fb5a697fa62735f2bb54c280758b24"
+  },
+  {
+   "path": "docs/synova/audit/AUDIT-COMPREHENSIVE-20260604.html",
+   "bytes": 31102,
+   "sha256": "411922a1eeb3c156442c784cf57f409417340314dca5cc97cbc56e85e70e4aec"
+  },
+  {
+   "path": "docs/synova/audit/AUDIT-CORE-COMPETITIVENESS-20260603.html",
+   "bytes": 40939,
+   "sha256": "938aa2787e7ca8afa1e683a34a705ae602d537c90899d2d99be75e6d09d88bbd"
+  },
+  {
+   "path": "docs/synova/audit/AUDIT-TUI-20260607.html",
+   "bytes": 15375,
+   "sha256": "154069a478247cca7d226f1c5bdee5427cb96ced71cf969e16ec0f099e83d191"
+  },
+  {
+   "path": "docs/synova/audit/CRITICAL-ISSUES-QUICK-REF-20260603.html",
+   "bytes": 8667,
+   "sha256": "68c740c9802e8ffc54f58e928a8dc1a340f9885e69602c339ee0272a2be0397b"
+  },
+  {
+   "path": "docs/synova/audit/audit-report-20260605.html",
+   "bytes": 35066,
+   "sha256": "027cfa1815eb3556b55e97df4d22bb3adee55a52b5b9630981d15711e1244b5a"
+  },
+  {
+   "path": "docs/synova/research/JTBD研究-2026-07-06/SYNOVA-RESEARCH-JTBD-FINAL-哨兵compute映射表-20260706.html",
+   "bytes": 53132,
+   "sha256": "c4904b9f02496ab608d32ca9da9c09feaa20ff79677dd0170f2d94ea1f6f9e46"
+  },
+  {
+   "path": "docs/synova/research/JTBD研究-2026-07-06/SYNOVA-RESEARCH-JTBD-FINAL-因果信息需求矩阵-20260706.html",
+   "bytes": 31165,
+   "sha256": "cdd6de24e2adc3dc48ab96877f834286918ffa02992fce0008db6ec064b97df9"
+  },
+  {
+   "path": "docs/synova/research/JTBD研究-2026-07-06/SYNOVA-RESEARCH-JTBD-FINAL-对抗性验证报告-20260706.html",
+   "bytes": 27793,
+   "sha256": "beec1e9a6091e6896c15ce6ee7401c65302ec9b8771d5bfb6f0a66fbb3a7a5be"
+  },
+  {
+   "path": "docs/synova/research/JTBD研究-2026-07-06/SYNOVA-RESEARCH-JTBD-场景基础画像-20260706.html",
+   "bytes": 47136,
+   "sha256": "3df79cf41f84eeebc8743addeaf4221c569001f165193d9c15d095d0d9710441"
+  },
+  {
+   "path": "docs/synova/research/JTBD研究-2026-07-06/SYNOVA-RESEARCH-JTBD-综合研究报告-20260706.html",
+   "bytes": 23914,
+   "sha256": "0bc36fc7264d38ee5cec540388c99ab0b4245efdd11f1f93ae1dfc2917e86f2d"
+  },
+  {
+   "path": "docs/synova/research/archive/2026-05-06/DEVELOPMENT-PLAN-7DAYS.html",
+   "bytes": 43199,
+   "sha256": "e5c7e499e9588d06c3138e190afa2a3109f487d30f29c4d94d979920a143fd7f"
+  },
+  {
+   "path": "docs/synova/research/archive/2026-05-06/L5-数据层现状-DataLayerCurrentState-20260605.html",
+   "bytes": 8908,
+   "sha256": "ebd04382d056115e03d226ddb2db8bbeac1ea28088324d303cf9e043aef01678"
+  },
+  {
+   "path": "docs/synova/research/archive/2026-05-06/SYNOVA-AgentObserver-主流框架适配清单-20260605.html",
+   "bytes": 5995,
+   "sha256": "28bd0785bf039f7cda6268f406176c8012b1c2ac70297e9db549027ee59c6d0d"
+  },
+  {
+   "path": "docs/synova/research/archive/2026-05-06/SYNOVA-Agent可观测性方案-AgentObservabilityFinal-20260605.html",
+   "bytes": 3742,
+   "sha256": "9933ed4fd7f132e25c0fd8ba7e46394064daa851da74bf948c621bb736e7ca6c"
+  },
+  {
+   "path": "docs/synova/research/archive/2026-05-06/SYNOVA-专家工具现状-ExpertToolStatus-20260605.html",
+   "bytes": 15427,
+   "sha256": "c0e36edd52730a4bfa7cda507ea85cfa86b79af410856d92ca74d313253fc739"
+  },
+  {
+   "path": "docs/synova/research/archive/2026-05-06/SYNOVA-全局专业知识库-GlobalPKB-PRD-20260605.html",
+   "bytes": 19356,
+   "sha256": "fa16f3d83805d781bb82ff30006cc94abaeae0dac32b333b29a22b0f96c619a0"
+  },
+  {
+   "path": "docs/synova/research/archive/2026-05-06/SYNOVA-增长导航架构-ArchitectureFinal-20260605.html",
+   "bytes": 19045,
+   "sha256": "55051e4ca587a94055052953871b0b89003f3c49101bc9618476991ef0d4719a"
+  },
+  {
+   "path": "docs/synova/research/archive/2026-05-06/SYNOVA-工具技能生态-ToolSkillEcosystem-20260605.html",
+   "bytes": 6376,
+   "sha256": "74d4eafa60002266feb3adbde836f5b8287774041eb6849f10347950f9005ab5"
+  },
+  {
+   "path": "docs/synova/research/archive/2026-05-06/SYNOVA-工具触发机制-ToolInvocation-20260605.html",
+   "bytes": 8805,
+   "sha256": "86f03e70af05234f28cc421113ce83e15fe9a043c07b709216f80ea5b65c45ea"
+  },
+  {
+   "path": "docs/synova/research/archive/2026-05-06/SYNOVA-待办工单-TodoList-20260605.html",
+   "bytes": 6425,
+   "sha256": "72c7acf3656a50ac286b12ef2c0f6c4198c751c461b8808f1bf59c8126c9940e"
+  },
+  {
+   "path": "docs/synova/research/archive/2026-05-06/SYNOVA-数据安全深化方案-DataSecurityDeepDive-20260605.html",
+   "bytes": 14571,
+   "sha256": "8df65ff258bfd2007c8ac49fb80329124eea18aea192ebc6329f69a2ed805e26"
+  },
+  {
+   "path": "docs/synova/research/archive/2026-05-06/SYNOVA-无限扩展能力-ExtensibilityComplete-20260605.html",
+   "bytes": 18363,
+   "sha256": "d54885cd4cdd1c0317ef8f9cb11d4fd884f89ef26f2d9c7f14300cbea72acdaf"
+  },
+  {
+   "path": "docs/synova/research/archive/2026-05-06/SYNOVA-知识库权限对话-KnowledgeAuthChat-20260605.html",
+   "bytes": 27564,
+   "sha256": "b8e7ee5e13c1a08abd670234f110733aef4fe9794dc1de2364b502beed92a532"
+  },
+  {
+   "path": "docs/synova/research/archive/2026-05-06/TUI-REFACTOR-PLAN-20260607.html",
+   "bytes": 16615,
+   "sha256": "0cf393dd988e33f9cb4072d452e868308da1214a2d2cfb3ca3214789141a67cd"
+  },
+  {
+   "path": "docs/synova/research/archive/2026-05-06/growth-diagnostics/archive/legacy/GROWTH_DIAGNOSTICS_IMPLEMENTATION.html",
+   "bytes": 99488,
+   "sha256": "07320e746018e660bc4cdcd0c32c51109bcbefa6ea09693d3ba23f188483a59d"
+  },
+  {
+   "path": "docs/synova/research/archive/2026-05-06/growth-diagnostics/archive/legacy/GROWTH_DIAGNOSTICS_TECHNICAL_SPEC.html",
+   "bytes": 66796,
+   "sha256": "3c59e0e177d971be20af10e0eef7255752fb182176ece2f824b46cdc31834930"
+  },
+  {
+   "path": "docs/synova/research/archive/2026-05-06/growth-diagnostics/archive/legacy/GROWTH_DIAGNOSTICS_WHITEPAPER.html",
+   "bytes": 174898,
+   "sha256": "c1e4fba9efa2f00e693c7f27d0721637c79aa56ce8760842d9236bf57f1ec73f"
+  },
+  {
+   "path": "docs/synova/research/archive/2026-05-06/growth-diagnostics/archive/raw-research/Synova-三轮研究收敛报告-20260703.html",
+   "bytes": 12129,
+   "sha256": "f4a7053dd0e99aeb0c8b16b1c60872d5ed255049350f2a0862e6b57b6d54205c"
+  },
+  {
+   "path": "docs/synova/research/archive/2026-05-06/growth-diagnostics/archive/raw-research/Synova系统全面自查报告-20260702.html",
+   "bytes": 15891,
+   "sha256": "2449ed77f146fb335f1f9f33ba214e0cbc17fbf7faa17d7b9030bebb58b895c6"
+  },
+  {
+   "path": "docs/synova/research/nci/RESEARCH-ODC-LastStand-20260704.html",
+   "bytes": 42114,
+   "sha256": "93675d826012e35b1ce024d1240ded0c4dbe24bb301fe6c26c49370ef08a979b"
+  },
+  {
+   "path": "docs/synova/research/nci/STM_INDEX_时机成熟度指数-20260704.html",
+   "bytes": 40180,
+   "sha256": "f17855e1e515b6c89440c993e178fddeee73417622051a18c66bb14b94b5c5a8"
+  },
+  {
+   "path": "docs/synova/research/nci/SYNOVA-RESEARCH-NCI五路研究汇合报告-20260705.html",
+   "bytes": 28539,
+   "sha256": "1985785444be40d343e678bf486e5c7d9a25a3eb7fe79df51a43cc076997ff6c"
+  },
+  {
+   "path": "docs/synova/research/nci/SYNOVA-WHITEPAPER-NCI非共识检测白皮书-20260705.html",
+   "bytes": 47237,
+   "sha256": "dc3e13df893b60aec67b77a6241a27eed0fb5a697fa62735f2bb54c280758b24"
+  },
+  {
+   "path": "docs/synova/research/sentinel-compute-ontology-20260710/_build.html",
+   "bytes": 92722,
+   "sha256": "d09d1425b71faa8367edf1c0774fa59e1df7e3e268c7dc83a181eb028aeef9f7"
+  },
+  {
+   "path": "docs/synova/research/员工分享-AI时代如何工作-20260801/演示-创始人控制塔架构图-20260802.html",
+   "bytes": 6196,
+   "sha256": "a1cba2d22c942fd9030ee7d79825f1b37ed0f89eba71fa852431ea47985c5c30"
+  },
+  {
+   "path": "docs/synova/research/哨兵-计算-本体三维映射-20260710/SYNOVA-RESEARCH-路线A-哨兵边双向审计-20260710.html",
+   "bytes": 35271,
+   "sha256": "3764245b326fe3e84c29f938417c15ffedb27747d6f05b914fa2718868493b2a"
+  },
+  {
+   "path": "docs/synova/research/哨兵-计算-本体三维映射-20260710/SYNOVA-RESEARCH-路线B-compute边映射与契约审计-20260710.html",
+   "bytes": 93076,
+   "sha256": "e4695cb36953012fbe1f141726240c9a56324bf113337015e7ec5e797f4cd197"
+  },
+  {
+   "path": "docs/synova/research/哨兵-计算-本体三维映射-20260710/SYNOVA-RESEARCH-路线C-JTBD映射验证-20260710.html",
+   "bytes": 37620,
+   "sha256": "0a547d1841489cafc60311c9ea0a03d0f697fc30813337435b1e7ef0a857b54e"
+  },
+  {
+   "path": "docs/synova/research/权威文档03-哨兵-计算-本体-权威规范-20260710/SYNOVA-RESEARCH-第一章-哨兵规范-20260710.html",
+   "bytes": 28436,
+   "sha256": "6fe1fc53706836853e6bc91e247aa6e47c452dd46efed7648345d3243a7ce9ee"
+  },
+  {
+   "path": "docs/synova/research/权威文档03-哨兵-计算-本体-权威规范-20260710/SYNOVA-RESEARCH-第三至七章-20260710.html",
+   "bytes": 6515,
+   "sha256": "ec6f070698e1991c9941cfa3aa803c7098abd185acb37d48120eeeeba956ca03"
+  },
+  {
+   "path": "docs/synova/research/权威文档03-哨兵-计算-本体-权威规范-20260710/SYNOVA-RESEARCH-第二章-compute规范-20260710.html",
+   "bytes": 18186,
+   "sha256": "05ae5980036abac58c68709839e029fe7a168a9180a42ef3cf388a60777f27ee"
+  },
+  {
+   "path": "docs/synova/research/权威文档04-数据层权威规范-20260710/SYNOVA-RESEARCH-第一章-数据接入标准-20260710.html",
+   "bytes": 9781,
+   "sha256": "35b85bfb4068e7f5b524a63508439e840861c9210b9407e54f1d59970f72e9a2"
+  },
+  {
+   "path": "docs/synova/research/权威文档04-数据层权威规范-20260710/SYNOVA-RESEARCH-第三章-数据质量门禁-20260710.html",
+   "bytes": 7391,
+   "sha256": "e0422d3aa44eca94d1d4e78cc4265c4c72fb08b9ad881b7b11308e11ba6ba42e"
+  },
+  {
+   "path": "docs/synova/research/权威文档04-数据层权威规范-20260710/SYNOVA-RESEARCH-第二章-存储Schema规范-20260710.html",
+   "bytes": 8998,
+   "sha256": "af1d0b97db93aa985d16d7ff04f542e274caece8751bb1e84770947709ca2eda"
+  },
+  {
+   "path": "docs/synova/research/权威文档04-数据层权威规范-20260710/SYNOVA-RESEARCH-第五章-数据管道可观测性-20260710.html",
+   "bytes": 3044,
+   "sha256": "f7c3242add468415dd4e9b9e5390711f9ff9ac4a23413c214f536cfbbfe2b6ff"
+  },
+  {
+   "path": "docs/synova/research/权威文档04-数据层权威规范-20260710/SYNOVA-RESEARCH-第六章-可插拔扩展机制-20260710.html",
+   "bytes": 3203,
+   "sha256": "bee3cef9c3d1286ac723b15ad59df9bcd4df9835bf392581163a748df3047676"
+  },
+  {
+   "path": "docs/synova/research/权威文档04-数据层权威规范-20260710/SYNOVA-RESEARCH-第四章-数据安全边界-20260710.html",
+   "bytes": 3501,
+   "sha256": "e81087214fc5b2e60d1ddd16c7f77a1ce564a584a0564d8caddc6f7e7a4363cf"
+  },
+  {
+   "path": "docs/synova/research/权威文档05-Agent主动交互系统蓝图-20260710/SYNOVA-RESEARCH-Module-1-主动触达引擎-20260710.html",
+   "bytes": 23443,
+   "sha256": "1df3722a2e117e8e0f09d544da928946383e41cd6f394a021fc41e8a69f6168b"
+  },
+  {
+   "path": "docs/synova/research/权威文档05-Agent主动交互系统蓝图-20260710/SYNOVA-RESEARCH-Module-2-对话式因果探索引擎-20260710.html",
+   "bytes": 16402,
+   "sha256": "71fd54d2d9f3c4f3ddf605471d298be6c2fb6c763697c466ff82e8828b8831c6"
+  },
+  {
+   "path": "docs/synova/research/权威文档05-Agent主动交互系统蓝图-20260710/SYNOVA-RESEARCH-Module-3-GA人机协同与反馈闭环-20260710.html",
+   "bytes": 12060,
+   "sha256": "2b1f5c5d79313db01188199aa6fc226e79bb1c30737e52568bf533bff2a3c0fa"
+  },
+  {
+   "path": "docs/synova/research/权威文档05-Agent主动交互系统蓝图-20260710/SYNOVA-RESEARCH-Module-4-Loop循环交互体现-20260710.html",
+   "bytes": 11986,
+   "sha256": "aed5799a14944ae559a56fe743de82769495d38338841bdbbc29f1fe190d73c8"
+  },
+  {
+   "path": "docs/synova/research/权威文档05-Agent主动交互系统蓝图-20260710/SYNOVA-RESEARCH-Module-5-Action闭环设计-20260710.html",
+   "bytes": 11642,
+   "sha256": "3977077d6772ac47bb3a5fccedddba020f6661bdd77b5956a8a1a9d700e31fbb"
+  },
+  {
+   "path": "docs/synova/research/权威文档05-Agent主动交互系统蓝图-20260710/SYNOVA-RESEARCH-Module-6-架构融合与报告形态-20260710.html",
+   "bytes": 18243,
+   "sha256": "6add0940fe3b597f3ed5a1f7f9fa22f43aabd6e52deb31ae8ac76f2ecbe08776"
+  },
+  {
+   "path": "docs/synova/research/权威文档06-测试体系权威规范-20260710/SYNOVA-RESEARCH-L2c-循环基础设施测试规格-20260710.html",
+   "bytes": 10035,
+   "sha256": "667f47d2b43e5600557427e9fea27c92b800f427b91633131716422adbf09a63"
+  },
+  {
+   "path": "docs/synova/research/权威文档06-测试体系权威规范-20260710/SYNOVA-RESEARCH-渐进式覆盖率路线图-20260710.html",
+   "bytes": 5378,
+   "sha256": "6b5006174496859ed4d23e1bcc82c55f40ce2741b7ac144c62e8385fc4d9509d"
+  },
+  {
+   "path": "docs/synova/research/权威文档06-测试体系权威规范-20260710/SYNOVA-RESEARCH-第一章-测试架构总览-20260710.html",
+   "bytes": 13271,
+   "sha256": "6f16ee10cf442b03c5fa8f1f5412720d04442271acaabd8fcdb34d433c2ee0e6"
+  },
+  {
+   "path": "docs/synova/research/权威文档06-测试体系权威规范-20260710/SYNOVA-RESEARCH-第七章-Pinpoint记录模式-20260710.html",
+   "bytes": 4080,
+   "sha256": "45542e1875d92a84f79b6d3fef4c8fc62e3db7c75364e5ee921995f3d4d59d0a"
+  },
+  {
+   "path": "docs/synova/research/权威文档06-测试体系权威规范-20260710/SYNOVA-RESEARCH-第三章-集成测试规范-20260710.html",
+   "bytes": 10041,
+   "sha256": "a4f26ebabebc0cb6ca4843cb090a0cd828883761deaf64f6dd522d90b167413c"
+  },
+  {
+   "path": "docs/synova/research/权威文档06-测试体系权威规范-20260710/SYNOVA-RESEARCH-第三章附录完整-专家推理验证集-32用例-20260710.html",
+   "bytes": 25982,
+   "sha256": "b1b93f2bf08af9628def687fcb09f3f721ce2c6ab0f3a21a9fc4c03090ec1270"
+  },
+  {
+   "path": "docs/synova/research/权威文档06-测试体系权威规范-20260710/SYNOVA-RESEARCH-第二章-契约测试规范-20260710.html",
+   "bytes": 8708,
+   "sha256": "17a350e4155871d72c1bdde69cb86d83653118dec7793e181268dcba100728b4"
+  },
+  {
+   "path": "docs/synova/research/权威文档06-测试体系权威规范-20260710/SYNOVA-RESEARCH-第二章附录-P0批次契约测试蓝图-20260710.html",
+   "bytes": 12949,
+   "sha256": "db5e6ab85007b064f99a543a313c32aedd38e1e9c148fed191d38fc47735b954"
+  },
+  {
+   "path": "docs/synova/research/权威文档06-测试体系权威规范-20260710/SYNOVA-RESEARCH-第五章-回归基准体系-20260710.html",
+   "bytes": 3198,
+   "sha256": "7d4d7ad2dd6f7498b2743fc614ce084ee8e92e0773f9c59ca324be1be611edf6"
+  },
+  {
+   "path": "docs/synova/research/权威文档06-测试体系权威规范-20260710/SYNOVA-RESEARCH-第八章-G1G5融合-20260710.html",
+   "bytes": 4418,
+   "sha256": "b28088d1a843142d40678fb7c57f2817c2620a76ec0f236dcd8b0fc376fd8534"
+  },
+  {
+   "path": "docs/synova/research/权威文档06-测试体系权威规范-20260710/SYNOVA-RESEARCH-第六章-GA验证层-20260710.html",
+   "bytes": 3708,
+   "sha256": "d31a031e9960c235aecb61e0267130faa5451cc6fa6395cb04e0894c87bfba99"
+  },
+  {
+   "path": "docs/synova/research/权威文档06-测试体系权威规范-20260710/SYNOVA-RESEARCH-第四章-因果回归测试-20260710.html",
+   "bytes": 5912,
+   "sha256": "b73747745c1f17a4ee8fc5b1ba3f41bf4fa3b2cb406854db144a364e9a4a846d"
+  },
+  {
+   "path": "docs/synova/research/权威文档07-Agent工程能力对标-20260710/SYNOVA-RESEARCH-路线1-Agent核心能力对标-20260710.html",
+   "bytes": 37228,
+   "sha256": "f640e66b618b42422a6cb8161c18df6ad7bd6ea8345f980a8d62856c32066286"
+  },
+  {
+   "path": "docs/synova/research/权威文档07-Agent工程能力对标-20260710/SYNOVA-RESEARCH-路线2-循环与Agent架构设计-20260710.html",
+   "bytes": 58472,
+   "sha256": "bedc082e35ce3acce07d0ede1c3507f6dfd18950107056d87982e088e7302965"
+  },
+  {
+   "path": "docs/synova/research/权威文档07-Agent工程能力对标-20260710/SYNOVA-RESEARCH-路线3-安全测试与质量-20260710.html",
+   "bytes": 3024,
+   "sha256": "7ca2c27376dfe8bf275bb600238b520bc86ce045f3c253927a3433fc468f3393"
+  },
+  {
+   "path": "docs/synova/research/权威文档07-Agent工程能力对标-20260710/SYNOVA-RESEARCH-路线4-运维性能与规模化-20260710.html",
+   "bytes": 21973,
+   "sha256": "7e8f5a43c3f643598d57aca8a15390632e472ae62413ba8c4428170becaa23cf"
+  },
+  {
+   "path": "docs/synova/research/权威文档07-Agent工程能力对标-20260710/SYNOVA-RESEARCH-路线5-多模态与决策质量-20260710.html",
+   "bytes": 2552,
+   "sha256": "45b7d2b7ca6516448fcddb6bfb711a0c2ea8f0dede69975256ad61f86056faa0"
+  },
+  {
+   "path": "docs/synova/research/权威文档08-安全隐私权限权威规范-20260712/SYNOVA-RESEARCH-第一章-安全架构总览-20260712.html",
+   "bytes": 11830,
+   "sha256": "1180d2bbe9d30d4d56b6c7bb5d5c4bdefecbe8d8b67b2233f5494db8277f6f13"
+  },
+  {
+   "path": "docs/synova/research/权威文档08-安全隐私权限权威规范-20260712/SYNOVA-RESEARCH-第七章-代码对齐与实施路线-20260712.html",
+   "bytes": 10180,
+   "sha256": "1987f9c5e5e362f608ceaaa44e077f7b4d3034f97a9c1f390512c8b84af7839c"
+  },
+  {
+   "path": "docs/synova/research/权威文档08-安全隐私权限权威规范-20260712/SYNOVA-RESEARCH-第三章-权限体系-20260712.html",
+   "bytes": 12006,
+   "sha256": "805729df63003019342c8fc53702360a5377c7b7aebee86755aecd22b45c777a"
+  },
+  {
+   "path": "docs/synova/research/权威文档08-安全隐私权限权威规范-20260712/SYNOVA-RESEARCH-第二章-数据分类与脱敏-20260712.html",
+   "bytes": 4453,
+   "sha256": "ecab0e554eb2d1bbbfecf9647a8609f1a88b84551bf2821e8989374b9ea13f7e"
+  },
+  {
+   "path": "docs/synova/research/权威文档08-安全隐私权限权威规范-20260712/SYNOVA-RESEARCH-第五章-对抗性鲁棒性-20260712.html",
+   "bytes": 4460,
+   "sha256": "97a42abaa273d2085c0e9b372ec037aca63560fc39350901732d405ede8facef"
+  },
+  {
+   "path": "docs/synova/research/权威文档08-安全隐私权限权威规范-20260712/SYNOVA-RESEARCH-第六章-知识基座隐私门禁-20260712.html",
+   "bytes": 4173,
+   "sha256": "49d772dc92b151c0e3a507a0b19acf9a19f01037be261c13ab7845432f334b8f"
+  },
+  {
+   "path": "docs/synova/research/权威文档08-安全隐私权限权威规范-20260712/SYNOVA-RESEARCH-第四章-审计与合规-20260712.html",
+   "bytes": 5243,
+   "sha256": "603f2a7f2d28f478f445f8713b379a250d9be57b1503eb1d146da501897db009"
+  },
+  {
+   "path": "docs/synova/research/权威文档09-部署运维权威规范-20260713/SYNOVA-RESEARCH-第一章-部署架构-20260713.html",
+   "bytes": 6210,
+   "sha256": "0ed2cb3ffd2432c9622532162ea35a02206b480e7bdcf8bc0a15c747e5edc66a"
+  },
+  {
+   "path": "docs/synova/research/权威文档09-部署运维权威规范-20260713/SYNOVA-RESEARCH-第三章-监控与告警-20260713.html",
+   "bytes": 6817,
+   "sha256": "f0d6f06f99e2972061c8414c714be291190ebc597eabd6f4b6cb83fdfd12d499"
+  },
+  {
+   "path": "docs/synova/research/权威文档09-部署运维权威规范-20260713/SYNOVA-RESEARCH-第二章-静默升级与版本回滚-20260713.html",
+   "bytes": 5433,
+   "sha256": "aa0207fe1658883b2757acd7bb1bc764cb1e53206741915fcfaa56260fb8f3b0"
+  },
+  {
+   "path": "docs/synova/research/权威文档09-部署运维权威规范-20260713/SYNOVA-RESEARCH-第五章-CI-CD流水线-20260713.html",
+   "bytes": 4843,
+   "sha256": "85a26f0bb534d02c670bdf94312cb1276e2396ee99739874e74f55df20705c27"
+  },
+  {
+   "path": "docs/synova/research/权威文档09-部署运维权威规范-20260713/SYNOVA-RESEARCH-第六章-多客户规模化运维-20260713.html",
+   "bytes": 5721,
+   "sha256": "2ec86583baf7f8a5d0588fac53d98a00dad677ee81d2f822497626b0f72a2c29"
+  },
+  {
+   "path": "docs/synova/research/权威文档09-部署运维权威规范-20260713/SYNOVA-RESEARCH-第四章-备份与灾难恢复-20260713.html",
+   "bytes": 5144,
+   "sha256": "08ad03dc0eaa055f3d1012e1ccf0aced4b57abfe4354468b72936683663e16bf"
+  },
+  {
+   "path": "docs/synova/research/权威文档10-专家提示词工程规范-20260713/SYNOVA-RESEARCH-第一章-专家角色定义规范-20260714.html",
+   "bytes": 9938,
+   "sha256": "cced56a1ba25b3af5901cf1080fb758c57bc0567e696eb773afcf0ac233b8877"
+  },
+  {
+   "path": "docs/synova/research/权威文档10-专家提示词工程规范-20260713/SYNOVA-RESEARCH-第三章-推理链与交叉验证-20260714.html",
+   "bytes": 4885,
+   "sha256": "1fd94d2faeb1a389752bea27a5261000ffe54c9716dbbf137521308afdd1172c"
+  },
+  {
+   "path": "docs/synova/research/权威文档10-专家提示词工程规范-20260713/SYNOVA-RESEARCH-第二章-模块化提示词组装-20260714.html",
+   "bytes": 7069,
+   "sha256": "3bcf6e6d593640ef51fa7d1608a0f1dfe307cef01676863b997e8f8f70889213"
+  },
+  {
+   "path": "docs/synova/research/权威文档10-专家提示词工程规范-20260713/SYNOVA-RESEARCH-第五章-Tone与行为约束-20260714.html",
+   "bytes": 4199,
+   "sha256": "b902687e7dc56cda99e96365be6114a67c3c35b2dd96de2df8b48786c8d5fcee"
+  },
+  {
+   "path": "docs/synova/research/权威文档10-专家提示词工程规范-20260713/SYNOVA-RESEARCH-第六章-代码对齐与双向映射矩阵-20260714.html",
+   "bytes": 7333,
+   "sha256": "a1bc3f1f1fcc44ffd512a54070d72092837bba9404a9474a73c746f5e4bfe7b4"
+  },
+  {
+   "path": "docs/synova/research/权威文档10-专家提示词工程规范-20260713/SYNOVA-RESEARCH-第四章-数据冲突与边界识别-20260714.html",
+   "bytes": 4328,
+   "sha256": "71e859c0b3111ac52a7658c752ddf0a6cdac364dceca0a03494bc13a960c70cf"
+  },
+  {
+   "path": "docs/synova/research/权威文档11-管理经济学权威规范-20260714/SYNOVA-RESEARCH-第一章-ME概念42边语义映射-20260715.html",
+   "bytes": 7496,
+   "sha256": "5726bc9ccee1d21b7aeef52c570798e95d4c9ec4ceaed104301cb00bd773add8"
+  },
+  {
+   "path": "docs/synova/research/权威文档11-管理经济学权威规范-20260714/SYNOVA-RESEARCH-第三章-ME哨兵规范-20260715.html",
+   "bytes": 5084,
+   "sha256": "882ff0ea8f0f97a34edb5aae29970e8222d8d8ed98151f8e4989dcb14774c96a"
+  },
+  {
+   "path": "docs/synova/research/权威文档11-管理经济学权威规范-20260714/SYNOVA-RESEARCH-第二章-ME-compute完整契约-20260715.html",
+   "bytes": 8308,
+   "sha256": "f133fa7e89884ed58c8d542116a7b1aa090bf0b77c0065ba3166fff9ba897118"
+  },
+  {
+   "path": "docs/synova/research/权威文档11-管理经济学权威规范-20260714/SYNOVA-RESEARCH-第五章-信息差审计矩阵-20260715.html",
+   "bytes": 7166,
+   "sha256": "9a0c36d9ce024d67204de878e73f9f05ec81cb3575a651c8285d3e80907fb873"
+  },
+  {
+   "path": "docs/synova/research/权威文档11-管理经济学权威规范-20260714/SYNOVA-RESEARCH-第六章-路线图与因果验证-20260715.html",
+   "bytes": 5227,
+   "sha256": "1f6b2e52ca25ed75e35c2d46f668d843061236f75ee618c882aea3ae50f20c3d"
+  },
+  {
+   "path": "docs/synova/research/权威文档11-管理经济学权威规范-20260714/SYNOVA-RESEARCH-第四章-ME专家知识注入-20260715.html",
+   "bytes": 4177,
+   "sha256": "c87d735a07f36650bfbc178aeeb77a3238c53a28cb6bf82a2fab483033e4f345"
+  },
+  {
+   "path": "docs/synova/research/管理经济学融入研究-20260708/SYNOVA-RESEARCH-ME-补充吸收方案-20260709.html",
+   "bytes": 14234,
+   "sha256": "b5e2e477d4866ca6acafdb73947a4ef48dfdc99947e088f1a3098d302296d589"
+  },
+  {
+   "path": "docs/synova/research/管理经济学融入研究-20260708/SYNOVA-RESEARCH-ME-路线A-学科产品场景映射-20260708.html",
+   "bytes": 44726,
+   "sha256": "031abe51c5057300040a0fd5331d38353939912671fbcd0974bf42a55c0f25de"
+  },
+  {
+   "path": "docs/synova/research/管理经济学融入研究-20260708/SYNOVA-RESEARCH-ME-路线B-模块架构归位-20260708.html",
+   "bytes": 10672,
+   "sha256": "cd1e4c09c9b05e3068aaff8c6256e02d5c70923ab1588c6918239c0c0411a9f0"
+  },
+  {
+   "path": "docs/synova/research/管理经济学融入研究-20260708/SYNOVA-RESEARCH-ME-路线C-理论融合矩阵-20260708.html",
+   "bytes": 51334,
+   "sha256": "3eadf9469ff688bf1738dc67d5c5eaa5f611b9992d9fb9d4cc8e43025c1ef9df"
+  },
+  {
+   "path": "docs/synova/research/管理经济学融入研究-20260708/SYNOVA-RESEARCH-ME-路线D-竞争定位强化-20260708.html",
+   "bytes": 49114,
+   "sha256": "560713cba534c17452b22929edbb9720e8ab065043b3e2622c671d7f9d59e84c"
+  },
+  {
+   "path": "docs/synova/research/管理经济学融入研究-20260708/SYNOVA-RESEARCH-ME-路线E-工程可行性验证-20260708.html",
+   "bytes": 51136,
+   "sha256": "ccf46d4d94ea4de4a84766ed9a394902bddad6ebf07e0fd5e146c18b15bf6695"
+  },
+  {
+   "path": "docs/synova/research/管理经济学融入研究-20260708/SYNOVA-RESEARCH-ME-路线F-定价策略吸收评估-20260709.html",
+   "bytes": 55007,
+   "sha256": "4c474aa4b3e56667b62503a2b69a76f2245a9eaab158e5ecb563fb216814eab3"
+  },
+  {
+   "path": "docs/synova/research/管理经济学融入研究-20260708/SYNOVA-RESEARCH-ME-路线G-统计工具吸收评估-20260709.html",
+   "bytes": 7804,
+   "sha256": "5b8b617534e82999666b34f3787fab510f0a86ce285f9dc2aa9e90e13be65461"
+  },
+  {
+   "path": "docs/synova/research/管理经济学融入研究-20260708/SYNOVA-RESEARCH-ME-路线H-缺口综合与CSF存活因素-20260709.html",
+   "bytes": 41969,
+   "sha256": "d4639f4f016465dbb64ac0723f1ff6598b232198174391b4ea50458ca579ad6b"
+  },
+  {
+   "path": "docs/synova/research/管理经济学融入研究-20260708/SYNOVA-RESEARCH-管理经济学融入Synova体系-最终方案-20260708.html",
+   "bytes": 38020,
+   "sha256": "02ba8915060313e849cb8c128215c0072aab3effcdd860393e57a3a1a36762c9"
+  },
+  {
+   "path": "MASTER-REPORT-审计架构模块化综合报告-20260603.html",
+   "bytes": 113523,
+   "sha256": "159d721ab18971731fb70b7d0a63e3df8bf7c0fd11cbdf51ebd524547c47abe4"
+  },
+  {
+   "path": "TUI-审计报告-20260607.html",
+   "bytes": 34039,
+   "sha256": "e35f7903ec4409fa6e9d5c9a49c9a48bd506918376169e09ffa3ba5b9acc9df6"
+  },
+  {
+   "path": "app/synova-founder-dashboard-20260801-144402.html",
+   "bytes": 171159,
+   "sha256": "adadb65153160510f536bfe205ee7d38e39eb5026cde179e9928a1dbf9c71db2"
+  },
+  {
+   "path": "app/synova-founder-dashboard-20260801-173351.html",
+   "bytes": 183375,
+   "sha256": "ce63c8a05872507ad2db005c1e0411f8cc3c6d2cf87814a0c33cbc7b1f927de2"
+  },
+  {
+   "path": "app/synova-founder-dashboard-20260801-174819.html",
+   "bytes": 183390,
+   "sha256": "33fa88c35e05ed4df2be570c9a328fee0fc979b9a07ac53506e580d5b934e5b6"
+  }
+ ]
+}

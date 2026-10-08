@@ -1,0 +1,10 @@
+{
+ "evidence_id": "1457/A-02",
+ "task": "Batch F 承接 + 1:1 对账",
+ "archive_commit": "44fae1614b",
+ "frozen": 114,
+ "newly_copied": 98,
+ "preexisting_identical": 2,
+ "conflicts_not_overwritten": 14,
+ "note": "承接先于移出（D1050-B2 范式）；冲突件 fail-closed 不覆盖、不入本批删除"
+}
