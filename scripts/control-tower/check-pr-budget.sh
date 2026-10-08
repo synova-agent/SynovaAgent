@@ -416,6 +416,7 @@ OUTBOUND_ALLOW_RE='^(\.claude/task-briefs/|docs/plans/|docs/synova/coordination/
 OUTBOUND_DENY_RE='^(src/|scripts/|\.github/|tests/|extensions/|expert/)'
 OUTBOUND_DENY_EXACT_RE='^docs/synova/coordination/(ownership\.yaml|AUDIT-PROTOCOL\.md)$'
 OUTBOUND_EXEMPT=0
+OUTBOUND_EXEMPT_SRC=""   # allowlist(D1028) | doc-contract(S2.4)
 OUTBOUND_DENY_HARD=0
 OUTSIDE_N=0
 OUTSIDE_LIST=""
@@ -459,6 +460,7 @@ done < <(printf '%s\n' "$ALL_TAGGED")
 if [ "$ALL_N" -gt 0 ]; then
   if [ "$AM_N" -eq 0 ] && [ "$OUTSIDE_N" -eq 0 ] && [ "$DENY_N" -eq 0 ]; then
     OUTBOUND_EXEMPT=1
+    OUTBOUND_EXEMPT_SRC="allowlist"
   else
     echo "  ℹ️  出库豁免不适用（D1028 路径级豁免未生效）:"
     if [ "$AM_N" -eq 0 ]; then
@@ -539,6 +541,98 @@ fi
 #     故保留目录级豁免 + 上述两条约束。两者不是"口径不一致"，是不同语义。
 GOV_PREFIX_RE='^(\.claude/task-briefs/|task-state/|memory/notes/|docs/plans/|docs/synova/product-lines/evidence/)'
 GOV_EXT_RE='\.(md|json|ya?ml|txt)$'
+# ── S2.4 文档契约出库豁免（创始人 2026-10-07 裁决；K3 #1299 CONDITIONAL PASS 后收紧）──
+# 判据源 = docs/synova/DOC-CONTRACT.md（机器可读块）→ 执行体 check-doc-contract.sh 判定。
+#   a' 剔除 D860 治理产物后，**非根级**剩余变更全部为 D/R；
+#   b' 每个非根级剩余路径都被判为闸 3 违规（= 契约 §7 出库域）；
+#   c' **零命中「不可豁免清单」**（A 层四件 + 根级真相/导航件 + 测试夹具点名件）。
+# 收紧两点（K3 §② P1 与 L4 缺口）:
+#   · **根级件一律不豁免**（root-level *.md/*.html 照常计预算）—— 根级 = 仓库门面/真相源区；
+#     类级堵住「任何未入白名单的、本应存在的文档被零预算信号删除」。
+#   · **不可豁免清单命中 ⇒ 绝不豁免（exit 1）** —— deny 方向硬编码可接受（同 D1028 DENY 名单）。
+# 效果: 非根级出库域件豁免（不调高 --max-files）；fail-closed（执行体缺失 / 契约 exit2 / JSON schema 漂移 ⇒ 不豁免）。
+# 遗留: 普通化解法（出库声明 + CTO 复核防线）按 K3 L4 建议另卡。
+S24_PROTECTED_RE='^(README\.md|AGENTS\.md|CLAUDE\.md|docs/synova/STATE\.md|PRODUCT-BRIEF\.md|INDEX\.md|START-HERE\.md|CHRONICLE\.md|LOOP\.md|MEMORY\.md|SPEC\.md|TECH_DEBT\.md|VERSION\.md|CHANGELOG\.md|LOOP-ENGINEERING-CHANGELOG\.md|loop-run-log\.md|\.claude/PRODUCT-BRIEF\.md|\.claude/agents/.*|\.codex/control-tower/VERSION\.md|docs/synova/audit-reports/2026-08-15-D366\.md|docs/synova/audit-reports/2026-08-24-D515\.md|docs/synova/audit-reports/2026-09-20-K3-D854\.md)$'
+S24_ROOT_RE='^[^/]+\.(md|html|markdown|htm)$'
+DOC_CONTRACT_EXEMPT=0
+DOC_CONTRACT_N=0
+DOC_CONTRACT_ROOT_N=0
+DOC_CONTRACT_PROT_N=0
+DOC_CONTRACT_MISSING_N=0
+DOC_CONTRACT_NOTE=""
+_dc_repo="$(cd "$SCRIPT_DIR/../.." 2>/dev/null && pwd)"
+_dc_am=0
+_dc_args=()
+_dc_prot_list=""
+while IFS="$TAB" read -r _dc_st _dc_p; do
+  [ -z "$_dc_p" ] && continue
+  if printf '%s' "$_dc_p" | grep -qE "$GOV_PREFIX_RE" && printf '%s' "$_dc_p" | grep -qE "$GOV_EXT_RE"; then continue; fi
+  # K3 §④: 拒绝名单路径归 D1028 封堵面（终态「绝不豁免」）→ S2.4 不接管，避免同帧字面矛盾。
+  if printf '%s' "$_dc_p" | grep -qE "$OUTBOUND_DENY_RE" || printf '%s' "$_dc_p" | grep -qE "$OUTBOUND_DENY_EXACT_RE"; then continue; fi
+  # K3 delta③: 路径必须先归一（strip 前导 `./`），且清单/根级判据**大小写不敏感** ——
+  #   否则 `FOO.MD`（大写扩展名）与 `./evil.md`（前导 ./）都绕过根级防线与不可豁免清单。
+  _dc_norm="$(printf '%s' "$_dc_p" | sed -E 's#^(\./)+##')"
+  case "$_dc_st" in
+    D|R)
+      if printf '%s' "$_dc_norm" | grep -qiE "$S24_PROTECTED_RE"; then
+        DOC_CONTRACT_PROT_N=$((DOC_CONTRACT_PROT_N + 1)); _dc_prot_list="${_dc_prot_list}${_dc_norm}${NL}"
+      elif printf '%s' "$_dc_norm" | grep -qiE "$S24_ROOT_RE"; then
+        DOC_CONTRACT_ROOT_N=$((DOC_CONTRACT_ROOT_N + 1))
+      else
+        _dc_args+=("$_dc_p")
+      fi ;;
+    *) _dc_am=$((_dc_am + 1)) ;;
+  esac
+done < <(printf '%s\n' "$ALL_TAGGED")
+DOC_CONTRACT_N="${#_dc_args[@]}"
+if [ "$DOC_CONTRACT_PROT_N" -gt 0 ]; then
+  DOC_CONTRACT_NOTE="c' 命中不可豁免清单 ${DOC_CONTRACT_PROT_N} 件 —— 绝不豁免（须 CTO 批）"
+  OUTBOUND_EXEMPT=0; OUTBOUND_EXEMPT_SRC=""; OUTBOUND_DENY_HARD=1
+  echo "  ❌ S2.4 不可豁免清单命中 ${DOC_CONTRACT_PROT_N} 件（A 层/真相源/测试夹具 —— 删它须 CTO 批）:"
+  printf '%s\n' "$_dc_prot_list" | sed '/^$/d' | sed 's/^/         - /'
+elif [ "$ALL_N" -gt 0 ] && [ "$OUTBOUND_EXEMPT" -eq 0 ]; then
+  if [ "$_dc_am" -ne 0 ]; then
+    DOC_CONTRACT_NOTE="a' 不满足: 剔除治理产物后仍有 ${_dc_am} 件增/改"
+  elif [ "$DOC_CONTRACT_N" -eq 0 ]; then
+    DOC_CONTRACT_NOTE="a' 不满足: 无非根级 D/R 路径可判"
+  elif [ -z "$PYBIN" ] || [ ! -x "$_dc_repo/scripts/control-tower/check-doc-contract.sh" ]; then
+    DOC_CONTRACT_NOTE="b' 无法判定: 契约执行体或 python 不可用（fail-closed，不豁免）"
+  else
+    _dc_json="$(mktemp)"
+    _dc_rc=0
+    bash "$_dc_repo/scripts/control-tower/check-doc-contract.sh" --repo-root "$_dc_repo" --files "${_dc_args[@]}" --json > "$_dc_json" 2>/dev/null || _dc_rc=$?
+    _dc_missing="$(printf '%s\n' "${_dc_args[@]}" | "$PYBIN" -c 'import json,sys
+try: d=json.load(open(sys.argv[1]))
+except Exception: print("DEGRADED"); sys.exit(0)
+if not isinstance(d, dict) or not isinstance(d.get("gate3_inbound"), dict) or not isinstance(d["gate3_inbound"].get("violations"), list):
+    print("DEGRADED"); sys.exit(0)
+v=set()
+for x in d["gate3_inbound"]["violations"]:
+    if not isinstance(x, dict) or not isinstance(x.get("file"), str):
+        print("DEGRADED"); sys.exit(0)
+    v.add(x["file"])
+print(sum(1 for p in sys.stdin.read().split(chr(10)) if p and p not in v))' "$_dc_json" 2>/dev/null)"
+    rm -f "$_dc_json"
+    if [ "$_dc_rc" -eq 2 ]; then
+      DOC_CONTRACT_NOTE="b' 无法判定: 契约件不可读（degraded，fail-closed）"
+    else
+      case "$_dc_missing" in
+        ""|DEGRADED) DOC_CONTRACT_NOTE="b' 无法判定: 输出 schema 不可解析/已漂移（fail-closed，不豁免）" ;;
+        0) DOC_CONTRACT_EXEMPT=1; OUTBOUND_EXEMPT=1; OUTBOUND_EXEMPT_SRC="doc-contract" ;;
+        *) DOC_CONTRACT_MISSING_N="$_dc_missing"; DOC_CONTRACT_NOTE="b' 不满足: ${_dc_missing} 件不在契约出库域（闸 3 未判违规）" ;;
+      esac
+    fi
+  fi
+fi
+if [ "$DOC_CONTRACT_EXEMPT" -eq 1 ]; then
+  echo "  ✅ S2.4 文档契约出库豁免生效（${DOC_CONTRACT_N} 件非根级契约出库域 + 纯删除/重命名）"
+  echo "     判据源: docs/synova/DOC-CONTRACT.md（机器可读块）→ check-doc-contract.sh --files"
+  if [ "$DOC_CONTRACT_ROOT_N" -gt 0 ]; then
+    echo "     ⚠️  根级件 ${DOC_CONTRACT_ROOT_N} 件**不豁免**（根级=门面/真相源区）→ 照常计入预算"
+  fi
+elif [ -n "$DOC_CONTRACT_NOTE" ] && [ "$DOC_CONTRACT_PROT_N" -eq 0 ]; then
+  echo "  ℹ️  文档契约出库豁免未生效（S2.4）：${DOC_CONTRACT_NOTE}"
+fi
 EVIDENCE_PREFIX='docs/synova/product-lines/evidence/'
 COUNTED=""
 GOV_OTHER=""
@@ -588,13 +682,26 @@ if [ "$OUTBOUND_EXEMPT" -eq 1 ]; then
   # 豁免生效 → COUNT_PATHS 全不计入（含 D860 治理产物口径不再适用）
   N_FILES=0
   COUNTED=""
+  if [ "$OUTBOUND_EXEMPT_SRC" = "doc-contract" ]; then
+    # S2.4 部分豁免（K3 §② 收紧）: 根级件不豁免 → 照常计预算
+    N_FILES="$DOC_CONTRACT_ROOT_N"
+  fi
 fi
 
 FAILED=0
 
 # ── ① 变更文件数 ≤ 上限（或 D1028 出库豁免生效 / 旁路封堵 FAIL）──
 if [ "$OUTBOUND_EXEMPT" -eq 1 ]; then
-  echo "  ✅ ① D734 出库豁免生效（$((N_DEL + N_REN)) 件纯删除/重命名，全部落出库白名单）"
+  if [ "$OUTBOUND_EXEMPT_SRC" = "doc-contract" ]; then
+    echo "  ✅ ① D734 出库豁免生效（S2.4：${DOC_CONTRACT_N} 件非根级契约出库域；根级 ${DOC_CONTRACT_ROOT_N} 件照常计预算）"
+    # K3 delta① P0: 部分豁免下「非豁免件」仍必须受上限约束 —— 计数 ≠ 执法（原缺此比较 ⇒ 12 契约域 + 13 根级 rc=0）。
+    if [ "${N_FILES:-0}" -gt "$MAX_FILES" ]; then
+      echo "  ❌ ① S2.4 部分豁免: 非豁免件 ${N_FILES} 件 > 上限 ${MAX_FILES} —— 拆 PR（禁调高上限）"
+      FAILED=1
+    fi
+  else
+    echo "  ✅ ① D734 出库豁免生效（$((N_DEL + N_REN)) 件纯删除/重命名，全部落出库白名单）"
+  fi
   # §Q2.S4 裁定: 无 `## 出库声明` 时豁免仍生效，只给 ⚠️（本脚本读不到 PR 正文，禁做硬条件）
   echo "  ⚠️  未读到「## 出库声明」（pre-commit 读不到 PR 正文）—— 请在 PR 描述补「## 出库声明」批次段，合并级对账见 D708"
 elif [ "$N_FILES" -le "$MAX_FILES" ]; then
@@ -612,6 +719,10 @@ if [ "$DECL_EFFECTIVE" -eq 1 ]; then
   printf '%s\n' "$DR_DENY_RE_LIST" | awk -v ind="      " -v cap=30 'NF { if (++i <= cap) print ind "- " $0 } END { if (i > cap) print ind "… 其余 " (i - cap) " 件省略（共 " i " 件）" }'
 fi
 if [ "$OUTBOUND_DENY_HARD" -eq 1 ]; then
+  if [ "$DOC_CONTRACT_PROT_N" -gt 0 ]; then
+    echo "  ❌ ① S2.4 不可豁免清单命中 ${DOC_CONTRACT_PROT_N} 件（A 层/真相源/测试夹具）—— 绝不豁免（exit 1，须 CTO 批）"
+  fi
+  if [ "$DENY_N" -gt 0 ]; then
   echo "  ❌ ① D1028 旁路封堵: 纯删除/重命名命中 ❌ 拒绝名单 ${DENY_N} 件 —— 绝不豁免（exit 1）"
   if [ "$DR_DENY_EXACT_N" -gt 0 ]; then   # 逐条点名（不受声明放行者）
     echo "      ⛔ 其中 DENY_EXACT ${DR_DENY_EXACT_N} 件**不受「## 死代码清理声明」放行**（CTO 裁定: 删治理文件 ≠ 铁律 37 死代码清理；要动须独立卡 + CTO 批复）:"
@@ -654,6 +765,7 @@ if [ "$OUTBOUND_DENY_HARD" -eq 1 ]; then
     printf '%s\n' "$DECL_MISSING_LIST" | awk -v ind="         " -v cap=30 'NF { if (++i <= cap) print ind $0 } END { if (i > cap) print ind "… 其余 " (i - cap) " 件省略（共 " i " 件）" }'
   fi
   echo "      注意: 声明生效只解除旁路封堵，**这些路径照常计入 ≤ ${MAX_FILES} 件预算**（放行 ≠ 豁免）"
+  fi   # end: DENY_N > 0（S2.4 清单命中时该段整体跳过，避免「0 件」噪音）
   FAILED=1
 fi
 
