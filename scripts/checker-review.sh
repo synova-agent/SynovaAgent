@@ -29,7 +29,9 @@ echo ""
 # 获取本次变更的文件
 echo "--- 变更文件 ---"
 CHANGED=$(git diff --name-only HEAD~1..HEAD 2>/dev/null || git diff --name-only origin/main..HEAD 2>/dev/null || true)
-echo "$CHANGED" | head -20
+# D-F: 禁 `| head` 管道 —— 变更集巨大时 head 提前关闭管道 ⇒ echo 收 SIGPIPE(141)，
+#   CI shell 带 -eo pipefail ⇒ 假红（D1214 同类）。改用 awk 截断，零管道零信号。
+awk "NR<=20" <<< "$CHANGED"
 echo ""
 
 # 1. compute 文件行数检查 (禁止 < 15 行的 stub)
