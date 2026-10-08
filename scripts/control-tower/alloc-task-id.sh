@@ -130,6 +130,25 @@ USAGE
   shift
 done
 TITLE="${_POS[0]:-}"
+# ═══ D-C 切换（创始人 2026-10-08 裁决：**一步到位禁【新建】D#**，存量只读兼容）═══
+#   · 生效点 = **新号断流**：取号路径**拒绝**（exit 2 + 替代指引）；
+#   · **不影响存量**：既有 task-state/D*.json 与 *D*.md brief **保持可读**（D# 链未删）；
+#   · `--check-id` / `--help` **保留可用**（门禁与只读面在用）；
+#   · 逃生缝 `SYNO_ALLOC_LEGACY_OK=1`：**仅用于测试夹具验证"取号引擎本身"**
+#     （= 显式、需主动设置；生产不设 ⇒ 一律拒绝）。**故意不做静默降级**。
+if [ -z "$CHECK_ID" ] && [ -n "$TITLE" ] && [ "${SYNO_ALLOC_LEGACY_OK:-}" != "1" ]; then
+  # 仅当是"真取号"路径（非 --help/无参报错）才拒绝：
+  echo "❌ alloc-task-id.sh 已【停止发放新 D#】（D-C 切换，创始人 2026-10-08 裁决）" >&2
+  echo "   理由: D# 读【本机 watermark】⇒ 跨机/并行必然撞号（6 个独立目击者）；撞号后果 =" >&2
+  echo "         D708 声明源多命中 ⇒ exit 2 fail-closed ⇒ 整条 PR 卡死。" >&2
+  echo "   请改用 issue 号作身份:" >&2
+  echo "     · 分支: feat/<issue>-<slug>        · 提交: feat(#<issue>): …" >&2
+  echo "     · 声明: .claude/claims/<issue>.yaml（writeset + done，note 可选）" >&2
+  echo "     · 迁移通告: issue #1224 / 本卡 #1423" >&2
+  echo "   （存量 D# 任务不受影响：其 task-state/brief 仍可读、仍可正常合并。）" >&2
+  exit 2
+fi
+
 # U5 弃用提示（**仅取号路径 + 仅交互终端**）
 #   为何 TTY 门控: stderr 是**错误通道**，夹具/脚本对它有"非空即失败"的契约断言
 #   （本卡首版直接写 stderr ⇒ 当场打红 5 项既有夹具 —— 噪音污染正是本批在治的形态）。
