@@ -9,9 +9,9 @@ writeset:
   - src/adapters/standard-key-guard.ts
   - src/l4/graph-bridge.ts
   - src/server.ts
-  - tests/l4/standard-key-guard.test.ts
+  - tests/adapters/standard-key-guard.test.ts
 done:
-  - verify: npx vitest run tests/l4/standard-key-guard.test.ts
+  - verify: npx vitest run tests/adapters/standard-key-guard.test.ts
   - verify: npx vitest run tests/l4/ tests/agent/ tests/contract/
   - verify: bash -c 'grep -c "wrapStandardKeyGuard" src/server.ts src/l4/graph-bridge.ts'
   - verify: npx tsc --noEmit

@@ -31,7 +31,7 @@
 - src/adapters/standard-key-guard.ts — **新建**：共享守卫（从 graph-bridge **逐字平移** standardKey 分支）
 - src/l4/graph-bridge.ts — 内联分支 ⇒ 委托共享守卫（**保留** `validateAndLog` + D33 时间字段）
 - src/server.ts — **只改"注入前包一次"这一处**（`app.locals.graphStore = wrapStandardKeyGuard(graphStore)`）+ 其 import
-- tests/l4/standard-key-guard.test.ts — **新建**：V1/V2/V3/V5
+- tests/adapters/standard-key-guard.test.ts — **新建**：V1/V2/V3/V5
 - .claude/claims/1403.yaml + .claude/task-briefs/2026-10-08-1403-standard-key-guard.md
 
 不做什么（逐条含具体文件名）：
@@ -57,7 +57,7 @@
 ## 架构层: `src/adapters/**`（纯装饰器）+ L4 委托 + composition root 包一次
 
 ## Done 标准
-- [ ] verify: npx vitest run tests/l4/standard-key-guard.test.ts
+- [ ] verify: npx vitest run tests/adapters/standard-key-guard.test.ts
 - [ ] verify: npx vitest run tests/l4/ tests/agent/ tests/contract/
 - [ ] verify: bash -c 'grep -c "wrapStandardKeyGuard" src/server.ts src/l4/graph-bridge.ts'
 - [ ] verify: npx tsc --noEmit
