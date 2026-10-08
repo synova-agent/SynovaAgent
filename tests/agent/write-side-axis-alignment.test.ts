@@ -57,7 +57,7 @@ describe('#1395 写入侧类型对齐本体轴', () => {
 
   it('🔴 V2【行为断言】端到端：走真实 ingest ⇒ 节点类型 = 本体轴 ⇒ **经收口点的读者能读到**', async () => {
     const db = new Database(':memory:');
-    const store = new SqliteGraphStore(db);
+    const store = new SqliteGraphStore(db, { standardKeyGuard: false })   // #1412 (C)：本用例需"裸语义"（记录不经守卫的行为）;
     const res = await ingestBatch(
       { createNode: (t: string, p: Record<string, unknown>, g: string) => store.createNode(t, p, g) },
       loadFieldMapping('hr-standard')!,
@@ -77,7 +77,7 @@ describe('#1395 写入侧类型对齐本体轴', () => {
     // 口径：选**声明了 `period` 的 schema**（本批 `erp-standard → outcome/financial`）；
     //   `resource/client` / `resource/person` 未声明 period ⇒ 白名单丢弃 ⇒ 无 standardKey（**预存在**，另登记）
     const db = new Database(':memory:');
-    const store = new SqliteGraphStore(db);
+    const store = new SqliteGraphStore(db, { standardKeyGuard: false })   // #1412 (C)：本用例需"裸语义"（记录不经守卫的行为）;
     const mk = () => ({ createNode: (t: string, p: Record<string, unknown>, g: string) => store.createNode(t, p, g) });
     const row = [{ 市场份额: 25, 期间: '2026-Q2' }];
     await ingestBatch(mk(), loadFieldMapping('erp-standard')!, row, 'default');
