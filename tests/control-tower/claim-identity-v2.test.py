@@ -275,6 +275,74 @@ class TestB_LegacyDidNoHijack(Base):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# a6-a9. **判据按载体分口径**（2026-10-08 全仓红热修 #1429 的改坏即红夹具）
+#   背景: #1423 把 Done 判据由软翻硬时**未同步收窄作用域**，而 $BRIEF 由 resolver 回退定位、
+#         可能不是本次提交自己的件 ⇒ 别人的在飞 brief（Done 只有 - [ ]）拦住你的提交 ⇒ 全仓红。
+#   口径: 载体 = claim(*.yaml) ⇒ 硬判 ｜ 载体 = legacy .md brief ⇒ 软件（回旧行为）
+# ══════════════════════════════════════════════════════════════════════════════
+class TestA6_CarrierScopedDone(Base):
+
+    def _legacy_unchecked_brief(self):
+        """legacy .md brief：Done 段**只有未勾选项**（在飞任务的常态）。"""
+        p = self.repo / ".claude" / "task-briefs" / "2026-10-08-D777-unchecked.md"
+        p.write_text("## Q2: 范围\n做什么:\n- scripts/a.sh\n\n## Done 标准:\n"
+                     "- [ ] verify: bash tests/x.sh\n\n## 架构层: 基础设施\n#CRITERIA: A\n",
+                     encoding="utf-8")
+        return p
+
+    def _claim_empty_done(self):
+        """claim 载体：done 段为空 ⇒ 不可对账（新格式仍从严）。"""
+        return self.write_claim(1234, body="writeset:\n  - scripts/a.sh\ndone: []\n")
+
+    def test_a6_legacy_brief_unchecked_is_soft_pass(self):
+        """① legacy .md brief 只有 - [ ] ⇒ **软件（rc=0）** —— 存量不误伤（创始人"不影响在飞合并"）。"""
+        self._legacy_unchecked_brief()
+        self.stage_edit()
+        rc, out, _ = self.check_done(env={"SYNO_CLAIM_V2": "1"})
+        self.assertEqual(rc, 0, f"legacy brief 未勾选必须软通过，实得 {rc}\n{out}")
+        self.assertIn("软通过", out)
+
+    def test_a7_claim_empty_done_is_hard_block(self):
+        """② 载体 = claim 且 done 为空 ⇒ **硬阻断（rc=1）** —— 新格式仍从严。"""
+        self._claim_empty_done()
+        self.stage_edit()
+        rc, out, _ = self.check_done(env={"SYNO_CLAIM_V2": "1",
+                                          "SYNO_CLAIM_DIR": str(self.repo / ".claude" / "claims"),
+                                          "SYNO_ISSUE_HINT": "1234"})
+        self.assertEqual(rc, 1, f"claim 空 Done 必须硬阻断，实得 {rc}\n{out}")
+        self.assertIn("硬阻断", out)
+
+    def test_a8_mutant_removing_carrier_case_turns_a6_red(self):
+        """③ 变异体: 去掉载体判断（case 恒走硬判）⇒ ①必红 ⇒ 证明夹具 ① 有判别力。"""
+        self._legacy_unchecked_brief()
+        self.stage_edit()
+        src = VERIFIABLE_DONE.read_text(encoding="utf-8")
+        # 变异体须**同时**中和两道守卫（载体分口径 + 归属判定）—— 任一残留都会让本场景变软
+        start = src.rindex('  case "$BRIEF" in')  # 取**载体分口径**那一处（文件里有两处 case）
+        end = src.index('  esac', start) + len('  esac')
+        mutant = src[:start] + (
+            '  # 变异体: 去掉载体判断（恢复一律硬判）\n'
+            + '  echo "  ❌ Done 可证伪性: 声明 $BRIEF 无 Done 条目 [硬阻断]"\n  exit 1'
+        ) + src[end:]
+        # 同时中和归属守卫（否则 legacy 场景仍走软通过 ⇒ 变异体测不到东西）
+        mutant = mutant.replace('if [ "${_BRIEF_OURS:-1}" = "0" ]; then',
+                                'if false; then')
+        mp = self.repo / "scripts" / "check-verifiable-done-mutant.sh"
+        mp.write_text(mutant, encoding="utf-8")
+        rc, _, _ = _run(["bash", str(mp)], cwd=str(self.repo), env={"SYNO_CLAIM_V2": "1"})
+        self.assertEqual(rc, 1, "变异体未复现硬阻断 ⇒ 夹具 ① 是纸老虎（判别力失效）")
+
+    def test_a9_reverse_guard_claim_not_softened(self):
+        """④ 反例守护: 载体分口径**不得**把 claim 也放宽（防顺手放松）。"""
+        self._claim_empty_done()
+        self.stage_edit()
+        rc, out, _ = self.check_done(env={"SYNO_CLAIM_V2": "1",
+                                          "SYNO_CLAIM_DIR": str(self.repo / ".claude" / "claims"),
+                                          "SYNO_ISSUE_HINT": "1234"})
+        self.assertNotIn("软通过", out, "claim 载体不得出现软通过字样")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # c. 声明缺失 fail-closed
 # ══════════════════════════════════════════════════════════════════════════════
 class TestC_FailClosed(Base):
