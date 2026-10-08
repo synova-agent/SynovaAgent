@@ -1,7 +1,7 @@
 {
   "name": "crm-standard",
   "label": "标准CRM系统导出",
-  "targetNodeType": "Client",
+  "targetNodeType": "resource/client",
   "mappings": [
     { "externalField": "市场份额", "prop": "market_share", "type": "number" },
     { "externalField": "净推荐值", "prop": "nps", "type": "number" },

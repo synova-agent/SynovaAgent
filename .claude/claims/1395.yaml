@@ -1,0 +1,12 @@
+# .claude/claims/1395.yaml — #1395（写入侧类型对齐本体轴）写集声明（D708 的 S0 源）
+#   **本 PR = 收尾同步**：补齐 #1395 未同步的契约测试（main 上遗留红，CTO 2026-10-08 裁 (a) 单独小 PR）
+writeset:
+  - .claude/claims/1395.yaml
+  - .claude/task-briefs/2026-10-08-1395-l4-contract-sync.md
+  - tests/contract/l4-contract.test.ts
+done:
+  - verify: npx vitest run tests/contract/l4-contract.test.ts
+  - verify: npx vitest run tests/contract/ tests/sentinel/ tests/sentinels/
+  - verify: bash -c 'grep -c "resource/client" tests/contract/l4-contract.test.ts'
+  - verify: npx tsc --noEmit
+note: #1395 改了写侧 targetNodeType（Client→resource/client 等）但未同步本契约测试 ⇒ main 上 5 failed/8 passed（独立发现）。本 PR 同步 5 处断言：3 处 target 断言 → 本体轴；2 处 roundtrip → **双侧锚点**（写侧本体轴直查命中 + 经收口点用遗留名命中，#1393 并集读）。

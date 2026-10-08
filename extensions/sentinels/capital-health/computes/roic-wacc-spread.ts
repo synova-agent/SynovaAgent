@@ -11,6 +11,7 @@
  *   分母 0 → degrade，aggregate 门控 !degraded。
  * 边界: spread 恰好 0（ROIC=WACC）→ 不降级
  */
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408：输入有效性检查
 export interface RoicWaccResult {
   /** ROIC − WACC */
   spread: number;
@@ -28,6 +29,9 @@ export function computeRoicWaccSpread(financials: Array<{
   equity?: number;
   wacc_override?: number;
 }>): RoicWaccResult {
+  // #1408：输入有效性检查（**显式声明本 compute 的必需字段**；缺字段/NaN/非有限 ⇒ 降级 + warnings）
+  const _inputIssues = checkFiniteInputs(financials, ['total_revenue', 'cogs', 'operatingExpenses']);
+  if (_inputIssues.length > 0) return { spread: 0, roic: 0, wacc: 0, degraded: true, warnings: _inputIssues };
   if (financials.length === 0) {
     return { spread: 0, roic: 0, wacc: 0, degraded: true, warnings: ['无财务数据'] };
   }

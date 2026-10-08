@@ -10,7 +10,10 @@
  *   分母 0 → degrade，aggregate 门控 !degraded。
  * 边界: 总周转率恰好 0.5（critical 阈值线）→ 不降级
  */
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408：输入有效性检查
 export interface AssetTurnoverResult {
+  /** #1408：输入有效性等告警（缺字段/NaN/非有限 ⇒ 非空） */
+  warnings?: string[];
   totalTurnover: number;
   currentTurnover: number;
   totalRevenue: number;
@@ -24,6 +27,9 @@ export function computeAssetTurnover(financials: Array<{
   total_assets: number;
   current_assets: number;
 }>): AssetTurnoverResult {
+  // #1408：输入有效性检查（**显式声明本 compute 的必需字段**；缺字段/NaN/非有限 ⇒ 降级 + warnings）
+  const _inputIssues = checkFiniteInputs(financials, ['total_revenue', 'total_assets']);
+  if (_inputIssues.length > 0) return { totalTurnover: 0, currentTurnover: 0, totalRevenue: 0, totalAssets: 0, currentAssets: 0, degraded: true, warnings: _inputIssues };
   if (financials.length === 0) {
     return {
       totalTurnover: 0, currentTurnover: 0,

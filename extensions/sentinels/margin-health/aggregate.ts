@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 /**
  * margin-health/aggregate.ts — 利润健康哨兵(合并)
  *
@@ -12,7 +13,7 @@
  *  - 指标层: 扩展字段（fixed_cost 等契约外）缺失 → 该指标 log.warn + 跳过，不发 finding。
  * 显式 0 视为合法数据（hasValue 存在性判定，D356 语义保留）；分母 0 → compute 自降级。
  */
-import type { SentinelFinding } from '../../../src/sentinel/types';
+import type { MetricRow, SentinelAggregateResult, SentinelFinding } from '../../../src/sentinel/types';
 import type { GraphStoreReader, GraphTraversal } from '../../../src/l4/graph-traversal';
 import type { SentinelManifest } from '../../../src/sentinel/sentinel-loader';
 import { createLogger } from '@synova/logger';
@@ -55,17 +56,27 @@ const hasValue = (v: unknown): boolean => v !== undefined && v !== null && v !==
 export const marginHealthSentinel = {
   manifest: null as SentinelManifest | null, // 由 loader 注入（D356 P0-1）
 
-  async check(store: GraphStoreReader, teamId: string, traversal?: GraphTraversal): Promise<SentinelFinding[]> {
+  async check(store: GraphStoreReader, teamId: string, traversal?: GraphTraversal): Promise<SentinelFinding[] | SentinelAggregateResult> {
     const now = new Date();
     const checkedAt = now.toISOString();
     const findings: SentinelFinding[] = [];
 
+    // #1375 B3b（A2 + CTO 裁 (a) 每 compute 一行）：哨兵只**返回** metrics（不碰库）
+
+    //   metric_id 命名依 #1054 样板（`CASH-FLOW-GROSS-MARGIN`）：<哨兵域大写>-<FIELD 大写>
+
+    let metricsHolder: MetricRow[] = [];
+
+    let inputDigest = '';   // 读取后赋值（见下方 finNodes 处）
+
+
     try {
       const finNodes = store.queryNodes('Financial', { teamId });
+      inputDigest = createHash('sha256').update(JSON.stringify(finNodes)).digest('hex').slice(0, 16);
       if (finNodes.length === 0) {
         // 无 Financial 节点 = 正常空态，非降级
         log.info({ teamId }, '无 Financial 节点 — 空库基线');
-        return [];
+        return { findings: [], metrics: metricsHolder };
       }
 
       const props = finNodes[0]?.props || {};
@@ -75,7 +86,7 @@ export const marginHealthSentinel = {
       if (missingGroups.length > 0) {
         const names = missingGroups.map(g => g.name).join('、');
         log.warn({ teamId, missing: names }, 'Financial 节点缺必填字段组 — 跳过指标（防缺失默认 0 假 finding）');
-        return [{
+        return { findings: [{
           id: `mh-degraded`,
           severity: 'warning',
           title: '利润健康数据不完整',
@@ -83,7 +94,7 @@ export const marginHealthSentinel = {
           evidence: [`缺失字段组: ${names}`],
           suggestion: '请补全财务数据字段后重试。',
           detectedAt: checkedAt,
-        }];
+        }], metrics: metricsHolder };
       }
 
       // 归一化: erp-standard 契约 props → typed records
@@ -101,6 +112,7 @@ export const marginHealthSentinel = {
 
       // 1. 毛利率（cost-health 源）
       const gm = computeGrossMargin(financials);
+      if (!gm.degraded) metricsHolder.push({ metricId: 'MARGIN-HEALTH-GROSS-MARGIN', value: Number(gm.value) || 0, unit: 'ratio', sourceId: 'sentinel-margin-health', inputDigest });
       if (!gm.degraded) {
         const t = th('gross_margin');
         if (gm.value <= t.critical) {
@@ -130,6 +142,7 @@ export const marginHealthSentinel = {
 
       // 2. 固定/变动成本比（fixed_cost 契约外扩展字段缺失 → compute 自降级）
       const fr = computeFixedVariableRatio(financials);
+      if (!fr.degraded) metricsHolder.push({ metricId: 'MARGIN-HEALTH-FIXED-VARIABLE-RATIO', value: Number(fr.value) || 0, unit: 'ratio', sourceId: 'sentinel-margin-health', inputDigest });
       if (!fr.degraded) {
         const t = th('fixed_ratio');
         if (fr.value >= t.critical) {
@@ -167,6 +180,7 @@ export const marginHealthSentinel = {
           (s, f) => s + (f.total_revenue - f.gross_margin) + f.operatingExpenses, 0,
         );
         const cph = computeCostPerHead({ total_cost: totalCost, head_count: personNodes.length });
+      if (!cph.degraded) metricsHolder.push({ metricId: 'MARGIN-HEALTH-COST-PER-HEAD', value: Number(cph.value) || 0, unit: 'ratio', sourceId: 'sentinel-margin-health', inputDigest });
         if (!cph.degraded) {
           const t = th('cost_per_head');
           if (cph.value >= t.critical) {
@@ -195,6 +209,7 @@ export const marginHealthSentinel = {
 
       // 4. 净利率（profit-health 源; D358 决策 6: 原假 critical 加 !degraded 门控）
       const pm = computeProfitMarginChange(financials);
+      if (!pm.degraded) metricsHolder.push({ metricId: 'MARGIN-HEALTH-PROFIT-MARGIN-CHANGE', value: Number(pm.value) || 0, unit: 'ratio', sourceId: 'sentinel-margin-health', inputDigest });
       if (!pm.degraded) {
         const t = th('profit_margin_change');
         if (pm.value <= Math.abs(t.critical)) {
@@ -214,6 +229,7 @@ export const marginHealthSentinel = {
 
       // 5. 利润率 vs 行业基准（D358 决策 6: degraded gap 恒 0 + 门控 !degraded 双保险）
       const mb = computeMarginVsBenchmark(financials, {});
+      if (!mb.degraded) metricsHolder.push({ metricId: 'MARGIN-HEALTH-MARGIN-VS-BENCHMARK', value: Number(mb.profitMargin) || 0, unit: 'ratio', sourceId: 'sentinel-margin-health', inputDigest });
       if (!mb.degraded) {
         const t = th('margin_vs_benchmark');
         if (mb.gap <= t.critical) {
@@ -284,16 +300,17 @@ export const marginHealthSentinel = {
       if (findings.length > 0) {
         log.info({ teamId, count: findings.length }, '利润健康检查完成');
       }
-      return findings;
+      // #1375 B3b：标识符形态返回也须带 metrics（否则 loader 读不到 ⇒ 0 行）
+      return { findings: findings, metrics: metricsHolder };
     } catch (err: unknown) {
       log.error({ err, teamId }, '[margin-health] check失败');
-      return [{
+      return { findings: [{
         id: `mh-error`, severity: 'warning' as const,
         title: '利润健康检测异常',
         description: `${(err as Error)?.message || String(err)}`,
         evidence: [], suggestion: '检查 Financial 数据源。',
         detectedAt: checkedAt,
-      }];
+      }], metrics: metricsHolder };
     }
   },
 };

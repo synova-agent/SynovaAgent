@@ -1,7 +1,7 @@
 {
   "name": "erp-operational",
   "label": "ERP运营导出",
-  "targetNodeType": "Operational",
+  "targetNodeType": "outcome/operational",
   "mappings": [
     { "externalField": "准时交付率", "prop": "on_time_delivery_rate", "type": "number" },
     { "externalField": "缺陷率", "prop": "defect_rate", "type": "number" },

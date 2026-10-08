@@ -10,6 +10,7 @@
  *   分母 0 → degrade（D358 决策 5: 堵 0/0 假值）
  * 边界: gross_margin 显式 0（无毛利企业）→ value 0 且不降级（显式 0 ≠ 缺失）
  */
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408：输入有效性检查
 export interface GrossMarginResult {
   /** 毛利率 (gross_profit / total_revenue)，0-1 */
   value: number;
@@ -24,6 +25,11 @@ export function computeGrossMargin(financials: Array<{
   total_revenue: number;
   gross_margin: number;
 }>): GrossMarginResult {
+  // #1408：输入有效性检查（显式调用）
+  const _inputIssues = checkFiniteInputs(financials, ['total_revenue', 'gross_margin']);
+  if (_inputIssues.length > 0) {
+    return { value: 0, totalRevenue: 0, grossProfit: 0, evidence: [], degraded: true, warnings: _inputIssues };
+  }
   if (financials.length === 0) {
     return {
       value: 0, totalRevenue: 0, grossProfit: 0,

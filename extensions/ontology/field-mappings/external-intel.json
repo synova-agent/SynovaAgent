@@ -1,7 +1,7 @@
 {
   "name": "external-intel",
   "label": "外部环境数据",
-  "targetNodeType": "External",
+  "targetNodeType": "outcome/external",
   "mappings": [
     { "externalField": "行业增长率", "prop": "industry_growth_rate", "type": "number" },
     { "externalField": "新创率", "prop": "birth_rate", "type": "number" },

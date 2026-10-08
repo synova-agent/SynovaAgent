@@ -10,6 +10,9 @@ import type { Sentinel, SentinelCheckResult, SentinelConfig, SentinelContext, Se
   // V4.2.4: financial-snapshot 桥接已删除
 import { discoverTeams } from './helpers';
 import { createLogger } from '@synova/logger';
+import { readByMappedTypeFromRawDb } from '../mapped-read';
+import { resolveOntologyTarget } from '../node-type-resolver';
+import { writeMetricReadings } from '../metric-readings-writer';
 
 const log = createLogger('sentinel/cashflow');
 
@@ -59,21 +62,39 @@ export const cashFlowSentinel: Sentinel = {
   async check(context: SentinelContext): Promise<SentinelCheckResult> {
     const { now } = context; const checkedAt = now.toISOString(); const startTime = Date.now();
     try {
-      const db = context.db as { prepare(sql: string): { all(): Array<Record<string, unknown>> } } | null;
+      // #1376: **显式取用** raw 能力（`context.rawDb`）；缺席 ⇒ 显式降级（warn + degraded），不静默
+      const rawDb = context.rawDb ?? null;
+      if (!rawDb) {
+        log.warn({ sentinelId: config.id }, 'rawDb 能力缺席（该路径无 raw 句柄）⇒ 降级：跳过财务条目读取');
+      }
+      const db = rawDb as { prepare(sql: string): { all(...params: unknown[]): Array<Record<string, unknown>> } } | null;
       if (!db) return { sentinelId: config.id, ok: true, findings: [], durationMs: Date.now() - startTime, checkedAt, degraded: true };
 
       // 从 SOG FINANCIAL 节点提取财务条目
       let rawEntries: Array<Record<string, unknown>> = [];
       try {
-        rawEntries = db.prepare(
-          "SELECT props FROM graph_nodes WHERE type = 'FINANCIAL' AND props IS NOT NULL"
-        ).all();
+        // #1381 V2a（B1）：**经显式映射读**（并集读逻辑单点：mapped-read）
+        const mapped = readByMappedTypeFromRawDb(db, 'FINANCIAL');
+        rawEntries = mapped.rows as Array<Record<string, unknown>>;
+        if (mapped.legacyFallback) {
+          log.warn({ sentinelId: config.id, usedTypes: mapped.usedTypes, degraded: true, reason: 'no-mapping' },
+            '无映射 ⇒ 回退遗留字面量（显式）');
+        }
+        // 归类（本体轴语义）：首行 props 判定该批数据落在哪个本体类型（用于观测，不静默）
+        const firstProps = rawEntries.length > 0
+          ? (() => { const p0 = rawEntries[0].props; return typeof p0 === 'string' ? JSON.parse(p0) as Record<string, unknown> : (p0 as Record<string, unknown>) ?? {}; })()
+          : {};
+        const classified = resolveOntologyTarget('FINANCIAL', firstProps);
+        log.debug({ sentinelId: config.id, usedTypes: mapped.usedTypes, classified: classified.target, warn: classified.warn }, '映射读归类');
       } catch (err) {
         log.warn({ err: err instanceof Error ? err.message : String(err) }, "从 SOG FINANCIAL 节点提取财务条目");
         /* DB 不可用 — 降级 */
       }
 
       if (rawEntries.length === 0) {
+        // #1379 V3：**能力在、数据读不到** ⇒ 显式 warn（不静默）
+        log.warn({ sentinelId: config.id, degraded: true, reason: 'empty-read', type: 'FINANCIAL' },
+          '读路径可用但 0 行 ⇒ 降级（静默空读会伪装成"无异常"；FNANCIAL 目前【无写入者】，见 #1381）');
         return { sentinelId: config.id, ok: true, findings: [], durationMs: Date.now() - startTime, checkedAt, degraded: true };
       }
 
@@ -89,8 +110,9 @@ export const cashFlowSentinel: Sentinel = {
           period: (p.period || p.月份 || now.toISOString().slice(0, 7)) as string,
           startDate: (p.start_date || p.开始日期 || '') as string,
           endDate: (p.end_date || p.结束日期 || '') as string,
-          revenue: Number(p.revenue) || Number(p.收入) || 0,
-          cost: Number(p.cost) || Number(p.costs) || Number(p.成本) || 0,
+          // #1384 V2b（消费侧）：**优先读本体 schema 字段名**（连接器按本体写）⇒ 旧名回退（显式，不静默）
+          revenue: Number(p.total_revenue) || Number(p.revenue) || Number(p.收入) || 0,
+          cost: Number(p.total_cost) || Number(p.cost) || Number(p.costs) || Number(p.成本) || 0,
           operatingExpenses: Number(p.operating_expenses) || Number(p.运营支出) || 0,
           cashBalance: Number(p.cash_balance) || Number(p.cash) || Number(p.现金) || 0,
           headcount: Number(p.headcount) || Number(p.人数) || 1,
@@ -112,6 +134,27 @@ export const cashFlowSentinel: Sentinel = {
       // 生成 findings
       const allFindings: SentinelFinding[] = [];
       const { cashFlowHealth, netMargin, revenueYoYGrowth, grossMargin } = snapshot;
+
+      // 🔴 #1054（2-1b）写点①·**指标级**（样板哨兵）：把"这次判定用的输入取值"落 metric_readings。
+      //   metric_id = compute 的真实指标名；value = 本次 compute 取值（这正是 archive/25 §三 写点①的语义）。
+      //   覆盖面：**仅本样板哨兵**；其余 44 哨兵暂只有轮次级（见 metric-readings-writer.ts 头注）。
+      writeMetricReadings(
+        context.metricSink,
+        {
+          orgId: context.teamId ?? 'default',
+          observedAt: checkedAt,
+          entityId: '*',
+          sourceId: 'SENTINEL-CASH-FLOW-v1',
+          evidenceRef: 'sentinel:cash-flow',
+        },
+        // ⚠️ compute 可能返回 null（数据不足）⇒ **不写**（不把"算不出"记成 0，避免假测量值）
+        [
+          { metricId: 'CASH-FLOW-NET-MARGIN', value: netMargin, unit: 'ratio' },
+          { metricId: 'CASH-FLOW-REVENUE-YOY-GROWTH', value: revenueYoYGrowth, unit: 'ratio' },
+          { metricId: 'CASH-FLOW-GROSS-MARGIN', value: grossMargin, unit: 'ratio' },
+          { metricId: 'CASH-FLOW-RUNWAY-MONTHS', value: Number.isFinite(runwayMonths) ? runwayMonths : null, unit: 'months' },
+        ].filter((r): r is { metricId: string; value: number; unit: string } => typeof r.value === 'number'),
+      );
 
       const runwayDisplay = Number.isFinite(runwayMonths) ? `${runwayMonths.toFixed(1)} 个月` : '充足';
 

@@ -1055,8 +1055,17 @@ def _emit(result: dict, as_json: bool) -> None:
         print(f"   任务: {result['task_id']} | 分支: {result.get('branch','')}")
     # D954: D# 推断来源必打印（--did 覆盖可见）；声明源为空时打印诊断
     #   —— 推断失败此前完全静默（K3 判 #741），此处让 fail-closed 可诊断。
+    # D1245（卡 #1361 同族 · 仅消息层）: claim 命中时**身份已由 claim 给出**（issue 号 + 声明件），
+    #   旧行 `claim → 未推断出` 会被读成"推断失败"（#1353 实测的误导面）⇒ 改为点明**实际来源与值**。
+    #   非 claim 场景**逐字不变**（既有夹具钉着 `D# 推断来源: explicit`，且"无 claim"与"claim 畸形"
+    #   由各自的措辞区分：前者走本行 src 名称，后者走 `claim #N 畸形 → fail-closed`）。
     _src = result.get("task_id_source")
-    if _src:
+    if _src == "claim":
+        _issue = str(result.get("issue") or "").strip()
+        _cpath = str((result.get("sources") or {}).get("claim") or "").strip()
+        print(f"   身份来源: claim → {('#' + _issue) if _issue else '（issue 未定）'}"
+              + (f"（{_cpath}）" if _cpath else ""))
+    elif _src:
         print(f"   D# 推断来源: {_src} → {result.get('task_id') or '未推断出'}")
     _decl_empty = not any((result.get("sources") or {}).values())
     if result.get("task_id_diag") and (_src == "none" or _decl_empty):
@@ -1087,15 +1096,32 @@ def _emit(result: dict, as_json: bool) -> None:
         print(f"   夹带文件 {len(result['smuggled'])} 个（不匹配任何声明项）:")
         for f in result["smuggled"]:
             print(f"     - {f}")
-        print("   修复指引（三选一，禁止静默忽略）:")
-        print("     ① 把该文件加入声明（S1 task-state write_set / S2 dev doc 写集表 / S3 brief Q2）")
-        print("     ② 从本 PR 移出该文件（它可能属于另一个任务）")
-        print("     ③ 显式豁免: 在 PR 正文/声明文件加 `## 写集豁免` 段落，每行 `- <路径> — <理由>`（无理由不生效）")
+        # D1245（卡 #1361 同族 · 仅消息层）: 修复指引**只列本分支真能用的路径**。
+        #   病根: 正文 `## 写集豁免` 只在**已有声明源**时按文件生效（逐文件循环里的 explicit）；
+        #   `declared` 为空（四源皆空）的分支**不消费**正文豁免 ⇒ 旧文案把 ③ 列为可修路径 =
+        #   指引与实现不一致（实测会让人白跑一轮）。本处按上下文分支：无声明源时不列 ③ 并显式说明。
+        #   "让该分支真消费正文豁免"属**语义变更** ⇒ 待裁项（须 K3→CTO），不在本消息层件内夹带。
+        _has_decl = bool(result.get("declared"))
+        if _has_decl:
+            print("   修复指引（三选一，禁止静默忽略）:")
+            print("     ① 把该文件加入声明（S0 claim.writeset / S1 task-state write_set / "
+                  "S2 dev doc 写集表 / S3 brief Q2）")
+            print("     ② 从本 PR 移出该文件（它可能属于另一个任务）")
+            print("     ③ 显式豁免: 在 PR 正文/声明文件加 `## 写集豁免` 段落，"
+                  "每行 `- <路径> — <理由>`（无理由不生效）")
+        else:
+            print("   修复指引（二选一，禁止静默忽略）:")
+            print("     ① 把该文件加入声明（S0 claim.writeset / S1 task-state write_set / "
+                  "S2 dev doc 写集表 / S3 brief Q2）")
+            print("     ② 从本 PR 移出该文件（它可能属于另一个任务）")
+            print("     ⛔ 正文 `## 写集豁免` 在**本分支不生效**（无任何声明源时不消费正文豁免；"
+                  "待裁项: 让它真消费属语义变更，须 K3→CTO 裁）")
         print("     ⚠ 豁免/声明条目必须逐条**精确路径**（或 `<dir>/**` glob）——")
         print("        模糊描述（如「相关脚本」「治理文档若干」）不被匹配，直接判夹带。")
-        print("     可直接粘贴的精确豁免行（补全理由后放入 PR 正文 `## 写集豁免`）:")
-        for f in result["smuggled"]:
-            print(f"       - {f} — <理由：为何此文件属于本任务>")
+        if _has_decl:
+            print("     可直接粘贴的精确豁免行（补全理由后放入 PR 正文 `## 写集豁免`）:")
+            for f in result["smuggled"]:
+                print(f"       - {f} — <理由：为何此文件属于本任务>")
     for w in result.get("warns", []):
         print(f"   ⚠️  {w}")
 

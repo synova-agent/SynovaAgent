@@ -1,0 +1,18 @@
+# .claude/claims/1403.yaml — #1403（标准键写入守卫：一处收口 + 两路径共用）写集声明（D708 的 S0 源）
+#
+# CTO 2026-10-08 裁 (A)：抽**共享守卫** `src/adapters/standard-key-guard.ts`
+#   + composition root（`src/server.ts`）注入前**包一次**（**只改这一处**）
+#   + 不采用：ingest 直调 graph-bridge（L2↛L4，门禁 check-architecture.sh:41-44 硬阻断）｜下沉 store 层
+writeset:
+  - .claude/claims/1403.yaml
+  - .claude/task-briefs/2026-10-08-1403-standard-key-guard.md
+  - src/adapters/standard-key-guard.ts
+  - src/l4/graph-bridge.ts
+  - src/server.ts
+  - tests/adapters/standard-key-guard.test.ts
+done:
+  - verify: npx vitest run tests/adapters/standard-key-guard.test.ts
+  - verify: npx vitest run tests/l4/ tests/agent/ tests/contract/
+  - verify: bash -c 'grep -c "wrapStandardKeyGuard" src/server.ts src/l4/graph-bridge.ts'
+  - verify: npx tsc --noEmit
+note: 共享守卫 = 从 graph-bridge **逐字平移**（D29/D33 的 standardKey 分支）；graph-bridge 保留自有语义（validateAndLog + D33 时间字段）并委托；server.ts 注入前包一次 ⇒ ingest 路径**无需改一行**即获得守卫。判据 V1（同事实 2 次 ⇒ 1 行）/V2（不同键 ⇒ 2 行）/V3（键格式不变）/V5（形态·只证明形态：两路径引用 + agent 不 import l4）。

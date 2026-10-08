@@ -11,6 +11,7 @@
  * 输出(降级): total_debt<=0 → degraded + signal 'healthy'（degraded 不产阈值结论）
  * 边界: 短债比恰好 0.7 → warning（>0.7 才 critical）
  */
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408：输入有效性检查
 export interface DebtStructureResult {
   shortTermRatio: number;
   signal: 'critical' | 'warning' | 'healthy';
@@ -22,6 +23,9 @@ export function computeDebtStructure(fin: {
   short_term_debt: number;
   total_debt: number;
 }): DebtStructureResult {
+  // #1408：输入有效性检查（**显式声明本 compute 的必需字段**；缺字段/NaN/非有限 ⇒ 降级 + warnings）
+  const _inputIssues = checkFiniteInputs(fin, ['short_term_debt', 'total_debt']);
+  if (_inputIssues.length > 0) return { shortTermRatio: 0, signal: 'healthy', degraded: true, warnings: _inputIssues };
   const warnings: string[] = [];
 
   if (fin.total_debt <= 0) {

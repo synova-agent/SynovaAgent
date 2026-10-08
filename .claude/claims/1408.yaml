@@ -1,0 +1,18 @@
+# .claude/claims/1408.yaml — #1408 写集声明（D708 的 S0 源）
+#   批 A（9493640f9）｜B（23a0f0d7b）｜类级复查（a2a2c31c3）｜C1（e6b86dc05）｜C2a（b280c6b53）
+#   **本 PR = 批 C2b**（nodes 数组型 ×2 + 标量参数型 ×2 + 补 make-or-buy 空壳夹具）⇒ **29/29 收尾**
+writeset:
+  - .claude/claims/1408.yaml
+  - .claude/task-briefs/2026-10-08-1408-silent-wrong-value-c2b.md
+  - extensions/sentinels/business-model-coherence/computes/model-consistency-score.ts
+  - extensions/sentinels/make-or-buy/computes/make-or-buy-score.ts
+  - extensions/sentinels/knowledge-accessibility/computes/compute-knowledge-accessibility.ts
+  - extensions/sentinels/talent-density/computes/compute-talent-density.ts
+  - tests/sentinels/make-or-buy.test.ts
+  - tests/sentinel/silent-wrong-value.test.ts
+done:
+  - verify: npx vitest run tests/sentinel/silent-wrong-value.test.ts tests/sentinel/assert-finite-inputs.test.ts tests/sentinels/make-or-buy.test.ts
+  - verify: npx vitest run tests/sentinels/ tests/sentinel/ tests/l4/ tests/agent/ tests/adapters/
+  - verify: bash -c 'grep -rn "checkFiniteInputs(\|checkRequiredFields(" extensions/sentinels/*/computes/*.ts | grep -vE ":[0-9]+:\s*(//|\*|/\*)" | grep -vE ":[0-9]+:\s*import\b" | cut -d: -f1 | sort -u | wc -l'
+  - verify: npx tsc --noEmit
+note: 批 C2b = **两类形态**：① nodes 数组型（model-consistency-score 用 checkRequiredFields ['type','props']｜make-or-buy-score 用 ['category','inHouse'] —— 两者**无数值字段** ⇒ 数值检查不适用，但存在性仍管）② 标量参数型（knowledge-accessibility/talent-density ⇒ **入口显式命名成对象**）。**并补齐** tests/sentinels/make-or-buy.test.ts（原 2 行空壳 ⇒ 门禁发现第 16 条）使其声明**可核**。isCallLine 泛化（同时匹配两个助手）。

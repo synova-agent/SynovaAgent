@@ -19,6 +19,7 @@ import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import type Database from 'better-sqlite3';
 import { createLogger } from '@synova/logger';
+import { withOrgScope } from '../../src/sentinel/org-scope';
 import { SqliteGraphStore } from '../../src/adapters/sqlite-graph-store';
 import type { GraphStoreReader } from '../../src/l4/graph-traversal';
 import { revenueHealthSentinel } from '../../extensions/sentinels/revenue-health/aggregate';
@@ -80,16 +81,16 @@ beforeEach(() => {
 });
 
 describe('D355 L4 契约 — 写侧映射 vs 读侧锚点（缺陷 B）', () => {
-  it('crm-standard 写侧 targetNodeType == 读侧 Client', () => {
-    expect(loadMapping('crm-standard').targetNodeType).toBe('Client');
+  it('crm-standard 写侧 targetNodeType == 本体轴 `resource/client`（#1395 后；读侧字典 Client → resource/client）', () => {
+    expect(loadMapping('crm-standard').targetNodeType).toBe('resource/client');
   });
 
-  it('hr-standard 写侧 targetNodeType == 读侧 Person', () => {
-    expect(loadMapping('hr-standard').targetNodeType).toBe('Person');
+  it('hr-standard 写侧 targetNodeType == 本体轴 `resource/person`（#1395 后）', () => {
+    expect(loadMapping('hr-standard').targetNodeType).toBe('resource/person');
   });
 
-  it('erp-standard 写侧 targetNodeType == 读侧 Financial', () => {
-    expect(loadMapping('erp-standard').targetNodeType).toBe('Financial');
+  it('erp-standard 写侧 targetNodeType == 本体轴 `outcome/financial`（#1395 后）', () => {
+    expect(loadMapping('erp-standard').targetNodeType).toBe('outcome/financial');
   });
 
   it('erp-standard 写侧 prop 对齐 financial schema cash/operating_expense（断裂名清零）', () => {
@@ -102,7 +103,7 @@ describe('D355 L4 契约 — 写侧映射 vs 读侧锚点（缺陷 B）', () => 
 });
 
 describe('D355 L4 契约 — 上传→查询 roundtrip（缺陷 B 场景 2）', () => {
-  it('按 crm 映射写 Client 后 queryNodes(Client) 命中', () => {
+  it('按 crm 映射写 `resource/client` ⇒ 本体轴直查命中 + **经收口点用遗留名 `Client` 也命中**（#1393 并集读）', () => {
     const db = createDb();
     const store = new SqliteGraphStore(db);
     const mapping = loadMapping('crm-standard');
@@ -110,14 +111,17 @@ describe('D355 L4 契约 — 上传→查询 roundtrip（缺陷 B 场景 2）', 
     for (const m of mapping.mappings) props[m.prop] = m.type === 'number' ? 1 : '2026Q1';
 
     const id = store.createNode(mapping.targetNodeType, props, 'enterprise');
-    const nodes = store.queryNodes('Client', {}, 'enterprise');
-
-    expect(nodes).toHaveLength(1);
+    // 写侧：本体轴直查
+    const axisNodes = store.queryNodes('resource/client', {}, 'enterprise');
+    expect(axisNodes, '写侧应落在本体轴 `resource/client`').toHaveLength(1);
+    // 读侧：经**收口点**（#1393 并集读）用遗留名 `Client` 也能读到 ⇒ 读写两侧锚点连通
+    const nodes = withOrgScope(store, undefined).queryNodes('Client', {}, 'enterprise') as Array<{ id: string; props: Record<string, unknown> }>;
+    expect(nodes, '经收口点读遗留名 `Client` 应命中本体轴节点').toHaveLength(1);
     expect(nodes[0].id).toBe(id);
     expect(nodes[0].props.churn_rate).toBe(1);
   });
 
-  it('按 erp 映射写 Financial 后 props.cash/operating_expense 可读', () => {
+  it('按 erp 映射写 `outcome/financial` ⇒ 本体轴直查命中 + 经收口点用 `Financial` 也命中', () => {
     const db = createDb();
     const store = new SqliteGraphStore(db);
     const mapping = loadMapping('erp-standard');
@@ -125,9 +129,9 @@ describe('D355 L4 契约 — 上传→查询 roundtrip（缺陷 B 场景 2）', 
     for (const m of mapping.mappings) props[m.prop] = m.type === 'number' ? 2 : '2026Q1';
 
     store.createNode(mapping.targetNodeType, props, 'enterprise');
-    const nodes = store.queryNodes('Financial', {}, 'enterprise');
-
-    expect(nodes).toHaveLength(1);
+    expect(store.queryNodes('outcome/financial', {}, 'enterprise'), '写侧应落在本体轴').toHaveLength(1);
+    const nodes = withOrgScope(store, undefined).queryNodes('Financial', {}, 'enterprise') as Array<{ props: Record<string, unknown> }>;
+    expect(nodes, '经收口点读遗留名 `Financial` 应命中').toHaveLength(1);
     expect(nodes[0].props.cash).toBe(2);
     expect(nodes[0].props.operating_expense).toBe(2);
   });

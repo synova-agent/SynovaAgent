@@ -39,7 +39,8 @@ export class NemoClawConnector implements DataConnector {
       mapping.edges.push({ type: EdgeType.INFORMATION_FLOW, from: msg.senderId, to: msg.recipientIds?.[0] || msg.senderId, weight: 1, props: { channel: msg.channel } });
     }
     for (const evt of events) {
-      mapping.nodes.push({ type: NodeType.ACTIVITY_LEARNING /* ONTOLOGY-MIGRATION: NodeType.ACTIVITY_LEARNING has no direct match. Store as edge annotation. */, props: { eventType: evt.eventType, timestamp: evt.timestamp } });
+      // #1384 V2b：补 requiredProps `name`；**语义待核**（#1381 判其为局部先例）
+      mapping.nodes.push({ type: NodeType.ACTIVITY_LEARNING /* ONTOLOGY-MIGRATION: NodeType.ACTIVITY_LEARNING has no direct match. Store as edge annotation. */, props: { name: evt.eventType || 'event', eventType: evt.eventType, timestamp: evt.timestamp } });
     }
     log.info({ nodes: mapping.nodes.length, edges: mapping.edges.length, orgId }, '[nemoclaw] 本体映射完成');
     return mapping;

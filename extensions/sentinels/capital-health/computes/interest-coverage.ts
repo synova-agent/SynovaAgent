@@ -11,7 +11,10 @@
  *   分母 0 → degrade，aggregate 门控 !degraded。
  * 边界: ICR 恰好 1.5（critical 阈值线）→ 不降级
  */
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408：输入有效性检查
 export interface InterestCoverageResult {
+  /** #1408：输入有效性等告警（缺字段/NaN/非有限 ⇒ 非空） */
+  warnings?: string[];
   icr: number;
   ebit: number;
   interestExpense: number;
@@ -22,6 +25,9 @@ export function computeInterestCoverage(financials: Array<{
   operating_cashflow: number;
   interest_expense: number;
 }>): InterestCoverageResult {
+  // #1408：输入有效性检查（**显式声明本 compute 的必需字段**；缺字段/NaN/非有限 ⇒ 降级 + warnings）
+  const _inputIssues = checkFiniteInputs(financials, ['operating_cashflow', 'interest_expense']);
+  if (_inputIssues.length > 0) return { icr: 0, ebit: 0, interestExpense: 0, degraded: true, warnings: _inputIssues };
   if (financials.length === 0) {
     return { icr: 0, ebit: 0, interestExpense: 0, degraded: true };
   }

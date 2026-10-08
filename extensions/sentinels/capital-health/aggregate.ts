@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 /**
  * capital-health/aggregate.ts — 资本健康哨兵(合并)
  *
@@ -17,7 +18,7 @@
  * 显式 0 视为合法数据（hasValue 存在性判定，D356 语义保留）；分母 0 → compute 自降级
  * （决策 5: 堵 99/rev-1/0 假值路径）。
  */
-import type { SentinelFinding } from '../../../src/sentinel/types';
+import type { MetricRow, SentinelAggregateResult, SentinelFinding } from '../../../src/sentinel/types';
 import type { GraphStoreReader, GraphTraversal } from '../../../src/l4/graph-traversal';
 import type { SentinelManifest } from '../../../src/sentinel/sentinel-loader';
 import { createLogger } from '@synova/logger';
@@ -83,17 +84,27 @@ interface NormalizedFinancial {
 export const capitalHealthSentinel = {
   manifest: null as SentinelManifest | null, // 由 loader 注入（D356 P0-1）
 
-  async check(store: GraphStoreReader, teamId: string, traversal?: GraphTraversal): Promise<SentinelFinding[]> {
+  async check(store: GraphStoreReader, teamId: string, traversal?: GraphTraversal): Promise<SentinelFinding[] | SentinelAggregateResult> {
     const now = new Date();
     const checkedAt = now.toISOString();
     const findings: SentinelFinding[] = [];
 
+    // #1375 B3b（A2 + CTO 裁 (a) 每 compute 一行）：哨兵只**返回** metrics（不碰库）
+
+    //   metric_id 命名依 #1054 样板（`CASH-FLOW-GROSS-MARGIN`）：<哨兵域大写>-<FIELD 大写>
+
+    let metricsHolder: MetricRow[] = [];
+
+    let inputDigest = '';   // 读取后赋值（见下方 finNodes 处）
+
+
     try {
       const finNodes = store.queryNodes('Financial', { teamId });
+      inputDigest = createHash('sha256').update(JSON.stringify(finNodes)).digest('hex').slice(0, 16);
       if (finNodes.length === 0) {
         // 无 Financial 节点 = 正常空态，非降级（K3 T2-b 空库基线）
         log.info({ teamId }, '无 Financial 节点 — 空库基线');
-        return [];
+        return { findings: [], metrics: metricsHolder };
       }
 
       const props = finNodes[0]?.props || {};
@@ -103,7 +114,7 @@ export const capitalHealthSentinel = {
       if (missingGroups.length > 0) {
         const names = missingGroups.map(g => g.name).join('、');
         log.warn({ teamId, missing: names }, 'Financial 节点缺必填字段组 — 跳过指标（防缺失默认 0 假 finding）');
-        return [{
+        return { findings: [{
           id: `ch-degraded`,
           severity: 'warning',
           title: '资本健康数据不完整',
@@ -111,7 +122,7 @@ export const capitalHealthSentinel = {
           evidence: [`缺失字段组: ${names}`],
           suggestion: '请补全财务数据字段后重试。',
           detectedAt: checkedAt,
-        }];
+        }], metrics: metricsHolder };
       }
 
       // 归一化: erp-standard 契约 props → typed records
@@ -198,6 +209,7 @@ export const capitalHealthSentinel = {
       const ct = computeCapitalTurnover(financials.map(f => ({
         total_revenue: f.total_revenue, total_debt: f.total_debt, equity: f.equity,
       })));
+      if (!ct.degraded) metricsHolder.push({ metricId: 'CAPITAL-HEALTH-CAPITAL-TURNOVER', value: Number(ct.turnover) || 0, unit: 'ratio', sourceId: 'sentinel-capital-health', inputDigest });
       if (!ct.degraded) {
         const t = th('capital_turnover');
         if (ct.turnover < t.critical) {
@@ -227,6 +239,7 @@ export const capitalHealthSentinel = {
       const de = computeDebtEquityRatio(financials.map(f => ({
         total_debt: f.total_debt, long_term_debt: f.long_term_debt ?? 0, equity: f.equity,
       })));
+      if (!de.degraded) metricsHolder.push({ metricId: 'CAPITAL-HEALTH-DEBT-EQUITY', value: Number(de.debtEquity) || 0, unit: 'ratio', sourceId: 'sentinel-capital-health', inputDigest });
       if (!de.degraded) {
         const t = th('debt_equity');
         if (de.debtEquity > t.critical) {
@@ -259,6 +272,7 @@ export const capitalHealthSentinel = {
         const ic = computeInterestCoverage(financials.map(f => ({
           operating_cashflow: f.operating_cashflow, interest_expense: f.interest_expense as number,
         })));
+      if (!ic.degraded) metricsHolder.push({ metricId: 'CAPITAL-HEALTH-INTEREST-COVERAGE', value: Number(ic.icr) || 0, unit: 'ratio', sourceId: 'sentinel-capital-health', inputDigest });
         if (!ic.degraded) {
           const t = th('interest_coverage');
           if (ic.icr < t.critical) {
@@ -292,6 +306,7 @@ export const capitalHealthSentinel = {
         const shortTermDebt = financials.reduce((s, f) => s + (f.short_term_debt as number), 0) / financials.length;
         const totalDebtAvg = financials.reduce((s, f) => s + f.total_debt, 0) / financials.length;
         const ds = computeDebtStructure({ short_term_debt: shortTermDebt, total_debt: totalDebtAvg });
+      if (!ds.degraded) metricsHolder.push({ metricId: 'CAPITAL-HEALTH-DEBT-STRUCTURE', value: Number(ds.shortTermRatio) || 0, unit: 'ratio', sourceId: 'sentinel-capital-health', inputDigest });
         if (!ds.degraded) {
           if (ds.signal === 'critical') {
             findings.push({
@@ -324,6 +339,7 @@ export const capitalHealthSentinel = {
         const at = computeAssetTurnover(financials.map(f => ({
           total_revenue: f.total_revenue, total_assets: f.total_assets, current_assets: f.current_assets as number,
         })));
+      if (!at.degraded) metricsHolder.push({ metricId: 'CAPITAL-HEALTH-ASSET-TURNOVER', value: Number(at.totalTurnover) || 0, unit: 'ratio', sourceId: 'sentinel-capital-health', inputDigest });
         if (!at.degraded) {
           const t = th('asset_turnover');
           if (at.totalTurnover < t.critical) {
@@ -357,6 +373,7 @@ export const capitalHealthSentinel = {
         const rt = computeReceivableTurnover(financials.map(f => ({
           total_revenue: f.total_revenue, receivables: f.receivables as number,
         })));
+      if (!rt.degraded) metricsHolder.push({ metricId: 'CAPITAL-HEALTH-RECEIVABLE-TURNOVER', value: Number(rt.turnoverRatio) || 0, unit: 'ratio', sourceId: 'sentinel-capital-health', inputDigest });
         if (!rt.degraded) {
           const t = th('receivable_turnover_days');
           if (rt.daysOutstanding > t.critical) {
@@ -397,6 +414,7 @@ export const capitalHealthSentinel = {
           accounts_payable: financials.reduce((s, f) => s + (f.accounts_payable as number), 0),
           total_revenue: financials.reduce((s, f) => s + f.total_revenue, 0),
         });
+      if (!ccc.degraded) metricsHolder.push({ metricId: 'CAPITAL-HEALTH-CASH-CONVERSION-CYCLE', value: Number(ccc.cccDays) || 0, unit: 'ratio', sourceId: 'sentinel-capital-health', inputDigest });
         if (!ccc.degraded) {
           if (ccc.signal === 'critical') {
             findings.push({
@@ -423,16 +441,17 @@ export const capitalHealthSentinel = {
       }
 
       log.debug({ totalFindings: findings.length }, '资本健康检查完成');
-      return findings;
+      // #1375 B3b：标识符形态返回也须带 metrics（否则 loader 读不到 ⇒ 0 行）
+      return { findings: findings, metrics: metricsHolder };
     } catch (err: unknown) {
       log.error({ err }, '[capital-health] check 失败');
-      return [{
+      return { findings: [{
         id: `ch-error`, severity: 'warning' as const,
         title: '资本健康检测异常',
         description: `${(err as Error)?.message || String(err)}`,
         evidence: [], suggestion: '检查 Financial 数据源。',
         detectedAt: checkedAt,
-      }];
+      }], metrics: metricsHolder };
     }
   },
 };

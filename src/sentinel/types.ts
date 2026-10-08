@@ -75,6 +75,8 @@ export interface SentinelCheckResult {
   durationMs: number;
   /** 检查时间 */
   checkedAt: string;
+  /** #1375：本轮产出的测量值行（loader 统一落库；哨兵不碰库） */
+  metrics?: MetricRow[];
   /** 错误信息 (ok=false 时) */
   error?: string;
   /** 降级标记 (部分数据不可用但仍产出结果) */
@@ -90,6 +92,23 @@ export interface SentinelCheckResult {
 export interface SentinelAggregateResult {
   findings: SentinelFinding[];
   degraded?: boolean;
+  /** #1375（A2）：哨兵只**返回**结构化 metrics，**不碰库**（写库统一在 loader） */
+  metrics?: MetricRow[];
+}
+
+/**
+ * 哨兵产出的**测量值行**（#1375 A2；**结构类型**，不引驱动/表耦合）。
+ * @field inputDigest 可选：**由哨兵**提供（它才知道读了什么输入）；缺省 ⇒ 该行 degraded=1（不编假值）
+ * @invariant 哨兵**不得**写库；写入契约（幂等/只追加/永不抛/显式降级）只在 writer 一处
+ */
+export interface MetricRow {
+  metricId: string;
+  value: number;
+  unit?: string;
+  sourceId?: string;
+  evidenceRef?: string;
+  /** 读入输入的规范化哈希（节点 id + props 稳定序列化）；缺省 ⇒ null ⇒ degraded=1 */
+  inputDigest?: string;
 }
 
 /** 哨兵阈值对（manifest.json thresholds 字段值形态）。warning/critical 数值语义随指标方向而定（高于/低于触发），由各 aggregate 判定式决定。 */
@@ -160,6 +179,32 @@ export interface Sentinel {
 export interface SentinelContext {
   /** 数据库实例 */
   db: unknown;
+  /**
+   * #1376 读能力（**显式命名，按需取用；禁隐式兜底**）
+   * @field graphStore — 语义读：`queryNodes(type, filters, graph?)`（**默认读路径**）
+   * @field rawDb      — **raw SQL 逃生口**（**结构类型**：只声明用到的成员；**禁 any/宽松形状**）
+   * @invariant ① 两者均为**可选**：缺席 = 该路径不具备该能力 ⇒ 哨兵**显式降级**（`log.warn` + degraded），**不得静默**；
+   *            ② `context.db` 的语义**保持不变**（= GraphStore 包装）⇒ **不存在「ctx.db 恰好也有 prepare」的兜底**；
+   *            ③ 新哨兵**默认只用 `graphStore`**；用 `rawDb` 须在哨兵注释写明理由（PR 正文列名单）。
+   * @not-here 不改既有哨兵对外行为（只提供能力）；不改 `src/l4/**`；统一读层（raw → queryNodes）归 #1375。
+   */
+  graphStore?: {
+    queryNodes(type: string, filters?: Record<string, unknown>, graph?: string):
+      Array<{ id: string; type: string; props: Record<string, unknown> }>;
+  };
+  rawDb?: {
+    prepare(sql: string): {
+      all(...params: unknown[]): unknown[];
+      get(...params: unknown[]): unknown;
+      run(...params: unknown[]): { changes: number };
+    };
+  };
+  /**
+   * #1054（2-1b）: 测量值写入 sink（可选）。
+   * 未注入 = **零行为变化**（既有 45 哨兵不受影响）；注入方 = 持有真实 Database 的调用点
+   * （`SentinelRunner`）。轮次级由 `registry.runAll` / runner 轮边界写，指标级由样板哨兵写。
+   */
+  metricSink?: import('./metric-readings-writer').MetricSink;
   /** 当前时间 (便于测试时间确定性) */
   now: Date;
   /** 哨兵注册中心 (哨兵间可互查) */

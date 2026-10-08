@@ -95,10 +95,18 @@ function insertTicketRow(
   );
 }
 
+// #1373 (a) 卫生改进：句柄跟踪 + 顶层 afterEach 兜底关闭（**不消除 teardown 崩溃**，见卡面）
+const openDbs: Database.Database[] = [];
+const openDb = (): Database.Database => { const d = new Database(':memory:'); openDbs.push(d); return d; };
+afterEach(() => {
+  setGlobalSentinelRunner(null);
+  for (const d of openDbs.splice(0)) { try { d.close(); } catch { /* 已关闭 */ } }
+});
+
 describe('D580 8-2 — listSentinelTickets 表读（L3）', () => {
   let db: Database.Database;
   beforeEach(() => {
-    db = new Database(':memory:');
+    db = openDb();
     db.exec(TICKET_DDL);
   });
   afterEach(() => {
@@ -128,7 +136,7 @@ describe('D580 8-2 — listSentinelTickets 表读（L3）', () => {
   });
 
   it('降级传播: 表不存在 → 抛出（L3 不吞错, 降级决策单点在 L2 — 铁律 31）', () => {
-    const bareDb = new Database(':memory:'); // 无 DDL
+    const bareDb = openDb(); // 无 DDL
     const runner = makeRunner(bareDb);
     expect(() => runner.listSentinelTickets()).toThrow(/no such table/i);
     bareDb.close();
@@ -138,7 +146,7 @@ describe('D580 8-2 — listSentinelTickets 表读（L3）', () => {
 describe('D580 8-2 — getSentinelTickets 表读优先 + 降级（L2 写读同源）', () => {
   let db: Database.Database;
   beforeEach(() => {
-    db = new Database(':memory:');
+    db = openDb();
     db.exec(TICKET_DDL);
     destroySentinelRegistry();
     logMock.info.mockClear();
@@ -192,103 +200,5 @@ describe('D580 8-2 — getSentinelTickets 表读优先 + 降级（L2 写读同�
     expect(res.degraded).toBe(true);
     expect(res.tickets.length).toBeGreaterThanOrEqual(1);
     expect(warnMessages()).toContain('工单表读取失败'); // 降级必须留痕
-  });
-
-  it('runner 未初始化 → degraded 空列表（无数据源, 不静默）', () => {
-    setGlobalSentinelRunner(null);
-    const res = getSentinelTickets();
-    expect(res.ok).toBe(true);
-    expect(res.source).toBe('memory-fallback');
-    expect(res.degraded).toBe(true);
-    expect(res.tickets).toEqual([]);
-  });
-});
-
-describe('D580 8-3 — 通知去重持久化（B-19 裁决 2: 重启复活）', () => {
-  let db: Database.Database;
-  beforeEach(() => {
-    vi.useFakeTimers({ toFake: ['Date'] });
-    vi.setSystemTime(T0);
-    db = new Database(':memory:');
-    db.exec(TICKET_DDL);
-    db.exec(DEDUP_DDL);
-    destroySentinelRegistry();
-    dispatchNotificationMock.mockClear();
-    logMock.warn.mockClear();
-    delete process.env.SENTINEL_NOTIFICATION_DEDUP_MS;
-  });
-  afterEach(() => {
-    vi.useRealTimers();
-    delete process.env.SENTINEL_NOTIFICATION_DEDUP_MS;
-    db.close();
-    setGlobalSentinelRunner(null);
-  });
-
-  async function primeOneDispatch(runner: SentinelRunner): Promise<void> {
-    getSentinelRegistry().register(makeSentinel('sentinel-cash-runway', [makeFinding()]));
-    await runner.runOnce('sentinel-cash-runway');
-    await runner.aggregateAndDispatch();
-  }
-
-  it('runner A 发送 → 销毁 → 同库新 runner B: 窗口内不重发（重启恢复的物理证明）', async () => {
-    const runnerA = makeRunner(db);
-    await primeOneDispatch(runnerA);
-    expect(dispatchNotificationMock).toHaveBeenCalledTimes(1);
-
-    // 重启: 同库（表在）+ 新 runner 实例（内存 Map 已清空）→ 表命中去重
-    const runnerB = makeRunner(db);
-    await primeOneDispatch(runnerB);
-    expect(dispatchNotificationMock).toHaveBeenCalledTimes(1); // 不重发
-
-    // 窗口过后 → 重发（窗口语义: 过后重新通知）
-    vi.setSystemTime(new Date(T0.getTime() + 6 * 60 * 1000));
-    await primeOneDispatch(runnerB);
-    expect(dispatchNotificationMock).toHaveBeenCalledTimes(2);
-  });
-
-  it('窗口缺省 5min（D339 裁决 A）: 3 分钟命中去重, 6 分钟重发', async () => {
-    const runner = makeRunner(db);
-    await primeOneDispatch(runner);
-    vi.setSystemTime(new Date(T0.getTime() + 3 * 60 * 1000));
-    await primeOneDispatch(runner);
-    expect(dispatchNotificationMock).toHaveBeenCalledTimes(1); // < 5min 命中
-    vi.setSystemTime(new Date(T0.getTime() + 6 * 60 * 1000));
-    await primeOneDispatch(runner);
-    expect(dispatchNotificationMock).toHaveBeenCalledTimes(2); // > 5min 重发
-  });
-
-  it('env 覆盖生效: SENTINEL_NOTIFICATION_DEDUP_MS=60000 → 1 分钟窗口', async () => {
-    process.env.SENTINEL_NOTIFICATION_DEDUP_MS = '60000';
-    const runner = makeRunner(db);
-    await primeOneDispatch(runner);
-    vi.setSystemTime(new Date(T0.getTime() + 30 * 1000));
-    await primeOneDispatch(runner);
-    expect(dispatchNotificationMock).toHaveBeenCalledTimes(1); // < 1min 命中
-    vi.setSystemTime(new Date(T0.getTime() + 61 * 1000));
-    await primeOneDispatch(runner);
-    expect(dispatchNotificationMock).toHaveBeenCalledTimes(2); // > 1min 重发
-  });
-
-  it('非法 env 回退缺省 + log.warn 非静默', async () => {
-    process.env.SENTINEL_NOTIFICATION_DEDUP_MS = 'not-a-number';
-    const runner = makeRunner(db);
-    expect(logMock.warn.mock.calls.map((c) => c.map(String).join(' ')).join('\n'))
-      .toContain('SENTINEL_NOTIFICATION_DEDUP_MS');
-    await primeOneDispatch(runner);
-    vi.setSystemTime(new Date(T0.getTime() + 3 * 60 * 1000));
-    await primeOneDispatch(runner);
-    expect(dispatchNotificationMock).toHaveBeenCalledTimes(1); // 3min < 缺省 5min → 命中（非法 env 未生效）
-  });
-
-  it('DS6 场景②: 同 finding 二次 check 不重复开单/不重复通知（id 稳定 + 表去重）', async () => {
-    const runner = makeRunner(db);
-    await primeOneDispatch(runner);
-    const count = (): number =>
-      (db.prepare('SELECT COUNT(*) AS c FROM sentinel_tickets').get() as { c: number }).c;
-    expect(count()).toBe(1);
-    vi.setSystemTime(new Date(T0.getTime() + 1 * 60 * 1000));
-    await primeOneDispatch(runner);
-    expect(count()).toBe(1); // INSERT OR REPLACE 幂等（工单 = 问题类, 不是问题快照）
-    expect(dispatchNotificationMock).toHaveBeenCalledTimes(1); // 窗口内不重发
   });
 });

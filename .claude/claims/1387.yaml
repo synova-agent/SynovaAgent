@@ -1,0 +1,19 @@
+# .claude/claims/1387.yaml — #1387（traversal 早退守卫 · 机制③）写集声明（D708 的 S0 源）
+#   **随批次更新**：B1（d09cc8f3d）⇒ B2（e3a06bac4）⇒ B3（5c70aa4f9）⇒ **B4（本批 = 收尾，17/17）**
+writeset:
+  - .claude/claims/1387.yaml
+  - .claude/task-briefs/2026-10-08-1387-traversal-fallback-b1.md
+  - .claude/task-briefs/2026-10-08-1387-traversal-fallback-b2.md
+  - .claude/task-briefs/2026-10-08-1387-traversal-fallback-b3.md
+  - .claude/task-briefs/2026-10-08-1387-traversal-fallback-b4.md
+  - extensions/sentinels/resource-misallocation/aggregate.ts
+  - extensions/sentinels/routine-mutation/aggregate.ts
+  - extensions/sentinels/strategy-capability-fit/aggregate.ts
+  - extensions/sentinels/value-capture/aggregate.ts
+  - tests/sentinel/traversal-fallback-b4.test.ts
+done:
+  - verify: npx vitest run tests/sentinel/traversal-fallback-b4.test.ts
+  - verify: npx vitest run tests/sentinel/ tests/store/ tests/l3/ tests/connectors/
+  - verify: test "$(git grep -rlE "if \(!r\.nodes\[0\]\) return \[\]" HEAD -- extensions/sentinels/ | grep -v _extinct | wc -l | tr -d '\n')" -eq 0
+  - verify: npx tsc --noEmit
+note: B4 = 机制③ **收尾批**（17/17）。收尾证据三项入判据：① 17/17 逐哨兵点名 ② 4 批判据指针（PR + 判据文件） ③ **旧形态全局零残留** regex（+ 防"扫空目录"假过：断言扫描文件数 >40）。短路声明：V2①-b 对本批对象不具备（未接指标级）⇒ 对已接线批次有效。

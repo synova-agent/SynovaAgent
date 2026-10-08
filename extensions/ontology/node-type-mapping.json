@@ -1,0 +1,282 @@
+{
+  "version": 1,
+  "topic": "graph_nodes.type 的【遗留轴 → 本体轴】显式映射（#1381 p0 词表断轴）",
+  "note": "真源 = 本体轴（CTO 2026-10-08 裁定，三条硬证据见 #1381 §②）。本表 = 过渡的【显式、可测】载体；收口形态 = 哨兵直读本体轴（#1381 §⑩ 批次表）。语义优先；语义不决 ⇒ null + warn（不用来源兜底）。",
+  "evidenceKinds": {
+    "writer": "有写入者（最强：库里真会出现该类型）",
+    "inline-migration": "既有 ONTOLOGY-MIGRATION 内联取舍（须标 scope：global 或 local(<连接器/工具>)）",
+    "vocab": "本体词表直配（packages/ontology/src/node-types.ts；无写入者/无先例）",
+    "none": "无证据 ⇒ 必须 null + warn（显式登记，不静默）"
+  },
+  "vocabSource": "packages/ontology/src/node-types.ts",
+  "entries": {
+    "Financial": {
+      "targets": [
+        "outcome/financial",
+        "resource/money"
+      ],
+      "rule": "按节点语义分：props 含损益/预算类键（total_revenue / gross_margin / operating_expense）⇒ outcome/financial；props 含存量/现金流类键（cash_balance / revenue / cost / period）⇒ resource/money",
+      "ruleTestedBy": [
+        "tests/sentinel/node-type-resolver.test.ts（读侧解析：Financial 两分支）"
+      ],
+      "evidence": [
+        {
+          "kind": "writer",
+          "file": "src/l4/graph-bridge.ts:198",
+          "scope": "global"
+        },
+        {
+          "kind": "writer",
+          "file": "src/connectors/csv-import.ts:101",
+          "scope": "global"
+        }
+      ]
+    },
+    "Agent": {
+      "targets": [
+        "resource/agent"
+      ],
+      "rule": "语义直配（执行体）",
+      "evidence": [
+        {
+          "kind": "writer",
+          "file": "src/agent-observer/collector.ts:75",
+          "scope": "global"
+        }
+      ]
+    },
+    "Risk": {
+      "targets": [
+        "outcome/risk"
+      ],
+      "rule": "语义直配（风险）",
+      "evidence": [
+        {
+          "kind": "writer",
+          "file": "src/l4/graph-bridge.ts:167",
+          "scope": "global"
+        }
+      ]
+    },
+    "Process": {
+      "targets": null,
+      "warn": true,
+      "reason": "来源 `src/l4/graph-bridge.ts:262`（`upsertFromCPC` 内）原文自认 \"is approximate. Check processType and map to correct activity type.\" ⇒ 【局部近似】+ 待按 processType 再分 ⇒ 语义不决 ⇒ 显式无源（CTO 2026-10-08：不确定 ⇒ null + warn）",
+      "evidence": [
+        {
+          "kind": "inline-migration",
+          "file": "src/l4/graph-bridge.ts:262",
+          "scope": "local(cpc/upsertFromCPC)"
+        }
+      ]
+    },
+    "Tool": {
+      "targets": [
+        "resource/tool"
+      ],
+      "rule": "词汇直配",
+      "evidence": [
+        {
+          "kind": "vocab",
+          "file": "packages/ontology/src/node-types.ts",
+          "scope": "global"
+        }
+      ]
+    },
+    "Client": {
+      "targets": [
+        "resource/client"
+      ],
+      "rule": "词汇直配",
+      "evidence": [
+        {
+          "kind": "vocab",
+          "file": "packages/ontology/src/node-types.ts",
+          "scope": "global"
+        }
+      ]
+    },
+    "Event": {
+      "targets": null,
+      "warn": true,
+      "reason": "内联先例（feishu.ts:139 / nemoclaw.ts:42）是【连接器局部】选择（注释自认 'has no direct match'），且哨兵侧 `Event` = 市场事件（marketNodes），与连接器侧消息事件【语义冲突】⇒ 不得推广为全局（#1381 CTO 2026-10-08 复核）",
+      "evidence": [
+        {
+          "kind": "inline-migration",
+          "file": "src/connectors/feishu.ts:139",
+          "scope": "local(feishu)"
+        },
+        {
+          "kind": "inline-migration",
+          "file": "src/connectors/nemoclaw.ts:42",
+          "scope": "local(nemoclaw)"
+        }
+      ]
+    },
+    "Capability": {
+      "targets": null,
+      "warn": true,
+      "reason": "内联先例（tools/marketing-expert-tools.ts:19）是【消费侧假设】（把 capabilities 读作 resource/knowledge），而写入侧 resource/knowledge = 'knowledge' 语义 ⇒ 不同轴，不得推广（同 Event 规则）",
+      "evidence": [
+        {
+          "kind": "inline-migration",
+          "file": "src/tools/marketing-expert-tools.ts:19",
+          "scope": "local(marketing-expert-tools)"
+        }
+      ]
+    },
+    "APP": {
+      "targets": null,
+      "warn": true,
+      "reason": "无先例 + 近似 ⇒ 语义不决（CTO 2026-10-08 裁：全部 null + warn）",
+      "evidence": [
+        {
+          "kind": "none",
+          "file": "src/sentinel/adapters/integration-health-sentinel.ts:35",
+          "scope": "global"
+        }
+      ]
+    },
+    "SOFTWARE": {
+      "targets": null,
+      "warn": true,
+      "reason": "无先例 + 近似 ⇒ 语义不决（CTO 2026-10-08 裁：全部 null + warn）",
+      "evidence": [
+        {
+          "kind": "none",
+          "file": "src/sentinel/adapters/integration-health-sentinel.ts:35",
+          "scope": "global"
+        }
+      ]
+    },
+    "Evidence": {
+      "targets": null,
+      "warn": true,
+      "reason": "无先例 + 近似 ⇒ 语义不决（CTO 2026-10-08 裁：全部 null + warn）",
+      "evidence": [
+        {
+          "kind": "none",
+          "file": "src/l3/quality-firewall.ts:54",
+          "scope": "global"
+        }
+      ]
+    },
+    "FINANCIAL": {
+      "aliasOf": "Financial",
+      "evidence": [
+        {
+          "kind": "writer",
+          "file": "src/connectors/csv-import.ts:101",
+          "scope": "global"
+        }
+      ]
+    },
+    "TOOL": {
+      "aliasOf": "Tool",
+      "evidence": [
+        {
+          "kind": "vocab",
+          "file": "packages/ontology/src/node-types.ts",
+          "scope": "global"
+        }
+      ]
+    },
+    "Competitive": {
+      "targets": [
+        "outcome/competitive"
+      ],
+      "rule": "语义直配（Competitive）；**主目标 = targets[0]**（CTO 2026-10-08 裁 (a)：写入侧写主目标，多目标由读侧承担）",
+      "evidence": [
+        {
+          "kind": "writer",
+          "file": "extensions/ontology/field-mappings/competitive-intel.json:4",
+          "scope": "global"
+        }
+      ]
+    },
+    "Operational": {
+      "targets": [
+        "outcome/operational"
+      ],
+      "rule": "语义直配（Operational）；**主目标 = targets[0]**（CTO 2026-10-08 裁 (a)：写入侧写主目标，多目标由读侧承担）",
+      "evidence": [
+        {
+          "kind": "writer",
+          "file": "extensions/ontology/field-mappings/erp-operational.json:4",
+          "scope": "global"
+        }
+      ]
+    },
+    "External": {
+      "targets": [
+        "outcome/external"
+      ],
+      "rule": "语义直配（External）；**主目标 = targets[0]**（CTO 2026-10-08 裁 (a)：写入侧写主目标，多目标由读侧承担）",
+      "evidence": [
+        {
+          "kind": "writer",
+          "file": "extensions/ontology/field-mappings/external-intel.json:4",
+          "scope": "global"
+        }
+      ]
+    },
+    "Person": {
+      "targets": [
+        "resource/person"
+      ],
+      "rule": "语义直配（Person）；**主目标 = targets[0]**（CTO 2026-10-08 裁 (a)：写入侧写主目标，多目标由读侧承担）",
+      "evidence": [
+        {
+          "kind": "writer",
+          "file": "extensions/ontology/field-mappings/hr-standard.json:4",
+          "scope": "global"
+        }
+      ]
+    },
+    "Innovation": {
+      "targets": [
+        "outcome/innovation",
+        "activity/innovation"
+      ],
+      "rule": "语义直配（Innovation）；**主目标 = targets[0]**（CTO 2026-10-08 裁 (a)：写入侧写主目标，多目标由读侧承担）",
+      "evidence": [
+        {
+          "kind": "writer",
+          "file": "extensions/ontology/field-mappings/innovation-pipeline.json:4",
+          "scope": "global"
+        }
+      ]
+    }
+  },
+  "inlineMigrationsTranscribed": [
+    {
+      "file": "src/l4/graph-bridge.ts:198",
+      "note": "OUTCOME_FINANCIAL -> outcome/financial or resource/money? Context-dependent."
+    },
+    {
+      "file": "src/l4/graph-bridge.ts:219",
+      "note": "RESOURCE_KNOWLEDGE has no direct match. Using resource/knowledge."
+    },
+    {
+      "file": "src/l4/graph-bridge.ts:241",
+      "note": "ACTIVITY_GOVERNANCE has no direct match. Using activity/governance (strategic alignment)."
+    },
+    {
+      "file": "src/l4/graph-bridge.ts:262",
+      "note": "ACTIVITY_PRODUCTION is approximate."
+    },
+    {
+      "file": "src/connectors/feishu.ts:139",
+      "note": "ACTIVITY_LEARNING has no direct match. Store as edge annotation."
+    },
+    {
+      "file": "src/connectors/nemoclaw.ts:42",
+      "note": "ACTIVITY_LEARNING has no direct match. Store as edge annotation."
+    },
+    {
+      "file": "src/l4/decision-capture.ts:38",
+      "note": "ACTIVITY_GOVERNANCE has no direct match. Using activity/governance (strategic alignment)."
+    }
+  ],
+  "aliasRule": "aliasOf ⇒ 解析时【委托到被指向的条目】（只维护一份；两者解析结果必须一致 —— 见判据 V1d）"
+}

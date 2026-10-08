@@ -1,0 +1,18 @@
+# .claude/claims/1398.yaml — #1398（三层字段真源对齐）写集声明（D708 的 S0 源）
+#   **随批次更新**：1a（churnRisk/tenureMonths/defectRate，已合 dfac2ef66）⇒ **批 1b（本批：marketShare/routineRigidity）**
+#   CTO 2026-10-08 裁 (a) 范围坍缩 + **去掉运行时归一化**；要求：**每批都要有自己的"改名前实测"对照**
+writeset:
+  - .claude/claims/1398.yaml
+  - .claude/task-briefs/2026-10-08-1398-field-truth-source-b1b.md
+  - extensions/sentinels/shared/computes/l4-competition/compute-competitor-pricing-landscape.ts
+  - extensions/sentinels/shared/computes/l2-internal/compute-routine-rigidity.ts
+  - extensions/sentinels/shared/computes/l2-value/compute-learning-rate.ts
+  - tests/sentinels/shared/compute-learning-rate.test.ts
+  - tests/e2e/full-pipeline.integration.test.ts
+  - tests/sentinel/field-name-alignment.test.ts
+done:
+  - verify: npx vitest run tests/sentinel/field-name-alignment.test.ts tests/sentinels/shared/ tests/e2e/
+  - verify: npx vitest run tests/sentinels/ tests/sentinel/ tests/e2e/
+  - verify: bash -c 'git grep -n -E "\b(marketShare|routineRigidity)\b" HEAD -- extensions/ | grep -v "_extinct/" | grep -v "/skills/" | wc -l'
+  - verify: npx tsc --noEmit
+note: 批 1b = A 类 2 字段改名（真源名 market_share / routine_rigidity）。**本批自己的实测对照**：routineRigidity 旧名 ⇒ **静默用默认值 0.5**（正名 0.3）且 degraded=false ⇒ **无信号**；marketShare ⇒ 本次返回值**实测无分歧**（如实登记，不夸大）。注：compute-hhi.ts **无字段问题**（入参是 number[]）⇒ 不在批次内（已核）。

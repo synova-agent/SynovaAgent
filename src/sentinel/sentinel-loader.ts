@@ -10,8 +10,9 @@ import { readdirSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { pathToFileURL } from 'url';
 import { createLogger } from '@synova/logger';
-import type { SentinelFinding, SentinelCheckResult, SentinelThresholdPair } from './types';
+import type { MetricRow, SentinelFinding, SentinelCheckResult, SentinelThresholdPair } from './types';
 
+import { withOrgScope } from './org-scope';
 const log = createLogger('sentinel/loader');
 
 export interface SentinelManifest {
@@ -259,7 +260,14 @@ export async function registerLoadedSentinels(): Promise<{ registered: number; e
         async check(context) {
           // 将 SentinelContext.db 作为 GraphStore 传给 aggregate
           const ctx = context as unknown as Record<string, unknown>;
-          const store = (context.db ?? {}) as Record<string, unknown>;
+          const rawStore = (context.db ?? {}) as Record<string, unknown>;
+          // #1374 租户收口：**单点包装** —— 43 个 queryNodes 读路径一次性获得 `props.orgId` 过滤；
+          //   注意：用 **ctx.teamId 原值**（不是下面的 'default' 兜底值）作为租户真源 ——
+          //   `'default'` 是回落值、不是租户（#1322/#1371 同族）；无值 ⇒ 原样透传 + 计数未隔离。
+          const store = withOrgScope(rawStore, ctx.teamId as string | undefined);
+          // #1376: 按需路径的读能力注入（`rawDb` 仅在传入句柄确是 raw 时提供；否则**显式缺席**）
+          const hasQueryNodes = typeof rawStore.queryNodes === 'function';
+          const hasPrepare = typeof (rawStore as { prepare?: unknown }).prepare === 'function';
           const teamId = (ctx.teamId as string) || 'default';
 
           // D577: 阈值注入（唯一生产解析点）—— manifest 基线 + memStore 覆写
@@ -279,6 +287,13 @@ export async function registerLoadedSentinels(): Promise<{ registered: number; e
           }
 
           // D577: 第 4 参注入 thresholds（aggregate 可选参，未声明者零影响）
+          context.graphStore = hasQueryNodes
+            ? (store as { queryNodes(type: string, filters?: Record<string, unknown>, graph?: string): Array<{ id: string; type: string; props: Record<string, unknown> }> })
+            : undefined;
+          context.rawDb = hasPrepare
+            ? (rawStore as { prepare(sql: string): { all(...p: unknown[]): unknown[]; get(...p: unknown[]): unknown; run(...p: unknown[]): { changes: number } } })
+            : undefined;
+
           const checkFn = sentinelObj as {
             check: (store: unknown, teamId: string, traversal?: unknown,
               thresholds?: Record<string, SentinelThresholdPair>) => unknown;
@@ -288,6 +303,36 @@ export async function registerLoadedSentinels(): Promise<{ registered: number; e
           const findings: SentinelFinding[] = Array.isArray(raw) ? raw : ((raw as Record<string, unknown>)?.findings as SentinelFinding[]) || [];
           // D577 缺陷 C: degraded 传播（aggregate 对象形态返回时），不再硬编码丢失（铁律 31）
           const degraded = !Array.isArray(raw) && (raw as Record<string, unknown>)?.degraded === true;
+          // #1375（A2）：**指标级接线** —— 哨兵只返回结构化 metrics，loader 统一落库
+          const metrics: MetricRow[] = Array.isArray(raw)
+            ? []
+            : ((raw as Record<string, unknown>)?.metrics as MetricRow[] | undefined) ?? [];
+          const runId = `run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+          const defVersion = `${manifest.name}@${manifest.version || '1.0.0'}`;
+          if (metrics.length > 0) {
+            const sink = (context as { metricSink?: (row: Record<string, unknown>) => unknown }).metricSink;
+            if (!sink) {
+              log.warn({ sentinelId: `sentinel-${manifest.name}`, count: metrics.length, degraded: true, reason: 'no-sink' },
+                '有 metrics 但无 sink（该路径未注入）⇒ 跳过写入（显式降级，不静默）');
+            } else {
+              for (const m of metrics) {
+                sink({
+                  orgId: teamId,
+                  metricId: m.metricId,
+                  value: m.value,
+                  unit: m.unit,
+                  entityId: '*',
+                  sourceType: 'compute',
+                  sourceId: m.sourceId ?? `sentinel-${manifest.name}`,
+                  evidenceRef: m.evidenceRef ?? `sentinel:${manifest.name}`,
+                  observedAt: new Date().toISOString(),
+                  runId,
+                  defVersion,
+                  inputDigest: m.inputDigest,
+                });
+              }
+            }
+          }
           const result: SentinelCheckResult = {
             sentinelId: `sentinel-${manifest.name}`,
             ok: true,
@@ -295,6 +340,7 @@ export async function registerLoadedSentinels(): Promise<{ registered: number; e
             durationMs: 0,
             checkedAt: new Date().toISOString(),
           };
+          if (metrics.length > 0) result.metrics = metrics;
           if (degraded) result.degraded = true;
           return result;
         },

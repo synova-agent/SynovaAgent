@@ -31,21 +31,36 @@ export function swapDbForContext(context: SentinelContext): () => void {
  * 从 diagnosis_snapshots 表发现所有已知团队 ID。
  * 空表或无权限时回退到 ['default']。
  */
+/**
+ * 团队/租户枚举（#1371 V6 处置 = **修**；CTO 2026-10-08 裁）：
+ *   · 旧实现读 `diagnosis_snapshots` —— 该表**在真库不存在**（2026-10-08 实测）⇒ 恒走 catch ⇒ 回落 `['default']`
+ *     （= 已坏的代码路径，不是"冷启动缺口"）。
+ *   · 现实现读 **租户注册表 `orgs`（status='active'）** ⇒ ① 死表依赖消失 ② 与 cron 扇出**共用同一真源**。
+ *   · 🔴 **删除 `['default']` 回落**：`'default'` 是回落值不是租户（表 CHECK 已禁入）⇒ 空注册表返回 `[]`，
+ *     调用方须自行处理"无租户"（**不得**把回落值当租户）。
+ */
 export function discoverTeams(context: SentinelContext): string[] {
   try {
-    const db = context.db as { prepare(sql: string): { all(): Array<{ team_id: string }> } } | null;
+    // #1376: **显式取用** raw 能力（`context.rawDb`）；缺席 ⇒ 空集 + warn（不静默；空结果 ≠ 隔离成功）
+    const rawDb = context.rawDb;
+    if (!rawDb) {
+      log.warn({ degraded: true, reason: 'rawDb-absent' }, 'rawDb 能力缺席 ⇒ 空集（该路径无 raw 句柄）');
+      return [];
+    }
+    const db = rawDb as { prepare(sql: string): { all(): Array<{ team_id: string }> } } | null;
     if (!db || typeof db.prepare !== 'function') {
-      log.debug('db 不可用 — 回退到 default 团队');
-      return ['default'];
+      log.debug('db 不可用 — 无租户可枚举（空集，不再回落 default）');
+      return [];
     }
     const rows = db
-      .prepare('SELECT DISTINCT team_id FROM diagnosis_snapshots ORDER BY team_id')
+      .prepare("SELECT org_id AS team_id FROM orgs WHERE status = 'active' ORDER BY org_id")
       .all();
     if (rows && rows.length > 0) return rows.map((r) => r.team_id);
   } catch (err: unknown) {
-    log.warn({ err: (err as Error)?.message || String(err) }, '团队发现查询失败 — 回退到 default');
+    log.warn({ err: (err as Error)?.message || String(err) }, '租户枚举查询失败 — 空集（不再回退 default）');
   }
-  return ['default'];
+  // #1371：**不再回落 `'default'`**（回落值不是租户；表 CHECK 亦禁入）⇒ 空集由调用方处理
+  return [];
 }
 
 /**

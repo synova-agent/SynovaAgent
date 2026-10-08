@@ -10,6 +10,7 @@
 import type { Sentinel, SentinelConfig, SentinelCategory, SentinelPriority, SentinelRegistry, SentinelFinding, SentinelContext } from './types';
 import { createLogger } from '@synova/logger';
 
+import { writeRoundReadings } from './metric-readings-writer';
 const log = createLogger('sentinel/registry');
 
 // ═══ SentinelRegistryImpl ═══
@@ -71,6 +72,8 @@ export class SentinelRegistryImpl implements SentinelRegistry {
     for (const s of this.sentinels.values()) {
       try {
         const result = await s.check(context);
+        // #1054（2-1b）轮次级写入（覆盖面 = 其余 44 哨兵；sink 未注入 ⇒ no-op）
+        writeRoundReadings(context.metricSink, s.config.id, result, context.teamId);
         if (result.findings) all.push(...result.findings);
       } catch (err: unknown) {
         log.warn({ err, id: s.config.id }, '哨兵执行失败 — degraded');

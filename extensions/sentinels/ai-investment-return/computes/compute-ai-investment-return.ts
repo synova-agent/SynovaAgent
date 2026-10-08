@@ -11,7 +11,10 @@
  * - paybackMonths: 预计投资回收期（月）
  * - roi = min(costSaving+revenueUplift)/investment, 3x封顶
  */
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408：输入有效性检查
 export interface AiInvestmentResult {
+  /** #1408：输入有效性等告警（缺字段/NaN/非有限 ⇒ 非空） */
+  warnings?: string[];
   roi: number;
   costSaving: number;
   revenueUplift: number;
@@ -26,6 +29,9 @@ export function computeAiInvestmentReturn(params: {
   totalInvestment: number;
   paybackMonths: number;
 }): AiInvestmentResult {
+  // #1408：输入有效性检查（**params 对象型** ⇒ 逐字段名与 params 逐字一致）
+  const _inputIssues = checkFiniteInputs(params, ['costSaved', 'revenueUplift', 'totalInvestment', 'paybackMonths']);
+  if (_inputIssues.length > 0) return { ...{ roi: 0, costSaving: 0, revenueUplift: 0, totalInvestment: 0, paybackMonths: 0, degraded: true }, warnings: _inputIssues };
   const { costSaved, revenueUplift, totalInvestment, paybackMonths } = params;
   if (totalInvestment <= 0) return { roi: 0, costSaving: 0, revenueUplift: 0, totalInvestment: 0, paybackMonths: 0, degraded: true };
   const totalReturn = costSaved + revenueUplift;
