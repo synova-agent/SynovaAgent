@@ -13,10 +13,20 @@
  * 产物：TUI_1348_OUT 写 ink 帧原始流；子进程 fd1/fd2（console.log + pino warn/error）由 shell 重定向另行留档。
  */
 import { Readable, Writable } from 'node:stream';
-import { appendFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
 
 const OUT = process.env.TUI_1348_OUT;
 if (!OUT) throw new Error('缺少 TUI_1348_OUT');
+
+// ── 留档防覆盖（根因修复，2026-10-09）──
+// 同型缺陷：#1466「夹具写死 /tmp/probe-dh.out ⇒ 并发假红」。写死共享路径的产物 = 可被覆盖的证据。
+// 本 runner 此前用 writeFileSync(OUT,'') 直接截断 ⇒ 一旦同前缀重跑/被误 cp，真留档静默消失。
+// 现改为 fail-closed：目标已存在即拒绝运行（要覆盖必须显式 TUI_ALLOW_OVERWRITE=1）。
+if (existsSync(OUT) && process.env.TUI_ALLOW_OVERWRITE !== '1') {
+  process.stderr.write(`[harness] REFUSE-OVERWRITE: 既有留档已存在: ${OUT}\n`);
+  process.stderr.write('[harness] 如需覆盖请显式 TUI_ALLOW_OVERWRITE=1；推荐改用带时间戳的新前缀。\n');
+  process.exit(4);
+}
 
 writeFileSync(OUT, '');
 const note = (line: string): void => {

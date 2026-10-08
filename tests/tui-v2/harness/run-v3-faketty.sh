@@ -24,6 +24,20 @@ set -u
 command -v node >/dev/null 2>&1 || { echo "FATAL: node 不在 PATH（nvm 未加载）"; exit 127; }
 
 export TERM=xterm-256color
+# ── 留档防覆盖（根因修复，2026-10-09）──
+# 与 #1466 同型：写死共享路径的产物可被覆盖 ⇒ 证据静默消失。以下四种留档任一存在即拒绝运行。
+if [ "${TUI_ALLOW_OVERWRITE:-0}" != "1" ]; then
+  _existing=""
+  for _f in "${OUTPFX}.frames.txt" "${OUTPFX}.console.txt" "${OUTPFX}.stub-requests.log" "${OUTPFX}.stub-server.log"; do
+    [ -e "$_f" ] && _existing="$_existing $_f"
+  done
+  if [ -n "$_existing" ]; then
+    echo "REFUSE-OVERWRITE: 既有留档存在:${_existing}" >&2
+    echo "（如需覆盖请显式 TUI_ALLOW_OVERWRITE=1；推荐改用带时间戳的新前缀）" >&2
+    exit 3
+  fi
+fi
+
 export STUB_PORT="${STUB_PORT:-18123}"
 export STUB_LOG="${OUTPFX}.stub-requests.log"
 export LLM_API_KEY="sk-stub-1348"
@@ -53,3 +67,8 @@ kill "$STUB_PID" 2>/dev/null  # swallow-ok: 清理路径，stub 可能已自行�
 echo "mode=$MODE rc=$RC frames=$(wc -c < "${OUTPFX}.frames.txt" | tr -d ' ') bytes console=$(wc -c < "${OUTPFX}.console.txt" | tr -d ' ') bytes"
 echo "--- 残留进程检查 ---"
 pgrep -fl "run-prod-faketty|llm-stub-server" || echo "(无残留)"
+
+echo "--- 留档指纹（sha256 前 16；防后改/后覆盖）---"
+for _f in "${OUTPFX}.frames.txt" "${OUTPFX}.console.txt" "${OUTPFX}.stub-requests.log"; do
+  [ -e "$_f" ] && printf "%-52s %s\n" "$_f" "$(shasum -a 256 "$_f" | cut -c1-16)"
+done
