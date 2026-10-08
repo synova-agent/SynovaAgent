@@ -6,6 +6,7 @@
   "allowedTo": ["pool/capital", "pool/human_capital"],
   "requiredProps": ["reputation_score", "attraction_multiplier"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "brand_recognition_rate": "number (0-1) — 品牌认知度",
     "employer_brand_score": "number (0-1) — 雇主品牌评分",
     "investor_confidence_index": "number (0-1) — 投资者信心指数"
