@@ -1,0 +1,13 @@
+{
+ "evidence_id": "1282/A-03",
+ "task": "主仓移出 + 计数闭合",
+ "method": "逐件 git rm（禁 -r 整目录）",
+ "outbound_N": 122,
+ "conflict_held": [],
+ "baseline_before": 841,
+ "baseline_after": 719,
+ "delta": 122,
+ "live_ref_files_intact": "11/11",
+ "note": "冲突件经档案仓刷新后并入（122 件）；活引用件零误删",
+ "card": "#1282"
+}
