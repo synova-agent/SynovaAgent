@@ -10,6 +10,9 @@ writeset:
   - docs/synova/coordination/2-2-参数清单-v1-20261008.md
   - docs/synova/coordination/tools/check-param-list.ts
   - docs/synova/product-lines/evidence/D1047-param-list-20261008.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  # ↑ 队长落盘（DOC-0190 登记条目，修 D782 登记门禁 D2）：本卡过 CI 所必需 ⇒ 计入本卡写集
+  #   先例：7a7de21ec「登记册入台账 DOC-0189 + claim 补登（修 D2 登记门禁 / D708 身份）」
 done:
   - verify: npx tsx docs/synova/coordination/tools/check-param-list.ts
 # 声明纪律：只列本 PR 真正改动的文件。不列 src/**（纯文档产物，卡面明令）。
