@@ -1,0 +1,16 @@
+writeset:
+  - .claude/claims/1457.yaml
+  - .claude/task-briefs/2026-10-09-1457-BatchF出库.md
+  - docs/synova/product-lines/evidence/1457-batch-f/**
+  - docs/synova/research/**
+  - docs/synova/audit/**
+  - docs/plans/**
+  - app/synova-founder-dashboard-*.html
+  - MASTER-REPORT-审计架构模块化综合报告-20260603.html
+  - TUI-审计报告-20260607.html
+done:
+  - "verify: bash scripts/control-tower/check-doc-contract.sh --baseline --json ⇒ 候选 83 → 62（扣留 14 + 裁定 12 保留）"
+  - "verify: bash -c 'test -f INDEX.md -a -f docs/synova/coordination/AUDIT-PROTOCOL.md -a -f app/index.html' ⇒ 活引用件零误删"
+  - "verify: bash scripts/pre-commit-check.sh ⇒ 13 组通过"
+note: 出库 Batch F（卡 #1457）：HTML 过程件 114 件承接（98 新复制 / 2 相同 / 14 冲突未覆盖扣留）⇒ 实删 100 件（F1 白名单内 + F2 白名单外）。business 7 + 权威档 5 留创始人裁定。
+
