@@ -1033,13 +1033,9 @@ TASK_BRIEF_EMPTY=""
 # 开时若 resolver 返回的是 claim，则 Q0/Q1/Q2/Q3 散文检查**按设计不适用**（claim 是两字段制），
 # 改以 claim 自身 schema 判据（writeset + done 非空且 done 含 verify:，由 claim_store 强制）
 # 替代；并**显式打印**该结论（禁静默空白，铁律 11）。
-# 卡 #1423（创始人 2026-10-08「一步到位」裁决）: **默认开** ——
-#   未设/真值 ⇒ 开；显式 0|false|off|no|n ⇒ 关（**唯一回滚点**）。
-#   口径与单一事实源 claim_store.claim_v2_enabled 逐字对齐。
-CLAIM_V2=1
+CLAIM_V2=0
 case "$(printf '%s' "${SYNO_CLAIM_V2:-}" | tr '[:upper:]' '[:lower:]')" in
-  ''|1|true|on|yes|y) CLAIM_V2=1 ;;
-  *) CLAIM_V2=0 ;;
+  1|true|on|yes|y) CLAIM_V2=1 ;;
 esac
 IS_CLAIM_DECL=0
 case "${BRIEF:-}" in *.yaml) IS_CLAIM_DECL=1 ;; esac
@@ -1627,28 +1623,6 @@ SCOPE_VIOLATION=""
 #     ④ 三态: claim 检查自身失败（畸形 claim ⇒ rc=2）⇒ 计硬红，不与「通过」混同。
 _G12_JUDGE_SET="${STAGED_ALL}"          # 送 legacy 判定的文件集（缺省=全部）
 _G12_CLAIM_STATUS="off"
-
-# ══════════════════════════════════════════════════════════════════════════════
-# 卡 #1423 判据③（反例守护）: **带 D# 的在飞分支必须仍 pass**
-#   为什么必须加: 开关默认翻「开」后，下面 D1220 的「claim 模式 ∧ 无 legacy 载体 ⇒ 硬红」
-#     分支变成**默认可达** —— 而 D# 在飞任务的 brief 若落在 ±1 天窗口外（跨日任务常态），
-#     `ALL_TODAY_BRIEFS` 为空 ⇒ 被误判"本提交无 legacy 声明载体" ⇒ **拦死在飞合并**
-#     （创始人 2026-10-08 明令禁止：「现在还带 D 的任务也不要影响他们合并」）。
-#   最小修法: 开关**开**时，把 resolver 已经定位到的 **legacy 声明**（非 .yaml）并入 legacy 判定集。
-#     · 判定力不降: 该文件仍要过它的 Q2 写集/排除项（只是不再"看不见它"）；
-#     · claim 载体（*.yaml）**不并入** ⇒ D1220 对 claim 用户的牙齿保留（无 legacy 载体即硬红）；
-#     · 开关**关**时本段不可达 ⇒ 回滚态与改前**逐字节一致**（文档承诺的回滚语义不破）。
-# ══════════════════════════════════════════════════════════════════════════════
-if [ "${CLAIM_V2:-0}" = "1" ] && [ -n "${BRIEF:-}" ] && [ "${IS_CLAIM_DECL:-0}" != "1" ] && [ -f "$BRIEF" ]; then
-  case "$ALL_TODAY_BRIEFS" in
-    *"$BRIEF"*) : ;;
-    *)
-      ALL_TODAY_BRIEFS="$(printf '%s\n%s\n' "$ALL_TODAY_BRIEFS" "$BRIEF" | grep -v '^$' | sort -u || true)"
-      echo -e "  ${CYAN}ℹ️  组 12: 并入 resolver 定位的 legacy 声明（窗口外/锚点定位，存量 D# 只读兼容）: ${BRIEF##*/}${RESET}"
-      ;;
-  esac
-fi
-
 if [ "${CLAIM_V2:-0}" = "1" ] && [ -n "$STAGED_ALL" ]; then
   _G12_C_OUT="$(printf '%s\n' "$STAGED_ALL" | python3 "$ROOT/scripts/control-tower/claim_store.py" --coverage --root "$ROOT" 2>&1)"
   _G12_C_RC=$?

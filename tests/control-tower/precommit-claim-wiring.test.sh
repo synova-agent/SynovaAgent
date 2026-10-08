@@ -9,14 +9,6 @@
 #   边界 — SYNO_CLAIM_V2 默认关 ⇒ 逐字节走 legacy 散文路径（claim 分支不参与）
 #   改坏即红 — 删掉开关门控 / 删掉显式打印 ⇒ 本夹具对应断言必红
 #
-#   ── 卡 #1423（D-C 最后一刀）: SYNO_CLAIM_V2 **默认翻「开」** + 存量 D# 反例守护 ──
-#   默认翻面 — 未设 ⇒ on（新任务走 issue 号身份）；显式 0/off ⇒ off（**唯一回滚点**）
-#   判据③   — **带 D# 的在飞分支**（有 brief、无 claim、brief 在 ±1 天窗口外）⇒ 组 12 **不得硬阻断**
-#              （"保存量 D#" = 创始人原话的机器判据）；其变异体（中和守护段）⇒ 误拦复现 ⇒ 必红
-#   判据④   — claim 新格式端到端（开关未设）⇒ resolver 返回 claim + 组 6 走 claim 分支
-#              其变异体（显式回滚 `SYNO_CLAIM_V2=0`）⇒ 新格式不可提交 ⇒ 默认开是承重点
-#   回滚语义 — 显式 0 ⇒ 组 12 逐字节 legacy（#1423 守护段不可达）
-#
 # 🔴 两处**环境耦合**修复（2026-10-07，卡 #1305 / Lead 派单）:
 #   ① 分支名耦合: resolver 先按**分支名**推断 issue（feat/D1220-* → 1220）再去 claim 库找 <issue>.yaml；
 #      而本夹具注入的是 1217.yaml ⇒ 在**任何别的卡的分支**上必然命中失败 → 回落 legacy → 证据消失（假红）。
@@ -48,11 +40,9 @@ grep -q 'IS_CLAIM_DECL' "$PC" && ok "接线: 声明载体双形态判定存在" 
 grep -q '散文检查按设计不适用' "$PC" && ok "接线: 含显式打印（禁静默空白）" \
   || no "接线: 缺显式打印（=静默空白）"
 
-# ── 边界（**卡 #1423 翻面**）: 默认开 + 回滚=显式关 ──
+# ── 边界: 默认关（回滚语义）──
 FLAG=$(env -u SYNO_CLAIM_V2 python3 "$CS" --flag 2>/dev/null)  # swallow-ok: 失败即空 → 下方断言直接判红（不静默放行）
-[ "$FLAG" = "on" ] && ok "边界: SYNO_CLAIM_V2 **默认开**（#1423: 新任务走 issue 号身份）" || no "边界: 默认应为 on，实得 $FLAG"
-FLAG_OFF=$(SYNO_CLAIM_V2=0 python3 "$CS" --flag 2>/dev/null)  # swallow-ok: 同上
-[ "$FLAG_OFF" = "off" ] && ok "边界: 显式 0 ⇒ 关（**唯一回滚点**，回滚语义保留）" || no "边界: 显式 0 应为 off，实得 $FLAG_OFF"
+[ "$FLAG" = "off" ] && ok "边界: SYNO_CLAIM_V2 默认关（回滚=关开关）" || no "边界: 默认应为 off，实得 $FLAG"
 
 # ── 正常: 合法 claim ⇒ --check exit 0 ──
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
@@ -247,179 +237,6 @@ COV_BAD_RC=$?
 [ "$COV_BAD_RC" -eq 2 ] && ok "契约[coverage]: 畸形 claim ⇒ exit 2（检查自身失败，fail-closed）" \
   || no "契约[coverage]: 畸形 claim 未 exit 2（实得 $COV_BAD_RC ⇒ 会判『无声明』）"
 rm -rf "$COV_TMP"
-
-
-
-
-
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# 卡 #1423（D-C 最后一刀）: SYNO_CLAIM_V2 默认翻「开」+ 存量 D# 反例守护
-#   创始人 2026-10-08：「**一步到位**，但是**现在还带 D 的任务也不要影响他们合并**」
-#   ⇒ 两条同时满足: 禁"新建 D#"（默认开 ⇒ 新任务走 issue 号）＋ 保"存量 D#"（只读兼容）
-#   判据来源: 卡 #1423 判据③（反例）④（新格式 + 变异体）；本段融合进本夹具是为守 D734 的
-#   12 文件 PR 预算（Lead 今日反复强调"PR 体积不搅混判据面"），不新开文件。
-# ══════════════════════════════════════════════════════════════════════════════
-echo ""
-echo "── 卡 #1423: 默认开三态 + 判据③反例 + 判据④新格式（含两处变异体）──"
-PYBIN="${PYBIN:-}"
-if [ -z "$PYBIN" ]; then
-  for _c in python3 python py; do
-    if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then PYBIN="$_c"; break; fi
-  done
-fi
-if [ -z "$PYBIN" ]; then
-  no "卡 #1423 §环境: 无可用 python（本条判红，不静默跳过）"
-else
-  # ── §1 单一事实源三态 ──
-  F_UNSET="$(env -u SYNO_CLAIM_V2 "$PYBIN" -B "$CS" --flag 2>/dev/null || true)"  # swallow-ok: 失败即空 → 断言判红
-  F_OFF="$(SYNO_CLAIM_V2=0 "$PYBIN" -B "$CS" --flag 2>/dev/null || true)"        # swallow-ok: 同上
-  F_ON="$(SYNO_CLAIM_V2=1 "$PYBIN" -B "$CS" --flag 2>/dev/null || true)"         # swallow-ok: 同上
-  [ "$F_UNSET" = "on" ] && ok "#1423 §1 未设 ⇒ on（默认开: 新任务走 issue 号身份）" || no "#1423 §1 未设应为 on，实得 '${F_UNSET}'"
-  [ "$F_OFF" = "off" ] && ok "#1423 §1 显式 0 ⇒ off（唯一回滚点）" || no "#1423 §1 显式 0 应为 off，实得 '${F_OFF}'"
-  [ "$F_ON" = "on" ] && ok "#1423 §1 显式 1 ⇒ on（兼容旧写法）" || no "#1423 §1 显式 1 应为 on，实得 '${F_ON}'"
-  # ── §2 四处 bash 解析点口径一致（防漏改漂移）──
-  for _f in scripts/workflow/resolve-commit-brief.sh scripts/check-verifiable-done.sh scripts/pre-commit-check.sh; do
-    if grep -q "''|1|true|on|yes|y) CLAIM_V2=1" "$REPO/$_f"; then
-      ok "#1423 §2 口径已翻（未设⇒开）: $(basename "$_f")"
-    else
-      no "#1423 §2 口径未翻（仍默认关）: $_f"
-    fi
-  done
-  if grep -q "_BCV_V2=1" "$REPO/scripts/check-brief-vs-code.sh"; then
-    ok "#1423 §2 口径已翻（未设⇒开）: check-brief-vs-code.sh"
-  else
-    no "#1423 §2 口径未翻（仍默认关）: scripts/check-brief-vs-code.sh"
-  fi
-
-  # ── 沙箱工厂（带 D# 在飞形态 / claim 新格式形态）──
-  T1423="$(mktemp -d)"; trap 'rm -rf "$T1423"' EXIT
-  D3="$(date -v-3d +%Y-%m-%d 2>/dev/null || date -d '3 days ago' +%Y-%m-%d)"
-  mk1423() {  # <dir> <kind: dinflight|claimnew>
-    local d="$1" kind="$2"
-    mkdir -p "$d/.claude/task-briefs" "$d/.claude/claims" "$d/src"
-    cp -R "$REPO/scripts" "$d/scripts"
-    printf 'node_modules/\n.env\n' > "$d/.gitignore"
-    git -C "$d" init -q -b main >/dev/null 2>&1
-    echo x > "$d/src/test.sh"; git -C "$d" add -A >/dev/null 2>&1
-    git -C "$d" -c user.name=t -c user.email=t@t commit -qm "chore: base" >/dev/null 2>&1
-    case "$kind" in
-      dinflight)
-        git -C "$d" checkout -qb feat/D9999-inflight >/dev/null 2>&1
-        cat > "$d/.claude/task-briefs/${D3}-D9999-inflight.md" <<'BEOF'
-## Q2: 范围
-做什么:
-- src/test.sh
-## 架构层: 基础设施
-#CRITERIA: A
-## Done 标准
-- [x] verify: echo 1
-BEOF
-        ;;
-      claimnew)
-        git -C "$d" checkout -qb feat/9999-newformat >/dev/null 2>&1
-        printf 'writeset:\n  - src/test.sh\ndone:\n  - verify: bash tests/x.sh\nnote: 卡 #1423 新格式探针\n' > "$d/.claude/claims/9999.yaml"
-        ;;
-    esac
-  }
-  p1423() {  # <sb> [v2模式: unset|0|1] [staged] → stdout
-    local sb="$1" mode="${2:-unset}" st="${3:-src/test.sh}"
-    local envs=(GITHUB_ACTIONS=true SYNO_TEST_ARM=1 SYNO_CLAIM_DIR="$sb/.claude/claims"
-                SYNO_GIT_CACHED_ALL_NAMES="$st" SYNO_GIT_CACHED_NAMES="$st")
-    case "$mode" in
-      0) envs+=(SYNO_CLAIM_V2=0) ;;
-      1) envs+=(SYNO_CLAIM_V2=1) ;;
-      *) : ;;
-    esac
-    ( cd "$sb" && env "${envs[@]}" bash scripts/pre-commit-check.sh 2>&1 || true )
-  }
-
-  # ── 判据③ 反例: 窗口外 D# brief + 开关未设（=默认开）⇒ 组 12 不得硬阻断 ──
-  SB_D="$T1423/dinflight"; mk1423 "$SB_D" dinflight
-  OUT_INFLIGHT="$(p1423 "$SB_D" unset)"
-  if printf '%s' "$OUT_INFLIGHT" | grep -q '并入 resolver 定位的 legacy 声明'; then
-    ok "#1423 判据③: 窗口外 D# brief 被并入 legacy 判定（存量 D# 只读兼容）"
-  else
-    no "#1423 判据③ 守护未生效: $(printf '%s' "$OUT_INFLIGHT" | grep -aE '组 12' | head -2)"
-  fi
-  if printf '%s' "$OUT_INFLIGHT" | grep -q '未被任何 claim 声明覆盖；且本提交无 legacy brief 载体'; then
-    no "#1423 判据③: 在飞 D# 被判「无 legacy 载体」= 误拦（创始人明令禁止的后果）"
-  else
-    ok "#1423 判据③: 未出现「无 legacy brief 载体」误判"
-  fi
-  printf '%s' "$OUT_INFLIGHT" | grep -q '✅ 声明闸② brief↔代码一致性' \
-    && ok "#1423 判据③: 组 12 / 声明闸② 判绿（在飞 D# 分支可继续提交）" \
-    || no "#1423 判据③: 声明闸② 未判绿: $(printf '%s' "$OUT_INFLIGHT" | grep -aE '声明闸②' | head -1)"
-
-  # ── 判据③ 变异体: 中和守护段 ⇒ 误拦复现（承重点证明）──
-  SB_DM="$T1423/dinflight-mut"; cp -R "$SB_D" "$SB_DM"
-  "$PYBIN" - "$SB_DM/scripts/pre-commit-check.sh" >"$T1423/mut3.log" 2>&1 <<'PYM3'
-import sys
-from pathlib import Path
-p = Path(sys.argv[1]); t = p.read_text(encoding='utf-8')
-anchor = 'if [ "${CLAIM_V2:-0}" = "1" ] && [ -n "${BRIEF:-}" ] && [ "${IS_CLAIM_DECL:-0}" != "1" ] && [ -f "$BRIEF" ]; then'
-assert anchor in t, '夹具写集漂移：未找到 #1423 守护段锚点'
-p.write_text(t.replace(anchor, 'if false; then  # MUTANT: 守护段被中和', 1), encoding='utf-8')
-print('判据③变异注入: 守护段中和')
-PYM3
-  OUT_MUT3="$(p1423 "$SB_DM" unset)"
-  printf '%s' "$OUT_MUT3" | grep -q '未被任何 claim 声明覆盖；且本提交无 legacy brief 载体' \
-    && ok "#1423 判据③变异体: 中和守护 ⇒ 误拦复现 ⇒ §③ 必红（守护是承重点）" \
-    || no "#1423 判据③变异体: 中和守护后误拦未复现 —— 判别力失效"
-
-  # ── 卡 #1423④ 端到端之**CI 面**: 分离头检出下 claim 仍须可达（否则"新格式只在本机成立"）──
-  SB_H="$T1423/cihint"; mk1423 "$SB_H" claimnew
-  git -C "$SB_H" checkout -q --detach HEAD 2>/dev/null || true   # 模拟 CI PR 检出（分离头 ⇒ 无常驻分支名）
-  R_NO_HINT="$(cd "$SB_H" && bash scripts/workflow/resolve-commit-brief.sh "" 2>/dev/null | head -1 || true)"
-  case "$R_NO_HINT" in
-    *.yaml) ok "#1423 CI 面判别: 无 hint 时也可能命中 claim（附注，不计失败）" ;;
-    *) ok "#1423 CI 面判别: 分离头 + **无 hint** ⇒ 取不到 claim（实得 ${R_NO_HINT##*/}）—— 这正是 CI 红机制" ;;
-  esac
-  R_HINT="$(cd "$SB_H" && GITHUB_HEAD_REF=feat/9999-newformat bash scripts/workflow/resolve-commit-brief.sh "" 2>/dev/null | head -1 || true)"
-  case "$R_HINT" in
-    *.yaml) ok "#1423 CI 面修复: GITHUB_HEAD_REF（PR 源分支）作 hint ⇒ 分离头下仍返回 claim ⇒ 新格式在 CI 端到端成立" ;;
-    *) no "#1423 CI 面修复: 带 GITHUB_HEAD_REF 仍未取到 claim（实得 '${R_HINT}'）" ;;
-  esac
-  # 刻意不用 GITHUB_REF_NAME（PR 下 = `<PR号>/merge`，PR 号 ≠ issue 号 ⇒ 指向错 claim）
-  # 只查**代码行**（注释里出现该字面量是"刻意不用"的说明，属正常）
-  if grep -v '^[[:space:]]*#' "$REPO/scripts/workflow/resolve-commit-brief.sh" | grep -q 'GITHUB_REF_NAME'; then
-    no "#1423 误用 GITHUB_REF_NAME（PR 号 ≠ issue 号 ⇒ 身份错）"
-  else
-    ok "#1423 未误用 GITHUB_REF_NAME（只用 PR 源分支 GITHUB_HEAD_REF）"
-  fi
-
-  # ── 判据④ 正向: claim 新格式端到端（开关未设）──
-  SB_C="$T1423/claimnew"; mk1423 "$SB_C" claimnew
-  RESOLVED="$(cd "$SB_C" && SYNO_ISSUE_HINT=9999 bash scripts/workflow/resolve-commit-brief.sh "src/test.sh" 2>/dev/null | head -1 || true)"  # swallow-ok: 失败即空 → 断言判红
-  case "$RESOLVED" in
-    *.yaml) ok "#1423 判据④: 开关未设下 resolver 返回 claim 载体 ⇒ 新格式身份生效" ;;
-    *) no "#1423 判据④: 开关未设下 resolver 未返回 claim（实得 '${RESOLVED}'）" ;;
-  esac
-  OUT_NEW="$(cd "$SB_C" && env GITHUB_ACTIONS=true SYNO_TEST_ARM=1 SYNO_ISSUE_HINT=9999 \
-    SYNO_CLAIM_DIR="$SB_C/.claude/claims" SYNO_GIT_CACHED_ALL_NAMES="src/test.sh" SYNO_GIT_CACHED_NAMES="src/test.sh" \
-    bash scripts/pre-commit-check.sh 2>&1 || true)"
-  printf '%s' "$OUT_NEW" | grep -q '声明载体 = claim' \
-    && ok "#1423 判据④: 组 6 走 claim 分支（新格式端到端成立）" \
-    || no "#1423 判据④: 组 6 未走 claim 分支: $(printf '%s' "$OUT_NEW" | grep -aE '组 6|task brief' | head -2)"
-
-  # ── 判据④ 变异体（回滚态 = 显式关）⇒ 新格式不可提交 ──
-  OUT_NEW_OFF="$(cd "$SB_C" && env GITHUB_ACTIONS=true SYNO_TEST_ARM=1 SYNO_CLAIM_V2=0 SYNO_ISSUE_HINT=9999 \
-    SYNO_CLAIM_DIR="$SB_C/.claude/claims" SYNO_GIT_CACHED_ALL_NAMES="src/test.sh" SYNO_GIT_CACHED_NAMES="src/test.sh" \
-    bash scripts/pre-commit-check.sh 2>&1 || true)"
-  printf '%s' "$OUT_NEW_OFF" | grep -q '今日无 task brief' \
-    && ok "#1423 判据④变异体: 显式回滚 ⇒ 新格式报「今日无 task brief」不可提交 ⇒ 默认开是承重点" \
-    || no "#1423 判据④变异体: 回滚态未使新格式失败 —— 判别力失效: $(printf '%s' "$OUT_NEW_OFF" | grep -aE '组 6|task brief' | head -2)"
-  printf '%s' "$OUT_NEW_OFF" | grep -q '声明载体 = claim' \
-    && no "#1423 判据④变异体: 回滚态仍走 claim 分支（开关未真正门控）" \
-    || ok "#1423 判据④变异体: 回滚态不走 claim 分支（门控真实）"
-
-  # ── 回滚语义: 显式 0 ⇒ 组 12 逐字节 legacy（#1423 守护段不可达）──
-  OUT_ROLLBACK="$(p1423 "$SB_D" 0)"
-  printf '%s' "$OUT_ROLLBACK" | grep -q '并入 resolver 定位的 legacy 声明' \
-    && no "#1423 回滚态出现守护行（回滚应与改前逐字节一致）" \
-    || ok "#1423 回滚语义: 显式 0 ⇒ 组 12 逐字节 legacy（守护段不可达）"
-fi
 
 echo ""
 echo "结果: $PASS 通过, $FAIL 失败"

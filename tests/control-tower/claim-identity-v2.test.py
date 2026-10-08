@@ -165,15 +165,10 @@ class TestA_NewClaimTakesEffect(Base):
         self.assertTrue(d["done"][0]["verify"].startswith("bash "), d["done"])
         self.assertNotIn("verify:", d["done"][0]["verify"])
 
-    def test_a1b_flag_defaults_on(self):
-        """卡 #1423（创始人 2026-10-08「一步到位」）: 开关**默认开**；回滚 = 显式关。"""
+    def test_a1b_flag_defaults_off(self):
         rc, out, _ = _run([sys.executable, str(CLAIM_STORE), "--flag"])
         self.assertEqual(rc, 0)
-        self.assertEqual(out.strip(), "on", "SYNO_CLAIM_V2 必须默认开（#1423: 新任务走 issue 号身份）")
-        rc2, out2, _ = _run([sys.executable, str(CLAIM_STORE), "--flag"],
-                            env={"SYNO_CLAIM_V2": "0"})
-        self.assertEqual(rc2, 0)
-        self.assertEqual(out2.strip(), "off", "显式 0 必须关（#1423 唯一回滚点）")
+        self.assertEqual(out.strip(), "off", "SYNO_CLAIM_V2 必须默认关（K3 R2 回滚语义）")
 
     def test_a2_brief_parser_single_source(self):
         p = self.write_claim(1234)
@@ -266,8 +261,7 @@ class TestB_LegacyDidNoHijack(Base):
         subprocess.run(["git", "-C", str(self.repo), "add", "scripts/c.sh"], check=True,
                        capture_output=True)
 
-        # 卡 #1423: 本用例本就是**回滚态**场景 ⇒ 必须显式关（不能再依赖"默认关"）
-        rc, out, _ = self.resolve("scripts/c.sh", env={"SYNO_CLAIM_V2": "0"})
+        rc, out, _ = self.resolve("scripts/c.sh")   # 开关 OFF = 回滚态
         self.assertNotIn("unrelated", out,
                          f"回滚态不得经日期回退返回无关 brief（R4 承诺）: {out.strip()!r}")
         self.assertNotEqual(rc, 0, "无 claim 命中且日期回退受守卫 ⇒ 必须 fail-closed（非 0）")
@@ -296,8 +290,7 @@ class TestC_FailClosed(Base):
         """开关关 → 逐字节 legacy（K3 R2「回滚 = 关开关」）。"""
         self.stage_edit()
         subprocess.run(["git", "-C", str(self.repo), "add", "-A"], check=True, capture_output=True)
-        # 卡 #1423: 「开关关 ⇒ 逐字节 legacy」必须显式关（默认已翻为开）
-        rc, out, _ = self.check_done(env={"SYNO_CLAIM_V2": "0"})
+        rc, out, _ = self.check_done()
         self.assertEqual(rc, 0, out)
         self.assertIn("跳过", out)
 
@@ -388,10 +381,8 @@ class TestD_Mutants(Base):
         subprocess.run(["git", "-C", str(self.repo), "add", "scripts/c.sh"], check=True,
                        capture_output=True)
 
-        # 卡 #1423: 本用例考察的是**回滚态**下"守卫是减法"的特性（见 docstring「开关 OFF」）
-        # ⇒ 生产与变异体都必须显式关跑，否则默认开后 claim-first 会让两者同结果（判别力消失）。
-        rc_prod, out_prod, err_prod = self.resolve("scripts/c.sh", env={"SYNO_CLAIM_V2": "0"})
-        rc_mut, out_mut, err_mut = self.resolve("scripts/c.sh", env={"SYNO_CLAIM_V2": "0"}, tool=mutant)
+        rc_prod, out_prod, err_prod = self.resolve("scripts/c.sh")
+        rc_mut, out_mut, err_mut = self.resolve("scripts/c.sh", tool=mutant)
         self.assertNotEqual(
             (rc_prod, out_prod.strip()), (rc_mut, out_mut.strip()),
             f"变异体必须与生产判定不同（否则夹具无法判别）: prod={out_prod.strip()!r} "
@@ -472,9 +463,8 @@ class TestD_Mutants(Base):
         subprocess.run(["git", "-C", str(self.repo), "add", "scripts/c.sh"], check=True,
                        capture_output=True)
 
-        # 卡 #1423: 本用例考察**回滚态**下日期回退守卫（默认已翻为开 ⇒ 显式关跑）
-        rc_prod, out_prod, _ = self.resolve("scripts/c.sh", env={"SYNO_CLAIM_V2": "0"})
-        rc_mut, out_mut, _ = self.resolve("scripts/c.sh", env={"SYNO_CLAIM_V2": "0"}, tool=mutant)
+        rc_prod, out_prod, _ = self.resolve("scripts/c.sh")
+        rc_mut, out_mut, _ = self.resolve("scripts/c.sh", tool=mutant)
         self.assertNotIn("unrelated", out_prod, out_prod)
         self.assertIn("unrelated", out_mut,
                       f"变异体应经日期回退拿到无关 brief（夹具判别力证明）: {out_mut.strip()!r}")
