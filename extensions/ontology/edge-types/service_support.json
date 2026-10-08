@@ -6,6 +6,7 @@
   "allowedTo": ["outcome/people"],
   "requiredProps": ["service_response_time_hours", "customer_satisfaction_score"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "first_call_resolution_rate": "number (0-1) — 首次解决率",
     "service_channel_count": "number — 服务渠道数量",
     "csat_trend": "number — 满意度趋势"

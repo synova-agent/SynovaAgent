@@ -6,6 +6,7 @@
   "allowedTo": ["pool/activity"],
   "requiredProps": ["fte_allocation", "skill_match_score"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "utilization_rate": "number (0-1) — 人员利用率",
     "avg_project_tenure_months": "number — 平均项目任期",
     "cross_function_assignment_ratio": "number (0-1) — 跨职能分配比例"
