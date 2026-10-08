@@ -1,5 +1,6 @@
 writeset:
   - .claude/claims/1452.yaml
+  - .claude/task-briefs/2026-10-08-1452-BatchD出库.md
   - docs/synova/product-lines/evidence/1452-batch-d/**
   - docs/plans/**
   - docs/synova/coordination/**
