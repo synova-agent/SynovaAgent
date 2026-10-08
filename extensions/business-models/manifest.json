@@ -1,1 +1,11 @@
-{"$schema":"https://synova.dev/schemas/extension-manifest-v1.json","$schema":"https://synova.dev/schemas/extension-manifest-v1.json","name":"business-models","version":"1.0.0","type":"business-model","displayName":"商业模式模板","entryPoint":"../src/l3/business-model-loader.ts","exportKey":"loadBusinessModels"}
+{
+  "$schema": "https://synova.dev/schemas/extension-manifest-v1.json",
+  "name": "business-models",
+  "version": "1.0.0",
+  "type": "business-model",
+  "displayName": "商业模式模板",
+  "description": "商业模式模板库（6 个模板）。#1465 已接活：loader 由 src/deploy/content-registry.ts 装配。",
+  "entryPoint": "../src/l3/business-model-loader.ts",
+  "exportKey": "loadBusinessModels",
+  "registry": "src/deploy/content-registry.ts"
+}

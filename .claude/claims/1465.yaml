@@ -1,0 +1,29 @@
+# .claude/claims/1465.yaml — #1465（模块 K10·第1批-补齐）EXT-WIRE 接线族 · 写集声明
+# 先例：.claude/claims/1045.yaml / 1052.yaml（claim 优先于 D# 链；K3 R3 防劫持）
+# 纪律：只列本 PR 真正改动的文件，不预授权。
+#
+# 与卡面写集的差异（如实声明，非预授权）：
+#   · extensions/engine/manifest.json、extensions/tools/manifest.json —— 卡面/登记件列为可写，
+#     但**本卡未改动**：check-file-driven.sh 组(a) 对暂存 manifest（含 M）硬要求 `entryPoint`，
+#     而这两件本就无 `entryPoint`（tools 另无 `$schema`）⇒ 改动即触发硬阻断，且过门禁只能写假指针。
+#     「废弃显式化」改落在 src/deploy/content-registry.ts 的 `status: 'retired'` + 显式 `reason`。
+#   · extensions/llm-providers/** —— CTO 预裁未下，**零改动**（仅出提案）。
+writeset:
+  - .claude/claims/1465.yaml
+  - .claude/task-briefs/2026-10-09-1465-ext-wiring.md
+  - memory/notes/proposed/2026-10-09-1465-content-registry-single-source.md
+  - src/deploy/content-registry.ts
+  - src/init/file-driven-loaders.ts
+  - tests/deploy/content-registry.test.ts
+  - extensions/context-strategies/manifest.json
+  - extensions/implementation-patterns/manifest.json
+  - extensions/policies/manifest.json
+  - extensions/security/manifest.json
+  - extensions/business-models/manifest.json
+  - scripts/control-tower/probe-content-registry.ts
+done:
+  - verify: npx tsx scripts/control-tower/probe-content-registry.ts
+  - verify: npx vitest run tests/deploy/content-registry.test.ts
+  - verify: bash scripts/check-file-driven.sh
+  - verify: bash -c 'test "$(git show origin/main:src/init/file-driven-loaders.ts | grep -cE "await import\(.*-loader")" -eq 8 && test "$(grep -cE "await import\(.*-loader" src/init/file-driven-loaders.ts)" -eq 0'
+note: llm-providers 子项按 CTO 预裁**不落地**（仅出提案）；B 块窗口已由 Lead 实测解锁（986 对 src/init 零改动）
