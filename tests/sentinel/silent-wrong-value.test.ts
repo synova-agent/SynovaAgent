@@ -14,6 +14,7 @@ import { SqliteGraphStore } from '../../src/adapters/sqlite-graph-store';
 import { loadSentinels, registerLoadedSentinels } from '../../src/sentinel/sentinel-loader';
 import { getSentinelRegistry } from '../../src/sentinel/registry';
 import { createMetricSink } from '../../src/sentinel/metric-readings-writer';
+import { reconcileSchema } from '../../src/store/schema-migration';
 import { computeGrossMargin } from '../../extensions/sentinels/margin-health/computes/compute-gross-margin';
 import { computeCostPerHead } from '../../extensions/sentinels/margin-health/computes/compute-cost-per-head';
 
@@ -86,5 +87,19 @@ describe('#1408 静默错误值（批 A：margin-health 的 5 个 compute）', (
     for (const r of rows) {
       expect(Number.isFinite(r.value), `🔴 ${r.metric_id} 的值必须是有限数（不得 NaN/Infinity）`).toBe(true);
     }
+  });
+
+  it('🔴 V-writer【行为·落库侧收口】非有限值 ⇒ **不落库 + 留痕（含行标识）**；且与 compute 侧**独立**', () => {
+    const db = new Database(':memory:');
+    reconcileSchema(db);   // 建 `metric_readings` 表（迁移 002）
+    const sink = createMetricSink(db);
+    const base = { orgId: 'org-1408', observedAt: new Date('2026-10-08T00:00:00Z').toISOString(), sourceType: 'compute' as const };
+    sink({ ...base, metricId: 'X-NONFINITE', value: Number.NaN });
+    sink({ ...base, metricId: 'X-INFINITY', value: Number.POSITIVE_INFINITY });
+    sink({ ...base, metricId: 'X-OK', value: 1.5 });
+    const rows = db.prepare('SELECT metric_id, value FROM metric_readings').all() as Array<{ metric_id: string; value: number }>;
+    expect(rows.map(r => r.metric_id), '非有限值 ⇒ **不落库**；正常值 ⇒ 落库').toEqual(['X-OK']);
+    expect(Number.isFinite(rows[0].value)).toBe(true);
+    // 🔴 与 compute 侧【独立】：本判据不依赖任何 compute 是否调用助手 ⇒ M1（去掉 compute 调用）仍必须红（由 V1/V3 守）
   });
 });

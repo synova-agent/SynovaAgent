@@ -4,6 +4,7 @@
 writeset:
   - .claude/claims/1408.yaml
   - .claude/task-briefs/2026-10-08-1408-silent-wrong-value-a.md
+  - src/sentinel/metric-readings-writer.ts
   - extensions/sentinels/shared/computes/assert-finite-inputs.ts
   - tests/sentinels/shared/assert-finite-inputs.test.ts
   - extensions/sentinels/margin-health/computes/compute-cost-per-head.ts
@@ -17,4 +18,4 @@ done:
   - verify: npx vitest run tests/sentinels/ tests/sentinel/ tests/l4/ tests/agent/ tests/adapters/
   - verify: bash -c 'grep -rl "checkFiniteInputs(" extensions/sentinels/margin-health/computes/ | wc -l'
   - verify: npx tsc --noEmit
-note: 批 A = 5 个 compute 接线（**显式调用** `checkFiniteInputs`；缺字段/NaN/非有限 ⇒ degraded + warnings）+ 助手 + 配对测试 + 主判据（V1 行为/V2 不误报/V3 覆盖率**扫调用**（排除 import 行）/V4 端到端"值为有限数"）。**空数组不报**（交回各 compute 自己的"无数据"守卫 ⇒ 不改既有降级语义/消息）。
+note: **落库侧收口（CTO 裁 (A)）**：非有限值 ⇒ **跳过 + warn（行标识）+ 计数留痕**（不落库；与 compute 侧**独立**）。批 A = 5 个 compute 接线（**显式调用** `checkFiniteInputs`；缺字段/NaN/非有限 ⇒ degraded + warnings）+ 助手 + 配对测试 + 主判据（V1 行为/V2 不误报/V3 覆盖率**扫调用**（排除 import 行）/V4 端到端"值为有限数"）。**空数组不报**（交回各 compute 自己的"无数据"守卫 ⇒ 不改既有降级语义/消息）。

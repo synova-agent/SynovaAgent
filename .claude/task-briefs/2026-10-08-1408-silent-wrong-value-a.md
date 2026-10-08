@@ -26,7 +26,8 @@
 - 实测教训：**V3 首版只扫"出现"（含 import 行）⇒ M1 假绿** ⇒ 已改扫**调用**（排除 import）
 
 ## Q2: 范围 — 正确的最简方案
-做什么（逐文件一行）：
+做什么（逐文件一行；**含 CTO 裁 (A) 的落库侧收口**）：
+- src/sentinel/metric-readings-writer.ts — **非有限值 ⇒ 跳过 + warn（含行标识）+ 计数留痕**（CTO 裁 (A) 约束一：**跳过，不落库**）
 - extensions/sentinels/shared/computes/assert-finite-inputs.ts — 新建助手（纯函数，返回问题清单）
 - tests/sentinels/shared/assert-finite-inputs.test.ts — 配对单测
 - extensions/sentinels/margin-health/computes/compute-cost-per-head.ts — 显式调用（`['total_cost','head_count']`）
@@ -46,6 +47,10 @@
 - 其余 139 个未接线 compute ⇒ 范围外（(b) 案），覆盖面逐条声明
 
 范围外约束（非文件级）：批 B = capital-health 9｜批 C = 其余 13 个哨兵的 compute。
+
+## Q2b: (A) 的两条约束（CTO 裁）
+① **跳过 + warn（含行标识）+ 计数留痕** —— **不许静默跳过**
+② **两条防线互相独立**：compute 侧检查了 ⇒ writer 侧**仍要查**（兜底必须独立）⇒ **M1（去掉 compute 调用）仍必须红**（已复验：红 3 条）
 
 ## Q3: 验收 — 入口 → 交互 → 结果
 入口：各 compute（经 aggregate / 真实哨兵路径调用）。
