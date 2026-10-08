@@ -43,6 +43,32 @@ export function getDataDirectory(): string {
 }
 
 /**
+ * 解析**实际运行库**的路径 —— 健康检查与运行时同源（#1454 B4）。
+ *
+ * 优先级与 `src/config.ts:loadConfig().dbPath` 的取值链同向：
+ *   ① `SYNOVA_DB_PATH`（显式指定，最高优先）
+ *   ② `SYNOVA_DATA_DIR` ⇒ `<dataDir>/synova.db`
+ *   ③ 平台数据目录 ⇒ `<getDataDirectory()>/synova.db`
+ *
+ * 修前 `src/routes/healthz.ts:84` 直接 `path.join(getDataDirectory(), 'synova.db')`，
+ * 不看 `SYNOVA_DB_PATH` ⇒ 用独立库跑进程时健康检查查的是**另一个库** ⇒ 恒假降级。
+ *
+ * @input  无（自读环境变量）
+ * @output 数据库文件的绝对路径（不保证存在）
+ * @degraded 无（纯字符串解析，不抛）
+ * @invariant 与 `loadConfig().dbPath` 在 `SYNOVA_DB_PATH` / `SYNOVA_DATA_DIR` 两档上同源
+ */
+export function resolveDbPath(): string {
+  const explicit = process.env.SYNOVA_DB_PATH;
+  if (explicit && explicit.trim() !== '') return explicit;
+
+  const dataDir = process.env.SYNOVA_DATA_DIR;
+  if (dataDir && dataDir.trim() !== '') return path.join(dataDir, 'synova.db');
+
+  return path.join(getDataDirectory(), 'synova.db');
+}
+
+/**
  * 注册(创建) Synova 数据目录。
  * 创建目录树 + 写入 .synova-registry 标记文件表示注册完成。
  *

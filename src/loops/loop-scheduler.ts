@@ -18,6 +18,7 @@ import { validateLoopConfig, LOOP_TRIGGER_MATRIX } from './loop-trigger-config';
 import { emitSignal } from '../control-tower/signal-emitter';
 import type { LoopExecutorLike } from './main-agent-binding';
 import { getBoundMainAgent } from './main-agent-binding';
+import { resolveLoopCron, DEFAULT_LOOP_CRON } from '../cron/cron-config';
 
 const log = createLogger('loops/loop-scheduler');
 
@@ -76,7 +77,8 @@ const HEARTBEAT_FILE = join(HEARTBEAT_DIR, 'heartbeat.json');
 /** 内置循环注册规格（D9/D237/D238）——消息原样保留（探针口径不可漂移） */
 interface BuiltinLoopSpec {
   jobName: string;
-  cron: string;
+  /** #1454 B8: 口径由 `src/cron/cron-config.ts` 提供，本数组不再承载 cron 事实源 */
+  cron?: string;
   loopId: string;
   scale: ScaleName;
   tag: string;
@@ -89,35 +91,39 @@ interface BuiltinLoopSpec {
 /**
  * 6 个内置循环的注册规格（#975: 单一机制，消息逐字保留原 D9/D237/D238 措辞）。
  * 顺序与历史实现一致（loop-4 → loop-5 → loop-1 → loop-2 → loop-3 → loop-6）。
+ *
+ * #1454 B8: `cron` **不再是本数组的事实源** —— 口径统一由
+ * `src/cron/cron-config.ts:DEFAULT_LOOP_CRON` 提供，可被环境变量 / 配置文件覆盖
+ * （默认日频，恢复 `MIN_TRIGGER_COUNT=3` 的「累计 3 次即触发」语义）。
  */
 const BUILTIN_LOOPS: BuiltinLoopSpec[] = [
   {
-    jobName: 'loop-4-self-check', cron: '0 0 * * *', loopId: 'loop-4', scale: 'fast', tag: 'D9',
+    jobName: 'loop-4-self-check', loopId: 'loop-4', scale: 'fast', tag: 'D9',
     skipMessage: '[D9] MainAgent 未注入 — 跳过 loop-4 执行 (degraded)',
     doneLabel: 'loop-4 系统自检完成',
   },
   {
-    jobName: 'loop-5-knowledge', cron: '0 0 * * 0', loopId: 'loop-5', scale: 'medium', tag: 'D9',
+    jobName: 'loop-5-knowledge', loopId: 'loop-5', scale: 'medium', tag: 'D9',
     skipMessage: '[D9] MainAgent 未注入 — 跳过 loop-5 执行 (degraded)',
     doneLabel: 'loop-5 知识积累完成',
   },
   {
-    jobName: 'loop-1-diagnosis', cron: '0 9 1 */3 *', loopId: 'loop-1', scale: 'slow', tag: 'D9',
+    jobName: 'loop-1-diagnosis', loopId: 'loop-1', scale: 'slow', tag: 'D9',
     skipMessage: '[D9] MainAgent 未注入 — 跳过 loop-1 (degraded)',
     doneLabel: 'loop-1 企业诊断完成',
   },
   {
-    jobName: 'loop-2-navigation', cron: '0 9 * * 1', loopId: 'loop-2', scale: 'medium', tag: 'D9',
+    jobName: 'loop-2-navigation', loopId: 'loop-2', scale: 'medium', tag: 'D9',
     skipMessage: '[D9] MainAgent 未注入 — 跳过 loop-2 (degraded)',
     doneLabel: 'loop-2 部门导航完成',
   },
   {
-    jobName: 'loop-3-ga-evolution', cron: '0 9 1 */3 *', loopId: 'loop-3', scale: 'slow', tag: 'D237',
+    jobName: 'loop-3-ga-evolution', loopId: 'loop-3', scale: 'slow', tag: 'D237',
     skipMessage: '[D237] MainAgent 未注入 — 跳过 loop-3 (degraded)',
     doneLabel: 'loop-3 GA进化完成',
   },
   {
-    jobName: 'loop-6-overflow', cron: '0 9 1 * *', loopId: 'loop-6', scale: 'medium', tag: 'D238',
+    jobName: 'loop-6-overflow', loopId: 'loop-6', scale: 'medium', tag: 'D238',
     skipMessage: '[D238] MainAgent 未注入 — 跳过 loop-6',
     doneLabel: 'loop-6 溢出监控完成',
   },
@@ -195,9 +201,9 @@ export class LoopScheduler {
   /**
    * D9/D237/D238: 注册 6 个内置业务循环到 CronScheduler。
    *
-   * loop-1 企业诊断（季度，slow）· loop-2 部门导航（周度，medium）· loop-3 GA进化（季度，slow）
-   * loop-4 系统自检（每日，fast）· loop-5 知识积累（每周日，medium）· loop-6 溢出监控（月级，medium）
-   * 各自 cron 表达式见下方 BUILTIN_LOOPS（唯一事实源，勿在注释里复写）。
+   * 循环语义：loop-1 企业诊断 · loop-2 部门导航 · loop-3 GA进化 ·
+   * loop-4 系统自检 · loop-5 知识积累 · loop-6 溢出监控
+   * 各自 cron 表达式由 `src/cron/cron-config.ts:DEFAULT_LOOP_CRON` 供给（可 env / 文件覆盖，默认日频）。
    *
    * #975（0-1 循环点火）: 六个循环共用同一注册/分派机制 —— 触发时 resolveExecutor()
    * 解析执行器（显式注入 → 进程级绑定），解析不到才 log.warn + 跳过（铁律 24+31）。
@@ -230,7 +236,14 @@ export class LoopScheduler {
    */
   private scheduleBuiltinLoop(spec: BuiltinLoopSpec): void {
     if (!this.scheduler) return;
-    this.scheduler.schedule(spec.jobName, spec.cron, async () => {
+    // #1454 B8: cron 口径从配置解析（env → 配置文件 → 默认日频），不在本文件硬编码
+    const cron = spec.cron ?? resolveLoopCron(spec.jobName);
+    // 口径表是**显式登记**：新增自研循环若忘了登记默认节律，会静默拿到通用回落值
+    // （日频）—— 这里把它显性化，避免节律被「默认」而不是「决定」。
+    if (!(spec.jobName in DEFAULT_LOOP_CRON)) {
+      log.warn({ jobName: spec.jobName, cron }, '[#1454 B8] 该循环未登记默认 cron 口径 — 使用通用回落值');
+    }
+    this.scheduler.schedule(spec.jobName, cron, async () => {
       const executor = this.resolveExecutor();
       if (!executor) {
         log.warn(spec.skipMessage);
@@ -245,7 +258,7 @@ export class LoopScheduler {
         log.warn({ err: msg }, `${spec.loopId} 执行失败 — degraded`);
       }
     });
-    log.info(`[${spec.tag}] ${spec.jobName} 已注册 (${spec.cron})`);
+    log.info(`[${spec.tag}] ${spec.jobName} 已注册 (${cron})`);
   }
 
   /**

@@ -120,12 +120,15 @@ describe('#975 — 循环点火（生产装配函数 wireLoopExecution）', () =
     const builtin = [...capture.jobs.entries()]
       .filter(([name]) => name.startsWith('loop-'))
       .map(([name, job]) => [name, job.cron] as const);
+    // #1454 B8（CTO 2026-10-09 裁定）: **唯一**例外 = loop-3-ga-evolution 由季度改日频
+    //（季度窗口废掉 MIN_TRIGGER_COUNT=3 的「累计 3 次即触发」语义）。
+    // 其余 5 条逐字保持原实现值（卡面 §③「不改变任何循环的业务语义」）。
     expect(builtin).toEqual([
       ['loop-4-self-check', '0 0 * * *'],
       ['loop-5-knowledge', '0 0 * * 0'],
       ['loop-1-diagnosis', '0 9 1 */3 *'],
       ['loop-2-navigation', '0 9 * * 1'],
-      ['loop-3-ga-evolution', '0 9 1 */3 *'],
+      ['loop-3-ga-evolution', '0 9 * * *'], // ← #1454 B8 前为 '0 9 1 */3 *'
       ['loop-6-overflow', '0 9 1 * *'],
     ]);
   });

@@ -1,0 +1,25 @@
+writeset:
+  - .claude/claims/1454.yaml
+  - .claude/task-briefs/2026-10-09-1454-cron-startup.md
+  - src/cron/scheduler.ts
+  - src/cron/cron-config.ts
+  - src/loops/loop-scheduler.ts
+  - src/routes/healthz.ts
+  - src/deploy/data-directory.ts
+  - src/deploy/startup-check.ts
+  - tests/cron/parse-cron-field.test.ts
+  - tests/cron/cron-config.test.ts
+  - tests/deploy/db-path-resolve.test.ts
+  - tests/deploy/fsutil-windows-leg.test.ts
+  - tests/loops/loop-execution-wiring.test.ts
+  - .probe/probe-1454-v2.ts
+  - .probe/probe-1454-v2-window.ts
+  - .probe/run-bootstrap-1454.sh
+  - .probe/probe-1454-phase2e.ts
+  - .probe/probe-1454-b8-config.ts
+done:
+  - verify: npx vitest run tests/cron/parse-cron-field.test.ts
+  - verify: npx vitest run tests/cron/cron-config.test.ts tests/deploy/db-path-resolve.test.ts tests/deploy/fsutil-windows-leg.test.ts
+  - verify: npx vitest run tests/cron tests/deploy tests/loops
+  - verify: npx tsc --noEmit
+note: #1454 B1/B4/B5/B8（K10 运行时·第0批止血）；越界声明唯一一处 tests/loops/loop-execution-wiring.test.ts（该测试逐字断言 loop-3 cron，与卡面 B8 的日频要求冲突，只改 loop-3 那一行）；V2 真实入口被 Node v24.19.0 内部断言挡住（修前/修后同点位），原始输出见交付评论。
