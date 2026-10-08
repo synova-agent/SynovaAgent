@@ -27,7 +27,13 @@ BRIEF=$(find "$ROOT/.claude/task-briefs/" -type f -name "${TODAY}*" 2>/dev/null 
 # ── D-C（K3 R3 场景 c）: claim 载体兜底 ──
 # `SYNO_CLAIM_V2=1` 且无今日 brief → 由 resolver 定位声明（claim 或在途跨日 brief）。
 # 缺此步时新格式声明**永不进入本器视野** → 全部散文类检查静默空过 = 静默空白（铁律 11）。
-if [ -z "$BRIEF" ] && [ "${SYNO_CLAIM_V2:-}" = "1" ]; then
+# 卡 #1423: 开关口径与单一事实源对齐（未设/真值 = 开；显式 0|false|off|no|n = 关）
+_BCV_V2=1
+case "$(printf '%s' "${SYNO_CLAIM_V2:-}" | tr '[:upper:]' '[:lower:]')" in
+  1|true|on|yes|y) _BCV_V2=1 ;;
+  *) _BCV_V2=0 ;;
+esac
+if [ -z "$BRIEF" ] && [ "$_BCV_V2" = "1" ]; then
   BRIEF=$(bash "$ROOT/scripts/workflow/resolve-commit-brief.sh" \
     "$(git -c core.quotepath=false diff --name-only 2>/dev/null || true)" 2>/dev/null || true)
 fi

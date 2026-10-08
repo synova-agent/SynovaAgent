@@ -31,9 +31,13 @@ STAGED_LIST="$(git -c core.quotepath=false diff --cached --name-only 2>/dev/null
 BRIEF=$(bash "$ROOT/scripts/workflow/resolve-commit-brief.sh" "$STAGED_LIST" 2>/dev/null || true)
 
 # D-C: 单一开关判定（与 claim_store.claim_v2_enabled 同口径: 1/true/on/yes/y）
-CLAIM_V2=0
+# 卡 #1423（创始人 2026-10-08「一步到位」裁决）: **默认开** ——
+#   未设/真值 ⇒ 开；显式 0|false|off|no|n ⇒ 关（**唯一回滚点**）。
+#   口径与单一事实源 claim_store.claim_v2_enabled 逐字对齐。
+CLAIM_V2=1
 case "$(printf '%s' "${SYNO_CLAIM_V2:-}" | tr '[:upper:]' '[:lower:]')" in
   1|true|on|yes|y) CLAIM_V2=1 ;;
+  *) CLAIM_V2=0 ;;
 esac
 
 if [ -z "$BRIEF" ]; then
@@ -67,7 +71,7 @@ print('\n'.join(parse_done(open(r'$BRIEF', encoding='utf-8', errors='replace').r
     PARSE_RC=$?
     if [ "$PARSE_RC" -ne 0 ]; then
       # 检查自身失败（三态 exit 2 语义）: 不得与"通过"混同（ctrl-tower-change 模式 1）
-      echo -e "  ${RED}❌ Done 可证伪性: claim 解析器不可用（$BRIEF）[检查自身失败，同样阻断]${RESET}"
+      echo -e "  ${RED}❌ Done 可证伪性: claim 解析器不可用（${BRIEF}）[检查自身失败，同样阻断]${RESET}"
       exit 2
     fi
     ;;
