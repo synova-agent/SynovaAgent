@@ -228,6 +228,18 @@ fi
 #   ⇒ `COPY package.json package-lock.json ./` **不会**把同级 synova.json 考进镜像。
 #   故断言拆两条: ① 无根目录级 COPY 通配 ② 宿主配置件已排除出上下文。
 
+# ⑤h 回归防护: A4 不得退回「全文件 grep」形态（#1464 复核缺陷复发防线）
+#     ⚠️ 只扫**活代码行**（剥注释）—— 原缺陷形态本身写在 :158 的历史注记里，
+#        扫注释会假红（本测试首版曾踩：把注记里的 `grep -cE '^COPY` 当成现役实现）。
+#     形态守卫之外另有行为守卫（⑤c/⑤d/⑤e），两者互补：形态守卫防「改回旧写法」，
+#     行为守卫防「换了写法但判别力仍为零」。
+A4_LIVE="$(sed -n '/^# A4:/,/^fi$/p' "$PROBE" | grep -vE '^[[:space:]]*#')"
+if printf '%s' "$A4_LIVE" | grep -qE "grep -cE '\^COPY.*vendor"; then
+  fail "⑤h A4 活代码退回全文件 grep 形态（零判别力缺陷复发）"
+else
+  pass "⑤h A4 活代码未退回全文件 grep 形态（仍按最终 FROM 段落判定）"
+fi
+
 # ⑤f 反例: 把具名文件 COPY 泛化成 `COPY . .` ⇒ A6 必须判红（宿主配置会静默进镜像）
 R9="$TMP_ROOT/r9"
 build_fixture "$R9"
