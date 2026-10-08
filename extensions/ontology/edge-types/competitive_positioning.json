@@ -6,6 +6,7 @@
   "allowedTo": ["outcome/competitive"],
   "requiredProps": ["seven_powers_score", "competitive_moat_depth"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "switching_cost_score": "number (0-1) — 切换成本评分",
     "network_effect_strength": "number (0-1) — 网络效应强度",
     "scale_economy_score": "number (0-1) — 规模经济评分",

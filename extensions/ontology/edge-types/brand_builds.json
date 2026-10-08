@@ -6,6 +6,7 @@
   "allowedTo": ["outcome/financial", "outcome/market"],
   "requiredProps": ["lag_months", "brand_investment"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "awareness_lift": "number (0-1) — 对应brand.json的awareness字段的变化率",
     "premium_ratio_change": "number — 对应brand.json的premium_ratio字段的变化",
     "repeat_purchase_lift": "number (0-1) — 对应brand.json的repeat_purchase_rate变化",
