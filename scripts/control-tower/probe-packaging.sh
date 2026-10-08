@@ -57,6 +57,13 @@ pass() { PASS_COUNT=$((PASS_COUNT + 1)); printf '  [PASS] %s\n' "$1"; }
 fail() { FAIL_COUNT=$((FAIL_COUNT + 1)); printf '  [FAIL] %s\n' "$1"; }
 info() { printf '         %s\n' "$1"; }
 section() { printf '\n== %s ==\n' "$1"; }
+# 探针自身异常（exit 2 通道）: 判定不可信时**显式中止**，禁静默放行
+#   （用于结构缺失使某段无法判定 —— 例如 Dockerfile 无 FROM ⇒ 无法界定运行阶段）
+self_err() {
+  printf '  [FAIL] %s\n' "$1"
+  printf '\n== SUMMARY ==\n  RESULT=ERROR（探针自身异常，判定不可信 —— 见上方 FAIL 明细）\n'
+  exit 2
+}
 # 行数计数
 #   坑 ①: `grep -c` 无匹配时输出 "0" 且 exit 1，`|| echo 0` 会追加成两行 → `[: integer expected`
 #   坑 ②: `$(cmd)` 剥掉末尾换行 ⇒ 空串经 `printf '%s\n'` 后又变成一个空行 ⇒ NR 误报 1
@@ -145,14 +152,69 @@ else
   fi
 fi
 
-# A4: 生产构建依赖面自洽 —— 交付资产（vendor/）须在运行阶段可见
-#     合法形态: 运行阶段直接 `COPY vendor/ …`（本卡采用），
-#               或构建阶段 COPY + 运行阶段 `COPY --from=builder …/vendor`
-#     判据: 至少一条运行阶段 COPY 让 vendor/ 落在镜像内（排除构建阶段专用 COPY）
-if grep -cE '^COPY[[:space:]]+vendor/' Dockerfile | grep -qE '^[1-9]'; then
-  pass 'A4 vendor/ 进运行阶段镜像（vendor 是运行时真依赖，见 src/agent/builtin-tools.ts:11）'
+# A4: 生产构建依赖面自洽 —— 交付资产（vendor/）须在**最终（运行）阶段**可见
+#
+# 🔴 判别力要求（V-08 教训）: 必须**按阶段**判定，禁止全文件 grep。
+#   历史缺陷（#1464 复核 M5 实证）: 原实现是 `grep -cE '^COPY vendor/' Dockerfile | grep -qE '^[1-9]'`
+#   —— 全文件计数、不分阶段，却在断言文本里声称「进**运行阶段**」。变异体（把 `COPY vendor/`
+#   只留在 builder 阶段）⇒ 仍 PASS ⇒ **零判别力**，且使 R6 反例声称被证伪。
+#   合法形态（二者任一）:
+#     ① 最终阶段内 `COPY vendor/ …`
+#     ② 最终阶段内 `COPY --from=<builder 阶段名> …/vendor …`
+#   阶段边界 = `FROM` 行；「最终阶段」= 最后一个 FROM 段落。
+FINAL_STAGE_LINE="$(grep -nE '^FROM[[:space:]]' Dockerfile | tail -1 | cut -d: -f1)"
+if [ -z "${FINAL_STAGE_LINE}" ]; then
+  self_err "A4 Dockerfile 无 FROM 指令（无法判定运行阶段）"
 else
-  fail 'A4 vendor/ 未出现在镜像 COPY（运行时将缺 vendor/ ⇒ 工具注册失败）'
+  A4_HITS="$(awk -v start="${FINAL_STAGE_LINE}" '
+    NR < start { next }                                  # 只看最终阶段段内
+    /^COPY[[:space:]]+vendor\//      { print "local"; next }
+    /^COPY[[:space:]]+--from=[^ ]+[[:space:]].*\/vendor([[:space:]]|$)/ { print "from-stage"; next }
+  ' Dockerfile)"
+  if [ -n "${A4_HITS}" ]; then
+    pass "A4 vendor/ 在最终阶段可见（形态: $(printf '%s' "${A4_HITS}" | sort -u | tr '\n' '/' | sed 's|/$||')；vendor 是运行时真依赖，见 src/agent/builtin-tools.ts:11）"
+  else
+    fail 'A4 最终阶段无任何 vendor/ COPY（运行时将缺 vendor/ ⇒ 工具注册失败）'
+  fi
+fi
+
+# A6: 构建上下文泄漏面 —— 仓库根的宿主配置文件不得进镜像（两条独立断言）
+#
+# 🔴 断言必须与 Docker 真实语义对齐（#1464 复核纠错，2026-10-09）:
+#   复核员推断「`COPY package.json package-lock.json ./` 会把同目录 synova.json 一起考进镜像」——
+#   **该推断与 Docker 规范不符**。官方 Dockerfile 参考（COPY → Source）:
+#     "You can specify multiple source files or directories with COPY. The last argument must
+#      always be the destination. … COPY file1.txt file2.txt /usr/src/things/"
+#   ⇒ 多源 COPY 只考**具名**源；未列名的同级文件**不入选**。本仓无任何 `COPY .` / 根目录级 COPY
+#   ⇒ `synova.json` **不在镜像内**。故「进镜像」不是事实，不能作为断言。
+#   真实且可测的两条:
+#     ① 须进镜像的同名具名文件依赖**显式列名**（若将来有人把 `COPY package.json` 泛化成 `COPY .`，
+#        宿主配置会被静默带进镜像）⇒ 断言 Dockerfile 无根目录级 `COPY .`。
+#     ② `synova.json` 仍在**构建上下文**内（未被 .dockerignore 排除）⇒ 每次 build 都随上下文上传，
+#        且 `config-file.ts` 从 `process.cwd()` 读它 ⇒ 一旦镜像里出现（当前没有）即携带宿主值。
+#        属上下文卫生欠账 ⇒ 以 .dockerignore 排除为期望态。
+A6_COPYDOT="$(grep -nE '^COPY[[:space:]]+(\.[[:space:]]|\./)' Dockerfile || true)"
+if [ -n "${A6_COPYDOT}" ]; then
+  fail "A6 Dockerfile 含根目录级 COPY 通配（会把未列名的宿主配置带进镜像）: ${A6_COPYDOT}"
+else
+  pass 'A6 Dockerfile 无根目录级 COPY 通配（同名具名文件方入选，宿主配置不会静默进镜像）'
+fi
+
+A6_SUSPECTS=""
+for cand in synova.json synova.json.last-good; do
+  [ -f "${cand}" ] || continue
+  # 期望态: .dockerignore 显式排除（支持 `name` / `/name`，忽略注释与空行）
+  #   ⚠️ 不用 `git ls-files` 判在库 —— 探针可在非 git 目录（如复跑夹具）运行，
+  #      把「文件存在但未排除」判红即可（更强的保守判据），在库与否不改变期望态。
+  if ! grep -qE "^[[:space:]]*/?${cand//./\\.}[[:space:]]*$" .dockerignore 2>/dev/null; then
+    A6_SUSPECTS="${A6_SUSPECTS} ${cand}"
+  fi
+done
+if [ -n "${A6_SUSPECTS}" ]; then
+  fail "A6b 宿主配置件未排除出构建上下文:${A6_SUSPECTS}（未进镜像，但随上下文上传；且一旦 COPY 形态被泛化即静默进镜像）"
+  info "     处置: 在 .dockerignore 显式加行（见交付件 U5 —— 本卡未处置，需授权面）"
+else
+  pass 'A6b 宿主配置件（synova.json / .last-good）已被 .dockerignore 排除或不存在'
 fi
 
 # A5: 后端生产入口由 bundle 产出（tsx 属 devDependency，镜像内不存在）

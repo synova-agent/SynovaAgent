@@ -52,7 +52,7 @@ build_fixture() {
   rm -rf "$dir"
   mkdir -p "$dir/scripts/control-tower" "$dir/scripts/desktop" "$dir/electron-renderer"
   cp "$REPO/Dockerfile" "$REPO/package.json" "$REPO/package-lock.json" \
-     "$REPO/build-synova.cjs" "$REPO/tsconfig.json" "$dir/"
+     "$REPO/build-synova.cjs" "$REPO/tsconfig.json" "$REPO/.dockerignore" "$dir/"
   cp "$PROBE" "$dir/scripts/control-tower/"
   cp "$REPO/scripts/desktop/build-backend.sh" "$dir/scripts/desktop/"
   cp "$REPO/electron-renderer/vite.config.ts" "$dir/electron-renderer/"
@@ -148,6 +148,108 @@ if [ "$R3_RC" -eq 1 ] && printf '%s' "$R3_OUT" | grep -q 'B6 Dockerfile 未 COPY
   pass "⑤ 镜像缺 package.json ⇒ exit 1 且 B6 命中"
 else
   fail "⑤ B6 未命中（/health 版本降级 0.0.0 防线失效；exit=${R3_RC}）"
+fi
+
+# ═══ ⑤-A4 阶段感知判别力（V-08 复发防线；#1464 复核实测 M5/M6 曾暴露零判别力）═══════
+#   缺陷史: 原 A4 为全文件 `grep -cE '^COPY vendor/'` —— 不分阶段，却在断言文本声称
+#   「进**运行阶段**」。变异体（终镜像无 vendor COPY，仅 builder 段有）⇒ 仍 PASS ⇒ 零判别力。
+#   下列两组断言把「按阶段判定」钉死。
+
+# ⑤c 真反例: 终镜像**无任何** vendor COPY（builder 段保留本地 COPY）⇒ A4 必须判红
+R6="$TMP_ROOT/r6"
+build_fixture "$R6"
+python3 - "$R6/Dockerfile" <<'PYEOF'
+import sys
+p = sys.argv[1]
+s = open(p, encoding='utf-8').read()
+old = 'COPY --from=builder /app/dist ./dist\nCOPY vendor/ ./vendor/'
+new = 'COPY --from=builder /app/dist ./dist'
+assert old in s, '⑤c 夹具未命中终阶段 vendor COPY 行'
+open(p, 'w', encoding='utf-8').write(s.replace(old, new, 1))
+PYEOF
+R6_OUT="$(cd "$R6" && bash scripts/control-tower/probe-packaging.sh 2>&1)"; R6_RC=$?
+if [ "$R6_RC" -eq 1 ] && printf '%s' "$R6_OUT" | grep -q 'A4 最终阶段无任何 vendor/ COPY'; then
+  pass "⑤c 终镜像无 vendor COPY ⇒ exit 1 且 A4 命中（阶段感知真反例）"
+else
+  fail "⑤c A4 阶段感知失效：终镜像无 vendor COPY 却未判红（exit=${R6_RC}）—— V-08 复发"
+fi
+
+# ⑤d 判别力对照: builder 段去掉本地 COPY vendor/（终阶段保留）⇒ **A4 必须仍 PASS**
+#     —— 这一组是「按阶段」与「全文件 grep」的分水岭：
+#        全文件 grep 在 builder 段缺失时靠终阶段的 COPY 也能过（巧合）；
+#        但旧实现真正的问题是反向（终阶段缺失时靠 builder 段误过）。⑤e 用无害变异构造
+#        「A4 是唯一差异项」的更纯对照，见下。
+R7="$TMP_ROOT/r7"
+build_fixture "$R7"
+python3 - "$R7/Dockerfile" <<'PYEOF'
+import sys
+p = sys.argv[1]
+s = open(p, encoding='utf-8').read()
+old = 'COPY packages/ ./packages/\nCOPY vendor/ ./vendor/\n'
+new = 'COPY packages/ ./packages/\n'
+assert old in s, '⑤d 夹具未命中 builder 段 vendor COPY 行'
+open(p, 'w', encoding='utf-8').write(s.replace(old, new, 1))
+PYEOF
+R7_OUT="$(cd "$R7" && bash scripts/control-tower/probe-packaging.sh 2>&1)"; R7_RC=$?
+if printf '%s' "$R7_OUT" | grep -q 'A4 vendor/ 在最终阶段可见'; then
+  pass "⑤d builder 段无本地 vendor COPY、终阶段有 ⇒ A4 仍 PASS（不越界误判）"
+else
+  fail "⑤d A4 误判：builder 段缺失却判红（阶段边界识别过宽）"
+fi
+
+# ⑤e 纯判别力对照（A4 为**唯一**差异项）：以 `--from=builder` 形态满足 A4 且不触及其它断言
+#     ⚠️ A3 会断言 CMD 入口 `dist/backend.mjs` 存在 ⇒ 必须补该文件占位（本测试曾漏建致假红）
+R8="$TMP_ROOT/r8"
+build_fixture "$R8"
+rm -rf "$R8/dist"                       # ① 清掉产物面，避免 D2 走 SKIP 之外的形态
+mkdir -p "$R8/vendor" "$R8/dist"        # ② 保证 A1 对 vendor/ 源路径断言成立
+printf '// placeholder\n' > "$R8/dist/backend.mjs"   # ③ A3 前置：CMD 入口占位
+python3 - "$R8/Dockerfile" <<'PYEOF'
+import sys
+p = sys.argv[1]
+s = open(p, encoding='utf-8').read()
+# ④ 删掉 builder 段的 `COPY vendor/`（A1 少一个源 token，仍全存在）
+s = s.replace('COPY packages/ ./packages/\nCOPY vendor/ ./vendor/\n',
+              'COPY packages/ ./packages/\n', 1)
+# ⑤ 终阶段换成 from-stage 形态（A4 合法形态之一）
+s = s.replace('COPY --from=builder /app/dist ./dist\nCOPY vendor/ ./vendor/',
+              'COPY --from=builder /app/dist ./dist\nCOPY --from=builder /app/vendor ./vendor/', 1)
+open(p, 'w', encoding='utf-8').write(s)
+PYEOF
+R8_OUT="$(cd "$R8" && bash scripts/control-tower/probe-packaging.sh 2>&1)"; R8_RC=$?
+if [ "$R8_RC" -eq 0 ] && printf '%s' "$R8_OUT" | grep -q '形态: from-stage'; then
+  pass "⑤e 终阶段 from-stage 形态 ⇒ A4 PASS 且整体 exit 0（唯一形态差异不放行也不误杀）"
+else
+  fail "⑤e from-stage 形态未被 A4 接受（exit=${R8_RC}）—— 合法形态被误杀"
+fi
+
+# ═══ ⑤-A6 构建上下文泄漏面（#1464 复核纠错后新增的断言；实测 Docker 规范语义）═══════
+#   规范依据: Dockerfile 参考 COPY→Source ——「多源 COPY 只考**具名**源；末位为 dest」
+#   ⇒ `COPY package.json package-lock.json ./` **不会**把同级 synova.json 考进镜像。
+#   故断言拆两条: ① 无根目录级 COPY 通配 ② 宿主配置件已排除出上下文。
+
+# ⑤f 反例: 把具名文件 COPY 泛化成 `COPY . .` ⇒ A6 必须判红（宿主配置会静默进镜像）
+R9="$TMP_ROOT/r9"
+build_fixture "$R9"
+sed -i.bak 's|^COPY package.json package-lock.json ./|COPY . ./|' "$R9/Dockerfile" && rm -f "$R9/Dockerfile.bak"
+R9_OUT="$(cd "$R9" && bash scripts/control-tower/probe-packaging.sh 2>&1)"; R9_RC=$?
+if [ "$R9_RC" -eq 1 ] && printf '%s' "$R9_OUT" | grep -q 'A6 Dockerfile 含根目录级 COPY 通配'; then
+  pass "⑤f COPY 泛化成 \`COPY . .\` ⇒ exit 1 且 A6 命中（宿主配置静默进镜像的防线）"
+else
+  fail "⑤f A6 未拦截根目录级 COPY 通配（exit=${R9_RC}）—— 宿主配置可静默进镜像"
+fi
+
+# ⑤g 反例: .dockerignore 去掉 synova.json 排除 ⇒ A6b 必须判红（上下文卫生欠账可见）
+R10="$TMP_ROOT/r10"
+build_fixture "$R10"
+printf '{\n  "server": { "port": 18790 }\n}\n' > "$R10/synova.json"
+sed -i.bak '/^synova\.json$/d' "$R10/.dockerignore" 2>/dev/null || true
+rm -f "$R10/.dockerignore.bak"
+R10_OUT="$(cd "$R10" && bash scripts/control-tower/probe-packaging.sh 2>&1)"; R10_RC=$?
+if [ "$R10_RC" -eq 1 ] && printf '%s' "$R10_OUT" | grep -q 'A6b 宿主配置件未排除出构建上下文'; then
+  pass "⑤g .dockerignore 缺 synova.json 排除 ⇒ exit 1 且 A6b 命中"
+else
+  fail "⑤g A6b 未命中（exit=${R10_RC}）—— 上下文卫生欠账不可见"
 fi
 
 # ═══ ⑥ 降级/边界: 探针自身异常通道 exit 2 ═════════════════════════════════════

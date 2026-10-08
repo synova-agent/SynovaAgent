@@ -9,6 +9,7 @@ writeset:
   - .claude/claims/1464.yaml
   - .claude/task-briefs/2026-10-09-1464-packaging-hygiene.md
   - Dockerfile
+  - .dockerignore
   - scripts/desktop/build-backend.sh
   - scripts/control-tower/probe-packaging.sh
   - .synova-out/读卡确认-1464.md

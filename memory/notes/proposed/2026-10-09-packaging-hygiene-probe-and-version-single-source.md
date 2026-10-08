@@ -40,7 +40,13 @@
    需 install 脚本）+ COPY bundle + `vendor/`。运行期版本读数依赖 bundle 同级 `package.json`
    （`src/services/update-checker.ts:63-76`，候选路径 `import.meta.dirname/../package.json`）
    ⇒ 镜像**必须**带 `package.json`，否则 `/health` 的 version 静默降级 `0.0.0`（已立 B6 断言钉住）。
-4. **构建脚本自足化**：`build-backend.sh` 在 `node_modules/@synova` 缺失时就地建符号链接。
+4. **宿主配置件出构建上下文**：`.dockerignore` 增行排除 `synova.json`/`synova.json.last-good`/
+   `.synova-state.json`/`.synova-owner`。**注意两处曾错**：①（我的错）`synova.json` **不**优先于
+   环境变量 —— `src/config.ts:107` 为 `process.env.PORT || String(filePort || 3000)`，env 在前；
+   ②（复核意见的错）`COPY package.json package-lock.json ./` **不会**把同级 `synova.json` 带进镜像
+   —— Docker 规范「多源 COPY 只考具名源」。真实缺陷只是**上下文卫生**（未进镜像 + 潜在：
+   COPY 被泛化成 `COPY . .` 时才进镜像）。故断言拆两条：A6 禁根目录级 COPY 通配；A6b 配置件须出上下文。
+5. **构建脚本自足化**：`build-backend.sh` 在 `node_modules/@synova` 缺失时就地建符号链接。
    原实现隐含依赖「dev 仓已存在该目录」，干净 checkout / 容器 builder 阶段会断链
    （实测报 `Could not resolve "@synova/logger"`）。此为**构建链可复现性**修复，非新增依赖。
 
@@ -71,7 +77,8 @@
 ## 六、复跑命令
 
 ```bash
-bash scripts/control-tower/probe-packaging.sh      # 判据：期望 exit 0
+bash scripts/control-tower/probe-packaging.sh      # 判据：期望 exit 0（20 断言）
+bash tests/control-tower/probe-packaging.test.sh   # 配对测试：期望 exit 0（19 断言）
 bash tests/control-tower/probe-packaging.test.sh   # 配对测试（CT-40）：期望 exit 0
 bash scripts/desktop/build-backend.sh              # 生产 bundle：期望产出 dist/backend.mjs
 find dist -type f -name '*.map' | wc -l            # V4：期望 0

@@ -56,6 +56,7 @@
 会使条目「不可匹配」⇒ 该 brief 认领数恒为 0 ⇒ 提交端误报「今日无 task brief」）：
 
 - Dockerfile
+- .dockerignore
 - scripts/desktop/build-backend.sh
 - scripts/control-tower/probe-packaging.sh
 - tests/control-tower/probe-packaging.test.sh
@@ -71,8 +72,11 @@
   compose 的 PORT=3000）
 - scripts/desktop/build-backend.sh — 自备 node_modules/@synova/* 解析链接（此前隐含依赖
   dev 仓已存在；干净 checkout / 容器 builder 阶段会断链）
-- scripts/control-tower/probe-packaging.sh — 新建（登记件 acceptance 判据载体，18 断言）
+- scripts/control-tower/probe-packaging.sh — 新建（登记件 acceptance 判据载体，20 断言）
 - tests/control-tower/probe-packaging.test.sh — 新建（U7/CT-40 硬门禁要求：控制塔脚本配对测试）
+- .dockerignore — 增 4 行：排除宿主运行期配置件（synova.json / synova.json.last-good /
+  .synova-state.json / .synova-owner）出构建上下文（卡面子项①「COPY 路径修正」的上下文面；
+  原写集未含本文件 ⇒ **例外声明**，见 §7/交付件 U5 详情，附回退方式）
 - .claude/claims/1464.yaml — 写集声明（D708 S0 源）
 - memory/notes/proposed/2026-10-09-packaging-hygiene-probe-and-version-single-source.md
 
