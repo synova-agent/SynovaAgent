@@ -85,6 +85,35 @@ snapshot activity/* count = 0
 
 > **未合并声明**：真机库是**本机 dev 数据资产**（`data/` 已在 `.gitignore`），本次在位迁移+写入**不产生 git 变更**。回滚方式：以 2.1 快照覆盖原库（sha256 `9b8b398a…`），即回到 count=0 / 无 `props` 列的迁移前形态。
 
+### 2.5 表级副作用披露（CTO 2026-10-09 追问项，逐项如实）
+
+**库表数 52 → 55**（+3）：`schema_version`（迁移框架表）、`metric_readings`（迁移 002）、`orgs`（迁移 003）。
+⇒ 在位运行不只加 `graph_nodes.props`，**还建了 3 张表**（属同一 `reconcileSchema` 行为，非本卡手工动作）。
+
+**`PRAGMA table_info(graph_triples)` 前 / 后（CTO 点名项）**：前置口径 = 迁移前一致性快照（该快照是整库副本，取它即"迁移前真值"，非推理）。
+
+```
+BEFORE = AFTER，**逐列完全相同、未被本次写入触碰**：
+  14 列: id,subject_type,subject_id,predicate,object_type,object_id,graph,weight,props_json,
+         confidence,source,valid_from,valid_to,created_at
+  DDL: CREATE TABLE graph_triples ( id INTEGER PRIMARY KEY AUTOINCREMENT, … props_json TEXT DEFAULT '{}', … )
+  COUNT(graph_triples) = 0 → 0
+```
+⇒ ① 该表**没有 `props` 列**；② 主键是 `INTEGER PRIMARY KEY AUTOINCREMENT`（**canonical 是 `TEXT PRIMARY KEY`**）；
+③ 迁移 001 只 `ALTER graph_nodes`，**没碰它**。本卡据此**未建任何边**（`createEdge` 在本形态上物理不可用，#1455 在修）。
+
+### 2.6 🔴 形状漂移声明（如实声明 + 建议另立卡；本卡不擅动）
+
+真机 `graph_nodes` 的形态与 canonical `SCHEMA_SQL`（`src/adapters/sqlite-graph-store.ts:20-40`）**不一致**，且迁移 001 未涉及主键：
+
+| 维度 | 真机库实测 | canonical `SCHEMA_SQL` | 差异 |
+|---|---|---|---|
+| 主键 | 复合 `PRIMARY KEY (id, graph)` | `id TEXT PRIMARY KEY` | 🔴 形状漂移 |
+| `valid_from` | **不存在** | `valid_from TEXT NOT NULL DEFAULT (datetime('now'))` | 🔴 缺列 |
+| 额外列 | `confidence` / `updated_at` / `props_json` | 无 | 遗留形态 |
+
+⇒ **本批不重建 `graph_nodes`**（今天不红，重建属高风险数据迁移）⇒ **建议另立卡**（提案→K3→CTO）。**本卡不擅动**（写集也不含 `src/**`）。
+
 ---
 
 ## 3. 判据① 对照组（队长裁定 ⑤：**两个读数都贴，不许合并成一句「通过」**）
@@ -202,16 +231,24 @@ $ git diff --stat     （提交前，仅已跟踪文件）
 
 ## 8. 自验独立性与边界
 
+**判据资格口径（原文照录 · CTO/队长 2026-10-09 裁定）**：**活库 = 交付本体，fixture = 判据**。
+即：真机库那条 `activity/production` 节点是**交付本体 + 留档**，**不得充当判据**；判据①的可复现来源 = **cwd 在本工作树内**的隔离 fixture（旧形态库 DDL 逐列抄真机读数 → 自愈迁移 → 写入 → 判据 SQL），加"裸 INSERT 必红"判别性反证。
+
 - **本件不含"审计通过"字样**；编码（`k4-coder-c`）**不自判通过**。自验由独立成员（task-8 `docs/synova/product-lines/evidence/1057-verify-*.md`）执行，三态结论归其出具；通过与否归 CTO 收件闸 + K3 终审。
 - 提交前已跑定向测试（**未跑全量 vitest**，遵守"重型验证串行 ≤1"上限）。
+- 本卡提交 4 个（时间序，无 amend/rebase 改写）：`17d1d18be`（仅 task brief，先于写码）→ `d083c212b`（brief 改名加日期前缀，修组 12 日期窗口）→ `ad7ab56ac`（实现 + 本证据件）→ `3975cd5ed`（`.claude/claims/1057.yaml` 写集声明，治理产物）。
+- 组 12 载体双备：date-prefixed brief（本地认领）+ `.claude/claims/1057.yaml`（**日期无关**，CI 可核：`--issue-of fix/1057-activity-instance-props ⇒ 1057`、`--path 1057 ⇒ 该文件`、`--coverage` 本卡 13/13 全覆盖、`broken=[] degraded=false`）。
+- **提交后复跑**（committed tree，worktree 干净）：`Tests 11 passed | 2 skipped (13)` exit 0；复跑后真机库 sha256 **仍为 `771f0677…`**、`activity/*` 计数**仍为 1** ⇒ 证明测试 cwd 隔离生效、无二次写入。
 
 ## 9. 遗留 / 待裁清单（未解决项，直说）
 
 1. 🔴 **`graph_triples` 同样缺 `props` 列且零迁移** ⇒ 本机 `createEdge` 硬失败、`queryEdges` 失败后静默返回 `[]`（队长裁定 ④ 明示 #1455 在修）。⇒ **本卡未建任何边**；"实例 + 因果边"里的**边那半今天物理不可用**，待 #1455 落地后另卡接续。
-2. **SOG 校验器无 `activity/*` schema** ⇒ 走「未覆盖类型 — 可见降级放行」（`src/l4/sog-schema-validator.ts:198-210`，`NODE_SCHEMAS` 仅 8 个旧 UPPERCASE 类型）。不在本卡修（`src/**` 禁碰；#980/#1436 域）。
-3. **实例值多为手填占位**（`_provenance` 标注 `handfill:`），**待真实访谈核实**；`data_reachability`/`capacity_utilization` 为 golden 近似派生（语义近似已标注）。
-4. **`agent_readiness_score` / `agent_type_recommendation` 的口径属 3-6（agent_readiness）** ⇒ 本卡只落示例值 + 自由文本，**不锁死算法/枚举**。
-5. **10 属性的类型口径（9 number + 1 string）为本卡自决**（卡面未给），可被 3-6 推翻。
-6. `headcount` 与 `resource/team`、`outcome/people` 近义（见 §6 披露）⇒ 是否改名待 CTO 裁。
-7. 测试文件按卡面指定名 `activity-instance-1057.test.ts`（实质含真实 SQLite I/O，按铁律 33 本可叫 `.integration.test.ts`）；**遵卡面文件名**，此处备案。
-8. **未合并**：GitHub 账号级封禁 ⇒ 无 `ls-remote` 回执、未 push、未开 PR、未回填板。本地 commit 见分支 `fix/1057-activity-instance-props`。
+2. 🔴 **`graph_nodes` 形状漂移**（真机复合 PK `(id, graph)`、缺 `valid_from`、多 `confidence`/`updated_at`/`props_json`，与 canonical `SCHEMA_SQL` 不一致；迁移 001 未涉主键）⇒ **本批不重建**，**建议另立卡**（提案→K3→CTO），本卡不擅动。详见 §2.6。
+3. **表级副作用**：在位运行同时建了 `metric_readings` / `orgs` / `schema_version` 三表（库表 52→55），属 `reconcileSchema` 行为，非本卡手工动作。详见 §2.5。
+4. **SOG 校验器无 `activity/*` schema** ⇒ 走「未覆盖类型 — 可见降级放行」（`src/l4/sog-schema-validator.ts:198-210`，`NODE_SCHEMAS` 仅 8 个旧 UPPERCASE 类型）。不在本卡修（`src/**` 禁碰；#980/#1436 域）。
+5. **实例值多为手填占位**（`_provenance` 标注 `handfill:`），**待真实访谈核实**；`data_reachability`/`capacity_utilization` 为 golden 近似派生（语义近似已标注）。
+6. **`agent_readiness_score` / `agent_type_recommendation` 的口径属 3-6（agent_readiness）** ⇒ 本卡只落示例值 + 自由文本，**不锁死算法/枚举**。
+7. **10 属性的类型口径（9 number + 1 string）为本卡自决**（卡面未给），可被 3-6 推翻。
+8. `headcount` 与 `resource/team`、`outcome/people` 近义（见 §6 披露）⇒ 是否改名待 CTO 裁。
+9. 测试文件按卡面指定名 `activity-instance-1057.test.ts`（实质含真实 SQLite I/O，按铁律 33 本可叫 `.integration.test.ts`）；**遵卡面文件名**，此处备案。
+10. **未合并**：GitHub 账号级封禁 ⇒ 无 `ls-remote` 回执（实测 `git ls-remote --heads origin` ⇒ **exit 128 `ERROR: Your account is suspended`**）、未 push、未开 PR、未回填板。本地 commit 见分支 `fix/1057-activity-instance-props`（4 个，见 §8）。
