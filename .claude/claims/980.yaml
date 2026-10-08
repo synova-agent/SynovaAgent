@@ -14,6 +14,7 @@
 writeset:
   - .claude/claims/980.yaml
   - .claude/task-briefs/2026-10-08-win-0-6-schema-degraded.md
+  - docs/authority/DOCS-REGISTRY.yaml
   - docs/synova/coordination/#980-待归口登记册-20261008.md
   - docs/synova/product-lines/evidence/980/ENV-980-better-sqlite3-workaround.md
   - docs/synova/product-lines/evidence/980/PLAN-980-0-6-schema-degraded.md
