@@ -1,0 +1,31 @@
+# cwd=/Users/wane/SynovaAgent/.synova-wt-schema
+$ node --experimental-strip-types docs/synova/coordination/tools/check-coordination-schema.ts
+--- output ---
+[PASS] V10-CAS-ROOT-EXISTS  -- cas-root=.
+[PASS] V10-CAS-PARSE  -- 声明格式合法 declarations=1 unparseable_json_skipped=6 示例=.codex/audit-reports/D1144.json , .codex/audit-reports/V10V11V12.json , .codex/audit/audit-result.json（非法 JSON 非本门判据，但跳过已显式计数）
+[PASS] V10-CAS-SELF  -- no self-referencing declarations
+[NOT-EVALUATED] V10-CAS-PRESENT  reason=no --cas-file given (presence is only asserted for a named dispatch file)  -- 未指定 --cas-file：不要求“某文件必须有声明”
+[NOT-EVALUATED] V10-CAS-STALE  reason=no --since ref  -- 未给 --since：变更集未定义，无法判断“写者基于的版本”是否已过期
+[NOT-EVALUATED] V10-CAS-DANGLING  reason=no --since ref  -- 未给 --since：无法在基线上解析被声明的目标
+[PASS] V11-ROOT-EXISTS  -- coord-root=docs/synova/coordination
+[PASS] V11-STATUS-ENUM  -- declaring=0 values in closed set
+[PASS] V11-STATUS-SINGLE  -- declaring=0 each declares <=1 status
+[PASS] V11-STATUS-LOCATION  -- declaring=0 location-consistent
+[NOT-EVALUATED] V11-NEW-DOC-STATUS  reason=no --since ref  -- 变更集未定义
+[NOT-EVALUATED] V11-MOVE-REWRITE  reason=no --since ref  -- 变更集未定义
+[NOT-EVALUATED] V11-ARCHIVE-FROZEN  reason=no --since ref  -- 变更集未定义
+[NOT-EVALUATED] V11-STATUS-DEBT  reason=unclassified legacy documents=251  -- 存量未标注状态位的文档 251 件（机制件与一次性回执同层；D8 存量，不阻断） 示例=docs/synova/coordination/2026-10-02-D1-门禁专项吸收件-治理线一窗.md , docs/synova/coordination/2026-10-02-D2-文档治理范围修正件-治理线一窗.md , docs/synova/coordination/2026-10-02-D3-线登记与收口-R1R5-治理线一窗.md , docs/synova/coordination/AGENT-FULL-CHAIN-AUDIT-TASK.md , docs/synova/coordination/AGENT-INFRASTRUCTURE-SCAN-TASK.md ...
+[PASS] V12-ROOT-EXISTS  -- decisions-root=decisions
+[PASS] V12-FILE-KIND  -- files=2 all .md
+[PASS] V12-STATUS-LINE  -- files=2 状态行唯一且在四态闭集内
+[PASS] V12-DATE-LINE  -- files=2 日期行唯一且与文件名一致
+[PASS] V12-SECTIONS  -- files=2 六段齐全
+[PASS] V12-SECTION-EMPTY  -- files=2 必填节均非空
+[PASS] V12-LIFECYCLE-DIR  -- files=2 状态与目录一致
+[PASS] V12-CLASS-DIR  -- files=2 类别在闭集内
+[PASS] V12-IMPLEMENTED-TONE  -- implemented 决策件无提议腔
+[NOT-EVALUATED] V12-PATH-DEBT  file=decisions/process/2026-09-26-doc-contract.md  -- 存量：路径缺少生命周期段（应为 decisions/{proposed|implemented|rejected|archived}/{product|architecture|process|feature|bug-fix|simplification}/YYYY-MM-DD-*.md） 现行=process/2026-09-26-doc-contract.md；修法: git mv 到 decisions/implemented/process/
+[NOT-EVALUATED] V12-PATH-RATCHET  reason=no --since ref  -- 未给 --since：无法区分新增件与存量件
+SUMMARY rules=25 pass=16 fail=0 not_evaluated=9 since=(none) strict=0
+EXIT 0
+--- exit=0 ---

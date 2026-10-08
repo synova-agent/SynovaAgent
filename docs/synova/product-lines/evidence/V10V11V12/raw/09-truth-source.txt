@@ -1,0 +1,13 @@
+# cwd=/Users/wane/SynovaAgent/.synova-wt-schema
+$ git ls-tree -r origin/main --name-only -- decisions/ | tr -d '\n\r' | ... (count)
+--- output ---
+decisions/ files at origin/main = 2
+$ git ls-tree -r origin/main --name-only -- decisions/ | sed 's/^/  /'
+  decisions/process/2026-09-26-doc-contract.md
+  decisions/proposed/process/2026-10-01-pre-push-preview.md
+
+$ git ls-tree -r origin/main --name-only -- docs/synova/coordination/ | wc -l
+coordination/ recursive files at origin/main = 268
+$ git show origin/main:docs/synova/DOC-CONTRACT.md | shasum -a 256
+2836c0f22560bf20962876095090a60bac7dc205be59925c967eb8e55530e558  -
+--- exit=0 ---

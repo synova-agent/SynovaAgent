@@ -1,0 +1,33 @@
+# fixture repo=<tmp>/v11-archive（git init 临时仓；绝对路径不入证据，保证可对账）
+# files:
+#   ./docs/synova/coordination/archive/old-receipt.md
+$ (cd <fixture> && node docs/synova/coordination/tools/check-coordination-schema.ts --repo-root <fixture> --cas-root .cas-empty)
+--- output ---
+[PASS] V10-CAS-ROOT-EXISTS  -- cas-root=.cas-empty
+[PASS] V10-CAS-PARSE  -- 声明格式合法 declarations=0 unparseable_json_skipped=0
+[PASS] V10-CAS-SELF  -- no self-referencing declarations
+[NOT-EVALUATED] V10-CAS-PRESENT  reason=no --cas-file given (presence is only asserted for a named dispatch file)  -- 未指定 --cas-file：不要求“某文件必须有声明”
+[NOT-EVALUATED] V10-CAS-STALE  reason=no --since ref  -- 未给 --since：变更集未定义，无法判断“写者基于的版本”是否已过期
+[NOT-EVALUATED] V10-CAS-DANGLING  reason=no --since ref  -- 未给 --since：无法在基线上解析被声明的目标
+[PASS] V11-ROOT-EXISTS  -- coord-root=docs/synova/coordination
+[PASS] V11-STATUS-ENUM  -- declaring=1 values in closed set
+[PASS] V11-STATUS-SINGLE  -- declaring=1 each declares <=1 status
+[FAIL] V11-STATUS-LOCATION  file=docs/synova/coordination/archive/old-receipt.md  line=3  token=STATUS_LOCATION_MISMATCH  -- 位置与状态不一致 —— 目录期望 'archived'，文件写作 'active'（移动时必须同批改写状态行）
+[NOT-EVALUATED] V11-NEW-DOC-STATUS  reason=no --since ref  -- 变更集未定义
+[NOT-EVALUATED] V11-MOVE-REWRITE  reason=no --since ref  -- 变更集未定义
+[NOT-EVALUATED] V11-ARCHIVE-FROZEN  reason=no --since ref  -- 变更集未定义
+[PASS] V11-STATUS-DEBT  -- all coordination documents declare a status
+[PASS] V12-ROOT-EXISTS  -- decisions-root=decisions
+[PASS] V12-FILE-KIND  -- files=0 all .md
+[PASS] V12-STATUS-LINE  -- files=0 状态行唯一且在四态闭集内
+[PASS] V12-DATE-LINE  -- files=0 日期行唯一且与文件名一致
+[PASS] V12-SECTIONS  -- files=0 六段齐全
+[PASS] V12-SECTION-EMPTY  -- files=0 必填节均非空
+[PASS] V12-LIFECYCLE-DIR  -- files=0 状态与目录一致
+[PASS] V12-CLASS-DIR  -- files=0 类别在闭集内
+[PASS] V12-IMPLEMENTED-TONE  -- implemented 决策件无提议腔
+[PASS] V12-PATH-DEBT  -- no decision file lacks a lifecycle segment
+[NOT-EVALUATED] V12-PATH-RATCHET  reason=no --since ref  -- 未给 --since：无法区分新增件与存量件
+SUMMARY rules=25 pass=17 fail=1 not_evaluated=7 since=(none) strict=0
+EXIT 1
+--- exit=1 ---

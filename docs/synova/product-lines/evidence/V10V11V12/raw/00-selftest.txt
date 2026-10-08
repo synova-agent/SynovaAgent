@@ -1,0 +1,37 @@
+# cwd=/Users/wane/SynovaAgent/.synova-wt-schema
+$ node --experimental-strip-types docs/synova/coordination/tools/check-coordination-schema.ts --selftest
+--- output ---
+SELFTEST ok   V10-green                              expect_exit=0 actual_exit=0
+SELFTEST ok   V10-stale-old-revision                 expect_exit=1 actual_exit=1
+fatal: path 'docs/synova/coordination/nope.json' does not exist in 'HEAD'
+SELFTEST ok   V10-dangling                           expect_exit=1 actual_exit=1
+SELFTEST ok   V10-malformed                          expect_exit=1 actual_exit=1
+SELFTEST ok   V10-self-reference                     expect_exit=1 actual_exit=1
+SELFTEST ok   V10-cas-root-missing                   expect_exit=1 actual_exit=1
+SELFTEST ok   V10-declaration-inside-unparseable-json expect_exit=0 actual_exit=0
+SELFTEST ok   V10-cas-file-without-declaration       expect_exit=1 actual_exit=1
+SELFTEST ok   V11-green                              expect_exit=0 actual_exit=0
+SELFTEST ok   V11-archive-but-active                 expect_exit=1 actual_exit=1
+SELFTEST ok   V11-status-enum                        expect_exit=1 actual_exit=1
+SELFTEST ok   V11-status-duplicate                   expect_exit=1 actual_exit=1
+SELFTEST ok   V11-new-doc-needs-status               expect_exit=1 actual_exit=1
+SELFTEST ok   V11-move-without-rewrite               expect_exit=1 actual_exit=1
+SELFTEST ok   V11-archive-frozen-edit                expect_exit=1 actual_exit=1
+SELFTEST ok   V11-archive-frozen-unarchive           expect_exit=1 actual_exit=1
+SELFTEST ok   V11-debt-not-blocking                  expect_exit=0 actual_exit=0
+SELFTEST ok   V12-green                              expect_exit=0 actual_exit=0
+SELFTEST ok   V12-missing-section                    expect_exit=1 actual_exit=1
+SELFTEST ok   V12-empty-section                      expect_exit=1 actual_exit=1
+SELFTEST ok   V12-implemented-proposal-tone          expect_exit=1 actual_exit=1
+SELFTEST ok   V12-implemented-tone-false-positive-guard expect_exit=0 actual_exit=0
+SELFTEST ok   V12-status-dir-mismatch                expect_exit=1 actual_exit=1
+SELFTEST ok   V12-status-enum                        expect_exit=1 actual_exit=1
+SELFTEST ok   V12-date-mismatch                      expect_exit=1 actual_exit=1
+SELFTEST ok   V12-class-not-in-set                   expect_exit=1 actual_exit=1
+SELFTEST ok   V12-unexpected-file-kind               expect_exit=1 actual_exit=1
+SELFTEST ok   V12-path-ratchet                       expect_exit=1 actual_exit=1
+SELFTEST ok   V12-path-debt-not-blocking             expect_exit=0 actual_exit=0
+SELFTEST ok   V11-root-missing-blocks                expect_exit=1 actual_exit=1
+SELFTEST ok   V12-root-missing-blocks                expect_exit=1 actual_exit=1
+SELFTEST SUMMARY cases=31 failed=0 covered_rules=25/25
+--- exit=0 ---

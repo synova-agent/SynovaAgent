@@ -1,0 +1,7 @@
+# cwd=/Users/wane/SynovaAgent/.synova-wt-schema
+$ node --experimental-strip-types docs/synova/coordination/tools/check-coordination-schema.ts --since no-such-ref-at-all
+--- output ---
+fatal: Needed a single revision
+CHECKER-ERROR [BAD_SINCE] --since ref 不可解析为提交: no-such-ref-at-all
+（检查自身失败 = 阻断；判例 M-02：禁 || true 吞崩溃）
+--- exit=2 ---
