@@ -89,9 +89,11 @@ chk_issue 'docs(d577-closeout): x' ''      # legacy D# scope 不得产伪 issue
 chk_issue 'Merge 9e4141d54e2b into 76' ''  # 合成 merge 主题不得产伪 issue
 chk_issue 'feat/win-d702-abc' ''           # legacy 分支不得产伪 issue
 
-# ── 边界: feature flag 默认关（K3 R2 回滚语义）──
+# ── 边界（**卡 #1423 翻面**）: 默认开 + 回滚 = 显式关 ──
 OUT=$(env -u SYNO_CLAIM_V2 "$PYBIN" "$CLAIM" --flag); assert_rc $? 0 "--flag 可读"
-[ "$OUT" = "off" ] && ok "边界: SYNO_CLAIM_V2 默认关" || no "边界: 默认应为 off，实得 $OUT"
+[ "$OUT" = "on" ] && ok "边界: SYNO_CLAIM_V2 **默认开**（#1423: 新任务走 issue 号身份）" || no "边界: 默认应为 on，实得 $OUT"
+OUT_OFF="$(SYNO_CLAIM_V2=0 "$PYBIN" "$CLAIM" --flag 2>/dev/null || true)"   # swallow-ok: 失败即空 → 下一行断言判红
+[ "$OUT_OFF" = "off" ] && ok "边界: 显式 0 ⇒ 关（#1423 唯一回滚点，回滚语义保留）" || no "边界: 显式 0 应为 off，实得 $OUT_OFF"
 OUT=$(SYNO_CLAIM_V2=1 "$PYBIN" "$CLAIM" --flag)
 [ "$OUT" = "on" ] && ok "边界: SYNO_CLAIM_V2=1 → on" || no "边界: 开关未生效: $OUT"
 
