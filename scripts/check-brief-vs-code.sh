@@ -30,7 +30,7 @@ BRIEF=$(find "$ROOT/.claude/task-briefs/" -type f -name "${TODAY}*" 2>/dev/null 
 # 卡 #1423: 开关口径与单一事实源对齐（未设/真值 = 开；显式 0|false|off|no|n = 关）
 _BCV_V2=1
 case "$(printf '%s' "${SYNO_CLAIM_V2:-}" | tr '[:upper:]' '[:lower:]')" in
-  ''|1|true|on|yes|y) _BCV_V2=1 ;;
+  1|true|on|yes|y) _BCV_V2=1 ;;
   *) _BCV_V2=0 ;;
 esac
 if [ -z "$BRIEF" ] && [ "$_BCV_V2" = "1" ]; then

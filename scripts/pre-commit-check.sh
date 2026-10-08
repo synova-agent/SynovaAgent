@@ -1038,7 +1038,7 @@ TASK_BRIEF_EMPTY=""
 #   口径与单一事实源 claim_store.claim_v2_enabled 逐字对齐。
 CLAIM_V2=1
 case "$(printf '%s' "${SYNO_CLAIM_V2:-}" | tr '[:upper:]' '[:lower:]')" in
-  ''|1|true|on|yes|y) CLAIM_V2=1 ;;
+  1|true|on|yes|y) CLAIM_V2=1 ;;
   *) CLAIM_V2=0 ;;
 esac
 IS_CLAIM_DECL=0

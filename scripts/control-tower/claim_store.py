@@ -124,8 +124,8 @@ def claim_v2_enabled(env: Optional[Dict[str, str]] = None) -> bool:
     e = os.environ if env is None else env
     raw = str(e.get("SYNO_CLAIM_V2", "")).strip().lower()
     if not raw:
-        return True  # 未设 = 默认开（#1423）
-    return raw in _TRUTHY
+        return False  # 未设 = **默认关（回滚态）** —— 2026-10-08 热修：默认开使 main 红（见 docstring）
+    return raw in _TRUTHY  # 显式开启能力保留（重翻时无需再改这里）
 
 
 def claim_dir(root: Optional[Path | str] = None, env: Optional[Dict[str, str]] = None) -> Path:

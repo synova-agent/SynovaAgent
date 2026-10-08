@@ -36,7 +36,7 @@ BRIEF=$(bash "$ROOT/scripts/workflow/resolve-commit-brief.sh" "$STAGED_LIST" 2>/
 #   口径与单一事实源 claim_store.claim_v2_enabled 逐字对齐。
 CLAIM_V2=1
 case "$(printf '%s' "${SYNO_CLAIM_V2:-}" | tr '[:upper:]' '[:lower:]')" in
-  ''|1|true|on|yes|y) CLAIM_V2=1 ;;
+  1|true|on|yes|y) CLAIM_V2=1 ;;
   *) CLAIM_V2=0 ;;
 esac
 
@@ -85,13 +85,23 @@ CHECKED=$(echo "$DONE_SECTION" | grep -cE '^\s*- \[x\]' 2>/dev/null | tr -d '\r'
 CHECKED=${CHECKED//[^0-9]/}
 [ -z "$CHECKED" ] && CHECKED=0
 if [ "$CHECKED" -eq 0 ]; then
-  if [ "$CLAIM_V2" = "1" ]; then
-    # claim 模式: Done 为空 = 无验收标准 = 不可对账（禁静默空白，对齐 claim_store 的 claim-empty-done）
-    echo -e "  ${RED}❌ Done 可证伪性: 声明 $BRIEF 无 Done 条目 [硬阻断]${RESET}"
-    exit 1
-  fi
-  echo -e "  ${GREEN}✅ Done 可证伪性 (无 checked 项)${RESET}"
-  exit 0
+  # ── D1249 热修（2026-10-08）: **硬判据只对【本任务载体】生效** ────────────────────
+  #   实证（全仓红）: 判据从"软"翻"硬"的同时，**作用域没收窄** —— 而 $BRIEF 由 resolver
+  #   回退定位，**可能不是本次提交自己的件**（实测点名 1398/1408/D1207，三次都不是提交者的卡）。
+  #   ⇒ 身份判错(老病) × 判据变硬 ⇒ **别人的在飞 brief 拦住你的提交** ⇒ 全仓红。
+  #   口径（对齐 #1423 的自述「存量 D# 只读兼容、不得 fail-closed」）:
+  #     · 载体 = **本任务 claim（*.yaml）**（新格式身份链）⇒ 硬判（无 Done 条目 = 不可对账）
+  #     · 载体 = **legacy .md brief**（存量形态）⇒ 回到「无 checked 项 ⇒ 软通过」（**逐字节旧行为**）
+  #   ⚠️ 这不是放松新格式，而是把"新人从严、存量不误伤"落到载体上。
+  case "$BRIEF" in
+    *.yaml)
+      # claim 模式: Done 为空 = 无验收标准 = 不可对账（禁静默空白，对齐 claim_store 的 claim-empty-done）
+      echo -e "  ${RED}❌ Done 可证伪性: 声明 $BRIEF 无 Done 条目 [硬阻断]${RESET}"
+      exit 1 ;;
+    *)
+      echo -e "  ${GREEN}✅ Done 可证伪性 (无 checked 项 · legacy brief 软通过)${RESET}"
+      exit 0 ;;
+  esac
 fi
 
 # 检查每个 - [x] 是否包含 verify:
