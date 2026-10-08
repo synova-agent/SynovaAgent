@@ -17,6 +17,7 @@
  */
 import { NodeType, EdgeType } from '@synova/ontology';
 import { createLogger } from '@synova/logger';
+import { wrapStandardKeyGuard } from '../adapters/standard-key-guard';
 import { validateAndLog } from './sog-schema-validator';
 import { deriveValidFrom, deriveValidTo } from '../l3/period-utils';
 
@@ -78,6 +79,13 @@ export function createGraphBridge(store: GraphStore, graph: string, onGraphUpdat
   // D33: 时间字段 — props.period 触发 valid_from/valid_to/observed_at 自动填充
   const _createNode = store.createNode.bind(store);
   const _updateNode = store.updateNode?.bind(store);
+  // #1403：标准键冲突检测 ⇒ **共享守卫**（一处收口；逐字平移，行为不变）
+  //   本处只保留 graph-bridge 自有语义：SOG schema 校验（validateAndLog）+ D33 时间字段推导
+  const _guarded = wrapStandardKeyGuard({
+    createNode: _createNode,
+    queryNodes: store.queryNodes.bind(store),
+    updateNode: _updateNode,
+  });
   store.createNode = (type: string, props: Record<string,unknown>, g: string): string => {
     validateAndLog(type, props);
 
@@ -89,36 +97,7 @@ export function createGraphBridge(store: GraphStore, graph: string, onGraphUpdat
     }
     props.observed_at = props.observed_at || new Date().toISOString();
 
-    const standardKey = props?.standardKey;
-    if (standardKey) {
-      const existing = store.queryNodes(type, { standardKey: standardKey as string }, g);
-      if (existing.length > 0) {
-        const existingNode = existing[0];
-        const existingProps = existingNode.props;
-        const dataVersions = Array.isArray(existingProps.data_versions)
-          ? existingProps.data_versions as Array<Record<string, unknown>>
-          : [];
-        const existingCore: Record<string, unknown> = {};
-        for (const k of Object.keys(existingProps)) {
-          if (k !== 'data_versions' && k !== 'has_conflict') {
-            existingCore[k] = existingProps[k];
-          }
-        }
-        store.updateNode(existingNode.id, {
-          ...existingProps,
-          ...props,
-          data_versions: [
-            ...dataVersions,
-            { value: existingCore, recordedAt: new Date().toISOString() },
-          ],
-          has_conflict: true,
-        }, g);
-        return existingNode.id;
-      }
-      return _createNode(type, { ...props, data_versions: [], has_conflict: false }, g);
-    }
-
-    return _createNode(type, props, g);
+    return _guarded.createNode(type, props, g);
   };
   if (_updateNode) {
     store.updateNode = (id: string, props: Record<string,unknown>, g: string): void => {
