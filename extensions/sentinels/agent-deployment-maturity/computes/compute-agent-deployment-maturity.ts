@@ -10,7 +10,10 @@
  * - monitoredRatio: 有监控的 Agent 比例
  * - errorRate: 总操作中的错误率
  */
+import { checkFiniteInputs } from '../../../../src/sentinel/assert-finite-inputs';   // #1408：输入有效性检查
 export interface AgentMaturityResult {
+  /** #1408：输入有效性等告警（缺字段/NaN/非有限 ⇒ 非空） */
+  warnings?: string[];
   score: number;
   agentCount: number;
   autonomyLevel: number;
@@ -27,6 +30,9 @@ export function computeAgentDeploymentMaturity(params: {
   recentErrors: number;
   totalOperations: number;
 }): AgentMaturityResult {
+  // #1408：输入有效性检查（**params 对象型** ⇒ 逐字段名与 params 逐字一致）
+  const _inputIssues = checkFiniteInputs(params, ['agentCount', 'autonomyLevel', 'monitoredAgents', 'totalAgents', 'recentErrors', 'totalOperations']);
+  if (_inputIssues.length > 0) return { ...{ score: 0, agentCount: 0, autonomyLevel: 0, monitoredRatio: 0, errorRate: 0, degraded: true }, warnings: _inputIssues };
   const { agentCount, autonomyLevel, monitoredAgents, totalAgents, recentErrors, totalOperations } = params;
   if (totalAgents === 0) return { score: 0, agentCount: 0, autonomyLevel: 0, monitoredRatio: 0, errorRate: 0, degraded: true };
   const autonomy = Math.min(autonomyLevel / 4, 1);
