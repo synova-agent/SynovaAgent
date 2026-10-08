@@ -1,0 +1,77 @@
+# V6「改坏即红」夹具证据 — item 2-4
+# criterionRef   : 施工项登记.ts#2-4/acceptance[0]
+# breakHow.file  : src/security/file-guard.ts (lines 94)
+# breakHow       : literal-replace —— 写入门禁第三层（跨边界检查）改为恒放行 = 门禁未接/fail-open ⇒ 工作目录外的路径可写、系统保护路径亦可写，即 2-4「写入门禁两道未接」
+# restoreHow     : runner 内存原文回写 + 收尾 `git diff --stat` 对被碰文件为空校验（run-fixtures.ts try/finally；不依赖 git checkout）
+# generatedAt    : 2026-10-06T06:09:37.251Z
+# runner         : docs/synova/coordination/fixtures/run-fixtures.ts
+# 原始输出（命令 + stdout/stderr 原样，无手写数字）
+
+════════════════════════════════════════════════════════════
+[SECTION 1] 破坏态 (BROKEN) — 期望 exit ≠ 0]
+$ npx vitest run tests/security/file-guard.test.ts
+--- exit: 1 | elapsed 0.7s ---
+--- stdout ---
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-fixtures
+
+ ❯ tests/security/file-guard.test.ts (12 tests | 1 failed) 8ms
+     ✓ Given work-dir file, When canWrite, Then allowed=true 1ms
+     ✓ Given work-dir itself, When canWrite, Then allowed=true 0ms
+     ✓ Given temp dir file, When canWrite, Then allowed=true 0ms
+     ✓ Given synova data dir, When canWrite, Then allowed=true 0ms
+     ✓ Given /etc/passwd, When canWrite, Then allowed=false 0ms
+     ✓ Given ~/.ssh/id_rsa, When canWrite, Then allowed=false 0ms
+     × Given path outside workdir (not whitelisted), When canWrite, Then allowed=false 5ms
+     ✓ Given normal text file, When canRead, Then allowed=true 0ms
+     ✓ Given .env file, When canRead, Then allowed=false (credential protected) 0ms
+     ✓ Given credentials.json, When canRead, Then allowed=false 0ms
+     ✓ Given .pem key file, When canRead, Then allowed=false 0ms
+     ✓ Given new workdir, When set then canWrite, Then respects new boundary 0ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 11 passed (12)
+   Start at  14:09:36
+   Duration  162ms (transform 28ms, setup 0ms, import 39ms, tests 8ms, environment 0ms)
+--- stderr ---
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/security/file-guard.test.ts > FileGuard.canWrite — write deny list > Given path outside workdir (not whitelisted), When canWrite, Then allowed=false
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ tests/security/file-guard.test.ts:51:28
+     49|   it('Given path outside workdir (not whitelisted), When canWrite, The…
+     50|     const result = guard.canWrite(path.join(homeDir, 'random-file.txt'…
+     51|     expect(result.allowed).toBe(false);
+       |                            ^
+     52|     expect(result.reason).toContain('不在工作目录内');
+     53|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+════════════════════════════════════════════════════════════
+[SECTION 2] 复原态 (RESTORED) — 期望 exit = 0]
+$ npx vitest run tests/security/file-guard.test.ts
+--- exit: 0 | elapsed 0.6s ---
+--- stdout ---
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-fixtures
+
+ ✓ tests/security/file-guard.test.ts (12 tests) 3ms
+
+ Test Files  1 passed (1)
+      Tests  12 passed (12)
+   Start at  14:09:37
+   Duration  118ms (transform 21ms, setup 0ms, import 28ms, tests 3ms, environment 0ms)
+--- stderr ---
+
+
+════════════════════════════════════════════════════════════
+VERDICT: VALID (破坏态红 + 复原态绿)

@@ -1,0 +1,32 @@
+{
+  "version": "1.0.0-selftest",
+  "description": "runner 自检 A：语义空操作破坏 ⇒ 必须 exit 1（无效夹具）",
+  "generatedFrom": "runner 自检用（故意做坏）",
+  "fixtureSemantics": "每条夹具跑两段：(1) 破坏态 `expectRedCommand` 必须 exit≠0；(2) 复原态同命令必须 exit=0。缺一即无效夹具（判例 V-08）。破坏方式只有一种（literal-replace）：把 `breakHow.file` 中**恰好出现 1 次**的 `find` 字面量替换为 `replace`；出现次数≠1 ⇒ runner exit 2，拒绝猜测定位。",
+  "exitCodes": {
+    "0": "全部夹具通过",
+    "1": "有夹具没红（无效夹具）",
+    "2": "检查自身失败（判例 M-02，禁吞崩溃）"
+  },
+  "counts": {
+    "fixtures": 1
+  },
+  "fixtures": [
+    {
+      "itemId": "2-4",
+      "criterionRef": "施工项登记.ts#2-4/acceptance[0]",
+      "breakHow": {
+        "kind": "literal-replace",
+        "file": "src/security/file-guard.ts",
+        "lines": "94",
+        "find": "    return this.checkBoundary(resolved, 'write');",
+        "replace": "    return this.checkBoundary(resolved, 'write'); // selftest: 语义空操作",
+        "rationale": "【runner 自检】语法上改动了、语义上零变化 —— 判据不得转红 ⇒ runner 必须判 INVALID 并 exit 1。若 runner 报 VALID/exit 0，则 runner 无分辨力（把\"跑了命令\"当\"判据有效\"）。"
+      },
+      "expectRedCommand": "npx vitest run tests/security/file-guard.test.ts",
+      "restoreHow": "runner 内存原文回写 + 收尾 `git diff --stat` 对被碰文件为空校验（run-fixtures.ts try/finally；不依赖 git checkout）",
+      "expectRedEvidence": "docs/synova/product-lines/evidence/V6/_selftest-noop-break.out"
+    }
+  ],
+  "notFixtureable": []
+}

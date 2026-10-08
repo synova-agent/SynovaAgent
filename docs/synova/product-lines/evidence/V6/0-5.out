@@ -1,0 +1,93 @@
+# V6「改坏即红」夹具证据 — item 0-5
+# criterionRef   : 施工项登记.ts#0-5/acceptance[0]
+# breakHow.file  : src/growth/goal-sentinel.ts (lines 194-196)
+# breakHow       : literal-replace —— 回退为 #979 修复前那一行 —— `baselinePeriod ? 0 : null` 与 computeDeviations 的 `baseline !== 0` 判据互斥 ⇒ 基线恒 0/null ⇒ 因子3 恒 false，即 0-5「目标哨兵因子3恒 false」原样复现
+# restoreHow     : runner 内存原文回写 + 收尾 `git diff --stat` 对被碰文件为空校验（run-fixtures.ts try/finally；不依赖 git checkout）
+# generatedAt    : 2026-10-06T06:09:31.288Z
+# runner         : docs/synova/coordination/fixtures/run-fixtures.ts
+# 原始输出（命令 + stdout/stderr 原样，无手写数字）
+
+════════════════════════════════════════════════════════════
+[SECTION 1] 破坏态 (BROKEN) — 期望 exit ≠ 0]
+$ npx vitest run tests/growth/goal-sentinel.test.ts
+--- exit: 1 | elapsed 0.5s ---
+--- stdout ---
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-fixtures
+
+ ❯ tests/growth/goal-sentinel.test.ts (14 tests | 1 failed) 8ms
+     ✓ 无偏离: 实际值接近目标值 → 0因子触发 1ms
+     ✓ 单因子偏离: 阈值偏离>10% 0ms
+     ✓ 双因子偏离: 阈值+趋势 0ms
+     ✓ 三因子偏离: 阈值+趋势+基线 0ms
+     ✓ 趋势偏离: 不足3采样点不触发 0ms
+     ✓ 注册方案哨兵: 命名空间goal-{goalId} 2ms
+     ✓ 超过5个上限 → 抛出异常 1ms
+     ✓ 注销方案哨兵 0ms
+     ✓ 新建Goal → baselineStatus=collecting 1ms
+     ✓ ≥14天 → baselineStatus=active 0ms
+     ✓ transitionGoal接受sentinelRegistry可选参数 0ms
+     × 正常路径: 声明 baselinePeriod + 采集期样本 → 因子3 触发（描述含"基线偏离"） 3ms
+     ✓ 边界: 采集期无样本 → 因子3 不判定（不猜基线，无"基线偏离"字段） 0ms
+     ✓ 边界: 未声明 baselinePeriod → 因子3 不判定（无基线语义） 0ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 13 passed (14)
+   Start at  14:09:30
+   Duration  135ms (transform 29ms, setup 0ms, import 45ms, tests 8ms, environment 0ms)
+--- stderr ---
+{"level":30,"time":1791266970647,"pid":64342,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注册"}
+{"level":30,"time":1791266970648,"pid":64342,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-0","sentinelId":"goal-goal-0","msg":"方案哨兵已注册"}
+{"level":30,"time":1791266970648,"pid":64342,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-1","sentinelId":"goal-goal-1","msg":"方案哨兵已注册"}
+{"level":30,"time":1791266970648,"pid":64342,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-2","sentinelId":"goal-goal-2","msg":"方案哨兵已注册"}
+{"level":30,"time":1791266970648,"pid":64342,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-3","sentinelId":"goal-goal-3","msg":"方案哨兵已注册"}
+{"level":30,"time":1791266970648,"pid":64342,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-4","sentinelId":"goal-goal-4","msg":"方案哨兵已注册"}
+{"level":30,"time":1791266970648,"pid":64342,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注册"}
+{"level":30,"time":1791266970649,"pid":64342,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注销"}
+{"level":30,"time":1791266970649,"pid":64342,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","daysSinceCreation":20,"msg":"方案哨兵基线已建立"}
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/growth/goal-sentinel.test.ts > #979 — 因子3 基线偏离可真触发（基线 = 采集期样本均值） > 正常路径: 声明 baselinePeriod + 采集期样本 → 因子3 触发（描述含"基线偏离"）
+AssertionError: expected 'monthly_revenue: 实际=550, 目标=800, 阈值偏离…' to contain '基线偏离'
+
+Expected: "基线偏离"
+Received: "monthly_revenue: 实际=550, 目标=800, 阈值偏离=31.3%"
+
+ ❯ tests/growth/goal-sentinel.test.ts:175:44
+    173|     expect(result.findings.length).toBeGreaterThanOrEqual(1);
+    174|     // 判别性核心: 改坏写入点（baseline 回退为 `? 0 : null`）→ 此断言必红
+    175|     expect(result.findings[0].description).toContain('基线偏离');
+       |                                            ^
+    176|     expect(result.findings[0].severity).toBe('warning'); // 因子1 + 因子3 …
+    177|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+════════════════════════════════════════════════════════════
+[SECTION 2] 复原态 (RESTORED) — 期望 exit = 0]
+$ npx vitest run tests/growth/goal-sentinel.test.ts
+--- exit: 0 | elapsed 0.5s ---
+--- stdout ---
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-fixtures
+
+ ✓ tests/growth/goal-sentinel.test.ts (14 tests) 6ms
+
+ Test Files  1 passed (1)
+      Tests  14 passed (14)
+   Start at  14:09:31
+   Duration  132ms (transform 29ms, setup 0ms, import 45ms, tests 6ms, environment 0ms)
+--- stderr ---
+{"level":30,"time":1791266971218,"pid":64368,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注册"}
+{"level":30,"time":1791266971219,"pid":64368,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-0","sentinelId":"goal-goal-0","msg":"方案哨兵已注册"}
+{"level":30,"time":1791266971219,"pid":64368,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-1","sentinelId":"goal-goal-1","msg":"方案哨兵已注册"}
+{"level":30,"time":1791266971219,"pid":64368,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-2","sentinelId":"goal-goal-2","msg":"方案哨兵已注册"}
+{"level":30,"time":1791266971219,"pid":64368,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-3","sentinelId":"goal-goal-3","msg":"方案哨兵已注册"}
+{"level":30,"time":1791266971219,"pid":64368,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-4","sentinelId":"goal-goal-4","msg":"方案哨兵已注册"}
+{"level":30,"time":1791266971219,"pid":64368,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注册"}
+{"level":30,"time":1791266971219,"pid":64368,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","sentinelId":"goal-goal-001","msg":"方案哨兵已注销"}
+{"level":30,"time":1791266971220,"pid":64368,"hostname":"192.168.1.8","name":"synova-agent","service":"growth/goal-sentinel","goalId":"goal-001","daysSinceCreation":20,"msg":"方案哨兵基线已建立"}
+
+════════════════════════════════════════════════════════════
+VERDICT: VALID (破坏态红 + 复原态绿)

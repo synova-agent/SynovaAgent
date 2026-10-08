@@ -1,0 +1,78 @@
+# V6「改坏即红」夹具证据 — item 3-12
+# criterionRef   : 施工项登记.ts#3-12/acceptance[0]
+# breakHow.file  : packages/evolution/src/global-analyzer.ts (lines 123)
+# breakHow       : literal-replace —— 阈值建议的判别条件取反（<20% 才建议）⇒「正常值不得出建议」断言红 ⇒ 跨客户基线聚合的判别逻辑失效，即 3-12 进化回环 E2/E3 的判别面塌陷
+# restoreHow     : runner 内存原文回写 + 收尾 `git diff --stat` 对被碰文件为空校验（run-fixtures.ts try/finally；不依赖 git checkout）
+# generatedAt    : 2026-10-06T06:09:38.690Z
+# runner         : docs/synova/coordination/fixtures/run-fixtures.ts
+# 原始输出（命令 + stdout/stderr 原样，无手写数字）
+# ⚠️ 判据非密闭（side effects）: 跑动中改动了以下**已跟踪文件**，已由 runner 复原：
+#     extensions/industries/saas-tech/thresholds.json
+#     extensions/industries/test-write/thresholds.json
+
+════════════════════════════════════════════════════════════
+[SECTION 1] 破坏态 (BROKEN) — 期望 exit ≠ 0]
+$ npx vitest run tests/evolution/global-analyzer.test.ts
+--- exit: 1 | elapsed 0.6s ---
+--- stdout ---
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-fixtures
+
+ ❯ tests/evolution/global-analyzer.test.ts (4 tests | 1 failed) 6ms
+       ✓ 空数据 → 返回空基线 + 无建议 3ms
+       ✓ 一个哨兵正常值 → 无调整建议（偏差 < 20%） 1ms
+       × 一个哨兵显著偏离 → 生成调整建议 2ms
+       ✓ 写入临时目录 → JSON 文件可读 0ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  14:09:37
+   Duration  181ms (transform 64ms, setup 0ms, import 88ms, tests 6ms, environment 0ms)
+--- stderr ---
+{"level":40,"time":1791266977861,"pid":66558,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"test-industry","msg":"行业哨兵数据不足 — 跳过聚合"}
+{"level":40,"time":1791266977863,"pid":66558,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","err":"Bad control character in string literal in JSON at position 63 (line 3 column 42)","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/evolution/default-thresholds.json","msg":"阈值 JSON 加载失败 — 使用 fallback"}
+{"level":30,"time":1791266977863,"pid":66558,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/industries/saas-tech/thresholds.json","thresholdCount":1,"msg":"行业阈值已写入"}
+{"level":30,"time":1791266977864,"pid":66558,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","sentinelCount":1,"suggestions":0,"msg":"行业基线聚合完成"}
+{"level":30,"time":1791266977864,"pid":66558,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/industries/saas-tech/thresholds.json","thresholdCount":1,"msg":"行业阈值已写入"}
+{"level":30,"time":1791266977864,"pid":66558,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","sentinelCount":1,"suggestions":0,"msg":"行业基线聚合完成"}
+{"level":30,"time":1791266977866,"pid":66558,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"test-write","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/industries/test-write/thresholds.json","thresholdCount":0,"msg":"行业阈值已写入"}
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/evolution/global-analyzer.test.ts > global-analyzer > aggregateIndustryBaseline > 一个哨兵显著偏离 → 生成调整建议
+AssertionError: expected 0 to be greater than or equal to 1
+ ❯ tests/evolution/global-analyzer.test.ts:58:50
+     56|       ]));
+     57|       // F1_KZ general critical = 2.0, median = 1.1, deviation = 45% →…
+     58|       expect(result.thresholdSuggestions.length).toBeGreaterThanOrEqua…
+       |                                                  ^
+     59|       if (result.thresholdSuggestions.length > 0) {
+     60|         expect(result.thresholdSuggestions[0].sentinelId).toBe('F1_KZ'…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+════════════════════════════════════════════════════════════
+[SECTION 2] 复原态 (RESTORED) — 期望 exit = 0]
+$ npx vitest run tests/evolution/global-analyzer.test.ts
+--- exit: 0 | elapsed 0.6s ---
+--- stdout ---
+
+ RUN  v4.1.8 /Users/wane/SynovaAgent/.synova-wt-fixtures
+
+ ✓ tests/evolution/global-analyzer.test.ts (4 tests) 5ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  14:09:38
+   Duration  177ms (transform 64ms, setup 0ms, import 89ms, tests 5ms, environment 0ms)
+--- stderr ---
+{"level":40,"time":1791266978557,"pid":66635,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"test-industry","msg":"行业哨兵数据不足 — 跳过聚合"}
+{"level":40,"time":1791266978558,"pid":66635,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","err":"Bad control character in string literal in JSON at position 63 (line 3 column 42)","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/evolution/default-thresholds.json","msg":"阈值 JSON 加载失败 — 使用 fallback"}
+{"level":30,"time":1791266978559,"pid":66635,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/industries/saas-tech/thresholds.json","thresholdCount":1,"msg":"行业阈值已写入"}
+{"level":30,"time":1791266978559,"pid":66635,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","sentinelCount":1,"suggestions":0,"msg":"行业基线聚合完成"}
+{"level":30,"time":1791266978559,"pid":66635,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/industries/saas-tech/thresholds.json","thresholdCount":1,"msg":"行业阈值已写入"}
+{"level":30,"time":1791266978559,"pid":66635,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"saas-tech","sentinelCount":1,"suggestions":1,"msg":"行业基线聚合完成"}
+{"level":30,"time":1791266978559,"pid":66635,"hostname":"192.168.1.8","name":"synova-agent","service":"evolution/global-analyzer","industry":"test-write","path":"/Users/wane/SynovaAgent/.synova-wt-fixtures/extensions/industries/test-write/thresholds.json","thresholdCount":0,"msg":"行业阈值已写入"}
+
+════════════════════════════════════════════════════════════
+VERDICT: VALID (破坏态红 + 复原态绿)
