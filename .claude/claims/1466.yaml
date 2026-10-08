@@ -1,6 +1,7 @@
 writeset:
   - .claude/claims/1466.yaml
   - .claude/task-briefs/2026-10-09-1466-BC清理族.md
+  - memory/notes/proposed/2026-10-09-1466-bc-delivery-hygiene.md
   - scripts/control-tower/probe-delivery-hygiene.sh
   - .dockerignore
   - .gitignore
@@ -8,17 +9,31 @@ writeset:
   - tests/test-http-route.ts
   - tests/control-tower/probe-delivery-hygiene.test.sh
   - app/favicon.ico
+# Done 口径（判例 P-03 / M-04；独立复核 B3 整改 2026-10-09）：每条自带 ref + 自带口径，禁跨 ref 混态。
+#   HEAD = 本次交付的分支态｜origin/main = 已落主干态（绝对引用 ⇒ 合并前必然红，合并后转绿）。
 done:
-  - "verify: bash scripts/control-tower/probe-delivery-hygiene.sh ⇒ exit 0（V1/V2/V3 三判据全绿）"
-  - "verify: bash scripts/control-tower/probe-delivery-hygiene.sh --ref HEAD ⇒ exit 0（分支态自证，不靠合并后 origin/main）"
-  - "verify: bash scripts/control-tower/probe-delivery-hygiene.sh --dockerignore <去掉一条反选行的样本> ⇒ exit 1（V-08 改坏即红）"
-  - "verify: git cat-file -s origin/main:src/routes/diagnosis-upload-v2.ts ⇒ 0（基线为 0 字节死壳，本卡删除）"
-  - "verify: bash scripts/control-tower/probe-delivery-hygiene.sh --ref HEAD ⇒ V2 零违规，客户构建上下文 control-tower 幸存 95→11 件（84 件出交付面）"
+  - "verify(ref=HEAD): bash scripts/control-tower/probe-delivery-hygiene.sh --ref HEAD ⇒ exit 0（V1/V2/V3 全 PASS；V2 幸存 11 件）"
+  - "verify(ref=origin/main): bash scripts/control-tower/probe-delivery-hygiene.sh --ref origin/main ⇒ 交付前预期 exit 1 / 合并后预期 exit 0（V1 点名待修三件；V2 幸存 94 件）"
+  - "verify(ref=HEAD): bash tests/control-tower/probe-delivery-hygiene.test.sh ⇒ 17 通过, 0 失败"
+  - "verify(ref=HEAD): 并发可重入 for i in 1 2 3; do bash tests/control-tower/probe-delivery-hygiene.test.sh & done; wait ⇒ 3/3 均 17 通过 0 失败"
+  - "verify(ref=HEAD): bash scripts/control-tower/probe-delivery-hygiene.sh --ref ref-does-not-exist ⇒ exit 2（三态 M-02）"
+  - "verify(ref=HEAD): bash -c 'git cat-file -e HEAD:src/routes/diagnosis-upload-v2.ts 2>/dev/null; test $? -ne 0' ⇒ exit 0（交付态缺件）"
+  - "verify(ref=origin/main): 同款命令 ⇒ 交付前预期 exit 1 / 合并后预期 exit 0"
+  - "verify(ref=HEAD): bash -c 'git show HEAD:app/favicon.ico 2>/dev/null | wc -c' ⇒ 0（占位符已出交付面）"
+  - "verify(ref=origin/main): bash -c 'git show origin/main:app/favicon.ico 2>/dev/null | wc -c' ⇒ 交付前预期 5 / 合并后预期 0"
+  - "verify(ref=HEAD): 抽掉一条 .dockerignore 反选行喂 --dockerignore ⇒ exit 1（V-08 改坏即红，点名 enterprise-fact-store.ts）"
 note: >-
-  BC 清理族（卡 #1466，登记件 BC-CLEAN）。四项实测结论：
-  ① BC-3 日期快照 —— 已由 #1457（9783411a3，2026-10-09T02:34）落地，本卡零动作（5404 LOC / 44.86% 复算与卡面一致）；
-  ② BC-4 0 字节空壳 —— 删 src/routes/diagnosis-upload-v2.ts + tests/test-http-route.ts（D590 b54a0fb6a 清空未删，零引用）；
+  基线读数（ref=origin/main，合并前，非 Done 项）: git cat-file -s origin/main:src/routes/diagnosis-upload-v2.ts ⇒ 0 字节；
+  git cat-file -s origin/main:tests/test-http-route.ts ⇒ 0 字节；git show origin/main:app/favicon.ico ⇒ 5 字节 dummy。三者即本卡删除对象。
+  本卡结论 —— BC 清理族（卡 #1466，登记件 BC-CLEAN）：
+  ① BC-3 日期快照 —— 已由 #1457（9783411a3，2026-10-09T02:34，早于本卡基线 17 分钟）落地，本卡零动作（5404 LOC / 44.87% 复算与卡面一致）；
+  ② BC-4 0 字节空壳 —— 删 src/routes/diagnosis-upload-v2.ts + tests/test-http-route.ts（D590 b54a0fb6a 清空为 0 B 后未删，零代码引用）；
   ③ BC-7 —— .dockerignore 剥离非 src/ 闭包的 control-tower 件（95→11），整目录归零不可达（src/ 4 处 load-bearing 引用，须 CTO 裁）；
-  ④ BC-8 —— .gitignore:90 已有 .synova-wt-*、仓库/CI 面零残留；本机 109 个 .synova-wt-* 全为活工作区，按卡面红线不删。
+  ④ BC-8 —— .gitignore:90 已有 .synova-wt-*、仓库/CI 面零残留；本机 109 个 .synova-wt-* 全为活工作区（失效 0），按卡面红线不删。
   附带：app/favicon.ico（5 B 字面量 dummy 占位符）出交付面。
-  未核（V-09）：本机无 docker ⇒ V2 为 .dockerignore 语义子集模拟，真 docker build 未核。
+  口径改述（独立复核追加②，我已独立复现）：11 件 = 10 件链路可达 + 1 件目录策略保留
+  （scripts/control-tower/views/pipeline_health.py 无生产引用者，仅靠「from views ⇒ 整个 views/ 目录」目录规则进闭包）。
+  判别力边界（独立复核追加①，我已独立复现）：闭包 = src/ 直接字符串引用 + python from-views 目录规则，
+  不含 TS/py import 图传递闭包 ⇒「被反选件 import 未反选兄弟」时 TS 面漏判（python 面有判别力）；
+  补 TS 传递闭包需改探针算法 ⇒ 另卡。现无实害（唯一 TS 边两端均在闭包内）。
+  未核（V-09）：本机无 docker ⇒ V2 为 .dockerignore 语义子集模拟（已用 git ignore 引擎做第二实现互证），真 docker build 未核。
