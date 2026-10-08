@@ -1,0 +1,21 @@
+# .claude/claims/1398.yaml — #1398（三层字段真源对齐）写集声明（D708 的 S0 源）
+#   CTO 2026-10-08 裁 (a)：范围坍缩 =「**A 类 ≤7 改名 + 守卫派生 + 一致性判据**」，**去掉运行时归一化**
+#     依据：分类证明 A 类 ≤7，且其余 camel 字段**不从数据 props 取值**（内部参数/容器）⇒ 归一化无事可做
+#   裁 (b)：真源加顶层 `_note` 标注 `teamId` 历史例外
+#   **本 PR = 批 1a**（churnRisk / tenureMonths / defectRate）；批 1b（marketShare / routineRigidity）与批 2（operatingExpenses）随后
+writeset:
+  - .claude/claims/1398.yaml
+  - .claude/task-briefs/2026-10-08-1398-field-truth-source.md
+  - extensions/sentinels/shared/computes/l2-value/compute-customer-value-score.ts
+  - extensions/sentinels/shared/computes/l1-production/compute-quality-traceability.ts
+  - extensions/sentinels/shared/computes/l3-output/compute-operational-execution.ts
+  - extensions/ontology/resource/person.json
+  - tests/sentinels/shared/compute-customer-value-score.test.ts
+  - tests/sentinels/shared/compute-operational-execution.test.ts
+  - tests/sentinel/field-name-alignment.test.ts
+done:
+  - verify: npx vitest run tests/sentinel/field-name-alignment.test.ts tests/sentinels/shared/
+  - verify: npx vitest run tests/sentinels/ tests/sentinel/ tests/e2e/
+  - verify: bash -c 'git grep -n -E "\b(churnRisk|tenureMonths|defectRate)\b" HEAD -- extensions/ | grep -v "_extinct/" | grep -v "/skills/" | wc -l'
+  - verify: npx tsc --noEmit
+note: 批 1a = A 类 3 字段改名（真源名：churn_risk/tenure_months/defect_rate）+ 真源 `_note`（teamId 历史例外）+ 判据。**去掉运行时归一化**（依据见上）。**发现（登记）**：旧名入参 ⇒ 结果 **NaN 且 degraded=false、warnings 为空**（静默读到 NaN —— 正是"名字必须对齐"的价值）。豁免逐条登记：marketShare/routineRigidity（批 1b）｜referralCount/efficiencyRate（B 类内部参数）。
