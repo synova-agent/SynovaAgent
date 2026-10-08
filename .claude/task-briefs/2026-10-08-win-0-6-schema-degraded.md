@@ -22,6 +22,7 @@
 | docs/synova/product-lines/evidence/980/VERIFY-980-env-verifier-980-env.md | 独立自验报告（环境/地雷） |
 | docs/synova/product-lines/evidence/980/VERIFY-980-regress-verifier-980-regress.md | 独立自验报告（回归/门禁） |
 | docs/synova/product-lines/evidence/980/REGRESS-980-summary-20261008.md | 回归结论摘要（PR addendum） |
+| docs/synova/coordination/#980-待归口登记册-20261008.md | 待归口登记册（6 偏离 + 6 缺口 + 就绪补丁） |
 | docs/synova/product-lines/evidence/980/VERIFY-980-acceptance-verifier-980-accept.md | 独立自验报告（判据复现） |
 | docs/synova/product-lines/evidence/980/assemble-evidence.sh | 探针证据组装脚本 |
 | docs/synova/product-lines/evidence/980/ENV-980-better-sqlite3-workaround.md | 环境变通落仓记录 |
