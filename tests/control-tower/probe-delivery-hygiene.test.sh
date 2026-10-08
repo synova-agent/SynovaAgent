@@ -155,6 +155,26 @@ if [ "$rc" -eq 2 ] && grep -q 'ref 不可解析' /tmp/probe-dh.out; then ok "三
 rc=$(bash "$PROBE" --repo "$FIX/../definitely-missing-$$" --ref HEAD >/tmp/probe-dh.out 2>&1; echo $?)
 if [ "$rc" -eq 2 ]; then ok "三态: --repo 目录不存在 → exit 2"; else no "三态 --repo 未 exit 2 (rc=$rc)"; fi
 
+# ── 等价性交叉验证: 探针模拟器 vs git 自家 ignore 引擎（独立第二实现） ──
+#   为什么: 探针的 .dockerignore 语义是自实现子集；本用例用 git 的 ignore 引擎（完全独立实现）
+#   在同一份「控制塔段」上独立算一遍幸存集合，两者必须逐件相同 ⇒ 把「自证」升级为「双实现互证」。
+#   边界（仍属未核）: git ≠ moby/patternmatcher，本比对只覆盖所用到的共享子集（* / ! / 目录 / 无斜杠按 basename）。
+mkfix
+SEC="$(grep -E '^(scripts/control-tower/\*|!)' "$FIX/.dockerignore")"
+printf '%s\n' "$SEC" > "$FIX/.gitignore"
+g add -A >/dev/null 2>&1; g -c user.email=t@t -c user.name=t commit -q -m xcheck
+# 范围对齐: 只比 scripts/control-tower/**（探针对象域），不把 app//src/ 一并拉进来比
+GISV="$( cd "$FIX" && find scripts/control-tower -type f | sort \
+  | env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE git check-ignore --no-index --stdin 2>/dev/null \
+  | sort -u > /tmp/gi-x-$$.txt; find scripts/control-tower -type f | sort > /tmp/all-x-$$.txt; \
+  comm -23 /tmp/all-x-$$.txt /tmp/gi-x-$$.txt )"
+PRSV="$(bash "$PROBE" --repo "$FIX" --ref HEAD --json 2>/dev/null | python3 -c 'import json,sys;print("\n".join(sorted(json.load(sys.stdin)["v2"]["survivors"])))')"
+if [ "$(printf '%s\n' "$GISV" | sort)" = "$(printf '%s\n' "$PRSV" | sort)" ] && [ -n "$GISV" ]; then
+  ok "等价性: git ignore 引擎幸存集合 == 探针模拟器幸存集合（$(printf '%s\n' "$GISV" | grep -c . ) 件，双实现互证）"
+else
+  no "等价性: 两实现幸存集合不一致"; echo "git: $GISV"; echo "probe: $PRSV"
+fi
+
 # ── 边界: --json 结构 ──
 mkfix
 J="$(bash "$PROBE" --repo "$FIX" --ref HEAD --json 2>/dev/null)"
