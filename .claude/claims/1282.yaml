@@ -1,0 +1,25 @@
+writeset:
+  - .claude/claims/1282.yaml
+  - .claude/task-briefs/2026-10-07-1282-BatchA出库-主仓121件.md
+  - docs/synova/product-lines/evidence/1282-batch-a/**
+  - docs/archive/**
+  - docs/synova/archive/**
+  - docs/synova/audit-reports/**
+  - docs/synova/dispatch/**
+  - novis-backup-20260526/**
+  - vendor/**
+  - synthesis/**
+  - .codex/control-tower/logs/**
+  - ARCHITECTURE-COMPARISON-现状vs理想-20260603.md
+  - AUDIT-BRIEF-第三方审计委托书-20260602.md
+  - AUDIT-BRIEF-第三方审计委托书-20260603-V2.html
+  - AUDIT-REPORT-第三方代码审计报告-20260602.md
+  - AUDIT-REPORT-第三方独立审计报告-20260603-V2.html
+  - AUDIT-REPORT-第三方独立审计报告-20260603-V3.html
+  - GAP-ANALYSIS-架构裁决vs代码实际-20260603.html
+  - TUI-V2-修复汇报.md
+done:
+  - "verify: bash scripts/control-tower/check-doc-contract.sh --baseline --json ⇒ 出库候选 842 → 719（本批 122 件）"
+  - "verify: bash -c 'test -f INDEX.md -a -f START-HERE.md -a -f CHRONICLE.md' ⇒ 活引用件零误删"
+  - "verify: bash -c 'git ls-files docs/archive docs/synova/archive | wc -l' ⇒ 本批移出后为 0"
+note: 出库 Batch A（卡 #1282）：承接进库外档案仓（f3ae481 / b121749）后自主仓移出 122 件；分 4 段落地（PR 预算 12 件/PR）。
