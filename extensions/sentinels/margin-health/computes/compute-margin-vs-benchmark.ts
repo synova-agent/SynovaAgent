@@ -10,6 +10,7 @@
  *   degraded 不得产出阈值结论（gap 恒 0，aggregate 门控 !degraded 双保险）。
  * 边界: gap 恰好 0（利润率=基准）→ 不降级
  */
+import { checkFiniteInputs } from '../../shared/computes/assert-finite-inputs';   // #1408：输入有效性检查
 import { computeProfitMarginChange } from './compute-profit-margin-change';
 
 export interface MarginVsBenchmarkResult {
@@ -31,6 +32,11 @@ export function computeMarginVsBenchmark(
   }>,
   input: { benchmark?: number } = {},
 ): MarginVsBenchmarkResult {
+  // #1408：输入有效性检查（显式调用；benchmark 为**可选** ⇒ 不列入必需字段）
+  const _inputIssues = checkFiniteInputs(financials, ['total_revenue', 'gross_margin']);
+  if (_inputIssues.length > 0) {
+    return { profitMargin: 0, benchmark: 0, gap: 0, degraded: true, warnings: _inputIssues };
+  }
   const margin = computeProfitMarginChange(financials);
   const benchmark = input.benchmark ?? 0.25;
 

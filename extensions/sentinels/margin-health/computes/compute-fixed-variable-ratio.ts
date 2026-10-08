@@ -9,6 +9,7 @@
  * 输出(降级): 空数组 / fixed_cost 全缺 / 总成本=0 → { value: 0, degraded: true, warnings: [...] }
  * 边界: fixed_cost 显式 0 → value 0 且不降级（无固定成本≠无数据）
  */
+import { checkFiniteInputs } from '../../shared/computes/assert-finite-inputs';   // #1408：输入有效性检查
 export interface FixedVariableRatioResult {
   /** 固定成本占比 (fixed_cost / total_cost)，0-1 */
   value: number;
@@ -25,6 +26,11 @@ export function computeFixedVariableRatio(financials: Array<{
   operatingExpenses: number;
   fixed_cost?: number;
 }>): FixedVariableRatioResult {
+  // #1408：输入有效性检查（显式调用）
+  const _inputIssues = checkFiniteInputs(financials, ['total_revenue', 'gross_margin']);
+  if (_inputIssues.length > 0) {
+    return { value: 0, fixedCost: 0, totalCost: 0, evidence: [], degraded: true, warnings: _inputIssues };
+  }
   if (financials.length === 0) {
     return {
       value: 0, fixedCost: 0, totalCost: 0,

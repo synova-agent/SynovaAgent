@@ -10,6 +10,7 @@
  *   分母 0 → degrade（D358 决策 5: 堵 0/0 假值）
  * 边界: total_cost 显式 0 → value 0 且不降级（零成本≠无数据）
  */
+import { checkFiniteInputs } from '../../shared/computes/assert-finite-inputs';   // #1408：输入有效性检查
 export interface CostPerHeadResult {
   /** 人均成本 */
   value: number;
@@ -24,6 +25,11 @@ export function computeCostPerHead(input: {
   total_cost: number;
   head_count: number;
 }): CostPerHeadResult {
+  // #1408：输入有效性检查（**显式调用**；缺字段/NaN/非有限 ⇒ 降级 + warnings）
+  const _inputIssues = checkFiniteInputs(input as unknown as Record<string, unknown>, ['total_cost', 'head_count']);
+  if (_inputIssues.length > 0) {
+    return { value: 0, totalCost: input.total_cost, headCount: input.head_count, evidence: [], degraded: true, warnings: _inputIssues };
+  }
   if (input.head_count === 0) {
     return {
       value: 0, totalCost: input.total_cost, headCount: 0,

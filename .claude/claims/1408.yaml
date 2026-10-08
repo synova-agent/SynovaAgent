@@ -1,0 +1,20 @@
+# .claude/claims/1408.yaml — #1408（静默错误值：缺字段/NaN 入参必须有信号）写集声明（D708 的 S0 源）
+#   CTO 2026-10-08 裁：范围 **(b)**「只做已接指标级哨兵所依赖的 compute」｜形态 **(c)**「共享助手 + 显式调用 + 覆盖率判据」
+#   **本 PR = 批 A**（margin-health 的 5 个 compute；2 个图遍历形态 = 不适用，已登记）
+writeset:
+  - .claude/claims/1408.yaml
+  - .claude/task-briefs/2026-10-08-1408-silent-wrong-value-a.md
+  - extensions/sentinels/shared/computes/assert-finite-inputs.ts
+  - tests/sentinels/shared/assert-finite-inputs.test.ts
+  - extensions/sentinels/margin-health/computes/compute-cost-per-head.ts
+  - extensions/sentinels/margin-health/computes/compute-fixed-variable-ratio.ts
+  - extensions/sentinels/margin-health/computes/compute-gross-margin.ts
+  - extensions/sentinels/margin-health/computes/compute-margin-vs-benchmark.ts
+  - extensions/sentinels/margin-health/computes/compute-profit-margin-change.ts
+  - tests/sentinel/silent-wrong-value.test.ts
+done:
+  - verify: npx vitest run tests/sentinel/silent-wrong-value.test.ts tests/sentinels/shared/assert-finite-inputs.test.ts
+  - verify: npx vitest run tests/sentinels/ tests/sentinel/ tests/l4/ tests/agent/ tests/adapters/
+  - verify: bash -c 'grep -rl "checkFiniteInputs(" extensions/sentinels/margin-health/computes/ | wc -l'
+  - verify: npx tsc --noEmit
+note: 批 A = 5 个 compute 接线（**显式调用** `checkFiniteInputs`；缺字段/NaN/非有限 ⇒ degraded + warnings）+ 助手 + 配对测试 + 主判据（V1 行为/V2 不误报/V3 覆盖率**扫调用**（排除 import 行）/V4 端到端"值为有限数"）。**空数组不报**（交回各 compute 自己的"无数据"守卫 ⇒ 不改既有降级语义/消息）。
