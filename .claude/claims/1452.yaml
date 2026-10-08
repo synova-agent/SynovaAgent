@@ -1,0 +1,15 @@
+writeset:
+  - .claude/claims/1452.yaml
+  - docs/synova/product-lines/evidence/1452-batch-d/**
+  - docs/plans/**
+  - docs/synova/coordination/**
+  - docs/synova/audit-reports/**
+  - docs/synova/dispatch/**
+  - docs/archive/**
+  - docs/synova/archive/**
+done:
+  - "verify: bash scripts/control-tower/check-doc-contract.sh --baseline --json ⇒ 候选 721 → 60"
+  - "verify: bash -c 'test -f INDEX.md -a -f START-HERE.md -a -f CHRONICLE.md -a -f docs/synova/coordination/AUDIT-PROTOCOL.md' ⇒ 活引用件零误删"
+  - "verify: bash scripts/pre-commit-check.sh ⇒ 13 组通过"
+note: 出库 Batch D（卡 #1452）：白名单内纯删除 661 件（冲突 23 件扣留 ⇒ 实删 638）；承接进库外档案仓 4ff00cdc2d（新复制 628 / 相同 10 / 冲突未覆盖 23）。
+
