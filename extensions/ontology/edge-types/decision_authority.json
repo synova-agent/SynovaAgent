@@ -6,6 +6,7 @@
   "allowedTo": ["pool/capital"],
   "requiredProps": ["authority_delegation_depth", "approval_threshold"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "centralization_index": "number (0-1) — 集权指数",
     "veto_power_holders": "array — 否决权持有者列表",
     "escalation_procedure": "string — 升级流程"

@@ -6,6 +6,7 @@
   "allowedTo": ["pool/sensing", "pool/revenue"],
   "requiredProps": ["data_collection_rate", "insight_actionability"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "data_to_product_lag_months": "number — 数据到产品改进的滞后",
     "personalization_effectiveness": "number (0-1) — 个性化有效性",
     "a_b_testing_maturity": "number (0-1) — A/B测试成熟度"

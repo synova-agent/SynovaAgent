@@ -6,6 +6,7 @@
   "allowedTo": ["pool/sensing"],
   "requiredProps": ["scan_breadth", "scan_depth", "filter_bias"],
   "optionalProps": {
+    "causal_strength": "number (0-1) — 因果强度（0=无因果传导，1=完全传导）",
     "scan_frequency_days": "number — 主动扫描周期",
     "horizon_months": "number — 扫描时间跨度"
   },
