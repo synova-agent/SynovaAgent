@@ -336,10 +336,35 @@ if [ "$UB_RC" -eq 0 ]; then
 else
   fail "⑧b 未构建态 exit=${UB_RC}（期望 0）—— 干净检出仍会红，CTO 退回项未修复"
 fi
-if printf '%s' "$UB_OUT" | grep -q 'A3-3 产物状态: .*不存在（未构建态，非失败）'; then
-  pass "⑧c 未构建态下产物状态走 info（不参与 PASS/FAIL 计数）"
+if printf '%s' "$UB_OUT" | grep -q 'A3-3 入口文件存在性: .*不存在（dist/\* 为构建产物'; then
+  pass "⑧c 未构建态下入口存在性走 info（不参与 PASS/FAIL 计数）"
 else
-  fail "⑧c 未构建态未输出 A3-3 info 行（产物状态未与判据解耦）"
+  fail "⑧c 未构建态未输出 A3-3 info 行（入口存在性未与判据解耦）"
+fi
+
+# ⑧e 措辞守卫（CTO 2026-10-09 裁决 2）: **源码入口**的 A3-3 文案**不得**出现「构建态」表述
+#     —— 源文件不是构建产物。此处用 CMD 指向 src/index.ts 的夹具实测，断言文案不含「构建态」。
+#     ⚠️ CMD 用 `node src/index.ts`（**不带 tsx/esm**）—— 若带 tsx 则 A5 会正确判红
+#     （tsx 是 devDependency），那会把「措辞验证」与「A5 守卫」混在一起、使 exit 非 0。
+#     本组只测 A3-3 措辞 ⇒ 隔离该变量。A5 对 tsx 形式的守卫另有 A5 自身断言覆盖。
+SRC_ENTRY="$TMP_ROOT/src-entry"
+build_fixture "$SRC_ENTRY"
+sed -i.bak 's|^CMD .*|CMD ["node", "src/index.ts"]|' "$SRC_ENTRY/Dockerfile" && rm -f "$SRC_ENTRY/Dockerfile.bak"
+SRC_OUT="$(cd "$SRC_ENTRY" && bash scripts/control-tower/probe-packaging.sh 2>&1)"; SRC_RC=$?
+if [ "$SRC_RC" -eq 0 ] && printf '%s' "$SRC_OUT" | grep -q 'A3-2 入口为仓库内源文件（非构建产物）'; then
+  pass "⑧e 源码入口（src/*）态可跑通（exit 0，A3-2 走源文件分支）"
+else
+  fail "⑧e 源码入口态异常（exit=${SRC_RC}）"
+fi
+if printf '%s' "$SRC_OUT" | grep -q 'A3-3 入口文件存在性: .*源码入口，与构建态无关'; then
+  pass "⑧f 源码入口的 A3-3 文案注明「与构建态无关」（CTO 裁决 2 指定措辞）"
+else
+  fail "⑧f 源码入口 A3-3 未注明「与构建态无关」（CTO 裁决 2 未落实）"
+fi
+if printf '%s' "$SRC_OUT" | grep 'A3-3' | grep -qE '（已构建态|（未构建态'; then
+  fail "⑧g 源码入口 A3-3 仍含「已构建态/未构建态」表述（措辞失实未修）"
+else
+  pass "⑧g 源码入口 A3-3 无「已构建态/未构建态」表述（仅「与构建态无关」）"
 fi
 
 # ⑧d 状态无关性: 两态 PASS 数一致（否则「干净检出 vs 已构建」两跑不可比）
