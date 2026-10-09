@@ -251,22 +251,28 @@ const CONTENT_TYPES: readonly ContentTypeEntry[] = [
     },
   },
   {
-    // 🔴 CTO 预裁：本子项牵涉「第四处两套并行」（死文件驱动系 vs 活硬编码类），
-    //    修法 = 接活文件驱动系 + 退役硬编码类，**须过 CTO 再动手**。
-    //    ⇒ 本卡只登记状态与证据，不落地任何改动（提案见 .synova-out/提案-llm-providers-1465.md）。
+    // 🔴 CTO 2026-10-09 **已裁：采「案 B」**（原预裁「接活文件驱动系 + 退役硬编码类」经实测复核后改向）。
+    //    CTO 派单原文：「案 B 落地补显式陈述 —— 10 空壳 vs src/providers 4 真实现 = **并行态**，
+    //    **本卡不删真实现**」。⇒ 本卡**只补显式陈述，不删不接**（消并行待后续卡）。
     type: 'llm-provider',
     dir: 'llm-providers',
     face: 'config',
     status: 'pending-cto',
     reason:
-      'loader 死（src/providers/llm-provider-loader.ts 零调用者，实测 `grep -rn "llm-provider-loader|' +
-      'loadLLMProviders" src/ packages/` 仅自身命中）＋生产走 src/providers 硬编码类 ⇒ ' +
-      '「第四处两套并行」。修法二选一（接活文件驱动系 / 退役硬编码类）属架构变更，按 CTO 预裁待裁。' +
-      '🔴 本表**刻意不登记其 loader**：未裁前不把它接进 boot 装配面。' +
-      '🔴 决策前提勘误（2026-10-09 复核，**别把侧 A 当既有资产**）：10 个 `adapter.ts` **不是**可接活的' +
-      '脚手架 —— 实测 `grep -c "^export"` ×10 **全为 0**、文件第一字节即 `//`、整文件是**一行注释**' +
-      '（`export const …Adapter = {…}` 那句在注释体内），真 `import()` 实测 `EXPORTS=[]` ×10。' +
-      '⇒ 「接活文件驱动系」的真实成本 = **从零写 10 个适配器**，非「接上已有实现」。',
+      '🔴 CTO 2026-10-09 已裁**案 B**，落地形态如下（**并行态**，本卡不删真实现）：' +
+      '① 侧 A `extensions/llm-providers/` = **10 个零导出空壳** —— 实测 `grep -c "^export"` ×10 全为 0、' +
+      '文件第一字节即 `//`、整文件是一行注释（`export const …Adapter = {…}` 落在注释体内）、' +
+      '真 `import()` 得 `EXPORTS=[]` ×10 ⇒ **不可被宿主 import，无可继承资产**；' +
+      '② 侧 B `src/providers/` = **4 个真实现**（deepseek / ernie / gateway / openai）＋ `ProviderChain` ' +
+      'failover 链 ＋ `detectProviderFromUrl` / `message-sanitizer`，且被 `src/agent/conversation-engine.ts:15` ' +
+      '**真实 import**；' +
+      '③ ⇒ 两侧并存 = **并行态**：一套是空的、一套是活的。' +
+      '🔴 **本卡不删真实现**（不退役侧 B）；**也不接活侧 A**（其真实成本 = 从零写 10 个适配器，' +
+      '非「接上已有实现」）⇒ **消并行待后续卡**（届时须过 §5.4 删路径核验 C2/requires）。' +
+      '🔴 本表**不登记其 loader**：侧 A 未接活（案 B 未授权接活）⇒ 不把它接进 boot 装配面' +
+      '（探针 ④ 段实证其未入装配）。' +
+      '🔴 死引用一并记录：`src/providers/llm-provider-loader.ts` 零调用者' +
+      '（实测 `grep -rn "llm-provider-loader|loadLLMProviders" src/ packages/` 仅自身命中）。',
   },
   {
     type: 'industry-template',

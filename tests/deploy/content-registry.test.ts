@@ -184,6 +184,65 @@ describe('#1465 content-registry — 边界条件', () => {
   });
 });
 
+describe('#1465 content-registry — CALL 段独立观测（M4 反例固化）', () => {
+  /**
+   * 🔴 本组是复核员 M4 的**永久固化**：
+   *   M4 = 「在 `initContentTypes` 里保留 `verified` 记账、删掉真实 init 调用」⇒ 旧探针（读自报）仍判绿。
+   *   根治 = 观测点移到**模块边界**（调用方自己的包装计数），与自报无关。
+   *   ⇒ 施加 M4 后本组第 1 条**必红**（计数为 0）—— 这就是「反例固化」，不再依赖一次性人工演示。
+   */
+  it('边界计数：注入模块的 loadBusinessModels 被真实调用恰好 1 次（M4 变异下必红）', async () => {
+    const real = await import('../../src/l3/business-model-loader');
+    let calls = 0;
+    const spy: Record<string, unknown> = { ...real };
+    spy.loadBusinessModels = (...args: unknown[]) => {
+      calls += 1;
+      return (real.loadBusinessModels as (...a: unknown[]) => unknown)(...args);
+    };
+    const report = await initContentTypes({
+      types: ['business-model'],
+      modules: { '../l3/business-model-loader': async () => spy },
+    });
+    expect(report.loaded).toBe(1);
+    expect(calls).toBe(1); // ← 删掉真实调用（M4）⇒ calls = 0 ⇒ 本行红
+  });
+
+  it('边界计数覆盖 verify：声明了 verify 的类型，其 verify 函数同样被计数', async () => {
+    const real = await import('../../src/l3/rule-loader');
+    let initCalls = 0;
+    let verifyCalls = 0;
+    const spy: Record<string, unknown> = { ...real };
+    spy.loadRules = (...args: unknown[]) => {
+      initCalls += 1;
+      return (real.loadRules as (...a: unknown[]) => unknown)(...args);
+    };
+    spy.getUpgradeStrategy = (...args: unknown[]) => {
+      verifyCalls += 1;
+      return (real.getUpgradeStrategy as (...a: unknown[]) => unknown)(...args);
+    };
+    const report = await initContentTypes({
+      types: ['rule'],
+      modules: { '../l3/rule-loader': async () => spy },
+    });
+    expect(report.loaded).toBe(1);
+    expect(initCalls).toBe(1);
+    expect(verifyCalls).toBe(1);
+  });
+
+  it('诚实性：模块未提供声明的导出 ⇒ 该项判失败（"说谎的模块"无法伪造绿灯）', async () => {
+    const report = await initContentTypes({
+      types: ['business-model'],
+      modules: {
+        // 该模块「看起来」成功返回，但根本没有声明要调用的导出
+        '../l3/business-model-loader': async () => ({ loadBusinessModels: undefined }),
+      },
+    });
+    expect(report.loaded).toBe(0);
+    expect(report.results[0].ok).toBe(false);
+    expect(report.errors[0]).toContain('导出缺失或非函数');
+  });
+});
+
 describe('#1465 content-registry — V2 唯一 type→loader 真源', () => {
   it('src/init/file-driven-loaders.ts 直连 loader import = 0，唯一装配入口 = registry', () => {
     const src = readFileSync(join(REPO_ROOT, 'src/init/file-driven-loaders.ts'), 'utf-8');

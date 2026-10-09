@@ -13,8 +13,10 @@
  *   INTEGRITY [L1] 状态/分面闭合 / 非可达项须有 reason / 无空挂 / 表完整性零问题（V1）
  *   RESOLVE   [L1] loader 模块文件真实存在；按名声明的 init/verify/cleanup 导出**真在模块上**
  *                  （经 file URL 直载模块取 `typeof === 'function'` —— 与宿主 loader 同型证据）
- *   CALL      [L2] **真跑** `initContentTypes()`：全部可装配项 ok ＋ init/verify **真被执行**；
- *                  `business-models`「接活」项留痕；非 reachable 项不得入装配面；
+ *   CALL      [L2] **真跑** `initContentTypes()`：全部可装配项 ok ＋ init/verify **经模块边界计数
+ *                  证明被真实调用**（🔴 **CTO 2026-10-09 裁定：不得以被检模块自报 `verified` 为据** ——
+ *                   本段注入自建计数器表，计数发生在探针自己的包装里，故「只记账不真调用」必红）；
+ *                  `business-models`「接活」项留痕 ＋ 副作用产出非空；非 reachable 项不得入装配面；
  *                  并断言 `src/init/file-driven-loaders.ts` 直连 loader import = 0（V2 唯一真源）
  *
  * 契约 (铁律 47):
@@ -181,8 +183,33 @@ async function main(): Promise<number> {
   }
 
   // ═══ ④ CALL [L2] — 真跑装配 ＋ V2 唯一真源 ═══
-  section('④ CALL [L2] — 真跑 initContentTypes() ＋ V2 唯一 type→loader 真源');
-  const report = await initContentTypes();
+  section('④ CALL [L2] — 真跑 + 独立观测(模块边界计数) + V2 唯一真源');
+  // ── 独立观测仪器（CTO 2026-10-09 裁定：**不得以被检模块自报为据**）──
+  //   自建一张与 registry 同键的模块表 —— 按**磁盘 file URL 直载**（不经 registry 的私有
+  //   `MODULE_IMPORTS`），把每个导出函数包一层**调用计数器**，再经 `initContentTypes({ modules })` 注入。
+  //   ⇒ 计数发生在**我们自己的包装里**（模块边界），与 `report.results[].verified`（被检模块自报）无关。
+  //   ⇒ 凡「只记账、不真调用」者计数恒 0 ⇒ **必红**（M4 变异由**构造**排除，非靠断言声明）。
+  const callCounts = new Map<string, number>();
+  const instrumented: Record<string, () => Promise<Record<string, unknown>>> = {};
+  for (const spec of snapshot.moduleKeys) {
+    const file = modulePathOf(repoRoot, spec);
+    if (!existsSync(file)) continue;
+    instrumented[spec] = async () => {
+      const real: Record<string, unknown> = await import(pathToFileURL(file).href);
+      const spy: Record<string, unknown> = { ...real };
+      for (const [name, fn] of Object.entries(real)) {
+        if (typeof fn !== 'function') continue;
+        const key = `${spec}#${name}`;
+        spy[name] = (...args: unknown[]) => {
+          callCounts.set(key, (callCounts.get(key) ?? 0) + 1);
+          return (fn as (...a: unknown[]) => unknown)(...args);
+        };
+      }
+      return spy;
+    };
+  }
+
+  const report = await initContentTypes({ modules: instrumented });
   console.log(
     `  attempted=${report.attempted} loaded=${report.loaded} degraded=${report.degraded} ` +
       `errors=${report.errors.length} warnings=${report.warnings.length}`,
@@ -194,14 +221,10 @@ async function main(): Promise<number> {
     ok(`全部 ${report.loaded} 项装配成功`);
   }
 
-  // 声明的 init/verify 是否**被记账为已执行** —— 判据口径（2026-10-09 复核勘误，**禁过度声称**）：
-  //   本段读的是**被检模块自报的 `verified` 记账**（`initContentTypes` 在调用成功后写入该数组）。
-  //   ⇒ 探针本身**不能区分「执行了」与「声称执行了」**：若被检模块只记账、不真调用，
-  //     本段仍判绿（复核员 M4 实测证实：删真实调用而保留记账 ⇒ `failures=0`）。
-  //   ⇒ 故「调用链通」的**独立证据来自生产入口实跑**（`initFileDrivenLoaders()` ⇒
-  //     `loadBusinessModels()` 返回 6 个模型 + loader 日志 `count:6`），**不来自本段**。
-  //   本段的价值 = **回归护栏**（改动后记账丢失/减项即红），**不是**执行性证明。
-  //   判别力边界已如实记入交付件 `.synova-out/WIN-1465-交付.md`。
+  // 声明的 init/verify 是否**被真实调用** —— 判据口径（CTO 2026-10-09 裁定：**不得以被检模块自报为据**）：
+  //   证据 = 上面 `callCounts`（我们自己包装的**模块边界计数器**），**不读** `verified`。
+  //   历史：改前本段读 `verified` 记账 ⇒ 复核员 M4 证明「保留记账、删真实调用」仍 `failures=0`（判据缺陷）。
+  //   改后：计数发生在我们的包装里 ⇒ 只记账不调用者计数恒 0 ⇒ 该变异**由构造即红**。
   for (const e of loadable) {
     const loader = e.loader;
     if (loader === undefined) continue;
@@ -210,20 +233,48 @@ async function main(): Promise<number> {
       fail(`CALL: 报告中缺 ${e.type}`);
       continue;
     }
-    const expected = [loader.init, ...(loader.verify ?? []).map((s) => s.fn)];
-    const notRun = expected.filter((fn) => !item.verified.includes(fn));
-    if (notRun.length > 0) fail(`CALL: ${e.type} 未真实执行 → ${notRun.join(', ')}`);
+    // 🔴 本段**不读** `report.results[].verified` 作为证据 —— 那是被检模块自报，可被「只记账不调用」伪造。
+    //   （`report` 仅用于 attempted/loaded/degraded 与错误明细。）
+    const need = [
+      { spec: loader.module, fn: loader.init },
+      ...(loader.verify ?? []).map((s) => ({ spec: s.module ?? loader.module, fn: s.fn })),
+    ];
+    const cold = need.filter((n) => (callCounts.get(`${n.spec}#${n.fn}`) ?? 0) < 1);
+    if (cold.length > 0) {
+      fail(
+        `CALL(独立观测): ${e.type} 的 ${cold.map((n) => n.fn).join(', ')} 模块边界计数 = 0 —— 未被真实调用` +
+          `（被检模块自报 verified=[${item?.verified.join(',') ?? '-'}] **不构成证据**）`,
+      );
+    } else {
+      ok(
+        `${e.type.padEnd(16)} 模块边界计数 = [${need.map((n) => `${n.fn}:${callCounts.get(`${n.spec}#${n.fn}`)}`).join(', ')}]`,
+      );
+    }
   }
-  ok('全部可装配项的 init/verify 均真实执行');
 
-  // business-models「接活」项 —— 本卡对 4 项不可达之一的裁决必须留下 L2 证据
-  const bm = report.results.find((r) => r.type === 'business-model');
-  if (bm === undefined) {
-    fail('CALL: 报告中无 business-model（接活项缺失）');
-  } else if (!bm.ok || !bm.verified.includes('loadBusinessModels')) {
-    fail(`CALL: business-model 接活未生效 verified=[${bm.verified.join(',')}] err=${bm.error ?? '-'}`);
+  // business-models「接活」项 —— 本卡对 4 项不可达之一的裁决，须留**独立观测**的 L2 证据
+  const bmCalls = callCounts.get('../l3/business-model-loader#loadBusinessModels') ?? 0;
+  if (bmCalls < 1) {
+    fail('CALL(独立观测): business-model 的 loadBusinessModels 模块边界计数 = 0（接活未真实发生）');
   } else {
-    ok(`business-model 接活生效: verified=[${bm.verified.join(',')}]`);
+    ok(`business-model 接活生效：模块边界计数 = ${bmCalls}（独立观测，非自报）`);
+  }
+
+  // 副作用**产出真实性**（独立读取，不经 registry）。
+  // ⚠️ 口径诚实标注：本项**不**用于证明 init 被调用 —— loader 有内部缓存，无论 init 是否跑过，
+  //    此处调用都从磁盘加载并返回同样条数 ⇒ **对 M4 变异不敏感**。它只证明「实现可用 + 产出非空」；
+  //    「调用是否发生」由上面的模块边界计数负责。
+  const bmMod: Record<string, unknown> = await import(
+    pathToFileURL(modulePathOf(repoRoot, '../l3/business-model-loader')).href
+  );
+  const loadBm = bmMod.loadBusinessModels;
+  if (typeof loadBm !== 'function') {
+    fail('CALL: business-model-loader 缺 loadBusinessModels 导出');
+  } else {
+    const out = (loadBm as () => { models?: unknown[] })();
+    const n = Array.isArray(out.models) ? out.models.length : 0;
+    if (n < 1) fail(`CALL: business-model 副作用产出为空（models=${n}）`);
+    else ok(`business-model 副作用产出真实：models=${n}（产出真实性，非调用证据）`);
   }
 
   // 显式化项必须在报告外（retired/pending-cto 不装配）
