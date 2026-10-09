@@ -136,19 +136,58 @@ else
   pass 'A2 Dockerfile 无 COPY server/…（#1464 病灶未回归）'
 fi
 
-# A3: 运行阶段入口文件存在（CMD 引用的目标必须在仓库内）
+# A3: CMD 入口 —— 拆三条（静态可达 / 产出声明 / 产物状态）
+#
+# 🔴 缺陷史（CTO 2026-10-09 退回判据，Lead 复现）:
+#   原 A3 把**两件事混在一条**并在失败分支断言「入口文件在仓库内不存在」:
+#     (i)  「CMD 引用了可识别入口形态」= 静态可达性 ✅ 合法判据
+#     (ii) 「入口文件**已存在**」      = ❌ **不合法**
+#   `dist/` 受 `.gitignore:2` 忽略 ⇒ **干净检出 / CI 下必然不存在** ⇒ 探针在 CI 必红
+#   （实证: `mv dist /tmp && bash …probe-packaging.sh` ⇒ PASS=18 FAIL=1 EXIT=1）。
+#   构建产物不属「交付面」，不得作为断言对象。
+#   修法（CTO 逐字）: A3-1 静态可达 + A3-2 构建链声明产出该入口 + A3-3 产物状态改 info。
+ENTRY=""
 cmd_line="$(grep -E '^CMD[[:space:]]' Dockerfile | head -1)"
 if [ -z "${cmd_line}" ]; then
-  fail 'A3 Dockerfile 无 CMD 指令（镜像无默认入口）'
+  fail 'A3-1 Dockerfile 无 CMD 指令（镜像无默认入口）'
 else
-  entry="$(grep -oE 'dist/[A-Za-z0-9._-]+\.(mjs|js)|src/[A-Za-z0-9._/-]+\.ts' <<< "${cmd_line}" | head -1)"
-  if [ -z "${entry}" ]; then
+  ENTRY="$(grep -oE 'dist/[A-Za-z0-9._-]+\.(mjs|js)|src/[A-Za-z0-9._/-]+\.ts' <<< "${cmd_line}" | head -1)"
+  if [ -z "${ENTRY}" ]; then
     info "CMD 原文: ${cmd_line}"
-    fail 'A3 CMD 未引用可识别的入口文件（dist/*.mjs 或 src/*.ts）'
-  elif [ ! -f "${entry}" ]; then
-    fail "A3 CMD 入口文件在仓库内不存在: ${entry}"
+    fail 'A3-1 CMD 未引用可识别的入口文件形态（dist/*.mjs|*.js 或 src/*.ts）'
   else
-    pass "A3 CMD 入口存在: ${entry}"
+    pass "A3-1 CMD 引用可识别入口形态: ${ENTRY}（静态可达性；**不检存在性** —— 产物不应要求预先存在）"
+  fi
+fi
+
+# A3-2: 构建链须**声明产出**该入口（dist/* 构建物）或该入口为**在库源文件**（src/*）
+#       两者都与「是否已构建」无关 ⇒ 干净检出下同样可判
+BUILD_SCRIPT='scripts/desktop/build-backend.sh'
+if [ -z "${ENTRY}" ]; then
+  fail 'A3-2 无入口可判（A3-1 未解析出入口）'
+elif [ "${ENTRY#dist/}" != "${ENTRY}" ]; then
+  # dist/* ⇒ 构建产物：须由构建链显式声明产出
+  if [ ! -f "${BUILD_SCRIPT}" ]; then
+    fail "A3-2 构建脚本缺失: ${BUILD_SCRIPT}"
+  elif grep -qF -- "--outfile=${ENTRY}" "${BUILD_SCRIPT}"; then
+    pass "A3-2 构建链声明产出该入口: ${BUILD_SCRIPT} 含 --outfile=${ENTRY}"
+  else
+    fail "A3-2 构建链未声明产出 CMD 入口 ${ENTRY}（${BUILD_SCRIPT} 内无 --outfile=${ENTRY}）"
+  fi
+elif [ -f "${ENTRY}" ]; then
+  # src/* ⇒ 源文件（不受 .gitignore 忽略）⇒ 在库存在性是合法判据
+  pass "A3-2 入口为仓库内源文件（非构建产物）: ${ENTRY}"
+else
+  fail "A3-2 源入口在仓库内不存在: ${ENTRY}"
+fi
+
+# A3-3: 产物状态 ⇒ **仅 info**（不参与 PASS/FAIL 计数）
+#   想报「是否已构建」就报这里；构建态不得影响判据总数（否则「干净检出 vs 已构建」两跑不可比）
+if [ -n "${ENTRY}" ]; then
+  if [ -e "${ENTRY}" ]; then
+    info "A3-3 产物状态: ${ENTRY} 已存在（已构建态）—— 非判据项"
+  else
+    info "A3-3 产物状态: ${ENTRY} 不存在（未构建态，非失败）—— 非判据项"
   fi
 fi
 
@@ -337,19 +376,29 @@ else
   while IFS= read -r l; do [ -n "${l}" ] && info "  ${l}"; done <<< "${tracked_maps}"
 fi
 
-# D2: 构建产物面（若已构建）不得有 .map —— 未构建时显式标 SKIP，禁静默
+# D2: 产物面 .map —— **条件蕴含式断言**（若 dist/ 存在则其中不得有 .map）
+#
+# 🔴 为何改为状态无关（CTO 2026-10-09 退回判据的连带要求）:
+#   原实现是 `if [ -d dist ]; then …pass… else …info(SKIP)…` ⇒ **判据总数随构建态变化**
+#   （已构建态 1 PASS / 未构建态 0 PASS）⇒「干净检出 vs 已构建」两跑的 PASS 数**不可比**，
+#   而可比性正是本次修复要立的性质（产物被 `.gitignore` 忽略 ⇒ 干净检出下不存在属**正常**，
+#   不构成「未核」）。改为蕴含式后：两种情况均 1 PASS，且 dist 存在时仍照旧咬（有 .map 即红）。
+d2_maps=""
+d2_files=0
 if [ -d dist ]; then
-  dist_maps="$(find dist -type f -name '*.map' 2>/dev/null || true)"
-  dist_count="$(count_nonempty_lines "${dist_maps}")"
-  dist_files="$(find dist -type f | awk 'END { print NR + 0 }')"
-  if [ "${dist_count}" -eq 0 ]; then
-    pass "D2 dist/ 产物面无 .map（实查 ${dist_files} 个产物文件）"
+  d2_maps="$(find dist -type f -name '*.map' 2>/dev/null || true)"
+  d2_files="$(find dist -type f | awk 'END { print NR + 0 }')"
+fi
+d2_count="$(count_nonempty_lines "${d2_maps}")"
+if [ "${d2_count}" -eq 0 ]; then
+  if [ -d dist ]; then
+    pass "D2 产物面无 .map（已构建态，实查 ${d2_files} 个产物文件）"
   else
-    fail "D2 dist/ 产物面有 ${dist_count} 个 .map"
-    while IFS= read -r l; do [ -n "${l}" ] && info "  ${l}"; done <<< "${dist_maps}"
+    pass 'D2 产物面无 .map（未构建态 —— 条件蕴含式「若 dist/ 存在则其中无 .map」；配置面见 D3/D3b）'
   fi
 else
-  info 'D2 [SKIP 未构建] dist/ 不存在 —— 本项未核，须在 bash scripts/desktop/build-backend.sh 之后复跑'
+  fail "D2 dist/ 产物面有 ${d2_count} 个 .map"
+  while IFS= read -r l; do [ -n "${l}" ] && info "  ${l}"; done <<< "${d2_maps}"
 fi
 
 # D3: 生产构建链不得开启 sourcemap

@@ -57,14 +57,25 @@ build_fixture() {
   cp "$REPO/scripts/desktop/build-backend.sh" "$dir/scripts/desktop/"
   cp "$REPO/electron-renderer/vite.config.ts" "$dir/electron-renderer/"
   # Dockerfile 本地 COPY 源占位（与真实仓库同构的最小形态）
-  #   注意: dist/backend.mjs 必须是**文件**（A3 断言 CMD 入口存在）；
-  #   `mkdir -p …/dist/backend.mjs` 会误建成目录并令 A3 假红（本测试曾踩）。
+  #   ②参 $2="unbuilt" ⇒ 造**未构建态**（无 dist/）—— 这是 CTO 2026-10-09 退回判据时
+  #   指出的「本轮缺的判别力」：原夹具从未测过未构建态，故 A3 要求产物预存在的缺陷逃逸。
+  #   注意: dist/backend.mjs 必须是**文件**；`mkdir -p …/dist/backend.mjs` 会误建成目录。
   mkdir -p "$dir/packages/dummy" "$dir/vendor/mcp-servers" "$dir/src" \
-           "$dir/app" "$dir/electron" "$dir/dist"
+           "$dir/app" "$dir/electron"
   printf '{"name":"@synova/dummy"}\n' > "$dir/packages/dummy/package.json"
   printf '// placeholder\n' > "$dir/src/index.ts"
-  printf '// placeholder\n' > "$dir/dist/backend.mjs"
   printf '// placeholder\n' > "$dir/mvp-server.cjs"
+  if [ "${2:-built}" = "unbuilt" ]; then
+    rm -rf "$dir/dist"                     # 未构建态：无 dist/
+  else
+    mkdir -p "$dir/dist"
+    printf '// placeholder\n' > "$dir/dist/backend.mjs"
+  fi
+}
+
+# 夹具的「已构建 / 未构建」两态 PASS 数须**一致**（判据总数不得随构建态变化）
+fixture_pass_count() {
+  ( cd "$1" && bash scripts/control-tower/probe-packaging.sh 2>&1 ) | grep -c '^  \[PASS\]'
 }
 
 echo "═══════════════════════════════════════════════════════════"
@@ -86,10 +97,10 @@ else
   fail "①b 真实仓库有 ${REAL_FAILS} 条 [FAIL]"
 fi
 REAL_PASSES="$(printf '%s' "$REAL_OUT" | grep -c '^  \[PASS\]' || true)"
-if [ "${REAL_PASSES:-0}" -ge 18 ]; then
-  pass "①c 真实仓库 PASS 断言数 ${REAL_PASSES} >= 18（四段覆盖未退化）"
+if [ "${REAL_PASSES:-0}" -ge 21 ]; then
+  pass "①c 真实仓库 PASS 断言数 ${REAL_PASSES} >= 21（四段覆盖未退化；A3 拆三条后基线）"
 else
-  fail "①c 真实仓库 PASS 断言数 ${REAL_PASSES} < 18（断言被删/被跳过）"
+  fail "①c 真实仓库 PASS 断言数 ${REAL_PASSES} < 21（断言被删/被跳过）"
 fi
 
 # ═══ ② 夹具基线: Dockerfile 完好 ⇒ exit 0（证明夹具本身可绿） ══════════════════
@@ -306,6 +317,73 @@ if [ "$MUT_RC" -eq 1 ] && printf '%s' "$MUT_OUT" | grep -q 'A2 Dockerfile 仍有
   pass "⑦b 变异体仍被 A2 判红 ⇒ 病灶有冗余防线（单点断言失效不放过）"
 else
   fail "⑦b 变异体未被 A2 判红 ⇒ 病灶仅靠 A1 单点防守"
+fi
+
+# ═══ ⑧ 未构建态（CTO 2026-10-09 退回判据 = 本轮缺的判别力）═════════════════════
+#   缺陷史: 原 A3 断言「CMD 入口文件在仓库内不存在」⇒ 要求 `dist/`（受 .gitignore 忽略）预存在
+#   ⇒ **干净检出 / CI 必红**。原夹具从未造过「无 dist/」的树 ⇒ 该缺陷逃逸（grep 未构建 = 0 命中）。
+#   本组把它钉死: ① 未构建态必须 exit 0 ② 未构建态与已构建态的 PASS 数必须**一致**。
+UB="$TMP_ROOT/unbuilt"
+build_fixture "$UB" unbuilt
+if [ ! -d "$UB/dist" ]; then
+  pass "⑧ 夹具确为未构建态（无 dist/）—— 前置成立"
+else
+  fail "⑧ 夹具未构造成未构建态（dist/ 仍存在）—— 本组失去意义"
+fi
+UB_OUT="$(cd "$UB" && bash scripts/control-tower/probe-packaging.sh 2>&1)"; UB_RC=$?
+if [ "$UB_RC" -eq 0 ]; then
+  pass "⑧b 未构建态（无 dist/）⇒ probe exit 0（干净检出必绿 —— CTO 退回项的直接判据）"
+else
+  fail "⑧b 未构建态 exit=${UB_RC}（期望 0）—— 干净检出仍会红，CTO 退回项未修复"
+fi
+if printf '%s' "$UB_OUT" | grep -q 'A3-3 产物状态: .*不存在（未构建态，非失败）'; then
+  pass "⑧c 未构建态下产物状态走 info（不参与 PASS/FAIL 计数）"
+else
+  fail "⑧c 未构建态未输出 A3-3 info 行（产物状态未与判据解耦）"
+fi
+
+# ⑧d 状态无关性: 两态 PASS 数一致（否则「干净检出 vs 已构建」两跑不可比）
+BLD="$TMP_ROOT/built-for-invariance"
+build_fixture "$BLD" built
+PC_BLD="$(fixture_pass_count "$BLD")"
+PC_UB="$(fixture_pass_count "$UB")"
+if [ "${PC_BLD}" = "${PC_UB}" ] && [ -n "${PC_BLD}" ]; then
+  pass "⑧d 判据总数状态无关: 已构建态 PASS=${PC_BLD} == 未构建态 PASS=${PC_UB}"
+else
+  fail "⑧d 判据总数随构建态变化: 已构建=${PC_BLD} vs 未构建=${PC_UB}（两跑不可比）"
+fi
+
+# ═══ ⑨ A3-1 反例: CMD 入口形态不可识别 ⇒ 必红 ══════════════════════════════════
+R11="$TMP_ROOT/a3r1"
+build_fixture "$R11"
+sed -i.bak 's|^CMD .*|CMD ["node", "backend"]|' "$R11/Dockerfile" && rm -f "$R11/Dockerfile.bak"
+R11_OUT="$(cd "$R11" && bash scripts/control-tower/probe-packaging.sh 2>&1)"; R11_RC=$?
+if [ "$R11_RC" -eq 1 ] && printf '%s' "$R11_OUT" | grep -q 'A3-1 CMD 未引用可识别的入口文件形态'; then
+  pass "⑨ CMD 入口形态不可识别 ⇒ exit 1 且 A3-1 命中（静态可达性断言有效）"
+else
+  fail "⑨ A3-1 未拦截不可识别入口形态（exit=${R11_RC}）"
+fi
+
+# ═══ ⑩ A3-2 反例: 构建链未声明产出该入口 ⇒ 必红 ════════════════════════════════
+#   两种变异各测: ① 构建链的 --outfile 指到别的产物 ② CMD 改名（与构建声明不一致）
+R12="$TMP_ROOT/a3r2"
+build_fixture "$R12"
+sed -i.bak 's|--outfile=dist/backend.mjs|--outfile=dist/other.mjs|' "$R12/scripts/desktop/build-backend.sh" && rm -f "$R12/scripts/desktop/build-backend.sh.bak"
+R12_OUT="$(cd "$R12" && bash scripts/control-tower/probe-packaging.sh 2>&1)"; R12_RC=$?
+if [ "$R12_RC" -eq 1 ] && printf '%s' "$R12_OUT" | grep -q 'A3-2 构建链未声明产出 CMD 入口'; then
+  pass "⑩ 构建链 --outfile 指向他物 ⇒ exit 1 且 A3-2 命中（产出声明断言有效）"
+else
+  fail "⑩ A3-2 未拦截构建声明缺失（exit=${R12_RC}）"
+fi
+
+R13="$TMP_ROOT/a3r3"
+build_fixture "$R13"
+sed -i.bak 's|^CMD .*|CMD ["node", "dist/wrong.mjs"]|' "$R13/Dockerfile" && rm -f "$R13/Dockerfile.bak"
+R13_OUT="$(cd "$R13" && bash scripts/control-tower/probe-packaging.sh 2>&1)"; R13_RC=$?
+if [ "$R13_RC" -eq 1 ] && printf '%s' "$R13_OUT" | grep -q 'A3-2 构建链未声明产出 CMD 入口 dist/wrong.mjs'; then
+  pass "⑩b CMD 入口名与构建声明不一致 ⇒ exit 1 且 A3-2 命中（CMD↔构建链失配可捕获）"
+else
+  fail "⑩b A3-2 未捕获 CMD↔构建链失配（exit=${R13_RC}）"
 fi
 
 echo ""

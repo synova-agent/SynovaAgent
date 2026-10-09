@@ -28,7 +28,7 @@
 
 ## 二、决策（四条）
 
-1. **判据载体 = 探针**（`scripts/control-tower/probe-packaging.sh`，18 断言，四段 A-V1/B-V3/C-V2/D-V4）：
+1. **判据载体 = 探针**（`scripts/control-tower/probe-packaging.sh`，21 断言，四段 A-V1/B-V3/C-V2/D-V4）：
    fail-closed（断言失败 exit 1；探针自身异常 exit 2），并配 CT-40 硬门禁要求的配对测试
    （`tests/control-tower/probe-packaging.test.sh`，含**变异体判别力**断言 —— 证明红灯来自断言而非环境噪声）。
 2. **版本单一来源**：真源 = `package.json:version`；Dockerfile 用 `ARG APP_VERSION=<默认值>` 注入
@@ -49,6 +49,35 @@
 5. **构建脚本自足化**：`build-backend.sh` 在 `node_modules/@synova` 缺失时就地建符号链接。
    原实现隐含依赖「dev 仓已存在该目录」，干净 checkout / 容器 builder 阶段会断链
    （实测报 `Could not resolve "@synova/logger"`）。此为**构建链可复现性**修复，非新增依赖。
+
+## 二·补 决策（第 5 条）—— CTO 退回后新增：**判据不得以构建产物为对象**
+
+**缺陷（CTO 2026-10-09 验收退回；Lead 复现）**：原 A3 把两件事混在一条断言里 ——
+(i)「CMD 引用了可识别入口形态」= 合法静态可达性；(ii)「入口文件**已存在**」= **不合法**。
+`dist/` 受 `.gitignore:2` 忽略 ⇒ **干净检出 / CI 下必然不存在** ⇒ 探针在 CI 必红：
+```
+$ mv dist /tmp && bash scripts/control-tower/probe-packaging.sh
+== SUMMARY ==  PASS=18  FAIL=1      EXIT=1        # 还原 dist 后回到 20-0 ⇒ 判据依赖本地构建态
+```
+
+**决策（第 5 条）**：**判据对象只能是「构建链的声明」与「源码面」，不能是「构建产物」**。产物是否存在属
+运行环境状态，不属交付面。据此 A3 拆三条：
+- **A3-1 静态可达**：CMD 引用可识别入口形态（`dist/*.mjs|*.js` 或 `src/*.ts`）—— **不检存在性**
+- **A3-2 产出声明**：`dist/*` 须由构建链**声明产出**（`build-backend.sh` 的 `--outfile=<该入口>`）；
+  `src/*` 则判为在库源文件（不受 gitignore 忽略 ⇒ 存在性合法）。⇒ 与构建态无关，干净检出可判
+- **A3-3 产物状态** ⇒ **仅 `info`**（已存在 / 不存在），**不参与 PASS/FAIL 计数**
+
+**连带决策（判据总数须状态无关）**：原 D2 在 `dist/` 缺失时走 `info(SKIP)` ⇒ 判据总数随构建态漂移
+（已构建 20 PASS / 未构建 18 PASS+1 FAIL）⇒ **「干净检出 vs 已构建」两跑不可比**。
+改为**条件蕴含式**：「若 `dist/` 存在则其中无 `.map`」——两种状态均恒 1 PASS，且 `dist` 存在时仍照旧咬。
+⇒ **净效果：两跑均 `PASS=21 FAIL=0 exit 0`，判据总数不随构建态变化。**
+
+**校验方式（可复跑）**：配对测试新增 ⑧/⑧b/⑧c/⑧d（未构建态 ⇒ exit 0 + 产物状态走 info +
+两态 PASS 数相等）与 ⑨/⑩/⑩b（A3-1 / A3-2 反例）。**夹具补「未构建态」是本轮缺的判别力** ——
+原夹具从未造过无 `dist/` 的树，故该缺陷逃逸（`grep -c 未构建` = 0）。
+
+**计数口径留痕**：CTO 期望 `PASS=19`，按逐字三条修法实得 **21**。差额 2 = A3 净 +1（1 条 → 2 条 PASS）
++ D2 状态无关化在未构建态 +1（已构建态不变）。**不硬凑 19**，以三条修法为准。
 
 ## 三、口径界定（V2 —— 本卡最易含糊处）
 
