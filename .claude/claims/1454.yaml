@@ -4,6 +4,7 @@ writeset:
   - src/cron/scheduler.ts
   - src/cron/cron-config.ts
   - src/loops/loop-scheduler.ts
+  - src/loops/loop-trigger-config.ts
   - src/routes/healthz.ts
   - src/deploy/data-directory.ts
   - src/deploy/startup-check.ts
