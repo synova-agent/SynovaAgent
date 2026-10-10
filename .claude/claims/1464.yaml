@@ -1,0 +1,24 @@
+# .claude/claims/1464.yaml — #1464 BS-5 交付打包卫生 写集声明（D708 门禁 S0 源）
+#
+# 为什么用 claim 而不是 task-state/<D#>.json：本卡是 **issue 号卡（#1464）**，无 D# 编号
+# ⇒ D708 门禁的 S1/S2/S3（按 `<D#>*` 定位）找不到声明源，会把全部改动判为「夹带」。
+# `.claude/claims/<issue>.yaml` 是为 issue 号任务提供的正式声明源（merge_writeset_gate.py 的 S0）。
+#
+# 纪律: 本 claim 只列**本 PR 真正改动**的文件（写准，不预授权）。越界项一律不列。
+writeset:
+  - .claude/claims/1464.yaml
+  - .claude/task-briefs/2026-10-09-1464-packaging-hygiene.md
+  - Dockerfile
+  - .dockerignore
+  - scripts/desktop/build-backend.sh
+  - scripts/control-tower/probe-packaging.sh
+  - .synova-out/读卡确认-1464.md
+  - .synova-out/交付-1464.md
+done:
+  - verify: bash scripts/control-tower/probe-packaging.sh
+  - verify: bash -n scripts/desktop/build-backend.sh
+# 声明纪律（同 #1052/#1322 先例）:
+#   不列 `package.json`（版本真源保持 0.1.0，本卡未改该文件）
+#   不列 `package-lock.json`（未改）
+#   不列 `src/**`（实测生产路径面 /Users/wane 命中 = 0 ⇒ 无 src 常量需改）
+#   不列任何既有 `scripts/control-tower/**` 脚本（治理线窗：只新建 probe-packaging.sh 一个文件）

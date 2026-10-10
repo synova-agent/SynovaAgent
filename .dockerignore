@@ -39,6 +39,17 @@ test-results/
 .env.local
 .env.*.local
 
+# ── 宿主运行期配置（不得进构建上下文/镜像；#1464 BS-5）──
+#   synova.json 是**本机运行期配置**（含 server.port: 18790、llm.model、sentinel 阈值），
+#   src/config-file.ts 从 process.cwd() 读它。当前 Dockerfile 只以具名 COPY 引入
+#   package.json/package-lock.json（多源 COPY 只考具名源 ⇒ 它**未进镜像**），但它仍在
+#   构建上下文中随每次 build 上传；一旦 COPY 形态被泛化成 `COPY .` 即静默进镜像。
+#   故排除出上下文（判据: scripts/control-tower/probe-packaging.sh A6/A6b）。
+synova.json
+synova.json.last-good
+.synova-state.json
+.synova-owner
+
 # ── OS ──
 .DS_Store
 Thumbs.db
