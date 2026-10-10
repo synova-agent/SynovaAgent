@@ -1,0 +1,13 @@
+{
+  "$schema": "https://synova.dev/schemas/extension-manifest-v1.json",
+  "name": "security",
+  "version": "1.0.0",
+  "type": "security-config",
+  "displayName": "安全配置",
+  "description": "上传前敏感关键词清单（blocked / warn 两级）。",
+  "entryPoint": "./sensitive-keywords.json",
+  "registry": "src/deploy/content-registry.ts",
+  "readers": [
+    "src/security/pre-upload-validator.ts"
+  ]
+}

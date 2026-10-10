@@ -1,0 +1,16 @@
+{
+  "$schema": "https://synova.dev/schemas/extension-manifest-v1.json",
+  "name": "policies",
+  "version": "1.0.0",
+  "type": "policy",
+  "displayName": "策略",
+  "description": "升级规则（escalation-rules.json）与数据访问维度策略（data-access.yaml）。",
+  "entryPoint": "./escalation-rules.json",
+  "registry": "src/deploy/content-registry.ts",
+  "readers": [
+    "src/services/escalation-engine.ts"
+  ],
+  "knownGaps": [
+    "data-access.yaml 实测零读者（grep -rn data-access src/ packages/ --include=*.ts = 0 命中）——半孤儿，需另立卡接线或显式废弃"
+  ]
+}

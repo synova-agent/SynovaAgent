@@ -1,0 +1,13 @@
+{
+  "$schema": "https://synova.dev/schemas/extension-manifest-v1.json",
+  "name": "context-strategies",
+  "version": "1.0.0",
+  "type": "context-strategy",
+  "displayName": "上下文策略",
+  "description": "诊断会话的上下文装配策略（预算/触发/保留规则）。按 type 选取，新增策略 = 加 json 文件。",
+  "entryPoint": "./default.json",
+  "registry": "src/deploy/content-registry.ts",
+  "readers": [
+    "src/orchestrator/context-engine.ts"
+  ]
+}
