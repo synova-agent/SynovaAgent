@@ -1873,6 +1873,16 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '2026-10-07-CTO-记录（权限层=能不能看 RB-01..05；内容层=看到什么样 RB-06）/ 院方《02》§三机制2 部门级 / 创始人 2026-10-05 定的上线闸',
   },
 
+  {
+    id: 'K12-21', worker: 'win', batch: '第12批', block: 'K12',
+    title: '测量梯子（13 个探针 · 全员前置）：未实现必须 exit 2，不许假绿',
+    paths: ['scripts/control-tower/probe-ladder.ts', 'scripts/control-tower/probe-*.ts', 'tests/control-tower/probe-contract.test.sh'],
+    dependsOn: [],
+    acceptance: [{ run: 'npx tsx scripts/control-tower/probe-ladder.ts --all', expectExit: 0 }],
+    status: 'todo',
+    source: 'CTO 2026-10-11 复核实测：13 个探针现存 0 个 ⇒ "能跑"一级全卡不成立 ⇒ 单独立卡先造测量梯子；契约=未实现必须 exit 2（fail-closed，铁律 31）',
+  },
+
 ];
 
 // ════════════════════════════════════════════════════════════════
@@ -1990,7 +2000,7 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
   {
     id: 'K12' as BlockId, name: '企业级一致性（宪章 §2.7 第一优先）',
     items: ['3-1', '3-3', '3-4', 'K12-02', 'K12-05', 'K12-06', 'K12-07', 'K12-08',
-            'RB-01', 'RB-02', 'RB-03', 'RB-04', 'RB-05', 'RB-06', '0-13', '1-9', '1-10', '1-11', '1-12', '1-13'],
+            'RB-01', 'RB-02', 'RB-03', 'RB-04', 'RB-05', 'RB-06', '0-13', '1-9', '1-10', '1-11', '1-12', '1-13', 'K12-21'],
     blockAcceptance: [
       { run: 'npx tsx scripts/control-tower/probe-onboarding.ts --dry-run', expectExit: 0 },
       { run: 'npx tsx scripts/control-tower/probe-role-pack.ts --role finance', expectExit: 0 },
