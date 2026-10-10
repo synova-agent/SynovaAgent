@@ -810,7 +810,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       // 🔴 原为纯 grep 型 ⇒ 改为穿生产入口：跑一次方向监测，断言参数【改变了输出】
       { run: 'npx vitest run tests/loops/direction-monitor.transfer-function.test.ts', expectExit: 0 },
     ],
-    status: 'todo',
+    status: 'retired',
     source: '施工单.md 1-9 / 现状报告 W2',
   },
   // ───────────────── 第 2 批 · 地基 ─────────────────
