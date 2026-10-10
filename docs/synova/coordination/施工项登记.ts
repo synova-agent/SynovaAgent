@@ -1854,6 +1854,25 @@ export const constructionItems: readonly ConstructionItem[] = [
     status: 'todo',
     source: '内容面规范 §一 E-2 撤回＋§5.2（双口径皆悬空；真加载器是 src/locale/locale-loader.ts）',
   },
+  {
+    id: 'RB-05', worker: 'win', batch: '第12批', block: 'K12',
+    title: '人在环审批（approval seam）：高风险动作要人点头，无人应答 ⇒ 拒',
+    paths: ['src/runtime/approval-seam.ts', 'tests/security/approval-seam.test.ts', 'scripts/control-tower/probe-approval-seam.ts'],
+    dependsOn: ['RB-01', 'RB-02'],
+    acceptance: [{ run: 'npx tsx scripts/control-tower/probe-approval-seam.ts --case no-answer', expectExit: 0 }],
+    status: 'todo',
+    source: '2026-10-07-CTO-记录（K11 四层之第四层 · 人在环）/ 创始人 2026-10-05 六条裁定之「高风险要人点头」/ 宪章 4.2 运行时含"审批"',
+  },
+  {
+    id: 'RB-06', worker: 'win', batch: '第12批', block: 'K12',
+    title: '岗位内容分层（提示词/工具/知识按部门变）—— 🔴 上线闸＝第一个客户上线前必须完成',
+    paths: ['extensions/content-layers/**', 'src/services/content-layering.ts', 'tests/services/content-layering.test.ts', 'scripts/control-tower/probe-content-layering.ts'],
+    dependsOn: ['K12-02', 'RB-02'],
+    acceptance: [{ run: 'npx tsx scripts/control-tower/probe-content-layering.ts --case dept-diff', expectExit: 0 }],
+    status: 'todo',
+    source: '2026-10-07-CTO-记录（权限层=能不能看 RB-01..05；内容层=看到什么样 RB-06）/ 院方《02》§三机制2 部门级 / 创始人 2026-10-05 定的上线闸',
+  },
+
 ];
 
 // ════════════════════════════════════════════════════════════════
@@ -1971,7 +1990,7 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
   {
     id: 'K12' as BlockId, name: '企业级一致性（宪章 §2.7 第一优先）',
     items: ['3-1', '3-3', '3-4', 'K12-02', 'K12-05', 'K12-06', 'K12-07', 'K12-08',
-            'RB-01', 'RB-02', 'RB-03', 'RB-04', '0-13', '1-9', '1-10', '1-11', '1-12', '1-13'],
+            'RB-01', 'RB-02', 'RB-03', 'RB-04', 'RB-05', 'RB-06', '0-13', '1-9', '1-10', '1-11', '1-12', '1-13'],
     blockAcceptance: [
       { run: 'npx tsx scripts/control-tower/probe-onboarding.ts --dry-run', expectExit: 0 },
       { run: 'npx tsx scripts/control-tower/probe-role-pack.ts --role finance', expectExit: 0 },
