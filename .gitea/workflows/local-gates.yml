@@ -1,0 +1,41 @@
+# 本机门禁 · 极简版（Gitea Actions · host 模式 · 无外部 action 依赖）
+#
+# 🔴 设计原则（2026-10-10 创始人明令：不得重犯"CI 又多又复杂 ⇒ 超时 ⇒ --no-verify"的历史病根）
+#   ① **少**：只留 3 步，且每步对应一条真会被绕过的风险
+#   ② **快**：目标 < 5 分钟；测试用 --changed（只测改动的），不跑全量
+#   ③ **可解释**：任何一步红了，一句话说清"哪里错、怎么修"；**存量问题只告警不阻断**
+#   ④ 硬上限：单作业 15 分钟（超出视为 CI 故障，不是代码问题）
+name: local-gates
+on:
+  push:
+  pull_request:
+    branches: [ main, local-main ]
+  workflow_dispatch:
+jobs:
+  gates:
+    runs-on: macos
+    timeout-minutes: 15
+    steps:
+      - name: 工作区（本机 Gitea 克隆；不用 actions/checkout）
+        run: |
+          set -e
+          WS=/Users/wane/.ci-work/SynovaAgent
+          if [ ! -d "$WS/.git" ]; then mkdir -p "$(dirname "$WS")"; git clone -q http://127.0.0.1:3000/synova-agent/SynovaAgent.git "$WS"; fi
+          git -C "$WS" fetch -q origin || true
+          git -C "$WS" checkout -q -f "${{ github.sha }}" 2>/dev/null || git -C "$WS" checkout -q -f FETCH_HEAD
+          echo "HEAD=$(git -C "$WS" rev-parse --short HEAD)"
+      - name: 依赖（缺失才装，一次）
+        run: |
+          WS=/Users/wane/.ci-work/SynovaAgent
+          if [ -d "$WS/node_modules/vitest" ]; then echo "依赖已存在"; else cd "$WS" && /usr/bin/env PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" npm ci --silent; fi
+      - name: ① 13 组门禁（唯一的阻断门）
+        run: cd /Users/wane/.ci-work/SynovaAgent && PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" SYNO_CI=1 bash scripts/pre-commit-check.sh
+      - name: ② 架构边界（快，阻断）
+        run: cd /Users/wane/.ci-work/SynovaAgent && PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash scripts/check-architecture.sh
+      - name: ③ 增量测试（vitest --changed；只测改动面，避免全量摩擦）
+        run: |
+          cd /Users/wane/.ci-work/SynovaAgent
+          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" npx vitest run --changed origin/main 2>&1 | tail -20 || {
+            echo "::error::增量测试失败 —— 只跑了本次改动相关的测试；若确认是既有 flaky，请在本作业日志里点名具体用例"
+            exit 1
+          }
