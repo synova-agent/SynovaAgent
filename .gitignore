@@ -89,6 +89,9 @@ evidence/
 # 树级守门: scripts/control-tower/check-gitlinks.sh（三态退出）+ 密封测试入 ci.yml。
 .synova-wt-*
 .sessions/
+# 交付件出件目录（各线交付正文/证据落盘处）—— 运行期产物不进版本控制（判例 M-05；
+# 且避免文档登记门禁（D782/D2）把出件目录里的 .md 判为「未登记文档」）
+.synova-out/
 
 # 文档契约 v1.0（2026-09-26）: STATE.md 是入口层正式文件（"现在到哪了"的唯一答案）
 !docs/synova/STATE.md
