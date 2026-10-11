@@ -415,7 +415,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   {
     issue: 8,
     id: '0-8',
-    worker: 'win', batch: '第0批', block: 'K6',
+    worker: 'win', batch: '第0批', block: 'K5',  // 修(2026-10-11 CTO): 原 block=K6; 真值=K5 -- K6 块 name 明说 参数层 b/c 类已移入 K5, 本项 title = 参数层 c 类整个模块零引用
     title: '参数层 c 类整个模块零引用',
     // 卡面 §④「本卡可碰 = 无（处置已完成）；取证用上述 5 个既有测试（只跑不改）」；CTO 2026-10-07 已裁以卡面 5 测试为准
     paths: [
@@ -465,7 +465,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   {
     issue: 9,
     id: '0-9',
-    worker: 'win', batch: '第0批', block: 'K1',
+    worker: 'win', batch: '第0批', block: 'RETIRED',  // 修(2026-10-11 CTO): 原 block=K1 与 RETIRED 块 items=[0-9] 冲突; 真值=RETIRED (本项 source 明说 0-9 前提被证伪 => 作废, 只留痕不派单)
     title: '0-9 知识权限过滤：复测 + 根因收口',
     paths: ['src/l4/knowledge-store.ts', 'tests/l4/**'],  // CTO 2026-10-08 裁定取 (a)
     dependsOn: [],
@@ -2126,14 +2126,17 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
     source: 'T3 §二 K4',
   },
   {
-    id: 'K5', name: '参数层（a/b/c/d 四类，护城河资产本体）', items: ['2-2', '2-6', '2-7', '0-7', '0-8', '2-3', 'PL-04'],
+    id: 'K5', name: '参数层（a/b/c/d 四类，护城河资产本体）', items: ['2-2', '2-6', '2-7', '0-8', 'PL-04'],
+    // 修(2026-10-11 CTO): 去 0-7 / 2-3 (真值属 K6: memoryStore 降级日志 / 反馈两通道);
+    // 0-8 保留 (其 block 已改为 K5, 须在 K5.items 内 -- 否则成孤儿)
     blockAcceptance: [
       { run: 'npx tsx scripts/control-tower/probe-compute-registry.ts', expectStdoutContains: 'COMPUTE-HHI-v1' },
     ],
     source: 'T3 §二 K5（🔴 无主 —— 待裁，见 §九#1）',
   },
   {
-    id: 'K6', name: '反馈·进化回环（进化侧；参数层 b/c 类已移入 K5）', items: ['0-2', '0-5', '1-4', '3-12'],
+    id: 'K6', name: '反馈·进化回环（进化侧；参数层 b/c 类已移入 K5）', items: ['0-2', '0-5', '1-4', '3-12', '0-7', '2-3'],
+    // 修(2026-10-11 CTO): 加 0-7 (补降级日志 + 补传 memoryStore => 反馈侧) / 2-3 (反馈两通道分裂)
     blockAcceptance: [
       // 🔴 原为纯 grep 型（T6 面1 否决点）⇒ 改为穿生产入口：跑一次真实进化回写，断言表行
       { run: 'npx vitest run tests/growth/evolution-writeback.test.ts', expectExit: 0 },
