@@ -17,6 +17,10 @@
  *   且它不是 retired ⇒ 疑似「误标 closed」⇒ **报警 exit 1**
  *   （撤销卡请打 retired 标签，否则同样报警 —— 撤销必须显式声明）
  *
+ * 【口径边界（独立复核 2026-10-11 补记）】
+ *   统计与报警**只覆盖挂在模块里程碑（K*）上的卡**；
+ *   无里程碑的 closed 卡既不计数也不报警（它们不进任何模块完成率）。
+ *
  * 【用法】
  *   npx tsx scripts/control-tower/check-board-metrics.ts           # 报警 ⇒ exit 1
  *   npx tsx scripts/control-tower/check-board-metrics.ts --quiet   # 只打印，不报警
