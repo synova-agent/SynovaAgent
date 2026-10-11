@@ -9,18 +9,20 @@
 **② 解决什么问题**：实测：`department` 恒 undefined ⇒ 部门轴在多岗位判定里**根本不参与**，多租户/部门隔离形同虚设。
 **③ 做完对项目的推动**：它是 §2.7 第①层（知识一致·**分层权限**）的接口前提；也是 K12 的 RB 系列（部门轴/权限项模型）的落点。
 **④ 🔴 不做行不行**：**不行**（禁令级）：权限模型缺维度 = 隔离不可达（K12/RB-02 判据同源）。
-**⑤ 现在有什么基础（代码盘点，as_of local-main）**：✅ `src/middleware/rbac.ts`、`tests/security/`（实测 58 件）在写集；❌ 提案件 `docs/synova/coordination/提案/RbacContext-org-team-维度.md` 未落（判据第 1 条就是 `test -f` 它）。
+**⑤ 现在有什么基础（**判据实测 @ 68bf57598 ＋ 路径实测**）**：❌ **判据未达标**（见下「状态」的失败项）；已存在落点：`src/middleware/rbac.ts`；**待新建**：`docs/synova/coordination/提案/`、`tests/security/**`。
 **⑥ 还需要做什么**：先出**提案件**（接口变更须先提案）+ 补 org/team 维度 + 三条判据（含 `req.userId =` 零命中）。
 **⑦ DSH 借鉴方式**：**自研**：DSH 是**单机单用户**，无 org/team/部门维度与多租户模型 ⇒ 无对应物；仅借其「接口变更先声明（`static inject` 即接口契约）」的方向（`dsh-permission-presets/lib/index.js:160` `static inject = [...]`）。
 **⑧ 涉及代码文件**：docs/synova/coordination/提案/｜src/middleware/rbac.ts｜tests/security/
 
 ## Q0: 定位 — 项目拼图 + 文件审计
 本卡属 **K1**（接线·点火·权限执行面），架构位置 = ⓪ 连接器（人侧 ⓪-b）＋ 横切权限模型。
-文件审计（实测 `git ls-tree origin/local-main`，as_of `7c6315029`）：
-- docs/synova/coordination/提案/
+文件审计（**逐条实测 @ 68bf5759878a4**）：
+### 已存在（本卡可直接复用/修改）
 - src/middleware/rbac.ts
-- tests/security/
-结论：按 §〇 ⑤/⑥ 判定为**新建/接线/收口**。
+### 待新建（写集，尚未存在）
+- docs/synova/coordination/提案/
+- tests/security/**
+结论：NOT-DONE。
 
 ## Q1: 调研
 a) 业界：对外可见/安全相关的动作必须有**独立于执行者的判据**（Anthropic 工程基线）。
@@ -68,17 +70,31 @@ c) memory 教训：**铁律 0-2**（接线失败 4 次：组件过单测但从�
 #CRITERIA: C
 
 ## 写集
-（单源 = 登记件 `paths`；glob 已折为**目录裸路径**，禁通配符与反引号 —— brief-compose D1231/#1308）
+（单源 = 登记件 `paths`；glob 已折为**目录裸路径**，禁通配符与反引号（格式依据：brief-compose D1231））
 - docs/synova/coordination/提案/
 - src/middleware/rbac.ts
 - tests/security/
 - .claude/task-briefs/2026-10-11-43-K1-1-7bis-RbacContext-org-team维度-先提案.md
 
 ## Done 标准
+（**逐条抄自登记件 `acceptance` 原文，未改写**）
 - [ ] verify: `test -f docs/synova/coordination/提案/RbacContext-org-team-维度.md`（expectExit 0）
 - [ ] verify: `npx vitest run tests/security/rbac-org-axis.test.ts`（expectExit 0）
 - [ ] verify: `npx vitest run tests/security/rbac-all-routes.test.ts`（expectExit 0）
 - [ ] verify: `bash -c "test "$(git grep -l 'req\.userId[[:space:]]*=' origin/main -- src/ | wc -l)" -eq 0"`（expectExit 0）
-- [ ] 反例（改坏即红）：按本卡 §〇 ⑥ 构造反例并留原始输出
+- [ ] 反例（改坏即红）：按文末「状态」列出的失败/待建项构造反例并留原始输出
 - [ ] 三态：未实现必须 **exit 2**（0=通过／1=失败／2=未实现 —— 禁假绿）
-- [ ] `npx tsc --noEmit` 零错误
+
+---
+## 状态（判据实测 · 独立复核回写 · 2026-10-11）
+
+基线：`68bf5759878a458b5e5ceb324a32878660155517`（**本分支 base**，非旧 as_of）
+判定：**NOT-DONE**（判据逐条：FAIL,FAIL,PASS,FAIL）
+登记件 status：`todo` ｜ 来源卡：#43
+
+❌ 判据未达标 —— 逐条判据失败项见 Done 段。
+
+### 独立复核结论（fresh context · 三批各自复核）
+本批经独立复核，判定：不能按现状直接开工，需按本卡修订后执行。
+修订项：as_of 重钉 ／ ⑤ 与 Q0 分「已存在 / 待新建」两栏 ／ Done 逐条抄登记件原文 ／ 去 #1308 引用。
+真源（`施工项登记.ts`）缺陷另由 CTO 处置（判据语法坏 / 假绿判据 / status 与 issue state 分歧）。
