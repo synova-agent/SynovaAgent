@@ -108,7 +108,14 @@ VITEST_STEP1_EXIT=1
 
 ## §A.3 改动清单（逐处；**不删弱任何既有断言**）
 
-全部落在 `tests/l4/ontology-loader-param-bridge-1031.test.ts`（loader **零改动**，见 §A.5 与 §A.9 的 `git status`）。
+全部落在 `tests/l4/ontology-loader-param-bridge-1031.test.ts`。
+
+> 🔴 **口径写死（防 K3 读成别的意思）**：本卡（K4-02 批 2）对 `src/l4/ontology-loader.ts` 的改动 =
+> **「本轮零改动」**，**不是**「相对基线零差异」——两句各给可复跑命令（读数见 §A.9-b）：
+> · **本轮（commit `db53d316`）零改动**：`git diff --stat db53d316^ db53d316 -- src/l4/ontology-loader.ts` ⇒ **空输出**；
+> · **相对 `origin/local-main` 不是零差异**：`git diff --stat origin/local-main...HEAD -- src/l4/ontology-loader.ts`
+>   ⇒ `1 file changed, 259 insertions(+)`（= **批 1 的注入实现**；blob `14bdef64… → 91b44093…`）。
+> ⇒ 本轮的净改动只有 **判据件 + 本证据件** 两件（`git show --stat db53d316` = 2 files, +373/−14）。
 
 | # | 位置（改后行号） | 改动 | 对应缺口 |
 |---|---|---|---|
@@ -120,7 +127,8 @@ VITEST_STEP1_EXIT=1
 | ⑥ | 新增 describe `:475-513` | 「两笔账棘轮（已交 / 未交，机器可判）」5 用例：已交 3 项 `DELIVERED`｜未交 4 项 `NOT_DELIVERED`｜未交③ 的**真仓** `cs_resolved===0` 断言｜已交② 的读取面三键断言｜未交① 的"不提供已交证据"边界 | G4 |
 
 **规模 Δ（原始计数）**：`417 → 513` 行｜`5 → 6` describe｜`23 → 29` it｜`94 → 115` expect。
-**未改**：`auditEdgeLags` 之外的 loader 一行未动；V1/V2/V3/回归组的断言逐条保留（新增只有 ⑥ 的 5 条 + ⑤ 的 1 条）。
+**未改**：`src/l4/ontology-loader.ts` **本轮一行未动**（口径见 §A.3 顶注：本轮零改动 ≠ 相对基线零差异）；
+V1/V2/V3/回归组的断言逐条保留（新增只有 ⑥ 的 5 条 + ⑤ 的 1 条）。
 
 ## §A.4 恢复绿（原始输出）
 
@@ -247,6 +255,50 @@ $ git -c … log -3 --format=%B | findstr /c:"<TOK>"                → 无输�
 ### A.9.4 环境事实（同批已上报）
 本克隆**未安装 git hooks**（`.git/hooks` 仅 `*.sample`；`core.hooksPath` 未设）⇒ 提交不触发 hook 链；
 门禁证据 = **手动跑同源脚本**（§A.9.1/A.9.2 的原始输出）。
+
+### A.9-b 提交与提交后复跑（M6 复跑件）
+
+**交付提交**：`db53d3160d4ff0f74dbb86c26219eff2acfc6414`（父 `41d7b3d7`）｜`2 files changed, 373 insertions(+), 14 deletions(-)`
+= 判据件 + 本证据件（**本轮 loader 零改动**，见下方口径复核）。
+
+**提交后复跑（committed tree）**：
+```
+$ npx vitest run tests/l4/ontology-loader-param-bridge-1031.test.ts
+ ✓ tests/l4/ontology-loader-param-bridge-1031.test.ts (29 tests) 283ms
+ Test Files  1 passed (1)
+      Tests  29 passed (29)
+VITEST_EXIT=0
+```
+
+**「零改动」口径复核（本轮 vs 基线，两句分别给读数）**：
+```
+$ git -c … diff --stat db53d316^ db53d316 -- src/l4/ontology-loader.ts
+（空输出）                                   ⇒ **本轮对 loader 零改动**
+
+$ git -c … diff --stat origin/local-main...HEAD -- src/l4/ontology-loader.ts
+ src/l4/ontology-loader.ts | 259 ++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 259 insertions(+)            ⇒ **相对基线不是零差异**（这 259 行 = 批 1 的注入实现）
+
+$ git -c … rev-parse HEAD:src/l4/ontology-loader.ts                  → 91b44093f84962f46ec22158fc2c8b32dc6eab0c
+$ git -c … rev-parse origin/local-main:src/l4/ontology-loader.ts     → 14bdef64ba8923d9dbe49f91c3a7d104bf2e0458
+（blob 不同 ⇒ 上句口径成立；blob 相同的是 `src/loops/direction-monitor.ts`，见 §A.6 未交①）
+```
+
+**PR 变更集（vs `origin/local-main = dc5ce093`，含批 1）**：
+```
+$ git -c … diff --stat origin/local-main...HEAD
+ .claude/claims/1031.yaml                           |  14 +
+ .claude/task-briefs/2026-10-09-1031-ontology-param-bridge.md |  59 +++
+ docs/synova/product-lines/evidence/1031-delivery.md | 568 +++++++++++++++++++++
+ docs/synova/product-lines/evidence/1031-injection-contract.md | 217 ++++++++
+ src/l4/ontology-loader.ts                          | 259 ++++++++++
+ tests/l4/ontology-loader-param-bridge-1031.test.ts | 513 +++++++++++++++++++
+ 6 files changed, 1630 insertions(+)
+$ git -c … rev-list --left-right --count origin/local-main...HEAD
+0	7
+```
+⇒ **6 件 ≤ 12**（治理产物 2 件不计则计 4 件），**单域**（本体参数桥 + 其判据/证据），全增量（删除行 = 14，均为判据件内被替换的行）。
+**工作树**：提交后 `git status --porcelain` 置空（本节由 doc-only commit-2 承载）。本卡**未 push**、**未开 PR**、未用任何 `--no-verify`。
 
 ## §A.10 收尾三件索引（实施席口径）+ 自验归属声明
 
