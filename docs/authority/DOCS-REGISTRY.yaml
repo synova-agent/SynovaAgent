@@ -452,3 +452,10 @@ documents:
     status: active
     owner: synova-squad-lead
     note: "#1047 2-2 参数清单：145 条 × 19 字段（五域 覆盖 + layer 四层分栏），值留空；判据 docs/synova/coordination/tools/check-param-list.ts（exit 0）"
+
+  - id: DOC-0191
+    type: registry
+    path: docs/synova/coordination/issue-number-mapping.md
+    status: active
+    owner: synova-governance-converge
+    note: "GitHub↔Gitea 号段映射表（2026-10-11，204 条全覆盖；依据=标题 [#N] 前缀 / claim 文件佐证 / 本地新建判据；GitHub 号未在线核验 API 403）。施工项登记 issue 字段的补录依据。"
