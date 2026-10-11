@@ -86,7 +86,33 @@ jobs:
           CHANGED_BASE=origin/local-main
           git rev-parse --verify -q "$CHANGED_BASE" >/dev/null || CHANGED_BASE=origin/main
           echo "增量基线 = $CHANGED_BASE"
-          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" npx vitest run --changed "$CHANGED_BASE" 2>&1 | tail -20 || {
-            echo "::error::增量测试失败 —— 只跑了本次改动相关的测试；若确认是既有 flaky，请在本作业日志里点名具体用例"
-            exit 1
-          }
+          # 🔴 2026-10-11 创始人裁决②：**区分「纯文档合法空绿」与「有代码改动却空绿 = 异常」**
+          #   病根（实测）：vitest --changed 在变更集为空/无测试命中时打印
+          #     No test files found, exiting with code 0
+          #   ⇒ 本步恒绿。本机日志实测**连续 33 个 job** 全是这一行 ⇒ 该步不提供任何信息。
+          #   为什么不能"一律变红"：合并后分支态 HEAD 常已就是基线（实测 3 个 job 的 HEAD
+          #     vs local-main 变更集 = **0 文件**）⇒ 那种情况"无对象可测"是**对的**，变红即噪音。
+          #   ⇒ 判据必须**分类**：先算变更集，再看它含不含代码面/测试面。
+          set -o pipefail
+          CHANGED_FILES="$(git diff --name-only "$CHANGED_BASE"...HEAD 2>/dev/null || true)"
+          N_FILES="$(printf '%s' "$CHANGED_FILES" | grep -c . || true)"
+          N_CODE="$(printf '%s' "$CHANGED_FILES" | grep -cE '^(src|tests|scripts|packages|extensions|expert|knowledge|theory)/|^\.(gitea|github)/' || true)"
+          echo "本次变更集: ${N_FILES} 文件（其中代码面/测试面 ${N_CODE} 个）"
+          VITEST_OUT="$(PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" npx vitest run --changed "$CHANGED_BASE" 2>&1)"; VITEST_RC=$?
+          printf '%s\n' "$VITEST_OUT" | tail -20
+          if [ "$VITEST_RC" -eq 0 ]; then
+            if printf '%s' "$VITEST_OUT" | grep -q "No test files found"; then
+              if [ "$N_FILES" -eq 0 ]; then
+                echo "ℹ️  合法跳过：变更集为空（HEAD 即基线/已合并）⇒ 无对象可测（既非通过也非故障）"
+              elif [ "$N_CODE" -eq 0 ]; then
+                echo "ℹ️  合法跳过（纯文档）：本次变更 ${N_FILES} 文件全在代码面/测试面之外 ⇒ 无测试可跑"
+              else
+                echo "::error::🔴 异常空绿 —— 本次变更含 ${N_CODE} 个代码面/测试面文件，但 vitest 一个测试都没跑（No test files found）。这**不是通过**：要么测试丢了，要么 --changed 判据失效。"
+                printf '%s\n' "$CHANGED_FILES" | grep -E '^(src|tests|scripts|packages|extensions|expert|knowledge|theory)/|^\.(gitea|github)/' | head -20 | sed 's/^/     - /'
+                exit 1
+              fi
+            fi
+            exit 0
+          fi
+          echo "::error::增量测试失败 —— 只跑了本次改动相关的测试；若确认是既有 flaky，请在本作业日志里点名具体用例"
+          exit 1
