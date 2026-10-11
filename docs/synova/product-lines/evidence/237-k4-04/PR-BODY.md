@@ -17,7 +17,7 @@
 | `tests/store/schema-migration.test.ts`・`tests/store/migrations/003-orgs.test.ts`・`tests/store/metric-readings-schema.test.ts`（改） | `SCHEMA_VERSION` 4→5 **逐条改 3 处**；🔴 `003-orgs.test.ts:39`（003 自己的 `version=4` 元数据断言）**逐字未动** |
 | `docs/synova/product-lines/evidence/issue1455-graph-triples-canonical-20261009.md`（新） | 捡回的证据件（433 行） |
 | `docs/synova/product-lines/evidence/237-k4-04/**`（新） | 判据原始输出、收尾三件（`README.md`）、CI 日志、Done⑤ 脚本/输出、Z8 提案（`PROPOSAL-skill-tool-discipline.md`） |
-| `docs/synova/product-lines/evidence/k4-04-verify-review-20261011.md`（新） | **独立复核件 v1.8**（逐字节搬运，实施员不编辑一字；`git rev-parse HEAD:<path>` = `c1313b22b7efb56dff861519ed78b9103c91dc43`） |
+| `docs/synova/product-lines/evidence/k4-04-verify-review-20261011.md`（新） | **独立复核件 v1.8（后升 v1.9）**（逐字节搬运，实施员不编辑一字；`git rev-parse HEAD:<path>` = `c1313b22b7efb56dff861519ed78b9103c91dc43`） |
 | `.claude/claims/237.yaml`（新） | 认领件（`writeset` + `done:` 三条 `verify:`） |
 
 ## (b) Done ①②③⑤ 逐条勾选 + 判据原始输出
@@ -219,7 +219,7 @@ $ git diff --name-only $(git merge-base origin/local-main HEAD)..HEAD -- tests/s
 ## 独立复核四项结论（M6 回写 · 原文照贴）
 
 > **增量复核**：head `cd1a34a8a9d09edddf8af5ed3ebe83009cafeff0`（见复核件 **§16**，v1.9，blob `625c44c8bc4ed82e33cd7858b6594251bfd29c7b`）；本节的四项结论对象为前序 head `09240a496…`。
-**复核员**：`独立复核员 k4-04-verify` ｜ **复核件**：`docs/synova/product-lines/evidence/k4-04-verify-review-20261011.md`（**v1.8**）｜ **对象**：新 head `09240a496935900fdf902f25d5c5c4dcb8229cca`，base `68bf5759878a458b5e5ceb324a32878660155517`
+**复核员**：`独立复核员 k4-04-verify` ｜ **复核件**：`docs/synova/product-lines/evidence/k4-04-verify-review-20261011.md`（**v1.8 → v1.9**，见本节 L220）｜ **对象**：新 head `09240a496935900fdf902f25d5c5c4dcb8229cca`，base `68bf5759878a458b5e5ceb324a32878660155517`
 
 **复核员结论原文**：
 > **`自验结论`：新 head `09240a496` 上全部可执行判据（C1/C2/C3/C4/C5′/C6/C7/C8/C9 ＋ D8）均通过复核员独立重跑，未发现与判据冲突之处 ⇒ `可提请独立审计`。** ⚠️ **"通过与否"归 CTO 收件闸 ＋ K3 终审**；本条不含审计结论，也不替代三项 CTO 决策。
@@ -228,12 +228,14 @@ $ git diff --name-only $(git merge-base origin/local-main HEAD)..HEAD -- tests/s
 
 | 对象 | 读数（现测） |
 |---|---|
-| 源 `D:\synova-wt-1455-verify\docs\synova\product-lines\evidence\k4-04-verify-review-20261011.md` | **69928 B / sha256 `A70372221E0ED25C258590982A240DA5693D02F3E3F375FBBD923A48497E36EF` / 654 个 `0x0A` / LF（CRLF=0）/ UTF-8 无 BOM** |
-| 目 本 PR 同相对路径 | `git rev-parse HEAD:…k4-04-verify-review-20261011.md` ⇒ **`c1313b22b7efb56dff861519ed78b9103c91dc43`** |
+| 源 `D:\synova-wt-1455-verify\docs\synova\product-lines\evidence\k4-04-verify-review-20261011.md`（**v1.8 时点**） | **69928 B / sha256 `A70372221E0ED25C258590982A240DA5693D02F3E3F375FBBD923A48497E36EF` / 654 个 `0x0A` / LF（CRLF=0）/ UTF-8 无 BOM** |
+| 目 本 PR 同相对路径（**该读数为对象 `4ae424e51…` 时点**） | `git rev-parse 4ae424e51:…k4-04-verify-review-20261011.md` ⇒ **`c1313b22b7efb56dff861519ed78b9103c91dc43`**（**当前 HEAD 见 L220 / §16**） |
 
 `bytes_eq=true / sha_eq=true`；实施员 `git hash-object -t blob` 自出数 = **`c1313b22…`** = 队长给出的 blob sha（⇒ clean 过滤器不改动，raw == filtered）。
 
-**版本更替留痕（不许沉默）**：`v1.7 / 68611 B / 652 行`（队长首报）→ 复核员就地更新（同标 v1.7，一度为 `70493 B / 656 行`）→ **`v1.8 / 69928 B / 654 行`**（复核员收编纪律第 10 条后，按 C9 口径**自出数**）。**本 PR 以 v1.8 为准**；前两版读数已作废，仅留痕。
+**版本更替留痕（不许沉默；每版注明【测量者】与【时点】）**：
+`v1.7 / 68611 B / 652 行`（**复核员自出数**）→ 中间态 `70493 B / 656 行`（**实施员中途实测**；同一时期复核员自报的中间态为 `69840 B / 654 行` —— 二者是**不同时点的不同磁盘态**，非同一读数）→ `v1.8 / 69928 B / 654 行`（**复核员**收编纪律第 10 条后按 C9 口径自出数）→ **`v1.9 / 77382 B / 708 个 `0x0A` / blob `625c44c8bc4ed82e33cd7858b6594251bfd29c7b`**（**复核员**，纪律第 11–13 条登记后；**708 为队长实测**）。
+🔴 **本 PR 以最新版为准（当前 = v1.9 / `625c44c8…`）**；v1.8 及更早读数已作废，仅留痕。
 
 ### a) 与实测不一致处（新 head）
 1. **"捡回源"是旧树本地分支，不在 Gitea 远端**：**受控对照**证明方法有效（已知对象 blob API **HTTP 200 / 8534 B**；左对象 **HTTP 400**）；`git fetch <sha>` 与按 ref 取均失败 ⇒ 源分支从未推送。**复核员最终从只读旧仓字节级取到左对象并自证 sha** ⇒ **可核**，但正文/claims 应写清"源 = 旧树本地分支"，勿暗示远端可达。
