@@ -21,8 +21,4 @@ done:
   - verify: test "$(git grep -lE 'catch[[:space:]]*\(\([[:space:]]*\)[[:space:]]*=>[[:space:]]*\{[[:space:]]*\}' HEAD -- src/tui-v2 | wc -l | tr -d ' ')" -eq 0
   # V1b 口径 B（src/，文件数口径；口径 B 模式不命中 routes/chat.ts:80 注释）—— 修复后必须 0
   - verify: test "$(git grep -lE 'catch[[:space:]]*(\([^)]*\))?[[:space:]]*\{[[:space:]]*\}' HEAD -- src | wc -l | tr -d ' ')" -eq 0
-note: >
-  #1348 0-7 同型残口：:237/:242/:418（口径 A）+ :260（口径 B，CTO 2026-10-08 裁定并入）四处静默空吞
-  → log.warn/error + 界面提示（addSystemMessage/addAlertMessage）+ :418 复位 :420 假进度「Phase 1: 数据采集中...」。
-  只改调用点；被调方（update-checker / deepseek-balance / conversation-engine / diagnosis-launcher）未改。
-  V3（真实生产入口 PTY）受阻：本机 Node 24 + better-sqlite3 12.11.1 原生断言（未打补丁的生产入口亦复现），证据见交付正文。
+note: "#1348 0-7 同型残口：:237/:242/:418（口径 A）+ :260（口径 B，CTO 2026-10-08 裁定并入）四处静默空吞 → log.warn/error + 界面提示（addSystemMessage/addAlertMessage）+ :418 复位 :420 假进度「Phase 1: 数据采集中...」。只改调用点；被调方（update-checker / deepseek-balance / conversation-engine / diagnosis-launcher）未改。V3（真实生产入口 PTY）受阻：本机 Node 24 + better-sqlite3 12.11.1 原生断言（未打补丁的生产入口亦复现），证据见交付正文。"
