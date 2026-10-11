@@ -229,7 +229,7 @@ $ git diff --name-only $(git merge-base origin/local-main HEAD)..HEAD -- tests/s
 | 对象 | 读数（现测） |
 |---|---|
 | 源 `D:\synova-wt-1455-verify\docs\synova\product-lines\evidence\k4-04-verify-review-20261011.md`（**v1.8 时点**） | **69928 B / sha256 `A70372221E0ED25C258590982A240DA5693D02F3E3F375FBBD923A48497E36EF` / 654 个 `0x0A` / LF（CRLF=0）/ UTF-8 无 BOM** |
-| 目 本 PR 同相对路径（**该读数为对象 `4ae424e51…` 时点**） | `git rev-parse 4ae424e51:…k4-04-verify-review-20261011.md` ⇒ **`c1313b22b7efb56dff861519ed78b9103c91dc43`**（**当前 HEAD 见 L220 / §16**） |
+| 目 本 PR 同相对路径（**该读数为对象 `4ae424e51…` 时点**） | `git rev-parse 4ae424e51:…k4-04-verify-review-20261011.md` ⇒ **`c1313b22b7efb56dff861519ed78b9103c91dc43`**（**当前 HEAD 见 L221 / §16**） |
 
 `bytes_eq=true / sha_eq=true`；实施员 `git hash-object -t blob` 自出数 = **`c1313b22…`** = 队长给出的 blob sha（⇒ clean 过滤器不改动，raw == filtered）。
 
