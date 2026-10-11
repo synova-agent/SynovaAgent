@@ -7,7 +7,9 @@
  *   · V3 落账：一次产出＋复核 ⇒ 台账**一行**，含**五要素**（谁/岗位/什么上下文/产出什么/哪版预设）
  *   · V4 禁静默修改：人工修正**必须结构化落账**（反例：静默改正 ⇒ **必红**）
  *   · V5 回流：不合格记录 ⇒ 成为预设包**再生成输入**（跑一轮后预设包版本 **+1**）
- *   · V6 反例：摘掉 `conversation-engine` 的调用 ⇒ V3 **必红**
+ *   · V6 反例（**措辞已更正**，创始人 2026-10-11）：摘掉**装配层的 `onDecision` 注入** ⇒ V3 **必红**
+ *     （原措辞「摘掉 conversation-engine 的调用」在 EC-03 下已无可摘 —— `conversation-engine.ts:30/482`
+ *      之后那里只有 `import type` ＋ 接缝，没有直接 L4 调用）
  *
  * 级别说明（判例 V-01 禁把 L1 报成 L2）:
  *   · V2 的 grep 反证 = [L1-静态可达]（只证"物理上只有一处写台账的字样"）
@@ -22,9 +24,13 @@ import {
   DECISION_LEDGER_SCHEMA,
   type DecisionLedgerRow,
   type DecisionLedgerOptions,
-  type DecisionResult,
 } from '../../src/l4/decision-capture';
 import { ConversationEngine } from '../../src/agent/conversation-engine';
+import { createDecisionCapturePort } from '../../src/deploy/bootstrap';
+import {
+  setDecisionCapturePort,
+  getDecisionCapturePort,
+} from '../../src/routes/conversations';
 import type { LLMProvider, ChatResult, StreamCallback } from '../../src/providers/types';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -349,24 +355,47 @@ describe('V5 回流 — 不合格记录 ⇒ 预设包再生成输入', () => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// V6 · 反例（硬要求）：摘掉 conversation-engine 的调用 ⇒ V3 必红
+// V6 · 反例（硬要求）：摘掉**装配层的 onDecision 注入** ⇒ V3 必红
+//
+// 🔴 措辞更正（创始人 2026-10-11 自认原卡面写错）:
+//   原措辞「摘掉 **conversation-engine** 的调用」在 EC-03 下**早已没有直接 L4 调用**可摘
+//   （`conversation-engine.ts:30/482` 之后那里只有 import type ＋ 接缝）。
+//   新措辞 = 「摘掉**装配层的 `onDecision` 注入** ⇒ V3 必红」。
 // ══════════════════════════════════════════════════════════════════════════════
 
-describe('V6 conversation-engine 接缝 — 摘掉调用 ⇒ V3 必红', () => {
+describe('V6 装配层 onDecision 注入 — 摘掉注入 ⇒ V3 必红', () => {
   const decision = {
     nodeId: 'rc-1', userId: 'u-1', action: 'confirmed' as const,
     output: { kind: 'report', ref: 'report-engine', digest: 'd1' },
     presetVersion: 4, review: { verdict: 'pass' as const },
   };
 
-  it('Given 接缝已装配（onDecision → 单一入口）, When engine.recordDecision, Then 台账真被写一行（V3 经生产接缝成立）', async () => {
+  it('V6-a [L2] Given 装配层构造的注入口（真图存储）, When 经它落账, Then 台账真被写一行，且**不是配置的转述**', async () => {
     const edges: Edge[] = [];
-    const store = makeStore(edges);
-    const engine = new ConversationEngine(fakeProvider(), {
-      orgId: 'org-9',
-      fallbackProvider: null,
-      onDecision: async (d): Promise<DecisionResult> => captureDecision(store, 'org-9', d),
-    });
+    const port = createDecisionCapturePort(makeStore(edges), 'default');
+    expect(port).toBeDefined();
+
+    // 驱动面：真调用捕获到的图谱存储原语，不是"字段存在"
+    const handler = port!('org-9');
+    const result = await handler(decision);
+
+    expect(result.recorded).toBe(true);
+    expect(edges).toHaveLength(1);
+    expect(edges[0].graph).toBe('org-9');                 // graph 形参真传到图存储
+    expect(rowOf(edges[0]).output.ref).toBe('report-engine');
+    // options 未注入 ⇒ 显式降级可见（不假装接上跨进程回读/预设包再生成）:
+    // 该产出此前无台账行 ⇒ priorSource='none'（"看不见"不当"没发生" —— captureDecision 三态语义）
+    expect(result.priorSource).toBe('none');
+    expect(result.reflowed).toBeUndefined();
+  });
+
+  it('V6-b [L2] Given 装配层把注入口下放到引擎, When engine.recordDecision, Then 台账真被写一行（V3 经装配层注入成立）', async () => {
+    const edges: Edge[] = [];
+    const engine = new ConversationEngine(fakeProvider(), { orgId: 'org-9', fallbackProvider: null });
+    // ↓ 这两行就是"装配层的注入"（`server.ts` 下放 → `conversations.ts` wireDecisionCapture 同款调用）
+    const port = createDecisionCapturePort(makeStore(edges), 'org-9');
+    expect(port).toBeDefined();
+    engine.setDecisionCapture(port!('org-9'));
 
     const result = await engine.recordDecision(decision);
 
@@ -375,15 +404,30 @@ describe('V6 conversation-engine 接缝 — 摘掉调用 ⇒ V3 必红', () => {
     expect(rowOf(edges[0]).output.ref).toBe('report-engine');
   });
 
-  it('反例③（摘掉调用 ⇒ V3 必红）：Given 接缝未装配, When engine.recordDecision, Then 零写入且显式失败', async () => {
+  it('反例③（新措辞：摘掉**装配层注入** ⇒ V3 必红）：Given 未注入装配层回调, When engine.recordDecision, Then 零写入且显式失败', async () => {
     const edges: Edge[] = [];
     const engine = new ConversationEngine(fakeProvider(), { orgId: 'org-9', fallbackProvider: null });
+    // ← 装配层注入被摘掉：不调 setDecisionCapture
 
     const result = await engine.recordDecision(decision);
 
     expect(edges).toHaveLength(0);                       // ← 台账一行也没有（V3 必红）
     expect(result.recorded).toBe(false);
     expect(result.error).toBeDefined();
+  });
+
+  it('V6-c [L1] Given 图存储缺席（Phase 1c 降级）, When 装配, Then 不构造注入口（降级不静默，铁律 24/31）', () => {
+    // 缺席 ⇒ undefined（启动不阻断），调用方据此不注入 ⇒ 引擎回落既有显式失败
+    expect(createDecisionCapturePort(undefined, 'default')).toBeUndefined();
+    // 形状不符（只有一半原语）⇒ 同样不构造，绝不吞掉后假装接上
+    expect(createDecisionCapturePort({ queryNodes: () => [] }, 'default')).toBeUndefined();
+  });
+
+  it('V6-d [L1] Given 装配层下放注入口, When 读取, Then L1 侧真拿到它（证"下放了"而非"字段存在"）', () => {
+    const edges: Edge[] = [];
+    const port = createDecisionCapturePort(makeStore(edges), 'default')!;
+    setDecisionCapturePort(port);
+    expect(getDecisionCapturePort()).toBe(port);
   });
 });
 

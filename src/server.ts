@@ -43,7 +43,7 @@ import ontologyAdminRoutes from './routes/ontology-admin';
 import diagnosisRoutes from './routes/diagnosis';
 import configRoutes from './routes/config'; // D600 — GET /api/config/dump 客户配置检查表面（--dump-config）
 import sessionsRoutes from './routes/sessions';
-import conversationsRoutes from './routes/conversations'; // D590 — 对话 SSE 端点（ConversationEngine × HTTP 接线）
+import conversationsRoutes, { setDecisionCapturePort } from './routes/conversations'; // D590 — 对话 SSE 端点（ConversationEngine × HTTP 接线）
 import metricsRoutes from './monitoring/routes';
 import reviewRoutes from './routes/review';
 import expertRoutes from './routes/expert';
@@ -336,6 +336,17 @@ export async function createServer(): Promise<Server> {
   app.locals.sessionStore = services.sessionStore;
   app.locals.orchestration = { eventBus, hookRunner, sessionManager, stateMachine, wiring, db, eventStore: services.eventStore };
   app.locals.federalAdapter = federalAdapter;
+  // K12-08(#191) V1/V6: 决策台账装配口下放 —— Bootstrap 用 Phase 1c 真图存储实例构造的回调工厂。
+  // 注入的是**回调工厂**（不是 store）：会话级 ConversationEngine 在构造/恢复时经
+  // `setDecisionCapture` 接到 EngineConfig.onDecision 接缝（EC-03: L2 只依赖 L4 类型，不持 L4 运行时实例）。
+  // 图存储缺席（Phase 1c 降级）⇒ Bootstrap 侧已 log.warn 且不构造 ⇒ 此处不下放
+  // ⇒ 引擎回落既有 `recordDecision` 显式失败（降级不静默，铁律 24/31）。
+  if (services.decisionCapture) {
+    app.locals.decisionCapture = services.decisionCapture;
+    setDecisionCapturePort(services.decisionCapture);
+  } else {
+    logger.warn('K12-08: decisionCapture 未装配（图存储缺席）— 决策台账在生产路径不落账');
+  }
   if (connectorToolRegistry) app.locals.connectorToolRegistry = connectorToolRegistry;
   if (credentialVault) app.locals.credentialVault = credentialVault;
   if (credentialPool) app.locals.credentialPool = credentialPool;
