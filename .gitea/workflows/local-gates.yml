@@ -45,7 +45,7 @@ jobs:
         run: |
           cd /Users/wane/.ci-work/SynovaAgent
           # CTO 2026-10-11：增量基线改用 local-main（与 D734 check-pr-budget.sh 同口径）——
-          #   origin/main = GitHub 旧 main（停 05a6591c4），拿它当基线会把 local-main 全部
+          #   origin/main = GitHub 旧 main（停 5a6591c4），拿它当基线会把 local-main 全部
           #   diverge 提交的存量红算进本 PR（实测 141 tests failed，与本 PR 改动零相关）。
           #   优先 origin/local-main（CI 内 origin=本机 Gitea，必存在），不存在时回退 origin/main。
           #   只改基线，不改测试判据/门禁组数。
