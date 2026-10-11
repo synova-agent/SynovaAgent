@@ -218,6 +218,7 @@ $ git diff --name-only $(git merge-base origin/local-main HEAD)..HEAD -- tests/s
 
 ## 独立复核四项结论（M6 回写 · 原文照贴）
 
+> **增量复核**：head `cd1a34a8a9d09edddf8af5ed3ebe83009cafeff0`（见复核件 **§16**，v1.9，blob `625c44c8bc4ed82e33cd7858b6594251bfd29c7b`）；本节的四项结论对象为前序 head `09240a496…`。
 **复核员**：`独立复核员 k4-04-verify` ｜ **复核件**：`docs/synova/product-lines/evidence/k4-04-verify-review-20261011.md`（**v1.8**）｜ **对象**：新 head `09240a496935900fdf902f25d5c5c4dcb8229cca`，base `68bf5759878a458b5e5ceb324a32878660155517`
 
 **复核员结论原文**：

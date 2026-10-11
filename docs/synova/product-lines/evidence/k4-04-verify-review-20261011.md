@@ -3,7 +3,7 @@
 > **任务**：Gitea #237 → K4-04
 > **复核员**：独立复核员 `k4-04-verify`（独立于实施员；**未进入实施员工作树**）
 > **基线**：`local-main` @ `68bf5759878a458b5e5ceb324a32878660155517`（**CTO v2 §1 正式采纳**；原钉死值 `07b28dfe2` 已废弃 —— 它是当前 tip 的干净祖先，换过去=倒退）
-> **日期**：2026-10-11 ｜ **版本**：**v1.8** —— 交付物**已到手并复核两轮**：§9.2（旧 head `8d9963431`，**已标注失效**）；**§15（新 head `09240a496`）= 当前有效结论**（含 C1–C9 + D8 判定表、D10 独立反证检查、Z8 提案交叉核、四层 a/b/c/d）。v1.1 §12 仪器校准；v1.2 §13 纪律清单；v1.3 证伪登记；v1.4 判据集按 CTO v2 更新；v1.5 `-shm` 裁定入账；v1.7 §14.3 补 `immutable=1` 不可用约束 + §15 全文；**v1.8 §13 收编纪律第 10 条（替换/锚点类操作必须先证命中）⇒ 现为「10 条亲测 + 1 条转述」**
+> **日期**：2026-10-11 ｜ **版本**：**v1.9** —— 交付物复核**三轮**：§9.2（head `8d9963431`，已失效）｜§15（head `09240a496`，**正文类结论已被 §16 取代**）｜**§16（head `cd1a34a8a`）= 当前有效结论**（CTO v4 增量：D8 / C5′ / (h) / (i) / (j) 逐项判定 + (j) 七行出处逐条现测 + §16.3 口径留档）。v1.1 §12 仪器校准；v1.2 §13 纪律清单（**10 条亲测 + 1 条转述**）；v1.3 证伪登记；v1.4 判据集按 CTO v2 更新；v1.5 `-shm` 裁定入账；v1.7 §14.3 补 `immutable=1` 不可用约束 + §15 全文；v1.8 §13 收编第 10 条
 > **性质**：本件是**独立复核**，不是审计结论。**不含"通过/不通过"判定**（通过与否归 CTO 收件闸 ＋ K3 终审）。
 > **更新约定**：§9 四项结论中"对交付物"的部分，待交付物到手后按**同一格式逐条附原始输出**补齐；补齐前不得当作已复核。
 
@@ -651,4 +651,58 @@ sha256(D:\novis-backup-20260526\Novis\synova-agent\data\synova.db)
 
 ---
 
-*本件 v1.8 由独立复核员 `k4-04-verify` 撰写。内容不得由实施员编辑；实施员仅承担搬运与提交。*
+## 16. v3 增量复核 —— 新 head `cd1a34a8a`（v1.8 之后的 CTO v4 正文增量）
+
+**对象（C9 口径）**：base `68bf57598…`｜**head `cd1a34a8a9d09edddf8af5ed3ebe83009cafeff0`**｜前序 head `09240a496…`（= 其**祖先**，`--is-ancestor` exit=0 ⇒ 无重写）｜正文 **18150 chars** @ `updated_at 2026-10-11T21:36:03+08:00`。
+⚠️ **§15 / §9.2 的"正文类"结论绑定前序 head，已被本节取代**；代码类判据（C1–C4 / C6–C9 / D8）仍成立（本增量未触碰 `004` 与 `schema-migration.ts`）。
+
+**增量面（v2 head → v4 head，`git diff --name-status` 实测）**
+```
+M docs/synova/product-lines/evidence/237-k4-04/PR-BODY.md
+M docs/synova/product-lines/evidence/237-k4-04/PROPOSAL-skill-tool-discipline.md
+M docs/synova/product-lines/evidence/237-k4-04/README.md
+A docs/synova/product-lines/evidence/k4-04-verify-review-20261011.md    ← 本件（逐字搬运）
+```
+
+### 16.1 逐项判定（全部独立重跑）
+| 项 | 结果 | 关键读数 |
+|---|---|---|
+| **D8（31 文件）** | ✅ 不越界 | `src/adapters/` = **0**、`scripts/audit/` = **0**、`scripts/control-tower/` = **0**；增量仅本件 |
+| **本件逐字搬运** | ✅ **未被编辑** | 工作树 blob = `c1313b22b7efb56dff861519ed78b9103c91dc43` = 交接值；`git status` **无 ` M`**。（raw sha256 与我的 LF 副本不同 = `core.autocrlf` 检出为 CRLF，**非编辑**） |
+| **C5′（v4 新字面串）** | ✅ PASS | 正文含 `## (c) C5′ — Done④ 未交付` ＋ `**Done④ 未交付 ⇒ 已拆卡 #345**`；**旧串 `卡号待 CTO 补登` 命中 = 0**（已按 v4 作废） |
+| **(h) 红件"应含且仅含两件"** | ✅ 成立 | 日志 error 注解 = `stream-tool-loop` ×1 ＋ `chat-degradation` ×6；**第三处 `tests/architecture/graphstore-compatibility.test.ts` 仅出现在门禁建议行**（`⚠ … 运行: npx vitest run …`）**而非失败** |
+| **(h) 证据①（现测，我方出数）** | ✅ | `diff --name-only merge-base..HEAD -- tests/tui-v2/` ⇒ **命中 0**；`-- tests/stream-tool-loop.test.ts` ⇒ **命中 0** |
+| **(h) 证据②** | ✅ | 红件 1：实施员 `git archive` 基线 ＋ **我方完整 checkout** 双证据；红件 2：本地两态皆绿 ＋ CI verbatim —— **我另核到两个 run 的两段不同真 LLM 回复**（319：`收到你的"测试错误"——我这边运作正常…`；328：`收到"测试错误"——但我需要确认你的意思，因为有两种可能…`）⇒ **活 LLM 非确定性坐实**（不同 run 回复不同） |
+| **(i) 存量卡号真实性** | ✅ | Gitea API 实测：**#347** `state=open`，标题＝存量红（与 K4 批无关，react19×ink5.2.1 reconciler）✓；**#345** `state=open`，标题＝Done④ 拆卡（与 `queryNodes` 同款 D355 口径）✓ —— 与 C5′ 所称吻合 |
+| **(i) 合规声明** | ✅ **文本级成立** | 正文中 `check-file-driven.sh` 出现 **1 次**，且**就是"未引用"声明本身**；全正文**无**任何 `事后复跑` 类读数引用 |
+| **(j) 断言出处 7 行** | ✅ **7/7 逐条成立** | 见 §16.2（每条 `it(` 名与断言行**均实存且语义相符**） |
+| **(j) helper 语义** | ✅ | `edgeCount` = 裸 `SELECT COUNT(*) FROM graph_triples`；`rawProps` = 裸 `SELECT props FROM graph_triples WHERE id = ?`（**确不经读路径**）⇒ 支撑"行数不丢"与"落库面"实义 |
+
+### 16.2 (j) 七行出处 —— 复核员**逐条现测**（非抽检；结论：无一条错）
+| (j) 所载 `file:line` | 现测内容（摘） | 判定 |
+|---|---|---|
+| `004-…test.ts:101` / `:109` / `:114` / `:115` | `it('2 行真数据：行数不丢、props_json → props 回填、id CAST 为 TEXT'` ／ `expect(edgeCount(db)).toBe(2);` ／ `toEqual({ action_effect_lag: '3-6_months' })` ／ `toEqual({ share: 7 })` | ✅ 相符 |
+| `:127` / `:137` / `:138` / `:139` | `it('props_json 为 NULL / 空串的行回填默认 {}，有值行保留原值'` ／ `toBe('{}')` ×2 ／ `JSON.parse(rows[2].props)).toEqual({ share: 7 })` | ✅ 相符 |
+| `:154` / `:165` / `:167` | `it('幂等：连跑两次 ⇒ 第二次 no-op（列/索引/行数/值都不变）'` ／ `toBe(1)` ／ `toEqual({ action_effect_lag: '3-6_months' })` | ✅ 相符 |
+| `:186` / `:194` / `:197` | `it('中间态（id 仍 INTEGER 但已被补过 props 列）⇒ 仍重建…'` ／ `…find(c => c.name === 'id')?.type).toBe('TEXT')` ／ `toEqual({ share: 7 })` | ✅ 相符 |
+| `:251` / `:260` / `:263` / `:264` | `it('【L2 真路径·读面】真机形态库 → new SqliteGraphStore → queryEdges() 读回 2 条且 props 可解析'` ／ `toHaveLength(2)` ／ `byFrom.get('c1')` / `('c2')` 值 | ✅ 相符 |
+| `legacy-schema.test.ts:104` / `:113` / `:116` / `:117` | `it('① queryEdges() 读回旧边 2 条，且 props 由 props_json 迁入、端点映射正确'` ／ `toHaveLength(2)` ／ `c1`/`c2` 值 | ✅ 相符 |
+| `legacy-schema.test.ts:133` / `:145` / `:150` / `:152` | `it('① createEdge() 成功：返回 edge- 前缀 id、props 正确落库、queryEdges 计数 +1'` ／ `store.queryEdges()).toHaveLength(2)` ／ `fresh?.props).toEqual({ k: 'v' })` ／ `JSON.parse(rawProps(db, created))).toEqual({ k: 'v' })` | ✅ 相符 |
+
+⇒ **(j) 成立**（七行出处**无一条不实**；两条 helper 亦为裸 SQL，非"读路径自证"）。
+
+### 16.3 🔴 留档（队长 §3 要求）：**v4 §一.1(a) 的字面口径对 `stream-tool-loop` 不可满足**
+- **字面口径**：「红件双证据 = **不在写集** ∧ **在零本卡改动的基线上同样红**」。
+- **实测冲突**：`stream-tool-loop` **本地两态（HEAD 与零改动基线）皆 6/6 绿**（我方完整 checkout 实测；实施员 `git archive` 同向）⇒ **"基线上同样红"没有可测对象** ⇒ **字面口径对本件恒不可满足**。
+- ⇒ 现正文采**分两类**口径（类 1 本地可复现存量红＝`chat-degradation`；类 2 CI-only 环境依赖＝`stream-tool-loop`，以 **本地两态皆绿 + CI verbatim 归因** 替代）。**若 CTO 回"坚持字面"，则本卡 D10 恒不可达** —— 本条必须留档。
+
+### 16.4 四项结论（**v4 head 增量版**；与 §15.6 同体，仅更新绑定对象）
+- **a) 与实测不一致处**：**本增量未引入新的不一致**（v2 的 a.1–a.4 仍适用）；补充两条**精确化已落地**：口径已改为「**净 +1 行（2 删 3 增）**」与「**只读旧仓本地分支 / 禁暗示远端可达**」（`4ae424e51` 已改，实测 `PROPOSAL`/`README`/`PR-BODY` 三件均被修改）。
+- **b) 无法核实处**：① **§16.3 的口径不可满足**（须 CTO 定甲/乙，**留档**）；② `immutable=1` 不可用系实施员实测（我方未亲测）；③ `stream-tool-loop` 本地为何不收到真 LLM 回复未测（只测到两端）。
+- **c) 跑不通处**：**本增量无新增**（v2 的 c.1–c.4 仍适用）。
+- **d) 能否据此独立开工 / 决策**：增量判据 **D8 / C5′ / (h) / (i) / (j) 全过**；结论同 §15.6-4，**绑定对象更新为 `cd1a34a8a`**：**`自验结论`：本 head 上全部可执行判据通过复核员独立重跑 ⇒ `可提请独立审计`**（通过与否归 CTO 收件闸 ＋ K3 终审）。
+- ⚠️ **回写同步提示**：PR 正文里的「独立复核四项结论」节绑定的对象是**前序 head `09240a496`**；本增量结论见本节 ⇒ **若 CTO 要求正文与复核件同步，需再回写一次（对象 + sha + 时点）**。
+
+---
+
+*本件 v1.9 由独立复核员 `k4-04-verify` 撰写。内容不得由实施员编辑；实施员仅承担搬运与提交。*
