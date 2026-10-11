@@ -372,6 +372,22 @@ const CONTENT_TYPES: readonly ContentTypeEntry[] = [
       '无内容可接 ⇒ 显式化为 retired（工具注册的真实通道是 MCP/工具注册表，不在此目录）。',
   },
   {
+    // 🔴 K12-01（#184）**段一登记** —— 内容面先落，宿主 loader/接线（段二）待 CTO 裁定。
+    //    段一实交付 = extensions/presets/manifest.json ＋ extensions/presets/roles/{finance,hr,sales}/ 五件套。
+    //    本表**只登记 dir**：不写 MODULE_IMPORTS、不设 reachable、不建 loader ——
+    //    与上方 llm-provider 条目同一处置纪律（**登记 ≠ 接活**），段二未裁前不接进 boot 装配面。
+    //    为什么段一必须登记：tests/deploy/content-registry.test.ts 断言
+    //    「注册表 dir 集 ↔ extensions/ 顶层目录集**双向相等**」⇒ 建了目录不登记，该测试必红。
+    //    反过来说，本项 status=pending-cto ⇒ 探针 probe-role-pack 的 L2 断言（registryHasType
+    //    ＋ attempted>=1 ＋ rowOk）**仍然红**，这正是段二未落的诚实信号，不得为让它绿而降级判据。
+    type: 'presets',
+    dir: 'presets',
+    face: 'content',
+    status: 'pending-cto',
+    reason:
+      'K12-01 角色预设包内容载体；段一仅落内容面，宿主 loader/接线待 CTO 裁定后由段二补',
+  },
+  {
     // K12-02（#185）：建档内容包＝L0/L1 采集方法的内容载体（extensions/onboarding/）。
     // ⇒ **纯内容包，本卡不接线**：无 loader、无生产直读者 ⇒ 按 §3.2 口径不得记 reachable
     //   （reachable 要求 loader 或 readers 二者之一，判据测试 :72 与表自检同源）。
@@ -496,8 +512,8 @@ function collectIntegrityProblems(): string[] {
       }
     }
   }
-  if (CONTENT_TYPES.length !== 22) {
-    problems.push(`CONTENT_TYPES 应为 22 项，实测 ${CONTENT_TYPES.length}`);
+  if (CONTENT_TYPES.length !== 23) {
+    problems.push(`CONTENT_TYPES 应为 23 项，实测 ${CONTENT_TYPES.length}`);
   }
   return problems;
 }

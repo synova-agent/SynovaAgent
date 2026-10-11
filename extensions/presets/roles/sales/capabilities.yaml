@@ -1,0 +1,16 @@
+# sales/capabilities.yaml — 常用能力
+roleId: sales
+version: 1.0.0
+capabilities:
+  - id: capability.revenue-health
+    label: 收入健康度
+    tool: analysis.revenue-health
+    enabled: true
+  - id: capability.customer-growth
+    label: 客户增长诊断
+    tool: analysis.customer-growth
+    enabled: true
+  - id: capability.commission-edit
+    label: 修改提成方案
+    enabled: false
+    disabledReason: 提成方案属制度层，须走人工审批（fail-closed）；岗位包不自动开通

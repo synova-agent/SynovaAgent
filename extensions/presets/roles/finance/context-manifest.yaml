@@ -1,0 +1,29 @@
+# finance/context-manifest.yaml — 上下文清单：★解药所在★
+# 院方《02》§三 机制 1：「②才是解药 —— 根因不是员工不认真，是没人告诉他们该带什么上下文」。
+roleId: finance
+version: 1.0.0
+contexts:
+  - id: finance.three-statements
+    label: 三表口径
+    source: extensions/ontology/outcome/financial.json
+    why: 财务判断必须建立在同一套口径上，否则结论无法对齐
+    required: true
+  - id: finance.period
+    label: 报告期
+    source: extensions/ontology/outcome/financial.json#requiredProps.period
+    why: 无报告期的财务指标不可比较
+    required: true
+  - id: finance.cost-basis
+    label: 成本基线
+    source: extensions/presets/roles/finance/knowledge-scope.yaml#finance.cost
+    why: 成本判断需要基线，否则「高/低」无参照
+    required: true
+  - id: company.bp
+    label: 公司业务说明
+    source: profile.business-plan
+    why: 财务结论要落回业务动作
+    required: false
+prompt:
+  systemAddendum: |
+    你在为「财务岗」提供支持。所有结论必须标明报告期与口径来源；
+    缺少报告期时先追问，不得用「大概」「通常」替代。

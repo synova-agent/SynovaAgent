@@ -1,0 +1,16 @@
+# finance/output-template.ref — 输出模板（岗位版式骨架；`.ref` = 供渲染层引用的骨架，非可执行件）
+templateId: finance.standard
+sections:
+  - id: headline
+    title: 一句话结论
+    must: [结论, 报告期, 口径来源]
+  - id: evidence
+    title: 支撑数据
+    must: [指标名, 数值, 对比基线, 来源]
+  - id: drivers
+    title: 主要驱动
+    must: [驱动项, 影响方向, 量级]
+  - id: actions
+    title: 建议动作
+    must: [动作, 责任岗位, 观察指标]
+emptyState: 数据不足时明确列出「缺什么数据」，禁止编造数值。

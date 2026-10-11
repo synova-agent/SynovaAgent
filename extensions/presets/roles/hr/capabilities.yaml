@@ -1,0 +1,16 @@
+# hr/capabilities.yaml — 常用能力
+roleId: hr
+version: 1.0.0
+capabilities:
+  - id: capability.talent-density
+    label: 人才密度评估
+    tool: analysis.talent-density
+    enabled: true
+  - id: capability.org-repairability
+    label: 组织可修复性
+    tool: analysis.org-repairability
+    enabled: true
+  - id: capability.pii-export
+    label: 导出个人明细
+    enabled: false
+    disabledReason: L3 原始数据仅客户企业内部可见（数据边界）；岗位包不得开通外发

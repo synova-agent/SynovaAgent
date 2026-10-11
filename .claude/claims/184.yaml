@@ -1,0 +1,42 @@
+# .claude/claims/184.yaml — #184（K12 第2批 · 组织层）K12-01 角色预设包 **段一** · 写集声明
+# 先例：.claude/claims/1465.yaml / 1047.yaml（claim 优先于 D# 链；K3 R3 防劫持）
+# 纪律：只列本 PR 真正改动的文件，不预授权。
+#
+# 🔴 本 PR = **段一（内容面 ＋ 最小登记）**，不含段二（宿主接线）。
+#   段二（`MODULE_IMPORTS` 闭表 +1 ＋ 新建 loader ＋ 转 reachable）撞 K10/EXT-WIRE #1465
+#   在飞分支 feat/1465-content-registry ⇒ 跨线写集扩张，已上报 CTO，本 PR 不做。
+#   故本表**不含** `src/init/file-driven-loaders.ts`，也不含任何新建 loader 模块。
+#
+# 为什么段一列入 `src/deploy/content-registry.ts` ＋ `tests/deploy/content-registry.test.ts`：
+#   `tests/deploy/content-registry.test.ts:40-43` 断言「注册表 dir 集 ↔ extensions/ 顶层目录集
+#   双向相等」⇒ 建了 `extensions/presets/` 而不登记，该测试必红。
+#   段一只加登记（`dir:'presets'` ＋ `status:'pending-cto'` ＋ `reason`），**不接活**。
+writeset:
+  - .claude/claims/184.yaml
+  - .claude/task-briefs/2026-10-11-184-K12-01-预设包载体与装配-角色预设包五件套.md
+  - extensions/presets/manifest.json
+  - extensions/presets/roles/finance/manifest.json
+  - extensions/presets/roles/finance/knowledge-scope.yaml
+  - extensions/presets/roles/finance/context-manifest.yaml
+  - extensions/presets/roles/finance/output-template.ref
+  - extensions/presets/roles/finance/capabilities.yaml
+  - extensions/presets/roles/finance/acceptance-criteria.yaml
+  - extensions/presets/roles/hr/manifest.json
+  - extensions/presets/roles/hr/knowledge-scope.yaml
+  - extensions/presets/roles/hr/context-manifest.yaml
+  - extensions/presets/roles/hr/output-template.ref
+  - extensions/presets/roles/hr/capabilities.yaml
+  - extensions/presets/roles/hr/acceptance-criteria.yaml
+  - extensions/presets/roles/sales/manifest.json
+  - extensions/presets/roles/sales/knowledge-scope.yaml
+  - extensions/presets/roles/sales/context-manifest.yaml
+  - extensions/presets/roles/sales/output-template.ref
+  - extensions/presets/roles/sales/capabilities.yaml
+  - extensions/presets/roles/sales/acceptance-criteria.yaml
+  - src/deploy/content-registry.ts
+  - tests/deploy/content-registry.test.ts
+  - tests/presets/role-pack.test.ts
+done:
+  - verify: npx vitest run tests/presets/role-pack.test.ts
+  - verify: npx vitest run tests/deploy/content-registry.test.ts
+note: 段一判据绿（role-pack 16/16 EXIT=0；content-registry 18/18 EXIT=0）；改坏即红两跑已留原始输出（改空 context-manifest ⇒ 4 failed；删 sales knowledge-scope ⇒ 6 failed，均当场恢复）。卡面 judge 命令 probe-role-pack --role finance 段一后为 exit 1（8 PASS / 2 FAIL），FAIL 的两条**正是段二**（loader 与 MODULE_IMPORTS），本段**不冒充 exit 0、不降级判据**。落点 B1 按 extensions/presets/（4 条独立证据；登记件 per-card paths[0] 的 docs/synova/presets/ 依据 mac/win 分域，该分域 2026-10-07 已废止）。

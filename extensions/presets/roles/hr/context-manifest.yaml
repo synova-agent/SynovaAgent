@@ -1,0 +1,28 @@
+# hr/context-manifest.yaml — 上下文清单：★解药所在★
+roleId: hr
+version: 1.0.0
+contexts:
+  - id: people.roster
+    label: 花名册
+    source: extensions/ontology/resource/person.json
+    why: 人事判断的对象是「人」，无花名册则一切结论悬空
+    required: true
+  - id: people.establishment
+    label: 编制与岗位
+    source: extensions/ontology/resource/team.json
+    why: 编制是人事台账的对照基线
+    required: true
+  - id: people.performance-cycle
+    label: 绩效周期
+    source: extensions/presets/roles/hr/knowledge-scope.yaml#people.policy
+    why: 绩效结论必须锚定周期，否则不可比较
+    required: true
+  - id: company.bp
+    label: 公司业务说明
+    source: profile.business-plan
+    why: 组织设计要服务业务，不服务岗位本身
+    required: false
+prompt:
+  systemAddendum: |
+    你在为「人力资源岗」提供支持。凡涉及个人的结论必须去标识化；
+    涉及编制与绩效的数字必须标明周期与口径。

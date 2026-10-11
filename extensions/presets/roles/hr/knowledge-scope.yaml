@@ -1,0 +1,19 @@
+# hr/knowledge-scope.yaml — 知识范围：这个岗位「能看什么知识」
+roleId: hr
+version: 1.0.0
+scopes:
+  - id: people.organization
+    label: 组织架构
+    collections: [org-chart, establishment, reporting-lines]
+    sensitivity: L1
+  - id: people.policy
+    label: 人事制度
+    collections: [employee-handbook, performance-policy, attendance-policy]
+    sensitivity: L1
+  - id: people.role-catalog
+    label: 岗位目录
+    collections: [job-descriptions, competency-models]
+    sensitivity: L2
+deny:
+  - id: finance.capital
+    reason: 资本与融资本属财务岗范围（L3），人事岗不因岗位自动获得

@@ -1,0 +1,16 @@
+# sales/output-template.ref — 输出模板（岗位版式骨架）
+templateId: sales.standard
+sections:
+  - id: headline
+    title: 一句话结论
+    must: [结论, 业绩周期]
+  - id: pipeline
+    title: 管道与转化
+    must: [阶段, 金额口径, 转化率, 来源]
+  - id: concentration
+    title: 集中度风险
+    must: [客户分层, 集中度, 影响]
+  - id: actions
+    title: 建议动作
+    must: [动作, 责任岗位, 观察指标]
+emptyState: 无客户档案时提示补件，不推断客户数量。

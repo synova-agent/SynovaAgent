@@ -5,7 +5,7 @@
  * 其余表项为模块私有（铁律 0-2 导出面纪律）。
  *
  * 覆盖（铁律 48: 正常路径 + 降级路径 + 边界条件，均带 expect 断言）:
- *   ① 正常: 20 项全覆盖 × extensions 顶层目录集双向相等 / 状态与分面落在闭合枚举 / 表完整性无问题
+ *   ① 正常: 全项覆盖（K12-01 段一后 = 21）× extensions 顶层目录集双向相等 / 状态与分面落在闭合枚举 / 表完整性无问题
  *   ② 正常: initContentTypes() 真实装配 business-model（本卡「接活」项），init+verify 真被执行
  *   ③ 降级: 注入模块返回 errors[] / degraded:true ⇒ report.warnings 非空且 degraded=true
  *   ④ 降级: 注入模块抛错 ⇒ 该项 ok=false 且其余项不受影响（失败隔离）
@@ -36,11 +36,11 @@ function extensionDirsOnDisk(): string[] {
     .sort();
 }
 
-describe('#1465 content-registry — V1 20/20 项有明确状态', () => {
+describe('#1465 content-registry — V1 全项有明确状态（K12-01 段一后 = 21/21）', () => {
   it('注册表项与 extensions/ 顶层目录集双向相等', () => {
     const snap = describeContentRegistry();
     expect(snap.entries.map((e) => e.dir).sort()).toEqual(extensionDirsOnDisk());
-    expect(snap.counts.total).toBe(22);
+    expect(snap.counts.total).toBe(23);
   });
 
   it('type 唯一；status / face 落在闭合枚举内（枚举取自快照单源）', () => {
@@ -107,7 +107,8 @@ describe('#1465 content-registry — 正常路径（真实装配，非 grep）',
   it('非 reachable 项（retired / pending-cto）不入装配面', async () => {
     const snap = describeContentRegistry();
     const notWired = snap.entries.filter((e) => e.status !== 'reachable').map((e) => e.type);
-    expect(notWired.length).toBe(5);
+    // retired×2（engine / tools）＋ pending-cto×2（llm-provider；K12-01 段一 presets）= 4
+    expect(notWired.length).toBe(6);
     const report = await initContentTypes();
     for (const t of notWired) {
       expect(report.results.some((r) => r.type === t)).toBe(false);

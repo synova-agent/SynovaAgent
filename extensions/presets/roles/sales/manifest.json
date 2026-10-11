@@ -1,0 +1,17 @@
+{
+  "$schema": "https://synova.dev/schemas/extension-manifest-v1.json",
+  "name": "role-sales",
+  "version": "1.0.0",
+  "type": "role-preset",
+  "displayName": "sales",
+  "entryPoint": "./context-manifest.yaml",
+  "roleId": "sales",
+  "pieces": [
+    "knowledge-scope.yaml",
+    "context-manifest.yaml",
+    "output-template.ref",
+    "capabilities.yaml",
+    "acceptance-criteria.yaml"
+  ],
+  "note": "角色包的自描述契约。entryPoint 指向本包的操作载荷（上下文清单）而非常规 loader —— 角色包是内容，不是带 loader 的扩展点（见 extensions/presets/manifest.json 的 loaderPending）。"
+}

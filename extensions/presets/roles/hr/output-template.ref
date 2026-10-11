@@ -1,0 +1,16 @@
+# hr/output-template.ref — 输出模板（岗位版式骨架）
+templateId: hr.standard
+sections:
+  - id: headline
+    title: 一句话结论
+    must: [结论, 适用范围]
+  - id: org-facts
+    title: 组织事实
+    must: [对象, 口径, 周期, 来源]
+  - id: gaps
+    title: 缺口与风险
+    must: [缺口项, 影响, 建议动作]
+  - id: actions
+    title: 建议动作
+    must: [动作, 责任岗位, 观察指标]
+emptyState: 无花名册时明确提示补件，不推断人数。

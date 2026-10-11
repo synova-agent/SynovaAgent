@@ -1,0 +1,20 @@
+# finance/capabilities.yaml — 常用能力（这个岗位日常会用到哪些 agent 能力）
+roleId: finance
+version: 1.0.0
+capabilities:
+  - id: capability.financial-variance
+    label: 财务差异分析
+    tool: analysis.variance
+    enabled: true
+  - id: capability.cash-runway
+    label: 现金跑道测算
+    tool: analysis.cash-runway
+    enabled: true
+  - id: capability.cost-attribution
+    label: 成本归因
+    tool: analysis.cost-attribution
+    enabled: true
+  - id: capability.evolution-write
+    label: 直接改写进化回环
+    enabled: false
+    disabledReason: ④ 参数层只允许由 ③ 哨兵写（宪章 4.4）；岗位包不得绕开该硬规则
