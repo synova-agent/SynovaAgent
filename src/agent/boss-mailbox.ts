@@ -123,10 +123,10 @@ export class BossMailbox {
     text += '\n二b、本周测量值趋势（指标级）\n';
     if (report.measurementErrors && report.measurementErrors.length > 0) {
       text += `  ⚠️ 测量值段降级：${report.measurementErrors.join('; ').slice(0, 120)}\n`;
-    } else if (report.measurements.length === 0) {
+    } else if ((report.measurements ?? []).length === 0) {
       text += '  （本周无指标级测量值落行）\n';
     }
-    for (const m of report.measurements) {
+    for (const m of report.measurements ?? []) {
       const change = m.changeRatio === null ? 'n/a'
         : `${m.changeRatio >= 0 ? '+' : ''}${(m.changeRatio * 100).toFixed(1)}%`;
       text += `  · ${m.metricId}[${m.entityId}] = ${m.latestValue ?? 'n/a'}${m.unit ?? ''}（环比 ${change}）\n`;
@@ -135,10 +135,10 @@ export class BossMailbox {
     text += '\n二c、本周决策台账（谁裁了什么）\n';
     if (report.decisionErrors && report.decisionErrors.length > 0) {
       text += `  ⚠️ 决策段降级：${report.decisionErrors.join('; ').slice(0, 120)}\n`;
-    } else if (report.decisions.length === 0) {
+    } else if ((report.decisions ?? []).length === 0) {
       text += '  （本周无决策落账）\n';
     }
-    for (const d of report.decisions) {
+    for (const d of report.decisions ?? []) {
       text += `  · ${d.at.slice(0, 10)} ${d.who}${d.role ? `(${d.role})` : ''} ${d.action} ${d.nodeId}${d.outputRef ? ` → ${d.outputRef}` : ''}\n`;
     }
 
