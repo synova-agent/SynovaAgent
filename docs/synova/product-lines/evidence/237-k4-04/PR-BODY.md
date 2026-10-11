@@ -214,6 +214,37 @@ $ git diff --name-only $(git merge-base origin/local-main HEAD)..HEAD -- tests/s
 | 同文件 `:133`「① createEdge() 成功：返回 edge- 前缀 id、props 正确落库、queryEdges 计数 +1」 | `:145` `:150` `:152` | `toHaveLength(2)`；读回 `props === {"k":"v"}`；**落库面**（不经读路径）`SELECT props` ⇒ `{"k":"v"}` |
 3. **口径**：以上行号现测自本 commit 的工作树（`it(` 行 ＋ 断言行 grep）；若后续 commit 使行号位移，**以复查命令重出**为准。
 
+## (h′) 补充 【run 号 ↔ 红件】逐条对应表（按 `title=` 归并 · **本表为实施员实测，非转述**）
+
+**口径**：对日志逐行取 `::error`，按 `title=` 归并；门禁**汇总行**（`::error::增量测试失败…`）**单列，不计入红件**。
+**数据源（本仓证据件，本表所有数字均由实施员当场重跑归并得出）**：`docs/synova/product-lines/evidence/237-k4-04/CI-run-307-push-failure.log.txt`（23399 B / split 139 行）、`CI-run-281-existing-red.log.txt`（21510 B / split 139 行）、`CI-repro-BASELINE-68bf57598.txt`、`CI-repro-head-Windows.txt`。
+
+| run | sha | 类型 | `chat-degradation` | `stream-tool-loop` | 汇总行 | `::error` 合计 |
+|---|---|---|---|---|---|---|
+| **307** | `274f0e87f`（**本卡**） | push ❌ | **6**（用例 ①②③④a④b⑤ 各 1） | **1**（`Given chat throws an error`，`line=210,column=26`） | 1 | **8** |
+| **281** | `3449c05bb`（**另一分支**，开工前） | push ❌ | **6**（同 6 条用例） | **0** | 1 | **7** |
+| 本地基线树 | `68bf57598`（**零本卡改动**） | 本地 | **6 failed** | **6 passed** | — | — |
+| 本地 HEAD | 本卡 | 本地 | **6 failed** | **6 passed** | — | — |
+
+🔴 **本表取代含糊表述**：**不再写"两件都红"**；逐 run × 逐件列数如上（`chat-degradation` / `stream-tool-loop` = `6 / 1`（307）、`6 / 0`（281））。
+
+**结论（逐条对应 CTO §一 三条收紧）**：
+- **类 1 —— `tests/tui-v2/chat-degradation.test.ts`**：CI 侧**同选 = 是**（281 与 307 **各有 6 条 `::error` 指向它**）**且本地两态亦红** ⇒ ① 不在写集（`tests/tui-v2/**` diff = 0）② 零改动基线上同样红 ⇒ **归属卡 `#347`** ✓
+- **类 2 —— `tests/stream-tool-loop.test.ts`**：**本地两态皆绿、仅 CI 红** ⇒ ① 本地两态皆绿 ② CI 日志 verbatim 归因 ③ 有归属卡 ⇒ **归属卡 `#351`** ✓
+  - **verbatim（按 run 绑定，两条原文均贴 —— 二者是不同 run 的不同 LLM 输出）**：
+    - run **307**（本卡 push，源：`CI-run-307-push-failure.log.txt`）：`expected '收到，不过这条信息我读不出具体意图——"测试错误"可能是几种情况：\n\n…' to contain '失败'`
+    - run **319**（复核员 §15.2-2 自取日志）：`expected '收到你的"测试错误"——我这边运作正常…' to contain '失败'`
+    - ⇒ 同一断言在两 run 上"收到的文本"**各不相同**（LLM 输出非确定）⇒ **外部输入导致、非断言逻辑**（类 2 判据 ②）。
+
+## (k) 【收件闸裁定回填】
+
+CTO 2026-10-11 裁定：(a) 口径 = **【乙】（分两类）**，并收紧为三条：
+- **类 1 存量红**：① 不在写集　② 在零改动基线上同样红 ⇒ 归属卡 **`#347`**
+- **类 2 CI-only**：① 本地两态皆绿　② CI 日志 verbatim 归因（须显示外部输入导致、非断言逻辑）　③ 有归属卡 ⇒ 归属卡 **`#351`**
+⇒ **D10 判过。**
+
+**验证落点**：`#347` = 存量红（react19×ink5.2.1，`chat-degradation` 6/6）；`#351` = 测试非 hermetic（`stream-tool-loop` 在 CI 打真实 LLM）。
+
 ---
 
 ## 独立复核四项结论（M6 回写 · 原文照贴）
