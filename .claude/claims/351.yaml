@@ -1,0 +1,23 @@
+# .claude/claims/351.yaml — #351（tests 面 · 测试非 hermetic）stream-tool-loop 离线确定性 · 写集声明（S0 源，issue 号卡）
+# 先例：.claude/claims/1045.yaml / 237.yaml（claim 优先于 D# 链；K3 R3 防劫持）
+# 纪律：只列本 PR 真正改动的文件，不预授权。
+#
+# 本卡性质：**测试非 hermetic** —— 单元测试在 CI 上打真实 LLM ⇒ 无差别翻红不相关 PR。
+# 根因（实测，锚点 = 代码不是行号）：
+#   ConversationEngine 构造函数在 `config.fallbackProvider === undefined` 时调
+#   `buildFallbackProvider(provider)`；该函数只要环境存在 `LLM_API_KEY` / `DEEPSEEK_API_KEY`
+#   就**派生一个真实 deepseek provider 挂进 failover chain**
+#   （注入 fake 的 baseUrl='fake://test' 经 detectProviderFromUrl 落默认分支 'openai' ⇒ 走 else 支）。
+#   ⇒ 主 provider 抛错时**链回退到真实 provider 并发出真实请求** ⇒ 断言随模型输出漂移。
+# 修法（CTO 裁定 5 = 甲）：7 处构造显式传 `{ fallbackProvider: null }`
+#   = **断掉构造函数对注入 fake 的自动接线**。
+#   ⚠️ 措辞（CTO 明令）：**不得**写成"注入 fake provider" —— 夹具自仓库引入起就是 fake，无需改。
+writeset:
+  - .claude/claims/351.yaml
+  - .claude/task-briefs/2026-10-12-351-stream-tool-loop-hermetic.md
+  - docs/synova/product-lines/evidence/351-stream-tool-loop-hermetic.md
+  - tests/stream-tool-loop.test.ts
+done:
+  - verify: npx vitest run tests/stream-tool-loop.test.ts
+  - verify: bash scripts/control-tower/merge_writeset_gate.py --base origin/local-main --head HEAD --branch fix/351-stream-tool-loop-hermetic
+note: 7 处构造补 { fallbackProvider: null }（断自动接线）；无凭据与**有 dummy 凭据**两态均 6 passed / exit 0；反例 = 去 null 时链上出现真实 deepseek provider（探针读链名，**零网络请求**）。
