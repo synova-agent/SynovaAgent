@@ -130,8 +130,22 @@ jobs:
           N_CODE_NONVITEST=$((N_CODE - N_VITEST)); [ "$N_CODE_NONVITEST" -lt 0 ] && N_CODE_NONVITEST=0
           DELETED_VITEST="$(git diff --name-only --diff-filter=D "$CHANGED_BASE"...HEAD 2>/dev/null | grep -E '\.(test|spec)\.(ts|tsx)$' || true)"
           echo "本次变更集: ${N_FILES} 文件（代码面 ${N_CODE} 个，其中 vitest 可收集 ${N_VITEST} 个；不可测面 ${N_CODE_NONVITEST} 个）"
+          # 🔴 CI 可诊断性（#338 前置 · 2026-10-12 实测钉死）：Gitea runner 对**每一步**注入 `set -e`
+          #   （本 job 日志 step0 的 `Wrote command` 明示 `set -e\n…`），而
+          #     VITEST_OUT="$(cmd)"; VITEST_RC=$?
+          #   在 `set -e` 下**子命令非 0 ⇒ 赋值语句即失败 ⇒ shell 当场退出** ⇒ 下面那行
+          #   `printf | tail` **永不执行** ⇒ **vitest 一失败，整步零输出、只剩 `exit status 1`**。
+          #   实证（PR #335 的 CI 红因就是被这行吞掉的，原始日志逐字）:
+          #     本次变更集: 5 文件（代码面 4 个，其中 vitest 可收集 2 个；不可测面 2 个）
+          #       ❌  Failure - Main ③ 增量测试（vitest --changed；只测改动面，避免全量摩擦）
+          #     exit status 1
+          #   ⇒ 诊断所需的一切被吞掉 ⇒ 属 #338 的「CI 可诊断性缺口」，且是本次改动引入的回退
+          #     （旧写法 `… | tail -20 || { echo ::error…; exit 1; }` 反而会打印尾部输出）。
+          #   修法：`set +e` 包住捕获、随后 `set -e` 恢复；失败时把**可判读摘要**写进 `::error`。
+          set +e
           VITEST_OUT="$(PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" npx vitest run --changed "$CHANGED_BASE" 2>&1)"; VITEST_RC=$?
-          printf '%s\n' "$VITEST_OUT" | tail -20
+          set -e
+          printf '%s\n' "$VITEST_OUT" | tail -30
           if [ "$VITEST_RC" -eq 0 ]; then
             if printf '%s' "$VITEST_OUT" | grep -q "No test files found"; then
               if [ "$N_FILES" -eq 0 ]; then
@@ -153,5 +167,9 @@ jobs:
             fi
             exit 0
           fi
-          echo "::error::增量测试失败 —— 只跑了本次改动相关的测试；若确认是既有 flaky，请在本作业日志里点名具体用例"
+          # 🔴 #338 可诊断性：`::error` 必须**带可判读摘要**（否则"红了你也不知道哪条挂了"）。
+          #   摘要取 vitest 输出里的失败文件 / 断言行 / 计数行；无摘要时显式说明"见完整输出"。
+          _V_SUM="$(printf '%s\n' "$VITEST_OUT" | grep -aE '^ *(FAIL|❯)|AssertionError|Test Files +[0-9]+ failed|Tests +[0-9]+ failed|Error: ' | head -12 | tr '\n' '|' || true)"
+          [ -n "$_V_SUM" ] || _V_SUM="（vitest 未产出可提取的失败摘要 —— 见本步「tail -30」完整输出）"
+          echo "::error title=增量测试失败::rc=${VITEST_RC}；摘要: $(printf '%s' "$_V_SUM" | cut -c1-900)"
           exit 1
