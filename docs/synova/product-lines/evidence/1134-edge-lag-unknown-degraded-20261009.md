@@ -162,6 +162,58 @@ M1_RED_EXIT=1
 4. ⚠️ **载体开关**：本卡 commit 走 `.claude/claims/1134.yaml`（issue 号卡 + claim 载体）；
    `SYNO_CLAIM_V2` 默认值与决策 Note 的不一致（同批 K4-03 已上报），本卡**不改门禁**。
 
+## §A.9 提交 / 提交后复跑 / 门禁 / token（原始输出）
+
+**交付提交**：`bfea3acf1876ac0ac6dfaf7c892292bdf3929f1c`（分支 `fix/1134-edge-lag-enum`；提交内 `3 files changed, 251 insertions(+), 20 deletions(-)`）
+**PR 变更集（vs `origin/local-main`，含批 1）**：`4 files changed, 1509 insertions(+)` ⇒ 4 件 ≤ 12（单域：本体边时滞值侧 + 其判据）；工作树 `git status --porcelain` = **空**。
+
+### A.9.1 提交后复跑（committed tree）
+```
+$ npx vitest run tests/l4/edge-lag-unknown-degraded-1134.test.ts
+stdout | … > A4b 🔴 第 3 类值必须显形：…
+[1134][真仓规范违规审计行] AUDIT edge-lag 越允许集(规范违规) file=goal_decomposition.json $id=edge/goal_decomposition value="0d — 分解关系为结构性从属（子目标一旦建立即属该上级），不承载跨期传导时滞" ⇒ 既非 §3.4 六值、亦非显式降级标记 "unknown"（禁静默放宽枚举）
+[1134][真仓计数] {"files":56,"degraded":50,"inEnum":5,"specViolation":1,"missing":0,"unmapped":0,"allowedSetSize":7}
+
+ Test Files  1 passed (1)
+      Tests  31 passed (31)
+VITEST_EXIT=0
+```
+
+### A.9.2 门禁（同一 staged 集，两种载体配置 ⇒ 与 K4-03 同一根因）
+```
+$ bash scripts/pre-commit-check.sh                    → DEFAULT_EXIT=1
+  ❌ 声明闸① brief schema…: 1 处 [硬阻断]   今日无 task brief
+  ❌ 声明闸② brief↔代码一致性…: 1 处 [硬阻断]  tests/l4/edge-lag-unknown-degraded-1134.test.ts (不在 Q2 范围内)
+  ❌ 2 组未通过 — 提交已拒绝
+$ SYNO_CLAIM_V2=1 bash scripts/pre-commit-check.sh    → CLAIMV2_EXIT=0
+  ℹ️  组 6: 声明载体 = claim（.claude/claims/1134.yaml）→ ✅ 声明闸①
+  ℹ️  组 12 claim 载体: 15 条 claim（并集）；覆盖 3/3 个暂存文件 → ✅ 全部暂存文件均被 claim 覆盖
+  ✅ 全部 13 组通过      （无 V5 软提示：本分支未触碰 extensions/ontology，tags 组不触发）
+```
+（根因与处置见同批 K4-03 证据件 §A.10.4：`scripts/pre-commit-check.sh:1040-1043` 默认关 vs 决策 Note「默认开」；
+`ci.yml:196-199` 未注入 `SYNO_CLAIM_V2` ⇒ PR CI 会同样红。**本卡不改门禁**。）
+
+### A.9.3 D708 合并级写集对账
+```
+$ python3 scripts/control-tower/merge_writeset_gate.py --base origin/local-main --head HEAD --branch fix/1134-edge-lag-enum --repo-root .
+✅ 结论: pass — 提交文件集 ⊆ 声明写集（无夹带）
+   身份来源: claim → #1134（.claude\claims\1134.yaml）｜变更集 4 个文件（merge-base e52499dd）
+   声明写集 4 条（全部 S0:claim.writeset）｜豁免 1 条 [claim-self]：.claude/claims/1134.yaml
+D708_EXIT=0
+```
+
+### A.9.4 token 0 处复核（命令 + 退出码；不回显 token）
+```
+$ set /p TOK=<D:\win-push.token                                （仅内存变量）
+$ git -c … grep -l "<TOK>" HEAD                                → 无输出 / GIT_GREP_EXIT=1   （0 处）
+$ findstr /s /m /c:"<TOK>" <本卡 3 个交付件>                     → 无输出 / FINDSTR_EXIT=1    （0 处）
+$ git -c … log -1 --format=%B | findstr /c:"<TOK>"              → 无输出 / MSG_EXIT=1        （0 处）
+```
+
+### A.9.5 环境事实（同 K4-03，已上报）
+本克隆**未安装 git hooks**（`.git/hooks` 仅 `*.sample`；`core.hooksPath` 未设）⇒ 本次 commit 未触发 hook 链；
+门禁证据 = **手动跑同一批脚本**（与 CI 同源、同 staged 集），原始输出见 §A.9.2/§A.9.3。
+
 ---
 
 # §B 批 1 历史记录（原 §0–§9；计数类断言以 §A 为准）
