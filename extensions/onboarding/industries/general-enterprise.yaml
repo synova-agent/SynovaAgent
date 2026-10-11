@@ -1,0 +1,41 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# extensions/onboarding/industries/general-enterprise.yaml — 通用企业覆盖层
+#
+# 判据源  : docs/synova/coordination/施工项登记.ts → K12-02（Issue #185）
+# 形态    : 同 extensions/industries/<x>/ 的「目录 + 行业子目录」形态（复用既有先例）
+#
+# 契约（铁律 47）:
+#   @input    — 基础清单 what-to-ask.yaml（全行业共通）
+#   @output   — 通用企业的**追加**采集项（不覆盖基础项）；映射规则与基础清单完全一致
+#   @degraded — 缺必需字段 / 悬空映射 ⇒ 判不完整（degraded=true 并列出），不得静默通过
+# ═══════════════════════════════════════════════════════════════════════════════
+$id: onboarding/industries/general-enterprise
+version: 1
+industry: general-enterprise
+displayName: 通用企业
+extends: base
+description: 无强行业属性的企业（20-1000 人）。基础清单已覆盖全部本体轴，本层只补「通用企业也值得问清」的三项边界问题。
+
+requiredFields: [id, layer, ask, why, mapsTo, required]
+
+overlayQuestions:
+  - id: q-l0-scale-boundary
+    layer: L0
+    ask: 公司是单一办公地点还是多地经营、有没有跨城市或跨境的团队？
+    why: 地点分散会同时抬高协调成本与合规复杂度，是通用企业最常见的隐性成本源。
+    mapsTo: [resource/location, activity/coordination]
+    required: false
+
+  - id: q-l0-founderkpi-coupling
+    layer: L0
+    ask: 老板或核心合伙人亲自抓的业务占多少、有没有「只有他能签」的单子？
+    why: 创始人耦合度决定组织能否放大；不问则扩张计划会低估对个人的依赖。
+    mapsTo: [resource/person, edge/decision_authority, edge/incentive-binds]
+    required: false
+
+  - id: q-l1-plan-credibility
+    layer: L1
+    ask: 上一次做的年度目标完成了多少、偏差主要出在哪些假设上？
+    why: 计划的可信度是后续所有导航建议的校准基线；不问则无法判断建议该激进还是保守。
+    mapsTo: [outcome/financial, outcome/operational, edge/assumption_triggered_reallocation]
+    required: false
