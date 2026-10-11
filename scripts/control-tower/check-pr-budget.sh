@@ -583,6 +583,18 @@ if [ "$OUTBOUND_EXEMPT" -eq 0 ] && [ "$EVID_OVER_N" -gt 0 ]; then
   echo "      ⇒ 超出 ${EVID_OVER_N} 件**计入预算**（阈值不单独判红；判红仍由 ① 文件数决定）:"
   printf '%s\n' "$EVID_OVER" | sed '/^$/d' | sed 's/^/         - /'
 fi
+# ═══ CTO 2026-10-11 裁定（创始人「对一些约定好的内容可以放宽数量限制」）═══
+# 放宽对象：**治理/文档/内容件**（冲突代价低、天然成批）——
+#   docs/** · .claude/** · memory/notes/** · 任意 *.md
+# 不放宽：src/** packages/** scripts/** extensions/** tests/**（代码件，仍受 12 件约束）
+# 纪律：**显式点名**（禁静默跳过）
+if [ -n "$COUNTED" ]; then
+  _EX_N=$(printf '%s\n' "$COUNTED" | grep -cE '^(docs/|\.claude/|memory/notes/)|.*\.md$')
+  if [ "${_EX_N:-0}" -gt 0 ]; then
+    COUNTED="$(printf '%s\n' "$COUNTED" | grep -vE '^(docs/|\.claude/|memory/notes/)|.*\.md$')"
+    echo "  ⓘ D734 口径（CTO 2026-10-11 裁定）：约定内容（docs/ · .claude/ · memory/notes/ · *.md）**不计入 PR 预算**（本批排除 ${_EX_N} 件）"
+  fi
+fi
 N_FILES="$(_count_lines "$COUNTED")"; N_FILES="${N_FILES:-0}"
 if [ "$OUTBOUND_EXEMPT" -eq 1 ]; then
   # 豁免生效 → COUNT_PATHS 全不计入（含 D860 治理产物口径不再适用）
