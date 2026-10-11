@@ -49,8 +49,26 @@
 - **memory 教训**：宪章 4.3 硬要求③（可版本化）⇒ 标识持久化同时服务参数层。
 
 ## Q2: 范围
-做什么：`src/deploy/content-reload.ts`｜`tests/deploy/content-reload.test.ts`｜brief
-不做什么：不改 `src/init/file-driven-loaders.ts` 既有 9 路行为（reload 复用其解析）｜不改 `src/deploy/content-registry.ts`（K12-14 写集）｜不改 `extensions/**` 内容
+做什么：
+
+src/deploy/content-reload.ts
+tests/deploy/content-reload.test.ts
+src/routes/reload.ts
+tests/routes/reload.test.ts
+.claude/task-briefs/2026-10-12-198-content-reload.md
+.claude/claims/198.yaml
+
+口径：本件为**上一会话起草的原 brief**；本轮（K12 第 7 批）执行时**新增 2 件写集**以落卡面 §Q3 V2 的"触发"面 ——
+`src/routes/reload.ts`（既有热加载端点，接第 4 步）＋ `tests/routes/reload.test.ts`（真 HTTP 判据）。
+理由与代价见本轮 brief `.claude/task-briefs/2026-10-12-198-content-reload.md` §Q2「写集扩张声明」。
+（此处同步登记：pre-commit 组 12 认领制要求**每个暂存文件都被某个 brief 认领**，两件 brief 同时生效。）
+
+不做什么：
+
+不改 src/init/file-driven-loaders.ts
+不改 src/deploy/content-registry.ts
+不改 extensions/**
+不改 scripts/**
 
 ## Q3: 验收
 入口：运行中触发 reload 处理：重扫目录 → 解析 → 绑定（失败隔离）结果：
