@@ -1,0 +1,28 @@
+# sales/context-manifest.yaml — 上下文清单：★解药所在★
+roleId: sales
+version: 1.0.0
+contexts:
+  - id: market.client-tier
+    label: 客户分层口径
+    source: extensions/ontology/resource/client.json
+    why: 无分层则「大客户」无定义，资源投放无依据
+    required: true
+  - id: market.pipeline-stage
+    label: 管道阶段定义
+    source: extensions/ontology/resource/channel.json
+    why: 阶段定义不一致 ⇒ 预测不可加总
+    required: true
+  - id: market.quota-period
+    label: 业绩周期
+    source: extensions/presets/roles/sales/knowledge-scope.yaml#market.pipeline
+    why: 业绩结论必须锚定周期
+    required: true
+  - id: company.bp
+    label: 公司业务说明
+    source: profile.business-plan
+    why: 销售策略要落回产品与市场定位
+    required: false
+prompt:
+  systemAddendum: |
+    你在为「销售岗」提供支持。客户名称按数据边界脱敏；
+    预测必须标注置信口径（自报 / 加权 / 历史转化率）。

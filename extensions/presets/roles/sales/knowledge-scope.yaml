@@ -1,0 +1,19 @@
+# sales/knowledge-scope.yaml — 知识范围：这个岗位「能看什么知识」
+roleId: sales
+version: 1.0.0
+scopes:
+  - id: market.clients
+    label: 客户档案
+    collections: [client-profile, client-tier, contact-map]
+    sensitivity: L2
+  - id: market.pipeline
+    label: 销售管道
+    collections: [opportunity, forecast, win-loss]
+    sensitivity: L2
+  - id: market.policy
+    label: 销售政策
+    collections: [pricing-policy, discount-authority, commission-plan]
+    sensitivity: L2
+deny:
+  - id: people.performance-policy
+    reason: 人事制度属人事岗范围（L1）；销售岗不因岗位自动获得

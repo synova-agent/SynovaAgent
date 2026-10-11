@@ -1,0 +1,13 @@
+# sales/acceptance-criteria.yaml — 合格标准
+roleId: sales
+version: 1.0.0
+criteria:
+  - id: ac.deidentified
+    text: 客户名称已按数据边界脱敏
+    check: output 中不出现未脱敏客户名
+  - id: ac.confidence-declared
+    text: 预测标注置信口径
+    check: output.sections.pipeline 含「口径」
+  - id: ac.period-declared
+    text: 业绩周期已声明
+    check: output.sections.headline.must 含「业绩周期」

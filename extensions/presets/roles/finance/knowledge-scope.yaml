@@ -1,0 +1,20 @@
+# finance/knowledge-scope.yaml — 知识范围：这个岗位「能看什么知识」
+# 判据锚点（卡面 §⑥）：两个不同岗位 ⇒ 拿到的知识集合**不同**。本件即差异源之一。
+roleId: finance
+version: 1.0.0
+scopes:
+  - id: finance.statements
+    label: 财务报表
+    collections: [income-statement, balance-sheet, cashflow-statement]
+    sensitivity: L2
+  - id: finance.cost
+    label: 成本结构
+    collections: [cost-center, unit-economics, procurement]
+    sensitivity: L2
+  - id: finance.capital
+    label: 资本与融资
+    collections: [capital-structure, financing-constraints]
+    sensitivity: L3
+deny:
+  - id: people.individual-compensation
+    reason: 个人薪酬明细属 L3 原始数据，财务岗不因岗位自动获得

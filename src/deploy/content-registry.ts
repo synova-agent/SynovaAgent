@@ -119,11 +119,11 @@ const MODULE_IMPORTS: Readonly<Record<string, () => Promise<Record<string, unkno
 };
 
 /**
- * 20 项 contents 全表（`extensions/` 顶层目录全集）。
+ * 21 项 contents 全表（`extensions/` 顶层目录全集）。
  * 状态口径（spec §3.2 逐项裁定表 + §5.1 可达性实测）:
  *   reachable —— 有装配 loader，或有生产直读者（16 项存量可达 ＋ business-models 本卡接活 = 17）
  *   retired   —— 生产不可达且**无内容可接**（engine / tools）
- *   pending-cto —— 生产不可达但**修法牵涉架构（第四处两套并行）**，须过 CTO 再落地（llm-providers）
+ *   pending-cto —— 生产不可达但修法须过 CTO 再落地（llm-providers；K12-01 段一 presets —— 段二补 loader）
  */
 const CONTENT_TYPES: readonly ContentTypeEntry[] = [
   {
@@ -366,6 +366,22 @@ const CONTENT_TYPES: readonly ContentTypeEntry[] = [
       '`grep -rn "tools-manifest" src/ packages/ scripts/ --include=*.ts` = 0 命中。' +
       '无内容可接 ⇒ 显式化为 retired（工具注册的真实通道是 MCP/工具注册表，不在此目录）。',
   },
+  {
+    // 🔴 K12-01（#184）**段一登记** —— 内容面先落，宿主 loader/接线（段二）待 CTO 裁定。
+    //    段一实交付 = extensions/presets/manifest.json ＋ extensions/presets/roles/{finance,hr,sales}/ 五件套。
+    //    本表**只登记 dir**：不写 MODULE_IMPORTS、不设 reachable、不建 loader ——
+    //    与上方 llm-provider 条目同一处置纪律（**登记 ≠ 接活**），段二未裁前不接进 boot 装配面。
+    //    为什么段一必须登记：tests/deploy/content-registry.test.ts 断言
+    //    「注册表 dir 集 ↔ extensions/ 顶层目录集**双向相等**」⇒ 建了目录不登记，该测试必红。
+    //    反过来说，本项 status=pending-cto ⇒ 探针 probe-role-pack 的 L2 断言（registryHasType
+    //    ＋ attempted>=1 ＋ rowOk）**仍然红**，这正是段二未落的诚实信号，不得为让它绿而降级判据。
+    type: 'presets',
+    dir: 'presets',
+    face: 'content',
+    status: 'pending-cto',
+    reason:
+      'K12-01 角色预设包内容载体；段一仅落内容面，宿主 loader/接线待 CTO 裁定后由段二补',
+  },
 ];
 
 /** 装配报告中的单项结果 */
@@ -453,8 +469,8 @@ function collectIntegrityProblems(): string[] {
       }
     }
   }
-  if (CONTENT_TYPES.length !== 20) {
-    problems.push(`CONTENT_TYPES 应为 20 项，实测 ${CONTENT_TYPES.length}`);
+  if (CONTENT_TYPES.length !== 21) {
+    problems.push(`CONTENT_TYPES 应为 21 项，实测 ${CONTENT_TYPES.length}`);
   }
   return problems;
 }

@@ -1,0 +1,16 @@
+# finance/acceptance-criteria.yaml — 合格标准（产出到这个程度才算合格）
+roleId: finance
+version: 1.0.0
+criteria:
+  - id: ac.period-declared
+    text: 每个结论都带报告期
+    check: output.sections.headline.must 含「报告期」
+  - id: ac.source-traceable
+    text: 每个数值可追到来源
+    check: output.sections.evidence 每项含 source
+  - id: ac.no-fabrication
+    text: 数据不足时列出缺口，不编造
+    check: emptyState 被遵守
+  - id: ac.action-observable
+    text: 建议动作带观察指标
+    check: output.sections.actions 每项含「观察指标」
