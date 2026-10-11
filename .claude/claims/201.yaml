@@ -1,0 +1,21 @@
+# .claude/claims/201.yaml — #201（K12-18 locales 死指针修复）写集声明（D708 的 S0 源）
+#   卡面：Gitea issue #201 ｜ 判据源：施工项登记件 1-13 ｜ 口径：CTO 裁定 046（准 A ＋ 附加）
+#   走法：entryPoint 死指针 './locale-loader.ts' → './manifest.json'（本 schema 下唯一"恒存在"的合法取值）
+#         ＋ entryPointNote（写清占位性质）＋ loaderRef（真加载器指针，纯文档）
+#   口径：只动内容面数据文件；**不碰门禁脚本**（附加③④ 取 tree 面／字段表归治理线，裁定 033）
+writeset:
+  - .claude/claims/201.yaml
+  - .claude/task-briefs/2026-10-12-201-locales-pointer.md
+  - extensions/locales/manifest.json
+done:
+  - verify: bash scripts/check-integrity-startup.sh
+  - verify: bash scripts/check-file-driven.sh
+  - verify: npx tsx -e "import { loadLocale } from './src/locale/locale-loader'; const r=loadLocale('en-US'); if(r.degraded) process.exit(1); console.log('uiKeys='+Object.keys(r.locale.ui||{}).length)"
+note: 门禁标号口径（**经复核 #4/#5 实测更正**）：**门禁A = `check-integrity-startup.sh`（查 entryPoint 值能否解析）**；**门禁B = `check-file-driven.sh`（只 grep 键 '"entryPoint"' 在不在，从不解析值）**。
+  实测（两复核员独立复现）：修前 门禁A rc=1（点名 locales manifest → ./locale-loader.ts 两口径皆不存在）；门禁B **修前修后恒 rc=0**（它不看值）。
+  ⇒ **区分力全在门禁A**；标题'两条门禁同批 rc=0'字面成立，但**两条里只有一条在判**。
+  🔴 **两条门禁互斥，不是'夹死'**（复核 #5 注入实测）：把 entryPoint 注回 ./locale-loader.ts ⇒ **A 红 B 绿**；整字段删除 ⇒ **A 绿 B 红**。原回执「被两条门禁夹死」「真拦它的是本地 pre-commit」**两个论断均不成立**，已撤回。
+  🔴 **两条门禁都不构成 CI 绿灯**：门禁A 全仓**零执行点**（`.gitea/ .github/ pre-commit-check.sh` 全零命中；唯一引用是 tests/control-tower/grep-oP-regression.test.sh 拿它当夹具）；门禁B 仅由 pre-commit 组 8 本地调用，而 CI 用 `git checkout -f` ⇒ 索引恒空（实测 `git diff --cached --name-only | wc -l` = 0）⇒ **空转**。
+  真覆盖本变更的守卫 = pre-commit 组 6/12 的 brief↔代码一致性（CI 日志可证）。
+  附加③④（门禁A 取值面改 tree ／ 门禁B 字段表改'有则必须可解析'）**归治理线**（裁定 033），本卡不碰 scripts/**。
+  其他更正：`exportKey` 字段删除（零消费者，安全，此处留痕）；死指针全量 = base 1 → head 0（复核 #4 报 base 10→9 含 expert/ 面 8 条，口径差异见 PR）。
