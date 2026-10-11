@@ -125,12 +125,15 @@ const MODULE_IMPORTS: Readonly<Record<string, () => Promise<Record<string, unkno
   // 🔴 为什么这个键必须在这里: `resolveContext` 的真消费者就是**本表**（按名声明、宿主调用）；
   //   缺这一行 ⇒ department 项在 boot 装配时于 `MODULE_IMPORTS 缺键` 处**硬失败**（不是静默跳过）。
   '../services/request-context': () => import('../services/request-context'),
+  // #1056（K4-07）：「甲」裁定后的接线落点 —— L1.5 专业包层解析器（含层序唯一真源 CONTENT_LAYER_ORDER）。
+  '../extensions/layer-resolver': () => import('../extensions/layer-resolver'),
 };
 
 /**
- * 24 项 contents 全表（`extensions/` 顶层目录全集）。
+ * 25 项 contents 全表（`extensions/` 顶层目录全集）。
  * 状态口径（spec §3.2 逐项裁定表 + §5.1 可达性实测）:
  *   reachable —— 有装配 loader，或有生产直读者（16 项存量可达 ＋ business-models 本卡接活 = 17）
+ *                ＋ presets（K12-01 段二）＋ department（K12-10）＋ professions（#1056/K4-07）= 20
  *   retired   —— 生产不可达且**无内容可接**（engine / tools）
  *   pending-cto —— 生产不可达但**修法牵涉架构（第四处两套并行）**，须过 CTO 再落地（llm-providers）
  *                  ＋ onboarding（K12-02 #185：纯内容包不接线）
@@ -462,6 +465,35 @@ const CONTENT_TYPES: readonly ContentTypeEntry[] = [
       initArgs: [{}],
     },
   },
+  {
+    // #1056（K4-07 / 3-11 专业包层 L1.5 机制，🔴 CTO 2026-10-11「甲」裁定）：
+    //   `extensions/professions/**` = **L1.5 专业包层**的内容载体（第三方维护、可跨客户复用），
+    //   解析入口 = `src/extensions/layer-resolver.ts` 的 `initProfessionLayer()`。
+    //
+    // 🔴 为什么"接线"落在这里而不是宿主文件：分支原形态是在 `src/init/file-driven-loaders.ts`
+    //   尾插 45 行 L1.5 代码块；而该文件已由 #1465 重写为「registry 唯一驱动」（其 L12 自述
+    //   「新增内容项 = 在 registry 加一条声明，**本文件零改动**」）。CTO 裁定保留 main 侧真源，
+    //   故本卡把接线**改为经本表按名声明** ⇒ 宿主装配入口文件**零改动**（规范 §5.4「0 宿主改动」）。
+    //
+    // 🔴 层序（precedence）**不**由本表承载：本表七元无 order/precedence 字段位，
+    //   `builtin < industry < profession < custom` 的真源仍是 `layer-resolver.ts` 的
+    //   `CONTENT_LAYER_ORDER`。本表只声明「professions 目录由谁承接口径」——与 `department`
+    //   项同形（按名声明 ＋ init 零参），不新造表结构。
+    //
+    // init 零参的理由：本表 `initArgs` 是**静态表数据**，无法派生运行时业务标识；而专业包名
+    //   一律来自目录扫描（`loadProfessionPackages()`）⇒「加一个专业包 = 加一个目录」仍成立，
+    //   宿主 TS 内**不硬编码任何包名**（P1「一切皆为内容」）。
+    //   降级契约：`initProfessionLayer()` 永不抛错，返回 `{degraded, errors[]}` 供本表收集
+    //   （`collectInitWarnings` ⇒ `ContentInitReport.warnings`，铁律 11/24/31）。
+    type: 'profession',
+    dir: 'professions',
+    face: 'content',
+    status: 'reachable',
+    loader: {
+      module: '../extensions/layer-resolver',
+      init: 'initProfessionLayer',
+    },
+  },
 ];
 
 /** 装配报告中的单项结果 */
@@ -549,8 +581,8 @@ function collectIntegrityProblems(): string[] {
       }
     }
   }
-  if (CONTENT_TYPES.length !== 24) {
-    problems.push(`CONTENT_TYPES 应为 24 项，实测 ${CONTENT_TYPES.length}`);
+  if (CONTENT_TYPES.length !== 25) {
+    problems.push(`CONTENT_TYPES 应为 25 项，实测 ${CONTENT_TYPES.length}`);
   }
   return problems;
 }

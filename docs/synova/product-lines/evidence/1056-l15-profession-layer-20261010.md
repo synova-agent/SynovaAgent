@@ -298,3 +298,203 @@ $ git diff --stat
 
 - 标 `可提请独立审计`；**K3 复审通过前不得合并**。
 - 本卡不提「越用越准 / 自我进化」等口径（卡面 ⑪ 话术红线）。
+
+---
+
+# 六、批 2 变更（CTO 2026-10-11「甲」裁定：接线改为经 content-registry 声明）
+
+> 本节为**第二次交付**（rebase 到当刻 local-main 后）的取证。§一–§五 为第一次交付（`4d004a5d`）原文，保留不动。
+
+## 6.1 rebase 与冲突解（原始输出）
+
+```
+$ lanfetch.bat D:\synova-wt-b2-1056
+FETCH_EXIT=0
+LOCAL_MAIN_TIP: dc5ce093c37f6cf8ef069431b3192a390637f88d
+（上一批取证基准 e52499dd 此后由 PR #343 推进到 dc5ce093；本卡关心的两组路径下一节证明未被触碰）
+
+$ git diff --stat e52499dd dc5ce093 -- src/init/file-driven-loaders.ts src/deploy/content-registry.ts \
+      tests/deploy/content-registry.test.ts extensions/ src/deploy/bootstrap.ts
+（空输出 ⇒ 该两组路径在 e52499dd→dc5ce093 间未被改）
+```
+```
+$ git rebase origin/local-main
+Rebasing (1/1)Auto-merging src/init/file-driven-loaders.ts
+CONFLICT (content): Merge conflict in src/init/file-driven-loaders.ts
+error: could not apply 4d004a5d... feat(1056): 新增 L1.5 专业包层（四层覆盖 custom>profession>industry>builtin）
+REBASE_EXIT=1
+
+$ git ls-files -u src/init/file-driven-loaders.ts
+100644 549cad011ca23508c5e265304c3c6dbb750c465b 1	src/init/file-driven-loaders.ts
+100644 6e0e1e6b0756eef2b71bd84347f8667c599582fb 2	src/init/file-driven-loaders.ts   ← ours = local-main 侧 88 行版
+100644 caec99a9415fce79dcb7214c8decb6aa0b4a6ccf 3	src/init/file-driven-loaders.ts   ← theirs = 分支 176 行版
+```
+**解冲突做法（禁 `--ours/--theirs` 一把过，逐文件裁定后显式取 main 侧）**：
+```
+$ git checkout HEAD -- src/init/file-driven-loaders.ts
+CHECKOUT_EXIT=0
+$ git diff origin/local-main -- src/init/file-driven-loaders.ts
+（空输出 ⇒ 与 local-main 逐字节一致）
+$ git hash-object src/init/file-driven-loaders.ts
+6e0e1e6b0756eef2b71bd84347f8667c599582fb     ← 与 :2 阶段（ours）blob 相同
+$ find /c /v "" src\init\file-driven-loaders.ts
+---------- SRC\INIT\FILE-DRIVEN-LOADERS.TS: 88
+$ git rebase --continue
+[detached HEAD 91dc6a07] feat(1056): 新增 L1.5 专业包层（四层覆盖 custom>profession>industry>builtin）
+ 9 files changed, 1288 insertions(+)
+CONTINUE_EXIT=0
+```
+**⇒ 分支原 45 行尾插块被丢弃**（其职责改由 registry 声明承接，见 §6.2），**main 侧 88 行真源被完整保留**。
+
+## 6.2 接线改落点：registry 按名声明（落地形态）
+
+`src/deploy/content-registry.ts` 新增项（照 `department` 项同形：按名声明 ＋ 零参 init）：
+
+```ts
+  {
+    type: 'profession',
+    dir: 'professions',
+    face: 'content',
+    status: 'reachable',
+    loader: {
+      module: '../extensions/layer-resolver',
+      init: 'initProfessionLayer',
+    },
+  },
+```
+`MODULE_IMPORTS` 加键：`'../extensions/layer-resolver': () => import('../extensions/layer-resolver'),`
+项数硬钉：`CONTENT_TYPES.length !== 24` ⇒ `!== 25`。
+测试计数：`tests/deploy/content-registry.test.ts` `total 24→25` / `reachable 19→20`。
+
+**语义边界（如实声明）**：registry 表七元（`type/dir/face/status/loader/readers/reason`）**无 order/precedence
+字段位** ⇒ **层序语义不由该表承载**，仍在 `layer-resolver.ts` 的 `CONTENT_LAYER_ORDER`；该表只声明
+「`professions` 目录由谁承接口径」。核验：`initProfessionLayer()` 零参、包名一律来自目录扫描
+（`loadProfessionPackages()`）⇒ 「加一个专业包 = 加一个目录」的 P1 性质**未被接线方式破坏**。
+
+## 6.3 改名落地与引用面改净（全量 grep，不截断）
+
+改名：`src/extensions/profession-layer.ts` ⇒ `src/extensions/layer-resolver.ts`（`git mv`，`MV_EXIT=0`）。
+
+```
+$ git grep -c "profession-layer"        # 全仓受控文件（含治理产物）
+.claude/claims/1056.yaml:5
+.claude/task-briefs/2026-10-09-1056-l15-profession-layer.md:4
+docs/synova/product-lines/evidence/1056-l15-profession-layer-20261010.md:10
+src/extensions/layer-resolver.ts:1
+tests/extensions/profession-layer.test.ts:2
+C_EXIT=0
+
+$ git grep -n "profession-layer" -- src tests extensions     # 代码面
+src/extensions/layer-resolver.ts:6: * 🔴 文件改名（CTO 2026-10-11 裁定）：`src/extensions/profession-layer.ts` ⇒ 本文件名。
+tests/extensions/profession-layer.test.ts:2: * tests/extensions/profession-layer.test.ts — L1.5 专业包层单元测试（#1056）
+tests/extensions/profession-layer.test.ts:4: * ⚠️ 文件名保留 `profession-layer`（本次改名只动**模块路径**：`src/extensions/profession-layer.ts`
+SRC_TESTS_EXT_EXIT=0
+```
+**汇总口径（禁手写数字，逐条来自上面原始输出）**：
+- **功能引用（import / entryPoint / logger 名）＝ 0 处**；
+- 剩余 3 处全为**说明性载荷**：① `layer-resolver.ts:6` 改名注记；②③ `profession-layer.test.ts:2,4` 测试文件名注记
+  （测试文件本体保留原名，理由已写在文件头：本卡只裁定**模块路径**改名，重命名测试文件会额外扩大写集）；
+- 治理产物 16 处（claim 5 ＋ brief 4 ＋ 本证据件 10 行含历史记录）＋ 分支名 1 处
+  （`feat/1056-l15-profession-layer` 是**分支名**，不随模块改名而变，属历史载荷）。
+
+非 TS 引用一并改净：`extensions/professions/manifest.json`
+`entryPoint` `"../../src/extensions/profession-layer.ts"` ⇒ `"../src/extensions/layer-resolver.ts"`
+（**原值本身有 bug**：manifest 位于 `extensions/professions/`，`../../` 会指到仓库外）；
+`exportKey` `loadProfessionPackages` ⇒ `initProfessionLayer`（与 registry 声明**同一符号**，避免两处口径漂移）。
+
+## 6.4 判据件新增：V7 接线组（"接线了 ≠ 被执行了"）
+
+`tests/extensions/layer-precedence.test.ts` 新增 V7 组 5 用例（真跑，非 grep 静态判据）：
+① registry 登记 professions 项 ＋ `loader.module/init` 按名指向 ＋ `moduleKeys` 含该键 ＋ `integrityProblems` 为空；
+② `initContentTypes({types:['profession']})` ⇒ `attempted=1 / loaded=1 / verified 含 'initProfessionLayer'`；
+③ `initProfessionLayer()` ⇒ 真实包 `chain-retail-expansion` 被发现且 `unwired=[]`；
+④ 判别性：临时造「有 manifest 无 thresholds.json」的包 ⇒ 该包进 `unwired`、`degraded=true`、errors 含「未参与层叠」；
+⑤ 降级信号经 registry 上抛（`report.errors=[]` / `degraded=false`，锁通路存在）。
+
+### 6.4.1 红证（真删真跑 · 原始输出）
+
+因实现与测试在同一提交落地，**补造判别性红证**（做法：把导出名 `export function initProfessionLayer(`
+改为 `function initProfessionLayer_DISABLED(`，跑完立即从备份恢复；**未用 `git stash`／`reset --hard`／`checkout -f`**）：
+
+```
+=== [0] hash of ORIGINAL ===
+2b500edf715e021803ec42c04eed003e11302a99
+=== [1] RED MUTATION: rename export symbol ===
+MUTATION-APPLIED
+520:function initProfessionLayer_DISABLED(): ProfessionLayerInitResult {
+=== [2] VITEST under mutation (expect RED) ===
+ ❯ tests/extensions/layer-precedence.test.ts (13 tests | 4 failed) 235ms
+       × ② boot 装配真调 layer-resolver：initProfessionLayer 被执行且该项 ok（非静态判据） 15ms
+       × ③ boot 自检覆盖真实专业包，且每个包的内容都参与层叠（unwired 为空） 1ms
+       × ④ 判别性：层叠自检对「发现到但叠不进去」真报警（构造 unwired 真值） 4ms
+       × ⑤ registry 装配报告把降级信号往上传（不静默吞） 6ms
+ FAIL … ② AssertionError: expected +0 to be 1   ❯ tests/extensions/layer-precedence.test.ts:284:29
+ FAIL … ③ TypeError: initProfessionLayer is not a function   ❯ :294:19
+ FAIL … ④ TypeError: initProfessionLayer is not a function   ❯ :316:21
+ FAIL … ⑤ AssertionError: expected [ Array(1) ] to deeply equal []
+        - []
+        + [ "profession: 导出缺失或非函数: initProfessionLayer" ]
+ Test Files  1 failed (1) ｜ Tests  4 failed | 9 passed (13)
+VITEST_RED_EXIT=1
+=== [3] restore ===
+=== [4] hash after restore (must equal [0]) ===
+2b500edf715e021803ec42c04eed003e11302a99
+```
+**⇒ 非恒真非恒假**：删掉接线面 ⇒ V7 必红（且红在**行为**上：`loaded=0`、registry 报「导出缺失或非函数」）；
+恢复后 hash 逐字节回到原值，`git status` 仅剩预期的 6 处改动（无变异残留）。
+
+## 6.5 绿灯复跑（原始输出，四文件同跑）
+
+```
+$ npx vitest run tests/extensions/layer-precedence.test.ts tests/extensions/profession-layer.test.ts \
+      tests/deploy/content-registry.test.ts tests/init/file-driven-loaders.test.ts
+ ✓ tests/deploy/content-registry.test.ts (18 tests) 3501ms
+ ✓ tests/init/file-driven-loaders.test.ts (3 tests) 3986ms
+ Test Files  4 passed (4)
+      Tests  44 passed (44)
+   Duration  4.92s
+VITEST_EXIT=0
+```
+boot 实测日志（同一轮，节选自原始 stdout）：
+```
+{"service":"extensions/layer-resolver","layers":"builtin < industry < profession < custom","packages":1,
+ "fragmentation":0,"unwired":0,"msg":"L1.5 专业包层已初始化"}
+{"service":"deploy/content-registry","type":"profession","verified":1,"msg":"内容项已装配"}
+{"service":"init/file-driven-loaders","attempted":12,"loaded":12,"msg":"内容面 loader 已初始化（content-registry 驱动）"}
+{"service":"init/file-driven-loaders","total":25,"reachable":20,"retired":2,"pendingCto":3,
+ "msg":"内容面注册表已加载（20 项状态分布）"}
+```
+⇒ **接线真实生效**：`initFileDrivenLoaders()` 的装配面由 11 项变 12 项（新增 profession），
+且 `profession` 项的 `verified=1` 证明 `initProfessionLayer` 被真调（非静态声明）。
+
+## 6.6 其他门禁与检查（原始结论）
+
+| 检查 | 命令 | 结果 |
+|---|---|---|
+| 架构边界（铁律 39） | `bash scripts/check-architecture.sh` | `架构检查: 全部通过 ✅`（exit 0；存量告警同基线） |
+| 增量边界 | `bash scripts/workflow/check-boundaries-incremental.sh` | exit 0 |
+| 文件驱动架构完整性 | `bash scripts/check-file-driven.sh` | 6 组全 ✅（含 manifest 必填字段、硬编码类型回归） |
+| 登记件不变量 | `npx tsx scripts/control-tower/check-registry-invariants.ts` | `RESULT=PASS`（exit 0） |
+| 类型检查 | `npx tsc --noEmit` | exit 2；**输出 38 行，命中本卡改动文件 0 行**（全为存量：`extensions/sentinels/_extinct/**`、`src/mcp/**`、`src/server.ts`、`src/connectors/ima.ts`） |
+| 判据探针（**未修，仅登记**） | `npx tsx scripts/control-tower/probe-content-registry.ts` | `SUMMARY: sections=4 failures=1`，唯一失败 = `注册表应为 20 项，实测 25`；③ RESOLVE 段打印 `profession ../extensions/layer-resolver exports=[initProfessionLayer]`；④ CALL 段 `模块边界计数 = [initProfessionLayer:1]` |
+
+## 6.7 遗留 / 未决项（批 2）
+
+1. 🔴 **`probe-content-registry.ts:103` 计数钉 20 未修**（控制塔域 + 属批 1/K12-21 写集，CTO 裁定本卡不碰）。
+   本卡只登记：该探针在 local-main 上已 FAIL（20 vs 24），本卡后为 20 vs 25。
+2. 🔴 **`src/init/file-driven-loaders.ts` 本卡零改动**（`git diff origin/local-main --` 为空）。
+   PR 正文须显式声明：第一次交付形态（+45 行尾插）已被「甲」裁定**撤销**，接线改落 registry。
+3. ⚠️ **写集超卡面 +2 项**（`src/deploy/content-registry.ts` / `tests/deploy/content-registry.test.ts`）——
+   CTO 2026-10-11 书面放行（理由：改表必须同改其项数硬钉与其判据测试，否则 rebase 落地即红）。
+4. ℹ️ **测试文件名保留 `profession-layer.test.ts`**：本卡只裁定模块路径改名；若 CTO 要求连测试文件一并改名，
+   属写集再扩一项（`git mv` ＋ 引用改净），请示后再做。
+5. ℹ️ `extensions/professions/manifest.json` 的 `type` 由 `profession-package-layer` 改为 `profession`
+   （与 registry 项 type 对齐；`content-registry.ts` 自述该字段为「manifest.type 值」）。实测 main 全仓
+   `profession-package` 零引用、`manifest.type` 仅作日志/过滤显示 ⇒ 无消费端受影响。
+6. ℹ️ 第一次交付的遗留 1–7（§5.3）**仍然有效**，其中「GitHub 封禁 ⇒ 接线点冲突扫描未覆盖」一条在批 2 仍适用
+   （本批冲突扫描改由本地 `git ls-tree origin/local-main` / `git grep` 完成，覆盖 local-main 侧；**不覆盖 136 个 open PR**）。
+
+## 6.8 交付语义（批 2）
+
+- 标 `可提请独立审计`；**K3 复审通过前不得合并**；**推分支 / 开 PR 由队长统一执行**（本席未 push）。
+

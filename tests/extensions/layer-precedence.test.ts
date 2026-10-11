@@ -22,7 +22,7 @@ import {
   CONTENT_LAYER_ORDER,
   resolveContentLayers,
   loadProfessionPackages,
-} from '../../src/extensions/profession-layer';
+} from '../../src/extensions/layer-resolver';
 
 const FILE = 'thresholds.json';
 const REPO = process.cwd();
@@ -249,6 +249,88 @@ describe('#1056 L1.5 专业包层 — 层叠覆盖验收', () => {
 
       rmSync(probeDir, { recursive: true, force: true });
       expect(existsSync(probeDir)).toBe(false);
+    });
+  });
+
+  // ═══ V7 接线判据（CTO 2026-10-11「甲」裁定：接线 = registry 按名声明） ═══
+  describe('V7 接线：L1.5 经 content-registry 声明 × boot 真执行（"接线了 ≠ 被执行了"）', () => {
+    /**
+     * 本组是「删掉即报红」的判别性夹具，针对裁定后的新接线形态：
+     *   · 删掉 registry 的 `professions` 项（或把 loader.module/init 改名）⇒ ①② 必红；
+     *   · 把 `initProfessionLayer()` 的层叠自检删掉（只发现不验证）⇒ ④ 必红；
+     *   · 把 `CONTENT_LAYER_ORDER` 的 profession 删掉 ⇒ 本文件 V3/V4 与 ④ 同时红。
+     * 断言点**不是** grep 静态文本：③④ 都真跑 `initContentTypes()` / `initProfessionLayer()` 并读返回值。
+     */
+    it('① registry 登记了 professions 项，且 loader 按名指向 layer-resolver 的 initProfessionLayer', async () => {
+      const { describeContentRegistry } = await import('../../src/deploy/content-registry');
+      const snap = describeContentRegistry();
+      const entry = snap.entries.find((e) => e.dir === 'professions');
+
+      expect(entry, 'registry 必须登记 professions 目录').toBeDefined();
+      expect(entry?.status).toBe('reachable');
+      expect(entry?.loader?.module).toBe('../extensions/layer-resolver');
+      expect(entry?.loader?.init).toBe('initProfessionLayer');
+      // 模块键在 MODULE_IMPORTS 内（否则 boot 装配时「缺键」硬失败）
+      expect(snap.moduleKeys).toContain('../extensions/layer-resolver');
+      // 注册表自身完整性零问题（项数硬钉与磁盘目录集的一致性由该检查兜底）
+      expect(snap.integrityProblems).toEqual([]);
+    });
+
+    it('② boot 装配真调 layer-resolver：initProfessionLayer 被执行且该项 ok（非静态判据）', async () => {
+      const { initContentTypes } = await import('../../src/deploy/content-registry');
+      const report = await initContentTypes({ types: ['profession'] });
+
+      expect(report.attempted).toBe(1);
+      expect(report.loaded).toBe(1);
+      const item = report.results[0];
+      expect(item.type).toBe('profession');
+      expect(item.ok).toBe(true);
+      // 真实执行过 init 的证据（registry 只在真调用成功后记账）
+      expect(item.verified).toContain('initProfessionLayer');
+    });
+
+    it('③ boot 自检覆盖真实专业包，且每个包的内容都参与层叠（unwired 为空）', async () => {
+      const { initProfessionLayer } = await import('../../src/extensions/layer-resolver');
+      const out = initProfessionLayer();
+
+      // 真实包必须被发现（extensions/professions/chain-retail-expansion）
+      expect(out.packages).toContain('chain-retail-expansion');
+      // 发现到 ≠ 叠得进去：本数组非空即接线失败
+      expect(out.unwired).toEqual([]);
+      // 行业层可寻址值（boot 自检用既有 L0 基线行业包，不猜业务行业）
+      expect(out.industry).toBe('general-enterprise');
+    });
+
+    it('④ 判别性：层叠自检对「发现到但叠不进去」真报警（构造 unwired 真值）', async () => {
+      const probeDir = join(PROFESSIONS_DIR, 'zz-k4-1056-unwired');
+      rmSync(probeDir, { recursive: true, force: true });
+      // 有 manifest 会被发现；但**没有** thresholds.json ⇒ profession 层内容取不到
+      writeJson(join(probeDir, 'manifest.json'), {
+        $schema: 'https://synova.dev/schemas/extension-manifest-v1.json',
+        name: 'zz-k4-1056-unwired',
+        version: '1.0.0',
+        type: 'profession-package',
+      });
+      try {
+        const { initProfessionLayer } = await import('../../src/extensions/layer-resolver');
+        const out = initProfessionLayer();
+
+        expect(out.packages).toContain('zz-k4-1056-unwired');
+        expect(out.unwired).toContain('zz-k4-1056-unwired');
+        expect(out.degraded).toBe(true);
+        expect(out.errors.join(' | ')).toContain('未参与层叠');
+      } finally {
+        rmSync(probeDir, { recursive: true, force: true });
+      }
+      expect(existsSync(probeDir)).toBe(false);
+    });
+
+    it('⑤ registry 装配报告把降级信号往上传（不静默吞）', async () => {
+      const { initContentTypes } = await import('../../src/deploy/content-registry');
+      const report = await initContentTypes({ types: ['profession'] });
+      // 真实仓库状态下：包内容齐备 ⇒ 无降级；本断言锁"信号通路存在且被读"
+      expect(report.errors).toEqual([]);
+      expect(report.degraded).toBe(false);
     });
   });
 });

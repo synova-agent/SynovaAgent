@@ -1,7 +1,17 @@
 /**
- * src/extensions/profession-layer.ts — L1.5 专业包层（内容四层覆盖机制）
+ * src/extensions/layer-resolver.ts — L1.5 专业包层（内容四层覆盖机制）
  *
  * 卡: #1056（3-11 专业包层 L1.5 机制）｜宪章 5.2 通用性四层覆盖 / P2
+ *
+ * 🔴 文件改名（CTO 2026-10-11 裁定）：`src/extensions/profession-layer.ts` ⇒ 本文件名。
+ *   理由：本文件承载的是**内容层解析**（四层归并 ＋ L1.5 包发现 ＋ 反碎片化检测），
+ *   "profession" 只是其中一层的层名，不足以命名整个解析器。
+ * 🔴 接线形态（同上裁定）：boot 真执行由 `src/deploy/content-registry.ts` 的 `professions` 项
+ *   **按名声明**（`loader.module='../extensions/layer-resolver'` / `loader.init='initProfessionLayer'`），
+ *   **不再**在 `src/init/file-driven-loaders.ts` 尾插代码块 —— 该文件已由 #1465 收敛为
+ *   「registry 唯一驱动，新增内容项零宿主改动」（其自述见该文件 L12）。
+ *   ⇒ **层序语义的真源仍是本文件的 `CONTENT_LAYER_ORDER`**；registry 只声明「谁承接口径」，
+ *     不承载层序（该表七元无 order/precedence 字段位）。
  *
  *   宪章 5.2 原文四层：
  *     L0 基线（我们维护）/ L1 行业包（我们维护）/
@@ -60,7 +70,7 @@ import { createLogger } from '@synova/logger';
 import { mergeLayers } from '../config/config-layers';
 import { DEFAULT_ROOT_NAME } from '../config/customer-config-package';
 
-const log = createLogger('extensions/profession-layer');
+const log = createLogger('extensions/layer-resolver');
 
 // ═══ 层序（唯一事实源；升序优先 = 数组后者覆盖前者） ═══
 
@@ -462,4 +472,102 @@ export function detectCustomerFragmentation(input?: {
   scannedOrgs.sort();
   log.info({ root, scannedOrgs: scannedOrgs.length, findings: findings.length }, '反碎片化检测完成');
   return { scannedOrgs, findings, degraded: errors.length > 0, errors };
+}
+
+// ═══ boot 接线入口（content-registry 按名声明） ═══
+
+/** `initProfessionLayer()` 的返回。registry 的降级收集器读 `errors` / `degraded` 两字段。 */
+export interface ProfessionLayerInitResult {
+  /** 已发现的专业包名（升序）。 */
+  packages: string[];
+  /** 反碎片化告警条数（宪章 5.2「同一东西在 ≥2 个客户出现 ⇒ 必须提升一层」）。 */
+  fragmentation: number;
+  /** 已发现但**内容未参与层叠**的包名（发现到 ≠ 叠得进去；非空 = 接线失败信号）。 */
+  unwired: string[];
+  /** boot 自检覆盖的行业层（当前恒为 L0 基线行业包，见下）。 */
+  industry: string;
+  /** 是否有包声明解析失败 / 内容未参与层叠（铁律 31 降级信号；registry 读本字段）。 */
+  degraded: boolean;
+  /** 降级明细（registry 读本字段并写入 `ContentInitReport.warnings`，铁律 11/24/31 不丢信号）。 */
+  errors: string[];
+}
+
+/** boot 自检用的行业层：取既有 L0 基线行业包，使 industry 层可寻址（本函数不猜业务行业）。 */
+const BOOT_SELFCHECK_INDUSTRY = 'general-enterprise';
+
+/**
+ * L1.5 专业包层的 **boot 装配入口**（`src/deploy/content-registry.ts` 的 `professions` 项按名声明）。
+ *
+ * 为什么需要它（卡 #1056 与 #1465 的口径冲突解）：
+ *   #1465 把 `src/init/file-driven-loaders.ts` 收敛为「registry 唯一驱动、新增内容项零宿主改动」，
+ *   故 L1.5 若仍以「宿主文件尾插代码块」接线，就等于回退该重构。本函数是该文件被删掉的 45 行
+ *   尾插块的**承接者**：同样的三件事（发现 / 反碎片化 / 四层栈自检），改由 registry 按名调用。
+ *
+ * 零参（registry 的 `initArgs` 是静态表数据，无法派生运行时业务标识）——专业包名**一律来自目录扫描**，
+ * 不在宿主 TS 里硬编码任何包名（P1「一切皆为内容」）。因此"加一个专业包 = 加一个目录"，仍然成立。
+ *
+ * 契约（铁律 47）:
+ *   @input  — 无。仓库根 = `process.cwd()`（与既有 boot 面 `bootstrap.ts Phase 3c`
+ *             `registry.discover('extensions')` 的相对路径口径一致）。
+ *   @output — `ProfessionLayerInitResult`：包名 / 反碎片化条数 / 未参与层叠的包名 / degraded / errors[]。
+ *   @degraded — **永不抛错**。包声明解析失败 ⇒ `errors[]` 追加 + `degraded=true`；
+ *             已发现的包**内容未参与层叠** ⇒ `unwired[]` 追加 + `degraded=true`
+ *             （"接线了 ≠ 被执行"：发现到 ≠ 叠得进去）。
+ *   判别性: boot 自检对每个包真的调一次 `resolveContentLayers()` 并读 `layers[].present`；
+ *          若删掉 profession 层（或改坏 `CONTENT_LAYER_ORDER`），本函数必返回 `unwired` 非空。
+ * @returns 装配结果（registry 读 `errors` / `degraded` 两字段做信号传播）。
+ */
+export function initProfessionLayer(): ProfessionLayerInitResult {
+  const errors: string[] = [];
+  const unwired: string[] = [];
+
+  const { packages, degraded, errors: pkgErrors } = loadProfessionPackages();
+  errors.push(...pkgErrors);
+
+  for (const pkg of packages) {
+    const probe = resolveContentLayers({
+      orgId: 'boot-selfcheck',
+      industry: BOOT_SELFCHECK_INDUSTRY,
+      profession: pkg.name,
+    });
+    if (!probe.layers.some((l) => l.layer === 'profession' && l.present)) {
+      unwired.push(pkg.name);
+      log.warn({ profession: pkg.name }, 'L1.5 专业包已发现但内容未参与层叠 — degraded');
+    }
+  }
+
+  const fragmentation = detectCustomerFragmentation();
+  if (fragmentation.findings.length > 0) {
+    log.warn(
+      { keys: fragmentation.findings.map((f) => f.key) },
+      '反碎片化告警：同一内容在 ≥2 个客户层出现 — 须提升至 L1.5 专业包或 L1 行业包',
+    );
+  }
+
+  if (unwired.length > 0) {
+    errors.push(`L1.5 内容未参与层叠的包 ${unwired.length} 个: ${unwired.join(', ')}`);
+  }
+  if (fragmentation.degraded) {
+    errors.push(`反碎片化检测降级: ${fragmentation.errors.length} 条`);
+  }
+
+  const result: ProfessionLayerInitResult = {
+    packages: packages.map((p) => p.name),
+    fragmentation: fragmentation.findings.length,
+    unwired,
+    industry: BOOT_SELFCHECK_INDUSTRY,
+    degraded: degraded || fragmentation.degraded || unwired.length > 0,
+    errors,
+  };
+
+  log.info(
+    {
+      layers: CONTENT_LAYER_ORDER.join(' < '),
+      packages: result.packages.length,
+      fragmentation: result.fragmentation,
+      unwired: unwired.length,
+    },
+    'L1.5 专业包层已初始化',
+  );
+  return result;
 }

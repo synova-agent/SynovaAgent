@@ -1,20 +1,26 @@
 # .claude/claims/1056.yaml — #1056（模块 K4）L1.5 专业包层机制 · 写集声明（issue 号卡）
 # 先例：.claude/claims/1045.yaml / 1052.yaml（claim 优先于 D# 链；K3 R3 防劫持）
 # 纪律：只列本 PR 真正改动的文件，不预授权。
+# 🔴 2026-10-11 更新（CTO「甲」裁定）：接线改为经 content-registry 声明 ⇒
+#   ① 新增 `src/extensions/layer-resolver.ts`（由 profession-layer.ts 改名）
+#   ② 新增 `src/deploy/content-registry.ts` + `tests/deploy/content-registry.test.ts`（内容注册表登记 + 计数同步）
+#   ③ 移除 `src/init/file-driven-loaders.ts`（#1465 后该文件为 registry 唯一驱动，本卡零改动）
 writeset:
   - .claude/claims/1056.yaml
   - .claude/task-briefs/2026-10-09-1056-l15-profession-layer.md
   - extensions/professions/manifest.json
   - extensions/professions/chain-retail-expansion/manifest.json
   - extensions/professions/chain-retail-expansion/thresholds.json
-  - src/extensions/profession-layer.ts
-  - src/init/file-driven-loaders.ts
+  - src/extensions/layer-resolver.ts
+  - src/deploy/content-registry.ts
+  - tests/deploy/content-registry.test.ts
   - tests/extensions/layer-precedence.test.ts
   - tests/extensions/profession-layer.test.ts
   - docs/synova/product-lines/evidence/1056-l15-profession-layer-20261010.md
 done:
   - verify: npx vitest run tests/extensions/layer-precedence.test.ts
   - verify: npx vitest run tests/extensions/profession-layer.test.ts
-  - verify: bash scripts/check-file-driven.sh
+  - verify: npx vitest run tests/deploy/content-registry.test.ts
   - verify: npx vitest run tests/init/file-driven-loaders.test.ts
+  - verify: bash scripts/check-file-driven.sh
 note: 宪章 5.2 五缺口之一（L1.5 专业包层）；四层顺序 custom>profession>industry>builtin，只复用 config-layers 的 mergeLayers 内核；L2 客户层沿用既有 customer-config/<orgId>/ 约定，未新造顶层目录。V5/V6 真删真跑均报红。写集外发现（已报 Lead 另立卡）：playbook 三层优先级实测与声明相反。未合并（GitHub 封禁）。

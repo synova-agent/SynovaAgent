@@ -1,6 +1,10 @@
 /**
  * tests/extensions/profession-layer.test.ts — L1.5 专业包层单元测试（#1056）
  *
+ * ⚠️ 文件名保留 `profession-layer`（本次改名只动**模块路径**：`src/extensions/profession-layer.ts`
+ *    ⇒ `src/extensions/layer-resolver.ts`）。本文件测的是「L1.5 专业包层」这一能力面，
+ *    与模块文件名不必同名；重命名测试文件会额外扩大写集与证据面，不在卡面裁定范围内。
+ *
  * 覆盖：文件驱动发现（正常 / 缺目录 / 坏 manifest）、四层解析降级路径
  * （缺目录 / JSON 坏 / 非 plain object）、反碎片化检测（命中 / 不命中 / 缺目录）。
  * 全部用**临时真实目录**（真的读盘，不 mock）。
@@ -14,7 +18,7 @@ import {
   resolveContentLayers,
   loadProfessionPackages,
   detectCustomerFragmentation,
-} from '../../src/extensions/profession-layer';
+} from '../../src/extensions/layer-resolver';
 
 const FILE = 'thresholds.json';
 let base = '';
@@ -38,7 +42,7 @@ function layerRoots(dir: string): { builtin: string; industry: string; professio
   };
 }
 
-describe('profession-layer 单元', () => {
+describe('layer-resolver 单元（L1.5 专业包层）', () => {
   beforeAll(() => {
     base = mkdtempSync(join(tmpdir(), 'k4-1056-unit-'));
   });
