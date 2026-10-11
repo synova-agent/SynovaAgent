@@ -70,6 +70,11 @@ export interface AcceptanceStep {
 }
 
 export interface ConstructionItem {
+  /** 🔴 **唯一真源（CTO 2026-10-11 立）**：Gitea/GitHub 的 **issue 号** —— 自动生成、全局唯一、**不可能撞号**。
+   *  新增项**必填**；存量项待补（门禁按白名单逐步收敛）。
+   *  理由：手写 id 会撞（实测事故：K12 的 `1-9` × K4 的 `1-9`）；issue 号是数据库主键，不会撞。 */
+  issue?: number;
+  /** ⚠️ **人类可读别名**（不再是主键）：便于交流与历史兼容（如 `3-1` / `RB-01` / `K12-21`）。 */
   id: string;
   /** 派给谁（**由 CTO 派单时指定** —— 不是"归属"。域概念已废止 2026-10-04） */
   worker: Worker;
@@ -1111,7 +1116,7 @@ export const constructionItems: readonly ConstructionItem[] = [
 
   // ───────────────── 第 3 批 · 新建 ─────────────────
   {
-    id: '3-1',
+    issue: 184, id: '3-1',
     worker: 'win', batch: '第3批', block: 'K12',
     title: '角色预设包（Role Pack）',
     paths: [
@@ -1158,7 +1163,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 3-2',
   },
   {
-    id: '3-3',
+    issue: 186, id: '3-3',
     worker: 'win', batch: '第3批', block: 'K12',
     title: '建档通道（"建档" 0 命中）',
     paths: [
@@ -1181,7 +1186,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 3-3',
   },
   {
-    id: '3-4',
+    issue: 187, id: '3-4',
     worker: 'win', batch: '第3批', block: 'K12',
     title: '追问由本体缺口驱动',
     paths: [
@@ -1508,7 +1513,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '产品线 K1 窗口上报 + CTO 实测（origin/main@65aa62dea）：jwtAuthMiddleware 全局挂载于 server.ts:344；isWhitelisted() 23 条不含 /api/im/feishu/webhook ⇒ 生产姿态必 401。与 1-7/1-7bis 同族（DevMode 掩盖）。🔴 修复方向不得简单加白名单（公网入口须验签）',
   },
   {
-    id: 'RB-01',
+    issue: 192, id: 'RB-01',
     worker: 'win', batch: '第1批', block: 'K12',
     title: '多租户隔离：跨 orgId 读必须被拒（含 DevMode 姿态）',
     // 卡面 §④；第二项由 `src/middleware/rbac.ts` 订正而来；卡面写 `probe-*` 通配，此处取同域**具名**件（避免与 RB-02/03/04 的 probe 相撞）
@@ -1534,7 +1539,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '创始人 2026-10-05：「DevMode 这个肯定是不允许的」+「云端服务肯定是不能 A 客户读 B 客户数据」。判据须在【硬化姿态】与【DevMode 姿态】各跑一次（构造跨 orgId 请求 ⇒ 必被拒），不依赖"真有第二个租户"',
   },
   {
-    id: 'RB-02',
+    issue: 193, id: 'RB-02',
     worker: 'win', batch: '第1批', block: 'K12',
     title: '部门轴：departmentIds（复数）+ 文件驱动真源 + resolveContext 单一入口',
     // 同 RB-01：卡面 `probe-*` 通配取同域具名件
@@ -1559,7 +1564,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '创始人 2026-10-05：「中层就会涉及多个部门」⇒ 必须复数；「部门唯一真源赞同文件驱动」（便于不同客户调整）。🔴 提案原稿的 departmentId（单数）作废。改造面：src/ 里 teamId/department 已 428 处 / 74 文件 ⇒ 必须有 resolveContext 单一入口，否则 74 文件各写各的判断',
   },
   {
-    id: 'RB-03',
+    issue: 194, id: 'RB-03',
     worker: 'win', batch: '第2批', block: 'K12',
     title: '权限项模型：PermissionId[] + 角色为可配包（五档仅出厂默认）',
     paths: [
@@ -1581,7 +1586,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '创始人 2026-10-05：「有一堆权限可以选择，根据岗位或角色灵活配置，不能根据岗位定死」+ 举例（同是市场总监，A 客户能看财务、B 客户不能）⇒ **不是 RBAC，是 Grant/ACL 模型**（角色只是打包）。五档保留为出厂默认，但**不是类型的一部分**',
   },
   {
-    id: 'RB-04',
+    issue: 195, id: 'RB-04',
     worker: 'win', batch: '第3批', block: 'K12',
     title: 'BR-3 重构：从 RBAC 档位 → Grants + 客户自定义配置面',
     paths: [
@@ -1756,7 +1761,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     },
   // ═══ K12 新增（一致性线 · 宪章 §2.7 第一优先 · 2026-10-11 立）═══
   {
-    id: 'K12-02', worker: 'win', batch: '第12批', block: 'K12',
+    issue: 185, id: 'K12-02', worker: 'win', batch: '第12批', block: 'K12',
     title: '建档内容包（L0/L1 采集方法）',
     paths: ['extensions/onboarding/**', 'tests/onboarding/completeness.test.ts'],
     dependsOn: [],
@@ -1765,7 +1770,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '内容面规范 §六（建档内容包＝过程输入）/ 02-一致性 §九',
   },
   {
-    id: 'K12-05', worker: 'win', batch: '第12批', block: 'K12',
+    issue: 188, id: 'K12-05', worker: 'win', batch: '第12批', block: 'K12',
     title: '知识一致：分层权限的数据面（四层＝企业/部门/岗位/个人）',
     paths: ['extensions/knowledge-scope/**', 'src/init/file-driven-loaders.ts', 'tests/knowledge-scope/layering.test.ts', 'scripts/control-tower/probe-knowledge-scope.ts'],
     dependsOn: ['RB-01', 'RB-02'],
@@ -1774,7 +1779,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '宪章 §2.7 第①层 / 02-一致性 §三机制2（四层不是"一个统一知识库"）',
   },
   {
-    id: 'K12-06', worker: 'win', batch: '第12批', block: 'K12',
+    issue: 189, id: 'K12-06', worker: 'win', batch: '第12批', block: 'K12',
     title: '标准一致：输出契约（可机器校验，非"给格式"）',
     paths: ['extensions/reports/contracts/**', 'src/output/contract-validator.ts', 'tests/output/contract-validator.test.ts'],
     dependsOn: [],
@@ -1783,7 +1788,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '宪章 §2.7 第③层 / 02-一致性 §三机制3（产出提交时自动检查；第二职务＝反馈捕获）',
   },
   {
-    id: 'K12-07', worker: 'win', batch: '第12批', block: 'K12',
+    issue: 190, id: 'K12-07', worker: 'win', batch: '第12批', block: 'K12',
     title: '目标一致：岗位目标 ↔ 公司目标可追溯（目标分解边）',
     paths: ['extensions/ontology/**', 'src/l4/goal-alignment.ts', 'tests/l4/goal-alignment.test.ts'],
     dependsOn: ['K12-03'],
@@ -1792,7 +1797,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '宪章 §2.7 第④层 / 02-一致性 §二第4层（创始人提出：公司目标与考核→传导到每个人）',
   },
   {
-    id: 'K12-08', worker: 'win', batch: '第12批', block: 'K12',
+    issue: 191, id: 'K12-08', worker: 'win', batch: '第12批', block: 'K12',
     title: '反馈一致：偏差回流到同一个地方（单一入口＋禁静默修改）',
     paths: ['src/l4/decision-capture.ts', 'tests/l4/decision-capture-single-entry.test.ts', 'scripts/control-tower/probe-decision-ledger.ts'],
     dependsOn: ['K12-06'],
@@ -1801,7 +1806,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '宪章 §2.7 第⑤层 / 02-一致性 §四（飞轮 v3.1 铁律：人工修正必须结构化落账，禁静默）',
   },
   {
-    id: '0-13', worker: 'win', batch: '第12批', block: 'K12',
+    issue: 196, id: '0-13', worker: 'win', batch: '第12批', block: 'K12',
     title: 'check-content-coupling 新门禁（CC1方向/CC2对称/CC3可达/CC4结构）',
     paths: ['scripts/check-content-coupling.sh', 'tests/control-tower/content-coupling.test.sh'],
     dependsOn: [],
@@ -1810,7 +1815,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '内容面规范 §3.5（现存量：113 type＋28 值钻入｜27 条反向 type｜4 项不可达｜4 目录无 manifest）',
   },
   {
-    id: 'K12-14', worker: 'win', batch: '第12批', block: 'K12',
+    issue: 197, id: 'K12-14', worker: 'win', batch: '第12批', block: 'K12',
     title: '【已撤销·重复立卡】content-registry（唯一 type→loader 表）＋ entryPoint 字段处置 —— 活归 K10 EXT-WIRE(#1465)',
     paths: ['src/deploy/content-registry.ts', 'extensions/*/manifest.json'],
     dependsOn: [],
@@ -1819,7 +1824,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '🔴 CTO 2026-10-11 裁：本项与 K10 的 EXT-WIRE **重复立卡**（同判据 probe-content-registry.ts、同写集 src/deploy/content-registry.ts ＋ file-driven-loaders.ts ＋ 9 个 manifest）⇒ **撤销本项，活归 EXT-WIRE（卡面 #1465）**；K12-05/K12-16 与 EXT-WIRE 为**串行**关系。依据：内容面规范 §八-5 的建议项**早已被建成 K10 的 EXT-WIRE**，我建 K12 时未查重。',
   },
   {
-    id: '1-10', worker: 'win', batch: '第12批', block: 'K12',
+    issue: 198, id: '1-10', worker: 'win', batch: '第12批', block: 'K12',
     title: 'reload 重扫 extensions/（不重启，失败隔离）',
     paths: ['src/deploy/content-reload.ts', 'tests/deploy/content-reload.test.ts'],
     dependsOn: ['EXT-WIRE'],
@@ -1828,7 +1833,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '内容面规范 §5.4＋§5.3（采纳 DSH 三机制：早激活／失败隔离／标识持久化；不采纳代际机制）',
   },
   {
-    id: '1-11', worker: 'win', batch: '第12批', block: 'K12',
+    issue: 199, id: '1-11', worker: 'win', batch: '第12批', block: 'K12',
     title: '四项生产不可达处置（llm-providers/business-models/engine/tools）＋ policies/data-access',
     paths: ['extensions/llm-providers/**', 'extensions/business-models/**', 'extensions/engine/**', 'extensions/tools/**', 'extensions/policies/data-access.yaml'],
     dependsOn: ['EXT-WIRE'],
@@ -1837,7 +1842,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '内容面规范 §3.2 汇总＋§七-2（取舍是产品判断，需 CTO/创始人裁）',
   },
   {
-    id: '1-12', worker: 'win', batch: '第12批', block: 'K12',
+    issue: 200, id: '1-12', worker: 'win', batch: '第12批', block: 'K12',
     title: 'adapters/notifications 引擎码归位（.ts 搬 src/，json 留）',
     paths: ['src/connectors/**', 'src/notifications/**', 'extensions/adapters/**', 'extensions/notifications/**'],
     dependsOn: ['0-13'],
@@ -1846,7 +1851,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '内容面规范 §3.2-9/12＋宪章 约束4（内核与扩展边界必须物理可见）',
   },
   {
-    id: '1-13', worker: 'win', batch: '第12批', block: 'K12',
+    issue: 201, id: '1-13', worker: 'win', batch: '第12批', block: 'K12',
     title: 'locales 死指针修复（manifest 指向不存在的 locale-loader.ts）',
     paths: ['extensions/locales/manifest.json'],
     dependsOn: ['EXT-WIRE'],
@@ -1855,7 +1860,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '内容面规范 §一 E-2 撤回＋§5.2（双口径皆悬空；真加载器是 src/locale/locale-loader.ts）',
   },
   {
-    id: 'RB-05', worker: 'win', batch: '第12批', block: 'K12',
+    issue: 202, id: 'RB-05', worker: 'win', batch: '第12批', block: 'K12',
     title: '人在环审批（approval seam）：高风险动作要人点头，无人应答 ⇒ 拒',
     paths: ['src/runtime/approval-seam.ts', 'tests/security/approval-seam.test.ts', 'scripts/control-tower/probe-approval-seam.ts'],
     dependsOn: ['RB-01', 'RB-02'],
@@ -1864,7 +1869,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '2026-10-07-CTO-记录（K11 四层之第四层 · 人在环）/ 创始人 2026-10-05 六条裁定之「高风险要人点头」/ 宪章 4.2 运行时含"审批"',
   },
   {
-    id: 'RB-06', worker: 'win', batch: '第12批', block: 'K12',
+    issue: 203, id: 'RB-06', worker: 'win', batch: '第12批', block: 'K12',
     title: '岗位内容分层（提示词/工具/知识按部门变）—— 🔴 上线闸＝第一个客户上线前必须完成',
     paths: ['extensions/content-layers/**', 'src/services/content-layering.ts', 'tests/services/content-layering.test.ts', 'scripts/control-tower/probe-content-layering.ts'],
     dependsOn: ['K12-02', 'RB-02'],
@@ -1874,7 +1879,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   },
 
   {
-    id: 'K12-21', worker: 'win', batch: '第12批', block: 'K12',
+    issue: 205, id: 'K12-21', worker: 'win', batch: '第12批', block: 'K12',
     title: '测量梯子（13 个探针 · 全员前置）：未实现必须 exit 2，不许假绿',
     paths: ['scripts/control-tower/probe-ladder.ts', 'scripts/control-tower/probe-*.ts', 'tests/control-tower/probe-contract.test.sh'],
     dependsOn: [],
