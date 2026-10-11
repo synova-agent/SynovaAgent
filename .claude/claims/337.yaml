@@ -13,11 +13,19 @@
 # 声明纪律：只列本 PR 真正改动的文件，不预授权。
 #   ⚠️ 本卡**不含** `tests/tui-v2/chat-degradation.test.ts`（上一位的 chat-degradation 追因修复
 #      已在 d5bc45141/c66544da1 落盘，属既有提交面，非本轮新增写面）。
+# 🔴 2026-10-12 收窄（CTO 二·D，授权自决）：本 claim 现服务于【测试面】PR（#399）。
+#   原声明（**已作废**）：
+#     > "writeset = .claude/claims/337.yaml ／ .claude/task-briefs/2026-10-11-followup-react19-ink-dep.md
+#     >             ／ package.json ／ package-lock.json"
+#   作废理由（两条）：
+#     (a) 那 4 件属【依赖面】—— 已由独立 PR 承载并合并（react 回 18.3.1，合并提交 b024bfa01），
+#         与本 PR（仅测试面）**不符**；claim 是机器可读的写集声明，留着会**误报写集**。
+#     (b) 原声明正文自陈"本卡**不含** tests/tui-v2/chat-degradation.test.ts"，
+#         而该件正是本 PR 的**唯一实质改动**——声明与实际**正相反**。
 writeset:
   - .claude/claims/337.yaml
   - .claude/task-briefs/2026-10-11-followup-react19-ink-dep.md
-  - package.json
-  - package-lock.json
+  - tests/tui-v2/chat-degradation.test.ts
 done:
   - verify: bash -c "npm ci && npx vitest run tests/tui-v2/chat-degradation.test.ts"
   - verify: npm ls react
