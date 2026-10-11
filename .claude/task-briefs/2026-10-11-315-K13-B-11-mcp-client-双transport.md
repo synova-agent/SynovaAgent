@@ -1,0 +1,63 @@
+# Task Brief: #315 → K13-B-11 — MCP client 双 transport（stdio / StreamableHTTP）＋ 工具表变更通知重载 ＋ 
+
+> 卡面来源：CTO 2026-10-11 恢复（GitHub 封仓期**未随迁**件）｜恢复源：《DSH借鉴指引-v2-20260904》§4/§11.3 ＋《派单-D760-D769-DSH借鉴卡-20260915》
+> 架构基准：**产品宪章 v8.1**（§0.4 ＋ §4.1）｜元断言：M1（落点归属）／M2（回写验收点）／M3（锚点口径）
+> 域：**mac** ｜ 主线贡献：**infra:DSH 借鉴卡（非 line-1）**
+
+## 〇、为什么要做这个（通俗版 · 先读这一节）
+**① 一句话**：MCP client 双 transport（stdio / StreamableHTTP）＋ 工具表变更通知重载 ＋ 子进程环境擦除（scrubbedParentEnv）
+**② 解决什么问题**：现有 MCP 入站**只有单 transport**，工具表一变就要**重启**才能生效；且连企业系统时**子进程继承父环境**（凭证/路径泄露面）。
+**③ 做完对项目的推动**：补 **MCP 集成 0%** 这个缺口 —— 它是"Synova 作为 client 连企业系统"（Stage 2 契约）的前置。
+**④ 🔴 不做行不行**：**可以做但有代价**（欠账级）：单 transport 也能先上线，不是安全底线；但企业系统 transport 形态一旦多样就必然撞墙，越晚做越贵。
+**⑤ 现在有什么基础（代码盘点，as_of local-main `7c6315029`）**：✅ 落点 src/mcp/ 已在（实测）；MCP 侧已有既有认证/权限件（卡 #456 先合，避免同模块撞车）。❌ 双 transport / 变更通知重载 / 环境擦除 三件缺。
+**⑥ 还需要做什么**：① 双 transport（stdio ＋ StreamableHTTP）② 工具表变更 → 通知 → 热重载 ③ scrubbedParentEnv（子进程环境擦除）。
+**⑦ DSH 借鉴方式**：**参考自研** —— DSH `dsh-mcp-client/lib/index.js:835` `export { Config, apply, createMcpToolDefinition, inject, name }`（一个 client 承载两种 transport，工具定义由宿主注入）
+**⑧ 涉及代码文件**：src/mcp/
+
+## Q0: 定位 — 项目拼图 + 文件审计
+本卡属 **K13（DSH 借鉴块，2026-10-11 新立）**，卡号 B-11（原 task-state D760）。架构位置 = ⓪ 连接器（数据侧 ⓪-a 入站）。
+文件审计（实测 `git ls-tree origin/local-main`）：src/mcp/ 均在。结论：**扩展/新建**（见 ⑤/⑥）。
+
+## Q1: 调研
+a) 业界：借鉴必须**带锚点**（包名＋符号＋现验命令），否则一年后无人能核（本卡 ⑦ 逐条给 file:line）。
+b) 顶级团队（本卡的借鉴对象）就是 **DeepSeek Harness**：一能力一包、按名声明、宿主满足（见 ⑦）。
+c) memory 教训：**铁律 46**（禁桥接引用 —— 抄码可以，`import @deepseek-ai/*` 不行）；**铁律 47/48**（契约优先 ＋ 测试非空壳）；**判例 V-01/V-02**（静态可达 ≠ 真跑通；grep 型不得作验收）；**M3**（锚点必须"包名＋符号＋现验命令"）。
+
+## Q2: 范围
+做什么：
+- src/mcp/
+- .claude/task-briefs/2026-10-11-315-K13-B-11-mcp-client-双transport.md
+不做什么：
+- 不改 docs/synova/coordination/施工项登记.ts
+- 不改 scripts/audit/audit-check.py
+
+## Q3: 验收 — 入口 → 交互 → 结果
+入口：26-1 / 26-2（G3 建议验收点，回写目标）
+处理：按 ⑥ 逐项落地；每项带 enable/disable 开关（G4）
+结果：见 Done 标准 ＋ 绑定验收点的证据文件
+
+## 架构层: ⓪ 连接器（数据侧 ⓪-a 入站）
+#CRITERIA: C
+
+## 写集
+- .claude/task-briefs/2026-10-11-315-K13-B-11-mcp-client-双transport.md
+- src/mcp/
+
+## Done 标准
+- [ ] verify: G1 零桥接：`grep -rn "@deepseek-ai" src/ packages/ --include="*.ts" --include="*.json" | grep -v node_modules` ⇒ **零结果**
+- [ ] verify: G2 接线：`grep -rn "<新符号>" src/` 有调用方 ＋ 集成测试走真实路由（铁律 0-2）
+- [ ] verify: G3 回写：回写到验收点 **26-1 / 26-2** ＋ 生成**绑定该点 id 的证据文件**（M2；未回写 = 不计通过）
+- [ ] verify: G4 可回退：每个机制有 enable/disable 开关 ＋ grep/测试物理证明
+- [ ] verify: G5 零运行时依赖：删除 `node_modules/@deepseek-ai` 后本仓仍能构建、仍能跑测试
+- [ ] 反例（改坏即红）：按 ⑥ 构造反例并留原始输出
+- [ ] 三态：未实现必须 **exit 2**（0=通过／1=失败／2=未实现 —— 禁假绿）
+
+## 补的产品缺口（G3：禁「为借鉴而借鉴」）
+**MCP 集成 0%**
+
+## 落点口径核对（两处真源交叉）
+指引 §11.3 与派单件 §一 **一致**（皆 src/mcp/）
+
+## 恢复说明（为什么以前在面板上看不到）
+本卡在 **GitHub 仓被封**后**未随迁**到 Gitea ⇒ 一直只活在 `task-state/D760.json`（旧 DSH 看板）。2026-10-11 由 CTO 专项会话从 local-main 的 task-state ＋ 仓外档案区恢复，并入 **K13**。
+🔴 真源（`docs/synova/coordination/施工项登记.ts`）新增 K13 块归 CTO。
