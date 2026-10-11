@@ -17,7 +17,7 @@
 | `tests/store/schema-migration.test.ts`・`tests/store/migrations/003-orgs.test.ts`・`tests/store/metric-readings-schema.test.ts`（改） | `SCHEMA_VERSION` 4→5 **逐条改 3 处**；🔴 `003-orgs.test.ts:39`（003 自己的 `version=4` 元数据断言）**逐字未动** |
 | `docs/synova/product-lines/evidence/issue1455-graph-triples-canonical-20261009.md`（新） | 捡回的证据件（433 行） |
 | `docs/synova/product-lines/evidence/237-k4-04/**`（新） | 判据原始输出、收尾三件（`README.md`）、CI 日志、Done⑤ 脚本/输出、Z8 提案（`PROPOSAL-skill-tool-discipline.md`） |
-| `docs/synova/product-lines/evidence/k4-04-verify-review-20261011.md`（新） | **独立复核件 v1.8（后升 v1.9）**（逐字节搬运，实施员不编辑一字；`git rev-parse 4ae424e51:<path>` = `c1313b22b7efb56dff861519ed78b9103c91dc43`（**该读数为对象 `4ae424e51…` 时点；当前 HEAD 见 L221 / §16**）） |
+| `docs/synova/product-lines/evidence/k4-04-verify-review-20261011.md`（新） | **独立复核件 v1.8（后升 v1.9）**（逐字节搬运，实施员不编辑一字；`git rev-parse 4ae424e51:<path>` = `c1313b22b7efb56dff861519ed78b9103c91dc43`（**该读数为对象 `4ae424e51…` 时点；当前 HEAD 见本节「增量复核」行 / §16**）） |
 | `.claude/claims/237.yaml`（新） | 认领件（`writeset` + `done:` 三条 `verify:`） |
 
 ## (b) Done ①②③⑤ 逐条勾选 + 判据原始输出
@@ -250,7 +250,7 @@ CTO 2026-10-11 裁定：(a) 口径 = **【乙】（分两类）**，并收紧为
 ## 独立复核四项结论（M6 回写 · 原文照贴）
 
 > **增量复核**：head `cd1a34a8a9d09edddf8af5ed3ebe83009cafeff0`（见复核件 **§16**，v1.9，blob `625c44c8bc4ed82e33cd7858b6594251bfd29c7b`）；本节的四项结论对象为前序 head `09240a496…`。
-**复核员**：`独立复核员 k4-04-verify` ｜ **复核件**：`docs/synova/product-lines/evidence/k4-04-verify-review-20261011.md`（**v1.8 → v1.9**，见本节 L221）｜ **对象**：新 head `09240a496935900fdf902f25d5c5c4dcb8229cca`，base `68bf5759878a458b5e5ceb324a32878660155517`
+**复核员**：`独立复核员 k4-04-verify` ｜ **复核件**：`docs/synova/product-lines/evidence/k4-04-verify-review-20261011.md`（**v1.8 → v1.9**，见本节「增量复核」行）｜ **对象**：新 head `09240a496935900fdf902f25d5c5c4dcb8229cca`，base `68bf5759878a458b5e5ceb324a32878660155517`
 
 **复核员结论原文**：
 > **`自验结论`：新 head `09240a496` 上全部可执行判据（C1/C2/C3/C4/C5′/C6/C7/C8/C9 ＋ D8）均通过复核员独立重跑，未发现与判据冲突之处 ⇒ `可提请独立审计`。** ⚠️ **"通过与否"归 CTO 收件闸 ＋ K3 终审**；本条不含审计结论，也不替代三项 CTO 决策。
@@ -260,7 +260,7 @@ CTO 2026-10-11 裁定：(a) 口径 = **【乙】（分两类）**，并收紧为
 | 对象 | 读数（现测） |
 |---|---|
 | 源 `D:\synova-wt-1455-verify\docs\synova\product-lines\evidence\k4-04-verify-review-20261011.md`（**v1.8 时点**） | **69928 B / sha256 `A70372221E0ED25C258590982A240DA5693D02F3E3F375FBBD923A48497E36EF` / 654 个 `0x0A` / LF（CRLF=0）/ UTF-8 无 BOM** |
-| 目 本 PR 同相对路径（**该读数为对象 `4ae424e51…` 时点**） | `git rev-parse 4ae424e51:…k4-04-verify-review-20261011.md` ⇒ **`c1313b22b7efb56dff861519ed78b9103c91dc43`**（**当前 HEAD 见 L221 / §16**） |
+| 目 本 PR 同相对路径（**该读数为对象 `4ae424e51…` 时点**） | `git rev-parse 4ae424e51:…k4-04-verify-review-20261011.md` ⇒ **`c1313b22b7efb56dff861519ed78b9103c91dc43`**（**当前 HEAD 见本节「增量复核」行 / §16**） |
 
 `bytes_eq=true / sha_eq=true`；实施员 `git hash-object -t blob` 自出数 = **`c1313b22…`** = 队长给出的 blob sha（⇒ clean 过滤器不改动，raw == filtered）。
 
@@ -303,7 +303,7 @@ CTO 2026-10-11 裁定：(a) 口径 = **【乙】（分两类）**，并收紧为
 
 - 步骤 **① 13 组门禁 ✅**、**② 架构边界 ✅**、**③ `vitest --changed origin/local-main` ❌**（run 307/308/309/310/319 同型）。
 - **失败件 1** `tests/tui-v2/chat-degradation.test.ts`（6 例，`ReactCurrentOwner`）⇒ **存量红**（独立复核员已复做并**加强**）：run **281**（**另一分支** `3449c05bb`）与 run **319**（本卡）**失败用例名逐条对齐**（① ② ③ ④a ④b ⑤ 六条，同根因）；本地**完整 checkout 基线树**（`local-main @ 68bf57598`）复跑同组 `6 failed` / `stream-tool-loop` `6 passed`，与 HEAD 一致。
-- **失败件 2** `tests/stream-tool-loop.test.ts:210` ⇒ **环境依赖**：CI 日志原文 `expected '收到你的"测试错误"——我这边运作正常…' to contain '失败'` ⇒ 收到**真 LLM 回复**（provider failover）；本地两态皆绿；该用例只构造 `AgentConversation(fakeProvider)`、**不建库**。
+- **失败件 2** `tests/stream-tool-loop.test.ts:210` ⇒ **环境依赖**：CI 日志原文（run 319）`expected '收到你的"测试错误"——我这边运作正常…' to contain '失败'` ⇒ 收到**真 LLM 回复**（provider failover）；本地两态皆绿；该用例只构造 `AgentConversation(fakeProvider)`、**不建库**。
 - **反证检查**（复核员独立重做，方法更强）：4 个绿 run 的日志中 `chat-degradation` / `stream-tool-loop` / `ReactCurrentOwner` **全 0 命中** ⇒ 它们**根本没跑这些用例** ⇒ **"找不到反例"成立**。
 - 两件**均不在本写集**；`--changed` 选中它们只因 `conversation-engine → sqlite-graph-store → store/schema-migration` 的**模块级依赖**。
 - 🔴 **`pending=0` 未达成**；处置路径（另开卡 / CI 收敛 `--changed` / 按「存量红点名」放行）**请 CTO 裁**。
