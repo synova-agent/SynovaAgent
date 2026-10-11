@@ -6,7 +6,11 @@
   "displayName": "多语言支持",
   "description": "SynovaAgent 国际化字符串。先做中英双语，其他语言按需追加。",
   "defaultLanguage": "zh-CN",
-  "languages": ["zh-CN", "en-US"],
-  "entryPoint": "./locale-loader.ts",
-  "exportKey": "loadLocale"
+  "languages": [
+    "zh-CN",
+    "en-US"
+  ],
+  "entryPoint": "./manifest.json",
+  "entryPointNote": "本字段是按 manifest schema 保留的占位（CTO 裁定 046）：locales 是**内容**，本目录内不存在、也不需要 loader 文件。真加载器 = src/locale/locale-loader.ts，由引擎侧 src/init/file-driven-loaders.ts → src/deploy/content-registry.ts 的 locale 项经 MODULE_IMPORTS 装配，**不经本字段解析**。原值 ./locale-loader.ts 是死指针（文件相对／extensions 相对两种口径皆不存在）⇒ 已删；./manifest.json 是本 schema 下唯一「恒存在」的合法取值（check-integrity-startup.sh:10 对该值有显式跳过分支）。",
+  "loaderRef": "src/locale/locale-loader.ts"
 }

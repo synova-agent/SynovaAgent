@@ -1,0 +1,14 @@
+# .claude/claims/201.yaml — #201（K12-18 locales 死指针修复）写集声明（D708 的 S0 源）
+#   卡面：Gitea issue #201 ｜ 判据源：施工项登记件 1-13 ｜ 口径：CTO 裁定 046（准 A ＋ 附加）
+#   走法：entryPoint 死指针 './locale-loader.ts' → './manifest.json'（本 schema 下唯一"恒存在"的合法取值）
+#         ＋ entryPointNote（写清占位性质）＋ loaderRef（真加载器指针，纯文档）
+#   口径：只动内容面数据文件；**不碰门禁脚本**（附加③④ 取 tree 面／字段表归治理线，裁定 033）
+writeset:
+  - .claude/claims/201.yaml
+  - .claude/task-briefs/2026-10-12-201-locales-pointer.md
+  - extensions/locales/manifest.json
+done:
+  - verify: bash scripts/check-integrity-startup.sh
+  - verify: bash scripts/check-file-driven.sh
+  - verify: npx tsx -e "import { loadLocale } from './src/locale/locale-loader'; const r=loadLocale('en-US'); if(r.degraded) process.exit(1); console.log('uiKeys='+Object.keys(r.locale.ui||{}).length)"
+note: 裁定 046 关键判据＝**两条门禁同批 rc=0**（门禁A 必填 entryPoint／门禁B 目标须存在）——'./manifest.json' 是唯一同时满足的合法取值（check-integrity-startup.sh:10 显式跳过该值）。修前：门禁B rc=1（死指针 ./locale-loader.ts 两种口径皆不存在）、门禁A rc=0（只查字段在不在）。真加载器不回归：loadLocale('en-US') 修前修后同值（degraded=false / uiKeys=39）。第五事实（复核挖、本卡登记）：门禁A 取 git diff --cached 而 CI 用 git checkout -f ⇒ 索引空 ⇒ 空集空过绿；「夹死」解释不了「#201 从未被这两条拦下」——真拦它的是本地 pre-commit。
