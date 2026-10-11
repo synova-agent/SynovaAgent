@@ -922,3 +922,56 @@ function createNoopEngine(): DiagnosisEngine {
 function sleep(ms: number): Promise<void> {
   return new Promise(r => setTimeout(r, ms));
 }
+
+// ═══ K12-08(#T) 进程级决策落账接缝 ═══
+
+/**
+ * 决策落账接缝的**最小面**（进程级）。
+ *
+ * 只需 `recordDecision` 一个方法 ⇒ 调用方不必持有 `ConversationEngine` 的完整构造参数
+ * （provider / sessionManager / …），也**不新增任何 L4 运行时依赖**（EC-03 不变）。
+ * 结构形态：真实 `ConversationEngine` 天然满足本接口，无需断言、无需适配层。
+ */
+export interface DecisionRecordingSeam {
+  /**
+   * @input  decision — 决策输入（谁/做什么/理由；五要素其余项由落账入口补默认）
+   * @output DecisionResult — recorded=true 时带台账行；失败时带 error（**不抛**）
+   * @degraded 未接 `onDecision` ⇒ `{recorded:false, error:'DecisionCapture callback not configured'}`
+   */
+  recordDecision(decision: DecisionInput): Promise<DecisionResult>;
+}
+
+/**
+ * 进程级接缝位 —— 供**无会话**的生产路径（如工单关闭的人工裁决，K12-08 C3）复用同一 L2 接缝。
+ *
+ * 为什么需要它：`ConversationEngine` 是**会话级**实例（`routes/conversations.ts` 的
+ * `sessionEngines` 缓存），而工单关闭（`POST /api/sentinel/tickets/:id/transition`）**没有会话**，
+ * 取不到那批实例。若在 L1 路由里临时 `new ConversationEngine(...)`，既要把 provider 重新
+ * 装一遍（failover 链 + 上下文压缩，含环境变量派生），又在请求路径上引入无关构造风险。
+ * 故：把**已由装配层注入好 `onDecision` 的引擎**存一个进程级引用，无会话路径直接复用同一接缝。
+ *
+ * 不变量：这里**只持接缝引用**，不持 L4 图存储实例 —— 写台账的运行时依赖仍在装配层
+ * （`deploy/bootstrap.ts` 的真图存储实例）里，本文件仍是 `import type`（EC-03 不破）。
+ */
+let decisionRecordingSeam: DecisionRecordingSeam | null = null;
+
+/**
+ * 注册进程级决策落账接缝（由 L1 装配点调用；**可选**，不调则无会话路径显式失败）。
+ *
+ * @input  seam — 已接好 `onDecision` 的引擎接缝；传 null ⇒ 注销（测试复位用）
+ * @output 无
+ * @degraded 未注册 ⇒ `getDecisionRecordingSeam()` 返回 null，调用方据此**显式跳过并 log**，
+ *           不静默假装落账（铁律 24/31）
+ */
+export function setDecisionRecordingSeam(seam: DecisionRecordingSeam | null): void {
+  decisionRecordingSeam = seam;
+}
+
+/**
+ * 读取进程级决策落账接缝。
+ *
+ * @output 已注册的接缝；未注册 ⇒ null（调用方须显式降级，不得假设可用）
+ */
+export function getDecisionRecordingSeam(): DecisionRecordingSeam | null {
+  return decisionRecordingSeam;
+}

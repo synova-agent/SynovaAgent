@@ -16,9 +16,17 @@
  *   · V3/V4/V5/V6 = [L2-真跑通]（真调用生产入口，读真实写入事件）
  * 判例 V-08（改坏即红）：V4/V6 各给一条**构造得出来**的反例，见文件末 §反例。
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
+import http from 'node:http';
+import type { AddressInfo } from 'node:net';
+import express from 'express';
+import Database from 'better-sqlite3';
+import sentinelRouter from '../../src/routes/sentinel';
+import { SentinelRunner, setGlobalSentinelRunner } from '../../src/sentinel/runner';
+import { CronScheduler } from '../../src/cron/scheduler';
+import { getDecisionRecordingSeam, setDecisionRecordingSeam } from '../../src/agent/conversation-engine';
 import {
   captureDecision,
   DECISION_LEDGER_SCHEMA,
@@ -32,6 +40,96 @@ import {
   getDecisionCapturePort,
 } from '../../src/routes/conversations';
 import type { LLMProvider, ChatResult, StreamCallback } from '../../src/providers/types';
+
+// ══════════════════════════════════════════════════════════════════════════════
+// K12-08 C3 触发点的**真生产路径**夹具
+//
+// 为什么在这里做 provider/config 打桩（`vi.mock` 仅两处，其余全真）:
+//   本判据要求 V8 穿过**真会话引擎装配路径**（`routes/conversations.ts` 的
+//   `wireDecisionCapture`）——该路径经 `createProvider(detectProvider(), …)` 建 provider。
+//   打桩这两处只为**不真的调 LLM**；路由、`handleConversationMessage`、会话引擎构造、
+//   `wireDecisionCapture`、`setDecisionRecordingSeam`、工单路由、L2 service、L3 runner、
+//   真 SQLite、`captureDecision` **全部是真件**（铁律 12：不 mock 管线）。
+// ══════════════════════════════════════════════════════════════════════════════
+
+vi.mock('../../src/providers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/providers')>();
+  return {
+    ...actual,
+    createProvider: () => ({
+      name: 'fake-k12-08-provider',
+      baseUrl: 'fake://k12-08',
+      async chat(): Promise<{ content: string; model: string }> {
+        return { content: '好的。', model: 'fake' };
+      },
+      async stream(_msgs: unknown, cb: StreamCallback): Promise<void> {
+        cb.onComplete?.({ content: '好的。', model: 'fake' });
+      },
+      async healthCheck() { return { healthy: true, latencyMs: 1 }; },
+      listModels() { return ['fake']; },
+    }),
+  };
+});
+vi.mock('../../src/providers/detect', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/providers/detect')>();
+  return { ...actual, detectProvider: () => 'deepseek' };
+});
+vi.mock('../../src/config', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/config')>();
+  return {
+    ...actual,
+    loadConfig: () => ({
+      llmApiKey: 'test-key',
+      llmBaseUrl: 'http://localhost:1',
+      llmModel: 'test-model',
+      dbPath: ':memory:',
+      devMode: true,
+    }),
+  };
+});
+
+/** 真 SQLite（`:memory:`）＋ 真 `sentinel_tickets` DDL —— 与 `runner.transitionTicket` 的 SELECT/UPDATE 同形 */
+function makeTicketDb(): Database.Database {
+  const db = new Database(':memory:');
+  db.exec(`CREATE TABLE IF NOT EXISTS sentinel_tickets (
+    id TEXT PRIMARY KEY,
+    signal_id TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    expert_type TEXT NOT NULL,
+    diagnosis TEXT,
+    suggested_actions TEXT,
+    status TEXT NOT NULL DEFAULT 'open',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    resolved_at TEXT
+  )`);
+  return db;
+}
+
+/** 真 express app（真工单路由 + 真会话路由），listen(0) 走真 HTTP —— 对齐 tests/routes 既有范式 */
+async function listen(app: express.Express): Promise<{ server: http.Server; baseUrl: string }> {
+  const server = http.createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address() as AddressInfo;
+  return { server, baseUrl: `http://127.0.0.1:${port}` };
+}
+
+async function POST(
+  baseUrl: string, path: string, body: unknown,
+): Promise<{ status: number; body: Record<string, unknown>; ledgerHeader: string | null }> {
+  const res = await fetch(`${baseUrl}${path}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  let parsed: Record<string, unknown> = {};
+  try {
+    parsed = JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    parsed = { raw: text };
+  }
+  return { status: res.status, body: parsed, ledgerHeader: res.headers.get('X-Ledger-Recorded') };
+}
 
 // ══════════════════════════════════════════════════════════════════════════════
 // 测试夹具（注入式：与生产件同一注入面，不 mock 管线 —— 铁律 12）
@@ -474,5 +572,240 @@ describe('降级不静默（铁律 24/31）', () => {
     expect(result.recorded).toBe(false);
     expect(result.error).toContain('INVALID_INPUT');
     expect(edges).toHaveLength(0);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// K12-08 C3 触发点 —— 哨兵发现 → 工单关闭时的人工裁决 ⇒ 台账真多一行
+//
+// 🔴 本组为什么必须是 [L2-真跑通] 而不是 grep/[L1-静态可达]（创始人 2026-10-11 明令）:
+//   上一卡（#312）的探针在**注释里**写 `captureDecision(` 字样即可报绿 —— 纯词法扫描 = 假绿。
+//   故本组一律：真 express 路由 → 真 L2 service → 真 L3 runner（真 SQLite）→
+//   真 L2 接缝 `recordDecision` → 真 L4 `captureDecision` → 真图存储 `createEdge`，
+//   然后断言**写入事件的内容**（边数 + 台账行五要素），不看任何源码文本。
+//
+// 触发点（Q0c 裁定 C3）：`POST /api/sentinel/tickets/:id/transition` 且 `to === 'resolved'`。
+// 状态机白名单（`runner.ts` LEGAL_TRANSITIONS）：`acknowledged → resolved` 是唯一合法关单路径。
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('K12-08 C3 触发点 — 工单关闭的人工裁决 ⇒ 台账真多一行（真 HTTP 路由驱动）', () => {
+  it('V8 [L2] Given 真路由＋真 runner＋真 SQLite＋真装配口, When POST transition to=resolved, Then 台账真多一行且五要素真值', async () => {
+    const db = makeTicketDb();
+    db.prepare(
+      `INSERT INTO sentinel_tickets (id, signal_id, severity, expert_type, diagnosis, suggested_actions, status, created_at, resolved_at)
+       VALUES ('ticket-c3-1', 'sentinel-cash-runway', 'critical', 'auto', ?, null, 'acknowledged', datetime('now'), null)`,
+    ).run(JSON.stringify({ title: '现金流危急' }));
+
+    const scheduler = new CronScheduler(db);
+    const runner = new SentinelRunner(scheduler, db);
+    setGlobalSentinelRunner(runner);
+
+    // 真装配口（`deploy/bootstrap.ts` 的真工厂）挂在真图存储替身上 —— 台账写入由此**可观测**
+    const edges: Edge[] = [];
+    setDecisionCapturePort(createDecisionCapturePort(makeStore(edges), 'default')!);
+
+    // 无会话路径的接缝：真 `ConversationEngine` 实例（不经 LLM，只作 L2 接缝载体）
+    const engine = new ConversationEngine(fakeProvider(), { orgId: 'default', fallbackProvider: null });
+    engine.setDecisionCapture(getDecisionCapturePort()!('default'));
+    setDecisionRecordingSeam(engine);
+
+    const { server, baseUrl } = await listen(express().use(express.json()).use('/api/sentinel', sentinelRouter));
+    try {
+      expect(edges).toHaveLength(0); // 前置：台账**空**（不是"忘了断言"）
+
+      const res = await POST(baseUrl, '/api/sentinel/tickets/ticket-c3-1/transition', {
+        to: 'resolved', operatorId: 'u-huang', role: 'role-ga-lead',
+      });
+
+      // ── ① 工单真关了（迁移仍生效） ──
+      expect(res.status).toBe(200);
+      expect(res.ledgerHeader).toBe('true');
+      const row = db.prepare('SELECT status, resolved_at FROM sentinel_tickets WHERE id = ?')
+        .get('ticket-c3-1') as { status: string; resolved_at: string | null };
+      expect(row.status).toBe('resolved');
+      expect(row.resolved_at).not.toBeNull();
+
+      // ── ② 台账**真多一行**（断言真写入事件，不看源码文本） ──
+      expect(edges).toHaveLength(1);
+      expect(edges[0].type).toBe('DECISION_CONFIRMED');       // 人工裁决 = 确认（非驳回/修正）
+      expect(edges[0].to).toBe('sentinel-cash-runway');       // 决策节点 = 触发该工单的哨兵信号
+      expect(edges[0].graph).toBe('default');
+
+      const ledger = rowOf(edges[0]);
+      expect(ledger.schema).toBe(DECISION_LEDGER_SCHEMA);
+      expect(ledger.who).toBe('u-huang');                     // ① 谁
+      expect(ledger.role).toBe('role-ga-lead');               // ② 岗位
+      expect(ledger.context.taskRef).toBe('ticket-c3-1');     // ③ 什么上下文（可回溯到该工单）
+      expect(ledger.context.summary).toContain('resolved');
+      expect(ledger.output.ref).toBe('ticket-c3-1');          // ④ 产出什么（工单关闭裁决）
+      expect(ledger.output.kind).toBe('ticket-resolution');
+      expect(ledger.presetVersion).toBe(1);                   // ⑤ 哪版预设（显式声明，不靠缺省）
+      expect(ledger.review.verdict).toBe('pass');             // 复核与产出同批落账
+      expect(ledger.kind).toBe('production');
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      setGlobalSentinelRunner(null);
+      setDecisionRecordingSeam(null);
+      scheduler.stop();
+      db.close();
+    }
+  });
+
+  it('V9 [L2] Given 同一关单动作重复驱动, When 第二次 POST, Then 台账不再多行（工单已终态 ⇒ 409 且零新增，无重复落账）', async () => {
+    const db = makeTicketDb();
+    db.prepare(
+      `INSERT INTO sentinel_tickets (id, signal_id, severity, expert_type, diagnosis, suggested_actions, status, created_at, resolved_at)
+       VALUES ('ticket-c3-2', 'sentinel-cash-runway', 'critical', 'auto', ?, null, 'acknowledged', datetime('now'), null)`,
+    ).run(JSON.stringify({ title: '现金流危急' }));
+
+    const scheduler = new CronScheduler(db);
+    setGlobalSentinelRunner(new SentinelRunner(scheduler, db));
+    const edges: Edge[] = [];
+    setDecisionCapturePort(createDecisionCapturePort(makeStore(edges), 'default')!);
+    const engine = new ConversationEngine(fakeProvider(), { orgId: 'default', fallbackProvider: null });
+    engine.setDecisionCapture(getDecisionCapturePort()!('default'));
+    setDecisionRecordingSeam(engine);
+
+    const { server, baseUrl } = await listen(express().use(express.json()).use('/api/sentinel', sentinelRouter));
+    try {
+      const first = await POST(baseUrl, '/api/sentinel/tickets/ticket-c3-2/transition', { to: 'resolved', operatorId: 'u-1' });
+      expect(first.status).toBe(200);
+      expect(edges).toHaveLength(1);
+
+      const second = await POST(baseUrl, '/api/sentinel/tickets/ticket-c3-2/transition', { to: 'resolved', operatorId: 'u-1' });
+      expect(second.status).toBe(409);                        // resolved 是终态（白名单外）
+      expect(edges).toHaveLength(1);                          // ← 台账不因失败重试而多行
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      setGlobalSentinelRunner(null);
+      setDecisionRecordingSeam(null);
+      scheduler.stop();
+      db.close();
+    }
+  });
+
+  it('V10 [L2] Given 接缝未注册（装配链缺席）, When POST resolved, Then 工单照常关闭但台账零行且显式降级可见（铁律 24/31）', async () => {
+    const db = makeTicketDb();
+    db.prepare(
+      `INSERT INTO sentinel_tickets (id, signal_id, severity, expert_type, diagnosis, suggested_actions, status, created_at, resolved_at)
+       VALUES ('ticket-c3-3', 'sentinel-cash-runway', 'critical', 'auto', ?, null, 'acknowledged', datetime('now'), null)`,
+    ).run(JSON.stringify({ title: '现金流危急' }));
+
+    const scheduler = new CronScheduler(db);
+    setGlobalSentinelRunner(new SentinelRunner(scheduler, db));
+    const edges: Edge[] = [];
+    setDecisionCapturePort(createDecisionCapturePort(makeStore(edges), 'default')!);
+    setDecisionRecordingSeam(null); // ← 装配链缺席（对照 V8 的注册）
+
+    const { server, baseUrl } = await listen(express().use(express.json()).use('/api/sentinel', sentinelRouter));
+    try {
+      const res = await POST(baseUrl, '/api/sentinel/tickets/ticket-c3-3/transition', { to: 'resolved', operatorId: 'u-1' });
+
+      expect(res.status).toBe(200);                 // 迁移不受台账影响（台账是旁路资产）
+      expect(res.ledgerHeader).toBe('false');       // ← 降级**显式可见**（响应头，不是静默）
+      expect(res.body.ledgerRecorded).toBe(false);
+      expect(edges).toHaveLength(0);                // 台账零行 —— 不假装落账
+      const row = db.prepare('SELECT status FROM sentinel_tickets WHERE id = ?').get('ticket-c3-3') as { status: string };
+      expect(row.status).toBe('resolved');
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      setGlobalSentinelRunner(null);
+      setDecisionRecordingSeam(null);
+      scheduler.stop();
+      db.close();
+    }
+  });
+
+  it('V11 [L2] Given 关单裁决带 operatorId, When 驱动真路径, Then 台账的「谁」= 该 operatorId（不是"系统"占位）', async () => {
+    // 反例面：若触发点用固定占位（如 'system'），V8/V11 必红 ⇒ 断言的是**真值**不是形状
+    const db = makeTicketDb();
+    db.prepare(
+      `INSERT INTO sentinel_tickets (id, signal_id, severity, expert_type, diagnosis, suggested_actions, status, created_at, resolved_at)
+       VALUES ('ticket-c3-4', 'sentinel-dso-drift', 'warning', 'auto', ?, null, 'acknowledged', datetime('now'), null)`,
+    ).run(JSON.stringify({ summary: 'DSO 连续三月上升' }));
+
+    const scheduler = new CronScheduler(db);
+    setGlobalSentinelRunner(new SentinelRunner(scheduler, db));
+    const edges: Edge[] = [];
+    setDecisionCapturePort(createDecisionCapturePort(makeStore(edges), 'default')!);
+    const engine = new ConversationEngine(fakeProvider(), { orgId: 'default', fallbackProvider: null });
+    engine.setDecisionCapture(getDecisionCapturePort()!('default'));
+    setDecisionRecordingSeam(engine);
+
+    const { server, baseUrl } = await listen(express().use(express.json()).use('/api/sentinel', sentinelRouter));
+    try {
+      const res = await POST(baseUrl, '/api/sentinel/tickets/ticket-c3-4/transition', {
+        to: 'resolved', operatorId: 'u-zhang',
+      });
+      expect(res.status).toBe(200);
+      const ledger = rowOf(edges[0]);
+      expect(ledger.who).toBe('u-zhang');
+      expect(ledger.review.by).toBe('u-zhang');
+      // diagnosis 无 title（只有 summary）⇒ 标题兜底取 summary（真值，不是空白）
+      expect(ledger.context.summary).toContain('ticket-c3-4');
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      setGlobalSentinelRunner(null);
+      setDecisionRecordingSeam(null);
+      scheduler.stop();
+      db.close();
+    }
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 🔴 补 #312 的两门禁失明（创始人 2026-10-11 实测：摘掉生产环 `wireDecisionCapture`
+//    的调用后，tests/l4 仍 20/20 全绿 + 探针 PASS）—— 本组把「生产环真接上」变成断言。
+//
+// 驱动面 = **真会话路由** `POST /api/conversations`（非直调私有函数）：
+//   它走 `handleConversationMessage` → 会话引擎缓存未命中 → `wireDecisionCapture(conv, orgId)`
+//   → `engine.setDecisionCapture(…)` ＋ `setDecisionRecordingSeam(engine)`。
+//   摘掉 `wireDecisionCapture(conv, orgId)` 这一行 ⇒ 进程级接缝恒为 null ⇒ V12 **必红**。
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('K12-08 生产环真接上 — 摘掉 `wireDecisionCapture` 调用 ⇒ 必红（补 #312 失明）', () => {
+  it('V12 [L2] Given 真会话路由, When POST 一条消息（缓存未命中 ⇒ 走装配）, Then 进程级接缝真被注册且能干真活', async () => {
+    // 未注册状态（前置）：证明本断言不是"恒真"
+    setDecisionRecordingSeam(null);
+    expect(getDecisionRecordingSeam()).toBeNull();
+
+    // 真 SQLite 作 orchestration.db（`resolveStore` fail-closed 的唯一前置：对话轨必须能落库）
+    const orchDb = new Database(':memory:');
+    const app = express();
+    app.use(express.json());
+    app.locals.orchestration = { db: orchDb };
+    const conversationsRouter = (await import('../../src/routes/conversations')).default;
+    app.use(conversationsRouter);
+
+    const { server, baseUrl } = await listen(app);
+    try {
+      // 真路由、真 `handleConversationMessage`、真引擎构造、真 `wireDecisionCapture`
+      const res = await POST(baseUrl, '/api/conversations', { message: '你好', orgId: 'default' });
+      expect(res.status).toBe(200);
+
+      // ① 生产环真把接缝注册了（摘掉 `wireDecisionCapture` 的调用 ⇒ 此处恒 null ⇒ 必红）
+      const seam = getDecisionRecordingSeam();
+      expect(seam).not.toBeNull();
+
+      // ② 注册的不只是"非 null"——它**真能**写台账（驱动面 = 真图存储写入事件）
+      const edges: Edge[] = [];
+      setDecisionCapturePort(createDecisionCapturePort(makeStore(edges), 'default')!);
+      // 再走一遍装配（第二个会话 ⇒ 又一次 `wireDecisionCapture`；模块级装配口已在上一行更新）
+      const res2 = await POST(baseUrl, '/api/conversations', { message: '再来一条', orgId: 'default' });
+      expect(res2.status).toBe(200);
+
+      const live = getDecisionRecordingSeam();
+      expect(live).not.toBeNull();
+      const written = await live!.recordDecision({
+        nodeId: 'rc-1', userId: 'u-wire-probe', action: 'confirmed', reason: '生产环接缝真活验证',
+      });
+      expect(written.recorded).toBe(true);
+      expect(edges).toHaveLength(1);
+      expect(rowOf(edges[0]).who).toBe('u-wire-probe');
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      setDecisionRecordingSeam(null);
+      orchDb.close();
+    }
   });
 });

@@ -21,7 +21,10 @@ import {
   getSentinelTickets,
   transitionSentinelTicket,
 } from '../agent/sentinel-service';
-import type { TicketStatus } from '../agent/sentinel-service'; // 铁律 39: L1 类型经 L2 出口（L1→L3 直触已被 CI 拦截, 2026-09-06 修复）
+import type { TicketStatus, SentinelTicketTransitionResult } from '../agent/sentinel-service'; // 铁律 39: L1 类型经 L2 出口（L1→L3 直触已被 CI 拦截, 2026-09-06 修复）
+import type { TicketRow } from '../sentinel/runner'; // 类型经 L3 出口（值经 L2；L1→L3 类型引用不违铁律 39 的运行时边界）
+import { getDecisionRecordingSeam } from '../agent/conversation-engine';
+import type { DecisionInput, DecisionResult } from '../l4/decision-capture';
 import { createLogger } from '@synova/logger';
 
 const log = createLogger('routes/sentinel');
@@ -29,6 +32,94 @@ const router = Router();
 
 /** sentinel_tickets.status 四态（DDL CHECK 枚举; ?status= 白名单 — 非法值按缺省处理, 对齐 findings 路由 idiom） */
 const TICKET_STATUSES: readonly string[] = ['open', 'acknowledged', 'resolved', 'dismissed'];
+
+/** 从 `diagnosis`（JSON 串）取工单标题 —— 解析失败按 signal_id 兜底并 log.warn（对齐 L2 `rowToTicketView` 先例，铁律 24） */
+function ticketTitleOf(row: TicketRow): string {
+  if (!row.diagnosis) return row.signal_id;
+  try {
+    const parsed = JSON.parse(row.diagnosis) as { title?: unknown; summary?: unknown };
+    const title = typeof parsed.title === 'string' ? parsed.title : undefined;
+    const summary = typeof parsed.summary === 'string' ? parsed.summary : undefined;
+    return title ?? (summary !== undefined ? summary.slice(0, 80) : row.signal_id);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.warn({ err: msg, ticketId: row.id }, '[sentinel] 工单 diagnosis JSON 损坏 — signal_id 兜底（不静默）');
+    return row.signal_id;
+  }
+}
+
+/**
+ * K12-08 C3 触发点：把「工单关闭时的人工裁决」落进决策台账 ④（宪章 §4.4：③ 是唯一允许写 ④ 的角色）。
+ *
+ * 契约（铁律 47）:
+ *   @input  input.ticket     — 迁移后**以表为准重读**的工单行（L3 权威行，不是内存拼装副本）
+ *           input.operatorId — 做出裁决的人（POST body `operatorId`）；缺省 → `'unknown-operator'`（入 gaps 可见）
+ *           input.role       — 该人岗位 / 角色包 id（POST body `role`）；缺省 → `'ga-operator'`
+ *           input.orgId      — 图名（组织/租户）；缺省 → `'default'`
+ *   @output `{recorded, error?, reason?}` —— `recorded=false` 时 `error` 必在场（禁静默）；
+ *           `reason='SEAM_NOT_WIRED'` 表示装配链未就绪（进程级接缝未注册）
+ *   @degraded 接缝缺席 / `captureDecision` 落账失败 ⇒ **不抛**，返回 `recorded:false` ＋ 原因；
+ *           调用方（路由）据此 log.warn ＋ `X-Ledger-Recorded: false`（降级显式传播，铁律 24/31）
+ *   @sideEffect 经 L2 接缝 `recordDecision` → L4 `captureDecision` → 图存储 `createEdge`（台账一行）
+ *
+ * 为什么经引擎接缝而不是直调 `captureDecision`：宪章 §4.4 硬规则 —— L1 **不许直写 ④**，
+ * 落账必须经 ③ 的职责路径；`recordDecision` 即该路径在代码里的接缝（#312 已合）。
+ */
+async function recordTicketResolution(input: {
+  ticket: TicketRow;
+  operatorId?: string;
+  role?: string;
+  orgId?: string;
+}): Promise<{ recorded: boolean; error?: string; reason?: string }> {
+  const seam = getDecisionRecordingSeam();
+  if (!seam) {
+    return {
+      recorded: false,
+      reason: 'SEAM_NOT_WIRED',
+      error: 'DecisionCapture 装配链未就绪（进程级接缝未注册）— 台账不落账',
+    };
+  }
+
+  const { ticket, operatorId, role, orgId } = input;
+  const graph = orgId ?? 'default';
+  // 决策节点 = 触发本工单的哨兵信号（③ 的观测对象；台账行落在该节点上）
+  const nodeId = ticket.signal_id !== '' ? ticket.signal_id : ticket.id;
+  const resolvedAt = ticket.resolved_at ?? '';
+
+  const decision: DecisionInput = {
+    nodeId,
+    userId: operatorId ?? 'unknown-operator',
+    action: 'confirmed',
+    role: role ?? 'ga-operator',
+    reason: `工单关闭裁决：${ticketTitleOf(ticket)}（${ticket.id}）`,
+    context: {
+      orgId: graph,
+      taskRef: ticket.id,
+      summary: `哨兵工单 ${ticket.id} 由 ${ticket.status} 关闭为 resolved（signal=${nodeId}，severity=${ticket.severity}）`,
+    },
+    output: { kind: 'ticket-resolution', ref: ticket.id, digest: `${ticket.id}@${resolvedAt}` },
+    presetVersion: DEFAULT_LEDGER_PRESET_VERSION,
+    review: {
+      verdict: 'pass',
+      by: operatorId ?? 'system-default',
+      reason: `工单 ${ticket.id} 关闭（状态机 acknowledged→resolved，人工裁决）`,
+    },
+  };
+
+  const result: DecisionResult = await seam.recordDecision(decision);
+  if (!result.recorded) {
+    return { recorded: false, error: result.error ?? '未落账（原因未给出）' };
+  }
+  return { recorded: true };
+}
+
+/**
+ * 台账行的预设包版本基线（预设层内容面未接入时的出厂缺省）。
+ *
+ * 与 `decision-capture.ts` 的 `DEFAULT_PRESET_VERSION` 同值 —— 此处**显式传入**而非依赖缺省，
+ * 让「哪版预设」这一要素在台账行里是**本触发点声明的事实**（预设层接入后改这一个常量即可）。
+ */
+const DEFAULT_LEDGER_PRESET_VERSION = 1;
 
 // ═══ GET /api/sentinel/findings ═══
 
@@ -111,18 +202,42 @@ router.get('/tickets', (req: Request, res: Response) => {
 //   404 { ok: false, error: 'TICKET_NOT_FOUND' }      — 无此工单行
 //   409 { ok: false, error: 'ILLEGAL_TRANSITION', from, to } — 白名单外迁移（含终态/同态）
 //   503 { ok: false, degraded: true, error }          — db 不可用（degraded 传播链终点）
+//
+// 🔴 K12-08 C3（创始人 2026-10-11 裁）：`to === 'resolved'` = 「哨兵发现 → 工单关闭时的人工裁决」
+//   ⇒ 它是**唯一**允许写决策台账 ④ 的用户动作（宪章 §4.4「③ 是唯一允许写 ④ 的角色」）。
+//   落账经 L2 接缝 `recordDecision`（**不在这里直写 ④**）；落账失败**不阻断**工单迁移
+//   （迁移已成功，台账是旁路资产）——但必 log.warn ＋ `X-Ledger-Recorded: false` 响应头，
+//   降级显式可见（铁律 24/31），不静默吞。
 
-router.post('/tickets/:id/transition', (req: Request, res: Response) => {
+router.post('/tickets/:id/transition', async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
-    const body = req.body as { to?: unknown } | undefined;
+    const body = req.body as { to?: unknown; operatorId?: unknown; role?: unknown; orgId?: unknown } | undefined;
     if (!body || typeof body.to !== 'string' || body.to === '') {
       res.status(400).json({ ok: false, error: '缺少 to 字段（可选值: acknowledged | resolved | dismissed）' });
       return;
     }
-    const result = transitionSentinelTicket(id, body.to);
+    const result: SentinelTicketTransitionResult = transitionSentinelTicket(id, body.to);
     if (result.ok) {
-      res.status(200).json(result);
+      // 人工裁决落账（仅关闭动作；acknowledged/dismissed 不是「关单裁决」，不落账）
+      let ledgerRecorded: boolean | undefined;
+      if (body.to === 'resolved') {
+        const outcome = await recordTicketResolution({
+          ticket: result.ticket,
+          operatorId: typeof body.operatorId === 'string' && body.operatorId !== '' ? body.operatorId : undefined,
+          role: typeof body.role === 'string' && body.role !== '' ? body.role : undefined,
+          orgId: typeof body.orgId === 'string' && body.orgId !== '' ? body.orgId : undefined,
+        });
+        ledgerRecorded = outcome.recorded;
+        if (!outcome.recorded) {
+          log.warn(
+            { ticketId: id, error: outcome.error, reason: outcome.reason },
+            '[sentinel] 工单关闭裁决**未**落决策台账（迁移照常生效）— 降级显式可见',
+          );
+        }
+        res.setHeader('X-Ledger-Recorded', String(outcome.recorded));
+      }
+      res.status(200).json(ledgerRecorded === undefined ? result : { ...result, ledgerRecorded });
       return;
     }
     switch (result.error) {
