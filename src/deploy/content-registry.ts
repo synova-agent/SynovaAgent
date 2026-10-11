@@ -119,11 +119,12 @@ const MODULE_IMPORTS: Readonly<Record<string, () => Promise<Record<string, unkno
 };
 
 /**
- * 20 项 contents 全表（`extensions/` 顶层目录全集）。
+ * 21 项 contents 全表（`extensions/` 顶层目录全集）。
  * 状态口径（spec §3.2 逐项裁定表 + §5.1 可达性实测）:
  *   reachable —— 有装配 loader，或有生产直读者（16 项存量可达 ＋ business-models 本卡接活 = 17）
  *   retired   —— 生产不可达且**无内容可接**（engine / tools）
  *   pending-cto —— 生产不可达但**修法牵涉架构（第四处两套并行）**，须过 CTO 再落地（llm-providers）
+ *                  ＋ onboarding（K12-02 #185：纯内容包不接线，宿主侧 loader 待收口）
  */
 const CONTENT_TYPES: readonly ContentTypeEntry[] = [
   {
@@ -366,6 +367,20 @@ const CONTENT_TYPES: readonly ContentTypeEntry[] = [
       '`grep -rn "tools-manifest" src/ packages/ scripts/ --include=*.ts` = 0 命中。' +
       '无内容可接 ⇒ 显式化为 retired（工具注册的真实通道是 MCP/工具注册表，不在此目录）。',
   },
+  {
+    // K12-02（#185）：建档内容包＝L0/L1 采集方法的内容载体（extensions/onboarding/）。
+    // ⇒ **纯内容包，本卡不接线**：无 loader、无生产直读者 ⇒ 按 §3.2 口径不得记 reachable
+    //   （reachable 要求 loader 或 readers 二者之一，判据测试 :72 与表自检同源）。
+    // 内容面语义（宪章 4.1 三判据）：删掉本目录引擎照常启动 ⇒ 内容面；装配面收口待后续卡。
+    type: 'onboarding-method',
+    dir: 'onboarding',
+    face: 'content',
+    status: 'pending-cto',
+    reason:
+      'K12-02 建档内容包（L0/L1 采集方法）的内容载体；本卡为纯内容包不接线（无 loader、无生产直读者），' +
+      '宿主侧 loader / 装配入口待 EXT-WIRE(#1465) 或 K12-03(#186) 收口 ⇒ 按 §3.2 口径登记为 pending-cto 而非 reachable。' +
+      '判据: npx vitest run tests/onboarding/completeness.test.ts（机器真源＝本包完整性校验）。',
+  },
 ];
 
 /** 装配报告中的单项结果 */
@@ -453,8 +468,8 @@ function collectIntegrityProblems(): string[] {
       }
     }
   }
-  if (CONTENT_TYPES.length !== 20) {
-    problems.push(`CONTENT_TYPES 应为 20 项，实测 ${CONTENT_TYPES.length}`);
+  if (CONTENT_TYPES.length !== 21) {
+    problems.push(`CONTENT_TYPES 应为 21 项，实测 ${CONTENT_TYPES.length}`);
   }
   return problems;
 }
