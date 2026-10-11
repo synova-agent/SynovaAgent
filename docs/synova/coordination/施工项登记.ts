@@ -175,6 +175,7 @@ export function isModuleShape(paths: readonly string[]): boolean {
 export const constructionItems: readonly ConstructionItem[] = [
   // ───────────────── 第 0 批 · 止血 ─────────────────
   {
+    issue: 1,
     id: '0-1',
     worker: 'win', batch: '第0批', block: 'K1',
     title: '六个业务循环的 cron 是死路（总闸）',
@@ -209,6 +210,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 0-1 / 现状报告 坏点2',
   },
   {
+    issue: 2,
     id: '0-2',
     sharedWrite: ["2-3: src/growth/feedback-collector.ts（0-2 改聚合键，2-3 改通道；须串行）"],
     worker: 'win', batch: '第0批', block: 'K6',
@@ -246,6 +248,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 0-2 / 现状报告 坏点3',
   },
   {
+    issue: 3,
     id: '0-3',
     worker: 'win', batch: '第0批', block: 'K3',
     title: '4 个内建哨兵永远注册不上',
@@ -283,6 +286,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 0-3 / 现状报告 坏点1',
   },
   {
+    issue: 4,
     id: '0-4',
     worker: 'win', batch: '第0批', block: 'K4',
     title: '循环的五阀映射指向已废止编号',
@@ -319,6 +323,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 0-4 / 现状报告 坏点6',
   },
   {
+    issue: 5,
     id: '0-5',
     worker: 'win', batch: '第0批', block: 'K6',
     title: '目标哨兵"因子3"恒 false',
@@ -345,6 +350,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 0-5 / 现状报告 坏点5',
   },
   {
+    issue: 6,
     id: '0-6',
     worker: 'win', batch: '第0批', block: 'K8',
     title: 'Schema 校验器覆盖率 1/40',
@@ -374,6 +380,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 0-6 / 现状报告 坏点4',
   },
   {
+    issue: 7,
     id: '0-7',
     worker: 'win', batch: '第0批', block: 'K6',
     title: '0-7 补降级日志（`.catch(()=>{})` → 记 warn）；并补传 `memoryStore`',
@@ -400,6 +407,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 0-7 / 现状报告 坏点8',
   },
   {
+    issue: 8,
     id: '0-8',
     worker: 'win', batch: '第0批', block: 'K6',
     title: '参数层 c 类整个模块零引用',
@@ -449,6 +457,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 0-8 / 现状报告 坏点7',
   },
   {
+    issue: 9,
     id: '0-9',
     worker: 'win', batch: '第0批', block: 'K1',
     title: '0-9 知识权限过滤：复测 + 根因收口',
@@ -477,6 +486,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 0-9 —— 🔴 **已作废（2026-10-05）**：前提被证伪。auth.ts:354-356 实为 DEV_MODE 自动 admin 分支（非内联空桩）；真 provider 在 :441-459（身份派生非空条件集）。#983 已 CLOSED/NOT_PLANNED 同因。**本项无对象** ⇒ 转 0-9\u0027（知识审计不可归属）',
   },
   {
+    issue: 10,
     id: '0-10',
     worker: 'win', batch: '第0批', block: 'K1',
     title: 'fail-open 兜底（0-9 延伸）',
@@ -509,6 +519,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 0-10（⚠️ CTO 实测：request-context 已修，剩 im.ts:53 补传 provider）',
   },
   {
+    issue: 11,
     id: '0-11',
     sharedWrite: ["2-4: src/tools/tool-registry.ts（0-11 决策死门去留，2-4 接写入门禁；同一文件须串行）"],
     worker: 'win', batch: '第0批', block: 'K2',
@@ -546,6 +557,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 0-11 / 现状报告 坏点9 同族',
   },
   {
+    issue: 12,
     id: '0-12',
     worker: 'win', batch: '第0批', block: 'K9',
     title: 'skills/ 46 个技能文件恒不加载',
@@ -571,6 +583,7 @@ export const constructionItems: readonly ConstructionItem[] = [
 
   // ───────────────── 第 1 批 · 补齐 ─────────────────
   {
+    issue: 13,
     id: '1-1',
     worker: 'win', batch: '第1批', block: 'K7',
     title: '一页纸偏离只告警不拦截',
@@ -598,6 +611,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 1-1',
   },
   {
+    issue: 14,
     id: '1-2',
     worker: 'win', batch: '第1批', block: 'K7',
     title: '输出契约不可版本化',
@@ -622,6 +636,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 1-2',
   },
   {
+    issue: 15,
     id: '1-3',
     worker: 'win', batch: '第1批', block: 'K7',
     title: '客户模板位只有"报告"一种',
@@ -649,6 +664,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 1-3',
   },
   {
+    issue: 16,
     id: '1-4',
     worker: 'win', batch: '第1批', block: 'K6',
     title: '目标"传导到每个人"',
@@ -679,6 +695,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 1-4',
   },
   {
+    issue: 17,
     id: '1-5',
     sharedWrite: ["3-7: src/routes/diagnosis.ts（1-5 消费 customer-config，3-7 接 Agent 化触发；须串行）"],
     worker: 'win', batch: '第1批', block: 'K7',
@@ -705,6 +722,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 1-5',
   },
   {
+    issue: 18,
     id: '1-6',
     worker: 'win', batch: '第1批', block: 'K8',
     title: 'TraversalPermissionFilter 零接线',
@@ -737,6 +755,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 1-6',
   },
   {
+    issue: 19,
     id: '1-7',
     worker: 'win', batch: '第1批', block: 'K1',
     title: '多岗位执法只在 1 处',
@@ -773,6 +792,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 1-7（⚠️ CTO 实测：origin/main 已修 rbac.ts:133-139）',
   },
   {
+    issue: 20,
     id: '1-8',
     worker: 'win', batch: '第1批', block: 'K4',
     title: '1-8 落权威文档15 已给的 5 条预估值，其余标 unknown；【零阻塞】',
@@ -796,6 +816,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 1-8 / 现状报告 W3',
   },
   {
+    issue: 21,
     id: '1-9',
     worker: 'win', batch: '第1批', block: 'K4',
     title: '1-9 给缺字段的 10 条边补 transfer_function；【零阻塞】',
@@ -820,6 +841,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   },
   // ───────────────── 第 2 批 · 地基 ─────────────────
   {
+    issue: 22,
     id: '2-1a',
     worker: 'win', batch: '第2批', block: 'K3',
     title: '测量值时序 · 表定义（承重件 W1 的 schema 侧）',
@@ -906,6 +928,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   },
 
   {
+    issue: 23,
     id: '2-1b',
     sharedWrite: ["3-8: src/sentinel/（2-1b 加写入侧，3-8 加新哨兵；同目录须串行）", "0-3: src/sentinel/（C-02：0-3 兜底改 builtins.ts，同目录须串行）"],
     worker: 'win', batch: '第2批', block: 'K3',
@@ -931,6 +954,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单 2-1（拆自 2-1）；写入侧 = src/sentinel（mac 域，archive/25 §三：只这三个写入点）',
   },
   {
+    issue: 24,
     id: '2-2',
     worker: 'win', batch: '第2批', block: 'K5',
     title: '参数清单（含 W5 两层结构 layer 字段）—— 2-5 已并入本项',
@@ -955,6 +979,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单 2-2 + 2-5 合并（同一份产物：清单本体 + 其 layer 字段；按选项①「不是独立项，是产物与字段」）',
   },
   {
+    issue: 25,
     id: '2-3',
     sharedWrite: ["0-2: src/growth/feedback-collector.ts（同上）"],
     worker: 'win', batch: '第2批', block: 'K6',
@@ -996,6 +1021,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 2-3',
   },
   {
+    issue: 26,
     id: '2-4',
     sharedWrite: ["0-11: src/tools/tool-registry.ts（同上）"],
     worker: 'win', batch: '第2批', block: 'K2',
@@ -1023,6 +1049,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     //      （`2-4` = 文件/边界门；本项 = 角色授权分支）⇒ 否则会出现「门装了一半就进下一批」。
     //      ⚠️ 写法口径点名：登记件既有写法 = **`'第2批'`**（`batch` 类型 `第0批|第1批|第2批|第3批`，共 9 项用此写法）；
     //      「第2批-地基」是 **Project #1 板字段的选项名**，**不是**登记件的写法 ⇒ 此处按登记件写。
+    issue: 27,
     id: '2-4bis',
     worker: 'win', batch: '第2批', block: 'K2',
     title: '接通角色授权：setRole() 零调用 ⇒ 执行面授权分支不可达',
@@ -1060,6 +1087,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '独立复核 2026-10-08 实测：`setRole()`（`src/agent/tools.ts:140` 定义）全仓零调用 ⇒ `_role` 恒 null ⇒ `:169`/`:188` 两个 `if` 恒不进入（与 0-11 拆掉的假门同病）。卡 = #1347；板字段：p1 / 未开工 / 第1批-补齐 / K2 / 不适用 / L2-真跑通 / 无阻塞',
   },
   {
+    issue: 28,
     id: '2-6',
     worker: 'win', batch: '第2批', block: 'K5',
     title: 'compute 契约注册表不存在（承重件 W4）',
@@ -1090,6 +1118,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 2-6（⚠️ 先定计数口径 U-4）',
   },
   {
+    issue: 29,
     id: '2-7',
     worker: 'win', batch: '第2批', block: 'K5',
     title: 'overall 准度计量口径（"越用越准"的可测判据）',
@@ -1142,6 +1171,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 3-1',
   },
   {
+    issue: 31,
     id: '3-2',
     worker: 'win', batch: '第3批', block: 'K8',
     title: '岗位级知识层（第四层）',
@@ -1211,6 +1241,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 3-4（需图非空）',
   },
   {
+    issue: 34,
     id: '3-5',
     worker: 'win', batch: '第3批', block: 'K4',
     title: '作业单元缺两件（实例 + 评估属性）',
@@ -1232,6 +1263,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 3-5',
   },
   {
+    issue: 35,
     id: '3-6',
     sharedWrite: ["3-7: src/agent/（3-6 readiness 工具，3-7 触发链；同目录须串行）"],
     worker: 'win', batch: '第3批', block: 'K9',
@@ -1259,6 +1291,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 3-6',
   },
   {
+    issue: 36,
     id: '3-7',
     sharedWrite: ["1-5: src/routes/diagnosis.ts（同上）"],
     worker: 'win', batch: '第3批', block: 'K7',
@@ -1284,6 +1317,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 3-7',
   },
   {
+    issue: 37,
     id: '3-8',
     sharedWrite: ["2-1b: src/sentinel/（同上）", "0-3: src/sentinel/（C-02：同上）"],
     worker: 'win', batch: '第3批', block: 'K3',
@@ -1309,6 +1343,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 3-8',
   },
   {
+    issue: 38,
     id: '3-9',
     sharedWrite: ["3-11: extensions/（同上）"],
     worker: 'win', batch: '第3批', block: 'K9',
@@ -1347,6 +1382,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 3-9',
   },
   {
+    issue: 39,
     id: '3-10',
     worker: 'win', batch: '第3批', block: 'K10',
     title: 'DSH 三件公共前段（出站网关 / 脱敏监听 / 双 baseURL）',
@@ -1376,6 +1412,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 3-10',
   },
   {
+    issue: 40,
     id: '3-11',
     sharedWrite: ["3-9: extensions/（3-11 加 L1.5 层，3-9 加声明三字段；同目录须串行）"],
     worker: 'win', batch: '第3批', block: 'K4',
@@ -1404,6 +1441,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 3-11',
   },
   {
+    issue: 41,
     id: 'PL-04',
     worker: 'win', batch: '第2批', block: 'K5',
     title: '三层契约贯通（写入类型 ↔ 哨兵查询类型 ↔ field-mapping 白名单）',
@@ -1432,6 +1470,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '边界评估/00-最终方案.md:48（领域智能 20 项之第 3 项，属【必须自建】）；创始人 2026-10-05 裁 A 归入 K5',
   },
   {
+    issue: 42,
     id: '0-9bis',
     worker: 'win', batch: '第0批', block: 'K1',
     title: '知识审计不可归属（req.userId 恒 undefined ⇒ user_id 恒 anonymous）',
@@ -1456,6 +1495,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: 'CTO 2026-10-05 实测：auth.ts 零处写 req.userId；knowledge.ts:40 读它并 `|| \'anonymous\'` ⇒ 审计行不可归属。取代已作废的 0-9（前提被证伪）。完成标准②须在【跑一次真 JWT 查询之后】测得',
   },
   {
+    issue: 43,
     id: '1-7bis',
     worker: 'win', batch: '第1批', block: 'K1',
     title: 'RbacContext 无 org/team 维度（rbac.ts:127 department 恒 undefined）—— 接口变更，先提案',
@@ -1487,6 +1527,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       + '⚠️ status 由 `proposal` 改为 `todo`：P0 提案期已交付并冻结 ⇒ 转实现期待开工（口径 = status 以 GitHub Issue 真实状态为准，#1346 现为 OPEN）。',
   },
   {
+    issue: 44,
     id: 'K1-WH',
     worker: 'win', batch: '第0批', block: 'K1',
     title: '飞书 webhook 在硬化姿态下必然 401（生产功能不可达）',
@@ -1612,6 +1653,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '创始人 2026-10-05：「出厂设置5档，但是客户可以自己配。这个在企业应用里一定要可以调整，就像调整组织架构一样」。本项含客户配置面（文件驱动）',
   },
   {
+    issue: 49,
     id: '3-12',
     worker: 'win', batch: '第3批', block: 'K6',
     title: '进化回环 E2/E3（跨客户模式 / 联邦）',
@@ -1639,6 +1681,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   },
     {
       // K10 补项（CTO 2026-10-09）——烟测断点族/边界C/规范 v0.1 派生卡，登记以供 Win/K3/验收三读
+      issue: 50,
       id: 'B-RUNTIME',
       worker: 'win', batch: '第0批', block: 'K10',
       title: '运行时断点修复 B1/B4/B5/B8（cron */n 解析·143s 启动阻塞 + healthz 同源 + fsutil + loop-3 口径）',
@@ -1657,6 +1700,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       source: 'PR #1437 断点清单 B1/B4/B5/B8（CTO 验收裁定归 K10）',
     },
     {
+      issue: 51,
       id: 'B3B7',
       worker: 'win', batch: '第0批', block: 'K10',
       title: 'B3+B7：Windows 哨兵注册 protocol d: + 45 次重复注册幂等',
@@ -1672,6 +1716,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       source: 'PR #1437 断点清单 B3(P1)/B7(P3)；卡面 Issue #1463',
     },
     {
+      issue: 52,
       id: 'BS-5',
       worker: 'win', batch: '第1批', block: 'K10',
       title: 'BS-5 交付打包卫生：Dockerfile 路径 + 三处版本号统一 + sourcemap 泄漏核查',
@@ -1689,6 +1734,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       source: '边界C §3.1 BS-5（rc.1 复核）；卡面 Issue #1464',
     },
     {
+      issue: 53,
       id: 'EXT-WIRE',
       worker: 'win', batch: '第1批', block: 'K10',
       title: 'extensions 接线族：4 项生产不可达 + content-registry（type→loader 唯一真源）+ 4 存量 manifest 补漏',
@@ -1714,6 +1760,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       source: 'extensions内容面规范-v0.1 §5.1/§5.2/§5.4；卡面 Issue #1465',
     },
     {
+      issue: 54,
       id: 'BC-CLEAN',
       worker: 'win', batch: '第1批', block: 'K10',
       title: 'BC 清理族：日期快照移出交付 + 0 字节空文件删 + control-tower 剥离客户交付 + 工作树残留清理',
@@ -1730,6 +1777,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       source: '边界C §3.4 BC-3/4/7/8；卡面 Issue #1466',
     },
     {
+      issue: 55,
       id: 'BS-6',
       worker: 'win', batch: '第1批', block: 'K10',
       title: 'BS-6 pre-upload-validator fail-closed 改造【待创始人裁 A/B 后转 todo】',
@@ -1746,6 +1794,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       source: '边界C §3.1 BS-6 + §2.6 三条静默失效路径；卡面 Issue #1467',
     },
     {
+      issue: 56,
       id: 'B2-GRAPH',
       worker: 'win', batch: '第0批', block: 'K4',
       title: 'B2（P1）图边查询 no such column: props —— 50 次失败致哨兵 compute 连环降级',

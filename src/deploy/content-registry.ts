@@ -116,15 +116,19 @@ const MODULE_IMPORTS: Readonly<Record<string, () => Promise<Record<string, unkno
   '../notifications/notification-loader': () => import('../notifications/notification-loader'),
   '../notifications/registry': () => import('../notifications/registry'),
   '../sentinel/sentinel-loader': () => import('../sentinel/sentinel-loader'),
+  // K12-20 (#203 / RB-06)：岗位内容分层解析服务（pending-cto ⇒ 本批**不装配**，
+  //   见 CONTENT_TYPES 中 content-layer 项；键在此登记是「模块路径自洽」的机器可核证据）。
+  '../services/content-layering': () => import('../services/content-layering'),
 };
 
 /**
- * 21 项 contents 全表（`extensions/` 顶层目录全集）。
+ * 22 项 contents 全表（`extensions/` 顶层目录全集）。
  * 状态口径（spec §3.2 逐项裁定表 + §5.1 可达性实测）:
  *   reachable —— 有装配 loader，或有生产直读者（16 项存量可达 ＋ business-models 本卡接活 = 17）
  *   retired   —— 生产不可达且**无内容可接**（engine / tools）
  *   pending-cto —— 生产不可达但**修法牵涉架构（第四处两套并行）**，须过 CTO 再落地（llm-providers）
- *                  ＋ onboarding（K12-02 #185：纯内容包不接线，宿主侧 loader 待收口）
+ *                  ＋ onboarding（K12-02 #185：纯内容包不接线）
+ *                  ＋ content-layers（K12-20 #203：新增顶层目录、boot 装配启用待放行）
  */
 const CONTENT_TYPES: readonly ContentTypeEntry[] = [
   {
@@ -381,6 +385,30 @@ const CONTENT_TYPES: readonly ContentTypeEntry[] = [
       '宿主侧 loader / 装配入口待 EXT-WIRE(#1465) 或 K12-03(#186) 收口 ⇒ 按 §3.2 口径登记为 pending-cto 而非 reachable。' +
       '判据: npx vitest run tests/onboarding/completeness.test.ts（机器真源＝本包完整性校验）。',
   },
+  {
+    // K12-20 (#203 / RB-06，🔴 上线闸)：新增顶层目录 content-layers = **客户岗位预设内容面**
+    //   （提示词 / 工具 / 知识按部门变）。载体 `extensions/content-layers/**`（企业层 → 部门层覆盖）
+    //   ＋ 解析服务 `src/services/content-layering.ts`（导出 resolveContent）。
+    //   ⚠️ 与 `docs/synova/presets/**`（**内部作业预设**：synova-cto / synova-k3-audit / synova-squad-lead）
+    //   不是一回事 —— 后者与客户岗位无关（V6 概念区分）。
+    // 🔴 status = pending-cto（**不是** reachable）：`listLoadableTypes()` 只装配
+    //   `reachable && loader!==undefined` 的项 ⇒ 本批**不启用 boot 装配**（宿主侧内容面装配的
+    //   启用属架构变更，须过 CTO）。loader 仍按名声明 —— 它是「该 type 的加载入口真实存在」的
+    //   机器可核证据（本目录测试断言 loader.module 对应文件确实存在），不是散文式声明。
+    type: 'content-layer',
+    dir: 'content-layers',
+    face: 'content',
+    status: 'pending-cto',
+    reason:
+      'K12-20 岗位内容分层内容载体（提示词/工具/知识按部门变）：解析服务 src/services/content-layering.ts' +
+      '（导出 resolveContent）＋ extensions/content-layers/** 已就位（探针 probe-content-layering exit 0）；' +
+      '宿主侧 boot 装配的启用属架构变更，待 CTO 放行。',
+    loader: {
+      module: '../services/content-layering',
+      init: 'resolveContent',
+      initArgs: [{ departmentIds: [] }],
+    },
+  },
 ];
 
 /** 装配报告中的单项结果 */
@@ -468,8 +496,8 @@ function collectIntegrityProblems(): string[] {
       }
     }
   }
-  if (CONTENT_TYPES.length !== 21) {
-    problems.push(`CONTENT_TYPES 应为 21 项，实测 ${CONTENT_TYPES.length}`);
+  if (CONTENT_TYPES.length !== 22) {
+    problems.push(`CONTENT_TYPES 应为 22 项，实测 ${CONTENT_TYPES.length}`);
   }
   return problems;
 }

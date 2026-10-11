@@ -29,8 +29,10 @@
 #   根因: 旧实现只取 ① ②。CI `actions/checkout`（fetch-depth: 0）后所有文件都已
 #     tracked+committed ⇒ ①② **皆空** ⇒ 汇总「检查 0 个文档」⇒ FAIL=0 ⇒ 放行。
 #     即：门禁只在**本地未提交态**有效，在**提交态从未真正行使**（fail-open）。
-#   修法: 增源 ③ = 本分支 base..HEAD **新增**的文档；base 解析链 origin/main →
-#     main → origin/HEAD（与 scripts/control-tower/check-pr-budget.sh 同口径）。
+#   修法: 增源 ③ = 本分支 base..HEAD **新增**的文档；base 解析链
+#     **origin/local-main → origin/main → main → origin/HEAD**（2026-10-11 改；
+#     `origin/local-main` 前置的理由与本仓 vitest 步同口径 —— 集成分支已是 local-main，
+#     而 `origin/main` 停在 5a6591c4a ⇒ 不前置会把 73+ 个他线已合并提交算进本 PR）。
 #     ⚠️ 不做"全仓 tracked 全量登记"：实测全仓 tracked .md/.yaml 过现有排除后仍有
 #     **872 件候选、其中 751 件未登记**（台账仅 39 条、面向权威文档）⇒ 全量口径会
 #     把每个 PR 都判红。故范围严格限定为"**本分支新增**"（与门禁本来的语义一致）。
@@ -43,7 +45,14 @@ REGISTRY="$ROOT/docs/authority/DOCS-REGISTRY.yaml"
 [ -f "$REGISTRY" ] || { echo "  ⚠️ 降级: DOCS-REGISTRY.yaml 不存在，跳过登记检查（exit 0）"; exit 0; }
 REG=$(cat "$REGISTRY")
 
-EXCLUDE='^tmp/|\.claude/|memory/|docs/plans/codex/implementation/|docs/synova/audit-reports/|docs/authority/chronicle-drafts/|docs/synova/DASHBOARD.*\.md$|/archive/|/Archive/|docs/synova/product-lines/evidence/'
+# 🔴 2026-10-11 增 `extensions/` 内容数据豁免（创始人裁定）:
+#   本门禁的语义是**文档台账**（`type ∈ [navigation…archive]`，面向权威文档），
+#   而 `extensions/**/*.yaml|yml` 是**内容面数据/配置**，**不是文档** ⇒ 登记它不产生真相价值。
+#   逐条登记的反面代价与既有先例同型（见下方 `docs/synova/product-lines/evidence/` 条目注释：
+#   「逐条登记会使每个任务都要改**共享**的 DOCS-REGISTRY.yaml（写冲突机器）」）。
+#   ⚠️ 豁免**只限 `.yaml|.yml`，不含 `.md`** —— `extensions/` 下的 `.md` 是说明文档，仍须登记。
+#   实测依据: 批 2 三张 PR 因 3/3/12 件扩展内容 yaml 被判"未登记"而 CI 硬红（run 116/121/125）。
+EXCLUDE='^tmp/|\.claude/|memory/|docs/plans/codex/implementation/|docs/synova/audit-reports/|docs/authority/chronicle-drafts/|docs/synova/DASHBOARD.*\.md$|/archive/|/Archive/|docs/synova/product-lines/evidence/|^extensions/.*\.(yaml|yml)$'
 
 FAIL=0; CHECKED=0
 check_file() { # $1 = 相对路径
@@ -63,8 +72,17 @@ check_file() { # $1 = 相对路径
 
 if git -c safe.directory="$ROOT" -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
   # ── CT-D2 源③：base 解析链 + merge-base..HEAD 新增文档 ──
+  # 🔴 2026-10-11 修 base 口径（创始人裁定；同病第三处）:
+  #   集成分支已从 main 改为 **local-main**（`docs/synova/coordination/MULTI-MACHINE-PR-WORKFLOW.md`），
+  #   而 GitHub `origin/main` **停于 5a6591c4a**（且 origin 账号已 suspended）。
+  #   实测（CI 等效仓复现）: base=origin/main 时 merge-base 亦为 5a6591c4a ⇒ 源③ range
+  #   覆盖 `5a6591c4a..HEAD` 的全部 **73+** 提交（**不只本 PR 改动**）⇒ 把他人已合并提交里
+  #   新增的 .md/.yaml 一并索登记 ⇒ 每张 PR 恒红。
+  #   实测（同仓同 HEAD d0775ab14）: 改 base=origin/local-main 后 range 收窄至本支真实改动。
+  #   ⚠️ 单改 base **不足以**转绿（内容面 yaml 仍需豁免，见下方 EXCLUDE），两处须同时生效。
+  #   口径对齐: `local-gates.yml` 的 vitest 步早已改用 `CHANGED_BASE=origin/local-main`（同理由）。
   BASE_REF=""
-  for _cand in origin/main main origin/HEAD; do
+  for _cand in origin/local-main origin/main main origin/HEAD; do
     if git -c safe.directory="$ROOT" -C "$ROOT" rev-parse --verify --quiet "$_cand" >/dev/null 2>&1; then BASE_REF="$_cand"; break; fi
   done
   MERGE_BASE=""
@@ -75,7 +93,7 @@ if git -c safe.directory="$ROOT" -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1;
   elif [ -n "$BASE_REF" ]; then
     echo "  ⚠️ 降级: merge-base($BASE_REF, HEAD) 为空 → 源③（base..HEAD 新增）跳过（显式留痕，不静默）"
   else
-    echo "  ⚠️ 降级: base 全链不可解析（尝试过 origin/main / main / origin/HEAD）→ 源③（base..HEAD 新增）跳过（显式留痕，不静默；请先 git fetch origin）"
+    echo "  ⚠️ 降级: base 全链不可解析（尝试过 origin/local-main / origin/main / main / origin/HEAD）→ 源③（base..HEAD 新增）跳过（显式留痕，不静默；请先 git fetch origin）"
   fi
   echo "  ℹ️ 扫描源: ① untracked ② staged-new ③ base..HEAD 新增（base=${BASE_REF:-不可解析} merge-base=${MERGE_BASE:0:8}）"
   # untracked 新增 + staged 新增（git add 过、未提交）都要登记；
