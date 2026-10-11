@@ -9,7 +9,7 @@
 **② 解决什么问题**：实测三条静默失效路径（院方《边界C》§2.6）⇒ 校验器自身失败时"放行"，最坏结果是**未校验内容出厂**，且无任何告警。
 **③ 做完对项目的推动**：宪章 §6.2「可见性承诺」要求"发什么、发多少"可查 ⇒ 校验器是其中一个执行点；fail-open 会让承诺**在失败时静默失效**。
 **④ 🔴 不做行不行**：**不行**（禁令级）：fail-open 的校验器 = **假绿**（判例 V-07「拔掉实现照样通过」/ M-02 三态退出码同型）。
-**⑤ 现在有什么基础（**判据实测 @ 68bf57598 ＋ 路径实测**）**：✅ **判据全绿 —— 本项已完成**（见下「状态」）；已存在落点：`src/security/pre-upload-validator.ts`、`tests/security/pre-upload-validator.test.ts`；**待新建**：（无）。
+**⑤ 现在有什么基础（**判据实测 @ 68bf57598 ＋ 路径实测**）**：❌ **未完成 —— 判据是假绿**：现测试断言的正是 fail-open，零改动即 exit 0（判例 V-07）；卡 state=open／登记件 status=`proposal`；已存在落点：`src/security/pre-upload-validator.ts`、`tests/security/pre-upload-validator.test.ts`；**待新建**：（无）。
 **⑥ 还需要做什么**：改 fail-closed + 三态 exit（0/1/2，未实现必须 exit 2）+ 反例测试（把校验器打进失败态 ⇒ 必须**拒**）。
 **⑦ DSH 借鉴方式**：**照搬（语义）**：DSH `dsh-user-approval/lib/index.js:41` 原文 —— "Approval policy: ask. Operations that require approval may ask through the configured answerers; **without an available answerer, the request fails closed**"；`:39` `NEVER_SENTENCE`；`:64` policy ∈ {`ask`,`never`}；`:81` `approval:policy` ⇒ **fail-closed ＋ 显式政策词表**直接照搬。
 **⑧ 涉及代码文件**：src/security/pre-upload-validator.ts｜tests/security/pre-upload-validator.test.ts
@@ -22,7 +22,7 @@
 - tests/security/pre-upload-validator.test.ts
 ### 待新建（写集，尚未存在）
 - （无）
-结论：ALL-PASS。
+结论：FALSE-GREEN（判据假绿 · 未完成）。
 
 ## Q1: 调研
 a) 业界：交付面与运行时面必须**单一入口 ＋ 可机器判**（Anthropic 工程基线：不可逆 / 对外可见的动作要有独立于执行者的判据）。
@@ -71,21 +71,22 @@ c) memory 教训：**铁律 0-2**（接线失败 4 次 —— 组件过了单测
 - .claude/task-briefs/2026-10-11-55-K10-BS-6-pre-upload-validator-fail-closed.md
 
 ## Done 标准
-（**逐条抄自登记件 `acceptance` 原文，未改写**）
+### 登记件 acceptance（1 条 · **逐字原文，未改写**）
 - [ ] verify: `npx vitest run tests/security/pre-upload-validator.test.ts`（expectExit 0）
+### 附加模板项（**非登记件原文** · 通用要求）
 - [ ] 反例（改坏即红）：按文末「状态」列出的失败/待建项构造反例并留原始输出
 - [ ] 三态：未实现必须 **exit 2**（0=通过／1=失败／2=未实现 —— 禁假绿）
-
 ---
-## 状态（判据实测 · 独立复核回写 · 2026-10-11）
+## 状态（判据实测 · 独立复核回写 R2 · 2026-10-11）
 
 基线：`68bf5759878a458b5e5ceb324a32878660155517`（**本分支 base**，非旧 as_of）
-判定：**ALL-PASS**（判据逐条：PASS）
+判定：**FALSE-GREEN（判据假绿 · 未完成）**（判据逐条：PASS）
 登记件 status：`proposal` ｜ 来源卡：#55
 
-✅ 判据全绿 —— 本项**已完成**；卡应 closed（本卡作回归/收口）。
+🔴 **不可据本卡关闭 #55**：Goal 未实现（源码 catch 仍放行），Done 命令 exit 0 只因现有测试断言的正是 fail-open ⇒ **假绿**，须先补判别性断言再转 todo。
 
-### 独立复核结论（fresh context · 三批各自复核）
-本批经独立复核，判定：本项已完成（见上）。
-修订项：as_of 重钉 ／ ⑤ 与 Q0 分「已存在 / 待新建」两栏 ／ Done 逐条抄登记件原文 ／ 去 #1308 引用。
-真源（`施工项登记.ts`）缺陷另由 CTO 处置（判据语法坏 / 假绿判据 / status 与 issue state 分歧）。
+### 复核回写轮次
+R1 修订：as_of 重钉 ／ Q0 分「已存在/待新建」／ Done 抄登记件原文 ／ 去失效跨引。
+**R2 修订（据第二轮独立复核）**：① 修 R1 的**路径分类 bug** —— 登记件写 `src/cron/**` 这类 glob，R1 按字面测试 ⇒ 把**已存在目录**误判成「待新建」（本轮已剥 glob 后缀重测）；② 修告示不实 —— 登记件 acceptance 只有 1 条，R1 曾把 3 条整体标为「逐条原文」，现**拆分为「登记件原文」与「附加模板项」**；③ 「全仓实测 N 处」等**末经复算的手写数**改为实测值。
+⚠️ 本卡 Done 内含的探针/测试若**不存在**，属「判据件待建」，非「已存在」。
+
