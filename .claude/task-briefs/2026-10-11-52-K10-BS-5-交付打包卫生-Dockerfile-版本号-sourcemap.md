@@ -6,22 +6,24 @@
 
 ## 〇、为什么要做这个（通俗版 · 先读这一节）
 **① 一句话**：交付包卫生三件：Dockerfile 路径正确、**版本号单一来源**、不泄漏 sourcemap。
-**② 解决什么问题**：实测：Dockerfile COPY 路径错；版本号散在三处易漂移；`.map` 泄漏面未核。
+**② 解决什么问题**：⚠️ **本项判据实测全绿 —— 问题已不复现**（详见文末「状态」）。登记件 `status` 与卡片 state 不一致，本卡转为**回归/收口**用途；执行方不得按"未完成"照单重做。
 **③ 做完对项目的推动**：交付面是客户的**第一接触面**；打包不卫生 = 客户镜像里带宿主绝对路径（`/Users/wane` 一类）⇒ 信息泄漏 ＋ 构建不可复现。
 **④ 🔴 不做行不行**：**不行**：泄漏宿主路径是信息泄漏，且不可复现构建会让"客户装不上"无法定位。
-**⑤ 现在有什么基础（代码盘点，as_of local-main）**：✅✅ **判据已绿**（本次实测 `bash scripts/control-tower/probe-packaging.sh` ⇒ exit 0，PASS=21 FAIL=0；含 C1/C2 宿主路径零命中、D1/D2/D3 `.map` 面核查）⇒ 本卡**只待状态收口**，不需新做代码。
+**⑤ 现在有什么基础（**判据实测 @ 68bf57598 ＋ 路径实测**）**：✅ **判据全绿 —— 本项已完成**（见下「状态」）；已存在落点：`Dockerfile`、`package.json`、`scripts/control-tower/probe-packaging.sh`；**待新建**：`scripts/build/**`。
 **⑥ 还需要做什么**：无需再做什么；如需加固仅保持判据绿（写集不变）。
 **⑦ DSH 借鉴方式**：**自研**：DSH 是桌面宿主 + npm 包形态，**不出客户镜像**，无"Dockerfile/版本号单一来源/交付包卫生"语义 ⇒ DSH 无对应物可借（诚实标注）。
 **⑧ 涉及代码文件**：Dockerfile｜package.json｜scripts/build/｜scripts/control-tower/probe-packaging.sh
 
 ## Q0: 定位 — 项目拼图 + 文件审计
 本卡属 **K10 平台交付与运行时（DSH）**，架构位置 = −1 运行时（交付面）。
-文件审计（实测 `git ls-tree origin/local-main`，as_of `7c6315029`）：
+文件审计（**逐条实测 @ 68bf5759878a4**）：
+### 已存在（本卡可直接复用/修改）
 - Dockerfile
 - package.json
-- scripts/build/
 - scripts/control-tower/probe-packaging.sh
-结论：**扩展/新建**（见 §〇 ⑤/⑥）。
+### 待新建（写集，尚未存在）
+- scripts/build/**
+结论：ALL-PASS。
 
 ## Q1: 调研
 a) 业界：交付面与运行时面必须**单一入口 ＋ 可机器判**（Anthropic 工程基线：不可逆 / 对外可见的动作要有独立于执行者的判据）。
@@ -66,7 +68,7 @@ c) memory 教训：**铁律 0-2**（接线失败 4 次 —— 组件过了单测
 #CRITERIA: D
 
 ## 写集
-（单源 = 登记件 `paths`；glob 已折为**目录裸路径**，禁通配符与反引号 —— 见 skill brief-compose D1231/#1308）
+（单源 = 登记件 `paths`；glob 已折为**目录裸路径**，禁通配符与反引号 —— 见 skill brief-compose D1231）
 - Dockerfile
 - package.json
 - scripts/build/
@@ -74,7 +76,21 @@ c) memory 教训：**铁律 0-2**（接线失败 4 次 —— 组件过了单测
 - .claude/task-briefs/2026-10-11-52-K10-BS-5-交付打包卫生-Dockerfile-版本号-sourcemap.md
 
 ## Done 标准
+（**逐条抄自登记件 `acceptance` 原文，未改写**）
 - [ ] verify: `bash scripts/control-tower/probe-packaging.sh`（expectExit 0）
-- [ ] 反例（改坏即红）：按本卡 §〇 ⑥ 构造反例并留原始输出
+- [ ] 反例（改坏即红）：按文末「状态」列出的失败/待建项构造反例并留原始输出
 - [ ] 三态：未实现必须 **exit 2**（0=通过／1=失败／2=未实现 —— 禁假绿）
-- [ ] `npx tsc --noEmit` 零错误
+
+---
+## 状态（判据实测 · 独立复核回写 · 2026-10-11）
+
+基线：`68bf5759878a458b5e5ceb324a32878660155517`（**本分支 base**，非旧 as_of）
+判定：**ALL-PASS**（判据逐条：PASS）
+登记件 status：`todo` ｜ 来源卡：#52
+
+✅ 判据全绿 —— 本项**已完成**；卡应 closed（本卡作回归/收口）。
+
+### 独立复核结论（fresh context · 三批各自复核）
+本批经独立复核，判定：本项已完成（见上）。
+修订项：as_of 重钉 ／ ⑤ 与 Q0 分「已存在 / 待新建」两栏 ／ Done 逐条抄登记件原文 ／ 去 #1308 引用。
+真源（`施工项登记.ts`）缺陷另由 CTO 处置（判据语法坏 / 假绿判据 / status 与 issue state 分歧）。

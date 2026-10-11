@@ -9,17 +9,20 @@
 **② 解决什么问题**：实测三条静默失效路径（院方《边界C》§2.6）⇒ 校验器自身失败时"放行"，最坏结果是**未校验内容出厂**，且无任何告警。
 **③ 做完对项目的推动**：宪章 §6.2「可见性承诺」要求"发什么、发多少"可查 ⇒ 校验器是其中一个执行点；fail-open 会让承诺**在失败时静默失效**。
 **④ 🔴 不做行不行**：**不行**（禁令级）：fail-open 的校验器 = **假绿**（判例 V-07「拔掉实现照样通过」/ M-02 三态退出码同型）。
-**⑤ 现在有什么基础（代码盘点，as_of local-main）**：✅ `src/security/pre-upload-validator.ts` ＋ `tests/security/pre-upload-validator.test.ts` 均在写集；❌ fail-closed 语义未落。
+**⑤ 现在有什么基础（**判据实测 @ 68bf57598 ＋ 路径实测**）**：✅ **判据全绿 —— 本项已完成**（见下「状态」）；已存在落点：`src/security/pre-upload-validator.ts`、`tests/security/pre-upload-validator.test.ts`；**待新建**：（无）。
 **⑥ 还需要做什么**：改 fail-closed + 三态 exit（0/1/2，未实现必须 exit 2）+ 反例测试（把校验器打进失败态 ⇒ 必须**拒**）。
 **⑦ DSH 借鉴方式**：**照搬（语义）**：DSH `dsh-user-approval/lib/index.js:41` 原文 —— "Approval policy: ask. Operations that require approval may ask through the configured answerers; **without an available answerer, the request fails closed**"；`:39` `NEVER_SENTENCE`；`:64` policy ∈ {`ask`,`never`}；`:81` `approval:policy` ⇒ **fail-closed ＋ 显式政策词表**直接照搬。
 **⑧ 涉及代码文件**：src/security/pre-upload-validator.ts｜tests/security/pre-upload-validator.test.ts
 
 ## Q0: 定位 — 项目拼图 + 文件审计
 本卡属 **K10 平台交付与运行时（DSH）**，架构位置 = ⓪ 连接器（数据边界 ＝ 可见性承诺）。
-文件审计（实测 `git ls-tree origin/local-main`，as_of `7c6315029`）：
+文件审计（**逐条实测 @ 68bf5759878a4**）：
+### 已存在（本卡可直接复用/修改）
 - src/security/pre-upload-validator.ts
 - tests/security/pre-upload-validator.test.ts
-结论：**扩展/新建**（见 §〇 ⑤/⑥）。
+### 待新建（写集，尚未存在）
+- （无）
+结论：ALL-PASS。
 
 ## Q1: 调研
 a) 业界：交付面与运行时面必须**单一入口 ＋ 可机器判**（Anthropic 工程基线：不可逆 / 对外可见的动作要有独立于执行者的判据）。
@@ -62,13 +65,27 @@ c) memory 教训：**铁律 0-2**（接线失败 4 次 —— 组件过了单测
 #CRITERIA: C
 
 ## 写集
-（单源 = 登记件 `paths`；glob 已折为**目录裸路径**，禁通配符与反引号 —— 见 skill brief-compose D1231/#1308）
+（单源 = 登记件 `paths`；glob 已折为**目录裸路径**，禁通配符与反引号 —— 见 skill brief-compose D1231）
 - src/security/pre-upload-validator.ts
 - tests/security/pre-upload-validator.test.ts
 - .claude/task-briefs/2026-10-11-55-K10-BS-6-pre-upload-validator-fail-closed.md
 
 ## Done 标准
+（**逐条抄自登记件 `acceptance` 原文，未改写**）
 - [ ] verify: `npx vitest run tests/security/pre-upload-validator.test.ts`（expectExit 0）
-- [ ] 反例（改坏即红）：按本卡 §〇 ⑥ 构造反例并留原始输出
+- [ ] 反例（改坏即红）：按文末「状态」列出的失败/待建项构造反例并留原始输出
 - [ ] 三态：未实现必须 **exit 2**（0=通过／1=失败／2=未实现 —— 禁假绿）
-- [ ] `npx tsc --noEmit` 零错误
+
+---
+## 状态（判据实测 · 独立复核回写 · 2026-10-11）
+
+基线：`68bf5759878a458b5e5ceb324a32878660155517`（**本分支 base**，非旧 as_of）
+判定：**ALL-PASS**（判据逐条：PASS）
+登记件 status：`proposal` ｜ 来源卡：#55
+
+✅ 判据全绿 —— 本项**已完成**；卡应 closed（本卡作回归/收口）。
+
+### 独立复核结论（fresh context · 三批各自复核）
+本批经独立复核，判定：本项已完成（见上）。
+修订项：as_of 重钉 ／ ⑤ 与 Q0 分「已存在 / 待新建」两栏 ／ Done 逐条抄登记件原文 ／ 去 #1308 引用。
+真源（`施工项登记.ts`）缺陷另由 CTO 处置（判据语法坏 / 假绿判据 / status 与 issue state 分歧）。
