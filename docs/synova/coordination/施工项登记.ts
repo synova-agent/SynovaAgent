@@ -277,7 +277,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     // │ - **判定人**：K3 / 独立复核（执行方不得自判）
     // └─ 抄录结束 ┘
     acceptance: [
-      { run: 'npm run probe:sentinels 2>/dev/null || npx tsx scripts/control-tower/probe-sentinels.ts', expectStdoutContains: 'cashFlow' },
+      { run: 'npx tsx tests/sentinel/probes/977-loader-registration.ts', expectStdoutContains: 'cashFlow' },
     ],
     // 📌 CTO 2026-10-08 裁定（title）：卡面标题为 GitHub 显示限制下的**截断形态**（结尾 `；或统`），本字段为**完整命名** ——
     //   两处**故意不同**，不是「未同步」。理由：登记件是**判据源**，不该被 GitHub 显示限制绑架；卡号的标识作用不依赖标题完整。
@@ -1079,9 +1079,9 @@ export const constructionItems: readonly ConstructionItem[] = [
       //   本机实跑（ref = origin/main@ce5507826）：不过滤 = 2 文件；过滤后 = **1 行**（仅定义）⇒ 本条现在**红**（正确，工作未做）。
       { run: 'bash -c \'test "$(git grep -n "setRole(" origin/main -- src/ | grep -vcE "^[^:]+:[^:]+:[0-9]+:[[:space:]]*(\\*|//|/\\*)")" -ge 2\'', expectExit: 0 },
       // 不新造授权体系（真源副本不增）：`getProfileForRole` 文件数 ≤ 2（现值 2 ✓ 已实跑）
-      { run: 'bash -c "test \"$(git grep -l \'getProfileForRole\' origin/main -- src/ | wc -l)\" -le 2"', expectExit: 0 },
+      { run: 'test "$(git grep -l "getProfileForRole" origin/main -- src/ | wc -l | tr -d " ")" -le 2', expectExit: 0 },  // 修(2026-10-11)：原双引号外层 + 反斜杠转义 ⇒ 命令替换被外层展开 ⇒ 无参 test ⇒ 恒 exit 1；改单层引号
       // 影子身份通道守卫（I4）：`req.userId =` 文件数 = 0（现值 0 ✓ 已实跑；R64 用 `[[:space:]]` 不用 `\s`）
-      { run: 'bash -c "test \"$(git grep -l \'req\\.userId[[:space:]]*=\' origin/main -- src/ | wc -l)\" -eq 0"', expectExit: 0 },
+      { run: 'test "$(git grep -l "req\.userId[[:space:]]*=" origin/main -- src/ | wc -l | tr -d " ")" -eq 0', expectExit: 0 },  // 修(2026-10-11)：原双层引号+反斜杠转义 ⇒ 无参 test ⇒ 恒 exit 1
     ],
     status: 'todo',
     source: '独立复核 2026-10-08 实测：`setRole()`（`src/agent/tools.ts:140` 定义）全仓零调用 ⇒ `_role` 恒 null ⇒ `:169`/`:188` 两个 `if` 恒不进入（与 0-11 拆掉的假门同病）。卡 = #1347；板字段：p1 / 未开工 / 第1批-补齐 / K2 / 不适用 / L2-真跑通 / 无阻塞',
@@ -1519,7 +1519,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       // V7 两姿态各跑（硬化姿态 + DevMode 姿态；**不依赖真有第二租户**）—— 既有件承载
       { run: 'npx vitest run tests/security/rbac-all-routes.test.ts', expectExit: 0 },
       // I4 守卫（R42 口径 + R66 显式 ref + R64 `[[:space:]]`）：影子身份通道零 —— 现值 0 ✓ 已实跑
-      { run: 'bash -c "test \"$(git grep -l \'req\\.userId[[:space:]]*=\' origin/main -- src/ | wc -l)\" -eq 0"', expectExit: 0 },
+      { run: 'test "$(git grep -l "req\.userId[[:space:]]*=" origin/main -- src/ | wc -l | tr -d " ")" -eq 0', expectExit: 0 },  // 修(2026-10-11)：原双层引号+反斜杠转义 ⇒ 无参 test ⇒ 恒 exit 1
     ],
     status: 'todo',
     source: '产品线 2026-10-05 独立复核四姿态实测：DevMode 无 secret 姿态下匿名 200 + 真实工作台数据 ⇒ 1-7 的守卫是身份级非越权级。根因=RbacContext 缺 org/team 维度。CTO 已批立项；**权限模型接口先冻结**（创始人 2026-10-05 裁）。'
