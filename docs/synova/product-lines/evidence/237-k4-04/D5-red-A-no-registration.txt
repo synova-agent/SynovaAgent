@@ -1,0 +1,401 @@
+node.exe : (!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to bec
+ome the default in a future major version of Vite:
+所在位置 行:1 字符: 1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((!) Your Vite c...ersion of Vite::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  - `__dirname` (vitest.config.ts:4:35). Use `import.meta.dirname` instead
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.0.2 D:/synova-wt-1455
+
+{"level":40,"time":1791723496069,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791723496071,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791723496074,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791723496074,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"name":"metric-readings","msg":"执行迁移 3: metric-readings"}
+{"level":30,"time":1791723496075,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"msg":"迁移 3 完成"}
+{"level":30,"time":1791723496075,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"name":"orgs","msg":"执行迁移 4: orgs"}
+{"level":30,"time":1791723496076,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"msg":"迁移 4 完成"}
+{"level":40,"time":1791723496077,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","err":"no such column: props","msg":"查询图边失败"}
+{"level":40,"time":1791723496098,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791723496099,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791723496100,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791723496100,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"name":"metric-readings","msg":"执行迁移 3: metric-readings"}
+{"level":30,"time":1791723496100,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"msg":"迁移 3 完成"}
+{"level":30,"time":1791723496100,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"name":"orgs","msg":"执行迁移 4: orgs"}
+{"level":30,"time":1791723496101,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"msg":"迁移 4 完成"}
+{"level":40,"time":1791723496102,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","err":"no such column: props","msg":"查询图边失败"}
+{"level":40,"time":1791723496105,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","err":"table graph_triples has no column named props","type":"OWNS","from":"c1","to":"p1","msg":"创建图边失
+败"}
+{"level":40,"time":1791723496111,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791723496112,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791723496112,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791723496112,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"name":"metric-readings","msg":"执行迁移 3: metric-readings"}
+{"level":30,"time":1791723496113,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"msg":"迁移 3 完成"}
+{"level":30,"time":1791723496113,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"name":"orgs","msg":"执行迁移 4: orgs"}
+{"level":30,"time":1791723496113,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"msg":"迁移 4 完成"}
+{"level":40,"time":1791723496113,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","err":"no such column: props","msg":"查询图边失败"}
+{"level":40,"time":1791723496117,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791723496117,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791723496118,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791723496118,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"name":"metric-readings","msg":"执行迁移 3: metric-readings"}
+{"level":30,"time":1791723496119,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"msg":"迁移 3 完成"}
+{"level":30,"time":1791723496119,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"name":"orgs","msg":"执行迁移 4: orgs"}
+{"level":30,"time":1791723496130,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"msg":"迁移 4 完成"}
+{"level":40,"time":1791723496131,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","err":"no such column: props","msg":"查询图边失败"}
+{"level":40,"time":1791723496134,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791723496136,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791723496137,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791723496137,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"name":"metric-readings","msg":"执行迁移 3: metric-readings"}
+{"level":30,"time":1791723496138,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"msg":"迁移 3 完成"}
+{"level":30,"time":1791723496138,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"name":"orgs","msg":"执行迁移 4: orgs"}
+{"level":30,"time":1791723496139,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"msg":"迁移 4 完成"}
+{"level":40,"time":1791723496140,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","err":"no such column: props","msg":"查询图边失败"}
+{"level":30,"time":1791723496143,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791723496145,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"msg":"迁移 2 完成"}
+{"level":40,"time":1791723496146,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791723496147,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791723496147,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791723496147,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"name":"metric-readings","msg":"执行迁移 3: metric-readings"}
+{"level":30,"time":1791723496148,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"msg":"迁移 3 完成"}
+{"level":30,"time":1791723496148,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"name":"orgs","msg":"执行迁移 4: orgs"}
+{"level":30,"time":1791723496149,"pid":48580,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"msg":"迁移 4 完成"}
+{"level":30,"time":1791723496149,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"name":"metric-readings","msg":"执行迁移 3: metric-readings"}
+{"level":30,"time":1791723496149,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"msg":"迁移 3 完成"}
+{"level":30,"time":1791723496150,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"name":"orgs","msg":"执行迁移 4: orgs"}
+{"level":30,"time":1791723496150,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"msg":"迁移 4 完成"}
+ ❯ tests/adapters/sqlite-graph-store.legacy-schema.test.ts (6 tests | 5 failed) 99ms
+   ❯ SqliteGraphStore — 旧库（真机 DDL）升级后读面 (2)
+     × ① queryEdges() 读回旧边 2 条，且 props 由 props_json 迁入、端点映射正确 41ms
+     × 边界：旧库边表为空 ⇒ 升级后 queryEdges() = []（合法空，不是"读失败被吞"） 12ms
+   ❯ SqliteGraphStore — 旧库（真机 DDL）升级后写面 (4)
+     × ① createEdge() 成功：返回 edge- 前缀 id、props 正确落库、queryEdges 计数 +1 5ms
+     × ① 表形状转 canonical：id 列 TEXT、props 在、props_json 已移除、12 列逐列一致 17ms
+     × 边界：同库二次构造（幂等）⇒ 不重复搬运、行数与 props 均不变 13ms
+     ✓ 回归：全新 :memory: 库（无旧表）⇒ 迁移 no-op，读写正常 6ms
+{"level":40,"time":1791723496197,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791723496198,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791723496201,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791723496201,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"name":"metric-readings","msg":"执行迁移 3: metric-readings"}
+{"level":30,"time":1791723496202,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"msg":"迁移 3 完成"}
+{"level":30,"time":1791723496202,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"name":"orgs","msg":"执行迁移 4: orgs"}
+{"level":30,"time":1791723496202,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"msg":"迁移 4 完成"}
+{"level":40,"time":1791723496203,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","err":"no such column: props","msg":"查询图边失败"}
+{"level":40,"time":1791723496208,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791723496209,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791723496209,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791723496209,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"name":"metric-readings","msg":"执行迁移 3: metric-readings"}
+{"level":30,"time":1791723496210,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"msg":"迁移 3 完成"}
+{"level":30,"time":1791723496210,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"name":"orgs","msg":"执行迁移 4: orgs"}
+{"level":30,"time":1791723496210,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"msg":"迁移 4 完成"}
+{"level":40,"time":1791723496212,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","err":"table graph_triples has no column named props","type":"OWNS","from":"c1","to":"p2","msg":"创建图边失
+败"}
+{"level":40,"time":1791723496215,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791723496216,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791723496216,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791723496216,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"name":"metric-readings","msg":"执行迁移 3: metric-readings"}
+{"level":30,"time":1791723496217,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"msg":"迁移 3 完成"}
+{"level":30,"time":1791723496217,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"name":"orgs","msg":"执行迁移 4: orgs"}
+{"level":30,"time":1791723496217,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"msg":"迁移 4 完成"}
+{"level":40,"time":1791723496217,"pid":41520,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","err":"no such column: props","msg":"查询图边失败"}
+ ❯ tests/store/migrations/004-graph-triples-rebuild.test.ts (16 tests | 4 failed) 208ms
+   ✓ 004-graph-triples-rebuild — 旧库搬运到 canonical（正常路径，夹具=真机 DDL） (4)
+     ✓ 2 行真数据：行数不丢、props_json → props 回填、id CAST 为 TEXT 33ms
+     ✓ 重建后 id 列类型 = TEXT（canonical 主键形状） 5ms
+     ✓ props_json 为 NULL / 空串的行回填默认 {}，有值行保留原值 4ms
+     ✓ canonical 5 索引全部在位（名字与 SCHEMA_SQL 一致） 5ms
+   ✓ 004-graph-triples-rebuild — 幂等与边界 (6)
+     ✓ 幂等：连跑两次 ⇒ 第二次 no-op（列/索引/行数/值都不变） 5ms
+     ✓ 已是 canonical 的新库 ⇒ no-op（列不变、数据不变） 3ms
+     ✓ 中间态（id 仍 INTEGER 但已被补过 props 列）⇒ 仍重建（兜住"只补列"半修遗留态） 4ms
+     ✓ graph_triples 不存在（全新库）→ no-op 不抛错、不建表 3ms
+     ✓ graph_triples 是视图（异常 schema）→ 抛错 fail-closed，视图本体不被破坏 3ms
+     ✓ 重建抛错 ⇒ 事务回滚（不留半成品表、不留 scratch 表） 8ms
+   ❯ 004-graph-triples-rebuild — 版本门控与生产读写路径（L2 真跑，夹具=真机 DDL） (6)
+     × reconcileSchema 门控：无 schema_version 表的旧库 ⇒ 004 被登记并执行（表转 canonical + 版本号写入） 60ms
+     × 【L2 真路径·读面】真机形态库 → new SqliteGraphStore → queryEdges() 读回 2 条且 props 可解析 12ms
+     × 【L2 真路径·写面】同一 store createEdge() 成功（半修的 datatype mismatch 已消失） 6ms
+     × 【V4 改坏即红】把 props 列还原成旧库形态 ⇒ 同一 store 的 queryEdges 退回 0 条、原文 SQL 抛 no such column 6ms
+     ✓ 【同形守卫】canonical DDL 与 adapter SCHEMA_SQL 的 graph_triples 列**逐列一致**（防两处漂移） 2ms
+     ✓ 001 与 004 互不越界 + 同库合跑：graph_nodes 由 001 补 props，graph_triples 由 004 转 canonical 44ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 9 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/adapters/sqlite-graph-store.legacy-schema.test.ts > SqliteGraphStore — 旧库（真机 DDL）升级后读面 > ① queryEdges() 读回
+旧边 2 条，且 props 由 props_json 迁入、端点映射正确
+AssertionError: expected [] to have a length of 2 but got +0
+
+- Expected
++ Received
+
+- 2
++ 0
+
+ ❯ tests/adapters/sqlite-graph-store.legacy-schema.test.ts:113:19
+    111|
+    112|     // 判别断言：具体条数 N>0 + 具体值
+    113|     expect(edges).toHaveLength(2);
+       |                   ^
+    114|     expect(edges.every((e) => e.type === 'REVENUE_FROM')).toBe(true);
+    115|     const byFrom = new Map(edges.map((e) => [e.from, e.props]));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯
+
+ FAIL  tests/adapters/sqlite-graph-store.legacy-schema.test.ts > SqliteGraphStore — 旧库（真机 DDL）升级后读面 > 边界：旧库边表为空 ⇒ 升级后 q
+ueryEdges() = []（合法空，不是"读失败被吞"）
+SqliteError: table graph_triples has no column named props
+ ❯ Database.prepare node_modules/better-sqlite3/lib/methods/wrappers.js:5:21
+ ❯ SqliteGraphStore.createEdge src/adapters/sqlite-graph-store.ts:176:10
+    174|       const objectType = toNode?.type || "unknown";
+    175|       this.db
+    176|         .prepare(
+       |          ^
+    177|           `INSERT INTO graph_triples
+    178|              (id, graph, subject_type, subject_id, predicate, object_t…
+ ❯ tests/adapters/sqlite-graph-store.legacy-schema.test.ts:127:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯
+
+ FAIL  tests/adapters/sqlite-graph-store.legacy-schema.test.ts > SqliteGraphStore — 旧库（真机 DDL）升级后写面 > ① createEdge() 成功
+：返回 edge- 前缀 id、props 正确落库、queryEdges 计数 +1
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ tests/adapters/sqlite-graph-store.legacy-schema.test.ts:137:32
+    135|     insertLegacyEdge(db, 'c1', 'p1', '{"share":7}');
+    136|     const store = new SqliteGraphStore(db);
+    137|     expect(store.queryEdges()).toHaveLength(1);
+       |                                ^
+    138|
+    139|     let created = '';
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯
+
+ FAIL  tests/adapters/sqlite-graph-store.legacy-schema.test.ts > SqliteGraphStore — 旧库（真机 DDL）升级后写面 > ① 表形状转 canonical：
+id 列 TEXT、props 在、props_json 已移除、12 列逐列一致
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ tests/adapters/sqlite-graph-store.legacy-schema.test.ts:161:32
+    159|     expect(idColumnType(db)).toBe('INTEGER'); // 升级前：真机形态
+    160|     const store = new SqliteGraphStore(db);
+    161|     expect(store.queryEdges()).toHaveLength(1);
+       |                                ^
+    162|
+    163|     expect(idColumnType(db)).toBe('TEXT'); // 升级后：canonical 主键形状（写面不再 …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯
+
+ FAIL  tests/adapters/sqlite-graph-store.legacy-schema.test.ts > SqliteGraphStore — 旧库（真机 DDL）升级后写面 > 边界：同库二次构造（幂等）⇒ 不重
+复搬运、行数与 props 均不变
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ tests/adapters/sqlite-graph-store.legacy-schema.test.ts:175:32
+    173|
+    174|     const first = new SqliteGraphStore(db);
+    175|     expect(first.queryEdges()).toHaveLength(1);
+       |                                ^
+    176|     const colsAfterFirst = columnsOf(db, 'graph_triples');
+    177|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯
+
+ FAIL  tests/store/migrations/004-graph-triples-rebuild.test.ts > 004-graph-triples-rebuild — 版本门控与生产读写路径（L2 真跑，夹具=真机 D
+DL） > reconcileSchema 门控：无 schema_version 表的旧库 ⇒ 004 被登记并执行（表转 canonical + 版本号写入）
+AssertionError: expected [ 'id', 'subject_type', …(12) ] to deeply equal [ 'id', 'graph', 'subject_type', …(9) ]
+
+- Expected
++ Received
+
+  [
+    "id",
+-   "graph",
+    "subject_type",
+    "subject_id",
+    "predicate",
+    "object_type",
+    "object_id",
++   "graph",
+    "weight",
+-   "props",
+-   "created_at",
++   "props_json",
++   "confidence",
++   "source",
+    "valid_from",
+    "valid_to",
++   "created_at",
+  ]
+
+ ❯ tests/store/migrations/004-graph-triples-rebuild.test.ts:246:44
+    244|     reconcileSchema(db);
+    245|
+    246|     expect(columnsOf(db, 'graph_triples')).toEqual([...EXPECTED_CANONI…
+       |                                            ^
+    247|     const ver = db.prepare('SELECT MAX(version) AS v FROM schema_versi…
+    248|     expect(ver.v).toBe(SCHEMA_VERSION);
+
+
+ Test Files  2 failed (2)
+      Tests  9 failed | 13 passed (22)
+   Start at  20:58:15
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯
+
+ FAIL  tests/store/migrations/004-graph-triples-rebuild.test.ts > 004-graph-triples-rebuild — 版本门控与生产读写路径（L2 真跑，夹具=真机 D
+DL） > 【L2 真路径·读面】真机形态库 → new SqliteGraphStore → queryEdges() 读回 2 条且 props 可解析
+AssertionError: expected [] to have a length of 2 but got +0
+
+- Expected
++ Received
+
+- 2
++ 0
+
+ ❯ tests/store/migrations/004-graph-triples-rebuild.test.ts:260:19
+    258|
+    259|     // 判别断言：具体条数 + 具体值
+    260|     expect(edges).toHaveLength(2);
+       |                   ^
+    261|     expect(edges.every((e) => e.type === 'REVENUE_FROM')).toBe(true);
+    262|     const byFrom = new Map(edges.map((e) => [e.from, e.props]));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯
+
+ FAIL  tests/store/migrations/004-graph-triples-rebuild.test.ts > 004-graph-triples-rebuild — 版本门控与生产读写路径（L2 真跑，夹具=真机 D
+DL） > 【L2 真路径·写面】同一 store createEdge() 成功（半修的 datatype mismatch 已消失）
+AssertionError: expected [Function] to not throw an error but 'SqliteError: table graph_triples has …' was thrown
+
+- Expected:
+undefined
+
++ Received:
+"SqliteError: table graph_triples has no column named props"
+
+ ❯ tests/store/migrations/004-graph-triples-rebuild.test.ts:273:75
+    271|
+    272|     let created = '';
+    273|     expect(() => { created = store.createEdge('OWNS', 'c1', 'p2'); }).…
+       |                                                                           ^
+    274|
+    275|     expect(created).toMatch(/^edge-/);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/9]⎯
+
+ FAIL  tests/store/migrations/004-graph-triples-rebuild.test.ts > 004-graph-triples-rebuild — 版本门控与生产读写路径（L2 真跑，夹具=真机 D
+DL） > 【V4 改坏即红】把 props 列还原成旧库形态 ⇒ 同一 store 的 queryEdges 退回 0 条、原文 SQL 抛 no such column
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ tests/store/migrations/004-graph-triples-rebuild.test.ts:285:32
+    283|     insertLegacyEdge(db, 'c1', 'p1', '{"action_effect_lag":"3-6_months…
+    284|     const store = new SqliteGraphStore(db);
+    285|     expect(store.queryEdges()).toHaveLength(1); // 绿：迁移后
+       |                                ^
+    286|
+    287|     // 改坏：还原旧库列形态（= 迁移未执行时的真实形态）
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/9]⎯
+
+   Duration  1.02s (transform 39%, tests 33%, import 23%, worker 4%)
+

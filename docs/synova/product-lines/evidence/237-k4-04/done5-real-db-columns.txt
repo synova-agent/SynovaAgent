@@ -1,0 +1,12 @@
+[db] D:\novis-backup-20260526\Novis\synova-agent\data\synova.db
+[file_bytes] 12959744
+[mode_immutable1] FAILED: unable to open database file ⇒ 回落 readonly + query_only
+[mode] readonly:true + PRAGMA query_only=1
+[count] 14
+[cols] id:INTEGER(pk), subject_type:TEXT, subject_id:TEXT, predicate:TEXT, object_type:TEXT, object_id:TEXT, graph:TEXT, weight:REAL, props_json:TEXT, confidence:REAL, source:TEXT, valid_from:TEXT, valid_to:TEXT, created_at:TEXT
+[has_props_json] true
+[has_props] false
+[id_type] INTEGER
+[sha256_before] 771f0677eee12c9f0b0a5f75869d8548d0294b08eec40f2646bef64b54a6bd5a
+[sha256_after] 771f0677eee12c9f0b0a5f75869d8548d0294b08eec40f2646bef64b54a6bd5a
+[sha256_unchanged] true
