@@ -14,6 +14,13 @@
  * 🔴 乙案降档声明：原判据②要求「DirectionMonitor 输出必须不同」，本卡改为「注入面 props 值必须不同」
  *    ⇒ 覆盖「参数落到哪」，**不覆盖**「参数改变下游计算」。本文件**不宣称**下游输出已改变。
  *
+ * ═══ K4-02 批 2（2026-10-11）棘轮上移 + 两笔账机器化 ═══
+ * as_of `local-main = dc5ce093`（本席实测）：`edge-types/` = **56 件**（第 56 件 `goal_decomposition.json`，
+ * 由 local-main `18ed356f feat(k12-07): 目标一致…` 引入）⇒ V5 的**件数与 tally 上移**（见 `BASELINE_*`）。
+ * 🔴 **两笔账（CTO 甲裁定）改为机器可判**：4 项未交（① direction-monitor 读取面 ② 生产可见效果
+ * ③ `causal_strength` 数值注入 ④ 脚本级 schema 门禁 📌实施席实测补记）由 `LEDGER` 常量声明，
+ * 并以**真仓** `cs_resolved === 0` 断言承载 ③；**未交项落地者必须显式翻转常量**（从而被迫更新两笔账）。
+ *
  * 日志断言手法：`vi.mock('@synova/logger')` **运行时捕获调用**（非 grep 静态判据）。
  * 同仓库既有手法参照 tests/l4/delivery-queue.test.ts:10-13。
  */
@@ -77,6 +84,40 @@ function makeDef(over: Partial<EdgeTypeDef> = {}): EdgeTypeDef {
 }
 
 const warnCount = () => logCalls.filter(c => c.level === 'warn').length;
+
+// ═══ 真仓棘轮（as_of `local-main = dc5ce093`，批 2 实测；漂移即红）═══════════════
+/** `edge-types/` 件数（批 1 = 55；第 56 件由 local-main `18ed356f` 引入）。 */
+const BASELINE_EDGE_TYPES = 56;
+/** 真仓逐件分类计数（用 loader 本体读 56 件实测；python/tsx 原始输出见证据件 §A.0-b）。 */
+const BASELINE_TALLY: Record<string, number> = {
+  tf_resolved: 0,
+  tf_placeholder: 53,   // 「TBD — to be defined in compute phase」×52 ＋ `goal_decomposition` 的「N/A — …」×1
+  tf_prose: 3,          // brand_builds / couples / cumulative_learning
+  tf_other: 0,
+  cs_declaration: 55,   // optionalProps 内描述串 ×55（批 2 不变）
+  cs_resolved: 0,       // 🔴 真仓**零数值**（未交③ 的机器可判证据）
+  cs_other: 1,          // `goal_decomposition` **缺该键** ⇒ absent
+  lag_resolved: 56,     // 非空字符串 ×56（unknown×50 + 4 种真值×5 + 第 56 件的散文值×1）
+  lag_other: 0,
+};
+/** 第 56 件逐字段状态（点名，非"数字变了"）。 */
+const EDGE_56 = { label: 'GOAL_DECOMPOSITION', tf: 'placeholder', cs: 'absent', lag: 'resolved' } as const;
+
+/**
+ * 🔴 两笔账（CTO 2026-10-11 甲裁定）—— **机器可判**（本批硬要求："覆盖力降档必须显式声明"）。
+ * 未交项落地者**必须**把对应值翻成 `'DELIVERED'`，否则本文件必红 ⇒ 被迫同步更新两笔账（PR 正文 + 证据件）。
+ */
+const LEDGER = {
+  // 已交
+  injectionContract: 'DELIVERED',        // 契约件 1031-injection-contract.md
+  implementation: 'DELIVERED',           // src/l4/ontology-loader.ts（+259，含读取面 3 键）
+  criteriaFile: 'DELIVERED',             // 本文件（真跑 + mock log 捕获）
+  // 未交
+  readFaceDirectionMonitor: 'NOT_DELIVERED',       // ① CTO 明令剔除；blob 与 local-main 同一
+  productionVisibleEffect: 'NOT_DELIVERED',        // ② 无生产调用方（"接入调度"另立卡）
+  causalStrengthNumericInjection: 'NOT_DELIVERED', // ③ 真仓 cs_resolved=0；真值标定属另卡
+  scriptSchemaGate: 'NOT_DELIVERED',               // ④ 脚本级 schema 门禁（U-1/U-2）📌实施席实测补记
+} as const;
 
 beforeEach(() => {
   logCalls.length = 0;
@@ -299,10 +340,10 @@ describe('#1031 V3 降级可见（不静默）', () => {
 // V5 — L2 真跑：桥跑在【真实仓库 55 件 JSON】上（非 mock、非 grep）
 // ═══════════════════════════════════════════════════════════════════════════════
 
-describe('#1031 V5(L2-真跑) 真实 55 件 edge-types 过桥实测', () => {
-  it('55 件全部过桥；分类计数与 as_of 5a6591c4a 逐件实测一致', () => {
+describe('#1031 V5(L2-真跑) 真实 56 件 edge-types 过桥实测', () => {
+  it('56 件全部过桥；分类计数与 as_of local-main=dc5ce093 逐件实测一致（棘轮）', () => {
     const { ontology } = loadOntology();
-    expect(ontology.edgeTypes).toHaveLength(55);
+    expect(ontology.edgeTypes).toHaveLength(BASELINE_EDGE_TYPES);
 
     const tally: Record<string, number> = {
       tf_resolved: 0, tf_placeholder: 0, tf_prose: 0, tf_other: 0,
@@ -331,18 +372,29 @@ describe('#1031 V5(L2-真跑) 真实 55 件 edge-types 过桥实测', () => {
       else tally.lag_other++;
     }
 
-    // ── 逐件实测原始计数（python3 全量统计，见交付件 §V5）──
-    expect(tally).toEqual({
-      tf_resolved: 0,
-      tf_placeholder: 52,   // 「TBD — to be defined in compute phase」× 52
-      tf_prose: 3,          // brand_builds / couples / cumulative_learning
-      tf_other: 0,
-      cs_declaration: 55,   // optionalProps 内描述串 × 55（类型层无数值）
-      cs_resolved: 0,
-      cs_other: 0,
-      lag_resolved: 55,     // 非空字符串 × 55（unknown × 50 + 4 种真值 × 5）
-      lag_other: 0,
+    // ── 逐件实测原始计数（批 2：用 loader 本体读 56 件；见证据件 §A.0-b）──
+    expect(tally).toEqual(BASELINE_TALLY);
+  });
+
+  it('🔴 第 56 件 `goal_decomposition` 逐字段点名（tally Δ 的可归因来源）', () => {
+    clearOntologyCache();
+    const r = getEdgeTypeParams(EDGE_56.label);
+    expect(r, `第 56 件 ${EDGE_56.label} 必须可读`).not.toBeNull();
+
+    const byKey = Object.fromEntries(r!.params.map(p => [p.key, p]));
+    expect(byKey.transfer_function.status).toBe(EDGE_56.tf);       // "N/A — …" ⇒ 占位族
+    expect(byKey.causal_strength.status).toBe(EDGE_56.cs);         // 缺键 ⇒ absent（全仓唯一）
+    expect(byKey.action_effect_lag.status).toBe(EDGE_56.lag);      // 非空散文串 ⇒ 原样透传
+
+    // 它对本桥的净效果：只有 action_effect_lag 可注入（其余两项降级 + warn 可见）
+    expect(r!.props).toEqual({
+      action_effect_lag: '0d — 分解关系为结构性从属（子目标一旦建立即属该上级），不承载跨期传导时滞',
     });
+    expect(r!.degraded).toBe(true);
+    expect(r!.issues).toHaveLength(2);
+
+    // 机器可判的"全仓唯一 absent"：把它与 BASELINE_TALLY.cs_other 绑死
+    expect(BASELINE_TALLY.cs_other).toBe(1);
   });
 
   it('真实 label 取源位置正确：CONSTRAINS 三字段各归其位', () => {
@@ -413,5 +465,49 @@ describe('#1031 零影响既有面（回归）', () => {
     const c = getEdgeTypeParams('CONSTRAINS');
     expect(c).not.toBe(a); // 缓存已失效
     expect(c).toEqual(a);  // 但内容一致
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 两笔账棘轮（CTO 2026-10-11 甲裁定：「覆盖力降档必须显式声明」⇒ 机器可判）
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('#1031 两笔账棘轮（已交 / 未交，机器可判）', () => {
+  it('已交三项显式声明为 DELIVERED（契约 / 实现 / 判据件）', () => {
+    expect(LEDGER.injectionContract).toBe('DELIVERED');
+    expect(LEDGER.implementation).toBe('DELIVERED');
+    expect(LEDGER.criteriaFile).toBe('DELIVERED');
+  });
+
+  it('🔴 未交四项显式声明为 NOT_DELIVERED（含实施席实测补记的第 4 项）', () => {
+    expect(LEDGER.readFaceDirectionMonitor).toBe('NOT_DELIVERED');        // ① CTO 明令剔除
+    expect(LEDGER.productionVisibleEffect).toBe('NOT_DELIVERED');         // ② 无生产调用方
+    expect(LEDGER.causalStrengthNumericInjection).toBe('NOT_DELIVERED');  // ③ 真仓零数值
+    expect(LEDGER.scriptSchemaGate).toBe('NOT_DELIVERED');                // ④ 📌实施席实测补记（U-1/U-2）
+  });
+
+  it('未交③ 的机器可判证据：**真仓** `cs_resolved === 0`（52/55 声明串不等于值）', () => {
+    clearOntologyCache();
+    const { ontology } = loadOntology();
+    let resolved = 0;
+    for (const e of ontology.edgeTypes) {
+      const r = getEdgeTypeParams(e.label);
+      if (r !== null && r.params.find(p => p.key === 'causal_strength')?.status === 'resolved') resolved++;
+    }
+    expect(resolved).toBe(0);
+    expect(resolved).toBe(BASELINE_TALLY.cs_resolved);
+    // ⇒ 一旦有人真把 causal_strength 标定成数值，本断言必红 ⇒ 迫使翻转 LEDGER 并更新两笔账
+    expect(LEDGER.causalStrengthNumericInjection).toBe('NOT_DELIVERED');
+  });
+
+  it('已交② 的机器可判证据：读取面**含** `causal_strength`（三键齐备，顺序固定）', () => {
+    expect([...EDGE_PARAM_KEYS]).toEqual(['transfer_function', 'causal_strength', 'action_effect_lag']);
+    expect([...EDGE_PARAM_KEYS]).toContain('causal_strength');
+  });
+
+  it('未交① 的边界：本桥**不**为 direction-monitor 读取面提供任何"已交"证据（防误读）', () => {
+    // 本文件不 import direction-monitor，也不断言其行为；
+    // 读取面是否落地由该文件的 blob 与后续卡判定（证据件 §A.6 未交① 给出 blob 同一的机器可判证据）。
+    expect(LEDGER.readFaceDirectionMonitor).not.toBe('DELIVERED');
   });
 });
