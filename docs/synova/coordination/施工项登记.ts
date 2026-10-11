@@ -810,7 +810,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       // 🔴 原为纯 grep 型 ⇒ 改为穿生产入口：跑一次方向监测，断言参数【改变了输出】
       { run: 'npx vitest run tests/loops/direction-monitor.transfer-function.test.ts', expectExit: 0 },
     ],
-    status: 'retired',
+    status: 'todo',
     source: '施工单.md 1-9 / 现状报告 W2',
   },
   // ───────────────── 第 2 批 · 地基 ─────────────────
@@ -1810,7 +1810,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '内容面规范 §3.5（现存量：113 type＋28 值钻入｜27 条反向 type｜4 项不可达｜4 目录无 manifest）',
   },
   {
-    id: '1-9', worker: 'win', batch: '第12批', block: 'K12',
+    id: 'K12-14', worker: 'win', batch: '第12批', block: 'K12',
     title: '【已撤销·重复立卡】content-registry（唯一 type→loader 表）＋ entryPoint 字段处置 —— 活归 K10 EXT-WIRE(#1465)',
     paths: ['src/deploy/content-registry.ts', 'extensions/*/manifest.json'],
     dependsOn: [],
@@ -2000,7 +2000,7 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
   {
     id: 'K12' as BlockId, name: '企业级一致性（宪章 §2.7 第一优先）',
     items: ['3-1', '3-3', '3-4', 'K12-02', 'K12-05', 'K12-06', 'K12-07', 'K12-08',
-            'RB-01', 'RB-02', 'RB-03', 'RB-04', 'RB-05', 'RB-06', '0-13', '1-10', '1-11', '1-12', '1-13', 'K12-21'],
+            'RB-01', 'RB-02', 'RB-03', 'RB-04', 'RB-05', 'RB-06', '0-13', 'K12-14', '1-10', '1-11', '1-12', '1-13', 'K12-21'],
     blockAcceptance: [
       { run: 'npx tsx scripts/control-tower/probe-onboarding.ts --dry-run', expectExit: 0 },
       { run: 'npx tsx scripts/control-tower/probe-role-pack.ts --role finance', expectExit: 0 },
