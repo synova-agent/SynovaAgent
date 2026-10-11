@@ -33,7 +33,11 @@ import { createLogger } from '@synova/logger';
 import { loadConfig } from '../config';
 import { createProvider } from '../providers';
 import { detectProvider } from '../providers/detect';
-import { ConversationEngine, type EngineState } from '../agent/conversation-engine';
+import {
+  ConversationEngine,
+  setDecisionRecordingSeam,
+  type EngineState,
+} from '../agent/conversation-engine';
 import { DiagnosisLauncher, type SessionStoreLike } from '../agent/diagnosis-launcher';
 import type { EngineContext } from '../agent/engine-context';
 import type { DiagnosisEngine } from '../l2-interfaces/diagnosis-engine';
@@ -78,6 +82,11 @@ export function getDecisionCapturePort(): DecisionCapturePort | null {
 function wireDecisionCapture(engine: ConversationEngine, orgId: string): void {
   if (!decisionCapturePort) return;
   engine.setDecisionCapture(decisionCapturePort(orgId));
+  // K12-08 C3（工单关闭的人工裁决）：同一接缝注册为**进程级**，供**无会话**的生产路径复用。
+  // 为什么不另建引擎：见 `conversation-engine.ts` `setDecisionRecordingSeam` 的 JSDoc
+  // （L1 路由里重装 provider 会在请求路径引入无关构造风险）。此处注册的是**同一实例**，
+  // 故无会话路径写台账与有会话路径写台账走的是**同一个 onDecision**（单一接缝，不分裂）。
+  setDecisionRecordingSeam(engine);
 }
 
 /** message 输入上界（spec §5.2-A；借鉴 dsh-api-gateway 输入边界校验范式） */
