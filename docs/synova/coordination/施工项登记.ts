@@ -1116,7 +1116,8 @@ export const constructionItems: readonly ConstructionItem[] = [
 
   // ───────────────── 第 3 批 · 新建 ─────────────────
   {
-    issue: 184, id: '3-1',
+    issue: 184,
+    id: 'K12-01',
     worker: 'win', batch: '第3批', block: 'K12',
     title: '角色预设包（Role Pack）',
     paths: [
@@ -1163,14 +1164,15 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 3-2',
   },
   {
-    issue: 186, id: '3-3',
+    issue: 186,
+    id: 'K12-03',
     worker: 'win', batch: '第3批', block: 'K12',
     title: '建档通道（"建档" 0 命中）',
     paths: [
       'src/onboarding/',
       'scripts/control-tower/probe-onboarding.ts',  // 判据交付物（本卡创建）
     ],
-    dependsOn: ['3-1', '3-2'],
+    dependsOn: ['K12-01', '3-2'],
     // ┌─ 卡面 §⑥ 判据（Issue #1069，2026-10-07 断面；全文抄录，机器条目见下方 acceptance）─┐
     // │ 卡面标题：3-3 · 建档通道（"建档" 0 命中）
     // │ - [ ] 丢一批文档 ⇒ 产出**一份基础配置包**（超管可确认）
@@ -1186,14 +1188,15 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '施工单.md 3-3',
   },
   {
-    issue: 187, id: '3-4',
+    issue: 187,
+    id: 'K12-04',
     worker: 'win', batch: '第3批', block: 'K12',
     title: '追问由本体缺口驱动',
     paths: [
       'src/onboarding/gap-questioner.ts',
       'tests/onboarding/gap-questioner.test.ts',  // 判据交付物（本卡创建）
     ],
-    dependsOn: ['3-3'],
+    dependsOn: ['K12-03'],
     // ┌─ 卡面 §⑥ 判据（Issue #1070，2026-10-07 断面；全文抄录，机器条目见下方 acceptance）─┐
     // │ 卡面标题：3-4 · 追问由本体缺口驱动
     // │ - [ ] 给定空图 ⇒ 产出**有序**追问表
@@ -1806,7 +1809,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '宪章 §2.7 第⑤层 / 02-一致性 §四（飞轮 v3.1 铁律：人工修正必须结构化落账，禁静默）',
   },
   {
-    issue: 196, id: '0-13', worker: 'win', batch: '第12批', block: 'K12',
+    issue: 196, id: 'K12-13', worker: 'win', batch: '第12批', block: 'K12',
     title: 'check-content-coupling 新门禁（CC1方向/CC2对称/CC3可达/CC4结构）',
     paths: ['scripts/check-content-coupling.sh', 'tests/control-tower/content-coupling.test.sh'],
     dependsOn: [],
@@ -1824,7 +1827,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '🔴 CTO 2026-10-11 裁：本项与 K10 的 EXT-WIRE **重复立卡**（同判据 probe-content-registry.ts、同写集 src/deploy/content-registry.ts ＋ file-driven-loaders.ts ＋ 9 个 manifest）⇒ **撤销本项，活归 EXT-WIRE（卡面 #1465）**；K12-05/K12-16 与 EXT-WIRE 为**串行**关系。依据：内容面规范 §八-5 的建议项**早已被建成 K10 的 EXT-WIRE**，我建 K12 时未查重。',
   },
   {
-    issue: 198, id: '1-10', worker: 'win', batch: '第12批', block: 'K12',
+    issue: 198, id: 'K12-15', worker: 'win', batch: '第12批', block: 'K12',
     title: 'reload 重扫 extensions/（不重启，失败隔离）',
     paths: ['src/deploy/content-reload.ts', 'tests/deploy/content-reload.test.ts'],
     dependsOn: ['EXT-WIRE'],
@@ -1833,7 +1836,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '内容面规范 §5.4＋§5.3（采纳 DSH 三机制：早激活／失败隔离／标识持久化；不采纳代际机制）',
   },
   {
-    issue: 199, id: '1-11', worker: 'win', batch: '第12批', block: 'K12',
+    issue: 199, id: 'K12-16', worker: 'win', batch: '第12批', block: 'K12',
     title: '四项生产不可达处置（llm-providers/business-models/engine/tools）＋ policies/data-access',
     paths: ['extensions/llm-providers/**', 'extensions/business-models/**', 'extensions/engine/**', 'extensions/tools/**', 'extensions/policies/data-access.yaml'],
     dependsOn: ['EXT-WIRE'],
@@ -1842,7 +1845,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '内容面规范 §3.2 汇总＋§七-2（取舍是产品判断，需 CTO/创始人裁）',
   },
   {
-    issue: 200, id: '1-12', worker: 'win', batch: '第12批', block: 'K12',
+    issue: 200, id: 'K12-17', worker: 'win', batch: '第12批', block: 'K12',
     title: 'adapters/notifications 引擎码归位（.ts 搬 src/，json 留）',
     paths: ['src/connectors/**', 'src/notifications/**', 'extensions/adapters/**', 'extensions/notifications/**'],
     dependsOn: ['0-13'],
@@ -1851,7 +1854,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: '内容面规范 §3.2-9/12＋宪章 约束4（内核与扩展边界必须物理可见）',
   },
   {
-    issue: 201, id: '1-13', worker: 'win', batch: '第12批', block: 'K12',
+    issue: 201, id: 'K12-18', worker: 'win', batch: '第12批', block: 'K12',
     title: 'locales 死指针修复（manifest 指向不存在的 locale-loader.ts）',
     paths: ['extensions/locales/manifest.json'],
     dependsOn: ['EXT-WIRE'],
@@ -2004,8 +2007,8 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
   },
   {
     id: 'K12' as BlockId, name: '企业级一致性（宪章 §2.7 第一优先）',
-    items: ['3-1', '3-3', '3-4', 'K12-02', 'K12-05', 'K12-06', 'K12-07', 'K12-08',
-            'RB-01', 'RB-02', 'RB-03', 'RB-04', 'RB-05', 'RB-06', '0-13', 'K12-14', '1-10', '1-11', '1-12', '1-13', 'K12-21'],
+    items: ['K12-01', 'K12-03', 'K12-04', 'K12-02', 'K12-05', 'K12-06', 'K12-07', 'K12-08',
+            'RB-01', 'RB-02', 'RB-03', 'RB-04', 'RB-05', 'RB-06', 'K12-13', 'K12-14', 'K12-15', 'K12-16', 'K12-17', 'K12-18', 'K12-21'],
     blockAcceptance: [
       { run: 'npx tsx scripts/control-tower/probe-onboarding.ts --dry-run', expectExit: 0 },
       { run: 'npx tsx scripts/control-tower/probe-role-pack.ts --role finance', expectExit: 0 },
