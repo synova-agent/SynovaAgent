@@ -101,12 +101,25 @@ const DEPT_SOURCE_MISSING = 'DEPT_SOURCE_MISSING';
  *   两者都只用于**取到候选 id**，取到后立刻归一进复数集合 —— 不留下任何单数语义。
  */
 export interface IdentityInput {
-  /** 部门身份（**复数** —— 唯一正式口径。一人可属多部门） */
-  readonly departmentIds?: readonly string[];
+  /**
+   * 部门身份（**复数** —— 唯一正式口径。一人可属多部门）。
+   *
+   * 🔴 运行时类型 = **`readonly unknown[]`，不是 `readonly string[]`**（K12-10-WIRE 收口）。
+   *   为什么：本入参的**生产来源是 JWT 载荷**（`middleware/auth.ts`），而载荷是
+   *   `JSON.parse` 的产物 —— **外部输入**，编译期挡不住（人手造 token / 旧客户端 /
+   *   将来别的签发方都可能给出非字符串元素甚至非数组）。声明成 `string[]` 等于
+   *   让类型系统替运行时作保，调用点就只剩"写断言"一条路 ⇒ 断言会掩盖这个事实。
+   *   ⇒ 声明按**真实可信度**写；收窄在 `requestedDepartmentIds` 内逐元素完成
+   *   （`optionalString` 对非字符串/空值/纯空白一律丢弃，只保留非空 string）。
+   */
+  readonly departmentIds?: readonly unknown[];
   /** 兼容入参：部门身份单数形态（历史写法 `departmentId`）—— 解析时视为单元素集合 */
   readonly departmentId?: string;
-  /** 兼容入参：`departmentIds` 的等价别名 */
-  readonly departments?: readonly string[];
+  /**
+   * 兼容入参：`departmentIds` 的等价别名。
+   * 与 `departmentIds` 同口径（外部输入）⇒ 运行时类型同为 `readonly unknown[]`。
+   */
+  readonly departments?: readonly unknown[];
   /** 用户 id（进 `ResolvedContext.identityKey`，供审计/留痕） */
   readonly userId?: string;
   /** 部门定义真源仓根（依赖注入缝，缺省 `process.cwd()`；生产不传） */

@@ -468,6 +468,13 @@ function edgeTypeOf(action: DecisionInput['action'], reflowed: boolean): string 
 }
 
 /**
+ * 决策边类型全集（= edgeTypeOf 的值域）。导出给读侧模块 `decision-ledger-readback`
+ * 作单一事实源（J5 / #405）；导出的是常量数组——不新增可调用导出，
+ * 不破 `decision-capture-single-entry.test.ts` 的单一写入口守卫。
+ */
+export const DECISION_EDGE_TYPES: readonly string[] = ['DECISION_CONFIRMED', 'DECISION_REJECTED', 'DECISION_MODIFIED'];
+
+/**
  * 取同一产出的**既有行**（禁静默修改的比较面）。
  *
  * 来源优先级：宿主注入的 `readPriorRows`（跨进程）⇒ 进程内索引（本入口写过的行）。
@@ -485,3 +492,4 @@ function findPriorRow(
   }
   return priorByOutputRef.get(ref);
 }
+

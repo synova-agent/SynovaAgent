@@ -92,6 +92,8 @@ export interface ExpertReportsResponse {
 export interface SentinelTicketView {
   id: string;
   title: string;
+  /** J5 / #405：触发工单的哨兵信号 id（台账读回的 nodeId 同口径：signalId 优先，工单 id 兜底） */
+  signalId?: string;
   severity: 'critical' | 'warning' | 'info';
   createdAt: string;
   status: TicketStatus;
@@ -356,6 +358,8 @@ function rowToTicketView(row: TicketRow): SentinelTicketView {
   const view: SentinelTicketView = {
     id: row.id,
     title,
+    // J5 / #405：暴露 signalId —— 台账读回需与写侧 nodeId 同口径（signal_id 优先，工单 id 兜底）
+    signalId: row.signal_id,
     severity: row.severity === 'warning' ? 'warning' : row.severity === 'info' ? 'info' : 'critical',
     createdAt: row.created_at,
     status: row.status,

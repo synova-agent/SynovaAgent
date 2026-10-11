@@ -15,7 +15,7 @@ import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import type { Request, Response, NextFunction } from 'express';
 import { createLogger } from '@synova/logger';
 import type { WorkspaceRole } from './rbac';
-import { runWithContext } from '../services/request-context';
+import { runWithContext, resolveContext } from '../services/request-context';
 
 const log = createLogger('auth');
 
@@ -30,6 +30,24 @@ export interface JwtPayload {
   iat: number;   // issued at (Unix seconds)
   exp: number;   // expires at (Unix seconds)
   jti: string;   // JWT ID (唯一，用于撤销)
+  /**
+   * K12-10-WIRE: 部门身份（**复数** —— 一人可属多部门），随**受签名保护**的载荷下发。
+   *
+   * 🔴 为什么必须是载荷而不是请求头：本模块 P0 不变量是「注入 `req.auth` / 请求上下文的
+   *   **只能是验签身份**，任何自报值（header/query）永不进入」（见下方白名单分支注释）。
+   *   部门身份与 `role` / `orgId` 同信任级 ⇒ 若走未验签的头，等于给任意客户端一个
+   *   **自助授予部门**的通道（越权面）。`x-org-id` 族头只表达"我要访问哪个组织"，
+   *   **不参与身份判定** —— 同纪律。
+   *
+   * 可选字段：旧 token 无此声明 ⇒ `undefined` ⇒ 部门集为**空**（**不是**"全部门"，fail-closed）。
+   * 逐字透传：`signJwtToken` 形参为 `Omit<JwtPayload, 'iat' | 'jti' | 'exp'>` 且实现是
+   *   `{...payload}` ⇒ **签发端零改动**即可携带本字段。
+   *
+   * ⚠️ 运行时类型**不在此处**校验 —— 载荷来自 `JSON.parse`（外部输入）。收窄发生在
+   *   `resolveContext` 内（`requestedDepartmentIds` 逐元素 `optionalString`）；
+   *   调用点以 `readonly unknown[]` 结构传入（见下方 `runWithContext` 处）。
+   */
+  departmentIds?: readonly string[];
 }
 
 export interface AuthRequestContext {
@@ -448,7 +466,7 @@ function denyCrossOrgAccess(
  * 替换 server.ts 中的内联 auth 中间件。
  * 与 request-context.ts 的 runWithContext 配合使用。
  */
-export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunction): void {
+export async function jwtAuthMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     // 白名单路径——跳过认证。
     //
@@ -596,6 +614,61 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
     // 同步注入 request-context（兼容 runWithContext 模式）
     // request-context 不可用时至少有 req.auth
     try {
+      /**
+       * K12-10-WIRE: **请求路径接入部门身份**（收口上一卡的缺口）。
+       *
+       * 缺口实测（本卡开工基线，真 express ＋ 真中间件 ＋ 真 HTTP）：
+       *   `BASELINE-RESULT: {"userSeen":"u-baseline","depts":[]}`
+       *   ⇒ 上下文本身是通的（`userSeen` 非空），但 `getCurrentDepartmentIds()` 恒 `[]` ——
+       *   因为 `resolved` 从未被塞进上下文：`resolveContext` 的真触发点只有 boot
+       *   （`server.ts` → `bootstrap.ts` → `initContentTypes()`），**不在请求路径**。
+       *
+       * 🔴 顺序是判据的一部分（不是风格）：`runWithContext(ctx, fn)` 即
+       *   `storage.run(ctx, fn)`，AsyncLocalStorage 的存储沿 **`fn()` 同步帧内新建的续延链**
+       *   传播。`resolveContext` 是 **async** ⇒ 若把 `await resolveContext(...)` 写在
+       *   `runWithContext` 的**入参对象字面量里**，该 Promise 的续延是在 `storage.run`
+       *   **之外**创建并已存在的 ⇒ await 之后那一帧已脱离存储。
+       *   ⇒ **必须先 await 解析、再进 `storage.run`**（本卡实测：`next()` 在 `fn` 同步帧内
+       *   调用 ⇒ 续延在存储内 ⇒ 下游可见）。
+       *
+       * 边界：**只读验签载荷**（`payload.departmentIds`），不读任何请求头 —— 见
+       *   `JwtPayload.departmentIds` 的说明（自报值永不进身份面，D947 P0 不变量）。
+       *   载荷是外部输入（`JSON.parse`）⇒ 以 `readonly unknown[]` 结构类型传入，
+       *   运行时收窄在 `resolveContext` 内（`requestedDepartmentIds` 逐元素校验）。
+       *   此处**不写断言**：断言会掩盖"载荷类型不可信"这个事实。
+       */
+      const identity = {
+        userId: payload.sub,
+        departmentIds: payload.departmentIds as readonly unknown[] | undefined,
+      };
+
+      /**
+       * 解析失败 ⇒ **降级不静默**（铁律 11/24/31）但**不阻断认证**：
+       * `resolveContext` 的契约是"不抛"，此处 try/catch 是防御其**将来**变更
+       * （远端部门源）——降级为空部门集，`req.auth` 仍在，请求照常下行。
+       */
+      let departmentSource: Awaited<ReturnType<typeof resolveContext>> | undefined;
+      try {
+        departmentSource = await resolveContext(identity);
+      } catch (resolveErr: unknown) {
+        log.warn(
+          { err: resolveErr, code: 'K12_10_DEPT_RESOLVE_FAILED', degraded: true, userId: payload.sub },
+          'request-context 部门解析失败 — 部门集降级为空（degraded:true，未静默），认证不受影响',
+        );
+      }
+
+      if (departmentSource?.degraded) {
+        log.warn(
+          {
+            code: 'K12_10_DEPT_DEGRADED',
+            degraded: true,
+            degradedReasons: departmentSource.degradedReasons,
+            userId: payload.sub,
+          },
+          'request-context 部门解析降级（真源未就位/定义不可用）— 部门集按已解析部分生效，请求照常下行',
+        );
+      }
+
       runWithContext({
         user: {
           userId: result.payload.sub,
@@ -632,6 +705,9 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
             ],
           }),
         },
+        // 🔴 K12-10-WIRE: 本行是"请求路径真带部门身份"的唯一接线点。
+        //   摘掉它 ⇒ `getCurrentDepartmentIds()` 回到空集 ⇒ 判据必红（已实测，见交付回执 B②）。
+        ...(departmentSource === undefined ? {} : { resolved: departmentSource }),
       }, async () => {
         next();
       }).catch((ctxErr: unknown) => {
