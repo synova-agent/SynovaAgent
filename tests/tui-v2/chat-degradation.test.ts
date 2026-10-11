@@ -48,6 +48,26 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { ReactElement } from 'react';
+
+// ═══ CI 环境屏蔽（必须在 ink / is-in-ci 首次加载之前执行；V-09 边界声明） ═══
+//
+// 为什么必须屏蔽：`is-in-ci@1.x` 在**模块加载期**读一次环境变量并冻结为常量
+//   （node_modules/is-in-ci/index.js: `const isInCi = env.CI !== '0' && env.CI !== 'false' && …`），
+// ink 据此在每帧 flush 时走**静态输出分支**、**根本不 write 动态帧**
+//   （node_modules/ink/build/ink.js:111 `if (isInCi) { …; return; }`）。
+// 而本文件被测的场景是**交互式 TTY**（FakeStdin/FakeStdout 的 isTTY 均为 true），
+// `CI` 是**测试运行器所在环境**的变量、**不是被测场景的属性** ⇒ 二者不相容。
+// CI 下不屏蔽的后果：`stdout.raw` 恒空 ⇒ 5 条依赖帧文本的断言恒红（Gitea Actions 必然注入 CI=true）。
+//
+// 边界（不改被测语义，只改跑测环境）：
+// - 只置 `process.env.CI = '0'`（is-in-ci 判 false 的取值之一），**不触碰** chat.tsx 与任何被调方；
+// - 不改变降级语义断言（log.warn/error 真被调用 + 界面提示可见），只让 ink 走**交互式输出路径**；
+// - 不影响 ink 的其它行为：`stdout.isTTY` 仍由 fakes 如实提供，帧累积/`finalFrame()` 语义不变。
+// vi.hoisted 由 vitest 提升到所有静态 import **之前**执行 ⇒ 早于 ./ink-fakes 触达 ink。
+vi.hoisted(() => {
+  process.env.CI = '0';
+});
+
 import { FakeStdin, FakeStdout, finalFrame, flush } from './ink-fakes';
 
 // ═══ 注入面（hoisted：vi.mock 工厂只能引用 hoisted 值）═══
