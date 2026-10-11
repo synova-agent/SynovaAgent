@@ -1,5 +1,171 @@
 # WIN-1134 · `action_effect_lag` 越权威枚举（`unknown`）—— 乙路线落地 + 判据证据
 
+> ## ⚠️ 版本/事实说明（K4-01 批 2 · 2026-10-11）
+> 本件**同时承载两批**：
+> - **§A（本文件顶部，权威）**：K4-01 批 2 —— CTO 甲裁定「只交信号 + 计数」下的**棘轮上移 + 违规如实点名**。
+> - **§B（下方原 §0–§9，批 1 历史记录，未删改）**：批 1 的读数**在其时真实**（as_of `origin/main = 5a6591c4a`）。
+>   其中**已被现实施覆盖**的事实（读 §B 时请以此为界）：
+>   · `edge-types/` **55 件 → 现 56 件**（第 56 件 `goal_decomposition.json`，由 local-main `18ed356f feat(k12-07)` 引入）；
+>   · 批 1 的「规范违规 = 0」→ **现 = 1**（该散文值，§A.0 D2）；
+>   · 批 1 §0 写「vitest 30 passed」为**其时的原始读数**；批 1 自述的 "23 it / 94 expect"（任务书转述）与实测不符，见 §A.6。
+>   ⇒ §B 的**设计说明、边界声明、防线分工**仍然有效；仅**计数类断言**以 §A 为准。
+
+---
+
+# §A K4-01 批 2 —— 棘轮上移（55→56）+ 第 3 类值如实点名（CTO 甲裁定：只交「信号 + 计数」）
+
+- **卡**：issue #1134（W3 时滞值侧 · 模块 K4）｜**卡面**：`.k4-cards/card-1134.md`
+- **执行**：`coder-k4-03`｜**工作树**：`D:\synova-wt-b2-1134`｜**分支**：`fix/1134-edge-lag-enum`
+- **基线**：`origin/local-main = e52499ddd6a1320435abd44f24323b5865d4caa1`（`lanfetch` 后；`rev-list --left-right --count origin/local-main...HEAD` = `0	2`）
+- **交付形态**：**保留批 1 形态**（审计实现留在该 test 文件内，穿生产入口 `loadOntology()`；**零 `src/**` 改动**、**未外提 probe**）
+- 🔴 **边界声明（原文，必须随 PR 带上）**：**本卡只交「信号 + 计数」，不含值域迁移（值域迁移另立卡）**。
+  具体不做：不改 `extensions/ontology/**`（含 `edge-types/**`，一件未碰）｜不改 `src/**`（读取侧发射属另卡）｜
+  不改 `scripts/control-tower/check-ontology-fields.sh`（判据冻结）｜**不把**第 3 类值塞进豁免面。
+
+## §A.0 前提冻结（逐条**独立实测**，不照抄任务书；原始输出可复跑）
+
+| # | 前提 | 我的命令 | 原始输出摘要 | 判 |
+|---|---|---|---|---|
+| D1 | `edge-types/` = **56 件**（非卡面 55） | `git ls-tree -r --name-only origin/local-main -- extensions/ontology/edge-types/ \| wc -l` ／ `ls extensions/ontology/edge-types/*.json \| wc -l` | `LM_EDGE_TYPES_COUNT=56` ／ `WT_EDGE_TYPES_COUNT=56` | ✅ |
+| D2 | 第 56 件 `goal_decomposition.json` 的 `action_effect_lag` = **散文串**（第 3 类值） | `python3 measure-edge-lags.py`（逐件打印 class + 原样值） | `goal_decomposition.json $id=edge/goal_decomposition class=SPEC_VIOLATION value="0d — 分解关系为结构性从属（子目标一旦建立即属该上级），不承载跨期传导时滞"` | ✅ |
+| D3 | `unknown` = **50** | 同上脚本 `COUNT_UNKNOWN` | `COUNT_UNKNOWN = 50` | ✅ |
+| D4 | 枚举内真值 = **5** | 同上 `COUNT_ENUM_IN` | `COUNT_ENUM_IN = 5` | ✅ |
+| D5 | 缺字段 = 0 | 同上 `COUNT_MISSING` | `COUNT_MISSING = 0` | ✅ |
+| D6 | `$id`↔文件名分歧 = **5**（存量） | 同上 `ID_TAIL_NE_FILENAME_COUNT` | `5`（`decision_concentrates` / `external_assumption` / `incentive_binds` / `locks_in` / `signal_transmits`） | ✅ |
+| D7 | 第 56 件的来源卡/提交 | `git log --oneline -3 origin/local-main -- extensions/ontology/edge-types/goal_decomposition.json` | `18ed356f feat(k12-07): 目标一致（岗位↔公司可追溯，断开分解边必红）` | ✅ 新增事实 |
+| D8 | 批 1 自述「`src/` + `packages/` 对 `action_effect_lag` 命中 0」 | `git grep -n action_effect_lag -- src packages` | **无输出**（`SRC_PKGS_GREP_RC=1`） | ✅ 前提仍成立 |
+| D9 | 批 1 自述「消费方验收件 `tests/sentinel/edge-lag-consumed.test.ts` 不存在」 | `[ -f … ]` | `CONSUMED_TEST_MISSING` | ✅ 前提仍成立 |
+| D10 | 违规件的字节锚（可复核"点的是哪一份"） | `sha256(goal_decomposition.json)` | `c720ca627757eb361c5584b7854c3b53b59df58eb219b478738099b3eb6b9c35`（1688 字节） | ✅ |
+
+**⇒ 新事实四元组 = files 56 ／ unknown 50 ／ inEnum 5 ／ specViolation 1（点名 `goal_decomposition.json`）。**
+
+## §A.1 判据审计表（卡面 Done → 用例名 → 行号）+ 缺口
+
+行号 = 本卡交付后 `tests/l4/edge-lag-unknown-degraded-1134.test.ts` 的行号（`grep -n` 原始读数）。
+卡面 Done（`card-1134.md` 完成标准 4 条 + §五「乙」判据）与派单件 Done（`CARD-1134-TASK.md` G）合并成下表。
+
+| # | 判据（卡面/派单件原文要点） | 用例（载体） | 行号 | 批 2 前的状态 |
+|---|---|---|---|---|
+| 1 | 读到 `unknown` ⇒ **必产 degraded 标记或审计行** | `A5`（degradedFlag）｜`A6`（50 条具名审计行）｜`D1` | 475 ｜ 479 ｜ 644 | ✅ 已有 |
+| 2 | **改坏即红**（含"还原即绿"） | `B2`｜`B3`｜`B4`（flip→红→复原→回基线）｜`B5`（第 3 类值） | 519 ｜ 529 ｜ 540 ｜ 562 | ✅ 已有 |
+| 3 | **豁免面恰为 6 值 ∪ {unknown}（7 项，防悄悄放宽）** | `C4b`（长度=7、无重复、逐值、负例 7 串） | 607 | ✅ 已有 |
+| 4 | `unknown` **计数钉 50**，真值漂移必红 | `A2`（=50）｜`D3`｜`E4` | 437 ｜ 662 ｜ 708 | ✅ 已有 |
+| 5 | 第 3 类值 **必须显形**（不得被吸收成 unknown） | `C4`（自造第 7 值）｜`B5` | 599 ｜ 562 | ⚠️ **仅沙箱面**：真仓面缺"点名"载体 |
+| 6 | 棘轮：真仓件数 = 真值 | `A1`｜`F1` | 433 ｜ 725 | ❌ **红**（55 vs 56） |
+| 7 | 真仓「无规范违规」 | `A4` | 445 | ❌ **红**（断言 0，真值 1） |
+| 8 | 三态互不吞并（degraded / specViolation / missing） | `E4`（+ `C1`/`C2`/`C3`） | 708 ｜ 580/588/594 | ❌ **红**（E4 断言 specViolation=0） |
+| 9 | 零出现**报告不阻断** | `E1`｜`E2`｜`E3` | 676 ｜ 689 ｜ 695 | ✅ 已有 |
+| 10 | `$id`↔文件名映射完整（禁从 `$id` 反推） | `F1`｜`F2`｜`F3`（5 件分歧留档） | 725 ｜ 730 ｜ 738 | ✅ 已有 |
+| 11 | 生产入口真跑（非 grep 静态计数） | A 组全体 ｜ `D3` ｜ `E1` ｜ `F2`（子进程 `chdir` + 动态 import） | 315（装载函数）｜433–500 | ✅ 已有 |
+| 12 | 读取侧未实现**显式棘轮**（诚实边界） | `D2`（`READ_SIDE_EMISSION='NOT_IMPLEMENTED'`） | 654（常量 172） | ✅ 已有 |
+
+**缺口（"先补测试"清单，逐条已闭合）**：
+- **G1**（判据 6）：`BASELINE_TOTAL` 55 → **56**，且 `A1`/`F1` 标题同步。→ §A.3 改动 ①
+- **G2**（判据 7）：`A4` 由「断言 0」改为「**恰为 1**」→ §A.3 改动 ②
+- **G3**（判据 5 的真仓面 + 判据 8）：新增 **`A4b`**：逐件点名 `file=goal_decomposition.json` + **原样值前缀** + `degraded` 仍 50（未被吸收）+ 豁免面仍 7（未放宽）+ 该散文值 ∉ 豁免面。→ §A.3 改动 ③
+- **G4**（判据 8）：`E4` 的 `specViolation` 期望 0 → **`BASELINE_SPEC_VIOLATION`(=1)**，并注明该 1 来自第 3 类值、**不是**零出现造成。→ §A.3 改动 ④
+- **G5**（诚实性）：头注释里「55 件」「无规范违规」「as_of `origin/main`」等陈述更新为批 2 实测；并在代码注释中写明**禁止**用放宽豁免面的方式把它改回 0。→ §A.3 改动 ⑤–⑧
+
+## §A.2 先红（批 1 判据件 vs 新事实；**未动实现**）
+
+命令：`cd /d D:\synova-wt-b2-1134 && npx vitest run tests/l4/edge-lag-unknown-degraded-1134.test.ts`
+```
+ ❯ tests/l4/edge-lag-unknown-degraded-1134.test.ts (30 tests | 4 failed) 5040ms
+     × A1 生产装载器读到 55 件边类型（棘轮）           → AssertionError: expected 56 to be 55
+     × A4 无规范违规、无字段缺失、无映射断裂（…）      → AssertionError: expected 1 to be +0
+     × E4 零出现**不得**被误记为降级或违规（三态互不吞并） → AssertionError: expected 1 to be +0
+     × F1 55 件的 `$id` 均能映射到真实文件（无断裂）    → AssertionError: expected 56 to be 55
+ Test Files  1 failed (1)
+      Tests  4 failed | 26 passed (30)
+VITEST_RED_EXIT=1
+```
+（4 条红**全部**落在"真值漂移"上：件数 55→56 ×2、specViolation 0→1 ×2；**无一**是语法/收集失败 ⇒ 棘轮的分辨力在批 2 现场再次被证明。）
+
+## §A.3 判据件改动（逐处；**未删弱任何断言**）
+
+| # | 位置（改后行号） | 改动 | 性质 |
+|---|---|---|---|
+| ① | `A1` / `F1`（433 / 725）+ 常量（146） | `BASELINE_TOTAL` 55 → 56；标题同步 | 棘轮上移到新事实 |
+| ② | `A4`（445） | `specViolation` 期望 0 → `BASELINE_SPEC_VIOLATION`(=1)；标题改「恰为 1（如实计数，禁静默放宽）」 | 由"无违规"改为"**如实点名 1 条**" |
+| ③ | **新增** `A4b`（451） | 违规**逐件点名真实文件名** + **原样值前缀** `0d —` + `degraded` 仍 = 50 + 豁免面仍 = 7 + 散文值 ∉ 豁免面 + 打印具名审计行与计数 | 新增判据（真仓面"必须显形"） |
+| ④ | `E4`（708） | `specViolation` 期望 0 → 1，并注明来源是第 3 类值而非零出现 | 三态语义不变、数字对齐 |
+| ⑤ | 头注释（28–38 行区） | as_of 基线 → `local-main = e52499ddd`；`src/packages` 命中 0 的**独立复测**命令与读数 | 诚实性（不照抄批 1） |
+| ⑥ | 常量块注释（~110–158） | 新增"**批 2 棘轮上移 55 → 56 + 纳入 1 条违规**"说明；加常量 `BASELINE_SPEC_VIOLATION` / `_FILES` / `_VALUE_PREFIX`；写明 🔴 **禁**用放宽豁免面把它改回 0 | 可审计 + 红线留痕 |
+| ⑦ | 覆盖矩阵注释（~65–73） | A 组读数改为 `56 件 / degraded=50 / inEnum=5 / specViolation=1 / 审计行 51 条` | 文档-代码一致 |
+| ⑧ | 「设计要点 2」（~56 行） | 「55 件中有 5 件 `$id` 尾段 ≠ 文件名」→「批 2 复测：**56 件中仍为 5 件**」 | 同 ⑦ |
+| ⑨ | `#1350` 移交义务注释（~120–136） | 保留义务，但注明该注**写于棘轮 = 55 时**、现真值为 56（第 56 件来自 K12-07，**不是** #1350 的两件）⇒ 落地时以实测重算 | 防后续卡照抄过期算术 |
+
+**未改**：`auditEdgeLags()` 判定逻辑、`EDGE_LAG_ENUM`（6 值）、`EDGE_LAG_ALLOWED_SET`（**仍 7 项**）、
+`READ_SIDE_EMISSION`（仍 `NOT_IMPLEMENTED`）、B/C/D/E/F 组的语义 —— 即**审计实现零放宽**。
+
+## §A.4 恢复绿（原始输出，含"信号 + 计数"三条真跑）
+
+```
+$ npx vitest run tests/l4/edge-lag-unknown-degraded-1134.test.ts
+stdout | … > A4b 🔴 第 3 类值必须显形：…
+[1134][真仓规范违规审计行] AUDIT edge-lag 越允许集(规范违规) file=goal_decomposition.json $id=edge/goal_decomposition value="0d — 分解关系为结构性从属（子目标一旦建立即属该上级），不承载跨期传导时滞" ⇒ 既非 §3.4 六值、亦非显式降级标记 "unknown"（禁静默放宽枚举）
+[1134][真仓计数] {"files":56,"degraded":50,"inEnum":5,"specViolation":1,"missing":0,"unmapped":0,"allowedSetSize":7}
+
+ ✓ tests/l4/edge-lag-unknown-degraded-1134.test.ts (31 tests) 4073ms
+ Test Files  1 passed (1)
+      Tests  31 passed (31)
+VITEST_EXIT=0
+```
+三条真跑对照（派单件 Done ④）：
+1. **读到 `unknown` ⇒ 必产 degraded 标记/具名审计行**：`degraded=50`、`A6` 断言 50 条具名行（点名真文件名 + `$id` + `degraded:true`）✅
+2. **豁免面恰为 7 项**：`allowedSetSize=7` + `C4b` 断言长度=7/无重复/负例 7 串不得入内 ✅
+3. **计数钉 50 且真值漂移必红**：`degraded=50`；漂移检测见 §A.2（红）+ §A.5（改坏即红）✅
+4. （第 4 条，本卡新增）**第 3 类值如实点名**：`specViolation=1` + `file=goal_decomposition.json` + 原样值 ✅
+
+## §A.5 造红 / 恢复绿（判别性：改坏即红 + 还原即绿）
+
+**M1（语义型改坏：把第 3 类值"吸收"成 `unknown` = 静默放宽枚举的典型形态）**
+改动：`if (s.lag === EDGE_LAG_DEGRADED_MARKER)` → `if (typeof s.lag === 'string' && !EDGE_LAG_ENUM.includes(s.lag))`
+（即"凡非枚举字符串一律算降级"，散文值被吸收 ⇒ `specViolation` 消失）
+```
+ ❯ tests/l4/edge-lag-unknown-degraded-1134.test.ts (31 tests | 9 failed) 5007ms
+     × A2 → AssertionError: expected 51 to be 50        （散文值被算成 degraded ⇒ 50→51）
+     × A4 → AssertionError: expected +0 to be 1         （违规被吸收 ⇒ 1→0）
+     × A4b / A6 / B5 / C2 / C4 / D3 / E4 → 同族红
+M1_RED_EXIT=1
+```
+**还原（字节级）**：`copy` 回备份件 ⇒ `certutil -hashfile … SHA256` = `974993be16c4a82599aafdaa5af2329021181073dd9073c15ad1810cb41dc7ab`
+（与改动前 **逐字一致**）⇒ 复跑 **31 passed / exit 0**，`git status --porcelain` = 仅 ` M tests/l4/…test.ts`（**无 `*.bak` / 无残留**）。
+⇒ 判别性成立：**放宽豁免面 / 吸收违规 ⇒ 必红；还原 ⇒ 必绿**。
+
+## §A.6 对批 1/任务书数字的更正（数字只认命令原始输出）
+
+| 项 | 批 1/任务书自述 | 我的原始读数 | 口径说明 |
+|---|---|---|---|
+| 用例数 | 任务书写「23 it」；批 1 §0 写「30 passed」 | vitest 收集 **30**（改前）／**31**（本卡 +`A4b`）；`grep -c "it("` = **31** | `grep "it("` 含 1 处假阳：`.split(/\r?\n/)`（**split(** 里的 `it(`）⇒ 真实用例 = grep 值 − 1，与 vitest 收集一致 |
+| `expect(` | 任务书写「94 expect」 | `grep -c "expect("` = **81** | 行计数（同 `expect` 多断言的写法差异会导致口径不同）；以 vitest 用例数与断言命中为准 |
+| 组数 | A–F 六组 | `describe(` = **6**（A/B/C/D/E/F） | ✅ 一致 |
+
+## §A.7 边界与 LIMITS（诚实标注，防误读）
+
+1. **不含值域迁移**（CTO 甲裁定原文口径）：本卡**未**改任何 `edge-types/**` JSON、**未**改枚举常量（仍 6 值）、
+   **未**给第 3 类值定值；`goal_decomposition.json` 的散文值**原样留存**并**被点名**（另立卡决定其值域归属）。
+2. **读取侧仍未实现**：`src/` + `packages/` 对 `action_effect_lag` 命中 **0**（§A.0 D8，独立复测）⇒
+   `READ_SIDE_EMISSION='NOT_IMPLEMENTED'` 棘轮原样保留（读取侧落地者必须显式改它，见用例 `D2`）。
+3. **判据等级**：本件为 **L1 防线/审计侧可执行实现 + L2 生产入口真跑**（穿 `loadOntology()`，非 grep 静态计数）；
+   **不含**读取侧端到端证据（无读取侧可插桩）。
+4. **未合并**：本卡未推远端、未开 PR（推 PR 由队长按 CTO 顺序执行）；**通过与否**归 CTO 收件闸 + K3 终审。
+
+## §A.8 遗留 / 未决（直说）
+
+1. 🔴 **值域迁移另立卡**：`goal_decomposition.json` 的 `action_effect_lag` = 散文串（本卡只点名不修）；
+   其正确值（作者原意疑为 `0d`/`immediate` 类）需**产品线 + CTO** 定，且属 `extensions/ontology/**` 写集（本卡禁碰）。
+2. ⚠️ **同目录串行纪律**：#1350（edge-types 新增 2 件）按卡面「本卡先行、#1350 排后」；
+   若 #1350 落地，棘轮须按 §A.3 ⑨ 的提示**以实测重算**（56 → 58 / 50 → 52 / 5 → 5）。
+3. ⚠️ **控制塔防线仍零枚举感知**：`check-ontology-fields.sh` 判据 = 字段存在 + 非空串（本卡**不碰**）；
+   若要把"值域"纳入该防线，须走 提案→K3→CTO（D1174 note 已明确让渡给产品线）。
+4. ⚠️ **载体开关**：本卡 commit 走 `.claude/claims/1134.yaml`（issue 号卡 + claim 载体）；
+   `SYNO_CLAIM_V2` 默认值与决策 Note 的不一致（同批 K4-03 已上报），本卡**不改门禁**。
+
+---
+
+# §B 批 1 历史记录（原 §0–§9；计数类断言以 §A 为准）
+
 > 卡：[#1134](https://github.com/synova-agent/SynovaAgent/issues/1134)（W3 时滞值侧 · 模块 K4）
 > 执行人：`@k4-coder-b` ｜ 小队：WIN 侧 K4 ｜ 分支：`fix/1134-edge-lag-enum`
 > 断面：`origin/main = 5a6591c4a3d4c9816895fb7f55a8a97b1c71a7e4` ｜ 工作树：`.synova-wt-1134`

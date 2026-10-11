@@ -12,8 +12,9 @@
  *     · `unknown` 计数**钉死 50**（棘轮）⇒ 真值漂移（如真值→`unknown` 50→51）**必红**
  *
  * ═══ 🔴 诚实边界（本件**不**覆盖什么 —— 禁把"防线侧"写成"读取侧"）═══════════
- * 实测 as_of `origin/main = 5a6591c4a`：`src/` + `packages/` 对 `action_effect_lag`
- * 命中 **0**（`extensions/` 55 件为纯数据面）⇒ **今天不存在可插桩的"读取侧"**。
+ * 实测 as_of `local-main = e52499ddd`（**K4-01 批 2 独立复测**，非照抄批 1）：
+ * `git grep -n action_effect_lag -- src packages` ⇒ **无输出（命中 0）**
+ * （`extensions/` **56 件**为纯数据面）⇒ **今天不存在可插桩的"读取侧"**。
  * 因此本件交付的是【**审计 / 防线侧的可执行实现**】：
  *   具名审计行 + 派生 `degraded` 计数 + 漂移即红。
  * **不是**「读取侧已产 degraded」。真正的"读取侧发射体"（有人读该字段时必须 degraded）
@@ -53,7 +54,7 @@
  *    每沙箱一子进程，**零真仓写入**，改坏即红不污染工作区。
  *
  * ═══ 设计要点 2：为什么不能从 `$id` 反推文件名 ═══════════════════════════════
- * 🔴 实测（本件发现）：**55 件中有 5 件 `$id` 尾段 ≠ 文件名** ——
+ * 🔴 实测（本件发现，批 2 复测：**56 件中仍为 5 件**）：**5 件 `$id` 尾段 ≠ 文件名** ——
  *    `decision_concentrates.json` / `external_assumption.json` / `incentive_binds.json` /
  *    `locks_in.json` / `signal_transmits.json` 的 `$id` 用**连字符**（`edge/decision-concentrates`），
  *    而真实文件名用**下划线**；真实文件名**不含连字符**（字符集 `[_a-z]`）。
@@ -63,9 +64,11 @@
  *    非本卡引入，且判其是否应统一超出本卡范围（登记，不擅改）。
  *
  * ═══ 覆盖矩阵（铁律 48：正常 / 降级 / 边界）═════════════════════════════════
- *  A 正常：真仓 55 件经生产入口 → 派生 degraded=50 / inEnum=5 / 具名审计行 50 条（**真文件名**）
+ *  A 正常：真仓 **56** 件经生产入口 → 派生 degraded=50 / inEnum=5 /
+ *          **specViolation=1（逐件点名 `goal_decomposition.json` 的散文值）** /
+ *          具名审计行 51 条（50 条 degraded + 1 条 violation，均点名**真文件名**）
  *  B 改坏即红：沙箱 5 件，翻转 1 件 ⇒ 计数漂移 ⇒ 同一绿断言必抛（正反两向 + 还原即绿）
- *  C 边界 + **禁静默放宽枚举**：缺字段 / 空串 / 非字符串 / **自造第 7 值**必须显形
+ *  C 边界 + **禁静默放宽枚举**：缺字段 / 空串 / 非字符串 / **自造第 7 值** / **真仓第 3 类值** 必须显形
  *  D 未来读取边界契约（可执行 + 棘轮）
  *  E 枚举成员零出现（**报告不阻断**）
  *  F `$id` ↔ 文件名 映射完整性（**报告不阻断**）
@@ -102,20 +105,35 @@ const EDGE_LAG_DEGRADED_MARKER = 'unknown';
 const EDGE_LAG_ALLOWED_SET: readonly string[] = [...EDGE_LAG_ENUM, EDGE_LAG_DEGRADED_MARKER];
 
 /**
- * 真仓基线（as_of `origin/main = 5a6591c4a`）。
+ * 真仓基线（as_of `local-main = e52499ddd`，**K4-01 批 2 现场实测**）。
  * 🔴 这是**棘轮**：任何真仓值漂移都会让 A 组转红 —— 这是"防漂移"判据的分辨力来源。
  *
- * ═══ 🔴 下游「棘轮同步」移交义务（**#1350 落地前必读**）═══════════════════════
- * 本夹具以 **55 / 50 / 5** 为基线常量。**#1350**（本体边体系提案 · 词表 **55 → 57**，
- * 新增 `GOAL_DECOMPOSES_TO` + `PLAN_COMMITS_TO` 两件边，按 CTO #1350 W3 口径
- * **初始 = `unknown`**）落地时 ⇒ **必须同步**：
+ * ═══ K4-01 批 2（2026-10-11）棘轮上移：55 → **56**，并**如实纳入 1 条规范违规** ═══
+ * 事实（逐条实测量，原始输出见证据件 §A.0；**不照抄批 1/任务书**）：
+ *   · `edge-types/` = **56 件**；第 56 件 = `goal_decomposition.json`（`$id=edge/goal_decomposition`），
+ *     由 local-main 上 `18ed356f feat(k12-07): 目标一致（岗位↔公司可追溯，断开分解边必红）` 引入。
+ *   · 该件 `action_effect_lag` = **散文串**
+ *     `"0d — 分解关系为结构性从属（子目标一旦建立即属该上级），不承载跨期传导时滞"`
+ *     ⇒ **第 3 类值**（既非 §3.4 六值、亦非显式降级标记 `unknown`）⇒ `specViolation = 1`。
+ *   · `unknown` 仍 = **50**（不变）；枚举内真值仍 = **5**（不变）；`$id`↔文件名分歧仍 = 5。
+ * ⇒ 处置（CTO 甲裁定：**只交「信号 + 计数」，不动枚举、不含值域迁移**）：
+ *   **让审计如实点名这 1 条违规 + 棘轮上移到新事实**。
+ *   🔴 **禁止**把该散文值塞进豁免面换全绿 —— 豁免面仍**恰为** 7 项（6 值 ∪ {unknown}，见 C4b），
+ *   本件对第 3 类值的唯一处置是"计数 + 具名审计行"（A4/A4b/C4/B5）。
  *
- *     BASELINE_TOTAL    55 → 57
+ * ═══ 🔴 下游「棘轮同步」移交义务（**#1350 落地前必读**）═══════════════════════
+ * 本夹具以 **56 / 50 / 5 / 1** 为基线常量。**#1350**（本体边体系提案 · 词表 55 → 57，
+ * 新增 `GOAL_DECOMPOSES_TO` + `PLAN_COMMITS_TO` 两件边，按 CTO #1350 W3 口径
+ * **初始 = `unknown`**）落地时 ⇒ **必须按当刻真值重新同步**：
+ *
+ *     BASELINE_TOTAL    56 → 58   （+2；⚠️ 本注写于棘轮 = 55 时，**批 2 已实测上移到 56**）
  *     BASELINE_DEGRADED 50 → 52   （两件新边按 W3 口径为 `unknown`）
  *     BASELINE_IN_ENUM   5 →  5   （不变：新边不进枚举）
  *
  * 并**重新跑本夹具确认绿**。不同步 ⇒ **A1 / A2 / F1 必红**（这是**棘轮的正确行为**：
  * 逼后续卡显式确认"新增两件也走 `unknown`"，而不是被静默继承）。
+ * ⚠️ **本注的算术前身是 55**；现真值 = 56（第 56 件由 K12-07 引入，**不是** #1350 的两件）
+ * ⇒ 落地时**以实测为准重算**，不要照抄上表数字。
  *
  * ⚠️ **B 组不受影响**（勿误以为漏改）：沙箱取样 = 真仓**前 5 件（字典序 `a…c` 段）**，
  * 而 `goal_decomposes_to` / `plan_commits_to` 的首字母 `g` / `p` **排在其后**
@@ -125,9 +143,19 @@ const EDGE_LAG_ALLOWED_SET: readonly string[] = [...EDGE_LAG_ENUM, EDGE_LAG_DEGR
  * 📌 记录：本条移交义务由自验员在 Phase 2 复核中提出（其自验结论文件 §三 遗留项 L2），
  * 原夹具**未写明**该义务 ⇒ 本注释即补写的收口。
  */
-const BASELINE_TOTAL = 55;
+const BASELINE_TOTAL = 56;
 const BASELINE_DEGRADED = 50;
 const BASELINE_IN_ENUM = 5;
+/**
+ * 越**允许集**（既非 §3.4 六值、亦非 `unknown`）的规范违规件数 —— **棘轮**。
+ * 当前 = 1：`goal_decomposition.json` 的散文值（见上方批 2 说明）。
+ * 🔴 **禁**把该件纳入豁免面来把这个数字改回 0（那是"静默放宽枚举"，本卡红线）。
+ */
+const BASELINE_SPEC_VIOLATION = 1;
+/** 违规件点名 —— 一律用**真实文件名**（取自目录实况；**禁**从 `$id` 反推）。 */
+const BASELINE_SPEC_VIOLATION_FILES: readonly string[] = ['goal_decomposition.json'];
+/** 第 3 类值的原样前缀（证明违规**被如实看见**，而非被吸收成 `unknown`）。 */
+const BASELINE_SPEC_VIOLATION_VALUE_PREFIX = '0d —';
 /** `$id` 尾段 ≠ 文件名 的件数（存量事实，报告不阻断）。 */
 const BASELINE_ID_FILENAME_DIVERGENT = 5;
 
@@ -402,7 +430,7 @@ describe('A. 真仓基线 — 穿生产入口 loadOntology()（正常路径）',
   const edges = loadEdgeLagsViaProductionEntry(REPO);
   const audit = auditEdgeLags(edges);
 
-  it('A1 生产装载器读到 55 件边类型（棘轮）', () => {
+  it('A1 生产装载器读到 56 件边类型（棘轮；批 2 实测上移 55 → 56）', () => {
     expect(edges.length).toBe(BASELINE_TOTAL);
   });
 
@@ -414,10 +442,34 @@ describe('A. 真仓基线 — 穿生产入口 loadOntology()（正常路径）',
     expect(audit.inEnum).toBe(BASELINE_IN_ENUM);
   });
 
-  it('A4 无规范违规、无字段缺失、无映射断裂（禁静默放宽枚举的底线）', () => {
-    expect(audit.specViolation).toBe(0);
+  it('A4 规范违规**恰为 1**（如实计数，禁静默放宽）、无字段缺失、无映射断裂', () => {
+    expect(audit.specViolation).toBe(BASELINE_SPEC_VIOLATION);
     expect(audit.missing).toBe(0);
     expect(audit.unmapped).toBe(0);
+  });
+
+  it('A4b 🔴 第 3 类值必须显形：逐件点名**真实文件名** + 原样值，且**不**被吸收成 unknown、**不**放宽豁免面', () => {
+    const violLines = audit.auditLines.filter(l => l.includes('越允许集(规范违规)'));
+    expect(violLines.length).toBe(BASELINE_SPEC_VIOLATION);
+    for (const f of BASELINE_SPEC_VIOLATION_FILES) {
+      expect(violLines.some(l => l.includes(`file=${f}`))).toBe(true);
+    }
+    // 原样值可见（不被折叠成"某值"）；且 violation ≠ degraded（三态互不吞并）
+    expect(violLines.some(l => l.includes(BASELINE_SPEC_VIOLATION_VALUE_PREFIX))).toBe(true);
+    expect(audit.degraded).toBe(BASELINE_DEGRADED);
+    // 豁免面**未被放宽**：仍恰 7 项，且这 1 条散文值**不在**豁免面内
+    expect(EDGE_LAG_ALLOWED_SET.length).toBe(7);
+    for (const f of BASELINE_SPEC_VIOLATION_FILES) {
+      const doc = JSON.parse(readFileSync(join(EDGE_SRC, f), 'utf-8')) as Record<string, unknown>;
+      expect(EDGE_LAG_ALLOWED_SET).not.toContain(doc['action_effect_lag']);
+    }
+    // 证据可见（原始输出里能读到"点的是谁 + 值是什么"）：具名审计行 + 计数照原样打印
+    console.log('[1134][真仓规范违规审计行]', violLines.join(' | '));
+    console.log('[1134][真仓计数]', JSON.stringify({
+      files: audit.total, degraded: audit.degraded, inEnum: audit.inEnum,
+      specViolation: audit.specViolation, missing: audit.missing, unmapped: audit.unmapped,
+      allowedSetSize: EDGE_LAG_ALLOWED_SET.length,
+    }));
   });
 
   it('A5 读到 `unknown` ⇒ 必产 degraded 标记（铁律 11/31，不得静默）', () => {
@@ -655,9 +707,11 @@ describe('E. 枚举成员零出现 — 报告但不阻断', () => {
 
   it('E4 零出现**不得**被误记为降级或违规（三态互不吞并）', () => {
     const audit = auditEdgeLags(loadEdgeLagsViaProductionEntry(REPO));
-    expect(audit.degraded).toBe(BASELINE_DEGRADED); // 50，不因零出现而变
-    expect(audit.specViolation).toBe(0);            // 零出现 ≠ 违规
-    expect(audit.missing).toBe(0);                  // 零出现 ≠ 缺字段
+    expect(audit.degraded).toBe(BASELINE_DEGRADED);      // 50，不因零出现而变
+    expect(audit.specViolation).toBe(BASELINE_SPEC_VIOLATION); // 1：来自 `goal_decomposition.json`
+    // ⚠️ 上面这 1 **不是**零出现造成的（零出现只进 reportLines）—— E2 已断言零出现不进 auditLines；
+    //    若有人把"零出现"改判成违规，本断言会因计数 ≠ 1 而红。
+    expect(audit.missing).toBe(0);                       // 零出现 ≠ 缺字段
   });
 });
 
@@ -668,7 +722,7 @@ describe('E. 枚举成员零出现 — 报告但不阻断', () => {
 describe('F. `$id` ↔ 文件名 映射完整性（报告不阻断）', () => {
   const edges = loadEdgeLagsViaProductionEntry(REPO);
 
-  it('F1 55 件的 `$id` 均能映射到真实文件（无断裂）', () => {
+  it('F1 56 件的 `$id` 均能映射到真实文件（无断裂）', () => {
     expect(edges.length).toBe(BASELINE_TOTAL);
     expect(edges.filter(e => e.file === null).length).toBe(0);
   });
