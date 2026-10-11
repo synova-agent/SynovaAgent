@@ -9,7 +9,7 @@
 **② 解决什么问题**：实测：审计表里 `user_id` 实测库中该表唯一一行为 `l3-real-user-1155`（非 anonymous） ⇒ 出了事**无法定位是谁**（审计等于没有）。
 **③ 做完对项目的推动**：归因能力是 §2.7 一致性与 ⑥ 进化回环的共同前提（判例：DSH 「账本可归因」为其六原则之一）。
 **④ 🔴 不做行不行**：**不行**（禁令级）：不可归属的审计 = 假审计（合规与追责皆为空洞）。
-**⑤ 现在有什么基础（**事实台账 @ 68bf57598**）**：登记件 `status`=`todo`；**本卡判据实跑 2/2 PASS**（逐条见文末「状态」，真 git 仓库 ＋ 真 sqlite）；已存在落点：`src/routes/knowledge.ts`；**待新建**：（无）。
+**⑤ 现在有什么基础（**事实台账 @ 68bf57598**）**：登记件 `status`=`todo`；**本卡判据实跑 1/2 PASS**（逐条见文末「状态」，真 git 仓库 ＋ 真 sqlite）；已存在落点：`src/routes/knowledge.ts`；**待新建**：（无）。
 **⑥ 还需要做什么**：把身份贯通到审计写入点 + 跑两条 sqlite 判据。
 **⑦ DSH 借鉴方式**：**参考自研**：借 DSH「**错误/违规必须带归属**」—— `dsh-invariants/lib/index.js:93` `throw new InvariantError(packageName, message)`（失败必须**归属于违规的包**）；`:12` `class InvariantError`；`:123` 导出。**不借**其包级归属粒度（我们要到人）。
 **⑧ 涉及代码文件**：src/routes/knowledge.ts
@@ -88,9 +88,10 @@ c) memory 教训：**铁律 0-2**（接线失败 4 次：组件过单测但从�
 | # | 判据命令 | expect | 实跑 exit | 判定 |
 |---|---|---|---|---|
 | 1 | `sqlite3 data/synova.db "SELECT COUNT(*) FROM knowledge_audit WHERE user_id NOT IN ('anonymous','unauthenticated')"` | 行数>0 | 0 | PASS |
-| 2 | `sqlite3 data/synova.db "SELECT COUNT(*) FROM knowledge_audit WHERE user_id='unauthenticated'"` | 行数>0 | 0 | PASS |
+| 2 | `sqlite3 data/synova.db "SELECT COUNT(*) FROM knowledge_audit WHERE user_id='unauthenticated'"` | 行数>0 | 0 | FAIL |
 
 ### 待 CTO 裁定的矛盾项（**本 brief 无权下结论**）
+- ⚠️ 含 **sqlite 判据**：结论依赖运行期库断面（`/tmp/kb-work/data/synova.db`）
 - 登记件 `status`=`todo` ↔ Gitea #42 state 须对齐（CTO 裁）
 
 > 「已完成 / 未完成」**不作为本 brief 的结论**：登记件中已有判据被**自行作废**（#19）、**假绿**（#22 单测绿/真库无表；#55 断言 fail-open）、**结构性跑不通**（#3）、**语法坏**（#27/#43），
