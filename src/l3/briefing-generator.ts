@@ -13,10 +13,36 @@
  */
 import { getReportTemplateRegistry } from './report-templates';
 import { createLogger } from '@synova/logger';
+import {
+  listDecomposedGoals,
+  traceGoalToCompany,
+  type GoalAlignmentStore,
+} from '../l4/goal-alignment';
 
 const log = createLogger('l3/briefing-generator');
 
 // ═══ Types ═══
+
+/**
+ * 目标一致（#190 / K12-07）—— 简报口径：岗位目标能否沿分解边追到公司目标。
+ *
+ * 为什么进简报: 宪章 §2.7 第④层「目标一致」此前**零载体**（目标之间是孤岛）。
+ * 简报是每日触达面 ⇒ 把"哪些目标未接入公司目标链路"变成**每天看得见**的事实，
+ * 而不是等目标打架了才发现。
+ */
+export interface GoalAlignmentSummary {
+  /** 可沿 GOAL_DECOMPOSITION 边**逐跳**追到公司目标的岗位目标数 */
+  traceable: number;
+  /** 追不到公司目标的岗位目标数（链顶未标记公司级 ⇒ 未接入链路） */
+  orphan: number;
+  /** 未接入链路的标题（最多 5 个，防简报刷屏；全量计数见 orphan） */
+  orphanTitles: string[];
+  /** 公司级目标 → 分解出的岗位目标数 */
+  companyGoals: Array<{ goalId: string; title: string; roleGoals: number }>;
+  /** 能力/环境失败（store 无 queryEdges / 读图抛错 / 本体端点矩阵不可用）—— 链路不完整（orphan）不算降级 */
+  degraded: boolean;
+  errors: string[];
+}
 
 export interface DailyBriefing {
   date: string;
@@ -25,6 +51,8 @@ export interface DailyBriefing {
   alerts: Array<{ description: string; priority: 'high' | 'medium' | 'low'; confidence: number }>;
   obstacles: Array<{ description: string; status: string }>;
   recommendations: string[];
+  /** 目标一致口径（#190 / K12-07；见 GoalAlignmentSummary 契约） */
+  goalAlignment: GoalAlignmentSummary;
   generatedAt: string;
 }
 
@@ -49,6 +77,14 @@ export class BriefingGenerator {
       alerts: [],
       obstacles: [],
       recommendations: [],
+      goalAlignment: {
+        traceable: 0,
+        orphan: 0,
+        orphanTitles: [],
+        companyGoals: [],
+        degraded: false,
+        errors: [],
+      },
       generatedAt: new Date().toISOString(),
     };
 
@@ -94,11 +130,17 @@ export class BriefingGenerator {
       }
 
       // Recommendations
+      briefing.goalAlignment = this.summarizeGoalAlignment(this.graphStore, goals, orgId);
       if (briefing.alerts.length > 0) {
         briefing.recommendations.push(`${briefing.alerts.length} 个活跃告警需关注`);
       }
       if (briefing.goals.some(g => g.trend === 'down')) {
         briefing.recommendations.push('部分目标进度下降，建议复盘调整');
+      }
+      if (briefing.goalAlignment.orphan > 0) {
+        briefing.recommendations.push(
+          `${briefing.goalAlignment.orphan} 个目标未接入公司目标链路（目标一致 · K12-07）`,
+        );
       }
       if (briefing.obstacles.length > 0) {
         briefing.recommendations.push(`${briefing.obstacles.length} 个遗留问题待解决`);
@@ -118,6 +160,79 @@ export class BriefingGenerator {
     }
 
     return briefing;
+  }
+
+  /**
+   * 目标一致汇总（#190 / K12-07）—— 逐目标沿分解边追到公司目标；公司级目标反向取分解集合。
+   *
+   * 契约（铁律 47）:
+   *   @input  — store（`GoalAlignmentStore`）/ goals（活跃 GOAL 图节点）/ orgId（图名）
+   *   @output — `GoalAlignmentSummary`；`orphan` = 追不到公司目标的岗位目标数（**事实**，非故障）
+   *   @degraded — 能力/环境失败 ⇒ `degraded:true` ＋ `log.warn` ＋ 原因进 `errors[]`（铁律 11/24/31）：
+   *               store 无 queryEdges / 读图抛错。**orphan 不置 degraded**（数据不完整 ≠ 模块坏了）。
+   */
+  private summarizeGoalAlignment(
+    store: GoalAlignmentStore,
+    goals: ReadonlyArray<{ id: string; props: Record<string, unknown> }>,
+    orgId: string,
+  ): GoalAlignmentSummary {
+    const errors: string[] = [];
+    const orphanTitles: string[] = [];
+    const companyGoals: GoalAlignmentSummary['companyGoals'] = [];
+    let traceable = 0;
+    let degraded = false;
+
+    try {
+      for (const node of goals) {
+        const entityId = node.props['goalId'];
+        const ref = typeof entityId === 'string' && entityId.length > 0 ? entityId : node.id;
+        const title = String(node.props['title'] ?? node.props['name'] ?? node.id);
+
+        const trace = traceGoalToCompany(store, ref, orgId);
+        if (trace.degraded) {
+          degraded = true;
+          errors.push(...trace.errors);
+          break; // 能力缺失 ⇒ 后续每个目标都会同因失败，不刷屏
+        }
+        if (trace.satisfied && trace.hops.length === 0) {
+          // 该目标自身即公司级 ⇒ 反查分解出的岗位目标集合
+          const children = listDecomposedGoals(store, ref, orgId);
+          if (children.degraded) {
+            degraded = true;
+            errors.push(...children.errors);
+            break;
+          }
+          companyGoals.push({
+            goalId: trace.companyGoalId ?? ref,
+            title,
+            roleGoals: children.roleGoals.length,
+          });
+          continue;
+        }
+        if (trace.satisfied) {
+          traceable += 1;
+        } else {
+          orphanTitles.push(title);
+        }
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push(`目标一致汇总失败: ${msg}`);
+      log.warn({ err: msg, orgId }, '目标一致汇总异常 — degraded（简报其余部分不受影响）');
+      degraded = true;
+    }
+
+    if (degraded) {
+      log.warn({ orgId, errors: errors.length }, '目标一致不可用 — degraded（不静默：原因随简报返回）');
+    }
+    return {
+      traceable,
+      orphan: orphanTitles.length,
+      orphanTitles: orphanTitles.slice(0, 5),
+      companyGoals,
+      degraded,
+      errors,
+    };
   }
 
   /** Format briefing using registered report template */

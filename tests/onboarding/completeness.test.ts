@@ -464,12 +464,15 @@ describe('K12-02 建档内容包 — 正常路径（真包）', () => {
     expect(report.degraded).toBe(false);
   });
 
-  it('本体词表真从磁盘读（节点 29 族 / 边 55 族，非硬编码）', () => {
+  // #190（K12-07）: 本体新增第 56 条边 `edge/goal_decomposition`（目标分解边）⇒
+  //   本计数从 55 收紧到 56 并**同断言新边在册**（不是放宽为 >= —— 放宽会废掉本条的判别性）。
+  it('本体词表真从磁盘读（节点 29 族 / 边 56 族，非硬编码）', () => {
     expect(pack.vocabulary.nodes.length).toBe(29);
-    expect(pack.vocabulary.edges.length).toBe(55);
+    expect(pack.vocabulary.edges.length).toBe(56);
     expect(pack.vocabulary.nodes).toContain('outcome/financial');
     expect(pack.vocabulary.nodes).toContain('resource/person');
     expect(pack.vocabulary.edges).toContain('edge/produces');
+    expect(pack.vocabulary.edges).toContain('edge/goal_decomposition');
   });
 
   it('V2 映射表: 每一项都追到本体节点或边，悬空 = 0（打印映射表）', () => {

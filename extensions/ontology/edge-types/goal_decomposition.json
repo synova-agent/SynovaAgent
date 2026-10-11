@@ -1,0 +1,35 @@
+{
+  "$id": "edge/goal_decomposition",
+  "label": "GOAL_DECOMPOSITION",
+  "tags": [
+    "structural",
+    "core"
+  ],
+  "allowedFrom": [
+    "GOAL",
+    "Goal"
+  ],
+  "allowedTo": [
+    "GOAL",
+    "Goal"
+  ],
+  "requiredProps": [
+    "decomposition_type"
+  ],
+  "optionalProps": {
+    "decomposition_type": "string — company_to_dept | dept_to_role | company_to_role | goal_to_task",
+    "cascade_level": "number — 层级深度（1 = 由公司目标直接分解）",
+    "allocation_weight": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "aligned_metric": "string — 两侧目标共享的量化指标名",
+    "decomposed_at": "string (ISO-8601) — 分解动作发生时间",
+    "rationale": "string — 为什么这样分解（可追溯的依据）"
+  },
+  "consumed_by_sentinels": [],
+  "action_effect_lag": "0d — 分解关系为结构性从属（子目标一旦建立即属该上级），不承载跨期传导时滞",
+  "transfer_function": "N/A — 结构性从属边（非因果传导）：输出 = 父目标分解出的子目标集合，无时滞/无增益系数",
+  "description": "目标分解——上级目标（公司/部门）拆解为下级目标（岗位）。承载宪章 §2.7 第④层『目标一致』：任一岗位目标沿本边逐跳即可追到公司目标，反向由公司目标取出分解到的岗位目标集合。端点同时放行 'GOAL'（src/growth/goal-store.ts:169 目标写入）与 'Goal'（src/agent/conversation-engine.ts:543-551 建档 Phase 0 访谈摘要）两个字面量——SQLite 的 type 比较大小写敏感，少任一个则该侧节点在链路上不可见。"
+}
