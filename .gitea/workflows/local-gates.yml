@@ -192,7 +192,10 @@ jobs:
             exit 0
           fi
           echo "⇒ 变更集触碰复现器面 ⇒ 跑自检"
-          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash scripts/control-tower/ci-emptygreen-sim.sh
-          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash tests/control-tower/ci-emptygreen-sim.test.sh
-          # 依赖步复现器**真跑 npm ci**（本机实测 ~89s）⇒ 仅在上面的条件命中时才轮到它
-          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash scripts/control-tower/ci-deps-step-sim.sh
+          # 🔴 **显式判红，不依赖 runner 的 `set -e`**（实测教训：不写 `|| exit` 时，本地直接跑该步正文
+          #   得 rc=0 —— harness 的 rc=2 没人接；只有 CI 注入 set -e 才红 ⇒ 本地复现与 CI 不一致
+          #   = 又一个"跑的不是同一件事"）。`|| exit $?` 保留原 rc（harness=2）。
+          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash scripts/control-tower/ci-emptygreen-sim.sh || exit $?
+          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash tests/control-tower/ci-emptygreen-sim.test.sh || exit $?
+          # 依赖步复现器**真跑 npm ci**（本机实测 ~70–90s）⇒ 仅在上面的条件命中时才轮到它
+          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash scripts/control-tower/ci-deps-step-sim.sh || exit $?
