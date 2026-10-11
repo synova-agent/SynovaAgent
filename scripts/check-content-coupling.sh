@@ -158,6 +158,7 @@ CC1 extensions/notifications/jira/adapter.ts t=1 v=0
 CC1 extensions/notifications/linear/adapter.ts t=1 v=0
 CC1 extensions/sentinels/agent-deployment-maturity/aggregate.ts t=2 v=0
 CC1 extensions/sentinels/agent-deployment-maturity/computes/compute-agent-deployment-maturity.ts t=0 v=1
+CC1 extensions/sentinels/agent-opportunity-window/aggregate.ts t=1 v=0
 CC1 extensions/sentinels/ai-ecosystem-fit/aggregate.ts t=2 v=0
 CC1 extensions/sentinels/ai-ecosystem-fit/computes/compute-ai-ecosystem-fit.ts t=0 v=1
 CC1 extensions/sentinels/ai-investment-return/aggregate.ts t=2 v=0
@@ -235,7 +236,7 @@ CC1 extensions/sentinels/time-penetration/aggregate.ts t=2 v=0
 CC1 extensions/sentinels/unit-economics/aggregate.ts t=2 v=0
 CC1 extensions/sentinels/value-capture/aggregate.ts t=2 v=0
 CC1 extensions/sentinels/value-capture/computes/value-capture-score.ts t=0 v=1
-CC2 src/sentinel/types.ts t=94 v=0
+CC2 src/sentinel/types.ts t=96 v=0
 """
 
 
