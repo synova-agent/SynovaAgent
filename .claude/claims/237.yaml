@@ -1,0 +1,16 @@
+writeset:
+  - .claude/claims/237.yaml
+  - src/store/migrations/004-graph-triples-rebuild.ts
+  - src/store/schema-migration.ts
+  - tests/adapters/sqlite-graph-store.legacy-schema.test.ts
+  - tests/store/migrations/004-graph-triples-rebuild.test.ts
+  - tests/store/schema-migration.test.ts
+  - tests/store/migrations/003-orgs.test.ts
+  - tests/store/metric-readings-schema.test.ts
+  - docs/synova/product-lines/evidence/237-k4-04/**
+  - docs/synova/product-lines/evidence/issue1455-graph-triples-canonical-20261009.md
+done:
+  - "verify: npx --no-install vitest run tests/adapters/sqlite-graph-store.legacy-schema.test.ts tests/store/migrations/004-graph-triples-rebuild.test.ts ⇒ exit 0（2 文件 / 22 例）"
+  - "verify: npx --no-install vitest run tests/store/ ⇒ exit 0（12 文件 / 107 例）"
+  - "verify: node docs/synova/product-lines/evidence/237-k4-04/done5-read-real-db.cjs <真机库> ⇒ has_props_json=true / has_props=false / id_type=INTEGER（只读）"
+note: "K4-04（#237，B2-GRAPH P1）：旧库 graph_triples 整表重建到 canonical（TEXT PK + props）。资产捡回自 fix/1455-graph-triples-props @ a797bdcb4，逐字节 hash 回核（004 迁移 e47568b66…／004 测试 78a05eb4f…／证据件 10e32f07c…）；schema-migration.ts 只取注册改动（回核 cc5feace6…）。🔴 Done④ 未交付（src/adapters/** 被 fix/1421-skills-type-assumption 占用），已在 PR 正文显式声明并拆卡。DDL 属 schema 面，待 CTO 逐字批。"

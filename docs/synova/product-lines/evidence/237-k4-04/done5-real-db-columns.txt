@@ -1,0 +1,7 @@
+[db] D:\novis-backup-20260526\Novis\synova-agent\data\synova.db
+[readonly] true
+[count] 14
+[cols] id:INTEGER(pk), subject_type:TEXT, subject_id:TEXT, predicate:TEXT, object_type:TEXT, object_id:TEXT, graph:TEXT, weight:REAL, props_json:TEXT, confidence:REAL, source:TEXT, valid_from:TEXT, valid_to:TEXT, created_at:TEXT
+[has_props_json] true
+[has_props] false
+[id_type] INTEGER
