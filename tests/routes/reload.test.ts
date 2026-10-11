@@ -9,13 +9,18 @@
  *      不是"import 到了"或 grep 命中。
  *
  * 契约（铁律 47）:
- *   @input  — 真 HTTP POST /api/reload；`app.locals.fileScanner` 注入最小可用桩（本文件只判**内容面**那一步）
+ *   @input  — 真 HTTP POST /api/reload；`app.locals.fileScanner` 注入**测试替身**（本文件只判**内容面**第 4 步，
+ *             替换掉真扫描以免判据依赖磁盘专家/测量器数量）
  *   @output — 200 + `content.{reloaded,retained,statePath,persisted,degraded}`
  *   @degraded — 内容面重扫带降级时 `content.degraded=true`，且**路由仍 200**（失败隔离：不阻断端点）
  *
- * 🔴 前置实测（诚实登记）：真实 `server.ts` 未把 `fileScanner` 注入 `app.locals`
- *   ⇒ 本端点在**真服务**里会在第 1 步就 `500 SCANNER_NOT_READY`（内容面那步根本到不了）。
- *   故本文件**注入桩**以触达第 4 步；"真服务里不可达"这一事实写进 PR 例外清单。
+ * 🔴 更正（2026-10-12 · CTO 裁定 046 a6）：本文件早期版本曾写「真实 `server.ts` 未把 `fileScanner`
+ *   注入 `app.locals` ⇒ 本端点在真服务里第 1 步即 `500 SCANNER_NOT_READY`」——**该说法已陈旧且为误判**。
+ *   实测（ref 口径 `git grep -n fileScanner <trunk> -- src/`）：
+ *     · `src/server.ts:375-376` → `const fileScanner = new FileScanner(); app.locals.fileScanner = fileScanner;`
+ *     · `src/deploy/bootstrap.ts:1147` → `ctx.set('fileScanner', fileScanner)`
+ *   ⇒ **真服务是会注入的**，第 1 步在真服务上可过。
+ *   本文件仍用替身，理由**只是"隔离被测面"**（判据只判内容面那一步），不是"真服务不可达"。
  *
  * 铁律 48: 每例真 expect()；覆盖正常路径 / 降级外传 / 边界（结构完整性）。
  * 铁律 38: 零 `as any` / `as never` / `as unknown as`。
