@@ -107,6 +107,20 @@ function isWhitelisted(path: string): boolean {
     path === '/api/auth/login' ||
     path === '/api/auth/register' ||
     path === '/api/enterprise/register' ||
+    // 🔴 K12-03 (#186) 2026-10-11 创始人裁定 2：`POST /api/onboarding/start` = **pre-auth 建档入口**。
+    //   理由：建档发生在「客户企业还没有任何凭据」的阶段 —— 与上一行 `/api/enterprise/register`
+    //   （建企业 + 建管理员）同一时序族；`/api/auth/login`、`/api/auth/register`、
+    //   `/api/enterprise/invitation/*` 同理。
+    //   判据事实：探针 `probe-onboarding.ts:196` 无条件 `app.use(jwtAuthMiddleware)` 而 fetch
+    //   **不发 Authorization** ⇒ 非白名单时生产态（DEV_MODE=false）必 401 ⇒ 判据恒红，
+    //   且无法区分"形状不符"与"能力缺失"（探针 `cannotJudge`）。
+    //   🔴 **窄口径，只此一条**：**不** whitelist `/api/onboarding/` 前缀 ——
+    //   同族其余端点（apply / 超管确认 / 配置包读取）**仍须带凭据**，卡面 V4
+    //   「超管确认**权限必须过人**」才成立。
+    //   ⚠️ 反例已固化为测试：`tests/middleware/onboarding-whitelist.test.ts`
+    //   （未带 token 打其它 POST ⇒ 仍 401；带无效 Bearer 打白名单路径 ⇒ 照旧放行但不注入身份）。
+    //   ⚠️ #194（RB 系列）开工须 rebase：本行改的是 RB 系列写集文件。
+    path === '/api/onboarding/start' ||
     path.startsWith('/api/enterprise/invitation/') ||
     path.startsWith('/api/status') ||
     path.startsWith('/assets/') ||
