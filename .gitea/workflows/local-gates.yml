@@ -73,6 +73,18 @@ jobs:
           export GITEA_TOKEN="$(cat /Users/wane/gitea/.win-push-token 2>/dev/null || true)"
           PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" \
             node_modules/.bin/tsx scripts/control-tower/check-board-truth.ts || exit 1
+      - name: ①c 内容面耦合 CC1–CC4（K12-13/#196 · 存量棘轮／新增必拦）
+        run: |
+          cd /Users/wane/.ci-work/SynovaAgent
+          # 判据源: 院方《extensions内容面规范-v0.1》§3.5；既有 check-architecture.sh 对 extensions/ 零覆盖。
+          # 语义（门禁自带，不在此另造）: 存量 237 条登记在门禁 `CC-BASELINE` 段 ⇒ 只报数不判红；
+          #   基线外新增 ⇒ exit 1。**不加 CC_STRICT**（加 = 把存量也判红，违反「存量只告警」）。
+          # ⚠️ 与步骤「① 13 组门禁」的关系（独立复核实测指出）：① 步以 SYNO_CI=1 跑 pre-commit-check.sh，
+          #   而 pre-commit 的附加块**已含**本门禁 ⇒ 功能上已被覆盖，本步是**显式具名**的等价执行点
+          #   （代价 ≈ 数秒 + 多一处失败面；收益 = CI 上有一条**可具名定位**的步骤，红时一眼看到是哪条）。
+          #   两处调用同一个脚本、同一份内嵌基线 ⇒ 不存在第二真相源。
+          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" \
+            bash scripts/check-content-coupling.sh || exit 1
       - name: ② 架构边界（快，阻断）
         run: cd /Users/wane/.ci-work/SynovaAgent && PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash scripts/check-architecture.sh
       - name: ③ 增量测试（vitest --changed；只测改动面，避免全量摩擦）
