@@ -287,7 +287,15 @@ export class SqliteGraphStore {
       }));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      log.warn({ err: msg }, "查询图边失败");
+      // D355 (#345 Done④): 静默 fail-open 升级 —— 与 queryNodes() 同款口径（不再 log.warn）
+      if (msg.includes("no such column")) {
+        // schema 漂移 → 升级 error，提示运行迁移
+        // 🔴 与 queryNodes() **故意不同**：此处日志字段名用 `predicate`，**不用** `type`。
+        //    理由：本方法形参 `type` 是**边谓词（predicate）**，与 queryNodes 的"节点类型"语义不同
+        log.error({ err: msg, predicate: type }, "图边 schema 漂移——graph_triples 的 props 列缺失，需运行迁移");
+        return [];
+      }
+      log.error({ err: msg, predicate: type }, "查询图边失败");
       return [];
     }
   }
