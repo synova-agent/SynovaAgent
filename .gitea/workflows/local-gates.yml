@@ -65,6 +65,14 @@ jobs:
           # 登记件不变量（CTO 2026-10-11 立：机器真源零约束曾致 id 撞号 + 误改他项）
           node_modules/.bin/tsx scripts/control-tower/check-registry-invariants.ts || exit 1
           PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" SYNO_CI=1 bash scripts/pre-commit-check.sh
+      - name: ①b 看板真值（交付未回填检测 · CTO 2026-10-11 立）
+        run: |
+          cd /Users/wane/.ci-work/SynovaAgent
+          # 治「交付未回填」致看板失真：已合并 PR 的交付性引用所指 issue 仍 open ⇒ 红
+          # 判别力自检：含交付性引用的 PR 数 == 0 ⇒ exit 2（禁把"看不见"当"没问题"）
+          export GITEA_TOKEN="$(cat /Users/wane/gitea/.win-push-token 2>/dev/null || true)"
+          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" \
+            node_modules/.bin/tsx scripts/control-tower/check-board-truth.ts || exit 1
       - name: ② 架构边界（快，阻断）
         run: cd /Users/wane/.ci-work/SynovaAgent && PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash scripts/check-architecture.sh
       - name: ③ 增量测试（vitest --changed；只测改动面，避免全量摩擦）
