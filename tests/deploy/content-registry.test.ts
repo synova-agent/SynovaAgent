@@ -36,11 +36,12 @@ function extensionDirsOnDisk(): string[] {
     .sort();
 }
 
-describe('#1465 content-registry — V1 全项有明确状态（K12-01 段一后 = 21/21）', () => {
+describe('#1465 content-registry — V1 全项有明确状态（K12-10 部门轴登记后 = 24/24）', () => {
   it('注册表项与 extensions/ 顶层目录集双向相等', () => {
     const snap = describeContentRegistry();
     expect(snap.entries.map((e) => e.dir).sort()).toEqual(extensionDirsOnDisk());
-    expect(snap.counts.total).toBe(23);
+    // K12-10 (#193) 新增 `extensions/departments/` ⇒ 23 → 24（本卡是第五个写本表的卡，合并冲突时以磁盘目录集为准）
+    expect(snap.counts.total).toBe(24);
   });
 
   it('type 唯一；status / face 落在闭合枚举内（枚举取自快照单源）', () => {
@@ -67,7 +68,8 @@ describe('#1465 content-registry — V1 全项有明确状态（K12-01 段一后
   it('reachable 项必须有 loader 或 readers（不得空挂）', () => {
     const snap = describeContentRegistry();
     const reachable = snap.entries.filter((e) => e.status === 'reachable');
-    expect(reachable.length).toBe(18);
+    // K12-10 (#193): departments 项 reachable（有 loader）⇒ 18 → 19
+    expect(reachable.length).toBe(19);
     for (const e of reachable) {
       expect(e.loader !== undefined || (e.readers ?? []).length > 0).toBe(true);
     }

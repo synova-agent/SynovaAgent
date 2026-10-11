@@ -1,0 +1,11 @@
+# extensions/departments/delivery.yaml — 部门定义真源（部门轴 · K12-10 / #193 / RB-02）
+#
+# 部门 id = 文件名去扩展名（本件 ⇒ delivery）—— 与 `id:` 字段必须一致，不一致 = 加载即降级。
+# 本件是**多部门身份（departmentIds 复数）判据**的第二个部门：财务 + 交付 ⇒ 两部门并集生效。
+id: delivery
+displayName: 交付部
+parent: null
+description: 交付部 —— 项目交付、实施质量、客户成功。
+tags:
+  - organizational
+  - operational

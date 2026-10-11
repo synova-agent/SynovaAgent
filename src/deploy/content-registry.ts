@@ -121,10 +121,14 @@ const MODULE_IMPORTS: Readonly<Record<string, () => Promise<Record<string, unkno
   '../services/content-layering': () => import('../services/content-layering'),
   // K12-01 (#184) 段二：角色预设包宿主 loader（reachable ⇒ 真进 boot 装配面）。
   '../init/preset-loader': () => import('../init/preset-loader'),
+  // K12-10 (#193 / RB-02)：部门轴解析入口（身份/部门**单一入口** `resolveContext`）。
+  // 🔴 为什么这个键必须在这里: `resolveContext` 的真消费者就是**本表**（按名声明、宿主调用）；
+  //   缺这一行 ⇒ department 项在 boot 装配时于 `MODULE_IMPORTS 缺键` 处**硬失败**（不是静默跳过）。
+  '../services/request-context': () => import('../services/request-context'),
 };
 
 /**
- * 23 项 contents 全表（`extensions/` 顶层目录全集）。
+ * 24 项 contents 全表（`extensions/` 顶层目录全集）。
  * 状态口径（spec §3.2 逐项裁定表 + §5.1 可达性实测）:
  *   reachable —— 有装配 loader，或有生产直读者（16 项存量可达 ＋ business-models 本卡接活 = 17）
  *   retired   —— 生产不可达且**无内容可接**（engine / tools）
@@ -437,6 +441,27 @@ const CONTENT_TYPES: readonly ContentTypeEntry[] = [
       initArgs: [{ departmentIds: [] }],
     },
   },
+  {
+    // K12-10 (#193 / RB-02，🔴 部门轴唯一真源)：`extensions/departments/**` = 部门定义
+    //   （部门 id ＝ 文件名去扩展名）＋ 解析入口 `src/services/request-context.ts` 的 `resolveContext`
+    //   （**身份/部门单一入口**：一人可属多部门，复数集合取并集；除它以外任何导出不得再读原始身份的部门字段）。
+    // ⚠️ 与 `extensions/content-layers/departments/**`（K12-20 的**内容层部门覆盖**）不是一回事：
+    //   后者答「这个部门**看到什么样**」（提示词/工具/知识差异）；本件答「**有哪几个部门、身份如何解析**」。
+    // status = reachable（**真进 boot 装配面**）: 本件是 K12-10 的**生产触发点**——
+    //   `src/server.ts` → `Bootstrap`（`src/deploy/bootstrap.ts` Phase 3b `await initFileDrivenLoaders()`）
+    //   → `initContentTypes()` **每次启动真调** `resolveContext`，并检查其返回的降级信号。
+    //   加一个部门仍只需加一个文件：**本表零改动**
+    //   （部门 id 由目录扫描得出，不在此逐项登记 —— 否则"加文件即可"当场失效）。
+    type: 'department',
+    dir: 'departments',
+    face: 'content',
+    status: 'reachable',
+    loader: {
+      module: '../services/request-context',
+      init: 'resolveContext',
+      initArgs: [{}],
+    },
+  },
 ];
 
 /** 装配报告中的单项结果 */
@@ -524,8 +549,8 @@ function collectIntegrityProblems(): string[] {
       }
     }
   }
-  if (CONTENT_TYPES.length !== 23) {
-    problems.push(`CONTENT_TYPES 应为 23 项，实测 ${CONTENT_TYPES.length}`);
+  if (CONTENT_TYPES.length !== 24) {
+    problems.push(`CONTENT_TYPES 应为 24 项，实测 ${CONTENT_TYPES.length}`);
   }
   return problems;
 }

@@ -1,0 +1,10 @@
+# extensions/departments/sales.yaml — 部门定义真源（部门轴 · K12-10 / #193 / RB-02）
+#
+# 部门 id = 文件名去扩展名（本件 ⇒ sales）—— 与 `id:` 字段必须一致，不一致 = 加载即降级。
+id: sales
+displayName: 销售部
+parent: null
+description: 销售部 —— 客户转化、回款周期、漏斗与留存。
+tags:
+  - organizational
+  - marketing
