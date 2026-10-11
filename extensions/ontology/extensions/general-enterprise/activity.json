@@ -1,0 +1,48 @@
+{
+  "$schema": "https://synova.dev/schemas/ontology-extension-v1.json",
+  "$id": "extension/general-enterprise/activity",
+  "layer": "extension",
+  "axis": "industry",
+  "axisId": "general-enterprise",
+  "extends": [
+    "activity/acquisition",
+    "activity/compliance",
+    "activity/coordination",
+    "activity/governance",
+    "activity/innovation",
+    "activity/learning",
+    "activity/maintenance",
+    "activity/production"
+  ],
+  "optionalProps": {
+    "headcount": "number",
+    "hours_per_run": "number",
+    "runs_per_period": "number",
+    "unit_labor_cost": "number",
+    "error_rate": "number",
+    "structuredness": "number",
+    "error_tolerance": "number",
+    "data_reachability": "number",
+    "agent_readiness_score": "number",
+    "agent_type_recommendation": "string"
+  },
+  "_semantics": {
+    "headcount": "该作业单元投入人数（人）",
+    "hours_per_run": "单次运行占用工时（小时）",
+    "runs_per_period": "评估周期（月）内运行次数（次/月）",
+    "unit_labor_cost": "单位人工成本（元/次）",
+    "error_rate": "差错率（0-1）",
+    "structuredness": "流程结构化程度评分（0-1，越高越易 Agent 化）",
+    "error_tolerance": "容错度评分（0-1，越高越易 Agent 化）",
+    "data_reachability": "数据可得性评分（0-1，越高越易 Agent 化）",
+    "agent_readiness_score": "Agent 就绪度评分（0-1）—— 消费方为 3-6，本件只声明属性与类型，不锁死算法",
+    "agent_type_recommendation": "建议的 Agent 化形态（自由文本，待 3-6 收口枚举）"
+  },
+  "_notes": [
+    "#1057 / K4-03：10 个评估属性自 extensions/ontology/activity/<cat>.json 的 optionalProps **搬来**（批 1 曾写在 8 个类目 Schema 上；本卡已把 8 件回退 local-main 原样，Schema 层不再声明这 10 个属性）。",
+    "落点（CTO 冻结）: extensions/ontology/extensions/<industry|profession>/<edge-or-node>.json —— 本件 axis=industry / axisId=general-enterprise（extensions/industries/ 既有 6 个行业 id 之一），轴语义 = 行业层扩展。",
+    "文件粒度依据：8 个类目共用**同一组** 10 属性 ⇒ 1 件族级声明（extends 逐条列出 8 个 $id）；PR 变更文件数 6 ≤ 12 预算。**可被 CTO 一票改**（改成每节点一件 = 8 件）。",
+    "不含 tags 字段：extensions/ontology/tags.json 现阶段由 #1436 独占（本卡写集外，禁碰）；且扩展件不参与 queryByTags 索引（该索引属 Schema 层）。",
+    "生产 loader 尚未扫本落点（src/l4/ontology-loader.ts:80-97 只扫 resource/activity/outcome 平铺层 ∪ extensions/industries/<id>/edge-types）⇒ 生产接线属后续卡；本卡只落盘 + 落判据（探针 scripts/control-tower/probe-ontology-instances.ts + tests/ontology/instance-loading.test.ts）。"
+  ]
+}

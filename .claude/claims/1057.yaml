@@ -1,0 +1,45 @@
+# .claude/claims/1057.yaml — #1057（3-5 作业单元补两件）写集声明（S0 源）
+#
+# 为什么用 claim 而不是 task-state/<D#>.json：#1057 是 **issue 号卡**，无 D# 编号
+# ⇒ D708 门禁的 S1/S2/S3（按 <D#>* 定位）找不到声明源，会把全部改动判为「夹带」。
+# `.claude/claims/<issue>.yaml` 是为 issue 号任务提供的正式声明源（merge_writeset_gate.py 的 S0）。
+# CI 凭证（2026-10-09 实测）：brief 走日期窗口（±1 天），跨日即失效 ⇒ claim 是日期无关的载体。
+# merge_writeset_gate.matches() = 精确 / 目录前缀 / glob；本件仍**逐件精确列出**（兼容
+# claim_store.match_path 的精确匹配口径，见 claim_store.py:349 path_in_writeset）。
+#
+# ═══ K4-03 批 2（2026-10-11）落点改写说明 ═══
+#   ① 10 个评估属性自 `extensions/ontology/activity/*.json` 的 optionalProps **搬到扩展层**
+#      ⇒ 8 个类目件**回退 local-main 原样**（相对 PR base 仍被 git 视为 M，故仍须声明）；
+#   ② 实例自 `extensions/ontology/activity/instances/` **搬到** `customer-config/ontology-instances/<orgId>/`；
+#   ③ 判据件自 `tests/l4/activity-instance-1057.test.ts` **搬到** `tests/ontology/instance-loading.test.ts`（旧件删除）。
+#   声明纪律：只列本卡/本 issue 真正改动的文件；不列 src/**（卡面禁碰）、
+#   不列 extensions/ontology/tags.json（#1436 独占）、不列 extensions/ontology/edge-types/**（K4-01/02 域）、
+#   不列 scripts/audit/**（审计红线）。
+writeset:
+  # ── 治理产物 ──
+  - .claude/claims/1057.yaml
+  - .claude/task-briefs/2026-10-09-1057-activity-instance-props.md
+  - docs/synova/product-lines/evidence/1057-activity-instance-props.md
+  # ── K4-03 新增落点（本卡）──
+  - customer-config/ontology-instances/wani-baby/activity-production.json
+  - extensions/ontology/extensions/general-enterprise/activity.json
+  - scripts/control-tower/probe-ontology-instances.ts
+  - tests/ontology/instance-loading.test.ts
+  # ── 搬家对偶（删除侧）──
+  - extensions/ontology/activity/instances/activity-production-wani-baby-001.json
+  - tests/l4/activity-instance-1057.test.ts
+  # ── 回退到 local-main 原样（8 件；相对 PR base 仍是 M ⇒ 必须声明）──
+  - extensions/ontology/activity/acquisition.json
+  - extensions/ontology/activity/compliance.json
+  - extensions/ontology/activity/coordination.json
+  - extensions/ontology/activity/governance.json
+  - extensions/ontology/activity/innovation.json
+  - extensions/ontology/activity/learning.json
+  - extensions/ontology/activity/maintenance.json
+  - extensions/ontology/activity/production.json
+done:
+  - "verify: npx tsx scripts/control-tower/probe-ontology-instances.ts ⇒ RESULT=OK（四段 SCHEMA/EXTENSION/INSTANCE/LOAD 全绿）/ exit 0（零 DB 依赖）"
+  - "verify: npx vitest run tests/ontology/instance-loading.test.ts ⇒ 25 passed（含隔离 fixture + 仓内真件 + 降级 + 边界 + 判别性夹具）/ exit 0"
+  - "verify: 反例 —— `ren extensions/ontology/extensions/general-enterprise/activity.json activity.json.bak` ⇒ 探针 RESULT=FAIL / exit 1（共 29 failures：扩展面 1 + 覆盖 8 + 归属 10 + 未覆盖 10）；判据件 1 failed / 24 passed；复原后 sha256 逐字一致 + 探针 exit 0 + 25 passed"
+  - "verify: git -c credential.helper= -c safe.directory=* diff --stat origin/local-main -- extensions/ontology/activity ⇒ 空输出（8 类目 + 旧 instances/ 逐字节回到 local-main）"
+note: "3-5 作业单元补两件（实例 + 评估属性）；K4-03 落点：实例 customer-config/ontology-instances/<orgId>/<node-type>.json、扩展 extensions/ontology/extensions/<industry|profession>/<edge-or-node>.json、探针 scripts/control-tower/probe-ontology-instances.ts、判据件 tests/ontology/instance-loading.test.ts。不新建节点类型（宪章 P4）；不建边（真机 graph_triples 缺 props 列，#1455 在修）；生产 loader 未扫新落点 ⇒ 接线属后续卡（遗留 1）。封禁期不 push/不开 PR（推 PR 由队长按 CTO 顺序执行）。"
