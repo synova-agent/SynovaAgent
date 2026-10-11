@@ -26,10 +26,15 @@
 ## 〇、裁定 046 定的走法（本卡照此执行）
 
 ```
-① 准确定性（**不是"死锁"**）：门禁 A 要求 manifest 必填 entryPoint｜门禁 B 要求该字段目标文件必须存在，
+① 准确定性（**不是"死锁"**）：**门禁 B = `check-file-driven.sh`** 要求 manifest 必填 `entryPoint`（只 grep 键在不在）｜**门禁 A = `check-integrity-startup.sh`** 要求该字段目标文件必须存在，
    而 extensions/locales/ 下无任何 loader 文件 ⇒ **"现状下无现成解"**。
    🔴 但 `entryPoint = "./manifest.json"` 时**两条同时 rc=0**（check-integrity-startup.sh:10 有显式跳过分支）
    ⇒ 有解 ⇒ 不是"不可能同时满足"。
+   🔴 **复核 #4/#5 注入实测（2026-10-12）更正两处归因**：① 两条门禁**互斥而非"夹死"** ——
+   把 entryPoint 注回 `./locale-loader.ts` ⇒ **门禁A 红 / 门禁B 绿**；整字段删除 ⇒ **门禁A 绿 / 门禁B 红**。
+   ② **"真拦它的是本地 pre-commit"亦不成立** —— 门禁A **全仓零执行点**（CI 与 pre-commit 链都不点火），
+   门禁B 仅由 pre-commit 组 8 本地调用且在 CI 因 `checkout -f`（索引恒空）**空转**。
+   ⇒ **两条门禁都不构成 CI 绿灯**；真覆盖本变更的守卫是 pre-commit 组 6/12 的 brief↔代码一致性。
 ② 裁定：entryPoint 口径改「**有则必须可解析**」（locales 是**内容**，不是"需要 loader 的可执行扩展"）
    ⇒ 本卡按此把值从死指针 `./locale-loader.ts` 改为 `./manifest.json`（本 schema 下唯一"恒存在"的合法取值）＋
       加 `entryPointNote` 写清"占位"性质 ＋ 保留 `loaderRef` 指向真加载器。
