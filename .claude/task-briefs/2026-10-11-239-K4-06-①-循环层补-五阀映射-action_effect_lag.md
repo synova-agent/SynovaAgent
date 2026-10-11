@@ -50,6 +50,9 @@
 **交互**：读 6 件 cycle → 断言五阀字段存在且结构合规 → 断言 `overflow-compute` 真读了它们
 **结果**：逐条 ✅/❌；**接线检查有 grep 证据**
 ## 架构层: ① 循环层（宪章 §0.4/§4.1；载体 `cycles/*.cycle.json`）
+#CRITERIA: D
+<!-- #CRITERIA: A/B/C/D 条件归属（v3-FINAL）｜A 诊断 / B 导航 / C 接入与权限 / D 基建兜底 -->
+
 ## 写集
 ```
 cycles/builtin/cash-cycle.cycle.json
