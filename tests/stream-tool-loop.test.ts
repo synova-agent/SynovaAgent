@@ -6,6 +6,20 @@
  *      工具调用在同一个 chat 响应中处理。
  *
  * Given/When/Then 格式，fake provider 可控。
+ *
+ * 🔒 离线确定性（#351 · CTO 2026-10-12 裁甲）：本文件**每一处** `new ConversationEngine(...)`
+ *   都显式传 `{ fallbackProvider: null }`，作用是**断掉构造函数对注入 fake 的自动接线** ——
+ *   `ConversationEngine` 构造函数在 `config.fallbackProvider === undefined` 时调
+ *   `buildFallbackProvider(provider)`；该函数只要环境里存在 `LLM_API_KEY` / `DEEPSEEK_API_KEY`，
+ *   就会**派生一个真实 deepseek provider 挂进 failover chain**。
+ *   （注入的 fake 的 `baseUrl = 'fake://test'` 经 `detectProviderFromUrl` 落到默认分支 `'openai'`
+ *     ⇒ 走 else 支 ⇒ 去取 deepseek 凭据。实测见 evidence/351-*.md。）
+ *   ⇒ 不显式置 null 时，**主 provider 抛错 ⇒ 链回退到真实 provider ⇒ 发出真实网络请求**，
+ *      断言随模型输出漂移 ⇒ 测试非 hermetic（CI 上无差别翻红不相关 PR）。
+ *
+ * ⚠️ 措辞（CTO 明令）：这叫「**断掉构造函数对注入 fake 的自动接线**」，
+ *   **不是**「注入 fake provider」—— 本文件自仓库引入起就在用 fake provider（`fakeProviderWithTools`），
+ *   **夹具无需改动**。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ConversationEngine } from '../src/agent/conversation-engine';
@@ -115,6 +129,7 @@ describe('streamWithToolLoop — single LLM call per user message', () => {
   beforeEach(() => {
     conv = new AgentConversation(
       fakeProviderWithTools({ firstContent: '你好！请告诉我你的组织情况。' }),
+      { fallbackProvider: null },
     );
   });
 
@@ -124,7 +139,7 @@ describe('streamWithToolLoop — single LLM call per user message', () => {
     let chatCalls = 0;
     const provider = fakeProviderWithTools({ firstContent: '好的，我已了解。' });
     const spy = vi.spyOn(provider, 'chat');
-    const conv2 = new AgentConversation(provider);
+    const conv2 = new AgentConversation(provider, { fallbackProvider: null });
 
     const tokens: string[] = [];
     const result = await conv2.processMessageStream('我的组织叫测试公司', (t) => tokens.push(t));
@@ -171,7 +186,7 @@ describe('streamWithToolLoop — single LLM call per user message', () => {
       secondContent: '查询结果显示一切正常。',
     });
     const spy = vi.spyOn(provider, 'chat');
-    const conv2 = new AgentConversation(provider);
+    const conv2 = new AgentConversation(provider, { fallbackProvider: null });
     // Register same tool into conv2's registry
     const conv2ToolReg = conv2.getToolRegistry();
     conv2ToolReg.register({
@@ -201,7 +216,7 @@ describe('streamWithToolLoop — single LLM call per user message', () => {
       throwAfterCalls: -1,
       throwError: new Error('Network timeout'),
     });
-    const conv2 = new AgentConversation(provider);
+    const conv2 = new AgentConversation(provider, { fallbackProvider: null });
 
     const tokens: string[] = [];
     const result = await conv2.processMessageStream('测试错误', (t) => tokens.push(t));
@@ -219,7 +234,7 @@ describe('streamWithToolLoop — single LLM call per user message', () => {
       secondContent: 'Round 2',
       secondToolCalls: [{ function: { name: 'fetch_document', arguments: '{"docId":"d1"}' } }],
     });
-    const conv2 = new AgentConversation(provider);
+    const conv2 = new AgentConversation(provider, { fallbackProvider: null });
     const registry = setupToolRegistry();
     (conv2 as any).toolRegistry = registry;
 
@@ -235,7 +250,7 @@ describe('streamWithToolLoop — single LLM call per user message', () => {
     const longText = '这是一个较长的回复，包含多字节字符、英文混合 content，' +
       '用于验证流式输出的完整性。每个 token 都应被正确传递到 onToken 回调。';
     const provider = fakeProviderWithTools({ firstContent: longText });
-    const conv2 = new AgentConversation(provider);
+    const conv2 = new AgentConversation(provider, { fallbackProvider: null });
 
     const tokens: string[] = [];
     const result = await conv2.processMessageStream('你好', (t) => tokens.push(t));
@@ -266,7 +281,7 @@ describe('streamWithToolLoop — tool_call_id fix', () => {
       ],
       secondContent: 'Tool done.',
     });
-    const conv = new AgentConversation(provider);
+    const conv = new AgentConversation(provider, { fallbackProvider: null });
     // Register tool via public API
     const convToolReg = conv.getToolRegistry();
     convToolReg.register({
