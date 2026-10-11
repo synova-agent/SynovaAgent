@@ -1,0 +1,20 @@
+# extensions/content-layers/enterprise.yaml — 企业层内容（基线）
+#
+# 本文件是【客户岗位预设内容面】的企业层：**同一份企业状态**的通用表述。
+# 部门层（departments/<id>.yaml）在其之上做覆盖 / 追加；未知部门 ⇒ 逐字回落本层。
+# 单一事实源纪律：本层内容不得与部门层互为副本 —— 部门层只写"该部门多出来/不一样"的部分。
+layer: enterprise
+displayName: 企业通用口径
+prompt: 企业通用口径：先看整体增长与组织瓶颈，再落到部门动作
+tools:
+  - enterprise-metrics-reader
+  - enterprise-report-writer
+knowledge:
+  - enterprise-growth-basics
+  - enterprise-org-diagnosis
+# 问法覆盖（可选）：question 命中 match 子串时替换 prompt / 追加 tools·knowledge
+questionOverrides:
+  - match: 现金流
+    prompt: 企业通用口径：现金流视角 —— 先看经营性现金流与回款结构
+    tools:
+      - enterprise-cashflow-view

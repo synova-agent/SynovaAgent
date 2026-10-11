@@ -1,0 +1,18 @@
+# extensions/content-layers/departments/finance.yaml — 财务部门层（覆盖 + 追加企业层）
+#
+# 部门 id = 文件名去扩展名（本件 ⇒ finance）—— 判据探针按此口径取部门身份。
+# 只写"财务多出来 / 不一样"的部分：enterprise.yaml 的 tools / knowledge 会自动并集进来。
+department: finance
+displayName: 财务口径
+prompt: 财务口径：先看毛利率与经营现金流，再判断增长是否可负担
+tools:
+  - finance-margin-analyzer
+  - finance-cashflow-reader
+knowledge:
+  - finance-cashflow-basics
+  - finance-margin-benchmark
+questionOverrides:
+  - match: 现金流
+    prompt: 财务口径：现金流健康度专项 —— 先看经营现金流净额与回款周期
+    tools:
+      - finance-cashflow-stress-test

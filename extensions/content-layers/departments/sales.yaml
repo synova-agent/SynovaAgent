@@ -1,0 +1,16 @@
+# extensions/content-layers/departments/sales.yaml — 销售部门层（覆盖 + 追加企业层）
+#
+# 部门 id = 文件名去扩展名（本件 ⇒ sales）—— 判据探针按此口径取部门身份。
+# 与 finance.yaml 同一份企业状态（enterprise.yaml），只是"该看到的样子"不同。
+department: sales
+displayName: 销售口径
+prompt: 销售口径：先看客户转化与回款周期，再判断增长是否可持续
+tools:
+  - sales-funnel-analyzer
+  - sales-pipeline-reader
+knowledge:
+  - sales-funnel-basics
+  - sales-retention-playbook
+questionOverrides:
+  - match: 转化
+    prompt: 销售口径：转化率专项 —— 先看漏斗各环节流失
