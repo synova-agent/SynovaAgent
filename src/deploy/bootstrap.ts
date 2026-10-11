@@ -34,6 +34,10 @@ import { createOrchestrationWiring, type OrchestrationWiring } from '../orchestr
 import { ToolRegistry } from '../agent/tools';
 import { createLogger } from '@synova/logger';
 import type { Database } from 'better-sqlite3';
+// K12-08(#191) V1/V6: 决策台账的**生产装配**（L4 写入口 × L2 接缝的唯一会合点）。
+// 类型侧只取 L4 契约（DecisionInput/DecisionResult），**运行时**写入口在工厂函数内动态 import
+// ——与既有 GraphStore 动态 import 同款（1c / 3b / 5x），保持启动期加载顺序不变。
+import type { DecisionInput, DecisionResult } from '../l4/decision-capture';
 
 const log = createLogger('deploy/bootstrap');
 
@@ -89,6 +93,90 @@ export interface BootstrapResult {
   services: BootstrapServices;
 }
 
+/**
+ * 决策台账装配口 —— **注入的是回调，不是 store**（K12-08/#191 V1/V6）。
+ *
+ * 契约（铁律 47）:
+ *   @input  graph — 图名（组织/租户）；缺省由闭包持有
+ *   @output 回调 —— 签名为 `ConversationEngine` 的 `EngineConfig.onDecision`
+ *           （`conversation-engine.ts:98`）：`(decision: DecisionInput) => Promise<DecisionResult>`
+ *   @degraded store 缺席 ⇒ 本口**不构造**（返回 undefined）＋ log.warn，调用方不注入该回调
+ *             ⇒ 引擎回落既有行为 `{recorded:false, error:'DecisionCapture callback not configured'}`
+ *             （**降级不静默**：缺席在启动日志可见，且失败由返回值显式表达 —— 铁律 24/31）
+ *
+ * 为什么不把 store 交给 L2：`conversation-engine.ts:30` 的 **EC-03** 规定 L2 只依赖 L4
+ * **类型**、不持 L4 **运行时实例**。故此处把 store 闭在装配层，只把回调形状交出去。
+ */
+export type DecisionCapturePort = (
+  graph?: string,
+) => (decision: DecisionInput) => Promise<DecisionResult>;
+
+/**
+ * 图存储的**最小结构形状** —— 与 `src/l4/decision-capture.ts` 的 `DecisionStore`
+ * （`queryNodes` ＋ `createEdge`）逐参同形。此处不 import 该接口：它是 L4 模块内部
+ * 非导出类型，且**结构类型**下真 `SqliteGraphStore` 天然满足 ⇒ 零适配、零断言。
+ */
+interface DecisionStoreShape {
+  queryNodes(type: string, filters?: Record<string, unknown>, graph?: string): Array<{ id: string }>;
+  createEdge(
+    type: string, from: string, to: string, weight?: number,
+    props?: Record<string, unknown>, graph?: string,
+  ): string;
+}
+
+/**
+ * 结构守卫（铁律 38 替代式：`unknown` ＋ 谓词，不用 any 型断言）。
+ *
+ * 为什么不用 `as { queryNodes?: unknown }` 收窄：那一步本身就要一次断言（且属禁用的
+ * 双段断言形态）。谓词只声明"这两个名字上挂着函数"，随即成为 `DecisionStoreShape`
+ * 的**编译器见证**，收窄处再无断言。
+ */
+function hasDecisionStorePrimitives(store: unknown): store is DecisionStoreShape {
+  if (store === null || typeof store !== 'object') return false;
+  const primitives = store as { queryNodes?: unknown; createEdge?: unknown };
+  return typeof primitives.queryNodes === 'function' && typeof primitives.createEdge === 'function';
+}
+
+/**
+ * 装配层构造决策台账回调（K12-08/#191 V1/V6）—— **全仓唯一的 `captureDecision(` 生产装配点**。
+ *
+ * 职责边界：本工厂只做"把闭包里的真 store 接到单一写入口上"这一件事；
+ * `captureDecision` 的落账/五要素/禁静默/回流语义全在 `src/l4/decision-capture.ts`（本卡不重复实现）。
+ *
+ * 为什么在装配层而不是 ConversationEngine：EC-03（`conversation-engine.ts:30`）禁止 L2 持 L4
+ * 运行时实例 ⇒ L2 只暴露"回调注入位"，由**装配层**用**真图存储实例**满足它。
+ *
+ * @input  store — 真图存储实例（Bootstrap Phase 1c 建的 `SqliteGraphStore`；不另造一套）。
+ *                 结构上即满足 `decision-capture.ts` 的 `DecisionStore`（`queryNodes` ＋ `createEdge`
+ *                 ＋可选 `graph` 形参），**零适配层、零类型断言**。
+ * @output 回调工厂（`graph?` 缺省时用 `defaultGraph`）
+ * @degraded store 形状不对（缺 `queryNodes`/`createEdge`）⇒ 返回 undefined ＋ log.warn，**不抛**
+ *           （启动不被阻断；调用方据此不注入、引擎回落既有行为 —— 降级不静默）
+ */
+export function createDecisionCapturePort(
+  store: unknown,
+  defaultGraph: string,
+): DecisionCapturePort | undefined {
+  if (!hasDecisionStorePrimitives(store)) {
+    log.warn(
+      { defaultGraph },
+      'K12-08 决策台账未装配 — 图存储缺席或形状不符（需 queryNodes ＋ createEdge）；'
+        + 'ConversationEngine.recordDecision 回落 "callback not configured"，台账不落账',
+    );
+    return undefined;
+  }
+  // 收窄后**无需任何类型断言**：`store` 已是结构完整的 DecisionStore 形状。
+  const decisionStore: DecisionStoreShape = store;
+  return (graph?: string) => async (decision: DecisionInput): Promise<DecisionResult> => {
+    // 运行时动态 import：写入口只在真被调用时加载（启动期零新增依赖面）。
+    const { captureDecision } = await import('../l4/decision-capture');
+    // 台账回读面/预设包再生成端口（DecisionLedgerOptions）本次**不注入** —— 两者分别是
+    // 跨进程回读与内容面（K12-01）的写集；缺席时 captureDecision 有既定显式降级
+    // （priorSource 回落 'process'；回流只标记为输入不跑轮）。此处不假装接上。
+    return captureDecision(decisionStore, graph ?? defaultGraph, decision);
+  };
+}
+
 /** 已初始化服务 — 从 bootstrap 传递给 server.ts */
 export interface BootstrapServices {
   config: SynovaConfig;
@@ -102,6 +190,11 @@ export interface BootstrapServices {
   stateMachine: PhaseStateMachine;
   wiring: OrchestrationWiring;
   graphStore?: unknown;
+  /**
+   * K12-08(#191): 决策台账装配口（回调工厂）—— 装配层用 Bootstrap Phase 1c 的真图存储实例构造；
+   * 图存储缺席时**不构造**（undefined），消费方据此不注入 `onDecision`（降级不静默，铁律 24/31）。
+   */
+  decisionCapture?: DecisionCapturePort;
   agentMemory?: unknown;
   connectorToolRegistry?: ToolRegistry;
   credentialVault?: unknown;
@@ -631,6 +724,11 @@ export class Bootstrap {
    * 使用 get() 而非 require() 以确保降级场景下不崩溃。
    */
   private buildServices(): BootstrapServices {
+    const graphStore = this.ctx.get('graphStore');
+    // K12-08(#191) V1/V6: 决策台账装配 —— 复用 Phase 1c 的真图存储**实例**（不另造一套）。
+    // 图存储缺席（Phase 1c 降级）⇒ createDecisionCapturePort 返回 undefined ＋ log.warn，
+    // 启动照常推进（不阻断），"没接上"在启动日志与 services.decisionCapture 处**可观测**。
+    const decisionCapture = createDecisionCapturePort(graphStore, this.ctx.get<SynovaConfig>('config')?.orgId ?? 'default');
     return {
       config: this.ctx.get<SynovaConfig>('config')!,
       db: this.ctx.get<Database>('db')!,
@@ -641,7 +739,8 @@ export class Bootstrap {
       sessionStore: this.ctx.get<SessionStore>('sessionStore')!,
       stateMachine: this.ctx.get<PhaseStateMachine>('stateMachine')!,
       wiring: this.ctx.get<OrchestrationWiring>('wiring')!,
-      graphStore: this.ctx.get('graphStore'),
+      graphStore,
+      ...(decisionCapture !== undefined ? { decisionCapture } : {}),
       agentMemory: this.ctx.get('agentMemory'),
       connectorToolRegistry: this.ctx.get('connectorToolRegistry'),
       credentialVault: this.ctx.get('credentialVault'),

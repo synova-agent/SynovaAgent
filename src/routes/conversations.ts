@@ -41,9 +41,44 @@ import { SessionManager } from '../orchestrator/session-manager';
 import { registerBuiltinTools } from '../agent/builtin-tools';
 import { ToolRegistry } from '../agent/tools';
 import { WebViewAdapter } from '../l1-interaction/web-adapter';
+import type { DecisionCapturePort } from '../deploy/bootstrap';
 
 const log = createLogger('routes/conversations');
 const router = Router();
+
+/**
+ * K12-08(#191) V1/V6 — 决策台账装配口（**回调工厂**；装配层注入，本路由只消费）。
+ *
+ * 为什么走模块级注入位：本路由的引擎是**会话级**构造的（`sessionEngines` 缓存 / `fromState`
+ * 恢复），无法在引擎构造器的 EngineConfig 里一次性传入。与 L1→L2 既有注入式缝同款
+ * （`routes/overflow.ts:24 setOverflowGraphStore` / `routes/import.ts:19 setGraphBridge`）。
+ *
+ * 不变量：这里**只持回调**，不持 L4 图存储实例（EC-03 的 L2 侧约束在 L1 消费面同样遵守）。
+ * 未注入 ⇒ 引擎回落既有 `recordDecision` 显式失败（`callback not configured`），不静默。
+ */
+let decisionCapturePort: DecisionCapturePort | null = null;
+
+/** 装配层（server.ts）下放决策台账装配口 —— 幂等，缺省不注入。 */
+export function setDecisionCapturePort(port: DecisionCapturePort): void {
+  decisionCapturePort = port;
+  log.info('K12-08 决策台账装配口已注入（onDecision 回调可用）');
+}
+
+/** 读取当前装配口（测试/自检面：证"装配层真注入了"而不是"字段存在"） */
+export function getDecisionCapturePort(): DecisionCapturePort | null {
+  return decisionCapturePort;
+}
+
+/**
+ * 把装配口接进引擎的 `onDecision` 接缝（`conversation-engine.ts:98`）。
+ * @input  engine — 会话级 ConversationEngine 实例（新建或 fromState 恢复的均适用）
+ *         orgId  — 图名（组织/租户）；缺省 'default'
+ * @output 无（装配口缺席 ⇒ 不调用，引擎保持既有显式失败语义）
+ */
+function wireDecisionCapture(engine: ConversationEngine, orgId: string): void {
+  if (!decisionCapturePort) return;
+  engine.setDecisionCapture(decisionCapturePort(orgId));
+}
 
 /** message 输入上界（spec §5.2-A；借鉴 dsh-api-gateway 输入边界校验范式） */
 const MESSAGE_MAX = 8000;
@@ -232,6 +267,9 @@ async function handleConversationMessage(req: Request, res: Response, pathSessio
       conv = restored
         ? ConversationEngine.fromState(provider, restored, { sessionManager, sessionStore: store, sessionId })
         : new ConversationEngine(provider, { sessionId, orgId, sessionManager, sessionStore: store });
+      // K12-08(#191) V1/V6: 决策台账接缝装配（新建与 fromState 恢复两条路都要接 ——
+      // 缓存未命中才会走到这里，故每个进程内每个会话恰好接一次）。
+      wireDecisionCapture(conv, orgId);
       if (sessionEngines.size >= SESSION_ENGINE_CACHE_MAX) {
         const oldest = sessionEngines.keys().next().value;
         if (oldest !== undefined) sessionEngines.delete(oldest);

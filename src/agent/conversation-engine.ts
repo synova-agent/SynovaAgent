@@ -473,6 +473,24 @@ export class ConversationEngine {
     this.viewAdapter = adapter;
   }
 
+  /**
+   * K12-08(#191) V1/V6: 注入决策台账回调（**回调，不是 store** —— EC-03 不变）。
+   *
+   * 用途：会话级引擎由 `fromState` 恢复时不经 `EngineConfig.onDecision`（`fromState` 的 wiring
+   * 槽位不含该字段），故装配层需要一条与 `setViewAdapter` 同款的**后置注入**通道。
+   * 本方法只存回调引用，不引入任何 L4 运行时依赖（`DecisionInput`/`DecisionResult` 仍是
+   * `:34` 的 `import type`）。
+   *
+   * @input  handler — 装配层（bootstrap）构造的回调；`DecisionResult.recorded=false` 时由
+   *                   `recordDecision` 原样回给调用方（失败不静默，铁律 24/31）
+   * @output 无
+   * @degraded 未注入 / 传 null ⇒ `recordDecision` 回落既有显式失败
+   *           `{recorded:false, error:'DecisionCapture callback not configured'}`
+   */
+  setDecisionCapture(handler: ((decision: DecisionInput) => Promise<DecisionResult>) | null): void {
+    this.onDecision = handler;
+  }
+
   /** Phase 5: Record user decision on a root cause node */
   async recordDecision(decision: DecisionInput): Promise<DecisionResult> {
     if (this.onDecision) return this.onDecision(decision);
