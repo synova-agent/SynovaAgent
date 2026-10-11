@@ -51,6 +51,34 @@ CI 第 ③ 步（`.gitea/workflows/local-gates.yml`）用 `vitest run --changed 
 **一般化教训（可迁移）**：桩/替身类复现器，必须**同时**满足两条，缺一即假绿 ——
 ① 替身真被执行（要哨兵断言，不能靠"结果看起来对"）；② 替身的取值真被消费（要区分"同效"与"生效"）。
 
+## 🔴 追加（独立复核 2026-10-11 实测出的**假阳性** —— 新判据第一次真实执法就误判了自己的 PR）
+
+```
+现象（复核原始输出）: PR #359 的 CI 在钉 SHA 7caed4446 上红，挂在 ③ 增量测试：
+  本次变更集: 5 文件（其中代码面/测试面 3 个）
+  No test files found, exiting with code 0
+  ::error::🔴 异常空绿 —— 本次变更含 3 个代码面/测试面文件，但 vitest 一个测试都没跑 ⇒ job failed
+根因: N_CODE 的正则把 `^(src|tests|scripts|…)/` **全算**代码面/测试面，而本 PR 自己的变更集是
+  `*.test.sh`（bash 测试）+ `.gitea/workflows/*.yml` —— **vitest 根本收集不到**
+  （`vitest.config.ts` include = `./tests/**/*.test.ts`）⇒ 自判假阳性。
+```
+
+**修法（判据与"vitest 可收集面"绑定）**：
+```
+· N_VITEST = 变更集中 `*.test.ts(x)` / `*.spec.ts(x)`（vitest 真能收集的）
+· N_CODE_NONVITEST = 代码面里**不可被 vitest 收集**的部分（.test.sh/.yml/.py…）
+判据三条：① 有不可测面改动 且 变更集无 vitest 测试 ⇒ **合法跳过（显式标注「不可测面」）**
+          ② 变更集合**被删除的** vitest 测试 ⇒ **异常**（真丢测试，不许被①吞掉）
+          ③ 其余有代码面却零测试 ⇒ 照旧**异常**
+```
+
+**教训（可迁移 · 已升级为本批纪律 8）**：**"我跑了判据" ≠ "判据跑的是我准备的桩"**，
+也 **"harness 绿" ≠ "真实 CI 绿"**（L1 vs L2）—— 新判据必须在**它要执法的真实变更集形态**上验一次。
+
+**harness 补场景**：己（`.test.sh`/`.yml` ⇒ 合法跳过且显式标注）、庚（删除 vitest 测试 ⇒ 必红）。
+其中庚暴露两个伪造坑：变量名紧跟多字节（`rc=$RC）`）⇒ bash 吞字节报 unbound；基线 ref 未前移 ⇒
+删除在 diff 里看不见（场景内需 `update-ref refs/remotes/origin/local-main` 自洽）。
+
 ## 落点
 
 - `.gitea/workflows/local-gates.yml` 第 ③ 步正文（仅此步；①②①b 步不动）

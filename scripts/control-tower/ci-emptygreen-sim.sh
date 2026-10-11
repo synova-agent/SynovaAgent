@@ -124,8 +124,46 @@ run_case 乙 empty 0 "合法跳过（纯文档）" "纯 docs/ 变更 ⇒ 合法�
 # 丙：变更集含代码面（tests/）却空绿 ⇒ 🔴 必须 exit 1
 run_case 丙 empty 1 "异常空绿" "含 tests/ 改动却零测试 ⇒ 异常 ⇒ exit 1" tests/x.test.ts
 
-# 丙2：含 src/ 改动却空绿 ⇒ 同样必须 exit 1
-run_case 丙2 empty 1 "异常空绿" "含 src/ 改动却零测试 ⇒ 异常 ⇒ exit 1" src/a.ts
+# 丙2：含 **vitest 可收集**的测试文件却空绿 ⇒ 必须 exit 1（异常的本体：测试在，却没跑）
+#   ⚠️ 独立复核后语义收紧：`src/a.ts` 这类**非** `*.test.ts` 的文件属「不可测面」⇒ 见 己；
+#      异常判据锁在「变更集里**有** vitest 可收集文件，却一个都没跑」。
+run_case 丙2 empty 1 "异常空绿" "含 vitest 可收集文件却零测试 ⇒ 异常 ⇒ exit 1" src/a.test.ts
+
+# ── 己（新增 · 独立复核建议 2026-10-11）：**非 vitest 可收集**的代码面 ⇒ 合法跳过（禁假阳性）──
+# 依据（复核实测）：本 PR 自己的变更集含 3 个此类文件（`*.test.sh` / `.gitea/*.yml`），
+#   被旧判据判成「异常空绿」⇒ **新判据第一次真实执法就误判了自己的 PR**
+#   （vitest.config.ts include 只收 `./tests/**/*.test.ts`）。
+# 断言：此类变更 ⇒ rc=0 **且输出显式标注「不可测面」**（不是静默绿）。
+run_case 己 empty 0 "合法跳过（不可测面）" "非 vitest 可收集的代码面（.test.sh/.yml）⇒ 合法跳过且显式标注" \
+  scripts/control-tower/x.test.sh .gitea/workflows/x.yml
+
+# ── 庚（新增）：**删除了 vitest 测试**却空绿 ⇒ 必须红（真丢测试，不许被「不可测面」分支吞掉）──
+# 构造：在 **local-main 分支上**加一个 vitest 测试并提交 ⇒ 再把 feat 重置到该点 ⇒ 删掉它并提交。
+#   这样 `$(baseline)...HEAD` 的 diff 会正确含**一条删除**（`--diff-filter=D` 命中）。
+# ⚠️ 变量名与多字节字符之间**必须** `${VAR}` 定界 + 补空格（否则 bash 把字符字节吞进变量名，
+#    实测报 `RC<乱码>: unbound variable` —— 本仓同型已多次复发）。
+git -C "$REPO" checkout -q local-main
+mkdir -p "$REPO/tests/doomed"; printf 'export const t=1;\n' > "$REPO/tests/doomed/gone.test.ts"
+git -C "$REPO" add -A >/dev/null && git -C "$REPO" -c user.email=a@b -c user.name=h commit -q -m "seed-test"
+# ⚠️ 必须把 CI 用的那个基线 ref 一并前移：step 读的是 `origin/local-main`
+#    （不前移 ⇒ diff 反把 seed 当成"新增"，删除就看不见 —— 实测踩过）
+git -C "$REPO" update-ref refs/remotes/origin/local-main refs/heads/local-main
+git -C "$REPO" checkout -q feat; git -C "$REPO" reset -q --hard local-main; git -C "$REPO" clean -qfdx
+install_stub empty
+git -C "$REPO" rm -q tests/doomed/gone.test.ts
+git -C "$REPO" -c user.email=a@b -c user.name=h commit -q -m "delete-test"
+echo "  （构造自检）变更集: $(git -C "$REPO" diff --name-only --diff-filter=D origin/local-main...HEAD | tr '\n' ' ')"
+OUT="$(cd "$REPO" && SYNO_EG_STUB_MODE=empty PATH="$WS/bin:$PATH" bash -c "$STEP_RUN" 2>&1)"; RC=$?
+printf '──── 场景庚（删除了 vitest 测试 ⇒ 必须红）rc=%s（期望 1）────\n%s\n' "${RC}" "$OUT"
+if printf '%s' "$OUT" | grep -q "SYNO_EG_STUB_RAN"; then
+  if [ "${RC}" -eq 1 ] && printf '%s' "$OUT" | grep -q "删除了 vitest 测试"; then
+    echo "  ✅ [庚] PASS — 删除 vitest 测试 ⇒ exit 1 且点名「删除了 vitest 测试」"
+  else
+    echo "  ❌ [庚] FAIL — 删除测试未被判红（rc=${RC} ）"; FAILS=$((FAILS+1))
+  fi
+else
+  echo "  ⛔ [庚] HARNESS-BROKEN — 桩未被执行 ⇒ 该场景结论不可信"; HARNESS_BROKEN=1; FAILS=$((FAILS+1))
+fi
 
 # 丁：vitest 真失败 ⇒ 照旧 exit 1（分类不得把真红吃掉）
 run_case 丁 fail 1 "增量测试失败" "vitest 真失败 ⇒ exit 1（分类不吞真红）" tests/y.test.ts
@@ -139,5 +177,5 @@ if [ "$HARNESS_BROKEN" -ne 0 ]; then
   echo "CI-EMPTYGREEN-SIM: HARNESS-BROKEN（桩未被执行 ⇒ 场景结论不可信；禁把「看不见」当「没问题」）failures=$FAILS"
   exit 2
 fi
-if [ "$FAILS" -eq 0 ]; then echo "CI-EMPTYGREEN-SIM: OK（6 场景全 PASS）"; exit 0; fi
+if [ "$FAILS" -eq 0 ]; then echo "CI-EMPTYGREEN-SIM: OK（8 场景全 PASS）"; exit 0; fi
 echo "CI-EMPTYGREEN-SIM: VIOLATION failures=$FAILS"; exit 1

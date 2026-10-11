@@ -57,8 +57,16 @@ fi
 # ── ② 现状（真工作流副本）⇒ 绿 6/6 ─────────────────────────────────────────
 cp "$WF" "$TMP/wf-ok.yml"
 OK_OUT="$(SYNO_EG_WF="$TMP/wf-ok.yml" SYNO_EG_WS="$TMP/ws-ok" bash "$SIM" 2>&1)"; OK_RC=$?
-if [ "$OK_RC" -eq 0 ] && printf '%s' "$OK_OUT" | grep -q "6 场景全 PASS"; then
-  ok "现状 ⇒ 绿（rc=0，6 场景全 PASS）"
+if [ "$OK_RC" -eq 0 ] && printf '%s' "$OK_OUT" | grep -q "场景全 PASS"; then
+  ok "现状 ⇒ 绿（rc=0，N 场景全 PASS）"
+
+# 场景数自证（纪律 8：判据要自证"它跑的是自己"）—— 防"场景被悄悄删掉却仍报全 PASS"
+N_CASES="$(printf '%s' "$OK_OUT" | grep -oE '（[0-9]+ 场景全 PASS）' | grep -oE '[0-9]+' | head -1)"
+if [ -n "$N_CASES" ] && [ "$N_CASES" -ge 6 ]; then
+  ok "场景数自证：harness 自报 ${N_CASES} 个场景（≥6，未被子集化）"
+else
+  no "场景数自证失败（harness 自报 '${N_CASES:-无}'，期望 ≥6）"
+fi
 else
   no "现状应绿，实际 rc=${OK_RC} ；尾部: $(printf '%s' "$OK_OUT" | tail -1)"
 fi
