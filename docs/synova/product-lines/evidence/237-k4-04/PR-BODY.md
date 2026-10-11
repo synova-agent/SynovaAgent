@@ -17,7 +17,7 @@
 | `tests/store/schema-migration.test.ts`・`tests/store/migrations/003-orgs.test.ts`・`tests/store/metric-readings-schema.test.ts`（改） | `SCHEMA_VERSION` 4→5 **逐条改 3 处**；🔴 `003-orgs.test.ts:39`（003 自己的 `version=4` 元数据断言）**逐字未动** |
 | `docs/synova/product-lines/evidence/issue1455-graph-triples-canonical-20261009.md`（新） | 捡回的证据件（433 行） |
 | `docs/synova/product-lines/evidence/237-k4-04/**`（新） | 判据原始输出、收尾三件（`README.md`）、CI 日志、Done⑤ 脚本/输出、Z8 提案（`PROPOSAL-skill-tool-discipline.md`） |
-| `docs/synova/product-lines/evidence/k4-04-verify-review-20261011.md`（新） | **独立复核件 v1.8（后升 v1.9）**（逐字节搬运，实施员不编辑一字；`git rev-parse HEAD:<path>` = `c1313b22b7efb56dff861519ed78b9103c91dc43`） |
+| `docs/synova/product-lines/evidence/k4-04-verify-review-20261011.md`（新） | **独立复核件 v1.8（后升 v1.9）**（逐字节搬运，实施员不编辑一字；`git rev-parse 4ae424e51:<path>` = `c1313b22b7efb56dff861519ed78b9103c91dc43`（**该读数为对象 `4ae424e51…` 时点；当前 HEAD 见 L221 / §16**）） |
 | `.claude/claims/237.yaml`（新） | 认领件（`writeset` + `done:` 三条 `verify:`） |
 
 ## (b) Done ①②③⑤ 逐条勾选 + 判据原始输出
@@ -219,7 +219,7 @@ $ git diff --name-only $(git merge-base origin/local-main HEAD)..HEAD -- tests/s
 ## 独立复核四项结论（M6 回写 · 原文照贴）
 
 > **增量复核**：head `cd1a34a8a9d09edddf8af5ed3ebe83009cafeff0`（见复核件 **§16**，v1.9，blob `625c44c8bc4ed82e33cd7858b6594251bfd29c7b`）；本节的四项结论对象为前序 head `09240a496…`。
-**复核员**：`独立复核员 k4-04-verify` ｜ **复核件**：`docs/synova/product-lines/evidence/k4-04-verify-review-20261011.md`（**v1.8 → v1.9**，见本节 L220）｜ **对象**：新 head `09240a496935900fdf902f25d5c5c4dcb8229cca`，base `68bf5759878a458b5e5ceb324a32878660155517`
+**复核员**：`独立复核员 k4-04-verify` ｜ **复核件**：`docs/synova/product-lines/evidence/k4-04-verify-review-20261011.md`（**v1.8 → v1.9**，见本节 L221）｜ **对象**：新 head `09240a496935900fdf902f25d5c5c4dcb8229cca`，base `68bf5759878a458b5e5ceb324a32878660155517`
 
 **复核员结论原文**：
 > **`自验结论`：新 head `09240a496` 上全部可执行判据（C1/C2/C3/C4/C5′/C6/C7/C8/C9 ＋ D8）均通过复核员独立重跑，未发现与判据冲突之处 ⇒ `可提请独立审计`。** ⚠️ **"通过与否"归 CTO 收件闸 ＋ K3 终审**；本条不含审计结论，也不替代三项 CTO 决策。
