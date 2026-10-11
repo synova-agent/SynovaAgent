@@ -96,7 +96,14 @@ for _c in python3 python py; do  # PYBIN 三级探测（PLATFORM-CHECKLIST #1；
   if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then PYBIN="$_c"; break; fi
 done
 
-BASE="origin/main"
+# ═══ CTO 2026-10-11 裁定：基线优先取 **local-main**（集成分支）═══
+# 事由：本地 CI 的 origin/main 是 **GitHub 的旧 main**（停在 05a6591c4），
+#   拿"集成分支账本总额"当"PR 预算"判 ⇒ **必然恒红**（实测 100 件增/改 · 115 件白名单外）
+#   ⇒ 红灯失去信息量（"被绕过的门禁 = 没有门禁"，历史病根）。
+# 正解：D734 是"PR 预算"——对着 **PR 的 base** 判才有意义；本地 CI 的 PR base 就是 **local-main**。
+#   ⇒ 优先 origin/local-main（不存在时回退 origin/main，保持对其他环境的兼容）。
+# 覆盖方式：环境变量 SYNO_PR_BUDGET_BASE=<ref>（显式指定基线）。
+BASE="${SYNO_PR_BUDGET_BASE:-}"
 MAX_FILES=12
 MAX_BEHIND=20
 FILES_OVERRIDE=""
@@ -153,7 +160,7 @@ else
   # 不 exit 2 —— 沿用 pre-push 门禁 0-1 对「fetch 失败」的既有语义（显式提示 + 不静默跳过），
   # 避免环境性缺 ref 把所有 PR 误打成红（fail-open 但留痕；铁律 11 不静默）。
   BASE_RESOLVED=""
-  for _cand in "$BASE" origin/main main origin/HEAD; do
+  for _cand in "$BASE" origin/local-main local-main origin/main main origin/HEAD; do
     if git rev-parse --verify --quiet "$_cand" >/dev/null 2>&1; then BASE_RESOLVED="$_cand"; break; fi
   done
   if [ -z "$BASE_RESOLVED" ]; then
