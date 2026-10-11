@@ -2,14 +2,14 @@
 
 > 卡面来源：CTO 2026-10-11 恢复（GitHub 封仓期**未随迁**件）｜恢复源：《DSH借鉴指引-v2-20260904》§4/§11.3 ＋《派单-D760-D769-DSH借鉴卡-20260915》
 > 架构基准：**产品宪章 v8.1**（§0.4 ＋ §4.1）｜元断言：M1（落点归属）／M2（回写验收点）／M3（锚点口径）
-> 主线贡献：**infra:DSH 借鉴卡（非 line-1）**
+## 主线贡献: **infra:DSH 借鉴卡（非 line-1）**
 
 ## 〇、为什么要做这个（通俗版 · 先读这一节）
 **① 一句话**：MCP client 双 transport（stdio / StreamableHTTP）＋ 工具表变更通知重载 ＋ 子进程环境擦除（scrubbedParentEnv）
 **② 解决什么问题**：现有 MCP 入站**只有单 transport**，工具表一变就要**重启**才能生效；且连企业系统时**子进程继承父环境**（凭证/路径泄露面）。
 **③ 做完对项目的推动**：补 **MCP 集成 0%** 这个缺口 —— 它是"Synova 作为 client 连企业系统"（Stage 2 契约）的前置。
 **④ 🔴 不做行不行**：**可以做但有代价**（欠账级）：单 transport 也能先上线，不是安全底线；但企业系统 transport 形态一旦多样就必然撞墙，越晚做越贵。
-**⑤ 现在有什么基础（代码盘点，as_of local-main `7c6315029`）**：✅ 落点 src/mcp/ 已在（实测）；MCP 侧已有既有认证/权限件（卡 #456 先合，避免同模块撞车）。❌ 双 transport / 变更通知重载 / 环境擦除 三件缺。
+**⑤ 现在有什么基础（代码盘点，as_of local-main `7c6315029`）**：✅ 落点 src/mcp/ 已在（实测）；MCP 侧已有既有认证/权限件（⚠️ **前置存疑**：卡 #456 在 Gitea **404**；仓外档案记「已关未合/疑似废弃」⇒ **开工前须 CTO 裁**）。❌ 双 transport / 变更通知重载 / 环境擦除 三件缺。
 **⑥ 还需要做什么**：① 双 transport（stdio ＋ StreamableHTTP）② 工具表变更 → 通知 → 热重载 ③ scrubbedParentEnv（子进程环境擦除）。
 **⑦ DSH 借鉴方式**：**参考自研** —— DSH `dsh-mcp-client/lib/index.js:835` `export { Config, apply, createMcpToolDefinition, inject, name }`（一个 client 承载两种 transport，工具定义由宿主注入）
 **⑧ 涉及代码文件**：src/mcp/
@@ -61,3 +61,30 @@ c) memory 教训：**铁律 46**（禁桥接引用 —— 抄码可以，`import
 ## 恢复说明（为什么以前在面板上看不到）
 本卡在 **GitHub 仓被封**后**未随迁**到 Gitea ⇒ 一直只活在 `task-state/D760.json`（旧 DSH 看板）。2026-10-11 由 CTO 专项会话从 local-main 的 task-state ＋ 仓外档案区恢复，并入 **K13**。
 🔴 真源（`docs/synova/coordination/施工项登记.ts`）新增 K13 块归 CTO。
+
+## 复核回写（独立复核 · fresh context · 2026-10-11）
+
+复核结论：**不能直接照单独立开工**（作为门禁通关的施工依据），可作任务说明书/决策输入。以下逐条回写：
+
+| 复核发现 | 处置 |
+|---|---|
+| 316 落点 `notifications/` **不存在**（仓内实为 `src/notifications/`，4 件） | ✅ 已改 |
+| 316「src/routes/ 43 件测试」→ 实测 **44** | ✅ 已改 |
+| 315 前置 `#456` 在 Gitea **404**、仓外档案记「已关未合/疑似废弃」 | ✅ 已改标「前置存疑，开工前须 CTO 裁」 |
+| 324 锚点无符号；`:477` 指向 `static inject` 而非 FTS5（建表在 106/136） | ✅ 已改：FTS5 引 :106/:136；time-context 补 :51 renderBrowserTimeZoneContext |
+| 323 `dsh-session-persistence-jsonl` 无行号/符号 | ✅ 已补 :3527 export { JsonlCompressionSchema, JsonlSessionPersistence } |
+| 322 `:12` 原文实为 `var InvariantError = class extends Error {`（打包形态） | ✅ 已按原文訂正 |
+| 11 份缺派单件 §四 要求的 `## 主线贡献` 标题（原为引用块行） | ✅ 已升为 `## 主线贡献:` 标题 |
+| 10/11 份 Q2 为目录级 ⇒ `match_path` 认领恒 0 | ⚠️ **未改**（新建模块的写集须开工时机器生成；已加「写集粒度说明」，**须 CTO 裁**） |
+
+> PR 归属更正：11 份 brief 的干净 PR 是 **#329**（`chore/k13-briefs-clean`，11 文件）；
+> **#327** 所在分支是**堆叠**的（54 文件 = 11 ＋ 43 份 K1~K10），11 文件只因 #329 从 `local-main` 重建。
+
+## 写集粒度说明（复核 A9 · 未决）
+
+本卡落点为**模块粒度**（新建模块，具体文件在开工时确定）。按派单件 §四 第 2 条，写集应由
+`bash scripts/control-tower/declare-write-set.sh --brief <brief> --base origin/main` **机器生成**，不手写。
+⚠️ 已知：门禁 `match_path` 对目录级条目返回 False ⇒ 真实提交时**认领数 0**。仓内 48 份 brief 同型（非本批独有）。
+**须 CTO 裁**：① 接受「模块粒度 + 开工时机器生成」② 或开工前落成逐条具体文件路径。
+
+---
