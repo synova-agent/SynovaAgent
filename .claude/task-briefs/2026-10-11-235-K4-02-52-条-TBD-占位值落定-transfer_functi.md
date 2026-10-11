@@ -1,8 +1,8 @@
 <!-- 卡面来源: 库外档案仓 K4-本体与循环-审计定稿与卡面全套.md（CTO 亲撰）
-     架构基准: 院方 产品宪章.md v8.1（§0.4 ＋ §4.1 ＋ §5.2）
+     架构基准: 院方 产品宪章 v8.1（镜像 docx: docs/synova/产品宪章-v8.1-镜像.md）
      机器真源: docs/synova/coordination/施工项登记.ts（K4 块）
-     审计 as_of: 6ff6b4719 ｜ 已过**三轮**独立复核（第3轮 20 条 + 新引入 5 条，按复核「最小修复清单」逐条回写）
-     纪律: 执行 session 只从本文件取施工信息；缺字段 ⇒ 问 CTO，不许猜 -->
+     审计 as_of: 6ff6b4719 ｜ **已过三轮独立复核**（20 条不一致 + 5 条新引入，已逐条回写）
+     纪律: 只从本文件取施工信息；缺字段 ⇒ 问 CTO，不许猜 -->
 
 # Task Brief: #235 → K4-02 — 52 条 `TBD` 占位值落定（`transfer_function` 真实公式）
 
@@ -25,7 +25,62 @@
 
 **⑦ DSH 借鉴方式**：**自研** —— DSH 无因果传导语义；借方向：**判据自带 ＋ 不生效即报错**（`dsh-invariants/lib/index.js:6-13`）。
 
-**⑧ 涉及代码文件**：`extensions/ontology/edge-types/<55 件逐条>（开工前由 CTO 列全 55 条裸路径）`｜新探针 `probe-ontology-values.ts`（与 K4-01 共用）
+**⑧ 涉及代码文件**：`（以下 **55 条裸路径**，逐条列出，不用 glob）
+extensions/ontology/edge-types/assumption_triggered_reallocation.json
+extensions/ontology/edge-types/augments.json
+extensions/ontology/edge-types/brand_building.json
+extensions/ontology/edge-types/brand_builds.json
+extensions/ontology/edge-types/capital_acquisition.json
+extensions/ontology/edge-types/capital_allocation.json
+extensions/ontology/edge-types/capital_source_mix.json
+extensions/ontology/edge-types/channel_delivery.json
+extensions/ontology/edge-types/competitive_positioning.json
+extensions/ontology/edge-types/constrains.json
+extensions/ontology/edge-types/couples.json
+extensions/ontology/edge-types/cross_functional_synergy.json
+extensions/ontology/edge-types/cumulative_learning.json
+extensions/ontology/edge-types/customer_data_loop.json
+extensions/ontology/edge-types/customer_lockin.json
+extensions/ontology/edge-types/data_collection.json
+extensions/ontology/edge-types/decision_authority.json
+extensions/ontology/edge-types/decision_concentrates.json
+extensions/ontology/edge-types/demand_to_spec.json
+extensions/ontology/edge-types/deploys.json
+extensions/ontology/edge-types/efficiency_attraction.json
+extensions/ontology/edge-types/environmental_scan.json
+extensions/ontology/edge-types/equipment_acquisition.json
+extensions/ontology/edge-types/external_assumption.json
+extensions/ontology/edge-types/external_feedback.json
+extensions/ontology/edge-types/funds.json
+extensions/ontology/edge-types/incentive_alignment.json
+extensions/ontology/edge-types/incentive_binds.json
+extensions/ontology/edge-types/information_flow.json
+extensions/ontology/edge-types/innovation_output.json
+extensions/ontology/edge-types/knowledge_reuse.json
+extensions/ontology/edge-types/knowledge_sharing.json
+extensions/ontology/edge-types/locks_in.json
+extensions/ontology/edge-types/market_share_capture.json
+extensions/ontology/edge-types/operational_execution.json
+extensions/ontology/edge-types/organizational_learning.json
+extensions/ontology/edge-types/procurement_bargaining.json
+extensions/ontology/edge-types/produces.json
+extensions/ontology/edge-types/profit_reinvestment.json
+extensions/ontology/edge-types/reputation_attraction.json
+extensions/ontology/edge-types/reputation_flywheel.json
+extensions/ontology/edge-types/retention_protects_knowledge.json
+extensions/ontology/edge-types/routine_rigidity.json
+extensions/ontology/edge-types/rule_constraint.json
+extensions/ontology/edge-types/sensing_calibration.json
+extensions/ontology/edge-types/service_support.json
+extensions/ontology/edge-types/signal_transmits.json
+extensions/ontology/edge-types/signal_upward_pass.json
+extensions/ontology/edge-types/talent_acquisition.json
+extensions/ontology/edge-types/talent_deployment.json
+extensions/ontology/edge-types/talent_filter.json
+extensions/ontology/edge-types/talent_retention.json
+extensions/ontology/edge-types/tech_infrastructure.json
+extensions/ontology/edge-types/trust_friction_reduction.json
+extensions/ontology/edge-types/value_pricing.json`｜新探针 `probe-ontology-values.ts`（与 K4-01 共用）
 
 ---
 
@@ -45,7 +100,62 @@
 ## 架构层: ② 本体层
 ## 写集
 ```
-extensions/ontology/edge-types/<55 件逐条>（开工前由 CTO 列全 55 条裸路径）
+（以下 **55 条裸路径**，逐条列出，不用 glob）
+extensions/ontology/edge-types/assumption_triggered_reallocation.json
+extensions/ontology/edge-types/augments.json
+extensions/ontology/edge-types/brand_building.json
+extensions/ontology/edge-types/brand_builds.json
+extensions/ontology/edge-types/capital_acquisition.json
+extensions/ontology/edge-types/capital_allocation.json
+extensions/ontology/edge-types/capital_source_mix.json
+extensions/ontology/edge-types/channel_delivery.json
+extensions/ontology/edge-types/competitive_positioning.json
+extensions/ontology/edge-types/constrains.json
+extensions/ontology/edge-types/couples.json
+extensions/ontology/edge-types/cross_functional_synergy.json
+extensions/ontology/edge-types/cumulative_learning.json
+extensions/ontology/edge-types/customer_data_loop.json
+extensions/ontology/edge-types/customer_lockin.json
+extensions/ontology/edge-types/data_collection.json
+extensions/ontology/edge-types/decision_authority.json
+extensions/ontology/edge-types/decision_concentrates.json
+extensions/ontology/edge-types/demand_to_spec.json
+extensions/ontology/edge-types/deploys.json
+extensions/ontology/edge-types/efficiency_attraction.json
+extensions/ontology/edge-types/environmental_scan.json
+extensions/ontology/edge-types/equipment_acquisition.json
+extensions/ontology/edge-types/external_assumption.json
+extensions/ontology/edge-types/external_feedback.json
+extensions/ontology/edge-types/funds.json
+extensions/ontology/edge-types/incentive_alignment.json
+extensions/ontology/edge-types/incentive_binds.json
+extensions/ontology/edge-types/information_flow.json
+extensions/ontology/edge-types/innovation_output.json
+extensions/ontology/edge-types/knowledge_reuse.json
+extensions/ontology/edge-types/knowledge_sharing.json
+extensions/ontology/edge-types/locks_in.json
+extensions/ontology/edge-types/market_share_capture.json
+extensions/ontology/edge-types/operational_execution.json
+extensions/ontology/edge-types/organizational_learning.json
+extensions/ontology/edge-types/procurement_bargaining.json
+extensions/ontology/edge-types/produces.json
+extensions/ontology/edge-types/profit_reinvestment.json
+extensions/ontology/edge-types/reputation_attraction.json
+extensions/ontology/edge-types/reputation_flywheel.json
+extensions/ontology/edge-types/retention_protects_knowledge.json
+extensions/ontology/edge-types/routine_rigidity.json
+extensions/ontology/edge-types/rule_constraint.json
+extensions/ontology/edge-types/sensing_calibration.json
+extensions/ontology/edge-types/service_support.json
+extensions/ontology/edge-types/signal_transmits.json
+extensions/ontology/edge-types/signal_upward_pass.json
+extensions/ontology/edge-types/talent_acquisition.json
+extensions/ontology/edge-types/talent_deployment.json
+extensions/ontology/edge-types/talent_filter.json
+extensions/ontology/edge-types/talent_retention.json
+extensions/ontology/edge-types/tech_infrastructure.json
+extensions/ontology/edge-types/trust_friction_reduction.json
+extensions/ontology/edge-types/value_pricing.json
 scripts/control-tower/probe-ontology-values.ts   （与 K4-01 共写 ⇒ 串行：K4-01 先）
 tests/ontology/edge-transfer-functions.test.ts
 ```
