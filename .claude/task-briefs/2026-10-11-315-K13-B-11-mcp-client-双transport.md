@@ -9,14 +9,19 @@
 **② 解决什么问题**：现有 MCP 入站**只有单 transport**，工具表一变就要**重启**才能生效；且连企业系统时**子进程继承父环境**（凭证/路径泄露面）。
 **③ 做完对项目的推动**：补 **MCP 集成 0%** 这个缺口 —— 它是"Synova 作为 client 连企业系统"（Stage 2 契约）的前置。
 **④ 🔴 不做行不行**：**可以做但有代价**（欠账级）：单 transport 也能先上线，不是安全底线；但企业系统 transport 形态一旦多样就必然撞墙，越晚做越贵。
-**⑤ 现在有什么基础（代码盘点，as_of local-main `7c6315029`）**：✅ 落点 src/mcp/ 已在（实测）；MCP 侧已有既有认证/权限件（⚠️ **前置存疑**：卡 #456 在 Gitea **404**；仓外档案记「已关未合/疑似废弃」⇒ **开工前须 CTO 裁**）。❌ 双 transport / 变更通知重载 / 环境擦除 三件缺。
+**⑤ 现在有什么基础（代码盘点，as_of local-main `015c39b10`）**：✅ 落点 src/mcp/ 已在（实测）；MCP 侧已有既有认证/权限件（⚠️ **前置存疑**：卡 #456 在 Gitea **404**；仓外档案记「已关未合/疑似废弃」⇒ **开工前须 CTO 裁**）。❌ 双 transport / 变更通知重载 / 环境擦除 三件缺。
 **⑥ 还需要做什么**：① 双 transport（stdio ＋ StreamableHTTP）② 工具表变更 → 通知 → 热重载 ③ scrubbedParentEnv（子进程环境擦除）。
 **⑦ DSH 借鉴方式**：**参考自研** —— DSH `dsh-mcp-client/lib/index.js:835` `export { Config, apply, createMcpToolDefinition, inject, name }`（一个 client 承载两种 transport，工具定义由宿主注入）
 **⑧ 涉及代码文件**：src/mcp/
 
 ## Q0: 定位 — 项目拼图 + 文件审计
 本卡属 **K13（DSH 借鉴块，2026-10-11 新立）**，卡号 B-11（原 task-state D760）。架构位置 = ⓪ 连接器（数据侧 ⓪-a 入站）。
-文件审计（实测 `git ls-tree origin/local-main`）：src/mcp/ 均在。结论：**扩展/新建**（见 ⑤/⑥）。
+文件审计（**逐条实测 @ 015c39b10**）：
+### 已存在
+- （无）
+### 待新建（写集，尚未存在）
+- （无）
+结论：**本 brief 不下完成/未完成结论**（见下「状态」事实台账与待裁项）。
 
 ## Q1: 调研
 a) 业界：借鉴必须**带锚点**（包名＋符号＋现验命令），否则一年后无人能核（本卡 ⑦ 逐条给 file:line）。
@@ -62,6 +67,23 @@ c) memory 教训：**铁律 46**（禁桥接引用 —— 抄码可以，`import
 本卡在 **GitHub 仓被封**后**未随迁**到 Gitea ⇒ 一直只活在 `task-state/D760.json`（旧 DSH 看板）。2026-10-11 由 CTO 专项会话从 local-main 的 task-state ＋ 仓外档案区恢复，并入 **K13**。
 🔴 真源（`docs/synova/coordination/施工项登记.ts`）新增 K13 块归 CTO。
 
+## 状态（**事实台账** · 不由本 brief 合成结论 · 2026-10-11）
+
+- 分支：`chore/k13-briefs-clean` ｜ 分支 base：`015c39b10` ｜ PR base：`local-main` @ `68bf5759`（合并前将 rebase）
+- 本批为 **DSH 借鉴卡**：K13 **未入** `施工项登记.ts`，**无 acceptance 可比** ⇒ Done 的 G1–G5 是**硬守卫（本卡设计）**，非「登记件原文」。
+
+| # | 判据 | expect | 实跑 exit | 判定 |
+|---|---|---|---|---|
+| G1 | `grep -rn "@deepseek-ai" src/ packages/ --include="*.ts" --include="*.json" | grep -v node_modules` | 零命中（exit 1） | 0 | FAIL |
+
+### 待 CTO 裁定的矛盾项（**本 brief 无权下结论**）
+- 落点口径：`指引 §11.3` 与 `派单件 §一` 对 B-12/B-14/B-15/B-16/B-18 不一致 ⇒ 开工前须裁
+- 写集粒度：10/11 为**模块粒度**（新建模块）⇒ 按派单件 §四 应由 `declare-write-set.sh` 开工时机器生成
+- `#456` 在 Gitea **404**（仓外档案记「已关未合/疑似废弃」）⇒ B-11 前置存疑
+
+> 「已完成 / 未完成」**不作为本 brief 的结论**；开工/关单以 CTO 对上述待裁项的裁定为准。
+
+---
 ## 复核回写（独立复核 · fresh context · 2026-10-11）
 
 复核结论：**不能直接照单独立开工**（作为门禁通关的施工依据），可作任务说明书/决策输入。以下逐条回写：
