@@ -831,7 +831,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       // 🔴 原为纯 grep 型（T6 面1 否决点）⇒ 改为穿生产入口：跑一次真实哨兵，断言它读到该字段
       { run: 'npx vitest run tests/sentinel/edge-lag-consumed.test.ts', expectExit: 0 },
     ],
-    status: 'todo',
+    status: 'doing',
     source: '施工单.md 1-8 / 现状报告 W3',
   },
   {
@@ -855,7 +855,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       // 🔴 原为纯 grep 型 ⇒ 改为穿生产入口：跑一次方向监测，断言参数【改变了输出】
       { run: 'npx vitest run tests/loops/direction-monitor.transfer-function.test.ts', expectExit: 0 },
     ],
-    status: 'todo',
+    status: 'doing',
     source: '施工单.md 1-9 / 现状报告 W2',
   },
   // ───────────────── 第 2 批 · 地基 ─────────────────
@@ -1003,7 +1003,9 @@ export const constructionItems: readonly ConstructionItem[] = [
     sharedWrite: ["0-2: src/growth/feedback-collector.ts（同上）"],
     worker: 'win', batch: '第2批', block: 'K6',
     title: '反馈两通道分裂 + 正向值被 DDL 拒',
-    // 卡面 §④「实际落点，实测」；原 `packages/evolution/` 已删（该目录属 3-12 的 global-analyzer.ts）
+    // 卡面 §④「实际落点，实测」；勘误(2026-10-12 CTO 裁2/审计实核)：原注「packages/evolution/ 已删」不实 ——
+    //    该目录锚内实存 10 文件（含 3-12 的 global-analyzer.ts，blob fcde4375，PR #1060 落地于此）。
+    //    根因 = 5e913d646(2026-10-08) 卡面→登记件回填时凭印象转述，未核目录实况。
     paths: [
       'src/growth/feedback-collector.ts',
       'tests/growth/feedback-channel-unification.test.ts',
@@ -1278,7 +1280,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     acceptance: [
       { run: 'sqlite3 data/synova.db "SELECT COUNT(*) FROM graph_nodes WHERE type LIKE \'activity/%\'"', expectRowsGt: { table: 'graph_nodes', n: 0 } },
     ],
-    status: 'todo',
+    status: 'doing',
     source: '施工单.md 3-5',
   },
   {
@@ -1456,7 +1458,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     acceptance: [
       { run: 'npx vitest run tests/extensions/layer-precedence.test.ts', expectExit: 0 },
     ],
-    status: 'todo',
+    status: 'doing',
     source: '施工单.md 3-11',
   },
   {
@@ -1820,16 +1822,34 @@ export const constructionItems: readonly ConstructionItem[] = [
       paths: [
         'src/l4/**',
         'src/store/**',
-        'tests/l4/edge-query.test.ts',  // 判据交付物（本卡创建）
+        'tests/adapters/sqlite-graph-store.legacy-schema.test.ts',  // 判据交付物（本卡创建）
       ],
       dependsOn: [],
       sharedWrite: ["1-10: src/l4/ontology-loader.ts（若同碰——本项只改查询列，桥归 1-10）"],
       acceptance: [
-        { run: 'npx vitest run tests/l4/edge-query.test.ts', expectExit: 0 },
+        { run: 'npx vitest run tests/adapters/sqlite-graph-store.legacy-schema.test.ts', expectExit: 0 },
       ],
-      status: 'todo',
+      status: 'done',
       source: 'PR #1437 断点清单 B2(P1)；卡面 Issue #1455',
     },
+    {
+      issue: 345,
+      id: 'B2-GRAPH-2',
+      worker: 'win', batch: '第0批', block: 'K4',
+      title: 'B2 后续（Done④ 拆卡）：queryEdges 读路径失败不得静默 —— 与 queryNodes 同款 D355 口径',
+      paths: [
+        'src/adapters/sqlite-graph-store.ts',
+        'tests/adapters/**',
+      ],
+      dependsOn: ['B2-GRAPH'],
+      sharedWrite: ['fix/1421-skills-type-assumption: src/adapters/sqlite-graph-store.ts（同文件须串行：(C) 案先行）'],
+      acceptance: [
+        { run: 'npx vitest run tests/adapters/', expectExit: 0 },
+      ],
+      status: 'todo',
+      source: 'K4-04 卡面 Done④ 拆出（CTO 2026-10-11 裁定）；卡面 Issue #345',
+    },
+
   // ═══ K12 新增（一致性线 · 宪章 §2.7 第一优先 · 2026-10-11 立）═══
   {
     issue: 185, id: 'K12-02', worker: 'win', batch: '第12批', block: 'K12',
@@ -2127,7 +2147,7 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
     source: 'T3 §二 K3',
   },
   {
-    id: 'K4', name: '本体·因果边·循环编号', items: ['0-4', '1-8', '1-9', '3-5', '3-11', 'B2-GRAPH'],
+    id: 'K4', name: '本体·因果边·循环编号', items: ['0-4', '1-8', '1-9', '3-5', '3-11', 'B2-GRAPH', 'B2-GRAPH-2'],
     blockAcceptance: [
       // CTO 2026-10-08 裁定（块级 K4）：块判据 = `scripts/control-tower/check-ontology-fields.sh`（exit 0）。
       //   依据：① 该脚本**实测在 main 存在**（本机实跑 ⇒ `✅ 全部 55 件边类型关键字段齐全` / exit 0）
