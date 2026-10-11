@@ -317,6 +317,128 @@ export function allowedSensitivities(role: string, clearance: string): string[] 
 }
 
 // ════════════════════════════════════════════════════════════════
+// D… K12-09 (#192 原 RB-01): 多租户隔离 — 跨 orgId 读必须被拒
+// ════════════════════════════════════════════════════════════════
+
+/**
+ * 请求声明「目标组织」的**唯一**属性族：本卡**可执行**的跨租户判据面。
+ *
+ * 命名空间实测干净（as_of `be57f90fb`，命令:
+ * `grep -rn "x-org-id|X-Org-Id|x-tenant-id" src/ tests/ docs/ app/` ⇒ 零命中）
+ * ⇒ 无既有客户端在用，可安全引入；且**不与** `extractAuthFromRequest` 已明确拒绝的
+ * 自报凭据族（`x-synova-token`）混淆——本族**不**参与身份判定，只表达"我要访问哪个组织"。
+ */
+const ORG_DECLARATION_HEADERS = ['x-org-id', 'x-tenant-id'] as const;
+
+/**
+ * 请求声明的目标组织。
+ *
+ * @input  headers — express 的 `req.headers`（HTTP 头名已被 Node 规范化为小写）
+ * @output 声明值（已 `trim`）或 `undefined`（未声明 / 空串 / 非字符串的重复头数组）
+ * @degraded 无。读取失败不产生放行路径——`undefined` 的含义是「未声明目标组织」，
+ *           此时隔离判定按"不适用"处理（无声明即无跨租户诉求），**不是**放行豁免。
+ */
+function declaredOrgIdOf(headers: Record<string, unknown>): string | undefined {
+  for (const name of ORG_DECLARATION_HEADERS) {
+    const raw = headers[name];
+    if (typeof raw !== 'string') continue;
+    const value = raw.trim();
+    // 头名大小写不敏感、重复头被 Node 折成 `a, b` ⇒ 折值不构成组织标识，按未声明处理
+    if (!value || value.includes(',')) continue;
+    return value;
+  }
+  return undefined;
+}
+
+/** 跨组织访问判定结果（判别联合：`denied` 为 `true` 时另两个字段必非空） */
+type CrossOrgDecision =
+  | { denied: false; declaredOrgId?: string }
+  | { denied: true; declaredOrgId: string; authOrgId: string; reason: 'org_mismatch' | 'auth_org_missing' };
+
+/**
+ * 多租户隔离判定 —— 「请求声明的目标组织」vs「验签身份的组织」。
+ *
+ * 契约（铁律 47）:
+ *   @input  — headers: `req.headers`；authOrgId: **验签身份**的组织声明（`req.auth.orgId`
+ *             或 DevMode 下的实例组织 `SYNOVA_ORG_ID`）。**缺失 / 空串** ⇒ 判据不可用。
+ *   @output — `{ denied:false, declaredOrgId? }` 放行（未声明目标组织，或声明与身份一致）；
+ *             `{ denied:true, declaredOrgId, authOrgId, reason }` 拒绝：`reason` 二态
+ *             `org_mismatch`（声明 ≠ 身份）/ `auth_org_missing`（有声明但身份无组织 → 判据不可用）。
+ *   @degraded — **无**。本函数**没有**降级放行路径：判据不可用时的处置是**收窄为拒绝**
+ *             （fail-closed），与"放行"是两件事（铁律 11/24 的降级语义在此**反向**适用——
+ *             安全判据的不可用态必须比可用态更严，否则"配置缺失"就成了越权通道）。
+ *
+ * 为何两条姿态路径共用（K12-09 卡面 §②「姿态漏洞」）:
+ *   `DEV_MODE=true` 且无 `JWT_SECRET` 时中间件自动授予 admin。若隔离判定只挂在认证路径，
+ *   **开发姿态下那道墙就会消失**。本函数由两侧**共用** ⇒ 「DevMode 只提升**单租户内**权限、
+ *   不跨租户」是**结构事实**，不是两处分别约定的行为。
+ *
+ * 不变量: 本函数**只**依据「验签身份 + 显式声明」两个输入判定，
+ *   不读 `body` / `query` 的 `orgId` —— 卡面禁止改动非隔离逻辑，而 `body.orgId` 是
+ *   **路由级**租户派生源（`routes/conversations.ts:167`、`routes/admin-knowledge.ts:117`），
+ *   在此拦截属判据变更（须先改卡）。边界已写入交付回执。
+ *
+ * @param headers - 请求头（express `req.headers`）
+ * @param authOrgId - 验签身份的组织；`undefined` / `null` / 空串 = 判据不可用
+ */
+function evaluateCrossOrgAccess(
+  headers: Record<string, unknown>,
+  authOrgId: string | null | undefined,
+): CrossOrgDecision {
+  const declaredOrgId = declaredOrgIdOf(headers);
+  if (!declaredOrgId) return { denied: false };
+  const identityOrgId = typeof authOrgId === 'string' ? authOrgId.trim() : '';
+  if (!identityOrgId) {
+    // 有声明、却没有任何身份可与之比对 ⇒ **不得**因"无法比对"而放行（那是把配置缺失
+    // 变成越权通道）。收窄为拒绝，并如实标注 reason 以便区分"身份不一致"与"身份缺失"。
+    return { denied: true, declaredOrgId, authOrgId: '', reason: 'auth_org_missing' };
+  }
+  if (declaredOrgId !== identityOrgId) {
+    return { denied: true, declaredOrgId, authOrgId: identityOrgId, reason: 'org_mismatch' };
+  }
+  return { denied: false, declaredOrgId };
+}
+
+/**
+ * 跨组织拒绝的**唯一**应答点（认证路径 / DevMode 路径 / 白名单路径共用）。
+ *
+ * 契约（铁律 47）:
+ *   @input  — res: express Response；decision: **必定** `denied:true` 的判定结果；
+ *             path: 请求路径（留痕用）
+ *   @output — 已写出 HTTP **403** + `{ ok:false, code:'CROSS_ORG_FORBIDDEN',
+ *             declaredOrgId, authOrgId }`；无返回值（调用方 `return`，`next()` 不执行）。
+ *   @degraded — 无。拒绝是**确定结论**，不是降级 ⇒ 响应体**不带** `degraded` 标记
+ *             （带标记会被下游误读为"服务不可用可重试"，而本条是"凭据越权，重试无用"）。
+ *
+ * 为何 403 而**非** 404: 对齐本仓既有路由级跨租户判据（`routes/overflow.ts:52-57` 用
+ *   `FORBIDDEN`）与 DSH `InvariantError{code,packageName}` 的"机器可读拒绝码 + 归属"取向。
+ *   静默 404 会让调用方把"越权"与"资源不存在"混为一谈（不可观测 = 不可审计）。
+ */
+function denyCrossOrgAccess(
+  res: Response,
+  decision: CrossOrgDecision & { denied: true },
+  path: string,
+): void {
+  log.warn(
+    {
+      code: 'CROSS_ORG_FORBIDDEN',
+      reason: decision.reason,
+      declaredOrgId: decision.declaredOrgId,
+      authOrgId: decision.authOrgId,
+      path,
+    },
+    '安全判据: 被拒绝 — 请求声明的目标组织与验签身份不一致（跨 orgId 读，HTTP 403 fail-closed；DevMode 亦不放行）',
+  );
+  res.status(403).json({
+    ok: false,
+    code: 'CROSS_ORG_FORBIDDEN',
+    message: '请求声明的目标组织与认证身份不一致',
+    declaredOrgId: decision.declaredOrgId,
+    authOrgId: decision.authOrgId,
+  });
+}
+
+// ════════════════════════════════════════════════════════════════
 // Express Middleware
 // ════════════════════════════════════════════════════════════════
 
@@ -340,25 +462,41 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
     // req.auth / req.rbac。
     if (isWhitelisted(req.path)) {
       const whitelistAuthHeader = req.headers['authorization'] as string | undefined;
-      if (whitelistAuthHeader && whitelistAuthHeader.startsWith('Bearer ')) {
-        const whitelistToken = whitelistAuthHeader.slice(7).trim();
-        const whitelistResult = whitelistToken
-          ? verifyJwtToken(whitelistToken)
-          : { payload: null, error: 'Token is empty' };
-        if (whitelistResult.payload) {
-          (req as Request & { auth?: JwtPayload }).auth = whitelistResult.payload;
-        } else {
-          // 留痕但**不拦截**：白名单属「不要求认证」，P5 的 fail-closed 只适用于安全判据，
-          // 凭据无效不构成拦截理由（可达性必须保持不变）。沿用三态口径以便区分：
-          // 判据不可用（配置缺失） vs 被拒绝（凭据无效）；whitelist:true 区分于真正的 401。
-          const ignoredCode = whitelistResult.error === 'JWT_SECRET not configured'
-            ? 'AUTH_UNAVAILABLE'
-            : 'AUTH_REJECTED';
-          log.warn(
-            { code: ignoredCode, whitelist: true, reason: whitelistResult.error, path: req.path },
-            '白名单路径携带 Bearer 但未被采纳 — 照旧放行（白名单=不要求认证，不拦截）',
-          );
-        }
+      const whitelistHasBearer = Boolean(whitelistAuthHeader?.startsWith('Bearer '));
+      const whitelistToken = whitelistHasBearer ? (whitelistAuthHeader ?? '').slice(7).trim() : '';
+      const whitelistResult = whitelistToken
+        ? verifyJwtToken(whitelistToken)
+        : { payload: null, error: 'Token is empty' };
+      // K12-09 (#192): 白名单语义 = 「**不要求**认证」，**不等于**「跨租户可读」。
+      // 身份解析三态（与下方认证路径同一判定函数、同一 DevMode 身份源）:
+      //   ① 验签通过     ⇒ 身份 = 凭据载荷（权威；DevMode 的实例身份**不**覆盖它）
+      //   ② DevMode 姿态 ⇒ 身份 = 实例组织（`SYNOVA_ORG_ID`，与认证路径同源）
+      //      ⚠️ ② **不要求凭据有效** —— 否则"带无效 Bearer + 声明异组织"会落进
+      //      「凭据无效照旧放行」的旧分支，成为绕过墙的通道（本卡 V3 实测到的洞）。
+      //   ③ 其余（非 DevMode 且无有效凭据）⇒ 无身份可建立
+      // 判定在**有身份时**一律执行；无身份**且**请求声明了目标组织 ⇒ 收窄为拒绝
+      // （fail-closed：显式声明却无法验证 ⇒ 拒绝，绝不放行）。
+      const whitelistDevMode = !process.env.JWT_SECRET && process.env.DEV_MODE === 'true';
+      const whitelistIdentity = whitelistResult.payload?.orgId
+        ?? (whitelistDevMode ? (process.env.SYNOVA_ORG_ID || 'default') : null);
+      const whitelistDecision = evaluateCrossOrgAccess(req.headers, whitelistIdentity);
+      if (whitelistDecision.denied) {
+        denyCrossOrgAccess(res, whitelistDecision, req.path);
+        return;
+      }
+      if (whitelistResult.payload) {
+        (req as Request & { auth?: JwtPayload }).auth = whitelistResult.payload;
+      } else if (whitelistHasBearer) {
+        // 留痕但**不拦截**：白名单属「不要求认证」，P5 的 fail-closed 只适用于安全判据，
+        // 凭据无效不构成拦截理由（可达性必须保持不变）。沿用三态口径以便区分：
+        // 判据不可用（配置缺失） vs 被拒绝（凭据无效）；whitelist:true 区分于真正的 401。
+        const ignoredCode = whitelistResult.error === 'JWT_SECRET not configured'
+          ? 'AUTH_UNAVAILABLE'
+          : 'AUTH_REJECTED';
+        log.warn(
+          { code: ignoredCode, whitelist: true, reason: whitelistResult.error, path: req.path },
+          '白名单路径携带 Bearer 但未被采纳 — 照旧放行（白名单=不要求认证，不拦截）',
+        );
       }
       return next();
     }
@@ -366,6 +504,16 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
     // DevMode 无 JWT_SECRET：自动 admin
     const secret = process.env.JWT_SECRET;
     if (!secret && process.env.DEV_MODE === 'true') {
+      // D479: 实例 org 唯一权威是 SYNOVA_ORG_ID（与 config.ts orgId 同源），'default' 仅作 env 缺失兜底
+      const devModeOrgId = process.env.SYNOVA_ORG_ID || 'default';
+      // K12-09 (#192) V3: DevMode **只提升单租户内权限，不跨租户** —— 隔离判定与认证路径
+      // **共用同一函数**（此处刻意放在 AUTH_DEV_MODE_GRANT 留痕之前：拒绝请求不产生"授权"记录，
+      // 避免审计面上把一次拒绝读成一次放行）。
+      const devModeDecision = evaluateCrossOrgAccess(req.headers, devModeOrgId);
+      if (devModeDecision.denied) {
+        denyCrossOrgAccess(res, devModeDecision, req.path);
+        return;
+      }
       log.warn(
         { code: 'AUTH_DEV_MODE_GRANT', reason: 'jwt_secret_not_configured' },
         '安全判据: 开发姿态放行（DEV_MODE=true 且无 JWT_SECRET）——非生产路径；生产须 DEV_MODE=false 并配置 JWT_SECRET',
@@ -373,8 +521,7 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
       (req as Request & { auth?: JwtPayload }).auth = {
         sub: 'dev-admin',
         role: 'admin',
-        // D479: 实例 org 唯一权威是 SYNOVA_ORG_ID（与 config.ts orgId 同源），'default' 仅作 env 缺失兜底
-        orgId: process.env.SYNOVA_ORG_ID || 'default',
+        orgId: devModeOrgId,
         iat: Math.floor(Date.now() / 1000),
         exp: Math.floor(Date.now() / 1000) + 86400,
         jti: 'dev-mode-no-jwt',
@@ -432,6 +579,16 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
 
     // D947: 先落常量——`result.payload` 的类型收窄不会穿进下方闭包（TS18047）
     const payload = result.payload;
+
+    // K12-09 (#192) V2: 验收后的**跨 orgId 隔离判定** —— 请求声明的目标组织必须与
+    // 验签身份一致，否则拒绝（含下方 DevMode 分支，两侧共用同一判定函数）。
+    // 位置是判据的一部分: 必须在**验签之后**（身份已可信）、**注入 req.auth 之前**
+    // （被拒请求不得把身份留在请求对象上，避免下游误用）。
+    const crossOrgDecision = evaluateCrossOrgAccess(req.headers, payload.orgId);
+    if (crossOrgDecision.denied) {
+      denyCrossOrgAccess(res, crossOrgDecision, req.path);
+      return;
+    }
 
     // 注入 auth 到请求对象（下游 RBAC 使用）
     (req as Request & { auth?: JwtPayload }).auth = result.payload;
