@@ -320,7 +320,7 @@ describe('jwtAuthMiddleware', () => {
     expect(res.statusCode).toBe(401);
   });
 
-  it('有效 JWT → 注入 auth + 调用 next', () => {
+  it('有效 JWT → 注入 auth + 调用 next', async () => {
     const token = signJwtToken({ sub: 'ga_user', role: 'ga', orgId: 'org-1' });
     expect(token).toBeTruthy();
 
@@ -333,7 +333,11 @@ describe('jwtAuthMiddleware', () => {
     res.json = (body: unknown) => { return res as unknown as Response; };
     let nextCalled = false;
 
-    jwtAuthMiddleware(req as unknown as Request, res as unknown as Response, () => { nextCalled = true; });
+    // K12-10-WIRE: `jwtAuthMiddleware` 已改为 async（请求路径需 `await resolveContext`
+    // 解析部门身份，且解析必须在 `storage.run` **之外**完成）⇒ 认证路径上的 `next()`
+    // 在一次微任务之后才调用。原断言在同步调用后立即读 `nextCalled` ⇒ 必须 await 返回的
+    // promise（express 本身丢弃该 promise，生产行为不变）。
+    await jwtAuthMiddleware(req as unknown as Request, res as unknown as Response, () => { nextCalled = true; });
 
     expect(nextCalled).toBe(true);
     expect(res.statusCode).toBeUndefined();
