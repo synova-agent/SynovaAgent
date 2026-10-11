@@ -44,7 +44,15 @@ jobs:
       - name: ③ 增量测试（vitest --changed；只测改动面，避免全量摩擦）
         run: |
           cd /Users/wane/.ci-work/SynovaAgent
-          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" npx vitest run --changed origin/main 2>&1 | tail -20 || {
+          # CTO 2026-10-11：增量基线改用 local-main（与 D734 check-pr-budget.sh 同口径）——
+          #   origin/main = GitHub 旧 main（停 05a6591c4），拿它当基线会把 local-main 全部
+          #   diverge 提交的存量红算进本 PR（实测 141 tests failed，与本 PR 改动零相关）。
+          #   优先 origin/local-main（CI 内 origin=本机 Gitea，必存在），不存在时回退 origin/main。
+          #   只改基线，不改测试判据/门禁组数。
+          CHANGED_BASE=origin/local-main
+          git rev-parse --verify -q "$CHANGED_BASE" >/dev/null || CHANGED_BASE=origin/main
+          echo "增量基线 = $CHANGED_BASE"
+          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" npx vitest run --changed "$CHANGED_BASE" 2>&1 | tail -20 || {
             echo "::error::增量测试失败 —— 只跑了本次改动相关的测试；若确认是既有 flaky，请在本作业日志里点名具体用例"
             exit 1
           }
