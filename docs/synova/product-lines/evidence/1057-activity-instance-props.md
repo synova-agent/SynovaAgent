@@ -211,6 +211,108 @@ ren extensions\ontology\extensions\general-enterprise\activity.json.bak activity
 git -c credential.helper= -c safe.directory=* status --porcelain=v1   # 期望无 *.bak 残留
 ```
 
+## §A.10 提交后复跑 / 干净 clone / 门禁复跑 / token 复核（原始输出）
+
+**提交**：`e064182492e9708f4df43c7bc6906338d2b1cf02`（分支 `fix/1057-activity-instance-props`；提交内 15 files changed；vs `origin/local-main` 见 A.10.3 = **7 件纯新增**）
+
+### A.10.1 提交后复跑（committed tree）
+```
+$ npx tsx scripts/control-tower/probe-ontology-instances.ts
+SUMMARY: sections=4 failures=0
+RESULT=OK: 四段全绿（SCHEMA / EXTENSION / INSTANCE / LOAD）
+PROBE_EXIT=0
+
+$ npx vitest run tests/ontology/instance-loading.test.ts
+ Test Files  1 passed (1)
+      Tests  25 passed (25)
+VITEST_EXIT=0
+```
+
+### A.10.2 干净 clone（`data/synova.db` **不存在**）⇒ Done ①
+```
+$ git -c … clone --no-hardlinks D:\synova-wt-b2-1057 <TMP>\clean-clone-1057   → CLONE_EXIT=0
+$ dir /b data                                    → golden        （仅 golden 冻结数据集）
+$ (if exist data\synova.db …)                    → DB_MISSING    （干净 clone 内零 synova.db）
+$ mklink /J node_modules D:\…\synova-agent\node_modules → Junction created
+$ npx tsx scripts/control-tower/probe-ontology-instances.ts → RESULT=OK / PROBE_EXIT=0
+$ npx vitest run tests/ontology/instance-loading.test.ts    → Tests 25 passed (25) / VITEST_EXIT=0
+```
+
+### A.10.3 PR 变更集（vs `origin/local-main`，命令原始输出）
+```
+$ git -c … diff --name-status --find-renames origin/local-main...HEAD
+A	.claude/claims/1057.yaml
+A	.claude/task-briefs/2026-10-09-1057-activity-instance-props.md
+A	customer-config/ontology-instances/wani-baby/activity-production.json
+A	docs/synova/product-lines/evidence/1057-activity-instance-props.md
+A	extensions/ontology/extensions/general-enterprise/activity.json
+A	scripts/control-tower/probe-ontology-instances.ts
+A	tests/ontology/instance-loading.test.ts
+$ git -c … diff --stat origin/local-main...HEAD
+ 7 files changed, 1696 insertions(+)
+```
+（批 1 对 8 个 `activity/*.json` 的改动 + 旧件新增，被本卡"回退 / 搬家"**抵消** ⇒ PR 内 = **7 件纯新增**，删除侧不出现在 PR 变更集里。PR 预算：纯新增按 CTO 2026-10-11 裁定② 不计入，计入件 = **0 ≤ 12** ✔；单域 = ② 本体层 ✔。）
+
+### A.10.4 门禁复跑（**同一 staged 集**，两种开关配置的差分 ⇒ 见结论③）
+```
+$ bash scripts/pre-commit-check.sh                         → DEFAULT_EXIT=1
+  ❌ 声明闸① brief schema（Q1–Q3/架构层/Done/骨架/Q0c；D1220 退时间戳+Q0）: 1 处 [硬阻断]
+      今日无 task brief。请先运行: bash scripts/workflow/task-start.sh "任务描述"
+  ❌ 声明闸② brief↔代码一致性（Q2 写集/排除项/可解析；D1148 合并 15→3）: 12 处 [硬阻断]
+      customer-config/ontology-instances/wani-baby/activity-production.json (不在 Q2 范围内)
+      extensions/ontology/activity/{acquisition,compliance,coordination,governance,innovation,learning,maintenance}… (不在 Q2 范围内)
+  ❌ 2 组未通过 — 提交已拒绝
+$ SYNO_CLAIM_V2=1 bash scripts/pre-commit-check.sh         → CLAIMV2_EXIT=0
+  ℹ️  组 6: 声明载体 = claim（.claude/claims/1057.yaml）→ ✅ 声明闸① brief schema
+  ℹ️  组 12 claim 载体: 15 条 claim（并集）；覆盖 14/14 个暂存文件 → ✅ 全部暂存文件均被 claim 覆盖（legacy 判定无对象）
+  ✅ 全部 13 组通过        ⚠ V5: 1 项软提示（详情见 A.10.5）
+```
+**结论③（必须让 CTO 看见，属门禁/流程域，本卡不改）**：本卡（issue 号 + claim 载体）在**未设 `SYNO_CLAIM_V2`** 的默认态会被声明闸①/② **硬拦**，根因不是交付内容而是**载体开关默认值**：
+- `scripts/pre-commit-check.sh:1040-1043` 的 `case` 对**未设**值落 `*) CLAIM_V2=0`（= 默认关）；
+- 但 `memory/notes/implemented/2026-10-08-1423-claim-default-on.md`（卡 #1423）与 `scripts/control-tower/claim_store.py:110` 注释均写「**默认开**」⇒ **脚本实现与其决策 Note 不一致**；
+- `.github/workflows/ci.yml:196-199` 跑 `bash scripts/pre-commit-check.sh`（`SYNO_CI=1`）且**未注入** `SYNO_CLAIM_V2` ⇒ **同样的红会出现在 PR CI**；
+- 另：`brief_parser.py --q2-include .claude/task-briefs/2026-10-11-236-K4-03-….md` ⇒ **空输出**（卡面 Q2「做什么」是散文、写集在单独 `## 写集` 段；D1231 要求「裸路径、独立成行」）⇒ 今日窗口内**没有任何 legacy brief 认领本卡文件**。
+⇒ 归 CTO 裁（① ci.yml 注入开关；② 修默认值；③ 或要求今日窗口 legacy brief）。**本卡不碰门禁脚本**（写集外）。
+
+### A.10.5 唯一软提示（绿腿告警，可见 + 有据）
+```
+⚠️ tags 引用完整性: extensions/ontology/activity/*.json 标签 'activity'（8 处）/ 'routine'（1 处）不在 tags.json 合法值中
+```
+口径：这 8 件**逐字节等于 local-main 存量**（`git diff origin/local-main -- extensions/ontology/activity` ⇒ **空输出**）⇒ 属**基线存量**标签问题，本卡未引入该标签；`extensions/ontology/tags.json` 由 #1436 独占（本卡写集外，**禁碰**）。本卡新增的扩展件**刻意不含 `tags` 字段**，故不会给该组添新红。⇒ 记入遗留 3。
+
+### A.10.6 D708 合并级写集对账（原始输出）
+```
+$ python3 scripts/control-tower/merge_writeset_gate.py --base origin/local-main --head HEAD \
+      --branch fix/1057-activity-instance-props --repo-root .
+✅ 结论: pass — 提交文件集 ⊆ 声明写集（无夹带）
+   身份来源: claim → #1057（.claude\claims\1057.yaml）
+   变更集: 13 个文件（merge-base e52499dd）｜声明写集 17 条（多源并集，逐条 S0:claim.writeset）
+   豁免 1 条: .claude/claims/1057.yaml ← [claim-self] 本 PR 自身的声明文件（对账输入，非交付物）
+D708_EXIT=0
+
+$ git -c … diff --cached --name-only | python3 scripts/control-tower/claim_store.py --coverage
+{"status": "ok", "claims": 15, "uncovered": [], "broken": [], "degraded": false,
+ "reason": "15 条 claim（并集）；覆盖 15/15 个暂存文件"}
+```
+
+### A.10.7 环境事实：本克隆**未安装 git hooks**（提交未触发 hook 链）
+```
+$ dir /b .git\hooks                      → 仅 *.sample（无 pre-commit / commit-msg / pre-push / post-commit）
+$ git config --get core.hooksPath        → 未设（exit 1）
+```
+⇒ 本次 `git commit` **没有**经过 hook 链：门禁不是被"绕过"，而是本地**未安装**（需显式跑 `scripts/install-hooks.sh`；本卡未执行、也未改 `.git/**`）。因此 A.10.4/A.10.6 的证据 = **手动跑同一批脚本**（与 CI 同源、同 staged 集）。
+⚠️ 附注（供 CTO）：`scripts/commit-msg-check.sh:249` 的 D395-a Note 引用门禁把 `scripts/control-tower/**`（除 `*.test.sh`）列为治理脚本区 ⇒ 一旦装上 hooks，本卡 commit **需在 message 引用 `memory/notes/` Note**；本卡写集**不含** `memory/notes/**` ⇒ 若要求装 hooks，请 CTO 指定可引用的既有 Note，或授权新增 Note（本卡不自选、不自造）。
+
+### A.10.8 token 0 处复核（命令 + 退出码；不回显 token 值）
+```
+$ set /p TOK=<D:\win-push.token                                    （仅内存变量）
+$ git -c … grep -l "<TOK>" HEAD                                    → 无输出 / GIT_GREP_EXIT=1     （0 处）
+$ findstr /s /m /c:"<TOK>" <本卡 6 个交付件>                        → 无输出 / FINDSTR_EXIT=1      （0 处）
+$ git -c … log -1 --format=%B | findstr /c:"<TOK>"                  → 无输出 / MSG_EXIT=1          （0 处）
+$ git -c … remote get-url origin  → http://192.168.1.7:3000/synova-agent/SynovaAgent.git（URL 不含 token）
+```
+（token 未写入任何文件 / commit / 证据件 / PR 体；仅作命令行内"有无"判定。）
+
 ---
 
 # §B 批 1 历史记录（原 §1–§9；落点已被 §A 改写，读数为其时真实读数）
