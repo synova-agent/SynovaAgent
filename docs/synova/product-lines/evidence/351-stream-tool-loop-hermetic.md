@@ -84,7 +84,8 @@ $ $env:LLM_API_KEY='sk-dummy-…'; npx vitest run tests/stream-tool-loop.test.ts
       Tests  6 passed (6)
 === VITEST-B-DUMMYKEY-EXIT=0 ===
 ```
-🔴 **判别式 = 【链名】**（只读属性，**零网络调用**；读数见 §一 [A]/[B]）：
+🔴 **判别式 = 【链名判别】**（= 读构造后 `engine.provider.name`，对应代码里的 `chain_name`；
+**只读属性，零网络调用**；读数见 §一 [A]/[B]）：
 ```
 修后（`{ fallbackProvider: null }`） ⇒ chain_name = **fake-primary-throws**            （单 provider，链上无真实 provider）
 修前（`undefined`，走 env 派生）     ⇒ chain_name = **chain(fake-primary-throws→deepseek)**（真实 provider 在链上）
@@ -130,7 +131,33 @@ $ $env:LLM_API_KEY='sk-dummy-…'; npx vitest run tests/stream-tool-loop.test.ts
 ## 五、影响面
 
 - **恢复的 CI 选测面**：凡经 `conversation-engine` 模块依赖被 `vitest --changed` 选中的 PR（K4-04 #237 的 CI 即因此翻红）⇒ 不再被本文件**无差别拖红**。
-- **未覆盖（同族风险，另案）**：`tests/e2e/diagnosis-pipeline.test.ts`、`tests/e2e/diagnosis-pipeline.e2e.test.ts`、`tests/e2e/pde-diagnosis.e2e.test.ts` 同样不传 `fallbackProvider`（实测 grep 命中）。
+- **未覆盖（同族风险，另案）**：3 个 e2e 同样**不传** `fallbackProvider`。**我方原始测量**（命令与输出原文，时点见下）：
+
+```
+$ git rev-parse origin/local-main
+28ae513dcf1103538d859a61cc9fbcebc2ed1b5d
+
+$ git ls-tree -r --name-only origin/local-main -- <每个文件>          # 三件均 exists = YES
+
+$ git grep -n -E 'new (ConversationEngine|AgentConversation)\(' origin/local-main -- \
+    tests/e2e/diagnosis-pipeline.test.ts tests/e2e/diagnosis-pipeline.e2e.test.ts tests/e2e/pde-diagnosis.e2e.test.ts
+origin/local-main:tests/e2e/diagnosis-pipeline.test.ts:76:    const engine = new ConversationEngine(fakeProvider(), {
+origin/local-main:tests/e2e/diagnosis-pipeline.test.ts:90:    const engine = new ConversationEngine(fakeProvider()); // no diagnosisEngine
+origin/local-main:tests/e2e/diagnosis-pipeline.e2e.test.ts:78:    const engine = new ConversationEngine(provider, {
+origin/local-main:tests/e2e/pde-diagnosis.e2e.test.ts:100:    const engine = new ConversationEngine(provider, {
+
+$ git grep -c -E 'new (ConversationEngine|AgentConversation)\(' origin/local-main -- <三件>
+origin/local-main:tests/e2e/diagnosis-pipeline.e2e.test.ts:1
+origin/local-main:tests/e2e/diagnosis-pipeline.test.ts:2
+origin/local-main:tests/e2e/pde-diagnosis.e2e.test.ts:1
+
+$ git grep -c -E 'fallbackProvider' origin/local-main -- <三件>
+（**0 命中**：三件均为 0）
+
+★ 口径：构造点命中 = **2 / 1 / 1**（合计 4 处）｜ `fallbackProvider` 命中 = **0 / 0 / 0**
+★ 读数时点 = `origin/local-main @ 28ae513dcf1103538d859a61cc9fbcebc2ed1b5d`（独立复核员另跑得同数，逐项一致）
+★ 边界：本卡**只测未改**这 3 件 —— 它们属**另案**，不在本卡写集
+```
 - **机制侧**：根因在 `src/agent/conversation-engine.ts` 的自动接线（D363 包装）。**本卡在写集内只修红**；
   「是否改机制（failover 改 opt-in / 非真实 provider 时跳过 env 派生）」= **系统卡**，已由 Lead 上报 CTO，**本卡不碰**。
 
