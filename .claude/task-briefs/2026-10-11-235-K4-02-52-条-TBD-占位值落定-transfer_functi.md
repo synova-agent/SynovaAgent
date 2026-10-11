@@ -1,7 +1,7 @@
 <!-- 卡面来源: 库外档案仓 K4-本体与循环-审计定稿与卡面全套.md（CTO 亲撰）
      架构基准: 院方 产品宪章.md v8.1（§0.4 ＋ §4.1 ＋ §5.2）
      机器真源: docs/synova/coordination/施工项登记.ts（K4 块）
-     审计 as_of: 6ff6b4719 ｜ 已过独立复核（15 条声称全跑，6 处不一致已修正）
+     审计 as_of: 6ff6b4719 ｜ **已过两轮独立复核**（第 2 轮 20 条不一致已逐条回写）
      纪律: 执行 session 只从本文件取施工信息；缺字段 ⇒ 问 CTO，不许猜 -->
 
 # Task Brief: #235 → K4-02 — 52 条 `TBD` 占位值落定（`transfer_function` 真实公式）
@@ -25,7 +25,7 @@
 
 **⑦ DSH 借鉴方式**：**自研** —— DSH 无因果传导语义；借方向：**判据自带 ＋ 不生效即报错**（`dsh-invariants/lib/index.js:6-13`）。
 
-**⑧ 涉及代码文件**：`extensions/ontology/edge-types/*.json`｜新探针 `probe-ontology-values.ts`（与 K4-01 共用）
+**⑧ 涉及代码文件**：`extensions/ontology/edge-types/<55 件逐条>（开工前由 CTO 列全 55 条裸路径）`｜新探针 `probe-ontology-values.ts`（与 K4-01 共用）
 
 ---
 
@@ -45,7 +45,7 @@
 ## 架构层: ② 本体层
 ## 写集
 ```
-extensions/ontology/edge-types/*.json
+extensions/ontology/edge-types/<55 件逐条>（开工前由 CTO 列全 55 条裸路径）
 scripts/control-tower/probe-ontology-values.ts   （与 K4-01 共写 ⇒ 串行：K4-01 先）
 tests/ontology/edge-transfer-functions.test.ts
 ```

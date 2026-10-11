@@ -1,7 +1,7 @@
 <!-- 卡面来源: 库外档案仓 K4-本体与循环-审计定稿与卡面全套.md（CTO 亲撰）
      架构基准: 院方 产品宪章.md v8.1（§0.4 ＋ §4.1 ＋ §5.2）
      机器真源: docs/synova/coordination/施工项登记.ts（K4 块）
-     审计 as_of: 6ff6b4719 ｜ 已过独立复核（15 条声称全跑，6 处不一致已修正）
+     审计 as_of: 6ff6b4719 ｜ **已过两轮独立复核**（第 2 轮 20 条不一致已逐条回写）
      纪律: 执行 session 只从本文件取施工信息；缺字段 ⇒ 问 CTO，不许猜 -->
 
 # Task Brief: #239 → K4-06 — ① 循环层补**五阀映射 ＋ action_effect_lag ＋ 池节点四分类**（原 0-4 重立）
@@ -22,7 +22,7 @@
 **④ 不做行不行**：**不行** —— 这是宪章对 ① 循环层的**成文要求**，不是可选项。
 
 **⑤ 现在有什么基础**：✅ 6 件 `.cycle.json`（cash/customer/product/talent/store-replication/arr-growth）；
-✅ loader 完整（`cycle-loader.ts:25-29/44/151` → `cycle-registry.ts:46`）；✅ 溢出公式 6/6；
+✅ loader 完整（`cycle-loader.ts:26-28/44/151` → `cycle-registry.ts:46`）；✅ 溢出公式 6/6；
 ❌ 五阀 ❌ 时滞 ❌ `edgeRefs`/`mapping` **零运行时消费者**。
 
 **⑥ 还需要做什么**：按权威15 §3.4 的形态补五阀 ＋ `actionEffectLag` ＋ 池节点四分类；
@@ -30,7 +30,7 @@
 
 **⑦ DSH 借鉴方式**：**自研** —— DSH 无循环/动力学语义；借方向：**按名声明、宿主满足**（`compaction-basic/src/index.ts:114`）。
 
-**⑧ 涉及代码文件**：`cycles/**/*.cycle.json`（6 件）｜`src/cycles/cycle-loader.ts`（校验新增字段）｜
+**⑧ 涉及代码文件**：`（下方 6 条已逐条列出，不用 glob）`（6 件）｜`src/cycles/cycle-loader.ts`（校验新增字段）｜
 `src/cycles/overflow-compute.ts`（消费）｜新探针 `probe-cycle-valves.ts`
 
 ---
