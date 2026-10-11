@@ -1,8 +1,8 @@
 # #237 (K4-04) 图边读/写修好 — B2-GRAPH · P1
 
 **分支** `fix/237-graph-triples-rebuild` ｜ **base** `local-main` ｜ **建分支时基线** `68bf5759878a458b5e5ceb324a32878660155517`（＝现测 merge-base）
-**读数时点（本文所有 sha/字节数现测于）**：`5dadc928319e5a6d90d1ad2f47a97b8d57c5c3f9`（本正文 commit 仅同步文档，不新增文件）
-**内容来源**：旧仓 `fix/1455-graph-triples-props @ a797bdcb4`
+**读数时点（本文 sha/字节数现测于）**：`09240a496935900fdf902f25d5c5c4dcb8229cca`（本正文 commit 仅同步文档）
+**内容来源（口径必须写严）**：**只读旧仓** `D:\novis-backup-20260526\Novis\synova-agent` 的**本地分支** `fix/1455-graph-triples-props @ a797bdcb4` —— 🔴 **该对象未推送到 Gitea 远端**（复核员受控对照：已知对象走 blob API `HTTP 200 / 8534 B`、左对象 `e47568b663…` 同端点 `HTTP 400`；`git fetch <sha>` 与按 ref 取均失败）。**取回方式**：在本工作区同名本地分支上逐字节 `git cat-file blob`，并以 `git hash-object -t blob` 自证 sha；复核员另在只读旧仓独立取到同一对象并自证 sha。
 
 ---
 
@@ -10,13 +10,14 @@
 
 | 文件 | 一句话 |
 |---|---|
-| `src/store/migrations/004-graph-triples-rebuild.ts`（新） | 捡回整表重建迁移（`version: 5`）：旧库 `graph_triples` 事务内重建到 canonical（`id TEXT PRIMARY KEY` + `props`）+ 5 索引；**仅 1 处 JSDoc 注释改动**，见 (d) |
+| `src/store/migrations/004-graph-triples-rebuild.ts`（新） | 捡回整表重建迁移（`version: 5`）：旧库 `graph_triples` 事务内重建到 canonical（`id TEXT PRIMARY KEY` + `props`）+ 5 索引；**仅 1 处 JSDoc 注释改动**（净 +1 行），见 (d) |
 | `src/store/schema-migration.ts`（改） | 只取「注册 004」改动：import + 注册项 + `SCHEMA_VERSION 4→5` |
-| `tests/adapters/sqlite-graph-store.legacy-schema.test.ts`（新） | **卡面 Done① 点名入口**：6 例，真机 DDL 夹具 → 生产构造路径（读/写双通） |
+| `tests/adapters/sqlite-graph-store.legacy-schema.test.ts`（新） | **卡面 Done① 点名入口（验收责任在此件）**：6 例，真机 DDL 夹具 → 生产构造路径（读/写双通） |
 | `tests/store/migrations/004-graph-triples-rebuild.test.ts`（新） | **额外回归**（16 例，含 D4 同形守卫）；**不得顶替 Done① 入口** |
 | `tests/store/schema-migration.test.ts`・`tests/store/migrations/003-orgs.test.ts`・`tests/store/metric-readings-schema.test.ts`（改） | `SCHEMA_VERSION` 4→5 **逐条改 3 处**；🔴 `003-orgs.test.ts:39`（003 自己的 `version=4` 元数据断言）**逐字未动** |
 | `docs/synova/product-lines/evidence/issue1455-graph-triples-canonical-20261009.md`（新） | 捡回的证据件（433 行） |
 | `docs/synova/product-lines/evidence/237-k4-04/**`（新） | 判据原始输出、收尾三件（`README.md`）、CI 日志、Done⑤ 脚本/输出、Z8 提案（`PROPOSAL-skill-tool-discipline.md`） |
+| `docs/synova/product-lines/evidence/k4-04-verify-review-20261011.md`（新） | **独立复核件 v1.8**（逐字节搬运，实施员不编辑一字；`git rev-parse HEAD:<path>` = `c1313b22b7efb56dff861519ed78b9103c91dc43`） |
 | `.claude/claims/237.yaml`（新） | 认领件（`writeset` + `done:` 三条 `verify:`） |
 
 ## (b) Done ①②③⑤ 逐条勾选 + 判据原始输出
@@ -75,7 +76,7 @@ D4 同形守卫单跑 = `1 passed | 15 skipped`；D6/D7 探针 = `[read] queryEd
 
 ## (d) 注释改动声明
 
-> **注释改动声明**：`a797bdcb4:src/store/migrations/004-graph-triples-rebuild.ts` blob `e47568b663edae57984095072a7f76d4e8ee9931`（8498 B）↔ `HEAD` 同路径 blob `46e255d5540271684025465dfacf183ed1749052`（8534 B）；差 **+36 B / +1 行**，内容为 **1 处 JSDoc 注释**（在飞 PR 号 `#1424` → 分支名 `fix/1421-skills-type-assumption`），**代码零改动**（`git diff <old-sha> <head-sha>` 全文已贴）。
+> **注释改动声明**：`a797bdcb4:src/store/migrations/004-graph-triples-rebuild.ts` blob `e47568b663edae57984095072a7f76d4e8ee9931`（8498 B）↔ `HEAD` 同路径 blob `46e255d5540271684025465dfacf183ed1749052`（8534 B）；差 **+36 B / 净 +1 行（1 hunk / 2 删 3 增）**，内容为 **1 处 JSDoc 注释**（在飞 PR 号 `#1424` → 分支名 `fix/1421-skills-type-assumption`），**代码零改动**（`git diff <old-sha> <head-sha>` 全文已贴）。
 
 ```diff
 diff --git a/e47568b663edae57984095072a7f76d4e8ee9931 b/46e255d5540271684025465dfacf183ed1749052
@@ -100,7 +101,7 @@ index e47568b66..46e255d55 100644
 
 | 对象 A（`a797bdcb4:<path>`） | 对象 B（`HEAD:<path>`） | 差 | 现测命令 |
 |---|---|---|---|
-| `src/store/migrations/004-graph-triples-rebuild.ts` sha `e47568b663edae57984095072a7f76d4e8ee9931`（8498 B） | sha `46e255d5540271684025465dfacf183ed1749052`（8534 B） | **+36 B / +1 行（1 处 JSDoc 注释）** | `git rev-parse` + `git cat-file -s` + `git diff <A> <B>`（全文见 (d)） |
+| `src/store/migrations/004-graph-triples-rebuild.ts` sha `e47568b663edae57984095072a7f76d4e8ee9931`（8498 B） | sha `46e255d5540271684025465dfacf183ed1749052`（8534 B） | **+36 B / 净 +1 行（2 删 3 增）· 1 hunk · 全在 JSDoc 内** | `git rev-parse` + `git cat-file -s` + `git diff <A> <B>`（全文见 (d)） |
 | `tests/store/migrations/004-graph-triples-rebuild.test.ts` sha `78a05eb4ffed2092da597e81b9b28d13270c1964`（16652 B） | sha `78a05eb4ffed2092da597e81b9b28d13270c1964`（16652 B） | **同 sha（0 B / 0 行）** | 同上（两对象 sha 现测一致；`git diff A B` 空） |
 | `docs/synova/product-lines/evidence/issue1455-graph-triples-canonical-20261009.md` sha `10e32f07c697d1899c2aefa3672e9bfba1830ff1`（30391 B） | sha `10e32f07c697d1899c2aefa3672e9bfba1830ff1`（30391 B） | **同 sha（0 B / 0 行）** | 同上 |
 | `src/store/schema-migration.ts` sha `cc5feace6e03a7afa60158c5b6af2eb5cdbcb7ec`（5731 B） | sha `cc5feace6e03a7afa60158c5b6af2eb5cdbcb7ec`（5731 B） | **同 sha（0 B / 0 行）** | 同上 |
@@ -109,7 +110,7 @@ index e47568b66..46e255d55 100644
 
 ## (f) D8 写集（口径 = `merge-base`，非死 SHA）
 
-`git diff --name-only $(git merge-base origin/local-main HEAD)..HEAD`，`MERGE_BASE=68bf5759878a458b5e5ceb324a32878660155517`，共 **30 文件**：
+`git diff --name-only $(git merge-base origin/local-main HEAD)..HEAD`，`MERGE_BASE=68bf5759878a458b5e5ceb324a32878660155517`，共 **31 文件**（含本轮新增的复核件搬运）：
 
 ```
 .claude/claims/237.yaml
@@ -135,6 +136,7 @@ docs/synova/product-lines/evidence/237-k4-04/PR-BODY.md
 docs/synova/product-lines/evidence/237-k4-04/PROPOSAL-skill-tool-discipline.md
 docs/synova/product-lines/evidence/237-k4-04/README.md
 docs/synova/product-lines/evidence/issue1455-graph-triples-canonical-20261009.md
+docs/synova/product-lines/evidence/k4-04-verify-review-20261011.md
 src/store/migrations/004-graph-triples-rebuild.ts
 src/store/schema-migration.ts
 tests/adapters/sqlite-graph-store.legacy-schema.test.ts
@@ -153,21 +155,69 @@ TOKEN_HITS=0
 ```
 （口径：工作树全部文件；**排除 `.git` 对象库与 `node_modules`**；token 只经运行时变量/环境变量，未落任何文件、commit、PR 正文。）
 
+---
+
+## 独立复核四项结论（M6 回写 · 原文照贴）
+
+**复核员**：`独立复核员 k4-04-verify` ｜ **复核件**：`docs/synova/product-lines/evidence/k4-04-verify-review-20261011.md`（**v1.8**）｜ **对象**：新 head `09240a496935900fdf902f25d5c5c4dcb8229cca`，base `68bf5759878a458b5e5ceb324a32878660155517`
+
+**复核员结论原文**：
+> **`自验结论`：新 head `09240a496` 上全部可执行判据（C1/C2/C3/C4/C5′/C6/C7/C8/C9 ＋ D8）均通过复核员独立重跑，未发现与判据冲突之处 ⇒ `可提请独立审计`。** ⚠️ **"通过与否"归 CTO 收件闸 ＋ K3 终审**；本条不含审计结论，也不替代三项 CTO 决策。
+
+**搬运读数（当点现测，两个对象都写明；口径 = 两个对象 + 现测）**：
+
+| 对象 | 读数（现测） |
+|---|---|
+| 源 `D:\synova-wt-1455-verify\docs\synova\product-lines\evidence\k4-04-verify-review-20261011.md` | **69928 B / sha256 `A70372221E0ED25C258590982A240DA5693D02F3E3F375FBBD923A48497E36EF` / 654 个 `0x0A` / LF（CRLF=0）/ UTF-8 无 BOM** |
+| 目 本 PR 同相对路径 | `git rev-parse HEAD:…k4-04-verify-review-20261011.md` ⇒ **`c1313b22b7efb56dff861519ed78b9103c91dc43`** |
+
+`bytes_eq=true / sha_eq=true`；实施员 `git hash-object -t blob` 自出数 = **`c1313b22…`** = 队长给出的 blob sha（⇒ clean 过滤器不改动，raw == filtered）。
+
+**版本更替留痕（不许沉默）**：`v1.7 / 68611 B / 652 行`（队长首报）→ 复核员就地更新（同标 v1.7，一度为 `70493 B / 656 行`）→ **`v1.8 / 69928 B / 654 行`**（复核员收编纪律第 10 条后，按 C9 口径**自出数**）。**本 PR 以 v1.8 为准**；前两版读数已作废，仅留痕。
+
+### a) 与实测不一致处（新 head）
+1. **"捡回源"是旧树本地分支，不在 Gitea 远端**：**受控对照**证明方法有效（已知对象 blob API **HTTP 200 / 8534 B**；左对象 **HTTP 400**）；`git fetch <sha>` 与按 ref 取均失败 ⇒ 源分支从未推送。**复核员最终从只读旧仓字节级取到左对象并自证 sha** ⇒ **可核**，但正文/claims 应写清"源 = 旧树本地分支"，勿暗示远端可达。
+2. **C9 的「+1 行」是净行**：复核员自出数为 **删 2 / 增 3 / 净 +1**（一处注释由 2 行重排为 3 行）。数值不冲突，但按新口径应写清。
+3. **交付件 004（157 行）与卡面 §⑤ 所指 `db7f0503f:002-…`（124 行）不同源**（交付件源为另一分支同名 004）；语义要素一致，**未发现语义退化**。
+4. **改动 30 文件 vs 卡面 3 条**：全在 CTO v2 §3 白名单内 ⇒ **非越界**，仅账面一致。
+
+### b) 无法核实处（新 head）
+1. **`immutable=1` 在本环境不可用**这一约束：**实施员实测 + 队长转述；复核员未亲测**（未再触碰真库）。
+2. **Z8 提案件条目 2「等长替换」的"反例"是假设性**（"若换成等长串…"），**非本批实际发生**；实际那次（长度断言误报 `REPLACE FAILED`）记在复核件 §13 第 2 条 ⇒ **不判冒充实测，但反例强度弱于复核件**。
+3. **`stream-tool-loop` 本地为何不收到真 LLM 回复**：未测（只测到"本地两态皆绿"与"CI 收到真回复"两端）。
+
+### c) 跑不通处（新 head）
+1. **`/actions/runs/{n}/logs` = 404**；正确端点是 **`/actions/jobs/{id}/logs`**（200）⇒ 首探失败属**我用错端点**（与复核件 §9.2 c-3 同族：**读错口径**）。
+2. `git fetch <sha>` 直取被拒；blob API 对左对象 400 ⇒ 改走只读旧仓。
+3. **造红锚点的一次失败（CRLF）**：C3 首轮 `(?m)^  graphTriplesRebuildMigration,$` **未命中** —— 工作树该行以 **`\r`** 结尾（CRLF 检出）；改 `,\r?$` 后命中。**断言拦住了静默空替换**（未写入，`diff=0` 已核）⇒ 与纪律第 3 条同族（**先核口径/行尾再断言**）。
+4. `sqlite3` 不存在；`pnpm` 损坏（`index.js: SyntaxError`）。
+
+### d) 能否据此独立开工 / 决策（新 head）
+1. **已独立完成**：D8（30 文件 + 三禁域零命中）、C8、C9（自出数）、C5′（新正文）、绿腿（28/28）、C2/C3 双造红、C4/C6、**D10 反证检查（自取日志）**。
+2. **🔴 须 CTO 决策（不由复核员代办）**：① **DDL 属 schema 面** —— 重建会移除 `confidence` / `source` / `props_json`（交付件已自标待批；生产边表 0 行 ⇒ 无行数据风险，但**列语义取舍属 CTO**）；② **Done④ 拆卡的卡号补登**；③ **CI 步骤③ 红的合并口径** —— 存量 + 环境已证，但"是否须转绿 / 是否豁免"属**流程决策**。
+3. **Z8 提案交叉核（复核员逐条）**：
+   - ✅ **无冒充实测**：该件 9 条与本件 §13 第 **1–9** 条**同组**；本件第 10 条「转述·未亲测」**未被夹带**。
+   - ✅ **我自测其条目 1 的两条 PS 5.1 声称**：`Out-File -Encoding utf8` → **`EF BB BF`（确加 BOM）**；`*>` → **`FF FE`（UTF-16LE）**（PS `5.1.26100.9444`）⇒ **实测为真**。
+   - 🔴 **须补写（条目 3）**：其"原因"写成"末行换行 / BOM / CRLF 切分"，**漏掉本批实测主因** —— UTF-8 内容按 ANSI/CP936 解码时**高字节吞 `0x0A`**；次因才是 `Measure-Object -Line` **不计空元素**。✅ **已按此补写为两效应版**。
+   - 🔴 **须补写（条目 6）**：其写"只读读数**优先 `immutable=1`**"，但本环境该法**不可用** ⇒ 应改为"**本环境实测不可用；实际口径 = `readonly: true` + `PRAGMA query_only=1`**"。✅ **已按此改**。
+4. **复核员的结论（依职责用语）**：见本节开头「复核员结论原文」。
+
+---
+
 ## CI 状态
 
-- 步骤 **① 13 组门禁 ✅**、**② 架构边界 ✅**、**③ `vitest --changed origin/local-main` ❌**（run 307/308/309/310 同型）。
-- **失败件 1** `tests/tui-v2/chat-degradation.test.ts`（6 例，`ReactCurrentOwner`）⇒ **存量红**：CI **run 281**（**另一分支** `3449c05bb`＝`fix(#337): react 回 18.3.1`）同样红在步骤 ③；本地**基线树**（`git archive 68bf57598`）复跑同组 `1 failed | 1 passed / 6 failed | 6 passed`，与 HEAD 一致。
-- **失败件 2** `tests/stream-tool-loop.test.ts:210` ⇒ **环境依赖**：本地 HEAD 与基线均通过；该用例只构造 `AgentConversation(fakeProvider)`、不建库；CI 收到真 LLM 文本（provider failover）。
+- 步骤 **① 13 组门禁 ✅**、**② 架构边界 ✅**、**③ `vitest --changed origin/local-main` ❌**（run 307/308/309/310/319 同型）。
+- **失败件 1** `tests/tui-v2/chat-degradation.test.ts`（6 例，`ReactCurrentOwner`）⇒ **存量红**（独立复核员已复做并**加强**）：run **281**（**另一分支** `3449c05bb`）与 run **319**（本卡）**失败用例名逐条对齐**（① ② ③ ④a ④b ⑤ 六条，同根因）；本地**完整 checkout 基线树**（`local-main @ 68bf57598`）复跑同组 `6 failed` / `stream-tool-loop` `6 passed`，与 HEAD 一致。
+- **失败件 2** `tests/stream-tool-loop.test.ts:210` ⇒ **环境依赖**：CI 日志原文 `expected '收到你的"测试错误"——我这边运作正常…' to contain '失败'` ⇒ 收到**真 LLM 回复**（provider failover）；本地两态皆绿；该用例只构造 `AgentConversation(fakeProvider)`、**不建库**。
+- **反证检查**（复核员独立重做，方法更强）：4 个绿 run 的日志中 `chat-degradation` / `stream-tool-loop` / `ReactCurrentOwner` **全 0 命中** ⇒ 它们**根本没跑这些用例** ⇒ **"找不到反例"成立**。
 - 两件**均不在本写集**；`--changed` 选中它们只因 `conversation-engine → sqlite-graph-store → store/schema-migration` 的**模块级依赖**。
-- 🔴 **`pending=0` 未达成**（上述存量/环境红）；处置路径（另开卡 / CI 收敛 `--changed` / 按「存量红点名」放行）**请 CTO 裁**。
-
-## 独立复核（四项）留位
-
-> 复核员请在此贴：**a** 与实测不一致处（附命令）｜**b** 无法核实处｜**c** 跑不通处｜**d** 能否据此独立开工/决策
+- 🔴 **`pending=0` 未达成**；处置路径（另开卡 / CI 收敛 `--changed` / 按「存量红点名」放行）**请 CTO 裁**。
 
 ## 遗留 / 未决
 
 1. **DDL 属 schema 面，须 CTO 逐字批**：整表重建**移除**旧库多出的 `confidence` / `source` / `props_json`（`props_json` 值已搬进 `props`）。
-2. **本地 git hooks 未安装**（`.git/hooks` 仅 `.sample`）⇒ 本地 13 组未跑；权威门禁＝Gitea CI。
-3. **Z8 提案**（`PROPOSAL-skill-tool-discipline.md`）＝提案→K3→CTO；**本批未落地** `SKILL.md`。
-4. K3 复审通过前**不合并**。
+2. **Done④ 拆卡的卡号**待 CTO 补登。
+3. **CI 步骤③ 红的合并口径**待 CTO 裁。
+4. **本地 git hooks 未安装**（`.git/hooks` 仅 `.sample`）⇒ 本地 13 组未跑；权威门禁＝Gitea CI。
+5. **Z8 提案**（`PROPOSAL-skill-tool-discipline.md`）＝提案→K3→CTO；**本批未落地** `SKILL.md`（条目 3、6 已按复核员交叉核补写）。
+6. K3 复审通过前**不合并**。
