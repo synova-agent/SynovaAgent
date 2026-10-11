@@ -42,7 +42,15 @@ install_hook() {
     # 方案1(挪CI, D468): 本地门禁软提示——失败不阻断，CI 权威（merge 前必须绿）
     body='#!/bin/bash
 # v4.8.x 方案1(挪CI): pre-commit 软提示 — 本地门禁失败不阻断，CI 权威
+# D537r2: 仅主树判据硬拦（生效层修复，A8）——钩子内先调 main-tree-guard，
+#   非 0（在主树提交 / 检查自身失败）⇒ exit 1 物理阻断；其余组维持软提示。
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+bash "$ROOT/scripts/control-tower/main-tree-guard.sh"
+_MT_RC=$?
+if [ $_MT_RC -ne 0 ]; then
+  echo "🔴 禁止在主树提交 — 请在独立 worktree 工作（SYNO_ALLOW_MAIN_TREE=1 显式放行并留痕）" >&2
+  exit 1
+fi
 bash "$ROOT/scripts/pre-commit-check.sh"
 EXIT_CODE=$?
 if [ $EXIT_CODE -ne 0 ]; then
