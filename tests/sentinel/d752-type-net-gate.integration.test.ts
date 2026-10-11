@@ -13,13 +13,26 @@
  */
 import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readdirSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const GATE = join(REPO_ROOT, 'scripts', 'control-tower', 'check-sentinel-type-net.sh');
+
+/**
+ * 活跃哨兵数 = 文件系统独立枚举（引用纪律 2026-09-26：数量一律以脚本实况为准，禁手写）。
+ * 口径与 check-sentinel-type-net.sh 门禁一致：extensions/sentinels/ 下含 manifest.json 的目录，
+ * 排除 _ 前缀（归档）与 shared（工具库）。
+ */
+function countActiveSentinels(): number {
+  const root = join(REPO_ROOT, 'extensions', 'sentinels');
+  return readdirSync(root, { withFileTypes: true })
+    .filter(e => e.isDirectory() && !e.name.startsWith('_') && e.name !== 'shared')
+    .filter(e => existsSync(join(root, e.name, 'manifest.json')))
+    .length;
+}
 
 /** 运行门禁（继承环境 + 可选沙箱根），返回 { code, stdout, stderr } */
 function runGate(root?: string): { code: number; out: string } {
@@ -54,10 +67,10 @@ function mkSandbox(typesTs: string, sentinelDirs: string[]): string {
 }
 
 describe('D752 哨兵类型网硬门禁（check-sentinel-type-net.sh）', () => {
-  it('正常路径: 真实仓库 45 个活跃哨兵全部登记 → exit 0', () => {
+  it(`正常路径: 真实仓库 ${countActiveSentinels()}/${countActiveSentinels()} 个活跃哨兵全部登记 → exit 0（N=extensions/sentinels 枚举）`, () => {
     const { code, out } = runGate();
     expect(code).toBe(0);
-    expect(out).toContain('45 个活跃哨兵全部已登记');
+    expect(out).toContain(`${countActiveSentinels()} 个活跃哨兵全部已登记`);
   });
 
   it('红分支: 沙箱缺登记 → exit 1 + 点名缺失哨兵（自动化反向验证）', () => {

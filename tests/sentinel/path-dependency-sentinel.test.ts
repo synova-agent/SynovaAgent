@@ -4,7 +4,7 @@
  *
  * 覆盖（dev doc §4，10 用例 red→green）:
  *   1. detect.ts 存在且 export pathDependencySentinel（命名对齐，exportKey 命中）
- *   2. registerLoadedSentinels 45/45 全量注册（无 path-dependency entryPoint 报错）
+ *   2. registerLoadedSentinels 全量注册（注册数 = extensions/sentinels 枚举数，动态；无 path-dependency entryPoint 报错）
  *   3. detectPathDependency 空图（0 节点）→ degraded: true
  *   4. detectPathDependency 空边（0 边）→ degraded: true
  *   5. detectPathDependency 有边 → value ∈ [0,1]
@@ -19,10 +19,24 @@
  * 测试先行（铁律 0-2/48）: 每个用例含 expect() 断言，覆盖正常/降级/边界。
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { existsSync } from 'fs';
-import { join } from 'path';
+import { existsSync, readdirSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { clearSentinelCache } from '../../src/sentinel/sentinel-loader';
 import { destroySentinelRegistry } from '../../src/sentinel/registry';
+
+/**
+ * 活跃哨兵数 = 文件系统独立枚举（引用纪律 2026-09-26：数量一律以脚本实况为准，禁手写）。
+ * 口径与 sentinel-loader 一致：extensions/sentinels/ 下含 manifest.json 的目录，
+ * 排除 _ 前缀（归档）与 shared（工具库）。
+ */
+function countActiveSentinels(): number {
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'extensions', 'sentinels');
+  return readdirSync(root, { withFileTypes: true })
+    .filter(e => e.isDirectory() && !e.name.startsWith('_') && e.name !== 'shared')
+    .filter(e => existsSync(join(root, e.name, 'manifest.json')))
+    .length;
+}
 
 // ═══ 契约（dev doc §4.5 决策 A: 阈值 0.4/0.7）═══
 // 注意: worktree 基于 main，无 D356 的 injectSentinelManifest（未合并）。
@@ -72,14 +86,16 @@ describe('D379 path-dependency 空壳补实现', () => {
     expect(typeof (obj as { check?: unknown }).check).toBe('function');
   });
 
-  // ═══ 用例 2: 45/45 全量注册 ═══
+  // ═══ 用例 2: 全量注册（N = 枚举实况）═══
 
-  it('registerLoadedSentinels 45/45 注册，无 path-dependency entryPoint 报错', async () => {
+  it(`registerLoadedSentinels 全量注册（${countActiveSentinels()}/${countActiveSentinels()}，N=extensions/sentinels 枚举），无 path-dependency entryPoint 报错`, async () => {
     const { registerLoadedSentinels } = await import('../../src/sentinel/sentinel-loader');
     clearSentinelCache();
     const { registered, errors } = await registerLoadedSentinels();
     expect(errors.filter(e => e.includes('path-dependency'))).toEqual([]);
-    expect(registered).toBe(45);
+    const expected = countActiveSentinels();
+    expect(expected).toBeGreaterThan(0);
+    expect(registered).toBe(expected);
   });
 
   // ═══ 用例 3-6: detectPathDependency 三态 ═══
