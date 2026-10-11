@@ -152,6 +152,92 @@ OUT_H6=$(DOC_TRUTH_ROOT="$CIF" bash "$SCRIPT" 2>&1); _e6=$?
 t "H6 extensions/ 下 .md 不豁免 → exit 1（豁免边界=不含 .md）" 1 $_e6
 printf '%s\n' "$OUT_H6" | grep -q 'README-scope.md' && { echo "  ✅ H6 .md 仍被点名（豁免未越界）"; PASS=$((PASS+1)); } || { echo "  ❌ H6 .md 未被点名 ⇒ 豁免越界（吞掉了说明文档）"; FAIL=$((FAIL+1)); }
 
+# ═══ H7: D782 D2 —— base 链前置（origin/local-main）回归护栏 ═══
+# 缺口（PR #250 独立复核指出）: 既有夹具只解析得到**自带的 `main` 分支** ⇒ 把 base 链改回
+#   `origin/main` 在夹具里是 **no-op**（22 例仍全绿）⇒ 这半边**零回归护栏**。
+# 本夹具让 `origin/main` 与 `origin/local-main` **指向不同提交**，且未登记件落在**两者之间**
+#   （模拟"他线已合并提交里新增的文档" —— 与老 base 把 73+ 他线提交卷进 range 同型机理）:
+#     A ← `main` 头 = refs/remotes/origin/main
+#     └─ U  docs/orphan.md（**未登记**）
+#        └─ L  docs/lm-only.md（已登记） = refs/remotes/origin/local-main
+#           └─ F  docs/feat-new.md（已登记） = HEAD（feature）
+# 两半判据（缺一即无判别力）:
+#   ① base 前置 origin/local-main ⇒ merge-base=L ⇒ range 仅本支新增 ⇒ 检查 1 件、exit 0
+#   ② 去掉 origin/local-main（base 退到 origin/main）⇒ merge-base=A ⇒ range 含 U 的未登记件
+#      ⇒ exit 1 且点名 docs/orphan.md
+echo ""
+echo "── H7. D782 D2: base 链前置（origin/local-main）回归护栏 ──"
+FORK="$FIX/fork-base"
+mkdir -p "$FORK/docs/authority" "$FORK/docs"
+printf 'documents:\n  - id: T1\n    type: prd\n    path: docs/keep.md\n' > "$FORK/docs/authority/DOCS-REGISTRY.yaml"
+: > "$FORK/docs/keep.md"
+git -C "$FORK" init -q -b main 2>/dev/null # swallow-ok:
+git -C "$FORK" config user.email t@t 2>/dev/null # swallow-ok:
+git -C "$FORK" config user.name t 2>/dev/null # swallow-ok:
+git -C "$FORK" config commit.gpgsign false 2>/dev/null # swallow-ok:
+git -C "$FORK" add -A 2>/dev/null # swallow-ok:
+git -C "$FORK" commit -q -m "chore: base" 2>/dev/null # swallow-ok:
+git -C "$FORK" update-ref refs/remotes/origin/main "$(git -C "$FORK" rev-parse HEAD)" 2>/dev/null # swallow-ok:
+git -C "$FORK" checkout -q -b local-main 2>/dev/null # swallow-ok:
+: > "$FORK/docs/orphan.md"
+git -C "$FORK" add -A 2>/dev/null # swallow-ok:
+git -C "$FORK" commit -q -m "docs(D998): 他线新增未登记文档" 2>/dev/null # swallow-ok:
+printf '  - id: T2\n    type: prd\n    path: docs/lm-only.md\n' >> "$FORK/docs/authority/DOCS-REGISTRY.yaml"
+: > "$FORK/docs/lm-only.md"
+git -C "$FORK" add -A 2>/dev/null # swallow-ok:
+git -C "$FORK" commit -q -m "docs(D998): local-main 自身新增（已登记）" 2>/dev/null # swallow-ok:
+git -C "$FORK" update-ref refs/remotes/origin/local-main "$(git -C "$FORK" rev-parse HEAD)" 2>/dev/null # swallow-ok:
+git -C "$FORK" checkout -q -b feature 2>/dev/null # swallow-ok:
+printf '  - id: T3\n    type: prd\n    path: docs/feat-new.md\n' >> "$FORK/docs/authority/DOCS-REGISTRY.yaml"
+: > "$FORK/docs/feat-new.md"
+git -C "$FORK" add -A 2>/dev/null # swallow-ok:
+git -C "$FORK" commit -q -m "docs(D998): 本支新增（已登记）" 2>/dev/null # swallow-ok:
+
+# 前提守卫 1: 纯 tracked（①untracked=0 ②staged-new=0）⇒ 判别力只可能来自源③（base 链）
+F7_UT=$(git -C "$FORK" ls-files --others --exclude-standard 2>/dev/null | wc -l | tr -d ' ') # swallow-ok:
+F7_ST=$(git -C "$FORK" diff --cached --name-only --diff-filter=A 2>/dev/null | wc -l | tr -d ' ') # swallow-ok:
+if [ "$F7_UT" = "0" ] && [ "$F7_ST" = "0" ]; then
+  echo "  ✅ H7 前提: 纯 tracked（untracked=0 / staged-new=0）⇒ 判别力只来自源③"; PASS=$((PASS+1))
+else
+  echo "  ❌ H7 前提不成立: untracked=$F7_UT staged-new=$F7_ST ⇒ 判别力被①②污染"; FAIL=$((FAIL+1))
+fi
+
+# 前提守卫 2: origin/main 与 origin/local-main 必须**指向不同提交**（Done ③；相同 ⇒ 与既有 22 例同型 = no-op）
+F7_OM=$(git -C "$FORK" rev-parse origin/main 2>/dev/null | tr -d '\n') # swallow-ok:
+F7_OLM=$(git -C "$FORK" rev-parse origin/local-main 2>/dev/null | tr -d '\n') # swallow-ok:
+if [ -n "$F7_OM" ] && [ -n "$F7_OLM" ] && [ "$F7_OM" != "$F7_OLM" ]; then
+  echo "  ✅ H7 前提: origin/main(${F7_OM:0:8}) ≠ origin/local-main(${F7_OLM:0:8})（夹具可判别 base 链）"; PASS=$((PASS+1))
+else
+  echo "  ❌ H7 前提不成立: origin/main=${F7_OM:0:8} origin/local-main=${F7_OLM:0:8} ⇒ 夹具无判别力（no-op）"; FAIL=$((FAIL+1))
+fi
+
+# 前提守卫 3: merge-base(origin/local-main, HEAD) 必须 = origin/local-main 本身（range 收窄的机械条件）
+F7_MBLM=$(git -C "$FORK" merge-base origin/local-main HEAD 2>/dev/null | tr -d '\n') # swallow-ok:
+if [ -n "$F7_OLM" ] && [ "$F7_MBLM" = "$F7_OLM" ]; then
+  echo "  ✅ H7 前提: merge-base(origin/local-main, HEAD) = origin/local-main ⇒ range 仅本支"; PASS=$((PASS+1))
+else
+  echo "  ❌ H7 前提不成立: merge-base=${F7_MBLM:0:8} ≠ origin/local-main=${F7_OLM:0:8}"; FAIL=$((FAIL+1))
+fi
+
+# H7a: base 链已前置 origin/local-main ⇒ 本支新增（已登记）通过，他线未登记件**不进检查面**
+OUT_H7=$(DOC_TRUTH_ROOT="$FORK" bash "$SCRIPT" 2>&1); _e7=$?
+t "H7a base 前置 origin/local-main → exit 0（改回 origin/main 必红）" 0 $_e7
+N_H7=$(printf '%s\n' "$OUT_H7" | sed -n 's/.*检查 \([0-9][0-9]*\) 个文档.*/\1/p' | head -1)
+if [ "${N_H7:-}" = "1" ]; then
+  echo "  ✅ H7a 检查数 N=1（range 收窄到本支新增，未把他线提交卷进来）"; PASS=$((PASS+1))
+else
+  echo "  ❌ H7a 检查数 N=${N_H7:-空}（期望 1 ⇒ base 未前置 / range 过宽）"; FAIL=$((FAIL+1))
+fi
+printf '%s\n' "$OUT_H7" | grep -q 'docs/orphan.md' && { echo "  ❌ H7a 未登记件 docs/orphan.md 进了检查面 ⇒ base 未前置"; FAIL=$((FAIL+1)); } || { echo "  ✅ H7a 未登记件未进检查面（base 前置生效）"; PASS=$((PASS+1)); }
+
+# H7b: 反例自证（改坏即红的内生版）—— 去掉 origin/local-main ⇒ base 退到 origin/main
+#   ⇒ merge-base 回到 A ⇒ range 把他线未登记件卷进来 ⇒ **必须 exit 1 且点名**
+#   （等价于"base 链未前置"：链上 origin/local-main 不可解析时行为完全相同）
+git -C "$FORK" update-ref -d refs/remotes/origin/local-main 2>/dev/null # swallow-ok:
+OUT_H7B=$(DOC_TRUTH_ROOT="$FORK" bash "$SCRIPT" 2>&1); _e7b=$?
+t "H7b base 退到 origin/main → exit 1（改坏即红）" 1 $_e7b
+printf '%s\n' "$OUT_H7B" | grep -q 'docs/orphan.md' && { echo "  ✅ H7b 未登记件被点名（夹具确有判别力）"; PASS=$((PASS+1)); } || { echo "  ❌ H7b 未登记件未被点名 ⇒ 夹具无判别力"; FAIL=$((FAIL+1)); }
+
 echo ""
 echo "── 汇总: $PASS 通过 / $FAIL 失败 ──"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1
