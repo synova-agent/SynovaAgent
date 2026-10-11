@@ -76,7 +76,7 @@ $ npx vitest run tests/stream-tool-loop.test.ts          # env: LLM_API_KEY=fals
 === VITEST-A-NOENV-EXIT=0 ===
 ```
 
-### ② 敌意环境（`LLM_API_KEY=<dummy>`，模拟 CI 有凭据）⇒ **仍 exit 0**（修复的判别力所在）
+### ② 敌意环境（`LLM_API_KEY=<dummy>`，模拟 CI 有凭据）⇒ **仍 exit 0**
 ```
 $ $env:LLM_API_KEY='sk-dummy-…'; npx vitest run tests/stream-tool-loop.test.ts
  ✓ tests/stream-tool-loop.test.ts (6 tests) 5494ms
@@ -84,13 +84,32 @@ $ $env:LLM_API_KEY='sk-dummy-…'; npx vitest run tests/stream-tool-loop.test.ts
       Tests  6 passed (6)
 === VITEST-B-DUMMYKEY-EXIT=0 ===
 ```
-🔴 日志里**没有** `无 DeepSeek 备用凭据 — failover 未启用`（该行只在 `buildFallbackProvider` 被调用时打）⇒ 反证构造函数**根本没走 env 派生**。
+🔴 **判别式 = 【链名】**（只读属性，**零网络调用**；读数见 §一 [A]/[B]）：
+```
+修后（`{ fallbackProvider: null }`） ⇒ chain_name = **fake-primary-throws**            （单 provider，链上无真实 provider）
+修前（`undefined`，走 env 派生）     ⇒ chain_name = **chain(fake-primary-throws→deepseek)**（真实 provider 在链上）
+```
+
+> ⚠️ **自纠（本件初版判据被独立复核员证伪，2026-10-12）**：本件初版在这里写过
+> 「日志里**没有** `无 DeepSeek 备用凭据 — failover 未启用` ⇒ 反证构造函数**未走 env 派生**」。**该推理无效。**
+> **源码条件**（`buildFallbackProvider`）：那行 `log.info` 只在 `if (!deepseekKey) { … }` 分支内 ⇒
+> 打印条件 = **函数被调用 ∧ `LLM_API_KEY` 与 `DEEPSEEK_API_KEY` 均缺失**。
+> ② 的环境里 **dummy key 在场** ⇒ **即便构造函数真的走了派生，该行也不会打**
+> ⇒ **修前/修后两态都恒 0 行 ⇒ 零判别力**（典型的"无判别力判据"，正是本卡要治的那类病）。
+> **复核员正对照（同场地、零网络）**：未修 + 无凭据 ⇒ 该行 **11 行**（说明仪器看得见它）；修后 + 无凭据 ⇒ **0 行**；修后 + dummy ⇒ **0 行**；
+>   其 live（未修 + dummy）⇒ **4×401** + `Provider 失败，尝试下一个`，**同样 0 行** ⇒ 直接证明该行不可判别。
+> ⇒ **本件已改用【链名判别】，并声明：本件不再以该日志行的有无作为任何结论的依据。**
 
 ### ③ 反例（CTO 指定改法：把 7 处的 `null` 去掉）
 ```
 [B] 去 null + dummy 凭据 ⇒ 链名 = chain(fake-primary-throws→deepseek)   ⇒ 真实 provider 在链上
 [C] 有可解析的 fallback（= CI 有效凭据的等价物）⇒ 目标断言 含'失败' = false ⇒ **必红**
 ```
+🔴 **[C] 的性质必须写明：它是【断言级仿真】，不是 live 复现** ——
+它用一个**本地 fake** 扮演"env 派生出的真 provider 能成功返回"的角色，从而在**离线、零网络**下把
+"fallback 可解析 ⇒ 目标断言必红"这一**因果链**跑通。它**不证明**真 provider 真出网（那只有 CI 侧能承担）。
+复核员判定：**「[B]/[C] 等价（结构级），不等同（live 级）」** —— `[B]` = 改坏的**机制物证**、`[C]` = 即红的**断言级等价物**。
+⇒ 读者**不得**把 `[C]` 读成 live 出网复现。
 
 ---
 
@@ -102,7 +121,7 @@ $ $env:LLM_API_KEY='sk-dummy-…'; npx vitest run tests/stream-tool-loop.test.ts
   ① 有效凭据只有 CI 侧有；② 复现它必须**真的发出请求** ⇒ 违反硬约束。
 - 本卡给的是**两段合起来等价**的离线证据：
   - **链上确有真实 provider**（`[B]` 链名 = `chain(…→deepseek)`，**只读属性、不调用 `chat()`**）
-  - **一旦 fallback 可解析，目标断言必红**（`[C]`，确定性、离线）
+  - **一旦 fallback 可解析，目标断言必红**（`[C]`，确定性、离线；🔴 **[C] = 断言级仿真，非 live 复现** —— 见 §三③）
 - 另有旁证（复核员 live 读数，非本卡产出）：同一 blob 在 CI 上以 `DEEPSEEK_API_KEY=dummy` 跑出
   `(401): Authentication Fails` ⇒ **真出网**（记录为"分工：live 物证 ≠ 离线机理"，不可互相替代）。
 
