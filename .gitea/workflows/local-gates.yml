@@ -24,10 +24,36 @@ jobs:
           git -C "$WS" fetch -q origin || true
           git -C "$WS" checkout -q -f "${{ github.sha }}" 2>/dev/null || git -C "$WS" checkout -q -f FETCH_HEAD
           echo "HEAD=$(git -C "$WS" rev-parse --short HEAD)"
-      - name: 依赖（缺失才装，一次）
+      - name: 依赖（lock 哈希指纹：变了就重装，没变才跳过）
         run: |
+          set -e
           WS=/Users/wane/.ci-work/SynovaAgent
-          if [ -d "$WS/node_modules/vitest" ]; then echo "依赖已存在"; else cd "$WS" && /usr/bin/env PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" npm ci --silent; fi
+          NODE_BIN=/Users/wane/.nvm/versions/node/v24.19.0/bin
+          # 🔴 2026-10-11 创始人裁定①：原判据 `if [ -d "$WS/node_modules/vitest" ]` 只看"装过没有"，
+          #   与 `package-lock.json` 无关 ⇒ **依赖变更在 CI 里不生效**（安全修复也一样）。
+          #   实证：CI 工作区 node_modules/react 停在 19.3.0（mtime Oct 10 16:48），
+          #         而 #337 的 lock 已是 18.3.1；日志打印「依赖已存在」⇒ 该 PR 的 CI 从未跑过 npm ci，
+          #         红是"旧树"所致，不是分支内容所致。
+          #   修法：以 lock 文件内容哈希作**缓存指纹** —— 指纹变了 ⇒ 强制重装。
+          #   ⚠️ 只改"何时装"，不改"装什么"（仍是 `npm ci`，即严格按 lock 装）。
+          HASH_FILE="$WS/.deps-lock-hash"
+          CUR_HASH="$(shasum -a 256 "$WS/package-lock.json" 2>/dev/null | awk '{print $1}')"
+          PREV_HASH="$(cat "$HASH_FILE" 2>/dev/null || true)"
+          echo "lock 哈希 = ${CUR_HASH:-<无法计算>}（上次 ${PREV_HASH:-<无>}）"
+          if [ ! -d "$WS/node_modules/vitest" ]; then
+            echo "⇒ node_modules 缺失/vitest 不在 ⇒ npm ci"
+          elif [ -z "$CUR_HASH" ]; then
+            echo "⇒ lock 哈希不可计算（fail-closed）⇒ npm ci"
+          elif [ "$CUR_HASH" = "$PREV_HASH" ]; then
+            echo "⇒ lock 未变，依赖已存在，跳过 npm ci"
+            exit 0
+          else
+            echo "⇒ lock 已变更 ⇒ 重装（这正是让依赖变更在 CI 生效的那一步）"
+          fi
+          cd "$WS"
+          /usr/bin/env PATH="$NODE_BIN:$PATH" npm ci --silent
+          printf '%s\n' "$CUR_HASH" > "$HASH_FILE"
+          echo "已重装并更新指纹 ⇒ $HASH_FILE"
       - name: ① 13 组门禁（唯一的阻断门）
         run: |
           cd /Users/wane/.ci-work/SynovaAgent
