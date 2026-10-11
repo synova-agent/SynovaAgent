@@ -942,7 +942,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       },
     ],
     // CTO 裁定 R1（2026-10-08 回填）：2-4 / 2-6 **解耦**（门禁管「写入」归 2-1b；`def_version` 已裁可空降级）⇒ dependsOn = []
-    status: 'todo',
+    status: 'done', // 回填(2026-10-12 第7批·裁定029口径)：acceptance vitest schema/insert 双 exit 0 + 反例差分实测(run_id→NOT NULL ⇒ 1 failed 具名；复原 exit 0)；数据面无 acceptance 条款。PR 待 CTO 批
     source: '施工单 2-1（拆自 2-1，按 DSH 式「一能力一包」：schema 与 writer 分离，只通过 INSERT 契约相连）',
   },
 
@@ -1135,7 +1135,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       // 两步断言由 probe 自身实现（解析成功 + 调用成功，缺一 ⇒ 非 0 退出）。
       { run: 'npx tsx scripts/control-tower/probe-compute-registry.ts', expectExit: 0 },
     ],
-    status: 'todo',
+    status: 'done', // 回填(2026-10-12 第7批·裁定029口径)：probe-compute-registry 实跑 exit 0(SUMMARY PASS presence 1/1 resolve 3/3 call 3/3) + 接线 contract-gate.ts:30 + 消费方 COMPUTE-HHI-v1。PR 待 CTO 批
     source: '施工单.md 2-6（⚠️ 先定计数口径 U-4）',
   },
   {
