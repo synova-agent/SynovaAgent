@@ -4,6 +4,7 @@
  * 42 edge type string constants from extensions/ontology/edge-types/ JSON Schema.
  * I2-Phase2: 7 KEEP + 4 MODIFY-rename + 2 @deprecated (DEPLOYS/FUNDS) + 38 NEW = 51
  * (55 JSON files - 4 renamed MODIFY old names = 51 EdgeType entries)
+ * +1 (#190 K12-07 目标分解边 GOAL_DECOMPOSITION) = 52 条目 / 56 JSON 文件
  * Replaces old SOGEdgeType enum. DO NOT add backward-compatible aliases.
  *
  * KEEP (7): SIGNAL_TRANSMITS, INCENTIVE_BINDS, DECISION_CONCENTRATES, LOCKS_IN,
@@ -87,12 +88,15 @@ export const EdgeType = {
   KNOWLEDGE_REUSE: 'KNOWLEDGE_REUSE',
   REPUTATION_FLYWHEEL: 'REPUTATION_FLYWHEEL',
   RETENTION_PROTECTS_KNOWLEDGE: 'RETENTION_PROTECTS_KNOWLEDGE',
+
+  // ── +1 (#190 K12-07) — 目标一致: 目标分解边（内容面真源 extensions/ontology/edge-types/goal_decomposition.json）──
+  GOAL_DECOMPOSITION: 'GOAL_DECOMPOSITION',
 } as const;
 
-/** Union type of all 51 edge type string values */
+/** Union type of all 52 edge type string values */
 export type EdgeType = typeof EdgeType[keyof typeof EdgeType];
 
-/** All 51 edge types in a flat array */
+/** All 52 edge types in a flat array */
 export const ALL_EDGE_TYPES: readonly EdgeType[] = [
   // KEEP (7)
   EdgeType.SIGNAL_TRANSMITS,
@@ -152,4 +156,7 @@ export const ALL_EDGE_TYPES: readonly EdgeType[] = [
   EdgeType.KNOWLEDGE_REUSE,
   EdgeType.REPUTATION_FLYWHEEL,
   EdgeType.RETENTION_PROTECTS_KNOWLEDGE,
+
+  // +1 (#190 K12-07): 目标分解边
+  EdgeType.GOAL_DECOMPOSITION,
 ] as const;
