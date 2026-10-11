@@ -36,6 +36,8 @@ jobs:
           #         而 D734 是"PR 预算"，对着集成分支账本总额判必然恒红 ⇒ 红灯失去信息量。
           #   执法位置改回：① 本地提交时软提示 ② 开 PR 时由审查人/CTO 人工判（13 组其余照常）
           export SYNO_SKIP_PR_BUDGET=1
+          # 登记件不变量（CTO 2026-10-11 立：机器真源零约束曾致 id 撞号 + 误改他项）
+          node_modules/.bin/tsx scripts/control-tower/check-registry-invariants.ts || exit 1
           PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" SYNO_CI=1 bash scripts/pre-commit-check.sh
       - name: ② 架构边界（快，阻断）
         run: cd /Users/wane/.ci-work/SynovaAgent && PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash scripts/check-architecture.sh
