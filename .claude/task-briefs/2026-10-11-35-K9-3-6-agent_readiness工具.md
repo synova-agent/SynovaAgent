@@ -9,19 +9,21 @@
 **② 解决什么问题**：实测：无该工具 ⇒ §4.7「软件 Agent 就绪度」无执行体。
 **③ 做完对项目的推动**：宪章 §4.7 是**第二优先**，而 `agent_readiness` 正是它的第一个可定价交付物（软件要服务于 agent 的判据面）。
 **④ 🔴 不做行不行**：**可以做但有代价**（欠账级）：不做则 §4.7 缺一个交付物，但矩阵触发点（`3-7`）仍可先落。
-**⑤ 现在有什么基础（代码盘点，as_of local-main）**：✅ `skills/org/agent-readiness.md`、`extensions/skills/`（83 件）、`src/agent/`、判据 `probe-agent-readiness.ts` 在写集。
+**⑤ 现在有什么基础（**判据实测 @ 68bf57598 ＋ 路径实测**）**：❌ **判据未达标**（见下「状态」的失败项）；已存在落点：`skills/org/agent-readiness.md`、`extensions/skills/`、`src/agent/`；**待新建**：`scripts/control-tower/probe-agent-readiness.ts`。
 **⑥ 还需要做什么**：以文件驱动落技能 + 工具 + 判据绿。
 **⑦ DSH 借鉴方式**：**参考自研**：借 DSH「**技能/能力文件化 ＋ 以工具暴露**」—— `dsh-skill-filesystem/lib/index.js:888`；`dsh-tool-skill` 为工具侧。
 **⑧ 涉及代码文件**：skills/org/agent-readiness.md｜extensions/skills/｜src/agent/｜scripts/control-tower/probe-agent-readiness.ts
 
 ## Q0: 定位 — 项目拼图 + 文件审计
 本卡属 **K9**（技能面（建档/预设/追问已并入 K12）），架构位置 = ⑤ 导航层（AI 化就绪度）。
-文件审计（实测 `git ls-tree origin/local-main`，as_of `7c6315029`）：
+文件审计（**逐条实测 @ 68bf5759878a4**）：
+### 已存在（本卡可直接复用/修改）
 - skills/org/agent-readiness.md
-- extensions/skills/
-- src/agent/
+- extensions/skills/（目录）
+- src/agent/（目录）
+### 待新建（写集，尚未存在）
 - scripts/control-tower/probe-agent-readiness.ts
-结论：按 §〇 ⑤/⑥ 判定为**新建/接线/收口**。
+结论：NOT-DONE。
 
 ## Q1: 调研
 a) 业界：对外可见/安全相关的动作必须有**独立于执行者的判据**（Anthropic 工程基线）。
@@ -86,7 +88,7 @@ c) memory 教训：**铁律 0-2**（接线失败 4 次：组件过单测但从�
 #CRITERIA: B
 
 ## 写集
-（单源 = 登记件 `paths`；glob 已折为**目录裸路径**，禁通配符与反引号 —— brief-compose D1231/#1308）
+（单源 = 登记件 `paths`；glob 已折为**目录裸路径**，禁通配符与反引号（格式依据：brief-compose D1231））
 - skills/org/agent-readiness.md
 - extensions/skills/
 - src/agent/
@@ -94,7 +96,21 @@ c) memory 教训：**铁律 0-2**（接线失败 4 次：组件过单测但从�
 - .claude/task-briefs/2026-10-11-35-K9-3-6-agent_readiness工具.md
 
 ## Done 标准
+（**逐条抄自登记件 `acceptance` 原文，未改写**）
 - [ ] verify: `npx tsx scripts/control-tower/probe-agent-readiness.ts`（expectExit 0）
-- [ ] 反例（改坏即红）：按本卡 §〇 ⑥ 构造反例并留原始输出
+- [ ] 反例（改坏即红）：按文末「状态」列出的失败/待建项构造反例并留原始输出
 - [ ] 三态：未实现必须 **exit 2**（0=通过／1=失败／2=未实现 —— 禁假绿）
-- [ ] `npx tsc --noEmit` 零错误
+
+---
+## 状态（判据实测 · 独立复核回写 · 2026-10-11）
+
+基线：`68bf5759878a458b5e5ceb324a32878660155517`（**本分支 base**，非旧 as_of）
+判定：**NOT-DONE**（判据逐条：FAIL）
+登记件 status：`todo` ｜ 来源卡：#35
+
+❌ 判据未达标 —— 逐条判据失败项见 Done 段。
+
+### 独立复核结论（fresh context · 三批各自复核）
+本批经独立复核，判定：不能按现状直接开工，需按本卡修订后执行。
+修订项：as_of 重钉 ／ ⑤ 与 Q0 分「已存在 / 待新建」两栏 ／ Done 逐条抄登记件原文 ／ 去 #1308 引用。
+真源（`施工项登记.ts`）缺陷另由 CTO 处置（判据语法坏 / 假绿判据 / status 与 issue state 分歧）。
