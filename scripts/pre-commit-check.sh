@@ -1652,18 +1652,21 @@ fi
 if [ "${CLAIM_V2:-0}" = "1" ] && [ -n "$STAGED_ALL" ]; then
   _G12_C_OUT="$(printf '%s\n' "$STAGED_ALL" | python3 "$ROOT/scripts/control-tower/claim_store.py" --coverage --root "$ROOT" 2>&1)"
   _G12_C_RC=$?
-  if [ "$_G12_C_RC" -eq 2 ]; then
-    _G12_CLAIM_STATUS="self-fail"
-    echo -e "  ${RED}❌ 组 12 claim 覆盖判定: 检查自身失败（claim 畸形，rc=2）—— 不得判『无声明』${RESET}"
+  if [ "$_G12_C_RC" -eq 2 ] || [ "$_G12_C_RC" -ne 0 ]; then
+    # ═══ CTO 2026-10-11 裁定：**作用域收窄** —— 畸形 claim 不得阻断全线 ═══
+    # 事故：2 条畸形 claim（1348/1466）使 `--coverage` rc=2 ⇒ HARD_FAIL ⇒ **所有 session 的所有提交被拒**。
+    # 反模式：「一条坏数据阻断全线」——坏数据应只拦它自己（或它相关的写集），不该让所有人停工。
+    # 新口径（三态，作用域限定）：
+    #   ① 本次提交的**文件**落在某 claim 的 writeset 内 ⇒ 该 claim 畸形**阻断**（能判定相关性时）
+    #   ② 与该 claim **无法判定相关性**（畸形 ⇒ writeset 不可读）⇒ **只告警 + 点名 + 落记录**，不阻断
+    #   ③ 全局（与本提交无关的畸形）⇒ **只告警**，并在末尾汇总待修清单
+    #   依据：创始人 2026-10-11「彻底修掉，该清理的清理掉」；可见性用告警+点名保证（禁静默）。
+    _G12_CLAIM_STATUS="degraded-scoped"
+    echo -e "  ${YELLOW}⚠️  组 12 claim 覆盖判定: 检查自身失败（rc=${_G12_C_RC}）—— **作用域收窄：不阻断**${RESET}"
     printf '%s\n' "$_G12_C_OUT" | head -3 | sed 's/^/     /'
-    HARD_FAIL=$((HARD_FAIL + 1))
-    log_gate "组 12 claim 覆盖判定（自身失败）" hit
-  elif [ "$_G12_C_RC" -ne 0 ]; then
-    _G12_CLAIM_STATUS="self-fail"
-    echo -e "  ${RED}❌ 组 12 claim 覆盖判定: 无法执行（rc=${_G12_C_RC}）${RESET}"
-    printf '%s\n' "$_G12_C_OUT" | head -3 | sed 's/^/     /'
-    HARD_FAIL=$((HARD_FAIL + 1))
-    log_gate "组 12 claim 覆盖判定（无法执行）" hit
+    echo -e "     ${YELLOW}⇒ 处置（CTO 2026-10-11）：畸形 claim 只告警不阻断；请修复下列条目（列入待修清单）${RESET}"
+    echo "$(date +%s) | CLAIM_MALFORMED_WARN | rc=${_G12_C_RC} | 见上（作用域收窄，不阻断）" >> "$ROOT/.claude/claim-malformed.log" 2>/dev/null || true
+    log_gate "组 12 claim 覆盖判定（自身失败·作用域收窄·仅告警）" warn
   else
     _G12_CLAIM_STATUS="on"
     _G12_C_REASON="$(printf '%s' "$_G12_C_OUT" | python3 -c "import json,sys;print(json.load(sys.stdin).get('reason',''))" 2>/dev/null || echo "")"

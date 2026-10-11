@@ -53,9 +53,11 @@ for (const i of constructionItems) {
 }
 warn(inconsistent.length === 0, `③ 归属一致（存量告警，不计阻断）：${inconsistent.length} 处不一致${inconsistent.length ? ` ｜ ${inconsistent.slice(0, 5).join('; ')}` : ''}`);
 
-// ④ 命名规则（存量豁免：豁免名单 = K4 既有 items；其余裸"批次-序号"式报 ⚠️ 不计红）
-const legacyNew = constructionItems.filter((i) => LEGACY_RE.test(i.id) && !LEGACY_ALLOW.has(i.id)).map((i) => i.id);
-console.log(`  ${legacyNew.length ? '⚠️' : '✅'} ④ 命名规则：新项应使用 \`<前缀>-<序号>\` 式；存量豁免 ${LEGACY_ALLOW.size} 项${legacyNew.length ? ` ｜ 待收敛 ${legacyNew.length} 项: ${legacyNew.slice(0, 6).join(', ')}` : ''}`);
+// ④ 命名规则（CTO 2026-10-11：**存量白名单豁免；白名单外一律阻断**）
+//   白名单 = 本裁定生效时已在册的裸"批次-序号"式项（冻结）；此后新增裸式 ⇒ 阻断。
+const LEGACY_FROZEN = new Set(['0-1', '0-10', '0-11', '0-12', '0-2', '0-3', '0-4', '0-5', '0-6', '0-7', '0-8', '0-9', '0-9bis', '1-1', '1-2', '1-3', '1-4', '1-5', '1-6', '1-7', '1-7bis', '1-8', '1-9', '2-1a', '2-1b', '2-2', '2-3', '2-4', '2-4bis', '2-6', '2-7', '3-10', '3-11', '3-12', '3-2', '3-5', '3-6', '3-7', '3-8', '3-9']);
+const legacyNew = constructionItems.filter((i) => LEGACY_RE.test(i.id) && !LEGACY_FROZEN.has(i.id)).map((i) => i.id);
+say(legacyNew.length === 0, `④ 命名规则：新项须 \`<前缀>-<序号>\` 式（存量冻结 ${LEGACY_FROZEN.size} 项豁免）${legacyNew.length ? ` ｜ 🔴 白名单外裸式: ${legacyNew.slice(0, 6).join(', ')}` : ''}`);
 
 
 // ⑤ 【CTO 2026-10-11 立】issue 号唯一性（**唯一真源**）—— 手写 id 会撞，issue 号不会
