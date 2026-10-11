@@ -40,7 +40,7 @@ describe('#1465 content-registry — V1 20/20 项有明确状态', () => {
   it('注册表项与 extensions/ 顶层目录集双向相等', () => {
     const snap = describeContentRegistry();
     expect(snap.entries.map((e) => e.dir).sort()).toEqual(extensionDirsOnDisk());
-    expect(snap.counts.total).toBe(20);
+    expect(snap.counts.total).toBe(21);
   });
 
   it('type 唯一；status / face 落在闭合枚举内（枚举取自快照单源）', () => {
@@ -107,7 +107,7 @@ describe('#1465 content-registry — 正常路径（真实装配，非 grep）',
   it('非 reachable 项（retired / pending-cto）不入装配面', async () => {
     const snap = describeContentRegistry();
     const notWired = snap.entries.filter((e) => e.status !== 'reachable').map((e) => e.type);
-    expect(notWired.length).toBe(3);
+    expect(notWired.length).toBe(4);
     const report = await initContentTypes();
     for (const t of notWired) {
       expect(report.results.some((r) => r.type === t)).toBe(false);
