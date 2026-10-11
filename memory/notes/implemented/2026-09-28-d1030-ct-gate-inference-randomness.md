@@ -1,5 +1,5 @@
 ---
-状态: proposed
+状态: implemented（2026-10-11 迁移：task-state=impl_done ＋ 落地证据见文末）
 日期: 2026-09-28
 决策: 门禁的输入一旦含"VCS 自动生成的标识符"（GitHub 合成 merge 提交主题里的 head/base SHA），判据必须**整体不依赖它**——`merge_writeset_gate.py` 的 D# 推断改为：合成 merge 主题不参与推断 + 正则加 hex 邻接边界 + 裸 SHA 词元判无效 + 输出面 SHA 脱敏；回退链落 `--first-parent` + `merge_base..HEAD` 范围 + 合成 merge 时锚 `HEAD^2`；声明源多命中改 fail-closed 逐条点名。
 理由: 旧 `DID_RE = [Dd]\d+` 从 `Merge <head_sha> into <base_sha>` 里抠出伪任务号 ⇒ **同一份代码在不同 SHA 上得出不同 D#**（实测 5 个 SHA → D54 / D4 / D0 / D34 / D34），门禁结论不可复现；且伪号会把声明源对到别的任务上，夹带判定整体失真。
@@ -66,3 +66,19 @@ CT-C 的 ⑱（`--first-parent` 判别夹具）**首版未给显式提交日期*
 
 `proposed/`（本 Note）→ 待 K3 独立审计通过后 `git mv` 到 `implemented/` 并更新头「状态」；
 `task-state/D1030.json` 的 status 同步 `claimed → impl_done`（README 四态迁移规则）。
+
+## 落地证据（2026-10-11 复核 · 迁移依据）
+
+> 迁移判据：`memory/notes/README.md`「四态迁移语义」＝ `task-state = impl_done` 即达。
+
+```
+$ grep -n "^DID_RE" scripts/control-tower/merge_writeset_gate.py
+204:DID_RE = re.compile(r"(?<![0-9a-fA-F])[Dd]\d+(?![0-9a-fA-F])")
+$ sed -n '194,204p' scripts/control-tower/merge_writeset_gate.py
+#   旧 DID_RE = `[Dd]\d+` 从**整条主题**贪婪取号 → 从 SHA 里抠出伪号：
+#   ② `DID_RE` 加**十六进制邻接边界**：紧邻其它十六进制字符的 `d<数字>` 属于一个 hex blob
+$ grep -n '"status"' task-state/D1030.json
+  "status": "impl_done",
+```
+
+判定：**真僵尸** —— 本 Note 的核心决策「正则加 hex 邻接边界」在 `:204` **物理在位** ⇒ `git mv` 到 `implemented/`。

@@ -1,0 +1,36 @@
+# .claude/claims/339.yaml — #339（D472 僵尸 Note 清场）写集声明（S0 源）
+#
+# 为什么用 claim 而不是 task-state/<D#>.json：本卡是 **issue 号卡（#339）**，
+#   D 号已退役（AGENTS.md V6.0：任务唯一编号 = Issue 号）⇒ D708 门禁的 S1/S2/S3
+#   （按 `<D#>*` 定位）找不到声明源。`.claude/claims/<issue>.yaml` = S0 声明源，
+#   存在时**优先于 D# 链**（merge_writeset_gate.py §833-835）。
+# 先例：.claude/claims/184.yaml ／ 337.yaml ／ 980.yaml。
+#
+# 本卡性质：**决策沉淀链的存量清理**（治理面，不属宪章 ⓪–⑤/⑥/−1 任一块）。
+#   病根：6 条 Note 内容早已落地（task-state=impl_done ＋ 逐条代码取证），但没 `git mv` 到 implemented/
+#         ⇒ D472 迁移门禁一见暂存 memory/notes/proposed/** 就 exit 1（本地与 CI 两姿态实测）。
+#
+# 声明纪律：只列本 PR 真正改动的文件，不预授权。
+#   ⚠️ `git mv` 载体 = 同提交内出现 proposed/ 删除 ＋ implemented/ 新增 ⇒ 两侧都列。
+#   ⚠️ 本写集**不含** `scripts/control-tower/check-notes-lifecycle.sh` —— 该文件属治理面，
+#      按卡面「共写声明」**串行让位**：本卡只出草案 ＋ 夹具 ＋ 实测，接入由 CTO 裁。
+writeset:
+  - .claude/claims/339.yaml
+  - .claude/task-briefs/2026-10-11-472-d472-zombie-notes.md
+  - memory/notes/proposed/2026-09-28-D1039-ci-signal-classify.md
+  - memory/notes/proposed/2026-09-28-D1044-b1-archive-outbound.md
+  - memory/notes/proposed/2026-09-28-D1050-b2-task-briefs-outbound.md
+  - memory/notes/proposed/2026-09-28-d1030-ct-gate-inference-randomness.md
+  - memory/notes/proposed/2026-10-07-d1219-position-legislation.md
+  - memory/notes/proposed/2026-10-07-d1220-da2-retirement.md
+  - memory/notes/implemented/2026-09-28-D1039-ci-signal-classify.md
+  - memory/notes/implemented/2026-09-28-D1044-b1-archive-outbound.md
+  - memory/notes/implemented/2026-09-28-D1050-b2-task-briefs-outbound.md
+  - memory/notes/implemented/2026-09-28-d1030-ct-gate-inference-randomness.md
+  - memory/notes/implemented/2026-10-07-d1219-position-legislation.md
+  - memory/notes/implemented/2026-10-07-d1220-da2-retirement.md
+done:
+  - verify: bash scripts/control-tower/check-notes-lifecycle.sh
+  - verify: bash -c "[ \"\$(git show -M --summary HEAD | grep -c '^ rename')\" = 6 ]"
+  - verify: bash -c "git show -M --diff-filter=D --name-only HEAD | grep -c '^memory/notes/' | grep -q ^0$"
+note: 六条僵尸逐条以「命令 ＋ 原始输出」取证（D1039 ci-signal-classify 3 件/ci.yml 12 处引用；D1044 archive 294 件且主仓残留 0；D1050 出库 281/主仓 368；D1030 merge_writeset_gate.py:204 DID_RE 边界；D1219 alloc-task-id.sh:297；D1220 bf226e3b1+2bedc25da 均 local-main ancestor）。触发面实测：只有暂存 memory/notes/proposed/** 才触发，本地 SYNO_CI=0 与 CI SYNO_CI=1 两姿态均 exit 1 ⇒ 在飞 PR #224 中招。本卡不执行任何 rm。迁移后门禁 RC=0。🔴 判据自纠：初版「git diff --diff-filter=D 不出现 memory/notes」**恒成立零判别力**（git 默认重命名检测把删+增记为 R）⇒ 改为「重命名对数=6 ∧ 未被配对成重命名的删除=0」；两面实测对照见卡面 Done 注。

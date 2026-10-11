@@ -2000,6 +2000,37 @@ else
   soft_check "DSH 断面一致性 (D943)" "${_DSH_ANCHOR_HITS}"
 fi
 
+# ═── K12-13（#196）内容面耦合门禁 CC1–CC4（附加检查；不并入 13 组编号——同 D782/D734 接入模式）──
+# 门禁: scripts/check-content-coupling.sh（判据源: 院方《extensions内容面规范-v0.1》§3.5）
+# 为何接入: 既有 check-architecture.sh 对 extensions/ **零覆盖**
+#   （门禁头注释实测 `grep -c extensions scripts/check-architecture.sh` = 0）⇒ 引擎/内容边界无执法方。
+# 语义（门禁自带，不在本文件里另造一套）: **存量走棘轮只报数、新增必拦** ——
+#   · 存量 **237 条**（CC1 85 文件/113 type＋30 值｜CC2 1 文件/94 type）登记在门禁的 `CC-BASELINE` 段；
+#     actual ≤ baseline ⇒ 只打印、**不判红** ⇒ 「存量不红」由门禁棘轮保证，本接入点**不写存量豁免逻辑**。
+#   · 基线外新增 ⇒ 门禁 exit 1 ⇒ 本块 v5_soft ⇒ **本地软提示 / CI(SYNO_CI=1) 硬阻断**（D515/D516 先例）。
+# 实测（本卡，@ rebase 后基线）: local 无新增 ⇒ rc 0；造一条 CC2 新增 ⇒ local rc 0 但报「新增 1」
+#   ｜ SYNO_CI=1 ⇒ rc 1（VIOLATION new=1）｜ CC_STRICT=1 ⇒ rc 1（存量亦判红）。
+# 🔴 判分支必须看**新增数**而不是只看 rc: local 模式契约就是 exit 0（只报数），
+#   若此处 `[ rc -ne 0 ]` 判分支 ⇒ **本地一个字都不印**（实测踩过：造违规后 pre-commit 零提及
+#   ⇒ 「存量只告警」的告警面在本地不存在，接入形同虚设）。故先取 `新增 N`，N>0 才报。
+# 判据顺序纪律: 本块在**结果汇总之前**——放末尾早退之后等于永不点火（本文件既有教训，D782 区块同款）。
+if [ -f "$ROOT/scripts/check-content-coupling.sh" ]; then
+  _CC_OUT="$(bash "$ROOT/scripts/check-content-coupling.sh" 2>&1)"; _CC_RC=$?
+  # ⚠️ 取数必须锁**末行**（`CONTENT-COUPLING:`）：逐行输出里 CC1/CC2 各自带「新增 N」，
+  #   若对整段 `grep -oE '新增 [0-9]+' | head -1` 会抓到 **CC1 的「新增 0」**（实测踩过 ⇒
+  #   有新增却不报 = 假绿）。末行才是全局真值。
+  _CC_LINE="$(printf '%s' "$_CC_OUT" | grep -E '^CONTENT-COUPLING:' | tail -1)"
+  _CC_NEW="$(printf '%s' "$_CC_LINE" | grep -oE '新增 [0-9]+' | head -1 | grep -oE '[0-9]+' || true)"
+  _CC_VIOL="$(printf '%s' "$_CC_LINE" | grep -oE 'new=[0-9]+' | head -1 | grep -oE '[0-9]+' || true)"
+  if [ "${_CC_NEW:-0}" != "0" ] || [ "${_CC_VIOL:-0}" != "0" ] || [ "$_CC_RC" -ne 0 ]; then
+    printf '%s\n' "$_CC_OUT" | grep -E "CC[1-4] NEW" | head -5 | sed 's/^/     /'
+    v5_soft "内容面耦合门禁 CC1–CC4（K12-13/#196；新增 ${_CC_NEW:-${_CC_VIOL:-?}} 条）"
+  fi
+else
+  # 常驻门禁缺脚本 ⇒ 不许静默跳过（本文件既有教训：脚本缺失若只观测 ⇒ 未登记件全放行）
+  self_fail_missing_script "内容面耦合门禁 CC1–CC4" "scripts/check-content-coupling.sh"
+fi
+
 # V3: 写 CP3 检查点
 mkdir -p "$ROOT/.codex/checkpoints"
 G10_FAIL=$([ -n "$MISMATCH" ] && echo "true" || echo "false")

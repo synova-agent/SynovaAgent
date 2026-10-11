@@ -1,0 +1,26 @@
+# .claude/claims/344.yaml — #344（CI 依赖安装步 lock 哈希指纹）写集声明（S0 源）
+#
+# 为什么用 claim：本卡是 **issue 号卡（#344）**；D 号已退役（AGENTS.md V6.0：任务唯一编号 = Issue 号）。
+#   `.claude/claims/<issue>.yaml` = S0 声明源，存在时优先于 D# 链（merge_writeset_gate.py §833-835）。
+# 先例：.claude/claims/{184,196,337,339,980}.yaml。
+#
+# 本卡性质：**跨卡阻塞修复**（创始人分步计划第 1 步）。不修则**所有依赖卡的 CI 都不可信**。
+#   `.gitea/workflows/local-gates.yml:30` 原判据 `if [ -d "$WS/node_modules/vitest" ]` 与 lock 无关
+#   ⇒ 依赖变更在 CI 不生效（实测：CI 树 react 停 19.3.0，而 #337 的 lock 已 18.3.1）。
+#   修法 = 创始人**裁定①** 逐字给的机制：lock 内容哈希作缓存指纹。
+#
+# 边界（如实）：**只改「何时装」，不改「装什么」**（仍是 npm ci，严格按 lock）。
+#   本卡**不夹带** `scripts/control-tower/install-deps.sh` 的脚本硬化（安装策略变更，须另裁）。
+#   已核无撞车：install-deps.test.sh 的「不得再有裸 npm ci」断言**不查 .gitea/**（零命中）。
+writeset:
+  - .claude/claims/344.yaml
+  - .claude/task-briefs/2026-10-11-344-ci-deps-fingerprint.md
+  - .gitea/workflows/local-gates.yml
+  - scripts/control-tower/ci-deps-step-sim.sh
+  - tests/control-tower/ci-deps-step-sim.test.sh
+  - memory/notes/implemented/2026-10-11-ci-deps-lock-fingerprint.md
+done:
+  - verify: bash scripts/control-tower/ci-deps-step-sim.sh
+  - verify: bash tests/control-tower/ci-deps-step-sim.test.sh
+  - verify: node -e "require('js-yaml').load(require('fs').readFileSync('.gitea/workflows/local-gates.yml','utf8'))"
+note: CI-DEPS-STEP-SIM OK（4 场景全 PASS：甲指纹一致⇒跳过且不装／乙指纹变了⇒真装并回写指纹／丙指纹缺失⇒重装 fail-closed／丁不删 node_modules）。改坏即红②：把该 step 正文换回修复前旧逻辑（步名保留）⇒ VIOLATION failures=3，甲/乙/丙 逐条点名；还原后回 OK。本卡另修 harness 自身三处假反例（--silent 不打印 added／桩 package.json 致 npm 空转／BSD sed 0,/re/ 静默不生效），已写进 harness 头注释。CI 空绿属第 2 步，本卡不动。

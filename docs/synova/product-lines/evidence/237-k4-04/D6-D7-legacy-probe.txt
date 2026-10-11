@@ -1,0 +1,37 @@
+[legacy] cols      = id, subject_type, subject_id, predicate, object_type, object_id, graph, weight, props_json, confidence, source, valid_from, valid_to, created_at
+[legacy] id_type   = INTEGER
+[legacy] rows      = 2
+[legacy] has_props_json = true | has_props = false
+node.exe : {"level":40,"time":1791723676788,"pid":52928,"hostname":"PC-202605261327","name":"synova-agent","service":"a
+dapters/sqlite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+所在位置 行:1 字符: 1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ({"level":40,"ti...降级到 DELETE 模式"}:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+{"level":30,"time":1791723676790,"pid":52928,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791723676791,"pid":52928,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791723676791,"pid":52928,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"name":"metric-readings","msg":"执行迁移 3: metric-readings"}
+{"level":30,"time":1791723676792,"pid":52928,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"msg":"迁移 3 完成"}
+{"level":30,"time":1791723676792,"pid":52928,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"name":"orgs","msg":"执行迁移 4: orgs"}
+{"level":30,"time":1791723676792,"pid":52928,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"msg":"迁移 4 完成"}
+{"level":30,"time":1791723676793,"pid":52928,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":5,"name":"graph-triples-rebuild","msg":"执行迁移 5: graph-triples-rebuild"}
+{"level":30,"time":1791723676796,"pid":52928,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":5,"msg":"迁移 5 完成"}
+[upgraded] cols    = id, graph, subject_type, subject_id, predicate, object_type, object_id, weight, props, created_at, valid_from, valid_to
+[upgraded] id_type = TEXT | has_props = true | has_props_json = false
+[D7②] canonical_12_equal = true | count = 12
+[D7②] removed_extra     = true
+[read] queryEdges N = 2
+[read] values       = [{"id":"1","type":"REVENUE_FROM","from":"c1","to":"p1","props":{"action_effect_lag":"3-6_months"}},{"id":"2","type":"REVENUE_FROM","from":"c2","to":"p2","props":{"share":7}}]
+[write] createEdge  = edge-ef5089de-c795-47fd-8f72-86f093b21099 | no-throw = true
+[read-after] N      = 3 | raw_props = {"k":"v"}
+[write] from/to     = {"id":"edge-ef5089de-c795-47fd-8f72-86f093b21099","type":"OWNS","from":"c1","to":"p2","weight":1,"props":{"k":"v"}}

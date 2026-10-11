@@ -1,0 +1,130 @@
+node.exe : (!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to bec
+ome the default in a future major version of Vite:
+所在位置 行:1 字符: 1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((!) Your Vite c...ersion of Vite::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  - `__dirname` (vitest.config.ts:4:35). Use `import.meta.dirname` instead
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.0.2 D:/synova-wt-1455
+
+{"level":40,"time":1791723667510,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791723667513,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791723667513,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791723667514,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"name":"metric-readings","msg":"执行迁移 3: metric-readings"}
+{"level":30,"time":1791723667515,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"msg":"迁移 3 完成"}
+{"level":30,"time":1791723667515,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"name":"orgs","msg":"执行迁移 4: orgs"}
+{"level":30,"time":1791723667515,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"msg":"迁移 4 完成"}
+{"level":30,"time":1791723667516,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":5,"name":"graph-triples-rebuild","msg":"执行迁移 5: graph-triples-rebuild"}
+{"level":30,"time":1791723667520,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":5,"msg":"迁移 5 完成"}
+{"level":40,"time":1791723667527,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791723667527,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791723667528,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791723667528,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"name":"metric-readings","msg":"执行迁移 3: metric-readings"}
+{"level":30,"time":1791723667529,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"msg":"迁移 3 完成"}
+{"level":30,"time":1791723667529,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"name":"orgs","msg":"执行迁移 4: orgs"}
+{"level":30,"time":1791723667529,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"msg":"迁移 4 完成"}
+{"level":30,"time":1791723667529,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":5,"name":"graph-triples-rebuild","msg":"执行迁移 5: graph-triples-rebuild"}
+{"level":30,"time":1791723667532,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":5,"msg":"迁移 5 完成"}
+{"level":40,"time":1791723667535,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791723667536,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791723667536,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791723667537,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"name":"metric-readings","msg":"执行迁移 3: metric-readings"}
+{"level":30,"time":1791723667537,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"msg":"迁移 3 完成"}
+{"level":30,"time":1791723667537,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"name":"orgs","msg":"执行迁移 4: orgs"}
+{"level":30,"time":1791723667538,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"msg":"迁移 4 完成"}
+{"level":30,"time":1791723667538,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":5,"name":"graph-triples-rebuild","msg":"执行迁移 5: graph-triples-rebuild"}
+{"level":30,"time":1791723667542,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":5,"msg":"迁移 5 完成"}
+{"level":40,"time":1791723667547,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791723667547,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791723667548,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791723667548,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"name":"metric-readings","msg":"执行迁移 3: metric-readings"}
+{"level":30,"time":1791723667549,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"msg":"迁移 3 完成"}
+{"level":30,"time":1791723667549,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"name":"orgs","msg":"执行迁移 4: orgs"}
+{"level":30,"time":1791723667550,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"msg":"迁移 4 完成"}
+{"level":30,"time":1791723667550,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":5,"name":"graph-triples-rebuild","msg":"执行迁移 5: graph-triples-rebuild"}
+{"level":30,"time":1791723667553,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":5,"msg":"迁移 5 完成"}
+{"level":40,"time":1791723667563,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791723667564,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791723667565,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791723667565,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"name":"metric-readings","msg":"执行迁移 3: metric-readings"}
+{"level":30,"time":1791723667569,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"msg":"迁移 3 完成"}
+{"level":30,"time":1791723667569,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"name":"orgs","msg":"执行迁移 4: orgs"}
+{"level":30,"time":1791723667570,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"msg":"迁移 4 完成"}
+{"level":30,"time":1791723667570,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":5,"name":"graph-triples-rebuild","msg":"执行迁移 5: graph-triples-rebuild"}
+{"level":30,"time":1791723667591,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":5,"msg":"迁移 5 完成"}
+{"level":40,"time":1791723667592,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":40,"time":1791723667595,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/sql
+ite-graph-store","pragmaResult":"memory","msg":"WAL 不可用 — 降级到 DELETE 模式"}
+{"level":30,"time":1791723667596,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1791723667597,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1791723667597,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"name":"metric-readings","msg":"执行迁移 3: metric-readings"}
+{"level":30,"time":1791723667598,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":3,"msg":"迁移 3 完成"}
+{"level":30,"time":1791723667599,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"name":"orgs","msg":"执行迁移 4: orgs"}
+{"level":30,"time":1791723667600,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":4,"msg":"迁移 4 完成"}
+{"level":30,"time":1791723667600,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":5,"name":"graph-triples-rebuild","msg":"执行迁移 5: graph-triples-rebuild"}
+{"level":30,"time":1791723667601,"pid":52752,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema
+-migration","version":5,"msg":"迁移 5 完成"}
+ ✓ tests/adapters/sqlite-graph-store.legacy-schema.test.ts (6 tests) 109ms
+
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+   Start at  21:01:06
+   Duration  768ms (transform 43%, tests 28%, import 23%, worker 6%)
+

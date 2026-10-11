@@ -54,7 +54,11 @@
 
 export type BlockId =
   | 'K1' | 'K2' | 'K3' | 'K4' | 'K5'
-  | 'K6' | 'K7' | 'K8' | 'K9' | 'K10' | 'K11' | 'K12' | 'RETIRED';
+  | 'K6' | 'K7' | 'K8' | 'K9' | 'K10' | 'K11' | 'K12' | 'RETIRED'
+  /** 🔴 **来源块（非架构块）** —— CTO 裁定 001（2026-10-11，见 handbook `CTO-裁定台账.md`）：
+   *  K13 = 封仓期存量债恢复（DSH 借鉴 B-11~B-20），**按来源命名，不按宪章架构分解**。
+   *  ⚠️ 任何"按架构块统计"的口径**必须显式排除 K13**（或在统计时报"含来源块"）。 */
+  | 'K13';
 
 /** 验收步：完成标准 = 可执行命令（禁 grep 型 —— T6 面 1 反例） */
 export interface AcceptanceStep {
@@ -78,7 +82,9 @@ export interface ConstructionItem {
   id: string;
   /** 派给谁（**由 CTO 派单时指定** —— 不是"归属"。域概念已废止 2026-10-04） */
   worker: Worker;
-  batch: '第0批' | '第1批' | '第2批' | '第3批' | '第12批';
+  batch: '第0批' | '第1批' | '第2批' | '第3批' | '第12批'
+  /** 封仓期存量债恢复项（K13 来源块）⇒ **未排入任何现行批次**（CTO 裁定 001） */
+  | '未排批';
   block: BlockId;
   title: string;
   /** 写集：落点文件/目录。**卡与卡不重叠由 CTO 派单时裁定**（不再由域推导）。 */
@@ -127,6 +133,17 @@ export interface ConstructionBlock {
   blockAcceptance: AcceptanceStep[];
   source: string;
 }
+
+// ════════════════════════════════════════════════════════════════
+// 【CTO 2026-10-11 核实】三条被判有问题的判据 —— 逐条核后**两条无需改**：
+//   ① `1-7`（#19）：卡面明写「原判据作废…保留为回归锁，非完成判据」，
+//      而 `acceptance` 已是新的 V1-V5（出货运姿 403 / 匿名不得探存在性 / 遮蔽消除 / DevMode / 反例）
+//      ⇒ **作废记录只是注释里的历史留痕，判据本体已修好** ⇒ 不动。
+//   ② `2-1a`（#22）：卡面 V1 明写「**真库**表结构：sqlite3 data/synova.db .schema metric_readings
+//      ⇒ 1 表 + 3 索引 + 17 列」⇒ **判据已含真库要求**；
+//      复核说的真库无该表是**执行状态**（status: todo），不是判据缺陷 ⇒ 不动。
+//   ③ `0-10`（#55）：**名实不符**（标题 fail-open ／ 判据 fail-closed）⇒ **已正名**（见该项 title）。
+// ════════════════════════════════════════════════════════════════
 
 // ════════════════════════════════════════════════════════════════
 // 【已废止】域规则镜像（2026-10-04 创始人裁定）
@@ -277,7 +294,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     // │ - **判定人**：K3 / 独立复核（执行方不得自判）
     // └─ 抄录结束 ┘
     acceptance: [
-      { run: 'npm run probe:sentinels 2>/dev/null || npx tsx scripts/control-tower/probe-sentinels.ts', expectStdoutContains: 'cashFlow' },
+      { run: 'npx tsx tests/sentinel/probes/977-loader-registration.ts', expectStdoutContains: 'cashFlow' },
     ],
     // 📌 CTO 2026-10-08 裁定（title）：卡面标题为 GitHub 显示限制下的**截断形态**（结尾 `；或统`），本字段为**完整命名** ——
     //   两处**故意不同**，不是「未同步」。理由：登记件是**判据源**，不该被 GitHub 显示限制绑架；卡号的标识作用不依赖标题完整。
@@ -409,7 +426,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   {
     issue: 8,
     id: '0-8',
-    worker: 'win', batch: '第0批', block: 'K6',
+    worker: 'win', batch: '第0批', block: 'K5',  // 修(2026-10-11 CTO): 原 block=K6; 真值=K5 -- K6 块 name 明说 参数层 b/c 类已移入 K5, 本项 title = 参数层 c 类整个模块零引用
     title: '参数层 c 类整个模块零引用',
     // 卡面 §④「本卡可碰 = 无（处置已完成）；取证用上述 5 个既有测试（只跑不改）」；CTO 2026-10-07 已裁以卡面 5 测试为准
     paths: [
@@ -459,7 +476,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   {
     issue: 9,
     id: '0-9',
-    worker: 'win', batch: '第0批', block: 'K1',
+    worker: 'win', batch: '第0批', block: 'RETIRED',  // 修(2026-10-11 CTO): 原 block=K1 与 RETIRED 块 items=[0-9] 冲突; 真值=RETIRED (本项 source 明说 0-9 前提被证伪 => 作废, 只留痕不派单)
     title: '0-9 知识权限过滤：复测 + 根因收口',
     paths: ['src/l4/knowledge-store.ts', 'tests/l4/**'],  // CTO 2026-10-08 裁定取 (a)
     dependsOn: [],
@@ -489,7 +506,9 @@ export const constructionItems: readonly ConstructionItem[] = [
     issue: 10,
     id: '0-10',
     worker: 'win', batch: '第0批', block: 'K1',
-    title: 'fail-open 兜底（0-9 延伸）',
+    title: '无认证上下文 ⇒ fail-closed 拒绝（0-9 延伸；原称 fail-open 兜底 — 名实不符，CTO 2026-10-11 正名）',  // 修(2026-10-11 CTO): 原标题写 fail-open, 而卡面 V1/V3/V5 全是 fail-closed 语义
+    //   (V1 未认证=>0 行 / V3 拒绝型条件集非空 / V5 反例: 改回 conditions:[] 必红)
+    //   => 标题会误导执行方照标题做 => 正名
     paths: [
       'tests/security/request-context-failclosed.test.ts',
       'tests/routes/im-authprovider.test.ts',
@@ -1079,9 +1098,9 @@ export const constructionItems: readonly ConstructionItem[] = [
       //   本机实跑（ref = origin/main@ce5507826）：不过滤 = 2 文件；过滤后 = **1 行**（仅定义）⇒ 本条现在**红**（正确，工作未做）。
       { run: 'bash -c \'test "$(git grep -n "setRole(" origin/main -- src/ | grep -vcE "^[^:]+:[^:]+:[0-9]+:[[:space:]]*(\\*|//|/\\*)")" -ge 2\'', expectExit: 0 },
       // 不新造授权体系（真源副本不增）：`getProfileForRole` 文件数 ≤ 2（现值 2 ✓ 已实跑）
-      { run: 'bash -c "test \"$(git grep -l \'getProfileForRole\' origin/main -- src/ | wc -l)\" -le 2"', expectExit: 0 },
+      { run: 'test "$(git grep -l "getProfileForRole" origin/main -- src/ | wc -l | tr -d " ")" -le 2', expectExit: 0 },  // 修(2026-10-11)：原双引号外层 + 反斜杠转义 ⇒ 命令替换被外层展开 ⇒ 无参 test ⇒ 恒 exit 1；改单层引号
       // 影子身份通道守卫（I4）：`req.userId =` 文件数 = 0（现值 0 ✓ 已实跑；R64 用 `[[:space:]]` 不用 `\s`）
-      { run: 'bash -c "test \"$(git grep -l \'req\\.userId[[:space:]]*=\' origin/main -- src/ | wc -l)\" -eq 0"', expectExit: 0 },
+      { run: 'test "$(git grep -l "req\.userId[[:space:]]*=" origin/main -- src/ | wc -l | tr -d " ")" -eq 0', expectExit: 0 },  // 修(2026-10-11)：原双层引号+反斜杠转义 ⇒ 无参 test ⇒ 恒 exit 1
     ],
     status: 'todo',
     source: '独立复核 2026-10-08 实测：`setRole()`（`src/agent/tools.ts:140` 定义）全仓零调用 ⇒ `_role` 恒 null ⇒ `:169`/`:188` 两个 `if` 恒不进入（与 0-11 拆掉的假门同病）。卡 = #1347；板字段：p1 / 未开工 / 第1批-补齐 / K2 / 不适用 / L2-真跑通 / 无阻塞',
@@ -1519,7 +1538,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       // V7 两姿态各跑（硬化姿态 + DevMode 姿态；**不依赖真有第二租户**）—— 既有件承载
       { run: 'npx vitest run tests/security/rbac-all-routes.test.ts', expectExit: 0 },
       // I4 守卫（R42 口径 + R66 显式 ref + R64 `[[:space:]]`）：影子身份通道零 —— 现值 0 ✓ 已实跑
-      { run: 'bash -c "test \"$(git grep -l \'req\\.userId[[:space:]]*=\' origin/main -- src/ | wc -l)\" -eq 0"', expectExit: 0 },
+      { run: 'test "$(git grep -l "req\.userId[[:space:]]*=" origin/main -- src/ | wc -l | tr -d " ")" -eq 0', expectExit: 0 },  // 修(2026-10-11)：原双层引号+反斜杠转义 ⇒ 无参 test ⇒ 恒 exit 1
     ],
     status: 'todo',
     source: '产品线 2026-10-05 独立复核四姿态实测：DevMode 无 secret 姿态下匿名 200 + 真实工作台数据 ⇒ 1-7 的守卫是身份级非越权级。根因=RbacContext 缺 org/team 维度。CTO 已批立项；**权限模型接口先冻结**（创始人 2026-10-05 裁）。'
@@ -1940,6 +1959,122 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: 'CTO 2026-10-11 复核实测：13 个探针现存 0 个 ⇒ "能跑"一级全卡不成立 ⇒ 单独立卡先造测量梯子；契约=未实现必须 exit 2（fail-closed，铁律 31）',
   },
 
+
+  // ══ K13 · 来源块（非架构块）· CTO 裁定 001（2026-10-11）═════════════
+  // 背书链：docs/synova/coordination/派单-D760-D769-DSH借鉴卡-20260915.md ＋
+  //         task-state/D760.json–D769.json（十件，title 与卡逐张对应）
+  // ⚠️ 「架构层」字段各自指向真实架构层（⓪/⑤/⑥/横切/−1/L5）—— 与 K13 并存，不许混用。
+  {
+    issue: 315, id: 'K13-B-11', worker: 'win', batch: '未排批', block: 'K13',
+    title: 'MCP client 双 transport（StreamableHTTP ＋ SSE 兜底）',
+    paths: [],
+    pathTBD: true,
+    dependsOn: [],
+    acceptance: [{ run: 'echo "K13 判据待 CTO 裁（落点/写集/判据三条）—— 卡面：.claude/task-briefs/2026-10-11-315-K13-B-11-mcp-client-双transport.md"', expectStdoutContains: 'K13' }],
+    status: 'proposal',
+    source: 'CTO 裁定 001/002（2026-10-11，见 handbook CTO-裁定台账.md）：本项属 K13 **来源块**（封仓期存量债恢复，非架构块）；背书链 = 派单-D760-D769-DSH借鉴卡-20260915.md ＋ task-state/D760–D769.json。🔴 **落点/写集/判据三条待 CTO 裁**（跨模型复核 2026-10-11 指出：写集目录级致 match_path 认领恒 0；落点口径不一致）⇒ 故 `pathTBD: true` 且 status=proposal。'
+  },
+  {
+    issue: 316, id: 'K13-B-12', worker: 'win', batch: '未排批', block: 'K13',
+    title: 'webhook 事件触发路（source / rule / 目标绑定）',
+    paths: [],
+    pathTBD: true,
+    dependsOn: [],
+    acceptance: [{ run: 'echo "K13 判据待 CTO 裁（落点/写集/判据三条）—— 卡面：.claude/task-briefs/2026-10-11-316-K13-B-12-webhook-事件触发路.md"', expectStdoutContains: 'K13' }],
+    status: 'proposal',
+    source: 'CTO 裁定 001/002（2026-10-11，见 handbook CTO-裁定台账.md）：本项属 K13 **来源块**（封仓期存量债恢复，非架构块）；背书链 = 派单-D760-D769-DSH借鉴卡-20260915.md ＋ task-state/D760–D769.json。🔴 **落点/写集/判据三条待 CTO 裁**（跨模型复核 2026-10-11 指出：写集目录级致 match_path 认领恒 0；落点口径不一致）⇒ 故 `pathTBD: true` 且 status=proposal。'
+  },
+  {
+    issue: 317, id: 'K13-B-13', worker: 'win', batch: '未排批', block: 'K13',
+    title: 'goal 事件溯源状态机四件套（foldGoal 投影）',
+    paths: [],
+    pathTBD: true,
+    dependsOn: [],
+    acceptance: [{ run: 'echo "K13 判据待 CTO 裁（落点/写集/判据三条）—— 卡面：.claude/task-briefs/2026-10-11-317-K13-B-13-goal-事件溯源状态机.md"', expectStdoutContains: 'K13' }],
+    status: 'proposal',
+    source: 'CTO 裁定 001/002（2026-10-11，见 handbook CTO-裁定台账.md）：本项属 K13 **来源块**（封仓期存量债恢复，非架构块）；背书链 = 派单-D760-D769-DSH借鉴卡-20260915.md ＋ task-state/D760–D769.json。🔴 **落点/写集/判据三条待 CTO 裁**（跨模型复核 2026-10-11 指出：写集目录级致 match_path 认领恒 0；落点口径不一致）⇒ 故 `pathTBD: true` 且 status=proposal。'
+  },
+  {
+    issue: 318, id: 'K13-B-14', worker: 'win', batch: '未排批', block: 'K13',
+    title: '消息级反馈 sidecar（域 spec ＋ schema）',
+    paths: [],
+    pathTBD: true,
+    dependsOn: [],
+    acceptance: [{ run: 'echo "K13 判据待 CTO 裁（落点/写集/判据三条）—— 卡面：.claude/task-briefs/2026-10-11-318-K13-B-14-消息级反馈-sidecar.md"', expectStdoutContains: 'K13' }],
+    status: 'proposal',
+    source: 'CTO 裁定 001/002（2026-10-11，见 handbook CTO-裁定台账.md）：本项属 K13 **来源块**（封仓期存量债恢复，非架构块）；背书链 = 派单-D760-D769-DSH借鉴卡-20260915.md ＋ task-state/D760–D769.json。🔴 **落点/写集/判据三条待 CTO 裁**（跨模型复核 2026-10-11 指出：写集目录级致 match_path 认领恒 0；落点口径不一致）⇒ 故 `pathTBD: true` 且 status=proposal。'
+  },
+  {
+    issue: 319, id: 'K13-B-15', worker: 'win', batch: '未排批', block: 'K13',
+    title: '权限预设写穿（预设＝旋钮打包）',
+    paths: [],
+    pathTBD: true,
+    dependsOn: [],
+    acceptance: [{ run: 'echo "K13 判据待 CTO 裁（落点/写集/判据三条）—— 卡面：.claude/task-briefs/2026-10-11-319-K13-B-15-权限预设写穿.md"', expectStdoutContains: 'K13' }],
+    status: 'proposal',
+    source: 'CTO 裁定 001/002（2026-10-11，见 handbook CTO-裁定台账.md）：本项属 K13 **来源块**（封仓期存量债恢复，非架构块）；背书链 = 派单-D760-D769-DSH借鉴卡-20260915.md ＋ task-state/D760–D769.json。🔴 **落点/写集/判据三条待 CTO 裁**（跨模型复核 2026-10-11 指出：写集目录级致 match_path 认领恒 0；落点口径不一致）⇒ 故 `pathTBD: true` 且 status=proposal。'
+  },
+  {
+    issue: 320, id: 'K13-B-16', worker: 'win', batch: '未排批', block: 'K13',
+    title: '不可信上下文标注（跨会话引用 URI ＋ 大小上限）',
+    paths: [],
+    pathTBD: true,
+    dependsOn: [],
+    acceptance: [{ run: 'echo "K13 判据待 CTO 裁（落点/写集/判据三条）—— 卡面：.claude/task-briefs/2026-10-11-320-K13-B-16-不可信上下文标注.md"', expectStdoutContains: 'K13' }],
+    status: 'proposal',
+    source: 'CTO 裁定 001/002（2026-10-11，见 handbook CTO-裁定台账.md）：本项属 K13 **来源块**（封仓期存量债恢复，非架构块）；背书链 = 派单-D760-D769-DSH借鉴卡-20260915.md ＋ task-state/D760–D769.json。🔴 **落点/写集/判据三条待 CTO 裁**（跨模型复核 2026-10-11 指出：写集目录级致 match_path 认领恒 0；落点口径不一致）⇒ 故 `pathTBD: true` 且 status=proposal。'
+  },
+  {
+    issue: 321, id: 'K13-B-17', worker: 'win', batch: '未排批', block: 'K13',
+    title: 'skill provider 两阶段触发（dispatch）',
+    paths: [],
+    pathTBD: true,
+    dependsOn: [],
+    acceptance: [{ run: 'echo "K13 判据待 CTO 裁（落点/写集/判据三条）—— 卡面：.claude/task-briefs/2026-10-11-321-K13-B-17-skill-provider-两阶段触发.md"', expectStdoutContains: 'K13' }],
+    status: 'proposal',
+    source: 'CTO 裁定 001/002（2026-10-11，见 handbook CTO-裁定台账.md）：本项属 K13 **来源块**（封仓期存量债恢复，非架构块）；背书链 = 派单-D760-D769-DSH借鉴卡-20260915.md ＋ task-state/D760–D769.json。🔴 **落点/写集/判据三条待 CTO 裁**（跨模型复核 2026-10-11 指出：写集目录级致 match_path 认领恒 0；落点口径不一致）⇒ 故 `pathTBD: true` 且 status=proposal。'
+  },
+  {
+    issue: 322, id: 'K13-B-18', worker: 'win', batch: '未排批', block: 'K13',
+    title: '运行时不变量注册表（InvariantRegistry）',
+    paths: [],
+    pathTBD: true,
+    dependsOn: [],
+    acceptance: [{ run: 'echo "K13 判据待 CTO 裁（落点/写集/判据三条）—— 卡面：.claude/task-briefs/2026-10-11-322-K13-B-18-运行时不变量注册表.md"', expectStdoutContains: 'K13' }],
+    status: 'proposal',
+    source: 'CTO 裁定 001/002（2026-10-11，见 handbook CTO-裁定台账.md）：本项属 K13 **来源块**（封仓期存量债恢复，非架构块）；背书链 = 派单-D760-D769-DSH借鉴卡-20260915.md ＋ task-state/D760–D769.json。🔴 **落点/写集/判据三条待 CTO 裁**（跨模型复核 2026-10-11 指出：写集目录级致 match_path 认领恒 0；落点口径不一致）⇒ 故 `pathTBD: true` 且 status=proposal。'
+  },
+  {
+    issue: 323, id: 'K13-B-19', worker: 'win', batch: '未排批', block: 'K13',
+    title: '持久化分级准则（日志 vs 内存）',
+    paths: [],
+    pathTBD: true,
+    dependsOn: [],
+    acceptance: [{ run: 'echo "K13 判据待 CTO 裁（落点/写集/判据三条）—— 卡面：.claude/task-briefs/2026-10-11-323-K13-B-19-持久化分级准则.md"', expectStdoutContains: 'K13' }],
+    status: 'proposal',
+    source: 'CTO 裁定 001/002（2026-10-11，见 handbook CTO-裁定台账.md）：本项属 K13 **来源块**（封仓期存量债恢复，非架构块）；背书链 = 派单-D760-D769-DSH借鉴卡-20260915.md ＋ task-state/D760–D769.json。🔴 **落点/写集/判据三条待 CTO 裁**（跨模型复核 2026-10-11 指出：写集目录级致 match_path 认领恒 0；落点口径不一致）⇒ 故 `pathTBD: true` 且 status=proposal。'
+  },
+  {
+    issue: 324, id: 'K13-B-20', worker: 'win', batch: '未排批', block: 'K13',
+    title: '速览族六项小缺口',
+    paths: [],
+    pathTBD: true,
+    dependsOn: [],
+    acceptance: [{ run: 'echo "K13 判据待 CTO 裁（落点/写集/判据三条）—— 卡面：.claude/task-briefs/2026-10-11-324-K13-B-20-速览族六项小缺口.md"', expectStdoutContains: 'K13' }],
+    status: 'proposal',
+    source: 'CTO 裁定 001/002（2026-10-11，见 handbook CTO-裁定台账.md）：本项属 K13 **来源块**（封仓期存量债恢复，非架构块）；背书链 = 派单-D760-D769-DSH借鉴卡-20260915.md ＋ task-state/D760–D769.json。🔴 **落点/写集/判据三条待 CTO 裁**（跨模型复核 2026-10-11 指出：写集目录级致 match_path 认领恒 0；落点口径不一致）⇒ 故 `pathTBD: true` 且 status=proposal。'
+  },
+  {
+    issue: 325, id: 'K13-ANCHOR-FIX', worker: 'win', batch: '未排批', block: 'K13',
+    title: '借鉴锚点补正（M3 四文件旧口径锚点）',
+    paths: [],
+    pathTBD: true,
+    dependsOn: [],
+    acceptance: [{ run: 'echo "K13 判据待 CTO 裁（落点/写集/判据三条）—— 卡面：.claude/task-briefs/2026-10-11-325-K13-ANCHOR-FIX-借鉴锚点-M3-补正.md"', expectStdoutContains: 'K13' }],
+    status: 'proposal',
+    source: 'CTO 裁定 002（2026-10-11）**追认授权**：本项无 task-state 原件（自增第 11 张），但内容经跨模型复核证实 —— B-11 锚点三处逐字符命中；B-18 行号锚点不精确（:835 实为连接收尾）⇒ **补正有必要** ⇒ CTO 追认。范围仅限"补正借鉴锚点"。'
+  },
+
 ];
 
 // ════════════════════════════════════════════════════════════════
@@ -2004,14 +2139,17 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
     source: 'T3 §二 K4',
   },
   {
-    id: 'K5', name: '参数层（a/b/c/d 四类，护城河资产本体）', items: ['2-2', '2-6', '2-7', '0-7', '0-8', '2-3', 'PL-04'],
+    id: 'K5', name: '参数层（a/b/c/d 四类，护城河资产本体）', items: ['2-2', '2-6', '2-7', '0-8', 'PL-04'],
+    // 修(2026-10-11 CTO): 去 0-7 / 2-3 (真值属 K6: memoryStore 降级日志 / 反馈两通道);
+    // 0-8 保留 (其 block 已改为 K5, 须在 K5.items 内 -- 否则成孤儿)
     blockAcceptance: [
       { run: 'npx tsx scripts/control-tower/probe-compute-registry.ts', expectStdoutContains: 'COMPUTE-HHI-v1' },
     ],
     source: 'T3 §二 K5（🔴 无主 —— 待裁，见 §九#1）',
   },
   {
-    id: 'K6', name: '反馈·进化回环（进化侧；参数层 b/c 类已移入 K5）', items: ['0-2', '0-5', '1-4', '3-12'],
+    id: 'K6', name: '反馈·进化回环（进化侧；参数层 b/c 类已移入 K5）', items: ['0-2', '0-5', '1-4', '3-12', '0-7', '2-3'],
+    // 修(2026-10-11 CTO): 加 0-7 (补降级日志 + 补传 memoryStore => 反馈侧) / 2-3 (反馈两通道分裂)
     blockAcceptance: [
       // 🔴 原为纯 grep 型（T6 面1 否决点）⇒ 改为穿生产入口：跑一次真实进化回写，断言表行
       { run: 'npx vitest run tests/growth/evolution-writeback.test.ts', expectExit: 0 },
@@ -2063,6 +2201,15 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
       { run: 'npx tsx scripts/control-tower/probe-role-pack.ts --role finance', expectExit: 0 },
     ],
     source: '创始人 2026-10-11 裁定：① 一致性＝建档＋角色预设＋权限（三件套组装，非新机制）② 落点以《extensions 内容面规范 v0.1》为准（extensions/presets/roles/ ＋ extensions/onboarding/）③ 组织层算扩展点 ④ 架构图补（采纳 (a) 内容贴层）。本块 = K9(3-1/3-3/3-4) ＋ K11(RB-01~04) 并入 ＋ 11 项新建。',
+  },
+  {
+    id: 'K13' as BlockId, name: 'DSH 借鉴（**来源块** · 非架构块 · 封仓期存量债恢复）',
+    items: ['K13-B-11', 'K13-B-12', 'K13-B-13', 'K13-B-14', 'K13-B-15', 'K13-B-16',
+            'K13-B-17', 'K13-B-18', 'K13-B-19', 'K13-B-20', 'K13-ANCHOR-FIX'],
+    blockAcceptance: [
+      { run: 'echo "K13 来源块：判据待 CTO 裁（落点/写集/判据）—— 见 handbook CTO-裁定台账.md 裁定 001"', expectStdoutContains: 'K13' },
+    ],
+    source: 'CTO 裁定 001/002（2026-10-11，handbook `CTO-裁定台账.md`）：K13 = **来源块**（DSH 借鉴恢复，按来源命名，非宪章架构分解）；背书链 = 派单-D760-D769-DSH借鉴卡-20260915.md ＋ task-state/D760–D769.json。跨模型复核 2026-10-11 实测：真源原本**无 K13**（BlockId 无此值、66 项无此块）⇒ 本块为消除「卡有块无」而建。⚠️ 按架构块统计的口径须显式排除本块。',
   },
 
 ];
