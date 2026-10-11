@@ -95,6 +95,9 @@ extensions/ontology/edge-types/value_pricing.json`｜新探针 `probe-ontology-v
 **交互**：扫全 55 件，统计 `TBD` 残留数
 **结果**：`TBD=0`；公式 或 `unknown` 二元
 ## 架构层: ② 本体层
+#CRITERIA: B
+<!-- #CRITERIA: A/B/C/D 条件归属（v3-FINAL）｜A 诊断 / B 导航 / C 接入与权限 / D 基建兜底 -->
+
 ## 写集
 ```
 （以下 **55 条裸路径**，逐条列出，不用 glob）

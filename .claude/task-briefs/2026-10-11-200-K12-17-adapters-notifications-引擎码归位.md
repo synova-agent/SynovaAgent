@@ -76,6 +76,9 @@
 ```
 
 ## 架构层: ⓪ 连接器（adapters）＋ 交付面（notifications）
+#CRITERIA: D
+<!-- #CRITERIA: A/B/C/D 条件归属（v3-FINAL）｜A 诊断 / B 导航 / C 接入与权限 / D 基建兜底 -->
+
 ## 写集
 | 文件 | 类别 |
 |---|---|
