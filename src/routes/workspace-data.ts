@@ -49,6 +49,8 @@ import type { WorkspaceBuilderDeps } from '../growth/workspace-builder';
 import { type RbacContext } from '../middleware/rbac';
 // #1322: 租户**标量**取数（唯一合法来源 = 验签后的 req.auth，见 auth.ts:492-503）
 import { extractAuthFromRequest } from '../middleware/auth';
+// E2 / 边卡对照表：部门越权判定消费 #335 接好的单一出口（只读已解析结果，不重算身份）
+import { getCurrentDepartmentIds } from '../services/request-context';
 // #1322: 生产唯一审计写通道（AuditStore 类只有 log():void，本域接口要 write→Promise）
 import { AuditService } from '../services/audit-service';
 import { listGoalsByOrg, getGoal, updateGoalStatus } from '../growth/goal-store';
@@ -154,6 +156,35 @@ function requireOrgId(req: Request, res: Response): { rbac: RbacContext; orgId: 
     return undefined;
   }
   return { rbac, orgId };
+}
+
+/**
+ * E2 / 边卡对照表（#335 关了卡但边未通）：部门越权判定 —— **今日可表达了**。
+ *
+ * 背景：本文件头注「部门级读判据曾因 `rbac.department` 恒 undefined 而恒假 ⇒ 已撤」。
+ * #335（K12-10-WIRE）已把 `resolveContext` 接进请求路径（auth.ts 验签后、runWithContext 前）
+ * ⇒ `getCurrentDepartmentIds()`（request-context 单一出口）在请求帧内可用 ⇒ 判据不再恒假。
+ *
+ * 语义（不重算身份——只读已解析结果，铁律 L-4 不破）：
+ *   · 用户**有**部门集（depts.length > 0）⇒ `deptId` 必须 ∈ depts，或 = orgId（租户全局面，
+ *     dashboard.js:35 的既有真消费方，不误杀）⇒ 否则 403 DEPARTMENT_SCOPE_DENIED。
+ *   · 用户**无**部门集（JWT 无 departmentIds ⇒ []）⇒ 维持今日行为（租户内可读），
+ *     与文件头「已知并接受的代价」一致——**不新增第二份角色/部门判定**，真源仍是 resolveContext。
+ *
+ * @degraded 无（[] 是合法业务态"此人无部门维度"，不是故障，不记 degraded）
+ */
+function denyIfOutsideDepartmentScope(
+  req: Request, res: Response, deptId: string, orgId: string,
+): boolean {
+  const depts = getCurrentDepartmentIds();
+  if (depts.length === 0) return false; // 无部门维度 ⇒ 维持租户级行为
+  if (deptId === orgId || depts.includes(deptId)) return false;
+  log.warn(
+    { code: 'DEPARTMENT_SCOPE_DENIED', deptId, orgId, departments: depts },
+    '安全判据: 被拒绝 — 部门越权（deptId 不在本人部门集且非租户全局，HTTP 403）',
+  );
+  res.status(403).json({ ok: false, error: 'access denied', code: 'DEPARTMENT_SCOPE_DENIED' });
+  return true;
 }
 
 /**
@@ -273,6 +304,7 @@ router.get('/api/workspace/:deptId', (req: Request, res: Response) => {
   if (!auth) return;
   try {
     const deptId = String(req.params.deptId);
+    if (denyIfOutsideDepartmentScope(req, res, deptId, auth.orgId)) return;
     const deps = getDefaultDeps(req);
     const workspace = buildDepartmentWorkspace(deptId, deps, WORKSPACE_GRAPH, { orgId: auth.orgId });
 
@@ -298,6 +330,7 @@ router.get('/api/workspace/:deptId/goals', (req: Request, res: Response) => {
   if (!auth) return;
   try {
     const deptId = String(req.params.deptId);
+    if (denyIfOutsideDepartmentScope(req, res, deptId, auth.orgId)) return;
     const deps = getDefaultDeps(req);
     const workspace = buildDepartmentWorkspace(deptId, deps, WORKSPACE_GRAPH, { orgId: auth.orgId });
 
@@ -322,6 +355,7 @@ router.get('/api/workspace/:deptId/alerts', (req: Request, res: Response) => {
   if (!auth) return;
   try {
     const deptId = String(req.params.deptId);
+    if (denyIfOutsideDepartmentScope(req, res, deptId, auth.orgId)) return;
     const deps = getDefaultDeps(req);
     const workspace = buildDepartmentWorkspace(deptId, deps, WORKSPACE_GRAPH, { orgId: auth.orgId });
 
@@ -353,6 +387,7 @@ router.get('/api/workspace/:deptId/next-action', (req: Request, res: Response) =
   if (!auth) return;
   try {
     const deptId = String(req.params.deptId);
+    if (denyIfOutsideDepartmentScope(req, res, deptId, auth.orgId)) return;
     const deps = getDefaultDeps(req);
     const workspace = buildDepartmentWorkspace(deptId, deps, WORKSPACE_GRAPH, { orgId: auth.orgId });
 
