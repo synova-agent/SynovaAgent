@@ -6,7 +6,11 @@
 #   ③ **可解释**：任何一步红了，一句话说清"哪里错、怎么修"；**存量问题只告警不阻断**
 #   ④ 硬上限：单作业 15 分钟（超出视为 CI 故障，不是代码问题）
 name: local-gates
-on: [push, workflow_dispatch]
+on:
+  push:
+  pull_request:
+    branches: [ main, local-main ]
+  workflow_dispatch:
 jobs:
   gates:
     runs-on: macos

@@ -39,6 +39,17 @@ test-results/
 .env.local
 .env.*.local
 
+# ── 宿主运行期配置（不得进构建上下文/镜像；#1464 BS-5）──
+#   synova.json 是**本机运行期配置**（含 server.port: 18790、llm.model、sentinel 阈值），
+#   src/config-file.ts 从 process.cwd() 读它。当前 Dockerfile 只以具名 COPY 引入
+#   package.json/package-lock.json（多源 COPY 只考具名源 ⇒ 它**未进镜像**），但它仍在
+#   构建上下文中随每次 build 上传；一旦 COPY 形态被泛化成 `COPY .` 即静默进镜像。
+#   故排除出上下文（判据: scripts/control-tower/probe-packaging.sh A6/A6b）。
+synova.json
+synova.json.last-good
+.synova-state.json
+.synova-owner
+
 # ── OS ──
 .DS_Store
 Thumbs.db
@@ -54,3 +65,44 @@ docs/
 .memory/
 MEMORY.md
 CLAUDE.md
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ── 治理线工具面：不进客户镜像（BC-7 / 卡 #1466）───────────────────────────────
+#
+# 为什么在这里排：Dockerfile 运行阶段 `COPY scripts/ ./scripts/`，把整个 scripts/ 树
+#   带进客户镜像 ⇒ scripts/control-tower/ 的 95 件治理工具（40 .py + 38 .sh + …）随镜像出货。
+#   而这些是控制塔自用件，**非客户功能**；且运行阶段基镜像是 `node:22-alpine`（无 python3）
+#   ⇒ 那 40 个 .py 在镜像里永不可执行，纯属交付面污染。
+#   （本仓的另一种客户产物 desktop 包不受影响：build-synova.cjs 的 files[]/extraResources
+#     本就只取 dist/ + extensions/ + 白名单 node_modules，control-tower 不入包 —— 实测零命中。）
+#
+# 🔴 为何不能整目录归零（判据口径见 scripts/control-tower/probe-delivery-hygiene.sh）：
+#   src/ 对 scripts/control-tower/ 有 **load-bearing 引用**，整目录剥离会打断客户运行时：
+#     · src/l4/agent-memory-store.ts:20   import ../../scripts/control-tower/enterprise-fact-store
+#       （**静态 value import** ⇒ 缺件 = 该模块解析失败 = 启动崩，不是降级）
+#     · src/deploy/bootstrap.ts:1125      await import ../../scripts/control-tower/conflict-scanner
+#       （cron 每日 04:00 企业事实冲突扫描；缺件 = 该 cron 降级）
+#     · src/agent/proactive-push.ts:192 / synova-agent.ts:106,127 / l4/department-memory-store.ts:216
+#       → `python3 scripts/control-tower/emit-signal.py`（控制塔信号；alpine 无 python3，本就不可用）
+#     · src/routes/cockpit.ts:27          → `python3 generate-dashboard.py`
+#       （创始人座舱；→ views/*.py + founder-truth.py；alpine 无 python3，本就不可用）
+#   ⇒ 下面用「排除 + 逐件反选」，把 95 件收到 **11 件 src/ 依赖闭包**（84 件出镜像）。
+#     达成「整目录归零」必须改 src/（本卡写集外）⇒ 属架构变更，须 CTO 裁。
+#
+# ⚠️ 顺序敏感：docker 末次匹配胜；`!` 反选行必须在 `scripts/control-tower/*` **之后**。
+# ⚠️ 风险边界（判例 V-09，未核项显式列出）：本机无 docker 二进制（`command -v docker` 空），
+#   以下模式**未经真 `docker build` 验证**；探针以 .dockerignore 语义子集（* ! ** ? 尾斜杠
+#   目录 无斜杠按 basename）模拟计算客户构建上下文并双向断言。真 build 未核。
+#   失败爆炸半径：views/* 依赖「反选目录 ⇒ 可下探」语义，若该语义不成立，最坏结果是
+#   generate-dashboard.py 缺依赖件 → 座舱 500 —— 而 alpine 无 python3 时它**本来就 500**，
+#   故对出货镜像无新增回归；启动关键件（2 个 .ts）是直接子件、按文件级反选，不依赖目录下探。
+# ═══════════════════════════════════════════════════════════════════════════════
+scripts/control-tower/*
+# ↓ 例外 = src/ 运行期依赖闭包（删任一行 = 客户镜像缺件；探针双向断言会红）
+!scripts/control-tower/enterprise-fact-store.ts
+!scripts/control-tower/conflict-scanner.ts
+!scripts/control-tower/emit-signal.py
+!scripts/control-tower/generate-dashboard.py
+!scripts/control-tower/founder-truth.py
+!scripts/control-tower/views
+!scripts/control-tower/views/*.py
