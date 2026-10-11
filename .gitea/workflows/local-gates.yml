@@ -79,12 +79,17 @@ jobs:
           # 判据源: 院方《extensions内容面规范-v0.1》§3.5；既有 check-architecture.sh 对 extensions/ 零覆盖。
           # 语义（门禁自带，不在此另造）: 存量 237 条登记在门禁 `CC-BASELINE` 段 ⇒ 只报数不判红；
           #   基线外新增 ⇒ exit 1。**不加 CC_STRICT**（加 = 把存量也判红，违反「存量只告警」）。
-          # ⚠️ 与步骤「① 13 组门禁」的关系（独立复核实测指出）：① 步以 SYNO_CI=1 跑 pre-commit-check.sh，
-          #   而 pre-commit 的附加块**已含**本门禁 ⇒ 功能上已被覆盖，本步是**显式具名**的等价执行点
-          #   （代价 ≈ 数秒 + 多一处失败面；收益 = CI 上有一条**可具名定位**的步骤，红时一眼看到是哪条）。
-          #   两处调用同一个脚本、同一份内嵌基线 ⇒ 不存在第二真相源。
+          # 🔴 **必须注入 SYNO_CI=1**（独立复核 2026-10-12 实测出的阻塞项，本行即其修法）：
+          #   门禁的 CI 硬阻断位是**自己实现的**（`check-content-coupling.sh:101` MODE 由 SYNO_CI 推导），
+          #   而 **local 模式对新增显式 `return 0`**（契约就是只报数、不判红）。
+          #   ⇒ 不注入 SYNO_CI ⇒ 该步**任何新增都 rc=0 ⇒ 永不红**（名实不符 + 零防守力）。
+          #   实测（本卡原始输出）：造一条真实新增 ⇒ 无 SYNO_CI rc=**0**／有 SYNO_CI rc=**1**。
+          #   （我此前在门禁 §接入方案 写的「`|| exit 1` 已保证该步红」是**错的** —— 已一并更正。）
+          # 与步骤「① 13 组门禁」的关系：① 步以 SYNO_CI=1 跑 pre-commit-check.sh，其附加块已含本门禁
+          #   ⇒ 功能上早已覆盖；本步的价值是**可具名定位**（红时一眼看到是哪条），并在 ① 被绕过时能补位
+          #   （补位能力正是靠上面这个 SYNO_CI=1 —— 没有它，本步连补位都做不到）。
           PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" \
-            bash scripts/check-content-coupling.sh || exit 1
+            SYNO_CI=1 bash scripts/check-content-coupling.sh || exit 1
       - name: ② 架构边界（快，阻断）
         run: cd /Users/wane/.ci-work/SynovaAgent && PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash scripts/check-architecture.sh
       - name: ③ 增量测试（vitest --changed；只测改动面，避免全量摩擦）
