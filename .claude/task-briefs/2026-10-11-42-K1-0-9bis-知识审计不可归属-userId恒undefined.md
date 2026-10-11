@@ -87,8 +87,8 @@ c) memory 教训：**铁律 0-2**（接线失败 4 次：组件过单测但从�
 
 | # | 判据命令 | expect | 实跑 exit | 判定 |
 |---|---|---|---|---|
-| 1 | `sqlite3 data/synova.db "SELECT COUNT(*) FROM knowledge_audit WHERE user_id NOT IN ('anonymous','unauthenticated')"` | 行数>0 | 0 | PASS |
-| 2 | `sqlite3 data/synova.db "SELECT COUNT(*) FROM knowledge_audit WHERE user_id='unauthenticated'"` | 行数>0 | 0 | FAIL |
+| 1 | `sqlite3 data/synova.db "SELECT COUNT(*) FROM knowledge_audit WHERE user_id NOT IN ('anonymous','unauthenticated')"` | 行数>0 | 0（shell exit）／**观测行数=1** | PASS |
+| 2 | `sqlite3 data/synova.db "SELECT COUNT(*) FROM knowledge_audit WHERE user_id='unauthenticated'"` | 行数>0 | 0（shell exit）／**观测行数=0** | FAIL |
 
 ### 待 CTO 裁定的矛盾项（**本 brief 无权下结论**）
 - ⚠️ 含 **sqlite 判据**：结论依赖运行期库断面（`/tmp/kb-work/data/synova.db`）
