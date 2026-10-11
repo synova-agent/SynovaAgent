@@ -60,7 +60,7 @@ SYNO_MAIN_TREE="$TMPD/repo-a" SYNO_ALLOW_MAIN_TREE=1 \
 [ -f "$DLOG" ] && grep -q "main-tree-guard" "$DLOG" && ok "丙: degraded-events.log 有新行" || no "丙: degraded-events.log 缺失/无新行"
 [ -f "$BLOG" ] && grep -q "MAIN_TREE_BYPASS" "$BLOG" && ok "丙: bypass 台账有新行" || no "丙: bypass 台账缺失/无新行"
 # 逃生舱留痕落点契约: ledger path 机制尊重 SYNO_BYPASS_LEDGER_DIR
-LP=$(SYNO_BYPASS_LEDGER_DIR="$BLD" bash "$REPO/scripts/control-tower/bypass-ledger.sh" path 2>/dev/null)
+LP=$(SYNO_BYPASS_LEDGER_DIR="$BLD" bash "$REPO/scripts/control-tower/bypass-ledger.sh" path 2>/dev/null)   # swallow-ok: 探测型——落点缺失属正常（丙断言另行判空)
 [ "$LP" = "$BLOG" ] && ok "丙: bypass 台账走 bypass-ledger.sh path 机制（注入缝生效）" || no "丙: ledger 落点异常: ${LP}"
 
 # ── CI 跳过: SYNO_CI=1 ⇒ exit 0 + 显式原因 ──
@@ -73,7 +73,7 @@ echo "$OUT" | grep -q "主树判据为本地层门禁" && ok "CI: 显式打印�
 # 同一棵树，注入路径互换 ⇒ 结果必须跟着换（若判据写死/toplevel 自比较，此处必红）
 cd "$TMPD/repo-b"
 SYNO_MAIN_TREE="$TMPD/repo-a" bash "$GUARD"; RC_A=$?
-SYNO_MAIN_TREE="$TMPD/repo-b" bash "$GUARD" 2>/dev/null; RC_B=$?
+SYNO_MAIN_TREE="$TMPD/repo-b" bash "$GUARD" 2>/dev/null; RC_B=$?   # swallow-ok: 探测型——非零 rc 即断言对象（B注入应拦）
 [ "$RC_A" -eq 0 ] && [ "$RC_B" -ne 0 ] \
   && ok "纪律8: 注入路径互换 ⇒ 放行/拦跟着换（判据消费注入路径）" \
   || no "纪律8: repo-b 下 A注入=$RC_A(期望0) B注入=$RC_B(期望非0)"
@@ -88,7 +88,7 @@ MUT="$TMPD/mut1-guard.sh"
 sed 's#_MAIN_RP="$(cd "${MAIN_TREE_CFG}" 2>/dev/null \&\& pwd -P)" || _MAIN_RP="${MAIN_TREE_CFG}"#_MAIN_RP="$_TOP_RP"#' "$GUARD" > "$MUT"
 if grep -q '_MAIN_RP="$_TOP_RP"' "$MUT"; then
   cd "$TMPD/repo-a"
-  SYNO_MAIN_TREE="$TMPD/repo-b" bash "$MUT" 2>/dev/null; RC=$?
+  SYNO_MAIN_TREE="$TMPD/repo-b" bash "$MUT" 2>/dev/null; RC=$?   # swallow-ok: 探测型——非零 rc 即断言对象（反例①应拦）
   [ "$RC" -ne 0 ] && ok "反例①: toplevel 自比较变异体 → 甲变红（exit 非 0，变异被抓）" \
     || no "反例①: 变异体仍放行 ⇒ 本测试对型 B 无判别力（首跑就绿=假反例）"
 else
