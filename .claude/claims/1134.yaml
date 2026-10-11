@@ -1,0 +1,23 @@
+# .claude/claims/1134.yaml — #1134（模块 K4 · W3 时滞值侧）edge-lag unknown 标 degraded + 落审计 · 写集声明（S0 源，issue 号卡）
+# 先例：.claude/claims/980.yaml / 1052.yaml（claim 优先于 brief；K3 R3 防劫持）
+# 纪律：只列本 PR 真正改动的文件，不预授权。
+#
+# ═══ K4-01 批 2（2026-10-11）事实与处置 ═══
+#   CTO 甲裁定 = 只交「信号 + 计数」；**不含值域迁移**（另立卡）。
+#   实测：edge-types = 56 件（第 56 件 goal_decomposition.json 由 local-main 18ed356f 引入）；
+#         unknown = 50（不变）；inEnum = 5（不变）；**specViolation = 1**（该件 action_effect_lag 为散文串）。
+#   处置：**如实点名该 1 条违规 + 棘轮上移**（55/0 → 56/1）；**不**把散文值塞进豁免面（豁免面仍恰 7 项）。
+#   禁碰：extensions/ontology/**（一件未碰）、src/**、scripts/audit/**、
+#         scripts/control-tower/check-ontology-fields.sh、.github/workflows/**。
+writeset:
+  - .claude/claims/1134.yaml
+  - .claude/task-briefs/2026-10-09-1134-edge-lag-unknown-degraded.md
+  - tests/l4/edge-lag-unknown-degraded-1134.test.ts
+  - docs/synova/product-lines/evidence/1134-edge-lag-unknown-degraded-20261009.md
+done:
+  - verify: npx vitest run tests/l4/edge-lag-unknown-degraded-1134.test.ts ⇒ 31 passed / exit 0（批 2 棘轮 56/50/5/1）
+  - verify: 先红（批 1 判据件未改时）npx vitest run tests/l4/edge-lag-unknown-degraded-1134.test.ts ⇒ 30 tests | 4 failed / exit 1（A1/F1 56≠55、A4/E4 specViolation 1≠0）
+  - verify: 造红 M1（把第 3 类值吸收成 unknown = 静默放宽）⇒ 31 tests | 9 failed / exit 1；还原后 sha256=974993be16c4a82599aafdaa5af2329021181073dd9073c15ad1810cb41dc7ab 逐字一致 + 31 passed
+  - verify: git -c credential.helper= -c safe.directory=* diff --stat origin/local-main -- extensions/ontology ⇒ 空输出（边界声明：edge-types 一件未碰）
+  - verify: git -c credential.helper= -c safe.directory=* grep -n action_effect_lag -- src packages ⇒ 无输出（读取侧仍 0 消费方；READ_SIDE_EMISSION=NOT_IMPLEMENTED 棘轮保留）
+note: "乙路线（unknown=显式降级标记 ⇒ 不纳入枚举）＋ CTO 甲裁定（只交信号+计数，不含值域迁移）；交付=防线/审计侧（具名审计行 + 派生 degraded 计数 + 计数钉 50/5/1 + 改坏即红，零真仓写入）；goal_decomposition.json 的散文值只点名不修（值域迁移另立卡）；读取侧 emitter 不在本卡写集（未决项）。"
