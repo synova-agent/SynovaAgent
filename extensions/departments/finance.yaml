@@ -1,0 +1,11 @@
+# extensions/departments/finance.yaml — 部门定义真源（部门轴 · K12-10 / #193 / RB-02）
+#
+# 部门 id = 文件名去扩展名（本件 ⇒ finance）—— 与 `id:` 字段必须一致，不一致 = 加载即降级。
+# 本文件是**唯一真源**：新增部门 = 复制本文件改 id/displayName，**不改任何 src/ 代码**。
+id: finance
+displayName: 财务部
+parent: null
+description: 财务部 —— 报表口径、成本基线、资本与融资。一人可同时属多个部门（复数）。
+tags:
+  - organizational
+  - financial

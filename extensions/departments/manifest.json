@@ -1,0 +1,15 @@
+{
+  "$schema": "https://synova.dev/schemas/extension-manifest-v1.json",
+  "name": "departments",
+  "version": "1.0.0",
+  "type": "department",
+  "displayName": "部门轴（部门定义唯一真源）",
+  "description": "一人可属多部门（departmentIds 复数）的【部门定义真源】：新增/调整一个部门 = 加一个 departments/<id>.yaml，不改代码。解析入口唯一 = src/services/request-context.ts 的 resolveContext()。",
+  "entryPoint": "../src/services/request-context.ts",
+  "exportKey": "resolveContext",
+  "departmentRoot": "extensions/departments",
+  "departmentsDir": ".",
+  "idRule": "部门 id = 文件名去扩展名；文件内 `id:` 字段为该 id 的显式声明（两者必须一致 —— 不一致 = 加载即降级）",
+  "resolveContract": "prompt 覆盖 / tools·knowledge 并集；多部门身份 ⇒ 部门集合取并集（不得覆盖、不得默认给全量）",
+  "note": "本目录是【部门轴】的唯一真源。≠ extensions/content-layers/departments/**（K12-20 的【内容层部门覆盖】，按部门给不同提示词/工具/知识）—— 后者答『看到什么样』，本件答『有哪几个部门、身份如何解析』。两者混为一谈会把『部门存在性』与『部门内容差异』当成同一件事。"
+}

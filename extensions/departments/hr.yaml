@@ -1,0 +1,9 @@
+# extensions/departments/hr.yaml — 部门定义真源（部门轴 · K12-10 / #193 / RB-02）
+#
+# 部门定义真源的最小完备面 = {id, displayName}；`parent` / `description` / `tags` 为可选。
+# 本件刻意**省略** parent —— 它是「可选字段缺失不阻断加载」的活体样本（判据测试据此断言）。
+id: hr
+displayName: 人力行政部
+description: 人力行政部 —— 组织与人才、行政事务。
+tags:
+  - organizational
