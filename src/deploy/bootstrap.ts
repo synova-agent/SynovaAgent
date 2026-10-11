@@ -38,6 +38,7 @@ import type { Database } from 'better-sqlite3';
 // 类型侧只取 L4 契约（DecisionInput/DecisionResult），**运行时**写入口在工厂函数内动态 import
 // ——与既有 GraphStore 动态 import 同款（1c / 3b / 5x），保持启动期加载顺序不变。
 import type { DecisionInput, DecisionResult } from '../l4/decision-capture';
+import { listDecisionRows, setDecisionLedgerReader, type DecisionLedgerReaderPort } from '../l4/decision-ledger-readback';
 
 const log = createLogger('deploy/bootstrap');
 
@@ -175,6 +176,30 @@ export function createDecisionCapturePort(
     // （priorSource 回落 'process'；回流只标记为输入不跑轮）。此处不假装接上。
     return captureDecision(decisionStore, graph ?? defaultGraph, decision);
   };
+}
+
+/**
+ * J5 / #405：决策台账**读回**端口装配 —— 与写口共用同一真图存储实例（不另造一套）。
+ *
+ * 职责边界：只做"把真 store 接到读入口上"；行的 schema/边类型/降级语义全在
+ * `src/l4/decision-capture.ts` 的 `listDecisionRows`（写读同源，禁第二处口径）。
+ *
+ * @input  store — 真图存储实例（需 queryEdges 原语；SqliteGraphStore 天然满足）
+ * @output 读回端口（graph 缺省用 defaultGraph）；并注册进程级接缝供 L1 路由消费
+ * @degraded store 形状不符（无 queryEdges）⇒ 返回 undefined ＋ log.warn，不注册接缝
+ *           ⇒ 路由侧 503 + code=LEDGER_READER_NOT_WIRED（降级不静默）
+ */
+export function createDecisionLedgerReaderPort(
+  store: unknown,
+  defaultGraph: string,
+): DecisionLedgerReaderPort | undefined {
+  if (store === null || typeof store !== 'object'
+    || typeof (store as { queryEdges?: unknown }).queryEdges !== 'function') {
+    log.warn({ defaultGraph }, 'J5 决策台账读回未装配 — 图存储缺席或无 queryEdges；'
+      + 'GET /api/sentinel/tickets/:id/decisions 将 503（LEDGER_READER_NOT_WIRED）');
+    return undefined;
+  }
+  return (graph?: string) => (query) => listDecisionRows(store, query, graph ?? defaultGraph);
 }
 
 /** 已初始化服务 — 从 bootstrap 传递给 server.ts */
@@ -729,6 +754,11 @@ export class Bootstrap {
     // 图存储缺席（Phase 1c 降级）⇒ createDecisionCapturePort 返回 undefined ＋ log.warn，
     // 启动照常推进（不阻断），"没接上"在启动日志与 services.decisionCapture 处**可观测**。
     const decisionCapture = createDecisionCapturePort(graphStore, this.ctx.get<SynovaConfig>('config')?.orgId ?? 'default');
+    // J5 / #405：读回端口 —— 同一真图存储；装配成功即注册进程级接缝（形态对齐写口）
+    const decisionLedgerReader = createDecisionLedgerReaderPort(graphStore, this.ctx.get<SynovaConfig>('config')?.orgId ?? 'default');
+    if (decisionLedgerReader !== undefined) {
+      setDecisionLedgerReader(decisionLedgerReader);
+    }
     return {
       config: this.ctx.get<SynovaConfig>('config')!,
       db: this.ctx.get<Database>('db')!,

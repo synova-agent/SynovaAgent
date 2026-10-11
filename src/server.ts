@@ -44,6 +44,7 @@ import diagnosisRoutes from './routes/diagnosis';
 import configRoutes from './routes/config'; // D600 — GET /api/config/dump 客户配置检查表面（--dump-config）
 import sessionsRoutes from './routes/sessions';
 import conversationsRoutes, { setDecisionCapturePort } from './routes/conversations'; // D590 — 对话 SSE 端点（ConversationEngine × HTTP 接线）
+import { setDecisionRecordingSeam } from './agent/conversation-engine'; // J5 / #405：无会话写路径的进程级接缝（装配时注册）
 import metricsRoutes from './monitoring/routes';
 import reviewRoutes from './routes/review';
 import expertRoutes from './routes/expert';
@@ -344,6 +345,13 @@ export async function createServer(): Promise<Server> {
   if (services.decisionCapture) {
     app.locals.decisionCapture = services.decisionCapture;
     setDecisionCapturePort(services.decisionCapture);
+    // J5 / #405：进程级写接缝在**装配时**注册（此前只在首个会话引擎构造时惰性注册 ⇒
+    // 全新进程里无会话的生产路径（工单关闭裁决）必然 SEAM_NOT_WIRED —— 端到端实测暴露）。
+    // 适配器只转发到同一回调工厂，不新建引擎（与 conversations.wireDecisionCapture 同源）；
+    // 会话引擎构造时仍会以"同一实例"覆盖注册，两条路径走同一 onDecision，接缝不分裂。
+    setDecisionRecordingSeam({
+      recordDecision: (decision) => services.decisionCapture!((config.orgId ?? 'default'))(decision),
+    });
   } else {
     logger.warn('K12-08: decisionCapture 未装配（图存储缺席）— 决策台账在生产路径不落账');
   }

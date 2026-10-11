@@ -45,6 +45,12 @@ export interface SentinelFinding {
   severity: 'emergency' | 'critical' | 'warning' | 'info';
   /** 标题 (一句话) */
   title: string;
+  /**
+   * 报正向标记（宪章 §3.6 哨兵四职责②）。
+   * 'positive' = 正向发现（机会窗口 / 增强信号，越过增强阈值时产出）；
+   * 缺省按 'negative' 处理（异常语义，兼容全部存量 findings）。
+   */
+  polarity?: 'positive' | 'negative';
   /** 详细描述 (人话) */
   description: string;
   /** 证据列表 */
@@ -318,6 +324,9 @@ import type { AiEcosystemFitSentinel as _aefCheck } from "../../extensions/senti
 import type { AgentDeploymentMaturitySentinel as _admCheck } from "../../extensions/sentinels/agent-deployment-maturity/aggregate";
 import type { AiInvestmentReturnSentinel as _airCheck } from "../../extensions/sentinels/ai-investment-return/aggregate";
 import type { HumanAgentBoundarySentinel as _habCheck } from "../../extensions/sentinels/human-agent-boundary/aggregate";
+// K3-3-8（#37）：AI 化机会窗口哨兵（宪章 §3.6 报正向）
+import type { AgentOpportunityWindowSentinel as _aowCheck } from "../../extensions/sentinels/agent-opportunity-window/aggregate";
+import type { computeAgentOpportunityWindow as _aowScoreCheck } from "../../extensions/sentinels/agent-opportunity-window/computes/compute-agent-opportunity-window";
 import type { strategyCapabilityFitSentinel as _scfCheck } from "../../extensions/sentinels/strategy-capability-fit/aggregate";
 import type { adaptationVelocitySentinel as _avCheck } from "../../extensions/sentinels/_extinct/adaptation-velocity/aggregate";
 import type { resourceMisallocationSentinel as _rmCheck } from "../../extensions/sentinels/resource-misallocation/aggregate";

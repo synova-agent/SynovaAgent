@@ -77,6 +77,9 @@ STUB
   chmod +x "$REPO/node_modules/.bin/vitest"
 }
 
+# 🔴 与 CI **同构**：Gitea runner 对每步注入 `set -e`（本 job 日志 step0 的 `Wrote command` 明示）。
+#   故 harness 必须用 `bash -e -c` 跑 step 正文 —— 否则抓不到「set -e 下子命令失败 ⇒ 当场退出」这类缺陷
+#   （实测事故：`VITEST_OUT="$(vitest…)"; RC=$?` 在 set -e 下吞掉全部失败输出，PR #335 的红因因此不可诊断）。
 STEP_RUN="$(printf '%s\n' "$STEP_BODY" | sed "s#/Users/wane/.ci-work/SynovaAgent#${REPO}#g")"
 
 FAILS=0
@@ -94,7 +97,7 @@ run_case() {  # $1=tag $2=stub $3=expect(rc) $4=expect_stdout_substr $5=label $6
   for f in "$@"; do mkdir -p "$REPO/$(dirname "$f")"; echo "x" > "$REPO/$f"; made=1; done
   if [ "$made" = "1" ]; then git -C "$REPO" add -A >/dev/null && git -C "$REPO" -c user.email=a@b -c user.name=h commit -q -m "$tag"; fi
   local out rc
-  out="$(cd "$REPO" && SYNO_EG_STUB_MODE="$stub" PATH="$WS/bin:$PATH" bash -c "$STEP_RUN" 2>&1)"
+  out="$(cd "$REPO" && SYNO_EG_STUB_MODE="$stub" PATH="$WS/bin:$PATH" bash -e -c "$STEP_RUN" 2>&1)"
   rc=$?
   printf '──── 场景%s（%s）rc=%s（期望 %s）────\n%s\n' "$tag" "$label" "$rc" "$want_rc" "$out"
   # ── 判别力自检（纪律④：「反例必红」本身要被验）──
@@ -153,7 +156,7 @@ install_stub empty
 git -C "$REPO" rm -q tests/doomed/gone.test.ts
 git -C "$REPO" -c user.email=a@b -c user.name=h commit -q -m "delete-test"
 echo "  （构造自检）变更集: $(git -C "$REPO" diff --name-only --diff-filter=D origin/local-main...HEAD | tr '\n' ' ')"
-OUT="$(cd "$REPO" && SYNO_EG_STUB_MODE=empty PATH="$WS/bin:$PATH" bash -c "$STEP_RUN" 2>&1)"; RC=$?
+OUT="$(cd "$REPO" && SYNO_EG_STUB_MODE=empty PATH="$WS/bin:$PATH" bash -e -c "$STEP_RUN" 2>&1)"; RC=$?
 printf '──── 场景庚（删除了 vitest 测试 ⇒ 必须红）rc=%s（期望 1）────\n%s\n' "${RC}" "$OUT"
 if printf '%s' "$OUT" | grep -q "SYNO_EG_STUB_RAN"; then
   if [ "${RC}" -eq 1 ] && printf '%s' "$OUT" | grep -q "删除了 vitest 测试"; then
@@ -165,8 +168,11 @@ else
   echo "  ⛔ [庚] HARNESS-BROKEN — 桩未被执行 ⇒ 该场景结论不可信"; HARNESS_BROKEN=1; FAILS=$((FAILS+1))
 fi
 
-# 丁：vitest 真失败 ⇒ 照旧 exit 1（分类不得把真红吃掉）
-run_case 丁 fail 1 "增量测试失败" "vitest 真失败 ⇒ exit 1（分类不吞真红）" tests/y.test.ts
+# 丁：vitest 真失败 ⇒ exit 1，**且必须给出可判读摘要**（#338 可诊断性判据 · 2026-10-12 收紧）
+#   判据锁 `摘要:` —— 只有「`set +e` 捕获 rc + 把失败摘要写进 `::error`」的新实现才有此行；
+#   旧实现（`VITEST_OUT="$(cmd)"; RC=$?` 在 Gitea 注入的 `set -e` 下**当场退出**）整步零输出
+#   ⇒ 本场景会**同时**报 HARNESS-BROKEN（连桩哨兵都打不出来）⇒ 该类缺陷无处藏身。
+run_case 丁 fail 1 "摘要:" "vitest 真失败 ⇒ exit 1 且 ::error 带可判读摘要（#338 可诊断性）" tests/y.test.ts
 
 # 戊：vitest 真通过 ⇒ exit 0（并须见"真通过"字样 —— 原判据 `exit 0` 是**弱判据**：
 #     真 vitest 输出里也有 "exiting with code 0"，无法区分"真跑过"与"空绿"⇒ 收紧）

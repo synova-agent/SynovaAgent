@@ -23,7 +23,7 @@ import {
 } from '../agent/sentinel-service';
 import type { TicketStatus, SentinelTicketTransitionResult } from '../agent/sentinel-service'; // 铁律 39: L1 类型经 L2 出口（L1→L3 直触已被 CI 拦截, 2026-09-06 修复）
 import type { TicketRow } from '../sentinel/runner'; // 类型经 L3 出口（值经 L2；L1→L3 类型引用不违铁律 39 的运行时边界）
-import { getDecisionRecordingSeam } from '../agent/conversation-engine';
+import { getDecisionRecordingSeam, getDecisionLedgerReader } from '../agent/conversation-engine';
 import type { DecisionInput, DecisionResult } from '../l4/decision-capture';
 import { createLogger } from '@synova/logger';
 
@@ -193,6 +193,46 @@ router.get('/tickets', (req: Request, res: Response) => {
   } catch (err: unknown) {
     log.error({ err }, '[sentinel] tickets 查询失败');
     res.status(500).json({ ok: false, source: 'memory-fallback', degraded: true, tickets: [] });
+  }
+});
+
+// ═══ GET /api/sentinel/tickets/:id/decisions — J5 / #405：④ 台账读回（工单的决策历史） ═══
+//   200 { ok: true, ticketId, nodeId, count, decisions } — 读回成功（count=0 是合法业务态：还没人裁过）
+//   404 { ok: false, error: 'TICKET_NOT_FOUND' }          — 无此工单行
+//   503 { ok: false, code: 'LEDGER_READER_NOT_WIRED' }    — 读口未装配（bootstrap 降级传播）
+//   200 { ok: false, degraded: true, errors }             — 读回部分失败（行损坏/查询异常；不静默）
+//
+// 业务语义（⑤ 的最小形态）：处理人看"这个工单（及其哨兵信号节点）此前谁裁过什么"——
+// ④ 台账第一次有了业务消费者（此前只写不读：研究院 03 号件 J5 / G1）。
+
+router.get('/tickets/:id/decisions', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params as { id: string };
+    const tickets = getSentinelTickets().tickets;
+    const ticket = tickets.find((t) => t.id === id);
+    if (!ticket) {
+      res.status(404).json({ ok: false, error: 'TICKET_NOT_FOUND' });
+      return;
+    }
+    // nodeId 口径与写侧 recordTicketResolution 完全一致（signal_id 优先，工单 id 兜底）
+    const nodeId = ticket.signalId !== undefined && ticket.signalId !== '' ? ticket.signalId : ticket.id;
+    const orgId = typeof req.query.orgId === 'string' && req.query.orgId !== '' ? req.query.orgId : undefined;
+    const reader = getDecisionLedgerReader();
+    if (!reader) {
+      log.warn({ ticketId: id }, '[sentinel] 台账读回未装配（LEDGER_READER_NOT_WIRED）— 503 显式降级');
+      res.status(503).json({ ok: false, code: 'LEDGER_READER_NOT_WIRED', error: '决策台账读回端口未装配（bootstrap 未注册）' });
+      return;
+    }
+    const result = reader(orgId)({ nodeId });
+    if (!result.ok) {
+      res.json({ ok: false, degraded: true, ticketId: id, nodeId, count: result.entries.length, decisions: result.entries, errors: result.errors });
+      return;
+    }
+    res.json({ ok: true, ticketId: id, nodeId, count: result.entries.length, decisions: result.entries });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.error({ err: msg }, '[sentinel] 台账读回失败');
+    res.json({ ok: false, degraded: true, ticketId: (req.params as { id?: string }).id, decisions: [], errors: [msg] });
   }
 });
 

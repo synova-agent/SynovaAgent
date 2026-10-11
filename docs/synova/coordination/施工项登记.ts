@@ -336,7 +336,13 @@ export const constructionItems: readonly ConstructionItem[] = [
     ],
     // 📌 CTO 2026-10-08 裁定（title）：卡面标题为 GitHub 显示限制下的**截断形态**（结尾 `权威`），本字段为**完整命名** ——
     //   两处**故意不同**，不是「未同步」。理由：登记件是**判据源**，不该被 GitHub 显示限制绑架；卡号的标识作用不依赖标题完整。
-    status: 'todo',
+    // 📌 #364 v3 对账（2026-10-12，**只读实测**；禁按推断改判据源）：本件 status todo → **done**。
+    //   实测（两路独立，同树）：`npx tsx scripts/control-tower/probe-cycle-edges.ts` ⇒ **exit 0**
+    //     判据① 旧编号 E-x.y 出现次数 = **0**（口径 `git grep -ohE "E-[0-9]+\.[0-9]+" -- cycles/`；原 45）
+    //     判据② code_edge_$id_count = 56 ｜ label_count = 56 ｜ distinct_values_used = **15（全部 ∈ 允许域）**
+    //     判据③ unknown_tokens = **0** ｜ 逐文件 6/6 全 loader_visible = yes
+    //   ⚠️ **五阀部分另属 K4-06** —— 本条的完成范围**仅到上述探针判据**，五阀映射不在其内。
+    status: 'done',
     source: '施工单.md 0-4 / 现状报告 坏点6',
   },
   {
@@ -819,6 +825,9 @@ export const constructionItems: readonly ConstructionItem[] = [
       'extensions/ontology/edge-types/*.json',
     ],
     dependsOn: [],
+    // 📌 #364 v3 对账（2026-10-12）：本件与 1-9 写同一写集（glob 为**登记件既有约定**，本草案**不动 glob**）
+    //   ⇒ 按 INV-4「同路径须显式声明共写」+ C-02「双向声明」先例补声明（须串行）。
+    sharedWrite: ["1-9: extensions/ontology/edge-types/*.json（1-8 补 action_effect_lag、1-9 补 transfer_function，同批同语料；须串行）"],
     // ┌─ 卡面 §⑥ 判据（Issue #987，2026-10-07 断面；全文抄录，机器条目见下方 acceptance）─┐
     // │ 卡面标题：1-8 落权威文档15 已给的 5 条预估值，其余标 unknown；【零阻塞】
     // │ - [x] 「有 `action_effect_lag` 的边 0 → 55」⇒ **实测 55/55**（命令与输出见 §②）
@@ -831,7 +840,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       // 🔴 原为纯 grep 型（T6 面1 否决点）⇒ 改为穿生产入口：跑一次真实哨兵，断言它读到该字段
       { run: 'npx vitest run tests/sentinel/edge-lag-consumed.test.ts', expectExit: 0 },
     ],
-    status: 'todo',
+    status: 'doing',
     source: '施工单.md 1-8 / 现状报告 W3',
   },
   {
@@ -842,6 +851,8 @@ export const constructionItems: readonly ConstructionItem[] = [
     paths: [
       'extensions/ontology/edge-types/*.json',
     ],
+    // 📌 #364 v3 对账（2026-10-12）：本件与 1-8 写同一写集（glob 为登记件既有约定，不动）⇒ 按 INV-4 + C-02 补**双向**共写声明（须串行）。
+    sharedWrite: ["1-8: extensions/ontology/edge-types/*.json（1-9 补 transfer_function、1-8 补 action_effect_lag，同批同语料；须串行）"],
     // 📌 CTO 2026-10-08 裁定（1-9）：改为 ['1-8','2-2']（**并集，不是替换**）—— 1-8 = 字段补全、2-2 = 参数抽取，**两者都对**。
     dependsOn: ['1-8', '2-2'],
     // ┌─ 卡面 §⑥ 判据（Issue #988，2026-10-07 断面；全文抄录，机器条目见下方 acceptance）─┐
@@ -855,7 +866,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       // 🔴 原为纯 grep 型 ⇒ 改为穿生产入口：跑一次方向监测，断言参数【改变了输出】
       { run: 'npx vitest run tests/loops/direction-monitor.transfer-function.test.ts', expectExit: 0 },
     ],
-    status: 'todo',
+    status: 'doing',
     source: '施工单.md 1-9 / 现状报告 W2',
   },
   // ───────────────── 第 2 批 · 地基 ─────────────────
@@ -870,6 +881,14 @@ export const constructionItems: readonly ConstructionItem[] = [
           'tests/store/metric-readings-insert.test.ts',  // 判据交付物（本卡创建）
     ],
     dependsOn: [],
+    // 📌 #364 v3 对账（2026-10-12）：本件与 B2-GRAPH 现实共写 `tests/store/metric-readings-schema.test.ts`
+    //   （实测：`git diff dc5ce093c^1 dc5ce093c` 含该件 —— 该件的 SCHEMA_VERSION 4→5 断言即由 PR #343 改；本件是该件的判据交付物）
+    //   🔴 **口径语义（CTO 一④ 明令注明）**：**该对由「字面口径」不产生**（B2-GRAPH 现用写集是 glob
+    //      `src/l4/**` / `src/store/**`，不含该路径）—— 它是**人工登记的显性共写**，**不是**由 `paths` 推导出的对。
+    //   🔴 **前提条件（复核员要求一并注明）**：本声明的正确性依赖口径「**`sharedWrite` 是【标注】，不是【派生边】**」；
+    //      若将来有门禁把 `sharedWrite` 展开成"共写边"，本声明会以「**已声明但无路径交集**」的形态出现。
+    //   ⇒ 按 C-02 先例补**双向**声明（须串行）。
+    sharedWrite: ["B2-GRAPH: tests/store/metric-readings-schema.test.ts（B2-GRAPH 改其中 SCHEMA_VERSION 断言；须串行）"],
     createsTable: {
       name: 'metric_readings',
       // 创始人 2026-10-04 裁 A：**目的是让需求能实现**，故：
@@ -942,7 +961,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       },
     ],
     // CTO 裁定 R1（2026-10-08 回填）：2-4 / 2-6 **解耦**（门禁管「写入」归 2-1b；`def_version` 已裁可空降级）⇒ dependsOn = []
-    status: 'todo',
+    status: 'done', // 回填(2026-10-12 第7批·裁定029口径)：acceptance vitest schema/insert 双 exit 0 + 反例差分实测(run_id→NOT NULL ⇒ 1 failed 具名；复原 exit 0)；数据面无 acceptance 条款。PR 待 CTO 批
     source: '施工单 2-1（拆自 2-1，按 DSH 式「一能力一包」：schema 与 writer 分离，只通过 INSERT 契约相连）',
   },
 
@@ -1003,7 +1022,9 @@ export const constructionItems: readonly ConstructionItem[] = [
     sharedWrite: ["0-2: src/growth/feedback-collector.ts（同上）"],
     worker: 'win', batch: '第2批', block: 'K6',
     title: '反馈两通道分裂 + 正向值被 DDL 拒',
-    // 卡面 §④「实际落点，实测」；原 `packages/evolution/` 已删（该目录属 3-12 的 global-analyzer.ts）
+    // 卡面 §④「实际落点，实测」；勘误(2026-10-12 CTO 裁2/审计实核)：原注「packages/evolution/ 已删」不实 ——
+    //    该目录锚内实存 10 文件（含 3-12 的 global-analyzer.ts，blob fcde4375，PR #1060 落地于此）。
+    //    根因 = 5e913d646(2026-10-08) 卡面→登记件回填时凭印象转述，未核目录实况。
     paths: [
       'src/growth/feedback-collector.ts',
       'tests/growth/feedback-channel-unification.test.ts',
@@ -1133,7 +1154,7 @@ export const constructionItems: readonly ConstructionItem[] = [
       // 两步断言由 probe 自身实现（解析成功 + 调用成功，缺一 ⇒ 非 0 退出）。
       { run: 'npx tsx scripts/control-tower/probe-compute-registry.ts', expectExit: 0 },
     ],
-    status: 'todo',
+    status: 'done', // 回填(2026-10-12 第7批·裁定029口径)：probe-compute-registry 实跑 exit 0(SUMMARY PASS presence 1/1 resolve 3/3 call 3/3) + 接线 contract-gate.ts:30 + 消费方 COMPUTE-HHI-v1。PR 待 CTO 批
     source: '施工单.md 2-6（⚠️ 先定计数口径 U-4）',
   },
   {
@@ -1278,7 +1299,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     acceptance: [
       { run: 'sqlite3 data/synova.db "SELECT COUNT(*) FROM graph_nodes WHERE type LIKE \'activity/%\'"', expectRowsGt: { table: 'graph_nodes', n: 0 } },
     ],
-    status: 'todo',
+    status: 'doing',
     source: '施工单.md 3-5',
   },
   {
@@ -1456,7 +1477,7 @@ export const constructionItems: readonly ConstructionItem[] = [
     acceptance: [
       { run: 'npx vitest run tests/extensions/layer-precedence.test.ts', expectExit: 0 },
     ],
-    status: 'todo',
+    status: 'doing',
     source: '施工单.md 3-11',
   },
   {
@@ -1820,16 +1841,44 @@ export const constructionItems: readonly ConstructionItem[] = [
       paths: [
         'src/l4/**',
         'src/store/**',
-        'tests/l4/edge-query.test.ts',  // 判据交付物（本卡创建）
+        'tests/adapters/sqlite-graph-store.legacy-schema.test.ts',  // 判据交付物（本卡创建）
       ],
       dependsOn: [],
-      sharedWrite: ["1-10: src/l4/ontology-loader.ts（若同碰——本项只改查询列，桥归 1-10）"],
-      acceptance: [
-        { run: 'npx vitest run tests/l4/edge-query.test.ts', expectExit: 0 },
+      // 📌 #364 v3 对账（2026-10-12）：本件与 2-1a 现实共写 `tests/store/metric-readings-schema.test.ts`（详见 2-1a 条目同款说明）。
+      //   🔴 **口径语义（CTO 一④ 明令注明）**：**该对由「字面口径」不产生**（本件写集现为 glob `src/l4/**` / `src/store/**` 等，
+      //      不含该路径）—— 它是**人工登记的显性共写**，**不是**由 `paths` 推导出的对。
+      //   🔴 **前提条件（复核员要求一并注明）**：正确性依赖口径「**`sharedWrite` 是【标注】，不是【派生边】**」；
+      //      若将来有门禁把 `sharedWrite` 展开成"共写边"，本声明会以「**已声明但无路径交集**」的形态出现。
+      sharedWrite: [
+        "1-10: src/l4/ontology-loader.ts（若同碰——本项只改查询列，桥归 1-10）",
+        "2-1a: tests/store/metric-readings-schema.test.ts（本件改其中 SCHEMA_VERSION 4→5 断言；须串行）",
       ],
-      status: 'todo',
+      acceptance: [
+        { run: 'npx vitest run tests/adapters/sqlite-graph-store.legacy-schema.test.ts', expectExit: 0 },
+      ],
+      status: 'done',
       source: 'PR #1437 断点清单 B2(P1)；卡面 Issue #1455',
     },
+    {
+      issue: 345,
+      id: 'B2-GRAPH-2',
+      worker: 'win', batch: '第0批', block: 'K4',
+      title: 'B2 后续（Done④ 拆卡）：queryEdges 读路径失败不得静默 —— 与 queryNodes 同款 D355 口径',
+      paths: [
+        'src/adapters/sqlite-graph-store.ts',
+        'tests/adapters/**',
+      ],
+      dependsOn: ['B2-GRAPH'],
+      // ⚠️ 【本草案额外项】按 CTO 令：本条 sharedWrite **不引分支名**（`fix/1421-skills-type-assumption` 与 `…-rebase` 都不引），
+      //   改引「**(C) 案（适配器默认带守卫）+ 落点**」⇒ 免因分支改名/退役而失效（旧分支已由 PR #392 的 rebase 版取代）。
+      sharedWrite: ['(C) 案（适配器默认带守卫）+ 落点: src/adapters/sqlite-graph-store.ts（同文件须串行：(C) 案先行）'],
+      acceptance: [
+        { run: 'npx vitest run tests/adapters/', expectExit: 0 },
+      ],
+      status: 'todo',
+      source: 'K4-04 卡面 Done④ 拆出（CTO 2026-10-11 裁定）；卡面 Issue #345',
+    },
+
   // ═══ K12 新增（一致性线 · 宪章 §2.7 第一优先 · 2026-10-11 立）═══
   {
     issue: 185, id: 'K12-02', worker: 'win', batch: '第12批', block: 'K12',
@@ -2127,7 +2176,7 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
     source: 'T3 §二 K3',
   },
   {
-    id: 'K4', name: '本体·因果边·循环编号', items: ['0-4', '1-8', '1-9', '3-5', '3-11', 'B2-GRAPH'],
+    id: 'K4', name: '本体·因果边·循环编号', items: ['0-4', '1-8', '1-9', '3-5', '3-11', 'B2-GRAPH', 'B2-GRAPH-2'],
     blockAcceptance: [
       // CTO 2026-10-08 裁定（块级 K4）：块判据 = `scripts/control-tower/check-ontology-fields.sh`（exit 0）。
       //   依据：① 该脚本**实测在 main 存在**（本机实跑 ⇒ `✅ 全部 55 件边类型关键字段齐全` / exit 0）

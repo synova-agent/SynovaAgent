@@ -1,0 +1,40 @@
+{
+  "$schema": "https://synova.dev/schemas/sentinel-manifest-v1.json",
+  "name": "agent-opportunity-window",
+  "version": "1.0.0",
+  "type": "sentinel",
+  "displayName": "AI 化机会窗口（报正向）",
+  "description": "宪章 §3.6 报正向执行体：当 AI/Agent 落地就绪度越过增强阈值时，产出正向发现（机会窗口开启），而非异常告警。",
+  "schedule": "0 4 * * 1",
+  "expert": "technology-foundation",
+  "priority": "P2",
+  "layer": "technology",
+  "computeKind": "heuristic",
+  "computes": [
+    "compute-agent-opportunity-window"
+  ],
+  "thresholds": {
+    "opportunityScore": {
+      "warning": 0.6,
+      "critical": 0.8
+    }
+  },
+  "aggregation": "worst_first",
+  "context": {
+    "requiredDataSources": [
+      "sog_graph"
+    ],
+    "dataAccess": {
+      "allowedDimensions": [
+        "technology"
+      ],
+      "sensitiveAccess": "read"
+    }
+  },
+  "entryPoint": "./aggregate.ts",
+  "exportKey": "AgentOpportunityWindowSentinel",
+  "auxiliaryExperts": [
+    "organizational-capability"
+  ],
+  "id": "sentinel-agent-opportunity-window"
+}
