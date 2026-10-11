@@ -79,6 +79,29 @@ CI 第 ③ 步（`.gitea/workflows/local-gates.yml`）用 `vitest run --changed 
 其中庚暴露两个伪造坑：变量名紧跟多字节（`rc=$RC）`）⇒ bash 吞字节报 unbound；基线 ref 未前移 ⇒
 删除在 diff 里看不见（场景内需 `update-ref refs/remotes/origin/local-main` 自洽）。
 
+## 🔴 追加（2026-10-12）：step ③ 在 Gitea 注入的 `set -e` 下**吞掉全部失败输出**（#338 可诊断性缺口 · 且是本卡引入的回退）
+
+```
+实证（PR #335 的真实 CI 日志，本地落盘 ~/gitea/data/actions_log/.../421.log.zst 解压后逐字）：
+    增量基线 = origin/local-main
+    本次变更集: 5 文件（代码面 4 个，其中 vitest 可收集 2 个；不可测面 2 个）
+      ❌  Failure - Main ③ 增量测试（vitest --changed；只测改动面，避免全量摩擦）
+    exit status 1
+  ⇒ vitest 输出一行都没有 ⇒ 红因不可诊断。
+根因：Gitea runner 对**每步**注入 `set -e`（同 job 日志 step0 的 `Wrote command` 明示 `set -e\n…`），
+  而本卡重构该步时写成 `VITEST_OUT="$(npx vitest … 2>&1)"; VITEST_RC=$?`
+  ⇒ set -e 下**子命令非 0 ⇒ 赋值即失败 ⇒ shell 当场退出** ⇒ 紧随的 `printf | tail -20` **永不执行**。
+  （旧写法 `… | tail -20 || { echo "::error::…"; exit 1; }` 反而会打印尾部输出 ⇒ **本卡引入的回退**。）
+```
+
+**修法**：`set +e` 包住捕获、随后 `set -e` 恢复；失败时把**可判读摘要**（失败文件/断言行/计数行）
+写进 `::error title=增量测试失败::rc=N；摘要: …`。
+
+**harness 同构（纪律 8 延伸）**：harness 原以 `bash -c` 跑 step 正文（**不带** `set -e`）
+⇒ **结构上抓不到本类缺陷**。已改为 **`bash -e -c`**（与 Gitea runner 一致）；
+并把 丁 场景判据由「增量测试失败」**收紧为「摘要:」** —— 旧实现下整步静默死掉、连桩哨兵都打不出
+⇒ 该场景会报 **HARNESS-BROKEN（exit 2）**。改坏实测：拿掉 `set +e` ⇒ harness rc=**2**，丁 判 HARNESS-BROKEN。
+
 ## 落点
 
 - `.gitea/workflows/local-gates.yml` 第 ③ 步正文（仅此步；①②①b 步不动）
