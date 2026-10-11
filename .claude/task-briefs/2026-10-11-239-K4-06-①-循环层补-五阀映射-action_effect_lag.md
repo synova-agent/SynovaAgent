@@ -1,8 +1,8 @@
 <!-- 卡面来源: 库外档案仓 K4-本体与循环-审计定稿与卡面全套.md（CTO 亲撰）
-     架构基准: 院方 产品宪章.md v8.1（§0.4 ＋ §4.1 ＋ §5.2）
+     架构基准: 院方 产品宪章 v8.1（镜像 docx: docs/synova/产品宪章-v8.1-镜像.md）
      机器真源: docs/synova/coordination/施工项登记.ts（K4 块）
-     审计 as_of: 6ff6b4719 ｜ 已过**三轮**独立复核（第3轮 20 条 + 新引入 5 条，按复核「最小修复清单」逐条回写）
-     纪律: 执行 session 只从本文件取施工信息；缺字段 ⇒ 问 CTO，不许猜 -->
+     审计 as_of: 6ff6b4719 ｜ **已过三轮独立复核**（20 条不一致 + 5 条新引入，已逐条回写）
+     纪律: 只从本文件取施工信息；缺字段 ⇒ 问 CTO，不许猜 -->
 
 # Task Brief: #239 → K4-06 — ① 循环层补**五阀映射 ＋ action_effect_lag ＋ 池节点四分类**（原 0-4 重立）
 
@@ -26,6 +26,10 @@
 ❌ 五阀 ❌ 时滞 ❌ `edgeRefs`/`mapping` **零运行时消费者**。
 
 **⑥ 还需要做什么**：按权威15 §3.4 的形态补五阀 ＋ `actionEffectLag` ＋ 池节点四分类；
+🔴 **CTO 裁定（2026-10-11）**：**新增 `valves` 字段**，**不覆盖**既有 `edges[]`
+   —— 理由：既有 `edges[]` 是**图结构**（有消费者，形态 from/to/polarity/delay/weight）；
+     权威15 §3.4 的 `edges{*Valve}` 是**阀映射**（新语义）⇒ **同名不同物** ⇒ 用新 key 避免歧义；
+   —— 连带：**`src/cycles/cycle-types.ts` 必须加进写集**（否则类型读不了新字段）；
 **并把它们接到消费端**（否则又是"死数据"）。
 
 **⑦ DSH 借鉴方式**：**自研** —— DSH 无循环/动力学语义；借方向：**按名声明、宿主满足**（`compaction-basic/src/index.ts:114`）。
@@ -59,6 +63,7 @@ cycles/industry/retail-ecommerce/store-replication.cycle.json
 cycles/industry/saas-tech/arr-growth.cycle.json
 src/cycles/cycle-loader.ts
 src/cycles/overflow-compute.ts
+src/cycles/cycle-types.ts
 scripts/control-tower/probe-cycle-valves.ts
 tests/cycles/valve-mapping.test.ts
 ```
