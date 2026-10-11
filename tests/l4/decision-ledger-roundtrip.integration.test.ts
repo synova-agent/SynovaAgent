@@ -11,7 +11,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import Database from 'better-sqlite3';
 import { SqliteGraphStore } from '../../src/adapters/sqlite-graph-store';
-import { captureDecision, listDecisionRows } from '../../src/l4/decision-capture';
+import { captureDecision } from '../../src/l4/decision-capture';
+import { listDecisionRows } from '../../src/l4/decision-ledger-readback';
 import type { DecisionInput } from '../../src/l4/decision-capture';
 
 let db: Database.Database;

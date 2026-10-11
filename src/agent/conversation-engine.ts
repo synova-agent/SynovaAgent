@@ -979,5 +979,5 @@ export function getDecisionRecordingSeam(): DecisionRecordingSeam | null {
 // ═══ J5 / #405：④ 台账读回接缝的 L2 出口（铁律 39：L1 不直触 L4）═══
 // 实现与语义（含降级）全在 `src/l4/decision-capture.ts`（写读同源）；此处仅转发，
 // 与上方写侧接缝同宿，L1 消费面只有一个可指的 L2 符号。
-export { getDecisionLedgerReader } from '../l4/decision-capture';
-export type { DecisionLedgerQuery, DecisionLedgerEntry, DecisionLedgerReadResult } from '../l4/decision-capture';
+export { getDecisionLedgerReader } from '../l4/decision-ledger-readback';
+export type { DecisionLedgerQuery, DecisionLedgerEntry, DecisionLedgerReadResult } from '../l4/decision-ledger-readback';

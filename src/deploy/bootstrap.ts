@@ -38,7 +38,7 @@ import type { Database } from 'better-sqlite3';
 // 类型侧只取 L4 契约（DecisionInput/DecisionResult），**运行时**写入口在工厂函数内动态 import
 // ——与既有 GraphStore 动态 import 同款（1c / 3b / 5x），保持启动期加载顺序不变。
 import type { DecisionInput, DecisionResult } from '../l4/decision-capture';
-import { listDecisionRows, setDecisionLedgerReader, type DecisionLedgerReaderPort } from '../l4/decision-capture';
+import { listDecisionRows, setDecisionLedgerReader, type DecisionLedgerReaderPort } from '../l4/decision-ledger-readback';
 
 const log = createLogger('deploy/bootstrap');
 
