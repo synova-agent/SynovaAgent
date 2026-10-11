@@ -8,7 +8,9 @@
   "_notes": [
     "#1057 的第一个作业实例。**不是新节点类型**（宪章 P4）：type 引用既有 $id activity/production。",
     "值来源逐字段见 _provenance：derived: = 派生自 golden 冻结数据集的具名字段；handfill: = 手填占位，待访谈核实。",
-    "本文件放 instances/ 子目录而非 activity/ 平铺层 —— loader 的 scanDir 平铺扫描不递归，实例不会被加载成第 9 个节点类型。"
+    "落点（K4-03 搬家后）: customer-config/ontology-instances/wani-baby/activity-production.json —— 命名规则 <orgId>/<node-type>.json；orgId = doc.graph = wani-baby。",
+    "本件在 extensions/ontology/ 之外 ⇒ 不会被 ontology-loader 的平铺 scanDir 当成第 9 个节点类型（旧 instances/ 子目录落点已撤除）。",
+    "10 个评估属性的**声明**（名 + 型）在扩展层：extensions/ontology/extensions/general-enterprise/activity.json；本件只落**值**。"
   ],
   "_semantics": {
     "headcount": "该作业单元投入人数（人）",

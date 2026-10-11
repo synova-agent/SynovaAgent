@@ -1,3 +1,220 @@
+# #1057 证据件 — 作业单元「补两件」（实例 + 评估属性）
+
+> ## ⚠️ 落点版本说明（K4-03 批 2 · 2026-10-11）
+> 本件**同时承载两批**，读之前先看这一行：
+> - **§A（本文件顶部，权威）**：K4-03 / 批 2 —— 落点按 CTO 冻结的「Schema / 实例 / 扩展」三件拆分**改写后**的交付与验证。
+> - **§B（下方原 §1–§9，批 1 历史记录，未删改）**：批 1 的读数**在其时真实**；其**落点**已被 K4-03 卡面改写：
+>   · `extensions/ontology/activity/*.json` 携带 10 属性 → **已回退 local-main 原样**（8 件）；
+>   · `extensions/ontology/activity/instances/*.json` → **已搬到 `customer-config/ontology-instances/<orgId>/`**；
+>   · `tests/l4/activity-instance-1057.test.ts` → **已搬到 `tests/ontology/instance-loading.test.ts`**（旧件删除，不并存）；
+>   · 10 个属性的**声明** → **已搬到 `extensions/ontology/extensions/<industry>/<node>.json`**。
+>   ⇒ 读 §B 时请当作"历史读数"，**不得**当作当前落点事实。
+
+---
+
+# §A K4-03 / 批 2 —— 落点改写后的交付与验证
+
+- **卡面（Done 真源）**：`.claude/task-briefs/2026-10-11-236-K4-03-作业单元补两件-实例-评估属性.md`（CTO 亲撰，local-main 上可读）
+- **执行**：`coder-k4-03`｜**工作树**：`D:\synova-wt-b2-1057`｜**分支**：`fix/1057-activity-instance-props`
+- **基线**：`origin/local-main = e52499ddd6a1320435abd44f24323b5865d4caa1`（rebase/复跑前先 `lanfetch.bat`；rebase 当刻 tip）
+- **等级声明**：探针 = **L1 真读盘**；判据件含 **L2**（`loadOntology()` 真加载）。**本件不含"审计通过"字样**；队内结论只为「自验结论」。
+
+## §A.0 前提冻结（逐条实测；输出为命令原始读数）
+
+| # | 前提（卡面/任务书原文） | 命令 | 输出摘要 | 判定 |
+|---|---|---|---|---|
+| P1 | 4 处落点在 local-main 上均 **0 件** | `git -c credential.helper= -c safe.directory=* ls-tree -r --name-only origin/local-main -- customer-config extensions/ontology/extensions scripts/control-tower/probe-ontology-instances.ts tests/ontology` | 仅 1 行 `tests/ontology/adapter-user.test.ts`（既有件，不冲突）⇒ 4 落点 = 0 件成立 | ✅ |
+| P2 | 8 个 `activity/*.json` **全被批 1 改动** | `git -c … diff --stat origin/local-main...HEAD -- extensions/ontology/activity` | `8 files changed, 8 insertions(+), 8 deletions(-)` ＋ 旧实例件 `59 ++++` | ✅ |
+| P3 | 10 属性在 8 件里**同名同型**（不一致须停报） | `python3 …/check-eval-props.py`（脚本文本见 §A.9） | `CONSISTENCY_ACROSS_8_FILES: SAME_NAME_SAME_TYPE (8/8)`；`ABSENT_SLOTS: none (10/10 x 8 files)` | ✅ 无缺口 |
+| P4 | 旧件在位（搬家对偶起点） | `if exist` / `dir` | 旧判据件 464 行、旧实例件 59 行、旧证据 275 行 | ✅ |
+| P5 | 新落点**零既有消费者 / 零撞车** | grep（`*.ts/tsx/js/mjs/cjs/json/py/sh/yml/yaml` 全仓）`ontology-instances|ontology/extensions|probe-ontology-instances|instance-loading` | **No matches found（共 0 处）** | ✅ |
+| P6 | 基线可解析 | `lanfetch.bat D:\synova-wt-b2-1057` → `rev-parse` / `rev-list` | `FETCH_EXIT=0`；`origin/local-main = e52499ddd6a1320435abd44f24323b5865d4caa1`；`HEAD = d5eb341b`；`0\t6` | ✅ |
+| P7 | 工作树开工态干净 | `git status --porcelain=v1` | 无输出（clean） | ✅ |
+
+**落点（CTO 冻结，未自定）**：实例 `customer-config/ontology-instances/<orgId>/<node-type>.json`｜扩展 `extensions/ontology/extensions/<industry|profession>/<edge-or-node>.json`｜探针 `scripts/control-tower/probe-ontology-instances.ts`｜判据件 `tests/ontology/instance-loading.test.ts`。
+
+## §A.1 判据审计表（Done 逐条 → 用例名 → 行号）
+
+行号为**交付 blob 的行号**（`grep -n` 原始读数；探针 = `scripts/control-tower/probe-ontology-instances.ts`，判据件 = `tests/ontology/instance-loading.test.ts`）。
+
+| # | 判据（卡面 Done / 本批硬要求） | 载体 | 用例 / 段名 | 行号 |
+|---|---|---|---|---|
+| ① | 探针 ⇒ exit 0，且**不依赖 `data/synova.db`** | 探针 | `main()` 四段（SCHEMA/EXTENSION/INSTANCE/LOAD）＋末行 `RESULT=` | 441（main）/ 453 / 468 / 495 / 514 |
+| ② | 反例：**删掉扩展层 ⇒ 探针必 exit 1** | 探针 | ② 段「扩展层缺评估属性」+ ④ 段「无归属 / 未被扩展声明覆盖」 | 468–494 / 514–540 |
+| ③ | 作业单元的评估属性**在 fixture 上有断言**（不是空壳） | 判据件 | `Schema 面：8 类目…` / `扩展面：单件声明…` / `实例面 + 加载链…` | 132 / 142 / 154 |
+| 补 | 仓内**真件**三面（只读盘、零 DB） | 判据件 | `真件三面：Schema 8 类目 / 扩展层非空 / 实例在位…` | 167 |
+| 补 | 真件实例**逐条断言值**（9 number + 1 string 前缀） | 判据件 | `真件实例值：9 个 number 逐条字面相等 + agent_type_recommendation 前缀` | 184 |
+| 补 | Schema 层**零评估属性**（本卡冻结口径：只在扩展层） | 判据件 | `真件 Schema 层零评估属性（属性只在扩展层 —— 本卡冻结口径）` | 195 |
+| 补 | **[L2]** 生产 loader 真加载（`loadOntology()`） | 判据件 | `[L2] 生产 loader 真加载：degraded=false 且 activity 恰好 8 个类型` | 203 |
+| 补 | 平铺扫描不递归（实例落点不成为第 9 个类型） | 判据件 | `平铺扫描不递归：实例落点不再被生产 loader 当成第 9 个节点类型` | 218 |
+| 补 | **判别性夹具**（改坏即红，5 条） | 判据件 | `#1057 判别性夹具 — 改坏即红…` 组内 5 条 `it` | 230 / 231 / 248 / 257 / 267 / 278 |
+| 补 | **降级路径**（loader 不抛 + errors 显式可见） | 判据件 | `#1057 降级路径…` 组内 3 条 `it` | 290 / 291 / 301 / 310 |
+| 补 | **边界**（空目录 / 悬空 / 轴非法 / 无归属 / 空值 / 回潮） | 判据件 | `#1057 边界…` 组内 11 条 `it` | 321–405 |
+
+**审计发现的缺口与补法**（"有缺口先补测试"）：
+1. 批 1 的旧判据件（`tests/l4/activity-instance-1057.test.ts`）判的是**旧落点**（Schema 层带 10 属性 + 旧 `instances/` 目录），且含 `data/synova.db` env-gated 段落 ⇒ 对新落点**零覆盖** ⇒ 本卡**先写新判据件 + 探针**（见 §A.2 先红），**再**动落点数据。
+2. 「删掉扩展层 ⇒ 红」在旧件里不存在（旧件没有扩展层概念）⇒ 本卡新增 ②/④ 两段 + 判据件 `删掉扩展件…` 用例承载。
+3. 旧件的 DB 写入路径断言（`SqliteGraphStore` 迁移、`graph_nodes` 计数）**撤除**：卡面要求判据仓内可复跑、不得依赖 `data/synova.db`；该面属图存储域（K4-04）⇒ 记入遗留清单（§A.8）。
+
+## §A.2 先红（新判据件先落盘、落点数据尚未创建时的原始输出）
+
+命令：`cd /d D:\synova-wt-b2-1057 && npx vitest run tests/ontology/instance-loading.test.ts`
+
+```
+ ❯ tests/ontology/instance-loading.test.ts (25 tests | 5 failed) 640ms
+     ✓ Schema 面：8 类目、$id 对齐、零 parse 错误
+     ✓ 扩展面：单件声明 → 10 属性 × 8 个 activity 节点类型 全覆盖（名 + 型）
+     ✓ 实例面 + 加载链：orgId 不变式成立、violations 为空（同实现，非两条码）
+     × 真件三面：Schema 8 类目 / 扩展层非空 / 实例在位，且加载链零 violations
+     × 真件实例值：9 个 number 逐条字面相等 + agent_type_recommendation 前缀
+     × 真件 Schema 层零评估属性（属性只在扩展层 —— 本卡冻结口径）
+     × [L2] 生产 loader 真加载：degraded=false 且 activity 恰好 8 个类型
+     × 平铺扫描不递归：实例落点不再被生产 loader 当成第 9 个节点类型
+     …（其余 20 条 fixture/降级/边界/判别性用例 ✓）
+ Test Files  1 failed (1)
+      Tests  5 failed | 20 passed (25)
+```
+
+关键失败原文（逐条，未截断）：
+```
+AssertionError: expected [ Array(1) ] to deeply equal []
++ [ "扩展面: extensions/ontology/extensions/ 零件（或目录不存在）—— 卡面 Done ② 的反例点（删掉扩展层 ⇒ 本段必红）" ]
+AssertionError: extensions/ontology/activity/acquisition.json 仍在 Schema 层携带评估属性: expected [ 'headcount', 'hours_per_run', …(8) ] to deeply equal []
+AssertionError: loader 加载到的 activity/acquisition 仍带评估属性: expected [ 'headcount', 'hours_per_run', …(8) ] to deeply equal []
+AssertionError: expected true to be false  // instances/ 旧目录仍在
+```
+⇒ 5 条红**全部落在"真件/落点"上**（不是语法/收集失败），且收集数 = 25（非 `no tests`）⇒ 判别性成立。
+`VITEST_EXIT=1`。
+
+## §A.3 反例（Done ②）：删掉扩展层 ⇒ 探针必 exit 1（原始输出）
+
+**做法**（可逆、字节等价）：`ren extensions\ontology\extensions\general-enterprise\activity.json activity.json.bak`（扩展层有效声明数 = 0）——**不是**改判据、不是改探针。
+
+```
+── ② EXTENSION [L1] — … ──
+  [FAIL] 扩展面: extensions/ontology/extensions/ 零件（或目录不存在）—— 卡面 Done ② 的反例点（删掉扩展层 ⇒ 本段必红）
+  扩展声明件数: 0
+  [FAIL] activity/acquisition: 扩展层缺评估属性 [headcount, hours_per_run, runs_per_period, unit_labor_cost, error_rate, structuredness, error_tolerance, data_reachability, agent_readiness_score, agent_type_recommendation]
+  …（**共 8 处**：8 个 activity 类目逐条点名）
+  覆盖: activity/acquisition=0/10  activity/compliance=0/10  activity/coordination=0/10  activity/governance=0/10  activity/innovation=0/10  activity/learning=0/10  activity/maintenance=0/10  activity/production=0/10
+── ④ LOAD [L1] — … ──
+  [FAIL] LOAD: …: prop 'headcount' 在 Schema 层与扩展层均无声明（无归属）
+  …（**共 10 处**无归属）
+  [FAIL] LOAD: …: 评估属性 'headcount' 未被任何扩展声明覆盖（activity/production）
+  …（**共 10 处**覆盖缺失）
+SUMMARY: sections=4 failures=29
+RESULT=FAIL
+```
+```
+PROBE_EXIT=1
+```
+判据件同步红（同一反例、同一时刻）：`Tests 1 failed | 24 passed (25)`，失败点 = `真件三面：…`（`VITEST_RED_EXIT=1`）。
+
+> 口径诚实标注：本反例证明「扩展层缺失 ⇒ ② 覆盖判据 + ④ 加载链判据必红」。**首次尝试用"改目录名"造红时探针黑红的原因是 `axisId ≠ 目录名`（非本判据）⇒ 已重做**，最终读数即上文（避免"假红"被当成判别性成立）。
+
+## §A.4 恢复绿 + 红证不残留（原始输出）
+
+**复原**：`ren … activity.json.bak activity.json` → `REN_BACK=0`
+```
+===HASH_AFTER===
+9fd753cd4b11656b04611d53bc4b3d591e1ac8896345262a0ac48665e5f043fd     ← 与造红前 HASH_BEFORE 逐字一致
+===EXT_LAYER===
+D:\synova-wt-b2-1057\extensions\ontology\extensions\general-enterprise\activity.json
+```
+**复跑（恢复绿）**：
+```
+$ npx tsx scripts/control-tower/probe-ontology-instances.ts
+SUMMARY: sections=4 failures=0
+RESULT=OK: 四段全绿（SCHEMA / EXTENSION / INSTANCE / LOAD）
+PROBE_EXIT=0
+
+$ npx vitest run tests/ontology/instance-loading.test.ts
+ Test Files  1 passed (1)
+      Tests  25 passed (25)
+VITEST_EXIT=0
+```
+**红证不残留**：`git status --porcelain=v1` 无 `*.bak`、无多余项（见 §A.5 同一读数；`.bak` 曾出现的唯一时刻已被 §A.3 记录）。
+
+## §A.5 交付清单（命令原始输出）
+
+```
+$ git -c credential.helper= -c safe.directory=* status --porcelain=v1
+M  extensions/ontology/activity/acquisition.json
+M  extensions/ontology/activity/compliance.json
+M  extensions/ontology/activity/coordination.json
+M  extensions/ontology/activity/governance.json
+M  extensions/ontology/activity/innovation.json
+D  extensions/ontology/activity/instances/activity-production-wani-baby-001.json
+M  extensions/ontology/activity/learning.json
+M  extensions/ontology/activity/maintenance.json
+M  extensions/ontology/activity/production.json
+D  tests/l4/activity-instance-1057.test.ts
+?? customer-config/
+?? extensions/ontology/extensions/
+?? scripts/control-tower/probe-ontology-instances.ts
+?? tests/ontology/instance-loading.test.ts
+```
+```
+$ git -c … diff --stat origin/local-main -- extensions/ontology/activity
+（空输出 —— 8 个类目 + 旧实例目录**逐字节回到 local-main**）
+```
+**搬家对偶（PR 内为"删 + 增"，非并存）**：
+- 删 `extensions/ontology/activity/instances/activity-production-wani-baby-001.json` → 增 `customer-config/ontology-instances/wani-baby/activity-production.json`（内容复用；仅 `_notes` 中**落点注记**两行改写，其余逐字不变）
+- 删 `tests/l4/activity-instance-1057.test.ts` → 增 `tests/ontology/instance-loading.test.ts`
+
+**PR 预算口径**（`scripts/control-tower/check-pr-budget.sh`，基线 `origin/local-main`）：
+- 增/改件：4 新（实例 / 扩展 / 探针 / 判据件）+ 治理产物（证据 / claim / brief）—— **纯新增件不计入预算**（CTO 2026-10-11 裁定②，脚本 L605-624 显式点名）
+- 计入预算的只有 **2 件删除**（`D`，脚本 L197-201 把 D 计入 COUNT_PATHS）⇒ **2 ≤ 12** ✔
+- 单域：② 本体层（含其判据载体）✔
+
+## §A.6 三面落点与冻结口径
+
+| 件 | 落点（本卡实测） | 说明 |
+|---|---|---|
+| Schema（未动，已回退） | `extensions/ontology/activity/*.json`（8 件） | 与 local-main **逐字节一致**；10 属性**不再**出现在 Schema 层 |
+| 实例 | `customer-config/ontology-instances/wani-baby/activity-production.json` | orgId = 目录名 = `doc.graph` = `wani-baby`；`type` = 既有 `$id` `activity/production`（**不新造类型**，宪章 P4） |
+| 扩展 | `extensions/ontology/extensions/general-enterprise/activity.json` | `axis=industry` / `axisId=general-enterprise`；`extends` 逐条列 8 个 `activity/*`；10 属性**声明（名 + 型）唯一位** |
+| 探针 | `scripts/control-tower/probe-ontology-instances.ts` | 纯 fs、零 DB；末行 `RESULT=`；四段独立可红 |
+| 判据件 | `tests/ontology/instance-loading.test.ts` | 隔离 fixture（`os.tmpdir()`）+ 仓内真件 + 降级 + 边界 + 判别性 |
+
+**两处需 CTO/队长知悉的"依据 + 可一票改"口径**：
+1. **扩展件粒度**：8 个类目共用同一组 10 属性 ⇒ 落 **1 件族级声明**（`extends` 逐条列 8 个 `$id`），而非"每节点一件"（8 件）。依据：卡面命名规则只给到 `<industry|profession>/<edge-or-node>.json`，未给粒度；单件使 PR 变更件数 6（原始口径）且语义单源。**可被 CTO 一票改**（改 8 件 = 每节点一件 + 探针/判据件零改动，因其按**目录扫描合并**口径实现）。
+2. **行业轴取值**：`general-enterprise`（`extensions/industries/` 既有 6 个 id 之一：general-enterprise / manufacturing / retail-ecommerce / saas-tech / financial-services / test-write），属队长倾向；`profession` 轴未被本卡采用。
+
+## §A.7 诚实边界（LIMITS —— 防「接线了 ≠ 被执行」误读）
+
+1. 探针是 **L1 真读盘**：证明三面落点存在 / 自洽 / 值可断言；**不**证明生产链消费了这两个新落点。当前 `src/l4/ontology-loader.ts:80-97` 只扫 `resource/activity/outcome` 平铺层 ∪ `extensions/industries/<id>/edge-types`，**不扫** `extensions/ontology/extensions/**` 与 `customer-config/**`；生产接线**不在本卡写集**（卡面明禁 `src/l4/**`）⇒ 见 §A.8 遗留 1。
+2. **[L2] 面由判据件承担**（`loadOntology()` 真加载 8 类目、`degraded=false`）——因 vitest 侧有 `@synova/logger` 别名解析；探针刻意不 import `src/**`（保持"干净 clone 上可跑"的鲁棒性）。
+3. 本卡**未**把 10 属性声明并入 Schema 层（冻结口径），也**未**新增节点/边类型（`nodes:29 edges:56` 原始 logger 行可核）。
+
+## §A.8 遗留清单（未解决项，直说）
+
+1. 🔴 **生产未接线**：无任何生产代码读 `extensions/ontology/extensions/**` 或 `customer-config/ontology-instances/**` ⇒ 需要一张后续卡（`src/l4/ontology-loader.ts` 增扩展层合并 + 实例加载器）；本卡只落盘 + 落判据。
+2. 🔴 **旧判据件的 DB 写入路径断言已撤除**：`SqliteGraphStore` 迁移 / `graph_nodes.props` / `activity/*` 计数属图存储域（K4-04 / #1455）⇒ 本卡不再承载；**若 CTO 认为必须保留，请另行指定落点**（本卡不得把 DB 断言写进本体判据件，卡面要求仓内可复跑）。
+3. ⚠️ **`activity` 标签不在 `extensions/ontology/tags.json`**：8 个类目件的 `tags:["activity",…]` 属 local-main 存量（本卡回退后与基线逐字节一致）⇒ `check-file-driven.sh` 的 tags 组本地为**软提示**、CI 侧空暂存区不触发。本卡**不碰** `tags.json`（#1436 独占，写集外）。扩展件**刻意不含 `tags` 字段**以避开该组。⇒ 提议另立卡收口（存量标签 vs tags.json 合法性）。
+4. ⚠️ **旧 brief 保留**：`.claude/task-briefs/2026-10-09-1057-activity-instance-props.md`（批 1）保留为历史件，其落点已被 K4-03 卡面取代；D708 声明链的 S3 仍会命中它 ⇒ 本卡以 **S0 claim** 为准（writeset 为**并集**口径）。
+5. `extensions/ontology/manifest.json`（`nodeTypes:29` / `edgeTypes:16`）**未随扩展层更新**：该字段语义是 Schema 层的类型计数，本卡新增的是扩展层声明（非节点类型）⇒ 未改（也不在写集内）。
+6. 实例值多为**手填占位**（`_provenance` 的 `handfill:`）——沿用批 1 状态，待访谈核实。
+
+## §A.9 复核用原始命令（可重跑；脚本文本随附）
+
+```bash
+# 前提 P3 的脚本（本卡实测用；输出见 §A.0）
+python3 check-eval-props.py          # 内容 = 读 8 个 activity/*.json → 逐属性打印 name:type + 一致性判定
+# 判据（本卡）
+npx tsx scripts/control-tower/probe-ontology-instances.ts        # 期望 RESULT=OK / exit 0
+npx vitest run tests/ontology/instance-loading.test.ts           # 期望 25 passed / exit 0
+# 反例（§A.3；改完必须复原）
+ren extensions\ontology\extensions\general-enterprise\activity.json activity.json.bak
+npx tsx scripts/control-tower/probe-ontology-instances.ts        # 期望 RESULT=FAIL / exit 1
+ren extensions\ontology\extensions\general-enterprise\activity.json.bak activity.json
+git -c credential.helper= -c safe.directory=* status --porcelain=v1   # 期望无 *.bak 残留
+```
+
+---
+
+# §B 批 1 历史记录（原 §1–§9；落点已被 §A 改写，读数为其时真实读数）
+
 # #1057 证据件 — 作业单元缺两件（实例 + 评估属性）
 
 - **卡**：GitHub issue #1057（3-5｜模块 K4）｜本地镜像 `.k4-cards/card-1057.md`（GitHub 账号级封禁期：**未读线上、未发评论、未开 PR**）
