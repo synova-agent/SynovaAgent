@@ -1003,7 +1003,9 @@ export const constructionItems: readonly ConstructionItem[] = [
     sharedWrite: ["0-2: src/growth/feedback-collector.ts（同上）"],
     worker: 'win', batch: '第2批', block: 'K6',
     title: '反馈两通道分裂 + 正向值被 DDL 拒',
-    // 卡面 §④「实际落点，实测」；原 `packages/evolution/` 已删（该目录属 3-12 的 global-analyzer.ts）
+    // 卡面 §④「实际落点，实测」；勘误(2026-10-12 CTO 裁2/审计实核)：原注「packages/evolution/ 已删」不实 ——
+    //    该目录锚内实存 10 文件（含 3-12 的 global-analyzer.ts，blob fcde4375，PR #1060 落地于此）。
+    //    根因 = 5e913d646(2026-10-08) 卡面→登记件回填时凭印象转述，未核目录实况。
     paths: [
       'src/growth/feedback-collector.ts',
       'tests/growth/feedback-channel-unification.test.ts',
