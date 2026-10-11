@@ -53,14 +53,26 @@ async function getAll<T>(path: string, pageSize = 50, maxPages = 20): Promise<T[
 
 function refsIn(text: string): number[] {
   const out = new Set<number>();
-  // 🔴 收紧：只认**交付性措辞**（Fixes/Closes/Resolves/Delivers/交付/已完成/Closes）。
-  //    实测教训：宽正则（含「修」「依据」）会把**建卡 PR / 卡面 PR / 修判据 PR** 当成交付 ⇒ 29 张里大半是误报。
-  for (const m of text.matchAll(/(?:Fixes|Closes|Resolves|Delivers|交付|已完成)\s*[:：]?\s*#(\d+)/gi)) {
+  // 🔴 2026-10-12 修正（**同类错误第二次 ⇒ CTO 认下本门禁的缺陷**）
+  //   原实现 = 纯文本匹配 ⇒ **无法区分「引述」与「声明」** ⇒
+  //   **"描述这个事故"本身就会触发本门禁** —— 实测两次（PR #371 / #385 的更正段引述被读成交付引用），
+  //   根因是**判据的作用域未排除"引述位置"**。
+  //   ⇒ 修正三层：
+  //     ① 剥**围栏代码块**（```…```）—— 引述最常见的位置
+  //     ② 剥**行内码**（`…`）—— 描述字符串字面量时用
+  //     ③ 剥**引用块**（行首 > ）—— 引用他人原话
+  //     ④ 只认**行首锚**（可选列表标记）的声明位置 —— 真声明通常独立成行或以列表项写出
+  const stripped = text
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/`[^`\n]*`/g, '')
+    .replace(/^[ \t]*>.*$/gm, '');
+  for (const m of stripped.matchAll(/^[ \t]*(?:[-*+]\s+)?(?:Fixes|Closes|Resolves|Delivers|交付|已完成)\s*[:：]?\s*#(\d+)/gim)) {
     const n = Number(m[1]);
     if (Number.isFinite(n) && n > 0) out.add(n);
   }
   return [...out];
 }
+
 
 (async () => {
   let issues: Issue[], prs: Record<string, unknown>[];
