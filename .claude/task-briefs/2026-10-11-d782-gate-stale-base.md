@@ -12,7 +12,7 @@
    实际却问"从**几天前**某个旧点到现在，**所有人**新加了哪些文档没登记"，于是每张 PR 都必红。
 
 ② **解决什么问题** —— K12 批 2 三张 PR 的 CI **全部**在 step ① 硬红，合并门条件①永不满足
-   （实测 run 116/121/125）。根因不是谁写错了代码，是**门禁基准过期**。
+   （实测 run 116/121/125）。根因不是谁写错了代码，是**门禁把"内容数据"当"文档"索登记**＋**基准过期放大范围**。
 
 ③ **做完对项目的推动** —— 解锁的不只是批 2：**任何新增 `extensions/**` 内容文件的卡都会撞**这道门
    （内容面是宪章第一优先 2.7 的载体），不修则整条内容面路线过不了 CI。
@@ -21,7 +21,7 @@
    门禁基准是**全局单点**，它红 ⇒ 三张 PR 永远拿不到绿 ⇒ 合并权四条件①结构性不可满足。
 
 ⑤ **现在有什么基础** —— ✅ `doc-registry-gate.sh` 已有三源扫描 + 已有配对测试 `tests/doc-system/doc-registry-gate.test.sh`
-   （18 例全绿）✅ 同病的 CI `vitest --changed` 已修（`local-gates.yml` 用 `CHANGED_BASE=origin/local-main`）
+   （改动前 18 例全绿）✅ 同病的 CI `vitest --changed` 已修（`local-gates.yml` 用 `CHANGED_BASE=origin/local-main`）
    ❌ base 链写死 `origin/main` ❌ `EXCLUDE` 不含 `extensions/`
 
 ⑥ **还需要做什么** —— 见 Q2（两处 + 配对测试 H5/H6 + 全仓基准点清单）
@@ -31,6 +31,21 @@
 
 ⑧ **涉及代码文件** —— `scripts/doc-system/doc-registry-gate.sh`｜`tests/doc-system/doc-registry-gate.test.sh`
    ｜`memory/notes/implemented/2026-10-11-d782-gate-stale-base-and-content-exempt.md`
+
+### 🔴 独立复核后的两处修正（本 brief 已按实测改；详见 PR #250 正文「修正」段）
+
+1. **「两处缺一仍红」不成立** —— 独立复核四象限实测（我在三支逐一复现）：
+   **只改 EXCLUDE 即绿**（K12-20/02/01：`rc=0 (1/0)`）；**只改 base 仍红**（3/3、3/3、12/12）。
+   ⇒ 准确结论：**EXCLUDE 豁免是"红→绿"的直接且充分原因**；base 修正**不是承重件**，
+   其价值是**收窄扫描面**（4→1 件、登记边界不随他人提交漂移），**且有副作用面**（本地 `origin/local-main` 陈旧至分叉点以下 ⇒ range 反而更宽 ⇒ 原病复现，实测 `4/2 rc=1`）。
+2. **「旧脚本+新测试 = 18/4」错** —— 实测 **20/2**；18 是**旧测试的例数**（旧脚本+旧测试 = 18/0）。
+   定性（H5 红 2 处 / H6 绿）成立，**仅数字错**。
+
+### 🟠 已知缺口（复核者指出，我确认，**列为后续卡**）
+
+现有 22 例**无一**能区分 base 链是否前置 —— 夹具靠**自带的 `main` 分支**解析 base，改 base 链在夹具里是 **no-op**
+（用 base 变体跑全套仍 `20 通过 / 2 失败`）⇒ **base 半支无回归护栏**。
+⇒ 须另立卡补「能在 base 未前置时变红」的专用夹具（构造 `origin/main` 与 `origin/local-main` 分叉的临时仓）。
 
 ## Q0: 定位 — 项目拼图 + 文件审计
 
@@ -111,6 +126,17 @@ memory/notes/implemented/2026-10-11-d782-gate-stale-base-and-content-exempt.md
 ## Done 标准
 
 - [ ] verify: `bash tests/doc-system/doc-registry-gate.test.sh` ⇒ rc=0（22 例）
-- [ ] verify: 改坏即红 —— 旧脚本跑新测试 ⇒ H5 报错（已实测：`18 通过 / 4 失败`，H5 两行红）
+- [ ] verify: 改坏即红 —— 旧脚本跑新测试 ⇒ **20 通过 / 2 失败**，H5 两行红
+      （已实测；🔴 上稿写 `18 通过 / 4 失败` 是错的 = 把旧测试例数当成失败数，见 §〇 修正）
+      ```
+      git show 8a0fea89f:scripts/doc-system/doc-registry-gate.sh > /tmp/old-gate.sh
+      SYNO_DOC_GATE_SRC=/tmp/old-gate.sh bash tests/doc-system/doc-registry-gate.test.sh   # ⇒ 20/2 rc=1
+      ```
+- [ ] verify: **四象限**（独立复核证伪「缺一仍红」后所加，逐支复现）
+      ```
+      # 只改 EXCLUDE ⇒ 绿（EXCLUDE 是承重件）
+      # 只改 base    ⇒ 仍红（3/3、3/3、12/12）
+      ```
+- [ ] ❌ **未满足（后续卡）**：base 半支**无回归护栏** —— 22 例无法区分 base 链是否前置（夹具自带 `main`，base 改动是 no-op）
 - [ ] verify: `git diff --name-only origin/local-main...HEAD` 仅含本卡写集 4 件
 - [ ] CI：三 PR `job.conclusion=success` 且 pending=0（**不再红**）
