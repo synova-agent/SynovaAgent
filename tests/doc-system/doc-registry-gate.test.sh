@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════════════
 # doc-registry-gate.test.sh — 登记门禁脚本测试（铁律 48：正常/边界/降级三路径）
 # 用例: A 检出未登记→1 | B 全登记→0 | C registry 缺失降级→0 | D 排除生效→0
@@ -131,6 +131,26 @@ git -C "$CIF2" commit -q -m c 2>/dev/null # swallow-ok:
 OUT_H4=$(DOC_TRUTH_ROOT="$CIF2" bash "$SCRIPT" 2>&1); _e4=$?
 t "H4 base 不可解析 → 显式降级（不 exit 2、不误红）" 0 $_e4
 printf '%s\n' "$OUT_H4" | grep -q 'base 全链不可解析' && { echo "  ✅ H4 降级留痕（不静默）"; PASS=$((PASS+1)); } || { echo "  ❌ H4 降级未留痕"; FAIL=$((FAIL+1)); }
+
+# H5: 2026-10-11 创始人裁定 —— `extensions/**` 内容面 yaml 豁免（只限 yaml/yml，不含 .md）
+#   背景（实测）: 批 2 三张 PR 因 extensions/ 下 3/3/12 件内容 yaml 被判"未登记"而 CI 硬红。
+#   反例分离: 同目录下 .md 是**说明文档**，仍须登记 ⇒ 两半都要断言，"一锅端"会失去判别力。
+EXTDIR="$CIF/extensions/onboarding"
+mkdir -p "$EXTDIR" 2>/dev/null # swallow-ok: 夹具目录
+printf 'a: 1\n' > "$EXTDIR/what-to-ask.yaml"
+git -C "$CIF" add -A 2>/dev/null # swallow-ok:
+git -C "$CIF" commit -q -m "feat(D999): 内容面 yaml（应豁免）" 2>/dev/null # swallow-ok:
+OUT_H5=$(DOC_TRUTH_ROOT="$CIF" bash "$SCRIPT" 2>&1); _e5=$?
+t "H5 extensions/ 内容 yaml 豁免 → exit 0" 0 $_e5
+printf '%s\n' "$OUT_H5" | grep -q 'what-to-ask.yaml' && { echo "  ❌ H5 内容 yaml 不应进检查面（又豁免又检查=双口径）"; FAIL=$((FAIL+1)); } || { echo "  ✅ H5 内容 yaml 未进检查面（只豁免不登记）"; PASS=$((PASS+1)); }
+
+# H6: 同目录 `extensions/**` 的 .md **不豁免** —— 守住豁免边界（不含 .md）
+printf '# 说明文档\n' > "$EXTDIR/README-scope.md"
+git -C "$CIF" add -A 2>/dev/null # swallow-ok:
+git -C "$CIF" commit -q -m "docs(D999): 扩展说明文档（应登记）" 2>/dev/null # swallow-ok:
+OUT_H6=$(DOC_TRUTH_ROOT="$CIF" bash "$SCRIPT" 2>&1); _e6=$?
+t "H6 extensions/ 下 .md 不豁免 → exit 1（豁免边界=不含 .md）" 1 $_e6
+printf '%s\n' "$OUT_H6" | grep -q 'README-scope.md' && { echo "  ✅ H6 .md 仍被点名（豁免未越界）"; PASS=$((PASS+1)); } || { echo "  ❌ H6 .md 未被点名 ⇒ 豁免越界（吞掉了说明文档）"; FAIL=$((FAIL+1)); }
 
 echo ""
 echo "── 汇总: $PASS 通过 / $FAIL 失败 ──"
