@@ -1,0 +1,19 @@
+# .claude/claims/198.yaml — #198（K12-15 reload 重扫 extensions/）写集声明（D708 的 S0 源）
+#   卡面：Gitea issue #198 ｜ 判据源：施工项登记件 1-10
+#   决策：新建 content-reload（复用 initContentTypes；loader.cleanup 的第一个生产消费者）+ 接到既有 POST /api/reload 第 4 步
+#   口径：不动 boot 路径、不动 registry 表、不动任何 loader 实现、不动 extensions/** 内容、不动 scripts/**
+#   🔴 写集扩张声明（相对卡面 §Q2）：+ src/routes/reload.ts + tests/routes/reload.test.ts
+#      理由：卡面 V2 要求"运行中新增目录 ⇒ 触发 reload ⇒ 无需重启被发现"，无生产入口则不成立；
+#            且不接 ⇒ 新 export 无消费者 ⇒ pre-commit 组 4 硬阻断
+writeset:
+  - .claude/claims/198.yaml
+  - .claude/task-briefs/2026-10-12-198-content-reload.md
+  - src/deploy/content-reload.ts
+  - src/routes/reload.ts
+  - tests/deploy/content-reload.test.ts
+  - tests/routes/reload.test.ts
+done:
+  - verify: npx vitest run tests/deploy/content-reload.test.ts tests/routes/reload.test.ts
+  - verify: npx tsc --noEmit -p tsconfig.json
+  - verify: bash scripts/check-architecture.sh
+note: 三机制落点——早激活（复用 initContentTypes 全量解析）/失败隔离（坏项进 retained + degraded 外传 + 永不抛）/标识持久化（content-binding-state.json，只含本次真绑定项）。关键发现：content-registry 的 loader.cleanup 此前零生产消费者 ⇒ 不先清缓存则 reload 名义生效实际不重扫；本文件是其第一个消费者。已知边界（如实登记）：失败项"旧值"不保证仍在内存（loaders 语义=先清缓存再重读），故失败项在下次成功 reload 或重启前不可用——这是"拒绝新绑定"，不等于"旧值回滚"（后者需 loaders 侧支持，不在本卡写集）。真服务 `POST /api/reload` 实测会先在第 1 步 `500 SCANNER_NOT_READY`（server.ts 未注入 app.locals.fileScanner）⇒ 测试注入最小桩以触达第 4 步；该事实已写入 PR 例外清单。
