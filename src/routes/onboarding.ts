@@ -13,15 +13,22 @@
  * 契约（铁律 47）:
  *   @input  — `POST /api/onboarding/start`，body `{ documents: string[], roles?: RoleSeed[],
  *             dryRun?: boolean, superAdminConfirmed?: boolean, requestedPermissions?: string[] }`
- *   @output — `{ ok: true, data: OnboardingReport }`（2xx）；入参非法 ⇒ 400 `{ok:false,code,message}`；
+ *   @output — `{ ok: true, data: OnboardingReport & { gapQuestions: GapQuestionReport } }`（2xx）；
+ *             入参非法 ⇒ 400 `{ok:false,code,message}`；
  *             内部异常 ⇒ 500 `{ok:false,code:'INTERNAL_ERROR',degraded:true}`（铁律 31）
  *   @degraded — 流程内失败已由 `runOnboardingFlow` 收成 `report.degraded` + `errors[]`，
  *             本层**原样透出**（不吞）；写响应失败才走 500 catch。
+ *
+ * 🔴 K12-04（#187）接线点: 建档第 ③ 步「追问」的**追问表**由 `buildQuestionTable()` 产出，
+ *   随本响应 `data.gapQuestions` 透出（**只加字段，不改既有字段与路由表** ——
+ *   本路由不新增任何端点，K12-03 的零表单判据与 `tests/routes/onboarding.test.ts` 不受影响）。
+ *   建档阶段企业图**尚未有实例** ⇒ `observed` 取空 ⇒ 全量追问（这是「空图 ⇒ 有序追问表」的生产路径）。
  */
 import { Router, type Request, type Response } from 'express';
 import { createLogger } from '@synova/logger';
 import { runOnboardingFlow, ONBOARDING_STEPS, type OnboardingInput } from '../onboarding/onboarding-flow';
 import type { RoleSeed } from '../onboarding/config-pack-generator';
+import { buildQuestionTable } from '../onboarding/gap-questioner';
 
 const log = createLogger('routes/onboarding');
 
@@ -69,8 +76,11 @@ router.post('/api/onboarding/start', (req: Request, res: Response) => {
       documentedPermissions: stringList(body['documentedPermissions']),
     };
     const report = runOnboardingFlow(input);
+    // 建档第 ③ 步：追问表（本体缺口驱动；建档期图未实例化 ⇒ 空图 ⇒ 全量追问）
+    //   自足失败面：本体缺/坏 ⇒ gapQuestions.degraded=true + errors[]（不抛，不拖垮建档主流程）
+    const gapQuestions = buildQuestionTable({ observed: { nodes: [], edges: [] }, rootDir: process.cwd() });
     log.info({ dryRun: input.dryRun === true, degraded: report.degraded }, '建档请求已处理');
-    res.json({ ok: true, data: report });
+    res.json({ ok: true, data: { ...report, gapQuestions } });
   } catch (err: unknown) {
     // 铁律 24/31: 不空吞 —— log.error + degraded 标记 + 500
     const msg = err instanceof Error ? err.message : String(err);
