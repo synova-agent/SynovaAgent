@@ -173,3 +173,26 @@ jobs:
           [ -n "$_V_SUM" ] || _V_SUM="（vitest 未产出可提取的失败摘要 —— 见本步「tail -30」完整输出）"
           echo "::error title=增量测试失败::rc=${VITEST_RC}；摘要: $(printf '%s' "$_V_SUM" | cut -c1-900)"
           exit 1
+      - name: ④ 门禁复现器自检（条件：变更集触碰工作流/复现器/夹具才跑；否则 <1s 跳过）
+        run: |
+          cd /Users/wane/.ci-work/SynovaAgent
+          # 目的（CTO 立卡）：把两个复现器（harness）及其配对测试**接进 CI** —— 此前它们命中 0，
+          #   等于「复现器只活在人工手里」；而它们保护的正是 CI 自己的语义（③ 步分类判据 / ② 步依赖指纹）。
+          # 约束（CTO 立卡）：**条件跳过必须 <1s**（历史病根：门禁太重 ⇒ 超时 ⇒ 被迫 --no-verify ⇒ 链全废）。
+          #   ⇒ 仅当变更集触碰下列任一文件才真跑；否则立即退出（git diff + grep，实测 <0.1s）。
+          # 🔴 本步的**自证能力**（卡面判据）：`ci-emptygreen-sim.sh` 会把 ③ 步正文**逐字抽出**、以
+          #   `bash -e`（与 Gitea 同构）执行 ⇒ 若有人把 ③ 步的 `set +e` 拿掉（= 复现 #338 那个
+          #   「set -e 下子命令失败即退 ⇒ 整步零输出」的缺陷），该 harness 会判 HARNESS-BROKEN 并 **exit 2**
+          #   ⇒ 本步在 CI 上红。即：**这条链自己抓自己**。
+          CHANGED_BASE=origin/local-main
+          git rev-parse --verify -q "$CHANGED_BASE" >/dev/null || CHANGED_BASE=origin/main
+          FILES="$(git diff --name-only "$CHANGED_BASE"...HEAD 2>/dev/null || true)"
+          if ! printf '%s\n' "$FILES" | grep -qE '^(\.gitea/workflows/local-gates\.yml|scripts/control-tower/ci-(emptygreen|deps-step)-sim\.sh|tests/control-tower/ci-(emptygreen|deps-step)-sim\.test\.sh)$'; then
+            echo "ℹ️  条件跳过（变更集未触碰 工作流/复现器/夹具）—— <1s"
+            exit 0
+          fi
+          echo "⇒ 变更集触碰复现器面 ⇒ 跑自检"
+          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash scripts/control-tower/ci-emptygreen-sim.sh
+          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash tests/control-tower/ci-emptygreen-sim.test.sh
+          # 依赖步复现器**真跑 npm ci**（本机实测 ~89s）⇒ 仅在上面的条件命中时才轮到它
+          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash scripts/control-tower/ci-deps-step-sim.sh
