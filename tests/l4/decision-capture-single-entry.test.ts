@@ -25,6 +25,7 @@ import express from 'express';
 import Database from 'better-sqlite3';
 import sentinelRouter from '../../src/routes/sentinel';
 import { SentinelRunner, setGlobalSentinelRunner } from '../../src/sentinel/runner';
+import { CronScheduler } from '../../src/cron/scheduler';
 import { getDecisionRecordingSeam, setDecisionRecordingSeam } from '../../src/agent/conversation-engine';
 import {
   captureDecision,
@@ -595,7 +596,8 @@ describe('K12-08 C3 触发点 — 工单关闭的人工裁决 ⇒ 台账真多�
        VALUES ('ticket-c3-1', 'sentinel-cash-runway', 'critical', 'auto', ?, null, 'acknowledged', datetime('now'), null)`,
     ).run(JSON.stringify({ title: '现金流危急' }));
 
-    const runner = new SentinelRunner({} as never, db);
+    const scheduler = new CronScheduler(db);
+    const runner = new SentinelRunner(scheduler, db);
     setGlobalSentinelRunner(runner);
 
     // 真装配口（`deploy/bootstrap.ts` 的真工厂）挂在真图存储替身上 —— 台账写入由此**可观测**
@@ -644,6 +646,7 @@ describe('K12-08 C3 触发点 — 工单关闭的人工裁决 ⇒ 台账真多�
       await new Promise<void>((resolve) => server.close(() => resolve()));
       setGlobalSentinelRunner(null);
       setDecisionRecordingSeam(null);
+      scheduler.stop();
       db.close();
     }
   });
@@ -655,7 +658,8 @@ describe('K12-08 C3 触发点 — 工单关闭的人工裁决 ⇒ 台账真多�
        VALUES ('ticket-c3-2', 'sentinel-cash-runway', 'critical', 'auto', ?, null, 'acknowledged', datetime('now'), null)`,
     ).run(JSON.stringify({ title: '现金流危急' }));
 
-    setGlobalSentinelRunner(new SentinelRunner({} as never, db));
+    const scheduler = new CronScheduler(db);
+    setGlobalSentinelRunner(new SentinelRunner(scheduler, db));
     const edges: Edge[] = [];
     setDecisionCapturePort(createDecisionCapturePort(makeStore(edges), 'default')!);
     const engine = new ConversationEngine(fakeProvider(), { orgId: 'default', fallbackProvider: null });
@@ -675,6 +679,7 @@ describe('K12-08 C3 触发点 — 工单关闭的人工裁决 ⇒ 台账真多�
       await new Promise<void>((resolve) => server.close(() => resolve()));
       setGlobalSentinelRunner(null);
       setDecisionRecordingSeam(null);
+      scheduler.stop();
       db.close();
     }
   });
@@ -686,7 +691,8 @@ describe('K12-08 C3 触发点 — 工单关闭的人工裁决 ⇒ 台账真多�
        VALUES ('ticket-c3-3', 'sentinel-cash-runway', 'critical', 'auto', ?, null, 'acknowledged', datetime('now'), null)`,
     ).run(JSON.stringify({ title: '现金流危急' }));
 
-    setGlobalSentinelRunner(new SentinelRunner({} as never, db));
+    const scheduler = new CronScheduler(db);
+    setGlobalSentinelRunner(new SentinelRunner(scheduler, db));
     const edges: Edge[] = [];
     setDecisionCapturePort(createDecisionCapturePort(makeStore(edges), 'default')!);
     setDecisionRecordingSeam(null); // ← 装配链缺席（对照 V8 的注册）
@@ -705,6 +711,7 @@ describe('K12-08 C3 触发点 — 工单关闭的人工裁决 ⇒ 台账真多�
       await new Promise<void>((resolve) => server.close(() => resolve()));
       setGlobalSentinelRunner(null);
       setDecisionRecordingSeam(null);
+      scheduler.stop();
       db.close();
     }
   });
@@ -717,7 +724,8 @@ describe('K12-08 C3 触发点 — 工单关闭的人工裁决 ⇒ 台账真多�
        VALUES ('ticket-c3-4', 'sentinel-dso-drift', 'warning', 'auto', ?, null, 'acknowledged', datetime('now'), null)`,
     ).run(JSON.stringify({ summary: 'DSO 连续三月上升' }));
 
-    setGlobalSentinelRunner(new SentinelRunner({} as never, db));
+    const scheduler = new CronScheduler(db);
+    setGlobalSentinelRunner(new SentinelRunner(scheduler, db));
     const edges: Edge[] = [];
     setDecisionCapturePort(createDecisionCapturePort(makeStore(edges), 'default')!);
     const engine = new ConversationEngine(fakeProvider(), { orgId: 'default', fallbackProvider: null });
@@ -739,6 +747,7 @@ describe('K12-08 C3 触发点 — 工单关闭的人工裁决 ⇒ 台账真多�
       await new Promise<void>((resolve) => server.close(() => resolve()));
       setGlobalSentinelRunner(null);
       setDecisionRecordingSeam(null);
+      scheduler.stop();
       db.close();
     }
   });
