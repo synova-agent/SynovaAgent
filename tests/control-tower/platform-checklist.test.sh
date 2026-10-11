@@ -38,7 +38,7 @@ OUT=$(cd "$REPO" && SYNO_TEST_ARM=1 SYNO_CI=0 \
   SYNO_GIT_CACHED_NAMES="scripts/control-tower/tmp-bare-probe.sh" \
   SYNO_GIT_CACHED_ALL_NAMES="scripts/control-tower/tmp-bare-probe.sh" \
   SYNO_GIT_CACHED_ADDED_NAMES="scripts/control-tower/tmp-bare-probe.sh" \
-  SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_WARN=1 SYNO_GATE_HITS_LOG="$(mktemp)" \
+  SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_WARN=1 SYNO_MAIN_TREE="$(mktemp -d)" SYNO_GATE_HITS_LOG="$(mktemp)" \
   bash scripts/pre-commit-check.sh 2>&1); rc=$?
 # 探针文件不存在 → 检查内 [ ! -f ] 跳过；需真实文件（放 tests 临时，不动 scripts/）
 TMPD="$(mktemp -d)"; trap 'rm -rf "$TMPD"' EXIT
@@ -52,7 +52,7 @@ OUT=$(cd "$REPO" && SYNO_TEST_ARM=1 SYNO_CI=0 \
   SYNO_GIT_CACHED_NAMES="$PROBE_REL" \
   SYNO_GIT_CACHED_ALL_NAMES="$PROBE_REL" \
   SYNO_GIT_CACHED_ADDED_NAMES="$PROBE_REL" \
-  SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_WARN=1 SYNO_GATE_HITS_LOG="$(mktemp)" \
+  SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_WARN=1 SYNO_MAIN_TREE="$(mktemp -d)" SYNO_GATE_HITS_LOG="$(mktemp)" \
   bash scripts/pre-commit-check.sh 2>&1); rc=$?
 [ "$rc" -eq 0 ] && ok "行为: 软提示不阻断本地 (exit 0)" || no "应 exit 0, 实际 $rc"
 # D564r7: 点名断言非空洞化——原双关键词 grep 被 ✅ 头行（恒含两关键词）空洞满足；
@@ -62,7 +62,7 @@ echo "$OUT" | grep -q "tmp-d520-plat-probe" \
 # CI strict: SYNO_CI=1 时同一检查转硬
 OUT2=$(cd "$REPO" && SYNO_TEST_ARM=1 SYNO_CI=1 \
   SYNO_GIT_CACHED_NAMES="$PROBE_REL" SYNO_GIT_CACHED_ALL_NAMES="$PROBE_REL" SYNO_GIT_CACHED_ADDED_NAMES="$PROBE_REL" \
-  SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_WARN=1 SYNO_GATE_HITS_LOG="$(mktemp)" \
+  SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_WARN=1 SYNO_MAIN_TREE="$(mktemp -d)" SYNO_GATE_HITS_LOG="$(mktemp)" \
   bash scripts/pre-commit-check.sh 2>&1); rc2=$?
 # D564r7: 探针清理移到 strict 复用之后（原 rm 先于 strict → strict 恒空转 rc2=0）
 rm -f "$PROBE"
@@ -75,7 +75,7 @@ CLEAN_REL="scripts/control-tower/tmp-d520-clean-probe.sh"
 printf '#!/bin/bash\nPYBIN=""\nfor _c in python3 python py; do command -v "$_c" >/dev/null 2>&1 && PYBIN="$_c" && break; done\necho ok\n' > "$CLEAN"
 OUT3=$(cd "$REPO" && SYNO_TEST_ARM=1 SYNO_CI=0 \
   SYNO_GIT_CACHED_NAMES="$CLEAN_REL" SYNO_GIT_CACHED_ALL_NAMES="$CLEAN_REL" SYNO_GIT_CACHED_ADDED_NAMES="$CLEAN_REL" \
-  SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_WARN=1 SYNO_GATE_HITS_LOG="$(mktemp)" \
+  SYNO_GATEKEEPER_ACK=1 SYNO_SKIP_PARALLEL_WARN=1 SYNO_MAIN_TREE="$(mktemp -d)" SYNO_GATE_HITS_LOG="$(mktemp)" \
   bash scripts/pre-commit-check.sh 2>&1); rc3=$?
 rm -f "$CLEAN"
 # 只看平台检查行（G12 范围提示与本检查无关）
