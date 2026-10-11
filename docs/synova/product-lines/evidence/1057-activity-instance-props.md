@@ -196,6 +196,65 @@ $ git -c … diff --stat origin/local-main -- extensions/ontology/activity
 5. `extensions/ontology/manifest.json`（`nodeTypes:29` / `edgeTypes:16`）**未随扩展层更新**：该字段语义是 Schema 层的类型计数，本卡新增的是扩展层声明（非节点类型）⇒ 未改（也不在写集内）。
 6. 实例值多为**手填占位**（`_provenance` 的 `handfill:`）——沿用批 1 状态，待访谈核实。
 
+## §A.8b 已知副作用（CTO 2026-10-11 裁定：**甲** = 按现状交付 + 证据件挂副作用 + 另立卡收口）
+
+> **裁定口径（原文）**：**按现状交付 + 证据件挂「已知副作用」+ 另立卡收口**。
+> ⇒ **落点不动**（CTO 冻结）、**产品件一行不改**（本节只改证据件；`git diff --name-only` 可核）。
+
+### ① 机制（源读，逐条 `file:line`）
+```
+· src/config/customer-config-package.ts:56
+    const ORG_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+  ⇒ `ontology-instances` **合法**（首字符字母、内嵌 `-`），不会被"非法目录名"分支跳过。
+· src/config/customer-config-package.ts:198-224  scanRoot()
+    :211  if (!child.isDirectory() || !ORG_ID_PATTERN.test(child.name)) continue;
+    :214  const broken = await compositionProblem(path);   // path = <dir>/config.yml
+    :216  found.push({ orgId: child.name, trust, path, ...(broken === undefined ? {} : { broken }) });
+  ⇒ 扫的是 `customer-config/` 的**第一层目录**：目录名即 orgId；缺 config.yml ⇒ 该包 **broken 但仍占 id**。
+· src/config/customer-config-package.ts:182
+    return `${COMPOSITION_FILE} 缺失——目录仍占用其 id；删除该目录或恢复文件`;
+  ⇒ 假包的 broken 文案（COMPOSITION_FILE = 'config.yml'，:45）。
+· src/config/customer-config-package.ts:230-243  discoverCustomerConfigPackages()
+    :230 注释自述「去重后的 roster（**含 broken 行——上报而非跳过**）」；:238 first-root-wins。
+· src/routes/diagnosis.ts:225-236（consult 路径，每次请求都走）
+    :225  const configRoots = [{ path: join(process.cwd(), DEFAULT_ROOT_NAME), trust: 'customer' }];
+    :226  const roster = await discoverCustomerConfigPackages(configRoots);
+    :227  const brokenPackages = roster.filter((p) => p.broken !== undefined);
+    :229-236  log.info({ consultId, orgId: teamId, …, packages: roster.length,
+                          brokenPackages: brokenPackages.map((p) => p.orgId), … }, '客户配置包四层解析完成（…）');
+  ⇒ **每次 consult ⇒ roster 里恒有该假包 ⇒ `brokenPackages` 恒含 `ontology-instances` ⇒ 逐次 INFO 日志。**
+```
+> 以上 ① 的性质 = **源读 + 行号**（不是运行期读数）；运行期读数见 ②。
+
+### ② 我（实施员）的第一手复现（原始输出；只读，零写入）
+命令：`npx tsx <TEMP>/repro-roster.ts` —— 调用**生产同一函数** `discoverCustomerConfigPackages([{ path: '<worktree>/customer-config', trust: 'customer' }])`
+```
+ROOT_SCANNED = D:/synova-wt-b2-1057/customer-config
+ROSTER_LEN = 1
+PKG = {"orgId":"ontology-instances","trust":"customer","path":"D:\\synova-wt-b2-1057\\customer-config\\ontology-instances\\config.yml","broken":"config.yml 缺失——目录仍占用其 id；删除该目录或恢复文件"}
+BROKEN_ORGIDS = ["ontology-instances"]
+HAS_FAKE_ONTOLOGY_INSTANCES = true
+REPRO_EXIT=0
+```
+⇒ **实测成立**：生产 roster **永久多一个** `orgId=ontology-instances`、`broken=<config.yml 缺失>` 的**假包**（本落点目录的第一层名字被当作 orgId）。
+
+### ③ 独立复核出处（复核席原文，**不是我自证**）
+- 报告：`D:\novis-backup-20260526\Novis\.k4-b2-lead\VERIFY-REPORT-K4-03-1057.md`（复核席 `verifier-k4`，被测 `cc3ad9fc`）
+- 该报告 **§c-补（超出实施员声称的独立发现）** 原文：
+  > **落点级冲突（我已单独报文，队长已复核确认机制）**：卡面冻结落点 `customer-config/ontology-instances/<orgId>/…` 会被既有 D599 客户配置包发现逻辑当成一个 **orgId**，产生永久假 broken。这**不是实施员的问题**（落点 CTO 冻结、他按卡执行），也**不影响本报告四项结论**；归 CTO 裁。
+- 该报告 **§d 第 5 条** 原文：**落点级冲突待 CTO 裁**（见 c-补）；**不影响本四项自验结论**。
+
+### ④ 影响面（如实，不夸大）
+1. 生产 roster 恒含 1 条**不存在的客户** orgId（`ontology-instances`）⇒ 任何按 roster 做巡检/对齐/计费的消费方会看到假客户。
+2. `POST /api/diagnosis/consult` **每次**把 `brokenPackages: ["ontology-instances"]` 写进 INFO 日志 ⇒ 日志噪音 + 排障误导。
+3. **不影响**本卡判据与探针：探针只读盘上三面落点、不构造 roster；判据件 25 用例与 roster 无关（复核席 §d 亦判「不影响本报告四项结论」）。
+
+### ⑤ 处置（CTO 裁定 = 另立卡收口；**本卡不修**）
+**候选方案（供收口卡抉择，本卡不预设）**：① `scanRoot` 增**排除名单**（如仅收含 `config.yml`/显式声明的目录，或点名排除 `ontology-instances`）｜② 落点**下沉一级**（如 `customer-config/ontology-instances/<orgId>/` 之外再套一层非 orgId 合法名，或显式用 `_`-前缀+排除口径）｜③ 落点**改名**。
+⚠️ 三者都会动**落点或 `src/config/**`** ⇒ 均**超出本卡写集**，且 ②③ 会与"CTO 冻结落点"冲突、① 会改 D599 语义 ⇒ **必须另立卡走 提案→K3→CTO**；本卡**只挂副作用，不做任何一处改动**。
+
+---
+
 ## §A.9 复核用原始命令（可重跑；脚本文本随附）
 
 ```bash
