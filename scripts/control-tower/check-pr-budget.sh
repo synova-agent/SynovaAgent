@@ -595,6 +595,26 @@ if [ -n "$COUNTED" ]; then
     echo "  ⓘ D734 口径（CTO 2026-10-11 裁定）：约定内容（docs/ · .claude/ · memory/notes/ · *.md）**不计入 PR 预算**（本批排除 ${_EX_N} 件）"
   fi
 fi
+# ═══ CTO 2026-10-11 裁定②：**纯新增文件不计入 PR 预算** ═══
+# 理由：D734 立意＝「一次改太多**既有文件** ⇒ 冲突风险」。**新增文件（add-only）冲突风险≈0**：
+#       它不需要与任何既有内容合并，除非同名（那会被 git 直接判冲突，不需要预算门禁兜）。
+# 依据：创始人 2026-10-11「对一些约定好的内容可以放宽数量限制」。
+# 纪律：**显式点名**（禁静默）—— 被排除的 A 类路径逐条打印。
+if [ -n "$ALL_TAGGED" ]; then
+  _A_N=$(printf '%s\n' "$ALL_TAGGED" | awk -F'\t' '$1=="A"{c++} END{print c+0}')
+  if [ "${_A_N:-0}" -gt 0 ]; then
+    _A_PATHS=$(printf '%s\n' "$ALL_TAGGED" | awk -F'\t' '$1=="A"{print $2}')
+    # 从 COUNTED 中剔除「仅以新增身份出现」的路径（同一路径若同时被 M 改过，仍计入）
+    _M_PATHS=$(printf '%s\n' "$ALL_TAGGED" | awk -F'\t' '$1=="M"{print $2}')
+    _PRUNE=$(printf '%s\n' "$_A_PATHS" | grep -vxF "$_M_PATHS" 2>/dev/null || true)
+    if [ -n "$_PRUNE" ]; then
+      _n=$(printf '%s\n' "$_PRUNE" | grep -c . )
+      COUNTED="$(printf '%s\n' "$COUNTED" | grep -vxF "$_PRUNE" 2>/dev/null || true)"
+      echo "  ⓘ D734 口径（CTO 2026-10-11 裁定②）：**纯新增文件不计入**（本批排除 ${_n} 件；改既有文件仍计入）"
+      printf '%s\n' "$_PRUNE" | sed 's/^/       - （不计·新增）/'
+    fi
+  fi
+fi
 N_FILES="$(_count_lines "$COUNTED")"; N_FILES="${N_FILES:-0}"
 if [ "$OUTBOUND_EXEMPT" -eq 1 ]; then
   # 豁免生效 → COUNT_PATHS 全不计入（含 D860 治理产物口径不再适用）

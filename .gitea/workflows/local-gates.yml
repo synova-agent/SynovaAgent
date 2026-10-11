@@ -31,10 +31,12 @@ jobs:
       - name: ① 13 组门禁（唯一的阻断门）
         run: |
           cd /Users/wane/.ci-work/SynovaAgent
-          # push 事件（= 合并后集成分支自身）⇒ D734（PR 预算）无意义，显式跳过；PR 事件照常
-          SKIP=""
-          [ "${{ github.event_name }}" = "push" ] && SKIP="SYNO_SKIP_PR_BUDGET=1"
-          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" SYNO_CI=1 $SKIP bash scripts/pre-commit-check.sh
+          # 🔴 CTO 2026-10-11 裁定③：**本地 CI 不判 D734**（显式跳过，非静默）
+          #   理由：Gitea host 模式下事件分流表达式不可靠（`${{ github.event_name }}` 实测不生效），
+          #         而 D734 是"PR 预算"，对着集成分支账本总额判必然恒红 ⇒ 红灯失去信息量。
+          #   执法位置改回：① 本地提交时软提示 ② 开 PR 时由审查人/CTO 人工判（13 组其余照常）
+          export SYNO_SKIP_PR_BUDGET=1
+          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" SYNO_CI=1 bash scripts/pre-commit-check.sh
       - name: ② 架构边界（快，阻断）
         run: cd /Users/wane/.ci-work/SynovaAgent && PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash scripts/check-architecture.sh
       - name: ③ 增量测试（vitest --changed；只测改动面，避免全量摩擦）
