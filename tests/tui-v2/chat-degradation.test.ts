@@ -14,6 +14,37 @@
  * - 本文件是 **V2 的补充证据，不替代 V3**（真实生产入口 `npm run tui` + PTY 的原始输出留档见 .synova-out/证据/）；
  * - 注入物（mock 与假流）**只存在于 tests/**，不改任何被调方源码语义；
  * - 未证明部分：「自然（非注入）失败下界面降级可见」**未核** —— 见 .synova-out/交付-1348.md 例外清单。
+ *
+ * ═══ 环境依赖声明（2026-10-11 追因卡确诊 · 2026-10-12 更新，必读）═══
+ * 本文件在本机绿的**前提**是 react 18.3.1 —— 即 `ink@5.2.1` 所带 `react-reconciler@0.29.2` 的
+ * peer 契约 `react: ^18.3.1`。
+ *
+ * 【历史 · 已修复】原 `package.json` 把 react 锁在 ^19.3.0（dependabot 于 2026-09-21 由 18.3.1 升到
+ * 19.3.0，见 commit bc2ce01f5），**与该 peer 直接冲突**。当时症状是：**任何干净安装 ⇒ 本文件 6/6 红**
+ * （本机只因 `node_modules` 陈旧而绿）：
+ * ```
+ * Error: [vitest] There was an error when mocking a module. … this call is hoisted to top of the file.
+ * Caused by: TypeError: Cannot read properties of undefined (reading 'ReactCurrentOwner')
+ *  ❯ react-reconciler.development.js:491
+ * ```
+ * 机理：react 19 移除了 `__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED`
+ * （改名为 `__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE`），
+ * 而 `react-reconciler@0.29.2` 在模块加载期读旧名 ⇒ `undefined.ReactCurrentOwner`。
+ * ⇒ 报错里的 "top level variables" 是 vitest 对工厂内**任意**异常的笼统提示，**与 hoisting 无关**。
+ * 后果不限于测试：那是**产品缺陷**（净安装下 `npm run tui` 起不来），且**触发铁律 40 冻结路径**。
+ * 修复位置本就在 `package.json` / `package-lock.json`（react 回 18.3.1，或 ink 升到 ≥6.6.0 + 重做
+ * `patches/ink+5.2.1.patch`）—— **均不在本测试文件写集内**。
+ * 🔴 **该冲突已由 #397 修复（react 回 18.3.1）**；当刻 main 的 `package.json` 该行为 `"react": "^18.3.1",`。
+ *    ⇒ 上面那句「任何干净安装 ⇒ 6/6 红」**自 #397 起不再成立**。
+ *
+ * 【2026-10-12 现状 · 只述现象】react 18.3.1 干净安装 ⇒ **本地三树皆 6/6 绿**（三棵树各自 `npm ci`，
+ * 均 `6 passed (6)` / exit 0）；**但 CI 上本文件的 ① ② ④a ④b ⑤ 五条 stdout 断言收【空串】**
+ * （`expected '' to contain '⚠️ …'`），而 ③（WAL checkpoint，其断言面不断言 stdout）通过。
+ *   已有一条**实测支持的候选机制**（🔴 **待复核，不是结论**）：`CI=true` 时 ink 走 `is-in-ci` 分支
+ *   ⇒ 输出被抑制（最小探针两态对比：可见文本 `true` → `false`）。
+ *   该候选读数的对象 = 最小探针的**修正副本** ＋ **一棵已净装的树**；**不是**原探针、**不是**他人工作树。
+ *   ⇒ **最终定性归卡 #403（机制待定／待复核）。**
+ * 详见 `.claude/task-briefs/2026-10-11-followup-chat-degradation-red.md` 追因结论（历史部分）。
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { ReactElement } from 'react';

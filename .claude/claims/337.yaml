@@ -1,0 +1,32 @@
+# .claude/claims/337.yaml — #337（K12 线续接 · 运行时依赖面）写集声明（S0 源）
+#
+# 为什么用 claim 而不是 task-state/<D#>.json：本卡是 **issue 号卡（#337）**，
+#   D 号已退役（AGENTS.md V6.0：任务唯一编号 = Issue 号）⇒ D708 门禁的 S1/S2/S3
+#   （按 `<D#>*` 定位）找不到声明源。`.claude/claims/<issue>.yaml` = S0 声明源，
+#   存在时**优先于 D# 链**（merge_writeset_gate.py §833-835）。
+# 先例：.claude/claims/184.yaml（K12 第2批）／980.yaml（同族 issue 号卡）。
+#
+# 本卡性质：**净安装下 TUI 崩**（产品级），不只是测试红。
+#   根因：react 19.3.0 × ink 5.2.1 所带 react-reconciler 0.29.2 的 peer `react: ^18.3.1` 冲突。
+#   修法：A 案（创始人已批）react 回 ^18.3.1 ＋ @types/react 回 ^18.3.31。**不触碰铁律 40 冻结 patch**。
+#
+# 声明纪律：只列本 PR 真正改动的文件，不预授权。
+#   ⚠️ 本卡**不含** `tests/tui-v2/chat-degradation.test.ts`（上一位的 chat-degradation 追因修复
+#      已在 d5bc45141/c66544da1 落盘，属既有提交面，非本轮新增写面）。
+# 🔴 2026-10-12 收窄（CTO 二·D，授权自决）：本 claim 现服务于【测试面】PR（#399）。
+#   原声明（**已作废**）：
+#     > "writeset = .claude/claims/337.yaml ／ .claude/task-briefs/2026-10-11-followup-react19-ink-dep.md
+#     >             ／ package.json ／ package-lock.json"
+#   作废理由（两条）：
+#     (a) 那 4 件属【依赖面】—— 已由独立 PR 承载并合并（react 回 18.3.1，合并提交 b024bfa01），
+#         与本 PR（仅测试面）**不符**；claim 是机器可读的写集声明，留着会**误报写集**。
+#     (b) 原声明正文自陈"本卡**不含** tests/tui-v2/chat-degradation.test.ts"，
+#         而该件正是本 PR 的**唯一实质改动**——声明与实际**正相反**。
+writeset:
+  - .claude/claims/337.yaml
+  - .claude/task-briefs/2026-10-11-followup-react19-ink-dep.md
+  - tests/tui-v2/chat-degradation.test.ts
+done:
+  - verify: bash -c "npm ci && npx vitest run tests/tui-v2/chat-degradation.test.ts"
+  - verify: npm ls react
+note: 净安装口径判据（修前 rc=1 @ react-reconciler.development.js:491:46 / 修后 rc=0 6 passed）；反例（react 回 19.3.0 + 重净安装）首跑即红且逐条点名，非"永远绿"假反例。lock 面收敛：2 files / +21 / −10，无无关漂移。Done 口径同步（裸 npx vitest run = 假绿）为跨线待办，不在本卡写集。
