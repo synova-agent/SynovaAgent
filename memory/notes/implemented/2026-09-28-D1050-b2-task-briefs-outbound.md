@@ -1,5 +1,5 @@
 ---
-状态: proposed
+状态: implemented（2026-10-11 迁移：task-state=impl_done ＋ 落地证据见文末）
 日期: 2026-09-28
 决策: B2（D1050）按「**活跃性过滤先行**」出库 `.claude/task-briefs/` 非 archive 存量 brief：以 task-state 实测词表重建映射（fail-closed），在飞卡（claimed/in_progress/spec_done）与近 14 天有 git 活动的 brief **一律保留**；实际出库 **275 / 424**，剩余 149 件留仓。
 理由: ① 本批对象是**工作目录**里的 brief，而 G10/G6/G12 的认领机制依赖该目录下存在当前卡的 brief ⇒ 误删在飞卡的 brief = **掐断认领链**，代价远高于少出一批；② 卡面判据的词表（done/merged/superseded）与 main 实测**不匹配**（实测 `audited 124 / impl_done 107 / claimed 103 / spec_done 22 / closed 15 / rejected 2 / in_progress 2 / audit_done 1 / (none) 1`）⇒ 必须用实测词表重建映射而非照抄判据；③ 「无 task-state ⇒ 可出库」需按**注册表结构性下限**细分：实测 task-state D# 区间下界 = **356**，故 D#<356 属结构性无卡（可出库，且 G12 认领窗口是文件名日期 ±1 天，其日期远早于窗口、不参与认领），D#≥356 却无卡属疑似漏登记/在飞（**保留**）；④ 引用复核**不可用「grep 0 命中」单判据**（D1047-R 实证：find 命中的目录级消费者对精确路径 grep 不可见）⇒ 双法并用，实测出库集在 `scripts/`、`tests/`、`.github/`、`.claude/settings.json` 中精确路径命中 **0 行**。
@@ -50,3 +50,21 @@
 | L2 | 卡面 ts 口径歧义：**509 = `src/`+`packages/` .ts**（`daily-cto-board.sh:81`）vs 全仓 .ts = 1453 | 两数皆真，须注明口径 |
 | L3 | 证据 `.json` 落 `docs/` ⇒ **本地** pre-commit 走全量 13 组（CI 侧 `ci.yml:51` 含 `\.(md\|json)$` ⇒ 仍 docs-only 早退） | 本地/CI 口径差异 |
 | L4 | 本批 brief 骨架由 `alloc-task-id.sh` 生成（占位符）⇒ 组 6 首跑 ❌「Q2 排除项缺少文件路径」硬阻断，须填充后过 | A-03 DEV-3 |
+
+## 落地证据（2026-10-11 复核 · 迁移依据）
+
+> 迁移判据：`memory/notes/README.md`「四态迁移语义」＝ `task-state = impl_done` 即达。
+
+```
+$ ls ~/Synova-过程档案/出库-主仓/.claude/task-briefs/ | wc -l
+281                      # 仓外承接副本在位
+$ git ls-tree -r --name-only gitea/local-main -- .claude/task-briefs/ | wc -l
+368                      # 主仓侧剩余（本 Note 契约：「活跃性过滤先行」，剩余留仓是有意保留）
+$ grep -n '"status"' task-state/D1050.json
+  "status": "impl_done",
+```
+
+判定：**真僵尸** ⇒ `git mv` 到 `implemented/`。
+⚠️ 本 Note 正文写的「实际出库 275 / 424，剩余 149 件留仓」是**决策当时**的实测值；
+2026-10-11 复核时的同口径实测为 `281 / 368`（后续追加出库所致）—— **本卡不改正文数字**
+（那是决策当时的快照），只在此登记复核时的实测值，避免制造新的口径漂移。
