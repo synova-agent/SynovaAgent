@@ -135,6 +135,17 @@ export interface ConstructionBlock {
 }
 
 // ════════════════════════════════════════════════════════════════
+// 【CTO 2026-10-11 核实】三条被判有问题的判据 —— 逐条核后**两条无需改**：
+//   ① `1-7`（#19）：卡面明写「原判据作废…保留为回归锁，非完成判据」，
+//      而 `acceptance` 已是新的 V1-V5（出货运姿 403 / 匿名不得探存在性 / 遮蔽消除 / DevMode / 反例）
+//      ⇒ **作废记录只是注释里的历史留痕，判据本体已修好** ⇒ 不动。
+//   ② `2-1a`（#22）：卡面 V1 明写「**真库**表结构：sqlite3 data/synova.db .schema metric_readings
+//      ⇒ 1 表 + 3 索引 + 17 列」⇒ **判据已含真库要求**；
+//      复核说的真库无该表是**执行状态**（status: todo），不是判据缺陷 ⇒ 不动。
+//   ③ `0-10`（#55）：**名实不符**（标题 fail-open ／ 判据 fail-closed）⇒ **已正名**（见该项 title）。
+// ════════════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════════
 // 【已废止】域规则镜像（2026-10-04 创始人裁定）
 //
 // 原设计：owner 由 paths 经 ownership.yaml 推导 ⇒ 治"负责人列被手填成不是负责人"
@@ -495,7 +506,9 @@ export const constructionItems: readonly ConstructionItem[] = [
     issue: 10,
     id: '0-10',
     worker: 'win', batch: '第0批', block: 'K1',
-    title: 'fail-open 兜底（0-9 延伸）',
+    title: '无认证上下文 ⇒ fail-closed 拒绝（0-9 延伸；原称 fail-open 兜底 — 名实不符，CTO 2026-10-11 正名）',  // 修(2026-10-11 CTO): 原标题写 fail-open, 而卡面 V1/V3/V5 全是 fail-closed 语义
+    //   (V1 未认证=>0 行 / V3 拒绝型条件集非空 / V5 反例: 改回 conditions:[] 必红)
+    //   => 标题会误导执行方照标题做 => 正名
     paths: [
       'tests/security/request-context-failclosed.test.ts',
       'tests/routes/im-authprovider.test.ts',
