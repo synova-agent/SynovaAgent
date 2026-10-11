@@ -1938,6 +1938,16 @@ fi
 #       📌 依据源（本次补注）: K3 报告 §一 Q1（同报告，P1，归因 devdoc，原文「D734 check-pr-budget.sh 独立运行/CI 侧接入」声称无据）。
 #       立卡：D734 预算门禁 CI 侧接入（另卡 A，内容见 D1148 PR 正文 §九）。
 #   ↳ D1171（P0-5）已执行撤回: 本块 bypass_run → v5_soft（本地软/CI strict 硬），撤回留痕见上方。
+# ═══ CTO 2026-10-11 裁定：**本地 CI 显式跳过 D734**（禁静默）═══
+# 依据：D734 是"PR 预算"——对着 **PR 的 base** 判才有意义。
+#   本地 CI 的基线是 GitHub 的旧 main（停在 05a6591c4），拿"集成分支账本总额"去判（实测 100 件/115 件白名单外）
+#   ⇒ **必然恒红** ⇒ 红灯失去信息量 ⇒ "被绕过的门禁 = 没有门禁"（历史病根）。
+# 执法位置改回：① 提交时软提示 ② 开 PR 时由审查人/CTO 人工判（13 组其余照常硬判）。
+# ⚠️ 实测教训：上一版只在 workflow 里设了 SYNO_SKIP_PR_BUDGET=1，**但本文件从未读它** ⇒ 开关形同虚设（本次修复补上）。
+if [ "${SYNO_SKIP_PR_BUDGET:-0}" = "1" ]; then
+  echo -e "${CYAN}── PR 预算门禁 (D734) ──${RESET}"
+  echo -e "  ${YELLOW}ⓘ 本地 CI 显式跳过（CTO 2026-10-11 裁定；执法位置=提交时软提示 + 开 PR 时人工判）${RESET}"
+else
 echo -e "${CYAN}── PR 预算门禁 (D734) ──${RESET}"
 if [ -x "$ROOT/scripts/control-tower/check-pr-budget.sh" ] || [ -f "$ROOT/scripts/control-tower/check-pr-budget.sh" ]; then
   _D734_OUT="$(bash "$ROOT/scripts/control-tower/check-pr-budget.sh" --quiet 2>&1)"; _D734_RC=$?
@@ -1949,6 +1959,7 @@ else
   # D1219（卡 #1225）: 存在性另有 check-pr-budget.test.sh 保证，但那不能替代**运行期** fail-closed。
   self_fail_missing_script "D734 PR 预算" "scripts/control-tower/check-pr-budget.sh"
 fi
+fi   # ← SYNO_SKIP_PR_BUDGET 分支结束（CTO 2026-10-11）
 
 # ── D520/任务3: 平台敏感命令软检查（V5 软提示——新增脚本须对照 PLATFORM-CHECKLIST.md）──
 # 只查本次新增（A）的 scripts/control-tower|workflow 下的 .sh/.py 文件：
