@@ -21,12 +21,34 @@
 
 import { readdirSync } from 'fs';
 import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { getSentinelRegistry } from './registry';
 import type { Sentinel } from './types';
 import { createLogger } from '@synova/logger';
 
 const log = createLogger('sentinel/builtins');
+
+/**
+ * 把磁盘绝对路径转成 ESM 动态 import 说明符（#1463 B3 修复点）。
+ *
+ * 契约（铁律 47）：
+ * - 输入：`absPath` = 原生文件系统绝对路径（POSIX 形态 `/…` 或 Windows 盘符形态 `D:\…`）
+ * - 输出：`file:` 协议的 URL 字符串，可直接交给 `await import()`
+ * - 降级：不适用 —— 纯字符串转换，无 I/O、无状态；非法输入由 `pathToFileURL` 抛 TypeError（调用方已有 try/catch）
+ *
+ * 为什么不能用 `absPath.replace(/\\/g, '/')`（旧实现，2026-10-09 实测）：
+ *   Windows 下 `adaptersDir` = `D:\…\src\sentinel\adapters` ⇒ 旧实现产出 `D:/…/x.ts`
+ *   ⇒ WHATWG URL 把 `D:` 解析为**协议头** ⇒ Node ESM loader 拒绝：`Received protocol 'd:'`
+ *   ⇒ 4 个内置适配器全部注册失败（#1437 首跑烟测断点 B3）。
+ *   POSIX 下路径以 `/` 开头（无 scheme，按相对 URL 解析回 `file:`）⇒ 旧实现**偶然可用**
+ *   ⇒ 该缺陷只在 Windows 腿可见（本机 macOS 复跑 4/4 全绿恰恰掩盖了它）。
+ *
+ * 调用方：`registerBuiltinSentinels()`（本文件）与 `registerLoadedSentinels()`（sentinel-loader.ts）
+ * —— 两处都是「磁盘路径 → 动态 import」，共用本函数即为该转换的唯一真源（铁律 9）。
+ */
+export function toImportSpecifier(absPath: string): string {
+  return pathToFileURL(absPath).href;
+}
 
 /**
  * 从文件名推导导出键名（首选键，不是唯一依据）。
@@ -128,7 +150,7 @@ export async function registerBuiltinSentinels(): Promise<void> {
 
   for (const filename of sentinelFiles) {
     try {
-      const mod = await import(join(adaptersDir, filename).replace(/\\/g, '/'));
+      const mod = await import(toImportSpecifier(join(adaptersDir, filename)));
       const match = resolveSentinelExport(mod as Record<string, unknown>, filename);
       if (match) {
         registry.register(match.sentinel);

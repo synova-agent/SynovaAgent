@@ -74,13 +74,18 @@ describe('SentinelRegistryImpl', () => {
     expect(registry.get('temp')).toBeUndefined();
   });
 
-  it('Given duplicate registration, When register again, Then warns and replaces', () => {
+  // #1463 B7（2026-10-09）：语义由「覆盖旧实例」翻转为「显式跳过 + 计数」。
+  // 旧断言是 `get('dup').config.name === 'v2'`（= 二次注册覆盖了首登实例）；
+  // 该语义在真实生产里让 45 次重复注册**对注册面不可见**，故按 #1463 §判据 V2 翻转。
+  it('Given duplicate registration, When register again, Then skips (idempotent) and counts', () => {
     const s1 = makeSentinel({ id: 'dup', name: 'v1' });
     const s2 = makeSentinel({ id: 'dup', name: 'v2' });
     registry.register(s1);
     registry.register(s2);
     expect(registry.count()).toBe(1);
-    expect(registry.get('dup')!.config.name).toBe('v2');
+    expect(registry.get('dup')).toBe(s1);              // 首登实例保留（修前此处 = s2）
+    expect(registry.get('dup')!.config.name).toBe('v1');
+    expect(registry.getDuplicateSkipCount()).toBe(1);  // 跳过可观测
   });
 
   it('Given multiple sentinels, When listByCategory, Then returns filtered', () => {
