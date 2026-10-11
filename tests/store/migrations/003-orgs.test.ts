@@ -62,12 +62,12 @@ describe('迁移 003 orgs（模块本体 + 表结构矩阵）', () => {
   });
 
   // ── 表结构矩阵与边界（原 orgs-migration.test.ts 的 6 例，逐条保留）──
-  it('正常：6 列 + 1 索引；SCHEMA_VERSION = 4', () => {
+  it('正常：6 列 + 1 索引；SCHEMA_VERSION = 5（003 之后已加 004，故门控版本号随之上移）', () => {
     const cols = db.pragma('table_info(orgs)') as ColRow[];
     expect(cols.map(c => c.name)).toEqual(EXPECTED_COLS);
     const idx = db.pragma('index_list(orgs)') as Array<{ name: string }>;
     expect(idx.map(i => i.name)).toContain('ix_orgs_status');
-    expect(SCHEMA_VERSION).toBe(4);
+    expect(SCHEMA_VERSION).toBe(5);
   });
 
   it('约束文本在位：两处 CHECK + 1 处 default 守卫', () => {

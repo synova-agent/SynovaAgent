@@ -1,0 +1,138 @@
+2026-10-11T13:02:33.3579190Z mac-host-runner(version:v0.2.13) received task 304 of job gates, be triggered by event: push
+2026-10-11T13:02:33.3590510Z workflow prepared
+2026-10-11T13:02:33.3592530Z evaluating expression 'success()'
+2026-10-11T13:02:33.3593830Z expression 'success()' evaluated to 'true'
+2026-10-11T13:02:33.3641550Z evaluating expression ''
+2026-10-11T13:02:33.3642530Z expression '' evaluated to 'true'
+2026-10-11T13:02:33.3643760Z ⭐ Run Main 工作区（本机 Gitea 克隆；不用 actions/checkout）
+2026-10-11T13:02:33.3662260Z expression 'set -e\nWS=/Users/wane/.ci-work/SynovaAgent\nif [ ! -d "$WS/.git" ]; then mkdir -p "$(dirname "$WS")"; git clone -q http://127.0.0.1:3000/synova-agent/SynovaAgent.git "$WS"; fi\ngit -C "$WS" fetch -q origin || true\ngit -C "$WS" checkout -q -f "${{ github.sha }}" 2>/dev/null || git -C "$WS" checkout -q -f FETCH_HEAD\necho "HEAD=$(git -C "$WS" rev-parse --short HEAD)"\n' rewritten to 'format('set -e\nWS=/Users/wane/.ci-work/SynovaAgent\nif [ ! -d "$WS/.git" ]; then mkdir -p "$(dirname "$WS")"; git clone -q http://127.0.0.1:3000/synova-agent/SynovaAgent.git "$WS"; fi\ngit -C "$WS" fetch -q origin || true\ngit -C "$WS" checkout -q -f "{0}" 2>/dev/null || git -C "$WS" checkout -q -f FETCH_HEAD\necho "HEAD=$(git -C "$WS" rev-parse --short HEAD)"\n', github.sha)'
+2026-10-11T13:02:33.3663640Z evaluating expression 'format('set -e\nWS=/Users/wane/.ci-work/SynovaAgent\nif [ ! -d "$WS/.git" ]; then mkdir -p "$(dirname "$WS")"; git clone -q http://127.0.0.1:3000/synova-agent/SynovaAgent.git "$WS"; fi\ngit -C "$WS" fetch -q origin || true\ngit -C "$WS" checkout -q -f "{0}" 2>/dev/null || git -C "$WS" checkout -q -f FETCH_HEAD\necho "HEAD=$(git -C "$WS" rev-parse --short HEAD)"\n', github.sha)'
+2026-10-11T13:02:33.3665350Z expression 'format('set -e\nWS=/Users/wane/.ci-work/SynovaAgent\nif [ ! -d "$WS/.git" ]; then mkdir -p "$(dirname "$WS")"; git clone -q http://127.0.0.1:3000/synova-agent/SynovaAgent.git "$WS"; fi\ngit -C "$WS" fetch -q origin || true\ngit -C "$WS" checkout -q -f "{0}" 2>/dev/null || git -C "$WS" checkout -q -f FETCH_HEAD\necho "HEAD=$(git -C "$WS" rev-parse --short HEAD)"\n', github.sha)' evaluated to '%!t(string=set -e\nWS=/Users/wane/.ci-work/SynovaAgent\nif [ ! -d "$WS/.git" ]; then mkdir -p "$(dirname "$WS")"; git clone -q http://127.0.0.1:3000/synova-agent/SynovaAgent.git "$WS"; fi\ngit -C "$WS" fetch -q origin || true\ngit -C "$WS" checkout -q -f "274f0e87f00a4831dc074277bdc7e0806b3b00b9" 2>/dev/null || git -C "$WS" checkout -q -f FETCH_HEAD\necho "HEAD=$(git -C "$WS" rev-parse --short HEAD)"\n)'
+2026-10-11T13:02:33.3665830Z Wrote command \n\nset -e\nWS=/Users/wane/.ci-work/SynovaAgent\nif [ ! -d "$WS/.git" ]; then mkdir -p "$(dirname "$WS")"; git clone -q http://127.0.0.1:3000/synova-agent/SynovaAgent.git "$WS"; fi\ngit -C "$WS" fetch -q origin || true\ngit -C "$WS" checkout -q -f "274f0e87f00a4831dc074277bdc7e0806b3b00b9" 2>/dev/null || git -C "$WS" checkout -q -f FETCH_HEAD\necho "HEAD=$(git -C "$WS" rev-parse --short HEAD)"\n\n\n to 'workflow/0.sh'
+2026-10-11T13:02:33.8020050Z HEAD=274f0e87f
+2026-10-11T13:02:33.8061790Z 依赖已存在
+2026-10-11T13:02:34.0158700Z   ✅ ① 唯一性：70 项 / 70 个唯一 id
+2026-10-11T13:02:34.0159390Z   ✅ ② 引用完整性：块内悬空 0 处
+2026-10-11T13:02:34.0160140Z   ⚠️ ③ 归属一致（存量告警，不计阻断）：8 处不一致 ｜ 0-9 声明 block=K1 但被 RETIRED 引用; 0-7 声明 block=K6 但被 K5 引用; 0-8 声明 block=K6 但被 K5 引用; 2-3 声明 block=K6 但被 K5 引用; 0-7 声明 block=K6 但不在该块 items 里
+2026-10-11T13:02:34.0161370Z   ✅ ④ 命名规则：新项须 `<前缀>-<序号>` 式（存量冻结 40 项豁免）
+2026-10-11T13:02:34.0161520Z   ✅ ⑤ issue 唯一性（真源）：70/70 项已带 issue ｜ 重复 0
+2026-10-11T13:02:34.0161670Z   ✅ ⑥ issue 必填（新项）：缺 issue 的项 0 项（存量待收敛）
+2026-10-11T13:02:34.0161780Z   RESULT=PASS ｜ 项 70 ｜ 块 13 ｜ **阻断级**违例 0（① 唯一性 / ② 引用完整性）；③④ 为存量告警
+2026-10-11T13:02:34.2736600Z 
+2026-10-11T13:02:34.2737330Z ═══════════════════════════════════════════════════════════
+2026-10-11T13:02:34.2739430Z   Loop Engineering V4.5.1 — pre-commit (13 组 + 免疫 + plan-integrity)
+2026-10-11T13:02:34.2739650Z ═══════════════════════════════════════════════════════════
+2026-10-11T13:02:34.2739830Z 
+2026-10-11T13:02:34.2739970Z [0;36m── 组 1/13: 类型安全 + 硬编码数据 ──[0m
+2026-10-11T13:02:34.4293510Z [0;36m── 组 2/13: 测试质量 ──[0m
+2026-10-11T13:02:34.5036210Z [0;36m── 组 3/13: Secrets ──[0m
+2026-10-11T13:02:35.0105420Z [0;36m── 组 4/13: 接线完整性 ──[0m
+2026-10-11T13:02:35.0125510Z [0;36m── 组 5/13: 架构边界 + 桥接文件 ──[0m
+2026-10-11T13:02:35.2218720Z [0;36m── 组 6/13: Task Brief (6 核心字段) ──[0m
+2026-10-11T13:02:35.3311360Z   [0;32m✅ 声明闸① brief schema（Q1–Q3/架构层/Done/骨架/Q0c；D1220 退时间戳+Q0）[0m
+2026-10-11T13:02:35.3472150Z   [0;32m✅ 声明闸③ Done 可证伪（每项 - [x] 带 verify:；D1148）[0m
+2026-10-11T13:02:35.4726260Z [0;36m── 组 7/13: 架构合规 ──[0m
+2026-10-11T13:02:35.4777220Z   [0;32m✅ 禁止 DiagnosticModule: 新模块须实现 Sentinel 接口[0m
+2026-10-11T13:02:35.5041220Z [0;36m── 组 8/13: 文件驱动架构完整性 (V3.9) ──[0m
+2026-10-11T13:02:35.5121480Z [0;36m── 组 9/13: 契约门禁 ──[0m
+2026-10-11T13:02:35.5164050Z [0;36m── 组 10/13: V3 流水线健康度 ──[0m
+2026-10-11T13:02:35.5211310Z [0;36m── 组 12/13: Task Scope 一致性 ──[0m
+2026-10-11T13:02:35.8023210Z   [0;32m✅ 声明闸② brief↔代码一致性（Q2 写集/排除项/可解析；D1148 合并 15→3）[0m
+2026-10-11T13:02:35.8212200Z [0;36m── 组 13/13: 技能同步一致性 ──[0m
+2026-10-11T13:02:35.8236090Z [0;36m── D782: 文档真相防线（D1 真相验证 + D2 登记门禁）──[0m
+2026-10-11T13:02:36.0072340Z [0;36m── PR 预算门禁 (D734) ──[0m
+2026-10-11T13:02:36.0072790Z   [1;33mⓘ 本地 CI 显式跳过（CTO 2026-10-11 裁定；执法位置=提交时软提示 + 开 PR 时人工判）[0m
+2026-10-11T13:02:36.0816280Z 
+2026-10-11T13:02:36.0816590Z ═══════════════════════════════════════════════════════════
+2026-10-11T13:02:36.0816800Z   [0;32m✅ 全部 13 组通过[0m
+2026-10-11T13:02:36.0816880Z ═══════════════════════════════════════════════════════════
+2026-10-11T13:02:36.0816950Z 
+2026-10-11T13:02:36.0869370Z 
+2026-10-11T13:02:36.0869980Z ═══ 架构边界检查 (铁律 39) ═══
+2026-10-11T13:02:36.0870050Z 
+2026-10-11T13:02:36.0973330Z   [0;32m✅ L2→L4 边界: 无直接引用[0m
+2026-10-11T13:02:36.0973650Z   [1;33m⚠ L1 扫描目标缺失(跳过): src/tui-v3[0m
+2026-10-11T13:02:36.1402200Z ─── 1b. L1→L3 跨层引用 ───
+2026-10-11T13:02:36.1402580Z   [1;33m⚠ 存量违规 9 处 (基线棘轮内, 不阻断——修复后请收紧 tests/architecture/l1-cross-layer-baseline.txt):[0m
+2026-10-11T13:02:36.1417480Z      src/routes/conversations.ts:164:  const { createSynovaDiagnosisEngine } = await import('../l3/synova-diagnosis-engine-impl');
+2026-10-11T13:02:36.1417580Z      src/routes/diagnosis.ts:278:    const { createSynovaDiagnosisEngine } = await import('../l3/synova-diagnosis-engine-impl');
+2026-10-11T13:02:36.1417750Z      src/routes/evolution.ts:68:  const { getGlobalSentinelRunner } = await import('../sentinel/runner');
+2026-10-11T13:02:36.1417850Z      src/tui-v2/chat.tsx:187:        const { createKnowledgeAgent } = await import('../l3/knowledge-agent');
+2026-10-11T13:02:36.1417950Z      src/mcp/skill-installer.ts:126:        const { getExpertRegistry } = await import('../l3/expert-registry');
+2026-10-11T13:02:36.1418070Z      src/server.ts:254:        const { getSentinelRegistry } = await import('./sentinel/registry');
+2026-10-11T13:02:36.1418160Z      src/server.ts:255:        const { aggregateSignals } = await import('./sentinel/signal-aggregator');
+2026-10-11T13:02:36.1418240Z      src/server.ts:322:    expertRegistry: new (await import('./l3/expert-registry')).ExpertRegistry(),
+2026-10-11T13:02:36.1418420Z      src/server.ts:324:    reportTemplates: new (await import('./l3/report-templates')).ReportTemplateRegistry(),
+2026-10-11T13:02:36.1435890Z      铁律 39: L1 只能依赖 L2。l3/ sentinel/ expert-platform/ expert/ 是 L3 层。正确做法: L1 → L2 (agent/ orchestrator/) → L3。
+2026-10-11T13:02:36.1435990Z 
+2026-10-11T13:02:36.1850220Z ─── 1c. L1→L4 跨层引用 ───
+2026-10-11T13:02:36.1850530Z   [1;33m⚠ 存量违规 10 处 (基线棘轮内, 不阻断——修复后请收紧 tests/architecture/l1-cross-layer-baseline.txt):[0m
+2026-10-11T13:02:36.1866920Z      src/routes/chat.ts:49:    const { SqliteGraphStore } = await import('../adapters/sqlite-graph-store');
+2026-10-11T13:02:36.1867050Z      src/routes/ga-annotations.ts:38:  const { getAgentMemoryStore } = await import('../l4/agent-memory-store');
+2026-10-11T13:02:36.1867270Z      src/routes/evolution.ts:61:  const { getAgentMemoryStore } = await import('../l4/agent-memory-store');
+2026-10-11T13:02:36.1867360Z      src/routes/knowledge-ask.ts:39:    const { KnowledgeStore } = await import('../l4/knowledge-store');
+2026-10-11T13:02:36.1867430Z      src/routes/ga-calibration.ts:70:  const { getAgentMemoryStore } = await import('../l4/agent-memory-store');
+2026-10-11T13:02:36.1867530Z      src/routes/ontology-admin.ts:16:    const { loadOntology } = await import('../l4/ontology-loader');
+2026-10-11T13:02:36.1867620Z      src/routes/ga-corrections.ts:9:  const { getAgentMemoryStore } = await import('../l4/agent-memory-store');
+2026-10-11T13:02:36.1867680Z      src/tui-v2/chat.tsx:57:    const { SqliteGraphStore } = await import('../adapters/sqlite-graph-store');
+2026-10-11T13:02:36.1867760Z      src/mcp/tool-registration.ts:104:      const { SqliteGraphStore } = await import('../adapters/sqlite-graph-store');
+2026-10-11T13:02:36.1867870Z      src/mcp/tool-definitions.ts:393:          const { loadOntology } = await import('../l4/ontology-loader');
+2026-10-11T13:02:36.1885860Z      铁律 39: L1 不得直接访问 L4 (l4/ evidence/ sqlite-graph-store 图桥接)。必须通过 L2 编排层。
+2026-10-11T13:02:36.1885950Z 
+2026-10-11T13:02:36.2318210Z ─── 1d. L1→L5 跨层引用 ───
+2026-10-11T13:02:36.2318560Z   [1;33m⚠ 存量违规 19 处 (基线棘轮内, 不阻断——修复后请收紧 tests/architecture/l1-cross-layer-baseline.txt):[0m
+2026-10-11T13:02:36.2334450Z      src/routes/conversations.ts:142:    const { SessionStore: SessionStoreImpl, isSqliteDatabase } = await import('../store/session-store');
+2026-10-11T13:02:36.2334620Z      src/routes/chat.ts:29:  const { getDatabase } = await import('../init/engine-context');
+2026-10-11T13:02:36.2334700Z      src/routes/im.ts:42:    const { getDatabase } = await import('../init/engine-context');
+2026-10-11T13:02:36.2334760Z      src/routes/im.ts:43:    const { SessionStore: SS } = await import('../store/session-store');
+2026-10-11T13:02:36.2334850Z      src/routes/diagnosis.ts:332:        const { SessionStore, isSqliteDatabase } = await import('../store/session-store');
+2026-10-11T13:02:36.2335000Z      src/routes/diagnosis.ts:676:    const { SessionStore, isSqliteDatabase } = await import('../store/session-store');
+2026-10-11T13:02:36.2335060Z      src/routes/diagnosis.ts:835:    const { SessionStore, isSqliteDatabase } = await import('../store/session-store');
+2026-10-11T13:02:36.2335120Z      src/routes/diagnosis.ts:860:    const { isDiagnosisReportArchive } = await import('../store/session-store');
+2026-10-11T13:02:36.2335170Z      src/routes/ga-annotations.ts:39:  const { getDatabase } = await import('../init/engine-context');
+2026-10-11T13:02:36.2335320Z      src/routes/evolution.ts:62:  const { getDatabase } = await import('../init/engine-context');
+2026-10-11T13:02:36.2335380Z      src/routes/knowledge-ask.ts:38:    const { getDatabase } = await import('../init/engine-context');
+2026-10-11T13:02:36.2335460Z      src/routes/ga-calibration.ts:71:  const { getDatabase } = await import('../init/engine-context');
+2026-10-11T13:02:36.2335510Z      src/routes/ga-corrections.ts:10:  const { getDatabase } = await import('../init/engine-context');
+2026-10-11T13:02:36.2335570Z      src/mcp/tool-registration.ts:105:      const { getDatabase } = await import('../init/engine-context');
+2026-10-11T13:02:36.2335640Z      src/mcp/tool-definitions.ts:383:        const { getDatabase, initEngineContext } = await import('../init/engine-context');
+2026-10-11T13:02:36.2335700Z      src/mcp/tool-definitions.ts:423:        const { getDatabase, initEngineContext } = await import('../init/engine-context');
+2026-10-11T13:02:36.2335770Z      src/mcp/tool-definitions.ts:428:        const { SessionStore } = await import('../store/session-store');
+2026-10-11T13:02:36.2335820Z      src/l1/im-inbound.ts:171:  const { SessionStore } = await import('../store/session-store');
+2026-10-11T13:02:36.2335890Z      src/server.ts:508:      const { runConnectorPipeline } = await import('./l5/connector-pipeline');
+2026-10-11T13:02:36.2355670Z      铁律 39: L1 不得直触 L5 (store/ cron/ l5/ better-sqlite3 / init/engine-context 句柄直取)。存储实例由 L2 bootstrap 组装后 DI 注入。
+2026-10-11T13:02:36.2355830Z 
+2026-10-11T13:02:36.2493350Z   [0;32m✅ L3→L5 边界: 无直接数据库操作[0m
+2026-10-11T13:02:36.3054100Z   [1;33m⚠  GraphStore 在 graph-bridge.ts 声明 (1处, 类型镜像自退役的 engine-core)[0m
+2026-10-11T13:02:36.3054570Z      运行: npx vitest run tests/architecture/graphstore-compatibility.test.ts
+2026-10-11T13:02:36.3149110Z   [1;33m⚠  多租户安全: 8 处 queryNodes/queryEdges 调用待审查 graph 参数[0m
+2026-10-11T13:02:36.3149420Z 
+2026-10-11T13:02:36.3149500Z   [0;32m架构检查: 全部通过 ✅[0m
+2026-10-11T13:02:36.3149560Z 
+2026-10-11T13:02:36.3318960Z 增量基线 = origin/local-main
+2026-10-11T13:02:48.2337370Z [2m   Start at [22m 21:02:39
+2026-10-11T13:02:48.2337950Z [2m   Duration [22m 9.10s[2m (tests 78%, import 18%, transform 2%, worker 2%)[22m
+2026-10-11T13:02:48.2338050Z 
+2026-10-11T13:02:48.2338100Z [2m    Isolate [22m [33m147 workers spawned[39m[2m · ~94ms startup each (spawn + environment, per file)[22m
+2026-10-11T13:02:48.2338300Z [2m            [22m [2mat least ~1.88s faster with [22m[33misolate: false[39m[2m — reuses workers across files instead of one per file[22m
+2026-10-11T13:02:48.2338410Z 
+2026-10-11T13:02:48.2338460Z 
+2026-10-11T13:02:48.2339560Z ::error file=/Users/wane/.ci-work/SynovaAgent/tests/stream-tool-loop.test.ts,title=tests/stream-tool-loop.test.ts > streamWithToolLoop — single LLM call per user message > Given chat throws an error%2C When processMessageStream%2C Then returns error message,line=210,column=26::AssertionError: expected '收到，不过这条信息我读不出具体意图——"测试错误"可能是几种情况：\n\n…' to contain '失败'%0A%0A- Expected%0A+ Received%0A%0A- 失败%0A+ 收到，不过这条信息我读不出具体意图——"测试错误"可能是几种情况：%0A+%0A+ - 你在**测试系统的异常/降级路径**（这条我理解，系统按设计不会静默吞掉，会明确标记并继续）；%0A+ - 或者是消息发错了、误触了；%0A+ - 或者你想说"我们公司现在有个问题"，只是还没展开。%0A+%0A+ 如果是第三种，我们从这里开始就好，不需要你组织语言：%0A+%0A+ **1. 公司是做什么的？大概多少人、什么行业？**%0A+ （为什么问：规模和行业决定后面用哪套判断基准——20人的贸易公司和一个300人的制造厂，"正常"的定义完全不同。）%0A+%0A+ **2. 现在最让你睡不着的一件事是什么？**%0A+ （为什么问：增长诊断最怕答错题。你说的第一个问题，往往不是真问题，但它决定了我们从哪儿挖。）%0A+%0A+ **3. 团队怎么分的？有几条业务线、谁是关键角色？**%0A+ （为什么问：后面要判断"卡点在人还是在事"，不知道谁负责什么，这个判断做不了。）%0A+%0A+ 这三条你先随便答，答到哪算哪。**我的初步判断是目前信息还不足以支撑任何结论**——但如果你只是来测异常的，告诉我一声，我直接给降级路径的表现，不占用你时间。%0A%0A ❯ tests/stream-tool-loop.test.ts:210:26%0A%0A
+2026-10-11T13:02:48.2340140Z 
+2026-10-11T13:02:48.2340640Z ::error file=/Users/wane/.ci-work/SynovaAgent/src/tui-v2/chat.tsx,title=tests/tui-v2/chat-degradation.test.ts > #1348 V2 — 4 处空吞降级语义在位（注入式补充证据） > ① %3A237 检查更新 reject → log.warn 真被调用 + 界面提示可见,line=10,column=1::Error: [vitest] There was an error when mocking a module. If you are using "vi.mock" factory, make sure there are no top level variables inside, since this call is hoisted to top of the file. Read more: https://vitest.dev/api/vi.html#vi-mock%0A ❯ src/tui-v2/chat.tsx:10:1%0A ❯ ensureEntryCaptured tests/tui-v2/chat-degradation.test.ts:162:3%0A%0ACaused by: Caused by: TypeError: Cannot read properties of undefined (reading 'ReactCurrentOwner')%0A ❯ $$$reconciler node_modules/ink/node_modules/react-reconciler/cjs/react-reconciler.development.js:491:46%0A ❯ node_modules/ink/build/reconciler.js:61:16%0A%0A
+2026-10-11T13:02:48.2341080Z 
+2026-10-11T13:02:48.2341530Z ::error file=/Users/wane/.ci-work/SynovaAgent/src/tui-v2/chat.tsx,title=tests/tui-v2/chat-degradation.test.ts > #1348 V2 — 4 处空吞降级语义在位（注入式补充证据） > ② %3A242 余额查询 reject → log.warn 真被调用 + 界面提示可见,line=10,column=1::Error: [vitest] There was an error when mocking a module. If you are using "vi.mock" factory, make sure there are no top level variables inside, since this call is hoisted to top of the file. Read more: https://vitest.dev/api/vi.html#vi-mock%0A ❯ src/tui-v2/chat.tsx:10:1%0A ❯ ensureEntryCaptured tests/tui-v2/chat-degradation.test.ts:162:3%0A%0ACaused by: TypeError: Cannot read properties of undefined (reading 'ReactCurrentOwner')%0A ❯ $$$reconciler node_modules/ink/node_modules/react-reconciler/cjs/react-reconciler.development.js:491:46%0A ❯ node_modules/ink/build/reconciler.js:61:16%0A%0A
+2026-10-11T13:02:48.2341910Z 
+2026-10-11T13:02:48.2342440Z ::error file=/Users/wane/.ci-work/SynovaAgent/src/tui-v2/chat.tsx,title=tests/tui-v2/chat-degradation.test.ts > #1348 V2 — 4 处空吞降级语义在位（注入式补充证据） > ③ %3A260 WAL checkpoint 抛错 → log.warn 真被调用 + 关闭流程不阻断（db.close 仍被调用）,line=10,column=1::Error: [vitest] There was an error when mocking a module. If you are using "vi.mock" factory, make sure there are no top level variables inside, since this call is hoisted to top of the file. Read more: https://vitest.dev/api/vi.html#vi-mock%0A ❯ src/tui-v2/chat.tsx:10:1%0A ❯ ensureEntryCaptured tests/tui-v2/chat-degradation.test.ts:162:3%0A%0ACaused by: TypeError: Cannot read properties of undefined (reading 'ReactCurrentOwner')%0A ❯ $$$reconciler node_modules/ink/node_modules/react-reconciler/cjs/react-reconciler.development.js:491:46%0A ❯ node_modules/ink/build/reconciler.js:61:16%0A%0A
+2026-10-11T13:02:48.2342800Z 
+2026-10-11T13:02:48.2343310Z ::error file=/Users/wane/.ci-work/SynovaAgent/src/tui-v2/chat.tsx,title=tests/tui-v2/chat-degradation.test.ts > #1348 V2 — 4 处空吞降级语义在位（注入式补充证据） > ④a %3A418 诊断为 reject → log.error 真被调用 + 界面提示 + 假进度被复位,line=10,column=1::Error: [vitest] There was an error when mocking a module. If you are using "vi.mock" factory, make sure there are no top level variables inside, since this call is hoisted to top of the file. Read more: https://vitest.dev/api/vi.html#vi-mock%0A ❯ src/tui-v2/chat.tsx:10:1%0A ❯ ensureEntryCaptured tests/tui-v2/chat-degradation.test.ts:162:3%0A%0ACaused by: TypeError: Cannot read properties of undefined (reading 'ReactCurrentOwner')%0A ❯ $$$reconciler node_modules/ink/node_modules/react-reconciler/cjs/react-reconciler.development.js:491:46%0A ❯ node_modules/ink/build/reconciler.js:61:16%0A%0A
+2026-10-11T13:02:48.2343660Z 
+2026-10-11T13:02:48.2344150Z ::error file=/Users/wane/.ci-work/SynovaAgent/src/tui-v2/chat.tsx,title=tests/tui-v2/chat-degradation.test.ts > #1348 V2 — 4 处空吞降级语义在位（注入式补充证据） > ④b %3A418 诊断为 resolve(null) → log.warn 真被调用 + 界面提示 + 假进度被复位,line=10,column=1::Error: [vitest] There was an error when mocking a module. If you are using "vi.mock" factory, make sure there are no top level variables inside, since this call is hoisted to top of the file. Read more: https://vitest.dev/api/vi.html#vi-mock%0A ❯ src/tui-v2/chat.tsx:10:1%0A ❯ ensureEntryCaptured tests/tui-v2/chat-degradation.test.ts:162:3%0A%0ACaused by: TypeError: Cannot read properties of undefined (reading 'ReactCurrentOwner')%0A ❯ $$$reconciler node_modules/ink/node_modules/react-reconciler/cjs/react-reconciler.development.js:491:46%0A ❯ node_modules/ink/build/reconciler.js:61:16%0A%0A
+2026-10-11T13:02:48.2344520Z 
+2026-10-11T13:02:48.2345010Z ::error file=/Users/wane/.ci-work/SynovaAgent/src/tui-v2/chat.tsx,title=tests/tui-v2/chat-degradation.test.ts > #1348 V2 — 4 处空吞降级语义在位（注入式补充证据） > ⑤ V5 降级不阻断：%3A418 失败后 TUI 仍能响应一次交互（/help）,line=10,column=1::Error: [vitest] There was an error when mocking a module. If you are using "vi.mock" factory, make sure there are no top level variables inside, since this call is hoisted to top of the file. Read more: https://vitest.dev/api/vi.html#vi-mock%0A ❯ src/tui-v2/chat.tsx:10:1%0A ❯ ensureEntryCaptured tests/tui-v2/chat-degradation.test.ts:162:3%0A%0ACaused by: TypeError: Cannot read properties of undefined (reading 'ReactCurrentOwner')%0A ❯ $$$reconciler node_modules/ink/node_modules/react-reconciler/cjs/react-reconciler.development.js:491:46%0A ❯ node_modules/ink/build/reconciler.js:61:16%0A%0A
+2026-10-11T13:02:48.2347050Z ::error::增量测试失败 —— 只跑了本次改动相关的测试；若确认是既有 flaky，请在本作业日志里点名具体用例
+2026-10-11T13:02:48.2349240Z   ❌  Failure - Main ③ 增量测试（vitest --changed；只测改动面，避免全量摩擦）
+2026-10-11T13:02:48.2351880Z exit status 1
+2026-10-11T13:02:48.2352220Z Cleaning up container for job gates
+2026-10-11T13:02:48.2361880Z 🏁  Job failed
+2026-10-11T13:02:48.2362290Z Job 'gates' failed

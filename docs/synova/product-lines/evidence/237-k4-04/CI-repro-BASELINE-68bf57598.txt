@@ -1,0 +1,169 @@
+node.exe : (!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to bec
+ome the default in a future major version of Vite:
+所在位置 行:1 字符: 1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((!) Your Vite c...ersion of Vite::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  - `__dirname` (vitest.config.ts:4:35). Use `import.meta.dirname` instead
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.0.2 D:/synova-wt-237-base
+
+ ❯ tests/tui-v2/chat-degradation.test.ts (6 tests | 6 failed) 884ms
+   ❯ #1348 V2 — 4 处空吞降级语义在位（注入式补充证据） (6)
+     × ① :237 检查更新 reject → log.warn 真被调用 + 界面提示可见 876ms
+     × ② :242 余额查询 reject → log.warn 真被调用 + 界面提示可见 1ms
+     × ③ :260 WAL checkpoint 抛错 → log.warn 真被调用 + 关闭流程不阻断（db.close 仍被调用） 2ms
+     × ④a :418 诊断为 reject → log.error 真被调用 + 界面提示 + 假进度被复位 1ms
+     × ④b :418 诊断为 resolve(null) → log.warn 真被调用 + 界面提示 + 假进度被复位 1ms
+     × ⑤ V5 降级不阻断：:418 失败后 TUI 仍能响应一次交互（/help） 1ms
+{"level":30,"time":1791723863094,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/conver
+sation-engine","msg":"无 DeepSeek 备用凭据 — failover 未启用（保持单 provider）"}
+{"level":40,"time":1791723863097,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"orchestrator
+/context-engine","file":"manifest.json","msg":"策略文件格式无效 — 跳过"}
+{"level":30,"time":1791723863097,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"orchestrator
+/context-engine","strategyCount":1,"activeStrategy":"context-strategy/default","msg":"ContextEngine 初始化完成"}
+{"level":30,"time":1791723863100,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/conver
+sation-engine","msg":"无 DeepSeek 备用凭据 — failover 未启用（保持单 provider）"}
+{"level":40,"time":1791723863101,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"orchestrator
+/context-engine","file":"manifest.json","msg":"策略文件格式无效 — 跳过"}
+{"level":30,"time":1791723863101,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"orchestrator
+/context-engine","strategyCount":1,"activeStrategy":"context-strategy/default","msg":"ContextEngine 初始化完成"}
+{"level":30,"time":1791723863219,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/conver
+sation-engine","msg":"无 DeepSeek 备用凭据 — failover 未启用（保持单 provider）"}
+{"level":40,"time":1791723863220,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"orchestrator
+/context-engine","file":"manifest.json","msg":"策略文件格式无效 — 跳过"}
+{"level":30,"time":1791723863220,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"orchestrator
+/context-engine","strategyCount":1,"activeStrategy":"context-strategy/default","msg":"ContextEngine 初始化完成"}
+{"level":30,"time":1791723863221,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/conver
+sation-engine","msg":"无 DeepSeek 备用凭据 — failover 未启用（保持单 provider）"}
+{"level":40,"time":1791723863222,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"orchestrator
+/context-engine","file":"manifest.json","msg":"策略文件格式无效 — 跳过"}
+{"level":30,"time":1791723863222,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"orchestrator
+/context-engine","strategyCount":1,"activeStrategy":"context-strategy/default","msg":"ContextEngine 初始化完成"}
+{"level":40,"time":1791723863341,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/tool-l
+oop","tool":"test_tool","synthesizedId":"call_loop_1","degraded":true,"msg":"tool_call 缺 id — 合成确定性 id 保持配对合法（非随机 UUID）
+"}
+{"level":30,"time":1791723863342,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/tools"
+,"name":"test_tool","params":{},"mode":"local","msg":"执行工具"}
+{"level":30,"time":1791723863516,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/conver
+sation-engine","msg":"无 DeepSeek 备用凭据 — failover 未启用（保持单 provider）"}
+{"level":40,"time":1791723863517,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"orchestrator
+/context-engine","file":"manifest.json","msg":"策略文件格式无效 — 跳过"}
+{"level":30,"time":1791723863517,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"orchestrator
+/context-engine","strategyCount":1,"activeStrategy":"context-strategy/default","msg":"ContextEngine 初始化完成"}
+{"level":30,"time":1791723863518,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/conver
+sation-engine","msg":"无 DeepSeek 备用凭据 — failover 未启用（保持单 provider）"}
+{"level":40,"time":1791723863519,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"orchestrator
+/context-engine","file":"manifest.json","msg":"策略文件格式无效 — 跳过"}
+{"level":30,"time":1791723863519,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"orchestrator
+/context-engine","strategyCount":1,"activeStrategy":"context-strategy/default","msg":"ContextEngine 初始化完成"}
+{"level":40,"time":1791723863520,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"llm/retry-mi
+ddleware","provider":"fake-tools","code":"UNKNOWN","attempt":0,"delayMs":568,"msg":"LLM 调用失败，568ms 后重试"}
+{"level":40,"time":1791723864103,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"llm/retry-mi
+ddleware","provider":"fake-tools","code":"UNKNOWN","attempt":1,"delayMs":860,"msg":"LLM 调用失败，860ms 后重试"}
+{"level":40,"time":1791723864980,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"llm/retry-mi
+ddleware","provider":"fake-tools","code":"UNKNOWN","attempt":2,"delayMs":1653,"msg":"LLM 调用失败，1653ms 后重试"}
+{"level":40,"time":1791723866638,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"llm/retry-mi
+ddleware","provider":"fake-tools","code":"UNKNOWN","attempts":4,"msg":"重试耗尽 — 返回 outcome"}
+{"level":40,"time":1791723866638,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/tool-l
+oop","code":"UNKNOWN","kind":"error","attempts":4,"degraded":true,"round":0,"msg":"streamWithToolLoop: LLM 调用降级（韧性层分类）"
+}
+{"level":30,"time":1791723866638,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/conver
+sation-engine","msg":"无 DeepSeek 备用凭据 — failover 未启用（保持单 provider）"}
+{"level":40,"time":1791723866639,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"orchestrator
+/context-engine","file":"manifest.json","msg":"策略文件格式无效 — 跳过"}
+{"level":30,"time":1791723866639,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"orchestrator
+/context-engine","strategyCount":1,"activeStrategy":"context-strategy/default","msg":"ContextEngine 初始化完成"}
+{"level":30,"time":1791723866640,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/conver
+sation-engine","msg":"无 DeepSeek 备用凭据 — failover 未启用（保持单 provider）"}
+{"level":40,"time":1791723866640,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"orchestrator
+/context-engine","file":"manifest.json","msg":"策略文件格式无效 — 跳过"}
+{"level":30,"time":1791723866640,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"orchestrator
+/context-engine","strategyCount":1,"activeStrategy":"context-strategy/default","msg":"ContextEngine 初始化完成"}
+{"level":40,"time":1791723866747,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/tool-l
+oop","tool":"query_ontology","synthesizedId":"call_loop_1","degraded":true,"msg":"tool_call 缺 id — 合成确定性 id 保持配对合法（非随机 
+UUID）"}
+{"level":40,"time":1791723866747,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/tools"
+,"name":"query_ontology","msg":"未知工具调用"}
+{"level":40,"time":1791723866853,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/tool-l
+oop","tool":"fetch_document","synthesizedId":"call_loop_2","degraded":true,"msg":"tool_call 缺 id — 合成确定性 id 保持配对合法（非随机 
+UUID）"}
+{"level":40,"time":1791723866853,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/tools"
+,"name":"fetch_document","msg":"未知工具调用"}
+{"level":40,"time":1791723866961,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/tool-l
+oop","tool":"fetch_document","synthesizedId":"call_loop_3","degraded":true,"msg":"tool_call 缺 id — 合成确定性 id 保持配对合法（非随机 
+UUID）"}
+{"level":40,"time":1791723866962,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"l3/tool-guar
+d","tool":"fetch_document","args":{"docId":"d1"},"count":2,"msg":"ToolGuard 循环提醒（advisory）"}
+{"level":40,"time":1791723866962,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/tools"
+,"name":"fetch_document","msg":"未知工具调用"}
+{"level":30,"time":1791723867071,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/conver
+sation-engine","msg":"无 DeepSeek 备用凭据 — failover 未启用（保持单 provider）"}
+{"level":40,"time":1791723867072,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"orchestrator
+/context-engine","file":"manifest.json","msg":"策略文件格式无效 — 跳过"}
+{"level":30,"time":1791723867072,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"orchestrator
+/context-engine","strategyCount":1,"activeStrategy":"context-strategy/default","msg":"ContextEngine 初始化完成"}
+{"level":30,"time":1791723867073,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/conver
+sation-engine","msg":"无 DeepSeek 备用凭据 — failover 未启用（保持单 provider）"}
+{"level":40,"time":1791723867073,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"orchestrator
+/context-engine","file":"manifest.json","msg":"策略文件格式无效 — 跳过"}
+{"level":30,"time":1791723867074,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"orchestrator
+/context-engine","strategyCount":1,"activeStrategy":"context-strategy/default","msg":"ContextEngine 初始化完成"}
+{"level":30,"time":1791723868211,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/conver
+sation-engine","msg":"无 DeepSeek 备用凭据 — failover 未启用（保持单 provider）"}
+{"level":40,"time":1791723868211,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"orchestrator
+/context-engine","file":"manifest.json","msg":"策略文件格式无效 — 跳过"}
+{"level":30,"time":1791723868211,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"orchestrator
+/context-engine","strategyCount":1,"activeStrategy":"context-strategy/default","msg":"ContextEngine 初始化完成"}
+{"level":30,"time":1791723868213,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/tool-l
+oop","count":1,"round":0,"msg":"LLM 请求工具调用"}
+{"level":30,"time":1791723868213,"pid":52416,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/tools"
+,"name":"my_special_tool","params":{},"mode":"local","msg":"执行工具"}
+ ✓ tests/stream-tool-loop.test.ts (6 tests) 5127ms
+   ✓ streamWithToolLoop — single LLM call per user message (5)
+     ✓ Given chat throws an error, When processMessageStream, Then returns error message 3122ms
+     ✓ Given persistent tool calls for 3 rounds, When processMessageStream, Then returns final reply on 4th round 433ms
+     ✓ Given a long reply, When streamed, Then all tokens concatenate to final reply 1138ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/tui-v2/chat-degradation.test.ts > #1348 V2 — 4 处空吞降级语义在位（注入式补充证据） > ① :237 检查更新 reject → log.warn 真被调用 + 界
+面提示可见
+ FAIL  tests/tui-v2/chat-degradation.test.ts > #1348 V2 — 4 处空吞降级语义在位（注入式补充证据） > ② :242 余额查询 reject → log.warn 真被调用 + 界
+面提示可见
+ FAIL  tests/tui-v2/chat-degradation.test.ts > #1348 V2 — 4 处空吞降级语义在位（注入式补充证据） > ③ :260 WAL checkpoint 抛错 → log.warn 真被
+调用 + 关闭流程不阻断（db.close 仍被调用）
+ FAIL  tests/tui-v2/chat-degradation.test.ts > #1348 V2 — 4 处空吞降级语义在位（注入式补充证据） > ④a :418 诊断为 reject → log.error 真被调用 + 
+界面提示 + 假进度被复位
+ FAIL  tests/tui-v2/chat-degradation.test.ts > #1348 V2 — 4 处空吞降级语义在位（注入式补充证据） > ④b :418 诊断为 resolve(null) → log.warn 真
+被调用 + 界面提示 + 假进度被复位
+ FAIL  tests/tui-v2/chat-degradation.test.ts > #1348 V2 — 4 处空吞降级语义在位（注入式补充证据） > ⑤ V5 降级不阻断：:418 失败后 TUI 仍能响应一次交互（/help
+）
+Error: [vitest] There was an error when mocking a module. If you are using "vi.mock" factory, make sure there are no to
+p level variables inside, since this call is hoisted to top of the file. Read more: https://vitest.dev/api/vi.html#vi-m
+ock
+ ❯ src/tui-v2/chat.tsx:10:1
+      8|
+      9| import React, { useState, useCallback, useEffect, useRef, useMemo } fr…
+     10| import { render, Box, useApp, useStdin, useStdout, Text, useInput } fr…
+       | ^
+     11| import { bootstrap, type BootstrapResult } from './lib/bootstrap';
+     12| import { handleCommand, tryConfigureKey, type CommandContext } from '.…
+ ❯ ensureEntryCaptured tests/tui-v2/chat-degradation.test.ts:162:3
+
+Caused by: TypeError: Cannot read properties of undefined (reading 'ReactCurrentOwner')
+ ❯ $$$reconciler ../synova-wt-1455/node_modules/ink/node_modules/react-reconciler/cjs/react-reconciler.development.js:4
+91:46
+ ❯ ../synova-wt-1455/node_modules/ink/build/reconciler.js:61:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  6 failed | 6 passed (12)
+   Start at  21:04:21
+   Duration  6.69s (tests 81%, transform 15%, import 4%)
+
