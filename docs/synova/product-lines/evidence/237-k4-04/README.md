@@ -3,7 +3,7 @@
 > **分支**：`fix/237-graph-triples-rebuild` ｜ **PR**：http://192.168.1.7:3000/synova-agent/SynovaAgent/pulls/343
 > **建分支时基线 tip**：`68bf5759878a458b5e5ceb324a32878660155517` ｜ **本轮读数时点 HEAD**：`09240a496935900fdf902f25d5c5c4dcb8229cca`
 > **交付人**：k4-04-impl ｜ 2026-10-11
-> **状态**：**`可提请独立审计`**（复核员 v2 四项结论见 §八；**"通过与否"归 CTO 收件闸 ＋ K3 终审**）｜ Done ④ **未交付 ⇒ CTO 已裁定拆卡，卡号待 CTO 补登**
+> **状态**：**`可提请独立审计`**（复核员 v2 四项结论见 §八；**"通过与否"归 CTO 收件闸 ＋ K3 终审**）｜ Done ④ **未交付 ⇒ 已拆卡 `#345`**
 > 🔴 K3 复审通过前**不得合并**。
 
 ---
@@ -70,35 +70,36 @@
 
 临时改动**只在工作区**、未 commit、未 push；复原后 `git status` 干净（HEAD 未变）。复核员已独立复做 C2/C3 双造红并确认判别性（红因子可区分：B 有 `datatype mismatch`、A 为 0）。
 
-## 五、CI 状态与存量红归因（🔴 待 CTO 裁；不在本写集）
+## 五、CI 状态与存量红归因（**CTO v4 §①：存量红点名放行；不收紧 `--changed`**）
 
 - 步骤 **① 13 组门禁 ✅**、**② 架构边界 ✅**、**③ `vitest --changed origin/local-main` ❌**（run 307/308/309/310/319 同型）。
-- **失败件 1** `tests/tui-v2/chat-degradation.test.ts`（6 例，`ReactCurrentOwner`）⇒ **存量红**：run **281**（另一分支 `3449c05bb`）与 run **319**（本卡）**失败用例名逐条对齐**（①②③④a④b⑤，同根因）；本地**完整 checkout 基线树**（`local-main @ 68bf57598`）复跑 `6 failed` / `stream-tool-loop` `6 passed`，与 HEAD 一致。
-- **失败件 2** `tests/stream-tool-loop.test.ts:210` ⇒ **环境依赖**：CI 日志原文 `expected '收到你的"测试错误"——我这边运作正常…' to contain '失败'` ⇒ 收到**真 LLM 回复**；本地两态皆绿；该用例**不建库**。
+- **失败件 1**（存量红 · 卡 **`#347`**）`tests/tui-v2/chat-degradation.test.ts`（6 例，`ReactCurrentOwner`）：**不在写集**（`git diff --name-only $(merge-base)..HEAD -- tests/tui-v2/` = 0）＋ **零改动基线同样红**（run 281 另一分支与 run 319 失败用例名逐条对齐；本地完整 checkout 基线树 `6 failed`）。→ 双证据全文见 PR 正文 **(h)**。
+- **失败件 2**（环境依赖）`tests/stream-tool-loop.test.ts:210`：**不在写集**（`-- tests/stream-tool-loop.test.ts` = 0）＋ **本地两态皆绿 / CI 收外部 LLM 文本**（verbatim：`expected '收到你的"测试错误"…' to contain '失败'`）。→ 见 PR 正文 **(h)**。
 - **反证检查**（复核员独立重做，方法更强）：4 个绿 run 日志中两文件与 `ReactCurrentOwner` **全 0 命中** ⇒ **"找不到反例"成立**。
-- 🔴 处置（另开卡 / CI 收敛 `--changed` / 按「存量红点名」放行）**请 CTO 裁**。
+- ✅ **D10 判过三条**：(a) 红件逐条点名 + 双证据 见 (h)；(b) 存量卡 `#347` 已立；(c) 本卡写集内判据全绿（复核员 C1–C9 + D8）见 (i)。
 
 ## 六、遗留清单 / 未决项
 
-1. **Done④ 未交付** ⇒ **CTO 已裁定拆卡，卡号待 CTO 补登**；口径＝与 `queryNodes` 的 **D355 先例同款**（`log.error` + `"no such column"` 识别 + **仍返回 `[]`**）；`degraded` 另案。
-2. **DDL 属 schema 面，须 CTO 逐字批**：移除旧库多出的 `confidence` / `source` / `props_json`（值已搬入 `props`；生产边表 0 行 ⇒ 无行数据风险，列语义取舍属 CTO）。
-3. **CI 步骤③ 红的合并口径**待 CTO 裁。
-4. **本地 git hooks 未安装**（`.git/hooks` 仅 `.sample`）⇒ 本地 13 组未跑；权威门禁＝Gitea CI。M4：**未使用** `synova-commit`（显式 push，无重复推）。
+1. **Done④ 未交付 ⇒ 已拆卡 `#345`**；口径＝与 `queryNodes` 的 **D355 先例同款**（`log.error` + `"no such column"` 识别 + **仍返回 `[]`**）；`degraded` 另案。
+2. **DDL：CTO 已逐字批（12 列 canonical）** —— `confidence` / `source` / `props_json` **三列被移除属既定取舍**；「`props_json` 值并入 `props` 不丢」的**断言出处（用例名 + `file:line`）见 PR 正文 (j)**（`004-*.test.ts:101/:127/:154/:186/:251` 与 `legacy-schema.test.ts:104/:133`）。
+3. ✅ **CI 步骤③ 红按「存量红点名放行」判过**；存量卡 `#347`；**不收紧 `--changed`**。
+4. **本地 git hooks 未安装**（`.git/hooks` 仅 `.sample`）⇒ 本地 13 组未跑；权威门禁＝Gitea CI。**CTO v4 §①-⑦：不立卡**，开工令将补 `npm run hooks:install`。
 5. **证据件编码事故（本批第 2 次，已升级 CTO）**：首版 9 份 + `CI-repro-*.txt` 2 份因本机 `pwsh` 实为 **PowerShell 5.1**、`*>` 产 **UTF-16LE**；另有 3 份被 `Out-File -Encoding utf8` 加 **BOM**。已全部转 **UTF-8 无 BOM**；**从 HEAD 复检 21 份 `bad_committed=0`**。
-6. **Z8 提案**（`PROPOSAL-skill-tool-discipline.md`）＝提案→K3→CTO；**未落地** `SKILL.md`；条目 3（行数口径改两效应版）、条目 6（`immutable=1` 本环境不可用 ⇒ 实际口径 `readonly + query_only`）已按复核员交叉核补写。
-7. K3 复审通过前**不合并**。
+6. **Z8 提案**（`PROPOSAL-skill-tool-discipline.md`）＝**落点已由 CTO v4 §①-③ 改定为 `docs/synova/product-lines/evidence/**`（写集内）**，不碰 `.dsh/skills/**`（技能面 diff = 0）；条目 3/6 已按复核员交叉核补写；复核员第 10 条**只登记、待裁**。
+7. **即时生效令合规（CTO v4 §①-⑤）**：本件与 PR 正文**均未引用 `check-file-driven.sh` 的事后复跑读数**。
+8. K3 复审通过前**不合并**。
 
 ## 七、归属逐张收口
 
 | 项 | 归属 | 状态 |
 |---|---|---|
-| Done ① ② ③（旧库读/写 + 反例判别） | 本卡 | 交付（D2/D5/D6 证据；复核员 C1/C2/C3 已独立复跑） |
+| Done ① ② ③（旧库读/写 + 反例判别） | 本卡 | 交付（D2/D5/D6；复核员 C1/C2/C3 已独立复跑） |
 | Done ⑤（真库读数，含加固） | 本卡 | 交付（`readonly + query_only=1`，本体 sha256 前后一致） |
-| Done ④（读路径不静默） | **拆卡 · 卡号待 CTO 补登** | 未交付（PR 正文 C5′ 显式声明） |
-| DDL（`confidence`/`source`/`props_json` 移除） | **CTO 逐字批** | 待批 |
-| CI 步骤③ 红（存量 + 环境） | **CTO 裁处理路径** | 未决 |
+| Done ④（读路径不静默） | **已拆卡 `#345`** | 未交付（PR 正文 C5′ 显式声明） |
+| DDL（`confidence`/`source`/`props_json` 移除） | **CTO 已逐字批** | ✅ 已批；断言出处见 (j) |
+| CI 步骤③ 红（存量 + 环境） | **CTO：存量红点名放行** | ✅ 判过（双证据 + `#347`） |
 | 资产来源与取回方式 | 本卡 | 只读旧仓本地分支逐字节取回 + 自证 sha；复核员独立复取 |
-| Z8 工具纪律清单 | 提案→**K3 → CTO** | 提案件已入仓，未落地 |
+| Z8 工具纪律清单 | 提案（落点 `evidence/**`）→ **K3 → CTO** | 提案件已入仓，未落地 |
 
 ## 八、独立复核结论（M6 回写 · 摘要；**四项原文照贴见 `PR-BODY.md` 同名节**）
 

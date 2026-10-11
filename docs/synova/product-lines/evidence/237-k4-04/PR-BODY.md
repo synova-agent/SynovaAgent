@@ -70,7 +70,7 @@ D4 同形守卫单跑 = `1 passed | 15 skipped`；D6/D7 探针 = `[read] queryEd
 
 ## (c) C5′ — Done④ 未交付
 
-**Done④ 未交付 ⇒ CTO 已裁定拆卡，卡号待 CTO 补登。**
+**Done④ 未交付 ⇒ 已拆卡 #345**
 
 （本 PR 不实施：`src/adapters/sqlite-graph-store.ts:255-259` 仍为 `log.warn + return []`；原因：该文件被在飞分支 `fix/1421-skills-type-assumption` 占用，写集禁 `src/adapters/**`。另立卡口径（CTO 给）：与同文件 `queryNodes` 的 **D355 先例同款**（`log.error` + `"no such column"` 识别 + **仍返回 `[]`**）；`degraded` 通道**另案**。）
 
@@ -155,6 +155,65 @@ TOKEN_HITS=0
 ```
 （口径：工作树全部文件；**排除 `.git` 对象库与 `node_modules`**；token 只经运行时变量/环境变量，未落任何文件、commit、PR 正文。）
 
+## (h) 【CI 红归因】红件逐条点名 + 每条双证据（CTO v4 §① / §2-(h)）
+
+> 红件**应含且仅含**下列两件；本 PR 正文**未点名任何其它红件**。
+
+### 红件 1｜`tests/tui-v2/chat-degradation.test.ts`（6 例；`TypeError: Cannot read properties of undefined (reading 'ReactCurrentOwner')`）
+
+**证据① — 不在本卡写集**（现测）：
+```
+$ git diff --name-only $(git merge-base origin/local-main HEAD)..HEAD -- tests/tui-v2/
+命中数 = 0
+```
+**证据② — 在"零本卡改动的基线"上同样红（且存量卡已立）**：
+- 实施员实测（基线树 = `git archive 68bf57598`）：
+```
+Test Files  1 failed | 1 passed (2)
+     Tests  6 failed | 6 passed (12)
+Caused by: TypeError: Cannot read properties of undefined (reading 'ReactCurrentOwner')
+（原始输出：docs/synova/product-lines/evidence/237-k4-04/CI-repro-BASELINE-68bf57598.txt）
+```
+- **独立复核员 `k4-04-verify`** 另用**完整 checkout** 重做同一对照（非 `git archive`，不受解包完整度影响）⇒ `chat-degradation` **6 failed**、与 HEAD **逐条一致 = True**（复核件 §15.2 附注）；其在 CI 侧另独立取证：run **281**（另一分支 `3449c05bb`）与 run **319**（本卡）**失败用例名逐条对齐**（① ② ③ ④a ④b ⑤ 六条，同根因）。
+- **存量卡号：`#347`**（`[open] 存量红（与 K4 批无关）：tests/tui-v2/chat-degradation.test.ts 6/6 红 —— react19 × ink 5.2.1 reconciler 不兼容`）。
+
+### 红件 2｜`tests/stream-tool-loop.test.ts:210`（`Given chat throws an error, When processMessageStream, Then returns error message`）
+
+**证据① — 不在本卡写集**（现测）：
+```
+$ git diff --name-only $(git merge-base origin/local-main HEAD)..HEAD -- tests/stream-tool-loop.test.ts
+命中数 = 0
+```
+**证据② — 本地 6/6 绿；CI 收的是外部 LLM 文本（两态对照）**：
+- 本地（本卡 HEAD 与零改动基线 **两态皆绿**）：两文件同跑为 `1 failed | 1 passed (2) / 6 failed | 6 passed (12)`，其中**该件是"通过的 1 件"**（`CI-repro-head-Windows.txt`、`CI-repro-BASELINE-68bf57598.txt`）。
+- CI 侧 **verbatim**（独立复核员自取日志，§15.2-2）：`line=210,column=26::AssertionError: expected '收到你的"测试错误"——我这边运作正常…' to contain '失败'` ⇒ 断言收到的是**真实 LLM 自然语言回复**（provider failover 生效）。
+- 该用例只构造 `AgentConversation(fakeProvider)`、**不建库**（imports 见用例头部）⇒ 与本写集**无因果**。
+
+**（引用许可）** 上述复核员读数按 CTO v4 §2-(h) 授权引用，署名 **`独立复核员 k4-04-verify`**；四项原文见本 PR「独立复核四项结论」节。
+
+## (i) 【存量卡号 + 写集内判据全绿】
+
+- **存量红卡号：`#347`**（`tests/tui-v2/chat-degradation.test.ts` 6/6 红，react19 × ink 5.2.1 reconciler 不兼容 —— **与 K4 批无关**）。
+- **本卡写集内判据全绿**（**独立复核员已独立重跑**）：**C1 / C2 / C3 / C4 / C5′ / C6 / C7 / C8 / C9 ＋ D8 全部通过**；三件定向同跑 `Tests 28 passed (28)`（验收件 6 ＋ 复核员探针 6 ＋ 004 回归 16）。
+- 依 CTO v4 §①（D10 = **存量红点名放行**，**不收紧 `--changed`**）：(a) 红件逐条点名 + 双证据 ✅（见 (h)）；(b) 存量卡已立 `#347` ✅；(c) 写集内判据全绿 ✅。
+- **即时生效令合规声明（CTO v4 §①-⑤）**：本 PR 正文**未引用 `check-file-driven.sh` 的任何"事后复跑"读数**；凡引用门禁读数处，均为 **staged 窗口内**（pre-commit）或**改引其它判据**（本地定向测试 / CI 步骤①②）。
+
+## (j) 【DDL 逐字声明】（CTO v4 §①-②：逐字批 12 列 canonical）
+
+1. **三列被移除**：整表重建到 canonical（12 列）时，旧库多出的 **`confidence` / `source` / `props_json` 三列被移除** —— CTO v4 裁定②：**属既定取舍**。
+2. **「`props_json` 值并入 `props` 不丢」的断言出处**（用例名 ＋ `file:line`；行号**当点现测**）：
+
+| 用例（`file:line`） | 断言点 | 断言内容 |
+|---|---|---|
+| `tests/store/migrations/004-graph-triples-rebuild.test.ts:101`「2 行真数据：行数不丢、props_json → props 回填、id CAST 为 TEXT」 | `:109` `:114` `:115` | `edgeCount(db)).toBe(2)`（**行数不丢**）；`JSON.parse(rows[0].props) === {"action_effect_lag":"3-6_months"}`；`rows[1].props === {"share":7}`（**值不丢**） |
+| 同文件 `:127`「props_json 为 NULL / 空串的行回填默认 {}，有值行保留原值」 | `:137` `:138` `:139` | NULL/空串 → `'{}'`；有值行 `JSON.parse(rows[2].props) === {"share":7}` |
+| 同文件 `:154`「幂等：连跑两次 ⇒ 第二次 no-op（列/索引/行数/值都不变）」 | `:165` `:167` | 行数仍 1；`row.props === {"action_effect_lag":"3-6_months"}` |
+| 同文件 `:186`「中间态（id 仍 INTEGER 但已被补过 props 列）⇒ 仍重建（兜住"只补列"半修遗留态）」 | `:194` `:197` | `id` 转 `TEXT`；`props === {"share":7}` |
+| 同文件 `:251`「【L2 真路径·读面】真机形态库 → new SqliteGraphStore → queryEdges() 读回 2 条且 props 可解析」 | `:260` `:263` `:264` | `toHaveLength(2)`；`{"action_effect_lag":"3-6_months"}`；`{"share":7}` |
+| `tests/adapters/sqlite-graph-store.legacy-schema.test.ts:104`「① queryEdges() 读回旧边 2 条，且 props 由 props_json 迁入、端点映射正确」 | `:113` `:116` `:117` | `toHaveLength(2)`；`{"action_effect_lag":"3-6_months"}`；`{"share":7}` |
+| 同文件 `:133`「① createEdge() 成功：返回 edge- 前缀 id、props 正确落库、queryEdges 计数 +1」 | `:145` `:150` `:152` | `toHaveLength(2)`；读回 `props === {"k":"v"}`；**落库面**（不经读路径）`SELECT props` ⇒ `{"k":"v"}` |
+3. **口径**：以上行号现测自本 commit 的工作树（`it(` 行 ＋ 断言行 grep）；若后续 commit 使行号位移，**以复查命令重出**为准。
+
 ---
 
 ## 独立复核四项结论（M6 回写 · 原文照贴）
@@ -206,6 +265,8 @@ TOKEN_HITS=0
 
 ## CI 状态
 
+> CTO v4 §① 裁定：**存量红点名放行**（**不收紧 `--changed`**）；D10 判过三条（(a) 逐条点名＋双证据 / (b) 存量卡 `#347` / (c) 写集内判据全绿）见 **(h) / (i)**。
+
 - 步骤 **① 13 组门禁 ✅**、**② 架构边界 ✅**、**③ `vitest --changed origin/local-main` ❌**（run 307/308/309/310/319 同型）。
 - **失败件 1** `tests/tui-v2/chat-degradation.test.ts`（6 例，`ReactCurrentOwner`）⇒ **存量红**（独立复核员已复做并**加强**）：run **281**（**另一分支** `3449c05bb`）与 run **319**（本卡）**失败用例名逐条对齐**（① ② ③ ④a ④b ⑤ 六条，同根因）；本地**完整 checkout 基线树**（`local-main @ 68bf57598`）复跑同组 `6 failed` / `stream-tool-loop` `6 passed`，与 HEAD 一致。
 - **失败件 2** `tests/stream-tool-loop.test.ts:210` ⇒ **环境依赖**：CI 日志原文 `expected '收到你的"测试错误"——我这边运作正常…' to contain '失败'` ⇒ 收到**真 LLM 回复**（provider failover）；本地两态皆绿；该用例只构造 `AgentConversation(fakeProvider)`、**不建库**。
@@ -215,9 +276,9 @@ TOKEN_HITS=0
 
 ## 遗留 / 未决
 
-1. **DDL 属 schema 面，须 CTO 逐字批**：整表重建**移除**旧库多出的 `confidence` / `source` / `props_json`（`props_json` 值已搬进 `props`）。
-2. **Done④ 拆卡的卡号**待 CTO 补登。
-3. **CI 步骤③ 红的合并口径**待 CTO 裁。
+1. **DDL：CTO 已逐字批（12 列 canonical）** —— `confidence` / `source` / `props_json` **三列被移除属既定取舍**；「`props_json` 值并入 `props` 不丢」的断言出处见 **(j)**。
+2. **Done④ 已拆卡 `#345`**（口径＝与 `queryNodes` 同款 D355：`log.error` + `"no such column"` 识别 + 仍返回 `[]`）。
+3. **CI 步骤③ 红：按「存量红点名放行」判过**（D10 三条见 (h)/(i)）；存量卡 `#347`（react19×ink）；**不收紧 `--changed`**。
 4. **本地 git hooks 未安装**（`.git/hooks` 仅 `.sample`）⇒ 本地 13 组未跑；权威门禁＝Gitea CI。
 5. **Z8 提案**（`PROPOSAL-skill-tool-discipline.md`）＝提案→K3→CTO；**本批未落地** `SKILL.md`（条目 3、6 已按复核员交叉核补写）。
 6. K3 复审通过前**不合并**。
