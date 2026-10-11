@@ -1,6 +1,6 @@
 # D1219 — 门禁判定位置立法（落点已裁）+ 旁路第三态清场
 
-- 状态: proposed（2026-10-07，治理线 line-e-da2）
+- 状态: implemented（2026-10-11 迁移；原记 2026-10-07 治理线 line-e-da2。落地证据见文末）
 - 任务: D1219 ｜ 卡: #1225（D-D · 判定位置立法 + 旁路清场）｜ 父卡: #1221（创始人 2026-10-07 批准 v2.0 六方案 §1）
 - 载体: `docs/synova/coordination/版本管理规范-控制塔.md` §七（**条文单一真源**）
   ⚠️ 本 Note **不复制条文原文** —— 只记裁决链、代价、处置表与执行体状态（见 §7.2 防双源）。
@@ -88,3 +88,18 @@ grep -vE '^[[:space:]]*#' scripts/pre-commit-check.sh | grep -c 'note_check "'  
   并在本表标注否决人与日期。
 - 若 §7.2 防双源条文被裁为「仅软约定」⇒ 该判据失去机器可判性，须同步登记为**无执行体条文**。
 - 代码半落地后：本 Note `git mv` 至 `implemented/`（铁律 49 四态），并同步 §7.4 执行体状态表。
+
+## 落地证据（2026-10-11 复核 · 迁移依据）
+
+> 迁移判据：`memory/notes/README.md`「四态迁移语义」＝ `task-state = impl_done` 即达。
+
+```
+$ grep -n "D1219: issue 标题快照" scripts/control-tower/alloc-task-id.sh
+297:# ═══ D1219: issue 标题快照 — **过渡件，D# 退役时同批删除此来源** ═══
+$ grep -n '"status"' task-state/D1219.json
+  "status": "impl_done",
+```
+
+判定：**真僵尸** —— 实现落点（issue 标题来源）在位 ⇒ `git mv` 到 `implemented/`。
+⚠️ 该实现是**过渡件**（`:297` 明文「D# 退役时同批删除」）⇒ 未来 D# 全量退役时须**一并删除**，
+本卡不改其语义，只登记该约束以免遗忘。

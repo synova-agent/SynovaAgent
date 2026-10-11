@@ -1,6 +1,6 @@
 # D1039 — control-tower-tests 按需跑：job 恒调度 + 内层 `if` 门控（禁用 job 级 `paths:`）
 
-- 状态: proposed
+- 状态: implemented（2026-10-11 迁移：task-state=impl_done ＋ 落地证据见文末）
 - 日期: 2026-09-28
 - 任务: D1039（父卡；子件 D1040 / D1041 / D1042 / D1043）
 - 分支: `team/a4-ci-cost` ｜ 工作树: `.synova-wt-a4`
@@ -71,3 +71,19 @@
   本次曾发出与 main 已占号 `D1034` 撞号的号（`D1034` 已被
   `.claude/task-briefs/2026-09-27-D1034-dispatch-template-v2.md` 占用）。
   已改号 D1039–D1043。**该分配器缺口应另立卡**（本卡未修，属 `scripts/control-tower/**` 但超出本批写集与风险面）。
+
+## 落地证据（2026-10-11 复核 · 迁移依据）
+
+> 迁移判据：`memory/notes/README.md`「四态迁移语义」＝ `task-state = impl_done` 即达。
+> 复跑人：K12 线续接（issue #339）。以下为**原始输出**，非转述。
+
+```
+$ git ls-tree -r --name-only gitea/local-main | grep -c "ci-signal-classify"
+3
+$ grep -c "ci-signal-classify" .github/workflows/ci.yml
+12
+$ grep -n '"status"' task-state/D1039.json
+  "status": "impl_done",
+```
+
+判定：**真僵尸**（实现已落地、提案未迁移）⇒ `git mv` 到 `implemented/`。

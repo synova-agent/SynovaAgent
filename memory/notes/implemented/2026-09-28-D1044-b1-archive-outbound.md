@@ -1,5 +1,5 @@
 ---
-状态: proposed
+状态: implemented（2026-10-11 迁移：task-state=impl_done ＋ 落地证据见文末）
 日期: 2026-09-28
 决策: `.claude/task-briefs/archive/` 294 件按「先承接、后移出」出库——承接副本落**仓外档案仓** `~/Synova-过程档案/出库-主仓/.claude/task-briefs/archive/`（保形落点，逐件 sha256 对账 294/294），主仓侧 `git rm -r` 一气执行；本批**不依赖** A3/#862（G10 恒不触发，实测），也**不依赖** D1028 出库豁免（预算实测由 D860 治理产物豁免放行）。
 理由: ① 删除对读者是不可逆动作，唯一可接受对价 = 同一内容的副本已在**另一个独立 git 仓**可读，故顺序不可颠倒（契约 §9:295「移出必与接手同批」）；② 卡面「隐藏前置：G10 会报红 ⇒ 等 #862」**前提不成立**——`scripts/pre-commit-check.sh` 的 G10 条件区域检查读 `$CHANGED_FILES`/`$STAGED_FILES`，二者**全脚本 0 处赋值**（幽灵变量），注入缝实测输出恒为 `✅ G10: 无 task brief 变更(跳过)`；③ 卡面「D734 预算靠 #864 出库豁免」**归因错误**——实测 `check-pr-budget.sh --diff-status <301 行真实变更集>` 输出 `ℹ️ 出库豁免不适用（ⓐ 不满足）`，实际放行来自既有 D860 治理产物豁免 300 件 → `N_FILES=1`；④ 卡面 2172→1878 是 `4afd4ce1` 时点的绝对值，`origin/main` 已前进至 `ff467712`（实测 2193），故判据必须改为「同一命令 Δ = −294」，否则数字必然漂移（M7 型）；⑤ 证据文件用 `.json` 而非 `.txt`：`.txt` 不在 `ci.yml:51` docs-only 白名单 ⇒ 触发全量 CI（≈35 min，卡面红线），`.md` 落证据目录会被 `doc-registry-gate.sh` 判未登记（实测 ❌），`.json` 是唯一同时满足两者的扩展名。
@@ -44,3 +44,18 @@ B1 是文档线出库批次的第一批：对象 `.claude/task-briefs/archive/` 
 | L2 | doc-registry 门禁输入在 commit 后归零 ⇒ CI 复跑恒 0 文档（与 D1028 交付遗留 L7 同源） | `doc-registry-gate.sh:43` |
 | L3 | 卡面 P6/P9 两处前提不成立；P7 基线漂移 | brief §Q0.b |
 | L4 | §11.3 命名条款对「批量出库件」不适用（改名即丢原始路径）——本批采用 `出库-主仓/<原路径>` 保形落点 | 源规格 §3② 契约缺口 |
+
+## 落地证据（2026-10-11 复核 · 迁移依据）
+
+> 迁移判据：`memory/notes/README.md`「四态迁移语义」＝ `task-state = impl_done` 即达。
+
+```
+$ ls ~/Synova-过程档案/出库-主仓/.claude/task-briefs/archive/ | wc -l
+294                      # 仓外承接副本在位（本 Note 契约：移出必与接手同批）
+$ git ls-tree -r --name-only gitea/local-main -- .claude/task-briefs/archive/ | wc -l
+0                        # 主仓侧 archive/ 已清零 ⇒ 出库已执行
+$ grep -n '"status"' task-state/D1044.json
+  "status": "impl_done",
+```
+
+判定：**真僵尸** ⇒ `git mv` 到 `implemented/`。
