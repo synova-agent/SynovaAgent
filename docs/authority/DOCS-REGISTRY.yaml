@@ -459,3 +459,10 @@ documents:
     status: active
     owner: synova-governance-converge
     note: "GitHub↔Gitea 号段映射表（2026-10-11，204 条全覆盖；依据=标题 [#N] 前缀 / claim 文件佐证 / 本地新建判据；GitHub 号未在线核验 API 403）。施工项登记 issue 字段的补录依据。"
+
+  - id: DOC-0192
+    type: architecture
+    path: docs/synova/extensions内容面规范-v0.1-镜像.md
+    status: active
+    owner: synova-governance-converge
+    note: "extensions 内容面规范 v0.1 镜像（源=院方规范；#253 `0bdaec491` 合入但未登记台账 ⇒ D782 D2 登记门禁在后续分支上恒红，K12-01 段二合并时按门禁要求补登）。产品宪章 §5.6/§5.7 与 K12/K4 多张卡面引用此规范。"

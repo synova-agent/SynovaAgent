@@ -5,10 +5,9 @@
   "type": "presets",
   "displayName": "角色预设包（Role Pack）",
   "description": "人侧入口 ⓪-b 的内容载体：每个岗位一个目录，五件套声明『这个岗位该给 agent 带什么上下文』。加一个角色目录 = 加一个岗位，不改宿主代码。",
-  "entryPoint": "./roles",
+  "entryPoint": "../src/init/preset-loader.ts",
   "exportKey": "loadRolePacks",
   "roles": 3,
   "authority": "runtime",
-  "loaderPending": true,
-  "note": "段一仅落内容面（本件 ＋ roles/**）。宿主 loader 与 content-registry 接线（段二）待 CTO 裁定后补；届时 entryPoint 改为 '../src/init/preset-loader.ts'。此处刻意不写指向不存在模块的假指针。"
+  "note": "段一落内容面（本件 ＋ roles/**），段二（2026-10-11 创始人裁定 1 放行）已补宿主 loader `src/init/preset-loader.ts` 并在 content-registry 升 `reachable` ⇒ 判据 `probe-role-pack.ts --role finance` exit 0。加一个角色目录 = 加一个岗位，不改宿主代码。"
 }

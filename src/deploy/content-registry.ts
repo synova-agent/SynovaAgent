@@ -119,10 +119,12 @@ const MODULE_IMPORTS: Readonly<Record<string, () => Promise<Record<string, unkno
   // K12-20 (#203 / RB-06)：岗位内容分层解析服务（pending-cto ⇒ 本批**不装配**，
   //   见 CONTENT_TYPES 中 content-layer 项；键在此登记是「模块路径自洽」的机器可核证据）。
   '../services/content-layering': () => import('../services/content-layering'),
+  // K12-01 (#184) 段二：角色预设包宿主 loader（reachable ⇒ 真进 boot 装配面）。
+  '../init/preset-loader': () => import('../init/preset-loader'),
 };
 
 /**
- * 22 项 contents 全表（`extensions/` 顶层目录全集）。
+ * 23 项 contents 全表（`extensions/` 顶层目录全集）。
  * 状态口径（spec §3.2 逐项裁定表 + §5.1 可达性实测）:
  *   reachable —— 有装配 loader，或有生产直读者（16 项存量可达 ＋ business-models 本卡接活 = 17）
  *   retired   —— 生产不可达且**无内容可接**（engine / tools）
@@ -372,20 +374,30 @@ const CONTENT_TYPES: readonly ContentTypeEntry[] = [
       '无内容可接 ⇒ 显式化为 retired（工具注册的真实通道是 MCP/工具注册表，不在此目录）。',
   },
   {
-    // 🔴 K12-01（#184）**段一登记** —— 内容面先落，宿主 loader/接线（段二）待 CTO 裁定。
+    // 🔴 K12-01（#184）**段一登记 → 段二已落地**（创始人 2026-10-11 裁定 1 放行）。
     //    段一实交付 = extensions/presets/manifest.json ＋ extensions/presets/roles/{finance,hr,sales}/ 五件套。
-    //    本表**只登记 dir**：不写 MODULE_IMPORTS、不设 reachable、不建 loader ——
-    //    与上方 llm-provider 条目同一处置纪律（**登记 ≠ 接活**），段二未裁前不接进 boot 装配面。
+    //    段二实交付 = 宿主 loader `src/init/preset-loader.ts`（零参 `loadRolePacks` / `listRolePacks`）
+    //    ＋ 本项升 `reachable` ＋ `MODULE_IMPORTS` 加键
+    //    ⇒ 判据 `probe-role-pack.ts --role finance` 由 exit 1（PASS=8 FAIL=2）走到 exit 0（实测）。
+    //    🔴 **不改 `src/init/file-driven-loaders.ts`**：该文件已由 #1465 收敛为「content-registry 唯一驱动」，
+    //    新增内容项 = 本表加声明、宿主入口文件**零改动**（规范《extensions内容面规范 v0》§5.4「0 宿主改动」；
+    //    见 file-driven-loaders.ts:10-12 自述）。故段二实际写集 = 本表 + 新 loader + presets manifest 同步。
     //    为什么段一必须登记：tests/deploy/content-registry.test.ts 断言
     //    「注册表 dir 集 ↔ extensions/ 顶层目录集**双向相等**」⇒ 建了目录不登记，该测试必红。
-    //    反过来说，本项 status=pending-cto ⇒ 探针 probe-role-pack 的 L2 断言（registryHasType
-    //    ＋ attempted>=1 ＋ rowOk）**仍然红**，这正是段二未落的诚实信号，不得为让它绿而降级判据。
     type: 'presets',
     dir: 'presets',
     face: 'content',
-    status: 'pending-cto',
-    reason:
-      'K12-01 角色预设包内容载体；段一仅落内容面，宿主 loader/接线待 CTO 裁定后由段二补',
+    status: 'reachable',
+    loader: {
+      module: '../init/preset-loader',
+      // loadRolePacks() 直读 extensions/presets/roles/ 目录名推导角色集合（**无硬编码角色表**）
+      init: 'loadRolePacks',
+      verify: [
+        // 零参查询导出 —— 与判据探针驱动同一批符号（可核性对齐）
+        { fn: 'listRolePacks' },
+      ],
+      cleanup: 'clearPresetCache',
+    },
   },
   {
     // K12-02（#185）：建档内容包＝L0/L1 采集方法的内容载体（extensions/onboarding/）。
