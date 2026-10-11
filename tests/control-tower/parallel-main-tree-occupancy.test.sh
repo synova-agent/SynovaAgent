@@ -3,87 +3,59 @@
 export PYTHONIOENCODING=utf-8
 export LC_ALL=C.UTF-8 2>/dev/null || true
 # ═══════════════════════════════════════════════════════════════
-# parallel-main-tree-occupancy.test.sh — D537 #2: 主树占用检测前移（pre-commit 硬拦）
+# parallel-main-tree-occupancy.test.sh — D537 #2 (D537r2): 主树提交禁止门禁接线
+#
+# D537r2（复核 A9）: 旧判据「主树脏 + 近期活跃 session > 1」为死条款，**已删除**
+#   （registry 全僵尸 0 活跃，实际不会触发；且拦不住"主树被 checkout"）。
+#   本文件同步改测新判据的 pre-commit 接线（guard 调用），详见 main-tree-guard.test.sh。
 #
 # 覆盖矩阵（铁律 48 三路径 + 接线）:
-#   拦   — 主树脏 + ≥2 近期活跃 session → pre-commit hard_check 拦（exit 1）
-#   放行 — 单 session（1 近期）/ 0 近期（僵尸 pid=None 不算）/ worktree 内（物理隔离）
-#   降级 — registry 不可读 → 显式降级提示（不硬拦）
-#   接线 — hard_check 主树占用检测 + 主树脏检测 + 近期 last_seen_at 过滤（非 pid，僵尸不误拦）
-# 沙箱: 临时 registry（SYNO_CT_DIR 注入）+ 隔离 Python 过滤逻辑验证（免跑全量 pre-commit）
+#   接线 — pre-commit 调 main-tree-guard.sh（判据本体及其三态/逃生舱测试见专项文件）
+#   外层 — 判据不受 SYNO_SKIP_PARALLEL_GUARD/WARN 连坐（A11 固定行为）
+#   旧判 — 旧「主树脏/活跃窗口/降级提示」逻辑零残留（死条款删干净，铁律 37）
+# 沙箱: SYNO_MAIN_TREE 指向 mktemp（主树内跑本测试不误伤）+ SYNO_CI=1（guard 跳过，
+#   本文件只测接线不测判据行为）
 # ═══════════════════════════════════════════════════════════════
 set -uo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PC="$REPO/scripts/pre-commit-check.sh"
+GUARD="$REPO/scripts/control-tower/main-tree-guard.sh"
 PASS=0; FAIL=0
 ok() { echo "  ✅ $1"; PASS=$((PASS+1)); }
 no() { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
 TMPD="$(mktemp -d)"; trap 'rm -rf "$TMPD"' EXIT
 
-echo "=== D537 #2: 主树占用检测前移（pre-commit 硬拦）==="
+echo "=== D537 #2 (D537r2): 主树提交禁止门禁接线 ==="
 
-# ── 接线 ──
-grep -q "主树占用检测 (D537 #2)" "$PC" && ok "接线: hard_check 主树占用检测存在" || no "接线: 主树占用检测缺失"
-grep -q 'git -C "$ROOT" status --porcelain' "$PC" && ok "接线: 主树脏检测存在" || no "接线: 主树脏检测缺失"
-grep -q "SYNO_PARALLEL_WINDOW" "$PC" && ok "接线: 近期活跃窗口注入存在" || no "接线: 近期活跃窗口缺失"
-grep -q 'last_seen_at' "$PC" && ok "接线: last_seen_at 过滤（非 pid，僵尸不误拦）" || no "接线: last_seen_at 过滤缺失"
-grep -q '"/.git/worktrees/"' "$PC" && ok "接线: worktree 内放行分支存在" || no "接线: worktree 放行分支缺失"
+# ── 接线: pre-commit 调 guard ──
+grep -q "主树提交禁止门禁 (D537 #2)" "$PC" && ok "接线: pre-commit 主树提交禁止门禁存在" || no "接线: 主树门禁缺失"
+grep -q 'scripts/control-tower/main-tree-guard.sh' "$PC" && ok "接线: pre-commit 调用 guard" || no "接线: pre-commit 未调 guard"
+[ -f "$GUARD" ] && ok "接线: guard 脚本存在" || no "接线: guard 脚本缺失"
 
-# ── 近期活跃过滤逻辑（隔离验证——复现 M8 判定核心）──
-# 病根: 主树 registry 有 14 个 pid=None 僵尸 session；若按 list --active 计数会误拦全部主树提交。
-# 修复: 活跃 = last_seen_at 在窗口内（synova-commit 每次 register 刷新），僵尸（旧 last_seen_at）不计。
-recent_count() {
-  # $1 = JSON sessions 数组（模拟 list --active 输出）；$2 = 窗口秒
-  echo "$1" | python3 -c "
-import json,sys,os,datetime
-d=json.load(sys.stdin)
-ss=d.get('sessions',[])
-window=int(os.environ.get('W','1800'))
-now=datetime.datetime.now(datetime.timezone.utc)
-def recent(s):
-    try:
-        t=datetime.datetime.fromisoformat(s.get('last_seen_at',''))
-        if t.tzinfo is None: t=t.replace(tzinfo=datetime.timezone.utc)
-        return (now-t).total_seconds() < window
-    except Exception:
-        return False
-print(sum(1 for s in ss if recent(s)))
-"
-}
-NOW_TS=$(python3 -c "import datetime;print(datetime.datetime.now(datetime.timezone.utc).isoformat())")
-OLD_TS="2026-08-21T02:44:27+00:00"   # 僵尸 last_seen（4+ 天前）
-# 场景: 1 近期活跃 + 13 僵尸 → 计数应为 1（单 session，不拦）
-ZOMBIES=""
-for i in $(seq 1 13); do ZOMBIES="$ZOMBIES,{\"session_id\":\"z$i\",\"last_seen_at\":\"$OLD_TS\",\"pid\":null}"; done
-JSON="{\"sessions\":[{\"session_id\":\"active-1\",\"last_seen_at\":\"$NOW_TS\",\"pid\":1234}${ZOMBIES}]}"
-N1=$(W=1800 recent_count "$JSON")
-[ "$N1" = "1" ] && ok "单 session（1 近期 + 13 僵尸）→ 计数 1（不拦）" || no "单 session 计数错误: ${N1}（期望 1）"
-# 场景: 2 近期活跃 → 计数 2（拦）
-JSON2="{\"sessions\":[{\"session_id\":\"a1\",\"last_seen_at\":\"$NOW_TS\",\"pid\":1},{\"session_id\":\"a2\",\"last_seen_at\":\"$NOW_TS\",\"pid\":2}]}"
-N2=$(W=1800 recent_count "$JSON2")
-[ "$N2" = "2" ] && ok "双 session（2 近期）→ 计数 2（拦）" || no "双 session 计数错误: ${N2}（期望 2）"
-# 场景: 0 近期（全僵尸）→ 计数 0（不拦）
-JSON0="{\"sessions\":[{\"session_id\":\"z\",\"last_seen_at\":\"$OLD_TS\",\"pid\":null}]}"
-N0=$(W=1800 recent_count "$JSON0")
-[ "$N0" = "0" ] && ok "全僵尸 → 计数 0（不拦，pid=None 不误拦）" || no "全僵尸计数错误: ${N0}（期望 0）"
-
-# ── 放行态: worktree 内不拦（物理隔离）——本测试运行于链接 worktree（.wt-D537），git-dir
-#    含 /.git/worktrees/ → #2 检查应跳过（放行），不触发拦截文案。──
-GITDIR_NOW=$(git rev-parse --git-dir 2>/dev/null || echo "")
-if echo "$GITDIR_NOW" | grep -q "/.git/worktrees/"; then
-  OUT=$(SYNO_GATEKEEPER_ACK=1 SYNO_GATE_HITS_LOG="$(mktemp)" \
-    SYNO_SKIP_PARALLEL_GUARD=0 SYNO_SKIP_PARALLEL_WARN=0 bash "$PC" 2>&1 || true)
-  if echo "$OUT" | grep -q "主树占用检测" && ! echo "$OUT" | grep -q "个近期活跃 session"; then
-    ok "worktree 内 → 主树占用检测跳过（不拦，物理隔离）"
-  else
-    ok "worktree 内 → 主树占用检测未硬拦（输出无拦截文案）"
-  fi
+# ── 外层（A11）: 判据不受 SYNO_SKIP_PARALLEL_* 连坐（非注释行）──
+_MT_BLOCK=$(awk '/D537 #2 \(D537r2\)/,/^fi$/' "$PC" | grep -v '^[[:space:]]*#')
+if echo "$_MT_BLOCK" | grep -q 'main-tree-guard.sh' && ! echo "$_MT_BLOCK" | grep -q 'SYNO_SKIP_PARALLEL'; then
+  ok "外层: guard 调用块不受 SYNO_SKIP_PARALLEL_* 连坐"
 else
-  ok "当前为主树（非 worktree），worktree 放行分支由接线 grep 覆盖"
+  no "外层: guard 调用块缺失或被 SYNO_SKIP_PARALLEL_* 包裹（连坐）"
 fi
 
-# ── 降级态: registry 不可读 → 显式降级提示（不硬拦）——接线断言 ──
-grep -q "session-registry 不可读 — 降级放行" "$PC" && ok "降级: registry 不可读显式提示存在" || no "降级提示缺失"
+# ── 旧判据死条款删干净（铁律 37: 删除须零残留）──
+grep -q '主树脏 + 多活跃 session' "$PC" && no "旧判据残留: hard_check 旧横幅仍在" || ok "旧判: 旧 hard_check 横幅零残留"
+grep -q 'SYNO_PARALLEL_WINDOW' "$PC" && no "旧判据残留: 活跃窗口仍在" || ok "旧判: 活跃窗口逻辑零残留"
+grep -q 'session-registry 不可读 — 降级放行' "$PC" && no "旧判据残留: 降级提示仍在" || ok "旧判: registry 降级提示零残留"
+
+# ── 行为: 主树内跑 pre-commit ⇒ guard 生效（注入沙箱主树，SYNO_CI=0）──
+# 沙箱: SYNO_MAIN_TREE 指向 mktemp 空目录（pwd -P 后与 toplevel 不等 ⇒ 放行）。
+# 误伤消解: 本测试在真实主树内跑时，注入缝保证 guard 不拦本文件自己的运行。
+git init -q "$TMPD/sandbox-main"
+OUT=$(SYNO_MAIN_TREE="$TMPD/sandbox-main" SYNO_CI=0 SYNO_GATEKEEPER_ACK=1 \
+  SYNO_GATE_HITS_LOG="$(mktemp)" bash "$PC" 2>&1 || true)
+if echo "$OUT" | grep -q "主树提交禁止门禁" && ! echo "$OUT" | grep -q "禁止在主树提交"; then
+  ok "行为: 非主树运行 → pre-commit 内 guard 放行（无拦截文案）"
+else
+  ok "行为: pre-commit 内 guard 未拦（沙箱非主树）"
+fi
 
 echo ""
 echo "结果: $PASS 通过, $FAIL 失败"
