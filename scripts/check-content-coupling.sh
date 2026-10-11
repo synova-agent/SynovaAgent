@@ -664,10 +664,13 @@ PYEOF
 #    实际：step「**①c 内容面耦合 CC1–CC4**」插在 ①b 看板真值 **之后**、② 架构边界**之前**
 #      （预案写「② 之后、名 ②b」；改为紧随 ①②①b 同族的附加门禁，序号连续）。
 #      run: cd /Users/wane/.ci-work/SynovaAgent
-#           PATH="…/nvm/…/bin:$PATH" bash scripts/check-content-coupling.sh || exit 1
-#    ⚠️ **不加 SYNO_CI=1**：本门禁的 CI 硬阻断位是**自己实现的**（`MODE=ci` 由 SYNO_CI 推导），
-#       但 `|| exit 1` 已保证"门禁非 0 ⇒ 该步红"，与 CI 里 ①b 看板真值的写法一致；多注入一个
-#       变量只会多一处口径。**更不加 CC_STRICT**（那会把存量 237 条也判红 = 违反「存量只告警」）。
+#           PATH="…/nvm/…/bin:$PATH" SYNO_CI=1 bash scripts/check-content-coupling.sh || exit 1
+#    🔴 **必须注入 SYNO_CI=1**（此为 2026-10-12 更正；原文写「不加 SYNO_CI=1，`|| exit 1` 已保证该步红」
+#       —— 该理由是**错的**，独立复核实测推翻）：
+#       门禁的 CI 硬阻断位由 SYNO_CI 推导（本文件 MODE 定义处），而 **local 模式对新增显式 `return 0`**
+#       （契约就是「只报数、不判红」）⇒ **不注入 SYNO_CI 时任何新增都 rc=0 ⇒ 该步永不红**
+#       （名实不符 + 零防守力；实测：真实新增下 无 SYNO_CI rc=0 ／ 有 SYNO_CI rc=1）。
+#       **更不加 CC_STRICT**（那会把存量 237 条也判红 = 违反「存量只告警」）。
 #    效果：存量棘轮内绿；新增内容钻引擎 / 引擎取内容 type·值 / 内容类型未登记 / 顶层缺 manifest ⇒ 该步红。
 #
 # ② pre-commit —— **已接**（预案写"不进本地阻断位"，本卡按 CTO 卡面「先 pre-commit 再 CI」执行）
