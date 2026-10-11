@@ -1,0 +1,15 @@
+{
+  "$schema": "https://synova.dev/schemas/extension-manifest-v1.json",
+  "name": "content-layers",
+  "version": "1.0.0",
+  "type": "content-layer",
+  "displayName": "岗位内容分层（提示词 / 工具 / 知识按部门变）",
+  "description": "企业层 → 部门层覆盖：同一份企业状态，不同部门看到各自该看到的提示词/工具/知识。新增部门 = 加 departments/<id>.yaml，不改代码（内容面）。",
+  "entryPoint": "../src/services/content-layering.ts",
+  "exportKey": "resolveContent",
+  "layerRoot": "extensions/content-layers",
+  "enterprise": "enterprise.yaml",
+  "departmentsDir": "departments",
+  "mergeRule": "prompt 覆盖（部门层胜过企业层）；tools / knowledge 并集去重（企业层在前）",
+  "note": "本目录是【客户岗位预设内容面】。≠ 仓内【内部作业预设】docs/synova/presets/**（synova-cto / synova-k3-audit / synova-squad-lead）—— 两者混为一谈会把「我们自己怎么干活」当成「客户岗位分层已完成」。"
+}

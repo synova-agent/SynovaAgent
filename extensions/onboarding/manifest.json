@@ -1,0 +1,27 @@
+{
+  "$schema": "https://synova.dev/schemas/extension-manifest-v1.json",
+  "name": "onboarding",
+  "version": "1.0.0",
+  "type": "onboarding-method",
+  "displayName": "建档采集方法包（L0/L1）",
+  "description": "把「第一次见客户该问什么、问到什么程度算齐」变成文件，而不是藏在某个人脑子里。每条采集项必须映射到本体节点/边（悬空即判不完整）。喂建档通道（K12-03 产出建档配置包 L2 实例），方向不可倒（院方《02》§六）。",
+  "entryPoint": "./manifest.json",
+  "authority": "runtime",
+  "contentOnly": true,
+  "loaderStatus": "not-wired",
+  "loaderNote": "本卡（K12-02 · Issue #185）为纯内容包、不接线：宿主侧 loader 与装配入口由后续卡落（EXT-WIRE #1465 / K12-03 #186）。在 src/deploy/content-registry.ts 登记为 pending-cto（无 loader、无 readers）—— 内容面语义为「删掉它引擎照常启动」（宪章 4.1 三判据）。",
+  "files": {
+    "whatToAsk": "what-to-ask.yaml",
+    "completeness": "completeness.yaml",
+    "industries": "industries"
+  },
+  "layers": ["L0", "L1"],
+  "ontologyVocabulary": {
+    "nodes": "extensions/ontology/resource/*.json ∪ extensions/ontology/outcome/*.json ∪ extensions/ontology/activity/*.json",
+    "edges": "extensions/ontology/edge-types/*.json",
+    "rule": "what-to-ask.yaml 与 industries/*.yaml 的每个 mapsTo 项必须命中上述真源的 $id —— 悬空即判不完整（degraded=true 并列出悬空项），不得静默通过"
+  },
+  "industries": ["general-enterprise"],
+  "judgedBy": "tests/onboarding/completeness.test.ts",
+  "note": "字段少而准（借鉴 DSH SKILL.md frontmatter 仅 2 字段：文件短、语义准）；采集方法全部声明式 YAML，零代码。"
+}

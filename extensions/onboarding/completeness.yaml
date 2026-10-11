@@ -1,0 +1,54 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# extensions/onboarding/completeness.yaml — 「问到什么程度算齐」的判定口径
+#
+# 判据源  : docs/synova/coordination/施工项登记.ts → K12-02（Issue #185）
+# 消费者  : tests/onboarding/completeness.test.ts（本卡判据）；建档通道 K12-03 读同一口径
+#
+# 契约（铁律 47）:
+#   @input    — 本包四件（manifest.json / what-to-ask.yaml / completeness.yaml / industries/*.yaml）
+#               ＋ 本体词表（extensions/ontology/**，只读真源）
+#   @output   — 每层的必需字段集 / 最小题量 / id 形态 / 本体覆盖要求 / 闭合要求
+#   @degraded — 本文件自身缺 requiredFields 或 layers ⇒ 判不完整（degraded=true），
+#               不得退化为「无口径 = 通过」（静默通过 = 铁律 11 违规）
+# ═══════════════════════════════════════════════════════════════════════════════
+$id: onboarding/completeness
+version: 1
+
+# 每条采集项的必需字段（缺任一项 ⇒ 不完整，逐项列出 itemId.field）
+# 与 what-to-ask.yaml 的 requiredFields 同源；此处为**判定口径**（本文件是判定真源）
+requiredFields: [id, layer, ask, why, mapsTo, required]
+
+layers:
+  L0:
+    displayName: 企业级基础事实
+    minQuestions: 15
+  L1:
+    displayName: 聚合信号级
+    minQuestions: 8
+
+# id 形态：q-<层>-<slug>（小写字母/数字/连字符）
+idPattern: "^q-(l0|l1)-[a-z0-9-]+$"
+
+# 本体覆盖：本体真源里的**每个节点**至少要被一条采集项命中（边为部分覆盖）
+coverage:
+  nodes: all
+  edges: partial
+
+# 闭合要求（院方《02》§九 原则③「追问由本体定义、有穷」）
+closure:
+  deterministic: true      # 同一输入跑两次 ⇒ 同一组问题（顺序也一致）
+  closedWhenFilled: true   # 已填满全部被映射的本体 id ⇒ 剩余问题 = 0
+
+# 行业覆盖层：同规则校验（悬空映射 / 缺字段 / 重复 id 一律不完整）
+industryOverlays:
+  dir: industries
+  required: [general-enterprise]
+  sameRulesAsBase: true
+
+# 降级口径（每一条都必须让 ok=false —— 没有「部分通过」）
+degradedPolicy:
+  missingFile: 标记不完整并列出缺哪个文件，不抛错
+  badSyntax: 标记不完整并列出解析失败的文件与原因，不抛错
+  missingField: 标记不完整并逐项列出 itemId.field
+  danglingMapping: 标记不完整并列出悬空的本体 id
+  silentPass: forbidden

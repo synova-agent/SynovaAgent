@@ -1,0 +1,237 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# extensions/onboarding/what-to-ask.yaml — 建档采集方法 · L0/L1 问答清单
+#
+# 判据源  : docs/synova/coordination/施工项登记.ts → K12-02（Issue #185）
+# 本体真源: extensions/ontology/{resource,outcome,activity}/*.json ∪ edge-types/*.json
+#
+# 契约（铁律 47）:
+#   @input    — 企业建档原始材料（企业提供的文档 / 对本清单的问答答案）
+#   @output   — 「问什么」的全体（L0 企业级基础事实 ＋ L1 聚合信号级），每条 mapsTo 至本体节点或边
+#   @degraded — 任一 mapsTo 命中不到本体真源 ⇒ 悬空 ⇒ 判不完整（degraded=true 并列出悬空项），
+#               不得静默通过；缺必需字段同理（逐项列字段名）
+#
+# 有穷性（院方《02》§九 原则③「追问由本体定义、有穷 —— 只问图里缺的节点/边，问完即止」）:
+#   本清单 = 本体 29 节点 + 相关边 的显式落点 ⇒ 问完即止，结构上不可能「无限追问」。
+#   同一输入跑两次 ⇒ 同一组问题（确定性）；缺口填满 ⇒ 剩余问题 = 0（闭合）。
+# ═══════════════════════════════════════════════════════════════════════════════
+$id: onboarding/what-to-ask
+version: 1
+
+layerLegend:
+  L0: 企业级基础事实 —— 这家企业「有什么」（人 / 客户 / 工具 / 流程 / 钱从哪来 / 知识在哪）
+  L1: 聚合信号级 —— 这家企业「经营得怎么样」（可聚合、可比对、可跨客户对齐的量化信号）
+
+requiredFields: [id, layer, ask, why, mapsTo, required]
+
+questions:
+  # ── L0 · 企业级基础事实（resource 13 + activity 8 全覆盖）─────────────────────
+  - id: q-l0-identity
+    layer: L0
+    ask: 公司全称、成立时间、注册地、是否有分子公司或独立经营主体？
+    why: 定主体边界 —— 没有它，后续所有实体都无法归属到一家企业。
+    mapsTo: [resource/location, resource/team]
+    required: true
+
+  - id: q-l0-team-structure
+    layer: L0
+    ask: 有哪些部门或团队、各自多少人、汇报关系是怎样的？
+    why: 组织单元是人员与协作密度的承载者；缺它则人效与协作指标无处置放。
+    mapsTo: [resource/team, resource/person]
+    required: true
+
+  - id: q-l0-key-people
+    layer: L0
+    ask: 哪几个人是不可替代的关键人（各自负责什么、有没有备份）？
+    why: 关键人风险只能从「谁不可替代」出发衡量；不采集则 bus factor 无法计算。
+    mapsTo: [resource/person]
+    required: true
+
+  - id: q-l0-people-flow
+    layer: L0
+    ask: 最近一年招了哪些岗位、招进来的人实际被放到哪个团队、缺什么岗位招不到？
+    why: 人才「进来」与「部署」是两条不同的边；只问招聘数会把部署错配整段丢掉。
+    mapsTo: [edge/talent_acquisition, edge/talent_deployment, resource/person]
+    required: true
+
+  - id: q-l0-clients
+    layer: L0
+    ask: 主要客户是谁（可给名单）、各自合作多久、有没有内部客户（部门互为客户）？
+    why: 客户实体是收入与流失分析的锚点；内部客户用于区分内部交易与外部收入。
+    mapsTo: [resource/client]
+    required: true
+
+  - id: q-l0-client-acquisition
+    layer: L0
+    ask: 新客户主要从哪里来（渠道 / 转介绍 / 销售直拓）、从接触到成交大概多久？
+    why: 获客活动是漏斗结构；不问则获客成本与转化率只能靠猜。
+    mapsTo: [activity/acquisition, edge/channel_delivery]
+    required: true
+
+  - id: q-l0-channels-brand
+    layer: L0
+    ask: 通过哪些渠道卖（自有 / 代理 / 平台）、客户提到我们时先想到什么？
+    why: 渠道是分发通路、品牌是心智资产，两者共同决定获客的可复制性。
+    mapsTo: [resource/channel, resource/brand, edge/brand_building]
+    required: true
+
+  - id: q-l0-suppliers
+    layer: L0
+    ask: 关键供应商或外包方是谁、占采购比重多大、可替换性如何？
+    why: 供应商集中度是结构性风险；不问则议价能力与断供风险都不可测。
+    mapsTo: [resource/supplier, edge/procurement_bargaining]
+    required: true
+
+  - id: q-l0-tools-systems
+    layer: L0
+    ask: 目前用了哪些系统或工具（财务 / 客户 / 协作 / 生产）、数据存在哪里、谁能导出？
+    why: 工具与数据决定可自动化程度；工具清单是后续接连接器的输入。
+    mapsTo: [resource/tool, resource/data, edge/tech_infrastructure]
+    required: true
+
+  - id: q-l0-money-sources
+    layer: L0
+    ask: 钱从哪来（经营回款 / 股东投入 / 借款）、目前账上有多少、每月净流出多少？
+    why: 资金来源结构与现金头寸是生存判定的第一输入。
+    mapsTo: [resource/money, edge/funds, edge/capital_source_mix]
+    required: true
+
+  - id: q-l0-production
+    layer: L0
+    ask: 产品或服务是怎么交付的（自己做 / 外包 / 混合）、关键环节在哪、交付周期多长？
+    why: 交付活动是把投入变成产出的核心流程；不问则产能与瓶颈无法定位。
+    mapsTo: [activity/production, edge/produces, edge/service_support]
+    required: true
+
+  - id: q-l0-governance
+    layer: L0
+    ask: 谁最终拍板（战略 / 预算 / 用人）、决策链有几层、一般多久出结论？
+    why: 治理活动与决策权归属决定组织响应速度；不问则「决策慢」只能归因给人。
+    mapsTo: [activity/governance, edge/decision_authority]
+    required: true
+
+  - id: q-l0-coordination
+    layer: L0
+    ask: 跨部门协作靠什么（会议 / 群 / 表格）、一周大概花多少时间在协调上？
+    why: 协调活动是内部交易成本的主要来源；不问则协作损耗不可见。
+    mapsTo: [activity/coordination, edge/information_flow]
+    required: true
+
+  - id: q-l0-compliance
+    layer: L0
+    ask: 有哪些资质、牌照或合规义务（年检 / 审计 / 行业监管）、谁负责？
+    why: 合规是约束条件而非可选项；不问则跨行业对比会得出错误结论。
+    mapsTo: [activity/compliance, edge/rule_constraint]
+    required: true
+
+  - id: q-l0-knowledge-assets
+    layer: L0
+    ask: 关键经验沉淀在哪里（文档 / 系统 / 某个人脑子里）、有没有专利或独家配方？
+    why: 知识资产的「可调用性」决定组织是否越做越省力；只存在人脑里等于没有资产。
+    mapsTo: [resource/knowledge, resource/ip, edge/knowledge_sharing, edge/knowledge_reuse]
+    required: true
+
+  - id: q-l0-innovation-pipeline
+    layer: L0
+    ask: 最近一年有没有做新产品或新流程、做到哪一步、几次能成一次？
+    why: 创新活动有阶段与成功率；不问则「创新不足」无法与「创新失败率高」区分。
+    mapsTo: [activity/innovation, edge/innovation_output]
+    required: true
+
+  - id: q-l0-learning-loop
+    layer: L0
+    ask: 出过的事故或失误，有没有变成流程或培训（还是下次照旧）？
+    why: 单环学习与双环学习的差别在于是否改了规则；这是组织复利的源头。
+    mapsTo: [activity/learning, edge/organizational_learning, edge/cumulative_learning]
+    required: true
+
+  - id: q-l0-routines
+    layer: L0
+    ask: 哪些日常做法是「一直这么干」但没人说得清为什么、多久没人改过了？
+    why: 惯例的刚性会在环境变化时变成负债；不问则路径依赖不可测。
+    mapsTo: [activity/maintenance, edge/routine_rigidity]
+    required: true
+
+  - id: q-l0-automation
+    layer: L0
+    ask: 有没有已经在用的自动化或 AI 工具（含外包客服、报表机器人）、谁在维护？
+    why: 数字劳动力已经是组织的一部分；不采集则人机边界与产能口径都算不准。
+    mapsTo: [resource/agent, edge/tech_infrastructure]
+    required: true
+
+  # ── L1 · 聚合信号级（outcome 8 全覆盖）───────────────────────────────────────
+  - id: q-l1-revenue-scale
+    layer: L1
+    ask: 最近 12 个月收入多少、同比变化多少、收入按产品线或客户怎么分布？
+    why: 收入是规模与结构的基座；不看分布则「增长」可能只是单一客户的波动。
+    mapsTo: [outcome/financial, resource/money, edge/value_pricing]
+    required: true
+
+  - id: q-l1-margin-structure
+    layer: L1
+    ask: 毛利率与净利率大概多少、固定成本占比多少、降本主要降在哪？
+    why: 利润结构决定经营杠杆；只问利润额无法判断「多卖一倍会更好还是更差」。
+    mapsTo: [outcome/financial, edge/efficiency_attraction]
+    required: true
+
+  - id: q-l1-cash-runway
+    layer: L1
+    ask: 按当前净流出，账上现金还能撑几个月？有没有大额到期负债或应收压款？
+    why: 现金是唯一会直接致命的指标；它必须能与收入增长同时被看到。
+    mapsTo: [resource/money, outcome/risk]
+    required: true
+
+  - id: q-l1-customer-concentration
+    layer: L1
+    ask: 前三大客户占收入多少比例、最大客户的合同什么时候到期？
+    why: 客户集中度是最常被低估的生存风险，且完全可以从已有账目聚合出来。
+    mapsTo: [outcome/risk, resource/client, edge/customer_lockin]
+    required: true
+
+  - id: q-l1-market-position
+    layer: L1
+    ask: 在所在的细分市场大概排第几、份额在涨还是跌、主要对手是谁？
+    why: 竞争位置决定打法选择；不问则所有策略建议都缺少参照系。
+    mapsTo: [outcome/competitive, outcome/market, edge/competitive_positioning, edge/market_share_capture]
+    required: true
+
+  - id: q-l1-retention-voice
+    layer: L1
+    ask: 客户流失率多少、有没有在收集客户反馈、复购或转介绍占比多少？
+    why: 留存与口碑是增长的飞轮输入；缺失则增长只能靠不断加获客投入。
+    mapsTo: [outcome/market, edge/external_feedback, edge/reputation_flywheel]
+    required: true
+
+  - id: q-l1-operational-quality
+    layer: L1
+    ask: 准时交付率、返工或投诉率大概多少、有没有量化的质量口径？
+    why: 运营质量是「规模化的前提」；不问则会陷入「越忙越乱」而不自知。
+    mapsTo: [outcome/operational, edge/operational_execution]
+    required: true
+
+  - id: q-l1-people-health
+    layer: L1
+    ask: 去年离职率多少、关键岗位有没有后备、激励与产出挂钩吗？
+    why: 人的健康度决定其它所有改进能否落地；不问则改进计划无人执行。
+    mapsTo: [outcome/people, edge/talent_retention, edge/incentive_alignment]
+    required: true
+
+  - id: q-l1-innovation-output
+    layer: L1
+    ask: 新产品带来的收入占比多少、研发投入占收入多少、从想法到上市多久？
+    why: 创新产出把投入换算成结果；不问则研发只能被当成纯成本。
+    mapsTo: [outcome/innovation, edge/demand_to_spec]
+    required: true
+
+  - id: q-l1-external-environment
+    layer: L1
+    ask: 所在行业整体增速多少、近期有没有监管或技术变化正在影响生意？
+    why: 外部环境是唯一不能靠内部努力抵消的变量；不问则会把行业下行误判成执行不力。
+    mapsTo: [outcome/external, edge/environmental_scan]
+    required: true
+
+  - id: q-l1-growth-loop
+    layer: L1
+    ask: 赚到的钱主要回去投什么（研发 / 销售 / 产能 / 分红）、有没有形成越做越强的循环？
+    why: 增长的质量取决于利润是否回流到强化来源；这是「增长能不能持续」的唯一判据。
+    mapsTo: [edge/profit_reinvestment, edge/reputation_flywheel, edge/couples]
+    required: true
