@@ -975,54 +975,28 @@ warn_check "铁律 47: 声称完成须 grep 物理证明" "${CLEANUP_CLAIM:-}"
 # ═══════════════════════════════════════════════════════════════════
 echo -e "${CYAN}── 组 6/13: Task Brief (6 核心字段) ──${RESET}"
 
-# ═══ D537 #2: 主树占用检测前移（M8 变体治本——P1 清单落地）═══
-# 病根: 并行污染只拦"新开工"（task-start），不拦"存量"（已在主树工作的 session 直接
-#   提交）→ M8 变体第四次复发（D394→D481/482→D486）。检测前移到 pre-commit（物理门禁、
-#   每次提交强制）——修根因非症状。
-# 三态:
-#   拦   — 主树脏 + 近期活跃 session > 1（有并行 session 在主树工作）
-#   放行 — worktree 内（物理隔离）/ 单 session（无并行风险）/ 主树干净
-#   降级 — registry 不可读（铁律 11，显式提示不硬拦）
-# 活跃判定 = last_seen_at 在 SYNO_PARALLEL_WINDOW（默认 1800s）内（synova-commit 每次
-#   register 刷新 last_seen_at，比 pid 更可靠——pid=None 的僵尸 session 不误拦）。
-#   复用 session_registry.py list --active（同一信号源，不新建 registry）。
-_PAR_BLOCK_MSG=""
-if [ "${SYNO_SKIP_PARALLEL_GUARD:-0}" != "1" ] && [ "${SYNO_SKIP_PARALLEL_WARN:-0}" != "1" ]; then
-  case "$(git rev-parse --git-dir 2>/dev/null || echo '')" in
-    *"/.git/worktrees/"*) : ;;  # worktree 内 → 物理隔离已成立，放行
-    *)
-      # 主树脏检测: 有任何未提交改动（暂存/未暂存）→ 有 session 在主树工作
-      _MAIN_DIRTY="$(git -C "$ROOT" status --porcelain 2>/dev/null | head -1 || true)"
-      if [ -n "$_MAIN_DIRTY" ] && [ -f "$ROOT/scripts/control-tower/session_registry.py" ]; then
-        _ACT_JSON=$(python3 "$ROOT/scripts/control-tower/session_registry.py" list --active 2>/dev/null </dev/null || true)
-        if [ -n "$_ACT_JSON" ]; then
-          _ACT_N=$(echo "$_ACT_JSON" | python3 -c "
-import json,sys,os,datetime
-d=json.load(sys.stdin)
-ss=d.get('sessions',[])
-window=int(os.environ.get('SYNO_PARALLEL_WINDOW','1800'))
-now=datetime.datetime.now(datetime.timezone.utc)
-def recent(s):
-    try:
-        t=datetime.datetime.fromisoformat(s.get('last_seen_at',''))
-        if t.tzinfo is None: t=t.replace(tzinfo=datetime.timezone.utc)
-        return (now-t).total_seconds() < window
-    except Exception:
-        return False
-print(sum(1 for s in ss if recent(s)))
-" 2>/dev/null | tr -d '\r\n' || echo "")
-          _ACT_N="${_ACT_N//[^0-9]/}"  # D520/任务1: 数字清洗防 CRLF 残留致算术错误
-          if [ -n "$_ACT_N" ] && [ "$_ACT_N" -gt 1 ]; then
-            _PAR_BLOCK_MSG="主树有未提交改动且 ${_ACT_N} 个近期活跃 session — 并行互踩风险（M8）: python3 scripts/control-tower/worktree-manager.py create <任务名>"
-          fi
-        else
-          echo -e "  ${YELLOW}⚠️  主树占用检测: session-registry 不可读 — 降级放行（铁律 11）${RESET}"
-        fi
-      fi
-      ;;
+# ═══ D537 #2 (D537r2): 主树提交禁止门禁 ═══
+# 判据（CTO 裁定 §三bis）: 拦 = 在主树（pwd -P 后 toplevel == ${SYNO_MAIN_TREE}，默认 $HOME/SynovaAgent）提交;
+#   放行 = 非主树（worktree / 独立克隆）｜ SYNO_ALLOW_MAIN_TREE=1（guard 内自动留痕 degraded-events.log + bypass 台账）。
+# 降级不适用（判据不依赖 session-registry）; SYNO_CI=1 → guard 显式跳过（主树判据为本地层门禁，非静默）。
+# 旧判据「主树脏 + 近期活跃 session > 1」**删除**（A9 死条款: registry 全僵尸 0 活跃，实际不会触发，
+#   且拦不住"主树被 checkout"——判据本身无判别力）。
+# 🔴 插入点在 SYNO_SKIP_PARALLEL_GUARD / SYNO_SKIP_PARALLEL_WARN **外层**（A11: 不受其连坐）。
+# 生效层（A8）: 本处是脚本层；裸 git commit 的硬拦在 install-hooks.sh 生成的 pre-commit 钩子模板内再调一次 guard。
+_MT_GUARD="$ROOT/scripts/control-tower/main-tree-guard.sh"
+if [ ! -f "$_MT_GUARD" ]; then
+  self_fail_missing_script "主树提交禁止门禁 (D537 #2)" "scripts/control-tower/main-tree-guard.sh"
+else
+  _MT_MSG=""
+  _MT_RC=0
+  bash "$_MT_GUARD" || _MT_RC=$?   # swallow-ok: 非零退出码在下方 case 显式分派（0/1/2 三态，不吞）
+  case "${_MT_RC}" in
+    0) : ;;
+    1) _MT_MSG="禁止在主树提交 — 请在独立 worktree 工作（SYNO_ALLOW_MAIN_TREE=1 显式放行并留痕）" ;;
+    *) _MT_MSG="主树门禁检查自身失败 rc=${_MT_RC} — 同样阻断（fail-closed）" ;;
   esac
+  hard_check "主树提交禁止门禁 (D537 #2): 主树判据（本地层）" "${_MT_MSG}"
 fi
-hard_check "主树占用检测 (D537 #2): 主树脏 + 多活跃 session" "${_PAR_BLOCK_MSG:-}"
 
 
 
