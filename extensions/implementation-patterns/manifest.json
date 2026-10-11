@@ -1,0 +1,13 @@
+{
+  "$schema": "https://synova.dev/schemas/extension-manifest-v1.json",
+  "name": "implementation-patterns",
+  "version": "1.0.0",
+  "type": "implementation-pattern",
+  "displayName": "落地模式",
+  "description": "按哨兵结论匹配的落地动作模式（含数据依赖与覆盖率）。新增模式 = 加 json 文件。",
+  "entryPoint": "./info-distortion.json",
+  "registry": "src/deploy/content-registry.ts",
+  "readers": [
+    "src/services/pattern-matcher.ts"
+  ]
+}

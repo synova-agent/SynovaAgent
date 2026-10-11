@@ -1,119 +1,77 @@
 /**
- * src/init/file-driven-loaders.ts — Batch 1 文件驱动加载器初始化
+ * src/init/file-driven-loaders.ts — 内容面装配入口（boot）
  *
- * 在 server.ts 启动时调用，将 loader 接入运行时。
+ * 在 server.ts 启动时调用，把 extensions/ 内容面接入运行时。
  * 接线审计 (铁律 5): 每个新 export 必须有调用方。
  *
- * v3.6 Batch 1 — 基础设施接线
+ * 🔴 #1465（K10·EXT-WIRE）重构：**收敛为 content-registry 驱动**。
+ *   原实现把 8 个 loader 的 `await import(...)` 硬编码在本文件里（散点 8 处，实测
+ *   `grep -cE "await import\('.*-loader'\)" origin/main:src/init/file-driven-loaders.ts` = 8）。
+ *   规范《extensions内容面规范-v0》§5.2 修法 = 建引擎侧唯一 `type→loader` 表 ⇒ 本文件不再持有映射，
+ *   只调用 `initContentTypes()`（`src/deploy/content-registry.ts`）。
+ *   ⇒ 新增内容项 = 在 registry 加一条声明，**本文件零改动**（规范 §5.4「0 宿主改动」）。
+ *
+ * 仍留在本文件的唯一块：D36 `field-mappings` 自动发现 —— 它扫描的是
+ *   `extensions/ontology/field-mappings/` **子路径**，走的是 `src/agent/adapter-scanner` +
+ *   `src/agent/adapter-registry` 的**注册通道**（非 loader 通道），故不在 content-registry 的
+ *   `type→loader` 表内；已在 registry 的 `ontology` 项 `readers[]` 中登记，避免成为隐形缺口。
  */
 import { createLogger } from '@synova/logger';
 
 const log = createLogger('init/file-driven-loaders');
 
 /**
- * 初始化所有 Batch 1 文件驱动加载器。
+ * 初始化所有内容面文件驱动加载器。
  * 在 server.ts 启动流程中调用。
+ *
+ * 降级契约（铁律 11/24/31）: 逐项失败隔离在 `initContentTypes()` 内完成；
+ * 本函数**不抛出**，只把 degraded 信号写 log 供上层观测。
  */
 export function initFileDrivenLoaders(): Promise<void> {
   return _initFileDrivenLoaders();
 }
 
 async function _initFileDrivenLoaders(): Promise<void> {
-  // i18n — 预加载默认 locale + 接线验证
+  // 内容面全部 loader —— 由 content-registry 唯一驱动（9 项: sentinel/ontology/framework/
+  // report-template/rule/locale/notification/adapter/business-model）
   try {
-    const { loadLocale, t, reloadLocale } = await import('../locale/locale-loader');
-    const { locale } = loadLocale();
-    t('report.title', locale);
-    void reloadLocale; // 备用热加载 — 接线
-    log.info('locale loader 已初始化');
-  } catch (err: any) {
-    log.warn({ err }, 'locale loader 初始化失败 — degraded');
-  }
+    const { describeContentRegistry, initContentTypes } = await import('../deploy/content-registry');
 
-  // 报告模板 — 验证模板可加载 + listTemplates 接线
-  try {
-    const { loadTemplate, listTemplates, clearTemplateCache } = await import('../l3/report-template-loader');
-    loadTemplate('default');
-    listTemplates();
-    void clearTemplateCache; // 备用热加载 — 接线
-    log.info('report template loader 已初始化');
-  } catch (err: any) {
-    log.warn({ err }, 'report template loader 初始化失败 — degraded');
-  }
+    // 规范 §5.3「早激活：boot 全量解析，选择前暴露失败」—— 先打印注册表构成 + 完整性问题
+    const snapshot = describeContentRegistry();
+    if (snapshot.integrityProblems.length > 0) {
+      log.warn(
+        { problems: snapshot.integrityProblems },
+        'content-registry 表自身完整性问题 — 编程错误，需修表',
+      );
+    }
+    log.info(
+      {
+        total: snapshot.counts.total,
+        reachable: snapshot.counts.reachable,
+        retired: snapshot.counts.retired,
+        pendingCto: snapshot.counts.pendingCto,
+      },
+      '内容面注册表已加载（20 项状态分布）',
+    );
 
-  // 认知框架 — 预加载 + 按类别查询接线
-  try {
-    const { loadFrameworks, getFrameworksByCategory, matchFrameworksByConstraint, clearFrameworkCache } = await import('../l3/framework-loader');
-    loadFrameworks();
-    getFrameworksByCategory('psychology');
-    matchFrameworksByConstraint(['激励']);
-    void clearFrameworkCache; // 备用热加载 — 接线
-    log.info('framework loader 已初始化');
-  } catch (err: any) {
-    log.warn({ err }, 'framework loader 初始化失败 — degraded');
-  }
-
-  // 通知渠道 — 文件驱动自动发现 (V3.8)
-  try {
-    const { loadAndRegisterNotificationAdapters } = await import('../notifications/notification-loader');
-    const { listNotificationChannels, listActiveAdapters } = await import('../notifications/registry');
-    const { registered, errors } = await loadAndRegisterNotificationAdapters();
-    if (errors.length > 0) log.warn({ errors }, '部分通知适配器注册失败 — degraded');
-    listNotificationChannels();
-    listActiveAdapters();
-    log.info({ registered }, 'notification adapters 已初始化');
+    const report = await initContentTypes();
+    if (report.errors.length > 0) {
+      log.warn({ errors: report.errors }, '内容项装配失败 — degraded（已隔离，不阻断启动）');
+    }
+    if (report.warnings.length > 0) {
+      log.warn({ warnings: report.warnings }, '内容项装配带降级信号 — degraded');
+    }
+    log.info(
+      { attempted: report.attempted, loaded: report.loaded },
+      '内容面 loader 已初始化（content-registry 驱动）',
+    );
   } catch (err: unknown) {
-    log.warn({ err }, 'notification adapters 初始化失败 — degraded');
+    // registry 自身损坏（编程错误）—— 显式降级，不让 boot 崩
+    log.warn({ err }, 'content-registry 驱动失败 — degraded');
   }
 
-  // sentinel — 哨兵加载 + 注册 (V3.8 文件驱动化)
-  try {
-    const { loadSentinels, registerLoadedSentinels, getSentinelsByExpert, clearSentinelCache } = await import('../sentinel/sentinel-loader');
-    const { sentinels } = loadSentinels();
-    const { registered, errors } = await registerLoadedSentinels();
-    if (errors.length > 0) log.warn({ errors }, '部分哨兵注册失败 — degraded');
-    getSentinelsByExpert('finance'); // 接线验证
-    void clearSentinelCache; // 备用热加载
-    log.info({ count: sentinels.length, registered }, 'sentinel loader 已初始化');
-  } catch (err: unknown) {
-    log.warn({ err }, 'sentinel loader 初始化失败 — degraded');
-  }
-
-  // 规则 — 诊断规则 + 升级策略 + 信号路由 (V3.7 Batch 3)
-  try {
-    const { loadRules, getUpgradeStrategy, clearRuleCache } = await import('../l3/rule-loader');
-    const { rules } = loadRules();
-    getUpgradeStrategy('general-enterprise'); // 接线验证
-    void clearRuleCache; // 备用热加载 — 接线
-    log.info({ diag: rules.diagnostic.length, sens: rules.sensitivity.length, strategies: rules.upgradeStrategies.length }, 'rule loader 已初始化');
-  } catch (err: any) {
-    log.warn({ err }, 'rule loader 初始化失败 — degraded');
-  }
-
-  // 本体类型 — 17 节点 + 14 边 + tags + queryByTags (V3.8 Batch 4)
-  try {
-    const { loadOntology, getTypesByTags, validateEdgeEndpoints, clearOntologyCache } = await import('../l4/ontology-loader');
-    const { ontology } = loadOntology();
-    getTypesByTags(['human']); // 接线验证
-    validateEdgeEndpoints('INTERACTS_WITH', 'Person', 'Agent'); // 接线验证
-    void clearOntologyCache; // 接线
-    log.info({ nodes: ontology.nodeTypes.length, edges: ontology.edgeTypes.length }, 'ontology loader 已初始化');
-  } catch (err: any) {
-    log.warn({ err }, 'ontology loader 初始化失败 — degraded');
-  }
-
-  // 适配器 — 加载 + 接线验证 (V3.8)
-  try {
-    const { loadAdapters, clearAdapterCache } = await import('../l4/adapter-loader');
-    const { adapters, errors } = loadAdapters();
-    if (errors.length > 0) log.warn({ errors }, '部分适配器加载失败 — degraded');
-    void clearAdapterCache;
-    log.info({ count: adapters.length }, 'adapter loader 已初始化');
-  } catch (err: unknown) {
-    log.warn({ err }, 'adapter loader 初始化失败 — degraded');
-  }
-
-  // D36: field-mappings 适配器自动发现 — 扫描 + 注册到 AdapterRegistry
+  // D36: field-mappings 适配器自动发现 — 扫描 extensions/ontology/field-mappings/ + 注册到 AdapterRegistry
   try {
     const { scanFieldMappings } = await import('../agent/adapter-scanner');
     const { AdapterRegistry } = await import('../agent/adapter-registry');
@@ -127,5 +85,4 @@ async function _initFileDrivenLoaders(): Promise<void> {
   } catch (err: unknown) {
     log.warn({ err }, 'field-mappings 适配器初始化失败 — degraded');
   }
-
 }

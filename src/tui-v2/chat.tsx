@@ -230,16 +230,22 @@ function TuiApp({ bctx }: { bctx: BootstrapResult }) {
       });
     }
 
-    // 检查更新
+    // 检查更新（失败降级：warn 留痕 + 界面提示；不阻断启动 — 铁律 24+31）
     checkForUpdates().then((result: UpdateCheckResult) => {
       const msg = formatUpdateMessage(result);
       if (msg) addSystemMessage(msg);
-    }).catch(() => {});
+    }).catch((err: unknown) => {
+      log.warn({ err: err instanceof Error ? err.message : String(err) }, '检查更新失败 — 跳过更新提示（降级不阻断）');
+      addSystemMessage('⚠️ 检查更新失败，本次已跳过更新提示。');
+    });
 
-    // 获取 DeepSeek 账户余额
+    // 获取 DeepSeek 账户余额（失败降级：warn 留痕 + 界面提示；余额区留空 — 铁律 24+31）
     fetchDeepseekBalance().then(b => {
       if (b) setBalance(b);
-    }).catch(() => {});
+    }).catch((err: unknown) => {
+      log.warn({ err: err instanceof Error ? err.message : String(err) }, '获取 DeepSeek 余额失败 — 余额暂不显示（降级不阻断）');
+      addSystemMessage('⚠️ 获取账户余额失败，余额暂不显示（可用 /balance 重试）。');
+    });
 
     // Cron 监测
     const scheduler = getGlobalScheduler(db);
@@ -257,7 +263,10 @@ function TuiApp({ bctx }: { bctx: BootstrapResult }) {
       log.info({ signal }, '收到信号，开始优雅关闭');
       if (convRef.current) store.saveState(sessionId, convRef.current.serialize());
       scheduler.stop();
-      try { db.pragma('wal_checkpoint(TRUNCATE)'); } catch {}
+      try { db.pragma('wal_checkpoint(TRUNCATE)'); } catch (err: unknown) {
+        // WAL checkpoint 失败不阻断关闭：数据随 close() 落盘，此处只影响下次启动的恢复耗时
+        log.warn({ err: err instanceof Error ? err.message : String(err) }, 'WAL checkpoint 失败 — 继续关闭（降级不阻断）');
+      }
       db.close();
       exit();
     };
@@ -415,7 +424,22 @@ function TuiApp({ bctx }: { bctx: BootstrapResult }) {
     setState(prev => ({ ...prev, status: '目标确认完成' }));
     addSystemMessage('═══ 目标已确认，启动增长导航 ═══');
 
-    convRef.current?.startDiagnosis('管理者', convRef.current?.getOrgId() || '用户').then(() => {}).catch(() => {});
+    // 诊断启动探针（无 event handler 的调用点）— 两种失败形态都必须降级可见：
+    //   ① reject：conversation-engine.ts startDiagnosis 无兜底（如 expertRouter.route 抛出）
+    //   ② resolve 为 null：diagnosis-launcher.ts 内部消化后返回 null，不 rethrow
+    // 失败时必须纠正下方 setState 写入的 'Phase 1: 数据采集中...'（否则用户对着假进度干等；与同文件 :504/:508 既有复位同向）。
+    // 只在状态仍是该假进度时复位 — 避免覆盖后续真实 phase 事件写入的进度。
+    convRef.current?.startDiagnosis('管理者', convRef.current?.getOrgId() || '用户').then((result: unknown) => {
+      if (result) return;
+      log.warn({ phase: 'diagnosis-launch' }, '增长导航未返回结果（诊断引擎降级）— 复位采集状态');
+      addAlertMessage('⚠️ 增长导航未启动：诊断引擎未返回结果，请检查引擎配置。');
+      setState(prev => (prev.status === 'Phase 1: 数据采集中...' ? { ...prev, status: '准备就绪' } : prev));
+    }).catch((err: unknown) => {
+      const reason = err instanceof Error ? err.message : String(err);
+      log.error({ err: reason }, '增长导航启动异常');
+      addAlertMessage(`⚠️ 增长导航启动失败: ${reason}`);
+      setState(prev => (prev.status === 'Phase 1: 数据采集中...' ? { ...prev, status: '准备就绪' } : prev));
+    });
 
     setState(prev => ({ ...prev, status: 'Phase 1: 数据采集中...' }));
     const expertStatusMap = expertStatusMapRef.current;

@@ -54,7 +54,7 @@
 
 export type BlockId =
   | 'K1' | 'K2' | 'K3' | 'K4' | 'K5'
-  | 'K6' | 'K7' | 'K8' | 'K9' | 'K10' | 'K11' | 'RETIRED';
+  | 'K6' | 'K7' | 'K8' | 'K9' | 'K10' | 'K11' | 'K12' | 'RETIRED';
 
 /** 验收步：完成标准 = 可执行命令（禁 grep 型 —— T6 面 1 反例） */
 export interface AcceptanceStep {
@@ -73,7 +73,7 @@ export interface ConstructionItem {
   id: string;
   /** 派给谁（**由 CTO 派单时指定** —— 不是"归属"。域概念已废止 2026-10-04） */
   worker: Worker;
-  batch: '第0批' | '第1批' | '第2批' | '第3批';
+  batch: '第0批' | '第1批' | '第2批' | '第3批' | '第12批';
   block: BlockId;
   title: string;
   /** 写集：落点文件/目录。**卡与卡不重叠由 CTO 派单时裁定**（不再由域推导）。 */
@@ -1112,7 +1112,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   // ───────────────── 第 3 批 · 新建 ─────────────────
   {
     id: '3-1',
-    worker: 'win', batch: '第3批', block: 'K9',
+    worker: 'win', batch: '第3批', block: 'K12',
     title: '角色预设包（Role Pack）',
     paths: [
       'docs/synova/presets/roles/',
@@ -1159,7 +1159,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   },
   {
     id: '3-3',
-    worker: 'win', batch: '第3批', block: 'K9',
+    worker: 'win', batch: '第3批', block: 'K12',
     title: '建档通道（"建档" 0 命中）',
     paths: [
       'src/onboarding/',
@@ -1182,7 +1182,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   },
   {
     id: '3-4',
-    worker: 'win', batch: '第3批', block: 'K9',
+    worker: 'win', batch: '第3批', block: 'K12',
     title: '追问由本体缺口驱动',
     paths: [
       'src/onboarding/gap-questioner.ts',
@@ -1509,7 +1509,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   },
   {
     id: 'RB-01',
-    worker: 'win', batch: '第1批', block: 'K11',
+    worker: 'win', batch: '第1批', block: 'K12',
     title: '多租户隔离：跨 orgId 读必须被拒（含 DevMode 姿态）',
     // 卡面 §④；第二项由 `src/middleware/rbac.ts` 订正而来；卡面写 `probe-*` 通配，此处取同域**具名**件（避免与 RB-02/03/04 的 probe 相撞）
     paths: [
@@ -1535,7 +1535,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   },
   {
     id: 'RB-02',
-    worker: 'win', batch: '第1批', block: 'K11',
+    worker: 'win', batch: '第1批', block: 'K12',
     title: '部门轴：departmentIds（复数）+ 文件驱动真源 + resolveContext 单一入口',
     // 同 RB-01：卡面 `probe-*` 通配取同域具名件
     paths: [
@@ -1560,7 +1560,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   },
   {
     id: 'RB-03',
-    worker: 'win', batch: '第2批', block: 'K11',
+    worker: 'win', batch: '第2批', block: 'K12',
     title: '权限项模型：PermissionId[] + 角色为可配包（五档仅出厂默认）',
     paths: [
       'src/middleware/rbac.ts',
@@ -1582,7 +1582,7 @@ export const constructionItems: readonly ConstructionItem[] = [
   },
   {
     id: 'RB-04',
-    worker: 'win', batch: '第3批', block: 'K11',
+    worker: 'win', batch: '第3批', block: 'K12',
     title: 'BR-3 重构：从 RBAC 档位 → Grants + 客户自定义配置面',
     paths: [
       'extensions/', 'src/middleware/rbac.ts',
@@ -1754,16 +1754,146 @@ export const constructionItems: readonly ConstructionItem[] = [
       status: 'todo',
       source: 'PR #1437 断点清单 B2(P1)；卡面 Issue #1455',
     },
+  // ═══ K12 新增（一致性线 · 宪章 §2.7 第一优先 · 2026-10-11 立）═══
+  {
+    id: 'K12-02', worker: 'win', batch: '第12批', block: 'K12',
+    title: '建档内容包（L0/L1 采集方法）',
+    paths: ['extensions/onboarding/**', 'tests/onboarding/completeness.test.ts'],
+    dependsOn: [],
+    acceptance: [{ run: 'npx vitest run tests/onboarding/completeness.test.ts', expectExit: 0 }],
+    status: 'todo',
+    source: '内容面规范 §六（建档内容包＝过程输入）/ 02-一致性 §九',
+  },
+  {
+    id: 'K12-05', worker: 'win', batch: '第12批', block: 'K12',
+    title: '知识一致：分层权限的数据面（四层＝企业/部门/岗位/个人）',
+    paths: ['extensions/knowledge-scope/**', 'src/init/file-driven-loaders.ts', 'tests/knowledge-scope/layering.test.ts', 'scripts/control-tower/probe-knowledge-scope.ts'],
+    dependsOn: ['RB-01', 'RB-02'],
+    acceptance: [{ run: 'npx tsx scripts/control-tower/probe-knowledge-scope.ts', expectExit: 0 }],
+    status: 'todo',
+    source: '宪章 §2.7 第①层 / 02-一致性 §三机制2（四层不是"一个统一知识库"）',
+  },
+  {
+    id: 'K12-06', worker: 'win', batch: '第12批', block: 'K12',
+    title: '标准一致：输出契约（可机器校验，非"给格式"）',
+    paths: ['extensions/reports/contracts/**', 'src/output/contract-validator.ts', 'tests/output/contract-validator.test.ts'],
+    dependsOn: [],
+    acceptance: [{ run: 'npx vitest run tests/output/contract-validator.test.ts', expectExit: 0 }],
+    status: 'todo',
+    source: '宪章 §2.7 第③层 / 02-一致性 §三机制3（产出提交时自动检查；第二职务＝反馈捕获）',
+  },
+  {
+    id: 'K12-07', worker: 'win', batch: '第12批', block: 'K12',
+    title: '目标一致：岗位目标 ↔ 公司目标可追溯（目标分解边）',
+    paths: ['extensions/ontology/**', 'src/l4/goal-alignment.ts', 'tests/l4/goal-alignment.test.ts'],
+    dependsOn: ['K12-03'],
+    acceptance: [{ run: 'npx vitest run tests/l4/goal-alignment.test.ts', expectExit: 0 }],
+    status: 'todo',
+    source: '宪章 §2.7 第④层 / 02-一致性 §二第4层（创始人提出：公司目标与考核→传导到每个人）',
+  },
+  {
+    id: 'K12-08', worker: 'win', batch: '第12批', block: 'K12',
+    title: '反馈一致：偏差回流到同一个地方（单一入口＋禁静默修改）',
+    paths: ['src/l4/decision-capture.ts', 'tests/l4/decision-capture-single-entry.test.ts', 'scripts/control-tower/probe-decision-ledger.ts'],
+    dependsOn: ['K12-06'],
+    acceptance: [{ run: 'npx tsx scripts/control-tower/probe-decision-ledger.ts', expectExit: 0 }],
+    status: 'todo',
+    source: '宪章 §2.7 第⑤层 / 02-一致性 §四（飞轮 v3.1 铁律：人工修正必须结构化落账，禁静默）',
+  },
+  {
+    id: '0-13', worker: 'win', batch: '第12批', block: 'K12',
+    title: 'check-content-coupling 新门禁（CC1方向/CC2对称/CC3可达/CC4结构）',
+    paths: ['scripts/check-content-coupling.sh', 'tests/control-tower/content-coupling.test.sh'],
+    dependsOn: [],
+    acceptance: [{ run: 'bash scripts/check-content-coupling.sh', expectExit: 0 }],
+    status: 'todo',
+    source: '内容面规范 §3.5（现存量：113 type＋28 值钻入｜27 条反向 type｜4 项不可达｜4 目录无 manifest）',
+  },
+  {
+    id: '1-9', worker: 'win', batch: '第12批', block: 'K12',
+    title: 'content-registry（唯一 type→loader 表）＋ entryPoint 字段处置',
+    paths: ['src/deploy/content-registry.ts', 'extensions/*/manifest.json'],
+    dependsOn: [],
+    acceptance: [{ run: 'npx tsx scripts/control-tower/probe-content-registry.ts', expectExit: 0 }],
+    status: 'todo',
+    source: '内容面规范 §5.2（entryPoint 语义破损三重：反指方向错／解析基准错／纯悬空＋零消费者）',
+  },
+  {
+    id: '1-10', worker: 'win', batch: '第12批', block: 'K12',
+    title: 'reload 重扫 extensions/（不重启，失败隔离）',
+    paths: ['src/deploy/content-reload.ts', 'tests/deploy/content-reload.test.ts'],
+    dependsOn: ['1-9'],
+    acceptance: [{ run: 'npx vitest run tests/deploy/content-reload.test.ts', expectExit: 0 }],
+    status: 'todo',
+    source: '内容面规范 §5.4＋§5.3（采纳 DSH 三机制：早激活／失败隔离／标识持久化；不采纳代际机制）',
+  },
+  {
+    id: '1-11', worker: 'win', batch: '第12批', block: 'K12',
+    title: '四项生产不可达处置（llm-providers/business-models/engine/tools）＋ policies/data-access',
+    paths: ['extensions/llm-providers/**', 'extensions/business-models/**', 'extensions/engine/**', 'extensions/tools/**', 'extensions/policies/data-access.yaml'],
+    dependsOn: ['1-9'],
+    acceptance: [{ run: 'bash scripts/check-content-coupling.sh', expectExit: 0 }],
+    status: 'todo',
+    source: '内容面规范 §3.2 汇总＋§七-2（取舍是产品判断，需 CTO/创始人裁）',
+  },
+  {
+    id: '1-12', worker: 'win', batch: '第12批', block: 'K12',
+    title: 'adapters/notifications 引擎码归位（.ts 搬 src/，json 留）',
+    paths: ['src/connectors/**', 'src/notifications/**', 'extensions/adapters/**', 'extensions/notifications/**'],
+    dependsOn: ['0-13'],
+    acceptance: [{ run: 'bash scripts/check-content-coupling.sh', expectExit: 0 }],
+    status: 'todo',
+    source: '内容面规范 §3.2-9/12＋宪章 约束4（内核与扩展边界必须物理可见）',
+  },
+  {
+    id: '1-13', worker: 'win', batch: '第12批', block: 'K12',
+    title: 'locales 死指针修复（manifest 指向不存在的 locale-loader.ts）',
+    paths: ['extensions/locales/manifest.json'],
+    dependsOn: ['1-9'],
+    acceptance: [{ run: 'bash scripts/check-content-coupling.sh', expectExit: 0 }],
+    status: 'todo',
+    source: '内容面规范 §一 E-2 撤回＋§5.2（双口径皆悬空；真加载器是 src/locale/locale-loader.ts）',
+  },
+  {
+    id: 'RB-05', worker: 'win', batch: '第12批', block: 'K12',
+    title: '人在环审批（approval seam）：高风险动作要人点头，无人应答 ⇒ 拒',
+    paths: ['src/runtime/approval-seam.ts', 'tests/security/approval-seam.test.ts', 'scripts/control-tower/probe-approval-seam.ts'],
+    dependsOn: ['RB-01', 'RB-02'],
+    acceptance: [{ run: 'npx tsx scripts/control-tower/probe-approval-seam.ts --case no-answer', expectExit: 0 }],
+    status: 'todo',
+    source: '2026-10-07-CTO-记录（K11 四层之第四层 · 人在环）/ 创始人 2026-10-05 六条裁定之「高风险要人点头」/ 宪章 4.2 运行时含"审批"',
+  },
+  {
+    id: 'RB-06', worker: 'win', batch: '第12批', block: 'K12',
+    title: '岗位内容分层（提示词/工具/知识按部门变）—— 🔴 上线闸＝第一个客户上线前必须完成',
+    paths: ['extensions/content-layers/**', 'src/services/content-layering.ts', 'tests/services/content-layering.test.ts', 'scripts/control-tower/probe-content-layering.ts'],
+    dependsOn: ['K12-02', 'RB-02'],
+    acceptance: [{ run: 'npx tsx scripts/control-tower/probe-content-layering.ts --case dept-diff', expectExit: 0 }],
+    status: 'todo',
+    source: '2026-10-07-CTO-记录（权限层=能不能看 RB-01..05；内容层=看到什么样 RB-06）/ 院方《02》§三机制2 部门级 / 创始人 2026-10-05 定的上线闸',
+  },
+
+  {
+    id: 'K12-21', worker: 'win', batch: '第12批', block: 'K12',
+    title: '测量梯子（13 个探针 · 全员前置）：未实现必须 exit 2，不许假绿',
+    paths: ['scripts/control-tower/probe-ladder.ts', 'scripts/control-tower/probe-*.ts', 'tests/control-tower/probe-contract.test.sh'],
+    dependsOn: [],
+    acceptance: [{ run: 'npx tsx scripts/control-tower/probe-ladder.ts --all', expectExit: 0 }],
+    status: 'todo',
+    source: 'CTO 2026-10-11 复核实测：13 个探针现存 0 个 ⇒ "能跑"一级全卡不成立 ⇒ 单独立卡先造测量梯子；契约=未实现必须 exit 2（fail-closed，铁律 31）',
+  },
+
 ];
 
 // ════════════════════════════════════════════════════════════════
-// 10 块
+// 13 块（含 K12；K11 已并入 K12）
 // ════════════════════════════════════════════════════════════════
 
 export const constructionBlocks: readonly ConstructionBlock[] = [
   {
     id: 'K11' as BlockId, name: '权限与多租户（部门轴 / 权限项模型 / 跨租户隔离）',
-    items: ['RB-01', 'RB-02', 'RB-03', 'RB-04'],
+    items: [],  // 2026-10-11 整体并入 K12（创始人裁定：一致性线收口）
+
     blockAcceptance: [
       { run: 'npx tsx scripts/control-tower/probe-rbac-multitenant.ts --case cross-org', expectExit: 0 },
     ],
@@ -1854,7 +1984,7 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
     source: 'T3 §二 K8（blockAcceptance 已按 T9 面1 反例改：禁串块）',
   },
   {
-    id: 'K9', name: '建档·岗位预设·技能面', items: ['0-12', '3-1', '3-3', '3-4', '3-6', '3-9'],
+    id: 'K9', name: '技能面（建档/预设/追问已并入 K12）', items: ['0-12', '3-6', '3-9'],
     blockAcceptance: [
       { run: 'npx tsx scripts/control-tower/probe-skills.ts', expectStdoutContains: '## Available Skills' },
     ],
@@ -1867,6 +1997,17 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
     ],
     source: 'T3 §二 K10',
   },
+  {
+    id: 'K12' as BlockId, name: '企业级一致性（宪章 §2.7 第一优先）',
+    items: ['3-1', '3-3', '3-4', 'K12-02', 'K12-05', 'K12-06', 'K12-07', 'K12-08',
+            'RB-01', 'RB-02', 'RB-03', 'RB-04', 'RB-05', 'RB-06', '0-13', '1-9', '1-10', '1-11', '1-12', '1-13', 'K12-21'],
+    blockAcceptance: [
+      { run: 'npx tsx scripts/control-tower/probe-onboarding.ts --dry-run', expectExit: 0 },
+      { run: 'npx tsx scripts/control-tower/probe-role-pack.ts --role finance', expectExit: 0 },
+    ],
+    source: '创始人 2026-10-11 裁定：① 一致性＝建档＋角色预设＋权限（三件套组装，非新机制）② 落点以《extensions 内容面规范 v0.1》为准（extensions/presets/roles/ ＋ extensions/onboarding/）③ 组织层算扩展点 ④ 架构图补（采纳 (a) 内容贴层）。本块 = K9(3-1/3-3/3-4) ＋ K11(RB-01~04) 并入 ＋ 11 项新建。',
+  },
+
 ];
 
 
