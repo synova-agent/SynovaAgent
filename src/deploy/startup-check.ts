@@ -210,11 +210,15 @@ async function checkDiskSpace(): Promise<CheckResult> {
   }
 
   try {
-    // Windows 下用 shell 获取可用空间
+    // Windows 下取可用空间
     if (process.platform === 'win32') {
-      const { execSync } = await import('child_process');
+      // #1454 B5（与 src/routes/healthz.ts 同型修）: 不经 shell —— 修前 execSync 的
+      // `"C:\"` 在 cmd.exe 下尾反斜杠转义收尾引号 ⇒ 命令行截断 ⇒ Windows 恒降级。
+      const { execFileSync } = await import('child_process');
       const drive = path.parse(dataDir).root || 'C:\\';
-      const output = execSync(`fsutil volume diskfree "${drive}"`, { timeout: 5000 }).toString().toLowerCase();
+      const output = execFileSync('fsutil', ['volume', 'diskfree', drive], { timeout: 5000 })
+        .toString()
+        .toLowerCase();
 
       // 解析 bytes (fsutil 输出类似: "可用空间: 1234567890 字节")
       const freeMatch = output.match(/[:：]\s*(\d+)\s*/);

@@ -51,6 +51,12 @@ export interface LoopTriggerConfig {
 /**
  * 6 个循环 × 3 个尺度的触发矩阵。
  * 每循环定义 fast/medium/slow 三种节奏，支持 cron/event/hybrid 触发。
+ *
+ * 🔴 快照，非事实源；真源 = `resolveLoopCron()`（`src/cron/cron-config.ts` 的 `DEFAULT_LOOP_CRON`）。
+ *    本矩阵的 `period` 为历史快照，与 #1454 后的实际注册口径**可能分歧**
+ *    （loop-3 已改默认为日频 `0 9 * * *`，本矩阵仍是月/季/半年）。
+ *    ⇒ 改「循环节律」请改 `DEFAULT_LOOP_CRON`（或 env `SYNOVA_CRON_<JOB>` / `cron-loops.json`），
+ *      不要以本文件的 `period` 为依据；本矩阵不承载事实源（#1454 CTO 裁定：只标注，不改逻辑）。
  */
 export const LOOP_TRIGGER_MATRIX: LoopTriggerConfig[] = [
   {

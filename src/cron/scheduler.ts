@@ -16,6 +16,24 @@ const log = createLogger('cron/scheduler');
 
 // ═══ Types ═══
 
+/**
+ * nextCronTime 逐分钟搜索的迭代硬上界（防空转保险丝，不是性能手段）。
+ *
+ * 口径（自算，非引用）：2 年搜索窗 = 731 天 × 1440 分钟 = 1,052,640 分钟，
+ * 故 1,100,000 的预算**大于窗宽** ⇒ 正常路径下「窗宽」先触底，本预算只在
+ * `check` 因 DST 等原因未向前推进时兜死循环。
+ *
+ * 成本削减来自**解析正确**，不是来自本预算：
+ *   · 修前：`* / n`、`a-b` 解析为空集 ⇒ 仍静默扫满 1,052,640 次/调用（实测 ~168ms/行）
+ *   · 修后：字段空集 ⇒ 立即 log.warn + 兜底返回（**0 次迭代**）
+ * 🔴 窗内无匹配（如 `0 0 31 2 *` 2 月 31 日）仍扫满窗宽 —— 该路径成本**未变低**，
+ *    只从「静默」变为「log.warn + 常数上界」。不得声称本预算降低了这条路径的成本。
+ */
+const SCAN_BUDGET = 1_100_000;
+
+/** 字段片段的合法整数形态：纯十进制数字（`+5` / `1e3` / `2-3` 一律判非法 —— 防 parseInt 静默取前缀） */
+const FIELD_NUM = /^\d+$/;
+
 export type TriggerType = 'cron' | 'event' | 'hybrid';
 
 export interface CronJob {
@@ -36,26 +54,116 @@ export interface CronJob {
 
 // ═══ Cron Expression Parser ═══
 
-function parseCronField(field: string, min: number, max: number): Set<number> {
+/**
+ * 解析单个 cron 字段。
+ *
+ * 支持语法（POSIX crontab(5) 常用子集 + Vixie 的 `n/m` 形态）：
+ *   `n`          单值          —— `5`
+ *   `a-b`        区间          —— `9-17`
+ *   `*`          全域          —— `*`
+ *   `* / n`      全域步进       —— `* / 3`（自 min 起，每 n）
+ *   `a-b / n`    区间步进       —— `9-17 / 2`
+ *   `n / m`      起点步进       —— `0 / 15`（自 n 起、每 m、上界 max；即 0,15,30,45）
+ *   `a,b,c`      列表（元素可为上述任一）
+ *
+ * @input  field — 原始字段串；min/max — 该字段合法闭区间（分 0-59 / 时 0-23 / 日 1-31 / 月 1-12 / 周 0-6）
+ * @output 字段所代表的取值集合（无合法片段 ⇒ 空集）
+ * @degraded 非法片段（非纯数字 / 反向区间 / 步长 ≤ 0 / 缺起始域 / 区间与单值之外的形态）
+ *           **跳过该片段**，其余合法片段照常生效 —— 函数本身不抛，
+ *           由调用方 `nextCronTime` 判定「全空 = 表达式无效」并 log.warn + 兜底。
+ * @invariant ① 返回集合恒为 [min, max] 的子集；`*` 恒等于全域
+ *            ② 区间/步进的两端**裁剪**到 [min,max]（如分字段 `50-70` ⇒ 50..59）
+ *            ③ 越界**单值**不裁剪也不贡献（如分字段 `70` ⇒ 不加入），与 ② 的差异是刻意的：
+ *               越界单值几乎总是书写错误，静默裁剪会把它变成另一个看起来正常的表达式
+ */
+export function parseCronField(field: string, min: number, max: number): Set<number> {
   const values = new Set<number>();
-  if (field === '*') {
-    for (let i = min; i <= max; i++) values.add(i);
-  } else {
-    for (const part of field.split(',')) {
-      const n = parseInt(part.trim());
-      if (!isNaN(n) && n >= min && n <= max) values.add(n);
+  const raw = field.trim();
+  if (raw === '') return values;
+
+  /** 把 [from, to] 按 step 展开，两端裁剪到 [min, max] 后逐点入集 */
+  const addRange = (from: number, to: number, step: number): void => {
+    const lo = Math.max(min, from);
+    const hi = Math.min(max, to);
+    for (let i = lo; i <= hi; i += step) values.add(i);
+  };
+
+  for (const rawPart of raw.split(',')) {
+    const part = rawPart.trim();
+    if (part === '') continue;
+
+    // ── 拆步进：`<主体>/<步长>`。`/` 只认首个；主体缺省 / 步长非法 ⇒ 整片段非法
+    const slash = part.indexOf('/');
+    const body = (slash === -1 ? part : part.slice(0, slash)).trim();
+    let step = 1;
+    if (slash !== -1) {
+      const stepStr = part.slice(slash + 1).trim();
+      if (!FIELD_NUM.test(stepStr)) continue; // `3/4` / 空 / `-2` / `2.5` ⇒ 非法片段
+      step = parseInt(stepStr, 10);
+      if (step <= 0) continue; // 步长 0 会让展开死循环 ⇒ 非法片段
     }
+    if (body === '') continue; // `/3`（缺起始域）⇒ 非法片段，不猜「全域」
+
+    // ── `*` / `* /n`：全域（自 min 起，每 step 个）
+    if (body === '*') {
+      addRange(min, max, step);
+      continue;
+    }
+
+    // ── `a-b` / `a-b/n`：区间（两端裁剪到 [min,max]）
+    const dash = body.indexOf('-');
+    if (dash !== -1) {
+      const fromStr = body.slice(0, dash).trim();
+      const toStr = body.slice(dash + 1).trim();
+      if (!FIELD_NUM.test(fromStr) || !FIELD_NUM.test(toStr)) continue; // `-5` / `5-` / `1-2-3` ⇒ 非法
+      const from = parseInt(fromStr, 10);
+      const to = parseInt(toStr, 10);
+      if (from > to) continue; // 反向区间 ⇒ 非法片段
+      addRange(from, to, step);
+      continue;
+    }
+
+    // ── `n` / `n/m`：单值；带步长时按 POSIX 语义展开到 max
+    if (!FIELD_NUM.test(body)) continue;
+    const n = parseInt(body, 10);
+    if (n < min || n > max) continue; // 越界单值 ⇒ 非法片段
+    if (slash !== -1) {
+      addRange(n, max, step);
+      continue;
+    }
+    values.add(n);
   }
+
   return values;
 }
 
-function nextCronTime(cron: string, from: Date = new Date()): Date {
-  const [minF, hourF, dayF, monthF, dowF] = cron.split(/\s+/);
-  const mins = parseCronField(minF, 0, 59);
-  const hours = parseCronField(hourF, 0, 23);
-  const days = parseCronField(dayF, 1, 31);
-  const months = parseCronField(monthF, 1, 12);
-  const dows = parseCronField(dowF, 0, 6);
+/**
+ * 计算 cron 表达式的下一次触发时刻。
+ *
+ * @input  cron — 5 字段表达式（分 时 日 月 周）；from — 起算时刻（默认 now）
+ * @output 下一次触发时刻；两条降级路径均返回 `from` 之后的**下一个整点**（≤1h）作为安全网
+ * @degraded ① 字段数 ≠ 5 或任一字段解析为空集（表达式无效）⇒ log.warn + 兜底
+ *           ② 2 年搜索窗内无匹配（如 `0 0 31 2 *` = 2 月 31 日）⇒ log.warn + 兜底
+ *           —— 修前两条路径均**静默**；①的成本由 1,052,640 次迭代降为 0，②的成本未变
+ * @invariant 迭代次数 ≤ min(窗宽 1,052,640, SCAN_BUDGET)；返回值恒 > from
+ */
+export function nextCronTime(cron: string, from: Date = new Date()): Date {
+  const parts = cron.trim().split(/\s+/);
+  const fields: [string, number, number][] = [
+    [parts[0] ?? '', 0, 59],
+    [parts[1] ?? '', 0, 23],
+    [parts[2] ?? '', 1, 31],
+    [parts[3] ?? '', 1, 12],
+    [parts[4] ?? '', 0, 6],
+  ];
+  const [mins, hours, days, months, dows] = fields.map(([f, lo, hi]) =>
+    parseCronField(f, lo, hi),
+  ) as [Set<number>, Set<number>, Set<number>, Set<number>, Set<number>];
+
+  if (parts.length !== 5 || [mins, hours, days, months, dows].some((s) => s.size === 0)) {
+    log.warn({ cron, fields: parts.length }, 'cron 表达式无效（字段数≠5 或字段解析为空集）— 退化为下一个整点触发');
+    return fallbackTime(from);
+  }
 
   const check = new Date(from.getTime() + 60000);
   check.setSeconds(0, 0);
@@ -63,7 +171,9 @@ function nextCronTime(cron: string, from: Date = new Date()): Date {
   const limit = new Date(from);
   limit.setFullYear(limit.getFullYear() + 2);
 
-  while (check <= limit) {
+  let iterations = 0;
+  while (check <= limit && iterations < SCAN_BUDGET) {
+    iterations++;
     if (
       months.has(check.getMonth() + 1) &&
       days.has(check.getDate()) &&
@@ -76,6 +186,19 @@ function nextCronTime(cron: string, from: Date = new Date()): Date {
     check.setMinutes(check.getMinutes() + 1);
   }
 
+  log.warn(
+    { cron, iterations, budget: SCAN_BUDGET },
+    'cron 表达式在 2 年搜索窗内无匹配 — 退化为下一个整点触发',
+  );
+  return fallbackTime(from);
+}
+
+/**
+ * 兜底时刻：`from` 之后的**下一个整点**（≤1h）。
+ *
+ * @invariant 返回值恒 > from（`from` 加 1h 再截到整点，最坏情形仍比 from 晚 1ms）
+ */
+function fallbackTime(from: Date): Date {
   const fallback = new Date(from.getTime() + 3600000);
   fallback.setMinutes(0, 0, 0);
   return fallback;

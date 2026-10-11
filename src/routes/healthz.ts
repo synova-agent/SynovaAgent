@@ -10,7 +10,7 @@ import { Router } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
 import { createLogger } from '@synova/logger';
-import { getDataDirectory } from '../deploy/data-directory';
+import { getDataDirectory, resolveDbPath } from '../deploy/data-directory';
 
 const log = createLogger('routes/healthz');
 const router = Router();
@@ -81,7 +81,9 @@ async function runAllChecks(): Promise<HealthzResponse> {
 // ─── 检查 1: 数据库 ───
 
 async function checkDatabase(): Promise<HealthCheck> {
-  const dbPath = path.join(getDataDirectory(), 'synova.db');
+  // #1454 B4: 与运行时同源 —— 尊重 SYNOVA_DB_PATH / SYNOVA_DATA_DIR
+  //（修前直取平台数据目录 ⇒ 独立库跑进程时恒假降级）
+  const dbPath = resolveDbPath();
 
   if (!fs.existsSync(dbPath)) {
     return { status: 'degraded', detail: '数据库文件不存在(首次启动尚未初始化)' };
@@ -186,9 +188,14 @@ async function checkDiskFree(): Promise<HealthCheck> {
     }
 
     if (process.platform === 'win32') {
-      const { execSync } = await import('child_process');
+      // #1454 B5: 不经 shell 调用 —— 修前 `execSync('fsutil volume diskfree "C:\\"')` 在 cmd.exe 下
+      // 尾反斜杠会转义收尾引号 ⇒ 命令行被截断 ⇒ 抛错 ⇒ 本检查在 Windows 上**恒降级**。
+      // execFileSync 直接传 argv，无引号解析层，`C:\` 原样进 argv[3]。
+      const { execFileSync } = await import('child_process');
       const drive = path.parse(dataDir).root || 'C:\\';
-      const output = execSync(`fsutil volume diskfree "${drive}"`, { timeout: 5000 }).toString().toLowerCase();
+      const output = execFileSync('fsutil', ['volume', 'diskfree', drive], { timeout: 5000 })
+        .toString()
+        .toLowerCase();
       const freeMatch = output.match(/[:：]\s*(\d+)\s*/);
       if (freeMatch && freeMatch[1]) {
         const freeGB = parseInt(freeMatch[1], 10) / (1024 * 1024 * 1024);
