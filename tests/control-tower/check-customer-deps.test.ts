@@ -111,3 +111,101 @@ describe('commandOwnPaths — 排除判据自身文件（防同义反复）', ()
     expect(commandOwnPaths('npx --flag ghost/x.ts tests/g/a.test.ts', root)).toEqual(['tests/g/a.test.ts']);
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════════════════
+ * 步 4 · 可卸载性（--phase uninstall）的判据测试（CTO 裁定 074 步 4）
+ *
+ * 🔴 四条承重判据（禁删）：
+ *   ① `splitMarkers` 必须把**块 id 一律降为弱标记** —— 本仓 `K3` 同时是**审计角色名**，
+ *      裸 `grep -w K3` 实测命中 269 行（绝大多数是"K3 审计"）⇒ 不弱化就是**假红**。
+ *   ② `sharedTopEntries` = "卸 X 会误伤他包"的机器判据（写集重叠）。
+ *   ③ `tablesOf` 只认真源 `createsTable.name`（禁从别处猜表名）。
+ *   ④ `topPathsLabel` 必须给"命中落在哪些文件" —— 回执要据此判"新残留 vs 历史冻结名单"。
+ * ══════════════════════════════════════════════════════════════════════════════ */
+import {
+  RESIDUAL_CLASSES,
+  RETENTION_BASES,
+  U_CLEAN,
+  extinctEntries,
+  markersOf,
+  runGrep,
+  sharedTopEntries,
+  splitMarkers,
+  tablesOf,
+  topPathsLabel,
+} from '../../scripts/control-tower/check-customer-deps.ts';
+
+describe('步4 · splitMarkers — 块 id 必须降为弱标记（防"审计角色名"假红）', () => {
+  it('块 id 即使含字母也是弱标记', () => {
+    const r = splitMarkers('K3', ['K3', '2-1a', '0-3']);
+    expect(r.weak).toContain('K3');
+    expect(r.strong).not.toContain('K3');
+  });
+  it('含字母的项 id 是强标记；纯数字项 id 是弱标记', () => {
+    const r = splitMarkers('K3', ['K3', '2-1a', '0-3', 'K3-13']);
+    expect(r.strong).toEqual(['2-1a', 'K3-13']);
+    expect(r.weak.sort()).toEqual(['0-3', 'K3']);
+  });
+  it('markersOf 含块 id 本身', () => {
+    expect(markersOf('K2', [{ id: '0-11', block: 'K2' }, { id: 'x', block: 'K9' }])).toEqual(['K2', '0-11']);
+  });
+});
+
+describe('步4 · sharedTopEntries — 写集重叠（卸 X 会误伤他包）', () => {
+  it('只挑"别的块也声明了"的条目', () => {
+    const byBlock = { K3: ['src/sentinel/', 'src/store/'], K4: ['src/store/', 'cycles/'] };
+    expect(sharedTopEntries(byBlock, 'K3')).toEqual(['src/store/']);
+    expect(sharedTopEntries(byBlock, 'K4')).toEqual(['src/store/']);
+  });
+  it('独占 ⇒ 空', () => {
+    expect(sharedTopEntries({ K1: ['a/'], K2: ['b/'] }, 'K1')).toEqual([]);
+  });
+});
+
+describe('步4 · tablesOf — 只认真源 createsTable.name', () => {
+  it('只取该块、且 name 非空', () => {
+    const items = [
+      { id: 'a', block: 'K3', createsTable: { name: 'metric_readings' } },
+      { id: 'b', block: 'K3', createsTable: {} },
+      { id: 'c', block: 'K9', createsTable: { name: 'other' } },
+    ];
+    expect(tablesOf('K3', items)).toEqual(['metric_readings']);
+    expect(tablesOf('K9', items)).toEqual(['other']);
+  });
+});
+
+describe('步4 · 常量与依据（防"声明保留"没有出处）', () => {
+  it('七类残留一个不多一个不少', () => {
+    expect([...RESIDUAL_CLASSES]).toEqual(['目录', '配置', '表', '索引', '引用', '缓存', '登记']);
+  });
+  it('每条"声明保留"都必须点名到文件/件', () => {
+    expect(RETENTION_BASES.length).toBeGreaterThan(0);
+    for (const b of RETENTION_BASES) {
+      expect(b.basis).toMatch(/施工项登记\.ts:\d+|AGENTS\.md/);
+    }
+  });
+  it('干净是独立态（不许与判不了混用字面量）', () => {
+    expect(U_CLEAN).toBe('干净');
+  });
+});
+
+describe('步4 · topPathsLabel — 命中落在哪些文件', () => {
+  it('按文件聚合、降序、给出总数', () => {
+    const hits = ['a/x.ts:1:foo', 'a/x.ts:2:foo', 'b/y.ts:9:foo'];
+    expect(topPathsLabel(hits)).toBe('a/x.ts×2 , b/y.ts×1');
+  });
+  it('超过 top ⇒ 标出文件总数', () => {
+    expect(topPathsLabel(['a:1', 'b:1', 'c:1'], 2)).toContain('共 3 个文件');
+  });
+});
+
+describe('步4 · runGrep / extinctEntries — 环境边界', () => {
+  it('grep 无命中 ⇒ count=0（正常默认，不是异常）', () => {
+    const r = runGrep(process.cwd(), ['-rnwE', '-e', '__决不存在的标记__', 'package.json']);
+    expect(r.count).toBe(0);
+    expect(r.command).toContain('grep');
+  });
+  it('目录不存在 ⇒ 空数组，不抛', () => {
+    expect(extinctEntries('/tmp/绝对不存在的目录-xyz')).toEqual([]);
+  });
+});
