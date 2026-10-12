@@ -49,11 +49,15 @@ Merge PR #392: fix(#1412 (C) 案) 适配器默认带守卫 + 显式 opt-out
 
 ```
 $ git log -1 --format="%H | %ad | %s" d180632d6
-d180632d66365081789d223b2b638a669535f321 | Thu Oct 8 10:46:33 2026 +0800 | feat(#1412): 守卫收口补全 —— 适配器默认带守卫（(C) 案）+ 显式 opt-out
+d180632d66365081789d223b2b638a669535f321 | Thu Oct 8 10:46:33 2026 +0800 | feat(#1412): 守卫收口补全 —— 适配器**默认带守卫**（(C) 案）+ 显式 opt-out
 
 $ git log -1 --format="%H | %ad | %s" d87b1ce3b
-d87b1ce3b3655c2858239674b796616408281e6e | Thu Oct 8 10:46:33 2026 +0800 | feat(#1412): 守卫收口补全 —— 适配器默认带守卫（(C) 案）+ 显式 opt-out
+d87b1ce3b3655c2858239674b796616408281e6e | Thu Oct 8 10:46:33 2026 +0800 | feat(#1412): 守卫收口补全 —— 适配器**默认带守卫**（(C) 案）+ 显式 opt-out
 ```
+
+> 🔴 **逐字订正（2026-10-12，verifier 抓出）**：本件前一版把两条 subject 写成 `适配器默认带守卫`，
+> **脱去了 `**`** ⇒ 与 `git cat-file -p <commit>` 的原文**不逐字**。实测原文含 **`适配器**默认带守卫**`**（markdown 粗体标记**在 commit subject 内是字面字符**），已按原文改正。
+> 对照：merge commit `1ab0cbb33` 的 subject **不含** `**`（`Merge PR #392: fix(#1412 (C) 案) 适配器默认带守卫 + 显式 opt-out`）——**两条 feat 有、merge 没有**，故不可互相套用。
 
 ### 1.4 写集全列（`git diff --name-only 1ab0cbb33^1 1ab0cbb33`，原文不摘要）
 
@@ -189,13 +193,25 @@ $ git grep -n "standardKeyGuard: false" -- tests/
 tests/adapters/standard-key-guard.test.ts:18
 tests/adapters/standard-key-guard.test.ts:19
 tests/adapters/standard-key-guard.test.ts:78
-tests/adapters/standard-key-guard.test.ts:97       # ← 该行是**判据自身**（grep src/ 断言零命中）
+tests/adapters/standard-key-guard.test.ts:94       # ← `it(...)` **标题字符串**（同名串污染计数，非调用点）
+tests/adapters/standard-key-guard.test.ts:97       # ← **判据自身**（grep src/ 断言零命中）
 tests/agent/write-side-axis-alignment.test.ts:60
 tests/agent/write-side-axis-alignment.test.ts:80
 ```
 
-**共 6 行 / 2 文件**（其中 `:97` 是**形态扫描判据的实现行**，不是 opt-out 调用点 ⇒ **真实 opt-out 调用点 = 5 行**）。
-⇒ 与 `.claude/claims/1412.yaml` 的自陈一致（唯一串 `测试侧 2 个显式 opt-out`）。
+**共 7 行 / 2 文件**（🔴 **2026-10-12 订正：前一版写「6 行」= 漏了 `:94` 的 `it(...)` 标题行**，verifier 抓出）。
+
+**三态拆分（这才是判据该有的口径）**：
+
+| 类别 | 行数 | 明细 |
+|---|---|---|
+| **真实 opt-out 调用点** | **5** | `standard-key-guard.test.ts:18` / `:19` / `:78` ＋ `write-side-axis-alignment.test.ts:60` / `:80` |
+| **`it(...)` 标题字符串**（同名串污染） | **1** | `standard-key-guard.test.ts:94` |
+| **判据实现行**（`execSync("grep …")`） | **1** | `standard-key-guard.test.ts:97` |
+| **合计（`git grep -n` 命中行）** | **7** | — |
+
+⇒ 与 `.claude/claims/1412.yaml` 的自陈一致（唯一串 `测试侧 2 个显式 opt-out` —— 指**2 个文件**）。
+🔴 **副产物（写进 S-2）**：这 3 行分类本身即证明了 shell `grep` 型判据的**第 4 条分辨率盲区 = 字符串/标题/注释里的同名串会污染计数**（本次 `7 ≠ 5`，误差 **+40%**）。
 
 ### 3.4 结论：§四⑥ 剩余面**是否仍成立**
 
@@ -221,12 +237,14 @@ tests/agent/write-side-axis-alignment.test.ts:80
 
 **建议候选 S-2（opt-out 的"形态判据"杠杆，中优先）**：现有 V4-new 判据是
 `tests/adapters/standard-key-guard.test.ts:97` 的 **shell 型 `grep` 扫描**（唯一串 `grep -rn 'standardKeyGuard: false' src/`）。
-- **分辨率边界（它测不出什么）**：它只抓**字面串** `standardKeyGuard: false`。
-  ① 抓不到 `standardKeyGuard: someVar`（变量取值）、② 抓不到**绕过构造参数**的其它关守卫写法
-  （如直接调 `_insertNodeRaw` —— 它是 `private`，TS 层挡住，但 `(store as any)[...]` 类逃逸抓不到）、
-  ③ 在 Windows 上依赖 `grep` 存在（`execSync` 内）。
+- **分辨率边界（它测不出什么）**：它只抓**字面串** `standardKeyGuard: false` —— **共 4 条盲区**。
+  ① 抓不到 `standardKeyGuard: someVar`（变量取值）—— **静默漏报**；
+  ② 抓不到**绕过构造参数**的其它关守卫写法（如直接调 `_insertNodeRaw` —— 它是 `private`，TS 层挡住，但 `(store as any)[...]` 类逃逸抓不到）；
+  ③ 在 Windows 上依赖 `grep` 存在（`execSync` 内）；
+  ④ 🆕 **字符串/标题/注释里的同名串会污染计数**（**实测**：本件 §3.3 的 7 行里只有 5 行是真调用点，`:94` 是 `it(...)` 标题串、`:97` 是判据自身 ⇒ **误差 +40%**）。
+  ⚠️ 注意 ①（漏报）与 ④（虚报）**方向相反**，故不能用"反正要人工复核"一句话合并 —— 两者需要不同的修法（① 需 AST/类型层，④ 需去字符串与注释）。
 - 可核判据（若开卡）：把该判据升级为**TS 层扫描**（读文件 + 正则 + 显式列出"已核例外"），
-  并给"删掉即报红"的判别性夹具。
+  **并同时给出「漏报样本」与「虚报样本」两种造红**（只造一种 = 只证明了一半）。
 - 归属：`tests/adapters/**` 属**已合入卡的写集**；新一轮改动 = 新卡。
 
 ---
@@ -237,7 +255,7 @@ tests/agent/write-side-axis-alignment.test.ts:80
 |---|---|
 | 落地件与 issue 标题所述需求的**路径差异** | 🔴 **§四⑥ 全文逐字**（原件不在本仓，见 §〇） |
 | 守卫**在适配器层默认开**（判别串可 grep） | 🔴 **运行期真的每次都走守卫**（本件只做静态形态；未跑 `tests/adapters/standard-key-guard.test.ts`） |
-| 生产侧 `standardKeyGuard: false` **字面零命中** | 🔴 **变量式/逃逸式关守卫**（见 §3.5 S-2 的 3 条分辨率盲区） |
+| 生产侧 `standardKeyGuard: false` **字面零命中** | 🔴 **变量式/逃逸式关守卫**（见 §3.5 S-2 的 **4 条**分辨率盲区：① 变量漏报 ② 逃逸 ③ Windows 依赖 `grep` ④ **同名串虚报**） |
 | 归档包 `graph_nodes` INSERT **不可达**（构建面两条 grep exit 1） | 🔴 **运行时通过 `require` 直读归档文件**的可能性（未见调用方；但未做全运行期插桩） |
 | 构造点计数 **13 处 / 12 文件** | 🔴 依赖 tsx/动态 `import()` 的**间接构造**（本件只扫 `new SqliteGraphStore(` 字面） |
 | 「2 处自建 store」实为 **1 处** | 🔴 该"2 处"是否指**另一个版本/另一个文件**（§〇 原件不可核） |
@@ -341,7 +359,14 @@ git grep -l "四⑥" ; echo "four6_exit=$?"
 1. **接线检查**：本件**不新增任何 export**（纯文档件）⇒ 无接线面。
 2. **异常处理**：本件**不含任何 catch**（纯文档件）。
 3. **类型安全**：本件**不含 TS 代码** ⇒ `as any` / `as never` / `as unknown as` 均为 0。
-4. **测试质量**：本件**不新增测试**（未实施任何代码）；**`src/`/`tests/` 零改动**可由 §五 的 `git diff` 集合直接判。
+4. **测试质量（🔴 2026-10-12 按队长裁定改措辞，verifier 判前一版"过宽"）**：
+   本件**无行为可验**（纯文档件：未实施任何代码 ⇒ 无"删掉即报红"的**行为**夹具可造）；
+   但**不等于**"无可执行判据" —— 本件同批 claim `.claude/claims/1350.yaml` 的 `done:` 有 **6 条可执行命令**，
+   其中 **3 条有判别力**（例：`git diff --name-only ba1b22a8b5..HEAD | grep -c "^src/"` ⇒ 若本段改了 `src/` 则得 `1` 而非 `0`；
+   `grep -c "^src/"` 类计数判据对**违规输入**会变值）、
+   **3 条是基线断言**（如 `git ls-tree … | wc -l ⇒ 56`、`git merge-base --is-ancestor … ⇒ BOTH_ANCESTOR`）——
+   **不随本段变化，故不计为本段成果**。
+   ⇒ 判据口径：**「有判别力的 3 条」才是本段的验收面**；基线断言只用于**固定参照系**。
 5. **残留清理**：本件**未删任何东西**；所有读数均为**只读** git 命令（`log` / `grep` / `diff` / `merge-base` / `ls-tree`）。
 
 ---

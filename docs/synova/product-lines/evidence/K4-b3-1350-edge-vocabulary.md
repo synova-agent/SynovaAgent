@@ -24,6 +24,7 @@
 | P-10 | 行尾口径（D8 依据） | `git config --get core.autocrlf` ＋ `git check-attr -a -- <edge json>` | `true`；`check-attr` **空输出**（`.gitattributes` **存在但无规则覆盖本批路径**）⇒ 工作树字节 = **CRLF**（56/56 件含 CRLF、56/56 以 LF 结尾、0 件纯 LF） |
 | P-11 | 生产者字面量（W-2 依据） | `git grep -n "'GOAL'\|'Goal'" -- src/` | `'GOAL'` 由 `src/growth/goal-store.ts` 唯一串 `store.createNode('GOAL'` 写入；`'Goal'` 由 `src/agent/conversation-engine.ts` 唯一串 `'Goal' as unknown as Parameters<typeof this.graphStore.createNode>` 写入 |
 | P-12 | `PLAN` 字面量**不存在**（禁凭名字推） | `git grep -n "PLAN" -- src/` | 共 **3** 处，**全为注释**（唯一串 `PLAN-K6` / `PLAN-expireold-wiring` / `PLAN-d660-data-lifecycle`）⇒ `'PLAN'` 属 **#1316 将建** |
+| 🆕 P-13 | **行尾「两层」**（D8b 依据；队长采信，精度采纳） | `git cat-file -p ba1b22a8b5:<path>` 直读 blob（不经工作树） | **blob 层：53 件存 CRLF / 第 56 件 `goal_decomposition.json` 存 LF**（样本：`augments.json` blob 1299 B，CRLF=**54**、裸 LF=**0**；`locks_in.json` blob 1031 B，CRLF=41、裸 LF=0；`signal_transmits.json` blob 1437 B，CRLF=56、裸 LF=0；**`goal_decomposition.json` blob 1653 B，CRLF=0、裸 LF=35**；blob 首 40 B = `b'{\r\n  "$id": "edge/augments",\r\n  "label":'`）<br>**工作树层**：56/56 含 CRLF（见 P-10）<br>⇒ **两层不一致**；新件落哪一组**实测后如实声明**（**不声称"与 53 件完全同层"**；**不去"顺手统一"**）；根因标注为**推断非实测**（见 W-9） |
 
 ### 🔴 P-5 明细（连字符 5 件 = `$id` 尾段≠文件名主干的那 5 件）
 
@@ -85,6 +86,16 @@
 | W-6 | `GOAL_DECOMPOSES_TO` 与既有 `GOAL_DECOMPOSITION` 的**语义边界判据**仓内无权威 | ⏳ **未决**（R8 已裁"不复用"，本卡照办，**不自行发明边界规则**） | 队长 → CTO |
 | W-7 | 卡面要求的**提案文档**（`docs/synova/coordination/提案/`）不在本仓，且该目录不存在 | ⏳ 登记备核 | 队长 → CTO |
 | W-8 | `ALL_EDGE_TYPES` `52 → 54` 的向量形状变化 | ✅ **队长裁：走 (a) 成对落地 ＋ 必写登记段**；影响面 = 余弦相似度值轻微改变，**无持久化面**（`vecA/vecB` 为函数内局部） | 队长（已落卡面） |
+| 🆕 W-9 | `edge-types/*.json` **blob 层**行尾存量不一致：**53 件存 CRLF / 第 56 件 `goal_decomposition.json` 存 LF**（工作树层因 autocrlf 统一 CRLF） | ✅ **队长采信并登记**（不阻塞）；本卡**不修**（触既有文件 ⇒ 越写集）；新件落哪一组**实测后如实声明**（见 §一 D8b 同源读数） | 队长 → CTO |
+| 🆕 W-10 | **E-25 排除出迁移域的后续**：E-25 登记为「**无落点**」⇒ 待院方/CTO 给 `BRAND_CONSTRUCTION` 的落点裁定（crosswalk A 段报 **MISS**；现存 `brand_building.json` 的 `label` = `BRAND_BUILDING`，**与 `BRAND_CONSTRUCTION` 不同名** ⇒ 「E-25 ↔ brand_building」是**语义推断、不是名字命中**） | ✅ 队长裁 **(a)** 已定：**明确排除出本次迁移域**，理由 = **对应件不可判定 ⇒ 无落点**，与 **E-10 / E-12 同型**；本卡**不做语义推断** | 队长 → CTO |
+| 🆕 W-11 | **本件跨域**：B 段写面 **≥8 件、跨 3 个路径域**（`extensions/` / `packages/` / `tests/`），而扩写集原只登记 2 件 | ✅ **队长裁：单 PR ＋ 跨域显式声明 ＋ 不拆分**（拆开会人为制造"常量与 JSON 不对称"的中间态，**比跨域更坏**）；扩写集登记为「**B 段全量件**」，任务板 `write_scopes` 同步补 | 队长 → CTO 收件闸 |
+
+### 🆕 W-11 跨域声明（**队长要求逐字进 PR 正文与本交付件**）
+```
+本件跨 extensions/ontology/ 与 packages/ontology/src/ 两个路径域，属同一逻辑域 = 本体边词表；
+且 EdgeType 常量与 edge-types/*.json 必须成对落地（否则 ALL_EDGE_TYPES 与 JSON 件数不对称 = 制造新缺陷）
+⇒ 请 CTO 收件闸按「单域 = 本体边词表」裁。
+```
 
 ---
 
@@ -106,5 +117,12 @@ docs/synova/product-lines/evidence/K4-b3-1412-status-recheck.md
 1. **接线检查**：A 段**不新增任何 export**（卡面 ＋ 证据件 ＋ claim）⇒ 无接线面。
 2. **异常处理**：A 段**不含 catch**（无代码）。
 3. **类型安全**：A 段**不含 TS 代码** ⇒ `as any` / `as never` / `as unknown as` 均 **0**。
-4. **测试质量**：A 段**不新增测试**（未实施任何代码）⇒ 无"空壳测试"面；B 段的测试件按 D10 覆盖正常/同构/认领/桥可读/**删掉即报红**四路径。
+4. **测试质量（🔴 2026-10-12 按队长裁定改措辞）**：A 段**无行为可验**（未实施任何代码 ⇒ **无"删掉即报红"的「行为」夹具可造**）；
+   但**不等于**"无可执行判据" —— 同批 claim `.claude/claims/1350.yaml` 的 `done:` 有 **6 条可执行命令**：
+   · **有判别力的 3 条**（对违规输入会变值，**这才是本段验收面**）：`… | grep -c "^src/"`（改 `src/` ⇒ 得 `1`）、
+     `grep -c -E "^## Q0:|…"`（卡面缺字段 ⇒ <6）、`grep -c -E "edge-lag-unknown-degraded-1134|…"`（禁入项 ⇒ >0）；
+   · **基线断言 3 条**（只断 base，**不随本段变化，不计为本段成果**）：`git ls-tree … | wc -l ⇒ 56`、
+     `git merge-base --is-ancestor … ⇒ BOTH_ANCESTOR`、`grep -c "^#CRITERIA: B" ⇒ 1`。
+   🔴 **措辞纪律**：**不许**写成"无可执行判据"（verifier 判前一版"过宽"，队长采信）。
+   B 段的测试件按 D10 覆盖正常/同构/认领/桥可读/**删掉即报红**四路径。
 5. **残留清理**：A 段**未删任何东西**；所有读数均为**只读**命令（`ls-tree` / `grep` / `diff` / `merge-base` / `config` / `check-attr` / python3 只读）。
