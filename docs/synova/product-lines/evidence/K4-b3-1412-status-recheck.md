@@ -277,21 +277,30 @@ tests/agent/write-side-axis-alignment.test.ts:80
 ```
 $ git diff --stat ba1b22a8b5..HEAD
  .claude/claims/1350.yaml                           |  37 ++
- ...270\216\350\256\241\345\210\222\350\276\271.md" | 562 +++++++++++++++++++++
- .../evidence/K4-b3-1412-status-recheck.md          | 327 ++++++++++++
- 3 files changed, 926 insertions(+)
+ ...270\216\350\256\241\345\210\222\350\276\271.md" | 650 +++++++++++++++++++++
+ .../evidence/K4-b3-1350-edge-vocabulary.md         | 146 +++++
+ .../evidence/K4-b3-1412-status-recheck.md          | 375 ++++++++++++
+ 4 files changed, 1208 insertions(+)
 ```
 
 ```
 $ git diff --name-only ba1b22a8b5..HEAD
 .claude/claims/1350.yaml
 ".claude/task-briefs/2026-10-11-1350-K4-05bis-\350\276\271\350\257\215\350\241\250-\347\233\256\346\240\207\345\261\202\347\272\247\350\276\271\344\270\216\350\256\241\345\210\222\350\276\271.md"
+docs/synova/product-lines/evidence/K4-b3-1350-edge-vocabulary.md
 docs/synova/product-lines/evidence/K4-b3-1412-status-recheck.md
 ```
 
-**共 3 条**（`git diff --name-only ba1b22a8b5..HEAD | wc -l` ⇒ `3`）。
+**共 4 条**（`git diff --name-only ba1b22a8b5..HEAD | wc -l` ⇒ `4`）。
 
-**判别性判据（判「不改 src/」）**：
+> 🔴 **读数时点（纪律 A6：报数必钉「读数时点 × diff 左端」）**
+> **读数时点 = `0160b220313878b27cdaf2756b5280999ab3114b`（本件当时 HEAD）｜ diff 左端 = `ba1b22a8b5`**
+> **订正记录**：本块前一版写「**共 3 条**（`wc -l` ⇒ `3`）」——那是 **`afa582cd8` 时点**的读数（当时交付件 `K4-b3-1350-edge-vocabulary.md` 未落）。
+> 该数字在**当前 HEAD 不可复现**（现为 `4`）⇒ 现按**当前时点重跑并全列**，并把时点钉死。
+> **本笔（改 U-4 口径 ＋ 本节订正）不新增/不删除任何文件** ⇒ 本列在本笔之后**仍为 `4` 条**（仅内容变化，集合不变）。
+> ⚠️ 同类漂移**本件自查抓到 1 处（即本处）**，非 verifier 提出 —— 已按「钉时点」纪律修掉，并保留订正痕迹（不抹除）。
+
+**判别性判据（判「不改 `src/`」）**：
 
 ```
 $ git diff --name-only ba1b22a8b5..HEAD | grep -c "^src/" || true
@@ -301,10 +310,10 @@ exit=0
 ```
 
 ⇒ **`src/` 前缀命中 = 0** ⇒ 本件与其同批产物**未改任何 `src/`**。（本判据**测不出**：未提交的工作树改动 ——
-故另跑 `git status --porcelain=v1`，本件相关文件之外为空；该判据在**提交前**跑，输出见交付回执。）
+故另跑 `git status --porcelain=v1`；本件提交后该输出仅剩 `?? memory/notes/proposed/2026-10-12-K4-b3-numbering-authority.md`（队长补落的 Note，**有意不提交**，见下「未提交项」）。）
 
 **写集声明（本件落点）**：`docs/synova/product-lines/evidence/K4-b3-1412-status-recheck.md`（**单件**）。
-同批另两件 = `.claude/claims/1350.yaml` ＋ `.claude/task-briefs/2026-10-11-1350-K4-05bis-…md`（#65 A 段卡面）。
+同批另三件 = `.claude/claims/1350.yaml` ＋ `.claude/task-briefs/2026-10-11-1350-K4-05bis-…md`（#65 A 段卡面）＋ `docs/synova/product-lines/evidence/K4-b3-1350-edge-vocabulary.md`（#65 交付件）。
 
 ---
 
@@ -349,7 +358,7 @@ git grep -l "四⑥" ; echo "four6_exit=$?"
 | U-1 | **§四⑥ 全文原件不在本仓** ⇒ 复核员只能比 issue 标题 + 派单件转述 | **队长 → CTO**（是否把工作令入库） | ⚠️ 限制本件可核面上限（已在 §〇 显式声明，**不假装满足**） |
 | U-2 | 「`src/ingest/index.ts` **2 处**自建 store」与实测 **1 处** 不符（`git grep "new SqliteGraphStore(" -- src/ingest/index.ts` 唯一命中 `:35`） | **队长 → CTO** | ❌ 不阻塞（已覆盖：该处不传选项 ⇒ 默认守卫生效） |
 | U-3 | 落地件简报记 `11 文件`，实测 **12 文件**（多 `src/tui-v2/chat.tsx`） | **队长 → CTO**（改历史卡面属 CTO 域） | ❌ 不阻塞（见 §3.5 S-1） |
-| U-4 | V4-new opt-out 判据为 **shell grep 形态扫描**，有 3 条分辨率盲区 | **队长 → CTO**（是否开 S-2 卡） | ❌ 不阻塞 |
+| U-4 | V4-new opt-out 判据为 **shell grep 形态扫描**，有 **4 条**分辨率盲区（① 变量漏报 ② 逃逸 ③ Windows 依赖 `grep` ④ **同名串虚报**；④ 由本件实测补，`7 ≠ 5`，误差 **+40%**） | **队长 → CTO**（是否开 S-2 卡） | ❌ 不阻塞（三处口径已同值，见 §3.5 S-2 / §四 局限表） |
 | U-5 | `packages/_archived/graph-store/` 自带裸 `graph_nodes` INSERT，**归档但仍在仓** | **队长 → CTO**（是否物理删除） | ❌ 不阻塞（构建面不可达，实测两条 grep exit 1） |
 
 ---
