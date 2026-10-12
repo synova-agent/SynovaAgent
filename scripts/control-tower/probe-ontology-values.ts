@@ -91,8 +91,92 @@ export const EDGE_DIR_REL = 'extensions/ontology/edge-types';
 /** 显式降级标记（**非**第七个档位）：未标定，不得静默） */
 export const UNKNOWN_MARKER = 'unknown';
 
-/** 非因果结构性边登记（`tags` 不含 `causal`）—— 唯一域外件，值**不改**，登记接受 */
+/**
+ * 非因果结构性边**已登记基线**（`tags` 不含 `causal`）—— 这些 `$id` **必须存在**。
+ * ⚠️ 本常量是**逐件枚举清单**而非数字；"新增/删除未登记件"由 `auditEdgeTypeSet()` 判红并**点名片名**。
+ */
 export const NON_CAUSAL_REGISTRY: readonly string[] = ['edge/goal_decomposition'];
+
+/** 🔴 **N2 规范快照**：`edge-types` 唯一真源清单（**逐件枚举**；件数由此**推导**，禁字面基数） */
+export const SPEC_EDGE_TYPES: readonly string[] = [
+  'assumption_triggered_reallocation', 'augments', 'brand_building', 'brand_builds',
+  'capital_acquisition', 'capital_allocation', 'capital_source_mix', 'channel_delivery',
+  'competitive_positioning', 'constrains', 'couples', 'cross_functional_synergy',
+  'cumulative_learning', 'customer_data_loop', 'customer_lockin', 'data_collection',
+  'decision_authority', 'decision_concentrates', 'demand_to_spec', 'deploys',
+  'efficiency_attraction', 'environmental_scan', 'equipment_acquisition', 'external_assumption',
+  'external_feedback', 'funds', 'goal_decomposition', 'incentive_alignment',
+  'incentive_binds', 'information_flow', 'innovation_output', 'knowledge_reuse',
+  'knowledge_sharing', 'locks_in', 'market_share_capture', 'operational_execution',
+  'organizational_learning', 'procurement_bargaining', 'produces', 'profit_reinvestment',
+  'reputation_attraction', 'reputation_flywheel', 'retention_protects_knowledge', 'routine_rigidity',
+  'rule_constraint', 'sensing_calibration', 'service_support', 'signal_transmits',
+  'signal_upward_pass', 'talent_acquisition', 'talent_deployment', 'talent_filter',
+  'talent_retention', 'tech_infrastructure', 'trust_friction_reduction', 'value_pricing',
+];
+
+/**
+ * 🔴 **预告新增登记位**（N2；**显式豁免面，且带到期** —— 无到期 = 永久豁免 = 把门禁变装饰）。
+ * 语义：登记的件**可以缺席，也可以在场**；在场时按 `expected` 校验分类。
+ * **到期**：`l3-65` 合入后由**下一次触及 `tests/l4/**` 的卡**把这 2 件提升为 `SPEC_EDGE_TYPES`
+ * 正式成员并**删除本段**；届时无人触碰则由 **CTO 在收件闸收口**。
+ */
+export interface PendingEdgeAddition {
+  readonly id: string;
+  readonly file: string;
+  readonly expected: 'non_causal_unknown';
+  readonly registeredBy: string;
+  readonly promoteAfter: string;
+}
+export const PENDING_REGISTERED_ADDITIONS: readonly PendingEdgeAddition[] = [
+  { id: 'edge/goal_decomposes_to', file: 'goal_decomposes_to.json', expected: 'non_causal_unknown',
+    registeredBy: 'l3-65 / a7437498c', promoteAfter: '下一次触及 tests/l4/** 的卡；否则 CTO 收件闸收口' },
+  { id: 'edge/plan_commits_to', file: 'plan_commits_to.json', expected: 'non_causal_unknown',
+    registeredBy: 'l3-65 / a7437498c', promoteAfter: '同上' },
+];
+
+/**
+ * 🔴 **集合级棘轮**（取代"字面基数"）：`actual` 必须满足
+ * ① `SPEC_EDGE_TYPES` 每件**都在**（删除 ⇒ 红 + 点名片名）
+ * ② `actual \ (SPEC ∪ PENDING)` 为空（**未登记新增 ⇒ 红 + 点名片名**）
+ * ③ 在场的 PENDING 件分类必须 === 登记期望
+ * ⇒ **合并顺序无关**：本笔（56）绿；`l3-65` 合入后（58 = SPEC∪PENDING）仍绿；任何第 3 件未登记仍红。
+ */
+export function auditEdgeTypeSet(samples: readonly EdgeFileSample[]): { violations: string[]; reportLines: string[] } {
+  const violations: string[] = [];
+  const reportLines: string[] = [];
+  const actual = samples.map(s => s.file);
+  const actualNames = new Set(actual);
+  const specSet = new Set(SPEC_EDGE_TYPES.map(n => `${n}.json`));
+  const pendingSet = new Set(PENDING_REGISTERED_ADDITIONS.map(p => p.file));
+
+  for (const n of SPEC_EDGE_TYPES) {
+    const f = `${n}.json`;
+    if (!actualNames.has(f)) violations.push(`规范基线件缺失 file=${f} ⇒ 不在真仓（删除/改名必须显式改 SPEC_EDGE_TYPES）`);
+  }
+  for (const f of actual) {
+    if (!specSet.has(f) && !pendingSet.has(f)) {
+      violations.push(`未登记新增件 file=${f} ⇒ SPEC_EDGE_TYPES 与 PENDING_REGISTERED_ADDITIONS 均未收录；请显式登记后重跑`);
+    }
+  }
+  for (const p of PENDING_REGISTERED_ADDITIONS) {
+    const s = samples.find(x => x.file === p.file);
+    if (!s) continue; // 可以缺席
+    const nonCausal = !s.tags.includes('causal');
+    const cls = !nonCausal ? 'causal' : s.lag === UNKNOWN_MARKER ? 'non_causal_unknown' : `non_causal_${JSON.stringify(s.lag)}`;
+    if (cls !== p.expected) {
+      violations.push(`预告件分类不符 file=${p.file} 期望=${p.expected} 实测=${cls}（登记自 ${p.registeredBy}）`);
+    }
+  }
+
+  const presentPending = PENDING_REGISTERED_ADDITIONS.filter(p => actualNames.has(p.file)).length;
+  reportLines.push(
+    `REPORT N2 集合棘轮: SPEC=${SPEC_EDGE_TYPES.length} 件 ｜ PENDING 登记=${PENDING_REGISTERED_ADDITIONS.length} 件（在场 ${presentPending}）` +
+      ` ｜ 真仓 actual=${actual.length}（**件数由清单推导，禁字面基数**）` +
+      ` ｜ PENDING 到期 = 下一次触及 tests/l4/** 的卡提升为 SPEC 并删 PENDING 段`,
+  );
+  return { violations, reportLines };
+}
 
 /**
  * §3.5.1 八条（一手原文表；`min`/`max` 单位月）。
@@ -498,15 +582,23 @@ export function auditLagValues(samples: readonly EdgeFileSample[]): LagAudit {
       `（后者理由 = 不在桶域内，**非**"无同标签边"；其【落点判定】见 #238 numbering-authority.md §九.2.1 / T5）`,
   );
 
-  // G5 非因果登记（唯一域外件必须恰为登记集）
+  // G5 非因果登记（**两段式**：已登记基线必须存在；未登记新增 ⇒ 红 + 点名片名）
   const nonCausalIds = [...nonCausal].sort();
   const nonCausalFiles = samples.filter(s => nonCausal.includes(s.id)).map(s => s.file).sort();
-  const wantNonCausal = [...NON_CAUSAL_REGISTRY].sort();
-  if (JSON.stringify(nonCausalIds) !== JSON.stringify(wantNonCausal)) {
-    violations.push(
-      `非因果登记不符 实测域外集=${JSON.stringify(nonCausalIds)} 域外件=${JSON.stringify(nonCausalFiles)} ` +
-        `登记集=${JSON.stringify(wantNonCausal)} ⇒ 新增/删除域外边必须显式改登记（禁静默放宽）`,
-    );
+  const registered = [...NON_CAUSAL_REGISTRY].sort();
+  const pendingIds = PENDING_REGISTERED_ADDITIONS.map(p => p.id);
+  for (const id of registered) {
+    if (!nonCausalIds.includes(id)) {
+      violations.push(`已登记非因果件缺失 $id=${id} ⇒ 域外集=${JSON.stringify(nonCausalIds)}（删除必须显式改 NON_CAUSAL_REGISTRY）`);
+    }
+  }
+  for (const f of nonCausalFiles) {
+    const s = samples.find(x => x.file === f)!;
+    if (!registered.includes(s.id) && !pendingIds.includes(s.id)) {
+      violations.push(
+        `非因果登记不符 file=${f} $id=${s.id} ⇒ **未登记新增**（NON_CAUSAL_REGISTRY 与 PENDING_REGISTERED_ADDITIONS 均未收录；显式登记后重跑）`,
+      );
+    }
   }
 
   // G6 换算规则自洽（往返：桶标签 → 区间 → 桶标签 必须回到自身）
@@ -768,6 +860,11 @@ function main(): number {
   for (const v of t.violations) console.log(`❌ ${v}`);
   console.log('');
 
+  const setAudit = auditEdgeTypeSet(samples);
+  for (const l of setAudit.reportLines) console.log(l);
+  for (const v of setAudit.violations) console.log(`❌ ${v}`);
+  console.log('');
+
   console.log('── LIMITS（本探针**证不了**什么，防「接线了 ≠ 被执行」误读）');
   console.log('   · [L1 真读盘] 只证明盘上值域已迁移且与 §3.5.1 对齐；**不**证明生产代码消费了该字段');
   console.log('     （实测 src/ + packages/ 对该字段零消费方 ⇒ 读取侧接线不在本卡写集，属遗留项）');
@@ -785,7 +882,7 @@ function main(): number {
     `tfr_registered=${t.registeredOther} TBD=${t.tbd}`;
   console.log(last);
 
-  const totalViolations = a.violations.length + t.violations.length;
+  const totalViolations = a.violations.length + t.violations.length + setAudit.violations.length;
   if (totalViolations > 0) {
     console.error(`[FAIL] 违规 ${totalViolations} 条（逐条见上）`);
     return 1;
