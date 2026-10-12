@@ -1,9 +1,0 @@
-# V4.2.1 数据访问策略 (替代 DEFAULT_POLICIES)
-strategy: {allowedDimensions: [strategic, financial, marketing], sensitiveAccess: read, prohibitedFields: [salary, personal_email]}
-org: {allowedDimensions: [organizational, technical], sensitiveAccess: read, prohibitedFields: [personal_email]}
-finance: {allowedDimensions: [financial, operational], sensitiveAccess: read, prohibitedFields: [person_name]}
-tech: {allowedDimensions: [technical, operational], sensitiveAccess: read}
-marketing: {allowedDimensions: [marketing, financial], sensitiveAccess: read, prohibitedFields: [salary]}
-action: {allowedDimensions: [strategic, organizational, financial, technical, marketing], sensitiveAccess: read}
-business_model: {allowedDimensions: [strategic, organizational, financial, marketing, operational], sensitiveAccess: read}
-knowledge: {allowedDimensions: [strategic, organizational, financial, technical, marketing, operational, risk, compliance], sensitiveAccess: read}

@@ -1,6 +1,0 @@
-{
-  "name": "tools",
-  "version": "1.0.0",
-  "type": "tools-manifest",
-  "description": "Synova Tool System. Tools are registered from the extensions/tools/ directory."
-}
