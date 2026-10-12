@@ -118,7 +118,9 @@ $ 消费者交叉核（我实测，口径 = 全仓 grep `edgeTypes`）：
 ⇒ **7/8 实跑通过，1 条未跑（b）**。
 
 ## 三、口径/环境提示（与 `K4-b3-VERIFY-239.md` §三 同源，此处为实证）
-1. **本机 PATH 上的 `bash` = WSL（无发行版）⇒ `bash scripts/….sh` 直接跑必失败**（我实测 `GATE_EXIT=255` ＋ 未安装发行版提示）；改用 **Git Bash 全路径** `C:\Program Files\Git\bin\bash.exe -c "cd '<dir>' && bash <script>"` ⇒ 正常（`58 件齐全 / exit 0`）。**claim done #2 的命令在本机默认环境下不可直接复算** ⇒ 建议全队写 verify 命令时注明 shell 或加 `git bash -c` 包裹。
+1. **本机 `bash` = WSL 存根（无发行版）⇒ `bash scripts/….sh` 直接跑必失败**（我实测 `GATE_EXIT=255` ＋ 未安装发行版提示）；改用 **Git Bash 全路径** `& 'C:\Program Files\Git\bin\bash.exe' -lc "cd /d/<dir> && bash <script>"` ⇒ 正常（`58 件齐全 / exit 0`）。**claim done #2 的命令在本机默认环境下不可直接复算**。
+   🔴 **单源声明（订正）**：该事实**已载于团队技能 `dsh-env-setup`**（「六类故障与修法」第 1 行）⇒ **本件不另立条文、以该技能为单一真源**；我首轮报成"新发现"实为**重复发现**（根因 = 未先加载该技能，已自陈）。
+   **同技能另有一条本件已当场自证**：`python3` 若为 WindowsApps 假别名 ⇒ **门禁静默空转**（断言全看到"通过"）。本机实测 = `…\Python313\python3.exe`（**3.13.13** 真解释器）⇒ §二 的门禁 ✅ **非假绿**；该脚本为三级探测 ＋ fail-closed。
 2. **vitest 报告器名**：`--reporter=basic` 在 vitest 5 不存在（会以"报告器加载失败"退出，易被误读为测试红）。
 3. **junction 必须用 `rmdir` 解除、禁 `rm -rf` 跟随**（否则会删到 `D:\synova-wt\node_modules` 实体）。
 

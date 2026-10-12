@@ -97,6 +97,10 @@ overflow-compute.ts:254/256 snapshot 里返回 valveLag / valveLagExceedsWindow
 
 ## 三、口径/环境提示（供收件闸与全队复用）
 
-1. **本机 `bash` = WSL（无发行版）** ⇒ claim 里形如 `bash scripts/…sh` 的 verify 命令**直接跑会失败**；必须用 **Git Bash 全路径**（`C:\Program Files\Git\bin\bash.exe`）或 `cmd /c`。我实测：直接用 PATH 的 `bash` → `GATE_EXIT=255`＋"未安装发行版"乱码；用 Git Bash → 正常。⇒ **属复现口径缺口**（建议写进复核须知）。
+1. **本机 `bash` = WSL 存根（无发行版）** ⇒ claim 里形如 `bash scripts/…sh` 的 verify 命令**直接跑会失败**；必须用 **Git Bash 全路径**：
+   `& 'C:\Program Files\Git\bin\bash.exe' -lc "cd /d/<dir> && bash <script>"`
+   我实测：PATH 的 `bash` → `exit 255` ＋"未安装发行版"乱码；Git Bash → 正常。
+   🔴 **单源声明（订正）**：该事实**已载于团队技能 `dsh-env-setup`**（「六类故障与修法」第 1 行原文即此修法）⇒ **本件不另立条文、不复制正文**，**以该技能为单一真源**。（我首轮把它报成"新发现/复现口径缺口"= **重复发现**，根因是开工时**未先加载 `dsh-env-setup`** —— 已自陈，避免同一事实两处维护产生漂移。）
+   **同技能另有一条本件已当场自证**：`python3` 若命中 WindowsApps 假别名 ⇒ **门禁静默空转、断言全看到"通过"**。我实测本机 = `…\Python313\python3.exe`（**3.13.13** 真解释器，技能所述持久修法已在位）⇒ 本件 §二/§四 的门禁读数**不是假绿**；且 `check-ontology-fields.sh` 用 `python3→python→py` 三级探测 ＋ **fail-closed**（探不到即报错，不与通过混同）。
 2. **vitest 报告器**：`--reporter=basic` 在 vitest 5 不存在 ⇒ 别用它（否则把"报告器失败"误读成"测试红"）。
 3. **临时 worktree + junction 的可复现做法**（本件方法）：`git worktree add --detach <tmp> <rev>` → `mklink /J <tmp>\node_modules <有依赖的树>\node_modules` → 跑 → `rmdir <junction>` → `git worktree remove`（**禁 `rm -rf` 跟随 junction**）。实测 `node_modules` 未进写集、我方树 SHA 不变。
