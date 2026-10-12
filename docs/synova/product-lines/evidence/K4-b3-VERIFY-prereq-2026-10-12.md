@@ -564,7 +564,7 @@ git ls-remote --heads origin | grep local-main
 ### b. 无法核实处
 
 **b-1（已闭合，保留痕迹）** 原记「权威文档01 内容未核」。**现已核**（§5b-4/5b-5/5b-6）：两章各 42 个两位式 E 号、GLOSSARY.md:74 冲突为真、两章 4 条 label 互斥。**剩余未核**：4 条互斥里哪一条"才对"（属权威归属决策，我不可裁 ⇒ 已升级为 a-5）；以及 golden（`data/golden/wani-baby-v1.json` 的 `edges.E-x.y.label`）与 `_patch_d66.cjs` 的第三套私有编号未核。归属：L1 impl-a / 卡 #238 判据①④ + 队长裁决。
-**b-2** `transfer_function` 的 52 条是「TBD 字面残留」已核，但**「哪些条应落 `unknown`、哪些条有仓内依据可落公式」无法核实**：需比对权威文档15 §3.5.1/§3.5 原件，而该原件不在本仓（task-2 描述亦自述"第三章正文不在本仓"）。归属：L2 impl-b / 卡 #235。
+**b-2（🔴 本件原判为假，已自纠 —— 见 §九.1）** 原写「需比对权威文档15 §3.5.1 原件，而该原件不在本仓」。**该结论错误**：原件**在仓内**（`docs/synova/research/权威文档15-企业循环溢出导航系统-20260714/SYNOVA-RESEARCH-第三章-投入建议引擎-v1-0-20260714.md`，blob `fff3ee01fd3c…`，§3.5.1 位于 L423），**一手原文可引**，8 条数值与 §三bis 引文逐字一致。**剩余未核**：52 条里逐条的落值依据（一手原件只给 8 条数值）。归属：L2 impl-b / 卡 #235。**我的错误机制见 §九.1。**
 **b-3** 本阶段**没有任何实施员交付物**，故「已消费/已接线/删掉即报红」类声称**一律未被核实**（记录为 b，阶段二按「判别性夹具」判）。§五的 0 命中恰是接线缺口的**基线**证据，不是任何实施成果。
 **b-4** 前提「`extensions/ontology/` 内 E 号 = 0」的**语义后果**未能核实：无法判定 #238 的「编号权威表」应落在该目录内（会引入 E 号，可能撞上某条现有门禁/判据）还是仅落 docs/。归属：L1 impl-a / 卡 #238 写集决策，须由队长确认写集边界。
 
@@ -589,6 +589,7 @@ git ls-remote --heads origin | grep local-main
 **旁证（同批已核并逐字为真，可直接引用）**：CTO 裁定 §三 第 1 行原文（口径用 15）、§三bis 8 条数值与「不双存」「未覆盖 3 条 E-05/E-13/E-28」、权威文档01 两章各 42 个两位式 E 号、`GLOSSARY.md:74` 冲突为真、`权威文档15` 整目录不在仓。
 
 **结论用语：本次前提复现部分 —— 可提请独立审计**（限「五项前提 + §5b 附加承重前提复现」这一事实）；a-1/a-2/a-3/a-5 四条请队长先行裁决/改判据后放行实施；阶段二三线交付物复核**尚未开始**，届时另出 `K4-b3-VERIFY-<issue>.md`。
+> **追加**：§九 首轮复核后第二轮（队长裁复到达后）的自纠与新发现已并入本件；d 的结论用语不变，但新增 a-6/a-7/a-8 三条待裁项。**修订后结论用语见 §九.9。**
 
 ---
 
@@ -611,3 +612,159 @@ git ls-remote --heads origin | grep local-main
 ## 八、一句话自验结论
 
 在字节等同 base（582/582）的副本上、以两套独立方法复现队长冻结的 5 项前提，4 项逐字吻合、1 项（`$id` 全为 snake）不精确；另发现 3 条判据口径缺陷（`occurrences=45` 歧义、「逐字节一致」与 `git hash-object` 混用、本地 `local-main` ref 落后 220）与 **1 条来源互斥（两章权威 4 条 E 号 label 打架，须队长裁决）**；本前提复现部分 **可提请独立审计**，四条缺陷建议队长先裁决再放行实施。
+
+---
+
+# 九、第二轮（队长裁复到达后）：自纠 + 对队长三件的复核
+
+> 口径声明：本节所有对象均以 **`ba1b22a8b5`** 为 diff 左端 / 读取基准；队长件以 `origin/k4b3/lead` tip = **`7310c890a`** 读取（见 §9.6）。读数时点 = 2026-10-12。
+
+## 9.1 🔴 自纠：本件 §六 b-2 的「doc15 第三章不在本仓」为**假**（我错了）
+
+**正确事实（我独立复验，`git cat-file` 直读）**：
+```
+$ git cat-file -e ba1b22a8b5:'docs/synova/research/权威文档15-企业循环溢出导航系统-20260714/SYNOVA-RESEARCH-第三章-投入建议引擎-v1-0-20260714.md'
+exit=0                    ← 存在
+$ git rev-parse ba1b22a8b5:<该路径>
+fff3ee01fd3c4cc2251e1c4286894fc9bbbd5bfd      （533 行）
+$ 该文件内 '3.5.1' 命中 1 处 → L423 ### 3.5.1 滞后时间的数据来源
+```
+
+**§3.5.1 表一手原文（逐行，L429-L438）**：
+```
+| 边 ID | 边名称 | minMonths | maxMonths | 依据 |
+| E-07 | TALENT_ACQUISITION | 1 | 3 | 招聘周期：发布→入职→上手 |
+| E-15 | HUMAN_DEPLOYMENT | 1 | 3 | 人岗匹配：入职→培训→独立产出 |
+| E-17 | INCENTIVE_ALIGNMENT | 0.5 | 1 | 激励效果：KPI调整→行为变化 |
+| E-23 | OPERATIONAL_EXECUTION | 0 | 0.5 | 运营调整：决策→执行变化（实时） |
+| E-38 | TALENT_RETENTION | 3 | 6 | 人才留存→知识保护→组织能力 |
+| E-25 | BRAND_CONSTRUCTION | 6 | 12 | 品牌建设：投入→市场认知变化 |
+| E-24 | INNOVATION | 6 | 18 | 创新：研发投入→产品上市 |
+| E-37 | PROFIT_REINVEST | 3 | 9 | 利润再投资→效果显现 |
+```
+⇒ 与 `K4-审计定稿与卡面全套.md` §三bis 的 8 条引文**逐字一致**；**一手原文可引**，b-2 关闭。
+
+**我的错误机制（与队长 §六 记的机制不同，两者都要防）**：
+1. **主因 = `core.quotepath` 转义**（非"控制台编码"）。默认 `core.quotepath=true` 时 `git ls-tree` 把非 ASCII 路径输出为八进制转义，**输出里根本不含 `权威文档15` 这串汉字**，故 `Select-String '权威文档15'` 恒 0：
+```
+$ git ls-tree -r --name-only ba1b22a8b5 -- docs/synova/research/          # 默认（quotepath=true）
+   docs/synova/research/AUTHORITY-DEVIATION-REGISTRY-v1.md …（首 2 行）
+   Select-String '权威文档01' 命中数 = 0      ← 假"不存在"
+$ git -c core.quotepath=false ls-tree -r …（同上）
+   Select-String '权威文档01' 命中数 = 8      ← 真值
+```
+2. **叠加因 = 我的第二路探针也静默失败**：`glob` 工具以 `docs/synova/research/权威文档15*/**` 查 → `No files found`；用**确定存在**的 `权威文档01*/**` 复测 → **同样 `No files found`** ⇒ **该工具对 CJK 通配路径静默返回空**，不能作为"不存在"的证据。
+3. 我因此把「两路零命中」当作「不存在」，**未做正向枚举** ⇒ 与队长 §六 的同族根因一致：**零命中 ≠ 不存在**。
+
+**纪律（并入复核须知）**：凡"某物不存在"类判定，必须 **(a)** 贴 `git -c core.quotepath=false ls-tree` 的**父目录正向全量枚举**；**(b)** 不以 `glob` 工具对 CJK 路径的零结果为证；**(c)** 路径含 CJK 时禁用 `Select-String '<汉字>'` 匹配 git 输出（除非已 `quotepath=false`）。
+
+**正向枚举（本次已补，证明"我找的是对的父目录"）**：`docs/synova/research/` 下 **300 文件 / 49 个一级子目录**，其中含 `权威文档15-企业循环溢出导航系统-20260714/`（**7 件**：研究方案-v2-0 + 第一/二/三/四/五/六章）。
+
+## 9.2 a-5 扩充 + 章名订正：**三章都载 E 号，冲突是 2 vs 1**
+
+队长问「第二章 vs 第四章」与我写的「第二章 vs 第一章」谁对。**两说都不完整**，实测：
+```
+口径（逐章用它自身的规范书写位置抽 label，各得 42 个 distinct，无缺失）：
+  第二章 = 标题 '### E-NN: LABEL'         （文件首行确认：'### E-01: ACTIVE_SCANNING' 起）
+  第一章 = §1.9 表 '| E-NN | LABEL |'     （文件首行 '# 第一章：第一性原理推导 — 五断裂点穷举'）
+  第四章 = 标题 '### E-NN LABEL（'        （文件首行 '<!-- @generated 2026-07-14 | 权威文档01-第四章 | v1.0 -->'）
+结果：章间不一致的 E 号数 = 4 / 42
+  E-08  第二章 RESOURCE_ACQUISITION  vs  第一章 TALENT_FILTER  = 第四章 TALENT_FILTER
+  E-10  第二章 DECISION_ALLOCATION   vs  第一章 EQUIPMENT_DEPLOYMENT  = 第四章 EQUIPMENT_DEPLOYMENT
+  E-11  第二章 TRUST_CONSTRUCTION    vs  第一章 REPUTATION_ATTRACTION = 第四章 REPUTATION_ATTRACTION
+  E-12  第二章 POWER_DISTRIBUTION    vs  第一章 EFFICIENCY_FINANCING  = 第四章 EFFICIENCY_FINANCING
+```
+**原始行二次确认（不经脚本）**：
+```
+第四章 L154: ### E-08 TALENT_FILTER（获取 | soft | 2/4=50%）
+第一章 L641: | E-08 | TALENT_FILTER | 获取 | A4 |     ← 该表标题 = '## 1.9 与现有42边体系的逐条对照'
+第二章 L257: ### E-08: RESOURCE_ACQUISITION
+```
+⇒ 准确表述 = **「第二章（1 源） vs 第一章 §1.9 ＋ 第四章（2 源）」**；队长写的「第二章 vs 第四章」与我的「第二章 vs 第一章」**各自漏了一源**。**归属：lead（判据措辞）**；#238 交付件的分歧栏应写**三源**，否则"两栏并列"实际是三栏。
+
+## 9.3 a-5 裁决②「取能对上词表的那一版」—— **E-10 / E-12 无法自动落地**
+
+按队长裁定②实测（词表 = 56 件 edge-types 的 label 及其 $id 短名）：
+```
+E-08: 候选=["RESOURCE_ACQUISITION","TALENT_FILTER"]         ⇒ 能对上词表的 = ["TALENT_FILTER"]           （talent_filter.json）
+E-10: 候选=["DECISION_ALLOCATION","EQUIPMENT_DEPLOYMENT"]   ⇒ 能对上词表的 = []   🔴 两版都 ∉ 词表
+E-11: 候选=["TRUST_CONSTRUCTION","REPUTATION_ATTRACTION"]   ⇒ 能对上词表的 = ["REPUTATION_ATTRACTION"]  （reputation_attraction.json）
+E-12: 候选=["POWER_DISTRIBUTION","EFFICIENCY_FINANCING"]    ⇒ 能对上词表的 = []   🔴 两版都 ∉ 词表
+```
+⇒ 裁决②对 E-08/E-11 可机械落地；**对 E-10/E-12 取不到任何 $id**，必须落到「待裁清单」且交付件**显式写"本两条无词表对应版"**——否则实施员会在两个都不对的候选里**任选其一**（即队长最担心的「静默消解分歧」）。**归属：lead（裁定边界）/ impl-a（落地）**。
+
+## 9.4 🔴 新发现 a-6：`§3.4` 的**定位**是陷阱——它在 doc15 **第一章**，不在第三章
+
+```
+doc15 第三章（投入建议引擎）内 '§3.4' = ### 3.4 执行约束因子模型（L387）  ← 与桶标签无关
+桶标签真正的规范节 = doc15 第一章（循环配置规范与动态加载机制） '### 3.4 `edges` -- 五阀映射（含action_effect_lag）'（L145）
+  同章 '### 3.5 `overflowParams` -- 参数溯源表'（L187 起）
+```
+**§3.4 一手原文要点（L145-L193，逐字）**：
+- L147：「每个子循环构建"获取->分配->转化->交付->回收"五个阀门。每个阀门映射到42条因果边的一条或多条。」
+- 五阀字段名（JSON 键，**#239 就靠它**）：`acquisitionValve` / `allocationValve` / `conversionValve` / `deliveryValve` / `recycleValve`
+- L184-L193「action_effect_lag 取值规范」= **6 个桶**：`immediate` / `1_month` / `1-3_months` / `3-6_months` / `6-12_months` / **`>12_months`**
+- L149（原文）：「`actionEffectLag` 字段在42边权威定义中尚未全面写入（当前仅在研究方案 v2.0 中提出了E-15/E-17/E-38的预估值）」
+
+**由此得三条可判缺陷**：
+1. **CTO 裁定 §三bis 列的桶标签是 5 个，原文是 6 个** —— 漏 `>12_months`。「换算规则」若只覆盖 5 个，遇 `>12_months` 即无规则（当前 56 件无该值，属**未来缺口**，须显式登记）。
+2. **§3.4 与三章权威表的 E 号命名再冲突 2 条**（超出 a-5 的 4 条）：§3.4 写 `E-30 VALUE_DELIVERY`、`E-31 CUSTOMER_SUCCESS`；而第一/二/四章的权威表 E-30 = **PRICING**、E-31 = **CLIENT_RETENTION**。⇒ 「E 号 ↔ 名字」的不一致总数实为 **6 条**（4 条章间 + 2 条跨文档）。
+3. **§3.5.1 与 §3.4 的重叠只有 3 条**（E-07 / E-23 / E-37），其中 **E-07 两处一致**（(1,3) vs `1-3_months`→[1,3]），**真互斥只有 E-23、E-37** ⇒ CTO 裁定的「E-23/E-37 互斥」**成立且精确**，但「§3.5.1 未覆盖 3 条（E-05/E-13/E-28）」在**§3.4 里有桶值**（immediate / 1_month / 3-6_months），按换算规则**可产出数值区间**——实施员不应把它们当"无依据"。
+
+**归属**：lead（前提冻结件须补"§3.4 属第一章"的定位与 6 桶）/ impl-a（#239 五阀字段名以 §3.4 为准）/ impl-b（#234 的 E-05/E-13/E-28 可经换算落地，须写明来源）。
+
+## 9.5 新发现 a-7 / a-8：对队长 crosswalk 底稿的两处数字口径
+
+**a-7「13/42」是章依赖的读数。** 底稿 A 段 MISS 列表点名 `E-08 RESOURCE_ACQUISITION`、`E-11 TRUST_CONSTRUCTION` 为"词表无同名项"——那是**第二章名**；改用第一章/第四章名（TALENT_FILTER / REPUTATION_ATTRACTION）则**均可命中**。⇒ 命中率两读：**13/42（仅第二章名）** vs **15/42（允许第一/四章变体）**；底稿标题只写"13/42"，未在标题/口径行披露变体依赖。**归属：lead（底稿口径行）**；建议标注「按第二章名」。
+
+**a-8「`_patch_d66.cjs` 解析出 0 条」低估了可取得量。** 底稿写 `_patch_d66.cjs 解析出的 (E-x.y, label) = 0 条 ← 解析降级，未取得`；实测**用一条正则即可取得**：
+```
+$ git grep -o -E 'E-[0-9]+\.[0-9]+' ba1b22a8b5 -- _patch_d66.cjs
+occurrences=119   distinct=34    （E-0.1 … E-5.5；与 K4 定稿件「34 个 distinct」一致）
+$ git grep -c -E 'E-[0-9]+\.[0-9]+' ba1b22a8b5 -- _patch_d66.cjs
+ba1b22a8b5:_patch_d66.cjs:31
+```
+⇒ 正确表述应为「**按 (E-x.y,label) 结构化解析未取得（0 条）**；但**正则可取得 34 distinct**」。"降级不静默"做得好，但降级后的数字不应写成 0 而被下游读成"该文件无 E 号"。**归属：lead（底稿）/ 阶段二 #238 需以 34 为起点**。
+**同批补齐**：`golden edges 键 = 36 条` ✔ 实测证实（`data/golden/wani-baby-v1.json`，blob `612dda6080236eafe94f96a668219469e7022f4f`，36 键全带 label，键形如 `E-1.1`）。
+
+## 9.6 对队长三件（+第 4 件）的独立复核
+
+**对象**：`origin/k4b3/lead` tip = **`7310c890a`**（**第 4 件**，队长回执只点名到 `3a754881a` —— tip 已前移，属"回执与实物时点差"，非缺陷，但请队长以 SHA 为准）。
+**字节复验**：5 个新增/修改文件全部 `git cat-file` 直读，独立 SHA-1 比对 **5/5 一致**（`VERDICT = EXTRACT_BYTE_IDENTICAL_TO_BASE`）。
+**写集**：累计 `git diff --name-status ba1b22a8b5..7310c890a` = **5 件全在 `docs/synova/product-lines/evidence/`**（A×4 + M×1）⇒ **零越界**，与 task-4 的 `K4-b3-VERIFY-*` 文件名级不相交。
+
+| # | 复核点 | 实测结论 |
+|---|---|---|
+| 1 | 前提件 §〇前提1 反证引用（blob `59c9a838c`） | **真**：`git rev-parse` = `59c9a838ce202d18bff4c1b444e3d33d7f1b2b71`；§三 第 1 行逐字一致 |
+| 2 | 前提件 §〇前提1 的 22/23/45/15 四数 | **与我独立实测一致**（A=22/15、B=23/15、跨口径和=45、并集去重=15） |
+| 3 | ⚠️ 前提件表行「口径C 并集 occurrences=**45** distinct=15」 | **措辞残留**：若读作 set-union，occurrences 应为 **15**；45 只成立在"multiset 拼接"读法。与队长自己的 a-2 裁定（occurrences=跨口径求和）**自洽**，但"并集"二字会误导复算者。建议写「A∪B（跨口径求和）」。**同型于 a-2** |
+| 4 | ⚠️ 前提件部分命令读**工作树**而非固定 SHA | `git grep … -- 'extensions/ontology/**'` 等在 `D:\synova-wt`（HEAD `ed63e2086`）执行，而件首声明"base 一律 ba1b22a8b5"。实测**本批读数恰好一致**（edge-types 56↔56、E 号 0↔0、TBD 52↔52），但**两棵树在该目录已差 1 个文件**：`extensions/ontology/extensions/general-enterprise/activity.json` 仅 base 有 ⇒ 属**运气而非不变量**。建议：凡纳入证据的读数一律 `git <cmd> ba1b22a8b5 -- <path>` |
+| 5 | 前提件 §六.3「对象形态会撞红两道门禁」 | **真**（我独立复核两处源码）：`scripts/control-tower/check-ontology-fields.sh:80` = `elif not isinstance(d[fld], str) or not d[fld].strip():` ⇒ **要求非空字符串**；`src/l4/ontology-loader.ts:280` 注释 =「`action_effect_lag` —— 时滞枚举，非空字符串即合法」⇒ 队长裁定「采字符串区间」**有据** |
+| 6 | 前提件 §六 自纠（doc15 第三章在仓内） | **真**（我独立复验，见 §9.1）；但**队长归因（"非 UTF-8 控制台"）不精确**，精确主因 = `core.quotepath` 转义（见 §9.1 机制 1），且**同一批错我也犯了一次**（本件 §六 b-2） |
+| 7 | crosswalk 底稿 E 段「引用 distinct 15 / 命中 15 / 未命中 0」 | **与我独立实测一致** |
+| 8 | crosswalk 底稿 F 段「本件测不出什么」四条 | **结构良好**（B2 强制声明齐全）；但见 a-8（0 条应改 34 distinct）与 a-7（13/42 的章依赖） |
+
+## 9.7 c 追加（第二轮新增的环境/工具陷阱）
+
+**c-6** `glob` 工具对**含 CJK 的通配路径**静默返回空：`docs/synova/research/权威文档01*/**` → `No files found`（该目录**确实存在**，`git ls-tree` 枚举 8 件）。⇒ **不得**以 glob 零结果作为"文件不存在"的证据。
+**c-7** `git ls-tree`/`git grep` 的默认输出受 `core.quotepath=true` 影响，非 ASCII 路径变八进制转义；`Select-String '<汉字>'` 在其上**恒 0 命中**（实测：quotepath 默认 0 命中 / `-c core.quotepath=false` 8 命中）。⇒ 报"不存在"前必须先 `quotepath=false` 或 `-z` 正向枚举。
+**c-8** 混用口径：件首声明固定 SHA、部分命令读陈旧工作树（见 §9.6 #4）。
+
+## 9.8 归属收口（第二轮追加）
+
+| 编号 | 问题 | 归属成员 | 卡 | 判据/条款 | 处置建议 |
+|---|---|---|---|---|---|
+| 自纠-b2 | 我原判「doc15 第三章不在本仓」为假 | **verifier（我）** | task-4 | b-2 | 已在本件订正 + 记纪律（§9.1） |
+| a-5′ | 章名应为「第二章 vs 第一章§1.9 **+ 第四章**」 | lead | #238① | 分歧栏 | 三源并列，别写两栏 |
+| a-5″ | 裁决②对 E-10/E-12 无词表版可落 | lead / impl-a | #238① | 裁定② | 显式写"本两条无词表对应版"，禁任选 |
+| a-6 | §3.4 在 doc15 **第一章**；6 桶（含 `>12_months`）；五阀键名；E-30/E-31 再冲突 | lead / impl-a / impl-b | #239·#234·#238 | 前提件·值域·五阀 | 前提件补定位；#239 五阀键名以 §3.4 为准；#234 的 E-05/E-13/E-28 可经换算落地 |
+| a-7 | crosswalk「13/42」是章依赖读数（15/42 变体） | lead | #238底稿 | A 段口径 | 标题标「按第二章名」+ 列变体 |
+| a-8 | `_patch_d66.cjs` 应为「regex 34 distinct」，非「0 条」 | lead | #238底稿 | B 段 | 改数、保留"结构化解析未取得"的降级声明 |
+| c-6/c-7 | glob 与 quotepath 的 CJK 静默失败 | 环境（全军） | — | 复核须知 | 并入 c-1..c-3 同一节 |
+| c-8 | 固定 SHA 与工作树口径混用 | lead（前提件） | batch | 件首口径行 | 证据性读数一律钉 SHA |
+
+## 9.9 修订后结论用语
+
+**第二轮复核结论：队长三件（`f740353ae`/`57cfd6cc1`/`3a754881a`，tip 实为 `7310c890a`）—— `可提请独立审计`**：字节 5/5 一致、写集零越界、关键反证引用（blob `59c9a838c`）与门禁冲突声明**均经实测证实**；**同时记入 3 处类型化残留**（§9.6 #3 措辞、#4 口径混用；§9.5 a-7/a-8 数字口径），**均属"改字/加口径行"级，不动结论**。
+**前提复现部分 —— `可提请独立审计`**（不变，且 b-2 由"无法核实"升级为"已核实为真、我原判错"）。
+**新增待裁**：a-6（§3.4 定位 + 6 桶 + E-30/E-31）与 a-5″（E-10/E-12 无落点）—— 建议在 L1/L2 交付件定稿前裁决，否则 #239 的五阀键名与 #234 的换算覆盖会有两种合法读法。
