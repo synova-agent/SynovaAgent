@@ -36,6 +36,12 @@
  *     它在 `tests/l4/edge-lag-unknown-degraded-1134.test.ts` 口径下仍是**唯一的具名规范违规**。
  *     两口径并存且都可见 —— 本件**不宣称**它已被"修好"。
  *
+ * 🔴 删件检测**已外包**（本件不再检出「件被删」——期望值与实测值同源，同为扫盘）：
+ *   · SPEC 件被删   ⇒ `tests/l4/edge-lag-unknown-degraded-1134.test.ts` 的 `N2-1`（具名清单）抓，且点名
+ *   · 预告件被删    ⇒ `tests/ontology/k4-05bis-edge-vocabulary-1350.test.ts` 抓
+ *   · 域外集被改    ⇒ 本件集合锚 / `numbering-authority.test.ts` 的 #1350 集合锚
+ *   ⚠️ 若上述任一处被改坏或跳过，**本件的删件覆盖会静默消失**（无其他防线）。
+ *
  * 契约 (铁律 47):
  *   @input    — 无。真仓根 = `process.cwd()`（vitest cwd = 仓库根）
  *   @output   — vitest 断言；沙箱全部落 `os.tmpdir()`，`afterAll` 清理
