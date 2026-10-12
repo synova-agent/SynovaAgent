@@ -1,0 +1,862 @@
+# K4-b3-VERIFY-prereq-2026-10-12 — 队长冻结前提的独立复现（复现员：verifier / task-4）
+
+> **读数时点** = 2026-10-12（本 session 机器时间 2026-10-12T12:3x +08:00）
+> **diff 左端（基准）** = `ba1b22a8b5ff75833704bac22fcfcb47295dc970`（`git rev-parse ba1b22a8b5` 原样输出）
+> base 提交信息原样：`Merge pull request 'P0收尾: 主树提交禁止门禁生效(D537r2) — guard接线+钩子硬拦+测试' (#459) from fix/main-tree-commit-gate into local-main`
+> **工作目录** = `D:\k4b3-verify`（分支 `k4b3/verify`；`git rev-parse HEAD` = `ba1b22a8b5ff75833704bac22fcfcb47295dc970`，`git status --porcelain` 行数 = 0）
+> **复现员身份** = `verifier`（独立复核员，未参与实施；未阅读任何实施员结论）
+> **工具** = git 2.54.0.windows.1 / node v24.16.0 / Windows PowerShell 5.1.26100.9444
+
+---
+
+## 〇、方法与测量污染防护（先证明"我读的确实是 base"）
+
+**口径**：不复用工作树字节，不 checkout。从 `ba1b22a8b5` 逐 blob 导出到临时目录，再用**独立实现的 git blob SHA-1**（`sha1("blob "+len+"\0"+bytes)`，纯 Node，不调 `git hash-object`）逐文件比对树内 blob 哈希。
+
+```
+命令：git -C D:\k4b3-verify ls-tree -r -z ba1b22a8b5 -- extensions/ontology cycles src/ > <tmp>\base-all-lstree.bin
+      （经 cmd /c 原样字节重定向；PowerShell 5.1 的 `>` 会写 UTF-16LE BOM，实测首 8 字节 ff fe 31 00 30 00 30 00 ⇒ 已弃用）
+命令：逐条 `git cat-file -p <sha> > <tmp>\k4b3-verify-base\<path>`（582 条，cmd 原样重定向）
+校验：node m-verify-extract.mjs
+```
+
+原始输出（全文）：
+
+```
+CALIBER       = 逐文件 git blob SHA-1 比对（独立实现，非 git hash-object）
+base tree 条目 = 582
+临时副本文件数 = 582
+SHA-1 一致     = 582
+缺失(树有盘无) = 0 []
+多出(盘有树无) = 0 []
+哈希不一致     = 0 []
+```
+
+⇒ 后文所有数字均取自这份 **582/582 字节等同 base** 的副本。
+
+### 〇bis、两个必须记录的取数陷阱（c 类：跑不通处）
+
+**陷阱 1 — PowerShell 5.1 文本重定向自造 BOM（A1 类测量污染）。**
+`git ls-tree ... > file` 实测首 8 字节 `ff fe 31 00 30 00 30 00`（UTF-16LE BOM），文件 23292 字节；改 `cmd /c "... > file"` 后首 8 字节 `31 30 30 36 34 34 20 62`（即 `100644 b`），11643 字节。**读文本类 blob 的中间产物一律走原样字节重定向。**
+
+**陷阱 2 — `git archive` 会按 `core.autocrlf` 改写行尾，导出件≠blob 字节。**
+- `git archive ... | tar -x` 在 PowerShell 5.1 下原生管道二进制被污染：`tar.exe: Damaged tar archive (bad header checksum)` ×N，导出 0 文件（跑不通）。
+- `git archive -o <tar>` 再 `tar -xf` 可导出，但 115 件中 **78 件 SHA-1 不一致**；对 `goal_decomposition.json` / `cycle-types.ts` / `cash-cycle.cycle.json` 三件逐一诊断，输出均为 `VERDICT = CRLF_CONVERTED_BY_ARCHIVE`（导出件 35/109/34 行全 CRLF，去 CR 后 SHA-1 与 blob 完全一致）。
+- 本机 `git config --get core.autocrlf` = `true`。
+
+**⇒ 连带风险（属 L1 卡 #238 判据 ③ 的口径缺陷，见下方 a-3）**：工作树字节 ≠ blob 字节。实测：
+
+```
+文件 src/cycles/cycle-types.ts
+  blob_sha_base     = 596e0a2d1738dcc03ac0f425dd26a6e76393c04c   （git rev-parse ba1b22a8b5:src/cycles/cycle-types.ts）
+  git hash-object   = 596e0a2d1738dcc03ac0f425dd26a6e76393c04c   （一致）
+  raw_worktree_sha1 = 3aedb6ff766714a6fcba62605806fec86034e603   （原始字节，不一致）
+  crlf_lines= 109   bare_lf= 0
+文件 cycles/builtin/cash-cycle.cycle.json
+  blob_sha_base     = 411bcfc6bb4c75cbe2736cd55ca31062d47def04
+  git hash-object   = 411bcfc6bb4c75cbe2736cd55ca31062d47def04
+  raw_worktree_sha1 = d427398847231ce9d94d03364ea93b0583711eab
+  crlf_lines= 34    bare_lf= 0
+```
+
+---
+
+## 一、前提 1 — edge-types 件数 / `$id` distinct / `label` distinct
+
+**口径**：`extensions/ontology/edge-types/` 目录直读 `.json` 文件（非递归）；`$id`/`label` 取顶层字段字符串原值，distinct = 去重集合大小。
+
+```
+.json 件数         = 56
+全部 $id 可读且为字符串 = true
+$id   总数=56  distinct=56
+label 总数=56  distinct=56
+$id 重复项 = []
+label 重复项 = []
+$id 形态非 edge/<snake> 的条目数 = 0 []     ← 见下方"口径订正"，该判据本身不成立
+```
+
+**与冻结前提对照**：件数 56 ✔（与 task-1/task-2/task-3 三张卡的「真基线 = 56 件（不是 55）」一致）；`$id` distinct 56 ✔；`label` distinct 56 ✔。
+
+**逐件 `$id` / `label` 全列（56 行，原文不摘要）**：
+
+```
+assumption_triggered_reallocation.json	edge/assumption_triggered_reallocation	ASSUMPTION_TRIGGERED_REALLOCATION
+augments.json	edge/augments	AUGMENTS
+brand_building.json	edge/brand_building	BRAND_BUILDING
+brand_builds.json	edge/brand_builds	BRAND_BUILDS
+capital_acquisition.json	edge/capital_acquisition	CAPITAL_ACQUISITION
+capital_allocation.json	edge/capital_allocation	CAPITAL_ALLOCATION
+capital_source_mix.json	edge/capital_source_mix	CAPITAL_SOURCE_MIX
+channel_delivery.json	edge/channel_delivery	CHANNEL_DELIVERY
+competitive_positioning.json	edge/competitive_positioning	COMPETITIVE_POSITIONING
+constrains.json	edge/constrains	CONSTRAINS
+couples.json	edge/couples	COUPLES
+cross_functional_synergy.json	edge/cross_functional_synergy	CROSS_FUNCTIONAL_SYNERGY
+cumulative_learning.json	edge/cumulative_learning	CUMULATIVE_LEARNING
+customer_data_loop.json	edge/customer_data_loop	CUSTOMER_DATA_LOOP
+customer_lockin.json	edge/customer_lockin	CUSTOMER_LOCKIN
+data_collection.json	edge/data_collection	DATA_COLLECTION
+decision_authority.json	edge/decision_authority	DECISION_AUTHORITY
+decision_concentrates.json	edge/decision-concentrates	DECISION_CONCENTRATES
+demand_to_spec.json	edge/demand_to_spec	DEMAND_TO_SPEC
+deploys.json	edge/deploys	DEPLOYS
+efficiency_attraction.json	edge/efficiency_attraction	EFFICIENCY_ATTRACTION
+environmental_scan.json	edge/environmental_scan	ENVIRONMENTAL_SCAN
+equipment_acquisition.json	edge/equipment_acquisition	EQUIPMENT_ACQUISITION
+external_assumption.json	edge/external-assumption	EXTERNAL_ASSUMPTION_BINDS
+external_feedback.json	edge/external_feedback	EXTERNAL_FEEDBACK
+funds.json	edge/funds	FUNDS
+goal_decomposition.json	edge/goal_decomposition	GOAL_DECOMPOSITION
+incentive_alignment.json	edge/incentive_alignment	INCENTIVE_ALIGNMENT
+incentive_binds.json	edge/incentive-binds	INCENTIVE_BINDS
+information_flow.json	edge/information_flow	INFORMATION_FLOW
+innovation_output.json	edge/innovation_output	INNOVATION_OUTPUT
+knowledge_reuse.json	edge/knowledge_reuse	KNOWLEDGE_REUSE
+knowledge_sharing.json	edge/knowledge_sharing	KNOWLEDGE_SHARING
+locks_in.json	edge/locks-in	LOCKS_IN
+market_share_capture.json	edge/market_share_capture	MARKET_SHARE_CAPTURE
+operational_execution.json	edge/operational_execution	OPERATIONAL_EXECUTION
+organizational_learning.json	edge/organizational_learning	ORGANIZATIONAL_LEARNING
+procurement_bargaining.json	edge/procurement_bargaining	PROCUREMENT_BARGAINING
+produces.json	edge/produces	PRODUCES
+profit_reinvestment.json	edge/profit_reinvestment	PROFIT_REINVESTMENT
+reputation_attraction.json	edge/reputation_attraction	REPUTATION_ATTRACTION
+reputation_flywheel.json	edge/reputation_flywheel	REPUTATION_FLYWHEEL
+retention_protects_knowledge.json	edge/retention_protects_knowledge	RETENTION_PROTECTS_KNOWLEDGE
+routine_rigidity.json	edge/routine_rigidity	ROUTINE_RIGIDITY
+rule_constraint.json	edge/rule_constraint	RULE_CONSTRAINT
+sensing_calibration.json	edge/sensing_calibration	SENSING_CALIBRATION
+service_support.json	edge/service_support	SERVICE_SUPPORT
+signal_transmits.json	edge/signal-transmits	SIGNAL_TRANSMITS
+signal_upward_pass.json	edge/signal_upward_pass	SIGNAL_UPWARD_PASS
+talent_acquisition.json	edge/talent_acquisition	TALENT_ACQUISITION
+talent_deployment.json	edge/talent_deployment	TALENT_DEPLOYMENT
+talent_filter.json	edge/talent_filter	TALENT_FILTER
+talent_retention.json	edge/talent_retention	TALENT_RETENTION
+tech_infrastructure.json	edge/tech_infrastructure	TECH_INFRASTRUCTURE
+trust_friction_reduction.json	edge/trust_friction_reduction	TRUST_FRICTION_REDUCTION
+value_pricing.json	edge/value_pricing	VALUE_PRICING
+```
+
+**口径订正（`$id` 命名形态，附加测量）**：
+
+```
+CALIBER = 对 $id 逐条套正则 ^edge/[a-z0-9]+(_[a-z0-9]+)*$ (snake) 与 ^edge/[a-z0-9]+(-[a-z0-9]+)*$ (kebab)
+总件数            = 56
+含连字符(非纯 snake) 的 $id 条数 = 5
+  decision_concentrates.json	edge/decision-concentrates	DECISION_CONCENTRATES
+  external_assumption.json	edge/external-assumption	EXTERNAL_ASSUMPTION_BINDS
+  incentive_binds.json	edge/incentive-binds	INCENTIVE_BINDS
+  locks_in.json	edge/locks-in	LOCKS_IN
+  signal_transmits.json	edge/signal-transmits	SIGNAL_TRANSMITS
+含下划线的 $id 条数 = 45
+单字 $id 条数 = 6
+label 不匹配 ^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$ 的件: （零行）
+```
+
+**结论**：`$id` 形态 **51/56 为 `edge/<snake>`，5/56 为连字符式**（`edge/decision-concentrates`、`edge/external-assumption`、`edge/incentive-binds`、`edge/locks-in`、`edge/signal-transmits`），另 6 条为单字无分隔符。**冻结前提「56 个 $id 全为 edge/<snake>」为不精确**（见 a-1）。
+
+---
+
+## 二、前提 2 — cycles 引用三口径 occurrences / distinct
+
+**口径**：基准树内 `cycles/**/*.cycle.json` 递归；口径 A = `nodes[].edgeRefs[]` 数组元素；口径 B = `mapping[].edgeId` 字段值；口径 C = A∪B 去重集合。occurrences = 原始出现次数（含同一值跨文件重复），distinct = 去重集合大小。
+
+**文件全列（6 件，原文不摘要）**：
+
+```
+cycles/builtin/cash-cycle.cycle.json
+cycles/builtin/customer-cycle.cycle.json
+cycles/builtin/product-cycle.cycle.json
+cycles/builtin/talent-cycle.cycle.json
+cycles/industry/retail-ecommerce/store-replication.cycle.json
+cycles/industry/saas-tech/arr-growth.cycle.json
+```
+
+```
+CALIBER_A = nodes[].edgeRefs 口径  : occurrences=22 distinct=15
+CALIBER_B = mapping[].edgeId 口径  : occurrences=23 distinct=15
+CALIBER_C = A∪B 并集口径           : occurrences=15 distinct=15
+A∩B 交集 distinct = 15
+只在 A 不在 B = []
+只在 B 不在 A = []
+A∪B(跨口径 occurrence 求和) = 45
+```
+
+逐文件（口径：edgeRefs 条数 / edgeId 条数 / nodes 数 / mapping 数）：
+
+```
+cycles/builtin/cash-cycle.cycle.json	edgeRefs=3	edgeId=3	nodes=4	mapping=3
+cycles/builtin/customer-cycle.cycle.json	edgeRefs=4	edgeId=4	nodes=4	mapping=4
+cycles/builtin/product-cycle.cycle.json	edgeRefs=4	edgeId=4	nodes=4	mapping=4
+cycles/builtin/talent-cycle.cycle.json	edgeRefs=4	edgeId=4	nodes=4	mapping=4
+cycles/industry/retail-ecommerce/store-replication.cycle.json	edgeRefs=4	edgeId=4	nodes=4	mapping=4
+cycles/industry/saas-tech/arr-growth.cycle.json	edgeRefs=3	edgeId=4	nodes=6	mapping=4
+```
+
+并集 distinct 全列（15 条，每值跨文件出现次数）：
+
+```
+edge/capital_allocation	×4	["cycles/builtin/cash-cycle.cycle.json","cycles/builtin/product-cycle.cycle.json","cycles/industry/retail-ecommerce/store-replication.cycle.json","cycles/industry/saas-tech/arr-growth.cycle.json"]
+edge/channel_delivery	×2	["cycles/builtin/customer-cycle.cycle.json","cycles/industry/retail-ecommerce/store-replication.cycle.json"]
+edge/cross_functional_synergy	×1	["cycles/builtin/product-cycle.cycle.json"]
+edge/cumulative_learning	×1	["cycles/builtin/talent-cycle.cycle.json"]
+edge/customer_lockin	×2	["cycles/builtin/customer-cycle.cycle.json","cycles/industry/saas-tech/arr-growth.cycle.json"]
+edge/efficiency_attraction	×1	["cycles/industry/retail-ecommerce/store-replication.cycle.json"]
+edge/equipment_acquisition	×1	["cycles/industry/retail-ecommerce/store-replication.cycle.json"]
+edge/external_feedback	×1	["cycles/builtin/product-cycle.cycle.json"]
+edge/knowledge_reuse	×1	["cycles/builtin/talent-cycle.cycle.json"]
+edge/operational_execution	×1	["cycles/builtin/product-cycle.cycle.json"]
+edge/profit_reinvestment	×1	["cycles/builtin/cash-cycle.cycle.json"]
+edge/reputation_flywheel	×2	["cycles/builtin/customer-cycle.cycle.json","cycles/industry/saas-tech/arr-growth.cycle.json"]
+edge/talent_acquisition	×1	["cycles/builtin/talent-cycle.cycle.json"]
+edge/talent_retention	×1	["cycles/builtin/talent-cycle.cycle.json"]
+edge/value_pricing	×3	["cycles/builtin/cash-cycle.cycle.json","cycles/builtin/customer-cycle.cycle.json","cycles/industry/saas-tech/arr-growth.cycle.json"]
+```
+
+命中 $id∪label：
+
+```
+并集 15 条中命中 $id∪label 的 distinct = 15
+未命中项 = 0 []
+未命中 $id∪label（A 口径）= []
+未命中 $id∪label（B 口径）= []
+```
+
+**与冻结前提对照**：distinct 15/15/15 ✔；edgeRefs occurrences 22 + edgeId occurrences 23 = 45 ✔；未命中 0 ✔。
+
+**口径必须钉死（否则判据字符串会漂）**：`occurrences=45` **只在**「两口径原始出现次数相加、跨口径不去重」这一口径下成立；**并集去重后 occurrences = 15**。同一件事三个合法读数：`22`（A 口径）/ `23`（B 口径）/ `45`（跨口径求和）/ `15`（并集集合大小）。见 a-2。
+
+---
+
+## 三、前提 3 — `extensions/ontology/` 内 E 号正则命中数
+
+**口径**：对 `extensions/ontology/` 下全部文件按 UTF-8 文本整体匹配正则 `E-[0-9]+(\.[0-9]+)?`（含注释与字符串）。
+
+```
+扫描文件数 = 100
+E 号 occurrences 命中总数 = 0
+E 号 distinct 形态数      = 0
+命中的 distinct 值 = []
+有命中的文件数 = 0
+附加口径(非要求)= 两位式 \bE-[0-9]{2}\b occurrences=0 distinct=0 []
+```
+
+**独立第二方法交叉验证**（`git grep` 直接搜 base 树 blob 内容，不经导出副本）：
+
+```
+命令：git grep -c -E 'E-[0-9]+' ba1b22a8b5 -- extensions/ontology/
+输出：（无输出）  exit=1   （exit 1 = 零命中）
+命令：git ls-tree -r --name-only ba1b22a8b5 -- extensions/ontology/ | wc 类计数
+输出：FILES=100
+```
+
+**与冻结前提对照**：0 命中 ✔（两法一致）；另实测 `extensions/ontology/` 文件总数 = 100（与扫描数一致）。
+
+> 注：E 号权威表（E-01..E-42）**不在** `extensions/ontology/` 内，本项只证明"该目录零命中"这一冻结前提成立，不证明权威文档里确有 42 条（那属阶段二逐卡复核范围）。
+
+---
+
+## 四、前提 4 — `action_effect_lag` 取值分布 / `transfer_function` TBD 数与总件数
+
+**口径**：`edge-types/` 下 56 件 `.json` 顶层字段原值分组（不做任何归一化）；`transfer_function` 按大小写不敏感 `\bTBD\b` 同时计「件级」与「出现级」。
+
+```
+CALIBER = edge-types/ 下 56 件 .json 顶层字段 action_effect_lag 的字符串原值分组（不做归一化）
+缺 action_effect_lag 字段的件 = 0 []
+distinct 取值形态 = 6
+--- 取值分布（原值 → 件数） ---
+  "unknown"	50
+  "3-6_months"	2
+  "0d — 分解关系为结构性从属（子目标一旦建立即属该上级），不承载跨期传导时滞"	1
+  "1_month"	1
+  "1-3_months"	1
+  "immediate"	1
+非数值区间形态的取值数 = 6 ["0d — 分解关系为结构性从属（子目标一旦建立即属该上级），不承载跨期传导时滞","1-3_months","1_month","3-6_months","immediate","unknown"]
+```
+
+```
+CALIBER = edge-types/ 下 .json 顶层 transfer_function，按大小写不敏感 \bTBD\b 计数（件级 + 出现级）
+transfer_function 总件数 = 56
+含 TBD 的件数            = 52
+TBD 出现总次数(occurrence)= 52
+不含 TBD 的件数          = 4
+缺 transfer_function 字段 = 0
+TBD 原文形态 distinct = 1
+```
+
+**不含 TBD 的 4 件 + 原值（原文不摘要）**：
+
+```
+brand_builds.json	:: "revenue_lift = brand_investment * f(awareness_lift, premium_ratio_change, repeat_purchase_lift, nps_change, lag_months)"
+couples.json	:: "B_output_volatility = A_output_volatility * coupling_strength * exp(-coupling_lag/decay_constant)"
+cumulative_learning.json	:: "unit_cost_t = unit_cost_t0 * (cumulative_output)^(-learning_rate)"
+goal_decomposition.json	:: "N/A — 结构性从属边（非因果传导）：输出 = 父目标分解出的子目标集合，无时滞/无增益系数"
+```
+
+**含 TBD 的 52 件全列（原文不摘要）**：
+
+```
+assumption_triggered_reallocation.json
+augments.json
+brand_building.json
+capital_acquisition.json
+capital_allocation.json
+capital_source_mix.json
+channel_delivery.json
+competitive_positioning.json
+constrains.json
+cross_functional_synergy.json
+customer_data_loop.json
+customer_lockin.json
+data_collection.json
+decision_authority.json
+decision_concentrates.json
+demand_to_spec.json
+deploys.json
+efficiency_attraction.json
+environmental_scan.json
+equipment_acquisition.json
+external_assumption.json
+external_feedback.json
+funds.json
+incentive_alignment.json
+incentive_binds.json
+information_flow.json
+innovation_output.json
+knowledge_reuse.json
+knowledge_sharing.json
+locks_in.json
+market_share_capture.json
+operational_execution.json
+organizational_learning.json
+procurement_bargaining.json
+produces.json
+profit_reinvestment.json
+reputation_attraction.json
+reputation_flywheel.json
+retention_protects_knowledge.json
+routine_rigidity.json
+rule_constraint.json
+sensing_calibration.json
+service_support.json
+signal_transmits.json
+signal_upward_pass.json
+talent_acquisition.json
+talent_deployment.json
+talent_filter.json
+talent_retention.json
+tech_infrastructure.json
+trust_friction_reduction.json
+value_pricing.json
+```
+
+**独立第二方法交叉验证**：
+
+```
+命令：git grep -c -E 'TBD' ba1b22a8b5 -- extensions/ontology/edge-types/
+输出：HIT_FILES=52   exit=0
+命令：git grep -c -E 'action_effect_lag' ba1b22a8b5 -- extensions/ontology/edge-types/
+输出：HIT_FILES=56   exit=0
+```
+
+**与冻结前提对照**：50 unknown + `3-6_months`×2 + `immediate`/`1_month`/`1-3_months` 各 1 + `goal_decomposition.json` 散文值×1 ✔（合计 50+2+1+1+1+1=56，与件数闭合）；TBD 52 / 总 56 ✔（两法一致）；非 TBD 4 件点名 `brand_builds`/`couples`/`cumulative_learning`/`goal_decomposition` ✔。
+
+---
+
+## 五、前提 5 — `src/cycles/` 内 `Valve` / `valves` / `actionEffectLag` 命中数
+
+**口径**：`src/cycles/` 下全部文件（递归）按 UTF-8 文本整体匹配，逐模式独立计数（大小写敏感 + 大小写不敏感各跑）。
+
+```
+扫描文件数 = 9
+  src/cycles/cross-scale-validator.ts
+  src/cycles/cycle-loader.ts
+  src/cycles/cycle-registry.ts
+  src/cycles/cycle-types.ts
+  src/cycles/index.ts
+  src/cycles/investment-advisor.ts
+  src/cycles/overflow-compute.ts
+  src/cycles/overflow-dashboard.ts
+  src/cycles/overflow-graph-bridge.ts
+
+PATTERN "Valve (case-sensitive)"            => occurrences=0
+PATTERN "valves (case-sensitive)"           => occurrences=0
+PATTERN "valve (case-insensitive)"          => occurrences=0
+PATTERN "actionEffectLag (case-sensitive)"  => occurrences=0
+PATTERN "valves (case-insensitive)"         => occurrences=0
+PATTERN "五阀|阀 (CJK)"                      => occurrences=0
+```
+
+**附加口径（非要求）：base 树 `src/` 全域（476 文件）同模式扫描**：
+
+```
+PATTERN "Valve (case-sensitive)"            => 命中文件数=0 []
+PATTERN "valves (case-sensitive)"           => 命中文件数=0 []
+PATTERN "valve (case-insensitive)"          => 命中文件数=0 []
+PATTERN "actionEffectLag (case-sensitive)"  => 命中文件数=0 []
+PATTERN "valves (case-insensitive)"         => 命中文件数=0 []
+PATTERN "五阀|阀 (CJK)"                      => 命中文件数=0 []
+```
+
+**独立第二方法交叉验证**：
+
+```
+命令：git grep -l -E 'Valve|valves|actionEffectLag' ba1b22a8b5 -- src/cycles/
+输出：（无输出）  exit=1   （exit 1 = 零命中）
+命令：git grep -l -E 'Valve|valves|actionEffectLag' ba1b22a8b5 -- src/
+输出：（无输出）  exit=1   （exit 1 = 零命中）
+```
+
+**与冻结前提对照**：全 0 命中 ✔（导出副本 + `git grep` 二法一致，且扩到 `src/` 全域仍为 0）。
+**注**：本项证明的是「基线无该符号」这一**接线缺口为真**，**不**证明任何实施员「已接线/已消费」；后者属阶段二，须有「删掉即报红」的判别性夹具方可采信。
+
+---
+
+## 五bis、附加核验：冻结件里的**承重前提**（超出 5 项清单，但同属队长冻结物，逐条实测）
+
+### 5b-1 CTO 裁定原件（口径用 15）——**逐字为真**
+
+```
+命令：git rev-parse ba1b22a8b5:docs/synova/coordination/K4-审计定稿与卡面全套.md
+输出：59c9a838ce202d18bff4c1b444e3d33d7f1b2b71      ← 与冻结件写的 "59c9a838c" 前缀一致
+命令：grep 工具搜 '45 条引用 distinct'（工作树 = base）
+命中：docs/synova/coordination/K4-审计定稿与卡面全套.md:48
+L44 节标题（原文）：## 三、独立复核抓出的 6 处不一致（**已据此修正本件**）
+L48 原文：| 1 | 45 条引用 distinct **15** | 复核员 1 说「实测 17」—— 🔴 **该复核员错了**；第二个复核员 + CTO 自量（四口径）全为 **15** | **一律用 15**；并记教训：**复核员之间会打架，只能以实测为准** |
+```
+
+⇒ 冻结件引文与仓内原件**逐字一致**，且该行为 §三 表第 1 行，"§三 第1行" 表述成立；**撤销派单件 §二①「三口径全为 17」** 的裁定依据成立。我的独立实测 distinct = 15（见 §二），与该裁定一致。
+
+### 5b-2 §三bis `action_effect_lag` 值域裁定 8 条数值——**逐字为真**
+
+```
+文件：docs/synova/coordination/K4-审计定稿与卡面全套.md  L55-L75
+L59 原文： · §3.5.1（数值区间）：E-07(1,3) E-15(1,3) E-17(0.5,1) E-23(0,0.5) E-38(3,6) E-25(6,12) E-24(6,18) E-37(3,9)
+L67 原文： ① 代码的桶标签**改为数值区间**（`[min, max]`，单位月；`immediate` ⇒ `[0, 0.5]`）
+L68 原文： ② **另加一条「数值区间 → 桶标签」换算规则**（供展示层用）—— **不双存**（避免第二个真源）
+L72 原文： ⑤ §3.5.1 表**漏登 3 条**（E-05 / E-13 / **E-28 CROSS_FUNCTIONAL_SYNERGY** —— 代码均有值）⇒ **不视为相冲**，登记为"§3.5.1 未覆盖项（3 条）"待院方补
+```
+⇒ 8 条 E 号与数值、`immediate ⇒ [0,0.5]`、「不双存」、未覆盖 3 条（E-05/E-13/E-28）**全部与 L2 冻结前提逐字一致**。
+
+### 5b-3 「权威文档15 第三章正文不在本仓」——**成立，且更强：整目录不在仓**
+
+```
+命令：git ls-tree -r --name-only ba1b22a8b5 | Select-String '权威文档15'
+输出：（无输出）   MATCH15_COUNT=0
+命令：git ls-tree -r --name-only ba1b22a8b5 | Select-String '第三章-投入建议引擎'
+输出：（无输出）   MATCH_CHAPTER3_COUNT=0
+```
+⇒ 仓内**不存在**任何 `权威文档15` 路径（不只是第三章）。L2 须**显式声明该来源局限**这一要求为真。
+
+### 5b-4 权威文档01 存在性 + E 号权威表——**42 条两位式 E 号，两章各自齐备**
+
+```
+命令：git ls-tree -r --name-only ba1b22a8b5 -- 'docs/synova/research/权威文档01-本体层因果体系权威规范-20260714/'
+输出：DOC01=8 件，含
+  SYNOVA-RESEARCH-第一章-五断裂点穷举-v1-0-20260714.md          （blob 8552dc5494…，692 行）
+  SYNOVA-RESEARCH-第二章-42条因果边权威定义-v1-0-20260714.md    （blob 6771008dc0…，1490 行）
+  SYNOVA-RESEARCH-第三章-15节点池与10表达层实体-v1-0-20260714.md
+  SYNOVA-RESEARCH-第四章-边节点映射矩阵-v1-0-20260714.md
+  SYNOVA-RESEARCH-第五章-因果链设计-v1-0-20260714.md
+  SYNOVA-RESEARCH-第六章-与现有体系对齐-v1-0-20260714.md
+  SYNOVA-RESEARCH-研究方案-v1-0 / v3-0-20260714.md
+
+CALIBER = 正则 /E-[0-9]+(\.[0-9]+)?/g 全文匹配
+第二章：occurrences = 269  distinct = 42   全列 E-01…E-42（两位式 42/42）
+第一章：occurrences = 168  distinct = 42   全列 E-01…E-42（两位式 42/42）
+```
+⇒ 「权威文档01 用两位式 E-01…E-42」**成立**；两章各有 42 个 distinct 两位式 E 号。
+
+### 5b-5 `GLOSSARY.md:74` 与两位式 E 号自相矛盾——**成立，逐字为真**
+
+```
+CALIBER = 正则 /E-[0-9]+(\.[0-9]+)?/g 全文匹配 GLOSSARY.md（blob 2648b3acff…，209 行）
+occurrences = 25   distinct = 23
+distinct 全列 = ["E-0.1","E-0.2","E-1.2","E-1.5","E-1.6","E-2.1","E-2.10","E-2.2","E-2.5","E-2.6","E-2.7","E-2.8","E-2.9","E-3.1","E-3.5","E-3.6","E-4.1","E-4.2","E-4.3","E-4.4","E-4.5","E-4.6","E-5.1"]
+其中两位式 E-NN = 0
+L74 原文：| **因果层** | `E-4.1 decision_centralization, E-4.2 info_flow` |
+```
+⇒ L74 行号与内容**逐字一致**；GLOSSARY.md 内两位式 E 号 **0** 个 ⇒ 与权威文档01 的编号体系确属**两套私有编号**，冲突为真。
+
+### 5b-6 🔴 **两章权威互斥：42 条 E 号里 4 条的 label 不一致**（L1 #238 的承重风险）
+
+**口径**：对每一章用其**自身**的规范书写位置抽取 label —— 第二章正文用标题 `### E-NN: LABEL`；第一章用表行 `| E-NN | LABEL |`；逐 id 比对（各抽出 42 个 distinct，无缺失）。
+
+```
+一致 = 38 / 42
+不一致的 E 号 = ["E-08","E-10","E-11","E-12"]
+```
+
+| E 号 | 第二章 `### E-NN: LABEL` | 第一章 表行 `| E-NN | LABEL |` |
+|---|---|---|---|
+| E-08 | `RESOURCE_ACQUISITION` @L257 | `TALENT_FILTER` @L641 |
+| E-10 | `DECISION_ALLOCATION` @L339 | `EQUIPMENT_DEPLOYMENT` @L643 |
+| E-11 | `TRUST_CONSTRUCTION` @L375 | `REPUTATION_ATTRACTION` @L644 |
+| E-12 | `POWER_DISTRIBUTION` @L408 | `EFFICIENCY_FINANCING` @L645 |
+
+**原始行直读（不经脚本，二次确认）**：
+
+```
+命令：node 直读第二章首行匹配   → E-08 @L257 :: ### E-08: RESOURCE_ACQUISITION
+                                   E-10 @L339 :: ### E-10: DECISION_ALLOCATION
+                                   E-11 @L375 :: ### E-11: TRUST_CONSTRUCTION
+                                   E-12 @L408 :: ### E-12: POWER_DISTRIBUTION
+命令：grep 工具 /^\| (E-08|E-10|E-11|E-12) \|/ 于第一章文件
+      Line 641: | E-08 | TALENT_FILTER | 获取 | A4 |
+      Line 643: | E-10 | EQUIPMENT_DEPLOYMENT | 获取 | A6 |
+      Line 644: | E-11 | REPUTATION_ATTRACTION | 获取 | A7 |
+      Line 645: | E-12 | EFFICIENCY_FINANCING | 获取（跨点） | A8 |
+```
+
+**余下 38 条**两章一致，全列见 `out-eid-labels.txt`（保留于临时目录，逐行 42 条）。
+**工具诚实声明**：我第一版比对脚本 `m-eid-labels.mjs` 的**列标题写反了**（表头写「第一章(标题式)」，实际变量 A 取的是第二章文件）。数据本身由参数顺序可复推，且上表已用 `node` 直读标题行 + `grep` 直读表行**二次确认**；引用本件时请以**本表 + 上述原始行**为准，勿据脚本表头。
+
+⇒ **影响面**：L1 #238 卡面要求「E 号（两位式 E-01..E-42）→ `$id`/`label` **双向**映射」，而其点名的两个权威源（第二章 / 第一章）在这 4 条上**互斥**。若实施员任选其一而未声明，映射结果将不可判定、且任何断言都可通过「换源」自适应 ⇒ **判据失去可证伪性**（恒真＝假绿风险）。
+
+### 5b-7 基底 ref 陷阱：本地 `local-main` ref 落后远端 **220** 个提交
+
+```
+git rev-parse local-main          = b88a23f76701b3cad7bbcd666d977e55f777358f
+git rev-parse origin/local-main   = ba1b22a8b5ff75833704bac22fcfcb47295dc970
+git rev-list --left-right --count ba1b22a8b5...local-main
+输出：220	0        （base 独有 220；local-main 独有 0 ⇒ 本地 ref 是陈旧的落后端）
+git ls-remote --heads origin | grep local-main
+输出：ba1b22a8b5ff75833704bac22fcfcb47295dc970	refs/heads/local-main
+```
+⇒ 冻结件「base = local-main 的**远端** tip」**成立**（`origin/local-main` == base）；**但**任何成员若把裸 `local-main`（本地 ref）当 diff 左端，会得到**错误的 220 提交差集**。建议全员一律写全 `ba1b22a8b5`，勿用分支名做 diff 左端。
+
+---
+
+## 六、固定输出四项
+
+### a. 与实测不一致处（附命令）
+
+**a-1（口径级·不精确）冻结前提「56 个 $id 全为 edge/<snake>」不成立。**
+命令：`node m-idform.mjs <base-copy>`（正则 `^edge/[a-z0-9]+(-[a-z0-9]+)*$` + 连字符判定）
+实测：含连字符的 `$id` = **5/56** —— `edge/decision-concentrates`、`edge/external-assumption`、`edge/incentive-binds`、`edge/locks-in`、`edge/signal-transmits`（余 45 条含下划线、6 条单字）。
+影响面：① L1 #238「E 号 → `$id`/`label` 双向映射」若以「label 小写+下划线转 `$id`」推断，这 5 条永远映射不上；② L3 #65「两个新边文件与既有 56 件**同构**」判据下，既有件本身形态不统一（51 snake + 5 kebab + 6 单字），"同构"未指明以哪一形态为准 ⇒ 判据不可判定。
+建议处置：把前提改写为「`$id` 一律以 `edge/` 前缀 + 小写单词，分隔符既有 `_` 亦有 `-`（5 条）」；#238/#65 需显式声明新件的分隔符口径。
+
+**a-2（口径级·判据字符串有歧义）`occurrences=45` 只在一种口径下成立。**
+命令：`node m-caliber.mjs <base-copy>`
+实测：`22`（A 口径 occurrences）/ `23`（B 口径 occurrences）/ `45`（跨口径求和）/ `15`（A∪B 去重集合大小）/ distinct 一律 `15`。
+影响面：L1 #238 判据②要求探针末行**逐字**含 `occurrences=45 distinct=15 hit=15 miss=0`。若实施员把 occurrences 实现为「并集去重后计数」，正常实现会输出 `occurrences=15` 而被判红；更危险的是**反向拟合**——为了让末行等于目标串而把计数写成 `22+23` 硬编码，形成「恒真判据＝假绿」。
+建议处置：判据必须写明定义「occurrences = `nodes[].edgeRefs` 元素数 + `mapping[].edgeId` 字段数（跨口径不去重）」，并加**判别性反例**：删 1 条 edgeRefs ⇒ 末行必须从 45 变 44 且探针非零退出；否则不得以该末行作为验收。
+
+**a-3（口径级·自相矛盾）L1 #238 判据③「复原后逐字节一致（用 git hash-object 比，声明口径=工作树字节）」内部冲突。**
+命令：见本文 §〇bis 陷阱 2 的实测块（`git hash-object` 与原始字节 SHA-1 并排比对）
+实测：`git hash-object` 对工作树文件**会施加 clean 过滤**，输出 = blob 哈希 `596e0a2d…`；而工作树**原始字节** SHA-1 = `3aedb6ff…`（109 行全 CRLF，`core.autocrlf=true`）。
+⇒ `git hash-object` 一致只证明「git 规范化后一致」，**不能**证明「工作树字节一致」；两个口径在同一判据里被写成同义词。
+建议处置：判据二选一并写明——(i)「git 规范化后与 base blob 哈希一致」= `git rev-parse ba1b22a8b5:<path>` == `git hash-object <path>`；或 (ii)「工作树原始字节一致」= 原始字节 SHA-1/`fc` 比对（本机 autocrlf=true 下二者必然不等，不可混用）。
+
+**a-4（口径级·前提未覆盖）`occurrences` 的读数与文件级重复有关，逐文件计数须留档。**
+命令：见 §二逐文件表
+实测：`arr-growth.cycle.json` 的 `edgeRefs`=3 而 `edgeId`=4（两口径条数不等），是 `22/23` 差异的唯一来源。
+影响面：仅用于 #238 交付件解释差异来源；不构成不一致，但交付件若不解释 22≠23，#239 复现者会重复此疑问。
+
+**a-5（来源互斥·判据不可证伪）冻结件把「第二章-42条因果边权威定义 / 第一章-五断裂点穷举」并列为编号权威源，两源在 4 条 E 号的 label 上互斥。**
+命令：`node m-eid-labels.mjs`（口径见 §5b-6）+ `node` 直读标题行 + `grep` 直读表行二次确认
+实测：42 条中 **38 一致 / 4 不一致** —— E-08（第二章 `RESOURCE_ACQUISITION` vs 第一章 `TALENT_FILTER`）、E-10（`DECISION_ALLOCATION` vs `EQUIPMENT_DEPLOYMENT`）、E-11（`TRUST_CONSTRUCTION` vs `REPUTATION_ATTRACTION`）、E-12（`POWER_DISTRIBUTION` vs `EFFICIENCY_FINANCING`），行号见 §5b-6。
+影响面：L1 #238「E 号 → `$id`/`label` **双向**映射」若未声明以哪一章为准，映射结果不可判定；更危险的是**任选一源都能让任意断言通过** ⇒ 判据失去可证伪性（恒真＝假绿）。
+建议处置：队长先行裁决 4 条以**哪一章**为准（或裁定为「两章均记录 + 标注互斥」），并在卡面判据里点名该裁决；否则 #238 的编号权威表**不得**作为判据交付物。
+
+### b. 无法核实处
+
+**b-1（已闭合，保留痕迹）** 原记「权威文档01 内容未核」。**现已核**（§5b-4/5b-5/5b-6）：两章各 42 个两位式 E 号、GLOSSARY.md:74 冲突为真、两章 4 条 label 互斥。**剩余未核**：4 条互斥里哪一条"才对"（属权威归属决策，我不可裁 ⇒ 已升级为 a-5）；以及 golden（`data/golden/wani-baby-v1.json` 的 `edges.E-x.y.label`）与 `_patch_d66.cjs` 的第三套私有编号未核。归属：L1 impl-a / 卡 #238 判据①④ + 队长裁决。
+**b-2（🔴 本件原判为假，已自纠 —— 见 §九.1）** 原写「需比对权威文档15 §3.5.1 原件，而该原件不在本仓」。**该结论错误**：原件**在仓内**（`docs/synova/research/权威文档15-企业循环溢出导航系统-20260714/SYNOVA-RESEARCH-第三章-投入建议引擎-v1-0-20260714.md`，blob `fff3ee01fd3c…`，§3.5.1 位于 L423），**一手原文可引**，8 条数值与 §三bis 引文逐字一致。**剩余未核**：52 条里逐条的落值依据（一手原件只给 8 条数值）。归属：L2 impl-b / 卡 #235。**我的错误机制见 §九.1。**
+**b-3** 本阶段**没有任何实施员交付物**，故「已消费/已接线/删掉即报红」类声称**一律未被核实**（记录为 b，阶段二按「判别性夹具」判）。§五的 0 命中恰是接线缺口的**基线**证据，不是任何实施成果。
+**b-4** 前提「`extensions/ontology/` 内 E 号 = 0」的**语义后果**未能核实：无法判定 #238 的「编号权威表」应落在该目录内（会引入 E 号，可能撞上某条现有门禁/判据）还是仅落 docs/。归属：L1 impl-a / 卡 #238 写集决策，须由队长确认写集边界。
+
+### c. 跑不通处
+
+**c-1** `git archive ... | tar -x` 在本机 PowerShell 5.1 下**跑不通**：原生管道二进制被污染 ⇒ `tar.exe: Damaged tar archive (bad header checksum)`（重复多次），导出文件数 = **0**。绕过：`git archive -o <tar>` + `tar -xf`，或逐 blob `git cat-file -p`（本次采用后者）。
+**c-2** `git archive -o` 虽可导出，但**不可作为 blob 字节比对源**：115 件中 78 件哈希不一致，诊断全部为 `CRLF_CONVERTED_BY_ARCHIVE`（`core.autocrlf=true`）。⇒ 任何"从 git 导出文件再比哈希"的复核路径在本机都会**假红**。归属：全军共用环境风险，建议写入复核须知。
+**c-3** PowerShell 5.1 的 `>`/`Out-File`/`Set-Content` 默认 UTF-16LE+BOM（实测首 8 字节 `ff fe …`），**凡经此路径的取数都属 A1 类测量污染**。本次已全程改用 `cmd /c "… > file"` 原样字节重定向。归属：全军共用环境风险。
+**c-4** 未跑的项（诚实声明）：`vitest`/`tsc`/全量门禁**未跑**（本阶段为只读前提复现，且重型验证按纪律串行、当前实施线正在跑）；`git fetch`/远端对比**未做**（读数时点本机 `ba1b22a8b5` 即工作树 HEAD，未验证远端同刻是否有更新）。
+**c-5** 本地 `local-main` ref **不是** base：`git rev-parse local-main` = `b88a23f7…`，`git rev-parse origin/local-main` = `ba1b22a8b5…`，`git rev-list --left-right --count ba1b22a8b5...local-main` = `220	0`。⇒ 用 Branch 名（而非写全 SHA）做 diff 左端的成员会得到**错误的 220 提交差集**。归属：环境/全军，建议写进复核须知。
+
+### d. 能否据此独立开工/决策
+
+**能。** 五项冻结前提中 **4 项完全复现**（edge-types 56/56/56、cycles 15/15/15 且 22+23=45 且 miss=0、E 号 0 命中、lag/TBD 分布 50+2+1+1+1+1=56 与 52/56、`src/cycles` 与 `src/` 全域 Valve/valves/actionEffectLag 全 0），且全部有**独立第二方法**（`git grep` 直搜 base blob）交叉验证；导出副本 **582/582 字节等同 base**。
+
+**但以下必须先修判据/先裁决再开工**，否则 L1 #238 的验收判据会同时存在「不可判定」与「反向拟合即假绿」多种失效模式：
+- a-1 ⇒ `$id` 形态前提改为「51 snake + 5 kebab + 6 单字」，L1/L3 显式声明分隔符口径；
+- a-2 ⇒ `occurrences=45` 必须钉死定义 + 配判别性反例（删 1 条 ⇒ 44 且非零退出）；
+- a-3 ⇒ 「逐字节一致」与「git 规范化一致」二选一，写明哪个；
+- **a-5 ⇒ 两章权威 4 条 E 号（E-08/E-10/E-11/E-12）互斥，须队长先裁决以哪章为准**；裁决前 #238 的编号权威表**不具备可证伪性**，不得作为判据交付物。
+
+**旁证（同批已核并逐字为真，可直接引用）**：CTO 裁定 §三 第 1 行原文（口径用 15）、§三bis 8 条数值与「不双存」「未覆盖 3 条 E-05/E-13/E-28」、权威文档01 两章各 42 个两位式 E 号、`GLOSSARY.md:74` 冲突为真、`权威文档15` 整目录不在仓。
+
+**结论用语：本次前提复现部分 —— 可提请独立审计**（限「五项前提 + §5b 附加承重前提复现」这一事实）；a-1/a-2/a-3/a-5 四条请队长先行裁决/改判据后放行实施；阶段二三线交付物复核**尚未开始**，届时另出 `K4-b3-VERIFY-<issue>.md`。
+> **追加**：§九 首轮复核后第二轮（队长裁复到达后）的自纠与新发现已并入本件；d 的结论用语不变，但新增 a-6/a-7/a-8 三条待裁项。**修订后结论用语见 §九.9。**
+
+---
+
+## 七、归属收口（问题 → 成员 / 卡 / 判据）
+
+| 编号 | 问题 | 归属成员 | 卡 | 判据/条款 | 处置建议 |
+|---|---|---|---|---|---|
+| a-1 | `$id` 形态前提不精确（5/56 kebab） | lead（前提冻结） | L1 #238 / L3 #65 / L2 #234 | #238①、#65 V1「同构」 | 改前提文字 + 卡面显式声明分隔符口径 |
+| a-2 | `occurrences=45` 口径有歧义 | lead（前提冻结） | L1 #238 | #238② 末行字符串 | 钉死定义 + 加判别性反例，禁硬编码 45 |
+| a-3 | 「逐字节一致（用 git hash-object 比）」自相矛盾 | lead（判据措辞） | L1 #238 | #238③ 复原校验 | 二选一并写明口径；本机 autocrlf=true |
+| a-4 | 22≠23 差异来源未在前提中说明 | lead（前提冻结） | L1 #238 | #238② | 交付件须解释 `arr-growth` edgeRefs=3/edgeId=4 |
+| a-5 | 两章权威 4 条 E 号 label 互斥，映射不可判定 | lead（**须裁决**）；impl-a 受影响 | L1 #238 | #238① 双向映射 | 先裁 4 条以哪章为准，再入判据；否则该表不得作为判据交付物 |
+| b-1 | （原）权威文档01 内容未核 → **已闭合**，余「4 条哪条才对」 | impl-a / lead | #238①④ | E 号表 | 见 a-5 |
+| b-2 | 52 条 TBD 的落值依据不在本仓 | impl-b | #235 | 落值判据 | 阶段二核；须显式声明来源局限 |
+| b-3 | 无交付物，「已消费/已接线」未核 | 全体实施员 | 三线 | 铁律 0-2 接线 | 阶段二凭「删掉即报红」夹具判 |
+| b-4 | E 号权威表落盘目录未定 | impl-a / lead | #238 | 写集边界 | 队长确认写集 |
+| c-1/c-2/c-3 | 取数环境陷阱（archive/CRLF/BOM） | 环境（全军） | — | 复核须知 | 写入复核须知，避免假红/污染 |
+| c-5 | 本地 `local-main` ref 落后远端 220 提交 | 环境（全军） | — | diff 左端写法 | 一律写全 `ba1b22a8b5`，勿用分支名当 diff 左端 |
+
+## 八、一句话自验结论
+
+在字节等同 base（582/582）的副本上、以两套独立方法复现队长冻结的 5 项前提，4 项逐字吻合、1 项（`$id` 全为 snake）不精确；另发现 3 条判据口径缺陷（`occurrences=45` 歧义、「逐字节一致」与 `git hash-object` 混用、本地 `local-main` ref 落后 220）与 **1 条来源互斥（两章权威 4 条 E 号 label 打架，须队长裁决）**；本前提复现部分 **可提请独立审计**，四条缺陷建议队长先裁决再放行实施。
+
+---
+
+# 九、第二轮（队长裁复到达后）：自纠 + 对队长三件的复核
+
+> 口径声明：本节所有对象均以 **`ba1b22a8b5`** 为 diff 左端 / 读取基准；队长件以 `origin/k4b3/lead` tip = **`7310c890a`** 读取（见 §9.6）。读数时点 = 2026-10-12。
+
+## 9.1 🔴 自纠：本件 §六 b-2 的「doc15 第三章不在本仓」为**假**（我错了）
+
+**正确事实（我独立复验，`git cat-file` 直读）**：
+```
+$ git cat-file -e ba1b22a8b5:'docs/synova/research/权威文档15-企业循环溢出导航系统-20260714/SYNOVA-RESEARCH-第三章-投入建议引擎-v1-0-20260714.md'
+exit=0                    ← 存在
+$ git rev-parse ba1b22a8b5:<该路径>
+fff3ee01fd3c4cc2251e1c4286894fc9bbbd5bfd      （533 行）
+$ 该文件内 '3.5.1' 命中 1 处 → L423 ### 3.5.1 滞后时间的数据来源
+```
+
+**§3.5.1 表一手原文（逐行，L429-L438）**：
+```
+| 边 ID | 边名称 | minMonths | maxMonths | 依据 |
+| E-07 | TALENT_ACQUISITION | 1 | 3 | 招聘周期：发布→入职→上手 |
+| E-15 | HUMAN_DEPLOYMENT | 1 | 3 | 人岗匹配：入职→培训→独立产出 |
+| E-17 | INCENTIVE_ALIGNMENT | 0.5 | 1 | 激励效果：KPI调整→行为变化 |
+| E-23 | OPERATIONAL_EXECUTION | 0 | 0.5 | 运营调整：决策→执行变化（实时） |
+| E-38 | TALENT_RETENTION | 3 | 6 | 人才留存→知识保护→组织能力 |
+| E-25 | BRAND_CONSTRUCTION | 6 | 12 | 品牌建设：投入→市场认知变化 |
+| E-24 | INNOVATION | 6 | 18 | 创新：研发投入→产品上市 |
+| E-37 | PROFIT_REINVEST | 3 | 9 | 利润再投资→效果显现 |
+```
+⇒ 与 `K4-审计定稿与卡面全套.md` §三bis 的 8 条引文**逐字一致**；**一手原文可引**，b-2 关闭。
+
+**我的错误机制（与队长 §六 记的机制不同，两者都要防）**：
+1. **主因 = `core.quotepath` 转义**（非"控制台编码"）。默认 `core.quotepath=true` 时 `git ls-tree` 把非 ASCII 路径输出为八进制转义，**输出里根本不含 `权威文档15` 这串汉字**，故 `Select-String '权威文档15'` 恒 0：
+```
+$ git ls-tree -r --name-only ba1b22a8b5 -- docs/synova/research/          # 默认（quotepath=true）
+   docs/synova/research/AUTHORITY-DEVIATION-REGISTRY-v1.md …（首 2 行）
+   Select-String '权威文档01' 命中数 = 0      ← 假"不存在"
+$ git -c core.quotepath=false ls-tree -r …（同上）
+   Select-String '权威文档01' 命中数 = 8      ← 真值
+```
+2. **叠加因 = 我的第二路探针也静默失败**：`glob` 工具以 `docs/synova/research/权威文档15*/**` 查 → `No files found`；用**确定存在**的 `权威文档01*/**` 复测 → **同样 `No files found`** ⇒ **该工具对 CJK 通配路径静默返回空**，不能作为"不存在"的证据。
+3. 我因此把「两路零命中」当作「不存在」，**未做正向枚举** ⇒ 与队长 §六 的同族根因一致：**零命中 ≠ 不存在**。
+
+**纪律（并入复核须知）**：凡"某物不存在"类判定，必须 **(a)** 贴 `git -c core.quotepath=false ls-tree` 的**父目录正向全量枚举**；**(b)** 不以 `glob` 工具对 CJK 路径的零结果为证；**(c)** 路径含 CJK 时禁用 `Select-String '<汉字>'` 匹配 git 输出（除非已 `quotepath=false`）。
+
+**正向枚举（本次已补，证明"我找的是对的父目录"）**：`docs/synova/research/` 下 **300 文件 / 49 个一级子目录**，其中含 `权威文档15-企业循环溢出导航系统-20260714/`（**7 件**：研究方案-v2-0 + 第一/二/三/四/五/六章）。
+
+## 9.2 a-5 扩充 + 章名订正：**三章都载 E 号，冲突是 2 vs 1**
+
+队长问「第二章 vs 第四章」与我写的「第二章 vs 第一章」谁对。**两说都不完整**，实测：
+```
+口径（逐章用它自身的规范书写位置抽 label，各得 42 个 distinct，无缺失）：
+  第二章 = 标题 '### E-NN: LABEL'         （文件首行确认：'### E-01: ACTIVE_SCANNING' 起）
+  第一章 = §1.9 表 '| E-NN | LABEL |'     （文件首行 '# 第一章：第一性原理推导 — 五断裂点穷举'）
+  第四章 = 标题 '### E-NN LABEL（'        （文件首行 '<!-- @generated 2026-07-14 | 权威文档01-第四章 | v1.0 -->'）
+结果：章间不一致的 E 号数 = 4 / 42
+  E-08  第二章 RESOURCE_ACQUISITION  vs  第一章 TALENT_FILTER  = 第四章 TALENT_FILTER
+  E-10  第二章 DECISION_ALLOCATION   vs  第一章 EQUIPMENT_DEPLOYMENT  = 第四章 EQUIPMENT_DEPLOYMENT
+  E-11  第二章 TRUST_CONSTRUCTION    vs  第一章 REPUTATION_ATTRACTION = 第四章 REPUTATION_ATTRACTION
+  E-12  第二章 POWER_DISTRIBUTION    vs  第一章 EFFICIENCY_FINANCING  = 第四章 EFFICIENCY_FINANCING
+```
+**原始行二次确认（不经脚本）**：
+```
+第四章 L154: ### E-08 TALENT_FILTER（获取 | soft | 2/4=50%）
+第一章 L641: | E-08 | TALENT_FILTER | 获取 | A4 |     ← 该表标题 = '## 1.9 与现有42边体系的逐条对照'
+第二章 L257: ### E-08: RESOURCE_ACQUISITION
+```
+⇒ 准确表述 = **「第二章（1 源） vs 第一章 §1.9 ＋ 第四章（2 源）」**；队长写的「第二章 vs 第四章」与我的「第二章 vs 第一章」**各自漏了一源**。**归属：lead（判据措辞）**；#238 交付件的分歧栏应写**三源**，否则"两栏并列"实际是三栏。
+
+## 9.3 a-5 裁决②「取能对上词表的那一版」—— **E-10 / E-12 无法自动落地**
+
+按队长裁定②实测（词表 = 56 件 edge-types 的 label 及其 $id 短名）：
+```
+E-08: 候选=["RESOURCE_ACQUISITION","TALENT_FILTER"]         ⇒ 能对上词表的 = ["TALENT_FILTER"]           （talent_filter.json）
+E-10: 候选=["DECISION_ALLOCATION","EQUIPMENT_DEPLOYMENT"]   ⇒ 能对上词表的 = []   🔴 两版都 ∉ 词表
+E-11: 候选=["TRUST_CONSTRUCTION","REPUTATION_ATTRACTION"]   ⇒ 能对上词表的 = ["REPUTATION_ATTRACTION"]  （reputation_attraction.json）
+E-12: 候选=["POWER_DISTRIBUTION","EFFICIENCY_FINANCING"]    ⇒ 能对上词表的 = []   🔴 两版都 ∉ 词表
+```
+⇒ 裁决②对 E-08/E-11 可机械落地；**对 E-10/E-12 取不到任何 $id**，必须落到「待裁清单」且交付件**显式写"本两条无词表对应版"**——否则实施员会在两个都不对的候选里**任选其一**（即队长最担心的「静默消解分歧」）。**归属：lead（裁定边界）/ impl-a（落地）**。
+
+## 9.4 🔴 新发现 a-6：`§3.4` 的**定位**是陷阱——它在 doc15 **第一章**，不在第三章
+
+```
+doc15 第三章（投入建议引擎）内 '§3.4' = ### 3.4 执行约束因子模型（L387）  ← 与桶标签无关
+桶标签真正的规范节 = doc15 第一章（循环配置规范与动态加载机制） '### 3.4 `edges` -- 五阀映射（含action_effect_lag）'（L145）
+  同章 '### 3.5 `overflowParams` -- 参数溯源表'（L187 起）
+```
+**§3.4 一手原文要点（L145-L193，逐字）**：
+- L147：「每个子循环构建"获取->分配->转化->交付->回收"五个阀门。每个阀门映射到42条因果边的一条或多条。」
+- 五阀字段名（JSON 键，**#239 就靠它**）：`acquisitionValve` / `allocationValve` / `conversionValve` / `deliveryValve` / `recycleValve`
+- L184-L193「action_effect_lag 取值规范」= **6 个桶**：`immediate` / `1_month` / `1-3_months` / `3-6_months` / `6-12_months` / **`>12_months`**
+- L149（原文）：「`actionEffectLag` 字段在42边权威定义中尚未全面写入（当前仅在研究方案 v2.0 中提出了E-15/E-17/E-38的预估值）」
+
+**由此得三条可判缺陷**：
+1. **CTO 裁定 §三bis 列的桶标签是 5 个，原文是 6 个** —— 漏 `>12_months`。「换算规则」若只覆盖 5 个，遇 `>12_months` 即无规则（当前 56 件无该值，属**未来缺口**，须显式登记）。
+2. **§3.4 与三章权威表的 E 号命名再冲突 2 条**（超出 a-5 的 4 条）：§3.4 写 `E-30 VALUE_DELIVERY`、`E-31 CUSTOMER_SUCCESS`；而第一/二/四章的权威表 E-30 = **PRICING**、E-31 = **CLIENT_RETENTION**。⇒ 「E 号 ↔ 名字」的不一致总数实为 **6 条**（4 条章间 + 2 条跨文档）。
+3. **§3.5.1 与 §3.4 的重叠只有 3 条**（E-07 / E-23 / E-37），其中 **E-07 两处一致**（(1,3) vs `1-3_months`→[1,3]），**真互斥只有 E-23、E-37** ⇒ CTO 裁定的「E-23/E-37 互斥」**成立且精确**，但「§3.5.1 未覆盖 3 条（E-05/E-13/E-28）」在**§3.4 里有桶值**（immediate / 1_month / 3-6_months），按换算规则**可产出数值区间**——实施员不应把它们当"无依据"。
+
+**归属**：lead（前提冻结件须补"§3.4 属第一章"的定位与 6 桶）/ impl-a（#239 五阀字段名以 §3.4 为准）/ impl-b（#234 的 E-05/E-13/E-28 可经换算落地，须写明来源）。
+
+## 9.5 新发现 a-7 / a-8：对队长 crosswalk 底稿的两处数字口径
+
+**a-7「13/42」是章依赖的读数。** 底稿 A 段 MISS 列表点名 `E-08 RESOURCE_ACQUISITION`、`E-11 TRUST_CONSTRUCTION` 为"词表无同名项"——那是**第二章名**；改用第一章/第四章名（TALENT_FILTER / REPUTATION_ATTRACTION）则**均可命中**。⇒ 命中率两读：**13/42（仅第二章名）** vs **15/42（允许第一/四章变体）**；底稿标题只写"13/42"，未在标题/口径行披露变体依赖。**归属：lead（底稿口径行）**；建议标注「按第二章名」。
+
+**a-8「`_patch_d66.cjs` 解析出 0 条」低估了可取得量。** 底稿写 `_patch_d66.cjs 解析出的 (E-x.y, label) = 0 条 ← 解析降级，未取得`；实测**用一条正则即可取得**：
+```
+$ git grep -o -E 'E-[0-9]+\.[0-9]+' ba1b22a8b5 -- _patch_d66.cjs
+occurrences=119   distinct=34    （E-0.1 … E-5.5；与 K4 定稿件「34 个 distinct」一致）
+$ git grep -c -E 'E-[0-9]+\.[0-9]+' ba1b22a8b5 -- _patch_d66.cjs
+ba1b22a8b5:_patch_d66.cjs:31
+```
+⇒ 正确表述应为「**按 (E-x.y,label) 结构化解析未取得（0 条）**；但**正则可取得 34 distinct**」。"降级不静默"做得好，但降级后的数字不应写成 0 而被下游读成"该文件无 E 号"。**归属：lead（底稿）/ 阶段二 #238 需以 34 为起点**。
+**同批补齐**：`golden edges 键 = 36 条` ✔ 实测证实（`data/golden/wani-baby-v1.json`，blob `612dda6080236eafe94f96a668219469e7022f4f`，36 键全带 label，键形如 `E-1.1`）。
+
+## 9.6 对队长三件（+第 4 件）的独立复核
+
+**对象**：`origin/k4b3/lead` tip = **`7310c890a`**（**第 4 件**，队长回执只点名到 `3a754881a` —— tip 已前移，属"回执与实物时点差"，非缺陷，但请队长以 SHA 为准）。
+**字节复验**：5 个新增/修改文件全部 `git cat-file` 直读，独立 SHA-1 比对 **5/5 一致**（`VERDICT = EXTRACT_BYTE_IDENTICAL_TO_BASE`）。
+**写集**：累计 `git diff --name-status ba1b22a8b5..7310c890a` = **5 件全在 `docs/synova/product-lines/evidence/`**（A×4 + M×1）⇒ **零越界**，与 task-4 的 `K4-b3-VERIFY-*` 文件名级不相交。
+
+| # | 复核点 | 实测结论 |
+|---|---|---|
+| 1 | 前提件 §〇前提1 反证引用（blob `59c9a838c`） | **真**：`git rev-parse` = `59c9a838ce202d18bff4c1b444e3d33d7f1b2b71`；§三 第 1 行逐字一致 |
+| 2 | 前提件 §〇前提1 的 22/23/45/15 四数 | **与我独立实测一致**（A=22/15、B=23/15、跨口径和=45、并集去重=15） |
+| 3 | ⚠️ 前提件表行「口径C 并集 occurrences=**45** distinct=15」 | **措辞残留**：若读作 set-union，occurrences 应为 **15**；45 只成立在"multiset 拼接"读法。与队长自己的 a-2 裁定（occurrences=跨口径求和）**自洽**，但"并集"二字会误导复算者。建议写「A∪B（跨口径求和）」。**同型于 a-2** |
+| 4 | ⚠️ 前提件部分命令读**工作树**而非固定 SHA | `git grep … -- 'extensions/ontology/**'` 等在 `D:\synova-wt`（HEAD `ed63e2086`）执行，而件首声明"base 一律 ba1b22a8b5"。实测**本批读数恰好一致**（edge-types 56↔56、E 号 0↔0、TBD 52↔52），但**两棵树在该目录已差 1 个文件**：`extensions/ontology/extensions/general-enterprise/activity.json` 仅 base 有 ⇒ 属**运气而非不变量**。建议：凡纳入证据的读数一律 `git <cmd> ba1b22a8b5 -- <path>` |
+| 5 | 前提件 §六.3「对象形态会撞红两道门禁」 | **真**（我独立复核两处源码）：`scripts/control-tower/check-ontology-fields.sh:80` = `elif not isinstance(d[fld], str) or not d[fld].strip():` ⇒ **要求非空字符串**；`src/l4/ontology-loader.ts:280` 注释 =「`action_effect_lag` —— 时滞枚举，非空字符串即合法」⇒ 队长裁定「采字符串区间」**有据** |
+| 6 | 前提件 §六 自纠（doc15 第三章在仓内） | **真**（我独立复验，见 §9.1）；但**队长归因（"非 UTF-8 控制台"）不精确**，精确主因 = `core.quotepath` 转义（见 §9.1 机制 1），且**同一批错我也犯了一次**（本件 §六 b-2） |
+| 7 | crosswalk 底稿 E 段「引用 distinct 15 / 命中 15 / 未命中 0」 | **与我独立实测一致** |
+| 8 | crosswalk 底稿 F 段「本件测不出什么」四条 | **结构良好**（B2 强制声明齐全）；但见 a-8（0 条应改 34 distinct）与 a-7（13/42 的章依赖） |
+
+## 9.7 c 追加（第二轮新增的环境/工具陷阱）
+
+**c-6** `glob` 工具对**含 CJK 的通配路径**静默返回空：`docs/synova/research/权威文档01*/**` → `No files found`（该目录**确实存在**，`git ls-tree` 枚举 8 件）。⇒ **不得**以 glob 零结果作为"文件不存在"的证据。
+**c-7** `git ls-tree`/`git grep` 的默认输出受 `core.quotepath=true` 影响，非 ASCII 路径变八进制转义；`Select-String '<汉字>'` 在其上**恒 0 命中**（实测：quotepath 默认 0 命中 / `-c core.quotepath=false` 8 命中）。⇒ 报"不存在"前必须先 `quotepath=false` 或 `-z` 正向枚举。
+**c-8** 混用口径：件首声明固定 SHA、部分命令读陈旧工作树（见 §9.6 #4）。
+
+## 9.8 归属收口（第二轮追加）
+
+| 编号 | 问题 | 归属成员 | 卡 | 判据/条款 | 处置建议 |
+|---|---|---|---|---|---|
+| 自纠-b2 | 我原判「doc15 第三章不在本仓」为假 | **verifier（我）** | task-4 | b-2 | 已在本件订正 + 记纪律（§9.1） |
+| a-5′ | 章名应为「第二章 vs 第一章§1.9 **+ 第四章**」 | lead | #238① | 分歧栏 | 三源并列，别写两栏 |
+| a-5″ | 裁决②对 E-10/E-12 无词表版可落 | lead / impl-a | #238① | 裁定② | 显式写"本两条无词表对应版"，禁任选 |
+| a-6 | §3.4 在 doc15 **第一章**；6 桶（含 `>12_months`）；五阀键名；E-30/E-31 再冲突 | lead / impl-a / impl-b | #239·#234·#238 | 前提件·值域·五阀 | 前提件补定位；#239 五阀键名以 §3.4 为准；#234 的 E-05/E-13/E-28 可经换算落地 |
+| a-7 | crosswalk「13/42」是章依赖读数（15/42 变体） | lead | #238底稿 | A 段口径 | 标题标「按第二章名」+ 列变体 |
+| a-8 | `_patch_d66.cjs` 应为「regex 34 distinct」，非「0 条」 | lead | #238底稿 | B 段 | 改数、保留"结构化解析未取得"的降级声明 |
+| c-6/c-7 | glob 与 quotepath 的 CJK 静默失败 | 环境（全军） | — | 复核须知 | 并入 c-1..c-3 同一节 |
+| c-8 | 固定 SHA 与工作树口径混用 | lead（前提件） | batch | 件首口径行 | 证据性读数一律钉 SHA |
+
+## 9.9 修订后结论用语
+
+**第二轮复核结论：队长三件（`f740353ae`/`57cfd6cc1`/`3a754881a`，tip 实为 `7310c890a`）—— `可提请独立审计`**：字节 5/5 一致、写集零越界、关键反证引用（blob `59c9a838c`）与门禁冲突声明**均经实测证实**；**同时记入 3 处类型化残留**（§9.6 #3 措辞、#4 口径混用；§9.5 a-7/a-8 数字口径），**均属"改字/加口径行"级，不动结论**。
+**前提复现部分 —— `可提请独立审计`**（不变，且 b-2 由"无法核实"升级为"已核实为真、我原判错"）。
+**新增待裁**：a-6（§3.4 定位 + 6 桶 + E-30/E-31）与 a-5″（E-10/E-12 无落点）—— 建议在 L1/L2 交付件定稿前裁决，否则 #239 的五阀键名与 #234 的换算覆盖会有两种合法读法。
+
+---
+
+# 十、第三轮：`k4b3/lead` tip `d4544114e`（收尾件草稿）复核 + 新发现 a-9
+
+> 读数时点 2026-10-12｜基准 `ba1b22a8b5`｜被审对象 `origin/k4b3/lead` = **`d4544114e`**（`git ls-remote` 实测）。
+> 同刻实测：**`origin/k4b3/l1-238-239` / `l2-234-235` / `l3-65` 三支在 origin 上均不存在**（`git ls-remote --heads origin` 只返回 `k4b3/lead` / `k4b3/verify` / `local-main` / `fix/prepush-bypass-*`）⇒ 三线**尚未推送任何提交**，本阶段无可复核的实施交付物。
+
+## 10.1 对象与字节
+
+```
+git ls-remote --heads origin | grep k4b3        → d4544114ed32298f5868ba9d5dd5e94e4fcc5253  refs/heads/k4b3/lead
+git diff --name-status ba1b22a8b5..d4544114e     → 6 件全在 docs/synova/product-lines/evidence/（A×6）
+新增件 K4-b3-lead-closeout-20261012.md：blob 1af503ae74d714b53c483e0adf3165550d8a0d21，9407 字节
+独立 SHA-1 比对：哈希不一致 = 0 []  → VERDICT = EXTRACT_BYTE_IDENTICAL_TO_BASE
+```
+⇒ 写集**零越界**（仍在本人宣告的 evidence 域内），对象**字节可信**。
+
+## 10.2 复核结论：**3 处需改**（均不动其结论）+ 1 处**新发现**
+
+**（1）§二/D7「`core.autocrlf=true` + **无 `.gitattributes`**」—— 事实错误**
+```
+$ git cat-file -e ba1b22a8b5:.gitattributes → 存在（27 行）
+$ git check-attr text eol -- cycles/builtin/cash-cycle.cycle.json
+  → text: unspecified | eol: unspecified      （src/cycles/cycle-types.ts、本件路径 同）
+```
+⇒ 正确表述 = 「**`.gitattributes` 存在（27 行）**，但对本批路径 `text`/`eol` 均 **unspecified** ⇒ 行尾行为由 `core.autocrlf=true` 决定」。队长在**回信里给的实测是对的**（"`git check-attr` 均 unspecified"），**草稿件把它写成了"无 `.gitattributes`"**。**归属 lead / D7 行。**
+
+**（2）§四「verifier 报 b-2 被队长纠正…（同一根因：用文件名当目录名）」—— 归因错误，且与队长已接受的订正自相矛盾**
+队长在回信 §0 已明文采纳我的订正（「归因记你的」）；草稿件仍写"同一根因"。实测两者根因**不同**：
+```
+队长根因 = 用文件名当目录名（`权威文档15-投入建议引擎`）→ 路径不存在
+我的根因 = 父目录用对了（`docs/synova/research/`），但：
+   (a) 默认 core.quotepath=true 把非 ASCII 路径输出成八进制 ⇒ Select-String '权威文档15' 恒 0
+       实测：默认 0 命中 / -c core.quotepath=false → 8 命中（'权威文档01'）
+   (b) glob 工具对 CJK 通配路径恒空（用确实存在的 权威文档01*/** 反证 → 同样 No files found）
+⇒ 对策不同：队长需"正向枚举证明找对目录"；我需"quotepath=false + 不用 glob 取证"
+```
+**归属 lead / §四。**
+
+**（3）§六 R3 与队长回信**互斥**：`1_month` 到底 `[0.5,1]` 还是 `[0,1]`？**
+```
+草稿件 R3 原文：`1_month ⇒ [0.5,1]` 为规则推导……提请追认
+队长回信 §1 原文：「桶图例逐字 `1_month` = 约1个月 ⇒ 我据此把 1_month 的换算从 [0.5,1] 改成 [0,1]」
+§3.4 图例原文（我已复核）：L188 `| immediate | 即时生效，无延迟 |`；L189 `| 1_month | 约1个月 |`；L190 `| 1-3_months | 1~3个月 |`
+CTO 裁定原文只钉了 `immediate ⇒ [0,0.5]`，未钉 `1_month`
+```
+⇒ **两件相差一份取值，且都未声明关键后果**：`[0.5,1]` 使桶集**互斥**（0-0.5 / 0.5-1 / 1-3 成链）；`[0,1]` 使 **`immediate[0,0.5] ⊂ 1_month[0,1]` 重叠** ⇒ 换算规则（区间→桶）**不再唯一**（任何 0～0.5 的值同时落两桶），而该规则的用途正是"供展示层反向换算"。
+⚠️ **E-13 与 E-05 恰好是这两桶**：`E-13 = 1_month`（实测 6 处 JSON + 附录A，无例外）、`E-05 = immediate` ⇒ 选 `[0,1]` 则二者区间重叠。**归属 lead（须定稿前钉死一版并声明是否需 tie-break，如"immediate 优先"）。**
+
+**（4）§四/§六 覆盖度落后于第二轮**：§四只列"a-1/a-2/a-3/a-5"，缺 **a-4 / a-6 / a-7 / a-8 / a-5′（三源）/ a-5″（E-10·E-12 无落点）**；§六 R1 写"**两章** 4 条"应改"**三源**"（第二章 vs 第一章§1.9 ＋ 第四章）。**归属 lead（定稿前补齐）。**
+
+## 10.3 🔴 新发现 a-9：doc15 内**三个** lag 值源，且 §3.5.1 与桶源互斥的是 **3 条**（多出 E-25）
+
+> 起因：核队长「E-13 在四条 cycle 中全部 `1_month`」这句 → 我扩查整章，发现**第一章内还有一整节附录**给出全量桶值。
+
+**三源定义（均为 doc15 内一手文件，`git cat-file` 直读）**：
+```
+S1 = 第三章 §3.5.1「滞后时间的数据来源」表（数值 minMonths/maxMonths）      = 8 条
+S2 = 第一章 §3.4 五阀 JSON + 同章各处 cycle 示例里的 "actionEffectLag"      = 22 条
+     （实测 {"edgeId":…,"actionEffectLag":…} 形态 22 条；E-13 出现于 L161/L701/L754/L863/L921/L979 共 6 处，全为 1_month）
+S3 = 第一章 附录A「42边ID速查（五阀常用边）」（典型 actionEffectLag 列）    = 25 条
+     L1210 标题原文：## 附录A：42边ID速查（五阀常用边）
+     L1212 表头原文：| 边ID | 中文名 | 所属断裂点 | 硬度 | 典型 actionEffectLag |
+```
+**逐条对照（26 个 E 号至少出现在一源）—— 跨源不一致 = 3 条**：
+```
+E-23  S1=0-0.5   S2=3-6_months  S3=3-6_months   ★S1≠S2 ★S1≠S3
+E-25  S1=6-12    S2=3-6_months  S3=3-6_months   ★S1≠S2 ★S1≠S3   ← 🔴 新，CTO 裁定未列
+E-37  S1=3-9     S2=6-12_months S3=6-12_months  ★S1≠S2 ★S1≠S3
+（其余 23 条同源一致或单源独有，全表见临时件 out-3way.txt）
+```
+⇒ **CTO 裁定「E-23/E-37 权威两节互斥」正确但不完整**：桶源与 §3.5.1 互斥的实为 **3 条**，多出 **E-25**（品牌建设：§3.5.1 = 6-12，§3.4/附录A = 3-6）；且 **E-25 正属 §3.5.1 的 8 条之一** ⇒ 迁移时有人可引"桶源"把 E-25 落成 `[3,6]`，与裁定值 `[6,12]` 相冲而**看似有据**。
+**同源附带**：① 「§3.5.1 未覆盖的 E-05/E-13/E-28」在 S2/S3 均有桶值（`immediate` / `1_month` / `3-6_months`）—— 队长已采信；② **附录A 的中文名与权威表英文 label 至少 2 处不可对应**（附录A `E-20 技术创新`、`E-22 知识管理`；权威表 E-20 = KNOWLEDGE_SHARING、E-22 = ROUTINE_RIGIDITY）⇒ 属**待裁**（中文→英文属语义判断，我不越界裁定，仅登记事实）。
+**归属**：**lead**（裁定清单需补 E-25 与"三源"表述）/ **impl-b**（#234 迁移遇 E-25 不得引桶源）/ **impl-a**（#239 五阀桶值以 S2/S3 为准但须声明与 §3.5.1 的 3 条冲突）。
+
+## 10.4 复核为**真**的项（逐条实测，供队长直接引用）
+
+| # | 队长件中的声明 | 我的实测 |
+|---|---|---|
+| 1 | §四「verifier 582/582 字节等同 base」 | **真**（本件 §〇 原始输出） |
+| 2 | §四 c 类三条（archive 假红 / PS5.1 BOM / local-main ref 落后 220） | **真**（§10.1 与 §〇bis、c-5） |
+| 3 | §二③「`18ed356f` = `feat(k12-07)` 2026-10-11，引入 `goal_decomposition.json`」 | **真**：`18ed356f877068d83fd92142f5fa095cdc42985f`，`2026-10-11 18:33:17 +0800`，diff 含 `…/ontology/edge-types/goal_decomposition.json \| 35 ++` |
+| 4 | §三 D5「#235 = 13 公式 / 39 `unknown`」 | **算术自洽**：crosswalk A 的 13 条命中项 → 词表 13 个文件，**13/13 全在 TBD-52 集合内** ⇒ 52 = 13 + 39（脚本逐条输出见 out-d5.txt） |
+| 5 | 队长回信「E-13 在 cycle 中全部 `1_month`，无例外」 | **真且更强**：`{"edgeId":"E-13","actionEffectLag":"1_month"}` 实测 **6 处**（非"四条 cycle"）+ 附录A L1221 `\| E-13 \| 资本配置效率 \| 配置 \| hard \| 1_month \|`，**零例外** |
+| 6 | §三 D6「新边用 `unknown`，TBD 会被 #235 全域判据打红」 | **与实测一致**（TBD 现 52 件、判据要求末行 `TBD=0`） |
+
+## 10.5 第三轮结论用语
+
+**`d4544114e`（收尾件草稿）—— `可提请独立审计`，附 3 处必改**：D7「无 `.gitattributes`」属事实错误、§四对我 b-2 的归因属错误且自相矛盾、R3 与回信在 `[0.5,1]`/`[0,1]` 上互斥（且未声明重叠后果）；另有覆盖度落后（a-4/a-6/a-7/a-8/a-5′/a-5″ 未列）。**均属"改字/补清单"级，不动其结论。**
+**新发现 a-9 建议在 L2 落值前裁决**：三源 + E-25 冲突 + `1_month` 区间取值 —— 这三项直接决定 `edge-types/*.json` 的 172（56 字段）落值结果，属**可逆性成本最高**的一类。
+**三线交付物：本阶段无可复核对象**（三支在 origin 上不存在，已实测）。
