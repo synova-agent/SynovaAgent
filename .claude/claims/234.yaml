@@ -1,19 +1,17 @@
 # .claude/claims/234.yaml — #234（K4-01 `action_effect_lag` 值域迁移）写集声明（D708 的 S0 源）
 #   分支 k4b3/l2-234-235 ｜ base ba1b22a8b5 ｜ 实施 impl-b ｜ 2026-10-12
 #   本件 = **本卡段**写集；#235 提交时会把本件更新为 **PR 全量并集**（D708 以 PR 全量变更集为对账对象）
+#   🔁 **续做笔（2026-10-12 深夜）**：分支 **k4b3/234-l2seq58** ｜ base **aa085e1f1** ｜ 实施 **impl-c**
+#      —— 「56 字面基数」改造 ＋ 同件第二根因（B6 陈旧期望）收口
+#      ⇒ 本件 `writeset` 按纪律「**只列本 PR 真正改动的文件，不预授权**」（1134.yaml 先例）改为该 PR 的 **5 条**；
+#        `done` / `note` 保持原样（**最小 diff**；本笔证据见下方新证据件）。
 writeset:
   - .claude/claims/234.yaml
-  - .claude/task-briefs/2026-10-12-234-K4-01-值域迁移.md
-  - docs/synova/product-lines/evidence/K4-b3-234-值域迁移-20261012.md
-  - memory/notes/proposed/2026-10-12-K4-b3-numbering-authority.md
-  - scripts/control-tower/probe-ontology-values.ts
+  - .claude/task-briefs/2026-10-13-234-K4-01-l2seq58-基数推导化.md
+  - docs/synova/product-lines/evidence/K4-b3-l2seq-58-20261013.md
+  - tests/coordination/numbering-authority.test.ts
   - tests/ontology/edge-lag-values.test.ts
-  - tests/l4/edge-lag-unknown-degraded-1134.test.ts
-  - extensions/ontology/edge-types/capital_acquisition.json
-  - extensions/ontology/edge-types/capital_allocation.json
-  - extensions/ontology/edge-types/cross_functional_synergy.json
-  - extensions/ontology/edge-types/operational_execution.json
-  - extensions/ontology/edge-types/talent_acquisition.json
+  - tests/ontology/edge-transfer-functions.test.ts
 done:
   - verify: npx tsx scripts/control-tower/probe-ontology-values.ts
   - verify: npx vitest run tests/ontology/edge-lag-values.test.ts

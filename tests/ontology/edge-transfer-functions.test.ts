@@ -30,7 +30,7 @@
  *   实测 `src/` + `packages/` 对 `transfer_function` 无 compute 消费方 ⇒ 执行面属另案。
  */
 import { afterAll, describe, expect, it } from 'vitest';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import {
@@ -80,12 +80,23 @@ describe('A. 真仓基线 — 52 条 TBD 已落值（L1 真读盘 + 运行时真
   const samples = loadEdgeFiles(REAL_EDGE_DIR);
   const audit = auditTransferFunctions(samples, REAL_FORMULAS);
 
-  it('A1 件数与分类：56 件 = 公式 13 + unknown 39 + 登记非权威 4；违规为空', () => {
-    expect(audit.total).toBe(56);
-    expect(audit.formula).toBe(13);
-    expect(audit.unknown).toBe(39);
-    expect(audit.registeredOther).toBe(4);
-    expect(audit.formula + audit.unknown + audit.registeredOther).toBe(audit.total);
+  it('A1 件数与分类：件数**扫盘推导** ＋ **闭合等式**（禁写死任何一数）；违规为空', () => {
+    // 🔴 N2 续做（#234，base `aa085e1f1`）：原为字面 `56 = 13 + 39 + 4`，撞上 #1350（`l3-65`）落地后的 **58 件**。
+    //    实测口径：两件新边带 `transfer_function="unknown"` ⇒ 落在 `unknown` 桶内、**不**在"登记非权威"内
+    //    ⇒ 闭合等式**不另加**"在场预告件"项（加了会**重复计数**）；项值一律由**具名登记面**推出。
+    const scanFiles = readdirSync(REAL_EDGE_DIR).filter((f) => f.endsWith('.json')).sort();
+
+    // ① 总数 = 扫盘件数（派生，不写死）
+    expect(audit.total, `总数须 == 扫盘实况（${scanFiles.length} 件）`).toBe(scanFiles.length);
+    // ② 具名登记面 ↔ 实测分类（**交叉**断言：两侧来源不同 ⇒ 非"扫盘当期望"）
+    expect(audit.formula, '公式件数须 == TFR_E_TO_FILE 具名条数').toBe(TFR_E_TO_FILE.length);
+    expect(audit.registeredOther, '登记非权威件数须 == TFR_REGISTERED_OTHER 具名条数').toBe(TFR_REGISTERED_OTHER.length);
+    // ③ **闭合等式**（比原版更强）：三分类必须恰好铺满总数（缺一类 / 多一类 ⇒ 红）
+    expect(
+      audit.formula + audit.unknown + audit.registeredOther,
+      `闭合等式不成立：formula(${audit.formula}) + unknown(${audit.unknown}) + registeredOther(${audit.registeredOther}) ≠ total(${audit.total})`,
+    ).toBe(audit.total);
+    // ④ 真棘轮：违规为空
     expect(audit.violations).toEqual([]);
   });
 
@@ -111,7 +122,15 @@ describe('A. 真仓基线 — 52 条 TBD 已落值（L1 真读盘 + 运行时真
       ...TFR_REGISTERED_OTHER.map(x => x.file),
     ]);
     const rest = samples.filter(s => !registeredFiles.has(s.file));
-    expect(rest).toHaveLength(39);
+    // 🔴 N2 续做（#234，base `aa085e1f1`）：原为字面 `39`；现由 **扫盘 − 具名登记** 推出（不写死）
+    const scanTotal = readdirSync(REAL_EDGE_DIR).filter(f => f.endsWith('.json')).length;
+    expect(
+      rest.length,
+      `余项件数须 == 扫盘(${scanTotal}) − 具名登记(${registeredFiles.size})`,
+    ).toBe(scanTotal - registeredFiles.size);
+    // 逐件断言（保留并**点名**）：未被 13 / 4 认领的其余件**必须全为** `unknown`
+    const notUnknown = rest.filter(s => s.tfr !== 'unknown').map(s => `${s.file}(${JSON.stringify(s.tfr)})`);
+    expect(notUnknown, `余项件必须全为 unknown；非 unknown 者: ${notUnknown.join(', ')}`).toEqual([]);
     for (const s of rest) {
       expect(s.tfr, `${s.file} 无 E 号名精确命中 ⇒ 必须显式 unknown`).toBe('unknown');
     }
