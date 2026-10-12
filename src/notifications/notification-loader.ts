@@ -5,6 +5,15 @@
  * 替代 file-driven-loaders.ts 中的硬编码 import。
  *
  * Iron law #24: catch + log + degraded.
+ *
+ * 🔴 K12-17（#200）引擎码归位后的**双位置解析**（宪章约束 4：内核/扩展边界物理可见）:
+ *   内容面 `extensions/notifications/<channel>/` = 客户的（**可改可删**）⇒ 只承载**声明**
+ *     （manifest.json: channel / config.credentialSchema / displayName）。
+ *   宿主面 `src/notifications/<channel>-adapter.ts` = 我们的（**客户不可见**）⇒ 承载**实现**。
+ *   ⇒ 解析顺序：① 宿主实现（首选）② 内容侧 entryPoint（客户自带实现的兼容通道）。
+ *   ⇒ 为什么实现位置不写进 manifest.entryPoint：manifest 是客户可改文件，而门禁
+ *     （CC1）只扫 extensions 下全部 .ts 的 import、**不扫 json 里的路径串** ⇒ 把 `src/…` 写进
+ *     json 等于造一条门禁零覆盖的引擎注入通道（#200 方案裁决 X/Y 依据，见卡面与 PR 正文）。
  */
 import { readdirSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
@@ -16,6 +25,44 @@ import type { NotificationAdapter } from './types';
 const log = createLogger('notifications/loader');
 
 const NOTIFICATIONS_DIR = join(process.cwd(), 'extensions', 'notifications');
+/**
+ * 宿主实现根（我们的，`src/` 侧）。与 NOTIFICATIONS_DIR 同按 cwd 定位（既有约定）——
+ * 🔴 故**调用方 cwd 必须是仓根**，否则两者同时失配（探针/测试必须先断 cwd，见 #200 §Q3）。
+ */
+const HOST_IMPL_DIR = join(process.cwd(), 'src', 'notifications');
+
+interface ResolvedImplementation {
+  /** 实现文件的绝对路径 */
+  path: string;
+  /** host = 宿主 src/ 侧内置实现；content = 内容侧 manifest 声明的客户自带实现 */
+  origin: 'host' | 'content';
+}
+
+/**
+ * 解析某通知渠道的**实现**位置（模块私有 —— 不新增导出，避免"未接线新 export"）。
+ *
+ * 契约（铁律 47）:
+ *   @input  channel     渠道目录名（= extensions/notifications/ 下的子目录名）
+ *           contentDir  该渠道的内容侧目录（承载 manifest.json）
+ *           entryPoint  manifest 声明的内容侧实现（可为空）
+ *   @output 命中 ⇒ { path, origin }；两侧皆缺 ⇒ null（**由调用方 push error，fail-visible**）
+ *           顺序: ① `src/notifications/<channel>-adapter.ts`（宿主内置，首选）
+ *                 ② `<contentDir>/<entryPoint || './adapter.ts'>`（内容侧，兼容）
+ *   @degraded 无 —— 本函数纯路径判定，不吞错、不猜测
+ */
+function resolveNotificationImplementation(
+  channel: string,
+  contentDir: string,
+  entryPoint?: string,
+): ResolvedImplementation | null {
+  const hostPath = join(HOST_IMPL_DIR, `${channel}-adapter.ts`);
+  if (existsSync(hostPath)) return { path: hostPath, origin: 'host' };
+
+  const contentPath = join(contentDir, entryPoint || './adapter.ts');
+  if (existsSync(contentPath)) return { path: contentPath, origin: 'content' };
+
+  return null;
+}
 
 export async function loadAndRegisterNotificationAdapters(): Promise<{ registered: number; errors: string[] }> {
   const errors: string[] = [];
@@ -40,13 +87,26 @@ export async function loadAndRegisterNotificationAdapters(): Promise<{ registere
 
       try {
         const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
-        const entryPath = join(NOTIFICATIONS_DIR, entry.name, manifest.entryPoint || './adapter.ts');
-        if (!existsSync(entryPath)) {
-          errors.push(`通知 ${entry.name} entryPoint 不存在: ${entryPath}`);
+        const impl = resolveNotificationImplementation(
+          entry.name,
+          join(NOTIFICATIONS_DIR, entry.name),
+          manifest.entryPoint,
+        );
+        if (!impl) {
+          // fail-visible：两侧皆缺 ⇒ 显式报错（禁静默降级成"配好了"）
+          errors.push(
+            `通知 ${entry.name} 无可用实现（宿主 src/notifications/${entry.name}-adapter.ts 与内容侧声明皆缺失）`,
+          );
           continue;
         }
+        if (impl.origin === 'content') {
+          log.warn(
+            { channel: entry.name, path: impl.path },
+            '通知实现取自内容侧声明（宿主侧无内置实现）— 兼容通道',
+          );
+        }
 
-        const mod = await import(pathToFileURL(entryPath).href);
+        const mod = await import(pathToFileURL(impl.path).href);
         const adapter = mod[manifest.exportKey || 'default'] as NotificationAdapter;
         if (!adapter || typeof adapter.send !== 'function') {
           errors.push(`通知 ${entry.name} 缺少 send() 方法`);
