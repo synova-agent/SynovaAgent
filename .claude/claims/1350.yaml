@@ -1,0 +1,37 @@
+# .claude/claims/1350.yaml — #1350（模块 K4 · K4-05bis 边词表：目标层级边 ＋ 计划边）写集声明（S0 源，issue 号卡）
+# 先例：.claude/claims/1412.yaml（同批 (C) 案）｜ .claude/claims/1134.yaml（K4-01 批 2）
+# 纪律（逐字沿 1134.yaml）：**只列本 PR 真正改动的文件，不预授权。**
+#
+# ═══ 本条（A 段 · 2026-10-12）范围说明 ═══
+#   本段落地 = **卡面 ＋ #66 核验件 ＋ 本 claim**（三件，零 src/ 改动）。
+#   🔴 #65 执行段（写 extensions/ontology/edge-types/）**仍冻结**：同一目录由 L2（#234/#235）在写，
+#      「同一文件同一时间只有一个写者」⇒ 收到队长「放行」信号后**在同一 PR 内**追加下列文件，
+#      届时本 claim 的 writeset 同步追加（**不预授权**，故此处不列）：
+#        extensions/ontology/edge-types/goal_decomposes_to.json   （⏳ 文件名待 N3/N4 认领确认）
+#        extensions/ontology/edge-types/plan_commits_to.json      （⏳ 文件名待 N3/N4 认领确认）
+#        tests/ontology/k4-05bis-edge-vocabulary-1350.test.ts
+#        extensions/ontology/manifest.json
+#        packages/ontology/src/edge-types.ts
+#        docs/synova/product-lines/evidence/K4-b3-1350-edge-vocabulary.md
+#   🔴 **禁入**（队长 2026-10-12 裁定：归 L2 先改，本卡不得出现于 diff）：
+#        tests/l4/edge-lag-unknown-degraded-1134.test.ts
+#        tests/l4/ontology-loader-param-bridge-1031.test.ts
+#   🔴 裁定**不改**（零运行时读取方，队长 D 裁定 ⇒ 登记不改）：
+#        extensions/ontology/edge-consumption-map.json
+#
+# ═══ 前提口径（本段判据的依据，读数时点 × diff 左端 双要素）═══
+#   读数时点 = 工作树 HEAD（分支 k4b3/l3-65，base ba1b22a8b5）；diff 左端 = ba1b22a8b5
+#   `extensions/ontology/edge-types/` 真基线 = **56 件**（卡面写「55→57」已漂移 ⇒ 本卡 56→58）
+#   E 号在 extensions/ontology/ 内 = **0** 命中；$id distinct = **56**；label distinct = **56**
+writeset:
+  - .claude/claims/1350.yaml
+  - .claude/task-briefs/2026-10-11-1350-K4-05bis-边词表-目标层级边与计划边.md
+  - docs/synova/product-lines/evidence/K4-b3-1412-status-recheck.md
+done:
+  - verify: bash -c 'git diff --name-only ba1b22a8b5..HEAD | grep -c "^src/" || true' ⇒ 0（#66 核验件「不改任何 src/」的物理判据）
+  - verify: bash -c 'git ls-tree -r --name-only ba1b22a8b5 -- extensions/ontology/edge-types/ | wc -l' ⇒ 56（V1 基数口径，非卡面字面 55）
+  - verify: bash -c 'git merge-base --is-ancestor 0b0601fac ba1b22a8b5 && git merge-base --is-ancestor 1ab0cbb33 ba1b22a8b5 && echo BOTH_ANCESTOR' ⇒ BOTH_ANCESTOR（#1134 PR#362 前置解除 ＋ #66 PR#392 已合入）
+  - verify: bash -c 'grep -c -E "^## Q0:|^## Q1:|^## Q2:|^## Q3:|^## 架构层:|^## Done 标准" ".claude/task-briefs/2026-10-11-1350-K4-05bis-边词表-目标层级边与计划边.md"' ⇒ 6（六字段齐）
+  - verify: bash -c 'grep -c "^#CRITERIA: B" ".claude/task-briefs/2026-10-11-1350-K4-05bis-边词表-目标层级边与计划边.md"' ⇒ 1
+  - verify: bash -c 'git diff --name-only ba1b22a8b5..HEAD | grep -c -E "edge-lag-unknown-degraded-1134|ontology-loader-param-bridge-1031" || true' ⇒ 0（禁入项为零）
+note: "K4-05bis（#1350）A 段：① 卡面 = 仓内正式版（原 carrier .k4-cards/card-1350.md 未入 git ⇒ 本件即可引原件）；显式处置三处漂移（基数 55→57 实测改 56→58；卡面【边界】「不实现代码」与 CTO 受理裁定 V1/V2/V3 的冲突 ⇒ 判据以受理裁定为准；#1134 前置已由 PR #362 / merge 0b0601fac 解除）；转录 CTO 裁定九项 ＋ 受理裁定 ＋ W3 全文。② #66 核验件 = 只核验不实施：工作令 §四⑥ 点名的 engine-context **不构造 store**（对象不存在）、ingest/index **1 处**自建 store 已被适配器默认守卫覆盖；剩余面 = 0。③ 本段零 src/ 改动、零 edge-types 写入（B 段待 L2 落地后放行）。"
