@@ -1,0 +1,115 @@
+# 输出契约 · KPI 表（kpi-table）
+#
+# 出处: K12-06（#189）—— 标准一致（输出契约 · 可机器校验）。
+#   院方《02》§三 机制 3 原文：「KPI 表＝**固定口径**」。
+#   ⇒ 本契约把"口径"变成**可机器判**的五件事，而不是写在文档里的约定：
+#       ① 12 项必填字段齐备（缺一项即点名报错）
+#       ② 期间唯一（同一张表不许混两个期间 —— 混期 = 口径不可比）
+#       ③ 单位一致（同一个指标不许一半"万元"一半"元"）
+#       ④ 数值域（actual / target 必须落在 [0, 1e12] 的有限数）
+#       ⑤ 指标 id 形态（小写点分命名空间，禁中文/空格/大写）
+#
+# 为什么"固定口径"必须落到这五条: 口径是**可比较性**的前提。缺字段 ⇒ 行不可读；
+#   混期间 ⇒ 行与行不可比；混单位 ⇒ 数字大小无意义；越界值 ⇒ 疑似单位错位（"1800"万元）。
+#   这四条每一条都能被机器判定，且**改坏必红**（见 tests/output/contract-validator.test.ts）。
+#
+# SQL 锚（同口径的既有单源）: `metric_readings(metric_id, value, recorded_at, unit)`
+#   —— 本契约的行形态与该表列对齐，使 KPI 表可直接落库比对（K12 第2批 W1 指标时序）。
+#   本文件不 import 该表；仅声明同形，避免第二套口径。
+
+schema:
+  entries:
+    - name: id
+      type: string
+      required: true
+      description: KPI 表标识（形态同 orgId 白名单）。
+    - name: orgId
+      type: string
+      required: true
+    - name: period
+      type: string
+      required: true
+      description: 期间（ISO 8601 区间或 `YYYY-MM` / `YYYY-Qn`）。闭包内唯一。
+    - name: rows
+      type: array
+      required: true
+      description: KPI 行数组。每行 = 一个指标一次观测。
+
+contract:
+  id: kpi-table
+  version: 1
+  title: KPI 表（固定口径）
+  format: structured
+  generated_at: "2026-10-12T14:31:43+08:00"
+
+checks:
+  - id: id-shape
+    kind: idFormat
+    path: id
+    pattern: "^[A-Za-z0-9][A-Za-z0-9_.-]{1,63}$"
+    message: "KPI 表 id 形态不合法"
+  - id: org-id-shape
+    kind: idFormat
+    path: orgId
+    pattern: "^[A-Za-z0-9][A-Za-z0-9_.-]{1,63}$"
+    message: "orgId 形态不合法"
+  # ① 至少一行 —— 空表不是 KPI 表。
+  #    ⚠️ 必须**显式**声明：`[]` 在本校验器里算"已填"（"没填"与"填了但没有"要机器可分），
+  #    想禁空数组就得在此点名，而不是靠隐式全局规则。
+  - id: rows-non-empty
+    kind: minItems
+    path: rows
+    min: 1
+    message: "KPI 表无任何数据行 —— 空表不是 KPI 表"
+  # ② 期间唯一 —— 闭包内不许出现两个不同期间（混期 ⇒ 行间不可比）
+  - id: period-unique
+    kind: valueUnique
+    path: rows[].period
+    message: "同一张 KPI 表混了两个期间 —— 行间不可比，口径已破"
+  # ③ 单位一致 —— 同一指标 id 下单位必须唯一
+  - id: unit-consistent-per-metric
+    kind: unitConsistency
+    groupBy: metricId
+    unitField: unit
+    path: rows[]
+    message: "同一指标的 KPI 行单位不一致（如一半万元一半元）—— 数字大小无意义，口径已破"
+  # ④ 数值域
+  - id: actual-finite
+    kind: range
+    path: rows[].actual
+    min: 0
+    max: 1000000000000
+    message: "actual 越界或非有限数 —— 疑单位错位（如以元填万元）"
+  # ⑤ 指标 id 形态
+  - id: metric-id-shape
+    kind: idFormat
+    path: rows[].metricId
+    pattern: "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+    message: "metricId 须为小写点分命名空间（如 finance.cashflow.operating）"
+
+fields:
+  - path: id
+    required: true
+  - path: orgId
+    required: true
+  - path: period
+    required: true
+  - path: rows
+    required: true
+  - path: rows[].metricId
+    required: true
+  - path: rows[].name
+    required: true
+  - path: rows[].unit
+    required: true
+  - path: rows[].period
+    required: true
+  - path: rows[].actual
+    required: true
+  - path: rows[].target
+    required: true
+  - path: rows[].source
+    required: true
+    description: 数据来源（原始出处标识）。无来源的 KPI 不得进表 —— 不可复核。
+  - path: rows[].recordedAt
+    required: true

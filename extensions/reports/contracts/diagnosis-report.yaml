@@ -1,0 +1,107 @@
+# 输出契约 · 诊断报告（diagnosis-report）
+#
+# 出处: K12-06（#189）—— 标准一致（输出契约 · 可机器校验）。
+#   院方《02》§三 机制 3 原文：「诊断报告＝**固定章节 + 引用**」。
+#   ⇒ 本契约断言：章齐（固定章节）＋ 每条结论带可解析引用（`[src:<kind>:<ref>]`）。
+#
+# "引用"为什么必须是机器可判的: 诊断报告的每一条结论都要能被 GA / 客户**回查**。
+#   无引用的结论 = 不可复核的判断。引用语法沿用既有单源 ——
+#   `src/agent/report-onepager-trace.ts` 的 `[src:<kind>:<ref>]` 规约（R1 条条带指针），
+#   以及 `src/agent/report-assembler.ts` 的 `buildReportPointer()` / `buildFindingPointerResolver()`。
+#   ⚠️ 本契约**只判形态**（是否存在可解析引用 + 章齐），**不判被引用对象是否真存在**
+#      —— 后者需要 findings 注册表，属跨模块引用完整性，不在本卡写集内（已列入 R4 承接项）。
+#
+# 与 `extensions/reports/*.hbs` 的关系: 那两个 .hbs 是 **HTML** 交付面；
+#   本契约锚定的是**markdown** 诊断报告（`### ` 章名）。两者产出面不同、互不覆盖
+#   —— HTML 文档不含 `### ` 章名 ⇒ 拿 HTML 顶 markdown 报告会被本契约拒绝。
+
+schema:
+  entries:
+    - name: id
+      type: string
+      required: true
+    - name: reportId
+      type: string
+      required: true
+      description: 报告标识。溯源指针 `[src:report:<reportId>#summary]` 的锚。
+    - name: orgId
+      type: string
+      required: true
+      description: "被诊断组织（渲染器头行 `## {orgId}: ...`）。"
+    - name: generatedAt
+      type: string
+      required: true
+      description: 生成时间（ISO 8601 含时区）。
+    - name: text
+      type: string
+      required: true
+      description: 报告正文（markdown）。
+
+contract:
+  id: diagnosis-report
+  version: 1
+  title: 诊断报告（固定章节 + 引用）
+  format: markdown
+  generated_at: "2026-10-12T14:31:43+08:00"
+
+checks:
+  - id: org-id-shape
+    kind: idFormat
+    path: orgId
+    pattern: "^[A-Za-z0-9][A-Za-z0-9_.-]{1,63}$"
+    message: "orgId 形态不合法"
+  - id: no-todo-left
+    kind: noPattern
+    pattern: "TODO|FIXME|XXX"
+    message: "诊断报告中残留 TODO/FIXME/XXX —— 未完成内容不得作为交付物提交"
+  # 证据引用形态：报告正文里至少要有一条可解析的 `[src:...]` 引用。
+  # 用 `textPattern`（kind `text`）—— 与 `### 结论` 槽位的 `pointers` 检查**分工不同**：
+  #   · textPattern  ⇒ 通篇至少一条引用（正文级，**不限章节**）
+  #   · pointers     ⇒ 指定章节至少 N 行带引用（章节级，**逐槽位**）
+  - id: has-traceable-citation
+    kind: textPattern
+    path: "text"
+    pattern: "\\[src:[a-z-]+:[^\\]]+\\]"
+    message: "诊断报告通篇无可解析引用（[src:<kind>:<ref>]）—— 无引用的结论不可复核"
+
+fields:
+  - path: id
+    required: true
+  - path: reportId
+    required: true
+  - path: orgId
+    required: true
+  - path: generatedAt
+    required: true
+  - path: text
+    required: true
+  - path: rootCauses
+    required: true
+    description: 根因清单（渲染器 Top 块与结论槽的数据源）。
+  - path: recommendations
+    required: true
+    description: 行动建议清单（结论槽与行动建议槽的数据源）。
+
+# 固定章节（渲染器 `src/l3/report-templates.ts:196-239` + `report-assembler.ts:316-318` 实测产出）。
+sections:
+  - title: "### 结论"
+    required: true
+  - title: "### 关键证据"
+    required: true
+  - title: "### 各维度循环结论"
+    required: true
+  - title: "### 行动建议"
+    required: true
+
+# 引用检查：结论槽与证据槽都必须有可解析引用（R1 条条带指针）。
+pointers:
+  - id: conclusion-citation
+    section: "### 结论"
+    min: 1
+    pattern: "\\[src:[a-z-]+:[^\\]]+\\]"
+    message: "结论缺可解析引用 —— 无引用的判断不得进诊断报告"
+  - id: evidence-citation
+    section: "### 关键证据"
+    min: 1
+    pattern: "\\[src:[a-z-]+:[^\\]]+\\]"
+    message: "关键证据缺可解析引用 —— 证据必须能回查到原始 finding"

@@ -17,6 +17,7 @@ import { createLogger } from '@synova/logger';
 import type { DiagnosisReport } from '../l3/synova-diagnosis-engine';
 import { getReportTemplateRegistry, type ReportData } from '../l3/report-templates';
 import { enforceReport } from '../l3/tone-enforcer';
+import { validateOutputContract } from '../output/contract-validator';
 import {
   auditConclusionCoverage,
   buildReportPointer,
@@ -348,6 +349,11 @@ export function renderOnePager(
         '一页纸结论行溯源指针覆盖不足 — degraded（R1 违规，覆盖审计留痕，铁律 24/31）',
       );
     }
+    // K12-06（#189）: 一页纸**提交口自检** —— 产出即体检（缺字段/缺章节/缺溯源指针 ⇒
+    // 点名留痕 + 落账为预设更新输入）。**只留痕，不阻断、不改写返回**：
+    // 本行是"接线了 == 被执行了"的物理证据，摘掉它 tests/output/contract-validator.test.ts
+    // 的「接线」用例必红。
+    validateOutputContract({ text: rendered, orgId: report.teamId, generatedAt: report.generatedAt });
     return rendered;
   } catch (err: unknown) {
     log.warn({ err, depth }, '一页纸渲染失败 — degraded（纯文本降级）');
