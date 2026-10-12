@@ -254,7 +254,15 @@ export async function createServer(): Promise<Server> {
       try {
         const { getSentinelRegistry } = await import('./sentinel/registry');
         const { aggregateSignals } = await import('./sentinel/signal-aggregator');
-        const findings = await getSentinelRegistry().runAll({ db, now: new Date(), registry: getSentinelRegistry() });
+        // E5 / #389（周报"无 sink"观测面修复）：runAll 注入 metricSink + teamId
+        // —— 此前该路径零写入（metric-readings-writer 头注点名路径③）；
+        //    teamId 用实例 org（无租户维度时 writer fail-closed 不写，不串租户）
+        const { createMetricSink } = await import('./sentinel/metric-readings-writer');
+        const findings = await getSentinelRegistry().runAll({
+          db, now: new Date(), registry: getSentinelRegistry(),
+          metricSink: createMetricSink(db as import('better-sqlite3').Database),
+          teamId: config.orgId,
+        });
         if (findings.length > 0) {
           const checkResults: import('./sentinel/types').SentinelCheckResult[] = [{
             sentinelId: 'boss-mailbox',
@@ -286,7 +294,50 @@ export async function createServer(): Promise<Server> {
         }
       } catch (err: unknown) { logger.warn({ err }, '老板信箱获取行动项失败 — degraded'); }
 
-      const report = bossMailbox.generateReport('Synova', `W${Math.ceil(now.getDate()/7)}`, signals, actions);
+      // E5 / #389：④a 测量值趋势 → 周报（业务读者②；读失败不阻断周报，降级显式进报告）
+      let measurements: import('./agent/boss-mailbox').MeasurementTrendView[] = [];
+      let measurementErrors: string[] = [];
+      try {
+        const { summarizeMetricTrends } = await import('./sentinel/metric-readings-reader');
+        const trends = summarizeMetricTrends(db, { orgId: config.orgId, days: 7 });
+        if (trends.ok) {
+          measurements = trends.summary.map(t => ({
+            metricId: t.metricId, entityId: t.entityId, unit: t.unit,
+            latestValue: t.latestValue, previousValue: t.previousValue,
+            changeRatio: t.changeRatio, latestAt: t.latestAt,
+          }));
+        } else {
+          measurementErrors = trends.errors ?? ['UNKNOWN'];
+          logger.warn({ errors: measurementErrors }, '老板信箱测量值段降级 — 不阻断周报');
+        }
+      } catch (err: unknown) { measurementErrors = [err instanceof Error ? err.message : String(err)]; }
+
+      // E7 / #406：④ 决策台账 → 周报（⑤ 交付读 ④；经 E6 交付的读回口，读失败不阻断周报）
+      let decisions: import('./agent/boss-mailbox').DecisionInView[] = [];
+      let decisionErrors: string[] = [];
+      try {
+        const { getDecisionLedgerReader } = await import('./agent/conversation-engine');
+        const reader = getDecisionLedgerReader();
+        if (!reader) {
+          decisionErrors = ['LEDGER_READER_NOT_WIRED'];
+          logger.warn({ code: 'LEDGER_READER_NOT_WIRED' }, '老板信箱决策段：读回口未装配 — 降级（不阻断周报）');
+        } else {
+          const weekAgo = Date.now() - 7 * 24 * 3600 * 1000;
+          const read = reader(config.orgId)({ limit: 200 });
+          decisions = read.entries
+            .filter(e => Date.parse(e.row.at) >= weekAgo)
+            .map(e => ({
+              nodeId: e.nodeId,
+              who: e.row.who,
+              role: e.row.role ?? null,
+              action: e.edgeType.replace('DECISION_', '').toLowerCase(),
+              at: e.row.at,
+              outputRef: e.row.output?.ref ?? null,
+            }));
+        }
+      } catch (err: unknown) { decisionErrors = [err instanceof Error ? err.message : String(err)]; }
+
+      const report = bossMailbox.generateReport('Synova', `W${Math.ceil(now.getDate()/7)}`, signals, actions, measurements, measurementErrors, decisions, decisionErrors);
       bossMailbox.pushToFeishu(report, webhookUrl).catch((err: unknown) => {
         logger.warn({ err }, '老板信箱飞书推送失败');
       });

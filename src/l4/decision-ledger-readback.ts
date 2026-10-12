@@ -21,10 +21,11 @@ export interface DecisionLedgerQuery {
   limit?: number;
 }
 
-/** 一条读回项：边 + 反序列化后的台账行 */
+/** 一条读回项：边 + 反序列化后的台账行（nodeId=决策对象的图节点 id，即边的 to 端） */
 export interface DecisionLedgerEntry {
   edgeId: string;
   edgeType: string;
+  nodeId: string;
   row: DecisionLedgerRow;
 }
 
@@ -80,7 +81,7 @@ export function listDecisionRows(
       const raw = edge?.props?.ledger;
       if (typeof raw !== 'string' || raw === '') continue;
       try {
-        entries.push({ edgeId: edge.id, edgeType, row: JSON.parse(raw) as DecisionLedgerRow });
+        entries.push({ edgeId: edge.id, edgeType, nodeId: edge.to ?? '', row: JSON.parse(raw) as DecisionLedgerRow });
       } catch {
         errors.push(`ROW_CORRUPT(edge=${edge.id}): 台账行 JSON 损坏 — 跳过该行（不静默）`);
       }
