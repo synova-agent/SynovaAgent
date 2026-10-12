@@ -280,11 +280,51 @@ $ git diff --name-only ba1b22a8b5..HEAD
 
 ---
 
-## 七、交付时刻读数（占位，提交后回填）
+## 七、交付时刻读数（#238 commit 后实测）
 
-> 本节在 commit 后由**同一条命令**回填，读数时点 = `as_of ba1b22a8b5 × git diff --name-only ba1b22a8b5..HEAD`。
+> 读数时点 × diff 左端 = **`as_of ba1b22a8b5` × `git diff --name-only ba1b22a8b5..HEAD`**
 
-（待回填）
+```
+$ git rev-parse HEAD
+a6e927a9a7f1f62f3100d69723ae8cae2055b1ae
+$ git log --oneline -1
+a6e927a9a feat(238): K4-05 编号权威表 + 引用对齐判据（判据④ 末行 occurrences=45 distinct=15 hit=15 miss=0）
+
+$ git diff --name-only ba1b22a8b5..HEAD
+.claude/claims/238.yaml
+docs/synova/GLOSSARY.md
+docs/synova/coordination/numbering-authority.md
+docs/synova/product-lines/evidence/K4-b3-238-numbering-authority.md
+memory/notes/proposed/2026-10-12-K4-b3-numbering-authority.md
+scripts/control-tower/probe-cycle-edges.ts
+tests/coordination/numbering-authority.test.ts
+
+$ git diff --stat ba1b22a8b5..HEAD
+ 7 files changed, 1322 insertions(+), 15 deletions(-)
+
+$ node scripts/control-tower/probe-cycle-edges.ts | tail -2
+✅ 结论：判据① 旧编号 = 0；判据② 全部取值 ∈ 代码边 $id ∪ label ∪ {unknown}；判据④ 引用对齐全命中；exit 0
+occurrences=45 distinct=15 hit=15 miss=0
+probe_exit=0
+
+$ git ls-remote --heads origin | grep '238-239'
+a6e927a9a7f1f62f3100d69723ae8cae2055b1ae	refs/heads/k4b3/238-239
+
+$ git diff --name-only ba1b22a8b5 -- cycles/
+（空）
+```
+
+**推送方式**：`synova-commit` **自带 auto-push**（M4）—— 提交后输出
+`* [new branch] k4b3/238-239 -> k4b3/238-239`，**我未手工再推**。
+
+**写集对账（多出/缺失说明）**：
+
+| 项 | 说明 |
+|---|---|
+| 卡面写集 ⊆ 本次 diff | ✅ 本卡 6 条命中（`numbering-authority.md` / `probe-cycle-edges.ts` / `numbering-authority.test.ts` / `GLOSSARY.md` / `238.yaml` / 本证据件） |
+| **多出 1 条** | `memory/notes/proposed/2026-10-12-K4-b3-numbering-authority.md` —— **经队长书面授权**（commit-msg 的 D395-a/D534 Note 引用门禁要求），已同步登记进 `238.yaml`/`239.yaml` 的 `writeset` |
+| **claim writeset ⊃ 本次 diff** | `238.yaml` 的 `writeset` 声明的是**本分支全量变更集**（含 #239 紧随其后的文件）；#239 提交后两者收敛。**这是有意的超集，不是遗漏**（D708 判据为「变更集 ⊆ 声明」，超集安全） |
+| **工作区未提交残留（如实登记）** | `.claude/claims/201.yaml` / `345.yaml` 呈 ` M`（**未 stage、未提交**）：**修复归属 = 队长**（治存量畸形 claim；`201/345` 是**别的卡**的件）。⇒ 本卡 `git diff ba1b22a8b5..HEAD` 内**不含**它们（已复核，见上 `git status` 输出仅两行 ` M`）。修复进主线的载体 = 队长分支，**不随本 PR** |
 
 ---
 
