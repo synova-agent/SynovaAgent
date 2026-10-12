@@ -423,8 +423,23 @@ describe('#1031 V5(L2-真跑) 真实 56 件 edge-types 过桥实测', () => {
     expect(r!.degraded).toBe(true);
     expect(r!.issues).toHaveLength(2);
 
-    // 机器可判的"全仓唯一 absent"：把它与 BASELINE_TALLY.cs_other 绑死
-    expect(BASELINE_TALLY.cs_other).toBe(1);
+    // 机器可判的"第 56 件可归因"：**逐件实测 + 点名**（原为 `expect(BASELINE_TALLY.cs_other).toBe(1)`）。
+    // 🔴 N2 修（verifier a-1 + 复跑 B 态）：旧写法对**派生常量**再施**字面断言** ⇒ `l3-65`（#65）+2 边
+    //   合入后在场预告件使 `cs_other` 由 1 → 3 ⇒ 该行红（B 态实测 `expected 3 to be 1`）。
+    //   本写法**不依赖聚合数**，且不主张"全仓唯一"——那条在 56 件态成立只是**偶然**：
+    //   `l3-65` 的两件新边同样**缺 `causal_strength` 键**（实测 `optionalProps` 无该键）⇒ absent 集必为 3。
+    //   ⇒ 断言 = ① `GOAL_DECOMPOSITION` **必须在** absent 集内（可归因，点上）
+    //            ② absent 集**恰等于**"本卡实测基线 ∪ 在场预告件"⇒ 若将来**再有** absent 件 ⇒ 红且点名。
+    const absentCsLabels: string[] = [];
+    for (const e of loadOntology().ontology.edgeTypes) {
+      const p = getEdgeTypeParams(e.label)?.params.find(x => x.key === 'causal_strength');
+      if (p && p.status === 'absent') absentCsLabels.push(e.label);
+    }
+    expect(absentCsLabels, '第 56 件 goal_decomposition 必须被点名（absent）').toContain('GOAL_DECOMPOSITION');
+    expect(absentCsLabels.slice().sort(), 'absent 集必须恰为「goal_decomposition + 在场预告件」').toEqual(
+      // `PendingEdgeAddition` 用 `id`（`edge/<name>`）；label 由 `id` 尾段大写化推得（与件内 `label` 一致）
+      ['GOAL_DECOMPOSITION', ...PRESENT_PENDING_EDGES.map(p => p.id.split('/').pop()!.toUpperCase())].sort(),
+    );
   });
 
   it('真实 label 取源位置正确：CONSTRAINS 三字段各归其位', () => {
