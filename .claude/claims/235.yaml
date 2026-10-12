@@ -1,0 +1,78 @@
+# .claude/claims/235.yaml — #235（K4-02 52 条 transfer_function 落值）写集声明（D708 的 S0 源）
+#   分支 k4b3/234 ｜ base ba1b22a8b5 ｜ 实施 impl-b ｜ 2026-10-12
+#   ⚠️ 本件列出的是 **PR 全量变更集**（#234 首笔 12 件 + #235 本笔增量），与「#234+#235 同分支同 PR」口径一致。
+#   ⚠️ 201.yaml / 345.yaml 属**队长**工作区修复件，**不在**本 PR 写集内（未 stage、未提交）。
+writeset:
+  - .claude/claims/234.yaml
+  - .claude/claims/235.yaml
+  - .claude/task-briefs/2026-10-12-234-K4-01-值域迁移.md
+  - .claude/task-briefs/2026-10-12-235-K4-02-transfer-function-落值.md
+  - docs/synova/product-lines/evidence/K4-b3-234-值域迁移-20261012.md
+  - docs/synova/product-lines/evidence/K4-b3-235-transfer-function-20261012.md
+  - extensions/ontology/edge-types/assumption_triggered_reallocation.json
+  - extensions/ontology/edge-types/augments.json
+  - extensions/ontology/edge-types/brand_building.json
+  - extensions/ontology/edge-types/capital_acquisition.json
+  - extensions/ontology/edge-types/capital_allocation.json
+  - extensions/ontology/edge-types/capital_source_mix.json
+  - extensions/ontology/edge-types/channel_delivery.json
+  - extensions/ontology/edge-types/competitive_positioning.json
+  - extensions/ontology/edge-types/constrains.json
+  - extensions/ontology/edge-types/cross_functional_synergy.json
+  - extensions/ontology/edge-types/customer_data_loop.json
+  - extensions/ontology/edge-types/customer_lockin.json
+  - extensions/ontology/edge-types/data_collection.json
+  - extensions/ontology/edge-types/decision_authority.json
+  - extensions/ontology/edge-types/decision_concentrates.json
+  - extensions/ontology/edge-types/demand_to_spec.json
+  - extensions/ontology/edge-types/deploys.json
+  - extensions/ontology/edge-types/efficiency_attraction.json
+  - extensions/ontology/edge-types/environmental_scan.json
+  - extensions/ontology/edge-types/equipment_acquisition.json
+  - extensions/ontology/edge-types/external_assumption.json
+  - extensions/ontology/edge-types/external_feedback.json
+  - extensions/ontology/edge-types/funds.json
+  - extensions/ontology/edge-types/incentive_alignment.json
+  - extensions/ontology/edge-types/incentive_binds.json
+  - extensions/ontology/edge-types/information_flow.json
+  - extensions/ontology/edge-types/innovation_output.json
+  - extensions/ontology/edge-types/knowledge_reuse.json
+  - extensions/ontology/edge-types/knowledge_sharing.json
+  - extensions/ontology/edge-types/locks_in.json
+  - extensions/ontology/edge-types/market_share_capture.json
+  - extensions/ontology/edge-types/operational_execution.json
+  - extensions/ontology/edge-types/organizational_learning.json
+  - extensions/ontology/edge-types/procurement_bargaining.json
+  - extensions/ontology/edge-types/produces.json
+  - extensions/ontology/edge-types/profit_reinvestment.json
+  - extensions/ontology/edge-types/reputation_attraction.json
+  - extensions/ontology/edge-types/reputation_flywheel.json
+  - extensions/ontology/edge-types/retention_protects_knowledge.json
+  - extensions/ontology/edge-types/routine_rigidity.json
+  - extensions/ontology/edge-types/rule_constraint.json
+  - extensions/ontology/edge-types/sensing_calibration.json
+  - extensions/ontology/edge-types/service_support.json
+  - extensions/ontology/edge-types/signal_transmits.json
+  - extensions/ontology/edge-types/signal_upward_pass.json
+  - extensions/ontology/edge-types/talent_acquisition.json
+  - extensions/ontology/edge-types/talent_deployment.json
+  - extensions/ontology/edge-types/talent_filter.json
+  - extensions/ontology/edge-types/talent_retention.json
+  - extensions/ontology/edge-types/tech_infrastructure.json
+  - extensions/ontology/edge-types/trust_friction_reduction.json
+  - extensions/ontology/edge-types/value_pricing.json
+  - memory/notes/proposed/2026-10-12-K4-b3-numbering-authority.md
+  - scripts/control-tower/probe-ontology-values.ts
+  - tests/l4/edge-lag-unknown-degraded-1134.test.ts
+  - tests/l4/ontology-loader-param-bridge-1031.test.ts
+  - tests/ontology/edge-lag-values.test.ts
+  - tests/ontology/edge-transfer-functions.test.ts
+done:
+  - verify: npx tsx scripts/control-tower/probe-ontology-values.ts
+  - verify: npx vitest run tests/ontology/edge-transfer-functions.test.ts
+  - verify: npx vitest run tests/ontology/edge-lag-values.test.ts
+  - verify: npx vitest run tests/l4/edge-lag-unknown-degraded-1134.test.ts tests/l4/ontology-loader-param-bridge-1031.test.ts
+  - verify: npx vitest run tests/ontology/ tests/l4/
+  - verify: bash scripts/control-tower/check-ontology-fields.sh
+  - verify: npx tsc --noEmit
+note: K4-02 口径 = E 号名精确命中（label 精确串 === 权威01 第二章 `### E-NN: NAME`）⇒ 13 条照抄权威公式（探针运行时真读文档逐字比对，归一化 = 按行 trim/丢空/"; " 连接）+ 39 条显式 unknown（禁自填；禁语义近邻放宽）；TBD=0 在探针末行；4 件本卡前既有值（brand_builds/couples/cumulative_learning 真公式 + goal_decomposition 结构性 N/A）原样登记不动；同步 tests/l4/ontology-loader-param-bridge-1031.test.ts 棘轮（tf_placeholder 53→1、tf_prose 3→55、CONSTRAINS 断言 placeholder→prose_formula）。

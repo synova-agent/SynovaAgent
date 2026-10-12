@@ -27,7 +27,6 @@ EOF
 printf '  echo "  Loop Engineering V1.0.0 — pre-commit (5 组)"\n' > "$FIX/scripts/pre-commit-check.sh"
 printf '  echo -e "  ✅ 全部 5 组通过"\n' >> "$FIX/scripts/pre-commit-check.sh"
 printf '> V1.0.0 | 2026-08-19 | pre-commit 5 组\n\n2位专家\n' > "$FIX/AGENTS.md"
-printf '> V1.0.0 "Main" | 2026-08-19\n\npre-commit 5 组\n\n2位专家\n' > "$FIX/CLAUDE.md"
 printf '> V1.0.0\n\npre-commit 5 组\n' > "$FIX/LOOP.md"
 printf '2位专家\n' > "$FIX/knowledge/shared/README.md"
 : > "$FIX/CHRONICLE.md"; : > "$FIX/INDEX.md"; : > "$FIX/START-HERE.md"
@@ -37,9 +36,9 @@ printf '2位专家\n' > "$FIX/knowledge/shared/README.md"
 DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" >/dev/null 2>&1; t "A 全一致" 0 $?
 
 # B: 专家数不符
-sed -i.bak 's/2位专家/3位专家/' "$FIX/CLAUDE.md"
+sed -i.bak 's/2位专家/3位专家/' "$FIX/AGENTS.md"
 DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" >/dev/null 2>&1; t "B 专家数不符" 1 $?
-sed -i.bak 's/3位专家/2位专家/' "$FIX/CLAUDE.md" && rm -f "$FIX/CLAUDE.md.bak"
+sed -i.bak 's/3位专家/2位专家/' "$FIX/AGENTS.md" && rm -f "$FIX/AGENTS.md.bak"
 
 # C: 组数不符
 sed -i.bak 's/pre-commit 5 组/pre-commit 13 组/' "$FIX/AGENTS.md"

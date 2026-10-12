@@ -13,6 +13,6 @@
   },
   "consumed_by_sentinels": [],
   "action_effect_lag": "unknown",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "unknown",
   "description": "决定谁有权分配资源——治理层定义的资金分配权限结构，调节CAPITAL_ALLOCATION的执行。"
 }

@@ -1,0 +1,100 @@
+# 输出契约 · 一页纸（one-pager）
+#
+# 出处: K12-06（#189）—— 标准一致（输出契约 · 可机器校验）。
+#   院方《02》§三 机制 3：「"给格式"不等于"保障一致"—— 要给**可校验的格式**」。
+#   ⇒ 本文件是**可机器校验**的格式声明，由 `src/output/contract-validator.ts` 消费。
+#
+# 🔴 契约随产出走（DSH `dsh-invariants/lib/index.js:6-8` package-owned：宿主只提供注册表，
+#    判据归包自己）。因此本文件的 schema 定义**内联**于此，校验器不内置任何契约知识。
+#
+# 三处对齐（非自造，实测锚定）:
+#   ① 章名 = 真实渲染器的实际输出。渲染器 `src/l3/report-templates.ts:196-239`
+#      （`EXECUTIVE_SUMMARY`，模板名 `executive_summary`）产出 `### 结论` /
+#      `### 关键证据` / `### 各维度循环结论` / `### 行动建议`（L211/231/232/233）。
+#      ⇒ 章名集合**不许手写猜**，一律从渲染器实测抄。
+#   ② 格式 = markdown。既有 `extensions/reports/*.hbs` 是 HTML 模板（不同产出面，不冲突）；
+#      一页纸 markdown 由内置模板渲染。故 `sections` 断言同时锚定了格式——
+#      HTML 文档不可能含 `### ` 章名（`<h2>` 形态 ⇒ 恒不红）。
+#   ③ 版本 = 宪章 P9「只能追加不能覆盖」⇒ 契约带 `version`，产物经
+#      `ValidationResult.contract_version` 记录**用了哪版**。
+#      `version` / `generated_at` 用引号包住 —— js-yaml 默认 schema 会把裸
+#      `2026-10-12` 解析成 Date 对象（实测），引号确保是字符串。
+
+## 坐标（Issue #189 正文块，坐标 7 字段）
+# 总闸: 不适用
+# 承重件: 不适用
+# 批次: 第8批-K12
+# 命名空间: 不适用
+# 执行态: 未开工
+# 验证级别: L2-真跑通
+# 阻塞源: 无阻塞
+
+schema:
+  entries:
+    - name: text
+      type: string
+      required: true
+      description: 产出正文（markdown）。契约的 sections / pointers 检查都在这个串上跑。
+    - name: orgId
+      type: string
+      required: true
+      description: "组织标识。一页纸头行必带（渲染器 `## {orgId}: ...`）。"
+    - name: generatedAt
+      type: string
+      required: true
+      description: 产出时间（ISO 8601 含时区）。无时刻的产出不可比对。
+
+contract:
+  id: one-pager
+  version: 1
+  title: 一页纸（高管摘要）
+  format: markdown
+  generated_at: "2026-10-12T14:31:43+08:00"
+
+# 模块级检查：整个文档层面的断言。
+checks:
+  - id: no-todo-left
+    kind: noPattern
+    pattern: "TODO|FIXME|XXX"
+    message: "产出中残留 TODO/FIXME/XXX —— 未完成内容不得作为交付物提交"
+  - id: org-id-shape
+    kind: idFormat
+    path: orgId
+    pattern: "^[A-Za-z0-9][A-Za-z0-9_.-]{1,63}$"
+    message: "orgId 形态不合法（须为 2-64 位字母数字，可含 _ . -）"
+
+# 字段级检查：逐字段（含数组元素通配 `rows[].name` 形态）。
+fields:
+  - path: orgId
+    required: true
+  - path: generatedAt
+    required: true
+  - path: text
+    required: true
+
+# 章节检查：markdown 标题（`### 结论` 形态）。
+# `required: true` 的章节缺席 ⇒ 报错点名缺哪一章。
+sections:
+  - title: "### 结论"
+    required: true
+    description: 结论先行第一槽位。正文须带 `[src:...]` 溯源指针。
+  - title: "### 关键证据"
+    required: true
+  - title: "### 各维度循环结论"
+    required: true
+  - title: "### 行动建议"
+    required: true
+
+# 指针检查：每条要求「带指针的行 ≥ min」。
+# 依据 `src/agent/report-onepager-trace.ts` 的 R1 规约（结论行条条带 `[src:<kind>:<ref>]`）。
+pointers:
+  - id: conclusion-pointer
+    section: "### 结论"
+    min: 1
+    pattern: "\\[src:[a-z-]+:[^\\]]+\\]"
+    message: "结论行缺可解析溯源指针 —— 无法回查的判断不得进一页纸"
+  - id: action-pointer
+    section: "### 行动建议"
+    min: 1
+    pattern: "\\[src:[a-z-]+:[^\\]]+\\]"
+    message: "行动建议行缺可解析溯源指针"

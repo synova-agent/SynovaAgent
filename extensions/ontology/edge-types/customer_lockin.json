@@ -13,6 +13,6 @@
   },
   "consumed_by_sentinels": [],
   "action_effect_lag": "unknown",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "unknown",
   "description": "客户不容易离开——品牌资产和客户满意度产生切换成本壁垒（取代原LOCKS_IN的客户部分）。"
 }

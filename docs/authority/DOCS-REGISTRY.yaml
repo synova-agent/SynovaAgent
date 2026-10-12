@@ -8,6 +8,13 @@
 # verified-by: 负责验证本文件声明的脚本（planned = 待实施）
 
 documents:
+
+  # ---- CTO 2026-10-12：CLAUDE.md 退役（裁定 059/061）----
+  - id: DOC-0193
+    type: decision
+    path: decisions/implemented/process/2026-10-12-claude-md-retirement.md
+    status: active
+    owner: CTO
   # ---- 权威层（现状 = 机器验证）----
   - id: DOC-0001
     type: navigation

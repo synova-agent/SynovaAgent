@@ -13,6 +13,6 @@
   },
   "consumed_by_sentinels": [],
   "action_effect_lag": "unknown",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "unknown",
   "description": "假设被打破触发资本配置阀关闭(跨环节联动二阶)——感知系统检测到外部假设被违反时，自动触发资本配置调整。"
 }
