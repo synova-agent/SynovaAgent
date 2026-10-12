@@ -97,9 +97,19 @@ RESULT=… formula=12 tfr_unknown=39 tfr_registered=4 TBD=1
 [FAIL] 违规 1 条（逐条见上）
 PROBE_EXIT=1
 ```
-**复原**：改回后探针 `formula=13 … TBD=0` / `PROBE_EXIT=0`；口径 W 逐件比对：
-`复原后 56 件口径W 比对：不一致 = 1 / 56` —— 🔴 **如实登记**：不一致件 = `capital_acquisition.json`（探针改动往返经由编辑工具，原始字节有写入细节差异）。
-**但内容等价有独立证据**：`git diff --numstat` = `1	1`（**仅目标 1 行**）、`git diff` 全文只显示该行增删、探针判定该件公式与权威01 第二章**逐字一致** ⇒ **语义/内容一致，原始字节差 1 件**（不宣称 56/56）。
+**复原 —— 四层并列**（**R20：报告复原必须说明是哪个层面复原**）：
+
+1. **内容层（权威；结论 = 复原成功）**：`git status --porcelain -- extensions/ontology/edge-types/capital_acquisition.json` ⇒ **无输出**（= 工作树 == HEAD，**非 modified**）；该件本笔 diff = **恰 2 行**（`git diff --numstat ba1b22a8b5..HEAD` ⇒ `2	2`）。
+2. **口径 B（git blob；比 raw-byte 更强，天然排除行尾/工具重写噪声）**：
+```
+git rev-parse HEAD:extensions/ontology/edge-types/capital_acquisition.json
+  → c1e4cffa8cbd5c55eb4f0f3d44dead395217bdb3
+git hash-object extensions/ontology/edge-types/capital_acquisition.json
+  → c1e4cffa8cbd5c55eb4f0f3d44dead395217bdb3        # 两者相等 ⇒ 内容零漂移
+```
+3. **原始字节层（口径 W）**：`复原后 56 件口径W 比对：不一致 = 1 / 56`，唯一不一致件 = `capital_acquisition.json`。
+   🔴 **成因定性 = 复原动作本身经编辑工具重写（即"我在执行的那个动作"），不是源仓被改坏** —— 由第 1/2 层独立证成；**不得**读成"复原失败"。
+4. **语义层**：探针运行时真读权威01 第二章比对 ⇒ 该件 `transfer_function` 与权威公式**逐字一致**；`action_effect_lag` = `"[0,0.5]"` 与登记期望值一致。
 
 ---
 
@@ -114,7 +124,13 @@ PROBE_EXIT=1
 
 🔴 **U10（登记）**：`unknown` 在 loader 分类里落 **`prose_formula`**（非 `placeholder`）。
 经查 `src/l4/ontology-loader.ts` 原文，`prose_formula` 的 `injectable: false` ⇒ **不会**被注入实例 props ⇒ **无下游注入风险**。
-但它意味着 `B_output…`/真公式/`unknown` 三类在 loader 眼里同属"散文字符串" ⇒ **无法从分类上区分"已标定"与"未标定"**（语义缺口，归 CTO）。
+但它意味着 真公式/`unknown` 两类在 loader 眼里同属"散文字符串" ⇒ **无法从分类上区分"已标定"与"未标定"**（语义缺口，归 CTO）。
+
+### §6.1 🔴 B2「这条判据**测不出**什么」（队长 2026-10-12 要求逐字加入）
+
+> 「loader 的 `tf_prose` / `prose_formula` 分类**测不出**"已标定 vs 未标定"：**13 条真公式与 39 条 `unknown` 在 loader 层同落 `prose_formula`** ⇒ 本卡的 13/39 区分**仅由探针的运行时真读 + 逐字比对提供**，**不得**引用 loader 分类作为证据（例：`tf_prose 3 → 55` **不等于**"55 条都有公式"）。」
+
+⇒ **Loader 分类面（`-1031` 棘轮）与探针判定面（本卡主判据）是两个不同的证据源**：前者证明"占位串已清零"，**不**证明"哪几条是公式、哪几条是 `unknown`"；后者才是。
 
 ---
 
@@ -129,9 +145,10 @@ PROBE_EXIT=1
 
 | # | 未决项 | 归属 |
 |---|---|---|
-| U10 | `unknown` 与"真公式"在 loader 分类里同落 `prose_formula`（`injectable:false`，无注入风险，但**无法区分已标定/未标定**） | **CTO**（判据/schema 域） |
+| U10 | `unknown` 与"真公式"在 loader 分类里同落 `prose_formula`（`injectable:false`，无注入风险，但**无法区分已标定/未标定**）⇒ 本卡 13/39 的区分**只由探针真读比对提供**（见 §6.1） | **CTO**（判据/schema 域） |
 | U11 | 39 条 `unknown` 的**真公式缺失**（无仓内依据 ⇒ 不填）；公式执行面（compute 消费）**零消费方** | **另卡**（"不许自填"纪律的必然结果） |
 | U12 | 归一化口径（` ; ` 连接）为**本卡声明**，权威文档未规定字段承载形态 | **CTO 追认** |
+| **U13** | 🔴 **规则申请（同类第二次 ⇒ 提请立规则）**：门禁依赖的**声明载体（task brief）不在执行者写集内** —— #234 与 #235 **两次**都撞此墙（#234 组 6「今日无 brief」+ 组 12「Q2 无写集」；#235 同型）。**同型第 2 次应用** = 新建 `2026-10-12-235-K4-02-transfer-function-落值.md`（队长 2026-10-12 授权，同型第 2 次）。<br>**提请立规则**（二选一或并用）：**(a)** 当日 brief 的**创建权显式归属执行者**（附写集自动同步）；**(b)** 组 6/12 在「claim 已含逐条 writeset」时**免 brief Q2 逐条**要求。 | **CTO（立规则）** |
 
 ---
 
