@@ -2,13 +2,15 @@
 #   分支 k4b3/l2-234-235 ｜ base ba1b22a8b5 ｜ 实施 impl-b ｜ 2026-10-12
 #   本件 = **本卡段**写集；#235 提交时会把本件更新为 **PR 全量并集**（D708 以 PR 全量变更集为对账对象）
 #   🔁 **续做笔（2026-10-12 深夜）**：分支 **k4b3/234-l2seq58** ｜ base **aa085e1f1** ｜ 实施 **impl-c**
-#      —— 「56 字面基数」改造 ＋ 同件第二根因（B6 陈旧期望）收口
-#      ⇒ 本件 `writeset` 按纪律「**只列本 PR 真正改动的文件，不预授权**」（1134.yaml 先例）改为该 PR 的 **5 条**；
-#        `done` / `note` 保持原样（**最小 diff**；本笔证据见下方新证据件）。
+#      —— 「56 字面基数」改造 ＋ 同件第二根因（B6 陈旧期望）收口（已合：PR #498 / merge d200c04bc）
+#   🔁 **续做第二笔（2026-10-13）**：分支 **k4b3/234-l2seq58b** ｜ base **d200c04bc** ｜ 实施 **impl-c**
+#      —— U-1（`numbering-authority.md` 16 处基数逐处标时点 ＋ L14 顺带修）
+#         ＋ U-4（三件判据件头部注明「删件检测已外包」＋静默消失风险）
+#         ＋ U-6（全量差集口径 = 两次跑交 ∩，落 `numbering-authority.test.ts` 头部）
+#      ⇒ 本件 `writeset` 按纪律「**只列本 PR 真正改动的文件，不预授权**」（1134.yaml 先例）改为该 PR 的真集。
 writeset:
   - .claude/claims/234.yaml
-  - .claude/task-briefs/2026-10-13-234-K4-01-l2seq58-基数推导化.md
-  - docs/synova/product-lines/evidence/K4-b3-l2seq-58-20261013.md
+  - docs/synova/coordination/numbering-authority.md
   - tests/coordination/numbering-authority.test.ts
   - tests/ontology/edge-lag-values.test.ts
   - tests/ontology/edge-transfer-functions.test.ts

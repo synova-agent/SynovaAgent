@@ -28,6 +28,13 @@
  *
  * 🔴 本件**证不了**什么：公式「与权威文档逐字一致」**不等于**「生产可执行」；
  *   实测 `src/` + `packages/` 对 `transfer_function` 无 compute 消费方 ⇒ 执行面属另案。
+ *
+ * 🔴 本件的**删件检测已外包**（本件改扫盘推导后不再检出「件被删」——期望值与实测值同源）：
+ *   承担方 = `tests/l4/edge-lag-unknown-degraded-1134.test.ts` 的 `N2-1`（`SPEC_EDGE_TYPES` 具名清单，且点名）
+ *            ＋ `tests/ontology/k4-05bis-edge-vocabulary-1350.test.ts`（预告件/集合锚）
+ *            ＋ `numbering-authority.test.ts` 的 #1350 集合锚（域外集被改）。
+ *   ⚠️ 若上述任一处被改坏或跳过，**本件的删件覆盖会静默消失**（无其他防线）。
+ *   ⚠️ 另：登记非权威件（`TFR_REGISTERED_OTHER`）的**值**本件 A5 只断言「非 `TBD` 字符串」⇒ **值被改不红**（U-5，归 #235 续做）。
  */
 import { afterAll, describe, expect, it } from 'vitest';
 import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
