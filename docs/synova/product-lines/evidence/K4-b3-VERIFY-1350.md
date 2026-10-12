@@ -106,3 +106,68 @@ L304: ⇒ **结论（按队长 D 裁定）**：**被生产代码消费（非文�
 - **A 段（卡面 ＋ claim ＋ #66 核验件）—— `可提请独立审计`**：写集 ≡ diff（3 件）、6 条 done 全部实跑通过、三处已知漂移（基数 55→57 改 56→58；卡面【边界】与受理裁定的冲突；#1134 前置解除）均已显式处置，且**claim 明确"不预授权"**（好做法）。
 - **B 段暂不可复核**，且**放行前须先补写集**（a-1）与钉"同构"分隔符口径（b-1）。
 - 本件共 2 处须改（a-1 归 lead、a-2 归 impl-c），均不动 A 段结论。
+
+---
+
+# 七、第二轮：交付件 `K4-b3-1350-edge-vocabulary.md` 复核
+
+> **对象**：`k4b3/l3-65` @ `0160b220313878b27cdaf2756b5280999ab3114b`（`git ls-remote` 实测）
+> **被审件 blob** = `f6ab7e84db436b3216320bc5fb0571e7f80f1293`（14188 B，146 行，**BOM = none**）
+> **diff 左端** = `ba1b22a8b5`；凡"逐件"读数一律**在 SHA 上取**（`git cat-file -p` 直读 blob，不经工作树）
+
+## 7.1 前提表 P-1…P-12 —— **逐条复核，全部吻合**
+
+| # | 件中声明 | 我的独立实测 | 判 |
+|---|---|---|---|
+| P-1 | `edge-types/` = **56** 件 | `git ls-tree -r --name-only ba1b22a8b5 -- extensions/ontology/edge-types/` 计 `.json` = **56** | ✅ |
+| P-2 | E 号在本体目录 **0 命中** | `git grep -c -E "E-[0-9]" -- extensions/ontology/` → 无输出 **exit 1** | ✅ |
+| P-3 | `$id` distinct **56**，全 `edge/` 前缀 | 逐件读 → **56 / 56**，前缀断言 `True` | ✅ |
+| P-4 | `label` distinct **56** | 逐件读 → **56** | ✅ |
+| P-5 | 分隔符三态 **45/5/6**；连字符 5 件 | 逐件正则 → **45 下划线 / 5 连字符 / 6 单字**；5 件名单与件内 §P-5 明细**逐字一致**（`decision_concentrates` / `external_assumption` / `incentive_binds` / `locks_in` / `signal_transmits`） | ✅ |
+| **P-6** | **key-order distinct = 2**：53 件 11 键 canonical；3 件多插 `diagnostic_signals` | 逐件 `Object.keys()` 去重 → **distinct = 2**；**53 件 = 11 键**（`$id,label,tags,allowedFrom,allowedTo,requiredProps,optionalProps,consumed_by_sentinels,action_effect_lag,transfer_function,description`）＋ **3 件 = 12 键**（在 `transfer_function` 与 `description` 之间插 `diagnostic_signals`）= `brand_builds` / `couples` / `cumulative_learning`；`git grep -l diagnostic_signals` 命中也恰为这 3 件 | ✅ **精确吻合** |
+| P-7 | `requiredProps` 无空 | 未复跑（低风险，件给逐件计数 `0/56`） | — |
+| P-8 | 两新边名各 **2** 处，**零实现** | `GOAL_DECOMPOSES_TO` = **2 处**、`PLAN_COMMITS_TO` = **2 处**，均落在 `docs/.../1134-edge-lag-unknown-degraded-20261009.md:635` 与 `tests/l4/edge-lag-unknown-degraded-1134.test.ts:126`（**说明性文本/注释**）⇒ "零实现"成立 | ✅ |
+| P-9 | 块级门禁改前基线 exit 0 | 未复跑（属重型/门禁类；且我上一轮已用同类门禁做过独立复跑，方法一致） | — |
+| P-10 | `autocrlf=true`；`check-attr` 空；工作树 **56/56 CRLF** | `core.autocrlf` = `true`；**工作树逐件实测 56/56 含 CRLF、0 件纯 LF** | ✅ |
+| P-11 | `'GOAL'` ← `goal-store.ts`；`'Goal'` ← `conversation-engine.ts` | `src/growth/goal-store.ts:169` = `store.createNode('GOAL', …)`；`src/agent/conversation-engine.ts:562` = `'Goal' as unknown as Parameters<typeof this.graphStore.createNode>[0],` **两处唯一串均逐字命中** | ✅ |
+| P-12 | `PLAN` 在 `src/` 共 **3** 处**全为注释** | `git grep -n "PLAN" ba1b22a8b5 -- src/` = **3 处**：`goal-types.ts:206`（`PLAN-K6 §0`）、`evidence-retention.ts:10/11`（`#PLAN-expireold-wiring` / `#PLAN-d660-data-lifecycle`）⇒ **全为注释**、`'PLAN'` 字面量不存在 | ✅ |
+
+## 7.2 🔴 a-1（须改）P-13 的**聚合数错**：不是「53 件存 CRLF」，实测 **10 件存 CRLF / 46 件存 LF**
+
+件中 P-13 原文：「**blob 层：53 件存 CRLF / 第 56 件 `goal_decomposition.json` 存 LF**」。
+
+**我的独立实测（口径 = 逐 blob `git cat-file -p <sha>` 原始字节，56 件全量）**：
+```
+blob 层含 CRLF 的件 = 10
+blob 层纯 LF 的件   = 46
+含 CRLF 的 10 件（全列，不截断）：
+  augments.json            (CRLF=54, bareLF=0, bytes=1299)
+  constrains.json          (CRLF=45, bareLF=0, bytes=1171)
+  decision_concentrates.json (CRLF=39, bareLF=0, bytes=1030)
+  deploys.json             (CRLF=70, bareLF=0, bytes=1714)
+  external_assumption.json (CRLF=44, bareLF=0, bytes=1187)
+  funds.json               (CRLF=54, bareLF=0, bytes=1223)
+  incentive_binds.json     (CRLF=42, bareLF=0, bytes=1095)
+  locks_in.json            (CRLF=41, bareLF=0, bytes=1031)
+  produces.json            (CRLF=48, bareLF=0, bytes=1199)
+  signal_transmits.json    (CRLF=56, bareLF=0, bytes=1437)
+```
+- **件里引用的 4 个样本逐个复算，全部吻合**：`augments` 1299 B / CRLF 54 ✔、`locks_in` 1031 B / CRLF 41 ✔、`signal_transmits` 1437 B / CRLF 56 ✔、`goal_decomposition` 1653 B / CRLF 0・裸 LF 35 ✔（⇒ "第 56 件存 LF" 这一半**成立**）。
+- **错在聚合**：把"4 个样本里有 3 个 CRLF"外推成"53 件 CRLF"。
+- **为什么样本没抓到**：件里选的 3 个 CRLF 样本恰好**全在那 10 件之内**（三件都是 legacy 组），而 46 件 LF 的大多数一件没采 ⇒ **样本支持假设、总体不支持假设**（典型抽样盲区）。
+- **疑似串号线索（供定位，不作定论）**：`53` 这个数**同时出现在 P-6**（53 件 = 11 键 canonical 顺序）——两行可能串了。
+- **正确表述建议**：「blob 层 **10 件存 CRLF / 46 件存 LF**（含 `goal_decomposition.json`）；工作树层 **56/56 CRLF**（autocrlf）⇒ **两层不一致确实存在**」——注意：**修正后结论方向不变**（两层不一致仍成立，因为 46 件 blob 为 LF 而工作树全 CRLF），故本条属**数字错、结论不倒**，但 **B 段"新件落哪一组"的依据必须换成 10/46**。
+- **归属**：impl-c / 交付件 §一 P-13（**须改数**）；并建议对"聚合数"类判据补一条纪律：**给出 n 时须给"n 是抽样还是全量"**（本例 4 样本 vs 56 全量）。
+
+## 7.3 其余复核（结构面，未逐条跑）
+
+- §三「B 段待填清单」：**明确标注"本件当前不含以下内容"＋待放行** ⇒ 与"B 段冻结"一致 ✅（无"声称已做"）。
+- §五「A 段写集全列（提交后复跑）」＋「未提交项（逐字登记）」：**登记未提交项**是为防"引用了不存在的件"，做法正确 ✅。
+- §四 **W-11 跨域声明**：与本轮 a-1（写集缺口）呼应，方向正确 ✅。
+- **未复核**：P-7 / P-9（未复跑）、§二 F 组完整分析（我已在 `K4-b3-VERIFY-1412.md` 独立复核过同组，此处未重跑）。
+
+## 7.4 d 类：本轮结论用语
+
+**交付件 `K4-b3-1350-edge-vocabulary.md`（A 段骨架）—— `可提请独立审计`**，附 **1 处必改（a-1：P-13 聚合数 53 → 10/46；样本明细本身正确）**。
+**11 条前提（P-1…P-12 中我复跑的 10 条）逐条吻合，其中 P-6（key-order 2/53/3）与 P-12（`PLAN` 3 处全注释）精确到件名与行号** ⇒ 该件的前提实测**方法可靠**；唯一失分点是"用 4 个样本外推 56 件"。
+**B 段仍不可复核**（写集未补、放行信号未到）；放行前请把 P-13 的数改掉，否则 B 段"新件落哪一组"会建在错数上。
