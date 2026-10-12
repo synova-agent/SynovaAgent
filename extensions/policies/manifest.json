@@ -4,13 +4,14 @@
   "version": "1.0.0",
   "type": "policy",
   "displayName": "策略",
-  "description": "升级规则（escalation-rules.json）与数据访问维度策略（data-access.yaml）。",
+  "description": "升级规则（escalation-rules.json）。",
   "entryPoint": "./escalation-rules.json",
   "registry": "src/deploy/content-registry.ts",
   "readers": [
     "src/services/escalation-engine.ts"
   ],
   "knownGaps": [
-    "data-access.yaml 实测零读者（grep -rn data-access src/ packages/ --include=*.ts = 0 命中）——半孤儿，需另立卡接线或显式废弃"
+    "K12-16(#199) 已删除原 data-access.yaml（判据：零读者 ＋ 其自称替代目标 packages/engine-core/... 已按铁律 46 清零 ＋ 与活的 L0 DEFAULT_POLICIES 词汇表**实质不相交**（交集仅 risk 1 词）⇒ 逐字接线会使 7/7 专家证据被滤空）",
+    "被删内容中 L0 **没有**的两项待另立卡决定是否并入 L0：①每专家的 sensitiveAccess: read ② knowledge 专家条目（施工单 FILE-DRIVEN-EXEC-TASKS.md:168 记 L0 缺 knowledge）—— 本卡不迁，避免把「清不可达」变成「改数据边界策略」"
   ]
 }
