@@ -13,6 +13,6 @@
   },
   "consumed_by_sentinels": [],
   "action_effect_lag": "unknown",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "unknown",
   "description": "决定资金来源比例——治理层对资本结构(股债比、融资渠道选择)的决策影响资本池构成。"
 }

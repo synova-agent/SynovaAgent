@@ -13,6 +13,6 @@
   },
   "consumed_by_sentinels": [],
   "action_effect_lag": "[0,0.5]",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "C_available = equity_raised + debt_raised + retained_earnings ; cash_runway_months = C_available / monthly_burn",
   "description": "获取资本——企业从外部资本市场通过股权/债权/融资等方式获取资金的输入阀。"
 }

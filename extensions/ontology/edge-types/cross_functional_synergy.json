@@ -13,6 +13,6 @@
   },
   "consumed_by_sentinels": [],
   "action_effect_lag": "[3,6]",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "synergy_score = cross_team_output / (sum(team_individual_output) + coordination_cost) ; internal_coordination_cost = coordination_cost / total_operating_cost",
   "description": "跨部门协同提升产出质量(二阶)——活动池中的协同效应提升运营执行和创新产出的效率（取代原COUPLES）。"
 }

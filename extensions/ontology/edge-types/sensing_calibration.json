@@ -12,6 +12,6 @@
   },
   "consumed_by_sentinels": [],
   "action_effect_lag": "unknown",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "unknown",
   "description": "感知经验的内化(二阶)——历史感知经验修正感知系统的filter_bias，形成学习型感知机制。"
 }

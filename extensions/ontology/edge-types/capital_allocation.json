@@ -13,6 +13,6 @@
   },
   "consumed_by_sentinels": [],
   "action_effect_lag": "[0.5,1]",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "allocation_efficiency = Sum(budget_i * roi_i) / total_budget ; reallocation_frequency = 再分配次数 / 周期",
   "description": "资金分配到活动——资本池中的资金按照决策分配到各业务活动的内部转化阀。"
 }

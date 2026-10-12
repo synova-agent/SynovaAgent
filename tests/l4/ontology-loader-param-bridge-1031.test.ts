@@ -91,8 +91,10 @@ const BASELINE_EDGE_TYPES = 56;
 /** 真仓逐件分类计数（用 loader 本体读 56 件实测；python/tsx 原始输出见证据件 §A.0-b）。 */
 const BASELINE_TALLY: Record<string, number> = {
   tf_resolved: 0,
-  tf_placeholder: 53,   // 「TBD — to be defined in compute phase」×52 ＋ `goal_decomposition` 的「N/A — …」×1
-  tf_prose: 3,          // brand_builds / couples / cumulative_learning
+  tf_placeholder: 1,    // K4-02（#235）后仅剩 `goal_decomposition` 的「N/A — …」×1（原 53 = 52 条 TBD + 1）
+  tf_prose: 55,         // K4-02 后 = 39 条显式 `unknown` + 13 条权威01 第二章公式 + 原有 3 条真公式
+                        //   ⚠️ `unknown` 在 loader 分类里落 `prose_formula`（非 placeholder），
+                        //   但该状态自带 `injectable:false` ⇒ **不会**被注入（登记见交付件 U10）
   tf_other: 0,
   cs_declaration: 55,   // optionalProps 内描述串 ×55（批 2 不变）
   cs_resolved: 0,       // 🔴 真仓**零数值**（未交③ 的机器可判证据）
@@ -404,9 +406,9 @@ describe('#1031 V5(L2-真跑) 真实 56 件 edge-types 过桥实测', () => {
 
     const byKey = Object.fromEntries(r!.params.map(p => [p.key, p]));
 
-    // transfer_function：顶层，实测为占位串 ⇒ 降级
-    expect(byKey.transfer_function.status).toBe('placeholder');
-    expect(String(byKey.transfer_function.declaredAs)).toContain('TBD');
+    // transfer_function：顶层，K4-02（#235）后 = 显式 `unknown`（非占位串）⇒ `prose_formula`（injectable:false）
+    expect(byKey.transfer_function.status).toBe('prose_formula');
+    expect(String(byKey.transfer_function.raw)).toBe('unknown');
 
     // causal_strength：optionalProps 内，实测为声明串 ⇒ 降级（类型层无值）
     expect(byKey.causal_strength.status).toBe('declaration_only');

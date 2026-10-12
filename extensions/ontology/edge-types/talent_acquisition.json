@@ -13,6 +13,6 @@
   },
   "consumed_by_sentinels": [],
   "action_effect_lag": "[1,3]",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "T_inflow = hiring_efficiency * employer_attractiveness * market_talent_supply ; hiring_efficiency = hires_completed / open_positions_per_period ; employer_attractiveness = f(brand_strength, compensation_competitiveness, culture_health)",
   "description": "获取人力——企业从外部人才市场招聘新员工的输入阀。受TALENT_FILTER的selection_threshold调节。"
 }

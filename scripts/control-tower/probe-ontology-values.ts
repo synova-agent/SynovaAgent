@@ -48,7 +48,10 @@
  *                · **同标签命中 4 条**（E-07/E-17/E-23/E-38）⇒ 值必须 === §3.5.1 值
  *                  否则 `与 §3.5.1 相冲`
  *                · **无同标签 4 条**（E-15/E-24/E-25/E-37）⇒ 值必须仍为 `unknown`
- *                  （**只登记、不改值**）否则 `缺口登记不符`
+ *                  （**只登记、不改值**）否则 `缺口登记不符`（措辞 = 「§3.5.1 无同标签边」）
+ *                · **有同标签但依裁定 (a) 不落值 2 条**（E-17/E-38）⇒ 值必须仍为 `unknown`
+ *                  （理由 = **不在桶域内**，**非**"无同标签边"、**非**"近邻≠同标签"；
+ *                   违规措辞按子类分，见 `gapKind`）
  *   G4 未覆盖项登记 §3.5.1 未覆盖的 3 条 E 号（E-05/E-13/E-28）**不判相冲**，但必须登记在册
  *                且值 === 登记值（登记值来源逐条注明）⇒ 否则 `登记不符`
  *   G5 非因果登记 唯一域外边（`tags` 不含 `causal`）必须 === `NON_CAUSAL_REGISTRY`
@@ -112,6 +115,13 @@ export interface S351Entry {
   readonly max: number;
   readonly alignment: 'exact_label' | 'no_same_label';
   readonly expectation: 'align_value' | 'register_gap';
+  /**
+   * `expectation='register_gap'` 的**子类**（必填）—— 防把两类不同理由混成一类（F1 形态）：
+   * · `no_same_label`              = §3.5.1 **无同标签边**（E-15/E-24/E-25/E-37，4 条）
+   * · `exact_label_not_migrated`   = **有**同标签命中，但**依裁定 (a) 不落值**（E-17/E-38，2 条）
+   *   ⇒ 理由 = 「**不在桶域内**」（`unknown` 本就不在桶标签域），**不是**"无同标签边"、**也不是**"近邻≠同标签"
+   */
+  readonly gapKind?: 'no_same_label' | 'exact_label_not_migrated';
   readonly basis: string;
 }
 
@@ -120,25 +130,25 @@ export const S351_TABLE: readonly S351Entry[] = [
     alignment: 'exact_label', expectation: 'align_value',
     basis: 'label=TALENT_ACQUISITION 精确命中（§3.5.1 原文行：`| E-07 | TALENT_ACQUISITION | 1 | 3 | 招聘周期：发布→入职→上手 |`）；§3.4 附录A 亦为 `1-3_months` ⇒ 两节一致' },
   { e: 'E-15', authName: 'HUMAN_DEPLOYMENT', file: 'talent_deployment.json', min: 1, max: 3,
-    alignment: 'no_same_label', expectation: 'register_gap',
+    alignment: 'no_same_label', expectation: 'register_gap', gapKind: 'no_same_label',
     basis: 'label 精确命中 0 件（实测 56 件 label 无 HUMAN_DEPLOYMENT）⇒ 登记为缺口、**不改值**。语义近邻 = talent_deployment（description「人力分配到任务」同义），但**近邻 ≠ 同标签** ⇒ 不据以取值' },
   { e: 'E-17', authName: 'INCENTIVE_ALIGNMENT', file: 'incentive_alignment.json', min: 0.5, max: 1,
-    alignment: 'exact_label', expectation: 'register_gap',
+    alignment: 'exact_label', expectation: 'register_gap', gapKind: 'exact_label_not_migrated',
     basis: 'label=INCENTIVE_ALIGNMENT 精确同标签命中，但**本卡不改其值**（队长 2026-10-12 裁定 (a)）：该件 base 现值为 `unknown`，**不在 §3.4 桶域内 ⇒ 无可迁移之物**；把未标定字段标定为已标定 = **语义升级/新增数据**，属扩面，须 CTO 定（纪律「不许自填」）。⇒ 登记为「§3.5.1 有值、本卡不落值」待 CTO 追认。🔴 与卡面 Done ②「能对上的逐条对齐」存在**口径缺口**，已在交付件 §8 显式登记。§3.5.1 值为 (0.5,1)' },
   { e: 'E-23', authName: 'OPERATIONAL_EXECUTION', file: 'operational_execution.json', min: 0, max: 0.5,
     alignment: 'exact_label', expectation: 'align_value',
     basis: 'label=OPERATIONAL_EXECUTION 精确命中（§3.5.1 原文行：`| E-23 | OPERATIONAL_EXECUTION | 0 | 0.5 | 运营调整：决策→执行变化（实时） |`）。🔴 与 §3.4/附录A（`3-6_months`⇒[3,6]）**互斥**，按 CTO 裁定 ④ 以 §3.5.1 优先（`S34_VS_S351_CONFLICTS`）' },
   { e: 'E-38', authName: 'TALENT_RETENTION', file: 'talent_retention.json', min: 3, max: 6,
-    alignment: 'exact_label', expectation: 'register_gap',
+    alignment: 'exact_label', expectation: 'register_gap', gapKind: 'exact_label_not_migrated',
     basis: 'label=TALENT_RETENTION 精确同标签命中，但**本卡不改其值**（队长 2026-10-12 裁定 (a)，理由同 E-17）：base 现值 `unknown`，不在桶域内。⇒ 登记为「§3.5.1 有值、本卡不落值」待 CTO 追认。§3.5.1 值为 (3,6)；§3.4/附录A 亦为 `3-6_months` ⇒ **两源一致**（仅"落不落值"未定）' },
   { e: 'E-25', authName: 'BRAND_CONSTRUCTION', file: 'brand_building.json', min: 6, max: 12,
-    alignment: 'no_same_label', expectation: 'register_gap',
+    alignment: 'no_same_label', expectation: 'register_gap', gapKind: 'no_same_label',
     basis: 'label 精确命中 0 件 ⇒ 登记为缺口、**不改值**。语义近邻候选 = brand_building（label BRAND_BUILDING「品牌建设」）；🔴 排除 brand_builds.json 的依据（可判）：实测 56 件中仅 **42** 件属规范化标签族（tags 含 first_order|second_order）——恰与权威01 第二章的 42 条 E 号同数；brand_building 属该族，brand_builds（tags=causal|growth|marketing|lagged）**不属**' },
   { e: 'E-24', authName: 'INNOVATION', file: 'innovation_output.json', min: 6, max: 18,
-    alignment: 'no_same_label', expectation: 'register_gap',
+    alignment: 'no_same_label', expectation: 'register_gap', gapKind: 'no_same_label',
     basis: 'label 精确命中 0 件 ⇒ 登记为缺口、**不改值**。语义近邻 = innovation_output（label INNOVATION_OUTPUT，属规范化标签族 42 件之一）；§3.4 附录A **无** E-24 ⇒ 两节不可比' },
   { e: 'E-37', authName: 'PROFIT_REINVEST', file: 'profit_reinvestment.json', min: 3, max: 9,
-    alignment: 'no_same_label', expectation: 'register_gap',
+    alignment: 'no_same_label', expectation: 'register_gap', gapKind: 'no_same_label',
     basis: 'label 精确命中 0 件 ⇒ 登记为缺口、**不改值**。语义近邻 = profit_reinvestment（label PROFIT_REINVESTMENT，属规范化标签族）。🔴 与 §3.4 附录A（`6-12_months`⇒[6,12]）**互斥**，以 §3.5.1 优先（登记见下）' },
 ];
 
@@ -285,6 +295,8 @@ export interface EdgeFileSample {
   label: string;
   tags: string[];
   lag: unknown;
+  /** `transfer_function` 原值（#235 K4-02 判定面用） */
+  tfr: unknown;
 }
 
 export class ProbeEnvError extends Error {}
@@ -316,6 +328,7 @@ export function loadEdgeFiles(dir: string): EdgeFileSample[] {
       label: typeof d.label === 'string' ? d.label : `<NO label:${n}>`,
       tags: Array.isArray(d.tags) ? d.tags.filter((t): t is string => typeof t === 'string') : [],
       lag: d.action_effect_lag,
+      tfr: d.transfer_function,
     });
   }
   return out;
@@ -405,10 +418,14 @@ export function auditLagValues(samples: readonly EdgeFileSample[]): LagAudit {
           registeredCount += 1;
         }
       } else if (s.lag !== UNKNOWN_MARKER) {
-        // 无同标签边 ⇒ 只登记、不改值：值必须仍为 `unknown`
+        // 只登记、不改值：值必须仍为 `unknown`；**措辞按子类分**（防两类不同理由混成一类）
+        const why =
+          s351.gapKind === 'exact_label_not_migrated'
+            ? '有同标签命中·依裁定 (a) 不落值（理由 = 不在桶域内，**非**"无同标签边"）'
+            : '§3.5.1 无同标签边';
         violations.push(
-          `缺口登记不符 file=${s.file} $id=${s.id} (${s351.e} ${s351.authName} §3.5.1 无同标签边) ` +
-            `实测=${JSON.stringify(s.lag)} 期望="unknown"（近邻 ≠ 同标签 ⇒ 禁据以自填值）`,
+          `缺口登记不符 file=${s.file} $id=${s.id} (${s351.e} ${s351.authName} ${why}) ` +
+            `实测=${JSON.stringify(s.lag)} 期望="unknown"`,
         );
       } else {
         registeredCount += 1;
@@ -471,10 +488,14 @@ export function auditLagValues(samples: readonly EdgeFileSample[]): LagAudit {
     `REPORT §3.4↔§3.5.1 互斥登记（按 CTO 裁定以 §3.5.1 优先） ${S34_VS_S351_CONFLICTS.length} 条: ` +
       S34_VS_S351_CONFLICTS.map(c => `${c.e}(${c.s34} vs ${c.s351})`).join(' / '),
   );
+  const noLabel = S351_TABLE.filter(x => x.gapKind === 'no_same_label');
+  const notMigrated = S351_TABLE.filter(x => x.gapKind === 'exact_label_not_migrated');
   reportLines.push(
-    `REPORT §3.5.1 八条中无同标签边（缺口登记·**不改值**） ` +
-      `${S351_TABLE.filter(x => x.expectation === 'register_gap').length} 条: ` +
-      S351_TABLE.filter(x => x.expectation === 'register_gap').map(x => `${x.e} ${x.authName}`).join(' / '),
+    `REPORT §3.5.1 缺口登记 ${noLabel.length + notMigrated.length} 条` +
+      `（无同标签边 ${noLabel.length} ＋ 有同标签·依裁定不落值 ${notMigrated.length}）·**不改值**: ` +
+      `无同标签边 = ${noLabel.map(x => `${x.e} ${x.authName}`).join(' / ')} ；` +
+      `有同标签·依裁定(a)不落值 = ${notMigrated.map(x => `${x.e} ${x.authName}`).join(' / ')}` +
+      `（后者理由 = 不在桶域内，**非**"无同标签边"；其【落点判定】见 #238 numbering-authority.md §九.2.1 / T5）`,
   );
 
   // G5 非因果登记（唯一域外件必须恰为登记集）
@@ -514,6 +535,162 @@ export function auditLagValues(samples: readonly EdgeFileSample[]): LagAudit {
     violations,
     reportLines,
   };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// #235（K4-02）— `transfer_function` 落值判定面（H1–H4）
+// ═══════════════════════════════════════════════════════════════════
+
+/** 权威公式源（仓内；运行时**真读盘**，非冻结副本 ⇒ 文档改版即判红） */
+export const TFR_DOC_REL =
+  'docs/synova/research/权威文档01-本体层因果体系权威规范-20260714/SYNOVA-RESEARCH-第二章-42条因果边权威定义-v1-0-20260714.md';
+
+/** 占位串前缀（禁残留） */
+export const TFR_PLACEHOLDER_PREFIX = 'TBD';
+
+/**
+ * 13 条落公式件 —— 口径 = **`label` 精确串 === 权威01 第二章 `### E-NN: NAME` 的 NAME**
+ * （#235 用「E 号名精确命中」口径；**禁**语义近邻放宽，#234 用的是「E 号覆盖」口径，两者**不同源**，各自带口径名）。
+ */
+export const TFR_E_TO_FILE: readonly { readonly e: string; readonly authName: string; readonly file: string }[] = [
+  { e: 'E-05', authName: 'CAPITAL_ACQUISITION', file: 'capital_acquisition.json' },
+  { e: 'E-07', authName: 'TALENT_ACQUISITION', file: 'talent_acquisition.json' },
+  { e: 'E-13', authName: 'CAPITAL_ALLOCATION', file: 'capital_allocation.json' },
+  { e: 'E-17', authName: 'INCENTIVE_ALIGNMENT', file: 'incentive_alignment.json' },
+  { e: 'E-18', authName: 'RULE_CONSTRAINT', file: 'rule_constraint.json' },
+  { e: 'E-20', authName: 'KNOWLEDGE_SHARING', file: 'knowledge_sharing.json' },
+  { e: 'E-22', authName: 'ROUTINE_RIGIDITY', file: 'routine_rigidity.json' },
+  { e: 'E-23', authName: 'OPERATIONAL_EXECUTION', file: 'operational_execution.json' },
+  { e: 'E-28', authName: 'CROSS_FUNCTIONAL_SYNERGY', file: 'cross_functional_synergy.json' },
+  { e: 'E-29', authName: 'TECH_INFRASTRUCTURE', file: 'tech_infrastructure.json' },
+  { e: 'E-38', authName: 'TALENT_RETENTION', file: 'talent_retention.json' },
+  { e: 'E-39', authName: 'KNOWLEDGE_REUSE', file: 'knowledge_reuse.json' },
+  { e: 'E-40', authName: 'REPUTATION_FLYWHEEL', file: 'reputation_flywheel.json' },
+];
+
+/**
+ * 4 件**登记的非权威值**（**不在** #235 的 52 条 TBD 内 ⇒ 原样保留、逐条登记）：
+ * · `prose_formula`（3 件）：本卡前即有的真公式，来源**非**权威01 第二章 ⇒ 不动、登记
+ * · `structural_na`（1 件）：非因果结构性边，字段语义 = 结构性从属说明 ⇒ 不动、登记
+ */
+export const TFR_REGISTERED_OTHER: readonly { readonly file: string; readonly kind: 'prose_formula' | 'structural_na' }[] = [
+  { file: 'brand_builds.json', kind: 'prose_formula' },
+  { file: 'couples.json', kind: 'prose_formula' },
+  { file: 'cumulative_learning.json', kind: 'prose_formula' },
+  { file: 'goal_decomposition.json', kind: 'structural_na' },
+];
+
+/**
+ * 归一化口径（两侧同用，**声明式**）：按行切 → 逐行 trim → 丢空行 → 以 ` ; ` 连接。
+ * ⇒ 文件侧（单行 ` ; ` 连接）与文档侧（多行代码块）由此可比；**逐字比较**（改一个字符即红）。
+ */
+export function normalizeFormula(raw: string): string {
+  return raw.split(/\r?\n/).map(s => s.trim()).filter(s => s.length > 0).join(' ; ');
+}
+
+/** 从权威01 第二章抽取 `### E-NN: NAME` 段内 `**transfer_function**：` 后第一个围栏代码块 */
+export function extractAuthoritativeFormulas(docText: string): Record<string, string> {
+  const lines = docText.split(/\r?\n/);
+  const heads: { e: string; at: number }[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const m = /^### (E-\d+): (\S+)/.exec(lines[i]);
+    if (m) heads.push({ e: m[1], at: i });
+  }
+  const out: Record<string, string> = {};
+  for (const h of heads) {
+    let j = h.at;
+    while (j < lines.length && !/^\*\*transfer_function\*\*/.test(lines[j])) j++;
+    if (j >= lines.length) continue;
+    let k = j;
+    while (k < lines.length && !/^```/.test(lines[k])) k++;
+    const start = k + 1;
+    let end = start;
+    while (end < lines.length && !/^```/.test(lines[end])) end++;
+    out[h.e] = normalizeFormula(lines.slice(start, end).join('\n'));
+  }
+  return out;
+}
+
+export interface TfrAudit {
+  total: number;
+  formula: number;
+  unknown: number;
+  registeredOther: number;
+  /** `TBD` 残留件数 —— 探针末行 `TBD=<n>` 的口径源 */
+  tbd: number;
+  violations: string[];
+  reportLines: string[];
+}
+
+/**
+ * 审计一批边类型的 `transfer_function`。
+ *
+ * @input  samples — `loadEdgeFiles()` 产物；`formulas` — `extractAuthoritativeFormulas()` 产物
+ * @output 计数 + 逐条具名违规行（真文件名 + 原样值/期望值）
+ * @degraded 无：缺失/异常一律落到 `violations`（fail-closed）
+ * @error  不抛
+ */
+export function auditTransferFunctions(
+  samples: readonly EdgeFileSample[],
+  formulas: Record<string, string>,
+): TfrAudit {
+  const violations: string[] = [];
+  const reportLines: string[] = [];
+  const byFile = new Map(samples.map(s => [s.file, s]));
+  const eFileOf = new Map(TFR_E_TO_FILE.map(x => [x.file, x]));
+  const otherFileSet = new Set(TFR_REGISTERED_OTHER.map(x => x.file));
+  let formula = 0, unknown = 0, registeredOther = 0, tbd = 0;
+
+  for (const s of samples) {
+    const raw = typeof s.tfr === 'string' ? s.tfr : '';
+    if (typeof s.tfr === 'string' && s.tfr.startsWith(TFR_PLACEHOLDER_PREFIX)) {
+      tbd += 1;
+      violations.push(`TBD 残留 file=${s.file} $id=${s.id} value=${JSON.stringify(s.tfr)} ⇒ 本卡禁止 TBD 残留`);
+      continue;
+    }
+    const mapped = eFileOf.get(s.file);
+    if (mapped) {
+      const want = formulas[mapped.e];
+      if (!want) {
+        violations.push(`权威公式缺失 file=${s.file} (${mapped.e} ${mapped.authName}) ⇒ 文档解析失败（fail-closed）`);
+        continue;
+      }
+      if (normalizeFormula(raw) !== want) {
+        violations.push(
+          `公式与权威不一致 file=${s.file} $id=${s.id} (${mapped.e} ${mapped.authName}) ⇒ 实测与权威01 第二章逐字不等`,
+        );
+        continue;
+      }
+      formula += 1;
+      continue;
+    }
+    if (otherFileSet.has(s.file)) {
+      const kind = TFR_REGISTERED_OTHER.find(x => x.file === s.file)!.kind;
+      registeredOther += 1;
+      reportLines.push(`REPORT 登记非权威值 file=${s.file} kind=${kind} value=${JSON.stringify(s.tfr)}`);
+      continue;
+    }
+    if (raw === UNKNOWN_MARKER) {
+      unknown += 1;
+      continue;
+    }
+    violations.push(
+      `transfer_function 越允许集 file=${s.file} $id=${s.id} value=${JSON.stringify(s.tfr)} ` +
+        `⇒ 既非「权威公式（13 条）」、「unknown」（39 条）、亦非登记非权威值（4 条）`,
+    );
+  }
+
+  for (const x of TFR_E_TO_FILE) {
+    if (!byFile.has(x.file)) violations.push(`公式登记件缺失 file=${x.file} (${x.e} ${x.authName})`);
+  }
+  for (const x of TFR_REGISTERED_OTHER) {
+    if (!byFile.has(x.file)) violations.push(`登记非权威件缺失 file=${x.file} (${x.kind})`);
+  }
+  reportLines.push(
+    `REPORT transfer_function 面: 权威公式 ${formula} + unknown ${unknown} + 登记非权威 ${registeredOther} = ${formula + unknown + registeredOther} / 全部 ${samples.length}`,
+  );
+
+  return { total: samples.length, formula, unknown, registeredOther, tbd, violations, reportLines };
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -563,7 +740,7 @@ function main(): number {
   console.log(`── 权威源: 权威文档15 §3.5.1（一手原文，仓内）+ §3.4 换算表 + 权威01 第二章 E 号名`);
   console.log('');
   console.log(`── G1 值域（因果边）: 区间=${a.intervalCount} unknown=${a.unknownCount}（合计因果边 ${a.causal} / 全部 ${a.files}）`);
-  console.log(`── G3 §3.5.1 八条: 精确同标签·取值 ${S351_TABLE.filter(x => x.expectation === 'align_value').length} 条 + 无同标签·缺口登记 ${S351_TABLE.filter(x => x.expectation === 'register_gap').length} 条`);
+  console.log(`── G3 §3.5.1 八条: 同标签命中·取值 ${S351_TABLE.filter(x => x.expectation === 'align_value').length} 条 + 缺口登记 ${S351_TABLE.filter(x => x.expectation === 'register_gap').length} 条（无同标签边 ${S351_TABLE.filter(x => x.gapKind === 'no_same_label').length} ＋ 有同标签·依裁定(a)不落值 ${S351_TABLE.filter(x => x.gapKind === 'exact_label_not_migrated').length}）`);
   console.log(`── G4 §3.5.1 未覆盖项登记: ${S351_UNCOVERED.length} 条（规则 ${S351_UNCOVERED.filter(x => x.kind === 'rule').length} + 推导 ${S351_UNCOVERED.filter(x => x.kind === 'derivation').length}）`);
   console.log(`── G5 非因果域外登记: ${NON_CAUSAL_REGISTRY.length} 条`);
   console.log('');
@@ -572,23 +749,45 @@ function main(): number {
   for (const v of a.violations) console.log(`❌ ${v}`);
   if (a.violations.length > 0) console.log('');
 
+  // ── #235（K4-02）transfer_function 面：运行时**真读盘**权威01 第二章，逐字比对
+  let t: TfrAudit;
+  try {
+    const docAbs = join(process.cwd(), TFR_DOC_REL);
+    if (!existsSync(docAbs)) {
+      console.error(`[FAIL] 权威公式源不存在: ${docAbs}（fail-closed）`);
+      return 2;
+    }
+    t = auditTransferFunctions(samples, extractAuthoritativeFormulas(readFileSync(docAbs, 'utf-8')));
+  } catch (e) {
+    console.error(`[FAIL] transfer_function 判定面异常: ${(e as Error).message}`);
+    return 2;
+  }
+  console.log(`── H1–H4 transfer_function 面: 权威公式=${t.formula} unknown=${t.unknown} 登记非权威=${t.registeredOther}（合计 ${t.formula + t.unknown + t.registeredOther} / ${t.total}）`);
+  console.log(`── H2 禁 TBD 残留: TBD=${t.tbd}`);
+  for (const l of t.reportLines) console.log(l);
+  for (const v of t.violations) console.log(`❌ ${v}`);
+  console.log('');
+
   console.log('── LIMITS（本探针**证不了**什么，防「接线了 ≠ 被执行」误读）');
   console.log('   · [L1 真读盘] 只证明盘上值域已迁移且与 §3.5.1 对齐；**不**证明生产代码消费了该字段');
   console.log('     （实测 src/ + packages/ 对该字段零消费方 ⇒ 读取侧接线不在本卡写集，属遗留项）');
   console.log('   · 非因果结构性边（' + NON_CAUSAL_REGISTRY.join(', ') + '）的值**不做**值域判定——');
   console.log('     它在本探针口径下是「域外登记」，在 #1134 判据口径下仍是「唯一的具名规范违规」（见交付件）；');
   console.log('     两口径并存、都可见，**不是**静默放宽');
-  console.log('   · 不比对权威文档正文（E 号 ↔ 文件名映射为冻结表，逐条带依据；正文比对属另案）');
+  console.log('   · transfer_function 面**真读**权威01 第二章并**逐字**比对（归一化口径 = 按行 trim/丢空/` ; ` 连接）；');
+  console.log('     13 条之外一律 `unknown`（禁自填）；公式正确性 = 与权威文档逐字一致，**不等于**生产可执行');
   console.log('');
 
   const last =
     `RESULT=files=${a.files} causal=${a.causal} noncausal=${a.nonCausal.length} ` +
     `interval=${a.intervalCount} unknown=${a.unknownCount} registered=${a.registeredCount} ` +
-    `violations=${a.violations.length}`;
+    `violations=${a.violations.length} formula=${t.formula} tfr_unknown=${t.unknown} ` +
+    `tfr_registered=${t.registeredOther} TBD=${t.tbd}`;
   console.log(last);
 
-  if (a.violations.length > 0) {
-    console.error(`[FAIL] 违规 ${a.violations.length} 条（逐条见上）`);
+  const totalViolations = a.violations.length + t.violations.length;
+  if (totalViolations > 0) {
+    console.error(`[FAIL] 违规 ${totalViolations} 条（逐条见上）`);
     return 1;
   }
   console.log('[OK] 值域迁移判定全绿');

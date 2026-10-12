@@ -65,6 +65,6 @@
     "sentinel-cost-health"
   ],
   "action_effect_lag": "unknown",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "unknown",
   "description": "资源部署到活动。增长诊断最核心的因果边。"
 }

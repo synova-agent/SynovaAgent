@@ -49,6 +49,6 @@
     "sentinel-adaptation-velocity"
   ],
   "action_effect_lag": "unknown",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "unknown",
   "description": "资源增强。资源间的协同增强效应。"
 }
