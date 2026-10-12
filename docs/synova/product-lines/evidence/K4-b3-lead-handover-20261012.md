@@ -13,11 +13,13 @@
 ```
 3b2c51d090f2b8ba65bd7855a6bc558a3d679822  refs/heads/k4b3/234         L2 · #234 + #235
 eb5ab88a90e71cb2c1206e1291d2cd2404020e25  refs/heads/k4b3/238-239     L1 · #238 + #239
-6f53b727c90fa2dd9972da0753aed009645bb35f  refs/heads/k4b3/l3-65       L3 · A 段（B 段进行中）
-f96f9fd194ce191a7d979f9467d71b4c3e8a0884  refs/heads/k4b3/lead        队长治理件（6 笔）
+a7437498c70235a7ef5eaef13b7de960b464dd20  refs/heads/k4b3/l3-65       L3 · #65 A＋B 段（B 段已落，队长实测 58 件）
+00684e3973d08ccd97d850c7f91f18c5bdbcd47f  refs/heads/k4b3/lead        队长治理件（7 笔）
 94b064965b0abf4057c57662c2af9db9eb39c237  refs/heads/k4b3/verify      独立复核（15 笔 / 8 件出件）
 ```
 > PR **未开**（开 PR 需 CTO；`synova-commit` 只 auto-push 分支）。
+> **收口时点更新（2026-10-12T15:09+08:00）**：impl-c 在队长收口令**之前已完成 B 段并推送
+> ⇒ **六卡全部交付**。#65 由「未达」改为「**已交付、待独立复核**」（详见下表与 §七bis）。
 
 ---
 
@@ -29,7 +31,7 @@ f96f9fd194ce191a7d979f9467d71b4c3e8a0884  refs/heads/k4b3/lead        队长治�
 | **#239** 循环五阀 | 同上 | `559fb6b0e`→`eb5ab88a9` | ✅ | 🟡 **下一轮开验**（已 recon） | **达**（43 条逐字取 §5 模板、24 处非注释真消费、消费改硬编码⇒测试红、13/13） |
 | **#234** 值域迁移 | `k4b3/234` | `a96cd2b50` | ✅ | ✅ **8/8 逐条**（含"改输入即红"） | **达**（`interval=5` 即裁定自证、反例②双报、口径 W 5/5）**附 U8 口径缺口提请终裁** |
 | **#235** TBD 落值 | 同上 | `4653cba2a`→`3b2c51d09` | ✅ | ✅ `K4-b3-VERIFY-235.md` | **达**（`TBD=0` 末行、13 公式运行时真读、39 unknown、最小 diff 52×1 行） |
-| **#65** 边词表 | `k4b3/l3-65` | `97d659785`→…→`6f53b727c`（8 笔） | 🟡 **A 段 ✅ / B 段未落** | ✅ A 段（2 处必改已改） | **未达**（B 段 = 两件新边尚未落盘） |
+| **#65** 边词表 | `k4b3/l3-65` | `97d659785`→…→`6f53b727c`→`5f4f8648a`→`a7437498c` | ✅ **A＋B 段全交**（B 段收口前落盘） | 🟡 **待**（verifier 下一轮） | **达**（V1 58 件/同构 `canon11=55 canon12=3 bad=0`；V2 20/20 + `edgeTypes.length===58`；V3 删边 57/57/56 回落 + B5 自足造红） |
 | **#66** 守卫收口 | — | — | ✅ **裁定不实施** | ✅ `K4-b3-VERIFY-1412.md` | **已由 PR #392 落地**（走适配器路径） |
 
 **#238 判据面独立复核（verifier 原样）**：`V-1` 末行逐字命中且非硬编码｜`V-2` 删引用即红 + 口径 W 复原逐字节一致｜`V-3` 表 A 42 行、计数 `13+6+2+2+17+2=42` 自洽、章间分歧三章并列｜`V-4` GLOSSARY 冲突显式标注且旧编号保留｜`V-5` 结构 ✅（**未跑 vitest，记 b**）｜`V-6` ⚠️ **probe 无自动执行链**（另案）。
@@ -126,39 +128,41 @@ $ git rev-parse local-main           → fatal: unknown revision（refs 内不�
 
 ---
 
-## 七、未完成项（**唯一**）：#65 B 段 —— 完整开工口径（可直接接力）
+## 七、未完成项
 
-**前置已备**：`k4b3/l3-65 @ 6f53b727c`（A 段 8 笔已推，`extensions/ontology/edge-types/` **零写入**）。
-**放行条件已满足**（L2/L1 均落地，无其他写者）。
+**无。** 六卡全部交付。
 
-**锁定写集（9 条裸路径，禁 glob）**
+### 七bis、#65 B 段落地实测（队长独立验证，`a7437498c`）
+
 ```
-.claude/task-briefs/2026-10-11-1350-K4-05bis-边词表-目标层级边与计划边.md
-.claude/claims/1350.yaml
-docs/synova/product-lines/evidence/K4-b3-1350-edge-vocabulary.md
-docs/synova/product-lines/evidence/K4-b3-1412-status-recheck.md
-extensions/ontology/edge-types/goal_decomposes_to.json      （待 N3/N4 确认）
-extensions/ontology/edge-types/plan_commits_to.json         （待 N3/N4 确认）
-extensions/ontology/manifest.json
-packages/ontology/src/edge-types.ts
-tests/ontology/k4-05bis-edge-vocabulary-1350.test.ts
+$ git ls-tree -r --name-only a7437498c -- extensions/ontology/edge-types/ | wc -l   → 58（56 + 2）✅
+$ git diff --name-only ba1b22a8b5..a7437498c                                        → 9 条（= 锁定写集，零多出零缺失）✅
+两件新边 $id/label/lag/tf：edge/goal_decomposes_to[GOAL_DECOMPOSES_TO] unknown/unknown
+                          edge/plan_commits_to[PLAN_COMMITS_TO]       unknown/unknown
 ```
-**禁入**：`tests/l4/edge-lag-unknown-degraded-1134.test.ts`、`tests/l4/ontology-loader-param-bridge-1031.test.ts`（归 L2）、`scripts/audit/**`、`claims/201.yaml`、`claims/345.yaml`。（Note **不提交**，择路 (b) 已获采信。）
+**description 已含**（逐字）：方向声明（父→子 / 计划→目标）｜**不复用 GOAL_DECOMPOSITION 的理由**（R8，避免污染 `consumed_by`）｜端点字面量声明（本体词表无 goal/plan ⇒ 运行时字面量，将来建须迁移）｜**双枚举 `["GOAL","Goal"]` 依据**（SQLite type 大小写敏感 + 两个生产写入方 + `GOAL_NODE_TYPE_LOCALS` fail-closed）｜`unknown` 而非 `TBD` 的理由（#235 全域 `TBD=0` + 铁律 8）｜**⚠️ 命名待 N3/N4 认领确认**。
+**`PLAN_COMMITS_TO` 的 subject 侧**已**如实声明**「`src/` 内不存在 `'PLAN'` 节点字面量（3 处命中全为注释）⇒ 该端点属 #1316 将建；本边只声明端点、不主张已有写入方」—— **禁凭名字推** 已落实。
 
-**锁定口径（5 条）**
-1. 桶 = **规范 6 / 实用 5**，**必须带口径**；`>12_months` **纳入合法值域**。
-2. 两件新边 `action_effect_lag` / `transfer_function` = **`unknown`**（**不用 `TBD`**，否则打红 #235 全域 `TBD=0`）。
-3. `manifest.json` 的 `edgeTypes` 按 **+2 后实数**填。
-4. **落组以实测为准**（多为 **LF 组 46/56**）⇒ `git cat-file` 实测，**不得当既定**。
-5. **跨域单 PR + 显式声明**（`extensions/ontology/` × `packages/ontology/src/` 属同一逻辑域＝本体边词表；常量与 JSON **必须成对落地**）。
+**三条判据各自有反向造红**：V1 由 **H2**（2 件 × 3 型注入 = 6/6 变红 + 阴性对照）｜V3 由 **B5**（把 A1 断言施加到缺件沙箱 ⇒ **必抛**；期望改 57 ⇒ 不抛 = **自足证明**）｜块级由**删字段造红 → 口径 W SHA256 逐字节一致**（`1d145c49…`）。
 
-**已备好的判别性夹具（impl-c 预建，已在现有 56 件上验分辨力）**
-- **H1 两层行尾读数**：基线 `56 件 / blob 层 10 CRLF / 工作树层 56 CRLF`；造红（副本改 1 件为 LF）⇒ **55**；可逆 ⇒ **56** ✅
-- **H2 同构断言（11 键 + 键顺序）**：基线 `canonical11=53 / canonical12=3 / bad=0`（12 键组 = `brand_builds`/`couples`/`cumulative_learning`）；造红（删键/换序/加键）⇒ `bad`；**阴性对照**（未改动 blob ⇒ `canon11`，非恒红）✅
+**🔴 落盘撞到的 3 道门禁（根因全在 impl-c，已修并留痕）**：
+`## 写集` 必须是 **Markdown 表格**（写成代码块+bullet ⇒ 反引号包裹 ⇒ 恒不中）｜`Done` 必须是 **`- [x] verify:` 行**｜`<!--` 行**必须含 `#CRITERIA`**。
+> **A 段 8 笔为何没撞**：A 段 staged 全为 `.claude/`+`docs/` ⇒ 组 12 的 `skip_re` 跳过、且走纯 docs 快速通道**跳过 plan-integrity** ⇒ **"没被检查"不等于"没错"**。
 
-**落地顺序（12 步）**：两件新边（11 键 canonical 序 + CRLF + `description` 迁移声明 + 双端点字面量依据）→ `manifest.json`（实数）→ `EdgeType`/`ALL_EDGE_TYPES` **成对** + W-8 登记段（52→54 **行为变化**：`entity-resolver.ts:215` 邻居类型向量维随数组长度变；无测试钉长度）→ 新测试件（正常/同构/认领/桥可读/**删掉即报红**）→ `check-ontology-fields.sh` **58 件 exit 0** + 删字段造红 → **口径 W** 复原 SHA256 → 交付件补 P-13/D8b/W-9/W-10/W-11 → 重跑写集全列 → 提交。
+**🔴 NEW-1（跨件增量，归 L2/R-2，impl-c 零写、已如实登记）**：新件 `transfer_function="unknown"` **不被** #1031 桥的 placeholder/declaration 正则命中 ⇒ 判 **`prose_formula`** ⇒ `tests/l4/ontology-loader-param-bridge-1031.test.ts` 的 `BASELINE_TALLY` 将 **`tf_prose: 3 → 5`**（`tf_placeholder` 保持 53、`tf_edges` 56→58）。
+**NEW-2**：`manifest.json` 的 `description` 散文「(17)/(14)」为存量表述，**本卡不动**（CTO §5 只裁定 `edgeTypes` 字段）。
 
-**★ 遗留的 +2 增量归属**：L3 的 +2 件会让 `tests/l4/edge-lag-unknown-degraded-1134.test.ts` 的 `BASELINE_TOTAL = 56` → **58**（同类：`ontology-loader-param-bridge-1031.test.ts` 的 `BASELINE_EDGE_TYPES`）⇒ 该两件**归 L2 后续同步**（队长已裁定），B 段落地后需补一笔。
+**口径 5 条逐条落地**：桶 **6/5 带口径**（#65 零桶数、不入判据）｜新边 lag/tf = **`unknown`**｜`manifest.edgeTypes` = **实测 58**｜**落组实测确认**（本卡 2 件 **blob 纯 LF ⇒ 落 LF 组，现 48/58**；"与 53 件 CRLF 同形态"的旧方向**已订正留痕**）｜**跨域单 PR 显式声明**（已进交付件）。
+**tsc 增量零**：BASE 与 HEAD 均 **29** 条，`Compare-Object` 差异为**空**（基线段用临时 worktree + junction，**已 `rmdir` 摘除后 `remove`**，原 `node_modules` 完好）。
+
+---
+
+## 七ter、遗留的跨线增量（**唯一**待补动作）
+
+`#65` 的 +2 件会让两件 L2 域的测试常量漂移 ⇒ **归 L2（impl-b），非缺陷**：
+1. `tests/l4/edge-lag-unknown-degraded-1134.test.ts` 的 **`BASELINE_TOTAL 56 → 58`**（`BASELINE_DEGRADED` 不变：新件 lag = `unknown`）
+2. `tests/l4/ontology-loader-param-bridge-1031.test.ts` 的 **`BASELINE_EDGE_TYPES 56 → 58`** ＋ **`BASELINE_TALLY.tf_prose 3 → 5`**（NEW-1）
+> 队长裁定：该两件归 L2 先改（同文件同一时间只有一个写者）。**合并顺序建议：L2 补这笔 → 再合 #65**。
 
 ---
 
@@ -181,8 +185,10 @@ tests/ontology/k4-05bis-edge-vocabulary-1350.test.ts
 - `#239`：**可提请独立审计**（待 verifier 出件；自验已过）
 - `#234`：**可提请独立审计**（8/8 逐条；附 2 处改字级 + U8 提请终裁）
 - `#235`：**可提请独立审计**（`K4-b3-VERIFY-235.md` 已出；附 2 处改字级）
-- `#65`：**A 段可提请独立审计 / B 段未落** ⇒ **卡未完成**
+- `#65`：**A＋B 段已交付**（V1/V2/V3 各有实测 + 各自反向造红）⇒ **卡面 Done 达**；独立复核待出（verifier 下一轮）
 - `#66`：**已落地（PR #392），按现状重判关卡**
+
+**⇒ 六卡全部交付，全部标 `可提请独立审计`（#65 的独立复核件待出）。**
 
 ⇒ **通过与否归 CTO 收件闸 + K3 终审。合并权在 CTO，本队不合并。**
 
