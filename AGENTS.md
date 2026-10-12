@@ -1,6 +1,9 @@
 # AGENTS.md — SynovaAgent
 
 > **V7.0 | 2026-10-12** | 对齐**产品宪章 v8.1**（判据中枢）｜ 本地软提示 + CI 权威门禁 + 契约门禁 + 认领制 + 跨 session 隔离
+> 🔴 **门禁可解析元信息**（**真值，勿手改**；改前跑 `bash scripts/doc-system/check-doc-truth.sh`）：
+> **控制塔 V5.2.7** ｜ **6位专家**（`expert/expert-registry.yaml`，enabled=6）｜ **13 组 pre-commit**（`scripts/pre-commit-check.sh` 自声明）｜ **桌面端**（品牌表层，切片 A/B/C 已闭环）
+> **流程约束 V4.5.1**
 > **架构基准（唯一）**：**产品宪章 §0.4 ＋ §4.1**（⓪①②③④⑤⑥ ＋ −1 运行时）—— **本文件一切"架构"表述以宪章为准**
 > 宪章路径：`~/山河研究院/04-技术研究/专题研究/CTO委托-基座治理/产品宪章.md`
 > **任务唯一编号 = Issue 号**（**D 号已退役**）｜ **本件 ≤15 KB**（**预算 65,536 硬上限**）
@@ -20,17 +23,22 @@
 ⇒ 因此：**改某块之前，先显式打开该块的守则**
 ```
 
-| 你要改什么 | 先读哪份守则 | 归属 |
-|---|---|---|
-| **哨兵**（加／改／退役） | `extensions/sentinels/AGENTS.md` | 产品线 |
-| **本体／因果边／图存储** | `src/l4/AGENTS.md` | 产品线 |
-| **专家**（`expert/**`） | `expert/AGENTS.md` | 产品线 |
-| **洞察层**（`src/l3/**`） | `src/l3/AGENTS.md` | 产品线 |
-| **门禁／控制塔脚本** | `scripts/control-tower/AGENTS.md` | 治理线 |
-| **CI／workflow** | `.gitea/AGENTS.md` | 治理线 |
-| **文档体系** | `docs/AGENTS.md` | 治理线 |
-| **控制塔测试** | `tests/control-tower/AGENTS.md` | 治理线 |
-| **写决策** | `decisions/` 的六段模板（`docs/synova/DOC-CONTRACT.md`） | CTO |
+🔴 **状态列口径（2026-10-13 加，独立复核指出）**：域级件**除首份外均尚未入库**——
+其内容在**未合入的 `pr948` 分支**（`587726182`，D1125）。**下表的"待建"＝该文件当前不存在**，
+**不是"可读但未列为必读"**。本件**只提供索引位置**，**不假装它们已存在**。
+
+| 你要改什么 | 先读哪份守则 | 归属 | 状态（as_of 2026-10-13） |
+|---|---|---|---|
+| **哨兵**（加／改／退役） | `extensions/sentinels/AGENTS.md` | 产品线 | ⚠️ **待建**（草稿已成，未入库） |
+| **本体／因果边／图存储** | `src/l4/AGENTS.md` | 产品线 | ⚠️ **待建** |
+| **专家**（`expert/**`） | `expert/AGENTS.md` | 产品线 | ⚠️ **待建** |
+| **洞察层**（`src/l3/**`） | `src/l3/AGENTS.md` | 产品线 | ⚠️ **待建** |
+| **门禁／控制塔脚本** | `scripts/control-tower/AGENTS.md` | 治理线 | ⚠️ **待建** |
+| **CI／workflow** | `.gitea/AGENTS.md` | 治理线 | ⚠️ **待建** |
+| **文档体系** | `docs/AGENTS.md` | 治理线 | ⚠️ **待建** |
+| **控制塔测试** | `tests/control-tower/AGENTS.md` | 治理线 | ⚠️ **待建** |
+| **任何一块的兜底** | `docs/synova/coordination/AGENTS-md-模板-20261002.md` | CTO | ⚠️ **待建**（同上，pr948 分支） |
+| **写决策** | `decisions/` 的六段模板（`docs/synova/DOC-CONTRACT.md`） | CTO | ✅ **在库** |
 
 > 🔴 **某块尚无守则 ⇒ 按「域级模板」补一份**（`docs/synova/coordination/AGENTS-md-模板-20261002.md`）：
 > **≤60 行 / ≤4KB** ｜ **与根件零重复** ｜ **三问齐**（是什么／谁改／怎么算完成） ｜ **判据机器可判**
@@ -168,6 +176,8 @@
 - **0** 协作对齐前置——先对齐再动手，**禁止假设共识**
 - **0-2** **测试先行 + 接线验收**（spec → test → impl → wire → review → merge）；**WIRE CHECK 是硬门禁**（`grep` 零结果 = 未完成）
 - **0-3** 多机 PR：**main 唯一真相** ｜ 一人一事一分支 ｜ 禁直推 main ｜ 禁 force push ｜ 禁 `git stash`（D312 事故）
+- **0-4** **数据资产备份**——代码三地备份，**数据须同样有异地副本**（`data/synova.db` 每日 03:30 由 launchd 备份到 iCloud Drive；**禁 `cp` 数据库**，用 `sqlite3 .backup` 加 integrity_check）；新机开工先验证 `launchctl list | grep synova.backup`
+- **0-5** **多 Agent 协作协议**——四角色两条线（开发/审计）；审计红线（违反等于事故）：**永不修改审计脚本**（`scripts/audit/**`）、**永不编写审计标准**、**禁止自我审计**；**同一模块同一时间只允许一个角色认领**；任务路由见 `docs/synova/coordination/TASK-ROUTING.md`
 - **49** **决策必须沉淀**（非平凡变更的 commit 须引 `memory/notes/` 四态 Note）
 
 **接线**
@@ -230,7 +240,7 @@
 |---|---|---|---|
 | **契约层** | **写代码前**：compute 的输入/输出/降级 | JSDoc ＋ `tests/` | 铁律 47/48 |
 | **装配层（集成线）** | **端到端能不能装起来** | `scripts/integration/e2e-*.ts` | 🔴 **摘掉任一接头 ⇒ 必红** |
-| **巡检层** | **定期跑，防漂移** | `scripts/control-tower/assembly-inspect.sh` | 三态退出码 ＋ 判别力自检 |
+| **巡检层** | **定期跑，防漂移** | `scripts/control-tower/assembly-inspect.sh` ⚠️ **待建**（2026-10-13 实测不存在） | 三态退出码 ＋ 判别力自检 |
 
 ---
 
