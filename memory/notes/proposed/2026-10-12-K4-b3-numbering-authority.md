@@ -16,7 +16,7 @@
 2. **`#239` 五阀字段名与平台**：新增 `valves` 字段，**不覆盖**既有 `edges[]`（同名不同物）。
    - 权威形态源 = `docs/synova/research/权威文档15-企业循环溢出导航系统-20260714/SYNOVA-RESEARCH-第一章-循环配置规范与动态加载机制-v1-0-20260714.md` §3.4（`edges` — 五阀映射）。
    - 五阀键名逐字 = `acquisitionValve` / `allocationValve` / `conversionValve` / `deliveryValve` / `recycleValve`；元素形态 = `{ edgeId, actionEffectLag }`。
-   - 桶标签 = **6 个**（`immediate` / `1_month` / `1-3_months` / `3-6_months` / `6-12_months` / `>12_months`）；派单件仅列 5 个，**漏 `>12_months`**，已登记。
+   - 桶标签 = **6 个**（`immediate` / `1_month` / `1-3_months` / `3-6_months` / `6-12_months` / `>12_months`）——**口径 = 规范定义（doc15 第一章 §3.4 图例）**；**实际使用 = 5 个**（JSON 值去重），`>12_months` **已定义未使用**。凡引用桶数**必须带此口径**（D10）。派单件仅列 5 个，**漏 `>12_months`**，已登记。
 
 3. **`#234` 值域迁移面 = 5 条桶标签**（实测）：`capital_acquisition` `immediate`、`capital_allocation` `1_month`、`talent_acquisition` `1-3_months`、`cross_functional_synergy` `3-6_months`、`operational_execution` `3-6_months`。
    - 换算：`immediate ⇒ [0,0.5]`（CTO 明文）；`1_month ⇒ [0.5,1]`（**推导**，理由 = 保「区间→桶」换算唯一性：`[0,1]` 会使 `immediate[0,0.5] ⊂ 1_month[0,1]` 重叠）；`1-3_months ⇒ [1,3]`；`3-6_months ⇒ [3,6]`。
