@@ -28,7 +28,7 @@ cp "$REPO/scripts/control-tower/weekly-selfcheck.sh" "$TMP/scripts/control-tower
 # 最小文件让第①-⑥项不 degrade/不误报（版本对齐 + 桌面端 + 专家数）
 printf '## V5.1.4\n' > "$TMP/.codex/control-tower/VERSION.md"
 printf '> V5.1.4\n桌面端\n7位专家\n软提示\n门禁 0-5\n' > "$TMP/AGENTS.md"
-printf '> V5.1.4\n桌面端\n' > "$TMP/CLAUDE.md"
+printf '> V5.1.4\n桌面端\n' > "$TMP/AGENTS.md"
 
 SELF="$TMP/scripts/control-tower/weekly-selfcheck.sh"
 

@@ -8,7 +8,7 @@
 #   3. 模板生成的 brief 实测含 ### c) 决策参考系（DS6 接线）
 #   4. doc-registry.json 注册 DECISION-REFERENCE.md
 #   5. inject-context.py 注入器含 DECISION-REFERENCE 引用
-#   6. CLAUDE.md 引用 DECISION-REFERENCE（新 session 必读）
+#   6. AGENTS.md 引用 DECISION-REFERENCE（新 session 必读）
 #   7. VERSION.md 含 V4.7.5（版本落地声明）
 #   8. 决策参考系字段含四步（①第一性原理 ②Anthropic ③开源实证 ④收敛）
 #
@@ -68,9 +68,9 @@ assert_contains "$(cat "$REGISTRY" 2>/dev/null)" "DECISION-REFERENCE" "doc-regis
 echo "── 5. 注入器引用 ──"
 assert_contains "$(cat "$INJECTOR" 2>/dev/null)" "DECISION-REFERENCE" "inject-context.py 含 DECISION-REFERENCE 引用" # swallow-ok: 文件缺失时测试读取（缺失=测试失败）
 
-# ── 6. CLAUDE.md 引用（新 session 必读）──
-echo "── 6. CLAUDE.md 引用 ──"
-assert_contains "$(cat "$REPO_DIR/CLAUDE.md" 2>/dev/null)" "DECISION-REFERENCE" "CLAUDE.md 引用 DECISION-REFERENCE（新 session 必读）" # swallow-ok: 文件缺失时测试读取（缺失=测试失败）
+# ── 6. AGENTS.md 引用（新 session 必读；CLAUDE.md 已于 2026-10-12 退役）──
+echo "── 6. AGENTS.md 引用 ──"
+assert_contains "$(cat "$REPO_DIR/AGENTS.md" 2>/dev/null)" "DECISION-REFERENCE" "AGENTS.md 引用 DECISION-REFERENCE（新 session 必读）" # swallow-ok: 文件缺失时测试读取（缺失=测试失败）
 
 # ── 7. VERSION.md 含 V4.7.5 ──
 echo "── 7. VERSION.md V4.7.5 ──"

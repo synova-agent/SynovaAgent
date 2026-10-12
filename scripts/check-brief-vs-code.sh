@@ -38,8 +38,8 @@ if [ -z "$BRIEF" ] && [ "$_BCV_V2" = "1" ]; then
     "$(git -c core.quotepath=false diff --name-only 2>/dev/null || true)" 2>/dev/null || true)
 fi
 
-# 也检查 CLAUDE.md 中是否引用 V4.5.1
-FLOW_CONSTRAINT=$(grep "流程约束" "$ROOT/CLAUDE.md" 2>/dev/null | grep -oE 'V[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
+# 也检查 AGENTS.md 中是否引用流程约束版本
+FLOW_CONSTRAINT=$(grep "流程约束" "$ROOT/AGENTS.md" 2>/dev/null | grep -oE 'V[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
 echo -e "  流程约束: ${FLOW_CONSTRAINT:-unknown}"
 
 if [ -z "$BRIEF" ]; then
