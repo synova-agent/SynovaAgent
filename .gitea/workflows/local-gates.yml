@@ -64,6 +64,14 @@ jobs:
           export SYNO_SKIP_PR_BUDGET=1
           # 登记件不变量（CTO 2026-10-11 立：机器真源零约束曾致 id 撞号 + 误改他项）
           node_modules/.bin/tsx scripts/control-tower/check-registry-invariants.ts || exit 1
+          # 块级 paths 快照对账（CTO 裁定 074 步 1b；治理线交付）——
+          #   治「快照漂移」：真源 `ConstructionBlock.paths` 是手工写死的并集，施工项一变就过时
+          #   （实证 2026-10-13：K10 少 4 条 / K12 多 2 条，根因=生成时读到旧真源）。
+          #   🔴 三态必须**原样透传**：0=一致 ｜ 1=不一致 ｜ **2=判不了（fail-closed）**
+          #   ⇒ 用 `|| exit $?` 保留原码，**禁** `|| exit 1`（那会把 2 说成 1，红因失真）
+          #     ——同族教训：本文件「④ 门禁复现器自检」步已写明"`|| exit $?` 保留原 rc（harness=2）"。
+          #   🔴 **不动任何 job `name:`**（12 必需 context 的唯一产出者）
+          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash scripts/control-tower/check-block-paths.sh || exit $?
           PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" SYNO_CI=1 bash scripts/pre-commit-check.sh
       - name: ①b 看板真值（交付未回填检测 · CTO 2026-10-11 立）
         run: |

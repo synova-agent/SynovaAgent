@@ -1451,6 +1451,56 @@ except: pass
 fi
 soft_check "契约门禁: 声明产出须在暂存区" "${CONTRACT_FAIL:-}"
 
+# ── 组 9 附加块: 块级 paths 快照对账（CTO 裁定 074 步 1b；治理线交付）──
+#   治什么: 真源 `ConstructionBlock.paths`（快照）是**手工跑脚本写死**的 ⇒ 施工项一变它就过时。
+#           实证（2026-10-13）: 该漂移**真的发生过** —— K10 少 4 条 / K12 多 2 条，
+#           根因 = 生成快照时读到 PR #493 落地**前**的旧真源。
+#   判据源: `scripts/control-tower/block-paths-core.ts`（唯一实现；生成器与门禁共用一份）。
+#   三态: 0=一致 ｜ 1=不一致 ｜ 🔴 2=判不了（fail-closed：读不到真源/形状异常/悬空 id/快照字段缺失）。
+#   🔴 **无条件跑**（成本实测 0.25s，远低于 <10s 预算）：
+#     理由是判据的**主体**——"生成器对真源跑 ⇒ 逐块一致"——正是我要的那条；
+#     若只在登记件进暂存区时才跑，则在**任何非登记件提交上都不产证据**（判据形同虚设）。
+#     为纪念"门禁过重 ⇒ 超时 ⇒ --no-verify"的历史病根，配**有界执行**（超时 ⇒ 124 ⇒ 报判不了）。
+#   🔴 本块**不新增组号**——不破坏 `── 组 N/13` 标签与「全部 13 组通过」横幅（既有夹具依赖）。
+_tsx_ok="$(command -v node >/dev/null 2>&1 && echo yes || echo no)"
+BP_OUT=""
+BP_RC=0
+if [ "$_tsx_ok" = "yes" ]; then
+  # 有界执行（移植 alloc-task-id.sh:218 的 D1091 契约：超时返回 124；macOS 无 timeout/gtimeout 时走便携轮询）
+  bash "$ROOT/scripts/control-tower/check-block-paths.sh" > /tmp/.syno-blockpaths.out 2>&1 &
+  _bp_pid=$!
+  _bp_i=0
+  while kill -0 "$_bp_pid" 2>/dev/null; do   # swallow-ok: 进程已退出=循环正常结束条件，非错误
+    if [ "$_bp_i" -ge 100 ]; then   # 10s 上限（0.1s × 100）
+      kill -TERM "$_bp_pid" 2>/dev/null || true
+      sleep 0.2
+      kill -KILL "$_bp_pid" 2>/dev/null || true
+      wait "$_bp_pid" 2>/dev/null || true
+      BP_RC=124
+      break
+    fi
+    sleep 0.1
+    _bp_i=$(( _bp_i + 1 ))
+  done
+  if [ "$BP_RC" -eq 0 ]; then
+    wait "$_bp_pid" 2>/dev/null || BP_RC=$?
+  fi
+  BP_OUT="$(cat /tmp/.syno-blockpaths.out 2>/dev/null || true)"
+  rm -f /tmp/.syno-blockpaths.out
+  case "$BP_RC" in
+    0) : ;;  # 一致 ⇒ 静默（D1148 成功静默）
+    1) soft_check "块级 paths 快照对账" "$(printf '%s' "$BP_OUT" | head -30)\n" ;;
+    *) # 🔴 非 0/1 = 判不了或超时 ⇒ **显式**报（不得与"通过"混同），且不吞原始输出
+       printf '%s\n' "$BP_OUT" | head -10 | sed 's/^/     /'
+       soft_check "块级 paths 快照对账（🔴 判不了/超时 = fail-closed，非通过）" "  exit=${BP_RC} — 读不到真源/形状异常/超时\n" ;;
+  esac
+else
+  # 无 node ⇒ 无法判定。显式降级登记（铁律 11：禁静默），**不判红**（判不了 ≠ 违规）。
+  echo -e "  ${YELLOW}⚠️  块级 paths 快照对账：node 不可用 — 无法判定（降级登记，fail-closed 语义见门禁自身）${RESET}"
+  mkdir -p "$ROOT/.codex/control-tower/logs" 2>/dev/null || true
+  echo "{\"time\": \"$(date -u +%Y-%m-%dT%H:%M:%S+00:00)\", \"component\": \"pre-commit-group9-block-paths\", \"reason\": \"node 不可用 — 块级 paths 对账跳过 (degraded)\"}" >> "$ROOT/.codex/control-tower/logs/degraded-events.log" 2>/dev/null || true
+fi
+
 # ═══ 组 10/12: V3 CP3 — 条件区域 + 测试覆盖 (D260) ═══
 echo -e "${CYAN}── 组 10/13: V3 流水线健康度 ──${RESET}"
 
