@@ -1,0 +1,33 @@
+{
+  "$id": "edge/plan_commits_to",
+  "label": "PLAN_COMMITS_TO",
+  "tags": [
+    "structural",
+    "core"
+  ],
+  "allowedFrom": [
+    "PLAN"
+  ],
+  "allowedTo": [
+    "GOAL",
+    "Goal"
+  ],
+  "requiredProps": [
+    "commitment_type"
+  ],
+  "optionalProps": {
+    "commitment_type": "string — plan_to_goal | plan_to_milestone（承诺对象类型）",
+    "commitment_strength": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "committed_at": "string (ISO-8601) — 承诺发生时点",
+    "due_at": "string (ISO-8601) — 承诺到期时点",
+    "rationale": "string — 为什么承诺这个目标（可追溯的依据）"
+  },
+  "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
+  "transfer_function": "unknown",
+  "description": "计划边 —— 计划节点 → 目标（计划承诺达成目标）。方向 = 计划 → 目标（subject = 计划，object = 目标）；CTO 2026-10-08 裁定 §1 理由：与派单原文一致、语义直读（计划承诺达成目标）、「挂在目标之下」是归属描述而非方向声明（归属由入边表达）、与边 A（父→子，分解语义）不同轴故不冲突。不复用既有边（R8 已裁）：避免污染下游 consumed_by 的语义。端点字面量声明：本体节点词表当前无 goal/plan ⇒ 端点为运行时字面量；将来若建本体节点类型，须同步迁移（CTO 裁定 §3）。object 侧双枚举 GOAL/Goal（同 edge/goal_decomposes_to 与 edge/goal_decomposition 的处置）：SQLite 的 type 比较大小写敏感，少任一个则该侧节点在链路上不可见。subject 侧实测声明：src/ 内目前不存在 'PLAN' 节点字面量（git grep -n \"PLAN\" -- src/ 共 3 处命中，且全为注释）⇒ 该端点属 #1316（⑤ 计划节点）将建；本边只声明端点，不主张已有写入方。词表终态 = 一次落地（CTO 裁定 §4）。初始 action_effect_lag / transfer_function = unknown，待标定（CTO W3 口径；本卡取 unknown 而非 TBD，因 #235 全域要求 TBD=0，且 TBD 属铁律 8「TODO 不留交付物」所禁）。⚠️ 命名待《命名权威登记册》N3/N4 认领确认。"
+}
