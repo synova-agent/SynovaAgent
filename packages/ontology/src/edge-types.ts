@@ -5,7 +5,15 @@
  * I2-Phase2: 7 KEEP + 4 MODIFY-rename + 2 @deprecated (DEPLOYS/FUNDS) + 38 NEW = 51
  * (55 JSON files - 4 renamed MODIFY old names = 51 EdgeType entries)
  * +1 (#190 K12-07 目标分解边 GOAL_DECOMPOSITION) = 52 条目 / 56 JSON 文件
+ * +2 (#1350 K4-05bis 目标层级边 GOAL_DECOMPOSES_TO ＋ 计划边 PLAN_COMMITS_TO) = 54 条目 / 58 JSON 文件
  * Replaces old SOGEdgeType enum. DO NOT add backward-compatible aliases.
+ *
+ * 🔴 #1350 同步纪律（CTO 裁定 §7 ＋ 队长裁 (a)）：本常量表与
+ *   extensions/ontology/edge-types/*.json **必须成对落地** —— 否则 ALL_EDGE_TYPES 与 JSON 件数
+ *   不对称 ⇒ 新边永不被计数（消费方：src/l4/data-exporter.ts / data-purger.ts / entity-resolver.ts）。
+ *   ⚠️ 行为变化登记：ALL_EDGE_TYPES 52→54 会让 src/l4/entity-resolver.ts 的「邻居类型余弦相似度
+ *   向量」维度随之变化（新增维度对既有节点恒为 0 ⇒ 相似度值轻微改变；无测试钉该长度；该向量为
+ *   函数内局部、不持久化）。
  *
  * KEEP (7): SIGNAL_TRANSMITS, INCENTIVE_BINDS, DECISION_CONCENTRATES, LOCKS_IN,
  *           CONSTRAINS, CUMULATIVE_LEARNING, BRAND_BUILDS
@@ -91,12 +99,18 @@ export const EdgeType = {
 
   // ── +1 (#190 K12-07) — 目标一致: 目标分解边（内容面真源 extensions/ontology/edge-types/goal_decomposition.json）──
   GOAL_DECOMPOSITION: 'GOAL_DECOMPOSITION',
+
+  // ── +2 (#1350 K4-05bis) — 导航层: 目标层级边 ＋ 计划边 ──
+  //   内容面真源: extensions/ontology/edge-types/goal_decomposes_to.json / plan_commits_to.json
+  //   ⚠️ 命名待《命名权威登记册》N3/N4 认领确认（CTO 裁定 §2）
+  GOAL_DECOMPOSES_TO: 'GOAL_DECOMPOSES_TO',
+  PLAN_COMMITS_TO: 'PLAN_COMMITS_TO',
 } as const;
 
-/** Union type of all 52 edge type string values */
+/** Union type of all 54 edge type string values */
 export type EdgeType = typeof EdgeType[keyof typeof EdgeType];
 
-/** All 52 edge types in a flat array */
+/** All 54 edge types in a flat array */
 export const ALL_EDGE_TYPES: readonly EdgeType[] = [
   // KEEP (7)
   EdgeType.SIGNAL_TRANSMITS,
@@ -159,4 +173,8 @@ export const ALL_EDGE_TYPES: readonly EdgeType[] = [
 
   // +1 (#190 K12-07): 目标分解边
   EdgeType.GOAL_DECOMPOSITION,
+
+  // +2 (#1350 K4-05bis): 目标层级边 ＋ 计划边（导航层 #1448 ⑤）
+  EdgeType.GOAL_DECOMPOSES_TO,
+  EdgeType.PLAN_COMMITS_TO,
 ] as const;
