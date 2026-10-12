@@ -1,1 +1,0 @@
-{"phases":[{"id":0,"name":"组织访谈","timeoutMs":60000},{"id":1,"name":"数据采集","timeoutMs":120000},{"id":2,"name":"假设生成","timeoutMs":180000},{"id":3,"name":"根因分析","timeoutMs":120000},{"id":4,"name":"报告生成","timeoutMs":60000},{"id":5,"name":"交付","timeoutMs":30000}],"gates":{"dataCompleteness":0.3,"minHypothesisConfidence":0.5},"maxToolRounds":4}

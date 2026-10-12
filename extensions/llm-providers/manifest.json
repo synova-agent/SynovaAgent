@@ -1,1 +1,0 @@
-{"$schema":"https://synova.dev/schemas/extension-manifest-v1.json","$schema":"https://synova.dev/schemas/extension-manifest-v1.json","name":"llm-providers","version":"1.0.0","type":"llm-provider","displayName":"LLM 提供商","entryPoint":"../src/providers/llm-provider-loader.ts","exportKey":"loadLLMProviders","providers":10}

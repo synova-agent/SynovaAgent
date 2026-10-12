@@ -130,14 +130,27 @@ const MODULE_IMPORTS: Readonly<Record<string, () => Promise<Record<string, unkno
 };
 
 /**
- * 25 项 contents 全表（`extensions/` 顶层目录全集）。
+ * 22 项 contents 全表（`extensions/` 顶层目录全集）。
  * 状态口径（spec §3.2 逐项裁定表 + §5.1 可达性实测）:
- *   reachable —— 有装配 loader，或有生产直读者（16 项存量可达 ＋ business-models 本卡接活 = 17）
+ *   reachable —— 有装配 loader，或有生产直读者（16 项存量可达 ＋ business-models 接活 = 17）
  *                ＋ presets（K12-01 段二）＋ department（K12-10）＋ professions（#1056/K4-07）= 20
- *   retired   —— 生产不可达且**无内容可接**（engine / tools）
- *   pending-cto —— 生产不可达但**修法牵涉架构（第四处两套并行）**，须过 CTO 再落地（llm-providers）
+ *   retired   —— 生产不可达且**无内容可接**。K12-16（#199）后 = **空集**：
+ *                engine / tools 已按规范 §5.4「删＝删目录」**真删**，不再以 retired 名义留存死内容
+ *                （铁律 37：Dead code 入仓库即违规）
+ *   pending-cto —— 生产不可达且**修改须先过 CTO**：
  *                  ＋ onboarding（K12-02 #185：纯内容包不接线）
  *                  ＋ content-layers（K12-20 #203：新增顶层目录、boot 装配启用待放行）
+ *
+ * 🔴 K12-16（#199）本卡变更（25 → 22）：`llm-providers` / `engine` / `tools` 三项**由「登记状态」升格为「真删」**
+ *   —— 本卡的判据是**二元**（接线 or 删除），**不许留「注册了但没人读」的第三态**（那正是"假信号"：
+ *   有人改了文件以为生效）。逐项：
+ *   ① `llm-providers`：CTO 2026-10-09 案B 二选一之「**退役空壳**」——
+ *      侧 A 10 个 `adapter.ts` 实测 `grep -c "^export"` ×10 **全 0**（整文件一行注释，`export` 落在注释体内
+ *      ⇒ 不可被宿主 import，**无资产可搬**）；侧 B `src/providers/**` 活的 4 个真实现**一字未动**。
+ *   ② `engine` / `tools`：spec §3.2 #15「零读者」/ #20「孤儿（仅 manifest，零内容）」；
+ *      建消费端属架构变更 ⇒ 按 §5.4 走删路径，核验两条件：**C2（src/ 对目标目录零 import）**＋
+ *      **manifest 无 `requires`**（实测 4 份 manifest 均无该键 ⇒ 第 3 条空转）。
+ *   ⇒ 目的不是省文件，是**消灭"改了不生效且不报错"的假信号**。
  */
 const CONTENT_TYPES: readonly ContentTypeEntry[] = [
   {
@@ -265,30 +278,6 @@ const CONTENT_TYPES: readonly ContentTypeEntry[] = [
     },
   },
   {
-    // 🔴 CTO 2026-10-09 **已裁：采「案 B」**（原预裁「接活文件驱动系 + 退役硬编码类」经实测复核后改向）。
-    //    CTO 派单原文：「案 B 落地补显式陈述 —— 10 空壳 vs src/providers 4 真实现 = **并行态**，
-    //    **本卡不删真实现**」。⇒ 本卡**只补显式陈述，不删不接**（消并行待后续卡）。
-    type: 'llm-provider',
-    dir: 'llm-providers',
-    face: 'config',
-    status: 'pending-cto',
-    reason:
-      '🔴 CTO 2026-10-09 已裁**案 B**，落地形态如下（**并行态**，本卡不删真实现）：' +
-      '① 侧 A `extensions/llm-providers/` = **10 个零导出空壳** —— 实测 `grep -c "^export"` ×10 全为 0、' +
-      '文件第一字节即 `//`、整文件是一行注释（`export const …Adapter = {…}` 落在注释体内）、' +
-      '真 `import()` 得 `EXPORTS=[]` ×10 ⇒ **不可被宿主 import，无可继承资产**；' +
-      '② 侧 B `src/providers/` = **4 个真实现**（deepseek / ernie / gateway / openai）＋ `ProviderChain` ' +
-      'failover 链 ＋ `detectProviderFromUrl` / `message-sanitizer`，且被 `src/agent/conversation-engine.ts:15` ' +
-      '**真实 import**；' +
-      '③ ⇒ 两侧并存 = **并行态**：一套是空的、一套是活的。' +
-      '🔴 **本卡不删真实现**（不退役侧 B）；**也不接活侧 A**（其真实成本 = 从零写 10 个适配器，' +
-      '非「接上已有实现」）⇒ **消并行待后续卡**（届时须过 §5.4 删路径核验 C2/requires）。' +
-      '🔴 本表**不登记其 loader**：侧 A 未接活（案 B 未授权接活）⇒ 不把它接进 boot 装配面' +
-      '（探针 ④ 段实证其未入装配）。' +
-      '🔴 死引用一并记录：`src/providers/llm-provider-loader.ts` 零调用者' +
-      '（实测 `grep -rn "llm-provider-loader|loadLLMProviders" src/ packages/` 仅自身命中）。',
-  },
-  {
     type: 'industry-template',
     dir: 'industries',
     face: 'content',
@@ -345,7 +334,16 @@ const CONTENT_TYPES: readonly ContentTypeEntry[] = [
     status: 'reachable',
     readers: [
       'src/services/escalation-engine.ts（读 policies/escalation-rules.json）',
-      // data-access.yaml 实测零读者（spec §3.2 #16「半孤儿」）—— 可达性由 escalation-rules 支撑
+      // 🔴 K12-16（#199）：原 `data-access.yaml` 已**真删**（spec §3.2 #16「半孤儿」二元化）。
+      //    判据 = 删除而非接线（接线是设计变更，非「读一个已存在字段」）：
+      //      ① 零读者（唯一代码侧命中是本表旧注释）
+      //      ② 其自称替代目标 `packages/engine-core/src/pipeline/diagnosis/expert-data-policy.ts` 已随
+      //         engine-core 清零（铁律 46）而**物理不存在**
+      //      ③ 与活的 L0 `DEFAULT_POLICIES` 词汇表**实质不相交**（8 词 ∩ 40 词 = 仅 `risk`）；
+      //         逐字接线 ⇒ `expert-dispatcher.ts:204` 精确成员判据把 7/7 专家主维度证据滤空 ⇒ 全体 degraded
+      //    ⚠️ 代价（逐字存档，勿静默丢）：yaml 含 L0 没有的 `sensitiveAccess: read`（每专家）＋ `knowledge`
+      //       专家条目 ⇒ 建议另立卡决定是否并入 L0（本卡不迁）。
+      //    本项可达性**由 escalation-rules.json ＋ escalation-engine.ts 支撑**，与 data-access 无关。
     ],
   },
   {
@@ -354,31 +352,6 @@ const CONTENT_TYPES: readonly ContentTypeEntry[] = [
     face: 'config',
     status: 'reachable',
     readers: ['src/security/pre-upload-validator.ts'],
-  },
-  {
-    // spec §3.2 #15：engine-config「零读者（构造路径口径复查仍 0）」；实测 `grep -rn engine-config
-    // src/ packages/ scripts/` = 0 命中，且 extensions/engine/ 无 loader 可接。
-    // ⇒ 废弃显式化（不删文件：删目录属 §5.4 删路径，需 C2 type 残留核验，本卡不越权）。
-    type: 'engine-config',
-    dir: 'engine',
-    face: 'config',
-    status: 'retired',
-    reason:
-      '零读者：实测 `grep -rn "engine-config" src/ packages/ scripts/ --include=*.ts` = 0 命中；' +
-      'extensions/engine/diagnosis.json（6 阶段 phases/gates/maxToolRounds）无任何消费端，且无 loader 可接。' +
-      '本卡显式化为 retired；复活需先建消费端（属架构变更）。',
-  },
-  {
-    // spec §3.2 #20：tools「孤儿」。实测 extensions/tools/ **仅 manifest.json 一个文件**（零内容），
-    // 且 `grep -rn tools-manifest src/ packages/ scripts/` = 0 命中 ⇒ 无内容可接、无 loader 可接。
-    type: 'tools-manifest',
-    dir: 'tools',
-    face: 'config',
-    status: 'retired',
-    reason:
-      '孤儿：extensions/tools/ 全目录**仅 manifest.json**（零内容文件，实测 git ls-tree 1 条）；' +
-      '`grep -rn "tools-manifest" src/ packages/ scripts/ --include=*.ts` = 0 命中。' +
-      '无内容可接 ⇒ 显式化为 retired（工具注册的真实通道是 MCP/工具注册表，不在此目录）。',
   },
   {
     // 🔴 K12-01（#184）**段一登记 → 段二已落地**（创始人 2026-10-11 裁定 1 放行）。
@@ -581,8 +554,12 @@ function collectIntegrityProblems(): string[] {
       }
     }
   }
-  if (CONTENT_TYPES.length !== 25) {
-    problems.push(`CONTENT_TYPES 应为 25 项，实测 ${CONTENT_TYPES.length}`);
+  // 🔴 项数**硬校验**（不是"忘了改"的软提醒）：本表是 extensions/ 顶层目录的**唯一真源**，
+  //   加/删顶层目录必须同步本表 —— 上界 22 = K12-16（#199）真删 3 项后的实测值（原 25 = #1056 后）。
+  //   ⚠️ 这个数字与 `tests/deploy/content-registry.test.ts` 的 `counts.total` 断言**同源同义**：
+  //   两处必须一起改（本卡：25 → 22）。改一处不改另一处 ⇒ 必有一处红。
+  if (CONTENT_TYPES.length !== 22) {
+    problems.push(`CONTENT_TYPES 应为 22 项，实测 ${CONTENT_TYPES.length}`);
   }
   return problems;
 }

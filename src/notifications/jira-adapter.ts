@@ -1,12 +1,13 @@
 /**
- * extensions/notifications/jira/adapter.ts — Jira 通知适配器
+ * src/notifications/jira-adapter.ts — Jira 通知适配器
  *
  * 实现 NotificationAdapter 接口。从 task-integration.ts 提取 Jira REST API 逻辑。
  * 幂等创建：先查后建，避免重复 Issue。
  *
  * v3.6 Batch 1 — 通知渠道文件化
+ * K12-17（#200）引擎码归位：由 extensions/notifications/jira/adapter.ts 搬入（约束 4 边界物理可见）。
  */
-import type { NotificationAdapter, Notification, NotificationResult } from '../../../src/notifications/types';
+import type { NotificationAdapter, Notification, NotificationResult } from './types';
 import { createLogger } from '@synova/logger';
 
 const log = createLogger('notifications/jira');
