@@ -17,7 +17,7 @@
  *
  * 铁律 48: 每条用例均有 expect 断言；覆盖正常路径 / 回落路径 / 降级路径 / 边界。
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, readdirSync, symlinkSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -525,21 +525,61 @@ describe('K12-11 / 接线面 — 项模型在授权判定点生效', () => {
 // ════════════════════════════════════════════════════════════════
 
 /**
- * 🔴 门控反例 —— **默认不跑**（默认全绿是 V2 的硬要求）。
+ * 🔴 门控反例（**自证伪**）—— **默认不跑**（默认全绿是 V2 的硬要求）。
  *
- * 打开方式（改坏**被测真件**，不是副本）:
+ * 一条命令，无需手改任何文件:
  *   `SYNOVA_MUTATION_FORCE_ITEM_MODEL_OFF=1 npx vitest run tests/security/permission-grants.test.ts`
- * 前置: 判定点被退回纯档位 —— 即 `src/middleware/auth.ts` 的
- *   `allowedSensitivitiesByGrants(...)` 改回 `allowedSensitivities(...)`
- *   （`packages/engine-auth/src/permission-grants.ts` 里 `permissionsForRole` 返回 `[]` 等效）。
- * 此时本组断言「包内 denies 生效」「客户槽隔离」必红 ⇒ 证明判据不是"永远绿"。
+ *   ⇒ 本组 2 条**必红**（它们断言"项模型生效"，而本组自己把项模型关掉了）。
+ *
+ * 语义: 本组**自己模拟"项模型不存在"**（`vi.doMock` 把 `permissionsForRole` 打成 `[]`、
+ *   `itemModelSpeaksForRole` 打成 false ⇒ 等价于判定点退回**纯档位**），然后断言
+ *   「本文件其它用例赖以成立的判别性结论」**不再成立** ⇒ 证明那些断言**有牙**（不是永远绿）。
+ *
+ * 🔴 为什么从"手改真件"改成"自证伪"（reviewer-b 2026-10-12 复核意见，lead 裁 Z=做）:
+ *   旧写法要人手改 `src/middleware/auth.ts` 再记得改回来 ⇒ 判据的**可执行性与它的名字不符**
+ *   （flag 单独打开**不可能变红** = 不能自证伪）。现改为一条命令 ⇒ **可进 CI、可被后人复跑**。
+ *   （手改真件的等价实测仍留在交付回执 V4 证据里，两者互为交叉验证。）
  */
 const FORCE_MUTATION = process.env['SYNOVA_MUTATION_FORCE_ITEM_MODEL_OFF'] === '1';
 
-describe.skipIf(!FORCE_MUTATION)('K12-11 / V4 反例（门控）: 退回档位制 ⇒ 必红', () => {
-  it('包内 denies 生效（退回纯档位 ⇒ 此处产出全三级 ⇒ 红）', () => {
+/**
+ * 把项模型**模拟关掉**（等价于判定点退回纯档位），返回**重新加载**的 auth 模块。
+ * 必须 `resetModules()` + `doMock()` + **动态 import** —— 否则拿到的是缓存里已绑好真模型的模块
+ * （那样 mock 不生效 ⇒ 本组会"假绿"；若实测如此，本组会**显式报红并说明**，见下）。
+ */
+async function importAuthWithItemModelOff(): Promise<{
+  allowedSensitivitiesByGrants: (role: string, clearance: string, tenantId?: string | null) => string[];
+}> {
+  vi.resetModules();
+  vi.doMock('@synova/engine-auth', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('@synova/engine-auth')>();
+    return {
+      ...actual,
+      // 「模型不存在」: 无任何项 + 模型不为该角色发声 ⇒ 判定点只能回落档位默认
+      permissionsForRole: () => [] as string[],
+      itemModelSpeaksForRole: () => false,
+    };
+  });
+  const mod = await import('../../src/middleware/auth');
+  return { allowedSensitivitiesByGrants: mod.allowedSensitivitiesByGrants };
+}
+
+/** 撤销 mock（避免污染同进程其它用例） */
+function undoItemModelMock(): void {
+  vi.doUnmock('@synova/engine-auth');
+  vi.resetModules();
+}
+
+describe.skipIf(!FORCE_MUTATION)('K12-11 / V4 反例（门控·自证伪）: 项模型关掉 ⇒ 本文件判别性结论必红', () => {
+  afterAll(() => {
+    undoItemModelMock();
+  });
+
+  it('前提自证（对照组，必过）: 真模型 + 同夹具 ⇒ 确实收窄为两级', () => {
+    // 对照组走**真**模块（顶层的原引用，未被 mock 影响），且必须自带夹具
+    //   —— 否则会去读真实仓的内容面（并发会话可改）⇒ 判据不自洽（本件已踩过这个坑）
     const root = makeFixtureRoot(); cleanupRoots.push(root);
-    writeRolePack(root, 'admin', [], ['knowledge.finance.read']);
+    writeRolePack(root, 'admin', [], ['knowledge.finance.read', 'knowledge.hr.read']);
     const restore = useFixtureRootAsPresetsRoot(root);
     try {
       expect(allowedSensitivitiesByGrants('admin', 'normal', 'org-1'))
@@ -549,17 +589,23 @@ describe.skipIf(!FORCE_MUTATION)('K12-11 / V4 反例（门控）: 退回档位�
     }
   });
 
-  it('客户包减掉**全部**读项 ⇒ 最窄 [normal]（退回纯档位 ⇒ 全三级 ⇒ 红）', () => {
-    const root = makeFixtureRoot(); cleanupRoots.push(root);
-    writeRolePack(root, 'admin', [],
-      ['knowledge.finance.read', 'knowledge.hr.read', 'knowledge.sales.read',
-       'knowledge.people.read', 'knowledge.market.read']);
-    const restore = useFixtureRootAsPresetsRoot(root);
-    try {
-      // 项模型: 读项被减干净 ⇒ fail-closed 到最窄；纯档位: 恒全三级 ⇒ 必红
-      expect(allowedSensitivitiesByGrants('admin', 'normal', 'org-1')).toEqual(['normal']);
-    } finally {
-      restore();
-    }
+  it('🔴 模型关掉 ⇒ 该收窄消失（本组必红 = 断言有牙）', async () => {
+    const { allowedSensitivitiesByGrants: withModelOff } = await importAuthWithItemModelOff();
+    const produced = withModelOff('admin', 'normal', 'org-1');
+    // 🔴 这一行**注定失败**：模型关掉后只能回落档位默认（全三级），
+    //    而本文件其它用例一致断言"收窄为两级" ⇒ 反证那些断言不是永远绿。
+    expect(produced, '模型关掉后仍收窄 ⇒ 说明本文件的判别性断言是假的（永远绿）').toEqual(['normal', 'sensitive']);
+  });
+
+  it('🔴 模型关掉 ⇒ 「减干净读项 ⇒ 最窄」也消失（本组必红）', async () => {
+    const { allowedSensitivitiesByGrants: withModelOff } = await importAuthWithItemModelOff();
+    // 模型关掉后读不出"读项被减干净"这件事 ⇒ 回落全三级
+    expect(withModelOff('admin', 'normal', 'org-1')).toEqual(['normal']);
+  });
+
+  it('自检: mock 必须**真的**生效（否则本组是"永远绿"的假反例）', async () => {
+    const { allowedSensitivitiesByGrants: withModelOff } = await importAuthWithItemModelOff();
+    // 生效判据: 模型关掉后产出 = 纯档位派生值（全三级）。若 mock 未生效 ⇒ 这里会红 ⇒ 如实暴露
+    expect(withModelOff('admin', 'normal', 'org-1')).toEqual(['normal', 'sensitive', 'restricted']);
   });
 });
