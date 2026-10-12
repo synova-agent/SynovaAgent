@@ -16,7 +16,7 @@
 2. **`#239` 五阀字段名与平台**：新增 `valves` 字段，**不覆盖**既有 `edges[]`（同名不同物）。
    - 权威形态源 = `docs/synova/research/权威文档15-企业循环溢出导航系统-20260714/SYNOVA-RESEARCH-第一章-循环配置规范与动态加载机制-v1-0-20260714.md` §3.4（`edges` — 五阀映射）。
    - 五阀键名逐字 = `acquisitionValve` / `allocationValve` / `conversionValve` / `deliveryValve` / `recycleValve`；元素形态 = `{ edgeId, actionEffectLag }`。
-   - 桶标签 = **6 个**（`immediate` / `1_month` / `1-3_months` / `3-6_months` / `6-12_months` / `>12_months`）；派单件仅列 5 个，**漏 `>12_months`**，已登记。
+   - 桶标签 = **6 个**（`immediate` / `1_month` / `1-3_months` / `3-6_months` / `6-12_months` / `>12_months`）——**口径 = 规范定义（doc15 第一章 §3.4 图例）**；**实际使用 = 5 个**（JSON 值去重），`>12_months` **已定义未使用**。凡引用桶数**必须带此口径**（D10）。派单件仅列 5 个，**漏 `>12_months`**，已登记。
 
 3. **`#234` 值域迁移面 = 5 条桶标签**（实测）：`capital_acquisition` `immediate`、`capital_allocation` `1_month`、`talent_acquisition` `1-3_months`、`cross_functional_synergy` `3-6_months`、`operational_execution` `3-6_months`。
    - 换算：`immediate ⇒ [0,0.5]`（CTO 明文）；`1_month ⇒ [0.5,1]`（**推导**，理由 = 保「区间→桶」换算唯一性：`[0,1]` 会使 `immediate[0,0.5] ⊂ 1_month[0,1]` 重叠）；`1-3_months ⇒ [1,3]`；`3-6_months ⇒ [3,6]`。
@@ -28,7 +28,13 @@
 ## 二、本批暴露并修复的存量缺陷（留痕）
 
 1. **两件畸形 claim 曾使 claim 库整体 fail-closed**：`.claude/claims/201.yaml` / `345.yaml` 的 `note:` block 续行缩进为 2 空格（与其父键同级）⇒ `claim_store.parse_claim` 见非 `  - ` 行即抛错 ⇒ `--resolve` 返回 `degraded: true` ⇒ 所有卡走 declaration 分支时 claim-first 失效。
-   - 修复 = 折叠 `note` 为**内联单标量 ＋ 对称双引号**（仓内 25 件 claim 中 20 件本为内联 note，最长 485 字符 ⇒ 属 house convention）。仅结构改动，`writeset`/`done` 逐条不变，`parse_claim` 往返 note 保真（935/935、539/539 字符），原件已备份。
+   - 修复 = 折叠 `note` 为**内联单标量 ＋ 对称双引号**（仓内 25 件 claim 中 **20 件**本为内联 note，**最长 480 字符**（多数态口径）⇒ 属 house convention）。原件已备份。
+   - 🔴 **修正后的准确自陈**（由 verifier 独立实测，队长原写「零语义」**过宽**）：
+     - **机器读字段零变化**：`writeset` / `done` 逐条不变（201 = 3/3；345 = 5/3）。
+     - **人读 `note` 有改动**：`201` note **947 → 937** 字符（**引号 10 → 0**）；`345` **544 → 539**（引号 4 → 0 ＋ 去尾空格）。
+     - ⇒ 正确表述 = 「**机器读字段零变化；`note` 去引号 ＋ 去尾空格**」，**不得写"零语义"**（删引号会抹掉短语边界）。
+     - **引号策略教训**：本次为省事**删引号**；正确做法是**转义 `\"`**。verifier 记为「**第二次**在 YAML 双引号标量上踩坑」。
+   - 🔴 **越界声明**：`.claude/claims/201.yaml` / `345.yaml` **不属本批任何卡**，队长修改属「**先做后报**」⇒ 需 **CTO 追认**；verifier 建议**转规则**（做成 `claim_store.py --repair`，带 dry-run），否则即"一次性特例"。
 2. **分支名影响 claim-first 可达性**：`claim_store.py` `BRANCH_ISSUE_RE = r"(?:^|[/#])(\d{1,7})(?=[-_/]|$)"` 要求数字段紧跟 `/` 或 `#`。
    - `k4b3/l1-238-239` ⇒ **提不出 issue**（`238` 前是 `-`）⇒ `resolve-commit-brief.sh` 的 claim-first 分支**不进入** ⇒ 回落到 legacy brief 链 ⇒ 组 12 判「不在 Q2 范围」。
    - 对策 = 分支命名 `k4b3/<issue>[-后缀]`（如 `k4b3/238-239`），与本仓既有 `feat/<issue>-x` 惯例一致。
