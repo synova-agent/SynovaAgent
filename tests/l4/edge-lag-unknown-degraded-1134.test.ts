@@ -99,6 +99,11 @@ import { pathToFileURL } from 'node:url';
 // 🔴 值域判定**单源** = K4-01（#234）探针（K3 R1：禁第二套解析口径）
 import {
   LEGACY_BUCKET_LABELS,
+  NON_CAUSAL_REGISTRY,
+  PENDING_REGISTERED_ADDITIONS,
+  S351_TABLE,
+  S351_UNCOVERED,
+  SPEC_EDGE_TYPES,
   formatInterval,
   isInLagDomain,
 } from '../../scripts/control-tower/probe-ontology-values';
@@ -108,7 +113,7 @@ import {
 // ═══════════════════════════════════════════════════════════════════════════
 
 const REPO = resolve(__dirname, '..', '..');
-const EDGE_SRC = join(REPO, 'extensions', 'ontology', 'edge-types');
+const EDGE_SRC = process.env.SYNO_EDGE_TYPES_DIR ?? join(REPO, 'extensions', 'ontology', 'edge-types');
 const LOADER_TS = join(REPO, 'src', 'l4', 'ontology-loader.ts');
 
 /**
@@ -188,7 +193,17 @@ const REJECTED_SAMPLES: readonly string[] = [
  * 📌 记录：本条移交义务由自验员在 Phase 2 复核中提出（其自验结论文件 §三 遗留项 L2），
  * 原夹具**未写明**该义务 ⇒ 本注释即补写的收口。
  */
-const BASELINE_TOTAL = 56;
+// ═══ N2（CTO 2026-10-12）：**禁字面基数** —— 尺寸由**扫盘实数**推导；
+//     **真棘轮 = 集合断言**（SPEC 成员不许缺 ∧ 未登记新增必红 ∧ 在场预告件分类校验），见下方 `N2 集合棘轮` 用例
+const ACTUAL_EDGE_FILES: readonly string[] = readdirSync(EDGE_SRC).filter(f => f.endsWith('.json')).sort();
+const PRESENT_PENDING_EDGES = PENDING_REGISTERED_ADDITIONS.filter(p => ACTUAL_EDGE_FILES.includes(p.file));
+const DERIVED_IN_DOMAIN =
+  S351_TABLE.filter(x => x.expectation === 'align_value').length + S351_UNCOVERED.length;
+const DERIVED_SPEC_VIOLATION = NON_CAUSAL_REGISTRY.length;
+const DERIVED_DEGRADED =
+  SPEC_EDGE_TYPES.length - DERIVED_IN_DOMAIN - NON_CAUSAL_REGISTRY.length +
+  PRESENT_PENDING_EDGES.filter(p => p.expected === 'non_causal_unknown').length;
+const BASELINE_TOTAL = ACTUAL_EDGE_FILES.length;
 /**
  * `unknown` 件数 —— **棘轮**（K4-01 #234 定稿后仍 = **50**，与 base 同值）。
  * 定稿迁移面 = **5 条桶标签**（`immediate`/`1_month`/`1-3_months`/`3-6_months`×2）⇒ 这 5 件都不是 `unknown`，
@@ -197,14 +212,14 @@ const BASELINE_TOTAL = 56;
  * `unknown` 不在桶域内 ⇒ 无可迁移之物；把未标定字段标定为已标定属**语义升级/扩面**，须 CTO 定）
  * ⇒ 也仍是 `unknown`。🔴 数字取自命令原始输出，**不照抄派单件**。
  */
-const BASELINE_DEGRADED = 50;
+const BASELINE_DEGRADED = DERIVED_DEGRADED;
 /**
  * **值域内区间**件数 —— **棘轮**（K4-01 #234 定稿 5 → **5**，与迁移后同值）。
  * 5 = 5 条桶标签迁到区间（其中 `operational_execution` 取 §3.5.1 的 `[0,0.5]`，CTO 裁定「§3.5.1 优先」）。
  * ⚠️ 旧口径名为 `BASELINE_IN_ENUM`（数的是 §3.4 桶标签）；新口径数的是**数值区间**，故改名
  * —— 留着旧名会让复核员以为是同一个数（口径名即证据的一部分）。
  */
-const BASELINE_IN_DOMAIN = 5;
+const BASELINE_IN_DOMAIN = DERIVED_IN_DOMAIN;
 /**
  * 越**允许集**（既非数值区间、亦非 `unknown`）的规范违规件数 —— **棘轮**。
  * 迁移后仍 = 1：`goal_decomposition.json` 的散文值**未被本卡改动**
@@ -212,7 +227,7 @@ const BASELINE_IN_DOMAIN = 5;
  * 的 `NON_CAUSAL_REGISTRY` 登记与说明）。
  * 🔴 **禁**把该件纳入豁免面来把这个数字改回 0（那是"静默放宽值域"）。
  */
-const BASELINE_SPEC_VIOLATION = 1;
+const BASELINE_SPEC_VIOLATION = DERIVED_SPEC_VIOLATION;
 /** 违规件点名 —— 一律用**真实文件名**（取自目录实况；**禁**从 `$id` 反推）。 */
 const BASELINE_SPEC_VIOLATION_FILES: readonly string[] = ['goal_decomposition.json'];
 /** 第 3 类值的原样前缀（证明违规**被如实看见**，而非被吸收成 `unknown`）。 */
@@ -846,5 +861,46 @@ describe('F. `$id` ↔ 文件名 映射完整性（报告不阻断）', () => {
     );
     // 真实文件名不含连字符；`$id` 含 —— 故不可反推
     for (const e of divergent) expect(e.id).toContain('-');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// N2 集合棘轮（CTO 2026-10-12「禁硬编码基数」）—— **尺寸由扫盘推导，棘轮在集合层**
+//   ① SPEC 成员不许缺（删件/改名 ⇒ 红 + **点名片名**）
+//   ② `actual \ (SPEC ∪ PENDING) === ∅`（**未登记新增 ⇒ 红 + 点名片名**）
+//   ③ 在场预告件分类必须 === 登记期望
+//   ⇒ 合并顺序无关：本笔（56）绿；`l3-65` 合入后（58 = SPEC∪PENDING）仍绿；任何第 3 件未登记仍红
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('N2. 集合棘轮 — 逐件枚举替代字面基数（禁第二套清单，复用探针导出量）', () => {
+  const specFiles = new Set(SPEC_EDGE_TYPES.map(n => `${n}.json`));
+  const pendingFiles = new Set(PENDING_REGISTERED_ADDITIONS.map(p => p.file));
+
+  it('N2-1 ① SPEC 成员不许缺（删除/改名 ⇒ 红 + 点名片名）', () => {
+    const missing = SPEC_EDGE_TYPES.map(n => `${n}.json`).filter(f => !ACTUAL_EDGE_FILES.includes(f));
+    expect(missing, `规范基线件缺失（删除/改名必须显式改 SPEC_EDGE_TYPES）: ${missing.join(', ')}`).toEqual([]);
+  });
+
+  it('N2-2 ② 未登记新增 ⇒ 红 + 点名片名（禁静默放宽）', () => {
+    const unregistered = ACTUAL_EDGE_FILES.filter(f => !specFiles.has(f) && !pendingFiles.has(f));
+    expect(unregistered, `未登记新增件（请显式登记后重跑）: ${unregistered.join(', ')}`).toEqual([]);
+  });
+
+  it('N2-3 ③ 在场预告件分类 === 登记期望（缺席合法；在场即受约束）', () => {
+    expect(PRESENT_PENDING_EDGES.every(p => p.expected === 'non_causal_unknown')).toBe(true);
+    for (const p of PRESENT_PENDING_EDGES) {
+      const doc = JSON.parse(readFileSync(join(EDGE_SRC, p.file), 'utf-8')) as Record<string, unknown>;
+      const tags = Array.isArray(doc.tags) ? (doc.tags as string[]) : [];
+      expect(tags.includes('causal'), `${p.file} 预告登记期望 non_causal`).toBe(false);
+      expect(doc['action_effect_lag'], `${p.file} 预告登记期望 lag=unknown`).toBe('unknown');
+    }
+  });
+
+  it('N2-4 尺寸由扫盘推导（禁字面 56/58）：总数 = SPEC ＋ 在场预告件', () => {
+    expect(BASELINE_TOTAL).toBe(SPEC_EDGE_TYPES.length + PRESENT_PENDING_EDGES.length);
+    expect(BASELINE_TOTAL).toBe(ACTUAL_EDGE_FILES.length); // 派生值 == 实测值（棘轮在 N2-1/2/3）
+    expect(BASELINE_DEGRADED).toBe(DERIVED_DEGRADED);
+    expect(BASELINE_IN_DOMAIN).toBe(DERIVED_IN_DOMAIN);
+    expect(BASELINE_SPEC_VIOLATION).toBe(DERIVED_SPEC_VIOLATION);
   });
 });
