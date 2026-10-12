@@ -43,7 +43,7 @@
  *   @零 DB    — 全程不 open 任何 SQLite 文件、不读 `data/synova.db`
  */
 import { afterAll, describe, expect, it } from 'vitest';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import {
@@ -52,6 +52,7 @@ import {
   LEGACY_BUCKET_LABELS,
   NON_CAUSAL_REGISTRY,
   OPEN_TAIL_BUCKET,
+  PENDING_REGISTERED_ADDITIONS,
   ProbeEnvError,
   S34_TYPICAL_LAG,
   S34_VS_S351_CONFLICTS,
@@ -68,6 +69,27 @@ import {
 
 const REPO_ROOT = process.cwd();
 const REAL_EDGE_DIR = join(REPO_ROOT, EDGE_DIR_REL);
+
+/**
+ * 🔴 N2 续做（#234，base `aa085e1f1`）：**件数与域外集一律「扫盘 ＋ 具名登记」推导，禁字面基数**。
+ *
+ * 原为字面 `56 / 55 / 1`，撞上 #1350（`l3-65`）落地后的 **58 件**。
+ * 口径（照 `tests/l4/edge-lag-unknown-degraded-1134.test.ts` 的 N2 版）：
+ *   · 件数 = **扫盘**目录实况（禁从文件名推 `$id` —— 实测恰 5 件 `$id` 尾段 ≠ 文件名主干）
+ *   · 域外集 = `NON_CAUSAL_REGISTRY`（具名登记）∪ **在场**预告件（`PENDING_REGISTERED_ADDITIONS`）
+ *   · 🔴 **在场性筛选**（纪律 #3）：预告件**缺席时不得计入** —— 否则本件在 56 件树上自红
+ *   · 真棘轮 = **集合比对**（登记面 ↔ 实测 `tags` 判定），**禁"扫盘实数当期望值"**（恒真 = 假绿）
+ */
+function derivedEdgeCounts(dir: string = REAL_EDGE_DIR): {
+  files: string[];
+  nonCausalIds: string[];
+  presentPendingIds: string[];
+} {
+  const files = readdirSync(dir).filter((f) => f.endsWith('.json')).sort();
+  const presentPending = PENDING_REGISTERED_ADDITIONS.filter((p) => files.includes(p.file));
+  const nonCausalIds = [...new Set([...NON_CAUSAL_REGISTRY, ...presentPending.map((p) => p.id)])].sort();
+  return { files, nonCausalIds, presentPendingIds: presentPending.map((p) => p.id) };
+}
 
 const SANDBOX_BASE = mkdtempSync(join(tmpdir(), 'synova-234-k4-01-'));
 afterAll(() => {
@@ -100,10 +122,18 @@ describe('A. 真仓基线 — 值域已迁移且与 §3.5.1 对齐（L1 真读�
   const samples = loadEdgeFiles(REAL_EDGE_DIR);
   const audit = auditLagValues(samples);
 
-  it('A1 件数口径：全部 56 / 因果 55 / 域外 1 —— 且违规为空（探针 exit 0 的依据）', () => {
-    expect(audit.files).toBe(56);
-    expect(audit.causal).toBe(55);
-    expect(audit.nonCausal).toHaveLength(1);
+  it('A1 件数口径：全部 / 因果 / 域外 —— 三数**扫盘推导**（禁字面基数），且违规为空（探针 exit 0 的依据）', () => {
+    const d = derivedEdgeCounts();
+    // ① 全部 = 扫盘件数（派生，不写死）
+    expect(audit.files, `全部件数须 == 扫盘实况（${d.files.length} 件）`).toBe(d.files.length);
+    // ② 🔴 集合棘轮：域外集**逐名**比对（登记面 ↔ 实测 tags 判定；多一件/少一件 ⇒ 红 + 点名两侧）
+    expect(
+      [...audit.nonCausal].sort(),
+      `域外集须 == NON_CAUSAL_REGISTRY ∪ 在场预告件\n  实得: ${[...audit.nonCausal].sort().join(', ')}\n  期望: ${d.nonCausalIds.join(', ')}`,
+    ).toEqual(d.nonCausalIds);
+    // ③ 因果 = 全部 − 域外（派生，不写死）
+    expect(audit.causal, '因果 = 件数 − 域外集').toBe(audit.files - d.nonCausalIds.length);
+    // ④ 真棘轮（保留）：违规为空
     expect(audit.violations).toEqual([]);
   });
 
@@ -187,9 +217,15 @@ describe('A. 真仓基线 — 值域已迁移且与 §3.5.1 对齐（L1 真读�
     expect(audit.intervalCount + audit.unknownCount).toBe(audit.causal);
   });
 
-  it('A6 域外登记面恰为 `NON_CAUSAL_REGISTRY`（防"再塞一件散文值进来"）', () => {
+  it('A6 域外登记面恰为 `NON_CAUSAL_REGISTRY` ∪ **在场**预告件（防"再塞一件散文值进来"）', () => {
+    const d = derivedEdgeCounts();
+    // 具名登记表本身（保留原断言：删条即红）
     expect(NON_CAUSAL_REGISTRY).toEqual(['edge/goal_decomposition']);
-    expect(audit.nonCausal).toEqual([...NON_CAUSAL_REGISTRY].sort());
+    // 🔴 两段式：**登记面（具名）** ↔ **实测判定面（tags）** 集合相等；差一件 ⇒ 红 + 点名两侧
+    expect(
+      [...audit.nonCausal].sort(),
+      `域外登记面不符\n  实得: ${[...audit.nonCausal].sort().join(', ')}\n  期望(NON_CAUSAL_REGISTRY ∪ 在场预告件): ${d.nonCausalIds.join(', ')}`,
+    ).toEqual(d.nonCausalIds);
     // 域外件**值未被改动**（本卡不改它；散文值原样保留 ⇒ 与 #1134 件的口径并存）
     const gd = readJson(REAL_EDGE_DIR, 'goal_decomposition.json');
     expect(String(gd['action_effect_lag'])).toContain('结构性从属');
@@ -201,11 +237,12 @@ describe('A. 真仓基线 — 值域已迁移且与 §3.5.1 对齐（L1 真读�
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('B. 改坏即红 — 沙箱翻转值域（零真仓写入）', () => {
-  it('B1 沙箱基线：未经改动 ⇒ 与真仓同判（violations 为空）', () => {
+  it('B1 沙箱基线：未经改动 ⇒ 与真仓同判（violations 为空；件数**同源推导**）', () => {
     withSandbox(dir => {
       const a = auditLagValues(loadEdgeFiles(dir));
       expect(a.violations).toEqual([]);
-      expect(a.files).toBe(56);
+      // 🔴 沙箱 = 真仓 `cpSync` 全量副本 ⇒ 期望值**同源推导**（禁字面 56）
+      expect(a.files, '沙箱基线件数须 == 真仓扫盘件数（同源推导）').toBe(derivedEdgeCounts().files.length);
     });
   });
 
@@ -282,15 +319,24 @@ describe('B. 改坏即红 — 沙箱翻转值域（零真仓写入）', () => {
     });
   });
 
-  it('B6 给域外件补 `causal` 标签 ⇒ `值域违规` + `非因果登记不符` 双现', () => {
+  it('B6 给域外件补 `causal` 标签 ⇒ `值域违规` ＋ **已登记非因果件缺失**（N2 后的精确串，不钉旧串）', () => {
     withSandbox(dir => {
       const doc = readJson(dir, 'goal_decomposition.json');
       doc['tags'] = ['structural', 'core', 'causal']; // 假装它是因果边
       writeJson(dir, 'goal_decomposition.json', doc);
 
       const a = auditLagValues(loadEdgeFiles(dir));
+      // ① 该件曾被登记为域外，补 `causal` 后其散文值不再适配因果域 ⇒ `值域违规`（点名该件）
       expect(a.violations.some(v => v.includes('值域违规') && v.includes('goal_decomposition.json'))).toBe(true);
-      expect(a.violations.some(v => v.includes('非因果登记不符'))).toBe(true);
+      // ② 🔴 N2 后的**精确**语义：该件**脱离域外集** ⇒ 探针走「已登记件缺失」分支（`probe:592`），
+      //    报串 = 「已登记非因果件缺失 $id=edge/goal_decomposition」。
+      //    （旧串「非因果登记不符」在 N2 后**只**对应 `probe:599` 的"未登记新增" ⇒ 此处**不得**出现，见 ③。）
+      expect(
+        a.violations.some(v => v.includes('已登记非因果件缺失') && v.includes('edge/goal_decomposition')),
+        `须报「已登记非因果件缺失 $id=edge/goal_decomposition」；实得 violations:\n${a.violations.join('\n')}`,
+      ).toBe(true);
+      // ③ 反向断言（**两分支不混**）：**不得**报 `未登记新增`（那是 `probe:599`，语义 = 域外在场但未登记）
+      expect(a.violations.some(v => v.includes('未登记新增'))).toBe(false);
     });
   });
 
