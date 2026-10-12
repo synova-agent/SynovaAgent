@@ -18,7 +18,17 @@
  *   · 改 golden `E-4.1.label` ⇒ §「golden 经 label 命中 34/36」必红
  *   · 改 `cycles/**` 任一引用为不存在的 `$id` ⇒ §「引用对齐全命中」必红
  *   · 删 `numbering-authority.md` 的任一条待裁登记 ⇒ §「交付件一致性」必红
+ *
+ * 🔴 本件**承接**其他两件的部分「删件/改集」覆盖（#234 续做第二笔，U-4）：
+ *   · 本件 §二 的 **#1350 集合锚**（`REQUIRED_IDS`）负责抓「必含边被删」，且**点名**
+ *   · 本件**自身**的删件检测 = 该集合锚 ＋ 扫盘 ↔ 件内解析 1:1（`files.length` vs `edges.length`）
+ *   ⚠️ 反过来说：`edge-lag-values.test.ts` / `edge-transfer-functions.test.ts` 的删件检测**已外包到本件与 `-1134`**；
+ *      若本件被改坏或跳过，**那两件的删件覆盖会静默消失**（无其他防线）。
  */
+
+// 🔴 全量差集判据的口径（U-6，CTO 2026-10-13）：
+//   全量套件存在 flaky（实测 ≥5 件在全量负载下跨轮互翻，±1 级噪声）⇒ **单次全量差集含噪声**。
+//   ⇒ 判据口径 = **两次跑交 ∩**（`head红 ∩ head红'` 再与 base 比），**禁单次跑定论**。
 import { describe, it, expect } from 'vitest';
 import { existsSync, readdirSync, readFileSync } from 'fs';
 import { join } from 'path';

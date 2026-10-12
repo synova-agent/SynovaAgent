@@ -11,7 +11,8 @@
 
 仓库里同时存在**五套**编号，它们长得像、来源不同、互不换算。K4-05 之前，
 「一条边的编号对不对」这件事**没有权威**：`cycles/**` 里 45 条引用写的是 `edge/<snake>`，
-`extensions/ontology/edge-types/` 里 56 个 `$id` **全是** `edge/<snake>`（E 号在里面 0 命中），
+`extensions/ontology/edge-types/` 里 56 个 `$id`（**as_of `ba1b22a8b5`；当前 58**）**全为 `edge/` 前缀**
+（尾段形态 **45 下划线 / 5 连字符 / 6 单字**，见 §1.1；E 号在里面 0 命中），
 而文档侧用的是两位式 `E-01…E-42`，历史数据（golden）用的又是 `E-x.y`。
 
 本件做三件事：
@@ -46,13 +47,15 @@
 | `$id` | `edge/<snake>` | 每个 `extensions/ontology/edge-types/*.json` 一个 | **唯一真源** |
 | `label` | `UPPER_SNAKE` | 同上文件内第二个键 | 同文件内与 `$id` 成对，**不是独立真源** |
 
-**实测基数**（口径见 §二）：`edge-types` **56** 件 / `$id` distinct **56** / `label` distinct **56** —
-两两 1:1，无重名、无重复 `$id`。目录内**全部 56 件**文件名均为 `<name>.json`，且 **56 个 `$id` 全部为 `edge/` 前缀**
+**实测基数**（口径见 §二）：`edge-types` **56** 件 / `$id` distinct **56** / `label` distinct **56**（**as_of `ba1b22a8b5`**）—
+> 🔴 **时点标注约定（全件适用）**：本件凡写基数处一律标 **`as_of <SHA>`**；文中历史读数一律对应 **`ba1b22a8b5`**，
+> **当前值 = 历史值 ＋ 2 = `58`**（#65 新增 `goal_decomposes_to` / `plan_commits_to` 两件，落地于 `9f0472e05`）。
+两两 1:1，无重名、无重复 `$id`。目录内**全部 56 件**（as_of `ba1b22a8b5`；当前 `58`）文件名均为 `<name>.json`，且 **56 个 `$id` 全部为 `edge/` 前缀**（as_of 同上）
 （名字部分：**45 个含下划线 / 5 个含连字符 / 6 个无分隔符** ——
 连字符 5 件为 `decision-concentrates`、`external-assumption`、`incentive-binds`、`locks-in`、`signal-transmits`；
 无分隔符 6 件为 `augments`、`constrains`、`couples`、`deploys`、`funds`、`produces`）。
 ⚠️ **不得**把形态写成「全为 `edge/<snake>`」就假设全是下划线 —— 上列 5 件是连字符，按下划线切分会漏。
-其中第 56 件是 `goal_decomposition.json`（`edge/goal_decomposition`）—— K4 审计定稿记的「55 件」是**该件入仓前**的旧基数。
+其中第 56 件（as_of `ba1b22a8b5`）是 `goal_decomposition.json`（`edge/goal_decomposition`）—— K4 审计定稿记的「55 件」是**该件入仓前**的旧基数。
 
 ### 1.2 本件的权威裁定（依据 = 卡面 §⑥① + 实测）
 
@@ -108,9 +111,9 @@ occurrences=45 distinct=15 hit=15 miss=0
 
 | 口径名 | 定义 | 读数 |
 |---|---|---|
-| `edge-types` 件数 | `extensions/ontology/edge-types/*.json` 文件数 | 56 |
-| `$id` distinct | 上述文件 `$id` 去重个数 | 56 |
-| `label` distinct | 上述文件 `label` 去重个数 | 56 |
+| `edge-types` 件数 | `extensions/ontology/edge-types/*.json` 文件数 | 56（as_of `ba1b22a8b5`；当前 58） |
+| `$id` distinct | 上述文件 `$id` 去重个数 | 56（as_of `ba1b22a8b5`；当前 58） |
+| `label` distinct | 上述文件 `label` 去重个数 | 56（as_of `ba1b22a8b5`；当前 58） |
 | `ch2-headings` | 第二章 `^### E-NN: NAME` 行数 | 42 |
 | `ch4-headings` | 第四章 `^### E-NN NAME（` 行数 | 42 |
 | `ch2-vs-ch4-name-diff` | 同 E 号、两章名字不同的条数 | 4 |
@@ -131,7 +134,7 @@ occurrences=45 distinct=15 hit=15 miss=0
 | `[章间分歧·取第四章命名]` | 第二章/第四章名字不同，取**能对上词表**的那一版 | 中（**待 CTO 裁**） |
 | `[章间分歧·待裁]` | 两版名字不同且**都对不上**词表 | 弱（**待 CTO 裁**） |
 | `[待裁·名称层有同根候选]` | 名字含相同词根、可能同义，但**无仓内依据** | 弱（**不落地**） |
-| `[待裁·名称层无同根]` | 名称层与词表 56 个 `label` **无任何共同词根** | 弱（**不落地**） |
+| `[待裁·名称层无同根]` | 名称层与词表 56 个 `label`（as_of `ba1b22a8b5`；当前 58 个）**无任何共同词根** | 弱（**不落地**） |
 
 > 标记用词说明：`取第四章命名` 沿用队长裁定用词。实测**第一章与第四章在这 4 条上同名**
 > （第一章用表格 `| E-08 | TALENT_FILTER | 获取 | A4 |` 而非 `### E-NN` heading，故早期只扫 heading 会漏判），
@@ -257,7 +260,7 @@ E-35 CUSTOMER_DATA_FEEDBACK · E-36 COMPETITIVE_POSITION · E-37 PROFIT_REINVEST
 E-41 TALENT_PROTECTION · E-42 ASSUMPTION_LINKAGE
 ```
 
-**B 类（2 条）· 名称层与词表 56 个 `label` 无任何共同词根**：
+**B 类（2 条）· 名称层与词表 56 个 `label`（as_of `ba1b22a8b5`；当前 58 个）无任何共同词根**：
 
 ```
 E-01 ACTIVE_SCANNING · E-26 PRODUCT_DEFINITION
@@ -285,7 +288,7 @@ E-01 ACTIVE_SCANNING · E-26 PRODUCT_DEFINITION
 
 ---
 
-## 四、表 B：词表 56 件 → E 号（反查 · 入向）
+## 四、表 B：词表 56 件（as_of `ba1b22a8b5`；当前 58 件）→ E 号（反查 · 入向）
 
 **列义**：`同名字段` = 第二章/第四章中与之**逐字同名**的 E 号；`交叉引用件` = §2.2 那件给出的对应。
 
@@ -317,7 +320,7 @@ E-01 ACTIVE_SCANNING · E-26 PRODUCT_DEFINITION
 | `edge/external-assumption` | EXTERNAL_ASSUMPTION_BINDS | — | — | 缺口（E-42 待裁候选） |
 | `edge/external_feedback` | EXTERNAL_FEEDBACK | — | — | 缺口（E-03 待裁候选） |
 | `edge/funds` | FUNDS | — | E-13 | `[语义同义·附仓内交叉引用件依据]` |
-| `edge/goal_decomposition` | GOAL_DECOMPOSITION | — | — | 缺口（第 56 件，非 `edge-` 命名族） |
+| `edge/goal_decomposition` | GOAL_DECOMPOSITION | — | — | 缺口（as_of `ba1b22a8b5` 的第 56 件，非 `edge-` 命名族） |
 | `edge/incentive_alignment` | INCENTIVE_ALIGNMENT | E-17 | — | `[字符串同义]` |
 | `edge/incentive-binds` | INCENTIVE_BINDS | — | E-17 | `[语义同义·附仓内交叉引用件依据]` |
 | `edge/information_flow` | INFORMATION_FLOW | — | — | 缺口（E-16 待裁候选） |
@@ -348,10 +351,11 @@ E-01 ACTIVE_SCANNING · E-26 PRODUCT_DEFINITION
 | `edge/trust_friction_reduction` | TRUST_FRICTION_REDUCTION | — | — | 缺口（E-21 待裁候选） |
 | `edge/value_pricing` | VALUE_PRICING | — | — | 缺口（E-30 待裁候选） |
 
-**反查计数核对**：56 件 = 同名命中 **13** ＋ 交叉引用件命中 **12** ＋ 缺口 **31**；
+**反查计数核对**：56 件（as_of `ba1b22a8b5`）= 同名命中 **13** ＋ 交叉引用件命中 **12** ＋ 缺口 **31**；
 两个命中集合**无交集**（同名命中的 13 条与交叉引用件的 12 条是**不同的文件** ——
 例如 `E-18` 的同名件是 `edge/rule_constraint`，交叉件是 `edge/constrains`）。
-13 + 12 = **25** 件有 E 号依据，25 + 31 = **56** ✅
+13 + 12 = **25** 件有 E 号依据，25 + 31 = **56**（as_of `ba1b22a8b5`）✅
+**当前 58 = 同名命中 13 ＋ 交叉引用件 12 ＋ 缺口 31 ＋ #65 新增 2**（新增 2 件按同一规则亦属「缺口」：无 E 号映射）。
 ⇒ 同一 E 号可挂**多条**代码边（多对多），已在上表如实并列，**不得据此推断一一对应**。
 
 ---
@@ -412,13 +416,13 @@ E-01 ACTIVE_SCANNING · E-26 PRODUCT_DEFINITION
 |---|---|---|
 | `patch-d66-distinct` | **34** | 文件内 `E-\d+\.\d+` 去重个数 |
 | `patch-d66-occurrences` | **119** | 文件内 `E-\d+\.\d+` 出现总次数 |
-| `patch-d66-label-present` | **0 / 56** | 词表 56 个 `label` 在该文件内出现的个数 |
+| `patch-d66-label-present` | **0 / 56**（as_of `ba1b22a8b5`） | 词表 56 个 `label`（as_of 同上；当前 0 / 58）在该文件内出现的个数 |
 
 **结论（三句话）**：
 
 1. `_patch_d66.cjs` 是 `E-x.y` 编号的**系统性载体**（34 distinct / 119 处），
    形态如 `'acquire-financial-data': { edges: ['E-1.1', 'E-1.2', 'E-5.1', 'E-5.2'], … }`。
-2. 它**不含任何 `label`**（56 个 code `label` 在其中 **0 命中**），
+2. 它**不含任何 `label`**（56 个 code `label`（as_of `ba1b22a8b5`）在其中 **0 命中**），
    ⇒ **不能**作为 `E-x.y → $id` 的依据。**唯一**依据是 golden 的 `label`（§五）。
 3. ⇒ 它的定位是「**编号集合载体**」，不是「映射依据」。**本件不改它、不进写集。**
 
@@ -462,7 +466,7 @@ GLOSSARY  E-4.2 info_flow                ↔ 词表 edge/information_flow      (
 # ① 引用对齐判据（本件 §1.3）—— 末行应为 occurrences=45 distinct=15 hit=15 miss=0
 cd <repo> && node scripts/control-tower/probe-cycle-edges.ts          # exit 0
 
-# ② 词表基数（应 56/56/56）
+# ② 词表基数（应 56/56/56，as_of `ba1b22a8b5`；当前 58/58/58）
 git ls-tree -r --name-only HEAD -- extensions/ontology/edge-types/ | wc -l
 git ls-tree -r HEAD -- extensions/ontology/edge-types/ \
   | grep -oE '"edge/[a-z_-]+"' | sort -u | wc -l
