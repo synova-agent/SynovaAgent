@@ -1,0 +1,125 @@
+{
+  "_source": "山河研究院《题8-可独立交付的包边界-全文.md》§2.5（11 包 customerDeps 初始表）",
+  "_status": "候选值（待摘除演练验）—— 本表**只作演练输入**，不写回登记件（CTO 红线）",
+  "_note": "🔴 unavailable 能力名均为占位（题8 §2.5 自陈\"min 列生成器未落地\"）⇒ 逐位比对暂不可能；本表保留原样以便\"打回\"时有据。",
+  "declarations": [
+    {
+      "pkg": "K1",
+      "missing": "",
+      "unavailable": [],
+      "degraded": "",
+      "soft": false
+    },
+    {
+      "pkg": "K2",
+      "missing": "",
+      "unavailable": [],
+      "degraded": "",
+      "soft": false
+    },
+    {
+      "pkg": "K3",
+      "missing": "K4",
+      "unavailable": [
+        "sentinel.compute"
+      ],
+      "degraded": "signal-only",
+      "soft": false
+    },
+    {
+      "pkg": "K3",
+      "missing": "K9",
+      "unavailable": [
+        "readiness 信号类"
+      ],
+      "degraded": "reduced-scope",
+      "soft": false
+    },
+    {
+      "pkg": "K4",
+      "missing": "K5",
+      "unavailable": [
+        "图谱度量回填类"
+      ],
+      "degraded": "reduced-scope",
+      "soft": false
+    },
+    {
+      "pkg": "K5",
+      "missing": "K3",
+      "unavailable": [
+        "参数测量类"
+      ],
+      "degraded": "no-source",
+      "soft": false
+    },
+    {
+      "pkg": "K5",
+      "missing": "K4",
+      "unavailable": [
+        "参数测量类"
+      ],
+      "degraded": "no-source",
+      "soft": false
+    },
+    {
+      "pkg": "K6",
+      "missing": "K1",
+      "unavailable": [
+        "回环触发类"
+      ],
+      "degraded": "unavailable",
+      "soft": false
+    },
+    {
+      "pkg": "K7",
+      "missing": "K9",
+      "unavailable": [
+        "矩阵输入类"
+      ],
+      "degraded": "no-source",
+      "soft": false
+    },
+    {
+      "pkg": "K8",
+      "missing": "",
+      "unavailable": [],
+      "degraded": "",
+      "soft": false
+    },
+    {
+      "pkg": "K9",
+      "missing": "K4",
+      "unavailable": [
+        "readiness 底账类"
+      ],
+      "degraded": "reduced-scope",
+      "soft": false
+    },
+    {
+      "pkg": "K10",
+      "missing": "",
+      "unavailable": [],
+      "degraded": "",
+      "soft": false
+    },
+    {
+      "pkg": "K12",
+      "missing": "K3",
+      "unavailable": [
+        "一致性覆盖·哨兵信号"
+      ],
+      "degraded": "reduced-scope",
+      "soft": true
+    },
+    {
+      "pkg": "K12",
+      "missing": "K4",
+      "unavailable": [
+        "一致性覆盖·本体"
+      ],
+      "degraded": "reduced-scope",
+      "soft": true
+    }
+  ]
+}
