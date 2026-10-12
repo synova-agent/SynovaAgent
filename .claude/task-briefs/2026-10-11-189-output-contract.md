@@ -172,13 +172,9 @@ src/routes/diagnosis.ts:812:async function renderOnePagerOnDemand(...)
 - [x] verify: `npx tsc --noEmit` ⇒ **RC=2 / error TS=29**（锚基线同为 RC=2/29；全量 29 行排序后逐字 diff
       = `IDENTICAL`，两文件 sha256 相同 `126309dc…`）⇒ 本工位未引入新 tsc 错误。
       **RC=2 不等于"通过"**，判据是"计数与行集与锚一致"。
-- [x] 反例（改坏即红）5 条：A1/A2/A3/A4 + 摘接线行 W。A1/A2 由**两态提交对照**机械可复跑
-      （`git checkout <T1-sha>` 后再跑同一测试 ⇒ 具体断言红）；A3/A4 无独立提交，留**注入复现记录**（脚本 + 原始输出 + 注入点）。
-      verify: `git checkout $(git rev-parse HEAD^) && npx vitest run tests/output/contract-validator.test.ts`
-- [x] V4 原始输出：一次失败记录落账的原始行（`cat` 原件见回件 R3；载体 `data/output-contract-failures.jsonl`）
-      verify: `cat data/output-contract-failures.jsonl`
-- [x] 卡上【读卡确认】+【交付】（见下）
-      verify: `grep -n "读卡确认" .claude/task-briefs/2026-10-11-189-output-contract.md`
+- [x] 反例（改坏即红）5 条：A1/A2/A3/A4 + 摘接线行 W。A1/A2 由**两态提交对照**机械可复跑（`git checkout <T1-sha>` 后再跑同一测试 ⇒ 具体断言红）；A3/A4 无独立提交，留**注入复现记录**（脚本 + 原始输出 + 注入点）。verify: `git checkout "$(git rev-parse HEAD^)" && npx vitest run tests/output/contract-validator.test.ts`
+- [x] V4 原始输出：一次失败记录落账的原始行（`cat` 原件见回件 R3；载体 `data/output-contract-failures.jsonl`）。verify: `cat data/output-contract-failures.jsonl`
+- [x] 卡上【读卡确认】+【交付】（见下）。verify: `grep -c "读卡确认" .claude/task-briefs/2026-10-11-189-output-contract.md`
 
 ## 读卡确认 + 交付
 

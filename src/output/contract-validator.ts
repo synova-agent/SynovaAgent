@@ -236,7 +236,7 @@ const contractCache = new Map<string, OutputContract>();
  *   这是"测试用临时目录"与"客户自定义绝对路径"共同的必踩点，故在此收口。
  */
 function resolveAgainstCwd(p: string): string {
-  return join(process.cwd(), p);
+  return isAbsolute(p) ? p : join(process.cwd(), p);
 }
 
 /** 契约根解析：显式入参 > 环境变量 > 默认（仓库相对）。绝对路径原样使用。 */
@@ -507,6 +507,7 @@ function readPath(subject: Record<string, unknown>, path: string): unknown {
       const itemRecord = asRecord(item);
       if (itemRecord === null) return undefined;
       const got = readPath(itemRecord, rest);
+      if (got === undefined) return undefined;
       plucked.push(got);
     }
     return plucked;
@@ -672,12 +673,17 @@ function checkRules(
         const re = safeRegExp(check.pattern ?? '');
         if (re === null) break;
 
+        // 先判"值形态"（必须字符串），再判"值内容"（必须匹配 pattern）。
+        // 🔴 两条都要覆盖**通配路径**（`rows[].metricId`）：`required` 只管"值在不在"，
+        //    不管"值是不是对的类型" —— 只覆盖单值路径 ⇒ `metricId: 123` 被**静默接受**
+        //    （"校验器看着在跑，却放过非法类型"正是本卡要消灭的洞）。
+        //    每条路径只报一条（不因多行同型错刷屏）⇒ found 标记后跳出。
         let found = false;
         for (const value of values) {
           if (typeof value !== 'string') {
             if (isText) continue;
-            if (!Array.isArray(raw)) found = true;
-            continue;
+            found = true;
+            break;
           }
           if (!isPresent(value)) continue;   // 缺席由 `fields[].required` 唯一负责
           if (!re.test(value)) {
@@ -840,7 +846,7 @@ function validateOutput(
 
   if (loaded.contract === null) {
     // 分类走**结构化 reason**，不靠文案前缀嗅探（文案改一个字就静默改判 = 口径漂移之源）
-    const isNotFound = (loaded.problem ?? '').startsWith('契约文件不存在');
+    const isNotFound = loaded.reason === 'invalid-id' || loaded.reason === 'missing-file';
     const kind = isNotFound ? 'not_found' : 'load_failed';
     errors.push({
       code: `contract.${kind}`,
