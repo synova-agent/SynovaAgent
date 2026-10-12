@@ -20,6 +20,27 @@
     { "from": "valuation", "to": "salesInvestment", "polarity": "+", "delay": 1, "weight": 0.7 },
     { "from": "salesInvestment", "to": "newArr", "polarity": "+", "delay": 2, "weight": 0.5 }
   ],
+  "valves": {
+    "acquisitionValve": [
+      { "edgeId": "E-25", "actionEffectLag": "3-6_months" },
+      { "edgeId": "E-01", "actionEffectLag": "1-3_months" }
+    ],
+    "allocationValve": [
+      { "edgeId": "E-13", "actionEffectLag": "1_month" }
+    ],
+    "conversionValve": [
+      { "edgeId": "E-31", "actionEffectLag": "1-3_months" },
+      { "edgeId": "E-23", "actionEffectLag": "3-6_months" }
+    ],
+    "deliveryValve": [
+      { "edgeId": "E-30", "actionEffectLag": "1_month" },
+      { "edgeId": "E-35", "actionEffectLag": "1-3_months" }
+    ],
+    "recycleValve": [
+      { "edgeId": "E-40", "actionEffectLag": "3-6_months" },
+      { "edgeId": "E-37", "actionEffectLag": "6-12_months" }
+    ]
+  },
   "overflowFormula": {
     "condition": "churnArr.currentValue > netArr.currentValue",
     "targetNode": "churnArr",

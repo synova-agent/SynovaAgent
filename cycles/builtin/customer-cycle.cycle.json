@@ -15,6 +15,24 @@
     { "from": "retention", "to": "ltv", "polarity": "+", "delay": 3, "weight": 0.8 },
     { "from": "ltv", "to": "cac", "polarity": "-", "delay": 0, "weight": 0.4 }
   ],
+  "valves": {
+    "acquisitionValve": [
+      { "edgeId": "E-01", "actionEffectLag": "1-3_months" },
+      { "edgeId": "E-25", "actionEffectLag": "3-6_months" }
+    ],
+    "allocationValve": [
+      { "edgeId": "E-13", "actionEffectLag": "1_month" }
+    ],
+    "conversionValve": [
+      { "edgeId": "E-31", "actionEffectLag": "1-3_months" }
+    ],
+    "deliveryValve": [
+      { "edgeId": "E-30", "actionEffectLag": "1_month" }
+    ],
+    "recycleValve": [
+      { "edgeId": "E-40", "actionEffectLag": "3-6_months" }
+    ]
+  },
   "overflowFormula": {
     "condition": "cac.currentValue > ltv.currentValue",
     "targetNode": "cac",

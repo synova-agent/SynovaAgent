@@ -10,9 +10,78 @@
  *   @degraded — 数据不足时降级标记，不崩溃
  */
 import { createLogger } from '@synova/logger';
-import type { CycleConfig } from './cycle-types';
+import type { CycleConfig, ValveKey } from './cycle-types';
+import { VALVE_KEYS, ACTION_EFFECT_LAG_RANGE_MONTHS } from './cycle-types';
 
 const log = createLogger('cycles/overflow-compute');
+
+// ═══ 五阀时滞剖面（#239 / K4-06 真消费）═══
+
+/** 五阀时滞剖面 —— `computeOverflow` 的**实际输入**（非装饰字段）。 */
+export interface ValveLagProfile {
+  /** 逐阀的「最早见效月数」（= 该阀各边 `minMonths` 的最小值；该阀无合法边 ⇒ null） */
+  byValve: Record<ValveKey, number | null>;
+  /** 全部边的「最早见效月数」最大值 = 该循环的**关键路径下界**（无合法边 ⇒ null） */
+  criticalPathMinMonths: number | null;
+  /** 合法边总条数 */
+  edgeCount: number;
+  /** 非法/无法换算的边条数（口径：`actionEffectLag` ∉ 6 桶） */
+  invalidEdgeCount: number;
+}
+
+/**
+ * 从 `cycle.valves` 计算五阀时滞剖面。
+ *
+ * 契约:
+ *   @input  — `cycle`（读 `cycle.valves`；缺失/空 ⇒ 返回 `edgeCount=0` 的**空剖面**，不抛错）
+ *   @output — `ValveLagProfile`
+ *   @degraded — 不抛错；非法 `actionEffectLag` 逐条计入 `invalidEdgeCount`（由调用方决定是否降级）
+ *
+ * 口径（写清楚，防漂移）:
+ *   · 桶 → 月数用 `ACTION_EFFECT_LAG_RANGE_MONTHS` 的 `minMonths`（**下界**）；
+ *   · `>12_months` 的 `maxMonths = null`（开区间）⇒ 只用 `minMonths = 12`，**不外推**；
+ *   · **不**把桶标签与边类型 JSON 的 `action_effect_lag`（数值区间口径，doc15 §3.5.1）混用。
+ */
+export function computeValveLagProfile(cycle: CycleConfig): ValveLagProfile {
+  const empty = (): ValveLagProfile => ({
+    byValve: Object.fromEntries(VALVE_KEYS.map(k => [k, null])) as Record<ValveKey, number | null>,
+    criticalPathMinMonths: null,
+    edgeCount: 0,
+    invalidEdgeCount: 0,
+  });
+  if (!cycle.valves) return empty();
+
+  const profile = empty();
+  let critical: number | null = null;
+
+  for (const key of VALVE_KEYS) {
+    const arr = cycle.valves[key];
+    if (!Array.isArray(arr)) continue;
+    for (const edge of arr) {
+      const lag = edge?.actionEffectLag as keyof typeof ACTION_EFFECT_LAG_RANGE_MONTHS | undefined;
+      const range = lag ? ACTION_EFFECT_LAG_RANGE_MONTHS[lag] : undefined;
+      if (!range) { profile.invalidEdgeCount += 1; continue; }
+      profile.edgeCount += 1;
+      const cur = profile.byValve[key];
+      profile.byValve[key] = cur === null ? range.minMonths : Math.min(cur, range.minMonths);
+      critical = critical === null ? range.minMonths : Math.max(critical, range.minMonths);
+    }
+  }
+  profile.criticalPathMinMonths = critical;
+  return profile;
+}
+
+/** 数据点跨度（月）；不足 2 点 ⇒ 0。 */
+function windowMonths(dataPoints: Array<{ month: string }>): number {
+  if (dataPoints.length < 2) return 0;
+  const sorted = [...dataPoints].sort((a, b) => a.month.localeCompare(b.month));
+  const first = sorted[0].month;
+  const last = sorted[sorted.length - 1].month;
+  const [fy, fm] = first.split('-').map(Number);
+  const [ly, lm] = last.split('-').map(Number);
+  if ([fy, fm, ly, lm].some(n => !Number.isFinite(n))) return 0;
+  return (ly - fy) * 12 + (lm - fm);
+}
 
 // ═══ Types ═══
 
@@ -45,6 +114,12 @@ export interface OverflowSnapshot {
   trendDirection: 'rising' | 'stable' | 'declining';
   /** 连续同向月数 */
   consecutiveDirection: number;
+  /** 五阀时滞剖面（#239 真消费；`valves` 缺失时为 `null`） */
+  valveLag: ValveLagProfile | null;
+  /** 数据点跨度（月） */
+  dataWindowMonths: number;
+  /** 数据窗口是否短于关键路径下界（⇒ 结论不可靠，`degraded` 置真） */
+  valveLagExceedsWindow: boolean;
   /** 降级标记 */
   degraded: boolean;
 }
@@ -145,7 +220,21 @@ export function computeOverflow(cycle: CycleConfig, data: EnterpriseTimeSeries):
     high: 'mature',
   };
 
-  const degraded = data.dataPoints.length < 2;
+  // #239 / K4-06: 五阀时滞**真消费** —— 数据窗口 < 关键路径下界 ⇒ 结论不可靠 ⇒ 降级（有 log，非静默）
+  const valveLag = cycle.valves ? computeValveLagProfile(cycle) : null;
+  const dataWindowMonths = windowMonths(sorted);
+  const valveLagExceedsWindow =
+    valveLag !== null &&
+    valveLag.criticalPathMinMonths !== null &&
+    dataWindowMonths < valveLag.criticalPathMinMonths;
+  if (valveLagExceedsWindow) {
+    log.warn(
+      { cycleId: cycle.cycleId, dataWindowMonths, criticalPathMinMonths: valveLag.criticalPathMinMonths },
+      '数据窗口短于五阀关键路径下界 — 溢出结论降级',
+    );
+  }
+
+  const degraded = data.dataPoints.length < 2 || valveLagExceedsWindow;
 
   const snapshot: OverflowSnapshot = {
     cycleId: cycle.cycleId,
@@ -162,10 +251,16 @@ export function computeOverflow(cycle: CycleConfig, data: EnterpriseTimeSeries):
     yoyChangePercent,
     trendDirection,
     consecutiveDirection,
+    valveLag,
+    dataWindowMonths,
+    valveLagExceedsWindow,
     degraded,
   };
 
-  log.info({ cycleId: cycle.cycleId, overflowValue: snapshot.overflowValue, trendDirection }, '溢出计算完成');
+  log.info(
+    { cycleId: cycle.cycleId, overflowValue: snapshot.overflowValue, trendDirection, dataWindowMonths, valveLagExceedsWindow },
+    '溢出计算完成',
+  );
   return snapshot;
 }
 
