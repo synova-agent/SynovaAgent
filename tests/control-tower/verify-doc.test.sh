@@ -42,7 +42,7 @@ fi
 cat > "$TMP/good.md" <<'DOC_EOF'
 # 合法 doc
 ## 6. 完成标准（机器可验证）
-- DS1: `grep -c "增长导航" CLAUDE.md`
+- DS1: `grep -c "增长导航" AGENTS.md`
 ## 8. 交付声明（声称 ↔ 证据对照表）
 | 声称 | 证据命令 | 预期 |
 |---|---|---|
@@ -107,7 +107,7 @@ fi
 cat > "$TMP/meta.md" <<'DOC_EOF'
 # 元字符 doc
 ## 6. 完成标准（机器可验证）
-- DS1: `grep -c "增长导航" CLAUDE.md; echo injected`
+- DS1: `grep -c "增长导航" AGENTS.md; echo injected`
 ## 8. 交付声明（声称 ↔ 证据对照表）
 | 声称 | 证据命令 | 预期 |
 |---|---|---|
