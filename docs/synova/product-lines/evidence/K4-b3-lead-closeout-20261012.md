@@ -59,7 +59,7 @@
 | D4 | 扩写集 = `tests/l4/edge-lag-unknown-degraded-1134.test.ts` + `tests/l4/ontology-loader-param-bridge-1031.test.ts` 归 **L2 先改**，L3 禁动 | 值迁移与 +2 新边**同时**撞这两件（impl-b 实测 7 处红 + `:376` 构造性必红）；同文件同时间只允许一个写者 |
 | D5 | `#234` 迁移域按 **E 号覆盖**（非字符串同标签）；`#235` 用 E 号名精确命中（13 公式 / 39 `unknown`） | 两卡口径不同源，各自声明，禁互相放宽 |
 | D6 | 新边初值 = `unknown`（**不用 `TBD`**） | `TBD` 会被 `#235` 的**全域** `TBD=0` 判据打红；`unknown` 既与既有约定同形（50/56）又不新增第三态 |
-| D7 | 测量口径强制：比字节用 `Get-FileHash`/`sha256sum`（口径 W）或 `git hash-object` **并标注经 autocrlf clean**（口径 B） | `core.autocrlf=true` + 无 `.gitattributes` ⇒ 工作树 CRLF；`hash-object` 只证规范化一致（A2） |
+| D7 | 测量口径强制：比字节用 `Get-FileHash`/`sha256sum`（口径 W）或 `git hash-object` **并标注经 autocrlf clean**（口径 B） | `core.autocrlf=true`；**`.gitattributes` 存在（27 行）但无规则覆盖本批路径**（实测 `git check-attr text eol` 对 `cycles/**`、`extensions/ontology/edge-types/**` 均 `unspecified`）⇒ 工作树 CRLF；`hash-object` 只证规范化一致（A2） |
 | D8 | 禁把 `git hash-object` 结果写成「逐字节一致」而不带口径名 | 同上 |
 | D9 | 证据件落 `docs/synova/product-lines/evidence/`，命名 `K4-b3-<卡号>-*` | M5 |
 
@@ -81,8 +81,23 @@ verifier 独立复现 5 项前提，全部以 `ba1b22a8b5` 为基准、逐 blob 
 **verifier 报的 4 项不一致（a-1/a-2/a-3/a-5）全部被队长采信并已处置**（见 §二/§三）：
 a-1 → 自纠 2；a-2 → D3 附钉定义 + 判别性反例要求；a-3 → D7/D8；a-5 → 并列 + 待裁。
 
-**verifier 报 b-2 被队长纠正**：其称「doc15 第三章不在本仓」与队长原判同错（同一根因：**用文件名当目录名**）。
-实证 `git cat-file -e ba1b22a8b5:<doc15 第三章路径>` → **exit=0**。
+**另有 a-4 / a-6 / a-7 / a-8 / a-5′ / a-5″ / a-9（verifier 第二三轮），逐条处置**：
+- **a-4** `22≠23` 唯一来源 = `cycles/industry/saas-tech/arr-growth.cycle.json`（edgeRefs 3 / edgeId 4）⇒ 要求交付件解释此差。
+- **a-6** `§3.4` 定位是陷阱：桶标签/五阀真节在 **doc15 第一章 §3.4**，第三章 §3.4 是「执行约束因子模型」。⇒ 已连同五阀键名下发 impl-a；**桶标签实测 6 个**（含 `>12_months`），派单件只列 5 个 ⇒ 已要求登记。
+- **a-7** 底稿「13/42」是**章依赖**读数（按第二章名）⇒ 底稿已加标注。
+- **a-8** `_patch_d66.cjs`「结构化解析 0 条」**低估**：正则可取得 **34 distinct / 119 occurrences** ⇒ 底稿已改为「结构化解析未取得（0）；正则可取得 34 distinct」，并加「降级的语义边界」声明。
+- **a-5′** 章名实为 **3 源 2 值**：**第二章 vs（第一章 §1.9 ∩ 第四章）**（第一/四章这 4 条标签相同）；且**第二章对 E-12 自身自相矛盾**（`L408 POWER_DISTRIBUTION` vs `L814 EFFICIENCY_FINANCING`）。
+- **a-5″** 「取能对上词表的那一版」有**边界**：E-08→`talent_filter` ✓、E-11→`reputation_attraction` ✓，但 **E-10 / E-12 两版候选均 ∉ 词表** ⇒ 必须显式写「无词表对应版」，只进待裁清单，**禁任选其一**。
+- **a-9** doc15 内 `actionEffectLag` 有**三个源**（S1 第三章 §3.5.1 8 条 / S2 第一章 §3.4 22 条 / S3 第一章附录A 25 条）；
+  跨源互斥 **3 条：E-23 / E-25 / E-37**（不止 E-23/E-37）⇒ 按 CTO 裁定 S1 优先；E-25 对应件现值为 `unknown`，本轮不动值但**必须登记冲突来源**。
+- **c-8** 队长本件 §〇 部分读数取自**工作树**（`ed63e2086`）而非钉死 SHA ⇒ 见本件 §七 自纠。
+
+**verifier 报 b-2 的归因纠正（重要）**：
+verifier 自纠 b-2（doc15 在仓内），并**订正了队长的归因**：
+- 队长的根因 = **用文件名当目录名**（`权威文档15-投入建议引擎`）⇒ 路径不存在；
+- verifier 的根因 = 父目录用对了，但 **(a)** 默认 `core.quotepath=true` 把非 ASCII 路径输出成八进制 ⇒ `Select-String '权威文档15'` 恒 0（实测默认 **0** / `-c core.quotepath=false` → **7**）；**(b)** `glob` 工具对 CJK 通配恒空（用确实存在的 `权威文档01*/**` 反证）。
+⇒ **两者根因不同、对策不同**（队长需"正向枚举证明找对目录"；verifier 需"`quotepath=false` + 不用 glob 取证"）。
+⇒ 本件**不把两条防线合成一条**（早先草稿曾合并，已按 verifier 意见改正）。
 
 **verifier 报 c 类（跑不通，采信并作为本批测量约束）**：
 - `git archive … | tar -x` 在 PS 5.1 下跑不通；`git archive -o` 导出的 115 件中 **78 件**因 `CRLF_CONVERTED_BY_ARCHIVE` 哈希不一致
@@ -104,18 +119,48 @@ a-1 → 自纠 2；a-2 → D3 附钉定义 + 判别性反例要求；a-3 → D7/
 
 | # | 遗留项 | 归属 | 说明 |
 |---|---|---|---|
-| R1 | 权威文档01 两章 4 条 E 号命名互斥（E-08/E-10/E-11/E-12） | **CTO** | 队长裁定「并列 + 待裁」；需 CTO 裁以哪章为准或确认并列形态 |
+| R1 | 权威文档01 **3 源 2 值**分歧 4 条（E-08/E-10/E-11/E-12）：**第二章 vs（第一章 §1.9 ∩ 第四章）**；且**第二章对 E-12 自身自相矛盾** | **CTO** | 队长裁定「并列 + 标 `[章间分歧·待裁]` + 不静默消解」；其中 **E-10/E-12 两版候选均 ∉ 词表** ⇒ 已定为「无词表对应版，只进待裁清单」 |
 | R2 | `§3.5.1` 主张 `{minMonths,maxMonths}` 对象形态 vs 既有门禁要求非空字符串 | **CTO** | 队长裁定按字符串区间落地，形态统一属另案 |
-| R3 | `1_month ⇒ [0.5,1]` 为**规则推导**（无 §3.5.1 权威值，E-13 属未覆盖项） | **CTO 追认** | 已在交付件标「推导非权威 + 提请追认」 |
-| R4 | `#66/#1412` 剩余面：工作令 §四⑥ 要的 `src/init/engine-context.ts` 第二收口点 + `src/ingest/index.ts` 2 处自建 store | **CTO** | 已落地件走适配器路径；剩余面是否另立新卡，待 CTO 裁 |
+| R3 | `1_month ⇒ [0.5,1]` 为**推导值**（CTO 明文只给 `immediate ⇒ [0,0.5]`） | **CTO 追认** | 队长**定稿 [0.5,1]**：取 `[0,1]` 会使 `immediate[0,0.5] ⊂ 1_month[0,1]` **重叠** ⇒ CTO 裁定② 的「区间→桶」换算规则不再唯一 |
+| R4 | `#66/#1412` 剩余面：工作令 §四⑥ 要的 `src/init/engine-context.ts` 第二收口点 + `src/ingest/index.ts` 2 处自建 store | **CTO** | impl-c 核定：`engine-context` **不构造 store**（`grep SqliteGraphStore` exit 1 = 对象不存在，非"没做"）；`src/ingest/index.ts` 实测 **1 处**（非 2 处）且被默认守卫覆盖 ⇒ 剩余面比工作令描述**小** |
 | R5 | `TBD` 可容性口径冲突（#1350 W3 允许 `TBD` vs #235 全域 `TBD=0`） | **CTO 追认** | 队长裁定新边用 `unknown` |
-| R6 | 两套本体词表并存（`extensions/ontology/` 56 JSON vs `packages/ontology/src/` TS 常量） | **CTO** | 本批未合；任一边体系改动须先声明与两者关系 |
+| R6 | 两套本体词表并存（`extensions/ontology/` 56 JSON vs `packages/ontology/src/` TS 常量 52 条） | **CTO** | 本批按裁定**同步常量**（52→54）；`ALL_EDGE_TYPES` 被 3 个 `src/` 文件消费，其 `EntityResolver` 向量维 52→54 **为行为变化**（无测试钉长度） |
 | R7 | 本批扩写集 2 件（D4） | **CTO 收件闸** | 属「要扩写集」类，队长按授权裁决并在此显式登记 |
 | R8 | `.claude/claims/201.yaml` / `345.yaml` 为**畸形 claim**（`claim_store` 报 `status=invalid`） | 存量 | 非本批产物；触发「归属呈报降级」（已由工具显式降级，非静默） |
+| R9 | doc15 内 `actionEffectLag` **三源互斥 3 条**（E-23 / E-25 / E-37） | **CTO** | 按裁定 S1（§3.5.1）优先；**E-25 对应件现值为 `unknown` ⇒ 本轮不动值，但冲突来源必须登记**（风险：有人引桶源把 E-25 落成 `[3,6]` 与裁定的 `(6,12)` 相冲却看似有据） |
+| R10 | 第一章附录A 中文名与权威表英文 label 至少 2 处不可对应（附录A `E-20 技术创新`、`E-22 知识管理`） | **CTO** | verifier 只登记事实、未越界裁；中文→英文属语义判断 |
 
 ---
 
-## 七、收尾三件的提交与推送回执
+## 七、队长读数口径自纠（采纳 verifier c-8：钉了左端却用工作树取数）
+
+本件 §二/§三 的部分**证据性读数**取自**工作树**（`D:\synova-wt`，其 HEAD = `ed63e2086`），而本件件首声明 diff 左端一律 `ba1b22a8b5`。
+**该两棵树的差异实测存在**：verifier 实测 `extensions/ontology/extensions/general-enterprise/activity.json` **仅 base 有**，工作树无。
+⇒ 本批读数"恰好一致"（56↔56、E 号 0↔0、TBD 52↔52）**是运气，不是不变量**。
+**订正口径（本批此后生效）**：一切证据性读数一律 `git <cmd> ba1b22a8b5 -- <path>`（**在 SHA 上取数**）。
+> 归因：这是 **A8**（「报差异不钉左端 ⇒ 同一 HEAD 两个数」）的**变体** —— 本次**钉了左端却用工作树取数**；对策 = 钉 SHA **且**在 SHA 上取数，两件事都要做。
+
+---
+
+## 八、卡级交付证据
+
+> 本节在三条实施线回执后逐卡填入（卡号 / 分支 / commit 实测 / 推送方式 / 写集全列 / 判据原始输出 + exit code / 反例造红 + 复原哈希 / 一句话自验结论）。
+
+| 卡 | 分支 | commit（实测） | 推送 | 状态 |
+|---|---|---|---|---|
+| #65 A 段 + #66 核验件 | `k4b3/l3-65` | `afa582cd8`（前一笔 `97d659785`） | auto-push（`synova-commit` 自带，未手工再推） | **已交**（A 段零代码零测试 ⇒ 无造红夹具；B 段冻结） |
+| #238 | `k4b3/l1-238-239` | —— | —— | 实施中（未推送） |
+| #239 | `k4b3/l1-238-239` | —— | —— | 未开工（串行，待 #238） |
+| #234 | `k4b3/l2-234-235` | —— | —— | 实施中（未推送） |
+| #235 | `k4b3/l2-234-235` | —— | —— | 未开工（串行，待 #234） |
+
+**时点事实（verifier 实测，队长采信）**：截至验证时点，`git ls-remote --heads origin` 上
+**`k4b3/l1-238-239` / `k4b3/l2-234-235` / `k4b3/l3-65` 三支均不存在** ⇒ **三线尚未推送**。
+（`k4b3/l3-65` 后由 impl-c 推送至 `afa582cd8`。）
+
+---
+
+## 九、收尾三件的提交与推送回执
 
 （待填：commit 实测 / 推送方式 / `git ls-remote --heads origin 'refs/heads/k4b3/*'` 回执）
 
