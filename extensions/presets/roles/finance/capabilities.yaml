@@ -18,3 +18,15 @@ capabilities:
     label: 直接改写进化回环
     enabled: false
     disabledReason: ④ 参数层只允许由 ③ 哨兵写（宪章 4.4）；岗位包不得绕开该硬规则
+
+# ═══ K12-11 (#194 / RB-03): 权限**项**（能看什么 / 能做什么）═══
+# 权限是「一项一项勾」，不是"五档套餐"。五档（admin/manager/employee/viewer/external）
+# 保留为**出厂默认（L0）**；本段是**客户可配层（L2）**，**覆盖不是替换**（宪章 5.2）。
+# 合成规则（engine-auth/permission-grants.ts）: 生效 = (出厂默认 ∪ grants) − denies
+#   合法项白名单见 `PERMISSION_CATALOG`（拼错的项**不授予**，fail-closed）
+permissionGrants:
+  grants:
+    - knowledge.finance.read
+  denies:
+    # 显式减项示例: 财务岗不因"能看财务"而顺带获得财务库的**写**权
+    - knowledge.finance.write

@@ -13,6 +13,6 @@
   },
   "consumed_by_sentinels": [],
   "action_effect_lag": "unknown",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "incentive_distortion = (1 - kpi_strategic_alignment) * (1 + kpi_conflict_count/10) * short_term_bias ; kpi_strategic_alignment = semantic_similarity(kpi_vector, strategy_vector)",
   "description": "激励与目标对齐——激励设计使个人决策与组织目标一致，调节人才部署和资本分配的个人决策。"
 }

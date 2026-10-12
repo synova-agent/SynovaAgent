@@ -1,0 +1,29 @@
+# .claude/claims/239.yaml — #239（K4-06 循环层五阀映射 ＋ action_effect_lag）写集声明（D708 的 S0 源）
+# 说明：本卡与 #238 同分支同 PR ⇒ writeset 取**本分支全量变更集**（= git diff --name-only ba1b22a8b5..HEAD）。
+writeset:
+  - .claude/claims/238.yaml
+  - .claude/claims/239.yaml
+  - memory/notes/proposed/2026-10-12-K4-b3-numbering-authority.md
+  - docs/synova/coordination/numbering-authority.md
+  - docs/synova/GLOSSARY.md
+  - scripts/control-tower/probe-cycle-edges.ts
+  - scripts/control-tower/probe-cycle-valves.ts
+  - tests/coordination/numbering-authority.test.ts
+  - tests/cycles/valve-mapping.test.ts
+  - cycles/builtin/cash-cycle.cycle.json
+  - cycles/builtin/customer-cycle.cycle.json
+  - cycles/builtin/product-cycle.cycle.json
+  - cycles/builtin/talent-cycle.cycle.json
+  - cycles/industry/retail-ecommerce/store-replication.cycle.json
+  - cycles/industry/saas-tech/arr-growth.cycle.json
+  - src/cycles/cycle-types.ts
+  - src/cycles/cycle-loader.ts
+  - src/cycles/overflow-compute.ts
+  - docs/synova/product-lines/evidence/K4-b3-238-numbering-authority.md
+  - docs/synova/product-lines/evidence/K4-b3-239-valve-mapping.md
+done:
+  - verify: node scripts/control-tower/probe-cycle-valves.ts
+  - verify: node node_modules/vitest/vitest.mjs run tests/cycles/valve-mapping.test.ts
+  - verify: node scripts/control-tower/probe-cycle-edges.ts
+  - verify: git diff --name-only ba1b22a8b5..HEAD
+note: K4-06 循环层五阀：6 件 cycle 按 doc15 第一章 §3.4 形态补 valves（5 键 + {edgeId,actionEffectLag}），不覆盖 edges[]。edgeId 用 E-NN（§3.4 原样；本卡不建 E号→$id 运行时映射）。桶规范 6 / 实用 5（>12_months 已定义未使用）。overflow-compute 真消费（数据窗口 < 关键路径下界 ⇒ 降级），删掉即报红。

@@ -121,6 +121,42 @@ async function recordTicketResolution(input: {
  */
 const DEFAULT_LEDGER_PRESET_VERSION = 1;
 
+// ═══ GET /api/sentinel/metrics/readings — E5 / #389：④a 测量值读回（业务读者①） ═══
+//   200 { ok: true, count, rows }        — 读回成功（count=0 合法：还没落过行）
+//   200 { ok: false, degraded, errors }  — 表未迁移/查询异常（显式降级，不静默空数组）
+//   503 { ok: false, code }              — db 未注入（装配降级传播）
+// 口径：缺省排除轮次级（SENTINEL-*，标定供数口径 CTO 裁 A3）；includeRound=1 显式包含。
+
+router.get('/metrics/readings', async (req: Request, res: Response) => {
+  try {
+    const db = (req.app.locals.orchestration as { db?: unknown } | undefined)?.db;
+    if (!db) {
+      log.warn('[sentinel] 测量值读回：db 未注入（orchestration.locals 缺席）— 503 显式降级');
+      res.status(503).json({ ok: false, code: 'METRIC_READINGS_DB_NOT_WIRED', error: 'orchestration.db 未注入' });
+      return;
+    }
+    const days = typeof req.query.days === 'string' && req.query.days !== '' ? parseInt(req.query.days, 10) : undefined;
+    const limit = typeof req.query.limit === 'string' && req.query.limit !== '' ? parseInt(req.query.limit, 10) : undefined;
+    const metricId = typeof req.query.metricId === 'string' && req.query.metricId !== '' ? req.query.metricId : undefined;
+    const includeRound = req.query.includeRound === '1' || req.query.includeRound === 'true';
+    const { listRecentReadings, summarizeMetricTrends } = await import('../sentinel/metric-readings-reader');
+    const query = { days: Number.isFinite(days) ? days : undefined, limit: Number.isFinite(limit) ? limit : undefined, metricId, includeRound };
+    if (req.query.view === 'trends') {
+      const result = summarizeMetricTrends(db, query);
+      if (!result.ok) { res.json({ ok: false, degraded: true, count: 0, summary: result.summary, errors: result.errors }); return; }
+      res.json({ ok: true, count: result.summary.length, summary: result.summary });
+      return;
+    }
+    const result = listRecentReadings(db, query);
+    if (!result.ok) { res.json({ ok: false, degraded: true, count: 0, rows: result.rows, errors: result.errors }); return; }
+    res.json({ ok: true, count: result.rows.length, rows: result.rows });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.error({ err: msg }, '[sentinel] 测量值读回失败');
+    res.json({ ok: false, degraded: true, count: 0, rows: [], errors: [msg] });
+  }
+});
+
 // ═══ GET /api/sentinel/findings ═══
 
 router.get('/findings', (req: Request, res: Response) => {

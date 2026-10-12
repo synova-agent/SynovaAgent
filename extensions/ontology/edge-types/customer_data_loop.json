@@ -13,6 +13,6 @@
   },
   "consumed_by_sentinels": [],
   "action_effect_lag": "unknown",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "unknown",
   "description": "客户使用数据引导产品改进(二阶)——客户行为数据反馈改进需求到规格转化和定价策略。"
 }

@@ -17,8 +17,69 @@ import { readdirSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { createLogger } from '@synova/logger';
 import type { CycleConfig, ContextLoaderLike } from './cycle-types';
+import { VALVE_KEYS, ACTION_EFFECT_LAG_RANGE_MONTHS } from './cycle-types';
 
 const log = createLogger('cycles/loader');
+
+const VALID_LAGS = new Set<string>(Object.keys(ACTION_EFFECT_LAG_RANGE_MONTHS));
+
+/**
+ * 校验五阀映射（#239 / K4-06）。
+ *
+ * 契约:
+ *   @input  — `raw`（已解析的循环配置对象）
+ *   @output — 违规描述数组；**空数组 = 合规**
+ *   @degraded — 不抛错；违规逐条以字符串返回，由调用方计入 `errors` ⇒ `degraded: true`
+ *
+ * 判据（缺字段即报错）:
+ *   ① `valves` 存在且为对象
+ *   ② 五个阀键（`acquisitionValve`/`allocationValve`/`conversionValve`/`deliveryValve`/`recycleValve`）**全部存在**且为数组
+ *   ③ 每个元素形如 `{ edgeId: string, actionEffectLag: <6 桶之一> }`
+ *   ④ 每个阀**至少 1 条边**（空阀 = 该环节无政策杠杆点，视为未配置）
+ */
+function validateValves(raw: unknown): string[] {
+  const violations: string[] = [];
+  const cfg = raw as { valves?: unknown };
+  const valves = cfg.valves;
+
+  if (valves === undefined || valves === null) {
+    violations.push('valves 缺失（五阀映射未配置）');
+    return violations;
+  }
+  if (typeof valves !== 'object' || Array.isArray(valves)) {
+    violations.push('valves 形态非法（应为对象）');
+    return violations;
+  }
+
+  const bag = valves as Record<string, unknown>;
+  for (const key of VALVE_KEYS) {
+    const arr = bag[key];
+    if (arr === undefined || arr === null) {
+      violations.push(`valves.${key} 缺失`);
+      continue;
+    }
+    if (!Array.isArray(arr)) {
+      violations.push(`valves.${key} 形态非法（应为数组）`);
+      continue;
+    }
+    if (arr.length === 0) {
+      violations.push(`valves.${key} 为空（该阀至少需 1 条边）`);
+      continue;
+    }
+    arr.forEach((entry, i) => {
+      const e = entry as { edgeId?: unknown; actionEffectLag?: unknown };
+      if (typeof e.edgeId !== 'string' || e.edgeId.trim() === '') {
+        violations.push(`valves.${key}[${i}].edgeId 缺失或非法`);
+      }
+      if (typeof e.actionEffectLag !== 'string' || !VALID_LAGS.has(e.actionEffectLag)) {
+        violations.push(
+          `valves.${key}[${i}].actionEffectLag 非法（须为 ${[...VALID_LAGS].join(' / ')}）`,
+        );
+      }
+    });
+  }
+  return violations;
+}
 
 // ═══ 扫描路径 ═══
 
@@ -106,6 +167,13 @@ function loadCycleFile(
     }
     if (!cycle.overflowFormula || !cycle.overflowFormula.condition) {
       errors.push(`循环 ${cycle.cycleId} overflowFormula 缺失`);
+      return;
+    }
+
+    // #239 / K4-06: 五阀映射校验（缺字段即报错 ⇒ errors ⇒ degraded: true，不静默放行）
+    const valveViolations = validateValves(cycle);
+    if (valveViolations.length > 0) {
+      for (const v of valveViolations) errors.push(`循环 ${cycle.cycleId} ${v}`);
       return;
     }
 

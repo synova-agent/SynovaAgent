@@ -13,6 +13,6 @@
   },
   "consumed_by_sentinels": [],
   "action_effect_lag": "unknown",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "rule_rigidity = compliance_burden * (1 - adaptation_speed) * (1 + brake_existence) ; brake_existence = (has_emergency_override ? 0.3 : 1.0)",
   "description": "规则约束——治理框架下制定的规则和限制，约束资本分配和人才部署的边界。"
 }

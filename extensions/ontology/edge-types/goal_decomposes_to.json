@@ -1,0 +1,29 @@
+{
+  "$id": "edge/goal_decomposes_to",
+  "label": "GOAL_DECOMPOSES_TO",
+  "tags": [
+    "structural",
+    "core"
+  ],
+  "allowedFrom": [
+    "GOAL",
+    "Goal"
+  ],
+  "allowedTo": [
+    "GOAL",
+    "Goal"
+  ],
+  "requiredProps": [
+    "hierarchy_axis"
+  ],
+  "optionalProps": {
+    "hierarchy_axis": "string — company_to_company | company_to_department | department_to_team | team_to_role（层级轴：从哪一级目标挂到哪一级目标）",
+    "cascade_depth": "number — 从顶层目标起算的层深（1 = 顶层目标的直接下级）",
+    "effective_from": "string (ISO-8601) — 该层级关系的生效时点",
+    "rationale": "string — 为什么这样挂（可追溯的依据）"
+  },
+  "consumed_by_sentinels": [],
+  "action_effect_lag": "unknown",
+  "transfer_function": "unknown",
+  "description": "目标层级边 —— 上级目标（父）→ 下级目标（子）。方向 = 父 → 子（subject = 父目标，object = 子目标）；「挂在目标之下」是归属描述、不是方向声明，归属由入边表达（CTO 2026-10-08 裁定 §1）。不复用既有 GOAL_DECOMPOSITION（R8 已裁「不复用」）：两条边不同轴 —— 本边表达目标树内的层级从属，GOAL_DECOMPOSITION 表达目标到部门/岗位/任务的分解，复用会污染下游 consumed_by 的语义。端点字面量声明：本体节点词表当前无 goal/plan ⇒ 端点为运行时字面量；将来若建本体节点类型，须同步迁移（CTO 裁定 §3）。双枚举 GOAL/Goal 的依据：SQLite 的 type 比较大小写敏感，生产侧存在两个字面量 —— 'GOAL'（src/growth/goal-store.ts 写入）与 'Goal'（src/agent/conversation-engine.ts 建档 Phase 0 写入），少任一个则该侧节点在链路上不可见；同侪 src/l4/goal-alignment.ts 的 GOAL_NODE_TYPE_LOCALS = ['GOAL','Goal'] 且端点矩阵 fail-closed（命中即拒）。词表终态 = 一次落地（CTO 裁定 §4：分批＝两次提案＋两次回滚面）。初始 action_effect_lag / transfer_function = unknown，待标定（CTO W3 口径；本卡取 unknown 而非 TBD，因 #235 全域要求 TBD=0，且 TBD 属铁律 8「TODO 不留交付物」所禁）。⚠️ 命名待《命名权威登记册》N3/N4 认领确认。"
+}

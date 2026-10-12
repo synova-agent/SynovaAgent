@@ -13,6 +13,6 @@
   },
   "consumed_by_sentinels": [],
   "action_effect_lag": "unknown",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "unknown",
   "description": "利润再投资——收入池中的利润通过再投资回注到资本池（取代原REPLENISHES）。"
 }
