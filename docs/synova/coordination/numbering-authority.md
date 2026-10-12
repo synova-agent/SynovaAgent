@@ -188,7 +188,7 @@ occurrences=45 distinct=15 hit=15 miss=0
 | E-22 | ROUTINE_RIGIDITY | ROUTINE_RIGIDITY | `edge/routine_rigidity` | `ROUTINE_RIGIDITY` | `[字符串同义]` | 第二章 `### E-22: ROUTINE_RIGIDITY` |
 | E-23 | OPERATIONAL_EXECUTION | OPERATIONAL_EXECUTION | `edge/operational_execution` | `OPERATIONAL_EXECUTION` | `[字符串同义]` | 第二章 `### E-23: OPERATIONAL_EXECUTION`；**另**＋`edge/produces` |
 | E-24 | INNOVATION | INNOVATION | — | — | `[待裁·名称层有同根候选]` | 候选 `INNOVATION_OUTPUT` |
-| E-25 | BRAND_CONSTRUCTION | BRAND_CONSTRUCTION | `edge/brand_builds` | `BRAND_BUILDS` | `[语义同义·附仓内交叉引用件依据]` | 交叉引用件串 `BRAND_BUILDS E-25 BRAND_CONSTRUCTION` |
+| E-25 | BRAND_CONSTRUCTION | BRAND_CONSTRUCTION | `edge/brand_builds` 〔🔴 **订正 → 见 §九.2.1：该落点判「不可判·待裁」，本行不作为落点**〕 | `BRAND_BUILDS` | `[语义同义·附仓内交叉引用件依据]`〔同上，已降级〕 | 交叉引用件串 `BRAND_BUILDS E-25 BRAND_CONSTRUCTION`（依据相冲，详见 §九.2.1） |
 | E-26 | PRODUCT_DEFINITION | PRODUCT_DEFINITION | — | — | `[待裁·名称层无同根]` | 见 §3.5 |
 | E-27 | SERVICE_DELIVERY | SERVICE_DELIVERY | — | — | `[待裁·名称层有同根候选]` | 候选 `CHANNEL_DELIVERY`/`SERVICE_SUPPORT` |
 | E-28 | CROSS_FUNCTIONAL_SYNERGY | CROSS_FUNCTIONAL_SYNERGY | `edge/cross_functional_synergy` | `CROSS_FUNCTIONAL_SYNERGY` | `[字符串同义]` | 第二章 `### E-28: CROSS_FUNCTIONAL_SYNERGY`；**另**＋`edge/couples` |
@@ -211,6 +211,11 @@ occurrences=45 distinct=15 hit=15 miss=0
 ｜ `[章间分歧·取第四章命名]` **2**（E-08/E-11）｜ `[章间分歧·待裁]` **2**（E-10/E-12）
 ｜ `[待裁·名称层有同根候选]` **17** ｜ `[待裁·名称层无同根]` **2**（E-01/E-26）
 ⇒ 13+6+2+2+17+2 = **42** ✅
+
+> ⚠️ **计数行的口径未变、但其中一行已降级**：`E-25` 的表 A 行已按 §九.2.1 订正为「**不可判·待裁**」。
+> 计数行仍按**原分类口径**列出（该行**仍带依据**，只是依据相冲）⇒ 若按「**现存可落点**」口径，
+> `[语义同义·附仓内交叉引用件依据]` 实为 **5** 条（`E-14`/`E-15`/`E-16`/`E-19`/`E-31`），
+> 对应 `[待裁]` 侧 +1 ⇒ `13+5+2+2+18+2 = 42` 亦成立。**两个口径都写出来，避免读者二义。**
 
 ### 3.3 章间分歧（4 条，**不得静默选一个**）
 
@@ -272,7 +277,7 @@ E-01 ACTIVE_SCANNING · E-26 PRODUCT_DEFINITION
 | E-38 | `[字符串同义]` | ✅ `edge/talent_retention` |
 | E-15 | `[语义同义·附仓内交叉引用件依据]` | ❌ 无同标签边（可跨到 `edge/deploys`，**非同名**） |
 | E-24 | `[待裁·名称层有同根候选]` | ❌ 无同标签边（候选 `INNOVATION_OUTPUT`） |
-| E-25 | `[语义同义·附仓内交叉引用件依据]` | ❌ 无同标签边（可跨到 `edge/brand_builds`，**非同名**） |
+| E-25 | `[语义同义·附仓内交叉引用件依据]`〔🔴 **订正 → §九.2.1：不可判·待裁**〕 | ❌ 无同标签边（可跨到 `edge/brand_builds`，**非同名**） |
 | E-37 | `[待裁·名称层有同根候选]` | ❌ 无同标签边（候选 `PROFIT_REINVESTMENT`） |
 
 ⇒ **字符串同义 4 条 / 无同标签边 4 条**，与 K4-01 卡面 §Done④ 的「4 条」计数**同数**。
