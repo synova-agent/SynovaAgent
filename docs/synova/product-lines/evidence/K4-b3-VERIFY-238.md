@@ -72,3 +72,143 @@ blob 相同 = False；逐行差异 = 8 行
 
 **`a6e927a9a`（#238 首笔）—— 结构面：1 条须处置（a-1 同路径跨分支异构）＋ 1 条越界登记（Note 不在声明写集）；判据面 6 项待核，本件不冒充已核。**
 **a-1 的隐患等级高于"写集越界"**：它会在合并时**静默回退已完成的订正内容**，且不报错 —— 建议在收件闸前先定单源方案（§1.2 三选一）。
+
+---
+
+# 三、第二轮：判据面 8 项 ＋ 两条新问（全量实测）
+
+> **对象**：`k4b3/238-239` @ **`0ff23b28c66c88c45bf4281d07e7c5f7eccc9fa4`**（`git ls-remote` 实测；含 Note 刷新笔）
+> 全部读数在 `ba1b22a8b5` 或该 tip 上取；运行类证据在**独立副本**做（不入任何人的工作树）
+
+## 3.1 ✅ 前置澄清：原 R15（同路径跨分支异构）**已消除**
+
+```
+$ git rev-parse origin/k4b3/lead:memory/notes/proposed/2026-10-12-K4-b3-numbering-authority.md
+b7fd9e1a0ab7536b46ae4129d4ec53439f6079f1
+$ git rev-parse origin/k4b3/238-239:<同路径>
+b7fd9e1a0ab7536b46ae4129d4ec53439f6079f1        ← 同一 blob ✅
+$ git -C <各工作树> hash-object <该文件>
+L1 / L2 / L3 三个工作树 = b7fd9e1a0a…（同 blob）✅；`D:\synova-wt`（主树）**不存在**该件
+```
+⇒ **两 ref ＋ 三工作树同 blob**；且该 blob 已含 **a-7 口径修订**（我实测 L19 现含「口径 = 规范定义 / 实际使用 = 5」）⇒ **合并前静默回退面已消除（截至本时点）**。
+**我给的验证步骤（收件闸/合并前各跑一次）**：
+1. `git ls-remote --heads origin | grep k4b3` 取双方 tip（**禁记忆值**）；
+2. `git rev-parse <tipA>:<path>` 与 `git rev-parse <tipB>:<path>` **比 blob 相等**；
+3. 若不等 ⇒ **先统一**（`git checkout <真源tip> -- <path>` 并提交）再合；
+4. PR 正文声明**真源 = `k4b3/lead`**（该件作者线），其余线为副本。
+**结构性残留（不构成 a，供你决策）**：该件只要仍在两条线上，就**每次编辑都会重新漂移**（本轮已实证一次）⇒ 建议走 §1.2 方案 ③（先单点落 main）。
+
+## 3.2 V-1 ✅ 判据④ 末行 —— **我独立跑出，与件内声明逐字一致**
+
+**方法**：把 base 的 `cycles/`＋`extensions/ontology/` 与该 probe 复制到**隔离副本**，用 Node v24 原生类型擦除运行（`node scripts/control-tower/probe-cycle-edges.ts`；该 probe **不调用 git**，我核过其无 `child_process`）。
+```
+PROBE_EXIT=0
+align_occurrences = 45   align_distinct = 15   align_hit = 15   align_miss = 0
+align_unknown_distinct = 0   align_vocabulary_id = 56   align_vocabulary_label = 56
+✅ 结论：判据① 旧编号 = 0；判据② 全部取值 ∈ 代码边 $id ∪ label ∪ {unknown}；判据④ 引用对齐全命中；exit 0
+occurrences=45 distinct=15 hit=15 miss=0        ← 末行逐字命中
+```
+- 与我独立口径一致（`edgeRefs` 22 ＋ `edgeId` 23 = 45；distinct 15）✅
+- probe 头部**已把三个数的口径写死**（occurrences = 两类条数之和；distinct = 取值去重；hit = ∈($id∪label)）⇒ **非硬编码**（我另核：把一条改成不存在的 `$id` 后 distinct 变 16、hit 仍 15，见 V-2）✅
+
+## 3.3 V-2 ✅ 判别性夹具（"删掉即报红"）—— **成立**，且复原用**口径 W**
+
+```
+反例前  Get-FileHash SHA256(cash-cycle.cycle.json 原始字节) = 7966B26BEBCD33426847752F97D2336939052CCC00F8654C4DF762C26138B8C5
+造红    "edge/value_pricing" → "edge/does_not_exist_xyz"（1 处）
+        运行 ⇒ align_miss = 1｜align_miss_values = edge/does_not_exist_xyz
+               occurrences=45 distinct=16 hit=15 miss=1｜RED_EXIT = 1        ← 期望 1 ✅
+复原    从 base 副本拷回 ⇒ Get-FileHash SHA256 = 7966B26B…（**逐字节一致 = True**）
+        重跑 ⇒ occurrences=45 distinct=15 hit=15 miss=0｜GREEN_EXIT = 0     ← 期望 0 ✅
+```
+⇒ **判据可证伪（非恒真）＋ 三态齐（绿/红/复原绿）＋ 复原口径为原始字节（口径 W）** ✅
+
+## 3.4 V-3 编号权威表 —— 主体成立，**1 处须同步**（见 a-1）
+
+- 表 A **42 行全列**，六类依据类型齐；**计数核对** 13＋6＋2＋2＋17＋2 = **42** ✅（我复算：字符串同义 13 ✔、语义同义 6 ✔、章间分歧取第四章名 2 ✔、章间分歧待裁 2 ✔、待裁·有同根 17 ✔、待裁·无同根 2 ✔）。
+- **章间分歧 4 条**：**三章并列**（第一章/第二章/第四章各自的定义形态与名字都给），并明写 E-10/E-12 **"不落库（候选仅登记）"** ✅ —— 与我实测的三源结论一致（且纠正了我第一轮"两栏"的表述）。
+- **第二章自身不自洽**（E-12 同文件两名）已登记 ✅（与我实测一致）。
+- §3.5 待裁 **19 条**（A 17 ＋ B 2）✅，并**显式声明 B 类"名称层无同根 ≠ 语义层无对应"** ✅（口径诚实）。
+- 🔴 **a-1（须同步）**：**E-25 在件内自相矛盾**——
+```
+L191（表 A）：E-25 BRAND_CONSTRUCTION → `edge/brand_builds`｜[语义同义·附仓内交叉引用件依据]
+L275（§3.6）：E-25｜[语义同义…]｜❌ 无同标签边（可跨到 `edge/brand_builds`，**非同名**）
+L292（表 B）：`edge/brand_builds` ← E-25｜[语义同义…]
+而你 2026-10-12 的裁定 = **E-25 无干净落点**（已移出 T2）
+```
+⇒ 同一件内「有 `$id`」与「无同标签边」并存，且**与你刚下的裁定相反** ⇒ **正是你报的 E-25 冲突的 #238 侧落点**（我判 **F1 同族**，见 §3.9）。**归属 impl-a（表 A/§3.6 需按裁定同步）＋ lead（裁定来源）**。
+
+## 3.5 V-4 ✅ GLOSSARY 改动 —— 范围受控 + 冲突**已显式标注**（且所引 golden 事实为真）
+
+```
+diff 仅 2 处 hunk：① 第三节表头新增「编号口径注记」② 命名规范表「因果边」行加标注
+L51 注记原文：例：本节映射 4 写 `E-4.1 decision_centralization`，而 golden 写 `"E-4.1": { "label": "VALUE_PRICING"`。**两处都无权威授权。**
+我独立核 golden：E-4.1 = {"label":"VALUE_PRICING","value":0.4,"confidence":"medium"}   ← 注记所述**为真** ✅
+             E-4.2 = {"label":"CUSTOMER_LOCKIN",…}
+L83 旧行 `E-4.1 decision_centralization, E-4.2 info_flow` **保留原样**（未代改）✅（合"解决或显式标注"）
+```
+⇒ 冲突**未静默**，且未越权改写需 CTO 裁定的编号 ✅
+
+## 3.6 V-5 测试件 —— 结构面合格；⚠️ **我未跑 vitest（见 b）**
+
+```
+行数=359  expect()=75  describe=8  it=19
+覆盖（逐条读）：原件存在 fail-closed｜词表 56/56/56｜两章 heading 各 42 且集合相同｜
+  章间分歧恰 4 条并逐条钉两章名字｜第二章自身不自洽(E-12)｜表 A 命中恰 13｜
+  ★降级路径：29 条未命中**不得**被计为命中（含 4 条章间分歧）｜§3.5.1 的 8 条中命中恰 4｜
+  golden 34/36 且未命中就是 E-0.4/E-X.1｜形态交集 24｜patch 34 distinct/119 处/0 个 code label｜
+  判据④ 末行｜GLOSSARY 已显式标注｜19 条待裁逐条在件｜B2「测不出什么」五条在件
+```
+⇒ **有真断言 + 显式降级路径 + 边界项**（非空壳，铁律 48 形态合规）✅
+
+## 3.7 V-6 ⚠️ 接线：**判据物存在，但无任何自动执行链**
+
+```
+$ git grep -n "probe-cycle-edges" ba1b22a8b5 -- scripts/pre-commit-check.sh .github/ .gitea/   → 零命中（exit 1）
+引用面只有三类：① claims 的 verify 文本 ② `docs/synova/coordination/施工项登记.ts`（`{ run: 'npx tsx …', expectExit: 0 }`）
+              ③ docs/evidence
+$ git grep -n -E "execSync|spawnSync|run:|expectExit" ba1b22a8b5 -- scripts/control-tower/check-registry-invariants.ts → 零命中
+```
+⇒ 该登记件的消费方（`check-registry-invariants.ts` / `probe-delivery-hygiene.sh` / `probe-packaging.sh`）**校验登记而不执行其中的 `run:`**；pre-commit / CI 也不调用它 ⇒ **"判据存在但无人跑"**。
+**判定**：**不构成 #238 卡面 Done 违背**（卡面要求探针存在且 exit 0），但属**"恒绿"隐患**：判据只在人手动跑时才有约束力。**建议（另案）**：把 probe 挂进 pre-commit 或 CI 的相应组（与 `check-content-coupling.sh` 同级）。**归属：CTO/控制塔（另案）**。
+
+## 3.8 新问 (a)：`valves[].edgeId` 用 `E-NN` —— **"8 个"可复现，但必须挂口径**
+
+**我实测（口径 = 6 件 WIP cycle 的 `valves[*][*].edgeId` 全量去重）**：
+```
+distinct edgeId = 21                                    ← 与「§3.4 用到的 21 个 E 号」一致 ✅
+严格字符串口径（只认 $id 或 label 逐字命中）⇒ 可映射 10 / 不可映射 11
+表 A 口径（含 4 条「语义同义·附仓内交叉引用件依据」）且 E-25 已剔 ⇒ 21 − 13 = 不可映射 8
+   8 = {E-01, E-04, E-06, E-25, E-30, E-34, E-35, E-37}
+```
+- **锚点真实性我已独立核（6/6 存在）**：`DECISION_CONCENTRATES E-14`、`DEPLOYS E-15`、`SIGNAL_TRANSMITS E-16`、`CUMULATIVE_LEARNING E-19`（2 处）、`BRAND_BUILDS E-25`（2 处）、`LOCKS_IN E-31` 全部命中，位于 `docs/synova/research/跨文档一致性审计-20260727/txt/*` ⇒ **不是凭形态猜**（impl-a 的抗辩成立）。
+- **与 §3.5 的 19 条对账**：8 个中 **7 个在 19 条内**（E-01/04/06/30/34/35/37）；**E-25 不在**（它由你的新裁定单列）⇒ **差集 = E-25，已另有裁定** ⇒ 对账**成立**，但"19 条"与"8 个"之间**缺一句解释**。
+- ⚠️ **a-2（口径未标，归 impl-a/lead）**：同一个数在**两套合法口径**下是 **11（严格字符串）** 与 **8（表 A 含语义同义锚点 + E-25 剔除）** ⇒ 按本批新规「值 + 口径 + 时点」，交接注记里的「8 个换算不出 `$id`」**必须挂口径**，否则不可复核。
+- **对 lead 的两条疑虑（E-15→`deploys`、E-31→`locks-in`）的独立判定**：**锚点能拿到** ⇒ 按你"拿不到锚点即并入待裁"的规则，这两条**不满足并入条件**；但**"有锚点 ≠ 语义等价成立"**（锚点是某审计文档的对照表，属**二级依据**）⇒ 建议维持「语义同义 + 标依据类型 + 保留疑虑为待裁」，**不要**因"更像"改判（那会变成形态推断）。
+
+## 3.9 新问 (b)：`valves` 是否**逐字**来自 doc15 第一章 §五 —— ✅ **6/6 逐条一致**
+
+```
+§五「出厂商内置循环模板」共 6 块（按 `"name"`）：现金流循环 / 客户循环 / **人才循环** / **产品循环** / 门店复制循环 / ARR增长循环
+按 **name ↔ cycleId** 配对后逐阀比对（阀名集合 + 每阀 (edgeId|actionEffectLag) 序列）：
+  cash-cycle ↔ 现金流循环 ✅｜customer-cycle ↔ 客户循环 ✅｜product-cycle ↔ 产品循环 ✅
+  talent-cycle ↔ 人才循环 ✅｜store-replication ↔ 门店复制循环 ✅｜arr-growth ↔ ARR增长循环 ✅
+  ⇒ 六件全部逐条一致 = true（条数 6/6/6/7/9/9 ＝ 43 条；distinct edgeId = 21）
+```
+**方法学自陈（我的第一次比对是错的）**：首轮我按**位置**配对（假设 §五 顺序 = cash/customer/product/talent/…），得出"产品/人才两件全阀不一致"的**假差异**；改用 **name ↔ cycleId 配对**后 6/6 一致。⇒ 教训：**跨文档比对必须先钉配对键，禁按位置**（与"抽样→总体"同族的方法错）。
+**归属**：impl-a 的"逐字"声明**成立** ✅；我未发现差异。
+
+## 3.10 顺带发现（a-3，风险提示，归 lead/impl-a）
+
+`D:\k4b3-l1-238-239` 工作树 `git status` 显示 **`M .claude/claims/201.yaml` / `M .claude/claims/345.yaml`**（即你那笔 **R11 越界修复**的内容在 L1 工作树里**未提交**地存在）。
+⇒ 风险：**#239 提交时若 `git add -A`，会把你那笔跨卡修复一并带上**（越界传播）⇒ 请要求 impl-a **只 add 自己写集内的件**（并在提交前 `git status` 逐条核对）。**与 R15 同源（跨线同路径）。**
+
+## 3.11 结论用语（#238 判据面）
+
+**`0ff23b28c`（#238 交付，含 Note 刷新笔）—— 判据面 `可提请独立审计`**：
+- **V-1 ✅／V-2 ✅**（我独立跑出末行逐字命中；删引用即报红 exit 1；复原口径 W 逐字节一致）
+- **V-3 ✅ 主体**（42 行全列、计数 42 自洽、三章并列、E-10/E-12 明标不落库）＋ **a-1（E-25 件内自相矛盾且与裁定相反，须同步）**
+- **V-4 ✅**（范围受控、冲突显式标注、所引 golden 事实为真）｜**V-5 ✅ 结构**（75 expect/含降级；**未跑 vitest**）｜**V-6 ⚠️**（无自动执行链，另案）
+- **新问 (a) ✅ 8 可复现但须挂口径（a-2）**；**(b) ✅ 6/6 逐字一致**（我的首轮配对错误已自陈）
+- **a-3**：#239 提交时勿把 201/345 的未提交改动带入。
+**全程未在任何实施工作树写入；运行类证据均在 `%TEMP%` 隔离副本完成。**
