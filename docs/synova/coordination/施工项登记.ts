@@ -2124,6 +2124,28 @@ export const constructionItems: readonly ConstructionItem[] = [
     source: 'CTO 裁定 002（2026-10-11）**追认授权**：本项无 task-state 原件（自增第 11 张），但内容经跨模型复核证实 —— B-11 锚点三处逐字符命中；B-18 行号锚点不精确（:835 实为连接收尾）⇒ **补正有必要** ⇒ CTO 追认。范围仅限"补正借鉴锚点"。'
   },
 
+  // ══ K10 · 账外资产归块（CTO 裁定 067／2026-10-13）══════════════════════════════
+  //   来源：研究院《产品图纸 v1》发现（锚 aa085e1f 实存、登记件 0 命中、有测试）
+  //   🔴 判据/写集**待补** —— 本件只做"归块"，先让它不再是"账外"
+  {
+    issue: 495, id: 'D48', worker: 'win', batch: '未排批', block: 'K10',
+    title: '快照回滚机制（D48）：createSnapshot / rollbackToSnapshot / listSnapshots',
+    paths: ['src/deploy/rollback.ts', 'tests/deploy/rollback.test.ts'],
+    dependsOn: [],
+    acceptance: [{ run: 'echo "D48 判据待补（本件只做归块）—— 卡面：Gitea #495"', expectStdoutContains: 'D48' }],
+    status: 'proposal',
+    source: '🔴 CTO 裁定 067（2026-10-13）：账外资产归 K10。头注逐字「src/deploy/rollback.ts — 快照回滚机制 · D48: 第9份权威文档 第二章」。由研究院《产品图纸 v1》发现。判据待补。',
+  },
+  {
+    issue: 496, id: 'D50', worker: 'win', batch: '未排批', block: 'K10',
+    title: '备份调度器（D50）：24h 间隔 + 启动时检测错过窗口 + 手动触发',
+    paths: ['src/deploy/backup-scheduler.ts', 'tests/deploy/backup-scheduler.test.ts'],
+    dependsOn: [],
+    acceptance: [{ run: 'echo "D50 判据待补（本件只做归块）—— 卡面：Gitea #496"', expectStdoutContains: 'D50' }],
+    status: 'proposal',
+    source: '🔴 CTO 裁定 067（2026-10-13）：账外资产归 K10。头注逐字「src/deploy/backup-scheduler.ts — 备份调度器 (D50) · 第9份权威文档 §4.3 机会窗口备份策略」。由研究院《产品图纸 v1》发现。判据待补。',
+  },
+
 ];
 
 // ════════════════════════════════════════════════════════════════
@@ -2235,7 +2257,10 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
     source: 'T3 §二 K9',
   },
   {
-    id: 'K10', name: '平台交付与运行时（DSH）', items: ['3-10', 'B-RUNTIME', 'B3B7', 'BS-5', 'EXT-WIRE', 'BC-CLEAN', 'BS-6'],
+    // 🔴 CTO 裁定 067（2026-10-13）：**账外资产归 K10** ——
+    //   `D48` 快照回滚 ＋ `D50` 备份调度 锚下实存、有测试，但**登记件 0 命中**（由研究院《产品图纸 v1》发现）。
+    //   依据：「回滚/备份」属「运行时·交付」面；且 K10 现有 BS-5/BC-CLEAN 已在管交付/卫生。
+    id: 'K10', name: '平台交付与运行时（DSH）', items: ['3-10', 'B-RUNTIME', 'B3B7', 'BS-5', 'EXT-WIRE', 'BC-CLEAN', 'BS-6', 'D48', 'D50'],
     blockAcceptance: [
       { run: 'bash scripts/control-tower/probe-egress.sh', expectExit: 0 },
     ],
