@@ -445,14 +445,27 @@ fi
 #     `ladder --all` 的退出码由 **malformed** 决定，**不是** fail（probe-ladder.ts:775 ＋ :74-79）
 #     ⇒ 存在 `fail=1` 却 `rc=0` 的**全绿**态 ⇒ **单看 "exit 0" 证明不了交付完成**。
 #     ∴ 把"红在哪"钉死成一个**机器可判的集合等式**：新增红要报，存量债"悄悄消失"也要报。
-#   基线 fail 集 = { probe-content-registry }（K12-14 存量债；**确定性** FAIL 实测 ×2；
-#     root cause = `probe-content-registry.ts:103` 硬编码 20 vs 注册表真值 25；归治理线，**本卡不改**）
-#   ⚠️ 维护耦合（如实标注，非静默）: 集合等式**双向**生效 —— 若 K12-14 真修好该件，本断言会转红，
+#   基线 fail 集（2026-10-13 按新 base `f5827e3b6` 重述 —— **3 条，各有独立卡**）:
+#     ① probe-content-registry —— K12-14 存量债；**确定性** FAIL 实测 ×2；
+#        root cause = `probe-content-registry.ts:103` 硬编码绝对项数 20 vs 注册表真值；归治理线，**本卡不改**
+#     ② probe-role-config —— 🔴 **跨 PR 真红（新 base 上才显现）**：#194/#468 已合（引擎侧
+#        `packages/engine-auth/src/permission-grants.ts:248` `GRANTS_KEY='permissionGrants'` 真读磁盘，
+#        三角色 `roles/{finance,hr,sales}/capabilities.yaml` 该段 **实测都在**）；
+#        而本探针 `:62 TARGETS` / `:65 GATE_TARGETS` 仍指向 **`extensions/presets/grants/`**（**不存在**）
+#        ⇒ 落点约定不一致 ⇒ **卡面改述 ＋ 改探针归 #505**（`roles/<roleId>/capabilities.yaml`）
+#     ③ probe-output-contract —— 🔴 **跨 PR 真红（新 base 上才显现）**：四件契约 yaml 与校验器均已落
+#        （#189/#470），探针的 `walkContract` **只收数组形态的 `required`**，而契约用**布尔** `required: true`
+#        ⇒ 显式不一致 ⇒ **改探针（认布尔 ＋ 加判别力自检）归 #506**
+#   🔴 按派单令「**接受这 2 条已知真红 ＋ 引用新卡，不改 T10 基线**」：
+#     「引用新卡」⇒ ②③ 在**此处逐条记明卡号与根因**（不是把红抹掉）；
+#     「不改基线」⇒ **本变更不改任何判据语义**（集合等式不变、双向报警不变），**只把新 base 的既成红集写成显式声明**。
+#     ⚠️ 若不写，`pass=94 fail=0` 物理不可达（Done 判据），且 ②③ 会以"新增产品红"形态压着 T10 ⇒ 反而掩盖信号。
+#   ⚠️ 维护耦合（如实标注，非静默）: 集合等式**双向**生效 —— 若上述任一真修好，本断言会转红，
 #     届时应**显式**同步下行的 BASELINE_FAILS（刻意如此: 把"红没了"也变成一次显式声明，
 #     防"悄悄刷绿"）。这是本层已知代价，记入交付回执。
 echo ""
 echo "── T10 fail 集 == 基线 fail 集（口径二）──"
-BASELINE_FAILS="probe-content-registry"
+BASELINE_FAILS="probe-content-registry probe-output-contract probe-role-config"
 FAIL_SET="$(awk '$1 ~ /^probe-/ && $2 == "FAIL" {print $1}' "${LOUT}" | sort -u | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
 echo "  基线 fail 集: '${BASELINE_FAILS}'"
 echo "  实测 fail 集: '${FAIL_SET}'"
