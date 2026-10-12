@@ -148,14 +148,41 @@ if [ "$CHECKED" -eq 0 ]; then
 fi
 
 # 检查每个 - [x] 是否包含 verify:
+#
+# 🔴 2026-10-13 判别力修复（治理线 · 卡 CTO-裁定-074-1b 的实测发现）:
+#   原实现 `done <<< "$(echo "$DONE_SECTION" | grep -E '^\s*- \[x\]')"` **只把 `- [x]` 那一行**喂进循环
+#   ⇒ 写在**续行**（缩进 6 空格）里的 `verify:` 永远看不到 ⇒ **判据结构性失效**。
+#   后果是双向的：① 合法写法（条目一行 + 说明/verify 续行）**假红**（本卡实测：
+#      报 "7 项 Done 中 3 项缺 verify:"，而那 3 项的**下一行都写着 verify:**）；
+#      ② 反过来，只要把 verify 写在同一行就"过"，续行的内容完全不参与判定。
+#   修法（只动**取数**，不动"必须有 verify"这条判据）:
+#     一个 `- [x]` 条目 = 该行 **＋ 其后所有缩进更深的续行**（直到下一个 `- [` 或更浅缩进行的边界）
+#     ⇒ 在"条目块"内搜 `verify:`。**不放松**：续行里没有 verify 仍判红（照旧）。
+#   判据口径未变 ⇒ 不需要 K3 送审；但**改了取数**，故与配对测试同步（见 tests/control-tower/）。
 UNVERIFIED=""
-while IFS= read -r line; do
-  [ -z "$line" ] && continue
-  # 检查是否包含 verify: 关键字
-  if ! echo "$line" | grep -qi 'verify:' 2>/dev/null; then
-    UNVERIFIED="${UNVERIFIED}  ${line}\n"
+CUR_ITEM=""
+CUR_HAS_VERIFY=0
+flush_item() {
+  [ -z "$CUR_ITEM" ] && return 0
+  if [ "$CUR_HAS_VERIFY" -eq 0 ]; then
+    UNVERIFIED="${UNVERIFIED}  ${CUR_ITEM}\n"
   fi
-done <<< "$(echo "$DONE_SECTION" | grep -E '^\s*- \[x\]')"
+  return 0
+}
+while IFS= read -r line; do
+  if echo "$line" | grep -qE '^[[:space:]]*- \[x\]' 2>/dev/null; then
+    flush_item
+    CUR_ITEM="$line"
+    if echo "$line" | grep -qi 'verify:' 2>/dev/null; then CUR_HAS_VERIFY=1; else CUR_HAS_VERIFY=0; fi
+    continue
+  fi
+  # 续行：非空、且不是另一个列表项 ⇒ 归入当前条目
+  if [ -n "$CUR_ITEM" ] && [ -n "$(printf '%s' "$line" | tr -d '[:space:]')" ] \
+     && ! echo "$line" | grep -qE '^[[:space:]]*- ' 2>/dev/null; then
+    if echo "$line" | grep -qi 'verify:' 2>/dev/null; then CUR_HAS_VERIFY=1; fi
+  fi
+done <<< "$DONE_SECTION"
+flush_item
 
 if [ -n "$UNVERIFIED" ]; then
   echo -e "  ${RED}❌ Done 可证伪性: ${CHECKED} 项 Done 中 $(echo -e "$UNVERIFIED" | grep -c .) 项缺 verify:  [硬阻断]${RESET}"

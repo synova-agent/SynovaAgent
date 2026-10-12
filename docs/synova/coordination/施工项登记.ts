@@ -2210,7 +2210,10 @@ export const constructionItems: readonly ConstructionItem[] = [
 export const constructionBlocks: readonly ConstructionBlock[] = [
   {
     id: 'K11' as BlockId, name: '权限与多租户（部门轴 / 权限项模型 / 跨租户隔离）',
-    items: [],  // 2026-10-11 整体并入 K12（创始人裁定：一致性线收口）
+    items: [],
+    // 🔴 CTO 裁定 074 步 1：块级 paths 快照（**机器生成，勿手改**）
+    //   生成器/检查待治理线实现（scripts/ ⇒ 治理线域）；来源＝items.paths 并集
+    paths: [],  // 2026-10-11 整体并入 K12（创始人裁定：一致性线收口）
 
     blockAcceptance: [
       { run: 'npx tsx scripts/control-tower/probe-rbac-multitenant.ts --case cross-org', expectExit: 0 },
@@ -2220,6 +2223,9 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
   {
     id: 'RETIRED' as BlockId, name: '已作废项（保留 id 防撞号；不派单）',
     items: ['0-9'],
+    // 🔴 CTO 裁定 074 步 1：块级 paths 快照（**机器生成，勿手改**）
+    //   生成器/检查待治理线实现（scripts/ ⇒ 治理线域）；来源＝items.paths 并集
+    paths: ['src/l4/knowledge-store.ts', 'tests/l4/**'],
     blockAcceptance: [
       { run: 'echo "RETIRED 块：已作废项只留痕，无判据（禁派单）"', expectStdoutContains: 'RETIRED' },
     ],
@@ -2227,6 +2233,9 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
   },
   {
     id: 'K1', name: '接线·点火·权限执行面', items: ['0-1', '0-9bis', '0-10', '1-7', '1-7bis', 'K1-WH'],
+    // 🔴 CTO 裁定 074 步 1：块级 paths 快照（**机器生成，勿手改**）
+    //   生成器/检查待治理线实现（scripts/ ⇒ 治理线域）；来源＝items.paths 并集
+    paths: ['docs/synova/coordination/提案/', 'docs/synova/product-lines/evidence/**', 'src/middleware/auth.ts', 'src/middleware/rbac.ts', 'src/routes/actions-api.ts', 'src/routes/department-workspace.ts', 'src/routes/im.ts', 'src/routes/knowledge.ts', 'src/routes/workspace-data.ts', 'src/routes/workspace.ts', 'src/routes/workspaces-api.ts', 'tests/l1/**', 'tests/loops/**', 'tests/loops/probes/batch0a-probes.ts', 'tests/routes/**', 'tests/routes/im-authprovider.test.ts', 'tests/security/**', 'tests/security/rbac-all-routes.test.ts', 'tests/security/request-context-failclosed.test.ts'],
     blockAcceptance: [
       // 块标准原为 `bash scripts/control-tower/probe-loops.sh` —— **该件在 origin/main 不存在**（全树零命中）。
       // 已按 CTO 2026-10-08 对 0-1 的裁定（内部自不一致 #2）同步为卡面 #975 的探针判据。
@@ -2237,6 +2246,9 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
   },
   {
     id: 'K2', name: '写入门禁与工具治理', items: ['0-11', '2-4', '2-4bis'],
+    // 🔴 CTO 裁定 074 步 1：块级 paths 快照（**机器生成，勿手改**）
+    //   生成器/检查待治理线实现（scripts/ ⇒ 治理线域）；来源＝items.paths 并集
+    paths: ['scripts/control-tower/probe-tool-policy.ts', 'src/agent/tool-profiles.ts', 'src/agent/tools.ts', 'src/security/file-guard.ts', 'src/tools/tool-registry.ts', 'tests/agent/tool-role-wiring.test.ts'],
     blockAcceptance: [
       { run: 'npx vitest run tests/security/file-guard.test.ts', expectExit: 0 },
     ],
@@ -2247,6 +2259,9 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
     //   依据：研究院《补充研究-能力包与K块关系》题 4；块名待改（候选「哨兵能力面（装载·时序·覆盖）」）
     //   ⚠️ 块名未改前，name 与 items 存在**名实不符**（已知，单列一步处理）。
     id: 'K3', name: '哨兵装载与时序落盘（a 类/W1）', items: ['0-3', '2-1a', '2-1b', '3-8', 'K3-13', 'K3-14', 'K3-15', 'K3-16', 'K3-17'],
+    // 🔴 CTO 裁定 074 步 1：块级 paths 快照（**机器生成，勿手改**）
+    //   生成器/检查待治理线实现（scripts/ ⇒ 治理线域）；来源＝items.paths 并集
+    paths: ['docs/synova/product-lines/evidence/**', 'extensions/sentinels/', 'scripts/control-tower/probe-sentinel.ts', 'src/sentinel/', 'src/sentinel/builtins.ts', 'src/store/', 'tests/sentinel/**', 'tests/store/metric-readings-insert.test.ts', 'tests/store/metric-readings-schema.test.ts'],
     blockAcceptance: [
       {
         run: 'sqlite3 data/synova.db "SELECT COUNT(*) FROM metric_readings WHERE observed_at > datetime(\'now\', \'-1 hour\')"',
@@ -2257,6 +2272,9 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
   },
   {
     id: 'K4', name: '本体·因果边·循环编号', items: ['0-4', '1-8', '1-9', '3-5', '3-11', 'B2-GRAPH', 'B2-GRAPH-2'],
+    // 🔴 CTO 裁定 074 步 1：块级 paths 快照（**机器生成，勿手改**）
+    //   生成器/检查待治理线实现（scripts/ ⇒ 治理线域）；来源＝items.paths 并集
+    paths: ['cycles/builtin/*.cycle.json', 'cycles/industry/*/*.cycle.json', 'extensions/', 'extensions/ontology/activity/', 'extensions/ontology/edge-types/*.json', 'scripts/control-tower/probe-cycle-edges.ts', 'src/adapters/sqlite-graph-store.ts', 'src/extensions/', 'src/l4/**', 'src/store/**', 'tests/adapters/**', 'tests/adapters/sqlite-graph-store.legacy-schema.test.ts', 'tests/extensions/layer-precedence.test.ts'],
     blockAcceptance: [
       // CTO 2026-10-08 裁定（块级 K4）：块判据 = `scripts/control-tower/check-ontology-fields.sh`（exit 0）。
       //   依据：① 该脚本**实测在 main 存在**（本机实跑 ⇒ `✅ 全部 55 件边类型关键字段齐全` / exit 0）
@@ -2269,6 +2287,9 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
   },
   {
     id: 'K5', name: '参数层（a/b/c/d 四类，护城河资产本体）', items: ['2-2', '2-6', '2-7', '0-8', 'PL-04'],
+    // 🔴 CTO 裁定 074 步 1：块级 paths 快照（**机器生成，勿手改**）
+    //   生成器/检查待治理线实现（scripts/ ⇒ 治理线域）；来源＝items.paths 并集
+    paths: ['docs/synova/coordination/', 'docs/synova/coordination/tools/', 'docs/synova/coordination/tools/probe-three-layer-contract.ts', 'extensions/ontology/', 'scripts/control-tower/probe-compute-registry.ts', 'src/adapters/', 'src/contract/', 'tests/growth/e2e-navigation-loop.integration.test.ts', 'tests/growth/effect-verification.test.ts', 'tests/growth/goal-lifecycle.test.ts', 'tests/growth/goal-sentinel.test.ts', 'tests/integration/goal-lifecycle.integration.test.ts'],
     // 修(2026-10-11 CTO): 去 0-7 / 2-3 (真值属 K6: memoryStore 降级日志 / 反馈两通道);
     // 0-8 保留 (其 block 已改为 K5, 须在 K5.items 内 -- 否则成孤儿)
     blockAcceptance: [
@@ -2278,6 +2299,9 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
   },
   {
     id: 'K6', name: '反馈·进化回环（进化侧；参数层 b/c 类已移入 K5）', items: ['0-2', '0-5', '1-4', '3-12', '0-7', '2-3'],
+    // 🔴 CTO 裁定 074 步 1：块级 paths 快照（**机器生成，勿手改**）
+    //   生成器/检查待治理线实现（scripts/ ⇒ 治理线域）；来源＝items.paths 并集
+    paths: ['packages/evolution/src/global-analyzer.ts', 'src/growth/feedback-collector.ts', 'src/growth/goal-sentinel.ts', 'src/growth/goal-store.ts', 'src/growth/goal-types.ts', 'src/loops/middle-evolution-engine.ts', 'tests/evolution/global-analyzer.test.ts', 'tests/growth/evolution-writeback.test.ts', 'tests/growth/feedback-channel-unification.test.ts', 'tests/growth/goal-propagation.test.ts', 'tests/growth/goal-sentinel.test.ts', 'tests/routes/chat-feedback.test.ts'],
     // 修(2026-10-11 CTO): 加 0-7 (补降级日志 + 补传 memoryStore => 反馈侧) / 2-3 (反馈两通道分裂)
     blockAcceptance: [
       // 🔴 原为纯 grep 型（T6 面1 否决点）⇒ 改为穿生产入口：跑一次真实进化回写，断言表行
@@ -2288,6 +2312,9 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
   },
   {
     id: 'K7', name: '诊断→报告交付链', items: ['1-1', '1-2', '1-3', '1-5', '3-7'],
+    // 🔴 CTO 裁定 074 步 1：块级 paths 快照（**机器生成，勿手改**）
+    //   生成器/检查待治理线实现（scripts/ ⇒ 治理线域）；来源＝items.paths 并集
+    paths: ['extensions/reports/', 'extensions/reports/contracts/', 'scripts/golden-scenarios/GS-08-report-readable/', 'src/agent/', 'src/agent/report-assembler.ts', 'src/l3/report-template-loader.ts', 'src/l3/report-templates.ts', 'src/routes/diagnosis.ts', 'tests/agent/agent-matrix-trigger.test.ts', 'tests/l3/report-contract-versioned.test.ts', 'tests/l3/report-template-client.test.ts', 'tests/routes/customer-config-consumed.test.ts'],
     blockAcceptance: [
       // CTO 裁定 C-01（2026-10-08）同批订正：原写 `scripts/golden-scenarios/run.sh` —— **该路径不存在**
       //   （main 上只有逐场景脚本；见 scripts/golden-scenarios/README.md §运行契约）。
@@ -2297,6 +2324,9 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
   },
   {
     id: 'K8', name: '知识与图谱权限（L4）', items: ['0-6', '1-6', '3-2'],
+    // 🔴 CTO 裁定 074 步 1：块级 paths 快照（**机器生成，勿手改**）
+    //   生成器/检查待治理线实现（scripts/ ⇒ 治理线域）；来源＝items.paths 并集
+    paths: ['scripts/control-tower/probe-diagnosis.ts', 'src/agent/diagnosis-launcher.ts', 'src/l4/graph-bridge.ts', 'src/l4/knowledge-store.ts', 'src/l4/sog-schema-validator.ts', 'src/l4/traversal-permission-filter.ts', 'src/sentinel/sentinel-loader.ts', 'tests/l4/knowledge-scope.test.ts', 'tests/l4/traversal-permission-filter.test.ts'],
     blockAcceptance: [
       // 🔴 修 T9 面 1 反例「K8 块标准串到 K1」：原为 org-isolation-audit（= K1 的项 0-9 判据）
       //    ⇒ K8 三项一件未做也能绿。改为 K8 自己三项的合并判据。
@@ -2309,6 +2339,9 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
   },
   {
     id: 'K9', name: '技能面（建档/预设/追问已并入 K12）', items: ['0-12', '3-6', '3-9'],
+    // 🔴 CTO 裁定 074 步 1：块级 paths 快照（**机器生成，勿手改**）
+    //   生成器/检查待治理线实现（scripts/ ⇒ 治理线域）；来源＝items.paths 并集
+    paths: ['extensions/**/manifest.json', 'extensions/skills/', 'scripts/control-tower/probe-agent-readiness.ts', 'scripts/control-tower/probe-eco-fields.ts', 'scripts/control-tower/probe-skills.ts', 'skills/org/agent-readiness.md', 'src/agent/', 'src/agent/skill-lazy-loader.ts'],
     blockAcceptance: [
       { run: 'npx tsx scripts/control-tower/probe-skills.ts', expectStdoutContains: '## Available Skills' },
     ],
@@ -2319,6 +2352,9 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
     //   `D48` 快照回滚 ＋ `D50` 备份调度 锚下实存、有测试，但**登记件 0 命中**（由研究院《产品图纸 v1》发现）。
     //   依据：「回滚/备份」属「运行时·交付」面；且 K10 现有 BS-5/BC-CLEAN 已在管交付/卫生。
     id: 'K10', name: '平台交付与运行时（DSH）', items: ['3-10', 'B-RUNTIME', 'B3B7', 'BS-5', 'EXT-WIRE', 'BC-CLEAN', 'BS-6', 'D48', 'D50'],
+    // 🔴 CTO 裁定 074 步 1：块级 paths 快照（**机器生成，勿手改**）
+    //   生成器/检查待治理线实现（scripts/ ⇒ 治理线域）；来源＝items.paths 并集
+    paths: ['.dsh/', '.gitignore', 'Dockerfile', 'app/**', 'docs/synova/research/DSH迁移施工图-20260820/', 'dsh/plugins/', 'extensions/business-models/manifest.json', 'extensions/context-strategies/manifest.json', 'extensions/engine/manifest.json', 'extensions/implementation-patterns/manifest.json', 'extensions/llm-providers/manifest.json', 'extensions/policies/manifest.json', 'extensions/security/manifest.json', 'extensions/tools/manifest.json', 'package.json', 'scripts/build/**', 'scripts/control-tower/probe-content-registry.ts', 'scripts/control-tower/probe-delivery-hygiene.sh', 'scripts/control-tower/probe-egress.sh', 'scripts/control-tower/probe-packaging.sh', 'src/cron/**', 'src/deploy/backup-scheduler.ts', 'src/deploy/content-registry.ts', 'src/deploy/data-directory.ts', 'src/deploy/rollback.ts', 'src/init/file-driven-loaders.ts', 'src/providers/**', 'src/routes/healthz.ts', 'src/security/pre-upload-validator.ts', 'src/sentinel/**', 'tests/cron/**', 'tests/deploy/backup-scheduler.test.ts', 'tests/deploy/rollback.test.ts', 'tests/security/pre-upload-validator.test.ts', 'tests/sentinel/builtin-registration.test.ts'],
     blockAcceptance: [
       { run: 'bash scripts/control-tower/probe-egress.sh', expectExit: 0 },
     ],
@@ -2328,6 +2364,9 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
     id: 'K12' as BlockId, name: '企业级一致性（宪章 §2.7 第一优先）',
     items: ['K12-01', 'K12-03', 'K12-04', 'K12-02', 'K12-05', 'K12-06', 'K12-07', 'K12-08',
             'RB-01', 'RB-02', 'RB-03', 'RB-04', 'RB-05', 'RB-06', 'K12-13', 'K12-14', 'K12-15', 'K12-16', 'K12-17', 'K12-18', 'K12-21'],
+    // 🔴 CTO 裁定 074 步 1：块级 paths 快照（**机器生成，勿手改**）
+    //   生成器/检查待治理线实现（scripts/ ⇒ 治理线域）；来源＝items.paths 并集
+    paths: ['docs/synova/presets/roles/', 'extensions/', 'extensions/adapters/**', 'extensions/business-models/**', 'extensions/content-layers/**', 'extensions/engine/**', 'extensions/knowledge-scope/**', 'extensions/llm-providers/**', 'extensions/locales/manifest.json', 'extensions/notifications/**', 'extensions/onboarding/**', 'extensions/ontology/**', 'extensions/policies/data-access.yaml', 'extensions/reports/contracts/**', 'extensions/tools/**', 'scripts/check-content-coupling.sh', 'scripts/control-tower/probe-*.ts', 'scripts/control-tower/probe-approval-seam.ts', 'scripts/control-tower/probe-content-layering.ts', 'scripts/control-tower/probe-decision-ledger.ts', 'scripts/control-tower/probe-department-axis.ts', 'scripts/control-tower/probe-knowledge-scope.ts', 'scripts/control-tower/probe-ladder.ts', 'scripts/control-tower/probe-onboarding.ts', 'scripts/control-tower/probe-permission-grants.ts', 'scripts/control-tower/probe-rbac-multitenant.ts', 'scripts/control-tower/probe-role-config.ts', 'scripts/control-tower/probe-role-pack.ts', 'src/agent/prompt-assembler.ts', 'src/connectors/**', 'src/deploy/content-reload.ts', 'src/init/file-driven-loaders.ts', 'src/l4/decision-capture.ts', 'src/l4/goal-alignment.ts', 'src/middleware/auth.ts', 'src/middleware/rbac.ts', 'src/notifications/**', 'src/onboarding/', 'src/onboarding/gap-questioner.ts', 'src/output/contract-validator.ts', 'src/runtime/approval-seam.ts', 'src/services/content-layering.ts', 'tests/control-tower/content-coupling.test.sh', 'tests/control-tower/probe-contract.test.sh', 'tests/deploy/content-reload.test.ts', 'tests/knowledge-scope/layering.test.ts', 'tests/l4/decision-capture-single-entry.test.ts', 'tests/l4/goal-alignment.test.ts', 'tests/onboarding/completeness.test.ts', 'tests/onboarding/gap-questioner.test.ts', 'tests/output/contract-validator.test.ts', 'tests/security/approval-seam.test.ts', 'tests/services/content-layering.test.ts'],
     blockAcceptance: [
       { run: 'npx tsx scripts/control-tower/probe-onboarding.ts --dry-run', expectExit: 0 },
       { run: 'npx tsx scripts/control-tower/probe-role-pack.ts --role finance', expectExit: 0 },
@@ -2338,6 +2377,9 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
     id: 'K13' as BlockId, name: 'DSH 借鉴（**来源块** · 非架构块 · 封仓期存量债恢复）',
     items: ['K13-B-11', 'K13-B-12', 'K13-B-13', 'K13-B-14', 'K13-B-15', 'K13-B-16',
             'K13-B-17', 'K13-B-18', 'K13-B-19', 'K13-B-20', 'K13-ANCHOR-FIX'],
+    // 🔴 CTO 裁定 074 步 1：块级 paths 快照（**机器生成，勿手改**）
+    //   生成器/检查待治理线实现（scripts/ ⇒ 治理线域）；来源＝items.paths 并集
+    paths: [],
     blockAcceptance: [
       { run: 'echo "K13 来源块：判据待 CTO 裁（落点/写集/判据）—— 见 handbook CTO-裁定台账.md 裁定 001"', expectStdoutContains: 'K13' },
     ],
