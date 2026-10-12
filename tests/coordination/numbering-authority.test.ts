@@ -93,10 +93,42 @@ describe('#238 前置：仓内原件存在（缺失即 fail，不静默）', () 
 describe('#238 §二 口径读数：词表 / 两章 / golden / patch', () => {
   const edges = loadCodeEdges();
 
-  it('词表 = 56 件，$id 56 distinct，label 56 distinct（1:1 无重名）', () => {
-    expect(edges.length).toBe(56);
-    expect(new Set(edges.map((e) => e.id)).size).toBe(56);
-    expect(new Set(edges.map((e) => e.label)).size).toBe(56);
+  it('词表件数 / $id distinct / label distinct —— 三数**扫盘推导**（禁字面基数），1:1 无重名', () => {
+    // 🔴 N2 续做（#234，base aa085e1f1）：原为字面 `56`，撞上 #1350 落地后的 **58 件**。
+    //    改造口径 = 「**派生计数 ＋ 集合棘轮 ＋ 交叉断言**」（照 -1134 的 N2 版），**禁"扫盘实数当期望值"**（恒真 = 假绿）。
+
+    // ① 交叉断言：扫盘文件集 ↔ 件内解析必须 1:1（有文件读不出 / 解析失败 / 未收全 ⇒ 红）
+    const files = readdirSync(EDGE_DIR).filter((f) => f.endsWith('.json')).sort();
+    expect(
+      edges.length,
+      `扫盘 ${files.length} 件 ≠ 件内解析 ${edges.length} 件 —— 有件不可读或未收全（件数由扫盘推导，不写死）`,
+    ).toBe(files.length);
+
+    const ids = edges.map((e) => e.id);
+    const labels = edges.map((e) => e.label);
+
+    // ② 集合棘轮①：`$id` 必 1:1（重复 ⇒ 红 + **点名**重复值）
+    const dupIds = [...new Set(ids.filter((v, i) => ids.indexOf(v) !== i))];
+    expect(dupIds, `$id 重复（词表要求 1:1 无重名）: ${dupIds.join(', ')}`).toEqual([]);
+
+    // ③ 集合棘轮②：`label` 必 1:1（重复 ⇒ 红 + **点名**重复值）
+    const dupLabels = [...new Set(labels.filter((v, i) => labels.indexOf(v) !== i))];
+    expect(dupLabels, `label 重复（词表要求 1:1 无重名）: ${dupLabels.join(', ')}`).toEqual([]);
+
+    // ④ 三数**同源**显式化：distinct == 扫盘件数（②③ 的等价写法，便于复核员一眼核"三数同源"）
+    expect(new Set(ids).size, 'distinct($id) 必须 == 扫盘件数').toBe(files.length);
+    expect(new Set(labels).size, 'distinct(label) 必须 == 扫盘件数').toBe(files.length);
+
+    // ⑤ 🔴 集合棘轮③（**必需**）：#1350 两件必须在场。
+    //    没有本锚 ⇒「件数」判据对**删除**恒真（扫盘怎么变、两边一起变）⇒ 假绿。删/改名 ⇒ 红 + **点名片名**。
+    const REQUIRED_IDS = ['edge/goal_decomposes_to', 'edge/plan_commits_to'];
+    const absent = REQUIRED_IDS.filter((id) => !ids.includes(id));
+    expect(absent, `#1350 必含边缺失（删除必须显式改本清单）: ${absent.join(', ')}`).toEqual([]);
+
+    // ⑥ 形态：`$id` 前缀正则。
+    //    🔴 **不断言**「`$id` 尾段 == 文件名主干」—— 实测**恰 5 件**不相等
+    //    （decision-concentrates / external-assumption / incentive-binds / locks-in / signal-transmits）
+    //    ⇒ 从文件名推 `$id` 的写法会在这 5 件上必红（纪律 #1）。
     for (const e of edges) expect(e.id).toMatch(/^edge\/[a-z0-9_-]+$/);
   });
 
