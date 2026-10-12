@@ -5,7 +5,7 @@
 > （`scripts/control-tower/alloc-task-id.sh` 已 DEPRECATED，U5/创始人 2026-10-08 裁「改用 issue 号作身份」）
 > **卡面格式**：六字段（Q0/Q1/Q2/Q3/架构层/写集）＋ §〇 七问 ＋ Done 标准（`line-audit-and-cards` §4.1/§4.3）
 > **三条硬要求**（CTO §三）：① 挂对里程碑 + 执行态/未开工 标签；② 标题带前缀；③ 卡面必须含 §〇 七问
-> **⚠️ PR 正文**：须写 `Closes #<本卡 issue 号>`（门禁 `check-board-truth` 依赖此信号）；
+> **⚠️ PR 正文**：须写 `Refs #<本卡 issue 号>`；
 > **号未分配前用 `Refs` 占位 —— 禁 `Closes` 到一个不存在的号**（#345 误关事故）
 
 ---

@@ -118,5 +118,5 @@ docs/synova/product-lines/evidence/K4-b3-criteria-discipline-<日期>.md
 ④ 明确写"**本卡不碰 scripts/audit/**；审计标准部分只转达 K3**"
 ⑤ 四元组：值 + 口径 + 时点 + 版本（技能版本 = blob SHA）
 ```
-⚠️ PR 正文须写 `Closes #<本卡 issue 号>`（号未分配前用 `Refs` 占位）。
+⚠️ PR 正文须写 `Refs #<本卡 issue 号>`（号未分配前用 `Refs` 占位）。
 ⚠️ 改纪律者**不得自判通过** ⇒ 合并前须 CTO 复核 / K3 审。

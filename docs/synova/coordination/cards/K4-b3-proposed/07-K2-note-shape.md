@@ -101,4 +101,4 @@ docs/synova/product-lines/evidence/K4-b3-note-shape-<日期>.md
 ⑤ 若改契约：契约描述与实测分布**一致**（给出"哪几种形态合法"的可 grep 判据）
 ⑥ 四元组：值 + 口径 + 时点 + 探针版本
 ```
-⚠️ PR 正文须写 `Closes #<本卡 issue 号>`（号未分配前用 `Refs` 占位）。
+⚠️ PR 正文须写 `Refs #<本卡 issue 号>`（号未分配前用 `Refs` 占位）。

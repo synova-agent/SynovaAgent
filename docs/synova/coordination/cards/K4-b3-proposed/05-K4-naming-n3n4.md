@@ -102,4 +102,4 @@ docs/synova/product-lines/evidence/K4-b3-naming-n3n4-<日期>.md
 ⑤ 保留订正痕迹（不抹旧的"待确认"表述记录）
 ⑥ 四元组：值 + 口径 + 时点 + 探针版本
 ```
-⚠️ PR 正文须写 `Closes #<本卡 issue 号>`（号未分配前用 `Refs` 占位）。
+⚠️ PR 正文须写 `Refs #<本卡 issue 号>`（号未分配前用 `Refs` 占位）。

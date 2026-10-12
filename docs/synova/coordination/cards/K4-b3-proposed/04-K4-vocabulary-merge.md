@@ -102,4 +102,4 @@ docs/synova/product-lines/evidence/K4-b3-vocabulary-merge-<日期>.md
 ⑤ 与 `packages/sog-core/**` 的关系**书面声明**（合/不合 + 理由）
 ⑥ 复原（口径 W）逐字节一致；四元组：值 + 口径 + 时点 + 探针版本
 ```
-⚠️ PR 正文须写 `Closes #<本卡 issue 号>`（号未分配前用 `Refs` 占位）。
+⚠️ PR 正文须写 `Refs #<本卡 issue 号>`（号未分配前用 `Refs` 占位）。

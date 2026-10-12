@@ -119,5 +119,5 @@ docs/synova/product-lines/evidence/K4-b3-claim-repair-<日期>.md
 ⑥ 契约注释写明「`note` = 人读单行内联标量」
 ⑦ 四元组：值 + 口径 + 时点 + 探针版本（工具版本）
 ```
-⚠️ PR 正文须写 `Closes #<本卡 issue 号>`（号未分配前用 `Refs` 占位）。
+⚠️ PR 正文须写 `Refs #<本卡 issue 号>`（号未分配前用 `Refs` 占位）。
 ⚠️ 本卡是 **CTO 令 R11「追认 + 转规则」的落点** ⇒ PR 正文须显式引用该裁定。

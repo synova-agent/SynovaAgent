@@ -97,4 +97,4 @@ docs/synova/product-lines/evidence/K4-b3-tags-registry-<日期>.md
 ⑤ 四元组标注：值 + 口径 + 时点 + 探针版本
 ⑥ 写集实测 = git diff --name-only <merge-base>..HEAD 全列，零多零缺
 ```
-⚠️ PR 正文须写 `Closes #<本卡 issue 号>`（门禁 `check-board-truth` 依赖此信号）；**号未分配前用 `Refs` 占位，禁写 `Closes` 到一个不存在的号**（#345 事故）。
+🔴 **关单信号（CTO 令第 5 条）：全文禁 `Closes`，统一用 `Refs #<本卡 issue 号>`**。建号后把 `<本卡 issue 号>` 换成真号。

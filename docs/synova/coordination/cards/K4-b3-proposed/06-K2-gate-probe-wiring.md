@@ -105,5 +105,5 @@ docs/synova/product-lines/evidence/K4-b3-probe-wiring-<日期>.md
 ④ 登记件 `run:` 字段：**要么执行、要么显式声明"仅文档"**（禁悬空）
 ⑤ 四元组：值 + 口径 + 时点 + 探针版本
 ```
-⚠️ PR 正文须写 `Closes #<本卡 issue 号>`（号未分配前用 `Refs` 占位）。
+⚠️ PR 正文须写 `Refs #<本卡 issue 号>`（号未分配前用 `Refs` 占位）。
 ⚠️ 本卡触及门禁语义 ⇒ **合并前须 CTO 复核**。

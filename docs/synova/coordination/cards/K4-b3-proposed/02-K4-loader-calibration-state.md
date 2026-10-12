@@ -100,4 +100,4 @@ docs/synova/product-lines/evidence/K4-b3-loader-calibration-state-<日期>.md
 ⑤ `-1031` 棘轮**由逐件表推导**（禁字面基数；见 [K2-D]）
 ⑥ 四元组：值 + 口径 + 时点 + 探针版本
 ```
-⚠️ PR 正文须写 `Closes #<本卡 issue 号>`（号未分配前用 `Refs` 占位）。
+⚠️ PR 正文须写 `Refs #<本卡 issue 号>`（号未分配前用 `Refs` 占位）。
