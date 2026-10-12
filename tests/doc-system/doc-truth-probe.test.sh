@@ -33,8 +33,7 @@ mkfix() {
   printf 'experts:\n  alpha:\n    enabled: true\n  beta:\n    enabled: true\n' > "$FIX/expert/expert-registry.yaml"
   printf 'echo "✅ 全部 5 组通过"\n' > "$FIX/scripts/pre-commit-check.sh"
   printf '> V1.0.0 | x\n\n2位专家\n' > "$FIX/AGENTS.md"
-  printf '> V1.0.0\n\npre-commit 5 组\n\n2位专家\n' > "$FIX/CLAUDE.md"
-  printf '> V1.0.0\n\npre-commit 5 组\n' > "$FIX/LOOP.md"
+    printf '> V1.0.0\n\npre-commit 5 组\n' > "$FIX/LOOP.md"
   printf '2位专家\n' > "$FIX/knowledge/shared/README.md"
   : > "$FIX/CHRONICLE.md"; : > "$FIX/INDEX.md"; : > "$FIX/START-HERE.md"
   : > "$FIX/docs/authority/PRD.md"; : > "$FIX/docs/authority/ARCHITECTURE.md"
@@ -51,7 +50,7 @@ grep -q "lastVerifiedAt:" "$FIX/docs/authority/DRIFT-LEDGER.md"; t "A3 台账含
 grep -q "exitCode: 0" "$FIX/docs/authority/DRIFT-LEDGER.md"; t "A4 台账含 exitCode" 0 $?
 
 # B: 破坏专家数（替换首个 2位专家→3位专家，C1 提取 head -1）→ run → FRESH-RED + firstRedAt
-python3 - "$FIX/CLAUDE.md" <<'PYEOF'
+python3 - "$FIX/AGENTS.md" <<'PYEOF'
 import sys
 p = sys.argv[1]
 s = open(p, encoding='utf-8').read()
@@ -91,7 +90,7 @@ t  "E STALE exit1" 1 "$RC"
 tg "E1 输出 STALE" "STALE" "$OUT"
 
 # F: 修复回绿 + run 刷新 → probe-only → FRESH-GREEN exit 0
-python3 - "$FIX/CLAUDE.md" <<'PYEOF'
+python3 - "$FIX/AGENTS.md" <<'PYEOF'
 import sys
 p = sys.argv[1]
 s = open(p, encoding='utf-8').read()
