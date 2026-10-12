@@ -11,9 +11,12 @@
 词表 edge-types                       = 56 件 / $id distinct 56 / label distinct 56
 权威文档01 第二章 E-nn 定义            = 42 条
 golden edges 键                        = 36 条
-_patch_d66.cjs 解析出的 (E-x.y, label) = 0 条  ← 解析降级，未取得
+_patch_d66.cjs 结构化解析 (E-x.y,label) = 0 条  ← 结构化解析未取得。注意：这不等于"该文件无 E 号" —— 正则可取得 34 distinct（见下 F 节口径边界）
 
-─── A. 权威文档01 两位式 E-nn → 词表（按 NAME 归一匹配）───
+─── A. 权威文档01 两位式 E-nn → 词表（**按第二章名**匹配）───
+     ⚠️ 口径警告（a-7）：本行数 13/42 是**章依赖**读数。
+        E-08/E-11 用第二章名对不上，改用第一章 §1.9 / 第四章的名字**均可命中** ⇒ 存在 15/42 的合法变体读法。
+        凡引用本数必须同时写明「按第二章名」。
   E-05 CAPITAL_ACQUISITION → edge/capital_acquisition  [CAPITAL_ACQUISITION]
   E-07 TALENT_ACQUISITION → edge/talent_acquisition  [TALENT_ACQUISITION]
   E-13 CAPITAL_ALLOCATION → edge/capital_allocation  [CAPITAL_ALLOCATION]
@@ -72,6 +75,12 @@ _patch_d66.cjs 解析出的 (E-x.y, label) = 0 条  ← 解析降级，未取得
 
 ─── E. 判据① 相关：cycles 引用的 distinct 是否全部可经词表命中 ──
   cycles 引用 distinct = 15；命中 $id∪label = 15；未命中 = 0 []
+
+─── E2. `_patch_d66.cjs` 的可取得量（a-8：降级语义边界）───
+  正则 E-x.y: occurrences = 119 / distinct = 34
+  结构化 (E-x.y,label) = 0（上节）
+  ⇒ 正确表述 =「结构化解析未取得（0）；但正则可取得 34 distinct」。
+  ⇒ 本件**不得**被下游读成「该文件无 E 号」。
 
 ─── F. 本件测不出什么（B2 强制声明）───
   ① 只测「编号/命名可否按名字对应」，**测不出**语义等价是否成立（需裁定，非计算）。

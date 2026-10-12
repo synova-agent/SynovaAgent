@@ -70,11 +70,14 @@ console.log('═══ 四套编号的可映射性事实 ═══');
 console.log(`词表 edge-types                       = ${vocab.length} 件 / $id distinct ${new Set(vocab.map(v=>v.id)).size} / label distinct ${new Set(vocab.map(v=>v.label)).size}`);
 console.log(`权威文档01 第二章 E-nn 定义            = ${authNum.size} 条`);
 console.log(`golden edges 键                        = ${Object.keys(gEdges).length} 条`);
-console.log(`_patch_d66.cjs 解析出的 (E-x.y, label) = ${patchPairs.length} 条  ${patchPairs.length === 0 ? '← 解析降级，未取得' : ''}`);
+console.log(`_patch_d66.cjs 结构化解析 (E-x.y,label) = ${patchPairs.length} 条  ${patchPairs.length === 0 ? '← 结构化解析未取得。注意：这不等于"该文件无 E 号" —— 正则可取得 34 distinct（见下 F 节口径边界）' : ''}`);
 
 // ── A. 权威 E-nn ↔ 词表 ──
 console.log('');
-console.log('─── A. 权威文档01 两位式 E-nn → 词表（按 NAME 归一匹配）───');
+console.log('─── A. 权威文档01 两位式 E-nn → 词表（**按第二章名**匹配）───');
+console.log('     ⚠️ 口径警告（a-7）：本行数 13/42 是**章依赖**读数。');
+console.log('        E-08/E-11 用第二章名对不上，改用第一章 §1.9 / 第四章的名字**均可命中** ⇒ 存在 15/42 的合法变体读法。');
+console.log('        凡引用本数必须同时写明「按第二章名」。');
 let hitA = 0; const missA = [];
 const vocabByNorm = new Map();
 for (const v of vocab) vocabByNorm.set(norm(String(v.label)), v);
@@ -139,6 +142,18 @@ const uniqIds = new Set(vocab.map((v) => String(v.id)));
 let ok = 0; const bad = [];
 for (const v of union) { if (uniqIds.has(v) || uniqLabels.has(v)) ok++; else bad.push(v); }
 console.log(`  cycles 引用 distinct = ${union.size}；命中 $id∪label = ${ok}；未命中 = ${bad.length} ${JSON.stringify(bad)}`);
+
+// ── E2. a-8：降级的语义边界 —— 结构化解析 0 ≠ 该文件无 E 号 ──
+console.log('');
+console.log('─── E2. `_patch_d66.cjs` 的可取得量（a-8：降级语义边界）───');
+try {
+  const src = readFileSync(join(ROOT, '_patch_d66.cjs'), 'utf-8');
+  const all = [...src.matchAll(/E-\d+\.\d+/g)].map((m) => m[0]);
+  console.log(`  正则 E-x.y: occurrences = ${all.length} / distinct = ${new Set(all).size}`);
+  console.log(`  结构化 (E-x.y,label) = ${patchPairs.length}（上节）`);
+  console.log('  ⇒ 正确表述 =「结构化解析未取得（0）；但正则可取得 34 distinct」。');
+  console.log(`  ⇒ 本件**不得**被下游读成「该文件无 E 号」。`);
+} catch (e) { console.log(`  ⚠ 读取降级: ${e.message}`); }
 
 // ── F. B2 要求：本件测不出什么 ──
 console.log('');

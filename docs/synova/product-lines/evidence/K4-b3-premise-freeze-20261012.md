@@ -29,12 +29,12 @@ $ git rev-parse origin/local-main
 ba1b22a8b5ff75833704bac22fcfcb47295dc970
 
 # 口径声明：读 ba1b22a8b5 的 git 对象（不 checkout）；
-#   口径A = cycles/**/*.cycle.json 的 nodes[].edgeRefs 值集合
-#   口径B = 同文件的 mapping[].edgeId 值集合
-#   口径C = A ∪ B
+#   口径A = cycles/**/*.cycle.json 的 nodes[].edgeRefs 值集合（occurrences = 元素计数）
+#   口径B = 同文件的 mapping[].edgeId 值集合（occurrences = 元素计数）
+#   口径C = A∪B（**跨口径求和**：22 + 23 = 45；注意 set-union 去重后的 occurrences 是 15，不是 45）
 口径A edgeRefs-only       occurrences=22 distinct=15
 口径B edgeId-only         occurrences=23 distinct=15
-口径C 并集                occurrences=45 distinct=15
+口径C A∪B（跨口径求和）    occurrences=45 distinct=15
 未命中 $id∪label 的 distinct = 0
 ```
 
@@ -327,3 +327,33 @@ $ git cat-file -p <该路径> | Select-String '^### 3\.5\.1'
    （前两次见 A1 类历史）。共同根因 = **用"我以为的名字"去取对象，零命中即当作"不存在"**，
    而未区分「零命中」与「不存在」。**对策**：凡"某物不存在"类判定，**必须同时贴出正向枚举**
    （如 `git ls-tree` 该父目录的全量清单），证明"我找的是对的目录"，否则不得写成"不存在"。
+
+---
+
+## 七、🔴 队长读数口径自纠（采纳 verifier 第二轮 a-7/a-8/c-8）
+
+### 7.1 本件 §〇 部分读数的**取数面**需声明（c-8，属 A8 家族）
+
+本件 §〇 的五条前提里，**有一部分命令是在工作树**（`D:\synova-wt`，其 HEAD = `ed63e2086`）**上跑的**，
+而本件件首声明「base 一律 `ba1b22a8b5`」。
+
+**该两棵树的差异是实测存在的**：verifier 实测 `extensions/ontology/extensions/general-enterprise/activity.json`
+**仅 base 有**，工作树无 ⇒ 两树在该目录**已差 1 个文件**。
+
+**⇒ 本批读数"恰好一致"（56↔56、E 号 0↔0、TBD 52↔52）是运气，不是不变量。**
+**订正口径（本批从此生效）**：一切**证据性读数**一律 `git <cmd> ba1b22a8b5 -- <path>`（在 SHA 上取），
+**禁**用工作树读数充当 base 读数。后续各卡交付件与复核件均按此口径。
+
+> 归因：这是 **A8**（「报差异不钉左端 ⇒ 同一 HEAD 两个数」）的**变体** —— 本次**钉了左端却用工作树取数**。
+> 对策同上：钉 SHA **且**在 SHA 上取数，两件事都要做。
+
+### 7.2 可映射性底稿的两处数字口径（a-7 / a-8）
+
+- **a-7**：底稿里「权威两位式 E-nn → 词表 命中 **13/42**」是**章依赖**读数
+  （MISS 列点名的 E-08 / E-11 用的是**第二章**名；改用第一章 §1.9 / 第四章的名字，E-08/E-11 **均可命中** ⇒ 存在 **15/42** 的合法变体读法）。
+  ⇒ 该数**必须标注「按第二章名」**，否则复算者会得到不同数。
+- **a-8**：底稿写 `_patch_d66.cjs` 「解析出的 (E-x.y, label) = **0** 条」**低估了可取得量**。
+  实测：`git grep -o -E 'E-[0-9]+\.[0-9]+' ba1b22a8b5 -- _patch_d66.cjs` ⇒ **occurrences = 119 / distinct = 34**
+  （与 K4 定稿件「34 个 distinct」一致）。
+  ⇒ 正确写法 = 「**按 `(E-x.y, label)` 结构化解析未取得（0）；但正则可取得 34 distinct**」。
+  ⇒ **「降级不静默」做对了，但降级后的数不该被下游读成"该文件无 E 号"** —— 这是**降级的语义边界**问题。
