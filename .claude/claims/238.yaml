@@ -1,0 +1,28 @@
+# .claude/claims/238.yaml — #238（K4-05 编号权威表 ＋ 引用对齐判据）写集声明（D708 的 S0 源）
+# 说明：本卡与 #239 同分支同 PR ⇒ writeset 取**本分支全量变更集**（= git diff --name-only ba1b22a8b5..HEAD）。
+writeset:
+  - .claude/claims/238.yaml
+  - .claude/claims/239.yaml
+  - memory/notes/proposed/2026-10-12-K4-b3-numbering-authority.md
+  - docs/synova/coordination/numbering-authority.md
+  - docs/synova/GLOSSARY.md
+  - scripts/control-tower/probe-cycle-edges.ts
+  - scripts/control-tower/probe-cycle-valves.ts
+  - tests/coordination/numbering-authority.test.ts
+  - tests/cycles/valve-mapping.test.ts
+  - cycles/builtin/cash-cycle.cycle.json
+  - cycles/builtin/customer-cycle.cycle.json
+  - cycles/builtin/product-cycle.cycle.json
+  - cycles/builtin/talent-cycle.cycle.json
+  - cycles/industry/retail-ecommerce/store-replication.cycle.json
+  - cycles/industry/saas-tech/arr-growth.cycle.json
+  - src/cycles/cycle-types.ts
+  - src/cycles/cycle-loader.ts
+  - src/cycles/overflow-compute.ts
+  - docs/synova/product-lines/evidence/K4-b3-238-numbering-authority.md
+  - docs/synova/product-lines/evidence/K4-b3-239-valve-mapping.md
+done:
+  - verify: node scripts/control-tower/probe-cycle-edges.ts
+  - verify: node node_modules/vitest/vitest.mjs run tests/coordination/numbering-authority.test.ts
+  - verify: git diff --name-only ba1b22a8b5..HEAD
+note: K4-05：编号权威表 + 引用对齐判据。真源裁定 = 代码侧 $id（edge/<snake>）+ 文档侧权威01 两位式 E-01..E-42；私有式 E-x.y 降为历史别名（唯一 label 载体 = golden，_patch_d66.cjs 无 label 故不作依据）。判据④ 末行 occurrences=45 distinct=15 hit=15 miss=0。两章命名分歧 4 条 + 待裁 19 条已如实登记，不代裁。

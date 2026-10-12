@@ -74,6 +74,66 @@ export interface CrossCyclePropagation {
   strength: number;
 }
 
+// ═══ 五阀映射（#239 / K4-06）═══
+
+/**
+ * `actionEffectLag` 的合法桶标签。
+ *
+ * 权威源 = `docs/synova/research/权威文档15-企业循环溢出导航系统-20260714/`
+ * `SYNOVA-RESEARCH-第一章-循环配置规范与动态加载机制-v1-0-20260714.md` **§3.4**（标题串
+ * ``### 3.4 `edges` -- 五阀映射（含action_effect_lag）``）。
+ * ⚠️ 是 **doc15 第一章 §3.4**，**不是**第三章 §3.4（第三章同名节是「执行约束因子模型」，同名不同物）。
+ *
+ * 🔴 桶标签共 **6 个**（含 `>12_months`）；CTO 派单件 §四曾只列 5 个，漏 `>12_months`，已登记（#239 证据件）。
+ * ⚠️ 与边类型 JSON 里的 `action_effect_lag`（数值区间口径，走 doc15 §3.5.1）**不同物**，禁混用。
+ */
+export type ActionEffectLag =
+  | 'immediate'
+  | '1_month'
+  | '1-3_months'
+  | '3-6_months'
+  | '6-12_months'
+  | '>12_months';
+
+/** 桶标签 → 月数区间（区间用于「时滞是否已过」的判定；`maxMonths=null` 表示开区间「超过」）。 */
+export const ACTION_EFFECT_LAG_RANGE_MONTHS: Record<ActionEffectLag, { minMonths: number; maxMonths: number | null }> = {
+  immediate: { minMonths: 0, maxMonths: 0.5 },
+  '1_month': { minMonths: 0.5, maxMonths: 1 },
+  '1-3_months': { minMonths: 1, maxMonths: 3 },
+  '3-6_months': { minMonths: 3, maxMonths: 6 },
+  '6-12_months': { minMonths: 6, maxMonths: 12 },
+  '>12_months': { minMonths: 12, maxMonths: null },
+};
+
+/** 五阀的键名（逐字对齐 doc15 第一章 §3.4）。 */
+export const VALVE_KEYS = [
+  'acquisitionValve',
+  'allocationValve',
+  'conversionValve',
+  'deliveryValve',
+  'recycleValve',
+] as const;
+
+export type ValveKey = (typeof VALVE_KEYS)[number];
+
+/**
+ * 五阀映射里的单条边。
+ *
+ * ⚠️ `edgeId` 的取值形态 = **权威文档15 第一章 §3.4 的原样形态（`E-NN` 两位式）**。
+ * 本字段**不是** `edgeRefs`/`mapping.edgeId` 那套代码侧 `$id`（`edge/<snake>`）；
+ * 两者的对应关系与「哪些 E 号换算不出 `$id`」见
+ * `docs/synova/coordination/numbering-authority.md`（#238 交付件）。
+ */
+export interface ValveEdge {
+  /** 权威文档15 §3.4 原样形态的边号（`E-NN`） */
+  edgeId: string;
+  /** 预期生效延迟（6 桶标签之一） */
+  actionEffectLag: ActionEffectLag;
+}
+
+/** 五阀映射：`获取 → 分配 → 转化 → 交付 → 回收`。 */
+export type CycleValves = Record<ValveKey, ValveEdge[]>;
+
 // ═══ 循环配置完整结构 ═══
 
 export interface CycleConfig {
@@ -89,8 +149,17 @@ export interface CycleConfig {
   applicableIndustries: string[];
   /** 循环中的节点 */
   nodes: CycleNode[];
-  /** 节点间关系 */
+  /** 节点间关系（图结构：from/to/polarity/delay/weight） */
   edges: CycleEdge[];
+  /**
+   * 五阀映射（#239 / K4-06）—— **新键，不覆盖 `edges[]`**。
+   *
+   * 🔴 CTO 裁定（2026-10-11）：doc15 §3.4 的 `edges{*Valve}` 与仓内 `edges[]` **同名不同物**
+   * （前者是「阀映射」，后者是「图结构」）⇒ 用新 key `valves` 避免歧义。
+   *
+   * 缺省可选：缺失 ⇒ loader 计入 errors 并返回 `degraded: true`（不静默通过）。
+   */
+  valves?: CycleValves;
   /** 溢出条件与公式 */
   overflowFormula: OverflowFormula;
   /** 数据成熟度等级 */

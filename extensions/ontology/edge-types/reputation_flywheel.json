@@ -13,6 +13,6 @@
   },
   "consumed_by_sentinels": [],
   "action_effect_lag": "unknown",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "flywheel_momentum = word_of_mouth_amplification * brand_damage_recovery_rate * growth_trajectory ; referral_prob = referred_clients / new_clients_total ; nps_proxy = (promoters - detractors) / total_responses",
   "description": "成功交付带来好口碑，好口碑带来更多客户(飞轮)——声誉池驱动客户获取效率提升。"
 }

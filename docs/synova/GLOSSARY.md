@@ -43,11 +43,20 @@ aliases: "术语表 / 跨层级映射 / 命名规范"
 
 同一物理事实在系统四个抽象层级中的对应表述。
 
+> ⚠️ **编号口径注记（2026-10-12 加，K4-05 / #238）**
+> 本节的 `E-a.b` 形态是**私有历史编号**，**不是权威编号**。权威编号有两套，均在本节之外：
+> ① 文档侧权威 = **权威文档01 两位式 `E-01 … E-42`**（`docs/synova/research/权威文档01-本体层因果体系权威规范-20260714/` 第二/四章）；
+> ② 代码侧真源 = **`$id` = `edge/<snake>`**（`extensions/ontology/edge-types/*.json`）。
+> **本节 `E-a.b` 与 golden 数据集 `data/golden/wani-baby-v1.json` 的同一编号指向不同的边** ——
+> 例：本节映射 4 写 `E-4.1 decision_centralization`，而 golden 写 `"E-4.1": { "label": "VALUE_PRICING"`。**两处都无权威授权。**
+> ⇒ 完整对照、冲突登记与待裁清单见 **`docs/synova/coordination/numbering-authority.md`**；
+> 本节旧编号**保留原样不代改**（改写成什么本身需 CTO 裁定）。
+
 ### 映射 1：成本结构硬化
 | 层级 | 表述 |
 |------|------|
 | **表达层**（用户看到） | "固定成本占比太高，降不下来" |
-| **因果层**（权威01） | `E-3.5 fixed_cost_ratio > 0.6, hardness > 0.7` |
+| **因果层**（私有编号 `E-a.b`，**非**权威01 的两位式 `E-01..E-42`；见本节表头注记） | `E-3.5 fixed_cost_ratio > 0.6, hardness > 0.7` |
 | **哨兵层**（权威03） | `F5_fixed_cost_rigidity` 哨兵, `cost_structure` 维度 |
 | **存储层**（GraphStore） | `node(FINANCIAL).costCenter[].fixedCostRatio`, `edge(COST_DRIVEN_BY).transfer_function.params.hardness` |
 
@@ -153,7 +162,7 @@ aliases: "术语表 / 跨层级映射 / 命名规范"
 
 | 类型 | 格式 | 示例 |
 |------|------|------|
-| 因果边 | `E-{大版本}.{小版本}` | E-3.5, E-2.6 |
+| 因果边（**历史别名**，非权威；权威 = `$id` `edge/<snake>` + 两位式 `E-NN`，见 `docs/synova/coordination/numbering-authority.md`） | `E-{大版本}.{小版本}` | E-3.5, E-2.6 |
 | compute函数 | `COMPUTE-{名称}-v{版本}` | COMPUTE-DOL-v1 |
 | 哨兵 | `{域}_{维度}` | F1_KZ, O1_info_distortion |
 | Skill | `{领域}-{动词}-{名词}` | diagnose-cashflow-health |

@@ -8,7 +8,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 # 背景: AGENTS.md 停在 V4.5.1（08-02），控制塔演进到 V5.1.1 期间文档冻结——门禁语义/版本/定位
 #       与实际严重漂移。教训: 关键文档没有"谁负责定期对齐"的机制 → 漂移无感知。
 #
-# 职责: 检查关键文档（AGENTS.md/CLAUDE.md/cto-handover/预设）vs 实际代码的漂移，
+# 职责: 检查关键文档（AGENTS.md/cto-handover/预设）vs 实际代码的漂移，
 #       输出漂移报告（哪些文档过时 + 差异点）→ CTO 看到漂移 → 安排对齐。
 #       由 dsh-task-board cron（每周一）或 launchd 触发；也可手动跑。
 #
@@ -62,14 +62,14 @@ report_alert() { # report_alert <项> <详情> — 告警级（数据/备份健�
   REPORT+=("[ALERT] $1: $2")
 }
 
-# ═══ ① 版本漂移: AGENTS.md / CLAUDE.md vs VERSION.md ═══
+# ═══ ① 版本漂移: AGENTS.md vs VERSION.md ═══
 LATEST="$(get_latest_version)"
 if [ "$LATEST" = "unknown" ]; then
   echo "degraded: 无法读取 VERSION.md（main 与本地均缺）" >&2
   exit 2
 fi
 
-for doc in AGENTS.md CLAUDE.md; do
+for doc in AGENTS.md; do
   DV="$(doc_version "$REPO_DIR/$doc")"
   if [ "$DV" = "missing" ]; then
     report_drift "$doc" "文件缺失"
@@ -170,6 +170,6 @@ if [ "$DRIFT" -eq 0 ]; then
 else
   echo "[自检漂移报告] 控制塔版本 ${LATEST} | $(date -u +%Y-%m-%dT%H:%M:%SZ)"
   for line in "${REPORT[@]}"; do echo "$line"; done
-  echo "[提示] 漂移项由 CTO 安排对齐（AGENTS.md/CLAUDE.md 同步自代码，门禁语义对照实际脚本）"
+  echo "[提示] 漂移项由 CTO 安排对齐（AGENTS.md 同步自代码，门禁语义对照实际脚本）"
   exit 1
 fi

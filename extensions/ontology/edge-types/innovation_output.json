@@ -13,6 +13,6 @@
   },
   "consumed_by_sentinels": [],
   "action_effect_lag": "unknown",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "unknown",
   "description": "研发投入转化为新产品/技术——活动池中的研发活动产生创新成果的价值输出阀。"
 }

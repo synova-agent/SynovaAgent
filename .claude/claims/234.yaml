@@ -1,0 +1,22 @@
+# .claude/claims/234.yaml — #234（K4-01 `action_effect_lag` 值域迁移）写集声明（D708 的 S0 源）
+#   分支 k4b3/l2-234-235 ｜ base ba1b22a8b5 ｜ 实施 impl-b ｜ 2026-10-12
+#   本件 = **本卡段**写集；#235 提交时会把本件更新为 **PR 全量并集**（D708 以 PR 全量变更集为对账对象）
+#   🔁 **续做笔（2026-10-12 深夜）**：分支 **k4b3/234-l2seq58** ｜ base **aa085e1f1** ｜ 实施 **impl-c**
+#      —— 「56 字面基数」改造 ＋ 同件第二根因（B6 陈旧期望）收口
+#      ⇒ 本件 `writeset` 按纪律「**只列本 PR 真正改动的文件，不预授权**」（1134.yaml 先例）改为该 PR 的 **5 条**；
+#        `done` / `note` 保持原样（**最小 diff**；本笔证据见下方新证据件）。
+writeset:
+  - .claude/claims/234.yaml
+  - .claude/task-briefs/2026-10-13-234-K4-01-l2seq58-基数推导化.md
+  - docs/synova/product-lines/evidence/K4-b3-l2seq-58-20261013.md
+  - tests/coordination/numbering-authority.test.ts
+  - tests/ontology/edge-lag-values.test.ts
+  - tests/ontology/edge-transfer-functions.test.ts
+done:
+  - verify: npx tsx scripts/control-tower/probe-ontology-values.ts
+  - verify: npx vitest run tests/ontology/edge-lag-values.test.ts
+  - verify: npx vitest run tests/l4/edge-lag-unknown-degraded-1134.test.ts tests/l4/ontology-loader-param-bridge-1031.test.ts
+  - verify: npx vitest run tests/l4/ tests/ontology/ tests/control-tower/
+  - verify: bash scripts/control-tower/check-ontology-fields.sh
+  - verify: npx tsc --noEmit
+note: 值域迁移面=实测 5 条桶标签（immediate×1/1_month×1/1-3_months×1/3-6_months×2），换算依据=doc15 第一章 §3.4 桶图例（CTO 明文只覆盖 immediate）；§3.5.1 同标签命中 4 条取值、无同标签 4 条（E-15/E-24/E-25/E-37）登记缺口**不改值**、未覆盖 3 条（E-05/E-13/E-28）按同一换算落地（E-13 标 derivation 提请 CTO 追认）；形态采**字符串形区间**以兼容两道写集外既有门禁（对象形态属另案）；§3.4↔§3.5.1 互斥实测 4 条（E-17/E-23/E-25/E-37）按 CTO 裁定以 §3.5.1 优先；goal_decomposition 散文值登记为域外、**不动**。

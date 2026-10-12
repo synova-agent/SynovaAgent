@@ -16,6 +16,24 @@
     { "from": "retention", "to": "knowledge", "polarity": "+", "delay": 2, "weight": 0.8 },
     { "from": "knowledge", "to": "hiring", "polarity": "-", "delay": 4, "weight": 0.3 }
   ],
+  "valves": {
+    "acquisitionValve": [
+      { "edgeId": "E-07", "actionEffectLag": "1-3_months" }
+    ],
+    "allocationValve": [
+      { "edgeId": "E-15", "actionEffectLag": "1-3_months" }
+    ],
+    "conversionValve": [
+      { "edgeId": "E-17", "actionEffectLag": "1_month" },
+      { "edgeId": "E-19", "actionEffectLag": "6-12_months" }
+    ],
+    "deliveryValve": [
+      { "edgeId": "E-23", "actionEffectLag": "3-6_months" }
+    ],
+    "recycleValve": [
+      { "edgeId": "E-38", "actionEffectLag": "3-6_months" }
+    ]
+  },
   "overflowFormula": {
     "condition": "retention.currentValue < 0.5",
     "targetNode": "retention",

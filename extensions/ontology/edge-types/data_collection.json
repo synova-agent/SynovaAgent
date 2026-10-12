@@ -13,6 +13,6 @@
   },
   "consumed_by_sentinels": [],
   "action_effect_lag": "unknown",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "unknown",
   "description": "采集内部经营信息——企业运营活动产生的数据被系统化采集进入企业信息池。"
 }

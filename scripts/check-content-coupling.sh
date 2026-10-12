@@ -28,8 +28,12 @@
 # ── 判据（CC1–CC4，逐条可机器判）──────────────────────────────────────────────
 #   CC1 方向 —— extensions/**/*.ts 的 import 目标 ∈ {裸包名} ∪ {extensions/ 内部相对路径}；
 #               越出 extensions/ 的相对/绝对路径 = 违规（**方向：内容不得钻引擎**）
-#   CC2 对称 —— src/**/*.ts 不得从 extensions/** 取 type（import type / type 位置 import）；
-#               值 import 进 extensions **无基线**（零容忍，出现即新增）
+#   CC2 对称 —— src/**/*.ts 不得从 extensions/** 取 type 或值（import type / type 位置
+#               import ＋ 值 import 均计）；
+#               🔴 2026-10-13 修头注（CTO 裁定 068）：原头注「只取 type」窄于实现——
+#               实现侧 scan_cc2() 的 viol 同时收 type 与 value ⇒ 头注自此与实现一致；
+#               存量值违规同走 CC-BASELINE 棘轮（例: content-registry.ts 的 layer-resolver
+#               接线 = CTO 2026-10-11「甲」裁定存量，证据件 1056-l15-profession-layer §六）。
 #   CC3 可达 —— 每个 extensions/<dir>/manifest.json 的 type 必须在 content-registry 登记；
 #               status ∈ {reachable, retired, pending-cto}；status=reachable ⇒ loader.module 或
 #               readers 至少一条在盘上可解析（堵"loader 死 / 无 loader 却称可达"）
@@ -237,6 +241,13 @@ CC1 extensions/sentinels/unit-economics/aggregate.ts t=2 v=0
 CC1 extensions/sentinels/value-capture/aggregate.ts t=2 v=0
 CC1 extensions/sentinels/value-capture/computes/value-capture-score.ts t=0 v=1
 CC2 src/sentinel/types.ts t=96 v=0
+# 2026-10-13 登记（CTO 裁定 068 走 A 路）: 「甲」裁定已找到 ——
+#   docs/synova/product-lines/evidence/1056-l15-profession-layer-20261010.md §六
+#   「批 2 变更（CTO 2026-10-11「甲」裁定：接线改为经 content-registry 声明）」
+#   ＋ 独立复核件 1056-independent-verify-20261011.md（被测 2cf60dfc1）。
+#   该接线承载「层序唯一真源=layer-resolver.ts 的 CONTENT_LAYER_ORDER」设计，
+#   属有裁定的存量 ⇒ 登记棘轮（只减不增）。
+CC2 src/deploy/content-registry.ts t=0 v=1
 """
 
 

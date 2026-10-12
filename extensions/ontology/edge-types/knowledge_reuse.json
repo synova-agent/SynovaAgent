@@ -13,6 +13,6 @@
   },
   "consumed_by_sentinels": [],
   "action_effect_lag": "unknown",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "knowledge_reuse_rate = KC_reaccess_count / total_KC_count ; codification_rate = DOCUMENT_count / KC_count ; knowledge_decay = avg_days_since_last_access / 365",
   "description": "知识复用——项目经验沉淀到知识池，减少重复学习成本。"
 }

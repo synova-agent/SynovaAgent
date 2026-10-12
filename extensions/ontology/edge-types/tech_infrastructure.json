@@ -13,6 +13,6 @@
   },
   "consumed_by_sentinels": [],
   "action_effect_lag": "unknown",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "infrastructure_health = 1 - (tech_debt_score * system_instability_ratio) / 2 ; tech_debt_score = avg(TOOL.version_age / current_version_age) ; system_stability = 1 / (1 + tech_incident_count_per_period)",
   "description": "IT系统/数据平台提升效率(二阶)——技术投资改善多个一阶阀的运行环境（取代原AUGMENTS）。"
 }

@@ -13,6 +13,6 @@
   },
   "consumed_by_sentinels": [],
   "action_effect_lag": "unknown",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "rigidity_gap = environmental_change_rate - routine_mutation_rate ; lock_in_strength = routine_age * (1 - adaptation_frequency)",
   "description": "惯例刚性阻止调整(二阶、负向)——'我们一直这样做'的惯例增加所有一阶阀的调整阻力。"
 }

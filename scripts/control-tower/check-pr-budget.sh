@@ -159,8 +159,14 @@ else
   # 基线解析链（origin/main 首选；独立 clone / 浅克隆下回退）。全不可解析 → **显式降级跳过**，
   # 不 exit 2 —— 沿用 pre-push 门禁 0-1 对「fetch 失败」的既有语义（显式提示 + 不静默跳过），
   # 避免环境性缺 ref 把所有 PR 误打成红（fail-open 但留痕；铁律 11 不静默）。
+  # 🔴 2026-10-12 修基线序（CTO P0 裁定）: `origin/local-main` 是 **GitHub 侧陈旧引用**
+  #   （实测停于 28ae513dc，落后 gitea 侧 111 提交）⇒ 回退取它 ⇒ 任何 PR 都被算进
+  #   "落后 111 提交的全部改动"（实测报「变更含 108 件」，真实只 2 件）。
+  #   修法: 基线链 **gitea/local-main → local-main（本地跟踪分支）前置**；
+  #   origin/local-main 仅作无 gitea remote 环境的回退。
+  #   判据: `git diff --stat gitea/local-main...HEAD | tail -1` = 本 PR 真实改动数。
   BASE_RESOLVED=""
-  for _cand in "$BASE" origin/local-main local-main origin/main main origin/HEAD; do
+  for _cand in "$BASE" gitea/local-main local-main origin/local-main origin/main main origin/HEAD; do
     if git rev-parse --verify --quiet "$_cand" >/dev/null 2>&1; then BASE_RESOLVED="$_cand"; break; fi
   done
   if [ -z "$BASE_RESOLVED" ]; then
