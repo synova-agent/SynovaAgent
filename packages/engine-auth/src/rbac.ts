@@ -139,7 +139,11 @@ export function createRBACProvider(config: RBACConfig): AuthProvider & { cache: 
       if (filter.conditions.length === 0) return resources;
 
       return resources.filter(r => {
-        const access = (r.access || r.props?.access) as AccessTags | undefined;
+        // K12-11 (#194): 类型收窄（行为逐字不变）—— 本文件此前**不在** `tsc` 程序内
+        // （`src/` 无人 import 本包）；本卡把项模型接进 `src/middleware/auth.ts` 后，本文件
+        // 才第一次被类型检查，暴露出这两处既有类型问题。此处只做类型级收窄，**不改判定逻辑**。
+        const props = (r as { props?: Record<string, unknown> }).props;
+        const access = (r.access ?? props?.['access']) as AccessTags | undefined;
         if (!access) return false; // 无标签 → 不通过
         return checkAccessTags(access, filter.conditions);
       });
@@ -161,8 +165,11 @@ export function createRBACProvider(config: RBACConfig): AuthProvider & { cache: 
 // ═══ 辅助 ═══
 
 function checkAccessTags(access: AccessTags, conditions: FilterCondition[]): boolean {
+  // K12-11 (#194): 类型级收窄（行为逐字不变）—— 接口类型无索引签名，不能直接 `as Record<string, unknown>`
+  //   （TS2352「sufficiently overlaps」）；用对象展开得到可索引的字面量类型，**不写断言族**。
+  const bag: Record<string, unknown> = { ...access };
   for (const c of conditions) {
-    const val = (access as Record<string, unknown>)[c.field.replace('access.', '')];
+    const val = bag[c.field.replace('access.', '')];
     if (c.operator === 'IN') {
       const allowed = c.value as unknown[];
       if (!allowed.includes(val)) return false;

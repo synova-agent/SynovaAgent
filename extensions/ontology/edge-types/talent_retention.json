@@ -13,6 +13,6 @@
   },
   "consumed_by_sentinels": [],
   "action_effect_lag": "unknown",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "talent_retention_rate = stayed_count / total_count_start ; turnover_cost = avg_replacement_cost * departed_count ; compensation_competitiveness = avg_salary_enterprise / avg_salary_market",
   "description": "人才留存——员工满意度驱动人才留在企业，减少人力池的流失。"
 }

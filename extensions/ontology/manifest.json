@@ -8,7 +8,7 @@
   "entryPoint": "../src/l4/ontology-loader.ts",
   "exportKey": "loadOntology",
   "nodeTypes": 29,
-  "edgeTypes": 16,
+  "edgeTypes": 58,
   "tagsFile": "tags.json",
   "authority": "runtime",
   "note": "JSON Schema files are the authoritative runtime data source. sog-core-schema.ts enum is deprecated reference."

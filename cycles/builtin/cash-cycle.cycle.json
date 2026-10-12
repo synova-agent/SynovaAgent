@@ -16,6 +16,24 @@
     { "from": "profit", "to": "reinvestment", "polarity": "+", "delay": 1, "weight": 0.5 },
     { "from": "reinvestment", "to": "revenue", "polarity": "+", "delay": 3, "weight": 0.3 }
   ],
+  "valves": {
+    "acquisitionValve": [
+      { "edgeId": "E-05", "actionEffectLag": "immediate" },
+      { "edgeId": "E-06", "actionEffectLag": "immediate" }
+    ],
+    "allocationValve": [
+      { "edgeId": "E-13", "actionEffectLag": "1_month" }
+    ],
+    "conversionValve": [
+      { "edgeId": "E-23", "actionEffectLag": "3-6_months" }
+    ],
+    "deliveryValve": [
+      { "edgeId": "E-30", "actionEffectLag": "1-3_months" }
+    ],
+    "recycleValve": [
+      { "edgeId": "E-37", "actionEffectLag": "6-12_months" }
+    ]
+  },
   "overflowFormula": {
     "condition": "profit.currentValue < 0",
     "targetNode": "reinvestment",

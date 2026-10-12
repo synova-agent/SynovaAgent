@@ -104,9 +104,12 @@ echo ""
 echo "── 8. Stage 1 不变量: 旧路径仍被写（兼容并存，没偷偷切完）──"
 # helper 体内必须仍有一处写旧路径（切到 Stage 2 时本断言才应改）
 if grep -q '>> "$ROOT/.claude/bypass.log"' "$HOOK"; then pass "旧路径仍在写（Stage 1 兼容并存成立）"; else fail "旧路径已停写 → 越过了 Stage 1（派单禁止一个 PR 切完）"; fi
-# 5 处原始写入点全部改走 helper（不得有直写绕过）
+# 2026-10-12 口径迁移: post-commit.sh 已增至 6 处证据写入点（新增 suspected-rewrite 类），
+#   全部走 helper；判别力补强: 直写绕过检查（helper 体外禁止 `>> bypass.log`）。
 DIRECT=$(grep -c '| _bypass_append' "$HOOK" | tr -d '\r\n')
-[ "$DIRECT" = "5" ] && pass "5 处证据写入点全部走双写 helper" || fail "双写接线数 = ${DIRECT}（应 5）"
+[ "$DIRECT" = "6" ] && pass "6 处证据写入点全部走双写 helper" || fail "双写接线数 = ${DIRECT}（应 6）"
+_DIRECT_BYPASS=$(grep '>> .*bypass\.log' "$HOOK" | grep -cv 'printf' | tr -d '\r\n')
+[ "$_DIRECT_BYPASS" = "0" ] && pass "无绕过 helper 的直写点（Stage 1 不变量完整）" || fail "发现 ${_DIRECT_BYPASS} 处直写绕过"
 
 echo ""
 echo "═══════════════════════════════════════════════════════════"

@@ -466,9 +466,25 @@ describe('K12-02 建档内容包 — 正常路径（真包）', () => {
 
   // #190（K12-07）: 本体新增第 56 条边 `edge/goal_decomposition`（目标分解边）⇒
   //   本计数从 55 收紧到 56 并**同断言新边在册**（不是放宽为 >= —— 放宽会废掉本条的判别性）。
-  it('本体词表真从磁盘读（节点 29 族 / 边 56 族，非硬编码）', () => {
+  // 🔴 N2（CTO 2026-10-12）：**基数改由扫盘实测推导，禁字面 56/58** ——
+  //   否则 #65（`l3-65`）新增 2 边后本断言必红（+2 ⇒ 58），且每次词表变动都要手改此处。
+  //   判别性不降：`toEqual` 仍要求**逐件**在册（下三行 toContain 为具名抽样），
+  //   且"盘上件数 == 装载件数"本身即"真从磁盘读"的断言（漏读/多读都会崩）。
+  it('本体词表真从磁盘读（节点 29 族 / 边由扫盘实测推导，非硬编码）', () => {
+    // 🔴 读**件内真实 `$id`**，不从文件名推 —— 实测有 5 件的 `$id` 尾段与文件名主干不同
+    //   （`decision-concentrates` / `external-assumption` / `incentive-binds` / `locks-in` / `signal-transmits`；
+    //    文件名用下划线、`$id` 用连字符）⇒ 从文件名推会把它们全推错（边界不统一）。
+    const onDiskEdgeFamilies = readdirSync(join(REPO_ROOT, 'extensions', 'ontology', EDGE_FAMILY))
+      .filter((n) => n.endsWith('.json'))
+      .sort()
+      .map((n) => {
+        const def = JSON.parse(readFileSync(join(REPO_ROOT, 'extensions', 'ontology', EDGE_FAMILY, n), 'utf-8')) as { $id?: unknown };
+        expect(typeof def.$id, `${n} 缺 $id`).toBe('string');
+        return def.$id as string;
+      })
+      .sort();
     expect(pack.vocabulary.nodes.length).toBe(29);
-    expect(pack.vocabulary.edges.length).toBe(56);
+    expect(pack.vocabulary.edges.slice().sort()).toEqual(onDiskEdgeFamilies);
     expect(pack.vocabulary.nodes).toContain('outcome/financial');
     expect(pack.vocabulary.nodes).toContain('resource/person');
     expect(pack.vocabulary.edges).toContain('edge/produces');

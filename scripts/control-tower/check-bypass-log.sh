@@ -53,7 +53,18 @@ if [ -f "$LEDGER_SH" ]; then
   _SRC_OUT="$(bash "$LEDGER_SH" sources 2>/dev/null)" || _SRC_OUT="$LOG"  # swallow-ok: 解析器失败即回退旧路径（显式赋值，非静默跳过对账）
   [ -n "$_SRC_OUT" ] && LEDGER_SOURCES="$_SRC_OUT"
 fi
-BASE="${SYNO_BASE_REF:-${1:-origin/feat/prompt-architecture}}"
+# 🔴 2026-10-12 基线口径（CTO P0 裁定 bug 1 同病第三处）: 原默认硬编码
+#   `origin/feat/prompt-architecture`（陈旧特性分支）⇒ merge-base 极旧 ⇒ 对账 range
+#   卷入大量他线已过闸提交 ⇒ 推送被误拦。修法: 优先当前分支 upstream（@{u}），
+#   回退 gitea/local-main → local-main；旧硬编码仅作最后兼容回退。
+_BASE_UPSTREAM="$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo "")" # swallow-ok: 无 upstream 走回退链
+BASE="${SYNO_BASE_REF:-${1:-${_BASE_UPSTREAM:-gitea/local-main}}}"
+# base 解析链: 显式/upstream 不可解析时按序回退（与 check-pr-budget.sh 口径一致）
+if ! git rev-parse --verify --quiet "$BASE" >/dev/null 2>&1; then
+  for _bcand in gitea/local-main local-main origin/local-main origin/feat/prompt-architecture; do
+    if git rev-parse --verify --quiet "$_bcand" >/dev/null 2>&1; then BASE="$_bcand"; break; fi
+  done
+fi
 
 # D513/③(Win 37dc1cae 根因): 防御性刷新 base —— `git push <URL>` 不更新本地
 # remote-tracking ref，BASE 解析到陈旧 ref → merge-base 化失效 → 对账范围扩大 →

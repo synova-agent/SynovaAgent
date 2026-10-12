@@ -13,6 +13,6 @@
   },
   "consumed_by_sentinels": [],
   "action_effect_lag": "unknown",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "unknown",
   "description": "设定人才准入门槛——治理层决定的人才筛选标准，调节TALENT_ACQUISITION的selection_threshold参数。"
 }

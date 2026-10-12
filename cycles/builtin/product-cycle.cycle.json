@@ -16,6 +16,25 @@
     { "from": "feedback", "to": "iteration", "polarity": "-", "delay": 0, "weight": 0.5 },
     { "from": "iteration", "to": "rnd", "polarity": "+", "delay": 1, "weight": 0.4 }
   ],
+  "valves": {
+    "acquisitionValve": [
+      { "edgeId": "E-01", "actionEffectLag": "1-3_months" },
+      { "edgeId": "E-04", "actionEffectLag": "3-6_months" }
+    ],
+    "allocationValve": [
+      { "edgeId": "E-13", "actionEffectLag": "1_month" }
+    ],
+    "conversionValve": [
+      { "edgeId": "E-20", "actionEffectLag": "6-12_months" },
+      { "edgeId": "E-22", "actionEffectLag": "3-6_months" }
+    ],
+    "deliveryValve": [
+      { "edgeId": "E-30", "actionEffectLag": "1_month" }
+    ],
+    "recycleValve": [
+      { "edgeId": "E-35", "actionEffectLag": "1-3_months" }
+    ]
+  },
   "overflowFormula": {
     "condition": "delivery.currentValue < 0.4",
     "targetNode": "rnd",

@@ -187,7 +187,10 @@ echo "── 10. D860 反例: 伪装成治理产物的代码必须仍被计数 �
 run_expect 1 "13 件纯代码仍被拦（豁免不放宽真代码）" --files "a1.ts a2.ts a3.ts a4.ts a5.ts a6.ts a7.ts a8.ts a9.ts a10.ts a11.ts a12.ts a13.ts"
 run_expect 1 "反例: task-state/evil.ts（代码伪装进治理前缀）→ 仍计数 13 > 12" --files "task-state/evil.ts a1.ts a2.ts a3.ts a4.ts a5.ts a6.ts a7.ts a8.ts a9.ts a10.ts a11.ts a12.ts"
 if echo "$OUT" | grep -q "13 > 上限 12"; then pass "反例计数点名 13"; else fail "反例计数未点名"; fi
-run_expect 1 "反例: .claude/task-briefs/evil.sh 仍计数" --files ".claude/task-briefs/evil.sh a1.ts a2.ts a3.ts a4.ts a5.ts a6.ts a7.ts a8.ts a9.ts a10.ts a11.ts a12.ts"
+# 2026-10-12 口径迁移: CTO 2026-10-11 裁定① 约定内容（docs/·.claude/·memory/notes/·*.md）
+#   **不计入 PR 预算** ⇒ `.claude/` 下文件（含代码）整体排除 ⇒ 本反例由「仍计数判红」
+#   改为「排除放行」；「代码伪装治理前缀仍被计」的判别力由上行 task-state/evil.ts 承担。
+run_expect 0 "反例(口径迁移): .claude/task-briefs/evil.sh → 约定内容排除不计入（12 代码件 ≤ 12）" --files ".claude/task-briefs/evil.sh a1.ts a2.ts a3.ts a4.ts a5.ts a6.ts a7.ts a8.ts a9.ts a10.ts a11.ts a12.ts"
 
 echo ""
 echo "── 11. D1028 DS1 出库豁免反例（--diff-status 注入缝）──"
@@ -197,11 +200,12 @@ if echo "$OUT" | grep -q "白名单外路径"; then pass "DS1① 输出点名「
 if echo "$OUT" | grep -q "命中 ❌ 拒绝名单 13 件"; then pass "DS1① 逐条点名 ❌ 命中（共 13 件）"; else fail "DS1① 未点名 ❌ 命中件数"; fi
 if echo "$OUT" | grep -q "src/mod001.ts"; then pass "DS1① 逐条列出 ❌ 路径（src/mod001.ts 可见）"; else fail "DS1① ❌ 路径未逐条列出"; fi
 
-# ② 删白名单内 13 件 + 改 1 件 → ⓐ 不满足 → 14 > 12
+# ② 2026-10-12 口径迁移: docs/** 属约定内容不计入预算 ⇒ 删/改白名单内 .md 全部排除
+#   ⇒ 计数 0 ≤ 12 放行（原「14 > 12 判红」口径随 CTO 2026-10-11 裁定① 作废）
 DS1_2="$(mk_set 'docs/synova/archive/f' 13 D '.md')
 M	docs/synova/archive/mod.md"
-run_expect 1 "DS1② 删白名单内 13 件 + 改 1 件 → exit 1" --diff-status "$DS1_2"
-if echo "$OUT" | grep -q "14 > 上限 12"; then pass "DS1② 计数点名 14 > 上限 12（D/R 计入）"; else fail "DS1② 计数未点名 14"; fi
+run_expect 0 "DS1②(口径迁移) 删白名单内 13 件 + 改 1 件 → docs 排除后 exit 0" --diff-status "$DS1_2"
+if echo "$OUT" | grep -q "变更文件数 0 ≤ 上限 12"; then pass "DS1② 计数排除后归零（0 ≤ 12）"; else fail "DS1② 计数未归零"; fi
 if echo "$OUT" | grep -q "ⓐ 不满足"; then pass "DS1② 不豁免原因点名 ⓐ"; else fail "DS1② ⓐ 原因缺失"; fi
 
 # ②' 判别性夹具: 删白名单内 1 件 + 改 1 件 → exit 0，但**必须**报「出库豁免不适用」
@@ -209,7 +213,7 @@ if echo "$OUT" | grep -q "ⓐ 不满足"; then pass "DS1② 不豁免原因点�
 run_expect 0 "DS1②' 删白名单内 1 件 + 改 1 件 → exit 0" --diff-status "$(printf 'D\tdocs/synova/archive/f001.md\nM\tdocs/synova/archive/mod.md\n')"
 if echo "$OUT" | grep -q "出库豁免不适用"; then pass "DS1②' 输出含「出库豁免不适用」（判别性夹具）"; else fail "DS1②' 未报「出库豁免不适用」（ⓐ 检查可能被删）"; fi
 if echo "$OUT" | grep -q "出库豁免生效"; then fail "DS1②' 误报「出库豁免生效」（ⓐ 未拦住增改件）"; else pass "DS1②' 未误报「出库豁免生效」"; fi
-if echo "$OUT" | grep -q "变更文件数 2 ≤ 上限 12"; then pass "DS1②' 回落到既有 ① 计数（2 件）"; else fail "DS1②' 未回落到既有计数"; fi
+if echo "$OUT" | grep -q "变更文件数 0 ≤ 上限 12"; then pass "DS1②' 回落到既有 ① 计数（docs 排除后 0 件）"; else fail "DS1②' 未回落到既有计数"; fi
 # 变体: 白名单内但属 D860 治理前缀的 .md（走的另一条不计入路径）→ 仍必须报不适用
 run_expect 0 "DS1②' 变体（docs/plans/*.md, D860 前缀）→ exit 0 且仍报不适用" --diff-status "$(printf 'D\tdocs/plans/a.md\nM\tdocs/plans/b.md\n')"
 if echo "$OUT" | grep -q "出库豁免不适用"; then pass "DS1②' 变体 输出含「出库豁免不适用」"; else fail "DS1②' 变体 未报不适用"; fi
@@ -287,12 +291,15 @@ echo "$OUT" | grep -q "CT-D evidence 目录级豁免超阈值" && fail "CT-D② 
 run_expect 0 "CT-D② 13 件 evidence + 1 脚本 → 超出 1 件计入预算（仍 ≤12）" --files "$EV13 scripts/control-tower/check-pr-budget.sh"
 echo "$OUT" | grep -q "共 13 件 > 上限 12 件" && pass "CT-D② 超阈值口径点名（共 N 件 / 上限）" || fail "CT-D② 超阈值未点名"
 echo "$OUT" | grep -q "x13.txt" && pass "CT-D② 逐条点名被计入预算的文件" || fail "CT-D② 未点名被计入的文件"
-echo "$OUT" | grep -q "✅ ① 变更文件数 2 " && pass "CT-D② 计数正确（13 豁免 12 + 超阈值 1 + 脚本 1 = 2 计入）" || fail "CT-D② 计数不符: $(echo "$OUT" | grep -a '① 变更文件数' )"
+echo "$OUT" | grep -q "✅ ① 变更文件数 1 " && pass "CT-D② 计数正确（13 evidence 排除(口径迁移) + 超阈值 1 + 脚本 1 = 1 计入）" || fail "CT-D② 计数不符: $(echo "$OUT" | grep -a '① 变更文件数' )"
 
-# 粒度② 判别性: 13 件 evidence + 12 件代码 —— 超出的 1 件真进预算 ⇒ 13 > 12 判红。
-#   去掉阈值（= 原实现的无界目录级豁免）时这里是 12 ≤ 12 **假绿**（见证据文件改前/改后对照）。
+# 粒度② 判别性: evidence 目录级豁免后，判红判别力由**计入预算的代码件数**承担。
+#   2026-10-12 口径迁移: docs/** evidence 不计入 ⇒ 12 代码 = 12 ≤ 12 放行；
+#   判红夹具改用 13 件代码（13 > 12 必红）——「无界豁免假绿」的判别力不变。
 C12=""; for _i in $(seq 1 12); do C12="$C12 scripts/control-tower/z$_i.sh"; done
-run_expect 1 "CT-D② 13 evidence + 12 代码 → 超出件计入后 13 > 上限 12 判红" --files "$EV13 $C12"
+C13="$C12 scripts/control-tower/z13.sh"
+run_expect 0 "CT-D②(口径迁移) 13 evidence + 12 代码 → 12 ≤ 12 放行" --files "$EV13 $C12"
+run_expect 1 "CT-D② 13 evidence + 13 代码 → 13 > 上限 12 判红（判别力保留）" --files "$EV13 $C13"
 echo "$OUT" | grep -q "13 > 上限 12" && pass "CT-D② 判红口径点名 13 > 12" || fail "CT-D② 判红口径未点名"
 run_expect 0 "CT-D② 反例: 12 evidence + 12 代码 → 仍在预算（阈值不误拦）" --files "$EV12 $C12"
 
@@ -586,8 +593,12 @@ _ESB="$TMPD/empty-set-sb"; mkdir -p "$_ESB"
 git -C "$_ESB" init -q
 git -C "$_ESB" config user.email "t@t"; git -C "$_ESB" config user.name "t"
 : > "$_ESB/base.txt"; git -C "$_ESB" add -A >/dev/null 2>&1; git -C "$_ESB" commit -qm base
+_i=0; while [ "$_i" -lt 14 ]; do _i=$((_i + 1)); printf 'base\n' > "$_ESB/m$_i.txt"; done
+git -C "$_ESB" add -A >/dev/null 2>&1; git -C "$_ESB" commit -qm base
+# 2026-10-12 口径迁移: 裁定②「纯新增不计入预算」⇒ 沙箱改用 **M（改既有文件）** 14 件，
+#   否则缺省路径被排除成 0 件 ⇒ 17.3 反例失真（判红判别力须由计入口径的 M 件承担）。
 _i=0; while [ "$_i" -lt 14 ]; do _i=$((_i + 1)); printf 'x%s\n' "$_i" > "$_ESB/m$_i.txt"; done
-git -C "$_ESB" add -A >/dev/null 2>&1; git -C "$_ESB" commit -qm "14 files"
+git -C "$_ESB" add -A >/dev/null 2>&1; git -C "$_ESB" commit -qm "14 files modified"
 _ES_N="$(git -C "$_ESB" diff --name-only 'HEAD~1...HEAD' | wc -l | tr -d ' ')"
 [ "$_ES_N" = 14 ] && pass "夹具自查: 沙箱三点 diff = 14 文件（> 上限 12 ⇒ 缺省路径必红）" \
   || fail "夹具自身失真: 沙箱三点 diff=${_ES_N}（应 14）"

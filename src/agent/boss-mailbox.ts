@@ -29,6 +29,35 @@ export interface WeeklyReport {
   actions: ActionProgress[];
   needsAttention: string[];
   generatedAt: string;
+  /** E5 / #389：④a 测量值趋势段（业务读者②——周报消费测量值时序；标定供数口径：不含轮次级） */
+  measurements: MeasurementTrendView[];
+  /** 测量值段降级原因（读失败不阻断周报；空数组=无降级） */
+  measurementErrors?: string[];
+  /** E7 / #406：④ 决策台账近期行（⑤ 交付读 ④——"本周谁裁了什么"） */
+  decisions: DecisionInView[];
+  /** 决策段降级原因（读回口未装配/失败不阻断周报） */
+  decisionErrors?: string[];
+}
+
+/** 周报消费形态的决策行（由调用方从 ④ 台账读回并映射） */
+export interface DecisionInView {
+  nodeId: string;
+  who: string;
+  role: string | null;
+  action: string;
+  at: string;
+  outputRef: string | null;
+}
+
+/** 周报消费形态的趋势行（由调用方从 ④a 读回并映射） */
+export interface MeasurementTrendView {
+  metricId: string;
+  entityId: string;
+  unit: string | null;
+  latestValue: number | null;
+  previousValue: number | null;
+  changeRatio: number | null;
+  latestAt: string;
 }
 
 export class BossMailbox {
@@ -37,6 +66,10 @@ export class BossMailbox {
     week: string,
     signals: WeeklySignal[],
     actions: ActionProgress[],
+    measurements: MeasurementTrendView[] = [],
+    measurementErrors: string[] = [],
+    decisions: DecisionInView[] = [],
+    decisionErrors: string[] = [],
   ): WeeklyReport {
     const worseningSignals = signals.filter(s => s.trend === 'worsening');
     const needsAttention: string[] = [];
@@ -54,6 +87,10 @@ export class BossMailbox {
       actions,
       needsAttention,
       generatedAt: new Date().toISOString(),
+      measurements,
+      ...(measurementErrors.length > 0 ? { measurementErrors } : {}),
+      decisions,
+      ...(decisionErrors.length > 0 ? { decisionErrors } : {}),
     };
   }
 
@@ -81,6 +118,28 @@ export class BossMailbox {
     for (const a of report.actions) {
       const icon = a.status === 'completed' ? '✅' : a.status === 'stalled' ? '🔴' : '🟡';
       text += `  ${icon} ${a.title} — ${a.detail}\n`;
+    }
+
+    text += '\n二b、本周测量值趋势（指标级）\n';
+    if (report.measurementErrors && report.measurementErrors.length > 0) {
+      text += `  ⚠️ 测量值段降级：${report.measurementErrors.join('; ').slice(0, 120)}\n`;
+    } else if ((report.measurements ?? []).length === 0) {
+      text += '  （本周无指标级测量值落行）\n';
+    }
+    for (const m of report.measurements ?? []) {
+      const change = m.changeRatio === null ? 'n/a'
+        : `${m.changeRatio >= 0 ? '+' : ''}${(m.changeRatio * 100).toFixed(1)}%`;
+      text += `  · ${m.metricId}[${m.entityId}] = ${m.latestValue ?? 'n/a'}${m.unit ?? ''}（环比 ${change}）\n`;
+    }
+
+    text += '\n二c、本周决策台账（谁裁了什么）\n';
+    if (report.decisionErrors && report.decisionErrors.length > 0) {
+      text += `  ⚠️ 决策段降级：${report.decisionErrors.join('; ').slice(0, 120)}\n`;
+    } else if ((report.decisions ?? []).length === 0) {
+      text += '  （本周无决策落账）\n';
+    }
+    for (const d of report.decisions ?? []) {
+      text += `  · ${d.at.slice(0, 10)} ${d.who}${d.role ? `(${d.role})` : ''} ${d.action} ${d.nodeId}${d.outputRef ? ` → ${d.outputRef}` : ''}\n`;
     }
 
     text += '\n三、需要你关注的事\n';

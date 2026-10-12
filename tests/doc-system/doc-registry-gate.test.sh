@@ -230,13 +230,31 @@ else
 fi
 printf '%s\n' "$OUT_H7" | grep -q 'docs/orphan.md' && { echo "  ❌ H7a 未登记件 docs/orphan.md 进了检查面 ⇒ base 未前置"; FAIL=$((FAIL+1)); } || { echo "  ✅ H7a 未登记件未进检查面（base 前置生效）"; PASS=$((PASS+1)); }
 
-# H7b: 反例自证（改坏即红的内生版）—— 去掉 origin/local-main ⇒ base 退到 origin/main
-#   ⇒ merge-base 回到 A ⇒ range 把他线未登记件卷进来 ⇒ **必须 exit 1 且点名**
-#   （等价于"base 链未前置"：链上 origin/local-main 不可解析时行为完全相同）
+# H7b: 反例自证（改坏即红的内生版）—— 去掉 gitea/local-main / local-main / origin/local-main
+#   ⇒ base 退到 origin/main ⇒ merge-base 回到 A ⇒ range 把他线未登记件卷进来
+#   ⇒ **必须 exit 1 且点名**（等价于"base 链全未前置"：链上各候选不可解析时行为相同）
+#   （2026-10-12 注: 新基线链含本地分支 local-main，故反例须三个候选一并移除才落到 origin/main）
 git -C "$FORK" update-ref -d refs/remotes/origin/local-main 2>/dev/null # swallow-ok:
+git -C "$FORK" branch -q -D local-main 2>/dev/null # swallow-ok:
 OUT_H7B=$(DOC_TRUTH_ROOT="$FORK" bash "$SCRIPT" 2>&1); _e7b=$?
 t "H7b base 退到 origin/main → exit 1（改坏即红）" 1 $_e7b
 printf '%s\n' "$OUT_H7B" | grep -q 'docs/orphan.md' && { echo "  ✅ H7b 未登记件被点名（夹具确有判别力）"; PASS=$((PASS+1)); } || { echo "  ❌ H7b 未登记件未被点名 ⇒ 夹具无判别力"; FAIL=$((FAIL+1)); }
+
+# H7c（2026-10-12，CTO P0 bug 1 同型实证）: origin/local-main **陈旧**（指回 A，落后两个提交）
+#   且本地分支 local-main 缺失 ⇒ 链上仅剩的 local-main 候选是陈旧引用 ⇒ 退到 origin/main
+#   ⇒ range 卷入 docs/orphan.md ⇒ **必须 exit 1**（改坏即红：陈旧 local-main 引用不得作首选基线）
+git -C "$FORK" update-ref refs/remotes/origin/local-main "$F7_OM" 2>/dev/null # swallow-ok:
+OUT_H7C=$(DOC_TRUTH_ROOT="$FORK" bash "$SCRIPT" 2>&1); _e7c=$?
+t "H7c origin/local-main 陈旧(指A)且无本地分支 → 必红（bug1 同型，改坏即红）" 1 $_e7c
+# 恢复 origin/local-main 为新鲜值（不泄漏影响后续）
+git -C "$FORK" update-ref refs/remotes/origin/local-main "$F7_OLM" 2>/dev/null # swallow-ok:
+
+# H8（2026-10-12，CTO P0 bug 2 判据）: 未在本 PR 里的 untracked 文件 ⇒ **不得阻断**（仅警告）
+: > "$FORK/docs/decoy-untracked.md"
+OUT_H8=$(DOC_TRUTH_ROOT="$FORK" bash "$SCRIPT" 2>&1); _e8=$?
+t "H8 untracked 未登记件 → exit 0（仅警告，不阻断）" 0 $_e8
+printf '%s\n' "$OUT_H8" | grep -q '⚠️ 未登记(仅警告,untracked): docs/decoy-untracked.md' && { echo "  ✅ H8 untracked 件被警告点名（不静默）"; PASS=$((PASS+1)); } || { echo "  ❌ H8 untracked 件未警告 ⇒ 静默放过（违反铁律 11）"; FAIL=$((FAIL+1)); }
+rm -f "$FORK/docs/decoy-untracked.md"
 
 echo ""
 echo "── 汇总: $PASS 通过 / $FAIL 失败 ──"

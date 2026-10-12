@@ -14,3 +14,11 @@ capabilities:
     label: 导出个人明细
     enabled: false
     disabledReason: L3 原始数据仅客户企业内部可见（数据边界）；岗位包不得开通外发
+
+# ═══ K12-11 (#194 / RB-03): 权限**项**（同 finance 的口径）═══
+permissionGrants:
+  grants:
+    - knowledge.hr.read
+    - knowledge.people.read
+  denies:
+    - knowledge.hr.write

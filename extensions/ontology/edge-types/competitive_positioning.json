@@ -17,6 +17,6 @@
   },
   "consumed_by_sentinels": [],
   "action_effect_lag": "unknown",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "unknown",
   "description": "竞争位势评估(七力)——企业位置通过七力框架(切换成本/网络效应/规模经济/反定位/品牌/独占资源/流程优势)评估竞争壁垒深度。"
 }

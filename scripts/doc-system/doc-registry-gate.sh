@@ -5,9 +5,13 @@
 # 契约（铁律 47 契约优先）:
 #   输入:  环境 DOC_TRUTH_ROOT 覆盖仓库根（测试用）
 #          git 仓库 → **三源并集**：
-#            ① untracked（`git ls-files --others --exclude-standard`）
+#            ① untracked（`git ls-files --others --exclude-standard`）—— ⚠️ 2026-10-12 起
+#               **仅警告不阻断**（CTO P0 裁定: untracked 无法区分"本 PR 的"与"别人的"；
+#               判据: 未在本 PR 里的 untracked 文件不得阻断）
 #            ② staged-new（`git diff --cached --diff-filter=A`）
-#            ③ **base..HEAD 新增**（CT-D2 新增；`git diff --diff-filter=A <merge-base>..HEAD`）
+#            ③ **base..HEAD 新增**（CT-D2 新增；`git diff --diff-filter=A <merge-base>..HEAD`；
+#               2026-10-12 起 base 链前置 gitea/local-main → local-main，origin/local-main
+#               为陈旧引用不作首选 —— 同 check-pr-budget.sh bug 1）
 #          非 git（测试 fixture）→ 全量扫描模式
 #   输出:  每文件 ✅/❌ + 扫描源行 + 汇总（**必打印检查数 N**）；
 #          任一未登记 → exit 1（硬阻断）；全部登记 → exit 0
@@ -55,8 +59,8 @@ REG=$(cat "$REGISTRY")
 EXCLUDE='^tmp/|\.claude/|memory/|docs/plans/codex/implementation/|docs/synova/audit-reports/|docs/authority/chronicle-drafts/|docs/synova/DASHBOARD.*\.md$|/archive/|/Archive/|docs/synova/product-lines/evidence/|^extensions/.*\.(yaml|yml)$'
 
 FAIL=0; CHECKED=0
-check_file() { # $1 = 相对路径
-  local rel="$1"
+check_file() { # $1 = 相对路径；$2 = 可选 "warn"（仅警告不阻断，用于 untracked 源①）
+  local rel="$1" mode="${2:-}"
   [ -z "$rel" ] && return
   [ "$rel" = "docs/authority/DOCS-REGISTRY.yaml" ] && return   # 台账自身（自引用）
   [[ "$rel" =~ $EXCLUDE ]] && return   # 纯内建正则（外部 grep 在 SYSTEM 会话下每文件 ~75ms）
@@ -64,6 +68,8 @@ check_file() { # $1 = 相对路径
   local base="${rel##*/}"
   if [[ "$REG" == *"$rel"* ]] || [[ "$REG" == *"$base"* ]]; then
     echo "  ✅ 已登记: $rel"
+  elif [ "$mode" = "warn" ]; then
+    echo "  ⚠️ 未登记(仅警告,untracked): $rel"
   else
     echo "  ❌ 未登记: $rel （请加入 docs/authority/DOCS-REGISTRY.yaml）"
     FAIL=$((FAIL+1))
@@ -82,7 +88,13 @@ if git -c safe.directory="$ROOT" -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1;
   #   ⚠️ 单改 base **不足以**转绿（内容面 yaml 仍需豁免，见下方 EXCLUDE），两处须同时生效。
   #   口径对齐: `local-gates.yml` 的 vitest 步早已改用 `CHANGED_BASE=origin/local-main`（同理由）。
   BASE_REF=""
-  for _cand in origin/local-main origin/main main origin/HEAD; do
+  # 🔴 2026-10-12 修基线序（CTO P0 裁定，同 check-pr-budget.sh bug 1）:
+  #   `origin/local-main` 是 GitHub 侧陈旧引用（实测停于 28ae513dc，落后 gitea 侧 111 提交）
+  #   ⇒ 取它作 base ⇒ 源③ range 覆盖他人/历史的已提交文档（实例: 报「未登记:
+  #   docs/synova/coordination/tools/准度计量口径-v1.md」，实为 a4cc8fd5f 已提交件）。
+  #   修法: **gitea/local-main → local-main 前置**；范围严格限定"本次 PR 的 diff"。
+  #   判据: 未在本 PR 里的 untracked 文件不得阻断（untracked 已降为警告，见下）。
+  for _cand in gitea/local-main local-main origin/local-main origin/main main origin/HEAD; do
     if git -c safe.directory="$ROOT" -C "$ROOT" rev-parse --verify --quiet "$_cand" >/dev/null 2>&1; then BASE_REF="$_cand"; break; fi
   done
   MERGE_BASE=""
@@ -93,13 +105,15 @@ if git -c safe.directory="$ROOT" -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1;
   elif [ -n "$BASE_REF" ]; then
     echo "  ⚠️ 降级: merge-base($BASE_REF, HEAD) 为空 → 源③（base..HEAD 新增）跳过（显式留痕，不静默）"
   else
-    echo "  ⚠️ 降级: base 全链不可解析（尝试过 origin/local-main / origin/main / main / origin/HEAD）→ 源③（base..HEAD 新增）跳过（显式留痕，不静默；请先 git fetch origin）"
+    echo "  ⚠️ 降级: base 全链不可解析（尝试过 gitea/local-main / local-main / origin/local-main / origin/main / main / origin/HEAD）→ 源③（base..HEAD 新增）跳过（显式留痕，不静默；请先 git fetch --all）"
   fi
-  echo "  ℹ️ 扫描源: ① untracked ② staged-new ③ base..HEAD 新增（base=${BASE_REF:-不可解析} merge-base=${MERGE_BASE:0:8}）"
-  # untracked 新增 + staged 新增（git add 过、未提交）都要登记；
-  # 提交场景靠 staged 集合（git add 后文件不再出现在 ls-files --others）；
-  # **CI/纯提交态靠源③**（①② 皆空时仍能扫到本分支新增的文档 —— CT-D2 修 fail-open）
-  while IFS= read -r rel; do check_file "$rel"; done < <({ git -c safe.directory="$ROOT" -C "$ROOT" ls-files --others --exclude-standard 2>/dev/null; git -c safe.directory="$ROOT" -C "$ROOT" diff --cached --name-only --diff-filter=A 2>/dev/null; printf '%s\n' "$ADDED_VS_BASE"; } | grep -E '\.(md|yaml)$' | sort -u) # swallow-ok:
+  echo "  ℹ️ 扫描源: ① untracked（仅警告，不阻断）② staged-new ③ base..HEAD 新增（base=${BASE_REF:-不可解析} merge-base=${MERGE_BASE:0:8}）"
+  # 🔴 2026-10-12（CTO P0 裁定 bug 2）: 源① untracked 降为**仅警告**——
+  #   工作区 untracked 无法区分"本 PR 的"与"别人/别的任务的"（判据: 造一个
+  #   未在本 PR 里的 untracked 文件 ⇒ 门禁不得因此阻断）。硬阻断只看
+  #   ② staged-new（git add 过 = 明确属于本次提交）与 ③ 本 PR diff 范围内新增。
+  while IFS= read -r rel; do check_file "$rel" warn; done < <(git -c safe.directory="$ROOT" -C "$ROOT" ls-files --others --exclude-standard 2>/dev/null | grep -E '\.(md|yaml)$' | sort -u) # swallow-ok:
+  while IFS= read -r rel; do check_file "$rel"; done < <({ git -c safe.directory="$ROOT" -C "$ROOT" diff --cached --name-only --diff-filter=A 2>/dev/null; printf '%s\n' "$ADDED_VS_BASE"; } | grep -E '\.(md|yaml)$' | sort -u) # swallow-ok:
 else
   echo "  ℹ️ 扫描源: 全量 find（非 git 模式）"
   while IFS= read -r rel; do check_file "$rel"; done < <(find "$ROOT" -type f \( -name '*.md' -o -name '*.yaml' \) 2>/dev/null | sed "s|^$ROOT/||") # swallow-ok:
