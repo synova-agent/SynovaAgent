@@ -2210,7 +2210,10 @@ export const constructionItems: readonly ConstructionItem[] = [
 export const constructionBlocks: readonly ConstructionBlock[] = [
   {
     id: 'K11' as BlockId, name: '权限与多租户（部门轴 / 权限项模型 / 跨租户隔离）',
-    items: [],  // 2026-10-11 整体并入 K12（创始人裁定：一致性线收口）
+    items: [],
+    // 🔴 CTO 裁定 074 步 1：块级 paths 快照（**机器生成，勿手改**）
+    //   生成器/检查待治理线实现（scripts/ ⇒ 治理线域）；来源＝items.paths 并集
+    paths: [],  // 2026-10-11 整体并入 K12（创始人裁定：一致性线收口）
 
     blockAcceptance: [
       { run: 'npx tsx scripts/control-tower/probe-rbac-multitenant.ts --case cross-org', expectExit: 0 },
@@ -2220,6 +2223,9 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
   {
     id: 'RETIRED' as BlockId, name: '已作废项（保留 id 防撞号；不派单）',
     items: ['0-9'],
+    // 🔴 CTO 裁定 074 步 1：块级 paths 快照（**机器生成，勿手改**）
+    //   生成器/检查待治理线实现（scripts/ ⇒ 治理线域）；来源＝items.paths 并集
+    paths: ['src/l4/knowledge-store.ts', 'tests/l4/**'],
     blockAcceptance: [
       { run: 'echo "RETIRED 块：已作废项只留痕，无判据（禁派单）"', expectStdoutContains: 'RETIRED' },
     ],
@@ -2358,6 +2364,9 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
     id: 'K12' as BlockId, name: '企业级一致性（宪章 §2.7 第一优先）',
     items: ['K12-01', 'K12-03', 'K12-04', 'K12-02', 'K12-05', 'K12-06', 'K12-07', 'K12-08',
             'RB-01', 'RB-02', 'RB-03', 'RB-04', 'RB-05', 'RB-06', 'K12-13', 'K12-14', 'K12-15', 'K12-16', 'K12-17', 'K12-18', 'K12-21'],
+    // 🔴 CTO 裁定 074 步 1：块级 paths 快照（**机器生成，勿手改**）
+    //   生成器/检查待治理线实现（scripts/ ⇒ 治理线域）；来源＝items.paths 并集
+    paths: ['docs/synova/presets/roles/', 'extensions/', 'extensions/*/manifest.json', 'extensions/adapters/**', 'extensions/business-models/**', 'extensions/content-layers/**', 'extensions/engine/**', 'extensions/knowledge-scope/**', 'extensions/llm-providers/**', 'extensions/locales/manifest.json', 'extensions/notifications/**', 'extensions/onboarding/**', 'extensions/ontology/**', 'extensions/policies/data-access.yaml', 'extensions/reports/contracts/**', 'extensions/tools/**', 'scripts/check-content-coupling.sh', 'scripts/control-tower/probe-*.ts', 'scripts/control-tower/probe-approval-seam.ts', 'scripts/control-tower/probe-content-layering.ts', 'scripts/control-tower/probe-decision-ledger.ts', 'scripts/control-tower/probe-department-axis.ts', 'scripts/control-tower/probe-knowledge-scope.ts', 'scripts/control-tower/probe-ladder.ts', 'scripts/control-tower/probe-onboarding.ts', 'scripts/control-tower/probe-permission-grants.ts', 'scripts/control-tower/probe-rbac-multitenant.ts', 'scripts/control-tower/probe-role-config.ts', 'scripts/control-tower/probe-role-pack.ts', 'src/agent/prompt-assembler.ts', 'src/connectors/**', 'src/deploy/content-registry.ts', 'src/deploy/content-reload.ts', 'src/init/file-driven-loaders.ts', 'src/l4/decision-capture.ts', 'src/l4/goal-alignment.ts', 'src/middleware/auth.ts', 'src/middleware/rbac.ts', 'src/notifications/**', 'src/onboarding/', 'src/onboarding/gap-questioner.ts', 'src/output/contract-validator.ts', 'src/runtime/approval-seam.ts', 'src/services/content-layering.ts', 'tests/control-tower/content-coupling.test.sh', 'tests/control-tower/probe-contract.test.sh', 'tests/deploy/content-reload.test.ts', 'tests/knowledge-scope/layering.test.ts', 'tests/l4/decision-capture-single-entry.test.ts', 'tests/l4/goal-alignment.test.ts', 'tests/onboarding/completeness.test.ts', 'tests/onboarding/gap-questioner.test.ts', 'tests/output/contract-validator.test.ts', 'tests/security/approval-seam.test.ts', 'tests/services/content-layering.test.ts'],
     blockAcceptance: [
       { run: 'npx tsx scripts/control-tower/probe-onboarding.ts --dry-run', expectExit: 0 },
       { run: 'npx tsx scripts/control-tower/probe-role-pack.ts --role finance', expectExit: 0 },
@@ -2368,6 +2377,9 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
     id: 'K13' as BlockId, name: 'DSH 借鉴（**来源块** · 非架构块 · 封仓期存量债恢复）',
     items: ['K13-B-11', 'K13-B-12', 'K13-B-13', 'K13-B-14', 'K13-B-15', 'K13-B-16',
             'K13-B-17', 'K13-B-18', 'K13-B-19', 'K13-B-20', 'K13-ANCHOR-FIX'],
+    // 🔴 CTO 裁定 074 步 1：块级 paths 快照（**机器生成，勿手改**）
+    //   生成器/检查待治理线实现（scripts/ ⇒ 治理线域）；来源＝items.paths 并集
+    paths: [],
     blockAcceptance: [
       { run: 'echo "K13 来源块：判据待 CTO 裁（落点/写集/判据）—— 见 handbook CTO-裁定台账.md 裁定 001"', expectStdoutContains: 'K13' },
     ],
