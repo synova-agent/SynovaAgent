@@ -40,6 +40,6 @@
     "sentinel-incentive-alignment"
   ],
   "action_effect_lag": "unknown",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "unknown",
   "description": "外部约束。宏观环境对活动的限制。"
 }

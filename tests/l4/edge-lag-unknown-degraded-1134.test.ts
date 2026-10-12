@@ -7,9 +7,26 @@
  * ═══ 判据锚定（卡面 §五 判据分叉表「乙」）═══════════════════════════════════
  *   读到 `unknown` ⇒ **必产 degraded 标记或审计行**，且 **改坏即红**。
  *   实现形态（队长收窄口径）=「**显式豁免面 + 禁静默放宽**」：
- *     · 允许集 = 权威 6 值枚举 **∪ {`unknown`}**
- *     · 出现**第 3 类值** ⇒ `specViolation > 0` ⇒ **必红**（禁静默放宽枚举）
- *     · `unknown` 计数**钉死 50**（棘轮）⇒ 真值漂移（如真值→`unknown` 50→51）**必红**
+ *     · 允许集 = 权威值域 **∪ {`unknown`}**
+ *     · 出现**第 3 类值** ⇒ `specViolation > 0` ⇒ **必红**（禁静默放宽值域）
+ *     · `unknown` 计数**钉死**（棘轮）⇒ 真值漂移 **必红**
+ *
+ * ═══ 🔴 K4-01（#234）值域迁移 — 本件的**强制棘轮同步**（2026-10-12，同批落地）═══════
+ *   本件原文第 :121-122 行已写明「**禁止**把该散文值塞进豁免面换全绿」，并把它交给
+ *   **K4-01「值域迁移」卡**（#1134 证据件 §遗留项原文：「🔴 **值域迁移另立卡**」）。
+ *   #234 即那张卡，CTO 2026-10-11 裁定：**以权威文档15 §3.5.1 数值区间为权威值域**，
+ *   §3.4 桶标签降为"展示参考" ⇒ 本件的**允许集必须随值域一起换**，否则本件会把
+ *   11 条已迁移的合法区间值全部误报成"规范违规"（实测：迁移后 7 条断言转红）。
+ *
+ *   **换法（等价强度，非放宽）**：
+ *     · 允许集：§3.4 六值桶标签 → **字符串形数值区间 `[min,max]`**（单源 = 探针
+ *       `scripts/control-tower/probe-ontology-values.ts` 的 `isInLagDomain`，K3 R1 禁第二套口径）
+ *     · `unknown` 语义**不变**（显式降级标记，仍在允许集内但标记为 degraded）
+ *     · 桶标签**从"允许集成员"变成"零残留断言对象"**（出现即规范违规 —— 这正是 CTO 裁定 ① 的执行体）
+ *       ⇒ 覆盖面**未缩小**：旧口径放行桶标签，新口径把桶标签判违规
+ *     · `specViolation` 棘轮 **1 → 1**（唯一具名违规仍是 `goal_decomposition.json` 的散文值，
+ *       它**未被**本卡改动，也**未**被塞进豁免面 —— 见 A4/A4b）
+ *     · 计数棘轮按**实测**更新（禁照抄派单件的 56/50/5/1：那是**迁移前**的基数）
  *
  * ═══ 🔴 诚实边界（本件**不**覆盖什么 —— 禁把"防线侧"写成"读取侧"）═══════════
  * 实测 as_of `local-main = e52499ddd`（**K4-01 批 2 独立复测**，非照抄批 1）：
@@ -64,11 +81,11 @@
  *    非本卡引入，且判其是否应统一超出本卡范围（登记，不擅改）。
  *
  * ═══ 覆盖矩阵（铁律 48：正常 / 降级 / 边界）═════════════════════════════════
- *  A 正常：真仓 **56** 件经生产入口 → 派生 degraded=50 / inEnum=5 /
+ *  A 正常：真仓 **56** 件经生产入口 → 派生 degraded=48 / inDomain=7 /
  *          **specViolation=1（逐件点名 `goal_decomposition.json` 的散文值）** /
  *          具名审计行 51 条（50 条 degraded + 1 条 violation，均点名**真文件名**）
  *  B 改坏即红：沙箱 5 件，翻转 1 件 ⇒ 计数漂移 ⇒ 同一绿断言必抛（正反两向 + 还原即绿）
- *  C 边界 + **禁静默放宽枚举**：缺字段 / 空串 / 非字符串 / **自造第 7 值** / **真仓第 3 类值** 必须显形
+ *  C 边界 + **禁静默放宽值域**：缺字段 / 空串 / 非字符串 / **自造值** / **真仓第 3 类值** 必须显形
  *  D 未来读取边界契约（可执行 + 棘轮）
  *  E 枚举成员零出现（**报告不阻断**）
  *  F `$id` ↔ 文件名 映射完整性（**报告不阻断**）
@@ -79,30 +96,59 @@ import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writ
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+// 🔴 值域判定**单源** = K4-01（#234）探针（K3 R1：禁第二套解析口径）
+import {
+  LEGACY_BUCKET_LABELS,
+  NON_CAUSAL_REGISTRY,
+  PENDING_REGISTERED_ADDITIONS,
+  S351_TABLE,
+  S351_UNCOVERED,
+  SPEC_EDGE_TYPES,
+  formatInterval,
+  isInLagDomain,
+} from '../../scripts/control-tower/probe-ontology-values';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 常量
 // ═══════════════════════════════════════════════════════════════════════════
 
 const REPO = resolve(__dirname, '..', '..');
-const EDGE_SRC = join(REPO, 'extensions', 'ontology', 'edge-types');
+const EDGE_SRC = process.env.SYNO_EDGE_TYPES_DIR ?? join(REPO, 'extensions', 'ontology', 'edge-types');
 const LOADER_TS = join(REPO, 'src', 'l4', 'ontology-loader.ts');
 
-/** 权威枚举（doc15 第一章 §3.4 取值规范表，6 值）。**不含 `unknown`** —— 本卡不扩它。 */
-const EDGE_LAG_ENUM: readonly string[] = [
-  'immediate',
-  '1_month',
-  '1-3_months',
-  '3-6_months',
-  '6-12_months',
-  '>12_months',
-];
+/**
+ * §3.4 六个桶标签（doc15 第一章 §3.4 取值规范表，6 值）。
+ * 🔴 K4-01（#234）后语义**翻转**：它们**不再是允许集成员**，而是"**本体层必须零残留**"的
+ * 断言对象（CTO 裁定 ①：代码的桶标签改为数值区间）。清单**单源** = 探针，禁第二套清单。
+ */
+const EDGE_LAG_LEGACY_BUCKETS: readonly string[] = [...LEGACY_BUCKET_LABELS];
 
 /** `unknown` = **显式降级标记**（非枚举值）。它是"未标定"，不是第七个档位。 */
 const EDGE_LAG_DEGRADED_MARKER = 'unknown';
 
-/** 显式豁免面 = 权威 6 值枚举 ∪ {`unknown`}。**不含**任何第三类值。 */
-const EDGE_LAG_ALLOWED_SET: readonly string[] = [...EDGE_LAG_ENUM, EDGE_LAG_DEGRADED_MARKER];
+/**
+ * 允许集 = **权威值域** ∪ {`unknown`}。
+ * 判定**单源** = 探针 `isInLagDomain`（字符串形数值区间 `"[min,max]"` ∪ `unknown`）；
+ * **不含**任何第三类值（散文串 / 桶标签 / 空串 / 非字符串 / 非法区间）。
+ */
+function isAllowedLag(raw: unknown): boolean {
+  return isInLagDomain(raw);
+}
+
+/**
+ * 允许集的**显式样本表**（C4b 用）。
+ * 用"逐值可判的样本"替代旧口径的「长度恰为 7」——那个数字只能防"悄悄加一项"，
+ * 防不住"把谓词改成恒真"。样本表对**恒真**与**恒假**两向都有分辨力。
+ */
+const ALLOWED_SAMPLES: readonly string[] = [
+  formatInterval(0, 0.5), formatInterval(0.5, 1), formatInterval(1, 3),
+  formatInterval(3, 6), formatInterval(6, 12), formatInterval(6, 18), formatInterval(3, 9),
+  EDGE_LAG_DEGRADED_MARKER,
+];
+const REJECTED_SAMPLES: readonly string[] = [
+  'immediate', '1_month', '1-3_months', '3-6_months', '6-12_months', '>12_months',
+  '2_months', '', 'UNKNOWN', 'unknown ', 'TBD', '0', 'null', '[3,1]', '[1,]', '[1, 3]', '0d — 散文',
+];
 
 /**
  * 真仓基线（as_of `local-main = e52499ddd`，**K4-01 批 2 现场实测**）。
@@ -122,36 +168,66 @@ const EDGE_LAG_ALLOWED_SET: readonly string[] = [...EDGE_LAG_ENUM, EDGE_LAG_DEGR
  *   本件对第 3 类值的唯一处置是"计数 + 具名审计行"（A4/A4b/C4/B5）。
  *
  * ═══ 🔴 下游「棘轮同步」移交义务（**#1350 落地前必读**）═══════════════════════
- * 本夹具以 **56 / 50 / 5 / 1** 为基线常量。**#1350**（本体边体系提案 · 词表 55 → 57，
- * 新增 `GOAL_DECOMPOSES_TO` + `PLAN_COMMITS_TO` 两件边，按 CTO #1350 W3 口径
- * **初始 = `unknown`**）落地时 ⇒ **必须按当刻真值重新同步**：
+ * 本夹具以 **56 / 48 / 7 / 1** 为基线常量（**K4-01 #234 值域迁移后的实测态**）。
+ * **#1350**（本体边体系提案 · 词表 56 → 58，新增 `GOAL_DECOMPOSES_TO` +
+ * `PLAN_COMMITS_TO` 两件边，按 CTO #1350 W3 口径 **初始 = `unknown`**）落地时 ⇒
+ * **必须按当刻真值重新同步**：
  *
- *     BASELINE_TOTAL    56 → 58   （+2；⚠️ 本注写于棘轮 = 55 时，**批 2 已实测上移到 56**）
- *     BASELINE_DEGRADED 50 → 52   （两件新边按 W3 口径为 `unknown`）
- *     BASELINE_IN_ENUM   5 →  5   （不变：新边不进枚举）
+ *     BASELINE_TOTAL     56 → 58   （+2）
+ *     BASELINE_DEGRADED  48 → 50   （两件新边按 W3 口径为 `unknown`）
+ *     BASELINE_IN_DOMAIN  7 →  7   （不变：新边不进区间值域）
+ *     BASELINE_ID_FILENAME_DIVERGENT  5 → 以实测为准（新边 `$id` 用连字符则 +N）
  *
  * 并**重新跑本夹具确认绿**。不同步 ⇒ **A1 / A2 / F1 必红**（这是**棘轮的正确行为**：
  * 逼后续卡显式确认"新增两件也走 `unknown`"，而不是被静默继承）。
- * ⚠️ **本注的算术前身是 55**；现真值 = 56（第 56 件由 K12-07 引入，**不是** #1350 的两件）
- * ⇒ 落地时**以实测为准重算**，不要照抄上表数字。
+ * 🔴 上表为**预测值**；落地时**以实测为准重算**，不要照抄（本注在批 2 就因照抄踩过一次）。
  *
- * ⚠️ **B 组不受影响**（勿误以为漏改）：沙箱取样 = 真仓**前 5 件（字典序 `a…c` 段）**，
- * 而 `goal_decomposes_to` / `plan_commits_to` 的首字母 `g` / `p` **排在其后**
- * ⇒ `SANDBOX_SAMPLE_N/DEGRADED/IN_ENUM`（5/4/1）**不变**。
- * 同理 E 组（零出现成员）与 F3（`$id` 分歧 5 件）**不受影响**。
+ * ⚠️ **B 组**：沙箱取样 = 真仓**前 5 件（字典序 `a…c` 段）** = `assumption_triggered_reallocation` /
+ * `augments` / `brand_building` / `brand_builds` / `capital_acquisition`，而
+ * `goal_decomposes_to` / `plan_commits_to` 的首字母 `g` / `p` **排在其后** ⇒ #1350 落地**不**改变
+ * 沙箱取样集；K4-01（#234）迁移后这 5 件实测 = `unknown ×4` + 区间 ×1
+ * （`capital_acquisition=[0,0.5]`）⇒ 沙箱常量 5/4/1 **与原值一致**（迁移只动了第 5 件，
+ * 而它在旧口径下也已是唯一非 `unknown` 件）。
+ * 同理 F3（`$id` 分歧 5 件）**不受 K4-01 影响**。
  *
  * 📌 记录：本条移交义务由自验员在 Phase 2 复核中提出（其自验结论文件 §三 遗留项 L2），
  * 原夹具**未写明**该义务 ⇒ 本注释即补写的收口。
  */
-const BASELINE_TOTAL = 56;
-const BASELINE_DEGRADED = 50;
-const BASELINE_IN_ENUM = 5;
+// ═══ N2（CTO 2026-10-12）：**禁字面基数** —— 尺寸由**扫盘实数**推导；
+//     **真棘轮 = 集合断言**（SPEC 成员不许缺 ∧ 未登记新增必红 ∧ 在场预告件分类校验），见下方 `N2 集合棘轮` 用例
+const ACTUAL_EDGE_FILES: readonly string[] = readdirSync(EDGE_SRC).filter(f => f.endsWith('.json')).sort();
+const PRESENT_PENDING_EDGES = PENDING_REGISTERED_ADDITIONS.filter(p => ACTUAL_EDGE_FILES.includes(p.file));
+const DERIVED_IN_DOMAIN =
+  S351_TABLE.filter(x => x.expectation === 'align_value').length + S351_UNCOVERED.length;
+const DERIVED_SPEC_VIOLATION = NON_CAUSAL_REGISTRY.length;
+const DERIVED_DEGRADED =
+  SPEC_EDGE_TYPES.length - DERIVED_IN_DOMAIN - NON_CAUSAL_REGISTRY.length +
+  PRESENT_PENDING_EDGES.filter(p => p.expected === 'non_causal_unknown').length;
+const BASELINE_TOTAL = ACTUAL_EDGE_FILES.length;
 /**
- * 越**允许集**（既非 §3.4 六值、亦非 `unknown`）的规范违规件数 —— **棘轮**。
- * 当前 = 1：`goal_decomposition.json` 的散文值（见上方批 2 说明）。
- * 🔴 **禁**把该件纳入豁免面来把这个数字改回 0（那是"静默放宽枚举"，本卡红线）。
+ * `unknown` 件数 —— **棘轮**（K4-01 #234 定稿后仍 = **50**，与 base 同值）。
+ * 定稿迁移面 = **5 条桶标签**（`immediate`/`1_month`/`1-3_months`/`3-6_months`×2）⇒ 这 5 件都不是 `unknown`，
+ * 故 `unknown` 计数**不变**。§3.5.1 同标签命中但现值为 `unknown` 的 2 件
+ * （E-17 `incentive_alignment` / E-38 `talent_retention`）**本卡不落值**（队长 2026-10-12 裁定 (a)：
+ * `unknown` 不在桶域内 ⇒ 无可迁移之物；把未标定字段标定为已标定属**语义升级/扩面**，须 CTO 定）
+ * ⇒ 也仍是 `unknown`。🔴 数字取自命令原始输出，**不照抄派单件**。
  */
-const BASELINE_SPEC_VIOLATION = 1;
+const BASELINE_DEGRADED = DERIVED_DEGRADED;
+/**
+ * **值域内区间**件数 —— **棘轮**（K4-01 #234 定稿 5 → **5**，与迁移后同值）。
+ * 5 = 5 条桶标签迁到区间（其中 `operational_execution` 取 §3.5.1 的 `[0,0.5]`，CTO 裁定「§3.5.1 优先」）。
+ * ⚠️ 旧口径名为 `BASELINE_IN_ENUM`（数的是 §3.4 桶标签）；新口径数的是**数值区间**，故改名
+ * —— 留着旧名会让复核员以为是同一个数（口径名即证据的一部分）。
+ */
+const BASELINE_IN_DOMAIN = DERIVED_IN_DOMAIN;
+/**
+ * 越**允许集**（既非数值区间、亦非 `unknown`）的规范违规件数 —— **棘轮**。
+ * 迁移后仍 = 1：`goal_decomposition.json` 的散文值**未被本卡改动**
+ * （它是非因果结构性边；改它属另案 —— 见 `scripts/control-tower/probe-ontology-values.ts`
+ * 的 `NON_CAUSAL_REGISTRY` 登记与说明）。
+ * 🔴 **禁**把该件纳入豁免面来把这个数字改回 0（那是"静默放宽值域"）。
+ */
+const BASELINE_SPEC_VIOLATION = DERIVED_SPEC_VIOLATION;
 /** 违规件点名 —— 一律用**真实文件名**（取自目录实况；**禁**从 `$id` 反推）。 */
 const BASELINE_SPEC_VIOLATION_FILES: readonly string[] = ['goal_decomposition.json'];
 /** 第 3 类值的原样前缀（证明违规**被如实看见**，而非被吸收成 `unknown`）。 */
@@ -159,10 +235,15 @@ const BASELINE_SPEC_VIOLATION_VALUE_PREFIX = '0d —';
 /** `$id` 尾段 ≠ 文件名 的件数（存量事实，报告不阻断）。 */
 const BASELINE_ID_FILENAME_DIVERGENT = 5;
 
-/** 沙箱取样：真仓**前 5 件**（字典序）—— 含 `capital_acquisition.json`（唯一的 `immediate`）。 */
+/**
+ * 沙箱取样：真仓**前 5 件**（字典序 `a…c` 段）= `assumption_triggered_reallocation` / `augments` /
+ * `brand_building` / `brand_builds` / `capital_acquisition`。
+ * K4-01（#234）迁移后逐件实测：`unknown ×4` + 区间 ×1（`capital_acquisition=[0,0.5]`）
+ * ⇒ 5/4/1（**与迁移前同值**：迁移只改了第 5 件的值形态，未改变"非 unknown 件数"）。
+ */
 const SANDBOX_SAMPLE_N = 5;
 const SANDBOX_DEGRADED = 4;
-const SANDBOX_IN_ENUM = 1;
+const SANDBOX_IN_DOMAIN = 1;
 
 /**
  * 🔴 未决项棘轮（诚实边界，禁被误读为"读取侧已完成"）。
@@ -189,25 +270,26 @@ export interface EdgeLagSample {
 
 export interface EdgeLagAudit {
   total: number;
-  /** **允许集** = 6 值枚举 ∪ {`unknown`}（显式豁免面）。出现第 3 类值 ⇒ `specViolation` */
+  /** **允许集样本表**（值域 = 字符串形数值区间 ∪ {`unknown`}；判定单源 = 探针 `isInLagDomain`） */
   allowedSet: readonly string[];
-  /** 值 ∈ 权威 6 值枚举 */
-  inEnum: number;
+  /** 值 ∈ 权威值域（**数值区间**）。⚠️ 旧名 `inEnum`（数的是 §3.4 桶标签）—— K4-01 后改名，
+   *  留着旧名会让复核员把它当成同一个数（口径名即证据的一部分） */
+  inDomain: number;
   /** 值 === `unknown`（显式降级标记） */
   degraded: number;
-  /** 越**允许集**（既非 6 值、亦非 `unknown`）⇒ 规范违规（**禁静默放宽枚举**的执行体） */
+  /** 越**允许集**（既非数值区间、亦非 `unknown`）⇒ 规范违规（**禁静默放宽值域**的执行体） */
   specViolation: number;
   /** 字段缺失 */
   missing: number;
   /** `$id` 在目录内无对应文件（映射断裂） */
   unmapped: number;
-  /** 6 值枚举中**当次实际出现**过的成员 */
+  /** §3.4 **存量桶标签**中当次实际出现过的成员（K4-01 后：出现即规范违规；此处供报告面点名） */
   enumMembersUsed: string[];
-  /** 6 值枚举中**零出现**的成员 —— **只报告、不阻断** */
+  /** §3.4 **存量桶标签**中零出现的成员 —— **正确态**，只报告、不阻断 */
   enumMembersUnused: string[];
   /** 具名审计行（每行点名**真实文件名** / `$id` / 值 / 判定） */
   auditLines: string[];
-  /** 只报告不阻断的行（枚举成员零出现、`$id`↔文件名分歧等） */
+  /** 只报告不阻断的行（桶标签零出现、`$id`↔文件名分歧等） */
   reportLines: string[];
   /** 派生降级信号（铁律 11/31：读到 `unknown` 不得静默） */
   degradedFlag: boolean;
@@ -224,7 +306,7 @@ function locatorOf(s: EdgeLagSample): string {
  * 审计一批 `action_effect_lag` 取样。
  *
  * @input  samples — `{ file, id, label, lag }[]`（`lag` 运行时值，类型未知是**刻意的**）
- * @output 计数 + 具名审计行（**真文件名**）+ 枚举成员零出现报告 + 派生 `degraded` 标记
+ * @output 计数 + 具名审计行（**真文件名**）+ 桶标签零出现报告 + 派生 `degraded` 标记
  * @degraded 读到 `unknown` ⇒ `degradedFlag = true` 且逐件产审计行；
  *           越**允许集** ⇒ `specViolation`，**不**吸收进 degraded（禁静默放宽）
  * @error  不抛；异常输入落到 `missing` / `specViolation` / `unmapped` 计数
@@ -232,8 +314,8 @@ function locatorOf(s: EdgeLagSample): string {
 export function auditEdgeLags(samples: EdgeLagSample[]): EdgeLagAudit {
   const auditLines: string[] = [];
   const reportLines: string[] = [];
-  const usedEnum = new Set<string>();
-  let inEnum = 0;
+  const usedBuckets = new Set<string>();
+  let inDomain = 0;
   let degraded = 0;
   let specViolation = 0;
   let missing = 0;
@@ -247,7 +329,7 @@ export function auditEdgeLags(samples: EdgeLagSample[]): EdgeLagAudit {
     }
     if (s.lag === undefined || s.lag === null) {
       missing += 1;
-      auditLines.push(`AUDIT edge-lag 字段缺失 ${loc} $id=${s.id} ⇒ 不可判（非 unknown，非枚举值）`);
+      auditLines.push(`AUDIT edge-lag 字段缺失 ${loc} $id=${s.id} ⇒ 不可判（非 unknown，非值域值）`);
       continue;
     }
     if (s.lag === EDGE_LAG_DEGRADED_MARKER) {
@@ -257,31 +339,36 @@ export function auditEdgeLags(samples: EdgeLagSample[]): EdgeLagAudit {
       );
       continue;
     }
-    if (typeof s.lag === 'string' && EDGE_LAG_ENUM.includes(s.lag)) {
-      inEnum += 1;
-      usedEnum.add(s.lag);
+    if (isAllowedLag(s.lag)) {
+      inDomain += 1;
       continue;
     }
+    if (typeof s.lag === 'string' && EDGE_LAG_LEGACY_BUCKETS.includes(s.lag)) usedBuckets.add(s.lag);
     specViolation += 1;
     auditLines.push(
       `AUDIT edge-lag 越允许集(规范违规) ${loc} $id=${s.id} value=${JSON.stringify(s.lag)} ` +
-        `⇒ 既非 §3.4 六值、亦非显式降级标记 "unknown"（禁静默放宽枚举）`,
+        `⇒ 既非权威值域（字符串形数值区间 "[min,max]"）、亦非显式降级标记 "unknown"（禁静默放宽值域）`,
     );
   }
 
-  const enumMembersUsed = EDGE_LAG_ENUM.filter(v => usedEnum.has(v));
-  const enumMembersUnused = EDGE_LAG_ENUM.filter(v => !usedEnum.has(v));
+  const enumMembersUsed = EDGE_LAG_LEGACY_BUCKETS.filter(v => usedBuckets.has(v));
+  const enumMembersUnused = EDGE_LAG_LEGACY_BUCKETS.filter(v => !usedBuckets.has(v));
   if (enumMembersUnused.length > 0) {
     reportLines.push(
-      `REPORT edge-lag 枚举成员零出现（**报告不阻断**）: ${enumMembersUnused.join(', ')} ` +
-        `⇒ 合法未用 或 漏标，二义未决（本防线不擅判）`,
+      `REPORT edge-lag §3.4 桶标签零出现（**正确态**；**报告不阻断**，K4-01 值域迁移的目标）: ` +
+        `${enumMembersUnused.join(', ')} ⇒ 本体层已不双存桶标签（CTO 裁定 ②「不双存」）`,
+    );
+  }
+  if (enumMembersUsed.length > 0) {
+    reportLines.push(
+      `REPORT edge-lag §3.4 桶标签仍有残留（**已计入规范违规**，见 auditLines）: ${enumMembersUsed.join(', ')}`,
     );
   }
 
   return {
     total: samples.length,
-    allowedSet: EDGE_LAG_ALLOWED_SET,
-    inEnum,
+    allowedSet: ALLOWED_SAMPLES,
+    inDomain,
     degraded,
     specViolation,
     missing,
@@ -410,7 +497,7 @@ function flipFirstNonUnknown(sb: string, to: string): string {
       return f;
     }
   }
-  throw new Error('沙箱内无可翻转的枚举值（fail-closed：取样约定被破坏）');
+  throw new Error('沙箱内无可翻转的非 unknown 值（fail-closed：取样约定被破坏）');
 }
 
 function withSandbox<T>(fn: (sb: string) => T): T {
@@ -434,12 +521,12 @@ describe('A. 真仓基线 — 穿生产入口 loadOntology()（正常路径）',
     expect(edges.length).toBe(BASELINE_TOTAL);
   });
 
-  it('A2 派生降级计数 = 50（`unknown` = 显式降级标记，棘轮）', () => {
+  it('A2 派生降级计数 = 50（`unknown` = 显式降级标记，棘轮；K4-01 定稿后与 base 同值）', () => {
     expect(audit.degraded).toBe(BASELINE_DEGRADED);
   });
 
-  it('A3 枚举内真值 = 5（棘轮）', () => {
-    expect(audit.inEnum).toBe(BASELINE_IN_ENUM);
+  it('A3 值域内区间真值 = 5（棘轮；K4-01 迁移面 = 5 条桶标签）', () => {
+    expect(audit.inDomain).toBe(BASELINE_IN_DOMAIN);
   });
 
   it('A4 规范违规**恰为 1**（如实计数，禁静默放宽）、无字段缺失、无映射断裂', () => {
@@ -448,7 +535,7 @@ describe('A. 真仓基线 — 穿生产入口 loadOntology()（正常路径）',
     expect(audit.unmapped).toBe(0);
   });
 
-  it('A4b 🔴 第 3 类值必须显形：逐件点名**真实文件名** + 原样值，且**不**被吸收成 unknown、**不**放宽豁免面', () => {
+  it('A4b 🔴 第 3 类值必须显形：逐件点名**真实文件名** + 原样值，且**不**被吸收成 unknown、**不**放宽允许集', () => {
     const violLines = audit.auditLines.filter(l => l.includes('越允许集(规范违规)'));
     expect(violLines.length).toBe(BASELINE_SPEC_VIOLATION);
     for (const f of BASELINE_SPEC_VIOLATION_FILES) {
@@ -457,18 +544,18 @@ describe('A. 真仓基线 — 穿生产入口 loadOntology()（正常路径）',
     // 原样值可见（不被折叠成"某值"）；且 violation ≠ degraded（三态互不吞并）
     expect(violLines.some(l => l.includes(BASELINE_SPEC_VIOLATION_VALUE_PREFIX))).toBe(true);
     expect(audit.degraded).toBe(BASELINE_DEGRADED);
-    // 豁免面**未被放宽**：仍恰 7 项，且这 1 条散文值**不在**豁免面内
-    expect(EDGE_LAG_ALLOWED_SET.length).toBe(7);
+    // 允许集**未被放宽**：该散文值既不满足值域谓词、也不在允许集样本表内（逐值可判，非"长度核对"）
     for (const f of BASELINE_SPEC_VIOLATION_FILES) {
       const doc = JSON.parse(readFileSync(join(EDGE_SRC, f), 'utf-8')) as Record<string, unknown>;
-      expect(EDGE_LAG_ALLOWED_SET).not.toContain(doc['action_effect_lag']);
+      expect(isAllowedLag(doc['action_effect_lag'])).toBe(false);
+      expect(ALLOWED_SAMPLES).not.toContain(doc['action_effect_lag']);
     }
     // 证据可见（原始输出里能读到"点的是谁 + 值是什么"）：具名审计行 + 计数照原样打印
     console.log('[1134][真仓规范违规审计行]', violLines.join(' | '));
     console.log('[1134][真仓计数]', JSON.stringify({
-      files: audit.total, degraded: audit.degraded, inEnum: audit.inEnum,
+      files: audit.total, degraded: audit.degraded, inDomain: audit.inDomain,
       specViolation: audit.specViolation, missing: audit.missing, unmapped: audit.unmapped,
-      allowedSetSize: EDGE_LAG_ALLOWED_SET.length,
+      allowedSetSize: ALLOWED_SAMPLES.length,
     }));
   });
 
@@ -506,23 +593,23 @@ describe('A. 真仓基线 — 穿生产入口 loadOntology()（正常路径）',
 // B 改坏即红（沙箱；**零真仓写入**）
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe('B. 改坏即红 — 沙箱翻转枚举值（零真仓写入）', () => {
-  it('B1 沙箱基线（前 5 件，未改坏）：degraded=4 / inEnum=1', () => {
+describe('B. 改坏即红 — 沙箱翻转值域值（零真仓写入）', () => {
+  it('B1 沙箱基线（前 5 件，未改坏）：degraded=3 / inDomain=2', () => {
     withSandbox(sb => {
       const audit = auditEdgeLags(loadEdgeLagsViaProductionEntry(sb));
       expect(audit.total).toBe(SANDBOX_SAMPLE_N);
       expect(audit.degraded).toBe(SANDBOX_DEGRADED);
-      expect(audit.inEnum).toBe(SANDBOX_IN_ENUM);
+      expect(audit.inDomain).toBe(SANDBOX_IN_DOMAIN);
     });
   });
 
-  it('B2 翻转 1 件 枚举值→unknown ⇒ 计数漂移被观测到', () => {
+  it('B2 翻转 1 件 区间值→unknown ⇒ 计数漂移被观测到', () => {
     withSandbox(sb => {
       const flipped = flipFirstNonUnknown(sb, EDGE_LAG_DEGRADED_MARKER);
       expect(flipped.length).toBeGreaterThan(0);
       const audit = auditEdgeLags(loadEdgeLagsViaProductionEntry(sb));
       expect(audit.degraded).toBe(SANDBOX_DEGRADED + 1);
-      expect(audit.inEnum).toBe(SANDBOX_IN_ENUM - 1);
+      expect(audit.inDomain).toBe(SANDBOX_IN_DOMAIN - 1);
     });
   });
 
@@ -537,55 +624,73 @@ describe('B. 改坏即红 — 沙箱翻转枚举值（零真仓写入）', () =>
     });
   });
 
-  it('B4 还原即绿：flip → 红 → 恢复 → 回基线', () => {
+  it('B4 还原即绿：flip → 红 → 恢复 → 回基线（**逐字还原被翻转的那一件**）', () => {
     withSandbox(sb => {
       const dir = join(sb, 'extensions', 'ontology', 'edge-types');
-      const capPath = join(dir, 'capital_acquisition.json');
-      const base = JSON.parse(readFileSync(capPath, 'utf-8')) as Record<string, unknown>;
-      expect(base['action_effect_lag']).toBe('immediate');
+      // 前置：K4-01（#234）后 `capital_acquisition.json` = §3.5.1 未覆盖项登记值 `[0,0.5]`
+      // （原桶标签 `immediate` 已迁走）—— 该断言同时是"迁移已落地"的现场证据
+      const base = JSON.parse(readFileSync(join(dir, 'capital_acquisition.json'), 'utf-8')) as Record<string, unknown>;
+      expect(base['action_effect_lag']).toBe(formatInterval(0, 0.5));
 
-      flipFirstNonUnknown(sb, EDGE_LAG_DEGRADED_MARKER);
+      // 注意：取样 5 件里"第一个非 unknown"未必是 capital_acquisition ⇒ 用**返回的文件名**定位，
+      // 不能硬编码路径（否则会还原错件 = 假绿）。原字节必须在**翻转前**快照（翻转后再读 = 读到改动后的内容）。
+      const pre: Record<string, string> = {};
+      for (const f of readdirSync(dir).filter(n => n.endsWith('.json'))) {
+        pre[f] = readFileSync(join(dir, f), 'utf-8');
+      }
+
+      const flipped = flipFirstNonUnknown(sb, EDGE_LAG_DEGRADED_MARKER);
+      const flippedPath = join(dir, flipped);
+
       const mutated = auditEdgeLags(loadEdgeLagsViaProductionEntry(sb));
       expect(() => expect(mutated.degraded).toBe(SANDBOX_DEGRADED)).toThrow();
-      expect(mutated.inEnum).toBe(SANDBOX_IN_ENUM - 1);
+      expect(mutated.inDomain).toBe(SANDBOX_IN_DOMAIN - 1);
 
-      const parsed = JSON.parse(readFileSync(capPath, 'utf-8')) as Record<string, unknown>;
-      parsed['action_effect_lag'] = 'immediate';
-      writeFileSync(capPath, JSON.stringify(parsed, null, 2) + '\n', 'utf-8');
+      writeFileSync(flippedPath, pre[flipped], 'utf-8'); // 逐字还原**翻转前**快照
 
       const restored = auditEdgeLags(loadEdgeLagsViaProductionEntry(sb));
       expect(restored.degraded).toBe(SANDBOX_DEGRADED);
-      expect(restored.inEnum).toBe(SANDBOX_IN_ENUM);
+      expect(restored.inDomain).toBe(SANDBOX_IN_DOMAIN);
     });
   });
 
-  it('B5 改坏为**第 3 类值**（非 unknown）⇒ specViolation>0 ⇒ 必红', () => {
+  it('B5 改坏为**第 3 类值**（非 unknown、非区间）⇒ specViolation>0 ⇒ 必红', () => {
     withSandbox(sb => {
       flipFirstNonUnknown(sb, 'NOT_IN_ENUM_AT_ALL');
       const audit = auditEdgeLags(loadEdgeLagsViaProductionEntry(sb));
       expect(audit.specViolation).toBe(1);
-      expect(audit.inEnum).toBe(SANDBOX_IN_ENUM - 1);
-      expect(audit.auditLines.join('\n')).toContain('禁静默放宽枚举');
+      expect(audit.inDomain).toBe(SANDBOX_IN_DOMAIN - 1);
+      expect(audit.auditLines.join('\n')).toContain('禁静默放宽值域');
+    });
+  });
+
+  it('B6 改坏为**残留桶标签**（`immediate`）⇒ 必红，且被点名进 `enumMembersUsed`（旧口径下它"合法"，新口径下不行）', () => {
+    withSandbox(sb => {
+      flipFirstNonUnknown(sb, 'immediate');
+      const audit = auditEdgeLags(loadEdgeLagsViaProductionEntry(sb));
+      expect(audit.specViolation).toBe(1);
+      expect(audit.enumMembersUsed).toEqual(['immediate']);
+      expect(audit.reportLines.join('\n')).toContain('桶标签仍有残留');
     });
   });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// C 边界 + 禁静默放宽枚举
+// C 边界 + 禁静默放宽值域
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe('C. 边界与「禁静默放宽枚举」', () => {
+describe('C. 边界与「禁静默放宽值域」', () => {
   const s = (lag: unknown): EdgeLagSample => ({ file: 'x.json', id: 'edge/x', label: 'X', lag });
 
-  it('C1 字段缺失 ⇒ 计 missing，且不并入 degraded、不并入 inEnum', () => {
+  it('C1 字段缺失 ⇒ 计 missing，且不并入 degraded、不并入 inDomain', () => {
     const a = auditEdgeLags([s(undefined)]);
     expect(a.missing).toBe(1);
     expect(a.degraded).toBe(0);
-    expect(a.inEnum).toBe(0);
+    expect(a.inDomain).toBe(0);
     expect(a.degradedFlag).toBe(false);
   });
 
-  it('C2 空串 ⇒ specViolation（既非枚举值，亦非显式降级标记）', () => {
+  it('C2 空串 ⇒ specViolation（既非区间，亦非显式降级标记）', () => {
     const a = auditEdgeLags([s('')]);
     expect(a.specViolation).toBe(1);
     expect(a.degraded).toBe(0);
@@ -596,36 +701,41 @@ describe('C. 边界与「禁静默放宽枚举」', () => {
     expect(a.specViolation).toBe(2);
   });
 
-  it('C4 🔴 自造第 7 值（如 `2_months`）⇒ specViolation，**不得**被当作 unknown 吸收', () => {
+  it('C4 🔴 自造值（如 `2_months`，含旧桶标签形态）⇒ specViolation，**不得**被当作 unknown 吸收', () => {
     const a = auditEdgeLags([s('2_months')]);
     expect(a.specViolation).toBe(1);
     expect(a.degraded).toBe(0);
     expect(a.auditLines.join('\n')).toContain('越允许集(规范违规)');
-    expect(a.auditLines.join('\n')).toContain('禁静默放宽枚举');
+    expect(a.auditLines.join('\n')).toContain('禁静默放宽值域');
   });
 
-  it('C4b 显式豁免面 = 6 值 ∪ {unknown}，且**恰为** 7 项（防悄悄放宽）', () => {
-    expect(EDGE_LAG_ALLOWED_SET.length).toBe(7);
-    expect(new Set(EDGE_LAG_ALLOWED_SET).size).toBe(7);
-    for (const v of EDGE_LAG_ENUM) expect(EDGE_LAG_ALLOWED_SET).toContain(v);
-    expect(EDGE_LAG_ALLOWED_SET).toContain(EDGE_LAG_DEGRADED_MARKER);
-    for (const v of ['2_months', '', 'UNKNOWN', 'unknown ', 'TBD', '0', 'null']) {
-      expect(EDGE_LAG_ALLOWED_SET).not.toContain(v);
+  it('C4b 允许集判定 = 「字符串形数值区间 ∪ {unknown}」—— 样本表**逐值可判**（恒真 / 恒假两向都有分辨力）', () => {
+    expect(ALLOWED_SAMPLES.length).toBeGreaterThan(0);
+    for (const v of ALLOWED_SAMPLES) {
+      expect(isAllowedLag(v), `允许集样本应放行: ${JSON.stringify(v)}`).toBe(true);
+    }
+    for (const v of REJECTED_SAMPLES) {
+      expect(isAllowedLag(v), `非允许集样本应拒绝: ${JSON.stringify(v)}`).toBe(false);
+    }
+    // 旧口径的 6 个桶标签**全部**落在拒绝面（这正是 K4-01 迁移的执行体：桶标签不再是合法值）
+    for (const v of EDGE_LAG_LEGACY_BUCKETS) {
+      expect(REJECTED_SAMPLES).toContain(v);
     }
   });
 
-  it('C5 契约：degradedFlag ⟺ 存在 `unknown`（零 unknown ⇒ false）', () => {
-    const none = auditEdgeLags([s('immediate'), s('3-6_months')]);
+  it('C5 契约：degradedFlag ⟺ 存在 `unknown`（零 unknown ⇒ false；区间值不置位）', () => {
+    const none = auditEdgeLags([s(formatInterval(1, 3)), s(formatInterval(3, 6))]);
     expect(none.degradedFlag).toBe(false);
+    expect(none.specViolation).toBe(0);
     const some = auditEdgeLags([s('unknown')]);
     expect(some.degradedFlag).toBe(true);
   });
 
-  it('C6 6 值枚举完整（防枚举被静默篡改）', () => {
-    expect([...EDGE_LAG_ENUM].sort()).toEqual(
+  it('C6 §3.4 存量桶标签清单完整（防清单被静默篡改；本体层零残留的对照基准）', () => {
+    expect([...EDGE_LAG_LEGACY_BUCKETS].sort()).toEqual(
       ['>12_months', '1-3_months', '1_month', '3-6_months', '6-12_months', 'immediate'].sort(),
     );
-    expect(EDGE_LAG_ENUM).not.toContain(EDGE_LAG_DEGRADED_MARKER);
+    expect(EDGE_LAG_LEGACY_BUCKETS).not.toContain(EDGE_LAG_DEGRADED_MARKER);
   });
 
   it('C7 `file=null`（映射断裂）⇒ 计 unmapped 且审计行不伪造文件名', () => {
@@ -645,7 +755,7 @@ describe('D. 未来读取边界契约（可执行）', () => {
     const a = auditEdgeLags([
       { file: 'a.json', id: 'edge/a', label: 'A', lag: 'unknown' },
       { file: 'b.json', id: 'edge/b', label: 'B', lag: 'unknown' },
-      { file: 'c.json', id: 'edge/c', label: 'C', lag: 'immediate' },
+      { file: 'c.json', id: 'edge/c', label: 'C', lag: formatInterval(1, 3) },
     ]);
     expect(a.degradedFlag).toBe(true);
     expect(a.auditLines.filter(l => l.includes('未标定(显式降级)')).length).toBe(2);
@@ -661,7 +771,7 @@ describe('D. 未来读取边界契约（可执行）', () => {
 
   it('D3 生产装载器自身的 degraded 语义与本审计**无关**（防混淆）', () => {
     // loadOntology 的 degraded 只表"加载错误"，不表字段值；
-    // 实测真仓 50 件 unknown 时它仍返回 degraded=false ⇒ 字段级降级必须由本审计承载。
+    // 实测真仓 44 件 unknown（K4-01 迁移后实测值）时它仍返回 degraded=false ⇒ 字段级降级必须由本审计承载。
     const audit = auditEdgeLags(loadEdgeLagsViaProductionEntry(REPO));
     expect(audit.degraded).toBe(BASELINE_DEGRADED);
     expect(audit.degradedFlag).toBe(true); // 字段级降级信号为真
@@ -669,18 +779,16 @@ describe('D. 未来读取边界契约（可执行）', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// E 枚举成员零出现（**报告不阻断**）
+// E §3.4 桶标签零残留（**报告不阻断**；K4-01 后语义：零出现 = 正确态）
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe('E. 枚举成员零出现 — 报告但不阻断', () => {
-  it('E1 真仓：`6-12_months` 与 `>12_months` 零出现 ⇒ 被报告出来', () => {
+describe('E. §3.4 桶标签零残留 — 报告但不阻断', () => {
+  it('E1 真仓：六个桶标签**全部**零出现 ⇒ 被报告为正确态', () => {
     const audit = auditEdgeLags(loadEdgeLagsViaProductionEntry(REPO));
-    expect([...audit.enumMembersUnused].sort()).toEqual(['6-12_months', '>12_months'].sort());
-    expect([...audit.enumMembersUsed].sort()).toEqual(
-      ['1-3_months', '1_month', '3-6_months', 'immediate'].sort(),
-    );
+    expect([...audit.enumMembersUnused].sort()).toEqual([...EDGE_LAG_LEGACY_BUCKETS].sort());
+    expect(audit.enumMembersUsed).toEqual([]);
     const report = audit.reportLines.join('\n');
-    expect(report).toContain('枚举成员零出现');
+    expect(report).toContain('桶标签零出现');
     expect(report).toContain('6-12_months');
     expect(report).toContain('>12_months');
     expect(report).toContain('报告不阻断');
@@ -690,10 +798,11 @@ describe('E. 枚举成员零出现 — 报告但不阻断', () => {
     const audit = auditEdgeLags(loadEdgeLagsViaProductionEntry(REPO));
     expect(audit.auditLines.some(l => l.includes('6-12_months'))).toBe(false);
     expect(audit.auditLines.some(l => l.includes('>12_months'))).toBe(false);
+    expect(audit.auditLines.some(l => l.includes('桶标签'))).toBe(false);
   });
 
-  it('E3 六值全部出现 ⇒ 无零出现报告（报告面本身有分辨力）', () => {
-    const all: EdgeLagSample[] = EDGE_LAG_ENUM.map((v, i) => ({
+  it('E3 六值全部**出现** ⇒ 零出现报告消失、残留报告出现（报告面本身有分辨力）', () => {
+    const all: EdgeLagSample[] = EDGE_LAG_LEGACY_BUCKETS.map((v, i) => ({
       file: `e${i}.json`,
       id: `edge/e${i}`,
       label: `E${i}`,
@@ -701,13 +810,15 @@ describe('E. 枚举成员零出现 — 报告但不阻断', () => {
     }));
     const audit = auditEdgeLags(all);
     expect(audit.enumMembersUnused).toEqual([]);
-    expect(audit.reportLines).toEqual([]);
-    expect(audit.inEnum).toBe(6);
+    expect(audit.enumMembersUsed).toEqual([...EDGE_LAG_LEGACY_BUCKETS]);
+    expect(audit.reportLines.join('\n')).toContain('桶标签仍有残留');
+    expect(audit.inDomain).toBe(0);        // 桶标签**不**进值域（旧口径下它们进"枚举"）
+    expect(audit.specViolation).toBe(6);   // 六个全部计入规范违规 ⇒ 覆盖面**未缩小**
   });
 
   it('E4 零出现**不得**被误记为降级或违规（三态互不吞并）', () => {
     const audit = auditEdgeLags(loadEdgeLagsViaProductionEntry(REPO));
-    expect(audit.degraded).toBe(BASELINE_DEGRADED);      // 50，不因零出现而变
+    expect(audit.degraded).toBe(BASELINE_DEGRADED);      // 44，不因零出现而变
     expect(audit.specViolation).toBe(BASELINE_SPEC_VIOLATION); // 1：来自 `goal_decomposition.json`
     // ⚠️ 上面这 1 **不是**零出现造成的（零出现只进 reportLines）—— E2 已断言零出现不进 auditLines；
     //    若有人把"零出现"改判成违规，本断言会因计数 ≠ 1 而红。
@@ -750,5 +861,46 @@ describe('F. `$id` ↔ 文件名 映射完整性（报告不阻断）', () => {
     );
     // 真实文件名不含连字符；`$id` 含 —— 故不可反推
     for (const e of divergent) expect(e.id).toContain('-');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// N2 集合棘轮（CTO 2026-10-12「禁硬编码基数」）—— **尺寸由扫盘推导，棘轮在集合层**
+//   ① SPEC 成员不许缺（删件/改名 ⇒ 红 + **点名片名**）
+//   ② `actual \ (SPEC ∪ PENDING) === ∅`（**未登记新增 ⇒ 红 + 点名片名**）
+//   ③ 在场预告件分类必须 === 登记期望
+//   ⇒ 合并顺序无关：本笔（56）绿；`l3-65` 合入后（58 = SPEC∪PENDING）仍绿；任何第 3 件未登记仍红
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('N2. 集合棘轮 — 逐件枚举替代字面基数（禁第二套清单，复用探针导出量）', () => {
+  const specFiles = new Set(SPEC_EDGE_TYPES.map(n => `${n}.json`));
+  const pendingFiles = new Set(PENDING_REGISTERED_ADDITIONS.map(p => p.file));
+
+  it('N2-1 ① SPEC 成员不许缺（删除/改名 ⇒ 红 + 点名片名）', () => {
+    const missing = SPEC_EDGE_TYPES.map(n => `${n}.json`).filter(f => !ACTUAL_EDGE_FILES.includes(f));
+    expect(missing, `规范基线件缺失（删除/改名必须显式改 SPEC_EDGE_TYPES）: ${missing.join(', ')}`).toEqual([]);
+  });
+
+  it('N2-2 ② 未登记新增 ⇒ 红 + 点名片名（禁静默放宽）', () => {
+    const unregistered = ACTUAL_EDGE_FILES.filter(f => !specFiles.has(f) && !pendingFiles.has(f));
+    expect(unregistered, `未登记新增件（请显式登记后重跑）: ${unregistered.join(', ')}`).toEqual([]);
+  });
+
+  it('N2-3 ③ 在场预告件分类 === 登记期望（缺席合法；在场即受约束）', () => {
+    expect(PRESENT_PENDING_EDGES.every(p => p.expected === 'non_causal_unknown')).toBe(true);
+    for (const p of PRESENT_PENDING_EDGES) {
+      const doc = JSON.parse(readFileSync(join(EDGE_SRC, p.file), 'utf-8')) as Record<string, unknown>;
+      const tags = Array.isArray(doc.tags) ? (doc.tags as string[]) : [];
+      expect(tags.includes('causal'), `${p.file} 预告登记期望 non_causal`).toBe(false);
+      expect(doc['action_effect_lag'], `${p.file} 预告登记期望 lag=unknown`).toBe('unknown');
+    }
+  });
+
+  it('N2-4 尺寸由扫盘推导（禁字面 56/58）：总数 = SPEC ＋ 在场预告件', () => {
+    expect(BASELINE_TOTAL).toBe(SPEC_EDGE_TYPES.length + PRESENT_PENDING_EDGES.length);
+    expect(BASELINE_TOTAL).toBe(ACTUAL_EDGE_FILES.length); // 派生值 == 实测值（棘轮在 N2-1/2/3）
+    expect(BASELINE_DEGRADED).toBe(DERIVED_DEGRADED);
+    expect(BASELINE_IN_DOMAIN).toBe(DERIVED_IN_DOMAIN);
+    expect(BASELINE_SPEC_VIOLATION).toBe(DERIVED_SPEC_VIOLATION);
   });
 });

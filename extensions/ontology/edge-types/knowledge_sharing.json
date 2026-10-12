@@ -13,6 +13,6 @@
   },
   "consumed_by_sentinels": [],
   "action_effect_lag": "unknown",
-  "transfer_function": "TBD — to be defined in compute phase",
+  "transfer_function": "knowledge_accessibility = sharing_channel_density * (1 - knowledge_silo_ratio) ; knowledge_silo_ratio = isolated_KC_count / total_KC_count ; cross_team_diffusion = KC_accessed_by_other_teams / total_KC_accesses",
   "description": "个体经验转化为团队能力(二阶)——个体知识通过分享机制扩散为团队知识。"
 }
