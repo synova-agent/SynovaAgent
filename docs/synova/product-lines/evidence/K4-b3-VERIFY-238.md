@@ -256,3 +256,61 @@ distinct edgeId = 21                                    ← 与「§3.4 用到�
 
 **`932c9db50`（#238 §九 订正笔）—— `可提请独立审计`**：a-1、a-2 **两处均已闭合**，且以"五类分解 + 自检 = 21 + 副作用自查"的方式闭合，**优于我原报的处置建议**；口径已挂、订正留痕完整。
 **残留**：① 表 A L191 建议加内联指针（§4.1）；② §三 其余判定（V-1/V-2/V-4/V-5/V-6）**未在新 tip 上重跑**——其中 **V-1/V-2 依赖 probe 与 cycles**（新笔未触及）⇒ 结论可平移；**V-5 测试件同样未触及**；**V-6（无自动执行链）不变**。
+
+---
+
+# 五、第四轮：队长点名要核的一问（`MISS` 是否曾用于 E-25）—— **答案：从未**
+
+> 队长问：「核一句：**impl-a 件里是否出现过 `MISS` 字样用于 E-25**（grep 全件）？」
+> 若从未 ⇒ F1 第 4 例**仍成立**，但归属应写「**队长底稿 / impl-a**」而不是「#238 vs #239 内部矛盾」。
+
+## 5.1 答案：**从未出现**（且全件唯一 `MISS` 命中是假阳）
+
+```
+$ git grep -n "MISS" <每个 tip> -- docs/synova/coordination/numbering-authority.md \
+      docs/.../K4-b3-238-numbering-authority.md tests/coordination/numbering-authority.test.ts .claude/claims/238.yaml
+tip a6e927a9a  → 1 处
+tip 0ff23b28c  → 1 处
+tip 932c9db50  → 1 处
+三处均为同一行：numbering-authority.md:182
+
+$ 打印该行全文（168 字符，逐字）：
+| E-16 | INFO_TRANSMISSION | INFO_TRANSMISSION | `edge/signal-transmits` | `SIGNAL_TRANSMITS` | `[语义同义·附仓内交叉引用件依据]` | 交叉引用件串 `SIGNAL_TRANSMITS E-16 INFO_TRANSMISSION` |
+
+⇒ 该行**并不含 MISS 标记** —— 命中来自单词 **TRANSMISSION** 里的子串 `…SMISSION…`，
+  我实测：`/MISS/.test('TRANSMISSION') === true`（**假阳**）。
+```
+**结论**：impl-a 的 #238 全件**从未**使用 `MISS` 标记（对 E-25 没有，对其他 E 号也没有）。**impl-a 的抗辩成立** ✅。
+**我的方法学披露**：我第一次做的是 `git grep "MISS"` 得「1 处」，若只看计数就会误判为"用过一次"；**必需打印命中行全文才能发现是子串假阳** ⇒ 与 F2（判据自身缺陷）同族：**子串匹配必须带边界**（此处的 "边界" = 词边界或人工看全文）。
+
+## 5.2 但 **F1 第 4 例仍成立** —— 且证据基础可**不依赖任何 WIP**
+
+我原判的两个"值"其实来自两处**已提交件**（复核后更硬）：
+```
+值A（队长底稿，已提交于 k4b3/lead，至 60518b4d0 仍在）：
+   docs/synova/product-lines/evidence/K4-b3-crosswalk-238.txt  L50
+   → MISS E-25 BRAND_CONSTRUCTION  ⇒ 词表无同名项                     （= 不可判）
+值B（impl-a 件，已提交于 L1 的 a6e927a9a / 0ff23b28c）：
+   docs/synova/coordination/numbering-authority.md  L191
+   → | E-25 | BRAND_CONSTRUCTION | BRAND_CONSTRUCTION | `edge/brand_builds` | `BRAND_BUILDS` | `[语义同义·附仓内交叉引用件依据]` |
+      （= 可落，且给了 $id）
+```
+⇒ **同一 E 号、两个值、两件均已落库** ⇒ **F1（同一事实两处取值不同）成立**，**归属 = 队长底稿 / impl-a**（照你的修正）✅。
+**并且我撤回一个不精的表述**：我上一轮写「`#238` crosswalk A 把 E-25 判 MISS，而 `#239` T2 把 E-25 当…可落」——**crosswalk A 是你的底稿**（我全程按你的件核），但"#238 … vs #239 …"的框易被读成**两张卡内部矛盾**。**该框应改为「队长底稿 vs L1 件」**。我认这条表述不精确。
+**另**：**#239 的 T2 内容至今仍是 WIP（未提交）** —— 我实测 L1 工作树 `git status` 仍是 `?? scripts/control-tower/probe-cycle-valves.ts` / `?? tests/cycles/valve-mapping.test.ts` / `M cycles/**` ⇒ 按纪律**未提交内容不得作为交付物证据** ⇒ **F1-4 只用上面两处已提交值即可，无需引用 WIP**（这比原判更干净）。
+
+## 5.3 顺带时点观察（供你排程）
+
+```
+D:\k4b3-l1-238-239  git status（我实测，只读）
+ M  docs/synova/coordination/numbering-authority.md      ← 已 **staged**（应为 a-1 残留的内联指针笔）
+ M  .claude/claims/201.yaml / 345.yaml                   ← **仍未 stage 的越界传播面**（a-3 风险仍在）
+ M  cycles/**×6 ；M src/cycles/{cycle-loader,cycle-types,overflow-compute}.ts   ← #239 WIP
+ ?? scripts/control-tower/probe-cycle-valves.ts ；?? tests/cycles/valve-mapping.test.ts
+```
+⇒ ① a-1 残留那笔**已在暂存区**（你压 #239 放行到它之后，方向对）；② **a-3 风险仍未消除**（201/345 仍在工作树里未 stage 地存在）⇒ 放行条件里的"**禁 `git add -A`**"必须保留并当面核一次。
+
+## 5.4 本轮结论用语
+
+**队长本轮请我核的一问 —— 答案明确：`MISS` 从未用于 E-25（全件唯一命中是 `TRANSMISSION` 子串假阳）**；⇒ **F1 第 4 例仍成立，归属改为「队长底稿 / impl-a」**（我背书你的修正），且证据基础**只用两处已提交值**、不依赖 #239 WIP。
+**我的两条自陈**：① "MISS 1 处"若不打印全文即会误判（子串必须带边界）；② 我上轮的"#238 vs #239"框**表述不精**，应为"队长底稿 vs L1 件"。
