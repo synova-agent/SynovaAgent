@@ -1,0 +1,92 @@
+# 输出契约 · 周报（weekly）
+#
+# 出处: K12-06（#189）—— 标准一致（输出契约 · 可机器校验）。
+#   院方《02》§三 机制 3 原文：「周报＝**固定结构 + 必填**」。
+#   ⇒ 本契约断言两件事：结构（章齐）＋ 必填（该有的字段一个不少）。
+#
+# 与一页纸的区别（为什么另立契约而非复用）: 一页纸是**给老板看的结论**（章节 + 溯源指针）；
+#   周报是**周期性留痕**（期间 + 上周承诺 vs 本周实际 + 阻塞）。两者的必填项集合不相交
+#   —— 复用同一契约会把"结论指针"强加给周报（假红），也会漏掉"期间"这个周报命门。
+#   ⇒ 一类产出一个契约（院方 §三 机制 3「同一类判断用同一把尺子」= 尺子按类给，不是一把通用尺）。
+#
+# 措辞红线（PRODUCT-BRIEF / 方向锚）: 本契约**不含**任何"越用越准 / 自我进化"类措辞校验
+#   —— 话术红线属文档审查域，不是输出契约域。契约只判**机器可判**的形状。
+
+schema:
+  entries:
+    - name: id
+      type: string
+      required: true
+    - name: orgId
+      type: string
+      required: true
+    - name: period
+      type: string
+      required: true
+      description: 报告期间（周）。形态 `YYYY-Www`。
+    - name: text
+      type: string
+      required: true
+      description: 周报正文（markdown）。
+
+contract:
+  id: weekly
+  version: 1
+  title: 周报（固定结构 + 必填）
+  format: markdown
+  generated_at: "2026-10-12T14:31:43+08:00"
+
+checks:
+  - id: id-shape
+    kind: idFormat
+    path: id
+    pattern: "^[A-Za-z0-9][A-Za-z0-9_.-]{1,63}$"
+    message: "周报 id 形态不合法"
+  - id: org-id-shape
+    kind: idFormat
+    path: orgId
+    pattern: "^[A-Za-z0-9][A-Za-z0-9_.-]{1,63}$"
+    message: "orgId 形态不合法"
+  - id: period-shape
+    kind: idFormat
+    path: period
+    pattern: "^[0-9]{4}-W[0-9]{2}$"
+    message: "期间形态不合法 —— 周报期间须为 YYYY-Www（如 2026-W41）"
+  - id: no-todo-left
+    kind: noPattern
+    pattern: "TODO|FIXME|XXX"
+    message: "周报中残留 TODO/FIXME/XXX —— 未完成内容不得作为交付物提交"
+
+fields:
+  - path: id
+    required: true
+  - path: orgId
+    required: true
+  - path: period
+    required: true
+  - path: text
+    required: true
+  # 上一周三件事的下落（承诺→实际）——周报的存在理由。缺一项即不是周报。
+  - path: committedLastWeek
+    required: true
+    description: 上周承诺清单。空数组合法（如实为空），字段缺席不合法。
+  - path: doneThisWeek
+    required: true
+    description: 本周实际完成清单。
+  - path: blocked
+    required: true
+    description: 阻塞清单。空数组合法（无阻塞照实写空）—— 但**字段必须在**
+               （缺席 = 没填，不是没阻塞；两者机器可分）。
+  - path: nextWeek
+    required: true
+    description: 下周计划清单。无计划的周报不得提交。
+
+sections:
+  - title: "## 本周执行摘要"
+    required: true
+  - title: "### 上周承诺与本周实际"
+    required: true
+  - title: "### 阻塞"
+    required: true
+  - title: "### 下周计划"
+    required: true
