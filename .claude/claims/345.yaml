@@ -25,13 +25,4 @@ done:
   - verify: npx vitest run tests/adapters/sqlite-graph-store.edge-degradation.test.ts
   - verify: npx vitest run tests/adapters/
   - verify: bash -c 'git grep -n "standardKeyGuard: false" HEAD -- src | wc -l'
-note: >
-  射程 = `tests/adapters/`；**未覆盖** `src/` 引用 `queryEdges` 的 **15 个调用方**
-  与 `tests/` 引用 `queryEdges` 的 **55 个引用件**（两数经独立复核，命令原始输出见证据件）。
-  base 钉 SHA = 1ab0cbb331702fdac21ee3a2ec68127793d6a869。
-  Done③ 的唯一红 = `tests/adapters/standard-key-guard.test.ts` 的 `V4-new`
-  （`execSync("grep … || true")` ⇒ **Windows posix 结构性**，非本卡回归）⇒ 已按既有口径
-  用**非 posix 实质判据**复核（`git grep -n "standardKeyGuard: false" HEAD -- src` = 0）
-  并在证据件**显式声明该件为环境面**。
-  判别性夹具为**自建**（`tests/adapters/sqlite-graph-store.edge-degradation.test.ts`）：
-  改回 `log.warn` ⇒ **3 failed / exit 1**（改坏即红已实测）。
+note: "射程 = `tests/adapters/`；**未覆盖** `src/` 引用 `queryEdges` 的 **15 个调用方** 与 `tests/` 引用 `queryEdges` 的 **55 个引用件**（两数经独立复核，命令原始输出见证据件）。 base 钉 SHA = 1ab0cbb331702fdac21ee3a2ec68127793d6a869。 Done③ 的唯一红 = `tests/adapters/standard-key-guard.test.ts` 的 `V4-new` （`execSync(grep … || true)` ⇒ **Windows posix 结构性**，非本卡回归）⇒ 已按既有口径 用**非 posix 实质判据**复核（`git grep -n standardKeyGuard: false HEAD -- src` = 0） 并在证据件**显式声明该件为环境面**。 判别性夹具为**自建**（`tests/adapters/sqlite-graph-store.edge-degradation.test.ts`）： 改回 `log.warn` ⇒ **3 failed / exit 1**（改坏即红已实测）。"
