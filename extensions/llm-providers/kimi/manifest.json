@@ -1,1 +1,0 @@
-{"$schema":"https://synova.dev/schemas/extension-manifest-v1.json","name":"kimi","version":"1.0.0","type":"llm-provider","displayName":"Kimi","capabilities":{"maxContext":32768,"functionCalling":true,"streaming":true},"entryPoint":"./adapter.ts","exportKey":"kimiAdapter"}

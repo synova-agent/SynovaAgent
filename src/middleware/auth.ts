@@ -15,6 +15,7 @@ import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import type { Request, Response, NextFunction } from 'express';
 import { createLogger } from '@synova/logger';
 import type { WorkspaceRole } from './rbac';
+import { permissionsForRole, sensitivityWhitelistFromGrants, itemModelSpeaksForRole, type PermissionId } from '@synova/engine-auth';
 import { runWithContext, resolveContext } from '../services/request-context';
 
 const log = createLogger('auth');
@@ -332,6 +333,52 @@ export function allowedSensitivities(role: string, clearance: string): string[] 
     ? levels.length - 1
     : Math.max(0, levels.indexOf(clearance));
   return levels.slice(0, ceilingIndex + 1);
+}
+/**
+ * K12-11 (#194 / RB-03): **项模型**在授权判定点上的生效面（PermissionId[] → 敏感度白名单）。
+ *
+ * 语义: 先取**档位出厂默认**（{@link allowedSensitivities}，既有行为，逐字不动），
+ *   再取该角色在**该客户槽**下**实际勾中的项**（`permissionsForRole`，真读
+ *   `extensions/presets/roles/<roleId>/{tenant/<tenantId>/}capabilities.yaml`），
+ *   最后取**交集**。
+ *
+ * 🔴 为什么是交集（只收窄、永不放宽）: 项模型是**新**面，档位默认是**既有**面。
+ *   项模型若能把面放得比档位默认更宽，等于"配一个文件就自动提权"
+ *   （且违背 D947 唯一漏斗的默认安全姿态）。交集保证：配包只能**减**权。
+ *
+ * 回落（**正常路径，不是错误**）: 角色无出厂项 / 包未命中 / 无任何「读知识」项
+ *   且项模型不为此角色发声（liaison / ga / 未知角色）⇒ **逐字返回档位默认**。
+ *   ⇒ 五档＝出厂默认；删掉自定义角色包 = 回落，且**不报错**（V7）。
+ * 降级（**真降级**）: 包解析失败/字段非法/未知项 ⇒ `resolveGrants` 置 `degraded: true`
+ *   且按出厂默认参与交集；本函数**不抛**、不静默放行，交调用方决定是否拦。
+ *
+ * @param role - 验签后的角色（`JwtPayload.role`）
+ * @param clearance - 请求上下文声明的敏感度上限
+ * @param tenantId - 客户槽（**可选**；缺省 ⇒ 只读岗位默认层）。
+ *   🔴 生产调用点传 `payload.orgId` —— org 即租户（同一岗位名、不同客户 ⇒ 权限集合不同，
+ *   正是创始人 2026-10-05 举的场景）。
+ */
+export function allowedSensitivitiesByGrants(
+  role: string,
+  clearance: string,
+  tenantId?: string | null,
+): string[] {
+  const defaultLevels = allowedSensitivities(role, clearance);
+  // 🔴 显式标注 `PermissionId[]`（而非仅推断）：让项模型的**类型面**在生产代码里**真被消费**（注释里出现不算接线）。
+  const items: readonly PermissionId[] = permissionsForRole(role, { tenantId: tenantId ?? null });
+  const grantedLevels = sensitivityWhitelistFromGrants(items);
+  if (grantedLevels === null) {
+    // 项集里没有「读知识」项 —— 两种语义**必须分开**（否则"客户收干净读权"被当成"没配置"）:
+    //   · 项模型**为这个角色发声**（有出厂清单 / 有客户包）⇒ 它说了"不许读" ⇒ 最窄白名单
+    //   · 项模型**没发声**（liaison/ga/未知角色）⇒ 逐字回落档位默认（五档＝出厂默认）
+    if (itemModelSpeaksForRole(role, { tenantId: tenantId ?? null })) {
+      return [CHUNK_SENSITIVITY_LEVELS[0] as string];
+    }
+    return defaultLevels;
+  }
+  const narrowed = defaultLevels.filter((l) => grantedLevels.includes(l));
+  // 交集为空 = 项集与档位默认不兼容 ⇒ fail-closed 到最窄，绝不放宽
+  return narrowed.length > 0 ? narrowed : [CHUNK_SENSITIVITY_LEVELS[0] as string];
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -700,7 +747,12 @@ export async function jwtAuthMiddleware(req: Request, res: Response, next: NextF
               {
                 field: 'access.sensitivity',
                 operator: 'IN',
-                value: allowedSensitivities(payload.role, ctx.auth.sensitivity),
+                // 🔴 K12-11 (#194 / RB-03): 敏感度白名单由**项模型**派生
+                //   （`PermissionId[]` → 交集），**不是**纯档位派生。
+                //   改动面严格窄: 档位默认（allowedSensitivities）逐字保留为 L0 出厂值，
+                //   项模型只能收窄。反例（改回纯档位）⇒ 客户包内的 denies 不再生效 ⇒ 判据红。
+                //   `payload.orgId` = 客户槽（同一岗位名、不同客户 ⇒ 权限集合不同）。
+                value: allowedSensitivitiesByGrants(payload.role, ctx.auth.sensitivity, payload.orgId),
               },
             ],
           }),

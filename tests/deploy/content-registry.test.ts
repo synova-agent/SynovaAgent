@@ -36,13 +36,16 @@ function extensionDirsOnDisk(): string[] {
     .sort();
 }
 
-describe('#1465 content-registry — V1 全项有明确状态（K4-07 #1056 专业包层登记后 = 25/25）', () => {
+describe('#1465 content-registry — V1 全项有明确状态（K12-16 #199 删除 3 项后 = 22/22）', () => {
   it('注册表项与 extensions/ 顶层目录集双向相等', () => {
     const snap = describeContentRegistry();
     expect(snap.entries.map((e) => e.dir).sort()).toEqual(extensionDirsOnDisk());
     // #1056（K4-07）新增 `extensions/professions/`（L1.5 专业包层）⇒ 24 → 25
-    //（本卡是第六个写本表的卡，合并冲突时以磁盘目录集为准）
-    expect(snap.counts.total).toBe(25);
+    // K12-16（#199）真删 `llm-providers` / `engine` / `tools` 三项（二元化：接线 or 删除，不留"注册了没人读"）
+    // ⇒ 25 → 22。🔴 本断言是"删目录必须同步删注册表条目"的**机械约束**——
+    //    `extensionDirsOnDisk()` 主动枚举磁盘，故"删目录不改注册表"机械上不可能通过。
+    //（本卡是第七个写本表的卡，合并冲突时以磁盘目录集为准）
+    expect(snap.counts.total).toBe(22);
   });
 
   it('type 唯一；status / face 落在闭合枚举内（枚举取自快照单源）', () => {
@@ -107,11 +110,13 @@ describe('#1465 content-registry — 正常路径（真实装配，非 grep）',
     expect(item.verified).toContain('loadBusinessModels');
   });
 
-  it('非 reachable 项（retired / pending-cto）不入装配面', async () => {
+  it('非 reachable 项（pending-cto）不入装配面', async () => {
     const snap = describeContentRegistry();
     const notWired = snap.entries.filter((e) => e.status !== 'reachable').map((e) => e.type);
-    // retired×2（engine / tools）＋ pending-cto×2（llm-provider；K12-01 段一 presets）= 4
-    expect(notWired.length).toBe(5);
+    // #1465 时 = 5（retired×2 engine/tools ＋ pending-cto×3 llm-provider/onboarding/content-layer）
+    // K12-16（#199）真删 engine / tools / llm-providers ⇒ 5 → 2（onboarding-method ＋ content-layer）
+    // 🔴 `retired` 现为**空集**（不再以 retired 名义留存死内容）
+    expect(notWired.length).toBe(2);
     const report = await initContentTypes();
     for (const t of notWired) {
       expect(report.results.some((r) => r.type === t)).toBe(false);
