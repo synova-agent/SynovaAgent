@@ -198,9 +198,66 @@ src/cycles/overflow-compute.ts:224  const valveLag = cycle.valves ? computeValve
 
 ---
 
-## 七、交付时刻读数（提交后回填）
+## 七、交付时刻读数（#239 commit 后实测）
 
-（待回填）
+> 读数时点 × diff 左端 = **`as_of ba1b22a8b5 × git diff --name-only ba1b22a8b5..HEAD`**
+
+```
+$ git log --oneline -1
+559fb6b0e feat(239): K4-06 循环层补五阀映射 + action_effect_lag（valves 新键，不覆盖 edges[]）
+$ git rev-parse HEAD                 → 559fb6b0e59b0459798f6d94489925f235294190
+$ git diff --stat ba1b22a8b5..HEAD   → 20 files changed, 2449 insertions(+), 19 deletions(-)
+
+$ git diff --name-only ba1b22a8b5..HEAD
+.claude/claims/238.yaml
+.claude/claims/239.yaml
+cycles/builtin/cash-cycle.cycle.json
+cycles/builtin/customer-cycle.cycle.json
+cycles/builtin/product-cycle.cycle.json
+cycles/builtin/talent-cycle.cycle.json
+cycles/industry/retail-ecommerce/store-replication.cycle.json
+cycles/industry/saas-tech/arr-growth.cycle.json
+docs/synova/GLOSSARY.md
+docs/synova/coordination/numbering-authority.md
+docs/synova/product-lines/evidence/K4-b3-238-numbering-authority.md
+docs/synova/product-lines/evidence/K4-b3-239-valve-mapping.md
+memory/notes/proposed/2026-10-12-K4-b3-numbering-authority.md
+scripts/control-tower/probe-cycle-edges.ts
+scripts/control-tower/probe-cycle-valves.ts
+src/cycles/cycle-loader.ts
+src/cycles/cycle-types.ts
+src/cycles/overflow-compute.ts
+tests/coordination/numbering-authority.test.ts
+tests/cycles/valve-mapping.test.ts
+
+$ git ls-remote --heads origin | grep 238-239
+559fb6b0e59b0459798f6d94489925f235294190	refs/heads/k4b3/238-239
+
+$ node scripts/control-tower/probe-cycle-valves.ts | tail -2
+✅ 结论：6/6 件含完整五阀映射（5 键齐备 + 桶合法 + edges[] 未被覆盖）；exit 0
+valve_files=6 compliant=6 violations=0
+
+$ node scripts/control-tower/probe-cycle-edges.ts | tail -1
+occurrences=45 distinct=15 hit=15 miss=0      （#238 判据④ 未被本卡打红 —— E-NN 不匹配带小数点的旧编号正则）
+
+$ git hash-object memory/notes/proposed/2026-10-12-K4-b3-numbering-authority.md
+b7fd9e1a0ab7536b46ae4129d4ec53439f6079f1      （= 队长分支同 blob；同路径纪律已满足）
+
+$ git status --porcelain=v1
+ M .claude/claims/201.yaml
+ M .claude/claims/345.yaml
+（仅此两件 —— 均为**队长**的存量 claim 修复，**未 stage、未提交、不在本卡 diff 内**）
+```
+
+**推送方式**：`synova-commit` **自带 auto-push**（M4）—— `aa04c9377..559fb6b0e  k4b3/238-239 -> k4b3/238-239`，**未手工再推**。
+
+**写集对账（多出/缺失说明）**：
+| 项 | 说明 |
+|---|---|
+| `git diff` 集 vs `239.yaml` 的 `writeset` | **20 = 20，逐条一致，无多出、无缺失** ✅ |
+| 卡面写集（13 条） | 全部命中；本卡的 diff 另含 **#238 的 7 条**（同分支同 PR 的既有变更） |
+| 任务板原写集里的 `docs/synova/GLOSSARY.md` / `numbering-authority.md` / `probe-cycle-edges.ts` / `numbering-authority.test.ts` / `238.yaml` | 属 **#238 域**，已在前 4 笔提交内；本卡**未再改** |
+| 工作区未提交残留 | `201.yaml` / `345.yaml`（` M`，归属 = **队长**，不进本 PR） |
 
 ---
 
