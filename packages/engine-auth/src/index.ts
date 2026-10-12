@@ -38,5 +38,29 @@ export type { AuthProvider } from './auth-provider';
 // RBAC implementation
 export { createRBACProvider, type RBACConfig } from './rbac';
 
+// K12-11 (#194 / RB-03): 权限**项**模型（PermissionId[] ＋ 角色为可配包）——
+//   五档仅出厂默认（L0），客户可配包（L2）；**覆盖不是替换**（宪章 5.2）。
+export type {
+  PermissionId,
+  PermissionItem,
+  ResolvedGrants,
+  KnowledgeScope,
+} from './permission-grants';
+export {
+  PERMISSION_CATALOG,
+  PERMISSION_BUCKETS,
+  KNOWLEDGE_SCOPES,
+  FACTORY_ROLE_GRANTS,
+  FACTORY_TIER_BY_LEGACY_ROLE,
+  isPermissionId,
+  expandPermissionId,
+  sensitivityWhitelistFromGrants,
+  itemModelSpeaksForRole,
+  resolveGrants,
+  permissionsForRole,
+  factoryPermissionsForRole,
+  hasPermission,
+} from './permission-grants';
+
 // User cache
 export { createUserCache, type UserCache } from './cache';
