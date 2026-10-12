@@ -26,12 +26,20 @@
 writeset:
   - .claude/claims/1350.yaml
   - .claude/task-briefs/2026-10-11-1350-K4-05bis-边词表-目标层级边与计划边.md
+  - docs/synova/product-lines/evidence/K4-b3-1350-edge-vocabulary.md
   - docs/synova/product-lines/evidence/K4-b3-1412-status-recheck.md
+  - extensions/ontology/edge-types/goal_decomposes_to.json
+  - extensions/ontology/edge-types/plan_commits_to.json
+  - extensions/ontology/manifest.json
+  - packages/ontology/src/edge-types.ts
+  - tests/ontology/k4-05bis-edge-vocabulary-1350.test.ts
 done:
-  - verify: bash -c 'git diff --name-only ba1b22a8b5..HEAD | grep -c "^src/" || true' ⇒ 0（#66 核验件「不改任何 src/」的物理判据）
-  - verify: bash -c 'git ls-tree -r --name-only ba1b22a8b5 -- extensions/ontology/edge-types/ | wc -l' ⇒ 56（V1 基数口径，非卡面字面 55）
-  - verify: bash -c 'git merge-base --is-ancestor 0b0601fac ba1b22a8b5 && git merge-base --is-ancestor 1ab0cbb33 ba1b22a8b5 && echo BOTH_ANCESTOR' ⇒ BOTH_ANCESTOR（#1134 PR#362 前置解除 ＋ #66 PR#392 已合入）
-  - verify: bash -c 'grep -c -E "^## Q0:|^## Q1:|^## Q2:|^## Q3:|^## 架构层:|^## Done 标准" ".claude/task-briefs/2026-10-11-1350-K4-05bis-边词表-目标层级边与计划边.md"' ⇒ 6（六字段齐）
-  - verify: bash -c 'grep -c "^#CRITERIA: B" ".claude/task-briefs/2026-10-11-1350-K4-05bis-边词表-目标层级边与计划边.md"' ⇒ 1
+  - verify: npx vitest run tests/ontology/k4-05bis-edge-vocabulary-1350.test.ts ⇒ 20 passed / exit 0（V1 计数 58 + V2 认领/桥 + V3 删边回落 + B5 夹具会红 + 边界）
+  - verify: bash scripts/control-tower/check-ontology-fields.sh ⇒ `✅ 全部 58 件边类型关键字段齐全` / exit 0
+  - verify: bash -c 'git ls-tree -r --name-only HEAD -- extensions/ontology/edge-types/ | wc -l' ⇒ 58（全量；实测基数 56 + 本卡 2）
+  - verify: bash -c 'git grep -c GOAL_DECOMPOSES_TO -- packages/ontology/src/edge-types.ts extensions/ontology/edge-types/goal_decomposes_to.json' ⇒ 两处均 ≥1（成对落地）
+  - verify: bash -c 'git grep -c PLAN_COMMITS_TO -- packages/ontology/src/edge-types.ts extensions/ontology/edge-types/plan_commits_to.json' ⇒ 两处均 ≥1（成对落地）
   - verify: bash -c 'git diff --name-only ba1b22a8b5..HEAD | grep -c -E "edge-lag-unknown-degraded-1134|ontology-loader-param-bridge-1031" || true' ⇒ 0（禁入项为零）
-note: "K4-05bis（#1350）A 段：① 卡面 = 仓内正式版（原 carrier .k4-cards/card-1350.md 未入 git ⇒ 本件即可引原件）；显式处置三处漂移（基数 55→57 实测改 56→58；卡面【边界】「不实现代码」与 CTO 受理裁定 V1/V2/V3 的冲突 ⇒ 判据以受理裁定为准；#1134 前置已由 PR #362 / merge 0b0601fac 解除）；转录 CTO 裁定九项 ＋ 受理裁定 ＋ W3 全文。② #66 核验件 = 只核验不实施：工作令 §四⑥ 点名的 engine-context **不构造 store**（对象不存在）、ingest/index **1 处**自建 store 已被适配器默认守卫覆盖；剩余面 = 0。③ 本段零 src/ 改动、零 edge-types 写入（B 段待 L2 落地后放行）。"
+  - verify: bash -c 'git diff --name-only ba1b22a8b5..HEAD | grep -c "^src/" || true' ⇒ 0（零 src/ 改动）
+  - verify: npx tsc --noEmit ⇒ 与 BASE(ba1b22a8b5) 逐行同为 29 条、差异为空（本卡引入 0 新错误）
+note: "K4-05bis（#1350）：① **A 段**=卡面（仓内正式版；原 carrier 未入 git ⇒ 本件即可引原件）+ #66 现状核验件（只核验不实施，剩余面=0）+ 本 claim。三处漂移显式处置：基数实测改 56→58；【边界】与 CTO 受理裁定的冲突点并置并判「以受理裁定为准」；#1134 前置由 PR #362/0b0601fac 解除。② **B 段**=两件新边（GOAL_DECOMPOSES_TO 父→子 / PLAN_COMMITS_TO 计划→目标，端点双枚举 GOAL/Goal）+ manifest.edgeTypes 按生成器口径实数 58 + EdgeType/ALL_EDGE_TYPES 成对同步 52→54 + 判别性夹具 20 例。计数 56→58，同构 = 11 键 + canonical 顺序。③ **口径**：新边 lag/tf 均取 unknown（不用 TBD，避免打红 #235 全域 TBD=0；口径冲突提请 CTO 追认）；blob 层行尾实测 10 CRLF / 48 LF（全量 58，非抽样），新件落 LF 组，工作树层 58/58 CRLF；复原用口径 W（工作树原始字节 SHA256）。④ **未提交**：memory/notes/proposed/2026-10-12-K4-b3-numbering-authority.md（门禁触发面零命中 ⇒ 引而不 stage；其归属为 L1/L2）。⑤ **禁入**：tests/l4/* 两件归 L2，本卡零写。"

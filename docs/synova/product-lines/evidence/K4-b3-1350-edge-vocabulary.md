@@ -55,22 +55,202 @@
 
 ---
 
-## 三、🟡 B 段待填清单（**待队长「放行」信号；本件当前不含以下内容**）
+## 三、B 段落盘实测（**V1 / V2 / V3** ＋ 块级 ＋ 同步 ＋ 两层行尾）
 
-| 段 | 内容 | 依据判据 |
+> **读数时点 = `5f4f8648ad3950f474ddc94f23beff4d8ce39b58`（B 段落盘笔）｜ diff 左端 = `ba1b22a8b5`**
+> **口径**：所有计数标 **全量（58/58）**，非抽样；所有"原始输出"可复算（值 ＋ 口径 ＋ 时点 ＋ 探针版本见 §十一）。
+
+### 三.1 落盘件与判据 —— V1（计数 ＋ 同构）
+
+**V1-a 计数**：`extensions/ontology/edge-types/` 全量 = **58 件**（实测基数 **56** ＋ 本卡 **2**）。
+
+```
+$ git ls-tree -r --name-only HEAD -- extensions/ontology/edge-types/ | wc -l
+58
+```
+
+**V1-b 同构**（键集 ＋ 键顺序）：见 §三.5 的 H2（全量 58 件：`canon11=55 / canon12=3 / bad=0`；
+本卡 2 件均判 `canon11` = 11 键 ＋ canonical 顺序）。
+
+### 三.2 加载器认领 ＋ 桥可读 —— V2
+
+穿**生产入口** `loadOntology()`（子进程 `chdir` ＋ 动态 import）真跑：
+
+```
+$ npx vitest run tests/ontology/k4-05bis-edge-vocabulary-1350.test.ts
+ ✓ tests/ontology/k4-05bis-edge-vocabulary-1350.test.ts (20 tests) 4346ms
+ Test Files  1 passed (1)
+      Tests  20 passed (20)
+   Duration  5.32s
+```
+
+关键断言（**原文**）：
+| 例 | 断言 | 实测 |
 |---|---|---|
-| §四 | 两件新边文件落盘 ＋ `$id`/`label`/端点/`requiredProps`/`optionalProps` 逐字段取证 | **V1** ＋ 卡面附录 C |
-| §五 | `loadOntology()` 真跑认领（`edgeTypes` 计数 `56 → 58`）＋ #1031 桥读字段 | **V2** |
-| §六 | 反例：删任一新边 ⇒ 计数回落 `58 → 57` ⇒ 夹具**红**；复原 ⇒ 绿 | **V3** |
-| §七 | 块级：`check-ontology-fields.sh` ⇒ `58 件 / exit 0`；删字段 ⇒ `exit 1` | D6/D7 |
-| §八 | `manifest.json` `edgeTypes` 字段 = **改后实测目录计数** | D11 |
-| §九 | `packages/ontology/src/edge-types.ts` 常量 ＋ `ALL_EDGE_TYPES` 成对同步 ＋ **登记段原文** | D12（含 W-8） |
-| §十 | 复原哈希（**口径 W：`Get-FileHash -Algorithm SHA256` 原始字节**） | D8 |
-| §十一 | 写集全列 ＋ 差异说明 | D9 |
-| §十二 | 自检 5 问 | D10 |
+| A1 【V1】 | `loadOntology().edgeTypes.length === 58` | ✅ 58（`56 + 2`） |
+| A2 【V2】 | 两新边按 `label` 可查到且**各有真实文件名** | ✅ `GOAL_DECOMPOSES_TO` / `PLAN_COMMITS_TO` |
+| A3 【V1】 | 键序 `=== canonical 11 键` | ✅ 两件均通过 |
+| A4 | 端点：边 A `["GOAL","Goal"]→["GOAL","Goal"]`；边 B `["PLAN"]→["GOAL","Goal"]` | ✅ 逐字 |
+| A5 | 两件 `action_effect_lag === "unknown"` 且 `transfer_function === "unknown"` | ✅ |
+| A6 【V2】 | 桥：`action_effect_lag` 槽 `status=resolved` / `injectable=true` / `value='unknown'` | ✅ |
+| A7 【V2】 | 桥：`transfer_function` 槽 `injectable=false`，状态如实 = **`prose_formula`** | ✅ 见下「⚠️ 状态命名登记」 |
+| A8 | 桥 3 槽齐备且顺序 = `EDGE_PARAM_KEYS` | ✅ |
 
-**B 段前置（已量，见 §一 P-6 / P-7 / P-9 / P-10）**：
-同构 = **11 键 ＋ 顺序**；落盘形态 = 2 空格缩进 ＋ **CRLF** ＋ 文件尾 LF；`requiredProps` 必须非空。
+> ⚠️ **A7 的状态命名登记（禁含糊）**：`"unknown"` 既不匹配 #1031 桥的 `PLACEHOLDER_RE`（`tbd|to be defined|todo|pending|n/a`）也不匹配 `DECLARATION_RE`（`^(number|string|…)`）
+> ⇒ 按 `resolveParam` 的兜底分支判为 **`prose_formula`（"散文字符串：非 P-3 值域，不可注入"）**。
+> **与既有 52 件 `TBD` 的差别**：那 52 件判 `placeholder`。**结果同形**（两者 `injectable=false` ⇒ 都不注入实例层），**状态名不同**。
+> ⇒ 这会把 `tests/l4/ontology-loader-param-bridge-1031.test.ts` 的 `BASELINE_TALLY.tf_prose` 由 **3 抬到 5**（`tf_placeholder` 保持 53）
+> —— 该件属 **R-2 / 归 L2**，本卡**零写**；此处**如实登记该增量**供 L2 同步（**不是本卡缺陷**，是"新件按裁定取 `unknown`"的直接后果）。
+
+### 三.3 反例：删任一新边 ⇒ 计数回落 ⇒ 夹具红 —— V3
+
+在 **/tmp 沙箱**（`cp -r extensions/ontology`）内**物理删除**，并经**生产入口**复读：
+
+| 例 | 沙箱操作 | 沙箱磁盘实况 | `loadOntology().edgeTypes.length` |
+|---|---|---|---|
+| B0（阴性对照） | 不删 | **58** | **58** |
+| B1 | 删 `goal_decomposes_to.json` | **57** | **57** ✅ 回落 |
+| B2 | 删 `plan_commits_to.json` | **57** | **57** ✅ 回落 |
+| B3 | 两件都删 | **56** | **56** ✅ 回到本卡之前基数 |
+| B4 | 删后磁盘核对 | 无该件、另一件在 | — |
+| B5 🔴 | **把 A1 的同一条断言（期望 58）施加到缺件沙箱** | — | **必抛（= 红）**；期望改 57 ⇒ 不抛（**反向对照**） |
+
+🔴 **B5 是「夹具会红」的自足证明**：`expect(() => expect(r.loaded).toBe(58)).toThrow()` ✅ 且
+`expect(() => expect(r.loaded).toBe(57)).not.toThrow()` ✅ ⇒ 证明"抛"来自**计数差**，不是写法错误。
+🔴 **"替换确实发生"已前置断言**（B0/B1 的 `dirFiles` 先于 `loaded` 断言）⇒ 防 R22「替换未发生却报绿」。
+
+### 三.4 块级判据 ＋ 删字段造红 —— D6 / D7
+
+**D6（改后）**：
+```
+$ bash scripts/control-tower/check-ontology-fields.sh
+✅ 全部 58 件边类型关键字段齐全（action_effect_lag, transfer_function）
+GATE_EXIT=0
+```
+
+**D7（删字段造红，**/tmp 副本** 经 `SYNO_EDGE_TYPES_DIR` 注入缝，**真仓零污染**）**：
+```
+沙箱件数 = 2（= 本卡 2 件）
+=== 口径 W 基线（工作树原始字节 SHA256）===
+  before = 1d145c49c04f3eae8597d6f3af8b7b47d21cb28a16e31badae7629b60d1ea567
+=== 反例：删 goal_decomposes_to.json 的 action_effect_lag ===
+  key removed; keys now = ['$id','label','tags','allowedFrom','allowedTo','requiredProps',
+                           'optionalProps','consumed_by_sentinels','transfer_function','description']
+❌ goal_decomposes_to.json: 缺字段 action_effect_lag
+── 汇总: 检查 2 件，违规 1 处（字段集: action_effect_lag, transfer_function）
+RED_EXIT=1
+=== 复原（重新从真仓复制该件）===
+  after  = 1d145c49c04f3eae8597d6f3af8b7b47d21cb28a16e31badae7629b60d1ea567
+  ✅ 口径 W 复原一致（工作树原始字节 SHA256 逐字节相同）
+=== 复原后复跑 ===
+✅ 全部 2 件边类型关键字段齐全（action_effect_lag, transfer_function）
+GREEN_EXIT=0
+=== 真仓零污染核对 ===
+?? extensions/ontology/edge-types/goal_decomposes_to.json
+?? extensions/ontology/edge-types/plan_commits_to.json
+```
+⇒ **口径 W 复原逐字节一致**（`1d145c49…a567`）＋ **真仓零污染**（仅本卡 2 件 untracked）。
+
+### 三.5 两层行尾（H1）＋ 同构（H2）—— 含反向造红与阴性对照
+
+**H1｜两层行尾读数【全量 58/58，非抽样】**（读数时点 `5f4f8648a`；blob 层 `git cat-file -p HEAD:<path>` 直读）
+```
+  blob  层含 CRLF = 10 件   （= 既有的 legacy 10 件；本卡 2 件**不在内**）
+  blob  层纯  LF  = 48 件   （46 既有 ＋ 本卡 2）
+  工作树层含 CRLF = 58 件   （全量）
+  --- 本卡新增 2 件的两层读数 ---
+    goal_decomposes_to.json    blob: bytes=2262 CRLF= 0 bareLF=29  |  工作树: bytes=2291 CRLF=29 bareLF=0
+    plan_commits_to.json       blob: bytes=2179 CRLF= 0 bareLF=33  |  工作树: bytes=2212 CRLF=33 bareLF=0
+H1 反向造红（/tmp 副本把本卡 2 件工作树形态改 LF）：
+  副本 goal_decomposes_to.json: CRLF=0（期望 0）  ✅
+  副本 plan_commits_to.json:    CRLF=0（期望 0）  ✅
+```
+🔴 **「落组」推断 → 实测确认（方向已按 2026-10-12 订正后口径）**：
+本卡 2 件的 **blob 层为纯 LF** ⇒ 落 **LF 组（现 48/58）**，与**最近的先例**（第 56 件 `goal_decomposition.json`，LF blob）**同组**。
+（P-13 原写"推断待实测"⇒ **现已实测**。**不抹旧**：订正前的"53 件 CRLF → 与 53 件同形态"方向**是错的**，原因见 §一 P-13 留痕。）
+
+**H2｜同构断言【全量 58/58】**
+```
+  canon11=55   canon12=3   bad=0
+  canon12 成员=['brand_builds.json','couples.json','cumulative_learning.json']（= 既有 3 件，成员未变）
+  bad 成员=[]
+  --- 本卡新增 2 件 ---
+    goal_decomposes_to.json    → canon11
+    plan_commits_to.json       → canon11
+H2 反向造红（对**已提交的**本卡 2 件各注入 3 型缺陷）：
+  goal_decomposes_to.json | 删 transfer_function → bad ｜ 对调 label/tags → bad ｜ 多 zz_extra → bad
+  plan_commits_to.json    | 删 transfer_function → bad ｜ 对调 label/tags → bad ｜ 多 zz_extra → bad
+H2 阴性对照（未改动的 blob 必须仍判 canon11）：
+  goal_decomposes_to.json → canon11 ｜ plan_commits_to.json → canon11   ✅ 非恒红
+```
+⇒ `55 = 既有 53 ＋ 本卡 2`；**12 键组仍恰为既有 3 件**（本卡 2 件**未引入** `diagnostic_signals`）。
+
+**夹具适用面（**它测不出什么**）**：H2 只判**键集 ＋ 键顺序**，**不判值的语义/合法性**（tags 合法性归 `check-file-driven.sh`）；
+只判**顶层键**，**不递归子结构**（`optionalProps` 内部形状不覆盖）；JSON 语法错判 `bad`（**刻意 fail-closed**）。
+
+### 三.6 `manifest.json` —— D11
+
+```
+$ python3 scripts/migrate-ontology-manifests.py      # dry-run（只读，不加 --apply）
+  [DRY-RUN] Would update manifest.json: nodeTypes 29→29, edgeTypes 16→58
+```
+⇒ 按**生成器自身口径**（`edge_count = len(list((manifest_path.parent / "edge-types").glob("*.json")))`）填 **58**；
+`nodeTypes 29→29` **不动**（CTO §5）。
+🔴 **未运行 `--apply`**：该脚本同一轮还会 `[DRY-RUN] Would add id: sentinel-path-dependency to extensions\sentinels\path-dependency\manifest.json`
+⇒ **会写本卡写集外文件** ⇒ 本卡**只手工改 `edgeTypes` 一个字段**（最小 diff），其余保持逐字节不变。
+⚠️ 同文件 `description` 的散文「节点类型 (17) 和边类型 (14)」为**存量表述**，**本卡不动**（不在裁定范围；登记备核）。
+
+### 三.7 `EdgeType` / `ALL_EDGE_TYPES` 成对同步 —— D12（含 W-8 登记段）
+
+```
+$ grep -c "^\s*[A-Z_]+: '[A-Z_]+'," packages/ontology/src/edge-types.ts   # EdgeType 成员
+54
+$ grep -c "^\s*EdgeType\.[A-Z_]+, " packages/ontology/src/edge-types.ts   # ALL_EDGE_TYPES 条目
+54
+```
+⇒ `52 → 54`（两处同增 2）；**既有 52 条一字未动**。
+
+🔴 **W-8 登记段（队长裁定要求"必写"，原文照录）**：
+```
+EntityResolver 邻居类型余弦相似度向量维度 52→54，为行为变化
+（新增维度对既有节点恒为 0 ⇒ 相似度值轻微改变）；
+无测试钉该长度（git grep 'edgeVector|edgeTypeVector' -- tests/ src/ = 0 命中）；
+§4-新边维唯一语义正确。
+```
+**跨件提醒已遵守**：`src/l4/entity-resolver.ts` **不在本卡写集** ⇒ **零改动**（未"顺手改"）。
+**类型检查（`npx tsc --noEmit`）**：HEAD **29** 错误 vs BASE(`ba1b22a8b5`) **29** 错误，
+`Compare-Object` 逐行比对 **差异为空** ⇒ **本卡引入 0 个新 tsc 错误**（29 条全为存量：25 条 `extensions/sentinels/_extinct/**` ＋ 3 条 `src/server.ts` ＋ 1 条 `src/connectors/ima.ts`）。
+
+### 三.8 本卡触发的门禁修复（**如实登记，含"我的判据也曾错"**）
+
+落盘过程撞到 **3 道门禁**，均为**本卡卡面自身的形态缺陷**（非代码缺陷），已逐条修复并复跑：
+
+| # | 门禁 | 报错原文（摘要） | 根因（**我的**） | 修复 |
+|---|---|---|---|---|
+| G-1 | 组 12 Task Scope | `❌ …: 4 处` / `<file> (不在 Q2 范围内)` | `parse_write_set` 只认 `## 写集` 下的 **Markdown 表格**；我写成**代码块 ＋ bullet** ⇒ 取不到 include ⇒ 回落 Q2 散文，而 Q2 bullet **反引号包裹** ⇒ 模式含反引号 ⇒ **恒不中** | 卡面 `## 写集` 改**机器表格**（9 行）＋ Q2「做什么」改**裸路径独立成行** |
+| G-2 | 组 6 声明闸② | `❌ brief 不可解析: … Done 标准无条目（至少 1 条）` | `parse_done` 只认 `^\s*- \[[ x]\]` 行；我的 Done 是**代码块 ＋ `D1…` 散文** ⇒ `done_count = 0` | 加 **6 条 `- [x] verify:`**（D1…D14 降为**语义索引**，保留不删） |
+| G-3 | plan-integrity | `❌ brief 模板残留: 发现 1 处未填注释 (<!--) [硬阻断]` | 本件第二行 `<!-- … -->` **不含** `#CRITERIA` ⇒ 被 `grep -vc '#CRITERIA'` 计入残留 | 该行改为 `<!-- #CRITERIA 归 B —— … -->`（保留信息、满足判据） |
+
+> 🔴 **口径声明（F2 同族诚实记录，复核员请看）**：
+> 本轮**我自己的判据**也错过 **1 次**：H2 夹具 v1 断言「56 件全通过 canon11」——
+> **真值是 53 件 canon11 ＋ 3 件 12 键变体** ⇒ **是判据期望错，不是数据错**（已改夹具，并保留此记录）。
+> 该例与另外两例（我的核对正则 `53` 命中字节数 `1653` 的子串 ⇒ 假阳；verifier 的 `MISS ⊂ TRANSMISSION`）**同族**＝
+> **判据侧缺陷**。**对策已固化进夹具**：**每次断言先打印 baseline 实数，再比 —— 不在代码里硬写期望值**。
+> 另：**给数必须标「抽样 or 全量」**（本件所有计数均已标"全量 58/58"）。
+
+### 三.9 自检 5 问（**B 段**）
+
+1. **接线检查**：B 段新增 **2 个常量**（`EdgeType.GOAL_DECOMPOSES_TO` / `EdgeType.PLAN_COMMITS_TO`）＋ **2 个 `ALL_EDGE_TYPES` 条目**。
+   **调用方 = 生产消费面已实测**：`ALL_EDGE_TYPES` 被 `src/l4/data-exporter.ts:183` / `src/l4/data-purger.ts:267` / `src/l4/entity-resolver.ts:215` 消费；
+   `EdgeType` 被 9 个 `src/` 文件 import。**非"写了没人读"**。
+2. **异常处理**：本卡**未新增任何 catch**（JSON 数据 ＋ 常量表 ＋ 测试件）⇒ 无静默降级面。
+   （桥的 `degraded` 语义由 #1031 既有实现负责，本卡只消费；新增 2 件的桥结果为 `degraded=true` ⇒ **不静默**，见 §三.2 A7。）
+3. **类型安全**：`as any` / `as never` / `as unknown as` = **0**
+   （夹具初稿曾有 2 处 `as unknown as` —— **自查发现并在提交前移除**，改为具名接口 + 类型断言）。
+4. **测试质量**：**真 `expect()`**，**20 例**，覆盖**正常（A 组 8）/ 判别性反例（B 组 6，含 B5「夹具会红」自足证明）/ 边界与失败面（C 组 3）/ 前置（0 组 3）**；
+   **非空壳**（每例均有具体断言值）。**判据各有反向造红**：H1 行尾、H2 同构、块级删字段、V3 删边 —— 四类各 1 次。
+5. **残留清理**：**无死代码**（未删任何既有文件）；**既有 56 件一字未改**（`git diff` 集合可判）；
+   🔴 **禁入 2 件零出现**：`git diff --name-only ba1b22a8b5..HEAD | grep -c -E "edge-lag-unknown-degraded-1134|ontology-loader-param-bridge-1031"` ⇒ **0**。
 
 ---
 
@@ -109,15 +289,23 @@ $ git diff --name-only ba1b22a8b5..HEAD
 ".claude/task-briefs/2026-10-11-1350-K4-05bis-\350\276\271\350\257\215\350\241\250-\347\233\256\346\240\207\345\261\202\347\272\247\350\276\271\344\270\216\350\256\241\345\210\222\350\276\271.md"
 docs/synova/product-lines/evidence/K4-b3-1350-edge-vocabulary.md
 docs/synova/product-lines/evidence/K4-b3-1412-status-recheck.md
+extensions/ontology/edge-types/goal_decomposes_to.json
+extensions/ontology/edge-types/plan_commits_to.json
+extensions/ontology/manifest.json
+packages/ontology/src/edge-types.ts
+tests/ontology/k4-05bis-edge-vocabulary-1350.test.ts
 ```
 
-**共 4 条**（`… | wc -l` ⇒ `4`）。
+**共 9 条**（`… | wc -l` ⇒ `9`）—— 🔴 **与锁定写集 9 条逐条相等**（同集合，顺序不同）：
+```
+$ git diff --name-only ba1b22a8b5..HEAD | wc -l
+9
+```
+**差异说明**：**零多出、零缺失**。与 `.claude/claims/1350.yaml` 的 `writeset:` 逐条相等（本笔已同步为 9 条）。
+🔴 **禁入核对**：`git diff --name-only ba1b22a8b5..HEAD | grep -c -E "edge-lag-unknown-degraded-1134|ontology-loader-param-bridge-1031"` ⇒ **0**（两件归 L2，本卡零写）。
 
-**订正记录（本件自查抓到，非 verifier 提出）**：本块前一版列 **3 条**并注「未含本件」——那是 **`afa582cd8` 时点**的读数；
-本件在 `fb79936d3` 落地后本就该是 **4 条** ⇒ 现按**当前时点重跑并全列**，时点钉死。
-**本笔只改内容、不新增/不删文件** ⇒ 本列之后仍为 `4` 条（集合不变）。
-
-> ⚠️ B 段落地后本节**再重跑一次**，给出**含 B 段全部产物**的最终全列（届时条数 > 4）；与 `.claude/claims/1350.yaml` 的 `writeset` 必须逐条相等。
+**订正留痕（不抹除）**：本块 A 段时点曾为 **3 条**（`afa582cd8`）→ 后订正 **4 条**（`fb79936d3`）→ B 段落地后 **9 条**（`5f4f8648a`）。
+每次均按**当时刻**重跑并钉 SHA；**不是同一数字被反复改**，而是**写作集随落盘推进**。
 
 ### 未提交项（**逐字登记，防被判"引用了不存在的件"**）
 
