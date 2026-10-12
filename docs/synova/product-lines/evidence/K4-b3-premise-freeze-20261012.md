@@ -72,8 +72,12 @@ $ git grep -h '"$id"' -- 'extensions/ontology/edge-types/*.json' | Measure-Objec
   "$id": "edge/augments",
   "$id": "edge/brand_building",
 ```
-⇒ E 号 = **0 命中**；`$id` 全为 `edge/<snake>`。**「不是对齐已有表、而是新建权威表」的结论成立。**
+⇒ E 号 = **0 命中**；`$id` 全为 `edge/` 前缀。**「不是对齐已有表、而是新建权威表」的结论成立。**
 （唯一订正：件数实测为 **56** 而非 55 —— 见下条。）
+（🔴 措辞订正，由 verifier 独立复现报 a-1 提出、队长复核确认：原文「56 个 `$id` 全是 `edge/<name>` 形式」**不精确**。
+实测**名字部分的分隔符不统一**：含下划线 **45** 件、含连字符 **5** 件
+（`edge/decision-concentrates` / `edge/external-assumption` / `edge/incentive-binds` / `edge/locks-in` / `edge/signal-transmits`）、单字 **6** 件。
+⇒ 凡按「下划线」假设做切分/正则的实现，会**漏掉这 5 件**。）
 
 ---
 
