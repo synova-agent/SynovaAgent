@@ -36,6 +36,21 @@ import express from 'express';
 import { createServer, type Server } from 'http';
 import { jwtAuthMiddleware, signJwtToken } from '../../src/middleware/auth';
 
+/**
+ * 本探针**被判据依赖的目标件**（K12-21 #205 补契约 —— 唯一消费者是聚合入口
+ * `probe-ladder.ts` 与契约自测 `probe-contract.test.sh` 的「报 `RESULT=PASS`
+ * ⇒ `TARGETS` 非空 ∧ 全部真存在」不变式）。
+ *
+ * 🔴 为什么**只**声明中间件、**不**声明 `src/server.ts`（补契约时实测的取舍，如实标注）:
+ *   本探针挂的是**自己的** express app（复现生产挂载顺序），**不读** `server.ts`
+ *   ⇒ 它的绿**不依赖**该文件内容 ⇒ 把 `server.ts` 列进来是**虚假依赖**
+ *   （会让不变式看上去更严，实则与被测对象无关 —— 判例 M-04：同一事实只许一处表达）。
+ *   另注（实测漂移，原样保留不改）: 本文件头部注释引的 `server.ts:396` 实际是
+ *   `app.get('/')`；真实挂载点是 `src/server.ts:415` 的 `app.use(jwtAuthMiddleware)`。
+ *   该注释属 K12-09 (#192) 交付物，本卡只补契约、**不改其语义**。
+ */
+export const TARGETS: readonly string[] = ['src/middleware/auth.ts'];
+
 // ════════════════════════════════════════════════════════════════
 // 用例模型
 // ════════════════════════════════════════════════════════════════
@@ -304,6 +319,11 @@ function parseArgs(argv: string[]): { names: string[]; json: boolean } {
       i += 1;
     } else if (arg === '--json') {
       json = true;
+    } else if (arg === '--all') {
+      // K12-21 (#205) 补契约: 聚合入口 `probe-ladder.ts` 对 13 个探针**一律以 `--all` 调用**
+      // （`spawnSync('npx', ['tsx', modulePath, '--all'])`）。本探针缺省（`names` 为空）本就
+      // 跑全部用例 ⇒ `--all` 与缺省**语义等价**，此处只做**识别**，不改变任何用例的选择结果。
+      // 旧行为: 抛「未识别参数: --all」⇒ 输出全进 stderr、无末行 ⇒ ladder 判 ERROR/malformed（假红）。
     } else if (arg === '--list') {
       for (const c of CASES) process.stdout.write(`${c.name}\t${c.intent}\n`);
       process.exit(0);
@@ -372,6 +392,18 @@ async function main(): Promise<number> {
     }
     process.stdout.write(`\n${String(outcomes.length - failed.length)}/${String(outcomes.length)} 用例符合预期\n`);
   }
+  // ── K12-21 (#205) 补契约: 末行 `RESULT=` ＋ 与退出码自洽的三态 ──────────────
+  //   判据源: `tests/control-tower/probe-contract.test.sh` §T2/§T3 与
+  //   `probe-ladder.ts` 的 `parseLastResult` / `EXIT_BY_VERDICT`（唯一映射，探针不得自定）:
+  //     RESULT=PASS ↔ exit 0 ｜ RESULT=FAIL ↔ exit 1 ｜ RESULT=NOT_IMPLEMENTED ↔ exit 2。
+  //   🔴 只认**末行** —— 故本行必须排在 `--json` 的 JSON 之后（两者共用本行签发）。
+  //   旧行为: 末行是 `N/M 用例符合预期` ⇒ ladder 判「末行无 `RESULT=`」⇒ ERROR/malformed（假红）。
+  //   本探针的目标件 `src/middleware/auth.ts` **已存在**（见 TARGETS）⇒ 不走 NOT_IMPLEMENTED 态；
+  //   本态只区分「8 用例全绿」（PASS/0）与「有断言不成立」（FAIL/1）。
+  //   探针**自身**异常（未捕获）走文件末尾 `.catch` ⇒ exit 2（无末行时 ladder 判 ERROR/malformed，
+  //   仍是 fail-loud，不假绿 —— 该边界如实标注于交付回执，未被契约自测覆盖）。
+  const verdict = failed.length === 0 ? 'PASS' : 'FAIL';
+  process.stdout.write(`RESULT=${verdict}\n`);
   return failed.length === 0 ? 0 : 1;
 }
 
