@@ -25,6 +25,8 @@
  * 同仓库既有手法参照 tests/l4/delivery-queue.test.ts:10-13。
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readdirSync } from 'node:fs';
+import { join } from 'node:path';
 
 const logCalls = vi.hoisted(() => [] as { level: string; meta?: unknown; msg?: unknown }[]);
 
@@ -85,21 +87,47 @@ function makeDef(over: Partial<EdgeTypeDef> = {}): EdgeTypeDef {
 
 const warnCount = () => logCalls.filter(c => c.level === 'warn').length;
 
-// ═══ 真仓棘轮（as_of `local-main = dc5ce093`，批 2 实测；漂移即红）═══════════════
-/** `edge-types/` 件数（批 1 = 55；第 56 件由 local-main `18ed356f` 引入）。 */
-const BASELINE_EDGE_TYPES = 56;
-/** 真仓逐件分类计数（用 loader 本体读 56 件实测；python/tsx 原始输出见证据件 §A.0-b）。 */
+// ═══ 真仓棘轮（件数由**单一真源清单**推导；分类计数由**入册增量**推导）═══════════════
+// 🔴 N2（CTO 2026-10-12）：「禁硬编码基数」。本文件的 `BASELINE_*` 已改为**推导式**：
+//   · 件数 = `SPEC_EDGE_TYPES`（探针内**逐件枚举**的唯一真源清单）∪ **在场**的 PENDING 预告件
+//     —— **不写字面 56/58**：`l3-65`（#65）新增 2 边合入后自动由 56 → 58，无需手改本文件；
+//   · 分类计数 = 各状态的**入册期望增量**从 0 起累加 —— `SPEC` 内件的**逐件真实分类**仍由
+//     下面 `tally` 的 `expect(tally).toEqual(BASELINE_TALLY)` 以外的方式守住（见 §N2 集合棘轮），
+//     本 `BASELINE_TALLY` 只声明"**新增件带来的 Δ**"，避免把"每类各有几件"再抄一遍（第二套真源）。
+//   ⚠️ **分辨力不降**：件数漂移由"集合棘轮"+ `DERIVED_EDGE_TYPES` 双向断言抓；新增件的分类
+//      由 `PENDING_REGISTERED_ADDITIONS[].expected` 逐条抓（落错分类即红）。
+import {
+  SPEC_EDGE_TYPES,
+  PENDING_REGISTERED_ADDITIONS,
+} from '../../scripts/control-tower/probe-ontology-values';
+
+/** 真仓**在场**的预告件（`SPEC` 之外、已登记却尚未提升为正式成员者）。
+ *  🔴 必须按**磁盘在场性**筛选，不能无条件计入 —— 否则本笔在"尚未合入 `l3-65`"的树上会**自红**
+ *  （推导出 58 而实际 56）。这样才能做到**合并顺序无关**：本笔绿 ∧ `l3-65` 合入后仍绿。 */
+const EDGE_TYPES_DIR_FOR_DERIVE = join(process.cwd(), 'extensions', 'ontology', 'edge-types');
+const ACTUAL_EDGE_FILES = readdirSync(EDGE_TYPES_DIR_FOR_DERIVE).filter(n => n.endsWith('.json')).sort();
+const PRESENT_PENDING_EDGES = PENDING_REGISTERED_ADDITIONS.filter(p => ACTUAL_EDGE_FILES.includes(p.file));
+/** `edge-types/` 件数 = **扫盘实测**（与 `SPEC ∪ 在场预告件` 恒等，由 §N2 集合棘轮双向断言）。
+ *  ⇒ **推导，无字面基数**：本笔 56 → `l3-65` 合入后 58 自动成立。 */
+const BASELINE_EDGE_TYPES = ACTUAL_EDGE_FILES.length;
+const DERIVED_EDGE_TYPES = SPEC_EDGE_TYPES.length + PRESENT_PENDING_EDGES.length;
+/** 逐类计数：`SPEC` 段（入册前的实测态）+ 预告件**入册期望**的 Δ。 */
 const BASELINE_TALLY: Record<string, number> = {
   tf_resolved: 0,
   tf_placeholder: 1,    // K4-02（#235）后仅剩 `goal_decomposition` 的「N/A — …」×1（原 53 = 52 条 TBD + 1）
-  tf_prose: 55,         // K4-02 后 = 39 条显式 `unknown` + 13 条权威01 第二章公式 + 原有 3 条真公式
+  tf_prose: 55 + PRESENT_PENDING_EDGES.filter(p => p.expected === 'non_causal_unknown').length,
+                        // K4-02 后 = 39 条显式 `unknown` + 13 条权威01 第二章公式 + 原有 3 条真公式 = 55
                         //   ⚠️ `unknown` 在 loader 分类里落 `prose_formula`（非 placeholder），
                         //   但该状态自带 `injectable:false` ⇒ **不会**被注入（登记见交付件 U10）
+                        //   ＋ 每件预告件（lag/tf = `unknown`）各 +1 ⇒ #65 合入后 55 → 57
   tf_other: 0,
-  cs_declaration: 55,   // optionalProps 内描述串 ×55（批 2 不变）
+  cs_declaration: 55,   // optionalProps 内描述串 ×55（批 2 不变；预告件**不含**该键 ⇒ 不增）
   cs_resolved: 0,       // 🔴 真仓**零数值**（未交③ 的机器可判证据）
-  cs_other: 1,          // `goal_decomposition` **缺该键** ⇒ absent
-  lag_resolved: 56,     // 非空字符串 ×56（unknown×50 + 4 种真值×5 + 第 56 件的散文值×1）
+  cs_other: 1 + PRESENT_PENDING_EDGES.length,
+                        // `goal_decomposition` **缺该键** ⇒ absent；预告件同样**缺该键** ⇒ each +1
+  lag_resolved: 56 + PRESENT_PENDING_EDGES.length,
+                        // 非空字符串 ×56（unknown×50 + 4 种真值×5 + 第 56 件的散文值×1）
+                        //   ＋ 预告件 `action_effect_lag = "unknown"`（非空）⇒ each +1
   lag_other: 0,
 };
 /** 第 56 件逐字段状态（点名，非"数字变了"）。 */
