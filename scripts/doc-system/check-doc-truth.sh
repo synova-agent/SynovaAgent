@@ -9,11 +9,11 @@
 #          ⚠️ 警告并跳过（禁止静默降级，铁律 24/31）
 #
 # v1.0 (2026-08-19, DSH 架构线) — 四项硬检查 + 一项警告:
-#   C1 专家数:    AGENTS.md / CLAUDE.md / knowledge/shared/README.md 的
+#   C1 专家数:    AGENTS.md / knowledge/shared/README.md 的
 #                "N 位专家"声明 vs expert/expert-registry.yaml 实际启用数
 #   C2 门禁组数:  文档 "pre-commit N 组" 声明 vs scripts/pre-commit-check.sh
 #                自声明组数（"全部 N 组通过"行）
-#   C3 版本一致:  AGENTS.md / CLAUDE.md / LOOP.md 头部版本号必须一致
+#   C3 版本一致:  AGENTS.md / LOOP.md 头部版本号必须一致
 #   C4 路径存在:  权威层文档必须存在（CHRONICLE/INDEX/START-HERE/docs/authority/*）
 #   W1 版本滞后:  文档版本 vs 最新 git tag（版本轴可能不同，仅警告不阻断）
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -39,7 +39,7 @@ echo "═══ check-doc-truth.sh v1.0 — 文档真相验证 (root: $ROOT) ═
 REGISTRY="$ROOT/expert/expert-registry.yaml"
 if [ -f "$REGISTRY" ]; then
   TRUTH_EXPERTS=$(grep -cE '^  [a-z0-9_-]+:$' "$REGISTRY")
-  for f in AGENTS.md CLAUDE.md knowledge/shared/README.md; do
+  for f in AGENTS.md knowledge/shared/README.md; do
     [ -f "$ROOT/$f" ] || continue
     CLAIM=$(grep -oE '[0-9]+位专家' "$ROOT/$f" | grep -oE '[0-9]+' | head -1)
     if [ -n "$CLAIM" ]; then
@@ -61,7 +61,7 @@ PCC="$ROOT/scripts/pre-commit-check.sh"
 if [ -f "$PCC" ]; then
   TRUTH_GROUPS=$(grep -oE '全部 [0-9]+ 组通过' "$PCC" | grep -oE '[0-9]+' | head -1)
   if [ -n "$TRUTH_GROUPS" ]; then
-    for f in AGENTS.md CLAUDE.md LOOP.md; do
+    for f in AGENTS.md LOOP.md; do
       [ -f "$ROOT/$f" ] || continue
       # 两段式提取：先剔除"第 N 组硬阻断"行（引用某组的行，非总数声明），再提取计数
       CLAIM=$(grep -vE '第.*组硬阻断' "$ROOT/$f" | grep -oE '[0-9]+ 组 pre-commit|pre-commit [0-9]+ 组|[0-9]+ 组硬阻断' | grep -oE '[0-9]+' | head -1)
@@ -84,16 +84,15 @@ fi
 
 # ---- C3 版本一致 ----
 VER_AGENTS=$(grep -oE 'V[0-9]+\.[0-9]+\.[0-9]+' "$ROOT/AGENTS.md" 2>/dev/null | head -1) # swallow-ok:
-VER_CLAUDE=$(grep -oE 'V[0-9]+\.[0-9]+\.[0-9]+' "$ROOT/CLAUDE.md" 2>/dev/null | head -1) # swallow-ok:
 VER_LOOP=$(grep -oE 'V[0-9]+\.[0-9]+\.[0-9]+' "$ROOT/LOOP.md" 2>/dev/null | head -1) # swallow-ok:
-if [ -n "$VER_AGENTS" ] && [ -n "$VER_CLAUDE" ] && [ -n "$VER_LOOP" ]; then
-  if [ "$VER_AGENTS" = "$VER_CLAUDE" ] && [ "$VER_CLAUDE" = "$VER_LOOP" ]; then
-    check "C3 版本一致" 0 "AGENTS/CLAUDE/LOOP 均为 $VER_AGENTS"
+if [ -n "$VER_AGENTS" ] && [ -n "$VER_LOOP" ]; then
+  if [ "$VER_AGENTS" = "$VER_LOOP" ]; then
+    check "C3 版本一致" 0 "AGENTS/LOOP 均为 $VER_AGENTS"
   else
-    check "C3 版本一致" 1 "AGENTS=$VER_AGENTS CLAUDE=$VER_CLAUDE LOOP=$VER_LOOP"
+    check "C3 版本一致" 1 "AGENTS=$VER_AGENTS LOOP=$VER_LOOP"
   fi
 else
-  warn "C3 版本一致" "degraded: 版本号缺失 (AGENTS=$VER_AGENTS CLAUDE=$VER_CLAUDE LOOP=$VER_LOOP)"
+  warn "C3 版本一致" "degraded: 版本号缺失 (AGENTS=$VER_AGENTS LOOP=$VER_LOOP)"
 fi
 
 # ---- C4 权威层路径存在 ----
