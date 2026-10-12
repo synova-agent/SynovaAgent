@@ -2119,52 +2119,52 @@ export const constructionItems: readonly ConstructionItem[] = [
   //   来源：《哨兵能力面情况说明》§⑤ 缺口矩阵 ｜ 研究院《补充研究-能力包与K块关系》题 4
   //   🔴 落点/写集/判据三条**待 CTO 裁** ⇒ 故 pathTBD: true 且 status=proposal（照 K13 先例）
   {
-    issue: 488, id: '3-13', worker: 'win', batch: '未排批', block: 'K3',
+    issue: 488, id: 'K3-13', worker: 'win', batch: '未排批', block: 'K3',
     title: '顶层索引登记缺口：3 个哨兵不可见（43/46 口径待重锚）',
     paths: [],
     pathTBD: true,
     dependsOn: [],
-    acceptance: [{ run: 'echo "3-13 判据待 CTO 裁（落点/写集/判据三条）—— 卡面：Gitea #488"', expectStdoutContains: '3-13' }],
+    acceptance: [{ run: 'echo "3-13 判据待 CTO 裁（落点/写集/判据三条）—— 卡面：Gitea #488"', expectStdoutContains: 'K3-13' }],
     status: 'proposal',
     source: '《哨兵能力面情况说明》§⑤ 问①（K3K5K6 线产出）＋ 研究院题 4（缺口全塞 K3）。🔴 落点/写集/判据待 CTO 裁。',
   },
   {
-    issue: 489, id: '3-14', worker: 'win', batch: '未排批', block: 'K3',
+    issue: 489, id: 'K3-14', worker: 'win', batch: '未排批', block: 'K3',
     title: 'computes 一致性：manifest 声明 vs 磁盘不一致 12/46（空挂 6 ＋ 孤儿 5）',
     paths: [],
     pathTBD: true,
     dependsOn: [],
-    acceptance: [{ run: 'echo "3-14 判据待 CTO 裁（落点/写集/判据三条）—— 卡面：Gitea #489"', expectStdoutContains: '3-14' }],
+    acceptance: [{ run: 'echo "3-14 判据待 CTO 裁（落点/写集/判据三条）—— 卡面：Gitea #489"', expectStdoutContains: 'K3-14' }],
     status: 'proposal',
     source: '《哨兵能力面情况说明》§⑤ 问②（判据脚本现成＋改坏必红夹具规程）＋ 研究院题 4。🔴 待 CTO 裁。',
   },
   {
-    issue: 490, id: '3-15', worker: 'win', batch: '未排批', block: 'K3',
+    issue: 490, id: 'K3-15', worker: 'win', batch: '未排批', block: 'K3',
     title: '全量生效探针：每支 compute 真被调用（3-8 probe 只覆盖新哨兵）',
     paths: [],
     pathTBD: true,
     dependsOn: [],
-    acceptance: [{ run: 'echo "3-15 判据待 CTO 裁（落点/写集/判据三条）—— 卡面：Gitea #490"', expectStdoutContains: '3-15' }],
+    acceptance: [{ run: 'echo "3-15 判据待 CTO 裁（落点/写集/判据三条）—— 卡面：Gitea #490"', expectStdoutContains: 'K3-15' }],
     status: 'proposal',
     source: '《哨兵能力面情况说明》§⑤ 问③（#306 只补 0-3 判据件）＋ 研究院题 4。🔴 待 CTO 裁。',
   },
   {
-    issue: 491, id: '3-16', worker: 'win', batch: '未排批', block: 'K3',
+    issue: 491, id: 'K3-16', worker: 'win', batch: '未排批', block: 'K3',
     title: '退役规约：_extinct 12 个无回归判据（插件契约⑥「删干净」）',
     paths: [],
     pathTBD: true,
     dependsOn: [],
-    acceptance: [{ run: 'echo "3-16 判据待 CTO 裁（落点/写集/判据三条）—— 卡面：Gitea #491"', expectStdoutContains: '3-16' }],
+    acceptance: [{ run: 'echo "3-16 判据待 CTO 裁（落点/写集/判据三条）—— 卡面：Gitea #491"', expectStdoutContains: 'K3-16' }],
     status: 'proposal',
     source: '《哨兵能力面情况说明》§⑤ 问④（_extinct 五条）＋ 研究院题 4（退役规约两可 ⇒ 已裁并入）。🔴 待 CTO 裁。',
   },
   {
-    issue: 492, id: '3-17', worker: 'win', batch: '未排批', block: 'K3',
+    issue: 492, id: 'K3-17', worker: 'win', batch: '未排批', block: 'K3',
     title: '全员时序写点：仅 1/46 哨兵有指标级写点（大件，受 G5 前置）',
     paths: [],
     pathTBD: true,
     dependsOn: [],
-    acceptance: [{ run: 'echo "3-17 判据待 CTO 裁（落点/写集/判据三条）—— 卡面：Gitea #492"', expectStdoutContains: '3-17' }],
+    acceptance: [{ run: 'echo "3-17 判据待 CTO 裁（落点/写集/判据三条）—— 卡面：Gitea #492"', expectStdoutContains: 'K3-17' }],
     status: 'proposal',
     source: '《哨兵能力面情况说明》§⑤ 四职责·存取值留时序（2-1a/2-1b 交付的是机制非铺量）＋ 研究院题 4（大件，与第 8 批"生产断面采集"串行）。🔴 待 CTO 裁。',
   },
@@ -2224,7 +2224,7 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
     // 🔴 CTO 裁定 062（2026-10-12）：**5 缺口全塞 K3**（不新增块）⇒ items 追加 3-13…3-17。
     //   依据：研究院《补充研究-能力包与K块关系》题 4；块名待改（候选「哨兵能力面（装载·时序·覆盖）」）
     //   ⚠️ 块名未改前，name 与 items 存在**名实不符**（已知，单列一步处理）。
-    id: 'K3', name: '哨兵装载与时序落盘（a 类/W1）', items: ['0-3', '2-1a', '2-1b', '3-8', '3-13', '3-14', '3-15', '3-16', '3-17'],
+    id: 'K3', name: '哨兵装载与时序落盘（a 类/W1）', items: ['0-3', '2-1a', '2-1b', '3-8', 'K3-13', 'K3-14', 'K3-15', 'K3-16', 'K3-17'],
     blockAcceptance: [
       {
         run: 'sqlite3 data/synova.db "SELECT COUNT(*) FROM metric_readings WHERE observed_at > datetime(\'now\', \'-1 hour\')"',
