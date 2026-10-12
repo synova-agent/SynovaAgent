@@ -1,5 +1,5 @@
-/** 飞书审批通知适配器 */
-import type { NotificationAdapter, Notification, NotificationResult } from '../../../src/notifications/types';
+/** 飞书审批通知适配器 — K12-17（#200）由 extensions/notifications/feishu-approval/adapter.ts 搬入（约束 4） */
+import type { NotificationAdapter, Notification, NotificationResult } from './types';
 export const feishuApprovalAdapter: NotificationAdapter = {
   channel: 'feishu-approval',
   shouldHandle(n: Notification) { return n.targetSystem === 'feishu-approval'; },

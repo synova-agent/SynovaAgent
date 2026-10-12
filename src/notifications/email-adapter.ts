@@ -1,5 +1,5 @@
-/** Email 通知适配器 */
-import type { NotificationAdapter, Notification, NotificationResult } from '../../../src/notifications/types';
+/** Email 通知适配器 — K12-17（#200）由 extensions/notifications/email/adapter.ts 搬入（约束 4） */
+import type { NotificationAdapter, Notification, NotificationResult } from './types';
 export const emailNotificationAdapter: NotificationAdapter = {
   channel: 'email',
   shouldHandle(n: Notification) { return n.targetSystem === 'email' || !n.targetSystem; },
