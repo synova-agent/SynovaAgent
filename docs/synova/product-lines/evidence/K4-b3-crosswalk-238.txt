@@ -1,0 +1,90 @@
+# K4 批 3 · #238 编号权威表 可映射性底稿（实测记录）
+
+- 日期：2026-10-12｜base：`ba1b22a8b5`
+- 生成方式（可复算）：`node docs/synova/product-lines/evidence/K4-b3-crosswalk-238.mjs`
+- 记录生成方式：`node docs/synova/product-lines/evidence/K4-b3-crosswalk-238.record.mjs`
+- 口径：见脚本头「口径声明」；归一化 = 小写 + 只留 [a-z0-9]
+- 编码：UTF-8 **无 BOM**（用 fs.writeFileSync 直写，不经 Out-File/Set-Content —— 见 A1：Windows 自造 BOM 属测量污染）
+
+```text
+═══ 四套编号的可映射性事实 ═══
+词表 edge-types                       = 56 件 / $id distinct 56 / label distinct 56
+权威文档01 第二章 E-nn 定义            = 42 条
+golden edges 键                        = 36 条
+_patch_d66.cjs 解析出的 (E-x.y, label) = 0 条  ← 解析降级，未取得
+
+─── A. 权威文档01 两位式 E-nn → 词表（按 NAME 归一匹配）───
+  E-05 CAPITAL_ACQUISITION → edge/capital_acquisition  [CAPITAL_ACQUISITION]
+  E-07 TALENT_ACQUISITION → edge/talent_acquisition  [TALENT_ACQUISITION]
+  E-13 CAPITAL_ALLOCATION → edge/capital_allocation  [CAPITAL_ALLOCATION]
+  E-17 INCENTIVE_ALIGNMENT → edge/incentive_alignment  [INCENTIVE_ALIGNMENT]
+  E-18 RULE_CONSTRAINT → edge/rule_constraint  [RULE_CONSTRAINT]
+  E-20 KNOWLEDGE_SHARING → edge/knowledge_sharing  [KNOWLEDGE_SHARING]
+  E-22 ROUTINE_RIGIDITY → edge/routine_rigidity  [ROUTINE_RIGIDITY]
+  E-23 OPERATIONAL_EXECUTION → edge/operational_execution  [OPERATIONAL_EXECUTION]
+  E-28 CROSS_FUNCTIONAL_SYNERGY → edge/cross_functional_synergy  [CROSS_FUNCTIONAL_SYNERGY]
+  E-29 TECH_INFRASTRUCTURE → edge/tech_infrastructure  [TECH_INFRASTRUCTURE]
+  E-38 TALENT_RETENTION → edge/talent_retention  [TALENT_RETENTION]
+  E-39 KNOWLEDGE_REUSE → edge/knowledge_reuse  [KNOWLEDGE_REUSE]
+  E-40 REPUTATION_FLYWHEEL → edge/reputation_flywheel  [REPUTATION_FLYWHEEL]
+  命中 13/42；未命中 29
+  MISS E-01 ACTIVE_SCANNING  ⇒ 词表无同名项
+  MISS E-02 PASSIVE_SIGNAL  ⇒ 词表无同名项
+  MISS E-03 EXTERNAL_ECHO  ⇒ 词表无同名项
+  MISS E-04 PERCEPTION_LEARNING  ⇒ 词表无同名项
+  MISS E-06 FINANCING_MIX  ⇒ 词表无同名项
+  MISS E-08 RESOURCE_ACQUISITION  ⇒ 词表无同名项
+  MISS E-09 DATA_ACQUISITION  ⇒ 词表无同名项
+  MISS E-10 DECISION_ALLOCATION  ⇒ 词表无同名项
+  MISS E-11 TRUST_CONSTRUCTION  ⇒ 词表无同名项
+  MISS E-12 POWER_DISTRIBUTION  ⇒ 词表无同名项
+  MISS E-14 DECISION_POWER  ⇒ 词表无同名项
+  MISS E-15 HUMAN_DEPLOYMENT  ⇒ 词表无同名项
+  MISS E-16 INFO_TRANSMISSION  ⇒ 词表无同名项
+  MISS E-19 ORG_LEARNING  ⇒ 词表无同名项
+  MISS E-21 ORG_TRUST  ⇒ 词表无同名项
+  MISS E-24 INNOVATION  ⇒ 词表无同名项
+  MISS E-25 BRAND_CONSTRUCTION  ⇒ 词表无同名项
+  MISS E-26 PRODUCT_DEFINITION  ⇒ 词表无同名项
+  MISS E-27 SERVICE_DELIVERY  ⇒ 词表无同名项
+  MISS E-30 PRICING  ⇒ 词表无同名项
+  MISS E-31 CLIENT_RETENTION  ⇒ 词表无同名项
+  MISS E-32 CHANNEL_EFFICIENCY  ⇒ 词表无同名项
+  MISS E-33 MARKET_COMPETITION  ⇒ 词表无同名项
+  MISS E-34 PROCUREMENT_POWER  ⇒ 词表无同名项
+  MISS E-35 CUSTOMER_DATA_FEEDBACK  ⇒ 词表无同名项
+  MISS E-36 COMPETITIVE_POSITION  ⇒ 词表无同名项
+  MISS E-37 PROFIT_REINVEST  ⇒ 词表无同名项
+  MISS E-41 TALENT_PROTECTION  ⇒ 词表无同名项
+  MISS E-42 ASSUMPTION_LINKAGE  ⇒ 词表无同名项
+
+─── B. golden 私有式 E-x.y → 词表（经 label 中介）───
+  命中 34/36；未命中 2
+  MISS E-0.4 label=ASSUMPTION_LINKAGE  ⇒ 词表无该 label
+  MISS E-X.1 label=EXTERNAL_ASSUMPTION  ⇒ 词表无该 label
+
+─── C. 覆盖缺口统计（双向）───
+  词表 56 件中，能被权威两位式 E-nn 命中的 = 13；无法命中 = 43
+
+─── D. golden 私有式 E-x.y 与 权威两位式 E-nn 是否同名不同物 ──
+  golden 形态 36 条；权威形态 42 条；**形态交集 = 24**
+  ⇒ 存在同形项：["e11","e12","e15","e16","e18","e21","e22","e23","e24","e25","e26","e27","e28","e29","e31","e35","e36","e37","e41","e42","e01","e02","e03","e04"]
+
+─── E. 判据① 相关：cycles 引用的 distinct 是否全部可经词表命中 ──
+  cycles 引用 distinct = 15；命中 $id∪label = 15；未命中 = 0 []
+
+─── F. 本件测不出什么（B2 强制声明）───
+  ① 只测「编号/命名可否按名字对应」，**测不出**语义等价是否成立（需裁定，非计算）。
+  ② **测不出**该边在图上是否真被使用（那是消费面，属 #239 接线门禁）。
+  ③ **测不出** packages/ontology/** 第二套词表的对齐情况（本件只看 extensions/ontology/）。
+  ④ `_patch_d66.cjs` 的解析依赖源码书写形态；形态一变即降级，降级时**不静默**。
+```
+
+## 本件测不出什么（B2 强制声明）
+
+1. 只测「编号/命名可否按名字对应」，**测不出**语义等价是否成立（需裁定，非计算）。
+2. **测不出**该边在图上是否真被使用（消费面属 #239 接线门禁）。
+3. **测不出** `packages/ontology/**` 第二套词表的对齐情况（本件只看 `extensions/ontology/`）。
+4. `_patch_d66.cjs` 的解析依赖源码书写形态；形态一变即降级，降级时**不静默**。
+
+*本件为事实底稿，不是权威表。*
