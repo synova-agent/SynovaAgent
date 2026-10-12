@@ -473,3 +473,24 @@ documents:
     status: active
     owner: synova-governance-converge
     note: "extensions 内容面规范 v0.1 镜像（源=院方规范；#253 `0bdaec491` 合入但未登记台账 ⇒ D782 D2 登记门禁在后续分支上恒红，K12-01 段二合并时按门禁要求补登）。产品宪章 §5.6/§5.7 与 K12/K4 多张卡面引用此规范。"
+
+  - id: DOC-0199
+    type: governance
+    path: scripts/control-tower/AGENTS.md
+    status: active
+    owner: synova-governance-converge（治理线）
+    note: "12 份域级守则件落库 PR2（CTO 派单件 2026-10-13，裁定 079/081/085/089）。门禁/控制塔脚本域：承载包 K2/K3/K4/K5/K8/K9/K10/K12。"
+
+  - id: DOC-0200
+    type: governance
+    path: tests/control-tower/AGENTS.md
+    status: active
+    owner: synova-governance-converge（治理线）
+    note: "12 份域级守则件落库 PR2。控制塔测试域（含 golden-scenarios）：承载包 K12。"
+
+  - id: DOC-0201
+    type: governance
+    path: docs/AGENTS.md
+    status: active
+    owner: synova-governance-converge（治理线）
+    note: "12 份域级守则件落库 PR2。文档体系：承载包 K1/K3/K5/K10/K12。"
