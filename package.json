@@ -62,7 +62,7 @@
     "express": "^4.22.2",
     "express-fileupload": "^1.5.2",
     "grapheme-splitter": "^1.0.4",
-    "ink": "^5.1.0",
+    "ink": "^8.0.0",
     "ink-text-input": "^6.0.0",
     "neo-blessed": "0.2.0",
     "nodemailer": "^10.0.11",
