@@ -34,13 +34,14 @@
  *   此时**第二档的一切输出作废**，不许拿它下任何结论。
  */
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { EXIT_MISMATCH, EXIT_OK, EXIT_UNJUDGEABLE } from './block-paths-core.ts';
-import { hasEntanglement, pathMatcher } from './probe-exile-compile.ts';
+import { blockPathsOf, hasEntanglement, pathMatcher } from './probe-exile-compile.ts';
 import { loadRegistryView, resolveSourceArg } from './gen-block-paths.ts';
-import { applyExile, expandAll, restoreTree } from './exile-tree-core.ts';
+import { QUARANTINE, applyExile, expandAll, restoreTree } from './exile-tree-core.ts';
 
 /** 判定字面量（🔴 具名常量） */
 export const V_RED = '红·依赖成立';
@@ -74,6 +75,8 @@ export interface ItemLike {
   paths?: readonly string[];
   dependsOn?: readonly string[];
   acceptance?: readonly AcceptanceStepLike[];
+  /** 真源：本项若建表，列出表名（步 4「表」残留类用） */
+  createsTable?: { name?: string };
 }
 
 /** 真源 block 的扩展视图 */
@@ -132,6 +135,8 @@ export interface DrillReport {
   /** 摘除灵敏度筛选（设计件 §3.2）：逐包"自摘 Y 的项级写集 ⇒ 判据必红" */
   sensitivity: RunRow[];
   runs: RunRow[];
+  /** 🔴 步 4 · 可卸载性（--phase uninstall）：逐包 × 七类残留 */
+  uninstall: UninstallPkgResult[];
   notes: string[];
 }
 
@@ -414,6 +419,409 @@ export function runDeclaration(
   return rows;
 }
 
+/* ══════════════════════════════════════════════════════════════════════════════
+ * 🔴 **步 4 · 可卸载性真值实测**（CTO 裁定 074 步 4）—— **--phase uninstall**
+ *
+ * 与步 2/3 的分别（**两件事，别混**）：
+ *   · 步 2/3 判「**缺了 X，Y 还能不能跑**」= **功能**（依赖判定）
+ *   · 步 4 判「**把 X 拿掉之后，"残留"是什么**」= **痕迹**（清理彻底性）
+ *
+ * 🔴 **复用而非重建**（派单件 §二）：隔离树走 `exile-tree-core.ts`（applyExile / restoreTree / expandAll），
+ *    卸除面走 `blockPathsOf()`（块级 paths = 该块 items 的 paths 并集，**已被对账门禁验过**）。
+ *    本段**不新造第二套摘除/隔离逻辑**。
+ *
+ * 七类残留（派单件 §三 原表）与各自的**可跑判据**：
+ *   ① 目录  卸完再展开一次 ⇒ 零命中 ＋ 无空目录残留
+ *   ② 配置  剩余 extensions/ 下各级 manifest.json 里还有没有 X 的落点 ⇒ 零命中
+ *           （🔴 铁律 45：本行**不写字面量** —— `*` 与 `/` 相邻会把块注释提前终结；
+ *             实测 esbuild 报 `Expected ";" but found "里还有没有"`，报错点在此行）
+ *   ③ 表    真源 createsTable 的表在库里还在不在 ⇒ 已删（**或已声明"数据保留"**）
+ *   ④ 索引  content-registry.ts ＋ extensions/** 里指向"已移除落点"的悬空条目 ⇒ 零命中
+ *   ⑤ 引用  grep -rnw "X 的 id" src/ extensions/ scripts/ ⇒ 零命中（**除历史留痕**）
+ *   ⑥ 缓存  X 相关的构建/派生缓存 ⇒ 全不存在
+ *   ⑦ 登记  施工项账仍列 X 的 items / _extinct/ 归档 ⇒ 状态与声明一致
+ *
+ * 🔴 三态（沿用）：干净 ／ 不干净（逐条列）／ 判不了（说明为什么）。
+ *    **"判不了"不许并进"干净"**；**声明保留**必须点名**哪条 ＋ 依据哪份文件**。
+ * ══════════════════════════════════════════════════════════════════════════════ */
+
+/** 残留类（七类，派单件 §三 原表；禁改名 —— 回执矩阵按它对齐） */
+export const RESIDUAL_CLASSES = ['目录', '配置', '表', '索引', '引用', '缓存', '登记'] as const;
+export type ResidualClass = (typeof RESIDUAL_CLASSES)[number];
+
+/** 判定（三态 ＋ 两个非"-"态） */
+export const U_CLEAN = '干净';
+export const U_DIRTY = '不干净';
+export const U_UNK = '判不了';
+export const U_DECLARED = '声明保留';
+export const U_NA = '不适用';
+
+/**
+ * 一条"声明保留"的**依据**（🔴 必须点名到文件:行 —— 派单件 §四）。
+ * 没有依据的保留**不算保留**，一律判"不干净"。
+ */
+export interface RetentionBasis {
+  what: string;
+  basis: string;
+}
+
+/** 🔴 已知的"声明保留"依据（逐条点名文件:行；新增必须同时给出处） */
+export const RETENTION_BASES: readonly RetentionBasis[] = [
+  {
+    what: '登记面（施工项账在卸载后仍在册）',
+    basis: 'docs/synova/coordination/施工项登记.ts:41 「本件是**施工项账**，不是卡账」',
+  },
+  {
+    what: '_extinct/ 归档件（卸载 = 移入归档，不是删）',
+    basis: 'AGENTS.md §5.1 「内容包……卸 = 移 _extinct/ ＋ 重扫」',
+  },
+];
+
+/** 一步外部命令的结果（本段只用它拼"可跑判据"与证据） */
+export interface CmdEvidence {
+  command: string;
+  rc: number | null;
+  /** 命中行（最多留 cap 条，够回执用） */
+  hits: string[];
+  count: number;
+}
+
+/**
+ * 跑一条 grep（**判据就是这条命令**；回执要贴它）。
+ *
+ * @contract
+ *   @input  tree｜args（grep 参数数组，**不含** grep 本身）｜cap（最多留多少行）
+ *   @output `{command, rc, hits, count}`；`count` = 命中行数
+ *   @degraded grep 无命中 ⇒ rc=1、count=0（**正常默认**，不是异常）；
+ *             rc>=2 ⇒ 环境/用法错误 ⇒ 由调用方按"判不了"处理（签名里保留 rc 供调用方判）
+ */
+export function runGrep(tree: string, args: readonly string[], cap = 40): CmdEvidence {
+  const r = spawnSync('grep', [...args], { cwd: tree, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 });
+  const out = (r.stdout ?? '').split('\n').filter((l) => l.trim() !== '');
+  return {
+    command: 'grep ' + args.map((a) => (a.includes(' ') || a === '' ? "'" + a + "'" : a)).join(' '),
+    rc: r.status,
+    hits: out.slice(0, cap),
+    count: out.length,
+  };
+}
+
+/** 某一类的一行结果 */
+export interface UninstallRow {
+  pkg: string;
+  cls: ResidualClass;
+  verdict: string;
+  /** 残留条数（0 = 干净；判不了/不适用 时为 -1） */
+  residual: number;
+  /** 可跑判据（回执直接贴这行） */
+  command: string;
+  /** 逐条证据（原始输出片段） */
+  evidence: string[];
+  /** 声明保留时的依据（文件:行）；其余为空串 */
+  declaredBy: string;
+}
+
+/** 某包卸除的整段结果 */
+export interface UninstallPkgResult {
+  pkg: string;
+  /** 卸除面展开后的顶层条目数 */
+  removedCount: number;
+  /** 🔴 与他包共用的条目数（写集重叠 ⇒ "卸 X 会误伤他包"的第一类证据） */
+  sharedWithOthers: number;
+  rows: UninstallRow[];
+}
+
+/** 把一组顶层条目里"别的块也声明了"的挑出来（写集重叠） */
+export function sharedTopEntries(byBlock: Record<string, string[]>, pkg: string): string[] {
+  const mine = byBlock[pkg] ?? [];
+  const others = new Set<string>();
+  for (const [k, v] of Object.entries(byBlock)) {
+    if (k === pkg) continue;
+    for (const p of v) others.add(p);
+  }
+  return mine.filter((p) => others.has(p)).sort();
+}
+
+/** X 的 id 标记（块 id ＋ 该项 id；供"引用"类 grep） */
+export function markersOf(pkg: string, items: readonly ItemLike[]): string[] {
+  const ids = items.filter((i) => i.block === pkg).map((i) => i.id);
+  return [pkg, ...ids];
+}
+
+/**
+ * 把 id 分成**强标记**与**弱标记**（🔴 防"数字 id 命中正文"的假阳性）。
+ *
+ * @why 实测（2026-10-13）：弱标记 `2-4` 会在**正文**里命中 ——
+ *      `src/l3/pkb-seed.ts:169` 的 `每季度 3-5 个 O,每个 O 配 2-4 个 KR` 被算成"K2 的引用残留"。
+ *      那是**假阳性**：它会把一个干净的包判成"不干净"。⇒ 必须分强弱：
+ *        · **强标记** = 含字母（如 `K12-01` / `RB-01` / `B2-GRAPH` / `D48`）⇒ 词边界即可（`grep -w`）；
+ *        · **弱标记** = 纯数字短 id（如 `2-4` / `3-8`）⇒ **只认被引号/反引号包住的形态**
+ *          （`'3-8'` / `"3-5"` / \`3-6\` —— 代码里引用 id 的常态），不认裸出现。
+ * @contract
+ *   @input  markers（`markersOf` 的产物）
+ *   @output `{strong, weak}`
+ *   @degraded 不适用（纯分类）
+ */
+export function splitMarkers(pkg: string, markers: readonly string[]): { strong: string[]; weak: string[] } {
+  const strong: string[] = [];
+  const weak: string[] = [];
+  for (const m of markers) {
+    // 🔴 **块 id 一律算弱标记**（实测 2026-10-13）：本仓里 `K3` **同时是审计角色名**
+    //    （"K3 独立审计" / "K3 P0 事故"），裸 `grep -w K3` 在 K3 包上命中 **269 行**，
+    //    绝大多数是**审计角色**不是**包引用** ⇒ 不弱化就会把一个包判成"重度不干净"（假红）。
+    //    ⇒ 块 id 只认**被引号/反引号包住**的形态（代码里引用包 id 的常态）。
+    if (m === pkg || !/[A-Za-z]/.test(m)) weak.push(m);
+    else strong.push(m);
+  }
+  return { strong, weak };
+}
+
+/** X 建的表（真源 createsTable.name） */
+export function tablesOf(pkg: string, items: readonly ItemLike[]): string[] {
+  const out = new Set<string>();
+  for (const it of items) {
+    if (it.block !== pkg) continue;
+    const t = it.createsTable;
+    if (t !== undefined && typeof t.name === 'string' && t.name !== '') out.add(t.name);
+  }
+  return [...out].sort();
+}
+
+/** 把 grep 命中行按文件聚合，取前 3 个（`path:count`）—— 供回执判"是新残留还是历史冻结名单" */
+export function topPathsLabel(hits: readonly string[], top = 3): string {
+  const m = new Map<string, number>();
+  for (const h of hits) {
+    const f = h.split(':')[0] ?? h;
+    m.set(f, (m.get(f) ?? 0) + 1);
+  }
+  const sorted = [...m.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
+  return sorted.slice(0, top).map(([f, n]) => f + '×' + n).join(' , ') + (sorted.length > top ? ' …（共 ' + sorted.length + ' 个文件）' : '');
+}
+
+/** 隔离树里 _extinct/ 的条目 */
+export function extinctEntries(tree: string): string[] {
+  const base = join(tree, 'extensions', 'sentinels', '_extinct');
+  if (!existsSync(base)) return [];
+  try {
+    return readdirSync(base).sort();
+  } catch (err) {
+    // ENOENT/权限：不抛（该目录不存在 = 无归档，是正常默认）；真异常由回执的"登记"行点名条目数暴露
+    void (err instanceof Error ? err.code : undefined);
+    return [];
+  }
+}
+
+/**
+ * **卸一个包**（只在隔离树里）—— 步 4 的主算法。
+ *
+ * @contract
+ *   @input  tree｜items｜byBlock（块级 paths 视图）｜pkg｜dbPath（树内 sqlite 路径）
+ *   @output `UninstallPkgResult`（七类各一行）
+ *   @degraded 不适用（"判不了"/"不干净"是**结果**，不是异常）
+ *
+ * 🔴 进出都 `restoreTree`：**卸完必须还原**（派单件 §六"不真删"）。
+ */
+export function runUninstall(
+  tree: string,
+  items: readonly ItemLike[],
+  byBlock: Record<string, string[]>,
+  pkg: string,
+  dbPath: string,
+): UninstallPkgResult {
+  const rows: UninstallRow[] = [];
+  restoreTree(tree);
+
+  const pathsX = byBlock[pkg] ?? [];
+  const expanded = expandAll(tree, pathsX);
+  const removed = expanded.rels;
+  const shared = sharedTopEntries(byBlock, pkg);
+  const moved = applyExile(tree, removed);
+
+  // ① 目录：卸完再展开一次（必须零命中）＋ 扫"移除后留下的空目录"
+  const after = expandAll(tree, pathsX);
+  const emptyDirs: string[] = [];
+  const parents = new Set(removed.map((r) => (r.includes('/') ? r.slice(0, r.lastIndexOf('/')) : '.')));
+  for (const p of parents) {
+    const abs = p === '.' ? tree : join(tree, p);
+    if (!existsSync(abs)) continue;
+    try {
+      if (readdirSync(abs).length === 0) emptyDirs.push(p);
+    } catch (err) {
+      // ENOENT/权限：不抛。空目录扫描是**加分项**，缺它不影响本行判定（判定只看 after 命中数）
+      void (err instanceof Error ? err.code : undefined);
+    }
+  }
+  rows.push({
+    pkg,
+    cls: '目录',
+    verdict: after.rels.length === 0 && emptyDirs.length === 0 ? U_CLEAN : U_DIRTY,
+    residual: after.rels.length + emptyDirs.length,
+    command: 'ls -d ' + pathsX.slice(0, 3).join(' ') + (pathsX.length > 3 ? ' …' : '') + '   # 卸后应全不存在',
+    evidence: [
+      '卸除面展开 ' + removed.length + ' 条（applyExile moved=' + moved + '）',
+      '卸后仍能匹配：' + after.rels.length + ' 条' + (after.rels.length > 0 ? ' ⇒ ' + after.rels.slice(0, 5).join(', ') : ''),
+      '空目录残留：' + emptyDirs.length + ' 个' + (emptyDirs.length > 0 ? ' ⇒ ' + emptyDirs.slice(0, 5).join(', ') : ''),
+      '🔴 与他包共用条目：' + shared.length + ' 条' + (shared.length > 0 ? ' ⇒ ' + shared.slice(0, 6).join(' , ') : '') + '（卸 X 会连带移除他包的东西）',
+    ],
+    declaredBy: '',
+  });
+
+  // ② 配置：剩余 extensions/ 下各级 manifest.json 里还有没有 X 的落点（铁律 45：注释内不写 `*` 紧邻 `/`）
+  const cfgPatterns = removed.filter((r) => r.startsWith('extensions/'));
+  const cfg = cfgPatterns.length === 0
+    ? { command: '(无 extensions/ 落点 ⇒ 不适用)', rc: 0, hits: [], count: 0 }
+    : runGrep(tree, ['-rnF', '-f', writePatterns(pkg, 'cfg', cfgPatterns), '--include=manifest.json', 'extensions/']);
+  rows.push({
+    pkg,
+    cls: '配置',
+    verdict: cfgPatterns.length === 0 ? U_NA : cfg.count === 0 ? U_CLEAN : U_DIRTY,
+    residual: cfgPatterns.length === 0 ? -1 : cfg.count,
+    command: cfg.command,
+    evidence: cfgPatterns.length === 0
+      ? ['X 在 extensions/ 下无落点 ⇒ 不涉内容面配置（**不适用**，不是干净）']
+      : ['X 在 extensions/ 下落点 ' + cfgPatterns.length + ' 条', 'manifest.json 命中 ' + cfg.count + ' 行', ...cfg.hits.slice(0, 6)],
+    declaredBy: '',
+  });
+
+  // ③ 表：真源 createsTable 的表在库里还在不在
+  const tables = tablesOf(pkg, items);
+  let tableHits: string[] = [];
+  let tableCmd = 'sqlite3 <db> "SELECT name FROM sqlite_master WHERE type=\'table\' AND name IN (…)"';
+  if (tables.length > 0 && existsSync(dbPath)) {
+    const inList = tables.map((t) => "'" + t + "'").join(',');
+    const sql = "SELECT name FROM sqlite_master WHERE type='table' AND name IN (" + inList + ")";
+    tableCmd = 'sqlite3 <树内 db> "' + sql + '"';
+    const r = spawnSync('sqlite3', [dbPath, sql], { encoding: 'utf8' });
+    tableHits = (r.stdout ?? '').split('\n').filter((l) => l.trim() !== '');
+  }
+  rows.push({
+    pkg,
+    cls: '表',
+    verdict: tables.length === 0 ? U_NA : !existsSync(dbPath) ? U_UNK : tableHits.length === 0 ? U_CLEAN : U_DIRTY,
+    residual: tables.length === 0 || !existsSync(dbPath) ? -1 : tableHits.length,
+    command: tableCmd,
+    evidence: tables.length === 0
+      ? ['真源里该块无 createsTable ⇒ 不涉数据面（不适用）']
+      : !existsSync(dbPath)
+        ? ['隔离树内无 sqlite 库 ⇒ **判不了**（与"干净"不同）']
+        : ['真源声明该块建表 ' + tables.length + ' 张：' + tables.join(', '), '卸后库里仍在：' + tableHits.length + ' 张' + (tableHits.length > 0 ? ' ⇒ ' + tableHits.join(', ') : '')],
+    declaredBy: '',
+  });
+
+  // ④ 索引：剩余注册表里指向"已移除落点"的悬空条目
+  const idxPatterns = removed.filter((r) => r.startsWith('extensions/') || r.startsWith('src/'));
+  const idxTargets = ['src/deploy/content-registry.ts'];
+  if (existsSync(join(tree, 'extensions'))) idxTargets.push('extensions/');
+  const idx = idxPatterns.length === 0
+    ? { command: '(无 src/ 或 extensions/ 落点 ⇒ 不适用)', rc: 0, hits: [], count: 0 }
+    : runGrep(tree, ['-rnF', '-f', writePatterns(pkg, 'idx', idxPatterns), ...idxTargets]);
+  rows.push({
+    pkg,
+    cls: '索引',
+    verdict: idxPatterns.length === 0 ? U_NA : idx.count === 0 ? U_CLEAN : U_DIRTY,
+    residual: idxPatterns.length === 0 ? -1 : idx.count,
+    command: idx.command,
+    evidence: idxPatterns.length === 0
+      ? ['该块无 src/ 或 extensions/ 落点 ⇒ 无注册表可悬空（不适用）']
+      : ['检查面：src/deploy/content-registry.ts ＋ extensions/**', '悬空/残留命中 ' + idx.count + ' 行', ...idx.hits.slice(0, 8)],
+    declaredBy: '',
+  });
+
+  // ⑤ 引用：grep X 的 id（块 id ＋ 项 id）；_extinct/ 单列"历史留痕"
+  //    🔴 强弱分开跑（防数字 id 命中正文的假阳性 —— 见 splitMarkers 的 @why）
+  const markers = markersOf(pkg, items);
+  const { strong, weak } = splitMarkers(pkg, markers);
+  const refStrong = strong.length === 0
+    ? { command: '(无强标记)', rc: 1, hits: [], count: 0 }
+    : runGrep(tree, ['-rnwE', '-e', strong.join('|'), 'src/', 'extensions/', 'scripts/'], 200);
+  const weakRe = weak.length === 0 ? '' : "['\"\u0060](" + weak.join('|') + ")['\"\u0060]";
+  const refWeak = weak.length === 0
+    ? { command: '(无弱标记)', rc: 1, hits: [], count: 0 }
+    : runGrep(tree, ['-rnE', '-e', weakRe, 'src/', 'extensions/', 'scripts/'], 200);
+  const allHits = [...refStrong.hits, ...refWeak.hits];
+  const allCount = refStrong.count + refWeak.count;
+  const historical = allHits.filter((l) => l.includes('_extinct/'));
+  // 🔴 本件**自带**的演练输入件（步 2/3 落的候选值表）：它含全部包 id，是**演练输入不是产品残留**
+  //    ⇒ 单列一个数，不混进"产品残留"里（也**不隐藏** —— 两个数都给）
+  const ownFixture = allHits.filter((l) => l.includes('customer-deps-candidates.json'));
+  const live = allCount - historical.length - ownFixture.length;
+  rows.push({
+    pkg,
+    cls: '引用',
+    verdict: live === 0 ? U_CLEAN : U_DIRTY,
+    residual: live,
+    command: refStrong.command + '   ;   ' + refWeak.command,
+    evidence: [
+      '标记 ' + markers.length + ' 个：强 ' + strong.length + '（含字母，grep -w）／ 弱 ' + weak.length + '（纯数字，**只认被引号包住**）' + ' ⇒ ' + markers.slice(0, 8).join(', ') + ' …',
+      '命中 ' + allCount + ' 行（强 ' + refStrong.count + ' ＋ 弱 ' + refWeak.count + '）⇒ 原始 ' + allCount +
+        ' ／ 历史留痕（_extinct/）' + historical.length + ' ／ 本件自带夹具 ' + ownFixture.length +
+        ' ⇒ **产品残留 = ' + live + ' 行**',
+      '命中落在（按文件聚合，供判"是新残留还是历史冻结名单"）：' + topPathsLabel(allHits),
+      ...allHits.filter((l) => !l.includes('_extinct/')).slice(0, 6),
+    ],
+    declaredBy: historical.length > 0 ? (RETENTION_BASES[1]?.basis ?? '') : '',
+  });
+
+  // ⑥ 缓存：**构建/派生缓存**里还有没有 X 的落点
+  //    🔴 两条实测修正（2026-10-13）：
+  //      ① 缓存根**不含 `.dsh/`** —— 那是**受版本控制的源码目录**（DSH 插件），不是缓存；
+  //         把它当缓存 ⇒ 每个包都判"不干净"（假红）。
+  //      ② **不把 `.exile-quarantine/` 算作残留** —— 那是**本件自己的摘除机制**，
+  //         此刻正装着刚卸下来的东西；把它计入 ⇒ 又是一个必然假红。
+  const cacheTargets = ['dist', 'coverage', 'node_modules/.cache'];
+  const present = cacheTargets.filter((c) => existsSync(join(tree, c)));
+  const cache = present.length === 0 || removed.length === 0
+    ? { command: 'ls -d dist/ coverage/ node_modules/.cache/ 2>/dev/null', rc: 1, hits: [], count: 0 }
+    : runGrep(tree, ['-rlF', '-f', writePatterns(pkg, 'cache', removed), ...present]);
+  rows.push({
+    pkg,
+    cls: '缓存',
+    verdict: present.length === 0 ? U_NA : cache.count === 0 ? U_CLEAN : U_DIRTY,
+    residual: present.length === 0 ? -1 : cache.count,
+    command: cache.command,
+    evidence: [
+      '树内存在的缓存根：' + (present.length === 0 ? '（无）' : present.join(', ')),
+      present.length === 0
+        ? '🔴 隔离树是**源码树**（无 dist/ coverage/ 等构建产物）⇒ 该类**测不到**，判"不适用"而非"干净"'
+        : '缓存里命中 X 落点的文件：' + cache.count + ' 个' + (cache.count > 0 ? ' ⇒ ' + cache.hits.slice(0, 5).join(', ') : ''),
+    ],
+    declaredBy: '',
+  });
+
+  // ⑦ 登记：施工项账在卸载后仍在册（声明保留）＋ _extinct/ 归档条目
+  const inRegistry = items.filter((i) => i.block === pkg).length;
+  const extinct = extinctEntries(tree);
+  rows.push({
+    pkg,
+    cls: '登记',
+    verdict: U_DECLARED,
+    residual: inRegistry,
+    command: "grep -c \"block: '" + pkg + "'\" docs/synova/coordination/施工项登记.ts ; ls extensions/sentinels/_extinct/",
+    evidence: [
+      '施工项账仍登记该块 ' + inRegistry + ' 项（**卸载不改登记件 —— CTO 红线，本件只读**）',
+      '_extinct/ 归档条目：' + extinct.length + ' 个' + (extinct.length > 0 ? ' ⇒ ' + extinct.slice(0, 12).join(', ') : ''),
+    ],
+    declaredBy: (RETENTION_BASES[0]?.basis ?? '') + ' ｜ ' + (RETENTION_BASES[1]?.basis ?? ''),
+  });
+
+  restoreTree(tree);
+  return { pkg, removedCount: removed.length, sharedWithOthers: shared.length, rows };
+}
+
+/**
+ * 把 patterns 写成临时文件（`grep -f` 用：**一次 grep 覆盖多条**，避免 N 次进程）。
+ *
+ * 🔴 落点必须在**树外**（`os.tmpdir()`）：树内的 `.exile-quarantine/` 会被 `restoreTree` 清掉，
+ *    写在里面 ⇒ 文件在 grep 前就没了（**实测踩过的坑**）。
+ */
+function writePatterns(pkg: string, tag: string, patterns: readonly string[]): string {
+  const dir = join(tmpdir(), 'synova-uninstall-patterns');
+  mkdirSync(dir, { recursive: true });
+  const p = join(dir, pkg + '-' + tag + '.patterns');
+  writeFileSync(p, patterns.join('\n') + '\n', 'utf8');
+  return p;
+}
+
 /** CLI 主体 */
 export async function main(): Promise<number> {
   const argv = process.argv.slice(2);
@@ -460,6 +868,7 @@ export async function main(): Promise<number> {
     scan: [],
     sensitivity: [],
     runs: [],
+    uninstall: [],
     notes: [
       `ⓘ 真源 = ${loaded.sourcePath}`,
       `ⓘ 候选值表 = ${candPath}（**候选，待本演练验**；不写回登记件）`,
@@ -558,11 +967,63 @@ export async function main(): Promise<number> {
     }
   }
 
+  // ══ 🔴 步 4 · 可卸载性真值实测（--phase uninstall）══════════════════════════════
+  //    与步 2/3 的 phase 互斥使用（uninstall 只做"痕迹"，不做"功能" —— 派单件 §一）。
+  if (phase === 'uninstall') {
+    const dbArg = readFlag(argv, '--db');
+    const dbPath = dbArg !== '' ? resolve(dbArg) : join(tree, 'data', 'synova.db');
+    const bp = blockPathsOf(loaded.view);
+    if (bp.error !== '') {
+      process.stderr.write('❌ 演练器判不了（exit 2）：块级 paths 算不出来：' + bp.error + '\n');
+      return EXIT_UNJUDGEABLE;
+    }
+    const pkgs = Object.keys(bp.byBlock).sort().filter((p) => only === '' || p === only);
+    report.notes.push(
+      'ⓘ 卸除面 = 块级 paths（= 该块 items 的 paths 并集，**已被对账门禁验过**）—— 派单件 §二「复用而非重建」',
+      'ⓘ 隔离树内 sqlite = ' + (existsSync(dbPath) ? dbPath : '（无 ⇒ 「表」类判不了）'),
+    );
+    process.stdout.write('\n[步4·可卸载性] 逐包卸除（**只在隔离树里**）⇒ 七类残留\n');
+    for (const p of pkgs) {
+      const one = runUninstall(tree, items, bp.byBlock, p, dbPath);
+      report.uninstall.push(one);
+      process.stdout.write('── ' + p + '：卸除面 ' + one.removedCount + ' 条 ｜ 🔴 与他包共用 ' + one.sharedWithOthers + ' 条\n');
+      for (const r of one.rows) {
+        const tag = r.verdict === U_CLEAN ? '✅' : r.verdict === U_DIRTY ? '❌' : r.verdict === U_DECLARED ? '▣' : '⚠️';
+        process.stdout.write('   ' + tag + ' ' + r.cls + '：' + r.verdict + '（残留 ' + (r.residual < 0 ? '–' : String(r.residual)) + '）\n');
+        for (const e of r.evidence.slice(0, 3)) process.stdout.write('        ' + e + '\n');
+        if (r.declaredBy !== '') process.stdout.write('        ▣ 依据：' + r.declaredBy + '\n');
+      }
+    }
+    const flat = report.uninstall.flatMap((u) => u.rows);
+    process.stdout.write(
+      'SUMMARY(步4): 干净 ' + flat.filter((r) => r.verdict === U_CLEAN).length +
+        ' ｜ 声明保留 ' + flat.filter((r) => r.verdict === U_DECLARED).length +
+        ' ｜ **不干净 ' + flat.filter((r) => r.verdict === U_DIRTY).length + '**' +
+        ' ｜ 判不了 ' + flat.filter((r) => r.verdict === U_UNK).length +
+        ' ｜ 不适用 ' + flat.filter((r) => r.verdict === U_NA).length + '\n',
+    );
+  }
+
   const outFile = readFlag(argv, '--out');
   if (outFile !== '') {
     mkdirSync(dirname(resolve(outFile)), { recursive: true });
     writeFileSync(resolve(outFile), JSON.stringify(report, null, 2), 'utf8');
     process.stderr.write(`  ⓘ 机器可读结果已落 ${resolve(outFile)}\n`);
+  }
+
+  // 🔴 步 4 与步 2/3 的**收尾口径不同**（一个是"痕迹"，一个是"功能"）⇒ 各印各的、各判各的
+  if (phase === 'uninstall') {
+    const flat = report.uninstall.flatMap((u) => u.rows);
+    const dirty = flat.filter((r) => r.verdict === U_DIRTY).length;
+    const unk = flat.filter((r) => r.verdict === U_UNK).length;
+    const sharedTotal = report.uninstall.reduce((a, u) => a + u.sharedWithOthers, 0);
+    process.stdout.write(
+      'SUMMARY(步4·收尾): 卸除面顶层条目合计 ' +
+        report.uninstall.reduce((a, u) => a + u.removedCount, 0) +
+        ' 条 ｜ 🔴 与他包共用合计 ' + sharedTotal + ' 条\n' +
+        '🔴 判据：**卸 X ⇒ 残留集 = ∅（或已声明保留）** —— 不干净 ' + dirty + ' 类 ／ 判不了 ' + unk + ' 类\n',
+    );
+    return dirty > 0 || unk > 0 ? EXIT_MISMATCH : EXIT_OK;
   }
 
   const greenFake = report.runs.filter((r) => r.verdict === V_GREEN).length;
