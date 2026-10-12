@@ -168,6 +168,20 @@ $ SYNO_CI=1 bash scripts/check-content-coupling.sh
 🔴 该 `new=1` **是锚上既有**（`ba1b22a8b` 上就红）—— 归因两条既有缺陷（门禁 `:394` 子串误判 ＋ `BASELINE_TEXT` 陈旧），
   均属门禁语义（治理线/CTO 域）⇒ **本卡不改**，按 lead 统一口径验收。
 
+## 🔴 本卡漏掉的回归（已同 PR 处置 · 过程教训）
+
+我第一轮 R3 的**回归面只跑了 `tests/deploy/content-registry.test.ts`**（18 passed）＋ 窄 CC/tsc，
+**漏了下游**：`tests/providers/llm-provider-loader.test.ts`（3 failed）。
+
+**漏的原因（机制，不是"忘了"）**：我扫的是**路径字面量**
+（`grep -rn "extensions/llm-providers" tests/` = 0 命中 ⇒ 我误判"下游无引用"），
+但该测试引用的是 **loader 的符号**（`loadLLMProviders` / `getLLMProvider`），不是路径。
+
+⇒ **教训（建议全队采纳）**：**删数据源时，扫的是"消费该数据源的符号"，不是"路径字符串"**。
+本次按符号重扫（`loadLLMProviders|getLLMProvider|clearLLMProviderCache|LLMProviderManifest|llm-provider-loader`）
+⇒ 唯一消费者就是该测试 ⇒ 与 lead 裁决一致。
+**并已补全量 vitest 扫描**（见 §全量回归），使"回归面"从"我猜的"变成"跑出来的"。
+
 ## 既有红（**非本卡回归**，登记备查）
 ```
 $ npx tsx scripts/control-tower/probe-content-registry.ts
@@ -179,12 +193,20 @@ $ npx tsx scripts/control-tower/probe-content-registry.ts
 是 `scripts/control-tower/probe-content-registry.ts:103` 硬编码 20 自身陈旧（与 CC 门禁基线陈旧**同族**）。
 该路径属 `scripts/control-tower/**` ＝**非本卡写集**（治理线）⇒ 本卡不动，已由 lead 并入上报 CTO。
 
+## 全量回归（补跑，闭死回归面）
+```
+$ npx vitest run            # 全量（重型位，按锁账协议取锁）
+  （原始输出见 PR #465 正文）
+```
+（本轮之所以补全量：上一条"漏掉的回归"证明**窄回归面不足以支撑"无回归"的声称**。）
+
 ## 架构层: −1 运行时（装配）＋ ⓪ 连接器（provider 面）
 #CRITERIA: D
 
 ## 写集
 | 文件 | 类别 |
 |---|---|
+| `.claude/task-briefs/2026-10-11-199-unreachable-disposal.md` | task（本件） |
 | `extensions/engine/diagnosis.json` | task（删除：二元化之「已删除」） |
 | `extensions/engine/manifest.json` | task（删除：二元化之「已删除」） |
 | `extensions/llm-providers/deepseek/adapter.ts` | task（删除：二元化之「已删除」） |
@@ -209,27 +231,51 @@ $ npx tsx scripts/control-tower/probe-content-registry.ts
 | `extensions/llm-providers/yi/adapter.ts` | task（删除：二元化之「已删除」） |
 | `extensions/llm-providers/yi/manifest.json` | task（删除：二元化之「已删除」） |
 | `extensions/policies/data-access.yaml` | task（删除：二元化之「已删除」） |
-| `extensions/tools/manifest.json` | task（删除：二元化之「已删除」） |
 | `extensions/policies/manifest.json` | task（🔴 写集扩张；登记见「写集扩张登记」） |
+| `extensions/tools/manifest.json` | task（删除：二元化之「已删除」） |
 | `src/deploy/content-registry.ts` | task（🔴 写集扩张；登记见「写集扩张登记」） |
+| `src/providers/llm-provider-loader.ts` | task（🔴 写集扩张；登记见「写集扩张登记」） |
 | `tests/deploy/content-registry.test.ts` | task（🔴 写集扩张；登记见「写集扩张登记」） |
-| `.claude/task-briefs/2026-10-11-199-unreachable-disposal.md` | task（本件） |
+| `tests/providers/llm-provider-loader.test.ts` | task（🔴 写集扩张；登记见「写集扩张登记」） |
 
-## 写集扩张登记（**4 文件，非卡面原始写集**）
-🔴 按纪律三件齐登记（**扩张清单 / 理由 / 代价 Y**）。四项均为**删除分支的物理必要条件**，不是图方便。
+## 写集扩张登记（**5 文件，非卡面原始写集**）
+🔴 按纪律三件齐登记（**扩张清单 / 理由 / 代价 Y**）。五项均为**删除分支的物理必要条件**，不是图方便。
 
-**扩张清单（4）**
+**扩张清单（5）**
 ```
 ① src/deploy/content-registry.ts          （本表是 extensions 顶层目录唯一真源；删目录必删条目）
 ② tests/deploy/content-registry.test.ts   （:42 dir 集双向相等 / :45 total 25→22 / :114 notWired 5→2）
 ③ extensions/policies/manifest.json       （:7 description ＋ :14 knownGaps 逐字提到 data-access.yaml ⇒ 删后成假陈述）
-④ （无第 4 项：目录删除未牵动其它文件 —— 实测 `src/**` 对 4 个目标目录 import = 0）
+④ src/providers/llm-provider-loader.ts    （🔴 回归处置：其**唯一数据源** extensions/llm-providers/ 被本卡删除）
+⑤ tests/providers/llm-provider-loader.test.ts（它测的是 ④，④ 一去它失去存在理由）
 ```
-**理由**：`tests/deploy/content-registry.test.ts:32` 的 `extensionDirsOnDisk()` **主动枚举磁盘**，
-  且 `:42` 断言"注册表 dir 集 ↔ 磁盘目录集**双向相等**"⇒ "删目录不改注册表"**机械上不可能通过**（不是"忘了改"）；
-  注册表 `:557` 另有 `CONTENT_TYPES.length !== 22` 硬校验，与测试断言**同源同义**，两处必须同改。
-**代价 Y**：PR 件数 +4（29 件变更）；`src/deploy/content-registry.ts` 与其它 K12 卡存在**理论交叉面** ⇒
+**理由**：①②③ 见下（机械必要条件）。**④⑤ 是本卡漏掉的回归，复核方抓出后同一 PR 内处置**：
+```
+回归实证（lead 与本工位各自实跑）：
+  $ npx vitest run tests/providers/llm-provider-loader.test.ts
+    Tests  3 failed (3) | rc=1        （锚上同命令 = 3 passed / rc=0 ⇒ 回归成立）
+  根因：src/providers/llm-provider-loader.ts:11 `LLM_DIR = join(cwd,'extensions','llm-providers')`
+        ← 其**唯一数据源就是本卡删除的 10 个 manifest**；:26 `if (!existsSync(LLM_DIR)) return {degraded:true,…}`
+  零调用方（三方 grep 坐实）：content-registry.ts 旧注释 | src/providers/index.ts **不导出** |
+        tests/providers/llm-provider-loader.test.ts **唯一真引用** | 且不在 MODULE_IMPORTS ⇒ boot 从不装配
+  ⇒ 它是**死 loader**，其测试**只测自己**（铁律 37：Dead code 入仓库即违规）
+```
+🔴 **两条路的选择与理由（我选删，不选改测试）**：lead 允许「改测试断言其已退役」。
+  我**不选**那条，因为：① 断言"零调用者"只能是 grep/静态判据 ⇒ 违反 V-02（禁 grep 型判据当验收）；
+  ② 保留一个**输入源已不存在的 loader** = 正是本卡要消灭的「注册了但没人读 + 静默 degraded」假信号；
+  ③ 它会使 `git grep loadLLMProviders` 永久留下一处无源引用（铁律 46「拆完了由 grep 物理证明」反例）。
+**代价 Y（两条，逐字）**
+```
+· 10 个 provider 的**能力元数据**（capabilities: maxContext/functionCalling/streaming）作为能力清单的载体
+  **一并消失**；若将来要 validateProvider（content-registry 的思想实验）需重建元数据。
+  （已核：manifest 的规范键集 = {$schema, capabilities, displayName, entryPoint, exportKey, name, type, version}；
+    而**可用的部分仍在** —— provider 的 baseUrl/model/label 由 src/providers/index.ts 的
+    PROVIDER_DEFAULTS / PROVIDER_LABELS 持有，10 个 provider 名一个不少 ⇒ 丢的是 capabilities 一项）
+· 本卡从「删 3 目录 ＋ 1 文件」扩为「删 3 目录 ＋ 1 loader ＋ 1 测试」
+```
+**代价 Y（①②③）**：PR 件数 31；`src/deploy/content-registry.ts` 与其它 K12 卡存在**理论交叉面** ⇒
   实测 3 个在途 PR（#442/#416/#224）变更集**零重叠**；若后续有卡也改本表 ⇒ **必须串行**。
+
 
 ## 代价 Y 存档（删除 `data-access.yaml` 丢失的内容，**逐字**，不许静默丢）
 被删文件全文（`git show ba1b22a8b:extensions/policies/data-access.yaml`）：
