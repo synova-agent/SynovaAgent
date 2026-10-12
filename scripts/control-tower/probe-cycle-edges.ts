@@ -1,36 +1,51 @@
 /**
- * scripts/control-tower/probe-cycle-edges.ts — #978（0-4）判据交付物
+ * scripts/control-tower/probe-cycle-edges.ts — #978（0-4）+ #238（K4-05）判据交付物
  *
  * 背景：`cycles/**\/*.cycle.json` 的 `nodes[].edgeRefs` / `mapping[].edgeId` 曾写旧编号
- * `E-<大版本>.<小版本>`（正文 45 处 / distinct 17 条）。代码边本体
+ * `E-<大版本>.<小版本>`（正文 45 处）。代码边本体
  * `extensions/ontology/edge-types/*.json` 用的是 `$id`=`edge/<snake>` + `label`=UPPER。
- * 两套互不相认 ⇒ 循环引用 ∩ 代码边 = ∅。本探针是卡面 §十 判据的**机器可跑形态**。
+ * 两套互不相认 ⇒ 循环引用 ∩ 代码边 = ∅。`15d04e6a4`（#978）把 45 处 E-x.y 全清为 `edge/<snake>`。
+ * 本探针是卡面 §十 判据的**机器可跑形态**；#238 在其上补「引用对齐判据」（原判据④）。
  *
- * 判据（卡面 §十 原文）:
+ * 判据（卡面 §十 原文 + #238 追加）:
  *   ① 循环配置里 `E-[0-9]+\.[0-9]+` 形态出现次数 = 0
  *   ② 每条 `edgeRefs`/`edgeId` 值 ⊆ 代码边 `$id` ∪ `label`（或明确标 `unknown`）
  *   ③ 低可信条目要么定稿、要么显式保留 `unknown` —— 不许猜（本探针只**呈报** unknown 计数，不判内容）
- *   ④ 本探针自身 exit 0
+ *   ④【#238 新增 · 引用对齐判据】45 条引用的 distinct 值**全部**命中 `$id` ∪ `label`；
+ *      末行恒为 `occurrences=45 distinct=15 hit=15 miss=0` 形态的**单行机器可读摘要**。
+ *   ⑤ 本探针自身 exit 0
  *
- * ⚠️ 口径声明（与卡面一致，勿漂移）:
+ * ⚠️ 口径声明（与卡面一致，勿漂移；#238 已按 CTO 裁定修正一处历史口径）:
  *   ① 的计数口径 = `git grep -ohE "E-[0-9]+\.[0-9]+" -- cycles/` 的文件级出现次数
- *      （含 `_` 前缀文件；45 = `nodes[].edgeRefs` 22 处 + `mapping[].edgeId` 23 处）。
- *      distinct = 17，两数口径不同，不得混用。
+ *      （含 `_` 前缀文件），基线实测 **0**（`15d04e6a4` 起）。
+ *   ④ 的计数口径（三个数不可混用）:
+ *      · occurrences = `nodes[].edgeRefs` 条数 + `mapping[].edgeId` 条数 = 22 + 23 = **45**
+ *      · distinct    = 上述两处**取值去重**后的个数 = **15**
+ *      · hit         = distinct 中 ∈（代码边 `$id` ∪ `label`）的个数；miss = distinct − hit − unknown_distinct
+ *      🔴 CTO 裁定（2026-10-12，用户当面确认）：判据① 的 distinct 口径**一律用 15**。
+ *      工作令 §二① 写「三口径全为 17」，与仓内裁定件
+ *      `docs/synova/coordination/K4-审计定稿与卡面全套.md` §三 第 1 行相反 ⇒ **以裁定件＋实测为准**。
+ *      （该行的稳定锚点串：`45 条引用 distinct`＋`一律用 15`。）
+ *      「17」是 `E-x.y` 私有编号时代的 distinct 残值，与当前 `edge/<snake>` 口径无关。
  *
  * 契约:
  *   @input   — 无参数。读取 `${cwd}/cycles/**\/*.cycle.json`（被检体）
  *              + `${cwd}/extensions/ontology/edge-types/*.json`（目标词表）
- *   @output  — stdout：判据①②③ 的原始计数与逐条明细；exit code 见下
+ *   @output  — stdout：判据①②③④ 的原始计数与逐条明细；**末行恒为**摘要行
+ *              `occurrences=<n> distinct=<n> hit=<n> miss=<n>`
  *   @degraded — `cycles/` 或 `edge-types/` 缺失/为空 → exit 2（fail-closed，绝不静默通过）；
  *               单个 .cycle.json 解析失败 → 计入违规 + 打 `❌`，exit 1（不吞错）
- *   退出码   — 0 = ①② 全通过；1 = 存在违规；2 = 输入缺失（降级）
+ *   退出码   — 0 = ①②④ 全通过；1 = 存在违规（含 miss > 0）；2 = 输入缺失（降级）
  *
  * 用法:
  *   npx tsx scripts/control-tower/probe-cycle-edges.ts
+ *   node scripts/control-tower/probe-cycle-edges.ts     # Node ≥ 22 原生类型擦除亦可
  *
  * 反例（判别性，卡面 §十 补强判据）:
- *   ⑤ 任一条 `edgeRefs` 值改回 `E-1.1` 形态 ⇒ 判据① 必红（非 0）
- *   ⑥ 只改 `nodes[].edgeRefs` 不改 `mapping[].edgeId` ⇒ 判据① 仍 > 0（残留 23 处）
+ *   ⑥ 任一条 `edgeRefs` 值改回 `E-1.1` 形态 ⇒ 判据① 必红（非 0）
+ *   ⑦ 只改 `nodes[].edgeRefs` 不改 `mapping[].edgeId` ⇒ 判据① 仍 > 0（残留 23 处）
+ *   ⑧【#238】任一条引用改成不存在的 `$id` ⇒ 判据④ 必红：`miss` 由 0 变正、exit 1
+ *   ⑨【#238】`cycles/` 或 `edge-types/` 缺失 ⇒ exit 2（降级，不静默通过）
  */
 import { readdirSync, readFileSync, existsSync, statSync } from 'fs';
 import { join, relative } from 'path';
@@ -229,6 +244,30 @@ function main(): number {
   console.log(`unknown_tokens = ${totalUnknown}`);
   console.log('');
 
+  // ─── 判据④ 引用对齐判据（#238 追加；口径见文件头，三数不得混用） ───
+  const occurrences = totalRefs + totalMappings;
+  const distinct = usedValues.size;
+  let hit = 0;
+  let unknownDistinct = 0;
+  const missValues: string[] = [];
+  for (const value of usedValues.keys()) {
+    if (value === UNKNOWN_TOKEN) { unknownDistinct += 1; continue; }
+    if (ids.has(value) || labels.has(value)) hit += 1;
+    else missValues.push(value);
+  }
+  const miss = distinct - hit - unknownDistinct;
+
+  console.log('══════ 判据④ 引用对齐判据（distinct 全部命中 $id ∪ label）');
+  console.log(`align_occurrences = ${occurrences}`);
+  console.log(`align_distinct = ${distinct}`);
+  console.log(`align_hit = ${hit}`);
+  console.log(`align_miss = ${miss}`);
+  console.log(`align_unknown_distinct = ${unknownDistinct}`);
+  console.log(`align_vocabulary_id = ${ids.size}`);
+  console.log(`align_vocabulary_label = ${labels.size}`);
+  if (missValues.length > 0) console.log(`align_miss_values = ${missValues.sort().join(',')}`);
+  console.log('');
+
   if (violations.length > 0) {
     console.log('══════ ❌ 违规明细');
     for (const v of violations) {
@@ -236,10 +275,13 @@ function main(): number {
     }
     console.log('');
     console.log(`❌ 结论：${violations.length} 项违规 — exit 1`);
+    // 末行恒为机器可读摘要（#238 判据④ Done 原文：末行含 occurrences=/distinct=/hit=/miss=）
+    console.log(`occurrences=${occurrences} distinct=${distinct} hit=${hit} miss=${miss}`);
     return 1;
   }
 
-  console.log('✅ 结论：判据① 旧编号 = 0；判据② 全部取值 ∈ 代码边 $id ∪ label ∪ {unknown}；exit 0');
+  console.log('✅ 结论：判据① 旧编号 = 0；判据② 全部取值 ∈ 代码边 $id ∪ label ∪ {unknown}；判据④ 引用对齐全命中；exit 0');
+  console.log(`occurrences=${occurrences} distinct=${distinct} hit=${hit} miss=${miss}`);
   return 0;
 }
 
