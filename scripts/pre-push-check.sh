@@ -446,7 +446,18 @@ if [[ -f "$CHECK_BYPASS" ]]; then
   _BB_AFTER="$(git rev-parse origin/local-main 2>/dev/null || true)"
   _BB_FRESH=0
   [ -n "$_BB_BEFORE" ] && [ -n "$_BB_AFTER" ] && [ "$_BB_BEFORE" != "$_BB_AFTER" ] && _BB_FRESH=1
-  if git rev-parse --verify local-main >/dev/null 2>&1; then
+  # 🔴 2026-10-12（CTO P0 bug1 同病第四处）: 本地 `local-main` 分支同样**会陈旧**
+  #   （本工位实测停 ba1b22a8b，gitea 真值 aa085e1f1）⇒ merge-base 偏旧 ⇒ 对账 range
+  #   卷入他线已过闸提交 ⇒ 推送被误拦。修法: **gitea/local-main 前置**
+  #   （fetch 刷新 + 比对 ref 前后值防"假成功"），新鲜才用作基；本地 local-main 次之。
+  _GB_BEFORE="$(git rev-parse gitea/local-main 2>/dev/null || true)"
+  git fetch --no-tags gitea local-main:refs/remotes/gitea/local-main --quiet 2>/dev/null || true
+  _GB_AFTER="$(git rev-parse gitea/local-main 2>/dev/null || true)"
+  _GB_FRESH=0
+  [ -n "$_GB_BEFORE" ] && [ -n "$_GB_AFTER" ] && [ "$_GB_BEFORE" != "$_GB_AFTER" ] && _GB_FRESH=1
+  if git rev-parse --verify gitea/local-main >/dev/null 2>&1; then
+    BYPASS_BASE="gitea/local-main"
+  elif git rev-parse --verify local-main >/dev/null 2>&1; then
     BYPASS_BASE="local-main"
   elif [ "$_BB_FRESH" = "1" ]; then
     BYPASS_BASE="origin/local-main"
