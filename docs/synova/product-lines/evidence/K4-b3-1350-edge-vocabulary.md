@@ -110,6 +110,24 @@ docs/synova/product-lines/evidence/K4-b3-1412-status-recheck.md
 
 > ⚠️ 上列**未含本件**（`K4-b3-1350-edge-vocabulary.md`）——本件在**下一次提交**落地；B 段落地后本节将重跑并给出**含本件与 B 段全部产物**的最终全列。
 
+### 未提交项（**逐字登记，防被判"引用了不存在的件"**）
+
+```
+（未提交项）memory/notes/proposed/2026-10-12-K4-b3-numbering-authority.md
+  理由 = 本段 staged 集零命中 commit-msg-check.sh 的治理/规则区正则（无治理/规则区变更 ⇒ 门禁跳过）
+       ＋ 沿 1134.yaml「只列本 PR 真正改动的文件，不预授权」⇒ 未提交，故不在 writeset。
+  注：该 Note 已物理存在于本树（Test-Path = True，4864 字节，SHA256 `07003CB9…DD1E`），仅未提交；
+      其自然归属为 L1/L2 的 PR（内容主体是 #238/#239/#234 的裁定）。
+```
+
+**判据原文（触发面，`scripts/commit-msg-check.sh` 唯一串）**：
+```
+CT_ORCH_TOUCHED=$(echo "$STAGED_LIST" | grep -E '^(scripts/(control-tower|workflow|hooks)/|src/orchestrator/|AGENTS\.md$|CLAUDE\.md$|memory/notes/README\.md$)' | grep -vE '\.test\.sh$' || true)
+```
+⇒ 触发面 = `scripts/{control-tower,workflow,hooks}/` ∪ `src/orchestrator/` ∪ `AGENTS.md` ∪ `CLAUDE.md` ∪ `memory/notes/README.md`（排除 `*.test.sh`）；
+**B 段落盘件逐条试判 ⇒ 零命中** ⇒ 门禁走 `else` 分支（`无治理/规则区变更（跳过）`）。
+**兜底**：B 段 commit message **引用**该 Note 路径但**不 stage** —— 若门禁被意外触发，`① 含 memory/notes/ 引用 ✅ ② 引用文件在本树存在 ✅` ⇒ 仍绿（零成本对冲）。
+
 ---
 
 ## 六、自检 5 问（A 段）
