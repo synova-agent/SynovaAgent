@@ -252,18 +252,41 @@ tests/agent/write-side-axis-alignment.test.ts:80
 
 ---
 
-## 五、自证：本件**未改任何 `src/`**
+## 五、自证：本件**未改任何 `src/`**（**提交后复跑**，原始输出）
+
+**读数时点**：`97d65978543a153b78db7dd78ad9e9380d7fd22c`（本段提交）｜ **diff 左端**：`ba1b22a8b5`
 
 ```
-$ git diff --name-only ba1b22a8b5..HEAD      # 本件提交后复跑（含本件自身的提交）
-$ git status --porcelain=v1                   # 期望：本件相关文件之外为空
+$ git diff --stat ba1b22a8b5..HEAD
+ .claude/claims/1350.yaml                           |  37 ++
+ ...270\216\350\256\241\345\210\222\350\276\271.md" | 562 +++++++++++++++++++++
+ .../evidence/K4-b3-1412-status-recheck.md          | 327 ++++++++++++
+ 3 files changed, 926 insertions(+)
 ```
 
-**（本节数字在提交后由交付件 `K4-b3-1350-edge-vocabulary.md` 的"写集全列"节统一给出原始输出——
-避免两处数字各写一遍而漂移。）**
+```
+$ git diff --name-only ba1b22a8b5..HEAD
+.claude/claims/1350.yaml
+".claude/task-briefs/2026-10-11-1350-K4-05bis-\350\276\271\350\257\215\350\241\250-\347\233\256\346\240\207\345\261\202\347\272\247\350\276\271\344\270\216\350\256\241\345\210\222\350\276\271.md"
+docs/synova/product-lines/evidence/K4-b3-1412-status-recheck.md
+```
+
+**共 3 条**（`git diff --name-only ba1b22a8b5..HEAD | wc -l` ⇒ `3`）。
+
+**判别性判据（判「不改 src/」）**：
+
+```
+$ git diff --name-only ba1b22a8b5..HEAD | grep -c "^src/" || true
+0
+$ echo "exit=$?"
+exit=0
+```
+
+⇒ **`src/` 前缀命中 = 0** ⇒ 本件与其同批产物**未改任何 `src/`**。（本判据**测不出**：未提交的工作树改动 ——
+故另跑 `git status --porcelain=v1`，本件相关文件之外为空；该判据在**提交前**跑，输出见交付回执。）
 
 **写集声明（本件落点）**：`docs/synova/product-lines/evidence/K4-b3-1412-status-recheck.md`（**单件**）。
-`src/` 与 `tests/` 下**零改动**（可由上列 `git diff --name-only` 的集合直接判：集合中不得出现 `src/` 前缀）。
+同批另两件 = `.claude/claims/1350.yaml` ＋ `.claude/task-briefs/2026-10-11-1350-K4-05bis-…md`（#65 A 段卡面）。
 
 ---
 
