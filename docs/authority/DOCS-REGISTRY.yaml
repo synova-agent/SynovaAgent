@@ -473,3 +473,45 @@ documents:
     status: active
     owner: synova-governance-converge
     note: "extensions 内容面规范 v0.1 镜像（源=院方规范；#253 `0bdaec491` 合入但未登记台账 ⇒ D782 D2 登记门禁在后续分支上恒红，K12-01 段二合并时按门禁要求补登）。产品宪章 §5.6/§5.7 与 K12/K4 多张卡面引用此规范。"
+
+  - id: DOC-0193
+    type: governance
+    path: extensions/sentinels/AGENTS.md
+    status: active
+    owner: synova-squad-lead（产品线）
+    note: "12 份域级守则件落库 PR1（CTO 派单件 2026-10-13，裁定 079/081/085/089）。哨兵域：承载包 K3。"
+
+  - id: DOC-0194
+    type: governance
+    path: src/l4/AGENTS.md
+    status: active
+    owner: synova-squad-lead（产品线）
+    note: "12 份域级守则件落库 PR1。本体·因果边·图存储域：承载包 K4/K8/K12（＋RETIRED）。"
+
+  - id: DOC-0195
+    type: governance
+    path: src/routes/AGENTS.md
+    status: active
+    owner: synova-squad-lead（产品线）
+    note: "12 份域级守则件落库 PR1。路由面：承载包 K1/K7/K10。"
+
+  - id: DOC-0196
+    type: governance
+    path: src/agent/AGENTS.md
+    status: active
+    owner: synova-squad-lead（产品线）
+    note: "12 份域级守则件落库 PR1。编排面：承载包 K2/K7/K8/K9/K12。"
+
+  - id: DOC-0197
+    type: governance
+    path: src/l3/AGENTS.md
+    status: active
+    owner: synova-squad-lead（产品线）
+    note: "12 份域级守则件落库 PR1。洞察层：承载包 K7。"
+
+  - id: DOC-0198
+    type: governance
+    path: expert/AGENTS.md
+    status: active
+    owner: synova-squad-lead（产品线）
+    note: "12 份域级守则件落库 PR1。专家域：承载包=无块直接管（账外，P2 观察窗件，复测清零即撤）。"
