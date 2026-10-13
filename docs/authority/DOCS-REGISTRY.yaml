@@ -515,3 +515,23 @@ documents:
     status: active
     owner: synova-squad-lead（产品线）
     note: "12 份域级守则件落库 PR1。专家域：承载包=无块直接管（账外，P2 观察窗件，复测清零即撤）。"
+  - id: DOC-0199
+    type: governance
+    path: scripts/control-tower/AGENTS.md
+    status: active
+    owner: synova-governance-converge（治理线）
+    note: "12 份域级守则件落库 PR2（CTO 派单件 2026-10-13，裁定 079/081/085/089）。门禁/控制塔脚本域：承载包 K2/K3/K4/K5/K8/K9/K10/K12。"
+
+  - id: DOC-0200
+    type: governance
+    path: tests/control-tower/AGENTS.md
+    status: active
+    owner: synova-governance-converge（治理线）
+    note: "12 份域级守则件落库 PR2。控制塔测试域（含 golden-scenarios）：承载包 K12。"
+
+  - id: DOC-0201
+    type: governance
+    path: docs/AGENTS.md
+    status: active
+    owner: synova-governance-converge（治理线）
+    note: "12 份域级守则件落库 PR2。文档体系：承载包 K1/K3/K5/K10/K12。"
