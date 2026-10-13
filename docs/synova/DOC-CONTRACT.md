@@ -230,6 +230,8 @@ skills/**
 memory/notes/**
 app/**
 electron-renderer/**
+extensions/AGENTS.md
+.gitea/AGENTS.md
 .github/**
 **/README.md
 **/AGENTS.md
@@ -583,3 +585,9 @@ tail -3 .claude/doc-contract-transition.log   # 最近几次过渡命中与台�
 > **K3 通过后新增的章节，须注明「入下一轮复审」，或先审后翻 `implemented`。**
 > 历史：§10/§11 是在 R3 通过之后追加的，而 `implemented` 在同一轮 R4 之前翻 ——
 > 对新增章节构成「事后补票」。⇒ 本条防同类。
+
+
+  - **两条显式授权条目（CTO 裁定 092 / 095）**：`extensions/AGENTS.md` · `.gitea/AGENTS.md`
+    **不走同址判定**：前者父目录只有 24 个子目录、后者只有 `workflows/` 子目录，
+    故 `**/AGENTS.md` 的同址规则对它们恒不放行。它们是**已授权目录**（12 份域级件清单明确列），
+    与 D1204/X3 反例（`reports/README.md` 索引后门 = **任意未授权目录**）性质不同 ⇒ **显式授权、可审计**。
