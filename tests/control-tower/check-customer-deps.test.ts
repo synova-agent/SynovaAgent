@@ -209,3 +209,60 @@ describe('步4 · runGrep / extinctEntries — 环境边界', () => {
     expect(extinctEntries('/tmp/绝对不存在的目录-xyz')).toEqual([]);
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════════════════
+ * 裁定 097 · K12 还原率（--phase restore-rate）的判据测试
+ *
+ * 🔴 三条承重判据（禁删）：
+ *   ① `targetSteps` 必须**保留重复步**（步数口径 = 任务书的"23 步"）**同时**给出唯一命令
+ *      —— 实测 K12：块级 2 ＋ 项 21 = **23 步**，去重后 **18 条唯一命令**。
+ *   ② 还原率的**分母用"基线绿"**，不用总步数 —— 否则"本来就红的步"会稀释还原率（假低）。
+ *   ③ 三个判定阈值必须**照任务书原文**（≥2/3 软 ／ <1/3 硬 ／ 中间地带交裁），**禁四舍五入**。
+ * ══════════════════════════════════════════════════════════════════════════════ */
+import {
+  RR_HARD,
+  RR_MID,
+  RR_SOFT,
+  RR_UNK,
+  targetSteps,
+} from '../../scripts/control-tower/check-customer-deps.ts';
+
+describe('裁定 097 · targetSteps — 步数口径 vs 唯一口径', () => {
+  const items = [
+    { id: 'a', block: 'KX', acceptance: [{ run: 'cmd-1' }, { run: 'cmd-2' }] },
+    { id: 'b', block: 'KX', acceptance: [{ run: 'cmd-2' }] },
+    { id: 'c', block: 'KY', acceptance: [{ run: 'cmd-9' }] },
+  ];
+  const blocks = [
+    { id: 'KX', items: ['a', 'b'], blockAcceptance: [{ run: 'cmd-1' }] },
+    { id: 'KY', items: ['c'], blockAcceptance: [] },
+  ];
+
+  it('步数 = 块级 ＋ 该块 items（含重复）；权重按出现次数', () => {
+    const r = targetSteps('KX', items, blocks);
+    expect(r.total).toBe(4); // cmd-1×2 + cmd-2×2
+    expect(r.steps.map((s) => s.run)).toEqual(['cmd-1', 'cmd-2']);
+    expect(r.weights).toEqual([2, 2]);
+  });
+
+  it('别的包的步不进本包', () => {
+    const r = targetSteps('KX', items, blocks);
+    expect(r.steps.map((s) => s.run)).not.toContain('cmd-9');
+  });
+
+  it('无块级判据 ⇒ 退回 items 的 acceptance', () => {
+    const r = targetSteps('KY', items, blocks);
+    expect(r.total).toBe(1);
+    expect(r.steps[0]?.run).toBe('cmd-9');
+  });
+});
+
+describe('裁定 097 · 判定常量照任务书原文（禁四舍五入）', () => {
+  it('三档阈值齐备且互不相同', () => {
+    const s = new Set([RR_SOFT, RR_HARD, RR_MID, RR_UNK]);
+    expect(s.size).toBe(4);
+    expect(RR_SOFT).toContain('2/3');
+    expect(RR_HARD).toContain('1/3');
+    expect(RR_MID).toContain('CTO');
+  });
+});

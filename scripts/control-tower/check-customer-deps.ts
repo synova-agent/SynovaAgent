@@ -137,6 +137,10 @@ export interface DrillReport {
   runs: RunRow[];
   /** 🔴 步 4 · 可卸载性（--phase uninstall）：逐包 × 七类残留 */
   uninstall: UninstallPkgResult[];
+  /** 🔴 裁定 097 · 还原率（--phase restore-rate） */
+  restore: RestoreRow[];
+  baselineGreenRuns: string[];
+  baselineRedRuns: string[];
   notes: string[];
 }
 
@@ -822,6 +826,183 @@ function writePatterns(pkg: string, tag: string, patterns: readonly string[]): s
   return p;
 }
 
+/* ══════════════════════════════════════════════════════════════════════════════
+ * 🔴 **验 K12 的"还原率"**（CTO 裁定 097）—— **--phase restore-rate**
+ *
+ * 要回答的一句话（创始人原话）：「**K12 离了别的包，还能还原多少能力？**」
+ *   · 能还原一大部分 ⇒ 维持 **T1**（可独立交付/可单独卖）
+ *   · 只还原一点点 ⇒ 降 **T2**（必须成组卖）
+ * ⇒ 产出是**还原率表**，不是"瘫/不瘫"的二元结论。
+ *
+ * 🔴 **复用而非重建**：隔离树走 `exile-tree-core.ts`，摘除走 `applyExile`；
+ *    本段只**加一个 phase**，不新造摘除/隔离逻辑（派单件 §七）。
+ *
+ * 🔴 **两个摘除面**（都要跑，因为"摘掉 X"在本仓有歧义 —— 块级 paths 互叠）：
+ *   · **面 A（字面照做）**：摘 `PATHS(X)` 全部 —— 任务书 §四 的字面读法
+ *   · **面 B（扣目标自持）**：摘 `PATHS(X) \ PATHS(target)` —— **"客户只买 K12"的场景**
+ *     （若把 K12 自己也声明持有的文件摘掉，那一刀砍的是 K12 自己 ⇒ 红因不指向依赖）
+ * ══════════════════════════════════════════════════════════════════════════════ */
+
+/** 还原率的一行（一个 X × 一个面） */
+export interface RestoreRow {
+  /** 'A' = 字面摘 PATHS(X) ｜ 'B' = 摘 PATHS(X) 减 PATHS(target) */
+  face: 'A' | 'B';
+  target: string;
+  missing: string;
+  /** 目标包被判的**步数**（含重复；本仓 K12 = 23） */
+  totalSteps: number;
+  /** 去重后的唯一命令数 */
+  uniqueSteps: number;
+  /** 基线（全量树）绿数（按步数口径） */
+  baselineGreen: number;
+  /** 摘除后绿数（按步数口径） */
+  remainGreen: number;
+  /** 还原率 = remainGreen / baselineGreen（**分母用基线绿**，排除"本来就不绿"的步） */
+  restoreRate: number;
+  /** 按任务书口径 = remainGreen / totalSteps */
+  rateOfTotal: number;
+  /** 摘除面条目数（展开后） */
+  anchorCount: number;
+  /** 基线绿、摘后红 的步（**实测不可用面**） */
+  newlyRed: string[];
+  /** 基线就红的步（**不计入分母**，但要看得见） */
+  baselineRed: string[];
+  verdict: string;
+  note: string;
+}
+
+/** 判定（程度，不是二元 —— 派单件 §五） */
+export const RR_SOFT = '软依赖（还原率 ≥ 2/3）';
+export const RR_HARD = '硬依赖（还原率 < 1/3）';
+export const RR_MID = '中间地带（交 CTO 裁，不四舍五入）';
+export const RR_UNK = '判不了';
+
+/**
+ * 取目标包的**判据步**（blockAcceptance ＋ 该包 items 的 acceptance；**按原样保留重复**）。
+ *
+ * @why 任务书说"K12 的 blockAcceptance（**23 步**）"——实测 23 = 块级 2 ＋ 21 项各 1；
+ *      其中 `check-content-coupling.sh` 出现 4 次 ⇒ **去重后 21 条唯一命令**。
+ *      两个口径都给（步数口径用于对齐任务书，唯一口径用于实际执行）。
+ * @contract
+ *   @input  blockId｜items｜blocks
+ *   @output `{steps, weights}`：`steps` = 去重后的命令；`weights` = 每条命令的步权重
+ *   @degraded 不适用
+ */
+export function targetSteps(
+  blockId: string,
+  items: readonly ItemLike[],
+  blocks: readonly BlockLike[],
+): { steps: AcceptanceStepLike[]; weights: number[]; total: number } {
+  const raw: AcceptanceStepLike[] = [];
+  const b = blocks.find((x) => x.id === blockId);
+  if (b?.blockAcceptance !== undefined) raw.push(...b.blockAcceptance);
+  for (const it of items) if (it.block === blockId) raw.push(...(it.acceptance ?? []));
+  const steps: AcceptanceStepLike[] = [];
+  const weights: number[] = [];
+  for (const s of raw) {
+    const i = steps.findIndex((x) => x.run === s.run);
+    if (i >= 0) weights[i] = (weights[i] ?? 1) + 1;
+    else {
+      steps.push(s);
+      weights.push(1);
+    }
+  }
+  return { steps, weights, total: raw.length };
+}
+
+/**
+ * **验还原率**：逐个摘 X ⇒ 跑目标包的判据 ⇒ 数"还剩几绿"。
+ *
+ * @contract
+ *   @input  tree｜items｜blocks｜byBlock｜target｜against（要摘的包）｜timeoutSec
+ *   @output `RestoreRow[]`（每个 X × 两个面各一行）
+ *   @degraded 不适用（"判不了"是结果）
+ *
+ * 🔴 **进出都 `restoreTree`**：卸完必须还原（沿用步 4 的做法）。
+ */
+export function runRestoreRate(
+  tree: string,
+  items: readonly ItemLike[],
+  blocks: readonly BlockLike[],
+  byBlock: Record<string, string[]>,
+  target: string,
+  against: readonly string[],
+  timeoutSec: number,
+): { rows: RestoreRow[]; baselineGreenRuns: string[]; baselineRedRuns: string[] } {
+  const { steps, weights, total } = targetSteps(target, items, blocks);
+  const rows: RestoreRow[] = [];
+  restoreTree(tree);
+
+  // ① 基线：全量树跑一遍（**这也是停止条件④ 的闸门**：全红 = 判据跑不起来）
+  const baselineGreen: boolean[] = [];
+  for (const s of steps) {
+    const r = runShell(tree, s.run, timeoutSec);
+    baselineGreen.push(stepPassed(s, r.rc, r.out));
+  }
+  const baselineGreenRuns = steps.filter((_, i) => baselineGreen[i] === true).map((s) => s.run);
+  const baselineRedRuns = steps.filter((_, i) => baselineGreen[i] !== true).map((s) => s.run);
+  const baselineGreenSteps = weights.reduce((a, w, i) => a + (baselineGreen[i] === true ? w : 0), 0);
+
+  const targetPaths = byBlock[target] ?? [];
+  const targetSet = new Set(targetPaths);
+
+  for (const x of against) {
+    const px = byBlock[x] ?? [];
+    const faces: { face: 'A' | 'B'; patterns: string[] }[] = [
+      { face: 'A', patterns: px },
+      { face: 'B', patterns: px.filter((p) => !targetSet.has(p)) },
+    ];
+    for (const f of faces) {
+      restoreTree(tree);
+      if (f.patterns.length === 0) {
+        rows.push({
+          face: f.face, target, missing: x, totalSteps: total, uniqueSteps: steps.length,
+          baselineGreen: baselineGreenSteps, remainGreen: -1, restoreRate: -1, rateOfTotal: -1,
+          anchorCount: 0, newlyRed: [], baselineRed: baselineRedRuns,
+          verdict: RR_UNK, note: '摘除面为空（PATHS(X) 被 PATHS(target) 字面全覆盖）',
+        });
+        continue;
+      }
+      const ex = expandAll(tree, f.patterns);
+      const moved = applyExile(tree, ex.rels);
+      if (moved === 0) {
+        rows.push({
+          face: f.face, target, missing: x, totalSteps: total, uniqueSteps: steps.length,
+          baselineGreen: baselineGreenSteps, remainGreen: -1, restoreRate: -1, rateOfTotal: -1,
+          anchorCount: ex.rels.length, newlyRed: [], baselineRed: baselineRedRuns,
+          verdict: RR_UNK, note: '摘除面展开为空（树里匹配不到）—— 禁当"全绿"',
+        });
+        restoreTree(tree);
+        continue;
+      }
+      const after: boolean[] = [];
+      for (const s of steps) {
+        const r = runShell(tree, s.run, timeoutSec);
+        after.push(stepPassed(s, r.rc, r.out));
+      }
+      restoreTree(tree);
+      const remainGreen = weights.reduce((a, w, i) => a + (after[i] === true ? w : 0), 0);
+      const newlyRed = steps.filter((_, i) => baselineGreen[i] === true && after[i] !== true).map((s) => s.run);
+      const rate = baselineGreenSteps === 0 ? -1 : remainGreen / baselineGreenSteps;
+      let verdict = RR_MID;
+      let note = '';
+      if (baselineGreenSteps === 0) {
+        verdict = RR_UNK;
+        note = '基线全红 ⇒ 判据跑不起来（停止条件④）';
+      } else if (rate >= 2 / 3) verdict = RR_SOFT;
+      else if (rate < 1 / 3) verdict = RR_HARD;
+      rows.push({
+        face: f.face, target, missing: x, totalSteps: total, uniqueSteps: steps.length,
+        baselineGreen: baselineGreenSteps, remainGreen,
+        restoreRate: rate, rateOfTotal: remainGreen / total,
+        anchorCount: ex.rels.length, newlyRed, baselineRed: baselineRedRuns, verdict, note,
+      });
+    }
+  }
+  restoreTree(tree);
+  return { rows, baselineGreenRuns, baselineRedRuns };
+}
+
 /** CLI 主体 */
 export async function main(): Promise<number> {
   const argv = process.argv.slice(2);
@@ -1002,6 +1183,58 @@ export async function main(): Promise<number> {
         ' ｜ 判不了 ' + flat.filter((r) => r.verdict === U_UNK).length +
         ' ｜ 不适用 ' + flat.filter((r) => r.verdict === U_NA).length + '\n',
     );
+  }
+
+  // ══ 🔴 验 K12 的还原率（--phase restore-rate · CTO 裁定 097）══════════════════════
+  if (phase === 'restore-rate') {
+    const target = readFlag(argv, '--target') || 'K12';
+    const againstArg = readFlag(argv, '--against');
+    const bp = blockPathsOf(loaded.view);
+    if (bp.error !== '') {
+      process.stderr.write('❌ 演练器判不了（exit 2）：块级 paths 算不出来：' + bp.error + '\n');
+      return EXIT_UNJUDGEABLE;
+    }
+    const all = Object.keys(bp.byBlock).sort();
+    const against = (againstArg !== '' ? againstArg.split(',') : all.filter((p) => p !== target)).map((s) => s.trim()).filter((s) => s !== '');
+    const tgt = targetSteps(target, items, blocks);
+    report.notes.push(
+      'ⓘ 目标包 = ' + target + ' ｜ 判据步 = ' + tgt.total + ' 步（去重后 ' + tgt.steps.length + ' 条唯一命令）',
+      'ⓘ 要摘的包 = ' + against.join(', '),
+      'ⓘ 两个摘除面：A = 字面摘 PATHS(X) ｜ B = 摘 PATHS(X) 减 PATHS(' + target + ')（= 「客户只买 ' + target + '」的场景）',
+    );
+    process.stdout.write('\n[还原率] 目标 ' + target + '：' + tgt.total + ' 步（唯一 ' + tgt.steps.length + ' 条）\n');
+    const rr = runRestoreRate(tree, items, blocks, bp.byBlock, target, against, timeoutSec);
+    report.notes.push('ⓘ 基线绿 ' + rr.baselineGreenRuns.length + ' / 唯一 ' + tgt.steps.length + '（基线本红 ' + rr.baselineRedRuns.length + ' 条，不计入分母）');
+    process.stdout.write('ⓘ 基线绿 ' + rr.baselineGreenRuns.length + ' / 唯一 ' + tgt.steps.length + ' 条\n');
+    for (const r of rr.baselineRedRuns) process.stdout.write('   ⚠️ 基线本红（不计分母）：' + r.slice(0, 110) + '\n');
+    process.stdout.write('\n面 ｜ 摘 ｜ 剩绿/步 ｜ 还原率 ｜ 摘除面 ｜ 新红步数 ｜ 判定\n');
+    for (const r of rr.rows) {
+      process.stdout.write(
+        ' ' + r.face + ' ｜ ' + r.missing.padEnd(7) + ' ｜ ' +
+          (r.remainGreen < 0 ? ' 判不了' : String(r.remainGreen).padStart(3) + '/' + r.totalSteps) + ' ｜ ' +
+          (r.restoreRate < 0 ? '  –  ' : (r.restoreRate * 100).toFixed(1) + '%') + ' ｜ ' +
+          String(r.anchorCount).padStart(4) + ' 条 ｜ ' + String(r.newlyRed.length).padStart(4) + ' ｜ ' + r.verdict +
+          (r.note === '' ? '' : '（' + r.note + '）') + '\n',
+      );
+      for (const s of r.newlyRed) process.stdout.write('        ❌ 新红：' + s.slice(0, 120) + '\n');
+    }
+    report.restore = rr.rows;
+    report.baselineGreenRuns = rr.baselineGreenRuns;
+    report.baselineRedRuns = rr.baselineRedRuns;
+    const soft = rr.rows.filter((r) => r.verdict === RR_SOFT).length;
+    const hard = rr.rows.filter((r) => r.verdict === RR_HARD).length;
+    const mid = rr.rows.filter((r) => r.verdict === RR_MID).length;
+    const unk = rr.rows.filter((r) => r.verdict === RR_UNK).length;
+    process.stdout.write('SUMMARY(还原率): 软 ' + soft + ' ｜ 硬 ' + hard + ' ｜ 中间地带 ' + mid + ' ｜ 判不了 ' + unk + ' ｜ 共 ' + rr.rows.length + ' 行\n');
+    // 🔴 本 phase **自带出口**（不回落到下面的通用收尾）⇒ `--out` 必须在此处落盘
+    //    （实测踩坑：首版在此直接 return ⇒ `--out` 静默失效、JSON 从未生成）
+    const rrOut = readFlag(argv, '--out');
+    if (rrOut !== '') {
+      mkdirSync(dirname(resolve(rrOut)), { recursive: true });
+      writeFileSync(resolve(rrOut), JSON.stringify(report, null, 2), 'utf8');
+      process.stderr.write('  ⓘ 机器可读结果已落 ' + resolve(rrOut) + '\n');
+    }
+    return unk > 0 ? EXIT_MISMATCH : EXIT_OK;
   }
 
   const outFile = readFlag(argv, '--out');
