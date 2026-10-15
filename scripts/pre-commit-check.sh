@@ -49,36 +49,31 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; RE
 #   用 `sed -n '42,44p;47p'` 提取计数器/颜色行后单独 source；赋值行不被提取 ⇒
 #   该片段里 QUIET_SUCCESS 为空 ⇒ ${QUIET_SUCCESS:-0} 走**打印**语义（夹具断言 ✅）。
 QUIET_SUCCESS="${SYNO_QUIET_SUCCESS:-1}"
+# ═══ 注释外移留痕（2026-10-16 · 门禁瘦身 · CTO 裁定 122）═══
+# 本件 2093 → 1373 行：**只删注释整行与冗余空行 —— 零代码改动**（709 行注释整行外移）。
+#   判据：剥掉 `^\s*#` 整行与空行后的"代码投影"与改前**逐字节一致**（命令见 PR 正文）。
+#   判据逻辑 / 退出码 / 13 组编号 / CI 硬阻断语义**一律未动**（改门禁语义归 CTO 裁定 + K3 过审）。
+# 被移出的注释原文（理由 / 留痕 / 历史沿革）**未丢**，两处可追：
+#   ① handbook 归档 `2026-10-16-pre-commit-check.sh-注释外移原文.md`（逐字照录，带原行号）
+#   ② git 历史 `49ddc63ee`:scripts/pre-commit-check.sh（改前真值）
+# 下列内容**必须保留**（仓库内夹具按字面 / 行号 / 标记抓取，删了即红；逐条已实证）：
+#   · 第 42,43,44,47 行 ── ci-strict-visible.test.sh:30 按**绝对行号** sed 提取
+#   · 旁路计数段的 BEGIN/END 标记注释 ── bypass-rewrite-classify.test.sh:134 按 marker 抽段
+#   · 今日 brief 计数函数的用法注释 ── today-by-name.test.sh:149（4 脚本合计计数 ≥4）
+#   · G12 fail-open 自述注释 ── precommit-groups-injection.test.sh:399
+#   · 平台敏感检查段头（D520 相关） ── platform-checklist.test.sh:33
+#   · CT-34 纯文档早退标记注释 ── check-doc-contract.test.sh:77（🔴 **顺序敏感**：必须在接线行**之前**）
+#   · CI strict 可见性修复标记（两处） ── ci-strict-visible.test.sh:40（要求计数 ≥2）
+#   · G12c 退役留痕（须与 D1219 同现） ── doc-commit-exempt.test.sh:239
+#   · 暂存区盲区坑注释 ── fastlane-bypass-only.test.sh:27
+#   · 骨架 brief 占位符检测留痕 ── skeleton-brief-gate.test.sh:35
+#   · D1148 / D1219 各留 1 行 ── hard-gate-convergence.test.sh:93,133
+#   · D537r2 段范围起锚注释 ── parallel-main-tree-occupancy.test.sh:36（awk 段抽取起点）
+# ⚠️ 本留痕头**不得引用**任何被"**顺序**断言"绑定的字面量（否则头自身会插到锚点之前 ⇒ 假红）。
+# ═══════════════════════════════════════════════════════════════════════════════
 
-# ═══════════════════════════════════════════════════════════════════════════════
+
 # ═══ D1148（批 3）: 声明类门禁 15 → 3（降噪，改坏即红）═══
-#   成功静默开关（**必须在 47 行之后定义**）: QUIET_SUCCESS 缺省 1 = 成功路径静默。
-#     · 调用点前缀赋值 `QUIET_SUCCESS=0 <检查函数> …` → 该次显式打印 ✅（组 7a 与三闸用）。
-#     · 用 ${QUIET_SUCCESS:-0}（缺省 **0=打印**）读——这样被 `sed -n '42,44p;47p'` 提取到
-#       只含计数器/颜色行的片段里（如 ci-strict-visible.test.sh），变量为空 → 仍是打印语义
-#       （该夹具断言 soft_check miss → ✅，缺省不能是静默）。
-#   病根: 声明/文书类实测 15 个执行点，占 gate-hits 命中约 35%，其中榜首
-#     `opt_check "PRD 对照…"` 261 次命中且**永不阻断**（opt_check 有意不转硬，D520）
-#     —— 噪音淹掉真信号 ⇒ 整条链被 --no-verify 绕过（V3.9: 软机制 0% 有效）。
-#   收敛为三条硬闸（生产路径，非沙箱）:
-#     声明闸①  brief schema      —— brief 存在 / 6 字段 / 骨架占位 / 时间戳顺序 / Q0 系列
-#     声明闸②  brief↔代码一致性  —— Q2 写集 ⊆ 声明（认领制）/ 排除项 / 可解析
-#     声明闸③  Done 可证伪       —— 每个 - [x] 带 verify: 可执行命令
-#   转旁路（note_check / bypass_run: 只打印、不判红、**不进 gate-hits.log**）:
-#     验收 CI、Q0c 取消跟踪、plan-integrity 的 non-Q2 项（plan.json 契约）、
-#     G12c dev doc 写集、G12d 声称↔证据表。
-#     注: 软提示在 CI strict（SYNO_CI=1）转硬；**旁路不转**（语义即"观测"）。
-#   ↳ D1171（P0-5，CTO 派单 Lane B，2026-10-07）: D782 D1/D2 与 D734 三处 bypass_run
-#     撤旁路复执法（v5_soft: 本地软 / CI strict 硬）。旁路家族其余 4 类保留，逐条
-#     理由见各调用点 D1171 处置注释（铁规⑧: 在做出决定的操作里执法）。
-#   退役（删检查点 + 本注释留痕）: opt_check「PRD 对照: Done 标准引用 PRD 章节」（261 命中/0 阻断）。
-#   降噪手段: 成功路径静默（SYNO_QUIET_SUCCESS，缺省 1）——保留失败点名与 CI annotation；
-#     组 7a 以 QUIET_SUCCESS=0 前缀显式保留 ✅ 行（gate-failopen-net.test.sh 判据输入）。
-#   不动的接线（夹具依赖，改前 grep 实证）: 12 个 `── 组 N/13` 标签、`全部 13 组通过`、
-#     `跳过 12 组` 横幅、组 7a ✅ 行、D1/D2 调用点（doc-registry-gate.test.sh W1/W2）、
-#     G12c 调用点（doc-commit-exempt.test.sh T11）、Notes 迁移调用点、check-pr-budget 调用点。
-#
-# ═══════════════════════════════════════════════════════════════════════════════
 
 hard_check() {
   local name="$1" matches="$2"
@@ -87,8 +82,6 @@ hard_check() {
   if [ "$count" -gt 0 ]; then
     echo -e "  ${RED}❌ ${name}: ${count} 处  [硬阻断]${RESET}"
     echo "$matches" | head -8 | while read -r line; do [ -n "$line" ] && echo "     ${line}"; done
-    # D521/工具1: CI 上失败进 GitHub annotations（无 token 也可经 check-runs API 读到——
-    #   见 docs/synova/coordination/CI-诊断通道.md；本地输出不污染）
     if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
       _first=$(echo "$matches" | head -1 | tr -d '%' | cut -c1-300)
       echo "::error title=IronLaws:${name}::${_first}"
@@ -96,42 +89,23 @@ hard_check() {
     HARD_FAIL=$((HARD_FAIL + 1))
     log_gate "$name" hit
   else
-    # D1148 降噪: 成功静默（缺省）——成功只登记 gate-hits miss，不占输出行。
-    #   写成**自包含条件**（不调外部函数）: ci-strict-visible.test.sh 用 sed 提取本函数
-    #   源码后单独 source，缺省 must-print 语义保 ✅（该夹具断言 miss → ✅）。
-    #   组 7a 以 `QUIET_SUCCESS=0 hard_check|soft_check …` 前缀显式保留 ✅ 行。
     [ "${QUIET_SUCCESS:-0}" != "1" ] && echo -e "  ${GREEN}✅ ${name}${RESET}"
     log_gate "$name" miss
   fi
 }
 
-# D1148: 成功静默缺省值（1=静默）。可在调用点以前缀赋值覆盖（组 7a 用 0）。
-#   注: 不在此处 export——保持"调用点展开"，供夹具提取函数片段独立 source 时仍打印 ✅。
-
 soft_pass() {
   local name="$1"
-  # D1148 降噪: 成功静默（同 hard_check）。soft_pass 只在成功路径被调用，无失败语义。
   [ "${QUIET_SUCCESS:-0}" != "1" ] && echo -e "  ${GREEN}✅ ${name}${RESET}"
   return 0
 }
 
-# D515 项4: 门禁命中统计 — 每次检查触发追加 JSONL 到 .claude/gate-hits.log
-# 契约(铁律47): @input $1=检查点名 $2=hit|miss; @output 追加 JSONL 行
-# @degraded 写失败静默（统计非门禁，不阻断提交——但 GATE_HITS_LOG 默认在仓库内可写）
 log_gate() {
   local g="$1" r="$2"
   [ -z "$g" ] && return 0
   echo "{\"time\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"gate\": \"${g}\", \"result\": \"${r}\", \"branch\": \"${_GATE_BRANCH}\"}" >> "${GATE_HITS_LOG}" 2>/dev/null || true  # swallow-ok: 统计写失败不阻断提交
 }
 
-# D515 项3 / V5.0.0: 软提示检查 — 输出格式与 hard_check 一致（报告完整，--check/K3 可见），
-# 但只计 SOFT_COUNT 不计 HARD_FAIL：本地不阻断，CI Iron Laws job 为权威。
-
-# D749: 声明类检查级别 = 沙箱感知
-#   真实提交（无注入缝）→ hard（错误不进 CI）
-#   测试沙箱（SYNO_TASK_STATE_DIR / SYNO_BRIEF_DIR 被注入）→ soft
-#   理由: 夹具 brief 由测试构造，不应强制 6 字段/#CRITERIA（那是真实提交的要求）；
-#        但绝不对真实提交放水（注入缝只在测试里出现）。
 _SANDBOX=0
 [ -n "${SYNO_TASK_STATE_DIR:-}" ] && _SANDBOX=1
 [ -n "${SYNO_BRIEF_DIR:-}" ] && _SANDBOX=1
@@ -161,19 +135,11 @@ soft_check() {
     echo "$matches" | head -8 | while read -r line; do [ -n "$line" ] && echo "     ${line}"; done
     log_gate "$name" hit
   else
-    # D1148 降噪: 成功静默（同 hard_check；自包含条件见 hard_check 注释）
     [ "${QUIET_SUCCESS:-0}" != "1" ] && echo -e "  ${GREEN}✅ ${name}${RESET}"
     log_gate "$name" miss
   fi
 }
 
-# ═══ D1148: 旁路观测（bypass）═══
-# 契约(铁律47):
-#   @input  note_check <名称> <发现描述串>;  bypass_run <名称> <命令...>
-#   @output 无发现 → 零输出；有发现 → ℹ️ 行 + 最多 3 行明细
-#   @exit   恒 0（旁路不改判据、不置 HARD_FAIL，**不写 gate-hits.log**）
-#   @degraded 命令非零（含 exit≥2 检查自身失败）→ 以 ℹ️ 明示，绝不静默吞掉
-# 与软提示的差别: soft_check 在 CI（SYNO_CI=1）转硬；旁路**不转**——语义即"观测"。
 note_check() {
   local name="$1" detail="$2"
   [ -z "$detail" ] && return 0
@@ -192,18 +158,6 @@ bypass_run() {
 }
 
 # ═══ D1219（卡 #1225 旁路清场）: 检查自身失败态 ═══
-# 三态纪律: 0=通过 / 1=违规 / 2=**检查自身失败**（同样阻断）。本函数实现第 3 态。
-# 为什么需要它（被替代的旧形态 = 假绿）: 旧写法把「判定脚本不存在」降级为 note_check 观测
-#   （只打印、不判红、CI 也不转硬）⇒ **检查消失被判作通过**。这不是「宽松」，是判据失效。
-# 与「违规」的区别（报告可分辨）: 违规红 = 命中描述；自身失败红 = 显式标注「检查自身失败（脚本缺失）」，
-#   并按铁律 11 落 degraded-events.log（component=pre-commit-<闸名>, reason=script-missing）。
-# 强度: 本地与 CI **同等阻断**（本地唯一软提示面是 v5_soft；自身失败态不适用软提示——
-#   「工具坏了」比「内容不合规」更需要立刻可见，禁 `|| true` 吞崩溃）。
-# 契约（铁律 47）:
-#   @input  — $1=闸名（报告用）; $2=缺失脚本的仓库相对路径（信息用）
-#   @output — stderr/stdout 显式红行 + HARD_FAIL 自增 + degraded-events.log 追加一行
-#   @exit   — 无（由本脚本末尾按 HARD_FAIL 统一退出；本仓约定：任一硬红 ⇒ 脚本 exit 1）
-#   @degraded — 日志写失败静默（统计/审计落盘非门禁本体，不改变已计入的 HARD_FAIL）
 self_fail_missing_script() {
   local _name="$1" _path="$2"
   echo -e "  ${RED}❌ ${_name}: 检查自身失败（脚本缺失，非内容违规）— ${_path} 不存在${RESET}"
@@ -216,12 +170,7 @@ self_fail_missing_script() {
     >> "$ROOT/.codex/control-tower/logs/degraded-events.log" 2>/dev/null || true
 }
 
-# D515 项3: par_collect 类软门禁失败时统一提示（判定脚本输出原样打印，不阻断）
 v5_soft() {
-  # D516/K3 P0-1: SYNO_CI strict 模式——CI 上（SYNO_CI=1）软提示转硬阻断。
-  # 这才是"本地减负 + CI 权威"的物理落地：本地快速通过（软提示），CI 同一检查
-  # 变硬（K3 D515 审计实证：无此转换则约 20 项检查本地+CI 双放行=门禁虚设，
-  # D503 P0-1 同型复发）。ci.yml Iron Laws job 注入 SYNO_CI: "1"。
   if [ "${SYNO_CI:-0}" = "1" ]; then
     echo -e "  ${RED}❌ ${1}: 检查未过 [CI strict——本地软提示在 CI 上为硬阻断]${RESET}"
     echo "::error title=IronLaws:${1}::检查未过（CI strict 转硬）"
@@ -233,27 +182,6 @@ v5_soft() {
   SOFT_COUNT=$((SOFT_COUNT + 1))
   log_gate "$1" hit
 }
-
-# D515 项4: 门禁命中统计 — 每次检查触发追加 JSONL 到 .claude/gate-hits.log
-# 契约(铁律47): @input $1=检查点名 $2=hit|miss; @output 追加 JSONL 行
-# @degraded 写失败静默（统计非门禁，不阻断提交——但 GATE_HITS_LOG 默认在仓库内可写）
-# D515 项3 / V5.0.0: 软提示检查 — 输出格式与 hard_check 一致（报告完整，--check/K3 可见），
-# 但只计 SOFT_COUNT 不计 HARD_FAIL：本地不阻断，CI Iron Laws job 为权威。
-# D515 项3: par_collect 类软门禁失败时统一提示（判定脚本输出原样打印，不阻断）
-# D515 项4: 门禁命中统计 — 每次检查触发追加 JSONL 到 .claude/gate-hits.log
-# 契约(铁律47): @input $1=检查点名 $2=hit|miss; @output 追加 JSONL 行
-# @degraded 写失败静默（统计非门禁，不阻断提交——但 GATE_HITS_LOG 默认在仓库内可写）
-# D515 项3 / V5.0.0: 软提示检查 — 输出格式与 hard_check 一致（报告完整，--check/K3 可见），
-# 但只计 SOFT_COUNT 不计 HARD_FAIL：本地不阻断，CI Iron Laws job 为权威。
-# D515 项3: par_collect 类软门禁失败时统一提示（判定脚本输出原样打印，不阻断）
-# D520: 可选信息类检查——永不转硬（即使 SYNO_CI=1）。CI strict 的语义边界：
-#   "本地减负+CI 权威"只对质量类检查成立；标注"可选"的提示（PRD 章节引用等）
-#   在 CI 转硬 = 提交 brief 的分支永远红（D520 实证：PRD 对照误炸 Iron Laws）。
-# ═══ D1148 退役: opt_check() 及其唯一调用点（`PRD 对照: Done 标准引用 PRD 章节(可选)`）═══
-#   退役判据: gate-hits 实测 261 次命中 / 0 次阻断（永不转硬 ⇒ 零判据价值，纯噪音）。
-#   退役方式: 删函数 + 删调用点 + 本注释留痕（D1148 可回溯；opt_check 若复活需先过 K3 送审）。
-#   代价（如实记录）: PRD 章节引用不再出现在提交输出——该项从未阻断过任何提交，
-#   其"提示"作用由 brief 模板的 Done 标准段自带 verify: 契约（声明闸③）覆盖。
 
 warn_check() {
   local name="$1" matches="$2"
@@ -272,18 +200,14 @@ warn_check() {
   fi
 }
 
-# V3.8: plan.json 感知的"硬阻断或降级警告"检查
-# 如果文件在 plan.json 中声明了 defer → 降级为警告，不阻断
 plan_aware_check() {
   local name="$1" matches="$2" deferred_list="$3"
   local count=0
   [ -n "$matches" ] && count=$(echo "$matches" | grep -c . 2>/dev/null) || count=0
   if [ "$count" -eq 0 ]; then
-    # D1148 降噪: 成功静默（plan.json deferred 场景下的接线检查同样无话可说）
     [ "${QUIET_SUCCESS:-0}" != "1" ] && echo -e "  ${GREEN}✅ ${name}${RESET}"
     return
   fi
-  # 检查是否所有匹配都在 deferred 列表中
   local non_deferred=""
   while IFS= read -r match_line; do
     [ -z "$match_line" ] && continue
@@ -294,7 +218,6 @@ plan_aware_check() {
     non_deferred="${non_deferred}${match_line}\n"
   done <<< "$matches"
   if [ -z "$non_deferred" ]; then
-    # 全部被 deferred → 警告不阻断
     echo -e "  ${YELLOW}⚠️  ${name}: ${count} 处 (plan.json deferred)  [警告]${RESET}"
     echo "$matches" | head -3 | while read -r line; do [ -n "$line" ] && echo "     ${line}"; done
     WARN_COUNT=$((WARN_COUNT + 1))
@@ -306,34 +229,19 @@ plan_aware_check() {
 }
 
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-# D515 项4: 命中统计落点（gitignore 运行态；SYNO_GATE_HITS_LOG 供测试注入）
 GATE_HITS_LOG="${SYNO_GATE_HITS_LOG:-$ROOT/.claude/gate-hits.log}"
 _GATE_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
-# D515 项4: 命中统计落点（gitignore 运行态；SYNO_GATE_HITS_LOG 供测试注入）
 GATE_HITS_LOG="${SYNO_GATE_HITS_LOG:-$ROOT/.claude/gate-hits.log}"
 _GATE_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
-# D515 项4: 命中统计落点（gitignore 运行态；SYNO_GATE_HITS_LOG 供测试注入）
 GATE_HITS_LOG="${SYNO_GATE_HITS_LOG:-$ROOT/.claude/gate-hits.log}"
 _GATE_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
 
-
-# ═══ D201 L3: bypass 阻断 — 今日任何绕过记录 → 硬阻断 ═══
-# D421 (CT-29 熔断去锁死): 单点 detected-bypass 误报不再无条件锁死全线——
-#   缺省仍硬阻断, 但 SYNO_GATEKEEPER_ACK=1 表示人工已复核该绕过记录 → 降级为告警放行。
-#   与组 7c 共享同一逃生舱语义 (逃生舱写入 degraded-events.log, 铁律 11)。
 BYPASS_LOG="$ROOT/.claude/bypass.log"
-# 方案1挪CI(D467)后：本地 pre-commit 软提示 + CI 权威，本地 --no-verify 不再是"绕过"（CI 兜底）。
-# GATEKEEPER 检测"本地 --no-verify"只在本地跑；CI 上跳过（否则 CI 检测 git 跟踪的本地 bypass.log 痕迹 → 自阻断）。
 # GATEKEEPER-COUNT-BEGIN（夹具 tests/control-tower/bypass-rewrite-classify.test.sh 按此标记提取本段做行为断言；改格式须同步夹具）
 if [ -f "$BYPASS_LOG" ] && [ "${GITHUB_ACTIONS:-}" != "true" ]; then
   TODAY=$(date +%Y-%m-%d)
-  # V4.5.1: 只匹配 detected-bypass 行。COMMITTED 行是正常提交成功标记，不是绕过。
-  # #1270（2026-10-07）: **疑似与确证分离** —— `suspected-rewrite`（rebase/cherry-pick 重写误报）
-  #   单独计数、**保留在台账**（可 grep/可审计，不静默漏判），但不计入"确证绕过"阈值；
-  #   只有确证行（detected-bypass）才触发原有的硬阻断/ACK 语义。
   BYPASS_COUNT=$(grep -c "${TODAY}.*detected-bypass" "$BYPASS_LOG" 2>/dev/null | tr -d '\n\r' || echo 0)
   SUSPECT_COUNT=$(grep -c "${TODAY}.*suspected-rewrite" "$BYPASS_LOG" 2>/dev/null | tr -d '\n\r' || echo 0)
-  # R1 收口（verifier P2）: 按类分开计数 + 标出**可伪造类**（forgeable=1，状态文件类 mkdir 即可伪造）
   SUSPECT_RS=$(grep -c "${TODAY}.*suspected-rewrite.*suspect=rebase-state" "$BYPASS_LOG" 2>/dev/null | tr -d '\n\r' || echo 0)
   SUSPECT_CP=$(grep -c "${TODAY}.*suspected-rewrite.*suspect=cherry-pick-state" "$BYPASS_LOG" 2>/dev/null | tr -d '\n\r' || echo 0)
   SUSPECT_TS=$(grep -c "${TODAY}.*suspected-rewrite.*suspect=tree-subject-match" "$BYPASS_LOG" 2>/dev/null | tr -d '\n\r' || echo 0)
@@ -359,22 +267,12 @@ if [ -f "$BYPASS_LOG" ] && [ "${GITHUB_ACTIONS:-}" != "true" ]; then
   fi
 fi
 # GATEKEEPER-COUNT-END
-# V4.5.1: 缓存 git diff 结果 — 本机每次 git 调用 ~1s，脚本内 10+ 次调用是超时主因
-# D387 (CT-34): 测试注入缝 (只读, 默认真实 git, fail-closed)
-# D390 (CT-P1-1, K3 D387 P1-1): 武装守卫 — 注入缝仅 SYNO_TEST_ARM=1 时生效。
-# 生产环境缝关闭: 组合 SYNO_SECRETS_ROOT 的无痕迹全 13 组旁路被堵死
-# (K3 实测: SYNO_GIT_CACHED_*=docs/x.md + SYNO_SECRETS_ROOT=/tmp/empty → 全部门禁跳过且零审计)。
 if [ "${SYNO_TEST_ARM:-0}" = "1" ]; then
-  # 测试/审计注入缝 (SYNO_TEST_ARM=1 双确认才可注入)
   GIT_CACHED_NAMES="${SYNO_GIT_CACHED_NAMES:-$(git -c core.quotepath=false diff --cached --name-only --diff-filter=ACMR 2>/dev/null || true)}"
   GIT_CACHED_ALL_NAMES="${SYNO_GIT_CACHED_ALL_NAMES:-$(git -c core.quotepath=false diff --cached --name-only --diff-filter=ACMR 2>/dev/null || true)}"
   GIT_CACHED_ADDED_NAMES="${SYNO_GIT_CACHED_ADDED_NAMES:-$(git -c core.quotepath=false diff --cached --name-only --diff-filter=A 2>/dev/null || true)}"
   GIT_CACHED_DIFF="${SYNO_GIT_CACHED_DIFF:-$(git diff --cached 2>/dev/null || true)}"
 else
-  # 生产路径: 真实 git (注入缝变量被忽略, fail-closed)
-  # CI gap 补齐 (2026-08-21): 仅 GITHUB_ACTIONS 环境 + SYNO_DIFF_BASE 注入时，
-  # 用 base...HEAD 替代 --cached，让 CI 空暂存下增量检查仍查"本次 PR 变更"（否则空跑假绿）。
-  # 本地环境 GITHUB_ACTIONS 非 true → 忽略 SYNO_DIFF_BASE（堵注入缝旁路，D390 教训）。
   if [ "${GITHUB_ACTIONS:-}" = "true" ] && [ -n "${SYNO_DIFF_BASE:-}" ]; then
     _DIFF_RANGE="${SYNO_DIFF_BASE}...HEAD"
     GIT_CACHED_NAMES="$(git -c core.quotepath=false diff --name-only --diff-filter=ACMR "$_DIFF_RANGE" 2>/dev/null || true)"
@@ -391,21 +289,6 @@ fi
 
 STAGED=$(echo "$GIT_CACHED_NAMES" | grep '\.ts$' | grep -v node_modules || true)
 
-# ═══ CT-34 (D387): 纯文档提交豁免 — 创始人 2026-08-16 决策 ═══
-# 文档(docs/、.claude/task-briefs/、memory/、task-state/、根级 *.md/*.html/*.txt)
-# 仅为跨机同步信息, 不与代码同跑 13 组门禁。豁免 12 组, 仅保留 Secrets(D312)。
-# 白名单 = 目录 + 扩展名双约束:
-#   ✅ docs/ 下仅 *.md|*.html|*.txt; .claude/task-briefs/ 下 *.md; memory/ 下 *.md;
-#      task-state/ 下 *.json|*.md(任务登记); 根级 *.md|*.html|*.txt
-#   ❌ 排除: .claude/skills/、.dsh/skills/(行为配置, D370 有独立同步契约 → 非纯文档,
-#      技能提交保持组 13 全门禁; 纯文档提交时 SKILL_FILES_STAGED 为空天然不触发)
-#   ❌ 排除: .codex/(契约/映射配置, 组 9 依赖)、.github/(CI 配置, 非同步信息)、
-#      .claude/settings.json(含 token 风险, D312)
-# 契约 (铁律 47):
-#   @input  — $1: STAGED_ALL（git diff --cached --name-only 全暂存文件, 换行分隔）
-#   @output — stdout: 1 = 纯文档提交; 0 = 非纯文档（含任一白名单外文件/空输入）
-#   @fail-closed — 正则匹配失败/空输入 → 0（走全量 13 组, 不静默放行, D328）
-#   @error  — 无异常路径（纯 bash 字符串匹配）
 DOC_PREFIX_RE='^(docs/.*\.(md|html|txt)$|\.claude/task-briefs/.*\.(md|html|txt)$|memory/.*\.(md|html|txt)$|task-state/.*\.(json|md)$|[^/]+\.(md|html|txt)$)'
 is_doc_only() {
   local staged="$1"
@@ -417,13 +300,6 @@ is_doc_only() {
 STAGED_ALL=$(echo "$GIT_CACHED_ALL_NAMES" | grep -v node_modules || true)
 DOC_ONLY=$(is_doc_only "$STAGED_ALL")
 
-# ═══ D1193: DOC-CONTRACT 三闸（格式 / 取代 / 入库）—— 接线点 ═══
-# 位置是判据的一部分: 必须在本块【之后】、CT-34 纯文档早退【之前】。
-#   理由（D1193 实测）: 纯文档提交会在下面 `exit 0`，而闸 3 的对象恰恰是文档提交 ——
-#   把调用点放到早退之后（如 D1/D2 所在的文末区块）等于永不点火。
-# 强度与 D515/D516 一致: 本地 soft（人可见），CI strict（SYNO_CI=1）转硬阻断。
-# 判据来源: docs/synova/DOC-CONTRACT.md 的三个机器可读块（执行体只解析契约，不硬编码）。
-# 条件跳过: 无 md/html 变更时不启动 python（保持 <1s）。
 DOC_CONTRACT_TOUCHED=$(echo "$STAGED_ALL" | grep -E '\.(md|html?)$' || true)
 if [ -z "$DOC_CONTRACT_TOUCHED" ]; then
   soft_pass "D1193 文档契约三闸: 无文档变更（跳过）"
@@ -431,7 +307,6 @@ elif [ ! -f "$ROOT/scripts/control-tower/check-doc-contract.sh" ]; then
   soft_check "D1193 文档契约三闸: 执行体缺失（fail-closed）" "scripts/control-tower/check-doc-contract.sh"
   [ "${SYNO_CI:-0}" = "1" ] && exit 1
 else
-  # CI 空暂存 → 用 base...HEAD（与 GIT_CACHED_* 同源，D390 注入缝语义不变）
   if [ "${GITHUB_ACTIONS:-}" = "true" ] && [ -n "${SYNO_DIFF_BASE:-}" ]; then
     _DC_ARGS=(--base "$SYNO_DIFF_BASE")
   else
@@ -444,35 +319,25 @@ else
   elif [ "$DOC_CONTRACT_RC" -eq 1 ]; then
     soft_check "D1193 文档契约三闸: 有违规 — 修正后重试（自跑: bash scripts/control-tower/check-doc-contract.sh ${_DC_ARGS[*]}）" \
       "$(echo "$DOC_CONTRACT_OUT" | grep -E '^\[FAIL\]|^       - ' | head -8)"
-    # 纯文档提交会走 CT-34 早退分支 exit 0 — 不在此处结算则 CI strict 下本闸等于未接（D1193 实测）
     [ "${SYNO_CI:-0}" = "1" ] && exit 1
   else
-    # D328 三态: degraded（判据源读不到）不与通过混同
     soft_check "D1193 文档契约三闸: 检查本身降级 (exit=$DOC_CONTRACT_RC)" "$(echo "$DOC_CONTRACT_OUT" | tail -3)"
     [ "${SYNO_CI:-0}" = "1" ] && exit 1
   fi
 fi
 
 # ── CT-34 纯文档提交: 仅 Secrets 扫描, 豁免其余 12 组 ──
-# 早退分支置于 par_start 之前: 纯文档提交零 par 启动、秒过 (V4.5.1 性能教训)。
-# GATEKEEPER bypass 阻断 (L99-111) 在早退之前 — 绕过审计先于豁免, 不放行 --no-verify 滥用。
 if [ "$DOC_ONLY" -eq 1 ]; then
   echo ""
   echo "═══════════════════════════════════════════════════════════"
   echo "  纯文档提交 (CT-34/D387): 豁免 12 组 — 仅 Secrets 扫描"
   echo "═══════════════════════════════════════════════════════════"
   echo ""
-  # D390 (CT-P1-1, K3 D387 P1-1): 豁免事件审计落盘 — 无痕迹豁免 = M4 执行证据链断裂。
-  # 每次纯文档豁免写 exempt.log（时间戳 + 暂存清单），供审计对账（post-commit/定期）。
-  # 路径支持 SYNO_EXEMPT_LOG 注入（测试沙箱，同 SYNO_SECRETS_ROOT 惯例；不构成旁路）。
   EXEMPT_LOG="${SYNO_EXEMPT_LOG:-$ROOT/.claude/exempt.log}"
   mkdir -p "$(dirname "$EXEMPT_LOG")" 2>/dev/null || true
   echo "$(date +%Y-%m-%dT%H:%M:%S%z) | EXEMPT | staged=$(echo "$STAGED_ALL" | tr '\n' ',' | sed 's/,$//')" >> "$EXEMPT_LOG" 2>/dev/null || true
   if bash "$ROOT/scripts/check-secrets.sh" 2>&1; then
     echo -e "  ${GREEN}✅ Secrets 扫描通过${RESET}"
-    # D472 复核修复: 纯文档提交也须过迁移门禁 —— proposed/ Note 变更（新建/修改决策 Note）
-    # 命中纯文档白名单（memory/.*\.md）会走本早退分支，若不检查则迁移门禁被 CT-34 豁免绕过，
-    # "新建 Note"这一 D472 核心场景门禁失效。门禁 <1s，不破坏 CT-34 秒过性能。
     NOTES_TOUCHED_DOC=$(echo "$STAGED_ALL" | grep -E '^memory/notes/proposed/' || true)
     if [ -n "$NOTES_TOUCHED_DOC" ]; then
       if bash "$ROOT/scripts/control-tower/check-notes-lifecycle.sh"; then
@@ -491,11 +356,7 @@ if [ "$DOC_ONLY" -eq 1 ]; then
   fi
 fi
 
-# ── D515 项2 / V5: 纯补记快速通道 ──
-# 仅当 synova-commit 判定 --files 列表唯一且为 .claude/bypass.log 时 export SYNO_FASTLANE=1。
 # ⚠️ 不裸看 git diff --cached：D414 会把 bypass.log 自动 add 进正常提交——裸看暂存区
-#    会让正常提交误走快速通道 = 质量根被绕过（D515 spec 自查坑）。唯一信号源 = 环境变量。
-# Secrets 保留（证据文件也可能泄密）；D331 对账由 pre-push 兜底，无需重复。
 if [ "${SYNO_FASTLANE:-0}" = "1" ]; then
   echo ""
   echo "═══════════════════════════════════════════════════════════"
@@ -512,22 +373,10 @@ if [ "${SYNO_FASTLANE:-0}" = "1" ]; then
   fi
 fi
 
-# ── D515 项2 / V5: 纯补记快速通道 ──
-# 仅当 synova-commit 判定 --files 列表唯一且为 .claude/bypass.log 时 export SYNO_FASTLANE=1。
 # ⚠️ 不裸看 git diff --cached：D414 会把 bypass.log 自动 add 进正常提交——裸看暂存区
-#    会让正常提交误走快速通道 = 质量根被绕过（D515 spec 自查坑）。唯一信号源 = 环境变量。
-# Secrets 保留（证据文件也可能泄密）；D331 对账由 pre-push 兜底，无需重复。
 
-# ── D515 项2 / V5: 纯补记快速通道 ──
-# 仅当 synova-commit 判定 --files 列表唯一且为 .claude/bypass.log 时 export SYNO_FASTLANE=1。
 # ⚠️ 不裸看 git diff --cached：D414 会把 bypass.log 自动 add 进正常提交——裸看暂存区
-#    会让正常提交误走快速通道 = 质量根被绕过（D515 spec 自查坑）。唯一信号源 = 环境变量。
-# Secrets 保留（证据文件也可能泄密）；D331 对账由 pre-push 兜底，无需重复。
 
-# ═══ V4.5.1: 慢脚本并行化 — 慢盘上串行 95s → 并行 ~26s ═══
-# 环境事实: 本机单文件 I/O ~500ms, python 启动 ~1.5s, git ~1s。
-# 9 个外部脚本串行执行累计 ~95s 导致 git commit 120s 超时 → 被迫 --no-verify。
-# 解法: 在脚本早期统一后台启动, 在各自原本的调用点 wait + cat 收集。
 PAR_DIR="$ROOT/.claude/.precommit-par"
 rm -rf "$PAR_DIR" 2>/dev/null
 mkdir -p "$PAR_DIR" 2>/dev/null
@@ -547,14 +396,6 @@ par_collect() {
   return "${code:-0}"
 }
 
-# D1148: 并行子检查的**静默成功**收集——成功零输出（降噪），失败原样打印（报告能力不减）。
-# 契约(铁律47):
-#   @input  <name> <pid>（同 par_collect）
-#   @output code=0 → 无输出；code≠0 → 原样输出该子检查的完整 stdout+stderr
-#   @exit   与 par_collect 一致（把子检查退出码原样返回，调用点 `|| v5_soft` / `|| HARD_FAIL=…` 语义不变）
-#   @degraded code≥2 同样走"失败打印 + 原样返回"（不静默，D328 三态）
-# ⚠️ 必须在**当前 shell** 调用（内部 wait 子进程；放进 $( ) 会因 "not a child of this shell"
-#    静默拿到未落盘的 code/out）。需要捕获文本时用「重定向到文件后读回」（见闸② 前的 plan-integrity）。
 par_collect_quiet() {
   local name="$1" pid="$2"
   wait "$pid" 2>/dev/null
@@ -567,26 +408,20 @@ par_collect_quiet() {
   return "$code"
 }
 
-# 后台启动 8 个慢脚本 (validate-expert-config 需即时判断退出码, 保留串行)
 ( par_start hardcoded check-hardcoded.sh ) &  PAR_HARDCODED=$!
 ( par_start deprecated-mapping check-deprecated-mapping.sh ) &  PAR_DEPRECATED=$!
 ( par_start secrets check-secrets.sh ) &  PAR_SECRETS=$!
 ( par_start plan-integrity check-plan-integrity.sh ) &  PAR_PLAN_INTEGRITY=$!
 ( par_start verifiable-done check-verifiable-done.sh ) &  PAR_VERIFIABLE=$!
-# D1148: q0c 取消跟踪已并入声明闸①，改为**同步单次**执行（见闸①块）——不再并行启动，避免跑两遍。
 ( par_start acceptance-ci check-acceptance-ci.sh ) &  PAR_ACCEPTANCE=$!
 ( par_start file-driven check-file-driven.sh ) &  PAR_FILE_DRIVEN=$!
 
-# ═══ V3.8: plan.json — 分阶段任务支持 ═══
-# Anthropic 原则: 架构步骤不是偷懒。当 plan.json 声明某文件处于 create 阶段
-# 且 wiring 标记为 deferred，接线检查对该文件降级为警告。
 PLAN_FILE="$ROOT/.claude/plan.json"
 DEFERRED_WIRING_FILES=""
 DEFERRED_FF_FILES=""
 DEFERRED_TEST_FILES=""
 PLAN_ACTIVE=0
 if [ -f "$PLAN_FILE" ]; then
-  # 用 python 解析 JSON 比 bash 可靠
   PLAN_PARSE=$(python3 -c "
 import json, sys
 try:
@@ -613,17 +448,9 @@ except: pass
     DEFERRED_TEST_FILES=$(echo "$PLAN_PARSE" | grep "^TEST:" | sed 's/^TEST://')
   fi
 fi
-# STAGED_ALL 已提前定义于 CT-34 (D387) 区块 — 此处不再重复定义
 STAGED_SRC=$(echo "$STAGED_ALL" | grep -E '^src/|^tests/|^packages/|^scripts/' | grep -v 'scripts/pre-commit-check.sh\|scripts/check-secrets.sh\|scripts/check-file-driven.sh\|scripts/workflow/' || true)
 NEW_IMPL=$(echo "$GIT_CACHED_ADDED_NAMES" | grep -E "^src/|^extensions/" | grep "\.ts$" | grep -v "\.test\." | grep -v "\.d\.ts" | grep -v "types\.ts$\|index\.ts$\|helpers\.ts$" | grep -v "src/sentinel/compute/" || true)
 
-# ═══ D1148: 声明类三闸的**对象集**（合并提交下收敛为"本次自撰文件"）═══
-# 病根（本卡实测）：合并提交下 `git diff --cached`（vs 第一父 = 本分支 HEAD）含**第二父（main）
-#   的全部文件**——它们已在各自 PR 受门禁。若照此解析"认领者"，会把**别人的 brief** 当成本次
-#   提交的对象（实测：merge origin/main 时把 main 侧 `2026-10-04-D1145-bypass-untrack.md` 拉来判
-#   可解析性 → 闸② 假红「#CRITERIA 缺失」。旧实现校验的是另一个对象，恰好不红）。
-# 定义"本次自撰" = 索引**同时**区别于两个父（正常合并 = 空；冲突解 = 冲突文件本身）。
-# 非合并提交：DECL_SCOPE == STAGED_ALL（语义零变化）。
 _DECL_IS_MERGE=0
 DECL_SCOPE="$STAGED_ALL"
 DECL_MERGE_SKIP=0
@@ -644,43 +471,19 @@ echo "  Loop Engineering V4.5.1 — pre-commit (13 组 + 免疫 + plan-integrity
 echo "═══════════════════════════════════════════════════════════"
 echo ""
 
-# ═══════════════════════════════════════════════════════════════════
-# 组 1: 类型安全 + 硬编码数据 (原 1, 10, 13 合并)
-#
-# Anthropic 决策: 原则 6 "找到根因" — `as any` 不是语法错误，是类型系统的信任崩溃。
-#   一次 `as any` 意味着"我不确定这个类型，跳过检查"——而这恰好是所有类型相关 bug
-#   的入口。47 次历史事故证明: 零容忍是唯一正确的策略。
-#   硬编码业务数据 (部门名/可扩展实体列表) 的根因相同——把应该是数据的东西写成了代码。
-#   历史: 47 次 as any 导致运行时崩溃。2026-05 engine-core 拆分中，20 个桥接文件
-#         大量使用 as any 绕过类型检查，17 处 CJS require() 在 ESM 下崩溃。
-# ═══════════════════════════════════════════════════════════════════
 echo -e "${CYAN}── 组 1/13: 类型安全 + 硬编码数据 ──${RESET}"
 
-# 1a. as any 零容忍 — 只拦本次变更新增的 as any（存量独立治理）
-# 方案1(挪CI): 本地用暂存区 diff；CI 用 base...HEAD diff（SYNO_DIFF_BASE 注入）
-# K3 审计 P1-2 修复：范围覆盖 src/ + packages/（原只查 src/ 漏掉 packages/ 33+ 处）；不查 scripts/ 防自引用误报。
-# D501 修复：排除测试/声明文件（.test.ts/.test.tsx/.d.ts）——as-any 审计器自己的测试 fixture 含
-#   as any 字符串，D471 引入 packages/test-kit/tests/architecture/05-as-any-audit.test.ts 后 CI 误报 19 处。
-#   与 findTsFiles（packages/test-kit/src/security-scanners.ts）排除规则一致：只查生产代码。
-# Anthropic 原则: bash 只做模式匹配。新增行 = diff 的 + 行（排除 +++ diff 头）。
 if [ -n "${SYNO_DIFF_BASE:-}" ]; then
   AS_ANY_DIFF="$(git diff "$SYNO_DIFF_BASE"...HEAD -- src/ packages/ ':(exclude)**/*.test.ts' ':(exclude)**/*.test.tsx' ':(exclude)**/*.d.ts' 2>/dev/null || true)"
 else
   AS_ANY_DIFF="$(git diff --cached -- src/ packages/ ':(exclude)**/*.test.ts' ':(exclude)**/*.test.tsx' ':(exclude)**/*.d.ts' 2>/dev/null || true)"
 fi
-# CT-46 (K3 GA 线闭环批, 2026-08-29): 模式扩 as never / as unknown as——mcp/index.ts L236 `getDatabase() as never`
-#   实证组 1 只匹配 as any 字面量存在逃逸盲区；双断言链 as unknown as 同属类型信任崩溃（铁律 38 精神）。
 M=$(echo "$AS_ANY_DIFF" | grep -E '^\+' | grep -v '^+++' | grep -E 'as (any|never)\b|as unknown as' | grep -vE '^\+\s*(//|/\*|\*|#)' || true)
 hard_check "as any / as never / as unknown as 零容忍（新增，铁律 38；存量独立清理）" "$M"
 
-# 1a-2. from" ???? (D93/D95 ????)
-# ??: Claude Code ?????? import ??????? from ?????
-# tsc ?????????? token??CI ?????: D93 + D95 ?????
 FROM_DAMAGE=$(grep -rn 'from"' src/ --include="*.ts" 2>/dev/null | grep -v "node_modules" | grep -v ".test." | grep -v ".d.ts" | grep -v '"import.*from"' | grep -v '".*from".*"' || true)
 hard_check "from ????: from??????? (D93/D95??)" "${FROM_DAMAGE:-}"
 
-
-# 1b. 硬编码业务数据 (合并原 10 + 13: 硬编码联合类型/数组/Set/DEFAULT_* + 部门名等)
 STAGED_HTML=$(echo "$STAGED_ALL" | grep -E '\.(html|ts)$' | grep -v node_modules | grep -v '\.test\.' || true)
 HARDCODE_DATA=""
 if [ -n "$STAGED_HTML" ]; then
@@ -690,27 +493,13 @@ if [ -n "$STAGED_HTML" ]; then
     [ -n "$DEPS" ] && HARDCODE_DATA="${HARDCODE_DATA}  ${hf}: 可能硬编码业务数据(如部门名)\n"
   done
 fi
-# 也跑 check-hardcoded.sh 的联合类型/数组/Set/DEFAULT_* 检测 (不阻断，仅报告)
 par_collect_quiet hardcoded "$PAR_HARDCODED" || true
 soft_check "硬编码业务数据/类型 (禁止硬编码部门名/可扩展实体列表)" "${HARDCODE_DATA:-}"
 
-# V4.5.1: 旧适配器废弃映射检查 (不阻断)
 par_collect_quiet deprecated-mapping "$PAR_DEPRECATED" || true
 
-# ═══════════════════════════════════════════════════════════════════
-# 组 2: 测试质量 (原 2, 4, 12, 17 合并)
-#
-# Anthropic 决策: 原则 2 "先设计验证标准" — 测试不是写完代码后的负担，是写代码前的规格。
-#   空 catch 无 log → 静默降级 → 线上故障无迹可寻。铁律 24+31 禁止。
-#   新文件无测试 → 4 次接线失败事故 (组件通过单元测试但从未被生产代码调用)。
-#   桩测试 (<3 expect) → 假绿色 CI → 合并后才发现的回归。铁律 36: vitest 零失败。
-#   跨模块无集成测试 → bridge/context 类跨层调用，单元测试 mock 一切，集成才是真实。
-#   历史: 4 次接线失败 — 新 export 有单元测试但从未被 import。
-#         铁律 11 — 静默降级事故 (catch 空吞异常，生产环境无日志)。
-# ═══════════════════════════════════════════════════════════════════
 echo -e "${CYAN}── 组 2/13: 测试质量 ──${RESET}"
 
-# 2a. empty catch 无 log
 EMPTY=""
 if [ -n "$STAGED" ]; then
   while IFS= read -r file; do
@@ -720,7 +509,6 @@ if [ -n "$STAGED" ]; then
       while IFS= read -r cline; do
         linenum=$(echo "$cline" | cut -d: -f1); [ -z "$linenum" ] && continue
         ctx=$(sed -n "${linenum},$((linenum + 2))p" "$file" 2>/dev/null || echo "")
-        # V3.8: 空 catch 接收 log.|degraded|throw|/\*|// — 有任一项即非"静默吞异常"
         if ! echo "$ctx" | grep -qE "log\.|logger\.|console\.|degraded|throw\s|/\*|//"; then
           EMPTY="${EMPTY}${file}:${linenum}: 空 catch (无 log/degraded/throw)\n"
         fi
@@ -730,7 +518,6 @@ if [ -n "$STAGED" ]; then
 fi
 soft_check "empty catch 无 log (铁律 24+31)" "${EMPTY:-}"
 
-# D313 M5b: 附挂静默吞错扫描（git diff 新增行含 2>/dev/null → 阻断，豁免需 # swallow-ok:）
 SILENT_OUT=$(bash "$ROOT/scripts/workflow/check-silent-swallow.sh" --diff 2>&1 || true)
 if echo "$SILENT_OUT" | grep -q "❌"; then
   soft_check "静默吞错扫描 (D313 M5b)" "$SILENT_OUT"
@@ -738,14 +525,11 @@ else
   soft_pass "静默吞错扫描 (D313 M5b)"
 fi
 
-# 2b. 新文件配对测试 (原 4)
 MISSING_TEST=""
 if [ -n "$NEW_IMPL" ]; then
   while IFS= read -r impl; do
     [ -z "$impl" ] && continue
-    # 映射: src/xxx.ts→tests/xxx.test.ts, extensions/sentinels/{name}/aggregate.ts→tests/sentinels/{name}.test.ts, extensions/sentinels/{name}/computes/{fn}.ts→tests/sentinels/{name}/{fn}.test.ts
     test_path=$(echo "$impl" | sed 's|^src/|tests/|; s|^extensions/sentinels/\([^/]*\)/aggregate\.ts$|tests/sentinels/\1.test.ts|; s|^extensions/sentinels/\([^/]*\)/computes/\([^/]*\)\.ts$|tests/sentinels/\1/\2.test.ts|')
-    # 追加 .test.ts — 但跳过已以 .test.ts 结尾的路径（extensions 映射已生成 .test.ts）
     if ! echo "$test_path" | grep -q '\.test\.ts$'; then
       test_path="${test_path%.ts}.test.ts"
     fi
@@ -756,14 +540,12 @@ if [ -n "$NEW_IMPL" ]; then
     fi
   done <<< "$NEW_IMPL"
 fi
-# V3.8: plan.json 感知 — deferred test 文件降级为警告
 if [ "$PLAN_ACTIVE" -eq 1 ] && [ -n "$DEFERRED_TEST_FILES" ]; then
   plan_aware_check "新文件配对: impl 须同 commit 有 test" "${MISSING_TEST:-}" "$DEFERRED_TEST_FILES"
 else
   hard_check "新文件配对: impl 须同 commit 有 test" "${MISSING_TEST:-}"
 fi
 
-# 2c. 桩测试 + 跨模块集成测试 (原 12 + 17 合并)
 STUB_FAIL=""
 INTG_FAIL=""
 STAGED_TESTS=$(echo "$GIT_CACHED_ADDED_NAMES" | grep '^tests/.*\.test\.ts$' || true)
@@ -790,10 +572,6 @@ fi
 hard_check "桩测试: 新测试需 ≥3 expect()" "${STUB_FAIL:-}"
 hard_check "跨模块集成: bridge/context 类需 .integration.test.ts" "${INTG_FAIL:-}"
 
-# 2d. 控制塔脚本测试门禁 (U7 — CT-40: 控制塔最高风险变更须配对测试且测试绿)
-#   历史: D393 控制塔脚本改了没测试门禁 → 交付态红灯无物理拦截。
-#   逻辑在独立脚本 scripts/control-tower/ct-test-gate.sh（铁律 35 可独立测试）。
-#   三态判定（沿用组 13 范式）: 0 过/绿或跳过 / 1 缺配对或测试红 / 2 检查执行失败
 CT_GATE_OUT=$(bash "$ROOT/scripts/control-tower/ct-test-gate.sh" 2>&1)
 CT_GATE_EXIT=$?
 if [ "$CT_GATE_EXIT" -eq 0 ]; then
@@ -804,35 +582,11 @@ else
   hard_check "控制塔脚本测试门禁执行失败 (exit=$CT_GATE_EXIT, D328 三态)" "$CT_GATE_OUT"
 fi
 
-# ═══════════════════════════════════════════════════════════════════
-# 组 3: Secrets (原 3 — 独立脚本，逻辑复杂不适合合并)
-#
-# Anthropic 决策: 原则 4 "安全边际" — Secrets 暴露是不可逆事故。
-#   一旦 API Key 进入 git 历史，即使后续 commit 删除，仍可通过 git log 恢复。
-#   全工作区扫描 (不仅暂存区) 是因为 .env 和 .claude/settings.local.json 可能含真实 Key
-#   但从未被 git add——旧门禁漏掉了它们。.claude/ 专项扫描是因为 settings.local.json
-#   可能被备份/同步到其他设备。
-#   历史: .env 真实 API Key 暴露仓库 + 飞书 App Secret 暴露 (2026-06)。
-#         旧门禁只扫暂存区 → 磁盘上的真实 Key 从未被发现，直到被备份软件同步出去。
-# ═══════════════════════════════════════════════════════════════════
 echo -e "${CYAN}── 组 3/13: Secrets ──${RESET}"
 par_collect_quiet secrets "$PAR_SECRETS" || HARD_FAIL=$((HARD_FAIL + 1))
 
-# ═══════════════════════════════════════════════════════════════════
-# 组 4: 接线完整性 (原 5, 11 合并)
-#
-# Anthropic 决策: 原则 5 "逐步验证，不信任声称完成" — "写完了" != "接线了"。
-#   铁律 5: 后端能力 ≠ 用户可用的功能。写了代码但没 import → 死代码。
-#   接线深度 (原 11): import 了但从未调用 → 空 import 绕过"有调用方"检测。
-#   这是 v3.5 新增的第二层防御——agent 会 import 一个函数但不调用它来满足门禁。
-#   历史: 4 次接线失败 — 组件通过单元测试但从未被生产代码调用。
-#         v3.5 追加拿线深度检查: 开发者 import 了函数但没调用，绕过了原第 5 项。
-# ═══════════════════════════════════════════════════════════════════
 echo -e "${CYAN}── 组 4/13: 接线完整性 ──${RESET}"
 
-# 4a. 新 export 被引用 (V3.8 简化: bash 只验证"被引用"这个物理事实)
-# Anthropic 原则: bash 退回到物理事实——"这个符号在文件外部出现过吗？"
-# 调用链正确性、分阶段接线 → agent 自检和 plan.json 负责。
 UNWIRED=""
 if [ -n "$NEW_IMPL" ]; then
   while IFS= read -r file; do
@@ -841,21 +595,18 @@ if [ -n "$NEW_IMPL" ]; then
     for name in $EXPORTS; do
       [ -z "$name" ] && continue
       echo "$name" | grep -qi 'mock\|fake\|_internal\|_deprecated' && continue
-      # V3.8: 搜索范围扩大——任何 src/ 下的文件引用了就算"已接线"
       WIRED=$(grep -rn "\b${name}\b" src/ --include="*.ts" 2>/dev/null \
         | grep -v "export.*${name}" | grep -v "$file" | grep -v "\.test\." | head -1 || true)
       [ -z "$WIRED" ] && UNWIRED="${UNWIRED}${file}: export ${name} — 未被任何 src/ 文件引用\n"
     done
   done <<< "$NEW_IMPL"
 fi
-# V3.8: plan.json 感知 — deferred wiring 文件降级为警告
 if [ "$PLAN_ACTIVE" -eq 1 ] && [ -n "$DEFERRED_WIRING_FILES" ]; then
   plan_aware_check "接线审计: 新 export 必须被引用" "${UNWIRED:-}" "$DEFERRED_WIRING_FILES"
 else
   hard_check "接线审计: 新 export 必须被引用 (物理事实)" "${UNWIRED:-}"
 fi
 
-# 4b. 接线深度: import 了但从未调用 (原 11)
 DEEP_FAIL=""
 if [ -n "$NEW_IMPL" ]; then
   for file in $NEW_IMPL; do
@@ -874,27 +625,12 @@ if [ -n "$NEW_IMPL" ]; then
 fi
 hard_check "接线深度: 新 export 必须被调用(非仅 import)" "${DEEP_FAIL:-}"
 
-# ═══════════════════════════════════════════════════════════════════
-# 组 5: 架构边界 + 桥接文件 (原 8, 19, 20 合并)
-#
-# Anthropic 决策: 原则 1 "第一性原理" — 五层架构的边界不是约定，是物理规律。
-#   L3 不能直接查 L5 SQLite —— 不是"不应该"，是"语义上不成立"（L3 不知道数据在哪）。
-#   铁律 46: 桥接文件 ≠ 迁移。import 代理骗过 tsc，骗不过 grep。
-#   铁律 47: "拆完了"必须由 grep 物理证明。声称完成但 grep 有结果 = 没拆完。
-#   历史: 2026-05~06 engine-core 拆分欺诈 — 被声称完成 4 次，实际 538 文件原封不动，
-#         20 个桥接文件伪装迁移。tsc 零错误（import 路径合法），但运行时 17 处 CJS
-#         require() 在 ESM 下崩溃。一个月反复承诺零实质进展。这是 Synova 最严重事故。
-#   为什么铁律 47 是警告而非阻断: task brief 可能包含历史遗留声明。但警告让问题
-#         始终可见——不可能"没注意到"。
-# ═══════════════════════════════════════════════════════════════════
 echo -e "${CYAN}── 组 5/13: 架构边界 + 桥接文件 ──${RESET}"
 
-# 5a. 跨层引用检测 (原 8)
 CROSS_LAYER=""
 if [ -n "$STAGED_SRC" ]; then
   L1_TO_L4=$(echo "$STAGED_SRC" | grep -E '^src/(routes/|l1/|l1-interaction/)' | xargs grep -l "from '\.\./l4/\|from '\.\./\.\./l4/\|from '\.\./store/\|from '\.\./\.\./store/" 2>/dev/null | grep -v "knowledge-bridge-service\|\.test\." || true)
   [ -n "$L1_TO_L4" ] && CROSS_LAYER="${CROSS_LAYER}L1→L4/L5: ${L1_TO_L4}\n"
-  # 修复 (D291): grep -l 输出文件名, "import type" 过滤须作用于代码行 → 逐文件先滤行再判存在
   L2_TO_L5=$(echo "$STAGED_SRC" | grep -E '^src/agent/' | while read -r _sf; do
     grep -E "from '\.\./store/|from '\.\./init/" "$_sf" 2>/dev/null | grep -v "import type\|knowledge-bridge-service\|\.test\." | grep -q . && echo "$_sf"
   done | grep -v "knowledge-bridge-service\|\.test\." || true)
@@ -904,27 +640,21 @@ if [ -n "$STAGED_SRC" ]; then
 fi
 soft_check "架构边界: 禁止跨层引用 (铁律 39)" "${CROSS_LAYER:-}"
 
-# 5b. 桥接文件欺诈 + 包级 engine-core 引用 + shell 包检测 (铁律 46 — V4.5.1 全面加固)
 BRIDGE_ALLOWED="src/init/engine-context.ts|src/l4/graph-bridge.ts|src/l4/diagnosis-graph-query.ts"
 BRIDGE_FAIL=""
 
-# 5b-i: 全仓库扫描（src/ + packages/）— 堵住"藏到 packages/ 目录下"的漏洞
 STAGED_ALL_FILES=$(echo "$GIT_CACHED_ALL_NAMES" | grep -E '^(src|packages)/.*\.ts$' | grep -v '\.test\.' || true)
 if [ -n "$STAGED_ALL_FILES" ]; then
   for file in $STAGED_ALL_FILES; do
     [ -z "$file" ] && continue
     echo "$file" | grep -qE "$BRIDGE_ALLOWED" && continue
-    # 匹配任意形式的 engine-core 引用：包名路径 + 相对路径
     if grep -qE "packages/engine-core|\.\./engine-core|\.\./\.\./engine-core" "$file" 2>/dev/null; then
       BRIDGE_FAIL="${BRIDGE_FAIL}  ${file}: 引用 engine-core (铁律 46 — 含相对路径)\n"
     fi
   done
 fi
 
-# 5b-ii: 壳包检测 — packages/*/ 下只有 index.ts 且全部是 export from → 桥接包
-# V4.5.1: 单次 find + 单次 grep -l 替代每包 4 次 I/O（13 包 × 4 次 = 26s → <1s）
 ALL_PKG_SRC=$(find "$ROOT"/packages/*/src -name "*.ts" ! -name "index.ts" 2>/dev/null || true)
-# V4.5.1: awk 单次扫描替代逐文件 grep/wc（8 个匹配包 × 3 次 I/O = 13s → <1s）
 SHELL_PKGS=$(awk '
   FNR == 1 { reexport=0; engcore=0 }
   { if ($0 ~ /^export.*from/) reexport=1; if ($0 ~ /engine-core/) engcore=1; lines=FNR }
@@ -933,7 +663,6 @@ SHELL_PKGS=$(awk '
 if [ -n "$SHELL_PKGS" ]; then
   while IFS= read -r pkg_idx; do
     [ -z "$pkg_idx" ] && continue
-    # 只有 index.ts 一个文件（该包无其他 src 文件）才是壳包
     pkg_dir=$(dirname "$(dirname "$pkg_idx")")
     if echo "$ALL_PKG_SRC" | grep -q "^${pkg_dir}/"; then
       continue  # 包内有其他源文件 → 不是壳包
@@ -943,15 +672,8 @@ if [ -n "$SHELL_PKGS" ]; then
 fi
 soft_check "铁律 46: 桥接文件欺诈 + 包级 engine-core + 壳包检测" "${BRIDGE_FAIL:-}"
 
-# 5c. 铁律 47: 声称拆分完须 grep 零旧引用 (原 20 — 警告模式)
 TODAY=$(date +%Y-%m-%d)
-# D296 认领制: 多 session 并发时用认领本提交文件的 brief (跨 session 污染根治)
 BRIEF=$(bash "$ROOT/scripts/workflow/resolve-commit-brief.sh" "${DECL_SCOPE:-$STAGED_ALL}" 2>/dev/null || true)
-# D1148 缺陷修复（可核）: 组 12 的 `while IFS= read -r BRIEF; do … done <<< "$ALL_TODAY_BRIEFS"`
-#   会**覆盖** $BRIEF（循环变量复用），使其后所有读 $BRIEF 的检查实际校验的是"今日 brief 列表
-#   里排序最后一份"而非**认领本次提交的那一份**——G12b 可解析性检查因此长年校验错对象
-#   （实证: 注入一份无 #CRITERIA 的认领 brief，G12b 仍判 ✅ = 假绿）。
-#   修法: 解析结果另存 BRIEF_RESOLVED，其后（含闸②）统一读它；$BRIEF 保持原语义供循环使用。
 BRIEF_RESOLVED="$BRIEF"
 CLEANUP_CLAIM=""
 if [ -n "$BRIEF" ] && [ -f "$BRIEF" ]; then
@@ -961,28 +683,9 @@ if [ -n "$BRIEF" ] && [ -f "$BRIEF" ]; then
 fi
 warn_check "铁律 47: 声称完成须 grep 物理证明" "${CLEANUP_CLAIM:-}"
 
-# ═══════════════════════════════════════════════════════════════════
-# 组 6: Task Brief (6 核心字段: Q0审计/Q1调研/Q2范围/Q3验收/架构层/Done)
-#
-# Anthropic 决策: 原则 0 "协作对齐前置" — task brief 是 agent 和人类的接口契约。
-#   没有 brief → agent 会假设共识 → 假设错误 → 做了一堆没人要的东西。
-#   v3.8: 6 核心字段 (Q0定位/Q1调研/Q2范围/Q3验收/架构层/Done)，v3.6 曾删到 5 字段，
-#   删除"可以后续补充"的部分 (PRD 章节引用、文件位置——已降级为警告)。
-#   越少字段 → 越可能被完整填写 → 门禁越有效。
-#   历史: 多个 task brief 因 11 字段太重在快速迭代时被跳过 (--no-verify 绕过)。
-#         v3.5 的 --no-verify 日志显示 15 次 pre-commit 失败，其中多次是因为
-#         task brief 字段不完整而非实质质量问题。
-# ═══════════════════════════════════════════════════════════════════
 echo -e "${CYAN}── 组 6/13: Task Brief (6 核心字段) ──${RESET}"
 
 # ═══ D537 #2 (D537r2): 主树提交禁止门禁 ═══
-# 判据（CTO 裁定 §三bis）: 拦 = 在主树（pwd -P 后 toplevel == ${SYNO_MAIN_TREE}，默认 $HOME/SynovaAgent）提交;
-#   放行 = 非主树（worktree / 独立克隆）｜ SYNO_ALLOW_MAIN_TREE=1（guard 内自动留痕 degraded-events.log + bypass 台账）。
-# 降级不适用（判据不依赖 session-registry）; SYNO_CI=1 → guard 显式跳过（主树判据为本地层门禁，非静默）。
-# 旧判据「主树脏 + 近期活跃 session > 1」**删除**（A9 死条款: registry 全僵尸 0 活跃，实际不会触发，
-#   且拦不住"主树被 checkout"——判据本身无判别力）。
-# 🔴 插入点在 SYNO_SKIP_PARALLEL_GUARD / SYNO_SKIP_PARALLEL_WARN **外层**（A11: 不受其连坐）。
-# 生效层（A8）: 本处是脚本层；裸 git commit 的硬拦在 install-hooks.sh 生成的 pre-commit 钩子模板内再调一次 guard。
 _MT_GUARD="$ROOT/scripts/control-tower/main-tree-guard.sh"
 if [ ! -f "$_MT_GUARD" ]; then
   self_fail_missing_script "主树提交禁止门禁 (D537 #2)" "scripts/control-tower/main-tree-guard.sh"
@@ -998,18 +701,8 @@ else
   hard_check "主树提交禁止门禁 (D537 #2): 主树判据（本地层）" "${_MT_MSG}"
 fi
 
-
-
 TASK_BRIEF_MISSING=""
 TASK_BRIEF_EMPTY=""
-# ── D-C 收口（K3 R6 合并核验）: 声明载体双形态 —— claim（.claude/claims/<issue>.yaml）／legacy brief ──
-# 单一开关 SYNO_CLAIM_V2（默认关）: 关时**逐字节**走下方 legacy 散文路径（回滚语义）。
-# 开时若 resolver 返回的是 claim，则 Q0/Q1/Q2/Q3 散文检查**按设计不适用**（claim 是两字段制），
-# 改以 claim 自身 schema 判据（writeset + done 非空且 done 含 verify:，由 claim_store 强制）
-# 替代；并**显式打印**该结论（禁静默空白，铁律 11）。
-# 卡 #1423（创始人 2026-10-08「一步到位」裁决）: **默认开** ——
-#   未设/真值 ⇒ 开；显式 0|false|off|no|n ⇒ 关（**唯一回滚点**）。
-#   口径与单一事实源 claim_store.claim_v2_enabled 逐字对齐。
 CLAIM_V2=1
 case "$(printf '%s' "${SYNO_CLAIM_V2:-}" | tr '[:upper:]' '[:lower:]')" in
   1|true|on|yes|y) CLAIM_V2=1 ;;
@@ -1021,7 +714,6 @@ if [ -n "$DECL_SRC" ]; then   # D1148: 合并提交且无自撰文件时为空 �
   if [ -z "$BRIEF" ]; then
     TASK_BRIEF_MISSING="今日无 task brief。请先运行: bash scripts/workflow/task-start.sh \"任务描述\""
   elif [ "$CLAIM_V2" = "1" ] && [ "$IS_CLAIM_DECL" = "1" ]; then
-    # claim 载体的合规判据（三态: 0 通过 / 1 违规 / 2 检查自身失败 —— 2 同样阻断）
     CLAIM_ISSUE="$(basename "$BRIEF" .yaml)"
     CLAIM_CHK_OUT="$(python3 "$ROOT/scripts/control-tower/claim_store.py" --check "$CLAIM_ISSUE" --root "$ROOT" 2>&1)"
     CLAIM_CHK_RC=$?
@@ -1032,17 +724,6 @@ if [ -n "$DECL_SRC" ]; then   # D1148: 合并提交且无自撰文件时为空 �
       TASK_BRIEF_EMPTY="${TASK_BRIEF_EMPTY}  claim 检查自身失败 rc=${CLAIM_CHK_RC}: $(printf '%s' "$CLAIM_CHK_OUT" | head -1)\n"
     fi
   else
-    # v3.9 兼容 ## Q0: / ## Q0 定位: 两种标题格式；D1220 起只查 Q1–Q3（Q0 项退役，见下）。
-    # ═══ D1220（卡 #1222 D-A2）退役: Q0 段（定位 — 项目拼图 + 文件审计）的「已填写」检查 ═══
-    #   退役判据（载体退役）: Q0 的实质是**人读的项目拼图/文件审计散文**，无机器可判阈值；
-    #     在 claim 载体（writeset + done 两字段制）下该段按设计不适用（#1275 已在组 6 显式打印该结论）。
-    #   替代: claim 载体的 `claim_store.py --check`（writeset 非空 + done 每条含 verify:）。
-    #   口径（本卡最保守解释，如实标注）: **只退 Q0**；Q1 调研 / Q2 范围 / Q3 验收 保留——
-    #     它们分别承载调研依据 / 写集声明 / 验收链路，机器可判性高于 Q0。
-    #     ⚠️ 若需连 Q1–Q3 一并退役（= 6 字段 → 架构层 + Done 两项），删本行数组的两个元素即可；
-    #     该扩展属**更大判据变更**，须另裁（不在本卡范围）。
-    #   代价（如实）: brief 的 Q0 段留空不再被拦（其内容本就不参与任何机器判定）。
-    #   复活须过 K3（判据变更）。关联: memory/notes/proposed/2026-10-07-d1220-da2-retirement.md
     for q in "Q1" "Q2" "Q3"; do
       SECTION=$(awk "/^## ${q}(:| )/{found=1; next} /^## /{if(found) exit} found" "$BRIEF" 2>/dev/null)
       FILLED=$(echo "$SECTION" | grep -v "^<!--\|^$" | tr -d "[:space:]" | head -1)
@@ -1050,19 +731,10 @@ if [ -n "$DECL_SRC" ]; then   # D1148: 合并提交且无自撰文件时为空 �
         TASK_BRIEF_EMPTY="${TASK_BRIEF_EMPTY}  ${q}: 未填写\n"
       fi
     done
-    # 架构层 (D707 统一口径): 与 check-brief-parseable.sh **共用同源解析器**
-    #   brief_parser.py（单一事实源）。旧实现是第二套 awk，在内联写法
-    #   `## 架构层: <值>` 上与解析器结论相反——实测存量 232/629 份 brief 命中
-    #   （解析器绿 / 本处报「未填写」），D665 即因此白烧一轮 CI（PR #494 首轮红）。
-    #   顺带修掉旧正则 `\s*(.+)` 跨行吞标题 → 真空值被当成「已填写」的假绿。
-    #   不再保留第二套 awk 回退：回退实现自身就会漂移（实测全角冒号 `## 架构层：X`
-    #   在 awk 下解析失败而解析器正常）——「一类一机制」，字段口径只允许一个实现。
     LAYER_FILLED=""
     if command -v python3 >/dev/null 2>&1; then
       LAYER_FILLED=$(python3 "$ROOT/scripts/control-tower/brief_parser.py" --layer "$BRIEF" 2>/dev/null | head -1 || true)
     else
-      # 无 python3 → 本项无法判定。显式降级跳过（不静默判「未填写」= 假红；
-      # 也不静默放行 = 假绿）。语义对齐 check-brief-parseable.sh 的既有约定。
       echo -e "  ${YELLOW}⚠️  D707: python3 不可用 — 架构层字段无法判定，跳过本项（降级登记）${RESET}"
       mkdir -p "$ROOT/.codex/control-tower/logs" 2>/dev/null || true
       echo "{\"time\": \"$(date -u +%Y-%m-%dT%H:%M:%S+00:00)\", \"component\": \"pre-commit-group6-layer\", \"reason\": \"python3 不可用 — 架构层字段跳过 (fail-open + degraded)\"}" >> "$ROOT/.codex/control-tower/logs/degraded-events.log" 2>/dev/null || true
@@ -1074,7 +746,6 @@ if [ -n "$DECL_SRC" ]; then   # D1148: 合并提交且无自撰文件时为空 �
         TASK_BRIEF_EMPTY="${TASK_BRIEF_EMPTY}  架构层: 未填写\n"
       fi
     fi
-    # Done 标准专项: 至少一条完成标准
     DONE_SECTION=$(awk "/^## Done 标准/{found=1; next} /^## /{if(found) exit} found" "$BRIEF" 2>/dev/null)
     DONE_CHECKED=$(echo "$DONE_SECTION" | grep -cE '^\s*- \[x\]' || true)
     DONE_EMPTY=$(echo "$DONE_SECTION" | grep -v "^##\|^<!--\|^$" | wc -l)
@@ -1083,13 +754,7 @@ if [ -n "$DECL_SRC" ]; then   # D1148: 合并提交且无自撰文件时为空 �
     fi
   fi
 fi
-# ↑ D1148: TASK_BRIEF_MISSING / TASK_BRIEF_EMPTY 是**闸①的输入变量**（判据计算零改动），
-#   不再各自占一行输出——于下方「声明闸①」处与骨架/时间戳/Q0 系列合并为一条硬闸。
-#   （原为两条独立 decl_check: brief 存在 / 6 核心字段）
 
-# D547 教训固化（物理门禁，非台账）：alloc-task-id 生成的骨架 brief 含 <agent>/<本任务在哪一层>
-#   占位符，不得随派单提交进 main——曾致 check-plan-integrity 在 CI 回退命中占位符，
-#   全局阻断所有非 docs PR（D544/D546 实证）。同类失误第三次复发 → 升级为物理硬阻断。
 SKEL_BRIEF=""
 for bf in $(echo "$STAGED_ALL" | grep -E '^\.claude/task-briefs/.*\.md$' || true); do
   if [ -f "$ROOT/$bf" ] && grep -q '认领: <agent>\|<本任务在哪一层' "$ROOT/$bf" 2>/dev/null; then
@@ -1098,54 +763,23 @@ for bf in $(echo "$STAGED_ALL" | grep -E '^\.claude/task-briefs/.*\.md$' || true
 done
 # ↑ D1148: 原 `hard_check "骨架 brief 占位符检测…"` 独立执行点 → 并入闸①（SKEL_BRIEF 变量保留）
 
-# ═══ D1220（卡 #1222 D-A2）退役: 时间戳顺序检查（原 V4.5.1，D1148 并入闸①）═══
-#   原形态: 读**仓库外绝对路径** /tmp/.synova-before-brief（PreToolUse 在「brief 未填就写代码」时写证据），
-#     命中则经闸① 的 BEFORE_BRIEF_MSG 硬阻断。
-#   退役判据: **写者已不存在** —— 该 marker 的唯一写者是 PreToolUse hook，随 **D1146**（CC 退役：
-#     `.claude/settings.json` hooks 段整段移除、11 个登记点归零）消失；全树只剩 reader + 文档 + 夹具
-#     ⇒ 判据恒空 = 死代码（铁律 37）。
-#   附带代价（实测）: 读仓库外绝对路径 ⇒ 宿主机残留 marker 会让 hermetic 夹具假红；
-#     `precommit-groups-injection.test.sh` 因此自带 HOST_STATE 归因 + sed 补丁探针 —— 三件已**同 PR 退役**，
-#     并换成反向断言（把该绝对路径读取加回 ⇒ 判红）。
-#   替代: 无（亦无对象）。「先声明后写码」的顺序语义在 claim 载体下由 writeset 声明承担。
-#   代价（如实）: 本地不再有「写码早于声明」的**顺序证据** —— 但该证据落在 /tmp、可 `rm` 规避，历史上从未可靠。
-#   复活须过 K3（判据变更）且须先恢复写者。关联: memory/notes/proposed/2026-10-07-d1220-da2-retirement.md
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# 声明闸① brief schema（D1148 合并 15→3）
-#   成员（原 5 个独立执行点，判据计算全部原样保留、只合并输出与计红口径）:
-#     ①-1 brief 存在（编码变更须有今日 brief）  → TASK_BRIEF_MISSING
-#     ①-2 6 核心字段 Q0/Q1/Q2/Q3/架构层/Done    → TASK_BRIEF_EMPTY
-#     ①-3 骨架占位符（D547）                     → SKEL_BRIEF
-#     ①-4 时间戳顺序（brief 必须早于代码写入）   → BEFORE_BRIEF_MSG
-#     ①-5 Q0 系列: Q0c 取消跟踪（原独立执行点）   → Q0C_OUT（check-q0c-tracking.sh）
-#   计红口径: decl_check —— 真提交（非沙箱）硬阻断；夹具沙箱降软（D749 语义不变）。
-#   三态: check-q0c-tracking.sh rc≥2（检查自身失败）同样计入（fail-closed，D328）。
-# ═══════════════════════════════════════════════════════════════════════════════
 Q0C_OUT=$(bash "$ROOT/scripts/check-q0c-tracking.sh" 2>&1); Q0C_RC=$?
 Q0C_MSG=""
 if [ "$Q0C_RC" -ne 0 ]; then
   Q0C_MSG="$(printf '%s\n' "$Q0C_OUT" | grep -v '^[[:space:]]*$' | head -4)\n"
 fi
 DECL1="${TASK_BRIEF_MISSING:-}${TASK_BRIEF_EMPTY:-}${SKEL_BRIEF:-}${Q0C_MSG}"
-# D1148: 三闸**显式保留 ✅ 行**（QUIET_SUCCESS=0 前缀）——让「声明类收敛为三条硬闸」在每次
-#   提交日志里可见（审计可核），代价 3 行输出（总行数预算内）。
-#   合并提交且无自撰文件（DECL_MERGE_SKIP=1）→ 三闸无对象：**显式打一行跳过**（不静默），
-#   闸②/③ 同步跳过（同一行已说明三条，见下方 guard）。
 if [ "$DECL_MERGE_SKIP" = "1" ]; then
   echo -e "  ${YELLOW}⏭ 声明类三闸：合并提交且无自撰文件（两父文件各已在各自 PR 受门禁）→ 闸①②③ 无对象，跳过${RESET}"
 else
   QUIET_SUCCESS=0 decl_check "声明闸① brief schema（Q1–Q3/架构层/Done/骨架/Q0c；D1220 退时间戳+Q0）" "${DECL1:-}"
 fi
 
-# D472: Agent Notes 迁移门禁 — proposed/ 有变更时扫僵尸条目（条件触发保持 <1s，V4.5.1 性能纪律）
-# 僵尸 = 提取到 D# 且 task-state 该 D# ∈ {impl_done, spec_done}（实现已落地但提案未 git mv）
 NOTES_TOUCHED=$(echo "$STAGED_ALL" | grep -E '^memory/notes/proposed/' || true)
 if [ -n "$NOTES_TOUCHED" ]; then
   if bash "$ROOT/scripts/control-tower/check-notes-lifecycle.sh"; then
     soft_pass "Notes 迁移门禁: proposed/ 无僵尸条目"
   else
-    # D515 项3: Notes 迁移门禁降软提示（CI 为权威；K3 审计链路不受影响——报告照出）
     echo -e "  ${YELLOW}⚠️  Notes 迁移门禁: proposed/ 存在僵尸条目（实现已落地未迁移） [V5 软提示——CI 为权威，本地不阻断]${RESET}"
     echo "  修复: git mv 到 implemented/ 或 rejected/，或删除测试残留"
     SOFT_COUNT=$((SOFT_COUNT + 1))
@@ -1155,11 +789,6 @@ else
   soft_pass "Notes 迁移门禁: 无 proposed/ 变更（跳过）"
 fi
 
-# D1148 转旁路: plan-integrity —— 只吃其 **Q2 排除项**失败进闸②（写集一致性，去重:
-#   G12 已按认领者判排除项）；plan.json 侧（principles/approach/memory_refs）→ 旁路观测。
-#   三态: rc≥2（检查自身失败）→ 进闸②（fail-closed，不静默）。
-#   ⚠️ par_collect 必须在**当前 shell** 调用（它内部 wait 子进程；放进 $( ) 会因
-#      "not a child of this shell" 静默拿到未落盘的 code/out）→ 故重定向到文件后读回。
 PI_OUT=""
 PI_RC=0
 par_collect plan-integrity "$PAR_PLAN_INTEGRITY" > "$PAR_DIR/plan-integrity.captured" 2>&1 || PI_RC=$?
@@ -1171,19 +800,9 @@ if [ "$PI_RC" -ne 0 ]; then
   else
     PI_Q2="$(printf '%s\n' "$PI_OUT" | grep -A3 'Q2 排除项' || true)"
     [ -n "$PI_Q2" ] && PI_Q2="${PI_Q2}\n"
-    # ═══ D1219（卡 #1225 旁路清场）退役: 原 `note_check "plan-integrity: non-Q2 项…"` 已删 ═══
-    #   退役判据: D1171 处置表自认「plan.json 契约明文 deferred = **设计行为非违规**」⇒ 零判据价值
-    #     （永不阻断的观测点 = 立法 §7.1-2 所禁的「旁路第三态」）。
-    #   替代: 无（亦不需要）——plan.json 的 **Q2 半边**仍由上方 PI_Q2 → 闸② 消费，未损失判据；
-    #     principles/approach/memory_refs 三项目本就不参与任何阻断。
-    #   代价（如实）: 该三项的观测串不再打印（历史上从未阻断过任何提交 ⇒ 代价为零判据力，
-    #     仅损失「提交输出里的一段人读信息」）。
-    #   复活须过 K3（判据变更）。关联: memory/notes/proposed/2026-10-07-d1219-position-legislation.md
   fi
 fi
 
-# ═══ 声明闸③ Done 可证伪（D1148）═══
-#   每个 - [x] 必须带 verify: 可执行命令。原为 v5_soft（本地软/CI 硬）→ 升为闸③硬闸。
 VD_OUT=""
 VD_RC=0
 par_collect verifiable-done "$PAR_VERIFIABLE" > "$PAR_DIR/verifiable-done.captured" 2>&1 || VD_RC=$?
@@ -1196,10 +815,6 @@ else
   QUIET_SUCCESS=0 decl_check "声明闸③ Done 可证伪（每项 - [x] 带 verify:；D1148）" ""
 fi
 
-# ↑ D1148: 原 `par_collect q0c-tracking … || v5_soft "Q0c 取消跟踪 (V3.9)"` 独立执行点已并入闸①
-#   （Q0C_RC/Q0C_MSG，见上方「声明闸①」）；脚本的并行启动点同时移除（避免同一检查跑两遍）。
-
-# V4.5.1 (本体迁移): 禁止旧 SOG 枚举引用潜入 src/
 SOG_NODE_REFS=$(grep -rn "SOGNodeType\." src/ --include="*.ts" 2>/dev/null | grep -v "node_modules" | head -10 || true)
 if [ -n "$SOG_NODE_REFS" ]; then
   echo -e "${YELLOW}  ⚠️  旧 SOGNodeType 枚举仍被引用 — 本体迁移未完成 [V5 软提示——CI 为权威]${RESET}"
@@ -1219,52 +834,13 @@ if [ -n "$SOG_IMPORTS" ]; then
   SOFT_COUNT=$((SOFT_COUNT + 1))
 fi
 
-# ═══ D1148 退役: 「PRD 对照: Done 标准引用 PRD 章节(可选)」检查点 ═══
-#   退役判据（gate-hits 实测）: 261 次命中 / 0 次阻断——`opt_check` 有意永不转硬（D520），
-#     即该检查点对提交结果零影响，只贡献噪音行（批 3 榜首噪音源）。
-#   本块原代码（PRD_REF 计算 + opt_check 调用）整段删除；opt_check() 函数同步删除（死代码，铁律 37）。
-#   复活门槛: 若将来要把 PRD 章节引用变为**判据**，须走门禁语义变更送审（提案 → K3 → CTO 裁），
-#     并配「改坏即红」夹具——不得以"提示"形态复活（软机制零有效，V3.9 教训）。
-#   代价（如实记录）: 输出中不再出现 PRD 章节提示；已核实无夹具依赖该行（grep 全 tests/ 零命中）。
-
-# ═══════════════════════════════════════════════════════════════════
-# 组 7: 架构合规 (原 6, 9, 14, 18 合并)
-#
-# Anthropic 决策: 原则 3 "安全边际" — --no-verify 是逃生舱，但不能变成常态。
-#   DiagnosticModule 禁止: Sentinel 已替代旧的模块注册系统。新模块必须走 Sentinel 接口。
-#   专家配置校验: YAML 中的 tool/skill 引用必须真实存在——引用断裂 = 运行时崩溃。
-#   --no-verify 审计: 24h 内使用 ≥3 次 → 硬阻断。逃生舱可以临时用，但不能连续用。
-#         连续绕过门禁意味着门禁本身有问题（太慢/误杀太多）或开发者有问题（偷懒）。
-#   v3.6 把 pre-commit 从 20 项减到 8 组 (<8s) 就是为了消除"门禁太慢"这个绕过理由。
-#   数据流自检: 路由文件含硬编码业务数据但无真实 API 调用 → 可能是静态 mock 未被替换。
-#   历史: DiagnosticModule 注册表已删除但引用未清理 (agent-tool-registry.ts:386
-#         listModules() 运行时崩溃)。--no-verify 在 v2.5 被频繁使用 (38 项检查 90s)。
-# ═══════════════════════════════════════════════════════════════════
 echo -e "${CYAN}── 组 7/13: 架构合规 ──${RESET}"
 
-# 7a. DiagnosticModule 禁止 (原 6)
-# D937: 原实现三处缺陷（K3 可核）:
-#   ① 排除模式含未转义 `^+++`（ERE 非法）→ BSD grep exit 2 → 管道整体失败 →
-#      NEW_DIAG 恒空 → 本检查自 D467（ab05e2de，BRE→ERE 迁移）起从未生效（fail-open 假绿）。
-#      实证: `echo test | grep -Ev '^+++'` → rc=2 "repetition-operator operand invalid"
-#      （本脚本无 set -e，管道失败后继续跑完并打 ✅）
-#   ② `|| true` 吞掉 grep 自身错误（exit≥2）→ 与「无命中」不可区分（铁律 11 静默降级禁止）
-#   ③ 文件级豁免（自身/.md/.html）与行级豁免混在一张表里按行子串匹配 → 误报
-#      实证: 58a19796 朴素修复（仅转义 ^+++）→ 5 处误报，全来自
-#      docs/SYNOVA-MASTER-全量对齐手册-20260610.html 正文（文档，非代码）
-# 修法: ① diff 头按结构化字符串比较逐文件判定豁免（免正则 → 根除非法 ERE 类）；
-#       ② 行级注释豁免锚定行首，用 POSIX [[:space:]]（非 \s —— D664 既有口径:
-#          \s 属 GNU 扩展，POSIX ERE 未定义）；
-#       ③ grep 退出码三态: rc≥2 = 检查自身失败 → 显式降级，绝不判 ✅
 _DIAG_SELF='scripts/pre-commit-check.sh'
 _DIAG_EXCL='@deprecated|import type|^\+[[:space:]]*(//|/\*|\*|#)|hard_check|禁止 ?新? ?DiagnosticModule|不要再使用 DiagnosticModule'
-# D390 武装缝: 排除模式覆盖仅 SYNO_TEST_ARM=1 时生效（生产路径忽略该变量，fail-closed）
 if [ "${SYNO_TEST_ARM:-0}" = "1" ]; then
   _DIAG_EXCL="${SYNO_DIAG_EXCL_OVERRIDE:-$_DIAG_EXCL}"
 fi
-# 候选行提取: 命中 `+++ b/<path>` 头即切换当前文件；文档/检查器自身整文件跳过。
-# 纯字符串比较（无正则）；兼容 git quotepath 引号形态 `+++ "b/<path>"`（CI 默认 quotepath=true，
-# 本机 config 为 off —— 不处理引号则 CI 下 .html 豁免静默失效）。
 _DIAG_CAND=$(printf '%s\n' "$GIT_CACHED_DIFF" | awk -v self="$_DIAG_SELF" '
   substr($0,1,4)=="+++ " {
     f=substr($0,5); n=length(f)
@@ -1276,7 +852,6 @@ _DIAG_CAND=$(printf '%s\n' "$GIT_CACHED_DIFF" | awk -v self="$_DIAG_SELF" '
   skip { next }
   substr($0,1,1)=="+" && index($0,"DiagnosticModule")>0 { print }
 ')
-# grep 退出码三态: 0=有命中 1=无命中 2+=模式非法或 grep 不可用（检查自身失败）
 _DIAG_RC=0
 if command -v grep >/dev/null 2>&1; then
   NEW_DIAG=$(printf '%s\n' "$_DIAG_CAND" | grep -Ev -- "$_DIAG_EXCL"); _DIAG_RC=$?
@@ -1284,7 +859,6 @@ else
   _DIAG_RC=127
 fi
 if [ "$_DIAG_RC" -ge 2 ]; then
-  # 检查自身失败 → 显式降级登记（沿 L876 group6-layer 既有格式），禁止 fail-open 假绿（铁律 11）
   echo -e "  ${YELLOW}⚠️  禁止新 DiagnosticModule: 检查降级 — grep 不可用或排除模式非法 (rc=${_DIAG_RC})；本项未判定${RESET}"
   mkdir -p "$ROOT/.codex/control-tower/logs" 2>/dev/null || true
   echo "{\"time\": \"$(date -u +%Y-%m-%dT%H:%M:%S+00:00)\", \"component\": \"pre-commit-group7a-diagnosticmodule\", \"reason\": \"grep rc=${_DIAG_RC} — 排除模式非法或 grep 不可用 (degraded, 非通过)\"}" >> "$ROOT/.codex/control-tower/logs/degraded-events.log" 2>/dev/null || true
@@ -1296,28 +870,19 @@ if [ "$_DIAG_RC" -ge 2 ]; then
   fi
   log_gate "禁止 DiagnosticModule: 新模块须实现 Sentinel 接口" degraded
 else
-  # D1148: 组 7a 唯一**显式保留 ✅ 行**的检查点（QUIET_SUCCESS=0 前缀赋值）——
-  #   gate-failopen-net.test.sh 的 seven_a_lines() 以「含被禁模块名 + ✅/❌/⚠️ 行首标记」
-  #   做判别（T1/T1s/T4/T5/T5c/T3f 全靠它）。这不是美观问题，是既有夹具的判据输入。
   QUIET_SUCCESS=0 soft_check "禁止 DiagnosticModule: 新模块须实现 Sentinel 接口" "${NEW_DIAG:-}"
 fi
 
-# 7b. 专家配置校验 (原 9)
 if bash "$ROOT/scripts/validate-expert-config.sh" 2>&1; then
-  # D1148 降噪: 成功静默（失败仍点名 + CI 转硬）
   [ "${QUIET_SUCCESS:-0}" != "1" ] && echo -e "  ${GREEN}✅ 专家配置校验${RESET}"
 else
   echo -e "  ${YELLOW}⚠️  专家配置校验: yaml 引用断裂  [V5 软提示——CI 为权威，本地不阻断]${RESET}"
   SOFT_COUNT=$((SOFT_COUNT + 1))
 fi
 
-# 7c. V3.8 双日志审计 — 门禁故障 vs 人为绕过分离
-#   门禁故障日志 → 用于发现门禁本身的 bug（误报率 = 门禁需要修）
-#   绕过日志     → 用于发现开发者绕过模式（频繁绕过 = 门禁太重/开发者偷懒）
 FAILURE_LOG="$ROOT/.claude/pre-commit-failures.log"
 BYPASS_LOG="$ROOT/.claude/bypass.log"
 
-# ── 门禁故障审计 (警告不阻断) ──
 FAILURE_COUNT=0
 if [ -f "$FAILURE_LOG" ]; then
   YESTERDAY=$(date -d "yesterday" +%Y-%m-%d 2>/dev/null || date +%Y-%m-%d)
@@ -1329,14 +894,9 @@ if [ "${FAILURE_COUNT:-0}" -gt 10 ]; then
   echo -e "  ${YELLOW}⚠️  门禁故障审计: 24h 内 pre-commit 失败 ${FAILURE_COUNT} 次 — 门禁可能太激进 [警告]${RESET}"
   echo "    高失败率意味着门禁本身有 bug 或太敏感。请检查误报来源。"
 else
-  # D1148 降噪: 成功静默（0 次与 N≤10 次均无判据价值；>10 次仍打警告）
   [ "${QUIET_SUCCESS:-0}" != "1" ] && echo -e "  ${GREEN}✅ 门禁故障审计${RESET}"
 fi
 
-# ── 绕过审计 (硬阻断) ──
-# 检测方法: post-commit hook 检测 --no-verify 并写入 bypass.log
-# 强弱信号分离 (D438): detected-bypass=强信号(head 不匹配, 真绕过)→阻断;
-#   possible-bypass=弱信号(stale marker, 可能慢提交/merge 产物)→只告警, U1 推送对账才是真兜底。
 BYPASS_COUNT=0
 POSSIBLE_COUNT=0
 if [ -f "$BYPASS_LOG" ]; then
@@ -1351,7 +911,6 @@ if [ "${BYPASS_COUNT:-0}" -ge 3 ]; then
   if [ "${SYNO_GATEKEEPER_ACK:-0}" = "1" ]; then
     echo -e "  ${YELLOW}⚠️  绕过审计: 24h 内 --no-verify ${BYPASS_COUNT} 次 — 已超限, 但已人工确认 (SYNO_GATEKEEPER_ACK=1)  [告警]${RESET}"
   else
-    # D515 项3: 降软——前置 GATEKEEPER 段仍硬拦当日 detected-bypass（审计强信号不放松）
     echo -e "  ${YELLOW}⚠️  绕过审计: 24h 内 --no-verify ${BYPASS_COUNT} 次 — 已超限  [V5 软提示]${RESET}"
     echo "    连续使用 --no-verify 超过 2 次后，第 3 次起必须修复根因而非绕过"
     echo "    若已人工复核为误报, 可用 SYNO_GATEKEEPER_ACK=1 放行本次"
@@ -1362,11 +921,9 @@ elif [ "${BYPASS_COUNT:-0}" -ge 2 ]; then
 elif [ "${POSSIBLE_COUNT:-0}" -gt 0 ]; then
   echo -e "  ${YELLOW}⚠️  绕过审计: 24h 内 possible-bypass ${POSSIBLE_COUNT} 次（stale marker 弱信号，非强绕过，U1 推送对账兜底）[告警不阻断]${RESET}"
 else
-  # D1148 降噪: 成功静默（零绕过记录是常态，无判据价值）
   [ "${QUIET_SUCCESS:-0}" != "1" ] && echo -e "  ${GREEN}✅ 绕过审计${RESET}"
 fi
 
-# 7d. 数据流自检 (原 18)
 STAGED_ROUTES=$(echo "$GIT_CACHED_ALL_NAMES" | grep -E '^src/routes/.*\.ts$' | grep -v '.test.' || true)
 DATA_FLOW_FAIL=""
 if [ -n "$STAGED_ROUTES" ]; then
@@ -1381,56 +938,23 @@ if [ -n "$STAGED_ROUTES" ]; then
 fi
 soft_check "数据流: 路由文件须含 API 调用证据" "${DATA_FLOW_FAIL:-}"
 
-# ═══════════════════════════════════════════════════════════════════
-# 组 8: 🆕 文件驱动架构完整性 (v3.6 新增 — 调用 check-file-driven.sh)
-#
-# Anthropic 决策: 原则 2 "先设计验证标准" — 这是整个 V3.6 最关键的架构新增。
-#   "文件驱动"是 SynovaAgent 的核心架构承诺——新行业/新本体类型/新 LLM/新 IM 平台
-#   全部零代码接入。如果这个承诺没有物理执法，它就和被声称完成 4 次的 engine-core
-#   拆分一样——只存在于文档里。
-#   这组检查的哲学: 不是"相信开发者会遵守文件驱动"，而是"让违反文件驱动在物理上不可能"。
-#   详细检查清单见 check-file-driven.sh 头部注释。
-#   历史: 这一组阻止的是"未来必然会发生的事故"——基于 engine-core 拆分欺诈的模式推演。
-#         同样的模式: 声称文件驱动 → 有人为了方便在 src/ 加了个 enum → 没人发现 →
-#         越来越多硬编码回归 → 一年后文件驱动只剩文档里的空壳。
-# ═══════════════════════════════════════════════════════════════════
 echo -e "${CYAN}── 组 8/13: 文件驱动架构完整性 (V3.9) ──${RESET}"
-# V3.9: 能力验收 CI — 验收测试必须通过 CI
-# D1148 转旁路: 原 `par_collect … || v5_soft "验收 CI (V3.9)"`（软提示，CI 转硬）→ 旁路观测。
-#   理由: 该检查与提交内容弱相关（跑的是 acceptance 用例集，非本次变更）；
-#   保留调用点做观测（失败时 ℹ️ 打印，不改判据、不写 gate-hits）。
-#   ⚠️ 撤回留痕（2026-10-05，CTO 裁决：撤回表述 + 立卡）:
-#     原句：「…实际阻断记录为零…」
-#     改后：**现无阻断执行方** —— 本文件第 497 行的 par_start 是**唯一**调用点
-#       （`git grep -n check-acceptance-ci -- .github scripts/` 除脚本自身仅命中本行），
-#       且该调用点已转旁路 ⇒ `check-acceptance-ci.sh` 的判定结果不再阻断任何提交。
-#     依据（精确口径）: gate-hits 累计落账 '验收 CI' **0 条**（历史未触发过），
-#       但原句把"历史未触发"说成了"阻断力为零"——改前它是 `v5_soft`（CI strict 下**可**阻断），
-#       故原句**不精确**而非纯虚构；"无阻断执行方"是本卡改动后的**事实**（调用点已旁路）。
-#     📌 依据源（本次补注）: K3 报告 §一 Q1（`2026-10-05-k3-审计报告-门禁治理波次-D1145-D1149.md`，P1，归因 devdoc）。
-#       注: K3 把该表述记作「PR 正文」；实测**正文文本零命中**，承载件 = 本 PR diff 内的注释块（见 PR 正文 §9.3 逐处排查）。
 AC_OUT=""
 AC_RC=0
 par_collect acceptance-ci "$PAR_ACCEPTANCE" > "$PAR_DIR/acceptance-ci.captured" 2>&1 || AC_RC=$?
 AC_OUT="$(cat "$PAR_DIR/acceptance-ci.captured" 2>/dev/null || true)"
-# D1176（K3 整改，2026-10-07）: 验收 CI 复执法 —— D1148 转旁路时自认「现无阻断执行方」，
-#   K3 审计 #1206 判处置表行#5 理由不成立（"CI Iron Laws 为权威"无据：note_check 无
-#   SYNO_CI 分支，本处是全仓唯一调用点）⇒ 同族第 3 次复发（D503/D1148/本处）。
-#   转回 v5_soft（本地软 / CI strict 硬）；par_start 并行腿 ⇒ 不破 <10s 预算。
 if [ "$AC_RC" -ne 0 ]; then
   printf '%s\n' "$AC_OUT" | grep -v '^[[:space:]]*$' | head -5 | sed 's/^/     /'
   v5_soft "验收 CI (V3.9)（D1176 K3 整改复执法）"
 fi
 par_collect_quiet file-driven "$PAR_FILE_DRIVEN" || v5_soft "文件驱动架构完整性 (V3.6)"
 
-# ═══ 组 9/12: 契约门禁 (D257) ═══
 echo -e "${CYAN}── 组 9/13: 契约门禁 ──${RESET}"
 CONTRACT_DIR="$ROOT/.codex/contracts"
 CONTRACT_FAIL=""
 if [ -d "$CONTRACT_DIR" ] && [ "$(ls -A "$CONTRACT_DIR" 2>/dev/null)" ]; then
   for cf in "$CONTRACT_DIR"/*.json; do
     [ ! -f "$cf" ] && continue
-    # 从 contract.json 提取声明产出文件列表
     DECLARED=$(python -c "
 import json, sys
 try:
@@ -1451,22 +975,10 @@ except: pass
 fi
 soft_check "契约门禁: 声明产出须在暂存区" "${CONTRACT_FAIL:-}"
 
-# ── 组 9 附加块: 块级 paths 快照对账（CTO 裁定 074 步 1b；治理线交付）──
-#   治什么: 真源 `ConstructionBlock.paths`（快照）是**手工跑脚本写死**的 ⇒ 施工项一变它就过时。
-#           实证（2026-10-13）: 该漂移**真的发生过** —— K10 少 4 条 / K12 多 2 条，
-#           根因 = 生成快照时读到 PR #493 落地**前**的旧真源。
-#   判据源: `scripts/control-tower/block-paths-core.ts`（唯一实现；生成器与门禁共用一份）。
-#   三态: 0=一致 ｜ 1=不一致 ｜ 🔴 2=判不了（fail-closed：读不到真源/形状异常/悬空 id/快照字段缺失）。
-#   🔴 **无条件跑**（成本实测 0.25s，远低于 <10s 预算）：
-#     理由是判据的**主体**——"生成器对真源跑 ⇒ 逐块一致"——正是我要的那条；
-#     若只在登记件进暂存区时才跑，则在**任何非登记件提交上都不产证据**（判据形同虚设）。
-#     为纪念"门禁过重 ⇒ 超时 ⇒ --no-verify"的历史病根，配**有界执行**（超时 ⇒ 124 ⇒ 报判不了）。
-#   🔴 本块**不新增组号**——不破坏 `── 组 N/13` 标签与「全部 13 组通过」横幅（既有夹具依赖）。
 _tsx_ok="$(command -v node >/dev/null 2>&1 && echo yes || echo no)"
 BP_OUT=""
 BP_RC=0
 if [ "$_tsx_ok" = "yes" ]; then
-  # 有界执行（移植 alloc-task-id.sh:218 的 D1091 契约：超时返回 124；macOS 无 timeout/gtimeout 时走便携轮询）
   bash "$ROOT/scripts/control-tower/check-block-paths.sh" > /tmp/.syno-blockpaths.out 2>&1 &
   _bp_pid=$!
   _bp_i=0
@@ -1495,24 +1007,20 @@ if [ "$_tsx_ok" = "yes" ]; then
        soft_check "块级 paths 快照对账（🔴 判不了/超时 = fail-closed，非通过）" "  exit=${BP_RC} — 读不到真源/形状异常/超时\n" ;;
   esac
 else
-  # 无 node ⇒ 无法判定。显式降级登记（铁律 11：禁静默），**不判红**（判不了 ≠ 违规）。
   echo -e "  ${YELLOW}⚠️  块级 paths 快照对账：node 不可用 — 无法判定（降级登记，fail-closed 语义见门禁自身）${RESET}"
   mkdir -p "$ROOT/.codex/control-tower/logs" 2>/dev/null || true
   echo "{\"time\": \"$(date -u +%Y-%m-%dT%H:%M:%S+00:00)\", \"component\": \"pre-commit-group9-block-paths\", \"reason\": \"node 不可用 — 块级 paths 对账跳过 (degraded)\"}" >> "$ROOT/.codex/control-tower/logs/degraded-events.log" 2>/dev/null || true
 fi
 
-# ═══ 组 10/12: V3 CP3 — 条件区域 + 测试覆盖 (D260) ═══
 echo -e "${CYAN}── 组 10/13: V3 流水线健康度 ──${RESET}"
 
 CRITERIA_MAP="$ROOT/.codex/criteria-code-map.json"
 if [ -f "$CRITERIA_MAP" ]; then
-  # V3 CP3-1: G10 条件区域检查 — 暂存的文件是否在声明的条件区域内
   BRIEF_FILE=$(echo "$CHANGED_FILES" | grep -m1 "\.claude/task-briefs/" || true)
   if [ -n "$BRIEF_FILE" ]; then
     BRIEF_PATH="$ROOT/$BRIEF_FILE"
     CRITERIA=$(grep -oE '#CRITERIA[[:space:]]*[:=][[:space:]]*[A-D]' "$BRIEF_PATH" 2>/dev/null | sed -E 's/.*[=:][[:space:]]*//' || true)
     if [ -n "$CRITERIA" ]; then
-      # 读取条件代码映射
       CRITERIA_GLOBS=$(python -c "
 import json
 with open('$CRITERIA_MAP') as f:
@@ -1524,7 +1032,6 @@ for gx in g:
       REGEX_GLOBS=""
       while IFS= read -r gx; do
         [ -z "$gx" ] && continue
-        # 转换 glob 到 grep 正则
         REGEX=$(echo "$gx" | sed 's/\*/.*/g; s/?/./g')
         REGEX_GLOBS="${REGEX_GLOBS}|${REGEX}"
       done <<< "$CRITERIA_GLOBS"
@@ -1551,7 +1058,6 @@ for gx in g:
     soft_pass "G10: 无 task brief 变更(跳过)"
   fi
 
-  # V3 CP3-2: G11 测试覆盖检查
   HAS_E2E=0; HAS_TESTS=0
   BRIEF_ID=$(echo "$STAGED_FILES" | grep -oE '\.claude/task-briefs/[^.]+' | sed -E 's|^\.claude/task-briefs/||' | head -1 || true)
   if [ -n "$BRIEF_ID" ]; then
@@ -1574,18 +1080,9 @@ else
   soft_pass "G10/G11: criteria-code-map.json 不存在(跳过)"
 fi
 
-# ═══ 组 12/12: Task Scope 一致性 — 暂存文件 vs Q2 范围 ═══
 echo -e "${CYAN}── 组 12/13: Task Scope 一致性 ──${RESET}"
 
 TODAY=$(date +%Y-%m-%d)
-# 修复 (D291): 组12 只用当前 session 的 brief, 避免并发 session 的 brief 干扰暂存文件匹配
-# D296 跨 session 污染根治 (认领制):
-#   - 范围 (做什么) 取今日全部 brief 的并集 — 每个 session 的文件由自己的 brief 认领,
-#     并发 session 的 brief 不再误伤 (D291 事故: session 提交被另一 session 的 brief 阻断)
-#   - 排除 (不做什么) 仅取 current-brief — 他人 brief 的排除项不适用于本 session 的文件
-#   - current-brief 缺失/陈旧 → 回退全部 (单 session 语义)
-#   - CT-42: session 专属 current-brief（.claude/current-brief.<sid>）优先，无则回退全局
-#     写侧 attach.py 已写专属文件（D329），读侧此前漏接 → 并行 session 互相覆盖全局文件
 CUR_BRIEF_PATH=""
 _CB_SRC="$ROOT/.claude/current-brief"
 if [ -n "${DSH_SESSION_ID:-}" ] && [ -f "$ROOT/.claude/current-brief.$DSH_SESSION_ID" ]; then
@@ -1600,21 +1097,9 @@ if [ -f "$_CB_SRC" ]; then
     CUR_BRIEF_PATH="$ROOT/.claude/task-briefs/$_bname"
   fi
 fi
-# 认领候选: 今日全部 brief (含并发 session 的) — D366: 文件名日期前缀 (mtime 会被 git pull 刷, 不可靠)
-# D366: 按文件名日期判断"今日" — 替代 find 按 mtime 的今日判定
 # 用法: today_files_by_prefix <dir>   # brief: YYYY-MM-DD 文件名前缀 (扫描 *.md)
-# 性能: 纯 bash for+case 零子进程 — grep|head 每文件 3 spawn × 349 brief = Windows 分钟级 (实测回退)
-# 注意: glob 硬编码在函数内 — 变量中的 * 不会被路径名展开 (实测), 字面 glob 才展开
 TODAY_DASH=$(date +%Y-%m-%d)
-# D503→D506: 时区容差 — brief 认领窗口扩到 ±1 天。Mac(UTC+8) 傍晚建的 brief 日期前缀
-# 对 CI runner(UTC) 是"明天"，单日过滤致 G12 在 CI 上无人认领 → 全部误报"不在 Q2 范围"
-# （D502 实证：本地 13 组全过、CI 红 7 处）；跨午夜连续作业同理。
-# D506 修正（K3 审计 P0-1）: 旧实现把 DAY_WINDOW_DAYS（含 |）放进 case 模式 ——
-#   case 的 pattern 在 parse-time 解析，变量展开是 runtime，展开结果里的 | 是字面量
 #   不是 alternation → 匹配恒失败 → ALL_TODAY_BRIEFS 空 → G12 整段跳过 soft_pass（fail-open）。
-#   改用 [[ $b =~ $RE ]]：=~ 的 RHS 在 runtime 展开后按 ERE 解析，| 作为 alternation 生效
-#   （bash 3.x/5.x 一致，K3 审计实测 + CTO 本地独立复现）。
-# 一次 python3 算三天 ERE（G12 本就依赖 python3；python 不可用 → 回退单日本地 glob 行为）。
 DAY_WINDOW_RE=$(python3 -c "
 import datetime
 t = datetime.date.today()
@@ -1637,32 +1122,9 @@ ALL_TODAY_BRIEFS=$(today_files_by_prefix "$ROOT/.claude/task-briefs/" | sort || 
 [ -z "$ALL_TODAY_BRIEFS" ] && [ -n "$CUR_BRIEF_PATH" ] && ALL_TODAY_BRIEFS="$CUR_BRIEF_PATH"
 SCOPE_VIOLATION=""
 
-# ═══ D1220（卡 #1222 D-A2）: 组 12 claim 载体覆盖判定（开关 SYNO_CLAIM_V2，默认关）═══
-#   缺陷（实测，本卡修的就是它）: 组 12 原只认 legacy 散文 brief —— 按 ±1 天窗口 glob
-#     `.claude/task-briefs/*.md`。claim 载体（`.claude/claims/<issue>.yaml`）下 ALL_TODAY_BRIEFS
-#     为空 ⇒ 下面 `if [ -n "$ALL_TODAY_BRIEFS" ] …` 为假 ⇒ **整段跳过、组 12 静默放行**
-#     （假绿：合法 claim 用户失去全部写集约束）。
-#   修法（同源改造，与组 6 的 claim 双形态同构）:
-#     ① 开关 SYNO_CLAIM_V2 关 ⇒ **逐字节 legacy**（回滚 = 关开关，判据零改动）；
-#     ② 开 ⇒ 先以 `claim_store.py --coverage`（**全 claim 并集**；`--resolve` 是最佳单 claim，
-#        多线并发时会假红，故不用）判覆盖；被 claim 覆盖的文件视为已声明；
-#     ③ **未被 claim 覆盖的余量**再走 legacy brief 判定（迁移期双载体并存 ⇒ 取并集，
-#        既不假绿也不假红）；claim 数为 0 时**显式打印空集**并全部回落 legacy（禁静默跳过）；
-#     ④ 三态: claim 检查自身失败（畸形 claim ⇒ rc=2）⇒ 计硬红，不与「通过」混同。
 _G12_JUDGE_SET="${STAGED_ALL}"          # 送 legacy 判定的文件集（缺省=全部）
 _G12_CLAIM_STATUS="off"
 
-# ══════════════════════════════════════════════════════════════════════════════
-# 卡 #1423 判据③（反例守护）: **带 D# 的在飞分支必须仍 pass**
-#   为什么必须加: 开关默认翻「开」后，下面 D1220 的「claim 模式 ∧ 无 legacy 载体 ⇒ 硬红」
-#     分支变成**默认可达** —— 而 D# 在飞任务的 brief 若落在 ±1 天窗口外（跨日任务常态），
-#     `ALL_TODAY_BRIEFS` 为空 ⇒ 被误判"本提交无 legacy 声明载体" ⇒ **拦死在飞合并**
-#     （创始人 2026-10-08 明令禁止：「现在还带 D 的任务也不要影响他们合并」）。
-#   最小修法: 开关**开**时，把 resolver 已经定位到的 **legacy 声明**（非 .yaml）并入 legacy 判定集。
-#     · 判定力不降: 该文件仍要过它的 Q2 写集/排除项（只是不再"看不见它"）；
-#     · claim 载体（*.yaml）**不并入** ⇒ D1220 对 claim 用户的牙齿保留（无 legacy 载体即硬红）；
-#     · 开关**关**时本段不可达 ⇒ 回滚态与改前**逐字节一致**（文档承诺的回滚语义不破）。
-# ══════════════════════════════════════════════════════════════════════════════
 if [ "${CLAIM_V2:-0}" = "1" ] && [ -n "${BRIEF:-}" ] && [ "${IS_CLAIM_DECL:-0}" != "1" ] && [ -f "$BRIEF" ]; then
   case "$ALL_TODAY_BRIEFS" in
     *"$BRIEF"*) : ;;
@@ -1677,14 +1139,6 @@ if [ "${CLAIM_V2:-0}" = "1" ] && [ -n "$STAGED_ALL" ]; then
   _G12_C_OUT="$(printf '%s\n' "$STAGED_ALL" | python3 "$ROOT/scripts/control-tower/claim_store.py" --coverage --root "$ROOT" 2>&1)"
   _G12_C_RC=$?
   if [ "$_G12_C_RC" -eq 2 ] || [ "$_G12_C_RC" -ne 0 ]; then
-    # ═══ CTO 2026-10-11 裁定：**作用域收窄** —— 畸形 claim 不得阻断全线 ═══
-    # 事故：2 条畸形 claim（1348/1466）使 `--coverage` rc=2 ⇒ HARD_FAIL ⇒ **所有 session 的所有提交被拒**。
-    # 反模式：「一条坏数据阻断全线」——坏数据应只拦它自己（或它相关的写集），不该让所有人停工。
-    # 新口径（三态，作用域限定）：
-    #   ① 本次提交的**文件**落在某 claim 的 writeset 内 ⇒ 该 claim 畸形**阻断**（能判定相关性时）
-    #   ② 与该 claim **无法判定相关性**（畸形 ⇒ writeset 不可读）⇒ **只告警 + 点名 + 落记录**，不阻断
-    #   ③ 全局（与本提交无关的畸形）⇒ **只告警**，并在末尾汇总待修清单
-    #   依据：创始人 2026-10-11「彻底修掉，该清理的清理掉」；可见性用告警+点名保证（禁静默）。
     _G12_CLAIM_STATUS="degraded-scoped"
     echo -e "  ${YELLOW}⚠️  组 12 claim 覆盖判定: 检查自身失败（rc=${_G12_C_RC}）—— **作用域收窄：不阻断**${RESET}"
     printf '%s\n' "$_G12_C_OUT" | head -3 | sed 's/^/     /'
@@ -1698,7 +1152,6 @@ if [ "${CLAIM_V2:-0}" = "1" ] && [ -n "$STAGED_ALL" ]; then
 import json,sys
 d=json.load(sys.stdin)
 print('\n'.join(d.get('uncovered',[])))" 2>/dev/null || echo "")"
-    # 显式打印（禁静默空白，铁律 11）: claim 数 / 覆盖数 / 余量去向
     echo -e "  ${CYAN}ℹ️  组 12 claim 载体: ${_G12_C_REASON}${RESET}"
     _G12_JUDGE_SET="${_G12_C_REMAIN}"
     if [ -z "$_G12_JUDGE_SET" ]; then
@@ -1710,33 +1163,21 @@ print('\n'.join(d.get('uncovered',[])))" 2>/dev/null || echo "")"
 fi
 
 if [ -n "$_G12_JUDGE_SET" ] && [ "$_G12_CLAIM_STATUS" = "on" ] && [ -z "$ALL_TODAY_BRIEFS" ]; then
-  # ═══ D1220（本卡修的核心假绿）: claim 模式 + **无 legacy 声明载体** ⇒ 余量文件无任何声明 ═══
-  #   原实现: ALL_TODAY_BRIEFS 为空 ⇒ 下面 legacy 块整段跳过 ⇒ **静默放行**（claim 载体用户
-  #   失去全部写集约束）。现改为显式判红。开关关时本分支不可达 ⇒ 逐字节 legacy 不受影响。
   SCOPE_VIOLATION="$(printf '%s\n' "$_G12_JUDGE_SET" | grep -v '^[[:space:]]*$' \
     | sed 's/^/  /;s/$/ (未被任何 claim 声明覆盖；且本提交无 legacy brief 载体)\n/')"
 elif [ -n "$_G12_JUDGE_SET" ] && [ -n "$ALL_TODAY_BRIEFS" ]; then
-  # 认领制 v2 (D296 复查): 每个文件由**认领它的 brief** 判定通过与排除
-  #   - 被 ≥1 个今日 brief 认领 → 通过 (除非认领者自身排除它)
-  #   - 未被任何 brief 认领 → 阻断 (不在任何任务范围)
-  #   - 他人 brief 的排除项不适用于本文件 (场景E: A认领+B排除 → 必须通过)
-  # 生成 per-brief TSV: "brief文件名\t路径"
-  # 注意: 必须用仓库内路径 — Git Bash mktemp 的 /tmp 路径 Windows python3 无法打开
   SCOPE_TSV="$ROOT/.claude/.g12-scope.tsv"
   EXCL_TSV="$ROOT/.claude/.g12-excl.tsv"
   rm -f "$SCOPE_TSV" "$EXCL_TSV"
   while IFS= read -r BRIEF; do
     [ -z "$BRIEF" ] && continue
     BNAME=$(basename "$BRIEF")
-    # D313 M3 同源: G12 awk → brief_parser.py（消灭双副本，语义 = parse_q2）
     python3 "$ROOT/scripts/control-tower/brief_parser.py" --q2-include "$BRIEF" 2>/dev/null \
       | sed "s|^|$BNAME\\t|" >> "$SCOPE_TSV" || true
     python3 "$ROOT/scripts/control-tower/brief_parser.py" --q2-exclude "$BRIEF" 2>/dev/null \
       | sed "s|^|$BNAME\\t|" >> "$EXCL_TSV" || true
   done <<< "$ALL_TODAY_BRIEFS"
 
-  # 检查每个暂存文件 — 修复 (D291): Python 单进程匹配, 替代 12321 次 grep 子进程 (Windows 10+ 分钟 → <1s)
-  # D296 认领制 v2: 按 per-brief TSV 判定, 排除只来自认领该文件的 brief
   SCOPE_VIOLATION=$(python3 -c "
 import re, sys
 staged = '''$_G12_JUDGE_SET'''.split('\n')
@@ -1779,17 +1220,7 @@ print('\n'.join(viol))
   rm -f "$SCOPE_TSV" "$EXCL_TSV"
 fi
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# 声明闸② brief↔代码一致性（D1148 合并 15→3）
-#   成员（原 3 个独立执行点 + plan-integrity 的 Q2 半边，判据实现全部原样复用）:
-#     ②-1 Q2 写集 ⊆ 声明（认领制含 per-claimant 排除项，D296/D749）→ SCOPE_VIOLATION
-#     ②-2 brief 可解析（同源解析器 brief_parser.py: #CRITERIA/架构层/Done/Q2 条目）→ G12b
-#     ②-3 Q2 排除项格式（check-plan-integrity.sh 的「Q2 排除项」半边，D515 项5）→ PI_Q2
-#   计红口径: decl_check —— 真提交（非沙箱）硬阻断；夹具沙箱降软（D749 语义不变）。
-#   报告保留: 越界文件逐个点名 + 修复指引（D515 项10）。
-# ═══════════════════════════════════════════════════════════════════════════════
 DECL2=""
-# D1148: 合并提交下只保留**自撰文件**的越界项（两父既有文件的越界不属本次提交，已在各自 PR 判过）
 if [ "$_DECL_IS_MERGE" = "1" ] && [ -n "$SCOPE_VIOLATION" ]; then
   _SV_F=""
   while IFS= read -r _svl; do
@@ -1801,14 +1232,9 @@ if [ "$_DECL_IS_MERGE" = "1" ] && [ -n "$SCOPE_VIOLATION" ]; then
 fi
 if [ -n "$SCOPE_VIOLATION" ]; then
   DECL2="${DECL2}${SCOPE_VIOLATION}\n"
-  # D515 项10: 修复指引文案 — 改 scripts/ 需先认领 brief（Codex P5 曾被拦无文档说明）
   DECL2="${DECL2}     💡 改 scripts/ 需先认领 brief（Q2 写集声明）——见 docs/synova/coordination/版本管理规范-控制塔.md\n"
 fi
 
-# ②-2 D313 M3: 附挂 brief 契约检查（同源解析器 + #CRITERIA + 架构层 + Done）
-#   D1148 两处修正: ① 对象用 BRIEF_RESOLVED（认领本提交的 brief，不被组 12 循环覆盖）；
-#   ② 三态 fail-closed —— 原实现 `|| true` + 只看 ❌ 字样 ⇒ 被检脚本崩溃(rc≥2)时输出无 ❌
-#      → 静默判过（假绿）。改为捕 rc：非 0（含 1=违规、≥2=检查自身失败）一律计入闸②。
 if [ "$DECL_MERGE_SKIP" != "1" ]; then   # 合并提交无自撰文件 → 无对象（跳过行见闸① 处）
   BRIEF_PARSEABLE_OUT=$(bash "$ROOT/scripts/workflow/check-brief-parseable.sh" "${BRIEF_RESOLVED:-}" 2>&1); BP_RC=$?
   if [ "$BP_RC" -ne 0 ]; then
@@ -1816,7 +1242,6 @@ if [ "$DECL_MERGE_SKIP" != "1" ]; then   # 合并提交无自撰文件 → 无�
   fi
 fi
 
-# ②-3 Q2 排除项格式/被修改（来自 check-plan-integrity.sh，见闸① 后 plan-integrity 块）
 if [ -n "${PI_Q2:-}" ]; then
   DECL2="${DECL2}${PI_Q2}"
 fi
@@ -1825,11 +1250,6 @@ if [ "$DECL_MERGE_SKIP" != "1" ]; then
   QUIET_SUCCESS=0 decl_check "声明闸② brief↔代码一致性（Q2 写集/排除项/可解析；D1148 合并 15→3）" "${DECL2:-}"
 fi
 
-# G12d (D458): 生成物单点生成门禁 — session 禁止提交 CI 单点生成的产物
-# 背景: founder-console/founder-dashboard/product-progress 由 CI bot（dashboard-auto.yml /
-#       product-progress.yml）单点生成 + 裸 git commit 提交。session 手改这些文件会制造
-#       并行冲突（D429/D452/D455 多次实证）。CI 走裸 git commit 不触发本门禁，天然放行。
-# 规则: 生成物文件处于新增(A)/修改(M)状态 → 阻断；删除(D)不拦（去跟踪/清理合法）。
 GENERATED_FILES="app/founder-dashboard.html docs/synova/founder-console.html docs/synova/product-lines/product-progress.json docs/synova/product-lines/product-progress.html docs/synova/product-lines/todos.yaml"
 GENERATED_VIOLATION=""
 while IFS= read -r line; do
@@ -1842,32 +1262,9 @@ while IFS= read -r line; do
 done <<< "$(git diff --cached --name-status 2>/dev/null)"
 hard_check "G12d: 生成物单点生成门禁 (D458)" "${GENERATED_VIOLATION:-}"
 
-# ═══ D1219（卡 #1225 旁路清场）退役: G12c dev doc 写集验证（原 D313 M3b / D1148 转旁路）═══
 #   原形态: 暂存含 SYNOVA-IMPL-*.md 时执行 `scripts/workflow/check-dev-doc-write-set.sh`，
-#     失败走 note_check 观测（只打印、不判红、CI 也不转硬）。
-#   退役判据: ① 立法 §7.1-2 禁旁路第三态；② 同判据在 CI 有**更强**执行点 —— D708 写集对账
-#     （`.github/workflows/ci.yml` 的 `Merge write-set reconciliation (D708)` 独立 step），
-#     双计数只会制造重复阻断且 D708 口径更准。
-#   替代: D708（CI，独立 step）。替代的**存在性已被物理断言**——
-#     tests/control-tower/doc-commit-exempt.test.sh T11c 直接 grep ci.yml 的该 step；
-#     删掉该 step ⇒ T11c 红 ⇒ 本退役依据失效即暴露（退役不可悬空）。
-#   代价（如实）: 本地提交端不再提前告警 dev doc 写集漂移（改由 CI 拦）。
 #   留痕: 本注释保留脚本名 `check-dev-doc-write-set.sh` 供 T11b 回溯；字样不再出现在**代码路径**。
-#   复活须过 K3（判据变更）。关联: memory/notes/proposed/2026-10-07-d1219-position-legislation.md
 
-# ═══ D1219 退役: G12d 声称↔证据对照表（原 U4/D423；D1148 转旁路）═══
-#   原形态: 暂存含 SYNOVA-IMPL-*.md 时执行 `scripts/control-tower/verify-claims-table.sh`，
-#     三种出口（0 过 / 1 不完整 / ≥2 执行失败）**全部只观测不判红**。
-#   退役判据: 该产物是供 **K3 审计消费**的对照表、**无机器可判阈值** ⇒ 本质是报告生成器而非门禁；
-#     留在提交路径 = 每次提交付生成成本换零阻断力（立法 §7.1-2 禁第三态）。
-#   替代: **归档** —— 生成器（静态格式校验器，不预跑命令）保留在库内，改为按需调用:
-#     `bash scripts/control-tower/verify-claims-table.sh <dev-doc>...`（K3/CTO 复核时手工跑）。
-#   代价（如实）: 提交端不再自动校验对照表**格式**（语义正确性本就无机器判据，靠 K3 人读）。
-#   复活须过 K3（判据变更）。关联: memory/notes/proposed/2026-10-07-d1219-position-legislation.md
-
-# ═══ 组 13/13: 技能同步一致性 (.claude/skills ↔ .dsh/skills, D370) ═══
-# 背景: DSH 技能发现根 .dsh/skills（rank 100）不读 .claude/skills → 单源复制 + 漂移门禁。
-# fail-closed (D328): 检查脚本 exit 2 = 检查执行失败 → 同样硬阻断, 不与"通过"混同。
 echo -e "${CYAN}── 组 13/13: 技能同步一致性 ──${RESET}"
 SKILL_FILES_STAGED=$(echo "$STAGED_ALL" | grep -E "\.claude/skills/|\.dsh/skills/" || true)
 if [ -n "$SKILL_FILES_STAGED" ]; then
@@ -1884,32 +1281,8 @@ else
   soft_pass "G13: 无技能文件变更(跳过)"
 fi
 
-# ═══ D782: 文档真相防线 D1/D2（附加检查；不并入 13 组编号——同 D734 接入模式）═══
-# 背景: K3 2026-09-14 权威文档一致性专项审计 §7.2 收割 2/3——D1 check-doc-truth.sh
-#   与 D2 doc-registry-gate.sh 2026-08 建成即零调用（M3「机制建成未接线」第 3 次复发：
-#   D329 P2-2 首次），W1/W2 接线断言（tests/doc-system/doc-registry-gate.test.sh L64-65）
-#   红 ≥25 天无 runner 可见。本块补调用点。
-# D1148 转旁路（语义变更，如实记录）: 原为 soft_check（本地软提示 + CI strict 转硬）
-#   → 现为 note_check/bypass_run（**只打印、不判红、不进 gate-hits**，CI 也不转硬）。
-#   理由: 文档登记/真相属**文档域**（D2 登记门禁的覆盖面另有 D2 闸 + doc-system 夹具兜底），
-#     与"本次提交的代码质量"弱相关；批 3 目标是把提交端收敛为质量根 + 三条声明闸。
-#   接线保留（硬要求）: `check-doc-truth.sh` / `doc-registry-gate.sh` 字面量调用点必须留在本文件
-#     —— doc-registry-gate.test.sh W1/W2 是**接线断言**（grep 本文件），删调用点即判红。
-#   代价（如实记录）: 未登记文档 / 导航层文档漂移不再阻断 CI 提交（原 CI strict 下会红）。
-#     ↳ D1171（P0-5）已撤回该代价: 三处 bypass_run 恢复 v5_soft（本地软/CI 硬），见下方 D1171 注释块。
-# 为何不动 13 组编号: 「✅ 全部 13 组通过」自声明行是 check-doc-truth.sh C2 的真值
-#   来源，改组数 = 连锁打破 AGENTS/CLAUDE/LOOP 的「13 组」声明（审计 T1 实证该链）。
-# fastlane 通道（bypass.log 单文件提交）不经过本块——该通道语义即最小化，CI 为权威。
-# 性能: D1 grep 4 个导航文件 + D2 ls-files/diff-cached，实测 <1s（D782 验收 ≤+5s）。
 echo -e "${CYAN}── D782: 文档真相防线（D1 真相验证 + D2 登记门禁）──${RESET}"
 
-# D1: 导航层文档 vs 代码事实（C1 专家数 / C2 门禁组数 / C3 版本轴 / C4 路径存在）
-# D1171（P0-5，CTO 派单 2026-10-07 Lane B）撤旁路复执法: bypass_run → 显式执行 + v5_soft。
-#   背景: D1148 转旁路时如实记录了代价「该门禁当前无阻断执行方」——旁路**不转硬**
-#   （CI 也不拦）= listener 型非执法（铁规⑧: Enforce a decision in the operation
-#   that makes it）。P0-5 裁决恢复: 本地软提示 / CI strict（SYNO_CI=1）硬阻断。
-#   回滚方式: 把下方 v5_soft 块改回 bypass_run 一行即恢复旁路（判据脚本零改动；
-#   hard-gate-convergence.test.sh 的 KEEP_V5SOFT 断言会同步抓到回退）。
 if [ -f "$ROOT/scripts/doc-system/check-doc-truth.sh" ]; then
   _D1_OUT="$(bash "$ROOT/scripts/doc-system/check-doc-truth.sh" 2>&1)"; _D1_RC=$?
   if [ "$_D1_RC" -ne 0 ]; then
@@ -1917,11 +1290,9 @@ if [ -f "$ROOT/scripts/doc-system/check-doc-truth.sh" ]; then
     v5_soft "D782 D1 文档真相（D1171 撤旁路复执法）"
   fi
 else
-  # D1219（卡 #1225）: 原 note_check 观测（不阻断 = 检查消失被判作通过/假绿）→ 检查自身失败态。
   self_fail_missing_script "D782 D1 文档真相" "scripts/doc-system/check-doc-truth.sh"
 fi
 
-# D2: 新增 .md/.yaml 必须登记 docs/authority/DOCS-REGISTRY.yaml（只拦新不拦旧）
 if [ -f "$ROOT/scripts/doc-system/doc-registry-gate.sh" ]; then
   _D2_OUT="$(bash "$ROOT/scripts/doc-system/doc-registry-gate.sh" 2>&1)"; _D2_RC=$?
   if [ "$_D2_RC" -ne 0 ]; then
@@ -1929,45 +1300,9 @@ if [ -f "$ROOT/scripts/doc-system/doc-registry-gate.sh" ]; then
     v5_soft "D782 D2 登记门禁（D1171 撤旁路复执法）"
   fi
 else
-  # D1219（卡 #1225）: 同上——D2 是「新增 .md/.yaml 必须登记」的提交端唯一执行点，
-  #   脚本缺失若只观测 ⇒ 未登记件全放行（后果重于 D1）。
   self_fail_missing_script "D782 D2 登记门禁" "scripts/doc-system/doc-registry-gate.sh"
 fi
 
-# ═══ D734: PR 预算门禁（附加检查；不并入传统 13 组编号）═══
-# 背景: 冲突概率 ∝ 改动大小 × 分支存活时间 —— D721 一个 PR 背三类门禁问题挂半天；
-#   K3 审计分支落后 main 差点回退他人成果。
-# 接线取舍（派单 §二.2 要求执行方给理由）: 派单给的是「pre-commit 新增一组 或 CI quality job
-#   一步」二选一 —— 派单红区已明列 .github/workflows/ci.yml（#520 刚改过，避免撞车）→
-#   CI 侧不可用，故选 pre-commit。
-# 为何不并入 13 组编号: 改总组数会打破 tests/control-tower/fastlane-bypass-only.test.sh 对
-#   「跳过 12 组」的断言（pre-commit-check.sh:343 的快速通道横幅），而那个测试文件不在
-#   D734 写集白名单内（创始人硬要求「写集白名单外一律不动」）→ 以额外命名的检查块接入，
-#   组数与横幅语义均不变。
-# D1148 转旁路（语义变更，如实记录）: 原 soft_check（本地软 + CI strict 转硬）→ bypass_run。
-#   ⚠️ 与 #1017（D734 预算与 D708/G12 阈值互斥）的关系: 本卡只把 D734 从**阻断路径**移出，
-#      不修改 check-pr-budget.sh 的任何阈值/判据（该件归 #1017，另卡）。
-#      即「越守规矩越红」的三个门禁（D708/D734/G12）中，D734 不再参与提交端阻断；
-#      路径级口径（同构 ≥10 文件零逻辑改动）仍待 #1017 裁决。
-#   ⚠️ 豁免 ≠ 停用: check-pr-budget.sh 继续执行并打印观测（限额内零输出；超限 ℹ️ 明示）。
-#   接线保留: check-pr-budget.test.sh 依赖本文件含 `check-pr-budget.sh` 字面量 + 横幅未改。
-#   代价（如实记录，2026-10-05 撤回后口径）: PR 预算超限**不再被任何门禁阻断**。
-#     ⚠️ 撤回留痕（CTO 裁决：撤回表述 + 立卡，不补完再合）:
-#       原句：「…PR 级预算仍可由 check-pr-budget.sh 独立运行/CI 侧接入。」
-#       改后：现无阻断执行方 —— 全树**没有第二个阻断调用点**。
-#       依据（逐半句核）: 「独立运行」= 任何脚本都能手工跑（同义反复，无信息量）；
-#             「**CI 侧接入**」= **无据** —— `git grep -n check-pr-budget -- .github scripts/ci`
-#             **零命中**（rc=1，CTO/K3 实测同结论）⇒ CI 侧不存在任何接入。
-#             ⇒ 本文件的 bypass_run 调用点是**唯一**执行点，且已不判红 ⇒ 该门禁当前无阻断执行方。
-#       📌 依据源（本次补注）: K3 报告 §一 Q1（同报告，P1，归因 devdoc，原文「D734 check-pr-budget.sh 独立运行/CI 侧接入」声称无据）。
-#       立卡：D734 预算门禁 CI 侧接入（另卡 A，内容见 D1148 PR 正文 §九）。
-#   ↳ D1171（P0-5）已执行撤回: 本块 bypass_run → v5_soft（本地软/CI strict 硬），撤回留痕见上方。
-# ═══ CTO 2026-10-11 裁定：**本地 CI 显式跳过 D734**（禁静默）═══
-# 依据：D734 是"PR 预算"——对着 **PR 的 base** 判才有意义。
-#   本地 CI 的基线是 GitHub 的旧 main（停在 05a6591c4），拿"集成分支账本总额"去判（实测 100 件/115 件白名单外）
-#   ⇒ **必然恒红** ⇒ 红灯失去信息量 ⇒ "被绕过的门禁 = 没有门禁"（历史病根）。
-# 执法位置改回：① 提交时软提示 ② 开 PR 时由审查人/CTO 人工判（13 组其余照常硬判）。
-# ⚠️ 实测教训：上一版只在 workflow 里设了 SYNO_SKIP_PR_BUDGET=1，**但本文件从未读它** ⇒ 开关形同虚设（本次修复补上）。
 if [ "${SYNO_SKIP_PR_BUDGET:-0}" = "1" ]; then
   echo -e "${CYAN}── PR 预算门禁 (D734) ──${RESET}"
   echo -e "  ${YELLOW}ⓘ 本地 CI 显式跳过（CTO 2026-10-11 裁定；执法位置=提交时软提示 + 开 PR 时人工判）${RESET}"
@@ -1980,14 +1315,11 @@ if [ -x "$ROOT/scripts/control-tower/check-pr-budget.sh" ] || [ -f "$ROOT/script
     v5_soft "D734 PR 预算（D1171 撤旁路复执法）"
   fi
 else
-  # D1219（卡 #1225）: 存在性另有 check-pr-budget.test.sh 保证，但那不能替代**运行期** fail-closed。
   self_fail_missing_script "D734 PR 预算" "scripts/control-tower/check-pr-budget.sh"
 fi
 fi   # ← SYNO_SKIP_PR_BUDGET 分支结束（CTO 2026-10-11）
 
 # ── D520/任务3: 平台敏感命令软检查（V5 软提示——新增脚本须对照 PLATFORM-CHECKLIST.md）──
-# 只查本次新增（A）的 scripts/control-tower|workflow 下的 .sh/.py 文件：
-#   裸 python3（非 PYBIN 模式）/ date +%s / date -v / grep -P → 提示见 checklist。
 if [ -f "$ROOT/scripts/control-tower/PLATFORM-CHECKLIST.md" ]; then
   _PLAT_NEW=$(echo "$GIT_CACHED_ADDED_NAMES" | grep -E '^scripts/(control-tower|workflow)/.*\.(sh|py)$' || true)
   _PLAT_HITS=""
@@ -2003,12 +1335,6 @@ else
   soft_pass "V5 平台检查: PLATFORM-CHECKLIST.md 不存在(跳过)"
 fi
 
-# ── D943: DSH 断面一致性（唯一源 docs/synova/coordination/DSH-断面.json）──
-# ① 位置：**必须在上方 if/else 之外**——放进 PLATFORM-CHECKLIST 的 if 块内会随该文件缺失而永不执行（M1 fail-open）。
-# ② 语义：soft_check 第二参是「命中/失败描述串」而非命令——直接传命令串会恒判 1 命中，
-#    本地恒 ⚠️、CI（SYNO_CI=1）恒 ❌ 硬阻断。故先跑命令取结论，仅失败时喂入描述。
-# ③ --no-tree-check：CI 无本地 DSH 树（DSH-断面.json 记的是绝对路径）→ 带树跑必 DEGRADED 假红。
-#    带树校验由本机显式命令与 scripts/control-tower/daily-cto-board.sh 承担（每日跑）。
 _DSH_PYBIN=""
 for _c in python3 python py; do  # PYBIN 三级探测（PLATFORM-CHECKLIST #1，禁裸 python3）
   if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then _DSH_PYBIN="$_c"; break; fi
@@ -2024,25 +1350,8 @@ else
   soft_check "DSH 断面一致性 (D943)" "${_DSH_ANCHOR_HITS}"
 fi
 
-# ═── K12-13（#196）内容面耦合门禁 CC1–CC4（附加检查；不并入 13 组编号——同 D782/D734 接入模式）──
-# 门禁: scripts/check-content-coupling.sh（判据源: 院方《extensions内容面规范-v0.1》§3.5）
-# 为何接入: 既有 check-architecture.sh 对 extensions/ **零覆盖**
-#   （门禁头注释实测 `grep -c extensions scripts/check-architecture.sh` = 0）⇒ 引擎/内容边界无执法方。
-# 语义（门禁自带，不在本文件里另造一套）: **存量走棘轮只报数、新增必拦** ——
-#   · 存量 **237 条**（CC1 85 文件/113 type＋30 值｜CC2 1 文件/94 type）登记在门禁的 `CC-BASELINE` 段；
-#     actual ≤ baseline ⇒ 只打印、**不判红** ⇒ 「存量不红」由门禁棘轮保证，本接入点**不写存量豁免逻辑**。
-#   · 基线外新增 ⇒ 门禁 exit 1 ⇒ 本块 v5_soft ⇒ **本地软提示 / CI(SYNO_CI=1) 硬阻断**（D515/D516 先例）。
-# 实测（本卡，@ rebase 后基线）: local 无新增 ⇒ rc 0；造一条 CC2 新增 ⇒ local rc 0 但报「新增 1」
-#   ｜ SYNO_CI=1 ⇒ rc 1（VIOLATION new=1）｜ CC_STRICT=1 ⇒ rc 1（存量亦判红）。
-# 🔴 判分支必须看**新增数**而不是只看 rc: local 模式契约就是 exit 0（只报数），
-#   若此处 `[ rc -ne 0 ]` 判分支 ⇒ **本地一个字都不印**（实测踩过：造违规后 pre-commit 零提及
-#   ⇒ 「存量只告警」的告警面在本地不存在，接入形同虚设）。故先取 `新增 N`，N>0 才报。
-# 判据顺序纪律: 本块在**结果汇总之前**——放末尾早退之后等于永不点火（本文件既有教训，D782 区块同款）。
 if [ -f "$ROOT/scripts/check-content-coupling.sh" ]; then
   _CC_OUT="$(bash "$ROOT/scripts/check-content-coupling.sh" 2>&1)"; _CC_RC=$?
-  # ⚠️ 取数必须锁**末行**（`CONTENT-COUPLING:`）：逐行输出里 CC1/CC2 各自带「新增 N」，
-  #   若对整段 `grep -oE '新增 [0-9]+' | head -1` 会抓到 **CC1 的「新增 0」**（实测踩过 ⇒
-  #   有新增却不报 = 假绿）。末行才是全局真值。
   _CC_LINE="$(printf '%s' "$_CC_OUT" | grep -E '^CONTENT-COUPLING:' | tail -1)"
   _CC_NEW="$(printf '%s' "$_CC_LINE" | grep -oE '新增 [0-9]+' | head -1 | grep -oE '[0-9]+' || true)"
   _CC_VIOL="$(printf '%s' "$_CC_LINE" | grep -oE 'new=[0-9]+' | head -1 | grep -oE '[0-9]+' || true)"
@@ -2051,11 +1360,9 @@ if [ -f "$ROOT/scripts/check-content-coupling.sh" ]; then
     v5_soft "内容面耦合门禁 CC1–CC4（K12-13/#196；新增 ${_CC_NEW:-${_CC_VIOL:-?}} 条）"
   fi
 else
-  # 常驻门禁缺脚本 ⇒ 不许静默跳过（本文件既有教训：脚本缺失若只观测 ⇒ 未登记件全放行）
   self_fail_missing_script "内容面耦合门禁 CC1–CC4" "scripts/check-content-coupling.sh"
 fi
 
-# V3: 写 CP3 检查点
 mkdir -p "$ROOT/.codex/checkpoints"
 G10_FAIL=$([ -n "$MISMATCH" ] && echo "true" || echo "false")
 G11_FAIL=$([ "$HAS_E2E" -gt 0 ] && [ "$HAS_TESTS" -eq 0 ] && echo "true" || echo "false")
@@ -2070,9 +1377,6 @@ with open('$ROOT/.codex/checkpoints/cp3-commit-check.json','w') as f:
     json.dump(d, f)
 " 2>/dev/null || true
 
-# ═══════════════════════════════════════════════════════════════════
-# 结果
-# ═══════════════════════════════════════════════════════════════════
 echo ""
 echo "═══════════════════════════════════════════════════════════"
 if [ "$HARD_FAIL" -gt 0 ]; then

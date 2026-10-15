@@ -1,0 +1,19 @@
+# .claude/claims/542.yaml — #542（门禁真值盘点 ＋ 门禁瘦身）写集声明（S0 源，issue 号卡）
+# 先例：.claude/claims/1031.yaml（claim 优先于 D# 链；K3 R3 防劫持）
+# 纪律：只列本 PR 真正改动的文件，不预授权。
+# 依据：CTO 裁定 122 ＋ 派单件 2026-10-16-派单-门禁真值盘点与瘦身.md ｜ as_of gitea/local-main=49ddc63ee
+writeset:
+  - .claude/claims/542.yaml
+  - scripts/pre-commit-check.sh
+done:
+  - verify: wc -l scripts/pre-commit-check.sh
+  - verify: diff <(git show 49ddc63ee:scripts/pre-commit-check.sh | grep -vE '^[[:space:]]*#|^[[:space:]]*$') <(grep -vE '^[[:space:]]*#|^[[:space:]]*$' scripts/pre-commit-check.sh)
+  - verify: bash tests/control-tower/ci-strict-visible.test.sh
+  - verify: bash tests/control-tower/claim-regex-narrow.test.sh
+  - verify: bash tests/control-tower/platform-checklist.test.sh
+  - verify: bash tests/control-tower/gate-failopen-net.test.sh
+  - verify: bash tests/control-tower/bypass-rewrite-classify.test.sh
+  - verify: bash tests/control-tower/check-doc-contract.test.sh
+  - verify: bash tests/control-tower/main-tree-guard.test.sh
+  - verify: bash tests/control-tower/parallel-main-tree-occupancy.test.sh
+note: 门禁瘦身（裁定 122）：只外移注释整行与冗余空行 —— 零代码改动（代码投影逐字节一致）；13 组判定行/退出码/编号/CI 硬阻断语义未动。盘点表＋原始输出落 handbook 回执件；外移注释原文 708 行落 handbook 归档件。
