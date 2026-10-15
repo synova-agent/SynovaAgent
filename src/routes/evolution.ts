@@ -313,4 +313,57 @@ router.post('/api/evolution/federation/import', async (req: Request, res: Respon
     res.status(500).json({ ok: false, error: msg, degraded: true });
   }
 });
+// ═══ K6-E9 (#539 / Closes #539): typed 回写对外面 ═══
+
+/**
+ * GET /api/evolution/writeback/policy — 审批分级 + 上限（只读，暴露审批态）。
+ */
+router.get('/api/evolution/writeback/policy', async (req: Request, res: Response) => {
+  if (!requireEvolutionRbac(req, res)) return;
+  try {
+    const {
+      L0_AUTO_KINDS, L1_MANUAL_KINDS, MAX_AUTO_WRITEBACK_PER_CYCLE,
+    } = await loadL0();
+    res.json({
+      ok: true,
+      L0AutoKinds: L0_AUTO_KINDS,
+      L1ManualKinds: L1_MANUAL_KINDS,
+      maxAutoWritebackPerCycle: MAX_AUTO_WRITEBACK_PER_CYCLE,
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.warn({ err: msg }, 'GET writeback/policy 失败 — degraded');
+    res.status(500).json({ ok: false, error: msg, degraded: true });
+  }
+});
+
+/**
+ * POST /api/evolution/proposals/:id/apply — 单条提案走 E9 typed 回写单一写入口。
+ *
+ * L0 层类（③④⑤）：pending 即可自动回写（受每周期上限 ≤10，超限 ⇒ halted 停下等人看）。
+ * L1 层类（①②）：必须先 approve（一次授权只对一次动作）；未批 ⇒ awaitingApproval，不落盘。
+ * 结果：applied 置位（appliedAt/appliedBy/approvedRef）＋ 审计条目（agent_memory）。
+ */
+router.post('/api/evolution/proposals/:id/apply', async (req: Request, res: Response) => {
+  if (!requireEvolutionRbac(req, res)) return;
+  const { id } = req.params as { id: string };
+  try {
+    const { listProposals } = await loadL0();
+    const memoryStore = await loadMemoryStore();
+    const proposals = listProposals(memoryStore, undefined);
+    const target = proposals.find((p: { id: string }) => p.id === id);
+    if (!target) {
+      res.status(404).json({ ok: false, error: '提案不存在' });
+      return;
+    }
+    const { applyTypedWritebacks } = await import('../loops/middle-evolution-engine');
+    const result = applyTypedWritebacks({ proposals: [target], memoryStore });
+    res.json({ ok: true, result, proposal: target });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.error({ err: msg, proposalId: id }, 'POST proposal/apply 失败');
+    res.status(500).json({ ok: false, error: '回写失败', degraded: true });
+  }
+});
+
 export default router;

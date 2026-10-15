@@ -781,3 +781,224 @@ export function applyEvolutionActions(actions: EvolutionAction[]): ApplyActionRe
 
   return result;
 }
+
+// ═══ K6-E9 (#539 / Closes #539): 四类 typed 回写 ＋ 审批分级 ＋ applied 置位 ＋ 每周期上限 ═══
+//
+// 卡面：.claude/task-briefs/2026-10-15-535-K6-E9-进化回写.md
+//   ⑥ 层四类回写（① loop-param / ② ontology-通道 / ④ param-prior / ⑤ nav-weight
+//   ＋ 既有 ③ sentinel-threshold）经**单一裁决入口**（approval-policy.decideWriteback）落盘：
+//     · L0 自动（③④⑤）受每周期上限 ≤10 约束；第 11 条 ⇒ halt（停下来等人看，不静默写）
+//     · L1 人工批（①②）未批 ⇒ 不落盘（fail-closed；一次授权只对一次动作）
+//     · 审计先行：审计写失败 ⇒ **拒绝落盘**（借 dsh-user-approval: "audit append that
+//       fails before commit rejects rather than returning an unlogged decision"）
+//   applied 置位（G6）：每次回写 ⇒ status='applied' + appliedAt/appliedBy/approvedRef
+//   （谁置的、依据哪条 approve）—— 提案链 0-2 总闸（applied 恒 0）在这里关闭。
+//
+// 铁律 47 契约见 applyTypedWritebacks JSDoc；铁律 24/31：所有降级显式 log + degraded 标记。
+
+import type {
+  EvolutionProposal,
+  TypedChange,
+  WritebackKind,
+  AgentMemoryStoreLike,
+} from '@synova/evolution';
+import { PAYLOAD_CONTRACTS, kindOf, describeChange, decideWriteback, WritebackBudget } from '@synova/evolution';
+
+/** K6-E9 回写执行结果 */
+export interface TypedWritebackResult {
+  /** 成功落盘并置位 applied 的提案数（0-2 总闸证据面：跑一轮 ⇒ > 0） */
+  applied: number;
+  /** L1 未批 ⇒ 等批（未落盘）的提案数 */
+  awaitingApproval: number;
+  /** 自动预算耗尽 ⇒ 整批停下（第 11 条必停） */
+  halted: boolean;
+  /** 触发 halt 的提案 id（审计面） */
+  haltedAtProposalId?: string;
+  /** 校验失败被拒的提案数 */
+  rejected: number;
+  appliedProposalIds: string[];
+  errors: string[];
+  degraded: boolean;
+}
+
+export interface TypedWritebackInput {
+  /** 待回写提案（多类混合，按序处理） */
+  proposals: EvolutionProposal[];
+  /** 记忆存储（审计 + 提案回写）。缺省 ⇒ 用 getAgentMemoryStore() */
+  memoryStore?: AgentMemoryStoreLike;
+  /** 快照提供者（RuleVersionManager 形状）：批次前建快照，成功回写的提案记 appliedSnapshotId */
+  snapshotProvider?: { createSnapshot(description: string): Promise<string | null> };
+}
+
+/** 提案的层类：取 typedChanges[0] 的 kind；无 typedChanges ⇒ sentinel-threshold（③ 通道） */
+function proposalKindOf(p: EvolutionProposal): WritebackKind {
+  const tc = p.typedChanges && p.typedChanges.length > 0 ? p.typedChanges[0] : undefined;
+  return tc ? kindOf(tc) : 'sentinel-threshold';
+}
+
+/** 全部载荷过该类自声明判据（PAYLOAD_CONTRACTS）—— 改坏即红 */
+function proposalPayloadsValid(p: EvolutionProposal): boolean {
+  if (p.type === 'pattern_discovery') return false; // 发现类不属回写通道
+  if (!p.typedChanges || p.typedChanges.length === 0) return false;
+  return p.typedChanges.every((c: TypedChange) => PAYLOAD_CONTRACTS[kindOf(c)].validate(c));
+}
+
+/**
+ * K6-E9: 执行一批进化提案的 typed 回写（单一写入口，提案链 applied 置位处）。
+ *
+ * 契约（铁律 47）:
+ *   @input  proposals —— EvolutionProposal[]（typedChanges 带 typed payload）；
+ *            memoryStore —— 可注入替身（测试/路由）；缺省走 getAgentMemoryStore()
+ *   @output TypedWritebackResult：
+ *     · applied>0 ⇔ 有提案 status='applied' 且审计条目已落（对账面：agent_memory
+ *       tags=['evolution_writeback','applied',kind]）
+ *     · halted=true ⇔ 自动预算耗尽，**剩余提案一律不再处理**（停下来等人看）
+ *   @degraded memoryStore 不可用 / 审计写失败 ⇒ 该提案**不落盘**（fail-closed），
+ *     result.degraded=true + errors 记因；绝不返回"没记账的 applied"。
+ *   @audit 每次成功回写两条 remember：① 审计条目（先写，失败即拒）② 提案终态
+ *     （status='applied', appliedAt, appliedBy='system:evolution-writeback', approvedRef）
+ */
+export async function applyTypedWritebacks(input: TypedWritebackInput): Promise<TypedWritebackResult> {
+  const result: TypedWritebackResult = {
+    applied: 0,
+    awaitingApproval: 0,
+    halted: false,
+    rejected: 0,
+    appliedProposalIds: [],
+    errors: [],
+    degraded: false,
+  };
+
+  const budget = new WritebackBudget();
+
+  // 批次前快照（可回滚面；失败 ⇒ degraded 继续 —— 快照是保护面，不是放行条件）
+  let snapshotId: string | null = null;
+  if (input.snapshotProvider) {
+    try {
+      snapshotId = await input.snapshotProvider.createSnapshot(
+        `e9-writeback:${input.proposals?.length ?? 0} proposals`,
+      );
+      if (!snapshotId) {
+        log.warn('E9 批次快照创建失败 — degraded（继续回写，回滚面缺失）');
+        result.degraded = true;
+      }
+    } catch (err: unknown) {
+      log.warn({ err: err instanceof Error ? err.message : String(err) }, 'E9 批次快照异常 — degraded');
+      result.degraded = true;
+    }
+  }
+
+  let store: AgentMemoryStoreLike | null = input.memoryStore ?? null;
+  if (!store) {
+    try {
+      store = getAgentMemoryStore();
+    } catch (err: unknown) {
+      log.warn({ err: err instanceof Error ? err.message : String(err) }, 'agent_memory 不可用 — E9 回写整批拒绝');
+      result.errors.push('memory_store_unavailable');
+      result.degraded = true;
+      return result;
+    }
+  }
+
+  for (const proposal of input.proposals ?? []) {
+    if (result.halted) break; // 第 11 条停 ⇒ 后续全部等人看，不再处理
+
+    const kind = proposalKindOf(proposal);
+
+    if (!proposalPayloadsValid(proposal)) {
+      log.warn({ proposalId: proposal.id, type: proposal.type }, 'E9 回写拒绝 — 载荷未过该类判据（PAYLOAD_CONTRACTS）');
+      result.rejected++;
+      continue;
+    }
+
+    const isApproved = proposal.status === 'approved';
+    const approvedRef = isApproved
+      ? (proposal.approvedRef ?? `approve:${proposal.id}`)
+      : undefined;
+
+    const decision = decideWriteback({
+      kind,
+      proposalApproved: isApproved,
+      approvedRef,
+      budget,
+    });
+
+    if (decision.decision === 'await-approval') {
+      log.warn({ proposalId: proposal.id, kind, reason: decision.reason }, 'E9 回写等待人工批准 — 不落盘（fail-closed）');
+      result.awaitingApproval++;
+      continue;
+    }
+    if (decision.decision === 'halt') {
+      log.warn(
+        { proposalId: proposal.id, kind, reason: decision.reason },
+        'E9 自动回写达每周期上限 — 整批停下等人看（不静默写进去）',
+      );
+      result.halted = true;
+      result.haltedAtProposalId = proposal.id;
+      continue;
+    }
+
+    // ——— apply：审计先行，审计写失败 ⇒ 拒绝落盘 ———
+    const appliedAt = new Date().toISOString();
+    const descriptions = (proposal.typedChanges ?? []).map((c: TypedChange) => describeChange(c)).join('; ');
+    try {
+      store.remember({
+        orgId: 'global',
+        key: `evolution_writeback:${proposal.id}:${Date.now()}`,
+        value: JSON.stringify({
+          proposalId: proposal.id,
+          kind,
+          type: proposal.type,
+          changes: descriptions,
+          appliedBy: 'system:evolution-writeback',
+          approvedRef: approvedRef ?? `auto:L0:${proposal.id}`,
+          appliedAt,
+          level: decision.level,
+          reason: decision.reason,
+        }),
+        type: 'fact',
+        confidence: 0.9,
+        source: 'evolution_writeback',
+        tags: ['evolution_writeback', 'applied', kind],
+        expiresAt: null,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      log.warn({ err: msg, proposalId: proposal.id }, 'E9 审计写入失败 — 拒绝落盘（fail-closed：不许没记账的 applied）');
+      result.errors.push(`audit_failed:${proposal.id}:${msg}`);
+      result.degraded = true;
+      continue;
+    }
+
+    // ——— 置位 applied（G6）：谁置的、依据哪条 approve ———
+    proposal.status = 'applied';
+    proposal.updatedAt = appliedAt;
+    proposal.appliedAt = appliedAt;
+    proposal.appliedBy = 'system:evolution-writeback';
+    proposal.approvedRef = approvedRef ?? `auto:L0:${proposal.id}`;
+    try {
+      store.remember({
+        orgId: 'global',
+        key: `proposal_${proposal.id}`,
+        value: JSON.stringify(proposal),
+        type: 'enterprise_fact',
+        confidence: 0.9,
+        source: 'evolution_writeback',
+        tags: ['proposal', kind, 'applied'],
+        expiresAt: null,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      log.warn({ err: msg, proposalId: proposal.id }, 'E9 提案终态回写失败 — degraded（审计已落，状态未持久化）');
+      result.errors.push(`persist_failed:${proposal.id}:${msg}`);
+      result.degraded = true;
+    }
+
+    if (snapshotId) proposal.appliedSnapshotId = proposal.appliedSnapshotId ?? snapshotId;
+    result.applied++;
+    result.appliedProposalIds.push(proposal.id);
+    log.info({ proposalId: proposal.id, kind, appliedAt, approvedRef: proposal.approvedRef }, 'E9 回写已落盘并置位 applied');
+  }
+
+  return result;
+}
