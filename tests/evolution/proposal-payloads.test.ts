@@ -31,6 +31,11 @@ function validPrior(): ParamPriorChange {
 function validNav(): NavWeightChange {
   return { kind: 'nav-weight', expertId: 'fundamental-efficiency', weightFrom: 0.5, weightTo: 0.4 };
 }
+/** 负路径构造器：unknown → TypedChange 单点合法转换（铁律 38：禁双层断言链） */
+function asBad(v: unknown): TypedChange {
+  return v as TypedChange;
+}
+
 function validThreshold(): ThresholdChange {
   return { sentinelId: 'F1_KZ', from: { warning: 0.5, critical: 1.0 }, to: { warning: 0.6, critical: 1.1 } };
 }
@@ -47,15 +52,15 @@ describe('K6-E9 proposal-payloads：四类 payload 判据（每类自声明）',
   it('① loop-param 改坏即红：缺 cycleId / paramKey / 非数值 ⇒ validate 必 false', () => {
     const base = validLoopParam();
     expect(PAYLOAD_CONTRACTS['loop-param'].validate({ ...base, cycleId: '' })).toBe(false);
-    expect(PAYLOAD_CONTRACTS['loop-param'].validate({ ...base, paramKey: undefined as unknown as string })).toBe(false);
+    expect(PAYLOAD_CONTRACTS['loop-param'].validate(asBad({ ...base, paramKey: undefined }))).toBe(false);
     expect(PAYLOAD_CONTRACTS['loop-param'].validate({ ...base, to: Number.NaN })).toBe(false);
   });
 
   it('② ontology 改坏即红：非法 op / 缺 nodeType / patch 非对象 ⇒ validate 必 false', () => {
     const base = validOntology();
-    expect(PAYLOAD_CONTRACTS.ontology.validate({ ...base, op: 'delete' as unknown as 'add' })).toBe(false);
+    expect(PAYLOAD_CONTRACTS.ontology.validate(asBad({ ...base, op: 'delete' }))).toBe(false);
     expect(PAYLOAD_CONTRACTS.ontology.validate({ ...base, nodeType: '' })).toBe(false);
-    expect(PAYLOAD_CONTRACTS.ontology.validate({ ...base, patch: 'not-an-object' as unknown as Record<string, unknown> })).toBe(false);
+    expect(PAYLOAD_CONTRACTS.ontology.validate(asBad({ ...base, patch: 'not-an-object' }))).toBe(false);
   });
 
   it('④ param-prior 改坏即红：非正先验 / 证据数 <1 或非整数 ⇒ validate 必 false', () => {
@@ -76,13 +81,13 @@ describe('K6-E9 proposal-payloads：四类 payload 判据（每类自声明）',
   it('③ sentinel-threshold 改坏即红：缺 sentinelId / to 非数值 ⇒ validate 必 false', () => {
     const base = validThreshold();
     expect(PAYLOAD_CONTRACTS['sentinel-threshold'].validate({ ...base, sentinelId: '' })).toBe(false);
-    expect(PAYLOAD_CONTRACTS['sentinel-threshold'].validate({ ...base, to: undefined as unknown as ThresholdChange['to'] })).toBe(false);
+    expect(PAYLOAD_CONTRACTS['sentinel-threshold'].validate(asBad({ ...base, to: undefined }))).toBe(false);
   });
 
   it('kindOf：存量无 kind ⇒ sentinel-threshold；未知 kind 字符串 ⇒ 回落 sentinel-threshold', () => {
     expect(kindOf(validThreshold() as TypedChange)).toBe('sentinel-threshold');
     expect(kindOf(validLoopParam())).toBe('loop-param');
-    expect(kindOf({ kind: 'bogus' } as unknown as TypedChange)).toBe('sentinel-threshold');
+    expect(kindOf(asBad({ kind: 'bogus' }))).toBe('sentinel-threshold');
   });
 
   it('isThresholdChange 形态守卫 + describeChange 审计描述可读', () => {

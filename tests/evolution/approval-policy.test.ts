@@ -7,6 +7,16 @@
  * 铁律 48：全部 expect 断言。
  */
 import { describe, it, expect, beforeEach } from 'vitest';
+
+/** 负路径构造器：unknown → 层类 单点合法转换（铁律 38：禁双层断言链） */
+function asBadKind(v: unknown): Parameters<typeof resolveApprovalLevel>[0] {
+  return v as Parameters<typeof resolveApprovalLevel>[0];
+}
+
+/** 负路径构造器：unknown → WritebackBudget 单点合法转换 */
+function asBadBudget(v: unknown): WritebackBudget {
+  return v as WritebackBudget;
+}
 import {
   resolveApprovalLevel,
   setApprovalLevelOverride,
@@ -39,7 +49,7 @@ describe('K6-E9 approval-policy：分级 + 上限 + fail-closed', () => {
   });
 
   it('fail-closed：未知层类 ⇒ L1（宁可等人批，不放行）', () => {
-    expect(resolveApprovalLevel('totally-unknown' as Parameters<typeof resolveApprovalLevel>[0])).toBe('L1');
+    expect(resolveApprovalLevel(asBadKind('totally-unknown'))).toBe('L1');
   });
 
   it('上限：MAX_AUTO_WRITEBACK_PER_CYCLE=10；第 11 条 consume 必 false', () => {
@@ -82,7 +92,7 @@ describe('K6-E9 approval-policy：分级 + 上限 + fail-closed', () => {
   });
 
   it('fail-closed：预算对象缺失 ⇒ halt', () => {
-    const d = decideWriteback({ kind: 'nav-weight', proposalApproved: false, budget: undefined as unknown as WritebackBudget });
+    const d = decideWriteback({ kind: 'nav-weight', proposalApproved: false, budget: asBadBudget(undefined) });
     expect(d.decision).toBe('halt');
   });
 });

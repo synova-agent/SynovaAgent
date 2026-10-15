@@ -59,6 +59,11 @@ const ONTO: TypedChange = { kind: 'ontology', nodeType: 'Financial', op: 'update
 const PRIOR: TypedChange = { kind: 'param-prior', paramId: 'p1', priorAlpha: 2, priorBeta: 3, evidenceCount: 5 };
 const NAV: TypedChange = { kind: 'nav-weight', expertId: 'host', weightFrom: 0.5, weightTo: 0.4 };
 
+/** 负路径构造器：unknown → TypedChange 单点合法转换（铁律 38：禁双层断言链） */
+function asBad(v: unknown): TypedChange {
+  return v as TypedChange;
+}
+
 describe('K6-E9 applyTypedWritebacks：applied 置位（0-2 总闸）', () => {
   it('🔴 applied > 0：一轮四类（L0 三类 + L1 已批本体）⇒ 4 条全部落盘并置位 applied', async () => {
     const store = makeStore();
@@ -116,10 +121,10 @@ describe('K6-E9 applyTypedWritebacks：applied 置位（0-2 总闸）', () => {
   it('② 改坏即红（四类逐组）：载荷缺必填字段 ⇒ rejected、该类回写消失', async () => {
     const store = makeStore();
     const bad: EvolutionProposal[] = [
-      proposal('bad-loop', [{ kind: 'loop-param', cycleId: '', paramKey: 'k', from: 1, to: 2 } as TypedChange]),
-      proposal('bad-onto', [{ kind: 'ontology', nodeType: 'Financial', op: 'delete' as unknown as 'add', patch: {} } as TypedChange]),
-      proposal('bad-prior', [{ kind: 'param-prior', paramId: 'p', priorAlpha: 0, priorBeta: 3, evidenceCount: 5 } as TypedChange]),
-      proposal('bad-nav', [{ kind: 'nav-weight', expertId: 'host', weightFrom: 0.5, weightTo: 2 } as TypedChange]),
+      proposal('bad-loop', [asBad({ kind: 'loop-param', cycleId: '', paramKey: 'k', from: 1, to: 2 })]),
+      proposal('bad-onto', [asBad({ kind: 'ontology', nodeType: 'Financial', op: 'delete', patch: {} })]),
+      proposal('bad-prior', [asBad({ kind: 'param-prior', paramId: 'p', priorAlpha: 0, priorBeta: 3, evidenceCount: 5 })]),
+      proposal('bad-nav', [asBad({ kind: 'nav-weight', expertId: 'host', weightFrom: 0.5, weightTo: 2 })]),
     ];
     const r = await applyTypedWritebacks({ proposals: bad, memoryStore: store });
     expect(r.rejected).toBe(4);
