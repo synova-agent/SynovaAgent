@@ -138,16 +138,30 @@ export interface ThresholdChange {
 
 export type ProposalStatus = 'pending' | 'approved' | 'rejected' | 'applied';
 
+// ═══ K6-E9（#539）: 提案链 typed payload 通道 ═══
+// 四类按层分型的回写载荷放在 typedChanges（① 循环 / ② 本体 / ④ 先验 / ⑤ 导航）；
+// 既有 changes: ThresholdChange[] 字段契约**冻结不动**（③ 阈值通道，存量提案与
+// global-analyzer approveProposal 的灰度链依赖其形态 —— 本卡写集不含 global-analyzer.ts）。
+// 类型从 proposal-payloads.ts 声明（每类判据自声明，见 PAYLOAD_CONTRACTS）。
+
 export interface EvolutionProposal {
   id: string;
-  /** 提案类型: 阈值调整 / 模式发现 */
-  type: 'threshold_adjustment' | 'pattern_discovery';
+  /** 提案类型: 阈值调整 / 模式发现 / K6-E9 四类层型回写 */
+  type:
+    | 'threshold_adjustment'
+    | 'pattern_discovery'
+    | 'loop_param'
+    | 'ontology_change'
+    | 'param_prior'
+    | 'nav_weight';
   title: string;
   description: string;
   /** 关联行业 */
   industry: string;
-  /** 具体的阈值变更列表 */
+  /** 具体的阈值变更列表（③ 阈值通道 —— 字段契约冻结） */
   changes: ThresholdChange[];
+  /** K6-E9: 四类 typed payload（① loop-param / ② ontology / ④ param-prior / ⑤ nav-weight） */
+  typedChanges?: Array<import('./proposal-payloads').TypedChange>;
   /** 风险评估: 影响多少个 org */
   risk: 'low' | 'medium' | 'high';
   /** 影响范围评估 */
@@ -162,6 +176,12 @@ export interface EvolutionProposal {
   appliedSnapshotId?: string;
   /** 灰度百分比历史 */
   rolloutPercentage?: number;
+  /** K6-E9: applied 置位时间（谁置的/依据哪条 approve 见 appliedBy/approvedRef） */
+  appliedAt?: string;
+  /** K6-E9: 置位者（恒 'system:evolution-writeback' —— 引擎单写入口） */
+  appliedBy?: string;
+  /** K6-E9: 依据的批准记录引用（L0 ⇒ 'auto:L0:<proposalId>'；L1 ⇒ approve 记录 id） */
+  approvedRef?: string;
 }
 
 // ═══ L3 Write API 类型 (由 sentinel/runner.ts 实现) ═══

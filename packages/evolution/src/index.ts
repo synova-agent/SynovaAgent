@@ -106,3 +106,26 @@ export type {
   ImportFederatedStatsResult,
 } from './global-analyzer';
 export { analyzeGlobalPatterns, detectNciGlobalPatterns } from './global-analyzer';
+
+// ═══ K6-E9 (#539): 四类 typed payload ＋ 审批分级 L0/L1 ＋ 每周期上限 ═══
+export type {
+  WritebackKind,
+  TypedChange,
+  LoopParamChange,
+  OntologyChange,
+  ParamPriorChange,
+  NavWeightChange,
+  PayloadContract,
+} from './proposal-payloads';
+export { PAYLOAD_CONTRACTS, kindOf, describeChange, isThresholdChange } from './proposal-payloads';
+export type { ApprovalLevel, WritebackDecisionKind, WritebackDecision, DecideWritebackInput } from './approval-policy';
+export {
+  L0_AUTO_KINDS,
+  L1_MANUAL_KINDS,
+  MAX_AUTO_WRITEBACK_PER_CYCLE,
+  WritebackBudget,
+  resolveApprovalLevel,
+  setApprovalLevelOverride,
+  clearApprovalLevelOverrides,
+  decideWriteback,
+} from './approval-policy';
