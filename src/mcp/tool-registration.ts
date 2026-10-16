@@ -102,7 +102,7 @@ export async function registerMCPTools(registry: ToolRegistry): Promise<void> {
       // Dynamically import L4 graph query to avoid circular deps
       // V4.2.3: diagnosis-graph-query.ts 已删除 — 降级跳过，函数在 switch 内直接 import
       // 铁律 39（#4 基线收紧）: 构造经 L2 出口（agent/graph-store-service）——
-      // 与修复前 `new SqliteGraphStore(getDatabase())` 行为逐字节一致（该 L2 服务头注自述）
+      // **构造**与修复前 `new SqliteGraphStore(getDatabase())` 行为逐字节一致（该 L2 服务头注自述）
       const { createSystemGraphStore } = await import('../agent/graph-store-service');
 
       const store = createSystemGraphStore(); // 真实类型（#4: 去 as-any 家族，铁律 38）
@@ -125,6 +125,13 @@ export async function registerMCPTools(registry: ToolRegistry): Promise<void> {
           return { brokers };
         }
         case 'matchTriples': {
+          // 🔴 #4 **已申报的行为变更**（独立复核 C7-c 实测；**是修 bug，不是等价迁移**）：
+          //   修复前本处是**解绑定调用** —— 先把 `queryTriples` 脱壳成自由函数再调，
+          //   `this` 为 undefined ⇒ 方法体 `this.db` 抛错 ⇒ 被内部 catch ⇒ **恒返回 [] ＋ warn**
+          //   （即该操作长期"永远查不到三元组"，静默空结果）。
+          //   现直接 `store.queryTriples(...)`（**绑定调用**）⇒ 返回**真实三元组**。
+          //   ⇒ 语义：**只读工具由"恒空"变为"可用"**；不写盘、不改数据，但**返回值可见变化**，
+          //     故在此显式登记，不并入"行为逐字节一致"口径（铁律 11：不静默）。
           const triples = store.queryTriples(
             (params.pattern as Record<string, unknown>) || {},
             graph,

@@ -131,7 +131,10 @@ describe('CT-64: check-architecture.sh 四类漏网修补 — 存量 36 处全�
       .filter((l) => /=\d+\s*$/.test(l))
       .reduce((sum, l) => sum + Number(l.split('=')[1]), 0);
     // K3 D593FIX2 附记补强：棘轮只许减少；逆向上调必须携带例外记账（理由 + 收紧任务 owner/期限）
-    if (total > 36) {
+    // 🔴 #4 门槛随总量等价移植（**不改判据语义**）：原 `> 36` = "无例外水平"（38 = 36 + D593-FIX2 例外 2）。
+    //    现总量 24 = 22 + 同一笔例外 2 ⇒ "无例外水平" = 22；若仍用 36，本闸在 24 下**恒不触发 = 死闸**，
+    //    "上调须记例外"的强制力会静默消失（独立复核 C-bonus 抓到）。故移植为 `> 22`，语义与原文逐字等价。
+    if (total > 22) {
       expect(text).toMatch(/逆向例外/);
       expect(text).toMatch(/收紧路径|收紧任务/);
       expect(text).toMatch(/PLAN-diagnosis-l5-di/);
