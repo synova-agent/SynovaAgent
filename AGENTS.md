@@ -1,6 +1,6 @@
 # AGENTS.md — SynovaAgent
 
-> **V7.0 | 2026-10-12** | 对齐**产品宪章 v8.1**（判据中枢）｜ 本地软提示 + CI 权威门禁 + 契约门禁 + 认领制 + 跨 session 隔离
+> **V7.0 | 2026-10-12** | 对齐**产品宪章 v8.2**（判据中枢｜v8.1 院方 10-12 复核后归一）｜ 本地软提示 + CI 权威门禁 + 契约门禁 + 认领制 + 跨 session 隔离
 > 🔴 **门禁可解析元信息**（**真值，勿手改**；改前跑 `bash scripts/doc-system/check-doc-truth.sh`）：
 > **控制塔 V5.2.7** ｜ **6位专家**（`expert/expert-registry.yaml`，enabled=6）｜ **13 组 pre-commit**（`scripts/pre-commit-check.sh` 自声明）｜ **桌面端**（品牌表层，切片 A/B/C 已闭环）
 > **流程约束 V4.5.1**

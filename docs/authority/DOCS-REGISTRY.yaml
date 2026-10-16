@@ -535,3 +535,15 @@ documents:
     status: active
     owner: synova-governance-converge（治理线）
     note: "12 份域级守则件落库 PR2。文档体系：承载包 K1/K3/K5/K10/K12。"
+
+  # ---- CTO 2026-10-16：架构权威统一（裁定 125）----
+  - id: DOC-0202
+    type: decision
+    path: decisions/implemented/process/2026-10-16-arch-authority-unification.md
+    status: active
+    owner: CTO
+  - id: DOC-0203
+    type: architecture
+    path: decisions/implemented/architecture/2026-10-09-权威架构总图.md
+    status: active
+    owner: CTO
