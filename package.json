@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Synova组织智能诊断 — 独立进程，终端对话式组织诊断。配置 LLM 即用。",
-  "main": "dist/index.js",
+  "main": "dist/backend.mjs",
   "bin": {
     "synova": "./bin/synova"
   },
@@ -16,8 +16,9 @@
     "chat": "tsx src/cli.ts",
     "tui": "tsx src/tui-v2/chat.tsx",
     "synova": "tsx src/tui-v2/chat.tsx",
-    "build": "tsc",
-    "start": "node dist/index.js",
+    "build": "tsc && bash scripts/desktop/build-backend.sh",
+    "build:bundle": "bash scripts/desktop/build-backend.sh",
+    "start": "node dist/backend.mjs",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
