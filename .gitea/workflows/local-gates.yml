@@ -99,7 +99,23 @@ jobs:
           PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" \
             SYNO_CI=1 bash scripts/check-content-coupling.sh || exit 1
       - name: ② 架构边界（快，阻断）
-        run: cd /Users/wane/.ci-work/SynovaAgent && PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash scripts/check-architecture.sh
+        run: |
+          cd /Users/wane/.ci-work/SynovaAgent
+          # 🔴 A1（CTO 裁定 124 · 派单件《两侧门禁定稿落地》v4 §A1 · 2026-10-16）：**必须注入 SYNO_CI=1**
+          #   病根（名实不符 + 零防守力）：本门禁的 CI 硬阻断位是**它自己实现的**
+          #     （`scripts/check-architecture.sh:32` `SYNO_CI="${SYNO_CI:-0}"`），
+          #     而 local 模式对"基线外新增"**只打软提示**（契约就是本地不阻断）。
+          #   ⇒ 不注入 SYNO_CI ⇒ **任何新增跨层引用都 rc=0 ⇒ 该步永不红** ⇒ 标题里的"阻断"是假的。
+          #   （与上一步 ①c 在 2026-10-12 被独立复核抓出的缺陷**同型同因**，修法亦同。）
+          #   实测（同一份代码，各附原始输出）：
+          #     · 无新增：无 SYNO_CI ⇒ rc=0 ／ SYNO_CI=1 ⇒ rc=0（**不误伤**）
+          #     · 人为新增 1 处 L1→L3：无 SYNO_CI ⇒ rc=**0**（软提示）／ SYNO_CI=1 ⇒ rc=**1**（逐行点名 file:line）
+          #   `|| exit $?` **原样保留退出码**（1=真红业务阻断 ／ 2=检查自身失败 fail-closed），
+          #   两个理由：① 不依赖 runner 注入的 `set -e`（本文件 ④ 步已记录同源教训：不写 `|| exit`
+          #   时，本地直接跑该步正文得 rc=0 ⇒ "本地复现与 CI 不一致 = 跑的不是同一件事"）；
+          #   ② 禁 `|| exit 1` 这类**退出码折叠**（CTO 立卡 #524 R-3：折叠 ⇒ 三态不可分辨）。
+          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" \
+            SYNO_CI=1 bash scripts/check-architecture.sh || exit $?
       - name: ③ 增量测试（vitest --changed；只测改动面，避免全量摩擦）
         run: |
           cd /Users/wane/.ci-work/SynovaAgent

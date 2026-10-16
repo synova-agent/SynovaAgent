@@ -13,6 +13,9 @@
  */
 
 import { Router, type Request, type Response } from 'express';
+// 🔴 A1 判据① 负控（临时，绝不合并）：人为新增 1 处 L1→L3 跨层引用
+import { getSentinelRegistry as __negctlProbe } from '../sentinel/registry';
+void __negctlProbe;
 import {
   getSentinelFindings,
   getAggregatedSignals,
