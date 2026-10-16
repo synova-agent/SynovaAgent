@@ -88,6 +88,21 @@ fi
 command -v npm >/dev/null 2>&1 || {
   echo "degraded: npm 不在 PATH" >&2; echo "INSTALL-DEPS: DEGRADED  [npm 缺失]"; exit $DEG; }
 
+# ── M1-a（2026-10-17）: 运行时组合固化 ──────────────────────────────────────────
+# 可用组合（已实证，K3 3/3 复跑 + M1 本卡复跑）：node v22.23.2 ＋ 按运行 node 重建原生件（ABI 127）。
+# 禁用组合（M1-e 反例登记）：node v24.19.0 ＋ ABI 127 原生件 ⇒ 必崩 rc≠0
+#   （ERR_DLOPEN_FAILED: NODE_MODULE_VERSION 137 vs 127；K3 另证 node24 自建件 ⇒ 39/39 SIGABRT）。
+# 注意：此处**只警告不改退出码**——CI（node24）跑本器但不加载原生件，硬拦会误伤 CI（M1 红线：不擅自改 CI 语义）。
+NODE_VER="$(node -p 'process.versions.node' 2>/dev/null || echo unknown)"
+NODE_ABI="$(node -p 'process.versions.modules' 2>/dev/null || echo unknown)"
+echo "运行时组合(M1-a): node ${NODE_VER} / ABI ${NODE_ABI} —— 可用组合 = node v22.23.2 + ABI 127 原生重建（禁用: v24.x 起 ABI≠127 ⇒ 必崩）"
+case "$NODE_VER" in
+  22.*) : ;;
+  *)
+    echo "::warning title=install-deps(M1-a)::当前 node ${NODE_VER}(ABI ${NODE_ABI}) ≠ 可用组合 v22.23.2/ABI127 —— 本器照常装，但 npm start 若加载 ABI127 原生件 ⇒ 必崩（禁用组合，M1-e 已登记）" >&2
+    ;;
+esac
+
 cd "$PREFIX" 2>/dev/null || {
   echo "degraded: --prefix 不可进入: $PREFIX" >&2; echo "INSTALL-DEPS: DEGRADED  [prefix 不可用]"; exit $DEG; }
 
@@ -112,20 +127,26 @@ if ! npm ci --ignore-scripts --no-audit --no-fund > /tmp/install-deps-npmci.log 
 fi
 
 # ── ② 显式放行：只重建白名单内的包 ──────────────────────────────────────────────
+# M1-b（2026-10-17）: rebuilt/absent 改为**真计数**（此前末行打 ${ALLOW_N} 冒充 rebuilt——变量冒充，禁）。
+#   管道 while 会进子 shell 丢计数 ⇒ 改 heredoc 重定向，主 shell 内累加。
 REBUILT=0; ABSENT=0; FAILED=""
 if [ "$ALLOW_N" != "0" ]; then
-  printf '%s' "$ALLOW" | grep . | while IFS= read -r pkg; do
+  while IFS= read -r pkg; do
     [ -z "$pkg" ] && continue
     if [ ! -d "node_modules/$pkg" ]; then
-      echo "  跳过(缺): $pkg"; continue
+      echo "  跳过(缺): $pkg"; ABSENT=$((ABSENT+1)); continue
     fi
     echo "  重建: $pkg"
     if ! npm rebuild "$pkg" --foreground-scripts --no-audit --no-fund > "/tmp/install-deps-rebuild.log" 2>&1; then
       echo "::error title=install-deps::白名单包 $pkg 重建失败（见 /tmp/install-deps-rebuild.log）"
       tail -15 "/tmp/install-deps-rebuild.log"
       echo "FAILED_PKG=$pkg" >> /tmp/install-deps-failed.txt
+    else
+      REBUILT=$((REBUILT+1))
     fi
-  done
+  done <<EOF
+$(printf '%s' "$ALLOW" | grep .)
+EOF
   if [ -f /tmp/install-deps-failed.txt ]; then FAILED="$(cat /tmp/install-deps-failed.txt | sed 's/^FAILED_PKG=//' | tr '\n' ' ')"; fi
 fi
 
@@ -147,5 +168,5 @@ if [ -n "$FAILED" ]; then
   echo "INSTALL-DEPS: VIOLATION(1)  [${FAILED}]"; exit $VIOL
 fi
 
-echo "INSTALL-DEPS: OK  [allowlist ${ALLOW_N} / rebuilt ${ALLOW_N} / absent 0]"
+echo "INSTALL-DEPS: OK  [allowlist ${ALLOW_N} / rebuilt ${REBUILT} / absent ${ABSENT}]"
 exit $OK
