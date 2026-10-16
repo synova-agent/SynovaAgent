@@ -494,8 +494,14 @@ export function injectManualSignal(input: GaManualSignalInput): ManualSignalInje
 // 铁律 39：L1（`src/routes/**` 与 `src/server.ts`）不得直触 L3 `sentinel/metric-readings-*`。
 // E5 #389 / E7 #406 遗留的三处 L1→L3 直触（routes/sentinel.ts ×1 + server.ts ×2）收敛至此。
 // 本模块 → L3 是 L2→L3（合法）；L1 → 本模块是 L1→L2（合法）。
-// ⚠️ 这是**契约出口**，不是透传别名：L1 只见本段三个具名契约（getMetricReadings /
-//    getMetricTrends / createSentinelMetricSink）＋收口类型，不见 L3 实现名。
+// ⚠️ 边界口径（**独立复核 #546 更正过一版，勿再写回**）——值/类型两面**不对称**，如实分开说：
+//    · **值面**：本段三个**具名契约**（getMetricReadings / getMetricTrends / createSentinelMetricSink）
+//      ⇒ L1 不再引用 L3 的**函数名**，import 方向 L1→L2→L3。
+//    · **类型面**：**逐字别名再出口**（下方三条 `export type … from '../sentinel/…'`）——
+//      L1 仍见到 L3 的同名类型。**这是有意为之**：形状与 L3 契约同源，
+//      避免"第二套类型副本"日后与 L3 漂移（铁律 46 的病根是**第二套实现**，不是类型再出口）。
+//    · 🔴 **本段不新增行为**：三个函数体都是一行转发（无校验/无日志/无缓存）——
+//      不得据此声称"L2 在此做了编排"。
 
 /** 读回查询入参（L1 只见本形状；L3 侧同名类型经此收口） */
 export type { MetricReadingsQuery } from '../sentinel/metric-readings-reader';
