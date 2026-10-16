@@ -494,7 +494,8 @@ export function injectManualSignal(input: GaManualSignalInput): ManualSignalInje
 // 铁律 39：L1（`src/routes/**` 与 `src/server.ts`）不得直触 L3 `sentinel/metric-readings-*`。
 // E5 #389 / E7 #406 遗留的三处 L1→L3 直触（routes/sentinel.ts ×1 + server.ts ×2）收敛至此。
 // 本模块 → L3 是 L2→L3（合法）；L1 → 本模块是 L1→L2（合法）。
-// ⚠️ 这是**契约出口**，不是透传别名：L1 只见本段四个具名契约，不见 L3 实现名。
+// ⚠️ 这是**契约出口**，不是透传别名：L1 只见本段三个具名契约（getMetricReadings /
+//    getMetricTrends / createSentinelMetricSink）＋收口类型，不见 L3 实现名。
 
 /** 读回查询入参（L1 只见本形状；L3 侧同名类型经此收口） */
 export type { MetricReadingsQuery } from '../sentinel/metric-readings-reader';
