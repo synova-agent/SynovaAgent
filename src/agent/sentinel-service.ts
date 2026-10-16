@@ -19,6 +19,15 @@ import {
   type TransitionResult,
 } from '../sentinel/runner';
 import { aggregateSignals } from '../sentinel/signal-aggregator';
+import {
+  listRecentReadings,
+  summarizeMetricTrends,
+  type MetricReadingsQuery,
+  type MetricReadingsReadResult,
+  type MetricTrendsReadResult,
+} from '../sentinel/metric-readings-reader';
+import { createMetricSink, type MetricSink } from '../sentinel/metric-readings-writer';
+import type { Database } from 'better-sqlite3';
 import { createLogger } from '@synova/logger';
 
 const log = createLogger('agent/sentinel-service');
@@ -479,4 +488,65 @@ export function injectManualSignal(input: GaManualSignalInput): ManualSignalInje
     log.error({ err: msg, signalType: input.signalType }, '[injectManualSignal] 注入异常 — degraded');
     return { ok: false, findingId: null, degraded: true, error: msg };
   }
+}
+
+// ═══ ④a 测量值（W1 metric_readings）—— L1 出口（L2 唯一桥）═══
+// 铁律 39：L1（`src/routes/**` 与 `src/server.ts`）不得直触 L3 `sentinel/metric-readings-*`。
+// E5 #389 / E7 #406 遗留的三处 L1→L3 直触（routes/sentinel.ts ×1 + server.ts ×2）收敛至此。
+// 本模块 → L3 是 L2→L3（合法）；L1 → 本模块是 L1→L2（合法）。
+// ⚠️ 边界口径（**独立复核 #546 更正过一版，勿再写回**）——值/类型两面**不对称**，如实分开说：
+//    · **值面**：本段三个**具名契约**（getMetricReadings / getMetricTrends / createSentinelMetricSink）
+//      ⇒ L1 不再引用 L3 的**函数名**，import 方向 L1→L2→L3。
+//    · **类型面**：**逐字别名再出口**（下方三条 `export type … from '../sentinel/…'`）——
+//      L1 仍见到 L3 的同名类型。**这是有意为之**：形状与 L3 契约同源，
+//      避免"第二套类型副本"日后与 L3 漂移（铁律 46 的病根是**第二套实现**，不是类型再出口）。
+//    · 🔴 **本段不新增行为**：三个函数体都是一行转发（无校验/无日志/无缓存）——
+//      不得据此声称"L2 在此做了编排"。
+
+/** 读回查询入参（L1 只见本形状；L3 侧同名类型经此收口） */
+export type { MetricReadingsQuery } from '../sentinel/metric-readings-reader';
+export type { MetricReadingRow, MetricReadingsReadResult, MetricTrendSummary, MetricTrendsReadResult } from '../sentinel/metric-readings-reader';
+export type { MetricSink, MetricReadingInput, MetricReadingResult } from '../sentinel/metric-readings-writer';
+
+/**
+ * 读回测量值行（observed_at 倒序）——L1 专用出口。
+ *
+ * 契约（铁律 47）:
+ *   @input    db — better-sqlite3 句柄。L1 侧持有的是 `unknown`（`req.app.locals.orchestration.db`），
+ *                 **L1 不做类型断言**；句柄形状由 L3 reader 自行收敛。
+ *             query — MetricReadingsQuery（days/limit/metricId/includeRound/orgId）
+ *   @output   MetricReadingsReadResult；ok=false 时 errors 必在场（不假装成功）
+ *   @degraded 表未迁移（`metric_readings` 不存在）⇒ ok=false + errors=['TABLE_MISSING…']
+ *             —— 不静默返回空数组（铁律 11/31）
+ *   @error    不抛（L3 reader 已是 fail-closed 返回形态）
+ */
+export function getMetricReadings(db: unknown, query: MetricReadingsQuery = {}): MetricReadingsReadResult {
+  return listRecentReadings(db, query);
+}
+
+/**
+ * 读回按指标聚合的趋势摘要（周报/前端消费形态）——L1 专用出口。
+ *
+ * 契约（铁律 47）:
+ *   @input    同 getMetricReadings
+ *   @output   MetricTrendsReadResult；`changeRatio` 在 previous 缺席/为零时为 null（不假装可算）
+ *   @degraded 同 getMetricReadings（表缺失 ⇒ ok=false + errors）
+ *   @error    不抛
+ */
+export function getMetricTrends(db: unknown, query: MetricReadingsQuery = {}): MetricTrendsReadResult {
+  return summarizeMetricTrends(db, query);
+}
+
+/**
+ * 造一个测量值 sink（哨兵轮次写入用）——L1 专用出口。
+ *
+ * 契约（铁律 47）:
+ *   @input    db — better-sqlite3 Database（装配根 `services.db` 的形状；L1 直接把句柄交进来，
+ *                 **不再在 L1 写 `as import('better-sqlite3').Database` 断言**）
+ *   @output   MetricSink（`(row) => {written, degraded?, reason?}`）；写失败降级不抛出
+ *   @degraded 无租户维度（teamId 缺席）时调用方 fail-closed 跳过写入（见 metric-readings-writer 头注）
+ *   @error    不抛（sink 内部 catch → log.warn + degraded）
+ */
+export function createSentinelMetricSink(db: Database): MetricSink {
+  return createMetricSink(db);
 }
