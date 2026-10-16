@@ -52,10 +52,14 @@ function moduleId(file: string): string {
 }
 
 // 组装: [文件路径, sentinel 实例]（manifest 槽位注入, 幂等可复跑）
+// M1b（CTO 裁 157 选②）：两个合并壳（competitive-moat / competitive-position）的子哨兵已退役至
+// _extinct/ 且编译期 import 边已断 ⇒ 恒零 finding，属已知降级（非空调通过），豁免本判据。
+const M1B_SUB_RETIRED_SHELLS = new Set(['competitive-moat', 'competitive-position']);
 const sentinels: Array<{ id: string; sentinel: SentinelLike }> = Object.entries(aggregateModules)
   .map(([file, mod]) => {
     const sentinel = extractSentinel(mod);
     if (!sentinel) return null;
+    if (M1B_SUB_RETIRED_SHELLS.has(moduleId(file))) return null;
     if ('manifest' in sentinel) {
       const manifestPath = file.replace('aggregate.ts', 'manifest.json');
       if (manifestModules[manifestPath] !== undefined) {
