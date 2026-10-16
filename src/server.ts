@@ -257,10 +257,11 @@ export async function createServer(): Promise<Server> {
         // E5 / #389（周报"无 sink"观测面修复）：runAll 注入 metricSink + teamId
         // —— 此前该路径零写入（metric-readings-writer 头注点名路径③）；
         //    teamId 用实例 org（无租户维度时 writer fail-closed 不写，不串租户）
-        const { createMetricSink } = await import('./sentinel/metric-readings-writer');
+        // 铁律 39：sink 经 L2 出口（agent/sentinel-service），不直触 L3 sentinel/metric-readings-writer
+        const { createSentinelMetricSink } = await import('./agent/sentinel-service');
         const findings = await getSentinelRegistry().runAll({
           db, now: new Date(), registry: getSentinelRegistry(),
-          metricSink: createMetricSink(db as import('better-sqlite3').Database),
+          metricSink: createSentinelMetricSink(db),
           teamId: config.orgId,
         });
         if (findings.length > 0) {
@@ -298,8 +299,9 @@ export async function createServer(): Promise<Server> {
       let measurements: import('./agent/boss-mailbox').MeasurementTrendView[] = [];
       let measurementErrors: string[] = [];
       try {
-        const { summarizeMetricTrends } = await import('./sentinel/metric-readings-reader');
-        const trends = summarizeMetricTrends(db, { orgId: config.orgId, days: 7 });
+        // 铁律 39：趋势读回经 L2 出口（agent/sentinel-service），不直触 L3 sentinel/metric-readings-reader
+        const { getMetricTrends } = await import('./agent/sentinel-service');
+        const trends = getMetricTrends(db, { orgId: config.orgId, days: 7 });
         if (trends.ok) {
           measurements = trends.summary.map(t => ({
             metricId: t.metricId, entityId: t.entityId, unit: t.unit,

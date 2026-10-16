@@ -20,6 +20,8 @@ import {
   getSentinelExpertReports,
   getSentinelTickets,
   transitionSentinelTicket,
+  getMetricReadings,
+  getMetricTrends,
 } from '../agent/sentinel-service';
 import type { TicketStatus, SentinelTicketTransitionResult } from '../agent/sentinel-service'; // 铁律 39: L1 类型经 L2 出口（L1→L3 直触已被 CI 拦截, 2026-09-06 修复）
 import type { TicketRow } from '../sentinel/runner'; // 类型经 L3 出口（值经 L2；L1→L3 类型引用不违铁律 39 的运行时边界）
@@ -127,7 +129,7 @@ const DEFAULT_LEDGER_PRESET_VERSION = 1;
 //   503 { ok: false, code }              — db 未注入（装配降级传播）
 // 口径：缺省排除轮次级（SENTINEL-*，标定供数口径 CTO 裁 A3）；includeRound=1 显式包含。
 
-router.get('/metrics/readings', async (req: Request, res: Response) => {
+router.get('/metrics/readings', (req: Request, res: Response) => {
   try {
     const db = (req.app.locals.orchestration as { db?: unknown } | undefined)?.db;
     if (!db) {
@@ -139,15 +141,14 @@ router.get('/metrics/readings', async (req: Request, res: Response) => {
     const limit = typeof req.query.limit === 'string' && req.query.limit !== '' ? parseInt(req.query.limit, 10) : undefined;
     const metricId = typeof req.query.metricId === 'string' && req.query.metricId !== '' ? req.query.metricId : undefined;
     const includeRound = req.query.includeRound === '1' || req.query.includeRound === 'true';
-    const { listRecentReadings, summarizeMetricTrends } = await import('../sentinel/metric-readings-reader');
     const query = { days: Number.isFinite(days) ? days : undefined, limit: Number.isFinite(limit) ? limit : undefined, metricId, includeRound };
     if (req.query.view === 'trends') {
-      const result = summarizeMetricTrends(db, query);
+      const result = getMetricTrends(db, query);
       if (!result.ok) { res.json({ ok: false, degraded: true, count: 0, summary: result.summary, errors: result.errors }); return; }
       res.json({ ok: true, count: result.summary.length, summary: result.summary });
       return;
     }
-    const result = listRecentReadings(db, query);
+    const result = getMetricReadings(db, query);
     if (!result.ok) { res.json({ ok: false, degraded: true, count: 0, rows: result.rows, errors: result.errors }); return; }
     res.json({ ok: true, count: result.rows.length, rows: result.rows });
   } catch (err: unknown) {
