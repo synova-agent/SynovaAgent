@@ -16,4 +16,4 @@ done:
   - verify: bash tests/control-tower/check-doc-contract.test.sh
   - verify: bash tests/control-tower/main-tree-guard.test.sh
   - verify: bash tests/control-tower/parallel-main-tree-occupancy.test.sh
-note: 门禁瘦身（裁定 122）：只外移注释整行与冗余空行 —— 零代码改动（代码投影逐字节一致）；13 组判定行/退出码/编号/CI 硬阻断语义未动。盘点表＋原始输出落 handbook 回执件；外移注释原文 708 行落 handbook 归档件。
+note: 门禁瘦身（裁定 122）：只外移注释整行与冗余空行 —— 零代码改动（判据：非注释非空行增删 = 0 ＋ 代码投影逐字节一致 ＋ 被删行不在多行字符串区间）；组编号/退出码/判定逻辑/CI 硬阻断语义未动。2093 → 1406 行（净 -687）。盘点表＋原始输出落 handbook 回执件；外移注释原文 707 条落 handbook 归档件。
