@@ -23,21 +23,10 @@ export const competitiveMoatSentinel = {
     const findings: SentinelFinding[] = [];
 
     try {
-      const { competitiveMoatPerceptualSentinel } = await import('../_extinct/competitive-moat-perceptual/aggregate');
-      const { competitiveMoatStructuralSentinel } = await import('../_extinct/competitive-moat-structural/aggregate');
-
-      const [r1, r2] = await Promise.all([
-        competitiveMoatPerceptualSentinel.check(store, teamId, traversal).catch((err: unknown) => {
-          log.warn({ err }, '[competitive-moat] perceptual 子检查失败');
-          return [] as SentinelFinding[];
-        }),
-        competitiveMoatStructuralSentinel.check(store, teamId, traversal).catch((err: unknown) => {
-          log.warn({ err }, '[competitive-moat] structural 子检查失败');
-          return [] as SentinelFinding[];
-        }),
-      ]);
-
-      findings.push(...r1, ...r2);
+      // M1b（CTO 裁 157 选②·「卸=移除」）：子哨兵 perceptual/structural 已退役至 _extinct/，
+      // 断开编译期 import 边（tsc 会追动态 import()，把归档件拉回编译域报 TS2307/TS7006）。
+      // 降级声明（铁律 11）：不再有子检查产出，显式 warn + degraded，不静默。
+      log.warn({ degraded: true }, '[competitive-moat] 子哨兵已退役(_extinct)，合并检查暂无产出');
       log.debug({ totalFindings: findings.length }, '竞争护城河合并检查完成');
       return findings;
     } catch (err: unknown) {

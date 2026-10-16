@@ -23,21 +23,10 @@ export const competitivePositionSentinel = {
     const findings: SentinelFinding[] = [];
 
     try {
-      const { competitiveDynamicsSentinel } = await import('../_extinct/competitive-dynamics/aggregate');
-      const { marketLifecycleSentinel } = await import('../_extinct/market-lifecycle/aggregate');
-
-      const [r1, r2] = await Promise.all([
-        competitiveDynamicsSentinel.check(store, teamId, traversal).catch((err: unknown) => {
-          log.warn({ err }, '[competitive-position] competitive-dynamics 子检查失败');
-          return [] as SentinelFinding[];
-        }),
-        marketLifecycleSentinel.check(store, teamId, traversal).catch((err: unknown) => {
-          log.warn({ err }, '[competitive-position] market-lifecycle 子检查失败');
-          return [] as SentinelFinding[];
-        }),
-      ]);
-
-      findings.push(...r1, ...r2);
+      // M1b（CTO 裁 157 选②·「卸=移除」）：子哨兵 competitive-dynamics/market-lifecycle 已退役至 _extinct/，
+      // 断开编译期 import 边（tsc 会追动态 import()，把归档件拉回编译域报 TS2307/TS7006）。
+      // 降级声明（铁律 11）：不再有子检查产出，显式 warn + degraded，不静默。
+      log.warn({ degraded: true }, '[competitive-position] 子哨兵已退役(_extinct)，合并检查暂无产出');
       log.debug({ totalFindings: findings.length }, '竞争定位合并检查完成');
       return findings;
     } catch (err: unknown) {

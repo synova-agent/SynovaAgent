@@ -140,7 +140,8 @@ export class ImaClient {
       );
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json() as { documents?: ImaDocument[] };
-      return (data.documents || []).filter(d => types.includes(d.type as string));
+      // M1b: types 默认值为窄字面量联合，d.type 含 'other' —— 收窄到 string 比较（铁律 38：零 any）。
+      return (data.documents || []).filter(d => (types as readonly string[]).includes(d.type));
     } catch (err: unknown) {
       log.warn({ err: err instanceof Error ? err.message : String(err) }, 'ima 文档扫描失败 — 降级');
       return [];
