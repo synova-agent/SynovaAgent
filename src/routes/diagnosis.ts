@@ -327,14 +327,14 @@ router.post('/api/diagnosis/consult', async (req: Request, res: Response) => {
     let sessionId = '';
     if (orchestrationDb) {
       try {
-        // D563: isSqliteDatabase 属 L5（session-store 导出）——经既有动态 import
-        // 通道解构（铁律 39: 谓词归存储层，L1 不直接引用数据库层实现）
-        const { SessionStore, isSqliteDatabase } = await import('../store/session-store');
+        // D563 谓词口径不变（#4 基线收紧: 谓词与构造同经 L2 出口 agent/session-storage-service，
+        // L1 不再出现 store/session-store 路径——铁律 39）
+        const { createSessionStoreFrom, isSqliteDatabase } = await import('../agent/session-storage-service');
         if (!isSqliteDatabase(orchestrationDb)) {
           // 谓词失败与构造器抛错同走既有降级通道（不静默信任 unknown）
           throw new TypeError('orchestration.db 非 SQLite 句柄（D563 谓词窄化失败）');
         }
-        const store = new SessionStore(orchestrationDb);
+        const store = createSessionStoreFrom(orchestrationDb);
         sessionStore = store;
         sessionId = store.createSession(teamId).id;
       } catch (err: unknown) {
@@ -670,15 +670,15 @@ router.post('/api/diagnosis/consult/:consultId/resume', async (req: Request, res
   }
   // 从 SessionStore 加载检查点
   try {
-    // D563: 存量 never 断言窄化——谓词自 L5（session-store）经本通道解构；谓词失败
+    // #4 基线收紧: 谓词与构造均经 L2 出口（agent/session-storage-service）；谓词失败
     // （含 db 为 undefined/非句柄）与原构造器抛错（initSchema 对 undefined 调 exec
     // 必抛 TypeError）同走 catch log.warn 降级（响应 checkpoint=null 语义零变化）
-    const { SessionStore, isSqliteDatabase } = await import('../store/session-store');
+    const { createSessionStoreFrom, isSqliteDatabase } = await import('../agent/session-storage-service');
     const db = (req.app.locals.orchestration as { db?: unknown } | undefined)?.db;
     if (!isSqliteDatabase(db)) {
       throw new TypeError('orchestration.db 非 SQLite 句柄（D563 谓词窄化失败）');
     }
-    const store = new SessionStore(db);
+    const store = createSessionStoreFrom(db);
     const checkpoint = store.getDiagnosisCheckpoint ? store.getDiagnosisCheckpoint(consultId) : null;
     active.aborted = false;
     res.json({
@@ -827,17 +827,17 @@ async function renderOnePagerOnDemand(req: Request, report: DiagnosisReportLike)
  * conversations.ts resolveStore 同款）。@returns SessionStore 实例；db 缺失/谓词窄化失败/
  * 构造抛错 → null（调用方按无持久层处理：GET report 404 / 列表 503 fail-closed）。
  */
-// 返回类型由动态 import 推断（完整 SessionStore 类），零静态 L5 类型引用
+// 返回类型由 L2 出口推断（完整 SessionStore 类），零 L5 路径引用（#4 基线收紧）
 async function resolveStoreFromRequest(req: Request) {
   const orchestrationDb = (req.app.locals.orchestration as { db?: unknown } | undefined)?.db;
   if (!orchestrationDb) return null;
   try {
-    const { SessionStore, isSqliteDatabase } = await import('../store/session-store');
+    const { createSessionStoreFrom, isSqliteDatabase } = await import('../agent/session-storage-service');
     if (!isSqliteDatabase(orchestrationDb)) {
       log.warn('orchestration.db 非 SQLite 句柄（D563 谓词窄化失败）— 报告读路径降级');
       return null;
     }
-    return new SessionStore(orchestrationDb);
+    return createSessionStoreFrom(orchestrationDb);
   } catch (err: unknown) {
     log.warn({ err }, 'SessionStore 装配失败 — 报告读路径降级（degraded）');
     return null;
@@ -857,7 +857,7 @@ async function readReportFromCheckpoint(req: Request, reportId: string): Promise
   try {
     const checkpoint = store.getDiagnosisCheckpoint ? store.getDiagnosisCheckpoint(reportId) : null;
     if (!checkpoint || checkpoint.phase !== 5) return null;
-    const { isDiagnosisReportArchive } = await import('../store/session-store');
+    const { isDiagnosisReportArchive } = await import('../agent/session-storage-service');
     if (!isDiagnosisReportArchive(checkpoint.partialReport)) {
       log.warn({ reportId }, 'checkpoint partial_report 形状非法 — 诚实 404（不静默，铁律 24）');
       return null;

@@ -168,7 +168,7 @@ async function generateAIReply(
   const { createProvider } = await import('../providers');
   const { detectProvider } = await import('../providers/detect');
   const { ConversationEngine } = await import('../agent/conversation-engine');
-  const { SessionStore } = await import('../store/session-store');
+  const { createSessionStoreFrom } = await import('../agent/session-storage-service'); // #4: L1→L5 收敛
   const { registerBuiltinTools } = await import('../agent/builtin-tools');
 
   const provider = createProvider(detectProvider(), {
@@ -180,7 +180,7 @@ async function generateAIReply(
   // D487: 会话事件装配 — builtinStore 先建，sessionManager+sessionStore 注入引擎
   // （诊断事件落 session_events；SessionManager 与 store 同源，消息事件持久化生效）
   const { SessionManager } = await import('../orchestrator/session-manager');
-  const builtinStore = new SessionStore(store['db' as keyof typeof store] as never);
+  const builtinStore = createSessionStoreFrom(store.db);
   const conv = new ConversationEngine(provider, {
     sessionId,
     sessionManager: new SessionManager({}, builtinStore),

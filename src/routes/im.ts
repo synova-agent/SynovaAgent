@@ -39,9 +39,10 @@ router.post('/api/im/feishu/webhook', async (req: Request, res: Response) => {
     const senderId = event?.sender?.open_id || event?.sender_id || payload?.event?.sender?.open_id || 'unknown';
 
     // 获取依赖
-    const { getDatabase } = await import('../init/engine-context');
-    const { SessionStore: SS } = await import('../store/session-store');
-    const store = new SS(getDatabase());
+    // 铁律 39（#4 基线收紧）: 装配经 L2 出口（agent/session-storage-service）——
+    // 与修复前 `new SessionStore(getDatabase())` 行为逐字节一致（该 L2 服务头注自述）
+    const { createSystemSessionStore } = await import('../agent/session-storage-service');
+    const store = createSystemSessionStore();
 
     const container = req.app.locals.container || req.app.locals;
     const piiScrubber = container.piiScrubber;

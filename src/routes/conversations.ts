@@ -139,12 +139,13 @@ async function resolveStore(req: Request) {
     return null;
   }
   try {
-    const { SessionStore: SessionStoreImpl, isSqliteDatabase } = await import('../store/session-store');
+    // #4 基线收紧: 谓词与构造均经 L2 出口（agent/session-storage-service），L1 不再触 store/session-store
+    const { createSessionStoreFrom, isSqliteDatabase } = await import('../agent/session-storage-service');
     if (!isSqliteDatabase(orchestrationDb)) {
       log.warn('orchestration.db 非 SQLite 句柄（D563 谓词窄化失败）— STORE_UNAVAILABLE');
       return null;
     }
-    return new SessionStoreImpl(orchestrationDb);
+    return createSessionStoreFrom(orchestrationDb);
   } catch (err: unknown) {
     log.warn({ err }, 'SessionStore 装配失败 — STORE_UNAVAILABLE（fail-closed）');
     return null;

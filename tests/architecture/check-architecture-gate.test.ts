@@ -123,7 +123,7 @@ describe('CT-64: check-architecture.sh 四类漏网修补 — 存量 36 处全�
     expect(status).toBe(0);
   });
 
-  it('基线文件总数 = 38（36 + D593-FIX2 逆向例外 2；>36 必须在头部有例外记录——理由+收紧任务，缺一即红）', () => {
+  it('基线文件总数 = 24（#4 段B未决项收紧 38→24；棘轮只减不增——上调须头部有例外记录：理由+收紧任务，缺一即红）', () => {
     const content = spawnSync('cat', [BASELINE], { encoding: 'utf-8' });
     const text = content.stdout ?? '';
     const total = text
@@ -136,7 +136,7 @@ describe('CT-64: check-architecture.sh 四类漏网修补 — 存量 36 处全�
       expect(text).toMatch(/收紧路径|收紧任务/);
       expect(text).toMatch(/PLAN-diagnosis-l5-di/);
     }
-    expect(total).toBe(38);
+    expect(total).toBe(24);
   });
 });
 

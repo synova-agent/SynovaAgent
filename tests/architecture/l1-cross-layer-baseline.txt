@@ -23,10 +23,35 @@
 #       规则（K3 附记补强）：基线总量只许减少；任何上调须 CTO 逐例批准，
 #       且必须在本头记录 例外理由 + 收紧任务(owner+期限)，缺一不批。
 #
+# #4 段B未决项 下调（2026-10-16, 段B 收口 session；依据 CTO 裁定 134＋补充）: 38 → 24，
+#       条目 29 → 19（**−10 条目 / −14 处**）。🔴 **先修后删，未放宽任何一条。**
+#       手法 = 复用 **既有 L2 装配出口**（先例：D595「MCP 哨兵族改走 L2 sentinel-service」；
+#       PR #548 已验同法）——本批修的**全部**是 D603 跨层修复**漏扫的文件**，非新机制：
+#         · L1→L4  10 → 7 条目：
+#             - `src/routes/chat.ts` / `src/mcp/tool-registration.ts`：
+#               `new SqliteGraphStore(getDatabase())` → L2 `graph-store-service`（既有件）
+#             - `src/routes/knowledge-ask.ts`：`new KnowledgeStore(getDatabase())`
+#               → L2 `knowledge-bridge-service`（既有件）
+#         · L1→L5  13 → 6 条目：
+#             - 上述三件（同一改动顺带清零其 L5 直触：`getDatabase()` 随构造一并消失）
+#             - `src/routes/chat.ts` 的 `engineDb()` —— **唯一**消费者迁到 L2 后成死代码
+#               （铁律 37）随之删除 ⇒ 该文件 L1→L5 **清零**（该文件现无任何 L1 直触）
+#             - `src/routes/im.ts`：`new SessionStore(getDatabase())` → L2 `session-storage-service`
+#             - `src/routes/conversations.ts` / `src/routes/diagnosis.ts`(×4) / `src/l1/im-inbound.ts`：
+#               句柄**已由装配根 DI 注入**（`app.locals.orchestration.db`），只是**构造点错在 L1**
+#               ⇒ 改走 L2 `session-storage-service` 新增出口 `createSessionStoreFrom(db)`
+#               ＋谓词 `isSqliteDatabase`/`isDiagnosisReportArchive` 经 L2 再导出
+#               （谓词语义与构造行为逐字节不变；见该服务头注）
+#       ⚠️ **保留未修的 19 条目**（逐条理由见收口回执「#4 逐条结论表」）——含义是"不在本轮射程"，
+#          **不是**"承认其合规"。其中 `ga-*`/`evolution` 的 memory 簇**已定位到根因**：
+#          缺一个 memory 的 L2 装配件（D603 三件套漏了它），补件后 L1 侧可清零；
+#         但该 L2 件必然 `import '../l4/agent-memory-store'` ⇒ 命中本门禁的 **L2→L4 例外表**，
+#         而**例外表 = 门禁语义（归 CTO）** ⇒ 本轮**未自行改表**，留 CTO 裁（见回执未决项）。
+#
 # 语义（check-architecture.sh 消费）:
 #   同文件同方向 实际命中数 > 基线 = 基线外新增违规 → 本地 ⚠ 软提示 / SYNO_CI=1 ❌ exit 1
 #   同文件同方向 实际命中数 < 基线 = 已修复 → 提示收紧基线（不阻断）
-#   粒度 file=count（行号漂移免疫；K3 可审计——总量只许减少，当前 = 38）
+#   粒度 file=count（行号漂移免疫；K3 可审计——总量只许减少，当前 = 24）
 #
 # 治理顺序（台账 CT-64）: 先修脚本可见性 → 静态 import 清零（D603）→ 动态 import
 #   36 处分批修 src/，每修复一处须同步下调本文件对应计数；全部清零后本文件删除。
@@ -43,27 +68,17 @@ src/tui-v2/chat.tsx=1
 
 [L1→L4]
 src/mcp/tool-definitions.ts=1
-src/mcp/tool-registration.ts=1
-src/routes/chat.ts=1
 src/routes/evolution.ts=1
 src/routes/ga-annotations.ts=1
 src/routes/ga-calibration.ts=1
 src/routes/ga-corrections.ts=1
-src/routes/knowledge-ask.ts=1
 src/routes/ontology-admin.ts=1
 src/tui-v2/chat.tsx=1
 
 [L1→L5]
-src/l1/im-inbound.ts=1
 src/mcp/tool-definitions.ts=3
-src/mcp/tool-registration.ts=1
-src/routes/chat.ts=1
-src/routes/conversations.ts=1
-src/routes/diagnosis.ts=4
 src/routes/evolution.ts=1
 src/routes/ga-annotations.ts=1
 src/routes/ga-calibration.ts=1
 src/routes/ga-corrections.ts=1
-src/routes/im.ts=2
-src/routes/knowledge-ask.ts=1
 src/server.ts=1

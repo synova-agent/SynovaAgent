@@ -20,15 +20,13 @@ const log = createLogger('routes/chat');
 const router = Router();
 
 /**
- * 引擎 DB 句柄（惰性 + 单点）。
- * 架构棘轮: L1→L5 动态 import 收敛为**本文件唯一一处**（`tests/architecture/l1-cross-layer-baseline.txt`
- * 记 `src/routes/chat.ts=1`，棘轮只减不增）。新增 DB 需求请复用本函数，勿再就地 import。
- * 注: 返回类型由 `getDatabase()` 推断 —— 勿在此写 sqlite 驱动名的内联类型注解（会命中 L1→L5 扫描模式）。
+ * 引擎 DB 句柄：本文件**已无** L1→L5 直触（#4 基线收紧）。
+ * 历史: 本处曾有 `engineDb()` 单点收敛 `getDatabase()`；其**唯一**消费者是 `/api/user-state`
+ * 的 `new SqliteGraphStore(...)`，该处已改走 L2 出口 `agent/graph-store-service`
+ * ⇒ `engineDb()` 成为死代码（铁律 37）已删，`src/routes/chat.ts` 的基线条目随之清零。
+ * 🔴 **新增 DB 需求请走 L2 出口**（graph-store-service / session-storage-service / knowledge-bridge-service），
+ * 勿在本文件就地 import L5 —— 那会重新长出 L1→L5 违规。
  */
-async function engineDb() {
-  const { getDatabase } = await import('../init/engine-context');
-  return getDatabase();
-}
 
 /** API Key 状态检查 */
 
@@ -46,9 +44,10 @@ router.get('/api/status', (_req: Request, res: Response) => {
 /** GNS v2.0: 检测用户状态 — 决定显示 Phase 0 还是直接进入默认循环 */
 router.get('/api/user-state', async (_req: Request, res: Response) => {
   try {
-    const { SqliteGraphStore } = await import('../adapters/sqlite-graph-store');
-    const db = await engineDb();
-    const store = new SqliteGraphStore(db) as unknown as { queryNodes(type: string, filters?: Record<string,unknown>, graph?: string): Array<{id:string, props:Record<string,unknown>}> };
+    // 铁律 39（#4 基线收紧）: 装配经 L2 出口（agent/graph-store-service）——
+    // 与修复前 `new SqliteGraphStore(getDatabase())` 行为逐字节一致（该 L2 服务头注自述）
+    const { createSystemGraphStore } = await import('../agent/graph-store-service');
+    const store: { queryNodes(type: string, filters?: Record<string, unknown>, graph?: string): Array<{ id: string; props: Record<string, unknown> }> } = createSystemGraphStore();
     const summaries = store.queryNodes('GOAL', { goalType: 'mission' }, 'default')
       .filter(n => (n.props as { name?: string })?.name?.startsWith('Phase0_Interview'));
     res.json({

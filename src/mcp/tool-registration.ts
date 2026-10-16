@@ -101,11 +101,11 @@ export async function registerMCPTools(registry: ToolRegistry): Promise<void> {
     handler: async (params) => {
       // Dynamically import L4 graph query to avoid circular deps
       // V4.2.3: diagnosis-graph-query.ts 已删除 — 降级跳过，函数在 switch 内直接 import
-      const { SqliteGraphStore } = await import('../adapters/sqlite-graph-store');
-      const { getDatabase } = await import('../init/engine-context');
+      // 铁律 39（#4 基线收紧）: 构造经 L2 出口（agent/graph-store-service）——
+      // 与修复前 `new SqliteGraphStore(getDatabase())` 行为逐字节一致（该 L2 服务头注自述）
+      const { createSystemGraphStore } = await import('../agent/graph-store-service');
 
-      const db = getDatabase();
-      const store = new SqliteGraphStore(db) as unknown as Record<string, unknown>;
+      const store = createSystemGraphStore(); // 真实类型（#4: 去 as-any 家族，铁律 38）
       const graph = (params.graph as string) || 'default';
 
       switch (params.operation) {
@@ -125,8 +125,7 @@ export async function registerMCPTools(registry: ToolRegistry): Promise<void> {
           return { brokers };
         }
         case 'matchTriples': {
-          const queryTriples = (store as { queryTriples: (p: Record<string, unknown>, g: string) => Array<unknown> }).queryTriples;
-          const triples = queryTriples(
+          const triples = store.queryTriples(
             (params.pattern as Record<string, unknown>) || {},
             graph,
           );

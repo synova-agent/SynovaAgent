@@ -35,22 +35,21 @@ async function answerQuestion(q: string): Promise<Record<string, unknown>> {
 
   try {
     // 尝试从 KnowledgeStore 搜索
-    const { getDatabase } = await import('../init/engine-context');
-    const { KnowledgeStore } = await import('../l4/knowledge-store');
-    const db = getDatabase();
-    if (db) {
-      const store = new KnowledgeStore(db);
-      const results = store.search(q, {
-        conditions: [
-          { field: 'access_level', operator: 'EQ', value: 'public' },
-          { field: 'access_level', operator: 'EQ', value: 'team' },
-        ],
-      }, 5);
+    // 铁律 39（#4 基线收紧）: 装配经 L2 出口（agent/knowledge-bridge-service）——
+    // 与修复前 `new KnowledgeStore(getDatabase())` 行为逐字节一致（该 L2 服务头注自述）；
+    // getDatabase() 未初始化时同样抛出 ⇒ 由本层 catch 降级（语义不变）
+    const { createSystemKnowledgeStore } = await import('../agent/knowledge-bridge-service');
+    const store = createSystemKnowledgeStore();
+    const results = store.search(q, {
+      conditions: [
+        { field: 'access_level', operator: 'EQ', value: 'public' },
+        { field: 'access_level', operator: 'EQ', value: 'team' },
+      ],
+    }, 5);
 
-      if (results.results.length > 0) {
-        bestAnswer = results.results.map(r => r.text).join('\n\n---\n\n');
-        sources = results.results.map(r => `pkb:${r.id}`).slice(0, 5);
-      }
+    if (results.results.length > 0) {
+      bestAnswer = results.results.map(r => r.text).join('\n\n---\n\n');
+      sources = results.results.map(r => `pkb:${r.id}`).slice(0, 5);
     }
   } catch { /* KnowledgeStore unavailable — degraded to templates */ }
 
