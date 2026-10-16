@@ -547,3 +547,11 @@ documents:
     path: decisions/implemented/architecture/2026-10-09-权威架构总图.md
     status: active
     owner: CTO
+
+  # ---- K10 M1 2026-10-17：运行时组合固化 + _extinct 处置登记（派单 M1）----
+  - id: DOC-0204
+    type: registry
+    path: docs/synova/runtime/M1-运行时组合与构建链登记-2026-10-17.md
+    status: active
+    owner: K10 平台线
+    note: "M1-a 可用组合（node v22.23.2 + ABI 127）/ M1-d 禁用组合两态（node v24.x）/ M1-c _extinct 定案不 exclude（真问题归 M1b）。"
