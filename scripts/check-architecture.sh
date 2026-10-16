@@ -66,8 +66,11 @@ if [ ! -d "$SYNO_ARCH_SRC" ]; then
 fi
 
 # L1 文件集 (扫描报告附录 A: 99 文件) —— 目录/文件缺失显式警告(可见性)，不静默缩小扫描面
+# 🔴 「目录缺失 ⇒ 显式警告」是**刻意机制**（防"静默缩小扫描面"）—— **只删陈旧条目，不删机制**。
+# #7 移除陈旧条目 tui-v3：D603「TUI 清理」(24eba4e4a) 已删除 src/tui-v3，扫描集未同步
+#   ⇒ 该目录**恒不存在** ⇒ 每跑必打一条**假**"缺失"警告 ⇒ 噪音掩盖**真**缺失（裁定 135）
 L1_DIRS=""; L1_FILES=""
-for d in routes tui-v2 tui-v3 mcp cli l1 l1-interaction; do
+for d in routes tui-v2 mcp cli l1 l1-interaction; do
   if [ -d "$SYNO_ARCH_SRC/$d" ]; then L1_DIRS="$L1_DIRS $SYNO_ARCH_SRC/$d"; else
     echo -e "  ${YELLOW}⚠ L1 扫描目标缺失(跳过): ${SYNO_ARCH_SRC}/$d${RESET}"
   fi
