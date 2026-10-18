@@ -117,7 +117,6 @@ tests/control-tower/declare-write-set.test.sh
 tests/control-tower/dev-doc-gatekeeper.test.sh
 tests/control-tower/doc-commit-exempt.test.sh
 tests/control-tower/external-auditor.test.sh
-tests/control-tower/founder-truth.test.sh
 tests/control-tower/g12-taskstate-exempt.test.sh
 tests/control-tower/gen-cto-health-batch-report.test.py
 tests/control-tower/gen-cto-health-repro.test.sh
