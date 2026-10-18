@@ -42,3 +42,9 @@
 | `knowledge/**` | ❌ | ❌ | P2 |
 | `skills/**` | ❌ | ❌ | P2 |
 | `customer-config/**` | ❌ | ❌ | P2（🔴 **只发模板骨架**，客户实例 `wani-baby/activity-production.json` 不得进包 —— 裁定 167-U1） |
+
+## 🔗 改本域涉及的包（双向清单 · 2026-10-18）
+
+P1｜P2｜P3｜P9
+
+> 口径：与 `handbook 包/交叉矩阵-12守则×10包.md` 一致；`👁`=只读不改
