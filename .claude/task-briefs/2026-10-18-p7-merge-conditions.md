@@ -1,6 +1,6 @@
 # Task Brief: P7-1 —— 四条件自证检查器（Issue #582）
 
-> 分支: ct/p7-impl-20261018（实施会话自建；一人一事一分支）｜ 规格: `docs/plans/codex/implementation/SYNOVA-IMPL-P7-1-merge-conditions-20261018.md`（**dev doc，已合 main，冻结 blob `518c3780d1b5afa3`**）
+> 分支: ct/p7-impl-20261018（实施会话自建；一人一事一分支）｜ 规格: `docs/plans/codex/implementation/SYNOVA-IMPL-582-merge-conditions-20261018.md`（**dev doc，已合 main；文件名＝Issue 号；冻结 blob `a22509208b08fa6a`**）
 > 依据: 创始人 2026-10-18 开工令（一条命令判四条件；③ 凭据形态由 P7 设计）｜ 五裁 B1–B5（dev doc 附录 B）＋ C 批（附录 C，已随 PR #584 落盘）｜ `agents/P7-交付自证与真值/AGENTS.md` §三/§四/§八之三
 > 本卡由 **L1（P7 包负责人）产出**，随 dev doc 之后落 main；**实施会话只读使用，不得改写本卡**（口径变更 ⇒ 退回 L1 → CTO）
 
