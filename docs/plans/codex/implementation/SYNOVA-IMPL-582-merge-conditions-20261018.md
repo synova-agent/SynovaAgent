@@ -1,14 +1,14 @@
 ---
 status: proposed
 日期: 2026-10-18
-任务: P7-1 四条件自证检查器（Issue #582，2026-10-18 立卡）
+任务: #582 四条件自证检查器（2026-10-18 立卡；🔴 **任务唯一编号＝Issue 号**，`P7-1` 只作批次俗称，不再入文件名）
 撰写: P7（交付自证与真值包负责人）· **独立于实现者**（本件不含实现，实现交 `synova-squad-lead`）
 依据: `agents/P7-交付自证与真值/AGENTS.md` §三/§四/§八/§八之三；`pre-plan-thinking` 9 问；`dev-doc-spec` v2（8 节＋3 条件）；创始人 2026-10-18 开工令（本包第一个交付＝dev doc，不写产品码）
-批次规模: **新建 5 文件 ＋ 改 1 文件**（W1 检查器 ≈ 560 行｜W2 配对测试 ≈ 260 行｜W3 回执格式说明 ≈ 40 行｜W3b `docs/authority/DOCS-REGISTRY.yaml` ＋1 条登记｜W4 四态 Note ≈ 30 行｜W5 卡面 ≈ 40 行）
+批次规模: **实现批新建 4 ＋ 改 1**（W1 检查器 ≈ 560 行｜W2 配对测试 ≈ 260 行｜W3 回执格式说明 ≈ 40 行｜W4 四态 Note ≈ 30 行｜W3b `docs/authority/DOCS-REGISTRY.yaml` ＋1 条登记，待 B6-b）；**W5 卡面已由 L1 落 main**
 前置口径: 创始人 2026-10-18 —— ① 判「四条件」绿/红一条命令 ② **③ 凭据形态由本件设计**（不预设，但必须机器可判）③ 全绿 ⇒ exit 0；**改坏任一条 ⇒ 必红并给原始输出**
 ---
 
-# SYNOVA-IMPL-P7-1 · `check-merge-conditions.sh`：四条件一条命令判绿/红
+# SYNOVA-IMPL-582 · `check-merge-conditions.sh`：四条件一条命令判绿/红
 
 > 🔴 **本件是执行小队的唯一规格源（dev doc）**。口径已由创始人开工令 ＋ 本件 §4bis 裁死；**实现方不得自行改口径**。
 > 🔴 **本件是文档，不是实现**：无产品代码、无 `.gitea/**`、无既有门禁脚本改动 ⇒ 可四条件自合（创始人令「dev doc 单独 PR」）。
@@ -28,7 +28,7 @@ status: proposed
    - docs/synova/reviews/README.md                                    （<新建> ③ 回执格式／生成流程／Known Limitations，非空目录载体）
    - docs/authority/DOCS-REGISTRY.yaml                                （改 1 条登记 —— `docs/AGENTS.md`「新文件须登记」；见附录 B-6）
    - memory/notes/implemented/2026-10-18-p7-merge-conditions.md       （<新建> 四态 Note，铁律 49）
-   - .claude/task-briefs/2026-10-18-p7-merge-conditions.md            （<新建> 卡面，pre-commit 组 6 六字段）
+   - .claude/task-briefs/2026-10-18-p7-merge-conditions.md            （**已落**：L1 产出并随本规格同批落 main；L2 **只读**，不得改写）
 ③ 判据（含"改坏必红"）：
    - 命令：bash scripts/control-tower/check-merge-conditions.sh --selfcheck
      期望：exit 0；末行 `SELFCHECK-OK: 12/12`；子例 A `inner_exit=0 CAN-自合并 ③=ok(attested)`
@@ -127,9 +127,9 @@ status: proposed
 | `docs/synova/reviews/README.md` | **新建** | W3 | ③ 回执格式 ＋ 生成流程 ＋ **Known Limitations**（裁 B3-2；目录非空载体） |
 | `docs/authority/DOCS-REGISTRY.yaml` | **改 1 条** | W3b | 新文件登记（`docs/AGENTS.md` 强制；**需创始人/CTO 批**，见附录 B-6）；只增 1 个 `- id/path/status/owner` 条目 |
 | `memory/notes/implemented/2026-10-18-p7-merge-conditions.md` | **新建** | W4 | 四态 Note（铁律 49；168-C 配套件默认可写） |
-| `.claude/task-briefs/2026-10-18-p7-merge-conditions.md` | **新建** | W5 | 卡面六字段（pre-commit 组 6；168-C 配套件默认可写） |
+| `.claude/task-briefs/2026-10-18-p7-merge-conditions.md` | **已落** | W5 | 卡面六字段，**由 L1 产出并随本规格落 main**（派单件先于实现；L2 只读，不得改写） |
 
-**两两不重叠**：W1（产品脚本）／W2（测试）／W3（回执说明）／W3b（台账登记）／W4（Note）／W5（卡面）互不交叠；**W1–W5 归实现方**（本件撰写者不实现）。
+**两两不重叠**：W1（产品脚本）／W2（测试）／W3（回执说明）／W3b（台账登记）／W4（Note）互不交叠，**归实现方**；**W5（卡面）已由 L1 落 main**，实现批只读。
 
 ### 2.2 W1 结构（行锚为预估，**七段**）
 
@@ -306,7 +306,7 @@ fixture JSON（字段固定，实现不得自定义）：
 | DS-8 | ③ 时序（复核后不得再改码） | 子例 **D3** | `R7 回执之后仍有代码改动`、退出码 1 |
 | DS-9 | ④ 基线新/队首两条都判 | 子例 **E**（S1）＋ **G**（S2 队首） | 各自红并点名 `S1`／`S2` |
 | DS-10 | 只读 | 脚本运行前后 `git status --porcelain` 不变 | 前后 diff 为空（`--selfcheck` 只写系统临时目录） |
-| DS-11 | 不改既有件 | `git diff --stat <base>..HEAD` | 只含 W1–W3b／W4／W5（六文件；`docs/authority/DOCS-REGISTRY.yaml` 见附录 B-6） |
+| DS-11 | 不改既有件 | `git diff --stat <base>..HEAD` | 只含 W1／W2／W3／W3b／W4（五文件；W3b 见 B6-b；**W5 卡面已在 main**，不在实现 PR 内） |
 | DS-12 | 配套件齐 | `ls memory/notes/implemented/2026-10-18-p7-merge-conditions.md .claude/task-briefs/2026-10-18-p7-merge-conditions.md` | 两件存在且六字段/四态齐 |
 | DS-13 | R9 告警**恒打印**（裁 B3-2） | 子例 **H** | `inner_exit=0` ∧ stdout 含 `warn: 身份未分离` |
 | DS-14 | 子例只让目标条件红（夹具契约 §4.3.0） | 每个子例的末行条件名 | 恰好等于该子例应红的条件集合（不得多红） |
