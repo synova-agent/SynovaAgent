@@ -48,7 +48,7 @@ import sys
 src, dst = sys.argv[1], sys.argv[2]
 s = open(src, encoding='utf-8').read()
 i = s.index('      - name: 依赖（lock 哈希指纹')
-j = s.index('      - name: ① 13 组门禁')
+j = s.index('      - name: ① 12 组门禁')
 old_body = '''      - name: 依赖（lock 哈希指纹：变了就重装，没变才跳过）
         run: |
           WS=/Users/wane/.ci-work/SynovaAgent

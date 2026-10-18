@@ -54,13 +54,13 @@ jobs:
           /usr/bin/env PATH="$NODE_BIN:$PATH" npm ci --silent
           printf '%s\n' "$CUR_HASH" > "$HASH_FILE"
           echo "已重装并更新指纹 ⇒ $HASH_FILE"
-      - name: ① 13 组门禁（唯一的阻断门）
+      - name: ① 12 组门禁（唯一的阻断门）
         run: |
           cd /Users/wane/.ci-work/SynovaAgent
           # 🔴 CTO 2026-10-11 裁定③：**本地 CI 不判 D734**（显式跳过，非静默）
           #   理由：Gitea host 模式下事件分流表达式不可靠（`${{ github.event_name }}` 实测不生效），
           #         而 D734 是"PR 预算"，对着集成分支账本总额判必然恒红 ⇒ 红灯失去信息量。
-          #   执法位置改回：① 本地提交时软提示 ② 开 PR 时由审查人/CTO 人工判（13 组其余照常）
+          #   执法位置改回：① 本地提交时软提示 ② 开 PR 时由审查人/CTO 人工判（12 组其余照常）
           export SYNO_SKIP_PR_BUDGET=1
           # 登记件不变量（CTO 2026-10-11 立：机器真源零约束曾致 id 撞号 + 误改他项）
           node_modules/.bin/tsx scripts/control-tower/check-registry-invariants.ts || exit 1
@@ -147,7 +147,7 @@ jobs:
           #   ⇒ 不注入 SYNO_CI ⇒ 该步**任何新增都 rc=0 ⇒ 永不红**（名实不符 + 零防守力）。
           #   实测（本卡原始输出）：造一条真实新增 ⇒ 无 SYNO_CI rc=**0**／有 SYNO_CI rc=**1**。
           #   （我此前在门禁 §接入方案 写的「`|| exit 1` 已保证该步红」是**错的** —— 已一并更正。）
-          # 与步骤「① 13 组门禁」的关系：① 步以 SYNO_CI=1 跑 pre-commit-check.sh，其附加块已含本门禁
+          # 与第 ① 步（12 组门禁）的关系：① 步以 SYNO_CI=1 跑 pre-commit-check.sh，其附加块已含本门禁
           #   ⇒ 功能上早已覆盖；本步的价值是**可具名定位**（红时一眼看到是哪条），并在 ① 被绕过时能补位
           #   （补位能力正是靠上面这个 SYNO_CI=1 —— 没有它，本步连补位都做不到）。
           PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" \
