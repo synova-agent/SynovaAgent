@@ -13,8 +13,11 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   🆕 FIX-008 — 输出隔离（M8 家族「测试副作用碰 tracked 文件」第 3 例）:
 #     生成物只写 mktemp 隔离目录；判别性判据 = 跑完 `git status --porcelain` 不增加脏度
 #     （成对反例：⒜ 隔离 → 干净；⒝ 沙箱内故意改 tracked 生成物 → 同一判据报红）
-# ⚠️ 既存红（**非本卡**，另立卡）: ①「正常: 输出结构异常」②「判定: 缺红绿灯标记」——
-#    main 上即失败；不许为凑绿改断言（lead 2026-09-26 口径）。
+# ✅ 2026-10-18 B6 修崩溃后：原「既存红（非本卡）」口径**作废**——①「正常」②「判定」的
+#    真因是 claim 行缺 id/title/phys 三键 ⇒ judge() KeyError 崩溃（founder-truth.py:90-94）；
+#    三键补齐后本测试应全绿（判别力靠收紧断言，不靠放宽绿线；lead 2026-09-26 口径不变）。
+# 🆕 2026-10-18 T7/T8 hermeticity 加固：诚信账本断言改「数据面三态感知」（有 AGENT 计分 / 无文件显式降级 /
+#    空账本显式真绕过计数 / 其余判红）。
 # ═══════════════════════════════════════════════════════════════
 set -uo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -58,11 +61,11 @@ else
   no "正常: 输出结构异常"
 fi
 
-# ── 判定: 输出含红绿灯语义标记（🟢/🟡/🔴/⚪ 至少一种）──
-if grep -qE "🟢|🟡|🔴|⚪" <<< "$OUT"; then
-  ok "判定: 含红绿灯语义标记"
+# ── 判定: 小结行必须给出 🟢 真实计数（收紧：崩溃输出的 traceback 源码行也含 🟢，旧粗匹配恒真）──
+if grep -q "小结：🟢" <<< "$OUT"; then
+  ok "判定: 小结行含 🟢 真实计数（崩溃输出不再假绿）"
 else
-  no "判定: 缺红绿灯标记"
+  no "判定: 小结行缺 🟢 计数（疑似崩溃或输出异常）"
 fi
 
 # ── 边界: 北星对齐含"无对应"标记（方向漂移检测）──
@@ -72,11 +75,21 @@ else
   no "边界: 北星对齐缺'无对应'标记（或当前全部对齐）"
 fi
 
-# ── 边界: 诚信账本按 agent 计分（含诚信 %）──
+# ── 边界: 诚信账本按 agent 计分（含诚信 %）—— 数据面三态感知（T7/T8 hermeticity 加固）──
+# 数据面说明: .claude/bypass.log 是 gitignored 运行时数据（.gitignore:40）⇒ 干净 checkout 无此文件；
+#   产品行为是显式降级「（bypass.log 缺失）」（铁律 11）⇒ 断言必须区分「有数据必须计分 / 无数据必须显式降级」，
+#   两者都没有（如崩溃输出）才判红 —— 否则解除隔离后干净 checkout 假红。
+# 第三态（T8）: scripts/hooks/post-commit.sh:138 每次 commit 都写 COMMITTED-only 账本（行内无 AGENT=）⇒
+#   文件存在但 agents 为空 ⇒ 面板必打「真绕过(detected-bypass): N 次」（账本区已渲染且显式空）；
+#   这是「提交后 hook 造账本态」的可判标记，不得因无 诚信% 判红。
 if grep -qE "诚信 [0-9]+%" <<< "$OUT"; then
   ok "边界: 诚信账本按 agent 计分（含诚信百分比）"
+elif grep -q "（bypass.log 缺失）" <<< "$OUT"; then
+  ok "边界: 无 bypass.log 数据面 ⇒ 显式降级标注（非静默空，铁律 11）"
+elif grep -q "真绕过(detected-bypass)" <<< "$OUT"; then
+  ok "边界: 账本存在但 0 条 AGENT 记录 ⇒ 面板显式给出真绕过计数（提交后 hook 造账本态）"
 else
-  no "边界: 诚信账本缺计分"
+  no "边界: 诚信账本缺计分（无数据/空账本时均未显式降级）"
 fi
 
 # ── 降级: git 不可用 → degraded 或 exit 2（不静默当真）──
@@ -96,6 +109,61 @@ if grep -q "已生成" <<< "$HTML" && [ -f "$OUTDIR/founder-console.html" ]; the
   ok "HTML: 生成自包含页面 founder-console.html（隔离目录）"
 else
   no "HTML: 页面生成失败"
+fi
+
+# ── B6: 无崩溃（修前 claim 行缺键 ⇒ KeyError；修后 exit ∈ {0,1}，不许 2）──
+GENRUN --offline >/dev/null 2>&1
+FT_RC=$?
+if ! grep -q "Traceback" <<< "$OUT" && { [ "$FT_RC" -eq 0 ] || [ "$FT_RC" -eq 1 ]; }; then
+  ok "无崩溃: --offline 输出无 Traceback，且 exit=${FT_RC} ∈ {0,1}"
+else
+  no "无崩溃: 崩溃或退出码异常（Traceback 行数=$(grep -c Traceback <<< "$OUT")，exit=${FT_RC}）"
+fi
+
+# ── B6: claim 行标注（迁移期 claim 必须显式标注"未核验"，不硬编码 issue 号）──
+if grep -qE '^\| #[0-9]+ +\| claimed\(claim\) \| 未核验' <<< "$OUT"; then
+  ok "claim 行: 显式标注「未核验（claim 无 D# 锚点）」"
+else
+  no "claim 行: 缺未核验标注（迁移期 claim 未显式声明物理核验口径）"
+fi
+
+# ── B6: 契约成对反例（照 FIX-008 ⒜/⒝ 范式；同一检查器两侧各跑一次 ⇒ 判据非恒真）──
+#   ⒜ 真行: collect() 的 claim 行三键齐 ⇒ missing=0 且 claims>0
+#   ⒝ 合成 legacy 行（缺 id/title/phys 三键）⇒ 同一检查器 missing=3
+CONTRACT=$(python3 - "$GEN" 2>&1 <<'PY'
+import importlib.util
+import sys
+
+spec = importlib.util.spec_from_file_location("founder_truth_under_test", sys.argv[1])
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+
+REQUIRED = ("id", "title", "phys")  # B6 W1 补的 3 键（行契约见 dev doc C1）
+
+
+def missing_keys(row):
+    return sum(1 for k in REQUIRED if k not in row)
+
+
+rows, _git_ok = mod.collect(offline=True)
+real_claims = [r for r in rows if r.get("migration")]
+missing_real = sum(missing_keys(r) for r in real_claims)
+# 修复前的 6 键 legacy claim 行（task_id/num/claimed/hist/source/migration）
+legacy = [{"task_id": "#9999", "num": None, "claimed": "claimed(claim)",
+           "hist": False, "source": ".claude/claims/9999.yaml", "migration": True}]
+missing_legacy = sum(missing_keys(r) for r in legacy)
+print("⒜ real missing=%d claims=%d" % (missing_real, len(real_claims)))
+print("⒝ legacy missing=%d" % missing_legacy)
+sys.exit(0 if (missing_real == 0 and len(real_claims) > 0 and missing_legacy == 3) else 1)
+PY
+)
+CRC=$?
+while IFS= read -r ln; do echo "  [契约] $ln"; done <<< "$CONTRACT"
+if [ "$CRC" -eq 0 ] && grep -q "⒜ real missing=0 claims=[1-9]" <<< "$CONTRACT" \
+   && grep -q "⒝ legacy missing=3" <<< "$CONTRACT"; then
+  ok "契约⒜⒝: 真行 missing=0 且 claims>0；缺 3 键合成行 missing=3（判别性成立）"
+else
+  no "契约⒜⒝: 判别性不成立（rc=${CRC}；见上方 [契约] 原始输出）"
 fi
 
 # ═══════════════════════════════════════════════════════════════

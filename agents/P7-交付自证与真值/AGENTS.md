@@ -15,11 +15,22 @@
 
 ## 三、完成判据
 
-`check-merge-conditions.sh` 输出 `CAN-自合并 / NO: <哪条>`；三信号可跑；问"进度"不用问人
+- **正常**：`bash scripts/control-tower/check-merge-conditions.sh --pr <N>` ⇒
+  四条件全满足时末行 `CAN-自合并`、**exit 0**；任一不满足 ⇒ 末行 `NO: <条件名>`、**exit 1**；
+  检查自身失败（API 不可达／refs 取不到／**CI 信号量==0**／`--offline`）⇒ `degraded: <原因>`、**exit 2**。
+  🔴 ③ 通过必须输出 `③=ok(attested)`，**禁只写 `③=ok`**（声明≠证明，创始人裁 B3-1）。
+- **反例（改坏必红）**：`bash scripts/control-tower/check-merge-conditions.sh --selfcheck` ⇒
+  子例逐条改坏（① pending／② 撞文件／③ 删回执·改指纹·回执后再改码／④ tip 不祖先·S2 非队首）
+  必 `inner_exit=1` 并点名条件；**CI 信号量为 0 必 `inner_exit=2`**；任一不符 ⇒ `SELFCHECK-FAIL`。
+- **三信号**：`scripts/control-tower/probe-line-signals.ts` 可跑（P7 下一批）；问"进度"不用问人。
 
 ## 四、写集（**文件级；越界即停并上报 CTO**）
 
-scripts/control-tower/{check-merge-conditions.sh,probe-line-signals.ts}｜docs/**｜memory/notes/**
+scripts/control-tower/{check-merge-conditions.sh,probe-line-signals.ts}｜tests/control-tower/{check-merge-conditions.test.sh}｜docs/**｜memory/notes/**｜.claude/task-briefs/**
+
+> 🔴 2026-10-18 创始人裁 **B1**：原枚举漏了 `tests/`——CT-40 配对是铁律，没有配对测试＝违规；
+> 那是**枚举不全，不是越界** ⇒ **一次改清**：W2（`tests/`）＋ W5（`.claude/task-briefs/`）一并入枚举，
+> 别让下一批再问一次（教训 175-b）。
 
 ## 五、依赖
 
@@ -143,3 +154,17 @@ scripts/control-tower/{check-merge-conditions.sh,probe-line-signals.ts}｜docs/*
 ### 回执三信号
 
 ① 判据通过率（绿/红）② 例外清单 ③ 在飞数 —— **不写全文**
+
+## 十、🔴 事实落点（条目 → 可复跑落点 → 现状）
+
+> 🔴 **口径（创始人 2026-10-18 裁 C-b）**：**现状栏禁写死裸数字** —— 数字会过期；现场取，确需举例必须带 `@<commit>`。
+> 理由：写死必然变成第二个「136 件 / check-* 62」事故（教训 161／167）。
+
+| # | 事实 | 落点（可复跑） | 现状（**as_of 由命令现场取**） |
+|---|---|---|---|
+| 1 | 四条件判据件是否在库 | `git ls-tree -r --name-only HEAD -- scripts/control-tower/check-merge-conditions.sh \| wc -l` | 现场取；`@964dc7233` 时为 0（P7-1 实现前） |
+| 2 | 判据是否可跑（含改坏必红） | `bash scripts/control-tower/check-merge-conditions.sh --selfcheck` | 现场取；实现前为「命令不存在」 |
+| 3 | ④ 串行存量（有多少 open PR 已含当次 tip） | `git ls-remote gitea refs/heads/local-main` × `git merge-base --is-ancestor <tip> <head>` | 现场取 |
+| 4 | ③ 凭据载体目录是否存在 | `git ls-tree -r --name-only HEAD -- docs/synova/reviews \| wc -l` | 现场取；实现前为 0 |
+| 5 | 原生 review 通道是否被用过 | `curl -s -H "Authorization: token $GITEA_TOKEN" "${SYNO_GITEA_API:-http://127.0.0.1:3000/api/v1}/repos/synova-agent/SynovaAgent/pulls/<N>/reviews"` | 现场取（`@964dc7233` 抽样为 `[]`） |
+| 6 | P7 自足性 ②⑦ 两格 | `python3 scripts/control-tower/check-package-selfsufficiency.py --packages P7` | 现场取（本件修复前：②🔴⑦🔴） |
