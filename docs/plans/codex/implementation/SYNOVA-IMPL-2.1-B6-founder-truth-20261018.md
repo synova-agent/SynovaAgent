@@ -292,6 +292,13 @@ python3 -c "import sys; print(sys.version.split()[0])" && git rev-parse --short 
 - `agents/P4-门禁/AGENTS.md` §十「合并例外」/ 裁 188：**P4 的 PR 一律不得自合并**（因 P4 改的正是门禁）。
 - ⇒ 本件**不自行裁决**：默认按创始人令执行，并在回执「例外清单」点名此冲突；若 CTO 一句话维持合并例外，则本 PR 走"独立复核 ＋ CTO 批"。
 
+**W3 提案裁决（CTO 已批 · 裁 210）**：
+
+> W3 提案：CTO 已批（裁 210）—— 从 `gate-integrity-baseline.txt:120` 移除
+> `founder-truth.test.sh` 的隔离。
+> 🔴 **顺序不可反**：**先收紧 `:62` 假绿断言（改坏必红）⇒ 再解除隔离**。
+> 若先解除 ⇒ 会先红一片（当前 5 过 6 败）；先修后解 ⇒ 才有意义。
+
 ---
 
 ## §8 交什么（给 L1）
@@ -302,6 +309,17 @@ python3 -c "import sys; print(sys.version.split()[0])" && git rev-parse --short 
  回执三信号：① 判据通过率（绿/红）② 例外清单 ③ 在飞数
  🔴 不判"通过"：只能给 自验结论 / 可提请独立复核 / 退回（附理由与失败点原文）
 ```
+
+🔴 **自证脚本必须进 PR**：把机械判据做成一条可跑命令，随 PR 提交。
+建议 `tests/control-tower/founder-truth-acceptance.test.sh`，需覆盖 6 项机械判据：
+  ① `:90-93` 三键齐（phys/id/title）
+  ② `:62` 假绿断言已改（不再是 `grep -qE "🟢|🟡|🔴|⚪"`）
+  ③ baseline `:120` 只删 1 行（diff --stat 判）
+  ④ `--offline` 跑通：exit 0/1 且无 `Traceback`
+  ⑤ 测试末行 `结果: N 通过, 0 失败`（N ≥ 14）
+  ⑥ `judge()` 零改动（diff 里无该函数）
+复用既有：`scripts/workflow/check-dev-doc-write-set.sh`（写集漂移 0）
+🔴 **脚本不进 PR ⇒ 视为"未自证" ⇒ 独立复核不受理**
 
 ---
 
