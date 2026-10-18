@@ -71,14 +71,14 @@
 | 14 | `tests/control-tower/ci-deps-step-sim.test.sh` | 改 | 51 | step 名索引同步 `① 12 组门禁` |
 | 15 | `tests/doc-system/check-doc-truth.test.sh` | 改（W7） | 28 | fixture 补 5 条横幅（D29）＋汇总改运行时变量 |
 | 16 | `tests/doc-system/doc-truth-probe.test.sh` | 改（W7） | 34 | 同上（5 条横幅，D29） |
-| 17 | `tests/control-tower/gate-count-acceptance.test.sh` | 新建 | 1–472（D18） | 自证：12 判据＋R1/R2/R3＋三态退出码（D23） |
+| 17 | `tests/control-tower/gate-count-acceptance.test.sh` | 新建 | 1–471（D18） | 自证：12 判据＋R1/R2/R3＋三态退出码（D23） |
 | 18 | `memory/notes/proposed/2026-10-19-gate-count.md` | 新建 | 全文 | 本 Note（四字段头＋七节＋数字出处） |
 
 > 表中「3 处／8 处／12 处／5 条」等计数：改文件取自 D16 的 hunk 内改动点；doc-system 两 fixture 的「5 条横幅」来自 D29；横幅行号来自 D28；新建件行数来自 D18。
 
 ## ⑤ 自证
 
-- 自证脚本：`tests/control-tower/gate-count-acceptance.test.sh`（新建，`472` 行，D18；判据 `12` 项＋反例 `3` 条，D23）。
+- 自证脚本：`tests/control-tower/gate-count-acceptance.test.sh`（新建，`471` 行，D18；判据 `12` 项＋反例 `3` 条，D23）。
 - 本机自跑（原始输出 `/tmp/task7-final-run-1019.log`）：`15 通过 / 0 失败`，exit `0`（D24）——`12` 判据＋`3` 反例全 ✅。此为**自验结论**；「通过」判定归 L1 收件闸与 K3。
 - R1 删组必红：副本从 `── 组 13:` 横幅删到 EOF（`11821` 字符）⇒ C2 `12 ≠ 11`、exit `1`；恢复 ⇒ exit `0`（D25）。
 - R2 改数必红：副本 AGENTS.md `12 组 pre-commit`→`13 组 pre-commit` ⇒ C2 `13 ≠ 12`、exit `1`；恢复 ⇒ exit `0`（D25）。
@@ -281,8 +281,10 @@ $ git grep -l '13 组' | wc -l
 
 ```bash
 $ wc -l < tests/control-tower/gate-count-acceptance.test.sh
-472
+471
 ```
+
+（silent-swallow 豁免 17 行后；修复前后行数见 git diff +17/−18）
 
 ### D19 基线（HEAD）组 11 标签数
 
