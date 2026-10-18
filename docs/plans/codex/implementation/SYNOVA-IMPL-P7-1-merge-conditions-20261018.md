@@ -1,7 +1,7 @@
 ---
 status: proposed
 日期: 2026-10-18
-任务: P7-1 四条件自证检查器（🔴 **未立卡** ⇒ Issue 号待立卡后回填）
+任务: P7-1 四条件自证检查器（Issue #582，2026-10-18 立卡）
 撰写: P7（交付自证与真值包负责人）· **独立于实现者**（本件不含实现，实现交 `synova-squad-lead`）
 依据: `agents/P7-交付自证与真值/AGENTS.md` §三/§四/§八/§八之三；`pre-plan-thinking` 9 问；`dev-doc-spec` v2（8 节＋3 条件）；创始人 2026-10-18 开工令（本包第一个交付＝dev doc，不写产品码）
 批次规模: **新建 5 文件**（W1 检查器 ≈ 520 行｜W2 配对测试 ≈ 220 行｜W3 回执格式说明 ≈ 40 行｜W4 四态 Note ≈ 30 行｜W5 卡面 ≈ 40 行）；**改 0 个既有文件**
@@ -45,7 +45,7 @@ status: proposed
 
 | # | 问 | 答 |
 |---|---|---|
-| 1 | 谁派 / 依据 | 创始人 2026-10-18 开工令（本包第一个交付＝dev doc）＋ CTO 本轮排期令三条；`agents/P7-交付自证与真值/AGENTS.md` §三；🟡 **未立卡**（立卡后回填 Issue 号） |
+| 1 | 谁派 / 依据 | 创始人 2026-10-18 开工令（本包第一个交付＝dev doc）＋ CTO 本轮排期令三条；`agents/P7-交付自证与真值/AGENTS.md` §三；Issue **#582**（2026-10-18 立卡） |
 | 2 | 归属包 / 产品线 | **P7 交付自证与真值**（治理线·自证）｜域：`scripts/control-tower/`、`tests/control-tower/`、`docs/synova/reviews/` |
 | 3 | 写集 | 见 §2（W1–W5，**文件级、两两不重叠**）；🔴 其中 **W2 需 CTO 批一行写集扩**（见附录 B-1） |
 | 4 | 判据 | 见 §4（正常／降级／反例三条）＋ DS-1…DS-12 |
@@ -411,7 +411,7 @@ python3 -c "import sys;print(sys.version.split()[0])" && git rev-parse --short=9
 | Gitea 可达且有 token | `curl -s -o /dev/null -w %{http_code} -H "Authorization: token $(cat $HOME/gitea/.win-push-token)" $SYNO_GITEA_API/repos/synova-agent/SynovaAgent/pulls?state=open` ⇒ `200` | 停，报 L1（本件**不许**把 API 不可达降级成"没红"） |
 | python3 ≥3.9 ∧ bash ≥3.2 ∧ git ≥2.20 | `python3 --version`／`bash --version \| head -1`／`git --version` | 停（`git diff --full-index --binary`、`:(exclude)` pathspec 需 ≥2.20） |
 | **CTO 批 W2 写集扩 1 行** | 附录 B-1 已批（回执一句即可） | **停**：不批则不写测试 ⇒ CT-40 硬拦 ⇒ 本件不可合 |
-| Issue 立卡 | Gitea Issue 存在并回填编号 | 🟡 不阻塞实现（P4 先例：未立卡亦可先落 dev doc），但**合并前回填** |
+| Issue 立卡 | Gitea Issue #582 存在且 open（`curl $SYNO_GITEA_API/repos/synova-agent/SynovaAgent/issues/582`） | 停，报 L1 |
 
 **🔴 CTO 本轮三条排期令（逐条落到路径）**：
 
@@ -533,7 +533,7 @@ A.8 F13 P7 自身矩阵：①🔴（缺引用）②🔴（缺命令/反例 token
 1. **W2 写集扩 1 行**：`tests/control-tower/check-merge-conditions.test.sh` 不在 `agents/P7-交付自证与真值/AGENTS.md` §四写集枚举内，但 **CT-40 硬拦要求它存在**（F9）。⇒ 请 CTO 一句话：**批**（写集改为 `scripts/control-tower/{check-merge-conditions.sh,…}｜tests/control-tower/{check-merge-conditions.test.sh}｜docs/**｜memory/notes/**`）／**不批**（则本件退回重出）。
 2. **④ 口径（S1∧S2）需 CTO 确认**：本件裁 S1（tip 是 head 祖先）∧ S2（①②③S1 全绿集合中编号最小）。今日 **14/14 S1 红** ⇒ 近期无 `CAN-自合并`。若 CTO 只要 S1 或只要 S2，请一句话，本件改口径后重派（**口径属 CTO，不属 L1**）。
 3. **③ 的身份局限**：单一 Gitea 账号 ⇒ 只能做"形式层独立＋防重放＋时序"，**不能证明签名者非作者**（C1 已知限制 1）。请 CTO 确认**接受该局限**（否则需先立"第二账号/签名"前置，本件无法落地）。
-4. **未立卡**：本件以 `P7-1` 代任务号（"任务唯一编号＝Issue 号"），请 CTO 立卡后回填。
+4. ~~未立卡~~ **已消**：Issue **#582** 已于 2026-10-18 立卡（P7 自建，任务号 P7-1；若 CTO 认为应由 CTO 立卡，请在回执点名，后续批次改口径）。
 5. **`--offline` 的 CI 数据源**：离线时无 API ⇒ ① 只能 exit 2。若期望离线也能判 ①，需引入本地 CI 状态缓存（**新增写集**），本件不做，请 CTO 裁是否需要。
 
 ## 附录 C · P7 自身 ②⑦ 修复口径（**待 CTO 批；未批不落盘**）
