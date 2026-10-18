@@ -152,7 +152,7 @@ scripts/control-tower/**（除 probe-*.ts 与 install-deps.sh）｜tests/control
 |---|---|---|---|---|
 | 2.1 | **B6 控制台崩溃** | `scripts/control-tower/founder-truth.py`（:430 附近 `judge(r["claimed"], r["phys"])`）｜测试 `tests/control-tower/founder-truth.test.sh` | 🔴 崩溃（`KeyError 'phys'`） | 修它 = **让 CTO 有眼睛**（最高杠杆） |
 | 2.2 | **§1 缺四形态** | 两处真实逃逸：`src/agent/synova-agent.ts:182` ＋ `src/agent/post-diagnosis-processor.ts:248`（两处均 `await import('../l4/agent-memory-store')` ⇒ §1 恒不可见） | 🔴 逃逸存在 | 改的是**架构边界检查器** ⇒ 需独立复核 |
-| 2.3 | **存量基线未更新** | 🔴 **"12 个"是哪套查不到**（pre-commit 是 **13 组**；`.gitea/ci-criteria.txt` **为空**） | 🔴 **信息缺** | **基线口径 = 判据语义 ⇒ 必须 CTO 裁** |
+| 2.3 | **存量基线未更新** | 🔴 **"12 个"是哪套查不到**（pre-commit 是 **12 组**；`.gitea/ci-criteria.txt` **为空**） | 🔴 **信息缺** | **基线口径 = 判据语义 ⇒ 必须 CTO 裁** |
 | 2.4 | **U1 双真源** | `~/gitea/local-gates.yml`（`ff61e38a`）vs repo `.gitea/workflows/local-gates.yml`（`a9b0501f`） | 🔴 **两版不一致（确证）** | 删哪份/合并 ⇒ **小，但须留处置说明** |
 | 2.5 | **U3 门禁可被改** | 🔴🔴 **机制根本不存在**：`protected_file_patterns`／`protected_files`／`protectedFilePatterns`／`受保护文件` **全 0 命中** | 🔴 **是从零新建，不是改配置** | **= 门禁语义 ⇒ CTO 裁，P4 只出方案** |
 

@@ -6,7 +6,7 @@ scripts/control-tower/merge_writeset_gate.py — D708 合并级写集对账 gate
 背景（M2 族第三次止血）:
   #449 夹带 D603 共 51 文件 / #442 夹带 6 文件 / D593-FIX 声称提交实未提交 —— 三次
   「PR 声称的写集」与「真正进入 main 的文件集」不一致，而现有门禁都抓不到：
-    - pre-commit 13 组：单提交粒度，只看暂存区，不看 PR 整体
+    - pre-commit 12 组：单提交粒度，只看暂存区，不看 PR 整体
     - verify-parallel.sh（ci.yml L51-57）：**已合 PR 之间**的写集重叠（inter-PR），
       不校验单个 PR 与**自己声明**的一致性（intra-PR）
   本 gate 补的正是 intra-PR 这一格：一个 PR 从「通过的写集」到「真正进入 main 的文件集」

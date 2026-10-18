@@ -12,7 +12,7 @@
  |------|------|---------|------|------|
  | **Task Start** | 每次新任�?| 手动 `bash scripts/workflow/task-start.sh` | `.claude/task-briefs/` + `STATE.md` 状态更�?| active |
  | **Verify Incremental** | 每次代码保存 | PostToolUse hook 自动 | L1 oxlint �?L2 tsc �?L3 vitest �?L4 接线审计, 最�?5 �?| active |
- | **Pre-Commit Gate** | 每次 `git commit` | `.git/hooks/pre-commit` | 13 组硬阻断（本地软提示/CI 权威；类型安全/测试/Secrets/接线/架构/Task Brief/架构合规/文件驱动) | active |
+ | **Pre-Commit Gate** | 每次 `git commit` | `.git/hooks/pre-commit` | 12 组硬阻断（本地软提示/CI 权威；类型安全/测试/Secrets/接线/架构/Task Brief/架构合规/文件驱动) | active |
  | **Pre-Push Gate** | 每次 `git push` | `.git/hooks/pre-push` | tsc + vitest 全量 + secrets 终扫 | active |
  | **Commit Message** | 每次 `git commit` | `.git/hooks/commit-msg` | Conventional Commits 格式强制 | active |
  | **Post-Commit** | 每次 `git commit` | `.git/hooks/post-commit` | 决策流程建议 (decide-next.sh) | active |
@@ -36,7 +36,7 @@
  | `STATE.md` | 免疫警告 + 错误模式追踪 + 活跃任务 | active |
  | `AGENTS.md` | Agent 指令 (Loop Engineering V5.2.7 设计) | active |
  | `MEMORY.md` | 历史教训持久�?| active |
- | `scripts/pre-commit-check.sh` | 13 组硬阻断门禁 | active |
+ | `scripts/pre-commit-check.sh` | 12 组硬阻断门禁 | active |
  | `scripts/workflow/verify-incremental.sh` | 四层增量验证 | active |
  | `scripts/workflow/task-start.sh` | 任务启动 3 �?| active |
  | `.claude/loop-state.json` | 循环轮次计数 (临时, verify-incremental 管理) | active |
@@ -50,5 +50,5 @@
  
  ## 版本
  
- **Loop Engineering V5.2.7** — 47 条铁律 + 13 组 pre-commit + 四层增量验证 + 免疫警告系统 + Plan-aware 门禁 + grep 物理门禁 + 侧翼修复自动化。
+ **Loop Engineering V5.2.7** — 47 条铁律 + 12 组 pre-commit + 四层增量验证 + 免疫警告系统 + Plan-aware 门禁 + grep 物理门禁 + 侧翼修复自动化。
  详见 [AGENTS.md](./AGENTS.md) Loop Engineering 章节�?
