@@ -33,6 +33,7 @@
 #   K3 回执 fp 差 1 hex（且用 63 hex 前缀，证明禁前缀匹配）⇒ 红 R3
 #   K4 checks 长度 = 4 ⇒ 红 R4 ｜ K5 --pr 指向取不到的 PR ⇒ exit 2
 #   K6 --json 与 --selfcheck 同给 ⇒ exit 2 ｜ K7 --offline ⇒ exit 2 ｜ K8 head 取不到 ⇒ exit 2
+#   K9 state=failure + statuses 全 success ⇒ 红（#603 补：① 的 state==success 判据此前零覆盖）
 #   注: C2 的「--pr 指向已合/已关 PR」在夹具层无 state 注入缝（fixture 的 PR 恒 open）
 #       ⇒ 以 K5「PR 取不到 ⇒ exit 2」（同为 fail-closed 降级）替代并在此登记差异。
 #
@@ -148,6 +149,10 @@ ci = {ahead: ok, ehead: ok}
 api_errors = {}
 if case == "B":
     ci[ahead] = mixed
+if mut == "fail_state":
+    ci[ahead] = {"state": "failure", "total_count": 2, "statuses": [
+        {"context": "local-gates / gates (push)", "status": "success"},
+        {"context": "local-gates / gates (pull_request)", "status": "success"}]}
 if case == "F" or mut == "ci_void":
     ci[ahead] = void
 if case == "I":
@@ -341,6 +346,12 @@ judgment() { # <case> <want_exit> <want_last> [needle...]
       bad="降级时不得输出 CAN-自合并 / ②=ok"
     fi
   fi
+  # 🔴 #603 输出级反例：任一 MERGE-COND 行出现裸 ③=ok（无 attested 级别）⇒ 失败（DS-5 的反例落成自动化）
+  if [ -z "$bad" ]; then
+    if grep -Eq '③=ok([^(:]|$)' "$OUT"; then
+      bad="机器行出现裸 ③=ok（缺 attested 级别）"
+    fi
+  fi
   if [ -z "$bad" ]; then
     pass "$case inner_exit=${RC} 末行=[${got}]"
     echo "     原始输出尾 3 行:"
@@ -403,10 +414,10 @@ judgment D1 1 "NO: ③ 已过独立复核" "R1 缺回执" "③=no"
 judgment D2 1 "NO: ③ 已过独立复核" "R3 指纹不匹配" "③=no"
 judgment D3 1 "NO: ③ 已过独立复核" "R7 回执之后仍有代码改动" "③=no"
 judgment D4 1 "NO: ③ 已过独立复核" "R2 independence 必须为 fresh-session" "③=no"
-judgment E  1 "NO: ④ 串行" "S1 tip" "落后 1 commits" "④=no"
+judgment E  1 "NO: ④ 串行" "S1 tip" "落后 1 commits" "④=no" "③=ok(attested)"
 judgment F  2 "degraded: CI 信号量==0（state=pending total_count=0；禁判绿也禁判红）" \
   "degraded:" "total_count=0"
-judgment G  1 "NO: ④ 串行" "S2 前置就绪 PR #99 编号更小 ⇒ 先合它" "④=no"
+judgment G  1 "NO: ④ 串行" "S2 前置就绪 PR #99 编号更小 ⇒ 先合它" "④=no" "③=ok(attested)"
 judgment H  0 "CAN-自合并" "warn: 身份未分离" "③=ok(attested)"
 judgment I  2 "degraded: open PR 列表不可达（HTTP 500 on /pulls?state=open，fail-closed）" \
   "degraded:" "MERGE-COND: degraded" "①=ok"
@@ -473,6 +484,15 @@ if build_repo A "$WORK/cli/k8" "head_unknown"; then
   boundary "K8 head 取不到 ⇒ exit 2" 2 "*" "degraded:" "取不到"
 else
   fail "[边界] K8 夹具构建失败"
+fi
+
+# K9 state=failure 但 statuses 全 success ⇒ 红（#603：#597 的 ① state==success 判据零覆盖 —— 去掉它两层测试仍全绿）
+if build_repo A "$WORK/cli/k9" "fail_state"; then
+  run_case "$WORK/cli/k9"
+  boundary "K9 state=failure + statuses 全 success ⇒ 红" 1 "NO: ① CI 全绿 pending=0" \
+    "CI_NOT_GREEN: state=failure"
+else
+  fail "[边界] K9 夹具构建失败"
 fi
 
 echo
