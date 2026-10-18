@@ -128,6 +128,8 @@ scripts/control-tower/**（除 probe-*.ts 与 install-deps.sh）｜tests/control
 ```
 🔴 **判据**：交付件缺 typed error／缺"已知限制"节／缺判别力自检 ⇒ **L1 不收**；独立复核须**逐条核这 8 项**。
 
+🔴 **细则见 skill**：`.dsh/skills/dsh-code-standards/SKILL.md`（12 项强制项，每项带 DSH 源码 file:line 证据＿含验证清单 8 条）
+
 ## 九、回执（三信号 ＋ 过程件位置）
 
 > 🔴 **过程件（在飞／回执／状态）不写判据** —— 防双真源
