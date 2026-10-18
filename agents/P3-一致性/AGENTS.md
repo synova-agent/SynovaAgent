@@ -100,7 +100,7 @@ M1、M2｜K12-03 建档通道
 **开工前必须盘一遍"有没有现成的"**，并在 dev doc 里留**一节「既有基础盘点」**：
 ```
  盘点范围（至少这四类）：
-  · `scripts/control-tower/`（现 **136 件**：check-* 62／probe-* 28／verify 12／baseline 6）
+  · `scripts/control-tower/`（现 **136 件**：check-* **26**（全树 check-* 60）／probe-* 28／verify 12／baseline 6）
   · `scripts/doc-system/`｜`scripts/workflow/`｜`scripts/integration/`
   · 相关 skill（`.dsh/skills/*/SKILL.md`）
   · **既有约定**（不算"件"，但必须遵守）

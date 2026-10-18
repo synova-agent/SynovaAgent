@@ -90,7 +90,7 @@ description: 活规格撰写（v2，2026-10-18 按"零上下文小队"读者重�
 
 ### §6 有什么基础（禁止重复建设）
 - 逐条：`<能力> | grep 命令 | 命中 N | 结论：复用 / 扩展现有 / 确需新建（说明为何不能复用）`
-- **必查四类**：`scripts/control-tower/`（**136 件**：check-* 62／probe-* 28）／`scripts/doc-system/`·`workflow/`·`integration/`／相关 skill／**既有约定**
+- **必查四类**：`scripts/control-tower/`（**136 件**：check-* **26**（全树 check-* 60）／probe-* 28）／`scripts/doc-system/`·`workflow/`·`integration/`／相关 skill／**既有约定**
 - 🔴 **四个必须复用的既有约定**：① 三态退出码（0/1/**2**）② `@降级`＋`SYNO_GATE_DEGRADED_LOG` ③ UTF-8 强制（D732）④ 判别力自检
 - 写"确需新建"但未说明**为何不能复用** ⇒ **退回**
 
