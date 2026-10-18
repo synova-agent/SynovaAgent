@@ -24,6 +24,10 @@
 3. 新增边界 **K9**：`state=failure` 且 statuses 全 success ⇒ exit 1（此前该判据零覆盖）。
 4. 删 `MACHINE_TAIL` 的 ③/④ 赋值（死代码）。
 
+## 生效时点
+
+合并即生效（PR #604 合入 `local-main` 起）；本 Note 随该 PR 同批落盘。
+
 ## 依据（实跑）
 
 - 红绿 1：改坏 `tok3` ⇒ 修前 `SELFCHECK-OK: 12/12` / 修后 `SELFCHECK-FAIL: B`（`机器行出现裸 ③=ok（缺 attested 级别）`）。

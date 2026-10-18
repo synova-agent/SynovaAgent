@@ -939,7 +939,7 @@ PY
     if [ "$JSON_MODE" = "1" ]; then
       emit_json "can" 0
     else
-      say "MERGE-COND: can ①=ok ②=ok ③=ok(attested) ④=ok"
+      say "MERGE-COND: can ①=ok ②=ok ③=${tok3} ④=ok"
       say "CAN-自合并"
     fi
     exit 0
@@ -1233,9 +1233,11 @@ run_case() { # run_case <case> <want-exit> <want-last-line> [needle...]
   fi
   # 🔴 #603 输出级反例（裁 B3-1 硬条件）：任何 MERGE-COND 行出现**裸** ③=ok（无 attested 级别）⇒ 失败
   #    根因：机器行 ③ 由 tok3 运行时拼接 ⇒ 只钉 needle 抓不住「改坏 tok3」；本断言直接看**输出**。
+  # 🔴 #603 白名单式（复核 #604 warn：只抓"裸 ok"会漏 `ok(fake)` 这类假级别）：
+  #    凡出现 `③=` 的行，必须形如 `③=ok(attested)` 或 `③=no`（后接空白/行尾）。
   if [ -z "$bad" ]; then
-    if grep -Eq '③=ok([^(:]|$)' "$out"; then
-      bad="机器行出现裸 ③=ok（缺 attested 级别）"
+    if grep -E '③=' "$out" | grep -Evq '③=(ok\(attested\)|no)([[:space:]]|$)'; then
+      bad="机器行 ③ 形态非法（只允许 ok(attested) / no）"
     fi
   fi
   if [ -z "$bad" ] && [ -s "$out" ]; then

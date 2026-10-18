@@ -318,6 +318,12 @@ run_cli() { # <dir> [参数...]（无夹具：参数/离线类边界）
 last_line() { tail -n 1 "$1" 2>/dev/null; }
 
 # ── 判定点执行器：同时断言 inner_exit ＋ 末行 ＋ 证据片段 ＋ 条件隔离 ──────────────
+# ③ 机器行形态白名单（#603／复核 #604）：凡含 `③=` 的行必须 `③=ok(attested)` 或 `③=no`（后接空白/行尾）
+form_ok() { # 读全局 $OUT
+  if grep -E '③=' "$OUT" 2>/dev/null | grep -Evq '③=(ok\(attested\)|no)([[:space:]]|$)'; then return 1; fi
+  return 0
+}
+
 judgment() { # <case> <want_exit> <want_last> [needle...]
   local case="$1" want_exit="$2" want_last="$3"
   shift 3
@@ -348,9 +354,7 @@ judgment() { # <case> <want_exit> <want_last> [needle...]
   fi
   # 🔴 #603 输出级反例：任一 MERGE-COND 行出现裸 ③=ok（无 attested 级别）⇒ 失败（DS-5 的反例落成自动化）
   if [ -z "$bad" ]; then
-    if grep -Eq '③=ok([^(:]|$)' "$OUT"; then
-      bad="机器行出现裸 ③=ok（缺 attested 级别）"
-    fi
+    if ! form_ok; then bad="机器行 ③ 形态非法（只允许 ok(attested) / no）"; fi
   fi
   if [ -z "$bad" ]; then
     pass "$case inner_exit=${RC} 末行=[${got}]"
@@ -380,6 +384,9 @@ boundary() { # <name> <want_exit> <want_last> <needle...>
       if ! grep -Fq -- "$1" "$OUT" "$ERR"; then bad="缺证据「$1」"; break; fi
       shift
     done
+  fi
+  if [ -z "$bad" ]; then
+    if ! form_ok; then bad="机器行 ③ 形态非法（只允许 ok(attested) / no）"; fi
   fi
   if [ -z "$bad" ]; then
     extra "$name inner_exit=${RC} 末行=[${got}]"
