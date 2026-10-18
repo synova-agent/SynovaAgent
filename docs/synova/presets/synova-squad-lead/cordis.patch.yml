@@ -192,12 +192,6 @@
                 config:
                   subagentProvider: spawn
                   maxRounds: 64
-          - id: tool-agent-team
-            name: '@deepseek-ai/dsh-experimental-tool-agent-team'
-            config:
-              freshProvider: spawn
-              forkProvider: fork
-
           - id: tool-ask-user
             name: '@deepseek-ai/dsh-tool-ask-user'
           - id: tool-todo
