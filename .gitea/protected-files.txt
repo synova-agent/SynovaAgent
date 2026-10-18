@@ -1,0 +1,29 @@
+# protected-files.txt — 门禁本体清单（仓内真源；S2 由创始人粘贴进 Gitea protected_file_patterns）
+# 语法：PATTERNS 段内每行一个 glob（gitea gobwas glob，大小写不敏感，相对仓库根）；# 开头为注释
+# 改本清单 = 改门禁本体 ⇒ 请走门禁豁免（见 gate-exemptions/README.md）；🔴 本清单自身不在下方 20 条 PATTERNS 内 ⇒ 仓内检查器**不拦清单自身改动**，真防线是 S2 平台字段（见检查器 Known Limitations 2；是否把本文件纳入 PATTERNS 待 L1 裁）
+# 来源：SYNOVA-IMPL-2.5-S1 §2 S1-a（CTO 2026-10-18 裁定的 R1 + R2；R3 package.json 不纳入）
+# 校验：bash scripts/control-tower/check-gate-protection.sh（三态 0/1/2；本文件只读）
+# PROTECTED-PATTERNS-SHA256=9790cde3574069ce1d2915c8000ece904194bd82e9997beac8c60e85356a3175
+# APPROVERS=huangxuesongvip@163.com
+# PATTERNS-BEGIN
+scripts/pre-commit-check.sh
+scripts/commit-msg-check.sh
+scripts/pre-push-check.sh
+scripts/install-hooks.sh
+scripts/check-*.sh
+scripts/audit/**
+scripts/control-tower/**
+scripts/hooks/**
+scripts/workflow/**
+scripts/doc-system/**
+scripts/ci/**
+scripts/golden-scenarios/**
+tests/control-tower/**
+tests/doc-system/**
+.gitea/workflows/**
+.github/workflows/**
+.github/CODEOWNERS
+agents/**/AGENTS.md
+.dsh/skills/**
+docs/authority/DOCS-REGISTRY.yaml
+# PATTERNS-END
