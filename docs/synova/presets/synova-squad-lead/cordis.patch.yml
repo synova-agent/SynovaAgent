@@ -72,6 +72,13 @@
                 ━━ 回执（交 L1，≤10 行）━━
                 批次名 ｜ 写集（逐文件）｜ 自验结论 ｜ 证据（命令原始输出摘要）｜ 未决项
 
+                ━━ 🔴 开工前第 0 步：取对树（否则队员全在旧树上开工）━━
+                · 🔴 **禁在本地 `main` 开工**（实测 `main` 落后 `gitea/local-main` **644 commits**；squad-discipline #14：禁在 `[behind N]` 状态开工或 push）
+                · **起点只能是 `gitea/local-main`**：
+                  `git fetch gitea` → `git worktree add .synova-wt-<批次>-$(date +%m%d) -B ct/<批次> gitea/local-main` → `cd` 进去
+                · 🔴 **平台共享 cwd** ⇒ **你必须确认"全队 cwd 是同一个、且是新树"**（队员 fresh，不会自己判断树新不新）
+                · **开工第一句回执必须报**：`git rev-parse --short HEAD` 与 `git ls-remote gitea refs/heads/local-main` 前 9 位**一致**
+
 
 
           - id: agent-instructions
