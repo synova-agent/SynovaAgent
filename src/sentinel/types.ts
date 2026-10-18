@@ -270,25 +270,17 @@ import type { computeMetricBindDivergence as _mbdCheck } from '../../extensions/
 import type { customerDemandShiftSentinel as _custDemandCheck } from '../../extensions/sentinels/customer-demand-shift/aggregate';
 import type { computeCustomerChurnRisk as _custChurnCheck } from '../../extensions/sentinels/customer-demand-shift/computes/customer-churn-risk';
 import type { computeCustomerConcentration as _custConcCheck } from '../../extensions/sentinels/customer-demand-shift/computes/customer-concentration';
-import type { capitalEfficiencySentinel as _capEffCheck } from '../../extensions/sentinels/_extinct/capital-efficiency/aggregate';
 import type { computeRoicWaccSpread as _roicCheck } from '../../extensions/sentinels/capital-health/computes/roic-wacc-spread';
-import type { marketLifecycleSentinel as _marketLifecycleCheck } from '../../extensions/sentinels/_extinct/market-lifecycle/aggregate';
-import type { computeLifecycleStage as _lifecycleCheck } from '../../extensions/sentinels/_extinct/market-lifecycle/computes/lifecycle-stage';
 import type { opportunityWindowSentinel as _oppWinCheck } from '../../extensions/sentinels/opportunity-window/aggregate';
 import type { computeOpportunityWindowScore as _oppScoreCheck } from '../../extensions/sentinels/opportunity-window/computes/opportunity-window-score';
 import type { computeCapitalTurnover as _capTurnCheck } from '../../extensions/sentinels/capital-health/computes/capital-turnover';
-import type { competitiveDynamicsSentinel as _compDynCheck } from "../../extensions/sentinels/_extinct/competitive-dynamics/aggregate";
 import type { environmentRentDependencySentinel as _rentDepCheck } from "../../extensions/sentinels/environment-rent-dependency/aggregate";
-import type { structuralChangeSentinel as _structChangeCheck } from "../../extensions/sentinels/_extinct/structural-change/aggregate";
-import type { computeStructuralChangeSignal as _structSigCheck } from "../../extensions/sentinels/_extinct/structural-change/computes/structural-change-signal";
 
 import type { financingConstraintSentinel as _finConCheck } from "../../extensions/sentinels/financing-constraint/aggregate";
-import type { capitalStructureSentinel as _capStructCheck } from "../../extensions/sentinels/_extinct/capital-structure/aggregate";
 import type { computeDebtEquityRatio as _deCheck } from "../../extensions/sentinels/capital-health/computes/debt-equity-ratio";
 import type { computeInterestCoverage as _icCheck } from "../../extensions/sentinels/capital-health/computes/interest-coverage";
 import type { growthQualitySentinel as _gqCheck } from "../../extensions/sentinels/growth-quality/aggregate";
 import type { computeCashConversionRate as _ccrCheck } from "../../extensions/sentinels/growth-quality/computes/cash-conversion-rate";
-import type { capitalTurnoverSentinel as _ctCheck } from "../../extensions/sentinels/_extinct/capital-turnover/aggregate";
 import type { computeDebtStructure as _dsCheck } from "../../extensions/sentinels/capital-health/computes/debt-structure";
 import type { computeIntegrationHealth as _ihCheck } from "../../extensions/sentinels/software-health/computes/integration-health";
 import type { computeAssetTurnover as _atCheck } from "../../extensions/sentinels/capital-health/computes/asset-turnover";
@@ -308,8 +300,6 @@ import type { nicheBreadthSentinel as _nbCheck } from "../../extensions/sentinel
 import type { computeLevinsBreadth as _levinsCheck } from "../../extensions/sentinels/niche-breadth/computes/levins-breadth";
 import type { nicheSqueezeSentinel as _nsCheck } from "../../extensions/sentinels/niche-squeeze/aggregate";
 import type { computeNicheSqueezeIndex as _nsIdxCheck } from "../../extensions/sentinels/niche-squeeze/computes/niche-squeeze-index";
-import type { competitiveMoatStructuralSentinel as _cmsCheck } from "../../extensions/sentinels/_extinct/competitive-moat-structural/aggregate";
-import type { competitiveMoatPerceptualSentinel as _cmpCheck } from "../../extensions/sentinels/_extinct/competitive-moat-perceptual/aggregate";
 import type { businessModelCoherenceSentinel as _bmcCheck } from "../../extensions/sentinels/business-model-coherence/aggregate";
 import type { unitEconomicsSentinel as _ueCheck } from "../../extensions/sentinels/unit-economics/aggregate";
 import type { internalTransactionCostSentinel as _itcCheck } from "../../extensions/sentinels/internal-transaction-cost/aggregate";
@@ -318,7 +308,6 @@ import type { valueCaptureSentinel as _vcCheck } from "../../extensions/sentinel
 import type { moatDependencySentinel as _mdCheck } from "../../extensions/sentinels/moat-dependency/aggregate";
 import type { timePenetrationSentinel as _tpCheck } from "../../extensions/sentinels/time-penetration/aggregate";
 import type { makeOrBuySentinel as _mobCheck } from "../../extensions/sentinels/make-or-buy/aggregate";
-import type { ConnectorCoverageSentinel as _ccCheck } from "../../extensions/sentinels/_extinct/connector-coverage/aggregate";
 import type { ProcessAiReadinessSentinel as _parCheck } from "../../extensions/sentinels/process-ai-readiness/aggregate";
 import type { AiEcosystemFitSentinel as _aefCheck } from "../../extensions/sentinels/ai-ecosystem-fit/aggregate";
 import type { AgentDeploymentMaturitySentinel as _admCheck } from "../../extensions/sentinels/agent-deployment-maturity/aggregate";
@@ -328,7 +317,6 @@ import type { HumanAgentBoundarySentinel as _habCheck } from "../../extensions/s
 import type { AgentOpportunityWindowSentinel as _aowCheck } from "../../extensions/sentinels/agent-opportunity-window/aggregate";
 import type { computeAgentOpportunityWindow as _aowScoreCheck } from "../../extensions/sentinels/agent-opportunity-window/computes/compute-agent-opportunity-window";
 import type { strategyCapabilityFitSentinel as _scfCheck } from "../../extensions/sentinels/strategy-capability-fit/aggregate";
-import type { adaptationVelocitySentinel as _avCheck } from "../../extensions/sentinels/_extinct/adaptation-velocity/aggregate";
 import type { resourceMisallocationSentinel as _rmCheck } from "../../extensions/sentinels/resource-misallocation/aggregate";
 import type { exploreExploitBalanceSentinel as _eebCheck } from "../../extensions/sentinels/explore-exploit-balance/aggregate";
 import type { routineMutationSentinel as _rmutCheck } from "../../extensions/sentinels/routine-mutation/aggregate";

@@ -162,7 +162,15 @@ export function wireLoopExecution(): LoopWiringResult {
     for (const loopConfig of LOOP_TRIGGER_MATRIX) {
       mainAgent.registerLoop(loopConfig);
     }
-    setMainAgent(mainAgent);
+    // M1b: MainAgent.executeLoop 返回 LoopExecutionRecord（无 ok 字段）—— 结构适配器映射到
+    // routes/loops 的 MainAgentLike 契约（status==='completed' ⇒ ok；铁律 38：零 any/never 断言）。
+    setMainAgent({
+      listLoops: () => mainAgent.listLoops(),
+      executeLoop: async (loopId: string) => {
+        const rec = await mainAgent.executeLoop(loopId);
+        return { ok: rec.status === 'completed', error: rec.error };
+      },
+    });
     bindMainAgent(mainAgent);
     logger.info({ loops: LOOP_TRIGGER_MATRIX.length }, "[wiring] MainAgent 已注入 loops 路由 + 循环点火绑定");
     return { ok: true, degraded: false, mainAgent };
@@ -209,7 +217,10 @@ export async function createServer(): Promise<Server> {
   const stateMachine = services.stateMachine;
   const wiring = services.wiring;
   const federalAdapter = services.federalAdapter;
-  const graphStore = services.graphStore;
+  // M1b: BootstrapServices.graphStore 为 unknown（降级装配可缺席）—— 判空守卫 + 同源显式收窄
+  // （类型源 = l4/graph-bridge.GraphStore，与 wrapStandardKeyGuard/setGraphBridge/setOverflowGraphStore
+  //  形参同源；铁律 38 合规：非 any）。graphStore 缺席 → 下游既有降级语义保持（铁律 31）。
+  const graphStore = services.graphStore as import('./l4/graph-bridge').GraphStore | undefined;
   const agentMemory = services.agentMemory;
   const connectorToolRegistry = services.connectorToolRegistry;
   const credentialVault = services.credentialVault;
@@ -594,7 +605,8 @@ export async function createServer(): Promise<Server> {
       logger.warn({ error: loopWiring.error }, "loop 执行链降级 — /api/loops/* 与内置循环 loop-1..6 均不可用");
     }
     try {
-      setGraphBridge(graphStore); // D231
+      // M1b: setGraphBridge 形参非空（GraphBridgeLike）—— 判空守卫，缺席保持路由侧 500 degraded 语义。
+      if (graphStore) setGraphBridge(graphStore); // D231
       // D478: overflow 路由 graphStore 生产注入。services.graphStore 为 unknown（BootstrapServices），
       // 判空守卫 + 显式收窄到 GraphStore（类型源与 setter 形参同源，非 any 断言，铁律 38 合规）。
       // graphStore 缺席（Bootstrap 降级）→ 跳过注入，路由侧既有 if (!graphStore) 503 degraded 语义保持（铁律 31）。

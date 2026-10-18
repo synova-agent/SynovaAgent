@@ -192,8 +192,8 @@ export class BudgetTracker {
   }
 }
 
-/** 未初始化的占位追踪器（降级用） */
-export const NOOP_BUDGET_TRACKER = new (class extends BudgetTracker {
+/** 未初始化的占位追踪器（降级用）— M1b: 具名类（TS4094：匿名类私有成员无法生成 .d.ts） */
+class NoopBudgetTracker extends BudgetTracker {
   constructor() {
     super({ cumulativeBudget: Infinity });
   }
@@ -228,4 +228,6 @@ export const NOOP_BUDGET_TRACKER = new (class extends BudgetTracker {
   override isDegraded(): boolean {
     return true;
   }
-})();
+}
+
+export const NOOP_BUDGET_TRACKER: BudgetTracker = new NoopBudgetTracker();
