@@ -88,7 +88,9 @@ def collect(offline=False):
                 continue
             _claim_n += 1
             rows.append({
-                "task_id": f"#{_cp.stem}", "num": None, "claimed": "claimed(claim)",
+                "task_id": f"#{_cp.stem}", "id": f"#{_cp.stem}", "title": "",
+                "num": None, "claimed": "claimed(claim)",
+                "phys": "未核验（claim 无 D# 锚点）",   # ← 诚实降级标注：不得写成"无提交记录"（那是假陈述）
                 "hist": False, "source": str(_cp.relative_to(REPO)), "migration": True,
             })
         if _claim_n:
