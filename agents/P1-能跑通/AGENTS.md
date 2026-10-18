@@ -29,9 +29,14 @@ M1（已合 44a30a572）｜M2/M3/M4 依赖 M1b（已合 3ab277c44）
 
 不碰 package.json/tsconfig（M1 域）｜不改 46 哨兵源码｜不碰 scripts/audit/**
 
+❌ 不碰 `package.json`／`tsconfig.json`（M1 域）｜❌ 不改 46 哨兵源码（`extensions/sentinels/**`）｜❌ 不碰 `scripts/audit/**`
+
 ## 七、🔴 域守则指针（**必须显式 read**，DSH 无法额外注入）
 
-见本包 handbook `包/P1-能跑通/README.md` §「域守则必读」；全表 `包/交叉矩阵-12守则×10包.md`。
+`extensions/sentinels/AGENTS.md`（48 目录/46 有效；**卸需重启**）｜`extensions/AGENTS.md`（**内容面 bundle 不可装载**）｜`src/l4/AGENTS.md`（图存储/权限两测）｜`src/routes/AGENTS.md`（**垂直切片三环节**）｜`src/agent/AGENTS.md`（**工具门禁独立送审**）｜`src/l3/AGENTS.md`（模板契约）｜`expert/AGENTS.md`（**账外资产**）｜`memory/notes/AGENTS.md`（**非平凡须引 Note**）
+
+> 口径：**12 份域守则按"目录"切，10 个包按"职责"切 —— 正交** ⇒ 本清单是交集（全表 `handbook 包/交叉矩阵-12守则×10包.md`）
+> 🔴 **DSH 无法额外注入指定文件 ⇒ 必须显式 `read`**（不 read 就会漏）
 
 ## 八、协作（何时派 L2 ／何时自己做 ／什么必须上报 CTO）
 

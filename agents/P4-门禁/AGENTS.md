@@ -29,9 +29,14 @@ scripts/control-tower/**（除 probe-*.ts 与 install-deps.sh）｜tests/control
 
 不碰 scripts/audit/**（K3 专属）｜不改 probe-*.ts（M6 独占）
 
+❌ **不碰 `scripts/audit/**`（K3 专属）**｜❌ 不改 `scripts/control-tower/probe-*.ts`（M6 独占）｜❌ 不改 `scripts/control-tower/install-deps.sh`（M1 域）
+
 ## 七、🔴 域守则指针（**必须显式 read**，DSH 无法额外注入）
 
-见本包 handbook `包/P4-门禁/README.md` §「域守则必读」；全表 `包/交叉矩阵-12守则×10包.md`。
+`scripts/control-tower/AGENTS.md`（**probe 三态退出码；信号量==0⇒exit 2**）｜`tests/control-tower/AGENTS.md`（零失败才合并）｜`.gitea/AGENTS.md`（**改门禁只认本目录；须独立送审**）｜`memory/notes/AGENTS.md`｜（👁）`docs/AGENTS.md`
+
+> 口径：**12 份域守则按"目录"切，10 个包按"职责"切 —— 正交** ⇒ 本清单是交集（全表 `handbook 包/交叉矩阵-12守则×10包.md`）
+> 🔴 **DSH 无法额外注入指定文件 ⇒ 必须显式 `read`**（不 read 就会漏）
 
 ## 八、协作（何时派 L2 ／何时自己做 ／什么必须上报 CTO）
 

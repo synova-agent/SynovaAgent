@@ -29,9 +29,14 @@ K3 过审（⚪判据两条）
 
 不改域级件正文（只立纪律）
 
+❌ 不改 12 份域级 `AGENTS.md` 的判据正文（只立纪律／改 as_of）｜❌ 不碰 `scripts/audit/**`
+
 ## 七、🔴 域守则指针（**必须显式 read**，DSH 无法额外注入）
 
-见本包 handbook `包/P6-事实与入口件/README.md` §「域守则必读」；全表 `包/交叉矩阵-12守则×10包.md`。
+`docs/AGENTS.md`（**新文件须登记 DOCS-REGISTRY**）｜`memory/notes/AGENTS.md`｜（👁）`tests/control-tower/AGENTS.md`
+
+> 口径：**12 份域守则按"目录"切，10 个包按"职责"切 —— 正交** ⇒ 本清单是交集（全表 `handbook 包/交叉矩阵-12守则×10包.md`）
+> 🔴 **DSH 无法额外注入指定文件 ⇒ 必须显式 `read`**（不 read 就会漏）
 
 ## 八、协作（何时派 L2 ／何时自己做 ／什么必须上报 CTO）
 

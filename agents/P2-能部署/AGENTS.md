@@ -29,9 +29,14 @@ M1b（已合）｜U1 数据卫生（customer-config 只发模板骨架）
 
 🔴 不宣"运行期可卸"（U2）｜不宣"容器已修"（U4 无 docker）｜判据不用字节/sha
 
+❌ 不碰 `package.json`（红线）｜❌ 不碰 `src/sentinel/types.ts`／`src/server.ts`／`src/connectors/ima.ts`／`src/agent/cost-budget.ts`（M1b 域）｜❌ 不碰 `scripts/audit/**`｜❌ 不改 `Dockerfile` 之外的容器配置
+
 ## 七、🔴 域守则指针（**必须显式 read**，DSH 无法额外注入）
 
-见本包 handbook `包/P2-能部署/README.md` §「域守则必读」；全表 `包/交叉矩阵-12守则×10包.md`。
+`extensions/sentinels/AGENTS.md`（装载器读它）｜`extensions/AGENTS.md`（**6 根分发＋U1 只发模板骨架**）｜`memory/notes/AGENTS.md`｜（👁）`.gitea/AGENTS.md`
+
+> 口径：**12 份域守则按"目录"切，10 个包按"职责"切 —— 正交** ⇒ 本清单是交集（全表 `handbook 包/交叉矩阵-12守则×10包.md`）
+> 🔴 **DSH 无法额外注入指定文件 ⇒ 必须显式 `read`**（不 read 就会漏）
 
 ## 八、协作（何时派 L2 ／何时自己做 ／什么必须上报 CTO）
 
