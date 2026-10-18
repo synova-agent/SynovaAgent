@@ -29,9 +29,14 @@ scripts/control-tower/{check-merge-conditions.sh,probe-line-signals.ts}｜docs/*
 
 不接 CI 硬阻断（先 warn，且 warn 期必须落 PR 日志）
 
+❌ 不接 CI 硬阻断（先 warn，warn 期必须落 PR 日志）｜❌ 不碰 `scripts/audit/**`｜❌ 不改 `src/**`
+
 ## 七、🔴 域守则指针（**必须显式 read**，DSH 无法额外注入）
 
-见本包 handbook `包/P7-交付自证与真值/README.md` §「域守则必读」；全表 `包/交叉矩阵-12守则×10包.md`。
+`scripts/control-tower/AGENTS.md`｜`tests/control-tower/AGENTS.md`｜`docs/AGENTS.md`｜`memory/notes/AGENTS.md`｜（👁）`.gitea/AGENTS.md`
+
+> 口径：**12 份域守则按"目录"切，10 个包按"职责"切 —— 正交** ⇒ 本清单是交集（全表 `handbook 包/交叉矩阵-12守则×10包.md`）
+> 🔴 **DSH 无法额外注入指定文件 ⇒ 必须显式 `read`**（不 read 就会漏）
 
 ## 八、协作（何时派 L2 ／何时自己做 ／什么必须上报 CTO）
 

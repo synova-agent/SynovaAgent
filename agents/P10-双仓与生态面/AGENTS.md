@@ -29,9 +29,14 @@ P7（三信号探针）
 
 不许两边各挂一半账｜🔴 客户实例（`wani-baby` 4,121 B）不得进 GA 包（N2）
 
+❌ 不碰 `scripts/audit/**`｜❌ 不改 `src/**`／`extensions/**`｜🔴 客户实例（`customer-config/ontology-instances/wani-baby/**`）不得进 GA 包
+
 ## 七、🔴 域守则指针（**必须显式 read**，DSH 无法额外注入）
 
-见本包 handbook `包/P10-双仓与生态面/README.md` §「域守则必读」；全表 `包/交叉矩阵-12守则×10包.md`。
+`.gitea/AGENTS.md`｜`docs/AGENTS.md`｜`memory/notes/AGENTS.md`
+
+> 口径：**12 份域守则按"目录"切，10 个包按"职责"切 —— 正交** ⇒ 本清单是交集（全表 `handbook 包/交叉矩阵-12守则×10包.md`）
+> 🔴 **DSH 无法额外注入指定文件 ⇒ 必须显式 `read`**（不 read 就会漏）
 
 ## 八、协作（何时派 L2 ／何时自己做 ／什么必须上报 CTO）
 

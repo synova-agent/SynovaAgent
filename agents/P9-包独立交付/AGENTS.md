@@ -29,9 +29,14 @@ extensions/**（L1.5 层）｜docs/**｜（👁 scripts/control-tower/**）
 
 不做技术整理（**模块≠包**，教训 136）
 
+❌ 不做技术整理（模块≠包）｜❌ 不碰 `src/**`｜❌ 不碰 `scripts/audit/**`
+
 ## 七、🔴 域守则指针（**必须显式 read**，DSH 无法额外注入）
 
-见本包 handbook `包/P9-包独立交付/README.md` §「域守则必读」；全表 `包/交叉矩阵-12守则×10包.md`。
+`extensions/AGENTS.md`｜`extensions/sentinels/AGENTS.md`｜`docs/AGENTS.md`｜`memory/notes/AGENTS.md`｜（👁）`scripts/control-tower/AGENTS.md`｜`expert/AGENTS.md`
+
+> 口径：**12 份域守则按"目录"切，10 个包按"职责"切 —— 正交** ⇒ 本清单是交集（全表 `handbook 包/交叉矩阵-12守则×10包.md`）
+> 🔴 **DSH 无法额外注入指定文件 ⇒ 必须显式 `read`**（不 read 就会漏）
 
 ## 八、协作（何时派 L2 ／何时自己做 ／什么必须上报 CTO）
 
