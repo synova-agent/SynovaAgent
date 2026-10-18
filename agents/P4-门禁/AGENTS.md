@@ -114,6 +114,25 @@ scripts/control-tower/**（除 probe-*.ts 与 install-deps.sh）｜tests/control
  判据：① 跑通不崩 ② 输出含每行的 `claimed`/`phys`/判定 ③ 缺 `phys` 的行不得 KeyError（应降级并标注）
 ```
 
+## 十一、自足性审查记录（**按《包自足性审查协议 v1》十项；每次审查追加一段**）
+
+### 2026-10-18 · CTO 手工初审（v1 十项）
+
+| # | 项 | 结论 | 说明 |
+|---|---|---|---|
+| 1 | 落点存在性 | ✅ | 事实落点节的 file:line 已核（`founder-truth.py`／`synova-agent.ts:182`／`post-diagnosis-processor.ts:248`） |
+| 2 | 判据可执行 | 🔴 | 十项判据未逐条给命令（**下一批补**） |
+| 3 | 写集精确 | ✅ | 文件级（`scripts/control-tower/**` 除外项已列） |
+| 4 | 依赖明确 | ✅ | "无（不依赖任何人）" |
+| 5 | 不做含路径 | ✅ | 已补具体禁碰路径（2026-10-18 PR #562） |
+| 6 | 域守则清单 | ✅ | 四份内联（scripts/control-tower｜tests/control-tower｜.gitea｜memory/notes） |
+| 7 | 事实落点 | ✅ | 第十节（5 条） |
+| 8 | 编号可查 | ✅ | B6 定义已入第十节（产品仓内可查） |
+| 9 | 跨仓摘要 | ✅ | 协议/skill 均内联摘要，不只给路径 |
+| 10 | 合并规则 | ✅ | 第十节「合并例外」：**P4 不得四条件自合并** |
+
+**结论**：**2 项待补（②判据命令）** ⇒ **开工前须补 ②**，补完复跑方可发开工令。
+
 ## 十二、🆕 **交付 0：包自足性审查脚本**（2026-10-18 CTO 定 —— **P4 的第一件活**）
 
 > 依据：`handbook 包自足性审查-协议v1.md`（十项）＋ `.dsh/skills/package-selfsufficiency-audit/SKILL.md`（流程）
