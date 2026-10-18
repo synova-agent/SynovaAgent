@@ -180,7 +180,8 @@ status: proposed
 bash scripts/control-tower/check-merge-conditions.sh --selfcheck
 # 期望：exit 0；末行 `SELFCHECK-OK: 12/12`；子例 A 打印 `[selfcheck] A 全绿 ⇒ inner_exit=0 CAN-自合并 ③=ok(attested)`
 
-# N2 真仓四条件（四行证据 ＋ 机器行 ＋ 末行；今日全仓 ④ 必红，见 §4bis ④）
+# N2 真仓四条件（四行证据 ＋ 机器行 ＋ 末行；🔴 不写「全仓必红」——**逐 PR 现场判**：
+#    存量旧 PR 因不含当次 tip ⇒ ④ 红；本 PR 若含当次 tip ⇒ ④ 绿（但 ③ 无回执仍红 ⇒ 无 CAN））
 bash scripts/control-tower/check-merge-conditions.sh --pr 558
 # 期望：通常 exit 1（除非四条件恰好全绿）；逐条看哪条红，**不预设具体数值**；
 #       机器行 `MERGE-COND: no ①=ok ②=ok ③=no ④=no`；末行 `NO: ③ 已过独立复核, ④ 串行`
@@ -534,7 +535,7 @@ python3 -c "import sys;print(sys.version.split()[0])" && git rev-parse --short=9
  ❌ scripts/audit/**（K3 专属）｜❌ P4 三件（CTO 令①）｜❌ .gitea/**（CTO 令②）｜❌ src/**、extensions/**、.github/**
  ❌ 既有门禁件一行不改（verify-parallel.sh／check-dev-doc-write-set.sh／devdoc_writeset.py／
     merge_writeset_gate.py／check-board-truth.ts／ct-test-gate.sh／pre-commit-check.sh）
- ❌ agents/P7-交付自证与真值/AGENTS.md（附录 C 未批前不动）
+ ❌ agents/P7-交付自证与真值/AGENTS.md（**已随 #584 落盘**〔merge `147361cac`〕；只读引用，**不得再改**）
  ❌ 主树写码｜❌ git stash｜❌ 把 API 不可达当"无红"
  ❌ 交付件缺 typed error（bash：`fail "code: msg"` 统一出口）／缺"已知限制"节／缺判别力自检 ⇒ L1 不收
 ```
@@ -643,7 +644,8 @@ A.10 独立复核（**fresh 会话三轮**，零上下文、只读、自跑命�
      ① 623 行版 ⇒ **FAIL / 14 findings**（P7 逐条改写：③ 前提纠正／夹具契约／13→12 判定点／N4 base／数字 as_of／W3b 等）
      ② 729 行版 ⇒ **FAIL / 10 findings**（5 条阻断：夹具互斥／③ 级别互斥／§6 命中数／审批口径／裸数字）
      ③ 741 行版 ⇒ **FAIL / 6 findings**（一致性残留：§7 状态／proven 残留／过期落后数／A.10 自身／D1 字段／封面枚举）⇒ 本稿逐条收口
-     🔴 **本文件不是复核证据的存放处**（防双真源）：每轮 verdict／findings 由该轮复核会话产出，随 PR #581 评论留档
+     🔴 **本文件不是复核证据的存放处**（防双真源）：每轮 verdict／findings 以**该轮复核会话自身的输出**为准；**本文件不承诺任何证据存放点**（PR #581 的评论/review 当前为空，勿引用）
+     🔴 **最终口径**：**12 个判定点**（A/B/C/D1–D4/E/F/G/H/I）＋ **③ 单轨 T1 `attested`**（proven ⏸ 待 B6-a）
 ```
 
 ## 附录 B · 五条待裁 → **已裁**（创始人 2026-10-18；五条全部有结论，实现方按此执行，**不得再问、不得自行改口径**）
@@ -665,7 +667,7 @@ A.10 独立复核（**fresh 会话三轮**，零上下文、只读、自跑命�
 | B3 | 本件 §4bis ③ ＋ C1 限制 1 ＋ C3 | ✅ 已落（**单轨 attested**；proven 只写规格，⏸ 待 B6-a，见 B-6） |
 | B4 | 本件头字段 | ✅ 已落（Issue #582） |
 | B5 | 本件 C1 ＋ §4.2 D5 ＋ C3 | ✅ 已落 |
-| C | 同 B1（C-a 照批；C-b 现状栏 as_of 化） | ✅ **已落**：PR #584 已合；P7 自足性 ②⑦ 转绿（① 仍红＝判据件未建，按裁不修） |
+| C | 同 B1（C-a 照批；C-b 现状栏 as_of 化） | ✅ **已落**：PR #584 已合；P7 自足性 **②⑦ 转绿**（① 仍红＝缺 `scripts/control-tower/probe-line-signals.ts`（**下一批**）；**与 W1 无关，W1 合并后不会转绿**） |
 
 
 ## 附录 B-6 · 🆕 **需创始人一句话**（本节是 §〇 独立复核的产出，2026-10-18 新增）
@@ -682,7 +684,7 @@ A.10 独立复核（**fresh 会话三轮**，零上下文、只读、自跑命�
 
 ## 附录 C · P7 自身 ②⑦ 修复口径（**已批 ＋ 已落盘**：PR **#584** 已合入 `local-main`（merge `147361cac`）；本附录只留历史口径供对账）
 
-> 背景：`check-package-selfsufficiency.py --packages P7`（F13）实测 P7 行 `🔴 🔴 ✅ ✅ ✅ ✅ 🔴 ✅ ✅ ✅`；CTO 令③ 要求"顺手补自己的 ②⑦，口径你拟我批"。① 缺引用（`check-merge-conditions.sh` 尚未落地）**本批不修**——它要等实现件合并后才自然转绿。
+> 背景：`check-package-selfsufficiency.py --packages P7`（F13）实测 P7 行 `🔴 🔴 ✅ ✅ ✅ ✅ 🔴 ✅ ✅ ✅`；CTO 令③ 要求「顺手补自己的 ②⑦，口径你拟我批」。🔴 **① 的缺口是 `scripts/control-tower/probe-line-signals.ts`（下一批交付件），不是 W1** ⇒ **W1 合并后 ① 不会自动转绿**；本批按裁不修（只修 ②⑦）。
 
 **C-a ② 判据可执行 —— §三「完成判据」改法（原文 → 新文）**：
 
