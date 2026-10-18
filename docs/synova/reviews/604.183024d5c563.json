@@ -1,0 +1,89 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 604,
+  "patch_fingerprint": "sha256:183024d5c563f6ffd0a8588649066ae0f7a9af9c0b1bda1675596669996256b6",
+  "author": "p7-l1（本修复作者；L1 单件小活）",
+  "reviewer": "fresh 会话 72363951（全量 PASS @0191bd224）＋ ecd2c7fa（增量快审 PASS @9881e09c6）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "增量范围",
+      "cmd": "git diff 0191bd224..HEAD --stat",
+      "result": "pass",
+      "evidence": "2 文件 19+/6−（+Note 生效时点）：断言白名单化、can 行 ③=${tok3} 同源、form_ok() 复用；无判定语义改动"
+    },
+    {
+      "id": "block 修复红绿（前一轮复核的 FAIL 原因）",
+      "cmd": "副本 tok3=\"ok(attested)\"→\"ok\" 后 --selfcheck",
+      "result": "pass",
+      "evidence": "修前 SELFCHECK-OK: 12/12；修后 SELFCHECK-FAIL（判据：机器行 ③ 形态非法）"
+    },
+    {
+      "id": "warn 修复红绿（假级别）",
+      "cmd": "副本 tok3→\"ok(fake)\" 后 --selfcheck",
+      "result": "pass",
+      "evidence": "修前 12/12 绿（上一轮复核实测）；修后 SELFCHECK-FAIL: A —— 白名单关掉假级别"
+    },
+    {
+      "id": "① state 判据覆盖",
+      "cmd": "elif [ \"$state\" != \"success\" ] → false 后跑 W2",
+      "result": "pass",
+      "evidence": "修后 K9 红：结果 12 通过, 1 失败（修前 12 通过 0 失败 = 零覆盖）"
+    },
+    {
+      "id": "白名单正则边界",
+      "cmd": "手工合成 7 条 MERGE-COND 行喂 form_ok 正则",
+      "result": "pass",
+      "evidence": "合法：③=ok(attested)（带空格）/③=no（EOL）/③=no 后接 ④=/无 ③= 的 degraded 行；非法：③=ok / ③=ok(fake) —— 7/7 符合预期"
+    },
+    {
+      "id": "基准不回归",
+      "cmd": "--selfcheck；W2；pre-commit-check.sh",
+      "result": "pass",
+      "evidence": "SELFCHECK-OK: 12/12；结果: 12 通过, 0 失败（含 K9）；13 组全过"
+    },
+    {
+      "id": "只读与范围",
+      "cmd": "git status --porcelain；git diff --name-only gitea/local-main..HEAD",
+      "result": "pass",
+      "evidence": "空；恰 3 文件（W1/W2/Note），无 audit/.gitea/P4 三件"
+    },
+    {
+      "id": "死代码删除安全",
+      "cmd": "复核者读码：die_degraded 唯一读 MACHINE_TAIL（:199）且全部调用点早于 ③/④",
+      "result": "pass",
+      "evidence": "删 ③/④ 赋值不丢输出；①/② 仍活（cond2/cond3 降级会打印）"
+    },
+    {
+      "id": "CT-40 配对",
+      "cmd": "SYNO_TEST_ARM=1 SYNO_CT_STAGED=… ct-test-gate.sh",
+      "result": "pass",
+      "evidence": "SYNC-OK: 控制塔脚本配对测试全绿 (1 个脚本)"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "note",
+      "where": "memory/notes/implemented/2026-10-19-p7b-603-machine-line-assertions.md §依据",
+      "what": "Note 记「修后 SELFCHECK-FAIL: B」是 #603 时点；#604 白名单化后同一改坏先被 case A 的 needle 命中，现报 `SELFCHECK-FAIL: A`（复核 ecd2c7fa 指出，结论仍 FAIL）。本 PR 不动 Note（改 Note 会改补丁指纹 ⇒ 需重做复核），随下一批清理时更正为「#603 时点 B／#604 起 A」。"
+    },
+    {
+      "severity": "note",
+      "where": "tests 的 form_ok() ＋ script 的 run_case 白名单负路径",
+      "what": "白名单的负路径（③=ok(fake)）无隔离红例：没有子例天然产出假级别，改坏 tok3 会先被 needle 拦 ⇒ form_ok 自身判别力未被自检覆盖（AGENTS.md §8）。复核已用合成探针验证其判别力更强（ok(fake)→FLAG、ok(attested)/no→allow、裸 ok→FLAG）；建议下一批加一条不依赖 needle 的合成行探针。"
+    },
+    {
+      "severity": "note",
+      "where": "规格 §4bis ③-2.2 R1（未修，报 CTO）",
+      "what": "实现 R1 回退找任意旧指纹回执，规格只认 <head>:<规范路径> ⇒「回执后改码」报 R3+R7 而非 R1；多份旧回执时 tail -n 1 取值不确定。方向更严仍 exit 1，但改了规格点名的规则。"
+    },
+    {
+      "severity": "note",
+      "where": "规格 §4bis ② 信息级（未修，报 CTO）",
+      "what": "实现只打一行指针，未真调 devdoc_writeset.py --overlap-a/--overlap-b。"
+    }
+  ],
+  "issued_at": "2026-10-19T02:45:00+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md）＋ 两轮 fresh 复核（全量 PASS ＋ 增量快审）＋ 作者侧 3 组定点改坏"
+}

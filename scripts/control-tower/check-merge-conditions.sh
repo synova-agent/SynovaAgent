@@ -666,11 +666,8 @@ cond3_review() { # ③ 已过独立复核（T1 attested 单轨）
       [ -n "$line" ] && fail "$line"
     done < "$WORK/rv_self.txt"
   fi
-  if [ "$RV_V" = "ok" ]; then
-    MACHINE_TAIL="${MACHINE_TAIL} ③=ok(attested)"
-  else
-    MACHINE_TAIL="${MACHINE_TAIL} ③=no"
-  fi
+  # （#603：此处原写 MACHINE_TAIL 的 ③ 赋值＝死代码 —— 只有 die_degraded 打印 MACHINE_TAIL，
+  #   ③ 赋值之后无降级点 ⇒ 永不输出，铁律 37。机器行统一由 main() 的 tok3 出，见下）
   say "③ 已过独立复核（T1 attested） ${RV_V}$( [ "$RV_V" = "ok" ] && printf '(attested)') (fp=${FP:0:12})"
   flush_fails
   flush_warns
@@ -757,7 +754,7 @@ cond4_serial() { # ④ 串行（S1 基线新 ＋ S2 队首）
     fail "S2 前置就绪 PR #${q} 编号更小 ⇒ 先合它"
   fi
   if [ "$s1" = "ok" ] && [ "$s2" = "ok" ]; then SR_V="ok"; else SR_V="no"; fi
-  MACHINE_TAIL="${MACHINE_TAIL} ④=${SR_V}"
+  # （#603：原 MACHINE_TAIL 的 ④ 赋值同样是死代码 —— cond4 无降级点，永不输出）
   say "④ 串行 ..................... ${SR_V} (S1=${s1} S2=${s2} 就绪集=${ready:-空})"
   flush_fails
 }
@@ -942,7 +939,7 @@ PY
     if [ "$JSON_MODE" = "1" ]; then
       emit_json "can" 0
     else
-      say "MERGE-COND: can ①=ok ②=ok ③=ok(attested) ④=ok"
+      say "MERGE-COND: can ①=ok ②=ok ③=${tok3} ④=ok"
       say "CAN-自合并"
     fi
     exit 0
@@ -1232,6 +1229,15 @@ run_case() { # run_case <case> <want-exit> <want-last-line> [needle...]
   if [ -z "$bad" ] && [ "$case" = "I" ]; then
     if grep -Fq -- "CAN-自合并" "$out" || grep -Fq -- "②=ok" "$out"; then
       bad="降级时不得输出 CAN-自合并 / ②=ok"
+    fi
+  fi
+  # 🔴 #603 输出级反例（裁 B3-1 硬条件）：任何 MERGE-COND 行出现**裸** ③=ok（无 attested 级别）⇒ 失败
+  #    根因：机器行 ③ 由 tok3 运行时拼接 ⇒ 只钉 needle 抓不住「改坏 tok3」；本断言直接看**输出**。
+  # 🔴 #603 白名单式（复核 #604 warn：只抓"裸 ok"会漏 `ok(fake)` 这类假级别）：
+  #    凡出现 `③=` 的行，必须形如 `③=ok(attested)` 或 `③=no`（后接空白/行尾）。
+  if [ -z "$bad" ]; then
+    if grep -E '③=' "$out" | grep -Evq '③=(ok\(attested\)|no)([[:space:]]|$)'; then
+      bad="机器行 ③ 形态非法（只允许 ok(attested) / no）"
     fi
   fi
   if [ -z "$bad" ] && [ -s "$out" ]; then
