@@ -24,7 +24,7 @@ description: 活规格撰写（原 📋 synova-devdoc 预设的能力载体，20
 - 规格是**独立交付物**，有自己的复核：过 `dev-doc-gatekeeper`（Q0-Q3 / 写集 / DS 清单 / Done 可证伪）+ K3 可核
 - 规格**必须先落 main 可读**，实现方不得引用未落 main 的规格路径（小队队长预设禁令原文）
 
-## 11 节活规格模板（逐节非空，缺节即退回）
+## 13 节活规格模板（逐节非空，缺节即退回）
 
 1. **北星锚定**（front-matter：本任务服务于哪条产品线的哪个验收点）
 2. **背景与现状证据**（每条事实性前提附 `命令 + 原始输出`；禁"我认为"）
@@ -37,6 +37,30 @@ description: 活规格撰写（原 📋 synova-devdoc 预设的能力载体，20
 9. **依赖与前置**（前置未满足 → 停，不抢跑）
 10. **风险与上限**（写集互斥、重型验证串行、PR ≤12 文件 + 单域）
 11. **DS 清单**（delivery statements：逐条可核验的交付声明，供 K3 复审）
+12. **🔴 既有基础盘点**（**禁止重复建设**；2026-10-18 创始人令，缺本节 ⇒ **不许开工**）
+    - 逐条格式：`<能力> | grep 命令 | 命中 N | 结论：复用 / 扩展现有 / 确需新建（说明为何不能复用）`
+    - **必查四类**：`scripts/control-tower/`（现 **136 件**：check-* 62／probe-* 28）／
+      `scripts/doc-system/`·`workflow/`·`integration/`／相关 skill（`.dsh/skills/*/SKILL.md`）／**既有约定**
+    - 🔴 **四个必须复用的既有约定**（重复实现即不合格）：
+      ① 三态退出码（0/1/**2**）—— `pre-dispatch-check.sh`
+      ② `@降级` 契约 ＋ `SYNO_GATE_DEGRADED_LOG`（字段 time/component/code/phase/retryable）—— `check-gate-integrity.sh`
+      ③ UTF-8 强制（D732）　④ 判别力自检（改坏必红能真变红）
+    - 写"确需新建"但**未说明为何不能复用** ⇒ **退回**
+13. **🔴 交接件：四行开场包**（**交创始人转 `synova-squad-lead`**；缺一行不许开工）
+    ```
+    ① 批次名：<例：P4-A类第1条>
+    ② 写集（逐文件；**由 L1 划，L2 不得扩**）：
+       - <path>（改什么）
+       - <path>（改什么）
+    ③ 判据（含"改坏必红"怎么做）：
+       - 命令：<...>　期望：<...>
+       - 反例：<改坏 X ⇒ 必红，命令+期望输出>
+    ④ 域守则指针（本批次涉及哪几份 AGENTS.md，**必须显式 read**）：
+       - <path/AGENTS.md>
+    ```
+    - 🔴 **L1 不得自己执行**：待办 **≥2 件** 或 单件 **>300 行 / >5 文件** ⇒ 必须走本交接
+    - 🔴 **禁止**：用 `subagent` 代替小队 ／ 自己 `spawn_teammate` 组队 ／ 下场写码（避免上下文污染）
+
 
 ## 验收（撰写完成后自检）
 
@@ -44,6 +68,7 @@ description: 活规格撰写（原 📋 synova-devdoc 预设的能力载体，20
 bash scripts/workflow/check-brief-parseable.sh <brief>      # 可解析
 bash scripts/control-tower/pre-dispatch-check.sh <规格件>    # 机械项 + 引用可核验
 bash scripts/workflow/check-dev-doc-write-set.sh            # 写集 vs 实际改动漂移 0
+  # ④ DSH 代码标准 8 项（缺则 L1 不收）：见 .dsh/skills/dsh-code-standards/SKILL.md
 ```
 
 ## 历史
