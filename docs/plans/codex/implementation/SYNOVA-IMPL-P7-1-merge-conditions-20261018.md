@@ -13,7 +13,8 @@ status: proposed
 > 🔴 **本件是执行小队的唯一规格源（dev doc）**。口径已由创始人开工令 ＋ 本件 §4bis 裁死；**实现方不得自行改口径**。
 > 🔴 **本件是文档，不是实现**：无产品代码、无 `.gitea/**`、无既有门禁脚本改动 ⇒ 可四条件自合（创始人令「dev doc 单独 PR」）。
 > 🔴 **冻结**：派单时给 **blob SHA**，实现方引用 blob，不引用可变工作树。
-> 🔴 **CTO 本轮三条排期令已逐条落到 §7**（不动 P4 三件／不自行接 CI／顺带修 P7 自身 ②⑦ 口径待批）。
+> 🔴 **CTO 本轮三条排期令已逐条落到 §7**（不动 P4 三件／不自行接 CI／顺带修 P7 自身 ②⑦ —— 口径已批，另 PR 落盘）。
+> 🔴 **创始人 2026-10-18 五裁已落附录 B/B-2**（B1 批／B2 确认／B3 接受带两硬条件／B4 追认／B5 不批）；**实现方不得再问、不得自行改口径**。
 
 ---
 
@@ -47,7 +48,7 @@ status: proposed
 |---|---|---|
 | 1 | 谁派 / 依据 | 创始人 2026-10-18 开工令（本包第一个交付＝dev doc）＋ CTO 本轮排期令三条；`agents/P7-交付自证与真值/AGENTS.md` §三；Issue **#582**（2026-10-18 立卡） |
 | 2 | 归属包 / 产品线 | **P7 交付自证与真值**（治理线·自证）｜域：`scripts/control-tower/`、`tests/control-tower/`、`docs/synova/reviews/` |
-| 3 | 写集 | 见 §2（W1–W5，**文件级、两两不重叠**）；🔴 其中 **W2 需 CTO 批一行写集扩**（见附录 B-1） |
+| 3 | 写集 | 见 §2（W1–W5，**文件级、两两不重叠**）；🔴 **W2/W5 的写集枚举已由创始人批（B1）**，守则 §四 另 PR 落盘 |
 | 4 | 判据 | 见 §4（正常／降级／反例三条）＋ DS-1…DS-12 |
 | 5 | 依赖 | 无（本包 §五「无」）；实现侧前置见 §7 |
 | 6 | 不做什么 | 见 §1.2（**逐条路径**）＋ §7 红线 |
@@ -94,7 +95,7 @@ status: proposed
 **目标**：一条命令对**任意 PR/diff** 判「四条件」（① CI 全绿 pending=0 ② 零写集重叠 ③ 已过独立复核 ④ 串行）绿/红，输出 `CAN-自合并` / `NO: <哪条>` / `degraded:`，退出码三态。
 
 **可观测结果**（三条，逐条可跑）：
-1. `--pr <N>` 在真仓上给出四行条件结论 ＋ 一行机器行 `MERGE-COND: can|no|degraded ①=… ②=… ③=… ④=…`；
+1. `--pr <N>` 在真仓上给出四行条件结论 ＋ 一行机器行 `MERGE-COND: can|no|degraded ①=ok ②=ok ③=ok(attested) ④=ok`（🔴 **③ 绿必须带 `attested`，禁只写 `ok`** —— 裁 B3-1）；
 2. `--selfcheck` 在零网络的临时仓上跑 6 子例，全绿输入 ⇒ `inner_exit=0 CAN-自合并`，逐条改坏 ⇒ 逐条必红；
 3. 任一条件失败时，输出**具体失败点**（哪个 context pending／哪个文件撞哪个 PR／哪条 R 规则不满足／落后多少 commits）。
 
@@ -106,7 +107,7 @@ status: proposed
 - ❌ `src/**`、`extensions/**`、`.github/**`（非本包域）
 - ❌ 既有门禁件：`verify-parallel.sh`、`check-dev-doc-write-set.sh`、`merge_writeset_gate.py`、`devdoc_writeset.py`、`check-board-truth.ts`、`ct-test-gate.sh`——**只读复用，一行不改**
 - ❌ `scripts/control-tower/probe-line-signals.ts`（三信号探针＝**下一批**，本件不建）
-- ❌ 不改 `agents/P7-交付自证与真值/AGENTS.md`（②⑦ 修复口径见**附录 C 待批**，未批不落）
+- ❌ 不改 `agents/P7-交付自证与真值/AGENTS.md`（②⑦ 修复口径**已批**（附录 C），但**按创始人令单开一个 PR 落盘**，不混本件）
 - ❌ 不实现「自动合并」：本件只**判**，不 `merge`、不 `push`（合并仍由人/会话执行）
 - ❌ 不做「已合 PR 之间的写集重叠」（＝既有 `verify-parallel.sh --ci-pr`）、不做「单 PR 夹带」（＝既有 `merge_writeset_gate.py`）
 
@@ -181,6 +182,7 @@ bash scripts/control-tower/check-merge-conditions.sh --selfcheck
 bash scripts/control-tower/check-merge-conditions.sh --pr 558
 # 期望：exit 1（今日）；逐条：① ✅ ② ✅ ③ 🔴（缺回执）④ 🔴（S1 落后 57 commits）；
 #       机器行 `MERGE-COND: no ①=ok ②=ok ③=no ④=no`；末行 `NO: ③ 已过独立复核, ④ 串行`
+#       全绿形态（夹具 A）：`MERGE-COND: can ①=ok ②=ok ③=ok(attested) ④=ok`（裁 B3-1：③ 禁只写 ok）
 
 # N3 配对测试
 bash tests/control-tower/check-merge-conditions.test.sh
@@ -206,6 +208,10 @@ GITEA_TOKEN= SYNO_GITEA_TOKEN= HOME=/nonexistent bash scripts/control-tower/chec
 
 # D4 --json 合法
 bash scripts/control-tower/check-merge-conditions.sh --pr 558 --json | python3 -m json.tool >/dev/null && echo JSON-OK
+
+# D5 离线 ⇒ ① 恒 exit 2（裁 B5：不引本地 CI 缓存，禁产假绿）
+bash scripts/control-tower/check-merge-conditions.sh --pr 558 --offline; echo "exit=$?"
+# 期望：exit 2；`degraded: --offline 无 CI 真值（不引本地缓存，裁 B5）`
 ```
 
 ### 4.3 🔴 反例（**改坏必红，六条，缺一不可**）
@@ -232,7 +238,7 @@ bash scripts/control-tower/check-merge-conditions.sh --pr 558 --json | python3 -
 | DS-2 | 改坏任一条件 ⇒ 必红且给原始输出 | `--selfcheck` 子例 B–E | `inner_exit=1` ＋ 末行点名该条件 |
 | DS-3 | 「看不见」不当绿/红 | 子例 F | `inner_exit=2` ＋ `degraded:` |
 | DS-4 | 三态退出码 | `bash tests/.../check-merge-conditions.test.sh` | 覆盖 0/1/2 三种 exit |
-| DS-5 | 输出末行契约 | `--pr <N>` 末行 | ∈{`CAN-自合并`,`NO: …`}；恒有 `MERGE-COND:` 机器行 |
+| DS-5 | 输出末行契约 | `--pr <N>` 末行 | ∈{`CAN-自合并`,`NO: …`}；恒有 `MERGE-COND:` 机器行；**③ 绿写 `③=ok(attested)`，禁只写 `ok`**（裁 B3-1） |
 | DS-6 | ③ 凭据机器可判、非人转述 | 回执 schema 校验 ＋ `R1..R8` | 逐条可复跑（§4bis ③） |
 | DS-7 | ③ 防重放（改一个字节即红） | 子例 D 变体 2 | `R3 指纹不匹配`、退出码 1 |
 | DS-8 | ③ 时序（复核后不得再改码） | 子例 D 变体 3 | `R7 回执之后仍有代码改动`、退出码 1 |
@@ -314,7 +320,9 @@ fp  = sha256( git diff --no-color -M --full-index --binary <mb> <head> -- . ':(e
 | R6 | 非自我复核 | `reviewer` 与 `author` 均非空 ∧ `reviewer != author` | `R6 reviewer 与 author 相同` |
 | R7 | **时序** | 回执引入提交 `C`（`git log --diff-filter=A --format=%H -1 <head> -- <path>`）：`git diff --name-only C <head>` 只允许 `docs/synova/reviews/**` | `R7 回执之后仍有代码改动: <文件>` |
 | R8 | 证据非空 | 每条 `checks[]` 的 `cmd` 与 `evidence` 非空 | `R8 checks[i] 缺 cmd/evidence` |
-| R9 | **告警级**（不改判定） | 回执引入提交的 `%ae` ∈ PR 代码提交 `%ae` 集合 ⇒ 打 `warn: 身份未分离（本机 git 身份不可信）` | 仅打印 |
+| R9 | **告警级**（不改判定；**必须打印**，裁 B3-2） | 回执引入提交的 `%ae` ∈ PR 代码提交 `%ae` 集合 ⇒ 打 `warn: 身份未分离（本机 git 身份不可信）` | **恒打印**（不因判定通过而省略） |
+
+**③-4 输出口径（裁 B3-1，硬要求）**：③ 通过时机器行与逐条行**必须**写 `③=ok(attested)`；**禁写 `③=ok`** ——「声明」不得被显示成「证明」（教训 178-c 同族：检查器绿 ≠ 检查有效）。R9 的 `warn: 身份未分离` **必须打印**（裁 B3-2），不因判定通过而省略。
 
 **③-3 生成流程（复核会话执行，**本件不实现自动合并**）**：
 
@@ -338,7 +346,7 @@ S2 队首  ：在 open PR 中，凡「①∧②∧③∧S1 全绿」者取编号
 注：S2 排除 S1 不绿者 —— 否则「陈旧 PR」会死锁队列（陈旧者必须先 rebase，那是它自己的 ④ 红）
 ```
 
-**今日存量实况（必须写进回执的例外清单，不得当"修到绿"）**：14/14 open PR 的 **S1 全红**（落后 57–115 commits）⇒ **今天不会有任何 `CAN-自合并`**；这是**正确行为**，不是 bug。故本件**不接 CI 硬阻断**（CTO 令②＋P7 守则 §六）。
+**存量实况（as_of `616162548` 实测，必须写进回执的例外清单，不得当"修到绿"）**：14/14 open PR 的 **S1 全红**（落后 57–115 commits）⇒ **今天不会有任何 `CAN-自合并`**；这是**正确行为**，不是 bug。故本件**不接 CI 硬阻断**（CTO 令②＋P7 守则 §六）。
 
 ---
 
@@ -410,7 +418,7 @@ python3 -c "import sys;print(sys.version.split()[0])" && git rev-parse --short=9
 | 分支从 `gitea/local-main` 取（非主树） | `git merge-base --is-ancestor gitea/local-main HEAD; echo $?` ⇒ `0` | 停，重取树 |
 | Gitea 可达且有 token | `curl -s -o /dev/null -w %{http_code} -H "Authorization: token $(cat $HOME/gitea/.win-push-token)" $SYNO_GITEA_API/repos/synova-agent/SynovaAgent/pulls?state=open` ⇒ `200` | 停，报 L1（本件**不许**把 API 不可达降级成"没红"） |
 | python3 ≥3.9 ∧ bash ≥3.2 ∧ git ≥2.20 | `python3 --version`／`bash --version \| head -1`／`git --version` | 停（`git diff --full-index --binary`、`:(exclude)` pathspec 需 ≥2.20） |
-| **CTO 批 W2 写集扩 1 行** | 附录 B-1 已批（回执一句即可） | **停**：不批则不写测试 ⇒ CT-40 硬拦 ⇒ 本件不可合 |
+| **W2/W5 写集枚举（裁 B1）** | 附录 B/B-2：**已批**；守则 §四 由 P7 另行 PR 落盘 | 停：守则 PR 未合 ⇒ 不写测试（CT-40 硬拦） |
 | Issue 立卡 | Gitea Issue #582 存在且 open（`curl $SYNO_GITEA_API/repos/synova-agent/SynovaAgent/issues/582`） | 停，报 L1 |
 
 **🔴 CTO 本轮三条排期令（逐条落到路径）**：
@@ -466,7 +474,8 @@ python3 -c "import sys;print(sys.version.split()[0])" && git rev-parse --short=9
          --base <ref>        （缺省 SYNO_MERGE_BASE | local-main）
          --repo-root <path>  （缺省＝脚本自身位置推导）
          --json              机器可读（stdout 仅 JSON）
-         --offline           不访问网络（用本地 refs/p7cmp/pr/<n>；CI 状态缺 ⇒ exit 2）
+         --offline           不访问网络（用本地 refs/p7cmp/pr/<n>）；🔴 **① 恒 exit 2**（无 API 即无 CI 真值；
+                             **不引本地 CI 缓存** —— 裁 B5：缓存过期即产假绿）
          --diff-fingerprint  只打印 ③-0 的 fp（供回执填写）
          --print-receipt-template  打印回执骨架 JSON（不写文件）
          --selfcheck         判别力自检（临时仓＋夹具，零网络）
@@ -511,7 +520,8 @@ python3 -c "import sys;print(sys.version.split()[0])" && git rev-parse --short=9
 - **何时可撤（规则级）**：当仓库改用**原生合并队列**（Gitea merge queue/第二账号 review 强制）时，③ 的回执机制与 ④ 的 S2 队首逻辑**同时退役**，只保留 ①。
 - **撤除动作**：删 W1／W2／W3，并在 `agents/P7-交付自证与真值/AGENTS.md` 记一次口径变更（**改判据真源归 CTO**）。
 - **前提变更不得带病续跑**：若 CI 从 `local-gates` 换成多 workflow（status context 名变化）⇒ ① 的"全 context success"判据仍成立，但**必须重跑 `--selfcheck`**；若 Gitea 升级后 `/commits/<sha>/status` 语义变化（例如"无 status 返回 `state:unknown`"）⇒ 必须同步 F4 的 exit 2 判据，否则"看不见"会被判绿。
-- **③ 的失效条件（更严）**：一旦出现**第二个人类/Agent 账号**能做原生 review ⇒ 必须先切原生 review（更硬的凭据），**不得两套并存**（双真源）。
+- **③ 的失效条件（更严，裁 B3-2）**：一旦出现**第二个人类/Agent 账号**能做原生 review ⇒ 必须先切原生 review（更硬的凭据），**不得两套并存**（双真源）；届时 ③ 由 `ok(attested)` **升级为 `ok(proven)`**，本收据**降为辅助**，且输出**禁再把 attested 写成 ok**。
+- **① 的离线边界（裁 B5）**：本件**不引本地 CI 状态缓存** —— 缓存过期即产假绿，正是要消灭的形态；`--offline` 时 ① **恒 exit 2**（2＝检查自身失败，不是"通过"）。将来若 CI 侧提供**带时间戳且可校验**的离线快照，另出规格再议，**本件不做**。
 
 ---
 
@@ -528,15 +538,30 @@ A.7 F11 指纹稳定：两次 sha256 同值 22c39c01…91afa；加 :(exclude)doc
 A.8 F13 P7 自身矩阵：①🔴（缺引用）②🔴（缺命令/反例 token）⑦🔴（缺「事实落点」节）＝ 3 红
 ```
 
-## 附录 B · 例外清单（**不自行处理，报 CTO**）
+## 附录 B · 五条待裁 → **已裁**（创始人 2026-10-18；五条全部有结论，实现方按此执行，**不得再问、不得自行改口径**）
 
-1. **W2 写集扩 1 行**：`tests/control-tower/check-merge-conditions.test.sh` 不在 `agents/P7-交付自证与真值/AGENTS.md` §四写集枚举内，但 **CT-40 硬拦要求它存在**（F9）。⇒ 请 CTO 一句话：**批**（写集改为 `scripts/control-tower/{check-merge-conditions.sh,…}｜tests/control-tower/{check-merge-conditions.test.sh}｜docs/**｜memory/notes/**`）／**不批**（则本件退回重出）。
-2. **④ 口径（S1∧S2）需 CTO 确认**：本件裁 S1（tip 是 head 祖先）∧ S2（①②③S1 全绿集合中编号最小）。今日 **14/14 S1 红** ⇒ 近期无 `CAN-自合并`。若 CTO 只要 S1 或只要 S2，请一句话，本件改口径后重派（**口径属 CTO，不属 L1**）。
-3. **③ 的身份局限**：单一 Gitea 账号 ⇒ 只能做"形式层独立＋防重放＋时序"，**不能证明签名者非作者**（C1 已知限制 1）。请 CTO 确认**接受该局限**（否则需先立"第二账号/签名"前置，本件无法落地）。
-4. ~~未立卡~~ **已消**：Issue **#582** 已于 2026-10-18 立卡（P7 自建，任务号 P7-1；若 CTO 认为应由 CTO 立卡，请在回执点名，后续批次改口径）。
-5. **`--offline` 的 CI 数据源**：离线时无 API ⇒ ① 只能 exit 2。若期望离线也能判 ①，需引入本地 CI 状态缓存（**新增写集**），本件不做，请 CTO 裁是否需要。
+| # | 事项 | 裁决 | 落到哪 |
+|---|---|---|---|
+| **B1** | W2 写集扩 1 行 | ✅ **批**。CT-40 是铁律，没有配对测试＝违规；P7 守则 §四 的枚举漏了 `tests/`，那是**枚举不全，不是越界**。<br>🔴 **附带条件**：§四 **一次改清** —— 把 **W2**（`tests/control-tower/check-merge-conditions.test.sh`）与 **W5**（`.claude/task-briefs/2026-10-18-p7-merge-conditions.md`）**一并写进枚举**，别让下一批再问一次（教训 175-b） | 守则 §四（**另 PR**，不混本件）；本件 §2.1 写集不变 |
+| **B2** | ④ 口径 S1 ∧ S2 | ✅ **确认**。S1 保证"合进去的东西在最新 tip 上跑过 CI"；S2 保证同一时刻只有一个队首；S2 排除 S1 红者**避免死锁**（特别认可）。<br>🔴 特别认可：**S1 用 `git ls-remote` 取远端真值、禁本地 stale ref**（本仓 `origin/local-main` 实测已落后 **351** commits） | 本件 §4bis ④（口径不变，已加 as_of） |
+| **B3** | ③ 身份局限 | ✅ **接受**（单账号下要求密码学证明＝要求不可能的，会永久堵死），**带两个硬条件**：<br>🔴 **一**：机器**不许把"声明"显示成"证明"** —— ③ 通过必须输出 `③=ok(attested)`，**不许只写 `③=ok`**（教训 178-c 同族）；<br>🔴 **二**：局限必须落 `docs/synova/reviews/README.md` 的 **Known Limitations** ＋ 写进 **C3 失效条件**（将来有第二账号/签名 ⇒ 升级 `proven`，本收据降为辅助）；**R9「身份未分离」warn 保留且必须打印** | 本件 **§4bis ③-4**／C1 限制 1／**C3** |
+| **B4** | Issue #582 自建 | ✅ **追认**（先例：裁 209 D② 允许 P4 自建 Issue）；任务号 **P7-1** 成立 | 本件头字段（已回填） |
+| **B5** | `--offline` 引本地 CI 缓存 | ❌ **不批**。为离线判 ① 引入本地 CI 状态缓存 ＝ **新增写集 ＋ 新增陈旧路径** ⇒ 缓存过期就产假绿（正是这两天在消灭的形态）。**离线 `exit 2` 是正确的三态降级**（2＝检查自身失败，不是"通过"）。<br>将来若 CI 侧提供**带时间戳且可校验**的离线快照再议，**本件不做** | 本件 **C1（`--offline`）／§4.2 D5／C3** |
 
-## 附录 C · P7 自身 ②⑦ 修复口径（**待 CTO 批；未批不落盘**）
+## 附录 B-2 · 五裁落盘状态（防"批了没落"）
+
+| 裁决 | 落点 | 状态 |
+|---|---|---|
+| B1 | `agents/P7-交付自证与真值/AGENTS.md` §四 | ⏳ **另 PR**（只改该文件一处，含 C-a/C-b） |
+| B2 | 本件 §4bis ④ | ✅ 已落（口径不变，加 as_of） |
+| B3 | 本件 §4bis ③-4 ＋ C1 限制 1 ＋ C3 | ✅ 已落 |
+| B4 | 本件头字段 | ✅ 已落（Issue #582） |
+| B5 | 本件 C1 ＋ §4.2 D5 ＋ C3 | ✅ 已落 |
+| C | 同上 B1 那个 PR（C-a 照批；C-b 现状栏 as_of 化） | ⏳ 同上 |
+
+---
+
+## 附录 C · P7 自身 ②⑦ 修复口径（**创始人 2026-10-18 已批：C-a 照批；C-b 修一行——现状栏禁写死数字**）
 
 > 背景：`check-package-selfsufficiency.py --packages P7`（F13）实测 P7 行 `🔴 🔴 ✅ ✅ ✅ ✅ 🔴 ✅ ✅ ✅`；CTO 令③ 要求"顺手补自己的 ②⑦，口径你拟我批"。① 缺引用（`check-merge-conditions.sh` 尚未落地）**本批不修**——它要等实现件合并后才自然转绿。
 
@@ -562,15 +587,15 @@ A.8 F13 P7 自身矩阵：①🔴（缺引用）②🔴（缺命令/反例 token
 ```diff
 +## 七之三、🔴 事实落点（条目 → 可复跑落点 → 现状）
 +
-+| # | 事实 | 落点（可复跑） | 现状 |
++| # | 事实 | 落点（可复跑） | 现状（**as_of `<commit>`；由上一列命令现场取，禁写死裸数字**） |
 +|---|---|---|---|
-+| 1 | 判据件 `check-merge-conditions.sh` | `git ls-tree -r --name-only HEAD -- scripts/control-tower/check-merge-conditions.sh \| wc -l` | 0（P7-1 交付前） |
-+| 2 | ④ 串行存量红 | `git ls-remote gitea refs/heads/local-main` × `git merge-base --is-ancestor <tip> <head>` | open PR 14/14 红（落后 57–115） |
-+| 3 | Gitea 原生 review 恒空 | `curl -H "Authorization: token …" $SYNO_GITEA_API/repos/synova-agent/SynovaAgent/pulls/<N>/reviews` | `[]` |
-+| 4 | ③ 凭据载体目录 | `git ls-tree -r --name-only HEAD -- docs/synova/reviews \| wc -l` | 0（P7-1 交付前） |
++| 1 | 判据件 `check-merge-conditions.sh` | `git ls-tree -r --name-only HEAD -- scripts/control-tower/check-merge-conditions.sh \| wc -l` | `0 @616162548`（实现件合并后应为 1） |
++| 2 | ④ 串行存量红 | `git ls-remote gitea refs/heads/local-main` × `git merge-base --is-ancestor <tip> <head>` | 现场取；`@616162548` 时为 14/14 红 |
++| 3 | Gitea 原生 review 恒空 | `curl -H "Authorization: token …" $SYNO_GITEA_API/repos/synova-agent/SynovaAgent/pulls/<N>/reviews` | 现场取；`@616162548` 时为 `[]` |
++| 4 | ③ 凭据载体目录 | `git ls-tree -r --name-only HEAD -- docs/synova/reviews \| wc -l` | `0 @616162548`（实现件合并后应为 1） |
 ```
 
-**批准方式**：CTO 回一句「**C 批**」即可；批准后由**实现小队**在同一 PR 内落这一处（属 P7 判据真源，**L2 只按本附录字面落，不得改写**）。
+**落盘方式（创始人定）**：**单开一个 PR，只改 `agents/P7-交付自证与真值/AGENTS.md` 一处**（含 B1 的 §四 补枚举 ＋ C-a ＋ C-b），B 类文档 ⇒ **P7 自己做**，四条件自合，**不混进实现批**（一条 PR 只做一件事）。实现小队**不落这一处**。
 
 ## 附录 D · 派单内部一致性自检（教训：同一单两条要求对同一路径互斥）
 
@@ -581,7 +606,7 @@ A.8 F13 P7 自身矩阵：①🔴（缺引用）②🔴（缺命令/反例 token
 | 「全绿 ⇒ exit 0」 vs 今日实况 | 真仓今日**不可能绿**（③ 无回执、④ 存量红）⇒ 判据绑定**夹具子例 A**（全绿输入），真仓只要求"红得有据"；两者对象不同、不互斥 |
 | ③ 指纹 vs 回执文件 | 指纹排除 `docs/synova/reviews/**` ⇒ 回执自身的加入不改变指纹，**无循环依赖**（F11 实测） |
 | ④ S1 vs S2 | S2 的就绪集**要求 S1 绿** ⇒ 陈旧 PR 不阻塞他人，**不死锁** |
-| CT-40 配对 vs 写集 | W2 不可省（F9 硬拦）⇒ 已在封面/§2.1 列明，并单列附录 B-1 请批 |
+| CT-40 配对 vs 写集 | W2 不可省（F9 硬拦）⇒ 已在封面/§2.1 列明；**裁定 B1 已批**（含 W5 一并入枚举） |
 | CTO 令① vs 本件 | P4 三件在 §1.2、§7 两处**逐条点名禁碰**；W1–W5 与它们零交集 |
 | CTO 令② vs 本件 | 本件**不产**任何 `.gitea/**` 改动、不设计 CI 接线（§7 明写"要接 CI 先停下报 CTO"） |
 
