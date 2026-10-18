@@ -29,7 +29,7 @@
 
 不新开治理线｜不碰别人分支
 
-❌ 不改任何代码文件｜❌ 不 force-push｜❌ 不碰别人未授权分支
+❌ **不改任何代码文件**（`src/**`／`extensions/**`／`scripts/**` 一律不动）｜❌ **不 force-push**｜❌ **不碰别人未授权分支**｜❌ **不碰 `scripts/audit/**`**（K3 专属）｜❌ 不改 `package.json`／`tsconfig.json`
 
 ## 七、🔴 域守则指针（**必须显式 read**，DSH 无法额外注入）
 
