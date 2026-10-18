@@ -20,7 +20,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   + bash 退位: 只做物理验证 (符号存在? 文件存在? 语法合法?)
 #   + agent 进位: 语义判断 (调用链正确? 降级诚实? 阶段合理?)
 #
-# 13 组:
+# 12 组:
 #   1. 类型安全 + 硬编码数据    (as any / as never / as unknown as 跳过注释行 + 硬编码业务字段)
 #   2. 测试质量                  (catch 无 log + 测试配对[可 deferred] + 桩测试)
 #   3. Secrets                   (全工作区 + .claude/ + 暂存区 + .env)
@@ -49,6 +49,8 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; RE
 #   用 `sed -n '42,44p;47p'` 提取计数器/颜色行后单独 source；赋值行不被提取 ⇒
 #   该片段里 QUIET_SUCCESS 为空 ⇒ ${QUIET_SUCCESS:-0} 走**打印**语义（夹具断言 ✅）。
 QUIET_SUCCESS="${SYNO_QUIET_SUCCESS:-1}"
+# #595: 组计数真值 = 实际执行的横幅数（运行时）；汇总行读 GROUP_DONE，禁写字面总数。
+GROUP_DONE=0
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ═══ D1148（批 3）: 声明类门禁 15 → 3（降噪，改坏即红）═══
@@ -74,7 +76,7 @@ QUIET_SUCCESS="${SYNO_QUIET_SUCCESS:-1}"
 #   退役（删检查点 + 本注释留痕）: opt_check「PRD 对照: Done 标准引用 PRD 章节」（261 命中/0 阻断）。
 #   降噪手段: 成功路径静默（SYNO_QUIET_SUCCESS，缺省 1）——保留失败点名与 CI annotation；
 #     组 7a 以 QUIET_SUCCESS=0 前缀显式保留 ✅ 行（gate-failopen-net.test.sh 判据输入）。
-#   不动的接线（夹具依赖，改前 grep 实证）: 12 个 `── 组 N/13` 标签、`全部 13 组通过`、
+#   不动的接线（夹具依赖，改前 grep 实证）: 12 个 `── 组 N` 标签、汇总行为运行时计数（`全部 ${GROUP_DONE} 组通过`）、
 #     `跳过 12 组` 横幅、组 7a ✅ 行、D1/D2 调用点（doc-registry-gate.test.sh W1/W2）、
 #     G12c 调用点（doc-commit-exempt.test.sh T11）、Notes 迁移调用点、check-pr-budget 调用点。
 #
@@ -362,7 +364,7 @@ fi
 # V4.5.1: 缓存 git diff 结果 — 本机每次 git 调用 ~1s，脚本内 10+ 次调用是超时主因
 # D387 (CT-34): 测试注入缝 (只读, 默认真实 git, fail-closed)
 # D390 (CT-P1-1, K3 D387 P1-1): 武装守卫 — 注入缝仅 SYNO_TEST_ARM=1 时生效。
-# 生产环境缝关闭: 组合 SYNO_SECRETS_ROOT 的无痕迹全 13 组旁路被堵死
+# 生产环境缝关闭: 组合 SYNO_SECRETS_ROOT 的无痕迹全 12 组旁路被堵死
 # (K3 实测: SYNO_GIT_CACHED_*=docs/x.md + SYNO_SECRETS_ROOT=/tmp/empty → 全部门禁跳过且零审计)。
 if [ "${SYNO_TEST_ARM:-0}" = "1" ]; then
   # 测试/审计注入缝 (SYNO_TEST_ARM=1 双确认才可注入)
@@ -393,7 +395,7 @@ STAGED=$(echo "$GIT_CACHED_NAMES" | grep '\.ts$' | grep -v node_modules || true)
 
 # ═══ CT-34 (D387): 纯文档提交豁免 — 创始人 2026-08-16 决策 ═══
 # 文档(docs/、.claude/task-briefs/、memory/、task-state/、根级 *.md/*.html/*.txt)
-# 仅为跨机同步信息, 不与代码同跑 13 组门禁。豁免 12 组, 仅保留 Secrets(D312)。
+# 仅为跨机同步信息, 不与代码同跑全量门禁。豁免 12 组, 仅保留 Secrets(D312)。
 # 白名单 = 目录 + 扩展名双约束:
 #   ✅ docs/ 下仅 *.md|*.html|*.txt; .claude/task-briefs/ 下 *.md; memory/ 下 *.md;
 #      task-state/ 下 *.json|*.md(任务登记); 根级 *.md|*.html|*.txt
@@ -404,7 +406,7 @@ STAGED=$(echo "$GIT_CACHED_NAMES" | grep '\.ts$' | grep -v node_modules || true)
 # 契约 (铁律 47):
 #   @input  — $1: STAGED_ALL（git diff --cached --name-only 全暂存文件, 换行分隔）
 #   @output — stdout: 1 = 纯文档提交; 0 = 非纯文档（含任一白名单外文件/空输入）
-#   @fail-closed — 正则匹配失败/空输入 → 0（走全量 13 组, 不静默放行, D328）
+#   @fail-closed — 正则匹配失败/空输入 → 0（走全量 12 组, 不静默放行, D328）
 #   @error  — 无异常路径（纯 bash 字符串匹配）
 DOC_PREFIX_RE='^(docs/.*\.(md|html|txt)$|\.claude/task-briefs/.*\.(md|html|txt)$|memory/.*\.(md|html|txt)$|task-state/.*\.(json|md)$|[^/]+\.(md|html|txt)$)'
 is_doc_only() {
@@ -640,7 +642,7 @@ DECL_SRC="$STAGED_SRC"
 
 echo ""
 echo "═══════════════════════════════════════════════════════════"
-echo "  Loop Engineering V4.5.1 — pre-commit (13 组 + 免疫 + plan-integrity)"
+echo "  Loop Engineering V4.5.1 — pre-commit (12 组 + 免疫 + plan-integrity)"
 echo "═══════════════════════════════════════════════════════════"
 echo ""
 
@@ -654,7 +656,8 @@ echo ""
 #   历史: 47 次 as any 导致运行时崩溃。2026-05 engine-core 拆分中，20 个桥接文件
 #         大量使用 as any 绕过类型检查，17 处 CJS require() 在 ESM 下崩溃。
 # ═══════════════════════════════════════════════════════════════════
-echo -e "${CYAN}── 组 1/13: 类型安全 + 硬编码数据 ──${RESET}"
+echo -e "${CYAN}── 组 1: 类型安全 + 硬编码数据 ──${RESET}"
+GROUP_DONE=$((GROUP_DONE+1))
 
 # 1a. as any 零容忍 — 只拦本次变更新增的 as any（存量独立治理）
 # 方案1(挪CI): 本地用暂存区 diff；CI 用 base...HEAD diff（SYNO_DIFF_BASE 注入）
@@ -708,7 +711,8 @@ par_collect_quiet deprecated-mapping "$PAR_DEPRECATED" || true
 #   历史: 4 次接线失败 — 新 export 有单元测试但从未被 import。
 #         铁律 11 — 静默降级事故 (catch 空吞异常，生产环境无日志)。
 # ═══════════════════════════════════════════════════════════════════
-echo -e "${CYAN}── 组 2/13: 测试质量 ──${RESET}"
+echo -e "${CYAN}── 组 2: 测试质量 ──${RESET}"
+GROUP_DONE=$((GROUP_DONE+1))
 
 # 2a. empty catch 无 log
 EMPTY=""
@@ -815,7 +819,8 @@ fi
 #   历史: .env 真实 API Key 暴露仓库 + 飞书 App Secret 暴露 (2026-06)。
 #         旧门禁只扫暂存区 → 磁盘上的真实 Key 从未被发现，直到被备份软件同步出去。
 # ═══════════════════════════════════════════════════════════════════
-echo -e "${CYAN}── 组 3/13: Secrets ──${RESET}"
+echo -e "${CYAN}── 组 3: Secrets ──${RESET}"
+GROUP_DONE=$((GROUP_DONE+1))
 par_collect_quiet secrets "$PAR_SECRETS" || HARD_FAIL=$((HARD_FAIL + 1))
 
 # ═══════════════════════════════════════════════════════════════════
@@ -828,7 +833,8 @@ par_collect_quiet secrets "$PAR_SECRETS" || HARD_FAIL=$((HARD_FAIL + 1))
 #   历史: 4 次接线失败 — 组件通过单元测试但从未被生产代码调用。
 #         v3.5 追加拿线深度检查: 开发者 import 了函数但没调用，绕过了原第 5 项。
 # ═══════════════════════════════════════════════════════════════════
-echo -e "${CYAN}── 组 4/13: 接线完整性 ──${RESET}"
+echo -e "${CYAN}── 组 4: 接线完整性 ──${RESET}"
+GROUP_DONE=$((GROUP_DONE+1))
 
 # 4a. 新 export 被引用 (V3.8 简化: bash 只验证"被引用"这个物理事实)
 # Anthropic 原则: bash 退回到物理事实——"这个符号在文件外部出现过吗？"
@@ -887,7 +893,8 @@ hard_check "接线深度: 新 export 必须被调用(非仅 import)" "${DEEP_FAI
 #   为什么铁律 47 是警告而非阻断: task brief 可能包含历史遗留声明。但警告让问题
 #         始终可见——不可能"没注意到"。
 # ═══════════════════════════════════════════════════════════════════
-echo -e "${CYAN}── 组 5/13: 架构边界 + 桥接文件 ──${RESET}"
+echo -e "${CYAN}── 组 5: 架构边界 + 桥接文件 ──${RESET}"
+GROUP_DONE=$((GROUP_DONE+1))
 
 # 5a. 跨层引用检测 (原 8)
 CROSS_LAYER=""
@@ -973,7 +980,8 @@ warn_check "铁律 47: 声称完成须 grep 物理证明" "${CLEANUP_CLAIM:-}"
 #         v3.5 的 --no-verify 日志显示 15 次 pre-commit 失败，其中多次是因为
 #         task brief 字段不完整而非实质质量问题。
 # ═══════════════════════════════════════════════════════════════════
-echo -e "${CYAN}── 组 6/13: Task Brief (6 核心字段) ──${RESET}"
+echo -e "${CYAN}── 组 6: Task Brief (6 核心字段) ──${RESET}"
+GROUP_DONE=$((GROUP_DONE+1))
 
 # ═══ D537 #2 (D537r2): 主树提交禁止门禁 ═══
 # 判据（CTO 裁定 §三bis）: 拦 = 在主树（pwd -P 后 toplevel == ${SYNO_MAIN_TREE}，默认 $HOME/SynovaAgent）提交;
@@ -1240,7 +1248,8 @@ fi
 #   历史: DiagnosticModule 注册表已删除但引用未清理 (agent-tool-registry.ts:386
 #         listModules() 运行时崩溃)。--no-verify 在 v2.5 被频繁使用 (38 项检查 90s)。
 # ═══════════════════════════════════════════════════════════════════
-echo -e "${CYAN}── 组 7/13: 架构合规 ──${RESET}"
+echo -e "${CYAN}── 组 7: 架构合规 ──${RESET}"
+GROUP_DONE=$((GROUP_DONE+1))
 
 # 7a. DiagnosticModule 禁止 (原 6)
 # D937: 原实现三处缺陷（K3 可核）:
@@ -1394,7 +1403,8 @@ soft_check "数据流: 路由文件须含 API 调用证据" "${DATA_FLOW_FAIL:-}
 #         同样的模式: 声称文件驱动 → 有人为了方便在 src/ 加了个 enum → 没人发现 →
 #         越来越多硬编码回归 → 一年后文件驱动只剩文档里的空壳。
 # ═══════════════════════════════════════════════════════════════════
-echo -e "${CYAN}── 组 8/13: 文件驱动架构完整性 (V3.9) ──${RESET}"
+echo -e "${CYAN}── 组 8: 文件驱动架构完整性 (V3.9) ──${RESET}"
+GROUP_DONE=$((GROUP_DONE+1))
 # V3.9: 能力验收 CI — 验收测试必须通过 CI
 # D1148 转旁路: 原 `par_collect … || v5_soft "验收 CI (V3.9)"`（软提示，CI 转硬）→ 旁路观测。
 #   理由: 该检查与提交内容弱相关（跑的是 acceptance 用例集，非本次变更）；
@@ -1423,8 +1433,9 @@ if [ "$AC_RC" -ne 0 ]; then
 fi
 par_collect_quiet file-driven "$PAR_FILE_DRIVEN" || v5_soft "文件驱动架构完整性 (V3.6)"
 
-# ═══ 组 9/12: 契约门禁 (D257) ═══
-echo -e "${CYAN}── 组 9/13: 契约门禁 ──${RESET}"
+# ═══ 组 9: 契约门禁 (D257) ═══
+echo -e "${CYAN}── 组 9: 契约门禁 ──${RESET}"
+GROUP_DONE=$((GROUP_DONE+1))
 CONTRACT_DIR="$ROOT/.codex/contracts"
 CONTRACT_FAIL=""
 if [ -d "$CONTRACT_DIR" ] && [ "$(ls -A "$CONTRACT_DIR" 2>/dev/null)" ]; then
@@ -1461,7 +1472,7 @@ soft_check "契约门禁: 声明产出须在暂存区" "${CONTRACT_FAIL:-}"
 #     理由是判据的**主体**——"生成器对真源跑 ⇒ 逐块一致"——正是我要的那条；
 #     若只在登记件进暂存区时才跑，则在**任何非登记件提交上都不产证据**（判据形同虚设）。
 #     为纪念"门禁过重 ⇒ 超时 ⇒ --no-verify"的历史病根，配**有界执行**（超时 ⇒ 124 ⇒ 报判不了）。
-#   🔴 本块**不新增组号**——不破坏 `── 组 N/13` 标签与「全部 13 组通过」横幅（既有夹具依赖）。
+#   🔴 本块**不新增组号**——不破坏 `── 组 N` 标签与「全部 ${GROUP_DONE} 组通过」汇总行（既有夹具依赖）。
 _tsx_ok="$(command -v node >/dev/null 2>&1 && echo yes || echo no)"
 BP_OUT=""
 BP_RC=0
@@ -1501,8 +1512,9 @@ else
   echo "{\"time\": \"$(date -u +%Y-%m-%dT%H:%M:%S+00:00)\", \"component\": \"pre-commit-group9-block-paths\", \"reason\": \"node 不可用 — 块级 paths 对账跳过 (degraded)\"}" >> "$ROOT/.codex/control-tower/logs/degraded-events.log" 2>/dev/null || true
 fi
 
-# ═══ 组 10/12: V3 CP3 — 条件区域 + 测试覆盖 (D260) ═══
-echo -e "${CYAN}── 组 10/13: V3 流水线健康度 ──${RESET}"
+# ═══ 组 10: V3 CP3 — 条件区域 + 测试覆盖 (D260) ═══
+echo -e "${CYAN}── 组 10: V3 流水线健康度 ──${RESET}"
+GROUP_DONE=$((GROUP_DONE+1))
 
 CRITERIA_MAP="$ROOT/.codex/criteria-code-map.json"
 if [ -f "$CRITERIA_MAP" ]; then
@@ -1574,8 +1586,9 @@ else
   soft_pass "G10/G11: criteria-code-map.json 不存在(跳过)"
 fi
 
-# ═══ 组 12/12: Task Scope 一致性 — 暂存文件 vs Q2 范围 ═══
-echo -e "${CYAN}── 组 12/13: Task Scope 一致性 ──${RESET}"
+# ═══ 组 12: Task Scope 一致性 — 暂存文件 vs Q2 范围 ═══
+echo -e "${CYAN}── 组 12: Task Scope 一致性 ──${RESET}"
+GROUP_DONE=$((GROUP_DONE+1))
 
 TODAY=$(date +%Y-%m-%d)
 # 修复 (D291): 组12 只用当前 session 的 brief, 避免并发 session 的 brief 干扰暂存文件匹配
@@ -1608,7 +1621,7 @@ fi
 TODAY_DASH=$(date +%Y-%m-%d)
 # D503→D506: 时区容差 — brief 认领窗口扩到 ±1 天。Mac(UTC+8) 傍晚建的 brief 日期前缀
 # 对 CI runner(UTC) 是"明天"，单日过滤致 G12 在 CI 上无人认领 → 全部误报"不在 Q2 范围"
-# （D502 实证：本地 13 组全过、CI 红 7 处）；跨午夜连续作业同理。
+# （D502 实证：本地 12 组全过、CI 红 7 处）；跨午夜连续作业同理。
 # D506 修正（K3 审计 P0-1）: 旧实现把 DAY_WINDOW_DAYS（含 |）放进 case 模式 ——
 #   case 的 pattern 在 parse-time 解析，变量展开是 runtime，展开结果里的 | 是字面量
 #   不是 alternation → 匹配恒失败 → ALL_TODAY_BRIEFS 空 → G12 整段跳过 soft_pass（fail-open）。
@@ -1865,10 +1878,11 @@ hard_check "G12d: 生成物单点生成门禁 (D458)" "${GENERATED_VIOLATION:-}"
 #   代价（如实）: 提交端不再自动校验对照表**格式**（语义正确性本就无机器判据，靠 K3 人读）。
 #   复活须过 K3（判据变更）。关联: memory/notes/proposed/2026-10-07-d1219-position-legislation.md
 
-# ═══ 组 13/13: 技能同步一致性 (.claude/skills ↔ .dsh/skills, D370) ═══
+# ═══ 组 13: 技能同步一致性 (.claude/skills ↔ .dsh/skills, D370) ═══
 # 背景: DSH 技能发现根 .dsh/skills（rank 100）不读 .claude/skills → 单源复制 + 漂移门禁。
 # fail-closed (D328): 检查脚本 exit 2 = 检查执行失败 → 同样硬阻断, 不与"通过"混同。
-echo -e "${CYAN}── 组 13/13: 技能同步一致性 ──${RESET}"
+echo -e "${CYAN}── 组 13: 技能同步一致性 ──${RESET}"
+GROUP_DONE=$((GROUP_DONE+1))
 SKILL_FILES_STAGED=$(echo "$STAGED_ALL" | grep -E "\.claude/skills/|\.dsh/skills/" || true)
 if [ -n "$SKILL_FILES_STAGED" ]; then
   SKILL_SYNC_OUT=$(bash "$ROOT/scripts/workflow/sync-dsh-skills.sh" --check 2>&1)
@@ -1884,7 +1898,7 @@ else
   soft_pass "G13: 无技能文件变更(跳过)"
 fi
 
-# ═══ D782: 文档真相防线 D1/D2（附加检查；不并入 13 组编号——同 D734 接入模式）═══
+# ═══ D782: 文档真相防线 D1/D2（附加检查；不并入 12 组编号——同 D734 接入模式）═══
 # 背景: K3 2026-09-14 权威文档一致性专项审计 §7.2 收割 2/3——D1 check-doc-truth.sh
 #   与 D2 doc-registry-gate.sh 2026-08 建成即零调用（M3「机制建成未接线」第 3 次复发：
 #   D329 P2-2 首次），W1/W2 接线断言（tests/doc-system/doc-registry-gate.test.sh L64-65）
@@ -1897,8 +1911,8 @@ fi
 #     —— doc-registry-gate.test.sh W1/W2 是**接线断言**（grep 本文件），删调用点即判红。
 #   代价（如实记录）: 未登记文档 / 导航层文档漂移不再阻断 CI 提交（原 CI strict 下会红）。
 #     ↳ D1171（P0-5）已撤回该代价: 三处 bypass_run 恢复 v5_soft（本地软/CI 硬），见下方 D1171 注释块。
-# 为何不动 13 组编号: 「✅ 全部 13 组通过」自声明行是 check-doc-truth.sh C2 的真值
-#   来源，改组数 = 连锁打破 AGENTS/CLAUDE/LOOP 的「13 组」声明（审计 T1 实证该链）。
+# 为何不动组编号: 组数真值 = `── 组 N` 横幅数（check-doc-truth.sh C2 数横幅），
+#   改组数 = 连锁打破 AGENTS/LOOP 的组数声明（审计 T1 实证该链）。
 # fastlane 通道（bypass.log 单文件提交）不经过本块——该通道语义即最小化，CI 为权威。
 # 性能: D1 grep 4 个导航文件 + D2 ls-files/diff-cached，实测 <1s（D782 验收 ≤+5s）。
 echo -e "${CYAN}── D782: 文档真相防线（D1 真相验证 + D2 登记门禁）──${RESET}"
@@ -1934,13 +1948,13 @@ else
   self_fail_missing_script "D782 D2 登记门禁" "scripts/doc-system/doc-registry-gate.sh"
 fi
 
-# ═══ D734: PR 预算门禁（附加检查；不并入传统 13 组编号）═══
+# ═══ D734: PR 预算门禁（附加检查；不并入传统 12 组编号）═══
 # 背景: 冲突概率 ∝ 改动大小 × 分支存活时间 —— D721 一个 PR 背三类门禁问题挂半天；
 #   K3 审计分支落后 main 差点回退他人成果。
 # 接线取舍（派单 §二.2 要求执行方给理由）: 派单给的是「pre-commit 新增一组 或 CI quality job
 #   一步」二选一 —— 派单红区已明列 .github/workflows/ci.yml（#520 刚改过，避免撞车）→
 #   CI 侧不可用，故选 pre-commit。
-# 为何不并入 13 组编号: 改总组数会打破 tests/control-tower/fastlane-bypass-only.test.sh 对
+# 为何不并入组编号: 改总组数会打破 tests/control-tower/fastlane-bypass-only.test.sh 对
 #   「跳过 12 组」的断言（pre-commit-check.sh:343 的快速通道横幅），而那个测试文件不在
 #   D734 写集白名单内（创始人硬要求「写集白名单外一律不动」）→ 以额外命名的检查块接入，
 #   组数与横幅语义均不变。
@@ -1966,7 +1980,7 @@ fi
 # 依据：D734 是"PR 预算"——对着 **PR 的 base** 判才有意义。
 #   本地 CI 的基线是 GitHub 的旧 main（停在 05a6591c4），拿"集成分支账本总额"去判（实测 100 件/115 件白名单外）
 #   ⇒ **必然恒红** ⇒ 红灯失去信息量 ⇒ "被绕过的门禁 = 没有门禁"（历史病根）。
-# 执法位置改回：① 提交时软提示 ② 开 PR 时由审查人/CTO 人工判（13 组其余照常硬判）。
+# 执法位置改回：① 提交时软提示 ② 开 PR 时由审查人/CTO 人工判（12 组其余照常硬判）。
 # ⚠️ 实测教训：上一版只在 workflow 里设了 SYNO_SKIP_PR_BUDGET=1，**但本文件从未读它** ⇒ 开关形同虚设（本次修复补上）。
 if [ "${SYNO_SKIP_PR_BUDGET:-0}" = "1" ]; then
   echo -e "${CYAN}── PR 预算门禁 (D734) ──${RESET}"
@@ -2024,7 +2038,7 @@ else
   soft_check "DSH 断面一致性 (D943)" "${_DSH_ANCHOR_HITS}"
 fi
 
-# ═── K12-13（#196）内容面耦合门禁 CC1–CC4（附加检查；不并入 13 组编号——同 D782/D734 接入模式）──
+# ═── K12-13（#196）内容面耦合门禁 CC1–CC4（附加检查；不并入 12 组编号——同 D782/D734 接入模式）──
 # 门禁: scripts/check-content-coupling.sh（判据源: 院方《extensions内容面规范-v0.1》§3.5）
 # 为何接入: 既有 check-architecture.sh 对 extensions/ **零覆盖**
 #   （门禁头注释实测 `grep -c extensions scripts/check-architecture.sh` = 0）⇒ 引擎/内容边界无执法方。
@@ -2084,7 +2098,7 @@ if [ "$HARD_FAIL" -gt 0 ]; then
   echo ""
   exit 1
 else
-  echo -e "  ${GREEN}✅ 全部 13 组通过${RESET}"
+  echo -e "  ${GREEN}✅ 全部 ${GROUP_DONE} 组通过${RESET}"
   [ "$WARN_COUNT" -gt 0 ] && echo -e "  ${YELLOW}⚠️  ${WARN_COUNT} 项警告 (不阻断)${RESET}"
   [ "$SOFT_COUNT" -gt 0 ] && echo -e "  ${YELLOW}⚠ V5: ${SOFT_COUNT} 项软提示（详情见上）——CI 为权威，本地不阻断${RESET}"
   echo "═══════════════════════════════════════════════════════════"
