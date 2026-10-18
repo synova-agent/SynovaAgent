@@ -73,6 +73,60 @@ jobs:
           #   🔴 **不动任何 job `name:`**（12 必需 context 的唯一产出者）
           PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash scripts/control-tower/check-block-paths.sh || exit $?
           PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" SYNO_CI=1 bash scripts/pre-commit-check.sh
+      - name: ①d 门禁本体自检（清单 ＋ diff 豁免）
+        run: |
+          cd /Users/wane/.ci-work/SynovaAgent
+          # 目的（P4 · 2.5 S1 / Issue #586）：门禁本体（受保护路径清单）此前可被普通 PR 改掉
+          #   ⇒ 本步核两件事：① 清单自身完整（条数 / pin / approvers）；② 本次 diff 若触碰
+          #   受保护路径，必须有带理由、带裁定号、且由批准人提交的豁免。
+          #   检查器契约（三态退出码 0/1/2）见 `scripts/control-tower/check-gate-protection.sh` 头部。
+          #
+          # 🔴 BASE 解析链（spec §S1-e）：SYNO_BASE_REF → GITHUB_BASE_REF → gitea/local-main
+          #   · 本步块内不写 GitHub 镜像远端的分支名（自证脚本 ⑪ 对本步块做 grep 硬判）；
+          #     该镜像已断且落后 351+ commits（实测）⇒ 拿陈旧 base 算 diff 只会得到假红/假绿。
+          #   · 仍不可解析时**不猜、不降级**：把 canonical 名交给检查器 ⇒ 它判 exit 2（fail loud）。
+          BASE=""
+          if [ -n "${SYNO_BASE_REF:-}" ]; then
+            BASE="$SYNO_BASE_REF"
+          elif [ -n "${GITHUB_BASE_REF:-}" ]; then
+            BASE="$GITHUB_BASE_REF"
+          else
+            BASE="gitea/local-main"
+          fi
+          # 裸分支名规范化：裸名会解析到 CI 克隆自带的本地分支（clone 后不再更新，可能陈旧）
+          #   ⇒ 与 canonical 分支同名的裸名，一律换成下面刚物化的 canonical 引用。
+          case "$BASE" in
+            local-main) BASE="gitea/local-main" ;;
+          esac
+          echo "①d base = $BASE"
+          #
+          # 🔴 canonical ref 物化（2026-10-18 实测事实：CI 克隆工作区只有唯一远端，且它 = 本机 Gitea、
+          #   不是 GitHub 镜像 ⇒ canonical 名在 CI 里不可解析；不物化则本步恒 exit 2、阻断全部合并）。
+          #   条件刻意收窄：只有 canonical 不可解析 **且** 远端恰 1 个时才 fetch
+          #   （多远端环境 = 开发机，那里 canonical 引用本就存在 ⇒ 不 fetch、不猜）。
+          if ! git rev-parse --verify -q gitea/local-main >/dev/null 2>&1; then
+            REMOTES="$(git remote 2>/dev/null || true)"
+            N_REMOTES="$(printf '%s\n' "$REMOTES" | grep -c . || true)"
+            echo "canonical ref gitea/local-main 不可解析；远端数=${N_REMOTES:-0}"
+            if [ "${N_REMOTES:-0}" -eq 1 ]; then
+              ONLY_REMOTE="$(printf '%s\n' "$REMOTES" | head -1)"
+              if git fetch -q "$ONLY_REMOTE" '+refs/heads/local-main:refs/remotes/gitea/local-main'; then
+                echo "已物化 refs/remotes/gitea/local-main（from 远端 ${ONLY_REMOTE}）"
+              else
+                echo "::warning title=①d base 物化失败::fetch 远端 $ONLY_REMOTE 失败；交检查器判 E_BAD_BASE（exit 2）"
+              fi
+            else
+              echo "::warning title=①d base 不可解析::远端数 != 1，跳过物化；交检查器判 E_BAD_BASE（exit 2）"
+            fi
+            echo "canonical 物化后 = $(git rev-parse --short gitea/local-main 2>/dev/null || echo '<仍不可解析>')"
+          fi
+          #
+          # 🔴 语义澄清（spec §7 Known Limitations 5，禁写成「push 也拦了」）：
+          #   push 到 local-main 时 base == HEAD ⇒ diff 为空 ⇒ 本步只做清单完整性 ＋ pin；
+          #   真正拦截在 pull_request 腿（required status check `local-gates / gates (pull_request)`）。
+          #
+          # `|| exit $?` 原样保留三态（0 通过 / 1 真红 / 2 检查自身失败）—— 禁把三态折叠成单一退出码。
+          bash scripts/control-tower/check-gate-protection.sh --changed-base "$BASE" || exit $?
       - name: ①b 看板真值（交付未回填检测 · CTO 2026-10-11 立）
         run: |
           cd /Users/wane/.ci-work/SynovaAgent
