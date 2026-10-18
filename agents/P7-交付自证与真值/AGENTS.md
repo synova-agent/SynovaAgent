@@ -89,6 +89,45 @@ scripts/control-tower/{check-merge-conditions.sh,probe-line-signals.ts}｜docs/*
 你一旦下场实施，上下文就被实现细节占满，**失去"全局视角 ＋ 验收能力"**；
 而**验收能力是 L1 存在的唯一理由**（判据你出、通过与否归 L1 → CTO → K3）。
 
+
+## 八之三、🔴 **开工前必做两件事**（2026-10-18 创始人令：禁止重复建设 ＋ 对齐 DSH 代码标准）
+
+### ① 先查基础（**禁止重复建设**）
+**开工前必须盘一遍"有没有现成的"**，并在 dev doc 里留**一节「既有基础盘点」**：
+```
+ 盘点范围（至少这四类）：
+  · `scripts/control-tower/`（现 **136 件**：check-* 62／probe-* 28／verify 12／baseline 6）
+  · `scripts/doc-system/`｜`scripts/workflow/`｜`scripts/integration/`
+  · 相关 skill（`.dsh/skills/*/SKILL.md`）
+  · **既有约定**（不算"件"，但必须遵守）
+ 输出格式（每条一行，**命令＋命中＋结论**）：
+  · `<能力> | grep -rn "<关键词>" scripts/ .dsh/skills/ | <命中 N 处> | 结论：复用 / 扩展现有 / 确需新建（理由）`
+```
+**🔴 必须复用的四个既有约定**（重复实现即不合格）：
+```
+ ① **三态退出码**（0 通过／1 真红／**2 检查自身失败**）—— 见 `scripts/control-tower/pre-dispatch-check.sh`
+ ② **`@降级` 契约 ＋ `SYNO_GATE_DEGRADED_LOG`**（degraded 日志字段 time/component/code/phase/retryable）—— 见 `check-gate-integrity.sh`
+ ③ **UTF-8 强制**（D732）—— 见 `pre-dispatch-check.sh` 头部
+ ④ **判别力自检**（"改坏必红"能够真的变红）—— 见 `check-gate-integrity.sh`／`check-verifiable-done.sh`
+```
+🔴 **判据**：dev doc 缺「既有基础盘点」节 ⇒ **不许开工**；盘点结论写"确需新建"但**未说明为何不能复用** ⇒ **退回**。
+
+### ② 代码质量对齐 **DSH 标准**（学人家的写法，不是自由发挥）
+```
+ 【结构】单件脚本/模块：**头部契约注释** `@input / @output / @exit / @degraded`（铁律 47）
+ 【错误】**Typed error**（带 `code`）—— 对齐 DSH 的 `class TeamError extends HarnessError`；
+        禁裸 `raise Exception("…")`／`except: pass`
+ 【越限】**Bounds that fail loud** —— 越界报 **typed error**，**绝不静默复用/降级**
+ 【权限】**Explicit authority** —— 每个入口写明"谁能调"（对齐 DSH "Every service method takes the exact live calling Agent"）
+ 【说明】**必须有「已知限制（Known Limitations）」节** —— 明确写"做不到什么、为什么"
+ 【设计说明】长篇/复杂件要有一句**"一个分离 ＋ N 条承诺"**式的设计哲学（对齐 DSH Design philosophy）
+ 【测试】与实现配对（CT-40：`<name>.<sh|py>` ↔ `<name>.test.sh`），**含三态＋改坏必红**用例
+ 【README/文档】若产出长期件：`Summary → Use（When to choose it / 最简可用配置 / What success looks like）
+        → Understand the implementation（Design philosophy / **Source map 表** / 实现节）
+        → **Known Limitations**`
+```
+🔴 **判据**：交付件缺 typed error／缺"已知限制"节／缺判别力自检 ⇒ **L1 不收**；独立复核须**逐条核这 8 项**。
+
 ## 九、回执（三信号 ＋ 过程件位置）
 
 > 🔴 **过程件（在飞／回执／状态）不写判据** —— 防双真源
