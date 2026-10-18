@@ -1,0 +1,102 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 597,
+  "patch_fingerprint": "sha256:8937990d78abea29bc94a0f643528d2f86945d25001ed484318d751031859f41",
+  "author": "synova-squad-lead 小队（enc-w1/enc-w2；git %ae=k12@local；PR 作者账号 win-push）",
+  "reviewer": "p7-l1（P7 包负责人·独立验收；未参与实现）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "写集越界",
+      "cmd": "git diff --name-only d64fa879f..ec5d4fed1",
+      "result": "pass",
+      "evidence": "恰 4 文件：scripts/control-tower/check-merge-conditions.sh（新）｜tests/control-tower/check-merge-conditions.test.sh（新）｜docs/synova/reviews/README.md（新）｜memory/notes/implemented/2026-10-18-p7-merge-conditions.md（新）；既有件 0 改动（无 .gitea/**、无 scripts/audit/**、无 verify-parallel.sh、无 P4 三件）"
+    },
+    {
+      "id": "判别力自检",
+      "cmd": "bash scripts/control-tower/check-merge-conditions.sh --selfcheck",
+      "result": "pass",
+      "evidence": "exit 0；末行 SELFCHECK-OK: 12/12；12 判定点 A/B/C/D1–D4/E/F/G/H/I 全部 inner_exit 与末行文本同时断言（H 恒打印 warn: 身份未分离）"
+    },
+    {
+      "id": "配对测试 CT-40",
+      "cmd": "bash tests/control-tower/check-merge-conditions.test.sh",
+      "result": "pass",
+      "evidence": "exit 0；末行「结果: 12 通过, 0 失败」；另覆盖 C2 边界 K1–K8（total_count=0、success+pending 并存、fp 差 1 hex 禁前缀、checks=4、PR 取不到、--json+--selfcheck 互斥、--offline、head 取不到）"
+    },
+    {
+      "id": "真仓三态",
+      "cmd": "bash scripts/control-tower/check-merge-conditions.sh --pr 597 / --pr 558",
+      "result": "pass",
+      "evidence": "--pr 597 exit=1「MERGE-COND: no ①=ok ②=ok ③=no ④=no｜NO: ③ 已过独立复核, ④ 串行」；--pr 558 同形；① 实测 state=success total_count=2"
+    },
+    {
+      "id": "降级路径（fail-closed）",
+      "cmd": "SYNO_GITEA_API=http://127.0.0.1:1/api/v1 … --pr 558; … --offline; … --pr 999999; … --json --selfcheck",
+      "result": "pass",
+      "evidence": "四次均 exit=2：E_API_UNREACHABLE｜E_CI_OFFLINE｜E_API_HTTP(404)｜E_ARGS_MUTEX —— 不判绿也不判红，stderr 一行 degraded: + code"
+    },
+    {
+      "id": "JSON/指纹/回执骨架契约",
+      "cmd": "… --pr 597 --json | python3 -m json.tool; … --diff-fingerprint; … --print-receipt-template",
+      "result": "pass",
+      "evidence": "JSON 合法且含 tool/pr/base/tip/head/fp/conditions/verdict/exit；fp=8937990d…59f41（与回执路径 fp12 一致）；骨架 11 字段齐，checks 空时明确提示需 ≥5 条"
+    },
+    {
+      "id": "独立改坏 ×5（我另写，非小队自测）",
+      "cmd": "复制脚本到 /tmp 定点改坏后跑 --selfcheck：①去指纹排除 ②CI 恒绿 ③S2 恒绿 ④真发射点 ③=ok 去级别 ⑤② fail-closed 失效",
+      "result": "pass",
+      "evidence": "M1 去排除 ⇒ SELFCHECK-FAIL: A；M2v CI 恒绿 ⇒ SELFCHECK-FAIL: B；M3 S2 恒绿 ⇒ SELFCHECK-FAIL: G；M5 真发射点裸 ok ⇒ SELFCHECK-FAIL: A；M8 fail-closed 失效 ⇒ SELFCHECK-FAIL: I（5/5 必红）"
+    },
+    {
+      "id": "② 零写集重叠独立复算",
+      "cmd": "自写脚本：本 PR 文件集 vs 16 个 open PR 的实际 diff（逐个 fetch refs/pull/N/head + merge-base）",
+      "result": "pass",
+      "evidence": "重叠 0 / 16；本 PR 文件 4 个"
+    },
+    {
+      "id": "门禁与接线",
+      "cmd": "bash scripts/pre-commit-check.sh；SYNO_TEST_ARM=1 SYNO_CT_STAGED=… bash scripts/control-tower/ct-test-gate.sh",
+      "result": "pass",
+      "evidence": "13 组全通过（exit 0）；CT-40 注入缝「SYNC-OK: 控制塔脚本配对测试全绿 (1 个脚本)」；干净态 CT-40 为「无控制塔脚本变更(跳过)」（交付已如实自述该判别力缺口）"
+    },
+    {
+      "id": "只读与降级日志",
+      "cmd": "git status --porcelain",
+      "result": "pass",
+      "evidence": "全部命令跑完仍 0 行；degraded 日志落 .codex/control-tower/logs/（gitignore 内，符合 D2 既有约定）"
+    },
+    {
+      "id": "文档与决策留痕",
+      "cmd": "读 docs/synova/reviews/README.md 与 memory/notes/implemented/2026-10-18-p7-merge-conditions.md",
+      "result": "pass",
+      "evidence": "README 含 Summary/Design philosophy/R1–R9/生成流程/§6 Known Limitations（5 条，含 B3-2 的身份局限与 R9 只告警）；Note 四态齐（状态/日期/决策/理由）＋冻结规格 blob 引用"
+    },
+    {
+      "id": "指纹 rebase 稳定性",
+      "cmd": "git merge gitea/local-main 后再算 --diff-fingerprint",
+      "result": "pass",
+      "evidence": "merge 前后同值 8937990d…59f41（内容寻址成立：合并新基线不改变本 PR 补丁指纹 ⇒ 无需重做复核）"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warn",
+      "where": "scripts/control-tower/check-merge-conditions.sh:670（MACHINE_TAIL）",
+      "what": "机器行里的 ③ 形态若被改成裸 `③=ok`，现有 --selfcheck / 配对测试**不红**（我实测 M4：12/12 仍绿）；真发射点（:945）改坏则必红（M5）。且交付自述称「该处由源码 grep -Ec '③=ok[^(:]'=0 兜住」——实测该兜底**不存在**（4 个文件 grep -F '③=ok[' = 0）⇒ 自述与事实不符。建议下一批：selfcheck 增一条断言「机器行 ③ 必须带 (attested) 级别」，并删掉不实的兜底表述。"
+    },
+    {
+      "severity": "note",
+      "where": "scripts/control-tower/ct-test-gate.sh（既有件，非本交付）",
+      "what": "CT-40 按暂存区判定 ⇒ 在干净工作树上「无控制塔脚本变更(跳过)」，对 untracked 新脚本无判别力（交付已如实自述，并用官方注入缝补测为真绿）。属既有门禁的通用缺口，非本件缺陷。"
+    },
+    {
+      "severity": "note",
+      "where": "本次验收的独立性边界",
+      "what": "reviewer = L1（写过规格、未写实现）⇒ 满足 R6「reviewer≠author」，但不是 zero-context；R9 因回执提交 %ae 与代码提交 %ae 同为 k12@local 而应告警（本回执已置 warn 字段供 R9 触发）。若要严格 zero-context，另开 fresh 会话复核。"
+    }
+  ],
+  "issued_at": "2026-10-19T02:05:00+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步）＋ L1 独立验收（含 5 组定点改坏、独立复算 ②、合并后指纹稳定性复核）"
+}
