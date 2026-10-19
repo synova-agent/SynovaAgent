@@ -27,8 +27,8 @@ status: proposed
    - .claude/task-briefs/2026-10-19-p7-probe-line-signals.md    （**已落**：L1 派单前产出；L2 只读）
 ③ 判据（含"改坏必红"）：
    - 命令：source ~/.nvm/nvm.sh && npx tsx scripts/control-tower/probe-line-signals.ts --all
-     期望：exit ∈ {0,1}（真实数据含 exceptions ⇒ 1；全绿夹具 ⇒ 0）；每条线一行三信号；末行 `LINE-SIGNALS: lines=<n> exceptions=<n> gaps=<n>`
-   - 反例（§4.3 夹具 6 子例，逐条给命令）：把 mapping_gap 静默丢弃／无在飞 PR 当 100%／
+     期望：exit ∈ {0,1}（真实数据含 exceptions ⇒ 1；全绿夹具 ⇒ 0）；每条线一行三信号（**5 条线都出行**，基座线 `n/a(未映射)`）；末行 `LINE-SIGNALS: lines=5 exceptions=<n> gaps=<n>`
+   - 反例（§4.3 夹具 7 子例，逐条给命令）：把 mapping_gap 静默丢弃／无在飞 PR 当 100%／
      根级 API 失败当 0 在飞／混入 B 口径／跨线 PR 被硬归某线／把 gaps 计数与明细改不一致 ⇒ 各自必红或 exit 2
 ④ 域守则指针（**必须显式 read**，DSH 无法额外注入）：
    - scripts/control-tower/AGENTS.md ｜ tests/control-tower/AGENTS.md ｜ docs/AGENTS.md
@@ -44,7 +44,7 @@ status: proposed
 | 1 | 谁派 / 依据 | 创始人 2026-10-19「**回执 A**」；P7 守则 §三「三信号可跑」；Issue **#602** |
 | 2 | 归属包 / 产品线 | **P7 交付自证与真值**（治理线·自证）｜域：`scripts/control-tower/`、`tests/control-tower/` |
 | 3 | 写集 | 见 §2（W1–W3 逐文件）；🔴 **W2 需批 1 行**（B-7-b） |
-| 4 | 判据 | 见 §4（正常／降级／反例 6 子例）＋ DS-1…DS-10 |
+| 4 | 判据 | 见 §4（正常／降级／反例 7 子例）＋ DS-1…DS-10 |
 | 5 | 依赖 | **B-7-a／B-7-c 未批 ⇒ 停**；其余无阻塞（复用件见 §6） |
 | 6 | 不做什么 | 见 §1.2（逐条路径）＋ §7 红线 |
 | 7 | 回执 | 见 §8（三信号 ＋ R2 ≤10 行） |
@@ -76,7 +76,7 @@ status: proposed
 | **⑥** | 失败路径 | 反例 6 条（§4.3）：gaps 被丢／无 PR 当 100%／根级失败当 0／混 B 口径／跨线硬归／计数与明细不一致 | §4.3 |
 | **⑦** | 边界 | 逐条路径见 §1.2 | §1 |
 | **⑧** | 可观测 | `--all` 一条命令：每线一行 ＋ 末行 `LINE-SIGNALS: lines=… exceptions=… gaps=…` | §4 |
-| **⑨** | 拆步 | S1 路径→线映射 → S2 三信号聚合 → S3 `--selfcheck`（夹具 6 子例）；单文件新建可整体 revert | 封面／§8 |
+| **⑨** | 拆步 | S1 路径→线映射 → S2 三信号聚合 → S3 `--selfcheck`（夹具 7 子例）；单文件新建可整体 revert | 封面／§8 |
 
 ---
 
@@ -84,14 +84,14 @@ status: proposed
 
 **目标**：一条命令按**报告线**输出**回执三信号**：① 判据通过率（**机器代理＝四条件通过率**，标签 `①(merge-conditions)`）② 例外清单 ③ 在飞 PR 数；全部取自机器真值。
 
-**可观测**：`--all` ⇒ 每线一行 `治理线 ①(merge-conditions)=2/3 ②=1 ③=5 在飞`；末行 `LINE-SIGNALS: lines=4 exceptions=1 gaps=6`；三态 `0`（无例外无缺口）／`1`（有例外或映射缺口）／`2`（根级取不到真值）。
+**可观测**：`--all` ⇒ 5 行（例 `治理线 ①(merge-conditions)=5/16 ②=1 ③=16(跨线 11)`、`基座线 ①=n/a(未映射) ②=0 ③=0(跨线 0)`）；末行 `LINE-SIGNALS: lines=5 exceptions=1 gaps=6`；三态 `0`（无例外无缺口）／`1`（有例外或映射缺口）／`2`（根级取不到真值）。
 
 ### 1.2 非目标（逐条路径）
 - ❌ `scripts/control-tower/check-merge-conditions.sh`（只读调用）
 - ❌ `scripts/control-tower/gen-cto-health.py`（B 口径已在算）｜`probe-ladder.ts`（只读契约）｜`emit-signal.py`（只读复用其格式）
 - ❌ `.gitea/**`（不接 CI）｜`scripts/audit/**`（K3）｜`src/**`｜`extensions/**`
 - ❌ 不写人读进度文档；不判"该不该开工/优先级"（CTO）
-- ❌ **v1 不出"未收口卡数"**（Issue→线 无可靠机器判据，实测 50 个 open issue 仅 9 个带 `^P<N>`）——**显式写进 Known Limitations 与 gaps**，不假装
+- ❌ **v1 不出"未收口卡数"**（Issue→线 无可靠机器判据，实测 **139 个 open issue 仅 9 个带 `^P<N>`**）——**显式写进 Known Limitations 与 gaps**，并**并入 B-7-c 请批**（③ 与 ① 同属 handbook §四口径，不得只批其一）
 
 ---
 
@@ -115,11 +115,11 @@ status: proposed
 | F1 | 无按线三信号件 | `git grep -l "回执三信号" 7a17677da -- scripts/` ⇒ 0 |
 | F2 | 探针契约有单一实现 | `sed -n 1,40p scripts/control-tower/probe-ladder.ts` ⇒ 13 探针／`RESULT=`／三态 |
 | F3 | 信号发射已有 | `sed -n 1,20p scripts/control-tower/emit-signal.py` ⇒ `.codex/signals/{component}.json` |
-| F4 | 四条件机器判定（① 代理源） | `bash scripts/control-tower/check-merge-conditions.sh --pr <**open**> --json` ⇒ `conditions{ci,overlap,review,serial}`（⚠️ 对已关 PR 会 `E_PR_NOT_OPEN` 降级，示例须选 open PR） |
-| F5 | **包写集重叠（v1 失败根因）** | 解析 10 包 §四：`docs/**`∈{P6,P7,P9,P10}；`memory/notes/**`∈{P6,P7}；`.gitea/**`∈{P4,P10}；`scripts/control-tower/**`∈{P4,P9} |
+| F4 | 四条件机器判定（① 代理源） | `bash scripts/control-tower/check-merge-conditions.sh --pr <**open**> --json` ⇒ `conditions{ci,overlap,review,serial}`（⚠️ 对已关 PR 会 `E_PR_NOT_OPEN` 降级，示例须选 open PR）；open PR 实测 **16**（as_of 2026-10-19，命令见 A.5） |
+| F5 | **包写集重叠（v1 失败根因）** | 解析 10 包 §四：`docs/**`∈{P6,P7,P9,P10}；`memory/notes/**`∈{P6,P7}；`.gitea/**`∈{P4,P10}；`scripts/control-tower/**`∈{P4,**P7**,P9}（P7 §四明列本件两脚本） |
 | F6 | 报告线按路径切（**v2 依据**） | handbook §五 原文逐字（见「权威件回执」末两行） |
 | F7 | 既有约定计数（**重取；v1 三个数字全错**） | `git grep -l "exit 2" 7a17677da -- 'scripts/control-tower/*.sh' \| wc -l` ⇒ **40**；`git grep -l "degraded" …` ⇒ **41**（其中 `SYNO_GATE_DEGRADED_LOG` ⇒ **3**）；`git grep -li "utf-8" … \| wc -l` ⇒ **40** / 分母 `git ls-tree -r --name-only 7a17677da -- scripts/control-tower \| grep -c '\.sh$'` ⇒ **47** |
-| F8 | 无现成"卡"映射 | 50 个 open issue 中 `^P\d+` 标题 **9** 个 ⇒ v1 不出卡数 |
+| F8 | 无现成"卡"映射 | **139** 个 open issue（分页拉全）中 `^P\d+` 标题 **9** 个 ⇒ v1 不出卡数 |
 | F9 | 运行环境 | 默认 shell `command -v npx` ⇒ 空（需 `source ~/.nvm/nvm.sh`；node v24.19.0 / tsx v4.23.13）⇒ §5 写死 nvm 前置 |
 
 **若 F1–F9 任一不成立 ⇒ 停，退回 L1。**
@@ -142,10 +142,19 @@ status: proposed
 ```
 
 **PR → 线**：对该 PR 的 `git diff --name-only <mb>..<head>` **逐文件**跑上述规则；
-- **全部文件同线** ⇒ 该线；
-- **跨 ≥2 条线** ⇒ `cross-line`（**点名涉及哪几条线**，不计入任一线）；
-- **全部 unknown** ⇒ `unknown`；
-- **混合（有线 + unknown）** ⇒ 归「命中的线」，同时在 **gaps 里点名未归属文件数**。
+- **全部文件同线** ⇒ 该线（`single`）；
+- **跨 ≥2 条线** ⇒ 该 PR **同时计入所涉每一条线的 ③**，并标 `(跨线)`（`cross`）；**不再"不计入任一线"**（v2 的错：11/16 cross ⇒ 各线 ③ 打印 `n/a(0)` = 假事实「无在飞 PR」）；
+- **全部 unknown** ⇒ `unknown`（进 gaps）；
+- **混合（有线 + unknown）** ⇒ 归命中的线，同时在 **gaps 里点名未归属文件数**。
+
+🔴 **实测（as_of 2026-10-19，16 个 open PR，逐 PR 拉 API `/pulls/<n>/files` 手算）**：
+```
+single = 5（#515/#519/#522/#543/#607）｜ cross = 11 ｜ unknown = 0
+按"cross 计入各涉线"：治理线 ③=16(跨线 11) ｜ 产品线 ③=11(跨线 11) ｜ CTO/K3/基座线 ③=0
+⚠️ `n/a(0)` 只在**全局 open PR = 0** 时打印；某线 0 必须打 `0(跨线 0)` 并附"该线本批无独立 PR"，不得说"无在飞 PR"
+```
+🔴 **结构性冲突（升为 B-7-a 待裁项，不在本件自裁决）**：handbook §五 把 `tests/**` 归产品线，而 **CT-40 强制** `scripts/{control-tower,workflow,hooks}/<name>.<sh|py> ↔ tests/control-tower/<name>.test.sh` 配对 ⇒ **合规治理 PR 天然 cross-line**（本件自己的 W1+W2+W3 亦然）。实测对照：若 `tests/control-tower/**`·`tests/architecture/**` 随被测面归**治理线** ⇒ **single 10 / cross 6**（治理线 ③=16、产品线 ③=6）。两读法都写进 B-7-a 请裁。
+🔴 **`.gitea/**` 归属待裁**：本仓 CI 真源是 `.gitea/workflows/local-gates.yml`（根件 §8），而 handbook §五 只写 `.github/**` ⇒ v2 把 `.gitea/**` 落 unknown（#606/#416 的 CI 改动受影响）。B-7-a 一并裁：`.gitea/**` 是否视同 `.github/**` 归治理线。
 
 **Issue → 线**：**v1 不映射**（50 open issues 仅 9 个带 `^P<N>`）⇒ ③ 不出卡数，写进 Known Limitations 与 gaps。
 **task-state → 线**：**v1 不映射**（468 份无 line 字段）⇒ 同上。
@@ -175,19 +184,22 @@ SYNO_LINE_SIGNALS_FIXTURE=<夹具> npx tsx … --all; echo $?   # 全绿夹具 �
 ```
 逐项降级：某 PR 的 check-merge-conditions 降级（E_MERGE_BASE／E_PR_NOT_OPEN 等）⇒ 该 PR 进 exceptions（点名 code），整体 exit 1
 根级降级：Gitea API／git／JSON 解析失败 ⇒ exit 2（fail-closed）
-运行前：工具内部先 fetch 该 PR 的 head（refs/pull/<n>/head），失败即该 PR 逐项降级
+文件清单：走 API `GET /pulls/<n>/files`（**零 git 写**，保 `@authority 只读`/DS-7 成立）；该 API 失败 ⇒ 该 PR 逐项降级。
+⚠️ **不做** `git fetch refs/pull/*`（会写 `.git`，与只读契约冲突；v2 的错）
 ```
 ```bash
 source ~/.nvm/nvm.sh && SYNO_GITEA_API=http://127.0.0.1:1/api/v1 npx tsx scripts/control-tower/probe-line-signals.ts --all; echo $?   # 期望 2 + degraded:
 ```
 
-### 4.3 🔴 反例（夹具 6 子例，**含命令与期望**）
+### 4.3 🔴 反例（夹具 7 子例，**含命令与期望**）
 
 夹具 = `SYNO_LINE_SIGNALS_FIXTURE=<json>`（零网络），schema：
 ```json
 {"open_prs":[{"number":1,"branch":"ct/p1-x","files":["src/a.ts"],
               "conditions":{"ci":"ok","overlap":"ok","review":"ok","serial":"ok"}}],
- "line_override":{},"force_root_fail":false,"inject_b_metric":false}
+ "drop_gaps_detail":false,"force_s1":"","force_root_fail":false,"inject_b_metric":false,
+ "cross_pr":{"number":2,"files":["src/a.ts","scripts/b.sh"],"conditions":{"ci":"ok","overlap":"ok","review":"ok","serial":"ok"}}}
+（旋钮：`drop_gaps_detail` 子例 B；`force_s1="1/1"` 子例 C；`force_root_fail` 子例 D；`inject_b_metric` 子例 E；`cross_pr` 子例 G）
 ```
 | 子例 | 命令（改坏后） | 期望 |
 |---|---|---|
@@ -196,9 +208,10 @@ source ~/.nvm/nvm.sh && SYNO_GITEA_API=http://127.0.0.1:1/api/v1 npx tsx scripts
 | **C** 无 PR 当 100% | 夹具该线 0 PR，实现输出 `1/1` | **必红**：必须 `n/a(0)` |
 | **D** 根级失败当 0 | `SYNO_GITEA_API=http://127.0.0.1:1/api/v1` | exit **2** + `degraded:` |
 | **E** 混入 B 口径 | `inject_b_metric=true` | **必红**：出现非 A 键 ⇒ 口径守卫失败 |
-| **F** 跨线硬归 | 夹具 PR files=`["src/a.ts","scripts/b.sh"]` | **必红**：必须 `cross-line` 并点名两线 |
+| **F** 跨线硬归 | `cross_pr` 存在但实现只归一线 | **必红**：必须两线各计 1 且标 `(跨线)` |
+| **G** 跨线漏计 | `cross_pr` 存在而某涉线 ③ 未 +1 | **必红**：两线 ③ 均须含该 PR |
 
-`--selfcheck` 自跑这 6 子例，末行 `SELFCHECK-OK: 6/6` 或 `SELFCHECK-FAIL: <子例>`（exit 2）。
+`--selfcheck` 自跑这 7 子例，末行 `SELFCHECK-OK: 7/7` 或 `SELFCHECK-FAIL: <子例>`（exit 2）。
 
 ### 4.4 DS
 
@@ -244,7 +257,7 @@ node -v && npx tsx --version
 | 任务状态 | `ls task-state/*.json \| wc -l` | 468；无 line 字段 | v1 不用于映射（Known Limitations） |
 | 写集声明 | `ls .claude/claims/*.yaml \| wc -l` | 30 | 不复用（PR 级写集） |
 | 施工项登记 | `head -30 docs/synova/coordination/施工项登记.ts` | 48 项/12 块 | v1 不复用（块≠报告线；留 v2） |
-| **doc-system／workflow／integration／skills 盘点**（P7 §八之三① 必查三类） | `ls scripts/doc-system \| wc -l`；`ls scripts/workflow \| wc -l`；`ls scripts/integration \| wc -l`；`ls .dsh/skills \| wc -l` | 4／34／3／21 | **均无"按线三信号"实现** ⇒ 确需新建 |
+| **doc-system／workflow／integration／skills 盘点**（P7 §八之三① 必查三类） | `ls scripts/doc-system \| wc -l`；`ls scripts/workflow \| wc -l`；`ls scripts/integration \| wc -l`；`ls .dsh/skills \| wc -l` | **10／37／3／21**（实测） | **均无"按线三信号"实现** ⇒ 确需新建 |
 | 三态/降级/UTF-8 | 见 F7 三条命令 | 40／41／40-47 | 复用（四约定） |
 
 **结论**：复用 8 项，**新建 1 件**；不重复 B 口径。
@@ -294,7 +307,7 @@ R2 ≤10 行：批次名｜写集｜自验结论｜证据｜未决项
 | 边界 | 期望 |
 |---|---|
 | open PR = 0（API 200 + []） | exit 2（信号量==0），除非夹具显式声明合法零 |
-| 某线 0 在飞 | ① 显示 `n/a(0)` |
+| 某线 0 在飞（全局有 PR） | ③ 显示 `0(跨线 0)` ＋「该线本批无独立 PR」；**不得**说"无在飞 PR" |
 | PR 跨 2 线 | `cross-line` 点名两线，不计入任一线 |
 | 全 unknown 文件 | 进 gaps |
 | 某 PR 逐项降级（E_MERGE_BASE／E_PR_NOT_OPEN） | 进 exceptions，整体 exit 1 |
@@ -326,8 +339,8 @@ A.9 环境：默认无 npx；source ~/.nvm/nvm.sh 后 node v24.19.0 / tsx v4.23.
 
 | # | 事项 | 证据 | 建议 |
 |---|---|---|---|
-| **B-7-a** | **线口径＝报告线（产品线/治理线/CTO/K3/基座线）＋ §4bis 路径映射（最长前缀＋显式排除；跨线=cross-line；其余=unknown）** | A.5 证明"包"不可行；A.6 为 handbook 原文 | **批**（v2 已按此写死） |
-| **B-7-c** | **① 的机器代理**：handbook ①＝"Done 判据逐条＋可复跑命令"；本件用 **check-merge-conditions 四条件通过率**作代理，标签写 `①(merge-conditions)` | handbook §四原文 vs A.4 | **批**；否则本件改为"不做 ①"，只出 ②③ |
+| **B-7-a** | **线口径＝报告线 ＋ §4bis 路径映射**；其中两条子项请一并裁：**(i) `tests/**` 归属** —— handbook 字面=产品线，但 CT-40 强制配对 ⇒ 治理 PR 天然 cross（实测 single 5/cross 11；若 `tests/control-tower/**`·`tests/architecture/**` 随被测面归治理线 ⇒ single 10/cross 6）；**(ii) `.gitea/**` 归属** —— 本仓 CI 真源是 `.gitea/workflows/local-gates.yml`，handbook 只写 `.github/**`，是否视同归治理线 | A.5／A.6 ＋ 两读法实测 | **批**（本件按「字面＋cross 计入各涉线」实现，两子项批复后再收敛） |
+| **B-7-c** | **§四口径的两处机器代理/缺口**：(i) **① 代理**＝四条件通过率，标签 `①(merge-conditions)`；(ii) **③ 的「未收口卡数」v1 不出**（Issue→线 无可靠判据：139 open issue 仅 9 带 `^P`） | handbook §四原文 vs A.4／A.8 | **批**；不批 ⇒ 本件只出 ②，① 与卡数均不出现 |
 | **B-7-b** | **写集扩 1 行**：`tests/control-tower/probe-line-signals.test.sh`（CT-40 只强制 sh/py；本件主动加固） | P7 §四枚举未含 | **批**；不批 ⇒ 不做 W2（交付面缩小） |
 
 **已消**：`docs/authority/DOCS-REGISTRY.yaml` 无需扩（P7 §四 `docs/**` 已覆盖）。
