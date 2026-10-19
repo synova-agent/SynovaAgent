@@ -4,7 +4,7 @@
 #
 # 被测: scripts/control-tower/check-merge-conditions.sh（W1）
 # 配对规则: scripts/{control-tower,workflow,hooks}/<name>.<sh|py> ↔ tests/control-tower/<name>.test.sh
-# 规格源: docs/plans/codex/implementation/SYNOVA-IMPL-582-merge-conditions-20261018.md
+# 规格源: handbook 派单件/2026-10-18-P7-582-四条件检查器-规格.md @ 22f47c55a（主仓 dev doc 已迁出）
 #         （冻结 blob a22509208b08fa6a）§4.3.0 夹具契约 / §4.3.1 12 子例 / §4.4 DS / C2 边界
 #
 # 🔴 接线说明（WIRE CHECK 不适用 —— 规格 §1.2 ＋ CTO 令②）:
