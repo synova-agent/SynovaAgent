@@ -9,7 +9,7 @@
 - 规格 `docs/plans/codex/implementation/SYNOVA-IMPL-598-doc-contract-ci-20261019.md`（352 行，sha 3f1e2f2d…）。
 
 ## Q2: 范围（做什么 / 不做什么——含文件路径）
-- 做：`.gitea/workflows/local-gates.yml`（① 注入 base；①d 改用 helper）、`scripts/control-tower/resolve-ci-base.sh`（新）、`scripts/pre-commit-check.sh`（CI 无 base fail-loud）、两测试、`gate-exemptions/2026-10-20-doc-contract-ci-598.md`（L1）。
+- 做：`.gitea/workflows/local-gates.yml`（① 注入 base；①d 改用 helper）｜`scripts/control-tower/resolve-ci-base.sh`（新建）｜`scripts/pre-commit-check.sh`（CI 无 base fail-loud）｜`tests/control-tower/resolve-ci-base.test.sh`（新建）｜`tests/control-tower/doc-contract-ci-acceptance.test.sh`（新建）｜`gate-exemptions/2026-10-20-doc-contract-ci-598.md`（L1）｜`docs/synova/DOC-CONTRACT.md`（§3 白名单加 gate-exemptions/**，CTO 批）｜`docs/authority/DOCS-REGISTRY.yaml`（DOC-0211 登记）。
 - 不做：不动 checker/validate 判据、不动 §9.1 过渡表、不迁 `docs/plans/**` 存量、不碰 `scripts/audit/**`、不动 `.github/**`。
 
 ## Q3: 验收（入口 → 交互 → 结果）
