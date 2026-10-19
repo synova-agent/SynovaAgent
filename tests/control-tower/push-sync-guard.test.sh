@@ -14,6 +14,8 @@
 #      旧格式零参数会让门禁 0 拿不到 remote → 退化）(red: 无 → 断言失败)
 #   9. 生产接线: pre-push-check.sh 主流程调用 check_push_sync（red: 零调用 → 失败）
 #   10. 删除操作 (git push --delete, local_sha 全零) → 跳过同步检查 exit 0（D457）
+#   11. #617: HEAD 过期 + 被推 ref 是远端后代 → 放行（old: HEAD..FETCH_HEAD 会误拦）
+#   12. #617: 显式 sha 造"假分叉" → 拦；恢复（被推 ref=远端 tip）→ 放行（改坏必红）
 #
 # 隔离: mktemp 临时 bare 远端 + 本地仓库, file:// 协议零网络。
 #       SYNO_SYNC_ONLY=1 → 只跑门禁 0, 不触及其他门禁。
@@ -60,12 +62,28 @@ commit_empty() { # <repo> <file> <msg>
 
 # helper: 以 hook 方式调用门禁 0
 # run_sync <local_dir> <remote_name> <remote_url> <branch_ref> <extra_env>
+# helper: remote ref 的真实 sha（#617：stdin 第 4 字段必须是远端真身，不能拿本地 sha 冒充）
+remote_sha_of() { # <dir> <remote> <ref>
+  local s
+  s=$(git -C "$1" ls-remote "$2" "$3" 2>/dev/null | awk '{print $1; exit}')
+  [ -z "$s" ] && s="0000000000000000000000000000000000000000"
+  printf '%s\n' "$s"
+}
 run_sync() {
   local dir="$1" rname="$2" rurl="$3" bref="$4" envs="$5"
-  local sha
+  local sha rsha
   sha=$(git -C "$dir" rev-parse HEAD)
+  rsha=$(remote_sha_of "$dir" "$rname" "$bref")
   ( cd "$dir" && \
-    printf '%s %s %s %s\n' "$bref" "$sha" "$bref" "$sha" | \
+    printf '%s %s %s %s\n' "$bref" "$sha" "$bref" "$rsha" | \
+    env $envs SYNO_SYNC_ONLY=1 bash "$PRE_PUSH" "$rname" "$rurl" > /tmp/pss-out.txt 2>&1 )
+  echo $?
+}
+# helper: 显式给定 local/remote sha（#617 用）
+run_sync_sha() { # <dir> <rname> <rurl> <local_ref> <local_sha> <remote_ref> <remote_sha> <envs>
+  local dir="$1" rname="$2" rurl="$3" lref="$4" lsha="$5" rref="$6" rsha="$7" envs="$8"
+  ( cd "$dir" && \
+    printf '%s %s %s %s\n' "$lref" "$lsha" "$rref" "$rsha" | \
     env $envs SYNO_SYNC_ONLY=1 bash "$PRE_PUSH" "$rname" "$rurl" > /tmp/pss-out.txt 2>&1 )
   echo $?
 }
@@ -114,6 +132,7 @@ grep -q "分叉" /tmp/pss-out.txt && pass "   阻断消息含分叉提示" || fa
 git -C "$LOCAL_DIR" push -q --force origin HEAD:feat/test 2>/dev/null # swallow-ok: 测试 bare 远端强制同步, 失败由后续断言暴露
 EC=$(run_sync "$LOCAL_DIR" origin "file://$REMOTE_DIR" "refs/heads/feat/test" "")
 assert_exit "$EC" 0 "5. 本地与远端同步 → 放行"
+BASE_C=$(git -C "$LOCAL_DIR" rev-parse HEAD)  # case 5 同步点（远端=本地）
 
 # 6. fetch 失败（remote 不存在）→ fail-open 显式提示
 commit_empty "$LOCAL_DIR" d.txt "D"
@@ -147,6 +166,32 @@ EC=$( ( cd "$LOCAL_DIR" && \
   SYNO_SYNC_ONLY=1 bash "$PRE_PUSH" origin "file://$REMOTE_DIR" > /tmp/pss-out10.txt 2>&1; echo $? ) )
 assert_exit "$EC" 0 "10. 删除操作 (local_sha 全零) → 跳过同步检查 exit 0"
 grep -q "删除操作" /tmp/pss-out10.txt && pass "   删除操作有跳过提示（不静默）" || fail "   删除操作缺跳过提示"
+
+# 11. #617: HEAD 过期 + 被推 ref 是远端后代 → 放行
+#     远端: C（case 5 同步点）→ OTHER 从 C 推 E（E 是 C 的后代）；本地 HEAD 停在 C，只 fetch 不前进
+git -C "$OTHER_DIR" fetch -q origin feat/test 2>/dev/null # swallow-ok: 取远端 tip, 失败由后续断言暴露
+git -C "$OTHER_DIR" checkout -q -B feat/test FETCH_HEAD 2>/dev/null # swallow-ok: 对齐远端 tip C
+commit_empty "$OTHER_DIR" e.txt "E"
+git -C "$OTHER_DIR" push -q origin HEAD:feat/test 2>/dev/null # swallow-ok: 模拟另一台机器推 E, 失败由后续断言暴露
+git -C "$LOCAL_DIR" reset -q --hard "$BASE_C" # HEAD 回到 C（过期），模拟"主树 HEAD 落后"
+git -C "$LOCAL_DIR" fetch -q origin feat/test 2>/dev/null # swallow-ok: 拉远端 E 到本地, 失败由后续断言暴露
+STALE_HEAD=$(git -C "$LOCAL_DIR" rev-parse HEAD)
+git -C "$LOCAL_DIR" branch -f feat/push FETCH_HEAD 2>/dev/null # swallow-ok: 本地分支指向远端 tip E
+PUSH_SHA=$(git -C "$LOCAL_DIR" rev-parse feat/push)
+REMOTE_SHA=$(git -C "$LOCAL_DIR" rev-parse FETCH_HEAD)
+EC=$(run_sync_sha "$LOCAL_DIR" origin "file://$REMOTE_DIR" "refs/heads/feat/push" "$PUSH_SHA" "refs/heads/feat/test" "$REMOTE_SHA" "")
+assert_exit "$EC" 0 "11. HEAD 过期（$(echo "$STALE_HEAD" | cut -c1-7)）+ 被推 ref 是远端后代 → 放行（#617）"
+grep -q "被推 ref 与远端同步" /tmp/pss-out.txt && pass "   放行消息按「被推 ref」口径" || fail "   放行消息未按被推 ref 口径"
+
+# 12. 假分叉 → 拦；恢复 → 放行（改坏必红）
+git -C "$LOCAL_DIR" checkout -q -B feat/div "$BASE_C" 2>/dev/null # swallow-ok: 从 C 造分叉提交（与远端 E 互为兄弟）
+commit_empty "$LOCAL_DIR" f.txt "F"
+DIV_SHA=$(git -C "$LOCAL_DIR" rev-parse feat/div)
+EC=$(run_sync_sha "$LOCAL_DIR" origin "file://$REMOTE_DIR" "refs/heads/feat/div" "$DIV_SHA" "refs/heads/feat/test" "$REMOTE_SHA" "")
+assert_exit "$EC" 1 "12a. 被推 ref 与远端分叉 → 硬阻断"
+grep -q "分叉" /tmp/pss-out.txt && pass "   阻断消息含分叉提示" || fail "   阻断消息缺分叉提示"
+EC=$(run_sync_sha "$LOCAL_DIR" origin "file://$REMOTE_DIR" "refs/heads/feat/push" "$REMOTE_SHA" "refs/heads/feat/test" "$REMOTE_SHA" "")
+assert_exit "$EC" 0 "12b. 恢复（被推 ref=远端 tip）→ 放行（改坏必红）"
 
 # 清理
 rm -rf "$REMOTE_DIR" "$LOCAL_DIR" "$OTHER_DIR" /tmp/pss-out*.txt

@@ -392,9 +392,15 @@ if [ "${_PCN:-0}" -ge 1 ]; then pass "DS5 接线: pre-commit-check.sh 命中 $_P
 echo ""
 echo "── 8. 接线（铁律 0-2 WIRE CHECK）──"
 if grep -q "check-pr-budget.sh" "$PC"; then pass "接线: pre-commit-check.sh 真调用本脚本"; else fail "接线: pre-commit 未调用本脚本（死代码）"; fi
-# 本任务不并组数：横幅语义必须保持原样（改则打破 fastlane-bypass-only.test.sh 断言）
+# 本任务不并组数：快速通道横幅与总结横幅都必须仍在（原 :396 断言保留不动）
 if grep -q "跳过 12 组" "$PC"; then pass "组数横幅未改（快速通道仍为「跳过 12 组」）"; else fail "快速通道横幅被改动 → 会打破白名单外的 fastlane 测试"; fi
-if grep -q "全部 13 组通过" "$PC"; then pass "总结横幅仍为 13 组（未并组）"; else fail "总结横幅组数被改"; fi
+# 总结横幅：锚定「全部 N 组通过」信号、不锁具体组数
+# （#595：N 由运行时 ${GROUP_DONE} 决定；故锚定式同时接受字面数 / 运行时变量，复用 hooks-install.test.sh:106 范式）
+if grep -qE '全部 [0-9]+ 组通过' "$PC" || grep -qF '全部 ${GROUP_DONE} 组通过' "$PC"; then
+  pass "总结横幅仍在（锚定「全部 N 组通过」，不锁组数）"
+else
+  fail "总结横幅被删/组数口径被改"
+fi
 
 echo ""
 echo "── 15. D1028-A2v2 死代码清理声明（硬拦保留 + 受控逃生口）──"

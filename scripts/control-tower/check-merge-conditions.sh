@@ -27,7 +27,7 @@ export LC_ALL=C.UTF-8 2>/dev/null   # swallow-ok: locale 不可用时回退默�
 #     --offline                 不访问网络（🔴 ① 恒 exit 2 —— 裁 B5：不引本地 CI 缓存）
 #     --diff-fingerprint        只打印 ③-2.0 的 fp（64 hex，供回执填写）
 #     --print-receipt-template  打印 syno-review-receipt/v1 回执骨架（不写文件）
-#     --selfcheck               判别力自检（临时 git 仓＋夹具，零网络，12 判定点）
+#     --selfcheck               判别力自检（临时 git 仓＋夹具，零网络，13 判定点）
 #     --help
 #     注入缝（测试/自检）：SYNO_MERGE_COND_FIXTURE=<fixture.json>（API 替换层，零网络）
 #   @output
@@ -60,7 +60,7 @@ export LC_ALL=C.UTF-8 2>/dev/null   # swallow-ok: locale 不可用时回退默�
 #          （R1..R9 / S1 / S2 / CI_* / OVL_*），输出原文可 grep，与规格 §4.3.1 逐字一致
 #   ⑤ 四条件                      — cond1_ci / cond2_overlap / cond3_review / cond4_serial
 #   ⑥ 编排与输出                  — main：解析 PR → 四条件 → 机器行 → 末行 → 三态 exit
-#   ⑦ --selfcheck                — 临时 git 仓＋夹具跑 A/B/C/D1–D4/E/F/G/H/I 12 判定点
+#   ⑦ --selfcheck                — 临时 git 仓＋夹具跑 A/B/C/D1–D4/E/F/G/H/I 13 判定点
 #
 # 已知限制（Known Limitations · C1 四条 ＋ 规格 §4bis）
 #   1. ③ 的「独立」只有 **T1 `attested`** 一级（创始人裁 B3；T0 `proven` 待 B6-a，本批不实现）。
@@ -607,6 +607,22 @@ EOF
   flush_fails
 }
 
+# ── ② 共享追加文件白名单（创始人 2026-10-19 裁 A；Issue #627）────────────────
+#   为什么：`docs/authority/DOCS-REGISTRY.yaml` 是**追加型中枢**——任何需 D2 登记的新文档
+#   PR 都会碰它 ⇒ 严格重叠判定下，在飞期间**所有持有方都无法合并**（实测 8 个 PR 互相锁死）。
+#   判定改为：白名单文件的重叠**不计 ②**，改由 ④ 的 S2（队列头）＋合并前 rebase 保证**一次只合一个**。
+SHARED_APPEND_PATHS="docs/authority/DOCS-REGISTRY.yaml"
+is_shared_append() { # <path> ⇒ 0=白名单内（不判硬重叠） / 1=不在
+  local p="$1" x
+  while IFS= read -r x; do          # #636 复核 finding 5：逐行读，防单词拆分/通配展开
+    [ -n "$x" ] || continue
+    [ "$p" = "$x" ] && return 0
+  done <<EOF
+$SHARED_APPEND_PATHS
+EOF
+  return 1
+}
+
 cond2_overlap() { # ② 零写集重叠（实际 diff × 实际 diff；open PR 分页拉全）
   local mb="$1" head="$2"
   scan_open_prs
@@ -614,7 +630,7 @@ cond2_overlap() { # ② 零写集重叠（实际 diff × 实际 diff；open PR �
   if ! diff_files "$mb" "$head" > "$WORK/files/0.txt"; then
     die_degraded "E_DIFF: git diff 失败（本 PR 文件集 ${mb}..${head}）"
   fi
-  local pairs=0 hits=0 pnum phead pref psha pmb f
+  local pairs=0 hits=0 shared=0 pnum phead pref psha pmb f
   while IFS="$(printf '\t')" read -r pnum phead pref; do
     [ -n "$pnum" ] || continue
     [ "$pnum" = "$PRNUM" ] && continue
@@ -636,6 +652,11 @@ cond2_overlap() { # ② 零写集重叠（实际 diff × 实际 diff；open PR �
     if [ -n "$hit" ]; then
       while IFS= read -r f; do
         [ -n "$f" ] || continue
+        if is_shared_append "$f"; then
+          shared=$((shared + 1))
+          say "   ② 共享追加（不计重叠，须串行合）: ${f} → PR#${PRNUM},#${pnum}"
+          continue
+        fi
         hits=$((hits + 1))
         fail "OVL_FILE: ${f} → PR#${PRNUM},#${pnum}"
       done <<EOF
@@ -645,7 +666,7 @@ EOF
   done < "$WORK/prs.tsv"
   if [ "$hits" -gt 0 ]; then OV_V="no"; else OV_V="ok"; fi
   MACHINE_TAIL="${MACHINE_TAIL} ②=${OV_V}"
-  say "② 零写集重叠 ............... ${OV_V} (比对 ${pairs} 对，${hits} 处文件重叠)"
+  say "② 零写集重叠 ............... ${OV_V} (比对 ${pairs} 对，${hits} 处文件重叠，${shared} 处共享追加不计)"
   say "   ② 信息级：声明 vs 声明交集 由 devdoc_writeset.py --overlap-a/--overlap-b 提供（本件不重写、不参与判定）"
   flush_fails
 }
@@ -775,7 +796,7 @@ check-merge-conditions.sh — 四条件一条命令判绿/红（#582 · P7-1）
   --offline                 不访问网络（🔴 ① 恒 exit 2 —— 裁 B5：不引本地 CI 缓存）
   --diff-fingerprint        只打印 ③ 的补丁指纹（64 hex，供回执填写）
   --print-receipt-template  打印 syno-review-receipt/v1 回执骨架（不写文件）
-  --selfcheck               判别力自检（临时 git 仓＋夹具，零网络，12 判定点）
+  --selfcheck               判别力自检（临时 git 仓＋夹具，零网络，13 判定点）
   --help                    本帮助
 
 退出码（三态）:
@@ -958,7 +979,7 @@ PY
   exit 1
 }
 
-# ─── ⑦ --selfcheck（判别力自检 · 12 判定点） ───────────────────────────────────
+# ─── ⑦ --selfcheck（判别力自检 · 13 判定点） ───────────────────────────────────
 _mkc() { # _mkc <repo> <msg> <author-email>
   GIT_AUTHOR_NAME="agent" GIT_AUTHOR_EMAIL="$3" GIT_COMMITTER_NAME="agent" GIT_COMMITTER_EMAIL="$3" \
     git -C "$1" commit -q -m "$2"
@@ -982,7 +1003,7 @@ import datetime, json, sys
 path, pr, fp, indep = sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4]
 checks = [
     {"id": "铁律47 契约", "cmd": "head -40 f | grep -E '@input|@output'", "result": "pass", "evidence": "四块齐"},
-    {"id": "铁律48 非空壳测试", "cmd": "grep -c 'inner_exit=' t.sh", "result": "pass", "evidence": "12 判定点"},
+    {"id": "铁律48 非空壳测试", "cmd": "grep -c 'inner_exit=' t.sh", "result": "pass", "evidence": "13 判定点"},
     {"id": "铁律38 as any", "cmd": "grep -rn 'as any' <变更文件>", "result": "pass", "evidence": "0 命中"},
     {"id": "铁律11 静默降级", "cmd": "grep -n 'degraded:' x.sh", "result": "pass", "evidence": "stderr 一行 + exit 2"},
     {"id": "三态退出码", "cmd": "bash x.sh --selfcheck; echo $?", "result": "pass", "evidence": "12/12"},
@@ -1077,8 +1098,14 @@ build_fixture_repo() { # build_fixture_repo <case> <dir> → 重建夹具（规�
   T2="$(git -C "$R" rev-parse HEAD)"
   # 分支 A（本 PR 100）：基于 T2 改 a.ts
   git -C "$R" checkout -q -b A "$T2" || return 1
-  printf 'a\n' > "$R/a.ts"
-  git -C "$R" add a.ts
+  if [ "$case" = "J" ]; then
+    mkdir -p "$R/docs/authority"
+    printf 'a\n' > "$R/docs/authority/DOCS-REGISTRY.yaml"
+    git -C "$R" add docs/authority/DOCS-REGISTRY.yaml
+  else
+    printf 'a\n' > "$R/a.ts"
+    git -C "$R" add a.ts
+  fi
   _mkc "$R" "A_code" "agent@synova.local" || return 1
   A_code="$(git -C "$R" rev-parse HEAD)"
   # 分支 B（101）/ C（102）/ D（98，基于 T1）/ E（99）
@@ -1145,6 +1172,14 @@ build_fixture_repo() { # build_fixture_repo <case> <dir> → 重建夹具（规�
     _mkc "$R" "B2_code" "agent@synova.local" || return 1
     B_head="$(git -C "$R" rev-parse HEAD)"
   fi
+  if [ "$case" = "J" ]; then
+    git -C "$R" checkout -q -b B2 "$T2" || return 1
+    mkdir -p "$R/docs/authority"
+    printf 'b-registry\n' > "$R/docs/authority/DOCS-REGISTRY.yaml"
+    git -C "$R" add docs/authority/DOCS-REGISTRY.yaml
+    _mkc "$R" "B2_reg" "agent@synova.local" || return 1
+    B_head="$(git -C "$R" rev-parse HEAD)"
+  fi
   # G：给 99 号置回执 ⇒ 它进就绪集且编号更小
   local E_head="$E_code"
   if [ "$case" = "G" ]; then
@@ -1182,6 +1217,7 @@ case_desc() {
     G) printf '④ S2 红（99 号更小且就绪）' ;;
     H) printf '身份未分离（仍绿 ＋ warn）' ;;
     I) printf '② fail-closed（open PR 列表 500）' ;;
+    J) printf '② 共享追加白名单（登记表重叠不计，仍 CAN）' ;;
     *) printf '%s' "$1" ;;
   esac
 }
@@ -1258,7 +1294,7 @@ run_case() { # run_case <case> <want-exit> <want-last-line> [needle...]
 selfcheck() {
   mkdir -p "$WORK/sc"
   local total=0 passed=0 f
-  for f in A B C D1 D2 D3 D4 E F G H I; do
+  for f in A B C D1 D2 D3 D4 E F G H I J; do
     total=$((total + 1))
     case "$f" in
       A) run_case A 0 "CAN-自合并" "③=ok(attested)" "①=ok" "④=ok" ;;
@@ -1273,6 +1309,7 @@ selfcheck() {
       G) run_case G 1 "NO: ④ 串行" "S2 前置就绪 PR #99 编号更小 ⇒ 先合它" ;;
       H) run_case H 0 "CAN-自合并" "warn: 身份未分离" ;;
       I) run_case I 2 "degraded: open PR 列表不可达（HTTP 500 on /pulls?state=open，fail-closed）" "degraded:" ;;
+      J) run_case J 0 "CAN-自合并" "②=ok" "共享追加" ;;
     esac
     if [ $? -eq 0 ]; then
       passed=$((passed + 1))
