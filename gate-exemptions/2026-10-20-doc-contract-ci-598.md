@@ -1,0 +1,7 @@
+- .gitea/workflows/local-gates.yml — #598 ① 注入 base；①d 改用 resolve-ci-base.sh — #598
+- scripts/control-tower/resolve-ci-base.sh — #598 新建：CI base 解析/刷新/新鲜度断言（① 与 ①d 共用） — #598
+- scripts/pre-commit-check.sh — #598 CI 无 base ⇒ fail-loud（禁 --staged 空跑） — #598
+- tests/control-tower/resolve-ci-base.test.sh — #598 CT-40 配对（10 例） — #598
+- tests/control-tower/doc-contract-ci-acceptance.test.sh — #598 自证（8 项） — #598
+- gate-exemptions/2026-10-20-doc-contract-ci-598.md — 本豁免文件（gate-exemptions 自我保护） — #598
+- docs/authority/DOCS-REGISTRY.yaml — #598 登记本豁免文件（D2 登记门禁） — #598
