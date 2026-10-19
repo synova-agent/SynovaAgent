@@ -1,0 +1,79 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 646,
+  "patch_fingerprint": "sha256:57415f175eb6f747ade6bac12ab6e1f4f9d897d39ce1bd9adea2649c1884bcd0",
+  "author": "p7-l1（创始人令「P7 小卡全部自做」；单文件深改，L1 自做）",
+  "reviewer": "fresh 会话 974173ee（终验 PASS @b803b8d49）；前序 fab917a5（FAIL，1 阻塞＋5 条）／29564bc9（FAIL，12 残留）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "#605 SUT 侧",
+      "cmd": "/tmp 副本删 no 行 ③=${tok3} ⇒ --selfcheck",
+      "result": "pass",
+      "evidence": "SELFCHECK-FAIL: B「机器行缺 ③= 字段」；修前同形态 13/13 绿（假阴性已复现）"
+    },
+    {
+      "id": "#639-1 外部闸",
+      "cmd": "is_shared_append 恒不命中 ⇒ 配对测试",
+      "result": "pass",
+      "evidence": "❌ J inner_exit=1（② 零写集重叠 / OVL_FILE）｜结果: 12 通过 2 失败 —— 不再只靠 selfcheck"
+    },
+    {
+      "id": "#639-2 机器行＋JSON 同源",
+      "cmd": "--json；配对测试同源断言",
+      "result": "pass",
+      "evidence": "文本 ②=ok(shared:1)；JSON conditions.overlap_shared（J=1 / A=0）实跑可见"
+    },
+    {
+      "id": "#639-2 判别力（负断言）",
+      "cmd": "OV_SHARED_SUFFIX 改成恒带 ⇒ 测试",
+      "result": "pass",
+      "evidence": "❌ #639-2 A 非共享却出现 (shared:) 后缀｜13 通过 1 失败"
+    },
+    {
+      "id": "#639-3/#639-4 注释",
+      "cmd": "grep 双保险/按行",
+      "result": "pass",
+      "evidence": "form_ok 旁两行注释（有意的双保险、改其一须同步；计数按行限制）"
+    },
+    {
+      "id": "判定点口径一致",
+      "cmd": "grep 12 个判定点|12/12",
+      "result": "pass",
+      "evidence": "仅剩 1 处历史叙事（修前 12/12 绿）；回执模板 evidence=13/13；枚举含 J"
+    },
+    {
+      "id": "门禁",
+      "cmd": "gate-protection；gate-integrity；pre-commit",
+      "result": "pass",
+      "evidence": "9 通过 0 失败（3 条受保护路径均有 217 豁免）；FIXTURE-POWER 违规 0（902 夹具）；门禁全过"
+    },
+    {
+      "id": "回归",
+      "cmd": "--selfcheck；配对测试",
+      "result": "pass",
+      "evidence": "SELFCHECK-OK: 13/13；结果: 13 通过, 0 失败"
+    },
+    {
+      "id": "CI",
+      "cmd": "GET commits/b803b8d49/status",
+      "result": "pass",
+      "evidence": "state=success total=2 pending=0"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "note",
+      "where": "过程教训（我的）",
+      "what": "两轮 FAIL 均因「自述不实/口径残留」：#639-4 注释未落地却声称已做；『12 判定点』四处残留含会写进生成回执的模板。已全部改正并加断言。"
+    },
+    {
+      "severity": "note",
+      "where": "遗留（已入 #639）",
+      "what": "配对测试对 SUT 侧降级豁免的独立驱动仍缺（本轮只补了 J 与 JSON 同源）；如需再加固另立。"
+    }
+  ],
+  "issued_at": "2026-10-19T21:40:00+08:00",
+  "tool": "pr-review@v1 ＋ 3 轮 fresh 复核（fab917a5 FAIL → 29564bc9 FAIL → 974173ee PASS）"
+}

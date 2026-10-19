@@ -13,7 +13,7 @@
 #     · `--help` 参数完备性（9 个参数逐一在帮助里出现）
 #     · `--selfcheck` 13 判定点自证（判据本身可跑且改坏必红）
 #
-# 覆盖矩阵（12 个判定点 ＝ 逐子例独立夹具 ＋ 三态退出码）:
+# 覆盖矩阵（13 个判定点 ＝ 逐子例独立夹具 ＋ 三态退出码；J 为 #639-1 新增）:
 #   A  inner_exit=0  CAN-自合并        ③=ok(attested)（禁裸 ok）
 #   B  inner_exit=1  NO: ① CI 全绿 pending=0      点名 pending 的 context
 #   C  inner_exit=1  NO: ② 零写集重叠             点名 a.ts → PR#100,#101
@@ -25,7 +25,8 @@
 #   F  inner_exit=2  degraded: CI 信号量==0       禁判绿也禁判红
 #   G  inner_exit=1  NO: ④ 串行                   S2 前置就绪 PR #99 编号更小
 #   H  inner_exit=0  CAN-自合并 ＋ warn: 身份未分离（R9 恒打印）
-#   I  inner_exit=2  degraded: open PR 列表不可达 禁输出 CAN-自合并 / ②=ok
+#   I  inner_exit=2  degraded: open PR 列表不可达
+#   J  inner_exit=0  CAN-自合并        ②=ok(shared:1)：两分支同碰共享追加登记表（#639-1） 禁输出 CAN-自合并 / ②=ok
 #   ⇒ 三态齐: exit 0（A/H）｜exit 1（B/C/D1–D4/E/G）｜exit 2（F/I）—— DS-4
 #
 # 边界值（C2 可离线复现者；单列计数，见下"计数口径"）:
@@ -37,9 +38,9 @@
 #   注: C2 的「--pr 指向已合/已关 PR」在夹具层无 state 注入缝（fixture 的 PR 恒 open）
 #       ⇒ 以 K5「PR 取不到 ⇒ exit 2」（同为 fail-closed 降级）替代并在此登记差异。
 #
-# 计数口径（规格 §4.1 N3：末行 N 必须 = --selfcheck 的 12 个判定点）:
-#   通过 = **12 判定点**（每子例一次；selfcheck 另有子例 J ⇒ 13/13，配对测试不驱动 J）；C2 边界/参数/只读断言单列（`边界:` 行），
-#   两者任一失败都计入「失败」。⇒ 末行恒为 `结果: 12 通过, 0 失败`。
+# 计数口径（规格 §4.1 N3：末行 N 必须 = --selfcheck 的 13 个判定点）:
+#   通过 = **13 判定点**（每子例一次；#639-1 起配对测试独立驱动 J（共享追加），与 --selfcheck 13/13 对表）；C2 边界/参数/只读断言单列（`边界:` 行），
+#   两者任一失败都计入「失败」。⇒ 末行恒为 `结果: 13 通过, 0 失败`。
 #
 # 沙箱: 全部夹具在系统临时目录（mktemp -d ＋ trap EXIT 清理）；夹具仓 git init ＋ 本地 commit。
 #       零网络：API 层经 SYNO_MERGE_COND_FIXTURE 注入（不依赖 Gitea 可达）。
@@ -62,7 +63,7 @@ WORK="$(mktemp -d "${TMPDIR:-/tmp}/synova-582-test.XXXXXX")" || { echo "❌ mkte
 cleanup() { rm -rf "$WORK" 2>/dev/null; }
 trap cleanup EXIT INT TERM
 
-PASS=0       # 判定点数（必须 = 12）
+PASS=0       # 判定点数（必须 = 13；#639-1 起配对测试驱动 J）
 FAIL=0       # 任何断言失败（判定点 ＋ 边界）
 EXTRA=0      # 边界/参数/只读断言通过数（单列，不计入 N）
 pass()  { PASS=$((PASS + 1));  echo "  ✅ $1"; }
@@ -211,8 +212,14 @@ build_repo() { # <case> <dir> [mut] → 造夹具仓 ＋ fixture.json（规格 �
   T2="$(git -C "$R" rev-parse HEAD)"
   # 分支 A（本 PR #100）：基于 T2 改 a.ts
   git -C "$R" checkout -q -b A "$T2" || return 1
-  printf 'a\n' > "$R/a.ts"
-  git -C "$R" add a.ts
+  if [ "$case" = "J" ]; then            # #639-1：A 碰共享追加登记表
+    mkdir -p "$R/docs/authority"
+    printf 'a\n' > "$R/docs/authority/DOCS-REGISTRY.yaml"
+    git -C "$R" add docs/authority/DOCS-REGISTRY.yaml
+  else
+    printf 'a\n' > "$R/a.ts"
+    git -C "$R" add a.ts
+  fi
   mk_commit "$R" "A_code" "agent@synova.local" || return 1
   A_code="$(git -C "$R" rev-parse HEAD)"
   # 分支 B(101) / Cb(102) / D(98,基于 T1) / E(99)
@@ -273,6 +280,14 @@ build_repo() { # <case> <dir> [mut] → 造夹具仓 ＋ fixture.json（规格 �
     mk_commit "$R" "B2_code" "agent@synova.local" || return 1
     B_head="$(git -C "$R" rev-parse HEAD)"
   fi
+  if [ "$case" = "J" ]; then
+    git -C "$R" checkout -q -b B2 "$T2" || return 1
+    mkdir -p "$R/docs/authority"
+    printf 'b-registry\n' > "$R/docs/authority/DOCS-REGISTRY.yaml"
+    git -C "$R" add docs/authority/DOCS-REGISTRY.yaml
+    mk_commit "$R" "B2_reg" "agent@synova.local" || return 1
+    B_head="$(git -C "$R" rev-parse HEAD)"
+  fi
   # G：给 99 号置回执 ⇒ 它进就绪集且编号更小（S2 红）
   if [ "$case" = "G" ]; then
     local fp99
@@ -322,6 +337,9 @@ last_line() { tail -n 1 "$1" 2>/dev/null; }
 #   grep 链无输出 ⇒ `grep -Evq` 非零 ⇒ if 为假 ⇒ **return 0（通过）**，即「看不见」被当成「没问题」）。
 #   新形＝计数法（两次 `grep -Ec`，不走管道）＋ **存在性**（空输出/无 `③=` ⇒ 返回 1）；
 #   **降级机行 `MERGE-COND: degraded` 豁免**（①/② 阶段即 exit 2，合法地没有 ③=）。
+# #639-4：本函数内的 degraded 豁免与调用点 `want_exit != 2` 门**功能重复**（有意的双保险；
+#   改其一必须同步另一处，否则语义漂移）。
+# #639-3：计数**按行**——同一行兼有合法与非法 `③=` 会判过（旧形同样放过；如需更严改 `grep -o`）。
 form_ok() { # 读全局 $OUT
   local mline n3 ok3
   if mline="$(grep -m1 '^MERGE-COND:' "$OUT" 2>/dev/null)"; then :; else mline=""; fi
@@ -420,7 +438,7 @@ RO_BEFORE="$(git -C "$REPO_DIR" status --porcelain)"
 mkdir -p "$WORK/j" "$WORK/cli"
 
 echo
-echo "── A 12 个判定点（逐子例独立夹具 ＋ 三态退出码）──"
+echo "── A 13 个判定点（逐子例独立夹具 ＋ 三态退出码；含 J 共享追加）──"
 judgment A  0 "CAN-自合并" \
   "③=ok(attested)" "①=ok" "②=ok" "④=ok" "MERGE-COND: can"
 judgment B  1 "NO: ① CI 全绿 pending=0" \
@@ -436,6 +454,31 @@ judgment F  2 "degraded: CI 信号量==0（state=pending total_count=0；禁判�
   "degraded:" "total_count=0"
 judgment G  1 "NO: ④ 串行" "S2 前置就绪 PR #99 编号更小 ⇒ 先合它" "④=no" "③=ok(attested)"
 judgment H  0 "CAN-自合并" "warn: 身份未分离" "③=ok(attested)"
+judgment J  0 "CAN-自合并" "shared:1" "②=ok(shared:1)"
+# #639-2 判别力（finding 3）：非共享追加**不得**带 (shared:) 后缀；共享追加必须带且计数为 1
+if grep -Fq "(shared:" "$WORK/j/A/out.txt" 2>/dev/null; then
+  fail "#639-2 A 非共享却出现 (shared:) 后缀（后缀恒带 ⇒ 无判别力）"
+else
+  extra "#639-2 A 非共享不带 shared 后缀"
+fi
+if grep -Fq "(shared:1)" "$WORK/j/J/out.txt" 2>/dev/null; then
+  extra "#639-2 J 共享追加带 (shared:1)"
+else
+  fail "#639-2 J 缺 (shared:1)（机行未体现共享追加）"
+fi
+# #639-2 JSON 同源断言：J（共享）与 A（非共享）的 conditions.overlap_shared 必须分别 1 / 0
+json_shared() { # <case-dir> → 打印 overlap_shared
+  SYNO_MERGE_COND_FIXTURE="$1/fixture.json" SYNO_GATE_DEGRADED_LOG="$1/degraded.log" \
+    bash "$TOOL" --pr 100 --repo-root "$1/repo" --base local-main --json 2>/dev/null \
+    | python3 -c "import json,sys;print(json.load(sys.stdin)['conditions'].get('overlap_shared'))" 2>/dev/null || echo ERR
+}
+got_j="$(json_shared "$WORK/j/J")"
+got_a="$(json_shared "$WORK/j/A")"
+if [ "$got_j" = "1" ] && [ "$got_a" = "0" ]; then
+  extra "#639-2 JSON overlap_shared 同源（J=1 / A=0）"
+else
+  fail "#639-2 JSON overlap_shared 不同源（J=${got_j} 期望 1；A=${got_a} 期望 0）"
+fi
 judgment I  2 "degraded: open PR 列表不可达（HTTP 500 on /pulls?state=open，fail-closed）" \
   "degraded:" "MERGE-COND: degraded" "①=ok"
 
@@ -570,8 +613,8 @@ fi
 echo
 echo "结果: ${PASS} 通过, ${FAIL} 失败"
 if [ "$FAIL" -ne 0 ]; then exit 1; fi
-if [ "$PASS" -ne 12 ]; then
-  echo "❌ 判定点数 ${PASS} ≠ 12（规格 §4.1 N3：N 必须 = --selfcheck 的 12 个判定点）" >&2
+if [ "$PASS" -ne 13 ]; then
+  echo "❌ 判定点数 ${PASS} ≠ 13（#639-1：配对测试 13 判定点，与 --selfcheck 13/13 对表）" >&2
   exit 1
 fi
 if [ "$EXTRA" -eq 0 ]; then
