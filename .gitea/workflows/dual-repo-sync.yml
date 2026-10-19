@@ -1,0 +1,50 @@
+# dual-repo-sync.yml — 两仓对账探针（每日）· 任务 #609
+#
+# 目的：把「Gitea local-main 与 GitHub main 是否对齐」从人查变成机器查。
+#   判据：scripts/control-tower/check-dual-repo-sync.sh（三态退出码）
+#     0 = 一致 ｜ 1 = 滞后/分叉（真红）｜ 2 = 读不到（degraded，**禁当"差=0"**）
+#   🔴 结果落固定路径：<repo>/.codex/control-tower/tmp/dual-repo-sync.json（被 .gitignore 覆盖）
+#
+# 边界（CTO 2026-10-19 卡）：
+#   · 本 workflow **不测 runner 存活**（runner 挂了本 job 根本不跑）—— 那半边归门禁域 P4
+#   · 与 local-gates 分离：不进阻断腿，不拖慢 required check
+#   · 只读：不改分支、不 push、不碰 scripts/audit/**
+name: dual-repo-sync
+on:
+  schedule:
+    - cron: "0 1 * * *"        # 每日 01:00 UTC（北京 09:00）
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: macos
+    timeout-minutes: 10
+    steps:
+      - name: 工作区（本机 Gitea 克隆；独立目录，避免与 local-gates 抢树）
+        run: |
+          set -e
+          WS=/Users/wane/.ci-work/SynovaAgent-dualrepo
+          if [ ! -d "$WS/.git" ]; then
+            mkdir -p "$(dirname "$WS")"
+            git clone -q http://127.0.0.1:3000/synova-agent/SynovaAgent.git "$WS"
+          fi
+          git -C "$WS" fetch -q origin "${{ github.sha }}" || true
+          git -C "$WS" checkout -q -f "${{ github.sha }}" 2>/dev/null \
+            || git -C "$WS" checkout -q -f origin/local-main
+          echo "HEAD=$(git -C "$WS" rev-parse --short HEAD)"
+
+      - name: 两仓对账（三态：0 一致 / 1 滞后或分叉 / 2 读不到）
+        run: |
+          cd /Users/wane/.ci-work/SynovaAgent-dualrepo
+          set +e
+          PATH="/Users/wane/.local/bin:$PATH" \
+          SYNO_SYNC_GITEA_URL=origin \
+            bash scripts/control-tower/check-dual-repo-sync.sh
+          rc=$?
+          set -e
+          case "$rc" in
+            0) echo "✅ 两仓一致"; exit 0 ;;
+            2) echo "::error title=DUAL-REPO-SYNC::degraded — 远端读不到，按判据不得当「差=0」"; exit 2 ;;
+            *) echo "::error title=DUAL-REPO-SYNC::镜像滞后或分叉 — 见上一条 verdict 与 JSON"; exit 1 ;;
+          esac
