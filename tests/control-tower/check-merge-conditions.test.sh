@@ -38,8 +38,8 @@
 #       ⇒ 以 K5「PR 取不到 ⇒ exit 2」（同为 fail-closed 降级）替代并在此登记差异。
 #
 # 计数口径（规格 §4.1 N3：末行 N 必须 = --selfcheck 的 12 个判定点）:
-#   通过 = **12 判定点**（每子例一次；selfcheck 另有子例 J ⇒ 13/13，配对测试不驱动 J）；C2 边界/参数/只读断言单列（`边界:` 行），
-#   两者任一失败都计入「失败」。⇒ 末行恒为 `结果: 12 通过, 0 失败`。
+#   通过 = **13 判定点**（每子例一次；#639-1 起配对测试独立驱动 J（共享追加），与 --selfcheck 13/13 对表）；C2 边界/参数/只读断言单列（`边界:` 行），
+#   两者任一失败都计入「失败」。⇒ 末行恒为 `结果: 13 通过, 0 失败`。
 #
 # 沙箱: 全部夹具在系统临时目录（mktemp -d ＋ trap EXIT 清理）；夹具仓 git init ＋ 本地 commit。
 #       零网络：API 层经 SYNO_MERGE_COND_FIXTURE 注入（不依赖 Gitea 可达）。
@@ -62,7 +62,7 @@ WORK="$(mktemp -d "${TMPDIR:-/tmp}/synova-582-test.XXXXXX")" || { echo "❌ mkte
 cleanup() { rm -rf "$WORK" 2>/dev/null; }
 trap cleanup EXIT INT TERM
 
-PASS=0       # 判定点数（必须 = 12）
+PASS=0       # 判定点数（必须 = 13；#639-1 起配对测试驱动 J）
 FAIL=0       # 任何断言失败（判定点 ＋ 边界）
 EXTRA=0      # 边界/参数/只读断言通过数（单列，不计入 N）
 pass()  { PASS=$((PASS + 1));  echo "  ✅ $1"; }
@@ -211,8 +211,14 @@ build_repo() { # <case> <dir> [mut] → 造夹具仓 ＋ fixture.json（规格 �
   T2="$(git -C "$R" rev-parse HEAD)"
   # 分支 A（本 PR #100）：基于 T2 改 a.ts
   git -C "$R" checkout -q -b A "$T2" || return 1
-  printf 'a\n' > "$R/a.ts"
-  git -C "$R" add a.ts
+  if [ "$case" = "J" ]; then            # #639-1：A 碰共享追加登记表
+    mkdir -p "$R/docs/authority"
+    printf 'a\n' > "$R/docs/authority/DOCS-REGISTRY.yaml"
+    git -C "$R" add docs/authority/DOCS-REGISTRY.yaml
+  else
+    printf 'a\n' > "$R/a.ts"
+    git -C "$R" add a.ts
+  fi
   mk_commit "$R" "A_code" "agent@synova.local" || return 1
   A_code="$(git -C "$R" rev-parse HEAD)"
   # 分支 B(101) / Cb(102) / D(98,基于 T1) / E(99)
@@ -271,6 +277,14 @@ build_repo() { # <case> <dir> [mut] → 造夹具仓 ＋ fixture.json（规格 �
     printf 'a-conflict\n' > "$R/a.ts"
     git -C "$R" add a.ts
     mk_commit "$R" "B2_code" "agent@synova.local" || return 1
+    B_head="$(git -C "$R" rev-parse HEAD)"
+  fi
+  if [ "$case" = "J" ]; then
+    git -C "$R" checkout -q -b B2 "$T2" || return 1
+    mkdir -p "$R/docs/authority"
+    printf 'b-registry\n' > "$R/docs/authority/DOCS-REGISTRY.yaml"
+    git -C "$R" add docs/authority/DOCS-REGISTRY.yaml
+    mk_commit "$R" "B2_reg" "agent@synova.local" || return 1
     B_head="$(git -C "$R" rev-parse HEAD)"
   fi
   # G：给 99 号置回执 ⇒ 它进就绪集且编号更小（S2 红）
@@ -436,6 +450,7 @@ judgment F  2 "degraded: CI 信号量==0（state=pending total_count=0；禁判�
   "degraded:" "total_count=0"
 judgment G  1 "NO: ④ 串行" "S2 前置就绪 PR #99 编号更小 ⇒ 先合它" "④=no" "③=ok(attested)"
 judgment H  0 "CAN-自合并" "warn: 身份未分离" "③=ok(attested)"
+judgment J  0 "CAN-自合并" "shared:1" "②=ok(shared:1)"
 judgment I  2 "degraded: open PR 列表不可达（HTTP 500 on /pulls?state=open，fail-closed）" \
   "degraded:" "MERGE-COND: degraded" "①=ok"
 
@@ -570,8 +585,8 @@ fi
 echo
 echo "结果: ${PASS} 通过, ${FAIL} 失败"
 if [ "$FAIL" -ne 0 ]; then exit 1; fi
-if [ "$PASS" -ne 12 ]; then
-  echo "❌ 判定点数 ${PASS} ≠ 12（规格 §4.1 N3：N 必须 = --selfcheck 的 12 个判定点）" >&2
+if [ "$PASS" -ne 13 ]; then
+  echo "❌ 判定点数 ${PASS} ≠ 13（#639-1：配对测试 13 判定点，与 --selfcheck 13/13 对表）" >&2
   exit 1
 fi
 if [ "$EXTRA" -eq 0 ]; then
