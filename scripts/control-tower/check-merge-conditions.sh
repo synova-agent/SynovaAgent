@@ -32,7 +32,7 @@ export LC_ALL=C.UTF-8 2>/dev/null   # swallow-ok: locale 不可用时回退默�
 #     注入缝（测试/自检）：SYNO_MERGE_COND_FIXTURE=<fixture.json>（API 替换层，零网络）
 #   @output
 #     逐条件证据（4 行）＋ 信息级补充行 ＋ 机器行
-#       `MERGE-COND: can|no|degraded ①=ok|no ②=ok|no ③=ok(attested)|no ④=ok|no`
+#       `MERGE-COND: can|no|degraded ①=ok|no ②=ok|no[(shared:<n>)] ③=ok(attested)|no ④=ok|no`
 #     末行 ∈ {`CAN-自合并`, `NO: <条件名[, 条件名]>`, `degraded: <原因>`}
 #     --json：{tool,pr,base,tip,head,fp,conditions:{ci,overlap,review,serial},verdict,exit}
 #   @exit  0 = 四条件全绿（CAN-自合并）
@@ -60,7 +60,7 @@ export LC_ALL=C.UTF-8 2>/dev/null   # swallow-ok: locale 不可用时回退默�
 #          （R1..R9 / S1 / S2 / CI_* / OVL_*），输出原文可 grep，与规格 §4.3.1 逐字一致
 #   ⑤ 四条件                      — cond1_ci / cond2_overlap / cond3_review / cond4_serial
 #   ⑥ 编排与输出                  — main：解析 PR → 四条件 → 机器行 → 末行 → 三态 exit
-#   ⑦ --selfcheck                — 临时 git 仓＋夹具跑 A/B/C/D1–D4/E/F/G/H/I 13 判定点
+#   ⑦ --selfcheck                — 临时 git 仓＋夹具跑 A/B/C/D1–D4/E/F/G/H/I/J 13 判定点
 #
 # 已知限制（Known Limitations · C1 四条 ＋ 规格 §4bis）
 #   1. ③ 的「独立」只有 **T1 `attested`** 一级（创始人裁 B3；T0 `proven` 待 B6-a，本批不实现）。
@@ -156,9 +156,9 @@ append_degraded_log() { # <code> <reason> <phase>
 emit_json() { # <verdict> <exit> [code] [reason]
   local verdict="$1" ec="$2" code="${3:-}" reason="${4:-}"
   python3 - "$PRNUM" "$BASE" "$TIP" "$HEAD" "$FP" "$CI_V" "$OV_V" "$RV_V" "$SR_V" \
-            "$verdict" "$ec" "$code" "$reason" <<'PY'
+            "$verdict" "$ec" "$code" "$reason" "${shared:-0}" <<'PY'
 import json, sys
-(pr, base, tip, head, fp, ci, ov, rv, sr, verdict, ec, code, reason) = sys.argv[1:14]
+(pr, base, tip, head, fp, ci, ov, rv, sr, verdict, ec, code, reason, shared) = sys.argv[1:15]
 def cond(v):
     return v if v in ("ok", "no", "degraded", "skip") else "skip"
 obj = {
@@ -171,6 +171,7 @@ obj = {
     "conditions": {
         "ci": cond(ci),
         "overlap": cond(ov),
+        "overlap_shared": int(shared) if str(shared).isdigit() else 0,   # #639-2：共享追加计数（机器可读的「须串行」痕迹）
         "review": "ok(attested)" if rv == "ok" else cond(rv),  # 裁 B3-1：③ 绿必须带级别
         "serial": cond(sr),
     },
@@ -630,7 +631,8 @@ cond2_overlap() { # ② 零写集重叠（实际 diff × 实际 diff；open PR �
   if ! diff_files "$mb" "$head" > "$WORK/files/0.txt"; then
     die_degraded "E_DIFF: git diff 失败（本 PR 文件集 ${mb}..${head}）"
   fi
-  local pairs=0 hits=0 shared=0 pnum phead pref psha pmb f
+  local pairs=0 hits=0 pnum phead pref psha pmb f
+  shared=0
   while IFS="$(printf '\t')" read -r pnum phead pref; do
     [ -n "$pnum" ] || continue
     [ "$pnum" = "$PRNUM" ] && continue
@@ -665,7 +667,9 @@ EOF
     fi
   done < "$WORK/prs.tsv"
   if [ "$hits" -gt 0 ]; then OV_V="no"; else OV_V="ok"; fi
-  MACHINE_TAIL="${MACHINE_TAIL} ②=${OV_V}"
+  # #639-2：共享追加须有机器可读痕迹（下游 grep MERGE-COND 能看到"存在共享追加、须串行"）
+  if [ "$shared" -gt 0 ]; then MACHINE_TAIL="${MACHINE_TAIL} ②=${OV_V}(shared:${shared})"; else MACHINE_TAIL="${MACHINE_TAIL} ②=${OV_V}"; fi
+  if [ "$shared" -gt 0 ]; then OV_SHARED_SUFFIX="(shared:${shared})"; else OV_SHARED_SUFFIX=""; fi
   say "② 零写集重叠 ............... ${OV_V} (比对 ${pairs} 对，${hits} 处文件重叠，${shared} 处共享追加不计)"
   say "   ② 信息级：声明 vs 声明交集 由 devdoc_writeset.py --overlap-a/--overlap-b 提供（本件不重写、不参与判定）"
   flush_fails
@@ -960,7 +964,7 @@ PY
     if [ "$JSON_MODE" = "1" ]; then
       emit_json "can" 0
     else
-      say "MERGE-COND: can ①=ok ②=ok ③=${tok3} ④=ok"
+      say "MERGE-COND: can ①=ok ②=ok${OV_SHARED_SUFFIX} ③=${tok3} ④=ok"
       say "CAN-自合并"
     fi
     exit 0
@@ -973,7 +977,7 @@ PY
   if [ "$JSON_MODE" = "1" ]; then
     emit_json "no" 1
   else
-    say "MERGE-COND: no ①=${CI_V} ②=${OV_V} ③=${tok3} ④=${SR_V}"
+    say "MERGE-COND: no ①=${CI_V} ②=${OV_V}${OV_SHARED_SUFFIX} ③=${tok3} ④=${SR_V}"
     say "NO: ${names}"
   fi
   exit 1
@@ -1006,7 +1010,7 @@ checks = [
     {"id": "铁律48 非空壳测试", "cmd": "grep -c 'inner_exit=' t.sh", "result": "pass", "evidence": "13 判定点"},
     {"id": "铁律38 as any", "cmd": "grep -rn 'as any' <变更文件>", "result": "pass", "evidence": "0 命中"},
     {"id": "铁律11 静默降级", "cmd": "grep -n 'degraded:' x.sh", "result": "pass", "evidence": "stderr 一行 + exit 2"},
-    {"id": "三态退出码", "cmd": "bash x.sh --selfcheck; echo $?", "result": "pass", "evidence": "12/12"},
+    {"id": "三态退出码", "cmd": "bash x.sh --selfcheck; echo $?", "result": "pass", "evidence": "13/13"},
 ]
 doc = {
     "schema": "syno-review-receipt/v1",
@@ -1269,12 +1273,30 @@ run_case() { # run_case <case> <want-exit> <want-last-line> [needle...]
   fi
   # 🔴 #603 输出级反例（裁 B3-1 硬条件）：任何 MERGE-COND 行出现**裸** ③=ok（无 attested 级别）⇒ 失败
   #    根因：机器行 ③ 由 tok3 运行时拼接 ⇒ 只钉 needle 抓不住「改坏 tok3」；本断言直接看**输出**。
-  # 🔴 #603 白名单式（复核 #604 warn：只抓"裸 ok"会漏 `ok(fake)` 这类假级别）：
-  #    凡出现 `③=` 的行，必须形如 `③=ok(attested)` 或 `③=no`（后接空白/行尾）。
+  # 🔴 #603/#605 白名单式：**计数法，禁走管道**。
+  #   管道法 `grep … | grep -Evq …` 在 `set -uo pipefail` 下：下游 -q 命中即退 ⇒ 上游收 SIGPIPE(141)
+  #   ⇒ 管道判非零 ⇒ 把"有非法行"误判成"没问题"（实测 200k 行假级别 MISSED）。
+  #   ＋**存在性**：非降级机行里没有 `③=` 也非法（"看不见 ≠ 没问题"；删掉机器行 ③ 段曾仍 12/12 绿）。
+  #   降级机行 `MERGE-COND: degraded`（①/② 阶段即 exit 2）合法地没有 ③= ⇒ **豁免**。
+  #   ⚠️ 已知限制：计数**按行**——同一行兼有合法与非法 `③=` 会判过（旧形同样放过；如需更严改 grep -o 口径）。
   if [ -z "$bad" ]; then
-    if grep -E '③=' "$out" | grep -Evq '③=(ok\(attested\)|no)([[:space:]]|$)'; then
-      bad="机器行 ③ 形态非法（只允许 ok(attested) / no）"
-    fi
+    local n3=0 ok3=0 mline=""
+    if mline="$(grep -m1 '^MERGE-COND:' "$out")"; then :; else mline=""; fi
+    case "$mline" in
+      "") bad="缺 MERGE-COND 机器行（非降级路径必须有机行）" ;;
+      *degraded*) : ;;   # 降级路径豁免
+      *)
+        if n3="$(grep -Ec '③=' "$out")"; then :; else n3=0; fi
+        if [ "$n3" -eq 0 ]; then
+          bad="机器行缺 ③= 字段（信号量==0：看不见≠没问题）"
+        else
+          if ok3="$(grep -Ec '③=(ok\(attested\)|no)([[:space:]]|$)' "$out")"; then :; else ok3=0; fi
+          if [ "$n3" -ne "$ok3" ]; then
+            bad="机器行 ③ 形态非法（$((n3-ok3)) 行 / 共 ${n3} 行；只允许 ok(attested) / no）"
+          fi
+        fi
+        ;;
+    esac
   fi
   if [ -z "$bad" ] && [ -s "$out" ]; then
     # 打印该子例的红点/告警行作为原始输出证据（非 head 截断：全量）

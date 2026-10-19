@@ -1,0 +1,89 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 621,
+  "patch_fingerprint": "sha256:9d50cd4e5f7a0639978e35a8cb7a42ae46c94ae04fb2908a6de1beefb5bea0dd",
+  "author": "p7-l1（P0 修复；单文件小改，L1 自做）",
+  "reviewer": "fresh 会话 34f4c7d7（独立复核 PASS @d97780e57）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "① 空输出 ⇒ 拒",
+      "cmd": "原样抽取 form_ok 到 /tmp 跑",
+      "result": "pass",
+      "evidence": "空文件 ⇒ 1；文件不存在 ⇒ 1"
+    },
+    {
+      "id": "② 正例不误伤",
+      "cmd": "③=ok(attested) / ③=no / 多行含噪声",
+      "result": "pass",
+      "evidence": "均返回 0"
+    },
+    {
+      "id": "③ 改坏必红",
+      "cmd": "git archive 物化后仅把 form_ok 换回旧形",
+      "result": "pass",
+      "evidence": "❌ #618 form_ok：空输出 ⇒ 拒绝（期望 1 实得 0）｜结果: 12 通过, 1 失败（exit 1）"
+    },
+    {
+      "id": "④ gate-integrity",
+      "cmd": "check-gate-integrity.sh",
+      "result": "pass",
+      "evidence": "GATE-INTEGRITY: OK；FIXTURE-POWER 违规 0（本件 0 命中）；且删掉了 base 的管道取反形态，未加豁免条"
+    },
+    {
+      "id": "⑤ 配对测试",
+      "cmd": "test.sh；--selfcheck",
+      "result": "pass",
+      "evidence": "结果: 12 通过, 0 失败；SELFCHECK-OK: 13/13"
+    },
+    {
+      "id": "⑥ 范围",
+      "cmd": "git diff --name-status base..HEAD",
+      "result": "pass",
+      "evidence": "仅测试件 ＋ 已登记豁免文件；被测件 blob 三方一致 3c1738d1（未改）"
+    },
+    {
+      "id": "⑦ 回归",
+      "cmd": "pre-commit；gate-protection",
+      "result": "pass",
+      "evidence": "门禁全过；豁免 8 通过 0 失败；工作树空"
+    },
+    {
+      "id": "F1 无副作用（复核强证）",
+      "cmd": "12 种对抗形态新旧对照",
+      "result": "pass",
+      "evidence": "唯一差异＝空文件/全文无 ③=（new=1 old=0）；其余全同，零例放宽"
+    },
+    {
+      "id": "CI",
+      "cmd": "GET commits/d97780e57/status",
+      "result": "pass",
+      "evidence": "state=success total=2 pending=0（复核者无 token 未核，L1 已核）"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "note",
+      "where": "F4 计数按行",
+      "what": "同行兼有合法/非法 ③= 会判过（旧形同样放过）；已记，另立小卡。"
+    },
+    {
+      "severity": "note",
+      "where": "F5 双保险冗余",
+      "what": "want_exit!=2 门与 degraded 豁免功能重复；建议注释声明冗余有意 —— 已记。"
+    },
+    {
+      "severity": "note",
+      "where": "F6 CI 盲点",
+      "what": "复核者无 token 未核 CI；L1 已用 API 核 state=success pending=0。"
+    },
+    {
+      "severity": "note",
+      "where": "既有口径",
+      "what": "pre-commit 组 9 node 不可用降级登记（非本 PR）；已记。"
+    }
+  ],
+  "issued_at": "2026-10-19T20:25:00+08:00",
+  "tool": "pr-review@v1 ＋ fresh 独立复核（34f4c7d7，含原样抽取＋变异）＋ L1 四条件自判"
+}

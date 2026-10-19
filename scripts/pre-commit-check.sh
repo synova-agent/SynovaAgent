@@ -426,6 +426,12 @@ DOC_ONLY=$(is_doc_only "$STAGED_ALL")
 # 强度与 D515/D516 一致: 本地 soft（人可见），CI strict（SYNO_CI=1）转硬阻断。
 # 判据来源: docs/synova/DOC-CONTRACT.md 的三个机器可读块（执行体只解析契约，不硬编码）。
 # 条件跳过: 无 md/html 变更时不启动 python（保持 <1s）。
+  # #598: 真实 CI 无 base ⇒ fail loud（禁静默退回 --staged 空跑；此前 ① 步不注入 base ⇒ 闸 3 恒绿）
+  #   作用域 = SYNO_CI=1 ∧ GITHUB_ACTIONS=true（真实 CI 三件套；沙箱夹具只设 SYNO_CI ⇒ 不受影响）
+  if [ "${SYNO_CI:-0}" = "1" ] && [ "${GITHUB_ACTIONS:-}" = "true" ] && [ -z "${SYNO_DIFF_BASE:-}" ]; then
+    soft_check "D1193 文档契约三闸: CI 无 base（fail-closed，禁空跑）" "SYNO_DIFF_BASE 未注入"
+    exit 1
+  fi
 DOC_CONTRACT_TOUCHED=$(echo "$STAGED_ALL" | grep -E '\.(md|html?)$' || true)
 if [ -z "$DOC_CONTRACT_TOUCHED" ]; then
   soft_pass "D1193 文档契约三闸: 无文档变更（跳过）"
