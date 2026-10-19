@@ -60,7 +60,7 @@ export LC_ALL=C.UTF-8 2>/dev/null   # swallow-ok: locale 不可用时回退默�
 #          （R1..R9 / S1 / S2 / CI_* / OVL_*），输出原文可 grep，与规格 §4.3.1 逐字一致
 #   ⑤ 四条件                      — cond1_ci / cond2_overlap / cond3_review / cond4_serial
 #   ⑥ 编排与输出                  — main：解析 PR → 四条件 → 机器行 → 末行 → 三态 exit
-#   ⑦ --selfcheck                — 临时 git 仓＋夹具跑 A/B/C/D1–D4/E/F/G/H/I 13 判定点
+#   ⑦ --selfcheck                — 临时 git 仓＋夹具跑 A/B/C/D1–D4/E/F/G/H/I/J 13 判定点
 #
 # 已知限制（Known Limitations · C1 四条 ＋ 规格 §4bis）
 #   1. ③ 的「独立」只有 **T1 `attested`** 一级（创始人裁 B3；T0 `proven` 待 B6-a，本批不实现）。
@@ -1010,7 +1010,7 @@ checks = [
     {"id": "铁律48 非空壳测试", "cmd": "grep -c 'inner_exit=' t.sh", "result": "pass", "evidence": "13 判定点"},
     {"id": "铁律38 as any", "cmd": "grep -rn 'as any' <变更文件>", "result": "pass", "evidence": "0 命中"},
     {"id": "铁律11 静默降级", "cmd": "grep -n 'degraded:' x.sh", "result": "pass", "evidence": "stderr 一行 + exit 2"},
-    {"id": "三态退出码", "cmd": "bash x.sh --selfcheck; echo $?", "result": "pass", "evidence": "12/12"},
+    {"id": "三态退出码", "cmd": "bash x.sh --selfcheck; echo $?", "result": "pass", "evidence": "13/13"},
 ]
 doc = {
     "schema": "syno-review-receipt/v1",

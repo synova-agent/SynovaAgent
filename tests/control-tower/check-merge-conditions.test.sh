@@ -38,7 +38,7 @@
 #   注: C2 的「--pr 指向已合/已关 PR」在夹具层无 state 注入缝（fixture 的 PR 恒 open）
 #       ⇒ 以 K5「PR 取不到 ⇒ exit 2」（同为 fail-closed 降级）替代并在此登记差异。
 #
-# 计数口径（规格 §4.1 N3：末行 N 必须 = --selfcheck 的 12 个判定点）:
+# 计数口径（规格 §4.1 N3：末行 N 必须 = --selfcheck 的 13 个判定点）:
 #   通过 = **13 判定点**（每子例一次；#639-1 起配对测试独立驱动 J（共享追加），与 --selfcheck 13/13 对表）；C2 边界/参数/只读断言单列（`边界:` 行），
 #   两者任一失败都计入「失败」。⇒ 末行恒为 `结果: 13 通过, 0 失败`。
 #
@@ -438,7 +438,7 @@ RO_BEFORE="$(git -C "$REPO_DIR" status --porcelain)"
 mkdir -p "$WORK/j" "$WORK/cli"
 
 echo
-echo "── A 12 个判定点（逐子例独立夹具 ＋ 三态退出码）──"
+echo "── A 13 个判定点（逐子例独立夹具 ＋ 三态退出码；含 J 共享追加）──"
 judgment A  0 "CAN-自合并" \
   "③=ok(attested)" "①=ok" "②=ok" "④=ok" "MERGE-COND: can"
 judgment B  1 "NO: ① CI 全绿 pending=0" \
@@ -465,6 +465,19 @@ if grep -Fq "(shared:1)" "$WORK/j/J/out.txt" 2>/dev/null; then
   extra "#639-2 J 共享追加带 (shared:1)"
 else
   fail "#639-2 J 缺 (shared:1)（机行未体现共享追加）"
+fi
+# #639-2 JSON 同源断言：J（共享）与 A（非共享）的 conditions.overlap_shared 必须分别 1 / 0
+json_shared() { # <case-dir> → 打印 overlap_shared
+  SYNO_MERGE_COND_FIXTURE="$1/fixture.json" SYNO_GATE_DEGRADED_LOG="$1/degraded.log" \
+    bash "$TOOL" --pr 100 --repo-root "$1/repo" --base local-main --json 2>/dev/null \
+    | python3 -c "import json,sys;print(json.load(sys.stdin)['conditions'].get('overlap_shared'))" 2>/dev/null || echo ERR
+}
+got_j="$(json_shared "$WORK/j/J")"
+got_a="$(json_shared "$WORK/j/A")"
+if [ "$got_j" = "1" ] && [ "$got_a" = "0" ]; then
+  extra "#639-2 JSON overlap_shared 同源（J=1 / A=0）"
+else
+  fail "#639-2 JSON overlap_shared 不同源（J=${got_j} 期望 1；A=${got_a} 期望 0）"
 fi
 judgment I  2 "degraded: open PR 列表不可达（HTTP 500 on /pulls?state=open，fail-closed）" \
   "degraded:" "MERGE-COND: degraded" "①=ok"
