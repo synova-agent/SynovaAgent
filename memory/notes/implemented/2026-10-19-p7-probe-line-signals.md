@@ -1,6 +1,6 @@
 ---
 状态: implemented
-日期: 2026-10-19（第 2 轮 · v4.1 口径）
+日期: 2026-10-19（第 2 轮 · v4.2 口径（H 子例／--line 退出码／exceptions.lines 三口径入册））
 决策: 「回执三信号」由人算改为按 handbook《常设授权条例》§五 的 5 条**报告线**（路径切 R1–R5）机器算；**② 只装「没做到」（NOT-DONE，跨线按所涉每线各计 1，与 ③ 同口径）**，逐项降级（不可判）进 `gaps` 不可判栏且**不计 ②**；**① 分母＝该线全部已归属在飞 PR（含降级，fail-closed）**；`--line` 末尾 `gaps(global)=<n>`；`--selfcheck` 8 子例（A–H，新增 H）。
 理由: 包写集天然重叠（规格 §〇pre ⑤ 实测：`docs/**`∈P6/P7/P9/P10、`scripts/control-tower/**`∈P4/P7/P9）⇒ 按包归线会把多数 open PR 打成 ambiguous；且第 2 轮收件闸实测出旧口径漏掉「没做到」（治理线 ①=0/20 而 ②=0）＋把降级当例外 ⇒ v4.1 把「没做到」（②）与「看不见」（gaps）分栏、末行计数 == 明细条数，使隐藏失败必须现形。
 ---
@@ -29,7 +29,7 @@
 ## 依据
 
 - 创始人 2026-10-19「回执 A」口径裁定；**B-7-a**（线＝报告线；`tests/control-tower/**`·`tests/architecture/**`·`.gitea/**`→治理线）／**B-7-b**（W2 写集扩 1 行）／**B-7-c**（①＝四条件通过率、③ 卡数 v1 不出）三条裁定（记于 Issue #602）；**L1 收件闸第 2 轮退回裁决**（② 只装没做到／降级进 gaps／① 分母含降级），冻结契约为 task-1 正文。
-- 规格真源（唯一）：handbook `派单件/2026-10-19-P7-602-三信号探针-规格.md` **@ `634200d3e`（v4.1）**；卡面 `.claude/task-briefs/2026-10-19-p7-probe-line-signals.md`。
+- 规格真源（唯一）：handbook `派单件/2026-10-19-P7-602-三信号探针-规格.md` **@ `94133bfa7`（v4.1）**；卡面 `.claude/task-briefs/2026-10-19-p7-probe-line-signals.md`。
 - 域守则：W3 本次显式 read `memory/notes/AGENTS.md`；W1/W2 域守则按 task-1/task-2 卡面分别 read（`scripts/control-tower/AGENTS.md`／`tests/control-tower/AGENTS.md`）。
 - 复用四既有约定（重复实现即不合格）：三态退出码／`@degraded` ＋ `SYNO_GATE_DEGRADED_LOG`／UTF-8 强制（D732）／判别力自检（改坏必红）。
 

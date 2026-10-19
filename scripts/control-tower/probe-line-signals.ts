@@ -1435,7 +1435,7 @@ function runChild(args: string[], env: Record<string, string>): RunResult {
     maxBuffer: 16 * 1024 * 1024,
   });
   const stderr1 = typeof result.stderr === 'string' ? result.stderr : '';
-  const loaderBroken = /ERR_UNKNOWN_FILE_EXTENSION|Unknown file extension|Cannot use import statement/.test(stderr1) || (result.error !== undefined && result.error.code === 'ENOENT');
+  const loaderBroken = /ERR_UNKNOWN_FILE_EXTENSION|Unknown file extension|Cannot use import statement/.test(stderr1) || (result.error !== undefined && (result.error as NodeJS.ErrnoException).code === 'ENOENT');
   if (loaderBroken) {
     result = spawnSync('npx', ['tsx', script, ...args], {
       env: merged,
