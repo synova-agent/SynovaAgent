@@ -1,0 +1,96 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 607,
+  "patch_fingerprint": "sha256:dea692d2f3e856147d6d3d2b86946bf187c17cae65ddc851eef3520eb4c87d8c",
+  "author": "p7-l1（dev doc 撰写者 ＋ 卡面；L1 产出，实现交 squad）",
+  "reviewer": "fresh 会话 fbd17346（终审 PASS @ba13c4bfc）；前序 fresh 评审链 8979bbb7／b2ae4acf／a431c300（各轮 FAIL，逐条收口）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "v1→v3.2 逐轮收口",
+      "cmd": "5 轮 fresh 复核：v1 FAIL(13) → v2 FAIL(9) → v3 FAIL(5) → v3.1 FAIL(2) → v3.2 PASS",
+      "result": "pass",
+      "evidence": "每轮 findings 均已实修；终审 fbd17346 判 PASS（1 blocker＋1 low 收口）"
+    },
+    {
+      "id": "线口径（v2 修正的根因）",
+      "cmd": "16/17 open PR 按报告线路径法手算",
+      "result": "pass",
+      "evidence": "v1 包口径 ⇒ 13–16 ambiguous（写集重叠实测 docs/**∈{P6,P7,P9,P10} 等）；v2/v3 报告线 ⇒ single 5 / cross 12 / unknown 0（17 PR，现场 API 核）"
+    },
+    {
+      "id": "③ 计数语义（v3 修正）",
+      "cmd": "grep 检查 C1/C2/§4bis/DS 四处 ③ 口径",
+      "result": "pass",
+      "evidence": "cross 计入所涉每条线并标 (跨线 n)；C2 禁用句「不计入任一线」0 命中；n/a(0) 限定为 ③ 且仅全局 PR=0，① 的 n/a 单列（DS-3＋子例 C 已分标）"
+    },
+    {
+      "id": "实测数与裁决表一致",
+      "cmd": "grep 'cross 11|cross 6' ＋ 附录 B 对照 §4bis",
+      "result": "pass",
+      "evidence": "0 命中；附录 B 现为 single 5/cross 12 与 single 10/cross 7，与 :152/:153/:156 的 17/12/7 对齐"
+    },
+    {
+      "id": "子例完整性",
+      "cmd": "grep '6 子例'；检查封面/§〇pre/卡面枚举",
+      "result": "pass",
+      "evidence": "0 命中；A–G 七子例（含 G 跨线漏计）在 dev doc §4.3、封面、§〇pre、卡面 Q3 四处一致；SELFCHECK-OK: 7/7 两处齐"
+    },
+    {
+      "id": "F7 等事实复跑",
+      "cmd": "git grep -l 'exit 2' 7a17677da -- 'scripts/control-tower/*.sh' | wc -l 等",
+      "result": "pass",
+      "evidence": "exit 2=40、degraded=41（SYNO_GATE_DEGRADED_LOG=3）、utf-8=40/47（v1 写的 38/8/33/45 全部更正）"
+    },
+    {
+      "id": "§6 盘点数字",
+      "cmd": "ls scripts/doc-system|wc -l 等四条",
+      "result": "pass",
+      "evidence": "10/37/3/21（v2 的 4/34 已更正）"
+    },
+    {
+      "id": "前置与批准",
+      "cmd": "读 §7 与附录 B",
+      "result": "pass",
+      "evidence": "B-7-a（报告线口径＋tests/**、.gitea/** 两子项）／B-7-c（① 代理＋③ 卡数）／B-7-b（写集 1 行）三条待裁；**无编造批准记录**；未批 ⇒ 停（a/c）／不做 W2（b）"
+    },
+    {
+      "id": "降级粒度与只读",
+      "cmd": "读 §4.2；检查是否仍做内部 git fetch",
+      "result": "pass",
+      "evidence": "逐项降级 exit 1／根级 exit 2；已删内部 fetch（改 API /pulls/<n>/files），保 @authority 只读与 DS-7"
+    },
+    {
+      "id": "环境前置",
+      "cmd": "command -v npx（默认 shell）",
+      "result": "pass",
+      "evidence": "默认无 npx；§5 已写 source ~/.nvm/nvm.sh（node v24.19.0 / tsx v4.23.13）"
+    },
+    {
+      "id": "门禁与范围",
+      "cmd": "pre-dispatch-check.sh；check-citations.py；git diff --name-only merge-base..HEAD",
+      "result": "pass",
+      "evidence": "两者 exit 0（引用 15/15）；恰 2 文件（dev doc 364 行＋卡面 70 行），工作树 clean"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "note",
+      "where": "dev doc §4bis 实测段（:150）",
+      "what": "该段头写「16 个 open PR」而同段 :152 写「open PR 共 17」——终审（fbd17346）判为措辞级非判据错、报 PASS；已记入 #602 规格勘误，随下一批顺手改为 17。"
+    },
+    {
+      "severity": "note",
+      "where": "dev doc 实测段取证",
+      "what": "终审提示：cross 12 的 PR 号未列（single 5 已列 #515/#519/#522/#543/#607），无 token 环境无法独立重算 12 ⇒ 已记入 #602 勘误，建议下批补列 12 个 PR 号。"
+    },
+    {
+      "severity": "note",
+      "where": "口径待裁",
+      "what": "B-7-a／B-7-b／B-7-c 三条仍待 CTO；本回执只判「本规格可作为唯一规格源」，不代裁口径。"
+    }
+  ],
+  "issued_at": "2026-10-19T03:30:00+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md）＋ 5 轮 fresh 复核（v1→v3.2）＋ L1 自核"
+}
