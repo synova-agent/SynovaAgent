@@ -45,6 +45,8 @@ PUSH_BRANCH_REF="$(printf '%s\n' "$REFS_INPUT" | awk '$3 ~ /^refs\/heads\// {pri
 PUSH_BRANCH="${PUSH_BRANCH_REF#refs/heads/}"
 # D457: 删除操作检测 — local_sha 全零 = git push --delete（门禁 0-1 不应做 behind/ahead 检查）
 PUSH_LOCAL_SHA="$(printf '%s\n' "$REFS_INPUT" | awk '$3 ~ /^refs\/heads\// {print $2; exit}' | tr -d '\n\r')"
+# #617: 第 4 字段 = 远端当前 sha（pre-push stdin 契约）；0-1 用它判"被推 ref 是否是远端后代"
+PUSH_REMOTE_SHA="$(printf '%s\n' "$REFS_INPUT" | awk '$3 ~ /^refs\/heads\// {print $4; exit}' | tr -d '\n\r')"
 IS_DELETE=""
 if [[ -n "$PUSH_LOCAL_SHA" && "$PUSH_LOCAL_SHA" =~ ^0+$ ]]; then
   IS_DELETE=1
@@ -93,35 +95,50 @@ check_push_sync() {
     return 0
   fi
 
-  # 0-1: fetch 目标分支对比同步状态
+  # 0-1: 按**被推 ref**（stdin local_sha/remote_sha）判同步 —— 不用 HEAD（#617）
+  #   旧实现用 HEAD..FETCH_HEAD：从过期 HEAD 推"远端祖先的后代"会被误拦。
+  #   判据：remote_sha 是被推 ref 的祖先 ⇒ 快进放行；否则（分叉/落后）拦。
   if [[ -z "$fremote" || -z "$fbranch" || -z "$PUSH_BRANCH_REF" ]]; then
     echo -e "  ${YELLOW}⚠️  门禁 0-1: 无法确定 push 目标 (remote=$fremote branch=$fbranch) — 跳过 (fail-open)${RESET}"
+    return 0
+  fi
+  if [[ -z "${PUSH_LOCAL_SHA:-}" || "${PUSH_LOCAL_SHA:-}" =~ ^0+$ ]]; then
+    echo -e "  ${YELLOW}⚠️  门禁 0-1: 无法确定被推 ref 的 sha（stdin 缺 local_sha）— 跳过 (fail-open)${RESET}"
     return 0
   fi
   if ! git fetch "$fremote" "$fbranch" --quiet 2>/dev/null; then # swallow-ok: fetch 失败走 fail-open 显式提示降级 (铁律 11)
     echo -e "  ${YELLOW}⚠️  门禁 0-1: fetch $fremote $fbranch 失败 — 同步检查跳过 (fail-open)${RESET}"
     return 0
   fi
-  behind="$(git rev-list --count HEAD..FETCH_HEAD 2>/dev/null | tr -d '\n\r' || echo "0")"
-  ahead="$(git rev-list --count FETCH_HEAD..HEAD 2>/dev/null | tr -d '\n\r' || echo "0")"
+  # remote_sha 取 stdin 第 4 字段（权威）；若本机无该对象（未 fetch 过）⇒ 退 FETCH_HEAD（= 远端当前 tip）
+  remote_sha="${PUSH_REMOTE_SHA:-}"
+  if [[ -z "$remote_sha" ]] || ! git cat-file -e "${remote_sha}^{commit}" 2>/dev/null; then
+    remote_sha="$(git rev-parse FETCH_HEAD 2>/dev/null || true)"
+  fi
+  if [[ -z "$remote_sha" ]]; then
+    echo -e "  ${YELLOW}⚠️  门禁 0-1: 远端 sha 不可解析 — 跳过 (fail-open)${RESET}"
+    return 0
+  fi
+  behind="$(git rev-list --count "$PUSH_LOCAL_SHA..$remote_sha" 2>/dev/null | tr -d '\n\r' || echo "0")"
+  ahead="$(git rev-list --count "$remote_sha..$PUSH_LOCAL_SHA" 2>/dev/null | tr -d '\n\r' || echo "0")"
   [[ -z "$behind" ]] && behind="0"
   [[ -z "$ahead" ]] && ahead="0"
   if [[ "$behind" -gt 0 && "$ahead" -gt 0 ]]; then
-    echo -e "  ${RED}❌ 门禁 0-1: 本地与远端分叉 — 本地领先 $ahead / 落后 $behind${RESET}"
+    echo -e "  ${RED}❌ 门禁 0-1: 被推 ref 与远端分叉 — 被推 ref 领先 $ahead / 落后 $behind${RESET}"
     echo "  禁止直接 push (会覆盖对方工作) 也禁止 force push。先集成远端:"
     echo "    git merge $fremote/$fbranch   # 推荐（不改 hash，bypass 对账不裂）"
     echo "    # 或 git rebase $fremote/${fbranch}（会改 hash → bypass 对账断裂，需按 D451 补记）"
     return 1
   fi
   if [[ "$behind" -gt 0 ]]; then
-    echo -e "  ${RED}❌ 门禁 0-1: 远端有 $behind 个本机没有的 commit — 本地已过期${RESET}"
-    echo "  注意: git status 的 ahead 是相对本机缓存的远端引用, 不是远端真身。"
+    echo -e "  ${RED}❌ 门禁 0-1: 被推 ref 落后远端 $behind 个 commit — 先拉平再 push${RESET}"
+    echo "  注意: 判定对象是被推 ref（不是当前 HEAD）；git status 的 ahead 是相对本机缓存的远端引用。"
     echo "  先拉平再 push:"
     echo "    git pull --ff-only   # 推荐（不改 hash，bypass 对账不裂）"
     echo "    # 或 git rebase $fremote/${fbranch}（会改 hash → 需按 D451 补记 bypass.log）"
     return 1
   fi
-  echo -e "  ${GREEN}✅ 门禁 0-1: 与远端同步 (本地领先 $ahead)${RESET}"
+  echo -e "  ${GREEN}✅ 门禁 0-1: 被推 ref 与远端同步 (被推 ref 领先 $ahead)${RESET}"
   return 0
 }
 

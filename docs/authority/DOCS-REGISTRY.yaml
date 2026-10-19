@@ -563,3 +563,11 @@ documents:
     status: draft
     owner: P10（平台线·生态）
     note: "Gitea=阻断腿/唯一账本（required check 实测 local-gates/gates）；GitHub=深度腿/集成验证面，产出信号不产出账。含创始人入口（mDNS，禁写死 IP；app.ini DOMAIN/ROOT_URL 仍写死 IP 属平台层上报）与地址口径清扫三分类 R/H/E（as_of 2026-10-19：10 件/13 行/15 次出现；按行 R4/H8/E1）。"
+
+    # ---- P4 2026-10-19：#617 pre-push 0-1 豁免（创始人作者；D2 登记要求）----
+    - id: DOC-0207
+      type: decision
+      path: gate-exemptions/2026-10-19-pre-push-0-1-617.md
+      status: active
+      owner: CTO
+      note: "#617 pre-push 0-1 改按被推 ref 判（stdin local_sha/remote_sha）的创始人授权豁免（3 条受保护路径）。"
