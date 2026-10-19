@@ -43,7 +43,7 @@
   - `治理线 ①(merge-conditions)=0/22 ②=22 ③=22(跨线 8)`
   - `CTO ①(merge-conditions)=n/a(0) ②=0 ③=0(跨线 0)`／`K3 ①(merge-conditions)=n/a(0) ②=0 ③=0(跨线 0)`／`基座线 ①=n/a(未映射) ②=0 ③=0(跨线 0)`
   - 末行 `LINE-SIGNALS: lines=5 exceptions=30 gaps=19`；30 条 `exception:`（如 `exception: PR#625 产品线 NOT-DONE NO: overlap,review`、`exception: PR#622 治理线 NOT-DONE NO: ci,overlap,review`）与 19 条 `gap:`（`cross` 8 条 ＋ `mixed-unassigned` 11 条）逐条可数，与末行计数一致。
-  - **不可判项实测 0 条**（真实仓当前无降级 PR）⇒ 由**子例 H 夹具覆盖**：`SYNO_LINE_SIGNALS_FIXTURE=<H 同构夹具> --all` ⇒ `产品线 ①(merge-conditions)=0/3 ②=2 ③=3(跨线 0)`、`exception: PR#21 产品线 NOT-DONE NO: ci,overlap,review`、`gap: PR#23 不可判 E_COND_DEGRADED`、末行 `LINE-SIGNALS: lines=5 exceptions=2 gaps=1`、exit `1`。
+  - **不可判项实测随合并窗口变化**：Lead 复跑 as_of `17:01:26Z` 为 0 条（末行 `LINE-SIGNALS: lines=5 exceptions=21 gaps=14`）；verifier 快照 as_of `16:46:04Z` 实测 2 条（原文 `gap: PR#553 不可判 E_MERGE_BASE`、`gap: PR#547 不可判 E_MERGE_BASE`，该次末行 `LINE-SIGNALS: lines=5 exceptions=27 gaps=21`，证据文件 `/tmp/verifier-602-r2-evidence.txt` §1）⇒ 稳定窗口可能为 0，口径由**子例 H 夹具**钉死（H 同构夹具原始输出：`SYNO_LINE_SIGNALS_FIXTURE=<H 同构夹具> --all` ⇒ `产品线 ①(merge-conditions)=0/3 ②=2 ③=3(跨线 0)`、`exception: PR#21 产品线 NOT-DONE NO: ci,overlap,review`、`gap: PR#23 不可判 E_COND_DEGRADED`、末行 `LINE-SIGNALS: lines=5 exceptions=2 gaps=1`、exit `1`）。
 - **真实数据 `--line 产品线`**（约 3min，只读）⇒ 退出码 `1`；行 `产品线 ①(merge-conditions)=0/8 ②=8 ③=8(跨线 8)` ＋ 8 条 `exception:` 明细，末行 `gaps(global)=19`（== `--all` 的 `gaps=19`）。
 - **真实数据 `--all --json`**（约 3min，只读）⇒ 退出码 `1`；stdout 仅 JSON 且顶层恰七键 `tool/lines/exceptions/gaps/mapping/summary/exit`；`lines=5 exceptions=30 gaps=19`；`summary.open_prs=22 attributed_prs=22 single_prs=14 cross_prs=8 unknown_prs=0 mixed_prs=11 files_total=183`；`exceptions[].code` 全 `NOT-DONE`、`gaps[].kind` ∈ {`cross`,`mixed-unassigned`}；stderr 5 行逐线行与 JSON `lines[].s1/s2/s3` 逐项相同（python3 比对 `True`）。
 - 随本批合并生效：`--all`／`--line`／`--json` 成为「某线进度/在飞/例外/看不见」的机算入口（只读）；真实数据判据由独立复核（task-4）复跑留档。
@@ -54,5 +54,5 @@
 2. **基座线无路径定义**（handbook §五「具体面由 CTO 在开线时给」）⇒ R5 v1 不映射，线级 `n/a(未映射)`，不作为 gaps 条目（但必须出行，不得少一行）。
 3. **不属任何报告线的路径进 gaps**：`docs/plans/**`、`memory/notes/**`、`task-state/**`、`.codex/**` 等 ⇒ `unknown` / `mixed-unassigned` 逐项点名。
 4. **① 是机器代理**（四条件通过率），非 handbook 字面「Done 判据逐条」；③ 的「独立复核」沿用 `check-merge-conditions.sh` 的 T1 `attested` 口径。
-5. **不可判项（取数降级）v4.1 归属**：进 `gaps` 不可判栏、**不计 ②**，但**计入 ① 分母与 ③**（fail-closed：看不见 ≠ 已做到）；文件清单取不到者只进 gaps、不进任何线计数。真实仓本轮实测 0 条，口径由子例 H 夹具钉死。
+5. **不可判项（取数降级）v4.1 归属**：进 `gaps` 不可判栏、**不计 ②**，但**计入 ① 分母与 ③**（fail-closed：看不见 ≠ 已做到）；文件清单取不到者只进 gaps、不进任何线计数。真实仓为**动态数据**：稳定窗口实测 0 条（as_of 17:01Z）、合并窗口实测 2 条 `E_MERGE_BASE`（as_of 16:46Z，见 verifier 证据文件 §1）⇒ 引用一律带 as_of；口径由子例 H 夹具钉死。
 6. **取数成本与单线视图**：① 逐 PR 串行调四条件检查器（真实仓 22 PR 单次 `--all` ≈3min，O(n²) 只读）；`--line` 不展开 gap 明细、只给 `gaps(global)=<n>`，查缺口用 `--all`／`--json`（详见 W1 Known Limitations 5–7）。
