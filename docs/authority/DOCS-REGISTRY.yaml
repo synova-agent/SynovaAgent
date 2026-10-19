@@ -572,6 +572,17 @@ documents:
       owner: CTO
       note: "#617 pre-push 0-1 改按被推 ref 判（stdin local_sha/remote_sha）的创始人授权豁免（3 条受保护路径）。"
 
+    # ---- P7 2026-10-19：#602 三信号探针受保护路径豁免（#623 新规；D2 登记）----
+    - id: DOC-0213
+      type: decision
+      path: gate-exemptions/2026-10-19-p7-602-probe.md
+      status: active
+      owner: P7
+      note: "#602 probe-line-signals.ts ＋ 配对测试的受保护路径豁免（报告线口径 v4.2；含 gate-exemptions 自覆盖；裁定号 #602）。"
+
+    # ---- P4 2026-10-20：#623 豁免机制改造（裁 217；D2 登记）----
+    - id: DOC-0209
+
     # ---- P4 2026-10-20：#595 组数口径豁免（D2 登记）----
     - id: DOC-0210
       type: decision
