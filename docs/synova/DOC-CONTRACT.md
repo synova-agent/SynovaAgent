@@ -514,10 +514,16 @@ tail -3 .claude/doc-contract-transition.log   # 最近几次过渡命中与台�
 
 **不入库 ≠ 不管。** 过程资产要有**统一落点 + 统一命名 + 一份索引**，否则**复盘做不到**。
 
-### 11.2 落点：**独立档案仓**
+### 11.2 落点：**库外 Gitea 双仓**
 
 ```
-一个独立 git 仓库（与 K3 独立审计仓同级），当前路径：`~/Synova-过程档案/`
+两个 Gitea 仓（与 K3 独立审计仓同级）：handbook（活账）/ process-archive（冻结档案）
+
+工作副本唯一约定：
+  handbook        → `/Users/wane/SynovaAgent/.handbook`
+  process-archive → `/Users/wane/SynovaAgent/.process-archive`
+
+dev doc 规范落点：handbook `派单件/<日期>-规格-<Issue#>-<slug>.md`
 
 为什么是独立仓（四条）：
  ① **有版本控制** ⇒ 可追溯、可 diff（"完整复盘"必须有历史，不能只有一个快照）
