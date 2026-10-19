@@ -228,6 +228,7 @@ theory/**
 scripts/golden-scenarios/**
 skills/**
 memory/notes/**
+gate-exemptions/**
 app/**
 electron-renderer/**
 extensions/AGENTS.md
@@ -246,6 +247,8 @@ extensions/AGENTS.md
   `theory/**` · `scripts/golden-scenarios/**` · **`skills/**`（顶层；D1193 补登——CLAUDE.md 声明它是
   文件驱动扩展资产，首版白名单漏登，实测 46 件被误判违规）**
 - 🔴 **`memory/notes/**`**：§9 过渡期白名单（退出判据见 §9 第一行）
+- 🔴 **门禁豁免记录 `gate-exemptions/**`**（CTO 2026-10-20 批）：门禁本体授权的**证据载体**（S1/#586 起、#623 起含自我保护）。
+  它不是过程文档，而是"谁批准了这次门禁变更"的机器可读记录 ⇒ 必须放行；不登记会让**每一份豁免文件**被闸 3 误拦。
 - 🔴 **同址代码文档** `**/README.md` · `**/AGENTS.md` · `**/SKILL.md`——包/目录自己的契约文档随代码走
   （DSH 同款「per-package README」；首版把 `packages/*/README.md` 等误判为违规）
 - 🔴 **产品运行时资产** `app/**` · `electron-renderer/**`——前端页面是**源码**不是文档，

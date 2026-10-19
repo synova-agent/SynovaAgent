@@ -72,7 +72,11 @@ jobs:
           #     ——同族教训：本文件「④ 门禁复现器自检」步已写明"`|| exit $?` 保留原 rc（harness=2）"。
           #   🔴 **不动任何 job `name:`**（12 必需 context 的唯一产出者）
           PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash scripts/control-tower/check-block-paths.sh || exit $?
-          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" SYNO_CI=1 bash scripts/pre-commit-check.sh
+          # #598: CI 也拿 base（否则 doc-contract 闸 3 在 CI 空跑）—— ① 与 ①d 共用 resolve-ci-base.sh
+          BASE="$(bash scripts/control-tower/resolve-ci-base.sh)" || exit $?
+          echo "① base = $BASE"
+          # 🔴 GITHUB_ACTIONS=true 显式置位：pre-commit 的 D390 守卫只在它为 true 时用 SYNO_DIFF_BASE
+          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" SYNO_CI=1 GITHUB_ACTIONS=true SYNO_DIFF_BASE="$BASE" bash scripts/pre-commit-check.sh
       - name: ①d 门禁本体自检（清单 ＋ diff 豁免）
         run: |
           cd /Users/wane/.ci-work/SynovaAgent
@@ -85,76 +89,9 @@ jobs:
           #   · 本步块内不写 GitHub 镜像远端的分支名（自证脚本 ⑪ 对本步块做 grep 硬判）；
           #     该镜像已断且落后 351+ commits（实测）⇒ 拿陈旧 base 算 diff 只会得到假红/假绿。
           #   · 仍不可解析时**不猜、不降级**：把 canonical 名交给检查器 ⇒ 它判 exit 2（fail loud）。
-          BASE=""
-          if [ -n "${SYNO_BASE_REF:-}" ]; then
-            BASE="$SYNO_BASE_REF"
-          elif [ -n "${GITHUB_BASE_REF:-}" ]; then
-            BASE="$GITHUB_BASE_REF"
-          else
-            BASE="gitea/local-main"
-          fi
-          # 裸分支名规范化：裸名会解析到 CI 克隆自带的本地分支（clone 后不再更新，可能陈旧）
-          #   ⇒ 与 canonical 分支同名的裸名，一律换成下面刚物化的 canonical 引用。
-          case "$BASE" in
-            local-main) BASE="gitea/local-main" ;;
-          esac
+          # #598: base 解析/刷新/新鲜度断言统一由 resolve-ci-base.sh 承担（与 ① 共用，禁两处漂移）
+          BASE="$(bash scripts/control-tower/resolve-ci-base.sh)" || exit $?
           echo "①d base = $BASE"
-          #
-          # 🔴 CI 探测（#610）：CI 工作区只建一次；canonical ref 若"仅不可解析才 fetch"就会永久陈旧
-          #   （run 1019 假绿根因：canonical 停在 5833c0d1b，早于 S1 23a4f5a38）。
-          CI_FLAG=0
-          if [ "${SYNO_CI:-0}" = "1" ] || [ "${GITHUB_ACTIONS:-}" = "true" ]; then
-            CI_FLAG=1
-          fi
-          #
-          # 🔴 canonical ref 刷新（2026-10-19 · #610）：
-          #   · 单远端 ∧（CI ∨ canonical 不可解析）⇒ fetch canonical ref（**CI 每次运行都刷新**）
-          #   · 多远端（= 开发机）⇒ 不 fetch、不猜（canonical 可解析时保持旧行为：静默不动）
-          REMOTES="$(git remote 2>/dev/null || true)"
-          N_REMOTES="$(printf '%s\n' "$REMOTES" | grep -c . || true)"
-          ONLY_REMOTE=""
-          if [ "${N_REMOTES:-0}" -eq 1 ]; then
-            ONLY_REMOTE="$(printf '%s\n' "$REMOTES" | head -1)"
-          fi
-          CANONICAL_OK=0
-          if git rev-parse --verify -q gitea/local-main >/dev/null 2>&1; then
-            CANONICAL_OK=1
-          fi
-          if [ "${N_REMOTES:-0}" -eq 1 ] && { [ "$CI_FLAG" -eq 1 ] || [ "$CANONICAL_OK" -eq 0 ]; }; then
-            if git fetch -q "$ONLY_REMOTE" '+refs/heads/local-main:refs/remotes/gitea/local-main'; then
-              echo "已刷新 refs/remotes/gitea/local-main（from 远端 ${ONLY_REMOTE}；CI=${CI_FLAG}）"
-            else
-              echo "::warning title=①d base 刷新失败::fetch 远端 $ONLY_REMOTE 失败；交检查器判 E_BAD_BASE（exit 2）"
-            fi
-          elif [ "${N_REMOTES:-0}" -ne 1 ] && { [ "$CI_FLAG" -eq 1 ] || [ "$CANONICAL_OK" -eq 0 ]; }; then
-            echo "::warning title=①d base 未刷新::远端数=${N_REMOTES:-0} != 1，不 fetch、不猜；交检查器判 E_BAD_BASE（exit 2）"
-          fi
-          echo "canonical 刷新后 = $(git rev-parse --short gitea/local-main 2>/dev/null || echo '<仍不可解析>')"
-          #
-          # 🔴 新鲜度断言（仅 CI · #610）：CI 必须用**本次运行**的 base，禁拿陈旧 canonical 算 diff
-          #   ① canonical 不可解析 ⇒ ::error ＋ exit 2（fail loud，不猜）
-          #   ② 唯一远端的 local-main 跟踪引用（**动态拼**，本块禁出现镜像分支字面）
-          #      若可解析 ⇒ 其 SHA 必须与 canonical 相等；不等 ⇒ ::error ＋ exit 2（陈旧 base）
-          if [ "$CI_FLAG" -eq 1 ]; then
-            if ! git rev-parse --verify -q gitea/local-main >/dev/null 2>&1; then
-              echo "::error title=①d base 不可解析::CI 下 canonical ref gitea/local-main 不可解析（刷新失败）⇒ fail-closed exit 2"
-              exit 2
-            fi
-            TRACK_REF=""
-            if [ -n "$ONLY_REMOTE" ]; then
-              TRACK_REF="refs/remotes/${ONLY_REMOTE}/local-main"
-            fi
-            if [ -n "$TRACK_REF" ] && TRACK_SHA="$(git rev-parse --verify -q "$TRACK_REF" 2>/dev/null)"; then
-              BASE_SHA="$(git rev-parse --verify -q gitea/local-main)"
-              if [ "$BASE_SHA" != "$TRACK_SHA" ]; then
-                echo "::error title=①d base 陈旧::canonical=$(git rev-parse --short gitea/local-main) != 远端跟踪引用 ${TRACK_REF}=$(git rev-parse --short "$TRACK_SHA") ⇒ fail-closed exit 2"
-                exit 2
-              fi
-              echo "①d 新鲜度断言通过：canonical = 远端跟踪引用（${TRACK_REF}）= $(git rev-parse --short gitea/local-main)"
-            else
-              echo "①d 新鲜度断言：无唯一远端或跟踪引用不可解析 ⇒ 只断言 canonical 可解析（不猜）"
-            fi
-          fi
           #
           # 🔴 语义澄清（spec §7 Known Limitations 5，禁写成「push 也拦了」）：
           #   push 到 local-main 时 base == HEAD ⇒ diff 为空 ⇒ 本步只做清单完整性 ＋ pin；

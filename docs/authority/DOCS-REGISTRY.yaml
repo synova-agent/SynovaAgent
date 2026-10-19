@@ -590,3 +590,11 @@ documents:
       status: active
       owner: CTO
       note: "#595 组数口径纠偏（12 组）的豁免（17 条受保护路径；作者不校验后由 L1 补记）。"
+
+    # ---- P4 2026-10-20：#598 闸 3 CI base 豁免（D2 登记）----
+    - id: DOC-0211
+      type: decision
+      path: gate-exemptions/2026-10-20-doc-contract-ci-598.md
+      status: active
+      owner: CTO
+      note: "#598 闸 3 在 CI 补 base ＋ fail-loud 的豁免（7 条受保护路径；作者不校验后由 L1 补记）。"
