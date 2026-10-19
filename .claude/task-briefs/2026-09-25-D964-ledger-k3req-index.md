@@ -1,4 +1,7 @@
 # Task Brief: D964 — 台账登记 + K3 审计请求 + 审计报告 INDEX 指针式索引
+
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->
 > 认领: 🧭 synova-cto（并行 CTO）
 
 ## Q0: 定位

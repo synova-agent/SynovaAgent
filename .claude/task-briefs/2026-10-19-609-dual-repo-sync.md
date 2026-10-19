@@ -55,6 +55,9 @@
 
 基础设施（控制塔巡检面；不触 L1–L5 业务代码）
 
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->
+
 ## Done 标准
 
 - [ ] verify: cd /Users/wane/SynovaAgent/.synova-wt-p10-609 && bash tests/control-tower/check-dual-repo-sync.test.sh; test $? -eq 0

@@ -64,6 +64,13 @@ c) 决策参考: 参考 Anthropic/DSH（机制只增不减即失败；失败要 
 ⑤ `bash scripts/control-tower/check-gate-integrity.sh` → `GATE-INTEGRITY: OK`
 ⑥ 相邻夹具零回归：bypass-ledger / bypass-union-merge / tag-bypass-wiring / clone-shadow-commit / pre-audit-summary / post-commit-marker / synova-commit 全 rc=0
 
+- [ ] fresh clone：`bash scripts/control-tower/check-bypass-log.sh origin/main` → rc=0；verify: bash scripts/control-tower/check-bypass-log.sh
+- [ ] 本机新提交无记录（真 clone 内外均验）→ rc=1（不许放宽）；verify: bash scripts/control-tower/check-bypass-log.sh
+- [ ] `bash tests/control-tower/post-commit.test.sh` 连跑 20 轮 rc 全 0；verify: bash scripts/control-tower/check-bypass-log.sh
+
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->
+
 ## 写集（机器生成，禁手改）
 
 | 文件 | 类型 |

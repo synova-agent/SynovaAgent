@@ -89,3 +89,6 @@
 | docs/synova/coordination/执行点基线-G1-G9.md | task |
 | docs/synova/coordination/未登记密封面清单-20261005.md | task |
 | memory/notes/proposed/2026-10-05-d1153-k3-material-exec-points.md | task |
+
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->

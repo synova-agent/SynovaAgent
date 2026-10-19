@@ -43,6 +43,18 @@
 **b)** 顶级团队：**字段必须有消费者**，否则是死数据。
 **c)** 我们的错：**铁律 0-2**（Step 5 WIRE CHECK 是硬门禁：新字段必须 `grep` 到调用方）；本次三路采集的**共同结论就是"零消费"**。
 ## Q2: 范围
+做什么：
+- cycles/builtin/cash-cycle.cycle.json
+- cycles/builtin/customer-cycle.cycle.json
+- cycles/builtin/product-cycle.cycle.json
+- cycles/builtin/talent-cycle.cycle.json
+- cycles/industry/retail-ecommerce/store-replication.cycle.json
+- cycles/industry/saas-tech/arr-growth.cycle.json
+- src/cycles/cycle-loader.ts
+- src/cycles/overflow-compute.ts
+- src/cycles/cycle-types.ts
+- scripts/control-tower/probe-cycle-valves.ts
+- tests/cycles/valve-mapping.test.ts
 **做什么**：补五阀映射 ＋ `actionEffectLag` ＋ 池节点四分类；**并在 `overflow-compute.ts` 真消费**；loader 加校验（缺字段即报错）。
 **不做什么**：`不改 extensions/ontology/**`（K4-01~03 域）；`不改 docs/**`（除本卡 brief）；`不改 scripts/control-tower/check-ontology-fields.sh`。
 ## Q3: 验收
@@ -68,6 +80,8 @@ scripts/control-tower/probe-cycle-valves.ts
 tests/cycles/valve-mapping.test.ts
 ```
 ## Done 标准
+- [ ] `npx tsx scripts/control-tower/probe-cycle-valves.ts` ⇒ exit 0（六件全部含五阀映射与 actionEffectLag，形态对齐权威15 §3.4）；verify: bash scripts/pre-commit-check.sh
+<!-- Done 补记：历史件原验收无法复跑，verify 取全量门禁 -->
 ```
 ① 探针 ⇒ exit 0；六件全部含五阀映射与 actionEffectLag，形态对齐权威15 §3.4
 ② 接线（铁律 0-2）：`grep -rn "Valve" src/cycles/` 至少 1 处**非注释**真消费

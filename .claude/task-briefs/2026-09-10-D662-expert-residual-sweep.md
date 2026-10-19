@@ -107,3 +107,8 @@ extensions/skills = L3 专家能力载体；tests/ 为质量契约层；本卡�
 - verify: rg "as any" 两个测试文件新增行零命中（DS5）
 - verify: git diff --name-only 恰为 55 写集 + spec 回填 + brief 簿记（DS6）
 - verify: grep -n "no-verify" .claude/bypass.log 零命中（DS7）
+
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->
+- [ ] expert 残留枚举零命中（DS1）；verify: bash scripts/pre-commit-check.sh
+<!-- Done 补记：历史件原验收无法复跑，verify 取全量门禁 -->

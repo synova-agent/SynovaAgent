@@ -35,3 +35,6 @@ L0 工程/文档（不涉及五层架构代码变更，纯归档与合并）。
 - [ ] DS1: git show HEAD --stat 含 700+ 文档，无 release/、.env、*.log 混入
 - [ ] DS2: git status --short 仅剩被忽略的运行时产物（bypass.log/settings.json 等）
 - [ ] DS3: main 已 pull --ff-only + feat/docs-sync 已 push + PR 链接生成
+
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->

@@ -178,3 +178,6 @@ L4 本体（adapters）+ 消费方 L1/L2/L3/L5 调用点
 - [ ] 入口可触达: 14 个 src 调用点全部使用 SqliteGraphStore，`grep -rn "@synova/graph-store" src/ tests/ tsconfig.json vitest.config.ts` → 0
 - [ ] 链路走通: graphstore-unify.test.ts（≥8 expect，先 red 后 green）+ synova-graph-store 2 测试 + sqlite-graph-store 扩展测试 + graphstore-compatibility 全绿；tsc --noEmit 零新增错误
 - [ ] 结果可见: packages/graph-store → _archived + ARCHIVED.md；npm run dev 冒烟无 graphstore 报错；pre-commit 全过；推送后 CI 通过
+
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->
