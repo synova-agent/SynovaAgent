@@ -26,3 +26,18 @@
 
 ## Done 标准（至少一条可验证）
 - 两测试 0 失败；真 PR 红/绿 run 号入 PR 正文；`pre-commit-check.sh` 12 组本地 exit 0。
+
+## 写集（机器可读；组 6 认领制判据）
+
+| 文件 | 类型 |
+|---|---|
+| `.gitea/workflows/local-gates.yml` | task |
+| `scripts/control-tower/resolve-ci-base.sh` | task |
+| `scripts/pre-commit-check.sh` | task |
+| `tests/control-tower/resolve-ci-base.test.sh` | task |
+| `tests/control-tower/doc-contract-ci-acceptance.test.sh` | task |
+| `gate-exemptions/2026-10-20-doc-contract-ci-598.md` | task |
+| `docs/synova/DOC-CONTRACT.md` | task |
+| `docs/authority/DOCS-REGISTRY.yaml` | task |
+| `.claude/task-briefs/2026-10-20-598-doc-contract-ci.md` | task |
+| `memory/notes/proposed/2026-10-20-doc-contract-ci.md` | task |
