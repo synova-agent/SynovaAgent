@@ -1,6 +1,6 @@
 # Task Brief: #602 —— P7-2 三信号探针（`probe-line-signals.ts`）
 
-> 分支: ct/p7-probe-20261019（实施会话自建；一人一事一分支）｜ 🔴 **规格权威源 = handbook `派单件/2026-10-19-P7-602-三信号探针-规格.md` @ `372d4613d`（v4，含三条裁定）**；主仓同名 dev doc 已按文档契约删除（**过程件不进主仓**）
+> 分支: ct/p7-probe-20261019（实施会话自建；一人一事一分支）｜ 🔴 **规格权威源 = handbook `派单件/2026-10-19-P7-602-三信号探针-规格.md` @ `b798946bd`（v4，含三条裁定）**；主仓同名 dev doc 已按文档契约删除（**过程件不进主仓**）
 > 依据: 创始人 2026-10-19 口径裁定「**回执 A**」｜ P7 守则 §三「三信号可跑」｜ handbook `常设授权条例.md` §四（① 判据通过率 ② 例外清单 ③ 在飞/卡数）
 > 本卡由 **L1（P7 包负责人）产出**，落 main 供实施会话读取；**实施会话只读使用，不得改写**（口径变更 ⇒ 退回 L1 → CTO）
 
@@ -8,7 +8,7 @@
 
 **a) 项目拼图**：治理线 · 自证（P7）。**把"回执三信号"从人算变成机算** —— CTO 问「某线进度/在飞/例外」时一条命令出，不靠人报。🔴 **「线」＝ handbook §五 的报告线（产品线／治理线／CTO／K3／基座线），按路径切；不是包 P1–P10**（裁定 B-7-a：`tests/control-tower/**`·`tests/architecture/**`→治理线、`.gitea/**`→治理线；裁定后实测 **single 11 / cross 6 / unknown 0**，17 open PR）。不触 L1–L5 业务代码。
 
-**b) 文件审计**：`scripts/control-tower/` 131 件；已有 **探针契约单一实现** `probe-ladder.ts`（13 探针／`RESULT=`／三态）、**信号发射** `emit-signal.py`（`.codex/signals/`）、**四条件机器判定** `check-merge-conditions.sh`（#597＋#604），**没有**按线聚合三信号的编排层（全树 grep「回执三信号」0 实现）。⚠️ **关键实测**：17 个 open PR 仅 3 个分支带包前缀；`task-state/*.json` **无 line/package 字段** ⇒ **必须多判据映射 ＋ unknown/cross-line 兜底**（dev doc §4bis）。
+**b) 文件审计**：`scripts/control-tower/` 131 件；已有 **探针契约单一实现** `probe-ladder.ts`（13 探针／`RESULT=`／三态）、**信号发射** `emit-signal.py`（`.codex/signals/`）、**四条件机器判定** `check-merge-conditions.sh`（#597＋#604），**没有**按线聚合三信号的编排层（全树 grep「回执三信号」0 实现）。⚠️ **关键实测**：17 个 open PR 仅 3 个分支带包前缀；`task-state/*.json` **无 line/package 字段** ⇒ **必须多判据映射 ＋ unknown/cross-line 兜底**（handbook 规格 v4 §4bis @`b798946bd`）。
 
 **c) 决策**：**复用 8 项 ＋ 新建 1 件**；**不做** B 口径健康三信号（`gen-cto-health.py` 已在算）；**线集读 handbook §五（5 条报告线，禁硬编码）**。
 
@@ -16,7 +16,7 @@
 
 **a) 业界最佳实践**：三态退出码（0/1/**2**）＋ **信号量==0 ⇒ exit 2**（看不见≠没问题）；**fail-closed**（取不到不许当 0）；探针只读、可复跑、同一状态两次同结果。依据 `scripts/control-tower/AGENTS.md`、`ctrl-tower-change`。
 
-**b) 决策链**：**创始人 2026-10-19「回执 A」**（A = 回执三信号；B = 健康三信号不做）；映射口径待 CTO 批（dev doc 附录 B-7-a）＋ **写集扩 1 行**待批（B-7-b）。
+**b) 决策链**：**创始人 2026-10-19「回执 A」**（A = 回执三信号；B = 健康三信号不做）＋ **三条裁定已批**（2026-10-19 · Issue #602）：**B-7-a** 线＝报告线＋两子项（`tests/control-tower/**`·`tests/architecture/**`→治理线；`.gitea/**`→治理线）｜**B-7-c** ①＝四条件通过率（标签 `①(merge-conditions)`）、③ 卡数 v1 不出｜**B-7-b** 写集扩 1 行。附录见 handbook 规格 v4 附录 B。
 
 **c) 历史教训**：① **"看不见"被当没问题**（#582 的 `total_count=0` 教训）⇒ 0 open PR 与 API 失败都必须 exit 2、但 reason 可区分；② **只见 needle 抓不住拼接**（#597 漏判、#604 修补）⇒ 本件映射与聚合的对错必须由**输出级**断言守；③ 写死数量必过期（教训 161/167）⇒ **线集读 handbook §五（5 条报告线），禁硬编码**；`--line` 只接受报告线名。
 
@@ -33,7 +33,7 @@
 - scripts/control-tower/gen-cto-health.py
 - scripts/control-tower/probe-ladder.ts
 - scripts/control-tower/emit-signal.py
-- docs/plans/codex/implementation/SYNOVA-IMPL-602-line-signals-probe-20261019.md
+- docs/plans/codex/implementation/SYNOVA-IMPL-602-*.md（已删，禁重加；规格真源在 handbook）
 - scripts/audit/
 - .gitea/workflows/local-gates.yml
 - src/
@@ -49,7 +49,7 @@
 ## Q4 契约与测试
 
 - 头部契约必写 `@input/@output/@exit/@degraded/@authority`（铁律 47）；三态退出码；降级 stderr `degraded:` + exit 2；UTF-8；**禁第三方新依赖**（用仓内 tsx）。
-- 夹具注入缝 `SYNO_LINE_SIGNALS_FIXTURE`（零网络，schema 见 dev doc §4.3）；**每个子例只让目标条件红**。
+- 夹具注入缝 `SYNO_LINE_SIGNALS_FIXTURE`（零网络，schema 见 handbook 规格 v4 §4.3 @`b798946bd`）；**每个子例只让目标条件红**。
 - **降级粒度**：逐项降级（单 PR 的 `E_MERGE_BASE` 等）⇒ 进 exceptions、整体 exit **1**；仅根级 API/git/JSON 失败 ⇒ exit **2**。
 - 输出级断言：unknown/cross-line 计数 = 明细条数；口径守卫（只允许 A 三信号键）。
 - 配对测试覆盖 7 子例 + 三态 + 只读证明；`--selfcheck` 与 W2 **两处**都必须能红。
