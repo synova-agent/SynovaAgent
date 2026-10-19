@@ -3,7 +3,7 @@
 # synova-commit — 校验网守 (D201 + D311 M1b)
 #
 # 权威文档 #17 第二章 §2.2：通往 git commit 的唯一路径。
-# 在允许提交前强制执行 pre-commit-check.sh 全部 13 组检查。
+# 在允许提交前强制执行 pre-commit-check.sh 全部 12 组检查。
 # 没有 --no-verify 标志。没有绕过开关。
 #
 # D311 M1b (2026-08-02): 暂存区隔离 — git commit 改显式路径（不用 -a），
@@ -280,7 +280,7 @@ while [[ $# -gt 0 ]]; do
       health_check
       ;;
     --check)
-      # D508: 全量 dry-run——一次跑完 plan-integrity + pre-commit 13 组 + commit-msg 格式，
+      # D508: 全量 dry-run——一次跑完 plan-integrity + pre-commit 12 组 + commit-msg 格式，
       # 汇总全部失败项统一退出（不 commit 不 push）。修"逐个揭穿"7 轮循环 → 1 轮看全。
       CHECK_ONLY=1
       shift
@@ -335,13 +335,13 @@ fi
 
 # ═══ D515 项2 + D537 #3: 快速通道判定扩展 ═══
 # 原: --files 长度==1 且为 .claude/bypass.log → SYNO_FASTLANE=1（90-120s → <3s）。
-# D537 #3: 补记摩擦——merge commit + "补记+bypass 组合"跑全量 13 组 → 每次合并 5-8 分钟
+# D537 #3: 补记摩擦——merge commit + "补记+bypass 组合"跑全量 12 组 → 每次合并 5-8 分钟
 #   纯门禁成本。三条快速通道（都无新代码语义，跳过非证据链组是安全降级）:
 #   ① 纯 bypass.log（原 D515）
 #   ② merge commit（MERGE_HEAD 存在，同 D328/D513 豁免语义——merge 无新声明）
 #   ③ 纯补记组合（--files 全部为证据/簿记文件，无代码/脚本）
 # ⚠️ 判定只看 --files 显式列表，不裸看暂存区（D414 会自动 add bypass.log 进正常提交）。
-#   普通提交（含任何 src/scripts/packages/tests/.github/.claude/skills 代码）仍全量 13 组
+#   普通提交（含任何 src/scripts/packages/tests/.github/.claude/skills 代码）仍全量 12 组
 #   （防 fastlane 误放行——证据/簿记白名单外的文件一律走全量）。
 FASTLANE_TRIGGER=0
 if [[ ${#FILES[@]} -eq 1 && "${FILES[0]}" == ".claude/bypass.log" ]]; then
@@ -444,14 +444,14 @@ if [[ "${CHECK_ONLY:-0}" = "1" ]]; then
     fi
   fi
   echo ""
-  echo "── 检查 2/3: pre-commit 13 组 ──"
+  echo "── 检查 2/3: pre-commit 12 组 ──"
   PRE_OUT=$(bash "$PROJECT_ROOT/scripts/pre-commit-check.sh" 2>&1 || true)
   # D515 项3/11: V5 后软提示不再阻断——--check 只认硬失败标记（"提交已拒绝"仅硬失败输出）
   if echo "$PRE_OUT" | grep -q "提交已拒绝"; then
     echo "$PRE_OUT" | grep -B1 -A3 "❌" | head -40
     FAILS=$((FAILS+1))
   else
-    echo "  ✅ pre-commit 13 组通过（V5: 软提示不阻断，CI 为权威）"
+    echo "  ✅ pre-commit 12 组通过（V5: 软提示不阻断，CI 为权威）"
   fi
   echo ""
   echo "── 检查 3/3: commit message 格式 ──"
@@ -750,7 +750,7 @@ echo ""
 
 # 运行 pre-commit（带超时）
 # D334: Mac 无 GNU timeout（D321 同款双机差异）→ 回退直接执行并显式提示。
-#   pre-commit 13 组自身 <50s，失去外层超时兜底风险可控（不静默降级: 铁律 11）。
+#   pre-commit 12 组自身 <50s，失去外层超时兜底风险可控（不静默降级: 铁律 11）。
 TIMEOUT_BIN=""
 for _c in timeout gtimeout; do
   if command -v "$_c" >/dev/null 2>&1; then TIMEOUT_BIN="$_c"; break; fi
@@ -778,7 +778,7 @@ echo ""
 
 if [[ $PRECOMMIT_EXIT -eq 0 ]]; then
   # 全部通过 → 执行提交
-  echo -e "${GREEN}✅ 全部 13 组检查通过${NC}"
+  echo -e "${GREEN}✅ 全部 12 组检查通过${NC}"
   echo ""
 
   # D214: 发射 gatekeeper 信号

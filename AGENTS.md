@@ -2,7 +2,7 @@
 
 > **V7.0 | 2026-10-12** | 对齐**产品宪章 v8.2**（判据中枢｜v8.1 院方 10-12 复核后归一）｜ 本地软提示 + CI 权威门禁 + 契约门禁 + 认领制 + 跨 session 隔离
 > 🔴 **门禁可解析元信息**（**真值，勿手改**；改前跑 `bash scripts/doc-system/check-doc-truth.sh`）：
-> **控制塔 V5.2.7** ｜ **6位专家**（`expert/expert-registry.yaml`，enabled=6）｜ **13 组 pre-commit**（`scripts/pre-commit-check.sh` 自声明）｜ **桌面端**（品牌表层，切片 A/B/C 已闭环）
+> **控制塔 V5.2.7** ｜ **6位专家**（`expert/expert-registry.yaml`，enabled=6）｜ **12 组 pre-commit**（`scripts/pre-commit-check.sh` 自声明）｜ **桌面端**（品牌表层，切片 A/B/C 已闭环）
 > **流程约束 V4.5.1**
 > **架构基准（唯一）**：**产品宪章 §0.4 ＋ §4.1**（⓪①②③④⑤⑥ ＋ −1 运行时）—— **本文件一切"架构"表述以宪章为准**
 > 宪章路径：`~/山河研究院/04-技术研究/专题研究/CTO委托-基座治理/产品宪章.md`
@@ -227,7 +227,7 @@
 
 
 ```
-【提交端】`bash scripts/pre-commit-check.sh` —— **13 组**（本地软提示）
+【提交端】`bash scripts/pre-commit-check.sh` —— **12 组 pre-commit**（本地软提示）
 【CI 权威】`.gitea/workflows/local-gates.yml` —— **`SYNO_CI=1` 时转硬阻断**
 【独立审计】**K3**（`scripts/audit/**` 归 K3 专属，**任何人禁碰**）
 【复现器】两个门禁复现器接进 CI（条件跳过 <1s）
@@ -297,7 +297,7 @@ npm run test             # 全量测试 (vitest run)
 npm run lint             # tsc --noEmit
 npm run check:iron-laws  # 铁律门禁
 npm run check:architecture # 架构边界
-bash scripts/pre-commit-check.sh   # 13 组门禁（本地）
+bash scripts/pre-commit-check.sh   # 12 组 pre-commit 门禁（本地）
 ```
 
 ---

@@ -571,3 +571,11 @@ documents:
       status: active
       owner: CTO
       note: "#617 pre-push 0-1 改按被推 ref 判（stdin local_sha/remote_sha）的创始人授权豁免（3 条受保护路径）。"
+
+    # ---- P4 2026-10-20：#595 组数口径豁免（D2 登记）----
+    - id: DOC-0210
+      type: decision
+      path: gate-exemptions/2026-10-19-gate-count-595.md
+      status: active
+      owner: CTO
+      note: "#595 组数口径纠偏（12 组）的豁免（17 条受保护路径；作者不校验后由 L1 补记）。"
