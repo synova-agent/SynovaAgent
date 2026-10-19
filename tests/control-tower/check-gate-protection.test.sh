@@ -8,13 +8,14 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 # 配对对象: scripts/control-tower/check-gate-protection.sh（CT-40：scripts/control-tower/<name>.sh
 #           ↔ tests/control-tower/<name>.test.sh）
 #
-# 覆盖矩阵（三路径 ＋ 五反例 ＋ bootstrap/DS-6 ＋ 契约）:
+# 覆盖矩阵（三路径 ＋ 五反例 ＋ 陈旧 base/DS-6 ＋ 契约）:
 #   正常 — 真清单默认模式 ⇒ exit 0 ｜ 沙箱合规豁免 ⇒ exit 0（DS-3）
 #   降级 — 清单缺失 ⇒ exit 2 ｜ PATTERNS 段空 ⇒ exit 2 ｜ 坏 base ⇒ exit 2（DS-5）
 #   真红 — pin 漂移 ⇒ exit 1 ｜ 受保护变更无豁免 ⇒ exit 1 且点名（DS-2）
 #          ｜ 豁免无理由 ⇒ exit 1 ｜ 豁免作者非 approver ⇒ exit 1（DS-4）
-#   边界 — bootstrap（base 无清单）⇒ exit 0 ＋ `BOOTSTRAP` 行 ｜ DS-6 反证：base 有清单
-#          且改保护路径无豁免 ⇒ exit 1（同一仓内对照，证明 bootstrap 不是后门）
+#   边界 — 陈旧 base（无清单）⇒ exit 2 ＋ E_BAD_BASE（禁 BOOTSTRAP；#610 已退役 bootstrap）｜
+#          T10b 同族反例：工作树有未跟踪清单仍 ⇒ exit 2 ｜ DS-6 反证：base 有清单
+#          且改保护路径无豁免 ⇒ exit 1（同一仓内对照，证明 base 有清单才判 diff）
 #   契约 — `--json` 输出合法 JSON ｜ 零平台 API 调用（DS-8：本器对平台 API 路径零命中）
 #   接线 — 检查器存在且可执行 ＋ 默认（无参）可跑（WIRE CHECK，铁律 0-2）
 #   注入缝 — SYNO_GATE_PROTECTED_LIST 真实生效（不碰真实仓库清单）
@@ -210,28 +211,52 @@ else
   no "DS-4/R4: 非批准人豁免应 exit 1 且提示作者非批准人，实际 exit ${RC}, 命中=${T9MSG:-0}"
 fi
 
-# ── T10/T12 bootstrap ⇄ DS-6（同一仓内对照，证明 bootstrap 不是后门）────────
+# ── T10/T12 陈旧 base（无清单）⇒ 2 ⇄ DS-6（同一仓内对照，证明 base 有清单才判 diff）────
 S6="$TMPD/s6"
 mk_repo "$S6" || no "沙箱 S6 初始化失败"
 (
   cd "$S6" || exit 1
   printf '#!/bin/bash\necho v1\n' > scripts/pre-commit-check.sh
-  git add -A && git commit -qm "c1: 无清单（bootstrap 前）"
+  git add -A && git commit -qm "c1: 无清单（陈旧 base）"
 ) || no "沙箱 S6 c1 提交失败"
 S6_C1="$(cd "$S6" && git rev-parse HEAD)"
 (
   cd "$S6" || exit 1
   cp "$MANIFEST" .gitea/protected-files.txt
   printf '#!/bin/bash\necho v2\n' > scripts/pre-commit-check.sh
-  git add -A && git commit -qm "c2: 清单首次落盘 ＋ 改脚本"
+  git add -A && git commit -qm "c2: 清单落盘 ＋ 改脚本"
 ) || no "沙箱 S6 c2 提交失败"
 S6_C2="$(cd "$S6" && git rev-parse HEAD)"
 run_gate "$S6" --changed-base "$S6_C1"
+T10CODE=$(printf '%s\n%s' "$OUT" "$ERR" | grep -c 'E_BAD_BASE' | tr -d '\n\r' || true)
 T10BOOT=$(printf '%s' "$OUT" | grep -c '^BOOTSTRAP: ' | tr -d '\n\r' || true)
-if [ "$RC" -eq 0 ] && [ "${T10BOOT:-0}" -ge 1 ]; then
-  ok "边界: bootstrap（base 无清单）→ exit ${RC}（BOOTSTRAP 行=${T10BOOT}, base=${S6_C1:0:8}）"
+if [ "$RC" -eq 2 ] && [ "${T10CODE:-0}" -ge 1 ] && [ "${T10BOOT:-0}" -eq 0 ]; then
+  ok "边界: 陈旧 base（无清单）→ exit ${RC}（E_BAD_BASE 命中=${T10CODE}, BOOTSTRAP 行=${T10BOOT}, base=${S6_C1:0:8}）"
 else
-  no "边界: bootstrap 应 exit 0 ＋ BOOTSTRAP 行，实际 exit ${RC}, 命中=${T10BOOT:-0}"
+  no "边界: 陈旧 base（无清单）应 exit 2 ＋ E_BAD_BASE 且禁 BOOTSTRAP，实际 exit ${RC}, E_BAD_BASE=${T10CODE:-0}, BOOTSTRAP=${T10BOOT:-0}"
+fi
+
+# ── T10b 同族反例: base 无清单 ＋ 工作树有未跟踪清单 ⇒ 2（不因 diff 未命中放行）──
+S8="$TMPD/s8"
+mk_repo "$S8" || no "沙箱 S8 初始化失败"
+(
+  cd "$S8" || exit 1
+  printf '#!/bin/bash\necho v1\n' > scripts/pre-commit-check.sh
+  git add -A && git commit -qm "c1: 无清单（base）"
+) || no "沙箱 S8 c1 提交失败"
+S8_C1="$(cd "$S8" && git rev-parse HEAD)"
+(
+  cd "$S8" || exit 1
+  cp "$MANIFEST" .gitea/protected-files.txt          # 未跟踪清单（不 git add、不 commit）
+  printf '#!/bin/bash\necho v2-uncommitted\n' > scripts/pre-commit-check.sh  # 工作树改动，不进 diff
+) || no "沙箱 S8 工作树写入失败"
+run_gate "$S8" --changed-base "$S8_C1"
+T10BCODE=$(printf '%s\n%s' "$OUT" "$ERR" | grep -c 'E_BAD_BASE' | tr -d '\n\r' || true)
+T10BBOOT=$(printf '%s' "$OUT" | grep -c '^BOOTSTRAP: ' | tr -d '\n\r' || true)
+if [ "$RC" -eq 2 ] && [ "${T10BCODE:-0}" -ge 1 ] && [ "${T10BBOOT:-0}" -eq 0 ]; then
+  ok "边界: 未跟踪清单（base 无清单）→ exit ${RC}（E_BAD_BASE 命中=${T10BCODE}, BOOTSTRAP 行=${T10BBOOT}, base=${S8_C1:0:8}）"
+else
+  no "边界: 未跟踪清单应 exit 2（不因 diff 未命中放行），实际 exit ${RC}, E_BAD_BASE=${T10BCODE:-0}, BOOTSTRAP=${T10BBOOT:-0}"
 fi
 
 # ── T11 反例: 坏 base ⇒ exit 2 ──────────────────────────────────────────────
@@ -252,7 +277,7 @@ fi
 run_gate "$S6" --changed-base "$S6_C2"
 T12BOOT=$(printf '%s' "$OUT" | grep -c '^BOOTSTRAP: ' | tr -d '\n\r' || true)
 if [ "$RC" -eq 1 ] && [ "${T12BOOT:-0}" -eq 0 ]; then
-  ok "DS-6: base 有清单 ＋ 无豁免 → exit ${RC}（BOOTSTRAP 行=${T12BOOT} ⇒ bootstrap 不是后门）"
+  ok "DS-6: base 有清单 ＋ 无豁免 → exit ${RC}（BOOTSTRAP 行=${T12BOOT} ⇒ base 有清单才判 diff）"
 else
   no "DS-6: base 有清单时应 exit 1 且不得 BOOTSTRAP，实际 exit ${RC}, BOOTSTRAP=${T12BOOT:-0}"
 fi

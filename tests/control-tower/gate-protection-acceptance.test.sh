@@ -34,7 +34,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   ① 清单存在可读非空（bytes＋条数）          ② pin 独立重算一致（声明/实算前 16 位）
 #   ③ 沙箱 改受保护路径无豁免 ⇒ 1              ④ 沙箱 同 diff 合规豁免（作者=approver）⇒ 0
 #   ⑤ 沙箱 豁免缺理由 ⇒ 1                      ⑥ 沙箱 豁免作者非 approver ⇒ 1
-#   ⑦ 沙箱 清单缺失 ⇒ 2 ／ PATTERNS 段空 ⇒ 2   ⑧ 沙箱 bootstrap（base 无清单）⇒ 0 ＋ BOOTSTRAP
+#   ⑦ 沙箱 清单缺失 ⇒ 2 ／ PATTERNS 段空 ⇒ 2   ⑧ 沙箱 base 无清单（陈旧 base）⇒ 2 ＋ E_BAD_BASE（无 BOOTSTRAP）
 #   ⑨ ①d 已接线（workflow grep）               ⑩ 检查器零平台 API 调用
 #   ⑪ ①d 步块内零 origin 回退（awk 块锚；`^` 坑见该步注释）
 #   ⑫ push 腿语义: 块内 pull_request/清单完整性 各 ≥1 ＋ 7 件交付件禁语扫描（排除禁止性语境行）
@@ -298,14 +298,14 @@ else
   no "⑦ 沙箱 清单缺失应为 exit 2、PATTERNS 段空应为 exit 2，实际 exit ${M7A_RC} / exit ${M7B_RC}"
 fi
 
-# ── ⑧ 沙箱：bootstrap（base 无清单）⇒ exit 0 且输出含 BOOTSTRAP ──────────────
+# ── ⑧ 沙箱：base 无清单（陈旧 base）⇒ exit 2 且含 E_BAD_BASE、无 BOOTSTRAP ─────
 S2="$TMPD/s2"
 mk_repo "$S2" || degrade_exit E_SANDBOX_BROKEN "沙箱 S2 初始化失败（git init）"
 (
   cd "$S2" || exit 1
   printf '#!/bin/bash\necho v1\n' >scripts/pre-commit-check.sh || exit 1
 ) || degrade_exit E_SANDBOX_BROKEN "沙箱 S2 c1 写文件失败"
-sb_commit "$S2" "c1: 无清单（bootstrap 前）" || degrade_exit E_SANDBOX_BROKEN "沙箱 S2 c1 提交失败"
+sb_commit "$S2" "c1: 无清单（陈旧 base）" || degrade_exit E_SANDBOX_BROKEN "沙箱 S2 c1 提交失败"
 S2_C1="$(git -C "$S2" rev-parse HEAD)" || degrade_exit E_SANDBOX_BROKEN "沙箱 S2 取 c1 失败"
 (
   cd "$S2" || exit 1
@@ -314,11 +314,12 @@ S2_C1="$(git -C "$S2" rev-parse HEAD)" || degrade_exit E_SANDBOX_BROKEN "沙箱 
 ) || degrade_exit E_SANDBOX_BROKEN "沙箱 S2 c2 写文件失败"
 sb_commit "$S2" "c2: 清单首次落盘＋改脚本" || degrade_exit E_SANDBOX_BROKEN "沙箱 S2 c2 提交失败"
 run_gate "$S2" --changed-base "$S2_C1"
+M8_CODE="$(printf '%s\n%s\n' "$OUT" "$ERR" | grep -c 'E_BAD_BASE')"
 M8_BOOT="$(printf '%s\n' "$OUT" | grep -c '^BOOTSTRAP: ')"
-if [ "$RC" -eq 0 ] && [ "${M8_BOOT:-0}" -ge 1 ]; then
-  ok "⑧ 沙箱 bootstrap（base 无清单）→ exit ${RC}（BOOTSTRAP 行=${M8_BOOT}，base=${S2_C1:0:8}）"
+if [ "$RC" -eq 2 ] && [ "${M8_CODE:-0}" -ge 1 ] && [ "${M8_BOOT:-0}" -eq 0 ]; then
+  ok "⑧ 沙箱 base 无清单（陈旧 base）→ exit ${RC}（E_BAD_BASE 命中=${M8_CODE}，BOOTSTRAP 行=${M8_BOOT}，base=${S2_C1:0:8}）"
 else
-  no "⑧ 沙箱 bootstrap 应 exit 0 ＋ BOOTSTRAP 行，实际 exit ${RC}（BOOTSTRAP=${M8_BOOT:-0}）"
+  no "⑧ 沙箱 base 无清单应 exit 2 ＋ E_BAD_BASE 且禁 BOOTSTRAP，实际 exit ${RC}（E_BAD_BASE=${M8_CODE:-0}，BOOTSTRAP=${M8_BOOT:-0}）"
 fi
 
 # ── ⑨ ①d 已接线：workflow grep ≥1（打印命中数）────────────────────────────────
