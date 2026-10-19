@@ -11,7 +11,7 @@
 #   本件**按规格 §1.2 不接 pre-commit/CI**（检查器只给本地/人判，不进 CI 硬阻断），
 #   故"新脚本被 gate 调用"式 WIRE CHECK **不适用**。替代自证两条:
 #     · `--help` 参数完备性（9 个参数逐一在帮助里出现）
-#     · `--selfcheck` 12 判定点自证（判据本身可跑且改坏必红）
+#     · `--selfcheck` 13 判定点自证（判据本身可跑且改坏必红）
 #
 # 覆盖矩阵（12 个判定点 ＝ 逐子例独立夹具 ＋ 三态退出码）:
 #   A  inner_exit=0  CAN-自合并        ③=ok(attested)（禁裸 ok）
@@ -38,7 +38,7 @@
 #       ⇒ 以 K5「PR 取不到 ⇒ exit 2」（同为 fail-closed 降级）替代并在此登记差异。
 #
 # 计数口径（规格 §4.1 N3：末行 N 必须 = --selfcheck 的 12 个判定点）:
-#   通过 = **12 判定点**（每子例一次）；C2 边界/参数/只读断言单列（`边界:` 行），
+#   通过 = **12 判定点**（每子例一次；selfcheck 另有子例 J ⇒ 13/13，配对测试不驱动 J）；C2 边界/参数/只读断言单列（`边界:` 行），
 #   两者任一失败都计入「失败」。⇒ 末行恒为 `结果: 12 通过, 0 失败`。
 #
 # 沙箱: 全部夹具在系统临时目录（mktemp -d ＋ trap EXIT 清理）；夹具仓 git init ＋ 本地 commit。
@@ -112,7 +112,7 @@ base_checks = [
     {"id": "铁律38 as any", "cmd": "grep -rn 'as any' <变更文件>", "result": "pass", "evidence": "0 命中"},
     {"id": "铁律11 静默降级", "cmd": "grep -n 'degraded:' x.sh", "result": "pass", "evidence": "stderr 一行 + exit 2"},
     {"id": "铁律47 契约", "cmd": "head -40 x.sh | grep -E '@input|@output'", "result": "pass", "evidence": "六块齐"},
-    {"id": "铁律48 非空壳测试", "cmd": "grep -c 'inner_exit=' t.sh", "result": "pass", "evidence": "12 判定点"},
+    {"id": "铁律48 非空壳测试", "cmd": "grep -c 'inner_exit=' t.sh", "result": "pass", "evidence": "13 判定点"},
     {"id": "三态退出码", "cmd": "bash x.sh --selfcheck; echo $?", "result": "pass", "evidence": "0/1/2 各有用例"},
 ]
 doc = {
@@ -547,12 +547,12 @@ else
   fail "[边界] --help exit=${RC}（期望 0）"
 fi
 
-# C2 --selfcheck 12 判定点（与被测件自身口径对表）
+# C2 --selfcheck 13 判定点（与被测件自身口径对表）
 OUT="$WORK/cli/selfcheck.txt"; ERR="$WORK/cli/selfcheck.err"
 bash "$TOOL" --selfcheck > "$OUT" 2> "$ERR"
 RC=$?
-if [ "$RC" = "0" ] && grep -Fq "SELFCHECK-OK: 12/12" "$OUT"; then
-  extra "--selfcheck exit=0 末行 SELFCHECK-OK: 12/12"
+if [ "$RC" = "0" ] && grep -Fq "SELFCHECK-OK: 13/13" "$OUT"; then
+  extra "--selfcheck exit=0 末行 SELFCHECK-OK: 13/13"
 else
   fail "[边界] --selfcheck exit=${RC}，末行=[$(last_line "$OUT")]"
   sed 's/^/       | /' "$OUT" >&2

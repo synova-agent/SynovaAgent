@@ -25,7 +25,13 @@ experts:
     enabled: true
 EOF
 printf '  echo "  Loop Engineering V1.0.0 — pre-commit (5 组)"\n' > "$FIX/scripts/pre-commit-check.sh"
-printf '  echo -e "  ✅ 全部 5 组通过"\n' >> "$FIX/scripts/pre-commit-check.sh"
+# #595: C2 真值 = 脚本内组横幅数 ⇒ fixture 必须带 5 条横幅；汇总行改运行时变量（单引号=字面，C2 只 grep 源文本）
+printf '  echo -e "── 组 1: fixture ──"\n' >> "$FIX/scripts/pre-commit-check.sh"
+printf '  echo -e "── 组 2: fixture ──"\n' >> "$FIX/scripts/pre-commit-check.sh"
+printf '  echo -e "── 组 3: fixture ──"\n' >> "$FIX/scripts/pre-commit-check.sh"
+printf '  echo -e "── 组 4: fixture ──"\n' >> "$FIX/scripts/pre-commit-check.sh"
+printf '  echo -e "── 组 5: fixture ──"\n' >> "$FIX/scripts/pre-commit-check.sh"
+printf '  echo -e "  ✅ 全部 ${GROUP_DONE} 组通过"\n' >> "$FIX/scripts/pre-commit-check.sh"
 printf '> V1.0.0 | 2026-08-19 | pre-commit 5 组\n\n2位专家\n' > "$FIX/AGENTS.md"
 printf '> V1.0.0\n\npre-commit 5 组\n' > "$FIX/LOOP.md"
 printf '2位专家\n' > "$FIX/knowledge/shared/README.md"

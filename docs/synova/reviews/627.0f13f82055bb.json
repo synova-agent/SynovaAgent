@@ -1,0 +1,67 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 627,
+  "patch_fingerprint": "sha256:0f13f82055bb14a2dfb29ff693183949b854f0e4f4e9e160b855af4fc8f13b9e",
+  "author": "p7-l2（小队实施）＋ p7-l1（收件闸、豁免/登记、复核 finding 收口、并入新 main 解冲突）",
+  "reviewer": "fresh 会话 5a0713e9（独立复核 PASS @e695dcb71；交付三件字节其后未变）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "fp 变更说明",
+      "cmd": "merge gitea/local-main（含 #636 白名单）",
+      "result": "pass",
+      "evidence": "新 fp 0f13f82055bb：仅因并入 main 后在 DOCS-REGISTRY 冲突处保留双方条目（P7 DOC-0213 ＋ P4 DOC-0210）；交付三件（probe/测试/Note）字节未变"
+    },
+    {
+      "id": "① CI",
+      "cmd": "--pr 627（main 版门禁）",
+      "result": "pass",
+      "evidence": "state=success total_count=2 pending=0"
+    },
+    {
+      "id": "② 零写集重叠（新口径）",
+      "cmd": "--pr 627 --repo-root .",
+      "result": "pass",
+      "evidence": "0 处文件重叠，8 处共享追加不计（registry ↔ #628–#635 等）—— #636 白名单在生产生效"
+    },
+    {
+      "id": "③",
+      "cmd": "本回执",
+      "result": "pass",
+      "evidence": "attested；reviewer=5a0713e9 fresh-session"
+    },
+    {
+      "id": "④ 串行",
+      "cmd": "--pr 627",
+      "result": "pass",
+      "evidence": "S1=ok（已并入当前 tip）S2=ok 就绪集空"
+    },
+    {
+      "id": "交付判据（复核已核）",
+      "cmd": "--selfcheck；配对测试",
+      "result": "pass",
+      "evidence": "SELFCHECK-OK: 8/8；结果: 8 通过, 0 失败"
+    },
+    {
+      "id": "豁免",
+      "cmd": "check-gate-protection --changed-base",
+      "result": "pass",
+      "evidence": "受保护路径 3 条均有合规豁免（含自覆盖）；D2 已登记 DOC-0213"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "note",
+      "where": "合并冲突",
+      "what": "DOCS-REGISTRY 与 main 的 #595 条目冲突；解决＝保留双方（DOC-0213 ＋ DOC-0210），YAML 结构未破坏。"
+    },
+    {
+      "severity": "note",
+      "where": "复核遗留建议",
+      "what": "5a0713e9 建议：合入后用 main 版复跑 --pr 636（已执行，见 #636 收尾）；配对测试补 J 子例（下一张卡）。"
+    }
+  ],
+  "issued_at": "2026-10-19T19:40:00+08:00",
+  "tool": "pr-review@v1 ＋ fresh 独立复核（5a0713e9）＋ L1 收件闸"
+}

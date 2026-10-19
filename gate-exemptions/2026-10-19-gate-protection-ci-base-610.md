@@ -1,0 +1,5 @@
+- .gitea/workflows/local-gates.yml — #610 ①d CI 每次刷新 base ＋ 新鲜度断言（门禁空跑修复） — #610
+- scripts/control-tower/check-gate-protection.sh — #610 退役 bootstrap（base 无清单 ⇒ fail-closed） — #610
+- tests/control-tower/check-gate-protection.test.sh — #610 陈旧 base 反例＋预期改 2 — #610
+- tests/control-tower/gate-protection-acceptance.test.sh — #610 自证⑧ 预期改 2 — #610
+- docs/authority/DOCS-REGISTRY.yaml — #610 登记本豁免文件（D2 登记门禁要求） — #610

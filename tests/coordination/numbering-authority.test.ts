@@ -100,6 +100,136 @@ describe('#238 前置：仓内原件存在（缺失即 fail，不静默）', () 
   });
 });
 
+// ════════════════════════════════════════════════════════════════════════════════
+// #499（2026-10-13）删件锚 ＋ 计数去恒真 ＋ 子串边界 —— 三处**判据自身缺陷**的修复
+// ────────────────────────────────────────────────────────────────────────────────
+// 反向造红实证（原始输出见 `docs/synova/product-lines/evidence/K2b4-499-20261013.md`）：
+//   · 删**非锚**边件（`augments.json`，58→57）⇒ 修前**全绿**（扫盘三数与实测**同源** ⇒ 删件不红）
+//   · 只改本文件 `classA` 字面（**文档一字未动**）⇒ 原 `expect(classA.length+classB.length).toBe(19)`
+//     即翻红 ⇒ 该断言证的是"本文件写了 19 个字符串"，**不是**"文档里有 19 条"（恒真型）
+//   · `E-02` → `E-02X`（前缀变异）⇒ 修前**全绿**（`toContain` 子串命中，`E-02X` ⊃ `E-02`）
+//
+// 契约（铁律 47）:
+//   @input  — `REGISTERED_EDGE_IDS`（具名登记面常量）＋ `extensions/ontology/edge-types/*.json` 扫盘
+//             ＋ `docs/synova/coordination/numbering-authority.md` 正文
+//   @output — 缺失/多出**逐条点名**；集合双向 `toEqual`
+//   @degraded — 无降级：任一侧读不到 ⇒ 前置用例已 fail（不静默通过）
+//   @边界   — ① 本锚是**方向性**的：只拦「登记件消失」，**允许**合法新增
+//              （保 L2 的 M4 边界 —— `K4-b3-l2seq-58-20261013.md` §四-a 实测「良构唯一新增不红」；
+//               「未登记新增」的约束在 `-1134` 的 N2-2，**不在本件**）
+//            ② 文档侧判据只说"登记面与文档一致"，**不判**语义等价 / E 号是否正确落到某个 `$id`
+// ════════════════════════════════════════════════════════════════════════════════
+
+/**
+ * 具名登记面（#499 删件锚）：`extensions/ontology/edge-types/*.json` 的 `$id` 全列，
+ * `as_of 918f2ade`（58 件）。与「扫盘推导」的**本质区别**：期望值来自本常量（独立来源），
+ * 不与磁盘扫盘同源 ⇒ 删件时两侧**不再同步变化** ⇒ 删件必红 + 点名。
+ * 维护：合法新增边**不必**改本清单（方向性检查）；**删除/改名必须显式改本清单并说明理由**。
+ */
+const REGISTERED_EDGE_IDS: readonly string[] = [
+  'edge/assumption_triggered_reallocation',
+  'edge/augments',
+  'edge/brand_building',
+  'edge/brand_builds',
+  'edge/capital_acquisition',
+  'edge/capital_allocation',
+  'edge/capital_source_mix',
+  'edge/channel_delivery',
+  'edge/competitive_positioning',
+  'edge/constrains',
+  'edge/couples',
+  'edge/cross_functional_synergy',
+  'edge/cumulative_learning',
+  'edge/customer_data_loop',
+  'edge/customer_lockin',
+  'edge/data_collection',
+  'edge/decision_authority',
+  'edge/decision-concentrates',
+  'edge/demand_to_spec',
+  'edge/deploys',
+  'edge/efficiency_attraction',
+  'edge/environmental_scan',
+  'edge/equipment_acquisition',
+  'edge/external-assumption',
+  'edge/external_feedback',
+  'edge/funds',
+  'edge/goal_decomposes_to',
+  'edge/goal_decomposition',
+  'edge/incentive_alignment',
+  'edge/incentive-binds',
+  'edge/information_flow',
+  'edge/innovation_output',
+  'edge/knowledge_reuse',
+  'edge/knowledge_sharing',
+  'edge/locks-in',
+  'edge/market_share_capture',
+  'edge/operational_execution',
+  'edge/organizational_learning',
+  'edge/plan_commits_to',
+  'edge/procurement_bargaining',
+  'edge/produces',
+  'edge/profit_reinvestment',
+  'edge/reputation_attraction',
+  'edge/reputation_flywheel',
+  'edge/retention_protects_knowledge',
+  'edge/routine_rigidity',
+  'edge/rule_constraint',
+  'edge/sensing_calibration',
+  'edge/service_support',
+  'edge/signal-transmits',
+  'edge/signal_upward_pass',
+  'edge/talent_acquisition',
+  'edge/talent_deployment',
+  'edge/talent_filter',
+  'edge/talent_retention',
+  'edge/tech_infrastructure',
+  'edge/trust_friction_reduction',
+  'edge/value_pricing',
+];
+
+/**
+ * `E-NN` token 提取，**带边界**：`E-02X` / `E-021` 不得被当成 `E-02`
+ * （卡面④「`TRANSMISSION` ⊃ `MISS` 类子串假阳」的机械防线）。
+ */
+function eTokens(block: string): string[] {
+  const re = /(?<![0-9A-Za-z-])E-\d{2}(?![0-9A-Za-z-])/g;
+  return [...new Set(block.match(re) ?? [])].sort();
+}
+
+/** 取清单块（首命中即边界）＋ **边界唯一性**断言（标记重复 ⇒ 首命中即边界会漂移 ⇒ 红）。 */
+function sliceBlock(doc: string, start: string, end: string, label: string): string {
+  const i0 = doc.indexOf(start);
+  const i1 = doc.indexOf(end);
+  expect(i0, `${label} 起点标记缺失: ${start}`).toBeGreaterThan(0);
+  expect(i1, `${label} 终点标记缺失: ${end}`).toBeGreaterThan(i0);
+  expect(doc.split(start).length - 1, `${label} 起点标记「${start}」出现多次（首命中即边界 ⇒ 边界会漂移）`).toBe(1);
+  expect(doc.split(end).length - 1, `${label} 终点标记「${end}」出现多次（同上）`).toBe(1);
+  return doc.slice(i0, i1);
+}
+
+/** 从清单块标题取「N 条」的 N。**无标题 ⇒ -1**（上层 `toBe` 必红，且消息带口径）。 */
+function headerCount(block: string, cls: 'A' | 'B'): number {
+  const m = new RegExp(`${cls} 类（(\\d+)\\s*条）`).exec(block);
+  if (!m) return -1;
+  return Number(m[1]);
+}
+
+/** 集合**双向**差集消息 ＋ **命中行全文**（卡面④：禁拿子串当定性依据）。 */
+function setDiffMsg(label: string, got: string[], want: string[], block: string): string {
+  const missing = want.filter((t) => !got.includes(t));
+  const extra = got.filter((t) => !want.includes(t));
+  const lineOf = (t: string): string => {
+    const hit = block.split(/\r?\n/).filter((l) => l.includes(t));
+    return hit.length > 0 ? hit.map((l) => l.trim()).join('  ⎪  ') : '（该块内无含此串的行）';
+  };
+  const head = `${label} 类登记面：声明 ↔ 文档实测 不一致（缺失 ${missing.length} 件 / 多出 ${extra.length} 件）`;
+  const body = [
+    ...missing.map((t) => `  ❌ 缺失 ${t} —— 含该串的行: ${lineOf(t)}`),
+    ...extra.map((t) => `  ⚠️ 多出 ${t} —— 含该串的行: ${lineOf(t)}`),
+  ];
+  return [head, ...body].join('\n');
+}
+
 describe('#238 §二 口径读数：词表 / 两章 / golden / patch', () => {
   const edges = loadCodeEdges();
 
@@ -140,6 +270,21 @@ describe('#238 §二 口径读数：词表 / 两章 / golden / patch', () => {
     //    （decision-concentrates / external-assumption / incentive-binds / locks-in / signal-transmits）
     //    ⇒ 从文件名推 `$id` 的写法会在这 5 件上必红（纪律 #1）。
     for (const e of edges) expect(e.id).toMatch(/^edge\/[a-z0-9_-]+$/);
+  });
+
+  it('删件锚：具名登记面（58 件）全在场 —— 缺一即红 + 点名（#499；补 L2「扫盘推导」的删件盲区）', () => {
+    // 🔴 #499 反向造红实证：**删掉非锚件**（`augments.json`，58→57）时上面那条"三数扫盘推导"用例**全绿**
+    //    —— 因为期望值与实测值**同源于同一目录**（扫盘 ↔ 扫盘）⇒ 删件两侧同步变化 ⇒ 恒真。
+    //    实测原始输出（修前）：`Test Files 1 passed (1) ｜ Tests 19 passed (19)` exit=0。
+    //    本锚把期望值换成**独立来源**（具名常量）⇒ 删件必红 + 点名。
+    // 边界：**方向性**（只拦登记件消失；允许合法新增 —— 保 L2 §四-a 的 M4 边界）。
+    const idsNow = loadCodeEdges().map((e) => e.id);
+    const absent = REGISTERED_EDGE_IDS.filter((id) => !idsNow.includes(id));
+    expect(
+      absent,
+      `已登记边缺失 ${absent.length} 件（删件/改名必须显式改 REGISTERED_EDGE_IDS 并说明理由）:\n` +
+        absent.map((id) => `  - ${id}`).join('\n'),
+    ).toEqual([]);
   });
 
   it('第二/四章 heading 各 42 条，且 E 号集合完全相同', () => {
@@ -278,9 +423,14 @@ describe('#238 §六 _patch_d66.cjs：编号集合载体，但不是映射依据
     expect(new Set(occurrences).size).toBe(34);
   });
 
-  it('56 个 code label 在其中 0 命中 ⇒ 不能当 E-x.y→$id 的依据', () => {
+  it('56 个 code label 在其中 0 命中 ⇒ 不能当 E-x.y→$id 的依据（命中须打**行全文**）', () => {
     const present = edges.filter((e) => raw.includes(e.label));
-    expect(present.map((e) => e.label)).toEqual([]);
+    // 卡面④：`includes` 是**子串**命中 —— 定性前必须打印命中行全文（防 `MISS` ⊂ `TRANSMISSION` 类假阳）
+    const hitLines = present.map((e) => {
+      const lines = raw.split(/\r?\n/).filter((l) => l.includes(e.label));
+      return `${e.label} @ ${lines.map((l) => l.trim()).join('  ⎪  ')}`;
+    });
+    expect(present.map((e) => e.label), `子串命中行全文（禁拿子串当定性依据）:\n${hitLines.join('\n')}`).toEqual([]);
   });
 });
 
@@ -370,27 +520,40 @@ describe('#238 §三 交付件一致性：待裁登记与计数不得被删除',
     expect(doc).toContain('工作令 §二① 与该仓内裁定件相反，以裁定件＋实测为准');
   });
 
-  it('两条待裁清单（19 条）逐条在件', () => {
+  it('两条待裁清单（19 条）逐条在件 —— 计数由**文档实测**推导 ＋ 集合双向 ＋ 子串边界（#499）', () => {
+    // 声明面（保留）：与文档实测面**双向**比对（缺失/多出都点名）
     const classA = [
       'E-02', 'E-03', 'E-04', 'E-06', 'E-09', 'E-21', 'E-24', 'E-27', 'E-30',
       'E-32', 'E-33', 'E-34', 'E-35', 'E-36', 'E-37', 'E-41', 'E-42',
     ];
     const classB = ['E-01', 'E-26'];
-    expect(classA.length + classB.length).toBe(19);
 
-    const iA = doc.indexOf('A 类（17 条）');
-    const iB = doc.indexOf('B 类（2 条）');
-    const iEnd = doc.indexOf('⚠️ B 类');
-    expect(iA, 'A 类清单块缺失').toBeGreaterThan(0);
-    expect(iB, 'B 类清单块缺失').toBeGreaterThan(iA);
-    expect(iEnd, 'B 类块尾缺失').toBeGreaterThan(iB);
+    // 🔴 #499：原来这里写 `expect(classA.length + classB.length).toBe(19)` ——
+    //    `classA`/`classB` 是**本文件自己的字面数组**，该断言与文档内容**无关**（恒真）。
+    //    反向造红实证：只改本文件 `classA`（**文档一字未动**）该断言即翻红
+    //    ⇒ 它证明的是「本文件写了 19 个字符串」，**不是**「文档里有 19 条」。
+    //    ⇒ 计数一律改由**文档实测**推导（见 ②）；文档字面删条目的分辨力由 ③ 的集合双向比对承担。
+    const blockA = sliceBlock(doc, 'A 类（17 条）', 'B 类（2 条）', 'A 类清单块');
+    const blockB = sliceBlock(doc, 'B 类（2 条）', '⚠️ B 类', 'B 类清单块');
+    const docA = eTokens(blockA);
+    const docB = eTokens(blockB);
 
-    const blockA = doc.slice(iA, iB);
-    const blockB = doc.slice(iB, iEnd);
-    for (const en of classA) expect(blockA, `A 类待裁清单缺 ${en}`).toContain(en);
-    // B 类两条必须落在同一清单块内（删掉任一条即报红）
-    expect(blockB, 'B 类块须含 E-01 ACTIVE_SCANNING').toContain('E-01 ACTIVE_SCANNING');
-    expect(blockB, 'B 类块须含 E-26 PRODUCT_DEFINITION').toContain('E-26 PRODUCT_DEFINITION');
+    // ① 标题基数 ↔ 块内实测（两侧**不同源**：标题是文字，块内是真条目）
+    expect(
+      docA.length,
+      `A 类标题写 ${headerCount(blockA, 'A')} 条，块内实测 ${docA.length} 条 —— 标题与块不一致`,
+    ).toBe(headerCount(blockA, 'A'));
+    expect(
+      docB.length,
+      `B 类标题写 ${headerCount(blockB, 'B')} 条，块内实测 ${docB.length} 条 —— 标题与块不一致`,
+    ).toBe(headerCount(blockB, 'B'));
+
+    // ② 合计由**文档实测**推导（恒真的字面计数已删）
+    expect(docA.length + docB.length, `两条待裁清单合计应为 19，文档实测 ${docA.length}+${docB.length}`).toBe(19);
+
+    // ③ 集合**双向**相等：缺失/多出都点名 ＋ **命中行全文**（卡面④：禁拿子串当定性依据）
+    expect(docA, setDiffMsg('A', docA, [...classA].sort(), blockA)).toEqual([...classA].sort());
+    expect(docB, setDiffMsg('B', docB, [...classB].sort(), blockB)).toEqual([...classB].sort());
   });
 
   it('§2.3「测不出什么」五条在件（B2 必写）', () => {

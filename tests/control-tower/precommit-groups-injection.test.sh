@@ -22,7 +22,7 @@
 #
 # ═══ 组标签映射（**冻结事实，勿假设 1..13 连续**）═══
 #   实测: `grep -c '── 组 ' scripts/pre-commit-check.sh` = 12
-#   标签为 组 1/13, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13 —— **组 11 不存在**
+#   标签为 组 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13 —— **组 11 不存在**（#595 起标签无分母）
 #   （无 `── 组 11` echo；组号沿用脚本历史 echo，不重排）。本夹具按 echo 标签定位断言，
 #   不按 1..13 循环，避免把不存在的组 11 当失败。
 #
@@ -83,18 +83,18 @@
 #   CI 侧：runner /tmp 为全新 → 不存在该 marker → 基线应得 BASELINE_OK（本夹具在 CI 上会更严）。
 #
 # ═══ 注入清单（每组一个场景；"期望红"= 注入后该组区块必须出现 ❌）═══
-#   g1  组 1/13  暂存新增 src/*.ts 含 `as any`（非注释行）            → as any 零容忍
-#   g2  组 2/13  暂存新增 src/*.ts 且无配对 tests/*.test.ts           → 新文件配对
-#   g3  组 3/13  暂存新增文件含 sk-<20+ alnum> 形态假密钥             → Secrets 扫描
-#   g4  组 4/13  暂存新增 src/*.ts（带配对测试，排除组 2 干扰）       → 接线审计（未引用）
-#   g5  组 5/13  暂存新增 src/*.ts 引用 packages/engine-core          → 铁律 46 桥接
-#   g6  组 6/13  暂存代码 + 认领 brief 的 Q0/Q1/Q3/架构层/Done 全空   → 6 核心字段
-#   g7  组 7/13  暂存新增行含 "Diagnostic"+"Module"（拼接，非注释）    → 禁止新 "Diagnostic"+"Module"
-#   g8  组 8/13  暂存新增 extensions/<新目录>/probe.txt（无 manifest）→ 目录结构
-#   g9  组 9/13  .codex/contracts/*.json 声明产出不在暂存区           → 契约门禁
-#   g10 组 10/13 端到端 brief + 无暂存 .test.ts                      → G10/G11 条件区域
-#   g12 组 12/13 暂存 scripts/*.sh 无任何今日 brief 认领               → Q2 范围一致性
-#   g13 组 13/13 暂存改动 .claude/skills/**（与 .dsh/skills 漂移）     → 技能同步
+#   g1  组 1:   暂存新增 src/*.ts 含 `as any`（非注释行）            → as any 零容忍
+#   g2  组 2:   暂存新增 src/*.ts 且无配对 tests/*.test.ts           → 新文件配对
+#   g3  组 3:   暂存新增文件含 sk-<20+ alnum> 形态假密钥             → Secrets 扫描
+#   g4  组 4:   暂存新增 src/*.ts（带配对测试，排除组 2 干扰）       → 接线审计（未引用）
+#   g5  组 5:   暂存新增 src/*.ts 引用 packages/engine-core          → 铁律 46 桥接
+#   g6  组 6:   暂存代码 + 认领 brief 的 Q0/Q1/Q3/架构层/Done 全空   → 6 核心字段
+#   g7  组 7:   暂存新增行含 "Diagnostic"+"Module"（拼接，非注释）    → 禁止新 "Diagnostic"+"Module"
+#   g8  组 8:   暂存新增 extensions/<新目录>/probe.txt（无 manifest）→ 目录结构
+#   g9  组 9:   .codex/contracts/*.json 声明产出不在暂存区           → 契约门禁
+#   g10 组 10:  端到端 brief + 无暂存 .test.ts                      → G10/G11 条件区域
+#   g12 组 12:  暂存 scripts/*.sh 无任何今日 brief 认领               → Q2 范围一致性
+#   g13 → 组 13:  暂存改动 .claude/skills/**（与 .dsh/skills 漂移）     → 技能同步
 #
 # ═══ D1148 追加（两种模式都跑，非 run_scenario 框架）═══
 #   d1148-decl   探针 brief 违反 ①Q0/Q1 空 ②无 #CRITERIA ③Done 无 verify: →
@@ -193,18 +193,19 @@ fail_lines() { # <label> <logfile> <max>
 }
 
 # 组标签常量（实测 echo 文本；组 11 不存在）
-LBL_g1="── 组 1/13: 类型安全 + 硬编码数据 ──"
-LBL_g2="── 组 2/13: 测试质量 ──"
-LBL_g3="── 组 3/13: Secrets ──"
-LBL_g4="── 组 4/13: 接线完整性 ──"
-LBL_g5="── 组 5/13: 架构边界 + 桥接文件 ──"
-LBL_g6="── 组 6/13: Task Brief (6 核心字段) ──"
-LBL_g7="── 组 7/13: 架构合规 ──"
-LBL_g8="── 组 8/13: 文件驱动架构完整性 (V3.9) ──"
-LBL_g9="── 组 9/13: 契约门禁 ──"
-LBL_g10="── 组 10/13: V3 流水线健康度 ──"
-LBL_g12="── 组 12/13: Task Scope 一致性 ──"
-LBL_g13="── 组 13/13: 技能同步一致性 ──"
+# #595：横幅去分母（`── 组 N: <名> ──`），组号不重排
+LBL_g1="── 组 1: 类型安全 + 硬编码数据 ──"
+LBL_g2="── 组 2: 测试质量 ──"
+LBL_g3="── 组 3: Secrets ──"
+LBL_g4="── 组 4: 接线完整性 ──"
+LBL_g5="── 组 5: 架构边界 + 桥接文件 ──"
+LBL_g6="── 组 6: Task Brief (6 核心字段) ──"
+LBL_g7="── 组 7: 架构合规 ──"
+LBL_g8="── 组 8: 文件驱动架构完整性 (V3.9) ──"
+LBL_g9="── 组 9: 契约门禁 ──"
+LBL_g10="── 组 10: V3 流水线健康度 ──"
+LBL_g12="── 组 12: Task Scope 一致性 ──"
+LBL_g13="── 组 13: 技能同步一致性 ──"
 
 INJ_NOTE=""
 INJ_PREFLIGHT_FAIL=""
@@ -392,7 +393,7 @@ inj_g13() {
 #   物理探针（不许口头豁免）：① 组 12 标签在源码 ② fail-open 分支在源码 ③ clone 内今日 brief 数 = 0
 assert_g12_structural() {
   local pc="$CLONE/scripts/pre-commit-check.sh"
-  if ! grep -q '组 12/13: Task Scope 一致性' "$pc" 2>/dev/null; then
+  if ! grep -q '组 12: Task Scope 一致性' "$pc" 2>/dev/null; then
     echo "    [structural g12] 未找到组 12 标签（模式抽不到）"
     return 1
   fi
@@ -532,7 +533,7 @@ run_scenario() {
 }
 
 echo "── 场景 0: baseline (干净副本，无任何注入) ──"
-run_scenario "baseline" "── 组 1/13" "green"
+run_scenario "baseline" "── 组 1" "green"
 
 # ── D1220（卡 #1222 D-A2）: 时间戳顺序判据退役后的**不变式反向断言** ──
 #   原三件（HOST_STATE 归因 + 因果隔离探针 + sed 补丁副本）随 cause 消失而退役：那条红来自

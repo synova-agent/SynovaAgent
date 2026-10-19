@@ -1,0 +1,99 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 636,
+  "patch_fingerprint": "sha256:3ba8a2e6b7414f9df2f0543239da3a7c7456b2ab9489fcd4156b9152c7312856",
+  "author": "p7-l1（创始人裁 A 后实施：② 共享追加白名单 ＋ 自检子例 J ＋ 豁免并入登记件）",
+  "reviewer": "fresh 会话 a89eff2f（独立复核 PASS @b09fd927f；其后应用 finding 1/2/5 收口，行为不变）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "范围",
+      "cmd": "git diff --name-status $(git merge-base gitea/local-main HEAD)..HEAD",
+      "result": "pass",
+      "evidence": "4 件（M 脚本／M 测试／M 已登记豁免文件／A Note）；cond2_overlap 除白名单与文案外判定未变（非白名单重叠仍 OVL_FILE）"
+    },
+    {
+      "id": "判据",
+      "cmd": "--selfcheck；配对测试",
+      "result": "pass",
+      "evidence": "SELFCHECK-OK: 13/13（exit 0）；结果: 12 通过, 0 失败（exit 0）"
+    },
+    {
+      "id": "改坏必红（双向）",
+      "cmd": "/tmp 副本：is_shared_append 恒 return 1 / 恒 return 0",
+      "result": "pass",
+      "evidence": "return 1 ⇒ SELFCHECK-FAIL: J（NO: ②）；return 0 ⇒ SELFCHECK-FAIL: C（非白名单 a.ts 仍须红）⇒ 既防漏放也防全放行"
+    },
+    {
+      "id": "边界",
+      "cmd": "grep SHARED_APPEND_PATHS",
+      "result": "pass",
+      "evidence": "仅 docs/authority/DOCS-REGISTRY.yaml 一条；代码/测试/契约路径不在白名单"
+    },
+    {
+      "id": "豁免与自覆盖",
+      "cmd": "check-gate-protection --changed-base",
+      "result": "pass",
+      "evidence": "9 通过 0 失败；无新增 gate-exemptions 文件；DOCS-REGISTRY 零改动（避免自锁）"
+    },
+    {
+      "id": "四条件（本分支门禁）",
+      "cmd": "--pr 636",
+      "result": "pass",
+      "evidence": "① CI success total=2 pending=0；② 0 处重叠；④ S1/S2 ok；③ 本回执即落"
+    },
+    {
+      "id": "回归",
+      "cmd": "pre-commit-check.sh；git status",
+      "result": "pass",
+      "evidence": "门禁全过；工作树空"
+    },
+    {
+      "id": "Note 四字段",
+      "cmd": "读 Note",
+      "result": "pass",
+      "evidence": "状态/日期/决策/理由 ＋ 独立「边界」段（白名单只装追加型中枢，新增须 CTO 裁定）"
+    },
+    {
+      "id": "自证风险评估（复核第 6 条）",
+      "cmd": "复核者独立判断",
+      "result": "pass",
+      "evidence": "接受：本 PR 的 ② 实测「0 处共享追加不计」⇒ 白名单分支未被触发，其 ②=ok 与改前逐字相同；另有创始人裁 A 授权、双向改坏、受保护文件留痕三条外部链。残留同源问题：建议合入 main 后由 main 版复跑 --pr 636"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "note",
+      "where": "自述不实（finding 1/2）",
+      "what": "Note 与豁免文件原写「配对测试同步 13 判定点」，实物为 12（J 在 selfcheck 内）—— 已改两处措辞＋测试 :41 回退 12。"
+    },
+    {
+      "severity": "note",
+      "where": "遍历加固（finding 5）",
+      "what": "is_shared_append 的 for 循环改逐行 read，防单词拆分/通配展开。"
+    },
+    {
+      "severity": "note",
+      "where": "覆盖缺口（finding 3）",
+      "what": "配对测试不独立驱动 J ⇒ 外部独立闸缺失；建议下一张卡在配对测试补 J（两分支同碰 registry ⇒ CAN＋出现「共享追加」；碰非白名单 ⇒ NO）。已记，不阻塞。"
+    },
+    {
+      "severity": "note",
+      "where": "217 豁免文件自述（finding 4）",
+      "what": "该文件声称 registry 已登记但实际无条目 —— pre-existing（非本 PR 引入），已报 D2/CTO 补登记或改正措辞。"
+    },
+    {
+      "severity": "note",
+      "where": "机器行（finding 6）",
+      "what": "建议机器行加 `②=ok(shared:n)`，让 ④ 的串行义务有机器可读痕迹；已记待 CTO 定语义。"
+    },
+    {
+      "severity": "note",
+      "where": "既有口径漂移（与本 PR 无关）",
+      "what": "pre-commit 脚本自声明 12 组 vs AGENTS 头部 13 组（横幅无「组 11」）—— 另立卡治，不拦本 PR。"
+    }
+  ],
+  "issued_at": "2026-10-19T19:10:00+08:00",
+  "tool": "pr-review@v1 ＋ 1 轮 fresh 独立复核（a89eff2f，含双向改坏）＋ L1 收件闸"
+}

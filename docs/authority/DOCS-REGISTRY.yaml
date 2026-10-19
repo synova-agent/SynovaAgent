@@ -563,3 +563,30 @@ documents:
     status: draft
     owner: P10（平台线·生态）
     note: "Gitea=阻断腿/唯一账本（required check 实测 local-gates/gates）；GitHub=深度腿/集成验证面，产出信号不产出账。含创始人入口（mDNS，禁写死 IP；app.ini DOMAIN/ROOT_URL 仍写死 IP 属平台层上报）与地址口径清扫三分类 R/H/E（as_of 2026-10-19：10 件/13 行/15 次出现；按行 R4/H8/E1）。"
+
+    # ---- P4 2026-10-19：#617 pre-push 0-1 豁免（创始人作者；D2 登记要求）----
+    - id: DOC-0207
+      type: decision
+      path: gate-exemptions/2026-10-19-pre-push-0-1-617.md
+      status: active
+      owner: CTO
+      note: "#617 pre-push 0-1 改按被推 ref 判（stdin local_sha/remote_sha）的创始人授权豁免（3 条受保护路径）。"
+
+    # ---- P7 2026-10-19：#602 三信号探针受保护路径豁免（#623 新规；D2 登记）----
+    - id: DOC-0213
+      type: decision
+      path: gate-exemptions/2026-10-19-p7-602-probe.md
+      status: active
+      owner: P7
+      note: "#602 probe-line-signals.ts ＋ 配对测试的受保护路径豁免（报告线口径 v4.2；含 gate-exemptions 自覆盖；裁定号 #602）。"
+
+    # ---- P4 2026-10-20：#623 豁免机制改造（裁 217；D2 登记）----
+    - id: DOC-0209
+
+    # ---- P4 2026-10-20：#595 组数口径豁免（D2 登记）----
+    - id: DOC-0210
+      type: decision
+      path: gate-exemptions/2026-10-19-gate-count-595.md
+      status: active
+      owner: CTO
+      note: "#595 组数口径纠偏（12 组）的豁免（17 条受保护路径；作者不校验后由 L1 补记）。"
