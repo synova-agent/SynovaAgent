@@ -8,15 +8,19 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 # 配对对象: scripts/control-tower/check-gate-protection.sh（CT-40：scripts/control-tower/<name>.sh
 #           ↔ tests/control-tower/<name>.test.sh）
 #
-# 覆盖矩阵（三路径 ＋ 五反例 ＋ 陈旧 base/DS-6 ＋ 契约）:
-#   正常 — 真清单默认模式 ⇒ exit 0 ｜ 沙箱合规豁免 ⇒ exit 0（DS-3）
+# 覆盖矩阵（三路径 ＋ 反例 ＋ 陈旧 base/DS-6 ＋ 契约；#623 裁 217 同步）:
+#   正常 — 真清单默认模式（22 条）⇒ exit 0 ｜ 沙箱合规豁免 ⇒ exit 0（DS-3/DS-4）
 #   降级 — 清单缺失 ⇒ exit 2 ｜ PATTERNS 段空 ⇒ exit 2 ｜ 坏 base ⇒ exit 2（DS-5）
-#   真红 — pin 漂移 ⇒ exit 1 ｜ 受保护变更无豁免 ⇒ exit 1 且点名（DS-2）
-#          ｜ 豁免无理由 ⇒ exit 1 ｜ 豁免作者非 approver ⇒ exit 1（DS-4）
+#   真红 — pin 漂移 ⇒ exit 1 ｜ 受保护变更无豁免 ⇒ exit 1 且点名（DS-2）｜
+#          清单自改（加 PATTERNS 行＋重算 pin）无豁免 ⇒ exit 1 且点名清单（DS-2b）｜
+#          豁免缺理由／理由 9 字／坏裁定号 abc ⇒ exit 1（DS-3b）｜
+#          不合规行 ＋ 另一合规覆盖行 ⇒ 仍 exit 1（不合规行本身计 failure）｜
+#          k12@local 作者 ＋ 齐全豁免 ⇒ exit 0（作者校验已删，DS-4b）
 #   边界 — 陈旧 base（无清单）⇒ exit 2 ＋ E_BAD_BASE（禁 BOOTSTRAP；#610 已退役 bootstrap）｜
 #          T10b 同族反例：工作树有未跟踪清单仍 ⇒ exit 2 ｜ DS-6 反证：base 有清单
-#          且改保护路径无豁免 ⇒ exit 1（同一仓内对照，证明 base 有清单才判 diff）
-#   契约 — `--json` 输出合法 JSON ｜ 零平台 API 调用（DS-8：本器对平台 API 路径零命中）
+#          且改保护路径无豁免 ⇒ exit 1（同一仓内对照，证明 base 有清单才判 diff）｜
+#          改豁免目录内文件（README）⇒ 自身也是受保护变更（DS-2c 自覆盖）
+#   契约 — `--json` 输出合法 JSON（不含作者字段）｜ 零平台 API 调用（DS-8）
 #   接线 — 检查器存在且可执行 ＋ 默认（无参）可跑（WIRE CHECK，铁律 0-2）
 #   注入缝 — SYNO_GATE_PROTECTED_LIST 真实生效（不碰真实仓库清单）
 #
@@ -24,7 +28,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #       🔴 零仓库内容写（不 git add/commit/stash，不改 .gitea/protected-files.txt）；
 #       降级日志全部导到 TMPD（export SYNO_GATE_DEGRADED_LOG="$TMPD/degraded-events.log"）；
 #       trap 清理；每项打印实测数字（exit / 条数 / 缓存命中数）。
-# 判别力自检（D4）: 五反例全部「改坏确实红」，且断言**红的原因原文**（不只断言 exit）。
+# 判别力自检（D4）: 全部反例「改坏确实红」，且断言**红的原因原文**（不只断言 exit）。
 # ═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -62,6 +66,25 @@ run_gate() { # $1=root [extra args…] ⇒ 全局 OUT / ERR / RC
   ERR="$(cat "$TMPD/stderr.txt" 2>/dev/null || true)"
 }
 
+recompute_pin() { # $1=沙箱仓库根 ⇒ 重算沙箱清单 pin（隔离 pin 漂移干扰；不碰真实仓库）
+  "${PYTHON_BIN:-python3}" - "$1/.gitea/protected-files.txt" <<'PY'
+import hashlib
+import sys
+
+path = sys.argv[1]
+lines = open(path, encoding="utf-8").read().splitlines()
+begin = lines.index("# PATTERNS-BEGIN")
+end = lines.index("# PATTERNS-END")
+patterns = [line.strip() for line in lines[begin + 1:end]
+            if line.strip() and not line.strip().startswith("#")]
+pin = hashlib.sha256("".join(p + "\n" for p in patterns).encode("utf-8")).hexdigest()
+out = ["# PROTECTED-PATTERNS-SHA256=" + pin if line.startswith("# PROTECTED-PATTERNS-SHA256=")
+       else line for line in lines]
+open(path, "w", encoding="utf-8").write("\n".join(out) + "\n")
+print("patterns=%d pin=%s" % (len(patterns), pin[:12]))
+PY
+}
+
 echo "=== CT-40 check-gate-protection 配对测试 ==="
 
 # ── T0 接线 ＋ DS-8 零平台 API ──────────────────────────────────────────────
@@ -82,10 +105,10 @@ bash "$GATE" >"$TMPD/t1.out" 2>"$TMPD/t1.err"
 T1RC=$?
 T1CNT=$(grep -o 'PATTERNS [0-9][0-9]* 条' "$TMPD/t1.out" | grep -o '[0-9][0-9]*' | head -1)
 T1PIN=$(grep -o 'pin 一致（声明 [0-9a-f]*' "$TMPD/t1.out" | awk '{print $NF}' | head -1)
-if [ "$T1RC" -eq 0 ] && [ "${T1CNT:-0}" -eq 20 ]; then
+if [ "$T1RC" -eq 0 ] && [ "${T1CNT:-0}" -eq 22 ]; then
   ok "正常: 真清单默认模式 → exit ${T1RC}（条数=${T1CNT}, pin=${T1PIN}）"
 else
-  no "正常: 真清单默认模式应 exit 0 且条数=20，实际 exit ${T1RC}, 条数=${T1CNT:-?}"
+  no "正常: 真清单默认模式应 exit 0 且条数=22，实际 exit ${T1RC}, 条数=${T1CNT:-?}"
 fi
 
 # ── T2 降级: 清单缺失 ⇒ exit 2 ＋ degraded 行（DS-5）────────────────────────
@@ -139,7 +162,7 @@ fi
 SYNO_GATE_PROTECTED_LIST="$S1/.gitea/protected-files.txt" bash "$GATE" --root "$S1" >"$TMPD/t5.out" 2>"$TMPD/t5.err"
 T5RC=$?
 if [ "$T5RC" -eq 0 ]; then
-  ok "注入缝: SYNO_GATE_PROTECTED_LIST → exit ${T5RC}（清单=$(grep -c 'PATTERNS 20 条' "$TMPD/t5.out" | tr -d '\n\r') 匹配）"
+  ok "注入缝: SYNO_GATE_PROTECTED_LIST → exit ${T5RC}（清单=$(grep -c 'PATTERNS 22 条' "$TMPD/t5.out" | tr -d '\n\r') 匹配）"
 else
   no "注入缝: SYNO_GATE_PROTECTED_LIST 应生效 exit 0，实际 exit ${T5RC}"
 fi
@@ -158,29 +181,29 @@ else
   no "DS-2/R2: 应为 exit 1 且点名 scripts/pre-commit-check.sh，实际 exit ${RC}"
 fi
 
-# ── T7 DS-3: 合规豁免（批准人提交）⇒ exit 0 ────────────────────────────────
+# ── T7 DS-3: 合规豁免（含豁免文件自覆盖；作者为创始人身份）⇒ exit 0 ────────
 (
   cd "$S1" || exit 1
   printf '#!/bin/bash\necho changed-with-exempt\n' > scripts/pre-commit-check.sh
-  printf '# 豁免登记\n\n- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与清单 — CTO-2026-10-18-裁001\n' \
+  printf '# 豁免登记\n\n- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与豁免校验 — 裁 217\n- gate-exemptions/e-compliant.md — 本豁免文件自身在 diff 内的自覆盖行 — 裁 217\n' \
     > gate-exemptions/e-compliant.md
   git add -A
-  git -c user.email=huangxuesongvip@163.com -c user.name=synova commit -qm "改门禁脚本＋合规豁免（批准人提交）"
+  git -c user.email=huangxuesongvip@163.com -c user.name=synova commit -qm "改门禁脚本＋合规豁免（创始人身份提交）"
 ) || no "沙箱 S1 合规豁免提交失败"
 run_gate "$S1" --changed-base "$S1_BASE"
 T7COVER=$(printf '%s' "$OUT" | grep -c '受保护路径有合规豁免' | tr -d '\n\r' || true)
 T7AUTH=$(cd "$S1" && git log -1 --format=%ae -- gate-exemptions/e-compliant.md)
-if [ "$RC" -eq 0 ] && [ "${T7COVER:-0}" -ge 1 ]; then
-  ok "DS-3: 合规豁免 → exit ${RC}（覆盖命中=${T7COVER}, 豁免作者=${T7AUTH}）"
+if [ "$RC" -eq 0 ] && [ "${T7COVER:-0}" -ge 2 ]; then
+  ok "DS-3: 合规豁免 → exit ${RC}（覆盖命中=${T7COVER}, 提交作者=${T7AUTH}）"
 else
-  no "DS-3: 合规豁免应 exit 0，实际 exit ${RC}（覆盖命中=${T7COVER:-0}）"
+  no "DS-3: 合规豁免应 exit 0（需覆盖脚本＋豁免文件自身），实际 exit ${RC}（覆盖命中=${T7COVER:-0}）"
 fi
 
-# ── T8 反例 R3: 豁免无理由 ⇒ exit 1 ─────────────────────────────────────────
+# ── T8 反例 DS-3b: 豁免缺理由 ⇒ exit 1 ──────────────────────────────────────
 (
   cd "$S1" || exit 1
   printf '#!/bin/bash\necho changed-reasonless\n' > scripts/pre-commit-check.sh
-  printf '# 豁免登记\n\n- scripts/pre-commit-check.sh —  — CTO-2026-10-18-裁002\n' \
+  printf '# 豁免登记\n\n- scripts/pre-commit-check.sh —  — 裁 217\n' \
     > gate-exemptions/e-compliant.md
   git add -A
   git -c user.email=huangxuesongvip@163.com -c user.name=synova commit -qm "豁免无理由"
@@ -188,27 +211,27 @@ fi
 run_gate "$S1" --changed-base "$S1_BASE"
 T8MSG=$(printf '%s' "$OUT" | grep -c '缺理由' | tr -d '\n\r' || true)
 if [ "$RC" -eq 1 ] && [ "${T8MSG:-0}" -ge 1 ]; then
-  ok "DS-4/R3: 豁免无理由 → exit ${RC}（'缺理由' 命中=${T8MSG}）"
+  ok "DS-3b: 豁免无理由 → exit ${RC}（'缺理由' 命中=${T8MSG}）"
 else
-  no "DS-4/R3: 豁免无理由应 exit 1 且提示缺理由，实际 exit ${RC}, 命中=${T8MSG:-0}"
+  no "DS-3b: 豁免无理由应 exit 1 且提示缺理由，实际 exit ${RC}, 命中=${T8MSG:-0}"
 fi
 
-# ── T9 反例 R4: 豁免作者非 approver ⇒ exit 1 ───────────────────────────────
+# ── T9 DS-4b: k12@local 作者 ＋ 齐全豁免 ⇒ exit 0（作者校验已删）─────────────
 (
   cd "$S1" || exit 1
-  printf '#!/bin/bash\necho changed-bad-author\n' > scripts/pre-commit-check.sh
-  printf '# 豁免登记\n\n- scripts/pre-commit-check.sh — 声称有理由 — CTO-2026-10-18-裁003\n' \
+  printf '#!/bin/bash\necho changed-k12-author\n' > scripts/pre-commit-check.sh
+  printf '# 豁免登记\n\n- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与豁免校验 — 裁 217\n- gate-exemptions/e-compliant.md — 本豁免文件自身在 diff 内的自覆盖行 — 裁 217\n' \
     > gate-exemptions/e-compliant.md
   git add -A
-  git -c user.email=k12@local -c user.name=k12-batch5 commit -qm "豁免由 agent 提交（非批准人）"
-) || no "沙箱 S1 非批准人豁免提交失败"
+  git -c user.email=k12@local -c user.name=k12-batch5 commit -qm "豁免由 k12 身份提交（作者校验已删）"
+) || no "沙箱 S1 k12 作者豁免提交失败"
 run_gate "$S1" --changed-base "$S1_BASE"
-T9MSG=$(printf '%s' "$OUT" | grep -c '作者非批准人' | tr -d '\n\r' || true)
+T9COVER=$(printf '%s' "$OUT" | grep -c '受保护路径有合规豁免' | tr -d '\n\r' || true)
 T9AUTH=$(cd "$S1" && git log -1 --format=%ae -- gate-exemptions/e-compliant.md)
-if [ "$RC" -eq 1 ] && [ "${T9MSG:-0}" -ge 1 ]; then
-  ok "DS-4/R4: 豁免作者非 approver → exit ${RC}（作者=${T9AUTH}, '作者非批准人' 命中=${T9MSG}）"
+if [ "$RC" -eq 0 ] && [ "${T9COVER:-0}" -ge 2 ]; then
+  ok "DS-4b: k12 作者（${T9AUTH}）＋齐全豁免 → exit ${RC}（覆盖命中=${T9COVER}）"
 else
-  no "DS-4/R4: 非批准人豁免应 exit 1 且提示作者非批准人，实际 exit ${RC}, 命中=${T9MSG:-0}"
+  no "DS-4b: k12 作者齐全豁免应 exit 0，实际 exit ${RC}（覆盖命中=${T9COVER:-0}）"
 fi
 
 # ── T10/T12 陈旧 base（无清单）⇒ 2 ⇄ DS-6（同一仓内对照，证明 base 有清单才判 diff）────
@@ -291,7 +314,7 @@ try:
     obj = json.loads(sys.argv[1])
 except Exception:
     print("INVALID"); raise SystemExit(0)
-need = ["component", "ok", "exit", "patterns", "pin_computed", "approvers", "checks", "failures"]
+need = ["component", "ok", "exit", "patterns", "pin_computed", "checks", "failures"]
 missing = [k for k in need if k not in obj]
 flag = "OK" if obj.get("exit") in (0, 1, 2) else "BADEXIT"
 print("%s:%s:%s" % (flag, obj.get("exit"), ",".join(missing) or "-"))
@@ -313,7 +336,6 @@ patterns = ["files/*.sh", "deep/**", "q/check-?.sh"]
 pin = hashlib.sha256("".join(p + "\n" for p in patterns).encode("utf-8")).hexdigest()
 body = ["# glob 语义测试清单（pin 由测试独立复算）",
         "# PROTECTED-PATTERNS-SHA256=%s" % pin,
-        "# APPROVERS=huangxuesongvip@163.com",
         "# PATTERNS-BEGIN"] + patterns + ["# PATTERNS-END", ""]
 open(sys.argv[1], "w", encoding="utf-8").write("\n".join(body))
 PY
@@ -389,10 +411,10 @@ S7_BASE="$(cd "$S7" && git rev-parse HEAD)"
 (
   cd "$S7" || exit 1
   printf '#!/bin/bash\necho readme-only\n' > scripts/pre-commit-check.sh
-  printf '# 只写在 README 里（不应生效）\n\n- scripts/pre-commit-check.sh — 看起来合规 — CTO-2026-10-18-裁009\n' \
+  printf '# 只写在 README 里（不应生效）\n\n- scripts/pre-commit-check.sh — README 内示例行不应生效（理由已足够长） — #610\n' \
     > gate-exemptions/README.md
   git add -A
-  git -c user.email=huangxuesongvip@163.com -c user.name=synova commit -qm "豁免只写在 README（批准人提交）"
+  git -c user.email=huangxuesongvip@163.com -c user.name=synova commit -qm "豁免只写在 README（作者身份不影响判定）"
 ) || no "沙箱 S7 README 提交失败"
 run_gate "$S7" --changed-base "$S7_BASE"
 T15COVER=$(printf '%s' "$OUT" | grep -c '受保护路径有合规豁免' | tr -d '\n\r' || true)
@@ -401,6 +423,130 @@ if [ "$RC" -eq 1 ] && [ "${T15COVER:-0}" -eq 0 ] && [ "${T15READMESKIP:-0}" -ge 
   ok "边界: 仅 README.md 声明豁免 → exit ${RC}（README 被排除：合规命中=${T15COVER}, 无豁免命中=${T15READMESKIP}）"
 else
   no "边界: README.md 不应充当豁免，实际 exit ${RC}, 合规命中=${T15COVER:-0}, 无豁免命中=${T15READMESKIP:-0}"
+fi
+
+# ── T16 DS-2b: 清单自改（加 PATTERNS 行＋重算 pin，无豁免）⇒ 1 且点名清单 ─────
+S9="$TMPD/s9"
+mk_repo "$S9" || no "沙箱 S9 初始化失败"
+(
+  cd "$S9" || exit 1
+  cp "$MANIFEST" .gitea/protected-files.txt
+  printf '#!/bin/bash\necho base\n' > scripts/pre-commit-check.sh
+  git add -A && git commit -qm "s9-base: 当前清单＋受保护脚本"
+) || no "沙箱 S9 base 提交失败"
+S9_BASE="$(cd "$S9" && git rev-parse HEAD)"
+(
+  cd "$S9" || exit 1
+  awk '{if ($0 ~ /^# PATTERNS-END$/) print "scripts/extra-new.sh"; print}' \
+    .gitea/protected-files.txt > .gitea/pf.tmp && mv .gitea/pf.tmp .gitea/protected-files.txt
+) || no "沙箱 S9 清单加行失败"
+S9_PIN="$(recompute_pin "$S9")"
+(
+  cd "$S9" || exit 1
+  git add -A && git commit -qm "s9-c2: 清单自改＋重算 pin（无豁免）"
+) || no "沙箱 S9 清单自改提交失败"
+run_gate "$S9" --changed-base "$S9_BASE"
+T16NAME=$(printf '%s' "$OUT" | grep -c '无合规豁免: .gitea/protected-files.txt' | tr -d '\n\r' || true)
+T16PROT=$(printf '%s' "$OUT" | grep -o '受保护路径变更 [0-9]* 条' | grep -o '[0-9]*' | head -1)
+if [ "$RC" -eq 1 ] && [ "${T16NAME:-0}" -ge 1 ]; then
+  ok "DS-2b: 清单自改无豁免 → exit ${RC}（${S9_PIN}, 受保护变更=${T16PROT:-?}, 点名清单命中=${T16NAME}）"
+else
+  no "DS-2b: 清单自改应 exit 1 且点名 .gitea/protected-files.txt，实际 exit ${RC}（受保护=${T16PROT:-?}, 点名=${T16NAME:-0}）"
+fi
+
+# ── T17 DS-4: 清单自改＋合规豁免覆盖清单（含自覆盖行）⇒ 0 ───────────────────
+(
+  cd "$S9" || exit 1
+  awk '{if ($0 ~ /^# PATTERNS-END$/) print "scripts/extra-new2.sh"; print}' \
+    .gitea/protected-files.txt > .gitea/pf.tmp && mv .gitea/pf.tmp .gitea/protected-files.txt
+) || no "沙箱 S9 清单二次加行失败"
+S9_PIN2="$(recompute_pin "$S9")"
+(
+  cd "$S9" || exit 1
+  printf '# 豁免登记\n\n- .gitea/protected-files.txt — 批次内调整保护路径清单并重算 pin — 裁 217\n- gate-exemptions/e-self.md — 本豁免文件自身在 diff 内的自覆盖行 — 裁 217\n' \
+    > gate-exemptions/e-self.md
+  git add -A && git commit -qm "s9-c3: 清单自改＋合规豁免（含自覆盖）"
+) || no "沙箱 S9 合规豁免提交失败"
+run_gate "$S9" --changed-base "$S9_BASE"
+T17COVER=$(printf '%s' "$OUT" | grep -c '受保护路径有合规豁免' | tr -d '\n\r' || true)
+if [ "$RC" -eq 0 ] && [ "${T17COVER:-0}" -ge 2 ]; then
+  ok "DS-4: 清单自改＋合规豁免（含自覆盖）→ exit ${RC}（${S9_PIN2}, 覆盖命中=${T17COVER}）"
+else
+  no "DS-4: 清单自改＋合规豁免应 exit 0（需覆盖清单＋豁免文件自身），实际 exit ${RC}（覆盖命中=${T17COVER:-0}）"
+fi
+
+# ── T18/T19/T20 DS-3b: 豁免三段加严（缺理由／9 字／坏裁定号）⇒ 1 ────────────
+S10="$TMPD/s10"
+mk_repo "$S10" || no "沙箱 S10 初始化失败"
+(
+  cd "$S10" || exit 1
+  cp "$MANIFEST" .gitea/protected-files.txt
+  printf '#!/bin/bash\necho base\n' > scripts/pre-commit-check.sh
+  git add -A && git commit -qm "s10-base: 当前清单＋受保护脚本"
+) || no "沙箱 S10 base 提交失败"
+S10_BASE="$(cd "$S10" && git rev-parse HEAD)"
+
+s10_case() { # $1=标签 $2=期望提示关键字 $3=豁免文件正文
+  (
+    cd "$S10" || exit 1
+    printf '#!/bin/bash\necho "%s"\n' "$1" > scripts/pre-commit-check.sh
+    printf '%s' "$3" > gate-exemptions/e-bad.md
+    git add -A && git -c user.email=k12@local -c user.name=k12-batch5 commit -qm "s10: ${1}"
+  ) || { no "沙箱 S10 ${1} 提交失败"; return; }
+  run_gate "$S10" --changed-base "$S10_BASE"
+  local _hit
+  _hit=$(printf '%s' "$OUT" | grep -c "$2" | tr -d '\n\r' || true)
+  if [ "$RC" -eq 1 ] && [ "${_hit:-0}" -ge 1 ]; then
+    ok "DS-3b: ${1} → exit ${RC}（'${2}' 命中=${_hit}）"
+  else
+    no "DS-3b: ${1} 应 exit 1 且提示 ${2}，实际 exit ${RC}（命中=${_hit:-0}）"
+  fi
+}
+
+s10_case "豁免缺理由" "缺理由" '# 豁免登记
+
+- scripts/pre-commit-check.sh —  — 裁 217
+'
+s10_case "理由 9 字" "理由不足 10 字" '# 豁免登记
+
+- scripts/pre-commit-check.sh — 一二三四五六七八九 — 裁 217
+'
+s10_case "坏裁定号 abc" "裁定号不合规" '# 豁免登记
+
+- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与豁免校验 — abc
+'
+
+# ── T21 DS-3b: 合规覆盖行 ＋ 不合规行 ⇒ 仍 1（不合规行本身计 failure）─────────
+(
+  cd "$S10" || exit 1
+  printf '#!/bin/bash\necho bad-line-with-cover\n' > scripts/pre-commit-check.sh
+  printf '# 豁免登记\n\n- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与豁免校验 — 裁 217\n- gate-exemptions/e-bad.md — 本豁免文件自身在 diff 内的自覆盖行 — 裁 217\n- scripts/legacy-gate.sh — 坏行：裁定号只有前缀没有数字 — 裁\n' \
+    > gate-exemptions/e-bad.md
+  git add -A && git -c user.email=k12@local -c user.name=k12-batch5 commit -qm "s10: 合规覆盖＋坏行"
+) || no "沙箱 S10 坏行提交失败"
+run_gate "$S10" --changed-base "$S10_BASE"
+T21COVER=$(printf '%s' "$OUT" | grep -c '受保护路径有合规豁免: scripts/pre-commit-check.sh' | tr -d '\n\r' || true)
+T21INV=$(printf '%s' "$OUT" | grep -c '豁免行不合规' | tr -d '\n\r' || true)
+if [ "$RC" -eq 1 ] && [ "${T21COVER:-0}" -ge 1 ] && [ "${T21INV:-0}" -ge 1 ]; then
+  ok "DS-3b: 合规覆盖＋坏行 → exit ${RC}（合规命中=${T21COVER}, 坏行 failure=${T21INV}；已覆盖也不放行）"
+else
+  no "DS-3b: 合规覆盖＋坏行应仍 exit 1，实际 exit ${RC}（合规=${T21COVER:-0}, 坏行=${T21INV:-0}）"
+fi
+
+# ── T22 DS-4: 齐全合规豁免（k12 作者）⇒ 0 ────────────────────────────────────
+(
+  cd "$S10" || exit 1
+  printf '#!/bin/bash\necho all-good\n' > scripts/pre-commit-check.sh
+  printf '# 豁免登记\n\n- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与豁免校验 — 裁 217\n- gate-exemptions/e-bad.md — 本豁免文件自身在 diff 内的自覆盖行 — 裁 217\n' \
+    > gate-exemptions/e-bad.md
+  git add -A && git -c user.email=k12@local -c user.name=k12-batch5 commit -qm "s10: 齐全合规"
+) || no "沙箱 S10 齐全豁免提交失败"
+run_gate "$S10" --changed-base "$S10_BASE"
+T22COVER=$(printf '%s' "$OUT" | grep -c '受保护路径有合规豁免' | tr -d '\n\r' || true)
+if [ "$RC" -eq 0 ] && [ "${T22COVER:-0}" -ge 2 ]; then
+  ok "DS-4: 齐全合规豁免（k12 作者）→ exit ${RC}（覆盖命中=${T22COVER}）"
+else
+  no "DS-4: 齐全合规豁免应 exit 0，实际 exit ${RC}（覆盖命中=${T22COVER:-0}）"
 fi
 
 echo ""
