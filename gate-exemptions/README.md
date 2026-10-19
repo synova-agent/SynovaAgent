@@ -67,12 +67,19 @@
 - tests/control-tower/** — 同批配对测试与自证预期更新 — #623
 ```
 
-反例（都不会生效，且**该行本身计 failure**）：
+反例分两类：
+
+- **前三行（三段不合规）⇒ 该行不生效，且该行本身计 failure**：
 
 ```
-- scripts/control-tower/** — 理由不足十字 — #623          ← 理由只有 9 字（要求 ≥10）
+- scripts/control-tower/** — 不足十字的理由示例 — #623          ← 理由只有 9 字（要求 ≥10）
 - scripts/control-tower/** — 批次内同步改门禁脚本与豁免校验 — abc   ← 裁定号不合规（须 裁 NNN 或 #NNN）
 - scripts/control-tower/** — 只有两段（缺裁定号）
+```
+
+- **末行（行首不是「- 」）⇒ 整行被跳过、不解析（不产生 failure）**：
+
+```
 – scripts/control-tower/** — 行首不是「- 」（en dash 当列表符）⇒ 整行被跳过、不解析
 ```
 
