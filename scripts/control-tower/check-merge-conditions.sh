@@ -156,9 +156,9 @@ append_degraded_log() { # <code> <reason> <phase>
 emit_json() { # <verdict> <exit> [code] [reason]
   local verdict="$1" ec="$2" code="${3:-}" reason="${4:-}"
   python3 - "$PRNUM" "$BASE" "$TIP" "$HEAD" "$FP" "$CI_V" "$OV_V" "$RV_V" "$SR_V" \
-            "$verdict" "$ec" "$code" "$reason" <<'PY'
+            "$verdict" "$ec" "$code" "$reason" "${shared:-0}" <<'PY'
 import json, sys
-(pr, base, tip, head, fp, ci, ov, rv, sr, verdict, ec, code, reason) = sys.argv[1:14]
+(pr, base, tip, head, fp, ci, ov, rv, sr, verdict, ec, code, reason, shared) = sys.argv[1:15]
 def cond(v):
     return v if v in ("ok", "no", "degraded", "skip") else "skip"
 obj = {
@@ -171,6 +171,7 @@ obj = {
     "conditions": {
         "ci": cond(ci),
         "overlap": cond(ov),
+        "overlap_shared": int(shared) if str(shared).isdigit() else 0,   # #639-2：共享追加计数（机器可读的「须串行」痕迹）
         "review": "ok(attested)" if rv == "ok" else cond(rv),  # 裁 B3-1：③ 绿必须带级别
         "serial": cond(sr),
     },

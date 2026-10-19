@@ -13,7 +13,7 @@
 #     · `--help` 参数完备性（9 个参数逐一在帮助里出现）
 #     · `--selfcheck` 13 判定点自证（判据本身可跑且改坏必红）
 #
-# 覆盖矩阵（12 个判定点 ＝ 逐子例独立夹具 ＋ 三态退出码）:
+# 覆盖矩阵（13 个判定点 ＝ 逐子例独立夹具 ＋ 三态退出码；J 为 #639-1 新增）:
 #   A  inner_exit=0  CAN-自合并        ③=ok(attested)（禁裸 ok）
 #   B  inner_exit=1  NO: ① CI 全绿 pending=0      点名 pending 的 context
 #   C  inner_exit=1  NO: ② 零写集重叠             点名 a.ts → PR#100,#101
@@ -25,7 +25,8 @@
 #   F  inner_exit=2  degraded: CI 信号量==0       禁判绿也禁判红
 #   G  inner_exit=1  NO: ④ 串行                   S2 前置就绪 PR #99 编号更小
 #   H  inner_exit=0  CAN-自合并 ＋ warn: 身份未分离（R9 恒打印）
-#   I  inner_exit=2  degraded: open PR 列表不可达 禁输出 CAN-自合并 / ②=ok
+#   I  inner_exit=2  degraded: open PR 列表不可达
+#   J  inner_exit=0  CAN-自合并        ②=ok(shared:1)：两分支同碰共享追加登记表（#639-1） 禁输出 CAN-自合并 / ②=ok
 #   ⇒ 三态齐: exit 0（A/H）｜exit 1（B/C/D1–D4/E/G）｜exit 2（F/I）—— DS-4
 #
 # 边界值（C2 可离线复现者；单列计数，见下"计数口径"）:
@@ -336,6 +337,9 @@ last_line() { tail -n 1 "$1" 2>/dev/null; }
 #   grep 链无输出 ⇒ `grep -Evq` 非零 ⇒ if 为假 ⇒ **return 0（通过）**，即「看不见」被当成「没问题」）。
 #   新形＝计数法（两次 `grep -Ec`，不走管道）＋ **存在性**（空输出/无 `③=` ⇒ 返回 1）；
 #   **降级机行 `MERGE-COND: degraded` 豁免**（①/② 阶段即 exit 2，合法地没有 ③=）。
+# #639-4：本函数内的 degraded 豁免与调用点 `want_exit != 2` 门**功能重复**（有意的双保险；
+#   改其一必须同步另一处，否则语义漂移）。
+# #639-3：计数**按行**——同一行兼有合法与非法 `③=` 会判过（旧形同样放过；如需更严改 `grep -o`）。
 form_ok() { # 读全局 $OUT
   local mline n3 ok3
   if mline="$(grep -m1 '^MERGE-COND:' "$OUT" 2>/dev/null)"; then :; else mline=""; fi
@@ -451,6 +455,17 @@ judgment F  2 "degraded: CI 信号量==0（state=pending total_count=0；禁判�
 judgment G  1 "NO: ④ 串行" "S2 前置就绪 PR #99 编号更小 ⇒ 先合它" "④=no" "③=ok(attested)"
 judgment H  0 "CAN-自合并" "warn: 身份未分离" "③=ok(attested)"
 judgment J  0 "CAN-自合并" "shared:1" "②=ok(shared:1)"
+# #639-2 判别力（finding 3）：非共享追加**不得**带 (shared:) 后缀；共享追加必须带且计数为 1
+if grep -Fq "(shared:" "$WORK/j/A/out.txt" 2>/dev/null; then
+  fail "#639-2 A 非共享却出现 (shared:) 后缀（后缀恒带 ⇒ 无判别力）"
+else
+  extra "#639-2 A 非共享不带 shared 后缀"
+fi
+if grep -Fq "(shared:1)" "$WORK/j/J/out.txt" 2>/dev/null; then
+  extra "#639-2 J 共享追加带 (shared:1)"
+else
+  fail "#639-2 J 缺 (shared:1)（机行未体现共享追加）"
+fi
 judgment I  2 "degraded: open PR 列表不可达（HTTP 500 on /pulls?state=open，fail-closed）" \
   "degraded:" "MERGE-COND: degraded" "①=ok"
 
