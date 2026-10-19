@@ -6,12 +6,12 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 # check-gate-protection.sh — 门禁本体保护：仓内清单自检 ＋ diff 豁免核验（只读、三态）
 #
 # 设计哲学（一句）: **把「谁能改门禁」写成仓内可判的清单，让每次触碰都必须留下带理由、带裁定号、
-#                    带批准人身份的豁免 —— 平台字段是刀，本器只是刀的磨刀石（误改报警，不是授权）。**
+#                    可审的证据链 —— 平台字段是刀，本器只是刀的磨刀石（误改报警，不是授权）。**
 #
 # 契约（铁律 47 / C1）:
 #   @usage   bash scripts/control-tower/check-gate-protection.sh [--list <path>] [--changed-base <ref>]
 #              [--root <dir>] [--json] [--help]
-#            默认（无 --changed-base）= 清单完整性 ＋ pin ＋ APPROVERS
+#            默认（无 --changed-base）= 清单完整性 ＋ pin
 #            --changed-base <ref>     = 上述 ＋ base→HEAD diff 的受保护路径豁免核验
 #   @input   .gitea/protected-files.txt（或 --list / SYNO_GATE_PROTECTED_LIST 注入）；
 #            diff 模式：git 仓库（HEAD 与 <ref> 的 merge-base）
@@ -19,12 +19,13 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #            --json 时 stdout 仅一份**合法 JSON**（人读行抑制，degraded 仍走 stderr）；
 #            降级时 stdout 追加 `DEGRADED: <code> — <原因>`（CI 日志可见，不静默）
 #   @exit    0=通过 ｜ 1=真红（pin 漂移 / 受保护变更无合规豁免 / 豁免不合法）
-#            2=检查自身失败（清单缺失·不可读·解析为空·APPROVERS 空·坏 base·git 不可用·参数错）
+#            2=检查自身失败（清单缺失·不可读·解析为空·坏 base·base 无清单·
+#            git 不可用·参数错）
 #            🔴 三态铁律：2 绝不等于通过（fail-closed）
 #   @degraded stderr 一行 `degraded: <原因>` ＋ 追加一行 JSON 到 SYNO_GATE_DEGRADED_LOG
 #            （字段 time/component/code/phase/retryable；铁律 11/32）＋ exit 2
-#   @error   code ∈ {E_LIST_MISSING, E_LIST_EMPTY, E_APPROVERS_EMPTY, E_PIN_MISMATCH,
-#                   E_BAD_BASE, E_EXEMPT_INVALID}（C1 定集）
+#   @error   code ∈ {E_LIST_MISSING, E_LIST_EMPTY, E_PIN_MISMATCH,
+#                   E_BAD_BASE, E_EXEMPT_INVALID}（C1 定集；#623 删作者校验相关 code）
 #            ＋ E_USAGE（参数用法错，C1 未列；按 DSH B1「typed error 必带 code」补齐）
 #            ＋ E_INTERNAL（本器自身异常兜底：宁可 exit 2 也不许把 bug 当"真红"或"绿"）
 #
@@ -33,15 +34,18 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   --root <dir>                               仓库根（默认 git toplevel，退化 pwd）
 #   SYNO_GATE_DEGRADED_LOG                     降级事件日志（默认 <root>/.codex/control-tower/logs/degraded-events.log）
 #
-# 清单格式（真源，逐字节；与 specs SYNOVA-IMPL-2.5-S1 §2 S1-a 一致）:
+# 清单格式（真源，逐字节；与 specs SYNOVA-IMPL-2.5-S1 §2 S1-a ＋ #623 裁 217 一致）:
 #   # PROTECTED-PATTERNS-SHA256=<64hex>      pin：PATTERNS 段规范串的 sha256
-#   # APPROVERS=<邮箱[,邮箱…]>                豁免生效所需的提交作者邮箱（空 ⇒ exit 2）
 #   # PATTERNS-BEGIN  …逐行 glob…  # PATTERNS-END
 #   pin 规范串 = PATTERNS 段内非空非注释行，按文件顺序，trim，各以 `\n` 收尾（= 行 + \n 串联）
+#   🔴 PATTERNS 首行 = 本清单自身、末行 = gate-exemptions/**（#623）：清单与豁免目录自我保护
 #
 # 豁免格式（gate-exemptions/*.md；README.md 显式排除）:
-#   - <路径或 glob> — <理由> — <裁定号>      三段缺一 ⇒ 不生效（理由、裁定号均须非空）
-#   该豁免文件**最后一次提交的作者邮箱**必须 ∈ APPROVERS（缺一 ⇒ exit 1 逐条点名）
+#   - <路径或 glob> — <理由> — <裁定号>
+#   三段校验（#623 裁 217 加严）：路径非空 ｜ 理由 strip 后 ≥10 字（Unicode 字符数）｜
+#   裁定号 fullmatch ^(裁\s*[0-9]+|#[0-9]+)$（如 `裁 217`／`#623`）。
+#   不合规行**不生效**，且**该行本身计 failure**（E_EXEMPT_INVALID；即使另一行已覆盖该路径）。
+#   🔴 不再校验提交作者（作者名单已删）：豁免=可审证据链，授权归裁定号（台账）。
 #
 # glob 语义 = Gitea/gobwas glob（**定义在下方 python 引擎，禁 fnmatch**）:
 #   大小写不敏感 ｜ `**` 跨目录 ｜ `*` 不跨 `/` ｜ `?` 单字符（不跨 `/`）
@@ -68,27 +72,37 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   ① 头部契约        本段（@input/@output/@exit/@degraded/@error/已知限制）
 #   ② 解释器探测      PYBIN 三级探测（探**可用性**，不只看存在性——D328 P1-1）
 #   ③ 参数与注入缝    --list/--root/--changed-base/--json；清单与日志默认值解析
-#   ④ 清单解析         PATTERNS 段 / pin 声明 / APPROVERS（空段 ⇒ 信号量 0 ⇒ exit 2）
+#   ④ 清单解析         PATTERNS 段 / pin 声明（空段 ⇒ 信号量 0 ⇒ exit 2）
 #   ⑤ glob 引擎        手写 glob→regex（** 跨目录、* 不跨 /、? 单字符、IGNORECASE）
-#   ⑥ diff 豁免核验     merge-base / 受保护路径命中 / 豁免三段式 / 作者 ∈ APPROVERS / bootstrap
+#   ⑥ diff 豁免核验     merge-base / base 清单存在性 / 受保护路径命中 / 豁免三段式加严（不合规行计 failure）
 #   ⑦ 输出             逐项 ✅❌ ＋ `结果: N 通过, M 失败` ｜ --json 合法 JSON
 #   ⑧ 降级              stderr `degraded:` ＋ degraded log JSON ＋ exit 2
 #
 # 已知限制（做不到什么 —— 禁读成"已检测"）:
 #   1. **无平台漂移检测**：只核仓内清单与豁免；Gitea 平台规则是否被改/删，本器核不到（403）。
 #   2. **pin 只是误改报警器**：蓄意改者可同步改 pin —— 真防线是 S2 的平台字段（裁）。
-#   3. **豁免作者校验可被同机身份绕过**：换 git config user.email 即可冒充批准人；
-#      真正授权仍是 S2 的 force-merge 限制。
-#   4. **bootstrap 是一次性开孔**：仅"base 无清单"时跳过 diff；DS-6 反例保证它不是后门。
-#   5. **push 腿 diff 为空**：push 到 local-main 时 merge-base == HEAD ⇒ 跳过 diff 判定；
+#   3. **作者签名语义已消失（#623）**：不再校验提交作者 ⇒ 豁免只证明「有路径/理由/裁定号的
+#      证据链」，**不证明谁批准**；授权仍归裁定号（台账）与 S2 的 force-merge 限制。
+#   4. **base 无清单 ⇒ 2（E_BAD_BASE）**：清单自 S1（23a4f5a38）起已落 main，不再有"首次落盘"
+#      例外；#610 已退役 bootstrap，陈旧/错误 base 一律 fail-closed（不再有一次性开孔）。
+#   5. **陈旧但含清单的 base ⇒ 可能假红**：diff 会把 base..HEAD 间别人的变更算进来；
+#      本器无远端知识，不判新鲜度（CI 由 ①d 每次刷新，本地开发者自行 `git fetch`）。
+#   6. **push 腿 diff 为空**：push 到 local-main 时 merge-base == HEAD ⇒ 跳过 diff 判定；
 #      真正的拦截在 pull_request 腿。**禁读成「push 也拦了」**。
-#   6. **glob 不支持字符类**（`[abc]` 按字面量处理）；只实现 `*`／`**`／`?`（规格所需）。
-#   7. **`X/**/Y` 的 `**/` 可为空目录层**（gobwas 严格语义下可能要求至少一层）⇒ 本器
+#   7. **glob 不支持字符类**（`[abc]` 按字面量处理）；只实现 `*`／`**`／`?`（规格所需）。
+#   8. **`X/**/Y` 的 `**/` 可为空目录层**（gobwas 严格语义下可能要求至少一层）⇒ 本器
 #      更严（多保护不多放行），偏差方向是 fail-closed。
-#   8. **pin 声明缺失按漂移处理**（exit 1）：宁可拦下坏的清单，也不放过未登记清单。
-#   9. **`--json` 抑制人读行**（stdout 仅 JSON），便于 `jq`；证据留档请同时存 stderr。
-#  10. **豁免行三段式以 em/en 破折号为界**：路径或理由**自身含 `—`/`–`** 会被多切一段
+#   9. **pin 声明缺失按漂移处理**（exit 1）：宁可拦下坏的清单，也不放过未登记清单。
+#  10. **`--json` 抑制人读行**（stdout 仅 JSON），便于 `jq`；证据留档请同时存 stderr。
+#  11. **豁免行三段式以 em/en 破折号为界**：路径或理由**自身含 `—`/`–`** 会被多切一段
 #      ⇒ 该行判不生效（fail-closed）。规避：路径用 glob 表达，理由里不要写破折号。
+#  12. **清单与豁免目录自我保护（#623）**：PATTERNS 首行=清单自身、末行=gate-exemptions/** ⇒
+#      改清单或改/加豁免文件本身也成为受保护变更（需同 diff 合规豁免行覆盖，含「自覆盖」）。
+#      这是有意的无死锁解法；旧口径「目录不加保护是有意设计」已作废。
+#  13. **旧作者引述不回改**：历史 `docs/plans/**`、旧 `memory/notes/**`、旧 `.claude/task-briefs/**`
+#      中的作者名单／「创始人作者」引述保持原样（历史引述性质）⇒ **全仓** grep 不为 0 是预期；
+#      本器只保证清单/检查器/两测试/README 四处零命中。
+#  14. **理由字数按 Unicode 字符数**（Python `len()`），中文一字=1；不按字节、不按词。
 # ═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
 
@@ -121,7 +135,7 @@ while [ $# -gt 0 ]; do
       GP_JSON=1; shift ;;
     -h|--help)
       # 头注释即用法文档（单源：改契约只改头部，不留第二份会漂移的用法文本）
-      sed -n '5,72p' "${BASH_SOURCE[0]}" | sed -e 's/^# \{0,1\}//'
+      sed -n '5,79p' "${BASH_SOURCE[0]}" | sed -e 's/^# \{0,1\}//'
       exit 0 ;;
     *)
       GP_USAGE_ERR="未知参数: $1"; break ;;
@@ -263,7 +277,6 @@ def glob_match(pattern, path):
 
 # ── ④ 清单解析 ────────────────────────────────────────────────────────────────
 PIN_MASK = re.compile(r"^#\s*PROTECTED-PATTERNS-SHA256\s*=\s*([0-9a-fA-F]{64})\s*$")
-APPROVERS_MASK = re.compile(r"^#\s*APPROVERS\s*=\s*(.*)$")
 
 
 def read_list(path):
@@ -281,7 +294,7 @@ def read_list(path):
 
 
 def parse_list(text):
-    """解析 PATTERNS 段 / pin / APPROVERS。返回 (patterns, pin, approvers)。"""
+    """解析 PATTERNS 段 / pin。返回 (patterns, pin)。"""
     lines = text.splitlines()
     begin = None
     end = None
@@ -296,18 +309,11 @@ def parse_list(text):
                         "PATTERNS-BEGIN/PATTERNS-END 标记缺失或未成对 ⇒ 无法确定 PATTERNS 段")
 
     pin = None
-    approvers = []
     for line in lines:
         stripped = line.strip()
         matched = PIN_MASK.match(stripped)
         if matched:
             pin = matched.group(1).lower()
-        matched = APPROVERS_MASK.match(stripped)
-        if matched:
-            for item in re.split(r"[,;\s]+", matched.group(1)):
-                item = item.strip().lower()
-                if item and item not in approvers:
-                    approvers.append(item)
 
     patterns = []
     for line in lines[begin + 1:end]:
@@ -317,7 +323,7 @@ def parse_list(text):
         if stripped.startswith("#"):
             continue
         patterns.append(stripped)
-    return patterns, pin, approvers
+    return patterns, pin
 
 
 def canonical(patterns):
@@ -329,10 +335,17 @@ def canonical(patterns):
 # 三段式分隔符 = em/en 破折号（**不含 ASCII `-`** —— 路径里常有连字符，会被误切）；
 # 空格可有可无（`—  —` 空理由也要判成「缺理由」，不能退化成「缺三段式」）。
 SEP = re.compile(r"\s*[—–]\s*")
+# #623 裁 217：理由 strip 后 ≥10 字（Unicode 字符数）；裁定号只接受 `裁 NNN` 或 `#NNN`。
+MIN_REASON_CHARS = 10
+RULING_MASK = re.compile(r"^(裁\s*[0-9]+|#[0-9]+)$")
 
 
 def parse_exempt_text(text, source):
-    """每行 `- <路径或 glob> — <理由> — <裁定号>`。三段缺一 ⇒ 该行记问题、不生效。"""
+    """每行 `- <路径或 glob> — <理由> — <裁定号>`。
+
+    三段校验（#623 加严）：路径非空／理由 strip 后 ≥10 字／裁定号 `^(裁\\s*[0-9]+|#[0-9]+)$`。
+    任一段不合规 ⇒ 该行 `problem` 非空、**不生效**，且主流程把**该行本身计 failure**。
+    """
     entries = []
     for lineno, line in enumerate(text.splitlines(), 1):
         stripped = line.strip()
@@ -346,12 +359,24 @@ def parse_exempt_text(text, source):
             entries.append({"glob": body, "reason": "", "ruling": "", "line": lineno,
                             "problem": "缺「— 理由 — 裁定号」三段式", "source": source})
             continue
+        glob = parts[0].strip()
+        reason = parts[1].strip()
+        ruling = parts[2].strip()
+        problem = None
+        if not glob:
+            problem = "路径为空"
+        elif not reason:
+            problem = "缺理由"
+        elif len(reason) < MIN_REASON_CHARS:
+            problem = "理由不足 %d 字（实测 %d 字）" % (MIN_REASON_CHARS, len(reason))
+        elif not RULING_MASK.match(ruling):
+            problem = "裁定号不合规（须 `裁 NNN` 或 `#NNN`，实测 `%s`）" % ruling
         entries.append({
-            "glob": parts[0].strip(),
-            "reason": parts[1].strip(),
-            "ruling": parts[2].strip(),
+            "glob": glob,
+            "reason": reason,
+            "ruling": ruling,
             "line": lineno,
-            "problem": None,
+            "problem": problem,
             "source": source,
         })
     return entries
@@ -370,14 +395,6 @@ def read_exempt_file(root, rel):
     if rc == 0:
         return out
     return ""
-
-
-def last_author(root, rel):
-    """该文件最后一次提交的作者邮箱（小写）；读不到 ⇒ 空串（fail-closed 处理）。"""
-    rc, out, _ = git(["log", "-1", "--format=%ae", "--", rel], root)
-    if rc != 0:
-        return ""
-    return out.strip().splitlines()[0].strip().lower() if out.strip() else ""
 
 
 def is_exempt_file(path):
@@ -409,12 +426,10 @@ def main():
         "patterns": 0,
         "pin_declared": None,
         "pin_computed": None,
-        "approvers": [],
         "merge_base": None,
         "changed_paths": 0,
         "protected_changes": [],
         "exempt_files": [],
-        "bootstrap": False,
         "checks": checks,
         "failures": failures,
         "degraded": None,
@@ -449,8 +464,6 @@ def main():
             if report["degraded"]:
                 sys.stdout.write("DEGRADED: %s — %s\n"
                                  % (report["degraded"]["code"], report["degraded"]["message"]))
-            if report["bootstrap"]:
-                sys.stdout.write("BOOTSTRAP: 清单在 base 不存在，diff 模式跳过（首次落盘）\n")
             sys.stdout.write("结果: %d 通过, %d 失败\n" % (passes, fails))
         return code
 
@@ -475,15 +488,14 @@ def main():
         return finish()
 
     try:
-        # ④ 清单：存在/可读 → 非空 → pin → APPROVERS
+        # ④ 清单：存在/可读 → 非空 → pin
         text, nbytes = read_list(list_path)
         report["list_bytes"] = nbytes
         ok("清单存在且可读（bytes=%d）" % nbytes)
 
-        patterns, pin, approvers = parse_list(text)
+        patterns, pin = parse_list(text)
         report["patterns"] = len(patterns)
         report["pin_declared"] = pin
-        report["approvers"] = approvers
 
         if not patterns:
             raise GateError("E_LIST_EMPTY", "parse",
@@ -501,11 +513,6 @@ def main():
         else:
             ok("pin 一致（声明 %s… 实算 %s…）" % (pin[:8], computed[:8]))
 
-        if not approvers:
-            raise GateError("E_APPROVERS_EMPTY", "approvers",
-                            "APPROVERS 为空：无批准人 ⇒ 任何豁免都无法生效（禁当作通过）")
-        ok("APPROVERS %d 项（%s）" % (len(approvers), ",".join(approvers)))
-
         # ⑥ diff 模式
         if base_ref:
             rc, _, _ = git(["rev-parse", "--verify", "--quiet", "%s^{commit}" % base_ref], root)
@@ -518,16 +525,16 @@ def main():
             merge_base = out.strip().splitlines()[0].strip()
             report["merge_base"] = merge_base
 
-            # base 里有没有「本清单」：没有 ⇒ 一次性 bootstrap（唯一开孔）
+            # base 里有没有「本清单」：没有 ⇒ 陈旧/错误 base，fail-closed（#610 已退役 bootstrap）
             rel_list = PROTECTED_REL
             if list_path.startswith(root.rstrip("/") + "/"):
                 rel_list = os.path.relpath(list_path, root)
             rc, _, _ = git(["cat-file", "-e", "%s:%s" % (merge_base, rel_list)], root)
             if rc != 0:
-                report["bootstrap"] = True
-                ok("base 无清单（%s@%s 不存在）⇒ 一次性 bootstrap 开孔（唯一开孔，DS-6 反例把守）"
-                   % (rel_list, merge_base[:8]))
-                return finish()
+                raise GateError("E_BAD_BASE", "list-in-base",
+                                "base 无清单（%s@%s 不存在）⇒ 陈旧/错误 base，fail-closed；"
+                                "清单自 S1（23a4f5a38）起已落 main，不再有'首次落盘'例外"
+                                "（#610 已退役 bootstrap）" % (rel_list, merge_base[:8]))
             ok("base 可解析（%s → merge-base %s）" % (base_ref, merge_base[:8]))
 
             rc, out, _ = git(["diff", "--name-only", merge_base, "HEAD"], root)
@@ -548,15 +555,21 @@ def main():
             exempt_rels = [path for path in changed if is_exempt_file(path)]
             exempt_info = []
             for rel in exempt_rels:
-                author = last_author(root, rel)
-                author_ok = author in approvers
                 entries = parse_exempt_text(read_exempt_file(root, rel), rel)
-                exempt_info.append({"path": rel, "author": author,
-                                    "author_ok": author_ok, "entries": entries})
+                exempt_info.append({"path": rel, "entries": entries})
             report["exempt_files"] = [
-                {"path": item["path"], "author": item["author"], "author_ok": item["author_ok"]}
+                {"path": item["path"], "entries": len(item["entries"])}
                 for item in exempt_info
             ]
+
+            # #623 裁 217：豁免文件内的不合规行**本身计 failure**（证据不完整 ⇒ 1），
+            # 即使另一行已覆盖该路径 —— 禁因「已覆盖」把坏行洗掉。
+            for info in exempt_info:
+                for entry in info["entries"]:
+                    if entry["problem"]:
+                        fail("E_EXEMPT_INVALID", "exempt",
+                             "豁免行不合规: %s:%d `%s`（%s）"
+                             % (entry["source"], entry["line"], entry["glob"], entry["problem"]))
 
             if not protected:
                 ok("受保护路径变更 0 条（无需豁免）")
@@ -566,22 +579,10 @@ def main():
                     covered = False
                     notes = []
                     for info in exempt_info:
-                        if not info["author_ok"]:
-                            notes.append("%s 作者非批准人(%s)"
-                                         % (info["path"], info["author"] or "未知"))
-                            continue
                         for entry in info["entries"]:
                             if entry["problem"]:
                                 notes.append("%s:%d %s"
                                              % (entry["source"], entry["line"], entry["problem"]))
-                                continue
-                            if not entry["reason"]:
-                                notes.append("%s:%d `%s` 缺理由"
-                                             % (entry["source"], entry["line"], entry["glob"]))
-                                continue
-                            if not entry["ruling"]:
-                                notes.append("%s:%d `%s` 缺裁定号"
-                                             % (entry["source"], entry["line"], entry["glob"]))
                                 continue
                             if glob_match(entry["glob"], path):
                                 covered = True

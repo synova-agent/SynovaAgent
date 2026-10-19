@@ -1,8 +1,8 @@
 # K4 批 3 · 9 张待建 issue（CTO 令 §三 / 第 3 条）
 
 > **用途**：CTO 在 Gitea 建 issue 时**直接粘贴**（正文已按 §三 三条硬要求成型）。
-> **为何由 CTO 提交**：执行侧**无 issue 创建通道** —— Gitea API `http://192.168.1.7:3000/api/v1/*` **匿名 403**；
-> `gh` CLI 存在但面向 GitHub；`git credential fill` 对 `192.168.1.7` **取不到凭据**（只有 push 走 helper 成功）。
+> **为何由 CTO 提交**：执行侧**无 issue 创建通道** —— Gitea API `http://MacBook-Pro-2.local:3000/api/v1/*` **匿名 403**；
+> `gh` CLI 存在但面向 GitHub；`git credential fill` 对 `MacBook-Pro-2.local` **取不到凭据**（只有 push 走 helper 成功）。
 > ⇒ 与 PR 通道同一阻塞。**已在回执 §三 报告。**
 > **卡面文件**：`docs/synova/coordination/cards/K4-b3-proposed/<NN>-<slug>.md`（已落仓）
 > **建完改名**：按 `<issue号>-<slug>.md` 改名（CTO 令第 3 条）。

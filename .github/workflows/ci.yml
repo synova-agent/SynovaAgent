@@ -1610,7 +1610,7 @@ jobs:
     runs-on: ubuntu-latest
     # 注: needs 必须单行 —— check-required-contexts.py 的 YAML 子集解析器不支持续行
     #     （多行会 fail-closed degrade ⇒ required-contexts 全量检查降级失败）。
-    needs: [quality, test, architecture, test-kit-architecture, control-tower-tests, integration-check, checker-review, golden-case]
+    needs: [quality, test, architecture, test-kit-architecture, control-tower-tests, integration-check, checker-review, golden-case, gate-integrity]
     if: ${{ !cancelled() }}
     steps:
       - name: Fail if any needed job did not succeed

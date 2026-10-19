@@ -1,0 +1,90 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 616,
+  "patch_fingerprint": "sha256:499a2d4f2d838fbe8c550a41cac6b90af1de7bb68959ef3ce5652932d7709d1f",
+  "author": "p7-l1（清理 PR 实施方：删主仓 dev doc ＋ 卡面改指 handbook v4）",
+  "reviewer": "fresh 会话 4fb65995（终验 PASS @d7f45d17a）；前序 4e81ae32（FAIL，3 findings，逐条已修）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "范围",
+      "cmd": "git diff --name-status $(git merge-base gitea/local-main HEAD)..HEAD",
+      "result": "pass",
+      "evidence": "恰 2 项：M 卡面 / D docs/plans/.../SYNOVA-IMPL-602-line-signals-probe-20261019.md；无代码改动、无第三文件"
+    },
+    {
+      "id": "删除对象正确",
+      "cmd": "git ls-files docs/plans/codex/implementation | grep 602",
+      "result": "pass",
+      "evidence": "空；diff 内仅 1 个 D"
+    },
+    {
+      "id": "规格确在 handbook（真源可核）",
+      "cmd": "git -C <handbook> show b798946bd:'派单件/2026-10-19-P7-602-三信号探针-规格.md'",
+      "result": "pass",
+      "evidence": "对象可达；365 行；附录 B 三行均 ✅ 已批（B-7-a/b/c）；§4bis 标题 = v4 已批 B-7-a"
+    },
+    {
+      "id": "F1 卡面裁定同步",
+      "cmd": "grep -c '待 CTO 批|待批'；grep -c B-7-c",
+      "result": "pass",
+      "evidence": "0 ／ B-7-c 1 次；:19 明写「三条裁定已批（2026-10-19 · Issue #602）」＋ 三条分别列出"
+    },
+    {
+      "id": "F2 简称清除",
+      "cmd": "grep -c 'dev doc §'",
+      "result": "pass",
+      "evidence": "0；正文统一为「handbook 规格 v4 §… @b798946bd」（行 3/11/52 共 3 处）"
+    },
+    {
+      "id": "F3 幽灵禁碰条目",
+      "cmd": "grep -c 'docs/plans/codex/implementation/SYNOVA-IMPL-602-line-signals-probe'",
+      "result": "pass",
+      "evidence": "0；Q2 条目改为「SYNOVA-IMPL-602-*.md（已删，禁重加；规格真源在 handbook）」"
+    },
+    {
+      "id": "P2/P3（卡面判据钉死）",
+      "cmd": "grep 'lines=5|5 行都出行|逐项失败' <卡面>",
+      "result": "pass",
+      "evidence": "lines=5＋「5 行都出行（基座线 n/a(未映射)）」；降级粒度三条（逐项 exit 1／根级 exit 2／无输出不得静默通过）"
+    },
+    {
+      "id": "卡面可解析与门禁",
+      "cmd": "brief_parser --all；pre-commit-check.sh",
+      "result": "pass",
+      "evidence": "parseable=true / criteria=A / done=7 / 写集 3 条；13 组全过"
+    },
+    {
+      "id": "CI",
+      "cmd": "GET commits/d7f45d17a/status",
+      "result": "pass",
+      "evidence": "state=success total=2 pending=0（push＋pull_request 两腿）"
+    },
+    {
+      "id": "无副作用",
+      "cmd": "git status --porcelain",
+      "result": "pass",
+      "evidence": "空"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "note",
+      "where": "卡面 :19",
+      "what": "「附录见 handbook 规格 v4 附录 B」未带 @b798946bd 后缀（行 3/11/52 都带）——终审判非阻塞；已记，随下一批顺手补。"
+    },
+    {
+      "severity": "note",
+      "where": "复核环境",
+      "what": "复核者本机 .handbook-mirror 停在 29e3950be、无 b798946bd 对象 ⇒ 无法自核规格。已由 L1 在真 handbook 仓核验（对象可达/365 行/附录 B 三行 ✅）。镜像滞后已记，建议同步机制加一次刷新。"
+    },
+    {
+      "severity": "note",
+      "where": "PR 正文",
+      "what": "正文自陈「①d 会被 CI 工作区陈旧误伤」——那是修缓存前的状态；缓存已刷新（gitea/local-main 6be0699aa），本 PR CI 实测 success。"
+    }
+  ],
+  "issued_at": "2026-10-19T09:40:00+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md）＋ 两轮 fresh 复核（4e81ae32 FAIL → 4fb65995 PASS）"
+}
