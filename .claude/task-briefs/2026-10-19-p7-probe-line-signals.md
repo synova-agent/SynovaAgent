@@ -1,12 +1,12 @@
 # Task Brief: #602 —— P7-2 三信号探针（`probe-line-signals.ts`）
 
-> 分支: ct/p7-probe-20261019（实施会话自建；一人一事一分支）｜ 规格: `docs/plans/codex/implementation/SYNOVA-IMPL-602-line-signals-probe-20261019.md`（**dev doc，冻结 blob 派单时给**）
+> 分支: ct/p7-probe-20261019（实施会话自建；一人一事一分支）｜ 🔴 **规格权威源 = handbook `派单件/2026-10-19-P7-602-三信号探针-规格.md` @ `372d4613d`（v4，含三条裁定）**；主仓同名 dev doc 已按文档契约删除（**过程件不进主仓**）
 > 依据: 创始人 2026-10-19 口径裁定「**回执 A**」｜ P7 守则 §三「三信号可跑」｜ handbook `常设授权条例.md` §四（① 判据通过率 ② 例外清单 ③ 在飞/卡数）
-> 本卡由 **L1（P7 包负责人）产出**，随 dev doc 落 main；**实施会话只读使用，不得改写**（口径变更 ⇒ 退回 L1 → CTO）
+> 本卡由 **L1（P7 包负责人）产出**，落 main 供实施会话读取；**实施会话只读使用，不得改写**（口径变更 ⇒ 退回 L1 → CTO）
 
 ## Q0: 定位（项目拼图 + 文件审计）
 
-**a) 项目拼图**：治理线 · 自证（P7）。**把"回执三信号"从人算变成机算** —— CTO 问「某线进度/在飞/例外」时一条命令出，不靠人报。🔴 **「线」＝ handbook §五 的报告线（产品线／治理线／CTO／K3／基座线），按路径切；不是包 P1–P10**（包写集天然重叠，实测 17 open PR 13–16 个 cross-line）。不触 L1–L5 业务代码。
+**a) 项目拼图**：治理线 · 自证（P7）。**把"回执三信号"从人算变成机算** —— CTO 问「某线进度/在飞/例外」时一条命令出，不靠人报。🔴 **「线」＝ handbook §五 的报告线（产品线／治理线／CTO／K3／基座线），按路径切；不是包 P1–P10**（裁定 B-7-a：`tests/control-tower/**`·`tests/architecture/**`→治理线、`.gitea/**`→治理线；裁定后实测 **single 11 / cross 6 / unknown 0**，17 open PR）。不触 L1–L5 业务代码。
 
 **b) 文件审计**：`scripts/control-tower/` 131 件；已有 **探针契约单一实现** `probe-ladder.ts`（13 探针／`RESULT=`／三态）、**信号发射** `emit-signal.py`（`.codex/signals/`）、**四条件机器判定** `check-merge-conditions.sh`（#597＋#604），**没有**按线聚合三信号的编排层（全树 grep「回执三信号」0 实现）。⚠️ **关键实测**：17 个 open PR 仅 3 个分支带包前缀；`task-state/*.json` **无 line/package 字段** ⇒ **必须多判据映射 ＋ unknown/cross-line 兜底**（dev doc §4bis）。
 
