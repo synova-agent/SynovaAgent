@@ -133,7 +133,8 @@ export class ToolLoopExecutor {
    * Max 3 rounds of tool calls to prevent infinite loops.
    */
   async callLLMWithTools(): Promise<string> {
-    const MAX_TOOL_ROUNDS = 3;
+    // 裁 219 / M10-3：轮数配置化（默认 3 不变），上界 10 —— 防客户配 1000 轮致费用失控
+    const MAX_TOOL_ROUNDS = Math.min(10, Math.max(1, Number.parseInt(process.env.SYNO_MAX_TOOL_ROUNDS ?? '', 10) || 3));
     const tools = this.ctx.toolRegistry.listTools();
     const { messages, hookRunner, eventBus, sessionId, toolRegistry } = this.ctx;
 
