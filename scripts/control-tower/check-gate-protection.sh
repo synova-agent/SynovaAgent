@@ -19,7 +19,8 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #            --json 时 stdout 仅一份**合法 JSON**（人读行抑制，degraded 仍走 stderr）；
 #            降级时 stdout 追加 `DEGRADED: <code> — <原因>`（CI 日志可见，不静默）
 #   @exit    0=通过 ｜ 1=真红（pin 漂移 / 受保护变更无合规豁免 / 豁免不合法）
-#            2=检查自身失败（清单缺失·不可读·解析为空·APPROVERS 空·坏 base·git 不可用·参数错）
+#            2=检查自身失败（清单缺失·不可读·解析为空·APPROVERS 空·坏 base·base 无清单·
+#            git 不可用·参数错）
 #            🔴 三态铁律：2 绝不等于通过（fail-closed）
 #   @degraded stderr 一行 `degraded: <原因>` ＋ 追加一行 JSON 到 SYNO_GATE_DEGRADED_LOG
 #            （字段 time/component/code/phase/retryable；铁律 11/32）＋ exit 2
@@ -70,7 +71,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   ③ 参数与注入缝    --list/--root/--changed-base/--json；清单与日志默认值解析
 #   ④ 清单解析         PATTERNS 段 / pin 声明 / APPROVERS（空段 ⇒ 信号量 0 ⇒ exit 2）
 #   ⑤ glob 引擎        手写 glob→regex（** 跨目录、* 不跨 /、? 单字符、IGNORECASE）
-#   ⑥ diff 豁免核验     merge-base / 受保护路径命中 / 豁免三段式 / 作者 ∈ APPROVERS / bootstrap
+#   ⑥ diff 豁免核验     merge-base / base 清单存在性 / 受保护路径命中 / 豁免三段式 / 作者 ∈ APPROVERS
 #   ⑦ 输出             逐项 ✅❌ ＋ `结果: N 通过, M 失败` ｜ --json 合法 JSON
 #   ⑧ 降级              stderr `degraded:` ＋ degraded log JSON ＋ exit 2
 #
@@ -79,15 +80,18 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   2. **pin 只是误改报警器**：蓄意改者可同步改 pin —— 真防线是 S2 的平台字段（裁）。
 #   3. **豁免作者校验可被同机身份绕过**：换 git config user.email 即可冒充批准人；
 #      真正授权仍是 S2 的 force-merge 限制。
-#   4. **bootstrap 是一次性开孔**：仅"base 无清单"时跳过 diff；DS-6 反例保证它不是后门。
-#   5. **push 腿 diff 为空**：push 到 local-main 时 merge-base == HEAD ⇒ 跳过 diff 判定；
+#   4. **base 无清单 ⇒ 2（E_BAD_BASE）**：清单自 S1（23a4f5a38）起已落 main，不再有"首次落盘"
+#      例外；#610 已退役 bootstrap，陈旧/错误 base 一律 fail-closed（不再有一次性开孔）。
+#   5. **陈旧但含清单的 base ⇒ 可能假红**：diff 会把 base..HEAD 间别人的变更算进来；
+#      本器无远端知识，不判新鲜度（CI 由 ①d 每次刷新，本地开发者自行 `git fetch`）。
+#   6. **push 腿 diff 为空**：push 到 local-main 时 merge-base == HEAD ⇒ 跳过 diff 判定；
 #      真正的拦截在 pull_request 腿。**禁读成「push 也拦了」**。
-#   6. **glob 不支持字符类**（`[abc]` 按字面量处理）；只实现 `*`／`**`／`?`（规格所需）。
-#   7. **`X/**/Y` 的 `**/` 可为空目录层**（gobwas 严格语义下可能要求至少一层）⇒ 本器
+#   7. **glob 不支持字符类**（`[abc]` 按字面量处理）；只实现 `*`／`**`／`?`（规格所需）。
+#   8. **`X/**/Y` 的 `**/` 可为空目录层**（gobwas 严格语义下可能要求至少一层）⇒ 本器
 #      更严（多保护不多放行），偏差方向是 fail-closed。
-#   8. **pin 声明缺失按漂移处理**（exit 1）：宁可拦下坏的清单，也不放过未登记清单。
-#   9. **`--json` 抑制人读行**（stdout 仅 JSON），便于 `jq`；证据留档请同时存 stderr。
-#  10. **豁免行三段式以 em/en 破折号为界**：路径或理由**自身含 `—`/`–`** 会被多切一段
+#   9. **pin 声明缺失按漂移处理**（exit 1）：宁可拦下坏的清单，也不放过未登记清单。
+#  10. **`--json` 抑制人读行**（stdout 仅 JSON），便于 `jq`；证据留档请同时存 stderr。
+#  11. **豁免行三段式以 em/en 破折号为界**：路径或理由**自身含 `—`/`–`** 会被多切一段
 #      ⇒ 该行判不生效（fail-closed）。规避：路径用 glob 表达，理由里不要写破折号。
 # ═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
@@ -414,7 +418,6 @@ def main():
         "changed_paths": 0,
         "protected_changes": [],
         "exempt_files": [],
-        "bootstrap": False,
         "checks": checks,
         "failures": failures,
         "degraded": None,
@@ -449,8 +452,6 @@ def main():
             if report["degraded"]:
                 sys.stdout.write("DEGRADED: %s — %s\n"
                                  % (report["degraded"]["code"], report["degraded"]["message"]))
-            if report["bootstrap"]:
-                sys.stdout.write("BOOTSTRAP: 清单在 base 不存在，diff 模式跳过（首次落盘）\n")
             sys.stdout.write("结果: %d 通过, %d 失败\n" % (passes, fails))
         return code
 
@@ -518,16 +519,16 @@ def main():
             merge_base = out.strip().splitlines()[0].strip()
             report["merge_base"] = merge_base
 
-            # base 里有没有「本清单」：没有 ⇒ 一次性 bootstrap（唯一开孔）
+            # base 里有没有「本清单」：没有 ⇒ 陈旧/错误 base，fail-closed（#610 已退役 bootstrap）
             rel_list = PROTECTED_REL
             if list_path.startswith(root.rstrip("/") + "/"):
                 rel_list = os.path.relpath(list_path, root)
             rc, _, _ = git(["cat-file", "-e", "%s:%s" % (merge_base, rel_list)], root)
             if rc != 0:
-                report["bootstrap"] = True
-                ok("base 无清单（%s@%s 不存在）⇒ 一次性 bootstrap 开孔（唯一开孔，DS-6 反例把守）"
-                   % (rel_list, merge_base[:8]))
-                return finish()
+                raise GateError("E_BAD_BASE", "list-in-base",
+                                "base 无清单（%s@%s 不存在）⇒ 陈旧/错误 base，fail-closed；"
+                                "清单自 S1（23a4f5a38）起已落 main，不再有'首次落盘'例外"
+                                "（#610 已退役 bootstrap）" % (rel_list, merge_base[:8]))
             ok("base 可解析（%s → merge-base %s）" % (base_ref, merge_base[:8]))
 
             rc, out, _ = git(["diff", "--name-only", merge_base, "HEAD"], root)
