@@ -81,6 +81,7 @@
 
 
 
+                · 🔴 **规格来源（2026-10-19 起）**：dev doc 在 `/Users/wane/SynovaAgent/.handbook/派单件/` 下（**不在**产品仓 `docs/plans/**`）；按 L1 四行开场包给的路径 + commit SHA 读，**禁凭记忆猜路径**。
           - id: agent-instructions
             name: '@deepseek-ai/dsh-agent-instructions'
             config:
