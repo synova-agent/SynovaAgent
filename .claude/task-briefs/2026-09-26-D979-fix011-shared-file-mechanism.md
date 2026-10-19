@@ -1,5 +1,8 @@
 # D979 — FIX-011：共享治理文件的多卡归属机制
 
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->
+
 ## Q0: 定位
 - 域: mac（控制塔）
 - 对象: `scripts/pre-commit-check.sh` 的 D328 判定段 + 共享治理文件迁移
@@ -26,3 +29,5 @@
 2) 两侧反例原始输出（授权通过 / 非授权仍红）
 3) 迁移清单 + 分步顺序
 4) 更新问题修复台 FIX-011 → 已闭环
+- [ ] 机制落地（D328 判定含共享声明支持）；verify: bash scripts/pre-commit-check.sh
+<!-- Done 补记：历史件原验收无法复跑，verify 取全量门禁 -->

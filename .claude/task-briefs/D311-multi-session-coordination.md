@@ -165,3 +165,6 @@ L1-L5 之外 — 控制塔（scripts/control-tower/ + .codex/control-tower/）�
 - [ ] 接线验证: grep session-registry/staging-guard/wait-manager/verify-parallel 在 synova-commit + pre-push-check.sh 每项 ≥1
 - [ ] tsc 零新增错误（预存 server.ts 2 处豁免）；vitest 定向 tests/control-tower/ 零失败
 - [ ] pre-commit 12 组通过；自吃狗粮提交走 synova-commit 显式路径
+
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->

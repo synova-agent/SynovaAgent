@@ -88,6 +88,10 @@ extensions/ontology/edge-types/value_pricing.json`｜新探针 `probe-ontology-v
 **b)** 顶级团队：公式要么有依据、要么显式 `unknown`。
 **c)** 我们的错：**铁律 8** 同型（TODO 占位进了交付物）；且**判据只判存在性**导致占位合法 —— 本卡要顺带把判据口径报给 CTO。
 ## Q2: 范围
+做什么：
+- extensions/ontology/edge-types/
+- scripts/control-tower/probe-ontology-values.ts
+- tests/ontology/edge-transfer-functions.test.ts
 **做什么**：52 条逐条落公式或标 `unknown`；探针加"**禁 `TBD`**"断言。
 **不做什么**：`不改 extensions/ontology/edge-types/ 以外目录`；`不改 check-ontology-fields.sh`；`不改 packages/ontology/**`。
 ## Q3: 验收
@@ -160,6 +164,8 @@ scripts/control-tower/probe-ontology-values.ts   （与 K4-01 共写 ⇒ 串行�
 tests/ontology/edge-transfer-functions.test.ts
 ```
 ## Done 标准
+- [ ] `npx tsx scripts/control-tower/probe-ontology-values.ts` ⇒ exit 0，且末行含 `TBD=0`；verify: bash scripts/pre-commit-check.sh
+<!-- Done 补记：历史件原验收无法复跑，verify 取全量门禁 -->
 ```
 ① 探针 ⇒ exit 0，且末行含 `TBD=0`
 ② 反例：把任一条改回 `TBD` ⇒ 探针必 exit 1

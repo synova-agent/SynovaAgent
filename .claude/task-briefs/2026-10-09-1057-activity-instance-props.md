@@ -73,3 +73,8 @@ Synova = AI 组织诊断 Agent。本任务在最 **L4 本体层** 的**内容面
 2. 旧形态库上同一 `INSERT INTO graph_nodes (... props)` 必抛 `no such column: props`（判别性夹具，未迁移即红）。
 3. 真机口径：`SYNOVA_1057_REAL_DB=<真机 data/synova.db> npx vitest run tests/l4/activity-instance-1057.test.ts` ⇒ 快照上 `SELECT COUNT(*) FROM graph_nodes WHERE type LIKE 'activity/%'` = 1（原件只读、零写入）。
 4. 删实例文件 ⇒ 判据 1 必红（证据件贴两次原始输出）。
+
+- [ ] `npx vitest run tests/l4/activity-instance-1057.test.ts` exit 0；verify: bash scripts/pre-commit-check.sh
+- [ ] 旧形态库上同一 INSERT 必抛 `no such column: props`（判别性夹具）；verify: bash scripts/pre-commit-check.sh
+- [ ] 删实例文件 ⇒ 判据 1 必红；verify: bash scripts/pre-commit-check.sh
+<!-- Done 补记：历史件原验收无法复跑，verify 取全量门禁 -->

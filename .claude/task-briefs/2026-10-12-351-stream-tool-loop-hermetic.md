@@ -19,6 +19,7 @@ tests 面（非五层产品代码）。本件 = **测试 hermeticity**修复：`
 
 ## Q2: 范围
 做什么：`tests/stream-tool-loop.test.ts` 7 处 `new AgentConversation(...)` 构造补 `{ fallbackProvider: null }` + 头部说明块。
+- tests/stream-tool-loop.test.ts
 不做什么（含文件路径）：
 - **不改** `src/agent/conversation-engine.ts`（机制点，不在写集；等 CTO 裁系统卡）
 - **不改** `package.json` / lock（#347 react 对齐占用）
@@ -33,6 +34,8 @@ tests 面（非五层产品代码）。本件 = **测试 hermeticity**修复：`
 
 ## 架构层
 非产品层（tests）。被测对象 = `src/agent/conversation-engine.ts`（L2 编排）—— 本卡**不改它**。
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->
 
 ## Done 标准
 - [x] verify: `npx vitest run tests/stream-tool-loop.test.ts` ⇒ exit 0（无凭据态，原始输出见证据件 §三①）

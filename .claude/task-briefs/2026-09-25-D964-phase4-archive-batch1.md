@@ -1,4 +1,7 @@
 # Task Brief: D964 阶段4 批次1 — 零引用 briefs 归档（274 份 2026-06/07）
+
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->
 > 认领: 🧭 synova-cto（并行 CTO）
 
 ## Q0: 定位

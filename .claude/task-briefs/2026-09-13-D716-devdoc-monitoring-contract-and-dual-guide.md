@@ -49,3 +49,6 @@ D-1 契约 loader 落 src/sentinel/（Mac 域）；契约文件目录归 Win 域
 - [ ] 契约 schema 含节奏/格式/升级/责任人四字段：`grep -cE "节奏|升级规则|责任人" docs/plans/codex/implementation/SYNOVA-IMPL-DSH-D1-monitoring-contract.md` → ≥3
 - [ ] 跨线写集边界写明：`grep -c "Win 域\|Mac 域" docs/plans/codex/implementation/SYNOVA-IMPL-DSH-1-5-dual-guide-convergence.md` → ≥1
 - [ ] 1-5 spec 给出「单入口」物理验收命令（非文字描述）：spec 内 Done 段含可执行 bash 命令
+
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->

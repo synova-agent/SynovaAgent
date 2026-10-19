@@ -1,5 +1,8 @@
 # Task Brief — D914 ownership 补齐（CTO 治理文档三目录）
 
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->
+
 ## Q0: 定位 — 项目拼图 + 文件审计
 ### a) 项目拼图
 控制塔治理层。`docs/synova/coordination/ownership.yaml` 是模块归属的**机器可读唯一源**（消费者 `scripts/control-tower/check-ownership.py`，产物 `.github/CODEOWNERS`）。
@@ -45,3 +48,4 @@
 - `check-ownership.py` 对 dispatch/authority/research 三类路径判 mac（贴原始输出）
 - `bash tests/control-tower/check-ownership.test.sh` → 51/51 通过（CODEOWNERS drift 逐字节断言不破）
 - `git diff` 只新增行、不改既有归属
+- [ ] `check-ownership.py` 对 dispatch/authority/research 三类路径判 mac；verify: bash tests/control-tower/check-ownership.test.sh

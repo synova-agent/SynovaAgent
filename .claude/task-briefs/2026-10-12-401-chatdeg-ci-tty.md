@@ -73,3 +73,6 @@ V-09（边界声明）：测试侧注入面必须写清「改了什么、没改�
 - [ ] verify: 注释掉 `vi.hoisted` shim ⇒ `CI=true` 下 5 failed 且点名 `expected '' to contain '⚠️ 检查更新失败'`
 - [ ] verify: `CI=true npx vitest run --changed gitea/local-main` → 1 passed / 6 passed
 - [ ] verify: `git diff --name-status gitea/local-main...HEAD` 只有 `tests/tui-v2/chat-degradation.test.ts`
+
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->

@@ -180,3 +180,6 @@ L1-L5 之外 — 控制塔（scripts/hooks/ + scripts/control-tower/ + .claude/ 
 - [ ] 基线: 真实 seed 29 条 tsc 存量 → 再跑"存量 29 + 新增 0"
 - [ ] 测试非空壳（≥3 断言/文件）；vitest 全量 ≤1 次
 - [ ] pre-commit 12 组通过；自吃狗粮提交走 synova-commit 显式路径；推送 CI
+
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->
