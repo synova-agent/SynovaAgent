@@ -10,21 +10,21 @@
 
 ## Q2: 范围（做什么 / 不做什么——含文件路径）
 做什么：
-- `.gitea/workflows/local-gates.yml`
-- `scripts/control-tower/resolve-ci-base.sh`
-- `scripts/pre-commit-check.sh`
-- `tests/control-tower/resolve-ci-base.test.sh`
-- `tests/control-tower/doc-contract-ci-acceptance.test.sh`
-- `gate-exemptions/2026-10-20-doc-contract-ci-598.md`
-- `docs/synova/DOC-CONTRACT.md`
-- `docs/authority/DOCS-REGISTRY.yaml`
-- `.claude/task-briefs/2026-10-20-598-doc-contract-ci.md`
-- `memory/notes/proposed/2026-10-20-doc-contract-ci.md`
+- .gitea/workflows/local-gates.yml
+- scripts/control-tower/resolve-ci-base.sh
+- scripts/pre-commit-check.sh
+- tests/control-tower/resolve-ci-base.test.sh
+- tests/control-tower/doc-contract-ci-acceptance.test.sh
+- gate-exemptions/2026-10-20-doc-contract-ci-598.md
+- docs/synova/DOC-CONTRACT.md
+- docs/authority/DOCS-REGISTRY.yaml
+- .claude/task-briefs/2026-10-20-598-doc-contract-ci.md
+- memory/notes/proposed/2026-10-20-doc-contract-ci.md
 不做什么：
-- `scripts/audit/**`
-- `.github/**`
-- `scripts/control-tower/check-doc-contract.sh`
-- `scripts/control-tower/validate_doc_contract.py`
+- scripts/audit/**
+- .github/**
+- scripts/control-tower/check-doc-contract.sh
+- scripts/control-tower/validate_doc_contract.py
 
 ## Q3: 验收（入口 → 交互 → 结果）
 - 入口：`bash tests/control-tower/resolve-ci-base.test.sh`；`bash tests/control-tower/doc-contract-ci-acceptance.test.sh`；真 PR 红/绿（临时 docs/plans 提交）。
