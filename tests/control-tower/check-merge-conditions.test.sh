@@ -318,10 +318,20 @@ run_cli() { # <dir> [参数...]（无夹具：参数/离线类边界）
 last_line() { tail -n 1 "$1" 2>/dev/null; }
 
 # ── 判定点执行器：同时断言 inner_exit ＋ 末行 ＋ 证据片段 ＋ 条件隔离 ──────────────
-# ③ 机器行形态白名单（#603／复核 #604）：凡含 `③=` 的行必须 `③=ok(attested)` 或 `③=no`（后接空白/行尾）
+# ③ 机器行形态白名单（#603／复核 #604；**#618 修正**：禁管道取反 —— 旧形在 $OUT 无 `③=` 时
+#   grep 链无输出 ⇒ `grep -Evq` 非零 ⇒ if 为假 ⇒ **return 0（通过）**，即「看不见」被当成「没问题」）。
+#   新形＝计数法（两次 `grep -Ec`，不走管道）＋ **存在性**（空输出/无 `③=` ⇒ 返回 1）；
+#   **降级机行 `MERGE-COND: degraded` 豁免**（①/② 阶段即 exit 2，合法地没有 ③=）。
 form_ok() { # 读全局 $OUT
-  if grep -E '③=' "$OUT" 2>/dev/null | grep -Evq '③=(ok\(attested\)|no)([[:space:]]|$)'; then return 1; fi
-  return 0
+  local mline n3 ok3
+  if mline="$(grep -m1 '^MERGE-COND:' "$OUT" 2>/dev/null)"; then :; else mline=""; fi
+  case "$mline" in
+    *degraded*) return 0 ;;   # 降级路径合法无 ③=
+  esac
+  if n3="$(grep -Ec '③=' "$OUT" 2>/dev/null)"; then :; else n3=0; fi
+  [ "$n3" -ge 1 ] || return 1          # 🔴 #618：空输出/无 ③= ⇒ 看不见 ≠ 没问题
+  if ok3="$(grep -Ec '③=(ok\(attested\)|no)([[:space:]]|$)' "$OUT" 2>/dev/null)"; then :; else ok3=0; fi
+  [ "$n3" -eq "$ok3" ]
 }
 
 judgment() { # <case> <want_exit> <want_last> [needle...]
@@ -354,7 +364,7 @@ judgment() { # <case> <want_exit> <want_last> [needle...]
   fi
   # 🔴 #603 输出级反例：任一 MERGE-COND 行出现裸 ③=ok（无 attested 级别）⇒ 失败（DS-5 的反例落成自动化）
   if [ -z "$bad" ]; then
-    if ! form_ok; then bad="机器行 ③ 形态非法（只允许 ok(attested) / no）"; fi
+    if [ "$want_exit" != "2" ] && ! form_ok; then bad="机器行 ③ 形态非法（只允许 ok(attested) / no）"; fi
   fi
   if [ -z "$bad" ]; then
     pass "$case inner_exit=${RC} 末行=[${got}]"
@@ -386,7 +396,7 @@ boundary() { # <name> <want_exit> <want_last> <needle...>
     done
   fi
   if [ -z "$bad" ]; then
-    if ! form_ok; then bad="机器行 ③ 形态非法（只允许 ok(attested) / no）"; fi
+    if [ "$want_exit" != "2" ] && ! form_ok; then bad="机器行 ③ 形态非法（只允许 ok(attested) / no）"; fi
   fi
   if [ -z "$bad" ]; then
     extra "$name inner_exit=${RC} 末行=[${got}]"
@@ -503,6 +513,21 @@ else
 fi
 
 echo
+# ── B'' #618 反例：form_ok 必须把「看不见」判成 1（旧形判 0 = 假绿）──
+form_probe() { # <name> <content> <want: 0=通过 1=拒绝>
+  local name="$1" content="$2" want="$3" got
+  OUT="$WORK/form-618.out"
+  if [ -n "$content" ]; then printf '%s\n' "$content" > "$OUT"; else : > "$OUT"; fi
+  if form_ok; then got=0; else got=1; fi
+  if [ "$got" = "$want" ]; then extra "#618 form_ok：${name}"; else fail "#618 form_ok：${name}（期望 ${want} 实得 ${got}）"; fi
+}
+form_probe "空输出 ⇒ 拒绝" "" 1
+form_probe "合法 ③=no ⇒ 通过" "MERGE-COND: no ①=ok ②=ok ③=no ④=ok" 0
+form_probe "合法 ③=ok(attested) ⇒ 通过" "MERGE-COND: can ①=ok ②=ok ③=ok(attested) ④=ok" 0
+form_probe "裸 ③=ok ⇒ 拒绝" "MERGE-COND: no ①=ok ②=ok ③=ok ④=ok" 1
+form_probe "假级别 ③=ok(fake) ⇒ 拒绝" "MERGE-COND: no ①=ok ②=ok ③=ok(fake) ④=ok" 1
+form_probe "降级机行 ⇒ 豁免通过" "MERGE-COND: degraded ①=ok" 0
+
 echo "── C 接线替代自证（规格 §1.2：不接 pre-commit/CI ⇒ 用 --help ＋ --selfcheck）──"
 
 # C1 --help 参数完备性（9 个参数逐一出现）
