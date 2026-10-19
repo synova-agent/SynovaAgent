@@ -1,0 +1,61 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 648,
+  "patch_fingerprint": "sha256:04b880ee823b39b3bdf738c6c7581ca4a7b5653a549f326ea12f79127e784627",
+  "author": "p7-l1（创始人令「P7 小卡自做」；纯文档删除＋指针收口）",
+  "reviewer": "fresh 会话 e4c29a3b（终验 PASS @a7f083417）；前序 caace783（FAIL：活指针 2 处）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "迁出属实",
+      "cmd": "handbook show 派单件/2026-10-18-P7-582-四条件检查器-规格.md | wc -l",
+      "result": "pass",
+      "evidence": "749 行，与删除前 blob SHA256 一致（6bed1714…）；与 749 deletions 精确对账"
+    },
+    {
+      "id": "指针收口",
+      "cmd": "grep -rn 'SYNOVA-IMPL-582-merge-conditions'",
+      "result": "pass",
+      "evidence": "全仓仅剩 memory/notes 历史 Note 1 处；reviews/README.md:4/:169 与 test.sh:6 已改指 handbook @22f47c55a"
+    },
+    {
+      "id": "范围",
+      "cmd": "git diff --name-status base..HEAD",
+      "result": "pass",
+      "evidence": "1 D（749 行）＋ 4 M（README 2 行／测试头注 1 行／任务卡 1 行／豁免 1 行）；scripts/** 零改动"
+    },
+    {
+      "id": "回归",
+      "cmd": "--selfcheck；配对测试；gate-protection；pre-commit",
+      "result": "pass",
+      "evidence": "13/13；13 通过 0 失败；8 通过 0 失败；门禁全过"
+    },
+    {
+      "id": "只读",
+      "cmd": "git status --porcelain",
+      "result": "pass",
+      "evidence": "空"
+    },
+    {
+      "id": "CI",
+      "cmd": "GET commits/a7f083417/status",
+      "result": "pass",
+      "evidence": "state=success total=2 pending=0"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "note",
+      "where": "过程教训",
+      "what": "删文件时未清活指针（reviews/README 是 ③ 自身权威载体）—— 复核 caace783 抓到后才补。以后「删/迁」必须同批 grep 活引用。"
+    },
+    {
+      "severity": "note",
+      "where": "同批产出",
+      "what": "存量 25 份 dev doc 清单已落 handbook 派单件/过程档案/；本文件为第 24 项，合并后残余 24。"
+    }
+  ],
+  "issued_at": "2026-10-19T22:30:00+08:00",
+  "tool": "pr-review@v1 ＋ 2 轮 fresh 复核（caace783 FAIL → e4c29a3b PASS）"
+}

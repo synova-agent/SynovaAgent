@@ -1,7 +1,7 @@
 # docs/synova/reviews/ — ③「已过独立复核」回执载体
 
 > 归属：治理线 · **P7 交付自证与真值**｜批次 **#582 / P7-1**｜写入方：实现小队 W3
-> 规格源（唯一，冻结）：`docs/plans/codex/implementation/SYNOVA-IMPL-582-merge-conditions-20261018.md`（blob `a22509208b08fa6a`）§4bis ③／C1／C3／附录 B B3
+> 规格源（唯一，冻结）：handbook `派单件/2026-10-18-P7-582-四条件检查器-规格.md` @ `22f47c55a`（主仓 dev doc 已按文档契约迁出；原 blob `a22509208b08fa6a` 仍可从历史解析）§4bis ③／C1／C3／附录 B B3
 > 本件同时是**目录非空载体**（git 不跟踪空目录）：目录里除本 README 外只放回执 JSON。
 
 ## Summary · 这目录是什么
@@ -166,7 +166,7 @@ bash scripts/control-tower/check-merge-conditions.sh --selfcheck                
 | `docs/synova/reviews/README.md` | 本件：③ 回执格式／指纹／R1–R9／生成流程／Known Limitations |
 | `scripts/control-tower/check-merge-conditions.sh` | 检查器（W1）：四条件编排 ＋ `--selfcheck` ＋ 回执相关参数（`--diff-fingerprint`／`--print-receipt-template`） |
 | `tests/control-tower/check-merge-conditions.test.sh` | 配对测试（W2）：CT-40 强制件，12 个判定点 ＋ 三态断言 |
-| `docs/plans/codex/implementation/SYNOVA-IMPL-582-merge-conditions-20261018.md` | 规格源（冻结 blob `a22509208b08fa6a`）—— 本件一切口径以它为准 |
+| handbook `派单件/2026-10-18-P7-582-四条件检查器-规格.md` @ `22f47c55a` | 规格源（**已迁 handbook**；原主仓副本已删）—— 本件一切口径以它为准 |
 
 ## 9. 无裸数字（引用纪律）
 
