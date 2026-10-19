@@ -12,7 +12,7 @@
 - `check-merge-conditions.sh` `cond2_overlap`：新增 `SHARED_APPEND_PATHS` ＋ `is_shared_append()`；
   白名单文件的重叠**不计 ②**（逐条打印「② 共享追加（不计重叠，须串行合）」），非白名单照旧 fail。
 - selfcheck 新增子例 **J**（PR#100 与 #101 同改 registry ⇒ 仍 `CAN-自合并`）⇒ **13/13**。
-- 配对测试同步 13 判定点。
+- 配对测试**仍 12 判定点**（A–I；不驱动 J）；J 在 selfcheck 内驱动 ⇒ 13/13。
 
 ## 判据（实跑）
 

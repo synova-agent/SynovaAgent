@@ -614,7 +614,12 @@ EOF
 SHARED_APPEND_PATHS="docs/authority/DOCS-REGISTRY.yaml"
 is_shared_append() { # <path> ⇒ 0=白名单内（不判硬重叠） / 1=不在
   local p="$1" x
-  for x in $SHARED_APPEND_PATHS; do [ "$p" = "$x" ] && return 0; done
+  while IFS= read -r x; do          # #636 复核 finding 5：逐行读，防单词拆分/通配展开
+    [ -n "$x" ] || continue
+    [ "$p" = "$x" ] && return 0
+  done <<EOF
+$SHARED_APPEND_PATHS
+EOF
   return 1
 }
 
