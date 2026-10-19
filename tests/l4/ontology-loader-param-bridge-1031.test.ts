@@ -21,11 +21,21 @@
  * ③ `causal_strength` 数值注入 ④ 脚本级 schema 门禁 📌实施席实测补记）由 `LEDGER` 常量声明，
  * 并以**真仓** `cs_resolved === 0` 断言承载 ③；**未交项落地者必须显式翻转常量**（从而被迫更新两笔账）。
  *
+ * ═══ #477（2026-10-13）loader 标定态：`formula` / `declared_unknown` 从此可分辨 ═══
+ * 病根（K4-b3 U10 / 本卡）：`transfer_function` 的真公式与 `unknown` **同落 `prose_formula`**
+ *   ⇒ 只看 loader 分类的判据会说"55 条都有公式"（真值 = 16 条公式 + 41 条 unknown）。
+ * 修法：loader **新增正交轴** `calibration: 'formula' | 'declared_unknown' | 'other'`
+ *   （`src/l4/ontology-loader.ts`）—— **`status` 一字未动**（`status` 是既有消费面：
+ *    `tests/ontology/k4-05bis-edge-vocabulary-1350.test.ts:257` 逐字断言 `unknown ⇒ prose_formula`）
+ *   ⇒ 读路径改动，消费面零破坏；本轴只回答「散文桶里哪类算**已标定**」。
+ * 本文件的棘轮同步：`BASELINE_TALLY` 改**由逐件登记面推导**（#477 ③，禁字面基数）＋
+ *   新增 §V5-477 的**逐件标定比对**与**三分类可数**判据（#477 ④）。
+ *
  * 日志断言手法：`vi.mock('@synova/logger')` **运行时捕获调用**（非 grep 静态判据）。
  * 同仓库既有手法参照 tests/l4/delivery-queue.test.ts:10-13。
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const logCalls = vi.hoisted(() => [] as { level: string; meta?: unknown; msg?: unknown }[]);
@@ -87,18 +97,20 @@ function makeDef(over: Partial<EdgeTypeDef> = {}): EdgeTypeDef {
 
 const warnCount = () => logCalls.filter(c => c.level === 'warn').length;
 
-// ═══ 真仓棘轮（件数由**单一真源清单**推导；分类计数由**入册增量**推导）═══════════════
+// ═══ 真仓棘轮（件数由**单一真源清单**推导；分类计数由**逐件登记面**推导）═══════════════
 // 🔴 N2（CTO 2026-10-12）：「禁硬编码基数」。本文件的 `BASELINE_*` 已改为**推导式**：
 //   · 件数 = `SPEC_EDGE_TYPES`（探针内**逐件枚举**的唯一真源清单）∪ **在场**的 PENDING 预告件
 //     —— **不写字面 56/58**：`l3-65`（#65）新增 2 边合入后自动由 56 → 58，无需手改本文件；
-//   · 分类计数 = 各状态的**入册期望增量**从 0 起累加 —— `SPEC` 内件的**逐件真实分类**仍由
-//     下面 `tally` 的 `expect(tally).toEqual(BASELINE_TALLY)` 以外的方式守住（见 §N2 集合棘轮），
-//     本 `BASELINE_TALLY` 只声明"**新增件带来的 Δ**"，避免把"每类各有几件"再抄一遍（第二套真源）。
-//   ⚠️ **分辨力不降**：件数漂移由"集合棘轮"+ `DERIVED_EDGE_TYPES` 双向断言抓；新增件的分类
-//      由 `PENDING_REGISTERED_ADDITIONS[].expected` 逐条抓（落错分类即红）。
+//   · 分类计数（#477 ③）＝ **逐件登记面导出**：`EXPECTED_TF_CALIBRATION`（由 `TFR_E_TO_FILE` /
+//     `TFR_REGISTERED_OTHER` / `SPEC ∪ 在场 PENDING` 三个登记面合成）＋ §V5 的**闭合等式**（余项强制为 0）。
+//     ⇒ 本文件**不再持有任何字面基数**；"每类各有几件"只有**登记面**一个真源。
+//   ⚠️ **分辨力不降**：件数漂移由"集合棘轮"+ `DERIVED_EDGE_TYPES` 双向断言抓；逐件分类漂移由
+//      §V5-477 的**逐件比对（点名）**抓（落错分类即红）。
 import {
   SPEC_EDGE_TYPES,
   PENDING_REGISTERED_ADDITIONS,
+  TFR_E_TO_FILE,
+  TFR_REGISTERED_OTHER,
 } from '../../scripts/control-tower/probe-ontology-values';
 
 /** 真仓**在场**的预告件（`SPEC` 之外、已登记却尚未提升为正式成员者）。
@@ -111,24 +123,55 @@ const PRESENT_PENDING_EDGES = PENDING_REGISTERED_ADDITIONS.filter(p => ACTUAL_ED
  *  ⇒ **推导，无字面基数**：本笔 56 → `l3-65` 合入后 58 自动成立。 */
 const BASELINE_EDGE_TYPES = ACTUAL_EDGE_FILES.length;
 const DERIVED_EDGE_TYPES = SPEC_EDGE_TYPES.length + PRESENT_PENDING_EDGES.length;
-/** 逐类计数：`SPEC` 段（入册前的实测态）+ 预告件**入册期望**的 Δ。 */
+
+// ═══ #477：`transfer_function` 标定期望 **逐件推导**（禁字面基数）═══════════════════
+// 真源 = 判据源 `probe-ontology-values.ts` 的两个**逐件登记面**（**只读**，本卡不改它）：
+//   · `TFR_E_TO_FILE`（13 件）      = 权威01 第二章公式的逐件落点（E 号 → 文件）
+//   · `TFR_REGISTERED_OTHER`（4 件） = 3 件本卡前既有真公式（`prose_formula`）+ 1 件结构性 N/A（`structural_na`）
+// 其余 `SPEC ∪ 在场预告件` = `unknown`（#235 显式置 unknown；预告件 `expected = non_causal_unknown`）。
+// ⇒ 得到**推导式逐件表** `EXPECTED_TF_CALIBRATION`：任何一件漂到别的标定类 ⇒ 逐件比对**红 + 点名**（见 §V5-477）。
+// ⚠️ 本表**不含任何字面计数**：`tf_formula` / `tf_declared_unknown` / `tf_placeholder` 全部由表**导出**。
+const AUTHORITY_FORMULA_FILES = TFR_E_TO_FILE.map(x => x.file);
+const REGISTERED_PROSE_FORMULA_FILES = TFR_REGISTERED_OTHER.filter(x => x.kind === 'prose_formula').map(x => x.file);
+const STRUCTURAL_NA_FILES = TFR_REGISTERED_OTHER.filter(x => x.kind === 'structural_na').map(x => x.file);
+const SPEC_EDGE_FILES = SPEC_EDGE_TYPES.map(n => `${n}.json`);
+
+/** 标定类（与 loader 的 `EdgeParamCalibration` 同形；此处独立声明，防类型耦合掩盖取值漂移）。 */
+type TfCal = 'formula' | 'declared_unknown' | 'other';
+const EXPECTED_TF_CALIBRATION = new Map<string, TfCal>();
+for (const f of AUTHORITY_FORMULA_FILES) EXPECTED_TF_CALIBRATION.set(f, 'formula');
+for (const f of REGISTERED_PROSE_FORMULA_FILES) EXPECTED_TF_CALIBRATION.set(f, 'formula');
+for (const f of STRUCTURAL_NA_FILES) EXPECTED_TF_CALIBRATION.set(f, 'other');
+for (const f of SPEC_EDGE_FILES) if (!EXPECTED_TF_CALIBRATION.has(f)) EXPECTED_TF_CALIBRATION.set(f, 'declared_unknown');
+for (const p of PRESENT_PENDING_EDGES) {
+  EXPECTED_TF_CALIBRATION.set(p.file, p.expected === 'non_causal_unknown' ? 'declared_unknown' : 'other');
+}
+
+const EXPECTED_TF_FORMULA = [...EXPECTED_TF_CALIBRATION.values()].filter(v => v === 'formula').length;
+const EXPECTED_TF_DECLARED_UNKNOWN = [...EXPECTED_TF_CALIBRATION.values()].filter(v => v === 'declared_unknown').length;
+const EXPECTED_TF_PLACEHOLDER = STRUCTURAL_NA_FILES.length;
+
+/** `label ← 文件名` 反查（`$id` 尾段用连字符、文件名用下划线，实测**恰 5 件不相等** ⇒ 不可从文件名推 `$id`）。 */
+const LABEL_BY_FILE = new Map<string, string>();
+for (const f of ACTUAL_EDGE_FILES) {
+  const j = JSON.parse(readFileSync(join(EDGE_TYPES_DIR_FOR_DERIVE, f), 'utf-8')) as { label: string };
+  LABEL_BY_FILE.set(f, j.label);
+}
+
+/** 逐类计数：**每一项都由逐件登记面推导**（#477 ③：禁写真死基数）。
+ *  ⚠️ 只列**可由登记面导出**的桶；余项（`tf_resolved` / 散文桶 `other` / `cs_resolved` / `lag_other`）
+ *     不写基数，改由 §V5 的**闭合等式**强制为 0（禁"数字变了靠手改"）。 */
 const BASELINE_TALLY: Record<string, number> = {
-  tf_resolved: 0,
-  tf_placeholder: 1,    // K4-02（#235）后仅剩 `goal_decomposition` 的「N/A — …」×1（原 53 = 52 条 TBD + 1）
-  tf_prose: 55 + PRESENT_PENDING_EDGES.filter(p => p.expected === 'non_causal_unknown').length,
-                        // K4-02 后 = 39 条显式 `unknown` + 13 条权威01 第二章公式 + 原有 3 条真公式 = 55
-                        //   ⚠️ `unknown` 在 loader 分类里落 `prose_formula`（非 placeholder），
-                        //   但该状态自带 `injectable:false` ⇒ **不会**被注入（登记见交付件 U10）
-                        //   ＋ 每件预告件（lag/tf = `unknown`）各 +1 ⇒ #65 合入后 55 → 57
-  tf_other: 0,
-  cs_declaration: 55,   // optionalProps 内描述串 ×55（批 2 不变；预告件**不含**该键 ⇒ 不增）
-  cs_resolved: 0,       // 🔴 真仓**零数值**（未交③ 的机器可判证据）
-  cs_other: 1 + PRESENT_PENDING_EDGES.length,
-                        // `goal_decomposition` **缺该键** ⇒ absent；预告件同样**缺该键** ⇒ each +1
-  lag_resolved: 56 + PRESENT_PENDING_EDGES.length,
-                        // 非空字符串 ×56（unknown×50 + 4 种真值×5 + 第 56 件的散文值×1）
-                        //   ＋ 预告件 `action_effect_lag = "unknown"`（非空）⇒ each +1
-  lag_other: 0,
+  tf_formula: EXPECTED_TF_FORMULA,                                   // 已标定：赋值式散文公式（13 权威 + 3 既有）
+  tf_declared_unknown: EXPECTED_TF_DECLARED_UNKNOWN,                 // 未标定：边文件显式声明 `unknown`
+  tf_placeholder: EXPECTED_TF_PLACEHOLDER,                           // 占位串（`N/A — …` 的结构性边）
+  tf_prose: EXPECTED_TF_FORMULA + EXPECTED_TF_DECLARED_UNKNOWN,      // 旧桶 = 上面两类之和（**推导，非字面 55/57**）
+  cs_declaration: SPEC_EDGE_TYPES.length - STRUCTURAL_NA_FILES.length,
+                        // optionalProps 内声明串：SPEC 件里除结构性 N/A 那件外都有（预告件不含该键）
+  cs_other: STRUCTURAL_NA_FILES.length + PRESENT_PENDING_EDGES.length,
+                        // 缺该键 ⇒ absent（结构性 N/A 1 件 + 在场预告件各 1）
+  lag_resolved: BASELINE_EDGE_TYPES,
+                        // 非空字符串**每件都有**（含 `unknown` 与预告件）⇒ 推导 = 扫盘件数
 };
 /** 第 56 件逐字段状态（点名，非"数字变了"）。 */
 const EDGE_56 = { label: 'GOAL_DECOMPOSITION', tf: 'placeholder', cs: 'absent', lag: 'resolved' } as const;
@@ -377,6 +420,7 @@ describe('#1031 V5(L2-真跑) 真实 56 件 edge-types 过桥实测', () => {
 
     const tally: Record<string, number> = {
       tf_resolved: 0, tf_placeholder: 0, tf_prose: 0, tf_other: 0,
+      tf_formula: 0, tf_declared_unknown: 0, tf_prose_other: 0,
       cs_declaration: 0, cs_resolved: 0, cs_other: 0,
       lag_resolved: 0, lag_other: 0,
     };
@@ -389,7 +433,13 @@ describe('#1031 V5(L2-真跑) 真实 56 件 edge-types 过桥实测', () => {
       const tf = r!.params.find(p => p.key === 'transfer_function')!;
       if (tf.status === 'resolved') tally.tf_resolved++;
       else if (tf.status === 'placeholder') tally.tf_placeholder++;
-      else if (tf.status === 'prose_formula') tally.tf_prose++;
+      else if (tf.status === 'prose_formula') {
+        // 🔴 #477：`status` **一字未变**（既有消费面不破），标定态走**正交轴** `calibration`
+        tally.tf_prose++;
+        if (tf.calibration === 'formula') tally.tf_formula++;
+        else if (tf.calibration === 'declared_unknown') tally.tf_declared_unknown++;
+        else tally.tf_prose_other++;
+      }
       else tally.tf_other++;
 
       const cs = r!.params.find(p => p.key === 'causal_strength')!;
@@ -402,8 +452,57 @@ describe('#1031 V5(L2-真跑) 真实 56 件 edge-types 过桥实测', () => {
       else tally.lag_other++;
     }
 
-    // ── 逐件实测原始计数（批 2：用 loader 本体读 56 件；见证据件 §A.0-b）──
-    expect(tally).toEqual(BASELINE_TALLY);
+    // ── ① 逐项对齐：`BASELINE_TALLY` **每一项都由逐件登记面推导**（#477 ③：禁字面基数）──
+    for (const [k, v] of Object.entries(BASELINE_TALLY)) {
+      expect(tally[k], `tally.${k}`).toBe(v);
+    }
+
+    // ── ② 闭合等式（禁字面基数）：每个键的各类必须**铺满件数** —— 余项只能为 0 ──
+    //    这样"某个桶多了一件"**不会**因为改了 BASELINE 而静默通过：闭合式会当场红。
+    expect(
+      tally.tf_formula + tally.tf_declared_unknown + tally.tf_prose_other + tally.tf_resolved + tally.tf_placeholder + tally.tf_other,
+      'tf 六桶之和必须 === 扫盘件数（禁字面基数）',
+    ).toBe(BASELINE_EDGE_TYPES);
+    expect(tally.tf_resolved + tally.tf_prose_other + tally.tf_other,
+      'tf 余项（resolved / 散文桶 other / 其他）必须为 0（本仓实测：tf 只落 formula|declared_unknown|placeholder）').toBe(0);
+    expect(tally.cs_declaration + tally.cs_resolved + tally.cs_other,
+      'cs 三桶之和必须 === 扫盘件数').toBe(BASELINE_EDGE_TYPES);
+    expect(tally.cs_resolved, 'cs_resolved 必须为 0（未交③ 的机器可判证据；见 §两笔账棘轮）').toBe(0);
+    expect(tally.lag_resolved + tally.lag_other, 'lag 两桶之和必须 === 扫盘件数').toBe(BASELINE_EDGE_TYPES);
+    expect(tally.lag_other, 'lag_other 必须为 0').toBe(0);
+  });
+
+  it('🔴 #477 逐件标定棘轮：每件的 `transfer_function` 标定类 === 登记面推导值（漂移即红 + 点名）', () => {
+    clearOntologyCache();
+    // ⓪ 登记面必须**恰等于**扫盘件集（未登记新增 / 登记件消失 ⇒ 红 + 点名）
+    expect([...EXPECTED_TF_CALIBRATION.keys()].sort(), '逐件登记面必须恰等于扫盘件集').toEqual(ACTUAL_EDGE_FILES.slice());
+
+    // ① 逐件比对（**点名**，不是"数字变了"）
+    const drift: string[] = [];
+    for (const [file, expected] of [...EXPECTED_TF_CALIBRATION].sort((a, b) => a[0].localeCompare(b[0]))) {
+      const label = LABEL_BY_FILE.get(file);
+      expect(label, `登记面里的件不在扫盘件内: ${file}`).toBeTruthy();
+      const r = getEdgeTypeParams(label!);
+      expect(r, `label=${label}（file=${file}）必须可读`).not.toBeNull();
+      const tf = r!.params.find(p => p.key === 'transfer_function')!;
+      if (tf.calibration !== expected) {
+        drift.push(`${file}（label=${label}): 期望 ${expected} / 实测 ${tf.calibration}（status=${tf.status}）`);
+      }
+    }
+    expect(drift, `标定态漂移 ${drift.length} 件（逐件点名）:\n${drift.join('\n')}`).toEqual([]);
+
+    // ② 三分类**各自可数**（#477 ④）：由**文档/登记面**推导的期望值 vs 实测逐件计数
+    const byCal = { formula: 0, declared_unknown: 0, other: 0 };
+    for (const e of loadOntology().ontology.edgeTypes) {
+      const c = getEdgeTypeParams(e.label)!.params.find(p => p.key === 'transfer_function')!.calibration;
+      if (c === 'formula') byCal.formula++;
+      else if (c === 'declared_unknown') byCal.declared_unknown++;
+      else byCal.other++;
+    }
+    expect(byCal.formula, 'tf_formula（已标定·赋值式公式）').toBe(EXPECTED_TF_FORMULA);
+    expect(byCal.declared_unknown, 'tf_declared_unknown（未标定·显式声明 unknown）').toBe(EXPECTED_TF_DECLARED_UNKNOWN);
+    expect(byCal.other, 'tf_other（既不属公式也不属 unknown 声明）').toBe(EXPECTED_TF_PLACEHOLDER);
+    expect(byCal.formula + byCal.declared_unknown + byCal.other, '三分类之和必须 === 扫盘件数').toBe(BASELINE_EDGE_TYPES);
   });
 
   it('🔴 第 56 件 `goal_decomposition` 逐字段点名（tally Δ 的可归因来源）', () => {
@@ -540,7 +639,11 @@ describe('#1031 两笔账棘轮（已交 / 未交，机器可判）', () => {
       if (r !== null && r.params.find(p => p.key === 'causal_strength')?.status === 'resolved') resolved++;
     }
     expect(resolved).toBe(0);
-    expect(resolved).toBe(BASELINE_TALLY.cs_resolved);
+    // `cs_resolved` **不再写基数**（#477 ③）：由 §V5 的闭合等式
+    // `cs_declaration + cs_resolved + cs_other === 扫盘件数` 强制为 0 ⇒ 此处用**推导式**复核同一条。
+    expect(resolved, 'cs_resolved 由闭合等式强制为 0（禁字面基数，见 §V5）').toBe(
+      BASELINE_EDGE_TYPES - BASELINE_TALLY.cs_declaration - BASELINE_TALLY.cs_other,
+    );
     // ⇒ 一旦有人真把 causal_strength 标定成数值，本断言必红 ⇒ 迫使翻转 LEDGER 并更新两笔账
     expect(LEDGER.causalStrengthNumericInjection).toBe('NOT_DELIVERED');
   });

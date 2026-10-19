@@ -24,7 +24,7 @@
 #       bash scripts/control-tower/sealed-tests.sh --quarantine | wc -l   # → QUARANTINE-TOTAL 实况
 #       bash scripts/control-tower/sealed-tests.sh --list       | wc -l   # → ci.yml 两 job 实际执行数
 #     ⚠️ 行尾不得带 ` | owner=…` 之类后缀——本段是**路径清单**，解析器整行取路径。
-# FACE-TOTAL=151   # **下界语义**：scan >= 此值 = 通过（新增测试不红）；scan < 此值 = 净删除 ⇒ 红。
+# FACE-TOTAL=173   # **下界语义**：scan >= 此值 = 通过（新增测试不红）；scan < 此值 = 净删除 ⇒ 红。
 #                   # 代价（如实登记）: **≤ 当前余量 (scan − FACE-TOTAL) 的净删除不可检测** —— 「不做逐条登记」的必然代价。
 #                   # 禁止自动重算本值（那会让棘轮彻底失效）；下调须本文件显式改行（= 留痕）。
 # 2026-10-07 D1225 staging_guard 退役 PR（#1291）棘轮经**合并收敛**到 main 的 151（本行取值 = main）:
@@ -33,8 +33,10 @@
 #         （更严的一方胜；未再上调——上调需新证据，禁自动重算）。
 #   合并后自查（Lead 给的三条约束）:
 #     SC=$(bash scripts/control-tower/sealed-tests.sh --scan | wc -l)
-#     ① FACE-TOTAL(151) ≤ SC   ② SC − 151 ≤ SLACK-CAP(10)   ③ 余量取 3~5（CI merge-ref 与本地 scan 差 1~2）
+#     ① FACE-TOTAL(173) ≤ SC   ② SC − 173 ≤ SLACK-CAP(10)   ③ 余量取 3~5（CI merge-ref 与本地 scan 差 1~2）
 #   复算命令: bash scripts/control-tower/sealed-tests.sh --scan | wc -l
+# 2026-10-19 #620（CTO 裁定）: FACE-TOTAL 151 → **173**（scan=177；slack=4，落 3~5）；
+#   SLACK-CAP=10 与 QUARANTINE-TOTAL=77 **不动**。放宽 CAP 会废掉净删除检测 ⇒ 正确动作是显式上调下界（更严）。
 # QUARANTINE-TOTAL=77
 # SLACK-CAP=10
 #   余量上限（#1227 跟进件，Lead 裁 N=10）: 余量 = scan − FACE-TOTAL；> 上限 ⇒ 红。

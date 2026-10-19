@@ -1,0 +1,13 @@
+# .claude/claims/477.yaml — #477 loader 标定态（formula / declared_unknown 可分辨）· 写集声明
+# 先例：.claude/claims/1031.yaml / 500.yaml / 499.yaml（claim 优先于 D# 链；K3 R3 防劫持）
+# 纪律：只列本 PR 真正改动的文件，不预授权。
+writeset:
+  - .claude/claims/477.yaml
+  - docs/synova/product-lines/evidence/K2b4-477-20261013.md
+  - src/l4/ontology-loader.ts
+  - tests/l4/ontology-loader-param-bridge-1031.test.ts
+done:
+  - verify: npx vitest run tests/l4/ontology-loader-param-bridge-1031.test.ts
+  - verify: npx tsx scripts/control-tower/probe-ontology-values.ts
+  - verify: npx tsc --noEmit
+note: 治「真公式与 unknown 在 loader 层同落 prose_formula ⇒ 已标定/未标定不可分辨」（K4-b3 U10）。修法 = 新增与 status **正交**的轴 calibration（formula=赋值式已标定 / declared_unknown=边文件显式声明 unknown / other=兜底不猜）；**status 一字未动**（它是既有消费面：tests/ontology/k4-05bis-edge-vocabulary-1350.test.ts:257 逐字断言 unknown⇒prose_formula，该件不在写集）⇒ 读路径零破坏（12 件消费面回归 base/fix 同 179 passed；tsc 新增错 0）。棘轮同步：BASELINE_TALLY 改由判据源三个逐件登记面（TFR_E_TO_FILE / TFR_REGISTERED_OTHER / SPEC∪在场PENDING）**推导**，禁字面基数，余项由闭合等式强制为 0。造红：M1 公式→unknown 红+点名、M2 反向红、M3 unknown_v2 边界落 other、M4 拆赋值号落 other、M5 改权威件时测试件与判据源同向红。被检体 extensions/** 零改动。未决项 U-1（卡面 13/39 是 #235 时点口径，当刻 16/41）、U-2（acceptance 测试写内容面致竞态）、U-3（边文件显式声明字段未落地）见证据件 §9。

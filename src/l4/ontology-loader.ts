@@ -209,9 +209,34 @@ export type EdgeParamStatus =
   | 'absent'
   | 'malformed';
 
+/**
+ * **标定态**（#477）—— 与 `status` **正交**的第二轴：
+ * - `status`      回答「**值域合法吗 / 能不能注入**」
+ * - `calibration` 回答「**这条边把该参数标定了没有**」：
+ *     · `formula`           **已标定**：串是形如 `<标识符> = <非空右侧>` 的**赋值式**（散文公式）
+ *     · `declared_unknown`  **未标定**：**边文件自己声明**该值未知（串**全串**等于 `unknown`）
+ *     · `other`             上两类之外的一切（占位串 / 声明串 / 结构说明 / P-3 值域 / 缺键 / 非法形态 …）
+ *
+ * 🔴 **为什么加轴而不改 `status`**：`status` 是**既有消费面** —— 例
+ *   `tests/ontology/k4-05bis-edge-vocabulary-1350.test.ts:257` 逐字断言 `unknown ⇒ prose_formula`；
+ *   本卡属**读路径**（卡面 Q2）⇒ 只**加轴**、不动既有语义 ⇒ 消费面零破坏。
+ *   （`prose_formula` 仍是散文桶的整体标签；本轴只回答「散文桶里哪类算**已标定**」。）
+ *
+ * 🔴 **判据边界（不许外推）**：
+ *   ① 只判**形态**（赋值式 / 全串 equals `unknown`）—— **不判**公式的数学或语义正确性；
+ *   ② 未登记形态一律落 `other`（**不猜**：不给"看起来像散文"的串发"已标定"证）；
+ *   ③ `other` 是**兜底桶**（含 `resolved`），调用方若要区分"可注入"必须**同时**读 `status`。
+ */
+export type EdgeParamCalibration =
+  | 'formula'
+  | 'declared_unknown'
+  | 'other';
+
 export interface EdgeParamResolution {
   key: EdgeParamKey;
   status: EdgeParamStatus;
+  /** 标定态（#477）：与 `status` 正交 —— 见 `EdgeParamCalibration` 的口径与边界 */
+  calibration: EdgeParamCalibration;
   /** 仅 `resolved` 为 true —— 唯一允许进实例层的情况 */
   injectable: boolean;
   /** 仅 `injectable` 时存在 —— 将写入 `edge.props[key]` 的值（同形透传） */
@@ -240,6 +265,27 @@ const PLACEHOLDER_RE = /\b(tbd|to be defined|todo|pending|n\/a)\b/i;
 
 /** 声明族：串首为类型关键字 ⇒ 描述的是「类型/值域」而非「值」 */
 const DECLARATION_RE = /^(number|string|boolean|integer|object|array)\b/i;
+
+/**
+ * **未标定声明族**（#477）：**全串**等于 `unknown`（大小写与空白归一后判定）。
+ * 🔴 只认**全串相等** —— **不做子串匹配**（`unknown_v2` / `not_unknown` / `已知 unknown` 一律**不**算声明；
+ * 防 `MISS ⊂ TRANSMISSION` 那类子串假阳）。
+ */
+const DECLARED_UNKNOWN_RE = /^unknown$/i;
+
+/**
+ * **已标定·公式族**（#477）：形如 `<标识符> = <非空右侧>` 的**赋值式**形态。
+ * 🔴 只判**形态**，不判数学/语义正确性（见 `EdgeParamCalibration` 的判据边界）。
+ * 🔴 未命中一律落 `other` —— 不给"像公式的散文"发已标定证。
+ */
+const FORMULA_SHAPE_RE = /^[A-Za-z_][A-Za-z0-9_]*\s*=\s*\S/;
+
+/** 标定态判定（纯函数）：只对**字符串**值有区分力；非字符串 / 空串由调用方直接给 `'other'`。 */
+function classifyCalibration(text: string): EdgeParamCalibration {
+  if (DECLARED_UNKNOWN_RE.test(text)) return 'declared_unknown';
+  if (FORMULA_SHAPE_RE.test(text)) return 'formula';
+  return 'other';
+}
 
 /** P-3 值域运行时类型守卫（不谎报类型：JSON 反序列化结果一律先过守卫） */
 function isValidParamValue(raw: unknown): raw is ParamValue {
@@ -274,53 +320,60 @@ function resolveParam(def: EdgeTypeDef, key: EdgeParamKey): EdgeParamResolution 
   const raw = readRawParam(def, key);
 
   if (raw === undefined) {
-    return { key, status: 'absent', injectable: false, reason: '类型层无此字段（键不存在）' };
+    return { key, status: 'absent', calibration: 'other', injectable: false, reason: '类型层无此字段（键不存在）' };
   }
 
   // action_effect_lag —— 时滞枚举，非空字符串即合法（值域收口属 #1134，本桥不裁定）
   if (key === 'action_effect_lag') {
     if (typeof raw === 'string' && raw.trim().length > 0) {
       return {
-        key, status: 'resolved', injectable: true, value: raw, raw,
+        key, status: 'resolved', calibration: classifyCalibration(raw.trim()), injectable: true, value: raw, raw,
         reason: '时滞枚举：非空字符串原样透传（值域收口属 #1134）',
       };
     }
-    return { key, status: 'malformed', injectable: false, raw, reason: '时滞须为非空字符串' };
+    return { key, status: 'malformed', calibration: 'other', injectable: false, raw, reason: '时滞须为非空字符串' };
   }
 
   // transfer_function / causal_strength —— P-3 值域
   if (isValidParamValue(raw)) {
     return {
-      key, status: 'resolved', injectable: true, value: raw, raw,
-      reason: 'P-3 值域：number | {param:number} | {ref:string}',
+      key, status: 'resolved', calibration: 'other', injectable: true, value: raw, raw,
+      reason: 'P-3 值域：number | {param:number} | {ref:string}（可注入性看本 status；标定轴只细分散文桶）',
     };
   }
 
   if (typeof raw === 'string') {
     const text = raw.trim();
+    const calibration = classifyCalibration(text);
     if (text.length === 0) {
-      return { key, status: 'malformed', injectable: false, raw: text, reason: '空字符串' };
+      return { key, status: 'malformed', calibration: 'other', injectable: false, raw: text, reason: '空字符串' };
     }
     if (PLACEHOLDER_RE.test(text)) {
       return {
-        key, status: 'placeholder', injectable: false, raw: text, declaredAs: text,
+        key, status: 'placeholder', calibration, injectable: false, raw: text, declaredAs: text,
         reason: '占位串：待标定替换为 P-3 值域（真值属另卡，本桥不伪造）',
       };
     }
     if (DECLARATION_RE.test(text)) {
       return {
-        key, status: 'declaration_only', injectable: false, raw: text, declaredAs: text,
+        key, status: 'declaration_only', calibration, injectable: false, raw: text, declaredAs: text,
         reason: '声明串：描述类型/值域而非值（槽存在、值待标定）',
       };
     }
+    // 🔴 #477 散文桶细分：`declared_unknown`（边文件**显式声明**未标定）／`formula`（赋值式 ⇒ 已标定）／`other`
     return {
-      key, status: 'prose_formula', injectable: false, raw: text, declaredAs: text,
-      reason: '散文字符串：非 P-3 值域，不可注入（规范化待治理线裁定）',
+      key, status: 'prose_formula', calibration, injectable: false, raw: text, declaredAs: text,
+      reason:
+        calibration === 'declared_unknown'
+          ? '散文桶·未标定：边文件显式声明 `unknown`（已标定/未标定自此可分辨，#477）'
+          : calibration === 'formula'
+            ? '散文桶·已标定：赋值式形态的散文公式（非 P-3 值域，不可注入）'
+            : '散文字符串：非 P-3 值域，不可注入（规范化待治理线裁定）',
     };
   }
 
   return {
-    key, status: 'malformed', injectable: false, raw,
+    key, status: 'malformed', calibration: 'other', injectable: false, raw,
     reason: '非 P-3 值域（须为 number | {param:number} | {ref:string}）',
   };
 }
