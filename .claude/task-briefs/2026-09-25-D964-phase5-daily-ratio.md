@@ -1,4 +1,7 @@
 # Task Brief: D964 阶段5 — 日报加「文档:代码 比」指标
+
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->
 > 认领: 🧭 synova-cto（并行 CTO）
 
 ## Q0: 定位

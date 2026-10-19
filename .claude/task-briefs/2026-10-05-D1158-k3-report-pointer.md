@@ -76,3 +76,6 @@
 | docs/synova/audit-reports/INDEX.md | task |
 | memory/notes/proposed/2026-10-05-d1158-k3-report-pointer.md | task |
 
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->
+

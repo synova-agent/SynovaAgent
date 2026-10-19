@@ -15,6 +15,8 @@ b) 消费边均使用代码真实16条边名（非JTBD边名）。
 c) 约束检查: 验证EdgeType枚举名与JSON Schema文件名一致（external_assumption.json→EXTERNAL_ASSUMPTION_BINDS）; validateEdgeEndpoints在 ontology-loader.ts。
 
 ## Q2:
+做什么：
+- tests/l4/edges/
 新增: edge-consumption-map.json + 9条边×3个集成测试(tests/l4/edges/) + 7条边接入已有哨兵 + 2个L3诊断模块。9条JSON Schema不动。不创建新哨兵目录。不修改edge-types枚举。不修改aggressive现有7条已接线边的消费。
 
 ## Q3:
@@ -29,6 +31,8 @@ c) 约束检查: 验证EdgeType枚举名与JSON Schema文件名一致（external
 
 ## 本任务在哪一层
 L4 本体层 (边接线) + L3 洞察层 (哨兵消费)
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->
 
 ## Done 标准
 - [ ] verify: grep -c "SUBSTITUTES\|METRIC_BINDS\|INCENTIVE_BINDS\|DECISION_CONCENTRATES\|EXTERNAL_ASSUMPTION_BINDS\|LOCKS_IN\|CONSTRAINS\|DEPENDS_ON_PLATFORM\|REPLENISHES" extensions/sentinels/ src/l3/ --include="*.ts" | grep -v "0$" | wc -l >= 9
