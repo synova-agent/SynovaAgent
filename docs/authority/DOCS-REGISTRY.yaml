@@ -571,3 +571,11 @@ documents:
       status: active
       owner: CTO
       note: "#610 ①d CI base 刷新＋退役 bootstrap 的创始人授权豁免（4 条受保护路径；作者 huangxuesongvip@163.com）。"
+
+    # ---- P4 2026-10-20：#623 豁免机制改造（裁 217；D2 登记）----
+    - id: DOC-0209
+      type: decision
+      path: gate-exemptions/2026-10-20-gate-exempt-217.md
+      status: active
+      owner: CTO
+      note: "#623 删作者校验／三段加严／清单＋豁免目录自我保护（裁 217）；豁免=证据链，不再要求创始人作者。"
