@@ -598,3 +598,11 @@ documents:
       status: active
       owner: CTO
       note: "#598 闸 3 在 CI 补 base ＋ fail-loud 的豁免（7 条受保护路径；作者不校验后由 L1 补记）。"
+
+    # ---- CTO 2026-10-20：技能同步（#642）豁免（裁 221；D2 登记）----
+    - id: DOC-0216
+      type: decision
+      path: gate-exemptions/2026-10-20-skill-sync-642.md
+      status: active
+      owner: CTO
+      note: "#642 技能漂移修复（10 处 → 0）＋ cto-handover 宪章版本/行数更新（512→690）；含 gate-exemptions 自覆盖与 DOCS-REGISTRY 自登记行。"
