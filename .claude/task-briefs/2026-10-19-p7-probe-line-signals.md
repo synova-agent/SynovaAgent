@@ -42,8 +42,8 @@
 ## Q3: 验收（入口 → 交互 → 结果）
 
 **入口**：`npx tsx scripts/control-tower/probe-line-signals.ts [--all|--line <产品线|治理线|CTO|K3|基座线>] [--json] [--selfcheck]`。
-**交互**：① `--all` ⇒ 每线一行 `①(merge-conditions)=p/n|n/a(0) ②=n ③=n 在飞` ＋ 末行 `LINE-SIGNALS: lines=<n> exceptions=<n> gaps=<n>`；② `--line <报告线>` ⇒ 单线 + 例外逐条；③ `--json` ⇒ 固定键（含 mapping）；④ `--selfcheck` ⇒ 7 子例（A 基线／B 计数明细不一致／C 无 PR 当 100%／D 根级失败／E 混入 B 口径／F 跨线硬归），末行 `SELFCHECK-OK: 7/7`。
-**结果**：三态 0/1/2；unknown/cross-line **不丢**；无在飞 PR 显示 `n/a`（非 100%）；只读（运行前后 `git status` 不变）。
+**交互**：① `--all` ⇒ 每线一行 `①(merge-conditions)=p/n|n/a(0) ②=n ③=n(跨线 c)` ＋ 末行 `LINE-SIGNALS: lines=<n> exceptions=<n> gaps=<n>`；② `--line <报告线>` ⇒ 单线 + 例外逐条；③ `--json` ⇒ 固定键（含 mapping）；④ `--selfcheck` ⇒ **7 子例**（A 基线／B gaps 明细被丢／C 无在飞 PR 当 100%／D 根级 API 失败／E 混入 B 口径／F 跨线硬归／**G 跨线漏计**），末行 `SELFCHECK-OK: 7/7`。
+**结果**：三态 0/1/2；unknown/cross-line **不丢**；**cross 计入所涉每条线 ③ 并标 `(跨线 c)`**；某线 0 且全局有 PR ⇒ `0(跨线 0)`（不得说"无在飞 PR"）；③ 的 `n/a(0)` 只在全局 open PR=0；只读（运行前后 `git status` 不变）。
 
 ## Q4 契约与测试
 

@@ -28,8 +28,8 @@ status: proposed
 ③ 判据（含"改坏必红"）：
    - 命令：source ~/.nvm/nvm.sh && npx tsx scripts/control-tower/probe-line-signals.ts --all
      期望：exit ∈ {0,1}（真实数据含 exceptions ⇒ 1；全绿夹具 ⇒ 0）；每条线一行三信号（**5 条线都出行**，基座线 `n/a(未映射)`）；末行 `LINE-SIGNALS: lines=5 exceptions=<n> gaps=<n>`
-   - 反例（§4.3 夹具 7 子例，逐条给命令）：把 mapping_gap 静默丢弃／无在飞 PR 当 100%／
-     根级 API 失败当 0 在飞／混入 B 口径／跨线 PR 被硬归某线／把 gaps 计数与明细改不一致 ⇒ 各自必红或 exit 2
+   - 反例（§4.3 夹具 **7 子例**，逐条给命令）：gaps 明细被丢／末行计数与明细不一致／无在飞 PR 当 100%／
+     根级 API 失败当 0 在飞／混入 B 口径／跨线 PR 被硬归某线／**跨线漏计（G）** ⇒ 各自必红或 exit 2
 ④ 域守则指针（**必须显式 read**，DSH 无法额外注入）：
    - scripts/control-tower/AGENTS.md ｜ tests/control-tower/AGENTS.md ｜ docs/AGENTS.md
    - memory/notes/AGENTS.md ｜（👁只读）`.gitea/AGENTS.md`
@@ -73,7 +73,7 @@ status: proposed
 | **③** | 有没有现成 | §6 表：复用 8 项，确需新建 1 件（按线聚合编排层） | §6 |
 | **④** | 最小改动 | 必须：1 TS 探针 ＋ 1 测试 ＋ Note。划掉：改 `check-merge-conditions.sh`／`gen-cto-health.py`／`probe-ladder.ts`／`.gitea/**` | §2 |
 | **⑤** | 最危险假设（**实测**） | 「按包归线可行」⇒ **假**：包写集重叠实测 `docs/**`∈{P6,P7,P9,P10}、`memory/notes/**`∈{P6,P7}、`.gitea/**`∈{P4,P10}、`scripts/control-tower/**`∈{P4,P9} ⇒ 17 个 open PR 中 13–16 个 ambiguous。⇒ **线改为报告线（路径法）**，见 §4bis | §4bis |
-| **⑥** | 失败路径 | 反例 6 条（§4.3）：gaps 被丢／无 PR 当 100%／根级失败当 0／混 B 口径／跨线硬归／计数与明细不一致 | §4.3 |
+| **⑥** | 失败路径 | 反例 7 条（§4.3，含 G 跨线漏计）：gaps 被丢／无 PR 当 100%／根级失败当 0／混 B 口径／跨线硬归／计数与明细不一致 | §4.3 |
 | **⑦** | 边界 | 逐条路径见 §1.2 | §1 |
 | **⑧** | 可观测 | `--all` 一条命令：每线一行 ＋ 末行 `LINE-SIGNALS: lines=… exceptions=… gaps=…` | §4 |
 | **⑨** | 拆步 | S1 路径→线映射 → S2 三信号聚合 → S3 `--selfcheck`（夹具 7 子例）；单文件新建可整体 revert | 封面／§8 |
@@ -84,7 +84,7 @@ status: proposed
 
 **目标**：一条命令按**报告线**输出**回执三信号**：① 判据通过率（**机器代理＝四条件通过率**，标签 `①(merge-conditions)`）② 例外清单 ③ 在飞 PR 数；全部取自机器真值。
 
-**可观测**：`--all` ⇒ 5 行（例 `治理线 ①(merge-conditions)=5/16 ②=1 ③=16(跨线 11)`、`基座线 ①=n/a(未映射) ②=0 ③=0(跨线 0)`）；末行 `LINE-SIGNALS: lines=5 exceptions=1 gaps=6`；三态 `0`（无例外无缺口）／`1`（有例外或映射缺口）／`2`（根级取不到真值）。
+**可观测**：`--all` ⇒ 5 行（例 `治理线 ①(merge-conditions)=5/17 ②=1 ③=17(跨线 12)`、`基座线 ①=n/a(未映射) ②=0 ③=0(跨线 0)`）；末行 `LINE-SIGNALS: lines=5 exceptions=1 gaps=6`；三态 `0`（无例外无缺口）／`1`（有例外或映射缺口）／`2`（根级取不到真值）。
 
 ### 1.2 非目标（逐条路径）
 - ❌ `scripts/control-tower/check-merge-conditions.sh`（只读调用）
@@ -115,7 +115,7 @@ status: proposed
 | F1 | 无按线三信号件 | `git grep -l "回执三信号" 7a17677da -- scripts/` ⇒ 0 |
 | F2 | 探针契约有单一实现 | `sed -n 1,40p scripts/control-tower/probe-ladder.ts` ⇒ 13 探针／`RESULT=`／三态 |
 | F3 | 信号发射已有 | `sed -n 1,20p scripts/control-tower/emit-signal.py` ⇒ `.codex/signals/{component}.json` |
-| F4 | 四条件机器判定（① 代理源） | `bash scripts/control-tower/check-merge-conditions.sh --pr <**open**> --json` ⇒ `conditions{ci,overlap,review,serial}`（⚠️ 对已关 PR 会 `E_PR_NOT_OPEN` 降级，示例须选 open PR）；open PR 实测 **16**（as_of 2026-10-19，命令见 A.5） |
+| F4 | 四条件机器判定（① 代理源） | `bash scripts/control-tower/check-merge-conditions.sh --pr <**open**> --json` ⇒ `conditions{ci,overlap,review,serial}`（⚠️ 对已关 PR 会 `E_PR_NOT_OPEN` 降级，示例须选 open PR）；open PR 实测 **17**（as_of 2026-10-19；枚举：`curl -s -H "Authorization: token $TOK" "$API/repos/synova-agent/SynovaAgent/pulls?state=open&limit=50" \| python3 -c 'import json,sys;print(len(json.load(sys.stdin)))'`） |
 | F5 | **包写集重叠（v1 失败根因）** | 解析 10 包 §四：`docs/**`∈{P6,P7,P9,P10}；`memory/notes/**`∈{P6,P7}；`.gitea/**`∈{P4,P10}；`scripts/control-tower/**`∈{P4,**P7**,P9}（P7 §四明列本件两脚本） |
 | F6 | 报告线按路径切（**v2 依据**） | handbook §五 原文逐字（见「权威件回执」末两行） |
 | F7 | 既有约定计数（**重取；v1 三个数字全错**） | `git grep -l "exit 2" 7a17677da -- 'scripts/control-tower/*.sh' \| wc -l` ⇒ **40**；`git grep -l "degraded" …` ⇒ **41**（其中 `SYNO_GATE_DEGRADED_LOG` ⇒ **3**）；`git grep -li "utf-8" … \| wc -l` ⇒ **40** / 分母 `git ls-tree -r --name-only 7a17677da -- scripts/control-tower \| grep -c '\.sh$'` ⇒ **47** |
@@ -143,17 +143,17 @@ status: proposed
 
 **PR → 线**：对该 PR 的 `git diff --name-only <mb>..<head>` **逐文件**跑上述规则；
 - **全部文件同线** ⇒ 该线（`single`）；
-- **跨 ≥2 条线** ⇒ 该 PR **同时计入所涉每一条线的 ③**，并标 `(跨线)`（`cross`）；**不再"不计入任一线"**（v2 的错：11/16 cross ⇒ 各线 ③ 打印 `n/a(0)` = 假事实「无在飞 PR」）；
+- **跨 ≥2 条线** ⇒ 该 PR **同时计入所涉每一条线的 ③**，并标 `(跨线 <c>)`（`cross`）；**不再把 cross 排除在计数外**（v2 之误：17 个 open PR 中 12 个 cross；旧法排除后各线 ③ 打 `n/a(0)` = 假事实「无在飞 PR」）；
 - **全部 unknown** ⇒ `unknown`（进 gaps）；
 - **混合（有线 + unknown）** ⇒ 归命中的线，同时在 **gaps 里点名未归属文件数**。
 
 🔴 **实测（as_of 2026-10-19，16 个 open PR，逐 PR 拉 API `/pulls/<n>/files` 手算）**：
 ```
-single = 5（#515/#519/#522/#543/#607）｜ cross = 11 ｜ unknown = 0
-按"cross 计入各涉线"：治理线 ③=16(跨线 11) ｜ 产品线 ③=11(跨线 11) ｜ CTO/K3/基座线 ③=0
-⚠️ `n/a(0)` 只在**全局 open PR = 0** 时打印；某线 0 必须打 `0(跨线 0)` 并附"该线本批无独立 PR"，不得说"无在飞 PR"
+single = 5（#515/#519/#522/#543/#607）｜ cross = 12 ｜ unknown = 0（open PR 共 17）
+按"cross 计入各涉线"：治理线 ③=17(跨线 12) ｜ 产品线 ③=12(跨线 12) ｜ CTO/K3/基座线 ③=0
+⚠️ **③ 的 `n/a(0)` 只在全局 open PR = 0 时打印**；某线 0 必须打 `0(跨线 0)` 并附"该线本批无独立 PR"，不得说"无在飞 PR"。（**① 的 `n/a` 是另一回事**：该线 0 在飞 PR 时 ① 显示 `n/a(0)`，见子例 C）
 ```
-🔴 **结构性冲突（升为 B-7-a 待裁项，不在本件自裁决）**：handbook §五 把 `tests/**` 归产品线，而 **CT-40 强制** `scripts/{control-tower,workflow,hooks}/<name>.<sh|py> ↔ tests/control-tower/<name>.test.sh` 配对 ⇒ **合规治理 PR 天然 cross-line**（本件自己的 W1+W2+W3 亦然）。实测对照：若 `tests/control-tower/**`·`tests/architecture/**` 随被测面归**治理线** ⇒ **single 10 / cross 6**（治理线 ③=16、产品线 ③=6）。两读法都写进 B-7-a 请裁。
+🔴 **结构性冲突（升为 B-7-a 待裁项，不在本件自裁决）**：handbook §五 把 `tests/**` 归产品线，而 **CT-40 强制** `scripts/{control-tower,workflow,hooks}/<name>.<sh|py> ↔ tests/control-tower/<name>.test.sh` 配对 ⇒ **合规治理 PR 天然 cross-line**（本件自己的 W1+W2+W3 亦然）。实测对照：若 `tests/control-tower/**`·`tests/architecture/**` 随被测面归**治理线** ⇒ **single 10 / cross 7**（治理线 ③=17、产品线 ③=7）。两读法都写进 B-7-a 请裁。
 🔴 **`.gitea/**` 归属待裁**：本仓 CI 真源是 `.gitea/workflows/local-gates.yml`（根件 §8），而 handbook §五 只写 `.github/**` ⇒ v2 把 `.gitea/**` 落 unknown（#606/#416 的 CI 改动受影响）。B-7-a 一并裁：`.gitea/**` 是否视同 `.github/**` 归治理线。
 
 **Issue → 线**：**v1 不映射**（50 open issues 仅 9 个带 `^P<N>`）⇒ ③ 不出卡数，写进 Known Limitations 与 gaps。
@@ -173,7 +173,7 @@ single = 5（#515/#519/#522/#543/#607）｜ cross = 11 ｜ unknown = 0
 ```bash
 source ~/.nvm/nvm.sh
 npx tsx scripts/control-tower/probe-line-signals.ts --all
-# 真实数据：exit 1（有 exceptions 或 gaps）；每线一行；末行 LINE-SIGNALS: lines=4 exceptions=<n> gaps=<n>
+# 真实数据：exit 1（有 exceptions 或 gaps）；每线一行；末行 LINE-SIGNALS: lines=5 exceptions=<n> gaps=<n>
 npx tsx scripts/control-tower/probe-line-signals.ts --line 治理线
 npx tsx scripts/control-tower/probe-line-signals.ts --all --json | python3 -m json.tool >/dev/null && echo JSON-OK
 bash tests/control-tower/probe-line-signals.test.sh    # 末行 `结果: N 通过, 0 失败`
@@ -293,7 +293,7 @@ R2 ≤10 行：批次名｜写集｜自验结论｜证据｜未决项
 ```
 @input  --all | --line <产品线|治理线|CTO|K3|基座线> | --json | --selfcheck | --repo-root <path>
         环境：SYNO_GITEA_API、token 三级、SYNO_LINE_SIGNALS_FIXTURE（夹具）、SYNO_GATE_DEGRADED_LOG
-@output 每线一行 `<线> ①(merge-conditions)=<p>/<n>|n/a(0) ②=<n> ③=<n> 在飞`
+@output 每线一行 `<线> ①(merge-conditions)=<p>/<n>|n/a(0) ②=<n> ③=<n>(跨线 <c>)`
         末行 `LINE-SIGNALS: lines=<n> exceptions=<n> gaps=<n>`；--json 见 DS-8
 @exit   0=无例外无缺口／1=有例外或缺口／2=根级失败（API/git/JSON）或信号量==0（open PR=0 且夹具未声明合法零）
 @degraded stderr 一行 `degraded: <原因>` + code；逐项降级不 exit 2（见 §4.2）
@@ -308,7 +308,7 @@ R2 ≤10 行：批次名｜写集｜自验结论｜证据｜未决项
 |---|---|
 | open PR = 0（API 200 + []） | exit 2（信号量==0），除非夹具显式声明合法零 |
 | 某线 0 在飞（全局有 PR） | ③ 显示 `0(跨线 0)` ＋「该线本批无独立 PR」；**不得**说"无在飞 PR" |
-| PR 跨 2 线 | `cross-line` 点名两线，不计入任一线 |
+| PR 跨 2 线 | **计入所涉每条线 ③ 并标 `(跨线 n)`**，全局 gaps 明细点名两线 |
 | 全 unknown 文件 | 进 gaps |
 | 某 PR 逐项降级（E_MERGE_BASE／E_PR_NOT_OPEN） | 进 exceptions，整体 exit 1 |
 | Issue 标题无 `^P<N>` | v1 不参与（无卡数） |
@@ -328,10 +328,10 @@ A.1 回执三信号原文（handbook 常设授权条例 §四）与 §五 域清
 A.2 无按线三信号件：git grep -l "回执三信号" 7a17677da -- scripts/ ⇒ 0
 A.3 探针契约：13 探针 / RESULT= / 三态（`scripts/control-tower/probe-ladder.ts:1-40`）
 A.4 四条件 --json：{tool,pr,base,tip,head,fp,conditions{…},verdict,exit}（对已关 PR ⇒ E_PR_NOT_OPEN 降级）
-A.5 包写集重叠：docs/**∈{P6,P7,P9,P10}；memory/notes/**∈{P6,P7}；.gitea/**∈{P4,P10}；scripts/control-tower/**∈{P4,P9}
+A.5 包写集重叠：docs/**∈{P6,P7,P9,P10}；memory/notes/**∈{P6,P7}；.gitea/**∈{P4,P10}；scripts/control-tower/**∈{P4,**P7**,P9}
 A.6 报告线路径：handbook §五（产品/治理/基座/CTO/K3）
 A.7 既有约定计数：exit 2=40；degraded=41（SYNO_GATE_DEGRADED_LOG=3）；utf-8=40/47
-A.8 Issue 覆盖：50 个 open issue 中 ^P\d+ 标题 9 个 ⇒ v1 不出卡数
+A.8 Issue 覆盖：**139** 个 open issue 中 ^P\d+ 标题 9 个 ⇒ v1 不出卡数
 A.9 环境：默认无 npx；source ~/.nvm/nvm.sh 后 node v24.19.0 / tsx v4.23.13
 ```
 
