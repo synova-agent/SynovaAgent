@@ -205,7 +205,7 @@ source ~/.nvm/nvm.sh && SYNO_GITEA_API=http://127.0.0.1:1/api/v1 npx tsx scripts
 |---|---|---|
 | **A** 基线 | `SYNO_LINE_SIGNALS_FIXTURE=fx/green.json npx tsx … --all` | exit 0；末行 `exceptions=0 gaps=0`；无 B 键 |
 | **B** 计数与明细不一致 | 把 gaps 明细删掉但末行计数不改 | **必红**（DS-2） |
-| **C** 无 PR 当 100% | 夹具该线 0 PR，实现输出 `1/1` | **必红**：必须 `n/a(0)` |
+| **C** 无 PR 当 100% | 夹具该线 0 PR，实现输出 `1/1` | **必红**：① 必须 `n/a(0)`；③ 必须 `0(跨线 0)`（**不得**用 n/a） |
 | **D** 根级失败当 0 | `SYNO_GITEA_API=http://127.0.0.1:1/api/v1` | exit **2** + `degraded:` |
 | **E** 混入 B 口径 | `inject_b_metric=true` | **必红**：出现非 A 键 ⇒ 口径守卫失败 |
 | **F** 跨线硬归 | `cross_pr` 存在但实现只归一线 | **必红**：必须两线各计 1 且标 `(跨线)` |
@@ -219,7 +219,7 @@ source ~/.nvm/nvm.sh && SYNO_GITEA_API=http://127.0.0.1:1/api/v1 npx tsx scripts
 |---|---|---|
 | DS-1 | 三信号按线可读 | §4.1 首条 |
 | DS-2 | **gaps 计数 = gaps 明细条数**（只约束 gaps 栏） | 子例 B |
-| DS-3 | 无在飞 PR ⇒ `n/a(0)`（非 100%） | 子例 C |
+| DS-3 | 无在飞 PR ⇒ **①** 显示 `n/a(0)`（非 100%） | 子例 C（期望 `①=n/a(0) 且 ③=0(跨线 0)`） |
 | DS-4 | 根级 fail-closed（exit 2）；逐项降级 exit 1 | 子例 D ＋ 逐项降级命令 |
 | DS-5 | 口径守卫（只 A 三信号，禁 B 键） | 子例 E |
 | DS-6 | 跨线点名、不硬归 | 子例 F |
@@ -339,7 +339,7 @@ A.9 环境：默认无 npx；source ~/.nvm/nvm.sh 后 node v24.19.0 / tsx v4.23.
 
 | # | 事项 | 证据 | 建议 |
 |---|---|---|---|
-| **B-7-a** | **线口径＝报告线 ＋ §4bis 路径映射**；其中两条子项请一并裁：**(i) `tests/**` 归属** —— handbook 字面=产品线，但 CT-40 强制配对 ⇒ 治理 PR 天然 cross（实测 single 5/cross 11；若 `tests/control-tower/**`·`tests/architecture/**` 随被测面归治理线 ⇒ single 10/cross 6）；**(ii) `.gitea/**` 归属** —— 本仓 CI 真源是 `.gitea/workflows/local-gates.yml`，handbook 只写 `.github/**`，是否视同归治理线 | A.5／A.6 ＋ 两读法实测 | **批**（本件按「字面＋cross 计入各涉线」实现，两子项批复后再收敛） |
+| **B-7-a** | **线口径＝报告线 ＋ §4bis 路径映射**；其中两条子项请一并裁：**(i) `tests/**` 归属** —— handbook 字面=产品线，但 CT-40 强制配对 ⇒ 治理 PR 天然 cross（实测 single 5/cross **12**；若 `tests/control-tower/**`·`tests/architecture/**` 随被测面归治理线 ⇒ single 10/cross **7**）；**(ii) `.gitea/**` 归属** —— 本仓 CI 真源是 `.gitea/workflows/local-gates.yml`，handbook 只写 `.github/**`，是否视同归治理线 | A.5／A.6 ＋ 两读法实测 | **批**（本件按「字面＋cross 计入各涉线」实现，两子项批复后再收敛） |
 | **B-7-c** | **§四口径的两处机器代理/缺口**：(i) **① 代理**＝四条件通过率，标签 `①(merge-conditions)`；(ii) **③ 的「未收口卡数」v1 不出**（Issue→线 无可靠判据：139 open issue 仅 9 带 `^P`） | handbook §四原文 vs A.4／A.8 | **批**；不批 ⇒ 本件只出 ②，① 与卡数均不出现 |
 | **B-7-b** | **写集扩 1 行**：`tests/control-tower/probe-line-signals.test.sh`（CT-40 只强制 sh/py；本件主动加固） | P7 §四枚举未含 | **批**；不批 ⇒ 不做 W2（交付面缩小） |
 
