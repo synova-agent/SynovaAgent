@@ -30,11 +30,12 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   D4 判别力自检（③–⑧ 六项沙箱反例：改坏确实红，并断言**红的原因原文**）
 #   D2 形制（`degraded:`/`DEGRADED:` 行 ＋ code）；按 @degraded 说明**不落日志**
 #
-# 12 项（判据源：裁 210 ＋ memory/notes/proposed/2026-10-18-gate-protection.md §自证）:
+# 12 项（判据源：裁 210 ＋ #623 裁 217 ＋ memory/notes/proposed/2026-10-18-gate-protection.md §自证）:
 #   ① 清单存在可读非空（bytes＋条数）          ② pin 独立重算一致（声明/实算前 16 位）
-#   ③ 沙箱 改受保护路径无豁免 ⇒ 1              ④ 沙箱 同 diff 合规豁免（作者=approver）⇒ 0
-#   ⑤ 沙箱 豁免缺理由 ⇒ 1                      ⑥ 沙箱 豁免作者非 approver ⇒ 1
-#   ⑦ 沙箱 清单缺失 ⇒ 2 ／ PATTERNS 段空 ⇒ 2   ⑧ 沙箱 bootstrap（base 无清单）⇒ 0 ＋ BOOTSTRAP
+#   ③ 沙箱 改受保护路径无豁免 ⇒ 1 ／ 清单自改（加 PATTERNS 行＋重算 pin）⇒ 1（两子例，同一项）
+#   ④ 沙箱 同 diff 合规豁免（含豁免文件自覆盖；作者=创始人身份）⇒ 0
+#   ⑤ 沙箱 豁免缺理由 ⇒ 1                      ⑥ 沙箱 k12@local 作者 ＋ 齐全豁免 ⇒ 0（作者校验已删）
+#   ⑦ 沙箱 清单缺失 ⇒ 2 ／ PATTERNS 段空 ⇒ 2   ⑧ 沙箱 base 无清单（陈旧 base）⇒ 2 ＋ E_BAD_BASE（无 BOOTSTRAP）
 #   ⑨ ①d 已接线（workflow grep）               ⑩ 检查器零平台 API 调用
 #   ⑪ ①d 步块内零 origin 回退（awk 块锚；`^` 坑见该步注释）
 #   ⑫ push 腿语义: 块内 pull_request/清单完整性 各 ≥1 ＋ 7 件交付件禁语扫描（排除禁止性语境行）
@@ -59,6 +60,10 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   4. **⑫ 禁语扫描是"字面＋禁止性语境排除"**：换行拆词、近义改写（如把"拦"换成"挡"）扫不到。
 #   5. **沙箱依赖 git 与可写临时目录**：git 不可用或 mktemp 失败 ⇒ exit 2，不降级为"跳过"。
 #   6. **不判"通过"**：本件只给自验结论；通过归 L1 收件闸 ＋ K3 独立复核。
+#   7. **作者签名语义已消失（#623）**：不核提交作者 ⇒ 豁免只证明证据链（路径/理由/裁定号），
+#      不证明谁批准；平台侧授权仍核不到（见 1）。
+#   8. **清单与豁免目录自我保护（#623）**：改清单或改豁免文件本身也需合规豁免（含自覆盖行）；
+#      本件 ④/⑥ 的沙箱豁免因此各含两行（目标文件＋豁免文件自身）。
 # ═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
 
@@ -191,6 +196,25 @@ run_gate_env_list() { # $1=root $2=清单路径 ⇒ 走 SYNO_GATE_PROTECTED_LIST
   ERR="$(cat "$TMPD/stderr.txt" 2>/dev/null)"  # swallow-ok: 读临时 stderr 失败⇒ERR 空，后续断言判红
 }
 
+recompute_pin() { # $1=沙箱仓库根 ⇒ 重算沙箱清单 pin（隔离 pin 漂移干扰；不碰真实仓库）
+  "$PYBIN" - "$1/.gitea/protected-files.txt" <<'PY'
+import hashlib
+import sys
+
+path = sys.argv[1]
+lines = open(path, encoding="utf-8").read().splitlines()
+begin = lines.index("# PATTERNS-BEGIN")
+end = lines.index("# PATTERNS-END")
+patterns = [line.strip() for line in lines[begin + 1:end]
+            if line.strip() and not line.strip().startswith("#")]
+pin = hashlib.sha256("".join(p + "\n" for p in patterns).encode("utf-8")).hexdigest()
+out = ["# PROTECTED-PATTERNS-SHA256=" + pin if line.startswith("# PROTECTED-PATTERNS-SHA256=")
+       else line for line in lines]
+open(path, "w", encoding="utf-8").write("\n".join(out) + "\n")
+print("patterns=%d pin=%s" % (len(patterns), pin[:12]))
+PY
+}
+
 sb_commit() { # $1=目录 $2=说明 $3=作者邮箱（空 ⇒ 用仓内默认 k12@local）
   local _d="$1" _msg="$2" _email="${3:-}"
   # 🔴 固定提交时间 ⇒ 沙箱 commit SHA 跨次可复现（"连跑两次同值"是硬要求；否则 ⑧ 的 base 短 SHA 会漂）
@@ -216,7 +240,7 @@ mk_repo "$S1" || degrade_exit E_SANDBOX_BROKEN "沙箱 S1 初始化失败（git 
 sb_commit "$S1" "base: 清单＋受保护脚本" || degrade_exit E_SANDBOX_BROKEN "沙箱 S1 base 提交失败"
 S1_BASE="$(git -C "$S1" rev-parse HEAD)" || degrade_exit E_SANDBOX_BROKEN "沙箱 S1 取 base 失败"
 
-# ── ③ 沙箱：改受保护路径无豁免 ⇒ exit 1 ──────────────────────────────────────
+# ── ③ 沙箱：改受保护路径无豁免 ⇒ exit 1 ／ 清单自改（加行＋重算 pin）⇒ exit 1 ──
 (
   cd "$S1" || exit 1
   printf '#!/bin/bash\necho changed-without-exempt\n' >scripts/pre-commit-check.sh || exit 1
@@ -225,38 +249,59 @@ sb_commit "$S1" "c2: 改受保护路径，无豁免" || degrade_exit E_SANDBOX_B
 run_gate "$S1" --changed-base "$S1_BASE"
 M3_PROT="$(printf '%s\n' "$OUT" | grep -o '受保护路径变更 [0-9][0-9]* 条' | grep -o '[0-9][0-9]*' | head -1)"
 M3_NAME="$(printf '%s\n' "$OUT" | grep -c '无合规豁免: scripts/pre-commit-check.sh')"
-if [ "$RC" -eq 1 ] && [ "${M3_NAME:-0}" -ge 1 ]; then
-  ok "③ 沙箱 改受保护路径无豁免 → exit ${RC}（受保护变更=${M3_PROT:-?} 条，点名命中=${M3_NAME}）"
+M3_RC=$RC
+# ③ 子例 B：清单自改必红（沙箱 S3；base 为改前清单；加 PATTERNS 行并重算 pin 隔离 pin 干扰）
+S3="$TMPD/s3"
+mk_repo "$S3" || degrade_exit E_SANDBOX_BROKEN "沙箱 S3 初始化失败（git init）"
+(
+  cd "$S3" || exit 1
+  cp "$MANIFEST" .gitea/protected-files.txt || exit 1
+  printf '#!/bin/bash\necho v1\n' >scripts/pre-commit-check.sh || exit 1
+) || degrade_exit E_SANDBOX_BROKEN "沙箱 S3 写基线文件失败"
+sb_commit "$S3" "base: 清单＋受保护脚本" || degrade_exit E_SANDBOX_BROKEN "沙箱 S3 base 提交失败"
+S3_BASE="$(git -C "$S3" rev-parse HEAD)" || degrade_exit E_SANDBOX_BROKEN "沙箱 S3 取 base 失败"
+(
+  cd "$S3" || exit 1
+  awk '{if ($0 ~ /^# PATTERNS-END$/) print "scripts/acceptance-extra.sh"; print}' \
+    .gitea/protected-files.txt >.gitea/pf.tmp && mv .gitea/pf.tmp .gitea/protected-files.txt || exit 1
+) || degrade_exit E_SANDBOX_BROKEN "沙箱 S3 清单加行失败"
+M3B_PIN="$(recompute_pin "$S3")" || degrade_exit E_SANDBOX_BROKEN "沙箱 S3 重算 pin 失败"
+sb_commit "$S3" "c2: 清单自改＋重算 pin（无豁免）" || degrade_exit E_SANDBOX_BROKEN "沙箱 S3 提交失败"
+run_gate "$S3" --changed-base "$S3_BASE"
+M3B_RC=$RC
+M3B_NAME="$(printf '%s\n' "$OUT" | grep -c '无合规豁免: .gitea/protected-files.txt')"
+if [ "$M3_RC" -eq 1 ] && [ "${M3_NAME:-0}" -ge 1 ] && [ "$M3B_RC" -eq 1 ] && [ "${M3B_NAME:-0}" -ge 1 ]; then
+  ok "③ 沙箱 受保护变更无豁免 → exit ${M3_RC}（受保护变更=${M3_PROT:-?} 条，点名命中=${M3_NAME}）／清单自改 → exit ${M3B_RC}（${M3B_PIN}，点名清单命中=${M3B_NAME}）"
 else
-  no "③ 沙箱 改受保护路径无豁免应 exit 1 且点名，实际 exit ${RC}（受保护变更=${M3_PROT:-?}，点名命中=${M3_NAME:-0}）"
+  no "③ 沙箱 应两支均 exit 1 且点名（实际 exit ${M3_RC}/${M3B_RC}；受保护变更无豁免点名=${M3_NAME:-0}，清单自改点名=${M3B_NAME:-0}）"
 fi
 
-# ── ④ 沙箱：同 diff 内有合规豁免（作者=huangxuesongvip@163.com）⇒ exit 0 ──────
+# ── ④ 沙箱：同 diff 内有合规豁免（含自覆盖；作者=huangxuesongvip@163.com）⇒ exit 0 ──
 (
   cd "$S1" || exit 1
   printf '#!/bin/bash\necho changed-with-exempt\n' >scripts/pre-commit-check.sh || exit 1
-  printf '# 豁免登记（沙箱自证）\n\n- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与清单 — CTO-2026-10-18-裁901\n' \
+  printf '# 豁免登记（沙箱自证）\n\n- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与豁免校验 — 裁 901\n- gate-exemptions/e-compliant.md — 本豁免文件自身在 diff 内的自覆盖行 — 裁 901\n' \
     >gate-exemptions/e-compliant.md || exit 1
 ) || degrade_exit E_SANDBOX_BROKEN "沙箱 S1 ④ 写文件失败"
-sb_commit "$S1" "c3: 改受保护路径＋合规豁免（批准人提交）" "huangxuesongvip@163.com" \
+sb_commit "$S1" "c3: 改受保护路径＋合规豁免（创始人身份提交）" "huangxuesongvip@163.com" \
   || degrade_exit E_SANDBOX_BROKEN "沙箱 S1 ④ 提交失败"
 run_gate "$S1" --changed-base "$S1_BASE"
 M4_COVER="$(printf '%s\n' "$OUT" | grep -c '受保护路径有合规豁免')"
 M4_AUTH="$(git -C "$S1" log -1 --format=%ae -- gate-exemptions/e-compliant.md)"
-if [ "$RC" -eq 0 ] && [ "${M4_COVER:-0}" -ge 1 ]; then
-  ok "④ 沙箱 同 diff 合规豁免 → exit ${RC}（覆盖命中=${M4_COVER}，豁免作者=${M4_AUTH}）"
+if [ "$RC" -eq 0 ] && [ "${M4_COVER:-0}" -ge 2 ]; then
+  ok "④ 沙箱 同 diff 合规豁免 → exit ${RC}（覆盖命中=${M4_COVER}，提交作者=${M4_AUTH}）"
 else
-  no "④ 沙箱 同 diff 合规豁免应 exit 0，实际 exit ${RC}（覆盖命中=${M4_COVER:-0}，豁免作者=${M4_AUTH:-?}）"
+  no "④ 沙箱 同 diff 合规豁免应 exit 0（需覆盖脚本＋豁免文件自身），实际 exit ${RC}（覆盖命中=${M4_COVER:-0}，提交作者=${M4_AUTH:-?}）"
 fi
 
 # ── ⑤ 沙箱：豁免缺理由 ⇒ exit 1 ──────────────────────────────────────────────
 (
   cd "$S1" || exit 1
   printf '#!/bin/bash\necho changed-reasonless\n' >scripts/pre-commit-check.sh || exit 1
-  printf '# 豁免登记\n\n- scripts/pre-commit-check.sh —  — CTO-2026-10-18-裁902\n' \
+  printf '# 豁免登记\n\n- scripts/pre-commit-check.sh —  — 裁 902\n' \
     >gate-exemptions/e-compliant.md || exit 1
 ) || degrade_exit E_SANDBOX_BROKEN "沙箱 S1 ⑤ 写文件失败"
-sb_commit "$S1" "c4: 豁免缺理由（批准人提交）" "huangxuesongvip@163.com" \
+sb_commit "$S1" "c4: 豁免缺理由（创始人身份提交）" "huangxuesongvip@163.com" \
   || degrade_exit E_SANDBOX_BROKEN "沙箱 S1 ⑤ 提交失败"
 run_gate "$S1" --changed-base "$S1_BASE"
 M5_MSG="$(printf '%s\n' "$OUT" | grep -c '缺理由')"
@@ -266,22 +311,22 @@ else
   no "⑤ 沙箱 豁免缺理由应 exit 1 且提示缺理由，实际 exit ${RC}（命中=${M5_MSG:-0}）"
 fi
 
-# ── ⑥ 沙箱：豁免作者=k12@local（非 approver）⇒ exit 1 ─────────────────────────
+# ── ⑥ 沙箱：豁免作者=k12@local ＋ 齐全豁免 ⇒ exit 0（作者校验已删）─────────────
 (
   cd "$S1" || exit 1
-  printf '#!/bin/bash\necho changed-bad-author\n' >scripts/pre-commit-check.sh || exit 1
-  printf '# 豁免登记\n\n- scripts/pre-commit-check.sh — 声称有理由 — CTO-2026-10-18-裁903\n' \
+  printf '#!/bin/bash\necho changed-k12-author\n' >scripts/pre-commit-check.sh || exit 1
+  printf '# 豁免登记\n\n- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与豁免校验 — 裁 903\n- gate-exemptions/e-compliant.md — 本豁免文件自身在 diff 内的自覆盖行 — 裁 903\n' \
     >gate-exemptions/e-compliant.md || exit 1
 ) || degrade_exit E_SANDBOX_BROKEN "沙箱 S1 ⑥ 写文件失败"
-sb_commit "$S1" "c5: 豁免由小队身份提交（非批准人）" "k12@local" \
+sb_commit "$S1" "c5: 豁免由小队身份提交（k12@local）" "k12@local" \
   || degrade_exit E_SANDBOX_BROKEN "沙箱 S1 ⑥ 提交失败"
 run_gate "$S1" --changed-base "$S1_BASE"
-M6_MSG="$(printf '%s\n' "$OUT" | grep -c '作者非批准人')"
+M6_COVER="$(printf '%s\n' "$OUT" | grep -c '受保护路径有合规豁免')"
 M6_AUTH="$(git -C "$S1" log -1 --format=%ae -- gate-exemptions/e-compliant.md)"
-if [ "$RC" -eq 1 ] && [ "${M6_MSG:-0}" -ge 1 ]; then
-  ok "⑥ 沙箱 豁免作者非 approver → exit ${RC}（作者=${M6_AUTH}，'作者非批准人' 命中=${M6_MSG}）"
+if [ "$RC" -eq 0 ] && [ "${M6_COVER:-0}" -ge 2 ]; then
+  ok "⑥ 沙箱 k12 作者（${M6_AUTH}）＋齐全豁免 → exit ${RC}（覆盖命中=${M6_COVER}；作者校验已删）"
 else
-  no "⑥ 沙箱 豁免作者非 approver 应 exit 1，实际 exit ${RC}（作者=${M6_AUTH:-?}，命中=${M6_MSG:-0}）"
+  no "⑥ 沙箱 k12 作者齐全豁免应 exit 0，实际 exit ${RC}（覆盖命中=${M6_COVER:-0}，作者=${M6_AUTH:-?}）"
 fi
 
 # ── ⑦ 沙箱：清单缺失 ⇒ exit 2；PATTERNS 段空 ⇒ exit 2（两子例，打印各自 exit）──
@@ -298,14 +343,14 @@ else
   no "⑦ 沙箱 清单缺失应为 exit 2、PATTERNS 段空应为 exit 2，实际 exit ${M7A_RC} / exit ${M7B_RC}"
 fi
 
-# ── ⑧ 沙箱：bootstrap（base 无清单）⇒ exit 0 且输出含 BOOTSTRAP ──────────────
+# ── ⑧ 沙箱：base 无清单（陈旧 base）⇒ exit 2 且含 E_BAD_BASE、无 BOOTSTRAP ─────
 S2="$TMPD/s2"
 mk_repo "$S2" || degrade_exit E_SANDBOX_BROKEN "沙箱 S2 初始化失败（git init）"
 (
   cd "$S2" || exit 1
   printf '#!/bin/bash\necho v1\n' >scripts/pre-commit-check.sh || exit 1
 ) || degrade_exit E_SANDBOX_BROKEN "沙箱 S2 c1 写文件失败"
-sb_commit "$S2" "c1: 无清单（bootstrap 前）" || degrade_exit E_SANDBOX_BROKEN "沙箱 S2 c1 提交失败"
+sb_commit "$S2" "c1: 无清单（陈旧 base）" || degrade_exit E_SANDBOX_BROKEN "沙箱 S2 c1 提交失败"
 S2_C1="$(git -C "$S2" rev-parse HEAD)" || degrade_exit E_SANDBOX_BROKEN "沙箱 S2 取 c1 失败"
 (
   cd "$S2" || exit 1
@@ -314,11 +359,12 @@ S2_C1="$(git -C "$S2" rev-parse HEAD)" || degrade_exit E_SANDBOX_BROKEN "沙箱 
 ) || degrade_exit E_SANDBOX_BROKEN "沙箱 S2 c2 写文件失败"
 sb_commit "$S2" "c2: 清单首次落盘＋改脚本" || degrade_exit E_SANDBOX_BROKEN "沙箱 S2 c2 提交失败"
 run_gate "$S2" --changed-base "$S2_C1"
+M8_CODE="$(printf '%s\n%s\n' "$OUT" "$ERR" | grep -c 'E_BAD_BASE')"
 M8_BOOT="$(printf '%s\n' "$OUT" | grep -c '^BOOTSTRAP: ')"
-if [ "$RC" -eq 0 ] && [ "${M8_BOOT:-0}" -ge 1 ]; then
-  ok "⑧ 沙箱 bootstrap（base 无清单）→ exit ${RC}（BOOTSTRAP 行=${M8_BOOT}，base=${S2_C1:0:8}）"
+if [ "$RC" -eq 2 ] && [ "${M8_CODE:-0}" -ge 1 ] && [ "${M8_BOOT:-0}" -eq 0 ]; then
+  ok "⑧ 沙箱 base 无清单（陈旧 base）→ exit ${RC}（E_BAD_BASE 命中=${M8_CODE}，BOOTSTRAP 行=${M8_BOOT}，base=${S2_C1:0:8}）"
 else
-  no "⑧ 沙箱 bootstrap 应 exit 0 ＋ BOOTSTRAP 行，实际 exit ${RC}（BOOTSTRAP=${M8_BOOT:-0}）"
+  no "⑧ 沙箱 base 无清单应 exit 2 ＋ E_BAD_BASE 且禁 BOOTSTRAP，实际 exit ${RC}（E_BAD_BASE=${M8_CODE:-0}，BOOTSTRAP=${M8_BOOT:-0}）"
 fi
 
 # ── ⑨ ①d 已接线：workflow grep ≥1（打印命中数）────────────────────────────────

@@ -1,0 +1,12 @@
+# .claude/claims/499.yaml — #499 A5 判据弱 ＋ count 断言没兜住 · 写集声明
+# 先例：.claude/claims/1031.yaml / 500.yaml（claim 优先于 D# 链；K3 R3 防劫持）
+# 纪律：只列本 PR 真正改动的文件，不预授权。
+writeset:
+  - .claude/claims/499.yaml
+  - docs/synova/product-lines/evidence/K2b4-499-20261013.md
+  - tests/coordination/numbering-authority.test.ts
+done:
+  - verify: npx vitest run tests/coordination/numbering-authority.test.ts
+  - verify: git diff 918f2ade..HEAD -- docs/synova/coordination/numbering-authority.md
+  - verify: git grep -n "A5" -- tests/coordination/numbering-authority.test.ts
+note: 治 numbering-authority 的「删件必红」锚：① 新增具名登记面 REGISTERED_EDGE_IDS（58 件，方向性：只拦删除、允许合法新增，保 L2 的 M4 边界）—— 修前删非锚件 augments.json 实测 19/19 全绿（同源恒真）；② L379 的 classA.length+classB.length===19 是恒真型（只改本文件字面、文档未动即翻红），改为由文档实测推导；③ toContain 子串 → 带边界 token 提取 ＋ 集合双向 ＋ 命中行全文（E-02→E-02X 修前不红）。被检体 numbering-authority.md 只读零改动。卡面「本件 A5」经独立复核为标签错件（A5 在 edge-transfer-functions.test.ts:150），已登记未决项交队长/CTO。
