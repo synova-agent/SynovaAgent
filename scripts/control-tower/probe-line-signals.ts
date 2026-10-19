@@ -2,9 +2,9 @@
  * probe-line-signals.ts — #602 P7-2 三信号探针（回执三信号口径 A · 报告线 v4）
  *
  * 【一句话】按 handbook《常设授权条例》§五 的 5 条**报告线**，一条命令算出「回执三信号」：
- *   ① 判据通过率（机器代理＝四条件通过率，标签 `①(merge-conditions)`）
- *   ② 逐项降级例外清单（按线）  ③ 在飞 PR 数（按线，跨线计入所涉每条线）
- *   并把「看不见」（全 unknown / 混合未归属 / 跨线）**逐项点名**进 gaps。三态退出码 0/1/2。
+ *   ① 判据通过率（机器代理＝四条件通过率，标签 `①(merge-conditions)`；分母＝该线全部已归属 PR）
+ *   ② 未通过 PR 明细（NOT-DONE，按线；**只装「没做到」**）  ③ 在飞 PR 数（按线，跨线计入所涉每条线）
+ *   并把「看不见」（全 unknown / 混合未归属 / 跨线 / **不可判**）**逐项点名**进 gaps。三态退出码 0/1/2。
  *
  * 【设计哲学】一个分离 ＋ 四条承诺
  *   · 一个分离：**取真值 与 归线聚合 分离** —— 取数只认 API／git／夹具三类真值源，
@@ -14,7 +14,8 @@
  *   · 承诺 2「跨线不硬归」：跨 ≥2 线的 PR **计入所涉每条线 ③** 并标 `(跨线 c)`，
  *     同时在 gaps 里点名所涉线（§4bis 硬约束 2）；全 unknown／混合未归属同样逐项点名、不许丢。
  *   · 承诺 3「只出 A 口径」：输出键集固定 DS-8 七键；出现 B 口径键（绕过/拒绝/M 复发）
- *     ⇒ 口径守卫必红（子例 E）。② 是对 A 口径的降级留痕，不是健康三信号。
+ *     ⇒ 口径守卫必红（子例 E）。**② 只装「没做到」（NOT-DONE）**；逐项降级（不可判）
+ *     进 `gaps` 的不可判栏、**不计 ②**，但**计入 ① 分母与 ③**（fail-closed：看不见 ≠ 已做到）。
  *   · 承诺 4「只读」：只 GET；不 `git fetch refs/pull/*`；不改任何仓库文件；
  *     `--selfcheck` 只写系统临时目录并在退出时清理。
  *
@@ -22,9 +23,9 @@
  *   @input
  *     --all | --line <产品线|治理线|CTO|K3|基座线> | --selfcheck | --json | --repo-root <path>
  *       --all                5 条线三信号 + 末行 `LINE-SIGNALS: lines=<L> exceptions=<n> gaps=<n>`
- *       --line <线>          单线视图（该线一行 + `exception: ` 明细逐条）
+ *       --line <线>          单线视图（该线一行 ＋ 该线 `exception: ` 明细逐条 ＋ 末行 `gaps(global)=<n>`）
  *       --json               stdout 仅 JSON（DS-8 七键；与 --selfcheck 互斥 ⇒ exit 2）
- *       --selfcheck          判别力自检（夹具 7 子例 A–G，零网络）
+ *       --selfcheck          判别力自检（夹具 8 子例 A–H，零网络）
  *       --repo-root <path>   仓库根（缺省＝本脚本上两级）
  *     环境：SYNO_GITEA_API（缺省 http://127.0.0.1:3000/api/v1）｜SYNO_GITEA_REPO
  *            token 三级：GITEA_TOKEN → SYNO_GITEA_TOKEN → $HOME/gitea/.win-push-token
@@ -34,17 +35,22 @@
  *     逐线行：`<线> ①(merge-conditions)=<p>/<n>|n/a(0)|n/a(未映射) ②=<n> ③=<n>(跨线 <c>)`
  *       · 基座线恒 `①=n/a(未映射) ②=0 ③=0(跨线 0)`（R5 v1 不映射 ⇒ 仍必须出行，不得少一行）
  *       · 某线 0 在飞 PR（全局有 PR）⇒ `①=n/a(0)`、`③=0(跨线 0)`（禁"无在飞 PR"式假事实）
- *       · ① 分母只数**可判 PR**（四条件取得到者）；全部不可判 ⇒ `n/a(0)`
+ *       · ① 分母 = 该线**全部已归属在飞 PR（含不可判/降级）**；分子 = 四条件全 ok 的 PR 数；
+ *         该线 PR 全不可判 ⇒ `0/<n>`（n≥1，fail-closed）
  *     明细行（行首无缩进，可计数契约）：
- *       `exception: PR#<n> <线> <code>`（逐项降级；末行 exceptions= 必须等于本类行数）
+ *       `exception: PR#<n> <线> NOT-DONE NO: <逗号分隔失败条件>`（**只装「未通过」**；跨线 PR 在所涉
+ *         每条线各 1 条；条件名固定顺序 ci,overlap,review,serial；末行 exceptions= 必须等于本类行数）
  *       `gap: PR#<n> cross <线1>,<线2>`（跨线 PR）
  *       `gap: PR#<n> unknown <k> files`（文件全部未映射）
  *       `gap: PR#<n> mixed-unassigned <k> files`（混合 PR 的未归属文件数）
+ *       `gap: PR#<n> 不可判 <code>`（逐项降级/不可判；**不计 ②**；文件归不到线者只进 gaps、不进线计数）
  *       末行 `LINE-SIGNALS: lines=<L> exceptions=<n> gaps=<n>`（L 由 LINES.length 派生，禁写死）
+ *       `--line` 文本末行 `gaps(global)=<n>`（n = 全局 gaps 条数；单线视图不展开 gap 明细）
  *     --json：{tool, lines[{line,s1,s2,s3}], exceptions[], gaps[], mapping{rule_hits}, summary{}, exit}
- *       s1/s2/s3 与文本行完全同源（同一行对象渲染，防两套口径漂移）
+ *       s1/s2/s3 与文本行完全同源（同一行对象渲染，防两套口径漂移）；`--line --json` 时
+ *       `summary.gaps_global=<全局 gaps 数>`（只加在 summary 内），`summary.gaps` 仍 = 本次输出 gaps 明细数
  *   @exit  0 = 无例外无缺口（仅夹具可构造）
- *          1 = 有逐项例外或映射缺口（gaps/cross/unknown/混合都算）
+ *          1 = 有例外或缺口（NOT-DONE / gaps 的 cross/unknown/混合/不可判都算；--line 按全局缺口判）
  *          2 = 根级失败（API/git/JSON/夹具/参数/信号量==0/open PR=0 且夹具未声明合法零）
  *   @degraded  stderr 一行 `degraded: <原因> [code=<CODE>]` ＋ 追加 JSON 到
  *              SYNO_GATE_DEGRADED_LOG（字段 time/component/code/phase/retryable）；exit 2（铁律 11/32）
@@ -59,17 +65,17 @@
  *   ③ 错误与出口            — ProbeError（typed：code/phase/retryable）/ degrade / usage
  *   ④ 映射层                — mapFile（最长前缀优先＋显式排除，同一文件只归一条线）
  *   ⑤ 取数层                — loadFixture / fetchOpenPrs / fetchPrFiles / fetchConditions
- *   ⑥ 聚合层                — aggregate（三信号 / exceptions / gaps / rule_hits / 跨线计数）
- *   ⑦ 不变式（判据守卫）    — validateInvariants（DS-2/DS-3/跨线硬归与漏计/B 口径/形态/exit 自洽）
+ *   ⑥ 聚合层                — aggregate（三信号 / NOT-DONE exceptions / gaps（含不可判）/ rule_hits）
+ *   ⑦ 不变式（判据守卫）    — validateInvariants（DS-2/DS-3/① 分母/②=NOT-DONE 明细/不可判不进 exceptions/跨线硬归与漏计/B 口径/形态/exit 自洽）
  *   ⑧ 输出层                — buildEnvelope / renderText / emit
- *   ⑨ --selfcheck           — 7 子例 A–G（夹具零网络；F/G 含「改坏必红」正控）
+ *   ⑨ --selfcheck           — 8 子例 A–H（夹具零网络；F/G/H 含「改坏必红」正控）
  *   ⑩ main 编排             — parseArgs → loadConfig → 取数 → 聚合 → 守卫 → 输出 → 三态 exit
  *
  * 已知限制（Known Limitations · C1 四条 ＋ 实录补充）
  *   1. **v1 不出「未收口卡数」**：Issue/task-state 无 line 字段（实测 139 open issue 仅 9 个带 ^P<N>）。
  *      规格 §1.2 要求"写进 Known Limitations 与 gaps"；但子例 A 硬要求全绿夹具 gaps=0，
- *      且 gap 明细被 L1 裁定为三种可计数形态 ⇒ 本件只在**本 Known Limitations ＋ --json summary.limitations**
- *      承载该限制，**不计入 gaps=**（口径冲突已回报队长，不擅自扩 gap 形态）。
+ *      且 gap 明细被 L1 裁定为可计数形态（cross/unknown/mixed-unassigned/不可判）⇒ 本件只在
+ *      **本 Known Limitations ＋ --json summary.limitations** 承载该限制，**不计入 gaps=**。
  *   2. **基座线无路径定义**（handbook §五写"具体面由 CTO 在开线时给"）⇒ R5 v1 恒不映射，
  *      线级 `①=n/a(未映射)`；按 §4bis R5 明示**不作为 gaps 条目**。
  *   3. `docs/plans/**`、`memory/notes/**`、`task-state/**`、`.codex/**`、`AGENTS.md`(根)、
@@ -79,11 +85,13 @@
  *   5. **① 取数成本 O(n²)**：逐 PR 调 check-merge-conditions.sh，其内部 ② 对每个 open PR 做
  *      ref/merge-base 文件比对（17 PR 实测单次 ≈7s）；本件串行调用（避免并发 fetch/update-ref 竞态），
  *      真实仓 `--all` 约 2 分钟。取数只读、可复跑。
- *   6. **逐项降级的归属**：PR 文件清单取不到 ⇒ 无法归线，exception 的 `<线>` 打 `—`
- *      （只进全局 exceptions=，不计任何线 ②）；跨线 PR 的逐项降级在所涉每条线各计 1 ②
- *      （与 ③ 同口径）⇒ Σ② 可 ≥ 末行 exceptions=（末行 = 明细条数）。
- *   7. `--line` 是**单线视图**：只输出该线行 + 该线 `exception:` 明细；gaps 是全局口径，
- *      不在单线模式输出（查缺口用 `--all` 或 `--json`）。单线模式 exit 只反映该线例外。
+ *   6. **逐项降级（不可判）的归属**：PR 文件清单取不到 ⇒ 无法归线 ⇒ 只进 `gaps`（不可判栏），
+ *      **不进任何线计数**；PR 文件已归线但四条件含 degraded/skip/缺失 ⇒ 仍进该线 ③ 与 ① 分母，
+ *      同时进 `gaps` 不可判栏，**不计 ②**（② 只装「没做到」）。跨线未通过 PR 在所涉每条线各 1 条
+ *      NOT-DONE（与 ③ 同口径）⇒ Σ② 可 ≥ 末行 exceptions=（末行 = 明细条数）。
+ *   7. `--line` 是**单线视图**：只输出该线行 + 该线 `exception:` 明细 + 末行 `gaps(global)=<n>`
+ *      （gaps 明细是全局口径，单线不展开；查缺口用 `--all` 或 `--json`）。单线模式 exit 按
+ *      **该线例外 ＋ 全局缺口**判（fail-closed：屏幕上印着缺口就不许 exit 0）。
  *   8. `--selfcheck` 的 inner 运行优先 `node <script>`（Node ≥23.6 原生剥类型）；脚本不在
  *      `"type":"module"` 包内（如 /tmp 下的改坏副本）时回退 `npx tsx <script>`。
  *   9. **线集是常量 LINES**（来源 handbook §五，as_of 2026-10-19），**不运行期解析 handbook/镜像**
@@ -193,9 +201,9 @@ function usageText(): string {
     '',
     '选项:',
     '  --all                 5 条报告线三信号 + 末行 LINE-SIGNALS 汇总',
-    '  --line <线>           单线视图（该线行 + exception 明细逐条）',
+    '  --line <线>           单线视图（该线行 + exception 明细 + 末行 gaps(global)=<n>）',
     '  --json                stdout 仅 JSON（DS-8 七键；与 --selfcheck 互斥 ⇒ exit 2）',
-    '  --selfcheck           判别力自检（夹具 7 子例 A–G，零网络）',
+    '  --selfcheck           判别力自检（夹具 8 子例 A–H，零网络）',
     '  --repo-root <path>    仓库根（缺省＝本脚本上两级）',
     '  --help                本帮助',
     '',
@@ -207,7 +215,7 @@ function usageText(): string {
     '',
     '退出码（三态）:',
     '  0 无例外无缺口（仅夹具可构造）',
-    '  1 有逐项例外或映射缺口',
+    '  1 有例外或缺口（NOT-DONE / cross / unknown / 混合 / 不可判）',
     '  2 根级失败（API/git/JSON/夹具/参数）或信号量==0（open PR=0 且夹具未声明合法零）',
   ].join('\n');
 }
@@ -268,6 +276,8 @@ const LIMITATIONS: readonly string[] = [
   '卡数（未收口）v1 不提供：Issue/task-state 无线字段（Known Limitations 1；不计入 gaps=）',
   '基座线无路径定义（R5 v1 不映射）：①=n/a(未映射)，不作为 gaps 条目',
   '① 是机器代理（四条件通过率），非凡 handbook 字面 Done 判据逐条',
+  '逐项降级（不可判）进 gaps 不计 ②，但计入 ① 分母与 ③（fail-closed）',
+  '文件清单取不到（files=null）的 PR 归不到线：只进 gaps，不进任何线计数',
 ];
 
 // ─── ④ 映射层（§4bis R1–R5：最长前缀优先 ＋ 显式排除） ───────────────────────
@@ -908,33 +918,44 @@ interface LineRow {
   line: string;
   /** ① 标记：`p/n` | `n/a(0)` | `n/a(未映射)`。 */
   s1: string;
-  /** ② 标记：该线逐项降级例外条数。 */
+  /** ② 标记：该线 NOT-DONE（未通过）明细条数；不可判不计入（进 gaps）。 */
   s2: string;
   /** ③ 标记：`n(跨线 c)`。 */
   s3: string;
 }
 
-/** 逐项降级例外（② 的明细；也进 --json exceptions[]）。 */
+/**
+ * 例外明细（② 的唯一来源；也进 --json exceptions[]）—— **只装「没做到」**。
+ * 不可判（降级）不在此处，进 GapEntry(kind='unjudgeable')。
+ */
 interface ExceptionEntry {
   pr: number;
-  /** 归属线（多线用 `,`；无法归线用 `—`）。 */
+  /** 归属线（每条线各 1 条；本件不再有「无法归线」的 exception）。 */
   line: string;
-  /** 归属线数组（内部按线计数用）。 */
+  /** 归属线数组（内部按线计数用；NOT-DONE 恒为单元素）。 */
   lines: LineName[];
+  /** 恒为 `NOT-DONE`（口径守卫据此判 ② 一致性）。 */
   code: string;
-  reason: string;
+  /** 未通过的四条件名（固定顺序 ci,overlap,review,serial）。 */
+  no: string[];
+  /** 阶段（恒 cond）。 */
   phase: string;
+  /** 是否可重试（恒 false：口径不通过不是瞬时故障）。 */
   retryable: boolean;
 }
 
-/** 映射缺口（全局；行首无缩进 `gap: ` 三类形态）。 */
+/** 映射缺口/不可判（全局；行首无缩进 `gap: ` 四种形态）。 */
 interface GapEntry {
-  kind: 'cross' | 'unknown' | 'mixed-unassigned';
+  kind: 'cross' | 'unknown' | 'mixed-unassigned' | 'unjudgeable';
   pr: number;
   /** cross 形态：所涉线（LINES 顺序）。 */
   lines?: LineName[];
   /** unknown / mixed-unassigned 形态：未归属文件数。 */
   files?: number;
+  /** unjudgeable 形态：机器可判原因码（如 E_COND_DEGRADED / E_PR_FILES_HTTP）。 */
+  code?: string;
+  /** unjudgeable 形态：人读原因（进 --json gaps[]）。 */
+  reason?: string;
 }
 
 /** 聚合结果（含判据守卫需要的内部真值）。 */
@@ -943,15 +964,15 @@ interface Aggregation {
   exceptions: ExceptionEntry[];
   gaps: GapEntry[];
   ruleHits: Record<string, number>;
-  /** 线 → 已归属 PR（含跨线/混合；含条件不可判者）。 */
+  /** 线 → 已归属 PR（含跨线/混合；**含条件不可判者** ⇒ ① 分母/③ 的同一口径）。 */
   linePrs: Map<LineName, number[]>;
   /** 线 → 跨线 PR。 */
   lineCross: Map<LineName, number[]>;
   /** 跨线 PR → 所涉线（守卫真值）。 */
   crossPrs: { pr: number; lines: LineName[] }[];
-  /** 线 → 可判 PR 数（① 分母）。 */
-  lineJudged: Map<LineName, number[]>;
-  /** 线 → 四条件全 ok 的可判 PR（① 分子）。 */
+  /** 线 → NOT-DONE PR（② 的内部真值；与 exceptions 明细独立计数，守卫比对用）。 */
+  lineNotDone: Map<LineName, number[]>;
+  /** 线 → 四条件全 ok 的已归属 PR（① 分子）。 */
   lineOk: Map<LineName, number[]>;
   stats: {
     openPrs: number;
@@ -963,6 +984,7 @@ interface Aggregation {
     filesTotal: number;
   };
 }
+
 
 /** 归线结果。 */
 interface Attribution {
@@ -988,17 +1010,37 @@ function classifyFiles(files: string[], ruleHits: Record<string, number>): Attri
   return { lines: LINES.filter((line) => hitLines.has(line)), unknownFiles };
 }
 
-/** 构造一条逐项降级例外。 */
-function makeException(pr: number, lines: LineName[], err: ProbeError): ExceptionEntry {
-  return {
-    pr,
-    line: lines.length > 0 ? lines.join(',') : '—',
-    lines,
-    code: err.code,
-    reason: err.message,
-    phase: err.phase,
-    retryable: err.retryable,
-  };
+/** 四条件名（固定顺序；`no` 列表与 ② 口径都按此顺序）。 */
+const CONDITION_NAMES: readonly (keyof Conditions)[] = ['ci', 'overlap', 'review', 'serial'];
+
+/**
+ * 取未通过的条件名（固定顺序 ci,overlap,review,serial）。
+ * @param cond 四条件（调用方保证可判）
+ * @returns 非 ok 的条件名数组（至少 1 个；全 ok 由调用方先行判定）
+ */
+function failedConditions(cond: Conditions): string[] {
+  return CONDITION_NAMES.filter((name) => !isOkMark(cond[name]));
+}
+
+/**
+ * 构造一条 NOT-DONE 例外（② 的明细；只装「没做到」）。
+ * @param pr PR 编号
+ * @param line 归属线（跨线 PR 按线各生成 1 条）
+ * @param cond 可判且非全 ok 的四条件
+ * @returns 例外条目
+ */
+function makeNotDone(pr: number, line: LineName, cond: Conditions): ExceptionEntry {
+  return { pr, line, lines: [line], code: 'NOT-DONE', no: failedConditions(cond), phase: 'cond', retryable: false };
+}
+
+/**
+ * 追加一条「不可判」缺口（取数降级；**不计 ②**）。
+ * @param gaps 缺口数组
+ * @param pr PR 编号
+ * @param err 降级原因（typed；code 进 gap 文本）
+ */
+function pushUnjudgeable(gaps: GapEntry[], pr: number, err: ProbeError): void {
+  gaps.push({ kind: 'unjudgeable', pr, code: err.code, reason: err.message });
 }
 
 /** 往 Map<LineName, number[]> 去重追加。 */
@@ -1009,7 +1051,8 @@ function pushUnique(target: Map<LineName, number[]>, line: LineName, pr: number)
 }
 
 /**
- * 三信号聚合（纯函数）：文件 → 线 → ③ 计数 / 跨线计数；四条件 → ① 分子分母；失败 → exceptions / gaps。
+ * 三信号聚合（纯函数）：文件 → 线 → ③ 计数 / 跨线计数；四条件 → ① 分子分母；
+ * 四条件可判但非全 ok → NOT-DONE（②）；取数降级/不可判 → gaps(kind='unjudgeable')。
  * @param prs 取数结果
  * @param knobs 夹具旋钮（改坏正控用；默认全关）
  * @returns 聚合结果（行 + 例外 + 缺口 + 内部真值）
@@ -1020,21 +1063,21 @@ function aggregate(prs: ProbedPr[], knobs: Knobs): Aggregation {
   const gaps: GapEntry[] = [];
   const linePrs = new Map<LineName, number[]>();
   const lineCross = new Map<LineName, number[]>();
-  const lineJudged = new Map<LineName, number[]>();
+  const lineNotDone = new Map<LineName, number[]>();
   const lineOk = new Map<LineName, number[]>();
   for (const line of LINES) {
     linePrs.set(line, []);
     lineCross.set(line, []);
-    lineJudged.set(line, []);
+    lineNotDone.set(line, []);
     lineOk.set(line, []);
   }
   const crossPrs: { pr: number; lines: LineName[] }[] = [];
-  const attributed = new Set<number>();
   const stats = { openPrs: prs.length, attributedPrs: 0, singlePrs: 0, crossPrs: 0, unknownPrs: 0, mixedPrs: 0, filesTotal: 0 };
 
   for (const pr of prs) {
     if (pr.files === null) {
-      exceptions.push(makeException(pr.number, [], pr.filesProblem ?? new ProbeError('E_PR_FILES', 'fetch', '取 PR 文件失败', true)));
+      // 文件清单取不到 ⇒ 归不到任何线 ⇒ 只进 gaps（不可判栏），不进任何线计数
+      pushUnjudgeable(gaps, pr.number, pr.filesProblem ?? new ProbeError('E_PR_FILES', 'fetch', '取 PR 文件失败', true));
       continue;
     }
     stats.filesTotal += pr.files.length;
@@ -1045,7 +1088,6 @@ function aggregate(prs: ProbedPr[], knobs: Knobs): Aggregation {
       continue;
     }
     stats.attributedPrs += 1;
-    attributed.add(pr.number);
     for (const line of attribution.lines) pushUnique(linePrs, line, pr.number);
     if (attribution.lines.length >= 2) {
       stats.crossPrs += 1;
@@ -1060,34 +1102,41 @@ function aggregate(prs: ProbedPr[], knobs: Knobs): Aggregation {
       gaps.push({ kind: 'mixed-unassigned', pr: pr.number, files: attribution.unknownFiles.length });
     }
     if (pr.conditions === null) {
-      exceptions.push(makeException(pr.number, attribution.lines, pr.condProblem ?? new ProbeError('E_COND_DEGRADED', 'cond', '四条件取数失败', false)));
+      // 四条件取不到（缺失/取数降级）⇒ 不可判：仍进 ③ 与 ① 分母，进 gaps，**不计 ②**
+      pushUnjudgeable(gaps, pr.number, pr.condProblem ?? new ProbeError('E_COND_DEGRADED', 'cond', '四条件取数失败', false));
       continue;
     }
     if (!isJudgeable(pr.conditions)) {
-      // 逐项降级：任一条件值 degraded/skip ⇒ 该 PR 不可判 ⇒ 进 exceptions（仍计入 ③），不进 ① 分母
-      exceptions.push(makeException(
-        pr.number,
-        attribution.lines,
-        new ProbeError('E_COND_DEGRADED', 'cond', `四条件含 degraded/skip（不可判）：ci=${pr.conditions.ci} overlap=${pr.conditions.overlap} review=${pr.conditions.review} serial=${pr.conditions.serial}`, false),
+      // 四条件含 degraded/skip ⇒ 不可判：仍进 ③ 与 ① 分母（fail-closed），进 gaps，**不计 ②**
+      pushUnjudgeable(gaps, pr.number, new ProbeError(
+        'E_COND_DEGRADED',
+        'cond',
+        `四条件含 degraded/skip（不可判）：ci=${pr.conditions.ci} overlap=${pr.conditions.overlap} review=${pr.conditions.review} serial=${pr.conditions.serial}`,
+        false,
       ));
       continue;
     }
+    if (isAllOk(pr.conditions)) {
+      for (const line of attribution.lines) pushUnique(lineOk, line, pr.number);
+      continue;
+    }
+    // 四条件全部可判且非全 ok ⇒ 「没做到」：所涉每条线各 1 条 NOT-DONE（与 ③ 同口径）
     for (const line of attribution.lines) {
-      pushUnique(lineJudged, line, pr.number);
-      if (isAllOk(pr.conditions)) pushUnique(lineOk, line, pr.number);
+      pushUnique(lineNotDone, line, pr.number);
+      exceptions.push(makeNotDone(pr.number, line, pr.conditions));
     }
   }
 
   const rows: LineRow[] = LINES.map((line) => {
     const prsInLine = linePrs.get(line) ?? [];
     const crossInLine = lineCross.get(line) ?? [];
-    const judgedInLine = lineJudged.get(line) ?? [];
+    const notDoneInLine = lineNotDone.get(line) ?? [];
     const okInLine = lineOk.get(line) ?? [];
     let s1: string;
     if (line === BASE_LINE) s1 = 'n/a(未映射)';
-    else if (judgedInLine.length === 0) s1 = 'n/a(0)';
-    else s1 = `${okInLine.length}/${judgedInLine.length}`;
-    const s2 = String(exceptions.filter((entry) => entry.lines.includes(line)).length);
+    else if (prsInLine.length === 0) s1 = 'n/a(0)';
+    else s1 = `${okInLine.length}/${prsInLine.length}`;
+    const s2 = String(notDoneInLine.length);
     const s3 = `${prsInLine.length}(跨线 ${crossInLine.length})`;
     return { line, s1, s2, s3 };
   });
@@ -1096,7 +1145,7 @@ function aggregate(prs: ProbedPr[], knobs: Knobs): Aggregation {
     const target = rows.find((row) => row.line !== BASE_LINE && (linePrs.get(row.line as LineName) ?? []).length === 0);
     if (target) target.s1 = knobs.forceS1;
   }
-  return { rows, exceptions, gaps, ruleHits, linePrs, lineCross, crossPrs, lineJudged, lineOk, stats };
+  return { rows, exceptions, gaps, ruleHits, linePrs, lineCross, crossPrs, lineNotDone, lineOk, stats };
 }
 
 // ─── ⑦ 不变式（判据守卫 · invariant companion 的同文件实现） ──────────────────
@@ -1120,10 +1169,11 @@ function rowOf(agg: Aggregation, line: LineName): LineRow {
   return row;
 }
 
-/** 渲染一条 gap 明细（行首无缩进、可计数契约；三类形态）。 */
+/** 渲染一条 gap 明细（行首无缩进、可计数契约；四种形态）。 */
 function renderGap(gap: GapEntry): string {
   if (gap.kind === 'cross') return `gap: PR#${gap.pr} cross ${(gap.lines ?? []).join(',')}`;
   if (gap.kind === 'unknown') return `gap: PR#${gap.pr} unknown ${gap.files ?? 0} files`;
+  if (gap.kind === 'unjudgeable') return `gap: PR#${gap.pr} 不可判 ${gap.code ?? 'E_UNKNOWN'}`;
   return `gap: PR#${gap.pr} mixed-unassigned ${gap.files ?? 0} files`;
 }
 
@@ -1136,16 +1186,18 @@ function renderRow(row: LineRow): string {
 /**
  * 渲染人读文本（纯函数；文本与 JSON 共用行对象，防两套口径漂移）。
  * @param env --json 信封（lines/gaps/exceptions 的唯一真值源）
- * @param scope null=全量模式；否则单线模式（不输出 gaps 与末行）
+ * @param scope null=全量模式；否则单线模式（不展开 gap 明细，末行给 gaps(global)）
  * @returns 逐行文本
  */
 function renderText(env: JsonEnvelope, scope: LineName | null): string[] {
   const out: string[] = [];
   for (const row of env.lines) out.push(renderRow(row));
-  for (const entry of env.exceptions) out.push(`exception: PR#${entry.pr} ${entry.line} ${entry.code}`);
+  for (const entry of env.exceptions) out.push(`exception: PR#${entry.pr} ${entry.line} ${entry.code} NO: ${entry.no.join(',')}`);
   if (scope === null) {
     for (const gap of env.gaps) out.push(renderGap(gap));
     out.push(`LINE-SIGNALS: lines=${env.lines.length} exceptions=${env.exceptions.length} gaps=${env.gaps.length}`);
+  } else {
+    out.push(`gaps(global)=${String(env.summary.gaps_global ?? 0)}`);
   }
   return out;
 }
@@ -1219,15 +1271,42 @@ function validateInvariants(env: JsonEnvelope, agg: Aggregation, scope: LineName
       throw new ProbeError('E_GUARD_ZERO_LINE', 'invariant', `DS-3 违反：${row.line} 0 在飞 PR 却输出 ③=${row.s3}（必须 0(跨线 0)）`, false);
     }
   }
-  // ① 分子分母复算（可判 PR 口径）
+  // DS-11 / ② 口径守卫：exceptions **只装 NOT-DONE**；不可判（gaps 的 unjudgeable 项）不得混入
+  const unjudgeablePrs = new Set(agg.gaps.filter((gap) => gap.kind === 'unjudgeable').map((gap) => gap.pr));
+  for (const entry of env.exceptions) {
+    if (entry.code !== 'NOT-DONE' || unjudgeablePrs.has(entry.pr)) {
+      throw new ProbeError('E_GUARD_S2_DEGRADED', 'invariant', `② 只装「没做到」：PR#${entry.pr} code=${entry.code} 属不可判项（应在 gaps 不可判栏，降级不计 ②）`, false);
+    }
+  }
+  // ② = 该线 NOT-DONE 明细数（真值取自条件判定，独立于 exceptions 列表 ⇒ 防「exceptions 里数降级」）
   for (const row of env.lines) {
     if (row.line === BASE_LINE) continue;
     const lineName = row.line as LineName;
-    const judged = (agg.lineJudged.get(lineName) ?? []).length;
-    if (judged === 0) continue;
-    const expectedS1 = `${(agg.lineOk.get(lineName) ?? []).length}/${judged}`;
+    const expectedS2 = (agg.lineNotDone.get(lineName) ?? []).length;
+    const detailS2 = env.exceptions.filter((entry) => entry.code === 'NOT-DONE' && entry.lines.includes(lineName)).length;
+    if (Number(row.s2) !== expectedS2 || detailS2 !== expectedS2) {
+      throw new ProbeError('E_GUARD_S2_COUNT', 'invariant', `${row.line} ② 应为 ${expectedS2}（NOT-DONE 明细 ${detailS2}；实际 s2=${row.s2}；不可判不计 ②）`, false);
+    }
+  }
+  // ① 分子分母复算（分母 = 该线**全部已归属 PR**，含不可判/降级 ⇒ fail-closed）
+  for (const row of env.lines) {
+    if (row.line === BASE_LINE) continue;
+    const lineName = row.line as LineName;
+    const attributed = (agg.linePrs.get(lineName) ?? []).length;
+    if (attributed === 0) continue; // DS-3 已钉 n/a(0)
+    const expectedS1 = `${(agg.lineOk.get(lineName) ?? []).length}/${attributed}`;
     if (row.s1 !== expectedS1) {
-      throw new ProbeError('E_GUARD_S1', 'invariant', `${row.line} ① 应为 ${expectedS1}（实际 ${row.s1}；分母=可判 PR）`, false);
+      throw new ProbeError('E_GUARD_S1', 'invariant', `${row.line} ① 应为 ${expectedS1}（实际 ${row.s1}；分母=已归属 PR（含不可判））`, false);
+    }
+  }
+  // --line：gaps 明细不展开，但必须给全局计数 gaps(global)=<n>（fail-closed：屏幕上印缺口就不许掩盖）
+  if (scope !== null) {
+    if (env.summary.gaps_global !== agg.gaps.length) {
+      throw new ProbeError('E_GUARD_GAPS_COUNT', 'invariant', `--line 的 summary.gaps_global=${String(env.summary.gaps_global)} 与全局 gaps 明细 ${agg.gaps.length} 条不一致`, false);
+    }
+    const globalLines = renderText(env, scope).filter((line) => line.startsWith('gaps(global)='));
+    if (globalLines.length !== 1 || globalLines[0] !== `gaps(global)=${String(agg.gaps.length)}`) {
+      throw new ProbeError('E_GUARD_GAPS_COUNT', 'invariant', `--line 文本末行必须恰为 gaps(global)=${String(agg.gaps.length)}（实际 ${globalLines.length} 行：${globalLines.join('|')}）`, false);
     }
   }
   // DS-2：计数 == 明细条数（只约束 gaps）；exceptions 同口径；文本明细行数再兜一层
@@ -1244,16 +1323,16 @@ function validateInvariants(env: JsonEnvelope, agg: Aggregation, scope: LineName
   if (detailText.filter((line) => line.startsWith('exception: ')).length !== env.exceptions.length) {
     throw new ProbeError('E_GUARD_EXCEPTIONS_COUNT', 'invariant', '文本 `exception: ` 行数 ≠ 例外明细条数', false);
   }
-  const expectedExit = env.exceptions.length > 0 || env.gaps.length > 0 ? 1 : 0;
+  const expectedExit = env.exceptions.length > 0 || agg.gaps.length > 0 ? 1 : 0;
   if (env.exit !== expectedExit) {
-    throw new ProbeError('E_GUARD_EXIT', 'invariant', `三态自洽失败：exit=${env.exit}（例外 ${env.exceptions.length} / 缺口 ${env.gaps.length} ⇒ 期望 ${expectedExit}）`, false);
+    throw new ProbeError('E_GUARD_EXIT', 'invariant', `三态自洽失败：exit=${env.exit}（例外 ${env.exceptions.length} / 全局缺口 ${agg.gaps.length} ⇒ 期望 ${expectedExit}）`, false);
   }
 }
 
 /**
  * 构造 DS-8 信封（含三态 exit）。
  * @param agg 聚合结果
- * @param scope null=全量模式；否则单线模式（lines/exceptions 收窄，gaps 为全局口径不输出）
+ * @param scope null=全量模式；否则单线模式（lines/exceptions 收窄，gaps 明细不输出但 summary 带 gaps_global）
  * @param knobs 夹具旋钮（drop_gaps_detail / inject_b_metric 是子例 B/E 的改坏正控）
  * @returns 信封与退出码
  */
@@ -1261,9 +1340,9 @@ function buildEnvelope(agg: Aggregation, scope: LineName | null, knobs: Knobs): 
   const rows = scope === null ? agg.rows : agg.rows.filter((row) => row.line === scope);
   const exceptions = scope === null ? agg.exceptions : agg.exceptions.filter((entry) => entry.lines.includes(scope));
   const gaps = scope === null && !knobs.dropGapsDetail ? agg.gaps : [];
-  // 单线视图不输出 gaps（全局口径）；drop_gaps_detail 是子例 B 正控：明细被丢但计数不改 ⇒ DS-2 必红
+  // 单线视图不展开 gaps 明细（全局口径）；drop_gaps_detail 是子例 B 正控：明细被丢但计数不改 ⇒ DS-2 必红
   const summaryGaps = knobs.dropGapsDetail ? agg.gaps.length : gaps.length;
-  const exit = exceptions.length > 0 || gaps.length > 0 ? 1 : 0;
+  const exit = exceptions.length > 0 || agg.gaps.length > 0 ? 1 : 0;
   const env: JsonEnvelope = {
     tool: TOOL,
     lines: rows.map((row) => ({ line: row.line, s1: row.s1, s2: row.s2, s3: row.s3 })),
@@ -1274,6 +1353,7 @@ function buildEnvelope(agg: Aggregation, scope: LineName | null, knobs: Knobs): 
       lines: rows.length,
       exceptions: exceptions.length,
       gaps: summaryGaps,
+      ...(scope === null ? {} : { gaps_global: agg.gaps.length }),
       open_prs: agg.stats.openPrs,
       attributed_prs: agg.stats.attributedPrs,
       single_prs: agg.stats.singlePrs,
@@ -1304,7 +1384,7 @@ function emit(env: JsonEnvelope, scope: LineName | null, jsonMode: boolean): voi
   process.stdout.write(`${lines.join('\n')}\n`);
 }
 
-// ─── ⑨ --selfcheck（判别力自检 · 7 子例 A–G；夹具零网络） ────────────────────
+// ─── ⑨ --selfcheck（判别力自检 · 8 子例 A–H；夹具零网络） ────────────────────
 
 /** 子例运行结果（inner 进程的退出码 + stdout + stderr）。 */
 interface RunResult {
@@ -1402,6 +1482,21 @@ function crossFixture(): unknown {
   };
 }
 
+/**
+ * 子例 H 夹具：**2 个未通过 PR（四条件全可判、非全 ok）＋ 1 个不可判 PR（条件含 degraded）**，
+ * 均属产品线。期望：①=0/3（分母含不可判，fail-closed）、②=2（只装没做到）、
+ * ③=3、exceptions=2、gaps=1（不可判栏单列）。
+ */
+function notDoneFixture(): unknown {
+  return {
+    open_prs: [
+      { number: 21, branch: 'ct/h-1', files: ['src/h1.ts'], conditions: { ci: 'no', overlap: 'no', review: 'no', serial: 'ok' } },
+      { number: 22, branch: 'ct/h-2', files: ['src/h2.ts'], conditions: { ci: 'ok', overlap: 'no', review: 'ok', serial: 'ok' } },
+      { number: 23, branch: 'ct/h-3', files: ['src/h3.ts'], conditions: { ci: 'degraded', overlap: 'ok', review: 'ok', serial: 'ok' } },
+    ],
+  };
+}
+
 /** 夹具 → 聚合（正控用；与主流程同一条 aggregate 代码路径）。 */
 function aggregateFixture(fixture: unknown): Aggregation {
   return aggregate(gatherFromFixture(parseFixture(fixture)), emptyKnobs());
@@ -1435,6 +1530,24 @@ function mutateCrossMissing(agg: Aggregation): Aggregation {
   const row = mutated.rows.find((candidate) => candidate.line === line);
   if (!row) throw new ProbeError('E_SELFCHECK_MUTATION', 'selfcheck', `缺线行 ${line}`, false);
   row.s3 = `${keepPrs.length}(跨线 ${keepCross.length})`;
+  return mutated;
+}
+
+/** 正控：把不可判 PR 塞进 exceptions（模拟旧口径「降级当例外」）⇒ E_GUARD_S2_DEGRADED。 */
+function mutateS2Degraded(agg: Aggregation): Aggregation {
+  const mutated = structuredClone(agg);
+  const unjudgeable = mutated.gaps.find((gap) => gap.kind === 'unjudgeable');
+  if (!unjudgeable) throw new ProbeError('E_SELFCHECK_MUTATION', 'selfcheck', 'H 夹具无不可判项，无法构造 ② 降级正控', false);
+  mutated.exceptions.push({ pr: unjudgeable.pr, line: '产品线', lines: ['产品线'], code: 'E_COND_DEGRADED', no: [], phase: 'cond', retryable: false });
+  return mutated;
+}
+
+/** 正控：把某线 ② 改成比 NOT-DONE 真值多 1（模拟「按 exceptions 计数」的漂移）⇒ E_GUARD_S2_COUNT。 */
+function mutateS2Count(agg: Aggregation): Aggregation {
+  const mutated = structuredClone(agg);
+  const row = mutated.rows.find((candidate) => candidate.line === '产品线');
+  if (!row) throw new ProbeError('E_SELFCHECK_MUTATION', 'selfcheck', 'H 夹具缺产品线行，无法构造 ② 计数正控', false);
+  row.s2 = String(Number(row.s2) + 1);
   return mutated;
 }
 
@@ -1585,8 +1698,52 @@ function selfcheckG(workDir: string): string {
 }
 
 /**
- * 判别力自检：跑 A–G 七子例（夹具零网络；F/G 含"改坏必红"正控）。
- * 末行 `SELFCHECK-OK: 7/7`（exit 0）/ `SELFCHECK-FAIL: <子例>`（exit 2）。
+ * 子例 H：2 未通过 ＋ 1 不可判（均产品线）⇒ ①=0/3（分母含降级，fail-closed）、②=2（只装没做到）、
+ * ③=3、gaps 含不可判栏、末行 exceptions=2 gaps=1、exit 1；并含两条改坏必红正控
+ * （降级混入 exceptions ⇒ E_GUARD_S2_DEGRADED；② 计数漂移 ⇒ E_GUARD_S2_COUNT）。
+ */
+function selfcheckH(workDir: string): string {
+  const bad: string[] = [];
+  const fixture = notDoneFixture();
+  const run = runWithFixture(workDir, 'H', fixture, ['--all']);
+  expectExit(run.status, 1, 'H', bad);
+  expectToken(run.stdout, '产品线 ①(merge-conditions)=0/3 ②=2 ③=3(跨线 0)', 'H 产品线行（① 分母含不可判）', bad);
+  expectToken(run.stdout, 'gap: PR#23 不可判 E_COND_DEGRADED', 'H 不可判 gap', bad);
+  expectToken(run.stdout, 'exception: PR#21 产品线 NOT-DONE NO: ci,overlap,review', 'H NOT-DONE #21', bad);
+  expectToken(run.stdout, 'exception: PR#22 产品线 NOT-DONE NO: overlap', 'H NOT-DONE #22', bad);
+  const last = lastLine(run.stdout);
+  if (last !== 'LINE-SIGNALS: lines=5 exceptions=2 gaps=1') {
+    bad.push(`H 末行=${JSON.stringify(last)}（期望 LINE-SIGNALS: lines=5 exceptions=2 gaps=1）`);
+  }
+  const detailLines = run.stdout.split('\n');
+  const exCount = detailLines.filter((line) => line.startsWith('exception: ')).length;
+  const gapCount = detailLines.filter((line) => line.startsWith('gap: ')).length;
+  if (exCount !== 2) bad.push(`H exception 明细=${exCount} 条（期望 2）`);
+  if (gapCount !== 1) bad.push(`H gap 明细=${gapCount} 条（期望 1）`);
+  const agg = aggregateFixture(fixture);
+  // 改坏必红正控（两条具体码）；构造失败也要指名（不把「抓不到」当「没问题」）
+  try {
+    const codeDegraded = guardCodeOf(mutateS2Degraded(agg));
+    if (codeDegraded !== 'E_GUARD_S2_DEGRADED') {
+      bad.push(`H 降级混入 exceptions 正控 code=${codeDegraded}（期望 E_GUARD_S2_DEGRADED）`);
+    }
+  } catch (mutationErr) {
+    bad.push(`H 降级混入 exceptions 正控构造失败：${mutationErr instanceof Error ? mutationErr.message : String(mutationErr)}`);
+  }
+  try {
+    const codeCount = guardCodeOf(mutateS2Count(agg));
+    if (codeCount !== 'E_GUARD_S2_COUNT') {
+      bad.push(`H ② 计数漂移正控 code=${codeCount}（期望 E_GUARD_S2_COUNT）`);
+    }
+  } catch (mutationErr) {
+    bad.push(`H ② 计数漂移正控构造失败：${mutationErr instanceof Error ? mutationErr.message : String(mutationErr)}`);
+  }
+  return bad.join('；');
+}
+
+/**
+ * 判别力自检：跑 A–H 八子例（夹具零网络；F/G/H 含"改坏必红"正控）。
+ * 末行 `SELFCHECK-OK: 8/8`（exit 0）/ `SELFCHECK-FAIL: <子例>`（exit 2）。
  * @returns 进程退出码
  */
 function selfcheck(): number {
@@ -1599,6 +1756,7 @@ function selfcheck(): number {
     { name: 'E', run: selfcheckE },
     { name: 'F', run: selfcheckF },
     { name: 'G', run: selfcheckG },
+    { name: 'H', run: selfcheckH },
   ];
   let passed = 0;
   try {
