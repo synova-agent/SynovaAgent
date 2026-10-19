@@ -1,5 +1,7 @@
 # Task Brief: P4 · #598 — 闸 3 在 Gitea CI 空跑（补 base ＋ fail-loud）
 
+#CRITERIA: A
+
 ## Q0: 定位（项目拼图 + 文件审计）
 - 闸 3（DOC-CONTRACT 入库闸）在 Gitea CI 空跑：`pre-commit-check.sh:435` 仅 `GITHUB_ACTIONS=true && SYNO_DIFF_BASE` 时用 `--base`，而 `local-gates` 的 ① 步从不注入 `SYNO_DIFF_BASE` ⇒ `--staged`（空暂存）⇒ 核 0 件 ⇒ PASS。
 - 相关件：`scripts/control-tower/check-doc-contract.sh`、`scripts/control-tower/validate_doc_contract.py`、`docs/synova/DOC-CONTRACT.md` §3。
@@ -39,5 +41,6 @@
 - 治理线 / 门禁（doc-contract 闸 3 ＋ CI 工作流）；不涉产品运行时。
 
 ## Done 标准（至少一条可验证）
-- 两测试 0 失败；真 PR 红/绿 run 号入 PR 正文；`pre-commit-check.sh` 12 组本地 exit 0。
-
+- [ ] 两测试 0 失败（配对 10/10、自证 8/8）→ `verify: bash tests/control-tower/resolve-ci-base.test.sh && bash tests/control-tower/doc-contract-ci-acceptance.test.sh`
+- [ ] 真 PR 红/绿：临时 docs/plans/** 提交 ⇒ CI 红；删除 ⇒ 绿 → `verify: git log --oneline -3`
+- [ ] 本地 12 组 exit 0 → `verify: bash scripts/pre-commit-check.sh`
