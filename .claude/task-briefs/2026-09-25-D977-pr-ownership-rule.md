@@ -1,5 +1,8 @@
 # D977 — PR 归属规则 R1–R4（新文件承载）+ 派单参数更正
 
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->
+
 ## Q0: 定位
 - 域: mac（流程/协调文档）
 - 对象: 新建 `docs/synova/coordination/PR归属与派单参数-20260926.md`
@@ -25,3 +28,5 @@
 1) 新文件含 R1–R4 与 `--repo-root` 更正（可 grep）
 2) 未改任何有历史归属的共享文件
 3) 未清项显式登记（指针待补 / R2 无机械校验）
+- [ ] 新文件含 R1–R4 与 `--repo-root` 更正（可 grep）；verify: bash scripts/pre-commit-check.sh
+<!-- Done 补记：历史件原验收无法复跑，verify 取全量门禁 -->

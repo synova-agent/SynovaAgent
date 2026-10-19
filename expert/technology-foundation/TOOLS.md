@@ -2,7 +2,7 @@
 
 ## 专有工具
 - software_ecosystem_scan: 软件生态扫描 — 识别客户全部在用软件，输出生态地图
-- agent_readiness: Agent就绪度评估 — API可达率、数据格式、MCP支持三维度评分
+- agent_readiness: Agent就绪度评估 — API可达率、数据格式、MCP支持、实时性四维度评分（宪章 v8.3 §4.7：四维，RULES.md 评分表为准）
 - connector_blueprint: 连接器方案设计 — 输出PRD供编码Agent实现
 - tech_debt_scan: 技术债务扫描 — 部署频率、故障率、基础设施老化程度
 

@@ -52,3 +52,6 @@
 - [ ] 计划文档含版本与哈希锚定节：grep -c '依据计划' docs/synova/coordination/整体推进计划-主线-20260913.md → ≥1
 - [ ] 第⑩项在位：grep -c '主线计划锚定' scripts/control-tower/pre-dispatch-check.sh → ≥1
 - [ ] 生成器幂等：连跑两次 gen-plan-status.py → 第二次输出「无变化」
+
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->

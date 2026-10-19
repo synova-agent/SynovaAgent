@@ -49,3 +49,6 @@
 - [ ] 无模板残留：`grep -l '<本任务在哪一层\|<path/to/' .claude/task-briefs/2026-09-13-D7*.md` → 零输出
 - [ ] 主树残留清零：`git status --porcelain | grep -c '^??'` → 0
 - [ ] 骨架未落 main（反证本单填的是真内容）：主树删除的 4 份骨架 == 本单落盘的 4 份，且行数 >36
+
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->

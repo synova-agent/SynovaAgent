@@ -54,6 +54,13 @@ c) 决策参考: 参考 Anthropic/DSH（诊断与主路径分离、机制只增�
 ⑤ 改坏即红：`bash tests/control-tower/bypass-untracked.test.sh` rc=0（含"回退停跟踪 ⇒ 两分支必冲突"重现）
 ⑥ 全量回归：CI 密封清单 58 条夹具 rc 全 0
 
+- [ ] `git ls-files .claude/bypass.log` 无输出（停跟踪）；verify: bash scripts/control-tower/bypass-ledger.sh
+- [ ] 对账仍有数据源：`bash scripts/control-tower/bypass-ledger.sh read | grep -c HASH` > 0；verify: bash scripts/control-tower/bypass-ledger.sh
+- [ ] 改坏即红：`bash tests/control-tower/bypass-untracked.test.sh` rc=0；verify: bash scripts/control-tower/bypass-ledger.sh
+
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->
+
 ## 写集（机器生成，禁手改）
 
 | 文件 | 类型 |

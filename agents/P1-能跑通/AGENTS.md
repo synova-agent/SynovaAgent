@@ -11,15 +11,28 @@
 
 ## 二、内容
 
-M1b 收口／M2 入口面／M3 领域链／M4 出口面／M9 验收件
+M1b 收口／M2 入口面／M3 领域链／M4 出口面／M9 验收件／**M10 agent 工具循环（裁 219）**
 
 ## 三、完成判据
 
 M6b probe：`growth==E(46)` ∧ `dev.total==bundle.total`（均 50）｜M4：界面真渲染「测量值＋趋势」
 
+**M10 · agent 工具循环（裁 219 · 五条全机器可判 · 🔴 离线可跑，不跑真模型）**：
+
+| # | 判据 | 反例（改坏 ⇒ 必红） |
+|---|---|---|
+| ① | 请求体含 `tools` 且 ≥1 个内置工具 | 摘掉 `registerBuiltinTools` 调用 ⇒ 请求体无 `tools` ⇒ 红 |
+| ② | 模型能调用并拿到**真实结果** | 工具 handler 抛错 ⇒ 结果空 ⇒ 红 |
+| ③ | `tool_call_id` 配对正确（P0-2 回归锁） | `tc.id` 改回 `randomUUID()` ⇒ **测试内部断言失败** ⇒ 红<br>🔴 **不靠真 API 的 400** —— 替身 provider 不会返回 400，反例必须是断言 |
+| ④ | 多轮不断（≥2 轮） | `SYNO_MAX_TOOL_ROUNDS=1` ⇒ 第二轮截断 ⇒ 红 |
+| ⑤ | 空工具时**不写** `tools` 字段（provider 契约） | 无条件写 `tools: []` ⇒ 契约变 ⇒ 红 |
+
+> 🔴 **驱动方式**：**替身 provider ＋ 构造的 ToolCall**（现成基础：`tests/conversation-engine.test.ts`、`tests/l3/tool-guard.test.ts`）。
+> 真模型端到端**只做一次性人工冒烟**（留原始输出），**不计入 M10 完成标准** —— 否则判据①会飘、CI 跑真模型慢且不可重复。
+
 ## 四、写集（**文件级；越界即停并上报 CTO**）
 
-src/l4/**｜src/sentinel/**｜src/routes/{chat,conversations,diagnosis}.ts｜src/agent/conversation-engine.ts｜src/cycles/**｜src/store/migrations/**｜expert/**｜extensions/sentinels/**
+src/l4/**｜src/sentinel/**｜src/routes/{chat,conversations,diagnosis}.ts｜src/agent/conversation-engine.ts｜src/cycles/**｜src/store/migrations/**｜expert/**｜extensions/sentinels/**｜src/agent/tool-loop-executor.ts（**仅** `MAX_TOOL_ROUNDS` 配置化 · 裁 219）｜tests/acceptance/m10-*（**仅新增**，不改 M6 既有测试）
 
 ## 五、依赖
 

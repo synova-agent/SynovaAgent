@@ -2,8 +2,11 @@
 
 > 归属：**产品线** ｜ 承载包：**K4/K8/K12（＋RETIRED）**（与根件 §0 表逐字一致）｜ as_of `38d77034b`（PR1/7）｜ 多对多冲突：包编号小者优先（🔴 约定，不是原则——可改，只换规则不改结构；裁定 089）
 
+> 🔴 **宪章 v8.3 §4.8：因果传导归 ① 循环**（`cycles/*.cycle.json` 的 `edges`／`overflowFormula`）。
+> 本目录的"因果边"指**边定义的存储与校验**（`edgeId` 字符串引用由 ② 侧校验端点），**不是因果函数的执行**。
+
 ## 是什么
-本体/因果边/图存储与 L4 权限过滤代码落点（锚下 27 文件）：`sqlite-graph-store`、`knowledge-store`、`sog-schema-validator`、`traversal-permission-filter`、`graph-bridge`、`decision-capture`、`goal-alignment`。
+本体（**结构**：Schema／实例／扩展）/图存储与 L4 权限过滤代码落点（锚下 27 文件）：`sqlite-graph-store`、`knowledge-store`、`sog-schema-validator`、`traversal-permission-filter`、`graph-bridge`、`decision-capture`、`goal-alignment`。
 
 ## 谁改
 产品线。

@@ -59,3 +59,8 @@ L2 编排（src/growth/ 目标与决策编排层；DecisionRecordStore/Goal 经 
 - DS6 写集一致（4 文件 + 簿记，无越界）
 - DS7 无 no-verify
 - DS8 push + CI 绿
+
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->
+- [ ] interface DecisionRecord 在 src/growth/decision-record.ts 存在（DS1）；verify: bash scripts/pre-commit-check.sh
+<!-- Done 补记：历史件原验收无法复跑，verify 取全量门禁 -->

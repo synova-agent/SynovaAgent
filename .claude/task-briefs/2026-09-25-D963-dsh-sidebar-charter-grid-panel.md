@@ -1,5 +1,8 @@
 # Task Brief — D963 DSH 侧边栏面板「宪章三问 48 格」
 
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->
+
 ## Q0: 定位 — 项目拼图 + 文件审计
 本任务在**工具面**（DSH 插件），不改 src/** 产品代码。触发：创始人 2026-09-25 指令「发卡」。
 文件审计：已有 dsh/plugins/synova-dashboards（client panel 骨架 + test/client-panel.test.js）；

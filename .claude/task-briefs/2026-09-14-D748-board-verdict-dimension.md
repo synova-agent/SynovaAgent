@@ -42,3 +42,6 @@
 - [ ] 测试含新用例且全绿：node --test dsh/plugins/task-board-adapter/test/sync.test.js → fail 0
 - [ ] 反向验证：去掉 verdictBoardStatus 调用 → D748 用例必红（贴两次输出）
 - [ ] 代码内 verdict 维度在位：grep -c verdictBoardStatus dsh/plugins/task-board-adapter/lib/sync.js → ≥3
+
+#CRITERIA: D
+<!-- #CRITERIA 补记：历史件无单一归属证据，按 criteria-code-map 兜底 D（L1 #645，2026-10-20） -->
