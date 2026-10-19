@@ -1,0 +1,3 @@
+- agents/P8-内置FDE/AGENTS.md — 宪章 v8.3 同步：§4.7 边界条款转述（不写生产码→不做客户生产系统承包） — 裁 220
+- gate-exemptions/2026-10-20-charter-v83-sync.md — 裁 220 本豁免文件自我保护 — 裁 220
+- docs/authority/DOCS-REGISTRY.yaml — 裁 220 登记本豁免文件（D2 登记门禁） — 裁 220
