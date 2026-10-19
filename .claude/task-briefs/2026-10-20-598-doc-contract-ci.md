@@ -9,8 +9,22 @@
 - 规格 `docs/plans/codex/implementation/SYNOVA-IMPL-598-doc-contract-ci-20261019.md`（352 行，sha 3f1e2f2d…）。
 
 ## Q2: 范围（做什么 / 不做什么——含文件路径）
-- 做：`.gitea/workflows/local-gates.yml`（① 注入 base；①d 改用 helper）｜`scripts/control-tower/resolve-ci-base.sh`（新建）｜`scripts/pre-commit-check.sh`（CI 无 base fail-loud）｜`tests/control-tower/resolve-ci-base.test.sh`（新建）｜`tests/control-tower/doc-contract-ci-acceptance.test.sh`（新建）｜`gate-exemptions/2026-10-20-doc-contract-ci-598.md`（L1）｜`docs/synova/DOC-CONTRACT.md`（§3 白名单加 gate-exemptions/**，CTO 批）｜`docs/authority/DOCS-REGISTRY.yaml`（DOC-0211 登记）。
-- 不做：不动 checker/validate 判据、不动 §9.1 过渡表、不迁 `docs/plans/**` 存量、不碰 `scripts/audit/**`、不动 `.github/**`。
+做什么：
+- `.gitea/workflows/local-gates.yml`
+- `scripts/control-tower/resolve-ci-base.sh`
+- `scripts/pre-commit-check.sh`
+- `tests/control-tower/resolve-ci-base.test.sh`
+- `tests/control-tower/doc-contract-ci-acceptance.test.sh`
+- `gate-exemptions/2026-10-20-doc-contract-ci-598.md`
+- `docs/synova/DOC-CONTRACT.md`
+- `docs/authority/DOCS-REGISTRY.yaml`
+- `.claude/task-briefs/2026-10-20-598-doc-contract-ci.md`
+- `memory/notes/proposed/2026-10-20-doc-contract-ci.md`
+不做什么：
+- `scripts/audit/**`
+- `.github/**`
+- `scripts/control-tower/check-doc-contract.sh`
+- `scripts/control-tower/validate_doc_contract.py`
 
 ## Q3: 验收（入口 → 交互 → 结果）
 - 入口：`bash tests/control-tower/resolve-ci-base.test.sh`；`bash tests/control-tower/doc-contract-ci-acceptance.test.sh`；真 PR 红/绿（临时 docs/plans 提交）。
@@ -27,17 +41,3 @@
 ## Done 标准（至少一条可验证）
 - 两测试 0 失败；真 PR 红/绿 run 号入 PR 正文；`pre-commit-check.sh` 12 组本地 exit 0。
 
-## 写集（机器可读；组 6 认领制判据）
-
-| 文件 | 类型 |
-|---|---|
-| `.gitea/workflows/local-gates.yml` | task |
-| `scripts/control-tower/resolve-ci-base.sh` | task |
-| `scripts/pre-commit-check.sh` | task |
-| `tests/control-tower/resolve-ci-base.test.sh` | task |
-| `tests/control-tower/doc-contract-ci-acceptance.test.sh` | task |
-| `gate-exemptions/2026-10-20-doc-contract-ci-598.md` | task |
-| `docs/synova/DOC-CONTRACT.md` | task |
-| `docs/authority/DOCS-REGISTRY.yaml` | task |
-| `.claude/task-briefs/2026-10-20-598-doc-contract-ci.md` | task |
-| `memory/notes/proposed/2026-10-20-doc-contract-ci.md` | task |
