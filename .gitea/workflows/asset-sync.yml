@@ -1,0 +1,139 @@
+# asset-sync.yml — 资产看板自动同步（push→local-main：ASSET-AUTO 段 ＋ #769 重建）· 任务 #776
+#
+# 目的（一句）: 让「资产覆盖」这件事在每次 local-main 前进后自动对账 —— 里程碑 M1–M10 的
+#   `<!-- ASSET-AUTO:BEGIN/END -->` 段与 #769 的「待归类」表由机器重写，人只写段外。
+#
+# 触发: `on: push: branches: [local-main]`（**有意不挂定时触发/cron**）。
+#   🔴 依据（dual-repo-sync.yml 头注实测教训）: Gitea 只登记**默认分支**上的定时任务，而本仓
+#      默认分支 = audit/k3-20260904-line1-desktop ≠ local-main ⇒ 定时键在 local-main 上
+#      **从不登记、从不点火**。配 cron 只会制造「配了=在跑」的假象 ⇒ 本件不配。
+#      真跑载体 = 本 workflow（push 腿）＋ 人工 `workflow_dispatch` 复跑（见下）。
+#      （判据「定时键名零命中」是对静态 grep 的，故本件连注释也不写该英文键名，统一写「定时触发」。）
+#
+# 三态退出码（判据源 = scripts/control-tower/asset-sync.py 头部契约，**本件不复述其语义**）:
+#   0 = 同步成功（或 changed=0 幂等）—— 唯一「绿」                        ⇒ job 绿
+#   1 = 真红（ASSET-MAP 解析失败／缺模块／catch-all／覆盖恒等式不成立／
+#            段外泄漏／API 4xx 明确拒绝）                                  ⇒ ::error + job 红
+#   2 = 降级（token 不可读／API 不可达／超时／里程碑无 marker／写失败）     ⇒ ::error + job 红
+#   🔴 **2 绝不等于通过**（三态铁律，scripts/control-tower/AGENTS.md）：降级只说明「没写成」，
+#      不说明「本来就该是这样」⇒ 本件把它翻成显式红，禁 `|| true`、禁伪装成功。
+#
+# 与 PR-1 脚本的接线（**禁双真源**）:
+#   · 判据与写面逻辑**全部**在 `scripts/control-tower/asset-sync.py`；本件只负责
+#     「取新树 → 定 prev/new → 调它 → 把退出码翻成可见信号」四件事，**不重复实现任何判据**。
+#   · token 只走既有文件通道（`SYNO_PUSH_GITEA_TOKEN_FILE`，缺省 /Users/wane/gitea/.win-push-token，
+#     与 scripts/control-tower/mirror-sync-push.sh:112-113 同一约定）⇒ 本件**不出现任何 token 值**。
+#   · API 基址走 `SYNO_PUSH_GITEA_API`；repo slug 走 `SYNO_PUSH_GITEA_REPO`
+#     （缺省 synova-agent/SynovaAgent ＝ mirror-sync-push.sh:112 同约定；**实测定稿脚本
+#     `asset-sync.py:277` 确以 `os.environ.get("SYNO_PUSH_GITEA_REPO", …)` 取值**，非写死）。
+#
+# 已知限制（如实标注，非「待办」）:
+#   1. **CTO 裁 277 限段**：本 workflow 调起的脚本**只改 M1–M10 描述里的 ASSET-AUTO 段 ＋ #769**；
+#      **不建卡**、不碰其它里程碑、不关验收卡。未知路径只进「待归类」桶与 #769。
+#      脚本虽有 `--open-x-cards` 开关（判据 6/8b 能力验证用），**本件有意不传**（默认关 = 裁 277 口径）。
+#   2. **前置未满足时它必须红**：M1–M10 缺 marker（A/X 初始化卡未完成）⇒ 脚本 rc=2（`code=NO_MARKER`）
+#      ⇒ 本 job 红。这是**设计如此**（宁红不猜），不是故障；修法在数据面（补 marker），不在本件。
+#   3. **同一次 push 内无互斥**：本件未用 `concurrency`（Gitea 版本兼容性未核），
+#      两次相邻 push 若重叠，写面是「最后写者胜」。脚本自身幂等（同 --prev/--new 二跑 changed=0），
+#      故风险限于 as_of 指针可能落后一次；**新增强制串行前须先核 Gitea 的 concurrency 支持**。
+#   4. **工作目录独立**（/Users/wane/.ci-work/SynovaAgent-assetsync）：同一次 push 会同时点
+#      local-gates 与 dual-repo-sync，三者共用 clone 会互相 checkout 覆盖 ⇒ 本件**必须**用第三个目录。
+#
+# 改坏确实红（本件的判别力自证路径，复核用）:
+#   ① 删掉任一 M1–M10 描述的 `<!-- ASSET-AUTO:BEGIN -->` ⇒ 脚本 rc=2（`code=NO_MARKER`，判据 8a）
+#      ⇒ job 红；
+#   ② 把 `branches: [local-main]` 改成 `[main]` ⇒ 本 workflow 不再点火（**这种「红」看不见**，
+#      故用第 ③ 条兜）；③ 本件末尾的「接线自检」step 断言脚本文件存在 ⇒ 脚本被挪走即红。
+#
+# 边界: 不改分支、不碰 scripts/audit/**、不写主树；只推 gitea。
+name: asset-sync
+on:
+  push:
+    branches: [local-main]
+  workflow_dispatch: # 仅供人工复跑（push 腿是真载体；不挂定时触发的理由见头注）
+permissions:
+  contents: read # 最小集：只读树（工作区用本机 clone，不用 token 拉取）
+  issues: write # #769 body 重建需要 PATCH /issues/769（裁 277 限段写面之一）
+jobs:
+  asset-sync:
+    runs-on: macos
+    timeout-minutes: 15
+    steps:
+      - name: 工作区（本机 Gitea 克隆 ＋ 强制取到目标提交；不用 actions/checkout）
+        run: |
+          set -e
+          # 🔴 独立目录（不得复用 /Users/wane/.ci-work/SynovaAgent 或 -dualrepo）：
+          #    同一次 push 会并发点火多个 job，共享 clone 会互相 checkout 覆盖（已知限制 4）。
+          WS=/Users/wane/.ci-work/SynovaAgent-assetsync
+          NEW_SHA="${{ github.sha }}"
+          if [ ! -d "$WS/.git" ]; then
+            mkdir -p "$(dirname "$WS")"
+            git clone -q http://127.0.0.1:3000/synova-agent/SynovaAgent.git "$WS"
+          fi
+          git -C "$WS" fetch -q origin || echo "::warning title=ASSET-SYNC::fetch 失败，改用本地已有对象判定"
+          # 🔴 写面 job 的硬要求：**树必须是目标提交**。取不到 ⇒ 宁可红，也不许拿陈旧树去写 Gitea。
+          if ! git -C "$WS" cat-file -e "${NEW_SHA}^{commit}" 2>/dev/null; then
+            echo "::error title=ASSET-SYNC::工作区不含目标提交 ${NEW_SHA}（fetch 失败／远端滞后）—— 不写、不猜"
+            exit 2
+          fi
+          git -C "$WS" checkout -q -f "$NEW_SHA"
+          echo "HEAD=$(git -C "$WS" rev-parse --short HEAD)（目标 $NEW_SHA）"
+
+      - name: 接线自检（脚本在位 ＋ python3 可用；缺一环 ⇒ 红，禁空跑成绿）
+        run: |
+          set -e
+          cd /Users/wane/.ci-work/SynovaAgent-assetsync
+          # 判别力自检（`.gitea/AGENTS.md` 红线：信号量 == 0 ⇒ 不当作「没问题」）
+          if [ ! -f scripts/control-tower/asset-sync.py ]; then
+            echo "::error title=ASSET-SYNC::脚本缺失 scripts/control-tower/asset-sync.py（PR-1 未合入？）—— 本 workflow 无对象可跑"
+            exit 2
+          fi
+          command -v python3 >/dev/null 2>&1 || { echo "::error title=ASSET-SYNC::python3 不可用"; exit 2; }
+          echo "✅ 接线在位：scripts/control-tower/asset-sync.py ＋ $(python3 -V 2>&1)"
+
+      - name: 资产同步（M1–M10 ASSET-AUTO 段 ＋ #769；三态）
+        run: |
+          set +e
+          cd /Users/wane/.ci-work/SynovaAgent-assetsync
+          NEW_SHA="${{ github.sha }}"
+          BEFORE="${{ github.event.before }}"
+          # before 语义（契约）: push 的旧 tip；全 0 哨兵（新分支/首次推送）= 40 个 0 ⇒ 回退 HEAD^。
+          # 🔴 哨兵值用 printf 生成而不是写 40 个 0 的字面量：既让「全 0」这件事可读，
+          #    也避免本文件里出现一段 40 位十六进制串 —— 静态扫描（token 明文检查）不该被哨兵误报。
+          ZERO40="$(printf '%040d' 0)"
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "$ZERO40" ]; then
+            BEFORE="$(git rev-parse HEAD^)" || {
+              echo "::error title=ASSET-SYNC::before 为全 0 且 HEAD^ 不可解析（浅克隆？）—— 不写、不猜"; exit 2; }
+            echo "before 为全 0（首次推送）⇒ 回退 HEAD^ = $BEFORE"
+          fi
+          if ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            echo "::error title=ASSET-SYNC::before $BEFORE 不在本工作区（历史被裁剪？）—— 不写、不猜"
+            exit 2
+          fi
+          echo "同步区间: $BEFORE..$NEW_SHA"
+          # 判据/写面逻辑全部在脚本内（禁双真源）；本件只给 env 与参数。
+          # token 只给**文件路径**，值由脚本读文件（不入日志、不入本文件）。
+          SYNO_PUSH_GITEA_TOKEN_FILE="${SYNO_PUSH_GITEA_TOKEN_FILE:-/Users/wane/gitea/.win-push-token}" \
+          SYNO_PUSH_GITEA_REPO="${SYNO_PUSH_GITEA_REPO:-synova-agent/SynovaAgent}" \
+          SYNO_PUSH_GITEA_API="${SYNO_PUSH_GITEA_API:-http://127.0.0.1:3000/api/v1}" \
+            python3 scripts/control-tower/asset-sync.py \
+              --prev "$BEFORE" --new "$NEW_SHA" --rebuild-769
+          rc=$?
+          set -e
+          case "$rc" in
+            0)
+              echo "✅ 资产同步成功（若本次无差异则为 changed=0 幂等）"
+              ;;
+            1)
+              echo "::error title=ASSET-SYNC::真红（rc=1）— ASSET-MAP 解析/缺模块/catch-all/覆盖恒等式/段外泄漏/API 明确拒绝；见上方逐项输出。禁重跑掩盖"
+              exit 1
+              ;;
+            2)
+              echo "::error title=ASSET-SYNC::降级（rc=2）— token 不可读/API 不可达/超时/里程碑无 ASSET-AUTO marker/写失败。**rc=2 不是通过**：本次未写成"
+              exit 2
+              ;;
+            *)
+              echo "::error title=ASSET-SYNC::未知退出码 rc=$rc（契约只定义 0/1/2）"
+              exit "$rc"
+              ;;
+          esac

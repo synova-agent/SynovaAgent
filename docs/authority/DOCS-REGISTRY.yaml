@@ -773,3 +773,11 @@ documents:
     status: active
     owner: P6
     note: "#776 PR-1 受保护路径豁免（ASSET-MAP/asset-sync.py/测试/DOCS 登记）；裁 277。"
+
+  # ---- P6 2026-10-21：#776 资产同步 PR-2 workflow 独立送审豁免件 ----
+  - id: DOC-0236
+    type: decision
+    path: gate-exemptions/2026-10-21-776-asset-sync-workflow.md
+    status: active
+    owner: P6
+    note: "#776 PR-2 .gitea/workflows/asset-sync.yml（push→local-main 自动同步 ASSET-AUTO 段＋#769）的受保护路径豁免；独立送审＋裁 277 限段。"
