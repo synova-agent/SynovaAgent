@@ -676,3 +676,35 @@ documents:
       status: active
       owner: CTO
       note: "#665e 夹具需要 tsx（组 13）——ci.yml 装 tsx＋夹具 SYNO_TSX 注入的豁免；裁 223。"
+
+  # ---- CTO 2026-10-20：本体层规范 v2.11 定稿存档（裁 227/229）----
+  - id: DOC-0224
+    type: architecture
+    path: docs/specs/ontology/本体层规范-v2.11.md
+    status: active
+    owner: CTO
+    note: "② 本体层执行规范（目标态）定稿镜像；权威源在院方；8 项技术决策＋9 处必改＋C1–C3 勘误已落。"
+
+  # ---- CTO 2026-10-20：产品宪章 v8.3 镜像存档（取代 v8.1 镜像）----
+  - id: DOC-0225
+    type: prd
+    path: docs/synova/产品宪章-v8.3-镜像.md
+    status: active
+    owner: CTO
+    note: "产品宪章 v8.3（2026-10-20 定稿获签）双端镜像；取代 docs/synova/产品宪章-v8.1-镜像.md（已标 superseded）。"
+
+  # ---- CTO 2026-10-20：存档豁免件（D2 登记）----
+  - id: DOC-0226
+    type: decision
+    path: gate-exemptions/2026-10-20-ontology-spec-archive.md
+    status: active
+    owner: CTO
+    note: "本体层规范 v2.11 ＋宪章 v8.3 镜像存档的受保护路径豁免（DOCS-REGISTRY ＋ 自覆盖）。"
+
+  # ---- CTO 2026-10-20：入口件/技能补本体层规范锚（口径盘点）----
+  - id: DOC-0227
+    type: decision
+    path: gate-exemptions/2026-10-20-p1-anchor-inventory.md
+    status: active
+    owner: CTO
+    note: "口径盘点：AGENTS.md 增两镜像路径；cto-handover skill 补本体层规范 v2.11 锚（.claude/.dsh 同源）。"
