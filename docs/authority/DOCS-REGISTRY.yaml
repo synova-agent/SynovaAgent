@@ -757,3 +757,11 @@ documents:
     status: active
     owner: P6
     note: "#776 资产同步的文件级映射单一源（MVP v1.2 §三写集种子＋X 显式根）；禁 catch-all（载入断言）。"
+
+  # ---- CTO 2026-10-21：P1 写集按裁 225 扩项（裁 274）----
+  - id: DOC-0234
+    type: decision
+    path: gate-exemptions/2026-10-21-p1-m9-writeset.md
+    status: active
+    owner: CTO
+    note: "P1 守则 §四 写集扩为 tests/acceptance/**（仅新增）的受保护路径豁免。"
