@@ -708,3 +708,11 @@ documents:
     status: active
     owner: CTO
     note: "口径盘点：AGENTS.md 增两镜像路径；cto-handover skill 补本体层规范 v2.11 锚（.claude/.dsh 同源）。"
+
+    # ---- P4 2026-10-20：#739④ 夹具工具链豁免（D2 登记）----
+    - id: DOC-0228
+      type: decision
+      path: gate-exemptions/2026-10-20-fixture-toolchain-739.md
+      status: active
+      owner: CTO
+      note: "#739④ 夹具工具链单一来源＋@requires 声明＋依赖核对（缺依赖报名字）的豁免；裁 223。"
