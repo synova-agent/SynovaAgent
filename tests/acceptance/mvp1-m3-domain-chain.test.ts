@@ -244,8 +244,11 @@ describe('#656 M3 · 领域链贯通（真哨兵 → 时序 → 趋势 → 循�
     expect(typeof verifyEffect).toBe('function');
     expect(typeof transitionGoal).toBe('function');
     const src = readFileSync(join(repoRoot, 'src/growth/goal-lifecycle.ts'), 'utf-8');
-    expect(src, '@deprecated 标记应在场（去掉 ⇒ 必红）').toContain('@deprecated');
-    expect(src, '#1010 接入点指针应在场（去掉 ⇒ 必红）').toContain('#1010');
+    // 只认**文件头注释块**（前 20 行）且必须是独立 JSDoc 标注行（`* @deprecated`）——
+    // 正文引用（如处置说明里提到"@deprecated 标注"）不算标记；去掉头部标注 ⇒ 必红
+    const header = src.split('\n').slice(0, 20).join('\n');
+    expect(header.match(/^\s*\*\s+@deprecated/m), '@deprecated 应为文件头 JSDoc 标注（去掉 ⇒ 必红）').not.toBeNull();
+    expect(header, '#1010 接入点指针应在文件头（去掉 ⇒ 必红）').toContain('#1010');
     // src/ 零调用点：全 src 扫描，除模块自身外不得 import goal-lifecycle
     const offenders: string[] = [];
     const walk = (dir: string): void => {
