@@ -1,0 +1,16 @@
+writeset:
+  - .claude/claims/703.yaml
+  - .claude/task-briefs/2026-10-20-703-m5-port.md
+  - src/mcp/index.ts
+  - tests/mcp/server-smoke.test.ts
+  - src/runtime/port.ts
+  - src/runtime/impl/real.ts
+  - src/runtime/impl/stub.ts
+  - src/runtime/README.md
+  - tests/runtime/port.test.ts
+  - tests/runtime/impl/real.test.ts
+  - tests/runtime/impl/stub.test.ts
+done:
+  - verify: npx vitest run tests/runtime/
+  - verify: npx tsc --noEmit
+note: 卡2 端口面（#703）；两 Provider 同套断言；RuntimePortError 在 src/mcp/index.ts 被 instanceof 消费（组 4a）。
