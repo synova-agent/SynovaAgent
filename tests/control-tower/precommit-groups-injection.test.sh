@@ -27,6 +27,10 @@
 #   不按 1..13 循环，避免把不存在的组 11 当失败。
 #
 # ═══ 隔离（hermetic）═══
+#   🔴 #665b（裁 223）: 子进程一律 `env -i` **白名单**（PATH/HOME/LANG/TMPDIR + 门禁三件套），
+#      不继承外层 CI 环境（CI / GITHUB_EVENT_NAME / GITHUB_* …）—— 否则门禁某些组走 strict
+#      分支 ⇒ 同一夹具"脱外层绿、带外层红"（不可复现）。白名单而非黑名单：GITHUB_* 消费点 300+。
+#      判据⑥：外层带 CI 环境跑本夹具，结果必须与干净环境逐字一致（EXIT/red_confirmed/baseline）。
 #   全部注入只发生在 `mktemp -d` 副本里（git clone 副本 + reset --hard/clean -fdx 复位）。
 #   源工作树只读：夹具不写源工作树任何文件（收尾断言物理证明）。禁用 `timeout` 命令
 #   （本机实测 `bash: timeout: command not found`）——需要限时用外层调度，或按本夹具做法
@@ -152,6 +156,18 @@ if ! command -v python >/dev/null 2>&1; then
   echo "[ENV] 无此 shim 时组 9 在本机恒假绿（pre-commit-check.sh L1099 用 python -c）—— 已单独记录为实测发现"
   echo ""
 fi
+
+
+# ── #665b: hermetic 运行（env -i 白名单）──
+#   外层 CI 环境（CI / GITHUB_EVENT_NAME / GITHUB_* …）会让门禁某些组走 strict 分支
+#   ⇒ 在干净副本上失败（实测：带外层 CI 环境跑本夹具 ⇒ BASELINE_FAIL）。
+#   env -i（白名单）而非 env -u（黑名单）：黑名单永远列不全（实测 GITHUB_* 有 300+ 处消费）。
+_run_gate_env() { # <out> [<gate-env>...]
+  local out="$1"; shift
+  ( cd "$CLONE" && env -i \
+      PATH="$PATH" HOME="${HOME:-/tmp}" LANG="${LANG:-C.UTF-8}" TMPDIR="${TMPDIR:-/tmp}" \
+      "$@" bash scripts/pre-commit-check.sh ) >"$out" 2>&1
+}
 
 # ── 副本 ──
 if [ "$BRANCH" = "HEAD" ]; then
@@ -480,7 +496,7 @@ run_scenario() {
   staged_mark="$(git -C "$CLONE" diff --cached | grep -c "$MARK" || true)"
   staged_mark="${staged_mark//[^0-9]/}"
   t1=$SECONDS
-  ( cd "$CLONE" && GITHUB_ACTIONS=true SYNO_CI=1 SYNO_FIXTURE_MODE=1 bash scripts/pre-commit-check.sh ) >"$out" 2>&1
+  _run_gate_env "$out" GITHUB_ACTIONS=true SYNO_CI=1 SYNO_FIXTURE_MODE=1
   rc=$?
   t2=$SECONDS
 
@@ -611,7 +627,7 @@ git -C "$CLONE" add scripts/d1148-decl-probe.sh
 # 卡 #1423: 本场景测的是 **legacy 三闸**（brief 载体）语义 ⇒ 必须**显式回滚**（SYNO_CLAIM_V2=0）。
 #   否则 claim-first 默认生效时，resolver 会按分支 issue 取到副本里的真 claim ⇒ 注入的探针 brief
 #   根本不进判定 ⇒ 三闸不点火（假红形态 = 判据被绕过，不是闸坏）。
-( cd "$CLONE" && GITHUB_ACTIONS=true SYNO_CI=1 SYNO_FIXTURE_MODE=1 SYNO_CLAIM_V2=0 bash scripts/pre-commit-check.sh ) >"$TMP/out.d1148.log" 2>&1
+_run_gate_env "$TMP/out.d1148.log" GITHUB_ACTIONS=true SYNO_CI=1 SYNO_FIXTURE_MODE=1 SYNO_CLAIM_V2=0
 DECL_RC=$?
 DECL_FAILS="$(strip_ansi < "$TMP/out.d1148.log" | grep '❌' | sed 's/^[[:space:]]*//' || true)"
 DECL_MISS=""
@@ -672,7 +688,7 @@ EOF
 chmod +x "$CLONE/scripts/d1148-excl-probe.sh"
 git -C "$CLONE" add scripts/d1148-excl-probe.sh
 # 卡 #1423: 同上 —— 本场景测 legacy 闸②（排除项子判据）⇒ 显式回滚态。
-( cd "$CLONE" && GITHUB_ACTIONS=true SYNO_CI=1 SYNO_FIXTURE_MODE=1 SYNO_CLAIM_V2=0 bash scripts/pre-commit-check.sh ) >"$TMP/out.d1148-excl.log" 2>&1
+_run_gate_env "$TMP/out.d1148-excl.log" GITHUB_ACTIONS=true SYNO_CI=1 SYNO_FIXTURE_MODE=1 SYNO_CLAIM_V2=0
 EXCL_RC=$?
 EXCL_FAILS="$(strip_ansi < "$TMP/out.d1148-excl.log" | grep '❌' | sed 's/^[[:space:]]*//' || true)"
 if [ "$EXCL_RC" -eq 1 ] && printf '%s\n' "$EXCL_FAILS" | grep -q '声明闸②' \
@@ -708,7 +724,7 @@ git -C "$CLONE" checkout -q --detach "$_SIDE_ORIG"
 git -C "$CLONE" -c user.name=t -c user.email=t@t merge --no-commit --no-ff -q d1148-side
 MERGE_HEAD_PRESENT=0
 [ -n "$(git -C "$CLONE" rev-parse -q --verify MERGE_HEAD 2>/dev/null || true)" ] && MERGE_HEAD_PRESENT=1
-( cd "$CLONE" && GITHUB_ACTIONS=true SYNO_CI=1 SYNO_FIXTURE_MODE=1 bash scripts/pre-commit-check.sh ) >"$TMP/out.d1148-merge.log" 2>&1
+_run_gate_env "$TMP/out.d1148-merge.log" GITHUB_ACTIONS=true SYNO_CI=1 SYNO_FIXTURE_MODE=1
 MERGE_RC=$?
 MERGE_SKIP_LINE="$(strip_ansi < "$TMP/out.d1148-merge.log" | grep '声明类三闸：合并提交且无自撰文件' || true)"
 if [ "$MERGE_HEAD_PRESENT" -eq 1 ] && [ "$MERGE_RC" -eq 0 ] && [ -n "$MERGE_SKIP_LINE" ]; then
@@ -778,7 +794,7 @@ FIXTURE_MODE_STATUS="OK"; D1193_REGRESSION_STATUS="OK"; NO_MARKER_NOTRED=0
 BASE_SHA="$(git -C "$CLONE" rev-parse HEAD 2>/dev/null || echo '')"
 # ② 带 base 的基线
 if [ -n "$BASE_SHA" ]; then
-  ( cd "$CLONE" && GITHUB_ACTIONS=true SYNO_CI=1 SYNO_FIXTURE_MODE=1 SYNO_DIFF_BASE="$BASE_SHA" bash scripts/pre-commit-check.sh ) >"$TMP/out.base-with-diffbase.log" 2>&1
+  _run_gate_env "$TMP/out.base-with-diffbase.log" GITHUB_ACTIONS=true SYNO_CI=1 SYNO_FIXTURE_MODE=1 SYNO_DIFF_BASE="$BASE_SHA"
   rc_b=$?
   if [ "$rc_b" -eq 2 ] || grep -q 'CI 无 base（fail-closed' "$TMP/out.base-with-diffbase.log"; then
     FIXTURE_MODE_STATUS="FAIL"
@@ -793,7 +809,7 @@ fi
 for _nm in g1 g2 g7 g12; do
   reset_clone
   "inj_$_nm"
-  ( cd "$CLONE" && env -u SYNO_FIXTURE_MODE GITHUB_ACTIONS=true SYNO_CI=1 bash scripts/pre-commit-check.sh ) >"$TMP/out.nomarker.$_nm.log" 2>&1
+  _run_gate_env "$TMP/out.nomarker.$_nm.log" GITHUB_ACTIONS=true SYNO_CI=1
   rc_n=$?
   _label=""; case "$_nm" in g1) _label="── 组 1";; g2) _label="── 组 2";; g7) _label="── 组 7";; g12) _label="── 组 12";; esac
   if [ "$rc_n" -eq 1 ] && grep -q 'CI 无 base（fail-closed' "$TMP/out.nomarker.$_nm.log"; then

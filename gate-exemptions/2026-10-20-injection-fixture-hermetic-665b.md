@@ -1,0 +1,3 @@
+- tests/control-tower/precommit-groups-injection.test.sh — #665b env -i 白名单（hermetic）＋判据⑥＋三反例 — 裁 223
+- gate-exemptions/2026-10-20-injection-fixture-hermetic-665b.md — 本豁免文件（gate-exemptions 自我保护） — 裁 223
+- docs/authority/DOCS-REGISTRY.yaml — #665b 登记本豁免文件（D2 登记门禁） — 裁 223

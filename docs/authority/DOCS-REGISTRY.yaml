@@ -644,3 +644,11 @@ documents:
       status: active
       owner: CTO
       note: "#665 夹具显式 SYNO_FIXTURE_MODE 豁免 D1193 fail-loud（真实 CI 不回退）的豁免；裁 223。"
+
+    # ---- P4 2026-10-20：#665b 注入夹具 hermetic 豁免（D2 登记）----
+    - id: DOC-0220
+      type: decision
+      path: gate-exemptions/2026-10-20-injection-fixture-hermetic-665b.md
+      status: active
+      owner: CTO
+      note: "#665b 注入夹具 env -i 白名单（外层 CI 环境隔离）的豁免；裁 223。"
