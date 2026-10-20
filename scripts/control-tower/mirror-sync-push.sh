@@ -34,7 +34,8 @@ export LC_ALL=C.UTF-8 2>/dev/null   # swallow-ok: locale 不可用时回退默�
 #             SYNO_PUSH_MIRROR_REMOTE       镜像远端名（缺省 mirror；门禁 0-2 认这个名字）
 #             SYNO_PUSH_GITHUB_SHA          注入缝（测试）：直接给定 GitHub main sha
 #             SYNO_PUSH_SSH_CMD             推送用 SSH 命令（缺省 deploy key）
-#             SYNO_PUSH_WATCH_CI            auto|off（缺省 auto）：推后观察 GitHub 集成测试
+#             SYNO_PUSH_WATCH_CI            auto|off（缺省 auto）：推后/一致时都观察 GitHub 集成测试
+#                                           （一致时也看：镜像停在旧 sha 但 CI 红，同样必须可见）
 #             SYNO_PUSH_GH_REPO             GitHub 仓库全名（缺省 synova-agent/SynovaAgent）
 #             SYNO_PUSH_CI_TIMEOUT          等 CI 的最长秒数（缺省 900）
 #             SYNO_PUSH_CI_INTERVAL         轮询间隔秒（缺省 20）
@@ -417,7 +418,13 @@ is_sha "$GITEA_SHA" || finish 2 DEGRADED E_PROBE_DEGRADED fail
 is_sha "$GH_SHA"    || finish 2 DEGRADED E_PROBE_DEGRADED fail
 
 case "$PROBE_RC" in
-  0) finish 0 NOOP "" recover ;;                            # 判据①：一致 ⇒ 不推
+  0)                                                        # 判据①：一致 ⇒ 不推；但**镜像侧 CI 也要核**
+     ci_watch "$GITEA_SHA"
+     case "$CI_RESULT" in
+       green|off) finish 0 NOOP "" recover ;;
+       red)       finish 2 MIRROR_CI_RED "镜像已就位但 GitHub CI 红：$CI_DETAIL" fail ;;
+       *)         finish 2 MIRROR_CI_UNKNOWN "$CI_DETAIL" fail ;;
+     esac ;;
   1) : ;;                                                   # 落后或分叉 ⇒ 下面分流
   *) finish 2 DEGRADED E_PROBE_DEGRADED fail ;;
 esac
