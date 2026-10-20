@@ -70,6 +70,12 @@ export LC_ALL=C.UTF-8 2>/dev/null   # swallow-ok: locale 不可用时回退默�
 # ═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
 
+# D520 清单第 1 条：禁裸 python3（Windows 只有 python/py -3；损坏 shim 要探可用性）
+PYBIN=""
+for _c in python3 python py; do   # PYBIN 探测器自身（D520 清单第 1 条），非调用
+  command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1 && PYBIN="$_c" && break
+done
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROBE="$SCRIPT_DIR/check-dual-repo-sync.sh"
 GATE="$SCRIPT_DIR/../pre-push-check.sh"
@@ -107,7 +113,7 @@ GITEA_SHA=""; GH_SHA=""; LAG=""; ANCESTOR=""; PUSHED_SHA=""; VERDICT=""; SIGNAL_
 say()     { [ "$JSON_ONLY" = "1" ] && return 0; echo "$*"; }
 say_err() { echo "$*" >&2; }
 
-_json() { python3 -c 'import json,sys; print(json.dumps(sys.argv[1], ensure_ascii=False))' "$1" 2>/dev/null || printf '"%s"' "$1"; }
+_json() { "$PYBIN" -c 'import json,sys; print(json.dumps(sys.argv[1], ensure_ascii=False))' "$1" 2>/dev/null || printf '"%s"' "$1"; }
 
 write_json() {  # $1=exit $2=verdict $3=reason
   local rc="$1" verdict="$2" reason="${3:-}"
@@ -139,7 +145,7 @@ _signal_payload() {  # $1=kind $2=verdict $3=reason
   SYNO_SF_REASON="$reason" SYNO_SF_ASOF="$AS_OF" SYNO_SF_GITEA="${GITEA_SHA:-}" \
   SYNO_SF_GITHUB="${GH_SHA:-}" SYNO_SF_LAG="${LAG:-}" SYNO_SF_PUSHED="${PUSHED_SHA:-}" \
   SYNO_SF_RUN="${SYNO_PUSH_RUN_URL:-}" \
-  python3 - <<'PY'
+  "$PYBIN" - <<'PY'
 import json,os
 e=os.environ
 p={k:(e.get("SYNO_SF_"+k.upper(),"") or "") for k in ("title","kind","verdict","reason","asof","gitea","github","lag","pushed","run")}
@@ -152,7 +158,7 @@ list_open_issue_no() {  # $1=token → stdout: 同名失败单号（可能为空
   raw="$(curl -fsS --max-time 15 -H "Authorization: token $tok" \
       "$GITEA_API/repos/$GITEA_REPO/issues?state=open&limit=50" 2>/dev/null || true)"   # swallow-ok: 读不到 ⇒ 空 ⇒ 调用方走新建分支
   [ -n "$raw" ] || return 0
-  printf '%s' "$raw" | SYNO_ISSUE_TITLE="$ISSUE_TITLE" python3 -c '
+  printf '%s' "$raw" | SYNO_ISSUE_TITLE="$ISSUE_TITLE" "$PYBIN" -c '
 import json,sys,os
 try: arr=json.load(sys.stdin)
 except Exception: raise SystemExit(0)
@@ -179,7 +185,7 @@ signal_fail() {  # $1=code $2=verdict $3=reason
   body="$(SYNO_SB_TITLE="$ISSUE_TITLE" SYNO_SB_VERDICT="$verdict" SYNO_SB_REASON="$reason" \
     SYNO_SB_ASOF="$AS_OF" SYNO_SB_GITEA="${GITEA_SHA:-}" SYNO_SB_GITHUB="${GH_SHA:-}" \
     SYNO_SB_LAG="${LAG:-}" SYNO_SB_PUSHED="${PUSHED_SHA:-}" SYNO_SB_RUN="${SYNO_PUSH_RUN_URL:-}" \
-    python3 - <<'PY'
+    "$PYBIN" - <<'PY'
 import json,os
 e=os.environ
 md=f"""自动镜像同步失败（由 `mirror-sync-push.sh` 每趟自动开/评单）。
@@ -260,13 +266,13 @@ finish() {  # $1=exit $2=verdict $3=reason $4=fail|recover|""
 }
 
 is_sha() { printf '%s' "$1" | grep -qE '^[0-9a-f]{40}$'; }
-jq_py()  { python3 -c "import json,sys; d=json.load(sys.stdin); $1" 2>/dev/null || true; }   # swallow-ok: 解析失败 ⇒ 空 ⇒ 下方 sha 形态自检判降级（不静默）
+jq_py()  { "$PYBIN" -c "import json,sys; d=json.load(sys.stdin); $1" 2>/dev/null || true; }   # swallow-ok: 解析失败 ⇒ 空 ⇒ 下方 sha 形态自检判降级（不静默）
 
 # ── 0. 前置 ───────────────────────────────────────────────────────────────────
 [ -e "$REPO/.git" ] || git -C "$REPO" rev-parse --git-dir >/dev/null 2>&1 || finish 2 DEGRADED E_REPO_MISSING fail
 [ -f "$PROBE" ] || finish 2 DEGRADED E_PROBE_MISSING fail
 [ -f "$GATE" ]  || finish 2 DEGRADED E_GATE_MISSING fail
-command -v python3 >/dev/null 2>&1 || finish 2 DEGRADED E_PROBE_DEGRADED fail
+[ -n "$PYBIN" ] || finish 2 DEGRADED E_NO_PYTHON fail   # 铁律 11：显式降级，不静默
 
 # ── 1. 对账（唯一判据源：探针；远端真值，不读本地同名分支指针）─────────────────
 PROBE_JSON="$(SYNO_SYNC_REPO="$REPO" SYNO_SYNC_GITEA_URL="$GITEA_URL" SYNO_SYNC_GITEA_REF="$GITEA_REF" \
