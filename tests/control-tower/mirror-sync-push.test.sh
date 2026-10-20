@@ -37,13 +37,13 @@ fail() { FAIL=$((FAIL + 1)); echo "  ❌ $1" >&2; }
 chk()  { if eval "$1"; then echo "      · ok: $2"; else echo "      · RED: $2"; CASE_FAIL=$((CASE_FAIL + 1)); fi; }
 
 TMPROOT="$(mktemp -d)"; trap 'rm -rf "$TMPROOT"' EXIT
-FX=""; WORK=""; GITEA=""; MIRROR=""; SIG=""; OUT=""; A1=""; A2=""; RC=""; RC1=""; RC2=""; VERDICT=""; O1=""; BASE_N=""
+FX=""; WORK=""; GITEA=""; MIRROR=""; SIG=""; OUT=""; A1=""; A2=""; RC=""; RC1=""; RC2=""; RC9=""; VERDICT=""; O1=""; BASE_N=""
 
 # ── 夹具：work（工作仓）+ gitea.git + mirror.git；产 A1/A2 两提交 ────────────────
 new_fixture() {  # $1=名字；默认 Gitea local-main=A1、GitHub main=A1（一致）
   local n="$1"
   FX="$(mktemp -d "$TMPROOT/${n}.XXXXXX")"
-  WORK="$FX/work"; GITEA="$FX/gitea.git"; MIRROR="$FX/mirror.git"; SIG="$FX/signals.log"; OUT="$FX/out.json"
+  WORK="$FX/work"; GITEA="$FX/gitea.git"; MIRROR="$FX/mirror.git"; SIG="$FX/signals.log"; ST="$FX/status.log"; OUT="$FX/out.json"
   git init -q --bare "$GITEA"; git init -q --bare "$MIRROR"; git init -q "$WORK"
   git -C "$WORK" config user.email "t@local"; git -C "$WORK" config user.name "t"
   git -C "$WORK" config commit.gpgsign false
@@ -52,14 +52,14 @@ new_fixture() {  # $1=名字；默认 Gitea local-main=A1、GitHub main=A1（一
   git -C "$WORK" remote add gitea "$GITEA"; git -C "$WORK" remote add mirror "$MIRROR"
   git -C "$WORK" push -q gitea "$A1:refs/heads/local-main"
   git -C "$WORK" push -q mirror "$A1:refs/heads/main"
-  : > "$SIG"
+  : > "$SIG"; : > "$ST"
 }
 
 # 统一跑法：信号走注入命令（零网络）；其余全用夹具
 run_sut() {  # $1=github_sha  [$2..=额外环境赋值]  → stdout: 退出码
   local gh="$1"; shift || true
   ( cd "$WORK" && env SYNO_PUSH_REPO="$WORK" SYNO_PUSH_GITEA_URL="$GITEA" \
-      SYNO_PUSH_GITHUB_SHA="$gh" SYNO_PUSH_SIGNAL_CMD="cat >> $SIG" \
+      SYNO_PUSH_GITHUB_SHA="$gh" SYNO_PUSH_SIGNAL_CMD="cat >> $SIG" SYNO_PUSH_STATUS_CMD="cat >> $ST" \
       SYNO_PUSH_VERIFY_TRIES=1 SYNO_PUSH_VERIFY_INTERVAL=0 SYNO_PUSH_OUT="$OUT" "$@" \
       bash "$SUT" --json ) >"$FX/stdout.txt" 2>"$FX/stderr.txt"
   echo $?
@@ -74,11 +74,13 @@ sig_fail_n()  { grep -c '"kind": "failure"' "$SIG" 2>/dev/null || true; }
 # ── 每条的断言（变异体复用同一套 ⇒ 改坏必红有判别力）──────────────────────────
 c1() { chk '[ "$RC" = 0 ]' 'exit 0'; chk '[ "$VERDICT" = NOOP ]' 'verdict=NOOP'
        chk '[ "$(mirror_main)" = "$A1" ]' '远端 main 未被改动'
-       chk '[ "$(sig_fail_n)" = 0 ]' '无失败信号（允许 recovery 关单）'; }
+       chk '[ "$(sig_fail_n)" = 0 ]' '无失败信号（允许 recovery 关单）'
+       chk 'grep -q "\"verdict\": \"NOOP\"" "$ST" 2>/dev/null' '状态单已留一行（B 层，verdict=NOOP）'; }
 c2() { chk '[ "$RC" = 0 ]' 'exit 0'; chk '[ "$VERDICT" = PUSHED ]' 'verdict=PUSHED'
        chk '[ "$(mirror_main)" = "$A2" ]' '远端 main == 被推 sha'
        chk 'grep -q ALLOW "$WORK/.claude/mirror-sync.log" 2>/dev/null' '门禁 0-2 留痕 ALLOW'
-       chk '[ "$(field_of "$OUT" lag)" = 1 ]' 'JSON lag=1'; }
+       chk '[ "$(field_of "$OUT" lag)" = 1 ]' 'JSON lag=1'
+       chk 'grep -q "\"verdict\": \"PUSHED\"" "$ST" 2>/dev/null' '状态单已留一行（verdict=PUSHED）'; }
 c3() { chk '[ "$RC" = 1 ]' 'exit 1'; chk '[ "$VERDICT" = FORK ]' 'verdict=FORK'
        chk '[ "$(mirror_main)" = "$O1" ]' '远端 main 未被覆盖'
        chk '[ "$(git -C "$WORK" rev-list --count --all)" = "$BASE_N" ]' '未新增 merge 提交'
@@ -86,6 +88,8 @@ c3() { chk '[ "$RC" = 1 ]' 'exit 1'; chk '[ "$VERDICT" = FORK ]' 'verdict=FORK'
 c4() { chk '[ "$RC" = 2 ]' 'exit 2（降级 ≠ 通过）'; chk '[ "$VERDICT" = VERIFY_MISMATCH ]' 'verdict=VERIFY_MISMATCH'
        chk '[ "$(field_of "$OUT" degraded)" = True ]' 'JSON degraded=true'
        chk 'sig_has VERIFY_MISMATCH' '降级已出信号（判据⑤）'; }
+c9() { chk '[ "$RC9" = 0 ]' '状态单写失败不改结论（仍 exit 0）'
+       chk 'grep -q "STATUS-UNREACHABLE" "$FX/stderr.txt" 2>/dev/null' '写失败有显式 STATUS-UNREACHABLE 行（不静默）'; }
 c8() { chk '[ "$RC" = 2 ]' 'exit 2'; chk '[ "$VERDICT" = DEGRADED ]' 'verdict=DEGRADED'
        chk '[ "$(field_of "$OUT" degraded)" = True ]' 'JSON degraded=true'
        chk 'sig_has DEGRADED' '降级已出信号'; }
@@ -118,6 +122,7 @@ setup4() { new_fixture "c4"; git -C "$WORK" push -q gitea "$A2:refs/heads/local-
            RC="$(run_sut "$A1" SYNO_PUSH_TEST_AFTER_PUSH="git -C $MIRROR update-ref refs/heads/main $A1")"
            VERDICT="$(verdict_of "$OUT")"; }
 setup5() { new_fixture "c5"; RC1="$(run_sut "deadbeef")"; RC2="$(run_sut "$A1")"; }
+setup9() { new_fixture "c9"; RC9="$(run_sut "$A1" SYNO_PUSH_STATUS_CMD=false)"; }
 setup8() { new_fixture "c8"; RC="$(run_sut "deadbeef")"; VERDICT="$(verdict_of "$OUT")"; }
 
 echo "── ① 落后=0 ⇒ 不推、exit 0 ──"
@@ -134,6 +139,9 @@ setup4; assert_case c4 "④ 核 SHA 不等 ⇒ exit 2 且出信号"
 
 echo "── ⑤ 失败必出声 ＋ 恢复要关单（同一夹具：先降级再恢复）──"
 setup5; assert_case c5 "⑤ 降级必出声、恢复必出声（否则历史单永不关闭）"
+
+echo "── 状态单容错（B 层写不出去，也不许污染结论、不许静默）──"
+setup9; assert_case c9 "状态单写失败 ⇒ 仍 exit 0，且有 STATUS-UNREACHABLE 显式行"
 
 echo "── ⑥ 触发器（本测试只核脚本侧；launchd 侧见现场命令）──"
 grep -q "SYNO_PUSH_VERIFY_TRIES" "$SUT" && pass "⑥ 执行器可被每日任务直接调用（无可交互等待）" || fail "⑥ 执行器缺可调用契约"
