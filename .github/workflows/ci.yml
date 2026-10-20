@@ -1115,9 +1115,9 @@ jobs:
   gate-integrity:
     # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-10-02T12:45:00+08:00；
     # 公式 = max(P95×1.5, 中位数×3)）：audit 1 / Test-Kit(ubuntu) 1 / Golden Case 2 /
-    # Gate Integrity 2 / Test-Kit(windows) 3 / Architecture 6 / Checker Review 6 /
+    # Gate Integrity 2 / Test-Kit(windows) 3 / Architecture 6 / Checker Review 6 /（#665e 改 10：夹具需先装 tsx）
     # Integration 6 / TypeScript+Iron Laws 7 / Vitest 8 / Control Tower(ubuntu) 14 / (windows) 106（D1109 后**未重取**：口径要 n=12 同分布样本，现 n=1）。
-    timeout-minutes: 2
+    timeout-minutes: 10
     name: Gate Integrity (pattern sentinel + injection fixture + ci-reds)
     runs-on: ubuntu-latest
     steps:
@@ -1175,6 +1175,13 @@ jobs:
         if: steps.docsonly.outputs.docs_only != 'true'
         run: bash scripts/control-tower/check-gate-integrity.sh
       # 抽检即注册（B 模式口径）——该行同时是"夹具在 CI 里无人执行"的反证。
+      # #665e: 夹具跑完整 pre-commit（含组 13 块级 paths 快照对账）需要 tsx；本 job 无依赖安装步骤
+      #   ⇒ 显式只装 tsx（不装全量 node_modules）。不装则组 13 fail-closed（exit 2）⇒ 夹具 baseline 恒红
+      #   （实测 CI annotation: ❌ 门禁判不了（exit 2）：找不到 tsx）。
+      - name: Install tsx for gate fixture (组 13 needs tsx)
+        if: steps.docsonly.outputs.docs_only != 'true'
+        run: npm install --no-save --no-audit --no-fund tsx@4.23.13
+        timeout-minutes: 5
       - name: pre-commit groups injection fixture (sampled)
         if: steps.docsonly.outputs.docs_only != 'true'
         run: bash tests/control-tower/precommit-groups-injection.test.sh
@@ -1252,7 +1259,7 @@ jobs:
             echo "::warning title=ci-reds::${REF} 取到 0 条 check-runs（尚无检查记录）——基线核对为空集，不等于「已核对通过」"
           fi
           echo "check_runs=${N} (ref=${REF})"
-          bash scripts/control-tower/check-gate-integrity.sh --root "$PWD" --ci-reds /tmp/checkruns.json --base-ref "$REF"
+          bash scripts/control-tower/check-gate-integrity.sh --root "$PWD" --ci-reds /tmp/checkruns.json --base-ref "$REF" --exclude-check "Gate Integrity (pattern sentinel + injection fixture + ci-reds)"
       # 证据步（M9 task-11）：判定已由前面 step 完成，本步只把关键行发布为 **可公开检索的注解**——
       #   GitHub job logs 端点匿名 404/403（CTO 证据要求 ③ 的 CI GNU 侧原始输出取不回，K3 也核不了），
       #   而注解有公开 API：GET /repos/{owner}/{repo}/check-runs/{id}/annotations（无需 token）。

@@ -1,0 +1,3 @@
+- tests/control-tower/precommit-groups-injection.test.sh — #665d 判据⑧ 探针文件不泄漏（cleanup 兜底＋段前/段末 reset＋status 断言） — 裁 223
+- gate-exemptions/2026-10-20-injection-fixture-clone-clean-665d.md — 本豁免文件（gate-exemptions 自我保护） — 裁 223
+- docs/authority/DOCS-REGISTRY.yaml — #665d 登记本豁免文件（D2 登记门禁） — 裁 223

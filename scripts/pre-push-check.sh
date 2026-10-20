@@ -67,18 +67,109 @@ fi
 # 降级: fetch 失败(离线/bare/无权限) → fail-open 显式提示 (不静默跳过; 铁律 11)
 # 测试注入: SYNO_SYNC_ONLY=1 只跑本检查 (push-sync-guard.test.sh 隔离单测)
 
+
+# ═══ #657: 门禁 0-2 补 remote 维度（裁 223）— gitea main 仍禁 / mirror main 放行＋三硬约束 ═══
+#   ① 只允许 fast-forward（non-ff 拒，exit 1）
+#   ② 记 mirror-sync.log（from→to / 时间 / 触发者）
+#   ③ 推完核 SHA：pending 记录 ＋ `--verify-mirror-sync` 模式（不等 ⇒ exit 1）
+#   测试注入: SYNO_MIRROR_REMOTE / SYNO_MIRROR_SYNC_LOG / SYNO_MIRROR_PENDING
+MIRROR_REMOTE="${SYNO_MIRROR_REMOTE:-mirror}"
+_MIRROR_REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+MIRROR_LOG="${SYNO_MIRROR_SYNC_LOG:-${_MIRROR_REPO_ROOT}/.claude/mirror-sync.log}"
+MIRROR_PENDING="${SYNO_MIRROR_PENDING:-${_MIRROR_REPO_ROOT}/.claude/mirror-sync.pending}"
+
+_is_zero_sha() { [[ "${1:-}" =~ ^0+$ ]]; }
+
+_mirror_sync_log() { # <verdict> <from> <to>
+  local verdict="$1" from="$2" to="$3"
+  local ts user
+  ts="$(date +%Y-%m-%dT%H:%M:%S%z 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)"
+  user="$(whoami 2>/dev/null || echo unknown)"
+  mkdir -p "$(dirname "$MIRROR_LOG")" 2>/dev/null || true
+  if ! printf '%s | %s | from=%s | to=%s | remote=%s | user=%s\n' \
+      "$ts" "$verdict" "$from" "$to" "${PUSH_URL:-${PUSH_REMOTE:-<none>}}" "$user" >> "$MIRROR_LOG" 2>/dev/null; then
+    echo -e "  ${RED}⚠️  mirror-sync.log 写入失败: $MIRROR_LOG${RESET}" >&2
+    return 1
+  fi
+  return 0
+}
+
+verify_mirror_sync() { # 推后核 SHA（读 pending；远端 SHA != 推的 SHA ⇒ exit 1）
+  local sha="" from="" url="" remote_sha=""
+  if [[ ! -f "$MIRROR_PENDING" ]]; then
+    echo -e "  ${RED}❌ 门禁 0-2 mirror: 无待核记录（$MIRROR_PENDING）— 先完成一次 mirror 放行推送${RESET}"
+    return 1
+  fi
+  sha="$(awk -F= '/^sha=/{print $2; exit}' "$MIRROR_PENDING")"
+  from="$(awk -F= '/^from=/{print $2; exit}' "$MIRROR_PENDING")"
+  url="$(awk -F= '/^url=/{print $2; exit}' "$MIRROR_PENDING")"
+  if [[ -z "$sha" || -z "$url" ]]; then
+    echo -e "  ${RED}❌ 门禁 0-2 mirror: pending 记录不完整（sha/url）${RESET}"
+    return 1
+  fi
+  printf '%s\n' "$sha" | grep -qE '^[0-9a-f]{40}$' || {
+    echo -e "  ${RED}❌ 门禁 0-2 mirror: pending sha 形态非法（$sha）${RESET}"; return 1; }
+  remote_sha="$(git ls-remote "$url" refs/heads/main 2>/dev/null | awk '{print $1; exit}')"
+  if [[ -z "$remote_sha" ]]; then
+    _mirror_sync_log "VERIFY-FAIL(unreachable)" "$sha" "$sha" || true
+    echo -e "  ${RED}❌ 门禁 0-2 mirror: 核 SHA 失败（ls-remote 无响应/无 main）— 视为失败${RESET}"
+    return 1
+  fi
+  if [[ "$remote_sha" != "$sha" ]]; then
+    _mirror_sync_log "VERIFY-FAIL(mismatch)" "$sha" "$remote_sha" || true
+    echo -e "  ${RED}❌ 门禁 0-2 mirror: 推后核 SHA 不一致（推=${sha:0:8} 远端=${remote_sha:0:8}）— 失败${RESET}"
+    return 1
+  fi
+  _mirror_sync_log "VERIFIED" "${from:-<none>}" "$sha" || true
+  rm -f "$MIRROR_PENDING" 2>/dev/null || true
+  echo -e "  ${GREEN}✅ 门禁 0-2 mirror: 推后核 SHA 一致（${sha:0:8}）${RESET}"
+  return 0
+}
+
 check_push_sync() {
   local behind="0" ahead="0" fremote="$1" fbranch="$2"
   [[ -z "$fbranch" ]] && fbranch="$PUSH_BRANCH"
 
   # 0-2: main 保护 (本地判定零成本, 先于网络操作)
+  #   #657 补 remote 维度（裁 223）：gitea main 仍禁；mirror main 放行（三硬约束）
   if [[ "$PUSH_BRANCH_REF" == "refs/heads/main" ]] || [[ "$fbranch" == "main" ]]; then
-    if [[ "${SYNO_ALLOW_MAIN_PUSH:-}" != "1" ]]; then
-      echo -e "  ${RED}❌ 门禁 0-2: 禁止直接 push main — main 只进 PR${RESET}"
-      echo "  正确流程: push 自己的 feat/ 分支 → 开 PR → GitHub PR 机制合并（CTO 用 API token 执行）。"
-      echo "  紧急逃生舱(需创始人批准, 禁止用于常规合并): SYNO_ALLOW_MAIN_PUSH=1 git push ... (记 bypass.log)"
-      return 1
-    fi
+    if [[ "$PUSH_REMOTE" == "$MIRROR_REMOTE" ]]; then
+      # ① 只允许 fast-forward（新建 main = 无远端 sha，视为 ff；删除一律拒）
+      if [[ -n "$IS_DELETE" ]]; then
+        echo -e "  ${RED}❌ 门禁 0-2 mirror: 禁止删除 main${RESET}"
+        _mirror_sync_log "REJECT(delete)" "${PUSH_REMOTE_SHA:-<none>}" "${PUSH_LOCAL_SHA:-<none>}" || true
+        return 1
+      fi
+      if [[ -z "${PUSH_LOCAL_SHA:-}" ]] || _is_zero_sha "$PUSH_LOCAL_SHA"; then
+        echo -e "  ${RED}❌ 门禁 0-2 mirror: 缺被推 ref 的 local sha（stdin 契约）— 拒${RESET}"
+        return 1
+      fi
+      if [[ -n "${PUSH_REMOTE_SHA:-}" ]] && ! _is_zero_sha "$PUSH_REMOTE_SHA"; then
+        if ! git merge-base --is-ancestor "$PUSH_REMOTE_SHA" "$PUSH_LOCAL_SHA" 2>/dev/null; then
+          echo -e "  ${RED}❌ 门禁 0-2 mirror: 非 fast-forward（远端 ${PUSH_REMOTE_SHA:0:8} 不是 ${PUSH_LOCAL_SHA:0:8} 的祖先）— 拒${RESET}"
+          echo "  mirror 是只读镜像：只允许把真源已有历史 ff 过去；改写历史请先在真源走 PR。"
+          _mirror_sync_log "REJECT(non-ff)" "${PUSH_REMOTE_SHA:-<none>}" "$PUSH_LOCAL_SHA" || true
+          return 1
+        fi
+      fi
+      # ② 记 mirror-sync.log（from→to / 时间 / 触发者）
+      if ! _mirror_sync_log "ALLOW" "${PUSH_REMOTE_SHA:-<create>}" "$PUSH_LOCAL_SHA"; then
+        echo -e "  ${RED}❌ 门禁 0-2 mirror: mirror-sync.log 写入失败（fail-closed）— 拒${RESET}"
+        return 1
+      fi
+      # ③ 写 pending ＋ 提示推后核 SHA（--verify-mirror-sync）
+      mkdir -p "$(dirname "$MIRROR_PENDING")" 2>/dev/null || true
+      printf 'sha=%s\nfrom=%s\nurl=%s\n' "$PUSH_LOCAL_SHA" "${PUSH_REMOTE_SHA:-<create>}" "${PUSH_URL:-$PUSH_REMOTE}" > "$MIRROR_PENDING" 2>/dev/null || true
+      echo -e "  ${GREEN}✅ 门禁 0-2 mirror: 放行（fast-forward 校验通过）${RESET}"
+      echo "  mirror-sync.log: $MIRROR_LOG"
+      echo "  🔴 推完必须核 SHA: bash scripts/pre-push-check.sh --verify-mirror-sync（不等 = 失败，exit 1）"
+    else
+      if [[ "${SYNO_ALLOW_MAIN_PUSH:-}" != "1" ]]; then
+        echo -e "  ${RED}❌ 门禁 0-2: 禁止直接 push main — main 只进 PR${RESET}"
+        echo "  正确流程: push 自己的 feat/ 分支 → 开 PR → GitHub PR 机制合并（CTO 用 API token 执行）。"
+        echo "  紧急逃生舱(需创始人批准, 禁止用于常规合并): SYNO_ALLOW_MAIN_PUSH=1 git push ... (记 bypass.log)"
+        return 1
+      fi
     # D571: 真实写 bypass.log——此前只 echo 声称「已记」未实现写入（M2 审计链断裂，2026-09-03 复盘发现）
     _escape_repo_root="$(cd "$SCRIPT_DIR/.." && pwd)"
     _escape_bypass_log="${SYNO_BYPASS_LOG:-${_escape_repo_root}/.claude/bypass.log}"  # 测试注入缝: 沙箱覆盖路径
@@ -88,6 +179,7 @@ check_push_sync() {
       >> "${_escape_bypass_log}" 2>/dev/null || echo -e "  ${RED}⚠️  逃生舱 bypass.log 写入失败 — 审计链断裂${RESET}" >&2
     echo -e "  ${YELLOW}⚠️  门禁 0-2: SYNO_ALLOW_MAIN_PUSH=1 逃生舱生效 — 直推 main (已记 bypass.log)${RESET}"
   fi
+    fi
 
   # D457: 删除操作 (git push --delete) 无 behind/ahead 语义，跳过同步检查
   if [[ -n "$IS_DELETE" ]]; then
@@ -141,6 +233,15 @@ check_push_sync() {
   echo -e "  ${GREEN}✅ 门禁 0-1: 被推 ref 与远端同步 (被推 ref 领先 $ahead)${RESET}"
   return 0
 }
+
+# #657: 推后核 SHA 模式（不读 stdin、不跑其他门禁；不等 ⇒ exit 1）
+if [[ "${1:-}" == "--verify-mirror-sync" ]]; then
+  set +e
+  verify_mirror_sync
+  EC=$?
+  set -e
+  exit "$EC"
+fi
 
 # 测试注入: 只跑同步检查 (push-sync-guard.test.sh 隔离单测)
 if [[ "${SYNO_SYNC_ONLY:-}" == "1" ]]; then

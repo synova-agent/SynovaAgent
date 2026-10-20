@@ -1,6 +1,6 @@
 # AGENTS.md — SynovaAgent
 
-> **V7.0 | 2026-10-12** | 对齐**产品宪章 v8.2**（判据中枢｜v8.1 院方 10-12 复核后归一）｜ 本地软提示 + CI 权威门禁 + 契约门禁 + 认领制 + 跨 session 隔离
+> **V7.1 | 2026-10-20** | 对齐**产品宪章 v8.3**（判据中枢｜v8.3 院方 2026-10-20 定稿获签）｜ 本地软提示 + CI 权威门禁 + 契约门禁 + 认领制 + 跨 session 隔离
 > 🔴 **门禁可解析元信息**（**真值，勿手改**；改前跑 `bash scripts/doc-system/check-doc-truth.sh`）：
 > **控制塔 V5.2.7** ｜ **6位专家**（`expert/expert-registry.yaml`，enabled=6）｜ **12 组 pre-commit**（`scripts/pre-commit-check.sh` 自声明）｜ **桌面端**（品牌表层，切片 A/B/C 已闭环）
 > **流程约束 V4.5.1**
@@ -8,6 +8,7 @@
 > 宪章路径：`~/山河研究院/04-技术研究/专题研究/CTO委托-基座治理/产品宪章.md`
 > 🔴 **DSH 口径（2026-10-20 定）**：DSH 是**开发时用的工具**（预设/技能/Team/会话跑在它上面），**不是产品运行时依赖**（实测：`grep -rn "from '@deepseek-ai/dsh'" src/ packages/` 零命中；`package.json` 无 dsh 依赖；Synova 运行时是 `src/agent/tool-loop-executor.ts` + `src/providers/base.ts`）。
 > 当前 **`0.2.1-rc.2`** ｜ 源码 **`/Users/wane/src/dsh-src-0.2.1-rc.2`** @ `687f282e86` ｜ **禁把 DSH 版本写进「产品支持范围」**（客户装的是 Synova，机器上没有 DSH）。
+> 🔴 **Win 侧读这两份镜像**（Mac 院方目录读不到）：宪章 `docs/synova/产品宪章-v8.3-镜像.md`｜② 本体层执行规范 `docs/specs/ontology/本体层规范-v2.11.md`
 > **任务唯一编号 = Issue 号**（**D 号已退役**）｜ **本件 18.3 KB**（**实测**；**硬上限 = 65,536 B**，**最坏账 = 本件 ＋ 12×3.5KB = 61,873 ≤ 65,536** ✅）
 
 > 组织数字孪生诊断 + 持续增长导航系统。诊断是手段，目的是增长。
@@ -61,7 +62,7 @@
 ⓪ 连接器      企业 → 系统：描述 / 观测 / 判断
   ⓪-a 数据 ｜ ⓪-b 人
 ① 循环层 Cycles    ＝ 状态的【动力学】
-② 本体层 Ontology  ＝ 状态的【结构】
+② 本体层 Ontology  ＝ 状态的【结构】（🔴 宪章 v8.3 §4.8：**只负责结构** —— 因果传导归 ① 循环／参数值归 ④／观测归 ③）
 ③ 哨兵层 Sentinels ＝ 状态的【偏离检测】
 ④ 参数层 Params ★  ＝ 判断的【来源】（**唯一被 ⑤ 读**）
 ⑤ 导航层 Navigation ＝ 交付

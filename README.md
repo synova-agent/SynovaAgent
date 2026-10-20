@@ -1,3 +1,6 @@
+> 🔴 **施工在 Gitea（内网 `http://MacBook-Pro-2.local:3000`）；本仓为镜像与对外展示。**
+> 本仓**只接收单向 fast-forward 镜像**，不接受 PR／提交；要改代码请到 Gitea 开卡。（裁 231）
+
 # SynovaAgent
 
 **Powered by NemoClaw, Brain by Synova** — 组织诊断智能体。

@@ -3,6 +3,7 @@
  *
  * POST /api/conversations              body {message, sessionId?, orgId?} → 单飞入口（sessionId 缺省即新建会话）
  * POST /api/conversations/:id/messages body {message}                     → 定向续轮（:id 不存在 → 404）
+ * POST /api/conversations              body {message:'/ingest <资料>'}     → #656 M2 资料入口（JSON 回执，零 LLM）
  *
  * 持久化时序（cli.ts:228-244 权威模板 + 用户消息前置）:
  *   ① addMessage(user) → ② processMessageStream → ③ addMessage(assistant)
@@ -12,15 +13,35 @@
  *   @input    — message: string(1..8000) 必填；sessionId/orgId: string 可选；
  *               store 经 req.app.locals.orchestration.db 获取（D563 动态 import 范式：
  *               值与类型均来自动态 import 通道的推断 + isSqliteDatabase 谓词窄化，
- *               L1 零静态 L5 import——diagnosis.ts:182 同款）
+ *               L1 零静态 L5 import——diagnosis.ts:182 同款）；
+ *               `/ingest` 分支另读 `req.app.locals.graphStore`（Bootstrap 注入，缺席 ⇒ 503）
  *   @output   — SSE 流 open(sessionId 回声) → token×N → agent_message →
  *               [诊断事件 flat 透传 → complete] → end；心跳 ": ping" 15s；
  *               流前 JSON 错误：400/404/409/503
+ *               ＋ `/ingest` 分支一律 JSON（非 SSE）：200 成功 / 400 INGEST_EMPTY /
+ *               200 INGEST_FAILED / 503 STORE_UNAVAILABLE
  *   @degraded — db 缺失/非 SQLite → 503 {code:'STORE_UNAVAILABLE', degraded:true}
  *               （fail-closed：会话持久化是本端点的存在理由，静默不落库 = 假绿）；
  *               store 双写失败（lastDegraded）→ 流内 error 帧 {code:'STORE_DEGRADED', degraded:true}
  *               且流不中断（铁律 24/31）；客户端断开 → 停写停心跳，在途轮次自然 settle 后仍
- *               完整落库 ③④⑤（DSH 中断锚语义：已见前缀 ⊆ 落库内容）；同会话并发 → 409 SESSION_BUSY
+ *               完整落库 ③④⑤（DSH 中断锚语义：已见前缀 ⊆ 落库内容）；同会话并发 → 409 SESSION_BUSY；
+ *               `/ingest`：图存储缺失 → 503（fail-closed）；摄取失败 → 200
+ *               {code:'INGEST_FAILED', degraded:true}（不阻断对话，铁律 11/31）
+ *   @authority — `/ingest` 分支仅 **conversation 链**（`POST /api/conversations` 与
+ *               `POST /api/conversations/:id/messages`）可触发；普通消息 SSE 语义不变，
+ *               本分支**不新增公开 HTTP 字段**（接口变更须 CTO）
+ *   @not-here  — 不做文件上传入口（PDF/DOCX/XLSX 仍走既有 TUI `/upload` → `ingestFile`）；
+ *               不建第二套 store；`/ingest` 不调 LLM；不改 `GET /chat` 页面结构
+ *
+ * 已知限制（Known Limitations —— 做不到什么，不得改写成"已核过"）:
+ *   a. 前缀**不做词边界**：`/ingested ...` 亦命中（资料文本 = 'ed'）；收紧属接口语义变更，
+ *      须 CTO（本批按裁 225 方案 A 只承诺前缀语义）。
+ *   b. 摄取失败返回 **200 + degraded:true**（不阻断对话）；客户端**必须**读 `degraded`/`code`，
+ *      不得只看 HTTP 状态码。
+ *   c. 图存储缺失 ⇒ **503 fail-closed**（不假装落库 = 假绿）。
+ *   d. 本批只做 **dev/source 形态**；文件类资料入口（PDF/DOCX/XLSX）不在本批。
+ *   e. **不新增 anchor 回执字段**：锚点只能从 `GET /api/ontology/graph/:orgId` 的
+ *      `Document.props.name` 读回（防客户端依赖未批准的公开字段）。
  *
  * 决策记录（D333，完成报告 §5.4 可核）: phaseComplete 诊断桥走 L1→L2 公开 API
  * DiagnosisLauncher 直连（diagnosis.ts:200-217 同款装配），而非 conv.startDiagnosis——
@@ -36,6 +57,9 @@ import { detectProvider } from '../providers/detect';
 import {
   ConversationEngine,
   setDecisionRecordingSeam,
+  INGEST_COMMAND_PREFIX,
+  ingestConversationExcerpt,
+  parseIngestMessage,
   type EngineState,
 } from '../agent/conversation-engine';
 import { DiagnosisLauncher, type SessionStoreLike } from '../agent/diagnosis-launcher';
@@ -46,6 +70,8 @@ import { registerBuiltinTools } from '../agent/builtin-tools';
 import { ToolRegistry } from '../agent/tools';
 import { WebViewAdapter } from '../l1-interaction/web-adapter';
 import type { DecisionCapturePort } from '../deploy/bootstrap';
+// #656 M2: 图存储类型只走 L2 出口（L1 零 l4/ import；ontology.ts:12 同款，铁律 39）
+import type { SqliteGraphStore } from '../agent/graph-store-service';
 
 const log = createLogger('routes/conversations');
 const router = Router();
@@ -209,6 +235,69 @@ async function handleConversationMessage(req: Request, res: Response, pathSessio
   const bodySessionId = typeof body.sessionId === 'string' && body.sessionId.length > 0 ? body.sessionId : undefined;
   const sessionIdInput = pathSessionId ?? bodySessionId;
   const orgId = (typeof body.orgId === 'string' && body.orgId) || process.env.SYNOVA_ORG_ID || 'default';
+
+  // ①-b `/ingest` 资料入口分支（#656 M2 判据①；**零 LLM 依赖**：先于 ②store 与 ④loadConfig）。
+  //      回执一律 JSON（非 SSE）；普通消息不进本分支 ⇒ 既有 SSE 语义零改动。
+  //      位置依据：批规格 §2「输入校验后、store/LLM 配置之前」；失败只降级不阻断对话主链。
+  if (message.startsWith(INGEST_COMMAND_PREFIX)) {
+    // 输入边界：`/ingest` 后无资料 ⇒ 400（不落库、不调 LLM、不建会话）
+    const parsedIngest = parseIngestMessage(message);
+    if (parsedIngest.text.length === 0) {
+      log.warn({ code: 'INGEST_EMPTY', orgId }, '/ingest 缺少资料文本 — 400（未落库）');
+      res.status(400).json({
+        ok: false,
+        code: 'INGEST_EMPTY',
+        ingested: false,
+        degraded: false,
+        message: '/ingest 后缺少资料文本',
+      });
+      return;
+    }
+    // 图存储 fail-closed（无持久化 ⇒ 拒绝，禁假装落库 = 假绿）。
+    // 注入：`app.locals.graphStore ← server.ts:398` Bootstrap Phase 1c；L1 类型只走 L2 出口
+    // （ontology.ts:12 同款，零 l4/ import）。注入实例 createNode/createEdge 与本接缝逐字兼容
+    // ⇒ **直接传、零断言**（断言集中在 L2 `ingestConversationExcerpt` 内，见其调用点注释）。
+    const graphStore = (req.app.locals as { graphStore?: SqliteGraphStore }).graphStore;
+    if (!graphStore) {
+      log.warn({ code: 'STORE_UNAVAILABLE', orgId }, '/ingest 图存储不可用 — 503（fail-closed）');
+      res.status(503).json({
+        ok: false,
+        code: 'STORE_UNAVAILABLE',
+        degraded: true,
+        message: '图存储不可用——/ingest 拒绝无持久化服务（fail-closed）',
+      });
+      return;
+    }
+    // 摄取（唯一调用点：conversation 链 → ingestConversationExcerpt → ingestDocumentText）
+    const outcome = await ingestConversationExcerpt(message, orgId, graphStore, 'route');
+    if (outcome.ingested) {
+      res.status(200).json({
+        ok: true,
+        ingested: true,
+        nodesCreated: outcome.nodesCreated,
+        edgesCreated: outcome.edgesCreated,
+        degraded: false,
+      });
+      return;
+    }
+    // 摄取失败：显式降级回执（200 + degraded:true，不阻断对话；**禁**把失败当成功）
+    if (outcome.code !== 'INGEST_FAILED') {
+      log.warn(
+        { code: outcome.code ?? 'INGEST_UNEXPECTED', orgId },
+        '/ingest 分支收到非预期 outcome — 仍按 INGEST_FAILED 回执（fail loud）',
+      );
+    }
+    res.status(200).json({
+      ok: false,
+      code: 'INGEST_FAILED',
+      ingested: false,
+      degraded: true,
+      nodesCreated: outcome.nodesCreated,
+      edgesCreated: outcome.edgesCreated,
+      message: '资料摄取失败（已记日志，不阻断对话）',
+    });
+    return;
+  }
 
   // ② Store fail-closed（对话轨的存在理由就是落库——静默降级 = 假绿，spec §5.2-A）
   const store = await resolveStore(req);

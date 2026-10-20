@@ -428,7 +428,9 @@ DOC_ONLY=$(is_doc_only "$STAGED_ALL")
 # 条件跳过: 无 md/html 变更时不启动 python（保持 <1s）。
   # #598: 真实 CI 无 base ⇒ fail loud（禁静默退回 --staged 空跑；此前 ① 步不注入 base ⇒ 闸 3 恒绿）
   #   作用域 = SYNO_CI=1 ∧ GITHUB_ACTIONS=true（真实 CI 三件套；沙箱夹具只设 SYNO_CI ⇒ 不受影响）
-  if [ "${SYNO_CI:-0}" = "1" ] && [ "${GITHUB_ACTIONS:-}" = "true" ] && [ -z "${SYNO_DIFF_BASE:-}" ]; then
+  # #665（裁 223）: 夹具显式声明 SYNO_FIXTURE_MODE=1 ⇒ 本 fail-loud 不点火（夹具模拟 CI，不是真实 CI）
+  #   真实 CI 无 base 仍必须红（#598 成果不回退；摘掉标记 ⇒ 重现 not_red=4，见夹具判别力探针）
+  if [ "${SYNO_CI:-0}" = "1" ] && [ "${GITHUB_ACTIONS:-}" = "true" ] && [ -z "${SYNO_DIFF_BASE:-}" ] && [ "${SYNO_FIXTURE_MODE:-0}" != "1" ]; then
     soft_check "D1193 文档契约三闸: CI 无 base（fail-closed，禁空跑）" "SYNO_DIFF_BASE 未注入"
     exit 1
   fi
