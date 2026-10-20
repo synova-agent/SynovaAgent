@@ -328,6 +328,15 @@ bash scripts/pre-commit-check.sh   # 12 组 pre-commit 门禁（本地）
 
 ## 15. 🔴 关卡 A（dev doc 评审）——**所有包、所有派单，强制走 `devdoc-gate-a`**
 
+> **评审分层（裁 267，固定）**
+> | 层 | 谁 | 管什么 | 输出 |
+> |---|---|---|---|
+> | ① gate-A | **L1 自己安排的零上下文独立会话**（不得作者、不得 CTO） | 按 skill R1–R8 审"能否开工" | **一条 Issue 评论**（verdict＋blocking＋停点确认），不出报告 |
+> | ② 最终验收 | CTO | 抽验 4 节点（规格/首次写数据/改门禁/周抽）＋签字 | 卡收口 |
+> | ③ 事后审计 | K3 | 高风险抽查、合并后审计、事故复盘 | 才出报告 |
+> | ④ 硬门禁 | Gitea 门禁 ＋ GitHub 集成 | CI/pre-commit/架构/doc-contract/main 集成 | 红绿自动阻断 |
+
+
 ```
  任何 L1（P1–P10）把 dev doc／派单件交给 L2 **之前**，必须按 `.claude/skills/devdoc-gate-a/SKILL.md` 跑六镜头评审：
    ① 卡面审计（line-audit-and-cards 六字段/七问/查重）② dev-doc-spec 8 节 ③ 零上下文执行者
