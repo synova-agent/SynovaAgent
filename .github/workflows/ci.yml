@@ -1594,7 +1594,7 @@ jobs:
           exit 0
 
   # ═══ P0-3: 聚合必需检查 —— skipped 也判 FAIL ═══
-  # 蓝本: DSH 上游 ci.yml:700-726（dsh-v0.2.0-rc.2；steps 段逐字）
+  # 蓝本: DSH 上游 ci.yml:700-726（dsh-v0.2.1-rc.2；steps 段逐字）
   # 与蓝本的三处已声明差异（K3 整改 D1177，原「唯一差异」表述不实）:
   #   ① if 去掉 pull_request 事件限定（CTO 明令——#905 语境为 main push）
   #   ② name: all checks passed → All Checks Passed（对齐本仓 check-run 命名习惯）
