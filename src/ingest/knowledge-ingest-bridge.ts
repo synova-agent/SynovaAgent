@@ -16,6 +16,38 @@ export interface IngestResult {
 }
 
 /**
+ * #667: 边写入前断言 target 存在。
+ * 不存在 ⇒ 抛错（调用方转 errors[] + log.error），不静默（铁律 11/24）。
+ */
+function assertNodeExists(store: GraphStore, nodeId: string, graph: string): void {
+  const node = store.getNode(nodeId, graph);
+  if (node === null || node === undefined) {
+    throw new Error(`MENTIONS edge target not found: ${nodeId}`);
+  }
+}
+
+/**
+ * #667: 建一条 MENTIONS 边；target 必须是真实节点（不再用 `doc_${fileName}`）。
+ * @input  store — GraphStore（getNode/queryEdges/createEdge）
+ * @input  personId/documentId — 必须已存在；documentId 不存在 ⇒ 抛错
+ * @output true=新建；false=边已存在（幂等，不重复写）
+ * @degraded — 不吞错：target 缺失/写入失败由调用方转 errors[] + log.error
+ * @authority — 只写 MENTIONS 边；不建节点、不改节点
+ */
+export function createMentionsEdge(
+  store: GraphStore, personId: string, documentId: string, orgId: string,
+): boolean {
+  assertNodeExists(store, documentId, orgId);
+  const existing = store.queryEdges('MENTIONS', personId, documentId, orgId);
+  if (existing.length > 0) {
+    log.debug({ personId, documentId }, 'MENTIONS 边已存在 — 幂等跳过');
+    return false;
+  }
+  store.createEdge('MENTIONS', personId, documentId, 0.5, {}, orgId);
+  return true;
+}
+
+/**
  * Ingest raw text content into SOG ontology.
  * Extracts entities (Person, Team) and relationships from document content.
  *
@@ -51,24 +83,28 @@ export async function ingestDocumentText(
       result.nodesCreated++;
     }
 
-    // Create document node
-    store.createNode('Document', {
+    // Create document node（#667: 接住返回 id；MENTIONS 边 target 用它）
+    const documentId = store.createNode('Document', {
       name: fileName, content: text.slice(0, 5000), source: 'upload',
     }, orgId);
     result.nodesCreated++;
 
-    // Link persons to document
+    // Link persons to document（#667: target = 真实 Document id；缺失/失败不静默）
     for (const pid of personIds) {
       try {
-        store.createEdge('MENTIONS', pid, `doc_${fileName}`, 0.5, {}, orgId);
-        result.edgesCreated++;
-      } catch (err) { log.debug({ err }, '边可能已存在 — 跳过'); }
+        if (createMentionsEdge(store, pid, documentId, orgId)) result.edgesCreated++;
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        result.errors.push(`MENTIONS_EDGE_FAILED: ${msg}`);
+        log.error({ err: msg, fileName, personId: pid, documentId }, 'MENTIONS 边写入失败（不静默）');
+      }
     }
 
     log.info({ fileName, nodes: result.nodesCreated, edges: result.edgesCreated }, '文档知识摄取完成');
-  } catch (err: any) {
-    result.errors.push(err.message);
-    log.warn({ err, fileName }, '文档知识摄取失败');
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    result.errors.push(msg);
+    log.warn({ err: msg, fileName }, '文档知识摄取失败');
   }
 
   return result;
