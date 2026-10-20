@@ -868,5 +868,25 @@ if [ "$RC" -eq 0 ]; then
   [ "$BASE_STATUS" = "host_state" ] && echo "   ⚠️ 注意：基线非天然绿（宿主 /tmp marker 绝对路径读取，已由探针因果确认）——CI 上新 runner 应为 BASELINE_OK"
 else
   echo "❌ 注入自测未达期望：not_red=$NOTRED_N baseline=$BASE_STATUS probe=$PROBE_STATUS residue_fail=$RESIDUE_FAIL"
+  # ═══ #665c 判据⑦: 失败时把 ❌ 行发成 GitHub annotation ═══
+  #   动机: job log 端点匿名 404/403（CTO 取不回）⇒ 用 check-runs annotations 做观测面。
+  #   只在该分支（RC=1）且 GITHUB_ACTIONS=true 时发（本地跑不产生 ::error）；
+  #   来源 = 基线/各场景/D1148 的原始日志（out.*.log）；去重后 ≤10 条（GitHub 注解上限）。
+  #   转义: % → %25（workflow command 语法）；剥离 \r。
+  if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+    #   剥 ANSI 色码（门禁输出带 \033[0;31m）—— annotation 里留色码会变成乱码
+    _ann_lines="$(grep -hE '❌|BASELINE_FAIL' "$TMP"/out.*.log 2>/dev/null \
+      | sed -E 's/^::(error|warning|notice) .*::[[:space:]]*//' \
+      | sed -E $'s/\033\\[[0-9;]*m//g' \
+      | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//' | grep -v '^$' | sort -u | head -n 10)"
+    if [ -n "$_ann_lines" ]; then
+      printf '%s\n' "$_ann_lines" | while IFS= read -r _l; do
+        _l="${_l//%/%25}"; _l="${_l//$'\r'/}"
+        echo "::error title=injection-fixture::${_l}"
+      done
+    else
+      echo "::error title=injection-fixture::not_red=${NOTRED_N} baseline=${BASE_STATUS} probe=${PROBE_STATUS}（无可摘 ❌ 行；见 job summary）"
+    fi
+  fi
 fi
 exit "$RC"

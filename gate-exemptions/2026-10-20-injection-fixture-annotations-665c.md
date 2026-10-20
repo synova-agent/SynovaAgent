@@ -1,0 +1,3 @@
+- tests/control-tower/precommit-groups-injection.test.sh — #665c 失败分支发 GitHub annotation（判据⑦；不动⑥隔离/断言） — 裁 223
+- gate-exemptions/2026-10-20-injection-fixture-annotations-665c.md — 本豁免文件（gate-exemptions 自我保护） — 裁 223
+- docs/authority/DOCS-REGISTRY.yaml — #665c 登记本豁免文件（D2 登记门禁） — 裁 223

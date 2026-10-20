@@ -652,3 +652,11 @@ documents:
       status: active
       owner: CTO
       note: "#665b 注入夹具 env -i 白名单（外层 CI 环境隔离）的豁免；裁 223。"
+
+    # ---- P4 2026-10-20：#665c 夹具失败注解豁免（D2 登记）----
+    - id: DOC-0221
+      type: decision
+      path: gate-exemptions/2026-10-20-injection-fixture-annotations-665c.md
+      status: active
+      owner: CTO
+      note: "#665c 注入夹具失败时发 GitHub annotation（判据⑦）的豁免；裁 223。"
