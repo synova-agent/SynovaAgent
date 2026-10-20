@@ -32,7 +32,7 @@ M6b probe：`growth==E(46)` ∧ `dev.total==bundle.total`（均 50）｜M4：界
 
 ## 四、写集（**文件级；越界即停并上报 CTO**）
 
-src/l4/**｜src/sentinel/**｜src/routes/{chat,conversations,diagnosis}.ts｜src/agent/conversation-engine.ts｜src/cycles/**｜src/store/migrations/**｜expert/**｜extensions/sentinels/**｜src/agent/tool-loop-executor.ts（**仅** `MAX_TOOL_ROUNDS` 配置化 · 裁 219）｜tests/acceptance/m10-*（**仅新增**，不改 M6 既有测试）
+src/l4/**｜src/sentinel/**｜src/routes/{chat,conversations,diagnosis}.ts｜src/agent/conversation-engine.ts｜src/cycles/**｜src/store/migrations/**｜expert/**｜extensions/sentinels/**｜src/agent/tool-loop-executor.ts（**仅** `MAX_TOOL_ROUNDS` 配置化 · 裁 219）｜tests/acceptance/**（**仅新增**，不改既有测试；**裁 225 已批**）
 
 ## 五、依赖
 

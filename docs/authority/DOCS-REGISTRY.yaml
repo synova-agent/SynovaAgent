@@ -741,3 +741,19 @@ documents:
     status: active
     owner: P10
     note: "#740 双仓镜像每日自动推送：执行器＋测试＋workflow 接线的受保护路径豁免；裁 223。"
+
+  # ---- CTO 2026-10-20：关卡 A 固定化豁免件（裁 256）----
+  - id: DOC-0232
+    type: decision
+    path: gate-exemptions/2026-10-20-devdoc-gate-a-skill.md
+    status: active
+    owner: CTO
+    note: "devdoc-gate-a 技能新增/同步（.claude→.dsh）的受保护路径豁免。"
+
+  # ---- CTO 2026-10-21：P1 写集按裁 225 扩项（裁 274）----
+  - id: DOC-0234
+    type: decision
+    path: gate-exemptions/2026-10-21-p1-m9-writeset.md
+    status: active
+    owner: CTO
+    note: "P1 守则 §四 写集扩为 tests/acceptance/**（仅新增）的受保护路径豁免。"

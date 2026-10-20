@@ -1,0 +1,7 @@
+# .claude/claims/746.yaml — #746（M5 批次级占位声明；只授权自身）
+# 规格：handbook 派单件/2026-10-20-规格-746-M5运行时接口层.md @ a60c3d5 §2.2.1
+writeset:
+  - .claude/claims/746.yaml
+done:
+  - verify: npx vitest run tests/runtime/ tests/mcp/
+note: M5 批次声明；分卡提交以分支名 issue 身份解析（ct/704-m5-win → 704；ct/703-m5-win → 703），不使用 746 作分支 hint。

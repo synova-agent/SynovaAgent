@@ -34,6 +34,12 @@ export LC_ALL=C.UTF-8 2>/dev/null   # swallow-ok: locale 不可用时回退默�
 #             SYNO_PUSH_MIRROR_REMOTE       镜像远端名（缺省 mirror；门禁 0-2 认这个名字）
 #             SYNO_PUSH_GITHUB_SHA          注入缝（测试）：直接给定 GitHub main sha
 #             SYNO_PUSH_SSH_CMD             推送用 SSH 命令（缺省 deploy key）
+#             SYNO_PUSH_WATCH_CI            auto|off（缺省 auto）：推后/一致时都观察 GitHub 集成测试
+#                                           （一致时也看：镜像停在旧 sha 但 CI 红，同样必须可见）
+#             SYNO_PUSH_GH_REPO             GitHub 仓库全名（缺省 synova-agent/SynovaAgent）
+#             SYNO_PUSH_CI_TIMEOUT          等 CI 的最长秒数（缺省 900）
+#             SYNO_PUSH_CI_INTERVAL         轮询间隔秒（缺省 20）
+#             SYNO_PUSH_CI_CMD              注入缝（测试）：参数=sha，输出 "id|conclusion|url[|失败job]"
 #             SYNO_PUSH_VERIFY_TRIES        核 SHA 重试次数（缺省 3）
 #             SYNO_PUSH_VERIFY_INTERVAL     重试间隔秒（缺省 5）
 #             SYNO_PUSH_OUT                 结果 JSON 路径
@@ -89,6 +95,10 @@ GITEA_URL="${SYNO_PUSH_GITEA_URL:-gitea}"
 GITEA_REF="${SYNO_PUSH_GITEA_REF:-refs/heads/local-main}"
 MIRROR="${SYNO_PUSH_MIRROR_REMOTE:-mirror}"
 SSH_CMD="${SYNO_PUSH_SSH_CMD:-ssh -i $HOME/.ssh/synova_gh_deploy -o IdentitiesOnly=yes -o BatchMode=yes}"
+CI_WATCH="${SYNO_PUSH_WATCH_CI:-auto}"
+CI_TIMEOUT="${SYNO_PUSH_CI_TIMEOUT:-900}"
+CI_INTERVAL="${SYNO_PUSH_CI_INTERVAL:-20}"
+GH_REPO_SLUG="${SYNO_PUSH_GH_REPO:-synova-agent/SynovaAgent}"
 VERIFY_TRIES="${SYNO_PUSH_VERIFY_TRIES:-3}"
 VERIFY_INTERVAL="${SYNO_PUSH_VERIFY_INTERVAL:-5}"
 OUT="${SYNO_PUSH_OUT:-$REPO/.codex/control-tower/tmp/mirror-sync-push.json}"
@@ -115,7 +125,7 @@ for arg in "$@"; do
 done
 
 AS_OF="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-GITEA_SHA=""; GH_SHA=""; LAG=""; ANCESTOR=""; PUSHED_SHA=""; VERDICT=""; SIGNAL_STATE="none"
+GITEA_SHA=""; GH_SHA=""; LAG=""; ANCESTOR=""; PUSHED_SHA=""; VERDICT=""; SIGNAL_STATE="none"; CI_RESULT="off"; CI_DETAIL=""
 
 say()     { [ "$JSON_ONLY" = "1" ] && return 0; echo "$*"; }
 say_err() { echo "$*" >&2; }
@@ -138,6 +148,8 @@ write_json() {  # $1=exit $2=verdict $3=reason
     printf '  "verdict": "%s",\n' "$verdict"
     printf '  "reason": %s,\n' "$(_json "$reason")"
     printf '  "degraded": %s,\n' "$([ "$rc" = "2" ] && echo true || echo false)"
+    printf '  "ci": "%s",\n' "$CI_RESULT"
+    printf '  "ci_detail": %s,\n' "$(_json "$CI_DETAIL")"
     printf '  "signal": "%s",\n' "$SIGNAL_STATE"
     printf '  "exit": %s\n' "$rc"
     printf '}\n'
@@ -218,8 +230,9 @@ md=["# 镜像同步状态（自动更新，请勿手改）","",
     "- 已推：%s"%(e.get("SYNO_ST_PUSHED","") or "-"),"",
     "| 时间(as_of) | 结论 | 落后 | Gitea | GitHub | 已推 | exit |","|---|---|---|---|---|---|---|"]
 for r in reversed(rows):
+    _lag = "-" if r.get("lag") is None else r.get("lag")
     md.append("| %s | %s | %s | `%s` | `%s` | `%s` | %s |"%(
-        (r.get("as_of") or "")[:19], r.get("verdict",""), r.get("lag","-"),
+        (r.get("as_of") or "")[:19], r.get("verdict",""), _lag,
         (r.get("gitea") or "-")[:9], (r.get("github") or "-")[:9], (r.get("pushed") or "-")[:9], r.get("exit","")))
 md += ["","说明：本单由 mirror-sync-push.sh 每趟自动 PATCH 正文；失败/恢复历史留在评论里。",
        "判据与处置见 handbook 派单件/2026-10-20-规格-740-镜像自动推送.md。"]
@@ -341,9 +354,45 @@ finish() {  # $1=exit $2=verdict $3=reason $4=fail|recover|""
     [ -n "$GITEA_SHA" ] && printf ' gitea=%s' "${GITEA_SHA:0:9}"
     [ -n "$GH_SHA" ]    && printf ' github=%s' "${GH_SHA:0:9}"
     [ -n "$PUSHED_SHA" ] && printf ' pushed=%s' "${PUSHED_SHA:0:9}"
-    printf ' signal=%s as_of=%s out=%s\n' "$SIGNAL_STATE" "$AS_OF" "$OUT"
+    printf ' signal=%s ci=%s as_of=%s out=%s\n' "$SIGNAL_STATE" "$CI_RESULT" "$AS_OF" "$OUT"
   fi
   exit "$rc"
+}
+
+ci_query() {  # $1=sha → stdout "id|conclusion|url[|failing_jobs]"；读不到 ⇒ 非 0
+  local sha="$1"
+  if [ -n "${SYNO_PUSH_CI_CMD:-}" ]; then
+    sh -c "$SYNO_PUSH_CI_CMD $sha"
+    return $?
+  fi
+  command -v gh >/dev/null 2>&1 || return 1
+  gh api "repos/$GH_REPO_SLUG/actions/runs?per_page=30" \
+    --jq "[.workflow_runs[] | select(.head_sha==\"$sha\") | select(.name|test(\"CI\"))] | sort_by(.created_at) | last | select(.!=null) | \"\(.id)|\(.conclusion // .status)|\(.html_url)\"" 2>/dev/null
+}
+
+ci_watch() {  # $1=被推 sha —— 观察 GitHub 集成测试；结果写 CI_RESULT/CI_DETAIL
+  local sha="$1" deadline=$(( $(date +%s) + CI_TIMEOUT )) out id concl url jobs run_id
+  [ "$CI_WATCH" = "off" ] && { CI_RESULT="off"; return 0; }
+  CI_RESULT="unknown"
+  while [ "$(date +%s)" -lt "$deadline" ]; do
+    out="$(ci_query "$sha")"   # swallow-ok: 读不到 ⇒ 下一轮重试；超时统一判 unknown（下面显式发信号）
+    if [ -n "$out" ]; then
+      id="${out%%|*}"; rest="${out#*|}"; concl="${rest%%|*}"; rest2="${rest#*|}"; url="${rest2%%|*}"
+      case "$concl" in
+        success) CI_RESULT="green"; CI_DETAIL="run=$id url=$url"; return 0 ;;
+        failure|cancelled|timed_out|startup_failure|action_required)
+          CI_RESULT="red"
+          jobs="$(gh api "repos/$GH_REPO_SLUG/actions/runs/$id/jobs?per_page=100" \
+                    --jq '[.jobs[] | select(.conclusion=="failure") | .name] | join(" / ")' 2>/dev/null)"
+          CI_DETAIL="run=$id url=$url 失败job=${jobs:-<未取到>}"
+          return 0 ;;
+        *) : ;;   # queued/in_progress ⇒ 继续等
+      esac
+    fi
+    sleep "$CI_INTERVAL"
+  done
+  CI_DETAIL="等满 ${CI_TIMEOUT}s 仍未出结论（禁当通过）"
+  return 0
 }
 
 is_sha() { printf '%s' "$1" | grep -qE '^[0-9a-f]{40}$'; }
@@ -369,7 +418,13 @@ is_sha "$GITEA_SHA" || finish 2 DEGRADED E_PROBE_DEGRADED fail
 is_sha "$GH_SHA"    || finish 2 DEGRADED E_PROBE_DEGRADED fail
 
 case "$PROBE_RC" in
-  0) finish 0 NOOP "" recover ;;                            # 判据①：一致 ⇒ 不推
+  0)                                                        # 判据①：一致 ⇒ 不推；但**镜像侧 CI 也要核**
+     ci_watch "$GITEA_SHA"
+     case "$CI_RESULT" in
+       green|off) finish 0 NOOP "" recover ;;
+       red)       finish 2 MIRROR_CI_RED "镜像已就位但 GitHub CI 红：$CI_DETAIL" fail ;;
+       *)         finish 2 MIRROR_CI_UNKNOWN "$CI_DETAIL" fail ;;
+     esac ;;
   1) : ;;                                                   # 落后或分叉 ⇒ 下面分流
   *) finish 2 DEGRADED E_PROBE_DEGRADED fail ;;
 esac
@@ -407,5 +462,13 @@ while [ "$i" -le "$VERIFY_TRIES" ]; do
   i=$((i + 1))
 done
 [ "$VERIFY_OK" = "1" ] || finish 2 VERIFY_MISMATCH E_VERIFY_MISMATCH fail
+
+# ── 5. 推后观察 GitHub 集成测试（判据④的延伸：镜像"能打开"不等于"测试过了"）──────────
+ci_watch "$PUSHED_SHA"
+case "$CI_RESULT" in
+  green|off) : ;;
+  red)     finish 2 CI_RED "github_ci_failed $CI_DETAIL" fail ;;
+  *)       finish 2 CI_UNKNOWN "$CI_DETAIL" fail ;;
+esac
 
 finish 0 PUSHED "" recover

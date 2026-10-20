@@ -10,21 +10,36 @@
  * process.execPath 在 win32/mac/linux 均为绝对路径，天然跨平台。
  *
  * 契约:
- *   @input  — src/mcp/index.ts（真实 server 进程）；env SYNOVA_MCP_MODE
+ *   @input  — src/mcp/index.ts（真实 server 进程）；env SYNOVA_MCP_MODE（＋ S9 的 SENTINELS_FIXTURE_DIR）
  *   @output — S1 信任声明/契约广告、S2 read-only 诚实过滤、S3 写工具 -32000 拒绝、
- *             S4 sentinel_list 经 L2 全链路取数（诚实绿：进程内 registry，无需 HTTP/LLM）、
+ *             S4 全链路正判据（sentinel_list 经启动期自举取全部哨兵：ok:true ∧ total===E）、
  *             S5 full 模式 12 工具全广告、S6 边界（未知工具/非法 JSON/缺参 → SDK 标准错误码，
- *             进程不崩 + stdout 纯度）、S7 非法模式 fail-closed（stderr warn + 行为=read-only）
- *   @degraded — 无（冒烟不允许降级放行；断言失败即红）
+ *             进程不崩 + stdout 纯度）、S7 非法模式 fail-closed（stderr warn + 行为=read-only）、
+ *             S9 全链路负例（fixture 目录不可用 ⇒ 自举失败 ⇒ sentinel_list 结构化 ok:false）
+ *   @degraded — S9 主动制造自举降级并断言（进程不退出，诚实报错）
  *   @error  — 子进程 10s 内未响应 → 测试失败（含 stderr 尾部便于排查）
  */
 import { describe, it, expect, afterAll } from 'vitest';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
+import { readdirSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import os from 'node:os';
 import path from 'node:path';
 
 const REPO_ROOT = path.resolve(__dirname, '../..');
 const TSX_CLI = path.join(REPO_ROOT, 'node_modules', 'tsx', 'dist', 'cli.mjs');
 const SERVER_ENTRY = path.join(REPO_ROOT, 'src', 'mcp', 'index.ts');
+const SENTINELS_ROOT = path.join(REPO_ROOT, 'extensions', 'sentinels');
+const ADAPTERS_DIR = path.join(REPO_ROOT, 'src', 'sentinel', 'adapters');
+
+/**
+ * E 独立派生（SPEC §9.3）：目录哨兵 = extensions/sentinels 下有效目录数（跳过 shared／`_` 前缀），
+ * 内置 = src/sentinel/adapters 下 *-sentinel.{ts,js} 文件数 ⇒ E = 46 ＋ 4（as_of，不写死）。
+ */
+const E_DIR = readdirSync(SENTINELS_ROOT, { withFileTypes: true })
+  .filter((d) => d.isDirectory() && d.name !== 'shared' && !d.name.startsWith('_')).length;
+const E_BUILTIN = readdirSync(ADAPTERS_DIR).filter((f) => /-sentinel\.(ts|js)$/.test(f)).length;
+const E = E_DIR + E_BUILTIN;
 
 /** 单条 JSON-RPC 响应/请求（测试视角最小形状） */
 interface JsonRpcMessage {
@@ -184,16 +199,23 @@ describe('S1-S4: SYNOVA_MCP_MODE=read-only（stdio 全链路）', () => {
     expect(resp.error?.message).toContain('sentinel_run');
   });
 
-  it('S4: tools/call sentinel_list → content[0].text 解析 ok:true 且 total≥0（L2 全链路诚实绿）', async () => {
+  it('S4 全链路正判据：sentinel_list ⇒ ok===true ∧ total===E ∧ sentinels.length===E（启动期自举，真数据）', async () => {
     const resp = await client.request('tools/call', { name: 'sentinel_list', arguments: {} });
     expect(resp.error).toBeUndefined();
     const content = (resp.result?.content ?? []) as Array<{ type: string; text?: string }>;
     expect(content.length).toBeGreaterThan(0);
     expect(content[0].type).toBe('text');
-    const parsed = JSON.parse(content[0].text ?? '{}') as { ok: boolean; total: number };
-    expect(parsed.ok).toBe(true);
-    expect(parsed.total).toBeGreaterThanOrEqual(0);
-    expect(Array.isArray((parsed as { sentinels?: unknown[] }).sentinels)).toBe(true);
+    const parsed = JSON.parse(content[0].text ?? '{}') as {
+      ok: boolean;
+      total: number;
+      sentinels?: Array<{ id: string }>;
+    };
+    // 业务真判据（E 由测试侧独立 FS 派生；不是 total>=0 的恒真断言）
+    // 诊断消息带应答原文 ＋ stderr 尾部：撤自举时必红，且红态点名 ok/total 与 fail-closed 指纹
+    // （stderr 含 `[mcp] degraded: sentinel-bootstrap SENTINEL_BOOTSTRAP_NOT_RUN`）
+    expect(parsed.ok, `sentinel_list 应答=${content[0].text} ｜ stderr 尾部=${client.stderrTail(800)}`).toBe(true);
+    expect(parsed.total, `total=${parsed.total} 应为独立的 E=${E}`).toBe(E);
+    expect(parsed.sentinels).toHaveLength(E);
   });
 });
 
@@ -257,5 +279,37 @@ describe('S7: SYNOVA_MCP_MODE=bogus（DS11 fail-closed）', () => {
     expect(tools).toHaveLength(READ_ONLY_TOOL_COUNT);
     // stderr 有 fail-closed 警告（resolveMcpMode log.warn 经 pino → fd2）
     expect(client.stderrChunks.join('')).toContain('fail-closed');
+  });
+});
+
+// ═══ 场景组 4: 全链路负例（S9，独立进程；自举失败 ⇒ 诚实报错）═══
+
+describe('S9: 全链路负例（自举失败，D751 fixture 缝）', () => {
+  // 不存在的 fixture 目录（既有注入缝 SENTINELS_FIXTURE_DIR ⇒ loader 自报「目录不存在」）
+  const missingFixture = path.join(os.tmpdir(), `synova-m5-missing-${randomUUID()}`);
+  const client = startClient({
+    SYNOVA_MCP_MODE: 'read-only',
+    SENTINELS_FIXTURE_DIR: missingFixture,
+  });
+
+  it('S9 全链路负例：fixture 不可用 ⇒ sentinel_list ok:false ∧ error=SENTINEL_BOOTSTRAP_FAILED ∧ sentinels.length===0', async () => {
+    await client.initialize();
+    const resp = await client.request('tools/call', { name: 'sentinel_list', arguments: {} });
+    expect(resp.error).toBeUndefined();
+    const content = (resp.result?.content ?? []) as Array<{ type: string; text?: string }>;
+    expect(content.length).toBeGreaterThan(0);
+    expect(content[0].type).toBe('text');
+    const parsed = JSON.parse(content[0].text ?? '{}') as {
+      ok: boolean;
+      error?: string;
+      sentinels?: unknown[];
+      degraded?: boolean;
+    };
+    // 诚实报错：不把「自举失败」读成「0 哨兵成功」；**不断言 total**（SPEC §9.4）
+    expect(parsed.ok).toBe(false);
+    expect(parsed.error).toBe('SENTINEL_BOOTSTRAP_FAILED');
+    expect(parsed.degraded).toBe(true);
+    expect(Array.isArray(parsed.sentinels)).toBe(true);
+    expect(parsed.sentinels ?? []).toHaveLength(0);
   });
 });
