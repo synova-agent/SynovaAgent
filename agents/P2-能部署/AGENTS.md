@@ -11,7 +11,7 @@
 
 ## 二、内容
 
-C4 两段式／M5 接口层／构建·打包·容器／M1 维护（**DSH 升级回归 —— 开发工具面，与产品运行时无关**）／N1
+C4 两段式／**M5 运行时接口层（判据＝卡 #703/#704/#705；DSH 借鉴锚见 §七之补）**／构建·打包·容器／M1 维护（**DSH 升级回归 —— 开发工具面，与产品运行时无关**）／N1
 
 ## 三、完成判据
 
@@ -19,7 +19,10 @@ C4 两段式／M5 接口层／构建·打包·容器／M1 维护（**DSH 升级�
 
 ## 四、写集（**文件级；越界即停并上报 CTO**）
 
-scripts/desktop/{build-content.mjs,build-backend.sh}｜src/sentinel/{sentinel-loader,builtins}.ts｜build-synova.cjs｜Dockerfile｜tests/desktop/**
+scripts/desktop/{build-content.mjs,build-backend.sh}｜src/sentinel/{sentinel-loader,builtins}.ts｜build-synova.cjs｜Dockerfile｜tests/desktop/**｜
+**（M5 批次专属 · 裁 248）** `src/runtime/**`｜`src/mcp/**`｜`tests/mcp/**`｜`packages/test-kit/**`｜`src/runtime/stub/**`（**新建**）
+> 🔴 `dsh/plugins/**` **不在本包写集**（研发看板＝开发工具面，宪章 §4.2；M5 批次亦不得动）
+> 🔴 M5 批次写集与 P1 在飞（`src/l4｜src/sentinel｜src/cycles｜src/store/migrations`）零重叠；**动手前仍须交一次在飞 PR 求交**
 
 ## 五、依赖
 
@@ -30,10 +33,25 @@ M1b（已合）｜U1 数据卫生（customer-config 只发模板骨架）
 🔴 不宣"运行期可卸"（U2）｜不宣"容器已修"（U4 无 docker）｜判据不用字节/sha
 
 ❌ 不碰 `package.json`（红线）｜❌ 不碰 `src/sentinel/types.ts`／`src/server.ts`／`src/connectors/ima.ts`／`src/agent/cost-budget.ts`（M1b 域）｜❌ 不碰 `scripts/audit/**`｜❌ 不改 `Dockerfile` 之外的容器配置
+❌ **不引 DSH 依赖**（`grep -rn "from '@deepseek-ai/dsh'" src/ packages/` 必须 0；裁 222）｜❌ **M5 批次不动 `dsh/plugins/**`**｜❌ 不重写 tool loop／不新增插件运行时（超出 M5 即停并上报）
+
+## 六之补 · 🔴 M5 批次的 DSH 借鉴锚（裁 248）
+
+```
+ 🔴 借鉴定位：**参考自研**（借原则/形状，不抄代码，不引依赖）——裁 222：DSH 是开发工具，不是产品运行时依赖
+ 锚定版本：DSH **0.2.1-rc.2** ｜ commit **687f282e86** ｜ 源码 `/Users/wane/src/dsh-src-0.2.1-rc.2`
+ 证据要求：每条"借鉴"必须给 **file:line**（DSH 源码）＋ 写清"借什么 / 不借什么 / 为什么"
+ 可借的形状（举例）：
+   · 不变量伴生注册（`dsh-invariants/lib/index.js:6-19`）→ 借"包自带判据、违约必炸"的形状，做替身断言
+   · 工具签名/独立包（`dsh-tool-*` 各自成包）→ 借"接口窄、可替换"的形状
+ 不可借：Cordis 生命周期/代际、运行时插件装载、任何 `@deepseek-ai/*` 运行时依赖
+ 代码质量：**按 `.claude/skills/dsh-code-standards/SKILL.md` 12 项强制项自评**（CTO 不复述标准，缺项即不合格）
+```
 
 ## 七、🔴 域守则指针（**必须显式 read**，DSH 无法额外注入）
 
 `extensions/sentinels/AGENTS.md`（装载器读它）｜`extensions/AGENTS.md`（**6 根分发＋U1 只发模板骨架**）｜`memory/notes/AGENTS.md`｜（👁）`.gitea/AGENTS.md`
+**（M5 批次追加）** `.claude/skills/dsh-code-standards/SKILL.md`（**代码标准 12 项强制**，写码/测试前对照；含 README 骨架／Known Limitations／typed error／fail loud／explicit authority／测试配对）｜`packages/test-kit/src/index.ts`（`createTestEnv()` 测试环境工厂，替身可直接复用）｜`src/mcp/**` **无域守则** ⇒ 以 `src/agent/AGENTS.md` ＋ 本件为准
 
 > 口径：**12 份域守则按"目录"切，10 个包按"职责"切 —— 正交** ⇒ 本清单是交集（全表 `handbook 包/交叉矩阵-12守则×10包.md`）
 > 🔴 **DSH 无法额外注入指定文件 ⇒ 必须显式 `read`**（不 read 就会漏）
