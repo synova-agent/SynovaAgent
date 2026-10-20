@@ -4,6 +4,7 @@
 writeset:
   - .claude/claims/704.yaml
   - .claude/claims/746.yaml
+  - .claude/task-briefs/2026-10-20-704-m5-bootstrap.md
   - src/agent/sentinel-service.ts
   - src/mcp/index.ts
   - tests/runtime/sentinel-bootstrap.test.ts
