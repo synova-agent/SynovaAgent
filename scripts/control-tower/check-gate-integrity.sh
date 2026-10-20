@@ -742,6 +742,16 @@ run_ci_reds() { # $1 = check-runs JSON
   #   非参与型失败（如 issues 事件触发的工作流）→ **advisory**：打印可见，**不判 violation**。
   #   ⚠️ 取不到参与集 ⇒ **fail-closed degrade**（不静默放行）。
   local part_names="$TMPD/participating_names.txt"
+  # #662: 排除清单落文件（--exclude-check 可重复；空数组在 bash 3.2 下用 + 展开）
+  local excl_file="$TMPD/exclude_checks.txt"
+  : > "$excl_file" 2>/dev/null || true
+  local _excl_one
+  for _excl_one in ${EXCLUDE_CHECKS[@]+"${EXCLUDE_CHECKS[@]}"}; do
+    [ -n "$_excl_one" ] && printf '%s\n' "$_excl_one" >> "$excl_file"
+  done
+  if [ -s "$excl_file" ]; then
+    info "CI-RED-EXCLUDE: 对账时排除 ${#EXCLUDE_CHECKS[@]} 个检查（自身/声明排除）: $(tr '\n' ' ' < "$excl_file")"
+  fi
   if [ -n "$PYBIN" ] && [ -f "$CIYML_FOR_SCOPE" ]; then
     "$PYBIN" - "$CIYML_FOR_SCOPE" > "$part_names" 2>"$TMPD/scope.err" <<'PYSCOPE' || true
 import re
@@ -810,7 +820,7 @@ PYSCOPE
   fi
   vprint "  参与集（ci.yml all-checks-passed.needs 展开）: ${n_part} 名"
 
-  if ! "$PYBIN" - "$json" "$part_names" > "$failing" 2>"$TMPD/json.err" <<'PYEOF'
+  if ! "$PYBIN" - "$json" "$part_names" "$excl_file" > "$failing" 2>"$TMPD/json.err" <<'PYEOF'
 import json
 import sys
 
@@ -835,8 +845,18 @@ try:
 except Exception:
     part = set()
 
+# #662（裁 223）: 对账时排除自身 —— 检查器不得把自己的红算成「未登记 CI 失败」
+#   排除清单来自 --exclude-check（可重复），由 shell 侧写成每行一个（sys.argv[3]）
+excl = set()
+try:
+    with open(sys.argv[3], encoding='utf-8') as fh:
+        excl = {ln.strip() for ln in fh if ln.strip()}
+except Exception:
+    excl = set()
+
 fail_all = sorted({str(r.get('name', '')) for r in runs
                    if isinstance(r, dict) and r.get('conclusion') == 'failure'})
+fail_all = [n for n in fail_all if n not in excl]
 for name in fail_all:
     if name and name in part:
         print(name)
@@ -1039,7 +1059,7 @@ run_fixture_power() {
 
 # ═══ 主流程 ═══════════════════════════════════════════════════════════════════
 
-DO_PATTERNS=0; DO_REGISTRY=0; DO_FIXTURE=0; CI_REDS=""; BASE_REF=""; VERBOSE=0
+DO_PATTERNS=0; DO_REGISTRY=0; DO_FIXTURE=0; CI_REDS=""; BASE_REF=""; VERBOSE=0; EXCLUDE_CHECKS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --patterns-only) DO_PATTERNS=1 ;;
@@ -1057,6 +1077,15 @@ while [ $# -gt 0 ]; do
       shift
       ;;
     --base-ref=*) BASE_REF="${1#--base-ref=}" ;;
+    --exclude-check)
+      [ -n "${2:-}" ] || { usage >&2; degrade "USAGE_ARGS" "args" "--exclude-check 缺少 <name> 参数"; }
+      EXCLUDE_CHECKS+=("$2")
+      shift
+      ;;
+    --exclude-check=*)
+      [ -n "${1#--exclude-check=}" ] || { usage >&2; degrade "USAGE_ARGS" "args" "--exclude-check= 需要 <name> 参数"; }
+      EXCLUDE_CHECKS+=("${1#--exclude-check=}")
+      ;;
     --root) shift ;;                      # 已在文件头预扫生效（定根必须先于 ROOT 解析）
     --root=*) ;;                          # 同上
     --verbose) VERBOSE=1 ;;
@@ -1067,7 +1096,7 @@ while [ $# -gt 0 ]; do
 done
 if [ "$DO_PATTERNS" = 0 ] && [ "$DO_REGISTRY" = 0 ] && [ "$DO_FIXTURE" = 0 ]; then DO_PATTERNS=1; DO_REGISTRY=1; DO_FIXTURE=1; fi
 
-info "GATE-INTEGRITY-CHECK: patterns=${DO_PATTERNS} registry=${DO_REGISTRY} fixture=${DO_FIXTURE} ci_reds=$([ -n "$CI_REDS" ] && echo 1 || echo 0) base_ref=${BASE_REF:-<未提供>} root=${ROOT}"
+info "GATE-INTEGRITY-CHECK: patterns=${DO_PATTERNS} registry=${DO_REGISTRY} fixture=${DO_FIXTURE} ci_reds=$([ -n "$CI_REDS" ] && echo 1 || echo 0) base_ref=${BASE_REF:-<未提供>} exclude=${#EXCLUDE_CHECKS[@]} root=${ROOT}"
 
 [ "$DO_PATTERNS" = 1 ] && run_patterns
 [ "$DO_REGISTRY" = 1 ] && run_registry
