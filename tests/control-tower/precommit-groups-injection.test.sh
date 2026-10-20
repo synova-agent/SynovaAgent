@@ -130,7 +130,15 @@ BRANCH="$(git -C "$REPO_DIR" rev-parse --abbrev-ref HEAD)"
 
 TMP="$(mktemp -d)"
 CLONE="$TMP/repo"
-cleanup() { rm -rf "$TMP"; }
+cleanup() {
+  # #665d（判据⑧）: 异常退出也清 clone——探针文件（*-decl-probe.md / *-excl-probe.md / *-side-brief.md）
+  #   不得泄漏；正常路径由夹具末尾的 status --porcelain 断言先证明。
+  if [ -n "${CLONE:-}" ] && [ -d "${CLONE:-}" ]; then
+    git -C "$CLONE" reset -q --hard HEAD 2>/dev/null || true
+    git -C "$CLONE" clean -qfdx 2>/dev/null || true
+  fi
+  rm -rf "$TMP"
+}
 trap cleanup EXIT INT TERM
 
 echo "═══════════════════════════════════════════════════════════════"
@@ -786,6 +794,9 @@ RESIDUE_FAIL=0
 [ "$CLONE_POSITIVE" -eq 0 ] && RESIDUE_FAIL=1
 [ "$RESIDUE_FAIL" -eq 0 ] && echo "✅ 残留断言满足（a=0, b<=13, c>0）" || echo "❌ 残留断言不满足（a=${CODE_RESIDUE}, b=${REPO_RESIDUE}, c=${CLONE_POSITIVE}）"
 
+# #665d: 进入 #665 探针段前先复位（D1148 合并探针停在 MERGE_HEAD；探针文件不许带进下一段）
+reset_clone
+
 # ═══ #665 判据②/④/⑤：fixture-mode 双模式 ＋ 判别力探针 ═══
 #   ② 设 SYNO_DIFF_BASE 与不设两种情况下基线都能出结论（不 crash / 不被 D1193 拦）
 #   ④ 真实 CI 无 base（无标记）⇒ 仍 exit 1（D1193 原判据不回退）
@@ -830,6 +841,22 @@ fi
 # ④ 有标记 + 无 base ⇒ 不再被 D1193 拦（显式豁免，不是放宽判据）
 grep -q 'CI 无 base（fail-closed' "$TMP/out.base-with-diffbase.log" && D1193_REGRESSION_STATUS="FAIL"
 
+# #665d: 夹具最后一步清理（判据⑧ 的"正常路径"）；删掉/变异这里的 reset ⇒ 断言必须红
+reset_clone
+
+# ═══ #665d 判据⑧: 探针文件不许泄漏（clone 必须干净） ═══
+#   期望产物: 无（本夹具不声明任何预期残留）；例外必须显式列出
+CLONE_DIRTY="$(git -C "$CLONE" status --porcelain 2>/dev/null || true)"
+if [ -n "$CLONE_DIRTY" ]; then
+  CLONE_DIRTY_N="$(printf '%s\n' "$CLONE_DIRTY" | grep -c . || true)"
+  echo "  ❌ 判据⑧: 夹具克隆残留（status --porcelain 非空，${CLONE_DIRTY_N} 行）:"
+  printf '%s\n' "$CLONE_DIRTY" | head -5 | sed 's/^/     /'
+  RESIDUE_FAIL=1
+else
+  CLONE_DIRTY_N=0
+  echo "  ✅ 判据⑧: 夹具克隆 status --porcelain 为空（探针文件未泄漏）"
+fi
+
 # ═══ 汇总表 ═══
 echo ""
 echo "═══════════════════════════════════════════════════════════════"
@@ -862,7 +889,7 @@ if [ "${SYNO_INJECT_REQUIRE_CLEAN_BASELINE:-0}" = "1" ] && [ "$BASE_STATUS" = "h
   echo "   [STRICT] SYNO_INJECT_REQUIRE_CLEAN_BASELINE=1 且基线=HOST_STATE → 判红（严格守门模式）"
 fi
 
-echo "GATE_INJECTION_SUMMARY: scenarios=${#NAMES[@]} red_confirmed=$RED_N structural_not_red=$STRUCT_N not_red=$NOTRED_N baseline=$BASE_STATUS probe=$PROBE_STATUS(rc=$PROBE_RC) residue_code=$CODE_RESIDUE residue_repo=$REPO_RESIDUE shim=$SHIM_USED decl_gates=${D1148_FAIL:-0} fixture_mode=$FIXTURE_MODE_STATUS d1193_regression=$D1193_REGRESSION_STATUS no_marker_notred=$NO_MARKER_NOTRED"
+echo "GATE_INJECTION_SUMMARY: scenarios=${#NAMES[@]} red_confirmed=$RED_N structural_not_red=$STRUCT_N not_red=$NOTRED_N baseline=$BASE_STATUS probe=$PROBE_STATUS(rc=$PROBE_RC) residue_code=$CODE_RESIDUE residue_repo=$REPO_RESIDUE shim=$SHIM_USED decl_gates=${D1148_FAIL:-0} fixture_mode=$FIXTURE_MODE_STATUS d1193_regression=$D1193_REGRESSION_STATUS no_marker_notred=$NO_MARKER_NOTRED clone_status=$([ "$CLONE_DIRTY_N" -eq 0 ] && echo clean || echo "DIRTY($CLONE_DIRTY_N)")"
 if [ "$RC" -eq 0 ]; then
   echo "✅ 注入自测结果：期望红组全部 RED_CONFIRMED，残留断言满足，baseline=${BASE_STATUS}（结论归自验/独立审计，本夹具只出证据）"
   [ "$BASE_STATUS" = "host_state" ] && echo "   ⚠️ 注意：基线非天然绿（宿主 /tmp marker 绝对路径读取，已由探针因果确认）——CI 上新 runner 应为 BASELINE_OK"
