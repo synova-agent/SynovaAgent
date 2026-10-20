@@ -20,7 +20,7 @@ C4 两段式／**M5 运行时接口层（判据＝卡 #703/#704/#705；DSH 借�
 ## 四、写集（**文件级；越界即停并上报 CTO**）
 
 scripts/desktop/{build-content.mjs,build-backend.sh}｜src/sentinel/{sentinel-loader,builtins}.ts｜build-synova.cjs｜Dockerfile｜tests/desktop/**｜
-**（M5 批次专属 · 裁 248）** `src/runtime/**`｜`src/mcp/**`｜`tests/mcp/**`｜`packages/test-kit/**`｜`src/runtime/stub/**`（**新建**）
+**（M5 批次专属 · 裁 248/249）** `src/runtime/**`｜`src/mcp/**`｜`src/agent/sentinel-service.ts`（**只加 `ensureSentinelRegistryLoaded()` 一个函数**）｜`tests/mcp/**`｜`tests/runtime/**`｜`packages/test-kit/**`｜`src/runtime/stub/**`（**新建**）
 > 🔴 `dsh/plugins/**` **不在本包写集**（研发看板＝开发工具面，宪章 §4.2；M5 批次亦不得动）
 > 🔴 M5 批次写集与 P1 在飞（`src/l4｜src/sentinel｜src/cycles｜src/store/migrations`）零重叠；**动手前仍须交一次在飞 PR 求交**
 
@@ -41,9 +41,9 @@ M1b（已合）｜U1 数据卫生（customer-config 只发模板骨架）
  🔴 借鉴定位：**参考自研**（借原则/形状，不抄代码，不引依赖）——裁 222：DSH 是开发工具，不是产品运行时依赖
  锚定版本：DSH **0.2.1-rc.2** ｜ commit **687f282e86** ｜ 源码 `/Users/wane/src/dsh-src-0.2.1-rc.2`
  证据要求：每条"借鉴"必须给 **file:line**（DSH 源码）＋ 写清"借什么 / 不借什么 / 为什么"
- 可借的形状（举例）：
-   · 不变量伴生注册（`dsh-invariants/lib/index.js:6-19`）→ 借"包自带判据、违约必炸"的形状，做替身断言
-   · 工具签名/独立包（`dsh-tool-*` 各自成包）→ 借"接口窄、可替换"的形状
+ ⚠️ **旧举例已作废**（裁 249）：`dsh-invariants`、`dsh-tool-*` 在 0.2.1-rc.2 源码里**不存在**（该版是分组布局）
+ ⇒ 借鉴点**由 P2 在 dev doc 里落**（Mac 读源码 → 写成设计结论＋真实 file:line）；**Win 不需要读 DSH 源码**
+ ⇒ 若给不出真实 file:line ⇒ 写"本例未找到对应源码，放弃该借鉴点"，**不许编引用**
  不可借：Cordis 生命周期/代际、运行时插件装载、任何 `@deepseek-ai/*` 运行时依赖
  代码质量：**按 `.claude/skills/dsh-code-standards/SKILL.md` 12 项强制项自评**（CTO 不复述标准，缺项即不合格）
 ```
