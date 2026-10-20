@@ -2,3 +2,4 @@
 - gate-exemptions/2026-10-20-devdoc-gate-a-skill.md — 本豁免文件（gate-exemptions 自我保护） — 裁 256
 - docs/authority/DOCS-REGISTRY.yaml — 登记 DOC-0232（devdoc-gate-a 豁免件） — 裁 256
 - .dsh/skills/** — 同步 devdoc-gate-a v2（角色卡/聚合规则/反模式） — 裁 262
+- .dsh/skills/** — 同步 devdoc-gate-a 评审分层（裁 267） — 裁 267
