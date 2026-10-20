@@ -41,9 +41,18 @@ M1b（已合）｜U1 数据卫生（customer-config 只发模板骨架）
  🔴 借鉴定位：**参考自研**（借原则/形状，不抄代码，不引依赖）——裁 222：DSH 是开发工具，不是产品运行时依赖
  锚定版本：DSH **0.2.1-rc.2** ｜ commit **687f282e86** ｜ 源码 `/Users/wane/src/dsh-src-0.2.1-rc.2`
  证据要求：每条"借鉴"必须给 **file:line**（DSH 源码）＋ 写清"借什么 / 不借什么 / 为什么"
- ⚠️ **旧举例已作废**（裁 249）：`dsh-invariants`、`dsh-tool-*` 在 0.2.1-rc.2 源码里**不存在**（该版是分组布局）
- ⇒ 借鉴点**由 P2 在 dev doc 里落**（Mac 读源码 → 写成设计结论＋真实 file:line）；**Win 不需要读 DSH 源码**
- ⇒ 若给不出真实 file:line ⇒ 写"本例未找到对应源码，放弃该借鉴点"，**不许编引用**
+ 🔴 **Win 也可读 DSH 源码**（裁 250）：仓库 `https://github.com/deepseek-ai/deepseek-harness.git`
+   钉 commit **687f282e8625c6b8d11ff58211a90524be2e4317**（0.2.1-rc.2，MIT）｜校验 `git rev-parse HEAD`
+   取法：`git clone --filter=blob:none https://github.com/deepseek-ai/deepseek-harness.git dsh-ref`
+        `cd dsh-ref && git fetch --depth 1 origin 687f282e8625c6b8d11ff58211a90524be2e4317 && git checkout FETCH_HEAD`
+   **已实测存在**的借鉴点（file:line 由执行方现场读到再引）：
+     · `.agents/notes/implemented/architecture/2026-06-13-capability-seams.md` —— **Service Definition / Provider / Consumer 三角色**
+       （正是 `src/runtime/port.ts` 要借的形状：定义=端口、真实现/替身=两个 Provider、MCP server=Consumer）
+     · `.agents/notes/implemented/architecture/2026-06-11-dev-invariants-over-deep-readonly.md` —— 不变量优先于深只读
+     · `packages/experimental/tool-agent-team/` —— 一个能力一个包（README＋package.json＋src＋tests）
+   ⚠️ 旧举例（`dsh-invariants`、`dsh-tool-*`）在 0.2.1-rc.2 布局里**不存在**，已作废（裁 249）
+   ⇒ 借用口径：**只借形状、不抄代码**（MIT 允许抄，但本仓口径是自己写）；每条借鉴给**现场核过的 file:line**；
+     给不出 ⇒ 写"未找到对应源码，放弃该借鉴点"，**不许编引用**
  不可借：Cordis 生命周期/代际、运行时插件装载、任何 `@deepseek-ai/*` 运行时依赖
  代码质量：**按 `.claude/skills/dsh-code-standards/SKILL.md` 12 项强制项自评**（CTO 不复述标准，缺项即不合格）
 ```
