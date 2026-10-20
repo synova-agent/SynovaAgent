@@ -1,0 +1,2 @@
+- docs/authority/DOCS-REGISTRY.yaml — 登记本体层规范 v2.11 与宪章 v8.3 镜像存档（D2 登记门禁） — 裁 227
+- gate-exemptions/2026-10-20-ontology-spec-archive.md — 本豁免文件（gate-exemptions 自我保护） — 裁 227

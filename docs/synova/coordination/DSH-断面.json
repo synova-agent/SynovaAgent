@@ -1,13 +1,13 @@
 {
   "authority": "DSH 断面唯一事实源（D943，2026-09-24）",
   "current": {
-    "version": "0.1.7-rc.1",
-    "head": "46a7f68b",
-    "tag": "dsh-v0.1.7-rc.1",
-    "path": "/Users/wane/src/deepseek-harness-017",
-    "recorded_at": "2026-09-24T16:04:35+08:00",
+    "version": "0.2.1-rc.2",
+    "head": "687f282e86",
+    "tag": "dsh-v0.2.1-rc.2",
+    "path": "/Users/wane/src/dsh-src-0.2.1-rc.2",
+    "recorded_at": "2026-10-20T03:40:00+08:00",
     "recorded_by": "synova-cto",
-    "note": "checkout 于 16:04:35 由 00102833(dsh-v0.1.7-alpha.2) 移至 dsh-v0.1.7-rc.1"
+    "note": "2026-10-20 重建：旧锚 path /Users/wane/src/deepseek-harness-017 已删除 ⇒ check-dsh-anchor 长期 DEGRADED。新锚指向 dsh-v0.2.1-rc.2 的独立 worktree（源码与实跑 app 版本对齐）。★ DSH 口径（2026-10-20 定）：DSH 是【开发工具】，不是产品运行时依赖 —— 本文件只服务开发侧断面，不得被引作『产品支持 DSH 某版本』。"
   },
   "superseded": [
     {
@@ -15,13 +15,20 @@
       "head": "00102833",
       "retired_at": "2026-09-24T16:04:35+08:00",
       "reason": "创始人 2026-09-24 决策『按新版来』→ 平移至 rc.1；alpha.2 对象仍在本地可解析（可回退）"
+    },
+    {
+      "version": "0.1.7-rc.1",
+      "head": "46a7f68b",
+      "retired_at": "2026-10-20T03:40:00+08:00",
+      "reason": "旧锚 path 已删（/Users/wane/src/dsh-src-0.2.1-rc.2 的上一代 /Users/wane/src/deepseek-harness-017 不存在）＋ DSH 已升至 0.2.1-rc.2。**该 path 不存在 ≠ 树被移动**，是环境已不存在 ⇒ 不得再作现状引用。"
     }
   ],
   "policy": {
     "anchor_required_format": "<version> @ <head> （并写绝对路径）",
     "tree_moved_means": "本文件与真实 HEAD 不一致时，所有绑旧 HEAD 的结论自动降级『待复核』",
     "ban": "不得在任何派单件/卡/交付物中把已 superseded 的 (version, head) 当作现状引用",
-    "known_versions_note": "known_versions=可在沿革/史料中提及；superseded 对（version+head）不得作为现状引用。历史版本一律入本表，不用豁免段。D943-FIX（K3 批次4 §1.4 豁免收紧）：补登 0.1.2-rc.1 / 0.1.3-alpha.1 —— 史料出处 docs/synova/coordination/审计发现台账-DSH-CTO.md:266-267（2026-09-06 行，DSH 版本沿革与 Mac 运行时依赖叙述），原靠关键字豁免通过，现按沿革登记出清。★ 2026-10-06 补登 0.1.2-install / 0.2.0-rc.2（治理线，W 组 G0 解锁件）：出处 docs/synova/coordination/提案/RbacContext-org-team-维度.md:405-406「工作机上有三棵 DSH 树」表——两串都是**该表逐字列举的机上台账**（`~/.dsh-pre-upgrade-015rc1-…/dsh-0.1.2-install` 目录名 / CTO 所测『当前安装』树 `0.2.0-rc.2`），非新的现状断言；补登前 check-dsh-anchor 恒红 ⇒ 必需 context `Control Tower Gate Tests (ubuntu-latest)` 恒红 ⇒ 一切控制塔域 PR 永久 blocked。口径仍遵本 note『历史版本一律入本表，不用豁免段』。"
+    "known_versions_note": "known_versions=可在沿革/史料中提及；superseded 对（version+head）不得作为现状引用。历史版本一律入本表，不用豁免段。D943-FIX（K3 批次4 §1.4 豁免收紧）：补登 0.1.2-rc.1 / 0.1.3-alpha.1 —— 史料出处 docs/synova/coordination/审计发现台账-DSH-CTO.md:266-267（2026-09-06 行，DSH 版本沿革与 Mac 运行时依赖叙述），原靠关键字豁免通过，现按沿革登记出清。★ 2026-10-06 补登 0.1.2-install / 0.2.0-rc.2（治理线，W 组 G0 解锁件）：出处 docs/synova/coordination/提案/RbacContext-org-team-维度.md:405-406「工作机上有三棵 DSH 树」表——两串都是**该表逐字列举的机上台账**（`~/.dsh-pre-upgrade-015rc1-…/dsh-0.1.2-install` 目录名 / CTO 所测『当前安装』树 `0.2.0-rc.2`），非新的现状断言；补登前 check-dsh-anchor 恒红 ⇒ 必需 context `Control Tower Gate Tests (ubuntu-latest)` 恒红 ⇒ 一切控制塔域 PR 永久 blocked。口径仍遵本 note『历史版本一律入本表，不用豁免段』。",
+    "scope": "本文件只锚【开发工具面】的 DSH 断面；产品（Synova）运行时不含 DSH，不引本文件。"
   },
   "known_versions": [
     "0.1.0-rc.8",
@@ -38,6 +45,7 @@
     "0.1.7-alpha.1",
     "0.1.7-alpha.2",
     "0.1.7-rc.1",
-    "0.2.0-rc.2"
+    "0.2.0-rc.2",
+    "0.2.1-rc.2"
   ]
 }

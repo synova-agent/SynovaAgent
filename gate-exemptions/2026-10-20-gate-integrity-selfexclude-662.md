@@ -1,0 +1,5 @@
+- scripts/control-tower/check-gate-integrity.sh — #662 自指死锁修复（--exclude-check＋fail_all 过滤） — 裁 223
+- .github/workflows/ci.yml — #662 Gate Integrity 调用传 --exclude-check 自身名 — 裁 223
+- tests/control-tower/check-gate-integrity-selfexclude.test.sh — #662 六判据＋四反例（含改名必红） — 裁 223
+- gate-exemptions/2026-10-20-gate-integrity-selfexclude-662.md — 本豁免文件（gate-exemptions 自我保护） — 裁 223
+- docs/authority/DOCS-REGISTRY.yaml — #662 登记本豁免文件（D2 登记门禁） — 裁 223

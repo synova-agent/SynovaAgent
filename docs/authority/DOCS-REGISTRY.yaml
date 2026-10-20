@@ -606,6 +606,13 @@ documents:
       owner: CTO
       note: "#598 闸 3 在 CI 补 base ＋ fail-loud 的豁免（7 条受保护路径；作者不校验后由 L1 补记）。"
 
+    # ---- CTO 2026-10-20：DSH 基线纠偏豁免（裁 222；D2 登记）----
+    - id: DOC-0228
+      type: decision
+      path: gate-exemptions/2026-10-20-dsh-baseline-222.md
+      status: active
+      owner: CTO
+      note: "裁 222：DSH 基线纠偏（0.2.1-rc.2）触碰受保护路径的豁免（ci.yml 蓝本注释、P2 守则 DSH 澄清）；含自覆盖与 DOCS-REGISTRY 自登记行。"
     # ---- CTO 2026-10-20：技能同步（#642）豁免（裁 221；D2 登记）----
     - id: DOC-0216
       type: decision
@@ -628,3 +635,99 @@ documents:
       status: active
       owner: CTO
       note: "#657 门禁 0-2 补 remote 维度（mirror main 放行＋三硬约束）的豁免；裁 223。"
+
+    # ---- P4 2026-10-20：#662 Gate Integrity 自指排除豁免（D2 登记）----
+    - id: DOC-0218
+      type: decision
+      path: gate-exemptions/2026-10-20-gate-integrity-selfexclude-662.md
+      status: active
+      owner: CTO
+      note: "#662 Gate Integrity 对账排除自身（--exclude-check）的豁免；裁 223。"
+
+    # ---- P4 2026-10-20：#665 注入夹具模式豁免（D2 登记）----
+    - id: DOC-0219
+      type: decision
+      path: gate-exemptions/2026-10-20-injection-fixture-mode-665.md
+      status: active
+      owner: CTO
+      note: "#665 夹具显式 SYNO_FIXTURE_MODE 豁免 D1193 fail-loud（真实 CI 不回退）的豁免；裁 223。"
+
+    # ---- P4 2026-10-20：#665b 注入夹具 hermetic 豁免（D2 登记）----
+    - id: DOC-0220
+      type: decision
+      path: gate-exemptions/2026-10-20-injection-fixture-hermetic-665b.md
+      status: active
+      owner: CTO
+      note: "#665b 注入夹具 env -i 白名单（外层 CI 环境隔离）的豁免；裁 223。"
+
+    # ---- P4 2026-10-20：#665c 夹具失败注解豁免（D2 登记）----
+    - id: DOC-0221
+      type: decision
+      path: gate-exemptions/2026-10-20-injection-fixture-annotations-665c.md
+      status: active
+      owner: CTO
+      note: "#665c 注入夹具失败时发 GitHub annotation（判据⑦）的豁免；裁 223。"
+
+    # ---- P4 2026-10-20：#665d 夹具克隆清理豁免（D2 登记）----
+    - id: DOC-0222
+      type: decision
+      path: gate-exemptions/2026-10-20-injection-fixture-clone-clean-665d.md
+      status: active
+      owner: CTO
+      note: "#665d 注入夹具判据⑧（探针文件不许泄漏）的豁免；裁 223。"
+
+    # ---- P4 2026-10-20：#665e 夹具 tsx 依赖豁免（D2 登记）----
+    - id: DOC-0223
+      type: decision
+      path: gate-exemptions/2026-10-20-injection-fixture-tsx-665e.md
+      status: active
+      owner: CTO
+      note: "#665e 夹具需要 tsx（组 13）——ci.yml 装 tsx＋夹具 SYNO_TSX 注入的豁免；裁 223。"
+
+  # ---- CTO 2026-10-20：本体层规范 v2.11 定稿存档（裁 227/229）----
+  - id: DOC-0224
+    type: architecture
+    path: docs/specs/ontology/本体层规范-v2.11.md
+    status: active
+    owner: CTO
+    note: "② 本体层执行规范（目标态）定稿镜像；权威源在院方；8 项技术决策＋9 处必改＋C1–C3 勘误已落。"
+
+  # ---- CTO 2026-10-20：产品宪章 v8.3 镜像存档（取代 v8.1 镜像）----
+  - id: DOC-0225
+    type: prd
+    path: docs/synova/产品宪章-v8.3-镜像.md
+    status: active
+    owner: CTO
+    note: "产品宪章 v8.3（2026-10-20 定稿获签）双端镜像；取代 docs/synova/产品宪章-v8.1-镜像.md（已标 superseded）。"
+
+  # ---- CTO 2026-10-20：存档豁免件（D2 登记）----
+  - id: DOC-0226
+    type: decision
+    path: gate-exemptions/2026-10-20-ontology-spec-archive.md
+    status: active
+    owner: CTO
+    note: "本体层规范 v2.11 ＋宪章 v8.3 镜像存档的受保护路径豁免（DOCS-REGISTRY ＋ 自覆盖）。"
+
+  # ---- CTO 2026-10-20：入口件/技能补本体层规范锚（口径盘点）----
+  - id: DOC-0227
+    type: decision
+    path: gate-exemptions/2026-10-20-p1-anchor-inventory.md
+    status: active
+    owner: CTO
+    note: "口径盘点：AGENTS.md 增两镜像路径；cto-handover skill 补本体层规范 v2.11 锚（.claude/.dsh 同源）。"
+
+  # ---- CTO 2026-10-20：MVP 权威件 v1.2 镜像（接宪章 v8.3＋本体层规范 v2.11＋M10）----
+  - id: DOC-0228
+    type: architecture
+    path: docs/specs/mvp/MVP阶段权威文件-v1.2.md
+    status: active
+    owner: CTO
+    note: "MVP 阶段权威件 v1.2 镜像（权威源=handbook；接宪章 v8.3＋本体层规范 v2.11＋裁 219 的 M10）。"
+
+  # ---- CTO 2026-10-20：MVP v1.2 存档豁免（D2 登记）----
+  - id: DOC-0229
+    type: decision
+    path: gate-exemptions/2026-10-20-mvp-v12-archive.md
+    status: active
+    owner: CTO
+    note: "MVP 权威件 v1.2 镜像存档（＋旧宪章 v5 HTML 标注 superseded）的受保护路径豁免。"

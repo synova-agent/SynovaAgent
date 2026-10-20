@@ -1,0 +1,4 @@
+- .github/workflows/ci.yml — #665e gate-integrity job 装 tsx＋timeout 2→10（组 13 需要） — 裁 223
+- tests/control-tower/precommit-groups-injection.test.sh — #665e _run_gate_env 注入 SYNO_TSX（克隆保持 hermetic） — 裁 223
+- gate-exemptions/2026-10-20-injection-fixture-tsx-665e.md — 本豁免文件（gate-exemptions 自我保护） — 裁 223
+- docs/authority/DOCS-REGISTRY.yaml — #665e 登记本豁免文件（D2 登记门禁） — 裁 223

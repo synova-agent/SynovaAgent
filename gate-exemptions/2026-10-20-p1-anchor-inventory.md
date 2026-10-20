@@ -1,0 +1,3 @@
+- .dsh/skills/cto-handover/SKILL.md — 补②本体层规范 v2.11 指针与裁 227/229（技能同步 .claude 同源） — 裁 227
+- docs/authority/DOCS-REGISTRY.yaml — 登记本豁免文件（D2 登记门禁） — 裁 227
+- gate-exemptions/2026-10-20-p1-anchor-inventory.md — 本豁免文件（gate-exemptions 自我保护） — 裁 227

@@ -27,6 +27,10 @@
 #   不按 1..13 循环，避免把不存在的组 11 当失败。
 #
 # ═══ 隔离（hermetic）═══
+#   🔴 #665b（裁 223）: 子进程一律 `env -i` **白名单**（PATH/HOME/LANG/TMPDIR + 门禁三件套），
+#      不继承外层 CI 环境（CI / GITHUB_EVENT_NAME / GITHUB_* …）—— 否则门禁某些组走 strict
+#      分支 ⇒ 同一夹具"脱外层绿、带外层红"（不可复现）。白名单而非黑名单：GITHUB_* 消费点 300+。
+#      判据⑥：外层带 CI 环境跑本夹具，结果必须与干净环境逐字一致（EXIT/red_confirmed/baseline）。
 #   全部注入只发生在 `mktemp -d` 副本里（git clone 副本 + reset --hard/clean -fdx 复位）。
 #   源工作树只读：夹具不写源工作树任何文件（收尾断言物理证明）。禁用 `timeout` 命令
 #   （本机实测 `bash: timeout: command not found`）——需要限时用外层调度，或按本夹具做法
@@ -67,7 +71,7 @@
 #   夹具内标记用拼接写法（MARK="INJECTED""-RED"）→ 夹具自身不含连续字面量，不会自命中。
 #
 # ═══ 绿基线与宿主 /tmp 泄漏（实测发现，2026-09-24 本机复现；CTO 裁定前按此分类）═══
-#   实测：干净副本直接跑 `GITHUB_ACTIONS=true SYNO_CI=1 bash scripts/pre-commit-check.sh` → rc=1，
+#   实测：干净副本直接跑 `GITHUB_ACTIONS=true SYNO_CI=1 SYNO_FIXTURE_MODE=1 bash scripts/pre-commit-check.sh` → rc=1，
 #   唯一红 = `❌ 时间戳顺序: brief 必须早于代码写入`。根因不是内容违规：
 #     pre-commit-check.sh L910 `BEFORE_BRIEF_EVI="/tmp/.synova-before-brief"` = **绝对宿主路径**，
 #     不是仓库相对路径 → 副本 hermetic 被打破，宿主上别人 session 的 marker 会污染副本判定。
@@ -126,7 +130,15 @@ BRANCH="$(git -C "$REPO_DIR" rev-parse --abbrev-ref HEAD)"
 
 TMP="$(mktemp -d)"
 CLONE="$TMP/repo"
-cleanup() { rm -rf "$TMP"; }
+cleanup() {
+  # #665d（判据⑧）: 异常退出也清 clone——探针文件（*-decl-probe.md / *-excl-probe.md / *-side-brief.md）
+  #   不得泄漏；正常路径由夹具末尾的 status --porcelain 断言先证明。
+  if [ -n "${CLONE:-}" ] && [ -d "${CLONE:-}" ]; then
+    git -C "$CLONE" reset -q --hard HEAD 2>/dev/null || true
+    git -C "$CLONE" clean -qfdx 2>/dev/null || true
+  fi
+  rm -rf "$TMP"
+}
 trap cleanup EXIT INT TERM
 
 echo "═══════════════════════════════════════════════════════════════"
@@ -152,6 +164,25 @@ if ! command -v python >/dev/null 2>&1; then
   echo "[ENV] 无此 shim 时组 9 在本机恒假绿（pre-commit-check.sh L1099 用 python -c）—— 已单独记录为实测发现"
   echo ""
 fi
+
+
+# ── #665b: hermetic 运行（env -i 白名单）──
+#   外层 CI 环境（CI / GITHUB_EVENT_NAME / GITHUB_* …）会让门禁某些组走 strict 分支
+#   ⇒ 在干净副本上失败（实测：带外层 CI 环境跑本夹具 ⇒ BASELINE_FAIL）。
+#   env -i（白名单）而非 env -u（黑名单）：黑名单永远列不全（实测 GITHUB_* 有 300+ 处消费）。
+_run_gate_env() { # <out> [<gate-env>...]
+  local out="$1"; shift
+  # #665e: 克隆里没有 node_modules（依赖装在工作区）⇒ 门禁组 13 的 tsx 探测会 exit 2。
+  #   显式注入门禁自带的 SYNO_TSX 注入缝（指向工作区的 tsx），克隆仍保持 hermetic（不装依赖、不复制目录）。
+  local tsx_env=()
+  if [ -x "$REPO_DIR/node_modules/.bin/tsx" ]; then
+    tsx_env=("SYNO_TSX=$REPO_DIR/node_modules/.bin/tsx")
+  fi
+  ( cd "$CLONE" && env -i \
+      PATH="$PATH" HOME="${HOME:-/tmp}" LANG="${LANG:-C.UTF-8}" TMPDIR="${TMPDIR:-/tmp}" \
+      ${tsx_env[@]+"${tsx_env[@]}"} \
+      "$@" bash scripts/pre-commit-check.sh ) >"$out" 2>&1
+}
 
 # ── 副本 ──
 if [ "$BRANCH" = "HEAD" ]; then
@@ -480,7 +511,7 @@ run_scenario() {
   staged_mark="$(git -C "$CLONE" diff --cached | grep -c "$MARK" || true)"
   staged_mark="${staged_mark//[^0-9]/}"
   t1=$SECONDS
-  ( cd "$CLONE" && GITHUB_ACTIONS=true SYNO_CI=1 bash scripts/pre-commit-check.sh ) >"$out" 2>&1
+  _run_gate_env "$out" GITHUB_ACTIONS=true SYNO_CI=1 SYNO_FIXTURE_MODE=1
   rc=$?
   t2=$SECONDS
 
@@ -611,7 +642,7 @@ git -C "$CLONE" add scripts/d1148-decl-probe.sh
 # 卡 #1423: 本场景测的是 **legacy 三闸**（brief 载体）语义 ⇒ 必须**显式回滚**（SYNO_CLAIM_V2=0）。
 #   否则 claim-first 默认生效时，resolver 会按分支 issue 取到副本里的真 claim ⇒ 注入的探针 brief
 #   根本不进判定 ⇒ 三闸不点火（假红形态 = 判据被绕过，不是闸坏）。
-( cd "$CLONE" && GITHUB_ACTIONS=true SYNO_CI=1 SYNO_CLAIM_V2=0 bash scripts/pre-commit-check.sh ) >"$TMP/out.d1148.log" 2>&1
+_run_gate_env "$TMP/out.d1148.log" GITHUB_ACTIONS=true SYNO_CI=1 SYNO_FIXTURE_MODE=1 SYNO_CLAIM_V2=0
 DECL_RC=$?
 DECL_FAILS="$(strip_ansi < "$TMP/out.d1148.log" | grep '❌' | sed 's/^[[:space:]]*//' || true)"
 DECL_MISS=""
@@ -672,7 +703,7 @@ EOF
 chmod +x "$CLONE/scripts/d1148-excl-probe.sh"
 git -C "$CLONE" add scripts/d1148-excl-probe.sh
 # 卡 #1423: 同上 —— 本场景测 legacy 闸②（排除项子判据）⇒ 显式回滚态。
-( cd "$CLONE" && GITHUB_ACTIONS=true SYNO_CI=1 SYNO_CLAIM_V2=0 bash scripts/pre-commit-check.sh ) >"$TMP/out.d1148-excl.log" 2>&1
+_run_gate_env "$TMP/out.d1148-excl.log" GITHUB_ACTIONS=true SYNO_CI=1 SYNO_FIXTURE_MODE=1 SYNO_CLAIM_V2=0
 EXCL_RC=$?
 EXCL_FAILS="$(strip_ansi < "$TMP/out.d1148-excl.log" | grep '❌' | sed 's/^[[:space:]]*//' || true)"
 if [ "$EXCL_RC" -eq 1 ] && printf '%s\n' "$EXCL_FAILS" | grep -q '声明闸②' \
@@ -708,7 +739,7 @@ git -C "$CLONE" checkout -q --detach "$_SIDE_ORIG"
 git -C "$CLONE" -c user.name=t -c user.email=t@t merge --no-commit --no-ff -q d1148-side
 MERGE_HEAD_PRESENT=0
 [ -n "$(git -C "$CLONE" rev-parse -q --verify MERGE_HEAD 2>/dev/null || true)" ] && MERGE_HEAD_PRESENT=1
-( cd "$CLONE" && GITHUB_ACTIONS=true SYNO_CI=1 bash scripts/pre-commit-check.sh ) >"$TMP/out.d1148-merge.log" 2>&1
+_run_gate_env "$TMP/out.d1148-merge.log" GITHUB_ACTIONS=true SYNO_CI=1 SYNO_FIXTURE_MODE=1
 MERGE_RC=$?
 MERGE_SKIP_LINE="$(strip_ansi < "$TMP/out.d1148-merge.log" | grep '声明类三闸：合并提交且无自撰文件' || true)"
 if [ "$MERGE_HEAD_PRESENT" -eq 1 ] && [ "$MERGE_RC" -eq 0 ] && [ -n "$MERGE_SKIP_LINE" ]; then
@@ -770,6 +801,69 @@ RESIDUE_FAIL=0
 [ "$CLONE_POSITIVE" -eq 0 ] && RESIDUE_FAIL=1
 [ "$RESIDUE_FAIL" -eq 0 ] && echo "✅ 残留断言满足（a=0, b<=13, c>0）" || echo "❌ 残留断言不满足（a=${CODE_RESIDUE}, b=${REPO_RESIDUE}, c=${CLONE_POSITIVE}）"
 
+# #665d: 进入 #665 探针段前先复位（D1148 合并探针停在 MERGE_HEAD；探针文件不许带进下一段）
+reset_clone
+
+# ═══ #665 判据②/④/⑤：fixture-mode 双模式 ＋ 判别力探针 ═══
+#   ② 设 SYNO_DIFF_BASE 与不设两种情况下基线都能出结论（不 crash / 不被 D1193 拦）
+#   ④ 真实 CI 无 base（无标记）⇒ 仍 exit 1（D1193 原判据不回退）
+#   ⑤ 摘掉标记 ⇒ 重现 not_red=4（标记是承重的，不是摆设）
+FIXTURE_MODE_STATUS="OK"; D1193_REGRESSION_STATUS="OK"; NO_MARKER_NOTRED=0
+BASE_SHA="$(git -C "$CLONE" rev-parse HEAD 2>/dev/null || echo '')"
+# ② 带 base 的基线
+if [ -n "$BASE_SHA" ]; then
+  _run_gate_env "$TMP/out.base-with-diffbase.log" GITHUB_ACTIONS=true SYNO_CI=1 SYNO_FIXTURE_MODE=1 SYNO_DIFF_BASE="$BASE_SHA"
+  rc_b=$?
+  if [ "$rc_b" -eq 2 ] || grep -q 'CI 无 base（fail-closed' "$TMP/out.base-with-diffbase.log"; then
+    FIXTURE_MODE_STATUS="FAIL"
+    echo "  [判据②] ❌ 设 SYNO_DIFF_BASE 的基线未出结论（rc=${rc_b}）"
+  else
+    echo "  [判据②] ✅ 设 SYNO_DIFF_BASE 的基线出结论（rc=${rc_b}，无 D1193 fail-loud）"
+  fi
+else
+  FIXTURE_MODE_STATUS="FAIL"; echo "  [判据②] ❌ 无法取 BASE_SHA"
+fi
+# ⑤/④ 摘掉标记：4 个场景各跑一次 ⇒ 每个都必须 not_red（D1193 拦在组判定之前）
+for _nm in g1 g2 g7 g12; do
+  reset_clone
+  "inj_$_nm"
+  _run_gate_env "$TMP/out.nomarker.$_nm.log" GITHUB_ACTIONS=true SYNO_CI=1
+  rc_n=$?
+  _label=""; case "$_nm" in g1) _label="── 组 1";; g2) _label="── 组 2";; g7) _label="── 组 7";; g12) _label="── 组 12";; esac
+  if [ "$rc_n" -eq 1 ] && grep -q 'CI 无 base（fail-closed' "$TMP/out.nomarker.$_nm.log"; then
+    if [ -z "$(fail_lines "$_label" "$TMP/out.nomarker.$_nm.log" 2 || true)" ]; then
+      NO_MARKER_NOTRED=$((NO_MARKER_NOTRED + 1)); echo "  [判据⑤] ✅ 摘标记 $_nm ⇒ not_red（组判定未执行，D1193 拦）"
+    else
+      echo "  [判据⑤] ❌ 摘标记 $_nm 却仍红（D1193 未拦）"
+    fi
+  else
+    echo "  [判据⑤] ❌ 摘标记 $_nm 未重现 D1193 fail-loud（rc=${rc_n}）"
+  fi
+done
+if [ "$NO_MARKER_NOTRED" -eq 4 ]; then
+  echo "  [判据⑤] ✅ 摘标记 ⇒ not_red=4（标记承重；D1193 原判据未放宽）"
+else
+  D1193_REGRESSION_STATUS="FAIL"; echo "  [判据⑤] ❌ 摘标记 not_red=${NO_MARKER_NOTRED}（期望 4）"
+fi
+# ④ 有标记 + 无 base ⇒ 不再被 D1193 拦（显式豁免，不是放宽判据）
+grep -q 'CI 无 base（fail-closed' "$TMP/out.base-with-diffbase.log" && D1193_REGRESSION_STATUS="FAIL"
+
+# #665d: 夹具最后一步清理（判据⑧ 的"正常路径"）；删掉/变异这里的 reset ⇒ 断言必须红
+reset_clone
+
+# ═══ #665d 判据⑧: 探针文件不许泄漏（clone 必须干净） ═══
+#   期望产物: 无（本夹具不声明任何预期残留）；例外必须显式列出
+CLONE_DIRTY="$(git -C "$CLONE" status --porcelain 2>/dev/null || true)"
+if [ -n "$CLONE_DIRTY" ]; then
+  CLONE_DIRTY_N="$(printf '%s\n' "$CLONE_DIRTY" | grep -c . || true)"
+  echo "  ❌ 判据⑧: 夹具克隆残留（status --porcelain 非空，${CLONE_DIRTY_N} 行）:"
+  printf '%s\n' "$CLONE_DIRTY" | head -5 | sed 's/^/     /'
+  RESIDUE_FAIL=1
+else
+  CLONE_DIRTY_N=0
+  echo "  ✅ 判据⑧: 夹具克隆 status --porcelain 为空（探针文件未泄漏）"
+fi
+
 # ═══ 汇总表 ═══
 echo ""
 echo "═══════════════════════════════════════════════════════════════"
@@ -795,16 +889,38 @@ RC=0
 [ "$NOTRED_N" -gt 0 ] && RC=1
 [ "$RESIDUE_FAIL" -ne 0 ] && RC=1
 [ "${D1148_FAIL:-0}" -ne 0 ] && RC=1   # D1148: 声明类三闸注入未红 = fail-open/未接线
+[ "$FIXTURE_MODE_STATUS" = "FAIL" ] && RC=1   # #665 判据②
+[ "$D1193_REGRESSION_STATUS" = "FAIL" ] && RC=1   # #665 判据④/⑤
 if [ "${SYNO_INJECT_REQUIRE_CLEAN_BASELINE:-0}" = "1" ] && [ "$BASE_STATUS" = "host_state" ]; then
   RC=1
   echo "   [STRICT] SYNO_INJECT_REQUIRE_CLEAN_BASELINE=1 且基线=HOST_STATE → 判红（严格守门模式）"
 fi
 
-echo "GATE_INJECTION_SUMMARY: scenarios=${#NAMES[@]} red_confirmed=$RED_N structural_not_red=$STRUCT_N not_red=$NOTRED_N baseline=$BASE_STATUS probe=$PROBE_STATUS(rc=$PROBE_RC) residue_code=$CODE_RESIDUE residue_repo=$REPO_RESIDUE shim=$SHIM_USED decl_gates=${D1148_FAIL:-0}"
+echo "GATE_INJECTION_SUMMARY: scenarios=${#NAMES[@]} red_confirmed=$RED_N structural_not_red=$STRUCT_N not_red=$NOTRED_N baseline=$BASE_STATUS probe=$PROBE_STATUS(rc=$PROBE_RC) residue_code=$CODE_RESIDUE residue_repo=$REPO_RESIDUE shim=$SHIM_USED decl_gates=${D1148_FAIL:-0} fixture_mode=$FIXTURE_MODE_STATUS d1193_regression=$D1193_REGRESSION_STATUS no_marker_notred=$NO_MARKER_NOTRED clone_status=$([ "$CLONE_DIRTY_N" -eq 0 ] && echo clean || echo "DIRTY($CLONE_DIRTY_N)")"
 if [ "$RC" -eq 0 ]; then
   echo "✅ 注入自测结果：期望红组全部 RED_CONFIRMED，残留断言满足，baseline=${BASE_STATUS}（结论归自验/独立审计，本夹具只出证据）"
   [ "$BASE_STATUS" = "host_state" ] && echo "   ⚠️ 注意：基线非天然绿（宿主 /tmp marker 绝对路径读取，已由探针因果确认）——CI 上新 runner 应为 BASELINE_OK"
 else
   echo "❌ 注入自测未达期望：not_red=$NOTRED_N baseline=$BASE_STATUS probe=$PROBE_STATUS residue_fail=$RESIDUE_FAIL"
+  # ═══ #665c 判据⑦: 失败时把 ❌ 行发成 GitHub annotation ═══
+  #   动机: job log 端点匿名 404/403（CTO 取不回）⇒ 用 check-runs annotations 做观测面。
+  #   只在该分支（RC=1）且 GITHUB_ACTIONS=true 时发（本地跑不产生 ::error）；
+  #   来源 = 基线/各场景/D1148 的原始日志（out.*.log）；去重后 ≤10 条（GitHub 注解上限）。
+  #   转义: % → %25（workflow command 语法）；剥离 \r。
+  if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+    #   剥 ANSI 色码（门禁输出带 \033[0;31m）—— annotation 里留色码会变成乱码
+    _ann_lines="$(grep -hE '❌|BASELINE_FAIL' "$TMP"/out.*.log 2>/dev/null \
+      | sed -E 's/^::(error|warning|notice) .*::[[:space:]]*//' \
+      | sed -E $'s/\033\\[[0-9;]*m//g' \
+      | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//' | grep -v '^$' | sort -u | head -n 10)"
+    if [ -n "$_ann_lines" ]; then
+      printf '%s\n' "$_ann_lines" | while IFS= read -r _l; do
+        _l="${_l//%/%25}"; _l="${_l//$'\r'/}"
+        echo "::error title=injection-fixture::${_l}"
+      done
+    else
+      echo "::error title=injection-fixture::not_red=${NOTRED_N} baseline=${BASE_STATUS} probe=${PROBE_STATUS}（无可摘 ❌ 行；见 job summary）"
+    fi
+  fi
 fi
 exit "$RC"
