@@ -668,3 +668,11 @@ documents:
       status: active
       owner: CTO
       note: "#665d 注入夹具判据⑧（探针文件不许泄漏）的豁免；裁 223。"
+
+    # ---- P4 2026-10-20：#665e 夹具 tsx 依赖豁免（D2 登记）----
+    - id: DOC-0223
+      type: decision
+      path: gate-exemptions/2026-10-20-injection-fixture-tsx-665e.md
+      status: active
+      owner: CTO
+      note: "#665e 夹具需要 tsx（组 13）——ci.yml 装 tsx＋夹具 SYNO_TSX 注入的豁免；裁 223。"
