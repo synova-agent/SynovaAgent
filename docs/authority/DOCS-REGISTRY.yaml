@@ -606,6 +606,13 @@ documents:
       owner: CTO
       note: "#598 闸 3 在 CI 补 base ＋ fail-loud 的豁免（7 条受保护路径；作者不校验后由 L1 补记）。"
 
+    # ---- CTO 2026-10-20：DSH 基线纠偏豁免（裁 222；D2 登记）----
+    - id: DOC-0228
+      type: decision
+      path: gate-exemptions/2026-10-20-dsh-baseline-222.md
+      status: active
+      owner: CTO
+      note: "裁 222：DSH 基线纠偏（0.2.1-rc.2）触碰受保护路径的豁免（ci.yml 蓝本注释、P2 守则 DSH 澄清）；含自覆盖与 DOCS-REGISTRY 自登记行。"
     # ---- CTO 2026-10-20：技能同步（#642）豁免（裁 221；D2 登记）----
     - id: DOC-0216
       type: decision
@@ -708,3 +715,29 @@ documents:
     status: active
     owner: CTO
     note: "口径盘点：AGENTS.md 增两镜像路径；cto-handover skill 补本体层规范 v2.11 锚（.claude/.dsh 同源）。"
+
+    # ---- P4 2026-10-20：#739④ 夹具工具链豁免（D2 登记）----
+    - id: DOC-0228
+      type: decision
+      path: gate-exemptions/2026-10-20-fixture-toolchain-739.md
+      status: active
+      owner: CTO
+      note: "#739④ 夹具工具链单一来源＋@requires 声明＋依赖核对（缺依赖报名字）的豁免；裁 223。"
+
+  # ---- CTO 2026-10-20：M5 批次写集扩项＋DSH 借鉴锚（裁 248）----
+  - id: DOC-0230
+    type: decision
+    path: gate-exemptions/2026-10-20-p2-m5-anchor.md
+    status: active
+    owner: CTO
+    note: "P2 守则补 M5 写集（src/runtime|src/mcp|tests/mcp|packages/test-kit）＋DSH 借鉴锚（0.2.1-rc.2@687f282e86）＋代码标准指针。"
+
+    note: "MVP 权威件 v1.2 镜像存档（＋旧宪章 v5 HTML 标注 superseded）的受保护路径豁免。"
+
+  # ---- P10 2026-10-20：#740 镜像每日自动推送豁免（D2 登记）----
+  - id: DOC-0231
+    type: decision
+    path: gate-exemptions/2026-10-20-p10-740-mirror-push.md
+    status: active
+    owner: P10
+    note: "#740 双仓镜像每日自动推送：执行器＋测试＋workflow 接线的受保护路径豁免；裁 223。"

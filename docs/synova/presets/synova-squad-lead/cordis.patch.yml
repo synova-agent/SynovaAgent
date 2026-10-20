@@ -1,4 +1,4 @@
-# 由 synova-base（基座线）定义生成 —— 底座 = DSH 0.1.7-rc.1 shipped `preset-cordis`（创造模式）。
+# 由 synova-base（基座线）定义生成 —— 底座 = DSH 0.2.1-rc.2 shipped `preset-cordis`（创造模式）。
 # 迁移/落位规则见 @deepseek-ai/dsh-agent-preset 的 editing-cordis-compositions SKILL。
 # 注: 分组行 id 写作 `subagent-delegation`（上游 standard/cordis 作 `delegation`）——
 #     控制塔 guard 对该组行 id 做子串匹配（含前导连字符），分组 id 属内部地址，改名无语义影响。

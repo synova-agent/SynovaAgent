@@ -1178,10 +1178,22 @@ jobs:
       # #665e: 夹具跑完整 pre-commit（含组 13 块级 paths 快照对账）需要 tsx；本 job 无依赖安装步骤
       #   ⇒ 显式只装 tsx（不装全量 node_modules）。不装则组 13 fail-closed（exit 2）⇒ 夹具 baseline 恒红
       #   （实测 CI annotation: ❌ 门禁判不了（exit 2）：找不到 tsx）。
-      - name: Install tsx for gate fixture (组 13 needs tsx)
+      - name: Install fixture toolchain (from single source)
         if: steps.docsonly.outputs.docs_only != 'true'
-        run: npm install --no-save --no-audit --no-fund tsx@4.23.13
+        run: |
+          # 卡 #739 ④: 工具链**单一来源** = scripts/control-tower/fixture-toolchain.txt；
+          #   kind=npm 的项由本步安装（不再硬编码包名）；kind=runner 的项由 runner 预装、由 preflight 核对。
+          SPECS="$(awk -F'|' '{b=$1; k=$2; s=$3; gsub(/^[[:space:]]+|[[:space:]]+$/,"",b); gsub(/^[[:space:]]+|[[:space:]]+$/,"",k); gsub(/^[[:space:]]+|[[:space:]]+$/,"",s); if (k=="npm" && s!="" ) print s}' scripts/control-tower/fixture-toolchain.txt | tr '\n' ' ')"
+          if [ -n "$SPECS" ]; then
+            echo "从 fixture-toolchain.txt 安装: $SPECS"
+            npm install --no-save --no-audit --no-fund $SPECS
+          else
+            echo "fixture-toolchain.txt 无 npm 项（跳过安装）"
+          fi
         timeout-minutes: 5
+      - name: Fixture requires preflight (卡 #739 ④)
+        if: steps.docsonly.outputs.docs_only != 'true'
+        run: bash scripts/control-tower/check-fixture-requires.sh
       - name: pre-commit groups injection fixture (sampled)
         if: steps.docsonly.outputs.docs_only != 'true'
         run: bash tests/control-tower/precommit-groups-injection.test.sh
@@ -1594,7 +1606,7 @@ jobs:
           exit 0
 
   # ═══ P0-3: 聚合必需检查 —— skipped 也判 FAIL ═══
-  # 蓝本: DSH 上游 ci.yml:700-726（dsh-v0.2.0-rc.2；steps 段逐字）
+  # 蓝本: DSH 上游 ci.yml:700-726（dsh-v0.2.1-rc.2；steps 段逐字）
   # 与蓝本的三处已声明差异（K3 整改 D1177，原「唯一差异」表述不实）:
   #   ① if 去掉 pull_request 事件限定（CTO 明令——#905 语境为 main push）
   #   ② name: all checks passed → All Checks Passed（对齐本仓 check-run 命名习惯）
