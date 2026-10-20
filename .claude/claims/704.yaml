@@ -1,0 +1,18 @@
+# .claude/claims/704.yaml — #704（M5 卡1 · 自举面）写集声明
+# 规格：handbook 派单件/2026-10-20-规格-746-M5运行时接口层.md @ a60c3d5 §2.2.1
+# 纪律：只列本 PR 真正改动的文件，不预授权；writeset 精确匹配（claim_store.py match_path）
+writeset:
+  - .claude/claims/704.yaml
+  - .claude/claims/746.yaml
+  - .claude/task-briefs/2026-10-20-704-m5-bootstrap.md
+  - src/agent/sentinel-service.ts
+  - src/mcp/index.ts
+  - tests/runtime/sentinel-bootstrap.test.ts
+  - tests/runtime/sentinel-bootstrap-negative.test.ts
+  - tests/mcp/server-smoke.test.ts
+done:
+  - verify: npx vitest run tests/runtime/sentinel-bootstrap.test.ts
+  - verify: npx vitest run tests/runtime/sentinel-bootstrap-negative.test.ts
+  - verify: npx vitest run tests/mcp/server-smoke.test.ts -t "全链路正判据"
+  - verify: npx vitest run tests/mcp/server-smoke.test.ts -t "全链路负例"
+note: 卡1 自举面（#704）；自举复用 content-registry 的 sentinel type＋内置适配器单独注册；E 由测试侧独立 FS 扫描派生。
