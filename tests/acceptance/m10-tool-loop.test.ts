@@ -28,8 +28,8 @@
  *   - 请求面用替身 provider 捕获 `ChatOptions`，不是真实 HTTP 请求体；
  *     真实路由面（POST /api/conversations）由 D819 集成用例
  *     `tests/agent/tool-loop-tool-pairing.integration.test.ts` 覆盖。
- *   - 🔴 `vitest.config.ts` 在 `CI` 下排除 `tests/acceptance/**` ⇒ 本件当前**不进 CI**；
- *     已上报 CTO（见 PR 回执「例外清单」），修复面不在本卡写集内。
+ *   - ✅ `vitest.config.ts` 的 CI 排除项已收窄（裁 223：仅排除
+ *     `tests/acceptance/zero-code-industry.test.ts`）⇒ 本件在 `CI` 下**会进 CI 并跑 7 例**。
  *
  * 铁律 33/38/48：命名 `*.test.ts`；`as any` 零容忍；每用例必有 expect。
  */
