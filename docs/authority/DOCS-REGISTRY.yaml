@@ -607,7 +607,7 @@ documents:
       note: "#598 闸 3 在 CI 补 base ＋ fail-loud 的豁免（7 条受保护路径；作者不校验后由 L1 补记）。"
 
     # ---- CTO 2026-10-20：DSH 基线纠偏豁免（裁 222；D2 登记）----
-    - id: DOC-0217
+    - id: DOC-0228
       type: decision
       path: gate-exemptions/2026-10-20-dsh-baseline-222.md
       status: active
