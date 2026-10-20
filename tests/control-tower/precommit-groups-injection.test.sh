@@ -172,8 +172,15 @@ fi
 #   env -i（白名单）而非 env -u（黑名单）：黑名单永远列不全（实测 GITHUB_* 有 300+ 处消费）。
 _run_gate_env() { # <out> [<gate-env>...]
   local out="$1"; shift
+  # #665e: 克隆里没有 node_modules（依赖装在工作区）⇒ 门禁组 13 的 tsx 探测会 exit 2。
+  #   显式注入门禁自带的 SYNO_TSX 注入缝（指向工作区的 tsx），克隆仍保持 hermetic（不装依赖、不复制目录）。
+  local tsx_env=()
+  if [ -x "$REPO_DIR/node_modules/.bin/tsx" ]; then
+    tsx_env=("SYNO_TSX=$REPO_DIR/node_modules/.bin/tsx")
+  fi
   ( cd "$CLONE" && env -i \
       PATH="$PATH" HOME="${HOME:-/tmp}" LANG="${LANG:-C.UTF-8}" TMPDIR="${TMPDIR:-/tmp}" \
+      ${tsx_env[@]+"${tsx_env[@]}"} \
       "$@" bash scripts/pre-commit-check.sh ) >"$out" 2>&1
 }
 
