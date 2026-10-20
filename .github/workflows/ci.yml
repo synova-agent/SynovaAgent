@@ -1252,7 +1252,7 @@ jobs:
             echo "::warning title=ci-reds::${REF} 取到 0 条 check-runs（尚无检查记录）——基线核对为空集，不等于「已核对通过」"
           fi
           echo "check_runs=${N} (ref=${REF})"
-          bash scripts/control-tower/check-gate-integrity.sh --root "$PWD" --ci-reds /tmp/checkruns.json --base-ref "$REF"
+          bash scripts/control-tower/check-gate-integrity.sh --root "$PWD" --ci-reds /tmp/checkruns.json --base-ref "$REF" --exclude-check "Gate Integrity (pattern sentinel + injection fixture + ci-reds)"
       # 证据步（M9 task-11）：判定已由前面 step 完成，本步只把关键行发布为 **可公开检索的注解**——
       #   GitHub job logs 端点匿名 404/403（CTO 证据要求 ③ 的 CI GNU 侧原始输出取不回，K3 也核不了），
       #   而注解有公开 API：GET /repos/{owner}/{repo}/check-runs/{id}/annotations（无需 token）。

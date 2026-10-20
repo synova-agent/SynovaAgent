@@ -628,3 +628,11 @@ documents:
       status: active
       owner: CTO
       note: "#657 门禁 0-2 补 remote 维度（mirror main 放行＋三硬约束）的豁免；裁 223。"
+
+    # ---- P4 2026-10-20：#662 Gate Integrity 自指排除豁免（D2 登记）----
+    - id: DOC-0218
+      type: decision
+      path: gate-exemptions/2026-10-20-gate-integrity-selfexclude-662.md
+      status: active
+      owner: CTO
+      note: "#662 Gate Integrity 对账排除自身（--exclude-check）的豁免；裁 223。"
