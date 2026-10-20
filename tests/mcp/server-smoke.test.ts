@@ -1,5 +1,5 @@
 /**
- * tests/mcp/server-smoke.test.ts — D595 MCP server stdio 全链路冒烟（S1-S7）
+ * tests/mcp/server-smoke.test.ts — D595 MCP server stdio 全链路冒烟（S1–S9）
  *
  * 铁律 12: 不 mock 协议管线——spawn 真实 `tsx src/mcp/index.ts` 子进程，
  *          经真实 stdio JSON-RPC 帧收发（initialize → tools/list → tools/call）。
@@ -10,13 +10,16 @@
  * process.execPath 在 win32/mac/linux 均为绝对路径，天然跨平台。
  *
  * 契约:
- *   @input  — src/mcp/index.ts（真实 server 进程）；env SYNOVA_MCP_MODE（＋ S9 的 SENTINELS_FIXTURE_DIR）
+ *   @input  — src/mcp/index.ts（真实 server 进程）；env SYNOVA_MCP_MODE
+ *             （＋ S9 的 SENTINELS_FIXTURE_DIR；＋ S8 的 SYNOVA_RUNTIME_PROVIDER=stub）
  *   @output — S1 信任声明/契约广告、S2 read-only 诚实过滤、S3 写工具 -32000 拒绝、
  *             S4 全链路正判据（sentinel_list 经启动期自举取全部哨兵：ok:true ∧ total===E）、
  *             S5 full 模式 12 工具全广告、S6 边界（未知工具/非法 JSON/缺参 → SDK 标准错误码，
  *             进程不崩 + stdout 纯度）、S7 非法模式 fail-closed（stderr warn + 行为=read-only）、
+ *             S8 假宿主全链路（SYNOVA_RUNTIME_PROVIDER=stub ⇒ 领域断言仍绿 ∧ 未支持工具 typed）、
  *             S9 全链路负例（fixture 目录不可用 ⇒ 自举失败 ⇒ sentinel_list 结构化 ok:false）
- *   @degraded — S9 主动制造自举降级并断言（进程不退出，诚实报错）
+ *   @degraded — S8 断言假宿主的结构化降级（RUNTIME_TOOL_UNSUPPORTED 而非崩溃）；
+ *               S9 主动制造自举降级并断言（进程不退出，诚实报错）
  *   @error  — 子进程 10s 内未响应 → 测试失败（含 stderr 尾部便于排查）
  */
 import { describe, it, expect, afterAll } from 'vitest';
@@ -311,5 +314,49 @@ describe('S9: 全链路负例（自举失败，D751 fixture 缝）', () => {
     expect(parsed.degraded).toBe(true);
     expect(Array.isArray(parsed.sentinels)).toBe(true);
     expect(parsed.sentinels ?? []).toHaveLength(0);
+  });
+});
+
+// ═══ 场景组 5: 假宿主全链路（S8，独立进程；换宿主领域不改的实链路判据）═══
+
+describe('S8: 假宿主全链路（SYNOVA_RUNTIME_PROVIDER=stub）', () => {
+  // 必须 full：否则写工具（sentinel_run）被权限门先以 -32000 拦，测不到 stub 的未支持工具路径
+  const client = startClient({ SYNOVA_MCP_MODE: 'full', SYNOVA_RUNTIME_PROVIDER: 'stub' });
+
+  it('S8 假宿主全链路：tools/list=12 ∧ sentinel_list total===E（领域不改）∧ sentinel_run ⇒ RUNTIME_TOOL_UNSUPPORTED', async () => {
+    const initResp = await client.initialize();
+    expect(initResp.error).toBeUndefined();
+    // 假宿主不改工具面口径：full 模式下仍是 12 个工具全广告
+    const tools = await client.listTools();
+    expect(tools).toHaveLength(FULL_TOOL_COUNT);
+
+    // 承诺①「换宿主不改领域」：同一 sentinel_list 领域断言在假宿主下仍成立（真 stdio 子进程）
+    const listResp = await client.request('tools/call', { name: 'sentinel_list', arguments: {} });
+    expect(listResp.error).toBeUndefined();
+    const listContent = (listResp.result?.content ?? []) as Array<{ type: string; text?: string }>;
+    expect(listContent.length).toBeGreaterThan(0);
+    const listed = JSON.parse(listContent[0].text ?? '{}') as {
+      ok: boolean;
+      total: number;
+      sentinels?: unknown[];
+    };
+    expect(listed.ok, `假宿主 sentinel_list 应答=${listContent[0].text} ｜ stderr 尾部=${client.stderrTail(800)}`).toBe(true);
+    expect(listed.total).toBe(E);
+    expect(listed.sentinels).toHaveLength(E);
+
+    // 承诺②「假宿主不造假」：未支持工具返回 typed 结构化错误（不是 JSON-RPC 崩溃，也不是空成功）
+    const runResp = await client.request('tools/call', { name: 'sentinel_run', arguments: { sentinelId: 'F1' } });
+    expect(runResp.error).toBeUndefined();
+    const runContent = (runResp.result?.content ?? []) as Array<{ type: string; text?: string }>;
+    const unsupported = JSON.parse(runContent[0].text ?? '{}') as {
+      ok: boolean;
+      error?: string;
+      tool?: string;
+      degraded?: boolean;
+    };
+    expect(unsupported.ok).toBe(false);
+    expect(unsupported.error).toBe('RUNTIME_TOOL_UNSUPPORTED');
+    expect(unsupported.tool).toBe('sentinel_run');
+    expect(unsupported.degraded).toBe(true);
   });
 });
