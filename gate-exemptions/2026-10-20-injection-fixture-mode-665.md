@@ -1,0 +1,4 @@
+- scripts/pre-commit-check.sh — #665 D1193 fail-loud 加 SYNO_FIXTURE_MODE 显式豁免（真实 CI 仍必红） — 裁 223
+- tests/control-tower/precommit-groups-injection.test.sh — #665 夹具模式标记＋双模式基线＋摘标记判别力探针 — 裁 223
+- gate-exemptions/2026-10-20-injection-fixture-mode-665.md — 本豁免文件（gate-exemptions 自我保护） — 裁 223
+- docs/authority/DOCS-REGISTRY.yaml — #665 登记本豁免文件（D2 登记门禁） — 裁 223
