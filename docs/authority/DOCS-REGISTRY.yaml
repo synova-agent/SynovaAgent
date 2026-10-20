@@ -749,3 +749,11 @@ documents:
     status: active
     owner: CTO
     note: "devdoc-gate-a 技能新增/同步（.claude→.dsh）的受保护路径豁免。"
+
+  # ---- P6 2026-10-21：#776 资产映射单一源 ----
+  - id: DOC-0233
+    type: authority
+    path: docs/authority/ASSET-MAP.yaml
+    status: active
+    owner: P6
+    note: "#776 资产同步的文件级映射单一源（MVP v1.2 §三写集种子＋X 显式根）；禁 catch-all（载入断言）。"
