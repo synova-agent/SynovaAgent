@@ -1,27 +1,34 @@
-# dual-repo-sync.yml — 两仓对账探针（每日）· 任务 #609
+# dual-repo-sync.yml — 双仓镜像自动同步（对账→门禁放行→推送→核 SHA→信号）· 任务 #740
 #
-# 目的：把「Gitea local-main 与 GitHub main 是否对齐」从人查变成机器查。
-#   判据：scripts/control-tower/check-dual-repo-sync.sh（三态退出码）
-#     0 = 一致 ｜ 1 = 滞后/分叉（真红）｜ 2 = 读不到（degraded，**禁当"差=0"**）
-#   🔴 结果落固定路径：<repo>/.codex/control-tower/tmp/dual-repo-sync.json（被 .gitignore 覆盖）
+# 判据：scripts/control-tower/mirror-sync-push.sh（三态退出码）
+#   0 = 一致（NOOP）／推送且核 SHA 相等（PUSHED）｜ 1 = 真红（分叉拒推 FORK／推送被拒）｜
+#   2 = 降级（远端读不到／核 SHA 不等／信号发不出）—— 2 绝不等于通过
+#   🔴 失败必须出可见信号（判据⑤）：执行器自动开/评 Gitea issue；本件再叠一条 ::error annotation。
 #
-# 边界（CTO 2026-10-19 卡）：
-#   · 本 workflow **不测 runner 存活**（runner 挂了本 job 根本不跑）—— 那半边归门禁域 P4
-#   · 与 local-gates 分离：不进阻断腿，不拖慢 required check
-#   · 只读：不改分支、不 push、不碰 scripts/audit/**
+# 🔴 已知真相（2026-10-20 实测，禁把"配了 cron"当"每天在跑"）：
+#   · 本件 `on.schedule` **从不起火**：Gitea 只登记**默认分支**上的 schedule，而本仓默认分支 =
+#     audit/k3-20260904-line1-desktop（本件不在其上）⇒ action_schedule 无本件登记、
+#     全历史 event='schedule' 计数 = 0。要真活须 CTO 裁「默认分支改 local-main」
+#     （副作用：.github 三个 cron 会一起在 Gitea 注册并在其中报错）。
+#   · ⇒ **每日真跑的载体 = 本机 launchd** `com.synova.mirror-sync`（每日 10:00，
+#     证据：~/Library/Logs/synova-mirror-sync.launchd.log 逐日一条）。
+#   · 本件保留 `workflow_dispatch` **仅供人工复跑**，不是每日驱动。
+#
+# 边界：不改分支、不碰 scripts/audit/**；推送只走门禁 0-2 mirror ff 通道（禁逃生舱）。
 name: dual-repo-sync
 on:
   schedule:
-    - cron: "0 1 * * *"        # 每日 01:00 UTC（北京 09:00）
+    - cron: "0 1 * * *"        # 每日 01:00 UTC（北京 09:00）—— 当前不生效，见上
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: read               # 最小集：推送用 deploy key，不用 token
+  issues: write                # 判据⑤：失败/恢复要能开单/关单
 jobs:
-  check:
+  sync:
     runs-on: macos
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
-      - name: 工作区（本机 Gitea 克隆；独立目录，避免与 local-gates 抢树）
+      - name: 工作区（持久 clone；取 local-main 新鲜树，避免陈旧树误判）
         run: |
           set -e
           WS=/Users/wane/.ci-work/SynovaAgent-dualrepo
@@ -29,22 +36,26 @@ jobs:
             mkdir -p "$(dirname "$WS")"
             git clone -q http://127.0.0.1:3000/synova-agent/SynovaAgent.git "$WS"
           fi
-          git -C "$WS" fetch -q origin "${{ github.sha }}" || true
-          git -C "$WS" checkout -q -f "${{ github.sha }}" 2>/dev/null \
-            || git -C "$WS" checkout -q -f origin/local-main
+          git -C "$WS" fetch -q origin local-main
+          git -C "$WS" checkout -q -f FETCH_HEAD
+          git -C "$WS" remote get-url mirror >/dev/null 2>&1 \
+            || git -C "$WS" remote add mirror git@github.com:synova-agent/SynovaAgent.git
           echo "HEAD=$(git -C "$WS" rev-parse --short HEAD)"
 
-      - name: 两仓对账（三态：0 一致 / 1 滞后或分叉 / 2 读不到）
+      - name: 对账 → 门禁放行 → 推送 → 核 SHA → 信号（三态）
         run: |
-          cd /Users/wane/.ci-work/SynovaAgent-dualrepo
           set +e
-          PATH="/Users/wane/.local/bin:$PATH" \
-          SYNO_SYNC_GITEA_URL=origin \
-            bash scripts/control-tower/check-dual-repo-sync.sh
+          cd /Users/wane/.ci-work/SynovaAgent-dualrepo
+          PATH="/Users/wane/.local/bin:/usr/local/bin:/opt/homebrew/bin:$PATH" \
+          GIT_SSH_COMMAND="ssh -i $HOME/.ssh/synova_gh_deploy -o IdentitiesOnly=yes -o BatchMode=yes" \
+          SYNO_PUSH_GITEA_URL=origin \
+          SYNO_PUSH_RUN_URL="${GITHUB_SERVER_URL:-http://127.0.0.1:3000}/${GITHUB_REPOSITORY:-synova-agent/SynovaAgent}/actions/runs/${GITHUB_RUN_ID:-manual}" \
+            bash scripts/control-tower/mirror-sync-push.sh
           rc=$?
           set -e
           case "$rc" in
-            0) echo "✅ 两仓一致"; exit 0 ;;
-            2) echo "::error title=DUAL-REPO-SYNC::degraded — 远端读不到，按判据不得当「差=0」"; exit 2 ;;
-            *) echo "::error title=DUAL-REPO-SYNC::镜像滞后或分叉 — 见上一条 verdict 与 JSON"; exit 1 ;;
+            0) echo "✅ 镜像已一致，或本次推送成功且核 SHA 相等" ;;
+            *)
+              echo "::error title=MIRROR-SYNC::失败或降级 — 见上方 verdict 与 JSON；判据⑤ 要求同时在 Gitea issue 可见"
+              exit "$rc" ;;
           esac
