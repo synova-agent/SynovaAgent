@@ -1,0 +1,170 @@
+#!/usr/bin/env bash
+# D732 UTF-8 强制
+export PYTHONIOENCODING=utf-8
+export LC_ALL=C.UTF-8 2>/dev/null   # swallow-ok: locale 不可用时回退默认 locale（非错误路径）
+# ═══════════════════════════════════════════════════════════════════════════════
+# mirror-sync-push.test.sh — 执行器六条判据 ＋ 判别力自检（任务 #740）
+#
+# 覆盖（全部零网络：本地 bare 仓当「Gitea」和「GitHub」，信号走注入命令）:
+#   ① 落后=0        ⇒ exit 0 / verdict=NOOP / 远端 main 不变 / 不发失败信号
+#   ② 落后>0 且 ff  ⇒ exit 0 / verdict=PUSHED / 远端 main == 被推 sha / 门禁有 ALLOW 留痕
+#   ③ 分叉 non-ff   ⇒ exit 1 / verdict=FORK / 远端 main 不变 / 无新 merge 提交
+#   ④ 推后核 SHA    ⇒ 远端停旧 sha ⇒ exit 2 / verdict=VERIFY_MISMATCH / degraded=true
+#   ⑤ 失败必出声    ⇒ ③④⑧ 失败时信号记录 ≥1 条且含 verdict（不许只写 log）
+#   ⑥ 触发器        ⇒ 本测试只核脚本侧；launchd 侧由现场命令核（不在此假绿）
+#   ⑦ 红线自检      ⇒ 可执行行内 0 命中 SYNO_ALLOW_MAIN_PUSH / --force / --no-verify / git merge
+#   ⑧ 判别力        ⇒ 注入非法 sha ⇒ exit 2（禁把「看不见」当「没问题」）
+#   ⑨ 改坏必红      ⇒ 五个变异体各跑**同一套断言**且必须被判红（每个变异体在独立沙箱里，
+#                      带探针/门禁符号链接 ⇒ 变异体失败只能来自被改坏，不会因找不到依赖误红）
+#
+# 隔离: mktemp -d ＋ 本地 bare 仓（file 协议）；不碰真实远端、不写产品仓、不发网络请求。
+# 用法: bash tests/control-tower/mirror-sync-push.test.sh
+# 退出码: 0 = 全绿 ｜ 1 = 有失败 ｜ 2 = 测试自身失败（缺依赖/夹具建不起来）
+# ═══════════════════════════════════════════════════════════════════════════════
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+SUT="$REPO_DIR/scripts/control-tower/mirror-sync-push.sh"
+
+[ -f "$SUT" ] || { echo "❌ 被测脚本不存在: $SUT" >&2; exit 2; }
+command -v python3 >/dev/null 2>&1 || { echo "❌ degraded: 缺 python3（脚本契约要求）" >&2; exit 2; }
+command -v git >/dev/null 2>&1 || { echo "❌ degraded: 缺 git" >&2; exit 2; }
+
+PASS=0; FAIL=0; CASE_FAIL=0
+pass() { PASS=$((PASS + 1)); echo "  ✅ $1"; }
+fail() { FAIL=$((FAIL + 1)); echo "  ❌ $1" >&2; }
+chk()  { if eval "$1"; then echo "      · ok: $2"; else echo "      · RED: $2"; CASE_FAIL=$((CASE_FAIL + 1)); fi; }
+
+TMPROOT="$(mktemp -d)"; trap 'rm -rf "$TMPROOT"' EXIT
+FX=""; WORK=""; GITEA=""; MIRROR=""; SIG=""; OUT=""; A1=""; A2=""; RC=""; VERDICT=""; O1=""; BASE_N=""
+
+# ── 夹具：work（工作仓）+ gitea.git + mirror.git；产 A1/A2 两提交 ────────────────
+new_fixture() {  # $1=名字；默认 Gitea local-main=A1、GitHub main=A1（一致）
+  local n="$1"
+  FX="$(mktemp -d "$TMPROOT/${n}.XXXXXX")"
+  WORK="$FX/work"; GITEA="$FX/gitea.git"; MIRROR="$FX/mirror.git"; SIG="$FX/signals.log"; OUT="$FX/out.json"
+  git init -q --bare "$GITEA"; git init -q --bare "$MIRROR"; git init -q "$WORK"
+  git -C "$WORK" config user.email "t@local"; git -C "$WORK" config user.name "t"
+  git -C "$WORK" config commit.gpgsign false
+  printf 'a\n' > "$WORK/f"; git -C "$WORK" add f; git -C "$WORK" commit -qm "A1"; A1="$(git -C "$WORK" rev-parse HEAD)"
+  printf 'b\n' >> "$WORK/f"; git -C "$WORK" add f; git -C "$WORK" commit -qm "A2"; A2="$(git -C "$WORK" rev-parse HEAD)"
+  git -C "$WORK" remote add gitea "$GITEA"; git -C "$WORK" remote add mirror "$MIRROR"
+  git -C "$WORK" push -q gitea "$A1:refs/heads/local-main"
+  git -C "$WORK" push -q mirror "$A1:refs/heads/main"
+  : > "$SIG"
+}
+
+# 统一跑法：信号走注入命令（零网络）；其余全用夹具
+run_sut() {  # $1=github_sha  [$2..=额外环境赋值]  → stdout: 退出码
+  local gh="$1"; shift || true
+  ( cd "$WORK" && env SYNO_PUSH_REPO="$WORK" SYNO_PUSH_GITEA_URL="$GITEA" \
+      SYNO_PUSH_GITHUB_SHA="$gh" SYNO_PUSH_SIGNAL_CMD="cat >> $SIG" \
+      SYNO_PUSH_VERIFY_TRIES=1 SYNO_PUSH_VERIFY_INTERVAL=0 SYNO_PUSH_OUT="$OUT" "$@" \
+      bash "$SUT" --json ) >"$FX/stdout.txt" 2>"$FX/stderr.txt"
+  echo $?
+}
+
+verdict_of()  { python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("verdict"))' "$1" 2>/dev/null || true; }   # swallow-ok: 夹具解析失败 ⇒ 空 ⇒ 断言必红
+field_of()    { python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get(sys.argv[2]))' "$1" "$2" 2>/dev/null || true; }   # swallow-ok: 同上
+mirror_main() { git -C "$MIRROR" rev-parse refs/heads/main 2>/dev/null || true; }   # swallow-ok: 远端不存在 ⇒ 空 ⇒ 断言必红
+sig_has()     { grep -q "\"verdict\": \"$1\"" "$SIG" 2>/dev/null; }   # grep -q 探测型（不匹配即假）
+sig_fail_n()  { grep -c '"kind": "failure"' "$SIG" 2>/dev/null || true; }
+
+# ── 每条的断言（变异体复用同一套 ⇒ 改坏必红有判别力）──────────────────────────
+c1() { chk '[ "$RC" = 0 ]' 'exit 0'; chk '[ "$VERDICT" = NOOP ]' 'verdict=NOOP'
+       chk '[ "$(mirror_main)" = "$A1" ]' '远端 main 未被改动'
+       chk '[ "$(sig_fail_n)" = 0 ]' '无失败信号（允许 recovery 关单）'; }
+c2() { chk '[ "$RC" = 0 ]' 'exit 0'; chk '[ "$VERDICT" = PUSHED ]' 'verdict=PUSHED'
+       chk '[ "$(mirror_main)" = "$A2" ]' '远端 main == 被推 sha'
+       chk 'grep -q ALLOW "$WORK/.claude/mirror-sync.log" 2>/dev/null' '门禁 0-2 留痕 ALLOW'
+       chk '[ "$(field_of "$OUT" lag)" = 1 ]' 'JSON lag=1'; }
+c3() { chk '[ "$RC" = 1 ]' 'exit 1'; chk '[ "$VERDICT" = FORK ]' 'verdict=FORK'
+       chk '[ "$(mirror_main)" = "$O1" ]' '远端 main 未被覆盖'
+       chk '[ "$(git -C "$WORK" rev-list --count --all)" = "$BASE_N" ]' '未新增 merge 提交'
+       chk 'sig_has FORK' '失败已出信号（判据⑤）'; }
+c4() { chk '[ "$RC" = 2 ]' 'exit 2（降级 ≠ 通过）'; chk '[ "$VERDICT" = VERIFY_MISMATCH ]' 'verdict=VERIFY_MISMATCH'
+       chk '[ "$(field_of "$OUT" degraded)" = True ]' 'JSON degraded=true'
+       chk 'sig_has VERIFY_MISMATCH' '降级已出信号（判据⑤）'; }
+c8() { chk '[ "$RC" = 2 ]' 'exit 2'; chk '[ "$VERDICT" = DEGRADED ]' 'verdict=DEGRADED'
+       chk '[ "$(field_of "$OUT" degraded)" = True ]' 'JSON degraded=true'
+       chk 'sig_has DEGRADED' '降级已出信号'; }
+
+assert_case() {  # $1=checker $2=label $3=green|red
+  local out file n; CASE_FAIL=0; file="$TMPROOT/case.out"
+  # 🔴 不用 $(...) 捕获：命令替换会进子 shell，CASE_FAIL 的累加会丢（假绿陷阱）
+  "$1" >"$file" 2>&1
+  n="$CASE_FAIL"
+  if [ "${3:-green}" = "green" ]; then
+    if [ "$n" = 0 ]; then pass "$2"; else fail "$2"; grep 'RED' "$file" | sed 's/^/    /' >&2; fi
+  else
+    if [ "$n" != 0 ]; then pass "$2（变异体被这套断言判红：$n 项）"; else fail "$2（变异体竟然全绿 ⇒ 该条判据没有判别力）"; fi
+  fi
+}
+
+# ── 场景构造（正向与变异体共用）────────────────────────────────────────────────
+setup1() { new_fixture "c1"; RC="$(run_sut "$A1")"; VERDICT="$(verdict_of "$OUT")"; }
+setup2() { new_fixture "c2"; git -C "$WORK" push -q gitea "$A2:refs/heads/local-main"
+           RC="$(run_sut "$A1")"; VERDICT="$(verdict_of "$OUT")"; }
+setup3() { new_fixture "c3"
+           git -C "$WORK" checkout -q -b other "$A1"
+           printf 'x\n' > "$WORK/g"; git -C "$WORK" add g; git -C "$WORK" commit -qm "O1"; O1="$(git -C "$WORK" rev-parse HEAD)"
+           git -C "$WORK" checkout -q master 2>/dev/null || git -C "$WORK" checkout -q -
+           git -C "$WORK" push -q mirror "$O1:refs/heads/main"
+           git -C "$WORK" push -q gitea "$A2:refs/heads/local-main"
+           BASE_N="$(git -C "$WORK" rev-list --count --all)"
+           RC="$(run_sut "$O1")"; VERDICT="$(verdict_of "$OUT")"; }
+setup4() { new_fixture "c4"; git -C "$WORK" push -q gitea "$A2:refs/heads/local-main"
+           RC="$(run_sut "$A1" SYNO_PUSH_TEST_AFTER_PUSH="git -C $MIRROR update-ref refs/heads/main $A1")"
+           VERDICT="$(verdict_of "$OUT")"; }
+setup8() { new_fixture "c8"; RC="$(run_sut "deadbeef")"; VERDICT="$(verdict_of "$OUT")"; }
+
+echo "── ① 落后=0 ⇒ 不推、exit 0 ──"
+setup1; assert_case c1 "① 一致 ⇒ 不推（exit 0 / NOOP / 远端不变 / 无失败信号）"
+
+echo "── ② 落后>0 且 ff ⇒ 自动推 ──"
+setup2; assert_case c2 "② ff ⇒ 自动推 且 门禁留痕 ALLOW"
+
+echo "── ③ 分叉（non-ff）⇒ 拒推 exit 1，不自作主张 merge ──"
+setup3; assert_case c3 "③ 分叉 ⇒ 拒推（exit 1 / FORK / 远端不变 / 无 merge / 有信号）"
+
+echo "── ④ 推后核 SHA：不等 ⇒ exit 2（降级 ≠ 通过）──"
+setup4; assert_case c4 "④ 核 SHA 不等 ⇒ exit 2 且出信号"
+
+echo "── ⑥ 触发器（本测试只核脚本侧；launchd 侧见现场命令）──"
+grep -q "SYNO_PUSH_VERIFY_TRIES" "$SUT" && pass "⑥ 执行器可被每日任务直接调用（无可交互等待）" || fail "⑥ 执行器缺可调用契约"
+echo "  ℹ️  launchd 真跑证据（现场跑）: launchctl print gui/\$(id -u)/com.synova.mirror-sync ＋ ~/Library/Logs/synova-mirror-sync.launchd.log"
+
+echo "── ⑦ 红线自检：可执行行 0 命中逃生舱／强推／绕过 ──"
+HITS="$(grep -vE '^[[:space:]]*#' "$SUT" | grep -cE 'SYNO_ALLOW_MAIN_PUSH|--force|--no-verify|git[[:space:]]+merge' || true)"
+[ "$HITS" = "0" ] && pass "⑦ 红线命中数 0" || fail "⑦ 红线命中数 $HITS（须 0）"
+
+echo "── ⑧ 判别力自检：非法 sha ⇒ exit 2（禁把「看不见」当「没问题」）──"
+setup8; assert_case c8 "⑧ 读不到合法 sha ⇒ 降级且出信号"
+
+echo "── ⑨ 改坏必红（五个变异体各跑同一套断言，必须全被判红）──"
+mutant() {  # $1=名字 $2=sed 表达式 $3=checker $4=setup
+  local name="$1" expr="$2" checker="$3" setup="$4"
+  local root="$TMPROOT/mut-$name/scripts"
+  mkdir -p "$root/control-tower"
+  ln -sf "$REPO_DIR/scripts/control-tower/check-dual-repo-sync.sh" "$root/control-tower/check-dual-repo-sync.sh"
+  ln -sf "$REPO_DIR/scripts/pre-push-check.sh" "$root/pre-push-check.sh"
+  sed "$expr" "$SUT" > "$root/control-tower/mirror-sync-push.sh"
+  if cmp -s "$SUT" "$root/control-tower/mirror-sync-push.sh"; then
+    fail "⑨ 变异体 $name 未生效（sed 未命中 ⇒ 自检空转）"; return
+  fi
+  local old="$SUT"; SUT="$root/control-tower/mirror-sync-push.sh"
+  "$setup"
+  SUT="$old"
+  assert_case "$checker" "⑨ 变异体 $name" red
+}
+mutant m1_noop_push   's/finish 0 NOOP "" recover/finish 0 PUSHED "" ""/' c1 setup1
+mutant m2_skip_push   's|git -C "$REPO" push "$MIRROR" "$GITEA_SHA:refs/heads/main"|true|' c2 setup2
+mutant m3_fork_allow  's/\[ "\$ANCESTOR" = "true" \] || finish 1 FORK E_FORK fail/[ "$ANCESTOR" = "true" ] || finish 0 NOOP "" ""/' c3 setup3
+mutant m4_verify_pass 's/\[ "\$VERIFY_OK" = "1" \] || finish 2 VERIFY_MISMATCH E_VERIFY_MISMATCH fail/VERIFY_OK=1/' c4 setup4
+mutant m5_log_only    's#fail)    signal_fail "E_\${verdict}" "\$verdict" "\$reason" || rc=2 ;;#fail)    : ;;#' c4 setup4
+
+echo
+echo "结果: $PASS 通过, $FAIL 失败"
+[ "$FAIL" = "0" ] || exit 1
+exit 0

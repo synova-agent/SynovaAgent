@@ -731,3 +731,11 @@ documents:
     status: active
     owner: CTO
     note: "MVP 权威件 v1.2 镜像存档（＋旧宪章 v5 HTML 标注 superseded）的受保护路径豁免。"
+
+  # ---- P10 2026-10-20：#740 镜像每日自动推送豁免（D2 登记）----
+  - id: DOC-0230
+    type: decision
+    path: gate-exemptions/2026-10-20-p10-740-mirror-push.md
+    status: active
+    owner: P10
+    note: "#740 双仓镜像每日自动推送：执行器＋测试＋workflow 接线的受保护路径豁免；裁 223。"
