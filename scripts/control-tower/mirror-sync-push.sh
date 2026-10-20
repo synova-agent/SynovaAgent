@@ -218,8 +218,9 @@ md=["# 镜像同步状态（自动更新，请勿手改）","",
     "- 已推：%s"%(e.get("SYNO_ST_PUSHED","") or "-"),"",
     "| 时间(as_of) | 结论 | 落后 | Gitea | GitHub | 已推 | exit |","|---|---|---|---|---|---|---|"]
 for r in reversed(rows):
+    _lag = "-" if r.get("lag") is None else r.get("lag")
     md.append("| %s | %s | %s | `%s` | `%s` | `%s` | %s |"%(
-        (r.get("as_of") or "")[:19], r.get("verdict",""), r.get("lag","-"),
+        (r.get("as_of") or "")[:19], r.get("verdict",""), _lag,
         (r.get("gitea") or "-")[:9], (r.get("github") or "-")[:9], (r.get("pushed") or "-")[:9], r.get("exit","")))
 md += ["","说明：本单由 mirror-sync-push.sh 每趟自动 PATCH 正文；失败/恢复历史留在评论里。",
        "判据与处置见 handbook 派单件/2026-10-20-规格-740-镜像自动推送.md。"]
