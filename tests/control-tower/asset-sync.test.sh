@@ -7,6 +7,13 @@
 #       T3 两跑幂等（sha256 全等＋changed=0）｜T4 无 marker 原子（零 PATCH）｜T5 catch-all 8d
 #       T6 total 造假 8c｜T7 空 MAP｜T8 token 不可读（零请求）｜T9 默认不开卡（零 POST）
 #       T10 --open-x-cards 去重（只 1 张）＋T10b 摘掉去重必红（判别力自检）｜T11 缺模块
+# 🔴 区间判据（R3 防回归，2026-10-21 lead 实测退回＋独立复核员修法）：**不依赖「首父提交..HEAD」非空，
+#    不依赖仓史形态**（HEAD 是普通提交／merge／同树空提交／squash 都必须同结果）：
+#    · 真实仓只断「恒等式／TREE／dry-run 零请求」，区间一律取 **空 diff**（--prev HEAD --new HEAD），
+#      故 merge 提交（首父与合并树同树）时不会假红；
+#    · DRY 行**格式与行数**契约由 temp fixture git 仓自证（T1a：A→B 加 1 个未知路径；
+#      T1b：B→C 同树空提交 ⇒ 零 DRY 行），与真实仓史零耦合。
+#    🔴 禁把 `--prev` 改回「首父提交（HEAD 上一级）」或「根提交↔HEAD」（前者 merge 时为空、后者随仓史漂移且慢）。
 # 接线（WIRE CHECK）：本测试必须实际调用 scripts/control-tower/asset-sync.py（grep 零结果＝未接线）。
 set -u
 
@@ -403,11 +410,11 @@ echo "──── #776 asset-sync 判据测试（T1–T11）｜ as_of HEAD=$(gi
 # ══════════════════════════════════════════════════════════════════════════════
 "$PY" "$TMP/gen_fixture.py" --out "$TMP/fix.json" >/dev/null
 start_server "$TMP/fix.json"
-run_sync --dry-run --map "$MAP" --prev HEAD^ --new HEAD
-t_exit "T1 dry-run" 0 "$RC"
+# 真实仓区间 = 空 diff（HEAD..HEAD）：与仓史形态解耦，只断恒等式/TREE/零请求
+run_sync --dry-run --map "$MAP" --prev HEAD --new HEAD
+t_exit "T1 dry-run（真实仓，空 diff 区间）" 0 "$RC"
 has "T1 SUMMARY" "$OUT" '^SUMMARY mapped=[0-9]+ unknown=[0-9]+ x=[0-9]+ total=[0-9]+$'
 has "T1 DRY-RUN 声明行" "$OUT" '^DRY-RUN: 未联网、未写里程碑、未开卡（判据 5）$'
-has "T1 DRY 行" "$OUT" '^DRY \S+ -> '
 has "T1 UNKNOWN_TOP 行" "$OUT" '^UNKNOWN_TOP '
 has "T1 MOD 行" "$OUT" '^MOD M[0-9]+ files=[0-9]+$'
 SUM_LINE="$(printf '%s\n' "$OUT" | grep -E '^SUMMARY ' | tail -1)"
@@ -426,23 +433,70 @@ TREE_SHA=$(printf '%s\n' "$OUT" | grep -E '^TREE ' | sed -E 's/^TREE new=([0-9a-
 eq "T1 TREE new == git rev-parse HEAD" "$(git -C "$ROOT" rev-parse HEAD)" "$TREE_SHA"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# T1b --root 护栏：不存在／非 git 仓库 ⇒ exit 2 code=BAD_ROOT（禁在误树上静默算数）
+# T1a DRY 行契约（temp fixture git 仓 A→B，B 新增 1 个未知路径）——与真实仓史零耦合
 # ══════════════════════════════════════════════════════════════════════════════
-run_sync --dry-run --root "$TMP/not-a-repo" --map "$MAP"
-t_exit "T1b --root 不存在" 2 "$RC"
-has "T1b typed error BAD_ROOT" "$OUT" 'code=BAD_ROOT'
-run_sync --dry-run --root "$TMP" --map "$MAP"
-t_exit "T1b --root 非 git 仓库" 2 "$RC"
-has "T1b 非仓 BAD_ROOT" "$OUT" 'code=BAD_ROOT'
+FX="$TMP/fxrepo"
+mkdir -p "$FX" "$TMP/nohooks"
+git init -q "$FX"
+fxgit() { git -C "$FX" -c core.hooksPath="$TMP/nohooks" -c user.name=fixture \
+  -c user.email=fixture@local -c commit.gpgsign=false "$@"; }
+mkdir -p "$FX/lib" "$FX/docs"
+printf 'alpha\n' > "$FX/lib/alpha.txt"
+printf '# readme\n' > "$FX/docs/readme.md"
+fxgit add -A >/dev/null
+fxgit commit -q -m "fixture A" >/dev/null
+FX_A="$(fxgit rev-parse HEAD)"
+mkdir -p "$FX/mystery"
+printf 'beta\n' > "$FX/lib/beta.txt"
+printf 'unknown\n' > "$FX/mystery/unknown.txt"
+fxgit add -A >/dev/null
+fxgit commit -q -m "fixture B" >/dev/null
+FX_B="$(fxgit rev-parse HEAD)"
+run_sync --dry-run --root "$FX" --map "$MAP" --prev "$FX_A" --new "$FX_B"
+t_exit "T1a fixture 仓 A→B dry-run" 0 "$RC"
+FX_DRY=$(printf '%s\n' "$OUT" | grep -cE '^DRY [^ ]+ -> ')
+FX_DIFF=$(git -C "$FX" diff --name-only "$FX_A" "$FX_B" | wc -l | tr -d ' ')
+eq "T1a DRY 行数 == fixture diff 行数" "$FX_DIFF" "$FX_DRY"
+eq "T1a fixture DRY 行数（B 新增 2 文件）" "2" "$FX_DRY"
+has "T1a DRY 行格式（未知 ⇒ 待归类，不进 X）" "$OUT" '^DRY [^ ]+ -> 待归类\(报警,不进X\)$'
+FX_TOTAL_REAL=$(git -C "$FX" ls-tree -r --name-only "$FX_B" | wc -l | tr -d ' ')
+FX_SUM=$(printf '%s\n' "$OUT" | grep -E '^SUMMARY ' | tail -1)
+FX_M=$(printf '%s' "$FX_SUM" | sed -E 's/.*mapped=([0-9]+).*/\1/')
+FX_U=$(printf '%s' "$FX_SUM" | sed -E 's/.*unknown=([0-9]+).*/\1/')
+FX_X=$(printf '%s' "$FX_SUM" | sed -E 's/.*x=([0-9]+).*/\1/')
+FX_T=$(printf '%s' "$FX_SUM" | sed -E 's/.*total=([0-9]+).*/\1/')
+eq "T1a fixture total == fixture ls-tree" "$FX_TOTAL_REAL" "$FX_T"
+eq "T1a fixture 恒等式 mapped+unknown+x == total" "$FX_T" "$((FX_M + FX_U + FX_X))"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# T1c 跨 cwd 同一棵树：--root 认树 ⇒ total 与目标树实数一致（修「靠 cwd 认树」假绿点）
+# T1b 同树空提交（B→C 空 diff）⇒ 零 DRY 行且仍 exit 0（「历史形态」回归位）
 # ══════════════════════════════════════════════════════════════════════════════
-OUT=$(cd "$TMP" && "$PY" "$SYNC" --dry-run --root "$ROOT" --map "$MAP" --prev HEAD^ --new HEAD 2>&1)
+fxgit commit -q --allow-empty -m "fixture C（同树）" >/dev/null
+FX_C="$(fxgit rev-parse HEAD)"
+eq "T1b fixture 同树提交（diff 为空）" "" "$(git -C "$FX" diff --name-only "$FX_B" "$FX_C")"
+run_sync --dry-run --root "$FX" --map "$MAP" --prev "$FX_B" --new "$FX_C"
+t_exit "T1b 空 diff 区间 dry-run" 0 "$RC"
+eq "T1b 空 diff ⇒ 零 DRY 行" "0" "$(printf '%s\n' "$OUT" | grep -cE '^DRY [^ ]+ -> ')"
+has "T1b 空 diff 仍有 SUMMARY" "$OUT" '^SUMMARY mapped=[0-9]+ unknown=[0-9]+ x=[0-9]+ total=[0-9]+$'
+
+# ══════════════════════════════════════════════════════════════════════════════
+# T1c --root 护栏：不存在／非 git 仓库 ⇒ exit 2 code=BAD_ROOT（禁在误树上静默算数）
+# ══════════════════════════════════════════════════════════════════════════════
+run_sync --dry-run --root "$TMP/not-a-repo" --map "$MAP"
+t_exit "T1c --root 不存在" 2 "$RC"
+has "T1c typed error BAD_ROOT" "$OUT" 'code=BAD_ROOT'
+run_sync --dry-run --root "$TMP" --map "$MAP"
+t_exit "T1c --root 非 git 仓库" 2 "$RC"
+has "T1c 非仓 BAD_ROOT" "$OUT" 'code=BAD_ROOT'
+
+# ══════════════════════════════════════════════════════════════════════════════
+# T1d 跨 cwd 同一棵树：--root 认树 ⇒ total 与目标树实数一致（修「靠 cwd 认树」假绿点）
+# ══════════════════════════════════════════════════════════════════════════════
+OUT=$(cd "$TMP" && "$PY" "$SYNC" --dry-run --root "$ROOT" --map "$MAP" --prev HEAD --new HEAD 2>&1)
 RC=$?
-t_exit "T1c 跨 cwd（--root 指目标树）" 0 "$RC"
+t_exit "T1d 跨 cwd（--root 指目标树）" 0 "$RC"
 CROSS_TOTAL=$(printf '%s\n' "$OUT" | grep -E '^SUMMARY ' | sed -E 's/.*total=([0-9]+).*/\1/')
-eq "T1c 跨 cwd total == 目标树 ls-tree" "$REAL_TOTAL" "$CROSS_TOTAL"
+eq "T1d 跨 cwd total == 目标树 ls-tree" "$REAL_TOTAL" "$CROSS_TOTAL"
 
 # ══════════════════════════════════════════════════════════════════════════════
 # T2 真跑正例：M1–M10 带标记 ＋ #769 无标记 ⇒ exit 0；段外逐字节不变；只 PATCH
@@ -450,7 +504,7 @@ eq "T1c 跨 cwd total == 目标树 ls-tree" "$REAL_TOTAL" "$CROSS_TOTAL"
 stop_server
 "$PY" "$TMP/gen_fixture.py" --out "$TMP/fix2.json" >/dev/null
 start_server "$TMP/fix2.json"
-run_sync --map "$MAP" --prev HEAD^ --new HEAD --rebuild-769
+run_sync --map "$MAP" --prev HEAD --new HEAD --rebuild-769
 t_exit "T2 真跑" 0 "$RC"
 hasnt "T2 无 typed error" "$OUT" '^(真红|degraded): code='
 has "T2 PATCH 里程碑" "$OUT" '^PATCHED milestones/[0-9]+ \(M[0-9]+\)$'
@@ -470,7 +524,7 @@ cp "$TMP/state.json" "$TMP/state-after1.json"
 # ══════════════════════════════════════════════════════════════════════════════
 # T3 幂等：同 --prev/--new 二跑 ⇒ changed=0 ＋ 所有 description/body sha256 全等（判据 4）
 # ══════════════════════════════════════════════════════════════════════════════
-run_sync --map "$MAP" --prev HEAD^ --new HEAD --rebuild-769
+run_sync --map "$MAP" --prev HEAD --new HEAD --rebuild-769
 t_exit "T3 第二跑" 0 "$RC"
 has "T3 CHANGED 0" "$OUT" '^CHANGED 0$'
 hasnt "T3 第二跑零 PATCH" "$OUT" '^PATCHED '
@@ -487,7 +541,7 @@ fi
 stop_server
 "$PY" "$TMP/gen_fixture.py" --out "$TMP/fix4.json" --no-marker M5 >/dev/null
 start_server "$TMP/fix4.json"
-run_sync --map "$MAP" --prev HEAD^ --new HEAD
+run_sync --map "$MAP" --prev HEAD --new HEAD
 t_exit "T4 无 marker" 2 "$RC"
 has "T4 typed error NO_MARKER" "$OUT" 'code=NO_MARKER'
 eq "T4 零 PATCH（原子）" "0" "$(field "$(reqs)" patch)"
@@ -511,7 +565,7 @@ inject = '  - glob: "**"\n    module: X\n    owner: P6\n    state: 其他\n'
 assert "entries:\n" in text
 open(sys.argv[2], "w", encoding="utf-8").write(text.replace("entries:\n", "entries:\n" + inject, 1))
 PY
-run_sync --dry-run --map "$TMP/map-catchall.yaml" --prev HEAD^ --new HEAD
+run_sync --dry-run --map "$TMP/map-catchall.yaml" --prev HEAD --new HEAD
 t_exit "T5 8d catch-all" 1 "$RC"
 has "T5 点名 catch-all" "$OUT" 'catch-all'
 has "T5 typed error MAP_CATCH_ALL" "$OUT" 'code=MAP_CATCH_ALL'
@@ -528,7 +582,7 @@ assert text.count("total = len(files)") == 1, "变异锚点 total = len(files) �
 open(dst, "w", encoding="utf-8").write(text.replace("total = len(files)", f"total = {n}", 1))
 print(f"OK mutant total={n}")
 PY
-run_py "$TMP/sync-mutant.py" --dry-run --map "$MAP" --prev HEAD^ --new HEAD
+run_py "$TMP/sync-mutant.py" --dry-run --map "$MAP" --prev HEAD --new HEAD
 t_exit "T6 8c total 造假" 1 "$RC"
 has "T6 恒等式不成立" "$OUT" '恒等式不成立'
 has "T6 typed error IDENTITY_VIOLATION" "$OUT" 'code=IDENTITY_VIOLATION'
@@ -537,7 +591,7 @@ has "T6 typed error IDENTITY_VIOLATION" "$OUT" 'code=IDENTITY_VIOLATION'
 # T7 空 MAP ⇒ exit 2（信号量自检：禁把看不见当没问题）
 # ══════════════════════════════════════════════════════════════════════════════
 printf 'match: first\nentries:\n' > "$TMP/map-empty.yaml"
-run_sync --dry-run --map "$TMP/map-empty.yaml" --prev HEAD^ --new HEAD
+run_sync --dry-run --map "$TMP/map-empty.yaml" --prev HEAD --new HEAD
 t_exit "T7 空 MAP" 2 "$RC"
 has "T7 typed error MAP_EMPTY" "$OUT" 'code=MAP_EMPTY'
 
@@ -548,7 +602,7 @@ stop_server
 start_server "$TMP/fix2.json"
 SYNO_PUSH_GITEA_TOKEN_FILE="$TMP/no-such-token"
 export SYNO_PUSH_GITEA_TOKEN_FILE
-run_sync --map "$MAP" --prev HEAD^ --new HEAD
+run_sync --map "$MAP" --prev HEAD --new HEAD
 t_exit "T8 token 不可读" 2 "$RC"
 has "T8 typed error TOKEN_UNREADABLE" "$OUT" 'code=TOKEN_UNREADABLE'
 eq "T8 零请求" "0" "$(field "$(reqs)" total)"
@@ -560,7 +614,7 @@ export SYNO_PUSH_GITEA_TOKEN_FILE
 # ══════════════════════════════════════════════════════════════════════════════
 stop_server
 start_server "$TMP/fix2.json"
-run_sync --map "$MAP" --prev HEAD^ --new HEAD
+run_sync --map "$MAP" --prev HEAD --new HEAD
 t_exit "T9 真跑（默认不开卡）" 0 "$RC"
 UNK=$(printf '%s\n' "$OUT" | grep -E '^SUMMARY ' | sed -E 's/.*unknown=([0-9]+).*/\1/')
 if [ "${UNK:-0}" -gt 0 ]; then ok "T9 未知>0" "unknown=$UNK"; else bad "T9 未知计数" "unknown=${UNK}（夹具不足：应 >0）"; fi
@@ -570,10 +624,10 @@ eq "T9 未建卡" "0" "$(field "$("$PY" "$TMP/check_state.py" --mode cards --sta
 # ══════════════════════════════════════════════════════════════════════════════
 # T10 --open-x-cards 两跑 ⇒ 只 1 张卡（标题全等＋open 去重；判据 6/8b）
 # ══════════════════════════════════════════════════════════════════════════════
-run_sync --map "$MAP" --prev HEAD^ --new HEAD --open-x-cards
+run_sync --map "$MAP" --prev HEAD --new HEAD --open-x-cards
 t_exit "T10 首跑开卡" 0 "$RC"
 has "T10 建卡行" "$OUT" '^CREATED issues'
-run_sync --map "$MAP" --prev HEAD^ --new HEAD --open-x-cards
+run_sync --map "$MAP" --prev HEAD --new HEAD --open-x-cards
 t_exit "T10 二跑" 0 "$RC"
 has "T10 去重命中" "$OUT" '^CARD exists'
 eq "T10 累计 POST（须 1）" "1" "$(field "$(reqs)" post)"
@@ -592,8 +646,8 @@ print("OK mutant nodedupe")
 PY
 stop_server
 start_server "$TMP/fix2.json"
-run_py "$TMP/sync-nodedupe.py" --map "$MAP" --prev HEAD^ --new HEAD --open-x-cards >/dev/null
-run_py "$TMP/sync-nodedupe.py" --map "$MAP" --prev HEAD^ --new HEAD --open-x-cards >/dev/null
+run_py "$TMP/sync-nodedupe.py" --map "$MAP" --prev HEAD --new HEAD --open-x-cards >/dev/null
+run_py "$TMP/sync-nodedupe.py" --map "$MAP" --prev HEAD --new HEAD --open-x-cards >/dev/null
 MUT_CARDS=$(field "$("$PY" "$TMP/check_state.py" --mode cards --state "$TMP/state.json")" cards)
 eq "T10b 摘掉去重 ⇒ 2 张卡（证明 T10 有判别力）" "2" "${MUT_CARDS:-x}"
 
@@ -622,7 +676,7 @@ text = "".join(out)
 assert "module: M7" not in text, "M7 条目未删净（测试自检）"
 open(sys.argv[2], "w", encoding="utf-8").write(text)
 PY
-run_sync --dry-run --map "$TMP/map-nom7.yaml" --prev HEAD^ --new HEAD
+run_sync --dry-run --map "$TMP/map-nom7.yaml" --prev HEAD --new HEAD
 t_exit "T11 缺 M7 条目" 1 "$RC"
 has "T11 typed error MAP_MISSING_MODULE" "$OUT" 'code=MAP_MISSING_MODULE'
 has "T11 点名 M7" "$OUT" '缺 M7'
