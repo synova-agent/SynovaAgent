@@ -660,3 +660,11 @@ documents:
       status: active
       owner: CTO
       note: "#665c 注入夹具失败时发 GitHub annotation（判据⑦）的豁免；裁 223。"
+
+    # ---- P4 2026-10-20：#665d 夹具克隆清理豁免（D2 登记）----
+    - id: DOC-0222
+      type: decision
+      path: gate-exemptions/2026-10-20-injection-fixture-clone-clean-665d.md
+      status: active
+      owner: CTO
+      note: "#665d 注入夹具判据⑧（探针文件不许泄漏）的豁免；裁 223。"
