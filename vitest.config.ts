@@ -28,7 +28,7 @@ export default defineConfig({
     include: ['./tests/**/*.test.ts', './tests/**/*.integration.test.ts'],
     exclude: process.env.CI
       ? [
-          'tests/acceptance/**',  // "零 .ts 文件修改" depends on uncommitted state
+          'tests/acceptance/zero-code-industry.test.ts',  // "零 .ts 文件修改" depends on uncommitted state
           'tests/circular-dependency.test.ts',  // Node 24 import resolution
           'tests/e2e/**',  // Needs LLM API
           'tests/data-pipeline.*.integration.test.ts',  // Feishu API
