@@ -550,3 +550,113 @@ export function getMetricTrends(db: unknown, query: MetricReadingsQuery = {}): M
 export function createSentinelMetricSink(db: Database): MetricSink {
   return createMetricSink(db);
 }
+
+// ═══ 自举（M5 卡1 / #704）—— MCP 启动期装载全部哨兵（46 目录 ＋ 4 内置）═══
+
+/**
+ * 自举结果契约（MCP 启动期与测试共用的单一形状；字段不得减）。
+ *
+ * @field ok           — true ⇔ `!report.degraded ∧ errors.length===0 ∧ dirCount>0 ∧ total===dirCount+builtinCount`
+ * @field alreadyLoaded— 调用前 registry 是否已非空（**只作可观测，不参与决策**）
+ * @field total        — `getSentinelRegistry().count()`
+ * @field dirCount     — 目录源计数（`loadSentinels().sentinels.length`）
+ * @field builtinCount — 内置适配器文件数（`src/sentinel/adapters/*-sentinel.{ts,js}`，与 builtins.ts:138 同规则）
+ * @field errors       — content-registry 的 errors ＋ warnings（非空 ⇒ ok=false；铁律 31 不丢信号）
+ * @field degraded     — `!ok`（铁律 11/31：降级必须显式）
+ * @field code         — 失败 `'SENTINEL_BOOTSTRAP_FAILED'`；已声明未自举的 fail-closed 默认值用
+ *                       `'SENTINEL_BOOTSTRAP_NOT_RUN'`（反例②指纹）
+ */
+export interface SentinelBootstrapResult {
+  ok: boolean;
+  alreadyLoaded: boolean;
+  total: number;
+  dirCount: number;
+  builtinCount: number;
+  errors: string[];
+  degraded: boolean;
+  code?: 'SENTINEL_BOOTSTRAP_FAILED' | 'SENTINEL_BOOTSTRAP_NOT_RUN';
+}
+
+/**
+ * 自举全局哨兵注册表（M5 卡1；MCP 启动期调用一次）—— **复用**既有装载链，不新建第二套扫描。
+ *
+ * 复用点（禁重造，SPEC §9.2）:
+ *   ① 46 目录哨兵 = `initContentTypes({ types: ['sentinel'] })`（content-registry 的唯一 type→loader 表，
+ *      sentinel 条目 init=`registerLoadedSentinels`）；**不复用** `initFileDrivenLoaders()`（装配 9 类面，副作用超范围）。
+ *   ② 4 内置 = `registerBuiltinSentinels()`（content-registry **不覆盖**内置，必须单独调）。
+ *
+ * 契约（铁律 47）:
+ *   @input    无参（隐式读全局 registry ＋ `extensions/sentinels`（或 D751 注入缝 `SENTINELS_FIXTURE_DIR`））
+ *   @output   `SentinelBootstrapResult`；ok 规则见接口注释（口径锚 46／4 由测试独立派生，不写死 50）
+ *   @degraded 任一环节失败 ⇒ `ok:false` ＋ `degraded:true` ＋ `errors[]` ＋ `log.warn`（铁律 24/31）；
+ *             内容面损坏／`SYNOVA_CONTENT_REGISTRY_DISABLE=1` 时**显式失败**，不静默当 0 哨兵成功
+ *   @error    **从不抛**（含 registry 访问失败：catch ⇒ code='SENTINEL_BOOTSTRAP_FAILED'）；
+ *             该"不抛"是契约而非疏漏 —— 自举失败不阻断 MCP 启动，由 sentinel_list 守卫诚实报错
+ *   @authority 只允许 MCP 装配层（`src/mcp/index.ts`）与 tests 调用；领域层不得以它替代 boot 装配
+ *
+ * 幂等：register 已幂等（`src/sentinel/registry.ts:39` 重复跳过）；**不设 memo** ⇒ 除 `alreadyLoaded`
+ * 外两次调用同形，第二次 `alreadyLoaded===true` 且实例引用不变（测试隔离用
+ * `destroySentinelRegistry()` ＋ `clearSentinelCache()`）。
+ */
+export async function ensureSentinelRegistryLoaded(): Promise<SentinelBootstrapResult> {
+  let alreadyLoaded = false;
+  // catch 路径**不得再触碰**可能已失效的 registry ⇒ 用已确立的计数快照（默认 0）
+  let lastTotal = 0;
+  try {
+    const { getSentinelRegistry } = await import('../sentinel/registry');
+    const registry = getSentinelRegistry();
+    alreadyLoaded = registry.count() > 0;
+
+    const { initContentTypes } = await import('../deploy/content-registry');
+    const { registerBuiltinSentinels } = await import('../sentinel/builtins');
+    const { loadSentinels } = await import('../sentinel/sentinel-loader');
+    const { readdirSync } = await import('node:fs');
+    const { fileURLToPath } = await import('node:url');
+
+    // ① 46 目录哨兵：复用唯一 type→loader 表（content-registry 的 sentinel 条目）
+    const report = await initContentTypes({ types: ['sentinel'] });
+    // ② 4 内置：content-registry 不覆盖内置，单独注册
+    await registerBuiltinSentinels();
+
+    const dirCount = loadSentinels().sentinels.length;
+    const adaptersDir = fileURLToPath(new URL('../sentinel/adapters/', import.meta.url));
+    const builtinCount = readdirSync(adaptersDir).filter((f) => /-sentinel\.(ts|js)$/.test(f)).length;
+    const total = registry.count();
+    lastTotal = total;
+    // 覆盖 loader 软降级（warnings）—— 只看 errors 会把"部分失败"读成成功
+    const errors = [...report.errors, ...report.warnings];
+    const ok =
+      !report.degraded &&
+      errors.length === 0 &&
+      dirCount > 0 &&
+      total === dirCount + builtinCount;
+
+    const result: SentinelBootstrapResult = {
+      ok,
+      alreadyLoaded,
+      total,
+      dirCount,
+      builtinCount,
+      errors,
+      degraded: !ok,
+    };
+    if (!ok) {
+      result.code = 'SENTINEL_BOOTSTRAP_FAILED';
+      log.warn({ dirCount, builtinCount, total, errors }, '[ensureSentinelRegistryLoaded] 自举降级 — degraded');
+    }
+    return result;
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    log.warn({ err: message }, '[ensureSentinelRegistryLoaded] 自举失败 — degraded');
+    return {
+      ok: false,
+      alreadyLoaded,
+      total: lastTotal,
+      dirCount: 0,
+      builtinCount: 0,
+      errors: [`SENTINEL_BOOTSTRAP_FAILED: ${message}`],
+      degraded: true,
+      code: 'SENTINEL_BOOTSTRAP_FAILED',
+    };
+  }
+}
