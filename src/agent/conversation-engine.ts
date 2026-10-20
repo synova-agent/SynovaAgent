@@ -46,6 +46,8 @@ import { getGlobalSentinelRunner } from '../sentinel/runner';
 import { ContextEngine } from '../orchestrator/context-engine';
 // D594: 会话级上下文压缩引擎（DSH compaction-basic 范式借鉴，读源码自研零依赖）
 import { ContextCompaction, ContextCompactionError, createProviderSummarizer, wrapProviderWithOverflowRecovery } from './context-compaction';
+// #656 M2: conversation 链 ingest 调用点（复用现成 ingestDocumentText；不改 src/ingest/**）
+import { ingestDocumentText } from '../ingest/knowledge-ingest-bridge';
 
 const log = createLogger('agent/conversation-engine');
 
@@ -981,3 +983,152 @@ export function getDecisionRecordingSeam(): DecisionRecordingSeam | null {
 // 与上方写侧接缝同宿，L1 消费面只有一个可指的 L2 符号。
 export { getDecisionLedgerReader } from '../l4/decision-ledger-readback';
 export type { DecisionLedgerQuery, DecisionLedgerEntry, DecisionLedgerReadResult } from '../l4/decision-ledger-readback';
+
+// ═══ #656 M2 · 对话链 `/ingest` 入口（判据②：conversation 链 ingest 调用点 ≥1）═══
+//
+// 设计哲学：**一个前缀分离 ＋ 三条承诺** —— ① 触发与落点锚只在 L2 定义一次（L1 只转发）；
+// ② 零 LLM 依赖（`/ingest` 不碰 provider/config，避免费用与 LLM_NOT_CONFIGURED 挡路）；
+// ③ 摄取失败只降级不阻断（degraded 显式传播，普通对话路径零改动）。
+//
+// 契约（铁律 47）:
+//   @input    message: string（route 边界已校验 1..MESSAGE_MAX）｜orgId: string
+//             ｜store: ConversationIngestStore（**参数注入**：本模块不建第二套 store、不直连 L5）
+//             ｜entry: 'route'|'engine'（仅日志归因，不改变语义）
+//   @output   ConversationIngestOutcome { ingested, nodesCreated, edgesCreated, degraded,
+//             code?: 'INGEST_TRIGGER_NONE'|'INGEST_EMPTY'|'INGEST_FAILED' }
+//   @degraded 摄取 errors 非空 / 调用抛错 ⇒ ingested=false + degraded=true + code='INGEST_FAILED'
+//             + log.warn（铁律 11/31）；**不阻断**普通对话（本函数不在普通消息路径上）
+//   @authority 仅 conversation 链可调（`routes/conversations.ts` 的 `/ingest` 分支经
+//             `ingestConversationExcerpt` 转发）；**不新增公开 HTTP 字段**（接口变更须 CTO）
+//   @not-here 不写 metric_readings ｜ 不改 46 哨兵 ｜ 不做标定 ｜ 不建第二套 store ｜ 不调 LLM
+//
+// 落点：`ingestDocumentText` 建 `Document` 节点，`name = anchor`、`content = text.slice(0,5000)`、
+//       `source = 'upload'`（src/ingest/knowledge-ingest-bridge.ts:55-57）⇒ 读回侧按 props.name 断锚点。
+//
+// 已知限制（Known Limitations）:
+//   1. 触发只按前缀 `startsWith('/ingest')`，**不做词边界** ⇒ `/ingested ...` 亦命中（text='ed'）。
+//      规格（裁 225）方案 A 只要求前缀语义；收紧属接口语义变更，须 CTO。
+//   2. 实体抽取仍是 `ingestDocumentText` 的启发式（引号人名/部门关键词）；落点证明用
+//      Document.name=anchor（不依赖启发式实体）——见批规格 §7.3。
+//   3. 锚点时间戳用 UTC ISO（`new Date().toISOString()`，含 `:`/`.`），非文件名安全字符；
+//      本批只做 Document 落点读回，不落文件系统。
+//   4. 同进程并发两次摄取由模块级 seq 同步自增保证锚点不同；跨进程靠 pid 段区分，
+//      不维护全局唯一性注册表（本批不需要）。
+//   5. **接口面刻意收窄**：`ConversationIngestStore` 只声明本接缝实际触达的 2 个方法
+//      （`ingestDocumentText` 只调 createNode/createEdge —— knowledge-ingest-bridge.ts:36/:47/:55/:63），
+//      比 `GraphStore`（14 方法）窄 ⇒ `src/adapters/**` 的实现（SqliteGraphStore 仅 9 个接口方法 + 构造器）
+//      也能直接注入，**不必补桩、不必 as unknown as**。`GraphStore` 比本接缝宽，本批**不改**
+//      `src/adapters/**`（不在写集）；两者关系见下方 `store as GraphStore` 的单层断言注释。
+
+/** `/ingest` 命令前缀（route 与引擎共用的唯一真源；改名即接口语义变更） */
+export const INGEST_COMMAND_PREFIX = '/ingest';
+
+/**
+ * 本接缝实际触达的图存储面（**比 GraphStore 窄**）。
+ *
+ * 为什么要单独的接口、而不是直接吃 `GraphStore`：
+ * `ingestDocumentText` 的形参声明为完整 GraphStore（knowledge-ingest-bridge.ts:25），
+ * 但其函数体只调用 `createNode`/`createEdge`（同文件 :36/:47/:55/:63）；
+ * 注入实例（`adapters/sqlite-graph-store`）只实现 GraphStore 的 9 个方法（共 10 个成员，含构造器），
+ * 与 14 方法的 GraphStore **不结构兼容**（单层断言实测 TS2352）⇒ 用触达面接口收口，
+ * L1 传真实例零断言，断言集中在本 L2 既有 L2↔L4 例外层（见调用点注释）。
+ */
+export interface ConversationIngestStore {
+  createNode(type: string, props: Record<string, unknown>, graph: string): string;
+  createEdge(
+    type: string, from: string, to: string, weight?: number,
+    props?: Record<string, unknown>, graph?: string,
+  ): string;
+}
+
+/** 模块级单调计数（进程内从 1 起）——保证同进程两次摄取锚点不同（批规格 §4.4 边界值） */
+let ingestAnchorSeq = 0;
+
+/** /ingest 摄取的归一化结果（契约 @output 的 TypeScript 载体；语义见本文件头 @output 与 ingestConversationExcerpt 的 @returns） */
+export interface ConversationIngestOutcome {
+  ingested: boolean;
+  nodesCreated: number;
+  edgesCreated: number;
+  degraded: boolean;
+  code?: 'INGEST_TRIGGER_NONE' | 'INGEST_EMPTY' | 'INGEST_FAILED';
+}
+
+/**
+ * 解析 `/ingest` 前缀消息（纯函数，无副作用——可直接单测边界）。
+ *
+ * @param message - 用户输入原文（调用方已做 1..MESSAGE_MAX 边界校验）
+ * @returns triggered=true 时 `text` = 前缀后 trim 的资料文本（可能为空串）；否则 `text=''`
+ * @degraded 无（纯函数不降级）
+ */
+export function parseIngestMessage(message: string): { triggered: boolean; text: string } {
+  if (!message.startsWith(INGEST_COMMAND_PREFIX)) return { triggered: false, text: '' };
+  return { triggered: true, text: message.slice(INGEST_COMMAND_PREFIX.length).trim() };
+}
+
+/**
+ * 生成一次摄取的唯一锚点：`inge-<ISO8601>-<pid>-<seq>`。
+ * 同时作为 `ingestDocumentText` 的 fileName ⇒ Document.name（落点读回的唯一依据）。
+ * @output 本进程内单调唯一锚点（seq 自增；pid 区分进程）
+ */
+function nextIngestAnchor(): string {
+  ingestAnchorSeq += 1;
+  return `inge-${new Date().toISOString()}-${process.pid}-${ingestAnchorSeq}`;
+}
+
+/**
+ * 摄取一段对话资料进本体图（conversation 链唯一 ingest 调用点）。
+ *
+ * @param message - 用户输入原文（`/ingest` 前缀消息；非前缀 ⇒ INGEST_TRIGGER_NONE）
+ * @param orgId - 图名（租户）；本函数只写该 orgId（跨租户隔离由读回侧按 orgId 过滤）
+ * @param store - ConversationIngestStore（**参数注入**；本模块不构造第二套 store）
+ * @param entry - 调用来源（'route' = POST /api/conversations 分支；'engine' = 引擎内调用），仅日志归因
+ * @returns 摄取结果；失败一律走 degraded 字段（**不裸 throw**，铁律 11/31/32）
+ * @degraded 摄取 errors 非空或调用抛错 ⇒ `{ingested:false, degraded:true, code:'INGEST_FAILED'}` + log.warn
+ */
+export async function ingestConversationExcerpt(
+  message: string, orgId: string, store: ConversationIngestStore, entry: 'route' | 'engine',
+): Promise<ConversationIngestOutcome> {
+  const parsed = parseIngestMessage(message);
+  if (!parsed.triggered) {
+    return { ingested: false, nodesCreated: 0, edgesCreated: 0, degraded: false, code: 'INGEST_TRIGGER_NONE' };
+  }
+  if (parsed.text.length === 0) {
+    // 空资料是**用户输入错误**而非降级：不调 ingestDocumentText、不写图（批规格 §4.4）
+    log.warn({ entry, orgId }, '/ingest 缺少资料文本 — INGEST_EMPTY（未落库）');
+    return { ingested: false, nodesCreated: 0, edgesCreated: 0, degraded: false, code: 'INGEST_EMPTY' };
+  }
+  const anchor = nextIngestAnchor();
+  try {
+    // 单层断言：`GraphStore`(14 方法) ⊇ `ConversationIngestStore`(2 方法) ⇒ 反向断言语义合法；
+    // 断言集中在本 L2（既有 L2↔L4 例外层，见文件头 import 注释），**不下放 L1**。
+    // 依据：ingestDocumentText 只触达 createNode/createEdge（knowledge-ingest-bridge.ts:36/47/55/63）。
+    const result = await ingestDocumentText(parsed.text, anchor, orgId, store as GraphStore);
+    if (result.errors.length > 0) {
+      log.warn(
+        { entry, orgId, anchor, errors: result.errors },
+        '/ingest 摄取降级 — 已记日志，不阻断对话（铁律 11/31）',
+      );
+      return {
+        ingested: false,
+        nodesCreated: result.nodesCreated,
+        edgesCreated: result.edgesCreated,
+        degraded: true,
+        code: 'INGEST_FAILED',
+      };
+    }
+    log.info(
+      { entry, orgId, anchor, nodes: result.nodesCreated, edges: result.edgesCreated },
+      '/ingest 资料已入本体图（Document.name=anchor）',
+    );
+    return {
+      ingested: true,
+      nodesCreated: result.nodesCreated,
+      edgesCreated: result.edgesCreated,
+      degraded: false,
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.warn({ entry, orgId, anchor, err: msg }, '/ingest 摄取抛错 — 降级为 INGEST_FAILED（不阻断对话）');
+    return { ingested: false, nodesCreated: 0, edgesCreated: 0, degraded: true, code: 'INGEST_FAILED' };
+  }
+}
