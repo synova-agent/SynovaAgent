@@ -39,6 +39,10 @@ export LC_ALL=C.UTF-8 2>/dev/null   # swallow-ok: locale 不可用时回退默�
 #             SYNO_PUSH_OUT                 结果 JSON 路径
 #             SYNO_PUSH_MIRROR_LOG          门禁留痕路径（缺省 <repo>/.claude/mirror-sync.log）
 #             SYNO_PUSH_MIRROR_PENDING      门禁 pending（缺省 <repo>/.claude/mirror-sync.pending）
+#             SYNO_PUSH_STATUS              auto|off（缺省 auto）：每趟更新常驻状态单
+#             SYNO_PUSH_STATUS_TITLE        状态单标题（缺省 [AUTO] 镜像同步状态（自动更新））
+#             SYNO_PUSH_STATUS_HIST         历史 JSONL（缺省 <repo>/.codex/…/mirror-sync-history.jsonl）
+#             SYNO_PUSH_STATUS_CMD          注入缝（测试）：状态载荷走该命令 stdin
 #             SYNO_PUSH_SIGNAL              auto|off（缺省 auto）
 #             SYNO_PUSH_SIGNAL_CMD          注入缝（测试）：载荷走该命令的 stdin
 #             SYNO_PUSH_GITEA_API           Gitea API 前缀（缺省 http://127.0.0.1:3000/api/v1）
@@ -91,6 +95,9 @@ OUT="${SYNO_PUSH_OUT:-$REPO/.codex/control-tower/tmp/mirror-sync-push.json}"
 MIRROR_LOG="${SYNO_PUSH_MIRROR_LOG:-$REPO/.claude/mirror-sync.log}"
 MIRROR_PENDING="${SYNO_PUSH_MIRROR_PENDING:-$REPO/.claude/mirror-sync.pending}"
 SIGNAL_MODE="${SYNO_PUSH_SIGNAL:-auto}"
+STATUS_MODE="${SYNO_PUSH_STATUS:-auto}"
+STATUS_TITLE="${SYNO_PUSH_STATUS_TITLE:-[AUTO] 镜像同步状态（自动更新）}"
+STATUS_HIST="${SYNO_PUSH_STATUS_HIST:-$REPO/.codex/control-tower/tmp/mirror-sync-history.jsonl}"
 GITEA_API="${SYNO_PUSH_GITEA_API:-http://127.0.0.1:3000/api/v1}"
 GITEA_REPO="${SYNO_PUSH_GITEA_REPO:-synova-agent/SynovaAgent}"
 TOKEN_FILE="${SYNO_PUSH_GITEA_TOKEN_FILE:-/Users/wane/gitea/.win-push-token}"
@@ -166,6 +173,79 @@ t=os.environ["SYNO_ISSUE_TITLE"]
 for i in arr:
     if (i.get("title") or "")==t: print(i["number"]); break
 ' 2>/dev/null || true   # swallow-ok: 解析失败 ⇒ 空 ⇒ 走新建分支（不静默：issue 建不成会打 SIGNAL-FAILED）
+}
+
+status_update() {  # $1=exit $2=verdict $3=reason —— B 层：常驻状态单（每趟 PATCH 正文）
+  local rc="$1" verdict="$2" reason="${3:-}" payload tok issue_no body
+  [ "$STATUS_MODE" = "off" ] && return 0
+  mkdir -p "$(dirname "$STATUS_HIST")" 2>/dev/null || true   # swallow-ok: 目录建不出 ⇒ 下方显式 STATUS-UNREACHABLE
+  printf '{"as_of":"%s","verdict":"%s","lag":%s,"gitea":"%s","github":"%s","pushed":"%s","exit":%s}\n' \
+    "$AS_OF" "$verdict" "${LAG:-null}" "${GITEA_SHA:-}" "${GH_SHA:-}" "${PUSHED_SHA:-}" "$rc" \
+    >> "$STATUS_HIST" 2>/dev/null || true   # swallow-ok: 历史仅供渲染，写不出不阻断（下方显式提示）
+  if [ -f "$STATUS_HIST" ]; then
+    tail -10 "$STATUS_HIST" > "$STATUS_HIST.tmp" 2>/dev/null && mv "$STATUS_HIST.tmp" "$STATUS_HIST" 2>/dev/null || true   # swallow-ok: 截断失败不影响本轮
+  fi
+
+  if [ -n "${SYNO_PUSH_STATUS_CMD:-}" ]; then
+    payload="$(printf '{"title": %s, "verdict": "%s", "as_of": "%s", "lag": %s, "exit": %s}' \
+      "$(_json "$STATUS_TITLE")" "$verdict" "$AS_OF" "${LAG:-null}" "$rc")"
+    printf '%s\n' "$payload" | sh -c "$SYNO_PUSH_STATUS_CMD" >/dev/null 2>&1 && return 0
+    say_err "STATUS-UNREACHABLE reason=status_cmd_failed（状态单未更新；不改变本趟结论）"; return 0
+  fi
+
+  command -v curl >/dev/null 2>&1 || { say_err "STATUS-UNREACHABLE reason=curl_missing"; return 0; }
+  [ -r "$TOKEN_FILE" ] || { say_err "STATUS-UNREACHABLE reason=token_unreadable"; return 0; }
+  tok="$(tr -d '\r\n' < "$TOKEN_FILE")"
+  body="$(SYNO_ST_HIST="$STATUS_HIST" SYNO_ST_TITLE="$STATUS_TITLE" SYNO_ST_LAST="$verdict" \
+    SYNO_ST_ASOF="$AS_OF" SYNO_ST_GITEA="${GITEA_SHA:-}" SYNO_ST_GITHUB="${GH_SHA:-}" \
+    SYNO_ST_LAG="${LAG:-}" SYNO_ST_PUSHED="${PUSHED_SHA:-}" SYNO_ST_EXIT="$rc" "$PYBIN" - <<'PY'
+import json,os
+e=os.environ
+rows=[]
+try:
+    for line in open(e["SYNO_ST_HIST"],encoding="utf-8"):
+        line=line.strip()
+        if not line: continue
+        try: rows.append(json.loads(line))
+        except Exception: continue
+except Exception:
+    pass
+rows=rows[-10:]
+md=["# 镜像同步状态（自动更新，请勿手改）","",
+    "- 最近一次：**%s**（as_of %s，exit %s）"%(e.get("SYNO_ST_LAST",""),e.get("SYNO_ST_ASOF",""),e.get("SYNO_ST_EXIT","")),
+    "- 两仓 sha：Gitea `%s` | GitHub `%s`"%(e.get("SYNO_ST_GITEA","") or "<未读到>", e.get("SYNO_ST_GITHUB","") or "<未读到>"),
+    "- 落后：%s"%(e.get("SYNO_ST_LAG","") or "-"),
+    "- 已推：%s"%(e.get("SYNO_ST_PUSHED","") or "-"),"",
+    "| 时间(as_of) | 结论 | 落后 | Gitea | GitHub | 已推 | exit |","|---|---|---|---|---|---|---|"]
+for r in reversed(rows):
+    md.append("| %s | %s | %s | `%s` | `%s` | `%s` | %s |"%(
+        (r.get("as_of") or "")[:19], r.get("verdict",""), r.get("lag","-"),
+        (r.get("gitea") or "-")[:9], (r.get("github") or "-")[:9], (r.get("pushed") or "-")[:9], r.get("exit","")))
+md += ["","说明：本单由 mirror-sync-push.sh 每趟自动 PATCH 正文；失败/恢复历史留在评论里。",
+       "判据与处置见 handbook 派单件/2026-10-20-规格-740-镜像自动推送.md。"]
+print(json.dumps("\n".join(md), ensure_ascii=False))
+PY
+)"
+  issue_no="$(curl -fsS --max-time 15 -H "Authorization: token $tok" \
+      "$GITEA_API/repos/$GITEA_REPO/issues?state=all&limit=50" 2>/dev/null \
+    | SYNO_ISSUE_TITLE="$STATUS_TITLE" "$PYBIN" -c '
+import json,sys,os
+try: arr=json.load(sys.stdin)
+except Exception: raise SystemExit(0)
+t=os.environ["SYNO_ISSUE_TITLE"]
+for i in arr:
+    if (i.get("title") or "")==t: print(i["number"]); break
+' 2>/dev/null || true)"   # swallow-ok: 读不到 ⇒ 走新建分支（建不出会打 STATUS-UNREACHABLE）
+  if [ -n "$issue_no" ]; then
+    curl -fsS --max-time 15 -X PATCH -H "Authorization: token $tok" -H "Content-Type: application/json" \
+      -d "$(printf '{"body":%s}' "$body")" "$GITEA_API/repos/$GITEA_REPO/issues/$issue_no" >/dev/null 2>&1 && return 0
+  else
+    curl -fsS --max-time 15 -X POST -H "Authorization: token $tok" -H "Content-Type: application/json" \
+      -d "$(printf '{"title":%s,"body":%s}' "$(_json "$STATUS_TITLE")" "$body")" \
+      "$GITEA_API/repos/$GITEA_REPO/issues" >/dev/null 2>&1 && return 0
+  fi
+  say_err "STATUS-UNREACHABLE reason=issue_write_failed（状态单未更新；不改变本趟结论）"
+  return 0
 }
 
 signal_fail() {  # $1=code $2=verdict $3=reason
@@ -249,6 +329,7 @@ finish() {  # $1=exit $2=verdict $3=reason $4=fail|recover|""
     fail)    signal_fail "E_${verdict}" "$verdict" "$reason" || rc=2 ;;
     recover) [ "$rc" = "0" ] && signal_recover ;;
   esac
+  status_update "$rc" "$verdict" "$reason" || true   # B 层：常驻状态单（失败显式 STATUS-UNREACHABLE，不改结论）
   if ! write_json "$rc" "$verdict" "$reason"; then
     echo "MIRROR-SYNC-PUSH: DEGRADED reason=E_OUT_UNWRITABLE out=$OUT"
     exit 2
