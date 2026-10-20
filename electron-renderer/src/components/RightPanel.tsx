@@ -20,6 +20,8 @@ import {
 } from '../stores/ga-collab';
 // D556: GA 协同纯展示组件（三块渲染——容器/展示拆分，renderToStaticMarkup 可断言）
 import { GaDetailSections, type GaInjectedRecord } from './ga-detail-sections';
+// #656 M4: 测量值＋趋势（loader 取数容器 + 纯展示组件；一页纸入口复用既有 report tab）
+import { MeasurementTrendContainer } from './MeasurementTrendContainer';
 
 // ═══ 视图解析 ═══
 
@@ -454,6 +456,9 @@ const GAWorkspaceTabs: React.FC = () => {
 
   return (
     <>
+      {/* #656 M4: 「测量值＋趋势」区块与一页纸入口（置于 tabs 条之前 ⇒ 任何 tab 下可见） */}
+      <MeasurementTrendContainer onOpenOnePager={() => setTab('report')} />
+
       <div className="right-panel-tabs">
         {(['action', 'sentinel', 'pattern', 'report'] as const).map((t) => (
           <button key={t} className={`right-panel-tab${tab === t ? ' active' : ''}`} onClick={() => setTab(t)}>
