@@ -620,3 +620,11 @@ documents:
       status: active
       owner: CTO
       note: "裁 220：产品宪章 v8.3（2026-10-20 定稿获签）下游同步的受保护路径豁免（P8 包守则 §4.7 转述、cto-handover skill 版本/行数）；含自覆盖与 DOCS-REGISTRY 自登记行。"
+
+    # ---- P4 2026-10-20：#657 0-2 remote 维度豁免（D2 登记）----
+    - id: DOC-0217
+      type: decision
+      path: gate-exemptions/2026-10-20-pre-push-mirror-657.md
+      status: active
+      owner: CTO
+      note: "#657 门禁 0-2 补 remote 维度（mirror main 放行＋三硬约束）的豁免；裁 223。"
