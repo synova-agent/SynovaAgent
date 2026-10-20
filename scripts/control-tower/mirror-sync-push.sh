@@ -235,7 +235,7 @@ signal_recover() {
   open_no="$(list_open_issue_no "$tok")" || true   # swallow-ok: 恢复信号是加分项，失败不改 verdict
   [ -z "$open_no" ] && return 0
   curl -fsS --max-time 15 -X POST -H "Authorization: token $tok" -H "Content-Type: application/json" \
-    -d "$(printf '{"body":%s}' "$(_json "已恢复：${VERDICT}（as_of $AS_OF，两仓一致或推送后核 SHA 相等）⇒ 自动关单。")")" \
+    -d "$(printf '{"body":%s}' "$(_json "已恢复：${VERDICT}（as_of ${AS_OF}，两仓一致或推送后核 SHA 相等）⇒ 自动关单。")")" \
     "$GITEA_API/repos/$GITEA_REPO/issues/$open_no/comments" >/dev/null 2>&1 || true   # swallow-ok: 同上
   curl -fsS --max-time 15 -X PATCH -H "Authorization: token $tok" -H "Content-Type: application/json" \
     -d '{"state":"closed"}' "$GITEA_API/repos/$GITEA_REPO/issues/$open_no" >/dev/null 2>&1 || true   # swallow-ok: 同上

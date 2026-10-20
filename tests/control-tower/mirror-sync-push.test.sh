@@ -37,7 +37,7 @@ fail() { FAIL=$((FAIL + 1)); echo "  ❌ $1" >&2; }
 chk()  { if eval "$1"; then echo "      · ok: $2"; else echo "      · RED: $2"; CASE_FAIL=$((CASE_FAIL + 1)); fi; }
 
 TMPROOT="$(mktemp -d)"; trap 'rm -rf "$TMPROOT"' EXIT
-FX=""; WORK=""; GITEA=""; MIRROR=""; SIG=""; OUT=""; A1=""; A2=""; RC=""; VERDICT=""; O1=""; BASE_N=""
+FX=""; WORK=""; GITEA=""; MIRROR=""; SIG=""; OUT=""; A1=""; A2=""; RC=""; RC1=""; RC2=""; VERDICT=""; O1=""; BASE_N=""
 
 # ── 夹具：work（工作仓）+ gitea.git + mirror.git；产 A1/A2 两提交 ────────────────
 new_fixture() {  # $1=名字；默认 Gitea local-main=A1、GitHub main=A1（一致）
@@ -117,6 +117,7 @@ setup3() { new_fixture "c3"
 setup4() { new_fixture "c4"; git -C "$WORK" push -q gitea "$A2:refs/heads/local-main"
            RC="$(run_sut "$A1" SYNO_PUSH_TEST_AFTER_PUSH="git -C $MIRROR update-ref refs/heads/main $A1")"
            VERDICT="$(verdict_of "$OUT")"; }
+setup5() { new_fixture "c5"; RC1="$(run_sut "deadbeef")"; RC2="$(run_sut "$A1")"; }
 setup8() { new_fixture "c8"; RC="$(run_sut "deadbeef")"; VERDICT="$(verdict_of "$OUT")"; }
 
 echo "── ① 落后=0 ⇒ 不推、exit 0 ──"
@@ -130,6 +131,9 @@ setup3; assert_case c3 "③ 分叉 ⇒ 拒推（exit 1 / FORK / 远端不变 / �
 
 echo "── ④ 推后核 SHA：不等 ⇒ exit 2（降级 ≠ 通过）──"
 setup4; assert_case c4 "④ 核 SHA 不等 ⇒ exit 2 且出信号"
+
+echo "── ⑤ 失败必出声 ＋ 恢复要关单（同一夹具：先降级再恢复）──"
+setup5; assert_case c5 "⑤ 降级必出声、恢复必出声（否则历史单永不关闭）"
 
 echo "── ⑥ 触发器（本测试只核脚本侧；launchd 侧见现场命令）──"
 grep -q "SYNO_PUSH_VERIFY_TRIES" "$SUT" && pass "⑥ 执行器可被每日任务直接调用（无可交互等待）" || fail "⑥ 执行器缺可调用契约"
