@@ -1,0 +1,2 @@
+- docs/authority/DOCS-REGISTRY.yaml — 登记 MVP 权威件 v1.2 镜像＋旧宪章 v5 标注的豁免（D2 登记门禁） — 裁 246
+- gate-exemptions/2026-10-20-mvp-v12-archive.md — 本豁免文件（gate-exemptions 自我保护） — 裁 246
