@@ -18,7 +18,7 @@
 - **标 superseded** `docs/synova/产品宪章-v8.1-镜像.md`（不再同步，保留追溯）
 
 ### 登记与豁免（D2 门禁 / 受保护路径）
-- `docs/authority/DOCS-REGISTRY.yaml`：**DOC-0221**（规范）／**DOC-0222**（宪章镜像）／**DOC-0223**（存档豁免件）／**DOC-0224**（入口件锚点豁免件）
+- `docs/authority/DOCS-REGISTRY.yaml`：**DOC-0224**（规范）／**DOC-0225**（宪章镜像）／**DOC-0226**（存档豁免件）／**DOC-0227**（入口件锚点豁免件）
 - `gate-exemptions/2026-10-20-ontology-spec-archive.md`、`gate-exemptions/2026-10-20-p1-anchor-inventory.md`：三段式（路径／理由／裁 227）
 
 ### 口径盘点（入口件／技能）
