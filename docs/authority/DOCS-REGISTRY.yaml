@@ -765,3 +765,11 @@ documents:
     status: active
     owner: CTO
     note: "P1 守则 §四 写集扩为 tests/acceptance/**（仅新增）的受保护路径豁免。"
+
+  # ---- P6 2026-10-21：#776 资产同步 PR-1 豁免件 ----
+  - id: DOC-0235
+    type: decision
+    path: gate-exemptions/2026-10-21-p6-776-asset-sync.md
+    status: active
+    owner: P6
+    note: "#776 PR-1 受保护路径豁免（ASSET-MAP/asset-sync.py/测试/DOCS 登记）；裁 277。"
