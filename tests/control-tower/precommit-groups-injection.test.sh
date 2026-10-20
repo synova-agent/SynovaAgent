@@ -1,4 +1,5 @@
 #!/bin/bash
+# @requires bash git python3 tsx
 # ═══════════════════════════════════════════════════════════════════════════════
 # precommit-groups-injection.test.sh — pre-commit 各组「违规注入必红」判别性夹具
 #   M9 控制塔门禁三件套 / task-6（m9-coder-b 写集）。K3 批次2 §五 #1 要求：

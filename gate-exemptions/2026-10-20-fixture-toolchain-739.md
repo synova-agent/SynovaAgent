@@ -1,0 +1,8 @@
+- scripts/control-tower/check-fixture-requires.sh — #739④ 夹具依赖声明核对（缺依赖报名字；静态扫未声明） — 裁 223
+- scripts/control-tower/fixture-toolchain.txt — #739④ 工具链单一来源清单 — 裁 223
+- scripts/control-tower/fixture-requires-baseline.txt — #739④ 存量未声明基线（棘轮只减不增） — 裁 223
+- tests/control-tower/check-fixture-requires.test.sh — #739④ 配对夹具（10 例） — 裁 223
+- tests/control-tower/precommit-groups-injection.test.sh — #739④ 加 @requires 声明（范本） — 裁 223
+- .github/workflows/ci.yml — #739④ 安装步从清单派生＋preflight — 裁 223
+- gate-exemptions/2026-10-20-fixture-toolchain-739.md — 本豁免文件（gate-exemptions 自我保护） — 裁 223
+- docs/authority/DOCS-REGISTRY.yaml — #739④ 登记本豁免文件（D2 登记门禁） — 裁 223

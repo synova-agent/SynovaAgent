@@ -716,18 +716,10 @@ documents:
     owner: CTO
     note: "口径盘点：AGENTS.md 增两镜像路径；cto-handover skill 补本体层规范 v2.11 锚（.claude/.dsh 同源）。"
 
-  # ---- CTO 2026-10-20：MVP 权威件 v1.2 镜像（接宪章 v8.3＋本体层规范 v2.11＋M10）----
-  - id: DOC-0228
-    type: architecture
-    path: docs/specs/mvp/MVP阶段权威文件-v1.2.md
-    status: active
-    owner: CTO
-    note: "MVP 阶段权威件 v1.2 镜像（权威源=handbook；接宪章 v8.3＋本体层规范 v2.11＋裁 219 的 M10）。"
-
-  # ---- CTO 2026-10-20：MVP v1.2 存档豁免（D2 登记）----
-  - id: DOC-0229
-    type: decision
-    path: gate-exemptions/2026-10-20-mvp-v12-archive.md
-    status: active
-    owner: CTO
-    note: "MVP 权威件 v1.2 镜像存档（＋旧宪章 v5 HTML 标注 superseded）的受保护路径豁免。"
+    # ---- P4 2026-10-20：#739④ 夹具工具链豁免（D2 登记）----
+    - id: DOC-0228
+      type: decision
+      path: gate-exemptions/2026-10-20-fixture-toolchain-739.md
+      status: active
+      owner: CTO
+      note: "#739④ 夹具工具链单一来源＋@requires 声明＋依赖核对（缺依赖报名字）的豁免；裁 223。"
