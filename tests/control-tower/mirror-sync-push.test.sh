@@ -37,7 +37,7 @@ fail() { FAIL=$((FAIL + 1)); echo "  ❌ $1" >&2; }
 chk()  { if eval "$1"; then echo "      · ok: $2"; else echo "      · RED: $2"; CASE_FAIL=$((CASE_FAIL + 1)); fi; }
 
 TMPROOT="$(mktemp -d)"; trap 'rm -rf "$TMPROOT"' EXIT
-FX=""; WORK=""; GITEA=""; MIRROR=""; SIG=""; OUT=""; A1=""; A2=""; RC=""; RC1=""; RC2=""; RC9=""; VERDICT=""; O1=""; BASE_N=""
+FX=""; WORK=""; GITEA=""; MIRROR=""; SIG=""; OUT=""; A1=""; A2=""; RC=""; RC1=""; RC2=""; RC9=""; RC10=""; RC11=""; VERDICT=""; O1=""; BASE_N=""
 
 # ── 夹具：work（工作仓）+ gitea.git + mirror.git；产 A1/A2 两提交 ────────────────
 new_fixture() {  # $1=名字；默认 Gitea local-main=A1、GitHub main=A1（一致）
@@ -60,7 +60,9 @@ run_sut() {  # $1=github_sha  [$2..=额外环境赋值]  → stdout: 退出码
   local gh="$1"; shift || true
   ( cd "$WORK" && env SYNO_PUSH_REPO="$WORK" SYNO_PUSH_GITEA_URL="$GITEA" \
       SYNO_PUSH_GITHUB_SHA="$gh" SYNO_PUSH_SIGNAL_CMD="cat >> $SIG" SYNO_PUSH_STATUS_CMD="cat >> $ST" \
-      SYNO_PUSH_VERIFY_TRIES=1 SYNO_PUSH_VERIFY_INTERVAL=0 SYNO_PUSH_OUT="$OUT" "$@" \
+      SYNO_PUSH_VERIFY_TRIES=1 SYNO_PUSH_VERIFY_INTERVAL=0 SYNO_PUSH_OUT="$OUT" \
+      SYNO_PUSH_WATCH_CI="${CI_MODE:-auto}" SYNO_PUSH_CI_TIMEOUT="${CI_TIMEOUT:-5}" \
+      SYNO_PUSH_CI_CMD="${CI_CMD:-echo \"1|success|http://x\"}" SYNO_PUSH_CI_INTERVAL=1 "$@" \
       bash "$SUT" --json ) >"$FX/stdout.txt" 2>"$FX/stderr.txt"
   echo $?
 }
@@ -80,7 +82,8 @@ c2() { chk '[ "$RC" = 0 ]' 'exit 0'; chk '[ "$VERDICT" = PUSHED ]' 'verdict=PUSH
        chk '[ "$(mirror_main)" = "$A2" ]' '远端 main == 被推 sha'
        chk 'grep -q ALLOW "$WORK/.claude/mirror-sync.log" 2>/dev/null' '门禁 0-2 留痕 ALLOW'
        chk '[ "$(field_of "$OUT" lag)" = 1 ]' 'JSON lag=1'
-       chk 'grep -q "\"verdict\": \"PUSHED\"" "$ST" 2>/dev/null' '状态单已留一行（verdict=PUSHED）'; }
+       chk 'grep -q "\"verdict\": \"PUSHED\"" "$ST" 2>/dev/null' '状态单已留一行（verdict=PUSHED）'
+       chk '[ "$(field_of "$OUT" ci)" = green ]' 'GitHub CI 绿（注入）'; }
 c3() { chk '[ "$RC" = 1 ]' 'exit 1'; chk '[ "$VERDICT" = FORK ]' 'verdict=FORK'
        chk '[ "$(mirror_main)" = "$O1" ]' '远端 main 未被覆盖'
        chk '[ "$(git -C "$WORK" rev-list --count --all)" = "$BASE_N" ]' '未新增 merge 提交'
@@ -122,6 +125,11 @@ setup4() { new_fixture "c4"; git -C "$WORK" push -q gitea "$A2:refs/heads/local-
            RC="$(run_sut "$A1" SYNO_PUSH_TEST_AFTER_PUSH="git -C $MIRROR update-ref refs/heads/main $A1")"
            VERDICT="$(verdict_of "$OUT")"; }
 setup5() { new_fixture "c5"; RC1="$(run_sut "deadbeef")"; RC2="$(run_sut "$A1")"; }
+setup10() { new_fixture "c10"; git -C "$WORK" push -q gitea "$A2:refs/heads/local-main"
+            RC10="$(run_sut "$A1" CI_CMD='echo "9|failure|http://x/run/9|All Checks Passed / Gate Integrity"')"
+            VERDICT="$(verdict_of "$OUT")"; }
+setup11() { new_fixture "c11"; git -C "$WORK" push -q gitea "$A2:refs/heads/local-main"
+            RC11="$(run_sut "$A1" CI_CMD='echo ""')"; VERDICT="$(verdict_of "$OUT")"; }
 setup9() { new_fixture "c9"; RC9="$(run_sut "$A1" SYNO_PUSH_STATUS_CMD=false)"; }
 setup8() { new_fixture "c8"; RC="$(run_sut "deadbeef")"; VERDICT="$(verdict_of "$OUT")"; }
 
@@ -142,6 +150,10 @@ setup5; assert_case c5 "⑤ 降级必出声、恢复必出声（否则历史单�
 
 echo "── 状态单容错（B 层写不出去，也不许污染结论、不许静默）──"
 setup9; assert_case c9 "状态单写失败 ⇒ 仍 exit 0，且有 STATUS-UNREACHABLE 显式行"
+
+echo "── GitHub 集成测试观察（推完不只看 sha，还要看测试跑没跑绿）──"
+setup10; assert_case c10 "CI 红 ⇒ exit 2 ＋ 点名失败 job ＋ 出信号"
+setup11; assert_case c11 "CI 等不出结论 ⇒ exit 2（禁当通过）＋ 出信号"
 
 echo "── ⑥ 触发器（本测试只核脚本侧；launchd 侧见现场命令）──"
 grep -q "SYNO_PUSH_VERIFY_TRIES" "$SUT" && pass "⑥ 执行器可被每日任务直接调用（无可交互等待）" || fail "⑥ 执行器缺可调用契约"
