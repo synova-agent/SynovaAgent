@@ -1,0 +1,4 @@
+- scripts/pre-push-check.sh — #657 0-2 补 remote 维度（mirror main ff 放行＋日志＋核 SHA） — 裁 223
+- tests/control-tower/pre-push-mirror.test.sh — #657 六判据＋改坏必红（M1/M2） — 裁 223
+- gate-exemptions/2026-10-20-pre-push-mirror-657.md — 本豁免文件（gate-exemptions 自我保护） — 裁 223
+- docs/authority/DOCS-REGISTRY.yaml — #657 登记本豁免文件（D2 登记门禁） — 裁 223
