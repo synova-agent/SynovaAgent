@@ -1,0 +1,197 @@
+# ASSET-MAP.yaml —— 代码资产 → 模块 映射单一源（#776）
+# 种子：MVP 权威件 v1.2 §三「写集（文件级）」列 ＋ 方案 2026-10-20 §1.1
+# 匹配规则：match: first（有序首中，具体条目必须排在宽泛条目之前）
+# 状态机：在用|冻结|删除候选|预留|其他
+# 🔴 禁 catch-all（** / 裸 * / 覆盖仓根）——asset-sync.py 载入断言，发现 exit 1（判据 2）
+# as_of: gitea/local-main = f4739fb39（2026-10-21 重钉；本批差集不涉本件面）
+match: first
+# required_modules：必填模块清单（#776 裁 277 限段写面 = M1–M10）。
+# asset-sync.py 载入断言：本清单每项必须至少 1 条具体条目，缺 ⇒ exit 1 code=MAP_MISSING_MODULE（判据 2）。
+# 脚本内禁硬编码模块数组 —— 清单只在本文件维护。
+required_modules:
+  - M1
+  - M2
+  - M3
+  - M4
+  - M5
+  - M6
+  - M7
+  - M8
+  - M9
+  - M10
+entries:
+  # ── M1 运行时组合（先于 M8 的 control-tower 宽条目）──
+  - glob: "install-deps.sh"
+    module: M1
+    owner: P1
+    state: 在用
+  - glob: "package.json"
+    module: M1
+    owner: P1
+    state: 在用
+  - glob: ".gitea/workflows/local-gates.yml"
+    module: M1
+    owner: P1
+    state: 在用
+  # ── M2 入口面 ──
+  - glob: "src/routes/chat.ts"
+    module: M2
+    owner: P1
+    state: 在用
+  - glob: "src/routes/conversations.ts"
+    module: M2
+    owner: P1
+    state: 在用
+  - glob: "src/agent/conversation-engine.ts"
+    module: M2
+    owner: P1
+    state: 在用
+  - glob: "src/ingest/**"
+    module: M2
+    owner: P1
+    state: 在用
+  # ── M3 领域链 ──
+  - glob: "src/l4/**"
+    module: M3
+    owner: P2
+    state: 在用
+  - glob: "src/sentinel/**"
+    module: M3
+    owner: P3
+    state: 在用
+  - glob: "src/cycles/**"
+    module: M3
+    owner: P2
+    state: 在用
+  - glob: "src/store/migrations/**"
+    module: M3
+    owner: P2
+    state: 在用
+  # ── M4 出口面 ──
+  - glob: "electron-renderer/**"
+    module: M4
+    owner: P1
+    state: 在用
+  - glob: "app/**"
+    module: M4
+    owner: P1
+    state: 在用
+  # ── M5 运行时接口层 ──
+  - glob: "src/runtime/**"
+    module: M5
+    owner: P2
+    state: 在用
+  - glob: "src/mcp/**"
+    module: M5
+    owner: P2
+    state: 在用
+  - glob: "dsh/plugins/**"
+    module: M5
+    owner: P2
+    state: 预留
+  # ── M6 三条不可妥协（probe-*.ts 独占，先于 M8 宽条目）──
+  - glob: "scripts/control-tower/probe-*.ts"
+    module: M6
+    owner: P4
+    state: 在用
+  # ── M9/M10 验收件与工具循环（tests 具体条目先于 M6 的 tests/**）──
+  - glob: "tests/acceptance/m10-*"
+    module: M10
+    owner: P2
+    state: 在用
+  - glob: "tests/acceptance/**"
+    module: M9
+    owner: P2
+    state: 在用
+  - glob: "scripts/integration/**"
+    module: M9
+    owner: P4
+    state: 在用
+  - glob: "src/agent/tool-loop-executor.ts"
+    module: M10
+    owner: P2
+    state: 在用
+  - glob: "vitest.config.ts"
+    module: M10
+    owner: P2
+    state: 在用
+  - glob: "tests/**"
+    module: M6
+    owner: P4
+    state: 在用
+  # ── M7 部署一致性 ──
+  - glob: "extensions/knowledge-scope/**"
+    module: M7
+    owner: P3
+    state: 在用
+  # ── M8 自证可信度（control-tower 其余 ＋ doc-system）──
+  - glob: "scripts/control-tower/**"
+    module: M8
+    owner: P4
+    state: 在用
+  - glob: "scripts/doc-system/**"
+    module: M8
+    owner: P4
+    state: 在用
+  # ── X · 非 MVP/生态根（显式清单，见方案 §1.1）──
+  - glob: "docs/**"
+    module: X
+    owner: P6
+    state: 在用
+  - glob: "memory/**"
+    module: X
+    owner: P6
+    state: 在用
+  - glob: ".claude/**"
+    module: X
+    owner: P6
+    state: 在用
+  - glob: ".dsh/**"
+    module: X
+    owner: P6
+    state: 在用
+  - glob: "vendor/**"
+    module: X
+    owner: P6
+    state: 其他
+  - glob: "task-state/**"
+    module: X
+    owner: P6
+    state: 其他
+  - glob: "knowledge/**"
+    module: X
+    owner: P6
+    state: 在用
+  - glob: "skills/**"
+    module: X
+    owner: P6
+    state: 在用
+  - glob: "expert/**"
+    module: X
+    owner: P6
+    state: 在用
+  - glob: "customer-config/**"
+    module: X
+    owner: P6
+    state: 预留
+  - glob: "cycles/*.cycle.json"
+    module: X
+    owner: P6
+    state: 在用
+  - glob: "extensions/**"
+    module: X
+    owner: P6
+    state: 在用
+  - glob: "decisions/**"
+    module: X
+    owner: P6
+    state: 在用
+  - glob: "gate-exemptions/**"
+    module: X
+    owner: P6
+    state: 在用
+  - glob: ".gitea/**"
+    module: X
+    owner: P6
+    state: 在用
+  # ⚠️ 未列 MVP 根（src/extensions/**、src/agent 其余、scripts 其余等）⇒ 待归类桶＋报警，不进 X
