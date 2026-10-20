@@ -749,3 +749,11 @@ documents:
     status: active
     owner: CTO
     note: "devdoc-gate-a 技能新增/同步（.claude→.dsh）的受保护路径豁免。"
+
+  # ---- CTO 2026-10-21：P1 写集按裁 225 扩项（裁 274）----
+  - id: DOC-0234
+    type: decision
+    path: gate-exemptions/2026-10-21-p1-m9-writeset.md
+    status: active
+    owner: CTO
+    note: "P1 守则 §四 写集扩为 tests/acceptance/**（仅新增）的受保护路径豁免。"
