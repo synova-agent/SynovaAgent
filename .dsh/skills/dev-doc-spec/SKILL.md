@@ -151,3 +151,7 @@ bash scripts/workflow/check-dev-doc-write-set.sh             # 写集 vs 实际�
 
 - 2026-09-23：v1（11 节），由 `synova-devdoc` 预设退役后技能化
 - 2026-10-18：**v2（8 必填 ＋ 3 条件）**，读者从"线负责人"变为"零上下文小队"；**新增 §5 怎么跑 / §8 交什么**，删"风险与上限"，合并"DS 清单"入 §4，北星锚定移 front-matter，四行开场包移封面
+
+## 🔴 交稿前置（裁 256）
+
+写完 dev doc **不等于交付**：必须过 `.claude/skills/devdoc-gate-a/SKILL.md` 的六镜头评审（通过/退回），并附必修清单。未过不许开 L2。

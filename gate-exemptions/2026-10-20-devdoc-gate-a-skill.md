@@ -1,0 +1,3 @@
+- .dsh/skills/** — 新增/同步 devdoc-gate-a 技能（.claude 源 → .dsh 镜像） — 裁 256
+- gate-exemptions/2026-10-20-devdoc-gate-a-skill.md — 本豁免文件（gate-exemptions 自我保护） — 裁 256
+- docs/authority/DOCS-REGISTRY.yaml — 登记 DOC-0232（devdoc-gate-a 豁免件） — 裁 256

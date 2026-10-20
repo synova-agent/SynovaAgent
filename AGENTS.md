@@ -325,3 +325,15 @@ bash scripts/pre-commit-check.sh   # 12 组 pre-commit 门禁（本地）
 ---
 > **本件维护**：**CTO** ｜ **版本号单一真源 = 本件头部** ｜ **变更史移 `LOOP-ENGINEERING-CHANGELOG.md`**
 > **本件不装**：域内细节（→ 域级件）｜ 技术设计（→ `docs/`）｜ 决策六段（→ `decisions/`）｜ 过程痕迹（→ handbook）
+
+## 15. 🔴 关卡 A（dev doc 评审）——**所有包、所有派单，强制走 `devdoc-gate-a`**
+
+```
+ 任何 L1（P1–P10）把 dev doc／派单件交给 L2 **之前**，必须按 `.claude/skills/devdoc-gate-a/SKILL.md` 跑六镜头评审：
+   ① 卡面审计（line-audit-and-cards 六字段/七问/查重）② dev-doc-spec 8 节 ③ 零上下文执行者
+   ④ 判据红队 ⑤ 写集/边界/并发 ⑥ 声明核实（claim-verifier）
+ 产出：**通过/退回** ＋ 必修清单（每条带 file:line 或命令）；退回意见落 Issue 评论，报告落 handbook。
+ 🔴 **不得自审**：评审者不参与写作；CTO 的 pre-dispatch-check 只作机械前置，不能代替本评审。
+ 🔴 **未过关卡 A 不许开工**（Win/Mac 同规）；复审用同一套镜头，重点验上次必修项。
+ 依据：裁 255/256；实证：M5 dev doc 首轮 6 视角 4 不够 2 有条件，抓出 13 条必修（含 claim 死链/假绿/E 同源）。
+```
