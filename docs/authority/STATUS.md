@@ -1,49 +1,54 @@
-# STATUS.md — 当前状态（2026-08-19）
+# STATUS.md — 当前状态（2026-10-21）
 
-> ⚠️ 目标：本文件**应**由脚本自动生成（读 git/测试/审计信号）。当前为人工草稿 v1。
+> ⚠️ 目标：本文件**应**由脚本自动生成（读 git / 测试 / 审计信号）；当前为人工维护件，**数字行内带取数命令**（可复跑）。
 > 工程事实以 `docs/synova/DASHBOARD-CN.md`（自动生成）与 `docs/synova/audit-reports/` 为准。
+
+- as_of 基线提交：`a8e7e26be`（取数：`git rev-parse --short a8e7e26be`）
+- 本件维护日：`2026-10-21`（取数：`date +%F`）
 
 ---
 
 ## 一、一句话状态
 
-**工程治理成熟，产品验证起步。** 控制塔/门禁/审计体系已经很强（这是三代踩坑换来的）；产品正在第一个付费客户（客户A）上做诊断验证。
+**工程治理成熟，产品验证起步。** 控制塔 / 门禁 / 审计体系已成型；资产同步自动化（ASSET-MAP ＋ asset-sync.py ＋ workflow）已合入；产品在第一个付费客户（客户A）上做诊断验证。
 
-## 二、工程事实（git 派生）
+## 二、工程事实（git 派生，逐行可复跑）
 
-| 项 | 值 |
-|---|---|
-| 仓库 | synova-agent（1684 commits，2026-06-03 独立建仓） |
-| 最近提交 | 2026-08-19（多分支活跃，git --all 提取） |
-| 控制塔版本 | V4.8.0（git tag） |
-| 门禁 | pre-commit 13 组硬阻断 + pre-push 3 项 |
-| 任务编号 | 最新 **D457**（2026-08-19，git 提取）；看板见 DASHBOARD-CN.md（生成时间可能滞后于 git） |
-| 协作 | 开发线（Codex/DSH/Claude Code）+ 审计线（Kimi K3），协议见 coordination/ |
+- 仓库提交总数（全史）：`5571`（取数：`git rev-list --count a8e7e26be`）
+- 仓库文件总数（tracked）：`5474`（取数：`git ls-tree -r a8e7e26be | wc -l`）
+- 最近提交日期：`2026-10-21`（取数：`git log -1 --format=%ad --date=short a8e7e26be`）
+- 控制塔版本（根件头部元信息）：`V5.2.7`（取数：`git show a8e7e26be:AGENTS.md | grep -m1 -oE 'V[0-9]+\.[0-9]+\.[0-9]+'`）
+- 根件版本（AGENTS.md 头部）：`V7.1`（取数：`git show a8e7e26be:AGENTS.md | grep -m1 -oE 'V[0-9]+\.[0-9]+'`）
+- pre-commit 组数（脚本横幅真值）：`12`（取数：`git show a8e7e26be:scripts/pre-commit-check.sh | grep -cE '── 组 [0-9]+:'`）
+- open PR（取数时点 = 本批建 PR 之前，活数）：`15`（取数：`curl -s -D - -o /dev/null -H "Authorization: token $(cat /Users/wane/gitea/.win-push-token)" "http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/pulls?state=open&limit=1" | grep -i '^x-total-count'`）
+- 远端分支数（远端 = Gitea；不含本任务分支，避免自身在飞造成波动）：`1136`（取数：`git ls-remote --heads gitea | grep -vc 'refs/heads/ct/p6-807-1021'`）
+- 任务编号：以 **Issue 号**为准（D 号已退役，见根件 §7）；看板见 `DASHBOARD-CN.md`
+- 协作：开发线（DSH 为开发者工具；Claude Code 已退役）＋ 审计线（K3），协议见 `docs/synova/coordination/`
 
 ## 三、产品事实
 
-| 项 | 值 |
-|---|---|
-| 两大系统 | GA 按需诊断 + Sentinel 定时哨兵（均已接线） |
-| 专家体系 | ⚠️ **待查证**：AGENTS.md 声称 7 位（host+6 cycle），CLAUDE.md 声称 8 位——**以 `expert/expert-registry.yaml` 为准**；这正是文档漂移的实例 |
-| 客户 | 客户A（第一个付费客户，2026-08-04 建档，服务跟进中） |
-| 本体层 | 22 节点 / 17 边；42 条因果边体系（权威文档 01） |
+- 两大系统：GA 按需诊断 ＋ Sentinel 定时哨兵（均已接线）
+- 专家数（registry 真值，根件声明同值）：`6`（取数：`git show a8e7e26be:expert/expert-registry.yaml | grep -cE '^  [a-z0-9_-]+:$'`）
+- 客户：客户A（第一个付费客户；建档与跟进见客户档案与卡，本件不复制历史日期）
+- 本体图节点（DB 实测，本机取数／仓外数据件）：`0`（取数：`sqlite3 /Users/wane/SynovaAgent/data/synova.db "select count(*) from graph_nodes"`）
+- 本体图边（DB 实测，本机取数／仓外数据件）：`0`（取数：`sqlite3 /Users/wane/SynovaAgent/data/synova.db "select count(*) from graph_triples"`）
+- 因果边设计口径：见研究院仓权威设计文档（设计文档口径，**非 DB 实测**）
+
+> DB 注：`data/synova.db` 是仓外数据件（fresh clone 无此文件）；本机 DB **空且可用**（`PRAGMA integrity_check` 返回 ok）⇒ 上两行值是**空库真值**，不是「取不到」。
 
 ## 四、风险清单（诚实版）
 
-1. **文档-代码漂移**：版本号/组数/专家数多处不一致（7/8/9 位专家、8/9/12/13 组 pre-commit 并存）→ 本次改革要根治
-2. **文档总量膨胀**：docs/ 532 份 md + 历史 Archive 433+ → 需要"出生即合规"机制
-3. **历史档案单点**：三代历史仅存于 `D:\novis-backup-20260526\`（E 盘已消失）→ 建议纳入备份策略
-4. ~~早期历史缺口~~ ✅ **2026-08-20 创始人已补录**（ClawOrg 起源/名字/聚焦决策/客户A获客故事）；剩余小缺口：04-27/28 密集定位背景、06-03 独立仓库决策
-5. **PRD 空缺**：6 月的 PRD（v1.6）已过时，新 PRD 为 draft 待创始人确认
+1. **文档-代码漂移**：历史上专家数 / 门禁组数多处不一致；现真值只从脚本与 registry 取（专家数见 §三、组数见 §二），历史分歧值不再复制。
+2. **文档总量膨胀**：docs/ 下 md 份数 `541`（取数：`git ls-tree -r --name-only a8e7e26be docs/ | grep -c '\.md$'`）；历史 Archive 不在主仓，无复跑命令（不复制旧值）。
+3. **历史档案单点**：三代历史备份只在单机磁盘（路径与状态见备份策略 / 卡），异地副本未验证。
+4. **早期历史缺口**：主要缺口创始人已补录；剩余小缺口见过程档案（本件不复制日期）。
+5. **PRD 空缺**：新 PRD 仍为 draft 待创始人确认（版本看 `docs/authority/PRD.md` 头部）。
 
-## 五、最近审计轨迹
+## 五、审计轨迹
 
-- 2026-08-15~17：D366/D363/D356/D355/D307 审计（LLM failover、L4 数据契约、哨兵阈值、dedup-key）
-- 2026-08-13：AGENT-CAPABILITY-FULL-CHAIN-AUDIT（P0-3 等）
-- 2026-08-14：AGENT-INFRASTRUCTURE-AUDIT（P1-1 等）
-- 详见 `docs/synova/audit-reports/`
+- 审计报告以 `docs/synova/audit-reports/` 为准（报告自带日期与结论，本件不复制）：LLM failover、L4 数据契约、哨兵阈值、dedup-key、AGENT-CAPABILITY-FULL-CHAIN-AUDIT、AGENT-INFRASTRUCTURE-AUDIT 等
+- 独立审计线：K3（`scripts/audit/**` 归 K3 专属，任何人禁碰）
 
 ---
 
-*本文件将逐步改为自动生成；当前草稿仅供创始人快速了解现状。*
+*本文件将逐步改为自动生成；当前人工维护，数字行均带取数命令。*
