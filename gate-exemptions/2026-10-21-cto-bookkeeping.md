@@ -1,0 +1,3 @@
+- .dsh/skills/** — 同步 cto-bookkeeping 技能（.claude 源 → .dsh 镜像） — 裁 289
+- docs/authority/DOCS-REGISTRY.yaml — 登记本豁免（D2 登记门禁） — 裁 289
+- gate-exemptions/2026-10-21-cto-bookkeeping.md — 本豁免文件（自我保护） — 裁 289
