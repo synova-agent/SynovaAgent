@@ -19,7 +19,7 @@
 - 控制塔版本（根件头部元信息）：`V5.2.7`（取数：`git show a8e7e26be:AGENTS.md | grep -m1 -oE 'V[0-9]+\.[0-9]+\.[0-9]+'`）
 - 根件版本（AGENTS.md 头部）：`V7.1`（取数：`git show a8e7e26be:AGENTS.md | grep -m1 -oE 'V[0-9]+\.[0-9]+'`）
 - pre-commit 组数（脚本横幅真值）：`12`（取数：`git show a8e7e26be:scripts/pre-commit-check.sh | grep -cE '── 组 [0-9]+:'`）
-- open PR（取数时点 = 本批建 PR 之前，活数）：`15`（取数：`curl -s -D - -o /dev/null -H "Authorization: token $(cat /Users/wane/gitea/.win-push-token)" "http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/pulls?state=open&limit=1" | grep -i '^x-total-count'`）
+- open PR（取数时点 = 本批建 PR 之前，活数；本批 PR 建立后该值加一）：`14`（取数：`curl -s -D - -o /dev/null -H "Authorization: token $(cat /Users/wane/gitea/.win-push-token)" "http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/pulls?state=open&limit=1" | grep -i '^x-total-count'`）
 - 远端分支数（远端 = Gitea；不含本任务分支，避免自身在飞造成波动）：`1136`（取数：`git ls-remote --heads gitea | grep -vc 'refs/heads/ct/p6-807-1021'`）
 - 任务编号：以 **Issue 号**为准（D 号已退役，见根件头部）；看板见 `DASHBOARD-CN.md`
 - 协作：开发线（DSH 为开发者工具；Claude Code 已退役）＋ 审计线（K3），协议见 `docs/synova/coordination/`

@@ -71,12 +71,12 @@ rule: 重写式维护 —— 每次更新整篇重写，不追加历史
 
 ## 5. 关键数字（每行一个值 ＋ 一条取数命令；命令在 pin 住的提交上可复跑）
 
-> 取数时点 = 本批建 PR 之前；活数（open PR / 远端分支）会随后续活动变化，重跑即可复核（判定按取数时点）。
+> 取数时点 = 本批建 PR 之前；活数（open PR / 远端分支）会随后续活动变化，重跑即可复核（判定按取数时点）。本件 `as_of` = 取数时点的 main HEAD；此后 main 可能已前进，本批 PR 的 base 见 PR 正文。
 
-- 本件 as_of 钉住的提交（main HEAD）：`a8e7e26be`（取数：`git rev-parse --short a8e7e26be`）
+- 本件 as_of 钉住的提交（取数时点的 main HEAD）：`a8e7e26be`（取数：`git rev-parse --short a8e7e26be`）
 - 仓库文件总数（tracked，全部目录）：`5474`（取数：`git ls-tree -r a8e7e26be | wc -l`）
 - docs/ 下 Markdown 份数：`541`（取数：`git ls-tree -r --name-only a8e7e26be docs/ | grep -c '\.md$'`）
-- open PR（取数时点见上）：`15`（取数：`curl -s -D - -o /dev/null -H "Authorization: token $(cat /Users/wane/gitea/.win-push-token)" "http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/pulls?state=open&limit=1" | grep -i '^x-total-count'`）
+- open PR（取数时点见上；本批 PR 建立后该值加一，属在飞）：`14`（取数：`curl -s -D - -o /dev/null -H "Authorization: token $(cat /Users/wane/gitea/.win-push-token)" "http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/pulls?state=open&limit=1" | grep -i '^x-total-count'`）
 - 远端分支数（远端 = Gitea；不含本任务分支，避免自身在飞造成波动）：`1136`（取数：`git ls-remote --heads gitea | grep -vc 'refs/heads/ct/p6-807-1021'`）
 - 专家数（registry 条目真值）：`6`（取数：`git show a8e7e26be:expert/expert-registry.yaml | grep -cE '^  [a-z0-9_-]+:$'`）
 - pre-commit 组数（脚本横幅真值）：`12`（取数：`git show a8e7e26be:scripts/pre-commit-check.sh | grep -cE '── 组 [0-9]+:'`）
