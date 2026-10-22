@@ -75,7 +75,7 @@ rule: 重写式维护 —— 每次更新整篇重写，不追加历史
 
 - 本件 as_of 钉住的提交（本 PR 的 base tip，取数基线）：`1924f761e`（取数：`git rev-parse --short 1924f761e`）
 - 仓库文件总数（tracked，全部目录）：`5476`（取数：`git ls-tree -r 1924f761e | wc -l`）
-- docs/ 下 Markdown 份数：`541`（取数：`git ls-tree -r --name-only 1924f761e docs/ | grep -c '\.md$'`）
+- docs/ 下 Markdown 份数：`541`（取数：`git -c core.quotePath=false ls-tree -r --name-only 1924f761e docs/ | grep -c '\.md$'`）
 - open PR（取数时点见上；本批 PR 建立后该值加一，属在飞）：`14`（取数：`curl -s -D - -o /dev/null -H "Authorization: token $(cat /Users/wane/gitea/.win-push-token)" "http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/pulls?state=open&limit=1" | grep -i '^x-total-count'`）
 - 远端分支数（远端 = Gitea；不含本任务分支，避免自身在飞造成波动）：`1136`（取数：`git ls-remote --heads gitea | grep -vc 'refs/heads/ct/p6-807-1021'`）
 - 专家数（registry 条目真值）：`6`（取数：`git show 1924f761e:expert/expert-registry.yaml | grep -cE '^  [a-z0-9_-]+:$'`）
