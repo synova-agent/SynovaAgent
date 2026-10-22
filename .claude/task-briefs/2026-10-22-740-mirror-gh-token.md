@@ -17,6 +17,7 @@
 ## Q2: 范围（做什么 / 不做什么——含文件路径）
 做什么：
 - scripts/control-tower/mirror-sync-push.sh
+- tests/control-tower/mirror-sync-push.test.sh
 - gate-exemptions/2026-10-20-p10-740-mirror-push.md
 不做什么：
 - scripts/pre-push-check.sh
@@ -28,6 +29,7 @@
 - 入口：`bash tests/control-tower/mirror-sync-push.test.sh`｜`bash scripts/control-tower/mirror-sync-push.sh --dry-run`
 - 交互：`ci_query` 改为 python3 直连 GitHub API（token 取自 `GH_TOKEN`/`GITHUB_TOKEN` 或 `~/.dsh/.credentials.yaml`），不依赖 gh/keychain；失败 job 名单由同一次响应携带
 - 结果：拿不到 token／请求失败 ⇒ 显式 `unknown`（仍 exit 2，不当通过）；拿到结论 ⇒ `green` / `red`
+- 附带：状态历史改共享位置（`~/Library/Logs/synova-mirror-sync-history.jsonl`）、同 `verdict+reason` 不重复评论
 
 ## Q4: 契约与测试
 - 契约不变（`@input/@output/@exit/@degraded` 见脚本头），仅换取数通道；新增 `SYNO_PUSH_GH_TOKEN_FILE` 缝。
