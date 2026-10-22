@@ -178,8 +178,9 @@ PY
 
 list_open_issue_no() {  # $1=token → stdout: 同名失败单号（可能为空）
   local tok="$1" raw=""
-  raw="$(curl -fsS --max-time 15 -H "Authorization: token $tok" \
-      "$GITEA_API/repos/$GITEA_REPO/issues?state=open&limit=50" 2>/dev/null || true)"   # swallow-ok: 读不到 ⇒ 空 ⇒ 调用方走新建分支
+  raw="$(curl -fsS --max-time 15 -G -H "Authorization: token $tok" \
+      --data-urlencode "state=open" --data-urlencode "limit=50" --data-urlencode "q=双仓镜像同步失败" \
+      "$GITEA_API/repos/$GITEA_REPO/issues" 2>/dev/null || true)"   # swallow-ok: 读不到 ⇒ 空 ⇒ 调用方走新建分支
   [ -n "$raw" ] || return 0
   printf '%s' "$raw" | SYNO_ISSUE_TITLE="$ISSUE_TITLE" "$PYBIN" -c '
 import json,sys,os
@@ -243,8 +244,9 @@ md += ["","说明：本单由 mirror-sync-push.sh 每趟自动 PATCH 正文；�
 print(json.dumps("\n".join(md), ensure_ascii=False))
 PY
 )"
-  issue_no="$(curl -fsS --max-time 15 -H "Authorization: token $tok" \
-      "$GITEA_API/repos/$GITEA_REPO/issues?state=all&limit=50" 2>/dev/null \
+  issue_no="$(curl -fsS --max-time 15 -G -H "Authorization: token $tok" \
+      --data-urlencode "state=all" --data-urlencode "limit=50" --data-urlencode "q=镜像同步状态" \
+      "$GITEA_API/repos/$GITEA_REPO/issues" 2>/dev/null \
     | SYNO_ISSUE_TITLE="$STATUS_TITLE" "$PYBIN" -c '
 import json,sys,os
 try: arr=json.load(sys.stdin)
@@ -339,13 +341,19 @@ signal_recover() {
   return 0
 }
 
-prev_sig_key() {  # 读历史最后一行的 verdict|reason 键（用于去重；读不到 ⇒ 空 ⇒ 照常发信号）
+norm_reason() { printf '%s' "$1" | sed -E 's/run=[0-9]+//g; s#url=[^ ]+##g; s/[[:space:]]+/ /g' | sed 's/^ *//; s/ *$//'; }
+
+prev_sig_key() {  # 读历史最后一行的 verdict|归一化reason（用于去重；读不到 ⇒ 空 ⇒ 照常发信号）
   [ -f "$STATUS_HIST" ] || return 0
   tail -1 "$STATUS_HIST" 2>/dev/null | "$PYBIN" -c '
 import json,sys
 try: r=json.load(sys.stdin)
 except Exception: raise SystemExit(0)
-print("%s|%s"%(r.get("verdict",""), r.get("reason","")))
+import re
+_rs=re.sub(r"run=\d+","",r.get("reason","") or "")
+_rs=re.sub(r"url=\S+","",_rs)
+_rs=" ".join(_rs.split())
+print("%s|%s"%(r.get("verdict",""), _rs))
 ' 2>/dev/null || true   # swallow-ok: 历史坏了 ⇒ 空键 ⇒ 照常发信号（不静默：信号照发）
 }
 
@@ -354,7 +362,7 @@ finish() {  # $1=exit $2=verdict $3=reason $4=fail|recover|""
   VERDICT="$verdict"
   case "$sig" in
     fail)
-      if [ "$(prev_sig_key)" = "${verdict}|${reason}" ]; then
+      if [ "$(prev_sig_key)" = "${verdict}|$(norm_reason "$reason")" ]; then
         SIGNAL_STATE="deduped"     # 与上一趟同一结论 ⇒ 不重复开/评单（历史仍记一行）
       else
         signal_fail "E_${verdict}" "$verdict" "$reason" || rc=2

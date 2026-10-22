@@ -1,0 +1,120 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 818,
+  "patch_fingerprint": "sha256:1dd35c7ec700697fed140c3e1f8ffae8da9819d741cb081801f07ece4677ab0f",
+  "author": "win-push",
+  "reviewer": "p6-verify-20261022",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "issued_at": "2026-10-22T17:48:39+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md）＋ fresh 独立会话 p6-verify（与编码者不同人、无实现记忆、独立 worktree .synova-wt-p6-808-1021）＋ 自写假 Gitea 驱动（stdlib，127.0.0.1 随机端口，禁触真 API）＋ 只读核验（真 API 仅 GET；真跑证据只读取；本回执为唯一写入）＋ base 同步后闭环复跑（merge c06c9cf48 → 重算指纹 → 重落回执）",
+  "checks": [
+    {
+      "id": "①范围与写集",
+      "name": "diff 恰 6 文件＝声明写集（brief＋5 交付），未越界；指纹与 PR #818 绑定",
+      "cmd": "git merge-base gitea/local-main HEAD ; git diff --name-only <merge-base>..HEAD ; git diff --stat <merge-base>..HEAD ; bash scripts/control-tower/check-merge-conditions.sh --pr 818 --diff-fingerprint",
+      "result": "pass",
+      "evidence": "merge-base=c06c9cf48（= 复核时 base tip c06c9cf48，#817 合入后）；diff 6 文件 = .claude/task-briefs/2026-10-22-808-weekly-recon.md、docs/authority/DOCS-REGISTRY.yaml、gate-exemptions/2026-10-21-808-weekly-recon.md、scripts/control-tower/weekly-recon.sh、tests/control-tower/AGENTS.md、tests/control-tower/weekly-recon.test.sh；stat=「6 files changed, 1372 insertions(+)」；base 同步后指纹复算不变：--diff-fingerprint=1dd35c7ec700697fed140c3e1f8ffae8da9819d741cb081801f07ece4677ab0f"
+    },
+    {
+      "id": "②判据测试",
+      "name": "配对判据测试 T1–T12 全绿（独立复跑，非采信编码者）",
+      "cmd": "bash tests/control-tower/weekly-recon.test.sh",
+      "result": "pass",
+      "evidence": "base 同步后复跑：首行「as_of HEAD=1efd18c0e ls-tree=5486 week=2026-W43」；「PASS=94 FAIL=0」「ALL PASS（T1–T12，94 项断言；判据测试三态：0=ALL PASS）」exit=0；覆盖 T1 首跑/T2 反例a/T3 幂等/T4 坏JSON/T5 token/T6 dry-run/T7 跨周/T8 判别力(摘去重双卡)/T9 AUDIT/T10 WIRE/T11 指标格式/T12 契约头"
+    },
+    {
+      "id": "③反例独立复现",
+      "name": "反例 a–d 由自写假 Gitea 驱动独立复现（断言与结论自产）",
+      "cmd": "bash /tmp/p6-808-verify/verify-exp.sh（自写 fake-gitea.py，127.0.0.1 随机端口；fixture/基线/token/npm 桩全在 /tmp）",
+      "result": "pass",
+      "evidence": "自写驱动 65 PASS/0 FAIL：a) 基线 FILES+1 ⇒ exit=1、diffs=1、卡数=1、POST=0、PATCH=1、差异表「| FILES | 旧值 | 新值 |」、基线刷新回实测；b) sed 摘去重（if existing is None → if True）⇒ exit=1、卡数=2、POST=1（原脚本同场景对照 卡数=1/POST=0，判别力成立）；c) 基线坏 JSON ⇒ exit=2＋stderr「degraded: code=BASELINE_CORRUPT」＋degraded JSONL 五字段＋零写；d) token 不可读 ⇒ exit=2＋「degraded: code=TOKEN_UNREADABLE」＋零请求"
+    },
+    {
+      "id": "④真跑/基线/卡一致",
+      "name": "真跑两跑 diffs=0 issue=#811；基线 metrics == 两跑 == 卡 #811 五指标表（程序化比对）",
+      "cmd": "cat /tmp/p6-808/real-run-final.txt /tmp/p6-808/real-run-final-2.txt ; cat ~/.ci-work/board-baseline.json ; GET /api/v1/repos/synova-agent/SynovaAgent/issues/811（只读）",
+      "result": "pass",
+      "evidence": "两跑均「SUMMARY diffs=0 issue=#811」（rc=0），五指标 FILES=5480 / MODS=M1:2,M2:6,M3:66,M4:69,M5:32,M6:995,M7:0,M8:130,M9:7,M10:3 / PRAVG=14 / WORKTREES=134 / AUDIT=critical:1；基线 as_of=d2322c027…（40hex，真跑时点 HEAD）、week=2026-W43、issue=811；卡 #811 open、title 全等「[RECON] 周对账（滚动）」、labels=域/治理、单节「## 2026-W43」（次数=1）、as_of=d2322c0、updated_at=2026-10-22T17:29:08+08:00；程序化比对：基线==两跑==卡 全 True；卡唯一（open RECON=1；state=all 分页 exact RECON=1）。注：真跑时点 HEAD=d2322c027；此后本补丁代码未变（仅 DOCS-REGISTRY/豁免件改号 DOC-0237→DOC-0238，见范围检查）"
+    },
+    {
+      "id": "⑤复用与 WIRE",
+      "name": "模块计数唯一复用 asset-sync.py 的 load_map/classify（无第二份 MAP 解析）；卡完成率未重算；WIRE 非零",
+      "cmd": "grep -n 'mod.load_map\\|mod.classify' scripts/control-tower/weekly-recon.sh ; grep -n '^def load_map\\|^def classify' scripts/control-tower/asset-sync.py ; grep -rn 'weekly-recon' .gitea/ scripts/ tests/ | wc -l",
+      "result": "pass",
+      "evidence": "weekly-recon.sh:201 mod.load_map(...)、:215 mod.classify(...)；asset-sync.py:102 def load_map / :172 def classify；脚本内无第二份 MAP/YAML 解析（无 yaml import、无 required_modules 手写解析）；卡完成率未重算（仅 :71 Known Limitations 注释指明归 check-board-metrics.ts）；WIRE=16 命中（grep -rn weekly-recon .gitea/ scripts/ tests/），含测试自身与 tests/control-tower/AGENTS.md 报备行"
+    },
+    {
+      "id": "⑥保护面",
+      "name": "受保护路径 5 条全有合规豁免（含自覆盖）；gate-protection rc=0；台账登记唯一",
+      "cmd": "bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main ; 逐行三段式校验 ; grep -c 'id: DOC-0238' docs/authority/DOCS-REGISTRY.yaml",
+      "result": "pass",
+      "evidence": "gate-protection rc=0：「base 可解析（merge-base b265c0fe）」「diff 变更路径 6 条」「受保护路径变更 5 条」5 条全有合规豁免、「结果: 11 通过, 0 失败」；豁免 5/5 行三段式合规（理由长度 72/78/55/37/23）且含 gate-exemptions 自覆盖行；DOCS-REGISTRY 新增 DOC-0238（出现 1 次；base 的 DOC-0237 原样保留，不撞号）"
+    },
+    {
+      "id": "⑦门禁",
+      "name": "CI 等效 pre-commit 12 组全过；doc-truth 硬检查通过；bash -n 通过",
+      "cmd": "env -u SYNO_CLAIM_V2 SYNO_CI=1 GITHUB_ACTIONS=true SYNO_DIFF_BASE=gitea/local-main PATH=\"/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH\" bash scripts/pre-commit-check.sh ; bash scripts/doc-system/check-doc-truth.sh ; bash -n scripts/control-tower/weekly-recon.sh ; bash -n tests/control-tower/weekly-recon.test.sh",
+      "result": "pass",
+      "evidence": "base 同步后复跑（HEAD 1efd18c0e，base c06c9cf48）：pre-commit「✅ 全部 12 组通过」exit=0；doc-truth「✅ 全部硬检查通过」exit=0（仅 1 项 W1 版本轴提示）；bash -n 两脚本 rc=0；PR #818 head 上一轮 CI 现场（只读 API）state=success、total_count=2、pending=0"
+    },
+    {
+      "id": "⑧契约头与三态",
+      "name": "头注契约要素齐（@input/@output/@exit/@degraded/@error/设计哲学/explicit authority/Known Limitations/Source map）＋三态 0/1/2 实证",
+      "cmd": "grep -q '@input\\|@output\\|@exit\\|@degraded\\|@error\\|设计哲学\\|explicit authority\\|Known Limitations\\|Source map' scripts/control-tower/weekly-recon.sh ; 反例驱动三态断言（/tmp/p6-808-verify/review-818-harness.txt）",
+      "result": "pass",
+      "evidence": "9 项契约头要素全部命中；typed error 10 码齐（TOKEN_UNREADABLE/API_UNREACHABLE/API_BAD_RESPONSE/BASELINE_CORRUPT/BASELINE_WRITE_FAILED/GIT_FAILED/MAP_FAILED/ISSUE_WRITE_FAILED/AUDIT_UNAVAILABLE/ENV_NO_PYTHON）；五指标行序 FILES→MODS→PRAVG→WORKTREES→AUDIT＋SUMMARY 终行格式实测；三态实证：0=首跑/同周幂等/零差异，1=有差异（真跑已开卡；dry-run 有差异未开卡带 (DRY)），2=坏 JSON/token 不可读；AUDIT_UNAVAILABLE 属指标级降级不改变退出码"
+    },
+    {
+      "id": "⑨base同步后复跑",
+      "name": "并入最新 base 后全链复跑：测试/CI 等效/保护面/doc-truth 全绿；补丁指纹不变",
+      "cmd": "git fetch gitea && git merge gitea/local-main ; bash tests/control-tower/weekly-recon.test.sh ; env -u SYNO_CLAIM_V2 SYNO_CI=1 GITHUB_ACTIONS=true SYNO_DIFF_BASE=gitea/local-main PATH=\"/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH\" bash scripts/pre-commit-check.sh ; bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main ; bash scripts/doc-system/check-doc-truth.sh",
+      "result": "pass",
+      "evidence": "merge 到 gitea/local-main=c06c9cf48（merge commit 1efd18c0e；零冲突）⇒ merge-base=c06c9cf48；测试 PASS=94 FAIL=0 ALL PASS；pre-commit 12/12 exit=0；gate-protection rc=0（base c06c9cf4、diff 6 条、受保护 5 条全有合规豁免、11 通过 0 失败）；doc-truth rc=0；diff 恰 6 文件（6 files changed, 1372 insertions(+)）；--diff-fingerprint 复算仍=1dd35c7ec700…ab0f（指纹未变，回执文件名沿用 fp12=1dd35c7ec700）"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "warn",
+      "where": "AUDIT 指标（npm audit --omit=dev --json → metadata.vulnerabilities）",
+      "what": "真跑/基线/卡记录 critical:1（2026-10-22T17:29 时点）；本复核会话独立复算 npm audit（nvm v18.20.8 / v22.23.2 / v24.19.0 三版本一致）= critical:4 ⇒ 外部 advisory 库在真跑后变化。",
+      "detail": "非补丁缺陷、不阻断：AUDIT 是外部活数，周对账探针按设计会把该变化报为 1 项差异（信号）。建议 P6/L1 知悉：下一次真跑会先报 AUDIT 差异（其余四项不变）；若希望口径稳定，可在 Known Limitations 补一句「advisory 库更新会产生 AUDIT 差异」。"
+    },
+    {
+      "id": "F2",
+      "severity": "info",
+      "where": "PR #818 base local-main（复核时 c06c9cf48）与活数快照",
+      "what": "真跑/基线/卡的五指标为「取数时点」快照（FILES=5480 @ HEAD d2322c027）；复核期 base 三次前进（#661→b6ca8c6b4、#816→b265c0fe7、#817→c06c9cf48），本回执所在 head 已并入最新 base c06c9cf48（merge commit 1efd18c0e），merge-base=c06c9cf48，补丁指纹 1dd35c7ec700 不变；当前 git ls-tree -r HEAD=5486，若现在重跑真跑会报 FILES 差异（信号，非缺陷）。",
+      "detail": "补丁指纹（排除 docs/synova/reviews/**）在三次 base 前进后均未变 ⇒ 评审对象稳定，本回执绑定该指纹。merge base 后 S1（tip 是否 head 祖先）预期转 ok；回执为重落后的最后一个提交（R7：回执之后仅 reviews/** 变更 ⇒ 本次重落即满足）。另：现 PRAVG（API X-Total-Count）=14、WORKTREES=134 与真跑快照一致；AUDIT 见 F1。"
+    },
+    {
+      "id": "F3",
+      "severity": "info",
+      "where": "分支提交 1d07cee6f / cb7ec74f0 / 1efd18c0e（+ 复核期两次提交流）",
+      "what": "本分支三次 merge local-main（#816→b265c0fe7、#661→b6ca8c6b4、#817→c06c9cf48，最后一次 merge commit 1efd18c0e）；merge-base=c06c9cf48；本补丁 diff 仍恰 6 文件、指纹 1dd35c7ec700 不变。",
+      "detail": "合入的是 base 前进文件，非本卡写集漂移；本卡脚本/测试自 d2322c027 起未变（仅 DOCS-REGISTRY/豁免件改号 DOC-0237→DOC-0238）。复核期另有两个 reviews-only 提交（旧回执摘除→新回执重落），R7 允许（docs/synova/reviews/**）。"
+    },
+    {
+      "id": "F4",
+      "severity": "info",
+      "where": "契约 @input --dry-run",
+      "what": "「--dry-run 只读」= 禁 POST/PATCH、禁写基线；GET pulls/issues/labels 属只读取数（本复核按「零写请求」口径判，而非「零 API 请求」）。",
+      "detail": "与规格 §4「--dry-run（只报差异不开卡）」一致；实测 dry-run 后基线 sha256 不变、卡 updated_at 不变，假 Gitea 下 POST/PATCH=0。"
+    },
+    {
+      "id": "F5",
+      "severity": "info",
+      "where": "commits 4c5389c41（DOC-0237→DOC-0238）",
+      "what": "因 base #816 已占 DOC-0237，本卡台账条目改号 DOC-0238 并同步豁免文件理由；DOC-0237 原样保留。",
+      "detail": "避免台账撞号的记账修正，无功能影响；DOCS-REGISTRY 中两 id 各出现 1 次。"
+    },
+    {
+      "id": "F6",
+      "severity": "info",
+      "where": "回执提交身份",
+      "what": "本回执提交者 p6-verify <verifier@synova.local>；PR 代码提交邮箱为 k12@local ⇒ R9「身份未分离」告警不触发。",
+      "detail": "T1 attested 不提供密码学独立（README §6 自述）；此处记录供 R6/R9 可追。"
+    }
+  ]
+}
