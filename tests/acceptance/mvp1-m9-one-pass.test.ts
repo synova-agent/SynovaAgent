@@ -42,7 +42,7 @@
  *      而 cash-flow 哨兵只读该名（`src/sentinel/adapters/cash-flow-sentinel.ts:116`
  *      `Number(p.operating_expenses) || Number(p.运营支出) || 0`），且 `ingestBatch` 有 schema 白名单
  *      （`src/agent/data-ingest-service.ts:175` 跳过不在目标 schema 的 prop）⇒ 经 `ingestBatch` 写入**物理上
- *      送不进 opex**（netMargin 会成 200/300、runway 成 ∞ ⇒ §4.3 的 170/300 与 12 不可达）。本件按 L1 裁决
+ *      送不进 opex**（netMargin 会成 200/300、runway 成 ∞ ⇒ §4.3 的 170/300 与 12 不可达）。本件按 CTO 批准 A／L1 收件追认
  *      改用**生产 L4 API** `SqliteGraphStore.createNode`（与 `ingestBatch` 内部 `ingestRow` 最终调用的同一 API，
  *      先例 `tests/sentinel/read-capability.test.ts:37`）写 2 条 `resource/money`；**禁 raw SQL INSERT**（§7.2）。
  *      修复方向（schema 补 `operating_expenses` 或哨兵加别名）**不在本批写集**，另开卡。
