@@ -782,18 +782,18 @@ documents:
     owner: P6
     note: "#776 PR-2 .gitea/workflows/asset-sync.yml（push→local-main 自动同步 ASSET-AUTO 段＋#769）的受保护路径豁免；独立送审＋裁 277 限段。"
 
-  # ---- P6 2026-10-21：#808 周对账探针豁免件 ----
+  # ---- CTO 2026-10-21：CTO 记账 skill 同步（裁 289）----
   - id: DOC-0237
-    type: decision
-    path: gate-exemptions/2026-10-21-808-weekly-recon.md
-    status: active
-    owner: P6
-    note: "#808 周对账探针 weekly-recon.sh＋配对测试的受保护路径豁免（含豁免件自覆盖）；单卡滚动、按 ISO 周分节。"
-
-  # ---- CTO 2026-10-21：CTO 记账 skill 同步（裁 289；base #816 并入，避与 #808 撞号改为 DOC-0238）----
-  - id: DOC-0238
     type: decision
     path: gate-exemptions/2026-10-21-cto-bookkeeping.md
     status: active
     owner: CTO
     note: "cto-bookkeeping 技能新增/同步与豁免登记。"
+
+  # ---- P6 2026-10-21：#808 周对账探针豁免件（DOC-0238）----
+  - id: DOC-0238
+    type: decision
+    path: gate-exemptions/2026-10-21-808-weekly-recon.md
+    status: active
+    owner: P6
+    note: "#808 周对账探针 weekly-recon.sh＋配对测试的受保护路径豁免（含豁免件自覆盖）；单卡滚动、按 ISO 周分节。"
