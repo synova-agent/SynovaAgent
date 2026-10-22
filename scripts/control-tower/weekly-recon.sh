@@ -90,7 +90,7 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PYBIN="$(command -v python3 2>/dev/null || true)"   # swallow-ok: python3 缺失由下一分支显式 degraded exit 2
 if [ -z "$PYBIN" ]; then
-  echo "degraded: code=ENV_NO_PYTHON python3 不可用（探针无法启动，零指标）" >&2
+  echo "degraded: code=ENV_NO_PYTHON PY 解释器不可用（探针无法启动，零指标）" >&2
   exit 2
 fi
 export SYNO_RECON_SCRIPT_DIR="$SCRIPT_DIR"
