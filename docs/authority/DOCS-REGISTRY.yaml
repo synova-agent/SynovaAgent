@@ -789,3 +789,11 @@ documents:
     status: active
     owner: P6
     note: "#808 周对账探针 weekly-recon.sh＋配对测试的受保护路径豁免（含豁免件自覆盖）；单卡滚动、按 ISO 周分节。"
+
+  # ---- CTO 2026-10-21：CTO 记账 skill 同步（裁 289；base #816 并入，避与 #808 撞号改为 DOC-0238）----
+  - id: DOC-0238
+    type: decision
+    path: gate-exemptions/2026-10-21-cto-bookkeeping.md
+    status: active
+    owner: CTO
+    note: "cto-bookkeeping 技能新增/同步与豁免登记。"
