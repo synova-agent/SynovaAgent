@@ -40,6 +40,8 @@ export LC_ALL=C.UTF-8 2>/dev/null   # swallow-ok: locale 不可用时回退默�
 #             SYNO_PUSH_CI_TIMEOUT          等 CI 的最长秒数（缺省 900）
 #             SYNO_PUSH_CI_INTERVAL         轮询间隔秒（缺省 20）
 #             SYNO_PUSH_CI_CMD              注入缝（测试）：参数=sha，输出 "id|conclusion|url[|失败job]"
+#             SYNO_PUSH_GH_TOKEN_FILE       GitHub token 文件（缺省试 ~/.dsh/.credentials.yaml）；
+#                                           用于 launchd/无 keychain 场景（实测 gh 在 launchd 下不可靠）
 #             SYNO_PUSH_VERIFY_TRIES        核 SHA 重试次数（缺省 3）
 #             SYNO_PUSH_VERIFY_INTERVAL     重试间隔秒（缺省 5）
 #             SYNO_PUSH_OUT                 结果 JSON 路径
@@ -99,6 +101,7 @@ CI_WATCH="${SYNO_PUSH_WATCH_CI:-auto}"
 CI_TIMEOUT="${SYNO_PUSH_CI_TIMEOUT:-900}"
 CI_INTERVAL="${SYNO_PUSH_CI_INTERVAL:-20}"
 GH_REPO_SLUG="${SYNO_PUSH_GH_REPO:-synova-agent/SynovaAgent}"
+GH_TOKEN_FILE="${SYNO_PUSH_GH_TOKEN_FILE:-$HOME/.dsh/.credentials.yaml}"
 VERIFY_TRIES="${SYNO_PUSH_VERIFY_TRIES:-3}"
 VERIFY_INTERVAL="${SYNO_PUSH_VERIFY_INTERVAL:-5}"
 OUT="${SYNO_PUSH_OUT:-$REPO/.codex/control-tower/tmp/mirror-sync-push.json}"
@@ -359,15 +362,45 @@ finish() {  # $1=exit $2=verdict $3=reason $4=fail|recover|""
   exit "$rc"
 }
 
+gh_token() {  # 依次：环境变量 → token 文件里的 GITHUB_TOKEN → 空
+  local t="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
+  [ -n "$t" ] && { printf '%s' "$t"; return 0; }
+  [ -r "$GH_TOKEN_FILE" ] || return 0
+  awk -F': *' '/^[[:space:]]*GITHUB_TOKEN:/{gsub(/["\r]/,"",$2); print $2; exit}' "$GH_TOKEN_FILE" 2>/dev/null || true   # swallow-ok: 无该键 ⇒ 空 ⇒ 上层判 unknown
+}
+
 ci_query() {  # $1=sha → stdout "id|conclusion|url[|failing_jobs]"；读不到 ⇒ 非 0
-  local sha="$1"
+  local sha="$1" tok
   if [ -n "${SYNO_PUSH_CI_CMD:-}" ]; then
     sh -c "$SYNO_PUSH_CI_CMD $sha"
     return $?
   fi
-  command -v gh >/dev/null 2>&1 || return 1
-  gh api "repos/$GH_REPO_SLUG/actions/runs?per_page=30" \
-    --jq "[.workflow_runs[] | select(.head_sha==\"$sha\") | select(.name|test(\"CI\"))] | sort_by(.created_at) | last | select(.!=null) | \"\(.id)|\(.conclusion // .status)|\(.html_url)\"" 2>/dev/null
+  tok="$(gh_token)"
+  [ -z "$tok" ] && return 1
+  SYNO_CI_SHA="$sha" SYNO_CI_REPO="$GH_REPO_SLUG" SYNO_CI_TOK="$tok" "$PYBIN" - <<'PY'
+import json,os,sys,urllib.request
+sha=os.environ["SYNO_CI_SHA"]; repo=os.environ["SYNO_CI_REPO"]; tok=os.environ["SYNO_CI_TOK"]
+def get(u):
+    r=urllib.request.Request(u,headers={"Authorization":"token "+tok,"Accept":"application/vnd.github+json","User-Agent":"mirror-sync-push"})
+    return json.load(urllib.request.urlopen(r,timeout=20))
+try:
+    runs=get("https://api.github.com/repos/%s/actions/runs?per_page=50"%repo).get("workflow_runs",[])
+except Exception:
+    sys.exit(1)
+mine=[r for r in runs if (r.get("head_sha") or "")==sha and "CI" in (r.get("name") or "")]
+if not mine:
+    sys.exit(1)
+r=sorted(mine,key=lambda x:x.get("created_at") or "")[-1]
+concl=r.get("conclusion") or r.get("status") or ""
+jobs=""
+if concl=="failure":
+    try:
+        js=get("https://api.github.com/repos/%s/actions/runs/%s/jobs?per_page=100"%(repo,r["id"])).get("jobs",[])
+        jobs=" / ".join(j["name"] for j in js if j.get("conclusion")=="failure")
+    except Exception:
+        jobs=""
+print("%s|%s|%s|%s"%(r["id"],concl,r.get("html_url",""),jobs))
+PY
 }
 
 ci_watch() {  # $1=被推 sha —— 观察 GitHub 集成测试；结果写 CI_RESULT/CI_DETAIL
@@ -382,8 +415,7 @@ ci_watch() {  # $1=被推 sha —— 观察 GitHub 集成测试；结果写 CI_R
         success) CI_RESULT="green"; CI_DETAIL="run=$id url=$url"; return 0 ;;
         failure|cancelled|timed_out|startup_failure|action_required)
           CI_RESULT="red"
-          jobs="$(gh api "repos/$GH_REPO_SLUG/actions/runs/$id/jobs?per_page=100" \
-                    --jq '[.jobs[] | select(.conclusion=="failure") | .name] | join(" / ")' 2>/dev/null)"
+          jobs="${rest2#*|}"; [ "$jobs" = "$rest2" ] && jobs=""
           CI_DETAIL="run=$id url=$url 失败job=${jobs:-<未取到>}"
           return 0 ;;
         *) : ;;   # queued/in_progress ⇒ 继续等
