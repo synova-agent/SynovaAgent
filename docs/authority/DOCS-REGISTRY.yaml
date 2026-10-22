@@ -797,3 +797,11 @@ documents:
       status: active
       owner: CTO
       note: "#819 技能源迁入 .synova/skills（25 技能）及相关受保护路径的豁免；裁 290。"
+
+  # ---- CTO 2026-10-23：research-acceptance 技能同步（裁 297）----
+  - id: DOC-0239
+    type: decision
+    path: gate-exemptions/2026-10-23-research-acceptance.md
+    status: active
+    owner: CTO
+    note: "research-acceptance 技能新增/同步与豁免登记。"
