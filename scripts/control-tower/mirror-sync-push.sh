@@ -245,7 +245,7 @@ print(json.dumps("\n".join(md), ensure_ascii=False))
 PY
 )"
   issue_no="$(curl -fsS --max-time 15 -G -H "Authorization: token $tok" \
-      --data-urlencode "state=all" --data-urlencode "limit=50" --data-urlencode "q=镜像同步状态" \
+      --data-urlencode "state=open" --data-urlencode "limit=50" --data-urlencode "q=镜像同步状态" \
       "$GITEA_API/repos/$GITEA_REPO/issues" 2>/dev/null \
     | SYNO_ISSUE_TITLE="$STATUS_TITLE" "$PYBIN" -c '
 import json,sys,os
@@ -353,16 +353,24 @@ import re
 _rs=re.sub(r"run=\d+","",r.get("reason","") or "")
 _rs=re.sub(r"url=\S+","",_rs)
 _rs=" ".join(_rs.split())
-print("%s|%s"%(r.get("verdict",""), _rs))
+stage=(_rs.split(" ",1)[0] if _rs else "")
+print("%s|%s"%(r.get("verdict",""), stage))
 ' 2>/dev/null || true   # swallow-ok: 历史坏了 ⇒ 空键 ⇒ 照常发信号（不静默：信号照发）
 }
 
 finish() {  # $1=exit $2=verdict $3=reason $4=fail|recover|""
   local rc="$1" verdict="$2" reason="${3:-}" sig="${4:-}"
   VERDICT="$verdict"
+  if [ "$verdict" = "NOOP" ] && [ -f "$STATUS_HIST" ]; then
+    if ! grep -q "$GITEA_SHA" "$STATUS_HIST" 2>/dev/null && [ "$(wc -l < "$STATUS_HIST" 2>/dev/null || echo 0)" -gt 0 ]; then
+      say_err "ℹ️ MIRROR-ADVANCED-ELSEWHERE sha=${GITEA_SHA:0:9}（本执行器历史里无此 sha ⇒ 有别的通道推过；本趟只核一致/CI，不认领该次推送）"
+      CI_DETAIL="${CI_DETAIL} source=external"
+    fi
+  fi
   case "$sig" in
     fail)
-      if [ "$(prev_sig_key)" = "${verdict}|$(norm_reason "$reason")" ]; then
+      _stage="$(norm_reason "$reason")"; _stage="${_stage%% *}"
+      if [ "$(prev_sig_key)" = "${verdict}|${_stage}" ]; then
         SIGNAL_STATE="deduped"     # 与上一趟同一结论 ⇒ 不重复开/评单（历史仍记一行）
       else
         signal_fail "E_${verdict}" "$verdict" "$reason" || rc=2
@@ -485,8 +493,12 @@ case "$PROBE_RC" in
   *) finish 2 DEGRADED E_PROBE_DEGRADED fail ;;
 esac
 
-# 判据③ 先于 lag：探针在 FORK 分支不算 lag（宁可报"分叉"，不许因缺数误判降级后放行）
-[ "$ANCESTOR" = "true" ] || finish 1 FORK E_FORK fail
+# 判据③ 先于 lag：探针在 FORK 分支不算 lag
+case "$ANCESTOR" in
+  true)  : ;;
+  false) finish 1 FORK E_FORK fail ;;          # 明确分叉 ⇒ 拒推（真红）
+  *)     finish 2 DEGRADED E_PROBE_DEGRADED fail ;;   # 祖先关系判不出 ⇒ 检查自身失败（三态纪律）
+esac
 printf '%s' "$LAG" | grep -qE '^[0-9]+$' || finish 2 DEGRADED E_PROBE_DEGRADED fail
 [ "$LAG" -gt 0 ] || finish 2 DEGRADED E_PROBE_DEGRADED fail # 判据②前提不成立却报落后 ⇒ 降级
 [ "$DRY" = "1" ] && finish 0 DRYRUN "will_push=$LAG" ""

@@ -189,7 +189,7 @@ mutant() {  # $1=名字 $2=sed 表达式 $3=checker $4=setup
 }
 mutant m1_noop_push   's/finish 0 NOOP "" recover/finish 0 PUSHED "" ""/' c1 setup1
 mutant m2_skip_push   's|git -C "$REPO" push "$MIRROR" "$GITEA_SHA:refs/heads/main"|true|' c2 setup2
-mutant m3_fork_allow  's/\[ "\$ANCESTOR" = "true" \] || finish 1 FORK E_FORK fail/[ "$ANCESTOR" = "true" ] || finish 0 NOOP "" ""/' c3 setup3
+mutant m3_fork_allow  's/finish 1 FORK E_FORK fail/finish 0 NOOP "" ""/' c3 setup3
 mutant m4_verify_pass 's/\[ "\$VERIFY_OK" = "1" \] || finish 2 VERIFY_MISMATCH E_VERIFY_MISMATCH fail/VERIFY_OK=1/' c4 setup4
 mutant m5_log_only    's#signal_fail "E_\${verdict}" "\$verdict" "\$reason" || rc=2#:#' c4 setup4
 
