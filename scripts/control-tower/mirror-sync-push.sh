@@ -49,7 +49,8 @@ export LC_ALL=C.UTF-8 2>/dev/null   # swallow-ok: locale 不可用时回退默�
 #             SYNO_PUSH_MIRROR_PENDING      门禁 pending（缺省 <repo>/.claude/mirror-sync.pending）
 #             SYNO_PUSH_STATUS              auto|off（缺省 auto）：每趟更新常驻状态单
 #             SYNO_PUSH_STATUS_TITLE        状态单标题（缺省 [AUTO] 镜像同步状态（自动更新））
-#             SYNO_PUSH_STATUS_HIST         历史 JSONL（缺省 <repo>/.codex/…/mirror-sync-history.jsonl）
+#             SYNO_PUSH_STATUS_HIST         历史 JSONL（缺省 ~/Library/Logs/synova-mirror-sync-history.jsonl）
+#                                           🔴 共享位置：不同 checkout 各写各的会把状态单覆盖成单行（实测）
 #             SYNO_PUSH_STATUS_CMD          注入缝（测试）：状态载荷走该命令 stdin
 #             SYNO_PUSH_SIGNAL              auto|off（缺省 auto）
 #             SYNO_PUSH_SIGNAL_CMD          注入缝（测试）：载荷走该命令的 stdin
@@ -110,7 +111,7 @@ MIRROR_PENDING="${SYNO_PUSH_MIRROR_PENDING:-$REPO/.claude/mirror-sync.pending}"
 SIGNAL_MODE="${SYNO_PUSH_SIGNAL:-auto}"
 STATUS_MODE="${SYNO_PUSH_STATUS:-auto}"
 STATUS_TITLE="${SYNO_PUSH_STATUS_TITLE:-[AUTO] 镜像同步状态（自动更新）}"
-STATUS_HIST="${SYNO_PUSH_STATUS_HIST:-$REPO/.codex/control-tower/tmp/mirror-sync-history.jsonl}"
+STATUS_HIST="${SYNO_PUSH_STATUS_HIST:-$HOME/Library/Logs/synova-mirror-sync-history.jsonl}"
 GITEA_API="${SYNO_PUSH_GITEA_API:-http://127.0.0.1:3000/api/v1}"
 GITEA_REPO="${SYNO_PUSH_GITEA_REPO:-synova-agent/SynovaAgent}"
 TOKEN_FILE="${SYNO_PUSH_GITEA_TOKEN_FILE:-/Users/wane/gitea/.win-push-token}"
@@ -194,8 +195,8 @@ status_update() {  # $1=exit $2=verdict $3=reason —— B 层：常驻状态单
   local rc="$1" verdict="$2" reason="${3:-}" payload tok issue_no body
   [ "$STATUS_MODE" = "off" ] && return 0
   mkdir -p "$(dirname "$STATUS_HIST")" 2>/dev/null || true   # swallow-ok: 目录建不出 ⇒ 下方显式 STATUS-UNREACHABLE
-  printf '{"as_of":"%s","verdict":"%s","lag":%s,"gitea":"%s","github":"%s","pushed":"%s","exit":%s}\n' \
-    "$AS_OF" "$verdict" "${LAG:-null}" "${GITEA_SHA:-}" "${GH_SHA:-}" "${PUSHED_SHA:-}" "$rc" \
+  printf '{"as_of":"%s","verdict":"%s","reason":%s,"lag":%s,"gitea":"%s","github":"%s","pushed":"%s","exit":%s}\n' \
+    "$AS_OF" "$verdict" "$(_json "$reason")" "${LAG:-null}" "${GITEA_SHA:-}" "${GH_SHA:-}" "${PUSHED_SHA:-}" "$rc" \
     >> "$STATUS_HIST" 2>/dev/null || true   # swallow-ok: 历史仅供渲染，写不出不阻断（下方显式提示）
   if [ -f "$STATUS_HIST" ]; then
     tail -10 "$STATUS_HIST" > "$STATUS_HIST.tmp" 2>/dev/null && mv "$STATUS_HIST.tmp" "$STATUS_HIST" 2>/dev/null || true   # swallow-ok: 截断失败不影响本轮
@@ -338,11 +339,26 @@ signal_recover() {
   return 0
 }
 
+prev_sig_key() {  # 读历史最后一行的 verdict|reason 键（用于去重；读不到 ⇒ 空 ⇒ 照常发信号）
+  [ -f "$STATUS_HIST" ] || return 0
+  tail -1 "$STATUS_HIST" 2>/dev/null | "$PYBIN" -c '
+import json,sys
+try: r=json.load(sys.stdin)
+except Exception: raise SystemExit(0)
+print("%s|%s"%(r.get("verdict",""), r.get("reason","")))
+' 2>/dev/null || true   # swallow-ok: 历史坏了 ⇒ 空键 ⇒ 照常发信号（不静默：信号照发）
+}
+
 finish() {  # $1=exit $2=verdict $3=reason $4=fail|recover|""
   local rc="$1" verdict="$2" reason="${3:-}" sig="${4:-}"
   VERDICT="$verdict"
   case "$sig" in
-    fail)    signal_fail "E_${verdict}" "$verdict" "$reason" || rc=2 ;;
+    fail)
+      if [ "$(prev_sig_key)" = "${verdict}|${reason}" ]; then
+        SIGNAL_STATE="deduped"     # 与上一趟同一结论 ⇒ 不重复开/评单（历史仍记一行）
+      else
+        signal_fail "E_${verdict}" "$verdict" "$reason" || rc=2
+      fi ;;
     recover) [ "$rc" = "0" ] && signal_recover ;;
   esac
   status_update "$rc" "$verdict" "$reason" || true   # B 层：常驻状态单（失败显式 STATUS-UNREACHABLE，不改结论）

@@ -37,13 +37,13 @@ fail() { FAIL=$((FAIL + 1)); echo "  ❌ $1" >&2; }
 chk()  { if eval "$1"; then echo "      · ok: $2"; else echo "      · RED: $2"; CASE_FAIL=$((CASE_FAIL + 1)); fi; }
 
 TMPROOT="$(mktemp -d)"; trap 'rm -rf "$TMPROOT"' EXIT
-FX=""; WORK=""; GITEA=""; MIRROR=""; SIG=""; OUT=""; A1=""; A2=""; RC=""; RC1=""; RC2=""; RC9=""; RC10=""; RC11=""; VERDICT=""; O1=""; BASE_N=""
+FX=""; WORK=""; GITEA=""; MIRROR=""; SIG=""; ST=""; HIST=""; OUT=""; A1=""; A2=""; RC=""; RC1=""; RC2=""; RC9=""; RC10=""; RC11=""; VERDICT=""; O1=""; BASE_N=""
 
 # ── 夹具：work（工作仓）+ gitea.git + mirror.git；产 A1/A2 两提交 ────────────────
 new_fixture() {  # $1=名字；默认 Gitea local-main=A1、GitHub main=A1（一致）
   local n="$1"
   FX="$(mktemp -d "$TMPROOT/${n}.XXXXXX")"
-  WORK="$FX/work"; GITEA="$FX/gitea.git"; MIRROR="$FX/mirror.git"; SIG="$FX/signals.log"; ST="$FX/status.log"; OUT="$FX/out.json"
+  WORK="$FX/work"; GITEA="$FX/gitea.git"; MIRROR="$FX/mirror.git"; SIG="$FX/signals.log"; ST="$FX/status.log"; HIST="$FX/hist.jsonl"; OUT="$FX/out.json"
   git init -q --bare "$GITEA"; git init -q --bare "$MIRROR"; git init -q "$WORK"
   git -C "$WORK" config user.email "t@local"; git -C "$WORK" config user.name "t"
   git -C "$WORK" config commit.gpgsign false
@@ -59,7 +59,7 @@ new_fixture() {  # $1=名字；默认 Gitea local-main=A1、GitHub main=A1（一
 run_sut() {  # $1=github_sha  [$2..=额外环境赋值]  → stdout: 退出码
   local gh="$1"; shift || true
   ( cd "$WORK" && env SYNO_PUSH_REPO="$WORK" SYNO_PUSH_GITEA_URL="$GITEA" \
-      SYNO_PUSH_GITHUB_SHA="$gh" SYNO_PUSH_SIGNAL_CMD="cat >> $SIG" SYNO_PUSH_STATUS_CMD="cat >> $ST" \
+      SYNO_PUSH_GITHUB_SHA="$gh" SYNO_PUSH_SIGNAL_CMD="cat >> $SIG" SYNO_PUSH_STATUS_CMD="cat >> $ST" SYNO_PUSH_STATUS_HIST="$HIST" \
       SYNO_PUSH_VERIFY_TRIES=1 SYNO_PUSH_VERIFY_INTERVAL=0 SYNO_PUSH_OUT="$OUT" \
       SYNO_PUSH_WATCH_CI="${CI_MODE:-auto}" SYNO_PUSH_CI_TIMEOUT="${CI_TIMEOUT:-5}" \
       SYNO_PUSH_CI_CMD="${CI_CMD:-echo \"1|success|http://x\"}" SYNO_PUSH_CI_INTERVAL=1 "$@" \
@@ -186,7 +186,7 @@ mutant m1_noop_push   's/finish 0 NOOP "" recover/finish 0 PUSHED "" ""/' c1 set
 mutant m2_skip_push   's|git -C "$REPO" push "$MIRROR" "$GITEA_SHA:refs/heads/main"|true|' c2 setup2
 mutant m3_fork_allow  's/\[ "\$ANCESTOR" = "true" \] || finish 1 FORK E_FORK fail/[ "$ANCESTOR" = "true" ] || finish 0 NOOP "" ""/' c3 setup3
 mutant m4_verify_pass 's/\[ "\$VERIFY_OK" = "1" \] || finish 2 VERIFY_MISMATCH E_VERIFY_MISMATCH fail/VERIFY_OK=1/' c4 setup4
-mutant m5_log_only    's#fail)    signal_fail "E_\${verdict}" "\$verdict" "\$reason" || rc=2 ;;#fail)    : ;;#' c4 setup4
+mutant m5_log_only    's#signal_fail "E_\${verdict}" "\$verdict" "\$reason" || rc=2#:#' c4 setup4
 
 echo
 echo "结果: $PASS 通过, $FAIL 失败"
