@@ -37,6 +37,7 @@ fail() { FAIL=$((FAIL + 1)); echo "  ❌ $1" >&2; }
 chk()  { if eval "$1"; then echo "      · ok: $2"; else echo "      · RED: $2"; CASE_FAIL=$((CASE_FAIL + 1)); fi; }
 
 TMPROOT="$(mktemp -d)"; trap 'rm -rf "$TMPROOT"' EXIT
+CI_DEFAULT='echo "1|success|http://x"'   # 默认注入"CI 绿"；CI_CMD 前缀可覆盖（空串=回落默认）
 FX=""; WORK=""; GITEA=""; MIRROR=""; SIG=""; ST=""; HIST=""; OUT=""; A1=""; A2=""; RC=""; RC1=""; RC2=""; RC9=""; RC10=""; RC11=""; RC12a=""; RC12b=""; VERDICT=""; O1=""; BASE_N=""
 
 # ── 夹具：work（工作仓）+ gitea.git + mirror.git；产 A1/A2 两提交 ────────────────
@@ -62,7 +63,7 @@ run_sut() {  # $1=github_sha  [$2..=额外环境赋值]  → stdout: 退出码
       SYNO_PUSH_GITHUB_SHA="$gh" SYNO_PUSH_SIGNAL_CMD="cat >> $SIG" SYNO_PUSH_STATUS_CMD="cat >> $ST" SYNO_PUSH_STATUS_HIST="$HIST" \
       SYNO_PUSH_VERIFY_TRIES=1 SYNO_PUSH_VERIFY_INTERVAL=0 SYNO_PUSH_OUT="$OUT" \
       SYNO_PUSH_WATCH_CI="${CI_MODE:-auto}" SYNO_PUSH_CI_TIMEOUT="${CI_TIMEOUT:-5}" \
-      SYNO_PUSH_CI_CMD="${CI_CMD:-echo \"1|success|http://x\"}" SYNO_PUSH_CI_INTERVAL=1 "$@" \
+      SYNO_PUSH_CI_CMD="${CI_CMD:-$CI_DEFAULT}" SYNO_PUSH_CI_INTERVAL=1 "$@" \
       bash "$SUT" --json ) >"$FX/stdout.txt" 2>"$FX/stderr.txt"
   echo $?
 }
@@ -91,6 +92,19 @@ c3() { chk '[ "$RC" = 1 ]' 'exit 1'; chk '[ "$VERDICT" = FORK ]' 'verdict=FORK'
 c4() { chk '[ "$RC" = 2 ]' 'exit 2（降级 ≠ 通过）'; chk '[ "$VERDICT" = VERIFY_MISMATCH ]' 'verdict=VERIFY_MISMATCH'
        chk '[ "$(field_of "$OUT" degraded)" = True ]' 'JSON degraded=true'
        chk 'sig_has VERIFY_MISMATCH' '降级已出信号（判据⑤）'; }
+c5() { chk '[ "$RC1" = 2 ]' '失败那次 exit 2'; chk '[ "$RC2" = 0 ]' '恢复那次 exit 0'
+       chk 'grep -q "\"kind\": \"failure\"" "$SIG" 2>/dev/null' '失败已出声'
+       chk 'grep -q "\"kind\": \"recovery\"" "$SIG" 2>/dev/null' '恢复已出声（能关单）'; }
+c10() { chk '[ "$RC" = 2 ]' 'CI 红 ⇒ exit 2（降级≠通过）'
+        chk '[ "$VERDICT" = CI_RED ]' 'verdict=CI_RED'
+        chk '[ "$(field_of "$OUT" ci)" = red ]' 'JSON ci=red'
+        chk 'sig_has CI_RED' 'CI 红已出信号'; }
+c11() { chk '[ "$RC" = 2 ]' 'CI 等不出结论 ⇒ exit 2'
+        chk '[ "$VERDICT" = CI_UNKNOWN ]' 'verdict=CI_UNKNOWN'
+        chk 'sig_has CI_UNKNOWN' '未知已出信号（禁当通过）'; }
+c12() { local n; n="$(grep -c '\"kind\": \"failure\"' "$SIG" 2>/dev/null || true)"
+        chk '[ "$n" = 1 ]' '同一阶段连跑两次 ⇒ 只发一次失败信号（实发 '"'"'"$n"'"'"
+        chk 'grep -q "deduped" "$FX/stdout.txt" 2>/dev/null' '第二趟 signal=deduped（可见，不静默）'; }
 c9() { chk '[ "$RC9" = 0 ]' '状态单写失败不改结论（仍 exit 0）'
        chk 'grep -q "STATUS-UNREACHABLE" "$FX/stderr.txt" 2>/dev/null' '写失败有显式 STATUS-UNREACHABLE 行（不静默）'; }
 c8() { chk '[ "$RC" = 2 ]' 'exit 2'; chk '[ "$VERDICT" = DEGRADED ]' 'verdict=DEGRADED'
@@ -99,6 +113,10 @@ c8() { chk '[ "$RC" = 2 ]' 'exit 2'; chk '[ "$VERDICT" = DEGRADED ]' 'verdict=DE
 
 assert_case() {  # $1=checker $2=label $3=green|red
   local out file n; CASE_FAIL=0; file="$TMPROOT/case.out"
+  # 🔴 守卫（复核实测：checker 未定义时 command not found 被重定向吞掉 ⇒ 假绿）
+  if ! declare -F "$1" >/dev/null 2>&1; then
+    fail "$2（checker \`$1\` 未定义 ⇒ 用例无效，按红计）"; return
+  fi
   # 🔴 不用 $(...) 捕获：命令替换会进子 shell，CASE_FAIL 的累加会丢（假绿陷阱）
   "$1" >"$file" 2>&1
   n="$CASE_FAIL"
@@ -126,12 +144,33 @@ setup4() { new_fixture "c4"; git -C "$WORK" push -q gitea "$A2:refs/heads/local-
            VERDICT="$(verdict_of "$OUT")"; }
 setup5() { new_fixture "c5"; RC1="$(run_sut "deadbeef")"; RC2="$(run_sut "$A1")"; }
 setup10() { new_fixture "c10"; git -C "$WORK" push -q gitea "$A2:refs/heads/local-main"
-            RC10="$(run_sut "$A1" CI_CMD='echo "9|failure|http://x/run/9|All Checks Passed / Gate Integrity"')"
+            CI_CMD='echo "9|failure|http://x/run/9|All Checks Passed / Gate Integrity"' \
+            RC10="$(run_sut "$A1")"; CI_CMD=""
             VERDICT="$(verdict_of "$OUT")"; }
 setup11() { new_fixture "c11"; git -C "$WORK" push -q gitea "$A2:refs/heads/local-main"
-            RC11="$(run_sut "$A1" CI_CMD='echo ""')"; VERDICT="$(verdict_of "$OUT")"; }
+            CI_CMD='echo ""' RC11="$(run_sut "$A1")"; CI_CMD=""; VERDICT="$(verdict_of "$OUT")"; }
 setup12() { new_fixture "c12"
             RC12a="$(run_sut "deadbeef")"; RC12b="$(run_sut "deadbeef")"; }
+setup13() { new_fixture "c13"
+            printf '{"as_of":"2026-01-01T00:00:00Z","verdict":"PUSHED","reason":"","lag":1,"gitea":"deadbeefdeadbeefdeadbeefdeadbeefdeadbeef","github":"","pushed":"deadbeefdeadbeefdeadbeefdeadbeefdeadbeef","exit":0}\n' > "$HIST"
+            RC="$(run_sut "$A1")"; VERDICT="$(verdict_of "$OUT")"; }
+setup14() { new_fixture "c14"
+            local sb="$TMPROOT/sb14"; mkdir -p "$sb/scripts/control-tower"
+            cp "$REPO_DIR/scripts/control-tower/mirror-sync-push.sh" "$sb/scripts/control-tower/"
+            ln -sf "$REPO_DIR/scripts/pre-push-check.sh" "$sb/scripts/pre-push-check.sh"
+            cat > "$sb/scripts/control-tower/check-dual-repo-sync.sh" <<EOS
+#!/usr/bin/env bash
+echo '{"schema":"x","as_of":"x","gitea":{"sha":"$A1"},"github":{"sha":"$A1"},"lag":1,"ancestor":null,"verdict":"LAG","exit":1}'
+exit 1
+EOS
+            chmod +x "$sb/scripts/control-tower/check-dual-repo-sync.sh"
+            local old="$SUT"; SUT="$sb/scripts/control-tower/mirror-sync-push.sh"
+            RC="$(run_sut "$A1")"; SUT="$old"; VERDICT="$(verdict_of "$OUT")"; }
+c13() { chk '[ "$RC" = 0 ]' 'NOOP 不因旁路而改结论'
+        chk 'grep -q "MIRROR-ADVANCED-ELSEWHERE" "$FX/stderr.txt" 2>/dev/null' '旁路推送被显式点名'
+        chk '[ "$(field_of "$OUT" source)" = external ]' 'JSON source=external（结构化，不只在字符串里）'; }
+c14() { chk '[ "$RC" = 2 ]' 'ancestor 判不出 ⇒ exit 2（三态纪律）'
+        chk '[ "$VERDICT" = DEGRADED ]' 'verdict=DEGRADED（不是 FORK）'; }
 setup9() { new_fixture "c9"; RC9="$(run_sut "$A1" SYNO_PUSH_STATUS_CMD=false)"; }
 setup8() { new_fixture "c8"; RC="$(run_sut "deadbeef")"; VERDICT="$(verdict_of "$OUT")"; }
 
@@ -152,6 +191,12 @@ setup5; assert_case c5 "⑤ 降级必出声、恢复必出声（否则历史单�
 
 echo "── 同结论去重（防每天刷同一张单）──"
 setup12; assert_case c12 "同一根因连跑两次 ⇒ 只发一次信号"
+
+echo "── 旁路推送可见化（复核阻断②的回归位）──"
+setup13; assert_case c13 "镜像被别处推过 ⇒ 显式点名且不改结论"
+
+echo "── ancestor 三态（复核建议③的回归位）──"
+setup14; assert_case c14 "ancestor 判不出 ⇒ DEGRADED exit 2（旧码会误判 FORK exit 1）"
 
 echo "── 状态单容错（B 层写不出去，也不许污染结论、不许静默）──"
 setup9; assert_case c9 "状态单写失败 ⇒ 仍 exit 0，且有 STATUS-UNREACHABLE 显式行"
