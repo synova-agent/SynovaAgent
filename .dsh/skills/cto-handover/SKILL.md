@@ -534,7 +534,7 @@ git fetch --all && git status -sb                 # 开工前同步
 | 派单文档 `docs/synova/coordination/派单-*.md` | `bash scripts/control-tower/pre-dispatch-check.sh <doc>` | 末行「✅ 机械项全通过」（exit 0） |
 | 控制塔脚本 / 预设 / skill | 该产物的配对测试 + `bash scripts/pre-commit-check.sh` | 全绿 + 配对测试通过 |
 | 计划 / 台账 / 协调文档 | `pre-commit-check.sh`（含 G12 写集一致性） | 全绿 |
-| 技能改动（`.synova/skills/**`） | `bash scripts/workflow/sync-dsh-skills.sh --check` | SYNC-OK（`.dsh` 与 `.claude` 逐字一致） |
+| 技能改动（`.synova/skills/**`） | `bash scripts/workflow/sync-dsh-skills.sh --check` | SYNC-OK（`.dsh` 与 `.synova/skills` 逐字一致） |
 
 **汇报里必须贴复核的原始输出**（不是"我跑过了"）。任一 ⚠️ 都要在汇报中说明是「已修 / 正在修 / 有意保留」，不许沉默。
 
