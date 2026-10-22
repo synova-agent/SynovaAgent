@@ -9,8 +9,8 @@
 > 🔴 **DSH 口径（2026-10-20 定）**：DSH 是**开发时用的工具**，**不是产品运行时依赖**（运行时＝`src/agent/tool-loop-executor.ts`+`src/providers/base.ts`）。
 > 当前 **`0.2.1-rc.2`** ｜ 源码 **`/Users/wane/src/dsh-src-0.2.1-rc.2`** @ `687f282e86` ｜ **禁把 DSH 版本写进「产品支持范围」**（客户装的是 Synova）。
 > 🔴 **Win 侧读这两份镜像**（Mac 院方目录读不到）：宪章 `docs/synova/产品宪章-v8.3-镜像.md`｜② 本体层执行规范 `docs/specs/ontology/本体层规范-v2.11.md`
-> **任务唯一编号 = Issue 号**（**D 号已退役**）｜ **本件 21.2 KB（21,679 B）**（**实测**；**硬上限 = 65,536 B**）
-> 🔴 **预算警戒**：理论最坏账 = 本件 + 12×3.5KB = **64,687 B** ⇒ ≤ 65,536 ✅（余量 849 B）；实战占用 = 本件 + 域守则实际 **19,710** = **41,389 B**
+> **任务唯一编号 = Issue 号**（**D 号已退役**）｜ **本件 21.8 KB（22,326 B）**（**实测**；**硬上限 = 65,536 B**）
+> 🔴 **预算警戒**：理论最坏账 = 本件 + 12×3.5KB = **65,334 B** ⇒ ≤ 65,536 ✅（余量 202 B）；实战占用 = 本件 + 域守则实际 **19,710** = **42,036 B**
 > ⇒ **再加根件内容前，先压缩域守则或删旧段**
 
 > 组织数字孪生诊断 + 持续增长导航系统。诊断是手段，目的是增长。
@@ -294,13 +294,11 @@
 · **SHA 取 `merge_commit`（不是 head）** ｜ **一切现状钉 SHA，禁钉分支名**
 · 🔴 **量真值用 `git show <ref>:` / `git ls-tree <ref>`，禁 `ls` / 工作树**
 · 🔴 **四条件自合**：CI 全绿 pending=0 ／ 零写集重叠 ／ 已过独立复核 ／ 串行
-   ⇒ **机器凭证（一条命令，禁口述"我核过了"）**：`bash scripts/control-tower/check-merge-conditions.sh --pr <N>`
-     末行 `CAN-自合并` 或 `NO: <条件名>`；三态 **0/1/2**（2＝检查自身失败，≠通过）⇒ **把末行贴进 PR 正文**
-   ⇒ 🔴 ② 写集重叠**有共享追加白名单**（两边都是追加到同一登记表 ⇒ 仍算不重叠）；判据由该脚本 ② 给出
-· 🔴 **回执三信号**（判据通过率 ／ 例外清单 ／ 在飞数）—— **机器算，不靠人记**：
-     `npx tsx scripts/control-tower/probe-line-signals.ts --line <产品线|治理线|CTO|K3|基座线>`
-     （`--all` 看五线；末行 `LINE-SIGNALS` 是汇总；🌐 需 Gitea token：`GITEA_TOKEN` → `SYNO_GITEA_TOKEN` → `~/gitea/.win-push-token`）
-     🔴 无 `tsx` 时用 `node --experimental-strip-types <同路径>`（实测可用）
+   ⇒ **机器凭证（禁口述"我核过了"）**：`bash scripts/control-tower/check-merge-conditions.sh --pr <N>`
+     末行 `CAN-自合并` / `NO: <条件>`；三态 0/1/2（2＝检查自身失败 ≠ 通过）⇒ **末行贴 PR 正文**
+   ⇒ ② 写集重叠有**共享追加白名单**（两边都追加到同一登记表 ⇒ 不算重叠）；判据由该脚本 ② 给
+· 🔴 **回执三信号**（判据通过率／例外清单／在飞数）—— **机器算，不靠人记**：
+     `npx tsx scripts/control-tower/probe-line-signals.ts --line <线|--all>`（末行 LINE-SIGNALS；无 tsx 用 `node --experimental-strip-types`）
 ```
 
 ---
