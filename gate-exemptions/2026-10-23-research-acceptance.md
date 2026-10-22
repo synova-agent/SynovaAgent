@@ -1,3 +1,4 @@
 - .dsh/skills/** — 同步 research-acceptance 技能（.synova 源 → .dsh 镜像） — 裁 297
 - docs/authority/DOCS-REGISTRY.yaml — 登记本豁免（D2 登记门禁） — 裁 297
 - gate-exemptions/2026-10-23-research-acceptance.md — 本豁免文件（自我保护） — 裁 297
+- .dsh/skills/** — 同步 deliverable-acceptance 泛化版（裁 298） — 裁 298
