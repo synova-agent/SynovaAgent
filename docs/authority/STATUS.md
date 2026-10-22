@@ -4,7 +4,6 @@
 > 工程事实以 `docs/synova/DASHBOARD-CN.md`（自动生成）与 `docs/synova/audit-reports/` 为准。
 
 - as_of 基线提交：`a8e7e26be`（取数：`git rev-parse --short a8e7e26be`）
-- 本件维护日：`2026-10-21`（取数：`date +%F`）
 
 ---
 
@@ -22,7 +21,7 @@
 - pre-commit 组数（脚本横幅真值）：`12`（取数：`git show a8e7e26be:scripts/pre-commit-check.sh | grep -cE '── 组 [0-9]+:'`）
 - open PR（取数时点 = 本批建 PR 之前，活数）：`15`（取数：`curl -s -D - -o /dev/null -H "Authorization: token $(cat /Users/wane/gitea/.win-push-token)" "http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/pulls?state=open&limit=1" | grep -i '^x-total-count'`）
 - 远端分支数（远端 = Gitea；不含本任务分支，避免自身在飞造成波动）：`1136`（取数：`git ls-remote --heads gitea | grep -vc 'refs/heads/ct/p6-807-1021'`）
-- 任务编号：以 **Issue 号**为准（D 号已退役，见根件 §7）；看板见 `DASHBOARD-CN.md`
+- 任务编号：以 **Issue 号**为准（D 号已退役，见根件头部）；看板见 `DASHBOARD-CN.md`
 - 协作：开发线（DSH 为开发者工具；Claude Code 已退役）＋ 审计线（K3），协议见 `docs/synova/coordination/`
 
 ## 三、产品事实
@@ -30,11 +29,11 @@
 - 两大系统：GA 按需诊断 ＋ Sentinel 定时哨兵（均已接线）
 - 专家数（registry 真值，根件声明同值）：`6`（取数：`git show a8e7e26be:expert/expert-registry.yaml | grep -cE '^  [a-z0-9_-]+:$'`）
 - 客户：客户A（第一个付费客户；建档与跟进见客户档案与卡，本件不复制历史日期）
-- 本体图节点（DB 实测，本机取数／仓外数据件）：`0`（取数：`sqlite3 /Users/wane/SynovaAgent/data/synova.db "select count(*) from graph_nodes"`）
-- 本体图边（DB 实测，本机取数／仓外数据件）：`0`（取数：`sqlite3 /Users/wane/SynovaAgent/data/synova.db "select count(*) from graph_triples"`）
+- 本体图节点（DB 实测，本机取数／仓外数据件）：`0`（取数：`sqlite3 data/synova.db "select count(*) from graph_nodes"`）
+- 本体图边（DB 实测，本机取数／仓外数据件）：`0`（取数：`sqlite3 data/synova.db "select count(*) from graph_triples"`）
 - 因果边设计口径：见研究院仓权威设计文档（设计文档口径，**非 DB 实测**）
 
-> DB 注：`data/synova.db` 是仓外数据件（fresh clone 无此文件）；本机 DB **空且可用**（`PRAGMA integrity_check` 返回 ok）⇒ 上两行值是**空库真值**，不是「取不到」。
+> DB 注：上两行取数命令需在**本机主工作区根**运行（`data/` 为仓外数据件，fresh clone 无此文件）；本机 DB **空且可用**（`PRAGMA integrity_check` 返回 ok）⇒ 值是**空库真值**，不是「取不到」。
 
 ## 四、风险清单（诚实版）
 
