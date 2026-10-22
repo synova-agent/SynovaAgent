@@ -15,7 +15,7 @@ tags: [llm-verifier, a2, semantic-filter, skill]
 ## 部署
 - .venv-llmverifier/（Python 3.9.6 venv，llm-verifier 0.2.0 + google-genai/openai/tqdm）
 - DeepSeek 后端连通（DEEPSEEK_API_KEY 从 ~/.dsh/.credentials.yaml 运行时注入）
-- synova-verify skill 双轨（.claude/skills 源 → .dsh/skills 同步）
+- synova-verify skill 双轨（.synova/skills 源 → .dsh/skills 同步）
 
 ## 验证
 - select：正确候选 0.654 vs 错误 0.346

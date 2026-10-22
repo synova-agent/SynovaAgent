@@ -5,7 +5,7 @@
 ## 决策记录
 
 1. **#2 主树占用检测前移（活跃判定用 last_seen_at，非 pid）**：并行污染只拦"新开工"（task-start）不拦"存量"（已在主树工作的 session 直接提交）→ M8 第四次复发。检测前移到 pre-commit（物理门禁、每次提交强制）。关键设计：活跃 session 判定用 `last_seen_at` 在窗口内（synova-commit 每次 register 刷新），**不是 pid**——synova-commit 注册不带 `--pid`，主树 registry 实测 14 个 `pid=None` 僵尸 session；若按 `list --active` 计数会灾难性误拦所有主树提交。
-2. **#3 fastlane 扩展三条快速通道**：纯 bypass.log（原 D515）+ merge commit（MERGE_HEAD，同 D328/D513 豁免）+ 纯补记组合（bypass.log + docs/task-state/memory 白名单）。证据白名单 = CT-34 doc 白名单 + `.claude/*.log`，**不含 `.claude/skills/`**（行为配置，防借道）。
+2. **#3 fastlane 扩展三条快速通道**：纯 bypass.log（原 D515）+ merge commit（MERGE_HEAD，同 D328/D513 豁免）+ 纯补记组合（bypass.log + docs/task-state/memory 白名单）。证据白名单 = CT-34 doc 白名单 + `.claude/*.log`，**不含 `.synova/skills/`**（行为配置，防借道）。
 3. **#4 D521-2 hook 层登记恢复**：D530（734ab32e CT-45 merge 豁免）重写 post-commit.sh 时覆盖丢失 D521-2 的 "bypass COMMITTED 登记" 段 → bypass-precommit.test.sh 红态（登记段缺失/HASH 未登记/仍脏/影子提交缺失）+ D451 补记循环。恢复该段（COMMITTED 成对登记 + 影子提交防递归）。
 4. **#5 baseline 漂移归因（改动集归因）**：merge main 引入 mac 提交后 tsc 基线变化，人工确认"main 现状 vs 本分支引入"成本高。扩展 baseline-check.sh：新增"错误"按文件归属本分支改动集（vs origin/main）→ 本分支引入才拦，main 既有漂移自动归因不拦；归因不可用 → fail-closed 拦全部。
 

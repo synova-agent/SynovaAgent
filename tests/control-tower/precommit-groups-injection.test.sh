@@ -99,7 +99,7 @@
 #   g9  组 9:   .codex/contracts/*.json 声明产出不在暂存区           → 契约门禁
 #   g10 组 10:  端到端 brief + 无暂存 .test.ts                      → G10/G11 条件区域
 #   g12 组 12:  暂存 scripts/*.sh 无任何今日 brief 认领               → Q2 范围一致性
-#   g13 → 组 13:  暂存改动 .claude/skills/**（与 .dsh/skills 漂移）     → 技能同步
+#   g13 → 组 13:  暂存改动 .synova/skills/**（与 .dsh/skills 漂移）     → 技能同步
 #
 # ═══ D1148 追加（两种模式都跑，非 run_scenario 框架）═══
 #   d1148-decl   探针 brief 违反 ①Q0/Q1 空 ②无 #CRITERIA ③Done 无 verify: →
@@ -409,8 +409,8 @@ EOF
 }
 
 inj_g13() {
-  printf '\n<!-- %s group-13 (故意制造 .claude/skills ↔ .dsh/skills 漂移) -->\n' "$MARK" >> "$CLONE/.claude/skills/squad-discipline/SKILL.md"
-  git -C "$CLONE" add .claude/skills/squad-discipline/SKILL.md
+  printf '\n<!-- %s group-13 (故意制造 .synova/skills ↔ .dsh/skills 漂移) -->\n' "$MARK" >> "$CLONE/.synova/skills/squad-discipline/SKILL.md"
+  git -C "$CLONE" add .synova/skills/squad-discipline/SKILL.md
 }
 
 # ═══ 结构性理由断言：非红时必须**物理验证**理由（不得口头豁免，不得白名单）═══

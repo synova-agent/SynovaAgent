@@ -89,7 +89,7 @@ docs/synova/coordination/总计划-双DSH提升-W1波-20260923.md:342:| **P-12**
 docs/synova/coordination/总计划-双DSH提升-W1波-20260923.md:401:$ bash scripts/control-tower/check-pr-budget.sh --files "<D923 全量写集>"
 docs/synova/coordination/总计划-双DSH提升-W1波-20260923.md:409:$ bash scripts/control-tower/check-pr-budget.sh --files "<D924 全量写集>"
 docs/synova/coordination/总计划-双DSH提升-W1波-20260923.md:416:$ bash scripts/control-tower/check-pr-budget.sh --files "<D925 全量写集>"
-docs/synova/coordination/总计划-双DSH提升-W1波-20260923.md:422:D860 豁免口径实测（`scripts/control-tower/check-pr-budget.sh:104`）：豁免前缀 = `.claude/task-briefs/`、`task-state/`、`memory/notes/`、`docs/plans/`、`docs/synova/product-lines/evidence/`；**`.claude/skills/`、`.dsh/`、`scripts/`、`tests/`、`docs/synova/coordination/` 均不在豁免内** → 各卡写集逐件计数成立。
+docs/synova/coordination/总计划-双DSH提升-W1波-20260923.md:422:D860 豁免口径实测（`scripts/control-tower/check-pr-budget.sh:104`）：豁免前缀 = `.claude/task-briefs/`、`task-state/`、`memory/notes/`、`docs/plans/`、`docs/synova/product-lines/evidence/`；**`.synova/skills/`、`.dsh/`、`scripts/`、`tests/`、`docs/synova/coordination/` 均不在豁免内** → 各卡写集逐件计数成立。
 docs/synova/coordination/总计划-双DSH提升-W1波-20260923.md:520:| DS3 | 三卡预算 5/5/7 ≤ 12（D860 口径）**且命令非空转** | `bash scripts/control-tower/check-pr-budget.sh --files "<该卡全量写集>"` —— **必须用 `--files` 注入**：`--base` 形态在本件上读到 **0 文件**（恒过 = 没核验，自验员 N3 实测）。逐卡原始输出见 §4.3 |
 docs/synova/coordination/总计划-双DSH提升-W1波-20260923.md:565:- **本 PR 预算复算**（同取值时点）：`check-pr-budget.sh --base origin/docs/d922-w1-dispatch` → `D860 豁免 5 件`／`✅ 变更文件数 2 ≤ 12`／`✅ 单域 mac`／`PASS`。
 docs/synova/coordination/派单-控制塔线-验证基建三件-20260921.md:8:写集：`.github/workflows/ci.yml`、`scripts/control-tower/check-pr-budget.sh`、`tests/control-tower/check-pr-budget.test.sh`、`tests/project/**`、`task-state/D86{0,1,3}.json`

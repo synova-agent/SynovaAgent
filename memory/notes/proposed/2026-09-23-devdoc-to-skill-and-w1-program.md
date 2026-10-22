@@ -9,7 +9,7 @@
 **实测依据**：近 7 天 dev doc 产物 **0 变更**；`synova-devdoc` 仍停在 08-16 版本；`synova-squad-lead`（09-21 新建）成员编制 = 队长 + ≤2 编码 + 1 自验，**无 dev-doc 位**；卡面 `spec` 字段已是「派单即规格」（DT 821 起）。
 
 **动作**：
-- 新增 skill `dev-doc-spec`（11 节活规格模板 + 独立性硬要求 + 触发条件），双写 `.claude/skills` / `.dsh/skills`
+- 新增 skill `dev-doc-spec`（11 节活规格模板 + 独立性硬要求 + 触发条件），双写 `.synova/skills` / `.dsh/skills`
 - `install-dsh-preset.sh` 注册表：`synova-devdoc` 标退役，默认安装集不含它
 - **触发式独立**：仅跨层 / 新产品线 / 超预算任务强制独立撰写者，且**撰写者不得实现该规格**
 

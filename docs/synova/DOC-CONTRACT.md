@@ -221,7 +221,7 @@ docs/**
 decisions/**
 expert/**
 extensions/skills/**
-.claude/skills/**
+.synova/skills/**
 .dsh/skills/**
 knowledge/**
 theory/**
@@ -243,7 +243,7 @@ extensions/AGENTS.md
 - ✅ **入口四份** / **C 层 `docs/**`** / **B 层 `decisions/**`**
 - 🔴 **豁免类（文件驱动扩展资产 + 知识资产）**——加了专家/技能/知识 = 新建目录 + 文件就自动注册
   （见 CLAUDE.md「文件驱动扩展」），**这些是产品运行时资产，不是过程文档** ⇒ 必须放行：
-  `expert/**` · `extensions/skills/**` · `.claude/skills/**` · `.dsh/skills/**` · `knowledge/**` ·
+  `expert/**` · `extensions/skills/**` · `.synova/skills/**` · `.dsh/skills/**` · `knowledge/**` ·
   `theory/**` · `scripts/golden-scenarios/**` · **`skills/**`（顶层；D1193 补登——CLAUDE.md 声明它是
   文件驱动扩展资产，首版白名单漏登，实测 46 件被误判违规）**
 - 🔴 **`memory/notes/**`**：§9 过渡期白名单（退出判据见 §9 第一行）
@@ -398,7 +398,7 @@ novis-backup-20260526/**
    · **退出判据**：`memory/notes/**` 迁移完成（该目录下 md 归零）⇒ 本条自动失效，白名单同步移除
    （否则按 §9 写的指针 note 会被 §3 闸 3 自己拦死 —— 这是 R2 抓出的自相矛盾） |
 | **doc-registry-gate**（`scripts/control-tower/doc-registry.json` 要求登记） | 契约的「出库」会删/移文档 ⇒ 注册表不一致 ⇒ 报红<br> | **"出库"动作必须与注册表同步同批做**；契约的存量迁移（§7）开始时，**第一批即同步注册表** |
-| **组 13 · 技能同步**（`.claude/skills` ↔ `.dsh/skills` 漂移检查）<br> | 契约若把 skills 纳入"出库/迁移"，**两份会漂移** ⇒ 报红 | **skills 属豁免类（见 §3 闸 3）⇒ 永不出库、不迁移**；任何改动**必须双份同批** |
+| **组 13 · 技能同步**（`.synova/skills` ↔ `.dsh/skills` 漂移检查）<br> | 契约若把 skills 纳入"出库/迁移"，**两份会漂移** ⇒ 报红 | **skills 属豁免类（见 §3 闸 3）⇒ 永不出库、不迁移**；任何改动**必须双份同批** |
 | **D1 · 文档真相防线**（`check-doc-truth.sh`，C1–C4 导航文档 vs 代码事实）<br> | 契约说"数量不写进定义"，而该防线**要求导航文档与代码事实一致** | **两者不冲突**（契约要求"以事实为准"），但**契约生效时须复核 C1–C4 的判据与 §1 一问是否同一取向** |
 
 **⇒ 一条总原则**（已在多处适用）：**「移出」必与「接手」同批** —— 移走一个机制之前，接手它的机制必须先就位。

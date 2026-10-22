@@ -265,7 +265,7 @@ documents:
 
   - id: DOC-0115
     type: knowledge
-    path: .claude/skills/dev-doc-spec/SKILL.md
+    path: .synova/skills/dev-doc-spec/SKILL.md
     status: active
     owner: DSH
 
@@ -277,7 +277,7 @@ documents:
 
   - id: DOC-0117
     type: knowledge
-    path: .claude/skills/squad-discipline/SKILL.md
+    path: .synova/skills/squad-discipline/SKILL.md
     status: active
     owner: DSH
 
@@ -789,3 +789,11 @@ documents:
     status: active
     owner: CTO
     note: "cto-bookkeeping 技能新增/同步与豁免登记。"
+
+    # ---- P4 2026-10-21：#819 技能目录迁移豁免（D2 登记）----
+    - id: DOC-0238
+      type: decision
+      path: gate-exemptions/2026-10-21-synova-skills-819.md
+      status: active
+      owner: CTO
+      note: "#819 技能源 .claude/skills → .synova/skills（25 技能）及相关受保护路径的豁免；裁 290。"

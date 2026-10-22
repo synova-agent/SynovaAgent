@@ -42,7 +42,7 @@
 ⇒ **欠账级**，但**复发率极高**（同类第二次的升级线已被触发两次）。
 
 **⑤ 现在有什么基础**（实测）：
-- ✅ 技能载体存在：`.claude/skills/**` ↔ `.dsh/skills/**`（**双轨同步**，pre-commit 组 13 硬门禁逐字节一致）
+- ✅ 技能载体存在：`.synova/skills/**` ↔ `.dsh/skills/**`（**双轨同步**，pre-commit 组 13 硬门禁逐字节一致）
 - ✅ 门禁骨架存在：`scripts/pre-commit-check.sh`（13 组）
 - ✅ 本批已有**活样例**（可作为规则的"来源证据"）：`naming-authority.md` 的订正留痕、`K4-b3-crossref` 的四元组标注、impl-c 的反向造红夹具
 - ❌ **无"四元组"要求**：任何编号/证据件都能写一个不带口径与时点的裸数
@@ -50,7 +50,7 @@
 - ❌ **无"造红脚本化 + 核替换"要求**
 
 **⑥ 还需要做什么**（**三选一或组合，由 CTO 定**）：
-① **入技能**（最低风险）：在 `.claude/skills/squad-discipline/SKILL.md`（及 `.dsh/` 镜像）加一节「判据纪律」，
+① **入技能**（最低风险）：在 `.synova/skills/squad-discipline/SKILL.md`（及 `.dsh/` 镜像）加一节「判据纪律」，
    含 **四元组** / **边界** / **命中打全文** / **反向造红** / **配对键** / **造红脚本化** 六条 + 本批 6 个实例；
 ② **入门禁**（需改门禁语义 ⇒ **CTO 另裁**）：加一条 check —— 证据件里出现"裸数"（无口径/时点）即警告或阻断；
 ③ **工具化**：给证据件加一个**生成器/校验器**（自动从命令输出填四元组）。
@@ -63,7 +63,7 @@
 ❌ **不借** DSH 的运行时不变式机制（我们是文档/提交面）。
 
 **⑧ 涉及代码文件**：
-`.claude/skills/squad-discipline/SKILL.md`（技能正文）｜`.dsh/skills/squad-discipline/SKILL.md`（**镜像，须逐字节一致**）｜
+`.synova/skills/squad-discipline/SKILL.md`（技能正文）｜`.dsh/skills/squad-discipline/SKILL.md`（**镜像，须逐字节一致**）｜
 （若走 ② ）`scripts/pre-commit-check.sh`
 > 🔴 **红线**：本卡**不碰 `scripts/audit/**`**（K3 域）。**凡涉及"审计标准"的部分，只转达 K3，不自行编写。**
 
@@ -89,7 +89,7 @@
 **不做什么**（**必须带路径**）：
 ```
 不改 scripts/audit/**                        （K3 域，红线 —— 审计标准只转达，不编写）
-不改 .claude/skills/** 下与本条无关的其他技能
+不改 .synova/skills/** 下与本条无关的其他技能
 不改 products 代码（src/** / packages/** / extensions/**）
 不改 scripts/control-tower/ 下探针判据逻辑
 ```
@@ -103,7 +103,7 @@
 
 ## 写集
 ```
-.claude/skills/squad-discipline/SKILL.md
+.synova/skills/squad-discipline/SKILL.md
 .dsh/skills/squad-discipline/SKILL.md
 .claude/claims/<本卡号>.yaml
 docs/synova/product-lines/evidence/K4-b3-criteria-discipline-<日期>.md

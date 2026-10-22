@@ -54,13 +54,13 @@ M1b（已合）｜U1 数据卫生（customer-config 只发模板骨架）
    ⇒ 借用口径：**只借形状、不抄代码**（MIT 允许抄，但本仓口径是自己写）；每条借鉴给**现场核过的 file:line**；
      给不出 ⇒ 写"未找到对应源码，放弃该借鉴点"，**不许编引用**
  不可借：Cordis 生命周期/代际、运行时插件装载、任何 `@deepseek-ai/*` 运行时依赖
- 代码质量：**按 `.claude/skills/dsh-code-standards/SKILL.md` 12 项强制项自评**（CTO 不复述标准，缺项即不合格）
+ 代码质量：**按 `.synova/skills/dsh-code-standards/SKILL.md` 12 项强制项自评**（CTO 不复述标准，缺项即不合格）
 ```
 
 ## 七、🔴 域守则指针（**必须显式 read**，DSH 无法额外注入）
 
 `extensions/sentinels/AGENTS.md`（装载器读它）｜`extensions/AGENTS.md`（**6 根分发＋U1 只发模板骨架**）｜`memory/notes/AGENTS.md`｜（👁）`.gitea/AGENTS.md`
-**（M5 批次追加）** `.claude/skills/dsh-code-standards/SKILL.md`（**代码标准 12 项强制**，写码/测试前对照；含 README 骨架／Known Limitations／typed error／fail loud／explicit authority／测试配对）｜`packages/test-kit/src/index.ts`（`createTestEnv()` 测试环境工厂，替身可直接复用）｜`src/mcp/**` **无域守则** ⇒ 以 `src/agent/AGENTS.md` ＋ 本件为准
+**（M5 批次追加）** `.synova/skills/dsh-code-standards/SKILL.md`（**代码标准 12 项强制**，写码/测试前对照；含 README 骨架／Known Limitations／typed error／fail loud／explicit authority／测试配对）｜`packages/test-kit/src/index.ts`（`createTestEnv()` 测试环境工厂，替身可直接复用）｜`src/mcp/**` **无域守则** ⇒ 以 `src/agent/AGENTS.md` ＋ 本件为准
 
 > 口径：**12 份域守则按"目录"切，10 个包按"职责"切 —— 正交** ⇒ 本清单是交集（全表 `handbook 包/交叉矩阵-12守则×10包.md`）
 > 🔴 **DSH 无法额外注入指定文件 ⇒ 必须显式 `read`**（不 read 就会漏）

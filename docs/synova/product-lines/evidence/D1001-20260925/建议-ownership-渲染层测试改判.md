@@ -331,7 +331,7 @@ mac  docs/synova/presets/install-squad-lead.sh
 EXIT=1
 ```
 
-**缺口现状**：origin/main 上 `dsh/` 已有 **21 个文件**（`git ls-tree -r --name-only origin/main -- dsh/` 实测，全部在 `dsh/plugins/` 下：synova-dashboards + task-board-adapter 两插件；`dsh/presets/` 尚不存在，属前瞻覆盖）——这 21 件当前全落 `**` 兜底判 win，与 `.dsh/**`、`.claude/skills/**` 等同族 mac 路径相悖。
+**缺口现状**：origin/main 上 `dsh/` 已有 **21 个文件**（`git ls-tree -r --name-only origin/main -- dsh/` 实测，全部在 `dsh/plugins/` 下：synova-dashboards + task-board-adapter 两插件；`dsh/presets/` 尚不存在，属前瞻覆盖）——这 21 件当前全落 `**` 兜底判 win，与 `.dsh/**`、`.synova/skills/**` 等同族 mac 路径相悖。
 
 **建议规则原文（供 Mac-CTO 直粘，缩进两空格，与现有表样式一致）**：
 

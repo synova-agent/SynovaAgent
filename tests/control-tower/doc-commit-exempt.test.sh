@@ -20,7 +20,7 @@
 #   T9  GATEKEEPER bypass 阻断行号 < is_doc_only 定义行号（绕过审计先于豁免）
 #   T10 空暂存集函数单测（边界）→ 0（fail-closed）
 #   T11 G12c check-dev-doc-write-set.sh 保留全量路径（D383 P1-1 不回退）
-#   T12 技能文件函数单测（.dsh/skills + .claude/skills）→ 0（D370 契约不被绕过）
+#   T12 技能文件函数单测（.dsh/skills + .synova/skills）→ 0（D370 契约不被绕过）
 #   附: 白名单正则正反矩阵（10 应豁免 / 10 应拒绝，含 docs/ 下 .ts 防藏代码）
 #
 # 测试策略（对齐双先例）:
@@ -97,8 +97,8 @@ check "T10: 空暂存集 → 0 (fail-closed, 走全量)" "0" "$OUT10"
 
 OUT12A=$(is_doc_only '.dsh/skills/test/SKILL.md')
 check "T12a: .dsh/skills → 0 (D370 同步契约不被绕过)" "0" "$OUT12A"
-OUT12B=$(is_doc_only '.claude/skills/test/SKILL.md')
-check "T12b: .claude/skills → 0 (技能=行为配置, 组 13 照跑)" "0" "$OUT12B"
+OUT12B=$(is_doc_only '.synova/skills/test/SKILL.md')
+check "T12b: .synova/skills → 0 (技能=行为配置, 组 13 照跑)" "0" "$OUT12B"
 
 # 白名单正则正反矩阵（增强: dev doc 自检清单 10 应豁免 + 10 应拒绝）
 echo ""
@@ -117,7 +117,7 @@ DOC_NO_PATHS='docs/secret.ts
 docs/code.json
 src/y.ts
 .claude/settings.json
-.claude/skills/test/SKILL.md
+.synova/skills/test/SKILL.md
 .dsh/skills/test/SKILL.md
 .codex/contracts/x.json
 .github/workflows/ci.yml

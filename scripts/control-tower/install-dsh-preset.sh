@@ -49,7 +49,7 @@ REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 #   规则: `# <id>|<说明>` = 该预设已退役 → 永不进默认集；显式请求 → exit 1 点名退役
 # synova-devdoc| 2026-09-23 退役（创始人批准 B 案）：常驻 dev-doc session 近 7 天产物 0 变更，
 #   职责已被「CTO 派单件（派单即规格）」+「K3 审计协议」吸收；能力保留为 skill dev-doc-spec
-#   （.claude/skills + .dsh/skills 双写）；恢复方式：删除本行注释标记即可回到在册。
+#   （.synova/skills + .dsh/skills 双写）；恢复方式：删除本行注释标记即可回到在册。
 
 # ── PYBIN 三级探测（PLATFORM-CHECKLIST #1；本行含 PYBIN 标记供 D520 平台扫描识别）
 #    Win Git Bash 无 python3（仅 python/py）；D330: 探测后须试运行，损坏 shim 不得当作可用

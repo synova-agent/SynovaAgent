@@ -75,7 +75,7 @@ git grep -l -E "deepseek-harness|@deepseek-ai" HEAD | sed 's|^HEAD:||' \
    3 tests/llm
    3 docs/archive
    3 .dsh/skills
-   3 .claude/skills
+   3 .synova/skills
    2 src/llm
    1 tests/store
    1 tests/control-tower
@@ -359,7 +359,7 @@ grep -n 'dsh-workflow-worker-thread' $R/docs/dependency-catalog.json
 
 | 组 | 总体文件数 | 本次核 | 覆盖率 | 说明 |
 |---|---|---|---|---|
-| `skills/**`（`.claude/skills` + `.dsh/skills`） | **30** | **30** | **100%** | 6 文件有 DSH 引用（cto-handover 29 命中 / dsh-decision-lens 8 / pr-review 1 / dev-doc-delivery 1 + 模板 2，两树镜像），24 文件**零引用** |
+| `skills/**`（`.synova/skills` + `.dsh/skills`） | **30** | **30** | **100%** | 6 文件有 DSH 引用（cto-handover 29 命中 / dsh-decision-lens 8 / pr-review 1 / dev-doc-delivery 1 + 模板 2，两树镜像），24 文件**零引用** |
 | `task-state/**` | 47 | **47** | **100%** | 全部为 `@deepseek-ai` 裸提及（G1 守卫字样 / 参照系声明），**无路径引用 → 无失效面** |
 | `docs/synova/coordination/**` | 41 | **41** | **100%** | 含 `dsh-cto-draft/agent.cordis.yml`（27 引用，1 问题）、`dsh-preset-draft/`、`dsh-audit-draft/`、`dsh-devdoc-draft/` |
 | `scripts/**` | 1 | **1** | **100%** | `scripts/control-tower/install-dsh-preset.sh`（`:85-87` 目标布局 = `config/agent-presets/standard`，**与官方树实际落点不符** → 见 §4.2 #1/#2） |
@@ -383,9 +383,9 @@ grep -n 'dsh-workflow-worker-thread' $R/docs/dependency-catalog.json
 **抽样判定（逐文件，cites = 路径引用数，problems = 失效数）**
 
 ```
-OK    .claude/skills/cto-handover/SKILL.md                        cites=2  problems=0
-OK    .claude/skills/dev-doc-delivery/template/编码指令模板.md    cites=1  problems=0
-OK    .claude/skills/dsh-decision-lens/SKILL.md                   cites=0  problems=0
+OK    .synova/skills/cto-handover/SKILL.md                        cites=2  problems=0
+OK    .synova/skills/dev-doc-delivery/template/编码指令模板.md    cites=1  problems=0
+OK    .synova/skills/dsh-decision-lens/SKILL.md                   cites=0  problems=0
 OK    .claude/task-briefs/2026-08-22-D473-guard-loop-hygiene.md   cites=2  problems=0
 OK    .claude/task-briefs/2026-09-08-D592-L1-P1对话E2E场景.md     cites=0  problems=0
 OK    .claude/task-briefs/2026-09-09-D658-sentinel-manifest-expert-sync.md  cites=0  problems=0

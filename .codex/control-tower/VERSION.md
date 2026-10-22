@@ -104,7 +104,7 @@
 
 - **① 新机制**: `scripts/ci/verify-doc.sh` —— 通用回放器，提取 dev doc §6/§8 的 DS 证据命令（grep/git/npx vitest/npx tsc 白名单；含 `; & $ < > 反引号` 的命令拒绝执行），逐条在干净工作树回放，任一失败 exit 1；`scripts/ci/verify-d703.sh` 为本卡自证脚本（对本批 D702/D703/D704 三份 spec 逐条回放，不可机器化项显式 SKIP + 理由）。
 - **② CI 接线**: `.github/workflows/ci.yml` 在非 docs-only 路径新增 Replay 步骤（按 changed dev-doc 匹配 `verify-dXXX.sh`，缺省 skip + 警告）；密封 canary 清单追加 `tests/control-tower/verify-doc.test.sh`（双平台矩阵）。
-- **③ 模板机器可查项**: `.claude/skills/dev-doc-delivery/template/编码指令模板.md` 与 `.dsh/` 镜像 §四 复核清单追加「每条 verify/DS 证据命令已在本分支 CI 实跑过（看 job 日志，非自述）」（组 13 双目录逐字同步）。
+- **③ 模板机器可查项**: `.synova/skills/dev-doc-delivery/template/编码指令模板.md` 与 `.dsh/` 镜像 §四 复核清单追加「每条 verify/DS 证据命令已在本分支 CI 实跑过（看 job 日志，非自述）」（组 13 双目录逐字同步）。
 - **验证**: 密封测试双平台绿；CI Replay 步骤 exit 0（D702 段 DS 在 CI 真跑）；`npx tsc --noEmit` 报错集与基线逐条恒等（33=33）。
 - **派生登记（不属本 PATCH 范围）**: ① 回放输出仅在失败时 `cat`，绿轮不进 CI 日志 → 可观测性缺口（一张主旨为「证据可复核」的卡，其证据在 CI 侧不可见），建议成功也输出汇总行；② `verify-parallel --ci-pr` 对「在途串行对」无逃生舱——本卡被**未开工**的分支覆盖卡 spec 阻塞（同一 `.github/workflows/ci.yml`，无关闭信号 → fail-closed），暂以 spec 移出比对集解阻，另立卡评估「串行对声明」机制。
 - **作者**: win-cto（CTO 代实现方补 bump——spec §3.1 写集遗漏 VERSION.md，实现方严格守写集故未 bump）
@@ -400,7 +400,7 @@
   - `pre-push-check.sh` — 门禁 0-1 同步检查（fetch 目标分支，落后/分叉 → 硬阻断并给修复命令）；门禁 0-2 main 直推保护（SYNO_ALLOW_MAIN_PUSH=1 逃生舱）；门禁 3 改基动态化（$PUSH_REMOTE/$PUSH_BRANCH 替代硬编码 origin/feat/prompt-architecture）
   - `install-hooks.sh` — pre-push entry 传 "$1" "$2"（remote 名/url，门禁 0 fetch 需要）
   - `docs/synova/coordination/MULTI-MACHINE-PR-WORKFLOW.md` — 协作规范（创始人 2 件事 + agent 开工/收工 5 步）
-  - `.claude/skills/git-sync-pr/SKILL.md` — Claude Code skill
+  - `.synova/skills/git-sync-pr/SKILL.md` — Claude Code skill
   - `CLAUDE.md` — 铁律 0-3 多机 PR 工作流
 - **测试**: push-sync-guard.test.sh 13 用例（main 阻断/逃生舱/落后/分叉/同步/fail-open×2/接线×2，red→green 已证）
 - **验证**: pre-commit 12 组 | as any = 0

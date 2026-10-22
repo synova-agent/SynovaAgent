@@ -5,7 +5,7 @@
 
 ## 影响
 - AGENTS.md 新增 §15（强制指针）
-- `.claude/skills/devdoc-gate-a/SKILL.md`（新建，同步 `.dsh/skills/`）
+- `.synova/skills/devdoc-gate-a/SKILL.md`（新建，同步 `.dsh/skills/`）
 - `dev-doc-spec` 增「交稿前置」指针
 - 依据：裁 255（M5 dev doc 首轮 6 视角 4 不够 2 有条件，13 条必修）
 

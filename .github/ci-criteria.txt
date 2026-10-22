@@ -32,7 +32,7 @@
 # 白名单分层（逐条带路径锚；无锚点正则会让 src/**/*.json、深层同名目录全部误早退）:
 #   ① docs/ 下的 .md/.json/.html —— 文档面（.html 纳入见 DOC-CONTRACT §3 / D1111-D2）
 #   ② task-state/ | memory/ | decisions/ —— 过程/决策载体（内容不影响构建与运行时）
-#   ③ .claude/skills/ | .dsh/skills/ —— 技能本体（是提示词，不影响构建）
+#   ③ .synova/skills/ | .dsh/skills/ —— 技能本体（是提示词，不影响构建）
 #   ④ 仅**仓库根**的 .md（带 ^ 锚；否则 [^/]+ 会跨 '/' 误命中深层）
 #   ⑤ 仅根级治理文件 LICENSE / .gitignore / .gitkeep
 #   有意**不**放行: 其余 .claude/**（settings.json/hooks.json 可改门禁本身）、

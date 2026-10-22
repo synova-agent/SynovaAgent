@@ -74,4 +74,4 @@
 |---|---|
 | ① | 是否采纳补条（含"**单源**"措辞：其他文档只引用、禁另抄） |
 | ② | 是否把「**Windows 门禁 fail-open 要显式 degraded**」一并写入（该 11 例红属 fail-open 的**下游表现**） |
-| ③ | 落点：`dsh-env-setup` **双轨**（`.claude/skills/` ↔ `.dsh/skills/`，组 13 逐字节一致） |
+| ③ | 落点：`dsh-env-setup` **双轨**（`.synova/skills/` ↔ `.dsh/skills/`，组 13 逐字节一致） |

@@ -34,7 +34,7 @@ if bash "$S" "$TMPD/nope.md" >/dev/null 2>&1; then no "④ 文档缺失却未报
   rc=0; bash "$S" "$TMPD/nope.md" >/dev/null 2>&1 || rc=$?; [ "$rc" -eq 2 ] && ok "④ 文档缺失 → exit 2（三态）" || no "④ 期望 exit 2 实得 $rc"; fi
 
 # 接线：skill 双写（.claude + .dsh，D370 同步）
-[ -f "$REPO/.claude/skills/pre-dispatch-check/SKILL.md" ] && [ -f "$REPO/.dsh/skills/pre-dispatch-check/SKILL.md" ] \
+[ -f "$REPO/.synova/skills/pre-dispatch-check/SKILL.md" ] && [ -f "$REPO/.dsh/skills/pre-dispatch-check/SKILL.md" ] \
   && ok "接线: skill 双写齐备" || no "接线: skill 未双写"
 grep -q 'pre-dispatch-check' "$REPO/.dsh/skills/cto-handover/SKILL.md" 2>/dev/null \
   && ok "接线: cto-handover 引用本流程" || echo "  ℹ cto-handover 未引用（建议补）"

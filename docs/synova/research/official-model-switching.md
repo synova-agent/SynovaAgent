@@ -110,7 +110,7 @@ $ git show bf325e51:"docs/synova/research/研究院交接-20260918/插件尽调-
 （两文件行数：205 / 253 —— 文件实体存在，但确无"模型""切换"字样）
 
 $ git -C /Users/wane/SynovaAgent grep -l "模型切换" HEAD            # main HEAD 3643db6a
-HEAD:.claude/skills/git-sync-pr/SKILL.md
+HEAD:.synova/skills/git-sync-pr/SKILL.md
 HEAD:.dsh/skills/git-sync-pr/SKILL.md
 HEAD:docs/synova/coordination/派单-D540-clone-pilot-20260827.md
 HEAD:docs/synova/research/权威文档07-Agent工程能力对标-20260710/SYNOVA-RESEARCH-路线2-循环与Agent架构设计-20260710.html

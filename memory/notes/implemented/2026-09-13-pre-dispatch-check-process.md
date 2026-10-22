@@ -25,7 +25,7 @@ CTO 诚实回答：**没有完整复核**。
 ## 三、固化（本 Note 对应的交付）
 
 1. **skill `pre-dispatch-check`**（八项复核：任务号真实 / 前置状态真实 / 技术声称亲自复现 / 写集路径验证 / 零交集+串行 / 行号可漂移 / 依赖图 / 交付物齐备）+ 反向自问「如果这条是错的，谁会第一个撞墙？」
-   - 双写 `.claude/skills/` 与 `.dsh/skills/`（D370 同步要求）
+   - 双写 `.synova/skills/` 与 `.dsh/skills/`（D370 同步要求）
 2. **脚本 `scripts/control-tower/pre-dispatch-check.sh`**：机械化可判的四项（D# 有 task-state / 写集路径存在 / file:line 不越界 / 前置 PR 合并状态），**三态退出码**（0 通过 / 1 发现问题 / 2 检查自身失败），无 token 时显式 degraded 不静默
 3. **密封测试 `tests/control-tower/pre-dispatch-check.test.sh`**：5 断言（正常放行 / 缺 task-state 必红 / 路径不存在必红 / 三态 2 / skill 双写接线）
 4. **硬接入 `cto-handover` skill**（双写）：CTO 开工必读的流程文档里写入「发出任何派单指令前必须加载 pre-dispatch-check，机械项跑脚本」

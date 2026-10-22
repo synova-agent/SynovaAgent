@@ -16,7 +16,7 @@
 - `scripts/control-tower/check-board-metrics.ts`：真实完成率 = 完成卡/(总数−retired)；
   「误标 closed」报警（closed 无任何已合并 PR 交付性引用且非 retired ⇒ exit 1）。
   改坏即红实测：#205 误关 ⇒ K12 7/20(35%)→8/20(40%) + 进报警名单 + exit 1；已恢复。
-- 开工令模板（§6 八节→九节）＋ 卡面 Done 标准区提示行，`.dsh/skills/…` 与 `.claude/skills/…` 镜像同步。
+- 开工令模板（§6 八节→九节）＋ 卡面 Done 标准区提示行，`.dsh/skills/…` 与 `.synova/skills/…` 镜像同步。
 - 13 个模块里程碑描述已写入口径三行。
 
 ## 边界

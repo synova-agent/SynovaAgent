@@ -222,7 +222,7 @@ DEVDOC_INSTALLED="$PROFILE_MOCK/node_modules/@local/dsh-preset-synova-devdoc"
 [ ! -e "$DEVDOC_INSTALLED" ] && pass "T11: devdoc 默认不再落位（退役生效）" || fail "T11: devdoc 仍被落位（退役未生效）"
 grep -qE '^# *synova-devdoc\|' "$INSTALL" \
   && pass "T11: 退役在注册表留痕（注释行，可逆）" || fail "T11: 退役无留痕（不可逆）"
-RP="$REPO_DIR"; [ -f "$RP/.claude/skills/dev-doc-spec/SKILL.md" ] && [ -f "$RP/.dsh/skills/dev-doc-spec/SKILL.md" ] \
+RP="$REPO_DIR"; [ -f "$RP/.synova/skills/dev-doc-spec/SKILL.md" ] && [ -f "$RP/.dsh/skills/dev-doc-spec/SKILL.md" ] \
   && pass "T11: 能力技能化保留（dev-doc-spec 双写齐备）" || fail "T11: 能力未保留（skill 缺失）"
 OUT11R=$(RUN --check synova-devdoc 2>&1)
 EXIT11R=$?

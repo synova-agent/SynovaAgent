@@ -139,7 +139,7 @@ rule: 重写式维护 —— 每次更新整篇重写，不追加历史
 
 ## 8. 读完之后去哪
 
-1. **必读**：`AGENTS.md`（规则）｜`decisions/` 最近若干条｜`.claude/skills/cto-handover/SKILL.md`（岗位全上下文）
+1. **必读**：`AGENTS.md`（规则）｜`decisions/` 最近若干条｜`.synova/skills/cto-handover/SKILL.md`（岗位全上下文）
 2. **权威研究**：**留在研究院仓**（`/Users/wane/山河研究院/`），**不进主仓**；引用前查「取码登记 / 未核实登记册」
 3. **状态台账**：`~/Synova-过程档案/CTO-工作台.md`（过程痕迹，不入库）
 4. **红线**：不写产品代码｜不碰 `scripts/audit/`｜不自我审计｜产品方向归创始人

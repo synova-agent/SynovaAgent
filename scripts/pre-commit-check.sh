@@ -30,7 +30,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   7. 架构合规                  (DiagnosticModule + 专家配置 + 数据流)
 #   8. 文件驱动架构完整性       (manifest/tags/回归/目录/feature-flag)
 #   9. 契约门禁 NEW (D257)       (.codex/contracts/*.json 声明 vs staged 比对)
-#  13. 技能同步一致性            (.claude/skills ↔ .dsh/skills 漂移, 调用 sync-dsh-skills.sh --check)
+#  13. 技能同步一致性            (.synova/skills ↔ .dsh/skills 漂移, 调用 sync-dsh-skills.sh --check)
 #
 # 设计哲学:
 #   bash 只回答"物理事实" — 符号被引用过吗？文件存在吗？
@@ -399,7 +399,7 @@ STAGED=$(echo "$GIT_CACHED_NAMES" | grep '\.ts$' | grep -v node_modules || true)
 # 白名单 = 目录 + 扩展名双约束:
 #   ✅ docs/ 下仅 *.md|*.html|*.txt; .claude/task-briefs/ 下 *.md; memory/ 下 *.md;
 #      task-state/ 下 *.json|*.md(任务登记); 根级 *.md|*.html|*.txt
-#   ❌ 排除: .claude/skills/、.dsh/skills/(行为配置, D370 有独立同步契约 → 非纯文档,
+#   ❌ 排除: .synova/skills/、.dsh/skills/(行为配置, D370 有独立同步契约 → 非纯文档,
 #      技能提交保持组 13 全门禁; 纯文档提交时 SKILL_FILES_STAGED 为空天然不触发)
 #   ❌ 排除: .codex/(契约/映射配置, 组 9 依赖)、.github/(CI 配置, 非同步信息)、
 #      .claude/settings.json(含 token 风险, D312)
@@ -1886,12 +1886,12 @@ hard_check "G12d: 生成物单点生成门禁 (D458)" "${GENERATED_VIOLATION:-}"
 #   代价（如实）: 提交端不再自动校验对照表**格式**（语义正确性本就无机器判据，靠 K3 人读）。
 #   复活须过 K3（判据变更）。关联: memory/notes/proposed/2026-10-07-d1219-position-legislation.md
 
-# ═══ 组 13: 技能同步一致性 (.claude/skills ↔ .dsh/skills, D370) ═══
-# 背景: DSH 技能发现根 .dsh/skills（rank 100）不读 .claude/skills → 单源复制 + 漂移门禁。
+# ═══ 组 13: 技能同步一致性 (.synova/skills ↔ .dsh/skills, D370) ═══
+# 背景: DSH 技能发现根 .dsh/skills（rank 100）不读 .synova/skills → 单源复制 + 漂移门禁。
 # fail-closed (D328): 检查脚本 exit 2 = 检查执行失败 → 同样硬阻断, 不与"通过"混同。
 echo -e "${CYAN}── 组 13: 技能同步一致性 ──${RESET}"
 GROUP_DONE=$((GROUP_DONE+1))
-SKILL_FILES_STAGED=$(echo "$STAGED_ALL" | grep -E "\.claude/skills/|\.dsh/skills/" || true)
+SKILL_FILES_STAGED=$(echo "$STAGED_ALL" | grep -E "\.synova/skills/|\.dsh/skills/" || true)
 if [ -n "$SKILL_FILES_STAGED" ]; then
   SKILL_SYNC_OUT=$(bash "$ROOT/scripts/workflow/sync-dsh-skills.sh" --check 2>&1)
   SKILL_SYNC_EXIT=$?

@@ -9,7 +9,7 @@
   "milestone": "M0 项目管理基建",
   "write_set": [
     "docs/synova/coordination/**",
-    ".claude/skills/**",
+    ".synova/skills/**",
     ".dsh/skills/**",
     "docs/synova/presets/**",
     "task-state/**"

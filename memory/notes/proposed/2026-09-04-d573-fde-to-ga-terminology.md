@@ -18,4 +18,4 @@
 - verify: bash scripts/check-fde-terms.sh → exit 0（白名单外零 FDE）
 - verify: grep -rn FDE src/ extensions/ skills/ expert/tech 零结果（T0/T2 运行时表面清零）
 - verify: tool-profiles `case 'ga'` 接线（getProfileForRole 被 src/agent/tools.ts:170,189 调用）+ tests/agent/tool-profiles.test.ts 同步
-- verify: .claude/skills ↔ .dsh/skills 双轨 diff 一致（D370 组 13）
+- verify: .synova/skills ↔ .dsh/skills 双轨 diff 一致（D370 组 13）
