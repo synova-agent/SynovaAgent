@@ -37,7 +37,7 @@ fail() { FAIL=$((FAIL + 1)); echo "  ❌ $1" >&2; }
 chk()  { if eval "$1"; then echo "      · ok: $2"; else echo "      · RED: $2"; CASE_FAIL=$((CASE_FAIL + 1)); fi; }
 
 TMPROOT="$(mktemp -d)"; trap 'rm -rf "$TMPROOT"' EXIT
-FX=""; WORK=""; GITEA=""; MIRROR=""; SIG=""; ST=""; HIST=""; OUT=""; A1=""; A2=""; RC=""; RC1=""; RC2=""; RC9=""; RC10=""; RC11=""; VERDICT=""; O1=""; BASE_N=""
+FX=""; WORK=""; GITEA=""; MIRROR=""; SIG=""; ST=""; HIST=""; OUT=""; A1=""; A2=""; RC=""; RC1=""; RC2=""; RC9=""; RC10=""; RC11=""; RC12a=""; RC12b=""; VERDICT=""; O1=""; BASE_N=""
 
 # ── 夹具：work（工作仓）+ gitea.git + mirror.git；产 A1/A2 两提交 ────────────────
 new_fixture() {  # $1=名字；默认 Gitea local-main=A1、GitHub main=A1（一致）
@@ -130,6 +130,8 @@ setup10() { new_fixture "c10"; git -C "$WORK" push -q gitea "$A2:refs/heads/loca
             VERDICT="$(verdict_of "$OUT")"; }
 setup11() { new_fixture "c11"; git -C "$WORK" push -q gitea "$A2:refs/heads/local-main"
             RC11="$(run_sut "$A1" CI_CMD='echo ""')"; VERDICT="$(verdict_of "$OUT")"; }
+setup12() { new_fixture "c12"
+            RC12a="$(run_sut "deadbeef")"; RC12b="$(run_sut "deadbeef")"; }
 setup9() { new_fixture "c9"; RC9="$(run_sut "$A1" SYNO_PUSH_STATUS_CMD=false)"; }
 setup8() { new_fixture "c8"; RC="$(run_sut "deadbeef")"; VERDICT="$(verdict_of "$OUT")"; }
 
@@ -147,6 +149,9 @@ setup4; assert_case c4 "④ 核 SHA 不等 ⇒ exit 2 且出信号"
 
 echo "── ⑤ 失败必出声 ＋ 恢复要关单（同一夹具：先降级再恢复）──"
 setup5; assert_case c5 "⑤ 降级必出声、恢复必出声（否则历史单永不关闭）"
+
+echo "── 同结论去重（防每天刷同一张单）──"
+setup12; assert_case c12 "同一根因连跑两次 ⇒ 只发一次信号"
 
 echo "── 状态单容错（B 层写不出去，也不许污染结论、不许静默）──"
 setup9; assert_case c9 "状态单写失败 ⇒ 仍 exit 0，且有 STATUS-UNREACHABLE 显式行"
