@@ -31,10 +31,10 @@ SUT="$REPO_DIR/scripts/control-tower/mirror-sync-push.sh"
 command -v python3 >/dev/null 2>&1 || { echo "❌ degraded: 缺 python3（脚本契约要求）" >&2; exit 2; }
 command -v git >/dev/null 2>&1 || { echo "❌ degraded: 缺 git" >&2; exit 2; }
 
-PASS=0; FAIL=0; CASE_FAIL=0
+PASS=0; FAIL=0; CASE_FAIL=0; CHK_N=0   # CHK_N = 本用例实际执行的断言数（信号量==0 ⇒ 判红）
 pass() { PASS=$((PASS + 1)); echo "  ✅ $1"; }
 fail() { FAIL=$((FAIL + 1)); echo "  ❌ $1" >&2; }
-chk()  { if eval "$1"; then echo "      · ok: $2"; else echo "      · RED: $2"; CASE_FAIL=$((CASE_FAIL + 1)); fi; }
+chk()  { CHK_N=$((CHK_N + 1)); if eval "$1"; then echo "      · ok: $2"; else echo "      · RED: $2"; CASE_FAIL=$((CASE_FAIL + 1)); fi; }
 
 TMPROOT="$(mktemp -d)"; trap 'rm -rf "$TMPROOT"' EXIT
 CI_DEFAULT='echo "1|success|http://x"'   # 默认注入"CI 绿"；CI_CMD 前缀可覆盖（空串=回落默认）
@@ -112,7 +112,7 @@ c8() { chk '[ "$RC" = 2 ]' 'exit 2'; chk '[ "$VERDICT" = DEGRADED ]' 'verdict=DE
        chk 'sig_has DEGRADED' '降级已出信号'; }
 
 assert_case() {  # $1=checker $2=label $3=green|red
-  local out file n; CASE_FAIL=0; file="$TMPROOT/case.out"
+  local out file n; CASE_FAIL=0; CHK_N=0; file="$TMPROOT/case.out"
   # 🔴 守卫（复核实测：checker 未定义时 command not found 被重定向吞掉 ⇒ 假绿）
   if ! declare -F "$1" >/dev/null 2>&1; then
     fail "$2（checker \`$1\` 未定义 ⇒ 用例无效，按红计）"; return
@@ -120,6 +120,10 @@ assert_case() {  # $1=checker $2=label $3=green|red
   # 🔴 不用 $(...) 捕获：命令替换会进子 shell，CASE_FAIL 的累加会丢（假绿陷阱）
   "$1" >"$file" 2>&1
   n="$CASE_FAIL"
+  # 🔴 A-1（第三轮复核）：断言数==0 ⇒ 该用例无效，按红计（禁把"没跑断言"当"全过"）
+  if [ "$CHK_N" = 0 ]; then
+    fail "$2（checker \`$1\` 实际执行断言数=0 ⇒ 空转，按红计）"; return
+  fi
   if [ "${3:-green}" = "green" ]; then
     if [ "$n" = 0 ]; then pass "$2"; else fail "$2"; grep 'RED' "$file" | sed 's/^/    /' >&2; fi
   else
