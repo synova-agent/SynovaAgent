@@ -1,0 +1,47 @@
+# .claude/claims/758.yaml — #758 · P5 删除执行批次（4 组 20 删 + 1 配套改）
+#
+# 为什么是**批次级**声明：本批一组一 PR（A/B/D/C 四个分支），四组写集两两不重叠；
+#   每个分支带同一份 claim（内容逐字相同），使**任一分支持有的声明集 ⊇ 该分支变更集**
+#   （merge_writeset_gate 判「声明 ⊇ 变更集」，多声明条目不影响判定）。
+# 为什么列全 21 件而非只列本分支：分支间声明内容必须一致（避免"改 claim 内容"出现在
+#   不同分支 diff 里）；A/B/D/C 的并集 = 本批总写集（规格 §2.3）。
+# 声明纪律（同 .claude/claims/980.yaml 先例）：只列本批真正会改动的文件；
+#   排除项语义由 merge_writeset_gate 承担（claim 两字段制无 exclude 字段）。
+writeset:
+  # A 组 · 1 删（零消费：git grep -c jtbd_overlap = 0 文件）
+  - jtbd_overlap.py
+  # B 组 · 11 删（C11 弃侧；留侧在 tests/sentinels/** 不动）
+  - extensions/sentinels/_extinct/capital-efficiency/computes/wacc.test.ts
+  - extensions/sentinels/_extinct/capital-structure/computes/debt-structure.test.ts
+  - extensions/sentinels/financing-constraint/computes/cash-runway.test.ts
+  - extensions/sentinels/org-repairability/computes/compute-problem-action-cycle.test.ts
+  - extensions/sentinels/power-rigidity/computes/compute-power-rigidity.test.ts
+  - extensions/sentinels/software-health/computes/integration-health.test.ts
+  - extensions/sentinels/unit-economics/computes/break-even.test.ts
+  - extensions/sentinels/unit-economics/computes/fixed-cost-rigidity.test.ts
+  - extensions/sentinels/unit-economics/computes/marginal-contribution.test.ts
+  - extensions/sentinels/unit-economics/computes/scenario-simulation.test.ts
+  - extensions/sentinels/unit-economics/computes/variable-costs.test.ts
+  # C 组 · 4 删（tracked .pyc；.gitignore:19-20 已覆盖 __pycache__）
+  - synova_worker/connectors/__pycache__/__init__.cpython-313.pyc
+  - synova_worker/connectors/__pycache__/feishu.cpython-313.pyc
+  - synova_worker/sog/__pycache__/__init__.cpython-313.pyc
+  - synova_worker/sog/__pycache__/schema.cpython-313.pyc
+  # D 组 · 4 删（活引用 0）
+  - scripts/jtbd-dedup.py
+  - scripts/jtbd-dedup-v2.py
+  - scripts/merge-expert-files.sh
+  - scripts/workflow/install-post-commit.sh
+  # 配套改 · 1 件（BOM 待清清单同步，仅删 :214/:215 两行）
+  - tests/control-tower/grep-oP-regression.test.sh
+  # 流程件（门禁触发：卡面/四态 Note/本声明）
+  - .claude/claims/758.yaml
+  - .claude/task-briefs/2026-10-23-758-p5-删除批次.md
+  - memory/notes/implemented/process/2026-10-22-p5-758-删除批次.md
+done:
+  - verify: npx tsc --noEmit
+  - verify: CI=1 npx vitest run --reporter=json
+  - verify: bash scripts/pre-commit-check.sh
+  - verify: git grep -n 'jtbd_overlap' HEAD -- .
+  - verify: git diff --name-only gitea/local-main..HEAD
+note: #758 P5 删除批次：20 件无消费者载体出库 + BOM 清单同步 2 行，不实现功能不改被测行为
