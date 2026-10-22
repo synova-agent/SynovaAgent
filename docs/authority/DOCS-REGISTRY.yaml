@@ -805,3 +805,11 @@ documents:
     status: active
     owner: CTO
     note: "research-acceptance 技能新增/同步与豁免登记。"
+
+  # ---- P6 2026-10-22：#828 周对账 launchd 定时接线豁免件 ----
+  - id: DOC-0240
+    type: decision
+    path: gate-exemptions/2026-10-22-p6-828-weekly-recon-launchd.md
+    status: active
+    owner: CTO
+    note: "#828 周对账 launchd 定时接线（安装器/配对测试/报备/登记）的受保护路径豁免；本体 weekly-recon.sh 零改动。"
