@@ -129,7 +129,7 @@ for arg in "$@"; do
 done
 
 AS_OF="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-GITEA_SHA=""; GH_SHA=""; LAG=""; ANCESTOR=""; PUSHED_SHA=""; VERDICT=""; SIGNAL_STATE="none"; CI_RESULT="off"; CI_DETAIL=""
+GITEA_SHA=""; GH_SHA=""; LAG=""; ANCESTOR=""; PUSHED_SHA=""; VERDICT=""; SIGNAL_STATE="none"; CI_RESULT="off"; CI_DETAIL=""; SOURCE="-"
 
 say()     { [ "$JSON_ONLY" = "1" ] && return 0; echo "$*"; }
 say_err() { echo "$*" >&2; }
@@ -152,6 +152,7 @@ write_json() {  # $1=exit $2=verdict $3=reason
     printf '  "verdict": "%s",\n' "$verdict"
     printf '  "reason": %s,\n' "$(_json "$reason")"
     printf '  "degraded": %s,\n' "$([ "$rc" = "2" ] && echo true || echo false)"
+    printf '  "source": "%s",\n' "$SOURCE"
     printf '  "ci": "%s",\n' "$CI_RESULT"
     printf '  "ci_detail": %s,\n' "$(_json "$CI_DETAIL")"
     printf '  "signal": "%s",\n' "$SIGNAL_STATE"
@@ -215,7 +216,7 @@ status_update() {  # $1=exit $2=verdict $3=reason —— B 层：常驻状态单
   tok="$(tr -d '\r\n' < "$TOKEN_FILE")"
   body="$(SYNO_ST_HIST="$STATUS_HIST" SYNO_ST_TITLE="$STATUS_TITLE" SYNO_ST_LAST="$verdict" \
     SYNO_ST_ASOF="$AS_OF" SYNO_ST_GITEA="${GITEA_SHA:-}" SYNO_ST_GITHUB="${GH_SHA:-}" \
-    SYNO_ST_LAG="${LAG:-}" SYNO_ST_PUSHED="${PUSHED_SHA:-}" SYNO_ST_EXIT="$rc" "$PYBIN" - <<'PY'
+    SYNO_ST_LAG="${LAG:-}" SYNO_ST_PUSHED="${PUSHED_SHA:-}" SYNO_ST_EXIT="$rc" SYNO_ST_SOURCE="${SOURCE:-}" "$PYBIN" - <<'PY'
 import json,os
 e=os.environ
 rows=[]
@@ -232,7 +233,8 @@ md=["# 镜像同步状态（自动更新，请勿手改）","",
     "- 最近一次：**%s**（as_of %s，exit %s）"%(e.get("SYNO_ST_LAST",""),e.get("SYNO_ST_ASOF",""),e.get("SYNO_ST_EXIT","")),
     "- 两仓 sha：Gitea `%s` | GitHub `%s`"%(e.get("SYNO_ST_GITEA","") or "<未读到>", e.get("SYNO_ST_GITHUB","") or "<未读到>"),
     "- 落后：%s"%(e.get("SYNO_ST_LAG","") or "-"),
-    "- 已推：%s"%(e.get("SYNO_ST_PUSHED","") or "-"),"",
+    "- 已推：%s"%(e.get("SYNO_ST_PUSHED","") or "-"),
+    "- 来源：%s"%(e.get("SYNO_ST_SOURCE","-")), "",
     "| 时间(as_of) | 结论 | 落后 | Gitea | GitHub | 已推 | exit |","|---|---|---|---|---|---|---|"]
 for r in reversed(rows):
     _lag = "-" if r.get("lag") is None else r.get("lag")
@@ -363,8 +365,8 @@ finish() {  # $1=exit $2=verdict $3=reason $4=fail|recover|""
   VERDICT="$verdict"
   if [ "$verdict" = "NOOP" ] && [ -f "$STATUS_HIST" ]; then
     if ! grep -q "$GITEA_SHA" "$STATUS_HIST" 2>/dev/null && [ "$(wc -l < "$STATUS_HIST" 2>/dev/null || echo 0)" -gt 0 ]; then
+      SOURCE="external"
       say_err "ℹ️ MIRROR-ADVANCED-ELSEWHERE sha=${GITEA_SHA:0:9}（本执行器历史里无此 sha ⇒ 有别的通道推过；本趟只核一致/CI，不认领该次推送）"
-      CI_DETAIL="${CI_DETAIL} source=external"
     fi
   fi
   case "$sig" in
