@@ -796,4 +796,4 @@ documents:
       path: gate-exemptions/2026-10-21-synova-skills-819.md
       status: active
       owner: CTO
-      note: "#819 技能源 .claude/skills → .synova/skills（25 技能）及相关受保护路径的豁免；裁 290。"
+      note: "#819 技能源迁入 .synova/skills（25 技能）及相关受保护路径的豁免；裁 290。"
