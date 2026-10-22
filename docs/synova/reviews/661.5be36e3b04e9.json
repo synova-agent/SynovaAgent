@@ -1,0 +1,134 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 661,
+  "patch_fingerprint": "sha256:5be36e3b04e92e2f22892ee967a78a1a06019dd90d0f3a5afbd611649177acbb",
+  "author": "win-push",
+  "reviewer": "verifier-p7-661-20261022",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "issued_at": "2026-10-22T17:27:23+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步）＋ fresh 零上下文会话，独立 worktree .synova-wt-p7-661rv-1022",
+  "checks": [
+    {
+      "id": "①范围",
+      "name": "范围：diff 仅 2 文件，未碰 scripts/**、scripts/audit/**、.gitea/**、.claude/**",
+      "cmd": "git diff --stat gitea/local-main..HEAD ; git diff --name-only gitea/local-main..HEAD ; git diff --stat gitea/local-main..HEAD -- .gitignore scripts/ .gitea/ .claude/ docs/authority/",
+      "result": "pass",
+      "evidence": "「2 files changed, 60 insertions(+), 2 deletions(-)」；name-only 仅 AGENTS.md 与 memory/notes/implemented/2026-10-20-p7-tools-wiring.md；最后一条交叉命令输出为空（= 未碰 .gitignore/scripts/**.gitea/**.claude/docs/authority）"
+    },
+    {
+      "id": "②§12指针",
+      "name": "§12 三处机器指针 + 两工具实物存在（git ls-tree 真源，不用工作树）",
+      "cmd": "grep -n 'check-merge-conditions\\|probe-line-signals\\|CAN-自合并\\|LINE-SIGNALS' AGENTS.md ; git ls-tree -l HEAD -- scripts/control-tower/check-merge-conditions.sh scripts/control-tower/probe-line-signals.ts",
+      "result": "pass",
+      "evidence": "AGENTS.md:297 机器凭证 check-merge-conditions.sh --pr <N>／:298 末行 CAN-自合并｜NO: 三态 0/1/2／:301 三信号 probe-line-signals.ts 末行 LINE-SIGNALS；git ls-tree: check-merge-conditions.sh blob 63e2f7f0 58132 B、probe-line-signals.ts blob d4b819d3 89445 B（均 100644 在树）"
+    },
+    {
+      "id": "②工具自检",
+      "name": "两工具自检实跑：check-merge-conditions --selfcheck 13/13、probe-line-signals --selfcheck 8/8",
+      "cmd": "bash scripts/control-tower/check-merge-conditions.sh --selfcheck ; /Users/wane/.nvm/versions/node/v22.23.2/bin/node --experimental-strip-types scripts/control-tower/probe-line-signals.ts --selfcheck ; 同 node … --help",
+      "result": "pass",
+      "evidence": "「SELFCHECK-OK: 13/13」exit=0（A–J 含 F 信号量==0⇒exit 2、I open PR API 500⇒degraded fail-closed、J 共享追加白名单）；「SELFCHECK-OK: 8/8」exit=0；--help exit=0 并打印三态退出码 0/1/2 定义"
+    },
+    {
+      "id": "③头部真值",
+      "name": "头部四处尺寸声明逐项自算（不抄 Note）＋ 域守则合计实测",
+      "cmd": "git show HEAD:AGENTS.md | wc -c ; git ls-tree -r -l HEAD -- <12 份域守则> | awk '{s+=$4} END{print s}' ; python3 算式复核",
+      "result": "pass",
+      "evidence": "wc -c = 22326（22326/1024 = 21.8027 ⇒ 报 21.8 KB ✓）；12×3584 = 43008，22326+43008 = 65334 ≤ 65536 ✓、余量 65536-65334 = 202 ✓；12 份域守则 git 实测合计 = 19710 ⇒ 实战占用 22326+19710 = 42036 ✓（头部四处声明全对）"
+    },
+    {
+      "id": "④单口径",
+      "name": "不新增第二口径、不覆盖主线：#798 预算警戒行与 §15 评审分层仍在且唯一",
+      "cmd": "grep -c '评审分层（裁 267' AGENTS.md ; grep -n '预算警戒' AGENTS.md ; grep -c '任务唯一编号' AGENTS.md 与 git show gitea/local-main:AGENTS.md | grep -c ; git show gitea/local-main:.gitignore | grep -n mirror-sync.pending",
+      "result": "pass",
+      "evidence": "评审分层（裁 267 = 1 处（:342）；预算警戒行在（:13，值与主线结构一致）；「任务唯一编号」HEAD=2 且 gitea/local-main=2（:12 头部／:100 §4 标题，本 PR 未增删，非新增口径）；.gitignore 不在本 PR diff 内，上游 :98 已有 .claude/mirror-sync.pending"
+    },
+    {
+      "id": "⑤写集重叠",
+      "name": "② 零写集重叠：Gitea open PR 全量逐一比对（含 #801），复刻脚本 ② 算法",
+      "cmd": "GET /api/v1/repos/synova-agent/SynovaAgent/pulls?state=open（15 个）；对每个 N：mb=$(git merge-base gitea/local-main gitea/pr/N) && git diff --name-only $mb $ref ∩ 本 PR 2 文件",
+      "result": "pass",
+      "evidence": "open=15，逐一比对 14 个对手：#416/#509/#543/#558/#628/#629/#630/#631/#632/#633/#634/#801/#809/#812 全部 0 命中；#801 改动 7 文件（check-root-decl.sh、pre-commit-check.sh、DOCS-REGISTRY.yaml、note、brief、exemption、test）不含 AGENTS.md；扫描结论：无任何 open PR 改 AGENTS.md"
+    },
+    {
+      "id": "⑥声称vs事实",
+      "name": "Note/PR 每条「已完成」声称逐项物理复现",
+      "cmd": "wc -l 两工具 ; git diff gitea/local-main..HEAD | grep -c '^+[^+]' ; git show gitea/local-main:.gitignore | grep -n 'mirror-sync.pending' ; grep -rln 'check-merge-conditions\\|probe-line-signals' --include=*.md .",
+      "result": "pass",
+      "evidence": "1351 行 ✓、1831 行 ✓（与 Note 逐字一致）；.gitignore 命中第 98 行 ✓（Note「主线第 98 行」）；§12 新增净 5 行内容（diff +7/-2，其中头部 2 行为替换）✓；根件与 agents/P7-*/AGENTS.md 均已出现两工具引用（Note 记改动前「根 AGENTS.md 零命中」）✓"
+    },
+    {
+      "id": "⑦门禁自洽",
+      "name": "门禁自洽：pre-commit 12 组 + doc-truth 硬检查（本 PR 未改任何门禁脚本）",
+      "cmd": "bash scripts/pre-commit-check.sh ; bash scripts/doc-system/check-doc-truth.sh",
+      "result": "pass",
+      "evidence": "pre-commit：「✅ 全部 12 组通过」exit=0（组 9 打印「块级 paths 快照对账：node 不可用 — 无法判定」＝既有环境降级，非本 PR 引入）；doc-truth：C1 专家数/C2 门禁组数 12=12/C3 版本一致/C4 路径全 ✅，「✅ 全部硬检查通过」exit=0，仅 W1 版本轴提示"
+    },
+    {
+      "id": "③前置+指纹",
+      "name": "③ 判别力常识核：原生 review 通道未被混用 + 补丁指纹独立复算一致",
+      "cmd": "GET /pulls/661/reviews ; git diff --no-color -M --full-index --binary $(git merge-base gitea/local-main HEAD) HEAD -- . ':(exclude)docs/synova/reviews/**' | shasum -a 256 ; bash scripts/control-tower/check-merge-conditions.sh --pr 661 --diff-fingerprint",
+      "result": "pass",
+      "evidence": "reviews count=0（未混用 T0/proven 通道）；我手算的 sha256 = sha256:5be36e3b04e92e2f22892ee967a78a1a06019dd90d0f3a5afbd611649177acbb，与脚本 --diff-fingerprint 自报逐字相同（fp12 = 5be36e3b04e9，与回执文件名一致）"
+    },
+    {
+      "id": "①CI现场态",
+      "name": "① CI 现场真值（供合并侧复核，不改本 PR 写集）",
+      "cmd": "GET /api/v1/repos/synova-agent/SynovaAgent/commits/da1d0036b346dc9b77f94abc4c35b4ff8d59f7e4/status",
+      "result": "pass",
+      "evidence": "state=success、total_count=2（local-gates / gates (push) 与 (pull_request) 均 success）、pending=0；信号量≠0 ⇒ ① 可判（非 degraded）"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "warn",
+      "where": "AGENTS.md:13 与 AGENTS.md:33／:40-:51",
+      "what": "同一 §0 内「域守则合计」存在两个数：:13 写 19,710（我实测 12 份 = 19,710，真值），:33 仍写「合计 13,972 B；最大单份 1,399 B」，表格逐份字节亦为旧值（实测 extensions/AGENTS.md = 3,151 B，表内写 1,399 B）。",
+      "detail": "存量问题：gitea/local-main 同文本一致（git show gitea/local-main:AGENTS.md | grep -c '13,972' = 1），非本 PR 引入；本 PR 只改 :12-:13 两行尺寸真值，算术自洽（22,326+19,710=42,036）。3.5KB/份上限仍满足（实测最大 3,151 B < 3,584 B），故不阻断。建议 #801（check-root-decl.sh 机器对账）合入后一并把 :33 与表格改为实测，消除同节双口径。"
+    },
+    {
+      "id": "F2",
+      "severity": "warn",
+      "where": "AGENTS.md:301",
+      "what": "§12 写「无 tsx 用 node --experimental-strip-types」，但本机非交互 shell 的 PATH 无 node（实测 `bash: node: command not found`，退出码 127）；node 来自 nvm，须绝对路径 /Users/wane/.nvm/versions/node/v22.23.2/bin/node 才能跑通（--help exit=0）。",
+      "detail": "同一环境原因使 pre-commit 组 9 打印「块级 paths 快照对账：node 不可用 — 无法判定」。属环境/可操作性问题，不是 §12 内容错误（判据指向的 fallback 机制本身可用）；建议后续在 §12 或域守则补一句「node 不在 PATH 时用绝对路径／先 source nvm」，或把 fallback 包成可执行包装脚本。"
+    },
+    {
+      "id": "F3",
+      "severity": "info",
+      "where": "branch ct/cto-p7-wire-1020（reflog）",
+      "what": "本地 reflog 显示该分支经多次 reset / amend（@{2} reset→fabbb3acf、@{4} reset→gitea/local-main、@{7} reset、@{9} amend），存在历史改写；远端无 reflog ⇒ 无法判定是否曾 force-push（未核，不臆断）。",
+      "detail": "现状链路本身线性且可追：fabbb3acf 是 f4d4be51b 的第一父（merge local-main 解冲突），da1d0036b 为其子；head 与远端 refs/heads/ct/cto-p7-wire-1020 一致（da1d0036b3）。若「禁 force push」按铁律 0-3 严格适用于功能分支，请 CTO 裁定；本次不作为阻断。"
+    },
+    {
+      "id": "F4",
+      "severity": "info",
+      "where": "memory/notes/implemented/2026-10-20-p7-tools-wiring.md:39",
+      "what": "Note「验证」节里「①d 6 通过 0 失败」无可复跑命令对应，未复现（未核/不可判）；其余数值声称全部复现（1351 行／1831 行／selfcheck 13-13／8-8／.gitignore 第 98 行／§12 5 行）。",
+      "detail": "建议后续把「①d」写成可复跑命令或直接删（引用纪律：每条声称给枚举命令）。不阻断。"
+    },
+    {
+      "id": "F5",
+      "severity": "info",
+      "where": "AGENTS.md:296-301",
+      "what": "接线级别是「文档指针级」：pre-commit / CI / hook 仍不调用 check-merge-conditions.sh 与 probe-line-signals.ts，全仓引用只增在根件与 agents/P7-*/AGENTS.md（grep 已非零，铁律 0-2 的 WIRE CHECK 字面满足）。",
+      "detail": "与 Note §已知限制「根件只放指针，不放工具内部判据」自述一致，也符合本 PR 声明范围；但「CTO 不靠人报数也能看见进度」的目标仍需下一步把探针接进看板/CI（P7 域守则 ⑧ 明确「先 warn，warn 期必须落 PR 日志」）。"
+    },
+    {
+      "id": "F6",
+      "severity": "info",
+      "where": "PR #661 正文",
+      "what": "正文只有「Closes #660 / 见 Issue #660」，未贴 MERGE-COND 末行；而本 PR 新增的 §12 要求「末行贴 PR 正文」。",
+      "detail": "规则生效时点差异：该要求随本 PR 合并才进主线，故对作者当时不构成违规；建议合并前把 check-merge-conditions.sh --pr 661 的末行补进 PR 正文（也让下游能 grep 到机器行）。不阻断。"
+    },
+    {
+      "id": "F7",
+      "severity": "info",
+      "where": "commits f4d4be51b / da1d0036b",
+      "what": "分支提交署名为 p7-lead <p7@synova.local>，Gitea PR 作者账号为 win-push(id 3)；回执 author 取 PR 作者账号（与 PR 主体一致），二者均 ≠ reviewer，R6 不触红。",
+      "detail": "记录用于 R6/R9 可追；本次回执提交者邮箱为 verifier@synova.local，与 PR 代码提交邮箱不同 ⇒ R9「身份未分离」warn 不会因本回执触发（但 T1 attested 仍不提供密码学独立，README §6 已自述）。"
+    }
+  ]
+}
