@@ -12,6 +12,19 @@
  *     tools/list 诚实过滤 + tools/call 写工具 -32000 拒绝
  *   - serverInfo.version 读 package.json（消原 :321 硬编码双源）
  *
+ * M5 卡1（#704）变更:
+ *   - 启动期自举：mode → `ensureSentinelRegistryLoaded()` → `server.connect`
+ *     ⇒ `sentinel_list` 从 `{ok:true,total:0}` 变为**全部哨兵**（46 目录 ＋ 4 内置）
+ *   - fail-closed 默认值（未自举 ⇒ code='SENTINEL_BOOTSTRAP_NOT_RUN'，永不读成绿）
+ *   - 自举失败 ⇒ 进程不退出（read-only 工具仍服务），`sentinel_list` 由守卫返回结构化 `ok:false`
+ *
+ * M5 卡2（#703）变更:
+ *   - 运行时端口装配：`mode → provider（fail loud）→ bootstrap → port → connect`
+ *     · provider 非法值 ⇒ stderr `RUNTIME_PROVIDER_INVALID` ＋ log.error ＋ exit 1（**不降级 real**）
+ *     · `SYNOVA_RUNTIME_PROVIDER` 未设 ⇒ real；`stub` ⇒ 假宿主端口（全链路测试用）
+ *   - `tools/call` 在权限门（`assertToolAllowed`）之后走 `port.callTool(name, args)`
+ *     （卡1 的 sentinel_list 自举失败守卫保留，且**先于** port）
+ *
  * 用法: npm run mcp  （等价 npx tsx src/mcp/index.ts）
  * 接入: README「安全模型」节 mcpServers 配置片段
  */
@@ -29,16 +42,74 @@ import {
   buildServerInfo,
   MCP_CONTRACT,
 } from './tool-definitions';
+import { ensureSentinelRegistryLoaded, type SentinelBootstrapResult } from '../agent/sentinel-service';
+import {
+  RuntimePortError,
+  resolveRuntimeProvider,
+  type RuntimePort,
+  type RuntimeProviderId,
+} from '../runtime/port';
+import { createRealPort } from '../runtime/impl/real';
+import { createStubPort } from '../runtime/impl/stub';
 
 const log = createLogger('src.mcp.index');
+
+/**
+ * fail-closed 自举默认值（M5 卡1 / #704）。
+ *
+ * 契约: 未调用 `ensureSentinelRegistryLoaded()` 时 bootstrap 恒为此值 ⇒ "忘了调自举"
+ * **永远不会被读成绿**（`ok:false` ＋ `code='SENTINEL_BOOTSTRAP_NOT_RUN'` 即反例②指纹）。
+ * 判别力：把 `ok: false` 改成 `ok: true` 后，未自举时 `sentinel_list` 仍必红于 `total===E`。
+ */
+const FAIL_CLOSED: SentinelBootstrapResult = {
+  ok: false, code: 'SENTINEL_BOOTSTRAP_NOT_RUN',
+  alreadyLoaded: false,
+  total: 0,
+  dirCount: 0,
+  builtinCount: 0,
+  errors: [],
+  degraded: true,
+};
 
 async function main(): Promise<void> {
   const mode = resolveMcpMode(process.env.SYNOVA_MCP_MODE);
 
+  // M5 卡2: 运行时 Provider 解析（顺序 mode → provider → bootstrap → port → connect）。
+  // 非法值 fail loud（exit 1）：降级到 real 会让"以为在跑 stub"的测试静默变真 ⇒ 假绿。
+  let providerId: RuntimeProviderId;
+  try {
+    providerId = resolveRuntimeProvider(process.env.SYNOVA_RUNTIME_PROVIDER);
+  } catch (err: unknown) {
+    if (err instanceof RuntimePortError) {
+      process.stderr.write(`[mcp] RUNTIME_PROVIDER_INVALID: ${err.message}\n`);
+      log.error({ code: err.code, phase: err.phase, retryable: err.retryable }, err.message);
+      process.exit(1);
+    }
+    throw err;
+  }
+
   // D595 信任模型显式声明（三件套之一，对标 dsh-acp :1143-1163 能力广告）
   process.stderr.write(
-    `[mcp] 信任模型: stdio 本机信任（无网络监听）| 模式: ${mode} | 契约: ${MCP_CONTRACT}\n`,
+    `[mcp] 信任模型: stdio 本机信任（无网络监听）| 模式: ${mode} | Provider: ${providerId} | 契约: ${MCP_CONTRACT}\n`,
   );
+
+  // M5 卡1: 启动期自举（顺序 mode → provider → bootstrap → port → connect）；自举失败不阻断进程
+  let bootstrap: SentinelBootstrapResult = FAIL_CLOSED;
+  bootstrap = await ensureSentinelRegistryLoaded();
+  process.stderr.write(
+    `[mcp] sentinel bootstrap ok=${bootstrap.ok} total=${bootstrap.total} dir=${bootstrap.dirCount} builtin=${bootstrap.builtinCount}\n`,
+  );
+  if (!bootstrap.ok) {
+    // 铁律 24/31：降级显式可观测（read-only 工具仍服务；sentinel_list 诚实报错）
+    process.stderr.write(
+      `[mcp] degraded: sentinel-bootstrap ${bootstrap.code ?? 'SENTINEL_BOOTSTRAP_FAILED'} ${bootstrap.errors.join('; ')}\n`,
+    );
+  }
+
+  // M5 卡2: 端口构造（Consumer 只依赖契约；real 注入既有 handleToolCall，stub 为假宿主）
+  const port: RuntimePort =
+    providerId === 'stub' ? createStubPort() : createRealPort({ dispatch: handleToolCall });
+  process.stderr.write(`[mcp] runtime provider=${port.providerId}\n`);
 
   const server = new Server(buildServerInfo(), {
     capabilities: { tools: {} },
@@ -59,7 +130,19 @@ async function main(): Promise<void> {
     const args: Record<string, unknown> = request.params.arguments ?? {};
     // 权限门: read-only 下写工具 → McpError -32000；未知工具 → -32601（SDK 标准映射）
     assertToolAllowed(name, mode);
-    const text = await handleToolCall(name, args);
+    // M5 卡1: 自举失败时 sentinel_list 在进入领域层之前被守卫拦截 ——
+    // 结构化 ok:false（不把"0 哨兵"当结果；real/stub 一致，卡2 亦复用本守卫）
+    if (name === 'sentinel_list' && !bootstrap.ok) {
+      const degradedList = {
+        ok: false,
+        total: 0,
+        sentinels: [],
+        error: 'SENTINEL_BOOTSTRAP_FAILED',
+        degraded: true,
+      };
+      return { content: [{ type: 'text', text: JSON.stringify(degradedList) }] };
+    }
+    const text = await port.callTool(name, args);
     return { content: [{ type: 'text', text }] };
   });
 

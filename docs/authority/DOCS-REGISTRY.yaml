@@ -716,18 +716,68 @@ documents:
     owner: CTO
     note: "口径盘点：AGENTS.md 增两镜像路径；cto-handover skill 补本体层规范 v2.11 锚（.claude/.dsh 同源）。"
 
-  # ---- CTO 2026-10-20：MVP 权威件 v1.2 镜像（接宪章 v8.3＋本体层规范 v2.11＋M10）----
-  - id: DOC-0228
-    type: architecture
-    path: docs/specs/mvp/MVP阶段权威文件-v1.2.md
-    status: active
-    owner: CTO
-    note: "MVP 阶段权威件 v1.2 镜像（权威源=handbook；接宪章 v8.3＋本体层规范 v2.11＋裁 219 的 M10）。"
+    # ---- P4 2026-10-20：#739④ 夹具工具链豁免（D2 登记）----
+    - id: DOC-0228
+      type: decision
+      path: gate-exemptions/2026-10-20-fixture-toolchain-739.md
+      status: active
+      owner: CTO
+      note: "#739④ 夹具工具链单一来源＋@requires 声明＋依赖核对（缺依赖报名字）的豁免；裁 223。"
 
-  # ---- CTO 2026-10-20：MVP v1.2 存档豁免（D2 登记）----
-  - id: DOC-0229
+  # ---- CTO 2026-10-20：M5 批次写集扩项＋DSH 借鉴锚（裁 248）----
+  - id: DOC-0230
     type: decision
-    path: gate-exemptions/2026-10-20-mvp-v12-archive.md
+    path: gate-exemptions/2026-10-20-p2-m5-anchor.md
     status: active
     owner: CTO
+    note: "P2 守则补 M5 写集（src/runtime|src/mcp|tests/mcp|packages/test-kit）＋DSH 借鉴锚（0.2.1-rc.2@687f282e86）＋代码标准指针。"
+
     note: "MVP 权威件 v1.2 镜像存档（＋旧宪章 v5 HTML 标注 superseded）的受保护路径豁免。"
+
+  # ---- P10 2026-10-20：#740 镜像每日自动推送豁免（D2 登记）----
+  - id: DOC-0231
+    type: decision
+    path: gate-exemptions/2026-10-20-p10-740-mirror-push.md
+    status: active
+    owner: P10
+    note: "#740 双仓镜像每日自动推送：执行器＋测试＋workflow 接线的受保护路径豁免；裁 223。"
+
+  # ---- CTO 2026-10-20：关卡 A 固定化豁免件（裁 256）----
+  - id: DOC-0232
+    type: decision
+    path: gate-exemptions/2026-10-20-devdoc-gate-a-skill.md
+    status: active
+    owner: CTO
+    note: "devdoc-gate-a 技能新增/同步（.claude→.dsh）的受保护路径豁免。"
+
+  # ---- P6 2026-10-21：#776 资产映射单一源 ----
+  - id: DOC-0233
+    type: authority
+    path: docs/authority/ASSET-MAP.yaml
+    status: active
+    owner: P6
+    note: "#776 资产同步的文件级映射单一源（MVP v1.2 §三写集种子＋X 显式根）；禁 catch-all（载入断言）。"
+
+  # ---- CTO 2026-10-21：P1 写集按裁 225 扩项（裁 274）----
+  - id: DOC-0234
+    type: decision
+    path: gate-exemptions/2026-10-21-p1-m9-writeset.md
+    status: active
+    owner: CTO
+    note: "P1 守则 §四 写集扩为 tests/acceptance/**（仅新增）的受保护路径豁免。"
+
+  # ---- P6 2026-10-21：#776 资产同步 PR-1 豁免件 ----
+  - id: DOC-0235
+    type: decision
+    path: gate-exemptions/2026-10-21-p6-776-asset-sync.md
+    status: active
+    owner: P6
+    note: "#776 PR-1 受保护路径豁免（ASSET-MAP/asset-sync.py/测试/DOCS 登记）；裁 277。"
+
+  # ---- P6 2026-10-21：#776 资产同步 PR-2 workflow 独立送审豁免件 ----
+  - id: DOC-0236
+    type: decision
+    path: gate-exemptions/2026-10-21-776-asset-sync-workflow.md
+    status: active
+    owner: P6
+    note: "#776 PR-2 .gitea/workflows/asset-sync.yml（push→local-main 自动同步 ASSET-AUTO 段＋#769）的受保护路径豁免；独立送审＋裁 277 限段。"

@@ -1,0 +1,24 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# fixture-toolchain.txt — 夹具工具链 **单一来源**（卡 #739 ④ · 裁 223）
+#
+# 所有跑夹具的 CI job / 本地入口都读本文件：kind=npm 的项由 CI 安装（spec=包规格），
+# kind=runner 的项由 runner 预装（只核对不安装）。夹具用 `# @requires <bin>…` 声明依赖。
+#
+# 格式（竖线分隔，行首 # 为注释）：
+#   bin | kind | spec | note
+#     bin  — 可执行名（command -v 检查）
+#     kind — npm（CI 安装）｜runner（runner 预装）
+#     spec — kind=npm 时的安装规格；kind=runner 时写 *
+#     note — 说明（可空）
+#
+# 新增依赖只改这里（一处定义、多处引用）；夹具不写安装命令。
+# ═══════════════════════════════════════════════════════════════════════════════
+bash | runner | * | 夹具本体（shell）
+git | runner | * | 版本控制（夹具建临时仓）
+python3 | runner | * | 门禁/夹具的 python 解析（组 6/9 等）
+node | runner | * | node 运行时（npx/npm 的宿主）
+npx | runner | * | 包执行器（vitest/tsx 的 npx 入口）
+tsx | npm | tsx@4.23.13 | TypeScript 执行器（组 13 块级 paths 快照）
+sqlite3 | runner | * | 本机 DB 校验（少量夹具用）
+jq | runner | * | JSON 处理（按需；当前 0 处使用，登记为候选）
+yq | runner | * | YAML 处理（按需；当前 0 处使用）
