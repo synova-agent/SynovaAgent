@@ -1,0 +1,12 @@
+writeset:
+  - .claude/claims/808.yaml
+  - scripts/control-tower/weekly-recon.sh
+  - tests/control-tower/weekly-recon.test.sh
+  - tests/control-tower/AGENTS.md
+  - gate-exemptions/2026-10-21-808-weekly-recon.md
+  - docs/authority/DOCS-REGISTRY.yaml
+done:
+  - verify: bash tests/control-tower/weekly-recon.test.sh
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main
+  - verify: bash scripts/doc-system/check-doc-truth.sh
+note: "#808 周对账探针（单卡滚动、按 ISO 周分节）＋配对测试＋受保护路径豁免（gate-exemptions 含自覆盖）＋DOCS-REGISTRY 登记；P6 2026-10-22 裁定本 claim 为声明件（交付写集仍 5 文件）。"

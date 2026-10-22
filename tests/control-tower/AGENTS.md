@@ -12,6 +12,7 @@
 ## 怎么算完成
 - 新增/改 probe ⇒ 对应 `tests/control-tower/` 断言同步（WIRE CHECK：`grep` 零结果＝未完成）。
 - vitest 零失败才合并；测试必有 `expect()`（禁空壳）。
+- 报备：#808 `weekly-recon.test.sh`（周对账探针 `scripts/control-tower/weekly-recon.sh` 配对测试；WIRE：`grep -rn "weekly-recon" .gitea/ scripts/ tests/` 非零）。
 
 ## 红线
 测试命名三档（`*.test.ts`/`*.integration.test.ts`/`*.e2e.test.ts`）｜ 集成测试 cover **真实路由**｜ 与根件零重复。
