@@ -26,7 +26,7 @@
   },
   "fix_task_id": null,
   "write_set": [
-    ".claude/skills/squad-discipline/SKILL.md",
+    ".synova/skills/squad-discipline/SKILL.md",
     ".dsh/skills/squad-discipline/SKILL.md",
     "docs/synova/coordination/dsh-preset-draft/persona.md",
     "docs/synova/coordination/dsh-preset-draft/persona-block.yml",

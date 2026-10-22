@@ -28,7 +28,7 @@
   "write_set": [
     "docs/synova/presets/install-squad-lead.sh",
     "docs/synova/presets/synova-squad-lead/SYSTEM-PROMPT.md",
-    ".claude/skills/squad-discipline/SKILL.md",
+    ".synova/skills/squad-discipline/SKILL.md",
     ".dsh/skills/squad-discipline/SKILL.md",
     "docs/synova/coordination/派单模板.md",
     "task-state/D931.json",

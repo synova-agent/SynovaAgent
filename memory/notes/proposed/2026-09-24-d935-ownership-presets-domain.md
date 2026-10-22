@@ -14,7 +14,7 @@
 ## 依据（可核）
 
 - **归属权威源**：`docs/synova/coordination/TASK-ROUTING.md:37`「`scripts/control-tower/` + `scripts/backup/` + 门禁脚本 + `docs/synova/coordination/` + **DSH 预设与技能** → **Mac DSH**」；`:108` 复述。
-- **兄弟路径先例**：`ownership.yaml:155`（`.claude/skills/**`→mac）、`:161`（`.dsh/**`→mac）均源自同一 L37；`docs/synova/presets/**` 是唯一漏登的兄弟路径。
+- **兄弟路径先例**：`ownership.yaml:155`（`.synova/skills/**`→mac）、`:161`（`.dsh/**`→mac）均源自同一 L37；`docs/synova/presets/**` 是唯一漏登的兄弟路径。
 - **真实阻塞复现**：`bash scripts/control-tower/check-pr-budget.sh --files "<D931 8 件写集>"` → `❌ ② 变更跨域`，exit 1（`docs/synova/presets/**` 判 `win`，其余判 `mac`）→ 卡住 PR #727。
 
 ## 前提纠正（本次实测，非转述）

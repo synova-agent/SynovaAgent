@@ -5,7 +5,7 @@
   "risk": "low",
   "spec": "创始人裁定：DSH 源码可核的六条原则（上限即纪律 / 归属自有可归因 / 只协调不干活 / 机械与业务语义分离 / 诊断不污染主路径 / 权威账本在 Lead）要变成决策纪律与工作纪律。",
   "write_set": [
-    ".claude/skills/dsh-decision-lens/SKILL.md",
+    ".synova/skills/dsh-decision-lens/SKILL.md",
     ".dsh/skills/dsh-decision-lens/SKILL.md",
     ".claude/task-briefs/2026-09-20-D845-DSH决策纪律skill.md",
     "task-state/D845.json"
@@ -23,7 +23,7 @@
   "blocked": null,
   "target": "2026-W38",
   "acceptance_points": [
-    "skill 在 .claude/skills 与 .dsh/skills 双份一致（D370 门禁过）",
+    "skill 在 .synova/skills 与 .dsh/skills 双份一致（D370 门禁过）",
     "六条原则每条带 DSH file:line 证据 + 一段可复制的复核命令",
     "含借鉴边界（单包 vs 单仓 ⇒ advisory 不足，必须文件级互斥）",
     "含决策四步与反模式清单，可直接用于派单/裁决"

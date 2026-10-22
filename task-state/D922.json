@@ -33,7 +33,7 @@
     "task-state/D925.json",
     ".claude/task-briefs/2026-09-23-D922-W1-dispatch.md",
     "memory/notes/proposed/2026-09-23-devdoc-to-skill-and-w1-program.md",
-    ".claude/skills/dev-doc-spec/SKILL.md",
+    ".synova/skills/dev-doc-spec/SKILL.md",
     ".dsh/skills/dev-doc-spec/SKILL.md",
     "scripts/control-tower/install-dsh-preset.sh",
     "docs/synova/coordination/TASK-ROUTING.md",

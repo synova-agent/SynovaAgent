@@ -103,7 +103,7 @@ EXIT=1
 ```
 $ git diff --name-only origin/main...origin/fix/d931-squad-lead-team
 .claude/bypass.log
-.claude/skills/squad-discipline/SKILL.md
+.synova/skills/squad-discipline/SKILL.md
 .claude/task-briefs/2026-09-23-D931-squad-team-wiring.md
 .dsh/skills/squad-discipline/SKILL.md
 docs/synova/coordination/派单模板.md
@@ -114,7 +114,7 @@ task-state/D931.json
 
 $ 逐条 [ -e ] 检查本工作树：
 EXISTS  : .claude/bypass.log
-EXISTS  : .claude/skills/squad-discipline/SKILL.md
+EXISTS  : .synova/skills/squad-discipline/SKILL.md
 MISSING : .claude/task-briefs/2026-09-23-D931-squad-team-wiring.md   ← D931 自己的 brief
 EXISTS  : .dsh/skills/squad-discipline/SKILL.md
 EXISTS  : docs/synova/coordination/派单模板.md
@@ -167,7 +167,7 @@ $ GITHUB_ACTIONS=true SYNO_DIFF_BASE=origin/main SYNO_CI=1 bash scripts/pre-comm
      ℹ️  D860 治理产物豁免: 2 件不计预算（brief/卡/Note/规格/自验证据，代码文件仍计数）
      ✅ ① 变更文件数 6 ≤ 上限 12
      ❌ ② 变更跨域 —— 一个 PR 只许一个域（D733 ownership.yaml）
-     mac  .claude/skills/squad-discipline/SKILL.md
+     mac  .synova/skills/squad-discipline/SKILL.md
      mac  .dsh/skills/squad-discipline/SKILL.md
      mac  docs/synova/coordination/派单模板.md
      win  docs/synova/presets/install-squad-lead.sh
@@ -191,7 +191,7 @@ EXIT=0     ← D733/D734 不再报错，且无其他组新增红
 ·   domain-neutral  .claude/bypass.log
 ·   domain-neutral  .claude/task-briefs/2026-09-23-D931-squad-team-wiring.md
 ·   domain-neutral  task-state/D931.json
-mac  .claude/skills/squad-discipline/SKILL.md
+mac  .synova/skills/squad-discipline/SKILL.md
 mac  .dsh/skills/squad-discipline/SKILL.md
 mac  docs/synova/coordination/派单模板.md
 win  docs/synova/presets/install-squad-lead.sh
@@ -203,7 +203,7 @@ EXIT=1
 ·   domain-neutral  .claude/bypass.log
 ·   domain-neutral  .claude/task-briefs/2026-09-23-D931-squad-team-wiring.md
 ·   domain-neutral  task-state/D931.json
-mac  .claude/skills/squad-discipline/SKILL.md
+mac  .synova/skills/squad-discipline/SKILL.md
 mac  .dsh/skills/squad-discipline/SKILL.md
 mac  docs/synova/coordination/派单模板.md
 mac  docs/synova/presets/install-squad-lead.sh
@@ -253,7 +253,7 @@ $ git diff -U0 origin/main...HEAD -- docs/synova/coordination/ownership.yaml
 +  # D935 增补（2026-09-24）: DSH 预设与技能目录 docs/synova/presets/** 漏登记 → 落 `**` 兜底
 +  #   判 win，与同写集的 mac 文件混装即被 D734 判「变更跨域」硬拦（D931 实测，卡住 PR #727）。
 +  #   权威源 TASK-ROUTING.md L37「… + coordination + DSH 预设与技能 → Mac DSH」；兄弟路径
-+  #   .claude/task-briefs/**、.claude/skills/**、.claude/settings.json、.dsh/** 均同源同归属
++  #   .claude/task-briefs/**、.synova/skills/**、.claude/settings.json、.dsh/** 均同源同归属
 +  #   （见上方 Mac 例外区）。不改任何既有归属。
 +  - glob: "docs/synova/presets/**"
 +    owner: "mac"
@@ -357,8 +357,8 @@ $ find . -type d -name presets -not -path "./node_modules/*" -not -path "./.git/
 兄弟先例核对（brief 引 `ownership.yaml:155/:161`）——按 **origin/main 版**行号核对**成立**：
 
 ```
-$ git show origin/main:docs/synova/coordination/ownership.yaml | grep -n 'glob: "\.claude/skills/\*\*"\|glob: "\.dsh/\*\*"'
-155:  - glob: ".claude/skills/**"        （HEAD 版因 +8 行顺移至 163）
+$ git show origin/main:docs/synova/coordination/ownership.yaml | grep -n 'glob: "\.synova/skills/\*\*"\|glob: "\.dsh/\*\*"'
+155:  - glob: ".synova/skills/**"        （HEAD 版因 +8 行顺移至 163）
 161:  - glob: ".dsh/**"                  （HEAD 版 169）
 ```
 
@@ -730,7 +730,7 @@ grep: repetition-operator operand invalid
      ℹ️  D860 治理产物豁免: 2 件不计预算（brief/卡/Note/规格/自验证据，代码文件仍计数）
      ✅ ① 变更文件数 6 ≤ 上限 12
      ❌ ② 变更跨域 —— 一个 PR 只许一个域（D733 ownership.yaml）
-     mac  .claude/skills/squad-discipline/SKILL.md
+     mac  .synova/skills/squad-discipline/SKILL.md
      mac  .dsh/skills/squad-discipline/SKILL.md
      mac  docs/synova/coordination/派单模板.md
      win  docs/synova/presets/install-squad-lead.sh

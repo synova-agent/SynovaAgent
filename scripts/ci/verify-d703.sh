@@ -90,7 +90,7 @@ else
 scripts/ci/verify-d703.sh
 tests/control-tower/verify-doc.test.sh
 .github/workflows/ci.yml
-.claude/skills/dev-doc-delivery/template/编码指令模板.md
+.synova/skills/dev-doc-delivery/template/编码指令模板.md
 .dsh/skills/dev-doc-delivery/template/编码指令模板.md
 .codex/control-tower/VERSION.md
 $SPEC_D703"

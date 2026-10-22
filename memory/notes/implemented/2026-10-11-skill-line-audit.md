@@ -9,7 +9,7 @@
     "六字段""七问"退化成名词，新会话只能猜 —— 而猜错的代价是整条线的卡面重写跑偏。
 ---
 
-# 技能内容（`.claude/skills/line-audit-and-cards/SKILL.md`）
+# 技能内容（`.synova/skills/line-audit-and-cards/SKILL.md`）
 
 | 节 | 内容 |
 |---|---|
@@ -30,4 +30,4 @@
 - 每问都给了**写什么 + 判据 + 范例 + 反例**（如 ④「不做行不行」要分**禁令级 vs 欠账级**）
 
 # 同步
-- 落点两处（门禁 13 组查漂移）：`.claude/skills/line-audit-and-cards/` ↔ `.dsh/skills/line-audit-and-cards/`
+- 落点两处（门禁 13 组查漂移）：`.synova/skills/line-audit-and-cards/` ↔ `.dsh/skills/line-audit-and-cards/`

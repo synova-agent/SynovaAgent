@@ -24,7 +24,7 @@
 
 ## 未做（发现后主动回避）
 - **`.dsh/skills/cto-handover/SKILL.md` 的「512 行」未改** —— 因为改它会激活 组 13 的**存量技能漂移 10 处**。
-- 🔴 **同时发现一个 P0 隐患**：`sync-dsh-skills.sh` 的源是 `.claude/skills`、目标是 `.dsh/skills`，
+- 🔴 **同时发现一个 P0 隐患**：`sync-dsh-skills.sh` 的源是 `.synova/skills`、目标是 `.dsh/skills`，
   而 `.dsh/skills/dev-doc-spec/SKILL.md` 是 **v2（153 行）**、`.claude` 是**旧版（60 行）**
   ⇒ **盲目跑 sync 会用旧版覆盖 v2**。已立卡（见下），**本次不动**。
 

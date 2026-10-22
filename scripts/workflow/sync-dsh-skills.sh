@@ -1,10 +1,10 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════════════
-# sync-dsh-skills.sh — DSH 技能同步（P0: .claude/skills → .dsh/skills 单源复制）
+# sync-dsh-skills.sh — DSH 技能同步（P0: .synova/skills → .dsh/skills 单源复制；2026-10-21 #819 迁移）
 #
 # 背景 (2026-08-15 创始人批准 P0-P3): DSH 的技能发现根是 <项目根>/.dsh/skills
-# （DSH skill-filesystem rank 100），不读 .claude/skills/。仓库 5 个流程技能
-# （git-sync-pr 等，沉淀 D313-D334 教训）对 DSH 会话不可见 → 本脚本把 .claude/skills/
+# （DSH skill-filesystem rank 100），不读 .synova/skills/。仓库 5 个流程技能
+# （git-sync-pr 等，沉淀 D313-D334 教训）对 DSH 会话不可见 → 本脚本把 .synova/skills/
 # 作为单一事实源同步到 .dsh/skills/，pre-commit 组 13 以 --check 模式物理阻断漂移。
 #
 # 契约 (铁律 47):
@@ -26,7 +26,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-SRC="${SYNO_SKILLS_SRC:-$REPO_DIR/.claude/skills}"
+SRC="${SYNO_SKILLS_SRC:-$REPO_DIR/.synova/skills}"
 DST="${SYNO_SKILLS_DST:-$REPO_DIR/.dsh/skills}"
 MODE="sync"
 [ "${1:-}" = "--check" ] && MODE="check"
@@ -37,7 +37,7 @@ degrade() { # <原因> — 降级: 显式日志 + exit 2（铁律 11: 不静默�
 }
 
 # ── 收集源技能: 目录 + SKILL.md 才算技能（DSH 格式: <name>/SKILL.md）──
-[ -d "$SRC" ] || degrade "源技能目录不存在: $SRC"
+[ -d "$SRC" ] || degrade "源技能目录不存在: $SRC（技能已迁移到 .synova/skills，见 #819）"
 
 SRC_LIST=$(mktemp /tmp/sds-src.XXXXXX)
 trap 'rm -f "$SRC_LIST"' EXIT

@@ -334,7 +334,7 @@
 - **P2) 零 CI 执行面**：脚本名及其配对夹具名均不出现在 `.github/workflows/**`；且不在 `ct-test-gate.sh` 配对域
   （该门禁只覆盖 `scripts/{control-tower,workflow,hooks}/`，由 `scripts/pre-commit-check.sh:617` 调用）。
 - **P3) 零活消费者**：全仓 referrer 仅剩 `docs/` / `memory/` / `.claude/task-briefs/`（非执行体）；
-  **不含**活 skill（`.claude/skills/**` 里的 `bash <路径>` 属可执行指令）与 ci.yml 已登记夹具的内容断言。
+  **不含**活 skill（`.synova/skills/**` 里的 `bash <路径>` 属可执行指令）与 ci.yml 已登记夹具的内容断言。
 - **git 历史可回溯**：`git log --oneline -- <路径>` 非空（本仓保留完整历史，内容可 `git show <sha>:<路径>` 逐字取回）。
 
 | # | 退役件 | P1 | P2 | P3 | #1046 退役判据 a/b/c | git 首末（可回溯） |
@@ -351,8 +351,8 @@
 | `scripts/control-tower/check-gitlinks.sh` | `.github/workflows/ci.yml:534` 登记夹具 `check-gitlinks.test.sh` 内 `bash "$CHECK"` 真实执行（3 例：clean/gitlink/降级） |
 | `scripts/control-tower/check-sentinel-type-net.sh` | `tests/sentinel/d752-type-net-gate.integration.test.ts` 经 `execFileSync('bash',[GATE])` 在 vitest 全量步骤执行（4 例） |
 | `scripts/control-tower/check-k3-report.py` | `.github/workflows/ci.yml:552` 登记夹具执行（T1-T8 八例） |
-| `scripts/control-tower/pre-dispatch-check.sh` | `.claude/skills/{cto-handover,dev-doc-spec}/SKILL.md` 内为**可执行指令**；且 ci.yml 登记夹具 `check-citations.test.sh` 对其内容有两处断言（含「正常」用例引用的 `pre-dispatch-check.sh:10`） |
-| `scripts/check-bridge-files.sh` | `.claude/skills/pr-review/SKILL.md:29` 内为**可执行指令**（`bash scripts/check-architecture.sh && bash scripts/check-bridge-files.sh`）；改该 skill 出本卡写集（且受 G13 `.claude ↔ .dsh` 技能同步门禁约束） |
+| `scripts/control-tower/pre-dispatch-check.sh` | `.synova/skills/{cto-handover,dev-doc-spec}/SKILL.md` 内为**可执行指令**；且 ci.yml 登记夹具 `check-citations.test.sh` 对其内容有两处断言（含「正常」用例引用的 `pre-dispatch-check.sh:10`） |
+| `scripts/check-bridge-files.sh` | `.synova/skills/pr-review/SKILL.md:29` 内为**可执行指令**（`bash scripts/check-architecture.sh && bash scripts/check-bridge-files.sh`）；改该 skill 出本卡写集（且受 G13 `.claude ↔ .dsh` 技能同步门禁约束） |
 | `scripts/check-integrity-startup.sh` | ci.yml 登记夹具 `grep-oP-regression.test.sh` 的 `eq '节点 label'` 接线断言要求该文件存在且含目标模式 |
 | `scripts/check-lessons-learned.sh` | 活门禁 `check-notes-lifecycle.sh`（pre-commit 组 6 区域）的配对夹具 `check-notes-lifecycle.test.sh` 内 `bash "$LESSONS"` 真实执行 ⇒ 删则留 ct-test-gate 地雷 |
 | `scripts/check-tech-debt.sh` | 同 `grep-oP-regression.test.sh`（两处 `eq` 断言：日期模式 / 不误吞短串） |

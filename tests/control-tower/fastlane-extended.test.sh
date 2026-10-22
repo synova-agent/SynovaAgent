@@ -10,7 +10,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   补记组合     — [bypass.log + task-state + docs] → fastlane（D537 扩展）
 #   merge commit — MERGE_HEAD 存在 → fastlane（D537 扩展，同 D328 豁免）
 #   普通提交     — [src/xxx.ts] → 全量（防误放行）
-#   防绕过       — .claude/skills/（行为配置，非证据）→ 全量
+#   防绕过       — .synova/skills/（行为配置，非证据）→ 全量
 # 接线: synova-commit FASTLANE_TRIGGER 三态 + 证据白名单 regex
 # ═══════════════════════════════════════════════════════════════
 set -uo pipefail
@@ -46,8 +46,8 @@ is_evidence_only() {
   && ok "补记组合（bypass+task-state+docs+memory）→ fastlane" || no "补记组合应 fastlane"
 # ③ 普通提交（src/ 代码）
 [ "$(is_evidence_only 'src/server.ts')" = "0" ] && ok "普通提交（src/server.ts）→ 全量（防误放行）" || no "src 代码应全量"
-# ④ 防绕过（.claude/skills/ 行为配置，非证据）
-[ "$(is_evidence_only '.claude/skills/foo/SKILL.md')" = "0" ] && ok "技能文件（行为配置）→ 全量（非证据，防借道）" || no "技能文件应全量"
+# ④ 防绕过（.synova/skills/ 行为配置，非证据）
+[ "$(is_evidence_only '.synova/skills/foo/SKILL.md')" = "0" ] && ok "技能文件（行为配置）→ 全量（非证据，防借道）" || no "技能文件应全量"
 # ⑤ 混合（补记 + 代码）→ 全量
 [ "$(is_evidence_only '.claude/bypass.log' 'src/server.ts')" = "0" ] && ok "混合（补记+代码）→ 全量" || no "混合应全量"
 

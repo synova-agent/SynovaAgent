@@ -117,8 +117,8 @@ if [ -f "$REPO_DIR/scripts/workflow/sync-dsh-skills.sh" ]; then
 fi
 
 # ═══ ⑥ cto-handover 派单规范 ═══
-if [ -f "$REPO_DIR/.claude/skills/cto-handover/SKILL.md" ]; then
-  if ! grep -q "派单必带 DSH 借鉴核查" "$REPO_DIR/.claude/skills/cto-handover/SKILL.md"; then
+if [ -f "$REPO_DIR/.synova/skills/cto-handover/SKILL.md" ]; then
+  if ! grep -q "派单必带 DSH 借鉴核查" "$REPO_DIR/.synova/skills/cto-handover/SKILL.md"; then
     report_drift "cto-handover skill" "缺『派单必带 DSH 借鉴核查』规范（§〇b）"
   fi
 fi

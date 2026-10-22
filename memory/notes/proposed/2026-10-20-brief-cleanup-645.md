@@ -23,4 +23,4 @@
 
 ## 影响面
 - 只动 `.claude/task-briefs/**`（48 份）＋本 Note；不动 gate/脚本/模板/契约。
-- 后续新 brief 按 `.claude/skills/brief-compose/SKILL.md` 格式写即可过闸。
+- 后续新 brief 按 `.synova/skills/brief-compose/SKILL.md` 格式写即可过闸。

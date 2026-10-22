@@ -9,7 +9,7 @@
     "files": [
       "scripts/pre-push-check.sh",
       "tests/control-tower/push-sync-guard.test.sh",
-      ".claude/skills/cto-handover/SKILL.md",
+      ".synova/skills/cto-handover/SKILL.md",
       ".dsh/skills/cto-handover/SKILL.md",
       "memory/notes/implemented/2026-09-03-d571-escape-hatch-audit-chain.md",
       "docs/synova/coordination/审计发现台账-DSH-CTO.md",

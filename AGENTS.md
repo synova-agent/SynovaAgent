@@ -342,7 +342,7 @@ bash scripts/pre-commit-check.sh   # 12 组 pre-commit 门禁（本地）
 > **评审分层（裁 267，固定）**：① gate-A＝L1 安排的**零上下文独立会话**（不得作者、不得 CTO），按 skill R1–R8 审"能否开工"，输出**一条 Issue 评论**（verdict＋blocking＋停点确认）｜② 最终验收＝CTO 抽验 4 节点＋签字｜③ 事后审计＝K3 高风险抽查/复盘（才出报告）｜④ 硬门禁＝Gitea＋GitHub 自动红绿。
 
 ```
- 任何 L1（P1–P10）把 dev doc／派单件交给 L2 **之前**，必须按 `.claude/skills/devdoc-gate-a/SKILL.md` 跑六镜头：
+ 任何 L1（P1–P10）把 dev doc／派单件交给 L2 **之前**，必须按 `.synova/skills/devdoc-gate-a/SKILL.md` 跑六镜头：
    ① 卡面审计（六字段/七问/查重）② dev-doc-spec 8 节 ③ 零上下文执行者 ④ 判据红队 ⑤ 写集/边界/并发 ⑥ 声明核实（claim-verifier）
  产出：**通过/退回**＋必修清单（带 file:line 或命令）；退回意见落 Issue 评论，报告落 handbook。
  🔴 **不得自审**（评审者不参与写作；CTO 的 pre-dispatch-check 只是机械前置）｜🔴 **未过关卡 A 不许开工**（Win/Mac 同规）。
@@ -355,5 +355,5 @@ bash scripts/pre-commit-check.sh   # 12 组 pre-commit 门禁（本地）
  一本账：**决策 → `handbook/CTO-裁定台账.md`（裁定 NNN，只记决定）**；**状态 → Gitea #671（§11 在飞／§12 五步）**。
  开工：读 #671 §11/§12 ＋ 台账最后 3 条；收工：有决策才追加裁定；状态变了只改 #671。
  禁止：台账复制状态／#671 写裁定历史／再开第二套账本（活账已归档只读）。
- 每周日核对、每月 1 日归档旧裁定：细则见 `.claude/skills/cto-bookkeeping/SKILL.md`。
+ 每周日核对、每月 1 日归档旧裁定：细则见 `.synova/skills/cto-bookkeeping/SKILL.md`。
 ```

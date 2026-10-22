@@ -1,6 +1,6 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════════════
-# sync-dsh-skills.test.sh — DSH 技能同步脚本测试（P0: .claude/skills → .dsh/skills）
+# sync-dsh-skills.test.sh — DSH 技能同步脚本测试（P0: .synova/skills → .dsh/skills）
 #
 # 覆盖（铁律 48: 正常/降级/边界; 铁律 0-2: red→green）:
 #   1. 首次同步: 目标空 → 复制全部技能, 内容一致（正常）

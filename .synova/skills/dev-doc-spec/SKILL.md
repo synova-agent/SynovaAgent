@@ -154,4 +154,4 @@ bash scripts/workflow/check-dev-doc-write-set.sh             # 写集 vs 实际�
 
 ## 🔴 交稿前置（裁 256）
 
-写完 dev doc **不等于交付**：必须过 `.claude/skills/devdoc-gate-a/SKILL.md` 的六镜头评审（通过/退回），并附必修清单。未过不许开 L2。
+写完 dev doc **不等于交付**：必须过 `.synova/skills/devdoc-gate-a/SKILL.md` 的六镜头评审（通过/退回），并附必修清单。未过不许开 L2。
