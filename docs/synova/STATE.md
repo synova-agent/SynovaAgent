@@ -2,7 +2,7 @@
 title: "SynovaAgent 当前状态"
 version: "3.0.0"
 updated: "2026-10-21"
-as_of: "a8e7e26be"
+as_of: "1924f761e"
 owner: CTO
 kind: 入口文件（A 层）
 rule: 重写式维护 —— 每次更新整篇重写，不追加历史
@@ -71,20 +71,20 @@ rule: 重写式维护 —— 每次更新整篇重写，不追加历史
 
 ## 5. 关键数字（每行一个值 ＋ 一条取数命令；命令在 pin 住的提交上可复跑）
 
-> 取数时点 = 本批建 PR 之前；活数（open PR / 远端分支）会随后续活动变化，重跑即可复核（判定按取数时点）。本件 `as_of` = 取数时点的 main HEAD；此后 main 可能已前进，本批 PR 的 base 见 PR 正文。
+> 取数时点 = 本批建 PR 之前；活数（open PR / 远端分支）会随后续活动变化，重跑即可复核（判定按取数时点）。本件 `as_of` = 本 PR 的 base tip（取数基线，建 PR 时的 local-main tip）；PR merge SHA 由 Gitea 生成、在卡回执记录。
 
-- 本件 as_of 钉住的提交（取数时点的 main HEAD）：`a8e7e26be`（取数：`git rev-parse --short a8e7e26be`）
-- 仓库文件总数（tracked，全部目录）：`5474`（取数：`git ls-tree -r a8e7e26be | wc -l`）
-- docs/ 下 Markdown 份数：`541`（取数：`git ls-tree -r --name-only a8e7e26be docs/ | grep -c '\.md$'`）
+- 本件 as_of 钉住的提交（本 PR 的 base tip，取数基线）：`1924f761e`（取数：`git rev-parse --short 1924f761e`）
+- 仓库文件总数（tracked，全部目录）：`5476`（取数：`git ls-tree -r 1924f761e | wc -l`）
+- docs/ 下 Markdown 份数：`541`（取数：`git ls-tree -r --name-only 1924f761e docs/ | grep -c '\.md$'`）
 - open PR（取数时点见上；本批 PR 建立后该值加一，属在飞）：`14`（取数：`curl -s -D - -o /dev/null -H "Authorization: token $(cat /Users/wane/gitea/.win-push-token)" "http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/pulls?state=open&limit=1" | grep -i '^x-total-count'`）
 - 远端分支数（远端 = Gitea；不含本任务分支，避免自身在飞造成波动）：`1136`（取数：`git ls-remote --heads gitea | grep -vc 'refs/heads/ct/p6-807-1021'`）
-- 专家数（registry 条目真值）：`6`（取数：`git show a8e7e26be:expert/expert-registry.yaml | grep -cE '^  [a-z0-9_-]+:$'`）
-- pre-commit 组数（脚本横幅真值）：`12`（取数：`git show a8e7e26be:scripts/pre-commit-check.sh | grep -cE '── 组 [0-9]+:'`）
-- 提交总数（全史）：`5571`（取数：`git rev-list --count a8e7e26be`）
-- 最近提交日期：`2026-10-21`（取数：`git log -1 --format=%ad --date=short a8e7e26be`）
-- 控制塔版本（根件头部元信息）：`V5.2.7`（取数：`git show a8e7e26be:AGENTS.md | grep -m1 -oE 'V[0-9]+\.[0-9]+\.[0-9]+'`）
-- 根件版本（AGENTS.md 头部）：`V7.1`（取数：`git show a8e7e26be:AGENTS.md | grep -m1 -oE 'V[0-9]+\.[0-9]+'`）
-- DSH 工具版本（开发工具面，不进产品支持范围）：`0.2.1-rc.2`（取数：`git show a8e7e26be:AGENTS.md | grep -m1 -oE '0\.2\.1-rc\.[0-9]+'`）
+- 专家数（registry 条目真值）：`6`（取数：`git show 1924f761e:expert/expert-registry.yaml | grep -cE '^  [a-z0-9_-]+:$'`）
+- pre-commit 组数（脚本横幅真值）：`12`（取数：`git show 1924f761e:scripts/pre-commit-check.sh | grep -cE '── 组 [0-9]+:'`）
+- 提交总数（全史）：`5580`（取数：`git rev-list --count 1924f761e`）
+- 最近提交日期：`2026-10-22`（取数：`git log -1 --format=%ad --date=short 1924f761e`）
+- 控制塔版本（根件头部元信息）：`V5.2.7`（取数：`git show 1924f761e:AGENTS.md | grep -m1 -oE 'V[0-9]+\.[0-9]+\.[0-9]+'`）
+- 根件版本（AGENTS.md 头部）：`V7.1`（取数：`git show 1924f761e:AGENTS.md | grep -m1 -oE 'V[0-9]+\.[0-9]+'`）
+- DSH 工具版本（开发工具面，不进产品支持范围）：`0.2.1-rc.2`（取数：`git show 1924f761e:AGENTS.md | grep -m1 -oE '0\.2\.1-rc\.[0-9]+'`）
 - 产品代码 import DSH 包的命中数：`0`（取数：`grep -rn "from '@deepseek-ai/dsh'" src/ packages/ | wc -l`）
 - 本体图节点（DB 实测，本机取数／仓外数据件）：`0`（取数：`sqlite3 data/synova.db "select count(*) from graph_nodes"`）
 - 本体图边（DB 实测，本机取数／仓外数据件）：`0`（取数：`sqlite3 data/synova.db "select count(*) from graph_triples"`）
