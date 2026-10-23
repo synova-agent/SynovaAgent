@@ -37,7 +37,7 @@ writeset:
   # 流程件（门禁触发：卡面/四态 Note/本声明）
   - .claude/claims/758.yaml
   - .claude/task-briefs/2026-10-23-758-p5-删除批次.md
-  - memory/notes/implemented/process/2026-10-22-p5-758-删除批次.md
+  - memory/notes/implemented/process/2026-10-22-p5-758-deletion-batch.md
 done:
   - verify: npx tsc --noEmit
   - verify: CI=1 npx vitest run --reporter=json
