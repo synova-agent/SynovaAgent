@@ -903,3 +903,11 @@ documents:
     status: active
     owner: P4
     note: "#912 批 1 唯一豁免通道：条目四字段（path/rule/reason/ruling）＋ratchet 只减不增；禁代码注释豁免。"
+
+  # ---- P4 2026-10-24：#917 拍 1（退 architecture／进 ①f）豁免件 ----
+  - id: DOC-0253
+    type: decision
+    path: gate-exemptions/2026-10-24-p4-917-retire-architecture.md
+    status: active
+    owner: P4
+    note: "#917 拍 1（裁 335）一进一出：退 GitHub architecture job（15→14）＋进 Gitea ①f（tsc --noEmit）；受保护路径豁免。"

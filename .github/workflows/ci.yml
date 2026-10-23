@@ -398,74 +398,6 @@ jobs:
           fi
           exit 1
 
-  architecture:
-    # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-10-02T12:45:00+08:00；
-    # 公式 = max(P95×1.5, 中位数×3)）：audit 1 / Test-Kit(ubuntu) 1 / Golden Case 2 /
-    # Gate Integrity 2 / Test-Kit(windows) 3 / Architecture 6 / Checker Review 6 /
-    # Integration 6 / TypeScript+Iron Laws 7 / Vitest 8 / Control Tower(ubuntu) 14 / (windows) 106（D1109 后**未重取**：口径要 n=12 同分布样本，现 n=1）。
-    timeout-minutes: 6
-    name: Architecture Check
-    runs-on: ubuntu-latest
-    env:
-      SYNO_CI: "1"  # CT-64: 与 TypeScript job 对齐——check-architecture.sh 在 CI 也走严格模式（棘轮基线内不阻断，新增才阻断）
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Detect docs-only change (D515)
-        id: docsonly
-        shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
-        run: |
-          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
-          # 🔴 D-F/①-fix（独立复核 R1，2026-10-07）: 单源读不到时**显式**置 docs_only=false（全量）。
-          #   实测 `printf x | grep -qvE ''` 返 **1**（空正则匹配每行，-v 反选后无输出）⇒ 若依赖该
-          #   隐式返回，正常路径会掉进 else ⇒ docs_only=true（早退）＝ **fail-OPEN**。
-          #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
-          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
-          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
-          # 卡 #1323: base 解析（push 用 github.event.before；全零 SHA/不可解析 ⇒ 显式全量）。详见文件头「docs-only 判定」段。
-          if [ "${GITHUB_EVENT_NAME:-}" = "push" ] && [ -n "${GITHUB_EVENT_BEFORE:-}" ] \
-             && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
-            DS_BASE="$GITHUB_EVENT_BEFORE"
-          else
-            DS_BASE="origin/main"
-          fi
-          if [ -z "$DS_RE" ]; then
-            echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
-            echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            # fail-safe（D1111 E5 原有，**保留原文**——D1023 守卫按此字面量计数 9 个消费点）:
-            #   origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
-            echo "::warning title=docs-only base::origin/main 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
-            echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          elif ! git rev-parse --verify -q "$DS_BASE" >/dev/null 2>&1; then
-            # fail-safe（#1323 新增）: push 的 before-sha 不可解析（含全零 SHA 退化）⇒ 全量跑
-            echo "::warning title=docs-only base::base=$DS_BASE 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
-            echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          else
-            DS_CHANGED="$(git diff --name-only "$DS_BASE"...HEAD 2>/dev/null || true)"   # swallow-ok: 空集/命中两条分支各自显式处置
-            if [ -z "$DS_CHANGED" ]; then
-              # 第三态（铁律 11: 空集 ≠ 纯文档）⇒ 无法判定 ⇒ 显式全量 + 告警，绝不静默归 docs-only
-              echo "::warning title=docs-only empty-diff::base=$DS_BASE 与 HEAD 变更集为**空** ⇒ 无法判定是否纯文档 ⇒ 显式按非 docs-only 处理（全量跑）"
-              echo "docs_only=false" >> "$GITHUB_OUTPUT"
-            elif printf '%s\n' "$DS_CHANGED" | grep -qvE "$DS_RE"; then
-              echo "docs_only=false" >> "$GITHUB_OUTPUT"
-            else
-              echo "docs_only=true" >> "$GITHUB_OUTPUT"
-            fi
-          fi
-      - uses: actions/setup-node@v4
-        if: steps.docsonly.outputs.docs_only != 'true'
-        with: { node-version: '20', cache: 'npm' }
-      - run: bash scripts/control-tower/install-deps.sh
-        if: steps.docsonly.outputs.docs_only != 'true'
-      - name: Layer boundary check
-        if: steps.docsonly.outputs.docs_only != 'true'
-        run: bash scripts/check-architecture.sh
-      - name: GraphStore compatibility
-        if: steps.docsonly.outputs.docs_only != 'true'
-        run: npx vitest run tests/architecture/
-
   test-kit-architecture:
     # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-10-02T12:45:00+08:00；
     # 公式 = max(P95×1.5, 中位数×3)）：audit 1 / Test-Kit(ubuntu) 1 / Golden Case 2 /
@@ -1629,7 +1561,7 @@ jobs:
     runs-on: ubuntu-latest
     # 注: needs 必须单行 —— check-required-contexts.py 的 YAML 子集解析器不支持续行
     #     （多行会 fail-closed degrade ⇒ required-contexts 全量检查降级失败）。
-    needs: [quality, test, architecture, test-kit-architecture, control-tower-tests, integration-check, checker-review, golden-case, gate-integrity]
+    needs: [quality, test, test-kit-architecture, control-tower-tests, integration-check, checker-review, golden-case, gate-integrity]
     if: ${{ !cancelled() }}
     steps:
       - name: Fail if any needed job did not succeed
