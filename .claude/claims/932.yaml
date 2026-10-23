@@ -1,0 +1,40 @@
+# .claude/claims/932.yaml — #932 文档一致性收口（PR-1 A+B 机械传播）· 写集声明（claim-first 载体）
+#
+# 批次 P6-932（三 PR：PR-1 A+B 机械传播（本件）｜PR-2 C+D 判据升级（A 类，先提案）｜PR-3 E DOC 重号）。
+# 指定：CTO 开工令 2026-10-24（#932 ＋ 裁 334）；锚 = local-main 9ada9f04d；合并由 CTO 点（裁 328）。
+# 纪律：只做机械传播（措辞/路径），不改各包职责与判据；零产品代码、零门禁脚本、零审计脚本。
+writeset:
+  - .claude/claims/932.yaml
+  - gate-exemptions/2026-10-24-p6-932-prop.md
+  # PR-1（A：8 节→9 节 13 文件；B：旧路径→新路径）
+  - .dsh/skills/brief-compose/SKILL.md
+  - .dsh/skills/dev-doc-delivery/SKILL.md
+  - .dsh/skills/line-audit-and-cards/SKILL.md
+  - .dsh/skills/pre-plan-thinking/SKILL.md
+  - .dsh/skills/synova-audit/SKILL.md
+  - .synova/skills/brief-compose/SKILL.md
+  - .synova/skills/dev-doc-delivery/SKILL.md
+  - .synova/skills/line-audit-and-cards/SKILL.md
+  - .synova/skills/pre-plan-thinking/SKILL.md
+  - .synova/skills/synova-audit/SKILL.md
+  - AGENTS.md
+  - agents/P1-能跑通/AGENTS.md
+  - agents/P10-双仓与生态面/AGENTS.md
+  - agents/P2-能部署/AGENTS.md
+  - agents/P3-一致性/AGENTS.md
+  - agents/P4-门禁/AGENTS.md
+  - agents/P5-清账/AGENTS.md
+  - agents/P6-事实与入口件/AGENTS.md
+  - agents/P7-交付自证与真值/AGENTS.md
+  - agents/P8-内置FDE/AGENTS.md
+  - agents/P9-包独立交付/AGENTS.md
+  - docs/synova/presets/synova-k3-audit/persona-block.yml
+  # 决策沉淀（D395-a Note 门禁强制）
+  - memory/notes/proposed/2026-10-24-p6-932-propagation.md
+  # PR-3（E：DOC 重号清理，另行开 PR）
+  - docs/authority/DOCS-REGISTRY.yaml
+done:
+  - verify: git grep -l "8 节" -- AGENTS.md agents .synova/skills .dsh/skills   # 期望 0
+  - verify: git grep -l "docs/plans/codex\|\.claude/task-briefs" -- AGENTS.md agents .synova .dsh docs/synova/presets   # 期望 0
+  - verify: bash scripts/workflow/sync-dsh-skills.sh --check   # 期望 SYNC-OK
+note: "#932 PR-1：A 8节→9节（13 文件）＋B 旧路径→新路径（.handbook/派单件、.claude/claims）；.dsh 镜像由 sync 生成；豁免件按裁 334。"

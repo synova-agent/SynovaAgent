@@ -26,10 +26,10 @@
 
 ## 四、写集（**文件级；越界即停并上报 CTO**）
 
-scripts/control-tower/{check-merge-conditions.sh,probe-line-signals.ts}｜tests/control-tower/{check-merge-conditions.test.sh}｜docs/**｜memory/notes/**｜.claude/task-briefs/**
+scripts/control-tower/{check-merge-conditions.sh,probe-line-signals.ts}｜tests/control-tower/{check-merge-conditions.test.sh}｜docs/**｜memory/notes/**｜.claude/claims/**
 
 > 🔴 2026-10-18 创始人裁 **B1**：原枚举漏了 `tests/`——CT-40 配对是铁律，没有配对测试＝违规；
-> 那是**枚举不全，不是越界** ⇒ **一次改清**：W2（`tests/`）＋ W5（`.claude/task-briefs/`）一并入枚举，
+> 那是**枚举不全，不是越界** ⇒ **一次改清**：W2（`tests/`）＋ W5（`.claude/claims/`）一并入枚举，
 > 别让下一批再问一次（教训 175-b）。
 
 ## 五、依赖
@@ -87,7 +87,7 @@ scripts/control-tower/{check-merge-conditions.sh,probe-line-signals.ts}｜tests/
 
 **你必须**：
 ```
- ① 🔴 **先跑 `pre-plan-thinking` 的 9 问**（想清楚：问题/现状/有没有现成/最小改动/最危险假设/失败路径/边界/可观测/拆步；**每问答不出证据就不许动笔**）→ ② 写 **dev doc**（用 `dev-doc-spec` skill **v2：8 节必填＋3 条件**，读者＝零上下文小队）：做什么／在哪做(**file:line**)/凭什么做/怎么算做完(**反例必红**)/**怎么跑**(取树·装依赖·端口·落盘)/有什么基础(**禁重复建设**)/前置与红线/交什么
+ ① 🔴 **先跑 `pre-plan-thinking` 的 9 问**（想清楚：问题/现状/有没有现成/最小改动/最危险假设/失败路径/边界/可观测/拆步；**每问答不出证据就不许动笔**）→ ② 写 **dev doc**（用 `dev-doc-spec` skill **v2：9 节必填＋3 条件**，读者＝零上下文小队）：做什么／在哪做(**file:line**)/凭什么做/怎么算做完(**反例必红**)/**怎么跑**(取树·装依赖·端口·落盘)/有什么基础(**禁重复建设**)/前置与红线/交什么
  ③ 产 **四行开场包**：批次名 ／ 写集（逐文件）／ 判据（含"改坏必红"）／ 域守则指针
  ④ **交创始人** —— 明确一句：「请用 `synova-squad-lead` 开一个会话执行本批次」
  ④ 你只等结果：收 **R2 指针（≤10 行）** ＋ **对账** ＋ 报"模块完成"

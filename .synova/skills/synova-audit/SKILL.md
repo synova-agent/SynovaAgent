@@ -24,8 +24,8 @@ description: 独立审计任务交付——Kimi K2.6 零上下文会话审查 Co
 |---|------|------|------|
 | 1 | **任务提交集** | `git log --all -- <文件>` 映射 | D320 教训：单提交必漏审 |
 | 2 | Git diff | `git show <hash> --stat` + `git diff <hash>^..<hash>` | 物理事实 |
-| 3 | Dev doc | `docs/plans/codex/implementation/SYNOVA-IMPL-DXXX-*.md` | 规划承诺 |
-| 4 | Task brief | `.claude/task-briefs/` 对应文件 | 范围约束 |
+| 3 | Dev doc | `.handbook/派单件/<日期>-规格-<Issue#>-<slug>.md` | 规划承诺 |
+| 4 | Task brief | `.claude/claims/<issue>.yaml` 对应文件 | 范围约束 |
 | 5 | AGENTS.md | 项目根 | 铁律判案依据 |
 | 6 | **审计基线** | `python scripts/audit/audit-check.py --full`（或降级：手动 grep as any / 空 catch） | 区分新增 vs 预存 |
 | 7 | **执行证据包** | CI job 级结论、bypass 记录、pre-commit 通过记录 | L3 依据 |

@@ -911,3 +911,11 @@ documents:
     status: active
     owner: P4
     note: "#917 拍 1（裁 335）一进一出：退 GitHub architecture job（15→14）＋进 Gitea ①f（tsc --noEmit）；受保护路径豁免。"
+
+  # ---- P6 2026-10-24：#932 PR-1 传播豁免件（重号修正：原 0251 → 0254，因 #912／#917 先后占号）----
+  - id: DOC-0254
+    type: decision
+    path: gate-exemptions/2026-10-24-p6-932-prop.md
+    status: active
+    owner: P6
+    note: "#932 PR-1（A+B 机械传播）技能镜像同步豁免（裁 334）；覆盖 .dsh/skills/** ＋ 本登记 ＋ 豁免件自覆盖。"
