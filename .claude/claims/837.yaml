@@ -6,6 +6,7 @@
 # 授权：创始人 2026-10-24 本窗一次性授权（CTO-2 临时扩写集：money schema ＋ cash-flow 哨兵适配器）。
 writeset:
   - .claude/claims/837.yaml
+  - .claude/task-briefs/2026-10-24-837-e1-real-chain.md
   - extensions/ontology/resource/money.json
   - src/sentinel/adapters/cash-flow-sentinel.ts
   - tests/acceptance/mvp1-m9-one-pass.test.ts
