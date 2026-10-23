@@ -1,0 +1,18 @@
+# .claude/claims/922.yaml — #922 #911/#910 合并后收口（inventory id 漂移 ＋ b-followers 新红 ＋ 第五消费者）· 写集声明
+# 纪律：只列本 PR 真正改动的文件，不预授权。
+writeset:
+  - .claude/claims/922.yaml
+  - docs/authority/GATE-INVENTORY.yaml
+  - docs/authority/DOCS-REGISTRY.yaml
+  - scripts/control-tower/claim_store.py
+  - scripts/check-brief-vs-code.sh
+  - tests/control-tower/precommit-claim-wiring.test.sh
+  - gate-exemptions/2026-10-24-p4-922-post911-closeout.md
+  - memory/notes/implemented/2026-10-24-922-post911-closeout.md
+done:
+  - verify: python3 scripts/control-tower/quality-baseline.py --check-inventory docs/authority/GATE-INVENTORY.yaml
+  - verify: bash tests/control-tower/quality-standard.test.sh
+  - verify: bash tests/control-tower/b-followers-claim-consistency.test.sh
+  - verify: bash tests/control-tower/precommit-claim-wiring.test.sh
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main
+note: "#922：#911 合并后 GATE-INVENTORY 的 X 头 id 漂移（4c673e→ce91d3）收口；b-followers §1 新红（docstring 字面量路径）修复；第五消费者 check-brief-vs-code.sh 空值分支补齐。判据未改。"

@@ -29,7 +29,7 @@ writeset:
   # PR-4（件 3：L2 预设三句写真源；presets 不在受保护清单 ⇒ 无豁免）
   - docs/synova/presets/synova-squad-lead/cordis.patch.yml
   - docs/synova/presets/synova-squad-lead/SYSTEM-PROMPT.md
-  # 每 PR 追加登记 1 条（DOC-0246…0249）
+  # 每 PR 追加登记 1 条（DOC-0247…0250）
   - docs/authority/DOCS-REGISTRY.yaml
 done:
   - verify: bash scripts/workflow/sync-dsh-skills.sh --check
