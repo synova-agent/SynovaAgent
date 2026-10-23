@@ -13,7 +13,11 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import express from 'express';
 import type { Server } from 'http';
-import { resolveMasterSecret, MasterSecretMissingError, DEV_MASTER_SECRET } from '../../src/security/master-secret';
+import { resolveMasterSecret } from '../../src/security/master-secret';
+
+/** dev 密钥的历史字面量（模块已内部化该常量；此处锁死兼容值）。 */
+const DEV_MASTER_SECRET = 'synova-dev-secret';
+type TypedErr = { name?: string; code?: string; phase?: string; retryable?: boolean; message?: string };
 
 const ORIG_MASTER = process.env['CREDENTIAL_MASTER_KEY'];
 const ORIG_ADMIN = process.env['SYNOVA_ADMIN_KEY'];
@@ -95,12 +99,13 @@ describe('#838 E-2 ③: 主密钥缺失 ⇒ 启动失败（typed error）', () =
     } catch (e) {
       caught = e;
     }
-    expect(caught).toBeInstanceOf(MasterSecretMissingError);
-    const err = caught as MasterSecretMissingError;
+    expect(caught).toBeInstanceOf(Error);
+    const err = caught as TypedErr;
+    expect(err.name).toBe('MasterSecretMissingError');
     expect(err.code).toBe('MASTER_SECRET_MISSING');
     expect(err.phase).toBe('startup');
     expect(err.retryable).toBe(false);
-    expect(err.message).toContain('MASTER_SECRET_MISSING');
+    expect(err.message ?? '').toContain('MASTER_SECRET_MISSING');
   });
 
   it('E2-③b 显式 devMode=true ⇒ 开发密钥常量（唯一允许的可预测值）', () => {
@@ -116,6 +121,6 @@ describe('#838 E-2 ③: 主密钥缺失 ⇒ 启动失败（typed error）', () =
 
   it('E2-③d 空白 env 不算配置（不得把空格当密钥）', () => {
     process.env['CREDENTIAL_MASTER_KEY'] = '   ';
-    expect(() => resolveMasterSecret({ engineTokens: '' })).toThrow(MasterSecretMissingError);
+    expect(() => resolveMasterSecret({ engineTokens: '' })).toThrow(/MASTER_SECRET_MISSING/);
   });
 });

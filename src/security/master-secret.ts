@@ -18,7 +18,7 @@
  * 已知限制: 本模块只负责"取哪个值"，不校验密钥强度/轮换（那是 KMS/凭据域的事，另卡）。
  */
 
-export class MasterSecretMissingError extends Error {
+class MasterSecretMissingError extends Error {
   readonly code = 'MASTER_SECRET_MISSING';
   readonly phase = 'startup';
   readonly retryable = false;
@@ -35,7 +35,7 @@ export interface MasterSecretSource {
 }
 
 /** devMode 下的开发密钥（**仅**显式 devMode=true 时使用；与历史值逐字一致，避免 dev 数据打不开）。 */
-export const DEV_MASTER_SECRET = 'synova-dev-secret';
+const DEV_MASTER_SECRET = 'synova-dev-secret';
 
 /**
  * 解析主密钥。优先级: 环境变量 > config.engineTokens > 显式 devMode 常量。
