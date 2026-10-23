@@ -1,0 +1,17 @@
+# .claude/claims/837.yaml — #837 E-1 真数据链（M9 ③ 去 createNode 绕行）· 写集声明
+#
+# 为什么是 claim 而不是 task-brief：近期 PR（#910/#911/#828）同型用 `.claude/claims/<issue>.yaml`
+# 作 S0 声明源；两字段版无 exclude（排除项由 D708 对账单点承担）。
+# 写集口径：只列本 PR 真正改动的文件，不预授权。
+# 授权：创始人 2026-10-24 本窗一次性授权（CTO-2 临时扩写集：money schema ＋ cash-flow 哨兵适配器）。
+writeset:
+  - .claude/claims/837.yaml
+  - extensions/ontology/resource/money.json
+  - src/sentinel/adapters/cash-flow-sentinel.ts
+  - tests/acceptance/mvp1-m9-one-pass.test.ts
+done:
+  - verify: npx vitest run tests/acceptance/mvp1-m9-one-pass.test.ts
+  - verify: npx tsc --noEmit
+  - verify: npx vitest run tests/sentinel tests/connectors tests/l4 tests/acceptance
+  - verify: git diff --name-only gitea/local-main..HEAD
+note: "#837 E-1：money schema 增 operating_expenses（哨兵主名，此前两 schema 均无 ⇒ ingestBatch 白名单跳过）；cash-flow-sentinel 加 operating_expense 单数显式别名（outcome/financial schema 名＋erp-standard 映射目标）；M9 ③ 改真入口 POST /api/data/upload（erp-standard）并新增 money 白名单判别断言。M9 7/7；#720 仍按裁 311-③ 待合并后在 main 真链复跑。"
