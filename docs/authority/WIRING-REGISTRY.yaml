@@ -65,3 +65,11 @@ entries:
     status: declared-only
     owner: K12
     notes: "同文件自调用（batchPublish→publish）不计消费者；外部生产侧只用 batchPublish ⇒ declared-only（禁编造消费者）"
+  - capability: quality.deltaGate
+    defined_at: "scripts/control-tower/check-quality-delta.py:1"
+    provider: "scripts/control-tower/check-quality-delta.py:1"
+    consumer: "scripts/pre-commit-check.sh:1926"
+    test: "tests/control-tower/check-quality-delta.test.sh"
+    status: wired
+    owner: P4
+    notes: "G1/G3/G4 变更集闸（#912 批 1／裁 330）；生产消费点=pre-commit 附加块，CI 另有具名步 ①e（local-gates.yml:98）"

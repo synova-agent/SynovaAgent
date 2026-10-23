@@ -1,0 +1,17 @@
+# quality-delta-whitelist.yaml — 质量增量闸（#912 批 1）唯一豁免通道（A3 · 裁 330）
+#
+# 🔴 纪律（缺一即违规）：
+#   · **禁代码内注释豁免**：本闸只认本文件；脚本里写 `# quality-delta-ok` 一律无效。
+#   · **只减不增**：`ratchet.max_entries` 是条目数上限，运行时核 `len(entries) > max_entries ⇒ 违规 W-RATCHET`。
+#     要新增条目 ⇒ 必须先由 CTO 裁定并**下调不上去**（上调 max_entries 是一次可见的治理动作，不是批准）。
+#   · 每条四字段齐：`path`（受豁免文件，支持 `*` 尾通配）｜`rule`（R1.1/R1.2/R3.1/R3.3/R3.4/R4.2/R4.3/R4.4）
+#     ｜`reason`（≥10 字，说清"为什么这不是缺陷"）｜`ruling`（`裁 NNN` 或 `#NNN`）。
+#   · 本文件只对**变更集内**的判定生效；不改存量、不改 #910 基线。
+#
+# 现状：批 1 上线时为 **0 条**（存量不判；新增误报先走 L1 复核，确认后才申请条目）。
+schema_version: 1
+
+ratchet:
+  max_entries: 0
+
+entries: []
