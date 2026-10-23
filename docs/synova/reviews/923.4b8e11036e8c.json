@@ -1,0 +1,85 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 923,
+  "patch_fingerprint": "sha256:4b8e11036e8c0f39c851562bada7e30e9d37862394eee447ea7f54a155aa5ffe",
+  "author": "P4-lead/deepseek-flash",
+  "reviewer": "review-919",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "issued_at": "2026-10-24T01:45:10+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步）｜零上下文 fresh 会话 review-919（未参与 #922 实现，不采信 PR 正文／CTO 转述）｜自建 worktree /Users/wane/SynovaAgent/.synova-wt-r923 @c06411d56（base gitea/local-main=06456ca9e）＋ 改前对照树 .synova-wt-r910-main @06456ca9e（旧树同机复跑，非引用历史输出）｜机械复核，未复跑全量 pre-commit｜label_hash 用 quality-baseline.py 自身的 _HEADER_RE/normalize_label/label_hash 独立复算（不采信件内登记值）｜判别力抽验：删第五处空值分支 ⇒ wiring 夹具 35/1 红，随后还原（git status 空）｜本回执为本分支唯一写入",
+  "checks": [
+    {
+      "id": "①范围与写集＋①d",
+      "name": "8 件恰等于 claim 922 writeset（无夹带／无虚报）；无 scripts/audit/**、无产品代码；①d 11 通过 0 失败（5 条受保护路径全有豁免）",
+      "cmd": "cd .synova-wt-r923 && git diff --name-status gitea/local-main HEAD ; python3 - <<'EOF'（解析 .claude/claims/922.yaml writeset 与 diff 集合做对称差）EOF ; git diff --name-only gitea/local-main HEAD | grep -E '^scripts/audit/|^src/|^packages/|^extensions/|^\\.gitea/|probe-|install-deps' ; bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main ; python3 scripts/control-tower/claim_store.py --check 922",
+      "result": "pass",
+      "evidence": "diff 8 件 / writeset 8 条：夹带「无」、虚报「无」、完全一致=True；清单：.claude/claims/922.yaml、docs/authority/DOCS-REGISTRY.yaml、docs/authority/GATE-INVENTORY.yaml、gate-exemptions/2026-10-24-p4-922-post911-closeout.md、memory/notes/implemented/2026-10-24-922-post911-closeout.md、scripts/check-brief-vs-code.sh、scripts/control-tower/claim_store.py、tests/control-tower/precommit-claim-wiring.test.sh；stat=「8 files changed, 105 insertions(+), 18 deletions(-)」；红线 grep 零命中（无 scripts/audit/**、src/、packages/、extensions/、.gitea/、probe-*、install-deps）；①d「diff 变更路径 8 条」「受保护路径变更 5 条」→ 5 条逐条有合规豁免（DOCS-REGISTRY／豁免件／check-brief-vs-code.sh／claim_store.py／precommit-claim-wiring.test.sh）⇒「结果: 11 通过, 0 失败」rc=0；claim --check 922 ⇒ {status:ok,writeset:8,done:5}"
+    },
+    {
+      "id": "②盘点件（改前红→改后绿）",
+      "name": "--check-inventory 在 head 上 rc=0 且 covered X5/5 K33/33；改前 main 06456ca9e 实测 violations=4／X4/5 K31/33（两树同机各跑一次，不引用历史输出）",
+      "cmd": "cd .synova-wt-r923 && python3 scripts/control-tower/quality-baseline.py --check-inventory docs/authority/GATE-INVENTORY.yaml ; cd ../.synova-wt-r910-main && 同命令",
+      "result": "pass",
+      "evidence": "head：rc=0，末两行「PAIRING-OK t1..t5=5/5 excluded_headers=19 orphans=6/32」「covered=G12/12 B9/9 X5/5 S9/9 K33/33 R35/35」；改前（main 06456ca9e，同一命令）：rc=1「INVENTORY-FAIL violations=4」＋「covered=G12/12 B9/9 X4/5 S9/9 K31/33 R35/35」⇒ 两态可区分，修复真实生效（C3/C4/C6 三条已转绿：C3 注释头 5/5、C4 检查点归属 33/33、C6 gates 35/35 且无手写 id 告警）"
+    },
+    {
+      "id": "③b-followers 新红消除",
+      "name": "b-followers-claim-consistency.test.sh：head 10 通过/0 失败；改前 main 9 通过/1 失败",
+      "cmd": "cd .synova-wt-r923 && bash tests/control-tower/b-followers-claim-consistency.test.sh ; cd ../.synova-wt-r910-main && 同命令",
+      "result": "pass",
+      "evidence": "head：「结果: 10 通过, 0 失败」rc=0（§1 枚举闭包 12 个消费点全部分类、无多出项）；改前 main：「结果: 9 通过, 1 失败」rc=1（失败点 §1 多出 scripts/control-tower/claim_store.py）。head 侧 root cause 已消：`grep -n 'resolve-commit-brief' scripts/control-tower/claim_store.py` 零命中，且 docstring 显式写明「本行故意不写 resolver 的文件名字面量」并引 #922 F1"
+    },
+    {
+      "id": "④标准件判据（J1）",
+      "name": "quality-standard.test.sh rc=0（该件在改前 main 上是 rc=1 failures=2）",
+      "cmd": "cd .synova-wt-r923 && bash tests/control-tower/quality-standard.test.sh",
+      "result": "pass",
+      "evidence": "末两行「covered=G12/12 B9/9 X5/5 S9/9 K33/33 R35/35」「STANDARD-OK g=6 fields=5 rules=5」，rc=0（改前 main 同命令：rc=1「STANDARD-TEST rc=1 failures=2」，两失败即盘点 covered 行与盘点 rc ⇒ 随 ② 一并转绿）"
+    },
+    {
+      "id": "⑤接线夹具＋判别力",
+      "name": "precommit-claim-wiring.test.sh 36 通过/0 失败；同源断言已由三文件扩到四文件（CLAIM_V2×3＋_BCV_V2×1）；删掉第五处空值分支 ⇒ 夹具真红（非纸老虎）",
+      "cmd": "cd .synova-wt-r923 && bash tests/control-tower/precommit-claim-wiring.test.sh ; 变异：删 scripts/check-brief-vs-code.sh 的 `\"\") _BCV_V2=1 ;;` 行 → 重跑 → 从 /tmp 备份还原 ; git status --short",
+      "result": "pass",
+      "evidence": "head：「结果: 36 通过, 0 失败」rc=0；源码级同源断言现为 same_source_probe × 4（pre-commit-check.sh / check-verifiable-done.sh / resolve-commit-brief.sh 用 CLAIM_V2，check-brief-vs-code.sh 用 _BCV_V2），注释同步改「防五处只改两处」；变异后：「❌ 同源[#911/#922]: scripts/check-brief-vs-code.sh 缺空值分支 ⇒ 未设会被 *) 吞成 0（与 claim_store 分裂）」「结果: 35 通过, 1 失败」rc=1 ⇒ 新断言有判别力；还原后 git status 为空"
+    },
+    {
+      "id": "⑥盘点 X 头 label_hash 独立复算",
+      "name": "GATE-INVENTORY 的 PC-X-ce91d3 三字段（id／label_hash／line）与 pre-commit-check.sh:1663 行**我自己复算**的值逐字相等",
+      "cmd": "cd .synova-wt-r923 && python3 - <<'EOF'（importlib 载入 scripts/control-tower/quality-baseline.py，用其 _HEADER_RE 匹配全文件、normalize_label + label_hash 复算，再与 docs/authority/GATE-INVENTORY.yaml 的登记行比对）EOF ; grep -n -A4 'id: PC-X-ce91d3' docs/authority/GATE-INVENTORY.yaml",
+      "result": "pass",
+      "evidence": "L1663 原文＝`# ═══ D1220（卡 #1222 D-A2）: 组 12 claim 载体覆盖判定（开关 SYNO_CLAIM_V2，**默认开** · #911）═══`；normalize_label ⇒ `D1220（卡 #1222 D-A2）: 组 12 claim 载体覆盖判定（开关 SYNO_CLAIM_V2，**默认开** · #911）`；label_hash ⇒ `ce91d38d83c7`，期望 id ⇒ `PC-X-ce91d3`；全文件扫描该组 12 头仅 1 处（line 1663，无重号/无漂移）；盘点表登记：id PC-X-ce91d3 / line 1663 / label 同 normalize_label / label_hash ce91d38d83c7 ⇒ 四字段逐字一致（PR 正文写的 4c673e7aeb51→ce91d38d83c7 与实算相符）"
+    },
+    {
+      "id": "⑦登记与留痕",
+      "name": "DOCS-REGISTRY 纯追加（8/0）、DOC-0246 唯一、4 个重号为预存；豁免件 13 行覆盖 5 条受保护路径",
+      "cmd": "cd .synova-wt-r923 && git diff --numstat gitea/local-main HEAD -- docs/authority/DOCS-REGISTRY.yaml ; grep -c 'id: DOC-0246' docs/authority/DOCS-REGISTRY.yaml ; grep -oE 'id: DOC-[0-9]+' docs/authority/DOCS-REGISTRY.yaml | sort | uniq -d ; git show gitea/local-main:docs/authority/DOCS-REGISTRY.yaml | grep -oE 'id: DOC-[0-9]+' | sort | uniq -d",
+      "result": "pass",
+      "evidence": "DOCS-REGISTRY numstat=「8 插入 / 0 删除」（纯追加，修正了 #910 的 +29/−3 形态）；新增条目仅 DOC-0246（计数 1，path=gate-exemptions/2026-10-24-p4-922-post911-closeout.md，type=decision，owner=CTO）；重复 id 仅 DOC-0124/0125/0193/0228 四个，且与 base 06456ca9e 的重号集合完全相同 ⇒ 预存、非本批引入；豁免件 13 行，①d 已确认 5 条受保护路径逐条命中豁免（含自覆盖）"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "info",
+      "where": "docs/authority/GATE-INVENTORY.yaml 的 PC-X-* id 生成规则（源自 scripts/control-tower/quality-baseline.py:184-195 normalize_label/label_hash）",
+      "what": "README 已声明的例外 1 属实：盘点表的 X 头 id 由「注释头文案的哈希」派生，任何批次改动那句注释都会再次漂移；本 PR 只同步了值（并在 reason 留痕），未改派生规则。",
+      "detail": "我已用模块自身函数复算确认当前值正确（见 check ⑥），因此本 PR 无缺陷。但同一形态的漂移会在下次有人改 `scripts/pre-commit-check.sh` 的 `# ═══ … ═══` 注释头时重现（#911→#922 已是第一例）。建议后续（需 CTO 裁，属 #910/#841 判据语义）：id 改为固定 slug（如 PC-X-g12-claim，不随文案变），label_hash 降为校验位并在盘点表登记「期望哈希」，这样改文案时门禁仍能判红但修复只需改一个校验位、不会牵动 owner 映射。"
+    },
+    {
+      "id": "F2",
+      "severity": "info",
+      "where": "docs/authority/GATE-INVENTORY.yaml 的 `line:` 字段（PC-X-ce91d3 之后的行）",
+      "what": "例外 2 属实：`line:` 对 1663 之后的行未重编号。",
+      "detail": "核实方式：枚举器按 label_hash 判定归属（quality-standard / --check-inventory 均只看 id＋label_hash，不看 line），故本 PR 未重编号不影响任何判据（②④⑥ 全绿即证）。仅提醒：若日后有人按 `line:` 人肉定位（如 grep 行号对账），1663 之后的行会指错位。属文档精度问题，不构成本批缺陷。"
+    },
+    {
+      "id": "F3",
+      "severity": "info",
+      "where": "docs/authority/DOCS-REGISTRY.yaml（DOC-0124/0125/0193/0228）",
+      "what": "该台账存在 4 个预存重复 id，与本批无关，供 CTO 分诊。",
+      "detail": "`grep -oE 'id: DOC-[0-9]+' | sort | uniq -d` 在 head 与 base 06456ca9e 两个 ref 上得到同一集合（DOC-0124/0125/0193/0228）⇒ 非本批引入；`doc-registry-gate.sh` 只做子串匹配、不查重号（#910 已登记该已知限制），故不会被门禁抓到。本批新增的 DOC-0246 唯一、无冲突。"
+    }
+  ]
+}

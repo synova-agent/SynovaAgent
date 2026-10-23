@@ -45,14 +45,19 @@ FLAG=$(env -u SYNO_CLAIM_V2 python3 "$CS" --flag 2>/dev/null)  # swallow-ok: 失
 [ "$FLAG" = "on" ] && ok "边界: SYNO_CLAIM_V2 未设 ⇒ on（默认开）" || no "边界: 默认应为 on，实得 $FLAG"
 FLAG=$(SYNO_CLAIM_V2=0 python3 "$CS" --flag 2>/dev/null)  # swallow-ok: 失败即空 → 下方断言直接判红（不静默放行）
 [ "$FLAG" = "off" ] && ok "边界: SYNO_CLAIM_V2=0 ⇒ off（唯一回滚点）" || no "边界: 显式 0 应为 off，实得 $FLAG"
-# 源码级同源断言（端到端未设态在下方行为探针 `probe_default` 里真跑；此处防"四处只改两处"）
-for f in scripts/pre-commit-check.sh scripts/check-verifiable-done.sh scripts/workflow/resolve-commit-brief.sh; do
-  if grep -q '^  "") CLAIM_V2=1 ;;' "$REPO/$f"; then
-    ok "同源[#911]: $f 空值分支显式 ⇒ 1"
+# 源码级同源断言（端到端未设态在下方行为探针 `probe_default` 里真跑；此处防"五处只改两处"）
+# #922: 变量名分两族（CLAIM_V2 / _BCV_V2），都必须是「空值 ⇒ 1」且排在 `*)` 之前。
+same_source_probe() { # <file> <var>
+  if grep -q "^  \"\") $2=1 ;;" "$REPO/$1"; then
+    ok "同源[#911/#922]: $1 空值分支显式 ⇒ 1（$2）"
   else
-    no "同源[#911]: $f 缺空值分支 ⇒ 未设会被 *) 吞成 0（与 claim_store 分裂）"
+    no "同源[#911/#922]: $1 缺空值分支 ⇒ 未设会被 *) 吞成 0（与 claim_store 分裂）"
   fi
-done
+}
+same_source_probe scripts/pre-commit-check.sh CLAIM_V2
+same_source_probe scripts/check-verifiable-done.sh CLAIM_V2
+same_source_probe scripts/workflow/resolve-commit-brief.sh CLAIM_V2
+same_source_probe scripts/check-brief-vs-code.sh _BCV_V2
 
 # ── 正常: 合法 claim ⇒ --check exit 0 ──
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
