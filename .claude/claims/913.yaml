@@ -1,0 +1,26 @@
+# .claude/claims/913.yaml — #913 批2 PR-1（Q-9 共享 conformance）· 写集声明（claim-first 载体）
+#
+# L1 2026-10-24 授权追加；本批只测 tests/**，零 src/**；第二轮二次授权追加 docs 登记＋受保护路径豁免（仍零 src/**）。
+# 规格（唯一判据准绳）：.handbook/派单件/2026-10-24-规格-913-PR1-契约套件.md（§1 写集／§2 契约用例／§3 判据；裁 331）
+# 门禁依据：CI 声明闸② 需 claim-first 载体覆盖 tests/** 路径（裁 324；同 #911/#916 先例）；
+#   D782 D2 登记门禁需 DOCS-REGISTRY 登记＋gate-exemptions 豁免（同 #916/#912 先例，裁 331）。
+# 纪律：只声明本批真正改动的文件；不动 src/**、scripts/**、.gitea/**、vitest.config.ts、package.json。
+writeset:
+  - .claude/claims/913.yaml
+  - tests/contract/conformance/storage-backend.contract.ts
+  - tests/contract/conformance/registry.ts
+  - tests/contract/storage-backend.conformance.test.ts
+  - tests/contract/conformance/meta.test.ts
+  - tests/contract/conformance/fixtures/broken-backend.ts
+  - tests/contract/known-divergences.yaml
+  - tests/contract/known-red.yaml
+  - tests/storage-backend.test.ts
+  # 第二轮（L1 2026-10-24 二次授权）：D782 D2 登记 + 受保护路径豁免
+  - docs/authority/DOCS-REGISTRY.yaml
+  - gate-exemptions/2026-10-24-p7-913-pr1-docs.md
+done:
+  - verify: npx vitest run tests/contract tests/storage-backend.test.ts
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main
+  - verify: python3 scripts/control-tower/claim_store.py --check 913 --root .
+  - verify: npx vitest run tests/contract/conformance/meta.test.ts
+note: "#913 批2 PR-1 Q-9 共享 conformance（裁 331）：同一套 StorageBackend 契约 × Memory/Sqlite；两条 sqlite 已知违约登记标红不阻断；D782 D2 登记两清单＋受保护路径豁免（同 #916/#912 先例）；不改门禁语义、不动 src/**、不碰 scripts/audit/**。"

@@ -911,3 +911,25 @@ documents:
     status: active
     owner: P4
     note: "#917 拍 1（裁 335）一进一出：退 GitHub architecture job（15→14）＋进 Gitea ①f（tsc --noEmit）；受保护路径豁免。"
+
+  # ---- P7 2026-10-24：#913-PR-1 两清单登记（裁 331）----
+  - id: DOC-0254
+    type: registry
+    path: tests/contract/known-divergences.yaml
+    status: active
+    owner: P7
+    note: "#913-PR-1 Q-9 共享 conformance 的 KNOWN_VIOLATION 登记表（updatedAt-iso／keyPrefix-literal × SqliteStorageBackend，裁 331 标红不阻断；只减不增）。"
+
+  - id: DOC-0255
+    type: registry
+    path: tests/contract/known-red.yaml
+    status: active
+    owner: P7
+    note: "#913-PR-1 既有红登记表（gss-common／graphbridge-wiring 两条；只减不增；消费在 PR-3 ①g）。"
+
+  - id: DOC-0256
+    type: decision
+    path: gate-exemptions/2026-10-24-p7-913-pr1-docs.md
+    status: active
+    owner: P7
+    note: "#913-PR-1 受保护路径豁免件：DOCS-REGISTRY.yaml 追加两清单登记（追加式，保留他人条目）＋本豁免件自覆盖（裁 331）。"

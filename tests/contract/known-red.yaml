@@ -1,0 +1,23 @@
+# tests/contract/known-red.yaml — 既有红测试登记表（#913-PR-1 · 裁 331）
+#
+# 用途：全量测试里**既有失败**的登记（PR-3 ①g 用它判容错：失败文件 ⊆ KNOWN-RED 且未过期 ⇒ 继续判覆盖率）。
+# 纪律：**只减不增** —— 修复后必须删行；本批（PR-1）只落文件，**不被消费**（消费在 PR-3 ①g）。
+# 真源：.handbook/派单件/2026-10-24-规格-913-PR1-契约套件.md §1 件 7；提案 v3 §件 3（裁 331）。
+# 两条基线 2026-10-24 现场复跑确认红（原始输出见 /tmp/913-pr1-evidence.log）；
+# 修它们另立卡（P1/P2），不在本批修。
+schema_version: 1
+meta:
+  as_of: "gitea/local-main@259d04329"
+  ruling: "裁331"
+  policy: "只减不增：修复后必须删行；本批只落文件，消费在 PR-3 ①g"
+entries:
+  - test: tests/golden-scenarios/gss-common.test.ts
+    reason: "inject 归一 targetNodeType 实测 'outcome/financial'，断言期望 'Financial'（gss-common.test.ts:67）"
+    owner: P1
+    expiry: "2026-12-31"
+    ruling: "裁331"
+  - test: tests/l3/graphbridge-wiring.test.ts
+    reason: "失败模块不应建节点：afterRun 后 Person 节点数期望 1 实测 0（graphbridge-wiring.test.ts:80）"
+    owner: P2
+    expiry: "2026-12-31"
+    ruling: "裁331"
