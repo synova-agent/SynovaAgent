@@ -38,6 +38,7 @@ import type { Database } from 'better-sqlite3';
 // 类型侧只取 L4 契约（DecisionInput/DecisionResult），**运行时**写入口在工厂函数内动态 import
 // ——与既有 GraphStore 动态 import 同款（1c / 3b / 5x），保持启动期加载顺序不变。
 import type { DecisionInput, DecisionResult } from '../l4/decision-capture';
+import { resolveMasterSecret } from '../security/master-secret';
 import { listDecisionRows, setDecisionLedgerReader, type DecisionLedgerReaderPort } from '../l4/decision-ledger-readback';
 
 const log = createLogger('deploy/bootstrap');
@@ -870,7 +871,7 @@ export class Bootstrap {
 
         // 1b: DB 解密
         const encryptionConfig = {
-          masterSecret: process.env.CREDENTIAL_MASTER_KEY || config.engineTokens || (config.devMode ? 'synova-dev-secret' : ''),
+          masterSecret: resolveMasterSecret(config),
           salt: config.dbPath,
           dbPath: config.dbPath,
         };
@@ -1026,7 +1027,7 @@ export class Bootstrap {
         // 4a: CredentialVault
         try {
           const { CredentialVault } = await import('../security/credential-vault');
-          const masterSecret = process.env.CREDENTIAL_MASTER_KEY || config.engineTokens || (config.devMode ? 'synova-dev-secret' : '');
+          const masterSecret = resolveMasterSecret(config);
           const vault = new CredentialVault(db, masterSecret, config.dbPath);
           ctx.set('credentialVault', vault);
           log.info('Phase 4a: CredentialVault 已初始化 (AES-256-GCM)');
@@ -1303,7 +1304,7 @@ export class Bootstrap {
                   backupDir: config.dbPath.replace(/[^/\\]+$/, '') + 'backups',
                   maxBackups: 7,
                   encryptBackups: true,
-                  masterSecret: process.env.CREDENTIAL_MASTER_KEY || config.engineTokens || (config.devMode ? 'synova-dev-secret' : ''),
+                  masterSecret: resolveMasterSecret(config),
                   salt: config.dbPath,
                 });
                 if (result.ok) log.info({ path: result.path }, '数据库备份完成');

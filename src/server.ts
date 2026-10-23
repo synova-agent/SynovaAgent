@@ -90,6 +90,7 @@ import { bindMainAgent } from "./loops/main-agent-binding"; // #975（0-1 循环
 import { registerGlobalErrorHandlers, unregisterGlobalErrorHandlers } from './services/runtime-global-handlers';
 
 import { Bootstrap } from './deploy/bootstrap';
+import { resolveMasterSecret } from './security/master-secret';
 import type { BootstrapResult } from './deploy/bootstrap';
 
 // ═══ D590 裁决②: upload-v2 下线 — 410 Gone 显式（非静默 404），指路替代入口 ═══
@@ -622,7 +623,7 @@ export async function createServer(): Promise<Server> {
 
       // P0-5.3: 优雅关闭时加密数据库
       const encryptionConfig = {
-        masterSecret: process.env.CREDENTIAL_MASTER_KEY || config.engineTokens || (config.devMode ? 'synova-dev-secret' : ''),
+        masterSecret: resolveMasterSecret(config),
         salt: config.dbPath,
         dbPath: config.dbPath,
       };

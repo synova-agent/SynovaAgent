@@ -36,15 +36,47 @@ interface DumpBody {
   audit?: Array<{ path?: string; kind?: string }>;
   code?: string;
   error?: string;
+  reason?: string;
 }
 
 async function dump(baseUrl: string, query: string): Promise<{ status: number; body: DumpBody }> {
-  const res = await fetch(`${baseUrl}/api/config/dump${query}`);
+  // #838 E-2 ②: 路由现在要求「验签身份组织 == ?orgId」。测试用 `x-test-org` 模拟中间件注入
+  //   （生产由 jwtAuthMiddleware 注入 req.auth；本文件只挂 config 路由，故自带注入缝）。
+  const m = /orgId=([^&]*)/.exec(query);
+  const declared = m ? decodeURIComponent(m[1] ?? '') : '';
+  const res = await fetch(`${baseUrl}/api/config/dump${query}`, {
+    headers: declared ? { 'x-test-org': declared } : {},
+  });
   const body = (await res.json()) as DumpBody;
   return { status: res.status, body };
 }
 
 describe('D600: GET /api/config/dump 检查表面', () => {
+  // ── #838 E-2 ②: 跨租户 fail-closed（两态）────────────────────────────────
+  it('E2-②a 无身份（未注入 req.auth）⇒ 403 CROSS_ORG_DENIED / auth_org_missing', async () => {
+    const res = await fetch(`${baseUrl}/api/config/dump?orgId=${ORG_FULL}`);
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as DumpBody;
+    expect(body.code).toBe('CROSS_ORG_DENIED');
+    expect(body.reason).toBe('auth_org_missing');
+  });
+
+  it('E2-②b 身份组织 != ?orgId ⇒ 403 CROSS_ORG_DENIED / org_mismatch', async () => {
+    const res = await fetch(`${baseUrl}/api/config/dump?orgId=${ORG_FULL}`, {
+      headers: { 'x-test-org': ORG_LEAK },
+    });
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as DumpBody;
+    expect(body.code).toBe('CROSS_ORG_DENIED');
+    expect(body.reason).toBe('org_mismatch');
+  });
+
+  it('E2-②c 身份组织 == ?orgId ⇒ 200（正常路径不被误伤）', async () => {
+    const { status, body } = await dump(baseUrl, `?orgId=${ORG_FULL}`);
+    expect(status).toBe(200);
+    expect(body.ok).toBe(true);
+  });
+
   let server: Server;
   let baseUrl: string;
 
@@ -73,6 +105,14 @@ describe('D600: GET /api/config/dump 检查表面', () => {
     const configRouter = (await import('../../src/routes/config')).default;
     const app = express();
     app.use(express.json());
+    // #838 E-2 ② 注入缝：模拟 jwtAuthMiddleware 的 req.auth（生产路径由中间件注入）
+    app.use((req, _res, next) => {
+      const org = req.headers['x-test-org'];
+      if (typeof org === 'string' && org.trim()) {
+        (req as unknown as { auth?: { orgId: string } }).auth = { orgId: org.trim() };
+      }
+      next();
+    });
     app.use(configRouter);
     server = app.listen(0, () => {
       const addr = server.address();
