@@ -839,3 +839,11 @@ documents:
     status: active
     owner: P4
     note: "#841 P0 质量门禁四件的受保护路径豁免（裁 320）；覆盖 6 件交付面 ＋ 本豁免件自覆盖。"
+
+  # ---- P4 2026-10-24：#911 claim-v2 默认开豁免件（DOC-0241…0244 已由本批预占，故取 0245）----
+  - id: DOC-0245
+    type: decision
+    path: gate-exemptions/2026-10-24-p4-911-claim-v2-default-on.md
+    status: active
+    owner: CTO
+    note: "#911 claim-v2 默认开（四处同源＋CI 显式注入）的受保护路径豁免；ID 避开本批已占的 DOC-0241…0244。"

@@ -40,9 +40,19 @@ grep -q 'IS_CLAIM_DECL' "$PC" && ok "接线: 声明载体双形态判定存在" 
 grep -q '散文检查按设计不适用' "$PC" && ok "接线: 含显式打印（禁静默空白）" \
   || no "接线: 缺显式打印（=静默空白）"
 
-# ── 边界: 默认关（回滚语义）──
+# ── 边界: **默认开**（裁 1423／裁 318 · #911 C1）＋ 显式 0 仍是唯一回滚点 ──
 FLAG=$(env -u SYNO_CLAIM_V2 python3 "$CS" --flag 2>/dev/null)  # swallow-ok: 失败即空 → 下方断言直接判红（不静默放行）
-[ "$FLAG" = "off" ] && ok "边界: SYNO_CLAIM_V2 默认关（回滚=关开关）" || no "边界: 默认应为 off，实得 $FLAG"
+[ "$FLAG" = "on" ] && ok "边界: SYNO_CLAIM_V2 未设 ⇒ on（默认开）" || no "边界: 默认应为 on，实得 $FLAG"
+FLAG=$(SYNO_CLAIM_V2=0 python3 "$CS" --flag 2>/dev/null)  # swallow-ok: 失败即空 → 下方断言直接判红（不静默放行）
+[ "$FLAG" = "off" ] && ok "边界: SYNO_CLAIM_V2=0 ⇒ off（唯一回滚点）" || no "边界: 显式 0 应为 off，实得 $FLAG"
+# 源码级同源断言（端到端未设态在下方行为探针 `probe_default` 里真跑；此处防"四处只改两处"）
+for f in scripts/pre-commit-check.sh scripts/check-verifiable-done.sh scripts/workflow/resolve-commit-brief.sh; do
+  if grep -q '^  "") CLAIM_V2=1 ;;' "$REPO/$f"; then
+    ok "同源[#911]: $f 空值分支显式 ⇒ 1"
+  else
+    no "同源[#911]: $f 缺空值分支 ⇒ 未设会被 *) 吞成 0（与 claim_store 分裂）"
+  fi
+done
 
 # ── 正常: 合法 claim ⇒ --check exit 0 ──
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
@@ -104,6 +114,22 @@ if evidence "$OUT_PROD"; then
   ok "行为: 生产脚本在 claim 载体下**实际执行** claim 分支（输出含不可替代信号：声明载体 = claim（${CLAIM_FILE_NAME}）+ 散文检查按设计不适用）"
 else
   no "行为: 生产脚本未出现 claim 分支证据 —— 输出片段: $(printf '%s' "$OUT_PROD" | grep -aE '声明载体|未填写|GATEKEEPER' | head -2)"
+fi
+# 🔴 #911 判据（默认开端到端）: **不注入** SYNO_CLAIM_V2 ⇒ 行为必须与显式 1 一致
+#   （此前 `*)` 兜底把"未设"吞成 0，且 resolver 同样默认关 ⇒ 组 6/12 的 claim 分支默认不可达）
+OUT_DEFAULT="$(GITHUB_ACTIONS=true SYNO_TEST_ARM=1 SYNO_CLAIM_DIR="$CLAIM_DIR" \
+  env -u SYNO_CLAIM_V2 SYNO_ISSUE_HINT=1217 \
+  SYNO_GIT_CACHED_ALL_NAMES="$STAGED" SYNO_GIT_CACHED_NAMES="$STAGED" \
+  bash "$PC" 2>&1 || true)"
+if evidence "$OUT_DEFAULT"; then
+  ok "行为[#911]: SYNO_CLAIM_V2 **未设** ⇒ claim 分支实际执行（默认开；与显式 1 同行为）"
+else
+  no "行为[#911]: 未设时 claim 证据消失 ⇒ 默认开未生效 —— 片段: $(printf '%s' "$OUT_DEFAULT" | grep -aE '声明载体|无 task brief|未填写' | head -2)"
+fi
+if printf '%s' "$OUT_DEFAULT" | grep -q '今日无 task brief'; then
+  no "行为[#911]: 未设时回落 legacy 并报『今日无 task brief』⇒ resolver 仍默认关（未与 claim_store 同源）"
+else
+  ok "行为[#911]: 未设时未回落 legacy（resolver/组 6 同源）"
 fi
 # 解耦断言（本卡核心之一）: 当前分支名**不含** 1217 时证据仍须在 ⇒ 证明探针不依赖宿主分支名
 BR_NOW="$(git -C "$REPO" branch --show-current 2>/dev/null || true)"

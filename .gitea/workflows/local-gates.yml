@@ -55,8 +55,15 @@ jobs:
           printf '%s\n' "$CUR_HASH" > "$HASH_FILE"
           echo "已重装并更新指纹 ⇒ $HASH_FILE"
       - name: ① 12 组门禁（唯一的阻断门）
+        # 🔴 #911（裁 318）: claim-v2 默认开 —— **CI 显式注入**，防未来某次把默认值改回去时
+        #   这条腿静默退回 legacy（显式注入 = 回归保险，不是新的开关）。回滚仍靠显式 0：
+        #   平台改 `SYNO_CLAIM_V2: "0"` 或本文件改成 "0"（改门禁本体 ⇒ 走 gate-exemptions 豁免）。
+        env:
+          SYNO_CLAIM_V2: "1"
         run: |
           cd /Users/wane/.ci-work/SynovaAgent
+          # #911 C3: 把生效值打印进 CI 日志（每次 run 一行，可 grep 留证）
+          echo "SYNO_CLAIM_V2=${SYNO_CLAIM_V2:-<未注入>}（claim-v2 显式注入；回滚=显式 0）"
           # 🔴 CTO 2026-10-11 裁定③：**本地 CI 不判 D734**（显式跳过，非静默）
           #   理由：Gitea host 模式下事件分流表达式不可靠（`${{ github.event_name }}` 实测不生效），
           #         而 D734 是"PR 预算"，对着集成分支账本总额判必然恒红 ⇒ 红灯失去信息量。
