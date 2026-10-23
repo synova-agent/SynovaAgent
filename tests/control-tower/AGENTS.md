@@ -14,7 +14,7 @@
 - vitest 零失败才合并；测试必有 `expect()`（禁空壳）。
 - 报备：#808 `weekly-recon.test.sh`（周对账探针 `scripts/control-tower/weekly-recon.sh` 配对测试；WIRE：`grep -rn "weekly-recon" .gitea/ scripts/ tests/` 非零）。
 - 报备：#828 `weekly-recon-launchd.test.sh`（launchd 安装器 `scripts/control-tower/weekly-recon-launchd.sh` 配对测试：HOME 隔离＋PATH 注入假 launchctl，绝不触系统 launchd；WIRE：`grep -rn "weekly-recon-launchd" tests/ scripts/` 非零）。
-
+- 报备：#912 `check-quality-delta.test.sh`（质量增量闸 `scripts/control-tower/check-quality-delta.py` 配对测试；T1–T12 含 A1 空集 SKIP／坏 base exit 2／白名单棘轮／变异体改坏必红。WIRE：`grep -rn "check-quality-delta" scripts/ .gitea/ tests/` 非零）。
 ## 红线
 测试命名三档（`*.test.ts`/`*.integration.test.ts`/`*.e2e.test.ts`）｜ 集成测试 cover **真实路由**｜ 与根件零重复。
 
