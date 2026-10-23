@@ -3,10 +3,12 @@
 # 为什么用 claim：本卡是 **issue 号卡（#841）**，无 D# 编号 ⇒ D# 链找不到声明源；
 #   `.claude/claims/<issue>.yaml` = S0 声明源（存在时优先于 D# 链）。
 # 先例：.claude/claims/1031.yaml / 980.yaml。
-# 纪律：writeset 列**本批 10 件**（批次级；含 impl-scanner 的 4 件）；顶层键只允许 writeset/done/note。
+# 纪律：writeset 列**本批 12 件**（批次级；含 impl-scanner 的 4 件 + CTO 裁 310/317 扩的两份守则）；顶层键只允许 writeset/done/note。
 # 判据唯一准绳＝规格 §4（J1–J15 ＋ R1–R14）；本批零接线、不删旧门禁、不改产品代码。
 writeset:
   - .claude/claims/841.yaml
+  - agents/P4-门禁/AGENTS.md
+  - docs/AGENTS.md
   - docs/authority/DOCS-REGISTRY.yaml
   - docs/authority/GATE-INVENTORY.yaml
   - docs/authority/WIRING-REGISTRY.yaml

@@ -19,7 +19,7 @@
 
 ## 四、写集（**文件级；越界即停并上报 CTO**）
 
-scripts/control-tower/**（除 probe-*.ts 与 install-deps.sh）｜tests/control-tower/**｜.gitea/**
+scripts/control-tower/**（除 probe-*.ts 与 install-deps.sh）｜tests/control-tower/**｜.gitea/**｜docs/authority/**（本批四件）
 
 ## 五、依赖
 
