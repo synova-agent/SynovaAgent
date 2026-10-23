@@ -7,6 +7,8 @@ writeset:
   - src/deploy/bootstrap.ts
   - src/server.ts
   - tests/routes/config.test.ts
+  - tests/routes/middleware-order.test.ts
+  - tests/routes/workspace-access-write-endpoint.test.ts
   - tests/security/master-secret.test.ts
   - memory/notes/implemented/2026-10-24-838-e2-failclosed.md
   - docs/authority/WIRING-REGISTRY.yaml
