@@ -452,7 +452,6 @@ documents:
     owner: line-win-dsh-lead
     note: "#980 执行期产出：6 项偏离（D-1 判据加严并存 / D-2 超登记 paths / D-3 收窄不碰 graph-bridge / D-4 卡面 bridge.createNode 与代码实况不符 / D-5 探针文案为判别力承重件 / D-6 判据落点在治理区待搬移）+ 6 项仓库级缺口（G-1 测试文件零类型门禁 / G-2 全量 tsc 存量红 28 条 / G-3 Test-Kit 必需检查只跑 1 文件 / G-4 未登记存量存疑 1 件 / G-5 本地 stash 存量 28 条 / G-6 自动 tag 落 feature 分支被 D331 拦）；含「就绪补丁」（探针搬移 3 处改动 + 搬移后必跑判据）。只登记不决策，立卡与指派归 CTO。"
 
-
   - id: DOC-0190
     type: registry
     path: docs/synova/coordination/2-2-参数清单-v1-20261008.md
@@ -814,10 +813,37 @@ documents:
     owner: CTO
     note: "#828 周对账 launchd 定时接线（安装器/配对测试/报备/登记）的受保护路径豁免；本体 weekly-recon.sh 零改动。"
 
-  # ---- P4 2026-10-24：#911 claim-v2 默认开豁免件（DOC-0241…0244 已由在飞 #910 预占，故取 0245）----
+  # ---- P4 2026-10-24：#841 P0 质量门禁四件（标准／登记表／盘点）----
+  #      取号时点 2026-10-24（rebase 到 f8b481e78 后重算）：base max=DOC-0240（#828 已合并）；#835 的 0240 已在 base ⇒ 本批 0241–0244。
+  - id: DOC-0241
+    type: governance
+    path: docs/authority/quality-standard-g1g6.md
+    status: active
+    owner: P4
+    note: "G1–G6 质量判据标准 v1（每条五字段：判据定义／怎么判（机械）／红条件／证据要求／豁免条件）；语义真源＝附卷 A §1，规则唯一定义在 #841 规格 §2.3-D3。"
+  - id: DOC-0242
+    type: registry
+    path: docs/authority/WIRING-REGISTRY.yaml
+    status: active
+    owner: P4
+    note: "能力接线登记表 schema v1 ＋ 3 行真实样例；--check-registry 三态校验（末行 REGISTRY-OK rows=3）。"
+  - id: DOC-0243
+    type: registry
+    path: docs/authority/GATE-INVENTORY.yaml
+    status: active
+    owner: P4
+    note: "旧门禁盘点（35 行 ＝ G12 ＋ B9 ＋ X5 ＋ CI9；32 检查器 ＋ pairing 5 行 ＋ excluded_headers 19）；C1–C10b 机器可核。"
+  - id: DOC-0244
+    type: decision
+    path: gate-exemptions/2026-10-24-p4-841-p0-gates.md
+    status: active
+    owner: P4
+    note: "#841 P0 质量门禁四件的受保护路径豁免（裁 320）；覆盖 6 件交付面 ＋ 本豁免件自覆盖。"
+
+  # ---- P4 2026-10-24：#911 claim-v2 默认开豁免件（DOC-0241…0244 已由本批预占，故取 0245）----
   - id: DOC-0245
     type: decision
     path: gate-exemptions/2026-10-24-p4-911-claim-v2-default-on.md
     status: active
     owner: CTO
-    note: "#911 claim-v2 默认开（四处同源＋CI 显式注入）的受保护路径豁免；ID 避开 #910 已占的 DOC-0241…0244。"
+    note: "#911 claim-v2 默认开（四处同源＋CI 显式注入）的受保护路径豁免；ID 避开本批已占的 DOC-0241…0244。"
