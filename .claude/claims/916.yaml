@@ -1,0 +1,39 @@
+# .claude/claims/916.yaml — #916 工具链五件（件1／1-附／2／3／4）· 写集声明（claim-first 载体）
+#
+# 批次 P6-916-件1-5（5 PR 串行：PR-1→PR-2→PR-5→PR-3→PR-4）。
+# 规格（唯一判据准绳）：.handbook/派单件/2026-10-24-规格-916-五件实施批次.md（commit e0b6ad1）
+# 门禁强制件：base 含 #911（claim-v2 默认开）⇒ 本批须 claim-first 载体（裁 324／326；同 #911/#828 先例）。
+# 纪律：只声明本批真正改动的文件；零产品代码（src/**）、零门禁脚本、零审计脚本。
+writeset:
+  - .claude/claims/916.yaml
+  # PR-1（件 1：deliverable-acceptance 改名＋六件套＋数字/复核链；sync 生成 .dsh 镜像）
+  - .synova/skills/deliverable-acceptance/SKILL.md
+  - .synova/skills/research-acceptance/SKILL.md
+  - .dsh/skills/deliverable-acceptance/SKILL.md
+  - .dsh/skills/research-acceptance/SKILL.md
+  - gate-exemptions/2026-10-24-p6-916-pr1.md
+  # PR-2（件 1-附：代码标准数字单源）
+  - .synova/skills/dsh-code-standards/SKILL.md
+  - .synova/skills/dev-doc-spec/SKILL.md
+  - .dsh/skills/dsh-code-standards/SKILL.md
+  - .dsh/skills/dev-doc-spec/SKILL.md
+  - gate-exemptions/2026-10-24-p6-916-pr2.md
+  # PR-5（件 4：pr-review 三条必查）
+  - .synova/skills/pr-review/SKILL.md
+  - .dsh/skills/pr-review/SKILL.md
+  - gate-exemptions/2026-10-24-p6-916-pr5.md
+  # PR-3（件 2：dev-doc-spec §9 出生证六件套＋devdoc-gate-a 两处）
+  - .synova/skills/devdoc-gate-a/SKILL.md
+  - .dsh/skills/devdoc-gate-a/SKILL.md
+  - gate-exemptions/2026-10-24-p6-916-pr3.md
+  # PR-4（件 3：L2 预设三句写真源；presets 不在受保护清单 ⇒ 无豁免）
+  - docs/synova/presets/synova-squad-lead/cordis.patch.yml
+  - docs/synova/presets/synova-squad-lead/SYSTEM-PROMPT.md
+  # 每 PR 追加登记 1 条（DOC-0247…0250）
+  - docs/authority/DOCS-REGISTRY.yaml
+done:
+  - verify: bash scripts/workflow/sync-dsh-skills.sh --check
+  - verify: bash scripts/doc-system/doc-registry-gate.sh
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main
+  - verify: bash scripts/control-tower/check-preset-bundles.sh --consistency synova-squad-lead
+note: "#916 工具链五件（裁 324／326）：件1 验收 skill 改名＋出生证六件套/数字单源/复核链；件1-附 代码标准数字单源；件2 dev-doc-spec §9 必填；件3 L2 预设三句写真源；件4 pr-review 三条必查。5 PR 串行、零产品代码、零门禁脚本；.dsh 镜像由 sync 生成不手改。"

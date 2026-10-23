@@ -855,3 +855,11 @@ documents:
     status: active
     owner: CTO
     note: "#922 收口（GATE-INVENTORY X 头 id 漂移／b-followers 新红／第五消费者 check-brief-vs-code）的受保护路径豁免。"
+
+  # ---- P6 2026-10-24：#916 件1 PR-1 受保护路径豁免（#922 已占 0246 ⇒ 本批自 0247 起）----
+  - id: DOC-0247
+    type: decision
+    path: gate-exemptions/2026-10-24-p6-916-pr1.md
+    status: active
+    owner: P6
+    note: "#916 件1（PR-1）deliverable-acceptance 改名＋出生证六件套的技能镜像同步豁免（裁 324）；覆盖 .dsh/skills/** ＋ 本登记 ＋ 豁免件自覆盖。"
