@@ -12,7 +12,7 @@
  *   |---|---|---|
  *   | ① 输入 | `① 输入 [SEG-1]` | `POST /api/conversations` `/ingest` ⇒ 200 ∧ ok/ingested/degraded=false ∧ nodes≥3/edges≥1；`GET /api/ontology/graph/:org` 读回唯一 Document（`type='Document'`、`props.name`=`inge-<ISO>-<pid>-<seq>` 且含当天与 pid） |
  *   | ② ingest | `② ingest [SEG-2]` | Document `props.content` 含本次资料原文；`MENTIONS` 边 `to`=真实 Document id ∧ DB `object_type='Document'`（#667：不再是 `doc_<fileName>`） |
- *   | ③ 本体/哨兵/计算 | `③ 本体/哨兵/计算 [SEG-3]` | **真入口** `POST /api/data/upload`（出厂映射 `erp-standard` ⇒ `outcome/financial`，合计 rev300/opex30/cash180）→ cash-flow 哨兵经唯一 sink 写 4 个 metric_id；`computeOverflow` = 30（独立常量）；`resource/money` 白名单接受 `operating_expenses`（#837 E-1） |
+ *   | ③ 本体/哨兵/计算 | `③ 本体/哨兵/计算 [SEG-3]` | **真入口** `POST /api/data/upload`（出厂映射 `erp-standard` ⇒ `outcome/financial`，合计 rev300/opex40/cash180）→ cash-flow 哨兵经唯一 sink 写 4 个 metric_id；`computeOverflow` = 30（独立常量）；`resource/money` 白名单接受 `operating_expenses`（#837 E-1） |
  *   | ④ 参数/决策 | `④ 参数/决策 [SEG-4]` | 真 HTTP `view=trends` 的 latest/previous/changeRatio 逐值可算（单次观测 ⇒ null）；④b 决策台账写→读逐字段匹配；④c 三导出＋文件头 `@deprecated`/#1010＋`src/` 零调用；④d `{calibrated:0,status:'not_implemented'}` |
  *   | ⑤ 出口 | `⑤ 出口 [SEG-5]` | 真 fetch（同一 full server）→ M4 loader → render 桥渲染「测量值＋趋势」＋`data-testid="measurement-to-onepager"` |
  *   | ⑥ 冻结 | `⑥ 冻结对照 [SEG-6]` | 只读源码扫描：六段链 15 个模块零 import 进化引擎/`applyEvolutionActions`/`processFeedbackSignals`/`loop-handlers`（**清单含 `src/cycles/overflow-compute.ts`**）；全 `src/` 调用点仅 loop-handlers；链运行期间进化写面零变化 |
@@ -127,7 +127,7 @@ const ENV_KEYS = [
 
 /**
  * 财务夹具（#837 E-1）：**出厂映射** `erp-standard`（target `outcome/financial`）的 14 个外部字段。
- * 两期（合计 revenue 300 / cost 0 / opex 30 / cash 180）—— 走**真入口** `POST /api/data/upload`。
+ * 两期（合计 revenue 300 / cost 0 / opex 40 / cash 180）—— 走**真入口** `POST /api/data/upload`。
  *   · opex：erp 映射写 `operating_expense`（单数，financial schema 名）⇒ 哨兵经**显式别名**读到（#837 ②）
  *   · cost：erp-standard 无 `total_cost` 映射 ⇒ 恒 0（该导出不含营业成本；cost 维度由 M3 守卫）
  * 14 个外部字段**全量提供**：缺一个 `ingestRow` 就记一条 `缺少字段` error（真实行为，不做半套夹具）。
