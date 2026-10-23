@@ -45,9 +45,12 @@ feature flag（K3 R2）:
   `SYNO_CLAIM_V2`（**默认开** —— 裁 1423「一步到位」，裁 318 恢复之；唯一回滚点 = 显式 `0|off|false|no|n`）。
     · 开（默认）: claim-first；且存在 claim 时**禁用 D# 锚点回退**（K3 R3 劫持修复）
     · 关（显式 0）: 本库不参与任何解析；既有 D# 路径**逐字节**不变（回滚 = 显式关，不改 30 文件）
-    🔴 **四处消费者必须同口径（未设 ⇒ 开）**：本库 ＋ `scripts/pre-commit-check.sh:CLAIM_V2`
-       ＋ `scripts/check-verifiable-done.sh:CLAIM_V2` ＋ `scripts/workflow/resolve-commit-brief.sh:CLAIM_V2`。
-       改任一处必须同改其余 —— 漏一处就是「同一事实多个说法」（Issue #911 的缺陷形态）。
+    🔴 **五处消费者必须同口径（未设 ⇒ 开）**：本库 ＋ `scripts/pre-commit-check.sh:CLAIM_V2`
+       ＋ `scripts/check-verifiable-done.sh:CLAIM_V2` ＋ `scripts/check-brief-vs-code.sh:_BCV_V2`
+       ＋ `scripts/workflow/` 下的声明解析器（resolver）。改任一处必须同改其余 ——
+       漏一处就是「同一事实多个说法」（Issue #911 的缺陷形态；第五处由 #922 补齐）。
+       ⚠️ 本行**故意不写 resolver 的文件名字面量**：`tests/control-tower/b-followers-claim-consistency.test.sh`
+       §1 用 `grep -r '<解析器名>'` 枚举消费点并要求分类，写进 docstring 会被判成"未分类 follower"（#922 F1）。
 
 用法（CLI）:
   claim_store.py --path <issue>                  # 打印声明文件绝对路径（不存在 → exit 1）

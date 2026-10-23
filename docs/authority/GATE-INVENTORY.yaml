@@ -373,20 +373,20 @@ gates:
     g_axis: ["G6"]
     checkpoints: []
     decision: keep
-    reason: "无 E2 命名检查点（声明闸② / G12d 在 L1846/L1864，owner 为 PC-X-4c673e）⇒ 保留"
+    reason: "无 E2 命名检查点（声明闸② / G12d 在 L1846/L1864，owner 为 PC-X-ce91d3）⇒ 保留"
     replacement: ""
-  - id: PC-X-4c673e
+  - id: PC-X-ce91d3
     kind: header
-    line: 1661
-    label: "D1220（卡 #1222 D-A2）: 组 12 claim 载体覆盖判定（开关 SYNO_CLAIM_V2，默认关）"
-    label_hash: "4c673e7aeb51"
-    occurrences: [1661]
-    what: "组 12 claim 载体覆盖判定（开关 SYNO_CLAIM_V2，默认关）＋ 本行区间内声明闸② / G12d 两检查点"
+    line: 1663
+    label: "D1220（卡 #1222 D-A2）: 组 12 claim 载体覆盖判定（开关 SYNO_CLAIM_V2，**默认开** · #911）"
+    label_hash: "ce91d38d83c7"
+    occurrences: [1663]
+    what: "组 12 claim 载体覆盖判定（开关 SYNO_CLAIM_V2，默认开）＋ 本行区间内声明闸② / G12d 两检查点"
     blocking: hard
     g_axis: ["G6"]
     checkpoints: ["声明闸② brief↔代码一致性（Q2 写集/排除项/可解析；D1148 合并 15→3）", "G12d: 生成物单点生成门禁 (D458)"]
     decision: keep
-    reason: "2 个检查点（1 decl_check + 1 hard_check）；开关默认关但 hard_check 在 ⇒ 保留"
+    reason: "2 个检查点（1 decl_check + 1 hard_check）；开关默认开（#911）但 hard_check 在 ⇒ 保留；id 随注释头文案派生（#922 同步）"
     replacement: ""
   - id: PC-G13
     kind: group
