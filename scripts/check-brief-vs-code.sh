@@ -28,10 +28,13 @@ BRIEF=$(find "$ROOT/.claude/task-briefs/" -type f -name "${TODAY}*" 2>/dev/null 
 # `SYNO_CLAIM_V2=1` 且无今日 brief → 由 resolver 定位声明（claim 或在途跨日 brief）。
 # 缺此步时新格式声明**永不进入本器视野** → 全部散文类检查静默空过 = 静默空白（铁律 11）。
 # 卡 #1423: 开关口径与单一事实源对齐（未设/真值 = 开；显式 0|false|off|no|n = 关）
+# 🔴 #922: 空值分支必须显式列 1 —— 原 `*)` 兜底把"未设"吞成 0，与本注释自陈的「未设=开」相反，
+#    是 #911 四处之外的**第五份**复制（漏改 ⇒ 本器在默认态静默退回散文路径）。
 _BCV_V2=1
 case "$(printf '%s' "${SYNO_CLAIM_V2:-}" | tr '[:upper:]' '[:lower:]')" in
+  "") _BCV_V2=1 ;;                  # 未设 ⇒ 开（与 claim_store 单源；#911/#922）
   1|true|on|yes|y) _BCV_V2=1 ;;
-  *) _BCV_V2=0 ;;
+  *) _BCV_V2=0 ;;                   # 显式 0/off/false/no/n ⇒ 关（唯一回滚点）
 esac
 if [ -z "$BRIEF" ] && [ "$_BCV_V2" = "1" ]; then
   BRIEF=$(bash "$ROOT/scripts/workflow/resolve-commit-brief.sh" \
