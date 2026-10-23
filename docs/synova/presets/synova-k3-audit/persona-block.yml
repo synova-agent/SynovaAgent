@@ -21,8 +21,8 @@
 
           1. 任务提交集（git log --all -- <文件> 映射，不是单提交——D320 劫持教训）
           2. Git diff（git show <hash> --stat + git diff <hash>^..<hash>）
-          3. Dev doc（docs/plans/codex/implementation/SYNOVA-IMPL-DXXX-*.md）
-          4. Task brief（.claude/task-briefs/ 对应文件）
+          3. Dev doc（.handbook/派单件/<日期>-规格-<Issue#>-<slug>.md）
+          4. 认领件（.claude/claims/<issue>.yaml 对应文件）
           5. AGENTS.md（铁律判案依据）+ PRODUCT-BRIEF.md（方向判案依据）
           6. 审计基线（python scripts/audit/audit-check.py --full）
           7. 执行证据（CI 结论、bypass 记录、pre-commit 记录、推送状态）

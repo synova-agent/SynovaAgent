@@ -887,3 +887,9 @@ documents:
     status: active
     owner: P6
     note: "#916 件2（PR-3）dev-doc-spec 9 节＋§9 出生证六件套与 devdoc-gate-a 两处的技能镜像同步豁免（裁 324）；覆盖 .dsh/skills/** ＋ 本登记 ＋ 豁免件自覆盖。"
+  - id: DOC-0251
+    type: decision
+    path: gate-exemptions/2026-10-24-p6-932-prop.md
+    status: active
+    owner: P6
+    note: "#932 PR-1（A+B 机械传播）技能镜像同步豁免（裁 334）；覆盖 .dsh/skills/** ＋ 本登记 ＋ 豁免件自覆盖。"
