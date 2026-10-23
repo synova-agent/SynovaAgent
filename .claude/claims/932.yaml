@@ -6,6 +6,7 @@
 writeset:
   - .claude/claims/932.yaml
   - gate-exemptions/2026-10-24-p6-932-prop.md
+  - gate-exemptions/2026-10-24-p6-932-docdup.md
   # PR-1（A：8 节→9 节 13 文件；B：旧路径→新路径）
   - .dsh/skills/brief-compose/SKILL.md
   - .dsh/skills/dev-doc-delivery/SKILL.md
