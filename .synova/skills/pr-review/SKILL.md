@@ -29,6 +29,12 @@ grep -c "expect(" <新测试文件>
 bash scripts/check-architecture.sh && bash scripts/check-bridge-files.sh
 ```
 
+G1 可达：`git grep -n "<新符号>" -- 'src/**'`（排除 `*.test.*` 与注释），**0 命中 = 阻塞**；PR 正文须贴 WIRING 行——未落 main 期间贴**登记行草案**，不引未落 main 的路径。
+
+G3 判据：新改动须有行为断言 ＋ **改坏两态**（删被保护行 ⇒ 必红）原始输出；`expect(true)`／纯 `toBeDefined` 单断言 = **阻塞**。
+
+G4 边界：租户来源须 `req.auth`（body/query 取租户 = 阻塞）；出站调用须 `timeout`／`signal:`（`fetch` 语句起 12 行窗口，按标准 G4）。
+
 ### ③ 声称 vs 事实（claim-verifier 精神）
 - PR 描述每条"已完成 X"声称 → 逐项物理复现。声称"拆完了/清理完" → grep 零引用证明
 - 声称"测试通过" → 自己跑 `vitest run --changed`；声称"门禁过" → 看 bypass.log 是否落窗（D331 对账）
@@ -40,7 +46,7 @@ bash scripts/check-architecture.sh && bash scripts/check-bridge-files.sh
 ### ⑤ 输出结构化审查结论
 ```
 结论: 通过 | 有条件通过 | 阻塞
-阻塞项: [文件:行号] 铁律N — 现象（可复现命令）
+阻塞项: [文件:行号] G#（或铁律N） — 现象（可复现命令）
 建议项: [文件:行号] 说明（非阻断）
 自检: 每项结论都有物理命令支撑
 ```
