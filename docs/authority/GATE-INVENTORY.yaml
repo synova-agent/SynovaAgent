@@ -1,0 +1,871 @@
+# GATE-INVENTORY.yaml — 旧门禁盘点（权威件 · #841 P4-P0 · 治理域）
+#
+# 口径：本件一切 id / 行号 / label_hash / occurrences / checkpoints / wired_to / counts
+#       均来自规格 §2.1 的枚举器 E1–E7 与 §2.3-D3 的 C10 机器复算（禁手写、禁猜）。
+# 锚：gitea/local-main = 6e5f321aab9bca8989de4f32d98e05a1400dbfd6（E1–E7 均在该 blob 上重跑）
+# 用途：旧门禁的账（防「只加不减」）。P0 只标记，不删不改任何门禁（J12/J15 兜）。
+#
+# 决策规则（C7 / C9 机器查）：
+#   keep    有独立语义 ∧ 当前有覆盖（阻断位或明确人工调用）∧ 与 G 轴不重复。
+#   replace 语义被 5 类扫描或他门禁同判据覆盖 ⇒ 新件上线并证明判别力后退役旧件；replacement 填新件 ID。
+#   retire  孤儿（C10 机器复算 wired_to=[]）或零命中（E6 有数据时）∧ 非守卫（守卫＝只在事故形态出现时命中）
+#           ∧ replacement 非空。
+#   pairing 5 类扫描的配对账（判据⑤）：T1→PC-G4、T4→PC-G2、T5→PC-G2（replace）；T2／T3→孤儿集（retire）。
+#
+# checkers[].id 规则：CT-<basename 去扩展名>；同名不同扩展的两件保留扩展名以保唯一
+#                    （CT-check-block-paths.sh / CT-check-block-paths.ts）。
+# YAML 语法＝scripts/product-lines/productline_yaml.py 的严格子集（§2.4）：禁 flow map、禁块标量、键全 ASCII。
+
+schema_version: 1
+meta:
+  as_of:
+    ref: local-main
+    sha: "6e5f321aab9bca8989de4f32d98e05a1400dbfd6"
+  enumerators: [E1, E2, E3, E4, E5, E7]
+  counts:
+    groups: 12
+    banner_blocks: 9
+    header_blocks: 5
+    ci_steps: 9
+    checkpoints: 33
+    checkers: 32
+    rows: 35
+  caliber_note: "组数口径：卡面写 13 组 vs 锚上实测 12 个组横幅（组 11 无横幅，历史并入组 10；组 11 的检查点以 warn_check/soft_pass 形态存在于脚本 L1574-1594，E2 的四函数口径不含 warn_check ⇒ E2 无 G11 名）；E3=10 条 banner 文本中 K12-13（内容面耦合 CC1–CC4）无命名检查点，盘点面由 CI ①c 步（CI-S6）覆盖，记 findings.F3，不占 banner 行；E7=24 条带文字注释头中 19 条行号区间内无命名检查点 ⇒ 进 excluded_headers（reason: no_named_checkpoint），其余 5 条成 header 行；组 9 附加块（脚本 L1473「# ── 组 9 附加块: …」）既不是 E1/E3 也不是 E7 —— 它含「── 组 9」被 E3 的 ── 组 N 过滤排除，故不是 slot；其检查点（L1514 块级 paths 快照对账）按行号归属落到上方最近 slot = PC-G9（L1445），因此 PC-G9 的 checkpoints 列 2 条；E6（gate-retirement-report.sh）在干净树必然「无数据」—— .claude/gate-hits.log 被 .gitignore 忽略且不在锚树内 ⇒ zero_hit_candidates 记空，退役依据只用 C10 孤儿集（机器复算），不用 E6；g_axis 是人工判定的语义重叠轴（非机器复算列），空列表＝与 G1–G6 无重叠。"
+  zero_hit_candidates: []
+
+findings:
+  - id: F1
+    what: "组 11 无横幅（历史并入组 10）；E1 的唯一组号集合 = {1..10, 12, 13}"
+    evidence: "E1=12 且组号列表无 11；组 11 检查点以 warn_check/soft_pass 形态存在于脚本 L1574-1594（G11），E2 的四函数口径不含 warn_check ⇒ E2 名中 grep G11 = 0"
+    owner: CTO
+  - id: F2
+    what: "E5 口径只含 check-*/verify-*，另有 27 个 probe-*.ts 与 67 个非 check/verify 的 .sh/.py 不在盘点面"
+    evidence: "E5=32；scripts/control-tower/ 共 147 件 = 32 check/verify + 27 probe + 67 其他 .sh/.py + 21 其他扩展名"
+    owner: CTO
+  - id: F3
+    what: "K12-13 内容面耦合 CC1–CC4：无命名检查点（E2 中 0 条含「耦合」），盘点面由 CI ①c 步覆盖"
+    evidence: "E3 含该 banner（PC-B-4edc7b，L2049）；E2 的 33 名 grep 耦合 = 0；E4 的 CI-S6 = ①c 在册"
+    owner: CTO
+  - id: F4
+    what: "C10 复算得 6 个孤儿检查器；仅 2 个（非守卫、按需运行）进 candidates.retire，其余 4 个为守卫/按需审查器，不据零命中退役（C7 守卫条款）"
+    evidence: "C10 复算 orphans=6/32：check-customer-deps.ts / check-gitlinks.sh / check-k3-report.py / check-package-selfsufficiency.py / check-project-coordinates.sh / check-sentinel-type-net.sh"
+    owner: CTO
+
+# excluded_headers：E7 的 24 条带文字注释头中，行号区间内无命名检查点的 19 条
+# （reason 固定 no_named_checkpoint；多一条少一条由 C3 判红）
+excluded_headers:
+  - id: PC-X-1323c6
+    label_hash: "1323c6e84003"
+    reason: no_named_checkpoint
+  - id: PC-X-d62c0e
+    label_hash: "d62c0e27a198"
+    reason: no_named_checkpoint
+  - id: PC-X-87e3a0
+    label_hash: "87e3a08fe282"
+    reason: no_named_checkpoint
+  - id: PC-X-8173dc
+    label_hash: "8173dcc48ca9"
+    reason: no_named_checkpoint
+  - id: PC-X-2212ba
+    label_hash: "2212ba9cd54d"
+    reason: no_named_checkpoint
+  - id: PC-X-055333
+    label_hash: "055333c98f6c"
+    reason: no_named_checkpoint
+  - id: PC-X-7e9f9f
+    label_hash: "7e9f9f164d6f"
+    reason: no_named_checkpoint
+  - id: PC-X-8ea6a8
+    label_hash: "8ea6a877cbeb"
+    reason: no_named_checkpoint
+  - id: PC-X-5ac238
+    label_hash: "5ac238814d12"
+    reason: no_named_checkpoint
+  - id: PC-X-34da5b
+    label_hash: "34da5b036b83"
+    reason: no_named_checkpoint
+  - id: PC-X-f4210c
+    label_hash: "f4210c432810"
+    reason: no_named_checkpoint
+  - id: PC-X-bd4ee2
+    label_hash: "bd4ee28eb431"
+    reason: no_named_checkpoint
+  - id: PC-X-282898
+    label_hash: "282898825dbc"
+    reason: no_named_checkpoint
+  - id: PC-X-fa6d9d
+    label_hash: "fa6d9de9e276"
+    reason: no_named_checkpoint
+  - id: PC-X-d1b9b0
+    label_hash: "d1b9b05b20a5"
+    reason: no_named_checkpoint
+  - id: PC-X-da428d
+    label_hash: "da428dab7cee"
+    reason: no_named_checkpoint
+  - id: PC-X-8dcc59
+    label_hash: "8dcc59dfe284"
+    reason: no_named_checkpoint
+  - id: PC-X-75da80
+    label_hash: "75da80be0fed"
+    reason: no_named_checkpoint
+  - id: PC-X-b32419
+    label_hash: "b324196c5f6e"
+    reason: no_named_checkpoint
+
+# gates：12 组（kind: group）+ 9 banner（kind: banner）+ 5 注释头（kind: header）+ 9 CI 步（kind: step）
+#        = 35 行。id 与行号由枚举器产出；checkpoints 的 owner 由「上方最近 slot」规则机器算定（C4）。
+gates:
+  - id: PC-X-9cf8d7
+    kind: header
+    line: 422
+    label: "D1193: DOC-CONTRACT 三闸（格式 / 取代 / 入库）—— 接线点"
+    label_hash: "9cf8d7274c36"
+    occurrences: [422]
+    what: "文档契约三闸（格式 / 取代 / 入库）—— 接线点"
+    blocking: soft
+    g_axis: ["G6"]
+    checkpoints: ["D1193 文档契约三闸: CI 无 base（fail-closed，禁空跑）", "D1193 文档契约三闸: 执行体缺失（fail-closed）"]
+    decision: keep
+    reason: "G6 唯一机械执行体（研究 D-10 引用）；2 个 soft_check ⇒ 保留"
+    replacement: ""
+  - id: PC-B-e91824
+    kind: banner
+    line: 466
+    label: "CT-34 纯文档提交: 仅 Secrets 扫描, 豁免其余 12 组"
+    label_hash: "e91824d23188"
+    occurrences: [466]
+    what: "纯文档提交豁免分支：仅跑 Secrets 扫描，豁免其余 12 组"
+    blocking: none
+    g_axis: []
+    checkpoints: []
+    decision: keep
+    reason: "豁免通道（不产生 E2 检查点）；不属 G 轴 ⇒ 保留"
+    replacement: ""
+  - id: PC-B-285c1b
+    kind: banner
+    line: 504
+    label: "D515 项2 / V5: 纯补记快速通道"
+    label_hash: "285c1be77331"
+    occurrences: [504, 525, 531]
+    what: "D515 项2 / V5 纯补记快速通道（同一 banner 文本在锚上出现 3 次）"
+    blocking: none
+    g_axis: []
+    checkpoints: []
+    decision: keep
+    reason: "快速通道（降摩擦），无命名检查点；保留"
+    replacement: ""
+  - id: PC-G1
+    kind: group
+    line: 667
+    label: "组 1: 类型安全 + 硬编码数据"
+    label_hash: "52e5b395fc69"
+    occurrences: [667]
+    what: "类型安全 + 硬编码数据（as any / as never / as unknown as 零容忍、from 断言、硬编码业务数据与可扩展实体列表）"
+    blocking: hard
+    g_axis: []
+    checkpoints: ["as any / as never / as unknown as 零容忍（新增，铁律 38；存量独立清理）", "from ????: from??????? (D93/D95??)", "硬编码业务数据/类型 (禁止硬编码部门名/可扩展实体列表)"]
+    decision: keep
+    reason: "3 个检查点（2 hard_check + 1 soft_check）仍在 E2；与 G1–G6 无独占重叠 ⇒ 保留"
+    replacement: ""
+  - id: PC-G2
+    kind: group
+    line: 722
+    label: "组 2: 测试质量"
+    label_hash: "91b761df8bb8"
+    occurrences: [722]
+    what: "测试质量（empty catch 无 log / 静默吞错扫描 / 新文件配对测试 / 桩测试 / 跨模块集成 / 控制塔脚本测试门禁）"
+    blocking: hard
+    g_axis: ["G2", "G3"]
+    checkpoints: ["empty catch 无 log (铁律 24+31)", "静默吞错扫描 (D313 M5b)", "新文件配对: impl 须同 commit 有 test", "桩测试: 新测试需 ≥3 expect()", "跨模块集成: bridge/context 类需 .integration.test.ts", "控制塔脚本测试门禁 (U7/CT-40)"]
+    decision: replace
+    reason: "6 个检查点；T4 补 return []/null/false 型吞错、T5 覆盖存量测试壳 ⇒ 待新扫描门禁化并证明判别力后 replace（本批只标记；T5 亦指向本行，见 pairing）"
+    replacement: "T4"
+  - id: PC-G3
+    kind: group
+    line: 830
+    label: "组 3: Secrets"
+    label_hash: "dc9118fc3b63"
+    occurrences: [830]
+    what: "Secrets 扫描（检查名含变量被 E2 口径剔除；命中即 HARD_FAIL+1）"
+    blocking: hard
+    g_axis: []
+    checkpoints: []
+    decision: keep
+    reason: "阻断位（L832 命中即 HARD_FAIL 累加）；无命名检查点属 E2 口径事实 ⇒ 保留"
+    replacement: ""
+  - id: PC-G4
+    kind: group
+    line: 844
+    label: "组 4: 接线完整性"
+    label_hash: "f0cc105a84dc"
+    occurrences: [844]
+    what: "接线完整性（新 export 必须被引用 / 必须被调用，非仅 import）"
+    blocking: hard
+    g_axis: ["G1"]
+    checkpoints: ["接线审计: 新 export 必须被引用 (物理事实)", "接线深度: 新 export 必须被调用(非仅 import)"]
+    decision: replace
+    reason: "2 个 hard_check；T1 是它的存量化（声明无消费者）⇒ 待 T1 门禁化并证明判别力后 replace（本批只标记）"
+    replacement: "T1"
+  - id: PC-G5
+    kind: group
+    line: 904
+    label: "组 5: 架构边界 + 桥接文件"
+    label_hash: "93f33e187543"
+    occurrences: [904]
+    what: "架构边界 + 桥接文件（禁跨层引用 / 铁律 46 桥接文件欺诈、包级 engine-core、壳包检测）"
+    blocking: soft
+    g_axis: ["G6"]
+    checkpoints: ["架构边界: 禁止跨层引用 (铁律 39)", "铁律 46: 桥接文件欺诈 + 包级 engine-core + 壳包检测"]
+    decision: keep
+    reason: "2 个 soft_check；桥接文件欺诈属双真源面，T1–T5 未覆盖 ⇒ 保留"
+    replacement: ""
+  - id: PC-G6
+    kind: group
+    line: 991
+    label: "组 6: Task Brief (6 核心字段)"
+    label_hash: "02c8ab7a821e"
+    occurrences: [991]
+    what: "Task Brief 6 核心字段（本行区间内检查点以 decl_check 形态落在下方注释头行，owner 见 C4）"
+    blocking: soft
+    g_axis: ["G6"]
+    checkpoints: []
+    decision: keep
+    reason: "本行区间内无 E2 命名检查点（decl_check 在 L1154/L1210，owner 为注释头行）；brief 声明面与 G6 重叠但无同判据扫描 ⇒ 保留"
+    replacement: ""
+  - id: PC-X-eeb6e2
+    kind: header
+    line: 994
+    label: "D537 #2 (D537r2): 主树提交禁止门禁"
+    label_hash: "eeb6e24a5067"
+    occurrences: [994]
+    what: "主树提交禁止门禁（D537 #2）主树判据（本地层）"
+    blocking: hard
+    g_axis: []
+    checkpoints: ["主树提交禁止门禁 (D537 #2): 主树判据（本地层）"]
+    decision: keep
+    reason: "hard_check 守卫（事故形态：在主树提交）⇒ 保留"
+    replacement: ""
+  - id: PC-B-563938
+    kind: banner
+    line: 1021
+    label: "D-C 收口（K3 R6 合并核验）: 声明载体双形态 —— claim（.claude/claims/<issue>.yaml）／legacy brief"
+    label_hash: "5639387f6f48"
+    occurrences: [1021]
+    what: "D-C 收口：声明载体双形态 —— claim（.claude/claims/<issue>.yaml）／legacy brief"
+    blocking: soft
+    g_axis: ["G6"]
+    checkpoints: []
+    decision: keep
+    reason: "声明载体口径（与 G6 重叠）；块内无 E2 命名检查点（判定走函数形态）⇒ 保留"
+    replacement: ""
+  - id: PC-X-295a47
+    kind: header
+    line: 1117
+    label: "D1220（卡 #1222 D-A2）退役: 时间戳顺序检查（原 V4.5.1，D1148 并入闸①）"
+    label_hash: "295a47ca42ab"
+    occurrences: [1117]
+    what: "D1220 退役位：原时间戳顺序检查并入声明闸①；本行区间内检查点 = 声明闸① brief schema"
+    blocking: soft
+    g_axis: ["G6"]
+    checkpoints: ["声明闸① brief schema（Q1–Q3/架构层/Done/骨架/Q0c；D1220 退时间戳+Q0）"]
+    decision: keep
+    reason: "退役注释头仍 owner 一个 decl_check（L1154）⇒ 按 C4 成行保留；不属 5 类扫描的 replace 面"
+    replacement: ""
+  - id: PC-X-ebd867
+    kind: header
+    line: 1201
+    label: "声明闸③ Done 可证伪（D1148）"
+    label_hash: "ebd8672a690f"
+    occurrences: [1201]
+    what: "声明闸③ Done 可证伪（每项 - [x] 带 verify:）"
+    blocking: soft
+    g_axis: ["G3", "G6"]
+    checkpoints: ["声明闸③ Done 可证伪（每项 - [x] 带 verify:；D1148）"]
+    decision: keep
+    reason: "decl_check（软）；Done 判据可证伪与 G3 同向 ⇒ 保留"
+    replacement: ""
+  - id: PC-G7
+    kind: group
+    line: 1259
+    label: "组 7: 架构合规"
+    label_hash: "d82d60fc731e"
+    occurrences: [1259]
+    what: "架构合规（禁止 DiagnosticModule，新模块须实现 Sentinel 接口）"
+    blocking: soft
+    g_axis: ["G1"]
+    checkpoints: ["禁止 DiagnosticModule: 新模块须实现 Sentinel 接口"]
+    decision: keep
+    reason: "1 个 soft_check；接口实现契约与 G1 部分重叠，但无存量扫描覆盖 ⇒ 保留"
+    replacement: ""
+  - id: PC-B-229a0b
+    kind: banner
+    line: 1337
+    label: "门禁故障审计 (警告不阻断)"
+    label_hash: "229a0b1e8dc0"
+    occurrences: [1337]
+    what: "门禁故障审计（警告不阻断）"
+    blocking: soft
+    g_axis: ["G2"]
+    checkpoints: []
+    decision: keep
+    reason: "banner 自述「警告不阻断」；与 G2（失败必须可见）同向 ⇒ 保留"
+    replacement: ""
+  - id: PC-B-470ed5
+    kind: banner
+    line: 1353
+    label: "绕过审计 (硬阻断)"
+    label_hash: "470ed53eae7b"
+    occurrences: [1353]
+    what: "绕过审计（硬阻断）；本 banner 下的检查点 = 数据流: 路由文件须含 API 调用证据"
+    blocking: soft
+    g_axis: ["G2"]
+    checkpoints: ["数据流: 路由文件须含 API 调用证据"]
+    decision: keep
+    reason: "绕过审计阻断位；L1399 数据流检查点按行号 owner 归本行（C4）⇒ 保留"
+    replacement: ""
+  - id: PC-G8
+    kind: group
+    line: 1414
+    label: "组 8: 文件驱动架构完整性 (V3.9)"
+    label_hash: "76562f1786f9"
+    occurrences: [1414]
+    what: "文件驱动架构完整性 V3.9（验收 CI / 文件驱动）"
+    blocking: soft
+    g_axis: ["G3"]
+    checkpoints: ["验收 CI (V3.9)（D1176 K3 整改复执法）"]
+    decision: keep
+    reason: "v5_soft；无 E2 命名检查点（par_collect_quiet 形态回调 v5_soft）⇒ 保留"
+    replacement: ""
+  - id: PC-G9
+    kind: group
+    line: 1445
+    label: "组 9: 契约门禁"
+    label_hash: "57b227369fe7"
+    occurrences: [1445]
+    what: "契约门禁（声明产出须在暂存区）＋ 块级 paths 快照对账（判不了/超时 = fail-closed）"
+    blocking: soft
+    g_axis: ["G6"]
+    checkpoints: ["契约门禁: 声明产出须在暂存区", "块级 paths 快照对账（🔴 判不了/超时 = fail-closed，非通过）"]
+    decision: keep
+    reason: "两个检查点均 soft_check（L1471 声明产出、L1514 块级 paths）；组 9 附加块不是 slot，其检查点亦归本行（见 meta.caliber_note）"
+    replacement: ""
+  - id: PC-G10
+    kind: group
+    line: 1524
+    label: "组 10: V3 流水线健康度"
+    label_hash: "13ab103dc7e9"
+    occurrences: [1524]
+    what: "V3 流水线健康度（G10 条件区域 + G11 测试覆盖；检查以 warn_check/soft_pass 形态存在，E2 的四函数口径不含）"
+    blocking: soft
+    g_axis: []
+    checkpoints: []
+    decision: keep
+    reason: "无 E2 命名检查点；G11 实际检查点仍是 warn_check/soft_pass（脚本 L1574-1594），非阻断 ⇒ 保留"
+    replacement: ""
+  - id: PC-G12
+    kind: group
+    line: 1598
+    label: "组 12: Task Scope 一致性"
+    label_hash: "12148771605f"
+    occurrences: [1598]
+    what: "Task Scope 一致性（暂存文件 vs Q2 范围；本行区间内检查点 owner 为 L1661 注释头行）"
+    blocking: soft
+    g_axis: ["G6"]
+    checkpoints: []
+    decision: keep
+    reason: "无 E2 命名检查点（声明闸② / G12d 在 L1846/L1864，owner 为 PC-X-4c673e）⇒ 保留"
+    replacement: ""
+  - id: PC-X-4c673e
+    kind: header
+    line: 1661
+    label: "D1220（卡 #1222 D-A2）: 组 12 claim 载体覆盖判定（开关 SYNO_CLAIM_V2，默认关）"
+    label_hash: "4c673e7aeb51"
+    occurrences: [1661]
+    what: "组 12 claim 载体覆盖判定（开关 SYNO_CLAIM_V2，默认关）＋ 本行区间内声明闸② / G12d 两检查点"
+    blocking: hard
+    g_axis: ["G6"]
+    checkpoints: ["声明闸② brief↔代码一致性（Q2 写集/排除项/可解析；D1148 合并 15→3）", "G12d: 生成物单点生成门禁 (D458)"]
+    decision: keep
+    reason: "2 个检查点（1 decl_check + 1 hard_check）；开关默认关但 hard_check 在 ⇒ 保留"
+    replacement: ""
+  - id: PC-G13
+    kind: group
+    line: 1892
+    label: "组 13: 技能同步一致性"
+    label_hash: "d155f69a9b71"
+    occurrences: [1892]
+    what: "技能同步一致性（.synova/skills ↔ .dsh/skills，G13 技能漂移）"
+    blocking: hard
+    g_axis: ["G6"]
+    checkpoints: ["G13: 技能漂移 — 运行 bash scripts/workflow/sync-dsh-skills.sh 后重新暂存"]
+    decision: keep
+    reason: "1 个 hard_check（技能漂移须重新暂存）＋ 执行失败硬阻断；无 G 轴同判据件 ⇒ 保留"
+    replacement: ""
+  - id: PC-B-1a48ce
+    kind: banner
+    line: 1926
+    label: "D782: 文档真相防线（D1 真相验证 + D2 登记门禁）"
+    label_hash: "1a48ce47768a"
+    occurrences: [1926]
+    what: "D782 文档真相防线（D1 真相验证 + D2 登记门禁）"
+    blocking: soft
+    g_axis: ["G6"]
+    checkpoints: ["D782 D1 文档真相（D1171 撤旁路复执法）", "D782 D2 登记门禁（D1171 撤旁路复执法）"]
+    decision: keep
+    reason: "G6 的既有机械执行体之一（2 个 v5_soft 检查点）⇒ 保留"
+    replacement: ""
+  - id: PC-B-1c131c
+    kind: banner
+    line: 1994
+    label: "PR 预算门禁 (D734)"
+    label_hash: "1c131c2588e3"
+    occurrences: [1994, 1997]
+    what: "PR 预算门禁（D734；同一 banner 文本在锚上出现 2 次）"
+    blocking: soft
+    g_axis: []
+    checkpoints: ["D734 PR 预算（D1171 撤旁路复执法）"]
+    decision: keep
+    reason: "v5_soft；与 G1–G6 无重叠 ⇒ 保留"
+    replacement: ""
+  - id: PC-B-4ca447
+    kind: banner
+    line: 2010
+    label: "D520/任务3: 平台敏感命令软检查（V5 软提示——新增脚本须对照 PLATFORM-CHECKLIST.md）"
+    label_hash: "4ca4472b5f3b"
+    occurrences: [2010]
+    what: "平台敏感命令软检查（新增脚本须对照 PLATFORM-CHECKLIST.md）"
+    blocking: soft
+    g_axis: []
+    checkpoints: ["V5 平台敏感命令: 新控制塔脚本对照 PLATFORM-CHECKLIST.md (D520)"]
+    decision: keep
+    reason: "soft_check 软提示；无 G 轴重叠 ⇒ 保留"
+    replacement: ""
+  - id: PC-B-1ff6e6
+    kind: banner
+    line: 2028
+    label: "D943: DSH 断面一致性（唯一源 docs/synova/coordination/DSH-断面.json）"
+    label_hash: "1ff6e6550cb0"
+    occurrences: [2028]
+    what: "DSH 断面一致性（唯一源 docs/synova/coordination/DSH-断面.json；3 个检查点含 fail-closed 降级）"
+    blocking: soft
+    g_axis: ["G6"]
+    checkpoints: ["DSH 断面一致性 (D943): 无可用 python（fail-closed，不静默跳过）", "DSH 断面一致性 (D943): 门禁脚本缺失 scripts/control-tower/check-dsh-anchor.py", "DSH 断面一致性 (D943)"]
+    decision: keep
+    reason: "3 个 soft_check（含 fail-closed 降级形态）；断面一致性属 G6 ⇒ 保留"
+    replacement: ""
+  - id: CI-S1
+    kind: step
+    line: 19
+    label: "工作区（本机 Gitea 克隆；不用 actions/checkout）"
+    label_hash: "cb70e0ee6c32"
+    occurrences: [19]
+    what: "工作区（本机 Gitea 克隆；不用 actions/checkout）"
+    blocking: none
+    g_axis: []
+    checkpoints: []
+    decision: keep
+    reason: "基础设施步（非门禁）；保留"
+    replacement: ""
+  - id: CI-S2
+    kind: step
+    line: 27
+    label: "依赖（lock 哈希指纹：变了就重装，没变才跳过）"
+    label_hash: "2af7e5c9b5b8"
+    occurrences: [27]
+    what: "依赖（lock 哈希指纹：变了就重装，没变才跳过）"
+    blocking: none
+    g_axis: []
+    checkpoints: []
+    decision: keep
+    reason: "基础设施步（非门禁）；保留"
+    replacement: ""
+  - id: CI-S3
+    kind: step
+    line: 57
+    label: "① 12 组门禁（唯一的阻断门）"
+    label_hash: "a43529a5dbab"
+    occurrences: [57]
+    what: "① 12 组门禁（唯一的阻断门）"
+    blocking: hard
+    g_axis: ["G1", "G2", "G3", "G4", "G6"]
+    checkpoints: []
+    decision: keep
+    reason: "CI 唯一阻断门（跑 pre-commit 全 12 组）⇒ 保留"
+    replacement: ""
+  - id: CI-S4
+    kind: step
+    line: 80
+    label: "①d 门禁本体自检（清单 ＋ diff 豁免）"
+    label_hash: "f0ae09fec6fa"
+    occurrences: [80]
+    what: "①d 门禁本体自检（清单 ＋ diff 豁免）"
+    blocking: hard
+    g_axis: ["G2"]
+    checkpoints: []
+    decision: keep
+    reason: "门禁本体自检（判别力面）⇒ 保留"
+    replacement: ""
+  - id: CI-S5
+    kind: step
+    line: 102
+    label: "①b 看板真值（交付未回填检测 · CTO 2026-10-11 立）"
+    label_hash: "f98a94e80379"
+    occurrences: [102]
+    what: "①b 看板真值（交付未回填检测 · CTO 2026-10-11 立）"
+    blocking: hard
+    g_axis: ["G6"]
+    checkpoints: []
+    decision: keep
+    reason: "看板真值（G6 一致）⇒ 保留"
+    replacement: ""
+  - id: CI-S6
+    kind: step
+    line: 110
+    label: "①c 内容面耦合 CC1–CC4（K12-13/#196 · 存量棘轮／新增必拦）"
+    label_hash: "308eb501658c"
+    occurrences: [110]
+    what: "①c 内容面耦合 CC1–CC4（K12-13/#196 · 存量棘轮／新增必拦）"
+    blocking: hard
+    g_axis: ["G6"]
+    checkpoints: []
+    decision: keep
+    reason: "K12-13 无命名检查点的盘点面由本步覆盖（findings.F3）⇒ 保留"
+    replacement: ""
+  - id: CI-S7
+    kind: step
+    line: 127
+    label: "② 架构边界（快，阻断）"
+    label_hash: "4dc0109a013d"
+    occurrences: [127]
+    what: "② 架构边界（快，阻断）"
+    blocking: hard
+    g_axis: []
+    checkpoints: []
+    decision: keep
+    reason: "阻断步；无 G 轴同判据件 ⇒ 保留"
+    replacement: ""
+  - id: CI-S8
+    kind: step
+    line: 150
+    label: "③ 增量测试（vitest --changed；只测改动面，避免全量摩擦）"
+    label_hash: "3780bc89afc4"
+    occurrences: [150]
+    what: "③ 增量测试（vitest --changed；只测改动面，避免全量摩擦）"
+    blocking: hard
+    g_axis: ["G3"]
+    checkpoints: []
+    decision: keep
+    reason: "增量测试（G3 有判据的执行面）⇒ 保留"
+    replacement: ""
+  - id: CI-S9
+    kind: step
+    line: 231
+    label: "④ 门禁复现器自检（条件：变更集触碰工作流/复现器/夹具才跑；否则 <1s 跳过）"
+    label_hash: "2af477f9fc7c"
+    occurrences: [231]
+    what: "④ 门禁复现器自检（条件跳过 <1s）"
+    blocking: soft
+    g_axis: ["G2", "G3"]
+    checkpoints: []
+    decision: keep
+    reason: "条件跳过（变更集未触碰则跳过）⇒ 判 soft；复现器自检属判别力面 ⇒ 保留"
+    replacement: ""
+
+# checkers：E5 的 32 个 check-*/verify-*；wired_to 由 C10 机器复算（pre-commit→owner slot id /
+#           workflow→CI-S<n> / 其他脚本→script:<相对路径>）；wired_to=[] ⇒ orphan: true（C10b）
+checkers:
+  - id: CT-check-block-paths.sh
+    path: "scripts/control-tower/check-block-paths.sh"
+    wired_to: ["CI-S3", "PC-G9", "script:scripts/control-tower/gen-block-paths.ts"]
+    orphan: false
+    blocking: true
+    decision: keep
+    reason: "C10 复算在门禁链在位（CI-S3/PC-G9）⇒ 保留"
+    replacement: ""
+  - id: CT-check-block-paths.ts
+    path: "scripts/control-tower/check-block-paths.ts"
+    wired_to: ["script:scripts/control-tower/check-block-paths.sh", "script:scripts/control-tower/gen-block-paths.ts"]
+    orphan: false
+    blocking: false
+    decision: keep
+    reason: "C10 复算只落在非门禁位脚本（C10b）：script:scripts/control-tower/check-block-paths.sh/script:scripts/control-tower/gen-block-paths.ts ⇒ 在脚本链在位、不在门禁链，保留"
+    replacement: ""
+  - id: CT-check-board-metrics
+    path: "scripts/control-tower/check-board-metrics.ts"
+    wired_to: ["script:scripts/control-tower/weekly-recon.sh"]
+    orphan: false
+    blocking: false
+    decision: keep
+    reason: "C10 复算只落在非门禁位脚本（C10b）：script:scripts/control-tower/weekly-recon.sh ⇒ 在脚本链在位、不在门禁链，保留"
+    replacement: ""
+  - id: CT-check-board-truth
+    path: "scripts/control-tower/check-board-truth.ts"
+    wired_to: ["CI-S5", "script:scripts/control-tower/check-board-metrics.ts", "script:scripts/control-tower/check-merge-conditions.sh"]
+    orphan: false
+    blocking: true
+    decision: keep
+    reason: "C10 复算在门禁链在位（CI-S5）⇒ 保留"
+    replacement: ""
+  - id: CT-check-bypass-log
+    path: "scripts/control-tower/check-bypass-log.sh"
+    wired_to: ["script:scripts/hooks/post-commit.sh", "script:scripts/pre-push-check.sh"]
+    orphan: false
+    blocking: false
+    decision: keep
+    reason: "C10 复算只落在非门禁位脚本（C10b）：script:scripts/hooks/post-commit.sh/script:scripts/pre-push-check.sh ⇒ 在脚本链在位、不在门禁链，保留"
+    replacement: ""
+  - id: CT-check-canary-drift
+    path: "scripts/control-tower/check-canary-drift.sh"
+    wired_to: ["CI-S9", "script:scripts/control-tower/check-gate-integrity.sh"]
+    orphan: false
+    blocking: false
+    decision: keep
+    reason: "C10 复算在门禁链在位（CI-S9）⇒ 保留"
+    replacement: ""
+  - id: CT-check-ci-stale-red
+    path: "scripts/control-tower/check-ci-stale-red.sh"
+    wired_to: ["script:scripts/control-tower/check-merge-conditions.sh", "script:scripts/control-tower/gen-cto-health.py"]
+    orphan: false
+    blocking: false
+    decision: keep
+    reason: "C10 复算只落在非门禁位脚本（C10b）：script:scripts/control-tower/check-merge-conditions.sh/script:scripts/control-tower/gen-cto-health.py ⇒ 在脚本链在位、不在门禁链，保留"
+    replacement: ""
+  - id: CT-check-citations
+    path: "scripts/control-tower/check-citations.py"
+    wired_to: ["script:scripts/control-tower/pre-dispatch-check.sh"]
+    orphan: false
+    blocking: false
+    decision: keep
+    reason: "C10 复算只落在非门禁位脚本（C10b）：script:scripts/control-tower/pre-dispatch-check.sh ⇒ 在脚本链在位、不在门禁链，保留"
+    replacement: ""
+  - id: CT-check-customer-deps
+    path: "scripts/control-tower/check-customer-deps.ts"
+    wired_to: []
+    orphan: true
+    blocking: false
+    decision: retire
+    reason: "C10 复算孤儿（wired_to=[]）且非守卫（按需运行的端口级摘除演练器，非事故形态触发）⇒ 等额退役给 T2（本批只标记，不删）"
+    replacement: "T2"
+  - id: CT-check-doc-contract
+    path: "scripts/control-tower/check-doc-contract.sh"
+    wired_to: ["PC-X-9cf8d7"]
+    orphan: false
+    blocking: false
+    decision: keep
+    reason: "C10 复算在门禁链在位（PC-X-9cf8d7）⇒ 保留"
+    replacement: ""
+  - id: CT-check-dsh-anchor
+    path: "scripts/control-tower/check-dsh-anchor.py"
+    wired_to: ["CI-S9", "PC-B-1ff6e6", "script:scripts/control-tower/daily-cto-board.sh"]
+    orphan: false
+    blocking: false
+    decision: keep
+    reason: "C10 复算在门禁链在位（CI-S9/PC-B-1ff6e6）⇒ 保留"
+    replacement: ""
+  - id: CT-check-dual-repo-sync
+    path: "scripts/control-tower/check-dual-repo-sync.sh"
+    wired_to: ["script:scripts/control-tower/mirror-sync-push.sh"]
+    orphan: false
+    blocking: false
+    decision: keep
+    reason: "C10 复算只落在非门禁位脚本（C10b）：script:scripts/control-tower/mirror-sync-push.sh ⇒ 在脚本链在位、不在门禁链，保留"
+    replacement: ""
+  - id: CT-check-fixture-requires
+    path: "scripts/control-tower/check-fixture-requires.sh"
+    wired_to: ["CI-S9"]
+    orphan: false
+    blocking: false
+    decision: keep
+    reason: "C10 复算在门禁链在位（CI-S9）⇒ 保留"
+    replacement: ""
+  - id: CT-check-gate-integrity
+    path: "scripts/control-tower/check-gate-integrity.sh"
+    wired_to: ["CI-S9", "script:scripts/commit-msg-check.sh", "script:scripts/control-tower/check-gate-protection.sh", "script:scripts/control-tower/sealed-tests.sh", "script:scripts/control-tower/weekly-recon.sh"]
+    orphan: false
+    blocking: false
+    decision: keep
+    reason: "C10 复算在门禁链在位（CI-S9）⇒ 保留"
+    replacement: ""
+  - id: CT-check-gate-protection
+    path: "scripts/control-tower/check-gate-protection.sh"
+    wired_to: ["CI-S4"]
+    orphan: false
+    blocking: true
+    decision: keep
+    reason: "C10 复算在门禁链在位（CI-S4）⇒ 保留"
+    replacement: ""
+  - id: CT-check-gitlinks
+    path: "scripts/control-tower/check-gitlinks.sh"
+    wired_to: []
+    orphan: true
+    blocking: false
+    decision: keep
+    reason: "C10 复算孤儿（wired_to=[]）；但为 fail-closed 守卫（仅在 gitlink 入树的事故形态命中）⇒ 不据零命中退役（C7 守卫条款）"
+    replacement: ""
+  - id: CT-check-k3-report
+    path: "scripts/control-tower/check-k3-report.py"
+    wired_to: []
+    orphan: true
+    blocking: false
+    decision: keep
+    reason: "C10 复算孤儿（wired_to=[]）；K3 审计报告形式保险，有审计报告才跑（事件形态）⇒ 守卫，不据零命中退役"
+    replacement: ""
+  - id: CT-check-merge-conditions
+    path: "scripts/control-tower/check-merge-conditions.sh"
+    wired_to: ["script:scripts/control-tower/probe-line-signals.ts"]
+    orphan: false
+    blocking: false
+    decision: keep
+    reason: "C10 复算只落在非门禁位脚本（C10b）：script:scripts/control-tower/probe-line-signals.ts ⇒ 在脚本链在位、不在门禁链，保留"
+    replacement: ""
+  - id: CT-check-name-allocation
+    path: "scripts/control-tower/check-name-allocation.sh"
+    wired_to: ["script:scripts/control-tower/alloc-task-id.sh"]
+    orphan: false
+    blocking: false
+    decision: keep
+    reason: "C10 复算只落在非门禁位脚本（C10b）：script:scripts/control-tower/alloc-task-id.sh ⇒ 在脚本链在位、不在门禁链，保留"
+    replacement: ""
+  - id: CT-check-notes-lifecycle
+    path: "scripts/control-tower/check-notes-lifecycle.sh"
+    wired_to: ["PC-B-e91824", "PC-X-295a47"]
+    orphan: false
+    blocking: false
+    decision: keep
+    reason: "C10 复算在门禁链在位（PC-B-e91824/PC-X-295a47）⇒ 保留"
+    replacement: ""
+  - id: CT-check-ontology-fields
+    path: "scripts/control-tower/check-ontology-fields.sh"
+    wired_to: ["script:scripts/control-tower/check-customer-deps.ts", "script:scripts/control-tower/probe-ontology-values.ts"]
+    orphan: false
+    blocking: false
+    decision: keep
+    reason: "C10 复算只落在非门禁位脚本（C10b）：script:scripts/control-tower/check-customer-deps.ts/script:scripts/control-tower/probe-ontology-values.ts ⇒ 在脚本链在位、不在门禁链，保留"
+    replacement: ""
+  - id: CT-check-orphan-worktrees
+    path: "scripts/control-tower/check-orphan-worktrees.sh"
+    wired_to: ["script:scripts/control-tower/classify-worktrees.py", "script:scripts/control-tower/gen-cto-health.py"]
+    orphan: false
+    blocking: false
+    decision: keep
+    reason: "C10 复算只落在非门禁位脚本（C10b）：script:scripts/control-tower/classify-worktrees.py/script:scripts/control-tower/gen-cto-health.py ⇒ 在脚本链在位、不在门禁链，保留"
+    replacement: ""
+  - id: CT-check-ownership
+    path: "scripts/control-tower/check-ownership.py"
+    wired_to: ["script:scripts/control-tower/check-pr-budget.sh", "script:scripts/control-tower/scan-fullwidth-vars.sh"]
+    orphan: false
+    blocking: false
+    decision: keep
+    reason: "C10 复算只落在非门禁位脚本（C10b）：script:scripts/control-tower/check-pr-budget.sh/script:scripts/control-tower/scan-fullwidth-vars.sh ⇒ 在脚本链在位、不在门禁链，保留"
+    replacement: ""
+  - id: CT-check-package-selfsufficiency
+    path: "scripts/control-tower/check-package-selfsufficiency.py"
+    wired_to: []
+    orphan: true
+    blocking: false
+    decision: keep
+    reason: "C10 复算孤儿（wired_to=[]）；包自足性审查协议 v2 执行体（按包按需跑）⇒ 保留，接线另开卡"
+    replacement: ""
+  - id: CT-check-pr-budget
+    path: "scripts/control-tower/check-pr-budget.sh"
+    wired_to: ["CI-S8", "PC-B-1c131c", "PC-X-75da80", "script:scripts/control-tower/check-bypass-log.sh", "script:scripts/control-tower/merge_writeset_gate.py", "script:scripts/doc-system/doc-registry-gate.sh"]
+    orphan: false
+    blocking: true
+    decision: keep
+    reason: "C10 复算在门禁链在位（CI-S8/PC-B-1c131c/PC-X-75da80）⇒ 保留"
+    replacement: ""
+  - id: CT-check-preset-bundles
+    path: "scripts/control-tower/check-preset-bundles.sh"
+    wired_to: ["script:scripts/control-tower/install-dsh-preset.sh"]
+    orphan: false
+    blocking: false
+    decision: keep
+    reason: "C10 复算只落在非门禁位脚本（C10b）：script:scripts/control-tower/install-dsh-preset.sh ⇒ 在脚本链在位、不在门禁链，保留"
+    replacement: ""
+  - id: CT-check-project-coordinates
+    path: "scripts/control-tower/check-project-coordinates.sh"
+    wired_to: []
+    orphan: true
+    blocking: false
+    decision: retire
+    reason: "C10 复算孤儿（wired_to=[]）且非守卫（D1175 坐标系校验器目前仅预演模式、默认 exit 0，原文「先出预演报告再谈进 CI」）⇒ 等额退役给 T3（本批只标记，不删）"
+    replacement: "T3"
+  - id: CT-check-registry-invariants
+    path: "scripts/control-tower/check-registry-invariants.ts"
+    wired_to: ["CI-S3"]
+    orphan: false
+    blocking: true
+    decision: keep
+    reason: "C10 复算在门禁链在位（CI-S3）⇒ 保留"
+    replacement: ""
+  - id: CT-check-required-contexts
+    path: "scripts/control-tower/check-required-contexts.py"
+    wired_to: ["CI-S9", "script:scripts/control-tower/check-package-selfsufficiency.py"]
+    orphan: false
+    blocking: false
+    decision: keep
+    reason: "C10 复算在门禁链在位（CI-S9）⇒ 保留"
+    replacement: ""
+  - id: CT-check-sentinel-type-net
+    path: "scripts/control-tower/check-sentinel-type-net.sh"
+    wired_to: []
+    orphan: true
+    blocking: false
+    decision: keep
+    reason: "C10 复算孤儿（wired_to=[]）；哨兵类型登记硬门禁，缺失登记属事故形态 ⇒ 守卫，不据零命中退役"
+    replacement: ""
+  - id: CT-verify-claims-table
+    path: "scripts/control-tower/verify-claims-table.sh"
+    wired_to: ["PC-X-d1b9b0"]
+    orphan: false
+    blocking: false
+    decision: keep
+    reason: "C10 复算在门禁链在位（PC-X-d1b9b0）⇒ 保留"
+    replacement: ""
+  - id: CT-verify-parallel
+    path: "scripts/control-tower/verify-parallel.sh"
+    wired_to: ["CI-S8", "script:scripts/control-tower/devdoc_writeset.py", "script:scripts/control-tower/incident-loop.py", "script:scripts/control-tower/merge_writeset_gate.py", "script:scripts/control-tower/self-health.py", "script:scripts/pre-push-check.sh", "script:scripts/workflow/check-dev-doc-write-set.sh"]
+    orphan: false
+    blocking: true
+    decision: keep
+    reason: "C10 复算在门禁链在位（CI-S8）⇒ 保留"
+    replacement: ""
+
+# pairing：判据⑤ —— 5 类扫描各 1 行，覆盖 T1–T5（C9 强制；target 必须命中 gates[].id 或 checkers[].id）
+#          retire 的 target 必须 ∈ C10 复算的孤儿集（C9b），禁拿在役门禁凑退役
+pairing:
+  - scan: T1
+    action: replace
+    target: "PC-G4"
+    why: "同语义：新 export 必须被消费（T1 是组 4 接线审计的存量化）"
+  - scan: T4
+    action: replace
+    target: "PC-G2"
+    why: "同语义：空 catch 必须可见（T4 扩到 return []/null/false 并覆盖存量）"
+  - scan: T5
+    action: replace
+    target: "PC-G2"
+    why: "同语义：测试不可空壳（T5 覆盖存量，旧检查点只测新增）"
+  - scan: T2
+    action: retire
+    target: "CT-check-customer-deps"
+    why: "等额退役：T2（无 timeout）上线即腾出一个旧位；target 为 C10 孤儿（wired_to=[]）且非守卫"
+  - scan: T3
+    action: retire
+    target: "CT-check-project-coordinates"
+    why: "等额退役：T3（schema 直通）上线即腾出一个旧位；target 为 C10 孤儿（wired_to=[]）且非守卫"
+
+# candidates：replace / retire 候选（本批只标记，不删任何门禁）
+candidates:
+  replace:
+    - from: PC-G4
+      to: T1
+      why: "T1 同语义且存量化（新 export 必须被消费）；上线并证明判别力后退役旧检查点（配对见 pairing.T1）"
+  retire:
+    - id: CT-check-customer-deps
+      why: "C10 复算孤儿（wired_to=[]）且非守卫（按需运行的端口级摘除演练器，非事故形态触发）⇒ 等额退役给 T2（本批只标记，不删）"
+      replacement: "T2"
+    - id: CT-check-project-coordinates
+      why: "C10 复算孤儿（wired_to=[]）且非守卫（D1175 坐标系校验器目前仅预演模式、默认 exit 0，原文「先出预演报告再谈进 CI」）⇒ 等额退役给 T3（本批只标记，不删）"
+      replacement: "T3"
+

@@ -805,3 +805,24 @@ documents:
     status: active
     owner: CTO
     note: "research-acceptance 技能新增/同步与豁免登记。"
+
+  # ---- P4 2026-10-23：#841 P0 质量门禁四件（标准／登记表／盘点）----
+  #      取号时点 2026-10-23：锚上 max=DOC-0239；在飞 PR #835 已占 DOC-0240 ⇒ 本批从 0241 起。
+  - id: DOC-0241
+    type: governance
+    path: docs/authority/quality-standard-g1g6.md
+    status: active
+    owner: P4
+    note: "G1–G6 质量判据标准 v1（每条五字段：判据定义／怎么判（机械）／红条件／证据要求／豁免条件）；语义真源＝附卷 A §1，规则唯一定义在 #841 规格 §2.3-D3。"
+  - id: DOC-0242
+    type: registry
+    path: docs/authority/WIRING-REGISTRY.yaml
+    status: active
+    owner: P4
+    note: "能力接线登记表 schema v1 ＋ 3 行真实样例；--check-registry 三态校验（末行 REGISTRY-OK rows=3）。"
+  - id: DOC-0243
+    type: registry
+    path: docs/authority/GATE-INVENTORY.yaml
+    status: active
+    owner: P4
+    note: "旧门禁盘点（35 行 ＝ G12 ＋ B9 ＋ X5 ＋ CI9；32 检查器 ＋ pairing 5 行 ＋ excluded_headers 19）；C1–C10b 机器可核。"

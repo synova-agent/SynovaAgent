@@ -1,0 +1,26 @@
+# .claude/claims/841.yaml — #841（P4 · P0 质量门禁四件）写集声明（S0 源，issue 号卡）
+#
+# 为什么用 claim：本卡是 **issue 号卡（#841）**，无 D# 编号 ⇒ D# 链找不到声明源；
+#   `.claude/claims/<issue>.yaml` = S0 声明源（存在时优先于 D# 链）。
+# 先例：.claude/claims/1031.yaml / 980.yaml。
+# 纪律：writeset 列**本批 10 件**（批次级；含 impl-scanner 的 4 件）；顶层键只允许 writeset/done/note。
+# 判据唯一准绳＝规格 §4（J1–J15 ＋ R1–R14）；本批零接线、不删旧门禁、不改产品代码。
+writeset:
+  - .claude/claims/841.yaml
+  - docs/authority/DOCS-REGISTRY.yaml
+  - docs/authority/GATE-INVENTORY.yaml
+  - docs/authority/WIRING-REGISTRY.yaml
+  - docs/authority/quality-standard-g1g6.md
+  - memory/notes/proposed/2026-10-23-p4-p0-quality-gate.md
+  - scripts/control-tower/quality-baseline.json
+  - scripts/control-tower/quality-baseline.py
+  - tests/control-tower/quality-baseline.test.sh
+  - tests/control-tower/quality-standard.test.sh
+done:
+  - verify: bash tests/control-tower/quality-standard.test.sh
+  - verify: bash tests/control-tower/quality-baseline.test.sh
+  - verify: python3 scripts/control-tower/quality-baseline.py --check-registry docs/authority/WIRING-REGISTRY.yaml
+  - verify: python3 scripts/control-tower/quality-baseline.py --check-inventory docs/authority/GATE-INVENTORY.yaml
+  - verify: python3 scripts/control-tower/quality-baseline.py --selfcheck
+  - verify: bash scripts/doc-system/doc-registry-gate.sh
+note: #841 P0 质量门禁四件（标准 v1／wiring 登记表 schema／基线扫描／旧门禁盘点）：只测量不阻断，零接线（J12/J15 兜），DOC 取号 0241–0243（时点 max=0239，在飞 #835 占 0240）。

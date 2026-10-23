@@ -1,0 +1,67 @@
+# WIRING-REGISTRY.yaml — 能力→消费者接线登记表（#841 P4-P0；schema v1 ＋ 恰好 3 行真实样例）
+# 契约真源：规格 .handbook/派单件/2026-10-23-规格-841-P4-P0-quality-gate.md §2.3-D2；
+# 校验器：python3 scripts/control-tower/quality-baseline.py --check-registry <本件>（R1–R7，三态）
+#
+# 状态口径（R6 机器查）：
+#   wired         声明/Provider/生产 Consumer/测试 全在位（consumer ＋ test 均非空）
+#   partial       有 Provider 但 Consumer 不全（consumer 可空；缺口写 notes）
+#   declared-only 只有声明/Provider，无生产 Consumer（consumer 必须为空）
+#   retired       已退役（retired_reason 必填）
+#
+# 🔴 本批只落 3 行真实样例，不填全量（规格 §1.2 非目标）；行号已现场 `grep -n` 复核。
+# 🔴 capability pattern 说明：规格 §2.3-D2 示例 pattern 为 ^[a-z]...（纯小写），但其自身样例
+#    （content.initContentTypes / audit.verifyChain）含大写 ⇒ 本表按真实 capability 命名
+#    用 [A-Za-z] 起始（规则 R4 本身不变；差异登记在 quality-baseline.py 的 limitations L8）。
+schema_version: 1
+row_key: capability
+fields:
+  - name: capability
+    required: true
+    pattern: "^[A-Za-z][A-Za-z0-9._-]{2,63}$"
+  - name: defined_at
+    required: true
+    format: "path:line"
+  - name: provider
+    required: true
+    format: "path:line"
+  - name: consumer
+    required: false
+    format: "path:line"
+  - name: test
+    required: false
+    format: "path:line"
+  - name: status
+    required: true
+    enum: [wired, partial, declared-only, retired]
+  - name: owner
+    required: true
+    format: "package"
+  - name: notes
+    required: false
+  - name: retired_reason
+    required: false
+entries:
+  - capability: content.initContentTypes
+    defined_at: "src/deploy/content-registry.ts:632"
+    provider: "src/deploy/content-registry.ts:632"
+    consumer: "src/init/file-driven-loaders.ts:58"
+    test: "tests/deploy/content-registry.test.ts"
+    status: wired
+    owner: K12
+    notes: "boot 装配入口；锚上非测试调用点 3 处（src/init/file-driven-loaders.ts:58 / src/agent/sentinel-service.ts:617 / src/deploy/content-reload.ts:197）"
+  - capability: audit.verifyChain
+    defined_at: "src/l4/audit-store.ts:213"
+    provider: "src/security/root-hash-publisher.ts:101"
+    consumer: null
+    test: "tests/security/root-hash-publisher.test.ts"
+    status: declared-only
+    owner: K12
+    notes: "生产侧 new RootHashPublisher = 0（实测）⇒ 链外锚不可达（研究 D-1）；consumer 空是实测不是遗漏"
+  - capability: eventbus.publish
+    defined_at: "src/l5/ontology-event-bus.ts:50"
+    provider: "src/l5/ontology-event-bus.ts:50"
+    consumer: null
+    test: null
+    status: declared-only
+    owner: K12
+    notes: "同文件自调用（batchPublish→publish）不计消费者；外部生产侧只用 batchPublish ⇒ declared-only（禁编造消费者）"
