@@ -156,10 +156,13 @@ fi
 # 卡 #1423（创始人 2026-10-08「一步到位」裁决）: **默认开** ——
 #   未设/真值 ⇒ 开；显式 0|false|off|no|n ⇒ 关（**唯一回滚点**）。
 #   口径与单一事实源 claim_store.claim_v2_enabled 逐字对齐。
+#   🔴 空值分支必须显式列 1（#911：原 `*)` 兜底把"未设"吞成 0 ⇒ pre-commit 的 resolver
+#      永远拿不到 claim 文件，组 6/12 的 claim 分支在默认态不可达）。
 CLAIM_V2=1
 case "$(printf '%s' "${SYNO_CLAIM_V2:-}" | tr '[:upper:]' '[:lower:]')" in
+  "") CLAIM_V2=1 ;;                 # 未设 ⇒ 开（与 claim_store 单源；#911）
   1|true|on|yes|y) CLAIM_V2=1 ;;
-  *) CLAIM_V2=0 ;;
+  *) CLAIM_V2=0 ;;                  # 显式 0/off/false/no/n ⇒ 关（唯一回滚点）
 esac
 if [ "$CLAIM_V2" = "1" ] && [ -n "$CLAIM_FILE" ]; then
   echo "$CLAIM_FILE"

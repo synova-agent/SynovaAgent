@@ -89,11 +89,22 @@ chk_issue 'docs(d577-closeout): x' ''      # legacy D# scope 不得产伪 issue
 chk_issue 'Merge 9e4141d54e2b into 76' ''  # 合成 merge 主题不得产伪 issue
 chk_issue 'feat/win-d702-abc' ''           # legacy 分支不得产伪 issue
 
-# ── 边界: feature flag 默认关（K3 R2 回滚语义）──
+# ── 边界: feature flag **默认开**（裁 1423／裁 318 · #911 C1 两态矩阵）──
+#   未设 ⇒ on（默认开）；truthy ⇒ on；显式假值（0/off/false/no/n）⇒ off = **唯一回滚点**。
 OUT=$(env -u SYNO_CLAIM_V2 "$PYBIN" "$CLAIM" --flag); assert_rc $? 0 "--flag 可读"
-[ "$OUT" = "off" ] && ok "边界: SYNO_CLAIM_V2 默认关" || no "边界: 默认应为 off，实得 $OUT"
-OUT=$(SYNO_CLAIM_V2=1 "$PYBIN" "$CLAIM" --flag)
-[ "$OUT" = "on" ] && ok "边界: SYNO_CLAIM_V2=1 → on" || no "边界: 开关未生效: $OUT"
+[ "$OUT" = "on" ] && ok "边界[C1]: SYNO_CLAIM_V2 未设 ⇒ on（默认开）" || no "边界[C1]: 未设应为 on，实得 $OUT"
+for v in 1 true on yes y TRUE Yes; do
+  OUT=$(SYNO_CLAIM_V2="$v" "$PYBIN" "$CLAIM" --flag)
+  [ "$OUT" = "on" ] && ok "边界[C1]: SYNO_CLAIM_V2=$v → on" || no "边界[C1]: $v 应为 on，实得 $OUT"
+done
+for v in 0 off false no n 0x0; do
+  OUT=$(SYNO_CLAIM_V2="$v" "$PYBIN" "$CLAIM" --flag)
+  [ "$OUT" = "off" ] && ok "边界[C1]: SYNO_CLAIM_V2=$v → off（唯一回滚点）" || no "边界[C1]: $v 应为 off，实得 $OUT"
+done
+# 反例（改坏即红）: 把空值分支改回 False ⇒ 下面这条必红
+OUT=$(env -u SYNO_CLAIM_V2 "$PYBIN" "$CLAIM" --flag)
+[ "$OUT" != "off" ] && ok "边界[C1]: 默认态与显式关**可区分**（未设≠off ⇒ 空值分支确有判别力）" \
+  || no "边界[C1]: 未设与显式关不可区分 ⇒ 空值分支失效"
 
 # ── 边界: --resolve-path 三态（先清掉上面的畸形样本——同目录存在畸形 claim 时
 #    resolve 判 invalid/exit 2 是**设计行为**：不得把"有声明读不动"当作"无声明"）──

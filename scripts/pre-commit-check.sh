@@ -1019,17 +1019,19 @@ fi
 TASK_BRIEF_MISSING=""
 TASK_BRIEF_EMPTY=""
 # ── D-C 收口（K3 R6 合并核验）: 声明载体双形态 —— claim（.claude/claims/<issue>.yaml）／legacy brief ──
-# 单一开关 SYNO_CLAIM_V2（默认关）: 关时**逐字节**走下方 legacy 散文路径（回滚语义）。
-# 开时若 resolver 返回的是 claim，则 Q0/Q1/Q2/Q3 散文检查**按设计不适用**（claim 是两字段制），
+# 单一开关 SYNO_CLAIM_V2（**默认开**，裁 1423／裁 318）: 开时若 resolver 返回的是 claim，
+# 则 Q0/Q1/Q2/Q3 散文检查**按设计不适用**（claim 是两字段制），
 # 改以 claim 自身 schema 判据（writeset + done 非空且 done 含 verify:，由 claim_store 强制）
 # 替代；并**显式打印**该结论（禁静默空白，铁律 11）。
-# 卡 #1423（创始人 2026-10-08「一步到位」裁决）: **默认开** ——
-#   未设/真值 ⇒ 开；显式 0|false|off|no|n ⇒ 关（**唯一回滚点**）。
+# 显式 0|false|off|no|n ⇒ **逐字节**走下方 legacy 散文路径（**唯一回滚点**，回滚不改代码）。
 #   口径与单一事实源 claim_store.claim_v2_enabled 逐字对齐。
+#   🔴 空值分支（``)）必须在这里显式列成 1 —— 与 claim_store 的「未设 ⇒ True」同源。
+#      历史缺陷（Issue #911）：`CLAIM_V2=1` 预置值被下面的 `*)` 兜底覆盖成 0 ⇒ 未设 = 关。
 CLAIM_V2=1
 case "$(printf '%s' "${SYNO_CLAIM_V2:-}" | tr '[:upper:]' '[:lower:]')" in
+  "") CLAIM_V2=1 ;;                 # 未设 ⇒ 开（与 claim_store 单源；#911）
   1|true|on|yes|y) CLAIM_V2=1 ;;
-  *) CLAIM_V2=0 ;;
+  *) CLAIM_V2=0 ;;                  # 显式 0/off/false/no/n ⇒ 关（唯一回滚点）
 esac
 IS_CLAIM_DECL=0
 case "${BRIEF:-}" in *.yaml) IS_CLAIM_DECL=1 ;; esac
@@ -1658,13 +1660,13 @@ ALL_TODAY_BRIEFS=$(today_files_by_prefix "$ROOT/.claude/task-briefs/" | sort || 
 [ -z "$ALL_TODAY_BRIEFS" ] && [ -n "$CUR_BRIEF_PATH" ] && ALL_TODAY_BRIEFS="$CUR_BRIEF_PATH"
 SCOPE_VIOLATION=""
 
-# ═══ D1220（卡 #1222 D-A2）: 组 12 claim 载体覆盖判定（开关 SYNO_CLAIM_V2，默认关）═══
+# ═══ D1220（卡 #1222 D-A2）: 组 12 claim 载体覆盖判定（开关 SYNO_CLAIM_V2，**默认开** · #911）═══
 #   缺陷（实测，本卡修的就是它）: 组 12 原只认 legacy 散文 brief —— 按 ±1 天窗口 glob
 #     `.claude/task-briefs/*.md`。claim 载体（`.claude/claims/<issue>.yaml`）下 ALL_TODAY_BRIEFS
 #     为空 ⇒ 下面 `if [ -n "$ALL_TODAY_BRIEFS" ] …` 为假 ⇒ **整段跳过、组 12 静默放行**
 #     （假绿：合法 claim 用户失去全部写集约束）。
 #   修法（同源改造，与组 6 的 claim 双形态同构）:
-#     ① 开关 SYNO_CLAIM_V2 关 ⇒ **逐字节 legacy**（回滚 = 关开关，判据零改动）；
+#     ① 开关 SYNO_CLAIM_V2 显式关 ⇒ **逐字节 legacy**（回滚 = 显式 0，判据零改动）；
 #     ② 开 ⇒ 先以 `claim_store.py --coverage`（**全 claim 并集**；`--resolve` 是最佳单 claim，
 #        多线并发时会假红，故不用）判覆盖；被 claim 覆盖的文件视为已声明；
 #     ③ **未被 claim 覆盖的余量**再走 legacy brief 判定（迁移期双载体并存 ⇒ 取并集，
