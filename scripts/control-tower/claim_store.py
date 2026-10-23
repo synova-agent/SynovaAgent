@@ -42,9 +42,12 @@ YAML 子集（**故意不收 PyYAML 依赖**——CI runner 与精简 Git 环境
     · 行内 `#` 注释在**非引号包裹**时剥离（避免路径里的 # 被误当注释）
 
 feature flag（K3 R2）:
-  `SYNO_CLAIM_V2`（默认关）——**唯一回滚点**。
-    · 关（默认）: 本库不参与任何解析；既有 D# 路径逐字节不变（回滚 = 关开关，不改 30 文件）
-    · 开        : claim-first；且存在 claim 时**禁用 D# 锚点回退**（K3 R3 劫持修复）
+  `SYNO_CLAIM_V2`（**默认开** —— 裁 1423「一步到位」，裁 318 恢复之；唯一回滚点 = 显式 `0|off|false|no|n`）。
+    · 开（默认）: claim-first；且存在 claim 时**禁用 D# 锚点回退**（K3 R3 劫持修复）
+    · 关（显式 0）: 本库不参与任何解析；既有 D# 路径**逐字节**不变（回滚 = 显式关，不改 30 文件）
+    🔴 **四处消费者必须同口径（未设 ⇒ 开）**：本库 ＋ `scripts/pre-commit-check.sh:CLAIM_V2`
+       ＋ `scripts/check-verifiable-done.sh:CLAIM_V2` ＋ `scripts/workflow/resolve-commit-brief.sh:CLAIM_V2`。
+       改任一处必须同改其余 —— 漏一处就是「同一事实多个说法」（Issue #911 的缺陷形态）。
 
 用法（CLI）:
   claim_store.py --path <issue>                  # 打印声明文件绝对路径（不存在 → exit 1）
@@ -57,7 +60,7 @@ feature flag（K3 R2）:
   claim_store.py --migration-marker               # 迁移期显式标识串（R6：禁静默空白）
   claim_store.py --legacy-view                    # task-state 形状的兼容视图（R6 消费者只读降级用）
   claim_store.py --issue-of "<text>"              # 从分支名/提交主题提取 issue 号（R5 单源）
-  claim_store.py --flag                           # 打印 SYNO_CLAIM_V2 是否启用（0=开 1=关）
+  claim_store.py --flag                           # 打印 SYNO_CLAIM_V2 状态（`on` / `off`）
 """
 from __future__ import annotations
 
@@ -124,8 +127,11 @@ def claim_v2_enabled(env: Optional[Dict[str, str]] = None) -> bool:
     e = os.environ if env is None else env
     raw = str(e.get("SYNO_CLAIM_V2", "")).strip().lower()
     if not raw:
-        return False  # 未设 = **默认关（回滚态）** —— 2026-10-08 热修：默认开使 main 红（见 docstring）
-    return raw in _TRUTHY  # 显式开启能力保留（重翻时无需再改这里）
+        # 未设 = **默认开**（裁 1423「一步到位」）。2026-10-08 曾热修翻回关（当时使 main 红），
+        # 由 Issue #911 恢复，并在 CI（`.gitea/workflows/local-gates.yml` 步①）显式注入防回归。
+        # 显式 0/off/false/no/n 仍是**唯一回滚点**（能力保留，回滚不改代码）。
+        return True
+    return raw in _TRUTHY
 
 
 def claim_dir(root: Optional[Path | str] = None, env: Optional[Dict[str, str]] = None) -> Path:

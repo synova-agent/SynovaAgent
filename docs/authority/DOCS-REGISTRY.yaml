@@ -813,3 +813,11 @@ documents:
     status: active
     owner: CTO
     note: "#828 周对账 launchd 定时接线（安装器/配对测试/报备/登记）的受保护路径豁免；本体 weekly-recon.sh 零改动。"
+
+  # ---- P4 2026-10-24：#911 claim-v2 默认开豁免件（DOC-0241…0244 已由在飞 #910 预占，故取 0245）----
+  - id: DOC-0245
+    type: decision
+    path: gate-exemptions/2026-10-24-p4-911-claim-v2-default-on.md
+    status: active
+    owner: CTO
+    note: "#911 claim-v2 默认开（四处同源＋CI 显式注入）的受保护路径豁免；ID 避开 #910 已占的 DOC-0241…0244。"

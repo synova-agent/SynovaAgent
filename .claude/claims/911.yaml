@@ -1,0 +1,24 @@
+# .claude/claims/911.yaml — #911 claim-v2 恢复「默认开」· 写集声明（claim-first 载体）
+# 自举说明（CTO #911 评论 5551）：本 PR 的 CI 按**新行为**（claim-v2 开）跑 ⇒ 本文件是
+#   本 PR 自己的合规声明载体；删掉它再跑 CI ⇒ 组 6/12 必红（判别力证据，见 PR 正文 C2）。
+# 纪律：只列本 PR 真正改动的文件，不预授权。
+writeset:
+  - .claude/claims/911.yaml
+  - memory/notes/implemented/2026-10-24-911-claim-v2-default-on.md
+  - scripts/control-tower/claim_store.py
+  - scripts/pre-commit-check.sh
+  - scripts/check-verifiable-done.sh
+  - scripts/workflow/resolve-commit-brief.sh
+  - .gitea/workflows/local-gates.yml
+  - tests/control-tower/claim_store.test.sh
+  - tests/control-tower/claim-identity-v2.test.py
+  - tests/control-tower/precommit-claim-wiring.test.sh
+  - gate-exemptions/2026-10-24-p4-911-claim-v2-default-on.md
+  - docs/authority/DOCS-REGISTRY.yaml
+done:
+  - verify: bash tests/control-tower/claim_store.test.sh
+  - verify: python3 tests/control-tower/claim-identity-v2.test.py
+  - verify: bash tests/control-tower/precommit-claim-wiring.test.sh
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main
+  - verify: env -u SYNO_CLAIM_V2 python3 scripts/control-tower/claim_store.py --flag
+note: "#911（裁 318）：claim-v2 未设⇒开（四处同源：claim_store/pre-commit/check-verifiable-done/resolver）＋CI 步①显式注入 SYNO_CLAIM_V2=1；显式 0 仍为唯一回滚点。"

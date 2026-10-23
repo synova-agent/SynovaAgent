@@ -34,6 +34,7 @@ tests/control-tower/claim-identity-v2.test.py — D-C 标识归一 R3 三场景�
 隔离: 全部在 mktemp 临时仓/临时目录，零网络、零真实仓库写入。
 运行: python3 tests/control-tower/claim-identity-v2.test.py   （exit 0 = 全绿）
 """
+import datetime
 import json
 import os
 import re
@@ -43,6 +44,11 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+
+# #911 派生修复（存量红，非本卡判据变更）: resolver 的「今日 brief」窗口是 ±1 天，
+#   而本文件多处夹具把文件名日期硬编码成 2026-10-07/08 ⇒ 2026-10-10 起这些用例**永久红**
+#   （锚 f8b481e78 实测 4 红：a6/a8/b3/d5）。改为「当日」生成，断言一字未改。
+TODAY = datetime.date.today().isoformat()
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CT = REPO_ROOT / "scripts" / "control-tower"
@@ -165,10 +171,21 @@ class TestA_NewClaimTakesEffect(Base):
         self.assertTrue(d["done"][0]["verify"].startswith("bash "), d["done"])
         self.assertNotIn("verify:", d["done"][0]["verify"])
 
-    def test_a1b_flag_defaults_off(self):
+    def test_a1b_flag_defaults_on(self):
+        """#911 C1 两态: 未设 ⇒ on（默认开）；显式 0/off/false/no/n ⇒ off（唯一回滚点）。"""
         rc, out, _ = _run([sys.executable, str(CLAIM_STORE), "--flag"])
         self.assertEqual(rc, 0)
-        self.assertEqual(out.strip(), "off", "SYNO_CLAIM_V2 必须默认关（K3 R2 回滚语义）")
+        self.assertEqual(out.strip(), "on", "SYNO_CLAIM_V2 必须默认开（裁 1423／裁 318；#911）")
+        for v in ("1", "true", "on", "yes", "y"):
+            rc, out, _ = _run([sys.executable, str(CLAIM_STORE), "--flag"],
+                              env={"SYNO_CLAIM_V2": v})
+            self.assertEqual(rc, 0)
+            self.assertEqual(out.strip(), "on", f"SYNO_CLAIM_V2={v} 应开")
+        for v in ("0", "off", "false", "no", "n"):
+            rc, out, _ = _run([sys.executable, str(CLAIM_STORE), "--flag"],
+                              env={"SYNO_CLAIM_V2": v})
+            self.assertEqual(rc, 0)
+            self.assertEqual(out.strip(), "off", f"SYNO_CLAIM_V2={v} 应关闭（回滚点）")
 
     def test_a2_brief_parser_single_source(self):
         p = self.write_claim(1234)
@@ -215,7 +232,7 @@ class TestA_NewClaimTakesEffect(Base):
 class TestB_LegacyDidNoHijack(Base):
 
     def _legacy_brief(self, did):
-        (self.repo / ".claude" / "task-briefs" / f"2026-10-07-{did}-legacy.md").write_text(
+        (self.repo / ".claude" / "task-briefs" / f"{TODAY}-{did}-legacy.md").write_text(
             "## Q2: 范围\n做什么:\n- scripts/a.sh\n\n## Done 标准:\n"
             "- [x] verify: bash tests/x.sh\n\n## 架构层: 基础设施\n#CRITERIA: A\n",
             encoding="utf-8")
@@ -250,7 +267,7 @@ class TestB_LegacyDidNoHijack(Base):
         夹具 = 让日期回退成为**唯一**可返回路径，断言生产**不返回**它。
         """
         self.write_claim(1234)
-        (self.repo / ".claude" / "task-briefs" / "2026-10-07-unrelated.md").write_text(
+        (self.repo / ".claude" / "task-briefs" / f"{TODAY}-unrelated.md").write_text(
             "## Q2: 范围\n做什么:\n- docs/unrelated.md\n\n## 架构层: 基础设施\n#CRITERIA: A\n",
             encoding="utf-8")
         self.stage_edit()
@@ -261,7 +278,7 @@ class TestB_LegacyDidNoHijack(Base):
         subprocess.run(["git", "-C", str(self.repo), "add", "scripts/c.sh"], check=True,
                        capture_output=True)
 
-        rc, out, _ = self.resolve("scripts/c.sh")   # 开关 OFF = 回滚态
+        rc, out, _ = self.resolve("scripts/c.sh", env={"SYNO_CLAIM_V2": "0"})   # 显式 0 = 回滚态（#911 后默认已开）
         self.assertNotIn("unrelated", out,
                          f"回滚态不得经日期回退返回无关 brief（R4 承诺）: {out.strip()!r}")
         self.assertNotEqual(rc, 0, "无 claim 命中且日期回退受守卫 ⇒ 必须 fail-closed（非 0）")
@@ -284,7 +301,7 @@ class TestA6_CarrierScopedDone(Base):
 
     def _legacy_unchecked_brief(self):
         """legacy .md brief：Done 段**只有未勾选项**（在飞任务的常态）。"""
-        p = self.repo / ".claude" / "task-briefs" / "2026-10-08-D777-unchecked.md"
+        p = self.repo / ".claude" / "task-briefs" / f"{TODAY}-D777-unchecked.md"
         p.write_text("## Q2: 范围\n做什么:\n- scripts/a.sh\n\n## Done 标准:\n"
                      "- [ ] verify: bash tests/x.sh\n\n## 架构层: 基础设施\n#CRITERIA: A\n",
                      encoding="utf-8")
@@ -355,12 +372,21 @@ class TestC_FailClosed(Base):
         self.assertIn("硬阻断", out)
 
     def test_c2_same_input_legacy_off_still_skips(self):
-        """开关关 → 逐字节 legacy（K3 R2「回滚 = 关开关」）。"""
+        """显式 0 → 逐字节 legacy（K3 R2「回滚 = 显式关」；#911 后未设已是开，故必须显式注入）。"""
         self.stage_edit()
         subprocess.run(["git", "-C", str(self.repo), "add", "-A"], check=True, capture_output=True)
-        rc, out, _ = self.check_done()
+        rc, out, _ = self.check_done(env={"SYNO_CLAIM_V2": "0"})
         self.assertEqual(rc, 0, out)
         self.assertIn("跳过", out)
+
+    def test_c2b_unset_now_blocks_like_flag_on(self):
+        """#911 C1 两态（判据面）: **未设**的行为必须与显式 1 一致（默认开生效）。"""
+        self.stage_edit()
+        subprocess.run(["git", "-C", str(self.repo), "add", "-A"], check=True, capture_output=True)
+        rc, out, _ = self.check_done()   # 未设
+        self.assertEqual(rc, 1, f"未设应等价于开（声明缺失 ⇒ 硬阻断），实得 {rc}\n{out}")
+        self.assertIn("硬阻断", out)
+        self.assertNotIn("跳过", out)
 
     def test_c3_malformed_claim_gate_exit2(self):
         self.write_claim(1234, "writeset:\n  - scripts/a.sh\nwrite_set:\n  - typo\ndone:\n"
@@ -449,8 +475,9 @@ class TestD_Mutants(Base):
         subprocess.run(["git", "-C", str(self.repo), "add", "scripts/c.sh"], check=True,
                        capture_output=True)
 
-        rc_prod, out_prod, err_prod = self.resolve("scripts/c.sh")
-        rc_mut, out_mut, err_mut = self.resolve("scripts/c.sh", tool=mutant)
+        rc_prod, out_prod, err_prod = self.resolve("scripts/c.sh", env={"SYNO_CLAIM_V2": "0"})
+        rc_mut, out_mut, err_mut = self.resolve("scripts/c.sh", env={"SYNO_CLAIM_V2": "0"},
+                                                tool=mutant)
         self.assertNotEqual(
             (rc_prod, out_prod.strip()), (rc_mut, out_mut.strip()),
             f"变异体必须与生产判定不同（否则夹具无法判别）: prod={out_prod.strip()!r} "
@@ -520,7 +547,7 @@ class TestD_Mutants(Base):
             'if [ -n "$CLAIM_FILE" ]; then\n  exit 1\nfi\nRESULT=$("$PYBIN" -c "',
             'RESULT=$("$PYBIN" -c "')
         self.write_claim(1234)
-        (self.repo / ".claude" / "task-briefs" / "2026-10-07-unrelated.md").write_text(
+        (self.repo / ".claude" / "task-briefs" / f"{TODAY}-unrelated.md").write_text(
             "## Q2: 范围\n做什么:\n- docs/unrelated.md\n\n## 架构层: 基础设施\n#CRITERIA: A\n",
             encoding="utf-8")
         self.stage_edit()
@@ -531,8 +558,9 @@ class TestD_Mutants(Base):
         subprocess.run(["git", "-C", str(self.repo), "add", "scripts/c.sh"], check=True,
                        capture_output=True)
 
-        rc_prod, out_prod, _ = self.resolve("scripts/c.sh")
-        rc_mut, out_mut, _ = self.resolve("scripts/c.sh", tool=mutant)
+        rc_prod, out_prod, _ = self.resolve("scripts/c.sh", env={"SYNO_CLAIM_V2": "0"})
+        rc_mut, out_mut, _ = self.resolve("scripts/c.sh", env={"SYNO_CLAIM_V2": "0"},
+                                          tool=mutant)
         self.assertNotIn("unrelated", out_prod, out_prod)
         self.assertIn("unrelated", out_mut,
                       f"变异体应经日期回退拿到无关 brief（夹具判别力证明）: {out_mut.strip()!r}")
