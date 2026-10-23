@@ -130,12 +130,12 @@ report struct "struct-inline-regex-copies-0" "0" "$got"
 if [ "$INLINE_QUOTED" = "0" ]; then got="0"; else got="$INLINE_QUOTED"; fi
 report struct "struct-inline-quoted-regex-0" "0" "$got"
 
-# ④ 消费点 = 9（每个 detect step 必须真读单源；改漏一处 = 那一处回退成字面量/空白判据）
-EXPECT_DOCS_ONLY_COPIES=9
+# ④ 消费点 = 8（每个 detect step 必须真读单源；改漏一处 = 那一处回退成字面量/空白判据）
+EXPECT_DOCS_ONLY_COPIES=8
 if [ "$CONSUME_N" = "$EXPECT_DOCS_ONLY_COPIES" ]; then got="$EXPECT_DOCS_ONLY_COPIES"; else got="$CONSUME_N"; fi
 report struct "struct-consumption-points-${EXPECT_DOCS_ONLY_COPIES}" "$EXPECT_DOCS_ONLY_COPIES" "$got"
 
-# ⑤ detect step 数 = 9（与消费点、fail-safe 计数同轴；载体增删必须同批改本夹具）
+# ⑤ detect step 数 = 8（与消费点、fail-safe 计数同轴；载体增删必须同批改本夹具）
 if [ "$DETECT_N" = "$EXPECT_DOCS_ONLY_COPIES" ]; then got="$EXPECT_DOCS_ONLY_COPIES"; else got="$DETECT_N"; fi
 report struct "struct-detect-steps-${EXPECT_DOCS_ONLY_COPIES}" "$EXPECT_DOCS_ONLY_COPIES" "$got"
 
@@ -165,7 +165,7 @@ done
 if [ "$MUT_HITS" = "6" ]; then got="6"; else got="$MUT_HITS"; fi
 report struct "struct-mutant-legacy-regex-flips-6" "6" "$got"
 
-# ⑩ 行为断言（D1111/A5 + 独立自验 E4 整改）: **docs-only detect 的 fail-safe 计数 = 9**。
+# ⑩ 行为断言（D1111/A5 + 独立自验 E4 整改）: **docs-only detect 的 fail-safe 计数 = 8**。
 #    为什么是这一条而不是「存在任意 ^ 锚」: 独立自验实测（第 2 批 §不一致 1）证明
 #    「存在 ^ 锚」型判据对旧正则**必然 PASS**（旧式本来就有 `^\.gitignore$`/`^LICENSE$`/`^\.gitkeep$`）
 #    ⇒ 判别力 0，是纸老虎，且其注释理由与事实相反。本夹具头注释自己就禁「grep 型静态判据当验收」。
@@ -177,6 +177,8 @@ report struct "struct-mutant-legacy-regex-flips-6" "6" "$got"
 #      `git rev-parse --verify -q origin/main` fail-safe（**路径触发**判据，非 docs-only detect）
 #      ⇒ 故本计数**限定在 9 个 `Detect docs-only change (D515)` step 的 step 体内**（awk 按 step 边界定界）。
 #    ⚠️ D1195（2026-10-07）: audit job 退役 ⇒ 载体数 10 → 9。
+#    ⚠️ #917 拍 1（2026-10-24，裁 335）: architecture job 退役 ⇒ 载体数 9 → 8
+#      （该 job 的 `Detect docs-only change` step 与其 job 同批删除；判据强度不变——仍是"每处 detect 都必须 fail-closed"）。
 FAILSAFE_N=$(awk '
   /^      - name: Detect docs-only change \(D515\)$/ { inside=1; next }
   inside && /^      - name: / { inside=0 }

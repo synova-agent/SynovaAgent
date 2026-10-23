@@ -240,7 +240,7 @@ INV_OUT="$("$PYBIN" "$SCANNER" --check-inventory "$INVENTORY" 2>&1)"
 INV_RC=$?
 INV_OK=1
 for pat in \
-  'covered=G12/12 B9/9 X6/6 S10/10 K34/34 R37/37' \
+  'covered=G12/12 B9/9 X6/6 S11/11 K34/34 R38/38' \
   'PAIRING-OK t1..t5=5/5' \
   'excluded_headers=19'
 do
