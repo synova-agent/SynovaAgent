@@ -11,7 +11,7 @@
 
 ```bash
 python3 scripts/control-tower/quality-baseline.py --json     # 6 条判据的命中集合（T1–T5 + 门禁位）
-bash scripts/control-tower/quality-standard.test.sh          # 本标准的可核性（结构 + 判别力）
+bash tests/control-tower/quality-standard.test.sh           # 本标准的可核性（结构 + 判别力）
 ```
 
 **三态退出码**（与 `scripts/control-tower/AGENTS.md` 同口径）：`0` = 无回退 ｜ `1` = 有回退/有违规 ｜ `2` = 扫描自身失败（看不见 ⇒ **不得**当通过）。

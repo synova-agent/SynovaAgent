@@ -826,3 +826,9 @@ documents:
     status: active
     owner: P4
     note: "旧门禁盘点（35 行 ＝ G12 ＋ B9 ＋ X5 ＋ CI9；32 检查器 ＋ pairing 5 行 ＋ excluded_headers 19）；C1–C10b 机器可核。"
+  - id: DOC-0244
+    type: decision
+    path: gate-exemptions/2026-10-24-p4-841-p0-gates.md
+    status: active
+    owner: P4
+    note: "#841 P0 质量门禁四件的受保护路径豁免（裁 320）；覆盖 6 件交付面 ＋ 本豁免件自覆盖。"

@@ -9,7 +9,7 @@ scripts/control-tower/quality-baseline.py — #841 P0 质量基线扫描器（�
 契约（铁律 47）:
   @input  — CLI（显式 authority）:
               --root <dir>        扫哪棵树（默认 cwd 的 git 仓根；不存在 ⇒ exit 2）
-              --ref <git-ref>     基线记录的 ref（默认 HEAD；解析到 40 hex sha）
+              --ref <git-ref>     基线记录的 ref（默认 HEAD；解析到 40 hex sha，写入 as_of.ref）
               --out <path>        基线产物路径（默认相对 --root 的
                                   scripts/control-tower/quality-baseline.json）
               --baseline <path>   对比用的既有基线（默认相对 --root 的同一路径）
@@ -787,7 +787,7 @@ def _print_violations(items: List[Dict[str, Any]], limit: int = 200) -> None:
         print("  … 其余 %d 条省略（见 --write-baseline 产物）" % (len(items) - limit))
 
 
-def cmd_scan_compare(root: str, baseline_path: str, strict: bool, as_json: bool) -> int:
+def cmd_scan_compare(root: str, baseline_path: str, strict: bool, as_json: bool, ref: str) -> int:
     baseline = load_baseline(baseline_path)
     scan = scan_tree(root)
     if scan["files_scanned"] == 0:
@@ -811,8 +811,8 @@ def cmd_scan_compare(root: str, baseline_path: str, strict: bool, as_json: bool)
         red = True
 
     if as_json:
-        sha = git_sha(root, "HEAD")
-        print(dump_json(build_json(scan, "HEAD", sha, None)), end="")
+        sha = git_sha(root, ref)
+        print(dump_json(build_json(scan, ref, sha, None)), end="")
         return EXIT_RED if red else EXIT_OK
 
     print("QUALITY-BASELINE files=%d modules=%d" % (scan["files_scanned"], len(scan["modules"])))
@@ -850,11 +850,11 @@ def cmd_scan_compare(root: str, baseline_path: str, strict: bool, as_json: bool)
     return EXIT_OK
 
 
-def cmd_write_baseline(root: str, out_path: str, reason: Optional[str]) -> int:
+def cmd_write_baseline(root: str, out_path: str, reason: Optional[str], ref: str) -> int:
     scan = scan_tree(root)
     if scan["files_scanned"] == 0 or not scan["modules"]:
         raise QualityBaselineError("E_EMPTY", "扫描到 0 文件/0 模块（信号量==0 ⇒ 不写基线）: %s" % root)
-    sha = git_sha(root, "HEAD")
+    sha = git_sha(root, ref)
     first_run = not os.path.exists(out_path)
     up: List[Tuple[str, int, int]] = []
     if not first_run:
@@ -866,15 +866,15 @@ def cmd_write_baseline(root: str, out_path: str, reason: Optional[str]) -> int:
             raise QualityBaselineError(
                 "E_REASON", "覆盖既有基线且 totals 上升但缺 --reason: %s"
                 % ", ".join("%s %d > %d" % item for item in up), degraded=False)
-    payload = dump_json(build_json(scan, "HEAD", sha, reason))
+    payload = dump_json(build_json(scan, ref, sha, reason))
     write_baseline_file(out_path, payload)
     totals_text = "T1=%d T2=%d T3=%d T4=%d T5=%d" % tuple(
         scan["totals"][rule] for rule in RULES)
     if first_run:
-        print("BOOTSTRAP ref=HEAD sha=%s %s files=%d modules=%d"
-              % (sha, totals_text, scan["files_scanned"], len(scan["modules"])))
+        print("BOOTSTRAP ref=%s sha=%s %s files=%d modules=%d"
+              % (ref, sha, totals_text, scan["files_scanned"], len(scan["modules"])))
     else:
-        print("RATCHET ref=HEAD sha=%s %s" % (sha, totals_text))
+        print("RATCHET ref=%s sha=%s %s" % (ref, sha, totals_text))
         if up:
             print("RATCHET-UP %s reason=%s" % (
                 ", ".join("%s %d > %d" % item for item in up), reason))
@@ -1748,9 +1748,10 @@ def main(argv: Optional[List[str]] = None) -> int:
             return cmd_orphans_only(root)
         out_path = resolve_under_root(root, args.out or BASELINE_REL)
         baseline_path = resolve_under_root(root, args.baseline or BASELINE_REL)
+        ref = args.ref or "HEAD"
         if args.write_baseline:
-            return cmd_write_baseline(root, out_path, args.reason)
-        return cmd_scan_compare(root, baseline_path, args.strict, args.json)
+            return cmd_write_baseline(root, out_path, args.reason, ref)
+        return cmd_scan_compare(root, baseline_path, args.strict, args.json, ref)
     except QualityBaselineError as exc:
         prefix = "degraded" if exc.degraded else "ERROR"
         print("%s: %s" % (prefix, exc), file=sys.stderr)

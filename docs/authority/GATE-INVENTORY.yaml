@@ -688,7 +688,7 @@ checkers:
     replacement: ""
   - id: CT-check-gate-protection
     path: "scripts/control-tower/check-gate-protection.sh"
-    wired_to: ["CI-S4"]
+    wired_to: ["CI-S4", "script:scripts/control-tower/weekly-recon-launchd.sh"]
     orphan: false
     blocking: true
     decision: keep
