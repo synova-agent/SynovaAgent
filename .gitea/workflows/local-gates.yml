@@ -84,6 +84,8 @@ jobs:
           echo "① base = $BASE"
           # 🔴 GITHUB_ACTIONS=true 显式置位：pre-commit 的 D390 守卫只在它为 true 时用 SYNO_DIFF_BASE
           PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" SYNO_CI=1 GITHUB_ACTIONS=true SYNO_DIFF_BASE="$BASE" bash scripts/pre-commit-check.sh
+          # #917 拍 1：为 ①f 落去重标记（① 通过 ⇒ scripts/pre-commit-check.sh 已以 CI strict 跑过）
+          touch .gate-step1-ran
       - name: ①d 门禁本体自检（清单 ＋ diff 豁免）
         run: |
           cd /Users/wane/.ci-work/SynovaAgent
@@ -261,3 +263,37 @@ jobs:
           PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash tests/control-tower/ci-emptygreen-sim.test.sh || exit $?
           # 依赖步复现器**真跑 npm ci**（本机实测 ~70–90s）⇒ 仅在上面的条件命中时才轮到它
           PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash scripts/control-tower/ci-deps-step-sim.sh || exit $?
+      # ①e 置于步序末尾：CI-S<n> 是**位置派生**的 id（#910 盘点表），插在中间会让 CI-S3..S9 全体漂移 ⇒
+      # 代价：① 若先红，本步不执行（与其余步同语义，不做 always）。
+      - name: ①e 质量增量闸（G1/G3/G4 · 只判变更集 · 不计组号）
+        run: |
+          cd /Users/wane/.ci-work/SynovaAgent
+          # #912 批 1（裁 330）：只判**本次变更集**的 G1 可达 / G3 判据 / G4 边界；
+          #   存量一律不挡（P2/P3 不在本批）。具名步的价值：红时一眼看到哪条规则、哪个 path:line，
+          #   不必翻 ① 的 12 组大日志。
+          # 🔴 三态原样透传（0 通过/SKIP ｜ 1 违规 ｜ 2 检查自身失败）⇒ `|| exit $?`，禁 `|| exit 1`。
+          # 🔴 A1：过滤后空代码变更 ⇒ 脚本自带 exit 0 + SKIP（纯文档 PR 是常态，不得红）。
+          # 回滚：SYNO_QUALITY_DELTA=0（CI 侧把本步 env 改成 "0" 即回滚；改门禁本体走 gate-exemptions）。
+          BASE="$(bash scripts/control-tower/resolve-ci-base.sh)" || exit $?
+          echo "①e base = $BASE"
+          SYNO_QUALITY_DELTA="${SYNO_QUALITY_DELTA:-1}" python3 scripts/control-tower/check-quality-delta.py \
+            --root . --base "$BASE" || exit $?
+      # ①f 置于步序末尾：#910 盘点表的 CI-S<n> 是**位置派生**的，插在中间会让 CI-S3..S10 全体漂移。
+      - name: ①f 类型＋铁律（tsc --noEmit ＋ check:iron-laws · 不计组号）
+        run: |
+          cd /Users/wane/.ci-work/SynovaAgent
+          NODE_BIN=/Users/wane/.nvm/versions/node/v24.19.0/bin
+          # 一进一出（裁 300／#917 拍 1）：**进** ①f ｜ **退** GitHub `architecture` job（同一 PR）。
+          # 缺口的准确形状：合并门在本机 Gitea，而「类型检查」此前**只有** GitHub quality 跑，
+          #   GitHub main 落后且红无人看 ⇒ 类型错误可以一路合进 local-main。
+          # ① 类型：真缺口（本步新增）。三态原样透传（0 通过 / 1 真红 / 2 检查自身失败）。
+          PATH="$NODE_BIN:$PATH" npx tsc --noEmit --pretty false || exit $?
+          # ② 铁律：`npm run check:iron-laws` 的**同一脚本**（scripts/pre-commit-check.sh）。
+          #   ① 已以 SYNO_CI=1＋SYNO_DIFF_BASE 跑过同一脚本（标记 .gate-step1-ran）⇒ 本步**去重**：
+          #   重复跑只会烧一次运行时长，且不带 base 地重跑会得到"空暂存 ⇒ 多数组跳过"的空绿（更坏）。
+          if [ -f .gate-step1-ran ]; then
+            echo "ℹ️ ①f 铁律半边：check:iron-laws 已由 ① 以同一脚本＋SYNO_CI=1＋SYNO_DIFF_BASE 执行 ⇒ 去重（本步新增的是类型检查）"
+          else
+            BASE="$(bash scripts/control-tower/resolve-ci-base.sh)" || exit $?
+            SYNO_CI=1 GITHUB_ACTIONS=true SYNO_DIFF_BASE="$BASE" bash scripts/pre-commit-check.sh || exit $?
+          fi

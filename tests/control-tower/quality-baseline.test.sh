@@ -5,7 +5,7 @@
 # 覆盖（规格 §4 J3/J5/J6/J7/J8/J9 ＋ §4.2 R1–R5 判别力两态 ＋ 子命令 C1–C10b）:
 #   1. 头契约（@input/@output/@exit/@degraded ＋ 已知限制）与 L8 例外登记
 #   2. --selfcheck：判别力 1/1/1/1/1 clean=0；反向（T4 规则改回不查 return []）⇒ rc=1
-#   3. --check-registry：真件 REGISTRY-OK rows=3；反例（wired 无 consumer/多余键/坏行号/0 行/YAML 越界）
+#   3. --check-registry：真件 REGISTRY-OK rows=4；反例（wired 无 consumer/多余键/坏行号/0 行/YAML 越界）
 #   4. --check-inventory：合成夹具 covered/PAIRING 契约；8 个改坏两态（C1/C3/C4/C6/C7/C9/C9b/C10）
 #   5. --orphans-only：夹具 2/4 ＋ 真树格式（rc=0，不判红）
 #   6. J3 确定性：两次 --write-baseline --out 副本 ⇒ 两次 shasum 相同；首跑 BOOTSTRAP
@@ -138,7 +138,7 @@ echo ""
 echo "── 3. --check-registry（J5 ＋ 反例）──"
 OUT=$("$PYBIN" "$TOOL" --check-registry "$REGISTRY" 2>&1); RC=$?
 assert_rc 0 "$RC" "--check-registry 真件"
-assert_contains "$OUT" "REGISTRY-OK rows=3" "末行 REGISTRY-OK rows=3"
+assert_contains "$OUT" "REGISTRY-OK rows=4" "末行 REGISTRY-OK rows=4"
 assert_contains "$OUT" "✅ R7" "R7 信号量（rows≥1）"
 
 REG_SRC="$REGISTRY"
@@ -431,8 +431,8 @@ assert_rc 0 "$RC" "--orphans-only 夹具"
 assert_eq "orphans=2/4" "$(printf '%s\n' "$OUT" | tail -1)" "夹具 orphans=2/4"
 OUT=$("$PYBIN" "$TOOL" --orphans-only 2>&1); RC=$?
 assert_rc 0 "$RC" "--orphans-only 真树（只报告不判红）"
-if printf '%s\n' "$OUT" | tail -1 | grep -qE '^orphans=[0-9]+/32$'; then
-  pass "真树末行格式 orphans=<n>/32"
+if printf '%s\n' "$OUT" | tail -1 | grep -qE '^orphans=[0-9]+/33$'; then
+  pass "真树末行格式 orphans=<n>/33"
 else
   fail "真树末行格式不符: $(printf '%s\n' "$OUT" | tail -1)"
 fi

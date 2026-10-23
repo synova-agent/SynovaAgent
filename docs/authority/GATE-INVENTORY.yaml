@@ -401,6 +401,19 @@ gates:
     decision: keep
     reason: "1 个 hard_check（技能漂移须重新暂存）＋ 执行失败硬阻断；无 G 轴同判据件 ⇒ 保留"
     replacement: ""
+  - id: PC-X-efbcc9
+    kind: header
+    line: 1911
+    label: "#912 批 1: 质量增量闸（G1/G3/G4 · 只判变更集；**不计组号** —— 同 D782/D734 接入模式）"
+    label_hash: "efbcc9521c42"
+    occurrences: [1911]
+    what: "质量增量闸（G1/G3/G4，只判变更集）＋ 硬阻断检查点「有违规」"
+    blocking: hard
+    g_axis: ["G1", "G3", "G4"]
+    checkpoints: ["#912 质量增量闸 (G1/G3/G4 · 只判变更集): 有违规"]
+    decision: keep
+    reason: "1 个 hard_check（违规即红；rc=2 检查自身失败同样阻断）；#912 批 1（裁 330）新增，与旧门禁无重叠 ⇒ 保留"
+    replacement: ""
   - id: PC-B-1a48ce
     kind: banner
     line: 1926
@@ -570,6 +583,32 @@ gates:
     decision: keep
     reason: "条件跳过（变更集未触碰则跳过）⇒ 判 soft；复现器自检属判别力面 ⇒ 保留"
     replacement: ""
+  - id: CI-S10
+    kind: step
+    line: 266
+    label: "①e 质量增量闸（G1/G3/G4 · 只判变更集 · 不计组号）"
+    label_hash: "4a1f4c6f86d1"
+    occurrences: [266]
+    what: "①e 质量增量闸（G1/G3/G4，只判变更集；A1 空集 SKIP）"
+    blocking: hard
+    g_axis: ["G1", "G3", "G4"]
+    checkpoints: []
+    decision: keep
+    reason: "具名步（非 12 组编号）⇒ 红时一眼定位；与 PC-X-efbcc9 同一脚本同一口径 ⇒ 保留"
+    replacement: ""
+  - id: CI-S11
+    kind: step
+    line: 282
+    label: "①f 类型＋铁律（tsc --noEmit ＋ check:iron-laws · 不计组号）"
+    label_hash: "7c9e1f2a3b4d"
+    occurrences: [282]
+    what: "①f 类型＋铁律（tsc --noEmit；铁律半边与 ① 同脚本，按标记去重）"
+    blocking: hard
+    g_axis: ["G2", "G6"]
+    checkpoints: []
+    decision: keep
+    reason: "#917 拍 1（裁 335）一进一出：进 ①f／退 GitHub architecture job；补「类型只在 GitHub 跑」的真缺口 ⇒ 保留"
+    replacement: ""
 
 # checkers：E5 的 32 个 check-*/verify-*；wired_to 由 C10 机器复算（pre-commit→owner slot id /
 #           workflow→CI-S<n> / 其他脚本→script:<相对路径>）；wired_to=[] ⇒ orphan: true（C10b）
@@ -616,7 +655,7 @@ checkers:
     replacement: ""
   - id: CT-check-canary-drift
     path: "scripts/control-tower/check-canary-drift.sh"
-    wired_to: ["CI-S9", "script:scripts/control-tower/check-gate-integrity.sh"]
+    wired_to: ["CI-S11", "script:scripts/control-tower/check-gate-integrity.sh"]
     orphan: false
     blocking: false
     decision: keep
@@ -656,7 +695,7 @@ checkers:
     replacement: ""
   - id: CT-check-dsh-anchor
     path: "scripts/control-tower/check-dsh-anchor.py"
-    wired_to: ["CI-S9", "PC-B-1ff6e6", "script:scripts/control-tower/daily-cto-board.sh"]
+    wired_to: ["CI-S11", "PC-B-1ff6e6", "script:scripts/control-tower/daily-cto-board.sh"]
     orphan: false
     blocking: false
     decision: keep
@@ -672,7 +711,7 @@ checkers:
     replacement: ""
   - id: CT-check-fixture-requires
     path: "scripts/control-tower/check-fixture-requires.sh"
-    wired_to: ["CI-S9"]
+    wired_to: ["CI-S11"]
     orphan: false
     blocking: false
     decision: keep
@@ -680,7 +719,7 @@ checkers:
     replacement: ""
   - id: CT-check-gate-integrity
     path: "scripts/control-tower/check-gate-integrity.sh"
-    wired_to: ["CI-S9", "script:scripts/commit-msg-check.sh", "script:scripts/control-tower/check-gate-protection.sh", "script:scripts/control-tower/sealed-tests.sh", "script:scripts/control-tower/weekly-recon.sh"]
+    wired_to: ["CI-S11", "script:scripts/commit-msg-check.sh", "script:scripts/control-tower/check-gate-protection.sh", "script:scripts/control-tower/sealed-tests.sh", "script:scripts/control-tower/weekly-recon.sh"]
     orphan: false
     blocking: false
     decision: keep
@@ -800,7 +839,7 @@ checkers:
     replacement: ""
   - id: CT-check-required-contexts
     path: "scripts/control-tower/check-required-contexts.py"
-    wired_to: ["CI-S9", "script:scripts/control-tower/check-package-selfsufficiency.py"]
+    wired_to: ["CI-S11", "script:scripts/control-tower/check-package-selfsufficiency.py"]
     orphan: false
     blocking: false
     decision: keep
@@ -829,6 +868,14 @@ checkers:
     blocking: true
     decision: keep
     reason: "C10 复算在门禁链在位（CI-S8）⇒ 保留"
+    replacement: ""
+  - id: CT-check-quality-delta.py
+    path: "scripts/control-tower/check-quality-delta.py"
+    wired_to: ["CI-S10", "PC-X-efbcc9"]
+    orphan: false
+    blocking: true
+    decision: keep
+    reason: "#912 批 1（裁 330）：pre-commit 附加块（PC-X-efbcc9）＋ CI 具名步 ①e（CI-S10）双接线 ⇒ 在役"
     replacement: ""
 
 # pairing：判据⑤ —— 5 类扫描各 1 行，覆盖 T1–T5（C9 强制；target 必须命中 gates[].id 或 checkers[].id）

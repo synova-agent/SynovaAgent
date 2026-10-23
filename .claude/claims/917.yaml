@@ -1,0 +1,20 @@
+# .claude/claims/917.yaml — #917 拍 1（GitHub 退 architecture／Gitea 进 ①f）· 写集声明
+# 依据：裁 335（#917 拍 1 批准；一进一出按裁 300）；实施 PR-B。
+# 纪律：只列本 PR 真正改动的文件，不预授权。
+writeset:
+  - .claude/claims/917.yaml
+  - .github/workflows/ci.yml
+  - .gitea/workflows/local-gates.yml
+  - docs/authority/GATE-INVENTORY.yaml
+  - docs/authority/DOCS-REGISTRY.yaml
+  - docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh
+  - tests/control-tower/quality-standard.test.sh
+  - gate-exemptions/2026-10-24-p4-917-retire-architecture.md
+  - memory/notes/implemented/2026-10-24-917-retire-architecture.md
+done:
+  - verify: bash docs/synova/product-lines/evidence/D1023-861-docsonly-guard.sh
+  - verify: bash tests/control-tower/quality-standard.test.sh
+  - verify: python3 scripts/control-tower/quality-baseline.py --check-inventory docs/authority/GATE-INVENTORY.yaml
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main
+  - verify: grep -c "^  architecture:$" .github/workflows/ci.yml
+note: "#917 拍 1（裁 335）：退 .github architecture job（15→14，needs 同步）＋进 Gitea ①f（tsc --noEmit；铁律半边与 ① 同脚本去重）。一进一出（裁 300）。盘点表与 docsonly 夹具计数同批同步。"
