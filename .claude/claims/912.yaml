@@ -1,0 +1,25 @@
+# .claude/claims/912.yaml — #912 批 1 质量增量闸（G1/G3/G4 · 只判变更集）· 写集声明
+# 依据：裁 330（#912 批 1 批准 ＋ A1/A2/A3 三条必改）；实施 PR-A。
+# 纪律：只列本 PR 真正改动的文件，不预授权。
+writeset:
+  - .claude/claims/912.yaml
+  - scripts/control-tower/check-quality-delta.py
+  - scripts/pre-commit-check.sh
+  - .gitea/workflows/local-gates.yml
+  - docs/authority/quality-delta-whitelist.yaml
+  - docs/authority/WIRING-REGISTRY.yaml
+  - docs/authority/GATE-INVENTORY.yaml
+  - docs/authority/DOCS-REGISTRY.yaml
+  - tests/control-tower/check-quality-delta.test.sh
+  - tests/control-tower/quality-standard.test.sh
+  - tests/control-tower/quality-baseline.test.sh
+  - tests/control-tower/AGENTS.md
+  - gate-exemptions/2026-10-24-p4-912-quality-delta.md
+  - memory/notes/proposed/2026-10-24-912-quality-delta-A2-checklist.md
+done:
+  - verify: bash tests/control-tower/check-quality-delta.test.sh
+  - verify: python3 scripts/control-tower/check-quality-delta.py --root . --base gitea/local-main
+  - verify: python3 scripts/control-tower/quality-baseline.py --check-registry docs/authority/WIRING-REGISTRY.yaml
+  - verify: python3 scripts/control-tower/quality-baseline.py --check-inventory docs/authority/GATE-INVENTORY.yaml
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main
+note: "#912 批 1（裁 330）：G1 可达／G3 判据／G4 边界，只判变更集；A1 空集⇒SKIP(exit 0)＋坏 base⇒exit 2；A2 不机器判散文（降 L1 清单）；A3 白名单文件化＋只减不增。回滚 SYNO_QUALITY_DELTA=0。"

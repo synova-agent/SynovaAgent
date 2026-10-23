@@ -227,10 +227,10 @@ fi
 echo "── 4. 登记表 ──"
 REG_OUT="$("$PYBIN" "$SCANNER" --check-registry "$REGISTRY" 2>&1)"
 REG_RC=$?
-if [ "$REG_RC" -eq 0 ] && printf '%s\n' "$REG_OUT" | grep -q 'REGISTRY-OK rows=3'; then
+if [ "$REG_RC" -eq 0 ] && printf '%s\n' "$REG_OUT" | grep -q 'REGISTRY-OK rows=4'; then
   pass "登记表：$(printf '%s\n' "$REG_OUT" | tail -1)"
 else
-  fail "登记表校验失败 rc=${REG_RC}（期望 0 ＋ REGISTRY-OK rows=3）"
+  fail "登记表校验失败 rc=${REG_RC}（期望 0 ＋ REGISTRY-OK rows=4）"
   printf '%s\n' "$REG_OUT" | tail -3 | sed 's/^/     /'
 fi
 
@@ -240,7 +240,7 @@ INV_OUT="$("$PYBIN" "$SCANNER" --check-inventory "$INVENTORY" 2>&1)"
 INV_RC=$?
 INV_OK=1
 for pat in \
-  'covered=G12/12 B9/9 X5/5 S9/9 K33/33 R35/35' \
+  'covered=G12/12 B9/9 X6/6 S10/10 K34/34 R37/37' \
   'PAIRING-OK t1..t5=5/5' \
   'excluded_headers=19'
 do

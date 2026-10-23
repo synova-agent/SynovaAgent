@@ -887,3 +887,19 @@ documents:
     status: active
     owner: P6
     note: "#916 件2（PR-3）dev-doc-spec 9 节＋§9 出生证六件套与 devdoc-gate-a 两处的技能镜像同步豁免（裁 324）；覆盖 .dsh/skills/** ＋ 本登记 ＋ 豁免件自覆盖。"
+
+  # ---- P4 2026-10-24：#912 批 1 质量增量闸豁免件 ----
+  - id: DOC-0251
+    type: decision
+    path: gate-exemptions/2026-10-24-p4-912-quality-delta.md
+    status: active
+    owner: P4
+    note: "#912 批 1 质量增量闸（G1/G3/G4 只判变更集／A1 空集 SKIP／A2 不判散文／A3 白名单文件化）的受保护路径豁免。"
+
+  # ---- P4 2026-10-24：#912 批 1 白名单件（A3 文件化豁免通道）----
+  - id: DOC-0252
+    type: registry
+    path: docs/authority/quality-delta-whitelist.yaml
+    status: active
+    owner: P4
+    note: "#912 批 1 唯一豁免通道：条目四字段（path/rule/reason/ruling）＋ratchet 只减不增；禁代码注释豁免。"

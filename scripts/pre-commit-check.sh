@@ -1908,6 +1908,34 @@ else
   soft_pass "G13: 无技能文件变更(跳过)"
 fi
 
+# ═══ #912 批 1: 质量增量闸（G1/G3/G4 · 只判变更集；**不计组号** —— 同 D782/D734 接入模式）═══
+# 判据源: 标准 v1（docs/authority/quality-standard-g1g6.md）＋ #912 评论 5792（裁 330 批，3 条必改 A1/A2/A3）
+# 语义: 只判**本次变更集**；过滤后空代码变更 ⇒ SKIP 退出 0（A1：纯文档 PR 是常态，不是"看不见"）；
+#       只有 base 不可解析/输入坏 ⇒ exit 2（fail-closed）。
+# 回滚: SYNO_QUALITY_DELTA=0（**唯一回滚点**；不改判据、不改组号）
+# 接线: CI 另有**具名步 ①e**（同脚本同口径）——本块供本地提交端提前红，不替代 CI。
+if [ "${SYNO_QUALITY_DELTA:-1}" = "0" ]; then
+  echo -e "  ${CYAN}ℹ️  质量增量闸: 回滚态（SYNO_QUALITY_DELTA=0）—— 跳过（唯一回滚点）${RESET}"
+else
+  _QD_ARGS=(--root "$ROOT")
+  if [ "${GITHUB_ACTIONS:-}" = "true" ] && [ -n "${SYNO_DIFF_BASE:-}" ]; then
+    _QD_ARGS+=(--base "$SYNO_DIFF_BASE")
+  else
+    _QD_ARGS+=(--staged)   # 本地：判暂存区（base...HEAD 看不到未提交的暂存改动 ⇒ 会假绿）
+  fi
+  _QD_OUT="$(python3 "$ROOT/scripts/control-tower/check-quality-delta.py" "${_QD_ARGS[@]}" 2>&1)"
+  _QD_RC=$?
+  if [ "$_QD_RC" -eq 0 ]; then
+    soft_pass "#912 质量增量闸 (G1/G3/G4): $(printf '%s' "$_QD_OUT" | grep -E 'QUALITY-DELTA:' | tail -1)"
+  elif [ "$_QD_RC" -eq 1 ]; then
+    hard_check "#912 质量增量闸 (G1/G3/G4 · 只判变更集): 有违规" \
+      "$(printf '%s\n' "$_QD_OUT" | grep -E '^❌' | head -8)${_QD_OUT:+}"
+  else
+    hard_check "#912 质量增量闸: 检查自身失败 rc=${_QD_RC}（fail-closed，不等于通过）" \
+      "$(printf '%s' "${_QD_OUT:-<无输出>}" | grep -E 'ERROR|degraded' | head -3)"
+  fi
+fi
+
 # ═══ D782: 文档真相防线 D1/D2（附加检查；不并入 12 组编号——同 D734 接入模式）═══
 # 背景: K3 2026-09-14 权威文档一致性专项审计 §7.2 收割 2/3——D1 check-doc-truth.sh
 #   与 D2 doc-registry-gate.sh 2026-08 建成即零调用（M3「机制建成未接线」第 3 次复发：
