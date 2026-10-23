@@ -879,3 +879,11 @@ documents:
     status: active
     owner: P6
     note: "#916 件4（PR-5）pr-review G1/G3/G4 三条必查＋结论模板 G# 的技能镜像同步豁免（裁 324）；覆盖 .dsh/skills/** ＋ 本登记 ＋ 豁免件自覆盖。"
+
+  # ---- P6 2026-10-24：#916 件2 PR-3 受保护路径豁免（#922 占 0246、PR-1 占 0247、PR-2 占 0248、PR-5 占 0249 ⇒ 本 PR 取 0250）----
+  - id: DOC-0250
+    type: decision
+    path: gate-exemptions/2026-10-24-p6-916-pr3.md
+    status: active
+    owner: P6
+    note: "#916 件2（PR-3）dev-doc-spec 9 节＋§9 出生证六件套与 devdoc-gate-a 两处的技能镜像同步豁免（裁 324）；覆盖 .dsh/skills/** ＋ 本登记 ＋ 豁免件自覆盖。"
