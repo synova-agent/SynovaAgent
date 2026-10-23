@@ -1,9 +1,9 @@
 ---
 name: dsh-code-standards
-description: DSH 代码标准（写代码／脚本／测试前必读）——12 项强制项，每项带 DSH 源码 file:line 证据：typed error 带 code／config schema／invariant companion／README 骨架（Design philosophy＋Source map＋Known Limitations）／JSDoc／fail loud／explicit authority／测试配对；并列出本仓四个必须复用的既有约定（三态退出码、@降级＋degraded log、D732 UTF-8、判别力自检）——重复实现即不合格。触发词：写代码/新建脚本/代码质量/代码风格/DSH 标准/实现/coding/自足性审查。
+description: DSH 代码标准（写代码／脚本／测试前必读）——8 项代码标准 ＋ 4 条必复用约定，每项带 DSH 源码 file:line 证据：typed error 带 code／config schema／invariant companion／README 骨架（Design philosophy＋Source map＋Known Limitations）／JSDoc／fail loud／explicit authority／测试配对；并列出本仓四个必须复用的既有约定（三态退出码、@降级＋degraded log、D732 UTF-8、判别力自检）——重复实现即不合格。触发词：写代码/新建脚本/代码质量/代码风格/DSH 标准/实现/coding/自足性审查。
 ---
 
-# dsh-code-standards — DSH 代码标准（12 项强制项）
+# dsh-code-standards — DSH 代码标准（8 项代码标准 ＋ 4 条必复用约定）
 
 ## 使用时机
 
