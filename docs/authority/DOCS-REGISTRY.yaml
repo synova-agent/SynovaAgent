@@ -847,3 +847,11 @@ documents:
     status: active
     owner: CTO
     note: "#911 claim-v2 默认开（四处同源＋CI 显式注入）的受保护路径豁免；ID 避开本批已占的 DOC-0241…0244。"
+
+  # ---- P6 2026-10-24：#916 件1 PR-1 受保护路径豁免（#911 已占 0245 ⇒ 本批自 0246 起）----
+  - id: DOC-0246
+    type: decision
+    path: gate-exemptions/2026-10-24-p6-916-pr1.md
+    status: active
+    owner: P6
+    note: "#916 件1（PR-1）deliverable-acceptance 改名＋出生证六件套的技能镜像同步豁免（裁 324）；覆盖 .dsh/skills/** ＋ 本登记 ＋ 豁免件自覆盖。"
