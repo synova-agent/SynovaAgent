@@ -848,24 +848,32 @@ documents:
     owner: CTO
     note: "#911 claim-v2 默认开（四处同源＋CI 显式注入）的受保护路径豁免；ID 避开本批已占的 DOC-0241…0244。"
 
-  # ---- P6 2026-10-24：#916 件1 PR-1 受保护路径豁免（#911 已占 0245 ⇒ 本批自 0246 起）----
+  # ---- P4 2026-10-24：#922 #911/#910 合并后收口豁免件 ----
   - id: DOC-0246
+    type: decision
+    path: gate-exemptions/2026-10-24-p4-922-post911-closeout.md
+    status: active
+    owner: CTO
+    note: "#922 收口（GATE-INVENTORY X 头 id 漂移／b-followers 新红／第五消费者 check-brief-vs-code）的受保护路径豁免。"
+
+  # ---- P6 2026-10-24：#916 件1 PR-1 受保护路径豁免（#922 已占 0246 ⇒ 本批自 0247 起）----
+  - id: DOC-0247
     type: decision
     path: gate-exemptions/2026-10-24-p6-916-pr1.md
     status: active
     owner: P6
     note: "#916 件1（PR-1）deliverable-acceptance 改名＋出生证六件套的技能镜像同步豁免（裁 324）；覆盖 .dsh/skills/** ＋ 本登记 ＋ 豁免件自覆盖。"
 
-  # ---- P6 2026-10-24：#916 件1-附 PR-2 受保护路径豁免（DOC-0246 已被 PR-1 占 ⇒ 本 PR 取 0247）----
-  - id: DOC-0247
+  # ---- P6 2026-10-24：#916 件1-附 PR-2 受保护路径豁免（#922 占 0246、PR-1 占 0247 ⇒ 本 PR 取 0248）----
+  - id: DOC-0248
     type: decision
     path: gate-exemptions/2026-10-24-p6-916-pr2.md
     status: active
     owner: P6
     note: "#916 件1-附（PR-2）代码标准数字单源（8 项代码标准 ＋ 4 条必复用约定）的技能镜像同步豁免（裁 324）；覆盖 .dsh/skills/** ＋ 本登记 ＋ 豁免件自覆盖。"
 
-  # ---- P6 2026-10-24：#916 件4 PR-5 受保护路径豁免（DOC-0247 已被 PR-2 占 ⇒ 本 PR 取 0248）----
-  - id: DOC-0248
+  # ---- P6 2026-10-24：#916 件4 PR-5 受保护路径豁免（#922 占 0246、PR-1 占 0247、PR-2 占 0248 ⇒ 本 PR 取 0249）----
+  - id: DOC-0249
     type: decision
     path: gate-exemptions/2026-10-24-p6-916-pr5.md
     status: active
