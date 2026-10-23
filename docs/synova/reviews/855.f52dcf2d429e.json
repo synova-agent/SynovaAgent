@@ -1,0 +1,71 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 855,
+  "patch_fingerprint": "sha256:f52dcf2d429e8cac547b8a1092a5ea30bf7843b17a64aacd5702fdaa5029dd30",
+  "author": "win-push",
+  "reviewer": "pr855-reviewer",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "issued_at": "2026-10-23T23:59:30+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步）＋ fresh 独立会话 pr855-reviewer（零实现记忆，不采信 PR 正文／L2 自验）＋ 只读核验：referee 独立 worktree /tmp/wt855@3da41e903 ＋ 自建 /tmp/rev855 沙箱（自写假 launchctl，不触系统 launchd）＋ 变异注入（SYNO_RECON_LAUNCHD_INSTALLER）＋ 指纹由 check-merge-conditions.sh 计算并手工同式复算对齐；本回执为唯一写入",
+  "checks": [
+    {
+      "id": "①范围与写集",
+      "name": "diff 恰 8 文件＝声明写集（2 交付＋配对测试＋AGENTS 报备＋豁免＋DOCS-REGISTRY＋Note＋brief/claim 声明载体）；本体 weekly-recon.sh 零改动（blob 同哈希）",
+      "cmd": "git merge-base gitea/local-main 3da41e903 ; git diff --name-status <mb>..3da41e903 ; git diff --stat <mb>..3da41e903 ; git diff <mb>..3da41e903 -- scripts/control-tower/weekly-recon.sh | wc -c ; git rev-parse <mb>:scripts/control-tower/weekly-recon.sh 3da41e903:scripts/control-tower/weekly-recon.sh",
+      "result": "pass",
+      "evidence": "merge-base=6e5f321aab9bca8989de4f32d98e05a1400dbfd6（= PR base local-main tip）；name-status 恰 8 条：A .claude/claims/828.yaml、A .claude/task-briefs/2026-10-23-828-weekly-recon-launchd.md、M docs/authority/DOCS-REGISTRY.yaml、A gate-exemptions/2026-10-22-p6-828-weekly-recon-launchd.md、A memory/notes/implemented/2026-10-22-828-weekly-recon-launchd.md、A scripts/control-tower/weekly-recon-launchd.sh、M tests/control-tower/AGENTS.md、A tests/control-tower/weekly-recon-launchd.test.sh；stat=「8 files changed, 931 insertions(+), 0 deletions」；本体 diff 字节数=0，blob 同哈希 3fada879ea36a75f0d0d3144a263eadf99c714bd（base==head）"
+    },
+    {
+      "id": "②判据测试",
+      "name": "配对判据测试独立复跑全绿：新 81/0、既有 94/0（都不采信作者自验）",
+      "cmd": "cd /tmp/wt855 && bash tests/control-tower/weekly-recon-launchd.test.sh ; bash tests/control-tower/weekly-recon.test.sh",
+      "result": "pass",
+      "evidence": "新测试：「PASS=81 FAIL=0」「结果: 81 通过, 0 失败」「ALL PASS（T1–T9，81 项断言；判据测试三态：0=ALL PASS）」exit=0（覆盖 T1 install/T2 幂等反例c/T2x 只补 bootstrap/T3 verify/T4 反例b/T5 反例a/T6 日志新鲜度/T7 exit 2 两路/T8 WIRE/T9 契约头+bash -n）；既有 weekly-recon.test.sh：「PASS=94 FAIL=0」「ALL PASS（T1–T12，94 项断言）」exit=0"
+    },
+    {
+      "id": "③隔离与安全",
+      "name": "测试真不触系统 launchd（HOME 重定向＋PATH 假 launchctl＋command -v 命中夹具断言）；安装器/plist 无凭据明文",
+      "cmd": "grep -n 'export HOME\\|export PATH\\|command -v launchctl\\|SYNO_LAUNCHCTL' tests/control-tower/weekly-recon-launchd.test.sh ; grep -nEi 'token|secret|password|api[_-]?key' scripts/control-tower/weekly-recon-launchd.sh ; ls ~/Library/LaunchAgents/ ; launchctl print gui/$(id -u)/com.synova.weekly-recon ; cd /tmp/wt855 && git status --short",
+      "result": "pass",
+      "evidence": "L61 export HOME=\"$TMP/home\"；L68 export PATH=\"$TMP/bin:$PATH\"；L133-135 RESOLVED_LAUNCHCTL=\"$(command -v launchctl)\" 且 != $TMP/bin/launchctl ⇒ ENV-FAIL exit 2（禁把「看不见」当没问题）；SYNO_LAUNCHCTL 仅 T7 负例内联 /nonexistent（不全局导出，安装器 L103 缺省裸名 launchctl ⇒ PATH 注入生效）；假 launchctl 落 $TMP/launchd.calls/$TMP/launchd.state，未注册 list rc1、print rc113+Could not find service；测试跑完：真 ~/Library/LaunchAgents 无 com.synova.weekly-recon.plist（grep -c=0）、真 launchd『Could not find service \"com.synova.weekly-recon\"』、真 /tmp/synova-recon-launchd.log 不存在、仓内 degraded-events.log 不存在、wt855 git status 空（测试零写仓库）；凭据 grep 3 处全为否定/注释（L71「不校验 token…禁落 plist/日志明文」、L84「heredoc 确定性 无 token／无 EnvironmentVariables」、L349 反向检测正则），plist 实体无 EnvironmentVariables/Token 键"
+    },
+    {
+      "id": "④判别力反例",
+      "name": "反例 a/b/c 真红——均在我自建沙箱／变异体上独立复现（不靠测试自述）",
+      "cmd": "cd /tmp/wt855 && SYNO_RECON_LAUNCHD_INSTALLER=/tmp/rev855/mut-no-sci.sh bash tests/control-tower/weekly-recon-launchd.test.sh ; /tmp/rev855/sb 沙箱：install×2 → uninstall → verify（自写假 launchctl，HOME/SYNO_* 全重定向）",
+      "result": "pass",
+      "evidence": "(b) 变异体（删 render_plist 的 StartCalendarInterval 段，bash -n 通过）⇒「PASS=71 FAIL=10」exit=1，失败点 T1h Weekday=1 期望'1'实际''、T1i、T1j、T1n 键集合缺 StartCalendarInterval、T3a verify exit=1、T3b PLIST_BAD(StartCalendarInterval.Weekday/Hour/Minute)、T4e/T4f/T4g/T6b ⇒ 红是「内容缺键」而非环境；(c) 我自建沙箱二跑 install：首跑 INSTALLED sha256=642b98db44e35d4e0fbc21f338a68fc37f713c4664a28829c2a9a3b2630fcd1e，二跑『NOOP already-installed』sha256 同上、实测 shasum 同值（不变=YES）、假 bootstrap 调用次数=1（不增）；(a) uninstall ⇒『REMOVED com.synova.weekly-recon』rc=0 plist 已删 ⇒ verify rc=1『PLIST_MISSING…』『LAUNCHCTL_UNREGISTERED(list rc=1 print rc=113 :: Could not find service…)』；二次 uninstall rc=0『NOOP not-installed』"
+    },
+    {
+      "id": "⑤契约与红线",
+      "name": "install/verify/uninstall 三态 0/1/2 实证＋launchctl print 兜底＋Label 不撞既有 6 件 plist；无 scripts/audit/**、无 .gitea/workflows/**、无既有 plist 改动",
+      "cmd": "/tmp/rev855/sb 沙箱：<installer>（无参）; <installer> frobnicate ; SYNO_LAUNCHCTL=/nonexistent/launchctl <installer> verify ; sed -n '64,65p;170,190p' scripts/control-tower/weekly-recon-launchd.sh ; ls ~/Library/LaunchAgents/ ; git diff --name-only <mb>..3da41e903 | grep -E '^scripts/audit/|^\\.gitea/workflows/|LaunchAgents|\\.plist$'",
+      "result": "pass",
+      "evidence": "exit 2 三态取证：无参 rc=2『degraded: code=E_USAGE 需要恰好 1 个子命令（收到 0 个参数：无）』、非法子命令 rc=2『E_USAGE 子命令非法：frobnicate』、launchctl 不可用 rc=2『E_ENV_NO_LAUNCHCTL』，降级 JSONL 两行落盘（{time,component,code,phase,retryable}）；exit 1 取证见反例 a/b；exit 0 取证见 install/verify；兜底实现：probe_state（L167-190）先 launchctl list 失败再 launchctl print gui/$(id -u)/$LABEL，两者皆败且命中『Could not find service』（rc113）或 list rc1 双空 ⇒ 判未注册——与头注 L64-65 所述一致；Label=com.synova.weekly-recon，既有 ~/Library/LaunchAgents 仅 com.synova.{backup-db,backup-freshness-check,gitea-backup-full,gitea-backup,mirror-sync,weekly-selfcheck}.plist 六件（另 com.wane.dsh-home、local.gitea、local.gitea-runner），grep 无 weekly-recon 命中、真 launchd 未注册该 label ⇒ 不撞号；红线 grep 无命中（scripts/audit/**、.gitea/workflows/**、任何 .plist 均未出现在 diff）"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "suggest",
+      "where": "scripts/control-tower/weekly-recon-launchd.sh ⑥ verify 的日志新鲜度分支",
+      "what": "plist 缺失时 verify 仍打印『LOG_STALE(absent)（无日志且 plist 超过 8 天；安装后从未跑过）』——plist 不存在，「超过 8 天」的措辞与事实不符。",
+      "detail": "非阻断：退出码正确（1），PLIST_MISSING 已点名真因；仅诊断文案可读性问题。建议（后续小改，不必在本 PR）在 plist 不存在的分支改述为『无日志且 plist 不存在』。"
+    },
+    {
+      "id": "F2",
+      "severity": "info",
+      "where": ".claude/claims/828.yaml 首行注释",
+      "what": "注释写『本 PR 真正改动的文件（8 件：7 交付件＋1 声明件）』，实际为 6 交付件＋2 声明载体（.claude/claims/828.yaml 与 .claude/task-briefs/2026-10-23-…md）。",
+      "detail": "非阻断：writeset 列表本身恰 8 条且与 diff 完全一致（逐条核对无缺无多）；仅分类计数注释口误，不影响判据与写集对账。"
+    },
+    {
+      "id": "F3",
+      "severity": "info",
+      "where": "回执提交身份",
+      "what": "本回执提交者 pr855-reviewer <pr855-reviewer@local>；PR 代码提交作者为 impl-launchd <impl-launchd@local> ⇒ R9「身份未分离」告警不触发。",
+      "detail": "T1 attested 不提供密码学独立；此处记录供 R6/R9 可追。本回执为该分支最后一个提交，其后仅 docs/synova/reviews/** 变动（R7）。"
+    }
+  ]
+}

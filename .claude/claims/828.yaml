@@ -1,0 +1,19 @@
+# .claude/claims/828.yaml — #828 周对账 launchd 定时接线（P6 实施批）· 写集声明（claim-first 载体）
+# 纪律：只列本 PR 真正改动的文件（8 件：7 交付件＋1 声明件），不预授权；本体 weekly-recon.sh 零改动（判据 4）。
+# 规格：.handbook/派单件/2026-10-22-规格-828-周对账定时接线.md §4（唯一判据准绳）。
+writeset:
+  - .claude/claims/828.yaml
+  - .claude/task-briefs/2026-10-23-828-weekly-recon-launchd.md
+  - scripts/control-tower/weekly-recon-launchd.sh
+  - tests/control-tower/weekly-recon-launchd.test.sh
+  - tests/control-tower/AGENTS.md
+  - gate-exemptions/2026-10-22-p6-828-weekly-recon-launchd.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - memory/notes/implemented/2026-10-22-828-weekly-recon-launchd.md
+done:
+  - verify: bash tests/control-tower/weekly-recon-launchd.test.sh
+  - verify: bash tests/control-tower/weekly-recon.test.sh
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main
+  - verify: grep -rn "weekly-recon-launchd" tests/ scripts/
+  - verify: git diff --name-only gitea/local-main..HEAD
+note: "#828 周对账 launchd 接线（安装器 install/verify/uninstall 三态＋配对测试 T1~T9）；本体 weekly-recon.sh 零改动；受保护路径走 gate-exemptions＋DOC-0240；判据②（连跑 2 周）归 #828 观察段，本批只交代码段。task-briefs 声明件为组 6/12 legacy 载体（本树 SYNO_CLAIM_V2 缺省为关，见 claim_store.py --flag）——与 #808 同型配套件。"
