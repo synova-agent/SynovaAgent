@@ -247,7 +247,7 @@
 
 ---
 
-## 9. 🔴 现行卡面格式（**.claude/task-briefs/**）
+## 9. 🔴 卡面格式（**legacy brief 规范，已退役；现行 = Gitea Issue ＋ `.claude/claims/<issue>.yaml`**）
 
 ```
 ## Q0: 定位（项目拼图 + 文件审计）
@@ -343,7 +343,7 @@ bash scripts/pre-commit-check.sh   # 12 组 pre-commit 门禁（本地）
 
 ```
  任何 L1（P1–P10）把 dev doc／派单件交给 L2 **之前**，必须按 `.synova/skills/devdoc-gate-a/SKILL.md` 跑六镜头：
-   ① 卡面审计（六字段/七问/查重）② dev-doc-spec 8 节 ③ 零上下文执行者 ④ 判据红队 ⑤ 写集/边界/并发 ⑥ 声明核实（claim-verifier）
+   ① 卡面审计（六字段/七问/查重）② dev-doc-spec 9 节 ③ 零上下文执行者 ④ 判据红队 ⑤ 写集/边界/并发 ⑥ 声明核实（claim-verifier）
  产出：**通过/退回**＋必修清单（带 file:line 或命令）；退回意见落 Issue 评论，报告落 handbook。
  🔴 **不得自审**（评审者不参与写作；CTO 的 pre-dispatch-check 只是机械前置）｜🔴 **未过关卡 A 不许开工**（Win/Mac 同规）。
  依据：裁 255/256；实证：M5 首轮 4/6 不够、抓出 13 条必修（claim 死链/假绿/E 同源）。

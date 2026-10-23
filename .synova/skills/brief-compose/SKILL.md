@@ -1,15 +1,18 @@
 ---
 name: brief-compose
-description: 撰写符合控制塔 pre-commit 门禁的 task brief（6 字段 + #CRITERIA + 格式坑清单）。创建/编辑 .claude/task-briefs/ 新 brief 时使用。历史：D313-D316 每次因 brief 格式失败 1-3 轮 pre-commit。
+description: 撰写符合控制塔 pre-commit 门禁的 task brief（6 字段 + #CRITERIA + 格式坑清单）。创建/编辑 `.claude/claims/<issue>.yaml` 认领件时使用。历史：D313-D316 每次因 brief 格式失败 1-3 轮 pre-commit。
 ---
 
 # brief-compose — task brief 撰写
 
+> ⚠️ **载体迁移（#932）**：旧 brief 目录（已退役） ⇒ 现行载体 = `.claude/claims/<issue>.yaml`（`writeset`＋`done` 两字段，裁 310/326）。
+> 本文余下「6 字段 / Q 编号 / #CRITERIA」格式**仅适用于 legacy brief**（历史件）；新建认领件按 claim schema，不套用本节。
+
 ## 使用时机
-在 `scripts/workflow/task-start.sh` 或手动创建 `.claude/task-briefs/<name>.md` 时。写完必须自查以下全部格式要求（pre-commit 组 6/12 物理验证，失败 = 提交阻断）。
+在 `scripts/workflow/task-start.sh` 或手动创建 `.claude/claims/<issue>.yaml` 时。写完必须自查以下全部格式要求（pre-commit 组 6/12 物理验证，失败 = 提交阻断）。
 
 ## V5.2.0 开工位置自检（先于一切格式检查）
-任务开工前确认当前路径在 `.sessions/<session-id>/repo` clone 内（不在主工作区——主工作区 = Codex 专用，禁止写代码）。brief 写在 **clone 内** 的 `.claude/task-briefs/`，随 feature 分支进 PR。不在 clone 内 → 先按 git-sync-pr"开工 clone 5 步"clone，再回来写 brief。
+任务开工前确认当前路径在 `.sessions/<session-id>/repo` clone 内（不在主工作区——主工作区 = Codex 专用，禁止写代码）。认领件写在 **clone 内** 的 `.claude/claims/`，随 feature 分支进 PR。不在 clone 内 → 先按 git-sync-pr"开工 clone 5 步"clone，再回来写 brief。
 
 ## 硬性格式（组 6/G12b 解析）
 
@@ -44,7 +47,7 @@ description: 撰写符合控制塔 pre-commit 门禁的 task brief（6 字段 + 
 # ① 排除项格式（最常漏——D316/D317 都因"自检没覆盖这条"被 pre-commit 拦）
 bash scripts/check-plan-integrity.sh
 # ② 解析性 4 项（Q2/#CRITERIA/架构层/Done）
-bash scripts/workflow/check-brief-parseable.sh .claude/task-briefs/<name>.md
+bash scripts/workflow/check-brief-parseable.sh .claude/claims/<issue>.yaml
 echo "<完整文件名>" > .claude/current-brief
 # ③ 12 组物理门禁（最终裁决）
 bash scripts/pre-commit-check.sh
@@ -69,7 +72,7 @@ bash scripts/pre-commit-check.sh
 
 | # | 自检 | 命令 | 期望 |
 |---|---|---|---|
-| **1** | **当日 brief 唯一** | `ls .claude/task-briefs/$(date +%F)-* \| wc -l` | **1**（两个 ⇒ `merge-writeset-gate` 报"候选不唯一" exit 2） |
+| **1** | **当日 brief 唯一** | `ls .claude/claims/*.yaml \| wc -l` | **1**（同 issue 两份 ⇒ `merge-writeset-gate` 报"候选不唯一" exit 2） |
 | **2** | **占位符清零** | `grep -c '<具体文件路径' <brief>` | **0**（`alloc-task-id.sh` 骨架残留会直接红） |
 | **3** | **「做什么」是精确路径** | `sed -n '/做什么/,/不做什么/p' <brief> \| grep '^- '` 每行去 `- ` 后 `[ -e ]` | **全为真** |
 | **4** | **「不做什么」每项带扩展名** | 同上段，检查含 `.sh`/`.py`/`.yml`/`.json`/`.ts` | 每项都有 |
