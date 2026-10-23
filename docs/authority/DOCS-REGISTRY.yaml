@@ -863,3 +863,11 @@ documents:
     status: active
     owner: P6
     note: "#916 件1（PR-1）deliverable-acceptance 改名＋出生证六件套的技能镜像同步豁免（裁 324）；覆盖 .dsh/skills/** ＋ 本登记 ＋ 豁免件自覆盖。"
+
+  # ---- P6 2026-10-24：#916 件1-附 PR-2 受保护路径豁免（#922 占 0246、PR-1 占 0247 ⇒ 本 PR 取 0248）----
+  - id: DOC-0248
+    type: decision
+    path: gate-exemptions/2026-10-24-p6-916-pr2.md
+    status: active
+    owner: P6
+    note: "#916 件1-附（PR-2）代码标准数字单源（8 项代码标准 ＋ 4 条必复用约定）的技能镜像同步豁免（裁 324）；覆盖 .dsh/skills/** ＋ 本登记 ＋ 豁免件自覆盖。"

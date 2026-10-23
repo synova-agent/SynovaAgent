@@ -137,7 +137,7 @@ description: 活规格撰写（v2，2026-10-18 按"零上下文小队"读者重�
 bash scripts/workflow/check-brief-parseable.sh <brief>       # 可解析
 bash scripts/control-tower/pre-dispatch-check.sh <规格件>     # 机械项 + 引用可核验
 bash scripts/workflow/check-dev-doc-write-set.sh             # 写集 vs 实际改动漂移 0
-# ④ DSH 代码标准 8 项（缺则 L1 不收）：见 .dsh/skills/dsh-code-standards/SKILL.md
+# ④ 代码标准：按 `dsh-code-standards` 清单（8 项代码标准 ＋ 4 条必复用约定），缺则 L1 不收（见 .dsh/skills/dsh-code-standards/SKILL.md）
 ```
 
 ## 红线 · 状态不得自宣（2026-09-26 加，来源 K3 文档契约审计）
