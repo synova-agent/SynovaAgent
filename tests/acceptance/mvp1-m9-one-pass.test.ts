@@ -12,7 +12,7 @@
  *   |---|---|---|
  *   | ① 输入 | `① 输入 [SEG-1]` | `POST /api/conversations` `/ingest` ⇒ 200 ∧ ok/ingested/degraded=false ∧ nodes≥3/edges≥1；`GET /api/ontology/graph/:org` 读回唯一 Document（`type='Document'`、`props.name`=`inge-<ISO>-<pid>-<seq>` 且含当天与 pid） |
  *   | ② ingest | `② ingest [SEG-2]` | Document `props.content` 含本次资料原文；`MENTIONS` 边 `to`=真实 Document id ∧ DB `object_type='Document'`（#667：不再是 `doc_<fileName>`） |
- *   | ③ 本体/哨兵/计算 | `③ 本体/哨兵/计算 [SEG-3]` | 生产 `createNode` 写 2 条 `resource/money`（合计 300/100/30/180）；cash-flow 哨兵经唯一 sink 写 4 个 metric_id；`computeOverflow` = 30（独立常量） |
+ *   | ③ 本体/哨兵/计算 | `③ 本体/哨兵/计算 [SEG-3]` | **真入口** `POST /api/data/upload`（出厂映射 `erp-standard` ⇒ `outcome/financial`，合计 rev300/opex40/cash180）→ cash-flow 哨兵经唯一 sink 写 4 个 metric_id；`computeOverflow` = 30（独立常量）；`resource/money` 白名单接受 `operating_expenses`（#837 E-1） |
  *   | ④ 参数/决策 | `④ 参数/决策 [SEG-4]` | 真 HTTP `view=trends` 的 latest/previous/changeRatio 逐值可算（单次观测 ⇒ null）；④b 决策台账写→读逐字段匹配；④c 三导出＋文件头 `@deprecated`/#1010＋`src/` 零调用；④d `{calibrated:0,status:'not_implemented'}` |
  *   | ⑤ 出口 | `⑤ 出口 [SEG-5]` | 真 fetch（同一 full server）→ M4 loader → render 桥渲染「测量值＋趋势」＋`data-testid="measurement-to-onepager"` |
  *   | ⑥ 冻结 | `⑥ 冻结对照 [SEG-6]` | 只读源码扫描：六段链 15 个模块零 import 进化引擎/`applyEvolutionActions`/`processFeedbackSignals`/`loop-handlers`（**清单含 `src/cycles/overflow-compute.ts`**）；全 `src/` 调用点仅 loop-handlers；链运行期间进化写面零变化 |
@@ -37,15 +37,13 @@
  *   每条断言都有对应「摘一处 ⇒ 必红」的消费缝（§4.2 R1–R8）；R7 在正跑内自带「守卫必红」反证。
  *
  * 已知限制（Known Limitations）:
- *   1. **③ 夹具披露（产品缺口，另开卡修复）**：`resource/money` 与 `outcome/financial` 两个 schema 都**没有**
- *      `operating_expenses` 字段（`extensions/ontology/resource/money.json` / `outcome/financial.json` 实查），
- *      而 cash-flow 哨兵只读该名（`src/sentinel/adapters/cash-flow-sentinel.ts:116`
- *      `Number(p.operating_expenses) || Number(p.运营支出) || 0`），且 `ingestBatch` 有 schema 白名单
- *      （`src/agent/data-ingest-service.ts:175` 跳过不在目标 schema 的 prop）⇒ 经 `ingestBatch` 写入**物理上
- *      送不进 opex**（netMargin 会成 200/300、runway 成 ∞ ⇒ §4.3 的 170/300 与 12 不可达）。本件按 CTO 批准 A／L1 收件追认
- *      改用**生产 L4 API** `SqliteGraphStore.createNode`（与 `ingestBatch` 内部 `ingestRow` 最终调用的同一 API，
- *      先例 `tests/sentinel/read-capability.test.ts:37`）写 2 条 `resource/money`；**禁 raw SQL INSERT**（§7.2）。
- *      修复方向（schema 补 `operating_expenses` 或哨兵加别名）**不在本批写集**，另开卡。
+ *   1. **③ 已改真链（#837 E-1 落地后）**：原「schema 无 `operating_expenses` ⇒ 经 ingest 送不进 opex」的缺口
+ *      已由两处产品改动闭合 —— ① `extensions/ontology/resource/money.json` 增 `operating_expenses`；
+ *      ② `src/sentinel/adapters/cash-flow-sentinel.ts` 加 `operating_expense`（单数，`outcome/financial` schema 名
+ *      与 `erp-standard` 映射目标）**显式别名回退**。本段因此改回**真入口**（`POST /api/data/upload`），
+ *      **不再用 `createNode` 绕行**，也不再声明「另开卡」。
+ *      ⚠️ 夹具代价（真实语义，不是缺陷）：`erp-standard` 映射**无** `total_cost` ⇒ 本段 cost 恒 0，
+ *      net=(rev-opex)/rev、gross=1；cost 维度由 **M3 领域链**守卫（`mvp1-m3-domain-chain.test.ts`）。
  *   2. ④b 决策台账夹具节点用生产 `createNode('outcome/risk', {id:…})` 建（`captureDecision` 按 props 过滤，
  *      同 `tests/acceptance/mvp1-m3-domain-chain.test.ts` 语义；M3 已合件用 raw SQL 直插，本件**不用**该形态）；
  *      只证接口存在（写→读各一次），**不作 §4.4 的 ③→④ 证据**，也不作六段链数据证据。
@@ -127,34 +125,54 @@ const ENV_KEYS = [
   ...LLM_ENV_KEYS,
 ] as const;
 
-/** 财务夹具：两期（合计 revenue 300 / cost 100 / opex 30 / cash 180）—— 生产 createNode 写入，非 raw SQL */
-interface MoneyRow {
-  period: string;
-  entity_type: string;
-  total_revenue: number;
-  total_cost: number;
-  operating_expenses: number;
-  cash_balance: number;
+/**
+ * 财务夹具（#837 E-1）：**出厂映射** `erp-standard`（target `outcome/financial`）的 14 个外部字段。
+ * 两期（合计 revenue 300 / cost 0 / opex 40 / cash 180）—— 走**真入口** `POST /api/data/upload`。
+ *   · opex：erp 映射写 `operating_expense`（单数，financial schema 名）⇒ 哨兵经**显式别名**读到（#837 ②）
+ *   · cost：erp-standard 无 `total_cost` 映射 ⇒ 恒 0（该导出不含营业成本；cost 维度由 M3 守卫）
+ * 14 个外部字段**全量提供**：缺一个 `ingestRow` 就记一条 `缺少字段` error（真实行为，不做半套夹具）。
+ */
+function erpRow(v: { revenue: number; opex: number; cash: number; period: string }): Record<string, string | number> {
+  return {
+    营业收入: v.revenue,
+    经营现金流: Math.round(v.revenue * 0.12),
+    固定资产净值: 30,
+    总负债: 40,
+    所有者权益: 60,
+    现金余额: v.cash,
+    毛利润: Math.round(v.revenue * 0.6),
+    营业费用: v.opex,
+    总资产: v.revenue,
+    流动资产: Math.round(v.revenue / 2),
+    流动负债: 20,
+    应收账款: 15,
+    存货: 5,
+    期间: v.period,
+  };
 }
 
-const MONEY_ROWS: readonly MoneyRow[] = [
-  { period: '2026-01', entity_type: 'enterprise', total_revenue: 100, total_cost: 40, operating_expenses: 10, cash_balance: 60 },
-  { period: '2026-02', entity_type: 'enterprise', total_revenue: 200, total_cost: 60, operating_expenses: 20, cash_balance: 120 },
+// opex 两期**取同值 20** 的原因：cost 维度恒 0（erp 无 total_cost），若 opex 也随收入等比放大，
+// 两期净利率会**完全相等** ⇒ ⑤「趋势 up」与 ④「changeRatio≠0」失去判别力（实测撞到过：flat vs up）。
+// 固定 opex ⇒ net 0.8 → 13/15（上升），runway 3 → 9（提升），趋势可判。
+const ERP_ROWS: ReadonlyArray<Record<string, string | number>> = [
+  erpRow({ revenue: 100, opex: 20, cash: 60, period: '2026-01' }),
+  erpRow({ revenue: 200, opex: 20, cash: 120, period: '2026-02' }),
 ];
 
-const MONEY_TOTAL = { revenue: 300, cost: 100, opex: 30, cash: 180 } as const;
+const MONEY_TOTAL = { revenue: 300, cost: 0, opex: 40, cash: 180 } as const;
 
 // 🔴 独立期望常量（手工从夹具算；**不从被测函数反推**；变异 compute ⇒ 必红）
-//    第一期（仅 2026-01）：net=(100-40-10)/100=1/2；gross=(100-40)/100=3/5；runway=60/(10/1)=6；YoY=null（不足两期）
-//    第二期（两期合计）：net=170/300；gross=200/300；YoY=(200-100)/100=1；runway=180/(30/2)=12
-//    （runway 分母 = Σoperating_expenses / 期数，见 cash-flow-sentinel.ts:131-132 —— 只含 opex，不含 cost）
-const PREV_NET_MARGIN = 1 / 2;
-const PREV_GROSS_MARGIN = 3 / 5;
-const PREV_RUNWAY = 6;
-const NET_MARGIN = 170 / 300;
-const GROSS_MARGIN = 200 / 300;
+//    第一期（仅 2026-01）：net=(100-0-20)/100=4/5；gross=(100-0)/100=1；runway=60/(20/1)=3；YoY=null（不足两期）
+//    两期合计：net=(300-0-40)/300=13/15；gross=300/300=1；YoY=(200-100)/100=1；runway=180/(40/2)=9
+//    （cost=0 是 `erp-standard` 映射的真实语义；runway 分母 = ΣoperatingExpenses/期数 —— 只含 opex，不含 cost）
+//    🔴 哨兵若不认 `operating_expense` ⇒ opex 恒 0 ⇒ net 变 1、runway 变 ∞ ⇒ 本组常量必红（#837 ③ 判别力）
+const PREV_NET_MARGIN = 4 / 5;
+const PREV_GROSS_MARGIN = 1;
+const PREV_RUNWAY = 3;
+const NET_MARGIN = 13 / 15;
+const GROSS_MARGIN = 1;
 const YOY = 1;
-const RUNWAY = 12;
+const RUNWAY = 9;
 const OVERFLOW = 30;
 
 const METRIC_IDS = [
@@ -399,9 +417,13 @@ function selectMentionsEdges(db: Database.Database, orgId: string): MentionEdgeR
   ).all(orgId) as MentionEdgeRow[];
 }
 
-function selectMoneyNodes(db: Database.Database, orgId: string): MoneyNodeRow[] {
+/**
+ * 读回本 run 的财务节点（#837 E-1 后 = `outcome/financial`；旧的 `resource/money` 仅由 3-6 白名单夹具写入）。
+ * 用**直 SQL 固定 type**（不经被测读口）⇒ 真实落库类型被咬住。
+ */
+function selectFinancialNodes(db: Database.Database, orgId: string): MoneyNodeRow[] {
   const rows = db.prepare(
-    "SELECT id, props FROM graph_nodes WHERE graph = ? AND type = 'resource/money' AND valid_to IS NULL ORDER BY id",
+    "SELECT id, props FROM graph_nodes WHERE graph = ? AND type = 'outcome/financial' AND valid_to IS NULL ORDER BY id",
   ).all(orgId) as Array<{ id: string; props: string }>;
   return rows.map(row => ({ id: row.id, props: JSON.parse(row.props) as Record<string, unknown> }));
 }
@@ -784,38 +806,49 @@ describe('#656 M9 · 六段一次贯通（真 full server ＋ 同临时库 ＋ �
   // ③ 本体/哨兵/计算（#718）：money 节点 → cash-flow 哨兵 → sink → 4 指标；overflow=30
   // ═════════════════════════════════════════════════════════════════════════
 
-  it('③ 本体/哨兵/计算 [SEG-3]：生产 createNode 写 money（rev300/cost100/opex30/cash180）＋ cash-flow 4 指标 ＋ overflow=30', async () => {
+  it('③ 本体/哨兵/计算 [SEG-3]：真 ingest（POST /api/data/upload · erp-standard ⇒ outcome/financial）＋ cash-flow 4 指标 ＋ overflow=30 ＋ money 白名单（#837）', async () => {
     expect(segmentMarks).toEqual(['1', '2']);
     const database = need(db, 'db');
     const graphStore = need(store, 'store');
     const metricSink = need(sink, 'sink');
 
-    // 3-1 第一期 money 节点（生产 L4 API；**不是** ingestBatch、**不是** raw SQL —— 见文件头「已知限制 ①」）
-    const firstNodeId = graphStore.createNode('resource/money', { ...MONEY_ROWS[0], name: `m9-money-${MONEY_ROWS[0].period}-${RUN_TAG}` }, ORG);
-    expect(firstNodeId.length).toBeGreaterThan(0);
+    // 3-1 第一期：**真入口**（HTTP 上传 ＋ 出厂映射 `erp-standard` → `outcome/financial`）
+    //     #837 ②：opex 落 `operating_expense`（单数）⇒ 哨兵经显式别名读到；**不再是 createNode 绕行**
+    const firstUpload = await postJson('/api/data/upload', { mapping: 'erp-standard', rows: [ERP_ROWS[0]], graph: ORG });
+    expect(firstUpload.status).toBe(200);
+    if (!isRecord(firstUpload.body)) envFail(`上传响应不是对象：${firstUpload.raw.slice(0, 200)}`);
+    expect(firstUpload.body.ok).toBe(true);
+    expect(firstUpload.body.nodeType).toBe('outcome/financial');
+    expect(firstUpload.body.nodesCreated).toBe(1);
+    expect(firstUpload.body.warnings).toEqual([]); // 14 字段全给 ⇒ 无白名单跳过
     const firstRun = await cashFlowSentinel.check({ db: graphStore, rawDb: database, metricSink, teamId: ORG, now: new Date() });
     expect(firstRun.ok).toBe(true);
     expect(firstRun.degraded).toBe(false);
     expect(sinkWriteCount).toBe(3); // 仅 1 期 ⇒ YoY=null 被过滤；net/gross/runway 三行
 
-    // 3-2 第二期 money 节点（同一次运行内追加 ⇒ 趋势出现 previousValue）
-    const secondNodeId = graphStore.createNode('resource/money', { ...MONEY_ROWS[1], name: `m9-money-${MONEY_ROWS[1].period}-${RUN_TAG}` }, ORG);
-    expect(secondNodeId.length).toBeGreaterThan(0);
+    // 3-2 第二期（同一次运行内追加 ⇒ 趋势出现 previousValue）
+    const secondUpload = await postJson('/api/data/upload', { mapping: 'erp-standard', rows: [ERP_ROWS[1]], graph: ORG });
+    expect(secondUpload.status).toBe(200);
+    if (!isRecord(secondUpload.body)) envFail(`上传响应不是对象：${secondUpload.raw.slice(0, 200)}`);
+    expect(secondUpload.body.ok).toBe(true);
+    expect(secondUpload.body.nodesCreated).toBe(1);
     const secondRun = await cashFlowSentinel.check({ db: graphStore, rawDb: database, metricSink, teamId: ORG, now: new Date() });
     expect(secondRun.ok).toBe(true);
     expect(secondRun.degraded).toBe(false);
     expect(sinkWriteCount).toBe(7); // 3（首期）＋ 4（两期，含 YoY）
 
-    // 3-3 本体：money 节点真落地，合计 = 独立常量（变异夹具/公式 ⇒ 必红）
-    const moneyNodes = selectMoneyNodes(database, ORG);
+    // 3-3 本体：ingest 真落库（`outcome/financial`），合计 = 独立常量（变异夹具/公式 ⇒ 必红）
+    //     🔴 opex 断言打在**单数名** `operating_expense` 上（真链写入名）：哨兵若不认它 ⇒ 3-4 的 net 必红
+    const moneyNodes = selectFinancialNodes(database, ORG);
     expect(moneyNodes.length).toBe(2);
     const sums = { revenue: 0, cost: 0, opex: 0, cash: 0 };
     for (const node of moneyNodes) {
       sums.revenue += numberProp(node.props, 'total_revenue');
-      sums.cost += numberProp(node.props, 'total_cost');
-      sums.opex += numberProp(node.props, 'operating_expenses');
-      sums.cash += numberProp(node.props, 'cash_balance');
+      sums.opex += numberProp(node.props, 'operating_expense');
+      sums.cash += numberProp(node.props, 'cash');
     }
+    // erp-standard 无 `total_cost` 映射 ⇒ cost 维度恒 0（真实语义，非夹具缺陷；cost 由 M3 守卫）
+    expect(sums.cost).toBe(0);
     expect(sums.revenue).toBe(MONEY_TOTAL.revenue);
     expect(sums.cost).toBe(MONEY_TOTAL.cost);
     expect(sums.opex).toBe(MONEY_TOTAL.opex);
@@ -874,6 +907,29 @@ describe('#656 M9 · 六段一次贯通（真 full server ＋ 同临时库 ＋ �
     expect(snapshot.cycleId).toBe('m9-overflow');
     expect(snapshot.degraded).toBe(false);
     expect(Number.isFinite(snapshot.momChangePercent)).toBe(true);
+
+    // 3-6 本体 schema 白名单（#837 ①）：`resource/money` 必须接受 `operating_expenses`
+    //     判别力：money.json 若缺该键 ⇒ ingestRow 按 validProps 跳过（warnings 非空 + 节点无该属性）⇒ 下面必红
+    //     （跑在 3-5 之后：多一条 money 节点不得影响上面已取的指标快照）
+    const { ingestBatch } = await import('../../src/agent/data-ingest-service');
+    const moneyIngest = await ingestBatch(
+      graphStore,
+      {
+        name: 'm9-e1-money',
+        label: 'M9 E-1 money 白名单夹具',
+        targetNodeType: 'resource/money',
+        mappings: [{ externalField: '营业费用', prop: 'operating_expenses', type: 'number' }],
+      },
+      [{ 营业费用: 7 }],
+      ORG,
+    );
+    expect(moneyIngest.warnings).toEqual([]);
+    expect(moneyIngest.nodesCreated).toBe(1);
+    const moneyRow = database.prepare(
+      "SELECT props FROM graph_nodes WHERE graph = ? AND type = 'resource/money' AND valid_to IS NULL",
+    ).all(ORG) as Array<{ props: string }>;
+    if (moneyRow.length !== 1) envFail(`money 节点数应为 1（实得 ${moneyRow.length}）`);
+    expect((JSON.parse(moneyRow[0].props) as Record<string, unknown>)['operating_expenses']).toBe(7);
 
     console.log(
       `[SEG-3] money=${moneyNodes.length} revenue=${sums.revenue} cost=${sums.cost} opex=${sums.opex} cash=${sums.cash}`
@@ -1020,7 +1076,7 @@ describe('#656 M9 · 六段一次贯通（真 full server ＋ 同临时库 ＋ �
     if (net === undefined) envFail('loader 结果缺 CASH-FLOW-NET-MARGIN');
     expect(net.latestValue).toBeCloseTo(NET_MARGIN, 9);
     expect(net.previousValue).toBeCloseTo(PREV_NET_MARGIN, 9);
-    expect(deriveTrendDirection(net.changeRatio)).toBe('up'); // 170/300 > 1/2 ⇒ up
+    expect(deriveTrendDirection(net.changeRatio)).toBe('up'); // 13/15 > 4/5 ⇒ up
 
     // render 桥（test-support/render.ts：纯函数组件树，不执行 hook/事件）
     const html = renderToStaticMarkup(MeasurementTrendSection({ view, state: 'ready', onOpenOnePager: () => undefined }));

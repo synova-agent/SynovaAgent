@@ -113,7 +113,9 @@ export const cashFlowSentinel: Sentinel = {
           // #1384 V2b（消费侧）：**优先读本体 schema 字段名**（连接器按本体写）⇒ 旧名回退（显式，不静默）
           revenue: Number(p.total_revenue) || Number(p.revenue) || Number(p.收入) || 0,
           cost: Number(p.total_cost) || Number(p.cost) || Number(p.costs) || Number(p.成本) || 0,
-          operatingExpenses: Number(p.operating_expenses) || Number(p.运营支出) || 0,
+          // #837 E-1：`operating_expense`（单数）是 `outcome/financial` 的 schema 名与 `erp-standard` 映射目标
+          //   ⇒ 显式别名回退（缺它则真链 ingest 的 opex 恒读 0；别名顺序 = 本体名优先，不静默）
+          operatingExpenses: Number(p.operating_expenses) || Number(p.operating_expense) || Number(p.运营支出) || 0,
           cashBalance: Number(p.cash_balance) || Number(p.cash) || Number(p.现金) || 0,
           headcount: Number(p.headcount) || Number(p.人数) || 1,
           operatingCashFlow: Number(p.operating_cash_flow) || Number(p.cashflow) || Number(p.经营现金流) || undefined,
