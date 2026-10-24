@@ -14,6 +14,8 @@
 #               为陈旧引用不作首选 —— 同 check-pr-budget.sh bug 1）
 #          非 git（测试 fixture）→ 全量扫描模式
 #   输出:  每文件 ✅/❌ + 扫描源行 + 汇总（**必打印检查数 N**）；
+#          **唯一性（#942）**：`- id: DOC-<n>` 重号 → 逐条点名 `❌ 重号: DOC-<n>（出现 k 次）`，并 exit 1
+#          （唯一性是硬判据，**不得只告警**）
 #          任一未登记 → exit 1（硬阻断）；全部登记 → exit 0
 #   降级:  DOCS-REGISTRY.yaml 缺失 → ⚠️ 警告 exit 0（台账未建立不阻断）
 #          base 全链不可解析 / merge-base 为空 → ⚠️ **显式降级**：源③跳过但**打印留痕**
@@ -48,6 +50,20 @@ ROOT="${DOC_TRUTH_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}" # 
 REGISTRY="$ROOT/docs/authority/DOCS-REGISTRY.yaml"
 [ -f "$REGISTRY" ] || { echo "  ⚠️ 降级: DOCS-REGISTRY.yaml 不存在，跳过登记检查（exit 0）"; exit 0; }
 REG=$(cat "$REGISTRY")
+
+# ── 唯一性（#942）：`- id: DOC-<n>` 重号即红、逐条点名（不是告警）──
+TOTAL_DOC_IDS=$(grep -cE '^[[:space:]]*-[[:space:]]*id:[[:space:]]*DOC-[0-9]+' "$REGISTRY")
+TOTAL_DOC_IDS=${TOTAL_DOC_IDS:-0}
+DUP_IDS=$(grep -oE '^[[:space:]]*-[[:space:]]*id:[[:space:]]*DOC-[0-9]+' "$REGISTRY" | sed -E 's/.*(DOC-[0-9]+).*/\1/' | sort | uniq -d)
+DUPFAIL=0
+if [ -n "$DUP_IDS" ]; then
+  while IFS= read -r _dup; do
+    [ -z "$_dup" ] && continue
+    _n=$(grep -cE "^[[:space:]]*-[[:space:]]*id:[[:space:]]*${_dup}[[:space:]]*$" "$REGISTRY")
+    echo "  ❌ 重号: ${_dup}（出现 ${_n} 次）"
+    DUPFAIL=$((DUPFAIL+1))
+  done <<< "$DUP_IDS"
+fi
 
 # 🔴 2026-10-11 增 `extensions/` 内容数据豁免（创始人裁定）:
 #   本门禁的语义是**文档台账**（`type ∈ [navigation…archive]`，面向权威文档），
@@ -119,5 +135,12 @@ else
   while IFS= read -r rel; do check_file "$rel"; done < <(find "$ROOT" -type f \( -name '*.md' -o -name '*.yaml' \) 2>/dev/null | sed "s|^$ROOT/||") # swallow-ok:
 fi
 
+echo "── 唯一性: ${TOTAL_DOC_IDS} 条 DOC id，重号 ${DUPFAIL} 个 ──"
 echo "── 汇总: 检查 $CHECKED 个文档，$FAIL 个未登记 ──"
-if [ "$FAIL" -eq 0 ]; then echo "  ✅ 登记门禁通过"; exit 0; else echo "  ❌ 登记门禁阻断"; exit 1; fi
+if [ "$FAIL" -eq 0 ] && [ "$DUPFAIL" -eq 0 ]; then
+  echo "  ✅ 登记门禁通过"; exit 0
+else
+  [ "$FAIL" -gt 0 ] && echo "  ❌ 登记门禁阻断（未登记 ${FAIL} 个）"
+  [ "$DUPFAIL" -gt 0 ] && echo "  ❌ 登记门禁阻断（DOC id 重号 ${DUPFAIL} 个；唯一性不是风格问题，不许只告警）"
+  exit 1
+fi

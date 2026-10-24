@@ -257,5 +257,27 @@ printf '%s\n' "$OUT_H8" | grep -q '⚠️ 未登记(仅警告,untracked): docs/d
 rm -f "$FORK/docs/decoy-untracked.md"
 
 echo ""
+echo "── I. #942 唯一性: DOC id 重号必红、逐条点名（不得只告警）──"
+cp "$FIX/docs/authority/DOCS-REGISTRY.yaml" "$FIX/reg.bak"
+# I1: 注入重号（同一 DOC-0500 两条）⇒ exit 1 且点名
+printf '  - id: DOC-0500\n    type: prd\n    path: a.md\n  - id: DOC-0500\n    type: prd\n    path: docs/good.md\n' >> "$FIX/docs/authority/DOCS-REGISTRY.yaml"
+OUT_I=$(DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" 2>&1); _ei=$?
+t "I1 注入 DOC id 重号 → exit 1" 1 $_ei
+if printf '%s\n' "$OUT_I" | grep -q '重号: DOC-0500'; then
+  echo "  ✅ I1 逐条点名重号 id（重号: DOC-0500）"; PASS=$((PASS+1))
+else
+  echo "  ❌ I1 未点名重号 id（唯一性未落）"; FAIL=$((FAIL+1))
+fi
+printf '%s\n' "$OUT_I" | grep -q '唯一性: .*条 DOC id，重号 1 个' && { echo "  ✅ I1 汇总行报重号数"; PASS=$((PASS+1)); } || { echo "  ❌ I1 汇总行未报重号数"; FAIL=$((FAIL+1)); }
+# I2: 还原 ⇒ exit 0（两态）
+cp "$FIX/reg.bak" "$FIX/docs/authority/DOCS-REGISTRY.yaml"
+OUT_I2=$(DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" 2>&1); _ei2=$?
+t "I2 还原重号 → exit 0" 0 $_ei2
+printf '%s\n' "$OUT_I2" | grep -q '重号 0 个' && { echo "  ✅ I2 还原后重号归零"; PASS=$((PASS+1)); } || { echo "  ❌ I2 还原后仍报重号"; FAIL=$((FAIL+1)); }
+# I3: 存量（真实仓）⇒ exit 0（#934 合入后应为 0 重号）
+RR="$(cd "$(dirname "$0")/../.." && pwd)"
+DOC_TRUTH_ROOT="$RR" bash "$SCRIPT" >/dev/null 2>&1; t "I3 存量真实仓 → exit 0" 0 $?
+
+echo ""
 echo "── 汇总: $PASS 通过 / $FAIL 失败 ──"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1
