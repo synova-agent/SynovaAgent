@@ -47,6 +47,82 @@ const migrations: Migration[] = [
   graphTriplesRebuildMigration,
 ];
 
+// ═══ 版本门禁类型（#964 Q-8，裁 395） ═══
+
+/** v1 = 隐式基线（初始 schema 由各 store 的 initSchema 建立，无独立迁移文件） */
+const MIGRATION_BASELINE_VERSION = 1;
+
+/** schema 版本门禁 typed error 码（铁律 32：可分类、可归因） */
+export type SchemaMigrationErrorCode =
+  | 'SCHEMA_TOO_NEW'
+  | 'MIGRATION_CHAIN_GAP'
+  | 'MIGRATION_DUPLICATE_VERSION';
+
+/** schema 版本门禁 typed error —— 版本/链违约一律抛错（不是静默跳过） */
+export class SchemaMigrationError extends Error {
+  readonly code: SchemaMigrationErrorCode;
+  readonly phase: 'chain' | 'reconcile';
+  readonly retryable = false;
+
+  constructor(code: SchemaMigrationErrorCode, phase: 'chain' | 'reconcile', message: string) {
+    super(message);
+    this.name = 'SchemaMigrationError';
+    this.code = code;
+    this.phase = phase;
+  }
+}
+
+/**
+ * 迁移链完整性断言（**相邻 +1、无重复、首条 = v1 基线+1、末条 = 当前版本**）。
+ *
+ * 为什么在模块加载时跑：DSH session-format `chain.ts` 的做法是"非相邻即抛"——
+ * 迁移链一旦缺环/重复，`pending` 过滤会**跨过缺环直接执行后续迁移**（在旧 schema 上叠新 DDL
+ * = 静默数据损坏）。这里把校验前移到 import 期 ⇒ 构建/启动即红，不等运行时。
+ *
+ * @input  list — 迁移注册表（须按版本升序）；schemaVersion — 本构建的当前版本
+ * @output 无（通过即返回）
+ * @throws SchemaMigrationError —— `MIGRATION_CHAIN_GAP`（缺环/越界/末条≠当前版本）／
+ *         `MIGRATION_DUPLICATE_VERSION`（同版本出现两次）
+ */
+export function assertMigrationChain(list: readonly Migration[], schemaVersion: number): void {
+  if (list.length === 0) {
+    if (schemaVersion <= MIGRATION_BASELINE_VERSION) return;
+    throw new SchemaMigrationError(
+      'MIGRATION_CHAIN_GAP',
+      'chain',
+      `schemaVersion=${schemaVersion} 但迁移注册表为空（v1 基线之后必须有迁移文件）`,
+    );
+  }
+  let expected = MIGRATION_BASELINE_VERSION + 1;
+  for (const migration of list) {
+    if (migration.version === expected - 1) {
+      throw new SchemaMigrationError(
+        'MIGRATION_DUPLICATE_VERSION',
+        'chain',
+        `迁移版本重复：v${migration.version}（${migration.name}）—— 链必须严格 +1 递增`,
+      );
+    }
+    if (migration.version !== expected) {
+      throw new SchemaMigrationError(
+        'MIGRATION_CHAIN_GAP',
+        'chain',
+        `迁移链缺环/乱序：期望 v${expected}，实得 v${migration.version}（${migration.name}）`,
+      );
+    }
+    expected += 1;
+  }
+  if (expected - 1 !== schemaVersion) {
+    throw new SchemaMigrationError(
+      'MIGRATION_CHAIN_GAP',
+      'chain',
+      `迁移链末条 v${expected - 1} ≠ SCHEMA_VERSION ${schemaVersion} —— 版本与迁移文件不同步`,
+    );
+  }
+}
+
+// 模块加载即校验生产链（构建/启动 fail-fast；不等到某个库上才发现缺环）
+assertMigrationChain(migrations, SCHEMA_VERSION);
+
 // ═══ reconcileSchema ═══
 
 /**
@@ -89,7 +165,17 @@ export function reconcileSchema(db: Database.Database): void {
   ).get() as { maxVersion: number | null } | undefined;
   const currentVersion = typeof row?.maxVersion === 'number' ? row.maxVersion : 0;
 
-  if (currentVersion >= SCHEMA_VERSION) {
+  if (currentVersion > SCHEMA_VERSION) {
+    // #964 Q-8: 库比构建新 ⇒ **拒**（DSH session-format `chain.ts:79-87` 同口径）。
+    // 旧实现的 `>=` 会把"回滚部署后旧构建跑新 schema"静默放行 ⇒ 撞新列/新约束才爆。
+    throw new SchemaMigrationError(
+      'SCHEMA_TOO_NEW',
+      'reconcile',
+      `库 schema 版本 ${currentVersion} 高于本构建 ${SCHEMA_VERSION} —— 拒绝运行（回滚部署会误读新列/新约束）`,
+    );
+  }
+
+  if (currentVersion === SCHEMA_VERSION) {
     log.debug({ currentVersion, schemaVersion: SCHEMA_VERSION }, 'Schema 已是最新');
     return;
   }
@@ -97,10 +183,19 @@ export function reconcileSchema(db: Database.Database): void {
   // 按版本顺序执行迁移
   const pending = migrations.filter(m => m.version > currentVersion && m.version <= SCHEMA_VERSION);
   if (pending.length === 0) {
-    // 没有迁移文件，仅更新版本号
-    db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(SCHEMA_VERSION);
-    log.info({ schemaVersion: SCHEMA_VERSION }, 'Schema 版本已初始化');
-    return;
+    if (migrations.length === 0) {
+      // 无迁移文件的构建（历史形态）⇒ 仅初始化版本号（保持旧语义）
+      db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(SCHEMA_VERSION);
+      log.info({ schemaVersion: SCHEMA_VERSION }, 'Schema 版本已初始化（无迁移文件）');
+      return;
+    }
+    // #964 Q-8: 链已由 assertMigrationChain 校验 ⇒ 此处只可能是"版本落后但无可执行迁移"的非法态
+    //（如 SCHEMA_VERSION 被 bump 而迁移文件未同步）—— 禁止盲插版本号（会把未执行迁移记账为已执行）
+    throw new SchemaMigrationError(
+      'MIGRATION_CHAIN_GAP',
+      'reconcile',
+      `currentVersion=${currentVersion} < SCHEMA_VERSION=${SCHEMA_VERSION} 但无可执行迁移 —— 拒绝盲插版本号`,
+    );
   }
 
   for (const migration of pending) {

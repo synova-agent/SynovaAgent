@@ -1,0 +1,17 @@
+# .claude/claims/964.yaml — #964 批 3-A（Q-7 事件化 / Q-8 版本门禁）写集声明
+#
+# 为什么需要：本卡是 issue 号卡（#964），无 D# 编号 ⇒ D708 写集对账的 S0 声明源
+#   = `.claude/claims/<issue>.yaml`（组 6 声明载体 = claim；claim_v2 两字段制）。
+# 纪律：一个 PR 一条（Q-7 / Q-8 分开）⇒ 本 writeset 是**两 PR 的并集**（超集允许；
+#   每 PR 实际改动 ⊆ 本表）。只登记本卡真正改动的文件；不列 scripts/audit/**。
+writeset:
+  - .claude/claims/964.yaml
+  - src/store/session-store.ts
+  - tests/store/session-event-log.test.ts
+  - src/store/schema-migration.ts
+  - src/init/engine-context.ts
+  - tests/store/schema-migration.test.ts
+done:
+  - verify: npx vitest run tests/store/session-event-log.test.ts
+  - verify: npx vitest run tests/store/schema-migration.test.ts
+note: "#964 批 3-A：Q-7（词表 fail-closed＋format_version＋SYNO_SESSION_EVENT_STRICT）｜Q-8（SCHEMA_TOO_NEW＋assertMigrationChain＋engine-context 吞错改 rethrow＋SYNO_SCHEMA_STRICT）。判据 = 测试内棘轮（两态＋改坏⇒红），不给 #912 闸加规则（裁 394）。"
