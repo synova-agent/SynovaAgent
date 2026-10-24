@@ -229,3 +229,35 @@ describe('resolveSecretSource：完整路径最高持有层', () => {
     expect(() => resolveSecretSource('$', layers)).toThrow(ConfigRedactError);
   });
 });
+
+describe('resolveSecretSource：非 ASCII／特殊字符父键（N3 回归 · 裁 371）', () => {
+  // 客户侧 YAML 允许任意键名：中文父键 / 含点键 / 含空格键都必须「可脱敏 + 可解析来源」，
+  // 否则 resolveSecretSource 抛错会经路由 catch 把整条 dump 退化成 config:{}（N3 阻断）。
+  const specialLayers: Array<{ layer: string; doc: LayerDoc | null }> = [
+    { layer: 'default', doc: null },
+    {
+      layer: 'customer',
+      doc: { 诊断: { apiKey: 'v1' }, 'a.b': { apiKey: 'v2' }, 'my key': { apiKey: 'v3' } },
+    },
+  ];
+
+  it('中文父键 ⇒ 路径 $.诊断.apiKey 可解析且命中来源层（旧 PATH_SHAPE 只认 ASCII ⇒ 抛错）', () => {
+    const red = redactSecrets({ 诊断: { apiKey: 'v1' } });
+    expect(red.secrets).toContainEqual({ path: '$.诊断.apiKey', configured: true });
+    expect(resolveSecretSource('$.诊断.apiKey', specialLayers)).toBe('customer');
+  });
+
+  it('含点键 ⇒ 以 ["a.b"] 段表示，解析为单段（不被拆成 a→b）', () => {
+    const red = redactSecrets({ 'a.b': { apiKey: 'v2' } });
+    expect(red.secrets).toContainEqual({ path: '$["a.b"].apiKey', configured: true });
+    expect(resolveSecretSource('$["a.b"].apiKey', specialLayers)).toBe('customer');
+    // 反例：把含点键当成两级路径 ⇒ 解析不到（防"看起来命中"的假绿）
+    expect(resolveSecretSource('$.a.b.apiKey', specialLayers)).toBeNull();
+  });
+
+  it('含空格键 ⇒ 原样保留在点段中（不被当作非法字符）', () => {
+    const red = redactSecrets({ 'my key': { apiKey: 'v3' } });
+    expect(red.secrets).toContainEqual({ path: '$.my key.apiKey', configured: true });
+    expect(resolveSecretSource('$.my key.apiKey', specialLayers)).toBe('customer');
+  });
+});

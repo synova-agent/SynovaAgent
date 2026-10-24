@@ -12,13 +12,15 @@
  *     @returns { value, secrets }：value＝脱敏副本（秘密槽＝{configured}）；
  *              secrets＝全部秘密槽 [{path, configured}]（遍历顺序，含 configured=false）。
  *     递归 plain object / array，叶子保持原值；对象键名**整段**命中 SECRET_SEGMENTS 时整槽替换。
- *     深路径记法 `$.a.b[0].token`（数组下标 `[i]`）。**不修改入参**（返回 detached 副本）。
+ *     深路径记法 `$.a.b[0].token`（数组下标 `[i]`）；键含 `.`／`[`／`]` 或是空键时该段写成
+ *     `["<JSON 字符串>"]`（如 `$["a.b"].apiKey`）。**不修改入参**（返回 detached 副本）。
  *     入参非 plain object，或遇到 Map/Date/function 等未知容器 ⇒ 抛 ConfigRedactError（fail-closed）。
  *   - resolveSecretSource(path, layers): string | null
  *     @param path - redactSecrets 产出的完整路径（如 `$.llm.apiKey`）。
  *     @param layers - 逐层来源数组，**末尾为最高层**（workspace）；doc=null 表示该层未提供。
  *     @returns 第一个「完整路径存在」（own 属性／数组下标命中）的层名；都不存在 ⇒ null。
- *     路径文法仅支持 `.key` 与 `[i]`；非法路径 ⇒ 抛 ConfigRedactError（fail loud，不静默 null）。
+ *     路径文法：`.key`（任意非 `.`/`[` 字符，含中文/空格）／`[i]`／`["<JSON 字符串>"]`；
+ *     非法路径 ⇒ 抛 ConfigRedactError（fail loud，不静默 null）。
  *   - ConfigRedactError: { code: 'REDACT_UNSUPPORTED'; phase: 'redactSecrets'; retryable: false }
  *     message 只含**容器类型与路径**，**绝不含值**（值本身可能就是秘密）。
  *
@@ -48,14 +50,9 @@ export const SECRET_SEGMENTS: readonly string[] = [
   'token', 'accessToken', 'refreshToken', 'credential', 'credentials', 'secret',
 ];
 
-const SECRET_SET: ReadonlySet<string> = new Set(SECRET_SEGMENTS);
-
-/** 合法路径文法：`$` 起头，后接 `.key` 或 `[i]`（与 redactSecrets 产出同式）。 */
-const PATH_SHAPE = /^\$(?:\.[A-Za-z0-9_$-]+|\[\d+\])+$/;
-
 /** 侧车单条：一条秘密的完整路径与「是否持有值」。 */
 export interface SecretSlot {
-  /** 完整路径，如 `$.llm.apiKey`／`$.a.b[0].token`。 */
+  /** 完整路径，如 `$.llm.apiKey`／`$.a.b[0].token`／`$["a.b"].apiKey`（特殊键段用引号形式）。 */
   path: string;
   /** 是否持有值（非 null/undefined/''；0/false/{}/[] 均算有值）。 */
   configured: boolean;
@@ -95,17 +92,10 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return proto === Object.prototype || proto === null;
 }
 
-/** JSON 标量叶子（null/undefined 视为缺值叶子；symbol/bigint 不属 JSON，走 fail-closed）。 */
-function isJsonLeaf(value: unknown): value is string | number | boolean | null | undefined {
-  return value === null || value === undefined || ['string', 'number', 'boolean'].includes(typeof value);
-}
-
 /** 只在错误 message 里描述的容器类型（**不含任何值**；Date/Set/类实例统一记 non-JSON value）。 */
 function describeContainer(value: unknown): string {
   if (Array.isArray(value)) return 'array';
-  if (value instanceof Map) return 'Map';
-  if (typeof value === 'function') return 'function';
-  return 'non-JSON value';
+  return value instanceof Map ? 'Map' : typeof value === 'function' ? 'function' : 'non-JSON value';
 }
 
 /** 秘密槽收口：值槽只留 {configured}，完整路径＋有无值进侧车（null/''/undefined 也记）。 */
@@ -115,31 +105,42 @@ function markSecret(slotPath: string, raw: unknown, slots: SecretSlot[]): { conf
   return { configured };
 }
 
+/** 段路径拼装：普通键 `.key`；含 `.`／`[`／`]` 或空键用 `["<JSON>"]`（防歧义/防被拆段）。 */
+function childPath(path: string, key: string): string {
+  return key === '' || /[.[\]]/.test(key) ? `${path}[${JSON.stringify(key)}]` : `${path}.${key}`;
+}
+
 /** 单键分派：整段命中秘密段名 ⇒ 收口；否则继续递归。 */
-function redactChild(childPath: string, key: string, raw: unknown, slots: SecretSlot[]): unknown {
-  return SECRET_SET.has(key) ? markSecret(childPath, raw, slots) : redactNode(raw, childPath, slots);
+function redactChild(path: string, key: string, raw: unknown, slots: SecretSlot[]): unknown {
+  const at = childPath(path, key);
+  return SECRET_SEGMENTS.includes(key) ? markSecret(at, raw, slots) : redactNode(raw, at, slots);
 }
 
-/** 递归 plain object：new 对象由 Object.fromEntries 建（own 数据属性，防 `__proto__` 污染）。 */
-function redactObject(node: Record<string, unknown>, path: string, slots: SecretSlot[]): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.keys(node).map((key): [string, unknown] => [key, redactChild(`${path}.${key}`, key, node[key], slots)]),
-  );
-}
-
-/** 递归分派：plain object／array／JSON 叶子；其余一律 fail-closed。 */
+/** 递归分派：plain object（own 键 → Object.fromEntries，防 `__proto__` 污染）／array／JSON 叶子；其余 fail-closed。 */
 function redactNode(node: unknown, path: string, slots: SecretSlot[]): unknown {
-  if (isPlainObject(node)) return redactObject(node, path, slots);
+  if (isPlainObject(node)) {
+    return Object.fromEntries(
+      Object.keys(node).map((key): [string, unknown] => [key, redactChild(path, key, node[key], slots)]),
+    );
+  }
   if (Array.isArray(node)) return node.map((item, index) => redactNode(item, `${path}[${index}]`, slots));
-  if (isJsonLeaf(node)) return node;
+  if (node === null || node === undefined || ['string', 'number', 'boolean'].includes(typeof node)) return node; // JSON 标量叶子；symbol/bigint 不属 JSON ⇒ 落 fail-closed
   throw new ConfigRedactError(`不支持的容器 ${describeContainer(node)}（路径 ${path}）`);
 }
 
-/** 路径文法解析：`$.a.b[0].token` → ['a', 'b', 0, 'token']；非法路径 fail-closed。 */
+/** 路径文法解析：`$.a.b[0].token` → ['a', 'b', 0, 'token']；引号段解出原始键；非法路径 fail-closed。 */
 function parsePath(path: string): Array<string | number> {
-  if (!PATH_SHAPE.test(path)) throw new ConfigRedactError(`路径格式不受支持："${path}"`);
-  return path.slice(1).split(/[.[]/).filter((part) => part !== '')
-    .map((part) => (/^\d+\]$/.test(part) ? Number(part.slice(0, -1)) : part));
+  const quoted: string[] = [];
+  const flat = path.replace(/\[("(?:[^"\\]|\\.)*")\]/g, (_all, literal: string) => {
+    const parsed: unknown = JSON.parse(literal); // 文法已限字符串字面量；坏转义由下方 try 兜底
+    if (typeof parsed !== 'string') throw new ConfigRedactError(`路径段必须是字符串：${literal}`);
+    quoted.push(parsed);
+    return `[#${String(quoted.length - 1)}]`;
+  });
+  if (!/^\$(?:\.[^.\[\]]+|\[\d+\]|\[#\d+\])+$/.test(flat)) throw new ConfigRedactError(`路径格式不受支持："${path}"`);
+  return flat.slice(1).split(/[.[]/).filter((part) => part !== '')
+    .map((part) => (/^\d+\]$/.test(part) ? Number(part.slice(0, -1))
+      : part.startsWith('#') ? quoted[Number(part.slice(1, -1))] : part));
 }
 
 /** 完整路径是否存在（own 属性／数组下标；不遍历原型链）。 */
@@ -170,8 +171,8 @@ export function resolveSecretSource(
 ): string | null {
   const segments = parsePath(path);
   for (let index = layers.length - 1; index >= 0; index -= 1) {
-    const entry = layers[index];
-    if (entry.doc !== null && hasPath(entry.doc, segments)) return entry.layer;
+    const { layer, doc } = layers[index];
+    if (doc !== null && hasPath(doc, segments)) return layer;
   }
   return null;
 }
@@ -188,5 +189,5 @@ export function redactSecrets(value: LayerDoc): RedactedValue {
     throw new ConfigRedactError(`配置文档必须是 plain object，收到 ${describeContainer(value)}`);
   }
   const secrets: SecretSlot[] = [];
-  return { value: redactObject(value, '$', secrets), secrets };
+  return { value: redactNode(value, '$', secrets) as LayerDoc, secrets }; // 入参已证 plain object ⇒ 输出同形
 }

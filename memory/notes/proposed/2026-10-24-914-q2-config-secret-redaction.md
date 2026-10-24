@@ -30,18 +30,21 @@
 3. **秘密槽只留有无**：值槽替换为 `{configured}`（configured＝非 `null/undefined/''`；`0`／`false`／`{}`／`[]` 算有值）；
    仍列入侧车（`configured:false` 也要可渲染）。返回 detached 副本，**不改入参**（诊断链仍用真值）。
 4. **两个面同口径**：`config` 用脱敏副本；`provenance[].doc` 逐层换成脱敏副本（`layer`/`present`/`contributedKeys` 不变，`doc:null` 原样）。
-5. **侧车 `secrets: [{path, configured, source}]`**：`path` 用 `$.a.b[0].token` 记法；`source` = `resolveSecretSource(path, mounted.provenance)`
+5. **侧车 `secrets: [{path, configured, source}]`**：`path` 用 `$.a.b[0].token` 记法（键含 `.`／`[`／`]` 或空键时该段写 `["<JSON 字符串>"]`，如 `$["a.b"].apiKey`）；`source` = `resolveSecretSource(path, mounted.provenance)`
    —— 从数组末尾（workspace）向 default 扫，第一个「完整路径存在」的层名，都不存在 ⇒ `null`。侧车**不含任何值片段**。
 6. **脱敏失败 fail-closed**：抛 `ConfigRedactError`（未知容器：Map/Date/function…；message 只含容器类型与路径、绝不含值）⇒ 落既有 catch
    ⇒ `log.warn`（带 `error.code`）＋ `degraded:true` ＋ 空 `config` ＋ `secrets: []`（宁可不给，不泄漏；铁律 24/31）。
    路由的 orgId 校验与 `resolveCustomerConfig` 调用**零改动**：`git show gitea/local-main:src/routes/config.ts` ⇒ `26`/`49`，现树 ⇒ `31`/`54`（偏移只因上方 JSDoc 增 5 行）。
 7. **接线点（实测行号）**：`grep -n "redactSecrets(\|resolveSecretSource(\|ConfigRedactError\|secrets: \[\]" src/routes/config.ts` ⇒
    `25`（import）／`57`／`61`（provenance 逐层）／`70`（source）／`81`（catch 取 code）／`87`（catch 补 `secrets: []`）。
-8. **测试**：`tests/config/redact.test.ts` 13 条（单元＋C2 边界＋fail-closed）＋`tests/routes/config.test.ts` 14 条
+8. **测试**：`tests/config/redact.test.ts` 16 条（单元＋C2 边界＋fail-closed＋N3 回归 3 条）＋`tests/routes/config.test.ts` 14 条
    （既有 8 条一字未改 ＋ 新增 6 条：A-1 跨 wire 全文/末 4 位无值、A-2 秘密槽仅 `{configured:true}`、A-3 非秘密原样、
-   A-4 侧车三键、A-5 provenance 第二面、B-1 明文对照 app 必红）；指定命令合计 `Tests 27 passed (27)`。
+   A-4 侧车三键、A-5 provenance 第二面、B-1 明文对照 app 必红）；指定命令合计 `Tests 30 passed (30)`。
 9. **判别力（裁 366 硬要求）**：同文件内联「故意原样回明文」的对照 app（不进产品代码）＋ 共用 `assertNoSecret`；
-   接线回退时 A-1/A-2/A-5 必红（实测 `Tests 3 failed | 11 passed (14)`）⇒ 判据不是假绿。
+   接线回退时 A-1/A-2/A-4/A-5 必红（实测 `Tests 4 failed | 10 passed (14)`）⇒ 判据不是假绿。
+10. **N3 修复（裁 371）**：旧 `PATH_SHAPE` 只认 ASCII ⇒ 中文/空格父键的路径在 `resolveSecretSource` 抛错、经路由 catch 把整条 dump 退化成 `config:{}`。
+   修＝路径文法放宽为「任意非 `.`/`[` 字符」＋含 `.`／`[`／`]`／空键的段写 `["<JSON 字符串>"]`（含点键不被拆段）；`resolveSecretSource` 仍 fail-loud（非法路径照抛）。
+   回归 3 例（中文父键／含点键／含空格键）＋ 改坏必红：回退 `redact.ts` 到修复前 ⇒ **3 failed**；恢复 ⇒ 30 passed。
 
 ## 依据
 
