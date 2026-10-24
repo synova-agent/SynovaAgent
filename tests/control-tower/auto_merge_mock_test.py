@@ -45,6 +45,10 @@ def make_handler(pr):
             return self._j([{"number": pr, "head": {"sha": "deadbeef"}, "base": {"ref": "main"}, "draft": False}])
         def do_POST(self):
             MERGES.append(self.path)
+            if os.environ.get("SYNO_MOCK_MERGE_FAIL") == "1":
+                raw = b'{"message":"merge blocked"}'
+                self.send_response(405); self.send_header("Content-Length", str(len(raw)))
+                self.end_headers(); self.wfile.write(raw); return
             self.send_response(200); self.send_header("Content-Length", "2"); self.end_headers(); self.wfile.write(b"{}")
     return H
 
@@ -82,5 +86,14 @@ print("── C. 负对照：previous_filename 不受保护 ⇒ 应允许合并 
 MERGES.clear(); r3 = run(997)
 chk(len(MERGES) == 1, "负对照确实合并（证明 B 的拦截不是'永不合并'）")
 assert len(MERGES) == 1, "负对照未合并 ⇒ 测试无判别力"
+
+print("── D. 三态「1」腿：merge 被拒（405）⇒ exit 1 + E_MERGE ──")
+MERGES.clear()
+os.environ["SYNO_MOCK_MERGE_FAIL"] = "1"
+r4 = run(997)
+chk(r4.returncode == 1, "merge 被拒 ⇒ exit 1")
+chk("E_MERGE" in (r4.stderr or ""), "stderr 含 E_MERGE")
+assert r4.returncode == 1, "merge 失败未返回 1"
+os.environ.pop("SYNO_MOCK_MERGE_FAIL", None)
 
 sys.exit(1 if fails else 0)
