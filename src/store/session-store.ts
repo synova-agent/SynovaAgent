@@ -133,17 +133,78 @@ export interface ConversationState {
 // ═══ D500: 事件溯源类型 ═══
 
 /**
+ * 事件词表（**v1 单一真源**，#964 Q-7）。
+ *
  * 事件类型（surface 事件 = 投影到消息历史的；log-only 事件 = 仅审计）。
  * D487: 新增诊断事件三类——GA 诊断过程落 session_events 可回放；
  * deriveMessages 投影跳过（log-only，不污染消息历史）。
+ *
+ * 🔴 新增/删除类目必须同批 bump `SESSION_EVENT_FORMAT_VERSION`，否则
+ * `tests/store/session-event-log.test.ts` 的词表冻结用例先红（禁悄悄扩词表）。
  */
-export type SessionEventType =
-  | 'message'
-  | 'tool_result'
-  | 'system'
-  | 'diagnosis_phase'
-  | 'diagnosis_module'
-  | 'diagnosis_report';
+export const SESSION_EVENT_TYPES = [
+  'message',
+  'tool_result',
+  'system',
+  'diagnosis_phase',
+  'diagnosis_module',
+  'diagnosis_report',
+] as const;
+
+/** 事件类型（由词表常量派生 —— 词表唯一真源，禁第二处手写联合） */
+export type SessionEventType = (typeof SESSION_EVENT_TYPES)[number];
+
+/**
+ * 事件行格式版本（**读侧 fail-closed**，#964 Q-7）。
+ * 写侧恒写当前版本；读侧遇更高版本（旧构建读新库）⇒ `EVENT_FORMAT_TOO_NEW`，
+ * 绝不按旧格式猜测解码（对齐 DSH storage-contract 的 version gate）。
+ */
+export const SESSION_EVENT_FORMAT_VERSION = 1;
+
+/** 事件流 typed error 码（铁律 32：code/phase/retryable 可分类） */
+export type SessionEventErrorCode = 'UNKNOWN_EVENT_TYPE' | 'EVENT_FORMAT_TOO_NEW';
+
+/** 事件流 typed error —— 词表/格式版本违约走**抛错**（不是 degraded 返回值） */
+export class SessionEventError extends Error {
+  readonly code: SessionEventErrorCode;
+  readonly phase: 'validate' | 'read';
+  readonly retryable = false;
+
+  constructor(code: SessionEventErrorCode, phase: 'validate' | 'read', message: string) {
+    super(message);
+    this.name = 'SessionEventError';
+    this.code = code;
+    this.phase = phase;
+  }
+}
+
+/**
+ * 运行时词表守卫（DB CHECK 只兜 SQL 面；API 入参 / 旧库行 / 直连 SQL 都要过这一道）。
+ * @input  value — 未知（调用方可能是 JS/动态值）
+ * @output 类型谓词；true = 可安全当作 SessionEventType
+ */
+export function isSessionEventType(value: unknown): value is SessionEventType {
+  return typeof value === 'string' && (SESSION_EVENT_TYPES as readonly string[]).includes(value);
+}
+
+/**
+ * 严格模式开关（**默认开**；`SYNO_SESSION_EVENT_STRICT=0` ⇒ 回滚旧 degraded 行为）。
+ * 逐调用读取（可测试注入）；关闭时按铁律 11 留痕一次，不静默。
+ */
+function isSessionEventStrict(): boolean {
+  return process.env.SYNO_SESSION_EVENT_STRICT !== '0';
+}
+
+let strictDisabledWarned = false;
+
+function warnStrictDisabled(where: string): void {
+  if (strictDisabledWarned) return;
+  strictDisabledWarned = true;
+  log.warn(
+    { degraded: true, component: 'store/session-store', code: 'SESSION_EVENT_STRICT_DISABLED', where },
+    'SYNO_SESSION_EVENT_STRICT=0 — 事件词表/格式版本校验降级为旧行为（回滚态）',
+  );
+}
 
 /** session_events 表行 */
 export interface SessionEvent {
@@ -152,6 +213,8 @@ export interface SessionEvent {
   seq: number;
   eventType: SessionEventType;
   payloadJson: string;
+  /** 行格式版本（老库升级后历史行 = 1） */
+  formatVersion: number;
   createdAt: string;
 }
 
@@ -213,17 +276,28 @@ export class SessionStore {
       -- D500: 事件溯源 append-only 事件流（会话唯一事实源）
       -- seq 单调 + UNIQUE(session_id, seq) 物理防并发 seq 重复（2026-08-22 缺陷①防线）
       -- D487: CHECK 扩展诊断事件三类（旧库经下方表重建迁移升级，CREATE IF NOT EXISTS 不更新已有约束）
+      -- #964 Q-7: format_version 行格式版本（老库经下方 PRAGMA 判缺 + ALTER 幂等升级）
       CREATE TABLE IF NOT EXISTS session_events (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         session_id TEXT NOT NULL REFERENCES agent_sessions(id) ON DELETE CASCADE,
         seq INTEGER NOT NULL,
         event_type TEXT NOT NULL CHECK(event_type IN ('message','tool_result','system','diagnosis_phase','diagnosis_module','diagnosis_report')),
         payload_json TEXT NOT NULL,
+        format_version INTEGER NOT NULL DEFAULT 1,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         UNIQUE(session_id, seq)
       );
       CREATE INDEX IF NOT EXISTS idx_session_events_sess ON session_events(session_id, seq);
     `);
+
+    // #964 Q-7: 老库升级 —— `session_events` 无 format_version 列 ⇒ PRAGMA 判缺 + ALTER ADD COLUMN。
+    // 🔴 裁 395：必须幂等且**不吞错**。这里不靠 `try/catch` 分流（ADD COLUMN 对"列已存在"会抛，
+    //    用异常当控制流 = 把真实错误一起吞掉）⇒ 先 PRAGMA 判存在性，再执行 ALTER；ALTER 失败原样上抛。
+    const eventColumns = this.db.prepare('PRAGMA table_info(session_events)').all() as Array<{ name: string }>;
+    if (!eventColumns.some((column) => column.name === 'format_version')) {
+      this.db.exec('ALTER TABLE session_events ADD COLUMN format_version INTEGER NOT NULL DEFAULT 1');
+      log.info('session_events 补 format_version 列（老库升级；历史行按 DEFAULT 1 视作 v1）');
+    }
 
     // D487: 旧库 session_events CHECK 约束升级 — ALTER 不支持修改 CHECK，
     // 幂等表重建（仅当现有建表 SQL 缺 diagnosis_phase 时执行；BEGIN/COMMIT 保证原子）
@@ -241,11 +315,12 @@ export class SessionStore {
               seq INTEGER NOT NULL,
               event_type TEXT NOT NULL CHECK(event_type IN ('message','tool_result','system','diagnosis_phase','diagnosis_module','diagnosis_report')),
               payload_json TEXT NOT NULL,
+              format_version INTEGER NOT NULL DEFAULT 1,
               created_at TEXT NOT NULL DEFAULT (datetime('now')),
               UNIQUE(session_id, seq)
             );
-            INSERT INTO session_events_new (id, session_id, seq, event_type, payload_json, created_at)
-              SELECT id, session_id, seq, event_type, payload_json, created_at FROM session_events;
+            INSERT INTO session_events_new (id, session_id, seq, event_type, payload_json, format_version, created_at)
+              SELECT id, session_id, seq, event_type, payload_json, format_version, created_at FROM session_events;
             DROP TABLE session_events;
             ALTER TABLE session_events_new RENAME TO session_events;
             CREATE INDEX IF NOT EXISTS idx_session_events_sess ON session_events(session_id, seq);
@@ -393,16 +468,33 @@ export class SessionStore {
    *   @error  — UNIQUE(session_id, seq) 冲突 → log.error + degraded（并发防线，seq 不重放）
    *   崩溃恢复: 续写基于 SELECT MAX(seq)（持久化 lastSeq），禁止内存 seq 回退（2026-08-22 缺陷②防线）
    *   seq 单调: 基于持久化 MAX(seq)+1，无内存计数器（缺陷①防线）
+   *
+   * #964 Q-7 契约变更（裁 395）:
+   *   未知 eventType ⇒ **抛** `SessionEventError('UNKNOWN_EVENT_TYPE')`（strict 默认开）；
+   *   `SYNO_SESSION_EVENT_STRICT=0` ⇒ 回滚旧行为（返回 degraded，不抛，warn 一次）。
+   *   I/O 失败（SQL/约束）仍走 degraded 返回值（铁律 24/31 不变）。
    */
   appendEvent(sessionId: string, eventType: SessionEventType, payload: unknown): AppendEventResult {
+    // 词表 fail-closed：必须在 try 之前（否则会被下面的 catch 折成 degraded = 旧病复发）
+    if (!isSessionEventType(eventType)) {
+      if (isSessionEventStrict()) {
+        throw new SessionEventError(
+          'UNKNOWN_EVENT_TYPE',
+          'validate',
+          `未知事件类型 ${JSON.stringify(eventType)}；合法词表 v1 = ${SESSION_EVENT_TYPES.join('|')}`,
+        );
+      }
+      warnStrictDisabled('appendEvent');
+      return { ok: false, degraded: true, error: `unknown event type: ${String(eventType)}` };
+    }
     try {
       // 持久化 lastSeq: 基于 MAX(seq) 续写，禁止内存回退（缺陷②防线）
       const row = this.db.prepare('SELECT MAX(seq) as max_seq FROM session_events WHERE session_id=?')
         .get(sessionId) as SqliteRow | undefined;
       const nextSeq = Number((row?.max_seq as number | null) ?? 0) + 1;
       this.db.prepare(
-        'INSERT INTO session_events (session_id, seq, event_type, payload_json) VALUES (?,?,?,?)'
-      ).run(sessionId, nextSeq, eventType, JSON.stringify(payload));
+        'INSERT INTO session_events (session_id, seq, event_type, payload_json, format_version) VALUES (?,?,?,?,?)'
+      ).run(sessionId, nextSeq, eventType, JSON.stringify(payload), SESSION_EVENT_FORMAT_VERSION);
       return { ok: true, seq: nextSeq };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -411,16 +503,53 @@ export class SessionStore {
     }
   }
 
-  /** 读取某会话全部事件（按 seq 升序） */
+  /**
+   * 读取某会话全部事件（按 seq 升序）。
+   *
+   * #964 Q-7 读侧 fail-closed（裁 395）:
+   *   ① 行 `event_type` 不在 v1 词表（旧库/直连 SQL 可绕过 DB CHECK）⇒ 抛 `UNKNOWN_EVENT_TYPE`；
+   *   ② 行 `format_version` 高于本构建 ⇒ 抛 `EVENT_FORMAT_TOO_NEW`（旧构建拒按旧格式解码新行）；
+   *   `SYNO_SESSION_EVENT_STRICT=0` ⇒ 两条守卫退回旧行为（照读 + warn 一次 + lastDegraded）。
+   */
   getEvents(sessionId: string): SessionEvent[] {
     const rows = this.db.prepare(
       'SELECT * FROM session_events WHERE session_id=? ORDER BY seq ASC'
     ).all(sessionId) as SqliteRow[];
-    return rows.map((r) => ({
-      id: Number(r.id), sessionId: r.session_id as string, seq: Number(r.seq),
-      eventType: r.event_type as SessionEventType,
-      payloadJson: r.payload_json as string, createdAt: r.created_at as string,
-    }));
+    return rows.map((r) => {
+      const rawType = r.event_type;
+      const formatVersion = Number(r.format_version ?? SESSION_EVENT_FORMAT_VERSION);
+      const strict = isSessionEventStrict();
+      if (!isSessionEventType(rawType)) {
+        if (strict) {
+          throw new SessionEventError(
+            'UNKNOWN_EVENT_TYPE',
+            'read',
+            `事件行含未知类型 ${JSON.stringify(rawType)}（session=${sessionId} seq=${String(r.seq)}）—— 词表 fail-closed`,
+          );
+        }
+        warnStrictDisabled('getEvents');
+        this.lastDegraded = true;
+      }
+      if (formatVersion > SESSION_EVENT_FORMAT_VERSION) {
+        if (strict) {
+          throw new SessionEventError(
+            'EVENT_FORMAT_TOO_NEW',
+            'read',
+            `事件行格式版本 ${formatVersion} 高于本构建 ${SESSION_EVENT_FORMAT_VERSION}` +
+              `（session=${sessionId} seq=${String(r.seq)}）—— 拒绝按旧格式解码`,
+          );
+        }
+        warnStrictDisabled('getEvents');
+        this.lastDegraded = true;
+      }
+      return {
+        id: Number(r.id), sessionId: r.session_id as string, seq: Number(r.seq),
+        eventType: rawType as SessionEventType,
+        payloadJson: r.payload_json as string,
+        formatVersion,
+        createdAt: r.created_at as string,
+      };
+    });
   }
 
   /**
