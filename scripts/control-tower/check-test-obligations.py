@@ -21,7 +21,7 @@
 #              2 = 检查自身失败（E_*；fail-closed，同样阻断，禁与「通过」混同）
 #   @degraded 绝不静默（铁律 11/32）：任何降级打 stderr `degraded: <code> — <原因>`；
 #              若设 $SYNO_GATE_DEGRADED_LOG 追加一行 JSON（time/component/code/phase/retryable）
-#   @error   code ∈ {E_USAGE, E_BAD_BASE, E_GIT, E_MANIFEST, E_SCHEMA, E_NOSRC, E_INTERNAL}
+#   @error   code ∈ {E_USAGE, E_BAD_BASE, E_GIT, E_GIT_TIMEOUT, E_ENV_INVALID, E_MANIFEST, E_SCHEMA, E_NOSRC, E_INTERNAL}
 #            🔴 **故意不设 E_EXPIRED**：exempt 过期是**真红 rc=1**（规格 §2／§4-S7／§8 三处一致），
 #               只有「expiry 不可解析」才归 E_SCHEMA（rc=2）—— 把业务红降级成环境红 = 判据失明。
 #   @rollback `SYNO_TEST_OBLIGATIONS=off|0|false|no` ⇒ 打印回滚态并 exit 0（规格 §6；
@@ -43,8 +43,10 @@
 #
 # 既有基础（**禁重复建设** —— 四条既有约定原样复用）:
 #   · 三态退出码 ＋ 判别力自检（信号量==0 ⇒ exit 2）= `scripts/control-tower/AGENTS.md`
-#   · `SYNO_GIT_TIMEOUT_SEC`（git 子进程超时秒；≥0 整数）——**非法值 ⇒ E_ENV_INVALID / exit 2**，
-#     不在 import 期抛裸 ValueError；超时 ⇒ `E_GIT_TIMEOUT` / exit 2（含 `--selfcheck` 夹具路径）
+#   · `SYNO_GIT_TIMEOUT_SEC`（git 子进程超时秒；≥0 整数）：
+#     — `=0` ⇒ **立即超时**（确定性触发超时分支；不是"关闭超时"）
+#     — 负数 / 非整数 ⇒ **E_ENV_INVALID / exit 2**（不在 import 期抛裸 ValueError）
+#     — 真超时 ⇒ **E_GIT_TIMEOUT / exit 2**（含 `--selfcheck` 夹具路径 `_sh()`）
 #   · `degraded: <code> — <原因>` ＋ $SYNO_GATE_DEGRADED_LOG 的 JSON 行 = 铁律 11/32 现行约定
 #   · UTF-8 强制（D732）：stdout reconfigure ＋ 一切文件读写显式 `encoding="utf-8"`
 #   · 无 PyYAML 的 YAML 子集解析（同 `claim_store.py`／`check-quality-delta.py` 的理由：

@@ -476,6 +476,7 @@ PY
 }
 if _py_mut "$SUT" "$MUT13" 2>/dev/null && [ -f "$MUT13" ]; then
   RUN_OUT="$( cd "$D13" && SYNO_GIT_TIMEOUT_SEC=0 "$PYBIN" "$MUT13" --root . --base HEAD~1 2>&1 )"; MRC13=$?
+  assert_rc "${MRC13}" 2 "S13-e 变异体仍以 rc=2 收口（变异只换错误码，不换退出码）"
   if printf '%s' "$RUN_OUT" | grep -qF "E_GIT_TIMEOUT"; then
     no "S13-e 变异体仍报 E_GIT_TIMEOUT（断言可能空转）"
   else

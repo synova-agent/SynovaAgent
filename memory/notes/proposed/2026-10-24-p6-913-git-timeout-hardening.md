@@ -14,7 +14,9 @@
 - 新增 `git_timeout_sec()`：**每次读 env 并校验**（非整数 / 负数 ⇒ `E_ENV_INVALID` / exit 2），
   不在 import 期抛裸异常；`git()`／`git_ok()`／`_sh()` 三处统一走它。
 - `--selfcheck` 分支的 `ObligationError` 也接住 ⇒ 打 degraded + `TEST-OBLIGATIONS: ERROR <code>` + **return 2**
-  （此前会 traceback 落到 rc=1）。
+  （此前会 traceback 落到 rc=1）。**实测行为**：自检内部对每个夹具逐项 catch ⇒ 不会直接抛到顶层，
+  而是打 `❌ selfcheck s9=0 — 夹具/检查自身失败 E_GIT_TIMEOUT…` 与 `SELFCHECK-FAIL s1..s9=0/…`，**rc=2**
+  （即"逐夹具吞 + 汇总判失败"，不是"顶层异常直出"）。
 - 配对测试 S13-a..e：合法值（非 2）／非法值（rc=2＋`E_ENV_INVALID`＋无 Traceback）／超时（rc=2＋`E_GIT_TIMEOUT`）／
   selfcheck 路径超时（rc=2）／变异体（替换全部 `E_GIT_TIMEOUT` 抛出点 ⇒ 断言翻红，证明承重）。
 - 语义约定：`SYNO_GIT_TIMEOUT_SEC=0` 视为"立即超时"（用于确定性触发超时分支），负数/非整数才算非法。
