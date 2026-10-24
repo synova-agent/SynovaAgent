@@ -74,8 +74,8 @@ entries:
     owner: P4
     notes: "G1/G3/G4 变更集闸（#912 批 1／裁 330）；生产消费点=pre-commit 附加块，CI 另有具名步 ①e（local-gates.yml:98）"
   - capability: security.masterSecret
-    defined_at: "src/security/master-secret.ts:48"
-    provider: "src/security/master-secret.ts:48"
+    defined_at: "src/security/master-secret.ts:45"
+    provider: "src/security/master-secret.ts:45"
     consumer: "src/deploy/bootstrap.ts:874"
     test: "tests/security/master-secret.test.ts"
     status: wired

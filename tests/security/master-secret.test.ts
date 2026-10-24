@@ -1,5 +1,5 @@
 /**
- * tests/security/e2-failclosed.test.ts —— #838 E-2：三处 fail-open 改 fail-closed（两态）
+ * tests/security/master-secret.test.ts —— #838 E-2：三处 fail-open 改 fail-closed（两态）
  *
  * 覆盖（每条都是「改坏必红」的判别力面）:
  *   ① backup 管理员备用通道: 环境变量未设 ⇒ 403 ADMIN_KEY_UNSET（旧实现 `undefined===undefined` ⇒ 放行）

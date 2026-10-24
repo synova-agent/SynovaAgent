@@ -36,7 +36,6 @@ interface DumpBody {
   audit?: Array<{ path?: string; kind?: string }>;
   code?: string;
   error?: string;
-  reason?: string;
 }
 
 async function dump(baseUrl: string, query: string): Promise<{ status: number; body: DumpBody }> {

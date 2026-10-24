@@ -34,9 +34,11 @@ function getScheduler(): BackupScheduler {
  * 简化版权限检查 — 实际接入 PolicyEngine(D38) 后可替换。
  */
 function requireAdmin(req: Request, res: Response): boolean {
-  // 检查 JWT 中的角色（验签身份；req.auth 由 jwtAuthMiddleware 注入）
-  const auth = (req as Request & { auth?: { role?: string } }).auth;
-  if (auth && (auth.role === 'ga' || auth.role === 'admin')) {
+  // 检查 JWT 中的角色 —— **保持 base 行为**（`req.user` 这条分支历史上不可达：jwtAuthMiddleware
+  //   注入的是 `req.auth` 而非 `req.user`）。本 PR 严格只做 fail-closed，
+  //   「是否开放 JWT 角色通道」属另卡决策 ⇒ 此处不顺手改。
+  const user = (req as unknown as Record<string, unknown>).user as Record<string, unknown> | undefined;
+  if (user && (user.role === 'ga' || user.role === 'admin')) {
     return true;
   }
 
