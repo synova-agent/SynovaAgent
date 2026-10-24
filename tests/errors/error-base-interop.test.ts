@@ -7,7 +7,7 @@
  *   C 禁解析 message：路由只认稳定 `code`，`message` 只给人读 ⇒ 路由型命中集合**严格等于 2 条**钉死
  *   （D 两态在 tests/services/runtime-global-handlers.test.ts —— 真类非致命 / lookalike 致命）
  *
- * 铁律 0-2: spec → test → impl；铁律 48: 每块都有 `expect()`（无空壳测试）
+ * 铁律 0-2: spec → test → impl；铁律 48: 每块都有断言（无空壳测试，禁 todo/skip 占位）
  * 铁律 38: 零 `as any` / `as never` / `as unknown as` —— 收窄一律用 `instanceof` 类型守卫
  *
  * ⚠️ 本文件**只读**产品代码：不修改 `src/**`（变异 M1/M2/M3 归 impl-errors 与独立自验员）。
