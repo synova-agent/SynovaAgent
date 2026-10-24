@@ -17,6 +17,7 @@ writeset:
   - tests/contract/triviality-manifest.yaml
   - scripts/control-tower/check-test-obligations.py
   - tests/control-tower/check-test-obligations.test.sh
+  - memory/notes/proposed/2026-10-24-p6-913-git-timeout-hardening.md
   - gate-exemptions/2026-10-24-p7-913-pr2-docs.md
   - docs/authority/DOCS-REGISTRY.yaml
   - .claude/claims/913.yaml

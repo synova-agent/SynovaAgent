@@ -43,6 +43,8 @@
 #
 # 既有基础（**禁重复建设** —— 四条既有约定原样复用）:
 #   · 三态退出码 ＋ 判别力自检（信号量==0 ⇒ exit 2）= `scripts/control-tower/AGENTS.md`
+#   · `SYNO_GIT_TIMEOUT_SEC`（git 子进程超时秒；≥0 整数）——**非法值 ⇒ E_ENV_INVALID / exit 2**，
+#     不在 import 期抛裸 ValueError；超时 ⇒ `E_GIT_TIMEOUT` / exit 2（含 `--selfcheck` 夹具路径）
 #   · `degraded: <code> — <原因>` ＋ $SYNO_GATE_DEGRADED_LOG 的 JSON 行 = 铁律 11/32 现行约定
 #   · UTF-8 强制（D732）：stdout reconfigure ＋ 一切文件读写显式 `encoding="utf-8"`
 #   · 无 PyYAML 的 YAML 子集解析（同 `claim_store.py`／`check-quality-delta.py` 的理由：
@@ -91,7 +93,7 @@ SURFACES = ("protocol", "model", "human-visible", "none")
 OBLIGATIONS = ("expected", "snapshot", "exempt")
 OBLIGATED = ("expected", "snapshot")
 NEW_FILE_MIN_LINES = 100          # §2「有效逻辑行 ≥100」
-GIT_TIMEOUT_SEC = int(os.environ.get("SYNO_GIT_TIMEOUT_SEC", "60"))
+DEFAULT_GIT_TIMEOUT_SEC = 60           # 可用 SYNO_GIT_TIMEOUT_SEC 覆盖（非法值 ⇒ E_ENV_INVALID / exit 2）
 TRAILER_MIN_REASON = 10           # §3.4「理由 ≥10 字」
 BEHAVIOR_TOKENS = ("export ", "if (", "switch (", "case ")
 OFF_VALUES = ("0", "off", "false", "no", "n")
@@ -108,6 +110,24 @@ class ObligationError(Exception):
         self.retryable = retryable
 
 
+def git_timeout_sec() -> int:
+    """git 子进程超时秒数（每次读 env）。
+
+    非法值（非整数 / 负数）⇒ **typed error**（E_ENV_INVALID → exit 2），
+    不在 import 期抛裸 ValueError（#942/#946 复核 warn c）。
+    """
+    raw = os.environ.get("SYNO_GIT_TIMEOUT_SEC", str(DEFAULT_GIT_TIMEOUT_SEC))
+    try:
+        val = int(str(raw).strip())
+    except (TypeError, ValueError):
+        raise ObligationError("E_ENV_INVALID",
+                              f"SYNO_GIT_TIMEOUT_SEC 非法: {raw!r}（须为 ≥0 的整数秒）", "env")
+    if val < 0:
+        raise ObligationError("E_ENV_INVALID",
+                              f"SYNO_GIT_TIMEOUT_SEC 非法: {raw!r}（须为 ≥0 的整数秒）", "env")
+    return val
+
+
 # ── git ───────────────────────────────────────────────────────────────────────
 def _git_cmd(root: str) -> List[str]:
     # core.quotepath=false：非 ASCII/空格路径不被八进制转义（判据按真实路径匹配）
@@ -115,24 +135,26 @@ def _git_cmd(root: str) -> List[str]:
 
 
 def git(root: str, *args: str) -> str:
+    _to = git_timeout_sec()
     try:
         p = subprocess.run(_git_cmd(root) + list(args), capture_output=True, text=True,
-                           encoding="utf-8", errors="replace", timeout=GIT_TIMEOUT_SEC)
+                           encoding="utf-8", errors="replace", timeout=_to)
     except subprocess.TimeoutExpired as exc:
         raise ObligationError("E_GIT_TIMEOUT",
-                              f"git {' '.join(args)} 超时（>{GIT_TIMEOUT_SEC}s）") from exc
+                              f"git {' '.join(args)} 超时（>{_to}s）") from exc
     if p.returncode != 0:
         raise ObligationError("E_GIT", f"git {' '.join(args)} 失败: {(p.stderr or '').strip()[:200]}")
     return p.stdout
 
 
 def git_ok(root: str, *args: str) -> Tuple[int, str, str]:
+    _to = git_timeout_sec()
     try:
         p = subprocess.run(_git_cmd(root) + list(args), capture_output=True, text=True,
-                           encoding="utf-8", errors="replace", timeout=GIT_TIMEOUT_SEC)
+                           encoding="utf-8", errors="replace", timeout=_to)
     except subprocess.TimeoutExpired as exc:
         raise ObligationError("E_GIT_TIMEOUT",
-                              f"git {' '.join(args)} 超时（>{GIT_TIMEOUT_SEC}s）") from exc
+                              f"git {' '.join(args)} 超时（>{_to}s）") from exc
     return p.returncode, p.stdout, p.stderr
 
 
@@ -710,8 +732,13 @@ def degraded(code: str, msg: str, phase: str = "scan", retryable: bool = False) 
 
 # ── 判别力自检（--selfcheck；信号量==0 ⇒ exit 2）─────────────────────────────
 def _sh(cwd: str, *args: str) -> str:
-    p = subprocess.run(["git"] + list(args), cwd=cwd, capture_output=True, text=True,
-                       encoding="utf-8", errors="replace")
+    _to = git_timeout_sec()
+    try:
+        p = subprocess.run(["git"] + list(args), cwd=cwd, capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=_to)
+    except subprocess.TimeoutExpired as exc:
+        raise ObligationError("E_GIT_TIMEOUT",
+                              f"selfcheck 夹具 git {' '.join(args)} 超时（>{_to}s）", "selfcheck") from exc
     if p.returncode != 0:
         raise ObligationError("E_GIT", f"夹具 git {' '.join(args)} 失败: {(p.stderr or '').strip()[:200]}",
                               "selfcheck")
@@ -969,7 +996,15 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 2
 
     if args.selfcheck:
-        return selfcheck()
+        try:
+            return selfcheck()
+        except ObligationError as exc:
+            degraded(exc.code, str(exc), exc.phase, exc.retryable)
+            if args.json:
+                print(json.dumps({"status": "error", "code": exc.code, "message": str(exc)}, ensure_ascii=False))
+            else:
+                print(f"TEST-OBLIGATIONS: ERROR {exc.code}")
+            return 2
 
     if _rollback():
         print("ℹ️  回滚态（SYNO_TEST_OBLIGATIONS=off）—— 跳过（唯一回滚点，不判红；规格 §6）")
