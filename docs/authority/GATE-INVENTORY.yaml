@@ -626,7 +626,7 @@ gates:
     kind: step
     line: 303
     label: "①i 工具入参校验增量闸（R1/R2/R3 · 只判变更集 · 不计组号）"
-    label_hash: "1d2426d71738"
+    label_hash: "838f1a3c3f19"
     occurrences: [303]
     what: "①i 工具入参校验增量闸（R1/R2/R3，只判变更集；空集 SKIP）"
     blocking: hard
