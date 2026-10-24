@@ -1,0 +1,139 @@
+{
+ "schema": "syno-review-receipt/v1",
+ "pr": 956,
+ "head_reviewed": "2b02131c6b7c0d1a5f9a2e4b3c8d7e6f5a4b3c2d",
+ "base_reviewed": "43f24f5c9",
+ "patch_fingerprint": "sha256:381e054a38bbd5d1c7313fc3dbc94a3f0b0654f1d511b216e8c234b5f7f4b555",
+ "author": "k12@local 实现小队（Gitea 提交账号 win-push）",
+ "reviewer": "零上下文独立复核员-956-2026-10-24",
+ "independence": "fresh-session",
+ "verdict": "PASS",
+ "scope": "全量复核（五步：范围撞车／铁律物理检查／声称vs事实／门禁自洽／结构化结论）＋两处敏感改动实验判定（C13/C14）",
+ "checks": [
+  {
+   "id": "C1-写集",
+   "cmd": "git diff --name-only gitea/local-main...HEAD | wc -l；claim writeset 双向 comm",
+   "result": "pass",
+   "evidence": "diff=17 件 / claim=17 件，双向差集空；禁改路径(scripts/audit/**、package.json、tsconfig*.json)零命中；新增行 as any/as never/as unknown as = 0"
+  },
+  {
+   "id": "C2-Step0+环境",
+   "cmd": "node -v；new better-sqlite3(':memory:')；z.fromJSONSchema 探针",
+   "result": "pass",
+   "evidence": "v22.23.2；SQLITE-OK；zod 4.6.2 ⇒ [\"invalid_type:orgId\"] 与 REF-THROW:Reference not found: #/defs/x"
+  },
+  {
+   "id": "C3-新测试",
+   "cmd": "npx vitest run tests/agent/tool-args-validation.test.ts",
+   "result": "pass",
+   "evidence": "Test Files 1 passed (1) / Tests 13 passed (13)；37 个 expect()、S1–S7/S5b＋库存①–⑤；断言④显式 probed=34/skipped=2（非空壳）"
+  },
+  {
+   "id": "C4-类型",
+   "cmd": "npx tsc --noEmit",
+   "result": "pass",
+   "evidence": "无输出 rc=0（合法转写 Parameters<typeof z.fromJSONSchema>[0]，零 as any）"
+  },
+  {
+   "id": "C5-闸",
+   "cmd": "python3 scripts/control-tower/check-tool-args-delta.py --root . --selfcheck；--base gitea/local-main；bash tests/control-tower/check-tool-args-delta.test.sh",
+   "result": "pass",
+   "evidence": "SELFCHECK-OK f1=1 f2=1 f3=1 clean=0；真树 TOOL-ARGS-DELTA: PASS changes=1 rules=R1,R2,R3；配对测试 71 通过 0 失败（含 T2/T2b/T2c/T3a/T3b/T5b/T9①–⑦/T-neg）"
+  },
+  {
+   "id": "C6-盘点三命令",
+   "cmd": "--check-registry；--orphans-only；--check-inventory docs/authority/GATE-INVENTORY.yaml",
+   "result": "pass",
+   "evidence": "REGISTRY-OK rows=9；orphans=7/35；INVENTORY C1–C10b 全 ✅ rc=0，covered=G12/12 B9/9 X7/7 S12/12 K35/35 R40/40，PAIRING-OK 5/5"
+  },
+  {
+   "id": "C7-两件存量红转绿",
+   "cmd": "bash tests/control-tower/quality-baseline.test.sh；bash tests/control-tower/quality-standard.test.sh（PR 树 vs 基线树 43f24f5c9）",
+   "result": "pass",
+   "evidence": "PR：TEST-OK pass=143 fail=0 / STANDARD-OK g=6 fields=5 rules=5（rc=0）；基线：FAIL pass=141 fail=2 rc=1 / STANDARD-TEST rc=1 failures=2 ⇒ 由红转绿属实"
+  },
+  {
+   "id": "C8-受保护路径+文档登记",
+   "cmd": "bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main；bash scripts/doc-system/doc-registry-gate.sh",
+   "result": "pass",
+   "evidence": "17 通过 0 失败（豁免件 11 条逐行三段式：破折号—、裁定号 裁 365）；128 条 DOC id 重号 0、0 未登记（DOC-0270 已登）"
+  },
+  {
+   "id": "C9-M1改坏⇒红",
+   "cmd": "副本把 execute 内 validateToolArgs 调用改恒空 ⇒ npx vitest run 新测试",
+   "result": "pass",
+   "evidence": "Tests 7 failed | 6 passed (13) —— 与 PR 正文 M1 数字逐字一致（S1/S2/S5/S5b/S6/S7＋库存④ 全红）"
+  },
+  {
+   "id": "C10-T2/R3独立复现",
+   "cmd": "副本真树加 properties:{}＋handler:(params: Record<string,unknown>) 新工具＋写进 baseline ⇒ 跑闸；再删 baseline 行复跑",
+   "result": "pass",
+   "evidence": "❌ R1: src/agent/builtin-tools.ts:24 工具 rev956_blank_probe ⇒ VIOLATIONS 1 rc=1；删登记 ⇒ VIOLATIONS 2（R1+R3 双向棘轮真）"
+  },
+  {
+   "id": "C11-CI",
+   "cmd": "curl commits/2b02131c6/status；actions/runs；runs/1729/jobs",
+   "result": "pass",
+   "evidence": "state=success total_count=2 pending=0（push+pull_request 均 success）；run 1729/1728 success；job gates step11「①i」completed/success（真执行非跳过）"
+  },
+  {
+   "id": "C12-全量vitest零新增红",
+   "cmd": "npx vitest run（PR 树）vs /tmp/rev956-base（base 43f24f5c9，同 symlink+node22）",
+   "result": "pass",
+   "evidence": "PR 5 failed|724 passed(732)/Tests 6 failed|5852 passed；基线 5 failed|723 passed/Tests 6 failed|5839 passed；失败用例 ID 逐一相同 ⇒ 零新增红"
+  },
+  {
+   "id": "C13-敏感改动a（5 行 CI-S11→S12）",
+   "cmd": "副本把 5 行改回 CI-S11（新 checker 行保留 CI-S12）⇒ --check-inventory",
+   "result": "pass",
+   "evidence": "INVENTORY-FAIL violations=5 rc=1 ⇒ 该重编号是 C10 机器复算强制（无第二个可通过值），非人类登记假账；PR 正文已披露"
+  },
+  {
+   "id": "C14-敏感改动b（注释 1 行）",
+   "cmd": "git show 基线版 vs HEAD 版 ast.parse+ast.dump 比对；compute_wiring 复算",
+   "result": "pass",
+   "evidence": "AST identical: True（仅 1 行 # 注释）；C10 归位：check-quality-delta=['CI-S10','PC-X-efbcc9']；check-merge-conditions 含 auto-merge.sh；新 checker=['CI-S12','PC-X-ab65b3']；check-test-obligations=[] 与表 orphan:true 一致"
+  },
+  {
+   "id": "C15-铁律与接线",
+   "cmd": "grep -rn validateToolArgs src/；新增行扫 2>/dev/null|\\|\\| true|TBD|/Users/；git merge-base --is-ancestor",
+   "result": "pass",
+   "evidence": "tools.ts:129 定义 ＋ :315 生产调用（WIRE 通）；唯一 ||true 为仓内 93 处同款 UTF-8 惯用行；/Users/ 仅 +1（CI 既有写法）；无 TBD/占位；base 是 head 祖先；3 commits 均引四态 Note（铁律 49）"
+  }
+ ],
+ "findings": [
+  {
+   "severity": "minor",
+   "where": "docs/authority/GATE-INVENTORY.yaml:684,724,740,748,868（5 行 wired_to CI-S11→CI-S12）",
+   "what": "判定＝C10 机器复算的必然要求＋PR 正文已披露，非登记假账（改回 CI-S11 ⇒ violations=5，无第二个可通过值）。但机器值语义失真：enumerate_ci 只枚举 local-gates.yml，compute_wiring 对 .github/workflows/ci.yml 命中用『跨文件行号≤』映射 ⇒ 所有行号≥303 的引用一律落到 CI-S12(①i)；5 个 checker 真实调用点在 ci.yml:819/825/1108/1128/1151。修 C10 属门禁语义，须另开卡＋CTO 送审（影响 6 行含 verify-parallel CI-S8＋两处常量），顺手重写 5 行 stale reason。"
+  },
+  {
+   "severity": "info",
+   "where": "scripts/control-tower/check-test-obligations.py:48",
+   "what": "确证只改注释、零语义（ast.parse/ast.dump 全等），C10 假账归位。残留：C10 仍把注释里的 basename 当接线，同类假账可复发 ⇒ 建议并入 C10 修复卡（匹配前剥注释）。"
+  },
+  {
+   "severity": "minor",
+   "where": "PR body:109（数字节）",
+   "what": "正文写『2 commits；head db4ae6605』，与正文:4 及实物（3 commits／head 2b02131c6）矛盾 ⇒ 自检第 8 条不完全成立（陈旧残留，不影响判据）。"
+  },
+  {
+   "severity": "info",
+   "where": "PR body:162-168（全量 vitest 存量红声明）",
+   "what": "『零新增红』成立（双树失败用例 ID 相同），但绝对数『4 文件/5 测试（基线 6 红）』在 /tmp 深度工作树实测为『5 文件/6 测试』：多出的 circular-dependency 由 path.resolve(HERE,'../../packages/…') 的工作树深度决定，基线树同红、非本 PR 引入；建议另开卡解耦。​"
+  },
+  {
+   "severity": "info",
+   "where": "docs/authority/GATE-INVENTORY.yaml（CI 步 label_hash）＋quality-baseline.py C5",
+   "what": "实验：把 CI-S12 的 label_hash 改 deadbeef ⇒ --check-inventory 仍 rc=0 ⇒ label_hash 未被任何检查校验（本 PR 提交已如实说明；正确现算值 838f1a3c3f19／ab65b340d91d 已核）。属真值面待加固，建议并入 C10 修复卡。"
+  },
+  {
+   "severity": "info",
+   "where": "tests/agent/tool-loop-tool-pairing.integration.test.ts:40",
+   "what": "跑全量 vitest 会改两份已跟踪证据 JSON 的 captured_date（双树同样，存量问题）；若全量后 git add -A 会把它们带进写集。本 PR 写集 17 件干净、未发生。建议另开卡。"
+  }
+ ],
+ "issued_at": "2026-10-24T20:43:56+08:00",
+ "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步）＋ check-merge-conditions --diff-fingerprint",
+ "patch_fingerprint_source": "canonical: check-merge-conditions.sh --diff-fingerprint（R3 定义；merge-base..head，排除 docs/synova/reviews/**）"
+}
