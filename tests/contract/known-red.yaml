@@ -7,7 +7,7 @@
 # 修它们另立卡（P1/P2），不在本批修。
 schema_version: 1
 meta:
-  as_of: "gitea/local-main@259d04329"
+  as_of: "gitea/local-main@138b8f2dc"
   ruling: "裁331"
   policy: "只减不增：修复后必须删行；本批只落文件，消费在 PR-3 ①g"
 entries:
@@ -17,7 +17,7 @@ entries:
     expiry: "2026-12-31"
     ruling: "裁331"
   - test: tests/l3/graphbridge-wiring.test.ts
-    reason: "失败模块不应建节点：afterRun 后 Person 节点数期望 1 实测 0（graphbridge-wiring.test.ts:80）"
+    reason: "失败模块不应建节点：afterRun 后 Person 节点数期望 1 实测 0（graphbridge-wiring.test.ts:79）"
     owner: P2
     expiry: "2026-12-31"
     ruling: "裁331"

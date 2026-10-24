@@ -10,7 +10,7 @@
 # 修缺陷另立卡：P2（S）——本清单只记账，不在本批改 src/**。
 schema_version: 1
 meta:
-  as_of: "gitea/local-main@259d04329"
+  as_of: "gitea/local-main@138b8f2dc"
   ruling: "裁331"
   interface: StorageBackend
 divergences:

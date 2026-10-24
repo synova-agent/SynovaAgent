@@ -26,7 +26,7 @@
  *   - 只扫 `.ts`（不含 `.tsx`/`.d.ts`），只认「同一行 class 声明 + implements … StorageBackend」；
  *     跨行声明（`class X\n  implements Y`）会漏。
  *   - `definedAt` 是 `path:line` 快照；源码行号漂移会让 meta 红（有意的漂移告警，不自动跟随）。
- *   - 两清单只做**结构**校验，不判 expiry 是否过期（过期判据属 PR-3 ①g 消费侧）。
+ *   - 两清单在**加载时**校验 expiry：日期非法（如 2026-13-99）⇒ SCHEMA_INVALID；**已过期 ⇒ REGISTRY_LEDGER_EXPIRED**（只减不增：到期必须修复/转正后删行）。
  *   - known-divergences 的 `evidence` 是自由文本，不做机器核验（人工复核项）。
  */
 import { existsSync, readdirSync, readFileSync } from 'fs';
@@ -40,7 +40,8 @@ export type RegistryErrorCode =
   | 'REGISTRY_ENUMERATION_EMPTY'
   | 'REGISTRY_LEDGER_MISSING'
   | 'REGISTRY_LEDGER_PARSE_FAILED'
-  | 'REGISTRY_LEDGER_SCHEMA_INVALID';
+  | 'REGISTRY_LEDGER_SCHEMA_INVALID'
+  | 'REGISTRY_LEDGER_EXPIRED';
 
 /** 登记表/枚举层错误：message 一律以 `degraded: ` 开头（三态：检查自身失败不得当通过） */
 export class RegistryError extends Error {
@@ -315,6 +316,44 @@ function requireString(
   return value;
 }
 
+
+/**
+ * 校验 expiry 字段（YYYY-MM-DD）：
+ *   ① 形状不对 / 不存在的日期（如 2026-13-99、2026-02-30）⇒ REGISTRY_LEDGER_SCHEMA_INVALID；
+ *   ② 早于今天（UTC 日期）⇒ REGISTRY_LEDGER_EXPIRED（到期即红；"只减不增"的可执行面）。
+ *
+ * @param expiry - 待校验的日期字符串
+ * @param what - 字段路径（如 `divergences[0]`），用于点名
+ * @param ledgerName - 清单文件名，用于点名
+ * @returns 原 expiry（校验通过）
+ */
+function requireValidExpiry(expiry: string, what: string, ledgerName: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(expiry)) {
+    throw new RegistryError(
+      `degraded: ${ledgerName} 的 ${what}.expiry 形状非法（须 YYYY-MM-DD）: ${JSON.stringify(expiry)}`,
+      'REGISTRY_LEDGER_SCHEMA_INVALID',
+      'ledger',
+    );
+  }
+  const ts = Date.parse(`${expiry}T00:00:00Z`);
+  if (!Number.isFinite(ts) || new Date(ts).toISOString().slice(0, 10) !== expiry) {
+    throw new RegistryError(
+      `degraded: ${ledgerName} 的 ${what}.expiry 不存在该日期（日历非法）: ${expiry}`,
+      'REGISTRY_LEDGER_SCHEMA_INVALID',
+      'ledger',
+    );
+  }
+  const todayIso = new Date().toISOString().slice(0, 10);
+  if (ts < Date.parse(`${todayIso}T00:00:00Z`)) {
+    throw new RegistryError(
+      `degraded: ${ledgerName} 的 ${what}.expiry 已过期: ${expiry}（今天 ${todayIso}；只减不增：修复/转正后必须删行）`,
+      'REGISTRY_LEDGER_EXPIRED',
+      'ledger',
+    );
+  }
+  return expiry;
+}
+
 function readLedgerDoc(filePath: string, ledgerName: string): Record<string, unknown> {
   const abs = path.resolve(process.cwd(), filePath);
   if (!existsSync(abs)) {
@@ -390,7 +429,7 @@ export function loadKnownDivergences(filePath: string = KNOWN_DIVERGENCES_PATH):
       case: caseId,
       implementation: requireString(entry, 'implementation', what, ledgerName),
       owner: requireString(entry, 'owner', what, ledgerName),
-      expiry: requireString(entry, 'expiry', what, ledgerName),
+      expiry: requireValidExpiry(requireString(entry, 'expiry', what, ledgerName), what, ledgerName),
       ruling: requireString(entry, 'ruling', what, ledgerName),
       evidence: requireString(entry, 'evidence', what, ledgerName),
     };
@@ -420,7 +459,7 @@ export function loadKnownRed(filePath: string = KNOWN_RED_PATH): KnownRedLedger 
       test: requireString(entry, 'test', what, ledgerName),
       reason: requireString(entry, 'reason', what, ledgerName),
       owner: requireString(entry, 'owner', what, ledgerName),
-      expiry: requireString(entry, 'expiry', what, ledgerName),
+      expiry: requireValidExpiry(requireString(entry, 'expiry', what, ledgerName), what, ledgerName),
       ruling: requireString(entry, 'ruling', what, ledgerName),
     };
   });

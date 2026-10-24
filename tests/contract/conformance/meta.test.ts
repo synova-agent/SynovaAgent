@@ -28,7 +28,7 @@
  * 已知限制（Known Limitations）：
  *   - broken-backend 只覆盖 2 条违约；其余 7 条用它跑应绿（若变红会精确集合断言逼复核）。
  *   - 枚举只用行级文本匹配；动态/反射实现漏检（与 G1 `T1` 同型盲区），本文件不能补这个盲区。
- *   - 清单只做结构校验，不判 expiry 是否过期（消费侧 PR-3 ①g 负责）。
+ *   - 清单 expiry 在**加载时**校验：非法日期 ⇒ SCHEMA_INVALID；已过期 ⇒ LEDGER_EXPIRED（本文件有两态用例证明）。
  *   - 三态用例写 /tmp 临时文件并自清理；若进程被强杀可能残留（不影响仓库写集）。
  */
 import { describe, it, expect } from 'vitest';
@@ -304,6 +304,46 @@ describe('conformance meta（Q-9 · 裁 331）', () => {
         'REGISTRY_LEDGER_MISSING',
         'known-red.yaml',
       );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('expiry 两态：不存在的日期 ⇒ SCHEMA_INVALID；已过期 ⇒ LEDGER_EXPIRED（"到期"不再形同虚设）', () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), '913-expiry-'));
+    try {
+      const mk = (name: string, expiry: string): string => {
+        const file = path.join(dir, name);
+        writeFileSync(
+          file,
+          'schema_version: 1\n' +
+            'meta:\n  as_of: gitea/local-main@138b8f2dc\n  ruling: "裁331"\n  interface: StorageBackend\n' +
+            'divergences:\n  - id: updatedAt-iso\n    implementation: SqliteStorageBackend\n' +
+            '    owner: P2\n' +
+            `    expiry: "${expiry}"\n` +
+            '    ruling: "裁331"\n    evidence: "probe evidence text"\n',
+          'utf8',
+        );
+        return file;
+      };
+      // ① 日历非法（形状对但日期不存在）
+      expectRegistryError(
+        () => loadKnownDivergences(mk('bad-date.yaml', '2026-13-99')),
+        'REGISTRY_LEDGER_SCHEMA_INVALID',
+        'expiry',
+      );
+      expectRegistryError(
+        () => loadKnownDivergences(mk('bad-date2.yaml', '2026-02-30')),
+        'REGISTRY_LEDGER_SCHEMA_INVALID',
+        'expiry',
+      );
+      // ② 已过期 ⇒ 到期即红（只减不增的可执行面）
+      const expired = expectRegistryError(
+        () => loadKnownDivergences(mk('expired.yaml', '2020-01-01')),
+        'REGISTRY_LEDGER_EXPIRED',
+        '2020-01-01',
+      );
+      expect(expired.message).toMatch(/^degraded: /);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

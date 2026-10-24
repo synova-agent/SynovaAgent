@@ -13,7 +13,7 @@ description: dev doc 交付附带编码指令——把创始人标准模板（�
 
 ## 输入
 
-- 本次交付的 spec 文件路径（`docs/plans/codex/implementation/SYNOVA-IMPL-*.md`）
+- 本次交付的 spec 文件路径（`.handbook/派单件/<日期>-规格-<Issue#>-<slug>.md`）
 - 派单文档路径（`docs/synova/coordination/派单-*.md`）
 - 任务专属材料：依赖声明 / K3 教训 / 写集约束 / 红线 / 环境坑 / 验证点收口口径
 
