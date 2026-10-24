@@ -1,0 +1,8 @@
+# .claude/claims/959.yaml — 补账：redact.ts 登记非平凡台账
+writeset:
+  - .claude/claims/959.yaml
+  - tests/contract/triviality-manifest.yaml
+done:
+  - verify: python3 scripts/control-tower/check-test-obligations.py --root . --base HEAD
+  - verify: bash tests/control-tower/check-test-obligations.test.sh
+note: "#959 补账（裁 379）：#955 新增 src/config/redact.ts 未登记 ⇒ Q-10 棘轮红；加豁免行后 legacy 469，测试 48/0。"
