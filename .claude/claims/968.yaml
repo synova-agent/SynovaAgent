@@ -1,4 +1,4 @@
-# .claude/claims/968.yaml — 摩擦治理③：③ 指纹绑 patch-id
+# .claude/claims/968.yaml — 摩擦治理③：③ 指纹 ③-2.1（逐字增删行＋二进制内容 id）
 writeset:
   - .claude/claims/968.yaml
   - scripts/control-tower/check-merge-conditions.sh
@@ -10,4 +10,4 @@ writeset:
 done:
   - verify: bash tests/control-tower/check-merge-conditions.test.sh
   - verify: bash scripts/control-tower/check-merge-conditions.sh --selfcheck
-note: "#968 指纹 ③-2.0→③-2.1（patch-id）：sync 不再作废回执；两态已测（sync 不变/内容变必变）。6 件。"
+note: "#968 指纹 ③-2.0→③-2.1（逐字增删行＋二进制内容 id）：sync 不改指纹、R7 放行 merge；空白/EOF/二进制均必变。7 件。"

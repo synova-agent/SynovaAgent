@@ -94,9 +94,9 @@ mk_commit() { # <repo> <msg> <author-email>
     git -C "$1" commit -q -m "$2"
 }
 
-fp_of() { # <repo> <mb> <head> → 64 hex（③-2.1：逐字增删行 canonical，测试侧独立复算）
+fp_of() { # <repo> <mb> <head> → 64 hex（③-2.1 独立实现：逐字增删行＋EOF 标记＋二进制 blob id）
   local R="$1" mb="$2" head="$3"
-  if ! git -C "$R" diff --no-color -M "$mb" "$head" \
+  if ! git -C "$R" diff --no-color -M --binary "$mb" "$head" \
         -- . ':(exclude)docs/synova/reviews/**' > "$WORK/fp.tmp"; then
     return 1
   fi
@@ -104,18 +104,37 @@ fp_of() { # <repo> <mb> <head> → 64 hex（③-2.1：逐字增删行 canonical�
     printf '%s' "EMPTY-DIFF" | python3 -c 'import hashlib,sys;print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest())'
     return 0
   fi
-  awk '
-    /^diff --git / { f=$0; sub(/^diff --git a\/.* b\//,"",f); print "F " f; next }
-    /^\+\+\+ / { print "P " substr($0,5); next }
-    /^--- / { next }
-    /^\+/ { print "A" substr($0,2); next }
-    /^-/  { print "R" substr($0,2); next }
-    /^Binary files / { print "B " $0; next }
-    /^(old mode|new mode|rename from|rename to|similarity index|dissimilarity index|new file mode|deleted file mode)/ { print "M " $0; next }
-    { next }
-  ' "$WORK/fp.tmp" > "$WORK/fp.canon"
-  [ -s "$WORK/fp.canon" ] || return 1
-  python3 -c 'import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$WORK/fp.canon"
+  python3 - "$R" "$head" "$WORK/fp.tmp" "$WORK/fp.canon" <<'PYF'
+import hashlib, subprocess, sys
+root, head, dp, op = sys.argv[1:5]
+lines = open(dp,'rb').read().decode('utf-8','surrogateescape').splitlines()
+out, cur, binary = [], None, False
+def flush():
+    global cur, binary
+    if cur is not None and binary:
+        blob = subprocess.run(['git','-C',root,'rev-parse',f'{head}:{cur}'],
+                              capture_output=True, text=True).stdout.strip()
+        if not blob: raise SystemExit(3)
+        out.append('B '+cur+' '+blob)
+    cur, binary = None, False
+for ln in lines:
+    if ln.startswith('diff --git '):
+        flush(); cur = ln.rsplit(' b/',1)[-1]; out.append('F '+cur)
+    elif ln.startswith('Binary files ') or ln.startswith('GIT binary patch'):
+        binary = True
+    elif ln.startswith(('+++ ','--- ')):
+        continue
+    elif ln.startswith('\\ No newline at end of file'):
+        out.append('E '+ln)
+    elif ln.startswith('+'): out.append('A'+ln[1:])
+    elif ln.startswith('-'): out.append('R'+ln[1:])
+    elif ln.startswith(('old mode','new mode','rename from','rename to','similarity index','dissimilarity index','new file mode','deleted file mode')):
+        out.append('M '+ln)
+flush()
+if not out: raise SystemExit(3)
+open(op,'wb').write(('\n'.join(out)+'\n').encode('utf-8','surrogateescape'))
+print(hashlib.sha256(open(op,'rb').read()).hexdigest())
+PYF
 }
 
 write_receipt() { # <repo> <pr> <patch_fingerprint 字面值> <fp12(路径)> <independence> <email> <checks 条数>
@@ -672,6 +691,28 @@ if [ -n "$S_FP4" ] && [ "$S_FP3" = "$S_FP4" ]; then extra "③-2.1 回执文件�
 # D) 被测脚本必须同口径（驱动脚本的 --fp-of，而非只用测试自带 fp_of）
 S_SUT_FP="$(cd "$SYNC_R" && bash "$TOOL" --repo-root "$SYNC_R" --fp-of "$S_MB4" "$(git -C "$SYNC_R" rev-parse feat)" 2>/dev/null)"
 if [ -n "$S_SUT_FP" ] && [ "$S_SUT_FP" = "$S_FP4" ]; then extra "③-2.1 被测脚本 --fp-of 与测试独立复算同值（${S_SUT_FP:0:12}）"; else fail "③-2.1 被测脚本指纹口径不一致（脚本=${S_SUT_FP:0:12} 测试=${S_FP4:0:12}）"; fi
+# E) 二进制内容变更 ⇒ 必变（v2 复核实测的绕过口）
+( cd "$SYNC_R" && printf '\000\001' > bin.dat && git add bin.dat && git commit -qm "add binary" )
+B_MB="$(git -C "$SYNC_R" merge-base "$(git -C "$SYNC_R" rev-parse main)" "$(git -C "$SYNC_R" rev-parse feat)")"
+B_FP1="$(fp_of "$SYNC_R" "$B_MB" "$(git -C "$SYNC_R" rev-parse feat)")"
+( cd "$SYNC_R" && printf '\000\002' > bin.dat && git commit -qam "change binary" )
+B_FP2="$(fp_of "$SYNC_R" "$B_MB" "$(git -C "$SYNC_R" rev-parse feat)")"
+if [ -n "$B_FP1" ] && [ "$B_FP1" != "$B_FP2" ]; then extra "③-2.1 二进制内容变化必变（${B_FP1:0:12}→${B_FP2:0:12}）"; else fail "③-2.1 二进制内容变化未变指纹 ⇒ R3 可被二进制绕过"; fi
+# F) EOF 换行变更 ⇒ 必变（v2 复核实测的绕过口）
+( cd "$SYNC_R" && printf 'tail' > eof.txt && git add eof.txt && git commit -qm "add no-newline file" )
+E_FP1="$(fp_of "$SYNC_R" "$B_MB" "$(git -C "$SYNC_R" rev-parse feat)")"
+( cd "$SYNC_R" && printf 'tail\n' > eof.txt && git commit -qam "add trailing newline" )
+E_FP2="$(fp_of "$SYNC_R" "$B_MB" "$(git -C "$SYNC_R" rev-parse feat)")"
+if [ -n "$E_FP1" ] && [ "$E_FP1" != "$E_FP2" ]; then extra "③-2.1 EOF 换行变化必变（${E_FP1:0:12}→${E_FP2:0:12}）"; else fail "③-2.1 EOF 换行变化未变指纹 ⇒ R3 可被 EOF 绕过"; fi
+# G) R7 新谓词：回执之后的 merge 不算代码改动；非 merge 提交算
+( cd "$SYNC_R" && git checkout -q -b r7 && printf 'r\n' > r.ts && git add r.ts && git commit -qm "code" \
+  && mkdir -p docs/synova/reviews && printf '{}' > docs/synova/reviews/7.x.json && git add . && git commit -qm "receipt" \
+  && git checkout -q main && printf 'm2\n' > m2.ts && git add m2.ts && git commit -qm "main2" && git checkout -q r7 && git merge -q --no-edit main )
+R_AFTER_MERGE="$(git -C "$SYNC_R" rev-list --no-merges --first-parent "$(git -C "$SYNC_R" log --format=%H -1 -- docs/synova/reviews/7.x.json)"..r7)"
+if [ -z "$R_AFTER_MERGE" ]; then extra "③-2.1 R7 谓词：回执后的 merge 不计为代码改动"; else fail "③-2.1 R7 谓词：merge 被误计为代码改动"; fi
+( cd "$SYNC_R" && git checkout -q r7 && printf 'x\n' >> r.ts && git commit -qam "code after receipt" )
+R_AFTER_CODE="$(git -C "$SYNC_R" rev-list --no-merges --first-parent "$(git -C "$SYNC_R" log --format=%H -1 -- docs/synova/reviews/7.x.json)"..r7)"
+if [ -n "$R_AFTER_CODE" ]; then extra "③-2.1 R7 谓词：回执后的非 merge 提交必被计为改动"; else fail "③-2.1 R7 谓词：回执后的代码改动未被计"; fi
 
 echo
 echo "结果: ${PASS} 通过, ${FAIL} 失败"

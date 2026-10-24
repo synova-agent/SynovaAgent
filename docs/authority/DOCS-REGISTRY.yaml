@@ -1029,4 +1029,4 @@ documents:
     path: gate-exemptions/2026-10-24-cto-968-fp-patchid.md
     status: active
     owner: CTO
-    note: "#968 ③ 回执指纹改绑 patch-id（sync 不作废回执）的受保护路径豁免；裁 386。"
+    note: "#968 ③ 回执指纹改 ③-2.1 逐字增删行口径（sync 不改指纹）的受保护路径豁免；裁 386。"

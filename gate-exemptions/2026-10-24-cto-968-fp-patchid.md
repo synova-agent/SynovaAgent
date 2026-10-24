@@ -1,4 +1,4 @@
-- scripts/control-tower/check-merge-conditions.sh — ③ 指纹改 patch-id 口径（③-2.1，摩擦治理） — 裁 386
+- scripts/control-tower/check-merge-conditions.sh — ③ 指纹改 ③-2.1 逐字增删行口径（摩擦治理） — 裁 386
 - tests/control-tower/check-merge-conditions.test.sh — fp_of 同步 ③-2.1 ＋ 新增 sync 稳定性两态 — 裁 386
 - gate-exemptions/2026-10-24-cto-968-fp-patchid.md — 本豁免件自覆盖（#623 规则） — 裁 386
 - docs/authority/DOCS-REGISTRY.yaml — #968 登记本豁免件（D2 登记门禁） — 裁 386

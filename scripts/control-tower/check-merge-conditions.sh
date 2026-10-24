@@ -25,8 +25,9 @@ export LC_ALL=C.UTF-8 2>/dev/null   # swallow-ok: locale 不可用时回退默�
 #     --repo-root <path>        仓库根（缺省＝脚本所在目录的上两级）
 #     --json                    stdout 仅 JSON（与 --selfcheck 互斥 ⇒ exit 2）
 #     --offline                 不访问网络（🔴 ① 恒 exit 2 —— 裁 B5：不引本地 CI 缓存）
-#     --diff-fingerprint        只打印 ③-2.0 的 fp（64 hex，供回执填写）
+#     --diff-fingerprint        只打印 ③-2.1 的 fp（64 hex，供回执填写）
 #     --print-receipt-template  打印 syno-review-receipt/v1 回执骨架（不写文件）
+#     --fp-of <mb> <head>       直接算 ③ 指纹（测试缝；不走 API）
 #     --selfcheck               判别力自检（临时 git 仓＋夹具，零网络，13 判定点）
 #     --help
 #     注入缝（测试/自检）：SYNO_MERGE_COND_FIXTURE=<fixture.json>（API 替换层，零网络）
@@ -423,14 +424,15 @@ diff_files() { # diff_files <a> <b> → 每行一个文件（-z 安全：中文/
   tr '\0' '\n' < "$WORK/.diff.tmp"
 }
 
-patch_fingerprint() { # patch_fingerprint <mb> <head> → 64 hex（③-2.1：**逐字增删行**，行号/上下文无关）
-  # ③-2.1 定义（替换 ③-2.0）：
-  #   指纹 = sha256( canonical )，canonical 只含 **增删行的逐字内容（含空白）** ＋ 文件路径 ＋ 模式/改名标记；
-  #   **不含 hunk 头（行号）与上下文行** ⇒ 把 main 合进来（sync）不改指纹；内容改一个空格 ⇒ 也必变。
-  #   （不用 git patch-id：它默认 strip whitespace，会把"只改空白"的真改动判成没改 —— 复核实测绕过）
-  #   fail-closed：diff 非空但取不出任何 canonical 行 ⇒ return 1（不假装"空 diff"）。
-  local mb="$1" head="$2"
-  if ! git -C "$ROOT" diff --no-color -M "$mb" "$head" \
+_fp_compute() { # _fp_compute <root> <mb> <head> → 64 hex（③-2.1 唯一实现：逐字增删行＋EOF 标记＋二进制 blob id）
+  # ③-2.1 定义（裁 386；替换 ③-2.0）：
+  #   canonical = 每文件的「增删行原文（含空白、含 "\ No newline at end of file" 标记）」＋ 路径 ＋ 模式/改名；
+  #               **二进制文件**改记 "B <path> <head 侧 blob sha>"（没有行可看，用内容 id 兜住）；
+  #   **不含** hunk 头（行号）与上下文行 ⇒ `git merge main` 不改指纹；
+  #   **含空白与 EOF 换行** ⇒ 改一个空格/去一个末尾换行也必变（R3 不削弱）。
+  #   fail-closed：diff 非空但 canonical 取不到 ⇒ return 1（不冒充空 diff）。
+  local ROOT="$1" mb="$2" head="$3"
+  if ! git -C "$ROOT" diff --no-color -M --binary "$mb" "$head" \
         -- . ':(exclude)docs/synova/reviews/**' > "$WORK/fp.diff"; then
     return 1
   fi
@@ -438,21 +440,51 @@ patch_fingerprint() { # patch_fingerprint <mb> <head> → 64 hex（③-2.1：**�
     printf '%s' "EMPTY-DIFF" | python3 -c 'import hashlib,sys;print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest())'
     return 0
   fi
-  awk '
-    /^diff --git / { f=$0; sub(/^diff --git a\/.* b\//,"",f); print "F " f; next }
-    /^\+\+\+ / { print "P " substr($0,5); next }
-    /^--- / { next }
-    /^\+/ { print "A" substr($0,2); next }
-    /^-/  { print "R" substr($0,2); next }
-    /^Binary files / { print "B " $0; next }
-    /^(old mode|new mode|rename from|rename to|similarity index|dissimilarity index|new file mode|deleted file mode)/ { print "M " $0; next }
-    { next }
-  ' "$WORK/fp.diff" > "$WORK/fp.canon"
-  if [ ! -s "$WORK/fp.canon" ]; then
-    return 1
-  fi
-  python3 -c 'import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$WORK/fp.canon"
+  python3 - "$ROOT" "$head" "$WORK/fp.diff" "$WORK/fp.canon" <<'PY'
+import hashlib, subprocess, sys
+root, head, diff_path, out_path = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+lines = open(diff_path, 'rb').read().decode('utf-8', 'surrogateescape').splitlines()
+out, cur, binary = [], None, False
+def flush():
+    global cur, binary
+    if cur is not None and binary:
+        try:
+            blob = subprocess.run(['git','-C',root,'rev-parse',f'{head}:{cur}'],
+                                  capture_output=True, text=True, timeout=20).stdout.strip()
+        except Exception:
+            blob = ''
+        if not blob:
+            raise SystemExit(3)   # head 侧取不到 blob ⇒ fail-closed
+        out.append('B ' + cur + ' ' + blob)
+    cur, binary = None, False
+for ln in lines:
+    if ln.startswith('diff --git '):
+        flush()
+        cur = ln.rsplit(' b/', 1)[-1]
+        out.append('F ' + cur)
+    elif ln.startswith('Binary files ') or ln.startswith('GIT binary patch'):
+        binary = True
+    elif ln.startswith('+++ ') or ln.startswith('--- '):
+        continue
+    elif ln.startswith('\\ No newline at end of file'):
+        out.append('E ' + ln)          # EOF 换行标记也参与哈希
+    elif ln.startswith('+'):
+        out.append('A' + ln[1:])
+    elif ln.startswith('-'):
+        out.append('R' + ln[1:])
+    elif ln.startswith(('old mode','new mode','rename from','rename to',
+                        'similarity index','dissimilarity index',
+                        'new file mode','deleted file mode')):
+        out.append('M ' + ln)
+flush()
+if not out:
+    raise SystemExit(3)
+open(out_path, 'wb').write(('\n'.join(out) + '\n').encode('utf-8', 'surrogateescape'))
+print(hashlib.sha256(open(out_path,'rb').read()).hexdigest())
+PY
 }
+patch_fingerprint() { _fp_compute "$ROOT" "$1" "$2"; }   # 生产路径：③ 指纹（③-2.1）
+
 
 resolve_tip() { # ④ S1 基线真值：git ls-remote（禁本地 stale ref）；fixture 模式取夹具 tip
   if [ "$FIXTURE_MODE" = "1" ]; then
@@ -568,10 +600,11 @@ PY
   if [ -z "$csha" ]; then
     printf 'R7 无法定位回执引入提交 %s\n' "$rpath" >> "$out"
   else
-    after="$(git -C "$ROOT" diff --name-only "$csha" "$head" -- . | grep -v '^docs/synova/reviews/')"
+    # 只禁"非合并提交"在回执之后：sync 的 merge 提交不算代码改动（其内容变化由 R3 指纹兜住）
+    after="$(git -C "$ROOT" rev-list --no-merges --first-parent "$csha..$head")"
     if [ -n "$after" ]; then
-      while IFS= read -r f; do
-        [ -n "$f" ] && printf 'R7 回执之后仍有代码改动: %s\n' "$f" >> "$out"
+      while IFS= read -r c; do
+        [ -n "$c" ] && printf 'R7 回执之后仍有代码改动: %s\n' "$c" >> "$out"
       done <<EOF
 $after
 EOF
@@ -844,6 +877,7 @@ check-merge-conditions.sh — 四条件一条命令判绿/红（#582 · P7-1）
   --diff-fingerprint        只打印 ③ 的补丁指纹（64 hex，供回执填写）
   --fp-of <mb> <head>       直接算两个提交之间的 ③ 指纹（测试/自检缝；不走 API）
   --print-receipt-template  打印 syno-review-receipt/v1 回执骨架（不写文件）
+  --fp-of <mb> <head>       直接算 ③ 指纹（测试缝；不走 API）
   --selfcheck               判别力自检（临时 git 仓＋夹具，零网络，13 判定点）
   --help                    本帮助
 
@@ -880,7 +914,11 @@ parse_args() {
       --json) JSON_MODE=1; shift ;;
       --offline) OFFLINE=1; shift ;;
       --diff-fingerprint) DIFF_FP=1; shift ;;
-      --fp-of) need_value "--fp-of" $#; FP_MB="$2"; FP_HEAD="${3:-}"; shift 3 ;;
+      --fp-of)
+        if [ "$#" -lt 3 ] || [ -z "$3" ]; then
+          printf 'degraded: --fp-of 需要两个提交（mb head） [code=E_ARGS]\n' >&2; exit 2
+        fi
+        FP_MB="$2"; FP_HEAD="$3"; shift 3 ;;
       --print-receipt-template) TEMPLATE=1; shift ;;
       --selfcheck) SELFCHECK=1; shift ;;
       --help|-h) usage; exit 0 ;;
@@ -947,7 +985,7 @@ main() {
       exit 2
     fi
     if ! FP="$(patch_fingerprint "$FP_MB" "$FP_HEAD")"; then
-      die_degraded "E_FP: 补丁指纹计算失败（--fp-of $FP_MB $FP_HEAD）"
+      die_degraded "E_FP: 补丁指纹计算失败（--fp-of ${FP_MB} ${FP_HEAD}）"
     fi
     printf '%s\n' "$FP"
     exit 0
@@ -1046,31 +1084,7 @@ _mkc() { # _mkc <repo> <msg> <author-email>
     git -C "$1" commit -q -m "$2"
 }
 
-_repo_fp() { # _repo_fp <repo> <mb> <head> → 64 hex（自检侧独立复算，与 ③-2.1 同口径）
-  local R="$1" mb="$2" head="$3"
-  if ! git -C "$R" diff --no-color -M "$mb" "$head" \
-        -- . ':(exclude)docs/synova/reviews/**' > "$WORK/sc_fp.diff"; then
-    return 1
-  fi
-  if [ ! -s "$WORK/sc_fp.diff" ]; then
-    printf '%s' "EMPTY-DIFF" | python3 -c 'import hashlib,sys;print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest())'
-    return 0
-  fi
-  awk '
-    /^diff --git / { f=$0; sub(/^diff --git a\/.* b\//,"",f); print "F " f; next }
-    /^\+\+\+ / { print "P " substr($0,5); next }
-    /^--- / { next }
-    /^\+/ { print "A" substr($0,2); next }
-    /^-/  { print "R" substr($0,2); next }
-    /^Binary files / { print "B " $0; next }
-    /^(old mode|new mode|rename from|rename to|similarity index|dissimilarity index|new file mode|deleted file mode)/ { print "M " $0; next }
-    { next }
-  ' "$WORK/sc_fp.diff" > "$WORK/sc_fp.canon"
-  if [ ! -s "$WORK/sc_fp.canon" ]; then
-    return 1
-  fi
-  python3 -c 'import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$WORK/sc_fp.canon"
-}
+_repo_fp() { _fp_compute "$1" "$2" "$3"; }   # 自检侧：与生产同一实现（杜绝口径漂移）
 
 _write_receipt() { # _write_receipt <repo> <pr> <fp> <fp-for-path> <independence> <author-email> [schema-verdict]
   local R="$1" pr="$2" fp="$3" fpp="$4" indep="$5" email="$6"
