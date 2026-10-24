@@ -7,6 +7,7 @@
  * 流程: LLM → tool call → ToolRegistry.execute() → result → LLM → 最终回复
  */
 import { createLogger } from '@synova/logger';
+import { z } from 'zod';
 import { getProfileForRole } from './tool-profiles';
 
 const log = createLogger('agent/tools');
@@ -76,6 +77,103 @@ export class ToolTimeoutError extends Error {
   }
 }
 
+/**
+ * #915 Q-1: 工具入参校验错误（内联 typed error — 同 ToolTimeoutError 先例）。
+ * 对照 DSH defineTool 的 ToolArgsError：违规以「路径化 violations」回给调用方/模型，
+ * 不吞错、不退化为扁平字符串（铁律 31 信号传播 / 铁律 32 错误分类）。
+ */
+export type ToolArgsErrorCode = 'INVALID_ARGS' | 'ARGS_SCHEMA_UNCOMPILABLE';
+
+export class ToolArgsError extends Error {
+  readonly code: ToolArgsErrorCode;
+  readonly violations: string[];
+  constructor(code: ToolArgsErrorCode, violations: string[], message?: string) {
+    super(message ?? `工具入参校验失败（${code}）: ${violations.join('; ')}`);
+    this.name = 'ToolArgsError';
+    this.code = code;
+    this.violations = violations;
+  }
+}
+
+/** #915 Q-1: 按 tool 对象缓存的派生校验器（成功/失败都缓存 ⇒ 编译失败只告警一次＝负缓存） */
+type ToolArgsValidatorCacheEntry =
+  | { kind: 'compiled'; schema: z.ZodType }
+  | { kind: 'uncompilable'; reason: string };
+
+const toolArgsValidatorCache = new WeakMap<ToolDefinition, ToolArgsValidatorCacheEntry>();
+
+/** 回滚开关（SYNO_TOOL_ARGS_VALIDATION=0）首命中留痕一次（铁律 11 禁静默降级） */
+let toolArgsValidationDisabledWarned = false;
+
+/**
+ * #915 Q-1: zod 派生工具入参校验器（唯一 schema 源 = tool.parameters，WeakMap 缓存含负缓存）。
+ *
+ * 设计哲学: 校验器只读「工具自己声明的 schema」——不另建第二份真源、不做 sanitize；
+ * 定位 defense-in-depth（服务端 strict:true 已先验），**不是安全边界**。
+ *
+ * 契约（铁律 47）:
+ * @input  tool — ToolDefinition（schema 源 tool.parameters）；params — execute 收到的原始入参
+ * @output { violations: string[]; degraded?: string }
+ *   · 非对象入参（null／数组／标量）⇒ violations=['$: 入参必须是 JSON 对象']，**先于** zod 编译（不依赖 zod）
+ *   · schema 可编译且合法 ⇒ violations=[]
+ *   · schema 可编译且非法 ⇒ violations=['$.<路径>: <zod 原话>', …]
+ *   · schema 不可编译（如含 $ref）⇒ violations=['$: <degraded>'] ＋ degraded='schema_uncompilable: <reason>'
+ * @degraded 编译失败 ⇒ log.warn({degraded:true}) 仅首次（负缓存），由 execute 转 ARGS_SCHEMA_UNCOMPILABLE fail-closed
+ * @error   永不抛异常（safeParse；编译异常就地收口为 degraded）
+ *
+ * 已知限制（规格 §8 已知限制节）:
+ *   · zod 4.6.2 的 fromJSONSchema 不 strip 多余键；校验面用 raw parameters，模型面用 _injectStrictMode 注入版（两份不同源）
+ *   · 只判 schema 层约束（类型/必填/枚举等），不判业务语义 —— handler 仍须自校
+ *   · 缓存键 = tool 对象（WeakMap）⇒ 同 schema 的不同 tool 对象各编译一次
+ */
+export function validateToolArgs(
+  tool: ToolDefinition,
+  params: Record<string, unknown>,
+): { violations: string[]; degraded?: string } {
+  // 对象性兜底 —— 不依赖 zod（S5/S5b：非对象入参必须命中这条，且早于 schema 编译）
+  if (params === null || typeof params !== 'object' || Array.isArray(params)) {
+    return { violations: ['$: 入参必须是 JSON 对象'] };
+  }
+
+  const entry = getToolArgsValidator(tool);
+  if (entry.kind === 'uncompilable') {
+    const degraded = `schema_uncompilable: ${entry.reason}`;
+    return { violations: [`$: ${degraded}`], degraded };
+  }
+
+  const parsed = entry.schema.safeParse(params);
+  if (parsed.success) return { violations: [] };
+  const violations = parsed.error.issues.map((issue) => {
+    const path = issue.path.length > 0 ? `$.${issue.path.map(String).join('.')}` : '$';
+    return `${path}: ${issue.message}`;
+  });
+  // zod 违规必有 issues；空映射属实现违约 ⇒ 不给"零违规"假绿
+  return { violations: violations.length > 0 ? violations : ['$: 入参校验失败（zod 未给出 issue）'] };
+}
+
+/** 派生并缓存校验器（编译失败 ⇒ 负缓存 ＋ 单次 log.warn，degraded 可见化） */
+function getToolArgsValidator(tool: ToolDefinition): ToolArgsValidatorCacheEntry {
+  const cached = toolArgsValidatorCache.get(tool);
+  if (cached) return cached;
+
+  let entry: ToolArgsValidatorCacheEntry;
+  try {
+    entry = {
+      kind: 'compiled',
+      schema: z.fromJSONSchema(tool.parameters as Parameters<typeof z.fromJSONSchema>[0]),
+    };
+  } catch (err) {
+    const reason = err instanceof Error ? err.message.split('\n')[0] : String(err);
+    log.warn(
+      { tool: tool.name, degraded: true, reason },
+      '工具入参 schema 不可编译 — ARGS_SCHEMA_UNCOMPILABLE（fail-closed，handler 不执行）',
+    );
+    entry = { kind: 'uncompilable', reason };
+  }
+  toolArgsValidatorCache.set(tool, entry);
+  return entry;
+}
+
 // ═══ Hermes P0-3: 并行门控 ═══
 
 export interface GuardrailDecision {
@@ -116,7 +214,7 @@ export interface ToolCallResult {
    * D473: 错误可为字符串（既有）或结构化错误对象（超时 → { name, code, message }，铁律 32 错误分类）。
    * 调用方按 truthy 判断失败（tool-loop-executor afterCall / postToolUse isError）。
    */
-  error?: string | { name: string; code: string; message: string };
+  error?: string | { name: string; code: string; message: string; violations?: string[] };
 }
 
 // ═══ ToolRegistry ═══
@@ -204,6 +302,29 @@ export class ToolRegistry {
     try {
       log.info({ name, params, mode }, '执行工具');
 
+      // #915 Q-1: dispatch 前统一入参校验（fail-closed；回滚开关 SYNO_TOOL_ARGS_VALIDATION=0 逐调用读）
+      if (process.env.SYNO_TOOL_ARGS_VALIDATION === '0') {
+        if (!toolArgsValidationDisabledWarned) {
+          toolArgsValidationDisabledWarned = true;
+          log.warn(
+            { degraded: true, name, switch: 'SYNO_TOOL_ARGS_VALIDATION=0' },
+            '工具入参校验已回滚关闭（仅首次留痕，铁律 11）',
+          );
+        }
+      } else {
+        const validation = validateToolArgs(tool, params);
+        if (validation.degraded !== undefined) {
+          throw new ToolArgsError(
+            'ARGS_SCHEMA_UNCOMPILABLE',
+            [`$: ${validation.degraded}`],
+            `工具 ${name} 的入参 schema 不可编译（fail-closed，handler 不执行）: ${validation.degraded}`,
+          );
+        }
+        if (validation.violations.length > 0) {
+          throw new ToolArgsError('INVALID_ARGS', validation.violations);
+        }
+      }
+
       switch (mode) {
         case 'local':
           return await this.withTimeout(name, tool, () => tool.handler(params));
@@ -246,6 +367,21 @@ export class ToolRegistry {
           return await tool.handler(params);
       }
     } catch (err: any) {
+      // #915 Q-1: 入参校验失败 —— 结构化回给调用方（路径化 violations 可读，铁律 32 错误分类）
+      if (err instanceof ToolArgsError) {
+        log.warn(
+          { name, mode, code: err.code, violations: err.violations },
+          '工具入参校验失败 — 已阻断 dispatch',
+        );
+        return {
+          error: {
+            name: 'ToolArgsError',
+            code: err.code,
+            message: err.message,
+            violations: err.violations,
+          },
+        };
+      }
       log.error({ err, name, mode }, '工具执行失败');
       return { error: `工具 ${name} 执行失败: ${err.message}` };
     }

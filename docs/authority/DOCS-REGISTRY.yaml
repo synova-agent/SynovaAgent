@@ -998,3 +998,10 @@ documents:
     status: active
     owner: CTO
     note: "#953 自动化一期（ledger-sync／auto-merge）的受保护路径豁免；裁 367。"
+  # ---- P1 2026-10-24：#915 Q-1 工具入参统一校验豁免件（DOC-0270；取号时点全表 max=DOC-0269，0268 由在飞 #950 预占）----
+  - id: DOC-0270
+    type: decision
+    path: gate-exemptions/2026-10-24-p1-915-q1.md
+    status: active
+    owner: P1
+    note: "#915 Q-1 受保护路径豁免件：11 条按文件名逐条覆盖（scripts/control-tower/**、scripts/pre-commit-check.sh、.gitea/workflows/**、tests/control-tower/**、docs/authority/DOCS-REGISTRY.yaml、gate-exemptions/** 自覆盖），裁 365。"

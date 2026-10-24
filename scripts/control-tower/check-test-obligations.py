@@ -45,7 +45,7 @@
 #   · 三态退出码 ＋ 判别力自检（信号量==0 ⇒ exit 2）= `scripts/control-tower/AGENTS.md`
 #   · `degraded: <code> — <原因>` ＋ $SYNO_GATE_DEGRADED_LOG 的 JSON 行 = 铁律 11/32 现行约定
 #   · UTF-8 强制（D732）：stdout reconfigure ＋ 一切文件读写显式 `encoding="utf-8"`
-#   · 无 PyYAML 的 YAML 子集解析（同 `claim_store.py`／`check-quality-delta.py` 的理由：
+#   · 无 PyYAML 的 YAML 子集解析（同 `claim_store.py` 的理由：
 #     依赖缺失会退化成「台账读不到」= 另一条静默路径）
 #
 # 已知限制（Known Limitations —— 禁读成「已检测」）:

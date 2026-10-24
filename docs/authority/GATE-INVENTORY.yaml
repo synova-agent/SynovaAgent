@@ -466,6 +466,19 @@ gates:
     decision: keep
     reason: "3 个 soft_check（含 fail-closed 降级形态）；断面一致性属 G6 ⇒ 保留"
     replacement: ""
+  - id: PC-X-ab65b3
+    kind: header
+    line: 2110
+    label: "#915 Q-1: 工具入参校验增量闸（只判变更集；**不计组号** —— 同 #912 接入模式）"
+    label_hash: "ab65b340d91d"
+    occurrences: [2110]
+    what: "工具入参校验增量闸（R1/R2/R3，只判变更集）；硬阻断检查点「有违规」＋ rc≥2 检查自身失败同阻断"
+    blocking: hard
+    g_axis: ["G1", "G4"]
+    checkpoints: ["#915 工具入参校验增量闸 (只判变更集): 有违规"]
+    decision: keep
+    reason: "#915 Q-1（裁 365）新增：R1 空 schema 有新工具／R2 绕过 execute 调工具 handler／R3 全树空 schema 棘轮；1 个 hard_check（rc=1 违规，rc=2 检查自身失败同样阻断），与旧门禁无重叠 ⇒ 保留"
+    replacement: ""
   - id: CI-S1
     kind: step
     line: 19
@@ -609,6 +622,19 @@ gates:
     decision: keep
     reason: "#917 拍 1（裁 335）一进一出：进 ①f／退 GitHub architecture job；补「类型只在 GitHub 跑」的真缺口 ⇒ 保留"
     replacement: ""
+  - id: CI-S12
+    kind: step
+    line: 303
+    label: "①i 工具入参校验增量闸（R1/R2/R3 · 只判变更集 · 不计组号）"
+    label_hash: "1d2426d71738"
+    occurrences: [303]
+    what: "①i 工具入参校验增量闸（R1/R2/R3，只判变更集；空集 SKIP）"
+    blocking: hard
+    g_axis: ["G1", "G4"]
+    checkpoints: []
+    decision: keep
+    reason: "具名步（非 12 组编号）⇒ 红时一眼定位；与 PC-X-ab65b3 同一脚本同一口径 ⇒ 保留；落位＝①f 之后（不依赖文件末尾，防 #943 撞位）"
+    replacement: ""
 
 # checkers：E5 的 32 个 check-*/verify-*；wired_to 由 C10 机器复算（pre-commit→owner slot id /
 #           workflow→CI-S<n> / 其他脚本→script:<相对路径>）；wired_to=[] ⇒ orphan: true（C10b）
@@ -655,7 +681,7 @@ checkers:
     replacement: ""
   - id: CT-check-canary-drift
     path: "scripts/control-tower/check-canary-drift.sh"
-    wired_to: ["CI-S11", "script:scripts/control-tower/check-gate-integrity.sh"]
+    wired_to: ["CI-S12", "script:scripts/control-tower/check-gate-integrity.sh"]
     orphan: false
     blocking: false
     decision: keep
@@ -695,7 +721,7 @@ checkers:
     replacement: ""
   - id: CT-check-dsh-anchor
     path: "scripts/control-tower/check-dsh-anchor.py"
-    wired_to: ["CI-S11", "PC-B-1ff6e6", "script:scripts/control-tower/daily-cto-board.sh"]
+    wired_to: ["CI-S12", "PC-B-1ff6e6", "script:scripts/control-tower/daily-cto-board.sh"]
     orphan: false
     blocking: false
     decision: keep
@@ -711,7 +737,7 @@ checkers:
     replacement: ""
   - id: CT-check-fixture-requires
     path: "scripts/control-tower/check-fixture-requires.sh"
-    wired_to: ["CI-S11"]
+    wired_to: ["CI-S12"]
     orphan: false
     blocking: false
     decision: keep
@@ -719,7 +745,7 @@ checkers:
     replacement: ""
   - id: CT-check-gate-integrity
     path: "scripts/control-tower/check-gate-integrity.sh"
-    wired_to: ["CI-S11", "script:scripts/commit-msg-check.sh", "script:scripts/control-tower/check-gate-protection.sh", "script:scripts/control-tower/sealed-tests.sh", "script:scripts/control-tower/weekly-recon.sh"]
+    wired_to: ["CI-S12", "script:scripts/commit-msg-check.sh", "script:scripts/control-tower/check-gate-protection.sh", "script:scripts/control-tower/sealed-tests.sh", "script:scripts/control-tower/weekly-recon.sh"]
     orphan: false
     blocking: false
     decision: keep
@@ -751,11 +777,11 @@ checkers:
     replacement: ""
   - id: CT-check-merge-conditions
     path: "scripts/control-tower/check-merge-conditions.sh"
-    wired_to: ["script:scripts/control-tower/probe-line-signals.ts"]
+    wired_to: ["script:scripts/control-tower/auto-merge.sh", "script:scripts/control-tower/probe-line-signals.ts"]
     orphan: false
     blocking: false
     decision: keep
-    reason: "C10 复算只落在非门禁位脚本（C10b）：script:scripts/control-tower/probe-line-signals.ts ⇒ 在脚本链在位、不在门禁链，保留"
+    reason: "C10 复算只落在非门禁位脚本（C10b）：script:scripts/control-tower/auto-merge.sh/script:scripts/control-tower/probe-line-signals.ts ⇒ 在脚本链在位、不在门禁链，保留"
     replacement: ""
   - id: CT-check-name-allocation
     path: "scripts/control-tower/check-name-allocation.sh"
@@ -839,7 +865,7 @@ checkers:
     replacement: ""
   - id: CT-check-required-contexts
     path: "scripts/control-tower/check-required-contexts.py"
-    wired_to: ["CI-S11", "script:scripts/control-tower/check-package-selfsufficiency.py"]
+    wired_to: ["CI-S12", "script:scripts/control-tower/check-package-selfsufficiency.py"]
     orphan: false
     blocking: false
     decision: keep
@@ -876,6 +902,22 @@ checkers:
     blocking: true
     decision: keep
     reason: "#912 批 1（裁 330）：pre-commit 附加块（PC-X-efbcc9）＋ CI 具名步 ①e（CI-S10）双接线 ⇒ 在役"
+    replacement: ""
+  - id: CT-check-test-obligations.py
+    path: "scripts/control-tower/check-test-obligations.py"
+    wired_to: []
+    orphan: true
+    blocking: false
+    decision: keep
+    reason: "#913 批 2 declared-only（C6 真缺行补登）：接线归 #913 PR-3（①g），当前 C10 复算 wired_to=[]；守卫型义务闸按需运行，接线前不退役 ⇒ keep"
+    replacement: ""
+  - id: CT-check-tool-args-delta.py
+    path: "scripts/control-tower/check-tool-args-delta.py"
+    wired_to: ["CI-S12", "PC-X-ab65b3"]
+    orphan: false
+    blocking: true
+    decision: keep
+    reason: "#915 Q-1（裁 365）：pre-commit 附加块（PC-X-ab65b3）＋ CI 具名步 ①i（CI-S12）双接线 ⇒ 在役"
     replacement: ""
 
 # pairing：判据⑤ —— 5 类扫描各 1 行，覆盖 T1–T5（C9 强制；target 必须命中 gates[].id 或 checkers[].id）
