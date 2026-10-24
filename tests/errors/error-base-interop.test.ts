@@ -303,6 +303,9 @@ const PINNED_ROUTING: readonly string[] = ['src/llm/types.ts:79', 'src/providers
  * 允许新增，但必须**人工同步本清单**（= 一次有意识的决定）；不自动放宽。
  */
 const PINNED_SAMPLING: readonly string[] = [
+  // #956（Q-1 工具入参校验）合入后新增的取样型：`err.message.split('\n')[0]` 只做日志 reason，不参与路由。
+  // 按"取样型新增须人工同步清单"的约定显式登记（路由型白名单 **不** 因此放宽，仍严格 2 条）。
+  'src/agent/tools.ts:166',
   'src/services/content-layering.ts:212',
   'src/services/request-context.ts:253',
 ];
@@ -433,8 +436,9 @@ describe('C 禁解析 message 棘轮（路由型只许 2 条钉死）', () => {
     const sampling = hits.filter((hit) => hit.shape === '取样型').map((hit) => hit.where);
 
     expect(routing).toEqual([...PINNED_ROUTING]);
-    // 显式编码"4 条里只有 2 条是路由型"，防止把 4 条一律当白名单
-    expect(hits).toHaveLength(4);
+    // 显式编码"命中集里只有路由型那 2 条可当白名单"，防止把全部命一律当白名单；
+    // 总数用两条钉死清单派生（禁写死数字：并行线新增取样型会漂移，2026-10-24 #956 实例）
+    expect(hits).toHaveLength(PINNED_ROUTING.length + PINNED_SAMPLING.length);
     expect(sampling).toEqual([...PINNED_SAMPLING]);
     expect(ratchetViolations(RATCHET_ROOT)).toEqual([]);
   });
