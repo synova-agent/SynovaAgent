@@ -5,7 +5,7 @@
  * 不 mock 管线（铁律 12）：只替换 provider 这一外部传输边界
  * （照 tests/agent/tool-loop-executor-resilience.integration.test.ts 形态）。
  *
- * 覆盖规格 §5.1 S1–S11（铁律 48：每条必有 expect）:
+ * 覆盖规格 §5.1 S1–S12（铁律 48：每条必有 expect）:
  *   S1 已 abort signal ⇒ BEFORE_DISPATCH 且 handler 零调用
  *   S2 handler 内 await 后 throwIfAborted ⇒ ABORTED 且副作用零调用
  *   S3 无 signal ⇒ 正常执行（防"全取消"假绿）
@@ -17,6 +17,8 @@
  *   S9 handler 收到的 ctx.signal 身份 === 传入 signal（严格相等）
  *   S10 WebViewAdapter 假 res emit('close') ⇒ signal.aborted + reason.message
  *   S11 引擎 processMessage 入场 abort ⇒ 取消文案且 chatCalls===0
+ *   S12 LLM 调用中途取消：stub provider 挂起监听 options.signal，abort 期间 reject
+ *      ⇒ provider 收到 signal 且被 abort；返回前缀+TOOL_CANCELLED_REPLY 且不发第 2 轮
  *
  * 改坏探针（判据常驻，规格 §5.3 M1–M4 — 改坏任一项 ⇒ 对应用例必红）:
  *   M1 删 src/agent/tools.ts execute 里 `signal?.throwIfAborted()`（dispatch 前）
@@ -25,7 +27,9 @@
  *      （`tool.handler(params, { signal })` 改 `tool.handler(params)`）
  *      ⇒ S2 ctx 为 undefined（throwIfAborted 不触发 → 副作用被执行）/ S9 严格相等失败 ⇒ 红。
  *   M3 删 src/agent/tool-loop-executor.ts callLlm 调用里的 `signal: sig` 透传
- *      ⇒ S6 第 2 轮 LLM 照发（chatCalls=2 ≠ 1）⇒ 红。
+ *      ⇒ **S12 失败**（provider 收不到 signal ⇒ 永不 abort ⇒ 2000ms 兜底 reject
+ *      'provider never saw abort' ⇒ 红）；S6 仍绿属预期（其红由循环头 aborted 检查
+ *      承重）—— 故 M3 判别力绑定 S12（规格 §5.3 v2 / §8-2 ②）。
  *   M4 闸 R6 规则删除 ⇒ T18 期望 rc=1 实得 0 ⇒ tests/control-tower/check-tool-args-delta.test.sh 红。
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
@@ -280,6 +284,39 @@ describe('#915 Q-5 ToolLoopExecutor — 循环取消（S5–S7）', () => {
     expect(spySecond).toHaveBeenCalledTimes(0);
     expect(reply.startsWith(tokens.join(''))).toBe(true); // onToken 收到的 token 前缀 ⊆ 返回内容
     expect(reply.endsWith(TOOL_CANCELLED_REPLY)).toBe(true);
+  });
+
+  it('S12 LLM 调用中途取消：挂起 provider 监听 options.signal，abort ⇒ 前缀+TOOL_CANCELLED_REPLY（M3 承重）', async () => {
+    const controller = new AbortController();
+    let sawSignal = false;
+    let abortedDuringCall = false;
+    const provider = stubProvider((_messages, options) => new Promise<ChatResult>((_resolve, reject) => {
+      // 记录 provider 边界是否收到 signal（callLlm 透传的物理证据；M3 改坏 ⇒ false ⇒ 红）
+      sawSignal = !!options?.signal;
+      const signal = options?.signal;
+      if (!signal) {
+        // 2000ms 兜底：M3 改坏（callLlm 不透传 signal）时 provider 永远看不到 abort
+        setTimeout(() => reject(new Error('provider never saw abort')), 2000);
+        return;
+      }
+      signal.addEventListener('abort', () => {
+        abortedDuringCall = true;
+        reject(new Error('CANCEL_TEST_MID_LLM')); // 非可重试普通 Error（模拟 provider 层 abort 拒绝）
+      }, { once: true });
+    }));
+    const registry = new ToolRegistry();
+    const executor = new ToolLoopExecutor(makeCtx(provider, registry));
+    const sleep = (ms: number): Promise<void> => new Promise(r => setTimeout(r, ms));
+
+    const pending = executor.callLLMWithTools(controller.signal);
+    await sleep(50); // 等 provider 已挂起、监听就位
+    controller.abort(new Error('CANCEL'));
+    const reply = await pending;
+
+    expect(sawSignal).toBe(true); // provider 收到 signal（callLlm 透传承重）
+    expect(abortedDuringCall).toBe(true); // provider 在挂起期间被 abort
+    expect(provider.chatCalls).toBe(1); // 不发第 2 轮
+    expect(reply).toBe(TOOL_CANCELLED_REPLY); // 本场景无已生成前缀 ⇒ 恰为取消文案
   });
 });
 

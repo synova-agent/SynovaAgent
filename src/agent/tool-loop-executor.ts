@@ -196,6 +196,11 @@ export class ToolLoopExecutor {
           signal: sig,
         });
         if (!outcome.ok) {
+          // #915 Q-5: 取消不再当普通失败（M3）——LLM 失败面若由取消引起，返回前缀+取消文案
+          if (sig?.aborted) {
+            this.log.info({ code: 'TOOL_ABORTED', kind: outcome.kind, round }, 'LLM 调用被取消 — 返回已生成前缀+取消标记');
+            return `${generated}${TOOL_CANCELLED_REPLY}`;
+          }
           this.log.warn(
             { code: outcome.code, kind: outcome.kind, attempts: outcome.attempts, degraded: true, round },
             'LLM 调用降级（韧性层分类）',
@@ -307,6 +312,11 @@ export class ToolLoopExecutor {
 
         continue; // 下一轮 LLM 调用
       } catch (err: unknown) {
+        // #915 Q-5: 取消不再当普通失败（M3）——异常若由取消引起，返回前缀+取消文案
+        if (sig?.aborted) {
+          this.log.info({ code: 'TOOL_ABORTED', round }, 'LLM 调用被取消 — 返回已生成前缀+取消标记');
+          return `${generated}${TOOL_CANCELLED_REPLY}`;
+        }
         this.log.error({ err, round }, 'LLM 调用失败');
         return `抱歉，调用失败：${errorMessage(err)}`;
       }
@@ -371,6 +381,11 @@ export class ToolLoopExecutor {
           signal: sig,
         });
         if (!outcome.ok) {
+          // #915 Q-5: 取消不再当普通失败（M3）——LLM 失败面若由取消引起，返回前缀+取消文案
+          if (sig?.aborted) {
+            this.log.info({ code: 'TOOL_ABORTED', kind: outcome.kind, round }, 'LLM 调用被取消 — 返回已生成前缀+取消标记');
+            return `${streamedText}${TOOL_CANCELLED_REPLY}`;
+          }
           this.log.warn(
             { code: outcome.code, kind: outcome.kind, attempts: outcome.attempts, degraded: true, round },
             'streamWithToolLoop: LLM 调用降级（韧性层分类）',
@@ -488,6 +503,11 @@ export class ToolLoopExecutor {
 
         continue;
       } catch (err: unknown) {
+        // #915 Q-5: 取消不再当普通失败（M3）——异常若由取消引起，返回前缀+取消文案
+        if (sig?.aborted) {
+          this.log.info({ code: 'TOOL_ABORTED', round }, 'LLM 调用被取消 — 返回已生成前缀+取消标记');
+          return `${streamedText}${TOOL_CANCELLED_REPLY}`;
+        }
         this.log.error({ err, round }, 'streamWithToolLoop: LLM 调用失败');
         return `抱歉，调用失败：${errorMessage(err)}`;
       }
