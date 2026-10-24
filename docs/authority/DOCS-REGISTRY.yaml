@@ -951,3 +951,12 @@ documents:
     status: active
     owner: P6
     note: "#932 PR-3（DOC 重号清理）受保护路径豁免登记（裁 334）。"
+
+  # ---- P6 2026-10-24：#932 PR-2b（K3 审计判据升级 C＋D，含仓内 bundle）豁免件（裁 348）----
+  - id: DOC-0263
+    type: decision
+    path: gate-exemptions/2026-10-24-p6-932-k3b.md
+    status: active
+    owner: P6
+    note: "#932 PR-2b K3 审计判据升级：G 轴缺任一 ⇒ 不得 PASS（P0/FAIL）；§Q 表（Q-1..Q-15）进 skill；仓内补成真 bundle（package.json＋cordis.patch.yml，persona 与 persona-block 同源）；生效链＋一致性检查；可复跑夹具。"
+
