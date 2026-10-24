@@ -235,7 +235,8 @@ async function handleConversationMessage(req: Request, res: Response, pathSessio
   }
   const bodySessionId = typeof body.sessionId === 'string' && body.sessionId.length > 0 ? body.sessionId : undefined;
   const sessionIdInput = pathSessionId ?? bodySessionId;
-  const orgId = (typeof body.orgId === 'string' && body.orgId) || process.env.SYNOVA_ORG_ID || 'default';
+  const orgIdCandidate = (typeof body.orgId === 'string' && body.orgId) || process.env.SYNOVA_ORG_ID;
+  const orgId = typeof orgIdCandidate === 'string' && orgIdCandidate !== '' ? orgIdCandidate : 'default';
 
   // ①-b `/ingest` 资料入口分支（#656 M2 判据①；**零 LLM 依赖**：先于 ②store 与 ④loadConfig）。
   //      回执一律 JSON（非 SSE）；普通消息不进本分支 ⇒ 既有 SSE 语义零改动。

@@ -404,11 +404,11 @@ export class ConversationEngine {
       config.fallbackProvider !== undefined ? config.fallbackProvider : buildFallbackProvider(provider),
     );
     this.phase = 0;
-    this.orgId = config.orgId || '';
+    this.orgId = typeof config.orgId === 'string' ? config.orgId : '';
     this.turnCount = 0;
     this.config = {
       maxTurns: config.maxTurns ?? 6,
-      orgId: config.orgId || '',
+      orgId: typeof config.orgId === 'string' ? config.orgId : '',
       contextWindowTokens: config.contextWindowTokens ?? DEFAULT_CONTEXT_WINDOW_TOKENS,
     } as Required<EngineConfig>;
     this.messages = [{ role: 'system', content: buildSystemPrompt(0, 0, this.dimensionCoverage, this.dimensionRegistry) }];
@@ -568,7 +568,7 @@ export class ConversationEngine {
           goalType: 'mission' as unknown as string,
           progress: coveredCount / 6,
         },
-        this.orgId || 'default',
+        typeof this.orgId === 'string' && this.orgId !== '' ? this.orgId : 'default',
       );
       log.info({ coveredCount, orgId: this.orgId }, 'Phase 0 访谈摘要已持久化');
     } catch (err: any) {
@@ -657,7 +657,7 @@ export class ConversationEngine {
     // L3 接线: EvidenceCollector — Phase 0 证据自动采集
     if (this.phase === 0 && this.evidenceCollector) {
       this.evidenceCollector.collectFromInterview(
-        this.orgId || 'default', this.sessionId, [userInput],
+        typeof this.orgId === 'string' && this.orgId !== '' ? this.orgId : 'default', this.sessionId, [userInput],
       );
     }
 

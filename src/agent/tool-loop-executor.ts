@@ -216,7 +216,7 @@ export class ToolLoopExecutor {
 
         // 有工具调用 → 执行并注入结果
         this.log.info({ count: result.toolCalls.length, round }, 'LLM 请求工具调用');
-        generated += result.content || '';
+        generated += typeof result.content === 'string' ? result.content : '';
 
         // D819: assistant 必须带 tool_calls（此前只推 role+content → 模型收到的工具对话结构非法）；
         // id 与下方 tool 消息同源（模型给的 id，缺 id 走确定性兜底）
