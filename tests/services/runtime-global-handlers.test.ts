@@ -18,10 +18,16 @@ vi.mock('@synova/logger', () => ({
     info: vi.fn(),
     debug: vi.fn(),
   },
+  // 914-Q3：本文件新增 import `../../src/errors/types`，该模块在 import 期会调 `createLogger`。
+  // 原 mock 只提供 `logger`（createLogger 为 undefined ⇒ import 期 TypeError）⇒ 这里补最小实现，
+  // 覆盖 types.ts 唯一使用的 `log.warn`（src/errors/types.ts:496/617）；不改原有 5 个 spy。
+  createLogger: () => ({ warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn(), fatal: vi.fn() }),
 }));
 
 import { registerGlobalErrorHandlers, unregisterGlobalErrorHandlers } from '../../src/services/runtime-global-handlers';
 import { DiagnosticAgentError, LLMRateLimitError } from '@synova/error-types';
+// 914-Q3 D 判据：真类 = 继承包基类的 `ClassifiedLlmError`（原 `new DiagnosticAgentError(...)` 造的是包类实例 = 假绿）
+import { ClassifiedLlmError } from '../../src/errors/types';
 import { logger } from '@synova/logger';
 import type { Server } from 'http';
 
@@ -110,7 +116,7 @@ describe('unhandledRejection handler 决策逻辑', () => {
   });
 
   it('RATE_LIMITED DiagnosticAgentError 应该 warn + 不关闭 server', () => {
-    const err = new DiagnosticAgentError('RATE_LIMITED', '请求过于频繁', 0, true);
+    const err = new ClassifiedLlmError({ code: 'RATE_LIMITED', message: '请求过于频繁', phase: 0, retryable: true });
 
     process.emit('unhandledRejection', err);
 
@@ -161,6 +167,21 @@ describe('unhandledRejection handler 决策逻辑', () => {
     process.emit('unhandledRejection', { custom: 'error' });
 
     expect(logger.error).toHaveBeenCalled();
+    expect(server.close).toHaveBeenCalled();
+  });
+
+  it('lookalike（code 相同但不是包基类子类）应该 error + 关闭 server', () => {
+    // 裁 366 两态反例：判定必须由 `instanceof` 驱动，而非 code 字符串相等。
+    // 若此条变绿（warn + 不关 server），说明存在"按 code 判"的旁路 ⇒ 真类那两条即为假绿。
+    class Lookalike extends Error {
+      readonly code = 'RATE_LIMITED';
+    }
+    const err = new Lookalike('请求过于频繁');
+
+    process.emit('unhandledRejection', err);
+
+    expect(logger.error).toHaveBeenCalled();
+    expect(logger.warn).not.toHaveBeenCalled();
     expect(server.close).toHaveBeenCalled();
   });
 });

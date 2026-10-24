@@ -10,14 +10,27 @@
 
 // ═══ Base ═══
 
-/** 所有诊断 Agent 错误的基类 */
+/**
+ * 所有诊断 Agent 错误的基类 —— **全仓唯一的错误层次根**（Q-3 单基类）。
+ *
+ * 设计哲学：**按 `code` 路由，永不解析 `message`**（DSH `HarnessError` 锚：
+ * "route on this, never by parsing message"）。`message` 只给人读，路由只认稳定 `code`。
+ */
 export class DiagnosticAgentError extends Error {
   readonly code: string;
   readonly phase: number;
   readonly retryable: boolean;
 
-  constructor(code: string, message: string, phase: number, retryable: boolean) {
-    super(message);
+  /**
+   * @param code - 稳定失败码（调用方按它路由，禁作展示之外的判断）
+   * @param message - 人读消息（只用于日志/展示，禁作路由依据）
+   * @param phase - 诊断阶段（0 = 基础设施）
+   * @param retryable - 是否可重试
+   * @param options - 原生 `ErrorOptions`：`cause` 原样透传给 `Error`（ES2022 原生 cause 链）；
+   *   不传 ⇒ `err.cause === undefined`（不伪造）；其余 9 个子类构造保持 4 参不变
+   */
+  constructor(code: string, message: string, phase: number, retryable: boolean, options?: ErrorOptions) {
+    super(message, options);
     this.name = 'DiagnosticAgentError';
     this.code = code;
     this.phase = phase;

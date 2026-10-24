@@ -9,7 +9,7 @@
  * 参考: https://cloud.baidu.com/doc/WENXINWORKSHOP/s/jlil56u11
  */
 import type { LLMProvider, LLMMessage, ChatOptions, ChatResult, StreamCallback, HealthCheckResult, ProviderConfig } from './types';
-import { DiagnosticAgentError, ErrorCode, isRetryable } from '../errors/types';
+import { ClassifiedLlmError, ErrorCode, isRetryable } from '../errors/types';
 import { createLogger } from '@synova/logger';
 const log = createLogger('src.providers.ernie');
 
@@ -44,7 +44,7 @@ async function getAccessToken(apiKey: string, secretKey: string): Promise<string
   });
 
   if (!res.ok) {
-    throw new DiagnosticAgentError({
+    throw new ClassifiedLlmError({
       code: ErrorCode.AUTH_FAILED,
       message: `文心一言 token 获取失败 (${res.status})`,
       phase: 0, retryable: false,
@@ -53,7 +53,7 @@ async function getAccessToken(apiKey: string, secretKey: string): Promise<string
 
   const data = await res.json() as { access_token?: string; expires_in?: number };
   if (!data.access_token) {
-    throw new DiagnosticAgentError({
+    throw new ClassifiedLlmError({
       code: ErrorCode.AUTH_FAILED,
       message: '文心一言 token 响应缺少 access_token',
       phase: 0, retryable: false,
@@ -91,7 +91,7 @@ export function createErnieProvider(config: ProviderConfig): LLMProvider {
 
     async chat(messages: LLMMessage[], opts?: ChatOptions): Promise<ChatResult> {
       if (!apiKey || !secretKey) {
-        throw new DiagnosticAgentError({
+        throw new ClassifiedLlmError({
           code: ErrorCode.AUTH_FAILED,
           message: '文心一言 API Key 或 Secret Key 未配置',
           phase: 0, retryable: false,
@@ -122,7 +122,7 @@ export function createErnieProvider(config: ProviderConfig): LLMProvider {
         const code = res.status === 429 ? ErrorCode.RATE_LIMITED
           : res.status >= 500 ? ErrorCode.SERVER_ERROR
           : ErrorCode.INTERNAL;
-        throw new DiagnosticAgentError({
+        throw new ClassifiedLlmError({
           code, phase: 0, retryable: isRetryable(code),
           message: `文心一言 API ${res.status}: ${text.slice(0, 200)}`,
         });
@@ -130,7 +130,7 @@ export function createErnieProvider(config: ProviderConfig): LLMProvider {
 
       const data = await res.json() as { result?: string; error_msg?: string };
       if (data.error_msg) {
-        throw new DiagnosticAgentError({
+        throw new ClassifiedLlmError({
           code: ErrorCode.INTERNAL, phase: 0, retryable: false,
           message: `文心一言: ${data.error_msg}`,
         });

@@ -2,10 +2,10 @@
  * providers/deepseek.ts — DeepSeek Provider 适配器
  *
  * 使用 BaseLLMProvider 消除 SSE/HTTP/健康检查重复代码 (54→0 行重复)。
- * 保留唯一特性: sanitizeMessages, DiagnosticAgentError, validateResponse, convertTools
+ * 保留唯一特性: sanitizeMessages, ClassifiedLlmError, validateResponse, convertTools
  */
 import type { LLMProvider, LLMMessage, ChatOptions, ChatResult, ProviderConfig, ChatCompletionResponse } from './types';
-import { DiagnosticAgentError, ErrorCode, isRetryable } from '../errors/types';
+import { ClassifiedLlmError, ErrorCode, isRetryable } from '../errors/types';
 import { sanitizeMessages } from './message-sanitizer';
 import { createOpenAICompatibleProvider } from './base';
 
@@ -35,7 +35,7 @@ export function createDeepSeekProvider(config: ProviderConfig): LLMProvider {
       const code = status === 429 ? ErrorCode.RATE_LIMITED
         : status >= 500 ? ErrorCode.NETWORK
         : ErrorCode.INTERNAL;
-      return new DiagnosticAgentError({
+      return new ClassifiedLlmError({
         code, message: `DeepSeek ${context}: ${err.message}`,
         phase: 0, retryable: isRetryable(code),
       });
