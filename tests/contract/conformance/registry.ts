@@ -8,7 +8,7 @@
  * 上游裁：两条 sqlite 违约（updatedAt-iso／keyPrefix-literal）标红不阻断、只减不增；枚举集合 ≡ 登记表。
  *
  * Source map：
- *   CONFORMANCE_REGISTRY        → interface／definedAt／implementations／suites／planned(DataConnector)
+ *   CONFORMANCE_REGISTRY        → interface／definedAt／implementations／suites／planned(DataConnector／StorageBackend declared-only)
  *   enumerateStorageBackendImplementations(scanRoot?) → 源码枚举 `class X implements … StorageBackend`
  *   loadKnownDivergences()      → known-divergences.yaml（KNOWN_VIOLATION 登记；主测试消费）
  *   loadKnownRed()              → known-red.yaml（既有红登记；PR-3 ①g 消费，本批只落文件）
@@ -131,6 +131,11 @@ export const CONFORMANCE_REGISTRY: ConformanceRegistry = {
       interface: 'DataConnector',
       definedAt: { file: 'src/connectors/types.ts', line: 61 },
       note: '连接器契约套件不在本批（PR-1 只做 StorageBackend）；PR-2/Q-10 另立，禁在本批空转',
+    },
+    {
+      interface: 'StorageBackend',
+      definedAt: { file: 'src/store/storage-backend.ts', line: 46 },
+      note: '生产接线/分层重构（hub 不做 IO/接线或退役）待 CTO 裁 —— 本批 declared-only',
     },
   ],
 };

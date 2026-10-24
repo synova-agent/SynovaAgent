@@ -9,7 +9,7 @@
 import Database from 'better-sqlite3';
 import { createLogger } from '@synova/logger';
 
-const log = createLogger('store/storage-backend');
+const log = createLogger('store/storage-backend'); // # quality-exempt: 964 declared-only（生产接线另立卡） 2026-12-31
 
 // ═══ Types ═══
 
@@ -58,6 +58,120 @@ export interface StorageBackend {
 
   /** Check if backend is healthy */
   healthCheck(): Promise<{ healthy: boolean; error?: string }>;
+
+  /**
+   * 能力面声明（可选）：省略 = 未声明 ⇒ `requireStorageCapability` 抛 `STORAGE_CAPABILITY_UNDECLARED`。
+   * #964 Q-15 declared-only（生产接线另立卡）。
+   */
+  capabilities?: ReadonlySet<StorageCapability>;
+}
+
+// ═══ Capability surface（#964 Q-15 · declared-only） ═══
+// 已知限制：本批只做「声明 + 可解析」，生产消费者 = 0（接线/分层重构另立卡，登记在
+//          tests/contract/conformance/registry.ts 的 planned）；能力面是静态声明集合，
+//          运行期动态注册能力不在本批契约内。
+
+/** 能力词表（唯一真源；禁第二处手写联合） */
+export const STORAGE_CAPABILITIES = [
+  'kv',
+  'prefix-query',
+  'limit-query',
+  'health',
+  'transactions',
+] as const;
+
+export type StorageCapability = (typeof STORAGE_CAPABILITIES)[number];
+
+/** 能力解析错误码（机器可判：调用方按 code 分流，不解析 message） */
+export type StorageCapabilityErrorCode =
+  | 'STORAGE_CAPABILITY_UNSUPPORTED'
+  | 'STORAGE_CAPABILITY_UNDECLARED';
+
+/**
+ * 能力解析错误：缺能力/未声明一律 throw（**不是** `{degraded:true}` 返回值）。
+ *
+ * 与 DSH `storage/backend.ts`「resolution fails loud」同口径；
+ * `StorageBackend` 既有 5 方法 I/O 失败折 degraded（铁律 31）的语义不受本类影响。
+ */
+export class StorageCapabilityError extends Error {
+  readonly code: StorageCapabilityErrorCode;
+  readonly capability: StorageCapability;
+  readonly phase: 'resolve';
+  readonly retryable = false;
+
+  /**
+   * @param message - 人类可读失败点（含 code 与 capability）
+   * @param code - 机器可判错误码（UNSUPPORTED／UNDECLARED）
+   * @param capability - 被解析的能力值（回填到错误上，供调用方兜底）
+   */
+  constructor(message: string, code: StorageCapabilityErrorCode, capability: StorageCapability) {
+    super(message);
+    this.name = 'StorageCapabilityError';
+    this.code = code;
+    this.capability = capability;
+    this.phase = 'resolve';
+  }
+}
+
+/**
+ * 解析 backend 的能力面：具备 ⇒ true；未声明／已声明但缺失 ⇒ 抛 typed error（可开关降级）。
+ *
+ * @input  backend — 任一 StorageBackend；capability — 能力枚举值
+ * @output true = 已声明且具备（可安全调用该能力）
+ * @throws StorageCapabilityError —— 未声明（UNDECLARED）／已声明但缺失（UNSUPPORTED）
+ * @degraded 开关 SYNO_STORAGE_CAP_STRICT=0 ⇒ 不抛：log.warn({degraded:true, code, capability}) ＋ 返回 false
+ * @exit   不退出
+ */
+export function requireStorageCapability(
+  backend: StorageBackend,
+  capability: StorageCapability,
+): boolean {
+  const declared = backend.capabilities;
+  if (declared === undefined) {
+    return resolveMissingCapability('STORAGE_CAPABILITY_UNDECLARED', capability);
+  }
+  if (!declared.has(capability)) {
+    return resolveMissingCapability('STORAGE_CAPABILITY_UNSUPPORTED', capability);
+  }
+  return true;
+}
+
+/**
+ * 缺能力的单一出口：严格模式抛 typed error；开关 `='0'` ⇒ degraded 日志 + false（不抛）。
+ *
+ * @input  code — 机器可判错误码；capability — 被解析的能力值
+ * @output false（仅降级路径可达；严格路径抛错不返回）
+ * @throws StorageCapabilityError —— 开关未设／非 '0'（只认 '0'）
+ * @degraded SYNO_STORAGE_CAP_STRICT='0' ⇒ log.warn({degraded:true, …}) ＋ 返回 false
+ * @exit   不退出
+ */
+function resolveMissingCapability(
+  code: StorageCapabilityErrorCode,
+  capability: StorageCapability,
+): boolean {
+  if (process.env.SYNO_STORAGE_CAP_STRICT === '0') {
+    log.warn(
+      {
+        degraded: true,
+        component: 'store/storage-backend',
+        code,
+        capability,
+        phase: 'resolve',
+        retryable: false,
+      },
+      `存储能力缺失已降级（SYNO_STORAGE_CAP_STRICT=0）：${code} capability=${capability}`,
+    );
+    return false;
+  }
+  const reason =
+    code === 'STORAGE_CAPABILITY_UNDECLARED'
+      ? '未声明能力面（backend.capabilities === undefined）'
+      : '已声明能力面但不含该能力';
+  throw new StorageCapabilityError(
+    `${code}: ${reason} —— capability='${capability}'`,
+    code,
+    capability,
+  );
 }
 
 // ═══ Memory Backend (dev/test) ═══
@@ -67,6 +181,8 @@ export interface StorageBackend {
  * Data is lost on process exit — no persistence.
  */
 export class MemoryStorageBackend implements StorageBackend {
+  readonly capabilities: ReadonlySet<StorageCapability> = new Set(['kv', 'prefix-query', 'limit-query', 'health']);
+
   private store = new Map<string, StorageEntry>();
 
   private makeKey(key: string, namespace = 'default'): string {
@@ -117,6 +233,8 @@ export class MemoryStorageBackend implements StorageBackend {
  * NOT for large binary blobs — use GraphStore for ontology data.
  */
 export class SqliteStorageBackend implements StorageBackend {
+  readonly capabilities: ReadonlySet<StorageCapability> = new Set(['kv', 'prefix-query', 'limit-query', 'health']);
+
   private db: Database.Database;
   private degraded = false;
 
