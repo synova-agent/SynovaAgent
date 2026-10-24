@@ -19,13 +19,13 @@
 #
 # 存量棘轮（§2）:
 #   legacy = `git ls-files src` 里 *.ts 的个数 − 本表已登记模块数（口径可核可复现）
-#   as_of 现算 = 475 − 6 = 469（2026-10-24，gitea/local-main@ac41ae13c）
+#   as_of 现算 = 475 − 6 = 469（2026-10-24，gitea/local-main@b398e4d0a）
 #   legacy_baseline **只减不增**：当前数 > baseline ⇒ 红；
 #   `python3 scripts/control-tower/check-test-obligations.py --write-baseline` **只许降到当前值**。
 #
 # 扩表方式（§9 风险 1）: 加一行 entry 即可（不改脚本）；schema_version 变更须**同 PR** 改本件。
 schema_version: 1
-meta: { as_of: "gitea/local-main@ac41ae13c", ruling: "裁332/353", legacy_baseline: 469 }
+meta: { as_of: "gitea/local-main@b398e4d0a", ruling: "裁332/353", legacy_baseline: 469 }
 entries:
   - { module: src/store/session-store.ts,          surface: protocol,      obligation: expected, asset_glob: "tests/expected/session/**",      issue: "#913", expiry: "2027-06-30" }
   - { module: src/store/session-projection.ts,     surface: protocol,      obligation: expected, asset_glob: "tests/expected/session/**",      issue: "#913", expiry: "2027-06-30" }
