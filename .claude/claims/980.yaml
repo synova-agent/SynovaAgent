@@ -11,3 +11,5 @@ done:
   - verify: bash scripts/control-tower/post-merge-gate.sh --selfcheck
   - verify: bash scripts/control-tower/post-merge-gate.sh
 note: "#980 A′ 替代（裁 397）：合并后跑 6 项未接 CI 的门禁；三态 0/1/2；自检 2/2。"
+
+# rerun trigger: CI failure at 02:40 was 8s early-fail (共享 worktree 并发，见 #986)
