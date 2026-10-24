@@ -105,7 +105,6 @@ entries:
     status: declared-only
     owner: CTO
     notes: "#953 自动化一期：四条件 can 且非受保护路径才自动合；人运行，无 CI 消费者"
- HEAD
   - capability: control-tower.checkToolArgsDelta
     defined_at: "scripts/control-tower/check-tool-args-delta.py:1"
     provider: "scripts/control-tower/check-tool-args-delta.py:1"

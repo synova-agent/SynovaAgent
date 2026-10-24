@@ -227,10 +227,10 @@ fi
 echo "── 4. 登记表 ──"
 REG_OUT="$("$PYBIN" "$SCANNER" --check-registry "$REGISTRY" 2>&1)"
 REG_RC=$?
-if [ "$REG_RC" -eq 0 ] && printf '%s\n' "$REG_OUT" | grep -q 'REGISTRY-OK rows=9'; then
+if [ "$REG_RC" -eq 0 ] && printf '%s\n' "$REG_OUT" | grep -q 'REGISTRY-OK rows=10'; then
   pass "登记表：$(printf '%s\n' "$REG_OUT" | tail -1)"
 else
-  fail "登记表校验失败 rc=${REG_RC}（期望 0 ＋ REGISTRY-OK rows=9）"
+  fail "登记表校验失败 rc=${REG_RC}（期望 0 ＋ REGISTRY-OK rows=10）"
   printf '%s\n' "$REG_OUT" | tail -3 | sed 's/^/     /'
 fi
 
