@@ -5,6 +5,7 @@ writeset:
   - vitest.config.ts
   - tsconfig.tests.json
   - tests/tsconfig.known-errors.txt
+  - tests/tsconfig.norm.py
   - tests/vitest.known-red.txt
   - tests/vitest.known-red.check.py
   - tests/acceptance/zero-code-industry.test.ts

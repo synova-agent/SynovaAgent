@@ -351,9 +351,9 @@ jobs:
           if [ ! -s /tmp/tests-tsc.log ]; then
             echo "❌ tsc 日志为空（检查自身失败 E_TSC_NOLOG；禁当"无错"）"; exit 2
           fi
-          NORM='s#/Users/[^"]*?/(src|tests|packages|scripts|node_modules)/#\1/#g'
-          grep "error TS" /tmp/tests-tsc.log | sed -E "$NORM" | sort > /tmp/tests-tsc-now.txt || exit 2
-          sed -E "$NORM" tests/tsconfig.known-errors.txt | sort > /tmp/tests-tsc-base.txt
+          # 路径归一：独立小件 tests/tsconfig.norm.py（本机与 CI 同式；避免 YAML↔bash↔python 三层转义）
+          grep "error TS" /tmp/tests-tsc.log | python3 tests/tsconfig.norm.py | sort > /tmp/tests-tsc-now.txt || exit 2
+          python3 tests/tsconfig.norm.py < tests/tsconfig.known-errors.txt | sort > /tmp/tests-tsc-base.txt || exit 2
           BASE_N="$(wc -l < /tmp/tests-tsc-base.txt | tr -d ' ')"
           NOW_N="$(wc -l < /tmp/tests-tsc-now.txt | tr -d ' ')"
           if [ "$NOW_N" -eq 0 ] && [ "$BASE_N" -gt 0 ]; then
