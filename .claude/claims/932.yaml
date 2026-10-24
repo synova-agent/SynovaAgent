@@ -34,6 +34,15 @@ writeset:
   - memory/notes/proposed/2026-10-24-p6-932-propagation.md
   # PR-3（E：DOC 重号清理，另行开 PR）
   - docs/authority/DOCS-REGISTRY.yaml
+  # PR-2b（K3 审计判据升级：仓内补成真 bundle ＋ 可复跑夹具，裁 336／348）
+  - docs/synova/presets/synova-k3-audit/package.json
+  - docs/synova/presets/synova-k3-audit/cordis.patch.yml
+  - .synova/skills/synova-audit/SKILL.md
+  - .dsh/skills/synova-audit/SKILL.md
+  - tests/control-tower/k3-preset-bundle-sync.test.sh
+  - tests/control-tower/k3-birthcert-fixture.test.sh
+  - gate-exemptions/2026-10-24-p6-932-k3b.md
+  - memory/notes/proposed/2026-10-24-p6-932-k3-audit-criteria.md
 done:
   - verify: git grep -l "8 节" -- AGENTS.md agents .synova/skills .dsh/skills   # 期望 0
   - verify: git grep -l "docs/plans/codex\|\.claude/task-briefs" -- AGENTS.md agents .synova .dsh docs/synova/presets   # 期望 0
