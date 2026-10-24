@@ -1,14 +1,96 @@
-{"pr":936,"head_reviewed":"27df166da","reviewer":"zero-context-subagent(CTO-spawned)","round":1,
- "verdict":"pass","blocking":[],
- "passed":["写集 11 件与 claim 集合相等，src|scripts|.gitea|package.json|vitest.config 命中 0",
-  "G1 可达：vitest.config.ts:28 include；local-gates.yml:210 CI 实跑 --changed；run #1625/#1626 success pending=0",
-  "G2 不静默：RegistryError(code/phase/retryable)+degraded: 前缀；四次 expiry 注入实测红并点名",
-  "G3 判据：真实现 × 9 条契约；改坏 7 次全红点名（未登记实现/删登记/强制转正/真 delete 改坏/两清单 expiry 各 2）",
-  "G4 边界：夹具结果校验、清单字段/日历校验、schema_version 校验；零出站 I/O",
-  "G6 一致：claim_store ok(writeset=11)；gate-protection 8/0；doc-registry 3 文档 0 未登记；DOC 重号仅既有 4 个，0255–0257 各 1",
-  "真跑：npx vitest run tests/contract tests/storage-backend.test.ts → 8 files / 58 tests 全绿 EXIT=0",
-  "两清单 expiry 真消费；meta.as_of=138b8f2dc；known-red :79 命中"],
- "unverifiable":["旧 head f2e277820 的 verifier 报告不在可见范围；已在 27df166da 独立复现等价态",
-  "E5 用等价形态（对已绿用例造假登记）验证同一判据",
-  "CI 内 vitest 版本行未逐字核（lock 5.0.2 vs 本机 4.1.8），以 run #1626 实跑同 3 个测试文件通过为准"],
- "as_of":"2026-10-24T03:51:16Z"}
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 936,
+  "patch_fingerprint": "sha256:14a5f9ea88989b9bc57bfdf81c2f472cb7ea8782d2ad5f7cb5d3f837ef856371",
+  "author": "win-push",
+  "reviewer": "zero-context-subagent(CTO-spawned)",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "issued_at": "2026-10-24T03:51:16Z",
+  "tool": "零上下文验收员（CTO 派；验收 skill 五步＋G1–G6）",
+  "head_reviewed": "27df166da",
+  "round": 1,
+  "checks": [
+    {
+      "id": "C1",
+      "name": "写集 11 件与 claim 集合相等，src|scripts|.gitea|package.json|vitest.config 命中 0",
+      "cmd": "见 reviewer_report.passed[0]（#936 评论 6055 验收员原文；L1 仅结构化，未增删/改写内容）",
+      "evidence": "写集 11 件与 claim 集合相等，src|scripts|.gitea|package.json|vitest.config 命中 0",
+      "result": "pass"
+    },
+    {
+      "id": "C2",
+      "name": "G1 可达：vitest.config.ts:28 include；local-gates.yml:210 CI 实跑 --changed；run #1625/#1626 success pending=0",
+      "cmd": "见 reviewer_report.passed[1]（#936 评论 6055 验收员原文；L1 仅结构化，未增删/改写内容）",
+      "evidence": "G1 可达：vitest.config.ts:28 include；local-gates.yml:210 CI 实跑 --changed；run #1625/#1626 success pending=0",
+      "result": "pass"
+    },
+    {
+      "id": "C3",
+      "name": "G2 不静默：RegistryError(code/phase/retryable)+degraded: 前缀；四次 expiry 注入实测红并点名",
+      "cmd": "见 reviewer_report.passed[2]（#936 评论 6055 验收员原文；L1 仅结构化，未增删/改写内容）",
+      "evidence": "G2 不静默：RegistryError(code/phase/retryable)+degraded: 前缀；四次 expiry 注入实测红并点名",
+      "result": "pass"
+    },
+    {
+      "id": "C4",
+      "name": "G3 判据：真实现 × 9 条契约；改坏 7 次全红点名（未登记实现/删登记/强制转正/真 delete 改坏/两清单 expiry 各 2）",
+      "cmd": "见 reviewer_report.passed[3]（#936 评论 6055 验收员原文；L1 仅结构化，未增删/改写内容）",
+      "evidence": "G3 判据：真实现 × 9 条契约；改坏 7 次全红点名（未登记实现/删登记/强制转正/真 delete 改坏/两清单 expiry 各 2）",
+      "result": "pass"
+    },
+    {
+      "id": "C5",
+      "name": "G4 边界：夹具结果校验、清单字段/日历校验、schema_version 校验；零出站 I/O",
+      "cmd": "见 reviewer_report.passed[4]（#936 评论 6055 验收员原文；L1 仅结构化，未增删/改写内容）",
+      "evidence": "G4 边界：夹具结果校验、清单字段/日历校验、schema_version 校验；零出站 I/O",
+      "result": "pass"
+    },
+    {
+      "id": "C6",
+      "name": "G6 一致：claim_store ok(writeset=11)；gate-protection 8/0；doc-registry 3 文档 0 未登记；DOC 重号仅既有 4 个，0255–0257 各 1",
+      "cmd": "见 reviewer_report.passed[5]（#936 评论 6055 验收员原文；L1 仅结构化，未增删/改写内容）",
+      "evidence": "G6 一致：claim_store ok(writeset=11)；gate-protection 8/0；doc-registry 3 文档 0 未登记；DOC 重号仅既有 4 个，0255–0257 各 1",
+      "result": "pass"
+    },
+    {
+      "id": "C7",
+      "name": "真跑：npx vitest run tests/contract tests/storage-backend.test.ts → 8 files / 58 tests 全绿 EXIT=0",
+      "cmd": "见 reviewer_report.passed[6]（#936 评论 6055 验收员原文；L1 仅结构化，未增删/改写内容）",
+      "evidence": "真跑：npx vitest run tests/contract tests/storage-backend.test.ts → 8 files / 58 tests 全绿 EXIT=0",
+      "result": "pass"
+    },
+    {
+      "id": "C8",
+      "name": "两清单 expiry 真消费；meta.as_of=138b8f2dc；known-red :79 命中",
+      "cmd": "见 reviewer_report.passed[7]（#936 评论 6055 验收员原文；L1 仅结构化，未增删/改写内容）",
+      "evidence": "两清单 expiry 真消费；meta.as_of=138b8f2dc；known-red :79 命中",
+      "result": "pass"
+    }
+  ],
+  "findings": [],
+  "reviewer_report": {
+    "pr": 936,
+    "head_reviewed": "27df166da",
+    "reviewer": "zero-context-subagent(CTO-spawned)",
+    "round": 1,
+    "verdict": "pass",
+    "blocking": [],
+    "passed": [
+      "写集 11 件与 claim 集合相等，src|scripts|.gitea|package.json|vitest.config 命中 0",
+      "G1 可达：vitest.config.ts:28 include；local-gates.yml:210 CI 实跑 --changed；run #1625/#1626 success pending=0",
+      "G2 不静默：RegistryError(code/phase/retryable)+degraded: 前缀；四次 expiry 注入实测红并点名",
+      "G3 判据：真实现 × 9 条契约；改坏 7 次全红点名（未登记实现/删登记/强制转正/真 delete 改坏/两清单 expiry 各 2）",
+      "G4 边界：夹具结果校验、清单字段/日历校验、schema_version 校验；零出站 I/O",
+      "G6 一致：claim_store ok(writeset=11)；gate-protection 8/0；doc-registry 3 文档 0 未登记；DOC 重号仅既有 4 个，0255–0257 各 1",
+      "真跑：npx vitest run tests/contract tests/storage-backend.test.ts → 8 files / 58 tests 全绿 EXIT=0",
+      "两清单 expiry 真消费；meta.as_of=138b8f2dc；known-red :79 命中"
+    ],
+    "unverifiable": [
+      "旧 head f2e277820 的 verifier 报告不在可见范围；已在 27df166da 独立复现等价态",
+      "E5 用等价形态（对已绿用例造假登记）验证同一判据",
+      "CI 内 vitest 版本行未逐字核（lock 5.0.2 vs 本机 4.1.8），以 run #1626 实跑同 3 个测试文件通过为准"
+    ],
+    "as_of": "2026-10-24T03:51:16Z"
+  }
+}
