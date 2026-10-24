@@ -10,15 +10,26 @@
  *     · node-types 用例保留，改为**反向断言**「按设计不加载」（防有人误加回去而不被发现）。
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { existsSync, mkdirSync, writeFileSync, rmSync } from 'fs';
+import { mkdirSync, writeFileSync, rmSync, mkdtempSync, symlinkSync } from 'fs';
+import { tmpdir } from 'os';
 import { join } from 'path';
 import { execSync } from 'child_process';
 
-const PIZZA_DIR = join(process.cwd(), 'extensions', 'industries', 'pizza-chain');
+const REPO_ROOT = process.cwd();
+// #840 E-4 隔离：本件会在「行业目录」里写临时行业包。若直接写仓内工作树，会与**并行**跑的
+//   参数桥棘轮（tests/l4/ontology-loader-param-bridge-1031.test.ts 数「真实 56 件 edge-types」）
+//   相互污染（实测：全量首跑 3 例红）。故改为 **temp cwd 隔离**：把 extensions/ontology 软链进临时目录，
+//   只在临时目录里造行业包，测完 chdir 回来 —— 不写仓库工作树、不影响并行用例。
+const TMP_CWD = mkdtempSync(join(tmpdir(), 'pizza-chain-acceptance-'));
+const PIZZA_DIR = join(TMP_CWD, 'extensions', 'industries', 'pizza-chain');
 const TEST_FILES: string[] = [];
 
 describe('零代码接入验收 (pizza-chain)', () => {
   beforeAll(() => {
+    // temp cwd 结构：真实本体目录软链 + 临时行业目录
+    mkdirSync(join(TMP_CWD, 'extensions', 'industries'), { recursive: true });
+    symlinkSync(join(REPO_ROOT, 'extensions', 'ontology'), join(TMP_CWD, 'extensions', 'ontology'), 'dir');
+    process.chdir(TMP_CWD);
     // 创建测试用的 pizza-chain 行业
     mkdirSync(join(PIZZA_DIR, 'node-types'), { recursive: true });
     mkdirSync(join(PIZZA_DIR, 'edge-types'), { recursive: true });
@@ -51,7 +62,8 @@ describe('零代码接入验收 (pizza-chain)', () => {
     for (const f of TEST_FILES) { try { rmSync(f, { force: true }); } catch { /* ok */ } }
     try { rmSync(join(PIZZA_DIR, 'node-types'), { recursive: true, force: true }); } catch { /* ok */ }
     try { rmSync(join(PIZZA_DIR, 'edge-types'), { recursive: true, force: true }); } catch { /* ok */ }
-    try { rmSync(PIZZA_DIR, { recursive: true, force: true }); } catch { /* ok */ }
+    try { process.chdir(REPO_ROOT); } catch { /* ok */ }
+    try { rmSync(TMP_CWD, { recursive: true, force: true }); } catch { /* ok */ }
   });
 
   it('pizza-chain 行业模板被自动发现', async () => {
@@ -88,7 +100,7 @@ describe('零代码接入验收 (pizza-chain)', () => {
   });
 
   it('新增行业零 .ts 文件修改', () => {
-    const diff = execSync('git diff --name-only', { encoding: 'utf-8' });
+    const diff = execSync('git diff --name-only', { encoding: 'utf-8', cwd: REPO_ROOT });
     const tsChanges = diff.split('\n').filter(f => f.endsWith('.ts') && !f.includes('.test.'));
     expect(tsChanges.length).toBe(0);
   });
