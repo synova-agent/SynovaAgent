@@ -1,0 +1,117 @@
+{
+ "schema": "syno-review-receipt/v1",
+ "pr": 955,
+ "head_reviewed": "968732a709cf0daf266fa1301a0d8af4a40b389e",
+ "base_reviewed": "43f24f5c9885e3ec4bcb78a23fda6a24b94653a8",
+ "author": "k12-batch5",
+ "reviewer": "零上下文独立复核员（fresh session，未参与实现）",
+ "independence": "fresh-session",
+ "verdict": "PASS",
+ "round": "3b — 上轮 4638f8ef1 判 PASS 但 N3 阻断（裁 371）；本轮只核 N3 修复与四周退化",
+ "scope": "只核 5 项：① N3 真修（三种特殊父键走真实 dump）② 回归 3 例真承重（回退必红）③ 前轮判据未退化（30 passed／canary 0／R4 删除 0）④ 三条文案 ⑤ merge 只带 main＋WIRING 双方行＋门禁（pre-commit 12 组／gate-protection／CI）。不重做全量审查。",
+ "environment": {
+  "worktree": "/tmp/acc955b（detached 968732a70；node_modules 指向 .synova-wt-914-q2-1024，vitest 5.0.2；node v22.23.2，与规格 §5 一致）",
+  "cross_check": "主仓 node_modules（vitest 4.1.8 / node v24.19.0）复跑同样 30 passed，结论不随工具链版本改变"
+ },
+ "checks": [
+  {
+   "id": "C1",
+   "title": "N3 真修：中文／含点／含空格父键走真实 dump 不退化",
+   "cmd": "cd /tmp/acc955b && npx tsx /tmp/dump955b.ts   # 临时夹具 customer-config/verify955b-raw/{config,workspace}.yml；真 express 路由 + listen(0) + fetch，raw body 断言",
+   "evidence": "HTTP 200，raw_bytes=851，degraded=false，config_keys=['诊断','x.y','a b','plain']；config={\"诊断\":{\"apiKey\":{\"configured\":true}},\"x.y\":{\"apiKey\":{\"configured\":true}},\"a b\":{\"apiKey\":{\"configured\":true}},\"plain\":\"keep\"}；secrets=[{\"path\":\"$.诊断.apiKey\",\"configured\":true,\"source\":\"customer\"},{\"path\":\"$[\\\"x.y\\\"].apiKey\",\"configured\":true,\"source\":\"customer\"},{\"path\":\"$.a b.apiKey\",\"configured\":true,\"source\":\"customer\"}]；三组 canary 全文/末 4 位命中均=0。⇒ 三种父键均可脱敏且 source 正确解析，整条 dump 未退化。",
+   "result": "pass"
+  },
+  {
+   "id": "C2",
+   "title": "N3 是真实缺陷（旧码同夹具复现 ⇒ 整条 dump 退化 config:{}）",
+   "cmd": "git show 4638f8ef1:src/config/redact.ts > src/config/redact.ts; npx vitest run 复核件（同一真实 dump 断言）；恢复（git diff src/config/redact.ts 为空）",
+   "evidence": "旧码路径日志：{\"level\":40,...,\"service\":\"routes/config\",\"err\":{\"code\":\"REDACT_UNSUPPORTED\",...},\"msg\":\"config/dump 解析/脱敏异常 — degraded 响应（不抛，铁律 24/31）\"}；断言 `expected true to be false`（degraded 由 false 变 true），config 退化为 {}。⇒ N3 可复现，且修复正是把这条路径修掉（非测试口径调整）。",
+   "result": "pass"
+  },
+  {
+   "id": "C3",
+   "title": "回归 3 例真承重：回退到只认 ASCII ⇒ 新增用例必红",
+   "cmd": "cp 修复版备份; git show 4638f8ef1:src/config/redact.ts > src/config/redact.ts; npx vitest run tests/config/redact.test.ts",
+   "evidence": "Tests 3 failed | 13 passed (16)。失败恰为 N3 三条：中文父键（ConfigRedactError: 路径格式不受支持 \"$.诊断.apiKey\"，旧 :140 PATH_SHAPE）、含点键（actual slot path '$.a.b.apiKey' ≠ 期望 '$[\"a.b\"].apiKey'）、含空格键（\"$.my key.apiKey\" 抛错）。恢复修复版后 `npx vitest run tests/config/redact.test.ts` ⇒ 16 passed；三文件合跑 34 passed。⇒ 3 例承重（改坏必红方向成立），且回退恢复后 git diff 为空。",
+   "result": "pass"
+  },
+  {
+   "id": "C4",
+   "title": "前轮判据未退化：30 passed／跨 wire canary 0／R4 删除 0",
+   "cmd": "export PATH=$HOME/.nvm/versions/node/v22.23.2/bin:$PATH; npx vitest --version; npx vitest run tests/config/redact.test.ts tests/routes/config.test.ts; npx tsc --noEmit; python3 scripts/control-tower/check-quality-delta.py --base gitea/local-main; git diff -U0 43f24f5c9..968732a70 -- tests/routes/config.test.ts | grep -E '^-' | grep -v '^---' | wc -l",
+   "evidence": "vitest/5.0.2 darwin-arm64 node-v22.23.2；Test Files 2 passed (2) / Tests 30 passed (30)。tsc exit 0。QUALITY-DELTA: PASS changes=4 rules=G1,G3,G4 base=43f24f5c9。R4：既有 tests/routes/config.test.ts 删除行=0（numstat 218 0；base 8 条 it() → head 14 条，只增 6 条）。跨 wire：套件 A-1 绿＋复核件三组自造 canary 全文/末 4 位命中 0。logic_lines(redact.ts)=98<100（check-test-obligations.py:423 同函数实测）。",
+   "result": "pass"
+  },
+  {
+   "id": "C5",
+   "title": "三条文案已改且口径与实测一致",
+   "cmd": "sed -n '43,47p' memory/notes/proposed/2026-10-24-914-q2-config-secret-redaction.md；curl Gitea /pulls/955 | 取 body；git -C .handbook show 7d3b7a1",
+   "evidence": "① Note:44 现为『实测 `Tests 4 failed | 10 passed (14)`』——我回退 src/routes/config.ts 到 base 实测：Tests 4 failed | 10 passed (14)，失败恰为 A-1/A-2/A-4/A-5（与文案同）⇒ 数字真。② PR body 首行『Refs #914…』，全文 `Closes #914` 命中 0（API body 实测）。③ 规格旧 :244 行（`:25/:39/:44` 旧行号）已在 handbook 7d3b7a1 改为现 :246『base :53/:54/:59』；对照 base 文件实测 53=config、54=provenance、59=catch、49=resolve、26-34=orgId 校验 ⇒ 新行号真。规格 C1 路径文法与 C2 特殊父键行亦同提交回填。",
+   "result": "pass"
+  },
+  {
+   "id": "C6",
+   "title": "merge 只带入 main；WIRING 冲突双方行都在",
+   "cmd": "git log -1 --format='%H %P' 006707d42；MB=$(git merge-base 902fd4243 43f24f5c9)；git diff --stat $MB..43f24f5c9；git diff --stat 902fd4243..006707d42；git diff --stat 43f24f5c9..006707d42 -- <main-only 12 件>；git diff 43f24f5c9..968732a70 -- docs/authority/WIRING-REGISTRY.yaml",
+   "evidence": "merge 006707d42 父=902fd4243＋43f24f5c9；merge-base=4aa1130e9。main 自身 delta（4aa1130e9..43f24f5c9）与 merge 第一父 delta（902fd4243..006707d42）逐文件行数完全一致：12 files, 634 insertions(+), 1 deletion(-)（唯一删除在 docs/authority/DOCS-REGISTRY.yaml，属 main 内容）。main-only 12 件在 merge 结果 vs local-main 逐件 diff 为空；PR 侧 6 件（除 WIRING）被 merge 改动为空。WIRING：head 同时含 #953 两行（:91-107）＋ config.redactSecrets 行（:108-115），相对 base 仅 +8 行、0 删除/0 修改。⇒ 合并干净，无夹带、无丢行。",
+   "result": "pass"
+  },
+  {
+   "id": "C7",
+   "title": "门禁：pre-commit 12 组全过＋gate-protection 0 失败",
+   "cmd": "GITHUB_ACTIONS=true SYNO_CI=1 SYNO_DIFF_BASE=gitea/local-main bash scripts/pre-commit-check.sh; bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main",
+   "evidence": "pre-commit exit 0，末行『✅ 全部 12 组通过』；组 12 claim 载体『49 条 claim；覆盖 7/7 个暂存文件』『全部暂存文件均被 claim 覆盖』。gate-protection：『结果: 6 通过, 0 失败』exit 0；清单 1392B、PATTERNS 22 条、pin 一致、diff 7 条、受保护 0 条。写集：git diff --name-only 43f24f5c9..968732a70 = 7 件，与 .claude/claims/914.yaml writeset 集合相等；禁改路径（scripts//.gitea//.github//DOCS-REGISTRY/gate-exemptions//src/{sentinel,runtime,mcp}//dsh/）命中 0；新增行 as any/as never/as unknown as 命中 0。",
+   "result": "pass"
+  },
+  {
+   "id": "C8",
+   "title": "CI 全绿 pending=0（head 968732a70）",
+   "cmd": "GET /api/v1/repos/synova-agent/SynovaAgent/commits/968732a709cf0daf266fa1301a0d8af4a40b389e/status；GET .../statuses；GET .../actions/runs?head_sha=968732a70…",
+   "evidence": "commit status: state=success, total_count=2；per-context latest：local-gates / gates (push)=success（run 1738）、local-gates / gates (pull_request)=success（run 1739）；两 run 均 status=completed、conclusion=success@968732a70。旧 pending 记录为更早重试历史，当前 per-context 无 pending ⇒ pending=0。base local-main 现场=43f24f5c9（与 PR base 一致）。",
+   "result": "pass"
+  },
+  {
+   "id": "C9",
+   "title": "回执指纹（R3 定义）",
+   "cmd": "GITEA_TOKEN=$(cat ~/gitea/.win-push-token) bash scripts/control-tower/check-merge-conditions.sh --pr 955 --diff-fingerprint",
+   "evidence": "fec0e9950acd6142cfe21c02be4977ec6732a80b90c50a3c559db9bd031ce49c（exit 0；--print-receipt-template 同值，前缀 sha256:）。",
+   "result": "pass"
+  }
+ ],
+ "findings": [
+  {
+   "id": "OBS-1",
+   "severity": "minor",
+   "blocking": false,
+   "status": "known-limitation",
+   "where": "src/config/redact.ts:109-111,132-143（childPath／parsePath）",
+   "detail": "父键恰为 `#<数字>`（如 `#0`／`#1`）时，redactSecrets 产出的 `$.#0.apiKey` 会被 parsePath 当作内部引号段占位符 `[#N]` 的裸形态，解析成 quoted[0]=undefined ⇒ resolveSecretSource 静默返回 null（不抛、不泄漏，但来源层标错）。实测：{ '#0': { apiKey:'v' } } ⇒ path `$.#0.apiKey`、source=null；对照 { 'a#0': … } 正常。另：内部占位语法 `$[#0]` 被当外部输入时亦静默 null（红线路由上不可达：redactSecrets 只产出 `[i]` 与 `[\"…\"]`）。C2 边界清单未列此键形，属清单外边缘。",
+   "fix": "后续单提交：childPath 对以 `#` 开头且整体匹配 /^#\\d+$/ 的键也用 `[\"…\"]` 引号形式；或把 `#` 加入引号触发字符集；补 1 条单测。不建议在本 PR 追加（会改 diff 指纹，需重出回执）。",
+   "why_not_blocking": "不可由正常客户键触发（YAML 需显式引号 `'#0':`），不造成泄漏/崩溃/退化；真实 dump 三型（中文/含点/含空格）均绿。"
+  },
+  {
+   "id": "OBS-2",
+   "severity": "minor",
+   "blocking": false,
+   "status": "stale-evidence-line",
+   "where": "docs/authority/WIRING-REGISTRY.yaml:109-110",
+   "detail": "`defined_at: \"src/config/redact.ts:186\"`／`provider: \"src/config/redact.ts:186\"` 已过期：加入该行时（7efb01ec0）export 确在 :186，N3 修复给 JSDoc 增 1 行后 head 的 `export function redactSecrets` 在 :187（:186 现为 ` */`）。规格 §4.5 DS4 要求 defined_at=『export 行』；check-quality-delta 的 R1.1 只比对 defined_at 的文件前缀（:355-358），故门禁不红。",
+   "fix": "后续单提交改 :186→:187（consumer :57 已正确）。⚠️ 本 PR 内追加会改 patch_fingerprint，须重出回执。",
+   "why_not_blocking": "纯证据行号漂移，不影响任何门禁判定/运行行为；文件级指向仍正确。"
+  },
+  {
+   "id": "OBS-3",
+   "severity": "info",
+   "blocking": false,
+   "status": "weak-verify-command",
+   "where": ".claude/claims/914.yaml:16（done[4]）",
+   "detail": "R4 的 verify 命令写作 `git diff -U0 tests/routes/config.test.ts | grep -E '^-' …⇒ 空`。在干净树上该命令恒空（工作树 vs 索引），与是否真放宽既有测试无关 ⇒ 非判别性（无参 diff＝空集）。R4 本身我已用 `git diff -U0 43f24f5c9..968732a70 -- tests/routes/config.test.ts` 实测删除行=0，结论不受影响。",
+   "fix": "改成 `git diff -U0 gitea/local-main..HEAD -- tests/routes/config.test.ts | grep …`（或 numstat 第二列=0）。",
+   "why_not_blocking": "claim 已有真实判据支撑（我独立复跑）；仅为命令口径缺陷。"
+  }
+ ],
+ "patch_fingerprint": "sha256:fec0e9950acd6142cfe21c02be4977ec6732a80b90c50a3c559db9bd031ce49c",
+ "patch_fingerprint_source": "check-merge-conditions.sh --pr 955 --diff-fingerprint（R3 定义：merge-base..head；排除 docs/synova/reviews/**）",
+ "tool": "deliverable-acceptance（.synova/skills/deliverable-acceptance/SKILL.md）＋ pr-review 四条件口径",
+ "issued_at": "2026-10-24T13:23:45Z"
+}
