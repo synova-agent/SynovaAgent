@@ -17,6 +17,11 @@ SELFCHECK=0
 deg() { printf 'degraded: %s [code=%s]\n' "$1" "$2" >&2; exit 2; }
 [ -d "$ROOT/.git" ] || [ -f "$ROOT/.git" ] || deg "不在 git 仓根: $ROOT" E_PMG_ROOT
 command -v git >/dev/null 2>&1 || deg "缺 git" E_PMG_ENV
+PYBIN=""
+for _c in python3 python py; do  # PYBIN 三级探测（PLATFORM-CHECKLIST #1，禁裸 python3）
+  command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1 && PYBIN="$_c" && break
+done
+[ -n "$PYBIN" ] || deg "缺 python（PYBIN 三级探测失败）" E_PMG_ENV
 git -C "$ROOT" rev-parse --verify -q "$SHA" >/dev/null 2>&1 || deg "无效提交: $SHA" E_PMG_SHA
 
 run_one() { # <name> <cmd...>
@@ -52,14 +57,15 @@ while IFS='|' read -r name cmd; do
   [ -z "$name" ] && continue
   N=$((N+1))
   # shellcheck disable=SC2086
+  cmd="${cmd//@PY@/$PYBIN}"
   run_one "$name" bash -c "$cmd" || case $? in
     1) FAIL=$((FAIL+1)) ;;
     *) DEG=$((DEG+1)) ;;
   esac
 done <<'LIST'
-obligations-scan|python3 scripts/control-tower/check-test-obligations.py --root . --base HEAD
+obligations-scan|@PY@ scripts/control-tower/check-test-obligations.py --root . --base HEAD
 obligations-test|bash tests/control-tower/check-test-obligations.test.sh
-tool-args-scan|python3 scripts/control-tower/check-tool-args-delta.py --root . --base HEAD
+tool-args-scan|@PY@ scripts/control-tower/check-tool-args-delta.py --root . --base HEAD
 tool-args-test|bash tests/control-tower/check-tool-args-delta.test.sh
 merge-cond-selfcheck|bash scripts/control-tower/check-merge-conditions.sh --selfcheck
 doc-registry|bash scripts/doc-system/doc-registry-gate.sh
