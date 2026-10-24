@@ -89,3 +89,11 @@ entries:
     status: declared-only
     owner: P7
     notes: "测试义务闸（#913 批 2 · Q-10）；本 PR 不接 CI（①g 归 PR-3/P4）⇒ 无生产消费者"
+  - capability: config.redactSecrets
+    defined_at: "src/config/redact.ts:186"
+    provider: "src/config/redact.ts:186"
+    consumer: "src/routes/config.ts:57"
+    test: "tests/config/redact.test.ts"
+    status: wired
+    owner: P2
+    notes: "跨 wire 无值（Q-2／裁 366）：秘密槽只以 {configured} 出现，secrets[] 侧车给 {path,configured,source}；provenance[].doc 同面脱敏"
