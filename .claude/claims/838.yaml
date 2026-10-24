@@ -1,0 +1,19 @@
+# .claude/claims/838.yaml — #838 E-2 安全：三处 fail-open 改 fail-closed · 写集声明
+writeset:
+  - .claude/claims/838.yaml
+  - src/security/master-secret.ts
+  - src/routes/backup.ts
+  - src/routes/config.ts
+  - src/deploy/bootstrap.ts
+  - src/server.ts
+  - tests/routes/config.test.ts
+  - tests/routes/middleware-order.test.ts
+  - tests/routes/workspace-access-write-endpoint.test.ts
+  - tests/security/master-secret.test.ts
+  - memory/notes/implemented/2026-10-24-838-e2-failclosed.md
+  - docs/authority/WIRING-REGISTRY.yaml
+done:
+  - verify: npx vitest run tests/security/master-secret.test.ts tests/routes/config.test.ts
+  - verify: npx tsc --noEmit
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main
+note: "#838 E-2：backup 管理员备用通道未设 key 时 fail-closed（403 ADMIN_KEY_UNSET）｜config/dump 租户守卫（403 CROSS_ORG_DENIED）｜主密钥缺失抛 MasterSecretMissingError（启动失败）。含变异体改坏必红。"

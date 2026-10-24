@@ -34,19 +34,35 @@ function getScheduler(): BackupScheduler {
  * 简化版权限检查 — 实际接入 PolicyEngine(D38) 后可替换。
  */
 function requireAdmin(req: Request, res: Response): boolean {
-  // 检查 JWT 中的角色
+  // 检查 JWT 中的角色 —— **保持 base 行为**（`req.user` 这条分支历史上不可达：jwtAuthMiddleware
+  //   注入的是 `req.auth` 而非 `req.user`）。本 PR 严格只做 fail-closed，
+  //   「是否开放 JWT 角色通道」属另卡决策 ⇒ 此处不顺手改。
   const user = (req as unknown as Record<string, unknown>).user as Record<string, unknown> | undefined;
   if (user && (user.role === 'ga' || user.role === 'admin')) {
     return true;
   }
 
-  // 备用: 检查 x-admin-key header
-  const adminKey = req.headers['x-admin-key'];
-  if (adminKey === process.env['SYNOVA_ADMIN_KEY']) {
+  // 备用: x-admin-key header —— #838 E-2 ①（fail-closed）
+  //   旧实现 `adminKey === process.env['SYNOVA_ADMIN_KEY']` 在环境变量**未设**时左右两侧都是
+  //   `undefined` ⇒ **无头的任意请求**被判为管理员（写操作可覆盖数据目录）。
+  //   现口径：① 环境变量未设 ⇒ 备用通道**不可用**（403 ADMIN_KEY_UNSET，绝不因"没配"而放行）；
+  //          ② 已配置 ⇒ 必须提供**非空且相等**的头；③ 头缺失/不等 ⇒ 403 FORBIDDEN。
+  const expected = (process.env['SYNOVA_ADMIN_KEY'] ?? '').trim();
+  const raw = req.headers['x-admin-key'];
+  const provided = typeof raw === 'string' ? raw.trim() : '';
+  if (!expected) {
+    res.status(403).json({
+      ok: false,
+      error: '管理员密钥未配置，备用管理通道不可用（fail-closed）',
+      code: 'ADMIN_KEY_UNSET',
+    });
+    return false;
+  }
+  if (provided && provided === expected) {
     return true;
   }
 
-  res.status(403).json({ error: '需要 GA 管理员权限', code: 'FORBIDDEN' });
+  res.status(403).json({ ok: false, error: '需要 GA 管理员权限', code: 'FORBIDDEN' });
   return false;
 }
 

@@ -23,6 +23,13 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createServer } from '../../src/server';
+
+// #838 E-2 ③：`createServer()` 内部的 Bootstrap 现在对「主密钥缺失」fail-closed
+// （typed error → server.ts 的 process.exit(1)）。本文件**不测主密钥**，只测中间件顺序/路由守卫
+// ⇒ 显式提供一个测试密钥（放在模块体，早于 beforeAll 里的 createServer()；不改安全口径）。
+if (!process.env['CREDENTIAL_MASTER_KEY']) {
+  process.env['CREDENTIAL_MASTER_KEY'] = 'test-master-key-e2-838';
+}
 import { signJwtToken } from '../../src/middleware/auth';
 import { getCurrentFilterClause, runWithContext } from '../../src/services/request-context';
 import { KnowledgeStore } from '../../src/agent/knowledge-bridge-service';
