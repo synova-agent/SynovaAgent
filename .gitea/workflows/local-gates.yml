@@ -347,8 +347,9 @@ jobs:
           cd /Users/wane/.ci-work/SynovaAgent
           NODE_BIN=/Users/wane/.nvm/versions/node/v24.19.0/bin
           PATH="$NODE_BIN:$PATH" npx tsc -p tsconfig.tests.json --pretty false > /tmp/tests-tsc.log 2>&1 || true
-          grep "error TS" /tmp/tests-tsc.log | sort > /tmp/tests-tsc-now.txt || true
-          sort tests/tsconfig.known-errors.txt > /tmp/tests-tsc-base.txt
+          # 工作区绝对前缀归一（同一份代码在本机=相对、在 CI=绝对；不归一则基线不可比）
+          grep "error TS" /tmp/tests-tsc.log | sed -E "s#$PWD/##g" | sort > /tmp/tests-tsc-now.txt || true
+          sed -E "s#$PWD/##g" tests/tsconfig.known-errors.txt | sort > /tmp/tests-tsc-base.txt
           NEW="$(comm -13 /tmp/tests-tsc-base.txt /tmp/tests-tsc-now.txt || true)"
           BASE_N="$(wc -l < /tmp/tests-tsc-base.txt | tr -d ' ')"
           NOW_N="$(wc -l < /tmp/tests-tsc-now.txt | tr -d ' ')"
