@@ -22,17 +22,17 @@ mkdir -p "$FIX/docs/authority" "$FIX/docs/archive"
 # A: registry 只登记 a.md + good.md → bad.md 未登记 → exit 1
 cat > "$FIX/docs/authority/DOCS-REGISTRY.yaml" <<'EOF'
 documents:
-  - id: T1
+  - id: DOC-9001
     type: prd
     path: a.md
-  - id: T2
+  - id: DOC-9002
     type: prd
     path: docs/good.md
 EOF
 DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" >/dev/null 2>&1; t "A 检出未登记" 1 $?
 
 # B: 补登记 bad.md → exit 0
-printf '  - id: T3\n    type: prd\n    path: docs/bad.md\n' >> "$FIX/docs/authority/DOCS-REGISTRY.yaml"
+printf '  - id: DOC-9003\n    type: prd\n    path: docs/bad.md\n' >> "$FIX/docs/authority/DOCS-REGISTRY.yaml"
 DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" >/dev/null 2>&1; t "B 全登记通过" 0 $?
 
 # C: registry 缺失 → 降级 exit 0
@@ -53,7 +53,7 @@ git -C "$FIX" add docs/new.md 2>/dev/null # swallow-ok:
 DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" >/dev/null 2>&1; t "E git模式检出staged未登记" 1 $?
 
 # F: 补登记 new.md → git 模式全登记 → exit 0
-printf '  - id: T4\n    type: prd\n    path: docs/new.md\n' >> "$FIX/docs/authority/DOCS-REGISTRY.yaml"
+printf '  - id: DOC-9004\n    type: prd\n    path: docs/new.md\n' >> "$FIX/docs/authority/DOCS-REGISTRY.yaml"
 DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" >/dev/null 2>&1; t "F git模式全登记通过" 0 $?
 
 # G: tmp/ 临时区排除 → 即使未登记也不报 → exit 0
@@ -73,7 +73,7 @@ echo ""
 echo "── H. CT-D2: CI 形态（提交态）新增文档必须被拦 ──"
 CIF="$FIX/ci-form"
 mkdir -p "$CIF/docs/authority" "$CIF/docs"
-printf 'documents:\n  - id: T1\n    type: prd\n    path: docs/old.md\n' > "$CIF/docs/authority/DOCS-REGISTRY.yaml"
+printf 'documents:\n  - id: DOC-9001\n    type: prd\n    path: docs/old.md\n' > "$CIF/docs/authority/DOCS-REGISTRY.yaml"
 : > "$CIF/docs/old.md"
 git -C "$CIF" init -q -b main 2>/dev/null # swallow-ok:
 git -C "$CIF" config user.email t@t 2>/dev/null # swallow-ok:
@@ -104,7 +104,7 @@ esac
 printf '%s\n' "$OUT_H" | grep -q 'docs/newdoc.md' && { echo "  ✅ H1 逐文件点名未登记文档"; PASS=$((PASS+1)); } || { echo "  ❌ H1 未点名未登记文档"; FAIL=$((FAIL+1)); }
 
 # H2: 补登记 → exit 0
-printf '  - id: T2\n    type: prd\n    path: docs/newdoc.md\n' >> "$CIF/docs/authority/DOCS-REGISTRY.yaml"
+printf '  - id: DOC-9002\n    type: prd\n    path: docs/newdoc.md\n' >> "$CIF/docs/authority/DOCS-REGISTRY.yaml"
 git -C "$CIF" add -A 2>/dev/null # swallow-ok:
 git -C "$CIF" commit -q -m "docs(D999): 登记 newdoc" 2>/dev/null # swallow-ok:
 DOC_TRUTH_ROOT="$CIF" bash "$SCRIPT" >/dev/null 2>&1; t "H2 补登记后通过" 0 $?
@@ -121,7 +121,7 @@ printf '%s\n' "$OUT_H3" | grep -q 'D999-proof.md' && { echo "  ❌ H3 evidence �
 # H4: 降级 —— base 全链不可解析 ⇒ 显式留痕 + 不误红（沿用既有 fetch 失败语义）
 CIF2="$FIX/ci-form-nobase"
 mkdir -p "$CIF2/docs/authority"
-printf 'documents: []\n' > "$CIF2/docs/authority/DOCS-REGISTRY.yaml"
+printf 'documents:\n  - id: DOC-9001\n    type: prd\n    path: docs/x.md\n' > "$CIF2/docs/authority/DOCS-REGISTRY.yaml"
 git -C "$CIF2" init -q -b trunk 2>/dev/null # swallow-ok:
 git -C "$CIF2" config user.email t@t 2>/dev/null # swallow-ok:
 git -C "$CIF2" config user.name t 2>/dev/null # swallow-ok:
@@ -169,7 +169,7 @@ echo ""
 echo "── H7. D782 D2: base 链前置（origin/local-main）回归护栏 ──"
 FORK="$FIX/fork-base"
 mkdir -p "$FORK/docs/authority" "$FORK/docs"
-printf 'documents:\n  - id: T1\n    type: prd\n    path: docs/keep.md\n' > "$FORK/docs/authority/DOCS-REGISTRY.yaml"
+printf 'documents:\n  - id: DOC-9001\n    type: prd\n    path: docs/keep.md\n' > "$FORK/docs/authority/DOCS-REGISTRY.yaml"
 : > "$FORK/docs/keep.md"
 git -C "$FORK" init -q -b main 2>/dev/null # swallow-ok:
 git -C "$FORK" config user.email t@t 2>/dev/null # swallow-ok:
@@ -182,13 +182,13 @@ git -C "$FORK" checkout -q -b local-main 2>/dev/null # swallow-ok:
 : > "$FORK/docs/orphan.md"
 git -C "$FORK" add -A 2>/dev/null # swallow-ok:
 git -C "$FORK" commit -q -m "docs(D998): 他线新增未登记文档" 2>/dev/null # swallow-ok:
-printf '  - id: T2\n    type: prd\n    path: docs/lm-only.md\n' >> "$FORK/docs/authority/DOCS-REGISTRY.yaml"
+printf '  - id: DOC-9002\n    type: prd\n    path: docs/lm-only.md\n' >> "$FORK/docs/authority/DOCS-REGISTRY.yaml"
 : > "$FORK/docs/lm-only.md"
 git -C "$FORK" add -A 2>/dev/null # swallow-ok:
 git -C "$FORK" commit -q -m "docs(D998): local-main 自身新增（已登记）" 2>/dev/null # swallow-ok:
 git -C "$FORK" update-ref refs/remotes/origin/local-main "$(git -C "$FORK" rev-parse HEAD)" 2>/dev/null # swallow-ok:
 git -C "$FORK" checkout -q -b feature 2>/dev/null # swallow-ok:
-printf '  - id: T3\n    type: prd\n    path: docs/feat-new.md\n' >> "$FORK/docs/authority/DOCS-REGISTRY.yaml"
+printf '  - id: DOC-9003\n    type: prd\n    path: docs/feat-new.md\n' >> "$FORK/docs/authority/DOCS-REGISTRY.yaml"
 : > "$FORK/docs/feat-new.md"
 git -C "$FORK" add -A 2>/dev/null # swallow-ok:
 git -C "$FORK" commit -q -m "docs(D998): 本支新增（已登记）" 2>/dev/null # swallow-ok:
@@ -277,6 +277,30 @@ printf '%s\n' "$OUT_I2" | grep -q '重号 0 个' && { echo "  ✅ I2 还原后�
 # I3: 存量（真实仓）⇒ exit 0（#934 合入后应为 0 重号）
 RR="$(cd "$(dirname "$0")/../.." && pwd)"
 DOC_TRUTH_ROOT="$RR" bash "$SCRIPT" >/dev/null 2>&1; t "I3 存量真实仓 → exit 0" 0 $?
+
+echo ""
+echo "── J. #942 F1/F2: 引号 id / 行尾注释 / 解析为 0（fail-closed）──"
+cp "$FIX/docs/authority/DOCS-REGISTRY.yaml" "$FIX/reg2.bak"
+# J1: 带引号 id 重号 ⇒ 非 0 退出并点名
+printf '  - id: "DOC-0500"\n    type: prd\n    path: a.md\n  - id: "DOC-0500"\n    type: prd\n    path: docs/good.md\n' >> "$FIX/docs/authority/DOCS-REGISTRY.yaml"
+OUT_J1=$(DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" 2>&1); _ej1=$?
+t "J1 带引号 id 重号 → 非 0 退出" 1 $_ej1
+printf '%s\n' "$OUT_J1" | grep -q '重号: DOC-0500' && { echo "  ✅ J1 带引号重号被点名"; PASS=$((PASS+1)); } || { echo "  ❌ J1 带引号重号未点名（正则不认引号）"; FAIL=$((FAIL+1)); }
+cp "$FIX/reg2.bak" "$FIX/docs/authority/DOCS-REGISTRY.yaml"
+# J2: 行尾注释重号 ⇒ 次数正确（出现 2 次）
+printf '  - id: DOC-0501  # 行尾注释\n    type: prd\n    path: a.md\n  - id: DOC-0501\t# tab 注释\n    type: prd\n    path: docs/good.md\n' >> "$FIX/docs/authority/DOCS-REGISTRY.yaml"
+OUT_J2=$(DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" 2>&1); _ej2=$?
+t "J2 行尾注释重号 → exit 1" 1 $_ej2
+printf '%s\n' "$OUT_J2" | grep -q '重号: DOC-0501（出现 2 次）' && { echo "  ✅ J2 次数正确（出现 2 次）"; PASS=$((PASS+1)); } || { echo "  ❌ J2 次数失真（F2 未对齐）: $(printf '%s' "$OUT_J2" | grep '重号: DOC-0501' | head -1)"; FAIL=$((FAIL+1)); }
+cp "$FIX/reg2.bak" "$FIX/docs/authority/DOCS-REGISTRY.yaml"
+# J3: 还原 ⇒ exit 0
+DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" >/dev/null 2>&1; t "J3 还原 → exit 0" 0 $?
+# J4: F1 fail-closed —— 台账里一条 DOC id 都解析不到（全是 T 型）⇒ exit 2 + 「不可见」
+printf 'documents:\n  - id: T1\n    type: prd\n    path: a.md\n' > "$FIX/docs/authority/DOCS-REGISTRY.yaml"
+OUT_J4=$(DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" 2>&1); _ej4=$?
+t "J4 解析到 0 条 DOC id → exit 2（fail-closed）" 2 $_ej4
+printf '%s\n' "$OUT_J4" | grep -q '不可见' && { echo "  ✅ J4 打印「不可见」不静默"; PASS=$((PASS+1)); } || { echo "  ❌ J4 未打印「不可见」"; FAIL=$((FAIL+1)); }
+cp "$FIX/reg2.bak" "$FIX/docs/authority/DOCS-REGISTRY.yaml"
 
 echo ""
 echo "── 汇总: $PASS 通过 / $FAIL 失败 ──"
