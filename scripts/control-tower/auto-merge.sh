@@ -7,7 +7,7 @@
 #          可选: SYNO_AUTO_MERGE_BASE（check-merge-conditions 的 base，默认 gitea/local-main）
 # @output  每个 open PR 一行判定：`AUTO-MERGE: <pr> 可自动合` / `SKIP <pr>: <原因>`
 # @exit    0 = 正常（含无可合项）；1 = --apply 时有 PR 合并失败；2 = 自身失败（E_TOKEN/E_NET/E_GIT）
-# @degraded 无 token ⇒ `E_TOKEN`；网络/API 失败 ⇒ `E_NET`；合并被拒 ⇒ `E_MERGE`（均落 stderr）
+# @degraded 无 token ⇒ `E_TOKEN`；环境不可用 ⇒ `E_ENV`；git 不可用 ⇒ `E_GIT`；网络/API ⇒ `E_NET`；合并被拒 ⇒ `E_MERGE`
 # 测试接缝: SYNO_AUTO_MERGE_FORCE_CAN=1 跳过四条件（仅供配对测试，禁止生产使用）
 # 已知限制: 只判"路径是否受保护"与四条件；**不做语义裁决**（A 类必须人批，见裁 354）
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -103,7 +103,6 @@ while True:
         out.append(f.get("filename",""))
         pf = f.get("previous_filename")
         if pf: out.append(pf)
-    if not d: break
     page += 1
 print("\n".join(out))
 PY

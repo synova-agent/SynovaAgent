@@ -7,7 +7,7 @@
 #          可选: SYNO_LEDGER_ISSUE（默认 918）
 # @output  dry-run: 打印待追加的 §G 行；--apply: 插入 #918 §G 表末并更新 state
 # @exit    0 = 正常（含"无新增"）；1 = 实际失败（API 写失败）；2 = 自身失败（无 token/无网/非 git 仓）
-# @degraded 无 token ⇒ `E_TOKEN`；网络/API 不可达 ⇒ `E_NET`；API 写入被拒 ⇒ `E_API`（均落 stderr，2/1）
+# @degraded 无 token ⇒ `E_TOKEN`；环境不可用 ⇒ `E_ENV`；网络/API 不可达 ⇒ `E_NET`；API 写入被拒 ⇒ `E_API`
 #            state 起点非法 ⇒ `E_STATE`（exit 2，拒绝把失败当"无新增"）
 # 已知限制: 行内"验收要点"无法自动生成，统一写"自动同步"；state 文件不跨机（路径见 SYNO_LEDGER_SYNC_STATE）
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -78,10 +78,10 @@ if [ "${SYNO_LEDGER_SYNC_MOCK_WRITE:-}" = "1" ]; then
   echo "LEDGER-SYNC: MOCK_WRITE（测试接缝：跳过 API，仅写 state）"
   rc=0
 else
-GITEA_TOKEN="$TOKEN" ISSUE="$ISSUE" ROWS="$ROWS" "$PYBIN" - <<'PY'
+GITEA_TOKEN="$TOKEN" ISSUE="$ISSUE" ROWS="$ROWS" SYNO_GITEA_BASE="${SYNO_GITEA_BASE:-http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent}" "$PYBIN" - <<'PY'
 import json, os, sys, urllib.request, urllib.error
 tok = os.environ["GITEA_TOKEN"]; issue = os.environ["ISSUE"]; rows = os.environ["ROWS"]
-base = "http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent"
+base = os.environ["SYNO_GITEA_BASE"]
 def api(url, data=None, method="GET"):
     req = urllib.request.Request(url, data=json.dumps(data).encode() if data else None,
         headers={"Authorization": "token " + tok, "Content-Type": "application/json"}, method=method)

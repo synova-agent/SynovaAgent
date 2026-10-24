@@ -1,5 +1,5 @@
 # .claude/claims/953.yaml — #953 自动化工作流一期 · 写集声明
-# 写集 = 10 件（含 .gitignore 一行）（2 脚本 ＋ 2 配对测试 ＋ 豁免件 ＋ DOC 登记 ＋ WIRING 登记 ＋ Note ＋ 本 claim）
+# 写集 = 11 件（含 .gitignore 与 python 行为测试）（2 脚本 ＋ 2 配对测试 ＋ 豁免件 ＋ DOC 登记 ＋ WIRING 登记 ＋ Note ＋ 本 claim）
 # 受保护路径（.gitea/protected-files.txt）：scripts/control-tower/**、tests/control-tower/**、
 #   gate-exemptions/**、docs/authority/DOCS-REGISTRY.yaml ⇒ 本 PR 内提交豁免件（裁定号 裁 367）
 writeset:
