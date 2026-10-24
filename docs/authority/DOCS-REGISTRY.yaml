@@ -919,3 +919,25 @@ documents:
     status: active
     owner: P6
     note: "#932 PR-1（A+B 机械传播）技能镜像同步豁免（裁 334）；覆盖 .dsh/skills/** ＋ 本登记 ＋ 豁免件自覆盖。"
+
+  # ---- P7 2026-10-24：#913-PR-1 两清单登记（裁 331；rebase 后按 main 现况取号：main max=0254 ⇒ 0255–0257）----
+  - id: DOC-0255
+    type: registry
+    path: tests/contract/known-divergences.yaml
+    status: active
+    owner: P7
+    note: "#913-PR-1 Q-9 共享 conformance 的 KNOWN_VIOLATION 登记表（updatedAt-iso／keyPrefix-literal × SqliteStorageBackend，裁 331 标红不阻断；只减不增）。"
+
+  - id: DOC-0256
+    type: registry
+    path: tests/contract/known-red.yaml
+    status: active
+    owner: P7
+    note: "#913-PR-1 既有红登记表（gss-common／graphbridge-wiring 两条；只减不增；消费在 PR-3 ①g）。"
+
+  - id: DOC-0257
+    type: decision
+    path: gate-exemptions/2026-10-24-p7-913-pr1-docs.md
+    status: active
+    owner: P7
+    note: "#913-PR-1 受保护路径豁免件：DOCS-REGISTRY.yaml 追加两清单登记（追加式，保留他人条目）＋本豁免件自覆盖（裁 331）。"
