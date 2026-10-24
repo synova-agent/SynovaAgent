@@ -612,7 +612,11 @@ EOF
 #   为什么：`docs/authority/DOCS-REGISTRY.yaml` 是**追加型中枢**——任何需 D2 登记的新文档
 #   PR 都会碰它 ⇒ 严格重叠判定下，在飞期间**所有持有方都无法合并**（实测 8 个 PR 互相锁死）。
 #   判定改为：白名单文件的重叠**不计 ②**，改由 ④ 的 S2（队列头）＋合并前 rebase 保证**一次只合一个**。
-SHARED_APPEND_PATHS="docs/authority/DOCS-REGISTRY.yaml"
+# #裁 370/376（效率）：登记表类**纯追加**才算共享追加；**任何删除/改写仍判硬重叠**
+#   （防"借追加之名删登记行"）。三条均为 append-only 中枢：DOCS / WIRING / GATE-INVENTORY。
+SHARED_APPEND_PATHS="docs/authority/DOCS-REGISTRY.yaml
+docs/authority/WIRING-REGISTRY.yaml
+docs/authority/GATE-INVENTORY.yaml"
 is_shared_append() { # <path> ⇒ 0=白名单内（不判硬重叠） / 1=不在
   local p="$1" x
   while IFS= read -r x; do          # #636 复核 finding 5：逐行读，防单词拆分/通配展开
@@ -622,6 +626,16 @@ is_shared_append() { # <path> ⇒ 0=白名单内（不判硬重叠） / 1=不在
 $SHARED_APPEND_PATHS
 EOF
   return 1
+}
+
+is_pure_append() { # <base> <head> <file> ⇒ 0=纯追加（additions>0 且 deletions==0）
+  local base="$1" head="$2" f="$3" nums add del
+  nums="$(git -C "$ROOT" diff --numstat "$base" "$head" -- "$f" 2>/dev/null | head -1)"
+  [ -n "$nums" ] || return 1
+  add="$(printf '%s' "$nums" | awk '{print $1}')"
+  del="$(printf '%s' "$nums" | awk '{print $2}')"
+  case "$add$del" in *-*) return 1 ;; esac          # 二进制 ⇒ 不看内容，判非纯追加
+  [ "$del" = "0" ] && [ "${add:-0}" -gt 0 ]
 }
 
 cond2_overlap() { # ② 零写集重叠（实际 diff × 实际 diff；open PR 分页拉全）
@@ -655,8 +669,13 @@ cond2_overlap() { # ② 零写集重叠（实际 diff × 实际 diff；open PR �
       while IFS= read -r f; do
         [ -n "$f" ] || continue
         if is_shared_append "$f"; then
-          shared=$((shared + 1))
-          say "   ② 共享追加（不计重叠，须串行合）: ${f} → PR#${PRNUM},#${pnum}"
+          if is_pure_append "$mb" "$head" "$f" && is_pure_append "$pmb" "$psha" "$f"; then
+            shared=$((shared + 1))
+            say "   ② 共享追加（纯追加，不计重叠，须串行合）: ${f} → PR#${PRNUM},#${pnum}"
+            continue
+          fi
+          hits=$((hits + 1))
+          fail "OVL_FILE: ${f} → PR#${PRNUM},#${pnum}（登记表非纯追加：含删除/改写 ⇒ 判硬重叠）"
           continue
         fi
         hits=$((hits + 1))

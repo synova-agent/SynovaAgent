@@ -1,0 +1,4 @@
+- scripts/control-tower/check-merge-conditions.sh — ② 重叠判定改纯追加两态（裁 376 效率 1/4） — 裁 376
+- tests/control-tower/check-merge-conditions.test.sh — 新增 case K（删行⇒硬重叠）＋点数 14 — 裁 376
+- gate-exemptions/2026-10-24-cto-957-overlap-append.md — 本豁免件自覆盖（#623 规则） — 裁 376
+- docs/authority/DOCS-REGISTRY.yaml — #957 登记本豁免件（D2 登记门禁） — 裁 376
