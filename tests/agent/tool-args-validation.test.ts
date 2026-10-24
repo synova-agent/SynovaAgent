@@ -11,7 +11,7 @@
  *   边界   S1 类型错／S2 缺必填／S5 非对象（null／数组／标量）／S5b 对象性兜底先于 zod 编译／S7 enum 越界
  *   棘轮   库存① 36 真注册 ＋ 8 未接线缺席｜② 空 schema 集合｜④ 34 错型探针 ＋ 2 nullary 豁免（skip===2）｜⑤ baseline 交叉对账
  *
- * 铁律 33/47/48：走真实 ToolRegistry.execute 路径（零 mock 替身），每条断言必含 expect()。
+ * 铁律 33/47/48：走真实 ToolRegistry.execute 路径（零 mock 替身），每条用例必有断言调用（禁空壳）。
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { readFileSync } from 'node:fs';
