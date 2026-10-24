@@ -324,18 +324,20 @@ documents:
   # ---- Win 线派单件（D1001/D1002/D1003）----
   # 依据：Mac-CTO 2026-09-25 裁定「正式派单件 = 入库（docs/synova/dispatch/**）」
   # 红因：D2 登记门禁（CI strict）判「有未登记文档 3 个」⇒ 本批补登记
-  - id: DOC-0124
+  - id: DOC-0259
     type: governance
     path: docs/synova/dispatch/D1001-ownership-renderer-tests-20260925.md
     status: active
     owner: win-line
 
-  - id: DOC-0125
+    note: "重号修正：原误用 DOC-0124（与 decisions/proposed/process/2026-09-30-preset-landing-must-diff-against-working-peer.md 同号）；2026-10-24 #932 改号，登记内容不变。"
+  - id: DOC-0260
     type: governance
     path: docs/synova/dispatch/D1002-workspaces-route-order-f1-20260925.md
     status: active
     owner: win-line
 
+    note: "重号修正：原误用 DOC-0125（与 decisions/proposed/process/2026-09-30-cite-by-section-name-not-line-number.md 同号）；2026-10-24 #932 改号，登记内容不变。"
   - id: DOC-0126
     type: governance
     path: docs/synova/dispatch/D1003-docs-tools-and-a-class-registry-20260926.md
@@ -473,12 +475,12 @@ documents:
     owner: synova-governance-converge
     note: "extensions 内容面规范 v0.1 镜像（源=院方规范；#253 `0bdaec491` 合入但未登记台账 ⇒ D782 D2 登记门禁在后续分支上恒红，K12-01 段二合并时按门禁要求补登）。产品宪章 §5.6/§5.7 与 K12/K4 多张卡面引用此规范。"
 
-  - id: DOC-0193
+  - id: DOC-0258
     type: governance
     path: extensions/sentinels/AGENTS.md
     status: active
     owner: synova-squad-lead（产品线）
-    note: "12 份域级守则件落库 PR1（CTO 派单件 2026-10-13，裁定 079/081/085/089）。哨兵域：承载包 K3。"
+    note: "12 份域级守则件落库 PR1（CTO 派单件 2026-10-13，裁定 079/081/085/089）。哨兵域：承载包 K3。｜重号修正：原误用 DOC-0193（保留者=decisions/implemented/process/2026-10-12-claude-md-retirement.md）；2026-10-24 #932 改号。"
 
   - id: DOC-0194
     type: governance
@@ -716,12 +718,12 @@ documents:
     note: "口径盘点：AGENTS.md 增两镜像路径；cto-handover skill 补本体层规范 v2.11 锚（.claude/.dsh 同源）。"
 
     # ---- P4 2026-10-20：#739④ 夹具工具链豁免（D2 登记）----
-    - id: DOC-0228
+    - id: DOC-0261
       type: decision
       path: gate-exemptions/2026-10-20-fixture-toolchain-739.md
       status: active
       owner: CTO
-      note: "#739④ 夹具工具链单一来源＋@requires 声明＋依赖核对（缺依赖报名字）的豁免；裁 223。"
+      note: "#739④ 夹具工具链单一来源＋@requires 声明＋依赖核对（缺依赖报名字）的豁免；裁 223。；重号修正：原误用 DOC-0228（#932 改号）。"
 
   # ---- CTO 2026-10-20：M5 批次写集扩项＋DSH 借鉴锚（裁 248）----
   - id: DOC-0230
@@ -941,3 +943,11 @@ documents:
     status: active
     owner: P7
     note: "#913-PR-1 受保护路径豁免件：DOCS-REGISTRY.yaml 追加两清单登记（追加式，保留他人条目）＋本豁免件自覆盖（裁 331）。"
+
+  # ---- P6 2026-10-24：#932 PR-3（DOC 重号清理）豁免件（重号修正：0255–0259 → 0258–0262，因 #913 已占 0255–0257）----
+  - id: DOC-0262
+    type: decision
+    path: gate-exemptions/2026-10-24-p6-932-docdup.md
+    status: active
+    owner: P6
+    note: "#932 PR-3（DOC 重号清理）受保护路径豁免登记（裁 334）。"
