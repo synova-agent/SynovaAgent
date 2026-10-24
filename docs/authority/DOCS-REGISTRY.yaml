@@ -945,7 +945,7 @@ documents:
     note: "#913-PR-1 受保护路径豁免件：DOCS-REGISTRY.yaml 追加两清单登记（追加式，保留他人条目）＋本豁免件自覆盖（裁 331）。"
 
   # ---- P4 2026-10-24：#840 E-4 全量 job 豁免件 ----
-  - id: DOC-0265
+  - id: DOC-0270
     type: decision
     path: gate-exemptions/2026-10-24-p4-840-e4-full-job.md
     status: active
@@ -975,3 +975,34 @@ documents:
     status: active
     owner: P6
     note: "#942：doc-registry-gate 增「DOC id 唯一」硬判据（重号即红、逐条点名，禁只告警）＋配对测试 I1/I2/I3；同 PR 校正 K3 预设『等 Gitea gates 绿（pending=0）』。"
+
+  # ---- P7 2026-10-24：#913 PR-2（Q-10 分层与快照）----
+  #      取号时点 2026-10-24（写前现算）：本工作树锚 base max=DOC-0263；写后实测 gitea/local-main 已前进到
+  #      f45cc73c1（#942 已占 DOC-0264）⇒ **被抢占，已顺延**：本批取 0265–0267（0264 归 #942）。
+  - id: DOC-0265
+    type: governance
+    path: docs/authority/testing-layers.md
+    status: active
+    owner: P7
+    note: "#913-PR-2 Q-10 测试分层成文：六档现役（unit／integration／e2e／acceptance／contract＋门禁自证／snapshot-replay）＋bench·web 两档标『未建不空转』；义务/命名/豁免/失效条件四节；G1–G6 只引 DOC-0241 不重定义。"
+
+  - id: DOC-0266
+    type: registry
+    path: tests/contract/triviality-manifest.yaml
+    status: active
+    owner: P7
+    note: "#913-PR-2 Q-10『非平凡』清单（裁 332 ① 指定落点）：schema_version 版本化＋6 条 surface 登记＋legacy_baseline 棘轮；唯一真源，禁口述表。"
+
+  - id: DOC-0267
+    type: decision
+    path: gate-exemptions/2026-10-24-p7-913-pr2-docs.md
+    status: active
+    owner: P7
+    note: "#913-PR-2 受保护路径豁免件：DOCS-REGISTRY.yaml 追加式登记（保留他人条目）＋gate-exemptions/** 自覆盖＋扫描器与配对测试两条受保护路径（scripts/control-tower/**、tests/control-tower/**），裁 331。"
+  # ---- CTO 2026-10-24：#953 自动化一期豁免件（DOC-0269；0268 由在飞 #950 预占）----
+  - id: DOC-0269
+    type: decision
+    path: gate-exemptions/2026-10-24-cto-953-automation.md
+    status: active
+    owner: CTO
+    note: "#953 自动化一期（ledger-sync／auto-merge）的受保护路径豁免；裁 367。"

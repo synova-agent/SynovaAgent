@@ -1,0 +1,35 @@
+# tests/contract/triviality-manifest.yaml — 「非平凡」台账（#913 批 2 · Q-10 · PR-2）
+#
+# 判据源（唯一准绳，禁凭记忆）:
+#   .handbook/派单件/2026-10-24-规格-913-PR2-分层与快照实施.md §2（裁 332／353）
+#   ＋ docs/authority/testing-layers.md（分层成文，G1–G6 格式只引不复制）
+#
+# 语义（§2 · 纯查表，禁形容词判据）:
+#   非平凡 ⇔ 有登记行且 surface ≠ none
+#   surface    ∈ protocol | model | human-visible | none      （none = 显式 triage 为"不承重"）
+#   obligation ∈ expected | snapshot | exempt
+#              expected = 该模块行为变化必须补 tests/expected/** 下的 expected 资产
+#              snapshot = 同上，形态为快照（snapshot-replay 档）
+#              exempt   = 显式豁免（**必须**带 issue ＋ expiry ＋ reason；过期即 rc=1）
+#   asset_glob  命中的文件只认「新增或修改」（git diff --diff-filter=ACMR）
+#
+# 新增兜底（§2，脚本内置，不改本表也可判）:
+#   变更集**新增** src/**/*.ts，有效逻辑行（去空行/注释）≥100 且 ≥1 个 export
+#   ⇒ 必须有 triage 行（本表 entries 里出现该 module，surface 任意）；否则 `untriaged:` 红。
+#
+# 存量棘轮（§2）:
+#   legacy = `git ls-files src` 里 *.ts 的个数 − 本表已登记模块数（口径可核可复现）
+#   as_of 现算 = 475 − 6 = 469（2026-10-24，gitea/local-main@b398e4d0a）
+#   legacy_baseline **只减不增**：当前数 > baseline ⇒ 红；
+#   `python3 scripts/control-tower/check-test-obligations.py --write-baseline` **只许降到当前值**。
+#
+# 扩表方式（§9 风险 1）: 加一行 entry 即可（不改脚本）；schema_version 变更须**同 PR** 改本件。
+schema_version: 1
+meta: { as_of: "gitea/local-main@b398e4d0a", ruling: "裁332/353", legacy_baseline: 469 }
+entries:
+  - { module: src/store/session-store.ts,          surface: protocol,      obligation: expected, asset_glob: "tests/expected/session/**",      issue: "#913", expiry: "2027-06-30" }
+  - { module: src/store/session-projection.ts,     surface: protocol,      obligation: expected, asset_glob: "tests/expected/session/**",      issue: "#913", expiry: "2027-06-30" }
+  - { module: src/agent/context-compaction.ts,     surface: model,         obligation: snapshot, asset_glob: "tests/expected/compaction/**",   issue: "#907", expiry: "2026-12-31" }
+  - { module: src/llm/retry-middleware.ts,         surface: model,         obligation: snapshot, asset_glob: "tests/expected/retry/**",        issue: "#907", expiry: "2026-12-31" }
+  - { module: src/agent/prompt-assembler.ts,       surface: model,         obligation: expected, asset_glob: "tests/expected/prompt/**",       issue: "#913", expiry: "2027-06-30" }
+  - { module: src/agent/report-assembler.ts,       surface: human-visible, obligation: expected, asset_glob: "tests/expected/report/**",       issue: "#913", expiry: "2027-06-30" }
