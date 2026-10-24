@@ -1,0 +1,20 @@
+# .claude/claims/942.yaml — #942 DOCS-REGISTRY 重号无断言（补「id 唯一」硬判据）· 写集声明
+#
+# 指定：Issue #942（#934 零上下文验收发现）｜B 类｜合由 CTO 点（裁 328）
+# 纪律：只改 scripts/doc-system/** ＋ 配对测试；不碰 DOCS-REGISTRY 内容语义；不新增门禁组号。
+writeset:
+  - .claude/claims/942.yaml
+  - scripts/doc-system/doc-registry-gate.sh
+  - tests/doc-system/doc-registry-gate.test.sh
+  - docs/authority/DOCS-REGISTRY.yaml
+  - gate-exemptions/2026-10-24-p6-942-docid-unique.md
+  - memory/notes/proposed/2026-10-24-p6-942-docid-unique.md
+  # 同 PR 的 K3 文案校正（裁 328 口径）
+  - docs/synova/presets/synova-k3-audit/persona-block.yml
+  - docs/synova/presets/synova-k3-audit/cordis.patch.yml
+done:
+  - verify: bash tests/doc-system/doc-registry-gate.test.sh      # 期望 39 通过 / 0 失败
+  - verify: bash scripts/doc-system/doc-registry-gate.sh         # 期望 重号 0 个 / exit 0
+  - verify: bash scripts/control-tower/check-preset-bundles.sh --consistency synova-k3-audit   # 期望 CONSISTENT
+  - verify: bash tests/control-tower/k3-preset-bundle-sync.test.sh   # 期望 PASS=7 FAIL=0
+note: "#942：登记门禁补唯一性硬判据（重号即红、逐条点名）；同 PR 校正 K3 预设 GitHub→Gitea gates 绿（pending=0）。"

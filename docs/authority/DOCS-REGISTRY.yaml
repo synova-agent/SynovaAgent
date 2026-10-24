@@ -960,3 +960,11 @@ documents:
     owner: P6
     note: "#932 PR-2b K3 审计判据升级：G 轴缺任一 ⇒ 不得 PASS（P0/FAIL）；§Q 表（Q-1..Q-15）进 skill；仓内补成真 bundle（package.json＋cordis.patch.yml，persona 与 persona-block 同源）；生效链＋一致性检查；可复跑夹具。"
 
+  # ---- P6 2026-10-24：#942 DOC id 唯一性判据 ＋ K3 文案校正（裁 350）----
+  - id: DOC-0264
+    type: decision
+    path: gate-exemptions/2026-10-24-p6-942-docid-unique.md
+    status: active
+    owner: P6
+    note: "#942：doc-registry-gate 增「DOC id 唯一」硬判据（重号即红、逐条点名，禁只告警）＋配对测试 I1/I2/I3；同 PR 校正 K3 预设『等 Gitea gates 绿（pending=0）』。"
+
