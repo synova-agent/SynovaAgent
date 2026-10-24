@@ -81,3 +81,11 @@ entries:
     status: wired
     owner: P4
     notes: "#838 E-2：主密钥缺失 fail-closed（抛 typed error＝启动失败）；四处调用点统一（bootstrap×3＋server×1）"
+  - capability: control-tower.checkTestObligations
+    defined_at: "scripts/control-tower/check-test-obligations.py:1"
+    provider: "scripts/control-tower/check-test-obligations.py:1"
+    consumer: null
+    test: "tests/control-tower/check-test-obligations.test.sh"
+    status: declared-only
+    owner: P7
+    notes: "测试义务闸（#913 批 2 · Q-10）；本 PR 不接 CI（①g 归 PR-3/P4）⇒ 无生产消费者"
