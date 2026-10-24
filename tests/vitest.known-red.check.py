@@ -115,8 +115,10 @@ def main():
     if new_fail or stale or uncovered_files:
         return 1
     # B1 兜底: 根级 success=false 但本器没归因到任何 new/stale/文件级 ⇒ 说明有"看不见的失败"
-    if data.get("success") is False:
-        print("❌ vitest 根 success=false，但未归因到任何未列失败/已绿条目（检查器盲区，禁当通过）")
+    # 盲区判定：根 success=false **且** 本器连失败记录都没看到（failed/file_failed 皆空）⇒ 不可归因
+    #   ⚠️ 不能写成"success=false 且无 new/stale"—— 已知红全命中时 new/stale 本来就都是 0（实测踩过）。
+    if data.get("success") is False and not failed and not file_failed:
+        print("❌ vitest 根 success=false，但 JSON 里没有任何失败记录（检查器盲区，禁当通过）")
         return 1
     print("KNOWN-RED-OK entries=%d failed=%d files_failed=%d" % (len(entries), len(failed), len(file_failed)))
     return 0
