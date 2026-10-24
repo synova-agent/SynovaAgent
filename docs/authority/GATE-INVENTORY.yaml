@@ -600,7 +600,7 @@ gates:
     kind: step
     line: 266
     label: "①e 质量增量闸（G1/G3/G4 · 只判变更集 · 不计组号）"
-    label_hash: "4a1f4c6f86d1"
+    label_hash: "f78e127cef46"
     occurrences: [266]
     what: "①e 质量增量闸（G1/G3/G4，只判变更集；A1 空集 SKIP）"
     blocking: hard
@@ -613,7 +613,7 @@ gates:
     kind: step
     line: 282
     label: "①f 类型＋铁律（tsc --noEmit ＋ check:iron-laws · 不计组号）"
-    label_hash: "7c9e1f2a3b4d"
+    label_hash: "361f9807d303"
     occurrences: [282]
     what: "①f 类型＋铁律（tsc --noEmit；铁律半边与 ① 同脚本，按标记去重）"
     blocking: hard
@@ -625,10 +625,10 @@ gates:
   - id: CI-S12
     kind: step
     line: 303
-    label: "①i 工具入参校验增量闸（R1/R2/R3 · 只判变更集 · 不计组号）"
-    label_hash: "838f1a3c3f19"
+    label: "①i 工具入参校验增量闸（R1–R6 · 只判变更集 · 不计组号）"
+    label_hash: "8c3ca37189ce"
     occurrences: [303]
-    what: "①i 工具入参校验增量闸（R1/R2/R3，只判变更集；空集 SKIP）"
+    what: "①i 工具入参校验增量闸（R1–R6（入参＋取消），只判变更集；空集 SKIP）"
     blocking: hard
     g_axis: ["G1", "G4"]
     checkpoints: []
@@ -681,7 +681,7 @@ checkers:
     replacement: ""
   - id: CT-check-canary-drift
     path: "scripts/control-tower/check-canary-drift.sh"
-    wired_to: ["CI-S12", "script:scripts/control-tower/check-gate-integrity.sh"]
+    wired_to: ["script:.github/workflows/ci.yml", "script:scripts/control-tower/check-gate-integrity.sh"]
     orphan: false
     blocking: false
     decision: keep
@@ -721,7 +721,7 @@ checkers:
     replacement: ""
   - id: CT-check-dsh-anchor
     path: "scripts/control-tower/check-dsh-anchor.py"
-    wired_to: ["CI-S12", "PC-B-1ff6e6", "script:scripts/control-tower/daily-cto-board.sh"]
+    wired_to: ["PC-B-1ff6e6", "script:.github/workflows/ci.yml", "script:scripts/control-tower/daily-cto-board.sh"]
     orphan: false
     blocking: false
     decision: keep
@@ -737,7 +737,7 @@ checkers:
     replacement: ""
   - id: CT-check-fixture-requires
     path: "scripts/control-tower/check-fixture-requires.sh"
-    wired_to: ["CI-S12"]
+    wired_to: ["script:.github/workflows/ci.yml"]
     orphan: false
     blocking: false
     decision: keep
@@ -745,7 +745,7 @@ checkers:
     replacement: ""
   - id: CT-check-gate-integrity
     path: "scripts/control-tower/check-gate-integrity.sh"
-    wired_to: ["CI-S12", "script:scripts/commit-msg-check.sh", "script:scripts/control-tower/check-gate-protection.sh", "script:scripts/control-tower/sealed-tests.sh", "script:scripts/control-tower/weekly-recon.sh"]
+    wired_to: ["script:.github/workflows/ci.yml", "script:scripts/commit-msg-check.sh", "script:scripts/control-tower/check-gate-protection.sh", "script:scripts/control-tower/sealed-tests.sh", "script:scripts/control-tower/weekly-recon.sh"]
     orphan: false
     blocking: false
     decision: keep
@@ -865,7 +865,7 @@ checkers:
     replacement: ""
   - id: CT-check-required-contexts
     path: "scripts/control-tower/check-required-contexts.py"
-    wired_to: ["CI-S12", "script:scripts/control-tower/check-package-selfsufficiency.py"]
+    wired_to: ["script:.github/workflows/ci.yml", "script:scripts/control-tower/check-package-selfsufficiency.py"]
     orphan: false
     blocking: false
     decision: keep
@@ -889,7 +889,7 @@ checkers:
     replacement: ""
   - id: CT-verify-parallel
     path: "scripts/control-tower/verify-parallel.sh"
-    wired_to: ["CI-S8", "script:scripts/control-tower/devdoc_writeset.py", "script:scripts/control-tower/incident-loop.py", "script:scripts/control-tower/merge_writeset_gate.py", "script:scripts/control-tower/self-health.py", "script:scripts/pre-push-check.sh", "script:scripts/workflow/check-dev-doc-write-set.sh"]
+    wired_to: ["script:.github/workflows/ci.yml", "script:scripts/control-tower/devdoc_writeset.py", "script:scripts/control-tower/incident-loop.py", "script:scripts/control-tower/merge_writeset_gate.py", "script:scripts/control-tower/self-health.py", "script:scripts/pre-push-check.sh", "script:scripts/workflow/check-dev-doc-write-set.sh"]
     orphan: false
     blocking: true
     decision: keep
