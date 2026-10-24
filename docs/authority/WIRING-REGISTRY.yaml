@@ -89,3 +89,19 @@ entries:
     status: declared-only
     owner: P7
     notes: "测试义务闸（#913 批 2 · Q-10）；本 PR 不接 CI（①g 归 PR-3/P4）⇒ 无生产消费者"
+  - capability: control-tower.ledgerSync
+    defined_at: "scripts/control-tower/ledger-sync.sh:1"
+    provider: "scripts/control-tower/ledger-sync.sh:1"
+    consumer: null
+    test: "tests/control-tower/ledger-sync.test.sh"
+    status: declared-only
+    owner: CTO
+    notes: "#953 自动化一期：merge → #918 §G 自动同步；人运行（dry-run 默认），无 CI 消费者"
+  - capability: control-tower.autoMerge
+    defined_at: "scripts/control-tower/auto-merge.sh:1"
+    provider: "scripts/control-tower/auto-merge.sh:1"
+    consumer: null
+    test: "tests/control-tower/auto-merge.test.sh"
+    status: declared-only
+    owner: CTO
+    notes: "#953 自动化一期：四条件 can 且非受保护路径才自动合；人运行，无 CI 消费者"

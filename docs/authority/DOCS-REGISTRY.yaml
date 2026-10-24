@@ -1000,3 +1000,10 @@ documents:
     owner: P6
     note: "#913 补丁（check-test-obligations 超时与非法值 typed rc=2）的受保护路径豁免登记：scanner、配测、本登记、自覆盖。"
 
+  # ---- CTO 2026-10-24：#953 自动化一期豁免件（DOC-0269；0268 由在飞 #950 预占）----
+  - id: DOC-0269
+    type: decision
+    path: gate-exemptions/2026-10-24-cto-953-automation.md
+    status: active
+    owner: CTO
+    note: "#953 自动化一期（ledger-sync／auto-merge）的受保护路径豁免；裁 367。"
