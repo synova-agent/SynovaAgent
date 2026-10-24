@@ -23,6 +23,7 @@
 #   S10 --selfcheck                                            ⇒ rc0 ＋ SELFCHECK-OK s1..s9=1/1/1/1/1/1/1/1/1
 #   S11 SYNO_TEST_OBLIGATIONS=off（规格 §6 回滚点）            ⇒ 红态被短路 rc0 ＋ 打印回滚态
 #   改坏必红 S12：两个变异体（剥掉 O1 检出 / 剥掉 T1 trailer 检出）⇒ 对应红态夹具翻绿 ⇒ 断言承重
+#   S13 git 超时/非法值：合法⇒非2｜非法⇒2＋E_ENV_INVALID｜超时⇒2＋E_GIT_TIMEOUT｜selfcheck 超时⇒2｜变异体承重
 #
 # 隔离: 每个用例独立 mktemp 仓（git init ＋ 本地身份 ＋ commit.gpgsign=false），
 #   零网络、零宿主写入；**唯一读真实工作树的用例是 S1/S10**（只读，不写）。
@@ -120,7 +121,7 @@ echo "════════════════════════�
 # ── S1 clean tree（真实工作树；只读）────────────────────────────────────────
 echo "── S1 clean tree · --base ${BASE_REF}（真实工作树，只读）──"
 runq "$REPO" --base "${BASE_REF}"
-assert_rc "$RUN_RC" 0 "S1 clean tree ⇒ exit 0"
+assert_rc "${RUN_RC}" 0 "S1 clean tree ⇒ exit 0"
 # M3（裁 355 M3）：不写死 modules/legacy —— 从台账现算；clean tree 的不变量是
 #   modules == 非 none 行数 ∧ legacy == legacy_baseline（相等即证棘轮基线未漂）
 read -r M_MODULES M_BASELINE <<< "$("$PYBIN" - "$MANIFEST" <<'PYM3'
@@ -150,7 +151,7 @@ commit_all "$D" "seed: 台账 1 条＋模块"
 ( cd "$D" && printf 'const changed = 1;\n' >> src/agent/context-compaction.ts )
 commit_all "$D" "S2 改模块无资产"
 runq "$D" --base HEAD~1
-assert_rc "$RUN_RC" 1 "S2 改 surface 模块无资产 ⇒ exit 1"
+assert_rc "${RUN_RC}" 1 "S2 改 surface 模块无资产 ⇒ exit 1"
 assert_has "S2 点名 context-compaction → tests/expected/compaction/**（实际改动：…）" \
   "context-compaction.ts → tests/expected/compaction/**（实际改动：src/agent/context-compaction.ts）"
 
@@ -174,7 +175,7 @@ commit_all "$D" "seed: 台账 1 条＋模块"
 )
 commit_all "$D" "S3 改模块＋补资产"
 runq "$D" --base HEAD~1
-assert_rc "$RUN_RC" 0 "S3 补 expected 资产 ⇒ exit 0"
+assert_rc "${RUN_RC}" 0 "S3 补 expected 资产 ⇒ exit 0"
 assert_hasnt "S3 不再点名 O1（义务已补）" "❌ O1"
 
 # ── S4 新增 110 行 src、台账无行 ⇒ rc1 untriaged ──────────────────────────
@@ -199,7 +200,7 @@ commit_all "$D" "seed: 台账 1 条＋src/seed.ts"
 )
 commit_all "$D" "S4 新增未 triage 模块"
 runq "$D" --base HEAD~1
-assert_rc "$RUN_RC" 1 "S4 新增 110 行 src 且台账无行 ⇒ exit 1"
+assert_rc "${RUN_RC}" 1 "S4 新增 110 行 src 且台账无行 ⇒ exit 1"
 assert_has "S4 点名 untriaged: src/x/new.ts" "untriaged: src/x/new.ts"
 assert_has "S4 同案存量棘轮也红（修法同一处：补 triage 行）" "legacy=1 > baseline=0"
 
@@ -220,7 +221,7 @@ mk_repo "$D"
 )
 commit_all "$D" "seed: 4 src / 2 登记 ⇒ legacy=2"
 runq "$D" --base HEAD
-assert_rc "$RUN_RC" 0 "S5 前置两态：seed 态 legacy=2==baseline ⇒ exit 0"
+assert_rc "${RUN_RC}" 0 "S5 前置两态：seed 态 legacy=2==baseline ⇒ exit 0"
 (
   cd "$D" || exit 1
   manifest tests/contract/triviality-manifest.yaml 2 \
@@ -228,7 +229,7 @@ assert_rc "$RUN_RC" 0 "S5 前置两态：seed 态 legacy=2==baseline ⇒ exit 0"
 )
 commit_all "$D" "S5 删一行台账"
 runq "$D" --base HEAD~1
-assert_rc "$RUN_RC" 1 "S5 删台账一行 ⇒ exit 1（清单级，无 src 变更也判）"
+assert_rc "${RUN_RC}" 1 "S5 删台账一行 ⇒ exit 1（清单级，无 src 变更也判）"
 assert_has "S5 点名 legacy=3 > baseline=2" "legacy=3 > baseline=2"
 
 # ── S6 NoBehaviorChange ＋ hunk 含 export ⇒ trailer 失效 ──────────────────
@@ -248,7 +249,7 @@ commit_all "$D" "refactor: 只重命名
 
 NoBehaviorChange: 本次只重命名局部变量"
 runq "$D" --base HEAD~1
-assert_rc "$RUN_RC" 1 "S6 trailer ＋行为行 ⇒ exit 1"
+assert_rc "${RUN_RC}" 1 "S6 trailer ＋行为行 ⇒ exit 1"
 assert_has "S6 点名 trailer 失效" "trailer 失效"
 assert_has "S6 点名命中行（+export function extra）" "export function extra(): number { return 2; }"
 assert_has "S6 点名 commit（sha 前 7 位）" "commit "
@@ -270,7 +271,7 @@ commit_all "$D" "refactor: 只重命名
 
 NoBehaviorChange: 本次只重命名局部变量"
 runq "$D" --base HEAD~1
-assert_rc "$RUN_RC" 0 "S6b trailer 有效且无行为行 ⇒ exit 0（免补资产）"
+assert_rc "${RUN_RC}" 0 "S6b trailer 有效且无行为行 ⇒ exit 0（免补资产）"
 assert_has "S6b 打印 trailer 免除义务" "trailer 免除义务"
 
 # ── S7 exempt 过期 ⇒ rc1 ──────────────────────────────────────────────────
@@ -286,7 +287,7 @@ mk_repo "$D"
 )
 commit_all "$D" "seed: exempt 已过期"
 runq "$D" --base HEAD
-assert_rc "$RUN_RC" 1 "S7 exempt expiry 过期 ⇒ exit 1（空变更集也判，SKIP 不吞）"
+assert_rc "${RUN_RC}" 1 "S7 exempt expiry 过期 ⇒ exit 1（空变更集也判，SKIP 不吞）"
 assert_has "S7 点名 expiry 已过期" "expiry 已过期"
 
 # ── S7b 两态：exempt 未过期 ⇒ rc0 ─────────────────────────────────────────
@@ -302,7 +303,7 @@ mk_repo "$D"
 )
 commit_all "$D" "seed: exempt 未过期"
 runq "$D" --base HEAD
-assert_rc "$RUN_RC" 0 "S7b exempt 未过期 ⇒ exit 0"
+assert_rc "${RUN_RC}" 0 "S7b exempt 未过期 ⇒ exit 0"
 
 # ── S8 边界三态 ───────────────────────────────────────────────────────────
 echo "── S8 边界：空变更集 / 坏 base / 扫描根 0 src ──"
@@ -317,15 +318,15 @@ mk_repo "$D"
 )
 commit_all "$D" "seed: 干净态"
 runq "$D" --base HEAD
-assert_rc "$RUN_RC" 0 "S8-a 空变更集 ⇒ exit 0"
+assert_rc "${RUN_RC}" 0 "S8-a 空变更集 ⇒ exit 0"
 assert_has "S8-a SKIP 语义" "SKIP: 无 src/** 变更"
 runq "$D" --base no-such-ref-xyz
-assert_rc "$RUN_RC" 2 "S8-b 坏 base ⇒ exit 2（fail-closed）"
+assert_rc "${RUN_RC}" 2 "S8-b 坏 base ⇒ exit 2（fail-closed）"
 assert_has "S8-b 点名 E_BAD_BASE" "E_BAD_BASE"
 D="$TMPROOT/s8c"
 mk_repo "$D"
 runq "$D" --base HEAD
-assert_rc "$RUN_RC" 2 "S8-c 扫描根 0 个 src 文件 ⇒ exit 2"
+assert_rc "${RUN_RC}" 2 "S8-c 扫描根 0 个 src 文件 ⇒ exit 2"
 assert_has "S8-c 点名 E_NOSRC" "E_NOSRC"
 
 # ── S9 golden 命名 ⇒ rc1 ──────────────────────────────────────────────────
@@ -347,7 +348,7 @@ commit_all "$D" "seed: 干净态"
 )
 commit_all "$D" "S9 新增 golden"
 runq "$D" --base HEAD~1
-assert_rc "$RUN_RC" 1 "S9 新增 golden 文件 ⇒ exit 1"
+assert_rc "${RUN_RC}" 1 "S9 新增 golden 文件 ⇒ exit 1"
 assert_has "S9 命名红（含 golden）" "命名红"
 assert_has "S9 点名路径 foo.golden.json" "tests/expected/x/foo.golden.json"
 
@@ -370,12 +371,12 @@ commit_all "$D" "seed: 干净态"
 )
 commit_all "$D" "S9b 合规命名"
 runq "$D" --base HEAD~1
-assert_rc "$RUN_RC" 0 "S9b 合规命名 ⇒ exit 0"
+assert_rc "${RUN_RC}" 0 "S9b 合规命名 ⇒ exit 0"
 
 # ── S10 --selfcheck ───────────────────────────────────────────────────────
 echo "── S10 --selfcheck（判别力自检；信号量==0 ⇒ exit 2）──"
 runq "$REPO" --selfcheck
-assert_rc "$RUN_RC" 0 "S10 --selfcheck ⇒ exit 0"
+assert_rc "${RUN_RC}" 0 "S10 --selfcheck ⇒ exit 0"
 assert_has "S10 SELFCHECK-OK s1..s9=1/1/1/1/1/1/1/1/1" "SELFCHECK-OK s1..s9=1/1/1/1/1/1/1/1/1"
 
 # ── S11 回滚点（规格 §6）：红态被 SYNO_TEST_OBLIGATIONS=off 短路 ─────────
@@ -383,7 +384,7 @@ echo "── S11 SYNO_TEST_OBLIGATIONS=off（唯一回滚点）⇒ 红态短路 
 D="$TMPROOT/s2"
 RUN_OUT="$( cd "$D" && SYNO_TEST_OBLIGATIONS=off "$PYBIN" "$SUT" --root . --base HEAD~1 2>&1 )"
 RUN_RC=$?
-assert_rc "$RUN_RC" 0 "S11 回滚态（S2 红态被短路）⇒ exit 0"
+assert_rc "${RUN_RC}" 0 "S11 回滚态（S2 红态被短路）⇒ exit 0"
 assert_has "S11 打印回滚态（不静默）" "回滚态"
 
 # ── S12 改坏必红（变异体：剥掉规则检出 ⇒ 对应红态夹具翻绿）──────────────
@@ -428,6 +429,61 @@ else
   else
     no "S12-B 变异体仍判红（rc=${MRC2}）⇒ T1 断言可能空转"
   fi
+fi
+
+echo ""
+echo "── S13 git 超时 / 非法值 ⇒ rc=2（typed）＋ _sh(selfcheck) 超时 ⇒ rc=2 ──"
+D13="$TMPROOT/s13"
+mk_repo "$D13"
+(
+  cd "$D13" || exit 1
+  mkdir -p src/agent
+  ts_module src/agent/context-compaction.ts
+)
+commit_all "$D13" "seed: 1 模块"
+( cd "$D13" && printf 'const x13 = 1;\n' >> src/agent/context-compaction.ts )
+commit_all "$D13" "S13 改模块"
+
+# S13-a 合法值 ⇒ 正常（rc 非 2；本夹具无台账义务 ⇒ 0/1 均可，这里断言"不是 2"）
+RUN_OUT="$( cd "$D13" && SYNO_GIT_TIMEOUT_SEC=60 "$PYBIN" "$SUT" --root . --base HEAD~1 2>&1 )"; RUN_RC=$?
+if [ "${RUN_RC}" -ne 2 ]; then ok "S13-a 合法值 SYNO_GIT_TIMEOUT_SEC=60 ⇒ 正常（exit=${RUN_RC}）"; else no "S13-a 合法值被误判为检查失败（exit=2）"; fi
+
+# S13-b 非法值 ⇒ rc=2 ＋ E_ENV_INVALID（typed，不裸 ValueError）
+RUN_OUT="$( cd "$D13" && SYNO_GIT_TIMEOUT_SEC=abc "$PYBIN" "$SUT" --root . --base HEAD~1 2>&1 )"; RUN_RC=$?
+assert_rc "${RUN_RC}" 2 "S13-b 非法值 ⇒ exit 2"
+assert_has "S13-b typed message 含 E_ENV_INVALID" "E_ENV_INVALID"
+assert_hasnt "S13-b 不出现裸 Traceback" "Traceback (most recent call last)"
+
+# S13-c 超时（=0 ⇒ 立即 TimeoutExpired）⇒ rc=2 ＋ E_GIT_TIMEOUT
+RUN_OUT="$( cd "$D13" && SYNO_GIT_TIMEOUT_SEC=0 "$PYBIN" "$SUT" --root . --base HEAD~1 2>&1 )"; RUN_RC=$?
+assert_rc "${RUN_RC}" 2 "S13-c git 超时 ⇒ exit 2"
+assert_has "S13-c typed message 含 E_GIT_TIMEOUT" "E_GIT_TIMEOUT"
+
+# S13-d _sh()（--selfcheck 夹具路径）超时 ⇒ rc=2 ＋ E_GIT_TIMEOUT（覆盖 warn a）
+RUN_OUT="$( cd "$D13" && SYNO_GIT_TIMEOUT_SEC=0 "$PYBIN" "$SUT" --selfcheck 2>&1 )"; RUN_RC=$?
+assert_rc "${RUN_RC}" 2 "S13-d selfcheck 路径超时 ⇒ exit 2"
+assert_has "S13-d 点名 E_GIT_TIMEOUT 且阶段为 selfcheck" "E_GIT_TIMEOUT"
+
+# S13-e 改坏必红：变异体（把 git() 的 TimeoutExpired 捕获换掉）⇒ 输出不再含 E_GIT_TIMEOUT ⇒ 断言承重
+MUT13="$TMPROOT/s13-mut.py"
+_py_mut() { "$PYBIN" - "$1" "$2" <<'PY'
+import sys
+src=open(sys.argv[1],encoding="utf-8").read()
+n=src.count('raise ObligationError("E_GIT_TIMEOUT"')
+assert n >= 2, f"变异点未命中：E_GIT_TIMEOUT 抛出点应 ≥2（实测 {n}）；scanner 改了 ⇒ 本用例必须同步"
+open(sys.argv[2],"w",encoding="utf-8").write(src.replace('raise ObligationError("E_GIT_TIMEOUT"','raise ObligationError("E_MUT_TIMEOUT"'))
+PY
+}
+if _py_mut "$SUT" "$MUT13" 2>/dev/null && [ -f "$MUT13" ]; then
+  RUN_OUT="$( cd "$D13" && SYNO_GIT_TIMEOUT_SEC=0 "$PYBIN" "$MUT13" --root . --base HEAD~1 2>&1 )"; MRC13=$?
+  assert_rc "${MRC13}" 2 "S13-e 变异体仍以 rc=2 收口（变异只换错误码，不换退出码）"
+  if printf '%s' "$RUN_OUT" | grep -qF "E_GIT_TIMEOUT"; then
+    no "S13-e 变异体仍报 E_GIT_TIMEOUT（断言可能空转）"
+  else
+    ok "S13-e 变异体（去掉 TimeoutExpired 捕获）⇒ 不再报 E_GIT_TIMEOUT ⇒ 断言承重（rc=${MRC13}）"
+  fi
+else
+  no "S13-e 变异体生成失败"
 fi
 
 echo ""

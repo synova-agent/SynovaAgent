@@ -1,6 +1,6 @@
 # .claude/claims/913.yaml — #913 批2 PR-2（Q-10 分层成文＋快照义务）· 写集声明（claim-first 载体）
 #
-# 写集 = 本 PR **9 件**（dev doc §1 的 1–7 ＋ 门禁实况必需 2 件；逐文件）。PR-1 已合（4485e7754），本文件由 PR-1 口径改钉 PR-2。
+# 写集 = 本 PR **11 件**（原 9 件 ＋ #950 补丁的决策 Note ＋ 本补丁豁免件；claim_store 实测 11）。PR-1 已合（4485e7754），本文件由 PR-1 口径改钉 PR-2。
 # 🔴 追加 2 件属**门禁实况必需**，**L1 已批准追认**（同 #912/#916「L1 追认」先例，裁 343）；
 #    合计 9 件 ≤ PR 12 件上限；仍零 src/**、零 scripts/audit/**：
 #    ① memory/notes/proposed/2026-10-24-p7-913-pr2-test-obligations.md
@@ -17,7 +17,9 @@ writeset:
   - tests/contract/triviality-manifest.yaml
   - scripts/control-tower/check-test-obligations.py
   - tests/control-tower/check-test-obligations.test.sh
+  - memory/notes/proposed/2026-10-24-p6-913-git-timeout-hardening.md
   - gate-exemptions/2026-10-24-p7-913-pr2-docs.md
+  - gate-exemptions/2026-10-24-p6-913-git-timeout.md
   - docs/authority/DOCS-REGISTRY.yaml
   - .claude/claims/913.yaml
   # 门禁实况必需（L1 已批准追认；裁 343 先例）
@@ -31,4 +33,4 @@ done:
   - verify: bash scripts/doc-system/doc-registry-gate.sh
   - verify: python3 scripts/control-tower/claim_store.py --check 913 --root .
   - verify: npx vitest run --changed gitea/local-main
-note: "#913 批2 PR-2 Q-10 分层成文＋快照义务（裁 353）：docs/authority/testing-layers.md（六档现役＋bench/web 未建不空转＋义务/命名/豁免/失效条件；G1–G6 只引 DOC-0241）＋triviality-manifest 唯一真源＋三态扫描器与 S1–S9 配对测试；DOC-0265/0266/0267（写前 base max=0263；写后实测 gitea/local-main 前进至 f45cc73c1，#942 已占 0264 ⇒ 被抢占已顺延）；受保护路径豁免 4 行（裁 331）；门禁必需追加 2 件（决策 Note 解 D395-a ＋ WIRING-REGISTRY 登记行）经 L1 追认（裁 343 先例）⇒ 写集 9 件；不改门禁语义、不动 src/**、本 PR 不接 CI。"
+note: "#913 批2 PR-2 Q-10 分层成文＋快照义务（裁 353）：docs/authority/testing-layers.md（六档现役＋bench/web 未建不空转＋义务/命名/豁免/失效条件；G1–G6 只引 DOC-0241）＋triviality-manifest 唯一真源＋三态扫描器与 S1–S9 配对测试；DOC-0265/0266/0267（写前 base max=0263；写后实测 gitea/local-main 前进至 f45cc73c1，#942 已占 0264 ⇒ 被抢占已顺延）；受保护路径豁免 4 行（裁 331）；门禁必需追加 2 件（决策 Note 解 D395-a ＋ WIRING-REGISTRY 登记行）经 L1 追认（裁 343 先例）⇒ 写集 9 件；#950 补丁再经 L1 追认 ＋ 豁免件（裁 354 同款自覆盖）⇒ 写集 11 件；不改门禁语义、不动 src/**、本 PR 不接 CI。"
