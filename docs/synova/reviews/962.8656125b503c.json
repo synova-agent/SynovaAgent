@@ -1,0 +1,162 @@
+{
+ "schema": "syno-review-receipt/v1",
+ "pr": 962,
+ "patch_fingerprint": "sha256:8656125b503c18cc75a86896dc495d217ac3064a4f9eafaadf9cf96c27b1f160",
+ "author": "ct/914-q4 实现会话（L2 实施 + L1 收口，非本复核会话）",
+ "reviewer": "零上下文独立复核会话（fresh，未参与实现；DSH subagent / deepseek-flash）",
+ "independence": "fresh-session",
+ "verdict": "PASS",
+ "checks": [
+  {
+   "id": "A",
+   "name": "A 运行时逃逸：17 类逃逸入参全部抛 UnreachableVariantError，零默认值返回",
+   "result": "pass",
+   "cmd": "自建 vitest 探针 tests/__accprobe/accprobe.test.ts（不复用 PR helper）对 isRetryable 传 JSON.parse 伪码/''/null/123/'NOT_A_REAL_CODE'/undefined/true/[]/{}/Symbol/1n/函数/NaN/'constructor'/'Timeout'",
+   "evidence": "49 passed / 0 failed（A 段全绿）；每个入参断言 code='UNREACHABLE_VARIANT'、phase=0、retryable=false、message 含 'isRetryable'；A-不返回默认值 断言 leaked=[] ⇒ 17/17 抛，无一 return"
+  },
+  {
+   "id": "A2",
+   "name": "assertNever 自身恒抛且 message 带自定义 context",
+   "result": "pass",
+   "cmd": "(assertNever as (v:unknown,c?:string)=>never)('ESCAPED','myCtx')",
+   "evidence": "抛 UnreachableVariantError，message 含 'myCtx'（探针 'A-assertNever 自身恒抛且 message 带 context' 绿）"
+  },
+  {
+   "id": "B",
+   "name": "B 编译期：给 ErrorCode 加成员 ⇒ tsc rc≠0 且指向 assertNever 的 never 参数",
+   "result": "pass",
+   "cmd": "在 ErrorCode 顶部加 1 行 ACC_PROBE_TOP 后 npx tsc --noEmit --pretty false；随后 git checkout 恢复",
+   "evidence": "rc=2；src/errors/types.ts(577,26): error TS2345: Argument of type '\"ACC_PROBE_TOP\"' is not assignable to parameter of type 'never'。基线 tsc rc=0，恢复后 rc=0"
+  },
+  {
+   "id": "B2",
+   "name": "B 对照：不加成员时 tsc 基线为 0（排除 B 被既有错污染）",
+   "result": "pass",
+   "cmd": "npx tsc --noEmit --pretty false（HEAD 原样）",
+   "evidence": "RC=0（无输出）；变异后 rc=2；恢复后 rc=0"
+  },
+  {
+   "id": "C",
+   "name": "C 存量基线：独立扫描 39 文件/39 债，与基线严格相等（自建扫描器）",
+   "result": "pass",
+   "cmd": "node /tmp/acc-scan.mjs /tmp/acc962（自写逐字符花括号配对，非复用 PR 的 countSwitchDebtInLines）",
+   "evidence": "fileCount=39 totalDebt=39；与测试内 SWITCH_DEBT_BASELINE 文件集合逐条比对 SET_EQUAL=true（only-mine=[] only-theirs=[]）；总 switch 面 40 处（39 债+1 已转换 src/errors/types.ts:546）"
+  },
+  {
+   "id": "C2",
+   "name": "C 棘轮增向：新增无 assertNever 的 switch ⇒ 红并点名文件",
+   "result": "pass",
+   "cmd": "写入 src/acc-probe-switch.ts（普通 switch）后 npx vitest run tests/contract/assert-never.test.ts；随后删除",
+   "evidence": "C1 red：\"switch 债基线被抬高：src/acc-probe-switch.ts 扫描 1 > 基线 0\"；Tests 3 failed | 9 passed；删除后复绿"
+  },
+  {
+   "id": "C3",
+   "name": "C 棘轮减向：删掉一个已登记文件 ⇒ 同样红（方向核清）",
+   "result": "pass",
+   "cmd": "mv src/cli/commands/config-cmd.ts 至 /tmp 后跑同一套；随后恢复",
+   "evidence": "C1 red：\"基线未同步：src/cli/commands/config-cmd.ts 扫描 0 < 基线 1\"。方向＝严格相等双向棘轮：增/减均红，必须显式改基线（PR diff 可见），故不能被静默放宽"
+  },
+  {
+   "id": "D",
+   "name": "D 行为不变：24 码真值表逐条 vs base 源码独立解析",
+   "result": "pass",
+   "cmd": "git show ed63144e7:src/errors/types.ts > base 副本；自写解析器按 case 分组取 return true/false；与 head 运行时 isRetryable(Object.values(ErrorCode)) 逐条比对",
+   "evidence": "base 解析出 24 码、无落空 case；mismatches=[]；true 集合恰 12 个且与 base 完全相同（TIMEOUT/NETWORK/DNS/RATE_LIMITED/ENGINE_TIMEOUT/DB_ERROR/OVERLOADED/SERVER_ERROR/CONTEXT_OVERFLOW/PAYLOAD_TOO_LARGE/EMPTY_RESPONSE/AUTH_FAILED）"
+  },
+  {
+   "id": "E",
+   "name": "M1–M2 改坏必红：删 default 与改静默 return 两态",
+   "result": "pass",
+   "cmd": "M1 删 default: assertNever 块；M2 把 assertNever 的 throw 改成 return（0 as never）；各跑一次套件后 git checkout 恢复",
+   "evidence": "M1：独立扫描 39→40 债、types.ts 1→2；C1 red 点名 src/errors/types.ts；Tests 6 failed。M2：Tests 4 failed | 8 passed（B0 'expected function to throw an error, but it didn't'）。两次恢复后 git status 0 行"
+  },
+  {
+   "id": "F",
+   "name": "L1 收口①：2 处 @ts-expect-error 的必要性与是否同类绕过",
+   "result": "pass",
+   "cmd": "读 tests/contract/assert-never.test.ts:88,135；另在 tests/ 下放一个「下一行无错」的 @ts-expect-error 后跑 npx tsc --noEmit",
+   "evidence": "删掉会红吗：本仓不会——root tsconfig include=['src/**/*.ts'] exclude=[...,'tests']，且所有 tsc 入口（CI local-gates.yml:290）都用它；实测伪 @ts-expect-error 仍 rc=0 且无 TS2578 ⇒ tests 从不被类型检查。判定：不是同类绕过（as never 单向伪造值、永不回验；@ts-expect-error 双向——错误消失即 TS2578 红），且仅测试件、未伪造值；但本仓该自反性质不成立 ⇒ 属「纸面合规」"
+  },
+  {
+   "id": "G",
+   "name": "L1 收口②：renderVariant 去 catch 改 WeakSet —— 行为等价与新增静默路径",
+   "result": "pass",
+   "cmd": "git show 7e1c753c5:packages/error-types/src/index.ts > .accprobe/old-error-types.ts（无外部 import，直接可载）；新旧两版各自经 new UnreachableVariantError('ctx',v).message 对 28 类入参对照",
+   "evidence": "普通对象/嵌套/数组/空/null/undefined/数字/布尔/Date 文本完全一致（diffs=[]）；循环引用 old=[object Object]/1,2, ⇒ new={\"self\":\"[Circular]\"}/[1,2,\"[Circular]\"](信息更优)；嵌套 BigInt old 走 catch 得 [object Object] ⇒ new={\"big\":\"10n\"}；**无新增静默路径**（全部走抛或正常返回）。但有 3 类回归：抛错 getter / 抛错 toJSON / 20000 层深嵌套 ⇒ new 抛 TypeError|RangeError，old 不抛（new 不抛的清单非空）"
+  },
+  {
+   "id": "H",
+   "name": "红线：package.json 未碰、写集 5 件闭合、零 audit、CI pending=0",
+   "result": "pass",
+   "cmd": "git diff ed63144e7 HEAD --name-status；name-only | grep audit；curl gitea /commits/<head>/status",
+   "evidence": "5 件恰为声明写集（M .claude/claims/914.yaml / A note / M packages/error-types/src/index.ts / M src/errors/types.ts / A tests/contract/assert-never.test.ts）；package.json 命中 0；src/audit|scripts/audit 命中 0；status state=success total_count=2（push 25s + pull_request 27s 均 success）⇒ pending=0"
+  },
+  {
+   "id": "I",
+   "name": "账实：39/39、12 passed、24 码表逐条核",
+   "result": "pass",
+   "cmd": "npx vitest run tests/contract/assert-never.test.ts；与 PR 正文/Note/claims 数字对照",
+   "evidence": "Test Files 1 passed / Tests 12 passed（12 条用例名全列）；39 文件/39 债 与我独立扫描严格相等；24 码真实存在且真值表一致；「40 switch」= 39 债 + 1 已转换（40=39+1 ✓）。唯一不一致：编译期行号记录为 (579,26)，实测为 (577,26)"
+  },
+  {
+   "id": "J",
+   "name": "零写集重叠：与其余 14 个 open PR 无交集",
+   "result": "pass",
+   "cmd": "curl gitea pulls?state=open（15 个）逐个 /pulls/<n>/files 比对 5 件写集",
+   "evidence": "open PRs=15（含 962）；943/901/900/899/898/897/835/801/633/632/631/630/629/628 全部 OVERLAP 命中 0"
+  }
+ ],
+ "findings": [
+  {
+   "severity": "note",
+   "id": "F1",
+   "title": "编译期证据行号记录错 2 行（579 vs 实测 577），已在 4 处durable载体扩散",
+   "detail": "实测：给 ErrorCode 顶部加 1 行 ⇒ src/errors/types.ts(577,26) TS2345；加 3 行 ⇒ (579,26)。过程档案 914-Q4-原始输出.txt:95 与 PR 正文=577（正确）；而 914-Q4 规格 §3-E3:86、Note:25、.claude/claims/914.yaml、tests/contract/assert-never.test.ts:122 均记 579 且未写注入行数 ⇒ 账实不自洽，需按「注入 1 行⇒577」订正或补注入形态",
+   "fix": "改 4 处为 (577,26) 并注明「ErrorCode 顶部插 1 行」"
+  },
+  {
+   "severity": "note",
+   "id": "F2",
+   "title": "Note 仍描述已删除的 catch 回退，且证据锚早于 head 两个 commit",
+   "detail": "Note:15 写「值只做 String/JSON.stringify 安全渲染、失败回退 String」——head 已无 catch（5219ea60a 改为 WeakSet replacer）；Note:21 证据锚 @77300474b，早于 7e1c753c5（去 as never）与 5219ea60a（去 catch），即 L1 两处收口未被 Note 记录",
+   "fix": "Note 补一行：renderVariant 无 catch + WeakSet replacer，抛错 getter/深嵌套会以非 typed error 逃出；证据锚更新到 head"
+  },
+  {
+   "severity": "note",
+   "id": "F3",
+   "title": "renderVariant 注释「不展开敏感内部值」与实现相反；逃逸对象会全量进 message（进而进日志）",
+   "detail": "packages/error-types/src/index.ts:52 注释称不展开，但实测 message=unreachable variant in ctx: {\"a\":1,\"b\":\"x\"} 为全量 JSON 展开；assertNever 是公开 API，误传含密钥的配置对象会把值写进日志（当前 3 个生产调用点均为常量/三元派生码，逃逸需强制转型 ⇒ 现实风险低）",
+   "fix": "二选一：改注释如实说明；或加长度上限+键名脱敏（更稳）"
+  },
+  {
+   "severity": "note",
+   "id": "F4",
+   "title": "A5 用例名「无 catch，不抛」过度概括：3 类入参确会抛",
+   "detail": "tests/contract/assert-never.test.ts:102 只覆盖 普通对象/循环/BigInt；抛错 getter、抛错 toJSON、超栈深嵌套会让 new UnreachableVariantError 抛 TypeError/RangeError 而非 typed error（无 code=UNREACHABLE_VARIANT），按 code 路由的调用方会漏",
+   "fix": "A5 补 3 个边界用例并断言「抛错但非本类」或收窄渲染；或改用例名为「上述三类输入不抛」"
+  },
+  {
+   "severity": "note",
+   "id": "F5",
+   "title": "非循环的共享引用被误标 [Circular]",
+   "detail": "{a:shared,b:shared} ⇒ old={\"a\":{\"s\":1},\"b\":{\"s\":1}}，new={\"a\":{\"s\":1},\"b\":\"[Circular]\"}（seen 记录所有对象而非调用栈）。不抛、不静默，仅信息失真",
+   "fix": "可改 path 栈式判定，或注释说明该口径"
+  },
+  {
+   "severity": "note",
+   "id": "F6",
+   "title": "G3 机械 T5 命中 1 条（新文件）——语义为委托 helper，非空壳测试",
+   "detail": "quality-baseline.py --json：T5 hit tests/contract/assert-never.test.ts:68「用例块内 expect( 数=0」；因 A2 的三条断言委托给 expectEscapeToThrow（该 helper 内含 5 个 expect）。T5 为正则+括号匹配非 AST（标准自述 limitation L6），全仓 T5 基线 137；且 G1–G6 标准状态=proposed/P0 不阻断",
+   "fix": "A2 内联 1 个 expect 即可消警，或按已知 FP 记账"
+  },
+  {
+   "severity": "note",
+   "id": "F7",
+   "title": "@ts-expect-error 两处在本仓无任何门禁校验（结构性缺口，非本 PR 可修）",
+   "detail": "root tsconfig 排除 tests，CI 仅 local-gates.yml:290 用 root tsconfig ⇒ 该指令的「错误消失即红」性质不生效；规格 R2 又禁改 tsconfig.json ⇒ 本 PR 无法自修。建议另立 P4 门禁项：tests 纳入 typecheck",
+   "fix": "不在本 PR；报 P4 门禁包"
+  }
+ ],
+ "issued_at": "2026-10-24T23:43:48+0800",
+ "tool": "deliverable-acceptance@v1（.synova/skills/deliverable-acceptance/SKILL.md 五步 + §1bis G1–G6）+ pr-review 口径"
+}
