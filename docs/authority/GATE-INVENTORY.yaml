@@ -803,11 +803,11 @@ checkers:
     replacement: ""
   - id: CT-check-merge-conditions
     path: "scripts/control-tower/check-merge-conditions.sh"
-    wired_to: ["script:scripts/control-tower/probe-line-signals.ts"]
+    wired_to: ["script:scripts/control-tower/auto-merge.sh", "script:scripts/control-tower/probe-line-signals.ts"]
     orphan: false
     blocking: false
     decision: keep
-    reason: "C10 复算只落在非门禁位脚本（C10b）：script:scripts/control-tower/probe-line-signals.ts ⇒ 在脚本链在位、不在门禁链，保留"
+    reason: "C10 复算只落在非门禁位脚本（C10b）：script:scripts/control-tower/auto-merge.sh/script:scripts/control-tower/probe-line-signals.ts ⇒ 在脚本链在位、不在门禁链，保留"
     replacement: ""
   - id: CT-check-name-allocation
     path: "scripts/control-tower/check-name-allocation.sh"
@@ -905,6 +905,14 @@ checkers:
     decision: keep
     reason: "C10 复算孤儿（wired_to=[]）；哨兵类型登记硬门禁，缺失登记属事故形态 ⇒ 守卫，不据零命中退役"
     replacement: ""
+  - id: CT-check-test-obligations
+    path: "scripts/control-tower/check-test-obligations.py"
+    wired_to: []
+    orphan: true
+    blocking: false
+    decision: keep
+    reason: "C10 复算孤儿（wired_to=[]）；#913 批 2 测试义务闸（Q-10）判据在役但尚未接门禁/CI（接线属 A 类另开卡，本卡不扩）⇒ 保留"
+    replacement: ""
   - id: CT-verify-claims-table
     path: "scripts/control-tower/verify-claims-table.sh"
     wired_to: ["PC-X-d1b9b0"]
@@ -923,11 +931,11 @@ checkers:
     replacement: ""
   - id: CT-check-quality-delta.py
     path: "scripts/control-tower/check-quality-delta.py"
-    wired_to: ["CI-S10", "PC-X-efbcc9"]
+    wired_to: ["CI-S10", "PC-X-efbcc9", "script:scripts/control-tower/check-test-obligations.py"]
     orphan: false
     blocking: true
     decision: keep
-    reason: "#912 批 1（裁 330）：pre-commit 附加块（PC-X-efbcc9）＋ CI 具名步 ①e（CI-S10）双接线 ⇒ 在役"
+    reason: "#912 批 1（裁 330）：pre-commit 附加块（PC-X-efbcc9）＋ CI 具名步 ①e（CI-S10）双接线 ⇒ 在役；wired_to 另含 check-test-obligations.py（注释文本引用，compute_wiring 不剥注释 ⇒ 按复算记账）"
     replacement: ""
 
 # pairing：判据⑤ —— 5 类扫描各 1 行，覆盖 T1–T5（C9 强制；target 必须命中 gates[].id 或 checkers[].id）
