@@ -1,0 +1,3 @@
+- scripts/control-tower/post-merge-gate.sh — 新增合并后门禁跑批器（A′ 替代） — 裁 397
+- gate-exemptions/2026-10-25-cto-980-post-merge-gate.md — 本豁免件自覆盖 — 裁 397
+- docs/authority/DOCS-REGISTRY.yaml — #980 登记本豁免件（D2 登记门禁） — 裁 397

@@ -121,3 +121,12 @@ entries:
     status: wired
     owner: P2
     notes: "跨 wire 无值（Q-2／裁 366）：秘密槽只以 {configured} 出现，secrets[] 侧车给 {path,configured,source}；provenance[].doc 同面脱敏"
+
+  - capability: control-tower.postMergeGate
+    defined_at: "scripts/control-tower/post-merge-gate.sh:1"
+    provider: "scripts/control-tower/post-merge-gate.sh:1"
+    consumer: null
+    test: "tests/control-tower/post-merge-gate.test.sh"
+    status: declared-only
+    owner: CTO
+    notes: "#980 合并后跑「未接 CI 的门禁」清单（A′ 替代／裁 397）：CTO 合并后手跑，0/1/2 三态 ＋ --selfcheck 两态；本件不接 CI（合并后才跑）⇒ 无生产消费者，declared-only 是实测"

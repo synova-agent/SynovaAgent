@@ -1030,3 +1030,11 @@ documents:
     status: active
     owner: P1
     note: "#915 Q-5 受保护路径豁免件：4 条按文件名逐条覆盖（check-tool-args-delta.py、check-tool-args-delta.test.sh、DOCS-REGISTRY.yaml、本文件自覆盖），裁 365。"
+
+  # ---- CTO 2026-10-25：#980 post-merge-gate 豁免件（裁 397）----
+  - id: DOC-0276
+    type: decision
+    path: gate-exemptions/2026-10-25-cto-980-post-merge-gate.md
+    status: active
+    owner: CTO
+    note: "#980 合并后跑未接 CI 门禁的清单（A′ 替代）；裁 397。"
