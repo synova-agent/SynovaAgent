@@ -30,4 +30,8 @@ out="$(GITEA_TOKEN=fake SYNO_LEDGER_SYNC_STATE="$TMP/state3" SYNO_LEDGER_SYNC_MO
 [ -s "$TMP/state3" ] && ok "state 已落盘" || no "state 未落盘"
 out2="$(GITEA_TOKEN=fake SYNO_LEDGER_SYNC_STATE="$TMP/state3" bash "$S" 2>&1)"
 case "$out2" in *无新增*) ok "重跑幂等（无新增 merge）";; *) no "重跑未幂等: $out2";; esac
+echo "── 7. state 非法 ⇒ exit 2 E_STATE（不假绿）──"
+printf 'not-a-sha-xyz' > "$TMP/badstate"
+out="$(GITEA_TOKEN=fake SYNO_LEDGER_SYNC_STATE="$TMP/badstate" bash "$S" 2>&1)"; chk 2 "$?" "state 非法 exit 2"
+case "$out" in *E_STATE*) ok "打印 E_STATE";; *) no "缺 E_STATE";; esac
 echo; echo "── 汇总: $PASS 通过 / $FAIL 失败 ──"; [ "$FAIL" = "0" ] || exit 1

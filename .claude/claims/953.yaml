@@ -9,6 +9,7 @@ writeset:
   - scripts/control-tower/auto-merge.sh
   - tests/control-tower/ledger-sync.test.sh
   - tests/control-tower/auto-merge.test.sh
+  - tests/control-tower/auto_merge_mock_test.py
   - gate-exemptions/2026-10-24-cto-953-automation.md
   - docs/authority/DOCS-REGISTRY.yaml
   - docs/authority/WIRING-REGISTRY.yaml

@@ -7,7 +7,8 @@
 #          可选: SYNO_AUTO_MERGE_BASE（check-merge-conditions 的 base，默认 gitea/local-main）
 # @output  每个 open PR 一行判定：`AUTO-MERGE: <pr> 可自动合` / `SKIP <pr>: <原因>`
 # @exit    0 = 正常（含无可合项）；1 = --apply 时有 PR 合并失败；2 = 自身失败（E_TOKEN/E_NET/E_GIT）
-# @degraded 无 token ⇒ `E_TOKEN`+2；网络/API 失败 ⇒ `E_NET`+2
+# @degraded 无 token ⇒ `E_TOKEN`；网络/API 失败 ⇒ `E_NET`；合并被拒 ⇒ `E_MERGE`（均落 stderr）
+# 测试接缝: SYNO_AUTO_MERGE_FORCE_CAN=1 跳过四条件（仅供配对测试，禁止生产使用）
 # 已知限制: 只判"路径是否受保护"与四条件；**不做语义裁决**（A 类必须人批，见裁 354）
 # ═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
@@ -76,18 +77,22 @@ fi
 FAIL=0
 while IFS=$'\t' read -r N HEAD BASE; do
   [ -n "$N" ] || continue
-  COND="$(cd "$ROOT" && SYNO_MERGE_BASE="${SYNO_AUTO_MERGE_BASE:-}" bash scripts/control-tower/check-merge-conditions.sh --pr "$N" 2>&1 | tail -1)"
-  case "$COND" in
-    *"MERGE-COND: can"*) : ;;
-    *) echo "SKIP $N: 四条件未满足 -- ${COND}"; continue ;;
-  esac
+  if [ "${SYNO_AUTO_MERGE_FORCE_CAN:-}" = "1" ]; then
+    COND="MERGE-COND: can（测试接缝 SYNO_AUTO_MERGE_FORCE_CAN=1）"
+  else
+    COND="$(cd "$ROOT" && SYNO_MERGE_BASE="${SYNO_AUTO_MERGE_BASE:-}" bash scripts/control-tower/check-merge-conditions.sh --pr "$N" 2>&1 | tail -1)"
+    case "$COND" in
+      *"MERGE-COND: can"*) : ;;
+      *) echo "SKIP $N: 四条件未满足 -- ${COND}"; continue ;;
+    esac
+  fi
   if ! FILES="$(GITEA_TOKEN="$TOKEN" PR="$N" SYNO_GITEA_BASE="$API" "$PYBIN" - <<'PY'
 
 import json, os, sys, urllib.request
 tok=os.environ["GITEA_TOKEN"]; pr=os.environ["PR"]
 out=[]; page=1
 while True:
-    u="http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/pulls/%s/files?limit=100&page=%d" % (pr, page)
+    u="%s/pulls/%s/files?limit=50&page=%d" % (os.environ["SYNO_GITEA_BASE"], pr, page)
     r=urllib.request.Request(u,headers={"Authorization":"token "+tok})
     try:
         with urllib.request.urlopen(r, timeout=10) as x: d=json.load(x)
@@ -98,7 +103,7 @@ while True:
         out.append(f.get("filename",""))
         pf = f.get("previous_filename")
         if pf: out.append(pf)
-    if len(d) < 100: break
+    if not d: break
     page += 1
 print("\n".join(out))
 PY
@@ -120,7 +125,7 @@ PY
     if GITEA_TOKEN="$TOKEN" PR="$N" SYNO_GITEA_BASE="$API" "$PYBIN" - <<'PY'
 import json, os, sys, urllib.request, urllib.error
 tok=os.environ["GITEA_TOKEN"]; pr=os.environ["PR"]
-u="http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/pulls/%s/merge" % pr
+u="%s/pulls/%s/merge" % (os.environ["SYNO_GITEA_BASE"], pr)
 req=urllib.request.Request(u, data=json.dumps({"Do":"merge","delete_branch_after_merge":False}).encode(),
     headers={"Authorization":"token "+tok,"Content-Type":"application/json"}, method="POST")
 try:
