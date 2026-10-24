@@ -297,3 +297,22 @@ jobs:
             BASE="$(bash scripts/control-tower/resolve-ci-base.sh)" || exit $?
             SYNO_CI=1 GITHUB_ACTIONS=true SYNO_DIFF_BASE="$BASE" bash scripts/pre-commit-check.sh || exit $?
           fi
+      # ①i 落位＝**①f 之后、下一 job 头之前**（#915 Q-1）：CI-S<n> 是**位置派生**的 id（#910 盘点表），
+      #   插在 ①f 之前会让 CI-S3..S11 全体漂移 ⇒ 只追加、不重编号。①g 由 #913 PR-3 预留；①h 由在飞 #943 占用。
+      #   代价（与 ①e 同）：① 若先红，本步不执行（不做 always）。
+      - name: ①i 工具入参校验增量闸（R1/R2/R3 · 只判变更集 · 不计组号）
+        run: |
+          cd /Users/wane/.ci-work/SynovaAgent
+          # 真逃生舱（唯一回滚点）：置 0 ⇒ 跳过本步且打 ℹ️ 行。
+          # 🔴 判断必须在 resolve-ci-base.sh **之前** —— 回滚时不该再白跑 git 解析（T9⑦）。
+          if [ "${SYNO_TOOL_ARGS_DELTA:-1}" = "0" ]; then
+            echo "ℹ️  工具入参校验增量闸: 回滚态（SYNO_TOOL_ARGS_DELTA=0）—— 跳过（唯一回滚点）"
+            exit 0
+          fi
+          # 判据源：#915 Q-1（规格 §4.2）—— R1 空 schema 有新工具 ⇒ 红；R2 绕过 execute 调工具 handler ⇒ 红；
+          #   R3 全树空 schema 集合 vs scripts/control-tower/tool-args-baseline.txt ⇒ 双向棘轮。
+          # 🔴 三态原样透传（0 通过/SKIP ｜ 1 违规 ｜ 2 检查自身失败）⇒ `|| exit $?`，禁 `|| exit 1`。
+          BASE="$(bash scripts/control-tower/resolve-ci-base.sh)" || exit $?
+          echo "①i base = $BASE"
+          python3 scripts/control-tower/check-tool-args-delta.py --root . --base "$BASE" || exit $?
+

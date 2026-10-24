@@ -1,0 +1,9 @@
+# tool-args-baseline.txt — #915 Q-1 工具入参校验增量闸（R3 存量棘轮）的唯一登记面
+# 格式：<tool_name> | <理由>（` | ` 分隔；`#` 开头为注释/空行忽略）
+# 语义：空 schema（parameters.properties 为空或缺失）**且 handler 零形参** ⇒ 合法 nullary
+#       （R1 不判它 —— 工具本身没有入参），但**必须**在此登记；
+#       全树空 schema 名集合 ≠ 本清单 ⇒ R3 双向红：多 ⇒ 新增盲区；少 ⇒ 修好未删登记。
+# 登记方向单一：本文件手写登记，测试（tests/agent/tool-args-validation.test.ts 断言⑤）与
+#   闸（R3 静态扫描）各自独立派生后与本文件互校 —— 防"双真源"。
+show_diagnosis_progress | nullary：handler 零形参，工具本身无入参
+list_scheduled_tasks | nullary：handler 零形参，列出全部定时任务

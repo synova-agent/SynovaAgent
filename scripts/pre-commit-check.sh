@@ -2107,6 +2107,35 @@ else
   self_fail_missing_script "内容面耦合门禁 CC1–CC4" "scripts/check-content-coupling.sh"
 fi
 
+# ═══ #915 Q-1: 工具入参校验增量闸（只判变更集；**不计组号** —— 同 #912 接入模式）═══
+if [ ! -f "$ROOT/scripts/control-tower/check-tool-args-delta.py" ]; then
+  # 缺脚本 ⇒ 不许静默跳过（同文件 :209 self_fail_missing_script 先例；最近调用点 :2107）
+  self_fail_missing_script "#915 工具入参校验增量闸" "scripts/control-tower/check-tool-args-delta.py"
+elif [ "${SYNO_TOOL_ARGS_DELTA:-1}" = "0" ]; then
+  echo -e "  ${CYAN}ℹ️  工具入参校验增量闸: 回滚态（SYNO_TOOL_ARGS_DELTA=0）—— 跳过（唯一回滚点）${RESET}"
+else
+  _TAD_ARGS=(--root "$ROOT")
+  if [ "${GITHUB_ACTIONS:-}" = "true" ] && [ -n "${SYNO_DIFF_BASE:-}" ]; then
+    _TAD_ARGS+=(--base "$SYNO_DIFF_BASE")
+  else
+    _TAD_ARGS+=(--staged)   # 本地：判暂存区（base...HEAD 看不到暂存改动 ⇒ 会假绿）
+  fi
+  _TAD_OUT="$(python3 "$ROOT/scripts/control-tower/check-tool-args-delta.py" "${_TAD_ARGS[@]}" 2>&1)"; _TAD_RC=$?
+  if [ "$_TAD_RC" -eq 0 ]; then
+    soft_pass "#915 工具入参校验增量闸: $(printf '%s' "$_TAD_OUT" | grep -E 'TOOL-ARGS-DELTA:' | tail -1)"
+  elif [ "$_TAD_RC" -eq 1 ]; then
+    _TAD_MSG="$(printf '%s\n' "$_TAD_OUT" | grep -E '^❌' | head -8)"
+    # 🔴 非空兜底：rc=1 但无 ❌ 行时，hard_check 空消息会打 ✅ 且不增 HARD_FAIL（实测）
+    [ -z "$_TAD_MSG" ] && _TAD_MSG="rc=1 但无 ❌ 行 ⇒ 按红阻断（输出格式违约）"
+    hard_check "#915 工具入参校验增量闸 (只判变更集): 有违规" "$_TAD_MSG"
+  elif [ "$_TAD_RC" -ge 2 ]; then
+    _TAD_MSG="$(printf '%s' "${_TAD_OUT:-<无输出>}" | grep -E 'ERROR|degraded' | head -3)"
+    # 🔴 同型兜底：rc≥2 且无 ERROR/degraded 行（如脚本缺失 ⇒ python3 报 can't open file）也不许打绿
+    [ -z "$_TAD_MSG" ] && _TAD_MSG="rc=${_TAD_RC} 且无 ERROR/degraded 行 ⇒ 按检查自身失败阻断"
+    hard_check "#915 工具入参校验增量闸: 检查自身失败 rc=${_TAD_RC}（fail-closed，不等于通过）" "$_TAD_MSG"
+  fi
+fi
+
 # V3: 写 CP3 检查点
 mkdir -p "$ROOT/.codex/checkpoints"
 G10_FAIL=$([ -n "$MISMATCH" ] && echo "true" || echo "false")

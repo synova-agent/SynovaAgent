@@ -105,6 +105,14 @@ entries:
     status: declared-only
     owner: CTO
     notes: "#953 自动化一期：四条件 can 且非受保护路径才自动合；人运行，无 CI 消费者"
+  - capability: control-tower.checkToolArgsDelta
+    defined_at: "scripts/control-tower/check-tool-args-delta.py:1"
+    provider: "scripts/control-tower/check-tool-args-delta.py:1"
+    consumer: "scripts/pre-commit-check.sh:2123"
+    test: "tests/control-tower/check-tool-args-delta.test.sh"
+    status: wired
+    owner: P1
+    notes: "#915 Q-1（裁 365）：工具入参校验增量闸（R1/R2/R3）；生产消费点=pre-commit 附加块调用行，CI 另有具名步 ①i（local-gates.yml:303）"
   - capability: config.redactSecrets
     defined_at: "src/config/redact.ts:186"
     provider: "src/config/redact.ts:186"
