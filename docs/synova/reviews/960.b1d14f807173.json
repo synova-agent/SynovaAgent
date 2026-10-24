@@ -1,0 +1,102 @@
+{
+ "schema": "syno-review-receipt/v1",
+ "pr": 960,
+ "patch_fingerprint": "sha256:b1d14f807173dd7ea03d1baded1d8fdbd30604dcaab1af327a1a1f2c8415018a",
+ "author": "k12-batch5 <k12@local>",
+ "reviewer": "acc960-fresh-reviewer / DSH session ca4d7bd6-1b57-4f5e-b171-437aa3dd3b95（零上下文，未参与实现）",
+ "independence": "fresh-session",
+ "verdict": "PASS",
+ "checks": [
+  {
+   "id": "红→绿·base(8a910555b)红态",
+   "cmd": "cd /tmp/base960 && python3 scripts/control-tower/check-test-obligations.py --root . --base HEAD; echo $?",
+   "result": "pass",
+   "evidence": "modules=6 legacy=470 untriaged=0 ／ ❌ M1 ... legacy=470 > baseline=469（存量只减不增）／ TEST-OBLIGATIONS: VIOLATIONS 1 ／ exit=1"
+  },
+  {
+   "id": "红→绿·base 测试红态",
+   "cmd": "cd /tmp/base960 && bash tests/control-tower/check-test-obligations.test.sh; echo $?",
+   "result": "pass",
+   "evidence": "结果: 45 通过, 3 失败 ／ exit=1（S1 三段全红：clean-tree rc=1、缺 modules=6 legacy=469、缺 SKIP 语义）"
+  },
+  {
+   "id": "红→绿·head(1fae32f6a)绿态",
+   "cmd": "cd /tmp/acc960 && python3 scripts/control-tower/check-test-obligations.py --root . --base HEAD; echo $?",
+   "result": "pass",
+   "evidence": "modules=7 legacy=469 untriaged=0 ／ TEST-OBLIGATIONS: SKIP base=1fae32f6a458 ／ exit=0"
+  },
+  {
+   "id": "红→绿·head 测试绿态",
+   "cmd": "cd /tmp/acc960 && bash tests/control-tower/check-test-obligations.test.sh; echo $?",
+   "result": "pass",
+   "evidence": "结果: 48 通过, 0 失败 ／ exit=0（S1–S13 含 S12 改坏必红、S13 三态 rc=2 全绿）"
+  },
+  {
+   "id": "写集/最小改动：只 +1 entry、as_of 改",
+   "cmd": "git -C /tmp/acc960 diff --stat 8a910555b..1fae32f6a; git -C /tmp/acc960 diff --name-only 8a910555b..1fae32f6a",
+   "result": "pass",
+   "evidence": "2 files changed, 10 insertions(+), 1 deletion(-) ／ 仅 .claude/claims/959.yaml（+8）与 tests/contract/triviality-manifest.yaml（+2/−1）；Gitea changed_files=2 additions=10 deletions=1 与本地一致"
+  },
+  {
+   "id": "未改 baseline 数值",
+   "cmd": "git -C /tmp/acc960 show HEAD:tests/contract/triviality-manifest.yaml | grep 'legacy_baseline'",
+   "result": "pass",
+   "evidence": "head: meta: { as_of: \"gitea/local-main@8a910555b\", ruling: \"裁332/353\", legacy_baseline: 469 } ／ base 同为 legacy_baseline: 469（只 as_of 从 b398e4d0a→8a910555b 更新，计数未放宽）"
+  },
+  {
+   "id": "未改脚本/测试：判据零放宽",
+   "cmd": "for f in scripts/control-tower/check-test-obligations.py tests/control-tower/check-test-obligations.test.sh; do git -C /tmp/acc960 rev-parse 8a910555b:$f 1fae32f6a:$f; done",
+   "result": "pass",
+   "evidence": "check-test-obligations.py base=head=2efb9cf45；check-test-obligations.test.sh base=head=a7cdb139b ⇒ 两件 sha 完全相同；git diff --name-only 8a910555b..1fae32f6a -- scripts/ tests/control-tower/ 为空"
+  },
+  {
+   "id": "登记行合规：exempt 三字段＋reason≥10 字",
+   "cmd": "python3 -c \"...\" 解析 head manifest 中 src/config/redact.ts 行",
+   "result": "pass",
+   "evidence": "obligation=exempt ／ issue=\"#955\" ／ expiry=\"2027-06-30\" ／ reason 长 64 字（≥10）：『Q-2 秘密脱敏helper：行为由 tests/config/redact.test.ts 覆盖，不设 expected 资产』"
+  },
+  {
+   "id": "module 路径真实存在",
+   "cmd": "git -C /tmp/acc960 cat-file -e HEAD:src/config/redact.ts; echo $?",
+   "result": "pass",
+   "evidence": "exit=0（src/config/redact.ts 存在，193 行）；且 check-test-obligations.py 的 validate_manifest 跑通无 E_SCHEMA（module 重复/字段非法也会 rc=2）"
+  },
+  {
+   "id": "exempt 理由诚实性（不虚报覆盖）",
+   "cmd": "git -C /tmp/acc960 cat-file -e HEAD:tests/config/redact.test.ts; git -C /tmp/acc960 show HEAD:tests/config/redact.test.ts | grep -cE '^\\s*(it|test)\\('",
+   "result": "pass",
+   "evidence": "tests/config/redact.test.ts 存在；16 个 it()；第 21–23 行 import { redactSecrets } from '../../src/config/redact' ⇒ 理由所称覆盖真实存在，非空口豁免"
+  },
+  {
+   "id": "CI 全绿 pending=0",
+   "cmd": "curl Gitea /commits/1fae32f6a458.../status",
+   "result": "pass",
+   "evidence": "state=success total_count=2 ／ success local-gates / gates (push)、success local-gates / gates (pull_request) ／ pending|failure|error 计数=0"
+  },
+  {
+   "id": "四条件（②重叠 ④串行；③由本回执承担）",
+   "cmd": "bash /tmp/acc960/scripts/control-tower/check-merge-conditions.sh --pr 960",
+   "result": "pass",
+   "evidence": "① CI 全绿 pending=0 ok ／ ② 零写集重叠 ok（比对 15 对，0 处重叠）／ ④ 串行 ok（S1=ok S2=ok 就绪集=空）／ ③ 现为 no 因缺回执 docs/synova/reviews/960.b1d14f807173.json —— 本回执即该条的输入"
+  }
+ ],
+ "findings": [
+  {
+   "severity": "info",
+   "title": "head 树的 --base HEAD 绿走 SKIP 路径",
+   "detail": "PR 无 src/** 变更，故 head 上该命令打印 SKIP 并 rc=0；真正承重的是清单级 M1（modules=7 legacy=469，非 SKIP 才判）＋ test.sh 的 S1（真实工作树 --base gitea/local-main）。红→绿结论成立，但复跑者若只看 head 那行 SKIP 会误以为未真校验。"
+  },
+  {
+   "severity": "info",
+   "title": "『reason ≥10 字』非门禁强制项",
+   "detail": "check-test-obligations.py:398-402 对 exempt 只要求 issue/expiry/reason 非空；TRAILER_MIN_REASON=10（:99）只作用于 NoBehaviorChange trailer（:639）。本条由我手工实测（64 字），换下一个 PR 时不能指望门禁挡住短理由。"
+  },
+  {
+   "severity": "info",
+   "title": "未验证项：exempt 与 expected 的取舍属政策判断",
+   "detail": "本条把 redact.ts 判为 exempt（不设 expected 资产）而落登记，恢复了 legacy=469=baseline。判『该模块是否真无 expected 义务』不在本次机械复核范围（需 CTO/线级判据），我只核『豁免理由所述覆盖真实存在』且『基线未被抬高』。"
+  }
+ ],
+ "issued_at": "2026-10-24T21:49:41+08:00",
+ "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步）"
+}
