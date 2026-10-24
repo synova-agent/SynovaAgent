@@ -6,9 +6,20 @@
  *
  * 质量降级: <3/5 评分且 >=5 企业反馈 → 降级
  * 过期: >6月未达2家验证→搁置, >12月→归档
+ *
+ * 契约（铁律 47）:
+ *   @input    — `new FederatedPipeline(anonymizer?: Anonymizer, clock: Clock = systemClock)`
+ *               各方法既有入参不变（markShareable/approveByGa/validateByEnterprise/
+ *               checkQualityDegradation/checkExpiry/checkGaWeightDrop）
+ *   @output   — `FederatedKnowledge`：条目 id 的尾缀、createdAt/updatedAt/reviewedAt
+ *               全部来自注入的 `clock`（本文件已无直取系统时钟）
+ *   @degraded — 不新增降级面：不传 `clock` ⇒ 默认 `systemClock`（生产行为与改前逐字节等价）
+ *   @error    — 不适用：本类不抛错（既有"查不到 ⇒ 返回 false/undefined"语义不变）；
+ *               `clock` 接口不符 ⇒ TypeScript 编译期失败
  */
 import { createLogger } from "@synova/logger";
 import { Anonymizer } from "./anonymizer";
+import { systemClock, type Clock } from "./clock";
 
 const log = createLogger("services/federated-pipeline");
 
@@ -53,9 +64,16 @@ export class FederatedPipeline {
   private store: Map<string, FederatedKnowledge> = new Map();
   private anonymizer: Anonymizer;
   private idCounter = 0;
+  /** 时间源（Q-6）——默认 `systemClock`，不传即旧行为 */
+  private readonly clock: Clock;
 
-  constructor(anonymizer?: Anonymizer) {
+  /**
+   * @param anonymizer — 脱敏器实例（可选，缺省 `new Anonymizer()`）
+   * @param clock — 时间源（可选，缺省 `systemClock` ⇒ 生产行为等价）
+   */
+  constructor(anonymizer?: Anonymizer, clock: Clock = systemClock) {
     this.anonymizer = anonymizer || new Anonymizer();
+    this.clock = clock;
   }
 
   /**
@@ -63,8 +81,8 @@ export class FederatedPipeline {
    */
   markShareable(chunkId: string, text: string, orgId: string): FederatedKnowledge {
     const { anonymizedText, replacedCount } = this.anonymizer.anonymize(text);
-    const id = `fed-${++this.idCounter}-${Date.now().toString(36)}`;
-    const now = new Date().toISOString();
+    const id = `fed-${++this.idCounter}-${this.clock.now().toString(36)}`;
+    const now = this.clock.nowIso();
 
     const entry: FederatedKnowledge = {
       sourceChunkId: chunkId,
@@ -92,8 +110,8 @@ export class FederatedPipeline {
 
     entry.status = "pending_ga";
     entry.reviewedBy = reviewer;
-    entry.reviewedAt = new Date().toISOString();
-    entry.updatedAt = new Date().toISOString();
+    entry.reviewedAt = this.clock.nowIso();
+    entry.updatedAt = this.clock.nowIso();
     log.info({ id, reviewer }, "GA 已审批 → pending_ga");
     return true;
   }
@@ -109,7 +127,7 @@ export class FederatedPipeline {
     entry.validationCount++;
     entry.feedbackCount++;
     entry.qualityScore = (entry.qualityScore * (entry.feedbackCount - 1) + score) / entry.feedbackCount;
-    entry.updatedAt = new Date().toISOString();
+    entry.updatedAt = this.clock.nowIso();
 
     if (entry.validationCount >= 2 && entry.status !== "federated") {
       entry.status = "federated";
@@ -129,7 +147,7 @@ export class FederatedPipeline {
 
     if (entry.qualityScore < 3 && entry.feedbackCount >= 5) {
       entry.status = "degraded";
-      entry.updatedAt = new Date().toISOString();
+      entry.updatedAt = this.clock.nowIso();
       log.warn({ id, qualityScore: entry.qualityScore, feedbackCount: entry.feedbackCount }, "联邦知识质量降级");
       return true;
     }
@@ -143,20 +161,20 @@ export class FederatedPipeline {
     const entry = this.store.get(id);
     if (!entry) return false;
 
-    const now = Date.now();
+    const now = this.clock.now();
     const created = new Date(entry.createdAt).getTime();
     const monthsElapsed = (now - created) / (1000 * 60 * 60 * 24 * 30);
 
     if (monthsElapsed > 12 && entry.validationCount < 2) {
       entry.status = "archived";
-      entry.updatedAt = new Date().toISOString();
+      entry.updatedAt = this.clock.nowIso();
       log.warn({ id, monthsElapsed: Math.round(monthsElapsed) }, "联邦知识超 12 月 → 归档");
       return true;
     }
 
     if (monthsElapsed > 6 && entry.validationCount < 2) {
       entry.status = "stalled";
-      entry.updatedAt = new Date().toISOString();
+      entry.updatedAt = this.clock.nowIso();
       log.warn({ id, monthsElapsed: Math.round(monthsElapsed) }, "联邦知识超 6 月 → 搁置");
       return true;
     }
@@ -180,7 +198,7 @@ export class FederatedPipeline {
     for (const [, entry] of this.store) {
       if (entry.reviewedBy !== gaUserId) continue;
       entry.qualityScore = entry.qualityScore * 0.5;
-      entry.updatedAt = new Date().toISOString();
+      entry.updatedAt = this.clock.nowIso();
       affected++;
 
       // 降低后评分过低 → 降级

@@ -1,33 +1,33 @@
-# .claude/claims/915.yaml — #915（批 3-B 第 2 条）Q-5 工具取消语义 · 写集声明（S0 源，issue 号卡）
-# 先例：.claude/claims/913.yaml / 912.yaml（claim 优先于 D# 链；K3 R3 防劫持）；Q-1 已完成，claim 随分支改写（同 #913 先例）
+# .claude/claims/915.yaml — #915（批 3-B 第 3 条）Q-6 时间可注入 · 写集声明（S0 源，issue 号卡）
+# 先例：.claude/claims/913.yaml / 912.yaml（claim 优先于 D# 链；K3 R3 防劫持）；Q-1/Q-5 已完成，claim 随分支改写（同 #913 先例）
 # 纪律：只列本 PR 真正改动的文件，不预授权。
-# 规格：handbook 派单件/2026-10-25-规格-915-Q5-工具取消语义.md §2（v2，15 件；+tests/errors/error-base-interop.test.ts 为 L1 裁 §8-2 ④ 行号同步）
+# 规格：handbook 派单件/2026-10-25-规格-915-Q6-时间可注入-v2.md（§2 v2；P1 批 A 案写集 9→13 件——新增 src/services/clock.ts 能力件 ⇒ WIRING 新增 1 行＋受保护测试常量同步，沿用 #956 Q-1 先例）
 writeset:
   - .claude/claims/915.yaml
   - docs/authority/DOCS-REGISTRY.yaml
-  - docs/authority/GATE-INVENTORY.yaml
-  - gate-exemptions/2026-10-25-p1-915-q5.md
-  - memory/notes/proposed/2026-10-25-915-q5-tool-cancel.md
-  - scripts/control-tower/check-tool-args-delta.py
-  - scripts/control-tower/tool-signal-baseline.txt
-  - src/agent/conversation-engine.ts
-  - src/agent/tool-loop-executor.ts
-  - src/agent/tools.ts
-  - src/l1-interaction/web-adapter.ts
-  - src/routes/conversations.ts
-  - tests/agent/tool-cancel.test.ts
-  - tests/control-tower/check-tool-args-delta.test.sh
-  - tests/errors/error-base-interop.test.ts
+  - docs/authority/WIRING-REGISTRY.yaml
+  - gate-exemptions/2026-10-25-p1-915-q6.md
+  - memory/notes/proposed/2026-10-25-915-q6-time-injection.md
+  - src/agent/main-agent.ts
+  - src/services/clock.ts
+  - src/services/federated-pipeline.ts
+  - tests/contract/clock-injection.test.ts
+  - tests/contract/time-injection.test.ts
+  - tests/control-tower/quality-baseline.test.sh
+  - tests/control-tower/quality-standard.test.sh
+  - tests/services/clock.test.ts
 done:
-  - verify: npx vitest run tests/agent/tool-cancel.test.ts # S1 至 S11 全绿
-  - verify: bash tests/control-tower/check-tool-args-delta.test.sh # T14 至 T22 全过（T7 新常量口径）
-  - verify: python3 scripts/control-tower/check-tool-args-delta.py --root . --selfcheck # 末行 SELFCHECK-OK f1=1 f2=1 f3=1 f4=1 f5=1 clean=0
-  - verify: python3 scripts/control-tower/check-tool-args-delta.py --root . --base gitea/local-main # rules=R1,R2,R3,R4,R5,R6 rc=0
+  - verify: npx vitest run tests/services/clock.test.ts tests/contract/clock-injection.test.ts # S1 至 S4 全绿（时钟单元／联邦链时间旅行／主干链 startedAt／默认 systemClock 回归）
+  - verify: npx vitest run tests/contract/time-injection.test.ts # R1 至 R6 全绿（新文件／加 1／减 1／豁免／不可读 fail-closed 逐用例点名）
   - verify: npx tsc --noEmit # 类型零错
-  - verify: python3 scripts/control-tower/quality-baseline.py --check-inventory docs/authority/GATE-INVENTORY.yaml # 盘点四值不变
-  - verify: python3 scripts/control-tower/quality-baseline.py --check-registry docs/authority/WIRING-REGISTRY.yaml # REGISTRY-OK rows=10
+  - verify: grep -c 'Date\.now()\|new Date()' src/services/federated-pipeline.ts src/agent/main-agent.ts # 两条链清零 = 0/0
+  - verify: python3 scripts/control-tower/quality-baseline.py --check-registry docs/authority/WIRING-REGISTRY.yaml # REGISTRY-OK rows=11
+  - verify: bash tests/control-tower/quality-baseline.test.sh # TEST-OK fail=0
+  - verify: bash tests/control-tower/quality-standard.test.sh # STANDARD-OK g=6 fields=5 rules=5
   - verify: python3 scripts/control-tower/quality-baseline.py --orphans-only # orphans=7/35
-  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main # 受保护路径豁免齐全 rc=0
-  - verify: npx vitest run tests/errors/error-base-interop.test.ts # 17 passed（PINNED_SAMPLING 行号同步 L1 裁 §8-2 ④）
-  - verify: bash scripts/pre-commit-check.sh # 提交端全绿
-note: "#915 批 3-B 第 2 条 Q-5：工具取消语义（execute 收 signal 全链贯穿＋派发前 throwIfAborted＋结构化 AbortError 两支码＋SYNO_TOOL_ABORT=0 回滚＋中断锚不变量保留）＋既有闸只扩 R4/R5/R6（副作用工具可取消/存量信号棘轮 3 行/执行链不丢 signal）不新建闸不新增 CI 步；PR 正文 Refs #915（不 Closes）。裁 365。"
+  - verify: python3 scripts/control-tower/quality-baseline.py --check-inventory docs/authority/GATE-INVENTORY.yaml # 盘点四值不变 covered=G12/12 B9/9 X7/7 S12/12 K35/35 R40/40
+  - verify: python3 scripts/control-tower/claim_store.py --check 915 --root . # rc=0
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main # 受保护路径 4 行豁免齐全 rc=0
+  - verify: SYNO_CI=1 GITHUB_ACTIONS=true SYNO_DIFF_BASE=gitea/local-main bash scripts/pre-commit-check.sh # 提交端全绿
+  - verify: npx vitest run # 全量零新增红
+note: "#915 批 3-B 第 3 条 Q-6：时间可注入——新增 src/services/clock.ts（Clock{now,nowIso}＋systemClock 唯一系统时钟入口）＋两链注入（federated-pipeline 10 处／main-agent 15 处，本文件清零，默认 systemClock 与改前逐字节等价）＋tests/contract 冻结清单双向棘轮（178 文件/306 now/270 newDate，唯一豁免 clock.ts，增/减/新文件/不可读皆判红）＋tests/contract 行为判据（同一测试内时间旅行），B 类不改门禁不新增 CI 步；rows 10→11 已经 P1 批 A 案（#956 Q-1 先例：新增 src 能力件 ⇒ WIRING 行＋受保护测试常量同步）；createMutableClock 落测试侧（P1 裁 A，模块只留 MutableClock interface）；规格 §6 清单命令勘误（git ls-files 'src/**/*.ts' 漏 src 顶层 2 件，实测口径 306/270/178）；裁 365；PR 正文 Refs #915（不 Closes）。"

@@ -1030,3 +1030,11 @@ documents:
     status: active
     owner: P1
     note: "#915 Q-5 受保护路径豁免件：4 条按文件名逐条覆盖（check-tool-args-delta.py、check-tool-args-delta.test.sh、DOCS-REGISTRY.yaml、本文件自覆盖），裁 365。"
+
+  # ---- P1 2026-10-25：#915 Q-6 时间可注入豁免件（DOC-0273；main 实测 max=0272 ⇒ 从 0273 起）----
+  - id: DOC-0273
+    type: decision
+    path: gate-exemptions/2026-10-25-p1-915-q6.md
+    status: active
+    owner: P1
+    note: "#915 Q-6 受保护路径豁免件：4 条按文件名逐条覆盖（docs/authority/DOCS-REGISTRY.yaml、tests/control-tower/quality-baseline.test.sh、tests/control-tower/quality-standard.test.sh、本文件自覆盖），裁 365。"

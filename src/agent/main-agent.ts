@@ -10,16 +10,21 @@
  *   - 追踪执行状态
  *   - 写入执行记录到审计日志
  *
- * 契约:
- *   @input  — LoopTriggerConfig[] + AuditStore 实例
- *   @output — LoopExecutionRecord
+ * 契约（铁律 47）:
+ *   @input  — `new MainAgent(auditStore?, taskDecomposer?, conflictArbitrator?, clock: Clock = systemClock)`
+ *             ＋ `LoopTriggerConfig`（registerLoop）
+ *   @output — `LoopExecutionRecord`：startedAt / completedAt / durationMs 全部来自注入的 clock
+ *             （本文件已无直取系统时钟）
  *   @degraded — 单循环失败不崩溃 MainAgent, catch + log.warn + degraded:true
+ *   @error   — 不适用：本类不向调用方抛错；失败一律落 record.status='failed' +
+ *              degraded:true 并 log.warn（既有语义不变）；clock 接口不符 ⇒ TypeScript 编译期失败
  */
 import { createLogger } from '@synova/logger';
 import type { LoopTriggerConfig, ScaleName } from '../loops/loop-trigger-config';
 import { defaultDiagnosisHandler, defaultNavigationHandler, defaultEvolutionHandler, defaultSelfCheckHandler, defaultKnowledgeAccumulationHandler, defaultOverflowHandler } from './loop-handlers';
 import type { ConflictArbitrator } from './conflict-arbitrator';
 import { BudgetTracker } from './cost-budget';
+import { systemClock, type Clock } from '../services/clock';
 
 const log = createLogger('agent/main-agent');
 const UNKNOWN_EXPERT = 'unknown' as const;
@@ -84,16 +89,26 @@ export class MainAgent {
   private taskDecomposer: import('./task-decomposer').TaskDecomposer | null;
   private conflictArbitrator: ConflictArbitrator | null;
   private budgetTracker: BudgetTracker;
+  /** 时间源（Q-6）——默认 `systemClock`，不传即旧行为 */
+  private readonly clock: Clock;
 
+  /**
+   * @param auditStore — 审计存储实例（可选，null 时降级）
+   * @param taskDecomposer — 任务分解器（可选，null 时 loop-1 不走分解）
+   * @param conflictArbitrator — 冲突仲裁器（可选，null 时不仲裁）
+   * @param clock — 时间源（可选，缺省 `systemClock` ⇒ 生产行为等价）
+   */
   constructor(
     auditStore?: AuditStoreLike | null,
     taskDecomposer?: import('./task-decomposer').TaskDecomposer | null,
     conflictArbitrator?: ConflictArbitrator | null,
+    clock: Clock = systemClock,
   ) {
     this.auditStore = auditStore ?? null;
     this.taskDecomposer = taskDecomposer ?? null;
     this.conflictArbitrator = conflictArbitrator ?? null;
     this.budgetTracker = new BudgetTracker();
+    this.clock = clock;
   }
 
   /**
@@ -125,7 +140,7 @@ export class MainAgent {
         status: 'failed',
         durationMs: 0,
         error: `循环 ${loopId} 未注册`,
-        startedAt: new Date().toISOString(),
+        startedAt: this.clock.nowIso(),
         degraded: true,
       };
     }
@@ -150,7 +165,7 @@ export class MainAgent {
         status: 'failed',
         durationMs: 0,
         error: `循环 ${loopId} 未注册`,
-        startedAt: new Date().toISOString(),
+        startedAt: this.clock.nowIso(),
         degraded: true,
       };
     }
@@ -160,14 +175,14 @@ export class MainAgent {
     if (budgetStatus.blocked) {
       log.warn({ loopId, scale, cumulativeCost: budgetStatus.cumulativeCost }, "预算拦截 — 累计成本超出上限");
       return {
-        loopId, scale, status: 'failed' as const, durationMs: 0, startedAt: new Date().toISOString(),
+        loopId, scale, status: 'failed' as const, durationMs: 0, startedAt: this.clock.nowIso(),
         error: `预算拦截: 累计成本 ${budgetStatus.cumulativeCost} 超出上限 ${this.budgetTracker['config']?.cumulativeBudget || '?'}`,
         degraded: true,
       };
     }
 
-    const startedAt = new Date().toISOString();
-    const startTime = Date.now();
+    const startedAt = this.clock.nowIso();
+    const startTime = this.clock.now();
 
     try {
       // D8b: 对于诊断循环 (loop-1)，使用任务分解
@@ -181,7 +196,7 @@ export class MainAgent {
       const handler = this.selectHandler(loopId);
       const result = await handler(scale);
 
-      const durationMs = Date.now() - startTime;
+      const durationMs = this.clock.now() - startTime;
       const record: LoopExecutionRecord = {
         loopId,
         scale,
@@ -191,7 +206,7 @@ export class MainAgent {
         output: result.output,
         error: result.error,
         startedAt,
-        completedAt: new Date().toISOString(),
+        completedAt: this.clock.nowIso(),
         degraded: result.degraded,
       };
 
@@ -230,7 +245,7 @@ export class MainAgent {
     } catch (err: unknown) {
       log.warn({ err: err instanceof Error ? err.message : String(err) }, "动态模块加载失败");
       const msg = err instanceof Error ? err.message : String(err);
-      const durationMs = Date.now() - startTime;
+      const durationMs = this.clock.now() - startTime;
       const record: LoopExecutionRecord = {
         loopId,
         scale,
@@ -238,7 +253,7 @@ export class MainAgent {
         durationMs,
         error: msg,
         startedAt,
-        completedAt: new Date().toISOString(),
+        completedAt: this.clock.nowIso(),
         degraded: true,
       };
 
@@ -313,8 +328,8 @@ export class MainAgent {
       const { subTasks } = this.taskDecomposer!.decompose(scope);
       if (subTasks.length === 0) {
         return {
-          loopId, scale, status: 'completed' as const, durationMs: Date.now() - startTime,
-          output: '诊断范围无异常，跳过分解', startedAt, completedAt: new Date().toISOString(), degraded: false,
+          loopId, scale, status: 'completed' as const, durationMs: this.clock.now() - startTime,
+          output: '诊断范围无异常，跳过分解', startedAt, completedAt: this.clock.nowIso(), degraded: false,
         };
       }
       const results = await Promise.allSettled(
@@ -388,16 +403,16 @@ export class MainAgent {
 
       return {
         loopId, scale, status: aggregated.status === 'completed' ? 'completed' as const : 'failed' as const,
-        durationMs: Date.now() - startTime, output: `子任务: ${aggregated.results.length}${cvInfo}`,
+        durationMs: this.clock.now() - startTime, output: `子任务: ${aggregated.results.length}${cvInfo}`,
         error: aggregated.degraded ? '部分子任务失败' : undefined,
-        startedAt, completedAt: new Date().toISOString(), degraded: aggregated.degraded,
+        startedAt, completedAt: this.clock.nowIso(), degraded: aggregated.degraded,
       };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       log.warn({ err: msg, loopId, scale }, '分解执行异常 — 降级');
       return {
-        loopId, scale, status: 'failed' as const, durationMs: Date.now() - startTime,
-        error: msg, startedAt, completedAt: new Date().toISOString(), degraded: true,
+        loopId, scale, status: 'failed' as const, durationMs: this.clock.now() - startTime,
+        error: msg, startedAt, completedAt: this.clock.nowIso(), degraded: true,
       };
     }
   }
