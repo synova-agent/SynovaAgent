@@ -1,0 +1,137 @@
+{
+ "schema": "syno-review-receipt/v1",
+ "pr": 950,
+ "patch_fingerprint": "sha256:017e481b77a2ca080d3424eb67c3229c965913f14420f9cfea3ab166098c3c3b",
+ "patch_fingerprint_source": "bash scripts/control-tower/check-merge-conditions.sh --pr 950 --diff-fingerprint (exit 0)",
+ "head_reviewed": "22313b54e3e6406b8b084517f139ab11b71b94c2",
+ "base_reviewed": "43f24f5c9885e3ec4bcb78a23fda6a24b94653a8",
+ "prev_head_passed": "b451190389f17ab25c044f56d1f76d6850ff0382",
+ "author": "P6 (PR #950 / ct/913-PR2-f4f；merge commit author=P6)",
+ "reviewer": "零上下文独立复核员（session-2745fb77-a87e-4c98-9280-99565386b654）",
+ "independence": "fresh-session",
+ "verdict": "PASS",
+ "round": "delta-b（round 2：仅核 merge local-main + 冲突解决）",
+ "scope": "DELTA ONLY：只核 (1) merge 是否只带入 main@43f24f5c9 内容 + DOCS-REGISTRY 冲突双方行都在且无重号；(2) 前一轮六处账实是否仍在；(3) 三门禁 + 新 head CI；(4) 写集无夹带。不重做全量审查；前一轮 b45119038 已 PASS。",
+ "skill_loaded": ".synova/skills/deliverable-acceptance/SKILL.md（117 行；注：§0 line14 自声明 scope 不含代码 PR ⇒ 采其 §1/§2 纪律 + §5.B，逐条见 checks）",
+ "issued_at": "2026-10-24T21:21:24+08:00",
+ "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步）",
+ "checks": [
+  {
+   "id": "C1",
+   "cmd": "git rev-parse HEAD; git rev-list --parents -n1 HEAD; git merge-base --is-ancestor b45119038 HEAD; git merge-base --is-ancestor 43f24f5c9 HEAD; git ls-remote gitea refs/heads/local-main",
+   "evidence": "HEAD=22313b54e3e6406b8b084517f139ab11b71b94c2；parents=(b45119038, 43f24f5c9) 恰两个；两者均为 HEAD 祖先（YES/YES）。gitea/local-main 远端权威 tip=43f24f5c9（ls-remote 实测），与 merge 带入值一致 ⇒ 合入的是真 tip，非过期 base。（主树 local 分支 local-main=ba1b22a8b 属落后/未快进，不影响判定）",
+   "result": "pass"
+  },
+  {
+   "id": "C2",
+   "cmd": "git diff --name-only $(git merge-base b45119038 43f24f5c9) 43f24f5c9 | sort > main.txt; git diff --name-only b45119038 HEAD | sort > merge.txt; diff main.txt merge.txt; for f in $(cat main.txt); do git diff --quiet 43f24f5c9 HEAD -- $f; done",
+   "evidence": "merge base=4aa1130e9。merge 带入文件集 == main 侧文件集，两侧均 12 条且 diff 空 ⇒ 无任何夹带文件。12 件中 11 件与 main 版本逐字节相同（IDENTICAL-to-main）；唯一例外 docs/authority/DOCS-REGISTRY.yaml 为冲突解决件，另见 C4。merge 侧 numstat 合计 +634/−0；main 侧 M..43f24f5c9 为 +634/−1，唯一 1 处删除即该冲突文件中被 PR 侧保留的空行（append-only 保 union 的副作用，非内容丢失）",
+   "result": "pass"
+  },
+  {
+   "id": "C3",
+   "cmd": "for f in $(git diff --name-only 4aa1130e9 b45119038 | sort); do git diff --quiet b45119038 HEAD -- $f && echo PRESERVED; done; git rev-parse b45119038:scripts/control-tower/check-test-obligations.py HEAD:scripts/control-tower/check-test-obligations.py",
+   "evidence": "前一轮 head 的 5 件 PR 侧产物全部 PRESERVED（逐字节保持）：.claude/claims/913.yaml、gate-exemptions/2026-10-24-p6-913-git-timeout.md、memory/notes/.../p6-913-git-timeout-hardening.md、check-test-obligations.py、check-test-obligations.test.sh。blob sha 实测相同（例：check-test-obligations.py b45119038=2efb9cf4596b / HEAD=2efb9cf4596b）⇒ merge 未吞掉任何 PR 侧成果",
+   "result": "pass"
+  },
+  {
+   "id": "C4",
+   "cmd": "git show HEAD:docs/authority/DOCS-REGISTRY.yaml | grep -n -A6 'id: DOC-0268'; ... 'id: DOC-0269'; 全表 dup 扫描：grep -oE 'DOC-[0-9]+' | sort | uniq -c | awk '$1>1'; 结构解析 115 条；cat -A 查 CRLF",
+   "evidence": "冲突解决=双方行都在（union）：DOC-0268 @line 996（owner P6，path=gate-exemptions/2026-10-24-p6-913-git-timeout.md）各 1 条、DOC-0269 @line 1004（owner CTO，path=gate-exemptions/2026-10-24-cto-953-automation.md）各 1 条；追加顺序 0266→0267→0268→0269 升序；全表 115 条 entry、重号 0；两条 6 必需键（id/type/path/status/owner/note）齐全；两 path 在 HEAD 均真实存在；文件 43294 B、CRLF=0、以换行结尾。main 的 DOC-0269 块 7 行与 main 版逐字相同（未被改动）",
+   "result": "pass"
+  },
+  {
+   "id": "C5",
+   "cmd": "同解析器分别跑 /tmp/reg_base.yaml(43f24f5c9) 与 /tmp/reg_head.yaml(HEAD)，比对 entry 数与缺失键集合",
+   "evidence": "base=114 条（含 0269、不含 0268）→ HEAD=115 条（含 0268/0269）⇒ 增量恰 +1，来源清楚（0268 属 PR 侧、0269 属 main 侧）。'缺必需键' 集合 base 与 HEAD 完全相同（均 29 条，前 6 同：DOC-0193/DOC-0001…）⇒ 该现象为 base 既有、**非本次 merge 引入**（不记账为本 PR 缺陷），且 doc-registry-gate 实跑通过（C9）",
+   "result": "pass"
+  },
+  {
+   "id": "C6",
+   "cmd": "六处账实取证：grep -n '@degraded' -A3 check-test-obligations.py; grep -n 'E_ENV\\|E_GIT' ; grep -n '立即超时'; sed -n '1,12p' .claude/claims/913.yaml + awk 计数 writeset; grep -n -A22 'S13-e' tests/control-tower/check-test-obligations.test.sh; curl pulls/950 取 body",
+   "evidence": "1) 降级/错误码契约：:22-23 @degraded（degraded:<code> 绝不静默 + SYNO_GATE_DEGRADED_LOG JSON 行）、:24 @error 枚举含 E_ENV_INVALID/E_GIT/E_GIT_TIMEOUT（实抛点 14 处：:125,:128 E_ENV_INVALID；:145,:742 E_GIT_TIMEOUT；:148,:745 E_GIT）；2) '=0 ⇒ **立即超时**（不是\"关闭超时\"）' 在 :47，且 :48 写明负数/非整数 = E_ENV_INVALID；3) Note：claim note 载 '…豁免件（裁 354 同款自覆盖）⇒ 写集 11 件'，与 body 六处账实表第 4 行一致；4) claim 写集 awk 实测 11 条（9 原 + 补丁 Note + 补丁豁免件）；5) S13-e：:479 assert_rc 2（变异只换错误码不换退出码）+ :481 no() 反向控制 + :483 ok()，实测两行均 ✅；6) 正文 body 1933 B 六处账实表在。**六项全部仍在**，且承载文件与上一轮 PASS 的 head 逐字节相同（C3）⇒ merge 未扰动任何一项",
+   "result": "pass"
+  },
+  {
+   "id": "C7",
+   "cmd": "bash tests/control-tower/check-test-obligations.test.sh",
+   "evidence": "结果: 48 通过, 0 失败；exit 0。S13 段全绿：S13-a 合法值 60 ⇒ exit=1、S13-b 非法值 ⇒ exit 2 且含 E_ENV_INVALID、S13-c 超时 ⇒ exit 2 且含 E_GIT_TIMEOUT、S13-d selfcheck 路径超时 ⇒ exit 2、S13-e 变异体 rc=2 且不再报 E_GIT_TIMEOUT（断言承重）。与声明 48/0 一致",
+   "result": "pass"
+  },
+  {
+   "id": "C8",
+   "cmd": "bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main",
+   "evidence": "结果: 10 通过, 0 失败；exit 0。base 解析 gitea/local-main → merge-base 43f24f5c；diff 变更路径 6 条、受保护路径 4 条，4 条均'有合规豁免'（DOCS-REGISTRY.yaml、gate-exemptions/2026-10-24-p6-913-git-timeout.md、check-test-obligations.py、check-test-obligations.test.sh）。清单 pin 一致 ef7c52a4…；PATTERNS 22 条（信号量>0）",
+   "result": "pass"
+  },
+  {
+   "id": "C9",
+   "cmd": "bash scripts/doc-system/doc-registry-gate.sh",
+   "evidence": "结论'✅ 登记门禁通过'；汇总：检查 1 个文档、**0 个未登记**；唯一性：128 条 DOC id、**重号 0 个**；已登记 gate-exemptions/2026-10-24-p6-913-git-timeout.md；exit 0。⇒ D2 登记门禁对合并后树仍绿（DOC-0268 已登记、DOC-0269 随 main 在册，二者不冲突）",
+   "result": "pass"
+  },
+  {
+   "id": "C10",
+   "cmd": "curl commits/22313b54e/status; curl commits/22313b54e/statuses?limit=100; curl actions/runs?head_sha=22313b54e3e6...",
+   "evidence": "取的是**新 head**（非上一轮 b45119038）：combined state=success total_count=2；latest-per-context push=success、pull_request=success；**pending 上下文 = NONE（pending=0）**；actions runs=2，均 status=completed conclusion=success（id=1732 push / id=1733 pull_request，head_sha 后缀 22313b54e）。6 条 status 行系同一次运行的 waiting→pending→success 生命周期，非多轮遗留（时间戳 20:58:02→20:58:50 同批）",
+   "result": "pass"
+  },
+  {
+   "id": "C11",
+   "cmd": "解析 .claude/claims/913.yaml writeset → /tmp/claim_ws.txt; git diff --name-only 43f24f5c9 HEAD | sort > /tmp/actual_files.txt; comm -23 actual claim; comm -13 actual claim; git cat-file -e 43f24f5c9:<f>",
+   "evidence": "声明写集 11 条；实际 PR 相对 base 的 delta 6 件：.claude/claims/913.yaml、DOCS-REGISTRY.yaml、gate-exemptions/p6-913-git-timeout.md、memory/notes/.../p6-913-git-timeout-hardening.md、check-test-obligations.py、check-test-obligations.test.sh。**actual − claim = 空（零夹带）**；claim − actual = 5 件，逐条 cat-file 证实在 base 43f24f5c9 已存在（testing-layers.md、triviality-manifest.yaml、gate-exemptions/p7-913-pr2-docs.md、WIRING-REGISTRY.yaml、memory/notes/.../p7-913-pr2-test-obligations.md）⇒ 属 PR-1 已合内容，非本 PR 新增。merge 带入的 12 件不参与本 PR 写集（相对 base 无 diff，物理上不可能夹带）",
+   "result": "pass"
+  },
+  {
+   "id": "C12",
+   "cmd": "git diff --name-only 43f24f5c9 HEAD | grep '^scripts/audit/'; grep -rn 'as any|as never|as unknown as' <merge 带入的脚本>; python3 scripts/control-tower/check-test-obligations.py --selfcheck; ... --base gitea/local-main",
+   "evidence": "红线：scripts/audit/** 改动 0 条（未碰 K3 专属区）。铁律 38：auto-merge.sh/ledger-sync.sh/auto_merge_mock_test.py 中 as any 类 0 命中。scanner --selfcheck = 'SELFCHECK-OK s1..s9=1/1/1/1/1/1/1/1/1' exit 0（九判定点全承重）；--base gitea/local-main = 'TEST-OBLIGATIONS: SKIP base=43f24f5c9885' exit 0（A1：无 src 变更 ≠ 看不见）",
+   "result": "pass"
+  }
+ ],
+ "findings": [
+  {
+   "id": "F1",
+   "severity": "major",
+   "blocking": false,
+   "status": "action-required-outside-delta",
+   "where": "scripts/control-tower/check-test-obligations.py（PR#950 vs PR#956）",
+   "detail": "此条不是 merge 缺陷，是**合并前置条件 ②（零写集重叠）实测为 no**：check-merge-conditions.sh --pr 950 输出 '② 零写集重叠 no (比对 17 对，1 处文件重叠)'、'✗ OVL_FILE: scripts/control-tower/check-test-obligations.py → PR#950,#956'。我已独立核 #956（head ca00e544f，18 件）确认它也改该文件（+1/−1）。进一步取证：#956 的该文件副本基于 **#950 之前的旧基线**（缺 E_GIT_TIMEOUT/E_ENV_INVALID 声明、缺 SYNO_GIT_TIMEOUT_SEC 契约块与 git_timeout_sec()），其**自身改动仅 1 行注释**（main 坐标 :48 去掉 '／check-quality-delta.py' 引用），而 #950 在 main 坐标 :46 插入 4 行超时契约块 —— 两处相距 2 行，落 rebase 时必然文本冲突。",
+   "fix": "① #950 先合（本 delta 审的就是它，且 #950 承载修复）；② #956 随后 rebase，冲突解决必须**双方都留**：保留 #950 的 4 行超时契约块 **且** 保留 #956 的注释措辞修正；🔴 **严禁'取 #956 版本'** —— 那会静默回退 #950 六处账实全部（超时/非法值 rc=2 修复），等于把已修的门禁 bug 原样复活。合前 #956 需重跑 check-test-obligations.test.sh（应仍 48/0）。",
+   "why_not_blocking": "不改变本次 delta 结论（merge 本体忠实、六处账实在、三门禁绿、CI 新 head 双绿）。它是合并序列问题，属四条件 ②/④ 的裁决面，按分工由 CTO/线负责人处置，不在复核员判定权内；且 #956 尚未合 ⇒ 当前对 #950 无实际污染。"
+  },
+  {
+   "id": "F2",
+   "severity": "minor",
+   "blocking": false,
+   "status": "partial",
+   "where": "Gitea PR#950 body（description，非 git 对象）",
+   "detail": "正文未随 sync 更新，三处口径滞后：① body 头部仍写 'head `b45119038`'，实际 head 已 22313b54e（本轮复核对象）；② body 头部 '写集 5 件' 与其自身'六处账实'表第 4 行（'claim 写集 9 → 实测 11'）及 claim 文件实测 11 条自相矛盾；③ body 写 'doc-registry-gate 复跑 ✅（127 id／重号 0）'，合并后实测 128 id（main 的 DOC-0269 进入视野）。",
+   "fix": "合并前改 body（纯文本、零代码风险、不需新提交）：head 改 22313b54e；'写集 5 件' 改为 '写集 11（本 PR delta 6 件）'；'127 id' 改 '128 id'。",
+   "why_not_blocking": "body 非 git 对象、不参与任何门禁/CI/构建；六处账实的**实质**全部成立（C6 实证），仅溯源串号滞后；doc 计数 127→128 系 base 前进所致，非本 PR 造成。"
+  },
+  {
+   "id": "F3",
+   "severity": "info",
+   "blocking": false,
+   "status": "observation",
+   "where": "scripts/control-tower/check-test-obligations.py:22-24",
+   "detail": "词面精度提示：'@degraded 含 E_ENV/E_GIT' 严格说，:22-23 的 @degraded 行规定的是发射机制（degraded:<code> — 原因 + SYNO_GATE_DEGRADED_LOG 的 time/component/code/phase/retryable 字段），**码表枚举在 :24 @error 行**（含 E_ENV_INVALID、E_GIT、E_GIT_TIMEOUT）。二者同处一份契约头块内、语义闭合，故按实质判通过。",
+   "fix": "无需改动（若要求字面严格，可把码表并入 @degraded 段，但会与既有约定 AGENTS.md 的三态/11-32 分栏口径分叉，不建议）。",
+   "why_not_blocking": "该文件与上一轮 PASS 的 head 逐字节相同，非本轮 merge 引入；实质（降级/错误码均已声明且均有真实发射点）成立。"
+  },
+  {
+   "id": "F4",
+   "severity": "info",
+   "blocking": false,
+   "status": "observation",
+   "where": "check-merge-conditions.sh ③ 输出",
+   "detail": "③ 独立复核当前为 no，原因仅为 'R1 缺回执 docs/synova/reviews/950.017e481b77a2.json' —— 即本回执尚未落库。本文件（/tmp/receipt-950b.json）即为满足该条的回执，fp 与脚本要求的前缀 017e481b77a2 一致。",
+   "fix": "由线负责人/CTO 将本回执按 950.017e481b77a2.json 提交（路径 docs/synova/reviews/）；提交后 ③ 应转 ok(attested)。",
+   "why_not_blocking": "缺件是流程时序（回执先出、后落库），非内容缺陷。"
+  }
+ ],
+ "four_condition_snapshot": "①=ok(state=success total_count=2) ②=no(shared:11，实重 1 处 check-test-obligations.py vs #956) ③=no(缺本回执，落库即 ok) ④=ok(就绪集=空)",
+ "conclusion": "DELTA PASS：merge 忠实（只带入 main@43f24f5c9；11/12 逐字节等于 main 版，1 件为 union 冲突解决；PR 侧 5 件全保留）；DOCS-REGISTRY 双方行都在（0268 P6 / 0269 CTO 各 1，0 重号，升序，path 均存在）；前一轮六处账实全部仍在且承载文件逐字节未变；三门禁 48/0、10/0、0 未登记；新 head CI pending=0 双绿；写集 6⊆11 零夹带；红线未碰。可否据此决策：**可以**用于『这份 head 的 merge 内容可信』；但 ② 未过（#956 撞同一文件）⇒ 此 head **尚不可自合并**，须按 F1 先 #950 后 #956 串行，且 #956 rebase 时禁止整取对方版本（会回退 #950 修复）。",
+ "known_limitation": "本回执是 **delta 复核**，不重做全量审查；round 1（b45119038）的 PASS 结论不在此重新论证，只证其未被 merge 破坏。未核项：与 #956 合并后的最终形态（不存在，需其 rebase 后另审）。"
+}

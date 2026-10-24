@@ -991,6 +991,15 @@ documents:
     status: active
     owner: P7
     note: "#913-PR-2 受保护路径豁免件：DOCS-REGISTRY.yaml 追加式登记（保留他人条目）＋gate-exemptions/** 自覆盖＋扫描器与配对测试两条受保护路径（scripts/control-tower/**、tests/control-tower/**），裁 331。"
+
+  # ---- P6 2026-10-24：#950 补丁（#913）受保护路径豁免件登记（裁 354 同款）----
+  - id: DOC-0268
+    type: decision
+    path: gate-exemptions/2026-10-24-p6-913-git-timeout.md
+    status: active
+    owner: P6
+    note: "#913 补丁（check-test-obligations 超时与非法值 typed rc=2）的受保护路径豁免登记：scanner、配测、本登记、自覆盖。"
+
   # ---- CTO 2026-10-24：#953 自动化一期豁免件（DOC-0269；0268 由在飞 #950 预占）----
   - id: DOC-0269
     type: decision
@@ -998,10 +1007,18 @@ documents:
     status: active
     owner: CTO
     note: "#953 自动化一期（ledger-sync／auto-merge）的受保护路径豁免；裁 367。"
-  # ---- P1 2026-10-24：#915 Q-1 工具入参统一校验豁免件（DOC-0270；取号时点全表 max=DOC-0269，0268 由在飞 #950 预占）----
-  - id: DOC-0270
+ HEAD
+  # ---- P1 2026-10-24：#915 Q-1 工具入参统一校验豁免件（DOC-0271；合 main 后 0270 已被 #958 占用，顺延）----
+  - id: DOC-0271
     type: decision
     path: gate-exemptions/2026-10-24-p1-915-q1.md
     status: active
     owner: P1
     note: "#915 Q-1 受保护路径豁免件：11 条按文件名逐条覆盖（scripts/control-tower/**、scripts/pre-commit-check.sh、.gitea/workflows/**、tests/control-tower/**、docs/authority/DOCS-REGISTRY.yaml、gate-exemptions/** 自覆盖），裁 365。"
+  # ---- CTO 2026-10-24：#957 效率 1/4 豁免件（裁 376）----
+  - id: DOC-0270
+    type: decision
+    path: gate-exemptions/2026-10-24-cto-957-overlap-append.md
+    status: active
+    owner: CTO
+    note: "#957 ② 重叠判定改「登记表纯追加」两态的受保护路径豁免；裁 376。"

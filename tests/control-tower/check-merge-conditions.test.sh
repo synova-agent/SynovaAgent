@@ -39,7 +39,7 @@
 #       ⇒ 以 K5「PR 取不到 ⇒ exit 2」（同为 fail-closed 降级）替代并在此登记差异。
 #
 # 计数口径（规格 §4.1 N3：末行 N 必须 = --selfcheck 的 13 个判定点）:
-#   通过 = **13 判定点**（每子例一次；#639-1 起配对测试独立驱动 J（共享追加），与 --selfcheck 13/13 对表）；C2 边界/参数/只读断言单列（`边界:` 行），
+#   通过 = **14 判定点**（每子例一次；#639-1 J 共享追加；裁 376 新增 K 登记表非纯追加⇒硬重叠）；C2 边界/参数/只读断言单列（`边界:` 行），
 #   两者任一失败都计入「失败」。⇒ 末行恒为 `结果: 13 通过, 0 失败`。
 #
 # 沙箱: 全部夹具在系统临时目录（mktemp -d ＋ trap EXIT 清理）；夹具仓 git init ＋ 本地 commit。
@@ -63,7 +63,7 @@ WORK="$(mktemp -d "${TMPDIR:-/tmp}/synova-582-test.XXXXXX")" || { echo "❌ mkte
 cleanup() { rm -rf "$WORK" 2>/dev/null; }
 trap cleanup EXIT INT TERM
 
-PASS=0       # 判定点数（必须 = 13；#639-1 起配对测试驱动 J）
+PASS=0       # 判定点数（必须 = 14；#639-1 J；裁 376 K）
 FAIL=0       # 任何断言失败（判定点 ＋ 边界）
 EXTRA=0      # 边界/参数/只读断言通过数（单列，不计入 N）
 pass()  { PASS=$((PASS + 1));  echo "  ✅ $1"; }
@@ -113,7 +113,7 @@ base_checks = [
     {"id": "铁律38 as any", "cmd": "grep -rn 'as any' <变更文件>", "result": "pass", "evidence": "0 命中"},
     {"id": "铁律11 静默降级", "cmd": "grep -n 'degraded:' x.sh", "result": "pass", "evidence": "stderr 一行 + exit 2"},
     {"id": "铁律47 契约", "cmd": "head -40 x.sh | grep -E '@input|@output'", "result": "pass", "evidence": "六块齐"},
-    {"id": "铁律48 非空壳测试", "cmd": "grep -c 'inner_exit=' t.sh", "result": "pass", "evidence": "13 判定点"},
+    {"id": "铁律48 非空壳测试", "cmd": "grep -c 'inner_exit=' t.sh", "result": "pass", "evidence": "14 判定点"},
     {"id": "三态退出码", "cmd": "bash x.sh --selfcheck; echo $?", "result": "pass", "evidence": "0/1/2 各有用例"},
 ]
 doc = {
@@ -207,6 +207,11 @@ build_repo() { # <case> <dir> [mut] → 造夹具仓 ＋ fixture.json（规格 �
   mk_commit "$R" "T1" "agent@synova.local" || return 1
   T1="$(git -C "$R" rev-parse HEAD)"
   printf 'base2\n' > "$R/base.ts"
+  if [ "$case" = "K" ]; then      # 裁 376：K 需基线里有登记表可被删除
+    mkdir -p "$R/docs/authority"
+    printf 'x1\nx2\n' > "$R/docs/authority/DOCS-REGISTRY.yaml"
+    git -C "$R" add docs/authority/DOCS-REGISTRY.yaml
+  fi
   git -C "$R" add base.ts
   mk_commit "$R" "T2" "agent@synova.local" || return 1
   T2="$(git -C "$R" rev-parse HEAD)"
@@ -215,6 +220,9 @@ build_repo() { # <case> <dir> [mut] → 造夹具仓 ＋ fixture.json（规格 �
   if [ "$case" = "J" ]; then            # #639-1：A 碰共享追加登记表
     mkdir -p "$R/docs/authority"
     printf 'a\n' > "$R/docs/authority/DOCS-REGISTRY.yaml"
+    git -C "$R" add docs/authority/DOCS-REGISTRY.yaml
+  elif [ "$case" = "K" ]; then          # 裁 376：A 纯追加（additions>0, deletions=0）
+    printf 'x3\n' >> "$R/docs/authority/DOCS-REGISTRY.yaml"
     git -C "$R" add docs/authority/DOCS-REGISTRY.yaml
   else
     printf 'a\n' > "$R/a.ts"
@@ -286,6 +294,13 @@ build_repo() { # <case> <dir> [mut] → 造夹具仓 ＋ fixture.json（规格 �
     printf 'b-registry\n' > "$R/docs/authority/DOCS-REGISTRY.yaml"
     git -C "$R" add docs/authority/DOCS-REGISTRY.yaml
     mk_commit "$R" "B2_reg" "agent@synova.local" || return 1
+    B_head="$(git -C "$R" rev-parse HEAD)"
+  fi
+  if [ "$case" = "K" ]; then            # 裁 376：B 删除一行 ⇒ 非纯追加 ⇒ ②=no
+    git -C "$R" checkout -q -b B2 "$T2" || return 1
+    printf 'x1\n' > "$R/docs/authority/DOCS-REGISTRY.yaml"
+    git -C "$R" add docs/authority/DOCS-REGISTRY.yaml
+    mk_commit "$R" "B2_del" "agent@synova.local" || return 1
     B_head="$(git -C "$R" rev-parse HEAD)"
   fi
   # G：给 99 号置回执 ⇒ 它进就绪集且编号更小（S2 红）
@@ -455,6 +470,7 @@ judgment F  2 "degraded: CI 信号量==0（state=pending total_count=0；禁判�
 judgment G  1 "NO: ④ 串行" "S2 前置就绪 PR #99 编号更小 ⇒ 先合它" "④=no" "③=ok(attested)"
 judgment H  0 "CAN-自合并" "warn: 身份未分离" "③=ok(attested)"
 judgment J  0 "CAN-自合并" "shared:1" "②=ok(shared:1)"
+judgment K  1 "NO: ② 零写集重叠" "OVL_FILE" "②=no" "非纯追加"
 # #639-2 判别力（finding 3）：非共享追加**不得**带 (shared:) 后缀；共享追加必须带且计数为 1
 if grep -Fq "(shared:" "$WORK/j/A/out.txt" 2>/dev/null; then
   fail "#639-2 A 非共享却出现 (shared:) 后缀（后缀恒带 ⇒ 无判别力）"
@@ -613,8 +629,8 @@ fi
 echo
 echo "结果: ${PASS} 通过, ${FAIL} 失败"
 if [ "$FAIL" -ne 0 ]; then exit 1; fi
-if [ "$PASS" -ne 13 ]; then
-  echo "❌ 判定点数 ${PASS} ≠ 13（#639-1：配对测试 13 判定点，与 --selfcheck 13/13 对表）" >&2
+if [ "$PASS" -ne 14 ]; then
+  echo "❌ 判定点数 ${PASS} ≠ 14（#639-1：J；裁 376：K）" >&2
   exit 1
 fi
 if [ "$EXTRA" -eq 0 ]; then

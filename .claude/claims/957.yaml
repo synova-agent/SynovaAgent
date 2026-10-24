@@ -1,0 +1,12 @@
+# .claude/claims/957.yaml — 效率 1/4：登记表纯追加白名单（② 重叠判定两态）
+writeset:
+  - .claude/claims/957.yaml
+  - scripts/control-tower/check-merge-conditions.sh
+  - tests/control-tower/check-merge-conditions.test.sh
+  - gate-exemptions/2026-10-24-cto-957-overlap-append.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - memory/notes/proposed/2026-10-24-957-overlap-append.md
+done:
+  - verify: bash tests/control-tower/check-merge-conditions.test.sh
+  - verify: bash scripts/control-tower/check-merge-conditions.sh --selfcheck
+note: "#957 效率 1/4（裁 376）：登记表纯追加白名单；删除/改写仍判硬重叠。6 件。"
