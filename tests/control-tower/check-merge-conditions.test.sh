@@ -94,15 +94,28 @@ mk_commit() { # <repo> <msg> <author-email>
     git -C "$1" commit -q -m "$2"
 }
 
-fp_of() { # <repo> <mb> <head> → 64 hex（③-2.1：sha256(git patch-id --stable)，测试侧独立复算）
-  local R="$1" pid
-  if ! git -C "$R" diff --no-color -M "$2" "$3" \
+fp_of() { # <repo> <mb> <head> → 64 hex（③-2.1：逐字增删行 canonical，测试侧独立复算）
+  local R="$1" mb="$2" head="$3"
+  if ! git -C "$R" diff --no-color -M "$mb" "$head" \
         -- . ':(exclude)docs/synova/reviews/**' > "$WORK/fp.tmp"; then
     return 1
   fi
-  pid="$(git patch-id --stable < "$WORK/fp.tmp" | awk 'NR==1{print $1}')"
-  if [ -z "$pid" ]; then printf '%s' "EMPTY-DIFF" | shasum -a 256 | awk '{print $1}'; return 0; fi
-  printf '%s' "$pid" | shasum -a 256 | awk '{print $1}'
+  if [ ! -s "$WORK/fp.tmp" ]; then
+    printf '%s' "EMPTY-DIFF" | python3 -c 'import hashlib,sys;print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest())'
+    return 0
+  fi
+  awk '
+    /^diff --git / { f=$0; sub(/^diff --git a\/.* b\//,"",f); print "F " f; next }
+    /^\+\+\+ / { print "P " substr($0,5); next }
+    /^--- / { next }
+    /^\+/ { print "A" substr($0,2); next }
+    /^-/  { print "R" substr($0,2); next }
+    /^Binary files / { print "B " $0; next }
+    /^(old mode|new mode|rename from|rename to|similarity index|dissimilarity index|new file mode|deleted file mode)/ { print "M " $0; next }
+    { next }
+  ' "$WORK/fp.tmp" > "$WORK/fp.canon"
+  [ -s "$WORK/fp.canon" ] || return 1
+  python3 -c 'import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$WORK/fp.canon"
 }
 
 write_receipt() { # <repo> <pr> <patch_fingerprint 字面值> <fp12(路径)> <independence> <email> <checks 条数>
@@ -628,23 +641,37 @@ else
   diff <(printf '%s\n' "$RO_BEFORE") <(printf '%s\n' "$RO_AFTER") | sed 's/^/       | /' >&2
 fi
 
-# ── ③-2.1 判别力：sync（合 main）不改指纹；内容变化必改 ──
-echo "── ③-2.1 指纹稳定性（sync 不变 / 内容变必变）──"
+# ── ③-2.1 判别力（逐字增删行）：行号/上下文无关；空白与内容必变；且**驱动被测脚本** ──
+echo "── ③-2.1 指纹（行号/上下文无关 / 空白必变 / 内容必变 / 回执不参与 / 被测件同口径）──"
 SYNC_R="$WORK/sync-fp/repo"; rm -rf "$WORK/sync-fp"; mkdir -p "$SYNC_R"
 git init -q "$SYNC_R" && git -C "$SYNC_R" config user.email agent@synova.local && git -C "$SYNC_R" config user.name agent
 ( cd "$SYNC_R" && printf 'a\nb\n' > f.ts && git add f.ts && git commit -qm base && git checkout -qb feat \
   && printf 'c\n' >> f.ts && git commit -qam "feat change" )
 S_MB1="$(git -C "$SYNC_R" rev-parse main)"; S_H1="$(git -C "$SYNC_R" rev-parse feat)"
 S_FP1="$(fp_of "$SYNC_R" "$S_MB1" "$S_H1")"
-( cd "$SYNC_R" && git checkout -q main && printf 'm\n' > m.ts && git add m.ts && git commit -qm "main advance" && git checkout -q feat && git merge -q --no-edit main )
+# A) main 改**同一文件上下文**（在 feat 改动行上方插入）→ merge clean ⇒ 指纹必须不变
+( cd "$SYNC_R" && git checkout -q main && printf 'z\n' > tmp && cat f.ts >> tmp && mv tmp f.ts && git commit -qam "main context change" \
+  && git checkout -q feat && git merge -q --no-edit main )
 S_MB2="$(git -C "$SYNC_R" merge-base "$(git -C "$SYNC_R" rev-parse main)" "$(git -C "$SYNC_R" rev-parse feat)")"
-S_H2="$(git -C "$SYNC_R" rev-parse feat)"
-S_FP2="$(fp_of "$SYNC_R" "$S_MB2" "$S_H2")"
-( cd "$SYNC_R" && printf 'd\n' >> f.ts && git commit -qam "feat change 2" )
+S_FP2="$(fp_of "$SYNC_R" "$S_MB2" "$(git -C "$SYNC_R" rev-parse feat)")"
+if [ -n "$S_FP1" ] && [ "$S_FP1" = "$S_FP2" ]; then extra "③-2.1 上下文变化(sync)指针不变（${S_FP1:0:12}）"; else fail "③-2.1 上下文变化改了指纹（${S_FP1:0:12} → ${S_FP2:0:12}）"; fi
+# B) 只改空白（行尾空格）⇒ 指纹必须变（防"只改缩进就绕过"）
+( cd "$SYNC_R" && printf 'c \n' > /tmp/_ws && python3 -c "
+import io
+p='f.ts'; s=open(p,encoding='utf-8').read()
+s=s.replace('c\\n','c \\n')
+open(p,'w',encoding='utf-8').write(s)" && git commit -qam "whitespace only" )
 S_MB3="$(git -C "$SYNC_R" merge-base "$(git -C "$SYNC_R" rev-parse main)" "$(git -C "$SYNC_R" rev-parse feat)")"
 S_FP3="$(fp_of "$SYNC_R" "$S_MB3" "$(git -C "$SYNC_R" rev-parse feat)")"
-if [ -n "$S_FP1" ] && [ "$S_FP1" = "$S_FP2" ]; then extra "③-2.1 sync 后指纹不变（${S_FP1:0:12}）"; else fail "③-2.1 sync 后指纹变了（${S_FP1:0:12} → ${S_FP2:0:12}）"; fi
-if [ -n "$S_FP3" ] && [ "$S_FP1" != "$S_FP3" ]; then extra "③-2.1 内容变化指纹必变（${S_FP3:0:12}）"; else fail "③-2.1 内容变化指纹未变 ⇒ 防重放失效"; fi
+if [ -n "$S_FP3" ] && [ "$S_FP1" != "$S_FP3" ]; then extra "③-2.1 只改空白也必变（${S_FP3:0:12}）"; else fail "③-2.1 只改空白未变指纹 ⇒ R3 可被空白绕过"; fi
+# C) 只加 reviews 回执 ⇒ 指纹不变
+( cd "$SYNC_R" && mkdir -p docs/synova/reviews && printf '{}' > docs/synova/reviews/100.x.json && git add . && git commit -qm "receipt only" )
+S_MB4="$(git -C "$SYNC_R" merge-base "$(git -C "$SYNC_R" rev-parse main)" "$(git -C "$SYNC_R" rev-parse feat)")"
+S_FP4="$(fp_of "$SYNC_R" "$S_MB4" "$(git -C "$SYNC_R" rev-parse feat)")"
+if [ -n "$S_FP4" ] && [ "$S_FP3" = "$S_FP4" ]; then extra "③-2.1 回执文件不参与指纹（${S_FP4:0:12}）"; else fail "③-2.1 回执文件改了指纹"; fi
+# D) 被测脚本必须同口径（驱动脚本的 --fp-of，而非只用测试自带 fp_of）
+S_SUT_FP="$(cd "$SYNC_R" && bash "$TOOL" --repo-root "$SYNC_R" --fp-of "$S_MB4" "$(git -C "$SYNC_R" rev-parse feat)" 2>/dev/null)"
+if [ -n "$S_SUT_FP" ] && [ "$S_SUT_FP" = "$S_FP4" ]; then extra "③-2.1 被测脚本 --fp-of 与测试独立复算同值（${S_SUT_FP:0:12}）"; else fail "③-2.1 被测脚本指纹口径不一致（脚本=${S_SUT_FP:0:12} 测试=${S_FP4:0:12}）"; fi
 
 echo
 echo "结果: ${PASS} 通过, ${FAIL} 失败"

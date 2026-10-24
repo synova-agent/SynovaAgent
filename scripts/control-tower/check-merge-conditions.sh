@@ -113,6 +113,8 @@ FIXTURE_MODE=0
 ROOT="$DEFAULT_ROOT"
 TOKEN=""
 PRNUM=""
+FP_MB=""
+FP_HEAD=""
 HEAD=""
 TIP=""
 MB=""
@@ -421,23 +423,35 @@ diff_files() { # diff_files <a> <b> → 每行一个文件（-z 安全：中文/
   tr '\0' '\n' < "$WORK/.diff.tmp"
 }
 
-patch_fingerprint() { # patch_fingerprint <mb> <head> → 64 hex（③-2.1：绑 PR 自身 patch-id，sync 不失效）
-  # ③-2.1 定义（替换 ③-2.0）：指纹 = sha256(git patch-id --stable(<PR 净 diff>))
-  #   · patch-id **只哈希增删行**，与上下文/行号无关 ⇒ 把 main 合进来（sync）不改指纹
-  #   · 内容一变（哪怕一行）⇒ patch-id 变 ⇒ 指纹变（R3 防重放仍成立）
-  #   · 排除 docs/synova/reviews/**（回执本身不改指纹）
-  local mb="$1" head="$2" pid
+patch_fingerprint() { # patch_fingerprint <mb> <head> → 64 hex（③-2.1：**逐字增删行**，行号/上下文无关）
+  # ③-2.1 定义（替换 ③-2.0）：
+  #   指纹 = sha256( canonical )，canonical 只含 **增删行的逐字内容（含空白）** ＋ 文件路径 ＋ 模式/改名标记；
+  #   **不含 hunk 头（行号）与上下文行** ⇒ 把 main 合进来（sync）不改指纹；内容改一个空格 ⇒ 也必变。
+  #   （不用 git patch-id：它默认 strip whitespace，会把"只改空白"的真改动判成没改 —— 复核实测绕过）
+  #   fail-closed：diff 非空但取不出任何 canonical 行 ⇒ return 1（不假装"空 diff"）。
+  local mb="$1" head="$2"
   if ! git -C "$ROOT" diff --no-color -M "$mb" "$head" \
         -- . ':(exclude)docs/synova/reviews/**' > "$WORK/fp.diff"; then
     return 1
   fi
-  pid="$(git patch-id --stable < "$WORK/fp.diff" | awk 'NR==1{print $1}')"
-  if [ -z "$pid" ]; then
-    # 空 diff（无净改动）：固定常量，仍输出 64 hex（不冒充指纹）
-    printf '%s' "EMPTY-DIFF" | shasum -a 256 | awk '{print $1}'
+  if [ ! -s "$WORK/fp.diff" ]; then
+    printf '%s' "EMPTY-DIFF" | python3 -c 'import hashlib,sys;print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest())'
     return 0
   fi
-  printf '%s' "$pid" | shasum -a 256 | awk '{print $1}'
+  awk '
+    /^diff --git / { f=$0; sub(/^diff --git a\/.* b\//,"",f); print "F " f; next }
+    /^\+\+\+ / { print "P " substr($0,5); next }
+    /^--- / { next }
+    /^\+/ { print "A" substr($0,2); next }
+    /^-/  { print "R" substr($0,2); next }
+    /^Binary files / { print "B " $0; next }
+    /^(old mode|new mode|rename from|rename to|similarity index|dissimilarity index|new file mode|deleted file mode)/ { print "M " $0; next }
+    { next }
+  ' "$WORK/fp.diff" > "$WORK/fp.canon"
+  if [ ! -s "$WORK/fp.canon" ]; then
+    return 1
+  fi
+  python3 -c 'import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$WORK/fp.canon"
 }
 
 resolve_tip() { # ④ S1 基线真值：git ls-remote（禁本地 stale ref）；fixture 模式取夹具 tip
@@ -828,6 +842,7 @@ check-merge-conditions.sh — 四条件一条命令判绿/红（#582 · P7-1）
   --json                    stdout 仅 JSON（与 --selfcheck 互斥 ⇒ exit 2）
   --offline                 不访问网络（🔴 ① 恒 exit 2 —— 裁 B5：不引本地 CI 缓存）
   --diff-fingerprint        只打印 ③ 的补丁指纹（64 hex，供回执填写）
+  --fp-of <mb> <head>       直接算两个提交之间的 ③ 指纹（测试/自检缝；不走 API）
   --print-receipt-template  打印 syno-review-receipt/v1 回执骨架（不写文件）
   --selfcheck               判别力自检（临时 git 仓＋夹具，零网络，13 判定点）
   --help                    本帮助
@@ -865,6 +880,7 @@ parse_args() {
       --json) JSON_MODE=1; shift ;;
       --offline) OFFLINE=1; shift ;;
       --diff-fingerprint) DIFF_FP=1; shift ;;
+      --fp-of) need_value "--fp-of" $#; FP_MB="$2"; FP_HEAD="${3:-}"; shift 3 ;;
       --print-receipt-template) TEMPLATE=1; shift ;;
       --selfcheck) SELFCHECK=1; shift ;;
       --help|-h) usage; exit 0 ;;
@@ -924,6 +940,18 @@ resolve_pr() {
 
 main() {
   parse_args "$@"
+  # --fp-of：纯本地指纹（测试/自检缝；不解析 PR、不访问网络）
+  if [ -n "$FP_MB" ]; then
+    if [ -z "$FP_HEAD" ]; then
+      printf 'degraded: --fp-of 需要两个提交（mb head） [code=E_ARGS]\n' >&2
+      exit 2
+    fi
+    if ! FP="$(patch_fingerprint "$FP_MB" "$FP_HEAD")"; then
+      die_degraded "E_FP: 补丁指纹计算失败（--fp-of $FP_MB $FP_HEAD）"
+    fi
+    printf '%s\n' "$FP"
+    exit 0
+  fi
   if [ "$SELFCHECK" = "1" ]; then
     selfcheck
     exit $?
@@ -1019,14 +1047,29 @@ _mkc() { # _mkc <repo> <msg> <author-email>
 }
 
 _repo_fp() { # _repo_fp <repo> <mb> <head> → 64 hex（自检侧独立复算，与 ③-2.1 同口径）
-  local R="$1" pid
-  if ! git -C "$R" diff --no-color -M "$2" "$3" \
+  local R="$1" mb="$2" head="$3"
+  if ! git -C "$R" diff --no-color -M "$mb" "$head" \
         -- . ':(exclude)docs/synova/reviews/**' > "$WORK/sc_fp.diff"; then
     return 1
   fi
-  pid="$(git patch-id --stable < "$WORK/sc_fp.diff" | awk 'NR==1{print $1}')"
-  if [ -z "$pid" ]; then printf '%s' "EMPTY-DIFF" | shasum -a 256 | awk '{print $1}'; return 0; fi
-  printf '%s' "$pid" | shasum -a 256 | awk '{print $1}'
+  if [ ! -s "$WORK/sc_fp.diff" ]; then
+    printf '%s' "EMPTY-DIFF" | python3 -c 'import hashlib,sys;print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest())'
+    return 0
+  fi
+  awk '
+    /^diff --git / { f=$0; sub(/^diff --git a\/.* b\//,"",f); print "F " f; next }
+    /^\+\+\+ / { print "P " substr($0,5); next }
+    /^--- / { next }
+    /^\+/ { print "A" substr($0,2); next }
+    /^-/  { print "R" substr($0,2); next }
+    /^Binary files / { print "B " $0; next }
+    /^(old mode|new mode|rename from|rename to|similarity index|dissimilarity index|new file mode|deleted file mode)/ { print "M " $0; next }
+    { next }
+  ' "$WORK/sc_fp.diff" > "$WORK/sc_fp.canon"
+  if [ ! -s "$WORK/sc_fp.canon" ]; then
+    return 1
+  fi
+  python3 -c 'import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$WORK/sc_fp.canon"
 }
 
 _write_receipt() { # _write_receipt <repo> <pr> <fp> <fp-for-path> <independence> <author-email> [schema-verdict]

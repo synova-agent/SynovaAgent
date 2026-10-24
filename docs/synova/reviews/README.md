@@ -73,17 +73,21 @@ bash scripts/control-tower/check-merge-conditions.sh --pr <N>     # <N> = 要判
 例   = docs/synova/reviews/558.22c39c01ab34.json      （fp 取 sha256 前 12 位十六进制；禁大写、禁前缀模糊）
 ```
 
-**指纹定义**（原样照规格 §4bis ③-2.0）：
+**指纹定义**（**③-2.1**，裁 386 起生效；替换 ③-2.0）：
 
 ```
 mb  = git merge-base <tip> <head>
-fp  = sha256( git diff --no-color -M --full-index --binary <mb> <head> -- . ':(exclude)docs/synova/reviews/**' )
+d   = git diff --no-color -M <mb> <head> -- . ':(exclude)docs/synova/reviews/**'
+canon = 仅取 d 的「文件路径行 ＋ 增删行逐字内容（含空白）＋ 模式/改名/二进制标记」
+        （**不含 hunk 头/行号、不含上下文行**）
+fp  = sha256(canon)
 ```
 
-两条设计要点（改动这两条 = 改口径，须 CTO 批）：
+三条设计要点（改动 = 改口径，须 CTO 批）：
 
-- **`--full-index`**：diff 里带 blob SHA ⇒ **内容寻址** ⇒ rebase 后同内容同指纹（不必重做复核）。
-- **`:(exclude)docs/synova/reviews/**`**：回执自身的加入**不改变**指纹 ⇒ 无循环依赖（规格 F11 实测：排除前后同值）。
+- **行号/上下文无关**：只哈希增删行与路径 ⇒ `git merge main`（sync）**不再作废回执**（旧 ③-2.0 会）。
+- **空白也参与哈希**：不用 `git patch-id`（它默认 strip whitespace，会把"只改缩进/空格"的真改动判成没改 —— 复核实测确认是绕过）。
+- **`:(exclude)docs/synova/reviews/**`**：回执自身的加入**不改变**指纹 ⇒ 无循环依赖。
 
 取指纹的命令见 §4 第一步（不要手算）。
 
@@ -136,7 +140,7 @@ bash scripts/control-tower/check-merge-conditions.sh --selfcheck                
 
 1. **`attested` 抓不到「作者冒用 reviewer 名」**：R6 只比 `author != reviewer` 两个**字符串**，
    本机 git 身份不可信 ⇒ 同一人换名即可"自证"。R9 只能**告警**（`warn: 身份未分离`），不能阻断。
-   T1 能保证的是：**回执与补丁指纹绑定 ∧ 回执之后无代码改动**（改码不重做复核必红），**不是**密码学意义上的独立。
+   T1 能保证的是：**回执与补丁指纹绑定 ∧ 回执之后无代码改动**（改码不重做复核必红；③-2.1 起"改码"含**只改空白**），**不是**密码学意义上的独立。
 2. **② 只比「文件路径」，不比内容**：两个 PR 改同一文件的不同行仍判重叠（**有意 fail-closed**，减少误放行）。
 3. **① 只认 CI 的最终态**：不判「这次红是不是存量红」（那属 `check-ci-stale-red.sh`）。
    `total_count==0`（"看不见"）⇒ **exit 2**，绝不当绿 —— 本件不引本地 CI 缓存做离线真值（裁 B5）。

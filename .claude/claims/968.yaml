@@ -6,6 +6,7 @@ writeset:
   - gate-exemptions/2026-10-24-cto-968-fp-patchid.md
   - docs/authority/DOCS-REGISTRY.yaml
   - memory/notes/proposed/2026-10-24-968-fp-patchid.md
+  - docs/synova/reviews/README.md
 done:
   - verify: bash tests/control-tower/check-merge-conditions.test.sh
   - verify: bash scripts/control-tower/check-merge-conditions.sh --selfcheck
