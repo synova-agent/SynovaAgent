@@ -991,4 +991,10 @@ documents:
     status: active
     owner: P7
     note: "#913-PR-2 受保护路径豁免件：DOCS-REGISTRY.yaml 追加式登记（保留他人条目）＋gate-exemptions/** 自覆盖＋扫描器与配对测试两条受保护路径（scripts/control-tower/**、tests/control-tower/**），裁 331。"
-
+  # ---- CTO 2026-10-24：#953 自动化一期豁免件（DOC-0269；0268 由在飞 #950 预占）----
+  - id: DOC-0269
+    type: decision
+    path: gate-exemptions/2026-10-24-cto-953-automation.md
+    status: active
+    owner: CTO
+    note: "#953 自动化一期（ledger-sync／auto-merge）的受保护路径豁免；裁 367。"
