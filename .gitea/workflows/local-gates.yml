@@ -328,13 +328,18 @@ jobs:
             printf '%s\n' "$CUR_HASH" > "$HASH_FILE"
           fi
           echo "依赖就绪"
-      - name: ①h 全量测试（**不按 --changed** · 不计组号）
+      - name: ①h 全量测试（**不按 --changed** · 不计组号 · 已知红双向棘轮）
         run: |
           cd /Users/wane/.ci-work/SynovaAgent
-          # #840 判据①：新 acceptance 件必须被**全量**执行（--changed 会漏掉未被依赖图命中的新件）。
-          # 排除面由 vitest.config.ts 的 CI 分支统一控（只留 3 条环境依赖）。
+          # 判据①：新 acceptance 件必须被**全量**执行（--changed 会漏掉未被依赖图命中的新件）。
+          # 判据②③（裁 352）：全量结果对比 tests/vitest.known-red.txt —— **双向棘轮**：
+          #   未列出的失败 ⇒ 红；列了但已绿 ⇒ 红（修复后必须删行）；条目 > max_entries ⇒ 红。
+          # 用 JSON reporter 取结构化失败集（文本解析会被 ANSI/多行描述骗）。
           NODE_BIN=/Users/wane/.nvm/versions/node/v24.19.0/bin
-          PATH="$NODE_BIN:$PATH" CI=true npx vitest run || exit $?
+          rm -f /tmp/vitest-result.json
+          PATH="$NODE_BIN:$PATH" CI=true npx vitest run --reporter=json --outputFile=/tmp/vitest-result.json > /tmp/vitest-console.log 2>&1
+          echo "vitest 已跑完（结构化结果 /tmp/vitest-result.json）"
+          python3 tests/vitest.known-red.check.py || exit $?
       - name: ①h-types tests 类型检查（tsconfig.tests.json ＋ 基线 · 只减不增 · 禁手抄）
         run: |
           cd /Users/wane/.ci-work/SynovaAgent
