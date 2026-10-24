@@ -1007,6 +1007,7 @@ documents:
     status: active
     owner: CTO
     note: "#953 自动化一期（ledger-sync／auto-merge）的受保护路径豁免；裁 367。"
+
   # ---- P1 2026-10-24：#915 Q-1 工具入参统一校验豁免件（DOC-0271；合 main 后 0270 已被 #958 占用，顺延）----
   - id: DOC-0271
     type: decision
