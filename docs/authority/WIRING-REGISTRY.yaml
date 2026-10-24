@@ -105,3 +105,11 @@ entries:
     status: declared-only
     owner: CTO
     notes: "#953 自动化一期：四条件 can 且非受保护路径才自动合；人运行，无 CI 消费者"
+  - capability: config.redactSecrets
+    defined_at: "src/config/redact.ts:186"
+    provider: "src/config/redact.ts:186"
+    consumer: "src/routes/config.ts:57"
+    test: "tests/config/redact.test.ts"
+    status: wired
+    owner: P2
+    notes: "跨 wire 无值（Q-2／裁 366）：秘密槽只以 {configured} 出现，secrets[] 侧车给 {path,configured,source}；provenance[].doc 同面脱敏"

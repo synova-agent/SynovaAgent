@@ -1,0 +1,18 @@
+# .claude/claims/914.yaml — #914 Q-2 配置面秘密结构性脱敏（跨 wire 无值）· 写集声明
+# L1 收口追认（2026-10-24，L1 收件时裁定；与裁 168-C「交付配套件默认可写」同类）：
+#   +1 件门禁配套件（组 12 认领闸机器要求），产品写集仍为 dev doc §2.2 的 6 件。
+writeset:
+  - .claude/claims/914.yaml
+  - src/config/redact.ts
+  - src/routes/config.ts
+  - tests/config/redact.test.ts
+  - tests/routes/config.test.ts
+  - docs/authority/WIRING-REGISTRY.yaml
+  - memory/notes/proposed/2026-10-24-914-q2-config-secret-redaction.md
+done:
+  - "verify: npx vitest run tests/config/redact.test.ts tests/routes/config.test.ts ⇒ Test Files 2 passed / Tests 30 passed"
+  - "verify: 回退 src/config/redact.ts 到修复前 ⇒ N3 三用例 3 failed（改坏必红，裁 371）"
+  - "verify: npx tsc --noEmit ⇒ exit 0"
+  - "verify: git diff -U0 tests/routes/config.test.ts | grep -E '^-' | grep -v '^---' ⇒ 空（既有 8 条零改动）"
+  - "verify: python3 scripts/control-tower/check-quality-delta.py --base gitea/local-main ⇒ QUALITY-DELTA: PASS changes=4 rules=G1,G3,G4"
+note: "#914 Q-2（裁 366）：GET /api/config/dump 的 config 与 provenance[].doc 双面结构性脱敏——秘密槽跨 wire 只传 {configured}，secrets[] 侧车给 {path,configured,source}；新建 src/config/redact.ts（SECRET_SEGMENTS 18 段名整段匹配、未知容器 fail-closed 抛 ConfigRedactError）；判别力＝同测试明文对照 app 必红。"
