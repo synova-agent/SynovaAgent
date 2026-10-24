@@ -10,7 +10,8 @@ writeset:
   - docs/authority/WIRING-REGISTRY.yaml
   - memory/notes/proposed/2026-10-24-914-q2-config-secret-redaction.md
 done:
-  - "verify: npx vitest run tests/config/redact.test.ts tests/routes/config.test.ts ⇒ Test Files 2 passed / Tests 27 passed"
+  - "verify: npx vitest run tests/config/redact.test.ts tests/routes/config.test.ts ⇒ Test Files 2 passed / Tests 30 passed"
+  - "verify: 回退 src/config/redact.ts 到修复前 ⇒ N3 三用例 3 failed（改坏必红，裁 371）"
   - "verify: npx tsc --noEmit ⇒ exit 0"
   - "verify: git diff -U0 tests/routes/config.test.ts | grep -E '^-' | grep -v '^---' ⇒ 空（既有 8 条零改动）"
   - "verify: python3 scripts/control-tower/check-quality-delta.py --base gitea/local-main ⇒ QUALITY-DELTA: PASS changes=4 rules=G1,G3,G4"
