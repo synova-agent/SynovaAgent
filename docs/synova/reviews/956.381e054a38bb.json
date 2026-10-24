@@ -1,7 +1,7 @@
 {
  "schema": "syno-review-receipt/v1",
  "pr": 956,
- "head_reviewed": "2b02131c6b7c0d1a5f9a2e4b3c8d7e6f5a4b3c2d",
+ "head_reviewed": "2b02131c6b67eafb92c0e08afb6d0376e26dd62a",
  "base_reviewed": "43f24f5c9",
  "patch_fingerprint": "sha256:381e054a38bbd5d1c7313fc3dbc94a3f0b0654f1d511b216e8c234b5f7f4b555",
  "author": "k12@local 实现小队（Gitea 提交账号 win-push）",
@@ -135,5 +135,6 @@
  ],
  "issued_at": "2026-10-24T20:43:56+08:00",
  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步）＋ check-merge-conditions --diff-fingerprint",
- "patch_fingerprint_source": "canonical: check-merge-conditions.sh --diff-fingerprint（R3 定义；merge-base..head，排除 docs/synova/reviews/**）"
+ "patch_fingerprint_source": "canonical: check-merge-conditions.sh --diff-fingerprint（R3 定义；merge-base..head，排除 docs/synova/reviews/**）",
+ "corrected_by": "CTO（2026-10-24）：原值 2b02131c6b7c0d1a5f9a2e4b3c8d7e6f5a4b3c2d 后 31 位为占位（不可解析），按同批次真实提交更正为 2b02131c6b67；指纹 381e054a38bb 属历史轮次，已由 956.831031bd7269 取代"
 }

@@ -1,0 +1,136 @@
+{
+ "schema": "syno-review-receipt/v1",
+ "pr": 956,
+ "head_reviewed": "26654da70757a5d14556b7826eb450bf58698cce",
+ "base_reviewed": "ea1c563fc17aa546fdc19442431bf34216e2130d",
+ "patch_fingerprint": "sha256:831031bd7269089c64c1319d0215dac109bd3b06b1819a36a137ef662cb7955d",
+ "author": "P1 k12（提交账号 win-push）",
+ "reviewer": "零上下文独立复核员-956b-2026-10-24（sync 增量窄复核）",
+ "independence": "fresh-session",
+ "verdict": "PASS",
+ "scope": "窄复核：只核 sync 增量（G1 合并只带入 main／G2 #950 修复未覆盖／G3 #960 补账／G4 DOC-0271 顺延／G5 Q-1 判据本体字节不变／G6 门禁与 CI）；上一轮 ca00e544f 的全量判定不重做。",
+ "checks": [
+  {
+   "id": "G1a-合并形状",
+   "cmd": "git log -1 --format='%H %P' 26654da70; git merge-base 7c740097 ea1c563fc; git ls-remote gitea refs/heads/local-main",
+   "result": "pass",
+   "evidence": "2 parents = 7c7400973c3370af71da586609e71bf73787b34f（第一父，PR 分支）＋ ea1c563fc17aa546fdc19442431bf34216e2130d（local-main）；merge-base(父1,父2)=8a910555b425793cb6927f17af67e68a4248abc7；base 现场 = ea1c563fc（与 PR base 一致，mergeable=true）"
+  },
+  {
+   "id": "G1b-两侧逐文件行数一致",
+   "cmd": "git diff --numstat 8a910555b..gitea/local-main; git diff --numstat 7c740097..HEAD; diff <(git diff --name-status A) <(git diff --name-status B)",
+   "result": "pass",
+   "evidence": "两侧逐文件 numstat 完全相同：.claude/claims/959.yaml 8/0；docs/synova/reviews/960.b1d14f807173.json 102/0；tests/contract/triviality-manifest.yaml 2/1（合计 +112/-1）；name-status 逐行 diff → IDENTICAL（无冲突残改／无侧带私货）"
+  },
+  {
+   "id": "G1c-PR 自身件齐、无额外改动",
+   "cmd": "git diff --numstat ea1c563fc..HEAD; git diff --name-only 8a910555b..7c740097 | wc -l; claim writeset 对照",
+   "result": "pass",
+   "evidence": "PR vs base = 18 files, +1993/-16；claim writeset 17/17 全部在 diff 内（.claude/claims/915.yaml…quality-standard.test.sh），第 18 件 = docs/synova/reviews/956.381e054a38bb.json（上一轮回执，收口产物）；merge 相对第一父只引入 main 的 3 件，其它 15 件未被 merge 触碰"
+  },
+  {
+   "id": "G2a-#950 修复未被覆盖",
+   "cmd": "grep -n 'E_GIT_TIMEOUT|E_ENV_INVALID|SYNO_GIT_TIMEOUT_SEC' scripts/control-tower/check-test-obligations.py; git diff --numstat ea1c563fc..HEAD -- 同文件; git show ea1c563fc:该文件 | grep -c",
+   "result": "pass",
+   "evidence": "head 命中计数 E_GIT_TIMEOUT=5 / E_ENV_INVALID=6 / SYNO_GIT_TIMEOUT_SEC=5（含 :98/:121/:125/:145/:158 实现点）；base 该文件已含 14 处命中 ⇒ 非本 PR 重加；PR 对该文件净改动 = 1 行（1 ins / 1 del，删的是注释行「无 PyYAML 的 YAML 子集解析…」）"
+  },
+  {
+   "id": "G2b-#950 新增用例全绿",
+   "cmd": "bash tests/control-tower/check-test-obligations.test.sh（HEAD 树 / 上一轮树 ca00e544f / base 树 ea1c563fc 三树各跑一次）",
+   "result": "pass",
+   "evidence": "HEAD：47 通过 1 失败（总计 48）；唯一红 = S1「clean tree」用例（断言 SKIP 字面量）；S13-#950 的 10 例（合法值/非法值 E_ENV_INVALID/git 超时 E_GIT_TIMEOUT/selfcheck 超时/变异体承重）全 ✅；base 树：48 通过 0 失败；ca00e544f 树：37 通过 1 失败（同一 S1）⇒ sync 未引入退化，且「48/0」只在 clean base 树成立"
+  },
+  {
+   "id": "G3a-#960 补账在位",
+   "cmd": "grep -n 'redact.ts|legacy_baseline' tests/contract/triviality-manifest.yaml",
+   "result": "pass",
+   "evidence": ":36 exempt 行 `src/config/redact.ts, surface: protocol, obligation: exempt, issue: \"#955\"`；:28 `legacy_baseline: 469`（meta.as_of=gitea/local-main@8a910555b）"
+  },
+  {
+   "id": "G3b-棘轮不超基线",
+   "cmd": "python3 scripts/control-tower/check-test-obligations.py --root . --base HEAD；另跑 --base gitea/local-main",
+   "result": "pass",
+   "evidence": "base=HEAD：rc=0，「modules=7 legacy=469 untriaged=0」＋「TEST-OBLIGATIONS: SKIP 无 src/** 变更」（SKIP 路径仍先算 legacy）；base=gitea/local-main（非 SKIP 路径）：rc=0 PASS changes=18 src_changes=1，modules=7 legacy=469 untriaged=0 ⇒ 469 == baseline，无超基线"
+  },
+  {
+   "id": "G4a-DOC 号无重号",
+   "cmd": "python3 正则统计 docs/authority/DOCS-REGISTRY.yaml 的 `id: DOC-\\d{4}`",
+   "result": "pass",
+   "evidence": "entries=130 / unique=130 / dups=[] / max=0271；0270 恰 1 条 = gate-exemptions/2026-10-24-cto-957-overlap-append.md（owner CTO，#957）；0271 恰 1 条 = gate-exemptions/2026-10-24-p1-915-q1.md（owner P1，本 PR），注释明写「合 main 后 0270 已被 #958 占用，顺延」"
+  },
+  {
+   "id": "G4b-登记门禁与豁免件引用",
+   "cmd": "bash scripts/doc-system/doc-registry-gate.sh；grep -n 'DOC-' gate-exemptions/2026-10-24-p1-915-q1.md",
+   "result": "pass",
+   "evidence": "gate rc=0（「唯一性: 130 条 DOC id，重号 0 个」/「检查 1 个文档，0 个未登记」）；P1 豁免件 :21 引用「登记本豁免件（DOC-0271）」"
+  },
+  {
+   "id": "G5-Q-1 判据本体字节不变",
+   "cmd": "git rev-parse ca00e544f:<f> 与 HEAD:<f> 对比 4 件；git diff --stat ca00e544f..HEAD -- 同 4 件",
+   "result": "pass",
+   "evidence": "blob 全等：src/agent/tools.ts dabada1b72ac41d17fca01094b8f07d3cfa45730；scripts/control-tower/check-tool-args-delta.py e1a4f1d70dbf2c59cc7151544840e06d9f003c30；tests/agent/tool-args-validation.test.ts 66b39cdb66efe308a74f8f0b9d01ca912a1caaef；scripts/control-tower/tool-args-baseline.txt 0c8a5ef00aeb35f0bc018250740267479123b20e（diff --stat 为空）"
+  },
+  {
+   "id": "G6a-pre-commit 12 组",
+   "cmd": "PATH=node22 bash scripts/pre-commit-check.sh（+ 与 base 版组标签集合对比）",
+   "result": "pass",
+   "evidence": "「✅ 全部 12 组通过」（含组 1–10/12/13；base 与 head 组标签集合相同 ⇒ 未减组）；PR 只新增「工具入参校验增量闸」附加块（不占组号）；另一次无 node_modules 的重跑出 1 条 V5 软提示（block-paths exit=2 读不到真源），软提示/本地不阻断，接 node_modules 后 0 软提示"
+  },
+  {
+   "id": "G6b-受保护路径",
+   "cmd": "bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main",
+   "result": "pass",
+   "evidence": "rc=0，17 通过 0 失败；pin 声明 ef7c52a4… = 实算 ef7c52a4…；diff 18 条 / 受保护 11 条逐条「有合规豁免」"
+  },
+  {
+   "id": "G6c-质量增量闸",
+   "cmd": "python3 scripts/control-tower/check-quality-delta.py --root . --base gitea/local-main",
+   "result": "pass",
+   "evidence": "「QUALITY-DELTA: PASS changes=8 rules=G1,G3,G4 base=ea1c563fc17a」rc=0"
+  },
+  {
+   "id": "G6d-类型检查",
+   "cmd": "PATH=node22 npx tsc --noEmit",
+   "result": "pass",
+   "evidence": "无输出，rc=0"
+  },
+  {
+   "id": "G6e-相关 vitest",
+   "cmd": "PATH=node22 npx vitest run tests/agent/tool-args-validation.test.ts",
+   "result": "pass",
+   "evidence": "Test Files 1 passed / Tests 13 passed（node v22.23.2）；node v24 下报 better-sqlite3 NODE_MODULE_VERSION 127≠137（本机原生模块按 node22 构建）⇒ 复核须 node22，非 PR 缺陷"
+  },
+  {
+   "id": "G6f-配套门禁与测试",
+   "cmd": "bash tests/control-tower/check-tool-args-delta.test.sh；quality-baseline.test.sh；quality-standard.test.sh；quality-baseline.py --check-registry/--check-inventory",
+   "result": "pass",
+   "evidence": "71 通过 0 失败；TEST-OK pass=143 fail=0；STANDARD-OK g=6；REGISTRY-OK rows=10（与 039e00df0 把常量 9→10 一致，WIRING 实为 10 行）；INV rc=0（covered=G12/12 B9/9 X7/7 S12/12 K35/35 R40/40，orphans=7/35）"
+  },
+  {
+   "id": "G6g-CI",
+   "cmd": "GET http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/commits/26654da70/status",
+   "result": "pass",
+   "evidence": "state=success，total_count=2，两条均 success（local-gates / gates (push) 1m3s、local-gates / gates (pull_request) 1m5s），无 pending；PR #956 state=open merged=false head=26654da70 base=local-main@ea1c563fc mergeable=true"
+  }
+ ],
+ "findings": [
+  {
+   "severity": "minor",
+   "where": "tests/control-tower/check-test-obligations.test.sh:136（S1 clean tree 用例）",
+   "what": "该用例断言输出含「SKIP: 无 src/** 变更」，合法前提是真实工作树 HEAD 相对 base 无 src 变更；在 PR 分支树上 tools.ts 必变 ⇒ 结构性命中 47/1（base 树 48/0，上一轮 ca00e544f 树 37/1 同一断言，sync 未触碰该行）。非本 PR 新增退化，但「48/0」不可作 PR 树判据；该套件亦未被 CI 调用（local-gates.yml 只跑 vitest --changed）⇒ CI 绿不覆盖它。建议另开卡：改为「检测到非 clean 树 ⇒ SKIP 并裁明」或加 TREE 前置。"
+  },
+  {
+   "severity": "minor",
+   "where": "docs/synova/reviews/956.381e054a38bb.json:head_reviewed",
+   "what": "所填 40-hex「2b02131c6b7c0d1a5f9a2e4b3c8d7e6f5a4b3c2d」不可解析（git cat-file -e ⇒ 不存在）；真实提交为 2b02131c6b67eafb92c0e08afb6d0376e26dd62a（仅前 9 位相同，后 31 位为占位/伪造）。该轮历史 fp 381e054a38bb 无法复算（脚本按当前 PR head 计算）⇒ 属「无法核实」。不影响本轮：被审内容已用 blob sha 四件全等独立补证。建议 P1 合并前更正该字段。"
+  },
+  {
+   "severity": "info",
+   "where": "AGENTS.md（门禁可解析元信息）vs scripts/pre-commit-check.sh:6,23",
+   "what": "根件写「13 组 pre-commit」，脚本自述与实跑均为 12 组（组 11 从来不存在，组号到 13）。既有文档漂移，非本 PR 改动（base 版组标签集合与 head 相同）。"
+  }
+ ],
+ "issued_at": "2026-10-24T22:05:00+08:00",
+ "tool": "deliverable-acceptance@v1（.synova/skills/deliverable-acceptance/SKILL.md 五步）＋ pr-review 五步 ＋ check-merge-conditions.sh --diff-fingerprint",
+ "patch_fingerprint_source": "canonical: check-merge-conditions.sh --diff-fingerprint（merge-base..head，排除 docs/synova/reviews/**；加回执文件不改 fp）"
+}
