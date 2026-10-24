@@ -1,0 +1,124 @@
+{
+ "schema": "syno-review-receipt/v1",
+ "pr": 954,
+ "head_reviewed": "fe9aef693322f322f7997766b93c78bced526116",
+ "base_reviewed": "4aa1130e9ccf48463e406d0410f635bde139da83",
+ "author": "win-push",
+ "reviewer": "零上下文独立复核员",
+ "independence": "fresh-session",
+ "issued_at": "2026-10-24T09:55:18Z",
+ "verdict": "PASS",
+ "round": 7,
+ "scope": "round 7 增量：仅核 N1/N2/N3/N4 四条（round 6 遗留）＋指定回归；不重做全量审查",
+ "checks": [
+  {
+   "id": "C1",
+   "item": "N1",
+   "cmd": "grep -n 'page' /tmp/acc954g/scripts/control-tower/auto-merge.sh; grep -c 'page > 20' auto-merge.sh",
+   "evidence": "两处分页各有 cap：auto-merge.sh:61-70（列表，cap 在 :69-70）、auto-merge.sh:95-110（文件，cap 在 :109-110）；grep -c 'page > 20' = 2，无第三处分页循环。ledger-sync.sh 无分页（grep 'page' 无命中）。cap 位于 break 之后、page+=1 之后 ⇒ 最多 20 次取页，请求第 21 页前退出。"
+  },
+  {
+   "id": "C2",
+   "item": "N1",
+   "cmd": "python3 /tmp/n1_cap_test.py  # mock 服务端永不返空页，两 loop 分别单测",
+   "evidence": "mode=list：exit 2，请求数 20，stderr 含『分页超过 20 页仍未结束』；mode=files：exit 2，请求数 20，同 cap 文案。两场景均 ≤20 页内退出，无死循环 ⇒ 实测与代码一致。"
+  },
+  {
+   "id": "C3",
+   "item": "N1",
+   "cmd": "删除两处 cap 得变异体 /tmp/mut-automerge.sh，再跑同一 mock（15s 上限）",
+   "evidence": "变异体：15s 内未退出（TIMEOUT/124），期间发出 51635 次请求；原体：20 次退出 2。⇒ cap 是承重行，非装饰（改坏必红方向成立）。"
+  },
+  {
+   "id": "C4",
+   "item": "N2",
+   "cmd": "sed -n '1,15p' ledger-sync.sh | grep E_  ; for c in E_GIT E_USAGE E_MARKER E_DUP; do grep -n $c ledger-sync.sh; done",
+   "evidence": "ledger-sync.sh:10-12 @degraded 声明 9 码，含全部四码：E_GIT、E_USAGE（:10）、E_MARKER、E_DUP（:12）。发射点齐备：E_GIT ledger-sync.sh:36、:46；E_USAGE :28、:29；E_MARKER :100；E_DUP :102。声明与发射两侧都存在，非纸面声明。"
+  },
+  {
+   "id": "C5",
+   "item": "N2",
+   "cmd": "comm -13 <(头部声明码集) <(实现发射码集)  # 双向比对两脚本",
+   "evidence": "auto-merge.sh 与 ledger-sync.sh 的『已发射但未声明』集合均为空 ⇒ 无未声明发射（比 N2 要求更强：degraded 契约闭合）。注：E_BASE/E_FORCE 系 SYNO_AUTO_MERGE_BASE/FORCE_CAN 环境变量名的子串误命中，非降级码。"
+  },
+  {
+   "id": "C6",
+   "item": "N3",
+   "cmd": "python3 取 PR body → /tmp/pr954-body.md；grep -n '两份配对测试|两件配对测试|两个 `.sh` 配对测试'",
+   "evidence": "「两份配对测试」0 次 ✅。「两个 `.sh` 配对测试（…mock 由 `auto-merge.test.sh` 调用）」已出现 ✅（body:39）。但「两件配对测试」仍 1 次 ⚠️（body:3「两件脚本 ＋ 两件配对测试」）；该句漏计第 3 件 auto_merge_mock_test.py（表格 5 行已列全 3 件测试）。⇒ 实质口径已纠正、字面禁令未 100% 达成，见 findings[N3]。"
+  },
+  {
+   "id": "C7",
+   "item": "N4",
+   "cmd": "git show --stat 768ba3850; git show --stat fe9aef693; git show ec41972d4:scripts/control-tower/auto-merge.sh | grep -c 'page > 20'",
+   "evidence": "768ba3850 真实含改动：auto-merge.sh +4 行，正是两处 `if page > 20:` cap（--stat 1 file changed, 4 insertions）。fe9aef693 真实含改动：ledger-sync.sh +3/-2，正是 @degraded 增补 E_GIT/E_USAGE/E_MARKER/E_DUP。『声称未兑现』的基线确实为假：ec41972d4 时 cap 计数=0、四码在头部计数全 0 ⇒ 本轮两提交是真 delta，非空转。"
+  },
+  {
+   "id": "C8",
+   "item": "回归",
+   "cmd": "python3 tests/control-tower/auto_merge_mock_test.py",
+   "evidence": "A 分页（第 2 页受保护被拦＋未 merge＋exit 0）、B 改名 previous_filename、C 负对照（确实合并，证明 B 非『永不合并』）、D 405 ⇒ exit 1 ＋ stderr 含 E_MERGE：全绿，退出码 0。"
+  },
+  {
+   "id": "C9",
+   "item": "回归",
+   "cmd": "bash tests/control-tower/ledger-sync.test.sh",
+   "evidence": "汇总 14 通过 / 0 失败，退出码 0（含 state 落盘＋重跑幂等、E_STATE exit 2 不假绿）。"
+  },
+  {
+   "id": "C10",
+   "item": "回归",
+   "cmd": "bash tests/control-tower/auto-merge.test.sh",
+   "evidence": "汇总 7 通过 / 0 失败，退出码 0（第 6 例调用 mock 行为测试并再全绿）。"
+  },
+  {
+   "id": "C11",
+   "item": "回归",
+   "cmd": "bash scripts/control-tower/check-gate-protection.sh; 同上 --changed-base 4aa1130e9",
+   "evidence": "默认：3 通过 / 0 失败，退出码 0（清单 1392B、PATTERNS 22 条、pin ef7c52a4 一致）。--changed-base：13 通过 / 0 失败，退出码 0；实测 diff 11 条、受保护 7 条，逐条有合规豁免（含两 .sh、mock .py、DOCS-REGISTRY、豁免件）。两模式均 0 失败。"
+  },
+  {
+   "id": "C12",
+   "item": "回归",
+   "cmd": "GET /api/v1/repos/synova-agent/SynovaAgent/commits/fe9aef693/status",
+   "evidence": "HTTP 200；state=success；total_count=2；per-context：local-gates / gates (push)=success、local-gates / gates (pull_request)=success。无 pending、无 failure。"
+  },
+  {
+   "id": "C13",
+   "item": "回归",
+   "cmd": "git diff --name-only 4aa1130e9 fe9aef693 | wc -l; 同列表 grep -c '^src/|^\\.gitea/|^scripts/audit/'",
+   "evidence": "写集 11 件（与自述 11 一致）；^src/ = 0、^.gitea/ = 0、^scripts/audit/ = 0 ⇒ 三类禁改路径均零命中。"
+  },
+  {
+   "id": "C14",
+   "item": "指纹",
+   "cmd": "git diff 4aa1130e9 fe9aef693 | shasum -a 256",
+   "evidence": "adeea3f6c1d1316c224d7194375df8f7fe2a3d5c5f99f8e2a3a5ff71ab0886a8（228 行 diff、508 insertions / 1 deletion）。"
+  }
+ ],
+ "findings": [
+  {
+   "id": "N3",
+   "severity": "minor",
+   "blocking": false,
+   "status": "partial",
+   "where": "PR body:3（Gitea #954 description）",
+   "detail": "禁令短语「两件配对测试」仍在 body 第 3 行原样出现（「两件脚本 ＋ 两件配对测试」），未替换为「两个 .sh 配对测试（mock 由其调用）」。纠正后的措辞已在 body:39『已知限制 3』出现，且表格已列全 3 件测试，故属字面未清、语义未误。该句相对其正下方表格（5 行：2 脚本＋3 测试）少计 1 件。",
+   "fix": "把 body:3 改为「两件脚本 ＋ 两个 `.sh` 配对测试 ＋ 1 件 mock 行为网（由 `auto-merge.test.sh` 调用）」。纯正文编辑，零代码风险，不必新提交。",
+   "why_not_blocking": "不影响任何门禁/CI/运行行为；⑥ CI 状态与 ④ 串行无关；语义已由 body:39 与表格消歧。"
+  },
+  {
+   "id": "OBS-1",
+   "severity": "info",
+   "blocking": false,
+   "status": "observation",
+   "where": "tests/control-tower/ledger-sync.test.sh:24-26",
+   "detail": "第 5 例标题写『--apply 无网 ⇒ exit 2』，但断言接受 rc∈{1,2}，实测 rc=1（GITEA_TOKEN=invalid 走 401 ⇒ E_API exit 1，非 E_NET）。即该例实际覆盖 E_API/1 腿，未覆盖 ledger-sync.sh:95 的 E_NET/2 腿。标题与实测口径不符。",
+   "fix": "标题改为『--apply API 被拒 ⇒ exit 1（E_API）』；如需 E_NET/2 腿，另加 SYNO_GITEA_BASE=http://127.0.0.1:9 的用例。",
+   "why_not_blocking": "不在 N1-N4 范围；断言当前不假绿（rc=0 会红），仅为标题口径与覆盖缺口。"
+  }
+ ],
+ "patch_fingerprint": "sha256:150ae11ed446b16fabdef850cec08d819cd295862635b612c9fb00dfbfb502c9",
+ "patch_fingerprint_source": "canonical: check-merge-conditions.sh --diff-fingerprint（R3 定义）；reviewer 原始 diff-sha256=sha256:adeea3f6c1d1316c224d7194375df8f7fe2a3d5c5f99f8e2a3a5ff71ab0886a8",
+ "fingerprint_note": "本字段按 R3 规范定义（merge-base..head，排除 docs/synova/reviews/**）对齐；复核员原文用 `git diff | shasum` 得到的值一并记于 patch_fingerprint_source。"
+}
