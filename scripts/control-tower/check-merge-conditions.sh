@@ -630,7 +630,7 @@ EOF
 
 is_pure_append() { # <base> <head> <file> ⇒ 0=纯追加（additions>0 且 deletions==0）
   local base="$1" head="$2" f="$3" nums add del
-  nums="$(git -C "$ROOT" diff --numstat "$base" "$head" -- "$f" 2>/dev/null | head -1)"
+  nums="$(git -C "$ROOT" diff --numstat "$base" "$head" -- "$f" | head -1)"
   [ -n "$nums" ] || return 1
   add="$(printf '%s' "$nums" | awk '{print $1}')"
   del="$(printf '%s' "$nums" | awk '{print $2}')"
