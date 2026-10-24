@@ -15,7 +15,7 @@ import type { LLMProvider, LLMMessage, HealthCheckResult } from '../providers/ty
 import { createProviderChain, detectProviderFromUrl } from '../providers/registry';
 import { createProvider } from '../providers';
 import type Database from 'better-sqlite3';
-import { ToolRegistry } from './tools';
+import { ToolRegistry, isToolAbortEnabled } from './tools';
 import { getGlobalGracefulShutdown } from '../services/graceful-shutdown';
 import { createLogger } from '@synova/logger';
 import type { ViewAdapter } from '../l1-interaction/types';
@@ -37,7 +37,7 @@ import type { Triple, ReflectionResult } from '../l4/triple-reflection';
 import type { L3ResolutionResult } from '../l4/entity-resolver';
 import type { CommunityReport } from '../l4/community-reports';
 // P1-01: 子组件提取 — 单体引擎拆分为 3 个独立类
-import { ToolLoopExecutor } from './tool-loop-executor';
+import { ToolLoopExecutor, TOOL_CANCELLED_REPLY } from './tool-loop-executor';
 import { DiagnosisLauncher, type DiagnosisEvent, type ConsultationResult, type SessionStoreLike } from './diagnosis-launcher';
 import { OntologySyncer, type OntologySyncResult } from './ontology-syncer';
 import type { EngineContext } from './engine-context';
@@ -596,9 +596,22 @@ export class ConversationEngine {
    * Phase 0: structured interview with turn limit.
    * Phase 1-5: tool-call loop.
    *
+   * #915 Q-5 契约扩展（铁律 47）:
+   *   @input  userInput；opts?: { signal?: AbortSignal }（取消信号；SYNO_TOOL_ABORT=0
+   *           ⇒ 引擎忽略 signal 且不传给工具循环 = 回旧行为，单一谓词 isToolAbortEnabled）
+   *   @output 入场已取消 ⇒ { reply: TOOL_CANCELLED_REPLY, phaseComplete: false }（不发 LLM，S11）
+   *   @degraded 取消是控制流：不设 degraded；log.info 留痕一次
+   *   @error  不抛（取消结果化）
+   *
    * @returns ProcessResult with reply text and phase completion signal
    */
-  async processMessage(userInput: string): Promise<ProcessResult> {
+  async processMessage(userInput: string, opts?: { signal?: AbortSignal }): Promise<ProcessResult> {
+    // #915 Q-5: 入口取消检查（开关关 ⇒ signal 视同未传，回旧行为）
+    const signal = isToolAbortEnabled() ? opts?.signal : undefined;
+    if (signal?.aborted) {
+      log.info({ code: 'TOOL_ABORTED' }, 'processMessage 入场即取消 — 返回取消文案（控制流，非降级）');
+      return { reply: TOOL_CANCELLED_REPLY, phaseComplete: false };
+    }
     // Phase 1.2: 注册活跃会话到优雅关闭追踪
     if (this.sessionId) {
       try { getGlobalGracefulShutdown().noteActive(this.sessionId, { orgId: this.orgId, phase: this.phase }); }
@@ -736,13 +749,13 @@ export class ConversationEngine {
         return { reply, phaseComplete: true };
       }
 
-      const reply = await this.callLLMWithTools();
+      const reply = await this.callLLMWithTools(signal);
       this.messages.push({ role: 'assistant', content: reply });
       return { reply, phaseComplete: false };
     }
 
     // Phase 1-5: 工具调用循环
-    const reply = await this.callLLMWithTools();
+    const reply = await this.callLLMWithTools(signal);
     this.messages.push({ role: 'assistant', content: reply });
     return { reply, phaseComplete: false };
   }
@@ -755,12 +768,21 @@ export class ConversationEngine {
    *
    * @param userInput - Raw user input text
    * @param onToken   - Callback invoked for each text/tool token
+   * @param opts      - #915 Q-5: { signal?: AbortSignal }（SYNO_TOOL_ABORT=0 ⇒ 忽略 = 回旧行为；
+   *                    入场已取消 ⇒ 返回 TOOL_CANCELLED_REPLY，不发 LLM；取消不设 degraded）
    * @returns ProcessResult with full reply and phase completion signal
    */
   async processMessageStream(
     userInput: string,
     onToken: (token: string) => void,
+    opts?: { signal?: AbortSignal },
   ): Promise<ProcessResult> {
+    // #915 Q-5: 入口取消检查（开关关 ⇒ signal 视同未传，回旧行为）
+    const signal = isToolAbortEnabled() ? opts?.signal : undefined;
+    if (signal?.aborted) {
+      log.info({ code: 'TOOL_ABORTED' }, 'processMessageStream 入场即取消 — 返回取消文案（控制流，非降级）');
+      return { reply: TOOL_CANCELLED_REPLY, phaseComplete: false };
+    }
     this.turnCount++;
     // PII 脱敏: 出站到云 LLM 前脱敏 (S4移除 + S3脱敏 + S2角色掩盖)
     const input = this.piiScrubber?.scrub(userInput, 'S2').cleaned ?? userInput;
@@ -801,12 +823,12 @@ export class ConversationEngine {
         return { reply, phaseComplete: true };
       }
 
-      const reply = await this.streamWithToolLoop(display);
+      const reply = await this.streamWithToolLoop(display, signal);
       this.messages.push({ role: 'assistant', content: reply });
       return { reply, phaseComplete: false };
     }
 
-    const reply = await this.streamWithToolLoop(display);
+    const reply = await this.streamWithToolLoop(display, signal);
     this.messages.push({ role: 'assistant', content: reply });
     return { reply, phaseComplete: false };
   }
@@ -884,12 +906,12 @@ export class ConversationEngine {
 
   // ═══ Private: LLM + Tool Loop (delegated to ToolLoopExecutor) ═══
 
-  private async callLLMWithTools(): Promise<string> {
-    return this.toolLoop.callLLMWithTools();
+  private async callLLMWithTools(signal?: AbortSignal): Promise<string> {
+    return this.toolLoop.callLLMWithTools(signal);
   }
 
-  private async streamWithToolLoop(onToken: (token: string) => void): Promise<string> {
-    return this.toolLoop.streamWithToolLoop(onToken);
+  private async streamWithToolLoop(onToken: (token: string) => void, signal?: AbortSignal): Promise<string> {
+    return this.toolLoop.streamWithToolLoop(onToken, signal);
   }
 
   // ═══ Private: Helpers ═══

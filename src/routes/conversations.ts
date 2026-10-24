@@ -23,8 +23,9 @@
  *   @degraded — db 缺失/非 SQLite → 503 {code:'STORE_UNAVAILABLE', degraded:true}
  *               （fail-closed：会话持久化是本端点的存在理由，静默不落库 = 假绿）；
  *               store 双写失败（lastDegraded）→ 流内 error 帧 {code:'STORE_DEGRADED', degraded:true}
- *               且流不中断（铁律 24/31）；客户端断开 → 停写停心跳，在途轮次自然 settle 后仍
- *               完整落库 ③④⑤（DSH 中断锚语义：已见前缀 ⊆ 落库内容）；同会话并发 → 409 SESSION_BUSY；
+ *               且流不中断（铁律 24/31）；客户端断开 → 停写停心跳 + abort 在途轮次
+ *               （#915 Q-5 断线取消语义见 web-adapter.ts：取消后以已生成前缀＋取消标记
+ *               settle，仍完整落库 ③④⑤——中断锚不变量『已见前缀 ⊆ 落库内容』保持）；同会话并发 → 409 SESSION_BUSY；
  *               `/ingest`：图存储缺失 → 503（fail-closed）；摄取失败 → 200
  *               {code:'INGEST_FAILED', degraded:true}（不阻断对话，铁律 11/31）
  *   @authority — `/ingest` 分支仅 **conversation 链**（`POST /api/conversations` 与
@@ -384,8 +385,14 @@ async function handleConversationMessage(req: Request, res: Response, pathSessio
     // ⑧ 持久化时序 ①：用户消息引擎处理前落库（崩溃安全；双写自动进事件流）
     store.addMessage(sessionId, 'user', message);
 
-    // ⑨ 引擎流式轮次（onToken → adapter token 帧；断线后 adapter 自动停写，轮次自然 settle）
-    const result = await conv.processMessageStream(message, (token) => adapter.appendToken(token));
+    // ⑨ 引擎流式轮次（onToken → adapter token 帧；断线后 adapter 自动停写 + abort 在途轮次
+    //    —— #915 Q-5：adapter.signal 断线即 aborted，引擎收到取消后以「已生成前缀＋取消标记」
+    //    settle；⑩ 落库时序不变，取消也落已生成内容，中断锚不变量保持，规格 §4.3）
+    const result = await conv.processMessageStream(
+      message,
+      (token) => adapter.appendToken(token),
+      { signal: adapter.signal },
+    );
 
     // ⑩ 持久化时序 ③④⑤（断线也执行——完整回复落库，重连不丢）
     store.addMessage(sessionId, 'assistant', result.reply);
