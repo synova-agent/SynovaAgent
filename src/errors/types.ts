@@ -12,7 +12,7 @@
  */
 import * as crypto from 'crypto';
 import { createLogger } from '@synova/logger';
-import { DiagnosticAgentError as BaseDiagnosticAgentError } from '@synova/error-types';
+import { assertNever, DiagnosticAgentError as BaseDiagnosticAgentError } from '@synova/error-types';
 const log = createLogger('src.errors.types');
 
 // ═══ Error Codes (Hermes FailoverReason 对齐) ═══
@@ -570,6 +570,10 @@ export function isRetryable(code: ErrorCodeType): boolean {
     case ErrorCode.CORRUPTED_DATA:
     case ErrorCode.INTERNAL:
       return false;
+    // #914 Q-4: 穷尽断言——新增 ErrorCode 成员 ⇒ 编译期 TS2345 红；
+    // 运行时逃逸值 ⇒ 抛 UnreachableVariantError（fail-loud，禁静默 return false）
+    default:
+      return assertNever(code, 'isRetryable');
   }
 }
 

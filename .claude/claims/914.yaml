@@ -20,6 +20,11 @@ writeset:
   - tests/services/runtime-global-handlers.test.ts
   - memory/notes/proposed/2026-10-24-914-q3-single-error-base.md
   - .claude/claims/914.yaml
+  # ── Q-4（裁 366 批 3-A）：assertNever 不可达分支 fail-loud＋40 switch 只减不增基线 · 五件（同 issue 累计）──
+  - packages/error-types/src/index.ts
+  - src/errors/types.ts
+  - tests/contract/assert-never.test.ts
+  - memory/notes/proposed/2026-10-24-914-q4-assert-never.md
 done:
   - "verify: npx vitest run tests/config/redact.test.ts tests/routes/config.test.ts ⇒ Test Files 2 passed / Tests 30 passed"
   - "verify: 回退 src/config/redact.ts 到修复前 ⇒ N3 三用例 3 failed（改坏必红，裁 371）"
@@ -36,4 +41,10 @@ done:
   - "verify: python3 scripts/control-tower/check-quality-delta.py --base gitea/local-main ⇒ QUALITY-DELTA: PASS changes=8 rules=G1,G3,G4 base=423f60e1fa66（merge main 后复跑；修前曾 VIOLATIONS 1＝R3.3 误命中测试头注释字面量 expect()，已由组 4/4 只改注释修掉）"
   - "verify: git merge gitea/local-main（423f60e1f）后 91-set ⇒ Test Files 6 passed / Tests 91 passed；#956 新增取样型 src/agent/tools.ts:166 已登记，路由白名单仍严格 2 条（未放宽）"
   - "verify: bash scripts/pre-commit-check.sh ⇒ ✅ 全部 12 组通过（exit 0；含组 1 类型安全／组 5 架构边界／组 9 契约门禁）"
-note: "#914 Q-3（裁 366／#951 另立）：单基类（ClassifiedLlmError extends @synova/error-types 基类）＋原生 ErrorOptions.cause＋message 解析棘轮（路由型仅 2 条）；:113 假绿改真类并补 lookalike 两态。｜#914 Q-2（裁 366）：GET /api/config/dump 的 config 与 provenance[].doc 双面结构性脱敏——秘密槽跨 wire 只传 {configured}，secrets[] 侧车给 {path,configured,source}；新建 src/config/redact.ts（SECRET_SEGMENTS 18 段名整段匹配、未知容器 fail-closed 抛 ConfigRedactError）；判别力＝同测试明文对照 app 必红。"
+  # ── Q-4 验收（改后实测原文；Note 见 memory/notes/proposed/2026-10-24-914-q4-assert-never.md）──
+  - "verify: npx vitest run tests/contract/assert-never.test.ts ⇒ Test Files 1 passed / Tests 12 passed（A1 伪码逃逸抛 UnreachableVariantError 四字段齐全；C1 扫描=SWITCH_DEBT_BASELINE 严格相等 39 文件/39 债；C3 注入无 assertNever 的 switch ⇒ debtViolations 红并点名 src/probe-new-switch.ts；D1 24 码真值表逐条一致）"
+  - "verify: npx vitest run tests/errors tests/contract ⇒ Tests 6 failed | 119 passed（failed 仅改前基线 l4-contract 5 + storage Sqlite 1；passed 107→119 只增不减）"
+  - "verify: npx tsc --noEmit ⇒ exit 0"
+  - "verify: B 编译期证据存档（L1 临时树实测）：加 PROBE_NEW_CODE ⇒ npx tsc --noEmit rc=2，src/errors/types.ts(579,26): error TS2345: Argument of type '\"PROBE_NEW_CODE\"' is not assignable to parameter of type 'never'.（dev doc §3-E3）"
+  - "verify: M1–M4 反例两态原始输出归独立自验（.handbook/派单件/过程档案/914-Q4-原始输出.txt）"
+note: "#914 Q-4（裁 366 批 3-A）：assertNever(value: never, context='switch') 恒抛 UnreachableVariantError（code=UNREACHABLE_VARIANT/phase=0/retryable=false）；isRetryable 唯一接入 default: return assertNever(code,'isRetryable')（加 ErrorCode 成员 ⇒ tsc TS2345 编译期红；运行时逃逸必抛不静默）；存量 40 switch 只登记 39 文件/39 债基线棘轮只减不增。｜#914 Q-3（裁 366／#951 另立）：单基类（ClassifiedLlmError extends @synova/error-types 基类）＋原生 ErrorOptions.cause＋message 解析棘轮（路由型仅 2 条）；:113 假绿改真类并补 lookalike 两态。｜#914 Q-2（裁 366）：GET /api/config/dump 的 config 与 provenance[].doc 双面结构性脱敏——秘密槽跨 wire 只传 {configured}，secrets[] 侧车给 {path,configured,source}；新建 src/config/redact.ts（SECRET_SEGMENTS 18 段名整段匹配、未知容器 fail-closed 抛 ConfigRedactError）；判别力＝同测试明文对照 app 必红。"

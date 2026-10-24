@@ -38,6 +38,62 @@ export class DiagnosticAgentError extends Error {
   }
 }
 
+// ═══ Unreachable Variant (assertNever, #914 Q-4) ═══
+
+/**
+ * 不可达分支命中（fail-loud 基建，#918 A 节 Q-4）。
+ *
+ * 设计哲学：**类型上不可能的分支，运行时一旦命中必须炸**（fail loud），
+ * 禁静默 return —— 静默正是"不可达分支漏处理"事故的温床。
+ */
+export class UnreachableVariantError extends DiagnosticAgentError {
+  /**
+   * @param context - 命中位置描述（如 `'isRetryable'`），进 message 便于定位
+   * @param value - 运行时逃逸值（类型上是 never）：只做安全渲染，不展开敏感内部值
+   */
+  constructor(context: string, value: unknown) {
+    super('UNREACHABLE_VARIANT', `unreachable variant in ${context}: ${renderVariant(value)}`, 0, false);
+    this.name = 'UnreachableVariantError';
+  }
+}
+
+/**
+ * 安全渲染逃逸值：**无 catch**（零依赖包无法 log，铁律 24 不允许静默吞错）。
+ * 用 WeakSet replacer 在 `JSON.stringify` 内部处理循环引用与 BigInt —— 从源头不产生异常，
+ * 而不是靠 try/catch 兜住（那会触发"空 catch 无 log"门禁）。
+ *
+ * @param value - 待渲染的逃逸值
+ * @returns 可读字符串（对象循环引用记 `[Circular]`，BigInt 记 `<n>n`）
+ */
+function renderVariant(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (value === null || value === undefined || typeof value !== 'object') return String(value);
+  const seen = new WeakSet<object>();
+  return JSON.stringify(value, (_key, item: unknown) => {
+    if (typeof item === 'bigint') return `${String(item)}n`;
+    if (typeof item === 'object' && item !== null) {
+      if (seen.has(item)) return '[Circular]';
+      seen.add(item);
+    }
+    return item;
+  }) ?? '[object]';
+}
+
+/**
+ * 穷尽 switch 的不可达分支断言（DSH 锚：`@deepseek-ai/dsh-util` values `assertNever`）。
+ *
+ * 用在 exhaustive switch 末尾：`default: return assertNever(code, 'isRetryable');`
+ * —— 给联合加成员 ⇒ 编译期 TS2345 红；运行时逃逸值 ⇒ 抛 `UnreachableVariantError`。
+ * **恒抛**，永不返回（返回类型 `never`）；禁改成 `return`（那是静默）。
+ *
+ * @param value - 不可达值（类型上 `never`；运行时可能是任何逃逸输入）
+ * @param context - 命中位置描述，进 message 便于定位
+ * @returns never（恒抛）
+ */
+export function assertNever(value: never, context = 'switch'): never {
+  throw new UnreachableVariantError(context, value);
+}
+
 // ═══ LLM Errors ═══
 
 /** LLM 请求超时 — 可重试 1 次 */
