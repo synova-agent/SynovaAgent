@@ -11,4 +11,5 @@
 - tests/control-tower/quality-baseline.test.sh — 修改：夹具 label_hash 换实算真值；新增 c5-tamper 与 C10 跨文件回退两反例及跨载体逐字相等断言（#975 规格四） — 裁 399
 - docs/authority/GATE-INVENTORY.yaml — 修改：六行 wired_to 改为修正后 compute_wiring 实算值；三个 label_hash 换实算；CI-S12 步名与 what 文案改 R1 至 R6（#975 规格二点一之三至十一） — 裁 399
 - .gitea/workflows/local-gates.yml — 修改：仅三零三行的步名 R1 斜杠 R2 斜杠 R3 改 R1 至 R6，run 体与逃生舱一字不动（#975 规格二点一之十二） — 裁 399
+- docs/authority/DOCS-REGISTRY.yaml — 修改：仅追加一行登记本豁免件（DOC-0274），既有条目不动（#975 登记门禁要求） — 裁 399
 - gate-exemptions/2026-10-25-p2-975-gate-inventory.md — 自覆盖：本文件自身即受保护路径 gate-exemptions/** 的新增件，须逐条豁免含自覆盖行 — 裁 399
