@@ -341,13 +341,6 @@ tests/sentinels/path-dependency/detect.test.ts(30,42): error TS2345: Argument of
 tests/sentinels/value-capture.test.ts(16,96): error TS2554: Expected 0 arguments, but got 1.
 tests/services/graceful-shutdown.test.ts(36,5): error TS2322: Type 'Mock<Procedure | Constructable>' is not assignable to type '((sessionId: string, role: string, content: string) => void) & Mock<Procedure | Constructable>'.
 tests/services/graceful-shutdown.test.ts(37,5): error TS2322: Type 'Mock<Procedure | Constructable>' is not assignable to type '(((checkpoint: { sessionId: string; phase: number; completedModules: string[]; partialReport: unknown; savedAt: string; }) => void) | undefined) & Mock<Procedure | Constructable>'.
-tests/services/runtime-global-handlers.test.ts(115,18): error TS2769: No overload matches this call.
-tests/services/runtime-global-handlers.test.ts(124,18): error TS2769: No overload matches this call.
-tests/services/runtime-global-handlers.test.ts(133,18): error TS2769: No overload matches this call.
-tests/services/runtime-global-handlers.test.ts(140,18): error TS2769: No overload matches this call.
-tests/services/runtime-global-handlers.test.ts(147,18): error TS2769: No overload matches this call.
-tests/services/runtime-global-handlers.test.ts(154,18): error TS2769: No overload matches this call.
-tests/services/runtime-global-handlers.test.ts(161,18): error TS2769: No overload matches this call.
 tests/stream-tool-loop.test.ts(127,13): error TS2749: 'AgentConversation' refers to a value, but is being used as a type here. Did you mean 'typeof AgentConversation'?
 tests/tui-components.test.ts(50,30): error TS7016: Could not find a declaration file for module 'neo-blessed'. 'node_modules/neo-blessed/lib/blessed.js' implicitly has an 'any' type.
 tests/tui-v2/chat-degradation.test.ts(213,16): error TS5097: An import path can only end with a '.tsx' extension when 'allowImportingTsExtensions' is enabled.
