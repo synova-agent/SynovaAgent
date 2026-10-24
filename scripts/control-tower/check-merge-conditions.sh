@@ -421,13 +421,23 @@ diff_files() { # diff_files <a> <b> → 每行一个文件（-z 安全：中文/
   tr '\0' '\n' < "$WORK/.diff.tmp"
 }
 
-patch_fingerprint() { # patch_fingerprint <mb> <head> → 64 hex（③-2.0 唯一指纹定义）
-  local mb="$1" head="$2"
-  if ! git -C "$ROOT" diff --no-color -M --full-index --binary "$mb" "$head" \
+patch_fingerprint() { # patch_fingerprint <mb> <head> → 64 hex（③-2.1：绑 PR 自身 patch-id，sync 不失效）
+  # ③-2.1 定义（替换 ③-2.0）：指纹 = sha256(git patch-id --stable(<PR 净 diff>))
+  #   · patch-id **只哈希增删行**，与上下文/行号无关 ⇒ 把 main 合进来（sync）不改指纹
+  #   · 内容一变（哪怕一行）⇒ patch-id 变 ⇒ 指纹变（R3 防重放仍成立）
+  #   · 排除 docs/synova/reviews/**（回执本身不改指纹）
+  local mb="$1" head="$2" pid
+  if ! git -C "$ROOT" diff --no-color -M "$mb" "$head" \
         -- . ':(exclude)docs/synova/reviews/**' > "$WORK/fp.diff"; then
     return 1
   fi
-  python3 -c 'import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$WORK/fp.diff"
+  pid="$(git patch-id --stable < "$WORK/fp.diff" | awk 'NR==1{print $1}')"
+  if [ -z "$pid" ]; then
+    # 空 diff（无净改动）：固定常量，仍输出 64 hex（不冒充指纹）
+    printf '%s' "EMPTY-DIFF" | shasum -a 256 | awk '{print $1}'
+    return 0
+  fi
+  printf '%s' "$pid" | shasum -a 256 | awk '{print $1}'
 }
 
 resolve_tip() { # ④ S1 基线真值：git ls-remote（禁本地 stale ref）；fixture 模式取夹具 tip
@@ -1008,13 +1018,15 @@ _mkc() { # _mkc <repo> <msg> <author-email>
     git -C "$1" commit -q -m "$2"
 }
 
-_repo_fp() { # _repo_fp <repo> <mb> <head> → 64 hex（自检侧独立复算，与被测件同一口径）
-  local R="$1"
-  if ! git -C "$R" diff --no-color -M --full-index --binary "$2" "$3" \
+_repo_fp() { # _repo_fp <repo> <mb> <head> → 64 hex（自检侧独立复算，与 ③-2.1 同口径）
+  local R="$1" pid
+  if ! git -C "$R" diff --no-color -M "$2" "$3" \
         -- . ':(exclude)docs/synova/reviews/**' > "$WORK/sc_fp.diff"; then
     return 1
   fi
-  python3 -c 'import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$WORK/sc_fp.diff"
+  pid="$(git patch-id --stable < "$WORK/sc_fp.diff" | awk 'NR==1{print $1}')"
+  if [ -z "$pid" ]; then printf '%s' "EMPTY-DIFF" | shasum -a 256 | awk '{print $1}'; return 0; fi
+  printf '%s' "$pid" | shasum -a 256 | awk '{print $1}'
 }
 
 _write_receipt() { # _write_receipt <repo> <pr> <fp> <fp-for-path> <independence> <author-email> [schema-verdict]

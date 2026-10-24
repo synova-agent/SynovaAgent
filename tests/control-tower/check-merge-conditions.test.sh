@@ -94,13 +94,15 @@ mk_commit() { # <repo> <msg> <author-email>
     git -C "$1" commit -q -m "$2"
 }
 
-fp_of() { # <repo> <mb> <head> → 64 hex（③-2.0 唯一指纹定义，测试侧独立复算）
-  local R="$1"
-  if ! git -C "$R" diff --no-color -M --full-index --binary "$2" "$3" \
+fp_of() { # <repo> <mb> <head> → 64 hex（③-2.1：sha256(git patch-id --stable)，测试侧独立复算）
+  local R="$1" pid
+  if ! git -C "$R" diff --no-color -M "$2" "$3" \
         -- . ':(exclude)docs/synova/reviews/**' > "$WORK/fp.tmp"; then
     return 1
   fi
-  python3 -c 'import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$WORK/fp.tmp"
+  pid="$(git patch-id --stable < "$WORK/fp.tmp" | awk 'NR==1{print $1}')"
+  if [ -z "$pid" ]; then printf '%s' "EMPTY-DIFF" | shasum -a 256 | awk '{print $1}'; return 0; fi
+  printf '%s' "$pid" | shasum -a 256 | awk '{print $1}'
 }
 
 write_receipt() { # <repo> <pr> <patch_fingerprint 字面值> <fp12(路径)> <independence> <email> <checks 条数>
@@ -625,6 +627,24 @@ else
   fail "[边界] 只读证明失败 — 真实仓 status 变了:"
   diff <(printf '%s\n' "$RO_BEFORE") <(printf '%s\n' "$RO_AFTER") | sed 's/^/       | /' >&2
 fi
+
+# ── ③-2.1 判别力：sync（合 main）不改指纹；内容变化必改 ──
+echo "── ③-2.1 指纹稳定性（sync 不变 / 内容变必变）──"
+SYNC_R="$WORK/sync-fp/repo"; rm -rf "$WORK/sync-fp"; mkdir -p "$SYNC_R"
+git init -q "$SYNC_R" && git -C "$SYNC_R" config user.email agent@synova.local && git -C "$SYNC_R" config user.name agent
+( cd "$SYNC_R" && printf 'a\nb\n' > f.ts && git add f.ts && git commit -qm base && git checkout -qb feat \
+  && printf 'c\n' >> f.ts && git commit -qam "feat change" )
+S_MB1="$(git -C "$SYNC_R" rev-parse main)"; S_H1="$(git -C "$SYNC_R" rev-parse feat)"
+S_FP1="$(fp_of "$SYNC_R" "$S_MB1" "$S_H1")"
+( cd "$SYNC_R" && git checkout -q main && printf 'm\n' > m.ts && git add m.ts && git commit -qm "main advance" && git checkout -q feat && git merge -q --no-edit main )
+S_MB2="$(git -C "$SYNC_R" merge-base "$(git -C "$SYNC_R" rev-parse main)" "$(git -C "$SYNC_R" rev-parse feat)")"
+S_H2="$(git -C "$SYNC_R" rev-parse feat)"
+S_FP2="$(fp_of "$SYNC_R" "$S_MB2" "$S_H2")"
+( cd "$SYNC_R" && printf 'd\n' >> f.ts && git commit -qam "feat change 2" )
+S_MB3="$(git -C "$SYNC_R" merge-base "$(git -C "$SYNC_R" rev-parse main)" "$(git -C "$SYNC_R" rev-parse feat)")"
+S_FP3="$(fp_of "$SYNC_R" "$S_MB3" "$(git -C "$SYNC_R" rev-parse feat)")"
+if [ -n "$S_FP1" ] && [ "$S_FP1" = "$S_FP2" ]; then extra "③-2.1 sync 后指纹不变（${S_FP1:0:12}）"; else fail "③-2.1 sync 后指纹变了（${S_FP1:0:12} → ${S_FP2:0:12}）"; fi
+if [ -n "$S_FP3" ] && [ "$S_FP1" != "$S_FP3" ]; then extra "③-2.1 内容变化指纹必变（${S_FP3:0:12}）"; else fail "③-2.1 内容变化指纹未变 ⇒ 防重放失效"; fi
 
 echo
 echo "结果: ${PASS} 通过, ${FAIL} 失败"
