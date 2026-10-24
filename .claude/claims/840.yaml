@@ -8,6 +8,7 @@ writeset:
   - tests/tsconfig.norm.py
   - tests/vitest.known-red.txt
   - tests/vitest.known-red.check.py
+  - tests/vitest.known-red.check.test.sh
   - tests/acceptance/zero-code-industry.test.ts
   - tests/control-tower/quality-standard.test.sh
   - tests/control-tower/quality-baseline.test.sh

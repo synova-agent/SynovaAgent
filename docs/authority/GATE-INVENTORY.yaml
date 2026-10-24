@@ -613,7 +613,7 @@ gates:
     kind: step
     line: 310
     label: "工作区（全量测试 job；复用本机 CI 克隆）"
-    label_hash: "a1b2c3d4e5f6"
+    label_hash: "f03265bff975"
     occurrences: [310]
     what: "全量测试 job 工作区同步（同 gates 口径）"
     blocking: hard
@@ -626,7 +626,7 @@ gates:
     kind: step
     line: 318
     label: "依赖（全量测试 job；lock 哈希指纹，与 gates 同口径）"
-    label_hash: "b2c3d4e5f6a1"
+    label_hash: "a68cf9f75974"
     occurrences: [318]
     what: "全量测试 job 依赖安装（lock 指纹，变更才重装）"
     blocking: hard
@@ -639,7 +639,7 @@ gates:
     kind: step
     line: 331
     label: "①h 全量测试（**不按 --changed** · 不计组号）"
-    label_hash: "c3d4e5f6a1b2"
+    label_hash: "7befc617edaa"
     occurrences: [331]
     what: "①h 全量 vitest（不按 --changed；排除面只留环境依赖）"
     blocking: hard
@@ -652,7 +652,7 @@ gates:
     kind: step
     line: 338
     label: "①h-types tests 类型检查（tsconfig.tests.json ＋ 基线 · 只减不增 · 禁手抄）"
-    label_hash: "d4e5f6a1b2c3"
+    label_hash: "7f71a679c05b"
     occurrences: [338]
     what: "①h-types tests 类型检查（tsconfig.tests.json；known-errors 基线只减不增）"
     blocking: hard
@@ -711,7 +711,7 @@ checkers:
     orphan: false
     blocking: false
     decision: keep
-    reason: "C10 复算在门禁链在位（CI-S9）⇒ 保留"
+    reason: "C10 复算在门禁链在位（CI-S9）⇒ 保留；wired_to 由枚举器**位置派生**（.github 引用按行号归到最后一个 Gitea 步 ⇒ CI-S15），非真实调用关系；C5/C10 真值修属 A 类另提案（#840 N1）"
     replacement: ""
   - id: CT-check-ci-stale-red
     path: "scripts/control-tower/check-ci-stale-red.sh"
@@ -751,7 +751,7 @@ checkers:
     orphan: false
     blocking: false
     decision: keep
-    reason: "C10 复算在门禁链在位（CI-S9/PC-B-1ff6e6）⇒ 保留"
+    reason: "C10 复算在门禁链在位（CI-S9/PC-B-1ff6e6）⇒ 保留；wired_to 由枚举器**位置派生**（.github 引用按行号归到最后一个 Gitea 步 ⇒ CI-S15），非真实调用关系；C5/C10 真值修属 A 类另提案（#840 N1）"
     replacement: ""
   - id: CT-check-dual-repo-sync
     path: "scripts/control-tower/check-dual-repo-sync.sh"
@@ -767,7 +767,7 @@ checkers:
     orphan: false
     blocking: false
     decision: keep
-    reason: "C10 复算在门禁链在位（CI-S9）⇒ 保留"
+    reason: "C10 复算在门禁链在位（CI-S9）⇒ 保留；wired_to 由枚举器**位置派生**（.github 引用按行号归到最后一个 Gitea 步 ⇒ CI-S15），非真实调用关系；C5/C10 真值修属 A 类另提案（#840 N1）"
     replacement: ""
   - id: CT-check-gate-integrity
     path: "scripts/control-tower/check-gate-integrity.sh"
@@ -775,7 +775,7 @@ checkers:
     orphan: false
     blocking: false
     decision: keep
-    reason: "C10 复算在门禁链在位（CI-S9）⇒ 保留"
+    reason: "C10 复算在门禁链在位（CI-S9）⇒ 保留；wired_to 由枚举器**位置派生**（.github 引用按行号归到最后一个 Gitea 步 ⇒ CI-S15），非真实调用关系；C5/C10 真值修属 A 类另提案（#840 N1）"
     replacement: ""
   - id: CT-check-gate-protection
     path: "scripts/control-tower/check-gate-protection.sh"
@@ -895,7 +895,7 @@ checkers:
     orphan: false
     blocking: false
     decision: keep
-    reason: "C10 复算在门禁链在位（CI-S9）⇒ 保留"
+    reason: "C10 复算在门禁链在位（CI-S9）⇒ 保留；wired_to 由枚举器**位置派生**（.github 引用按行号归到最后一个 Gitea 步 ⇒ CI-S15），非真实调用关系；C5/C10 真值修属 A 类另提案（#840 N1）"
     replacement: ""
   - id: CT-check-sentinel-type-net
     path: "scripts/control-tower/check-sentinel-type-net.sh"
