@@ -1,0 +1,102 @@
+{
+ "schema": "syno-review-receipt/v1",
+ "pr": 965,
+ "patch_fingerprint": "sha256:9c826b5056b084748faeb40921827d785d1cb18d64bf0ba7f9272bddbe69b68b",
+ "author": "k12-batch5 <k12@local>（L2 小队实施，#915 Q-5）",
+ "reviewer": "zero-context independent reviewer（fresh subagent；未参与实现）",
+ "independence": "fresh-session",
+ "verdict": "PASS",
+ "tool": "pr-review@v1（独立复核六项必核 ＋ deliverable-acceptance 五步）",
+ "base": "ed63144e7a86（开 PR 时 gitea/local-main；现 local-main=6554191529d7，mergeable=true）",
+ "head": "d099e36f4df8d0faf13282cd3cd36c85531dffc0",
+ "checks": [
+  {
+   "id": "C1",
+   "name": "裁383落实：新增 ||''//??'' = 0，6 处改类型守卫三元",
+   "cmd": "git diff gitea/local-main...HEAD | grep '^+' | grep -cF \"|| ''\" ; grep -cF \"?? ''\" ; git show d099e36f4 --stat",
+   "evidence": "added || ''=0，?? ''=0，|| 'default'=0；第三提交仅 3 文件 7+/6-（conversation-engine 4 处＋conversations.ts 1 处＋tool-loop-executor 1 处＝6 个站点）；base 同 pattern 23 行 → head 18 行（-5 存量），净新增 0",
+   "result": "pass"
+  },
+  {
+   "id": "C2",
+   "name": "quality-delta rc=0 ＋ 白名单逐字节未动、max_entries 仍 0",
+   "cmd": "SYNO_CI=1 python3 scripts/control-tower/check-quality-delta.py --root . --base gitea/local-main ; git show ed63144e7:docs/authority/quality-delta-whitelist.yaml | shasum -a 256",
+   "evidence": "QUALITY-DELTA: PASS changes=9 rules=G1,G3,G4 base=ed63144e7a86 rc=0；白名单 base/head sha256 均 5d7802946a8d…5410（逐字节相同）；blob d2fba80a 两侧同；max_entries: 0，entries: []；diff 未含该文件",
+   "result": "pass"
+  },
+  {
+   "id": "C3",
+   "name": "取消语义真贯穿（自造 8 用例＋4 变异体，不采信 PR 用例）",
+   "cmd": "自写 tests/agent/zz-reviewer-abort.test.ts（临时，已删）npx vitest run；MUT-A/B/C/M3 后复原",
+   "evidence": "8/8 pass：R1 派发前 abort ⇒ {name:'AbortError',code:'TOOL_ABORTED_BEFORE_DISPATCH'}、handler 0 次；R2 中途 abort ⇒ TOOL_ABORTED 且副作用 0（effects=['step1']）；R3 未 abort 正常＋ctx.signal 严格相等；R4 全链（WebViewAdapter res.close→adapter.signal→引擎→循环→execute→handler）前缀+TOOL_CANCELLED_REPLY、副作用 0、onToken 前缀 ⊆ 返回、chatCalls=1；R5 每轮头分支；R6 LLM 在途取消；R7 引擎 stream 入场；R8 SYNO_TOOL_ABORT=0 回旧行为。变异：删 dispatch throwIfAborted⇒R1红；去 ctx⇒R2/R3/R4红；去 adapter abort⇒R4红；去 4 处 callLlm signal⇒S12红(30s 超时)",
+   "result": "pass"
+  },
+  {
+   "id": "C4",
+   "name": "取消分支覆盖：15 处真分支抽样 8；PR 用例真驱动 signal",
+   "cmd": "grep -rnE \"if \\(.*aborted\" src/{agent/tools.ts,agent/tool-loop-executor.ts,agent/conversation-engine.ts,l1-interaction/web-adapter.ts,routes/conversations.ts} | wc -l ; grep -n 'vi.mock' tests/agent/tool-cancel.test.ts",
+   "evidence": "变更 5 件内 if(…aborted) = 15（tool-loop 10＋tools 2＋engine 2＋adapter 1），全部可执行代码非注释；另 3 个非 if 决策点（tools.ts:419 dispatch throwIfAborted、tool-loop:283/:481 isToolAbortResult）共 18 决策点。抽样 8 处均被我的用例走到（见 C3）。PR 用例零 vi.mock、10×new AbortController、真实类 ToolRegistry/ToolLoopExecutor/ConversationEngine/WebViewAdapter（仅 provider 外部边界替换）；独立变异：MUT-A⇒S1/S8 红，MUT-B⇒S2/S9 红，MUT-C⇒S10 红，M3⇒S12 红（与自述一致）",
+   "result": "pass"
+  },
+  {
+   "id": "C5",
+   "name": "回归：tsc / 相关 vitest / pre-commit 12 组 / check-gate-protection / CI",
+   "cmd": "npx tsc --noEmit（node22）；npx vitest run 16 个相关文件；SYNO_CI=1 GITHUB_ACTIONS=true SYNO_DIFF_BASE=gitea/local-main bash scripts/pre-commit-check.sh；bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main；Gitea API commits/<sha>/status",
+   "evidence": "tsc rc=0 零错；vitest 171 passed（tool-cancel 12、error-base-interop 17、受影响 6 件 65、另 8 件 77），0 failed；pre-commit ✅ 全部 12 组通过 rc=0；check-gate-protection 11 通过 0 失败 rc=0（5 条受保护路径逐条合规豁免）；CI head d099e36f4：run 1784(push)/1785(pull_request) 均 completed success，pending=0",
+   "result": "pass"
+  },
+  {
+   "id": "C6",
+   "name": "写集闭合 / 零 audit / 未碰 packages/error-types/package.json",
+   "cmd": "git diff --name-only ed63144e7..d099e36f4 | sort vs .claude/claims/915.yaml writeset ; grep -E '^(src|scripts)/audit/|packages/error-types/package.json'",
+   "evidence": "实际 15 件 vs claim 15 件 SET-EQUAL（diff 空）；零 src/audit、零 scripts/audit；零 packages/** 改动（含 error-types/package.json）；基线/盘点四值不变：PAIRING-OK covered=G12/12 B9/9 X7/7 S12/12 K35/35 R40/40、REGISTRY-OK rows=10、orphans=7/35、inventory rc=0",
+   "result": "pass"
+  },
+  {
+   "id": "C7",
+   "name": "账实：PR 正文数字与实测一致（写集/测试数/15 处）",
+   "cmd": "逐项复跑 PR 正文所列命令（见各 C 条）",
+   "evidence": "写集 15=15；tool-cancel Tests 12 passed(12)；interop 17 passed；test.sh 98 通过 0 失败；selfcheck SELFCHECK-OK f1=1 f2=1 f3=1 f4=1 f5=1 clean=0；闸 TOOL-ARGS-DELTA: PASS changes=3 rules=R1,R2,R3,R4,R5,R6；quality-delta changes=9；豁免 5 行、信号基线 3 名、DOC-0272、T14–T22/S1–S12 齐；15 处取消分支=实测 15（口径见 C4）。3 处口径瑕疵见 findings F1/F2/F3（均非本次必核的三项数字）",
+   "result": "pass"
+  }
+ ],
+ "findings": [
+  {
+   "id": "F1",
+   "severity": "warn",
+   "where": "PR 正文『数字（现算）』节",
+   "what": "『grep throwIfAborted ⇒ 3 处』是 grep 命中数：src 内 3 条中 2 条是注释/JSDoc（tools.ts:68 段注释、tools.ts:81 接口 JSDoc），可执行代码仅 tools.ts:419（dispatch 前检查）。memory note 写『3 处全部是 execute 派发前检查』不成立。",
+   "fix": "改为『grep 命中 3（代码 1＋注释 2）』或命令加 grep -v '^\\s*\\*'；不影响闸与行为"
+  },
+  {
+   "id": "F2",
+   "severity": "warn",
+   "where": "PR 正文『回滚』节",
+   "what": "回滚指令 `revert d099e36f4..11c22a589` 指向 rebase 前孤儿提交 11c22a589（不在 head 历史；git log d099e36f4..11c22a589 只含它自己）。实际 head 链 = ed63144e7 → 9b34b4823 → 4bf5fe3c4 → d099e36f4，按该指令 revert 不会撤销本 PR。",
+   "fix": "改为逐提交 revert 三件（d099e36f4、4bf5fe3c4、9b34b4823）或 merge 后 revert merge commit；环境开关 SYNO_TOOL_ABORT=0 已实测有效（R8）"
+  },
+  {
+   "id": "F3",
+   "severity": "info",
+   "where": "PR 正文 M3 / 规格 §5.3",
+   "what": "M3 写『删 3 处 callLlm signal: sig』；实测 callLlm 透传点 4 处（tool-loop-executor.ts:194-196、328、379-381、519），`signal: sig` 文本共 6 处（另 2 处在 execute 调用）。删 4 处后 S12 确实红（30s 超时），机制与自述一致，仅计数口径差 1。",
+   "fix": "改为『4 处 callLlm 透传』"
+  },
+  {
+   "id": "F4",
+   "severity": "info",
+   "where": "scripts/control-tower/check-tool-args-delta.py:470,627",
+   "what": "--selfcheck 帮助与段注释仍写『4 夹具』，实际已扩为 6（clean＋f1–f5）。纯文档漂移，不影响判据。",
+   "fix": "改为『6 夹具』（下一件顺手修）"
+  },
+  {
+   "id": "F5",
+   "severity": "info",
+   "where": "PR 标题 vs gate-exemptions/2026-10-25-p1-915-q5.md / memory note",
+   "what": "门禁扩规则 R4–R6（改变『哪条检查阻断合并』的语义）在 PR 标题记『裁 383』，而豁免件与 memory note 记『裁 365』。属 A 类提案的裁号引用不一致；政策批准不在我的判据内，仅报不一致供 CTO 自证。",
+   "fix": "统一裁号或补一句『裁 383 覆盖 R4–R6 扩规则』到豁免件/PR 正文"
+  }
+ ],
+ "issued_at": "2026-10-25T00:35:51+0800",
+ "scope_note": "写集/取消语义/回归/账实六项必核；不含政策裁定（裁号/A 类批准）与合并动作；复核产生的临时用例与 node_modules 软链均在 /tmp 且已删，worktree 收尾 git status 为空。"
+}

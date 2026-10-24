@@ -17,11 +17,44 @@ import { pruneToolResult, ToolResultPruneError } from '../llm/tool-result-pruner
 // 重试事件落 D500 事件流（投影计数单元见 store/retry-projection，由 deploy/bootstrap 注册）：
 // 落盘缝在 src/llm（共享基础设施层）——铁律 39 禁本层静态 import src/store。
 import { callWithResilience, appendRetryEvent, type LlmRetryEvent, type ResilienceOutcome } from '../llm/retry-middleware';
+// #915 Q-5: 取消语义（signal 贯穿 execute 链；取消文案导出供引擎复用）
+import { isToolAbortEnabled, type ToolAbortErrorCode } from './tools';
 
 /** Tool execution result — may contain error property on failure */
 interface ToolExecResult {
   error?: string;
   [key: string]: unknown;
+}
+
+/**
+ * #915 Q-5: 取消回执文案（工具循环/引擎取消时拼接在「已生成前缀」之后；
+ * 中断锚不变量：已见前缀 ⊆ 返回内容 ⊆ 落库内容，规格 §4.3）。
+ */
+export const TOOL_CANCELLED_REPLY = '\n[回复已取消：客户端中断，以上为已生成内容]';
+
+/**
+ * #915 Q-5: 判 execute 结果是否为取消（两支码）——取消不当普通失败（DS-4）。
+ * @input  result — toolRegistry.execute 返回值
+ * @output true ⇒ error 为结构化 AbortError（name='AbortError'，code ∈ 取消两码）
+ * @error  永不抛（纯形状判别）
+ */
+function isToolAbortResult(result: unknown): boolean {
+  if (typeof result !== 'object' || result === null) return false;
+  const err = (result as ToolExecResult).error;
+  if (typeof err !== 'object' || err === null) return false;
+  const e = err as { name?: unknown; code?: unknown };
+  return e.name === 'AbortError' && (e.code === 'TOOL_ABORTED' || e.code === 'TOOL_ABORTED_BEFORE_DISPATCH');
+}
+
+/** 取消码窄化（日志用；isToolAbortResult 已保证形状——本函数独立自守卫，零 as-any 家族） */
+function toolAbortCode(result: unknown): ToolAbortErrorCode {
+  if (typeof result === 'object' && result !== null) {
+    const err = (result as { error?: unknown }).error;
+    if (typeof err === 'object' && err !== null) {
+      return (err as { code?: unknown }).code === 'TOOL_ABORTED' ? 'TOOL_ABORTED' : 'TOOL_ABORTED_BEFORE_DISPATCH';
+    }
+  }
+  return 'TOOL_ABORTED_BEFORE_DISPATCH';
 }
 
 /** D819: 出站 assistant.tool_calls 的 OpenAI 形状（id/type/function）—— 配对 id 的唯一来源 */
@@ -131,19 +164,43 @@ export class ToolLoopExecutor {
   /**
    * Call LLM with tool execution loop (non-streaming).
    * Max 3 rounds of tool calls to prevent infinite loops.
+   *
+   * #915 Q-5 契约扩展（铁律 47）:
+   * @input  signal?: AbortSignal — 取消信号（SYNO_TOOL_ABORT=0 ⇒ 忽略，回旧行为）
+   * @output 入场/每轮已取消 ⇒ `${已生成前缀}${TOOL_CANCELLED_REPLY}`（不发 LLM、不再执行工具）
+   * @degraded 取消是控制流：不设 degraded；log.info 留痕一次
+   * @error  不抛（取消结果化，不当普通失败）
    */
-  async callLLMWithTools(): Promise<string> {
+  async callLLMWithTools(signal?: AbortSignal): Promise<string> {
+    const sig = isToolAbortEnabled() ? signal : undefined;
+    // 已生成前缀（非流式：各轮 assistant 文本累积；中断锚：已生成 ⊆ 返回）
+    let generated = '';
+    if (sig?.aborted) {
+      this.log.info({ code: 'TOOL_ABORTED' }, 'callLLMWithTools 入场即取消 — 不发 LLM');
+      return TOOL_CANCELLED_REPLY;
+    }
     // 裁 219 / M10-3：轮数配置化（默认 3 不变），上界 10 —— 防客户配 1000 轮致费用失控
     const MAX_TOOL_ROUNDS = Math.min(10, Math.max(1, Number.parseInt(process.env.SYNO_MAX_TOOL_ROUNDS ?? '', 10) || 3));
     const tools = this.ctx.toolRegistry.listTools();
     const { messages, hookRunner, eventBus, sessionId, toolRegistry } = this.ctx;
 
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+      // #915 Q-5: 每轮先判取消（取消 ⇒ 停在第 2 轮 LLM 前，S6）
+      if (sig?.aborted) {
+        this.log.info({ code: 'TOOL_ABORTED', round }, '工具循环已取消 — 返回已生成前缀+取消标记');
+        return `${generated}${TOOL_CANCELLED_REPLY}`;
+      }
       try {
         const outcome = await this.callLlm(messages, {
           tools: tools.length > 0 ? toolRegistry.toOpenAITools() : undefined,
+          signal: sig,
         });
         if (!outcome.ok) {
+          // #915 Q-5: 取消不再当普通失败（M3）——LLM 失败面若由取消引起，返回前缀+取消文案
+          if (sig?.aborted) {
+            this.log.info({ code: 'TOOL_ABORTED', kind: outcome.kind, round }, 'LLM 调用被取消 — 返回已生成前缀+取消标记');
+            return `${generated}${TOOL_CANCELLED_REPLY}`;
+          }
           this.log.warn(
             { code: outcome.code, kind: outcome.kind, attempts: outcome.attempts, degraded: true, round },
             'LLM 调用降级（韧性层分类）',
@@ -159,6 +216,7 @@ export class ToolLoopExecutor {
 
         // 有工具调用 → 执行并注入结果
         this.log.info({ count: result.toolCalls.length, round }, 'LLM 请求工具调用');
+        generated += typeof result.content === 'string' ? result.content : '';
 
         // D819: assistant 必须带 tool_calls（此前只推 role+content → 模型收到的工具对话结构非法）；
         // id 与下方 tool 消息同源（模型给的 id，缺 id 走确定性兜底）
@@ -219,7 +277,13 @@ export class ToolLoopExecutor {
             });
           }
 
-          const execResult = await toolRegistry.execute(tc.function.name, effectiveParams);
+          const execResult = await toolRegistry.execute(tc.function.name, effectiveParams, { signal: sig });
+
+          // #915 Q-5: 取消两码 ⇒ 停止本轮并返回取消文案（不当普通失败，DS-4）
+          if (isToolAbortResult(execResult)) {
+            this.log.info({ code: toolAbortCode(execResult), tool: tc.function.name, round }, '工具已取消 — 停止本轮，返回前缀+取消标记');
+            return `${generated}${TOOL_CANCELLED_REPLY}`;
+          }
 
           // L3 ToolGuard: 工具调用后记录（失败计数）
           this.toolGuard.afterCall(tc.function.name, execResult, 0);
@@ -248,14 +312,20 @@ export class ToolLoopExecutor {
 
         continue; // 下一轮 LLM 调用
       } catch (err: unknown) {
+        // #915 Q-5: 取消不再当普通失败（M3）——异常若由取消引起，返回前缀+取消文案
+        if (sig?.aborted) {
+          this.log.info({ code: 'TOOL_ABORTED', round }, 'LLM 调用被取消 — 返回已生成前缀+取消标记');
+          return `${generated}${TOOL_CANCELLED_REPLY}`;
+        }
         this.log.error({ err, round }, 'LLM 调用失败');
         return `抱歉，调用失败：${errorMessage(err)}`;
       }
     }
 
     // 达到最大轮次 → 最后一次无工具调用
+    if (sig?.aborted) return `${generated}${TOOL_CANCELLED_REPLY}`;
     try {
-      const outcome = await this.callLlm(messages);
+      const outcome = await this.callLlm(messages, { signal: sig });
       if (!outcome.ok) {
         this.log.warn(
           { code: outcome.code, kind: outcome.kind, attempts: outcome.attempts, degraded: true },
@@ -275,18 +345,47 @@ export class ToolLoopExecutor {
    *
    * Slice 0.1 fix: single provider.chat() call per round —
    * no more separate stream()+chat() double calls.
+   *
+   * #915 Q-5 契约扩展（铁律 47）:
+   * @input  onToken, signal?: AbortSignal（SYNO_TOOL_ABORT=0 ⇒ 忽略，回旧行为）
+   * @output 取消 ⇒ `${已流式生成前缀}${TOOL_CANCELLED_REPLY}`——onToken 已收到的 token
+   *         前缀 ⊆ 返回内容（中断锚不变量，规格 §4.3；S7 前缀完整性）
+   * @degraded 取消是控制流：不设 degraded；log.info 留痕一次
+   * @error  不抛（取消结果化）
    */
-  async streamWithToolLoop(onToken: (token: string) => void): Promise<string> {
+  async streamWithToolLoop(onToken: (token: string) => void, signal?: AbortSignal): Promise<string> {
+    const sig = isToolAbortEnabled() ? signal : undefined;
+    // #915 Q-5: 流式已生成前缀累积（emit 包装 onToken——onToken 收到的每个 token 都计入）
+    let streamedText = '';
+    const emit = (token: string): void => {
+      streamedText += token;
+      onToken(token);
+    };
+    if (sig?.aborted) {
+      this.log.info({ code: 'TOOL_ABORTED' }, 'streamWithToolLoop 入场即取消 — 不发 LLM');
+      return TOOL_CANCELLED_REPLY;
+    }
     const MAX_ROUNDS = 3;
     const tools = this.ctx.toolRegistry.listTools();
     const { messages, toolRegistry, hookRunner, eventBus, sessionId } = this.ctx;
 
     for (let round = 0; round < MAX_ROUNDS; round++) {
+      // #915 Q-5: 每轮先判取消（第 2 轮不再发 LLM，S7）
+      if (sig?.aborted) {
+        this.log.info({ code: 'TOOL_ABORTED', round }, '流式工具循环已取消 — 返回已生成前缀+取消标记');
+        return `${streamedText}${TOOL_CANCELLED_REPLY}`;
+      }
       try {
         const outcome = await this.callLlm(messages, {
           tools: tools.length > 0 ? toolRegistry.toOpenAITools() : undefined,
+          signal: sig,
         });
         if (!outcome.ok) {
+          // #915 Q-5: 取消不再当普通失败（M3）——LLM 失败面若由取消引起，返回前缀+取消文案
+          if (sig?.aborted) {
+            this.log.info({ code: 'TOOL_ABORTED', kind: outcome.kind, round }, 'LLM 调用被取消 — 返回已生成前缀+取消标记');
+            return `${streamedText}${TOOL_CANCELLED_REPLY}`;
+          }
           this.log.warn(
             { code: outcome.code, kind: outcome.kind, attempts: outcome.attempts, degraded: true, round },
             'streamWithToolLoop: LLM 调用降级（韧性层分类）',
@@ -302,7 +401,7 @@ export class ToolLoopExecutor {
         // 此处不再 push（旧实现与本方法出口双推 → 出站角色序出现 assistant,assistant，D817-F2）。
         if (!result.toolCalls || result.toolCalls.length === 0) {
           for (const ch of content) {
-            onToken(ch);
+            emit(ch);
             await sleep(5); // P3-06: 5ms/char 流式动画
           }
           return content || '(empty response)';
@@ -312,7 +411,7 @@ export class ToolLoopExecutor {
         this.log.debug({ count: result.toolCalls.length, round }, 'streamWithToolLoop: 工具调用');
 
         for (const ch of content) {
-          onToken(ch);
+          emit(ch);
           await sleep(5);
         }
 
@@ -324,9 +423,9 @@ export class ToolLoopExecutor {
           tool_calls: toolCalls,
         });
 
-        onToken('\n[工具调用: ');
+        emit('\n[工具调用: ');
         for (const tc of toolCalls) {
-          onToken(tc.function.name + ' ');
+          emit(tc.function.name + ' ');
           let params: Record<string, unknown> = {};
           try {
             params = JSON.parse(tc.function.arguments);
@@ -367,7 +466,7 @@ export class ToolLoopExecutor {
 
           let execResult: unknown;
           try {
-            execResult = await toolRegistry.execute(tc.function.name, effectiveParams);
+            execResult = await toolRegistry.execute(tc.function.name, effectiveParams, { signal: sig });
           } catch (err: any) {
             this.log.warn({ err, tool: tc.function.name }, '工具执行失败');
             execResult = { error: `工具执行失败: ${err.message}` };
@@ -376,6 +475,12 @@ export class ToolLoopExecutor {
                 this.log.warn({ hookErr, tool: tc.function.name }, 'PostToolUseFailure hook 执行失败 — 非阻断');
               });
             }
+          }
+
+          // #915 Q-5: 取消两码 ⇒ 停止本轮并返回取消文案（不当普通失败，DS-4；S7 前缀完整性）
+          if (isToolAbortResult(execResult)) {
+            this.log.info({ code: toolAbortCode(execResult), tool: tc.function.name, round }, '流式工具已取消 — 停止本轮，返回前缀+取消标记');
+            return `${streamedText}${TOOL_CANCELLED_REPLY}`;
           }
 
           // L3 ToolGuard: 工具调用后记录
@@ -394,18 +499,24 @@ export class ToolLoopExecutor {
             content: this.pruneForPrompt(JSON.stringify(execResult)),
           });
         }
-        onToken(']\n');
+        emit(']\n');
 
         continue;
       } catch (err: unknown) {
+        // #915 Q-5: 取消不再当普通失败（M3）——异常若由取消引起，返回前缀+取消文案
+        if (sig?.aborted) {
+          this.log.info({ code: 'TOOL_ABORTED', round }, 'LLM 调用被取消 — 返回已生成前缀+取消标记');
+          return `${streamedText}${TOOL_CANCELLED_REPLY}`;
+        }
         this.log.error({ err, round }, 'streamWithToolLoop: LLM 调用失败');
         return `抱歉，调用失败：${errorMessage(err)}`;
       }
     }
 
     // 达到最大轮次
+    if (sig?.aborted) return `${streamedText}${TOOL_CANCELLED_REPLY}`;
     try {
-      const outcome = await this.callLlm(messages);
+      const outcome = await this.callLlm(messages, { signal: sig });
       if (!outcome.ok) {
         this.log.warn(
           { code: outcome.code, kind: outcome.kind, attempts: outcome.attempts, degraded: true },
@@ -415,7 +526,7 @@ export class ToolLoopExecutor {
       }
       const final = outcome.result;
       for (const ch of (final.content || '')) {
-        onToken(ch);
+        emit(ch);
         await sleep(5);
       }
       // D819: 同上——最终态 assistant 由 ConversationEngine 统一入上下文（此处勿再 push，防双推）

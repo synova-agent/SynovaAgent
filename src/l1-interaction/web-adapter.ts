@@ -10,9 +10,10 @@
  *   @input    — express Response（SSE 目标流）；本类持有具体连接，路由每请求 new 一个
  *   @output   — SSE 帧 `event: <type>\ndata: {json}\n\n` + `: ping` 心跳注释帧（15s，
  *               close/end 后清除）
- *   @degraded — 客户端断开（res close）→ 置 closed 停写 + 停心跳 + 触发 onClosed 钩子
- *               （路由据此感知断线，settle 后仍完整落库——DSH 中断锚语义）；
- *               写入异常仅 log 不抛（引擎流式管线不应因下游断开而崩溃，铁律 24 显式留痕）
+ *   @degraded — 客户端断开（res close）→ 置 closed 停写 + 停心跳 + abort 在途 signal +
+ *               触发 onClosed 钩子；#915 Q-5 中断锚口径：断线 ⇒ 取消在途（signal abort），
+ *               轮次 settle 时把「已生成前缀＋取消标记」落库（不变量『已见前缀 ⊆ 落库内容』保持，
+ *               规格 §4.3）；写入异常仅 log 不抛（引擎流式管线不应因下游断开而崩溃，铁律 24 显式留痕）
  *
  * @since 0.2.0
  */
@@ -35,6 +36,12 @@ export class WebViewAdapter implements ViewAdapter {
   private closed = false;
   private onClosedCallback: (() => void) | null = null;
   private heartbeat: ReturnType<typeof setInterval> | null = null;
+  /**
+   * #915 Q-5: 断线 ⇒ 取消在途（signal abort('CLIENT_DISCONNECTED')）。
+   * 路由经 get signal() 取消信号传给 processMessageStream —— 在途工具/LLM 收到取消后
+   * 以「已生成前缀＋取消标记」settle（中断锚不变量不破，规格 §4.3）。
+   */
+  private readonly abortController = new AbortController();
 
   constructor(res: Response) {
     this.res = res;
@@ -47,13 +54,17 @@ export class WebViewAdapter implements ViewAdapter {
     // 心跳注释帧——防代理/负载均衡空闲断连（": " 开头为 SSE 注释，客户端忽略）
     this.heartbeat = setInterval(() => this.writeRaw(': ping\n\n'), HEARTBEAT_INTERVAL_MS);
 
-    // 断线感知——路由经 setOnClosed 注册后续动作（在途轮次 settle 后仍完整落库）
+    // 断线感知——路由经 setOnClosed 注册后续动作；#915 Q-5：同时 abort 在途 signal
+    // （断线 ⇒ 取消在途，轮次以「已生成前缀＋取消标记」settle 后仍落库，⑩ 时序不变）
     res.on('close', () => {
       const wasClosed = this.closed;
       this.closed = true;
       this.clearHeartbeat();
+      if (!this.abortController.signal.aborted) {
+        this.abortController.abort(new Error('CLIENT_DISCONNECTED'));
+      }
       if (!wasClosed) {
-        log.debug('SSE 连接关闭 — 停写停心跳');
+        log.debug('SSE 连接关闭 — 停写停心跳，abort 在途轮次（signal）');
         this.onClosedCallback?.();
       }
     });
@@ -66,6 +77,14 @@ export class WebViewAdapter implements ViewAdapter {
   /** 注册断线回调（路由用于感知客户端断开；close 后不再触发） */
   setOnClosed(fn: () => void): void {
     this.onClosedCallback = fn;
+  }
+
+  /**
+   * #915 Q-5: 断线取消信号（只读访问器）——未断线 aborted=false；断线 ⇒ aborted=true 且
+   * reason.message='CLIENT_DISCONNECTED'（S10）。路由把它传给 processMessageStream 第三参。
+   */
+  get signal(): AbortSignal {
+    return this.abortController.signal;
   }
 
   private clearHeartbeat(): void {

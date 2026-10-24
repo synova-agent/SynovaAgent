@@ -4,6 +4,7 @@ export PYTHONIOENCODING=utf-8
 export LC_ALL=C.UTF-8 2>/dev/null || true
 # ═══════════════════════════════════════════════════════════════════════════════
 # check-tool-args-delta.test.sh — #915 Q-1 配对判据测试（只读脚本 ＋ mktemp 沙箱夹具仓）
+#                        ＋ #915 Q-5 扩展（R4/R5/R6 · T14–T22 · 裁 365）
 #
 # 覆盖矩阵（铁律 48 三路径 ＋ 改坏必红；ctrl-tower-change 模式 1 三态 0/1/2）:
 #   正常  — T1 合规工具变更 ⇒ rc0 PASS changes=1 ｜T-neg 真 nullary ⇒ rc0
@@ -12,8 +13,13 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #           T4 基线少一名（修好未删登记的反向）⇒ rc1 点名 R3
 #   边界  — T5 纯文档变更 ⇒ rc0 + SKIP ｜T5b `--files ""` ⇒ rc0 + SKIP（整体替换语义）
 #           T6 坏 base ⇒ rc2 + E_BAD_BASE ｜T11 非扫描面文件 ⇒ SKIP（不误红 job.handler/command.handler）
-#   自检  — T7 `--selfcheck` ⇒ 末行精确 SELFCHECK-OK f1=1 f2=1 f3=1 clean=0（判别力）
+#   自检  — T7 `--selfcheck` ⇒ 末行精确 SELFCHECK-OK f1=1 f2=1 f3=1 f4=1 f5=1 clean=0（判别力）
 #   改坏  — T8 变异体两臂（R1 恒空 ⇒ T2 场景翻绿＋selfcheck 失败）｜T8b（R2 恒空 ⇒ T3a 翻绿）
+#           T21 变异体两臂（R4 恒空 ⇒ T14 场景翻绿＋selfcheck f4 失败）
+#   Q-5 扩 — T14 mutating 工具无 ctx/检查 ⇒ rc1 点名 R4 ｜T15 同上但有 ctx＋检查 ⇒ rc0（防一律红）
+#           T16 信号基线少一行（修好未删登记）⇒ rc1 点名 R5 ｜T17 多一行（未登记新副作用）⇒ rc1 R5
+#           T18 src/agent 内 execute 2 参 ⇒ rc1 点名 R6 ｜T19 3 参 ⇒ rc0
+#           T20 selfcheck 末行精确（Q-5 新口径）｜T22 生产接线三条（复用既有，不新增 CI 步）
 #   接线  — T9 七条（pre-commit 块真调用/--staged/hard_check 无 v5_soft/CI ①i 落位与三态/
 #           rc1 无 ❌ 仍阻断/rc2 无 ERROR 仍阻断/脚本缺失仍阻断/CI ①i 真逃生舱）
 #           T13 pre-commit 块真逃生舱（SYNO_TOOL_ARGS_DELTA=0 ⇒ ℹ️ ＋ rc0）
@@ -112,6 +118,9 @@ TS
 diag_progress | nullary：handler 零形参
 list_jobs | nullary：handler 零形参
 BASE
+  # Q-5：夹具树无「缺取消检查的副作用工具」⇒ 信号基线为空（注释行）
+  printf '# 夹具信号基线（夹具树无缺取消检查的副作用工具）\n' \
+    > "$d/scripts/control-tower/tool-signal-baseline.txt"
   printf '__pycache__/\n' > "$d/.gitignore"
   ( cd "$d" && git init -q && git config user.email t@t && git config user.name t \
       && git add -A && git commit -q -m base )
@@ -124,6 +133,10 @@ runq() { # <dir> <args...> → RUN_OUT（stdout+stderr）／RUN_RC
 
 append_baseline() { # <dir> <name> <reason>
   printf '%s | %s\n' "$2" "$3" >> "$1/scripts/control-tower/tool-args-baseline.txt"
+}
+
+append_signal_baseline() { # <dir> <name> <reason>（Q-5：R5 信号基线）
+  printf '%s | %s\n' "$2" "$3" >> "$1/scripts/control-tower/tool-signal-baseline.txt"
 }
 
 # ── 夹具不变式检查器（用闸自身的取数口 + 基线解析，独立于主流程输出）──
@@ -337,13 +350,13 @@ runq "$D" --base no-such-ref-xyz
 assert_rc "$RUN_RC" 2 "T6 坏 base ⇒ exit 2（fail-closed）"
 printf '%s' "$RUN_OUT" | grep -q 'E_BAD_BASE' && ok "T6 点名 E_BAD_BASE" || no "T6 未点名 E_BAD_BASE: $RUN_OUT"
 
-# ── T7 --selfcheck ⇒ 末行精确 SELFCHECK-OK f1=1 f2=1 f3=1 clean=0 ──
+# ── T7 --selfcheck ⇒ 末行精确 SELFCHECK-OK f1=1 f2=1 f3=1 f4=1 f5=1 clean=0（Q-5 新口径）──
 D="$TMPROOT/t7"; mk_repo "$D"
 runq "$D" --selfcheck
 assert_rc "$RUN_RC" 0 "T7 --selfcheck ⇒ exit 0"
 T7_LAST="$(printf '%s\n' "$RUN_OUT" | tail -1)"
-[ "$T7_LAST" = "SELFCHECK-OK f1=1 f2=1 f3=1 clean=0" ] \
-  && ok "T7 末行精确 SELFCHECK-OK f1=1 f2=1 f3=1 clean=0" || no "T7 末行实得: $T7_LAST"
+[ "$T7_LAST" = "SELFCHECK-OK f1=1 f2=1 f3=1 f4=1 f5=1 clean=0" ] \
+  && ok "T7 末行精确 SELFCHECK-OK f1=1 f2=1 f3=1 f4=1 f5=1 clean=0" || no "T7 末行实得: $T7_LAST"
 
 md5of() { # <file> → md5 hex（跨平台: 用 python 算，禁依赖 md5/md5sum 差异）
   "$PYBIN" -c 'import hashlib,sys;print(hashlib.md5(open(sys.argv[1],"rb").read()).hexdigest())' "$1"
@@ -553,12 +566,12 @@ raw = open(sys.argv[1], encoding="utf-8").read().strip()
 obj = json.loads(raw)          # 必须是**一份**合法 JSON（多份会在这里炸）
 assert set(obj) == {"status", "base", "changed", "violations", "rules"}, sorted(obj)
 text = open(sys.argv[2], encoding="utf-8").read()
-m = re.search(r"TOOL-ARGS-DELTA: PASS changes=(\d+) rules=R1,R2,R3", text)
+m = re.search(r"TOOL-ARGS-DELTA: PASS changes=(\d+) rules=R1,R2,R3,R4,R5,R6", text)
 assert m, "文本路径末行不合约"
 assert obj["status"] == "PASS", obj["status"]
 assert obj["changed"] == int(m.group(1)), (obj["changed"], m.group(1))
 assert obj["violations"] == [], obj["violations"]
-assert obj["rules"] == ["R1", "R2", "R3"], obj["rules"]
+assert obj["rules"] == ["R1", "R2", "R3", "R4", "R5", "R6"], obj["rules"]
 PY
 then ok "T10 JSON 键固定/合法且 status·changed·violations 与文本一致"; else no "T10 JSON 与文本不一致"; fi
 runq "$TMPROOT/t2" --staged --json; T10V_RC=$RUN_RC
@@ -603,6 +616,186 @@ printf '%s' "$PC_OUT" | grep -q '回滚态（SYNO_TOOL_ARGS_DELTA=0）' && ok "T
 # 反向锚：不置 0 时同一桩必须阻断（证明 T13 的 rc0 是逃生舱给的，不是桩失效）
 run_pc_block "$S5"
 assert_rc "$PC_RC" 1 "T13 反向锚：不置 0 ⇒ 同一桩仍阻断"
+
+# ═══ #915 Q-5 扩展（R4/R5/R6 · 规格 §5.2 T14–T22 · 裁 365）════════════════════
+
+# ── T14 新增 mutating 工具、handler 无 ctx/无检查 ⇒ rc1 点名 R4（登记进信号基线 ⇒ R5 不顶红）──
+D="$TMPROOT/t14"; mk_repo "$D"
+cat >> "$D/src/agent/builtin-tools.ts" <<'TS'
+
+export function registerT14(registry: ToolRegistry): void {
+  registry.register({
+    name: 't14_mutating_tool',
+    description: 'mutating 工具无 ctx/无取消检查 ⇒ R4 必红',
+    parameters: { type: 'object', properties: { job: { type: 'string' } }, required: ['job'] },
+    operationType: 'write',
+    sideEffects: 'mutating',
+    handler: async (params) => ({ job: params.job }),
+  });
+}
+TS
+# 不登记进信号基线：R4 与 R5 共用同一副作用谓词 —— T21 变异体（谓词恒空）下
+# 两条规则同静默 ⇒ 副本 rc=0（若登记，R5「少」臂会在副本上顶红，T21① 不可达）
+( cd "$D" && git add -A )
+runq "$D" --staged
+echo "  ── T14 原始输出（CTO 红线②必贴证据）──"
+printf '%s\n' "$RUN_OUT" | sed 's/^/     /'
+assert_rc "$RUN_RC" 1 "T14 mutating 工具无 ctx/检查 ⇒ exit 1"
+printf '%s' "$RUN_OUT" | grep -q '❌ R4:' && ok "T14 输出含 ❌ R4:" || no "T14 未点名 R4: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -qE '❌ R4: src/agent/builtin-tools\.ts:[0-9]+' \
+  && ok "T14 点名 path:line" || no "T14 未点名 path:line: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 't14_mutating_tool' && ok "T14 点名工具名" || no "T14 未点名工具名: $RUN_OUT"
+fixture_invariant "$D" "T14"
+
+# ── T15 同上但 handler 有 ctx 且 ctx?.signal?.throwIfAborted() ⇒ rc0（正例；防"一律红"）──
+D="$TMPROOT/t15"; mk_repo "$D"
+cat >> "$D/src/agent/builtin-tools.ts" <<'TS'
+
+export function registerT15(registry: ToolRegistry): void {
+  registry.register({
+    name: 't15_mutating_ok',
+    description: 'mutating 工具有 ctx ＋ throwIfAborted ⇒ R4 不红（正例）',
+    parameters: { type: 'object', properties: { job: { type: 'string' } }, required: ['job'] },
+    operationType: 'write',
+    sideEffects: 'mutating',
+    handler: async (params, ctx) => {
+      ctx?.signal?.throwIfAborted();
+      return { job: params.job };
+    },
+  });
+}
+TS
+( cd "$D" && git add -A )
+runq "$D" --staged
+assert_rc "$RUN_RC" 0 "T15 mutating 工具有 ctx＋检查 ⇒ exit 0"
+printf '%s' "$RUN_OUT" | grep -q 'TOOL-ARGS-DELTA: PASS changes=1' \
+  && ok "T15 末行 PASS changes=1（R4 不是一律红）" || no "T15 末行不合约: $RUN_OUT"
+fixture_invariant "$D" "T15"
+
+# ── T16 信号基线少一行（修好未删登记）⇒ rc1 点名 R5（双向棘轮的"少"臂）──
+D="$TMPROOT/t16"; mk_repo "$D"
+append_signal_baseline "$D" 'ghost_fixed_tool' '夹具：信号基线登记树中已无者（修好未删登记）'
+printf '\n// T16: 触达扫描面，不改任何工具定义\n' >> "$D/src/agent/builtin-tools.ts"
+( cd "$D" && git add -A )
+runq "$D" --staged
+assert_rc "$RUN_RC" 1 "T16 信号基线少一行 ⇒ exit 1"
+printf '%s' "$RUN_OUT" | grep -q '❌ R5:' && ok "T16 输出含 ❌ R5:" || no "T16 未点名 R5: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'ghost_fixed_tool' && ok "T16 点名差异名单（ghost_fixed_tool）" \
+  || no "T16 未点名差异: $RUN_OUT"
+
+# ── T17 信号基线多一行（未登记的新副作用工具）⇒ rc1 点名 R5（双向棘轮的"多"臂）──
+D="$TMPROOT/t17"; mk_repo "$D"
+cat >> "$D/src/agent/builtin-tools.ts" <<'TS'
+
+export function registerT17(registry: ToolRegistry): void {
+  registry.register({
+    name: 't17_unregistered_side_tool',
+    description: 'mutating 工具无检查且未登记 ⇒ R5 必红（集合多一名）',
+    parameters: { type: 'object', properties: { x: { type: 'string' } }, required: ['x'] },
+    operationType: 'write',
+    handler: async (params) => ({ x: params.x }),
+  });
+}
+TS
+( cd "$D" && git add -A )
+runq "$D" --staged
+assert_rc "$RUN_RC" 1 "T17 未登记的新副作用工具 ⇒ exit 1"
+printf '%s' "$RUN_OUT" | grep -q '❌ R5:' && ok "T17 输出含 ❌ R5:" || no "T17 未点名 R5: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 't17_unregistered_side_tool' \
+  && ok "T17 点名差异名单（t17_unregistered_side_tool）" || no "T17 未点名差异: $RUN_OUT"
+
+# ── T18 src/agent/<夹具>.ts 里 2 参 execute 调用 ⇒ rc1 点名 R6 path:line ──
+D="$TMPROOT/t18"; mk_repo "$D"
+cat > "$D/src/agent/executor-fixture.ts" <<'TS'
+export async function t18Call(
+  registry: { execute: (a: string, b: unknown) => Promise<unknown> },
+  name: string,
+  params: unknown,
+): Promise<unknown> {
+  return registry.execute(name, params);
+}
+TS
+( cd "$D" && git add -A )
+runq "$D" --staged
+assert_rc "$RUN_RC" 1 "T18 src/agent 内 2 参 execute ⇒ exit 1"
+printf '%s' "$RUN_OUT" | grep -qE '❌ R6: src/agent/executor-fixture\.ts:[0-9]+' \
+  && ok "T18 点名 ❌ R6: src/agent/executor-fixture.ts:<行>" || no "T18 未点名 R6: $RUN_OUT"
+
+# ── T19 3 参调用（{signal}）⇒ rc0 ──
+D="$TMPROOT/t19"; mk_repo "$D"
+cat > "$D/src/agent/executor-fixture.ts" <<'TS'
+export async function t19Call(
+  registry: {
+    execute: (a: string, b: unknown, c?: { signal?: AbortSignal }) => Promise<unknown>;
+  },
+  name: string,
+  params: unknown,
+  signal?: AbortSignal,
+): Promise<unknown> {
+  return registry.execute(name, params, { signal });
+}
+TS
+( cd "$D" && git add -A )
+runq "$D" --staged
+assert_rc "$RUN_RC" 0 "T19 3 参 execute 调用 ⇒ exit 0"
+printf '%s' "$RUN_OUT" | grep -q 'TOOL-ARGS-DELTA: PASS changes=1' \
+  && ok "T19 末行 PASS changes=1" || no "T19 末行不合约: $RUN_OUT"
+
+# ── T20 --selfcheck ⇒ 末行精确 SELFCHECK-OK f1=1 f2=1 f3=1 f4=1 f5=1 clean=0 ──
+D="$TMPROOT/t20"; mk_repo "$D"
+runq "$D" --selfcheck
+assert_rc "$RUN_RC" 0 "T20 --selfcheck ⇒ exit 0"
+T20_LAST="$(printf '%s\n' "$RUN_OUT" | tail -1)"
+[ "$T20_LAST" = "SELFCHECK-OK f1=1 f2=1 f3=1 f4=1 f5=1 clean=0" ] \
+  && ok "T20 末行精确 SELFCHECK-OK f1=1 f2=1 f3=1 f4=1 f5=1 clean=0" || no "T20 末行实得: $T20_LAST"
+
+# ── T21 变异体（两臂）：R4 判据恒空 ⇒ ① T14 场景翻绿（-eq 0，不收 rc=2）② selfcheck f4 必失败 ──
+MUT4="$TMPROOT/mut-r4.py"
+"$PYBIN" - "$SUT" "$MUT4" <<'PY'
+import sys
+
+src = open(sys.argv[1], encoding="utf-8").read()
+lines = src.splitlines(True)
+hit = 0
+for i, l in enumerate(lines):
+    if l.startswith("RE_SIDE_EFFECT = re.compile("):
+        lines[i] = 'RE_SIDE_EFFECT = re.compile(r"__NEVER_MATCH__")\n'
+        hit += 1
+assert hit == 1, "T21 变异锚缺失或多处（RE_SIDE_EFFECT 命中 %d 处）" % hit
+open(sys.argv[2], "w", encoding="utf-8").write("".join(lines))
+PY
+if [ "$(md5of "$SUT")" != "$(md5of "$MUT4")" ]; then
+  ok "T21 副本与原件 md5 不同（变异真的落地）"
+else
+  no "T21 副本与原件 md5 相同 ⇒ 变异未生效"
+fi
+( cd "$TMPROOT/t14" && "$PYBIN" "$MUT4" --root . --staged > "$TMPROOT/t21a.out" 2>&1 ); T21A_RC=$?
+[ "$T21A_RC" -eq 0 ] && ok "T21① 副本（R4 恒空）上 T14 场景 rc=0 ⇒ T14 的红由 R4 承重" \
+  || no "T21① 副本上仍 rc=${T21A_RC}（期望 0）⇒ R4 未承重: $(tail -2 "$TMPROOT/t21a.out")"
+( cd "$TMPROOT/t14" && "$PYBIN" "$MUT4" --root . --selfcheck > "$TMPROOT/t21b.out" 2>&1 ); T21B_RC=$?
+printf '%s' "$(cat "$TMPROOT/t21b.out")" | grep -q 'SELFCHECK-FAIL' \
+  && ok "T21② 副本 --selfcheck 报 SELFCHECK-FAIL（f4 失败：'同一函数'成为判据）" \
+  || no "T21② 副本 selfcheck 未失败: $(cat "$TMPROOT/t21b.out")"
+[ "$T21B_RC" -ne 0 ] && ok "T21② 副本 --selfcheck 非 0（rc=${T21B_RC}）" || no "T21② 副本 selfcheck rc=0"
+
+# ═══ T22 生产接线（复用既有，三条；不新增 CI 步/PC 块）════════════════════════
+# ① 剥注释后 pre-commit 真调用本脚本（同 T9① 口径的独立复查）
+T22_N="$(grep -vE '^[[:space:]]*#' "$PC" | grep -c 'check-tool-args-delta')"; T22_N="${T22_N:-0}"
+[ "$T22_N" -ge 1 ] && ok "T22① pre-commit 剥注释后真调用 check-tool-args-delta（$T22_N 处）" \
+  || no "T22① pre-commit 未调用（剥注释后 0 处）"
+# ② CI 步 ①i run 块含该脚本
+sed -n '/- name: ①i/,/- name:/p' "$WF" > "$TMPROOT/t22-1i.txt"
+if grep -q 'check-tool-args-delta' "$TMPROOT/t22-1i.txt"; then
+  ok "T22② CI ①i run 块含 check-tool-args-delta"
+else
+  no "T22② CI ①i run 块缺 check-tool-args-delta"
+fi
+# ③ 不新增 CI 步：workflow 中出现次数与 gitea/local-main 版本相同
+T22_CUR="$(grep -c 'check-tool-args-delta' "$WF")"
+T22_OLD="$(git -C "$REPO" show gitea/local-main:.gitea/workflows/local-gates.yml 2>/dev/null | grep -c 'check-tool-args-delta')"
+[ "$T22_CUR" = "$T22_OLD" ] \
+  && ok "T22③ workflow 出现次数未变（$T22_CUR == $T22_OLD ⇒ 无新 CI 步）" \
+  || no "T22③ workflow 出现次数变了（${T22_CUR} != ${T22_OLD}）⇒ 疑似新增 CI 步"
 
 echo ""
 echo "结果: $PASS 通过, $FAIL 失败"

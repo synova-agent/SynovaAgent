@@ -305,7 +305,7 @@ const PINNED_ROUTING: readonly string[] = ['src/llm/types.ts:79', 'src/providers
 const PINNED_SAMPLING: readonly string[] = [
   // #956（Q-1 工具入参校验）合入后新增的取样型：`err.message.split('\n')[0]` 只做日志 reason，不参与路由。
   // 按"取样型新增须人工同步清单"的约定显式登记（路由型白名单 **不** 因此放宽，仍严格 2 条）。
-  'src/agent/tools.ts:166',
+  'src/agent/tools.ts:239',
   'src/services/content-layering.ts:212',
   'src/services/request-context.ts:253',
 ];

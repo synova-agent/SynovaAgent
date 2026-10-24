@@ -9,6 +9,8 @@
 import { createLogger } from '@synova/logger';
 import { z } from 'zod';
 import { getProfileForRole } from './tool-profiles';
+// #915 Q-5: 手工组合 signal 与既有 timeout（不引 AbortSignal.any 依赖差异，规格 §2 http 分支）
+import { deadline } from '../llm/timeout';
 
 const log = createLogger('agent/tools');
 
@@ -60,7 +62,78 @@ export interface ToolDefinition {
    * timeoutMs=0 视为未启用（边界，与缺省同语义）。
    */
   timeoutMs?: number;
-  handler: (params: Record<string, unknown>) => Promise<Record<string, unknown>>;
+  handler: (params: Record<string, unknown>, ctx?: ToolHandlerContext) => Promise<Record<string, unknown>>;
+}
+
+// ═══ #915 Q-5: 工具取消语义（signal 贯穿 + 副作用前 throwIfAborted）═══
+
+/**
+ * execute 的可选第三参（取消信号；旧调用点不传 = 旧行为）。
+ * @input  signal — 调用方（引擎/路由/测试）持有的 AbortSignal；undefined ⇒ 完全回旧行为
+ */
+export interface ToolExecOptions {
+  signal?: AbortSignal;
+}
+
+/**
+ * handler 的可选第二形参（向后兼容：旧 handler 单参签名仍可赋值）。
+ * @input  signal — 与 execute 收到的同一 signal（身份相等，S9 物理证据）；副作用工具应在
+ *         副作用前 `ctx?.signal?.throwIfAborted()` 自校（R4 闸判据）
+ */
+export interface ToolHandlerContext {
+  signal?: AbortSignal;
+}
+
+/**
+ * #915 Q-5 取消错误码（两支：派发前 / 派发后 —— 对照 DSH TOOL_ABORTED* 两支码范式）。
+ */
+export type ToolAbortErrorCode = 'TOOL_ABORTED_BEFORE_DISPATCH' | 'TOOL_ABORTED';
+
+/**
+ * #915 Q-5: 取消检查总开关（SYNO_TOOL_ABORT=0 ⇒ 回旧行为）——**单一谓词**，
+ * execute 与 ConversationEngine 两处同读本函数（规格红线 4：唯一回滚点）。
+ * @input  无（读 process.env.SYNO_TOOL_ABORT）
+ * @output true = 取消检查生效；false = 关闭（execute 不检查、引擎不传 signal）
+ * @degraded 不适用（布尔谓词，无副作用；关闭态由调用方各自 log.info 留痕一次）
+ * @error  永不抛（纯 env 读取）
+ */
+export function isToolAbortEnabled(): boolean {
+  return process.env.SYNO_TOOL_ABORT !== '0';
+}
+
+/**
+ * #915 Q-5: signal → Error 形态（fetch/connector 外层 abort 的拒绝载荷）。
+ * @input  signal — 已 abort 的 AbortSignal
+ * @output name='AbortError' 的 Error；message 取 reason.message（reason 非 Error 时 String，缺省 'aborted'）
+ * @error  永不抛
+ */
+function abortErrorFrom(signal: AbortSignal): Error {
+  const reason: unknown = signal.reason;
+  const message = reason instanceof Error ? reason.message : reason !== undefined ? String(reason) : 'aborted';
+  const err = new Error(message);
+  err.name = 'AbortError';
+  return err;
+}
+
+/**
+ * #915 Q-5: connector 外层取消（connector 接口本身不收 signal，规格 §8 已知限制——
+ * 只能在调用外层 abort，底层连接可能仍在收尾，cooperative 语义）。
+ * @input  signal — 调用方 signal（undefined ⇒ 不包裹，回旧行为）；run — 实际调用 thunk
+ * @output run() 的结果；signal abort ⇒ 以 abortErrorFrom(signal) reject（不 kill 底层）
+ * @degraded 不适用（取消是控制流）
+ * @error  已 abort 入场 ⇒ 直接 reject；run 自身异常原样透传
+ */
+function raceWithAbort<T>(signal: AbortSignal | undefined, run: () => Promise<T>): Promise<T> {
+  if (!signal) return run();
+  if (signal.aborted) return Promise.reject(abortErrorFrom(signal));
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(abortErrorFrom(signal));
+    signal.addEventListener('abort', onAbort, { once: true });
+    run().then(
+      (value) => { signal.removeEventListener('abort', onAbort); resolve(value); },
+      (err) => { signal.removeEventListener('abort', onAbort); reject(err); },
+    );
+  });
 }
 
 /**
@@ -280,8 +353,23 @@ export class ToolRegistry {
     return this.tools.get(name);
   }
 
-  /** 执行工具，支持多模式分发 (Slice 1.2)，永不抛异常 */
-  async execute(name: string, params: Record<string, unknown>): Promise<ToolCallResult> {
+  /**
+   * 执行工具，支持多模式分发 (Slice 1.2)，永不抛异常
+   *
+   * #915 Q-5 契约扩展（铁律 47）:
+   * @input  execute(name, params, opts?: ToolExecOptions)
+   *         开关 = isToolAbortEnabled()（SYNO_TOOL_ABORT=0 ⇒ 忽略 signal = 回旧行为）
+   * @output 取消 ⇒ ToolCallResult.error = { name:'AbortError',
+   *         code:'TOOL_ABORTED_BEFORE_DISPATCH'（未进 handler，handler 零调用）
+   *         | 'TOOL_ABORTED'（dispatch 后取消），message = 取消原因 }
+   *         local: ctx = { signal } 传给 handler 第二形参；connector: 外层 race abort；
+   *         http: deadline(signal, 30000) 组合进 fetch（复用 src/llm/timeout.ts:65，不引新依赖）
+   * @degraded 取消是控制流不是降级：不设 degraded:true；log.info({code:'TOOL_ABORTED'}) 留痕一次
+   * @error  仍永不抛（取消同 Q-1 INVALID_ARGS 族走结构化 error）
+   */
+  async execute(name: string, params: Record<string, unknown>, opts?: ToolExecOptions): Promise<ToolCallResult> {
+    // #915 Q-5: 回滚开关单一谓词（关闭 ⇒ signal 视同未传，回旧行为）
+    const signal = isToolAbortEnabled() ? opts?.signal : undefined;
     // E2: Tool Profiles — 检查当前角色是否有权限执行此工具
     if (this._role) {
       const profile = getProfileForRole(this._role);
@@ -298,6 +386,8 @@ export class ToolRegistry {
     }
 
     const mode = tool.executionMode || 'local';
+    /** #915 Q-5: 是否已进入 dispatch（区分 BEFORE_DISPATCH / ABORTED 两码） */
+    let handlerStarted = false;
 
     try {
       log.info({ name, params, mode }, '执行工具');
@@ -325,9 +415,13 @@ export class ToolRegistry {
         }
       }
 
+      // #915 Q-5: dispatch 前取消检查（副作用前；已 abort ⇒ BEFORE_DISPATCH，handler 零调用）
+      signal?.throwIfAborted();
+      handlerStarted = true;
+
       switch (mode) {
         case 'local':
-          return await this.withTimeout(name, tool, () => tool.handler(params));
+          return await this.withTimeout(name, tool, () => tool.handler(params, { signal }));
 
         case 'connector': {
           if (!this.connectorRegistry) {
@@ -338,7 +432,10 @@ export class ToolRegistry {
           if (!connector) {
             return { error: `Connector "${tool.connectorName}" 未注册` };
           }
-          const rawResult = await this.withTimeout(name, tool, () => connector.executeTool(name, params));
+          const rawResult = await this.withTimeout(
+            name, tool,
+            () => raceWithAbort(signal, () => connector.executeTool(name, params)),
+          );
           return this.wrapUntrustedResult(name, rawResult as ToolCallResult);
         }
 
@@ -346,16 +443,22 @@ export class ToolRegistry {
           if (!tool.httpEndpoint) {
             return { error: `HTTP 模式工具 "${name}" 缺少 httpEndpoint` };
           }
-          const res = await fetch(tool.httpEndpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(params),
-            signal: AbortSignal.timeout(30000),
-          });
-          if (!res.ok) {
-            return { error: `HTTP 工具 ${name} 返回 ${res.status}` };
+          // #915 Q-5: signal 与既有 30s timeout 手工组合（deadline 原语，不引 AbortSignal.any）
+          const dl = deadline(signal, 30000, 'TOOL_HTTP_TIMEOUT');
+          try {
+            const res = await fetch(tool.httpEndpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(params),
+              signal: dl.signal,
+            });
+            if (!res.ok) {
+              return { error: `HTTP 工具 ${name} 返回 ${res.status}` };
+            }
+            return (await res.json()) as ToolCallResult;
+          } finally {
+            dl.dispose();
           }
-          return (await res.json()) as ToolCallResult;
         }
 
         case 'remote-agent': {
@@ -364,9 +467,22 @@ export class ToolRegistry {
         }
 
         default:
-          return await tool.handler(params);
+          return await tool.handler(params, { signal });
       }
     } catch (err: any) {
+      // #915 Q-5: 取消 ⇒ 结构化 AbortError（控制流，log.info 留痕一次，不设 degraded）
+      if (signal?.aborted) {
+        const abortMessage = abortErrorFrom(signal).message;
+        const code: ToolAbortErrorCode = handlerStarted ? 'TOOL_ABORTED' : 'TOOL_ABORTED_BEFORE_DISPATCH';
+        log.info({ name, mode, code, message: abortMessage }, '工具已取消 — AbortError（控制流，非降级）');
+        return {
+          error: {
+            name: 'AbortError',
+            code,
+            message: abortMessage,
+          },
+        };
+      }
       // #915 Q-1: 入参校验失败 —— 结构化回给调用方（路径化 violations 可读，铁律 32 错误分类）
       if (err instanceof ToolArgsError) {
         log.warn(
@@ -461,11 +577,11 @@ export class ToolRegistry {
     return PREFIXES.some(p => name.startsWith(p));
   }
 
-  /** Hermes P0-3: 并行执行工具 — 门控检查后并发或串行 */
-  async executeParallel(toolCalls: Array<{ name: string; params: Record<string, unknown> }>): Promise<Map<string, ToolCallResult>> {
+  /** Hermes P0-3: 并行执行工具 — 门控检查后并发或串行（#915 Q-5: opts.signal 透传每个 execute） */
+  async executeParallel(toolCalls: Array<{ name: string; params: Record<string, unknown> }>, opts?: ToolExecOptions): Promise<Map<string, ToolCallResult>> {
     if (toolCalls.length === 0) return new Map();
     if (toolCalls.length === 1) {
-      const r = await this.execute(toolCalls[0].name, toolCalls[0].params);
+      const r = await this.execute(toolCalls[0].name, toolCalls[0].params, opts);
       return new Map([[toolCalls[0].name, r]]);
     }
 
@@ -476,7 +592,7 @@ export class ToolRegistry {
       // 串行执行 (保持顺序)
       const results = new Map<string, ToolCallResult>();
       for (const t of toolCalls) {
-        results.set(t.name, await this.execute(t.name, t.params));
+        results.set(t.name, await this.execute(t.name, t.params, opts));
       }
       return results;
     }
@@ -484,7 +600,7 @@ export class ToolRegistry {
     // 并行执行 (最多 8 并发)
     const entries = await Promise.all(
       toolCalls.map(async (t): Promise<[string, ToolCallResult]> => {
-        const r = await this.execute(t.name, t.params);
+        const r = await this.execute(t.name, t.params, opts);
         return [t.name, r];
       }),
     );

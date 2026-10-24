@@ -472,12 +472,12 @@ gates:
     label: "#915 Q-1: 工具入参校验增量闸（只判变更集；**不计组号** —— 同 #912 接入模式）"
     label_hash: "ab65b340d91d"
     occurrences: [2110]
-    what: "工具入参校验增量闸（R1/R2/R3，只判变更集）；硬阻断检查点「有违规」＋ rc≥2 检查自身失败同阻断"
+    what: "工具入参校验增量闸（R1–R6（入参＋取消），只判变更集）；硬阻断检查点「有违规」＋ rc≥2 检查自身失败同阻断"
     blocking: hard
     g_axis: ["G1", "G4"]
     checkpoints: ["#915 工具入参校验增量闸 (只判变更集): 有违规"]
     decision: keep
-    reason: "#915 Q-1（裁 365）新增：R1 空 schema 有新工具／R2 绕过 execute 调工具 handler／R3 全树空 schema 棘轮；1 个 hard_check（rc=1 违规，rc=2 检查自身失败同样阻断），与旧门禁无重叠 ⇒ 保留"
+    reason: "#915 Q-1（裁 365）新增：R1 空 schema 有新工具／R2 绕过 execute 调工具 handler／R3 全树空 schema 棘轮；#915 Q-5（裁 365）扩 R4–R6（入参＋取消）：R4 副作用工具须 ctx＋throwIfAborted／R5 全树缺取消检查副作用棘轮／R6 src/agent 内 execute ≥3 参 —— 扩规则不新建闸（同一脚本同一 hard_check）；与旧门禁无重叠 ⇒ 保留"
     replacement: ""
   - id: CI-S1
     kind: step
@@ -917,7 +917,7 @@ checkers:
     orphan: false
     blocking: true
     decision: keep
-    reason: "#915 Q-1（裁 365）：pre-commit 附加块（PC-X-ab65b3）＋ CI 具名步 ①i（CI-S12）双接线 ⇒ 在役"
+    reason: "#915 Q-1（裁 365）：pre-commit 附加块（PC-X-ab65b3）＋ CI 具名步 ①i（CI-S12）双接线 ⇒ 在役；#915 Q-5 扩 R4–R6（入参＋取消）同一脚本，无新步/新件 ⇒ 接线不变"
     replacement: ""
 
 # pairing：判据⑤ —— 5 类扫描各 1 行，覆盖 T1–T5（C9 强制；target 必须命中 gates[].id 或 checkers[].id）

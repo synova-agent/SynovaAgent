@@ -1,34 +1,33 @@
-# .claude/claims/915.yaml — #915（批 3-B 第 1 条）Q-1 工具入参统一校验 · 写集声明（S0 源，issue 号卡）
-# 先例：.claude/claims/913.yaml / 912.yaml（claim 优先于 D# 链；K3 R3 防劫持）
+# .claude/claims/915.yaml — #915（批 3-B 第 2 条）Q-5 工具取消语义 · 写集声明（S0 源，issue 号卡）
+# 先例：.claude/claims/913.yaml / 912.yaml（claim 优先于 D# 链；K3 R3 防劫持）；Q-1 已完成，claim 随分支改写（同 #913 先例）
 # 纪律：只列本 PR 真正改动的文件，不预授权。
-# 规格：handbook 派单件/2026-10-24-规格-915-Q1-工具入参校验.md §2（17 件 = 16 主件 + 1 件 §8-0 A′ 跨线）
+# 规格：handbook 派单件/2026-10-25-规格-915-Q5-工具取消语义.md §2（v2，15 件；+tests/errors/error-base-interop.test.ts 为 L1 裁 §8-2 ④ 行号同步）
 writeset:
   - .claude/claims/915.yaml
-  - .gitea/workflows/local-gates.yml
   - docs/authority/DOCS-REGISTRY.yaml
   - docs/authority/GATE-INVENTORY.yaml
-  - docs/authority/WIRING-REGISTRY.yaml
-  - gate-exemptions/2026-10-24-p1-915-q1.md
-  - memory/notes/proposed/2026-10-24-915-q1-tool-args-validation.md
-  - scripts/control-tower/check-test-obligations.py
+  - gate-exemptions/2026-10-25-p1-915-q5.md
+  - memory/notes/proposed/2026-10-25-915-q5-tool-cancel.md
   - scripts/control-tower/check-tool-args-delta.py
-  - scripts/control-tower/tool-args-baseline.txt
-  - scripts/pre-commit-check.sh
+  - scripts/control-tower/tool-signal-baseline.txt
+  - src/agent/conversation-engine.ts
+  - src/agent/tool-loop-executor.ts
   - src/agent/tools.ts
-  - tests/agent/tool-args-validation.test.ts
-  - tests/control-tower/AGENTS.md
+  - src/l1-interaction/web-adapter.ts
+  - src/routes/conversations.ts
+  - tests/agent/tool-cancel.test.ts
   - tests/control-tower/check-tool-args-delta.test.sh
-  - tests/control-tower/quality-baseline.test.sh
-  - tests/control-tower/quality-standard.test.sh
+  - tests/errors/error-base-interop.test.ts
 done:
-  - verify: npx vitest run tests/agent/tool-args-validation.test.ts
-  - verify: bash tests/control-tower/check-tool-args-delta.test.sh
-  - verify: python3 scripts/control-tower/check-tool-args-delta.py --root . --selfcheck
-  - verify: npx tsc --noEmit
-  - verify: python3 scripts/control-tower/quality-baseline.py --check-inventory docs/authority/GATE-INVENTORY.yaml
-  - verify: python3 scripts/control-tower/quality-baseline.py --check-registry docs/authority/WIRING-REGISTRY.yaml
-  - verify: bash tests/control-tower/quality-baseline.test.sh
-  - verify: bash tests/control-tower/quality-standard.test.sh
-  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main
-  - verify: bash scripts/pre-commit-check.sh
-note: #915 批 3-B 第 1 条 Q-1：zod 派生工具入参校验（对象性兜底先于 zod ＋ ARGS_SCHEMA_UNCOMPILABLE fail-closed ＋ 两开关回滚）＋只判变更集增量闸 R1/R2/R3（三态/--selfcheck 判别力/--files 注入缝/三前缀扫描面）；含 §8-0 A′ 跨线账目（C6 补真缺行／C10 假账归位／#953 真接线）与两件存量红测试仅改常量转绿；PR 正文 Refs #915（不 Closes）。裁 365。
+  - verify: npx vitest run tests/agent/tool-cancel.test.ts # S1 至 S11 全绿
+  - verify: bash tests/control-tower/check-tool-args-delta.test.sh # T14 至 T22 全过（T7 新常量口径）
+  - verify: python3 scripts/control-tower/check-tool-args-delta.py --root . --selfcheck # 末行 SELFCHECK-OK f1=1 f2=1 f3=1 f4=1 f5=1 clean=0
+  - verify: python3 scripts/control-tower/check-tool-args-delta.py --root . --base gitea/local-main # rules=R1,R2,R3,R4,R5,R6 rc=0
+  - verify: npx tsc --noEmit # 类型零错
+  - verify: python3 scripts/control-tower/quality-baseline.py --check-inventory docs/authority/GATE-INVENTORY.yaml # 盘点四值不变
+  - verify: python3 scripts/control-tower/quality-baseline.py --check-registry docs/authority/WIRING-REGISTRY.yaml # REGISTRY-OK rows=10
+  - verify: python3 scripts/control-tower/quality-baseline.py --orphans-only # orphans=7/35
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main # 受保护路径豁免齐全 rc=0
+  - verify: npx vitest run tests/errors/error-base-interop.test.ts # 17 passed（PINNED_SAMPLING 行号同步 L1 裁 §8-2 ④）
+  - verify: bash scripts/pre-commit-check.sh # 提交端全绿
+note: "#915 批 3-B 第 2 条 Q-5：工具取消语义（execute 收 signal 全链贯穿＋派发前 throwIfAborted＋结构化 AbortError 两支码＋SYNO_TOOL_ABORT=0 回滚＋中断锚不变量保留）＋既有闸只扩 R4/R5/R6（副作用工具可取消/存量信号棘轮 3 行/执行链不丢 signal）不新建闸不新增 CI 步；PR 正文 Refs #915（不 Closes）。裁 365。"

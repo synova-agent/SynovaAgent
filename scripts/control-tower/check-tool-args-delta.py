@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ═══════════════════════════════════════════════════════════════════════════════
-# check-tool-args-delta.py — 工具入参校验增量闸（#915 Q-1 · R1/R2/R3 · **只判变更集**）
+# check-tool-args-delta.py — 工具入参校验增量闸（#915 Q-1 · R1/R2/R3 ＋ #915 Q-5 · R4/R5/R6）
 #
-# 设计哲学（一句）: 工具面的「空 schema ＋ 有参 handler」是入参校验的盲区 —— 本闸只判
-#   本次变更集把它**变多还是变少**（双向棘轮），改坏必红、改动之外 0 噪音。
+# 设计哲学（一句）: 工具面的「空 schema ＋ 有参 handler」与「副作用工具不可取消」都是
+#   静态可判的盲区 —— 本闸只判本次变更集把它**变多还是变少**（双向棘轮），改坏必红、
+#   改动之外 0 噪音。
 #
 # 契约（铁律 47）:
 #   @input  git 仓库（--root）＋ 变更集来源（四选一，优先级从上到下）:
@@ -16,8 +17,10 @@
 #                        → local-main → HEAD~1（**有意偏离 #912**：集成分支是 local-main，
 #                        依 CTO 2026-10-12 P0 裁定；origin/local-main 已陈旧）
 #            辅助件: --baseline <path>（默认 scripts/control-tower/tool-args-baseline.txt）
+#                    --signal-baseline <path>（默认 scripts/control-tower/tool-signal-baseline.txt
+#                    ＃Q-5：存量「缺取消检查副作用工具」棘轮登记面）
 #   @output  stdout 逐条 ℹ️/✅/❌（❌ 必带 path:line）＋末行
-#              `TOOL-ARGS-DELTA: PASS changes=<n> rules=R1,R2,R3` ／
+#              `TOOL-ARGS-DELTA: PASS changes=<n> rules=R1,R2,R3,R4,R5,R6` ／
 #              `TOOL-ARGS-DELTA: VIOLATIONS <n>` ／
 #              `TOOL-ARGS-DELTA: SKIP base=<sha12>（无相关变更）`
 #            --json 时 stdout 仅一份合法 JSON：
@@ -25,7 +28,7 @@
 #              （与同一次文本运行同一份结论数据，不另算一遍）
 #   @exit    **三态**（ctrl-tower-change 模式 1 / scripts/control-tower/AGENTS.md）:
 #              0 = 通过，或**过滤后无相关代码变更 ⇒ SKIP**（同 #912 的 A1：不适用 ≠ 看不见）
-#              1 = 有违规（R1/R2/R3；含棘轮被抬／修好未删登记）
+#              1 = 有违规（R1–R6；含棘轮被抬／修好未删登记）
 #              2 = 检查自身失败（E_BAD_BASE／E_GIT／E_BASELINE／E_USAGE／E_INTERNAL／
 #                  E_EMPTY_SCAN／E_SANDBOX）—— **同样阻断**，绝不当通过
 #   @degraded 绝不静默：任何降级都打 stderr `degraded: <code> — <原因>`
@@ -48,6 +51,19 @@
 #      全树空 schema 工具名集合 ≠ `--baseline` 清单 ⇒ 双向红：
 #      **多** ⇒ 新增盲区（未登记的新工具没有可校验 schema）；**少** ⇒ 修好未删登记。
 #      基线格式：`<tool_name> | <理由>`，`#` 开头为注释/空行忽略（` | ` 分隔）。
+#   （#915 Q-5 扩展 · 裁 365 模板：同一扫描面，扩规则不新建闸）
+#   R4 副作用工具必须可取消（只判变更集内三前缀的工具定义）:
+#      声明 `sideEffects:'mutating'|'destructive'` 或 `operationType:'write'|'admin'` 的工具
+#      ⇒ handler 必须（a）第二形参（`ctx`／`ctx?`／`_ctx`，识别锚 `,\s*_?ctx\??\s*[:,)]`）
+#      且（b）体内出现 `throwIfAborted(`（`ctx?.signal?.throwIfAborted()` 命中）⇒ 红（点名
+#      path:line ＋ 工具名）。
+#   R5 存量信号棘轮（**全树**，同三前缀）:
+#      全树「缺取消检查的副作用工具」名单 ≠ `--signal-baseline` 清单 ⇒ 双向红
+#      （**多** ⇒ 新增不可取消副作用；**少** ⇒ 修好未删登记）。格式同 R3 基线。
+#   R6 执行链不得丢弃 signal（只判变更集内 **`src/agent/**`** 的 `.ts`；排除
+#      `src/agent/tools.ts` —— execute 本体/自调不算）:
+#      `toolRegistry.execute(`／`registry.execute(` 调用参数 < 3 个 ⇒ 红（点名 path:line；
+#      防链路断点：第三参 `{signal}`）。
 #
 # 既有基础（禁重复建设；参照实物逐条照抄口径）:
 #   · 变更集解析／空集 SKIP／三态／degraded = #912 批 1 的增量闸（同口径）
@@ -66,8 +82,16 @@
 #   5. **不判 schema 的正确性**：只判 `properties` 空不空与 handler 有没有形参；
 #      `enum`／`format`／`$ref` 等关键字语义不在本闸（运行时校验面另有判据）。
 #   6. **空集语义**：过滤后空相关变更 = `exit 0 + SKIP`；**只有** base 坏/输入坏/看不见才 exit 2。
-#   7. **一文件一扫描**：变更文件内**所有**工具定义都参与 R1/R2（不按 diff hunk 精确定位），
+#   7. **一文件一扫描**：变更文件内**所有**工具定义都参与 R1/R2/R4（不按 diff hunk 精确定位），
 #      即"改了这个文件 ⇒ 这个文件的工具面全查一遍"（少漏多查，代价是多报同文件的存量问题）。
+#   8. **R4/R5 是正则不是 AST**（Q-5）：`throwIfAborted(` 检查在 handler 锚点到工具块末尾的
+#      跨度内查找（不精确到 handler 函数体边界）——箭头表达式体/注释里的同名文本可能误判；
+#      `ctx` 第二形参只认 `, ctx`/`, ctx?`/`, _ctx` 及带类型注解形态。
+#   9. **R5 只覆盖静态注册面**：与 R3 同一 `iter_tool_defs` 取数口 —— connector manifest／MCP
+#      运行时装载的工具不计入（未接线工具不在扫描面，另卡处理）。
+#   10. **R6 只判 `src/agent/**`**：routes shim／`src/l3`／`src/tools` 的 execute 调用不在视野
+#      （第三参可选 ⇒ 向后兼容，存量 2 参调用点已核为空注册表或适配器 shim）；
+#      字符串/注释里的同名调用文本可能误判。
 # ═══════════════════════════════════════════════════════════════════════════════
 from __future__ import annotations
 
@@ -96,6 +120,7 @@ CODE_EXT = (".ts", ".tsx", ".js", ".mjs", ".cjs")
 # R2 的唯一豁免：execute 本体就住在这里（它**必须**调 tool.handler —— 那是唯一合法调用点）
 R2_EXCLUDE = ("src/agent/tools.ts",)
 DEFAULT_BASELINE = "scripts/control-tower/tool-args-baseline.txt"
+DEFAULT_SIGNAL_BASELINE = "scripts/control-tower/tool-signal-baseline.txt"
 SCAN_ROOTS_TEXT = ", ".join(r.rstrip("/") for r in SCAN_ROOTS)
 
 # ── 识别锚（正则面；已知限制 1）──────────────────────────────────────────────
@@ -108,6 +133,13 @@ RE_EMPTY_PROPS = re.compile(r"properties\s*:\s*\{\s*\}")
 # 🔴 本行的正则形态是 T8 变异体的锚（R1 恒空 ⇒ T2 场景翻绿 ⇒ 证明 R1 承重）
 RE_HANDLER_PARAMS = re.compile(r"handler:\s*(?:async\s+)?\(\s*(?:\{|[A-Za-z_$])")
 RE_HANDLER_CALL = re.compile(r"\.handler\s*\(")
+# ── Q-5 识别锚（R4/R5/R6；正则面；已知限制 8/10）──────────────────────────────
+RE_HANDLER_ANCHOR = re.compile(r"handler\s*:\s*(?:async\s+)?")
+# 🔴 本行的正则形态是 T21 变异体的锚（R4 恒空 ⇒ T14 场景翻绿 ⇒ 证明 R4 承重）
+RE_SIDE_EFFECT = re.compile(r"sideEffects\s*:\s*'(?:mutating|destructive)'|operationType\s*:\s*'(?:write|admin)'")
+RE_HANDLER_CTX = re.compile(r",\s*_?ctx\??\s*(?::[^,()]*)?[,)]")
+RE_THROW_IF_ABORTED = re.compile(r"throwIfAborted\s*\(")
+RE_EXECUTE_CALL = re.compile(r"\b(?:toolRegistry|registry)\.execute\s*\(")
 
 Violation = Tuple[str, str, int, str]  # (rule, path, line, msg)
 
@@ -172,16 +204,17 @@ def is_relevant(path: str) -> bool:
 
 
 # ── 工具定义扫描（R1/R2/R3 共用的唯一实现）──────────────────────────────────
-def _block(text: str, open_idx: int) -> str:
-    """从 `{` 起按花括号配平取块（正则面；字符串/注释内的花括号可能干扰 —— 已知限制 1）。"""
+def _block(text: str, open_idx: int, open_ch: str = "{") -> str:
+    """从开括号起按配平取块（正则面；字符串/注释内的括号可能干扰 —— 已知限制 1）。"""
+    close_ch = {"{": "}", "(": ")", "[": "]"}[open_ch]
     depth = 0
     i = open_idx
     n = len(text)
     while i < n:
         ch = text[i]
-        if ch == "{":
+        if ch == open_ch:
             depth += 1
-        elif ch == "}":
+        elif ch == close_ch:
             depth -= 1
             if depth == 0:
                 return text[open_idx:i + 1]
@@ -229,12 +262,27 @@ def iter_tool_defs(text: str) -> List[Dict]:
         else:
             empty = bool(RE_EMPTY_PROPS.search(pb)) or not RE_PROP_KEY.search(pb)
         hm = RE_HANDLER_PARAMS.search(block)
+        # ── Q-5 字段（R4/R5）：副作用声明 ＋ handler 第二形参 ctx ＋ throwIfAborted 检查 ──
+        side_effect = bool(RE_SIDE_EFFECT.search(block))
+        has_ctx = False
+        has_check = False
+        ha = RE_HANDLER_ANCHOR.search(block)
+        if ha:
+            sig_paren = block.find("(", ha.end() - 1)
+            if sig_paren >= 0:
+                sig = _block(block, sig_paren, "(")
+                has_ctx = bool(RE_HANDLER_CTX.search(sig))
+            # 检查跨度＝handler 锚点到工具块末尾（不精确定位函数体边界 —— 已知限制 8）
+            has_check = bool(RE_THROW_IF_ABORTED.search(block, ha.start()))
         out.append({
             "name": nm.group(1),
             "line": _line_of(text, open_idx + nm.start()),
             "empty_schema": empty,
             "handler_params": bool(hm),
             "handler_line": _line_of(text, open_idx + hm.start()) if hm else 0,
+            "side_effect": side_effect,
+            "has_ctx": has_ctx,
+            "has_check": has_check,
         })
     return out
 
@@ -330,6 +378,78 @@ def rule_r3(root: str, baseline: Dict[str, Tuple[str, int]],
     return out
 
 
+def _cancel_ok(d: Dict) -> bool:
+    """副作用工具「可取消」= handler 有第二形参 ctx 且体内有 throwIfAborted（R4/R5 共用谓词）。"""
+    return bool(d.get("has_ctx") and d.get("has_check"))
+
+
+def rule_r4(root: str, path: str, text: str) -> List[Violation]:
+    """R4: 副作用工具 handler 必须 (a) 第二形参 ctx 且 (b) 体内 throwIfAborted ⇒ 否则红。"""
+    out: List[Violation] = []
+    for d in iter_tool_defs(text):
+        if d["side_effect"] and not _cancel_ok(d):
+            out.append(("R4", path, d["line"],
+                        "副作用工具 %s（sideEffects mutating/destructive 或 operationType "
+                        "write/admin）：handler 缺第二形参 ctx 或体内缺 throwIfAborted( —— "
+                        "取消信号无法在副作用前自校" % d["name"]))
+    return out
+
+
+def rule_r5(root: str, signal_baseline: Dict[str, Tuple[str, int]],
+            defs: Optional[List[Dict]] = None) -> List[Violation]:
+    """R5: 全树「缺取消检查副作用工具」名单 ≠ --signal-baseline ⇒ 双向红（同 R3 口径）。"""
+    tree_defs = scan_tree_defs(root) if defs is None else defs
+    tree = {d["name"]: d for d in tree_defs if d["side_effect"] and not _cancel_ok(d)}
+    tree_names = set(tree)
+    base_names = set(signal_baseline)
+    out: List[Violation] = []
+    for name in sorted(tree_names - base_names):
+        d = tree[name]
+        out.append(("R5", d["path"], d["line"],
+                    "缺取消检查的副作用工具「%s」未在 %s 登记（新增不可取消副作用：集合多一名）"
+                    % (name, DEFAULT_SIGNAL_BASELINE)))
+    for name in sorted(base_names - tree_names):
+        _, lineno = signal_baseline[name]
+        out.append(("R5", DEFAULT_SIGNAL_BASELINE, lineno,
+                    "信号基线登记「%s」但树中已无缺取消检查的副作用工具（修好未删登记：集合少一名）"
+                    % name))
+    return out
+
+
+def _count_args(arg_text: str) -> int:
+    """数顶层实参个数（arg_text 为剥去外层括号的实参串；跨括号/方/花的逗号不算）。"""
+    s = arg_text.strip()
+    if not s:
+        return 0
+    depth = 0
+    args = 1
+    for ch in s:
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        elif ch == "," and depth == 0:
+            args += 1
+    return args
+
+
+def rule_r6(root: str, path: str, text: str) -> List[Violation]:
+    """R6: src/agent/** 内 toolRegistry.execute/registry.execute 调用 < 3 参 ⇒ 红（防链路断点）。
+
+    只判 `src/agent/` 前缀的 `.ts`；`src/agent/tools.ts`（execute 本体/自调）排除 —— 已知限制 10。
+    """
+    if not path.startswith("src/agent/") or not path.endswith(".ts") \
+            or path in R2_EXCLUDE:
+        return []
+    out: List[Violation] = []
+    for m in RE_EXECUTE_CALL.finditer(text):
+        arg_text = _block(text, m.end() - 1, "(")[1:-1]
+        if _count_args(arg_text) < 3:
+            out.append(("R6", path, _line_of(text, m.start()),
+                        "execute 调用参数 < 3 个 —— 第三参 { signal } 被丢弃（取消链路断点）"))
+    return out
+
+
 # ── 降级留痕（铁律 11/32：绝不静默）──────────────────────────────────────────
 def degraded(code: str, msg: str, phase: str = "scan") -> None:
     sys.stderr.write("degraded: %s — %s\n" % (code, msg))
@@ -399,6 +519,25 @@ _SELF_BASELINE_CLEAN = """# selfcheck 基线（clean 夹具：树内无空 schem
 _SELF_BASELINE_F3 = """# selfcheck 基线（f3 夹具：只登记 a，b 未登记 ⇒ R3 = 1）
 f3_nullary_a | nullary：handler 零形参
 """
+# ── Q-5 selfcheck 夹具（f4/f5；与主流程同一 rule_r4/rule_r5 函数，禁另写玩具规则）──
+_SELF_F4 = """import type { ToolRegistry } from './tools';
+
+export function registerF4(registry: ToolRegistry): void {
+  registry.register({
+    name: 'f4_mutating_tool',
+    description: 'mutating 工具无 ctx/无取消检查 ⇒ R4 必红',
+    parameters: { type: 'object', properties: { job: { type: 'string' } }, required: ['job'] },
+    operationType: 'write',
+    sideEffects: 'mutating',
+    handler: async (params) => ({ job: params.job }),
+  });
+}
+"""
+_SELF_SIGNAL_CLEAN = """# selfcheck 信号基线（clean 夹具：树内无缺取消检查的副作用工具）
+"""
+_SELF_SIGNAL_F5 = """# selfcheck 信号基线（f5 夹具：登记一名树中已无者 ⇒ 修好未删登记 ⇒ R5 = 1）
+f5_fixed_tool | 存量副作用工具：已修好（应删登记）
+"""
 
 
 def _write_fixture(path: str, content: str) -> None:
@@ -408,7 +547,7 @@ def _write_fixture(path: str, content: str) -> None:
 
 
 def cmd_selfcheck() -> int:
-    """判别力自检：clean=0 / f1=1 / f2=1 / f3=1（与主流程同一 R1/R2/R3 函数）。"""
+    """判别力自检：clean=0 / f1=1 / f2=1 / f3=1 / f4=1 / f5=1（与主流程同一 R1–R6 函数）。"""
     try:
         sandbox = tempfile.mkdtemp(prefix="tool-args-delta-selfcheck-")
     except OSError as exc:
@@ -416,16 +555,21 @@ def cmd_selfcheck() -> int:
     try:
         target = os.path.join(sandbox, "src", "agent", "builtin-tools.ts")
         base_path = os.path.join(sandbox, DEFAULT_BASELINE)
+        signal_path = os.path.join(sandbox, DEFAULT_SIGNAL_BASELINE)
 
-        # ① clean 夹具：三条规则都必须 0（防"全红"式假自检）
+        # ① clean 夹具：六条规则都必须 0（防"全红"式假自检）
         _write_fixture(target, _SELF_CLEAN)
         _write_fixture(base_path, _SELF_BASELINE_CLEAN)
+        _write_fixture(signal_path, _SELF_SIGNAL_CLEAN)
         clean_defs = scan_tree_defs(sandbox)
         if not clean_defs:
             raise DeltaError("E_SANDBOX", "自检沙箱工具定义数==0（信号量==0 ⇒ exit 2）")
         clean = (len(rule_r1(sandbox, "src/agent/builtin-tools.ts", _SELF_CLEAN))
                  + len(rule_r2(sandbox, "src/agent/builtin-tools.ts", _SELF_CLEAN))
-                 + len(rule_r3(sandbox, load_baseline(base_path), defs=clean_defs)))
+                 + len(rule_r3(sandbox, load_baseline(base_path), defs=clean_defs))
+                 + len(rule_r4(sandbox, "src/agent/builtin-tools.ts", _SELF_CLEAN))
+                 + len(rule_r5(sandbox, load_baseline(signal_path), defs=clean_defs))
+                 + len(rule_r6(sandbox, "src/agent/builtin-tools.ts", _SELF_CLEAN)))
 
         # ② f1 夹具：空 schema ＋ 有参 handler ⇒ R1 恰好 1（R1 承重的判据）
         _write_fixture(target, _SELF_F1)
@@ -440,11 +584,20 @@ def cmd_selfcheck() -> int:
         _write_fixture(base_path, _SELF_BASELINE_F3)
         f3 = len(rule_r3(sandbox, load_baseline(base_path)))
 
-        if (f1, f2, f3, clean) != (1, 1, 1, 0):
-            print("SELFCHECK-FAIL f1=%d f2=%d f3=%d clean=%d（期望 1/1/1/0 ⇒ 判别力不足）"
-                  % (f1, f2, f3, clean))
+        # ⑤ f4 夹具（Q-5）：mutating 工具无 ctx/无检查 ⇒ R4 恰好 1（R4 承重的判据）
+        _write_fixture(target, _SELF_F4)
+        f4 = len(rule_r4(sandbox, "src/agent/builtin-tools.ts", _SELF_F4))
+
+        # ⑥ f5 夹具（Q-5）：信号基线登记树中已无者（修好未删登记）⇒ R5 恰好 1
+        _write_fixture(target, _SELF_CLEAN)
+        _write_fixture(signal_path, _SELF_SIGNAL_F5)
+        f5 = len(rule_r5(sandbox, load_baseline(signal_path)))
+
+        if (f1, f2, f3, f4, f5, clean) != (1, 1, 1, 1, 1, 0):
+            print("SELFCHECK-FAIL f1=%d f2=%d f3=%d f4=%d f5=%d clean=%d"
+                  "（期望 1/1/1/1/1/0 ⇒ 判别力不足）" % (f1, f2, f3, f4, f5, clean))
             return 1
-        print("SELFCHECK-OK f1=1 f2=1 f3=1 clean=0")
+        print("SELFCHECK-OK f1=1 f2=1 f3=1 f4=1 f5=1 clean=0")
         return 0
     finally:
         shutil.rmtree(sandbox, ignore_errors=True)
@@ -468,6 +621,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--files", default=None,
                     help='显式变更集（空格分隔；**整体替换**变更集，同 #734 PR 预算门禁 :51 口径）')
     ap.add_argument("--baseline", default=None, help="基线（默认 %s）" % DEFAULT_BASELINE)
+    ap.add_argument("--signal-baseline", default=None,
+                    help="信号基线（默认 %s；Q-5 R5 的存量登记面）" % DEFAULT_SIGNAL_BASELINE)
     ap.add_argument("--json", action="store_true", help="stdout 仅输出 JSON")
     ap.add_argument("--selfcheck", action="store_true", help="判别力自检（mktemp 沙箱 4 夹具）")
     try:
@@ -493,6 +648,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         baseline = load_baseline(str(baseline_path))
     except DeltaError as exc:
         return _emit_error(exc.code, str(exc), args.json)
+    signal_path = Path(root) / (args.signal_baseline or DEFAULT_SIGNAL_BASELINE)
+    try:
+        signal_baseline = load_baseline(str(signal_path))
+    except DeltaError as exc:
+        return _emit_error(exc.code, str(exc), args.json)
 
     try:
         if args.files is not None:
@@ -511,7 +671,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     if not relevant:
         if args.json:
             print(json.dumps({"status": "SKIP", "base": base_label, "changed": 0,
-                              "violations": [], "rules": ["R1", "R2", "R3"]},
+                              "violations": [],
+                              "rules": ["R1", "R2", "R3", "R4", "R5", "R6"]},
                              ensure_ascii=False))
         else:
             print("⏭  SKIP: 无相关变更（扫描面 %s 内 0 个文件）" % SCAN_ROOTS_TEXT)
@@ -531,7 +692,10 @@ def main(argv: Optional[List[str]] = None) -> int:
             violations += rule_r1(root, path, text)
             if not path.startswith(R2_EXCLUDE):
                 violations += rule_r2(root, path, text)
+            violations += rule_r4(root, path, text)
+            violations += rule_r6(root, path, text)
         violations += rule_r3(root, baseline, defs=tree_defs)
+        violations += rule_r5(root, signal_baseline, defs=tree_defs)
     except DeltaError as exc:
         return _emit_error(exc.code, str(exc), args.json)
     except Exception as exc:  # noqa: BLE001 —— 兜底：宁可 exit 2 也不把 bug 当绿
@@ -543,12 +707,14 @@ def main(argv: Optional[List[str]] = None) -> int:
                           "changed": len(relevant),
                           "violations": [{"rule": r[0], "path": r[1], "line": r[2], "msg": r[3]}
                                          for r in violations],
-                          "rules": ["R1", "R2", "R3"]}, ensure_ascii=False))
+                          "rules": ["R1", "R2", "R3", "R4", "R5", "R6"]},
+                         ensure_ascii=False))
         return 1 if violations else 0
 
-    print("ℹ️  扫描面: %s（R1/R2/R3 同一口径）" % " ".join(SCAN_ROOTS))
-    print("ℹ️  变更集: %d 个相关文件；树内工具定义 %d 个（R3 对象）；基线 %d 名"
-          % (len(relevant), len(tree_defs), len(baseline)))
+    print("ℹ️  扫描面: %s（R1–R6 同一口径；R6 只判 src/agent/**）" % " ".join(SCAN_ROOTS))
+    print("ℹ️  变更集: %d 个相关文件；树内工具定义 %d 个（R3/R5 对象）；"
+          "schema 基线 %d 名；信号基线 %d 名"
+          % (len(relevant), len(tree_defs), len(baseline), len(signal_baseline)))
     if violations:
         for rule, path, line, msg in violations:
             print("❌ %s: %s:%d %s" % (rule, path, line, msg))
@@ -557,7 +723,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     print("✅ R1 新增/改动工具均有可校验 schema")
     print("✅ R2 无绕过 execute 的工具 handler 调用")
     print("✅ R3 空 schema 集合 == 基线（%d 名）" % len(baseline))
-    print("TOOL-ARGS-DELTA: PASS changes=%d rules=R1,R2,R3" % len(relevant))
+    print("✅ R4 变更集内副作用工具均可取消（ctx ＋ throwIfAborted）")
+    print("✅ R5 缺取消检查副作用集合 == 信号基线（%d 名）" % len(signal_baseline))
+    print("✅ R6 src/agent/** 内 execute 调用均 ≥3 参（signal 未被丢弃）")
+    print("TOOL-ARGS-DELTA: PASS changes=%d rules=R1,R2,R3,R4,R5,R6" % len(relevant))
     return 0
 
 

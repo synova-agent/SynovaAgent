@@ -1022,3 +1022,11 @@ documents:
     status: active
     owner: CTO
     note: "#957 ② 重叠判定改「登记表纯追加」两态的受保护路径豁免；裁 376。"
+
+  # ---- P1 2026-10-25：#915 Q-5 工具取消语义豁免件（DOC-0272；main 实测 max=0271 ⇒ 从 0272 起）----
+  - id: DOC-0272
+    type: decision
+    path: gate-exemptions/2026-10-25-p1-915-q5.md
+    status: active
+    owner: P1
+    note: "#915 Q-5 受保护路径豁免件：4 条按文件名逐条覆盖（check-tool-args-delta.py、check-tool-args-delta.test.sh、DOCS-REGISTRY.yaml、本文件自覆盖），裁 365。"
