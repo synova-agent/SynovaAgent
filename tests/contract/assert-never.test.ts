@@ -85,7 +85,8 @@ describe('A 运行时逃逸：isRetryable 对类型外取值 fail-loud', () => {
   it('A4 context 缺省：message 含 "switch"（默认值）；自定义 context 进 message', () => {
     let caught: unknown = undefined;
     try {
-      assertNever('ESCAPED' as never, undefined);
+      // @ts-expect-error —— 故意传非 never 值以验运行时 fail-loud（规格 R3 禁 `as never`）
+      assertNever('ESCAPED', undefined);
     } catch (e) {
       caught = e;
     }
@@ -128,7 +129,8 @@ describe('B 编译期证据存档', () => {
     // 存档锚：包真实导出（B 判据的编译期证据靠 tsc 复跑；此处只钉"导出面存在"）
     expect(typeof assertNever).toBe('function');
     expect(typeof UnreachableVariantError).toBe('function');
-    expect(() => assertNever('X' as never)).toThrow(UnreachableVariantError);
+    // @ts-expect-error —— 同上：运行时逃逸必须炸（类型层用 @ts-expect-error 表达"故意非法"）
+    expect(() => assertNever('X')).toThrow(UnreachableVariantError);
   });
 });
 
