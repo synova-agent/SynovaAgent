@@ -1,0 +1,115 @@
+{
+ "schema": "syno-review-receipt/v1",
+ "pr": 961,
+ "patch_fingerprint": "sha256:2713680c9c9283d6e5a528ec3b4eb218899fc14df74138905be5fbe3ab2a5e28",
+ "author": "k12-batch5 <k12@local>",
+ "reviewer": "acc961-fresh-reviewer / DSH session 7f6d98df-5a75-401c-9278-9db08aeb4581（零上下文，未参与实现）",
+ "independence": "fresh-session",
+ "issued_at": "2026-10-24T22:28:30+08:00",
+ "verdict": "PASS",
+ "checks": [
+  {
+   "id": "A 单一基类",
+   "cmd": "cd /tmp/acc961 && grep -rn 'class DiagnosticAgentError' src packages; grep -n 'export { ClassifiedLlmError as DiagnosticAgentError }' src/errors/types.ts",
+   "result": "pass",
+   "evidence": "恰 1 处声明：packages/error-types/src/index.ts:19（class DiagnosticAgentError extends Error）；src/errors/types.ts:153 为别名导出（同一类，不新增定义）；我的探针实测 alias identity === true"
+  },
+  {
+   "id": "B cause 原生链",
+   "cmd": "sed -n '33p' packages/error-types/src/index.ts; sed -n '139p' src/errors/types.ts; npx tsx --tsconfig ./tsconfig.json /tmp/myprobe-961.ts",
+   "result": "pass",
+   "evidence": "基类 :33 super(message, options)；子类 :139 super(code, msg, ph, retry, { cause })；自造三层探针 outer.cause===mid、outer.cause.cause===root PASS；无 cause⇒undefined 且不抛"
+  },
+  {
+   "id": "C 禁解析 message 棘轮（未放宽）",
+   "cmd": "grep -rnE '\\.message\\.(includes|match|startsWith|indexOf|split)' src --include=*.ts | wc -l; git grep -nE <同> 423f60e1f -- src",
+   "result": "pass",
+   "evidence": "head 5 条 = 路由型 2（src/llm/types.ts:79、src/providers/deepseek.ts:33）＋取样型 3（agent/tools.ts:166、content-layering.ts:212、request-context.ts:253）；base 同为这 5 条 ⇒ 零新增零删除、白名单未放宽（#956 那条已显式登记 PINNED_SAMPLING）"
+  },
+  {
+   "id": "D 两态（真类 vs lookalike）",
+   "cmd": "cd /tmp/acc961 && sed -n '119p;173,175p' tests/services/runtime-global-handlers.test.ts; npx vitest run tests/services/runtime-global-handlers.test.ts",
+   "result": "pass",
+   "evidence": ":119 new ClassifiedLlmError({code:'RATE_LIMITED'}) ⇒ warn/不关 server（非致命）；:173 class Lookalike extends Error（同名 code，非子类）⇒ error+close（致命）；11 passed；M1 变异下真类用例转红、lookalike 仍绿 ⇒ 判的是类不是名字"
+  },
+  {
+   "id": "D 只删旧假绿 1 行",
+   "cmd": "git -C /tmp/acc961 diff 423f60e1f..61bae2979 -- tests/services/runtime-global-handlers.test.ts | grep -cE '^-[^-]'; git diff --numstat 423f60e1f..61bae2979",
+   "result": "pass",
+   "evidence": "删除行 = 1（-const err = new DiagnosticAgentError('RATE_LIMITED', ...)）；numstat 该件 22/1；全 PR 10 件 +728/−69"
+  },
+  {
+   "id": "改坏必红 M1（extends Error）",
+   "cmd": "sed -i 改 extends BaseDiagnosticAgentError→extends Error; npx vitest run tests/errors/error-base-interop.test.ts tests/services/runtime-global-handlers.test.ts",
+   "result": "pass",
+   "evidence": "interop 7 failed（A2/A4/A5/B1/B2/B3/B6）+ runtime 1 failed（RATE_LIMITED 真类用例）= 合计 8 failed；git checkout 恢复后 28 passed、dirty=0"
+  },
+  {
+   "id": "改坏必红 M2（删 {cause}）",
+   "cmd": "sed -i 'super(code,msg,ph,retry,{cause})→super(code,msg,ph,retry)'; npx vitest run tests/errors/error-base-interop.test.ts",
+   "result": "pass",
+   "evidence": "4 failed | 13 passed；失败断言行 = :177:23/:197:25/:232:26/:264:7（B1/B2/B3/B6），与 claim 订正后的 177/197/232/264 完全一致"
+  },
+  {
+   "id": "改坏必红 M3（新增 message 解析）",
+   "cmd": "自造 src/probe-m961-new.ts { if (err.message.includes(code)) return true; } → npx vitest run tests/errors/error-base-interop.test.ts",
+   "result": "pass",
+   "evidence": "C1 red：AssertionError expected [...] to deeply equal [...]，C4 明确报 '新增路由型（禁解析 message 棘轮被放宽）：src/probe-m961-new.ts:2'；C3 亦红（fs 扫描抓到未跟踪文件）；删探针后 17 passed、git status 空"
+  },
+  {
+   "id": "回归+门禁",
+   "cmd": "npx tsc --noEmit; python3 scripts/control-tower/check-quality-delta.py --base 423f60e1f; bash scripts/pre-commit-check.sh; npx vitest run tests/error-types.test.ts tests/errors tests/providers tests/services/runtime-global-handlers.test.ts; Gitea /commits/61bae2979/status",
+   "result": "pass",
+   "evidence": "tsc exit 0；QUALITY-DELTA: PASS changes=8 rules=G1,G3,G4 base=423f60e1fa66；pre-commit ✅ 全部 12 组通过 exit 0；6 files/91 passed（§5 命令另跑 5 files/80 passed）；CI state=success、2 上下文（push/pull_request）均 success、pending=0"
+  },
+  {
+   "id": "写集闭合",
+   "cmd": "git -C /tmp/acc961 diff --name-status 423f60e1f..61bae2979; Gitea PR changed_files",
+   "result": "pass",
+   "evidence": "10 件与 claims/914.yaml Q-3 写集逐条一致（含 claim 自身与 Note）；Gitea changed_files=10/additions=728/deletions=69 与本地一致；零 src/audit、零 scripts/audit；未动 packages/error-types/package.json（红线，归 #951）"
+  },
+  {
+   "id": "账实（E5/E8/E10/§5）",
+   "cmd": "grep -nE '\\| E5 |\\| E8 |\\| E10 ' .handbook/派单件/2026-10-24-规格-914-Q3-稳定错误码与cause链.md; ls tests/llm/call-resilience.test.ts tests/services/fault-recovery.test.ts",
+   "result": "pass",
+   "evidence": "E5 已回填 4 条（路由 2＋取样 2）、E8 10（Q-3 后 11）、E10 49（17+22+10）、§5 回归命令已换成 tests/errors+tests/llm/call-resilience.test.ts+runtime-handlers（fault-recovery.test.ts 实测不存在）"
+  },
+  {
+   "id": "D331 补记",
+   "cmd": "cd /private/tmp/p2-914-q3-1024 && tail -5 .claude/bypass.log; bash scripts/control-tower/check-bypass-log.sh 423f60e1f",
+   "result": "pass",
+   "evidence": "5 条 BACKFILL COMMITTED 行（22:15:08，HASH=508340a2/7d812302/dcdfa427/d861a207/6188fbd1）；该 worktree 内对账 exit 0『7 条本机待推提交全部有记录』；无 --no-verify 字样；账本自记 suspect=rebase-state，reflog 实证 rebase (finish)"
+  }
+ ],
+ "findings": [
+  {
+   "id": "F1",
+   "severity": "warn",
+   "item": "D331 补记只落在临时 worktree 账本，未回填主树",
+   "evidence": "/private/tmp/p2-914-q3-1024/.claude/bypass.log 有 5 条 BACKFILL 行；但主树 /Users/wane/SynovaAgent/.claude/bypass.log（255536B，mtime 10-20 10:00）零命中；全机 199 个 bypass.log 仅该临时目录命中；从干净 checkout(/tmp/acc961) 复跑 check-bypass-log.sh 423f60e1f = exit 1『全部来源均为空 — 但本机有 7 条待记录提交』",
+   "suggestion": "D486 先例要求回填主树账本；把 5 条 BACKFILL 行追加到主树 .claude/bypass.log（账本 gitignore，不入库），否则 /private/tmp 一清即证据链断裂"
+  },
+  {
+   "id": "F2",
+   "severity": "warn",
+   "item": "PR 正文/回执把 M1 计数写成 interop 8 failed（实测 7）",
+   "evidence": "PR body『M1 extends Error ⇒ interop 8 failed ＋ runtime 真类用例 1 failed』；我分件实测：interop 单独 7 failed | 10 passed（17），runtime 单独 1 failed | 10 passed（11），合计 8 ——『8』是两件合计，再 +1 即重复计数；handbook P2 README 同句沿用",
+   "suggestion": "改为『interop 7 failed ＋ runtime 1 failed（合计 8）』，避免把合计值当分件值"
+  },
+  {
+   "id": "F3",
+   "severity": "info",
+   "item": "『不伪造 cause』措辞与子类实现有细节差：子类恒有 own cause 属性",
+   "evidence": "子类 :139 恒传 { cause }；node 实测 new Error('x',{cause:undefined}) ⇒ Object.hasOwn=TRUE/'cause' in=TRUE（值 undefined），而不传 options 则 hasOwn=FALSE。仓库 B4 只对基类 4 参断言 hasOwnProperty=false，子类只断言 ===undefined；无消费者依赖该差别（grep Object.hasOwn/'cause' in 零命中）",
+   "suggestion": "要么把 JSDoc『不伪造』收敛为『值为 undefined（属性可能存在）』，要么 cause===undefined 时不传 options 以对齐基类"
+  },
+  {
+   "id": "F4",
+   "severity": "info",
+   "item": "dev doc E5 计数在 #956 合入后已漂移 1（写 4，实测 5）",
+   "evidence": "E5 仍写『4 条＝路由型 2 ＋ 取样型 2』；head 实测 5 条（源 #956 的 src/agent/tools.ts:166 取样型）。claims 已单列 verify 行承认该新增，但 dev doc 未回填",
+   "suggestion": "E5 改 5 条＝路由型 2 ＋ 取样型 3（或在 E5 注明『#956 后 5』），与 PINNED_SAMPLING 三行对齐"
+  }
+ ],
+ "tool": "DSH / deepseek-flash（独立复核席，零上下文）"
+}
