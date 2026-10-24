@@ -91,6 +91,7 @@ SURFACES = ("protocol", "model", "human-visible", "none")
 OBLIGATIONS = ("expected", "snapshot", "exempt")
 OBLIGATED = ("expected", "snapshot")
 NEW_FILE_MIN_LINES = 100          # §2「有效逻辑行 ≥100」
+GIT_TIMEOUT_SEC = int(os.environ.get("SYNO_GIT_TIMEOUT_SEC", "60"))
 TRAILER_MIN_REASON = 10           # §3.4「理由 ≥10 字」
 BEHAVIOR_TOKENS = ("export ", "if (", "switch (", "case ")
 OFF_VALUES = ("0", "off", "false", "no", "n")
@@ -114,16 +115,24 @@ def _git_cmd(root: str) -> List[str]:
 
 
 def git(root: str, *args: str) -> str:
-    p = subprocess.run(_git_cmd(root) + list(args), capture_output=True, text=True,
-                       encoding="utf-8", errors="replace")
+    try:
+        p = subprocess.run(_git_cmd(root) + list(args), capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=GIT_TIMEOUT_SEC)
+    except subprocess.TimeoutExpired as exc:
+        raise ObligationError("E_GIT_TIMEOUT",
+                              f"git {' '.join(args)} 超时（>{GIT_TIMEOUT_SEC}s）") from exc
     if p.returncode != 0:
         raise ObligationError("E_GIT", f"git {' '.join(args)} 失败: {(p.stderr or '').strip()[:200]}")
     return p.stdout
 
 
 def git_ok(root: str, *args: str) -> Tuple[int, str, str]:
-    p = subprocess.run(_git_cmd(root) + list(args), capture_output=True, text=True,
-                       encoding="utf-8", errors="replace")
+    try:
+        p = subprocess.run(_git_cmd(root) + list(args), capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=GIT_TIMEOUT_SEC)
+    except subprocess.TimeoutExpired as exc:
+        raise ObligationError("E_GIT_TIMEOUT",
+                              f"git {' '.join(args)} 超时（>{GIT_TIMEOUT_SEC}s）") from exc
     return p.returncode, p.stdout, p.stderr
 
 

@@ -1,6 +1,6 @@
 # 测试分层成文 v1 · 六档现役 ＋ 两档未建（可机械判）
 
-> **版本** `v1` ｜ **as_of** `gitea/local-main@b398e4d0a`（2026-10-24）｜ **状态** `proposed`（P0：只测量，不阻断）
+> **版本** `v1` ｜ **as_of** `gitea/local-main@b398e4d0a`（2026-10-24）｜ **状态** `proposed`（成文随 PR-2 合入；执行器**未接 CI**——接线归 PR-3 ①g；本件统一用 `proposed` 一个口径）
 > **语义真源**：`#918 A 节 Q-10`（裁 353 批准；裁 332 ①②③）｜**归属**：治理域 · P7 交付自证与真值
 > **本件只做「分层成文」**：把「非平凡模块必须有 expected/snapshot」从形容词变成**可判判据**。**不改门禁语义（P4）｜不动 `src/**`｜本 PR 不接 CI**（接线归 PR-3 的 ①g，由 P4 决定）。
 > 🔴 **本件不重定义 G1–G6**：质量判据的唯一定义 = `docs/authority/quality-standard-g1g6.md`（DOC-0241），本件**只引编号、不复制、不改写**（防两处口径）。
@@ -95,8 +95,8 @@ bash tests/control-tower/check-test-obligations.test.sh                         
 
 ## 5 豁免（`obligation: exempt` ⇒ 需 `issue`＋`expiry`＋`reason`，过期即红）
 
-- **三栏必填**：`obligation: exempt` 的行必须同时带 `issue`（Issue 号，如 `#913`）、`expiry`（`YYYY-MM-DD`）、`reason`（≥10 个 Unicode 字）。**缺任一 ⇒ rc=1**（不是默认放过）。
-- **过期即红**：`expiry` 当日已到或已过 ⇒ **rc=1**，属**清单级**失败（点名 module ＋ expiry）；**不吞**其他判据（缺资产、命名红照旧各自点名）。
+- **三栏必填**：`obligation: exempt` 的行必须同时带 `issue`（Issue 号，如 `#913`）、`expiry`（`YYYY-MM-DD`）、`reason`（必填；**长度不限**——`≥10 字`只约束 `NoBehaviorChange` trailer）。**缺任一 ⇒ rc=2 `E_SCHEMA`**（检查自身失败，不是默认放过）。
+- **过期才红**：`expiry` **已过期（< 今日）才红 ⇒ rc=1**（**当日不算过期**），属**清单级**失败（点名 module ＋ expiry）；**不吞**其他判据（缺资产、命名红照旧各自点名）。
 - **只减不增**：豁免行是**债务登记**，修好后须删行（删行不得使 `legacy` 超 baseline —— 见 §3 棘轮）。
 - **与 G1–G6 豁免是两套**：`# quality-exempt: <issue> <reason> <expiry>`（DOC-0241）是**源码行级**豁免；本节的 `obligation: exempt` 是**清单行级**登记。**两者互不替代**，不得互相引用洗白。
 - **授权载体**：`issue` ＋ `expiry` ＋ `reason` 三者即授权链；本 PR 不接 CI ⇒ **不产生阻断面**，但清单被后续 PR-3 ①g 消费后，过期行会直接变红。

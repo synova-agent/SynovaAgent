@@ -7,7 +7,7 @@
 # 判据源: .handbook/派单件/2026-10-24-规格-913-PR2-分层与快照实施.md §4（S1–S11 两态）
 #
 # 覆盖矩阵（铁律 48：正常/降级/边界 ＋ ctrl-tower-change 模式 1 三态 0/1/2 ＋ 改坏必红）:
-#   S1  clean tree（真实工作树 · --base gitea/local-main）      ⇒ rc0 ＋ modules=6 legacy=469 untriaged=0 ＋ SKIP
+#   S1  clean tree（真实工作树 · --base gitea/local-main→origin/local-main）⇒ rc0 ＋ modules=<台账现算> legacy=<baseline> untriaged=0 ＋ SKIP
 #   S2  改 surface 模块、无资产                                ⇒ rc1 点名 module → asset_glob（实际改动：…）
 #   S3  同 S2 ＋ 补 tests/expected 资产（**S2 的正态**）        ⇒ rc0，无 O1
 #   S4  新增 110 有效行 src 文件、台账无行                     ⇒ rc1 `untriaged: src/x/new.ts`（M1 同案红）
@@ -26,7 +26,7 @@
 #
 # 隔离: 每个用例独立 mktemp 仓（git init ＋ 本地身份 ＋ commit.gpgsign=false），
 #   零网络、零宿主写入；**唯一读真实工作树的用例是 S1/S10**（只读，不写）。
-# 依赖: git（缺 ⇒ exit 2）｜python3（缺/不可执行 ⇒ exit 2）｜S1 依赖 `gitea/local-main` 可解析
+# 依赖: git（缺 ⇒ exit 2）｜python3（缺/不可执行 ⇒ exit 2）｜S1 依赖 `gitea/local-main`（缺失回退 `origin/local-main`）可解析
 #   （不可解析 ⇒ exit 2：判据纪律 ⑨②「环境依赖显式，缺什么就报什么」，不静默软化）。
 # ═══════════════════════════════════════════════════════════════════════════════
 export PYTHONIOENCODING=utf-8
@@ -57,8 +57,11 @@ done
 command -v git >/dev/null 2>&1 || { echo "❌ 缺 git（检查自身失败 exit 2）"; exit 2; }
 [ -f "$SUT" ] || { echo "❌ 缺被测件: ${SUT}（检查自身失败 exit 2）"; exit 2; }
 [ -f "$MANIFEST" ] || { echo "❌ 缺台账: ${MANIFEST}（检查自身失败 exit 2）"; exit 2; }
-git -C "$REPO" rev-parse --verify -q "gitea/local-main^{commit}" >/dev/null 2>&1 \
-  || { echo "❌ S1 依赖 gitea/local-main 不可解析（先 git fetch gitea；检查自身失败 exit 2）"; exit 2; }
+BASE_REF="gitea/local-main"
+git -C "$REPO" rev-parse --verify -q "${BASE_REF}^{commit}" >/dev/null 2>&1 \
+  || BASE_REF="origin/local-main"
+git -C "$REPO" rev-parse --verify -q "${BASE_REF}^{commit}" >/dev/null 2>&1 \
+  || { echo "❌ S1 依赖 gitea/local-main / origin/local-main 均不可解析（先 git fetch；检查自身失败 exit 2）"; exit 2; }
 
 TMPROOT="$(mktemp -d)"
 trap 'rm -rf "$TMPROOT"' EXIT
@@ -115,10 +118,21 @@ echo "  #913 批 2 · Q-10 check-test-obligations（S1–S12 · 两态 ＋ 改�
 echo "═══════════════════════════════════════════════════════════════"
 
 # ── S1 clean tree（真实工作树；只读）────────────────────────────────────────
-echo "── S1 clean tree · --base gitea/local-main（真实工作树，只读）──"
-runq "$REPO" --base gitea/local-main
+echo "── S1 clean tree · --base ${BASE_REF}（真实工作树，只读）──"
+runq "$REPO" --base "${BASE_REF}"
 assert_rc "$RUN_RC" 0 "S1 clean tree ⇒ exit 0"
-assert_has "S1 汇总行 modules=6 legacy=469 untriaged=0" "modules=6 legacy=469 untriaged=0"
+# M3（裁 355 M3）：不写死 modules/legacy —— 从台账现算；clean tree 的不变量是
+#   modules == 非 none 行数 ∧ legacy == legacy_baseline（相等即证棘轮基线未漂）
+read -r M_MODULES M_BASELINE <<< "$("$PYBIN" - "$MANIFEST" <<'PYM3'
+import re, sys
+text = open(sys.argv[1], encoding="utf-8").read()
+mods = len(re.findall(r'surface:\s*(?!none\b)[A-Za-z-]+', text))
+m = re.search(r'legacy_baseline:\s*(\d+)', text)
+print(mods, m.group(1) if m else "ERR")
+PYM3
+)"
+[ "${M_BASELINE}" != "ERR" ] || { echo "❌ 台账 legacy_baseline 不可解析（检查自身失败 exit 2）"; exit 2; }
+assert_has "S1 汇总行 modules=${M_MODULES} legacy=${M_BASELINE} untriaged=0（台账现算，不写死）" "modules=${M_MODULES} legacy=${M_BASELINE} untriaged=0"
 assert_has "S1 SKIP 语义（无 src/** 变更）" "SKIP: 无 src/** 变更"
 
 # ── S2 改 surface 模块、无资产 ⇒ rc1 ───────────────────────────────────────
