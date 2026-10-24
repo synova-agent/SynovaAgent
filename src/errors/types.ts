@@ -12,6 +12,7 @@
  */
 import * as crypto from 'crypto';
 import { createLogger } from '@synova/logger';
+import { DiagnosticAgentError as BaseDiagnosticAgentError } from '@synova/error-types';
 const log = createLogger('src.errors.types');
 
 // ═══ Error Codes (Hermes FailoverReason 对齐) ═══
@@ -66,35 +67,60 @@ export type ErrorCodeType = (typeof ErrorCode)[keyof typeof ErrorCode];
 
 // ═══ Classified Error (Hermes ClassifiedError dataclass) ═══
 
-export class DiagnosticAgentError extends Error {
-  readonly code: ErrorCodeType;
-  readonly phase: number;
-  readonly retryable: boolean;
+/** `ClassifiedLlmError` 的 options 对象构造入参（推荐形式；positional 4 参仍兼容） */
+export interface ClassifiedLlmErrorOptions {
+  code: ErrorCodeType;
+  message: string;
+  phase: number;
+  retryable: boolean;
+  shouldCompress?: boolean;
+  shouldRotateCredential?: boolean;
+  shouldFallback?: boolean;
+  cause?: unknown;
+  statusCode?: number;
+  provider?: string;
+  model?: string;
+}
+
+/**
+ * 全仓唯一错误层次（`@synova/error-types` 的 `DiagnosticAgentError`）里的 **LLM 专用子类**。
+ *
+ * 设计哲学：**按 `code` 路由，永不解析 `message`**（DSH `HarnessError` 锚：
+ * "route on this, never by parsing message"）—— `message` 只给人读，路由只认稳定码。
+ *
+ * 与包基类的分工：基类只承载 code/message/phase/retryable ＋ 原生 `cause`；
+ * Hermes 恢复动作提示（compress/rotate/fallback）与上游 status/provider/model 留在此子类，
+ * 因此搬进 package、合并两套码表另立 A 类卡（#951），本类不搬。
+ */
+export class ClassifiedLlmError extends BaseDiagnosticAgentError {
+  /** 收窄失败码为 `ErrorCodeType`（`declare` 只做类型收窄、不 emit：基类构造已赋值，无需断言转写） */
+  declare readonly code: ErrorCodeType;
   /** Hermes: should trigger context compression before retry */
   readonly shouldCompress: boolean;
   /** Hermes: should rotate to next credential in pool */
   readonly shouldRotateCredential: boolean;
   /** Hermes: should fallback to alternative provider/model */
   readonly shouldFallback: boolean;
-  readonly cause?: unknown;
   readonly statusCode?: number;
   readonly provider?: string;
   readonly model?: string;
 
-  // New API: options object
-  constructor(opts: {
-    code: ErrorCodeType; message: string; phase: number; retryable: boolean;
-    shouldCompress?: boolean; shouldRotateCredential?: boolean; shouldFallback?: boolean;
-    cause?: unknown; statusCode?: number; provider?: string; model?: string;
-  });
-  // Backward-compat: old positional API (code, message, phase, retryable)
+  /**
+   * options 对象构造（推荐）：失败事实 ＋ 恢复动作提示。
+   * @param opts - `opts.cause` 经包基类第 5 参 `ErrorOptions.cause` 原生透传（可链）；
+   *   缺省或显式 `undefined` ⇒ `err.cause === undefined`（不伪造）
+   */
+  constructor(opts: ClassifiedLlmErrorOptions);
+  /**
+   * positional 4 参构造（向后兼容；无 cause ⇒ `err.cause === undefined`）。
+   * @param code - 稳定失败码
+   * @param message - 人读消息（禁作路由依据）
+   * @param phase - 诊断阶段（0 = 基础设施）
+   * @param retryable - 是否可重试
+   */
   constructor(code: ErrorCodeType, message: string, phase: number, retryable: boolean);
   constructor(
-    codeOrOpts: ErrorCodeType | {
-      code: ErrorCodeType; message: string; phase: number; retryable: boolean;
-      shouldCompress?: boolean; shouldRotateCredential?: boolean; shouldFallback?: boolean;
-      cause?: unknown; statusCode?: number; provider?: string; model?: string;
-    },
+    codeOrOpts: ErrorCodeType | ClassifiedLlmErrorOptions,
     message?: string, phase?: number, retryable?: boolean,
   ) {
     let code: ErrorCodeType; let msg: string; let ph: number; let retry: boolean;
@@ -110,13 +136,21 @@ export class DiagnosticAgentError extends Error {
       code = codeOrOpts; msg = message!; ph = phase!; retry = retryable!;
     }
 
-    super(msg);
-    this.name = 'DiagnosticAgentError';
-    this.code = code; this.phase = ph; this.retryable = retry;
+    super(code, msg, ph, retry, { cause });
+    this.name = 'ClassifiedLlmError';
     this.shouldCompress = compress; this.shouldRotateCredential = rotate; this.shouldFallback = fallback;
-    this.cause = cause; this.statusCode = status; this.provider = prov; this.model = mod;
+    this.statusCode = status; this.provider = prov; this.model = mod;
   }
 }
+
+/**
+ * 向后兼容别名 —— 历史消费者仍从本文件 import `DiagnosticAgentError`（tests/agent、tests/errors、
+ * tests/llm 三处 ＋ 旧 provider 代码）。别名指向**同一个类**（`ClassifiedLlmError`），
+ * **不新增类定义**：全仓该类定义仍唯一（在 `@synova/error-types`）。
+ * 保留别名的收益：`instanceof DiagnosticAgentError`（包名）与 `instanceof ClassifiedLlmError`
+ * 落在**同一个类**上 —— 这正是本批要修的缺陷（运行时判包类、管线抛本地类，Q-3 的 E2）。
+ */
+export { ClassifiedLlmError as DiagnosticAgentError };
 
 // ═══ Pattern Banks (Hermes 消息感知模式匹配) ═══
 
@@ -227,7 +261,7 @@ export interface ClassifyInput {
  * Stage 7: Transport error heuristics
  * Stage 8: Fallback → unknown (retryable)
  */
-export function classifyApiError(input: ClassifyInput): DiagnosticAgentError {
+export function classifyApiError(input: ClassifyInput): ClassifiedLlmError {
   const { error, provider = '', model = '', approxTokens = 0, contextLength = 200_000, numMessages = 0 } = input;
   const statusCode = extractStatusCode(error);
   const errorType = error.constructor.name;
@@ -240,7 +274,7 @@ export function classifyApiError(input: ClassifyInput): DiagnosticAgentError {
     retryable: boolean; shouldCompress: boolean;
     shouldRotateCredential: boolean; shouldFallback: boolean;
     message: string;
-  }> = {}) => new DiagnosticAgentError({
+  }> = {}) => new ClassifiedLlmError({
     code, phase: 0,
     message: overrides.message || errorMsg || error.message,
     retryable: overrides.retryable ?? true,
@@ -302,8 +336,8 @@ export function classifyApiError(input: ClassifyInput): DiagnosticAgentError {
 function classifyByStatus(
   statusCode: number, errorMsg: string, errorCode: string,
   approxTokens: number, contextLength: number, numMessages: number,
-  diag: (code: ErrorCodeType, o?: Partial<{ retryable: boolean; shouldCompress: boolean; shouldRotateCredential: boolean; shouldFallback: boolean; message: string }>) => DiagnosticAgentError,
-): DiagnosticAgentError | null {
+  diag: (code: ErrorCodeType, o?: Partial<{ retryable: boolean; shouldCompress: boolean; shouldRotateCredential: boolean; shouldFallback: boolean; message: string }>) => ClassifiedLlmError,
+): ClassifiedLlmError | null {
   if (statusCode === 401) {
     return diag(ErrorCode.AUTH_FAILED, { retryable: false, shouldRotateCredential: true, shouldFallback: true });
   }
@@ -384,8 +418,8 @@ function _classify402(errorMsg: string): { code: ErrorCodeType; retryable: boole
 
 function classifyByErrorCode(
   errorCode: string,
-  diag: (c: ErrorCodeType, o?: any) => DiagnosticAgentError,
-): DiagnosticAgentError | null {
+  diag: (c: ErrorCodeType, o?: any) => ClassifiedLlmError,
+): ClassifiedLlmError | null {
   const c = errorCode.toLowerCase();
   if (['resource_exhausted', 'throttled', 'rate_limit_exceeded'].includes(c)) {
     return diag(ErrorCode.RATE_LIMITED, { shouldRotateCredential: true });
@@ -407,8 +441,8 @@ function classifyByErrorCode(
 function classifyByMessage(
   errorMsg: string, errorType: string,
   approxTokens: number, contextLength: number,
-  diag: (c: ErrorCodeType, o?: any) => DiagnosticAgentError,
-): DiagnosticAgentError | null {
+  diag: (c: ErrorCodeType, o?: any) => ClassifiedLlmError,
+): ClassifiedLlmError | null {
   // Usage limit disambiguation (same as 402)
   const hasUsageLimit = matchAny(errorMsg, USAGE_LIMIT_PATTERNS);
   if (hasUsageLimit) {
@@ -582,7 +616,7 @@ export async function withRetry<T>(
     } catch (err: any) {
       log.warn({ err: err instanceof Error ? err.message : String(err) }, "错误分类流水线执行");
       lastError = err;
-      const diagErr = err instanceof DiagnosticAgentError ? err : null;
+      const diagErr = err instanceof ClassifiedLlmError ? err : null;
       const code = diagErr?.code || ErrorCode.INTERNAL;
 
       // CONTEXT_OVERFLOW: caller should compress and retry — don't loop here
@@ -606,17 +640,17 @@ export async function withRetry<T>(
   throw lastError;
 }
 
-// ═══ API Error Normalizer (unwrap SDK exceptions → DiagnosticAgentError) ═══
+// ═══ API Error Normalizer (unwrap SDK exceptions → ClassifiedLlmError) ═══
 
 /**
- * Normalize any thrown error into a DiagnosticAgentError using the classification pipeline.
+ * Normalize any thrown error into a ClassifiedLlmError using the classification pipeline.
  * Call this at every API call boundary.
  */
 export function normalizeError(
   error: unknown,
   opts: { provider?: string; model?: string; phase?: number; approxTokens?: number; contextLength?: number } = {},
-): DiagnosticAgentError {
-  if (error instanceof DiagnosticAgentError) return error;
+): ClassifiedLlmError {
+  if (error instanceof ClassifiedLlmError) return error;
 
   const err = error instanceof Error ? error : new Error(String(error));
   const classified = classifyApiError({
@@ -625,7 +659,7 @@ export function normalizeError(
   });
   // Preserve the original phase if specified
   if (opts.phase != null) {
-    return new DiagnosticAgentError({
+    return new ClassifiedLlmError({
       code: classified.code, message: classified.message, phase: opts.phase,
       retryable: classified.retryable, shouldCompress: classified.shouldCompress,
       shouldRotateCredential: classified.shouldRotateCredential,
@@ -738,7 +772,7 @@ function errorMessage(error: Error): string {
  * 把 LLM adapter 边界抛出的任意值（Error / 非 Error / 敌意值 / 跨包拷贝）归一化为
  * 冻结的可序列化失败事实。跨包拷贝保留 own 数据但丢失类身份——只有 own failure
  * 快照与 own code 一致（且字段全部通过校验）时才信任携带事实，否则回落
- * {message, code}（自有类 DiagnosticAgentError 的码可信，其余一律 'UNKNOWN'）。
+ * {message, code}（自有类 ClassifiedLlmError 的码可信，其余一律 'UNKNOWN'）。
  * 原始值由调用方作为 cause 保留（见 src/providers/base.ts 最终 throw 边界）。
  */
 export function normalizeLlmFailure(value: unknown): NormalizedLlmFailure {
@@ -747,7 +781,7 @@ export function normalizeLlmFailure(value: unknown): NormalizedLlmFailure {
     if (carried !== undefined && carried.code === ownErrorCode(value)) return carried;
     return Object.freeze({
       message: errorMessage(value),
-      code: value instanceof DiagnosticAgentError ? value.code : 'UNKNOWN',
+      code: value instanceof ClassifiedLlmError ? value.code : 'UNKNOWN',
     });
   }
   return Object.freeze({ message: thrownMessage(value), code: 'UNKNOWN' });

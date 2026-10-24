@@ -14,7 +14,7 @@
  *   7. 不可恢复错误 → error event + SSE close + user-friendly message
  */
 import { createLogger } from '@synova/logger';
-import { DiagnosticAgentError, ErrorCode, isRetryable } from '../errors/types';
+import { ClassifiedLlmError, ErrorCode, isRetryable } from '../errors/types';
 
 const log = createLogger('services/fault-recovery');
 
@@ -23,7 +23,7 @@ const log = createLogger('services/fault-recovery');
 export interface RecoveryResult<T> {
   ok: boolean;
   value?: T;
-  error?: DiagnosticAgentError;
+  error?: ClassifiedLlmError;
   degraded: boolean;
   degradedModules: string[];
   retryAfterMs?: number;
@@ -79,7 +79,7 @@ export class FaultRecovery {
       return {
         ok: true, value: fallback, degraded: true,
         degradedModules: [moduleName],
-        error: new DiagnosticAgentError(ErrorCode.NETWORK, `LLM 不可用: ${err.message}`, 0, true),
+        error: new ClassifiedLlmError(ErrorCode.NETWORK, `LLM 不可用: ${err.message}`, 0, true),
       };
     }
   }
@@ -98,7 +98,7 @@ export class FaultRecovery {
       this.degradedModules.add(moduleName);
       return {
         ok: false, degraded: true, degradedModules: [moduleName],
-        error: new DiagnosticAgentError(ErrorCode.INTERNAL, `模块 ${moduleName} 失败: ${err.message}`, 0, false),
+        error: new ClassifiedLlmError(ErrorCode.INTERNAL, `模块 ${moduleName} 失败: ${err.message}`, 0, false),
       };
     }
   }
@@ -134,7 +134,7 @@ export class FaultRecovery {
       return {
         ok: false, degraded: true,
         degradedModules: [`phase_${phaseName}`],
-        error: new DiagnosticAgentError(ErrorCode.TIMEOUT, `Phase ${phaseName} 超时 (${ms}ms)`, 0, false),
+        error: new ClassifiedLlmError(ErrorCode.TIMEOUT, `Phase ${phaseName} 超时 (${ms}ms)`, 0, false),
       };
     }
   }
@@ -181,7 +181,7 @@ export class FaultRecovery {
       return {
         ok: false, degraded: true,
         degradedModules: [`api_${apiName}`],
-        error: new DiagnosticAgentError(ErrorCode.NETWORK, `API ${apiName} 不可达: ${err.message}`, 0, true),
+        error: new ClassifiedLlmError(ErrorCode.NETWORK, `API ${apiName} 不可达: ${err.message}`, 0, true),
         retryAfterMs: 30_000,
       };
     }
@@ -234,8 +234,8 @@ export class FaultRecovery {
 
   // ═══ 7. 不可恢复错误 — error event + SSE close ═══
 
-  unrecoverable(error: Error, context: string): DiagnosticAgentError {
-    const diagError = new DiagnosticAgentError(
+  unrecoverable(error: Error, context: string): ClassifiedLlmError {
+    const diagError = new ClassifiedLlmError(
       ErrorCode.INTERNAL,
       `不可恢复错误 (${context}): ${error.message}`,
       0, false,
@@ -269,7 +269,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   return Promise.race([
     promise,
     new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new DiagnosticAgentError(ErrorCode.TIMEOUT, label, 0, true)), ms)),
+      setTimeout(() => reject(new ClassifiedLlmError(ErrorCode.TIMEOUT, label, 0, true)), ms)),
   ]);
 }
 

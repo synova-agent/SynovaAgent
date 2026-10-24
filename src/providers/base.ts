@@ -19,7 +19,7 @@ import { createLogger } from '@synova/logger';
 import { PromptInjectionDetector, PolicyDeniedError } from '../security/prompt-injection-detector';
 import { AuditService } from '../services/audit-service';
 import {
-  DiagnosticAgentError, ErrorCode, isRetryable,
+  ClassifiedLlmError, ErrorCode, isRetryable,
   normalizeLlmFailure, isContextWindowExceededError, isQuotaExceededError,
 } from '../errors/types';
 
@@ -30,32 +30,32 @@ const log = createLogger('providers/base');
  * 任意 throw → normalizeLlmFailure（冻结 {message, code}，敌意值不逃逸）→
  * provider code+type+message 合一 detail 正则分类 → canonical 稳定码
  * （CONTEXT_OVERFLOW ≈ DSH CONTEXT_WINDOW_EXCEEDED；BILLING_EXCEEDED ≈ DSH QUOTA）。
- * 已分类错误（onError 产物）与安全错误原样透传（capability seam，DiagnosticAgentError
+ * 已分类错误（onError 产物）与安全错误原样透传（capability seam，ClassifiedLlmError
  * 既有消费方接口不变）。原始 throw 保留在 .cause 上。
  */
 function finalizeAdapterFailure(err: unknown, provider: string, context: string): Error {
-  if (err instanceof DiagnosticAgentError) return err;
+  if (err instanceof ClassifiedLlmError) return err;
   if (err instanceof PolicyDeniedError) return err;
   const failure = normalizeLlmFailure(err);
   const errType = err instanceof Error ? err.name : '';
   const detail = [failure.code, errType, failure.message].filter(Boolean).join(' ');
   const message = `${provider} ${context}: ${failure.message}`;
   if (isContextWindowExceededError(detail)) {
-    return new DiagnosticAgentError({
+    return new ClassifiedLlmError({
       code: ErrorCode.CONTEXT_OVERFLOW, message, phase: 0,
       retryable: isRetryable(ErrorCode.CONTEXT_OVERFLOW), shouldCompress: true,
       cause: err, provider,
     });
   }
   if (isQuotaExceededError(detail)) {
-    return new DiagnosticAgentError({
+    return new ClassifiedLlmError({
       code: ErrorCode.BILLING_EXCEEDED, message, phase: 0, retryable: false,
       shouldRotateCredential: true, shouldFallback: true,
       cause: err, provider,
     });
   }
   // 未知失败: Hermes Stage 8 语义 — unknown 默认可重试
-  return new DiagnosticAgentError({
+  return new ClassifiedLlmError({
     code: ErrorCode.INTERNAL, message, phase: 0, retryable: true,
     cause: err, provider,
   });
@@ -104,7 +104,7 @@ export interface ProviderAdapterConfig {
   beforeSend?(messages: LLMMessage[]): LLMMessage[];
   /** 响应后处理钩子 (如丰富 usage 信息) */
   afterResponse?(data: ChatCompletionResponse, opts?: ChatOptions): Partial<ChatResult>;
-  /** 错误处理钩子 (如 DiagnosticAgentError 包装) */
+  /** 错误处理钩子 (如 ClassifiedLlmError 包装) */
   onError?(err: Error, context: string): Error;
 }
 
@@ -132,7 +132,7 @@ export function createOpenAICompatibleProvider(cfg: ProviderAdapterConfig): LLMP
     if (cfg.apiKey !== undefined && !cfg.apiKey) {
       // DSH B-01: INVALID_CREDENTIAL 分类走 adapter 侧（api-key 路径）—
       // 供了但不可用的凭据（空值）: 修正存储值而非补供；永不重试，轮换+回退
-      throw new DiagnosticAgentError({
+      throw new ClassifiedLlmError({
         code: ErrorCode.AUTH_FAILED,
         message: `${cfg.name} API Key 未配置（INVALID_CREDENTIAL 语义 — 修正存储值而非补供）`,
         phase: 0, retryable: false,
@@ -256,7 +256,7 @@ export function createOpenAICompatibleProvider(cfg: ProviderAdapterConfig): LLMP
         if (content.length === 0 && !toolCalls) {
           // DSH B-01 assembler 侧分类: 正常完成但零内容 → EMPTY_RESPONSE
           // （产物为零，重试策略视为可安全重复）
-          throw new DiagnosticAgentError({
+          throw new ClassifiedLlmError({
             code: ErrorCode.EMPTY_RESPONSE,
             message: `${cfg.name} 返回缺少 content 且无 tool_calls（退化空响应 EMPTY_RESPONSE）`,
             phase: 0, retryable: true, shouldFallback: true,
