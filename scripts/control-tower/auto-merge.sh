@@ -30,21 +30,24 @@ TOKEN="${GITEA_TOKEN:-$(cat "$HOME/gitea/.win-push-token" 2>/dev/null || true)}"
 
 is_protected() {
   local p="$1" pat
+  shopt -s nocasematch 2>/dev/null || true
   while IFS= read -r pat; do
     case "$pat" in ''|\#*) continue ;; esac
     # shellcheck disable=SC2254
     case "$p" in $pat) return 0 ;; esac
   done < "$PROTECTED"
+  shopt -u nocasematch 2>/dev/null || true
   return 1
 }
 
-OPEN_PRS="$(GITEA_TOKEN="$TOKEN" python3 - <<'PY' || exit 2
+if ! OPEN_PRS="$(GITEA_TOKEN="$TOKEN" python3 - <<'PY'
+
 import json, os, sys, urllib.request, urllib.error
 tok=os.environ["GITEA_TOKEN"]; base="http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent"
 def api(u):
     r=urllib.request.Request(u,headers={"Authorization":"token "+tok})
     try:
-        with urllib.request.urlopen(r) as x: return json.load(x)
+        with urllib.request.urlopen(r, timeout=10) as x: return json.load(x)
     except Exception as e:
         print("E_NET: %s" % e, file=sys.stderr); sys.exit(2)
 out=[]; page=1
@@ -57,29 +60,43 @@ while True:
     page+=1
 print("\n".join(out))
 PY
-)"
+)"; then
+  echo "E_NET: open PR 列表获取失败（fail-closed，不当作\"无 PR\"）" >&2
+  exit 2
+fi
 [ -n "$OPEN_PRS" ] || { echo "AUTO-MERGE: 无 open PR"; exit 0; }
 
 FAIL=0
 while IFS=$'\t' read -r N HEAD BASE; do
   [ -n "$N" ] || continue
-  COND="$(cd "$ROOT" && bash scripts/control-tower/check-merge-conditions.sh --pr "$N" 2>&1 | tail -1)"
+  COND="$(cd "$ROOT" && SYNO_MERGE_BASE="${SYNO_AUTO_MERGE_BASE:-}" bash scripts/control-tower/check-merge-conditions.sh --pr "$N" 2>&1 | tail -1)"
   case "$COND" in
     *"MERGE-COND: can"*) : ;;
     *) echo "SKIP $N: 四条件未满足 -- ${COND}"; continue ;;
   esac
-  FILES="$(GITEA_TOKEN="$TOKEN" PR="$N" python3 - <<'PY' || exit 2
+  if ! FILES="$(GITEA_TOKEN="$TOKEN" PR="$N" python3 - <<'PY'
+
 import json, os, sys, urllib.request
 tok=os.environ["GITEA_TOKEN"]; pr=os.environ["PR"]
-u="http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/pulls/%s/files?limit=100" % pr
-r=urllib.request.Request(u,headers={"Authorization":"token "+tok})
-try:
-    with urllib.request.urlopen(r) as x: d=json.load(x)
-except Exception as e:
-    print("E_NET: %s" % e, file=sys.stderr); sys.exit(2)
-print("\n".join(f.get("filename","") for f in d))
+out=[]; page=1
+while True:
+    u="http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/pulls/%s/files?limit=100&page=%d" % (pr, page)
+    r=urllib.request.Request(u,headers={"Authorization":"token "+tok})
+    try:
+        with urllib.request.urlopen(r, timeout=10) as x: d=json.load(x)
+    except Exception as e:
+        print("E_NET: %s" % e, file=sys.stderr); sys.exit(2)
+    if not d: break
+    out += [f.get("filename","") for f in d]
+    if len(d) < 100: break
+    page += 1
+print("\n".join(out))
 PY
-)"
+)"; then
+    echo "E_NET: PR $N 变更文件获取失败 ⇒ fail-closed（禁止在看不见时合并）" >&2
+    exit 2
+  fi
+  [ -n "$FILES" ] || { echo "E_NET: PR $N 变更文件为空 ⇒ fail-closed" >&2; exit 2; }
   HIT=""
   while IFS= read -r f; do
     [ -n "$f" ] || continue
@@ -97,7 +114,7 @@ u="http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/pulls/%s/merge" %
 req=urllib.request.Request(u, data=json.dumps({"Do":"merge","delete_branch_after_merge":False}).encode(),
     headers={"Authorization":"token "+tok,"Content-Type":"application/json"}, method="POST")
 try:
-    with urllib.request.urlopen(req) as x: x.read()
+    with urllib.request.urlopen(req, timeout=15) as x: x.read()
 except urllib.error.HTTPError as e:
     print("E_MERGE: %s" % e.read()[:200].decode(errors="replace"), file=sys.stderr); sys.exit(1)
 PY

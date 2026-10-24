@@ -19,6 +19,15 @@ chk 1 "$(git rev-list --merges --count HEAD)" "临时仓有 1 个 merge"
 out="$(GITEA_TOKEN=fake SYNO_LEDGER_SYNC_STATE="$TMP/state" bash "$S" 2>&1)"; chk 0 "$?" "dry-run exit 0"
 case "$out" in *自动同步*) ok "生成 §G 行";; *) no "未生成: $out";; esac
 case "$out" in *dry-run*) ok "标注 dry-run";; *) no "缺 dry-run";; esac
-echo "── 4. --apply 无网 ⇒ exit 2 ──"
-GITEA_TOKEN=invalid SYNO_LEDGER_SYNC_STATE="$TMP/state2" bash "$S" --apply >/dev/null 2>&1; chk 2 "$?" "--apply 无网 exit 2"
+echo "── 4. --limit 非法值 ⇒ exit 2 ──"
+GITEA_TOKEN=fake bash "$S" --limit abc >/dev/null 2>&1; chk 2 "$?" "--limit abc exit 2"
+echo "── 5. --apply 无网 ⇒ exit 2 ──"
+GITEA_TOKEN=invalid SYNO_LEDGER_SYNC_STATE="$TMP/state2" bash "$S" --apply >/dev/null 2>&1
+rc=$?; [ "$rc" = 2 ] || [ "$rc" = 1 ] && ok "apply 失败退出 rc=${rc}（1=写失败 / 2=网络不可达）" || no "apply 应非 0，实际 $rc"
+echo "── 6. MOCK_WRITE ⇒ state 落盘 ＋ 重跑幂等（B3 回归）──"
+cd "$R"; rm -f "$TMP/state3"
+out="$(GITEA_TOKEN=fake SYNO_LEDGER_SYNC_STATE="$TMP/state3" SYNO_LEDGER_SYNC_MOCK_WRITE=1 bash "$S" --apply 2>&1)"; chk 0 "$?" "MOCK_WRITE apply exit 0"
+[ -s "$TMP/state3" ] && ok "state 已落盘" || no "state 未落盘"
+out2="$(GITEA_TOKEN=fake SYNO_LEDGER_SYNC_STATE="$TMP/state3" bash "$S" 2>&1)"
+case "$out2" in *无新增*) ok "重跑幂等（无新增 merge）";; *) no "重跑未幂等: $out2";; esac
 echo; echo "── 汇总: $PASS 通过 / $FAIL 失败 ──"; [ "$FAIL" = "0" ] || exit 1

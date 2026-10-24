@@ -8,7 +8,7 @@
 # @output  dry-run: 打印待追加的 §G 行；--apply: 插入 #918 §G 表末并更新 state
 # @exit    0 = 正常（含"无新增"）；1 = 实际失败（API 写失败）；2 = 自身失败（无 token/无网/非 git 仓）
 # @degraded 无 token ⇒ stderr `E_TOKEN` + exit 2；网络/API 不可用 ⇒ `E_NET` + exit 2
-# 已知限制: 行内"验收要点"无法自动生成，统一写"自动同步"；state 文件 gitignored、不跨机
+# 已知限制: 行内"验收要点"无法自动生成，统一写"自动同步"；state 文件不跨机（路径见 SYNO_LEDGER_SYNC_STATE）
 # ═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
 
@@ -16,7 +16,8 @@ APPLY=0; LIMIT=20
 while [ $# -gt 0 ]; do
   case "$1" in
     --apply) APPLY=1 ;;
-    --limit) LIMIT="${2:-20}"; shift ;;
+    --limit) LIMIT="${2:-20}"; shift
+      case "$LIMIT" in ''|*[!0-9]*) echo "E_USAGE: --limit 须为非负整数（拿到 ${LIMIT}）" >&2; exit 2 ;; esac ;;
     --help|-h) echo "用法: $0 [--apply] [--limit N]"; exit 0 ;;
     *) echo "用法: $0 [--apply] [--limit N]" >&2; exit 2 ;;
   esac
@@ -58,9 +59,13 @@ if [ "$APPLY" != "1" ]; then
   exit 0
 fi
 
-mapfile -t MERGES < <(git log --merges --format='%H' "$LAST"..HEAD | head -n "$LIMIT")
-NEW_STATE="${MERGES[0]:-}"
+NEW_STATE="$(git log --merges --format='%H' "$LAST"..HEAD | head -n 1)"
+[ -n "$NEW_STATE" ] || NEW_STATE=""
 
+if [ "${SYNO_LEDGER_SYNC_MOCK_WRITE:-}" = "1" ]; then
+  echo "LEDGER-SYNC: MOCK_WRITE（测试接缝：跳过 API，仅写 state）"
+  rc=0
+else
 GITEA_TOKEN="$TOKEN" ISSUE="$ISSUE" ROWS="$ROWS" python3 - <<'PY'
 import json, os, sys, urllib.request, urllib.error
 tok = os.environ["GITEA_TOKEN"]; issue = os.environ["ISSUE"]; rows = os.environ["ROWS"]
@@ -69,10 +74,10 @@ def api(url, data=None, method="GET"):
     req = urllib.request.Request(url, data=json.dumps(data).encode() if data else None,
         headers={"Authorization": "token " + tok, "Content-Type": "application/json"}, method=method)
     try:
-        with urllib.request.urlopen(req) as r:
+        with urllib.request.urlopen(req, timeout=15) as r:
             b = r.read(); return json.loads(b) if b else None
     except urllib.error.HTTPError as e:
-        print("E_NET: HTTP %d %s" % (e.code, e.read()[:200].decode(errors="replace")), file=sys.stderr); sys.exit(2)
+        print("E_API: HTTP %d %s" % (e.code, e.read()[:200].decode(errors="replace")), file=sys.stderr); sys.exit(1)
     except Exception as e:
         print("E_NET: %s" % e, file=sys.stderr); sys.exit(2)
 d = api("%s/issues/%s" % (base, issue))
@@ -87,6 +92,7 @@ api("%s/issues/%s" % (base, issue), {"body": body}, "PATCH")
 print("LEDGER-SYNC: 已写入 #%s §G（%d 行）" % (issue, len(rows.strip().split("\n"))))
 PY
 rc=$?
+fi
 [ "$rc" = "0" ] || exit "$rc"
 if [ -n "${NEW_STATE:-}" ]; then
   mkdir -p "$(dirname "$STATE")" && printf '%s' "$NEW_STATE" > "$STATE"
