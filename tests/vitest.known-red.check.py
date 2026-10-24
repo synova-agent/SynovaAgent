@@ -56,9 +56,16 @@ def main():
     except Exception as exc:  # noqa: BLE001
         print("❌ 无结构化结果（vitest 未产出 JSON）: " + str(exc))
         return 2
+    def norm(f):
+        # CI 的 JSON 里 name 可能是**绝对路径**（/Users/.../tests/...）⇒ 统一成仓库相对路径
+        i = f.find("/tests/")
+        if i >= 0:
+            return f[i + 1:]
+        return f
+
     failed = []
     for tr in data.get("testResults", []):
-        f = tr.get("name", "")
+        f = norm(tr.get("name", ""))
         for a in tr.get("assertionResults", []):
             if a.get("status") == "failed":
                 failed.append((f, a.get("fullName", "")))
