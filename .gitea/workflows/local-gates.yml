@@ -297,3 +297,61 @@ jobs:
             BASE="$(bash scripts/control-tower/resolve-ci-base.sh)" || exit $?
             SYNO_CI=1 GITHUB_ACTIONS=true SYNO_DIFF_BASE="$BASE" bash scripts/pre-commit-check.sh || exit $?
           fi
+  # ═══ #840 E-4：全量测试 job（不按 --changed；不计组号；①h/①h-types）═══
+  # 为什么独立成 job（不是 gates 的步）：gates 已有 15 分钟上限，全量 vitest 加进去会顶满；
+  #   独立 job 有自己的 15 分钟预算，`needs: gates` 保证串行（共用同一 CI 工作区，并行会踩工作树）。
+  # 只在 PR ＋ push local-main 有意义 —— 本 workflow 的 on: 已是 push/pull_request/workflow_dispatch；
+  #   注：Gitea host 模式下 job 级 `if:` 表达式不可靠（既有教训），故保守地"全触发都跑"（成本可接受）。
+  full-tests:
+    runs-on: macos
+    timeout-minutes: 15
+    needs: gates
+    steps:
+      - name: 工作区（全量测试 job；复用本机 CI 克隆）
+        run: |
+          set -e
+          WS=/Users/wane/.ci-work/SynovaAgent
+          if [ ! -d "$WS/.git" ]; then mkdir -p "$(dirname "$WS")"; git clone -q http://127.0.0.1:3000/synova-agent/SynovaAgent.git "$WS"; fi
+          git -C "$WS" fetch -q origin || true
+          git -C "$WS" checkout -q -f "${{ github.sha }}" 2>/dev/null || git -C "$WS" checkout -q -f FETCH_HEAD
+          echo "HEAD=$(git -C "$WS" rev-parse --short HEAD)"
+      - name: 依赖（全量测试 job；lock 哈希指纹，与 gates 同口径）
+        run: |
+          set -e
+          WS=/Users/wane/.ci-work/SynovaAgent
+          NODE_BIN=/Users/wane/.nvm/versions/node/v24.19.0/bin
+          HASH_FILE="$WS/.deps-lock-hash"
+          CUR_HASH="$(shasum -a 256 "$WS/package-lock.json" 2>/dev/null | awk '{print $1}')"
+          PREV_HASH="$(cat "$HASH_FILE" 2>/dev/null || true)"
+          if [ ! -d "$WS/node_modules/vitest" ] || [ -z "$CUR_HASH" ] || [ "$CUR_HASH" != "$PREV_HASH" ]; then
+            cd "$WS"; /usr/bin/env PATH="$NODE_BIN:$PATH" npm ci --silent
+            printf '%s\n' "$CUR_HASH" > "$HASH_FILE"
+          fi
+          echo "依赖就绪"
+      - name: ①h 全量测试（**不按 --changed** · 不计组号）
+        run: |
+          cd /Users/wane/.ci-work/SynovaAgent
+          # #840 判据①：新 acceptance 件必须被**全量**执行（--changed 会漏掉未被依赖图命中的新件）。
+          # 排除面由 vitest.config.ts 的 CI 分支统一控（只留 3 条环境依赖）。
+          NODE_BIN=/Users/wane/.nvm/versions/node/v24.19.0/bin
+          PATH="$NODE_BIN:$PATH" CI=true npx vitest run || exit $?
+      - name: ①h-types tests 类型检查（tsconfig.tests.json ＋ 基线 · 只减不增 · 禁手抄）
+        run: |
+          cd /Users/wane/.ci-work/SynovaAgent
+          NODE_BIN=/Users/wane/.nvm/versions/node/v24.19.0/bin
+          PATH="$NODE_BIN:$PATH" npx tsc -p tsconfig.tests.json --pretty false > /tmp/tests-tsc.log 2>&1 || true
+          grep "error TS" /tmp/tests-tsc.log | sort > /tmp/tests-tsc-now.txt || true
+          sort tests/tsconfig.known-errors.txt > /tmp/tests-tsc-base.txt
+          NEW="$(comm -13 /tmp/tests-tsc-base.txt /tmp/tests-tsc-now.txt || true)"
+          BASE_N="$(wc -l < /tmp/tests-tsc-base.txt | tr -d ' ')"
+          NOW_N="$(wc -l < /tmp/tests-tsc-now.txt | tr -d ' ')"
+          if [ -n "$NEW" ]; then
+            echo "❌ 新增 tests 类型错（基线只减不增，见 tests/tsconfig.known-errors.txt）："
+            printf '%s\n' "$NEW" | head -20
+            exit 1
+          fi
+          echo "TYPES-OK known=${BASE_N} now=${NOW_N}"
+          if [ "$NOW_N" -lt "$BASE_N" ]; then
+            echo "ℹ️ 类型错已减少（${BASE_N} → ${NOW_N}）—— 请重测后下调基线（禁手抄）"
+          fi
+          exit 0

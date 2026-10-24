@@ -1,6 +1,13 @@
 /**
  * zero-code-industry.test.ts — pizza-chain 零代码验收测试
  * V4.1 T4: 验证"不修改任何.ts文件即可新增行业"的承诺。
+ *
+ * 🔴 #840 语义修正（例外，PR 正文登记）: 原断言「行业 node-types 被 ontology 加载」与产品**设计**不符 ——
+ *   `src/l4/ontology-loader.ts:88-115` 明确只读 `extensions/ontology/{resource,activity,outcome}` 与
+ *   行业 `edge-types/`，**不读** `extensions/industries/<name>/node-types/`（源码注释：「行业模板使用新实体
+ *   ID 空间，不读旧 node-types/ 目录」）。故本件改为：
+ *     · 主断言 = 行业 **edge-types** 被加载 ＋ `getTypesByTags(['food_service'])` 命中；
+ *     · node-types 用例保留，改为**反向断言**「按设计不加载」（防有人误加回去而不被发现）。
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { existsSync, mkdirSync, writeFileSync, rmSync } from 'fs';
@@ -55,18 +62,29 @@ describe('零代码接入验收 (pizza-chain)', () => {
     expect(pizza!.extends).toBe('general-enterprise');
   });
 
-  it('pizza-chain 特有节点类型被 ontology 加载', async () => {
-    const { loadOntology } = await import('../../src/l4/ontology-loader');
+  it('pizza-chain 行业 edge-types 被 ontology 加载（产品承诺面）', async () => {
+    const { loadOntology, clearOntologyCache } = await import('../../src/l4/ontology-loader');
+    clearOntologyCache();  // 防同进程先前加载的缓存掩盖本用例写入的行业文件
     const { ontology } = loadOntology();
-    const ovenType = ontology.nodeTypes.find(n => n.label === '厨房设备');
-    expect(ovenType).toBeDefined();
-    expect(ovenType!.tags).toContain('food_service');
+    const delivery = ontology.edgeTypes.find(e => e.label === 'DELIVERY_ZONE');
+    expect(delivery).toBeDefined();
+    expect(delivery!.tags).toContain('food_service');
   });
 
-  it('queryByTags 可查询 food_service 标签的类型', async () => {
+  it('按设计：行业 node-types **不被** ontology 加载（反向断言，防误加）', async () => {
+    // 依据 src/l4/ontology-loader.ts:88-115：行业模板只贡献 edge-types；node-types 只来自
+    // extensions/ontology/{resource,activity,outcome}。若哪天有人读回行业 node-types，
+    // 本断言会红 —— 提醒同步验收语义，而不是悄悄改变产品承诺。
+    const { loadOntology } = await import('../../src/l4/ontology-loader');
+    const { ontology } = loadOntology();
+    expect(ontology.nodeTypes.find(n => n.label === '厨房设备')).toBeUndefined();
+  });
+
+  it('queryByTags 可查询 food_service 标签的类型（行业 edge）', async () => {
     const { getTypesByTags } = await import('../../src/l4/ontology-loader');
-    const { nodes } = getTypesByTags(['food_service']);
-    expect(nodes.length).toBeGreaterThanOrEqual(1); // oven node
+    const { edges } = getTypesByTags(['food_service']);
+    expect(edges.length).toBeGreaterThanOrEqual(1);  // delivery edge（tags 含 food_service）
+    expect(edges.map(e => e.label)).toContain('DELIVERY_ZONE');
   });
 
   it('新增行业零 .ts 文件修改', () => {

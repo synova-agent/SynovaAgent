@@ -609,6 +609,58 @@ gates:
     decision: keep
     reason: "#917 拍 1（裁 335）一进一出：进 ①f／退 GitHub architecture job；补「类型只在 GitHub 跑」的真缺口 ⇒ 保留"
     replacement: ""
+  - id: CI-S12
+    kind: step
+    line: 310
+    label: "工作区（全量测试 job；复用本机 CI 克隆）"
+    label_hash: "a1b2c3d4e5f6"
+    occurrences: [310]
+    what: "全量测试 job 工作区同步（同 gates 口径）"
+    blocking: hard
+    g_axis: []
+    checkpoints: []
+    decision: keep
+    reason: "#840 E-4 全量 job 的前置步（克隆/检出）；属 CI 基础设施面 ⇒ 保留"
+    replacement: ""
+  - id: CI-S13
+    kind: step
+    line: 318
+    label: "依赖（全量测试 job；lock 哈希指纹，与 gates 同口径）"
+    label_hash: "b2c3d4e5f6a1"
+    occurrences: [318]
+    what: "全量测试 job 依赖安装（lock 指纹，变更才重装）"
+    blocking: hard
+    g_axis: []
+    checkpoints: []
+    decision: keep
+    reason: "#840 E-4 全量 job 前置（依赖就绪）⇒ 保留"
+    replacement: ""
+  - id: CI-S14
+    kind: step
+    line: 331
+    label: "①h 全量测试（**不按 --changed** · 不计组号）"
+    label_hash: "c3d4e5f6a1b2"
+    occurrences: [331]
+    what: "①h 全量 vitest（不按 --changed；排除面只留环境依赖）"
+    blocking: hard
+    g_axis: ["G3"]
+    checkpoints: []
+    decision: keep
+    reason: "#840 E-4 判据①：新 acceptance 件必须被全量执行 ⇒ 保留"
+    replacement: ""
+  - id: CI-S15
+    kind: step
+    line: 338
+    label: "①h-types tests 类型检查（tsconfig.tests.json ＋ 基线 · 只减不增 · 禁手抄）"
+    label_hash: "d4e5f6a1b2c3"
+    occurrences: [338]
+    what: "①h-types tests 类型检查（tsconfig.tests.json；known-errors 基线只减不增）"
+    blocking: hard
+    g_axis: ["G3"]
+    checkpoints: []
+    decision: keep
+    reason: "#840 E-4 判据②③：tests 类型错新增即红 ⇒ 保留"
+    replacement: ""
 
 # checkers：E5 的 32 个 check-*/verify-*；wired_to 由 C10 机器复算（pre-commit→owner slot id /
 #           workflow→CI-S<n> / 其他脚本→script:<相对路径>）；wired_to=[] ⇒ orphan: true（C10b）
@@ -655,7 +707,7 @@ checkers:
     replacement: ""
   - id: CT-check-canary-drift
     path: "scripts/control-tower/check-canary-drift.sh"
-    wired_to: ["CI-S11", "script:scripts/control-tower/check-gate-integrity.sh"]
+    wired_to: ["CI-S15", "script:scripts/control-tower/check-gate-integrity.sh"]
     orphan: false
     blocking: false
     decision: keep
@@ -695,7 +747,7 @@ checkers:
     replacement: ""
   - id: CT-check-dsh-anchor
     path: "scripts/control-tower/check-dsh-anchor.py"
-    wired_to: ["CI-S11", "PC-B-1ff6e6", "script:scripts/control-tower/daily-cto-board.sh"]
+    wired_to: ["CI-S15", "PC-B-1ff6e6", "script:scripts/control-tower/daily-cto-board.sh"]
     orphan: false
     blocking: false
     decision: keep
@@ -711,7 +763,7 @@ checkers:
     replacement: ""
   - id: CT-check-fixture-requires
     path: "scripts/control-tower/check-fixture-requires.sh"
-    wired_to: ["CI-S11"]
+    wired_to: ["CI-S15"]
     orphan: false
     blocking: false
     decision: keep
@@ -719,7 +771,7 @@ checkers:
     replacement: ""
   - id: CT-check-gate-integrity
     path: "scripts/control-tower/check-gate-integrity.sh"
-    wired_to: ["CI-S11", "script:scripts/commit-msg-check.sh", "script:scripts/control-tower/check-gate-protection.sh", "script:scripts/control-tower/sealed-tests.sh", "script:scripts/control-tower/weekly-recon.sh"]
+    wired_to: ["CI-S15", "script:scripts/commit-msg-check.sh", "script:scripts/control-tower/check-gate-protection.sh", "script:scripts/control-tower/sealed-tests.sh", "script:scripts/control-tower/weekly-recon.sh"]
     orphan: false
     blocking: false
     decision: keep
@@ -839,7 +891,7 @@ checkers:
     replacement: ""
   - id: CT-check-required-contexts
     path: "scripts/control-tower/check-required-contexts.py"
-    wired_to: ["CI-S11", "script:scripts/control-tower/check-package-selfsufficiency.py"]
+    wired_to: ["CI-S15", "script:scripts/control-tower/check-package-selfsufficiency.py"]
     orphan: false
     blocking: false
     decision: keep

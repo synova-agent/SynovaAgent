@@ -26,14 +26,18 @@ export default defineConfig({
     //   *.integration.test.ts → 集成测试 (API + DB, 真实 SQLite)
     //   *.e2e.test.ts → 端到端测试 (完整用户旅程)
     include: ['./tests/**/*.test.ts', './tests/**/*.integration.test.ts'],
+    // #840 E-4（policy：排除面**只许环境依赖**，不得排除验收件）
+    //   留下 = 无法在本机/CI 自足复现的**环境依赖**（3 条）：
+    //     · circular-dependency —— Node 运行时模块解析行为（随 Node 版本变）
+    //     · e2e/** —— 需要真实 LLM API（凭据 + 网络）
+    //     · data-pipeline.*.integration —— 需要 Feishu API
+    //   移出（原 3 条，均非环境依赖）：acceptance/zero-code-industry（已按设计语义修正）、
+    //     routes/ga-evolution、l4/ontology-loader —— 三条本地实测全绿，现纳入常规运行。
     exclude: process.env.CI
       ? [
-          'tests/acceptance/zero-code-industry.test.ts',  // "零 .ts 文件修改" depends on uncommitted state
-          'tests/circular-dependency.test.ts',  // Node 24 import resolution
-          'tests/e2e/**',  // Needs LLM API
+          'tests/circular-dependency.test.ts',  // Node 24 import resolution（运行时行为）
+          'tests/e2e/**',  // Needs LLM API（凭据+网络）
           'tests/data-pipeline.*.integration.test.ts',  // Feishu API
-          'tests/routes/ga-evolution.test.ts',  // Pre-existing GA failure
-          'tests/l4/ontology-loader.test.ts',  // edge-types session, not ours
         ]
       : [],
     coverage: {

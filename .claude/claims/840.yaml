@@ -1,0 +1,21 @@
+# .claude/claims/840.yaml — #840 E-4：全量 job＋收窄排除＋tests 类型检查 · 写集声明
+writeset:
+  - .claude/claims/840.yaml
+  - .gitea/workflows/local-gates.yml
+  - vitest.config.ts
+  - tsconfig.tests.json
+  - tests/tsconfig.known-errors.txt
+  - tests/acceptance/zero-code-industry.test.ts
+  - tests/control-tower/quality-standard.test.sh
+  - tests/control-tower/quality-baseline.test.sh
+  - docs/authority/GATE-INVENTORY.yaml
+  - docs/authority/DOCS-REGISTRY.yaml
+  - gate-exemptions/2026-10-24-p4-840-e4-full-job.md
+  - memory/notes/implemented/2026-10-24-840-e4-full-job.md
+done:
+  - verify: npx vitest run tests/acceptance/zero-code-industry.test.ts
+  - verify: python3 scripts/control-tower/quality-baseline.py --check-inventory docs/authority/GATE-INVENTORY.yaml
+  - verify: bash tests/control-tower/quality-standard.test.sh
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main
+  - verify: npx tsc -p tsconfig.tests.json --pretty false
+note: "#840 E-4（policy 已批）：①h 全量 job（不按 --changed，不计组号）＋ 排除面只留 3 条环境依赖 ＋ tsconfig.tests.json＋实测基线（只减不增）。验收件语义修正（行业 node-types 按设计不加载→反向断言）。"

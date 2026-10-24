@@ -941,3 +941,11 @@ documents:
     status: active
     owner: P7
     note: "#913-PR-1 受保护路径豁免件：DOCS-REGISTRY.yaml 追加两清单登记（追加式，保留他人条目）＋本豁免件自覆盖（裁 331）。"
+
+  # ---- P4 2026-10-24：#840 E-4 全量 job 豁免件 ----
+  - id: DOC-0254
+    type: decision
+    path: gate-exemptions/2026-10-24-p4-840-e4-full-job.md
+    status: active
+    owner: P4
+    note: "#840 E-4 全量测试 job（①h/①h-types）＋排除面收窄＋tests 类型检查基线的受保护路径豁免。"
