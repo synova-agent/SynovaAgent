@@ -360,6 +360,7 @@ jobs:
             echo "❌ 信号量==0：tsc 输出 0 条错，但基线 ${BASE_N} 条 ⇒ tsconfig/工作区异常（禁把\"看不见\"当通过）"; exit 2
           fi
           NEW="$(comm -13 /tmp/tests-tsc-base.txt /tmp/tests-tsc-now.txt || exit 2)"
+          STALE="$(comm -23 /tmp/tests-tsc-base.txt /tmp/tests-tsc-now.txt || exit 2)"
           if [ -n "$NEW" ]; then
             echo "❌ 新增 tests 类型错（基线只减不增，见 tests/tsconfig.known-errors.txt）："
             printf '%s\n' "$NEW" | head -20
@@ -367,6 +368,7 @@ jobs:
           fi
           echo "TYPES-OK known=${BASE_N} now=${NOW_N}"
           if [ "$NOW_N" -lt "$BASE_N" ]; then
-            echo "ℹ️ 类型错已减少（${BASE_N} → ${NOW_N}）—— 请重测后下调基线（禁手抄）"
+            echo "ℹ️ 类型错已减少（${BASE_N} → ${NOW_N}）—— 请按下方清单删行下调基线（禁手抄）"
+            printf '%s\n' "$STALE" | head -30
           fi
           exit 0
