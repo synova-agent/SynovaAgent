@@ -1,0 +1,92 @@
+{
+ "schema": "syno-review-receipt/v1",
+ "pr": 958,
+ "base": "local-main",
+ "head": "a83abac1fce32ebe0716c116593c7575bad16415",
+ "author": "win-push",
+ "reviewer": "independent-review-958（零上下文独立会话，deliverable-acceptance 五步）",
+ "independence": "fresh-session",
+ "verdict": "PASS",
+ "tool": "bash scripts/control-tower/check-merge-conditions.sh --pr 958 --diff-fingerprint（deliverable-acceptance v1：.synova/skills/deliverable-acceptance/SKILL.md @ a83abac1f ＋ ctrl-tower-change 模式 1-6）",
+ "fingerprint_cmd": "bash scripts/control-tower/check-merge-conditions.sh --pr 958 --diff-fingerprint",
+ "patch_fingerprint": "sha256:a5c06630017db70db4184890c9bb3dbc0904899d7e2c6a1c734932316c851329",
+ "checks": [
+  {
+   "id": "1a 两态-正向（两 PR 都纯追加）",
+   "cmd": "/tmp/acc958-scen/harness.sh pure2（两个分支各对 DOCS-REGISTRY.yaml 纯追加；夹具注入，零网络）",
+   "result": "pass",
+   "evidence": "② 零写集重叠 ... ok (比对 1 对，0 处文件重叠，1 处共享追加不计)；MERGE-COND: can ①=ok ②=ok(shared:1) ③=ok(attested) ④=ok；末行 CAN-自合并；exit 0。三 PR 同纯追加 ⇒ ②=ok(shared:2)（JSON conditions.overlap_shared=2）"
+  },
+  {
+   "id": "1b 两态-删除（一侧删行）",
+   "cmd": "harness.sh bdelete（A 纯追加 / B 把 x1,x2 改为 x1）",
+   "result": "pass",
+   "evidence": "OVL_FILE: docs/authority/DOCS-REGISTRY.yaml → PR#100,#101（登记表非纯追加：含删除/改写 ⇒ 判硬重叠）；②=no；末行 NO: ② 零写集重叠；exit 1"
+  },
+  {
+   "id": "1c 两态-改写（同字数替换）",
+   "cmd": "harness.sh brewite（A 纯追加 / B 把 x2 换成同字节 y2）；另 arewrite（A 侧改写 / B 纯追加）",
+   "result": "pass",
+   "evidence": "两向均：OVL_FILE ...（登记表非纯追加）；②=no；exit 1 —— 说明 is_pure_append 的两处调用（$mb..$head 与 $pmb..$psha）都在承重，不是只看一侧"
+  },
+  {
+   "id": "2 白名单范围=3 且白名单外不受影响",
+   "cmd": "grep -A3 SHARED_APPEND_PATHS scripts/control-tower/check-merge-conditions.sh；harness.sh wiring2/gate2/quality/nonwhite",
+   "result": "pass",
+   "evidence": "白名单恰 3 行：docs/authority/DOCS-REGISTRY.yaml / WIRING-REGISTRY.yaml / GATE-INVENTORY.yaml。wiring2、gate2 两纯追加 ⇒ ②=ok(shared:1)；真实非白名单 docs/authority/quality-delta-whitelist.yaml 与 docs/authority/OTHER.yaml 纯追加 ⇒ 仍 OVL_FILE + ②=no（exit 1）"
+  },
+  {
+   "id": "3 只动 ② 判定段，①③④ 未变",
+   "cmd": "git diff 43f24f5c9..a83abac1f -- scripts/control-tower/check-merge-conditions.sh | grep '^@@'；bash scripts/control-tower/check-merge-conditions.sh --selfcheck",
+   "result": "pass",
+   "evidence": "工具件仅 3 个 hunk：@@ -615 +615,5（注释＋白名单常量）、@@ -626,0 +631,10（新增 is_pure_append）、@@ -658,2 +672,7（cond2 判定）；cond1_ci 起始行 base=head=569，cond3/cond4 仅因插入而位移；--selfcheck 末行 SELFCHECK-OK: 13/13"
+  },
+  {
+   "id": "4 测试真假（14/14 且改坏必红）",
+   "cmd": "bash tests/control-tower/check-merge-conditions.test.sh；SYNO_MERGE_COND_TOOL=/tmp/tool-0.sh（is_pure_append 恒真）/ /tmp/tool-1.sh（恒假）/ /tmp/tool-base.sh（改前件）各跑一遍",
+   "result": "pass",
+   "evidence": "原版：结果: 14 通过, 0 失败（exit 0）。恒真 ⇒ ❌ K — inner_exit=0（期望 1）；恒假 ⇒ ❌ J 且 ❌ [边界] --selfcheck exit=2，末行 SELFCHECK-FAIL: J；改前件 ⇒ ❌ K（说明新用例真编码新行为）。三态承重均实测"
+  },
+  {
+   "id": "5 边界 fail-closed",
+   "cmd": "harness.sh binary（A 把白名单文件改成含 NUL 的二进制）/ puredelete（A git rm WIRING）/ chmodonly（A 只改 mode）/ renameaway（A 把 DOCS 改名走）",
+   "result": "pass",
+   "evidence": "二进制 ⇒ OVL_FILE ...（登记表非纯追加）②=no；纯删除（additions=0）⇒ ②=no；仅 chmod（numstat 0 0）⇒ ②=no；三者 exit 1。边界缺口 1 处见 findings（重命名走掉 ⇒ ②=ok，改前件同行为，非本 PR 引入）"
+  },
+  {
+   "id": "6 写集/豁免/登记/CI",
+   "cmd": "git diff --name-status 43f24f5c9..a83abac1f；grep -E '^(src/|scripts/audit/)' | wc -l；bash scripts/control-tower/check-gate-protection.sh --changed-base 43f24f5c9；Gitea /commits/a83abac1f/status",
+   "result": "pass",
+   "evidence": "写集 6 件且逐件等于 .claude/claims/957.yaml 的 writeset；src/** 与 scripts/audit/** 各 0 件；①d 门禁 结果: 10 通过, 0 失败（受保护路径变更 4 条全有合规豁免）；DOCS-REGISTRY 追加 DOC-0270（base 无、唯一、path 与豁免件一致）；CI state=success total_count=2（push/pull_request 双 success，pending=0，as_of a83abac1f）"
+  }
+ ],
+ "findings": [
+  {
+   "severity": "note",
+   "where": "memory/notes/proposed/2026-10-24-957-overlap-append.md:14",
+   "detail": "自述「二进制/重命名仍按原口径判硬重叠」前半真、后半不真：二进制确实 ②=no（实测），但把白名单文件改名走 ⇒ git diff --name-only 折叠为改名后路径 ⇒ 与对方追加的旧路径不交 ⇒ ②=ok（CAN-自合并）。改前件（43f24f5c9 版）同行为 ⇒ 既有路径级口径，**非本 PR 引入**；建议把这句改成「重命名折叠为改名后路径、不进本判定（既有路径级口径）」或另开卡补 rename 探测"
+  },
+  {
+   "severity": "note",
+   "where": "tests/control-tower/check-merge-conditions.test.sh:36,38",
+   "detail": "头注释仍写「末行恒为 `结果: 13 通过, 0 失败`」与「末行 N 必须 = --selfcheck 的 13 个判定点」，但实装断言是 -ne 14（第 39/66 行已改、36/38 行未同步）。仅注释陈旧，不影响判定"
+  },
+  {
+   "severity": "note",
+   "where": "scripts/control-tower/check-merge-conditions.sh:631-639",
+   "detail": "边界 fail-open（今日不可达）：白名单文件若在 merge base 不存在，两侧各自「新建」该文件也会被判纯追加（additions>0 ∧ deletions==0）⇒ ②=ok(shared:1)。实测 bothcreate 夹具确认；当前三件均在 local-main 存在，故不可达。一行守卫可闭合：要求 `git cat-file -e \"$base:$f\"`"
+  },
+  {
+   "severity": "note",
+   "where": "tests/control-tower/check-merge-conditions.test.sh:473",
+   "detail": "新用例 K 只覆盖「对方侧删一行」；「同字节改写」与「本 PR 侧非纯追加（第一处 is_pure_append 调用）」无用例（我独立造夹具验过两者的红态成立）。建议补 1-2 条，防日后重构把 A 侧支路拆坏而套件仍绿"
+  },
+  {
+   "severity": "note",
+   "where": "scripts/control-tower/check-merge-conditions.sh:633-635",
+   "detail": "is_pure_append 在 git diff 取不到 numstat 时返回 1（判硬重叠红）而非 exit 2（看不见）；方向是 fail-closed（不会误放行），但与「看不见 ⇒ 2」的三态口径不严格一致，可记入已知限制"
+  }
+ ],
+ "summary": "② 重叠判定改「登记表纯追加」两态：两态与 3 条白名单均实测成立；无放宽其它条件；无放宽过头（除一条既有 rename 缺口与一条今日不可达的 both-create 边界），建议修文案与补 1-2 条用例",
+ "issued_at": "2026-10-24T21:28:43+08:00"
+}

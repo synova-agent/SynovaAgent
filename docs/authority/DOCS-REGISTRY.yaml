@@ -1007,3 +1007,11 @@ documents:
     status: active
     owner: CTO
     note: "#953 自动化一期（ledger-sync／auto-merge）的受保护路径豁免；裁 367。"
+
+  # ---- CTO 2026-10-24：#957 效率 1/4 豁免件（裁 376）----
+  - id: DOC-0270
+    type: decision
+    path: gate-exemptions/2026-10-24-cto-957-overlap-append.md
+    status: active
+    owner: CTO
+    note: "#957 ② 重叠判定改「登记表纯追加」两态的受保护路径豁免；裁 376。"
