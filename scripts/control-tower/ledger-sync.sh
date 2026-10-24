@@ -7,8 +7,9 @@
 #          可选: SYNO_LEDGER_ISSUE（默认 918）
 # @output  dry-run: 打印待追加的 §G 行；--apply: 插入 #918 §G 表末并更新 state
 # @exit    0 = 正常（含"无新增"）；1 = 实际失败（API 写失败）；2 = 自身失败（无 token/无网/非 git 仓）
-# @degraded 无 token ⇒ `E_TOKEN`；环境不可用 ⇒ `E_ENV`；网络/API 不可达 ⇒ `E_NET`；API 写入被拒 ⇒ `E_API`
-#            state 起点非法 ⇒ `E_STATE`（exit 2，拒绝把失败当"无新增"）
+# @degraded 无 token ⇒ `E_TOKEN`；环境不可用 ⇒ `E_ENV`；git 不可用 ⇒ `E_GIT`；用法错 ⇒ `E_USAGE`；
+#           网络/API 不可达 ⇒ `E_NET`；API 写入被拒 ⇒ `E_API`；state 起点非法 ⇒ `E_STATE`；
+#           表尾标记缺失 ⇒ `E_MARKER`；重复行（幂等跳过）⇒ `E_DUP`（exit 0）
 # 已知限制: 行内"验收要点"无法自动生成，统一写"自动同步"；state 文件不跨机（路径见 SYNO_LEDGER_SYNC_STATE）
 # ═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
