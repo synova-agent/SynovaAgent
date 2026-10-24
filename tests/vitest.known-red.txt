@@ -13,6 +13,6 @@
 # max_entries: 4
 #
 tests/agent/context-compaction.test.ts::* | 2 用例红：threshold 未超不触发返回 null；summarizer 抛错路径 end(ok:false)+锁释放 | P4 | 2026-12-31 | 裁 352
-tests/expert-quality/layer2-judge.test.ts::* | 19 用例红：诊断+评分套件（非环境依赖；若确证模型依赖另 PR 迁移） | P4 | 2026-12-31 | 裁 352
+tests/expert-quality/layer2-judge.test.ts::* | 19 用例红：CI 无模型凭据 ⇒ API 404；裁 352 暂按存量红，另 PR 迁移（#948） | P4 | 2026-12-31 | 裁 352
 tests/golden-scenarios/gss-common.test.ts::* | inject 归一 targetNodeType 实测 'outcome/financial' vs 期望 'Financial'（#913 已登记） | P1 | 2026-12-31 | 裁 352
 tests/l3/graphbridge-wiring.test.ts::* | 失败模块不应建节点：afterRun 后 Person 节点数期望 1 实测 0（#913 已登记） | P2 | 2026-12-31 | 裁 352

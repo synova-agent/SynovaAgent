@@ -347,12 +347,19 @@ jobs:
           cd /Users/wane/.ci-work/SynovaAgent
           NODE_BIN=/Users/wane/.nvm/versions/node/v24.19.0/bin
           PATH="$NODE_BIN:$PATH" npx tsc -p tsconfig.tests.json --pretty false > /tmp/tests-tsc.log 2>&1 || true
-          # 工作区绝对前缀归一（同一份代码在本机=相对、在 CI=绝对；不归一则基线不可比）
-          grep "error TS" /tmp/tests-tsc.log | sed -E "s#$PWD/##g" | sort > /tmp/tests-tsc-now.txt || true
-          sed -E "s#$PWD/##g" tests/tsconfig.known-errors.txt | sort > /tmp/tests-tsc-base.txt
-          NEW="$(comm -13 /tmp/tests-tsc-base.txt /tmp/tests-tsc-now.txt || true)"
+          # B2（裁 352 复核）: 信号量检查 —— tsc 日志必须非空；NOW==0 且 BASE>0 ⇒ 检查没跑（exit 2）
+          if [ ! -s /tmp/tests-tsc.log ]; then
+            echo "❌ tsc 日志为空（检查自身失败 E_TSC_NOLOG；禁当"无错"）"; exit 2
+          fi
+          NORM='s#/Users/[^"]*?/(src|tests|packages|scripts|node_modules)/#\1/#g'
+          grep "error TS" /tmp/tests-tsc.log | sed -E "$NORM" | sort > /tmp/tests-tsc-now.txt || exit 2
+          sed -E "$NORM" tests/tsconfig.known-errors.txt | sort > /tmp/tests-tsc-base.txt
           BASE_N="$(wc -l < /tmp/tests-tsc-base.txt | tr -d ' ')"
           NOW_N="$(wc -l < /tmp/tests-tsc-now.txt | tr -d ' ')"
+          if [ "$NOW_N" -eq 0 ] && [ "$BASE_N" -gt 0 ]; then
+            echo "❌ 信号量==0：tsc 输出 0 条错，但基线 ${BASE_N} 条 ⇒ tsconfig/工作区异常（禁把\"看不见\"当通过）"; exit 2
+          fi
+          NEW="$(comm -13 /tmp/tests-tsc-base.txt /tmp/tests-tsc-now.txt || exit 2)"
           if [ -n "$NEW" ]; then
             echo "❌ 新增 tests 类型错（基线只减不增，见 tests/tsconfig.known-errors.txt）："
             printf '%s\n' "$NEW" | head -20

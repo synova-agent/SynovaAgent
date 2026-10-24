@@ -76,8 +76,12 @@ def main():
     if len(entries) > max_n:
         print("❌ 清单条目 %d > max_entries %d（只减不增）" % (len(entries), max_n))
         return 1
-    with open(REGISTRY, encoding="utf-8") as fh:
-        ytxt = fh.read()
+    try:
+        with open(REGISTRY, encoding="utf-8") as fh:
+            ytxt = fh.read()
+    except OSError as exc:
+        print("❌ 登记表不可读（E_REGISTRY）: " + REGISTRY + " — " + str(exc))
+        return 2
     ytests = [t.strip().strip('"') for t in re.findall(r"^\s+-\s+test:\s*\"?([^\"\n]+)\"?", ytxt, re.M)]
     files_in_manifest = set()
     for e in entries:
@@ -86,9 +90,20 @@ def main():
     if missing:
         print("❌ known-red.yaml 有而新清单缺: " + str(missing))
         return 1
+    # B1（裁 352 复核）: **文件级失败**（collection error 等：testResults[].status=="failed"
+    #   但 assertionResults 为空/无 failed）也必须被清单覆盖；否则即"未列出的失败"。
+    file_failed = [norm(tr.get("name", "")) for tr in data.get("testResults", [])
+                   if tr.get("status") == "failed"]
+    uncovered_files = [f for f in file_failed
+                       if not any(covers(e, f, "") for e in entries)]
     new_fail = [(f, n) for f, n in failed if not any(covers(e, f, n) for e in entries)]
-    stale = [e for e in entries if not any(covers(e, f, n) for f, n in failed)]
-    print("全量失败 %d 条 / 清单 %d 条" % (len(failed), len(entries)))
+    stale = [e for e in entries if not any(covers(e, f, n) for f, n in failed)
+             and not any(covers(e, f, "") for f in file_failed)]
+    print("全量失败 %d 条 / 文件级失败 %d 个 / 清单 %d 条" % (len(failed), len(file_failed), len(entries)))
+    if uncovered_files:
+        print("❌ 未覆盖的文件级失败（新增红）：")
+        for f in uncovered_files[:20]:
+            print("   " + f + "::<file-level failed>")
     if new_fail:
         print("❌ 未列出的失败（新增红）：")
         for f, n in new_fail[:20]:
@@ -97,9 +112,13 @@ def main():
         print("❌ 列了但已绿（修复后必须删行）：")
         for e in stale:
             print("   " + e)
-    if new_fail or stale:
+    if new_fail or stale or uncovered_files:
         return 1
-    print("KNOWN-RED-OK entries=%d failed=%d" % (len(entries), len(failed)))
+    # B1 兜底: 根级 success=false 但本器没归因到任何 new/stale/文件级 ⇒ 说明有"看不见的失败"
+    if data.get("success") is False:
+        print("❌ vitest 根 success=false，但未归因到任何未列失败/已绿条目（检查器盲区，禁当通过）")
+        return 1
+    print("KNOWN-RED-OK entries=%d failed=%d files_failed=%d" % (len(entries), len(failed), len(file_failed)))
     return 0
 
 

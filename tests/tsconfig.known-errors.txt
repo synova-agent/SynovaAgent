@@ -79,13 +79,10 @@ tests/cycles/overflow-graph-bridge.test.ts(41,13): error TS2739: Type '{ cycleId
 tests/cycles/overflow-graph-bridge.test.ts(56,13): error TS2739: Type '{ cycleId: string; month: string; overflowValue: number; unit: string; trend: string; trendDelta: number; maturity: "active"; isIndustryBaseline: false; momChange: number; momChangePercent: number; ... 4 more ...; degraded: false; }' is missing the following properties from type 'OverflowSnapshot': valveLag, dataWindowMonths, valveLagExceedsWindow
 tests/cycles/overflow-graph-bridge.test.ts(80,13): error TS2739: Type '{ cycleId: string; month: string; overflowValue: number; unit: string; trend: string; trendDelta: number; maturity: "active"; isIndustryBaseline: false; momChange: number; momChangePercent: number; ... 4 more ...; degraded: false; }' is missing the following properties from type 'OverflowSnapshot': valveLag, dataWindowMonths, valveLagExceedsWindow
 tests/cycles/valve-mapping.test.ts(18,15): error TS2459: Module '"../../src/cycles/overflow-compute"' declares 'CycleConfig' locally, but it is not exported.
-tests/deploy/bootstrap.test.ts(178,17): error TS2339: Property 'BootstrapContext' does not exist on type 'typeof import("/Users/wane/SynovaAgent/.synova-wt-840/src/deploy/bootstrap")'.
 tests/deploy/bootstrap.test.ts(178,17): error TS2339: Property 'BootstrapContext' does not exist on type 'typeof import("src/deploy/bootstrap")'.
 tests/deploy/bootstrap.test.ts(179,29): error TS2749: 'BootstrapContext' refers to a value, but is being used as a type here. Did you mean 'typeof BootstrapContext'?
-tests/deploy/bootstrap.test.ts(225,17): error TS2339: Property 'BootstrapContext' does not exist on type 'typeof import("/Users/wane/SynovaAgent/.synova-wt-840/src/deploy/bootstrap")'.
 tests/deploy/bootstrap.test.ts(225,17): error TS2339: Property 'BootstrapContext' does not exist on type 'typeof import("src/deploy/bootstrap")'.
 tests/deploy/bootstrap.test.ts(226,29): error TS2749: 'BootstrapContext' refers to a value, but is being used as a type here. Did you mean 'typeof BootstrapContext'?
-tests/deploy/bootstrap.test.ts(273,24): error TS2339: Property 'BootstrapContext' does not exist on type 'typeof import("/Users/wane/SynovaAgent/.synova-wt-840/src/deploy/bootstrap")'.
 tests/deploy/bootstrap.test.ts(273,24): error TS2339: Property 'BootstrapContext' does not exist on type 'typeof import("src/deploy/bootstrap")'.
 tests/deploy/bootstrap.test.ts(281,28): error TS2749: 'BootstrapContext' refers to a value, but is being used as a type here. Did you mean 'typeof BootstrapContext'?
 tests/deploy/db-path-resolve.test.ts(110,43): error TS2769: No overload matches this call.
@@ -142,9 +139,7 @@ tests/ingest/knowledge-ingest-bridge.test.ts(75,31): error TS2345: Argument of t
 tests/integration/goal-lifecycle.integration.test.ts(133,32): error TS2353: Object literal may only specify known properties, and 'triggerType' does not exist in type 'LightweightReDiagnosisInput'.
 tests/integration/goal-lifecycle.integration.test.ts(141,19): error TS2339: Property 'confidence' does not exist on type 'GoalAdjustmentProposal'.
 tests/integration/goal-lifecycle.integration.test.ts(141,54): error TS2339: Property 'confidence' does not exist on type 'GoalAdjustmentProposal'.
-tests/integration/goal-lifecycle.integration.test.ts(167,25): error TS2339: Property 'classifyDeviation' does not exist on type 'typeof import("/Users/wane/SynovaAgent/.synova-wt-840/src/growth/knowledge-feedback")'.
 tests/integration/goal-lifecycle.integration.test.ts(167,25): error TS2339: Property 'classifyDeviation' does not exist on type 'typeof import("src/growth/knowledge-feedback")'.
-tests/integration/goal-lifecycle.integration.test.ts(169,29): error TS2339: Property 'classifyDeviation' does not exist on type 'typeof import("/Users/wane/SynovaAgent/.synova-wt-840/src/growth/knowledge-feedback")'.
 tests/integration/goal-lifecycle.integration.test.ts(169,29): error TS2339: Property 'classifyDeviation' does not exist on type 'typeof import("src/growth/knowledge-feedback")'.
 tests/integration/knowledge-feedback.integration.test.ts(24,3): error TS2322: Type '{ goalId: string; orgId: string; proposalId?: string | undefined; diagnosisId?: string | undefined; decisionRecordId?: string; title: string; description: string; priority: "P0" | "P1" | "P2"; ... 16 more ...; props?: Record<string, unknown>; }' is not assignable to type 'Goal'.
 tests/integration/wiring-integration.test.ts(222,7): error TS2345: Argument of type '{ goalId: string; orgId: string; title: string; priority: "P1"; status: "draft"; ownerDeptId: string; createdBy: { role: string; }; createdAt: string; deadline: string; lastModifiedAt: string; plannedDurationDays: number; ... 4 more ...; reDiagnosisCount: number; }' is not assignable to parameter of type 'Goal'.
@@ -354,7 +349,6 @@ tests/services/runtime-global-handlers.test.ts(147,18): error TS2769: No overloa
 tests/services/runtime-global-handlers.test.ts(154,18): error TS2769: No overload matches this call.
 tests/services/runtime-global-handlers.test.ts(161,18): error TS2769: No overload matches this call.
 tests/stream-tool-loop.test.ts(127,13): error TS2749: 'AgentConversation' refers to a value, but is being used as a type here. Did you mean 'typeof AgentConversation'?
-tests/tui-components.test.ts(50,30): error TS7016: Could not find a declaration file for module 'neo-blessed'. '/Users/wane/SynovaAgent/node_modules/neo-blessed/lib/blessed.js' implicitly has an 'any' type.
 tests/tui-components.test.ts(50,30): error TS7016: Could not find a declaration file for module 'neo-blessed'. 'node_modules/neo-blessed/lib/blessed.js' implicitly has an 'any' type.
 tests/tui-v2/chat-degradation.test.ts(213,16): error TS5097: An import path can only end with a '.tsx' extension when 'allowImportingTsExtensions' is enabled.
 tests/tui-v2/harness/entry-with-fault.ts(52,14): error TS5097: An import path can only end with a '.tsx' extension when 'allowImportingTsExtensions' is enabled.
