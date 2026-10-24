@@ -66,6 +66,8 @@ while True:
         if p.get("draft") or p.get("merged_at"): continue
         out.append("%d\t%s\t%s" % (p["number"], p["head"]["sha"], p["base"]["ref"]))
     page+=1
+    if page > 20:
+        print("E_NET: 列表分页超过 20 页仍未结束（服务端异常）", file=sys.stderr); sys.exit(2)
 print("\n".join(out))
 PY
 )"; then
@@ -104,6 +106,8 @@ while True:
         pf = f.get("previous_filename")
         if pf: out.append(pf)
     page += 1
+    if page > 20:
+        print("E_NET: 文件分页超过 20 页仍未结束（服务端异常）", file=sys.stderr); sys.exit(2)
 print("\n".join(out))
 PY
 )"; then
