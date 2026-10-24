@@ -1,0 +1,20 @@
+# .claude/claims/953.yaml — #953 自动化工作流一期 · 写集声明
+# 写集 = 9 件（2 脚本 ＋ 2 配对测试 ＋ 豁免件 ＋ DOC 登记 ＋ WIRING 登记 ＋ Note ＋ 本 claim）
+# 受保护路径（.gitea/protected-files.txt）：scripts/control-tower/**、tests/control-tower/**、
+#   gate-exemptions/**、docs/authority/DOCS-REGISTRY.yaml ⇒ 本 PR 内提交豁免件（裁定号 裁 367）
+writeset:
+  - .claude/claims/953.yaml
+  - scripts/control-tower/ledger-sync.sh
+  - scripts/control-tower/auto-merge.sh
+  - tests/control-tower/ledger-sync.test.sh
+  - tests/control-tower/auto-merge.test.sh
+  - gate-exemptions/2026-10-24-cto-953-automation.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - docs/authority/WIRING-REGISTRY.yaml
+  - memory/notes/proposed/2026-10-24-953-automation.md
+done:
+  - verify: bash tests/control-tower/ledger-sync.test.sh
+  - verify: bash tests/control-tower/auto-merge.test.sh
+  - verify: bash scripts/control-tower/ledger-sync.sh
+  - verify: bash scripts/control-tower/auto-merge.sh
+note: "#953 自动化一期（裁 367）：ledger-sync 自动写 §G；auto-merge 仅对「四条件 can ＋非受保护路径」合并，默认 dry-run。9 件；零 src/**、零 .gitea/**、零 scripts/audit/**。"
