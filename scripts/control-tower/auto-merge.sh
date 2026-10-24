@@ -11,6 +11,12 @@
 # 已知限制: 只判"路径是否受保护"与四条件；**不做语义裁决**（A 类必须人批，见裁 354）
 # ═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
+# D520/V5 平台敏感命令规避（PLATFORM-CHECKLIST.md #1）：**禁裸 python3**
+PYBIN=""
+for _c in python3 python py; do  # PYBIN 三级探测（含 PYBIN 标记）
+  command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1 && PYBIN="$_c" && break
+done
+[ -z "$PYBIN" ] && { echo "E_ENV: python 不可用（python3/python/py 均不可用）" >&2; exit 2; }
 
 APPLY=0
 while [ $# -gt 0 ]; do
@@ -26,6 +32,7 @@ ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "E_GIT: 不在 git
 PROTECTED="$ROOT/.gitea/protected-files.txt"
 [ -f "$PROTECTED" ] || { echo "E_GIT: 缺 $PROTECTED" >&2; exit 2; }
 TOKEN="${GITEA_TOKEN:-$(cat "$HOME/gitea/.win-push-token" 2>/dev/null || true)}"
+API="${SYNO_GITEA_BASE:-http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent}"
 [ -n "$TOKEN" ] || { echo "E_TOKEN: 无 GITEA_TOKEN（或 ~/gitea/.win-push-token）" >&2; exit 2; }
 
 is_protected() {
@@ -40,10 +47,10 @@ is_protected() {
   return 1
 }
 
-if ! OPEN_PRS="$(GITEA_TOKEN="$TOKEN" python3 - <<'PY'
+if ! OPEN_PRS="$(GITEA_TOKEN="$TOKEN" SYNO_GITEA_BASE="$API" "$PYBIN" - <<'PY'
 
 import json, os, sys, urllib.request, urllib.error
-tok=os.environ["GITEA_TOKEN"]; base="http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent"
+tok=os.environ["GITEA_TOKEN"]; base=os.environ["SYNO_GITEA_BASE"]
 def api(u):
     r=urllib.request.Request(u,headers={"Authorization":"token "+tok})
     try:
@@ -74,7 +81,7 @@ while IFS=$'\t' read -r N HEAD BASE; do
     *"MERGE-COND: can"*) : ;;
     *) echo "SKIP $N: 四条件未满足 -- ${COND}"; continue ;;
   esac
-  if ! FILES="$(GITEA_TOKEN="$TOKEN" PR="$N" python3 - <<'PY'
+  if ! FILES="$(GITEA_TOKEN="$TOKEN" PR="$N" SYNO_GITEA_BASE="$API" "$PYBIN" - <<'PY'
 
 import json, os, sys, urllib.request
 tok=os.environ["GITEA_TOKEN"]; pr=os.environ["PR"]
@@ -87,7 +94,10 @@ while True:
     except Exception as e:
         print("E_NET: %s" % e, file=sys.stderr); sys.exit(2)
     if not d: break
-    out += [f.get("filename","") for f in d]
+    for f in d:
+        out.append(f.get("filename",""))
+        pf = f.get("previous_filename")
+        if pf: out.append(pf)
     if len(d) < 100: break
     page += 1
 print("\n".join(out))
@@ -107,7 +117,7 @@ PY
     continue
   fi
   if [ "$APPLY" = "1" ]; then
-    if GITEA_TOKEN="$TOKEN" PR="$N" python3 - <<'PY'
+    if GITEA_TOKEN="$TOKEN" PR="$N" SYNO_GITEA_BASE="$API" "$PYBIN" - <<'PY'
 import json, os, sys, urllib.request, urllib.error
 tok=os.environ["GITEA_TOKEN"]; pr=os.environ["PR"]
 u="http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/pulls/%s/merge" % pr

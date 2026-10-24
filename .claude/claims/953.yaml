@@ -18,4 +18,4 @@ done:
   - verify: bash tests/control-tower/auto-merge.test.sh
   - verify: bash scripts/control-tower/ledger-sync.sh
   - verify: bash scripts/control-tower/auto-merge.sh
-note: "#953 自动化一期（裁 367）：ledger-sync 自动写 §G；auto-merge 仅对「四条件 can ＋非受保护路径」合并，默认 dry-run。9 件；零 src/**、零 .gitea/**、零 scripts/audit/**。"
+note: "#953 自动化一期（裁 367）：ledger-sync 自动写 §G；auto-merge 仅对「四条件 can ＋非受保护路径」合并，默认 dry-run。10 件；零 src/**、零 .gitea/**、零 scripts/audit/**。"

@@ -14,6 +14,8 @@ echo "── 3. 受保护路径判定（源码级：受保护清单含 scripts/c
 grep -q "scripts/control-tower/\*\*" "$ROOT/.gitea/protected-files.txt" && ok "清单含 scripts/control-tower/**" || no "清单缺该模式"
 echo "── 4. API 不可用 ⇒ exit 2（B2 回归，不假绿）──"
 GITEA_TOKEN=invalid bash "$S" >/dev/null 2>&1; chk 2 "$?" "invalid token ⇒ exit 2"
+echo "── 4b. API 不可达（SYNO_GITEA_BASE 接缝）⇒ exit 2（B1/B2 回归网）──"
+GITEA_TOKEN=fake SYNO_GITEA_BASE=http://127.0.0.1:9/nope bash "$S" >/dev/null 2>&1; chk 2 "$?" "不可达 API ⇒ exit 2"
 echo "── 5. --help ⇒ exit 0 ──"
 GITEA_TOKEN=fake bash "$S" --help >/dev/null 2>&1; chk 0 "$?" "--help exit 0"
 echo; echo "── 汇总: $PASS 通过 / $FAIL 失败 ──"; [ "$FAIL" = "0" ] || exit 1

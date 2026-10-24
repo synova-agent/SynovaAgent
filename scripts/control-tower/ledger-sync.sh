@@ -7,17 +7,25 @@
 #          可选: SYNO_LEDGER_ISSUE（默认 918）
 # @output  dry-run: 打印待追加的 §G 行；--apply: 插入 #918 §G 表末并更新 state
 # @exit    0 = 正常（含"无新增"）；1 = 实际失败（API 写失败）；2 = 自身失败（无 token/无网/非 git 仓）
-# @degraded 无 token ⇒ stderr `E_TOKEN` + exit 2；网络/API 不可用 ⇒ `E_NET` + exit 2
+# @degraded 无 token ⇒ `E_TOKEN`；网络/API 不可达 ⇒ `E_NET`；API 写入被拒 ⇒ `E_API`（均落 stderr，2/1）
+#            state 起点非法 ⇒ `E_STATE`（exit 2，拒绝把失败当"无新增"）
 # 已知限制: 行内"验收要点"无法自动生成，统一写"自动同步"；state 文件不跨机（路径见 SYNO_LEDGER_SYNC_STATE）
 # ═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
+# D520/V5 平台敏感命令规避（PLATFORM-CHECKLIST.md #1）：**禁裸 python3**
+PYBIN=""
+for _c in python3 python py; do  # PYBIN 三级探测（含 PYBIN 标记）
+  command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1 && PYBIN="$_c" && break
+done
+[ -z "$PYBIN" ] && { echo "E_ENV: python 不可用（python3/python/py 均不可用）" >&2; exit 2; }
 
 APPLY=0; LIMIT=20
 while [ $# -gt 0 ]; do
   case "$1" in
     --apply) APPLY=1 ;;
     --limit) LIMIT="${2:-20}"; shift
-      case "$LIMIT" in ''|*[!0-9]*) echo "E_USAGE: --limit 须为非负整数（拿到 ${LIMIT}）" >&2; exit 2 ;; esac ;;
+      case "$LIMIT" in ''|*[!0-9]*) echo "E_USAGE: --limit 须为正整数（拿到 ${LIMIT}）" >&2; exit 2 ;; esac
+      [ "$LIMIT" -ge 1 ] || { echo "E_USAGE: --limit 须 ≥1" >&2; exit 2; } ;;
     --help|-h) echo "用法: $0 [--apply] [--limit N]"; exit 0 ;;
     *) echo "用法: $0 [--apply] [--limit N]" >&2; exit 2 ;;
   esac
@@ -36,8 +44,12 @@ if [ -z "$LAST" ]; then
 fi
 [ -n "$LAST" ] || { echo "E_GIT: 无法确定同步起点（无 state 且无 merge 提交）" >&2; exit 2; }
 
+git rev-parse -q --verify "${LAST}^{commit}" >/dev/null 2>&1 || {
+  echo "E_STATE: state 起点不是有效提交（${LAST:0:12}）⇒ 拒绝把失败当\"无新增\"（删 $STATE 可重建）" >&2
+  exit 2
+}
 GITLOG="$(git log --merges --format='%H%x09%s' "$LAST"..HEAD | head -n "$LIMIT")"
-ROWS="$(printf '%s\n' "$GITLOG" | python3 -c '
+ROWS="$(printf '%s\n' "$GITLOG" | "$PYBIN" -c '
 import sys, re
 for line in sys.stdin:
     line = line.rstrip("\n")
@@ -66,7 +78,7 @@ if [ "${SYNO_LEDGER_SYNC_MOCK_WRITE:-}" = "1" ]; then
   echo "LEDGER-SYNC: MOCK_WRITE（测试接缝：跳过 API，仅写 state）"
   rc=0
 else
-GITEA_TOKEN="$TOKEN" ISSUE="$ISSUE" ROWS="$ROWS" python3 - <<'PY'
+GITEA_TOKEN="$TOKEN" ISSUE="$ISSUE" ROWS="$ROWS" "$PYBIN" - <<'PY'
 import json, os, sys, urllib.request, urllib.error
 tok = os.environ["GITEA_TOKEN"]; issue = os.environ["ISSUE"]; rows = os.environ["ROWS"]
 base = "http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent"
