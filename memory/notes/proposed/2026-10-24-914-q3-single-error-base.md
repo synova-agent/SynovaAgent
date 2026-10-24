@@ -1,6 +1,6 @@
 # 2026-10-24 · #914 Q-3（裁 366）：单错误基类 + 原生 cause 链 + 禁解析 message 棘轮
 
-## 现状（实测，锚 = `ct/914-q3` base `8a910555b`）
+## 现状（实测，锚 = `ct/914-q3` base `8a910555b`；分支基后经 merge 到 `423f60e1f`，#959/#960 等并行合入与本批写集零重叠）
 
 1. **两套同名类**：`git grep -c "class DiagnosticAgentError" -- src packages` 改前 = **2**
    （`packages/error-types/src/index.ts:1`／`src/errors/types.ts:1`）。
