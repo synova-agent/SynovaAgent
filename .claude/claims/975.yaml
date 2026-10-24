@@ -1,0 +1,18 @@
+# .claude/claims/975.yaml — #975 GATE-INVENTORY 三处整改（A 案 · 裁 399）写集声明（S0 源，issue 号卡）
+# 纪律：只列本 PR 真正改动的文件，不预授权。规格：handbook 派单件/2026-10-25-规格-975-GATE-INVENTORY三处整改.md §5（8 件）
+writeset:
+  - .claude/claims/975.yaml
+  - .gitea/workflows/local-gates.yml
+  - docs/authority/DOCS-REGISTRY.yaml
+  - docs/authority/GATE-INVENTORY.yaml
+  - gate-exemptions/2026-10-25-p2-975-gate-inventory.md
+  - memory/notes/proposed/2026-10-25-p2-975-gate-inventory.md
+  - scripts/control-tower/quality-baseline.py
+  - tests/control-tower/quality-baseline.test.sh
+done:
+  - verify: python3 scripts/control-tower/quality-baseline.py --check-inventory docs/authority/GATE-INVENTORY.yaml # rc=0、C5 12/12、orphans=7/35
+  - verify: bash tests/control-tower/quality-baseline.test.sh # pass=155 fail=0（含 c5-tamper 与 C10 跨文件两新反例）
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main # 4 条受保护路径有合规豁免 rc=0
+  - verify: python3 scripts/control-tower/quality-baseline.py --orphans-only # orphans=7/35 不变
+  - verify: bash scripts/pre-commit-check.sh # 提交端全绿
+note: "#975 A 案（裁 399）：C10 跨文件映射修正（仅枚举源折 CI-S<n>，跨文件记 script:<rel>）＋C5 追加 label_hash 真校验＋GATE-INVENTORY 6 行 wired_to/3 个 hash/①i 步名 R1–R6 三载体同步＋豁免件（DOC-0274）/登记/四态 Note。禁 --no-verify；GATE-INVENTORY:916 与 meta 段不动。Refs #975。"
