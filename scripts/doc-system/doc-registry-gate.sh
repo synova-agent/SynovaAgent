@@ -52,14 +52,24 @@ REGISTRY="$ROOT/docs/authority/DOCS-REGISTRY.yaml"
 REG=$(cat "$REGISTRY")
 
 # ── 唯一性（#942）：`- id: DOC-<n>` 重号即红、逐条点名（不是告警）──
-TOTAL_DOC_IDS=$(grep -cE '^[[:space:]]*-[[:space:]]*id:[[:space:]]*DOC-[0-9]+' "$REGISTRY")
+# F1（fail-closed）：正则容**可选引号**（DOC-0255 / "DOC-0255" / 'DOC-0255'）；
+#   解析到 0 条 ⇒ 打印「不可见」并 exit 2 —— 禁把"看不见"当"没问题"（#942 F1）。
+DOC_ID_RE="^[[:space:]]*-[[:space:]]*id:[[:space:]]*[\"']?DOC-[0-9]+[\"']?"
+TOTAL_DOC_IDS=$(grep -cE "$DOC_ID_RE" "$REGISTRY")
 TOTAL_DOC_IDS=${TOTAL_DOC_IDS:-0}
-DUP_IDS=$(grep -oE '^[[:space:]]*-[[:space:]]*id:[[:space:]]*DOC-[0-9]+' "$REGISTRY" | sed -E 's/.*(DOC-[0-9]+).*/\1/' | sort | uniq -d)
+if [ "$TOTAL_DOC_IDS" -eq 0 ]; then
+  echo "  ❌ 不可见: 台账中解析到 0 条 DOC id（正则失配或台账结构变更）"
+  echo "  ❌ 登记门禁阻断（唯一性检查不可执行 ⇒ fail-closed exit 2；禁把不可见当没问题）"
+  exit 2
+fi
+DUP_IDS=$(grep -oE "$DOC_ID_RE" "$REGISTRY" | sed -E 's/.*(DOC-[0-9]+).*/\1/' | sort | uniq -d)
 DUPFAIL=0
 if [ -n "$DUP_IDS" ]; then
   while IFS= read -r _dup; do
     [ -z "$_dup" ] && continue
-    _n=$(grep -cE "^[[:space:]]*-[[:space:]]*id:[[:space:]]*${_dup}[[:space:]]*$" "$REGISTRY")
+    # F2（计数失真）：去「严格行尾」锚，改「右边界=非数字后随任意内容」——
+    #   既容行尾注释/引号，又不让 DOC-025 误配 DOC-0256（与检出正则同口径）。
+    _n=$(grep -cE "^[[:space:]]*-[[:space:]]*id:[[:space:]]*[\"']?${_dup}([^0-9].*)?$" "$REGISTRY")
     echo "  ❌ 重号: ${_dup}（出现 ${_n} 次）"
     DUPFAIL=$((DUPFAIL+1))
   done <<< "$DUP_IDS"
