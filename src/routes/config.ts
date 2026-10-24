@@ -28,6 +28,21 @@ router.get('/api/config/dump', async (req: Request, res: Response) => {
     res.status(400).json({ ok: false, error: 'orgId 必填（?orgId=）', code: 'VALIDATION_ERROR' });
     return;
   }
+  // #838 E-2 ②（fail-closed）: 租户守卫 —— 原实现无任何身份比对，任意调用方可凭 `?orgId=` 读
+  //   任意组织的生效配置（跨租户读）。现口径：验签身份的组织必须存在且与 orgId 一致；
+  //   身份缺失 ⇒ auth_org_missing；不一致 ⇒ org_mismatch（二态与 middleware/auth.ts
+  //   `evaluateCrossOrgAccess` 同义，避免两套说法）。DevMode 下 req.auth 由中间件按实例组织注入。
+  const auth = (req as Request & { auth?: { orgId?: string } }).auth;
+  const identity = typeof auth?.orgId === 'string' ? auth.orgId.trim() : '';
+  if (!identity || identity !== orgId) {
+    res.status(403).json({
+      ok: false,
+      error: '跨租户访问被拒绝（声明 orgId 与验签身份不一致）',
+      code: 'CROSS_ORG_DENIED',
+      reason: identity ? 'org_mismatch' : 'auth_org_missing',
+    });
+    return;
+  }
   try {
     // 与 diagnosis.ts consult 同根（cwd/customer-config，D599 消费点先例，spec §5 接线）
     const roots = [{ path: join(process.cwd(), DEFAULT_ROOT_NAME), trust: 'customer' as const }];
