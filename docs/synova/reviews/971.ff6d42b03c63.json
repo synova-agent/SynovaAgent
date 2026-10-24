@@ -14,56 +14,56 @@
   {
    "id": "C1",
    "name": "词表 fail-closed（委托#1 / G1+G2）",
-   "result": "PASS",
+   "result": "pass",
    "method": "复核员自写 probe（不复制 PR 测试）：tests/_probe-971/q7-probe.test.ts（16 例）",
    "evidence": "appendEvent(sid,'not_a_real_type',{}) => 抛 SessionEventError{code:UNKNOWN_EVENT_TYPE, phase:validate, retryable:false, message 含类型名}；返回值未被产生（变量保持 THROWN_INSTEAD）；session_events COUNT 仍=1（零污染）；随后 'system' 写入 ok seq=2。空串/null/42/{}/['message'] 五种运行时非法值全抛 typed。六类合法值（含 D487 三类）逐一可写且 eventType 回读一致。词表与 DB CHECK 六类逐字相等。"
   },
   {
    "id": "C2",
    "name": "format_version 真加列（委托#2 / G5）",
-   "result": "PASS",
+   "result": "pass",
    "method": "自写 probe2（Proxy 定向注入 ALTER 失败 + query_only 反证 + 旧库/新库/二次打开）",
    "evidence": "新库：sqlite_master.sql 本身含 format_version（非后补），写入行 format_version=1；旧库（base 形态无列，PRAGMA 前置断言确认无列）打开后列出现，老行 3 条 formatVersion=[1,1,1]，库内真值 SELECT 亦 [1,1,1]，payload 逐字节保留；二次/三次打开不抛、sqlite_master 字符串不变、行数不变、列不重复。不吞错：Proxy 使 ALTER 抛 injected: ALTER failed => 构造原样上抛同串；PRAGMA query_only=ON 反证 => attempt to write a readonly database 上抛；新库/二次打开时 ALTER 注入器未被调用（证明条件化，非异常分流）。D487 三事件旧库：补列先于重建，payload 零丢失、列保留、可写 diagnosis_report。"
   },
   {
    "id": "C3",
    "name": "读越界 fail-closed（委托#3 / G2）",
-   "result": "PASS",
+   "result": "pass",
    "method": "自写 probe：UPDATE session_events SET format_version=2 后读",
    "evidence": "getEvents => 抛 SessionEventError{code:EVENT_FORMAT_TOO_NEW, phase:read, retryable:false}，无返回值（变量为 null，非空数组）；deriveMessages / getMessages 同源抛（同 code）；多行中仅 seq=2 越界时整体抛（不跳过、不返回前缀）；formatVersion=1 不误报；0/负数不误报（只拦更高版本）。"
   },
   {
    "id": "C4",
    "name": "回滚开关两态（委托#4 / G2）",
-   "result": "PASS",
+   "result": "pass",
    "method": "自写 probe：unset / 1 / true vs 0，含同 store 内即时切换",
    "evidence": "unset|1|true => 写侧抛、读侧抛；0 => appendEvent 返回 {ok:false,degraded:true,error:'unknown event type: nope'}（不抛，表 COUNT=0），getEvents 照读 1 行且 formatVersion=2 + lastDegraded=true；同一 store 内 env 切换后下一次调用即生效（逐调用 isSessionEventStrict()，非模块加载期缓存），测后 env 恢复。"
   },
   {
    "id": "C5",
    "name": "改坏必红（委托#5 / G3）",
-   "result": "PASS",
+   "result": "pass",
    "method": "复核员自写变异器 splice 到 /tmp/acc971 工作树 → 跑 PR 套件 → git checkout 复位",
    "evidence": "M1 删 appendEvent 词表守卫 => 2 红：expected undefined to be an instance of SessionEventError ＋ expected CHECK constraint failed: event_type … to contain unknown event type；M2 删 getEvents 版本判据 => 1 红：expected 空串 to be EVENT_FORMAT_TOO_NEW；M4 删读侧词表守卫 => 1 红：expected 空串 to be UNKNOWN_EVENT_TYPE；M3 删 PRAGMA 幂等判据（改无条件 ALTER）=> 20 红 SqliteError: duplicate column name: format_version；M5 删老库补列 ALTER => 6 红（2×expected false to be true ＋ SqliteError: no such column: format_version ＋ 3 条 #964 新例）；M6 加第 7 类 => 冻结例红；M7 减一类 => 冻结例红。每次复位后 PR 套件 25/25 绿。"
   },
   {
    "id": "C6",
    "name": "存量 3 写入点只登记基线、无全量改造（委托#6 / G6）",
-   "result": "PASS",
+   "result": "pass",
    "method": "git diff 逐 hunk ＋ grep appendEvent 全仓 ＋ Gitea API 文件清单交叉",
    "evidence": "diff 仅 3 件：.claude/claims/964.yaml(A,+17) / src/store/session-store.ts(M,+146/-17) / tests/store/session-event-log.test.ts(M,+214/-4)；与 Gitea API pulls/971/files 一致，无无关重构。生产写入点 3 处形状未动：session-store.ts:452 addMessage→appendEvent('message')、diagnosis-launcher.ts:88（诊断三类字面量 + try/catch）、retry-middleware.ts:222→appendEvent('system')；后两文件 diff 0 行。隐藏载荷子词表 RETRY_EVENT_KIND='llm_retry'（retry-middleware.ts:180）实测存在。基线登记见 tests/store/session-event-log.test.ts:296-303 注释块。"
   },
   {
    "id": "C7",
    "name": "回归面（委托#7）",
-   "result": "PASS",
+   "result": "pass",
    "method": "逐条现场跑，不引用自述",
    "evidence": "tsc --noEmit exit 0 零输出（node v22.23.2）；vitest PR 自有 25/25；tests/store/** + session-manager-eventlog + diagnosis-session-events = 14 文件 128/128；再扩 12 文件 97/97（session-storage-service/stuck-session/restart-recovery/graceful-shutdown/data-exporter/data-purger/org-isolation/diagnosis-consult/report-persistence/conversations/sentinel-events-contract/m10）；pre-commit-check.sh exit 0 全部 12 组通过（横幅 1-10+12+13；组 12 claim 载体：覆盖 3/3 暂存文件）；check-gate-protection --changed-base gitea/local-main => 结果: 6 通过, 0 失败（受保护路径变更 0 条）；CI be113e43b：commit status total=2 state=success pending=0，Actions runs 1802(push)/1803(pull_request) 均 completed/success；写集 3 件 ⊆ claim 声明（claim 为 Q-7+Q-8 两 PR 并集）；src/audit 与 scripts/audit 零改动；diff 中 check-quality-delta / quality-delta 零命中（#912 闸未加规则，裁 394）。"
   },
   {
    "id": "C8",
    "name": "额外：读写路径与词表第二真源检查（复核员自加）",
-   "result": "PASS",
+   "result": "pass",
    "method": "grep 全仓 session_events / getEvents / appendEvent",
    "evidence": "生产读路径唯一入口 getEvents（session-store.ts:516），经 deriveMessages:565 被 getMessages:611 使用，routes/sessions.ts:78、l1/im-inbound.ts:192、l4/data-exporter.ts:220 等全走此链 => fail-closed 不被绕过；消费侧 routes/sessions.ts:76-84 有 try/catch+500 兜底（不静默）；src/ 内无第二处直接读写 session_events 的 SQL（仅 session-store.ts），无第二份词表副本。"
   }
