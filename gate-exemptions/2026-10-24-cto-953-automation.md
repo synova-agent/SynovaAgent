@@ -1,0 +1,7 @@
+- scripts/control-tower/ledger-sync.sh — 台账自动同步脚本（裁 367 一期，幂等 dry-run 默认） — 裁 367
+- scripts/control-tower/auto-merge.sh — 四条件自动合并脚本（仅非受保护路径，默认 dry-run） — 裁 367
+- tests/control-tower/ledger-sync.test.sh — ledger-sync 配对测试（14 例，含 E_STATE 与 state 落盘幂等） — 裁 367
+- tests/control-tower/auto-merge.test.sh — auto-merge 配对测试（7 例，含 mock 行为调用） — 裁 367
+- tests/control-tower/auto_merge_mock_test.py — auto-merge 行为回归网（分页第 2 页与 previous_filename 改名绕过） — 裁 367
+- gate-exemptions/2026-10-24-cto-953-automation.md — 本豁免件自覆盖（#623 规则） — 裁 367
+- docs/authority/DOCS-REGISTRY.yaml — #953 登记本豁免件（D2 登记门禁） — 裁 367
