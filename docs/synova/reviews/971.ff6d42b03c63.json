@@ -1,14 +1,15 @@
 {
- "tool": "independent-reviewer (merge-condition-3) — deliverable-acceptance SKILL.md read at PR head tree /tmp/acc971",
+ "schema": "syno-review-receipt/v1",
  "pr": 971,
- "issue": 964,
+ "author": "k12-batch5（L2 实施，#964 Q-7）",
+ "reviewer": "zero-context independent reviewer（fresh subagent；未参与实现）",
+ "independence": "fresh-session",
+ "issued_at": "2026-10-25T02:05:00+08:00",
+ "tool": "independent-reviewer (merge-condition-3) — deliverable-acceptance SKILL.md read at PR head tree /tmp/acc971",
  "verdict": "PASS",
  "head": "be113e43bd071df1efd5fc941c9dc7fa3a5ab17d",
  "base": "3f1098a0a802bc080cd3e5cf922220c9d6cdf07a",
  "patch_fingerprint": "sha256:ff6d42b03c637ea95b5fadfd0678fa31379bcca8ef02e03ab8339aeb76827d2c",
- "fingerprint_cmd": "bash scripts/control-tower/check-merge-conditions.sh --pr 971 --diff-fingerprint",
- "reviewed_tree": "/tmp/acc971 (worktree add --detach be113e43b; head clean; 主仓 HEAD 仍 ba1b22a8b; 未 push/merge/commit)",
- "node": "v22.23.2",
  "checks": [
   {
    "id": "C1",
@@ -67,6 +68,41 @@
    "evidence": "生产读路径唯一入口 getEvents（session-store.ts:516），经 deriveMessages:565 被 getMessages:611 使用，routes/sessions.ts:78、l1/im-inbound.ts:192、l4/data-exporter.ts:220 等全走此链 => fail-closed 不被绕过；消费侧 routes/sessions.ts:76-84 有 try/catch+500 兜底（不静默）；src/ 内无第二处直接读写 session_events 的 SQL（仅 session-store.ts），无第二份词表副本。"
   }
  ],
+ "findings": [
+  {
+   "id": "A1",
+   "severity": "non-blocking",
+   "title": "「不吞错」无判别测试：PR 套件对吞错反模式全绿",
+   "evidence": "变异 3b（PRAGMA 判据删除 ＋ ALTER 包进 try/catch 空吞 = 代码注释明说要避免的反模式）=> tests/store/session-event-log.test.ts 仍 Tests 25 passed (25)；我用 Proxy 注入 ＋ query_only 才证明当前实现真的不吞。用例名『旧库（无列）打开 ⇒ 自动加列、老行读作 1；二次打开幂等（裁 395：禁 catch 吞）』未真正触及『禁 catch 吞』这半句。",
+   "fix": "补 1 例：老库 ＋ PRAGMA query_only=ON（或 Proxy 注入 ALTER 抛错）=> expect(() => new SessionStore(db)).toThrow(/readonly|injected/)；放同一 describe('#964 行格式版本')。"
+  },
+  {
+   "id": "A2",
+   "severity": "non-blocking",
+   "title": "并发首启竞态：两进程同时对旧库首启时第二个 ALTER 会硬失败",
+   "evidence": "ALTER 失败原样上抛（裁 395 要求），故并发首启第二个进程会 duplicate column name 并构造失败，而非幂等跳过；一次性窗口，启动器是否重试未核。",
+   "fix": "#964 回执登记为已知限制；若启动器无重试，则改为『PRAGMA 判缺 → ALTER，捕获 duplicate-column 专属 code 视为并发成功』（其它错误仍上抛）。"
+  },
+  {
+   "id": "A3",
+   "severity": "bookkeeping",
+   "title": "Issue #964 标签仍『执行态/未开工』",
+   "evidence": "Gitea issues/964 labels 含 执行态/未开工，而 PR #971（Q-7 第 1 条）已在飞。",
+   "fix": "看板真值回填：改 执行态/在飞（按 P# 口径），不阻断本 PR。"
+  },
+  {
+   "id": "A4",
+   "severity": "note",
+   "title": "version=1 时『写侧写当前版本』与 DEFAULT 1 运行期不可区分",
+   "evidence": "写侧正确性只有 code 证据（session-store.ts:496-497 INSERT 显式含列并绑定 SESSION_EVENT_FORMAT_VERSION）＋ 存储值=1，但 1 同时等于列 DEFAULT，运行观测无法证伪『其实靠 DEFAULT』。",
+   "fix": "bump 到 2 时补一条『当前版本 != DEFAULT 仍写对』的用例（或临时把常量改成 2 跑一次）。"
+  }
+ ],
+ "summary": "independent-reviewer (merge-condition-3) — deliverable-acceptance SKILL.md read at PR head tree /tmp/acc971",
+ "issue": 964,
+ "fingerprint_cmd": "bash scripts/control-tower/check-merge-conditions.sh --pr 971 --diff-fingerprint",
+ "reviewed_tree": "/tmp/acc971 (worktree add --detach be113e43b; head clean; 主仓 HEAD 仍 ba1b22a8b; 未 push/merge/commit)",
+ "node": "v22.23.2",
  "advisories": [
   {
    "id": "A1",
