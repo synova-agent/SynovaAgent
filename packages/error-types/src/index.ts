@@ -58,19 +58,25 @@ export class UnreachableVariantError extends DiagnosticAgentError {
 }
 
 /**
- * 安全渲染逃逸值：`JSON.stringify` 失败（循环引用等）时回退 `String()`，永不抛渲染错误。
+ * 安全渲染逃逸值：**无 catch**（零依赖包无法 log，铁律 24 不允许静默吞错）。
+ * 用 WeakSet replacer 在 `JSON.stringify` 内部处理循环引用与 BigInt —— 从源头不产生异常，
+ * 而不是靠 try/catch 兜住（那会触发"空 catch 无 log"门禁）。
  *
  * @param value - 待渲染的逃逸值
- * @returns 可读字符串（不含对象敏感内部值的深度展开）
+ * @returns 可读字符串（对象循环引用记 `[Circular]`，BigInt 记 `<n>n`）
  */
 function renderVariant(value: unknown): string {
   if (typeof value === 'string') return value;
   if (value === null || value === undefined || typeof value !== 'object') return String(value);
-  try {
-    return JSON.stringify(value) ?? String(value);
-  } catch {
-    return String(value);
-  }
+  const seen = new WeakSet<object>();
+  return JSON.stringify(value, (_key, item: unknown) => {
+    if (typeof item === 'bigint') return `${String(item)}n`;
+    if (typeof item === 'object' && item !== null) {
+      if (seen.has(item)) return '[Circular]';
+      seen.add(item);
+    }
+    return item;
+  }) ?? '[object]';
 }
 
 /**

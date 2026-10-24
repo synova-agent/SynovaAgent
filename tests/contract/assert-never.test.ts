@@ -99,7 +99,7 @@ describe('A 运行时逃逸：isRetryable 对类型外取值 fail-loud', () => {
     expectEscapeToThrow('OTHER', 'isRetryable');
   });
 
-  it('A5 值渲染：对象走 JSON.stringify；循环引用（JSON.stringify 失败）回退 String，不抛渲染错误', () => {
+  it('A5 值渲染：对象走 JSON.stringify；循环引用记 [Circular]、BigInt 记 <n>n（无 catch，不抛）', () => {
     const plain = { code: 'X' };
     const errPlain = new UnreachableVariantError('probe', plain);
     expect(errPlain.message).toContain('{"code":"X"}');
@@ -107,9 +107,12 @@ describe('A 运行时逃逸：isRetryable 对类型外取值 fail-loud', () => {
     const circular: Record<string, unknown> = {};
     circular.self = circular;
     const errCirc = new UnreachableVariantError('probe', circular);
-    // 不抛（构造成功即证明回退生效），且 message 仍是可读字符串
     expect(typeof errCirc.message).toBe('string');
     expect(errCirc.message).toContain('probe');
+    expect(errCirc.message).toContain('[Circular]');
+
+    const errBig = new UnreachableVariantError('probe', { big: 1n });
+    expect(errBig.message).toContain('1n');
   });
 });
 
