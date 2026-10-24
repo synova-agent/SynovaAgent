@@ -337,7 +337,9 @@ jobs:
           # 用 JSON reporter 取结构化失败集（文本解析会被 ANSI/多行描述骗）。
           NODE_BIN=/Users/wane/.nvm/versions/node/v24.19.0/bin
           rm -f /tmp/vitest-result.json
-          PATH="$NODE_BIN:$PATH" CI=true npx vitest run --reporter=json --outputFile=/tmp/vitest-result.json > /tmp/vitest-console.log 2>&1
+          # runner 默认 bash -e：vitest 有红时 rc≠0 会**直接终止本步**（json 与判定都来不及跑）⇒ 必须 `|| true`，
+          # 判定只认 JSON ＋ check.py（三态 0/1/2 由 check.py 出）。
+          PATH="$NODE_BIN:$PATH" CI=true npx vitest run --reporter=json --outputFile=/tmp/vitest-result.json > /tmp/vitest-console.log 2>&1 || true
           echo "vitest 已跑完（结构化结果 /tmp/vitest-result.json）"
           python3 tests/vitest.known-red.check.py || exit $?
       - name: ①h-types tests 类型检查（tsconfig.tests.json ＋ 基线 · 只减不增 · 禁手抄）
