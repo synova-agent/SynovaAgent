@@ -9,7 +9,7 @@
 # 用例:
 #   ① 六轴齐（G3 有真实路径断言 ＋ 改坏两态）⇒ 通过
 #   ② 缺 G3（只有"测试全绿"结论）        ⇒ 不得 PASS（点名 G3）
-#   ③ G3 恒真断言（expect(true)）         ⇒ 不得 PASS（点名 G3）
+#   ③ G3 恒真断言（expect(1 === 1) 类）   ⇒ 不得 PASS（点名 G3）
 #   ④ 缺 G6（无三门禁汇总行）             ⇒ 不得 PASS（点名 G6）
 #
 # 用法: bash tests/control-tower/k3-birthcert-fixture.test.sh
@@ -36,11 +36,12 @@ ev={}
 for line in txt.splitlines():
     m=re.match(r'^(G[1-6]):\s*(.+)$', line.strip())
     if m: ev[m.group(1)]=m.group(2).strip()
+TAUT=re.compile(r'expect\(\s*(?:true|false)\s*\)|expect\(\s*(\d+)\s*\)\s*\.\s*(?:toBe|toEqual)\s*\(\s*\1\s*\)|expect\(\s*\d+\s*===\s*\d+\s*\)')
 norm=lambda v: v.replace('（','(').replace('）',')')
 rules={
  'G1':lambda v: ('src/' in v) and ('WIRING' in v),
  'G2':lambda v: any(k in v for k in ('log.','degraded','throw')),
- 'G3':lambda v: (('expect(' in v) or ('断言' in v) or ('assert' in v)) and any(k in v for k in ('两态','改坏','删掉','→')) and ('expect(true)' not in v),
+ 'G3':lambda v: (('expect(' in v) or ('断言' in v) or ('assert' in v)) and any(k in v for k in ('两态','改坏','删掉','→')) and not TAUT.search(v),
  'G4':lambda v: (('safeParse' in v) or ('parse(' in v) or ('validate' in v)) and (('timeout' in v) or ('signal' in v)),
  'G5':lambda v: any(k in v for k in ('落盘','事务','事件')),
  'G6':lambda v: ('doc-truth' in v) and ('未登记' in v),
@@ -75,7 +76,7 @@ EOF
 mk tautology.txt <<'EOF'
 G1: 生产调用点 src/agent/router.ts:88（非测试）；WIRING 行 status=wired
 G2: catch 带 log.warn + degraded:true（router.ts:95）
-G3: expect(true) 通过；改坏两态已贴
+G3: expect(1 === 1) 恒真；改坏两态已贴
 G4: zod safeParse（routes/tool.ts:31）；fetch 带 signal: AbortSignal.timeout(5000)
 G5: 事件落盘 append-only（store/events.ts:40）
 G6: check-doc-truth ✅；doc-registry 0 未登记
