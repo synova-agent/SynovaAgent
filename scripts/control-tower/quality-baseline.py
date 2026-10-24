@@ -33,6 +33,13 @@ scripts/control-tower/quality-baseline.py — #841 P0 质量基线扫描器（�
             2 = 环境或检查自身失败（扫描 0 文件／基线不可读或损坏／YAML 子集不支持／
                 解析器缺失／枚举器 0 项／参数互斥违例／python 异常）——信号量==0 ⇒ 2
   @degraded — 上述 exit 2 路径一律 stderr 打印 "degraded:" 前缀（fail loud，禁静默当通过）
+  @known — ① C5 只核 label_hash（哈希指纹），不核 label 文本本身（文本漂移由
+              tests 跨载体逐字相等断言兜底，#975）；② wired_to 是「引用位」非
+              「阻断位」：script:<path> 表示仅被该文件引用，不构成 CI 步阻断
+              （跨文件 workflow 引用记 script:.github/workflows/<file>，#975）
+           错误码（exit 2 家族）：E_YAML = 盘点/登记表 YAML 子集解析失败；
+              E_EMPTY = 枚举器 0 项或 gates 段缺失（信号量==0）；
+              E_HASH = label_hash 计算失败（输入非字符串/编码失败，#975）
 
 已知限制（与 JSON `limitations[]` 逐条同步；改一处必须改两处）:
   L1 T2 启发式窗口=12 行：语句跨 12 行以外的 timeout/signal 看不见
@@ -192,7 +199,13 @@ def normalize_label(line: str) -> str:
 
 
 def label_hash(line: str) -> str:
-    return hashlib.sha1(normalize_label(line).encode("utf-8")).hexdigest()[:12]
+    """#975：哈希输入异常 ⇒ E_HASH（exit 2），不折成 0/1。"""
+    if not isinstance(line, str):
+        raise QualityBaselineError("E_HASH", "label_hash 输入非字符串: %r" % (line,))
+    try:
+        return hashlib.sha1(normalize_label(line).encode("utf-8")).hexdigest()[:12]
+    except (UnicodeError, ValueError) as exc:
+        raise QualityBaselineError("E_HASH", "label_hash 计算失败: %r (%s)" % (line, exc))
 
 
 def module_of(rel: str) -> str:
@@ -1309,7 +1322,8 @@ def compute_wiring(root: str, checkers: List[str],
                 lines = fh.read().split("\n")
         except OSError as exc:
             raise QualityBaselineError("E_IO", "读取引用文件失败: %s (%s)" % (rel, exc))
-        is_workflow = rel.startswith(".gitea/workflows/") or rel.startswith(".github/workflows/")
+        # #975：CI-S<n> 只对枚举源（local-gates.yml）折算；其余 workflow 文件
+        # （如 .github/workflows/ci.yml）的行号与本表步序无关 ⇒ 记 script:<rel>
         for lineno, line in enumerate(lines, 1):
             for name in checkers:
                 if name not in line:
@@ -1319,7 +1333,7 @@ def compute_wiring(root: str, checkers: List[str],
                 if rel == PRECOMMIT_PATH:
                     owner = _owner_of_line_inclusive(slots, lineno)
                     wired[name].add(owner[1] if owner else "script:" + PRECOMMIT_PATH)
-                elif is_workflow:
+                elif rel == WORKFLOW_PATH:
                     idx = sum(1 for step_line in step_lines if step_line <= lineno)
                     if idx:
                         wired[name].add("CI-S%d" % idx)
@@ -1385,7 +1399,9 @@ def cmd_check_inventory(root: str, script_path: str, yaml_path: str) -> int:
     expected_rows = len(groups) + len(normal_banners) + len(x_headers) + len(steps)
 
     gates = data.get("gates")
-    gates_rows = [g for g in gates if isinstance(g, dict)] if isinstance(gates, list) else []
+    if not isinstance(gates, list) or not gates:
+        raise QualityBaselineError("E_EMPTY", "盘点表 gates 段缺失或 0 行（信号量==0 ⇒ 不是通过）")
+    gates_rows = [g for g in gates if isinstance(g, dict)]
     checkers_rows = [c for c in data.get("checkers") if isinstance(c, dict)] \
         if isinstance(data.get("checkers"), list) else []
     pairing_rows = [p for p in data.get("pairing") if isinstance(p, dict)] \
@@ -1519,6 +1535,13 @@ def cmd_check_inventory(root: str, script_path: str, yaml_path: str) -> int:
             continue
         if _as_text(matched[0].get("kind")) != "step":
             c5_bad.append("%s kind 不符" % step["id"])
+            continue
+        # #975 C5 追加：label_hash 真校验（表值 vs label_hash() 实算 ← 实跑 label）
+        table_hash = _as_text(matched[0].get("label_hash"))
+        computed_hash = label_hash(step["label"])
+        if table_hash != computed_hash:
+            c5_bad.append("%s label_hash 不符（表=%s 复算=%s ← 实跑 label=%r）"
+                          % (step["id"], table_hash, computed_hash, step["label"]))
             continue
         counters["S"] += 1
     print("  %s C5 CI 步 %d/%d%s"
