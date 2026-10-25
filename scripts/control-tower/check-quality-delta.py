@@ -69,7 +69,7 @@
 #       且既有 27 用例有 7 条 stage src/** 不传参，会整批翻红（与"零回归"判据冲突）。
 #       接线（coverage 与闸同管线生成并传 --coverage-sha）不在本批。
 #     R5.1（阻断）per-file 行覆盖率（coverage-summary 的 lines.pct；键归一化为 repo 相对路径）:
-#       **A 档**（--diff-filter=A 新增）lines ≥ 40%；**M 档**（其余 ACMR）≥ max(30%, baseline[path])
+#       **A 档**（--diff-filter=A 新增）lines ≥ 30%（裁 415）；**M 档**（其余 ACMR）≥ baseline[path]；**无基线 ⇒ 以当次实测入册并通过**
 #       缺条目／不可解析 ⇒ E_COVERAGE exit 2；新鲜度（--coverage-sha vs `git rev-parse HEAD`）不符或缺省
 #       ⇒ E_COVERAGE-STALE exit 2。R5.1 豁免复用白名单（rule=R5.1）
 #     R5.2（advisory，裁 405-①）重复率: 变更集内 src/** 文件，jscpd 重复 >5% ⇒
@@ -160,8 +160,8 @@ G5_SRC_PREFIX = "src/"
 G5_SRC_EXT = ".ts"
 DEFAULT_COVERAGE_SUMMARY = "coverage/coverage-summary.json"
 DEFAULT_BASELINE = "docs/authority/coverage-baseline.json"
-G5_A_MIN_PCT = 40.0          # A 档（新增）行覆盖率下限
-G5_M_FLOOR_PCT = 30.0        # M 档（修改）行覆盖率下限（与 baseline 取 max）
+G5_A_MIN_PCT = 30.0          # A 档（新增）行覆盖率下限（裁 415：地板；全局 40% 平均闸兜底）
+G5_M_FLOOR_PCT = 0.0         # 裁 415：M 档**不设统一下限**；有基线比基线，无基线以当次实测入册
 G5_DUP_MAX_PCT = 5.0         # R5.2 advisory 阈值（> 才报）
 G5_JSCPD_VERSION = "4.0.5"   # 固定版本（关卡 A 红线：不入 devDeps、不改 package.json）
 G5_JSCPD_PROBE_TIMEOUT = 180
@@ -581,9 +581,12 @@ def scan_g5_coverage(root: str, src: List[str], added: List[str], cov: Dict[str,
         else:
             m_n += 1
             base = _lookup_pct(baseline, path)
-            thr = max(G5_M_FLOOR_PCT, base if base is not None else 0.0)
-            label = ("M 档修改（max(30%%, baseline %.2f%%)）" % base) if base is not None \
-                else "M 档修改（max(30%, baseline 无条目)）"
+            if base is None:
+                # 裁 415：老文件首次被改到 ⇒ 以**当次实测**入册（不设 30% 地板，避免背历史债）
+                baseline[path] = pct
+                continue
+            thr = base
+            label = "M 档修改（≥ baseline %.2f%%）" % base
         if pct + 1e-9 < thr:
             out.append(("R5.1", path, 1, f"行覆盖率 {pct:.2f}% < {thr:.2f}%（{label}）"))
     return out, a_n, m_n, wl_n
