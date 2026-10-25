@@ -1074,3 +1074,11 @@ documents:
     status: active
     owner: CTO
     note: "#998 D331 对账来源并入主工作树账本；裁 420。"
+
+  # ---- CTO 2026-10-26：#999/#1001/#1002/#1003 受保护路径豁免补记（裁 409/415/420）----
+  - id: DOC-0282
+    type: decision
+    path: gate-exemptions/2026-10-26-cto-1003-gate-protection-backfill.md
+    status: active
+    owner: CTO
+    note: "四次门禁合并的受保护路径豁免补记；裁 409/415/420。"

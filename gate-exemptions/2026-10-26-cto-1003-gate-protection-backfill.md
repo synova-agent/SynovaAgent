@@ -1,0 +1,6 @@
+- scripts/pre-commit-check.sh — #1002/#1003 组 8 降级接线（裁 409/421）— 裁 409
+- scripts/check-file-driven.sh — #1003 组 8 降级（SYNO_GROUP_DOWN）— 裁 409
+- scripts/control-tower/check-bypass-log.sh — #999 D331 账本并集（裁 420）— 裁 420
+- scripts/control-tower/check-quality-delta.py — #1000 G5 未武装不假绿（裁 415-③）— 裁 415
+- docs/authority/DOCS-REGISTRY.yaml — 上述豁免件登记 — 裁 409/420
+- gate-exemptions/2026-10-26-cto-1003-gate-protection-backfill.md — 本豁免件自覆盖 — 裁 409

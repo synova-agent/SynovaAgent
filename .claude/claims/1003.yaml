@@ -3,6 +3,8 @@ writeset:
   - scripts/check-file-driven.sh
   - scripts/pre-commit-check.sh
   - memory/notes/proposed/2026-10-26-1003-downgrade-proof.md
+  - gate-exemptions/2026-10-26-cto-1003-gate-protection-backfill.md
+  - docs/authority/DOCS-REGISTRY.yaml
 done:
   - verify: SYNO_GROUP_DOWN=1 bash scripts/check-file-driven.sh
 note: "#1003 组 8 降级三态证据（裁 409）。"
