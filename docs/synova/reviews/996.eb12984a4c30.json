@@ -1,0 +1,71 @@
+{
+ "schema": "syno-review-receipt/v1",
+ "pr": 996,
+ "author": "L2 小队（#991 Q-12）",
+ "reviewer": "CTO（未参与实现；本会话与 L2 实施会话分离）",
+ "independence": "fresh-session",
+ "issued_at": "2026-10-25T22:47:00+08:00",
+ "verdict": "PASS",
+ "head_reviewed": "9155604ff",
+ "patch_fingerprint": "sha256:eb12984a4c30744b6fa10bbcb9320063873046bcb0a1eac947342bf12c4ffb46",
+ "tool": "CTO 复核（读实现+判据+出生证；L2 已提供两态原始输出）",
+ "checks": [
+  {
+   "id": "C1",
+   "title": "执行点在写库前（拒单条）",
+   "result": "pass",
+   "cmd": "git show gitea/ct/991-q12:src/store/session-store.ts | grep -n -A10 'nextSeq > cap'",
+   "evidence": "appendEvent 在词表校验后、INSERT 前判断；超限抛 SessionEventError{SESSION_EVENT_LIMIT, phase:'validate', retryable:false}；catch 对 typed error 显式 rethrow"
+  },
+  {
+   "id": "C2",
+   "title": "clamp 按裁 219 模板",
+   "result": "pass",
+   "cmd": "读 maxSessionEvents()",
+   "evidence": "Math.min(CEILING, Math.max(1, parseInt(env)||DEFAULT))；负数夹 1、未配回落 20000、上限 1e6"
+  },
+  {
+   "id": "C3",
+   "title": "出生证 ①-⑦ 齐",
+   "result": "pass",
+   "cmd": "读 storage/session-store.ts 头部注释块",
+   "evidence": "①拥有 ②不拥有 ③为什么 ④失败形态 ⑤上限(20000+理由) ⑥已知限制 ⑦借用边界(含 DSH file:line)"
+  },
+  {
+   "id": "C4",
+   "title": "反例证据独立（COUNT 直查）",
+   "result": "pass",
+   "cmd": "读 tests/store/session-events-limit.test.ts",
+   "evidence": "持 better-sqlite3 句柄直查 SELECT COUNT(*)；不靠被测 getEvents 自证"
+  },
+  {
+   "id": "C5",
+   "title": "两态与改坏",
+   "result": "pass",
+   "cmd": "L2 原始输出（#991 R2）",
+   "evidence": "正 8 passed；反 cap+1 抛 typed error 且 COUNT 抛前=抛后；改坏⇒6 failed/2 passed"
+  },
+  {
+   "id": "C6",
+   "title": "写集与红线",
+   "result": "pass",
+   "cmd": "git diff --name-status main...HEAD",
+   "evidence": "6 件（session-store.ts/测试/claim/DOCS/Note/豁免）；WIRING 0、scripts/audit 0、tests/control-tower 0"
+  },
+  {
+   "id": "C7",
+   "title": "CI",
+   "result": "pass",
+   "cmd": "GET /commits/9155604ff/status",
+   "evidence": "push+pull_request 双 success、pending=0"
+  }
+ ],
+ "findings": [
+  {
+   "severity": "info",
+   "where": "reviewer",
+   "what": "本回执为 CTO 自查（非独立复核）；K3 最终审计（#997）将独立复核本件"
+  }
+ ],
+ "reviewer_note": "CTO 复核：读实现/判据/出生证 + L2 两态输出；**非第三方独立**，K3 #997 终审将独立复跑。independence 字段按\"与实现会话分离\"口径填 fresh-session。"
+}

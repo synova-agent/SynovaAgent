@@ -1052,3 +1052,10 @@ documents:
     status: active
     owner: P1
     note: "#915 Q-6 受保护路径豁免件：4 条按文件名逐条覆盖（docs/authority/DOCS-REGISTRY.yaml、tests/control-tower/quality-baseline.test.sh、tests/control-tower/quality-standard.test.sh、本文件自覆盖），裁 365。"
+  # ---- P1 2026-10-25：#991 Q-12 会话事件数上限豁免件（DOC-0276；本分支实测 max=0275（#915 Q-6 占用）⇒ 从 0276 起）----
+  - id: DOC-0276
+    type: decision
+    path: gate-exemptions/2026-10-25-p1-991-q12.md
+    status: active
+    owner: P1
+    note: "#991 Q-12 受保护路径豁免件：2 条逐条覆盖（docs/authority/DOCS-REGISTRY.yaml、本文件自覆盖），裁 411。"
