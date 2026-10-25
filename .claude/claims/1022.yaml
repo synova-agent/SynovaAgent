@@ -1,0 +1,14 @@
+writeset:
+  - .claude/claims/1022.yaml
+  - scripts/control-tower/check-bypass-log.sh
+  - scripts/pre-commit-check.sh
+  - scripts/check-file-driven.sh
+  - scripts/control-tower/pre-dispatch-check.sh
+  - tests/control-tower/pre-dispatch-check.test.sh
+  - tests/contract/swallow-ratchet.test.ts
+  - gate-exemptions/2026-10-26-cto-1022-def-fix.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - memory/notes/proposed/2026-10-26-1022-def-fix.md
+done:
+  - verify: npx vitest run tests/contract/swallow-ratchet.test.ts
+note: "#1022 D/E/F 修复批：头部契约 + 吞错棘轮 + 任务号口径。"

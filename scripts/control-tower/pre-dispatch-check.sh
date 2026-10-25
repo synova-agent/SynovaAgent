@@ -28,10 +28,16 @@ echo "── ① 任务号真实性（禁臆写，需 task-state 存在）──
 # D1058/R8 修复（2026-09-28）: 原 'D[0-9]{3}' 对 D1007.json 截成 D100 → 查不到 task-state
 #   → 「⚠️ D100 无 task-state」exit 1 → 静默冻结本脚本（纯净 main 上 7过1败，CT-40 双阻断）。
 #   改为 {3,4} 贪婪匹配（D1007 整体命中；短号 D100 亦不受影响）。
-for d in $(grep -oE 'D[0-9]{3,4}' "$DOC" | sort -u); do
-  if [ -f "$ROOT/task-state/$d.json" ]; then echo "  ✅ $d 已登记"
-  else echo "  ⚠️ $d 无 task-state（新建须走 alloc-task-id.sh）"; FIND=1; fi
-done
+# 裁 421（2026-10-26）：**任务唯一编号 = Issue 号**（`#N`）。文档已用 Issue 号时，
+#   不再强制 legacy D# 的 task-state（D# 只对历史卡有意义；新卡一切走 Gitea Issue）。
+if grep -qE '#[0-9]{1,5}' "$DOC"; then
+  echo "  ✅ 已用 Issue 号（#N）作为任务唯一编号 —— 跳过 legacy D# task-state 校验"
+else
+  for d in $(grep -oE 'D[0-9]{3,4}' "$DOC" | sort -u); do
+    if [ -f "$ROOT/task-state/$d.json" ]; then echo "  ✅ $d 已登记"
+    else echo "  ⚠️ $d 无 task-state（新建须走 alloc-task-id.sh）"; FIND=1; fi
+  done
+fi
 
 echo "── ④ 写集路径存在性（不存在须显式标注「新建」）──"
 # D756: 路径根补全 + 边界锚定（防止在 packages/ontology/src/x.ts 里误匹配内层 src/x.ts）

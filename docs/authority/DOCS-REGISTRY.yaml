@@ -1090,3 +1090,11 @@ documents:
     status: active
     owner: CTO
     note: "Q-9 契约测试接入 CI ①j；裁 421。"
+
+  # ---- CTO 2026-10-26：#1022 D/E/F 修复批豁免件（裁 421）----
+  - id: DOC-0285
+    type: decision
+    path: gate-exemptions/2026-10-26-cto-1022-def-fix.md
+    status: active
+    owner: CTO
+    note: "D 项头部契约 + P10 任务号口径；裁 421。"
