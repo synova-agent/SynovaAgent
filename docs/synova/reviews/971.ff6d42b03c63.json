@@ -1,0 +1,171 @@
+{
+ "schema": "syno-review-receipt/v1",
+ "pr": 971,
+ "author": "k12-batch5（L2 实施，#964 Q-7）",
+ "reviewer": "zero-context independent reviewer（fresh subagent；未参与实现）",
+ "independence": "fresh-session",
+ "issued_at": "2026-10-25T02:05:00+08:00",
+ "tool": "independent-reviewer (merge-condition-3) — deliverable-acceptance SKILL.md read at PR head tree /tmp/acc971",
+ "verdict": "PASS",
+ "head": "be113e43bd071df1efd5fc941c9dc7fa3a5ab17d",
+ "base": "3f1098a0a802bc080cd3e5cf922220c9d6cdf07a",
+ "patch_fingerprint": "sha256:ff6d42b03c637ea95b5fadfd0678fa31379bcca8ef02e03ab8339aeb76827d2c",
+ "checks": [
+  {
+   "id": "C1",
+   "name": "词表 fail-closed（委托#1 / G1+G2）",
+   "result": "pass",
+   "method": "复核员自写 probe（不复制 PR 测试）：tests/_probe-971/q7-probe.test.ts（16 例）",
+   "evidence": "appendEvent(sid,'not_a_real_type',{}) => 抛 SessionEventError{code:UNKNOWN_EVENT_TYPE, phase:validate, retryable:false, message 含类型名}；返回值未被产生（变量保持 THROWN_INSTEAD）；session_events COUNT 仍=1（零污染）；随后 'system' 写入 ok seq=2。空串/null/42/{}/['message'] 五种运行时非法值全抛 typed。六类合法值（含 D487 三类）逐一可写且 eventType 回读一致。词表与 DB CHECK 六类逐字相等。",
+   "cmd": "复核员自写 probe（不复制 PR 测试）：tests/_probe-971/q7-probe.test.ts（16 例）"
+  },
+  {
+   "id": "C2",
+   "name": "format_version 真加列（委托#2 / G5）",
+   "result": "pass",
+   "method": "自写 probe2（Proxy 定向注入 ALTER 失败 + query_only 反证 + 旧库/新库/二次打开）",
+   "evidence": "新库：sqlite_master.sql 本身含 format_version（非后补），写入行 format_version=1；旧库（base 形态无列，PRAGMA 前置断言确认无列）打开后列出现，老行 3 条 formatVersion=[1,1,1]，库内真值 SELECT 亦 [1,1,1]，payload 逐字节保留；二次/三次打开不抛、sqlite_master 字符串不变、行数不变、列不重复。不吞错：Proxy 使 ALTER 抛 injected: ALTER failed => 构造原样上抛同串；PRAGMA query_only=ON 反证 => attempt to write a readonly database 上抛；新库/二次打开时 ALTER 注入器未被调用（证明条件化，非异常分流）。D487 三事件旧库：补列先于重建，payload 零丢失、列保留、可写 diagnosis_report。",
+   "cmd": "自写 probe2（Proxy 定向注入 ALTER 失败 + query_only 反证 + 旧库/新库/二次打开）"
+  },
+  {
+   "id": "C3",
+   "name": "读越界 fail-closed（委托#3 / G2）",
+   "result": "pass",
+   "method": "自写 probe：UPDATE session_events SET format_version=2 后读",
+   "evidence": "getEvents => 抛 SessionEventError{code:EVENT_FORMAT_TOO_NEW, phase:read, retryable:false}，无返回值（变量为 null，非空数组）；deriveMessages / getMessages 同源抛（同 code）；多行中仅 seq=2 越界时整体抛（不跳过、不返回前缀）；formatVersion=1 不误报；0/负数不误报（只拦更高版本）。",
+   "cmd": "自写 probe：UPDATE session_events SET format_version=2 后读"
+  },
+  {
+   "id": "C4",
+   "name": "回滚开关两态（委托#4 / G2）",
+   "result": "pass",
+   "method": "自写 probe：unset / 1 / true vs 0，含同 store 内即时切换",
+   "evidence": "unset|1|true => 写侧抛、读侧抛；0 => appendEvent 返回 {ok:false,degraded:true,error:'unknown event type: nope'}（不抛，表 COUNT=0），getEvents 照读 1 行且 formatVersion=2 + lastDegraded=true；同一 store 内 env 切换后下一次调用即生效（逐调用 isSessionEventStrict()，非模块加载期缓存），测后 env 恢复。",
+   "cmd": "自写 probe：unset / 1 / true vs 0，含同 store 内即时切换"
+  },
+  {
+   "id": "C5",
+   "name": "改坏必红（委托#5 / G3）",
+   "result": "pass",
+   "method": "复核员自写变异器 splice 到 /tmp/acc971 工作树 → 跑 PR 套件 → git checkout 复位",
+   "evidence": "M1 删 appendEvent 词表守卫 => 2 红：expected undefined to be an instance of SessionEventError ＋ expected CHECK constraint failed: event_type … to contain unknown event type；M2 删 getEvents 版本判据 => 1 红：expected 空串 to be EVENT_FORMAT_TOO_NEW；M4 删读侧词表守卫 => 1 红：expected 空串 to be UNKNOWN_EVENT_TYPE；M3 删 PRAGMA 幂等判据（改无条件 ALTER）=> 20 红 SqliteError: duplicate column name: format_version；M5 删老库补列 ALTER => 6 红（2×expected false to be true ＋ SqliteError: no such column: format_version ＋ 3 条 #964 新例）；M6 加第 7 类 => 冻结例红；M7 减一类 => 冻结例红。每次复位后 PR 套件 25/25 绿。",
+   "cmd": "复核员自写变异器 splice 到 /tmp/acc971 工作树 → 跑 PR 套件 → git checkout 复位"
+  },
+  {
+   "id": "C6",
+   "name": "存量 3 写入点只登记基线、无全量改造（委托#6 / G6）",
+   "result": "pass",
+   "method": "git diff 逐 hunk ＋ grep appendEvent 全仓 ＋ Gitea API 文件清单交叉",
+   "evidence": "diff 仅 3 件：.claude/claims/964.yaml(A,+17) / src/store/session-store.ts(M,+146/-17) / tests/store/session-event-log.test.ts(M,+214/-4)；与 Gitea API pulls/971/files 一致，无无关重构。生产写入点 3 处形状未动：session-store.ts:452 addMessage→appendEvent('message')、diagnosis-launcher.ts:88（诊断三类字面量 + try/catch）、retry-middleware.ts:222→appendEvent('system')；后两文件 diff 0 行。隐藏载荷子词表 RETRY_EVENT_KIND='llm_retry'（retry-middleware.ts:180）实测存在。基线登记见 tests/store/session-event-log.test.ts:296-303 注释块。",
+   "cmd": "git diff 逐 hunk ＋ grep appendEvent 全仓 ＋ Gitea API 文件清单交叉"
+  },
+  {
+   "id": "C7",
+   "name": "回归面（委托#7）",
+   "result": "pass",
+   "method": "逐条现场跑，不引用自述",
+   "evidence": "tsc --noEmit exit 0 零输出（node v22.23.2）；vitest PR 自有 25/25；tests/store/** + session-manager-eventlog + diagnosis-session-events = 14 文件 128/128；再扩 12 文件 97/97（session-storage-service/stuck-session/restart-recovery/graceful-shutdown/data-exporter/data-purger/org-isolation/diagnosis-consult/report-persistence/conversations/sentinel-events-contract/m10）；pre-commit-check.sh exit 0 全部 12 组通过（横幅 1-10+12+13；组 12 claim 载体：覆盖 3/3 暂存文件）；check-gate-protection --changed-base gitea/local-main => 结果: 6 通过, 0 失败（受保护路径变更 0 条）；CI be113e43b：commit status total=2 state=success pending=0，Actions runs 1802(push)/1803(pull_request) 均 completed/success；写集 3 件 ⊆ claim 声明（claim 为 Q-7+Q-8 两 PR 并集）；src/audit 与 scripts/audit 零改动；diff 中 check-quality-delta / quality-delta 零命中（#912 闸未加规则，裁 394）。",
+   "cmd": "逐条现场跑，不引用自述"
+  },
+  {
+   "id": "C8",
+   "name": "额外：读写路径与词表第二真源检查（复核员自加）",
+   "result": "pass",
+   "method": "grep 全仓 session_events / getEvents / appendEvent",
+   "evidence": "生产读路径唯一入口 getEvents（session-store.ts:516），经 deriveMessages:565 被 getMessages:611 使用，routes/sessions.ts:78、l1/im-inbound.ts:192、l4/data-exporter.ts:220 等全走此链 => fail-closed 不被绕过；消费侧 routes/sessions.ts:76-84 有 try/catch+500 兜底（不静默）；src/ 内无第二处直接读写 session_events 的 SQL（仅 session-store.ts），无第二份词表副本。",
+   "cmd": "grep 全仓 session_events / getEvents / appendEvent"
+  }
+ ],
+ "findings": [
+  {
+   "id": "A1",
+   "severity": "non-blocking",
+   "title": "「不吞错」无判别测试：PR 套件对吞错反模式全绿",
+   "evidence": "变异 3b（PRAGMA 判据删除 ＋ ALTER 包进 try/catch 空吞 = 代码注释明说要避免的反模式）=> tests/store/session-event-log.test.ts 仍 Tests 25 passed (25)；我用 Proxy 注入 ＋ query_only 才证明当前实现真的不吞。用例名『旧库（无列）打开 ⇒ 自动加列、老行读作 1；二次打开幂等（裁 395：禁 catch 吞）』未真正触及『禁 catch 吞』这半句。",
+   "fix": "补 1 例：老库 ＋ PRAGMA query_only=ON（或 Proxy 注入 ALTER 抛错）=> expect(() => new SessionStore(db)).toThrow(/readonly|injected/)；放同一 describe('#964 行格式版本')。"
+  },
+  {
+   "id": "A2",
+   "severity": "non-blocking",
+   "title": "并发首启竞态：两进程同时对旧库首启时第二个 ALTER 会硬失败",
+   "evidence": "ALTER 失败原样上抛（裁 395 要求），故并发首启第二个进程会 duplicate column name 并构造失败，而非幂等跳过；一次性窗口，启动器是否重试未核。",
+   "fix": "#964 回执登记为已知限制；若启动器无重试，则改为『PRAGMA 判缺 → ALTER，捕获 duplicate-column 专属 code 视为并发成功』（其它错误仍上抛）。"
+  },
+  {
+   "id": "A3",
+   "severity": "bookkeeping",
+   "title": "Issue #964 标签仍『执行态/未开工』",
+   "evidence": "Gitea issues/964 labels 含 执行态/未开工，而 PR #971（Q-7 第 1 条）已在飞。",
+   "fix": "看板真值回填：改 执行态/在飞（按 P# 口径），不阻断本 PR。"
+  },
+  {
+   "id": "A4",
+   "severity": "note",
+   "title": "version=1 时『写侧写当前版本』与 DEFAULT 1 运行期不可区分",
+   "evidence": "写侧正确性只有 code 证据（session-store.ts:496-497 INSERT 显式含列并绑定 SESSION_EVENT_FORMAT_VERSION）＋ 存储值=1，但 1 同时等于列 DEFAULT，运行观测无法证伪『其实靠 DEFAULT』。",
+   "fix": "bump 到 2 时补一条『当前版本 != DEFAULT 仍写对』的用例（或临时把常量改成 2 跑一次）。"
+  }
+ ],
+ "summary": "independent-reviewer (merge-condition-3) — deliverable-acceptance SKILL.md read at PR head tree /tmp/acc971",
+ "issue": 964,
+ "fingerprint_cmd": "bash scripts/control-tower/check-merge-conditions.sh --pr 971 --diff-fingerprint",
+ "reviewed_tree": "/tmp/acc971 (worktree add --detach be113e43b; head clean; 主仓 HEAD 仍 ba1b22a8b; 未 push/merge/commit)",
+ "node": "v22.23.2",
+ "advisories": [
+  {
+   "id": "A1",
+   "severity": "non-blocking",
+   "title": "「不吞错」无判别测试：PR 套件对吞错反模式全绿",
+   "evidence": "变异 3b（PRAGMA 判据删除 ＋ ALTER 包进 try/catch 空吞 = 代码注释明说要避免的反模式）=> tests/store/session-event-log.test.ts 仍 Tests 25 passed (25)；我用 Proxy 注入 ＋ query_only 才证明当前实现真的不吞。用例名『旧库（无列）打开 ⇒ 自动加列、老行读作 1；二次打开幂等（裁 395：禁 catch 吞）』未真正触及『禁 catch 吞』这半句。",
+   "fix": "补 1 例：老库 ＋ PRAGMA query_only=ON（或 Proxy 注入 ALTER 抛错）=> expect(() => new SessionStore(db)).toThrow(/readonly|injected/)；放同一 describe('#964 行格式版本')。"
+  },
+  {
+   "id": "A2",
+   "severity": "non-blocking",
+   "title": "并发首启竞态：两进程同时对旧库首启时第二个 ALTER 会硬失败",
+   "evidence": "ALTER 失败原样上抛（裁 395 要求），故并发首启第二个进程会 duplicate column name 并构造失败，而非幂等跳过；一次性窗口，启动器是否重试未核。",
+   "fix": "#964 回执登记为已知限制；若启动器无重试，则改为『PRAGMA 判缺 → ALTER，捕获 duplicate-column 专属 code 视为并发成功』（其它错误仍上抛）。"
+  },
+  {
+   "id": "A3",
+   "severity": "bookkeeping",
+   "title": "Issue #964 标签仍『执行态/未开工』",
+   "evidence": "Gitea issues/964 labels 含 执行态/未开工，而 PR #971（Q-7 第 1 条）已在飞。",
+   "fix": "看板真值回填：改 执行态/在飞（按 P# 口径），不阻断本 PR。"
+  },
+  {
+   "id": "A4",
+   "severity": "note",
+   "title": "version=1 时『写侧写当前版本』与 DEFAULT 1 运行期不可区分",
+   "evidence": "写侧正确性只有 code 证据（session-store.ts:496-497 INSERT 显式含列并绑定 SESSION_EVENT_FORMAT_VERSION）＋ 存储值=1，但 1 同时等于列 DEFAULT，运行观测无法证伪『其实靠 DEFAULT』。",
+   "fix": "bump 到 2 时补一条『当前版本 != DEFAULT 仍写对』的用例（或临时把常量改成 2 跑一次）。"
+  }
+ ],
+ "selfreport_mismatches": [
+  {
+   "item": "PR body『删老库补列 ALTER ⇒ D487 重建 3 用例红（expected false to be true）』",
+   "actual": "我复现该变异得 6 红：2 个 expected false to be true（约束升级 / seq 连续）＋ 1 个 SqliteError: no such column: format_version（旧库行保留）＋ 3 个 #964 新例（幂等 / 旧库无列 / D487 重建路径）。",
+   "impact": "数量与报文不符（方向对、不影响判据）"
+  },
+  {
+   "item": "PR body 词表棘轮原文断言 expected [7] to deeply equal [6] / expected [5] to deeply equal [6]",
+   "actual": "vitest 4.1.8 实测渲染为 expected [ message, tool_result, …(5) ] to deeply equal [ message, tool_result, …(4) ]（…(5)=7 项 vs …(4)=6 项）；语义等价但非原文照录。",
+   "impact": "引文格式失真，不影响判据"
+  },
+  {
+   "item": "PR body『词表偷减 ⇒ D487 幂等同红』",
+   "actual": "我删 diagnosis_module 得 2 红：词表冻结 ＋ seq 连续（SessionEventError 未知事件类型），不是幂等例；红点随被删类目而变。",
+   "impact": "摘要失真，不影响判据"
+  },
+  {
+   "item": "PR body『回归 4 文件 31 passed』",
+   "actual": "我按相关面跑：PR 文件 25/25、store 面 128/128（14 文件）、扩面 97/97（12 文件）。口径不同，非冲突。",
+   "impact": "口径差异"
+  },
+  {
+   "item": "M1/M2 两条必测变异的报错文本（自述 vs 实测）",
+   "actual": "逐字一致：expected undefined to be an instance of SessionEventError / expected 空串 to be EVENT_FORMAT_TOO_NEW。",
+   "impact": "一致"
+  }
+ ]
+}

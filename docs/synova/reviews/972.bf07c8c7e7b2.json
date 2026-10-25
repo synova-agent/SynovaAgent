@@ -1,0 +1,66 @@
+{
+ "schema": "syno-review-receipt/v1",
+ "pr": 972,
+ "author": "k12-batch5（P3 实施，#964 Q-8）",
+ "reviewer": "K3 独立审计员（零上下文；见 #989 第三轮审计报告）",
+ "independence": "fresh-session",
+ "issued_at": "2026-10-25T14:48:43+08:00",
+ "verdict": "PASS",
+ "head_reviewed": "fe6f4622a",
+ "base_reviewed": "8ea3a6129",
+ "tool": "K3 独立审计（#989 第三轮）＋ CTO sync 等价性复核",
+ "patch_fingerprint": "sha256:bf07c8c7e7b2b2978dcd69d4a2562783e9497524fd4424ddf0d63587f947b12c",
+ "checks": [
+  {
+   "id": "C1",
+   "title": "库比代码新 ⇒ 真拒启（Phase 0 fatal）",
+   "result": "pass",
+   "cmd": "/tmp 建库 schema_version=99 → initEngineContext()",
+   "evidence": "THREW name=SchemaMigrationError code=SCHEMA_TOO_NEW phase=reconcile retryable=false；先 db.close() 再抛 ⇒ 真拒启，非 warn 后继续"
+  },
+  {
+   "id": "C2",
+   "title": "开关两态",
+   "result": "pass",
+   "cmd": "SYNO_SCHEMA_STRICT=0 同场景",
+   "evidence": "STRICT0: NO THROW ＋ pino warn degraded:true code=SCHEMA_RECONCILE_DEGRADED"
+  },
+  {
+   "id": "C3",
+   "title": "迁移链缺环/重复具名 code",
+   "result": "pass",
+   "cmd": "构造 [2,4,5]/[2,3,3,4,5] 等",
+   "evidence": "MIGRATION_CHAIN_GAP / MIGRATION_DUPLICATE_VERSION，均 instanceof SchemaMigrationError"
+  },
+  {
+   "id": "C4",
+   "title": "自举（无空吞/裸 Error）",
+   "result": "pass",
+   "cmd": "git diff 审查 catch 与 Error 新增",
+   "evidence": "仅 1 处 catch（schema-migration.ts:207）log.error + throw err；无空 catch、无裸 Error 新增"
+  },
+  {
+   "id": "C5",
+   "title": "配对测试",
+   "result": "pass",
+   "cmd": "npx vitest run tests/store/schema-migration.test.ts",
+   "evidence": "Tests 19 passed (19) rc=0"
+  },
+  {
+   "id": "C6",
+   "title": "sync 等价性（头变内容不变）",
+   "result": "pass",
+   "cmd": "比较 sync 前后 mb..head 的 +/- 行集合",
+   "evidence": "332 行增删行集合完全一致（仅上下文变化）⇒ 复核对象与 K3 所审一致"
+  },
+  {
+   "id": "C7",
+   "title": "写集与红线",
+   "result": "pass",
+   "cmd": "git diff --name-status；grep audit",
+   "evidence": "4 件（含回执）；scripts/audit 0 行"
+  }
+ ],
+ "findings": [],
+ "reviewer_note": "本回执由 CTO 依据 K3 审计报告（#989）转录，非 CTO 自行判定；sync 等价性 C6 为 CTO 补测。"
+}

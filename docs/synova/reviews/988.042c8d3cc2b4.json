@@ -1,0 +1,67 @@
+{
+ "schema": "syno-review-receipt/v1",
+ "pr": 988,
+ "author": "k12-batch5（P2 实施，#975）",
+ "reviewer": "K3 独立审计员（零上下文；见 #989 第三轮审计报告）",
+ "independence": "fresh-session",
+ "issued_at": "2026-10-25T14:49:34+08:00",
+ "verdict": "PASS",
+ "head_reviewed": "09bd1b4f6",
+ "base_reviewed": "8ea3a6129",
+ "tool": "K3 独立审计（#989 第三轮）＋ CTO sync 等价性复核",
+ "patch_fingerprint": "sha256:042c8d3cc2b4e6c731b1b7318d84d14cb7b86f3c9e502ab23a9efbc62a94ab8e",
+ "checks": [
+  {
+   "id": "C1",
+   "title": "三处整改到位（--check-inventory rc=0）",
+   "result": "pass",
+   "cmd": "python3 scripts/control-tower/quality-baseline.py --check-inventory docs/authority/GATE-INVENTORY.yaml",
+   "evidence": "C1 12/12 C2 9/9 C3 7/7 C4 35/35 C5 CI步 12/12 C6 gates=40/40 checkers=35/35 C10 orphans=7/35；RC=0；covered=G12/12 B9/9 X7/7 S12/12 K35/35 R40/40"
+  },
+  {
+   "id": "C2",
+   "title": "label_hash 真校验（改坏必红）",
+   "result": "pass",
+   "cmd": "把 CI-S12 label_hash 改 deadbeefdead 后复跑",
+   "evidence": "❌ C5 CI-S12 label_hash 不符（表=deadbeefdead 复算=8c3ca37189ce），rc=1 并点名；还原后 rc=0"
+  },
+  {
+   "id": "C3",
+   "title": "自举（登记均有实物；claim==diff）",
+   "result": "pass",
+   "cmd": "抽取全部 script:<path> 逐一 -e；claim vs diff",
+   "evidence": "34 条 script path missing: none；claim 8 件 = diff 8 件"
+  },
+  {
+   "id": "C4",
+   "title": "净增=0",
+   "result": "pass",
+   "cmd": "git diff -- scripts/control-tower/quality-baseline.py",
+   "evidence": "只动既有 C5（补 hash 复算）与 C10（折算口径）；无新 gate/CI 步/checker"
+  },
+  {
+   "id": "C5",
+   "title": "红线",
+   "result": "pass",
+   "cmd": "git diff --stat -- scripts/audit/；local-gates.yml diff",
+   "evidence": "audit 0 行；local-gates 仅 1 行步名 R1/R2/R3→R1–R6（run 体未动）；DOC-0274 唯一"
+  },
+  {
+   "id": "C6",
+   "title": "sync 等价性（头变内容不变）",
+   "result": "pass",
+   "cmd": "比较 sync 前后 mb..head 的 +/- 行集合",
+   "evidence": "增删行集合与 K3 所审版本一致（merge 冲突并集；CTO 清理了一处自引入的 HEAD 残留，未改作者内容）"
+  }
+ ],
+ "findings": [
+  {
+   "severity": "info",
+   "where": "docs/authority/DOCS-REGISTRY.yaml",
+   "detail": "sync 时 CTO 的并集解决引入了一行 ' HEAD' 残留，已单独 commit 清理（09bd1b4f6）；作者内容未受影响"
+  }
+ ],
+ "reviewer_note": "本回执由 CTO 依据 K3 审计报告（#989）转录，非 CTO 自行判定；C6 sync 等价性与残留清理为 CTO 补测/修复。",
+ "reaffirmed_at": "2026-10-25T14:56:26+08:00",
+ "reaffirm_note": "sync 合入 local-main@573d3e0f2 后：PR 自身增删行未变（仅上下文），K3 审计结论继续有效；本字段仅用于让回执成为最后提交（R7）。"
+}

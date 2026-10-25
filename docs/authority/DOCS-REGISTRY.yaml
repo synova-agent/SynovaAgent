@@ -163,7 +163,7 @@ documents:
   - id: DOC-0106
     type: diary
     path: WORKLOG-*.md
-    status: active
+    status: archived
     owner: dev-line
     note: "WORKLOG 日记系列（2026-06-08 起）"
 
@@ -177,7 +177,7 @@ documents:
   - id: DOC-0108
     type: devdoc
     path: docs/synova/coordination/DSH-DEVDOC-MODE.md
-    status: active
+    status: archived
     owner: DSH
     note: "DSH 开发文档模式（2026-08 新增协调文档）"
 
@@ -191,7 +191,7 @@ documents:
   - id: DOC-0109
     type: devdoc
     path: docs/synova/coordination/K3-AUDIT-STANDARD-v2-20260820.md
-    status: active
+    status: archived
     owner: K3
     note: "K3 审计标准 v2（2026-08-20；登记门禁首次实战拦截项）"
 
@@ -260,7 +260,7 @@ documents:
   - id: DOC-0114
     type: governance
     path: docs/synova/coordination/派单-W1-双DSH提升-20260923.md
-    status: active
+    status: archived
     owner: DSH
 
   - id: DOC-0115
@@ -306,19 +306,19 @@ documents:
   - id: DOC-0121
     type: governance
     path: docs/synova/coordination/CTO-派单规程.md
-    status: active
+    status: archived
     owner: line-lead
 
   - id: DOC-0122
     type: governance
     path: docs/synova/coordination/CTO-派单模板-v3.md
-    status: active
+    status: archived
     owner: line-lead
 
   - id: DOC-0123
     type: governance
     path: docs/synova/coordination/CTO-DSH派单台账.md
-    status: active
+    status: archived
     owner: line-lead
 
   # ---- Win 线派单件（D1001/D1002/D1003）----
@@ -327,21 +327,21 @@ documents:
   - id: DOC-0259
     type: governance
     path: docs/synova/dispatch/D1001-ownership-renderer-tests-20260925.md
-    status: active
+    status: archived
     owner: win-line
 
     note: "重号修正：原误用 DOC-0124（与 decisions/proposed/process/2026-09-30-preset-landing-must-diff-against-working-peer.md 同号）；2026-10-24 #932 改号，登记内容不变。"
   - id: DOC-0260
     type: governance
     path: docs/synova/dispatch/D1002-workspaces-route-order-f1-20260925.md
-    status: active
+    status: archived
     owner: win-line
 
     note: "重号修正：原误用 DOC-0125（与 decisions/proposed/process/2026-09-30-cite-by-section-name-not-line-number.md 同号）；2026-10-24 #932 改号，登记内容不变。"
   - id: DOC-0126
     type: governance
     path: docs/synova/dispatch/D1003-docs-tools-and-a-class-registry-20260926.md
-    status: active
+    status: archived
     owner: win-line
   # ---- D1111（治理线第一窗：门禁专项吸收 + 文档治理范围修正）2026-10-02 ----
   # 取号实测：全局最大（origin/main ∪ 未合并分支）＝ DOC-0136（docs/D1110 分支，实测）
@@ -350,26 +350,26 @@ documents:
   - id: DOC-0137
     type: governance
     path: docs/synova/coordination/2026-10-02-D1-门禁专项吸收件-治理线一窗.md
-    status: active
+    status: archived
     owner: line-lead
 
   - id: DOC-0138
     type: governance
     path: docs/synova/coordination/2026-10-02-D2-文档治理范围修正件-治理线一窗.md
-    status: active
+    status: archived
     owner: line-lead
 
   # D1112 送审件（A5 送审链：提案→K3 过审→CTO 裁；红线 7「改门禁者不自判」）
   - id: DOC-0139
     type: governance
     path: docs/synova/coordination/K3审计请求-D1112-门禁语义变更-20261002.md
-    status: active
+    status: archived
     owner: line-lead
 
   - id: DOC-0140
     type: governance
     path: docs/synova/coordination/2026-10-02-D3-线登记与收口-R1R5-治理线一窗.md
-    status: active
+    status: archived
     owner: line-lead
 
   # ---- D1153 治理线三件（K3 送审材料 / 密封面差集 / 执行点口径）2026-10-05 补登记 ----
@@ -379,21 +379,21 @@ documents:
   - id: DOC-0144
     type: governance
     path: docs/synova/coordination/K3-送审-门禁治理波次-20261005.md
-    status: active
+    status: archived
     owner: gov-line
     note: "D1153-1：本波次两 PR（#1077 435e58263 / #1107 ac1829ca0）K3 送审材料（门禁语义变更必过 K3）"
 
   - id: DOC-0145
     type: governance
     path: docs/synova/coordination/未登记密封面清单-20261005.md
-    status: active
+    status: archived
     owner: gov-line
     note: "D1153-2：密封面差集 77 条全量清单 + T6「2 行 ci.yml 登记」真载体判定（= PR #1079）"
 
   - id: DOC-0146
     type: governance
     path: docs/synova/coordination/执行点基线-G1-G9.md
-    status: active
+    status: archived
     owner: gov-line
     note: "D1153-3：执行点口径（一句话定义 + 可复跑命令 E0 + as_of 实测 + 不可比说明）"
 
@@ -403,20 +403,20 @@ documents:
   - id: DOC-0141
     type: governance
     path: docs/synova/dispatch/D1000-win-identity-chain-department-20260924.md
-    status: active
+    status: archived
     owner: win-line
 
   - id: DOC-0142
     type: governance
     path: docs/synova/dispatch/D1004-js-yaml-dependency-20260925.md
-    status: active
+    status: archived
     owner: win-line
 
   # 红因：D2 登记门禁（CI strict）判「有未登记文档 1 个（本件）」⇒ D1147 同批补登记
   - id: DOC-0143
     type: governance
     path: docs/synova/coordination/D1147-单套门禁-必需context变更提案.md
-    status: active
+    status: archived
     owner: line-lead
     note: "D1147 单套门禁（批2）：必需 context 12→9→10 提案 + PATCH/回滚/复核命令 + 改坏即红证据 + 例外清单"
 
@@ -424,7 +424,7 @@ documents:
   - id: DOC-0186
     type: governance
     path: docs/synova/coordination/D1160-门禁提案-登记表追加型豁免与D708多命中分级.md
-    status: active
+    status: archived
     owner: line-lead
     note: "D1160 门禁提案（落库版 v2.1）：① DOCS-REGISTRY.yaml 追加型豁免（5 约束定稿 + numstat 删除数=0 前置 + 行键求交冲突自动判 + R1-R7 夹具）② D708 多命中判定分级（候选存在于 base 则 exit 1；全部来自本分支则 exit 2）③ 判据纪律（数字三要素含 ref + 读文件须写 ref + 夹具红须来自断言）。待 K3 过审转 CTO 裁；本件不改任何判据。号取 DOC-0186 以规避在飞撞号（同批 6 个 PR 同取 DOC-0144）。"
 
@@ -432,7 +432,7 @@ documents:
   - id: DOC-0187
     type: governance
     path: docs/synova/coordination/交付-D1132-两预设包与哨兵skill-20261003.md
-    status: active
+    status: archived
     owner: line-lead
 
   # ---- D1204 闸 3 判据收敛（承接 D1203 整改 + K3 §R2/§R3 逃逸面）2026-10-07 ----
@@ -450,14 +450,14 @@ documents:
   - id: DOC-0189
     type: registry
     path: docs/synova/coordination/#980-待归口登记册-20261008.md
-    status: active
+    status: archived
     owner: line-win-dsh-lead
     note: "#980 执行期产出：6 项偏离（D-1 判据加严并存 / D-2 超登记 paths / D-3 收窄不碰 graph-bridge / D-4 卡面 bridge.createNode 与代码实况不符 / D-5 探针文案为判别力承重件 / D-6 判据落点在治理区待搬移）+ 6 项仓库级缺口（G-1 测试文件零类型门禁 / G-2 全量 tsc 存量红 28 条 / G-3 Test-Kit 必需检查只跑 1 文件 / G-4 未登记存量存疑 1 件 / G-5 本地 stash 存量 28 条 / G-6 自动 tag 落 feature 分支被 D331 拦）；含「就绪补丁」（探针搬移 3 处改动 + 搬移后必跑判据）。只登记不决策，立卡与指派归 CTO。"
 
   - id: DOC-0190
     type: registry
     path: docs/synova/coordination/2-2-参数清单-v1-20261008.md
-    status: active
+    status: archived
     owner: synova-squad-lead
     note: "#1047 2-2 参数清单：145 条 × 19 字段（五域 覆盖 + layer 四层分栏），值留空；判据 docs/synova/coordination/tools/check-param-list.ts（exit 0）"
 
@@ -1031,8 +1031,22 @@ documents:
     owner: P1
     note: "#915 Q-5 受保护路径豁免件：4 条按文件名逐条覆盖（check-tool-args-delta.py、check-tool-args-delta.test.sh、DOCS-REGISTRY.yaml、本文件自覆盖），裁 365。"
 
-  # ---- P1 2026-10-25：#915 Q-6 时间可注入豁免件（DOC-0273；main 实测 max=0272 ⇒ 从 0273 起）----
+  # ---- P2 2026-10-25：#975 GATE-INVENTORY 三处整改豁免件（DOC-0274；0273 预留给在飞 #983）----
+  - id: DOC-0274
+    type: decision
+    path: gate-exemptions/2026-10-25-p2-975-gate-inventory.md
+    status: active
+    owner: P2
+    note: "#975 受保护路径豁免件：5 条逐条覆盖（quality-baseline.py、quality-baseline.test.sh、GATE-INVENTORY.yaml、local-gates.yml、本文件自覆盖），裁 399。"
+  # ---- P2 2026-10-25：#976 DOCS-REGISTRY 存活判据豁免件（DOC-0273；main 实测 max=0272 ⇒ 从 0273 起）----
   - id: DOC-0273
+    type: decision
+    path: gate-exemptions/2026-10-25-p2-976-doc-registry-alive.md
+    status: active
+    owner: P2
+    note: "#976 受保护路径豁免件：4 条按文件名逐条覆盖（doc-registry-gate.sh、doc-registry-gate.test.sh、DOCS-REGISTRY.yaml、本文件自覆盖），裁 399。"
+  # ---- P1 2026-10-25：#915 Q-6 时间可注入豁免件（DOC-0275；sync 时 main 实测 max=0274（#975/#976 已占 0273/0274）⇒ 从 0275 起）----
+  - id: DOC-0275
     type: decision
     path: gate-exemptions/2026-10-25-p1-915-q6.md
     status: active

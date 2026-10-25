@@ -16,6 +16,9 @@
 #   输出:  每文件 ✅/❌ + 扫描源行 + 汇总（**必打印检查数 N**）；
 #          **唯一性（#942）**：`- id: DOC-<n>` 重号 → 逐条点名 `❌ 重号: DOC-<n>（出现 k 次）`，并 exit 1
 #          （唯一性是硬判据，**不得只告警**）
+#          **存活（#976）**：`status: active` 且 `path` 不在树内 → 逐条点名 `❌ 存活失配: DOC-<n> path 不存在`，
+#          并 exit 1；`status: active` 但**无 path 字段**同样红（否则删掉 path 行即可绕过）；
+#          path 含通配（如 `WORKLOG-*.md`）按**字面路径**判 —— 通配不是"存在的文件"，不能算活
 #          任一未登记 → exit 1（硬阻断）；全部登记 → exit 0
 #   降级:  DOCS-REGISTRY.yaml 缺失 → ⚠️ 警告 exit 0（台账未建立不阻断）
 #          base 全链不可解析 / merge-base 为空 → ⚠️ **显式降级**：源③跳过但**打印留痕**
@@ -74,6 +77,54 @@ if [ -n "$DUP_IDS" ]; then
     DUPFAIL=$((DUPFAIL+1))
   done <<< "$DUP_IDS"
 fi
+
+# ── 存活（#976）：`status: active` 且 `path` 不在树内 ⇒ 红、逐条点名 ──
+# 背景（K3 #974 D2）: 旧实现只查「**新增**文档是否登记」，**不查已登记的是否还在**
+#   ⇒ 台账可长期指向不存在的路径。实测（改造前 27e3433f1）: 138 条 entry 中 33 条 path
+#   不在树内，其中 **24 条 status=active**（如 DOC-0121 `CTO-派单规程.md`、DOC-0190 参数清单）。
+# 口径: `status: active` = 「现在还在用的文档」⇒ `path` 必须存在于树内（相对仓库根的**字面**路径）。
+#   历史件走 `archived` / `superseded` / `draft`（**降级不删条目**：身份证 id 与 note 保留可追溯）。
+#   通配（`WORKLOG-*.md`）按字面判 —— 它不是"存在的文件"，不能当活件；要保留语义须改口径再来。
+# 判据: active ∧ [ ! -e "$ROOT/$path" ] ⇒ 逐条点名 + exit 1；active ∧ 无 path 字段 ⇒ 同样红。
+# fail-closed（三态码 2）: 台账里**一条 status 字段都解析不到** ⇒ 存活检查不可执行 ⇒ exit 2
+#   —— 禁把"看不见"当"没问题"（与 #942 F1「0 条 DOC id ⇒ exit 2」同口径）。
+STATUS_FIELDS=$(grep -cE '^[[:space:]]+status:[[:space:]]*[A-Za-z]' "$REGISTRY")
+STATUS_FIELDS=${STATUS_FIELDS:-0}
+if [ "$STATUS_FIELDS" -eq 0 ]; then
+  echo "  ❌ 不可见: 台账中解析到 0 条 status 字段（schema 变更或解析失配）"
+  echo "  ❌ 登记门禁阻断（存活检查不可执行 ⇒ fail-closed exit 2；禁把不可见当没问题）"
+  exit 2
+fi
+ALIVE_TOTAL=0; ALIVE_FAIL=0
+# 逐条 entry 抽 id/path/status（纯 awk，单次遍历；`- id:` 起条目，其后到下一个 `- id:` 属本条目）
+while IFS=$'\t' read -r _aid _apath; do
+  [ -z "$_aid" ] && continue
+  ALIVE_TOTAL=$((ALIVE_TOTAL+1))
+  if [ "$_apath" = "<NO-PATH>" ]; then
+    echo "  ❌ 存活失配: ${_aid} status=active 但条目无 path 字段"
+    ALIVE_FAIL=$((ALIVE_FAIL+1))
+  elif [ ! -e "$ROOT/$_apath" ]; then
+    echo "  ❌ 存活失配: ${_aid} path 不存在: ${_apath} （降 status 为 archived/superseded，或修 path）"
+    ALIVE_FAIL=$((ALIVE_FAIL+1))
+  fi
+done <<< "$(awk '
+  # clean(): 去引号 + 去行尾注释 + 去尾空格（`status: "active"` / `path: a.md  # 说明`）
+  function clean(s) { gsub("\047", "", s); gsub("\"", "", s); sub(/[[:space:]]+#.*$/, "", s); sub(/[[:space:]]+$/, "", s); return s }
+  function emit() { if (id != "" && st == "active") printf "%s\t%s\n", id, (p == "" ? "<NO-PATH>" : p) }
+  {
+    line = $0
+    if (line ~ /^[[:space:]]*-[[:space:]]*id:/) {
+      emit()
+      id = line; sub(/^[[:space:]]*-[[:space:]]*id:[[:space:]]*/, "", id)
+      st = ""; p = ""
+    } else if (id != "") {
+      if (line ~ /^[[:space:]]+path:/) { p = line; sub(/^[[:space:]]+path:[[:space:]]*/, "", p) }
+      else if (line ~ /^[[:space:]]+status:/) { st = line; sub(/^[[:space:]]+status:[[:space:]]*/, "", st) }
+    }
+    id = clean(id); p = clean(p); st = clean(st)
+  }
+  END { emit() }
+' "$REGISTRY")"
 
 # 🔴 2026-10-11 增 `extensions/` 内容数据豁免（创始人裁定）:
 #   本门禁的语义是**文档台账**（`type ∈ [navigation…archive]`，面向权威文档），
@@ -146,11 +197,13 @@ else
 fi
 
 echo "── 唯一性: ${TOTAL_DOC_IDS} 条 DOC id，重号 ${DUPFAIL} 个 ──"
+echo "── 存活: ${ALIVE_TOTAL} 条 status=active，path 失配 ${ALIVE_FAIL} 个（status 字段 ${STATUS_FIELDS} 条）──"
 echo "── 汇总: 检查 $CHECKED 个文档，$FAIL 个未登记 ──"
-if [ "$FAIL" -eq 0 ] && [ "$DUPFAIL" -eq 0 ]; then
+if [ "$FAIL" -eq 0 ] && [ "$DUPFAIL" -eq 0 ] && [ "$ALIVE_FAIL" -eq 0 ]; then
   echo "  ✅ 登记门禁通过"; exit 0
 else
   [ "$FAIL" -gt 0 ] && echo "  ❌ 登记门禁阻断（未登记 ${FAIL} 个）"
   [ "$DUPFAIL" -gt 0 ] && echo "  ❌ 登记门禁阻断（DOC id 重号 ${DUPFAIL} 个；唯一性不是风格问题，不许只告警）"
+  [ "$ALIVE_FAIL" -gt 0 ] && echo "  ❌ 登记门禁阻断（active 条目 path 失配 ${ALIVE_FAIL} 个；台账不许指向不存在的文件）"
   exit 1
 fi

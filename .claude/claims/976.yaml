@@ -1,0 +1,17 @@
+# .claude/claims/976.yaml — #976 DOCS-REGISTRY 存活判据（active 条目 path 必须存在）· 写集声明
+#
+# 指定：Issue #976（K3 #974 D2 实测 24 条 active 指向已不存在的文件）｜B 类轻量档｜合由 CTO 点（裁 399）
+# 纪律：只改 scripts/doc-system/ 与配对测试；台账**只改 status 行**（不删条目/不改 id/不改 note）；
+#       不新增门禁组号；不碰 scripts/audit/**。
+writeset:
+  - .claude/claims/976.yaml
+  - scripts/doc-system/doc-registry-gate.sh
+  - tests/doc-system/doc-registry-gate.test.sh
+  - docs/authority/DOCS-REGISTRY.yaml
+  - gate-exemptions/2026-10-25-p2-976-doc-registry-alive.md
+  - memory/notes/proposed/2026-10-25-p2-976-doc-registry-alive.md
+done:
+  - verify: bash tests/doc-system/doc-registry-gate.test.sh      # 期望 63 通过 / 0 失败
+  - verify: bash scripts/doc-system/doc-registry-gate.sh         # 期望 存活失配 0 个 / exit 0
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main   # 期望 豁免 0 失败
+note: "#976：登记门禁补存活硬判据（active 且 path 不存在 ⇒ 逐条点名 exit 1／0 条 status 字段 fail-closed exit 2）＋24 条存量降 archived；判据两态与改坏必红见配对测试 K 段。"
