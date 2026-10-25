@@ -6,7 +6,8 @@
 #   1. 头契约（@input/@output/@exit/@degraded ＋ 已知限制）与 L8 例外登记
 #   2. --selfcheck：判别力 1/1/1/1/1 clean=0；反向（T4 规则改回不查 return []）⇒ rc=1
 #   3. --check-registry：真件 REGISTRY-OK rows=10；反例（wired 无 consumer/多余键/坏行号/0 行/YAML 越界）
-#   4. --check-inventory：合成夹具 covered/PAIRING 契约；8 个改坏两态（C1/C3/C4/C6/C7/C9/C9b/C10）
+#   4. --check-inventory：合成夹具 covered/PAIRING 契约；10 个改坏两态（C1/C3/C4/C5/C6/C7/C9/C9b/C10×2）
+#      ＋ #975 新增：E 态 gates 段缺失 rc=2；D 跨载体逐字相等（workflow ①i 步名 = 表 CI-S12 label）
 #   5. --orphans-only：夹具 2/4 ＋ 真树格式（rc=0，不判红）
 #   6. J3 确定性：两次 --write-baseline --out 副本 ⇒ 两次 shasum 相同；首跑 BOOTSTRAP
 #   7. J6 三态：0=写基线 / 1=沙箱注入 T4 / 2=坏根目录（信号量==0）
@@ -219,6 +220,18 @@ jobs:
       - name: plain step
         run: echo ok
 FIXTURE_WF
+# #975 夹具：跨文件 workflow 引用（.github/workflows/ci.yml）——其行号与
+# local-gates.yml 步序无关，引用位必须记 script:<rel>，禁止折算成 CI-S<n>
+mkdir -p "$INV_DIR/.github/workflows"
+cat > "$INV_DIR/.github/workflows/ci.yml" <<'FIXTURE_CI'
+name: fixture-ci
+on: [push]
+jobs:
+  ci:
+    steps:
+      - name: upstream ci step
+        run: bash scripts/control-tower/check-beta.sh
+FIXTURE_CI
 cat > "$INV_DIR/inventory.yaml" <<'FIXTURE_INV'
 schema_version: 1
 meta:
@@ -278,7 +291,7 @@ gates:
     kind: step
     line: 6
     label: "①c content coupling fixture"
-    label_hash: "000000000001"
+    label_hash: "0ddc26409d01"
     occurrences: [6]
     what: "fixture CI step"
     blocking: soft
@@ -291,7 +304,7 @@ gates:
     kind: step
     line: 8
     label: "plain step"
-    label_hash: "000000000002"
+    label_hash: "9c3750b3669b"
     occurrences: [8]
     what: "fixture CI step"
     blocking: soft
@@ -311,7 +324,7 @@ checkers:
     replacement: ""
   - id: CT-check-beta
     path: scripts/control-tower/check-beta.sh
-    wired_to: ["script:scripts/tool-helper.sh"]
+    wired_to: ["script:.github/workflows/ci.yml", "script:scripts/tool-helper.sh"]
     orphan: false
     blocking: false
     decision: keep
@@ -387,7 +400,16 @@ elif name == "retire-empty-replacement":
         '    decision: keep\n    reason: "fixture"\n    replacement: ""\n  - id: PC-B-192f1b',
         '    decision: retire\n    reason: "fixture"\n    replacement: ""\n  - id: PC-B-192f1b')
 elif name == "wrong-wired-to":
-    out = text.replace('    wired_to: ["script:scripts/tool-helper.sh"]', "    wired_to: []")
+    out = text.replace('    wired_to: ["script:.github/workflows/ci.yml", "script:scripts/tool-helper.sh"]',
+                       "    wired_to: []")
+elif name == "c5-tamper":
+    # #975：CI-S2 的 label_hash 篡改 ⇒ C5 真校验判红
+    out = text.replace('    label: "plain step"\n    label_hash: "9c3750b3669b"',
+                       '    label: "plain step"\n    label_hash: "deadbeefdead"')
+elif name == "c10-ci-yml-mapping":
+    # #975：把跨文件引用位写回旧 bug 形态（折算成 CI-S2）⇒ C10 复算判红
+    out = text.replace('    wired_to: ["script:.github/workflows/ci.yml", "script:scripts/tool-helper.sh"]',
+                       '    wired_to: ["CI-S2", "script:scripts/tool-helper.sh"]')
 elif name == "drop-excluded-header":
     out = cut(text, "excluded_headers:\n", "gates:\n")
 elif name == "handwritten-gate-id":
@@ -422,6 +444,65 @@ inv_case wrong-wired-to "wired_to 不一致" "C10"
 inv_case drop-excluded-header "PC-X-0dfe02" "C3"
 inv_case handwritten-gate-id "PC-Z9" "C6"
 inv_case move-checkpoint-to-wrong-row "cp two" "C4"
+inv_case c5-tamper "label_hash 不符" "C5"
+inv_case c5-tamper "CI-S2" "C5"
+inv_case c10-ci-yml-mapping "wired_to 不一致" "C10"
+
+# #975 E 态：gates 段缺失 ⇒ 信号量==0 ⇒ rc=2（不折成 0/1）
+INV_E_MISSING="$TMP_DIR/inv-e-missing-gates.yaml"
+"$PYBIN" - "$INV_DIR/inventory.yaml" "$INV_E_MISSING" <<'PYEOF'
+import sys
+src, dst = sys.argv[1], sys.argv[2]
+text = open(src, encoding="utf-8").read()
+i = text.index("gates:\n")
+j = text.index("checkers:\n")
+out = text[:i] + text[j:]
+assert out != text
+open(dst, "w", encoding="utf-8", newline="\n").write(out)
+PYEOF
+OUT=$("$PYBIN" "$TOOL" --root "$INV_DIR" --check-inventory "$INV_E_MISSING" 2>&1); RC=$?
+assert_rc 2 "$RC" "inventory E 态：gates 段缺失 ⇒ rc=2"
+assert_contains "$OUT" "degraded:" "gates 段缺失打印 degraded 字样"
+
+# #975 D 断言（跨载体逐字相等）：真树 workflow ①i 步名 = 表 CI-S12 label，
+# 且表 label_hash = label_hash() 实算（步名/hash 改任一侧 ⇒ 此断言红）
+D_CHECK=$("$PYBIN" - "$REPO_DIR" <<'PYEOF'
+import hashlib
+import re
+import sys
+
+root = sys.argv[1]
+wf = open(root + "/.gitea/workflows/local-gates.yml", encoding="utf-8").read().split("\n")
+inv = open(root + "/docs/authority/GATE-INVENTORY.yaml", encoding="utf-8").read().split("\n")
+name_re = re.compile(r"^\s*-\s*name:\s*(.+?)\s*$")
+step_labels = [m.group(1).strip() for m in map(name_re.match, wf) if m]
+inv_label = None
+inv_hash = None
+for idx, line in enumerate(inv):
+    if re.match(r"\s*-\s*id:\s*CI-S12\s*$", line):
+        for probe in inv[idx:idx + 12]:
+            m = re.match(r'\s*label:\s*"(.*)"\s*$', probe)
+            if m:
+                inv_label = m.group(1)
+            m = re.match(r'\s*label_hash:\s*"(.*)"\s*$', probe)
+            if m:
+                inv_hash = m.group(1)
+            if inv_label and inv_hash:
+                break
+        break
+assert inv_label and inv_hash, "CI-S12 行未找到 label/label_hash"
+tool_step = [s for s in step_labels if "①i" in s]
+assert len(tool_step) == 1, "workflow ①i 步不唯一: %r" % tool_step
+computed = hashlib.sha1(tool_step[0].encode("utf-8")).hexdigest()[:12]
+ok = tool_step[0] == inv_label and computed == inv_hash
+print("D-EQUAL %s inv_label=%r inv_hash=%s computed=%s" % ("OK" if ok else "BAD", inv_label, inv_hash, computed))
+PYEOF
+)
+if printf '%s' "$D_CHECK" | grep -q "^D-EQUAL OK"; then
+  pass "#975 D：workflow ①i 步名 = 表 CI-S12 label（逐字）且 label_hash 实算一致"
+else
+  fail "#975 D：跨载体逐字相等断言红 — $D_CHECK"
+fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
