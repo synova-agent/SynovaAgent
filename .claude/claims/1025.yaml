@@ -1,0 +1,8 @@
+writeset:
+  - .claude/claims/1025.yaml
+  - .github/GATE-SPLIT.md
+  - gate-exemptions/2026-10-26-cto-1025-gh-evidence.md
+  - docs/authority/DOCS-REGISTRY.yaml
+done:
+  - verify: grep -n "40234461099" .github/GATE-SPLIT.md
+note: "#1025 补 GitHub 实跑证据。"

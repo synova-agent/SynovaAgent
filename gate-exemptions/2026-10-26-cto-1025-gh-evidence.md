@@ -1,0 +1,3 @@
+- .github/GATE-SPLIT.md — 补 GitHub 实跑证据与跨平台冲突记录（裁 421）— 裁 421
+- docs/authority/DOCS-REGISTRY.yaml — 登记本豁免件（仅追加一行）— 裁 421
+- gate-exemptions/2026-10-26-cto-1025-gh-evidence.md — 本豁免件自覆盖，声明上两条路径 — 裁 421
