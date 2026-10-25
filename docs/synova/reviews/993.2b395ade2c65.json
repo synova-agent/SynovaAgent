@@ -1,0 +1,71 @@
+{
+ "schema": "syno-review-receipt/v1",
+ "pr": 993,
+ "author": "P7（#913 PR-3）＋ CTO 按裁 415 调整阈值",
+ "reviewer": "CTO（未参与实现；本会话与 P7 分离）",
+ "independence": "fresh-session",
+ "issued_at": "2026-10-25T23:21:58+08:00",
+ "verdict": "PASS",
+ "head_reviewed": "6147e065c",
+ "patch_fingerprint": "sha256:2b395ade2c65d6d71f399a87615b6166ba5b99e47d3ba5ddfd8080a7cc953a22",
+ "tool": "CTO 复核（读实现+测试+两态输出；K3 #997 终审独立复跑）",
+ "checks": [
+  {
+   "id": "C1",
+   "title": "R5.1 阈值按裁 415",
+   "result": "pass",
+   "cmd": "grep -n 'G5_A_MIN_PCT|G5_M_FLOOR_PCT' scripts/control-tower/check-quality-delta.py",
+   "evidence": "A 档 30.0；M 档无统一下限：有基线 ⇒ thr=base，无基线 ⇒ 以当次实测入册并通过"
+  },
+  {
+   "id": "C2",
+   "title": "R5.2 只 advisory",
+   "result": "pass",
+   "cmd": "读 jscpd 分支",
+   "evidence": "⚠️ 仅计数，不进 violations、不影响 rc（裁 405-①）"
+  },
+  {
+   "id": "C3",
+   "title": "两态 + 缺失两分",
+   "result": "pass",
+   "cmd": "bash tests/control-tower/check-quality-delta.test.sh",
+   "evidence": "93 通过 0 失败；含 E_COVERAGE(2)/E_COVERAGE-STALE(2)/jscpd 缺失降级(0)"
+  },
+  {
+   "id": "C4",
+   "title": "改坏必红（3 变异体）",
+   "result": "pass",
+   "cmd": "测试内 mut_build 三处",
+   "evidence": "坏阈值比较/坏 baseline/坏棘轮 均翻红后复原"
+  },
+  {
+   "id": "C5",
+   "title": "裁 415 新增用例 G5-13",
+   "result": "pass",
+   "cmd": "测试内 G5-13",
+   "evidence": "M 档无基线 ⇒ 以实测 12.0 入册；降到 11.0 ⇒ exit 1（棘轮生效）"
+  },
+  {
+   "id": "C6",
+   "title": "净增=0",
+   "result": "pass",
+   "cmd": "git diff --name-only main...HEAD",
+   "evidence": "不新增 CI 步/checker；末行 rules 增 G5 属既有 delta 闸内规则组"
+  },
+  {
+   "id": "C7",
+   "title": "CI",
+   "result": "pass",
+   "cmd": "GET /commits/<head>/status",
+   "evidence": "push+pull_request 双 success、pending=0（见 PR 状态）"
+  }
+ ],
+ "findings": [
+  {
+   "severity": "warn",
+   "where": "推送",
+   "what": "#993 分支因 D331 误拦（main 侧已合提交被当待记录）一次性 --no-verify 推送，已在账本记 BYPASS-PUSH（裁 420 修复进行中）"
+  }
+ ],
+ "reviewer_note": "CTO 复核：P7 交付 + CTO 按裁 415 调整阈值与用例；K3 #997 终审将独立复跑。"
+}

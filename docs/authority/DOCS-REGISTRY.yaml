@@ -1045,6 +1045,13 @@ documents:
     status: active
     owner: P2
     note: "#976 受保护路径豁免件：4 条按文件名逐条覆盖（doc-registry-gate.sh、doc-registry-gate.test.sh、DOCS-REGISTRY.yaml、本文件自覆盖），裁 399。"
+  # ---- P7 2026-10-26：#913 PR-3 Q-11 G5 覆盖率与重复率门禁豁免件（base 实测 max=0274 ⇒ 从 0275 起）----
+  - id: DOC-0279
+    type: decision
+    path: gate-exemptions/2026-10-26-p7-913-pr3-q11.md
+    status: active
+    owner: P7
+    note: "#913 PR-3 Q-11 G5 受保护路径豁免（裁 405），覆盖 G5 实现＋配对测试＋本登记＋豁免件自覆盖。"
   # ---- P1 2026-10-25：#915 Q-6 时间可注入豁免件（DOC-0275；sync 时 main 实测 max=0274（#975/#976 已占 0273/0274）⇒ 从 0275 起）----
   - id: DOC-0275
     type: decision
