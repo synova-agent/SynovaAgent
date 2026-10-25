@@ -115,6 +115,9 @@
 #       （规格 §13 写的 `jsonFull` 在 jscpd@4.0.5 **不存在**：只打 warning、rc=0、无产物——L1 实测；本器按真名实现）。
 #   11. **jscpd 只扫变更文件**（不扫全仓）⇒ "变更文件 vs 存量文件"的重复只有在两边**都变更**时才可能被测到；
 #       且 jscpd 默认参数（min-tokens 等）不在本器调优范围内。
+#   11b. **jscpd@4.0.5 只在检出重复时写报告**（实测：单文件/无重复文件 rc=0 且无 jscpd-report.json）⇒
+#       本器把 "rc=0 且无报告" 判为**本次未检出重复**（note 显式说明，不误报 E_JSCPD-MISSING）；
+#       "不可用" 只指 npx 探测失败/子进程异常/rc≠0/报告不可解析 —— 这些才降级（E_JSCPD-MISSING，不阻断）。
 #   12. **--update-baseline 也只处理变更集内的 src .ts**（存量条目不动）；写盘键 = repo 相对路径、2 空格缩进。
 #   13. **src/** 的 .d.ts / 纯类型文件亦在 R5.1 视野内**（规格按 `src/**` + `.ts` 的字面口径，本器不自造豁免）；
 #       若其 coverage 条目缺失 ⇒ E_COVERAGE（fail-closed，与规格一致）。
@@ -636,10 +639,13 @@ def jscpd_report(root: str, files: List[str]) -> Optional[dict]:
             _jscpd_degrade(f"jscpd 运行失败: {type(exc).__name__}: {exc}")
             return None
         rp = Path(out_dir) / "jscpd-report.json"
-        if run.returncode != 0 or not rp.exists():
-            _jscpd_degrade(f"jscpd rc={run.returncode} 且无 jscpd-report.json（stdout 前 80: "
-                           f"{(run.stdout or '').strip()[:80]!r}）")
+        if run.returncode != 0:
+            _jscpd_degrade(f"jscpd rc={run.returncode}（stdout 前 80: {(run.stdout or '').strip()[:80]!r}）")
             return None
+        if not rp.exists():
+            # jscpd@4.0.5 **只在检出重复时写报告**（实测：单个/无重复文件 rc=0 且无产物）
+            # ⇒ rc=0 无报告 = 本次未检出重复（不是"不可用"）。留 _no_report 标记供 note 显式说明。
+            return {"duplicates": [], "_no_report": True}
         try:
             data = json.loads(rp.read_text(encoding="utf-8"))
         except (OSError, ValueError) as exc:
@@ -709,6 +715,8 @@ def scan_g5_duplication(root: str, src: List[str]) -> Tuple[List[str], int, str]
         if ratio > G5_DUP_MAX_PCT + 1e-9:
             advisories.append(f"⚠️ R5.2: {path} 重复 {ratio:.2f}% > {G5_DUP_MAX_PCT:.0f}%（advisory）")
     note = f"G5 重复率: R5.2 advisory 超阈 {len(advisories)} 个文件（> {G5_DUP_MAX_PCT:.0f}%，不阻断、不计违规）"
+    if report.get("_no_report"):
+        note += "；jscpd rc=0 且未产出报告 ⇒ 本次未检出重复（非降级）"
     return advisories, len(advisories), note
 
 
