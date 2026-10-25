@@ -1,0 +1,3 @@
+- scripts/control-tower/check-bypass-log.sh — D331 对账来源并入主工作树账本（跨 worktree 误拦修复） — 裁 420
+- gate-exemptions/2026-10-25-cto-998-d331-union-ledger.md — 本豁免件自覆盖 — 裁 420
+- docs/authority/DOCS-REGISTRY.yaml — #998 登记本豁免件 — 裁 420
