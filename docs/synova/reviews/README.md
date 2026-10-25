@@ -127,7 +127,7 @@ bash scripts/control-tower/check-merge-conditions.sh --pr <N> --print-receipt-te
 
 ```bash
 bash scripts/control-tower/check-merge-conditions.sh --pr <N> --json | python3 -m json.tool   # 机器可读，stdout 仅 JSON
-bash scripts/control-tower/check-merge-conditions.sh --selfcheck                             # 判别力自检（12 判定点，零网络）
+bash scripts/control-tower/check-merge-conditions.sh --selfcheck                             # 判别力自检（13 判定点，零网络）
 ```
 
 回执写坏了 ⇒ 输出**点名具体规则**（R1–R9 之一 ＋ 具体字段/文件），不是笼统 exit 1。

@@ -25,14 +25,16 @@ documents:
   - id: DOC-9001
     type: prd
     path: a.md
+    status: active
   - id: DOC-9002
     type: prd
     path: docs/good.md
+    status: active
 EOF
 DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" >/dev/null 2>&1; t "A 检出未登记" 1 $?
 
 # B: 补登记 bad.md → exit 0
-printf '  - id: DOC-9003\n    type: prd\n    path: docs/bad.md\n' >> "$FIX/docs/authority/DOCS-REGISTRY.yaml"
+printf '  - id: DOC-9003\n    type: prd\n    path: docs/bad.md\n    status: active\n' >> "$FIX/docs/authority/DOCS-REGISTRY.yaml"
 DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" >/dev/null 2>&1; t "B 全登记通过" 0 $?
 
 # C: registry 缺失 → 降级 exit 0
@@ -53,7 +55,7 @@ git -C "$FIX" add docs/new.md 2>/dev/null # swallow-ok:
 DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" >/dev/null 2>&1; t "E git模式检出staged未登记" 1 $?
 
 # F: 补登记 new.md → git 模式全登记 → exit 0
-printf '  - id: DOC-9004\n    type: prd\n    path: docs/new.md\n' >> "$FIX/docs/authority/DOCS-REGISTRY.yaml"
+printf '  - id: DOC-9004\n    type: prd\n    path: docs/new.md\n    status: active\n' >> "$FIX/docs/authority/DOCS-REGISTRY.yaml"
 DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" >/dev/null 2>&1; t "F git模式全登记通过" 0 $?
 
 # G: tmp/ 临时区排除 → 即使未登记也不报 → exit 0
@@ -73,7 +75,7 @@ echo ""
 echo "── H. CT-D2: CI 形态（提交态）新增文档必须被拦 ──"
 CIF="$FIX/ci-form"
 mkdir -p "$CIF/docs/authority" "$CIF/docs"
-printf 'documents:\n  - id: DOC-9001\n    type: prd\n    path: docs/old.md\n' > "$CIF/docs/authority/DOCS-REGISTRY.yaml"
+printf 'documents:\n  - id: DOC-9001\n    type: prd\n    path: docs/old.md\n    status: active\n' > "$CIF/docs/authority/DOCS-REGISTRY.yaml"
 : > "$CIF/docs/old.md"
 git -C "$CIF" init -q -b main 2>/dev/null # swallow-ok:
 git -C "$CIF" config user.email t@t 2>/dev/null # swallow-ok:
@@ -104,7 +106,7 @@ esac
 printf '%s\n' "$OUT_H" | grep -q 'docs/newdoc.md' && { echo "  ✅ H1 逐文件点名未登记文档"; PASS=$((PASS+1)); } || { echo "  ❌ H1 未点名未登记文档"; FAIL=$((FAIL+1)); }
 
 # H2: 补登记 → exit 0
-printf '  - id: DOC-9002\n    type: prd\n    path: docs/newdoc.md\n' >> "$CIF/docs/authority/DOCS-REGISTRY.yaml"
+printf '  - id: DOC-9002\n    type: prd\n    path: docs/newdoc.md\n    status: active\n' >> "$CIF/docs/authority/DOCS-REGISTRY.yaml"
 git -C "$CIF" add -A 2>/dev/null # swallow-ok:
 git -C "$CIF" commit -q -m "docs(D999): 登记 newdoc" 2>/dev/null # swallow-ok:
 DOC_TRUTH_ROOT="$CIF" bash "$SCRIPT" >/dev/null 2>&1; t "H2 补登记后通过" 0 $?
@@ -121,7 +123,7 @@ printf '%s\n' "$OUT_H3" | grep -q 'D999-proof.md' && { echo "  ❌ H3 evidence �
 # H4: 降级 —— base 全链不可解析 ⇒ 显式留痕 + 不误红（沿用既有 fetch 失败语义）
 CIF2="$FIX/ci-form-nobase"
 mkdir -p "$CIF2/docs/authority"
-printf 'documents:\n  - id: DOC-9001\n    type: prd\n    path: docs/x.md\n' > "$CIF2/docs/authority/DOCS-REGISTRY.yaml"
+printf 'documents:\n  - id: DOC-9001\n    type: prd\n    path: docs/x.md\n    status: active\n' > "$CIF2/docs/authority/DOCS-REGISTRY.yaml"
 git -C "$CIF2" init -q -b trunk 2>/dev/null # swallow-ok:
 git -C "$CIF2" config user.email t@t 2>/dev/null # swallow-ok:
 git -C "$CIF2" config user.name t 2>/dev/null # swallow-ok:
@@ -169,7 +171,7 @@ echo ""
 echo "── H7. D782 D2: base 链前置（origin/local-main）回归护栏 ──"
 FORK="$FIX/fork-base"
 mkdir -p "$FORK/docs/authority" "$FORK/docs"
-printf 'documents:\n  - id: DOC-9001\n    type: prd\n    path: docs/keep.md\n' > "$FORK/docs/authority/DOCS-REGISTRY.yaml"
+printf 'documents:\n  - id: DOC-9001\n    type: prd\n    path: docs/keep.md\n    status: active\n' > "$FORK/docs/authority/DOCS-REGISTRY.yaml"
 : > "$FORK/docs/keep.md"
 git -C "$FORK" init -q -b main 2>/dev/null # swallow-ok:
 git -C "$FORK" config user.email t@t 2>/dev/null # swallow-ok:
@@ -182,13 +184,13 @@ git -C "$FORK" checkout -q -b local-main 2>/dev/null # swallow-ok:
 : > "$FORK/docs/orphan.md"
 git -C "$FORK" add -A 2>/dev/null # swallow-ok:
 git -C "$FORK" commit -q -m "docs(D998): 他线新增未登记文档" 2>/dev/null # swallow-ok:
-printf '  - id: DOC-9002\n    type: prd\n    path: docs/lm-only.md\n' >> "$FORK/docs/authority/DOCS-REGISTRY.yaml"
+printf '  - id: DOC-9002\n    type: prd\n    path: docs/lm-only.md\n    status: active\n' >> "$FORK/docs/authority/DOCS-REGISTRY.yaml"
 : > "$FORK/docs/lm-only.md"
 git -C "$FORK" add -A 2>/dev/null # swallow-ok:
 git -C "$FORK" commit -q -m "docs(D998): local-main 自身新增（已登记）" 2>/dev/null # swallow-ok:
 git -C "$FORK" update-ref refs/remotes/origin/local-main "$(git -C "$FORK" rev-parse HEAD)" 2>/dev/null # swallow-ok:
 git -C "$FORK" checkout -q -b feature 2>/dev/null # swallow-ok:
-printf '  - id: DOC-9003\n    type: prd\n    path: docs/feat-new.md\n' >> "$FORK/docs/authority/DOCS-REGISTRY.yaml"
+printf '  - id: DOC-9003\n    type: prd\n    path: docs/feat-new.md\n    status: active\n' >> "$FORK/docs/authority/DOCS-REGISTRY.yaml"
 : > "$FORK/docs/feat-new.md"
 git -C "$FORK" add -A 2>/dev/null # swallow-ok:
 git -C "$FORK" commit -q -m "docs(D998): 本支新增（已登记）" 2>/dev/null # swallow-ok:
@@ -301,6 +303,114 @@ OUT_J4=$(DOC_TRUTH_ROOT="$FIX" bash "$SCRIPT" 2>&1); _ej4=$?
 t "J4 解析到 0 条 DOC id → exit 2（fail-closed）" 2 $_ej4
 printf '%s\n' "$OUT_J4" | grep -q '不可见' && { echo "  ✅ J4 打印「不可见」不静默"; PASS=$((PASS+1)); } || { echo "  ❌ J4 未打印「不可见」"; FAIL=$((FAIL+1)); }
 cp "$FIX/reg2.bak" "$FIX/docs/authority/DOCS-REGISTRY.yaml"
+
+# ═══ K. #976 存活: `status: active` 且 `path` 不在树内 ⇒ 红、逐条点名 ═══
+# 缺口（K3 #974 D2）: 旧门禁只查"新增文档是否登记"，**不查已登记的是否还在**
+#   ⇒ 台账可长期指向不存在的路径（实测 24 条 active 指向已不存在的文件）。
+# 两态判据（缺一即无判别力）: ① 造 active+缺路径 ⇒ exit 1 并点名 ② 同台账改 archived ⇒ exit 0。
+# 边界三例（防止"删字段/通配/看不见"绕过）:
+#   K4 active 但无 path 字段 ⇒ 红（否则删 path 行即绕过）｜K5 一条 status 都解析不到 ⇒ exit 2
+#   K6 active 且 path 是通配（`WORKLOG-*.md`）⇒ 红（通配不是"存在的文件"）
+echo ""
+echo "── K. #976 存活: active 且 path 不在树内 ⇒ 红、逐条点名 ──"
+# ⚠️ 必须**脱离 $FIX**：$FIX 在 E 段已被 `git init` ⇒ 嵌套目录会走 git 模式，
+#   扫到 FIX 仓的 staged-new（a.md/docs/*.md 等）⇒ 与本夹具台账无关的恒红。
+KF=$(mktemp -d "${TMPDIR:-/tmp}/doc-gate-alive.XXXXXX")
+trap 'rm -rf "$FIX" "$KF"' EXIT
+mkdir -p "$KF/docs/authority" "$KF/docs"
+: > "$KF/docs/live.md"
+cat > "$KF/docs/authority/DOCS-REGISTRY.yaml" <<'EOF'
+documents:
+  - id: DOC-9101
+    type: prd
+    path: docs/live.md
+    status: active
+  - id: DOC-9102
+    type: retrospective
+    path: docs/gone.md
+    status: archived
+EOF
+
+# K1: 存量降级口径 —— 缺文件的那条是 archived ⇒ 不查存活 ⇒ exit 0
+OUT_K1=$(DOC_TRUTH_ROOT="$KF" bash "$SCRIPT" 2>&1); _ek1=$?
+t "K1 archived 条目不查存活 → exit 0" 0 $_ek1
+printf '%s\n' "$OUT_K1" | grep -q '存活: 1 条 status=active，path 失配 0 个' && { echo "  ✅ K1 汇总行报 active 计数（存活检查真跑过，非空转）"; PASS=$((PASS+1)); } || { echo "  ❌ K1 汇总行缺失/计数失真: $(printf '%s' "$OUT_K1" | grep '存活:' | head -1)"; FAIL=$((FAIL+1)); }
+
+# K2: 把 DOC-9102 翻回 active（path 不存在）⇒ 必须 exit 1 且**逐条点名**（改坏即红）
+sed -i.bak 's/^    status: archived$/    status: active/' "$KF/docs/authority/DOCS-REGISTRY.yaml"
+OUT_K2=$(DOC_TRUTH_ROOT="$KF" bash "$SCRIPT" 2>&1); _ek2=$?
+t "K2 active 且 path 不存在 → exit 1（改坏即红）" 1 $_ek2
+printf '%s\n' "$OUT_K2" | grep -q '存活失配: DOC-9102' && { echo "  ✅ K2 逐条点名 DOC-9102"; PASS=$((PASS+1)); } || { echo "  ❌ K2 未点名 DOC-9102（判据未落）"; FAIL=$((FAIL+1)); }
+printf '%s\n' "$OUT_K2" | grep -q 'docs/gone.md' && { echo "  ✅ K2 点名缺失路径 docs/gone.md"; PASS=$((PASS+1)); } || { echo "  ❌ K2 未点名缺失路径"; FAIL=$((FAIL+1)); }
+printf '%s\n' "$OUT_K2" | grep -q '存活: 2 条 status=active，path 失配 1 个' && { echo "  ✅ K2 汇总行报失配数 1"; PASS=$((PASS+1)); } || { echo "  ❌ K2 汇总行未报失配数"; FAIL=$((FAIL+1)); }
+printf '%s\n' "$OUT_K2" | grep -q '登记门禁阻断（active 条目 path 失配' && { echo "  ✅ K2 阻断行点明判据（active 条目 path 失配）"; PASS=$((PASS+1)); } || { echo "  ❌ K2 阻断行未点明判据"; FAIL=$((FAIL+1)); }
+
+# K3: 还原为 archived ⇒ exit 0（两态闭环；证明 K2 的红来自本条判据、不是别的恒红）
+mv "$KF/docs/authority/DOCS-REGISTRY.yaml.bak" "$KF/docs/authority/DOCS-REGISTRY.yaml"
+OUT_K3=$(DOC_TRUTH_ROOT="$KF" bash "$SCRIPT" 2>&1); _ek3=$?
+t "K3 还原 archived → exit 0（两态闭环）" 0 $_ek3
+
+# K4: active 但**无 path 字段** ⇒ 红（否则删 path 行即可绕过判据）
+cat >> "$KF/docs/authority/DOCS-REGISTRY.yaml" <<'EOF'
+  - id: DOC-9103
+    type: decision
+    status: active
+EOF
+OUT_K4=$(DOC_TRUTH_ROOT="$KF" bash "$SCRIPT" 2>&1); _ek4=$?
+t "K4 active 无 path 字段 → exit 1（删字段不可绕过）" 1 $_ek4
+printf '%s\n' "$OUT_K4" | grep -q '存活失配: DOC-9103 status=active 但条目无 path 字段' && { echo "  ✅ K4 点名「无 path 字段」"; PASS=$((PASS+1)); } || { echo "  ❌ K4 未点名无 path 字段"; FAIL=$((FAIL+1)); }
+
+# K6: active 且 path 是通配 ⇒ 红（通配不是"存在的文件"，不能算活）
+python3 - "$KF/docs/authority/DOCS-REGISTRY.yaml" <<'PYEOF'
+import sys, re
+p = sys.argv[1]
+s = open(p).read()
+s = s.replace("""  - id: DOC-9103
+    type: decision
+    status: active
+""", """  - id: DOC-9103
+    type: diary
+    path: WORKLOG-*.md
+    status: active
+""")
+open(p, 'w').write(s)
+PYEOF
+OUT_K6=$(DOC_TRUTH_ROOT="$KF" bash "$SCRIPT" 2>&1); _ek6=$?
+t "K6 active + 通配 path → exit 1（通配不算活）" 1 $_ek6
+printf '%s\n' "$OUT_K6" | grep -q '存活失配: DOC-9103 path 不存在: WORKLOG-\*\.md' && { echo "  ✅ K6 通配路径被按字面判红"; PASS=$((PASS+1)); } || { echo "  ❌ K6 通配路径被当活件放过"; FAIL=$((FAIL+1)); }
+
+# K5: fail-closed —— 台账里一条 status 字段都没有 ⇒ 存活检查不可执行 ⇒ exit 2（禁把看不见当没问题）
+printf 'documents:\n  - id: DOC-9101\n    type: prd\n    path: docs/live.md\n' > "$KF/docs/authority/DOCS-REGISTRY.yaml"
+OUT_K5=$(DOC_TRUTH_ROOT="$KF" bash "$SCRIPT" 2>&1); _ek5=$?
+t "K5 0 条 status 字段 → exit 2（fail-closed）" 2 $_ek5
+printf '%s\n' "$OUT_K5" | grep -q '不可见: 台账中解析到 0 条 status 字段' && { echo "  ✅ K5 打印「不可见」不静默"; PASS=$((PASS+1)); } || { echo "  ❌ K5 未打印「不可见」"; FAIL=$((FAIL+1)); }
+
+# K7: 存量真实仓 ⇒ 绿（#976 批量降级后应 0 条 active 失配）
+RR976="$(cd "$(dirname "$0")/../.." && pwd)"
+OUT_K7=$(DOC_TRUTH_ROOT="$RR976" bash "$SCRIPT" 2>&1); _ek7=$?
+t "K7 存量真实仓 → exit 0（批量降级后 0 失配）" 0 $_ek7
+_K7N=$(printf '%s\n' "$OUT_K7" | sed -n 's/.*存活: \([0-9][0-9]*\) 条 status=active，path 失配 \([0-9][0-9]*\) 个.*/\1 \2/p' | head -1)
+set -- $_K7N
+if [ -n "${1:-}" ] && [ "${1:-0}" -gt 0 ] && [ "${2:-1}" = "0" ]; then
+  echo "  ✅ K7 存量：active=${1} 条、失配 0（判别力非空转：active 计数 > 0）"; PASS=$((PASS+1))
+else
+  echo "  ❌ K7 存量汇总异常（active=${1:-空} 失配=${2:-空}）"; FAIL=$((FAIL+1))
+fi
+
+# K8: 判别力自证 —— 变异实现（把 emit 判据改成永远不命中）跑 K2 的红态夹具
+#   期望 **exit 0** ⇒ 说明"判据被删/被改坏"时 K2 必红（K2 的红来自该判据，不是别的恒红）。
+MUT="${TMPDIR:-/tmp}/doc-gate-mut-$$.sh"
+sed 's/st == "active"/st == "NEVER-MATCH"/g' "$SCRIPT" > "$MUT"
+cp "$KF/docs/authority/DOCS-REGISTRY.yaml" "$KF/reg.k5.bak"
+printf 'documents:\n  - id: DOC-9101\n    type: prd\n    path: docs/live.md\n    status: active\n  - id: DOC-9102\n    type: retrospective\n    path: docs/gone.md\n    status: active\n' > "$KF/docs/authority/DOCS-REGISTRY.yaml"
+DOC_TRUTH_ROOT="$KF" bash "$MUT" >/dev/null 2>&1; _emut=$?
+if [ "$_emut" = "0" ]; then
+  echo "  ✅ K8 变异实现（判据被改坏）→ exit 0 ⇒ K2 的 exit 1 确由该判据产生（判别力自证）"; PASS=$((PASS+1))
+else
+  echo "  ❌ K8 变异实现仍 exit $_emut ⇒ K2 红来自别处（本条判据无判别力）"; FAIL=$((FAIL+1))
+fi
+cp "$KF/reg.k5.bak" "$KF/docs/authority/DOCS-REGISTRY.yaml"
+rm -f "$MUT" "$KF/reg.k5.bak"
 
 echo ""
 echo "── 汇总: $PASS 通过 / $FAIL 失败 ──"
