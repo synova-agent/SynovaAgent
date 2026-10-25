@@ -1045,3 +1045,10 @@ documents:
     status: active
     owner: P2
     note: "#976 受保护路径豁免件：4 条按文件名逐条覆盖（doc-registry-gate.sh、doc-registry-gate.test.sh、DOCS-REGISTRY.yaml、本文件自覆盖），裁 399。"
+  # ---- P1 2026-10-25：#915 Q-6 时间可注入豁免件（DOC-0275；sync 时 main 实测 max=0274（#975/#976 已占 0273/0274）⇒ 从 0275 起）----
+  - id: DOC-0275
+    type: decision
+    path: gate-exemptions/2026-10-25-p1-915-q6.md
+    status: active
+    owner: P1
+    note: "#915 Q-6 受保护路径豁免件：4 条按文件名逐条覆盖（docs/authority/DOCS-REGISTRY.yaml、tests/control-tower/quality-baseline.test.sh、tests/control-tower/quality-standard.test.sh、本文件自覆盖），裁 365。"

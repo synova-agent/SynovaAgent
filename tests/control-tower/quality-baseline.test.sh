@@ -5,7 +5,7 @@
 # 覆盖（规格 §4 J3/J5/J6/J7/J8/J9 ＋ §4.2 R1–R5 判别力两态 ＋ 子命令 C1–C10b）:
 #   1. 头契约（@input/@output/@exit/@degraded ＋ 已知限制）与 L8 例外登记
 #   2. --selfcheck：判别力 1/1/1/1/1 clean=0；反向（T4 规则改回不查 return []）⇒ rc=1
-#   3. --check-registry：真件 REGISTRY-OK rows=10；反例（wired 无 consumer/多余键/坏行号/0 行/YAML 越界）
+#   3. --check-registry：真件 REGISTRY-OK rows=11；反例（wired 无 consumer/多余键/坏行号/0 行/YAML 越界）
 #   4. --check-inventory：合成夹具 covered/PAIRING 契约；10 个改坏两态（C1/C3/C4/C5/C6/C7/C9/C9b/C10×2）
 #      ＋ #975 新增：E 态 gates 段缺失 rc=2；D 跨载体逐字相等（workflow ①i 步名 = 表 CI-S12 label）
 #   5. --orphans-only：夹具 2/4 ＋ 真树格式（rc=0，不判红）
@@ -139,7 +139,7 @@ echo ""
 echo "── 3. --check-registry（J5 ＋ 反例）──"
 OUT=$("$PYBIN" "$TOOL" --check-registry "$REGISTRY" 2>&1); RC=$?
 assert_rc 0 "$RC" "--check-registry 真件"
-assert_contains "$OUT" "REGISTRY-OK rows=10" "末行 REGISTRY-OK rows=10"
+assert_contains "$OUT" "REGISTRY-OK rows=11" "末行 REGISTRY-OK rows=11"
 assert_contains "$OUT" "✅ R7" "R7 信号量（rows≥1）"
 
 REG_SRC="$REGISTRY"
