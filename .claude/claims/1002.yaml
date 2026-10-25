@@ -1,0 +1,8 @@
+writeset:
+  - .claude/claims/1002.yaml
+  - .gitea/workflows/local-gates.yml
+  - scripts/pre-commit-check.sh
+  - memory/notes/proposed/2026-10-26-1002-discipline-land.md
+done:
+  - verify: SYNO_CI=1 bash scripts/pre-commit-check.sh
+note: "#1002 纪律落地批：CI 空绿兜底修复 + Q-10 接线 ①g + 裁 409 降级机制。"
