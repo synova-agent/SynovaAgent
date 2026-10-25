@@ -1,0 +1,9 @@
+writeset:
+  - .claude/claims/1016.yaml
+  - .gitea/workflows/local-gates.yml
+  - gate-exemptions/2026-10-26-cto-1016-q9-contract.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - memory/notes/proposed/2026-10-26-1016-q9-contract.md
+done:
+  - verify: npx vitest run tests/contract/
+note: "#1016 Q-9 契约测试接入 CI ①j。"

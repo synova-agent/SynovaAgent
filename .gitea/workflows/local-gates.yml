@@ -306,6 +306,17 @@ jobs:
           SYNO_QUALITY_DELTA="${SYNO_QUALITY_DELTA:-1}" python3 scripts/control-tower/check-quality-delta.py \
             --root . --base "$BASE" $COV_ARGS || exit $?
       # ①f 置于步序末尾：#910 盘点表的 CI-S<n> 是**位置派生**的，插在中间会让 CI-S3..S10 全体漂移。
+      # ═══ ①j 契约测试（Q-9 接线 · 裁 421）：tests/contract/ 全量（~1.2s，89 例）═══
+      #   此前契约测试**无任何阻断链调用** ⇒ Q-9 纸面。回滚：SYNO_CONTRACT_TESTS=0
+      - name: ①j 契约测试（tests/contract 全量 · Q-9 接线）
+        run: |
+          cd /Users/wane/.ci-work/SynovaAgent
+          if [ "${SYNO_CONTRACT_TESTS:-1}" = "0" ]; then
+            echo "ℹ️  ①j 契约测试: 回滚态（SYNO_CONTRACT_TESTS=0）—— 跳过（唯一回滚点）"
+            exit 0
+          fi
+          NODE_BIN=/Users/wane/.nvm/versions/node/v24.19.0/bin
+          PATH="$NODE_BIN:$PATH" npx vitest run tests/contract/ || exit $?
       - name: ①f 类型＋铁律（tsc --noEmit ＋ check:iron-laws · 不计组号）
         run: |
           cd /Users/wane/.ci-work/SynovaAgent
