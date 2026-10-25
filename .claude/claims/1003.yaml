@@ -1,0 +1,8 @@
+writeset:
+  - .claude/claims/1003.yaml
+  - scripts/check-file-driven.sh
+  - scripts/pre-commit-check.sh
+  - memory/notes/proposed/2026-10-26-1003-downgrade-proof.md
+done:
+  - verify: SYNO_GROUP_DOWN=1 bash scripts/check-file-driven.sh
+note: "#1003 组 8 降级三态证据（裁 409）。"
