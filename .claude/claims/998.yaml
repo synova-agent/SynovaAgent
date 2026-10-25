@@ -1,0 +1,10 @@
+# .claude/claims/998.yaml — D331 去摩擦（裁 420）
+writeset:
+  - .claude/claims/998.yaml
+  - scripts/control-tower/check-bypass-log.sh
+  - memory/notes/proposed/2026-10-25-998-d331-cross-worktree-ledger.md
+  - gate-exemptions/2026-10-25-cto-998-d331-union-ledger.md
+  - docs/authority/DOCS-REGISTRY.yaml
+done:
+  - verify: bash scripts/control-tower/check-bypass-log.sh
+note: "#998 裁 420-③：D331 对账来源并入主工作树账本（跨 worktree 不再误拦）。"

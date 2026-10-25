@@ -53,6 +53,24 @@ if [ -f "$LEDGER_SH" ]; then
   _SRC_OUT="$(bash "$LEDGER_SH" sources 2>/dev/null)" || _SRC_OUT="$LOG"  # swallow-ok: 解析器失败即回退旧路径（显式赋值，非静默跳过对账）
   [ -n "$_SRC_OUT" ] && LEDGER_SOURCES="$_SRC_OUT"
 fi
+# ═══ 裁 420-③（2026-10-25）: 账本来源**并入主工作树**（跨 worktree 不再误拦）═══
+#   病灶（实测）: `.sessions/` 与 `.claude/bypass.log` 都在**各自 worktree 内** ⇒ 在 worktree A
+#   用 synova-commit/plain commit 产生的记录，在 worktree B 推送时**查不到** ⇒ fail-closed 误拦
+#   （今天 CTO 代合/代推实测 3 次）。
+#   修法: 来源 = 当前 ROOT ∪ **主工作树**（git-common-dir 的上一级）的 .claude/bypass.log 与
+#   .sessions/*/bypass.log，去重。判据强度不降（仍是 COMMITTED 行 HASH= 前缀锚定）。
+_COMMON_DIR="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null || echo "")"  # swallow-ok: 非 git/旧 git 版本 → 无主树来源，退化为仅当前 ROOT
+_MAIN_ROOT=""
+[ -n "$_COMMON_DIR" ] && _MAIN_ROOT="$(dirname "$_COMMON_DIR")"
+for _d in "$ROOT" "$_MAIN_ROOT"; do
+  [ -n "$_d" ] || continue
+  if [ -f "$_d/.claude/bypass.log" ]; then LEDGER_SOURCES="${LEDGER_SOURCES}"$'\n'"$_d/.claude/bypass.log"; fi
+  for _f in "$_d"/.sessions/*/bypass.log; do
+    [ -f "$_f" ] && LEDGER_SOURCES="${LEDGER_SOURCES}"$'\n'"$_f"
+  done
+done
+LEDGER_SOURCES="$(printf '%s\n' "$LEDGER_SOURCES" | awk 'NF' | sort -u)"
+
 # 🔴 2026-10-12 基线口径（CTO P0 裁定 bug 1 同病第三处）: 原默认硬编码
 #   `origin/feat/prompt-architecture`（陈旧特性分支）⇒ merge-base 极旧 ⇒ 对账 range
 #   卷入大量他线已过闸提交 ⇒ 推送被误拦。修法: 优先当前分支 upstream（@{u}），
