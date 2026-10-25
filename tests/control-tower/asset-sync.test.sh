@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# @requires python3
 # asset-sync.test.sh —— #776 判据测试 T1–T11（本地假 Gitea，仅 127.0.0.1，不联网出本机）
 #
 # 三态退出码：0 = ALL PASS ｜ 1 = 断言失败（真红，具体失败点逐条打印）｜ 2 = 环境失败

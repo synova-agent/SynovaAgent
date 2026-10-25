@@ -1,3 +1,7 @@
+- tests/control-tower/quality-baseline.test.sh — 补 @requires python3 声明以通过前置工具链校验 — 裁 421
+- tests/control-tower/check-tool-args-delta.test.sh — 补 @requires python3 声明以通过前置工具链校验 — 裁 421
+- tests/control-tower/check-quality-delta.test.sh — 补 @requires python3 声明以通过前置工具链校验 — 裁 421
+- tests/control-tower/asset-sync.test.sh — 补 @requires python3 声明以通过前置工具链校验 — 裁 421
 - tests/control-tower/auto-merge.test.sh — 补 @requires python3 声明以通过前置工具链校验 — 裁 421
 - tests/control-tower/check-test-obligations.test.sh — 补 @requires python3 声明以通过前置工具链校验 — 裁 421
 - tests/control-tower/k3-birthcert-fixture.test.sh — 补 @requires python3 声明以通过前置工具链校验 — 裁 421
