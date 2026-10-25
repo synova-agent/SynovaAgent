@@ -1114,3 +1114,11 @@ documents:
     status: active
     owner: CTO
     note: "GATE-SPLIT 补 GitHub 实跑证据；发现 Gate Integrity 跨平台冲突。"
+
+  # ---- CTO 2026-10-26：#1026 GATE-INTEGRITY 对齐（FACE-TOTAL=197）豁免件（裁 421）----
+  - id: DOC-0288
+    type: decision
+    path: gate-exemptions/2026-10-26-cto-1026-face-total.md
+    status: active
+    owner: CTO
+    note: "两平台共用的 GATE-INTEGRITY：FACE-TOTAL 显式上调至 197（slack=0）。"
