@@ -126,6 +126,8 @@ describe('#915 Q-5 ToolRegistry.execute — 取消语义', () => {
     expect(result.error).toMatchObject({
       name: 'AbortError',
       code: 'TOOL_ABORTED_BEFORE_DISPATCH',
+      phase: 'validate',
+      retryable: false,
     });
     expect(handlerSpy).toHaveBeenCalledTimes(0); // 副作用前拦截，handler 零调用
   });
