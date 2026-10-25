@@ -1031,7 +1031,6 @@ documents:
     owner: P1
     note: "#915 Q-5 受保护路径豁免件：4 条按文件名逐条覆盖（check-tool-args-delta.py、check-tool-args-delta.test.sh、DOCS-REGISTRY.yaml、本文件自覆盖），裁 365。"
 
- HEAD
   # ---- P2 2026-10-25：#975 GATE-INVENTORY 三处整改豁免件（DOC-0274；0273 预留给在飞 #983）----
   - id: DOC-0274
     type: decision
