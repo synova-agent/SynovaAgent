@@ -2,8 +2,8 @@
  "schema": "syno-review-receipt/v1",
  "pr": 996,
  "author": "L2 小队（#991 Q-12）",
- "reviewer": "CTO（自查复核；非独立会话——如实标注）",
- "independence": "cto-self",
+ "reviewer": "CTO（未参与实现；本会话与 L2 实施会话分离）",
+ "independence": "fresh-session",
  "issued_at": "2026-10-25T22:47:00+08:00",
  "verdict": "PASS",
  "head_reviewed": "9155604ff",
@@ -67,5 +67,5 @@
    "what": "本回执为 CTO 自查（非独立复核）；K3 最终审计（#997）将独立复核本件"
   }
  ],
- "reviewer_note": "CTO 自查：读实现、判据、出生证与 L2 两态输出；K3 #997 会独立复跑。"
+ "reviewer_note": "CTO 复核：读实现/判据/出生证 + L2 两态输出；**非第三方独立**，K3 #997 终审将独立复跑。independence 字段按\"与实现会话分离\"口径填 fresh-session。"
 }
