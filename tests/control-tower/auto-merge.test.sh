@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# @requires python3
 # auto-merge.test.sh — 配对测试（#953/#954；U7/CT-40）
 # 覆盖：无 token／非法参数／API 不可达／--help／受保护清单存在 ＋ 调用 mock 行为测试（分页/改名）
 set -uo pipefail

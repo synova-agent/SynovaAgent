@@ -1,4 +1,5 @@
 #!/bin/bash
+# @requires python3
 # ═══════════════════════════════════════════════════════════════════════════════
 # k3-preset-bundle-sync.test.sh — K3 预设：仓内 bundle 与 persona 源同源（#932 PR-2）
 #

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# @requires python3
 # D732 UTF-8 强制
 export PYTHONIOENCODING=utf-8
 export LC_ALL=C.UTF-8 2>/dev/null   # swallow-ok: locale 不可用时回退默认 locale（非错误路径）

@@ -1,0 +1,14 @@
+writeset:
+  - .claude/claims/1027.yaml
+  - tests/control-tower/auto-merge.test.sh
+  - tests/control-tower/check-test-obligations.test.sh
+  - tests/control-tower/k3-birthcert-fixture.test.sh
+  - tests/control-tower/k3-preset-bundle-sync.test.sh
+  - tests/control-tower/mirror-sync-push.test.sh
+  - tests/control-tower/quality-standard.test.sh
+  - tests/control-tower/weekly-recon.test.sh
+  - gate-exemptions/2026-10-26-cto-1027-fixture-requires.md
+  - docs/authority/DOCS-REGISTRY.yaml
+done:
+  - verify: bash scripts/control-tower/check-fixture-requires.sh
+note: "#1027 夹具前置声明补齐（FIXTURE-REQUIRES 0 违规）。"

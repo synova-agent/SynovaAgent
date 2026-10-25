@@ -1122,3 +1122,11 @@ documents:
     status: active
     owner: CTO
     note: "两平台共用的 GATE-INTEGRITY：FACE-TOTAL 显式上调至 197（slack=0）。"
+
+  # ---- CTO 2026-10-26：#1027 夹具前置声明补齐豁免件（裁 421）----
+  - id: DOC-0289
+    type: decision
+    path: gate-exemptions/2026-10-26-cto-1027-fixture-requires.md
+    status: active
+    owner: CTO
+    note: "7 个夹具补 @requires python3；FIXTURE-REQUIRES: OK。"
