@@ -162,7 +162,7 @@ export type SessionEventType = (typeof SESSION_EVENT_TYPES)[number];
 export const SESSION_EVENT_FORMAT_VERSION = 1;
 
 /** 事件流 typed error 码（铁律 32：code/phase/retryable 可分类） */
-export type SessionEventErrorCode = 'UNKNOWN_EVENT_TYPE' | 'EVENT_FORMAT_TOO_NEW';
+export type SessionEventErrorCode = 'UNKNOWN_EVENT_TYPE' | 'EVENT_FORMAT_TOO_NEW' | 'SESSION_EVENT_LIMIT';
 
 /** 事件流 typed error —— 词表/格式版本违约走**抛错**（不是 degraded 返回值） */
 export class SessionEventError extends Error {
@@ -176,6 +176,52 @@ export class SessionEventError extends Error {
     this.code = code;
     this.phase = phase;
   }
+}
+
+/**
+ * 会话事件数上限（#991 Q-12「上限即纪律」· 裁 407 A 组 ／ 裁 411）
+ *
+ * 出生证（裁 407 · 本能力＝「单会话事件数上限」；七格）:
+ *   ① 拥有什么：给「一个会话能追加多少条事件」一个**显式上限**，超限在**写库前**拒单条。
+ *   ② 不拥有什么：不做轮转/归档/压缩（另立卡）；不做跨会话或跨租户配额；不删既有行。
+ *   ③ 为什么这样设计：事件表 append-only 且 seq 单调 ⇒ `MAX(seq)+1` 本身就是「下一条的序号」，
+ *      拿它当计数**零额外查询**；若改用 `COUNT(*)`，每次写都随会话变长退化成 O(n)。
+ *   ④ 失败形态：抛 `SessionEventError{SESSION_EVENT_LIMIT, phase:'validate', retryable:false}`
+ *      —— **拒单条、不断会话**：会话本身与既有事件不受影响，调用方可用新会话继续；
+ *      **不折成 degraded、不静默丢**（catch 里对 typed error 显式 rethrow）。
+ *   ⑤ 上限：默认 **20000** 条/会话；`SYNO_MAX_SESSION_EVENTS` 可配，clamp 到 [1, 1000000]
+ *      （沿裁 219 模板：`Math.min(上界, Math.max(1, parseInt(env) || 默认))`
+ *      —— 未配/非数/0 ⇒ 回落默认，**负数 ⇒ 下界 1**，超上界 ⇒ 夹到 CEILING）。
+ *      为什么是 20000：本仓 `session_events` 实测 0 行（`SELECT COUNT(*)`＝0，无存量分布可依）
+ *      ⇒ 取「10 事件/日 × 5 年 ≈ 1.8 万」的保守上界，同时把「重试风暴/循环追加」这类真异常
+ *      挡在 2 万条（≈ 单会话 ≤ ~40MB @2KB/条）。判据形态＝**配对测试**（两态＋改坏必红），
+ *      不新增 checker 脚本或 CI 步（裁 402 净增=0）。
+ *   ⑥ 已知限制：额度按 seq 计，**物理删行不回收额度**；对**已超限的存量会话**立即生效（补不进）；
+ *      `SYNO_SESSION_EVENT_STRICT=0` 只回滚词表/格式版本校验，**不回滚本上限**（两条闸独立）。
+ *   ⑦ 借用边界：借鉴 `dsh@687f282e86:packages/jobs/jobs-local/src/index.ts:220`（每 owner 并发上限
+ *      ⇒ 超限抛错并给**可执行指引**「job_kill / 等完成再重试」）与
+ *      `.../attachment/attachment/src/index.ts:77`（数量上限 ⇒ `TOO_MANY_IMAGES` 稳定码）；
+ *      不借其「每 owner 并发」的多租户维度（我们只有会话内 seq 一条轴，跨会话配额另立卡）；
+ *      我们改：把可执行指引落在**配置项＋新开会话**上，并把计数挂在既有 seq 上（DSH 是独立计数器）。
+ */
+export const DEFAULT_MAX_SESSION_EVENTS = 20_000;
+
+/** 上限硬上界（防误配天文数字把闸变成空闸） */
+export const MAX_SESSION_EVENTS_CEILING = 1_000_000;
+
+/**
+ * 解析本进程生效的事件数上限（逐调用读取 ⇒ 可测试注入；clamp 而非裸用，裁 219 字面模板）。
+ * 模板同形：`src/agent/tool-loop-executor.ts:183`
+ *   `Math.min(10, Math.max(1, Number.parseInt(process.env.SYNO_MAX_TOOL_ROUNDS ?? '', 10) || 3))`
+ * @input  无（读 `process.env.SYNO_MAX_SESSION_EVENTS`）
+ * @output 正整数上限：未配/非数/0 ⇒ `DEFAULT_MAX_SESSION_EVENTS`；负数 ⇒ 下界 1；
+ *         > `MAX_SESSION_EVENTS_CEILING` ⇒ clamp 到 CEILING；其余原样
+ * @degraded 不适用（纯解析，无 IO、无 catch 分支）
+ */
+export function maxSessionEvents(): number {
+  const raw =
+    Number.parseInt(process.env.SYNO_MAX_SESSION_EVENTS ?? '', 10) || DEFAULT_MAX_SESSION_EVENTS;
+  return Math.min(MAX_SESSION_EVENTS_CEILING, Math.max(1, raw));
 }
 
 /**
@@ -473,6 +519,11 @@ export class SessionStore {
    *   未知 eventType ⇒ **抛** `SessionEventError('UNKNOWN_EVENT_TYPE')`（strict 默认开）；
    *   `SYNO_SESSION_EVENT_STRICT=0` ⇒ 回滚旧行为（返回 degraded，不抛，warn 一次）。
    *   I/O 失败（SQL/约束）仍走 degraded 返回值（铁律 24/31 不变）。
+   *
+   * #991 Q-12 契约变更（裁 411 · 上限即纪律）:
+   *   下一条 seq > `maxSessionEvents()`（默认 20000，`SYNO_MAX_SESSION_EVENTS` 可配）⇒
+   *   **写库前抛** `SessionEventError('SESSION_EVENT_LIMIT','validate')` —— 拒单条、不断会话；
+   *   本上限**独立于** `SYNO_SESSION_EVENT_STRICT`（关词表校验不回滚上限）。
    */
   appendEvent(sessionId: string, eventType: SessionEventType, payload: unknown): AppendEventResult {
     // 词表 fail-closed：必须在 try 之前（否则会被下面的 catch 折成 degraded = 旧病复发）
@@ -492,11 +543,24 @@ export class SessionStore {
       const row = this.db.prepare('SELECT MAX(seq) as max_seq FROM session_events WHERE session_id=?')
         .get(sessionId) as SqliteRow | undefined;
       const nextSeq = Number((row?.max_seq as number | null) ?? 0) + 1;
+      // #991 Q-12：超限即拒 —— 写库前拒绝单条（不静默丢、不折 degraded、不断会话）
+      const cap = maxSessionEvents();
+      if (nextSeq > cap) {
+        throw new SessionEventError(
+          'SESSION_EVENT_LIMIT',
+          'validate',
+          `会话事件数已达上限 ${cap}（下一条 seq=${nextSeq}）；` +
+            `可用 SYNO_MAX_SESSION_EVENTS 调整（默认 ${DEFAULT_MAX_SESSION_EVENTS}，范围 1-${MAX_SESSION_EVENTS_CEILING}），` +
+            `或新开一个会话继续 —— 本条被拒，会话与既有事件不受影响。`,
+        );
+      }
       this.db.prepare(
         'INSERT INTO session_events (session_id, seq, event_type, payload_json, format_version) VALUES (?,?,?,?,?)'
       ).run(sessionId, nextSeq, eventType, JSON.stringify(payload), SESSION_EVENT_FORMAT_VERSION);
       return { ok: true, seq: nextSeq };
     } catch (err) {
+      // typed error 必须原样抛：折成 degraded 就等于「静默丢事件」，正是 Q-12 要治的形态
+      if (err instanceof SessionEventError) throw err;
       const msg = err instanceof Error ? err.message : String(err);
       log.error({ sessionId, eventType, error: msg }, 'appendEvent 写入失败 — degraded');
       return { ok: false, degraded: true, error: msg };

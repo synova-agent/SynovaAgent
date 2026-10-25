@@ -121,3 +121,11 @@ entries:
     status: wired
     owner: P2
     notes: "跨 wire 无值（Q-2／裁 366）：秘密槽只以 {configured} 出现，secrets[] 侧车给 {path,configured,source}；provenance[].doc 同面脱敏"
+  - capability: services.clock
+    defined_at: "src/services/clock.ts:55"
+    provider: "src/services/clock.ts:55"
+    consumer: "src/services/federated-pipeline.ts:76"
+    test: "tests/services/clock.test.ts"
+    status: wired
+    owner: P1
+    notes: "#915 Q-6（裁 365）：可注入时钟；systemClock 为唯一系统时钟入口，生产消费点=federated-pipeline/main-agent 两链"

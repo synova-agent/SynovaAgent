@@ -11,7 +11,12 @@ writeset:
   - src/store/schema-migration.ts
   - src/init/engine-context.ts
   - tests/store/schema-migration.test.ts
+  - src/store/storage-backend.ts
+  - tests/contract/storage-backend.conformance.test.ts
+  - tests/contract/conformance/registry.ts
 done:
   - verify: npx vitest run tests/store/session-event-log.test.ts
   - verify: npx vitest run tests/store/schema-migration.test.ts
+  - verify: npx vitest run tests/contract/storage-backend.conformance.test.ts
+  - verify: npx vitest run tests/contract/conformance/meta.test.ts
 note: "#964 批 3-A：Q-7（词表 fail-closed＋format_version＋SYNO_SESSION_EVENT_STRICT）｜Q-8（SCHEMA_TOO_NEW＋assertMigrationChain＋engine-context 吞错改 rethrow＋SYNO_SCHEMA_STRICT）。判据 = 测试内棘轮（两态＋改坏⇒红），不给 #912 闸加规则（裁 394）。"

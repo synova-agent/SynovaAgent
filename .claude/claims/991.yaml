@@ -1,0 +1,21 @@
+# .claude/claims/991.yaml — #991（P1 · Q-12 资源上限）会话事件数显式拒绝 · 写集声明
+# 纪律：只列本 PR 真正改动的文件，不预授权。
+# 档位（裁 411）：轻量档 —— 产品代码 1 ＋ 配对测试 1 ＝ 2；登记类 4（claim／DOCS／Note／豁免）另计但列全。
+# 边界：不打 WIRING（本件不新增 capability/provider）；不碰 tests/control-tower/**（棘轮那份沿用 #973）。
+writeset:
+  - .claude/claims/991.yaml
+  - docs/authority/DOCS-REGISTRY.yaml
+  - gate-exemptions/2026-10-25-p1-991-q12.md
+  - memory/notes/proposed/2026-10-25-991-q12.md
+  - src/store/session-store.ts
+  - tests/store/session-events-limit.test.ts
+done:
+  - verify: npx vitest run tests/store/session-events-limit.test.ts # Q12-1..Q12-8 全绿（正常量/超限抛/写库前拒/不断会话/非 degraded/clamp/与 STRICT 独立/边界）
+  - verify: npx vitest run tests/store/session-event-log.test.ts tests/store/session-store.test.ts tests/session-store.test.ts tests/agent/diagnosis-session-events.test.ts # 回归 43 passed，零新增红
+  - verify: npx tsc --noEmit # 类型零错（rc=0）
+  - verify: grep -c "SYNO_MAX_SESSION_EVENTS" src/store/session-store.ts # 上限可配且登记在模块头，≥1
+  - verify: python3 scripts/control-tower/claim_store.py --check 991 --root . # claim 结构合规（writeset 非空、done 每条带 verify）
+  - verify: bash scripts/doc-system/doc-registry-gate.sh # DOC-0276 登记 ＋ active path 存在性 rc=0
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base a12e621aa # 受保护路径豁免逐条合规 rc=0（按栈基 a12e621aa 钉 SHA：#973 未合，禁钉分支名）
+  - verify: python3 scripts/control-tower/merge_writeset_gate.py --base a12e621aa --head HEAD --issue 991 --repo-root . # 写集对账 pass（无夹带；按栈基 a12e621aa 钉 SHA：#973 未合，禁钉分支名）
+note: "#991 Q-12（裁 407 A 组最后一条／裁 411 只做 1 个真缺口）：SessionStore.appendEvent 加**单会话事件数上限**——写库前判 nextSeq > maxSessionEvents()（默认 20000，SYNO_MAX_SESSION_EVENTS 可配，clamp [1,1000000] 沿裁 219 模板）⇒ 抛 SessionEventError{SESSION_EVENT_LIMIT, phase:'validate', retryable:false}，拒单条、不断会话；catch 对 typed error 显式 rethrow（不折 degraded＝不静默丢）。计数复用既有 MAX(seq)+1，零额外查询。配对测试 8 例两态＋边界＋clamp＋与 STRICT 独立；改坏（上限判断置 false）⇒ 6 failed。净增=0：不新增 checker/CI 步。不新增 capability/provider ⇒ 不打 WIRING。"
