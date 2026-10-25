@@ -18,9 +18,10 @@
 | 桌面端构建 | — | ✅ | 集成面 |
 | 覆盖率（G5/R5.1） | ✅ ①e | — | 质量面 |
 
-## 二、待办（阻断"分工已实现"的判定）
-1. **GitHub 远端当前不可达**（`git ls-remote github` 返回空；SSH 到 github.com:22 断）⇒
-   本次改动**未能在 GitHub 侧实测**。镜像修复后必须补一次真实跑（同 PR 双平台对照）。
+## 二、实测更正（2026-10-26）
+1. ~~GitHub 远端不可达~~ **此前判断有误**：远端名是 `mirror`（不是 `github`）；`ssh -T git@github.com` 实测通过。
+2. 已推验证分支 `verify/gh-integration` 并在 GitHub 开 **PR #1479**（仅取证，不合并）⇒ **GitHub Actions 确实在跑**。
+3. `mirror/main` 落后 `local-main` **89 commits**（实测 `git rev-list --count`）。
 2. 镜像修复前，GitHub 侧一切判据**不可作为合并依据**（可能判旧树）。
 
 ## 三、判定口径
