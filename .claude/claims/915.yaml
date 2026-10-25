@@ -2,12 +2,12 @@
 # 先例：.claude/claims/913.yaml / 912.yaml（claim 优先于 D# 链；K3 R3 防劫持）；Q-1/Q-5 已完成，claim 随分支改写（同 #913 先例）
 # 纪律：只列本 PR 真正改动的文件，不预授权。
 # 规格：handbook 派单件/2026-10-25-规格-915-Q6-时间可注入-v2.md（§2 v2；P1 批 A 案写集 9→13 件——新增 src/services/clock.ts 能力件 ⇒ WIRING 新增 1 行＋受保护测试常量同步，沿用 #956 Q-1 先例）
-# K3 复签条件（裁 410 后，#973 第 2 轮）：写集声明 13→14 —— 补第 14 件 `docs/synova/reviews/973.f94239cd6c39.json`（③ 复核回执，复核员产出、随分支入库）；claim 同步到 14 使 diff ⊆ writeset 成立（不靠 PR 正文「写集豁免」兜）。
+# K3 复签条件（裁 410 后，#973 第 2 轮）：写集声明 13→14 —— 补第 14 件 `docs/synova/reviews/973.7e86c386d004.json`（③ 复核回执，复核员产出、随分支入库；**回执名钉当前 head 实算 fp `7e86c386d004`**，旧 `f94239cd6c39` 由 K3 detach/re-attach 流程替换）；claim 同步到 14 使 diff ⊆ writeset 成立（不靠 PR 正文「写集豁免」兜）。
 writeset:
   - .claude/claims/915.yaml
   - docs/authority/DOCS-REGISTRY.yaml
   - docs/authority/WIRING-REGISTRY.yaml
-  - docs/synova/reviews/973.f94239cd6c39.json
+  - docs/synova/reviews/973.7e86c386d004.json
   - gate-exemptions/2026-10-25-p1-915-q6.md
   - memory/notes/proposed/2026-10-25-915-q6-time-injection.md
   - src/agent/main-agent.ts
