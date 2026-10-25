@@ -1074,3 +1074,11 @@ documents:
     status: active
     owner: CTO
     note: "#998 D331 对账来源并入主工作树账本；裁 420。"
+
+  # ---- CTO 2026-10-26：#1012 Q-11 覆盖率接线豁免件（裁 421）----
+  - id: DOC-0283
+    type: decision
+    path: gate-exemptions/2026-10-26-cto-1012-q11-wire.md
+    status: active
+    owner: CTO
+    note: "Q-11 接线（CI ①e 传 coverage 参数）；裁 421。"

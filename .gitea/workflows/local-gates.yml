@@ -283,8 +283,28 @@ jobs:
           # 回滚：SYNO_QUALITY_DELTA=0（CI 侧把本步 env 改成 "0" 即回滚；改门禁本体走 gate-exemptions）。
           BASE="$(bash scripts/control-tower/resolve-ci-base.sh)" || exit $?
           echo "①e base = $BASE"
+          # ═══ Q-11 接线（裁 421）：生成覆盖率摘要并传入；否则 G5 恒「未武装」= 纸面 ═══
+          #   回滚：SYNO_QD_G5=0 ⇒ 不生成、不传参（G5 整组不判，末行不含 G5）
+          NODE_BIN=/Users/wane/.nvm/versions/node/v24.19.0/bin
+          COV_DIR="${TMPDIR:-/tmp}/synova-cov-$$"; mkdir -p "$COV_DIR"
+          COV_ARGS=""
+          if [ "${SYNO_QD_G5:-1}" != "0" ]; then
+            echo "①e 覆盖率：npx vitest run --coverage → $COV_DIR"
+            if PATH="$NODE_BIN:$PATH" npx vitest run --coverage \
+                 --coverage.reporter=json-summary --coverage.reportsDirectory="$COV_DIR" \
+                 > /tmp/synova-cov.log 2>&1; then
+              echo "①e 覆盖率生成成功"
+            else
+              echo "::warning::①e 覆盖率生成失败（见 /tmp/synova-cov.log 尾部）"
+              tail -20 /tmp/synova-cov.log || true
+            fi
+            if [ -f "$COV_DIR/coverage-summary.json" ]; then
+              COV_ARGS="--coverage-summary $COV_DIR/coverage-summary.json --coverage-sha $(git rev-parse HEAD)"
+            fi
+          fi
+          # shellcheck disable=SC2086
           SYNO_QUALITY_DELTA="${SYNO_QUALITY_DELTA:-1}" python3 scripts/control-tower/check-quality-delta.py \
-            --root . --base "$BASE" || exit $?
+            --root . --base "$BASE" $COV_ARGS || exit $?
       # ①f 置于步序末尾：#910 盘点表的 CI-S<n> 是**位置派生**的，插在中间会让 CI-S3..S10 全体漂移。
       - name: ①f 类型＋铁律（tsc --noEmit ＋ check:iron-laws · 不计组号）
         run: |
