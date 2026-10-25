@@ -4,7 +4,6 @@ writeset:
   - gate-exemptions/2026-10-26-cto-1012-q11-wire.md
   - docs/authority/DOCS-REGISTRY.yaml
   - memory/notes/proposed/2026-10-26-1012-q11-wire.md
-  - docs/synova/reviews/1013.*.json
 done:
   - verify: grep -n "coverage-summary" .gitea/workflows/local-gates.yml
 note: "#1012 Q-11 覆盖率接线（裁 421）。"
