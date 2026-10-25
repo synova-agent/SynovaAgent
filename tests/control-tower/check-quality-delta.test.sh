@@ -10,6 +10,7 @@
 #          T3 只在 tests/ 引用 ⇒ rc1 点名 R1.2｜T10 登记表缺失 ⇒ rc2（E_REGISTRY）
 #          T11 declared-only ⇒ rc0（A3 显式豁免，不红）
 #   改坏必红 — T12 变异体（删 R4.1 检出 / 删 R3.3 恒真检出）⇒ 对应夹具翻绿 ⇒ 证明规则承重
+#   G5 — 覆盖率/重复率（#913 PR-3 · 调用方声索制）— 两态（E_COVERAGE exit2 / 无 src 不适用 rc0）｜A 档 40.0·39.9｜M 档 baseline±0.1｜E_BASELINE｜棘轮只升不降｜R5.2 advisory｜jscpd 缺失降级｜变异体 ×3
 #
 # 隔离: 每个用例独立 mktemp 仓（git init + 本地身份），零网络、零宿主写入、不触真实仓库。
 # 依赖: python3（与生产同契约；缺 ⇒ exit 2 —— 不静默当通过）
@@ -208,6 +209,306 @@ PY
 runq "$TMPROOT/t5" --staged >/dev/null 2>&1
 ( cd "$TMPROOT/t5" && "$PYBIN" "$MUT" --root . --staged >/dev/null 2>&1 ); MRC2=$?
 [ "$MRC2" -eq 0 ] && ok "T12 变异体（删 R3.3 恒真检出）⇒ T5 场景翻转 rc=0 ⇒ 规则承重" || no "T12 变异体仍判红（rc=$MRC2）⇒ 规则可能空转"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# G5 覆盖率＋重复率（#913 PR-3 · 裁 405/裁 402）—— 只判变更集 src/** .ts
+#
+#   武装制: 传 --coverage-summary/--coverage-sha/--baseline 之一才判；未传 ⇒ 显式 note＋exit 0
+#   两态（裁 405-③）: a) 武装且有 src/** 而 coverage 缺失/缺条目 ⇒ degraded: E_COVERAGE ＋ exit 2
+#                      b) 无 src/** ⇒ G5 不适用 ＋ exit 0（不得出 E_COVERAGE）
+#   新鲜度: --coverage-sha 与 HEAD 不符/缺省 ⇒ degraded: E_COVERAGE-STALE ＋ exit 2
+#   边界: A 档 40.0 过 / 39.9 红 ｜ M 档 baseline=实测 过 / baseline +0.1 红 ｜ baseline 非法 ⇒ E_BASELINE
+#   棘轮: --update-baseline 降⇒keep＋条目不变；升⇒打印 diff；默认检查模式对 baseline 零写入（sha256 前后同）
+#   advisory: R5.2 >5% 仅 ⚠️ 不阻断（恰 5% 不报）｜ jscpd 缺失 ⇒ E_JSCPD-MISSING 且 R5.1 照判
+#   回滚: SYNO_QD_G5=0 ⇒ G5-DISABLED（非静默），rules 回 G1,G3,G4，rc 按 G1/G3/G4
+#   改坏必红: 变异体 ×3（坏 R5.1 阈值／坏 baseline 阈值／坏棘轮只升不降）⇒ 对应反例翻绿
+#   隔离: 每例独立 mktemp 仓；夹具 JSON 运行时写进沙箱（不入库）；R5.2 走注入缝（不联网）
+# ═══════════════════════════════════════════════════════════════════════════════
+PYABS="$(command -v "$PYBIN")"
+[ -n "$PYABS" ] || { echo "❌ python 不可解析（检查自身失败）"; exit 2; }
+G5T="$TMPROOT/g5"; mkdir -p "$G5T"
+
+sha_of() { # <file> → sha256（默认检查模式零写入断言用）
+  "$PYABS" -c 'import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$1" 2>/dev/null
+}
+runq_g5() { # <dir> [VAR=VAL ...] -- <args...>；--root 用物理绝对路径（coverage 键同为绝对路径）
+  local d="$1"; shift
+  local envs=()
+  while [ "$#" -gt 0 ] && [ "$1" != "--" ]; do envs+=("$1"); shift; done
+  if [ "$#" -gt 0 ]; then shift; fi
+  local root; root="$( cd "$d" && pwd -P )"
+  if [ "${#envs[@]}" -eq 0 ]; then
+    RUN_OUT="$( cd "$d" && "$PYABS" "$SUT" --root "$root" "$@" 2>&1 )"; RUN_RC=$?
+  else
+    RUN_OUT="$( cd "$d" && env "${envs[@]}" "$PYABS" "$SUT" --root "$root" "$@" 2>&1 )"; RUN_RC=$?
+  fi
+}
+cov_write() { # <out> <abs-path> <pct> [...]（§13 夹具：绝对路径键 ＋ total.lines.pct）
+  local out="$1"; shift
+  { printf '{"total": {"lines": {"pct": 50.0}}'
+    while [ "$#" -ge 2 ]; do printf ', "%s": {"lines": {"pct": %s}}' "$1" "$2"; shift 2; done
+    printf '}\n'
+  } > "$out"
+}
+jscpd_empty() { printf '{"statistics": {"total": {"lines": 0}}, "duplicates": []}\n' > "$1"; }
+jscpd_dup() { # <out> <变更集内相对路径> <重复行数> [<对照文件相对路径>]
+  printf '{"statistics": {"total": {"lines": 0}}, "duplicates": [{"format": "typescript", "lines": %s, "fragment": "dup", "tokens": 0, "firstFile": {"name": "%s", "start": 1, "end": 1}, "secondFile": {"name": "%s", "start": 1, "end": 1}}]}\n' "$3" "$2" "${4:-src/svc/other.ts}" > "$1"
+}
+mk_g5_repo() { # <dir> —— mk_repo ＋ src/svc/m.ts ＋ baseline 种子（两次提交 ⇒ HEAD~1 可用）
+  local d="$1"
+  mk_repo "$d"
+  ( cd "$d"
+    mkdir -p src/svc
+    printf 'export const m = 1;\n' > src/svc/m.ts
+    printf '{\n  "schema_version": 1,\n  "entries": {}\n}\n' > docs/authority/coverage-baseline.json
+    git add -A; git commit -q -m g5-base )
+}
+g5_sha() { ( cd "$1" && git rev-parse HEAD ); }
+g5_modify_m() { ( cd "$1" && printf 'export const m = 1;\nexport const m2 = 2;\n' > src/svc/m.ts && git add -A ); }
+g5_reg_declared() { # <dir> <rel-path> <capability> —— 新增 src 件登记 declared-only（G1 显式豁免）
+  local d="$1" p="$2" cap="$3"
+  cat > "$d/docs/authority/WIRING-REGISTRY.yaml" <<YAML
+entries:
+  - capability: $cap
+    defined_at: "$p:1"
+    provider: "$p:1"
+    consumer: null
+    test: null
+    status: declared-only
+    owner: P7
+YAML
+}
+g5_baseline() { # <dir> <entries-json-body> —— 重写 baseline（<body> 如 '"src/svc/m.ts": 50.0'）
+  printf '{"schema_version": 1, "entries": {%s}}\n' "$2" > "$1/docs/authority/coverage-baseline.json"
+}
+g5_entries_val() { # <baseline-file> <rel-path> → 打印条目值（无条目打印 MISSING）
+  "$PYABS" -c 'import json,sys
+try:
+    d = json.load(open(sys.argv[1]))
+    print(d.get("entries", {}).get(sys.argv[2], "MISSING"))
+except Exception as e:
+    print("ERR:%s" % e)' "$1" "$2" 2>/dev/null
+}
+
+echo ""
+echo "── G5 覆盖率/重复率（#913 PR-3 · 只判变更集 src/** .ts）──"
+
+# ── G5-1 正常：A 档 40.0 ＋ M 档 baseline=实测 ⇒ exit 0，末行 rules 含 G5 ──
+D="$G5T/normal"; mk_g5_repo "$D"; g5_modify_m "$D"
+( cd "$D" && printf 'export const a = 1;\n' > src/svc/new-a.ts )
+g5_reg_declared "$D" "src/svc/new-a.ts" "svc.newA"
+g5_baseline "$D" '"src/svc/m.ts": 50.0'
+( cd "$D" && git add -A )
+GROOT="$( cd "$D" && pwd -P )"; GSHA="$(g5_sha "$D")"
+cov_write "$D/cov.json" "$GROOT/src/svc/m.ts" 50.0 "$GROOT/src/svc/new-a.ts" 40.0
+jscpd_empty "$D/jscpd.json"
+runq_g5 "$D" "SYNO_JSCPD_REPORT=$D/jscpd.json" -- --staged --coverage-summary cov.json --coverage-sha "$GSHA"
+assert_rc "$RUN_RC" 0 "G5-1 正常（A 档 40.0＋M 档 baseline=实测）⇒ exit 0"
+printf '%s' "$RUN_OUT" | grep -q 'rules=G1,G3,G4,G5' && ok "G5-1 末行 rules 追加 G5" || no "G5-1 末行缺 rules=...G5: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q '❌ R5.1' && no "G5-1 正常态误报 R5.1" || ok "G5-1 正常态无 R5.1 违规"
+printf '%s' "$RUN_OUT" | grep -q '✅ G5 覆盖率/重复率' && ok "G5-1 打印 ✅ G5 通过行" || no "G5-1 缺 ✅ G5 行: $RUN_OUT"
+
+# ── G5-2a 两态 a：武装且含 src/** 而 coverage JSON 缺失 ⇒ E_COVERAGE exit 2 ──
+D="$G5T/nocov"; mk_g5_repo "$D"; g5_modify_m "$D"
+GSHA="$(g5_sha "$D")"
+jscpd_empty "$D/jscpd.json"
+runq_g5 "$D" "SYNO_JSCPD_REPORT=$D/jscpd.json" -- --staged --coverage-sha "$GSHA"
+assert_rc "$RUN_RC" 2 "G5-2a 武装＋含 src/** 而 coverage 缺失 ⇒ exit 2（fail-closed）"
+printf '%s' "$RUN_OUT" | grep -q 'degraded: E_COVERAGE ' && ok "G5-2a 点名 degraded: E_COVERAGE" || no "G5-2a 未点名 E_COVERAGE: $RUN_OUT"
+
+# ── G5-2b 两态 b：变更集不含 src/** ⇒ G5 不适用 exit 0（不得出 E_COVERAGE）──
+D="$G5T/nosrc"; mk_repo "$D"
+( cd "$D" && mkdir -p scripts && printf '#!/bin/bash\necho a\n' > scripts/x.sh
+  git add -A; git commit -q -m b2
+  printf '#!/bin/bash\necho b\n' > scripts/x.sh; git add -A )
+jscpd_empty "$D/jscpd.json"
+runq_g5 "$D" "SYNO_JSCPD_REPORT=$D/jscpd.json" -- --staged
+assert_rc "$RUN_RC" 0 "G5-2b 无 src/** ⇒ exit 0（不适用 ≠ 看不见）"
+printf '%s' "$RUN_OUT" | grep -q 'G5 覆盖率/重复率: 不适用' && ok "G5-2b 打印 G5 不适用说明" || no "G5-2b 缺不适用说明: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'E_COVERAGE' && no "G5-2b 误出 E_COVERAGE" || ok "G5-2b 无 E_COVERAGE（两态不混淆）"
+
+# ── G5-2c 未武装（含 src/** 但不传 coverage 参数）⇒ 显式 note ＋ exit 0（不静默）──
+D="$G5T/unarmed"; mk_g5_repo "$D"; g5_modify_m "$D"
+runq_g5 "$D" -- --staged
+assert_rc "$RUN_RC" 0 "G5-2c 未武装（含 src/** 不传 coverage 参数）⇒ exit 0"
+printf '%s' "$RUN_OUT" | grep -q 'G5 未武装' && ok "G5-2c 打印『G5 未武装』note（不静默）" || no "G5-2c 缺未武装 note: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'rules=G1,G3,G4,G5' && ok "G5-2c 末行 rules 仍含 G5（组存在即使 N/A）" || no "G5-2c 末行 rules 缺 G5: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'E_COVERAGE' && no "G5-2c 未武装却报 E_COVERAGE" || ok "G5-2c 未武装不判 coverage"
+
+# ── G5-3 coverage 存在但缺该文件条目 ⇒ E_COVERAGE exit 2 ──
+D="$G5T/noentry"; mk_g5_repo "$D"; g5_modify_m "$D"
+GROOT="$( cd "$D" && pwd -P )"; GSHA="$(g5_sha "$D")"
+cov_write "$D/cov.json" "$GROOT/src/svc/other.ts" 99.0
+jscpd_empty "$D/jscpd.json"
+runq_g5 "$D" "SYNO_JSCPD_REPORT=$D/jscpd.json" -- --staged --coverage-summary cov.json --coverage-sha "$GSHA"
+assert_rc "$RUN_RC" 2 "G5-3 coverage 缺该文件条目 ⇒ exit 2（应有未有）"
+printf '%s' "$RUN_OUT" | grep -q 'degraded: E_COVERAGE ' && ok "G5-3 点名 degraded: E_COVERAGE" || no "G5-3 未点名 E_COVERAGE: $RUN_OUT"
+
+# ── G5-4a 新鲜度：--coverage-sha HEAD~1 ⇒ E_COVERAGE-STALE exit 2 ──
+D="$G5T/stale"; mk_g5_repo "$D"; g5_modify_m "$D"
+GROOT="$( cd "$D" && pwd -P )"
+cov_write "$D/cov.json" "$GROOT/src/svc/m.ts" 99.0
+jscpd_empty "$D/jscpd.json"
+runq_g5 "$D" "SYNO_JSCPD_REPORT=$D/jscpd.json" -- --staged --coverage-summary cov.json --coverage-sha "$( cd "$D" && git rev-parse HEAD~1 )"
+assert_rc "$RUN_RC" 2 "G5-4a --coverage-sha HEAD~1 ⇒ exit 2（陈旧 JSON 不得假绿）"
+printf '%s' "$RUN_OUT" | grep -q 'degraded: E_COVERAGE-STALE' && ok "G5-4a 点名 E_COVERAGE-STALE" || no "G5-4a 未点名 E_COVERAGE-STALE: $RUN_OUT"
+
+# ── G5-4b 新鲜度：含 src/** 且未传 --coverage-sha ⇒ E_COVERAGE-STALE exit 2 ──
+runq_g5 "$D" "SYNO_JSCPD_REPORT=$D/jscpd.json" -- --staged --coverage-summary cov.json
+assert_rc "$RUN_RC" 2 "G5-4b 未传 --coverage-sha ⇒ exit 2（fail-closed）"
+printf '%s' "$RUN_OUT" | grep -q 'degraded: E_COVERAGE-STALE' && ok "G5-4b 点名 E_COVERAGE-STALE" || no "G5-4b 未点名 E_COVERAGE-STALE: $RUN_OUT"
+
+# ── G5-5a A 档边界：新增件 39.9 ⇒ ❌ R5.1 exit 1 ──
+D="$G5T/a399"; mk_g5_repo "$D"
+( cd "$D" && printf 'export const b = 2;\n' > src/svc/new-b.ts )
+g5_reg_declared "$D" "src/svc/new-b.ts" "svc.newB"
+( cd "$D" && git add -A )
+GROOT="$( cd "$D" && pwd -P )"; GSHA="$(g5_sha "$D")"
+cov_write "$D/cov.json" "$GROOT/src/svc/new-b.ts" 39.9
+jscpd_empty "$D/jscpd.json"
+runq_g5 "$D" "SYNO_JSCPD_REPORT=$D/jscpd.json" -- --staged --coverage-summary cov.json --coverage-sha "$GSHA"
+assert_rc "$RUN_RC" 1 "G5-5a A 档 39.9 ⇒ exit 1"
+printf '%s' "$RUN_OUT" | grep -q '❌ R5.1' && ok "G5-5a 点名 ❌ R5.1" || no "G5-5a 未点名 R5.1: $RUN_OUT"
+
+# ── G5-5b M 档边界：baseline 比实测高 0.1 ⇒ ❌ R5.1 exit 1 ──
+D="$G5T/mfail"; mk_g5_repo "$D"; g5_modify_m "$D"
+g5_baseline "$D" '"src/svc/m.ts": 50.1'
+( cd "$D" && git add -A )
+GROOT="$( cd "$D" && pwd -P )"; GSHA="$(g5_sha "$D")"
+cov_write "$D/cov.json" "$GROOT/src/svc/m.ts" 50.0
+jscpd_empty "$D/jscpd.json"
+runq_g5 "$D" "SYNO_JSCPD_REPORT=$D/jscpd.json" -- --staged --coverage-summary cov.json --coverage-sha "$GSHA"
+assert_rc "$RUN_RC" 1 "G5-5b M 档 baseline+0.1 ⇒ exit 1"
+printf '%s' "$RUN_OUT" | grep -q '❌ R5.1' && ok "G5-5b 点名 ❌ R5.1" || no "G5-5b 未点名 R5.1: $RUN_OUT"
+
+# ── G5-6 baseline 非法值（负/非数字/>100）⇒ E_BASELINE exit 2 ──
+D="$G5T/badbl"; mk_g5_repo "$D"; g5_modify_m "$D"
+GROOT="$( cd "$D" && pwd -P )"; GSHA="$(g5_sha "$D")"
+cov_write "$D/cov.json" "$GROOT/src/svc/m.ts" 55.0
+jscpd_empty "$D/jscpd.json"
+for BAD in '-1' '"abc"' '101'; do
+  g5_baseline "$D" "\"src/svc/m.ts\": $BAD"
+  runq_g5 "$D" "SYNO_JSCPD_REPORT=$D/jscpd.json" -- --staged --coverage-summary cov.json --coverage-sha "$GSHA"
+  assert_rc "$RUN_RC" 2 "G5-6 baseline=$BAD ⇒ exit 2"
+  printf '%s' "$RUN_OUT" | grep -q 'E_BASELINE' && ok "G5-6 baseline=$BAD 点名 E_BASELINE" || no "G5-6 baseline=$BAD 未点名 E_BASELINE: $RUN_OUT"
+done
+
+# ── G5-7 棘轮：--update-baseline 只升不降；默认检查模式零写入 ──
+D="$G5T/ratchet"; mk_g5_repo "$D"; g5_modify_m "$D"
+GROOT="$( cd "$D" && pwd -P )"; GSHA="$(g5_sha "$D")"
+cov_write "$D/cov.json" "$GROOT/src/svc/m.ts" 55.0
+jscpd_empty "$D/jscpd.json"
+BL="$D/docs/authority/coverage-baseline.json"
+g5_baseline "$D" '"src/svc/m.ts": 90.0'
+runq_g5 "$D" "SYNO_JSCPD_REPORT=$D/jscpd.json" -- --staged --coverage-summary cov.json --coverage-sha "$GSHA" --update-baseline
+assert_rc "$RUN_RC" 0 "G5-7 降向 --update-baseline ⇒ exit 0"
+printf '%s' "$RUN_OUT" | grep -q 'keep src/svc/m.ts=90.00%' && ok "G5-7 降向打印 keep <path>=<旧值>" || no "G5-7 缺 keep 文案: $RUN_OUT"
+[ "$(g5_entries_val "$BL" "src/svc/m.ts")" = "90.0" ] && ok "G5-7 降向条目不变（90.0）" || no "G5-7 降向条目被改: $(g5_entries_val "$BL" "src/svc/m.ts")"
+printf '%s' "$RUN_OUT" | grep -q 'QUALITY-DELTA: BASELINE updated=0 kept=1' && ok "G5-7 降向末行 updated=0 kept=1" || no "G5-7 降向末行不合约: $RUN_OUT"
+g5_baseline "$D" '"src/svc/m.ts": 50.0'
+runq_g5 "$D" "SYNO_JSCPD_REPORT=$D/jscpd.json" -- --staged --coverage-summary cov.json --coverage-sha "$GSHA" --update-baseline
+assert_rc "$RUN_RC" 0 "G5-7 升向 --update-baseline ⇒ exit 0"
+printf '%s' "$RUN_OUT" | grep -q '↑ R5.1 baseline: src/svc/m.ts 50.00% → 55.00%' && ok "G5-7 升向打印 diff" || no "G5-7 升向缺 diff: $RUN_OUT"
+[ "$(g5_entries_val "$BL" "src/svc/m.ts")" = "55.0" ] && ok "G5-7 升向条目升至 55.0" || no "G5-7 升向条目未升: $(g5_entries_val "$BL" "src/svc/m.ts")"
+printf '%s' "$RUN_OUT" | grep -q 'QUALITY-DELTA: BASELINE updated=1 kept=0' && ok "G5-7 升向末行 updated=1 kept=0" || no "G5-7 升向末行不合约: $RUN_OUT"
+H1="$(sha_of "$BL")"
+runq_g5 "$D" "SYNO_JSCPD_REPORT=$D/jscpd.json" -- --staged --coverage-summary cov.json --coverage-sha "$GSHA"
+H2="$(sha_of "$BL")"
+assert_rc "$RUN_RC" 0 "G5-7 默认检查模式（baseline=实测 55.0）⇒ exit 0"
+[ -n "$H1" ] && [ "$H1" = "$H2" ] && ok "G5-7 默认检查模式对 baseline 零写入（sha256 前后同）" || no "G5-7 检查模式写了 baseline: $H1 → $H2"
+
+# ── G5-8a R5.2：重复率 >5% ⇒ 仅 ⚠️ advisory，rc=0、不进 violations ──
+D="$G5T/dup"; mk_g5_repo "$D"
+( cd "$D" && mkdir -p src/svc && for i in $(seq 1 20); do echo "export const v$i = $i;"; done > src/svc/dup.ts )
+g5_reg_declared "$D" "src/svc/dup.ts" "svc.dup"
+( cd "$D" && git add -A )
+GROOT="$( cd "$D" && pwd -P )"; GSHA="$(g5_sha "$D")"
+cov_write "$D/cov.json" "$GROOT/src/svc/dup.ts" 100.0
+jscpd_dup "$D/jscpd.json" "src/svc/dup.ts" 2
+runq_g5 "$D" "SYNO_JSCPD_REPORT=$D/jscpd.json" -- --staged --coverage-summary cov.json --coverage-sha "$GSHA"
+assert_rc "$RUN_RC" 0 "G5-8a 重复率 10% > 5% ⇒ exit 0（advisory 不阻断）"
+printf '%s' "$RUN_OUT" | grep -q '⚠️ R5.2' && ok "G5-8a 打 ⚠️ R5.2 advisory" || no "G5-8a 缺 ⚠️ R5.2: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q '❌ R5.2' && no "G5-8a R5.2 被计入 violations" || ok "G5-8a R5.2 不进 violations"
+printf '%s' "$RUN_OUT" | grep -q 'QUALITY-DELTA: PASS' && ok "G5-8a 末行仍 PASS（rc 不受影响）" || no "G5-8a 末行非 PASS: $RUN_OUT"
+
+# ── G5-8b R5.2：恰 5% ⇒ 不报 ──
+jscpd_dup "$D/jscpd.json" "src/svc/dup.ts" 1
+runq_g5 "$D" "SYNO_JSCPD_REPORT=$D/jscpd.json" -- --staged --coverage-summary cov.json --coverage-sha "$GSHA"
+assert_rc "$RUN_RC" 0 "G5-8b 重复率恰 5% ⇒ exit 0"
+printf '%s' "$RUN_OUT" | grep -q 'R5.2: ' && no "G5-8b 恰 5% 仍报 R5.2" || ok "G5-8b 恰 5% 不报（>5 才报）"
+
+# ── G5-9 jscpd 不可用（PATH 无 node/npx）⇒ E_JSCPD-MISSING 且 R5.1 照判 ──
+D="$G5T/nojscpd"; mk_g5_repo "$D"
+( cd "$D" && printf 'export const c = 3;\n' > src/svc/new-c.ts )
+g5_reg_declared "$D" "src/svc/new-c.ts" "svc.newC"
+( cd "$D" && git add -A )
+GROOT="$( cd "$D" && pwd -P )"; GSHA="$(g5_sha "$D")"
+cov_write "$D/cov.json" "$GROOT/src/svc/new-c.ts" 80.0
+runq_g5 "$D" "PATH=/usr/bin:/bin" -- --staged --coverage-summary cov.json --coverage-sha "$GSHA"
+assert_rc "$RUN_RC" 0 "G5-9 jscpd 缺失 ⇒ exit 0（不阻断）"
+printf '%s' "$RUN_OUT" | grep -q 'degraded: E_JSCPD-MISSING' && ok "G5-9 点名 degraded: E_JSCPD-MISSING" || no "G5-9 未点名 E_JSCPD-MISSING: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'G5 覆盖率: 判 1 个' && ok "G5-9 R5.1 仍判（打印判 1 个）" || no "G5-9 R5.1 被整组跳过: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'R5.2 跳过（jscpd 不可用' && ok "G5-9 R5.2 整组跳过有痕" || no "G5-9 R5.2 跳过无痕: $RUN_OUT"
+
+# ── G5-10 SYNO_QD_G5=0 ⇒ G5 整组跳过＋degraded: G5-DISABLED，rc 按 G1/G3/G4 ──
+D="$G5T/g5off"; mk_g5_repo "$D"; g5_modify_m "$D"
+runq_g5 "$D" "SYNO_QD_G5=0" -- --staged
+assert_rc "$RUN_RC" 0 "G5-10 SYNO_QD_G5=0（无 coverage）⇒ exit 0（E_COVERAGE 系整组关）"
+printf '%s' "$RUN_OUT" | grep -q 'degraded: G5-DISABLED' && ok "G5-10 点名 degraded: G5-DISABLED（非静默）" || no "G5-10 静默跳过: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'G5 覆盖率/重复率: 已禁用' && ok "G5-10 打印已禁用说明" || no "G5-10 缺已禁用说明: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'rules=G1,G3,G4 ' && ok "G5-10 末行 rules 回 G1,G3,G4（不含 G5）" || no "G5-10 末行 rules 未回滚: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'E_COVERAGE' && no "G5-10 开关关闭仍报 E_COVERAGE" || ok "G5-10 关了就不判 coverage（skip 语义）"
+( cd "$D" && mkdir -p tests && printf 'expect(%s).toBe(true);\n' true > tests/g3.test.ts && git add -A )
+runq_g5 "$D" "SYNO_QD_G5=0" -- --staged
+assert_rc "$RUN_RC" 1 "G5-10 开关只关 G5：G3 违规仍 exit 1"
+printf '%s' "$RUN_OUT" | grep -q 'R3.3' && ok "G5-10 点名 R3.3（G1/G3/G4 照判）" || no "G5-10 G3 未判: $RUN_OUT"
+
+# ── G5-11 --json 输出含 g5:{checked,advisory,disabled} ──
+D="$G5T/json"; mk_g5_repo "$D"; g5_modify_m "$D"
+g5_baseline "$D" '"src/svc/m.ts": 50.0'
+( cd "$D" && git add -A )
+GROOT="$( cd "$D" && pwd -P )"; GSHA="$(g5_sha "$D")"
+cov_write "$D/cov.json" "$GROOT/src/svc/m.ts" 60.0
+jscpd_empty "$D/jscpd.json"
+runq_g5 "$D" "SYNO_JSCPD_REPORT=$D/jscpd.json" -- --staged --coverage-summary cov.json --coverage-sha "$GSHA" --json
+assert_rc "$RUN_RC" 0 "G5-11 --json ⇒ exit 0"
+G5JSON="$(printf '%s' "$RUN_OUT" | "$PYABS" -c 'import json,sys
+d = json.load(sys.stdin); g = d.get("g5") or {}
+print("%s|%s|%s" % (g.get("checked"), g.get("advisory"), g.get("disabled")))' 2>/dev/null)"
+[ "$G5JSON" = "1|0|False" ] && ok "G5-11 --json g5={checked:1,advisory:0,disabled:false}" || no "G5-11 --json g5 不符: '$G5JSON' 原文: $RUN_OUT"
+
+# ── G5-12 改坏必红（变异体 ×3：坏 R5.1 阈值／坏 baseline 阈值／坏棘轮只升不降）──
+mut_build() { # <out> <old> <new>；锚点找不到 ⇒ 非零（py 契约漂移 ⇒ 测试报红而非静默通过）
+  "$PYABS" - "$SUT" "$1" "$2" "$3" <<'PYMUT'
+import sys
+src = open(sys.argv[1], encoding='utf-8').read()
+old, new = sys.argv[3], sys.argv[4]
+if old not in src:
+    sys.stderr.write("mutation anchor not found\n"); sys.exit(3)
+open(sys.argv[2], 'w', encoding='utf-8').write(src.replace(old, new, 1))
+PYMUT
+}
+MUT51="$TMPROOT/mut-r51.py"
+mut_build "$MUT51" 'if pct + 1e-9 < thr:' 'if False:  # MUT' && ok "G5-12 变异体① 构造（坏 R5.1 阈值比较）" || no "G5-12 变异体① 锚点漂移（py 契约变了，须重核）"
+D="$G5T/a399"; GROOT="$( cd "$D" && pwd -P )"; GSHA="$(g5_sha "$D")"
+( cd "$D" && env SYNO_JSCPD_REPORT="$D/jscpd.json" "$PYABS" "$MUT51" --root "$GROOT" --staged --coverage-summary cov.json --coverage-sha "$GSHA" >/dev/null 2>&1 ); MRC=$?
+[ "$MRC" -eq 0 ] && ok "G5-12 变异体① 坏阈值比较 ⇒ A 档 39.9 翻绿 rc=0 ⇒ R5.1 承重" || no "G5-12 变异体① 仍判红 rc=$MRC"
+MUTBL="$TMPROOT/mut-baseline.py"
+mut_build "$MUTBL" 'thr = max(G5_M_FLOOR_PCT, base if base is not None else 0.0)' 'thr = max(G5_M_FLOOR_PCT, 0.0)  # MUT' && ok "G5-12 变异体② 构造（坏 baseline 阈值）" || no "G5-12 变异体② 锚点漂移（py 契约变了，须重核）"
+D="$G5T/mfail"; GROOT="$( cd "$D" && pwd -P )"; GSHA="$(g5_sha "$D")"
+( cd "$D" && env SYNO_JSCPD_REPORT="$D/jscpd.json" "$PYABS" "$MUTBL" --root "$GROOT" --staged --coverage-summary cov.json --coverage-sha "$GSHA" >/dev/null 2>&1 ); MRC2=$?
+[ "$MRC2" -eq 0 ] && ok "G5-12 变异体② 坏 baseline 阈值 ⇒ baseline+0.1 翻绿 rc=0 ⇒ baseline 承重" || no "G5-12 变异体② 仍判红 rc=$MRC2"
+MUTR="$TMPROOT/mut-ratchet.py"
+mut_build "$MUTR" 'elif pct > old + 1e-9:' 'elif True:  # MUT' && ok "G5-12 变异体③ 构造（坏只升不降）" || no "G5-12 变异体③ 锚点漂移（py 契约变了，须重核）"
+D="$G5T/mutratchet"; mk_g5_repo "$D"; g5_modify_m "$D"
+GROOT="$( cd "$D" && pwd -P )"; GSHA="$(g5_sha "$D")"
+cov_write "$D/cov.json" "$GROOT/src/svc/m.ts" 55.0
+jscpd_empty "$D/jscpd.json"
+g5_baseline "$D" '"src/svc/m.ts": 90.0'
+( cd "$D" && env SYNO_JSCPD_REPORT="$D/jscpd.json" "$PYABS" "$MUTR" --root "$GROOT" --staged --coverage-summary cov.json --coverage-sha "$GSHA" --update-baseline >/dev/null 2>&1 )
+[ "$(g5_entries_val "$D/docs/authority/coverage-baseline.json" "src/svc/m.ts")" = "55.0" ] \
+  && ok "G5-12 变异体③ 坏棘轮 ⇒ 降向被写入 55.0（条目翻降）⇒ 只升不降承重" \
+  || no "G5-12 变异体③ 降向仍未写入（条目 $(g5_entries_val "$D/docs/authority/coverage-baseline.json" "src/svc/m.ts")）"
 
 echo ""
 echo "结果: $PASS 通过, $FAIL 失败"
