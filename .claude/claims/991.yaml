@@ -1,12 +1,12 @@
 # .claude/claims/991.yaml — #991（P1 · Q-12 资源上限）会话事件数显式拒绝 · 写集声明
 # 纪律：只列本 PR 真正改动的文件，不预授权。
-# 档位（裁 413）：轻量档 —— 产品代码 1 ＋ 配对测试 1 ＝ 2；登记类 4（claim／DOCS／Note／豁免）另计但列全。
+# 档位（裁 411）：轻量档 —— 产品代码 1 ＋ 配对测试 1 ＝ 2；登记类 4（claim／DOCS／Note／豁免）另计但列全。
 # 边界：不打 WIRING（本件不新增 capability/provider）；不碰 tests/control-tower/**（棘轮那份沿用 #973）。
 writeset:
   - .claude/claims/991.yaml
   - docs/authority/DOCS-REGISTRY.yaml
   - gate-exemptions/2026-10-25-p1-991-q12.md
-  - memory/notes/proposed/2026-10-25-991-q12-session-event-limit.md
+  - memory/notes/proposed/2026-10-25-991-q12.md
   - src/store/session-store.ts
   - tests/store/session-events-limit.test.ts
 done:
