@@ -1,0 +1,10 @@
+writeset:
+  - .claude/claims/1023.yaml
+  - .github/workflows/ci.yml
+  - .github/GATE-SPLIT.md
+  - gate-exemptions/2026-10-26-cto-1023-gh-split.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - memory/notes/proposed/2026-10-26-1023-gh-split.md
+done:
+  - verify: grep -c "pre-commit-check" .github/workflows/ci.yml
+note: "#1023 两平台分工：GitHub 去重。"

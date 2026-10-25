@@ -1098,3 +1098,11 @@ documents:
     status: active
     owner: CTO
     note: "D 项头部契约 + P10 任务号口径；裁 421。"
+
+  # ---- CTO 2026-10-26：#1023 两平台分工（GitHub 去重）豁免件（裁 421）----
+  - id: DOC-0286
+    type: decision
+    path: gate-exemptions/2026-10-26-cto-1023-gh-split.md
+    status: active
+    owner: CTO
+    note: "GitHub ci.yml 去重（tsc/pre-commit）；分工真值 .github/GATE-SPLIT.md。"

@@ -180,23 +180,6 @@ jobs:
             fi
           done
           exit $FAIL
-      - name: TypeScript check
-        if: steps.docsonly.outputs.docs_only != 'true'
-        # K3 审计 P1-1 修复：去掉 `|| true` fail-open（CI 类型检查永不红 → 挪 CI 后类型防线真空）。
-        # 过滤存量白名单（_extinct 退役哨兵死代码 + ima.ts/server.ts 已知错误 + 4 个历史文件），
-        # 其余新类型错误 → exit 1 阻断。存量清理后逐步收紧白名单。
-        run: |
-          ERRORS=$(npx tsc --noEmit --pretty false 2>&1 | grep -v "_extinct/\|ima.ts\|server.ts\|sentinel-service.ts\|industry-loader.ts\|tool-registration.ts\|llm-provider-loader.ts" | grep -E "error TS" || true)
-          if [ -n "$ERRORS" ]; then
-            echo "$ERRORS"
-            exit 1
-          fi
-      - name: Iron laws check
-        if: steps.docsonly.outputs.docs_only != 'true'
-        run: bash scripts/pre-commit-check.sh
-        env:
-          SYNO_DIFF_BASE: "origin/main"
-          SYNO_CI: "1"  # D516/K3 P0-1: CI strict——本地 V5 软提示在 CI 转硬（权威物理落地）
       # D540: verify-parallel 已从本地 pre-push 移 CI/PR —— CI 权威物理拦截写集重叠
       #   base..HEAD write set vs origin/main 已合 dev doc write set（fetch-depth:0 需完整历史，已确认）
       #   纯文档 PR 跳过；混合 PR 正常跑。
