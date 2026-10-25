@@ -82,10 +82,26 @@ GROUP_DONE=0
 #
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# ═══ 裁 409（2026-10-25）: 降级清单 —— 这些组在 CI 上**只报不拦** ═══
+#   背景：创始人「别让实施把时间全花在应付门禁上」；裁 409 定 5 条降 report。
+#   实现：名字含下列子串的检查，即使 SYNO_CI=1 也不计 HARD_FAIL（打 ⚠️ 降级）。
+#   回滚：SYNO_GATE_STRICT_LEGACY=1 ⇒ 恢复原语义（全硬）。
+_downgraded() {
+  [ "${SYNO_GATE_STRICT_LEGACY:-0}" = "1" ] && return 1
+  case "$1" in
+    *"Task Brief"*|*"文件驱动架构"*|*"V3 流水线健康度"*|*"技能同步一致性"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
 hard_check() {
   local name="$1" matches="$2"
   local count=0
   [ -n "$matches" ] && count=$(echo "$matches" | grep -c . 2>/dev/null) || count=0
+  if [ "$count" -gt 0 ] && _downgraded "$name"; then
+    echo -e "  ${YELLOW}⚠️  ${name}: ${count} 处  [裁 409 降级 —— 只报不拦]${RESET}"
+    echo "$matches" | head -8 | while read -r line; do [ -n "$line" ] && echo "     ${line}"; done
+    log_gate "$name" hit; return 0
+  fi
   if [ "$count" -gt 0 ]; then
     echo -e "  ${RED}❌ ${name}: ${count} 处  [硬阻断]${RESET}"
     echo "$matches" | head -8 | while read -r line; do [ -n "$line" ] && echo "     ${line}"; done
@@ -153,7 +169,7 @@ soft_check() {
   [ -n "$matches" ] && count=$(echo "$matches" | grep -c . 2>/dev/null) || count=0
   if [ "$count" -gt 0 ]; then
     # D542: CI strict 下必须显示 ❌（此前显示 ⚠️ 导致「N 组未通过」在日志中找不到对应组——M1 类失败不点名）
-    if [ "${SYNO_CI:-0}" = "1" ]; then
+    if [ "${SYNO_CI:-0}" = "1" ] && ! _downgraded "$name"; then
       echo -e "  ${RED}❌ ${name}: ${count} 处  [CI strict——软提示在 CI 上为硬阻断]${RESET}"
       HARD_FAIL=$((HARD_FAIL + 1))  # D516 CI strict
     else

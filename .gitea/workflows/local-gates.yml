@@ -191,6 +191,7 @@ jobs:
           #         ⇒ 合法跳过（显式标注「不可测面」）；② 代码面含**被删除的** vitest 测试 ⇒ 异常（真丢测试）；
           #         ③ 其余有代码面却零测试 ⇒ 照旧异常。
           N_VITEST="$(printf '%s' "$CHANGED_FILES" | grep -cE '\.(test|spec)\.(ts|tsx)$' || true)"
+          N_SRC_TS="$(printf '%s' "$CHANGED_FILES" | grep -cE '^src/.*\.ts$' || true)"
           N_CODE_NONVITEST=$((N_CODE - N_VITEST)); [ "$N_CODE_NONVITEST" -lt 0 ] && N_CODE_NONVITEST=0
           DELETED_VITEST="$(git diff --name-only --diff-filter=D "$CHANGED_BASE"...HEAD 2>/dev/null | grep -E '\.(test|spec)\.(ts|tsx)$' || true)"
           echo "本次变更集: ${N_FILES} 文件（代码面 ${N_CODE} 个，其中 vitest 可收集 ${N_VITEST} 个；不可测面 ${N_CODE_NONVITEST} 个）"
@@ -219,6 +220,12 @@ jobs:
               elif [ -n "$DELETED_VITEST" ]; then
                 echo "::error::🔴 异常空绿 —— 本次变更**删除了 vitest 测试**却被收集到零测试；这**不是通过**：测试真的丢了。"
                 printf '%s\n' "$DELETED_VITEST" | head -20 | sed 's/^/     - 已删除: /'
+                exit 1
+              elif [ "$N_VITEST" -eq 0 ] && [ "$N_SRC_TS" -gt 0 ]; then
+                # 裁 421：生产代码（src/**.ts）有改动却一个测试都没跑 ⇒ **不是通过**（原公式把它算"不可测面"= 假绿）
+                echo "::error::🔴 异常空绿 —— 本次变更含 ${N_SRC_TS} 个 src/**.ts 生产文件改动，但 vitest 一个测试都没跑。"
+                echo "   ⇒ 判据：新增/改动生产代码必须带测试（或显式说明为何不可测）。这不是通过。"
+                printf '%s\n' "$CHANGED_FILES" | grep -E '^src/.*\.ts$' | head -20 | sed 's/^/     - /'
                 exit 1
               elif [ "$N_VITEST" -eq 0 ]; then
                 echo "ℹ️  合法跳过（不可测面）：本次变更 ${N_CODE} 个代码面文件**均非 vitest 可收集**（如 .test.sh/.yml/.py）"
@@ -297,6 +304,17 @@ jobs:
             BASE="$(bash scripts/control-tower/resolve-ci-base.sh)" || exit $?
             SYNO_CI=1 GITHUB_ACTIONS=true SYNO_DIFF_BASE="$BASE" bash scripts/pre-commit-check.sh || exit $?
           fi
+      # ①g 测试义务闸（Q-10 接线 · 裁 421）：此前 check-test-obligations.py **零调用点** ⇒ Q-10 纸面。
+      #   只判变更集；缺省 base 由 resolve-ci-base.sh 给出（与 ①i 同源）。
+      - name: ①g 测试义务闸（新模块缺 expected/snapshot ⇒ 红 · 只判变更集）
+        run: |
+          cd /Users/wane/.ci-work/SynovaAgent
+          if [ "${SYNO_TEST_OBLIGATIONS:-1}" = "0" ]; then
+            echo "ℹ️  ①g 测试义务闸: 回滚态（SYNO_TEST_OBLIGATIONS=0）—— 跳过（唯一回滚点）"
+            exit 0
+          fi
+          BASE="$(bash scripts/control-tower/resolve-ci-base.sh)" || exit $?
+          python3 scripts/control-tower/check-test-obligations.py --base "$BASE"
       # ①i 落位＝**①f 之后、下一 job 头之前**（#915 Q-1）：CI-S<n> 是**位置派生**的 id（#910 盘点表），
       #   插在 ①f 之前会让 CI-S3..S11 全体漂移 ⇒ 只追加、不重编号。①g 由 #913 PR-3 预留；①h 由在飞 #943 占用。
       #   代价（与 ①e 同）：① 若先红，本步不执行（不做 always）。
