@@ -1,0 +1,138 @@
+{
+ "schema": "syno-review-receipt/v1",
+ "pr": 972,
+ "patch_fingerprint": "sha256:dcb6ce3863c15e10d1b5822359339c50656964b7b4a3cd414df8a2a4135b0358",
+ "author": "synova（实施会话；.claude/claims/964.yaml 声明者）",
+ "reviewer": "dsh-subagent/session-acc972（零上下文独立复核，未参与实现）",
+ "independence": "fresh-session",
+ "verdict": "PASS",
+ "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步）＋ deliverable-acceptance §1bis G1-G6（PR head 树 .synova/skills/deliverable-acceptance/SKILL.md 已读）",
+ "issued_at": "2026-10-25T02:11:29+08:00",
+ "subject": {
+  "repo": "synova-agent/SynovaAgent（Gitea 127.0.0.1:3000）",
+  "head": "d899fbe04af7763ce93220dacfa2a1f545adb76e",
+  "base": "local-main@3f1098a0a802bc080cd3e5cf922220c9d6cdf07a",
+  "worktree": "/tmp/acc972（detach，只读复核；未 push/merge/commit）"
+ },
+ "checks": [
+  {
+   "name": "① 库比构建新 ⇒ 拒（typed SCHEMA_TOO_NEW）+ 启动路径真失败",
+   "result": "pass",
+   "cmd": "seed schema_version=99 → `SYNOVA_DB_PATH=/tmp/probe972data/too-new.db DEV_MODE=true node --import tsx src/index.ts`；直调探针 reconcileSchema(=p1)",
+   "evidence": "进程 REAL_EXIT_CODE=1；日志 `\"code\":\"SCHEMA_TOO_NEW\",\"phase\":\"reconcile\",\"retryable\":false` + `msg=Schema 迁移/版本门禁失败 — 拒绝启动（Phase 0 fatal）`；stack=schema-migration.ts:171 ← engine-context.ts:137 ← agent-entry.ts:26 ← index.ts:20。直调探针：threw=true / instanceof SchemaMigrationError=true / 库行 [{\"version\":99}]（零写入）"
+  },
+  {
+   "name": "①bis 服务端启动路径（Bootstrap Phase 0 fatal）也真终止",
+   "result": "pass",
+   "cmd": "`SYNOVA_DB_PATH=<v99> node --import tsx .probe-972/p3-bootstrap.ts`；`SYNOVA_DB_PATH=<v99> PORT=18799 node --import tsx .probe-972/p3b-server-entry.ts`（真跑 createServer）",
+   "evidence": "BOOTSTRAP ok=false / aborted=true / phase0.status=failed；createServer CREATE_SERVER_EXIT=1，logs `Bootstrap 启动失败 — 服务器将终止`（aborted:true），`Synova-Agent → http` 出现次数=0（从未 listen）"
+  },
+  {
+   "name": "② 启动侧吞错已改：迁移异常 ⇒ 启动失败，不 warn 后继续",
+   "result": "pass",
+   "cmd": "seed `graph_nodes`=VIEW + schema_version=1（→ 迁移 v2 ALTER 视图必炸）→ `node --import tsx src/index.ts`",
+   "evidence": "MIGFAIL_EXIT=1；日志含 `拒绝启动（Phase 0 fatal）`(1) 与 `SynovaAgent 启动失败`(1)；`degraded` 关键字计数=0；底层 err=`Cannot add a column to a view`（SQLITE_ERROR）。即 rethrow 生效、无降级续跑"
+  },
+  {
+   "name": "③ 迁移链完整：缺环/重复各自具名 typed code",
+   "result": "pass",
+   "cmd": "`node --import tsx .probe-972/p5-chain.ts`（用生产迁移对象构造 [2,4,5] / [3,4,5] / [2,3,3,4,5] / [2,3,4] vs 版本5 / 空表 vs 5）",
+   "evidence": "缺环 2→4：code=MIGRATION_CHAIN_GAP（msg 期望 v3 实得 v4）；1→3 断 2：MIGRATION_CHAIN_GAP（期望 v2 实得 v3）；重复相邻 v3/v4：MIGRATION_DUPLICATE_VERSION；末条v4≠版本5：MIGRATION_CHAIN_GAP；空表版本5：MIGRATION_CHAIN_GAP；全部 instanceof SchemaMigrationError=true（非笼统 Error），phase='chain'"
+  },
+  {
+   "name": "④ 开关两态：SYNO_SCHEMA_STRICT 默认拒 / =0 退回 warn+degraded",
+   "result": "pass",
+   "cmd": "`SYNOVA_DB_PATH=<v99> node --import tsx .probe-972/p6-switch.ts`（不设 / 设 0）；`... SYNO_SCHEMA_STRICT=0 node --import tsx .probe-972/p6b-bootstrap.ts`",
+   "evidence": "未设：initEngineContext threw=true code=SCHEMA_TOO_NEW；=0：threw=false。Bootstrap 层 =0：ok=true aborted=false degraded=true（degradedModules=[{phase:1,module:'graphstore',error:'库 schema 版本 99 高于本构建 5'}]，graphStore 未装配）⇒ 进程可起、图存储退化为缺席"
+  },
+  {
+   "name": "⑤ 改坏必红（自己改自己跑）",
+   "result": "pass",
+   "cmd": "变异A：engine-context catch 内 rethrow→warn-only；变异B：schema-migration `currentVersion > SCHEMA_VERSION` 整段删除并恢复 `>=` 早退；各自 `npx vitest run tests/store/schema-migration.test.ts`",
+   "evidence": "变异A ⇒ Tests 1 failed | 18 passed（`expected undefined to be an instance of SchemaMigrationError`）；变异B ⇒ Tests 2 failed | 17 passed（同断言，SCHEMA_TOO_NEW 直调用例+真拒启用例双红）；两者恢复后 19/19 绿。旁证：变异B 下 `npx tsc --noEmit` 仍 exit 0 ⇒ 只有测试能抓"
+  },
+  {
+   "name": "⑥ 存量只登记冻结清单（7 写入 / D487 / 2 ALTER）+ diff 无无关重构",
+   "result": "pass",
+   "cmd": "`grep -rn \"INSERT OR IGNORE INTO schema_version\" --include=*.ts src/`；`grep -n \"CREATE TABLE IF NOT EXISTS session_events|CREATE TABLE session_events_new|ALTER TABLE agent_sessions ADD COLUMN\" src/store/session-store.ts`；`git diff --numstat 3f1098a0a..HEAD`",
+   "evidence": "实测 7 条 = d93b_actor_role×1 + d551_target_type×2 + k6_confirm_decision×2 + d551_memory_type×2（feedback-collector 5 + agent-memory-store 2），无第三文件；session_events 重建 2 处、agent_sessions ALTER 2 处，与冻结断言一致。numstat：claims +17/-0、engine-context +12/-1、schema-migration +100/-5、test +166/-0（测试文件零删除行 ⇒ 老断言未被削弱）"
+  },
+  {
+   "name": "⑦ 回归：tsc / vitest / pre-commit 12 组 / gate-protection / CI / 写集 / 禁区",
+   "result": "pass",
+   "cmd": "`npx tsc --noEmit`（node v22.23.2）；`npx vitest run tests/store tests/sentinel/{org-registry,silent-wrong-value,metric-readings-writer}.test.ts tests/adapters/sqlite-graph-store.{legacy-schema,edge-degradation}.test.ts`；`npx vitest run tests/init tests/deploy`；`bash scripts/pre-commit-check.sh`；`bash scripts/control-tower/check-gate-protection.sh --changed-base 3f1098a0a`；`bash scripts/control-tower/check-merge-conditions.sh --pr 972 --json`",
+   "evidence": "tsc EXIT=0；相关 17 文件 167 通过；tests/init+tests/deploy 18 文件 136 通过 1 跳过；pre-commit `✅ 全部 12 组通过` EXIT=0；gate-protection 6 通过 0 失败（受保护路径变更 0 条）；CI `① CI 全绿 pending=0 ... ok (state=success total_count=2)`（该 sha 仅 2 个 run，均 completed/success）；写集实测 4 件 ⊆ claims 声明；`git diff --name-only | grep -E '^(src|scripts)/audit/'`=0、`grep -c check-quality-delta`=0（未给 #912 闸加规则）"
+  }
+ ],
+ "findings": [
+  {
+   "severity": "suggest",
+   "priority": "high",
+   "title": "模块加载期链校验那一行没有判别力测试（G1「只测不接」风险）",
+   "file": "src/store/schema-migration.ts:124",
+   "detail": "变异C：把 `assertMigrationChain(migrations, SCHEMA_VERSION);` 整行删掉后，目标测试仍 19/19 全绿（无任何红）。我进一步实测承重性：删该行 + 把 SCHEMA_VERSION 5→6（无 v6 迁移文件）⇒ 进程正常 listen（日志出现 `Synova-Agent → http`），库停在 v5；把该行恢复（仍 SCHEMA_VERSION=6）⇒ 进程 EXIT=1，日志 `末条 v5 ≠ SCHEMA_VERSION 6 —— 版本与迁移文件不同步`，listen=0。即：这行是「版本与迁移文件同步」唯一保证，却可被删而 CI 全绿。",
+   "suggest": "加 5 行：模块内 `export const PRODUCTION_CHAIN_ASSERTED = true;`（或 export 一个 `assertProductionChain()` 由加载期调用），测试断言该导出为 true ⇒ 删调用即红。"
+  },
+  {
+   "severity": "suggest",
+   "title": "非相邻重复版本被判成 GAP 而非 DUPLICATE（语义错位）",
+   "file": "src/store/schema-migration.ts:98",
+   "detail": "重复判定用 `migration.version === expected - 1`，只抓相邻重复。实测 [2,3,4,2] ⇒ MIGRATION_CHAIN_GAP（期望 v5 实得 v2）、[2,3,2] ⇒ GAP。仍是具名 typed code（满足闸要求），但归类不准，K3 归因会看错方向。",
+   "suggest": "先 `new Set(versions).size !== list.length` ⇒ DUPLICATE，再走相邻/末条校验。"
+  },
+  {
+   "severity": "suggest",
+   "title": "迁移 up() 原始错误未包装，typed error 缺 'apply' 相位",
+   "file": "src/store/schema-migration.ts:207-211",
+   "detail": "迁移执行失败仍 rethrow 原始 SqliteError（code=SQLITE_ERROR，无 phase），SchemaMigrationError.phase 只有 'chain'|'reconcile'。拒启可达（已验证），但错误分类面少一层。",
+   "suggest": "可包一层 `new SchemaMigrationError('MIGRATION_APPLY_FAILED','apply',...)` 并 cause 原始 error（非本卡判据，可选）。"
+  },
+  {
+   "severity": "suggest",
+   "title": "回滚开关未登记进 .env.example",
+   "file": ".env.example",
+   "detail": "`SYNO_SCHEMA_STRICT` 仅出现在 engine-context.ts 与测试里，全仓 md/.env 零登记；.env.example 已列 SYNOVA_DB_PATH 等同族变量。",
+   "suggest": "在 .env.example 服务配置段补一行 `# SYNO_SCHEMA_STRICT=1` 并注明 =0 是回滚态。"
+  },
+  {
+   "severity": "suggest",
+   "title": "PR 正文明细与实测差 1：称「+9 用例」，实测 +10",
+   "file": "tests/store/schema-migration.test.ts",
+   "detail": "base 处 9 个 it( ⇒ HEAD 19 个 it(，新增 10 条（库新即拒 1 + 链 6 + 真拒启 1 + 存量冻结 2）。PR body 写 +9。",
+   "suggest": "改正文为 +10，或核实是否有一条被合并表述。"
+  },
+  {
+   "severity": "suggest",
+   "title": "SYNO_SCHEMA_STRICT=0 时图存储缺席应在正文/已知限制写明",
+   "file": "src/adapters/sqlite-graph-store.ts:125",
+   "detail": "graph store ctor 内也调 reconcileSchema（无开关）⇒ strict=0 时它仍抛，被 bootstrap Phase 1c catch 成 degraded，graphStore 不装配。实测 degradedModules=[{phase:1,module:'graphstore',...}]。启动不失败成立，但能力面缺图存储。",
+   "suggest": "在 SYNO_SCHEMA_STRICT 说明处补一句：回滚态下图存储退化为缺席（degraded 可见）。"
+  }
+ ],
+ "merge_conditions_from_control_tower": {
+  "cmd": "bash scripts/control-tower/check-merge-conditions.sh --pr 972 --json",
+  "ci": "ok",
+  "overlap": "no",
+  "review": "no（本回执即 ③ 证据，需以 docs/synova/reviews/972.dcb6ce3863c1.json 提交到分支方可转 ok(attested)）",
+  "serial": "ok",
+  "overlap_detail": ".claude/claims/964.yaml 与 PR #971（open，head be113e43b）重叠 1 处；实测两分支该文件逐字节相同（git diff 0 行）⇒ 内容无冲突，但②口径判 no ⇒ 当前不满足四条件自合，需 CTO 排期（#971 先合 或 拆分 claims）",
+  "cannot_self_merge_now": true
+ },
+ "evidence_artifacts": [
+  "/tmp/probe972data/index-strict.log",
+  "/tmp/probe972data/server-entry.log",
+  "/tmp/probe972data/index-migfail.log",
+  "/tmp/probe972data/mutantc2.log",
+  "/tmp/probe972data/mutantc4.log",
+  "/tmp/tsc-972.log",
+  "/tmp/vitest-related-972.log",
+  "/tmp/precommit-972.log",
+  "/tmp/probe972data/probes-archive（探针源码）"
+ ],
+ "probe_note": "探针源码归档在 /tmp/probe972data/probes-archive/*.ts（p1-too-new/p3-bootstrap/p3b-server-entry/p5-chain/p6-switch/p6b-bootstrap/p7-dup）。运行时置于 worktree 根下的 .probe-972/（相对 import ../src/**），跑完已删除；复核结束 `git status --porcelain` 为空，HEAD=d899fbe04，未 push/merge/commit。",
+ "cleanup": {
+  "worktree_git_status": "clean",
+  "head": "d899fbe04",
+  "touched_remote_refs": "仅临时 fetch refs/pull/971/head（用于比对 claims 文件字节一致性），已 git update-ref -d 删除"
+ }
+}

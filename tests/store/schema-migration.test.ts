@@ -123,3 +123,169 @@ describe('SchemaMigration — v2 迁移 (D355 graph_nodes props)', () => {
     expect(() => reconcileSchema(db)).toThrow();
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// #964 Q-8（裁 395）: 版本门禁（库比构建新 ⇒ 拒）＋迁移链相邻完整 ＋ 存量基线冻结
+//
+// 存量基线（**只登记，不迁台账**；双向棘轮：新增写点 ⇒ 红；偷减写点 ⇒ 红）:
+//   · 台账外 `schema_version` 写入 = 7 条（4 个 tag 值；feedback-collector 5 条 + agent-memory-store 2 条）
+//   · `session_events` 台账外 DDL = D487 重建 2 处（CREATE IF NOT EXISTS / CREATE _new）
+//   · `agent_sessions` 台账外 ALTER = 2 处（user_id / title）
+//   —— 全量迁入台账属 E-7（另立），本卡不改写侧。
+// ═══════════════════════════════════════════════════════════════════
+
+import { readFileSync } from 'fs';
+import path from 'path';
+import {
+  SchemaMigrationError,
+  assertMigrationChain,
+  type Migration,
+} from '../../src/store/schema-migration';
+
+const migrationStub = (version: number): Migration => ({ version, name: `m${version}`, up: () => {} });
+
+describe('#964 版本门禁：库比构建新 ⇒ 拒（SCHEMA_TOO_NEW）', () => {
+  beforeEach(async () => { await loadModules(); });
+
+  it('schema_version=99 ⇒ reconcileSchema 抛 SchemaMigrationError(SCHEMA_TOO_NEW)，且不改库', () => {
+    const db = createTestDb();
+    db.exec("CREATE TABLE schema_version (version INTEGER NOT NULL, updated_at TEXT NOT NULL DEFAULT (datetime('now')))");
+    db.prepare('INSERT INTO schema_version (version) VALUES (99)').run();
+
+    let caught: unknown;
+    try {
+      reconcileSchema(db);
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(SchemaMigrationError);
+    const typed = caught as SchemaMigrationError;
+    expect(typed.code).toBe('SCHEMA_TOO_NEW');
+    expect(typed.phase).toBe('reconcile');
+    expect(typed.retryable).toBe(false);
+
+    const row = db.prepare("SELECT MAX(version) AS v FROM schema_version WHERE typeof(version) = 'integer'").get() as { v: number };
+    expect(row.v).toBe(99); // 拒 = 零写入（不追加版本行）
+    db.close();
+  });
+});
+
+describe('#964 迁移链完整性 assertMigrationChain（缺环/重复/末条≠版本）', () => {
+  it('合法链：v2..v5 严格 +1 且末条 = SCHEMA_VERSION ⇒ 通过', () => {
+    expect(() => assertMigrationChain([2, 3, 4, 5].map(migrationStub), 5)).not.toThrow();
+    expect(() => assertMigrationChain([2].map(migrationStub), 2)).not.toThrow();
+  });
+
+  it('缺环（v2,v4,v5）⇒ MIGRATION_CHAIN_GAP，message 点名期望 v3', () => {
+    let caught: unknown;
+    try { assertMigrationChain([2, 4, 5].map(migrationStub), 5); } catch (err) { caught = err; }
+    expect(caught).toBeInstanceOf(SchemaMigrationError);
+    expect((caught as SchemaMigrationError).code).toBe('MIGRATION_CHAIN_GAP');
+    expect((caught as SchemaMigrationError).message).toContain('期望 v3');
+  });
+
+  it('重复（v2,v3,v3,v4,v5）⇒ MIGRATION_DUPLICATE_VERSION', () => {
+    let caught: unknown;
+    try { assertMigrationChain([2, 3, 3, 4, 5].map(migrationStub), 5); } catch (err) { caught = err; }
+    expect(caught).toBeInstanceOf(SchemaMigrationError);
+    expect((caught as SchemaMigrationError).code).toBe('MIGRATION_DUPLICATE_VERSION');
+  });
+
+  it('首条非 v2（从 v3 起）⇒ MIGRATION_CHAIN_GAP（v1 基线之后必须从 2 开始）', () => {
+    let caught: unknown;
+    try { assertMigrationChain([3, 4, 5].map(migrationStub), 5); } catch (err) { caught = err; }
+    expect(caught).toBeInstanceOf(SchemaMigrationError);
+    expect((caught as SchemaMigrationError).code).toBe('MIGRATION_CHAIN_GAP');
+  });
+
+  it('末条 ≠ SCHEMA_VERSION（v2..v4 但版本 5）⇒ MIGRATION_CHAIN_GAP', () => {
+    let caught: unknown;
+    try { assertMigrationChain([2, 3, 4].map(migrationStub), 5); } catch (err) { caught = err; }
+    expect(caught).toBeInstanceOf(SchemaMigrationError);
+    expect((caught as SchemaMigrationError).code).toBe('MIGRATION_CHAIN_GAP');
+  });
+
+  it('空迁移表：schemaVersion=1 ⇒ 合法；schemaVersion>1 ⇒ GAP', () => {
+    expect(() => assertMigrationChain([], 1)).not.toThrow();
+    let caught: unknown;
+    try { assertMigrationChain([], 5); } catch (err) { caught = err; }
+    expect(caught).toBeInstanceOf(SchemaMigrationError);
+    expect((caught as SchemaMigrationError).code).toBe('MIGRATION_CHAIN_GAP');
+  });
+});
+
+describe('#964 真·拒启：initEngineContext 对不兼容库抛错（Phase 0 fatal）', () => {
+  it('临时文件库 schema_version=99 ⇒ 抛 SCHEMA_TOO_NEW；SYNO_SCHEMA_STRICT=0 ⇒ 不抛（回滚态）', async () => {
+    const fsMod = await import('fs');
+    const osMod = await import('os');
+    const pathMod = await import('path');
+    const BetterSqlite3 = require('better-sqlite3');
+    const tmpDir = fsMod.mkdtempSync(pathMod.join(osMod.tmpdir(), '964-schema99-'));
+    const dbPath = pathMod.join(tmpDir, 'schema99.db');
+    const seed = new BetterSqlite3(dbPath);
+    seed.exec("CREATE TABLE schema_version (version INTEGER NOT NULL, updated_at TEXT NOT NULL DEFAULT (datetime('now')))");
+    seed.prepare('INSERT INTO schema_version (version) VALUES (99)').run();
+    seed.close();
+
+    const prevDbPath = process.env.SYNOVA_DB_PATH;
+    const prevStrict = process.env.SYNO_SCHEMA_STRICT;
+    process.env.SYNOVA_DB_PATH = dbPath;
+    delete process.env.SYNO_SCHEMA_STRICT;
+
+    const engineContext = await import('../../src/init/engine-context');
+    try {
+      let caught: unknown;
+      try {
+        engineContext.initEngineContext();
+      } catch (err) {
+        caught = err;
+      }
+      expect(caught).toBeInstanceOf(SchemaMigrationError);
+      expect((caught as SchemaMigrationError).code).toBe('SCHEMA_TOO_NEW');
+
+      // 回滚开关：退回旧 warn+degraded 语义 ⇒ 不抛，可继续启动
+      process.env.SYNO_SCHEMA_STRICT = '0';
+      expect(() => engineContext.initEngineContext()).not.toThrow();
+      engineContext.closeEngineContext();
+    } finally {
+      if (prevDbPath === undefined) delete process.env.SYNOVA_DB_PATH; else process.env.SYNOVA_DB_PATH = prevDbPath;
+      if (prevStrict === undefined) delete process.env.SYNO_SCHEMA_STRICT; else process.env.SYNO_SCHEMA_STRICT = prevStrict;
+      fsMod.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('#964 存量基线冻结（只登记不迁台账；新增 ⇒ 红，偷减 ⇒ 红）', () => {
+  const REPO_ROOT = path.resolve(__dirname, '..', '..');
+  const readSource = (rel: string): string => readFileSync(path.join(REPO_ROOT, rel), 'utf8');
+
+  /** 台账外 schema_version 写入：tag → 次数（4 个 tag 值 / 共 7 条） */
+  const EXPECTED_TAG_WRITES: Record<string, number> = {
+    d93b_actor_role: 1,
+    d551_target_type: 2,
+    k6_confirm_decision: 2,
+    d551_memory_type: 2,
+  };
+
+  it('台账外 schema_version 写入 = 7 条 / 4 tag 值（新增写点 ⇒ 红；偷减 ⇒ 红）', () => {
+    const texts = [readSource('src/growth/feedback-collector.ts'), readSource('src/l4/agent-memory-store.ts')].join('\n');
+    const actual: Record<string, number> = {};
+    for (const tag of Object.keys(EXPECTED_TAG_WRITES)) {
+      const pattern = new RegExp(`INSERT OR IGNORE INTO schema_version \\(version\\) VALUES \\('${tag}'\\)`, 'g');
+      actual[tag] = (texts.match(pattern) ?? []).length;
+    }
+    expect(actual).toEqual(EXPECTED_TAG_WRITES);
+    // 总量棘轮：任何**新 tag/新写点**都会让总数 > 7（只在已知 tag 上比对会漏掉新 tag）
+    const totalWrites = (texts.match(/INSERT OR IGNORE INTO schema_version/g) ?? []).length;
+    expect(totalWrites).toBe(7);
+    expect(Object.values(actual).reduce((sum, count) => sum + count, 0)).toBe(totalWrites);
+  });
+
+  it('session_events 台账外 DDL 冻结：重建 2 处 + agent_sessions ALTER 2 处（新 DDL ⇒ 红；删 DDL ⇒ 红）', () => {
+    const sessionStore = readSource('src/store/session-store.ts');
+    const count = (pattern: RegExp): number => (sessionStore.match(pattern) ?? []).length;
+    expect(count(/CREATE TABLE IF NOT EXISTS session_events/g)).toBe(1);
+    expect(count(/CREATE TABLE session_events_new/g)).toBe(1);
+    expect(count(/ALTER TABLE agent_sessions ADD COLUMN/g)).toBe(2);
+  });
+});
