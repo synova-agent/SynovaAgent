@@ -130,11 +130,22 @@ export function initEngineContext(): void {
   `);
 
   // Phase 4.4: Schema 版本化迁移（必须在任何 query 前执行）
+  // #964 Q-8（裁 395）：迁移/版本门禁失败 **必须拒启**（原实现 catch → log.warn 后继续，
+  //   ⇒ "库版本高于构建即拒"在进程级不成立）。Phase 0 为 `fatal: true`（src/deploy/bootstrap.ts），
+  //   本函数抛错 ⇒ 启动中止。回滚开关 `SYNO_SCHEMA_STRICT=0` ⇒ 退回旧 warn+degraded 语义。
   try {
     reconcileSchema(db);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    log.warn({ err: msg }, 'Schema 迁移失败 — degraded');
+    if (process.env.SYNO_SCHEMA_STRICT === '0') {
+      log.warn({ err: msg, degraded: true, code: 'SCHEMA_RECONCILE_DEGRADED' }, 'Schema 迁移失败 — degraded（SYNO_SCHEMA_STRICT=0 回滚态）');
+    } else {
+      // 先释放已开连接再抛（不留半开句柄），由启动入口按 Phase 0 fatal 处理
+      db?.close();
+      db = null;
+      log.error({ err: msg }, 'Schema 迁移/版本门禁失败 — 拒绝启动（Phase 0 fatal）');
+      throw err;
+    }
   }
 
   log.info({ path: config.dbPath }, 'SQLite 数据库已打开');
