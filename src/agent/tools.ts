@@ -287,7 +287,13 @@ export interface ToolCallResult {
    * D473: 错误可为字符串（既有）或结构化错误对象（超时 → { name, code, message }，铁律 32 错误分类）。
    * 调用方按 truthy 判断失败（tool-loop-executor afterCall / postToolUse isError）。
    */
-  error?: string | { name: string; code: string; message: string; violations?: string[] };
+  error?: string | {
+    name: string; code: string; message: string;
+    /** 铁律 32 三件套：阶段与可重试性（#1014 补齐） */
+    phase?: 'validate' | 'dispatch' | 'execute';
+    retryable?: boolean;
+    violations?: string[];
+  };
 }
 
 // ═══ ToolRegistry ═══
@@ -480,6 +486,8 @@ export class ToolRegistry {
             name: 'AbortError',
             code,
             message: abortMessage,
+            phase: handlerStarted ? 'execute' : 'validate',
+            retryable: false,
           },
         };
       }
@@ -494,6 +502,8 @@ export class ToolRegistry {
             name: 'ToolArgsError',
             code: err.code,
             message: err.message,
+            phase: 'validate',
+            retryable: false,
             violations: err.violations,
           },
         };

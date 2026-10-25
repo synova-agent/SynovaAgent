@@ -1,0 +1,8 @@
+writeset:
+  - .claude/claims/1014.yaml
+  - src/agent/tools.ts
+  - tests/agent/tool-cancel.test.ts
+  - memory/notes/proposed/2026-10-26-1014-q5-error-body.md
+done:
+  - verify: npx vitest run tests/agent/tool-cancel.test.ts
+note: "#1014 Q-5 错误体补 phase/retryable。"
