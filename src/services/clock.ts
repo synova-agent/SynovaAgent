@@ -21,6 +21,24 @@
  *               `tests/contract/clock-injection.test.ts`，不进 src）。
  *               消费方传入不符合接口的对象 ⇒ TypeScript 编译期失败，不静默兜底。
  *
+ * 出生证（裁 407 B 组载体 · 七格）:
+ *   ① 拥有什么：把「取当前时间」收成**唯一注入点**（`Clock`），并给出默认实现 `systemClock`。
+ *   ② 不拥有什么：不做时区/夏令时/排程（那是排程域的事）；不保证单调；不清理存量直取点。
+ *   ③ 为什么这样设计：消费方是**长寿命对象**（`FederatedPipeline`/`MainAgent`）⇒ 走构造注入；
+ *      不学"逐函数传 `now` 参数"——我们的两条链要改 30+ 个签名，且漏传即静默回退。
+ *   ④ 失败形态：**不抛错**（无 IO、无解析）；消费方传错形状 ⇒ 编译期失败（见上方 @error）。
+ *   ⑤ 上限：不适用（无 IO、无重试、无队列、无累积状态）。判据形态＝**测试棘轮**
+ *      （`tests/contract/time-injection.test.ts` 冻结直取计数，增/减/新文件/不可读皆判红），
+ *      **不新增 checker 脚本或 CI 步** ⇒ 与 A 组 Q-1（入参校验）/Q-12（运行时资源上限）不重叠。
+ *   ⑥ 已知限制：见下方 Known Limitations（四条，逐条可达）。
+ *   ⑦ 借用边界：
+ *      借鉴：`dsh@687f282e86:packages/schedule/schedule/src/domain.ts:843`——域纯函数
+ *            `nextMatchingTarget(..., now: number, ...)` 由调用方喂时间；同包
+ *            `.../runtime.ts:89` 的 `Date.now()` 只出现在 runtime 边界 ⇒ 时间源头单点化。
+ *      不借：其 `Temporal` 时区/夏令时/本地日期全套（`domain.ts:843` 附近的 `localDate(now, timeZone)`）
+ *            —— 我们无排程语义，`nowIso()` 一律 UTC，引入时区模型是给空气加锁。
+ *      我们改：**构造注入 `Clock` 对象**（DSH 是逐函数传 `now`），因消费方是长寿命对象（见 ③）。
+ *
  * Known Limitations（已知限制，写进 PR 正文）:
  *   - `systemClock` 不做单调性保证：系统时钟回拨/校时会如实反映到 `now()`
  *   - 只覆盖**显式注入**的调用链；`src/**` 其余存量直取系统时钟不在本模块视野（本批不清存量）
