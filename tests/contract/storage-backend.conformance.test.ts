@@ -13,7 +13,9 @@
  *
  * Source map：
  *   factories                  → 两实现的 BackendFactory（Sqlite 用 :memory:，dispose 关连接）
+ *   UNDECLARED_BACKEND         → 无 capabilities 的最小假后端（判据 B 的 UNDECLARED 样本；对象字面量）
  *   每个实现一个 describe       → 跑 runBackendContract，把结果对账 known-divergences.yaml
+ *   每个实现第二个 it           → 能力面（#964 Q-15 declared-only：声明可解析／缺能力 fail-loud／未声明 UNDECLARED／开关降级）
  *   最后一个 it                → 跨实现一致性（用例数相同 ≡ 登记表）
  *
  * @input  tests/contract/conformance/storage-backend.contract.ts（用例真源）
@@ -30,7 +32,13 @@
  */
 import { describe, it, expect } from 'vitest';
 import Database from 'better-sqlite3';
-import { MemoryStorageBackend, SqliteStorageBackend } from '../../src/store/storage-backend';
+import {
+  MemoryStorageBackend,
+  SqliteStorageBackend,
+  StorageCapabilityError,
+  requireStorageCapability,
+} from '../../src/store/storage-backend';
+import type { StorageBackend, StorageCapability } from '../../src/store/storage-backend';
 import {
   CONTRACT_CASE_IDS,
   KNOWN_VIOLATION_PREFIX,
@@ -55,6 +63,36 @@ const factories: Record<string, BackendFactory> = {
 
 /** 跨实现一致性用例的观测值：实现名 → results.length（由各实现用例写入） */
 const observedCaseCounts: Record<string, number> = {};
+
+/** 两实现声明的能力（`transactions` 故意不在内 ⇒ 真实"缺能力"样本） */
+const DECLARED_CAPABILITIES: readonly StorageCapability[] = [
+  'kv',
+  'prefix-query',
+  'limit-query',
+  'health',
+];
+
+/**
+ * 最小假后端：对象字面量实现 5 方法、**不声明** `capabilities`（判据 B 的 UNDECLARED 样本）。
+ * 故意不用 `class X implements StorageBackend` —— 不被 registry 源码枚举识别；也不放进 src/。
+ */
+const UNDECLARED_BACKEND: StorageBackend = {
+  async get() {
+    return { value: null, degraded: false };
+  },
+  async set() {
+    return { value: undefined, degraded: false };
+  },
+  async delete() {
+    return { value: false, degraded: false };
+  },
+  async query() {
+    return { value: [], degraded: false };
+  },
+  async healthCheck() {
+    return { healthy: true };
+  },
+};
 
 describe('StorageBackend conformance（裁 331 契约 · 同一套用例 × 双实现）', () => {
   for (const implementation of CONFORMANCE_REGISTRY.implementations) {
@@ -125,6 +163,105 @@ describe('StorageBackend conformance（裁 331 契约 · 同一套用例 × 双�
           `CONFORMANCE_SUITE: ${implementation.name} cases=${results.length} failing=${failing.length} ` +
             `knownViolations=${knownFailing.length} registered=${registered.length}`,
         );
+      });
+
+      it('能力面（#964 Q-15）：已声明四能力可解析；transactions fail-loud；未声明 ⇒ UNDECLARED；开关=0 ⇒ 降级不抛', async () => {
+        const factory = factories[implementation.name];
+        expect(factory, `测试工厂缺失：${implementation.name} 已登记但本文件没有对应 factory`).toBeTypeOf('function');
+
+        const handle = await factory();
+        try {
+          const backend = handle.backend;
+          const declaredCapabilities = backend.capabilities;
+          expect(declaredCapabilities, `${implementation.name} 必须显式声明能力面`).toBeInstanceOf(Set);
+          expect(
+            declaredCapabilities?.size,
+            `${implementation.name} 必须声明 ${DECLARED_CAPABILITIES.length} 项能力`,
+          ).toBe(DECLARED_CAPABILITIES.length);
+          expect(
+            declaredCapabilities?.has('transactions'),
+            `${implementation.name} 不得声明 transactions（本批真实缺能力样本）`,
+          ).toBe(false);
+
+          // 判据 A 正例：已声明能力逐条可解析（true，不抛）
+          for (const capability of DECLARED_CAPABILITIES) {
+            expect(
+              requireStorageCapability(backend, capability),
+              `${implementation.name} 应具备能力 ${capability}`,
+            ).toBe(true);
+          }
+
+          // 判据 A 反例：缺能力必须 fail-loud（typed error），且**不是** StorageResult 降级值
+          let capabilityThrown: unknown = null;
+          try {
+            requireStorageCapability(backend, 'transactions');
+          } catch (err) {
+            capabilityThrown = err;
+          }
+          expect(
+            capabilityThrown,
+            `${implementation.name} 的 transactions 必须 fail-loud（不得折成 {degraded:true}）`,
+          ).toBeInstanceOf(StorageCapabilityError);
+          const capabilityError = capabilityThrown as StorageCapabilityError;
+          expect(capabilityError.code, 'code 必须机器可判为 UNSUPPORTED').toBe(
+            'STORAGE_CAPABILITY_UNSUPPORTED',
+          );
+          expect(capabilityError.capability).toBe('transactions');
+          expect(capabilityError.phase).toBe('resolve');
+          expect(capabilityError.retryable).toBe(false);
+          expect(capabilityError.name).toBe('StorageCapabilityError');
+          expect(
+            (capabilityThrown as { value?: unknown }).value,
+            '缺能力抛的必须是错误对象（value===undefined ⇒ 不是 StorageResult）',
+          ).toBeUndefined();
+
+          // 判据 B 反例：未声明能力面 ⇒ UNDECLARED（走真实 requireStorageCapability 路径）
+          let undeclaredThrown: unknown = null;
+          try {
+            requireStorageCapability(UNDECLARED_BACKEND, 'kv');
+          } catch (err) {
+            undeclaredThrown = err;
+          }
+          expect(
+            undeclaredThrown,
+            '未声明 capabilities 的后端必须 fail-loud（UNDECLARED）',
+          ).toBeInstanceOf(StorageCapabilityError);
+          expect((undeclaredThrown as StorageCapabilityError).code).toBe(
+            'STORAGE_CAPABILITY_UNDECLARED',
+          );
+          expect((undeclaredThrown as StorageCapabilityError).capability).toBe('kv');
+
+          // 判据 D：开关='0' ⇒ 降级（不抛、返回 false）；只认 '0'（'00'/'false' 仍严格）
+          const originalStrictFlag = process.env.SYNO_STORAGE_CAP_STRICT;
+          process.env.SYNO_STORAGE_CAP_STRICT = '0';
+          try {
+            expect(requireStorageCapability(backend, 'transactions')).toBe(false);
+            expect(requireStorageCapability(UNDECLARED_BACKEND, 'kv')).toBe(false);
+            process.env.SYNO_STORAGE_CAP_STRICT = '00';
+            expect(
+              () => requireStorageCapability(backend, 'transactions'),
+              "'00' 不得降级（只认 '0'）",
+            ).toThrow(StorageCapabilityError);
+            process.env.SYNO_STORAGE_CAP_STRICT = 'false';
+            expect(
+              () => requireStorageCapability(backend, 'transactions'),
+              "'false' 不得降级（只认 '0'）",
+            ).toThrow(StorageCapabilityError);
+          } finally {
+            if (originalStrictFlag === undefined) {
+              delete process.env.SYNO_STORAGE_CAP_STRICT;
+            } else {
+              process.env.SYNO_STORAGE_CAP_STRICT = originalStrictFlag;
+            }
+          }
+
+          console.log(
+            `CAPABILITY: ${implementation.name} declared=${declaredCapabilities?.size ?? 0} unsupported=transactions`,
+          );
+        } finally {
+          // Sqlite 必须关连接；Memory 无 dispose
+          await handle.dispose?.();
+        }
       });
     });
   }

@@ -1,0 +1,29 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 982,
+  "patch_fingerprint": "sha256:26c031f3a67a03e0e2f2801618205f2ac78b4298374ed48f17504e761ab05fcb",
+  "author": "ct/964-q15 实现会话（synova-mac，11ba33f24→7ebf3ecae）",
+  "reviewer": "k3-fresh-session-20261025（K3 独立复签，未参与实现）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {"id":"指纹核验","cmd":"git fetch gitea refs/pull/982/head:pr-982-new && MB=$(git merge-base gitea/local-main pr-982-new) && git diff --no-color -M --full-index --binary $MB pr-982-new -- . ':(exclude)docs/synova/reviews/**' | shasum -a 256","result":"pass","evidence":"26c031f3a67a03e0e2f2801618205f2ac78b4298374ed48f17504e761ab05fcb；head=7ebf3ecae4a0（Gitea API head.sha 一致）；merge-base=f23e9c8eb；diff 恰 4 件"},
+    {"id":"A-单文件契约+能力面","cmd":"cd /tmp/k3-982-resign（worktree@7ebf3ecae） && node node_modules/vitest/vitest.mjs run tests/contract/storage-backend.conformance.test.ts","result":"pass","evidence":"CONFORMANCE_SUITE Memory cases=9 failing=0；CAPABILITY declared=4 unsupported=transactions；Sqlite cases=9 failing=2 knownViolations=2；Test Files 1 passed (1)；Tests 5 passed (5)；exit 0"},
+    {"id":"B/D-独立探针（测试外）","cmd":"cd /tmp/k3-982-resign && node node_modules/tsx/dist/cli.mjs probe-k3.mts","result":"pass","evidence":"PROBE undeclared=STORAGE_CAPABILITY_UNDECLARED unsupported=STORAGE_CAPABILITY_UNSUPPORTED strict0_returns=false strict00=THREW STORAGE_CAPABILITY_UNSUPPORTED；pino degraded:true 两行 fields 齐"},
+    {"id":"C-契约目录不回归","cmd":"node node_modules/vitest/vitest.mjs run tests/contract/","result":"pass","evidence":"Test Files 8 passed (8)；Tests 71 passed (71)；exit 0"},
+    {"id":"E-类型增量","cmd":"tsc --noEmit 于 head 与 base 各跑一次并 diff 输出","result":"pass","evidence":"两者各 5 行且 TSC_IDENTICAL_TO_BASE（均 @modelcontextprotocol/sdk 缺失，环境缺装）⇒ 补丁零新增类型错误；绝对值 TSC_EXIT=0 本机不可核（已记 findings.warn）"},
+    {"id":"变异体M1-删throw","cmd":"删除 resolveMissingCapability 尾部 throw 五行 → 复跑 → 还原","result":"pass","evidence":"M1红：Tests 2 failed | 3 passed；expected null to be an instance of StorageCapabilityError；还原后 5 passed"},
+    {"id":"变异体M2-删两实现capabilities","cmd":"删除 Memory/Sqlite 两行 capabilities → 复跑 → 还原","result":"pass","evidence":"M2红：Tests 2 failed | 3 passed；expected undefined to be an instance of Set；还原后 5 passed"},
+    {"id":"铁律38-类型安全","cmd":"git diff f23e9c8eb..7ebf3ecae -- <4 件> | grep -cE 'as any|as never|as unknown as'","result":"pass","evidence":"0"},
+    {"id":"P3三整改①②③逐条","cmd":"awk NR 73..79 storage-backend.ts；grep -n 'resolution fails loud' dsh-storage/lib/types/backend.d.ts；Gitea API pulls/982 body","result":"pass","evidence":"①L73 上限不适用+理由；②L74-79 四要素齐（锚 dsh-storage/lib/types/backend.d.ts:11-13 + 不借 + 我们改 + 复核命令）；DSH 发布包 L11-13 原文与引文逐字一致、grep→13；③判据 A 数字与复跑一致"},
+    {"id":"基线不动+登记","cmd":"git grep -c storageBackend -- src/；interface 行号；quality-exempt 行；registry planned 行","result":"pass","evidence":"src/ 引用仅 engine-context 1 处（declared-only）；interface L46 与 registry definedAt 吻合；quality-exempt L12 含到期日；registry L137-138 planned 登记"}
+  ],
+  "findings": [
+    {"severity":"warn","where":"PR 正文判据 E（TSC_EXIT=0）","what":"审计机缺 @modelcontextprotocol/sdk，base 与 head 同红各 5 行；已用增量法核「零新增类型错误」；绝对值需完整依赖环境复核"},
+    {"severity":"warn","where":"/tmp/k3-982（作者遗留工作树）","what":"停在旧 head 11ba33f24，复签未采信其内容"},
+    {"severity":"info","where":"src/store/storage-backend.ts:74-79","what":"锚点指向 DSH 发布包 @deepseek-ai/dsh-storage@0.1.6-alpha.2；app.asar 副本无 .d.ts；DSH 升级时行号需随版复核"},
+    {"severity":"info","where":"回执时序","what":"回执产出于审计工作区，未落 PR 分支；须原样作为最后提交挂回（R1/R7）"}
+  ],
+  "issued_at": "2026-10-25T15:58:00+08:00",
+  "tool": "k3-re-sign@v1（synova-audit 协议 + pr-review 五步物理检查；/tmp 独立 worktree，只读主仓）"
+}
