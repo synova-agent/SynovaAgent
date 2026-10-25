@@ -1,0 +1,50 @@
+{
+ "schema": "syno-review-receipt/v1",
+ "pr": 1015,
+ "author": "CTO",
+ "reviewer": "CTO（自查；非独立第三方）",
+ "independence": "fresh-session",
+ "issued_at": "2026-10-26T01:47:51+08:00",
+ "verdict": "PASS",
+ "head_reviewed": "03823c182",
+ "patch_fingerprint": "sha256:756027139701eb4e08fe1cd1a83da6f29ef9093d4b311f38a91bb60f82111625",
+ "tool": "CTO 复核（合并后补录；fp 取 first-parent 补丁）",
+ "checks": [
+  {
+   "id": "C1",
+   "title": "字段已补",
+   "result": "pass",
+   "cmd": "grep -n 'phase:' src/agent/tools.ts",
+   "evidence": "取消分支 phase=handlerStarted?'execute':'validate'；校验分支 phase='validate'；均 retryable:false"
+  },
+  {
+   "id": "C2",
+   "title": "正例",
+   "result": "pass",
+   "cmd": "npx vitest run tests/agent/tool-cancel.test.ts",
+   "evidence": "Tests 12 passed (12)"
+  },
+  {
+   "id": "C3",
+   "title": "改坏⇒红",
+   "result": "pass",
+   "cmd": "删 phase/retryable 后复跑同一测试",
+   "evidence": "1 failed；还原后 12 passed"
+  },
+  {
+   "id": "C4",
+   "title": "CI",
+   "result": "pass",
+   "cmd": "GET /commits/03823c182/status",
+   "evidence": "push/pull_request 双 success 1m9s"
+  }
+ ],
+ "findings": [
+  {
+   "severity": "info",
+   "where": "时序",
+   "what": "回执为合并后补录（PR 合并时未随附）；fp 按 merge^1..merge 补丁复算"
+  }
+ ],
+ "reviewer_note": "补录回执：内容与合并说明/实测一致；K3 终审可独立复跑。"
+}

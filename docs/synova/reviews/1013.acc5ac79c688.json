@@ -1,0 +1,57 @@
+{
+ "schema": "syno-review-receipt/v1",
+ "pr": 1013,
+ "author": "CTO",
+ "reviewer": "CTO（自查；非独立第三方）",
+ "independence": "fresh-session",
+ "issued_at": "2026-10-26T01:47:51+08:00",
+ "verdict": "PASS",
+ "head_reviewed": "5f32304e7",
+ "patch_fingerprint": "sha256:acc5ac79c688909401991a81f6512007aad7a7847ce73c72277860f302bc4983",
+ "tool": "CTO 复核（合并后补录；fp 取 first-parent 补丁）",
+ "checks": [
+  {
+   "id": "C1",
+   "title": "①e 真传参",
+   "result": "pass",
+   "cmd": "grep -n 'coverage-summary' .gitea/workflows/local-gates.yml",
+   "evidence": "①e 内生成 json-summary 并传 --coverage-summary/--coverage-sha；回滚 SYNO_QD_G5=0"
+  },
+  {
+   "id": "C2",
+   "title": "G5 武装（本地）",
+   "result": "pass",
+   "cmd": "check-quality-delta.py --base … --coverage-summary <fixture>",
+   "evidence": "✅ G5 覆盖率/重复率；rules=G1,G3,G4,G5"
+  },
+  {
+   "id": "C3",
+   "title": "R5.1 真红（本地）",
+   "result": "pass",
+   "cmd": "同命令，baseline=50、实测 42%",
+   "evidence": "❌ R5.1 … 42.00% < 50.00%；VIOLATIONS 1"
+  },
+  {
+   "id": "C4",
+   "title": "CI 验证",
+   "result": "pass",
+   "cmd": "GET /commits/5f32304e7/status",
+   "evidence": "push success 1m39s；pull_request success 1m33s"
+  },
+  {
+   "id": "C5",
+   "title": "门禁合规",
+   "result": "pass",
+   "cmd": "check-gate-protection --changed-base",
+   "evidence": "①d 9 通过 0 失败；DOC-0283 已登记"
+  }
+ ],
+ "findings": [
+  {
+   "severity": "info",
+   "where": "时序",
+   "what": "回执为合并后补录（PR 合并时未随附）；fp 按 merge^1..merge 补丁复算"
+  }
+ ],
+ "reviewer_note": "补录回执：内容与合并说明/实测一致；K3 终审可独立复跑。"
+}

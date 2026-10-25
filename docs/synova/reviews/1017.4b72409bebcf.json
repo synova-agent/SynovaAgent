@@ -1,0 +1,50 @@
+{
+ "schema": "syno-review-receipt/v1",
+ "pr": 1017,
+ "author": "CTO",
+ "reviewer": "CTO（自查；非独立第三方）",
+ "independence": "fresh-session",
+ "issued_at": "2026-10-26T01:47:51+08:00",
+ "verdict": "PASS",
+ "head_reviewed": "12ced3296",
+ "patch_fingerprint": "sha256:4b72409bebcf662a0941e527466bb4fe7304ec0d4a58ee7dce454e78efb4a851",
+ "tool": "CTO 复核（合并后补录；fp 取 first-parent 补丁）",
+ "checks": [
+  {
+   "id": "C1",
+   "title": "①j 已接线",
+   "result": "pass",
+   "cmd": "grep -n 'tests/contract/' .gitea/workflows/local-gates.yml",
+   "evidence": "新增 ①j 跑 tests/contract/；回滚 SYNO_CONTRACT_TESTS=0"
+  },
+  {
+   "id": "C2",
+   "title": "正例",
+   "result": "pass",
+   "cmd": "npx vitest run tests/contract/",
+   "evidence": "89 passed（1.2s）"
+  },
+  {
+   "id": "C3",
+   "title": "改坏⇒红",
+   "result": "pass",
+   "cmd": "删 resolveMissingCapability 的 throw 后复跑",
+   "evidence": "2 failed / 87 passed；还原后 89 passed"
+  },
+  {
+   "id": "C4",
+   "title": "CI",
+   "result": "pass",
+   "cmd": "GET /commits/12ced3296/status",
+   "evidence": "push success 1m39s；pull_request success 1m35s"
+  }
+ ],
+ "findings": [
+  {
+   "severity": "info",
+   "where": "时序",
+   "what": "回执为合并后补录（PR 合并时未随附）；fp 按 merge^1..merge 补丁复算"
+  }
+ ],
+ "reviewer_note": "补录回执：内容与合并说明/实测一致；K3 终审可独立复跑。"
+}
