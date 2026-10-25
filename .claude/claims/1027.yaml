@@ -9,6 +9,10 @@ writeset:
   - tests/control-tower/weekly-recon.test.sh
   - gate-exemptions/2026-10-26-cto-1027-fixture-requires.md
   - docs/authority/DOCS-REGISTRY.yaml
+  - tests/control-tower/asset-sync.test.sh
+  - tests/control-tower/check-quality-delta.test.sh
+  - tests/control-tower/check-tool-args-delta.test.sh
+  - tests/control-tower/quality-baseline.test.sh
 done:
   - verify: bash scripts/control-tower/check-fixture-requires.sh
 note: "#1027 夹具前置声明补齐（FIXTURE-REQUIRES 0 违规）。"
