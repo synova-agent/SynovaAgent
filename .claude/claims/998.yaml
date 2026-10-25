@@ -8,3 +8,5 @@ writeset:
 done:
   - verify: bash scripts/control-tower/check-bypass-log.sh
 note: "#998 裁 420-③：D331 对账来源并入主工作树账本（跨 worktree 不再误拦）。"
+
+# retrigger: CI env gate (tsx) — see #986 shared-worktree race
