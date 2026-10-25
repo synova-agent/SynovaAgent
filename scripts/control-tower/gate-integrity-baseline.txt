@@ -24,7 +24,9 @@
 #       bash scripts/control-tower/sealed-tests.sh --quarantine | wc -l   # → QUARANTINE-TOTAL 实况
 #       bash scripts/control-tower/sealed-tests.sh --list       | wc -l   # → ci.yml 两 job 实际执行数
 #     ⚠️ 行尾不得带 ` | owner=…` 之类后缀——本段是**路径清单**，解析器整行取路径。
-# FACE-TOTAL=173   # **下界语义**：scan >= 此值 = 通过（新增测试不红）；scan < 此值 = 净删除 ⇒ 红。
+# FACE-TOTAL=197   # **下界语义**：scan >= 此值 = 通过（新增测试不红）；scan < 此值 = 净删除 ⇒ 红。
+#   2026-10-26 显式上调 173→197（CTO·裁 421）：P1–P12 期间新增密封测试（swallow-ratchet／契约测试接入等）
+#   使 scan=197、余量 24 > SLACK-CAP=10 ⇒ 按脚本要求**显式**登记全部现有夹具（slack=0，此后净删 1 个即红）。
 #                   # 代价（如实登记）: **≤ 当前余量 (scan − FACE-TOTAL) 的净删除不可检测** —— 「不做逐条登记」的必然代价。
 #                   # 禁止自动重算本值（那会让棘轮彻底失效）；下调须本文件显式改行（= 留痕）。
 # 2026-10-07 D1225 staging_guard 退役 PR（#1291）棘轮经**合并收敛**到 main 的 151（本行取值 = main）:
