@@ -21,7 +21,13 @@
 ## 二、实测更正（2026-10-26）
 1. ~~GitHub 远端不可达~~ **此前判断有误**：远端名是 `mirror`（不是 `github`）；`ssh -T git@github.com` 实测通过。
 2. 已推验证分支 `verify/gh-integration` 并在 GitHub 开 **PR #1479**（仅取证，不合并）⇒ **GitHub Actions 确实在跑**。
-3. `mirror/main` 落后 `local-main` **89 commits**（实测 `git rev-list --count`）。
+3. `mirror/main` 落后 `local-main` **89 commits**；**已于 2026-10-26 同步**：
+   `27e3433f1..193c3bdf8  HEAD -> main`（GitHub 侧 required checks 提示 2/8 failing，但直推成功）。
+4. **同步后 GitHub CI 实跑结果（run 40234461099）**：
+   - `desktop-build` ✅ / `Product Progress` ✅ / `Dashboard Auto` ✅
+   - `CI · SynovaAgent` ❌ —— 失败 job：**`Gate Integrity (pattern sentinel + injection fixture + ci-reds)`**，
+     失败步骤：`Gate integrity pattern sentinel + registration gate`
+   ⇒ **发现一处真实的跨平台冲突：GitHub 侧自有 Gate Integrity 与 Gitea 侧的登记表口径不一致**，需单独修（见下）。
 2. 镜像修复前，GitHub 侧一切判据**不可作为合并依据**（可能判旧树）。
 
 ## 三、判定口径

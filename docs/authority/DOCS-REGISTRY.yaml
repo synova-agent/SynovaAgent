@@ -1106,3 +1106,11 @@ documents:
     status: active
     owner: CTO
     note: "GitHub ci.yml 去重（tsc/pre-commit）；分工真值 .github/GATE-SPLIT.md。"
+
+  # ---- CTO 2026-10-26：#1025 GitHub 实跑证据补充豁免件（裁 421）----
+  - id: DOC-0287
+    type: decision
+    path: gate-exemptions/2026-10-26-cto-1025-gh-evidence.md
+    status: active
+    owner: CTO
+    note: "GATE-SPLIT 补 GitHub 实跑证据；发现 Gate Integrity 跨平台冲突。"
