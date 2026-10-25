@@ -12,7 +12,7 @@ TMPD=$(mktemp -d); trap 'rm -rf "$TMPD"' EXIT
 PH=$(shasum -a 256 "$REPO"/docs/synova/coordination/整体推进计划-主线-*.md 2>/dev/null | cut -c1-8)
 EXIST=$(ls "$REPO"/task-state/D*.json 2>/dev/null | head -1 | grep -oE "D[0-9]{3}")
 cat > "$TMPD/good.md" <<MD
-派单：${EXIST:-D001} 测试
+派单：#1021 测试（Issue 号即任务唯一编号）
 依据计划: v1.0@$PH
 - 写集: scripts/control-tower/pre-dispatch-check.sh
 
