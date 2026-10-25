@@ -1,0 +1,8 @@
+writeset:
+  - .claude/claims/1019.yaml
+  - docs/synova/reviews/1013.acc5ac79c688.json
+  - docs/synova/reviews/1015.756027139701.json
+  - docs/synova/reviews/1017.4b72409bebcf.json
+done:
+  - verify: ls docs/synova/reviews/101{3,5,7}.*.json
+note: "#1019 补录三份复核回执（P1–P3）。"
