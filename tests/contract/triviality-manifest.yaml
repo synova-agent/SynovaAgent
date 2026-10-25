@@ -25,7 +25,7 @@
 #
 # 扩表方式（§9 风险 1）: 加一行 entry 即可（不改脚本）；schema_version 变更须**同 PR** 改本件。
 schema_version: 1
-meta: { as_of: "gitea/local-main@8a910555b", ruling: "裁332/353", legacy_baseline: 469 }
+meta: { as_of: "gitea/local-main@8a910555b", ruling: "裁332/353", legacy_baseline: 470 }
 entries:
   - { module: src/store/session-store.ts,          surface: protocol,      obligation: expected, asset_glob: "tests/expected/session/**",      issue: "#913", expiry: "2027-06-30" }
   - { module: src/store/session-projection.ts,     surface: protocol,      obligation: expected, asset_glob: "tests/expected/session/**",      issue: "#913", expiry: "2027-06-30" }

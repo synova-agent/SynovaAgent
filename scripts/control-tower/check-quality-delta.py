@@ -951,11 +951,13 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 1
     for rule in ("G1", "G3", "G4"):
         print(f"✅ {rule} 可达/判据/边界")
-    if not g5_disabled:
+    if g5_armed(args) and not g5_disabled:
         print("✅ G5 覆盖率/重复率")
+    elif not g5_disabled:
+        print("ℹ️  G5 未武装（未传 --coverage-summary/--coverage-sha）⇒ 未判，不计入 rules")
     # 末行 rules 口径固定（L1 追认）：正常/未武装/不适用 都含 G5（组存在即使 N/A）；
     # 仅 SYNO_QD_G5=0 时 G5 组整组回滚 ⇒ rules 不含 G5（并已在 stderr 打 degraded: G5-DISABLED）
-    rules = "G1,G3,G4" if g5_disabled else "G1,G3,G4,G5"
+    rules = "G1,G3,G4,G5" if (g5_armed(args) and not g5_disabled) else "G1,G3,G4"
     print(f"QUALITY-DELTA: PASS changes={len(code_changed)} rules={rules} base={base_sha}")
     return 0
 

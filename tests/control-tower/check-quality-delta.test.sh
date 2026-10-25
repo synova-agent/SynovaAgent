@@ -332,7 +332,8 @@ D="$G5T/unarmed"; mk_g5_repo "$D"; g5_modify_m "$D"
 runq_g5 "$D" -- --staged
 assert_rc "$RUN_RC" 0 "G5-2c 未武装（含 src/** 不传 coverage 参数）⇒ exit 0"
 printf '%s' "$RUN_OUT" | grep -q 'G5 未武装' && ok "G5-2c 打印『G5 未武装』note（不静默）" || no "G5-2c 缺未武装 note: $RUN_OUT"
-printf '%s' "$RUN_OUT" | grep -q 'rules=G1,G3,G4,G5' && ok "G5-2c 末行 rules 仍含 G5（组存在即使 N/A）" || no "G5-2c 末行 rules 缺 G5: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'rules=G1,G3,G4 ' && ok "G5-2c 未武装 ⇒ 末行 rules 不含 G5（裁 415-③：没判过不列）" || no "G5-2c 末行仍含 G5: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q '✅ G5' && no "G5-2c 未武装却打 ✅ G5（假绿）" || ok "G5-2c 未武装不打 ✅ G5"
 printf '%s' "$RUN_OUT" | grep -q 'E_COVERAGE' && no "G5-2c 未武装却报 E_COVERAGE" || ok "G5-2c 未武装不判 coverage"
 
 # ── G5-3 coverage 存在但缺该文件条目 ⇒ E_COVERAGE exit 2 ──

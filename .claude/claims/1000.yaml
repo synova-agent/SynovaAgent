@@ -1,0 +1,9 @@
+writeset:
+  - .claude/claims/1000.yaml
+  - scripts/control-tower/check-quality-delta.py
+  - tests/control-tower/check-quality-delta.test.sh
+  - tests/contract/triviality-manifest.yaml
+  - memory/notes/proposed/2026-10-26-1000-fake-green-batch.md
+done:
+  - verify: bash tests/control-tower/check-quality-delta.test.sh
+note: "#1000 四处假绿/静默放行（复核 P1 批）。"
