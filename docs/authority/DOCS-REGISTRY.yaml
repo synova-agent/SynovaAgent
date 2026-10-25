@@ -1066,3 +1066,11 @@ documents:
     status: active
     owner: P1
     note: "#991 Q-12 受保护路径豁免件：2 条逐条覆盖（docs/authority/DOCS-REGISTRY.yaml、本文件自覆盖），裁 411。"
+
+  # ---- CTO 2026-10-25：#998 D331 跨 worktree 账本并集豁免件（裁 420）----
+  - id: DOC-0280
+    type: decision
+    path: gate-exemptions/2026-10-25-cto-998-d331-union-ledger.md
+    status: active
+    owner: CTO
+    note: "#998 D331 对账来源并入主工作树账本；裁 420。"
