@@ -30,6 +30,11 @@ hard_check() {
   local name="$1" matches="$2"
   local count=0
   [ -n "$matches" ] && count=$(echo "$matches" | grep -c . 2>/dev/null) || count=0
+  if [ "$count" -gt 0 ] && [ "${SYNO_GROUP_DOWN:-0}" = "1" ]; then
+    echo -e "  ${YELLOW}⚠️  ${name}: ${count} 处  [裁 409 降级 —— 只报不拦]${RESET}"
+    echo "$matches" | head -8 | while read -r line; do [ -n "$line" ] && echo "     ${line}"; done
+    return 0
+  fi
   if [ "$count" -gt 0 ]; then
     echo -e "  ${RED}❌ ${name}: ${count} 处  [硬阻断]${RESET}"
     echo "$matches" | head -8 | while read -r line; do [ -n "$line" ] && echo "     ${line}"; done

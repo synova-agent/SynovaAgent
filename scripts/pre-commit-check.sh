@@ -86,6 +86,7 @@ GROUP_DONE=0
 #   背景：创始人「别让实施把时间全花在应付门禁上」；裁 409 定 5 条降 report。
 #   实现：名字含下列子串的检查，即使 SYNO_CI=1 也不计 HARD_FAIL（打 ⚠️ 降级）。
 #   回滚：SYNO_GATE_STRICT_LEGACY=1 ⇒ 恢复原语义（全硬）。
+GROUP_DOWN="${GROUP_DOWN:-0}"
 _downgraded() {
   [ "${SYNO_GATE_STRICT_LEGACY:-0}" = "1" ] && return 1
   case "$1" in
@@ -97,7 +98,7 @@ hard_check() {
   local name="$1" matches="$2"
   local count=0
   [ -n "$matches" ] && count=$(echo "$matches" | grep -c . 2>/dev/null) || count=0
-  if [ "$count" -gt 0 ] && _downgraded "$name"; then
+  if [ "$count" -gt 0 ] && { _downgraded "$name" || [ "$GROUP_DOWN" = "1" ]; }; then
     echo -e "  ${YELLOW}⚠️  ${name}: ${count} 处  [裁 409 降级 —— 只报不拦]${RESET}"
     echo "$matches" | head -8 | while read -r line; do [ -n "$line" ] && echo "     ${line}"; done
     log_gate "$name" hit; return 0
@@ -601,7 +602,7 @@ par_collect_quiet() {
 ( par_start verifiable-done check-verifiable-done.sh ) &  PAR_VERIFIABLE=$!
 # D1148: q0c 取消跟踪已并入声明闸①，改为**同步单次**执行（见闸①块）——不再并行启动，避免跑两遍。
 ( par_start acceptance-ci check-acceptance-ci.sh ) &  PAR_ACCEPTANCE=$!
-( par_start file-driven check-file-driven.sh ) &  PAR_FILE_DRIVEN=$!
+( SYNO_GROUP_DOWN=$([ "${SYNO_GATE_STRICT_LEGACY:-0}" = "1" ] && echo 0 || echo 1) par_start file-driven check-file-driven.sh ) &  PAR_FILE_DRIVEN=$!
 
 # ═══ V3.8: plan.json — 分阶段任务支持 ═══
 # Anthropic 原则: 架构步骤不是偷懒。当 plan.json 声明某文件处于 create 阶段
@@ -1430,6 +1431,7 @@ soft_check "数据流: 路由文件须含 API 调用证据" "${DATA_FLOW_FAIL:-}
 #         越来越多硬编码回归 → 一年后文件驱动只剩文档里的空壳。
 # ═══════════════════════════════════════════════════════════════════
 echo -e "${CYAN}── 组 8: 文件驱动架构完整性 (V3.9) ──${RESET}"
+GROUP_DOWN=1  # 裁 409：本组降级（只报不拦）
 GROUP_DONE=$((GROUP_DONE+1))
 # V3.9: 能力验收 CI — 验收测试必须通过 CI
 # D1148 转旁路: 原 `par_collect … || v5_soft "验收 CI (V3.9)"`（软提示，CI 转硬）→ 旁路观测。
@@ -1460,6 +1462,7 @@ fi
 par_collect_quiet file-driven "$PAR_FILE_DRIVEN" || v5_soft "文件驱动架构完整性 (V3.6)"
 
 # ═══ 组 9: 契约门禁 (D257) ═══
+GROUP_DOWN=0  # 组 8 降级范围结束
 echo -e "${CYAN}── 组 9: 契约门禁 ──${RESET}"
 GROUP_DONE=$((GROUP_DONE+1))
 CONTRACT_DIR="$ROOT/.codex/contracts"
