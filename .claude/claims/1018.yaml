@@ -1,0 +1,9 @@
+writeset:
+  - .claude/claims/1018.yaml
+  - src/probe10/obligation-probe.ts
+  - tests/probe10/obligation-probe.test.ts
+  - docs/authority/WIRING-REGISTRY.yaml
+  - memory/notes/proposed/2026-10-26-1018-q10-proof.md
+done:
+  - verify: python3 scripts/control-tower/check-test-obligations.py --base gitea/local-main
+note: "#1018 探针：新模块缺 expected ⇒ ①g 红。"
