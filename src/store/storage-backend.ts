@@ -71,12 +71,12 @@ export interface StorageBackend {
 //          tests/contract/conformance/registry.ts 的 planned）；能力面是静态声明集合，
 //          运行期动态注册能力不在本批契约内。
 // 上限：不适用 —— requireStorageCapability 是纯解析（Set.has），无并发、无重试、无资源消耗
-// 借用边界：借鉴 DSH `packages/storage/storage/src/backend.ts:15`（@687f282e86；
-//           发布包同名件 `dsh-storage/lib/types/backend.d.ts`）：
+// 借用边界：借鉴 DSH dsh-storage/lib/types/backend.d.ts:11-13
 //           「facets are optional members — a backend that cannot serve a data kind
 //            simply omits it, and resolution fails loud instead」；
 //           不借其插件运行时 / facets 可选成员模型（我们单仓编译期装配、能力集合静态声明）；
 //           我们改：能力词表 as const + declared-only + SYNO_STORAGE_CAP_STRICT 开关降级
+//           复核：grep -n "resolution fails loud" <DSH>/dsh-storage/lib/types/backend.d.ts → 13:
 
 /** 能力词表（唯一真源；禁第二处手写联合） */
 export const STORAGE_CAPABILITIES = [
