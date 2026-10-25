@@ -1,4 +1,5 @@
 #!/bin/bash
+# @requires python3
 # ═══════════════════════════════════════════════════════════════════════════════
 # tests/control-tower/quality-standard.test.sh — #841 P4-P0 标准 v1 的结构与可核性测试
 #

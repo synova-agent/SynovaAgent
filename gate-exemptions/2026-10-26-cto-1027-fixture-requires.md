@@ -1,0 +1,9 @@
+- tests/control-tower/auto-merge.test.sh — 补 @requires python3 声明以通过前置校验 — 裁 421
+- tests/control-tower/check-test-obligations.test.sh — 同上补声明 — 裁 421
+- tests/control-tower/k3-birthcert-fixture.test.sh — 同上补声明 — 裁 421
+- tests/control-tower/k3-preset-bundle-sync.test.sh — 同上补声明 — 裁 421
+- tests/control-tower/mirror-sync-push.test.sh — 同上补声明 — 裁 421
+- tests/control-tower/quality-standard.test.sh — 同上补声明 — 裁 421
+- tests/control-tower/weekly-recon.test.sh — 同上补声明 — 裁 421
+- docs/authority/DOCS-REGISTRY.yaml — 登记本豁免件 DOC-0289 仅追加一行 — 裁 421
+- gate-exemptions/2026-10-26-cto-1027-fixture-requires.md — 本豁免件自覆盖并声明上列路径 — 裁 421
