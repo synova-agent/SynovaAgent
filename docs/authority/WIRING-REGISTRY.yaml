@@ -129,3 +129,10 @@ entries:
     status: wired
     owner: P1
     notes: "#915 Q-6（裁 365）：可注入时钟；systemClock 为唯一系统时钟入口，生产消费点=federated-pipeline/main-agent 两链"
+  - capability: probe.obligationProbe
+    provider: src/probe10/obligation-probe.ts
+    consumer: null
+    test: tests/probe10/obligation-probe.test.ts
+    status: declared-only
+    defined_at: src/probe10/obligation-probe.ts:2
+    notes: "#1018 探针"
