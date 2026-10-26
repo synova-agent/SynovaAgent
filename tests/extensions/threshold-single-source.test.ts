@@ -46,6 +46,9 @@ const REAL_AGGREGATE = join(SENTINEL_DIR, 'aggregate.ts');
 const CCC_KEY = 'cash_conversion_cycle_days';
 const DEBT_KEY = 'short_term_debt_ratio';
 
+/** capital-health.check 的 store 入参类型（用 Parameters 取，避免手抄引擎类型，也不用断言） */
+type CheckStore = Parameters<typeof capitalHealthSentinel.check>[0];
+
 interface ThresholdPair { warning: number; critical: number }
 type ThresholdsMap = Record<string, ThresholdPair>;
 
@@ -98,7 +101,7 @@ function useFixture(root: string): void {
  *   short_term_debt/total_debt = 70/100 = 0.7（压线：`>0.7` 才 critical）
  *   total_debt/equity = 100/1000 = 0.1（D/E healthy，保证 ccc/ds 是唯一关注点）
  */
-function financialStore(opts: { inventory: number; shortTermDebt: number }) {
+function financialStore(opts: { inventory: number; shortTermDebt: number }): CheckStore {
   const node = {
     id: 'f-732',
     type: 'Financial',
@@ -117,8 +120,14 @@ function financialStore(opts: { inventory: number; shortTermDebt: number }) {
     },
   };
   return {
-    queryNodes(_type: string, _filters?: Record<string, unknown>): unknown[] {
+    queryNodes(_type: string, _filters?: Record<string, unknown>, _graph?: string): Array<{ id: string; type: string; props: Record<string, unknown> }> {
       return [node];
+    },
+    queryEdges(): Array<{ id: string; type: string; from: string; to: string; weight: number; props: Record<string, unknown> }> {
+      return [];
+    },
+    getNode(): Record<string, unknown> | null {
+      return null;
     },
   };
 }
@@ -127,7 +136,7 @@ function financialStore(opts: { inventory: number; shortTermDebt: number }) {
  * 走**真 loader 管线**取 findings：loadSentinels（夹具）→ registerLoadedSentinels → registry.check。
  * 阈值由此在生产解析点（loader 第 4 参注入）给出 —— 不是本文件手传，故能证"行为随 manifest 变"。
  */
-async function checkViaLoader(store: unknown, teamId: string): Promise<Finding[]> {
+async function checkViaLoader(store: CheckStore, teamId: string): Promise<Finding[]> {
   destroySentinelRegistry();
   clearSentinelCache();
   const { registered, errors } = await registerLoadedSentinels();
@@ -140,8 +149,8 @@ async function checkViaLoader(store: unknown, teamId: string): Promise<Finding[]
 }
 
 /** 直调（绕过 loader）：用于取"第 4 参未注入"与"手传阈值"两条路径的行为 */
-async function checkDirect(store: unknown, teamId: string, thresholds?: Record<string, ThresholdPair>): Promise<Finding[]> {
-  const r = await capitalHealthSentinel.check(store as never, teamId, undefined, thresholds);
+async function checkDirect(store: CheckStore, teamId: string, thresholds?: Record<string, ThresholdPair>): Promise<Finding[]> {
+  const r = await capitalHealthSentinel.check(store, teamId, undefined, thresholds);
   return Array.isArray(r) ? (r as Finding[]) : (r.findings as Finding[]);
 }
 
@@ -299,8 +308,8 @@ describe('#732 ④ 缺键 ⇒ fail-loud 点名缺键（禁静默取默认）', (
 
   it('第 4 参未注入（既有 2 参直调）⇒ 点名"第 4 参"、跳过两指标、但不外抛且其余指标照常', async () => {
     // completeFinancial 同款夹具：D/E=4 > 2.5 ⇒ f2-de-crit 必须仍在（证明不是全量中止）
-    const store = {
-      queryNodes(): unknown[] {
+    const store: CheckStore = {
+      queryNodes(): Array<{ id: string; type: string; props: Record<string, unknown> }> {
         return [{
           id: 'f1', type: 'Financial',
           props: {
@@ -310,6 +319,8 @@ describe('#732 ④ 缺键 ⇒ fail-loud 点名缺键（禁静默取默认）', (
           },
         }];
       },
+      queryEdges: () => [],
+      getNode: () => null,
     };
     const findings = await checkDirect(store, 't1'); // ← 不传第 4 参
     const err = findings.find(f => f.id === 'ch-error');
