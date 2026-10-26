@@ -95,18 +95,18 @@ GROUP_DONE=0
 #   回滚：SYNO_GATE_STRICT_LEGACY=1 ⇒ 恢复原语义（全硬）。
 GROUP_DOWN="${GROUP_DOWN:-0}"
 _downgraded() {
+  # 裁 409（K3 根因报告 §6）：**删除按名字子串匹配**（实测为 no-op：组标题 ≠ hard_check 名）。
+  # 降级一律由组界开关 GROUP_DOWN 决定；严格模式一律不降级。
   [ "${SYNO_GATE_STRICT_LEGACY:-0}" = "1" ] && return 1
-  case "$1" in
-    *"Task Brief"*|*"文件驱动架构"*|*"V3 流水线健康度"*|*"技能同步一致性"*) return 0 ;;
-    *) return 1 ;;
-  esac
+  return 1
 }
 hard_check() {
   local name="$1" matches="$2"
   local count=0
   [ -n "$matches" ] && count=$(echo "$matches" | grep -c . 2>/dev/null) || count=0
-  if [ "$count" -gt 0 ] && { _downgraded "$name" || [ "$GROUP_DOWN" = "1" ]; }; then
-    echo -e "  ${YELLOW}⚠️  ${name}: ${count} 处  [裁 409 降级 —— 只报不拦]${RESET}"
+  if [ "$count" -gt 0 ] && [ "$GROUP_DOWN" = "1" ] && [ "${SYNO_GATE_STRICT_LEGACY:-0}" != "1" ]; then
+    # 裁 409 + K3 根因：降级只摘「计数/阻断」，**❌ 与点名一律保留**（夹具只认 ❌）
+    echo -e "  ${RED}❌ ${name}: ${count} 处  [裁 409 降级 —— 只报不拦]${RESET}"
     echo "$matches" | head -8 | while read -r line; do [ -n "$line" ] && echo "     ${line}"; done
     log_gate "$name" hit; return 0
   fi
@@ -177,7 +177,11 @@ soft_check() {
   [ -n "$matches" ] && count=$(echo "$matches" | grep -c . 2>/dev/null) || count=0
   if [ "$count" -gt 0 ]; then
     # D542: CI strict 下必须显示 ❌（此前显示 ⚠️ 导致「N 组未通过」在日志中找不到对应组——M1 类失败不点名）
-    if [ "${SYNO_CI:-0}" = "1" ] && ! _downgraded "$name"; then
+    if [ "${SYNO_CI:-0}" = "1" ] && [ "${GROUP_DOWN:-0}" = "1" ] && [ "${SYNO_GATE_STRICT_LEGACY:-0}" != "1" ]; then
+      echo -e "  ${RED}❌ ${name}: ${count} 处  [裁 409 降级——只报不拦]${RESET}"
+      echo "$matches" | head -8 | while read -r line; do [ -n "$line" ] && echo "     ${line}"; done
+      log_gate "$name" hit
+    elif [ "${SYNO_CI:-0}" = "1" ] && ! _downgraded "$name"; then
       echo -e "  ${RED}❌ ${name}: ${count} 处  [CI strict——软提示在 CI 上为硬阻断]${RESET}"
       HARD_FAIL=$((HARD_FAIL + 1))  # D516 CI strict
     else
@@ -926,6 +930,10 @@ hard_check "接线深度: 新 export 必须被调用(非仅 import)" "${DEEP_FAI
 #         始终可见——不可能"没注意到"。
 # ═══════════════════════════════════════════════════════════════════
 echo -e "${CYAN}── 组 5: 架构边界 + 桥接文件 ──${RESET}"
+GROUP_DOWN=1  # 裁 409：组5/6 降级（只报不拦；❌ 保留）
+
+# 裁 409 确定性自检缝（K3 方向A：hard_check 注入，不用 exit）
+if [ "${SYNO_DOWN_SELFTEST:-}" = "5" ] || [ "${SYNO_DOWN_SELFTEST:-}" = "6" ]; then hard_check "SELFTEST-组5/6 注入（应只报不拦）" "injected"; fi
 GROUP_DONE=$((GROUP_DONE+1))
 
 # 5a. 跨层引用检测 (原 8)
@@ -1283,6 +1291,7 @@ fi
 #         listModules() 运行时崩溃)。--no-verify 在 v2.5 被频繁使用 (38 项检查 90s)。
 # ═══════════════════════════════════════════════════════════════════
 echo -e "${CYAN}── 组 7: 架构合规 ──${RESET}"
+GROUP_DOWN=0  # 组5/6 降级范围结束
 GROUP_DONE=$((GROUP_DONE+1))
 
 # 7a. DiagnosticModule 禁止 (原 6)
@@ -1471,6 +1480,10 @@ par_collect_quiet file-driven "$PAR_FILE_DRIVEN" || v5_soft "文件驱动架构�
 # ═══ 组 9: 契约门禁 (D257) ═══
 GROUP_DOWN=0  # 组 8 降级范围结束
 echo -e "${CYAN}── 组 9: 契约门禁 ──${RESET}"
+GROUP_DOWN=1  # 裁 409：组9/10 降级（块级 paths 由 CI ①d 承担）
+
+# 裁 409 确定性自检缝（K3 方向A：hard_check 注入，不用 exit）
+if [ "${SYNO_DOWN_SELFTEST:-}" = "9" ] || [ "${SYNO_DOWN_SELFTEST:-}" = "10" ]; then hard_check "SELFTEST-组9/10 注入（应只报不拦）" "injected"; fi
 GROUP_DONE=$((GROUP_DONE+1))
 CONTRACT_DIR="$ROOT/.codex/contracts"
 CONTRACT_FAIL=""
@@ -1624,6 +1637,7 @@ fi
 
 # ═══ 组 12: Task Scope 一致性 — 暂存文件 vs Q2 范围 ═══
 echo -e "${CYAN}── 组 12: Task Scope 一致性 ──${RESET}"
+GROUP_DOWN=0  # 组9/10 降级范围结束
 GROUP_DONE=$((GROUP_DONE+1))
 
 TODAY=$(date +%Y-%m-%d)
@@ -1918,6 +1932,10 @@ hard_check "G12d: 生成物单点生成门禁 (D458)" "${GENERATED_VIOLATION:-}"
 # 背景: DSH 技能发现根 .dsh/skills（rank 100）不读 .synova/skills → 单源复制 + 漂移门禁。
 # fail-closed (D328): 检查脚本 exit 2 = 检查执行失败 → 同样硬阻断, 不与"通过"混同。
 echo -e "${CYAN}── 组 13: 技能同步一致性 ──${RESET}"
+GROUP_DOWN=1  # 裁 409：组13 降级
+
+# 裁 409 确定性自检缝（K3 方向A：hard_check 注入，不用 exit）
+if [ "${SYNO_DOWN_SELFTEST:-}" = "13" ]; then hard_check "SELFTEST-组13 注入（应只报不拦）" "injected"; fi
 GROUP_DONE=$((GROUP_DONE+1))
 SKILL_FILES_STAGED=$(echo "$STAGED_ALL" | grep -E "\.synova/skills/|\.dsh/skills/" || true)
 if [ -n "$SKILL_FILES_STAGED" ]; then
@@ -1967,6 +1985,7 @@ else
   fi
 fi
 
+GROUP_DOWN=0  # 组13 降级范围结束
 # ═══ D782: 文档真相防线 D1/D2（附加检查；不并入 12 组编号——同 D734 接入模式）═══
 # 背景: K3 2026-09-14 权威文档一致性专项审计 §7.2 收割 2/3——D1 check-doc-truth.sh
 #   与 D2 doc-registry-gate.sh 2026-08 建成即零调用（M3「机制建成未接线」第 3 次复发：
