@@ -1,0 +1,11 @@
+# .claude/claims/712.yaml — #712 ③建档通道（生产挂载＋落盘判据）· 写集声明
+writeset:
+  - .claude/claims/712.yaml
+  - src/server.ts
+  - tests/extensions/onboarding-mount.test.ts
+done:
+  - verify: npx vitest run tests/extensions/onboarding-mount.test.ts
+  - verify: npx vitest run tests/extensions tests/presets
+  - verify: npx tsc --noEmit
+  - verify: npm run check:architecture
+note: "#712: src/server.ts 挂载 routes/onboarding（import＋一行 mount；此前在树未挂载 ⇒ 生产不可达）＋ 穿真 createServer() 的落盘判据（非 dryRun 真落盘／dryRun 零落盘／改坏必红／主树 data 零写入）。两处缺口属写集外并已上报 L1：#712-a 生成器只落 3 件（期望 6 件）｜#712-b apply 未超管确认响应 409 但盘上已写（按 L1 裁示不设为断言）。"
