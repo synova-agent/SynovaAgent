@@ -7,16 +7,22 @@
  *
  * 契约（铁律 47；规格 §4.3）:
  *   @input  临时 DB（mkdtemp，经 SYNOVA_DB_PATH 指向；禁碰 data/synova.db）＋ 合成企业输入 ＋ env 隔离
- *   @output 标签化输出 [BOOT]/[SENTINEL]/[METRIC]/[TREND]/[CYCLE]/[PARAM-④b]/[PARAM-④c]/[PARAM-④d]/[PASS]
+ *   @output 标签化输出 [BOOT]/[INGEST]/[SENTINEL]/[METRIC]/[TREND]/[CYCLE]/[PARAM-④b]/[PARAM-④c]/[PARAM-④d]/[PASS]
  *   @exit   vitest 语义：0=通过 ｜ 任一 expect 红=真红（1）｜ 环境/检查自身失败 ⇒ throw Error('[M3][ENV] …')（=2 语义）
  *   @degraded 测试自身不降级：环境不满足 ⇒ throw，不跳过
- *   @not-here 不做标定内容；不写第二套 store；不 mock 被测系统（④b 用真 store/真 readback；④c/④d 只读导入）；
+ *   @not-here 不做标定内容；不写第二套 store；不 mock 被测系统（①走**真 HTTP 上传入口**；
+ *             ④b 用真 store/真 readback；④c/④d 只读导入）；
  *             不断言 ④b 的 kind（裁 227 Step 1 未做）；不判 ④c/④d "已实现"
  *
  * 已知限制:
+ *   · **数据入口 = `POST /api/data/upload`（出厂映射 `erp-standard`）**，不再直插图节点。
+ *   · 🔴 **`cost` 维度走真链路恒为 0**：`erp-standard` 的 14 个映射字段**不含营业成本**
+ *     （`extensions/ontology/field-mappings/erp-standard.json`）⇒ 哨兵的
+ *     `total_cost || cost || costs || 成本` 全落空。**这是该导出的真实语义，不是夹具缺陷**；
+ *     为此去新增/篡改 field-mapping 等于把假数据搬进产品契约（本卡要根除的正是这个）。
+ *     ⇒ 期望常量按真实语义重算（见下方手算注释）。
  *   · ④d `not_implemented` 是**合法通过态**（裁 153 只要求接口存在），本件只证"存在、未实现"。
  *   · ④c 证"接口在、未接线"（@deprecated/#1010 标记 + src/ 零调用点），不是"已接线"。
- *   · cash-flow 样板哨兵写的指标行无 R4 三列 ⇒ degraded=1（表级不变量），属预期，不作失败。
  *   · 反例变异验证（规格 §4.2 六项）由 T2 在本文件上执行，本文件不含变异。
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -31,6 +37,7 @@ import { cashFlowSentinel } from '../../src/sentinel/adapters/cash-flow-sentinel
 import { createMetricSink } from '../../src/sentinel/metric-readings-writer';
 import { metricReadingsMigration } from '../../src/store/migrations/002-metric-readings';
 import sentinelRoutes from '../../src/routes/sentinel';
+import dataRoutes from '../../src/routes/data';
 import { computeOverflow } from '../../src/cycles/overflow-compute';
 import type { CycleConfig, EnterpriseTimeSeries } from '../../src/cycles/overflow-compute';
 import { captureDecision } from '../../src/l4/decision-capture';
@@ -60,34 +67,94 @@ let sink: ReturnType<typeof createMetricSink>;
 let base = '';
 let server: Server | undefined;
 
-// ── 合成企业输入（期望值手算，见各断言注释；变异计算 ⇒ 值变 ⇒ 必红）──
-// 两条财务条目（graph_nodes，类型 = 映射目标 resource/money；FINANCIAL→aliasOf Financial）
-//   合计：revenue 300 ｜ cost 100 ｜ opex 30 ｜ cash 180
-const ENTRIES = [
-  { period: '2026-01', revenue: 100, cost: 40, operating_expenses: 10, cash_balance: 60 },
-  { period: '2026-02', revenue: 200, cost: 60, operating_expenses: 20, cash_balance: 120 },
-] as const;
+/**
+ * 财务夹具：**出厂映射** `erp-standard`（target `outcome/financial`）的 **14 个外部字段全量**。
+ *   · 缺任一字段 ⇒ `ingestRow` 记一条 `缺少字段` error（真实行为，不做半套夹具）。
+ *   · `erp-standard` **无成本字段** ⇒ `cost` 恒 0（见文件头「已知限制」）。
+ *   · `营业费用` ⇒ `operating_expense`（单数，financial schema 名）；哨兵经显式别名读到（#837 E-1）。
+ */
+function erpRow(v: { revenue: number; opex: number; cash: number; period: string }): Record<string, string | number> {
+  return {
+    营业收入: v.revenue,
+    经营现金流: Math.round(v.revenue * 0.12),
+    固定资产净值: 30,
+    总负债: 40,
+    所有者权益: 60,
+    现金余额: v.cash,
+    毛利润: Math.round(v.revenue * 0.6),
+    营业费用: v.opex,
+    总资产: v.revenue,
+    流动资产: Math.round(v.revenue / 2),
+    流动负债: 20,
+    应收账款: 15,
+    存货: 5,
+    期间: v.period,
+  };
+}
+
+// 两期合计（真链路实际落库值）：revenue 300 ｜ **cost 0** ｜ opex 30 ｜ cash 180
+const ERP_ROWS: ReadonlyArray<Record<string, string | number>> = [
+  erpRow({ revenue: 100, opex: 10, cash: 60, period: '2026-01' }),
+  erpRow({ revenue: 200, opex: 20, cash: 120, period: '2026-02' }),
+];
+
+// 🔴 独立期望常量（手工从夹具算；**不从被测函数反推**；变异 compute ⇒ 必红）
+//   netMargin   = (300 − 0 − 30) / 300 = 270/300 = 9/10
+//   grossMargin = (300 − 0)      / 300 = 300/300 = 1
+//   revenueYoY  = (200 − 100) / 100 = 1
+//   runway      = 180 / (30/2)  = 12
+const EXP_REVENUE = 300;
+const EXP_COST = 0; // erp-standard 无成本字段 ⇒ 真实语义恒 0
+const EXP_OPEX = 30;
+const EXP_CASH = 180;
+const EXP_NET_MARGIN = 270 / 300;
+const EXP_GROSS_MARGIN = 1;
+const EXP_YOY = 1;
+const EXP_RUNWAY = 12;
 
 beforeAll(async () => {
   db = new Database(process.env.SYNOVA_DB_PATH as string);
   store = new SqliteGraphStore(db); // 建真表（graph_nodes/graph_triples）
   metricReadingsMigration.up(db);   // 建真表（metric_readings 17 列）
-  const ins = db.prepare(
-    "INSERT INTO graph_nodes (graph, type, name, props) VALUES ('default', 'resource/money', ?, ?)",
-  );
-  for (const e of ENTRIES) ins.run(`fin-${e.period}`, JSON.stringify(e));
   sink = createMetricSink(db);
 
   const app = express();
   app.use(express.json());
   (app.locals as { orchestration?: unknown }).orchestration = { db };
+  // 真上传入口需要 GraphStore（server.ts 的注入形态）
+  (app.locals as { graphStore?: unknown }).graphStore = store;
   app.use('/api/sentinel', sentinelRoutes); // 真路由（只读复用，不改）
+  app.use(dataRoutes);                      // 真上传入口 POST /api/data/upload
   server = app.listen(0);
   await new Promise<void>((r) => server!.once('listening', r));
   const addr = server.address();
   if (!addr || typeof addr === 'string') throw new Error('[M3][ENV] express 服务未起 —— 环境不满足');
   base = `http://127.0.0.1:${addr.port}`;
   console.log(`[BOOT] db=${process.env.SYNOVA_DB_PATH} anchor=${ANCHOR} base=${base}`);
+
+  // ── 数据进入：**真 HTTP 上传入口**（出厂映射 erp-standard），逐期走一次 ──
+  for (const row of ERP_ROWS) {
+    const res = await fetch(`${base}/api/data/upload`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ mapping: 'erp-standard', rows: [row], graph: ANCHOR }),
+    });
+    const body = (await res.json()) as {
+      ok?: boolean; nodeType?: string; nodesCreated?: number;
+      errors?: string[]; warnings?: string[];
+    };
+    console.log(`[INGEST] status=${res.status} nodeType=${String(body.nodeType)} created=${String(body.nodesCreated)}`
+      + ` errors=${JSON.stringify(body.errors ?? [])} warnings=${JSON.stringify(body.warnings ?? [])}`);
+    // 入口不满足 ⇒ 环境/契约不满足：显式 throw（=2 语义），不跳过
+    if (res.status !== 200 || body.ok !== true) {
+      throw new Error(`[M3][ENV] 真上传入口未通过：status=${res.status} body=${JSON.stringify(body)}`);
+    }
+    // 14 字段全给 ⇒ 无白名单跳过、无缺字段
+    expect(body.warnings).toEqual([]);
+    expect(body.errors).toEqual([]);
+    expect(body.nodesCreated).toBe(1);
+    expect(body.nodeType).toBe('outcome/financial');
+  }
 });
 
 afterAll(() => {
@@ -97,7 +164,28 @@ afterAll(() => {
 });
 
 describe('#656 M3 · 领域链贯通（真哨兵 → 时序 → 趋势 → 循环 → ④b/c/d）', () => {
-  it('判据①＋②前半 [SENTINEL][METRIC]：真哨兵（cash-flow，非 SEED）经真链路写 metric_readings，值随输入变', async () => {
+  it('判据①＋②前半 [INGEST][SENTINEL][METRIC]：数据经真上传入口进入，真哨兵（cash-flow，非 SEED）写 metric_readings，值随输入变', async () => {
+    // ①-0 数据确实来自真入口：落库类型是映射目标 `outcome/financial`，且合计 = 独立常量
+    const nodes = db.prepare(
+      'SELECT type, props FROM graph_nodes WHERE graph = ?',
+    ).all(ANCHOR) as Array<{ type: string; props: string }>;
+    console.log(`[INGEST] nodes=${nodes.length} types=${nodes.map(n => n.type).join(',')}`);
+    expect(nodes.length).toBe(2);
+    expect(nodes.every(n => n.type === 'outcome/financial')).toBe(true);
+    const sums = { revenue: 0, opex: 0, cost: 0, cash: 0 };
+    for (const n of nodes) {
+      const p = JSON.parse(n.props) as Record<string, unknown>;
+      sums.revenue += Number(p.total_revenue) || 0;
+      sums.opex += Number(p.operating_expense) || 0;
+      // 哨兵的 cost 字段链（total_cost || cost || costs || 成本）在本导出下全落空
+      sums.cost += (Number(p.total_cost) || Number(p.cost) || Number(p.costs) || Number(p.成本)) || 0;
+      sums.cash += Number(p.cash) || 0;
+    }
+    expect(sums.revenue).toBe(EXP_REVENUE);
+    expect(sums.opex).toBe(EXP_OPEX);
+    expect(sums.cost).toBe(EXP_COST);
+    expect(sums.cash).toBe(EXP_CASH);
+
     const res = await cashFlowSentinel.check({
       db: store, rawDb: db, metricSink: sink, teamId: ANCHOR, now: NOW,
     });
@@ -110,18 +198,19 @@ describe('#656 M3 · 领域链贯通（真哨兵 → 时序 → 趋势 → 循�
       'SELECT metric_id, value, unit, source_id FROM metric_readings WHERE org_id = ?',
     ).all(ANCHOR) as Array<{ metric_id: string; value: number; unit: string; source_id: string }>;
     console.log(`[METRIC] rows=${rows.length} metrics=${rows.map(r => r.metric_id).join(',')}`);
-    expect(rows.length).toBeGreaterThanOrEqual(3); // 至少 net-margin/yoy/gross 三行（runway 本例有限也应有）
+    console.log(`[METRIC-VALUES] ${rows.map(r => `${r.metric_id}=${r.value}${r.unit}`).join(' | ')}`);
+    expect(rows.length).toBe(4); // 两期 ⇒ net/gross/yoy/runway 四行
 
     // 期望值手算（变异 computeCashFlowMetrics ⇒ 必红）：
     const byId = new Map(rows.map(r => [r.metric_id, r]));
-    //   netMargin = (300-100-30)/300 = 0.5666…
-    expect(byId.get('CASH-FLOW-NET-MARGIN')?.value).toBeCloseTo(170 / 300, 9);
-    //   grossMargin = (300-100)/300 = 0.6666…
-    expect(byId.get('CASH-FLOW-GROSS-MARGIN')?.value).toBeCloseTo(200 / 300, 9);
+    //   netMargin = (300-0-30)/300 = 270/300
+    expect(byId.get('CASH-FLOW-NET-MARGIN')?.value).toBeCloseTo(EXP_NET_MARGIN, 9);
+    //   grossMargin = (300-0)/300 = 1
+    expect(byId.get('CASH-FLOW-GROSS-MARGIN')?.value).toBeCloseTo(EXP_GROSS_MARGIN, 9);
     //   revenueYoY = (200-100)/100 = 1
-    expect(byId.get('CASH-FLOW-REVENUE-YOY-GROWTH')?.value).toBeCloseTo(1, 9);
+    expect(byId.get('CASH-FLOW-REVENUE-YOY-GROWTH')?.value).toBeCloseTo(EXP_YOY, 9);
     //   runway（哨兵写点用的外层算法）= totalCash / (Σopex/count) = 180 / (30/2) = 12
-    expect(byId.get('CASH-FLOW-RUNWAY-MONTHS')?.value).toBeCloseTo(12, 9);
+    expect(byId.get('CASH-FLOW-RUNWAY-MONTHS')?.value).toBeCloseTo(EXP_RUNWAY, 9);
     expect(byId.get('CASH-FLOW-NET-MARGIN')?.source_id).toBe('SENTINEL-CASH-FLOW-v1');
   });
 
@@ -133,7 +222,7 @@ describe('#656 M3 · 领域链贯通（真哨兵 → 时序 → 趋势 → 循�
     expect(json.ok).toBe(true);
     const nm = json.summary.find(s => s.metricId === 'CASH-FLOW-NET-MARGIN');
     expect(nm, 'trends 应含 CASH-FLOW-NET-MARGIN').toBeDefined();
-    expect(nm!.latestValue).toBeCloseTo(170 / 300, 9);
+    expect(nm!.latestValue).toBeCloseTo(EXP_NET_MARGIN, 9);
     expect(nm!.count).toBeGreaterThanOrEqual(1);
 
     // 普通视图（非 trends）逐字段读回
@@ -142,7 +231,7 @@ describe('#656 M3 · 领域链贯通（真哨兵 → 时序 → 趋势 → 循�
     expect(pj.ok).toBe(true);
     expect(pj.count).toBeGreaterThanOrEqual(1);
     expect(pj.rows.every(r => r.org_id === ANCHOR)).toBe(true); // 唯一锚点：库里只有本次写入的行
-    expect(pj.rows[0].value).toBeCloseTo(170 / 300, 9);
+    expect(pj.rows[0].value).toBeCloseTo(EXP_NET_MARGIN, 9);
     expect(pj.rows[0].unit).toBe('ratio');
   });
 
@@ -203,8 +292,9 @@ describe('#656 M3 · 领域链贯通（真哨兵 → 时序 → 趋势 → 循�
   it('判据④b [PARAM-④b]：决策台账写→读回逐字段匹配（真 store；不断言 kind——裁 227 Step 1 未做）', () => {
     const wdb = new Database(':memory:');
     const wstore = new SqliteGraphStore(wdb);
-    wdb.prepare("INSERT INTO graph_nodes (graph, type, name, props) VALUES ('default', 'outcome/risk', 'n-m3', ?)")
-      .run(JSON.stringify({ id: 'n-m3' })); // props 含 id（queryNodes 按 props 过滤，同 J5 集成测形态）
+    // 经 **GraphStore API** 建节点（props 含 id，queryNodes 按 props 过滤，同 J5 集成测形态）；
+    // 不用 raw SQL ⇒ 全文件零直插图节点（见末尾 [NO-SEED] 守卫）
+    wstore.createNode('outcome/risk', { id: 'n-m3' }, 'default');
     const input: DecisionInput = {
       nodeId: 'n-m3', userId: 'u-m3', action: 'confirmed', role: 'm3-role',
       reason: 'm3-reason',
@@ -269,5 +359,16 @@ describe('#656 M3 · 领域链贯通（真哨兵 → 时序 → 趋势 → 循�
     const r = calibrateThresholds('m3-industry');
     console.log(`[PARAM-④d] calibrated=${r.calibrated} status=${r.status}`);
     expect(r).toEqual({ calibrated: 0, status: 'not_implemented' });
+  });
+
+  it('判据①守卫 [NO-SEED]：本文件不得再用 raw SQL 直插图节点（自证清零，替代人工 grep）', () => {
+    // 用拼接构造针，避免守卫自身命中
+    const needle = ['INSERT', 'INTO', 'graph_nodes'].join(' ');
+    const source = readFileSync(join(repoRoot, 'tests/acceptance/mvp1-m3-domain-chain.test.ts'), 'utf-8');
+    console.log(`[NO-SEED] rawSeeded=${source.includes(needle)}`);
+    expect(source.includes(needle), '本夹具必须经真上传入口造数；直插图节点会被判红').toBe(false);
+    // 反向证明：入口确实被调用（不是靠"没写 INSERT"空过）
+    expect(source).toContain('/api/data/upload');
+    expect(source).toContain("mapping: 'erp-standard'");
   });
 });
