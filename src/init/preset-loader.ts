@@ -224,8 +224,16 @@ function parseKnowledgeScope(absPath: string, roleId: string): KnowledgeScopeDec
  *
  * @input  `roleId`（验签身份里的角色名）、`options.root`（内容根；缺省走 `SYNOVA_PRESETS_ROOT` 注入缝）
  * @output {@link KnowledgeScopeDeclaration}
- * @degraded 读失败/解析失败/形状非法 ⇒ `degraded: true` ＋ `log.error`；文件缺席 ⇒ `declared: false`
- *           ＋ `log.warn`（I-C4：该岗位不追加 scope 维，但**可观测**）。**本函数从不抛**。
+ * @degraded **三条分支，安全方向不同（别合并）**:
+ *           ① **角色目录不存在**（admin/manager/employee/viewer/liaison/ga/未知角色）
+ *              ⇒ `declared: false, degraded: false` ＋ `log.warn`（I-C4：不追加 scope 维，**可观测**）；
+ *           ② **角色目录存在但 `knowledge-scope.yaml` 缺失/不可读/为空文档**
+ *              ⇒ `degraded: true` ＋ `log.error(code=KNOWLEDGE_SCOPE_MISSING)` ⇒ 调用点给
+ *              `{pkb_domain IN []}`（**fail-closed：整岗一件都不给看**）；
+ *           ③ **内容坏**（YAML 坏/形状非法/`scopes[]` 空/重复 id）
+ *              ⇒ `degraded: true` ＋ `log.error(code=KNOWLEDGE_SCOPE_INVALID)` ⇒ 同上 fail-closed。
+ *           🔴 ② 是自验抓到的**真 fail-open 修复**：曾把"目录在但文件没了"当 ① 处理 ⇒ 删文件即可看全库。
+ *           **本函数从不抛**（它在每个请求的判定路径上跑）。
  *
  * 🔴 缓存口径（d-refresh）：缓存键 = 绝对路径，值带 `mtimeMs:size` 指纹 —— 同一服务寿命内改内容
  *   文件（只改 mtime 或只改大小都算）⇒ **下一次调用即重解析**。禁进程级常量：那会让
@@ -233,22 +241,54 @@ function parseKnowledgeScope(absPath: string, roleId: string): KnowledgeScopeDec
  */
 const scopeDeclCache = new Map<string, { readonly fingerprint: string; readonly decl: KnowledgeScopeDeclaration }>();
 
+/**
+ * 「装不进去 ⇒ 一件都不给看」的统一出口（fail-closed）。
+ *
+ * 🔴 与 I-C4（无角色目录 ⇒ 不追加）的区别是**安全方向**：
+ *   角色目录在而知识范围取不到 ⇒ 说明"这个岗位本来该有 scope 声明" ⇒ **一件都不给看**；
+ *   角色目录根本不存在 ⇒ 说明"这个角色不属岗位包管辖"（admin/manager/employee/viewer/liaison/ga/未知）
+ *   ⇒ 不追加 scope 维，交既有 sensitivity 面管。
+ *   🔴 反例（本卡自验抓到的真 fail-open）: 曾对**两种**情形都返回 `declared:false, degraded:false`
+ *   ⇒ 删掉 `roles/finance/knowledge-scope.yaml` 后 finance **能看见全部语料** ——
+ *   这正是本批要杀的"因为读不到而不收"。
+ */
+function scopeUnavailable(roleId: string, abs: string, reason: string): KnowledgeScopeDeclaration {
+  log.error(
+    { roleId, path: abs, reason, code: 'KNOWLEDGE_SCOPE_MISSING', degraded: true },
+    '角色目录在但知识范围取不到 — 该岗位按 fail-closed 拒绝全部知识（不回落"不过滤"）',
+  );
+  return { roleId, declared: false, scopeIds: [], denyIds: [], problems: [reason], degraded: true };
+}
+
 export function resolveRoleKnowledgeScope(
   roleId: string,
   options: { root?: string } = {},
 ): KnowledgeScopeDeclaration {
   try {
     const root = options.root !== undefined && options.root.length > 0 ? options.root : resolvePresetsRoot();
-    const abs = join(root, ROLES_SUBDIR, roleId, SCOPE_FILE);
+    const roleDir = join(root, ROLES_SUBDIR, roleId);
+    const abs = join(roleDir, SCOPE_FILE);
+    const roleDirExists = ((): boolean => {
+      try {
+        return statSync(roleDir).isDirectory();
+      } catch {
+        return false; // 目录不存在 = 该角色不属岗位包管辖（I-C4 的正常路径，不是错误）
+      }
+    })();
+
     let fingerprint: string;
     try {
       const st = statSync(abs);
       if (!st.isFile()) throw new Error('not a regular file');
       fingerprint = `${String(st.mtimeMs)}:${String(st.size)}`;
     } catch {
-      // ENOENT = 该岗位没有知识范围文件（I-C4：不追加条件，但必须可见）
-      log.warn({ roleId, path: abs }, '岗位未声明 knowledge-scope.yaml ⇒ 不追加 scope 维（可观测，非静默）');
-      return { roleId, declared: false, scopeIds: [], denyIds: [], problems: [], degraded: false };
+      if (!roleDirExists) {
+        // I-C4：**角色目录不存在** ⇒ 不追加 scope 维（但必须可见，不静默）
+        log.warn({ roleId, path: abs }, '岗位包目录不存在 ⇒ 不追加 scope 维（I-C4，可观测）');
+        return { roleId, declared: false, scopeIds: [], denyIds: [], problems: [], degraded: false };
+      }
+      // 🔴 fail-closed：角色目录在而 knowledge-scope.yaml 缺/不可读 ⇒ **整岗不给看**
+      return scopeUnavailable(roleId, abs, `${abs}: 角色目录存在但 ${SCOPE_FILE} 缺失或不可读`);
     }
     const cached = scopeDeclCache.get(abs);
     if (cached !== undefined && cached.fingerprint === fingerprint) return cached.decl;
@@ -259,6 +299,11 @@ export function resolveRoleKnowledgeScope(
         { roleId, path: abs, problems: decl.problems, code: 'KNOWLEDGE_SCOPE_INVALID', degraded: true },
         '知识范围文件内容非法 — 该岗位按 fail-closed 拒绝全部知识（不回落"不过滤"）',
       );
+      return decl;
+    }
+    if (!decl.declared) {
+      // 文件在、可读，但内容为空/仅注释 ⇒ 声明面缺失（同族 fail-open，一律 fail-closed）
+      return scopeUnavailable(roleId, abs, `${abs}: 文件存在但未声明任何内容（空文档/仅注释）`);
     }
     return decl;
   } catch (err: unknown) {

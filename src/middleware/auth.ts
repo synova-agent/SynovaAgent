@@ -412,18 +412,21 @@ interface FilterCondition {
  *   - **I-C2** deny  ⇒ 每个 `deny[].id` 一条 `{ field:'pkb_domain', operator:'NOT_EQ', value:id }`
  *     （`matchFilter` 只实现 IN/EQ/NOT_EQ，没有 NOT_IN ⇒ deny 只能逐 id 展开）
  *   - **I-C3** 本函数**只追加**；`access.sensitivity` 条件由调用点保持在第 0 位（K12-11 不回退）
- *   - **I-C4** 岗位没有 `knowledge-scope.yaml`（admin / manager / employee / viewer / liaison / ga /
- *     未知角色）⇒ **不追加**任何 scope/deny 条件，但 `resolveRoleKnowledgeScope` 已 `log.warn`
- *     （**可观测**，不是静默跳过）⇒ 已知限制 KL-3 声明"这些岗位不受 scope 维约束"
- *   - **I-C6** 文件在但内容不可用（非法 YAML / 缺 `scopes[]` / 空 `scopes[]` / 重复 id）⇒
- *     **拒绝型条件集** `{ field:'pkb_domain', operator:'IN', value: [] }` —— `IN` 对空数组恒 false
- *     ⇒ 每一行都被过滤（与 `src/services/request-context.ts:388` 的 DENY_ALL 同一机制），
- *     **绝不回落"不过滤"**（那是 fail-open，正是本批要杀的病）
+ *   - **I-C4** **角色目录不存在**（admin / manager / employee / viewer / liaison / ga / 未知角色 ——
+ *     它们不属岗位包管辖）⇒ **不追加**任何 scope/deny 条件，但 `resolveRoleKnowledgeScope` 已
+ *     `log.warn`（**可观测**，不是静默跳过）⇒ 已知限制 KL-3 声明"这些岗位不受 scope 维约束"
+ *   - **I-C6** 内容不可用 ⇒ **拒绝型条件集** `{ field:'pkb_domain', operator:'IN', value: [] }` ——
+ *     `IN` 对空数组恒 false ⇒ 每一行都被过滤（与 `src/services/request-context.ts:388` 的 DENY_ALL
+ *     同一机制），**绝不回落"不过滤"**（那是 fail-open，正是本批要杀的病）。
+ *     🔴 覆盖**三态**：① 内容坏（非法 YAML / 缺 `scopes[]` / 空 `scopes[]` / 重复 id）；
+ *     ② **角色目录存在但 `knowledge-scope.yaml` 缺失/不可读/为空文档**（自验抓到的真 fail-open：
+ *     曾把它当 I-C4 处理 ⇒ 删掉文件即看全库）；③ 解析过程未预期异常。
+ *     ⚠️ 只有 **I-C4（目录不存在）** 才有"不追加"这条路 —— "读不到"永远不许等于"不收"。
  *
  * @input  `role` — 验签身份里的角色（`JwtPayload.role`，**唯一可信来源**；不读任何请求头）
- * @output 条件数组：`[]`（无 scope 文件）｜`1`（fail-closed 的 `IN []`）｜`1 + N`（IN ＋ N 条 NOT_EQ）
- * @degraded 内容坏 ⇒ 拒绝型 ＋ `log.error`（日志在 `resolveRoleKnowledgeScope` 内，带
- *           `KNOWLEDGE_SCOPE_INVALID` ／ `KNOWLEDGE_SCOPE_RESOLVE_FAILED` typed code）。
+ * @output 条件数组：`[]`（仅 I-C4：角色目录不存在）｜`1`（fail-closed 的 `IN []`）｜`1 + N`（IN ＋ N 条 NOT_EQ）
+ * @degraded 内容坏/缺件 ⇒ 拒绝型 ＋ `log.error`（日志在 `resolveRoleKnowledgeScope` 内，带
+ *           `KNOWLEDGE_SCOPE_INVALID` ／ `KNOWLEDGE_SCOPE_MISSING` ／ `KNOWLEDGE_SCOPE_RESOLVE_FAILED` typed code）。
  *           **本函数从不抛** —— 它在每个请求的判定路径上跑。
  *
  * 设计哲学（一句）: **权限条件只从「验签身份 ＋ 内容文件」派生，且只能收窄** —— 文件在就按它收，
@@ -438,7 +441,9 @@ function knowledgeScopeConditions(role: string): FilterCondition[] {
     return [{ field: SCOPE_FIELD, operator: 'IN', value: [] }];
   }
   if (!decl.declared || decl.scopeIds.length === 0) {
-    // I-C4: 该岗位未声明知识范围 ⇒ 不追加（可观测性由 resolveRoleKnowledgeScope 的 log.warn 承担）
+    // I-C4（**仅此一路**）: 角色目录不存在 ⇒ 该岗位不属岗位包管辖 ⇒ 不追加 scope 维。
+    // 🔴 可观测性由 resolveRoleKnowledgeScope 的 log.warn 承担；"读不到"的其它形态已在上方
+    //   被折成 degraded ⇒ 走 fail-closed，**不会**落到这里（否则就是 fail-open）。
     return [];
   }
   const allowed = [...new Set(decl.scopeIds)].slice().sort();

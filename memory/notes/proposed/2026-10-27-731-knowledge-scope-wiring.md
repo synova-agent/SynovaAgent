@@ -76,20 +76,31 @@
    **看不到任何现有语料**。这是 **fail-closed 的正确方向**（不是 bug），数据回填另立卡。
    **无 scope 文件的岗位**（admin/manager/employee/viewer/liaison/ga/未知角色）按 I-C4 不追加 scope 维 ⇒ **不受影响**。
    **不得**据此宣称「生产写入已按 scope 分类」或「知识已按 scope 可用」。
-3. **deny 在现物三件里天然无操作差异**（deny id 与各自 scopes 无重叠）⇒ 只用「看不到 deny 域」断言必是**恒真式**。
+3. **🔴 自验抓到的真 fail-open（已修，本卡最重要的返工）**：原实现在「角色目录在、`knowledge-scope.yaml`
+   被删/不可读/为空文档」时返回 `declared:false, degraded:false` ⇒ 调用点**不追加** scope 维 ⇒
+   该岗位**可见全部语料**。这与 dev doc §4.2 边界值清单「文件缺失 ⇒ 装载 fail-loud」不一致，
+   且与本批要杀的"因为读不到而不收"同族。**修法（窄修，不影响无目录角色）**：
+   · **角色目录不存在**（admin/manager/employee/viewer/liaison/ga/未知）⇒ 保持 I-C4：不追加 ＋ `log.warn`
+   · **角色目录在但文件缺失/不可读/空文档** ⇒ `degraded:true` ＋ `log.error(code=KNOWLEDGE_SCOPE_MISSING)`
+     ⇒ 条件集退化为 `{pkb_domain IN []}` ⇒ **整岗一件都看不到**
+   · **内容坏** ⇒ `log.error(code=KNOWLEDGE_SCOPE_INVALID)` ⇒ 同上
+   判据同步改：原 `:469` 那条"删文件仍见 6/6"的用例**把 fail-open 写成了期望** ⇒ 已改为断言
+   fail-closed（`IN []` ＋ 检索结果为空）；并新增两条分界用例（有目录缺文件 / 无目录）与
+   一条空文档用例。
+4. **deny 在现物三件里天然无操作差异**（deny id 与各自 scopes 无重叠）⇒ 只用「看不到 deny 域」断言必是**恒真式**。
    本卡按 d-deny 两段式：结构断言（NOT_EQ 逐 id 在）＋ 语义断言（临时内容根里把 deny 的 id **同时写进 scopes[]**
    ⇒ IN 允许、NOT_EQ 排除，且该 scope 下**确实播了语料却检索不到** ⇒ 排除只能来自 deny）。
-4. **fail-closed 路径刻意只给最小拒绝型**（`{pkb_domain IN []}`，不附 deny 的 NOT_EQ）：`IN []` 对每一行恒 false，
+5. **fail-closed 路径刻意只给最小拒绝型**（`{pkb_domain IN []}`，不附 deny 的 NOT_EQ）：`IN []` 对每一行恒 false，
    附加 NOT_EQ 是冗余；也因此该路径下探针的「V6(i) deny 条件齐备」会一并报缺失 —— 那是**已红场景**里的附加红，
    不构成越权面（没有任何行能穿过 `IN []`）。
-5. **通配与"全库读"仍以编译期基线为界**（KL-T2-1）：`expandPermissionId('knowledge.*.read')` 与
+6. **通配与"全库读"仍以编译期基线为界**（KL-T2-1）：`expandPermissionId('knowledge.*.read')` 与
    `sensitivityWhitelistFromGrants` 的「覆盖全部范围 ⇒ 视同全库读」必须同集，否则 admin 的全库读会因
    "分母含派生项"而静默失去 `restricted`。⇒ 文件新增命名空间可用**显式项**授予，但**不被通配覆盖**。
-6. **`knowledge.hr.read` / `knowledge.sales.read` 迁移**：d-perm 后变未知名被丢弃（hr 仍持
+7. **`knowledge.hr.read` / `knowledge.sales.read` 迁移**：d-perm 后变未知名被丢弃（hr 仍持
    `knowledge.people.read` ⇒ 项模型对 hr 仍"发声"，不回落放宽）。外部客户包若引用这两个 id **需改**。
-7. **本卡不覆盖 HTTP 层的独立判据**：真路由 `POST /api/knowledge/search` 的端到端由 D5 探针承担；
+8. **本卡不覆盖 HTTP 层的独立判据**：真路由 `POST /api/knowledge/search` 的端到端由 D5 探针承担；
    `tests/extensions` 侧走「真中间件链 ＋ 真 `getCurrentFilterClause` ＋ 真 `KnowledgeStore.search`」。
-8. **`scopes[]` 为空的 stub 文件不计装载错**（KL-T1-1）：空文档/仅注释 = 「未声明」而不是「坏件」——
+9. **`scopes[]` 为空的 stub 文件不计**装载期**错**（KL-T1-1）：空文档/仅注释 = 「未声明」而不是「坏件」——
    否则装载面会与既有夹具（`tests/init/preset-loader.test.ts` 的 `writeRole()` 写 `# <role>/<piece>`）对撞。
    真正的「文件在但无 scope」由 D5 探针 V1（`scopes[] 为空 ⇒ 业务红 exit 1`）兜住（见反例 b）。
 

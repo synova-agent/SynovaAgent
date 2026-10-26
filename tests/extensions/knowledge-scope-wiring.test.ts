@@ -466,7 +466,7 @@ describe('#731 / ② 行为面 + ③ 可对账: 同 query 两岗位结果不同�
     }
   });
 
-  it('🔴 改坏必红（declared-only 回归等价）: 拔掉 finance 的 scope 文件 ⇒ scope 维整维消失、跨岗位隔离消失', async () => {
+  it('🔴 fail-closed（自验抓到的真 fail-open 修复）: 角色目录在而 scope 文件被拔 ⇒ 整岗**一件都看不到**', async () => {
     const root = makeVariantRoot((rolesRoot) => {
       rmSync(join(rolesRoot, 'finance', 'knowledge-scope.yaml'), { force: true });
     });
@@ -478,15 +478,63 @@ describe('#731 / ② 行为面 + ③ 可对账: 同 query 两岗位结果不同�
         await captureFilter('finance'),
         await captureFilter('hr'),
       ]);
+      // 诊断面：声明被折成 degraded（fail-closed 的入口条件）
+      const decl = await withPresetsRoot(root, () => resolveRoleKnowledgeScope('finance'));
+      expect(decl.degraded).toBe(true);
+      expect(decl.scopeIds).toEqual([]);
+
+      // 条件面：退化为拒绝型 `pkb_domain IN []`（**不是**"少一维"）
+      expect(valuesOf(finance, 'pkb_domain', 'IN')).toEqual([[]]);
+      // 第 0 位仍是 sensitivity（K12-11 不回退）
+      expect(finance.conditions[0]?.field).toBe('access.sensitivity');
+
+      // 行为面：**一行都检索不到**（旧实现此处是 6/6 全见 = fail-open，本用例就是它的牙）
       const financeIds = searchIds(seeded, finance as FilterClause);
+      expect(financeIds).toEqual([]);
+      // 对照：hr 不受影响（证明收的是"该岗位"，不是"全站")
       const hrIds = searchIds(seeded, hr as FilterClause);
-      // 正命题（内容文件在时）两岗位不同；拔掉文件后 finance 不再受 scope 约束 ⇒ 看到 hr 的语料
-      expect(financeIds).not.toEqual(hrIds);              // 一侧仍受约束（hr）
-      const hrIdSet = new Set(hrIds);
-      expect(financeIds.some((id) => hrIdSet.has(id))).toBe(true);
-      expect(financeIds.length).toBe(allScopes.length);   // 6 条全见 ⇒ scope 维确实消失
-      // 而主用例（文件在）里 finance 只能看 3 条 ⇒ 两处对照即"内容文件驱动行为"的牙
       expect(hrIds.length).toBe(ROLES_UNITS);
+    } finally {
+      seeded.close();
+    }
+  });
+
+  it('两条分支分界: 角色目录在缺文件 ⇒ fail-closed；角色目录不存在 ⇒ 不追加但条件仍非空（不 fail-open）', async () => {
+    const root = makeVariantRoot((rolesRoot) => {
+      // ① 目录在、文件缺 ⇒ 必须 fail-closed
+      rmSync(join(rolesRoot, 'hr', 'knowledge-scope.yaml'), { force: true });
+      // ② 目录整个不存在 ⇒ I-C4（不追加），且不得与 ① 混为一谈
+      rmSync(join(rolesRoot, 'sales'), { recursive: true, force: true });
+    });
+    await withPresetsRoot(root, async () => {
+      // ① 有目录缺文件
+      const hrNoFile = resolveRoleKnowledgeScope('hr');
+      expect(hrNoFile.degraded).toBe(true);
+      expect(hrNoFile.problems.join(' ')).toContain('knowledge-scope.yaml');
+      // ② 无目录
+      const salesNoDir = resolveRoleKnowledgeScope('sales');
+      expect(salesNoDir.degraded).toBe(false);
+      expect(salesNoDir.declared).toBe(false);
+      expect(salesNoDir.problems).toEqual([]);
+
+      const hrFilter = await captureFilter('hr');
+      expect(valuesOf(hrFilter, 'pkb_domain', 'IN')).toEqual([[]]);   // ① fail-closed
+      const salesFilter = await captureFilter('sales');
+      expect(valuesOf(salesFilter, 'pkb_domain', 'IN')).toEqual([]);  // ② 不追加
+      expect(salesFilter.conditions.length).toBe(1);                  // 仍非空（sensitivity 在）
+      expect(salesFilter.conditions[0]?.field).toBe('access.sensitivity');
+    });
+  });
+
+  it('同样 fail-closed: 角色目录在而 scope 文件为**空文档/仅注释** ⇒ 整岗一件都看不到', async () => {
+    const root = makeVariantRoot((rolesRoot) => {
+      writeFileSync(join(rolesRoot, 'finance', 'knowledge-scope.yaml'), '# 只有注释，没有任何声明\n', 'utf8');
+    });
+    const seeded = seedStore(declaredScopes(unitRoot, 'finance'), 'wire:shared-fact');
+    try {
+      const finance = await withPresetsRoot(root, () => captureFilter('finance'));
+      expect(valuesOf(finance, 'pkb_domain', 'IN')).toEqual([[]]);
+      expect(searchIds(seeded, finance as FilterClause)).toEqual([]);
     } finally {
       seeded.close();
     }
