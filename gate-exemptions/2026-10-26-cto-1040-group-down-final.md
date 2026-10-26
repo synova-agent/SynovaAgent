@@ -1,0 +1,3 @@
+- scripts/pre-commit-check.sh — 裁 409 最终实现（K3 根因方向 A）：删名字匹配降级；组界 GROUP_DOWN 开关（组5/6、9/10、13）；hard_check/soft_check 降级分支保留❌点名仅摘计数 — 裁 409
+- docs/authority/DOCS-REGISTRY.yaml — 登记本豁免件 DOC-0301 仅追加一行 — 裁 409
+- gate-exemptions/2026-10-26-cto-1040-group-down-final.md — 本豁免件自覆盖并声明上列全部路径 — 裁 409

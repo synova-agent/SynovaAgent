@@ -1210,3 +1210,11 @@ documents:
     status: active
     owner: CTO
     note: "回滚组级降级，恢复 fd478083b 语义。"
+
+  # ---- CTO 2026-10-26：#1040 裁 409 最终实现 ----
+  - id: DOC-0301
+    type: decision
+    path: gate-exemptions/2026-10-26-cto-1040-group-down-final.md
+    status: active
+    owner: CTO
+    note: "组级降级：❌ 保留、只摘计数；子 shell 禁用（K3 根因）。"
