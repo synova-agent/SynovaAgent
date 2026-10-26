@@ -3,6 +3,8 @@ writeset:
   - .claude/claims/713.yaml
   - scripts/control-tower/probe-knowledge-scope.ts
   - memory/notes/proposed/2026-10-27-713-d5-probe-retarget.md
+  - gate-exemptions/2026-10-27-825-m7-probe.md
+  - docs/authority/DOCS-REGISTRY.yaml
 done:
   - verify: node node_modules/.bin/tsx scripts/control-tower/probe-knowledge-scope.ts
   - verify: bash tests/control-tower/probe-contract.test.sh
