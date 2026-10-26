@@ -310,6 +310,10 @@ jobs:
             fi
             if [ -f "$COV_DIR/coverage-summary.json" ]; then
               COV_ARGS="--coverage-summary $COV_DIR/coverage-summary.json --coverage-sha $(git rev-parse HEAD)"
+            else
+              # 裁 422-R2（fail-closed）：生成失败/摘要缺失 ⇒ 声索武装，由检查器判
+              # 「变更集含 src/** ∧ 未武装 ⇒ E_COV_UNARMED exit 2」；无 src 变更 ⇒ 检查器自判不适用
+              COV_ARGS="--coverage-required"
             fi
           fi
           # shellcheck disable=SC2086

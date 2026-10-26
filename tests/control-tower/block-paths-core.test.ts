@@ -29,6 +29,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  sourceImportSpec,
   EXIT_MISMATCH,
   EXIT_OK,
   EXIT_UNJUDGEABLE,
@@ -546,3 +547,16 @@ function computedHasBlock(view: RegistryView, blockId: string): boolean {
     Object.prototype.hasOwnProperty.call(res.byBlock, blockId) && Array.isArray(res.byBlock[blockId])
   );
 }
+
+
+// ═══ 裁 422-R1：sourceImportSpec（ESM specifier 必须 URL——Windows 绝对路径会被当协议 'd:'）═══
+describe('sourceImportSpec（裁 422-R1 · Windows 路径归一）', () => {
+  it('posix 绝对路径（含空格）→ 百分号编码的 file:// URL', () => {
+    expect(sourceImportSpec('/tmp/a b/c d.ts')).toBe('file:///tmp/a%20b/c%20d.ts');
+  });
+  it('Windows 盘符路径 → 无反斜杠的 file:// URL（改坏=直接返回原路径 ⇒ 本例红）', () => {
+    const u = sourceImportSpec('D:\\repo\\施工项登记.ts');
+    expect(u.startsWith('file:///')).toBe(true);
+    expect(u.includes('\\')).toBe(false);
+  });
+});

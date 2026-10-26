@@ -407,10 +407,29 @@ def is_exempt_file(path):
 
 
 # ── 主流程 ────────────────────────────────────────────────────────────────────
+def _git_rel(list_path, root):
+    """list_path → 相对 root 的 git object 路径（恒正斜杠）。
+    Windows: os.path.relpath 产出反斜杠 ⇒ git object spec 失败（E_BAD_BASE 假触发，裁 422-R1）；
+    git tree 路径恒为正斜杠 ⇒ 无条件归一（双 replace 兼顾 posix 上的字面反斜杠）。"""
+    return os.path.relpath(list_path, root).replace(os.sep, "/").replace("\\", "/")
+
+
 def main():
     root = os.environ.get("GP_ROOT", "")
     list_path = os.environ.get("GP_LIST", "")
     base_ref = os.environ.get("GP_BASE_ARG", "")
+    # 自检缝（裁 422-R1）：只验「路径 → git object spec」归一化，不跑门禁本体（SYNO_DOWN_SELFTEST 同型）
+    if os.environ.get("GP_SELFTEST_REL"):
+        for _p, _r in (
+            ("C:\\repo\\.gitea\\protected-files.txt", "C:\\repo"),
+            ("/tmp/r/.gitea/protected-files.txt", "/tmp/r"),
+        ):
+            try:
+                _rel = _git_rel(_p, _r)
+            except Exception as _exc:  # pragma: no cover — 自检缝自身失败也要可见
+                _rel = "ERR:%s" % _exc
+            sys.stdout.write("GP-REL\t%s\t%s\n" % (_p, _rel))
+        sys.exit(0)
     json_mode = os.environ.get("GP_JSON", "0") == "1"
     degraded_log = os.environ.get("GP_DEGRADED_LOG", "")
 
@@ -528,7 +547,9 @@ def main():
             # base 里有没有「本清单」：没有 ⇒ 陈旧/错误 base，fail-closed（#610 已退役 bootstrap）
             rel_list = PROTECTED_REL
             if list_path.startswith(root.rstrip("/") + "/"):
-                rel_list = os.path.relpath(list_path, root)
+                # Windows: os.path.relpath 产出反斜杠 ⇒ git object spec 失败（E_BAD_BASE 假触发，裁 422-R1）
+                # git tree 路径恒为正斜杠 ⇒ 无条件归一（双 replace 兼顾 posix 上的字面反斜杠，供自检缝复算）
+                rel_list = _git_rel(list_path, root)
             rc, _, _ = git(["cat-file", "-e", "%s:%s" % (merge_base, rel_list)], root)
             if rc != 0:
                 raise GateError("E_BAD_BASE", "list-in-base",
