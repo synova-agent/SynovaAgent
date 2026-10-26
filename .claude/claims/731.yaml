@@ -2,8 +2,11 @@
 # 批次 P3-M7-前置缺口补齐（#825 重审版）· PR2／7 · 分支 ct/p3m7-pr2
 # 🔴 写集例外（L1 裁定 2026-10-27「裁 B」）：d-perm 命名空间收缩需要迁移两件**既有**测试的夹具，
 #    故在两件产品测试（tests/security/permission-grants.test.ts 等）上破例；已获 L1 明示批准。
+# 🔴 `memory/notes/**` 属交付配套件（memory/notes/AGENTS.md · 裁定 168-C）＋ 铁律 49（非平凡变更须引
+#    四态 Note）⇒ 由门禁触发，不是写集扩张；本卡 note = 2026-10-27-731-knowledge-scope-wiring.md。
 writeset:
   - .claude/claims/731.yaml
+  - memory/notes/proposed/2026-10-27-731-knowledge-scope-wiring.md
   - packages/engine-auth/src/permission-grants.ts
   - packages/engine-auth/src/index.ts
   - src/init/preset-loader.ts

@@ -432,7 +432,9 @@ interface FilterCondition {
 function knowledgeScopeConditions(role: string): FilterCondition[] {
   const decl = resolveRoleKnowledgeScope(role);
   if (decl.degraded) {
-    // I-C6: fail-closed 到"看不到任何知识"，而不是"看不到限制"
+    // I-C6: fail-closed 到"看不到任何知识"，而不是"看不到限制"。
+    // 🔴 刻意**只**给这一条最小拒绝型：`IN []` 对每一行恒 false，已使 deny 的 NOT_EQ 冗余；
+    //   （内容坏时 deny 列表本身可能就是不可信的，少派生一条条件 = 少一个"看起来生效"的假象。）
     return [{ field: SCOPE_FIELD, operator: 'IN', value: [] }];
   }
   if (!decl.declared || decl.scopeIds.length === 0) {
