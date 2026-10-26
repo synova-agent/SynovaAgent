@@ -1,0 +1,148 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1047,
+  "patch_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "author": "win-cto-m3-session",
+  "reviewer": "rereview-verifier-fresh-session",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "①-CI运行身份与任务粒度",
+      "cmd": "GET http://192.168.1.6:3000/api/v1/repos/synova-agent/SynovaAgent/actions/runs?limit=10 ; GET .../actions/runs/2099/jobs ; GET .../pulls/1045",
+      "result": "pass",
+      "evidence": "run 2099: head_sha=af3065850 event=pull_request status=completed conclusion=success（title='docs(#695): M3 独立复核回执'）; jobs total_count=1 job_id=2167，steps=14，全部 completed/success; PR1045 merged=True merge_commit=ec072853f6f0e49b9d1b2a05273c619c4382f0c8 head=af3065850 base=local-main。材料所述 run/job 与步骤数均属实。"
+    },
+    {
+      "id": "①j-契约测试确实全量真跑（非『不适用』）",
+      "cmd": "GET .../actions/jobs/2167/logs -o log（52,392 B）; 去 ANSI 后数 'tests/contract/*.test.ts' 与 Test Files/Tests 汇总行",
+      "result": "pass",
+      "evidence": "日志实得 'Test Files 11 passed (11)' / 'Tests 92 passed (92)'，去重后 11 个 contract 文件：swallow-ratchet(3)/contract-store(4)/conformance/meta(9)/storage-backend.conformance(5)/time-injection(10)/l4-contract(13)/contract-gate(4)/compute-registry(7)/assert-never(12)/llm-failover(17)/clock-injection(8)。⇒ 材料『①j 真跑全量、不是不适用』成立；但其『10 个文件/合计 84 例』清单漏 clock-injection(8)，见 findings。"
+    },
+    {
+      "id": "④-门禁复现器确有显式条件跳过理由",
+      "cmd": "同日志 grep '条件跳过|复现器'",
+      "result": "pass",
+      "evidence": "日志原文：'ℹ️  条件跳过（变更集未触碰 工作流/复现器/夹具）—— <1s'。与材料（一）③④ 行一致。"
+    },
+    {
+      "id": "①g-测试义务闸脚本真跑且内部显式 SKIP",
+      "cmd": "同日志 grep 'triviality|TEST-OBLIGATIONS'",
+      "result": "pass",
+      "evidence": "逐字命中材料所引四行：'ℹ️  base=gitea/local-main mb=616fb3f6c374 head=af3065850aee manifest=tests/contract/triviality-manifest.yaml baseline=470 changes=3 src_changes=0' / 'modules=7 legacy=470 untriaged=0' / 'SKIP: 无 src/** 变更（base=616fb3f6c374）' / 'TEST-OBLIGATIONS: SKIP base=616fb3f6c374'。"
+    },
+    {
+      "id": "组9-块级 paths：CI 绿、Windows 红（复现）",
+      "cmd": "本地 bash scripts/control-tower/check-block-paths.sh ; 对照 CI 日志行 23-25",
+      "result": "pass",
+      "evidence": "本地 exit 2：'❌ 门禁判不了（exit 2）：import 真源失败：Only URLs with a scheme in: file, data, and node are supported ... Received protocol 'd:''；CI 日志：'✅ 块级 paths 对账通过：14 块逐块一致（快照 === items.paths 并集，含顺序）' 与 '✅ 块级 paths 对账（exit 0：一致）'。⇒ 材料『CI 通过 / Win 侧 exit 2』两侧均属实。"
+    },
+    {
+      "id": "④-判别力 M1..M6 六项必红（隔离副本独立复现，非采信材料）",
+      "cmd": "C:/.../Temp/m3-rr/repo = git archive HEAD af3065850 + node_modules junction；逐处 sed 变异后 npx vitest run tests/acceptance/mvp1-m3-domain-chain.test.ts；每处前从 pristine 还原（未触碰被审工作树）",
+      "result": "pass",
+      "evidence": "基线 7 passed(7) exit0。M1（:33 去 '- totalOpEx'）2 failed/5 passed，'AssertionError: expected 1 to be close to 0.9, received difference is 0.09999999999999998'；M2（:143 if(false) writeMetricReadings）2F/5P，'expected +0 to be 4' + 'trends 应含 CASH-FLOW-NET-MARGIN: expected undefined to be defined'；M3（:179 momPrev>=0）1F/6P，'expected false to be true'；M3b（:282 String(val+1)）1F/6P，'expected 30.3 to be 30'；M4（:57 去 export listDecisionRows）1F/6P，'TypeError: listDecisionRows is not a function'，失败落在判据④b；M5（goal-lifecycle 去 @deprecated）1F/6P，'@deprecated 应为文件头 JSDoc 标注（去掉 ⇒ 必红）: expected null not to be null'；M6（pkb-lifecycle :169 status implemented）1F/6P，'expected { calibrated: +0, …(1) } to deeply equal { calibrated: +0, …(1) }'。⇒ 规格 §4.2 六项反例 6/6 必红成立。"
+    },
+    {
+      "id": "④-cost 轴（M7）独立复现——应为绿",
+      "cmd": "同隔离副本：cash-flow-sentinel.ts:33 去掉 '- totalCost' 后跑同一验收件",
+      "result": "pass",
+      "evidence": "'Test Files 1 passed (1)' / 'Tests 7 passed (7)'，exit 0，无任何断言失败。⇒ 材料（二）§④.2『cost 轴无判别力、如实列为未覆盖、不回填』的自我判定为真；M1 能红只因 opex 非零，不能反推 cost 已覆盖。"
+    },
+    {
+      "id": "④c-导出缺失边界（材料引 M4 有误；另行 M8 复现该边界）",
+      "cmd": "M8：src/growth/goal-lifecycle.ts:135 'export async function closeGoal(' → 'async function closeGoal(' 后跑验收件",
+      "result": "pass",
+      "evidence": "M8 ⇒ 1 failed/6 passed，失败落在判据④c：'AssertionError: expected 'undefined' to be 'function''。而 M4 的实测失败落在判据④b（listDecisionRows）。⇒『④c 导出缺失 ⇒ 必红』这一边界为真，但材料把证据记到 M4 上是错引（见 findings）。"
+    },
+    {
+      "id": "§4.4-边界值清单的实际覆盖与缺口",
+      "cmd": "读 tests/acceptance/mvp1-m3-domain-chain.test.ts 全 374 行；grep 'days=' ；核 L268-289 / L310-328 / L326-328",
+      "result": "pass",
+      "evidence": "days 仅 2 次且均为 days=7（无缺省/0/1/负值/超大）；时序空表与『同指标多次观测』无断言；循环输入 空序列(L268-271)/单点(L273-274)/零分母(L276-281)/负值(L283-289) 4/4 有断言；④b 仅 1 行(L312) + 读侧无 queryEdges(L326-328) 有降级断言。⇒ 材料自报的『days 未覆盖 / 空表与多行未覆盖』与实测一致（仅行数一处表述含糊，见 findings）。"
+    },
+    {
+      "id": "DSH-12 项：第 6 项确缺、N/A 判定有效、契约头存在",
+      "cmd": "grep '一个分离' 测试件；git diff --numstat 616fb3f6c af3065850 -- src ；读 L8-L15/L17-L26",
+      "result": "pass",
+      "evidence": "'一个分离' 0 命中 ⇒ 第 6 项（设计哲学一句）确实缺失（材料自报『缺』并要求裁，非沉默放过）。变更集 3 文件 251 insertions/26 deletions，其中 src/ 0 行（numstat 空）⇒ 第 2/4/8 项『不适用』成立。L9-L12 有 @input/@output/@exit/@degraded（另 @not-here）⇒ 第 1 项成立；出错即 throw（L57/L131/L150）⇒ 第 3 项成立。"
+    },
+    {
+      "id": "代码品味-6 维独立复评（重点核维度 4）",
+      "cmd": "grep -cE 'as any|as never|as unknown as' 测试件；统计 expect( 与带 message 的调用；核 src/server.ts:399 与测试注入",
+      "result": "pass",
+      "evidence": "as any/as never/as unknown as = 0 ⇒ 维度 6 的 A 成立；EXP_* 具名常量 + 手算注释 ⇒ 维度 2 的 A 成立；测试注入裸 SqliteGraphStore，生产在 server.ts:399 'wrapStandardKeyGuard(graphStore)' ⇒ 维度 3 的 B 成立。维度 4：63 个 expect( 中仅 6 个带 message（≈10%，L224/L288/L340/L341/L355/L369）⇒ 材料理由『断言基本带 message』不成立，我判 B 而非 A（全 6 维无一维 C）。"
+    },
+    {
+      "id": "DS-8-类型检查与 CI 终态（pending=0）",
+      "cmd": "npx tsc --noEmit --pretty false（被审工作树，只读）；GET .../commits/af3065850/status?limit=1000",
+      "result": "pass",
+      "evidence": "tsc exit 0，输出 0 行（/tmp/m3-tsc.log 为空）。commit status：state=success total_count=2，两条 context 均 success（'local-gates / gates (push)'、'local-gates / gates (pull_request)'），无 pending/failure。日志另证 '✅ 全部 12 组通过'、'架构检查: 全部通过 ✅'、①d '结果: 6 通过, 0 失败'、CC1 '违规 82 文件 / 110 type ＋ 30 值（棘轮内 140｜新增 0）'、③ 'Test Files 1 passed (1) / Tests 7 passed (7)'。"
+    },
+    {
+      "id": "指纹与 PR 载体（回执自身不改变指纹）",
+      "cmd": "printf '' | shasum -a 256 ; GET .../pulls/1047",
+      "result": "pass",
+      "evidence": "空串 sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855，与 patch_fingerprint 逐字相同。GET /pulls/1047 返回 404 ⇒ PR 1047 尚未创建；本 PR 只新增本回执，按 §2 指纹定义排除 docs/synova/reviews/** 后 diff 为空，故指纹=空串 sha256 成立。复核操作前被审工作树 git status --porcelain 为 0 行；写本回执后仅多出本文件（'?? docs/synova/reviews/1047.e3b0c44298fc.json'），未改任何其他文件、未 commit/push。HEAD=af3065850，gitea/local-main=ec072853f（PR1045 merged=True，merge_commit=ec072853f）。"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warn",
+      "where": "M3 复审材料（二）§④ 矩阵 M4 行 + §⑤.4『④c』行",
+      "what": "材料称 ④c『导出缺失』由 M4 变异覆盖（『以变异证（M5／M4）』）。实测 M4 改的是 src/l4/decision-ledger-readback.ts（④b 读侧导出），其失败落在判据④b（TypeError: listDecisionRows is not a function），与 ④c（goal-lifecycle 三导出）无关。④c 导出缺失这一边界本身为真——我用 M8（去 export closeGoal）复现为判据④c 红——但材料引用的证据是错的，须改引 M8 或补跑同型变异。"
+    },
+    {
+      "severity": "warn",
+      "where": "M3 复审材料（一）① 触发矩阵『①j』行",
+      "what": "材料称日志实见『10 个』contract 测试文件，逐文件例数 3+4+9+5+13+4+7+12+17+10=84。日志实为 11 个文件 / 92 例：漏 clock-injection.test.ts（8 例）。『①j 真跑全量、不是不适用』的结论成立且比材料所述更强，但清单与合计与日志不符，且 84≠日志自报的 92。"
+    },
+    {
+      "severity": "warn",
+      "where": "M3 复审材料（一）① 触发矩阵『③ 增量测试』行",
+      "what": "材料写『Test Files 1 passed (1)（本件）｜另 11 passed (11)』。日志中 ③ 本步只有 'Test Files 1 passed (1)' / 'Tests 7 passed (7)'；『11 passed (11)' 是同一次 job 里 ①j 契约测试的汇总行（Tests 92 passed）。属跨步骤误引，结论（③ 跑到本件）本身成立。"
+    },
+    {
+      "severity": "warn",
+      "where": "M3 复审材料（一）① 触发矩阵『①i』行",
+      "what": "材料标『✅ 触发｜只判变更集｜step success』。日志实际为条件跳过：'⏭  SKIP: 无相关变更（扫描面 src/agent, src/tools, vendor/pandoc-skill 内 0 个文件）' 与 'TOOL-ARGS-DELTA: SKIP base=616fb3f6c374（无相关变更）'。按该表对 ①e/①g/④ 的同一标准，此格应标『条件跳过（有显式理由）』。"
+    },
+    {
+      "severity": "warn",
+      "where": "M3 复审材料（一）③ 代码品味 6 维『维度 4 错误可见』行",
+      "what": "材料给 A，理由为『断言基本带 message』。实测测试件 63 个 expect( 中仅 6 个带 message（约 10%），且多数 expect 无自定义文案。自定义文案虽非错误可见性的唯一来源（vitest 仍打印 expected/received），但该理由不成立，我判该维 B。全 6 维我未发现应评 C 者。"
+    },
+    {
+      "severity": "info",
+      "where": "M3 复审材料（一）抬头『取证命令』",
+      "what": "材料称 job 2167 日志 46,554 B。同一端点两次下载均为 52,392 B（sha256=0726ED43DC558AE267D516B1A1E258F1488C47E20327BE761C97C3EA1A68944A，确定性），去 ANSI 后 50,601 B。该数字不可复现；不影响日志内容层面的任何结论。"
+    },
+    {
+      "severity": "info",
+      "where": "M3 复审材料（一）② DSH 第 5 项",
+      "what": "材料称『已知限制 6 条』。测试件 L17-L26 实为 5 条 bullet（L18 数据入口 / L19-23 cost≡0 / L24 ④d / L25 ④c / L26 变异说明）。项数与证据不符（性质为笔误，不是掩盖）。"
+    },
+    {
+      "severity": "info",
+      "where": "M3 复审材料（二）§④ 矩阵 M5 行",
+      "what": "材料称变异点 goal-lifecycle.ts:7。实测 @deprecated 标注在 L6（L7 为空行）；变异本身可红（我已复现），仅行号引用有误。"
+    },
+    {
+      "severity": "info",
+      "where": "M3 复审材料（一）① 触发矩阵『①e』行",
+      "what": "『G5 显式判不适用』确为日志一行（'ℹ️  G5 覆盖率/重复率: 不适用（变更集无 src/**.ts；变更集 3 文件）'），但同一步真实状态是覆盖率生成失败（'::warning::①e 覆盖率生成失败'）⇒ 'G5 未武装 … 未判，不计入 rules'。材料在 ①.2 已自报该 fail-open（诚实披露），但矩阵行只写『不适用』会让只读矩阵的人以为 G5 真的判过。建议两态并写。"
+    },
+    {
+      "severity": "info",
+      "where": "M3 复审材料（二）§⑤.4『行数』与『④b』行",
+      "what": "『空表与多行未覆盖』表述易混：本次真链路实际写入 4 行（L202 rows.length=4），真正未覆盖的是『同指标多次观测』与『时序空表』；另 ④b 只测 1 行，0 行/多行缺口只在『行数』行间接提到，未在『④b』行显式列。建议按观测维度改写，避免读者误判。"
+    },
+    {
+      "severity": "info",
+      "where": "M3 复审材料（一）①.1 两条软提示（组9 / CC1『新增 473 条』）",
+      "what": "本地 pre-commit 提交时的 12 组结果与 CC1 本地伪信号『新增 473 条』属历史/本地态，我未复跑；已复核其 CI 对应面（'✅ 全部 12 组通过'、组9 CI 通过、组9 Windows exit 2 复现）。此项如实登记为『未独立核』，不是已核实。"
+    }
+  ],
+  "issued_at": "2026-10-26T21:46:35+08:00",
+  "tool": "独立复评（零上下文 fresh session）：Gitea API 取 CI run/job/日志原文 + git-archive 隔离副本逐项变异复现（未改被审工作树）+ 本地门禁复跑 + 测试件静态核对；按 pr-review 五步精神输出，receipt 字段按 docs/synova/reviews/README.md §1/§2"
+}
