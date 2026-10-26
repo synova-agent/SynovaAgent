@@ -1,0 +1,88 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1052,
+  "patch_fingerprint": "sha256:26b764e8d53843ee（口径：git diff gitea/local-main...HEAD | shasum -a 256；head=f2d712d4b；指定文件名后缀 70b55a5ba414 与本实测不一致，见 findings info-2）",
+  "author": "gate-422-implementing-session",
+  "reviewer": "independent-reviewer-fresh-session",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "①-范围与撞车",
+      "cmd": "git rev-parse --abbrev-ref HEAD; git merge-base --is-ancestor gitea/local-main HEAD; git diff --name-status gitea/local-main...HEAD",
+      "result": "pass",
+      "evidence": "branch=ct/gate-422-robustness HEAD=f2d712d4b base=9b0b1f935 ancestor rc=0；14 件变更（5 脚本+4 测试+豁免+registry+note+claims×2）；local-gates.yml 零差异 ✓（摘出理由见 warn-1）"
+    },
+    {
+      "id": "②-四套件全绿",
+      "cmd": "bash tests/control-tower/check-gate-protection.test.sh; bash tests/control-tower/check-merge-conditions.test.sh; bash tests/control-tower/check-quality-delta.test.sh; npx vitest run tests/control-tower/block-paths-core.test.ts",
+      "result": "pass",
+      "evidence": "27 通过 0 失败 / 14 通过 0 失败 / 99 通过 0 失败 / Tests 34 passed (34)，四套 EXIT=0——与 PR 正文声明逐字一致"
+    },
+    {
+      "id": "③-变异闭环亲验（复核方独立变异，非复述作者）",
+      "cmd": "cp scripts/control-tower/check-quality-delta.py /tmp/qd-backup.py; <删除 E_COV_UNARMED print+return 2 两行>; bash tests/control-tower/check-quality-delta.test.sh; cp /tmp/qd-backup.py 回还原; 重跑; git status --porcelain",
+      "result": "pass",
+      "evidence": "变异后 EXIT=1 且红在「G5-14 声索武装+src+无摘要 ⇒ exit 2 — exit=0 期望 2」（98/1）；cp 还原后 EXIT=0（99/0）；终态 git status 空。判别力实证"
+    },
+    {
+      "id": "④-E_OPENPRS_EMPTY 落位",
+      "cmd": "grep -n E_OPENPRS_EMPTY scripts/control-tower/check-merge-conditions.sh + 函数上下文",
+      "result": "pass",
+      "evidence": "仅 1 处（:648），位于 cond2_overlap() 内 scan_open_prs 之后、diff_files 之前＝判定输入断言点（非别处）；测试 boundary L 断言 exit 2+点名+assert_not_has '②=ok'"
+    },
+    {
+      "id": "⑤-sourceImportSpec 接线",
+      "cmd": "grep -n sourceImportSpec scripts/control-tower/block-paths-core.ts scripts/control-tower/gen-block-paths.ts",
+      "result": "pass",
+      "evidence": "core:59 export（JSDoc 四契约 @input/@output/@exit/@degraded 齐；纯函数反斜杠归一+pathToFileURL）；gen:29 import + :84 真实调用（(await import(sourceImportSpec(...)))，非仅 import）"
+    },
+    {
+      "id": "⑥-豁免件三段式",
+      "cmd": "cat gate-exemptions/2026-10-26-cto-422-gate-robustness.md",
+      "result": "pass",
+      "evidence": "13 行全部『路径 — 理由（≥10字，含修法与机制） — 裁 422』三段式；自覆盖+DOC-0305 登记行在 DOCS-REGISTRY.yaml（仅追加）"
+    },
+    {
+      "id": "⑦-三态 typed error 点名",
+      "cmd": "grep E_OPENPRS_EMPTY/E_COV_UNARMED/_git_rel 于生产件与测试件",
+      "result": "pass",
+      "evidence": "E_OPENPRS_EMPTY=die_degraded+测试断言点名；E_COV_UNARMED=degraded()+print 'QUALITY-DELTA: ERROR E_COV_UNARMED'+测试点名断言（变异输出亲见）；_git_rel=纯函数（归一语义 JSDoc，无错误码属正确形态）；两处均 exit 2 语义（判不了≠业务红）"
+    },
+    {
+      "id": "⑧-claims/登记/决策Note",
+      "cmd": "head claims 1048/1049; git diff DOCS-REGISTRY.yaml; ls memory/notes/implemented/2026-10-26-422-gate-robustness.md",
+      "result": "pass-with-finding",
+      "evidence": "claims×2 写集声明在（1049 写集含 local-gates.yml——与实物零差异不符，见 warn-1）；DOC-0305 active；决策 Note 在（铁律 49）"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warn",
+      "where": "PR #1052 正文 R2-b 行 + .claude/claims/1049.yaml writeset + commit f2d712d4b",
+      "what": "『local-gates ①e else 分支传 flag』未在本 PR：commit 自述摘出原因是与 #943 同文件硬重叠按串行规则让线（正当）。但 ⇒ #1049 Done『src∧无摘要⇒exit 2』在 CI 实际路径尚未生效（引擎+测试已落地，CI 接线待 #943 后续）。且 PR 正文与 claims/1049 写集两处声明未同步摘出事实——声明与实物不符（#1044 勘误同病）。建议：合并前修 PR 正文与 claim；#1049 卡关闭评论须注明『CI ①e 接线随 #943 串行续接』，否则 Closes #1049 与 Done 全落地不符"
+    },
+    {
+      "severity": "warn",
+      "where": "PR 正文『4+4 件』/父令『10 件』 vs 实测 14 件",
+      "what": "计数口径与实物不符（多出 gen-block-paths.ts/DOCS-REGISTRY/memory note/claims 第2件——内容均合理且豁免件全列，纯计数病）"
+    },
+    {
+      "severity": "info",
+      "where": "R1 全部",
+      "what": "真实 Windows 行为 Mac 不可复现——以 GP_SELFTEST_REL 同源自检缝（win/posix 两组）+sourceImportSpec 纯函数单测锚定（正文已知限制如实声明）；Win 侧下次本地跑门禁即真实验收"
+    },
+    {
+      "severity": "info",
+      "where": "本回执文件名",
+      "what": "指定后缀 70b55a5ba414 无法由任何可复算口径得出（diff 三点/两点/format-patch/head/tree 均不符）；fingerprint 字段用实测 26b764e8d53843ee+口径命令，防篡改语义不受影响"
+    },
+    {
+      "severity": "info",
+      "where": "scan_open_prs 测试缝",
+      "what": "SYNO_MERGE_COND_TEST_NO_PRS 生产恒空（env 默认不设）⇒ 不触生产路径；缝行为=跳过拉取⇒prs.tsv 缺失⇒cond2 断言触发，与 D-10 场景同构"
+    }
+  ],
+  "issued_at": "2026-10-27T00:52:24+08:00",
+  "tool": "fresh-session 独立复核（node v22.23.2；全部检查现场跑；变异用 cp 备份法未用 git checkout）"
+}
