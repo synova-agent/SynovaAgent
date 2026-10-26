@@ -1248,3 +1248,11 @@ documents:
     status: active
     owner: CTO
     note: "裁422-R1/R2 门禁健壮性豁免：Windows 路径归一＋判不了必须 exit 2。"
+
+  # ---- P3 2026-10-27：#825 M7 前置缺口补齐 · PR1（D5 判据件改靶；裁 424；D2 登记要求）----
+  - id: DOC-0306
+    type: decision
+    path: gate-exemptions/2026-10-27-825-m7-probe.md
+    status: active
+    owner: P3
+    note: "#825 PR1（D5 判据件改靶，#713）：scripts/control-tower/probe-knowledge-scope.ts 受保护路径豁免（裁 424 第 3 条，边界冻结＝三态退出码/存在性闸/判别力自检逐字保留）；含 gate-exemptions 自覆盖行与 DOCS-REGISTRY 自登记行。"
