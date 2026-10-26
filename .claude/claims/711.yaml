@@ -8,7 +8,7 @@ writeset:
   - .claude/claims/711.yaml
   - tests/extensions/departments-dual-engine.test.ts
 done:
-  - verify: npx vitest run tests/extensions/departments-dual-engine.test.ts # 10 passed（行 A 同源 5 例 ＋ 行 B 双引擎 5 例）
+  - verify: npx vitest run tests/extensions/departments-dual-engine.test.ts # 10 passed（行 A 6 例 ＋ 行 B 4 例；--reporter=verbose 计数）
   - verify: npx vitest run tests/extensions tests/presets # 回归 0 失败（numTotalTests／numPassed／numPending 三数进回执）
   - verify: python3 scripts/control-tower/claim_store.py --check 711 --root . # claim 结构合规（writeset 非空、done 每条带 verify）
 note: "#711 ②上下文一致（两岗位 resolveContext 读同一 departments 真源：改共享件⇒两岗位同一轮同时变、解析值逐字等于各自驱动文件的同一 key 行）＋ 双引擎分立可观测（feedback-collector 写点 :427-441 INSERT／独立读点 :470 queryFeedback 可计数、degraded 可见）。仅新增判据件 1 件。"
