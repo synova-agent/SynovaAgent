@@ -146,7 +146,13 @@ else
   for pr in $(grep -oE '#[0-9]{2,4}' "$DOC" | tr -d '#' | sort -u); do
     st=$(curl -s -H "Authorization: token $TOKEN" "https://api.github.com/repos/tangbaobao520/SynovaAgent/pulls/$pr" 2>/dev/null \
       | python3 -c "import json,sys;d=json.load(sys.stdin);print(d.get('state'),d.get('merged'))" 2>/dev/null || echo "? ?")  # D520: 平台敏感命令豁免声明（见 PLATFORM-CHECKLIST.md）
-    echo "  PR #${pr} → ${st}（派单若声称「已合」须与此一致）"
+    if [ -z "$st" ] || [ "$st" = "? ?" ]; then
+      # #1000-③：取数失败 = 判不了 ⇒ fail-closed（原来静默放过 ⇒ 假绿）
+      echo "  ❌ PR #${pr} 查询失败（网络/token）——记 FIND=1，不当作通过（fail-closed）"
+      FIND=1
+    else
+      echo "  PR #${pr} → ${st}（派单若声称「已合」须与此一致）"
+    fi
   done
 fi
 

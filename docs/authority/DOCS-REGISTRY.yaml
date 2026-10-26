@@ -1226,3 +1226,11 @@ documents:
     status: active
     owner: CTO
     note: "CI④ 复现器自检 report-only，带回滚开关。"
+
+  # ---- CTO 2026-10-26：#1042 #1000③ 修复 ----
+  - id: DOC-0303
+    type: decision
+    path: gate-exemptions/2026-10-26-cto-1042-1000-fix.md
+    status: active
+    owner: CTO
+    note: "pre-dispatch PR 查询失败 fail-closed。"
