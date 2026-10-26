@@ -1131,7 +1131,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
-          OUT="$(python3 scripts/control-tower/check-required-contexts.py --api-check --allow-degraded --verbose 2>&1)"; rc=$?
+          # 裁 421（K3 诊断 §1.3）：原写法在 `bash -e` 下失败路径是死代码——
+          #   赋值命令失败即触发 errexit，rc=$?/printf/落盘全被跳过 ⇒ CI 日志里看不到失败原因。
+          #   改为 errexit 安全捕获：失败原因必打印、/tmp/required-contexts-check.out 必落盘。
+          if OUT="$(python3 scripts/control-tower/check-required-contexts.py --api-check --allow-degraded --verbose 2>&1)"; then
+            rc=0
+          else
+            rc=$?
+          fi
           printf '%s\n' "$OUT"
           printf '%s\n' "$OUT" > /tmp/required-contexts-check.out
           exit "$rc"

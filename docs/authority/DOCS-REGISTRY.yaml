@@ -1138,3 +1138,11 @@ documents:
     status: active
     owner: CTO
     note: "干净合并态跳过质量增量闸（D513 同型）。"
+
+  # ---- CTO 2026-10-26：#1031 Gate Integrity A1 根因修复豁免件（裁 421）----
+  - id: DOC-0292
+    type: decision
+    path: gate-exemptions/2026-10-26-cto-1031-a1-fix.md
+    status: active
+    owner: CTO
+    note: "检查器迁 rulesets + baseline 重放 8 条 + ci.yml errexit 安全捕获。"
