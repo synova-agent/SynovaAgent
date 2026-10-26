@@ -1178,3 +1178,11 @@ documents:
     status: active
     owner: CTO
     note: "组5/6/9/10/13 降级 + CI ④ report-only；两态证据见 Note。"
+
+  # ---- CTO 2026-10-26：#1036 回滚 #1035 豁免件 ----
+  - id: DOC-0297
+    type: decision
+    path: gate-exemptions/2026-10-26-cto-1036-revert-409.md
+    status: active
+    owner: CTO
+    note: "回滚组级降级，恢复 853baaca4 门禁语义。"
