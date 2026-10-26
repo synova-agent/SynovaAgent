@@ -1202,3 +1202,11 @@ documents:
     status: active
     owner: CTO
     note: "裁 409 组级降级 + CI④ report-only；夹具已降级感知（#1037）。"
+
+  # ---- CTO 2026-10-26：#1039 回滚 #1038 ----
+  - id: DOC-0300
+    type: decision
+    path: gate-exemptions/2026-10-26-cto-1039-revert2.md
+    status: active
+    owner: CTO
+    note: "回滚组级降级，恢复 fd478083b 语义。"
