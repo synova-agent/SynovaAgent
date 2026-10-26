@@ -1,0 +1,8 @@
+writeset:
+  - .claude/claims/1029.yaml
+  - scripts/pre-commit-check.sh
+  - gate-exemptions/2026-10-26-cto-1029-merge-skip.md
+  - docs/authority/DOCS-REGISTRY.yaml
+done:
+  - verify: bash tests/control-tower/precommit-groups-injection.test.sh
+note: "#1029 质量增量闸：干净合并态跳过。"

@@ -1130,3 +1130,11 @@ documents:
     status: active
     owner: CTO
     note: "7 个夹具补 @requires python3；FIXTURE-REQUIRES: OK。"
+
+  # ---- CTO 2026-10-26：#1029 质量增量闸合并态豁免（裁 421）----
+  - id: DOC-0290
+    type: decision
+    path: gate-exemptions/2026-10-26-cto-1029-merge-skip.md
+    status: active
+    owner: CTO
+    note: "干净合并态跳过质量增量闸（D513 同型）。"
