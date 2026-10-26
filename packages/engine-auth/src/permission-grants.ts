@@ -643,7 +643,7 @@ function resolveGrantsUnsafe(
       try {
         isFile = existsSync(abs) && statSync(abs).isFile();
       } catch {
-        isFile = false;
+        isFile = false; // stat 竞态 ⇒ 视为不存在（父包缺失 = 正常回落，非错误；与上方候选包判定同口径）
       }
       if (!isFile) continue;
       const raw = readRawGrants(abs, reasons);
