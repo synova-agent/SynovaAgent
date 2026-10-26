@@ -57,15 +57,25 @@ git -C <repo> fetch -q gitea
 git -C <repo> worktree add -q --detach <wt> gitea/local-main
 cd <wt>
 
-# 1) 校验一份矩阵（anchor = 被验收 commit；--repo 缺省 .；--anchor 缺省取矩阵 anchor）
+# A1 默认：主线锚样例（anchor 已并入 local-main；--repo 缺省 .；--anchor 缺省取矩阵 anchor）
+python3 scripts/control-tower/check-acceptance-matrix.py docs/synova/acceptance/1048.matrix.yaml --repo . --anchor 1ca0d4dfc
+
+# A2 复跑机械 11 项：矩阵声明 vs 机械事实（与 plain 同一判据，不做第二套实现）
+python3 scripts/control-tower/check-acceptance-matrix.py docs/synova/acceptance/1048.matrix.yaml --repo . --anchor 1ca0d4dfc --verify
+
+# A3 机器可读（stdout 仅一份 JSON；人读行全部抑制）
+python3 scripts/control-tower/check-acceptance-matrix.py docs/synova/acceptance/1048.matrix.yaml --repo . --anchor 1ca0d4dfc --json \
+  | python3 -c "import json,sys;d=json.load(sys.stdin);print(sorted(d));print(d['summary'])"
+
+# A1b 回溯演练（M4-T1 @ 5553bb95c）——**回溯演练，不得作默认**：
+#   该 anchor 未并入 local-main（见 Known Limitations 12），只用于验证校验器点名历史缺口的能力
 python3 scripts/control-tower/check-acceptance-matrix.py docs/synova/acceptance/1053.matrix.yaml --repo . --anchor 5553bb95c
 
-# 2) 复跑机械 11 项：矩阵声明 vs 机械事实（与 plain 同一判据，不做第二套实现）
-python3 scripts/control-tower/check-acceptance-matrix.py docs/synova/acceptance/1053.matrix.yaml --repo . --anchor 5553bb95c --verify
+# D1 降级自证：anchor 不可解析 ⇒ **exit 2**（判不了 ≠ 红；末行 `MATRIX: UNJUDGED E_ANCHOR_MISMATCH`）
+python3 scripts/control-tower/check-acceptance-matrix.py docs/synova/acceptance/1048.matrix.yaml --repo . --anchor deadbeef0; echo "exit=$?"
 
-# 3) 机器可读（stdout 仅一份 JSON；人读行全部抑制）
-python3 scripts/control-tower/check-acceptance-matrix.py docs/synova/acceptance/1053.matrix.yaml --repo . --anchor 5553bb95c --json \
-  | python3 -c "import json,sys;d=json.load(sys.stdin);print(sorted(d));print(d['summary'])"
+# D2 降级自证：`--repo` 指向不存在的路径 ⇒ **exit 2**
+python3 scripts/control-tower/check-acceptance-matrix.py docs/synova/acceptance/1048.matrix.yaml --repo /nonexistent/synova-1054 --anchor 1ca0d4dfc; echo "exit=$?"
 ```
 
 环境：Windows／macOS／Linux 同一实现（纯标准库，见 F1）。Windows 上 `python3` 在 PATH（实测 3.13.x）；跑 `.sh` 用 Git 自带 bash（`.dsh/skills/windows-compat/SKILL.md`）。UTF-8 强制（D732）：脚本内 `sys.stdout.reconfigure(encoding="utf-8")`，shell 侧可用 `PYTHONIOENCODING=utf-8`。
@@ -409,7 +419,8 @@ VERIFY <id> declared=<status> mech=<verdict> consistent=<yes|no>
 | File | Role |
 |---|---|
 | `docs/synova/acceptance/README.md` | **本件**：`acceptance-matrix/v1` 格式权威（F1–F12 ＋ 边界值 ＋ 已知限制） |
-| `docs/synova/acceptance/1053.matrix.yaml` | 回溯样例（M4-T1 @ `5553bb95c`），填满 23 行；A1/A4 的被测对象 |
+| `docs/synova/acceptance/1048.matrix.yaml` | 主线锚样例（#1048/#1049 门禁健壮性批 @ `1ca0d4dfc`，已并入 `local-main`），填满 23 行；**A1 默认被测对象** |
+| `docs/synova/acceptance/1053.matrix.yaml` | 回溯样例（M4-T1 @ `5553bb95c`），填满 23 行；**A1b 回溯演练对象（不得作默认）** |
 | `scripts/control-tower/check-acceptance-matrix.py` | 三态校验器（T2）：子集解析 ＋ F2/F3 校验 ＋ 机械 11 项 ＋ `--verify`／`--json` ＋ 降级日志 |
 | `tests/control-tower/check-acceptance-matrix.test.sh` | 配对测试（T3）：绿基线 ＋ M1–M5 改坏必红 ＋ D1–D2 降级 exit 2（mktemp 沙箱，零网络） |
 
@@ -436,8 +447,9 @@ VERIFY <id> declared=<status> mech=<verdict> consistent=<yes|no>
 8. **URL 类 evidence 不联网**：只检查"含 anchor 前 7 位 hex"这一字符串条件 ⇒ 不验可达性／状态码；7 位前缀可被伪造或碰撞（**有意**：P0 不允许校验器发网络请求）。
 9. **T-8 只数小节数**：`^## ` ≥5 是结构计数；`AGENTS.md` 存在但内容空洞照样绿。
 10. **子集 YAML 不支持真实 YAML 的多行字符串／块序列／锚点别名**：超出子集一律 `E_MATRIX_SCHEMA`（有意 fail-closed，不猜）；复杂值请改成单行或加双引号。
-11. **本目录的台账登记在本批补齐**：`docs/AGENTS.md` 要求新文件登记 `docs/authority/DOCS-REGISTRY.yaml`；本批经 L1 批准**扩写集 1 件**（`docs/authority/DOCS-REGISTRY.yaml`），由登记件（T5）落 `docs/synova/acceptance/README.md` 与 `docs/synova/acceptance/1053.matrix.yaml` 两条 `status: active` 登记。登记条目不改变本件任何判据；若两者口径冲突，**以本件为准**。
-12. **样例 anchor `5553bb95c` 不在 `local-main` 祖先上**（在未合并分支 `feat/1053-metric-readings-schema`）：本器只要求"anchor 在本仓可解析且内容可读"，不判"anchor 是否已并入主线"；该事实由样例／复核位如实记录，不是本件的缺陷。
+11. **本目录的台账登记在本批补齐**：`docs/AGENTS.md` 要求新文件登记 `docs/authority/DOCS-REGISTRY.yaml`；本批经 **L1 批准（Gitea #1054 评论 · 2026-10-27）**的扩写集共 **2 件**（`docs/authority/DOCS-REGISTRY.yaml` ＋ `docs/authority/WIRING-REGISTRY.yaml`），由登记件落 `docs/synova/acceptance/README.md`、`docs/synova/acceptance/1053.matrix.yaml` 与 `docs/synova/acceptance/1048.matrix.yaml` 三条 `status: active` 登记（DOC-0306／DOC-0307／DOC-0308）。登记条目不改变本件任何判据；若两者口径冲突，**以本件为准**。
+12. **回溯样例 anchor `5553bb95c` 不在 `local-main` 祖先上**：含该提交的分支是 `feat/m4-1051-closeout`（及 `cto/t1-c4`），**不是** `feat/1053-metric-readings-schema`（其 tip `b6ce2d44e` 不含该提交）——本器只要求"anchor 在本仓可解析且内容可读"，不判"anchor 是否已并入主线"；该事实由样例／复核位如实记录，不是本件的缺陷。因此 **A1 默认样例改用主线锚 `1048.matrix.yaml`@`1ca0d4dfc`**；`1053.matrix.yaml` 定位为 **A1b 回溯演练（不得作默认）**。
 13. **anchor 内容读取依赖本仓对象库**：若 anchor 指向未 fetch 的远端对象 ⇒ exit 2（判不了），此时**不是**矩阵写错。
 14. **规格内部冲突已在 F3 处裁决，本件按裁决执行**：规格 §5.1 示例写 `n/a` 的 `evidence.out: "0"`，与 §6 边界表（`out` = 仓内路径／含 anchor sha 的 URL，不存在即 `E_EVIDENCE_UNRESOLVED`）**互相冲突**；L1 2026-10-27 裁决取 **§6（判据表）** ⇒ `out` 一旦出现即强校验、`n/a` 只写 `cmd`。**这不是 F1–F12 的改动**（F2 本就写"`out` 不要求"，F3 本就无 status 例外），只是把两处规格的冲突显式记录下来，供 K3 复核时判定该取舍是否成立。
 15. **`T-1..T-8` 的序号 ≠ `.dsh/skills/dsh-code-standards` 的 `B1–B8` 表序号**：B 表是**实现标准分类**（B1 typed error／B2 config schema／B3 invariant／B4 bounds fail-loud／B5 explicit authority／B6 JSDoc／B7 design philosophy／B8 测试配对），本件 `T-n` 是**验收品味序**（按 handbook §5 列举序：`T-1` 头部契约／`T-2` typed error 带 code／`T-3` fail loud／`T-4` explicit authority／`T-5` 已知限制节／`T-6` 设计哲学一句／`T-7` 测试配对／`T-8` 长期件 README）。**引用时按本表序，勿按 B 表序套号**（例：B5 explicit authority 对应本文 `T-4`）。
+16. **`1048.matrix.yaml` 的 `changed_files` 取 13 件（原 diff 15 件去掉 `.claude/claims/1048.yaml` 与 `.claude/claims/1049.yaml` 两件认领台账）**：`T-8` 要求在 anchor 下"同一父目录下 ≥2 个变更文件"时该目录的 `AGENTS.md` 存在且 `^## ` 小节数 ≥5，而 `.claude/claims/AGENTS.md` 在 anchor 下**实测不存在**、且 `T-8` 是硬判（不满足即 exit 1）⇒ 保留这两行必红。该口径经 **L1 2026-10-27 裁定**；其余 13 件是 `git diff --name-status 9b0b1f935 1ca0d4dfc` 的真实子集（**判据未改**，只是该样例的变更集口径）。

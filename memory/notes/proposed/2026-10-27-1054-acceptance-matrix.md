@@ -1,4 +1,4 @@
-# #1054 验收矩阵机制 v1 · P0（acceptance-matrix/v1 ＋ 三态校验器 ＋ M4-T1 回溯样例）
+# #1054 验收矩阵机制 v1 · P0→P0.5（acceptance-matrix/v1 ＋ 三态校验器 ＋ 主线锚样例 1048／回溯样例 1053）
 
 > 四态：**proposed**（未过独立复核／未合并；禁读成 implemented）
 > 规格源：handbook `派单件/2026-10-27-规格-1054-验收矩阵机制-P0.md` @ `b086a0a`（§5 契约／§6 边界／§7 验收）
@@ -15,9 +15,11 @@ M4-T1 的验收实证（规格 §2.2）：声明核实 9/9 属实，但**没有*
 
 1. **格式权威** `docs/synova/acceptance/README.md`：23 行固定槽位（Q-1…Q-15、T-1…T-8）＋ `status ∈ {pass,n/a,deferred,partial}` ＋ `evidence{cmd,out}` ＋ 子集 YAML 语法 ＋ F1–F12 冻结契约 ＋ 边界值表 ＋ 已知限制。
 2. **三态校验器** `scripts/control-tower/check-acceptance-matrix.py`：0 通过／1 真红／2 判不了；机械 11 项在 anchor 上复算，语义 12 项只判齐全性（`attested`）；`--verify`（与 plain 同一实现）＋ `--json`；exit 2 写 `SYNO_GATE_DEGRADED_LOG`（D2）。
-3. **M4-T1 回溯样例** `docs/synova/acceptance/1053.matrix.yaml`（anchor `5553bb95c`）：证明校验器能点出 T-1 partial（`src/routes/sentinel.ts` 缺 `@exit`）、T-7 partial（无 committed 测试入变更集）、Q-11 partial（#943 ①e 未武装）。
+3. **M4-T1 回溯样例** `docs/synova/acceptance/1053.matrix.yaml`（anchor `5553bb95c`；**A1b 回溯演练，不得作默认**）：证明校验器能点出 T-1 partial（`src/routes/sentinel.ts` 缺 `@exit`）、T-7 partial（无 committed 测试入变更集）、Q-11 partial（#943 ①e 未武装）。
 4. **配对自测** `tests/control-tower/check-acceptance-matrix.test.sh`：绿基线 ＋ M1–M5 改坏必红 ＋ D1/D2 降级 exit 2（mktemp 沙箱、零网络）。
-5. 登记：`.claude/claims/1054.yaml`（writeset 8 条）＋ 本 note ＋ `docs/authority/DOCS-REGISTRY.yaml` 追加 2 条 ＋ `docs/authority/WIRING-REGISTRY.yaml` 追加 1 行（`declared-only`）（两项均创始人批准的**最小扩写集**：D782 D2 登记门禁要求新增 .md/.yaml 必须登记）。
+5. 登记：`.claude/claims/1054.yaml`（writeset **10 条**）＋ 本 note ＋ `docs/authority/DOCS-REGISTRY.yaml` 追加 2 条（本补单：DOC-0308／DOC-0309）＋ `docs/authority/WIRING-REGISTRY.yaml` 追加 1 行（`declared-only`）（两项均 **L1 批准（Gitea #1054 评论 · 2026-10-27）** 的**最小扩写集**：D782 D2 登记门禁要求新增 .md/.yaml 必须登记）。
+6. **主线锚样例** `docs/synova/acceptance/1048.matrix.yaml`（anchor `1ca0d4dfc`，= 已并入 `gitea/local-main` 的提交）：**A1 默认被测对象**。变更集取 **13 件**（原 diff 15 件去掉 `.claude/claims/1048.yaml`／`.claude/claims/1049.yaml` 两件认领台账）：`T-8` 要求在 anchor 下 `.claude/claims/AGENTS.md` 存在（实测不存在）且 `T-8` 为硬判 ⇒ 该两行保留必红；该口径经 **L1 2026-10-27 裁定**，其余 13 件是 `git diff --name-status 9b0b1f935 1ca0d4dfc` 的真实子集。
+7. **受保护路径豁免件** `gate-exemptions/2026-10-27-1054-gate-exempt.md`（**裁 423**，2026-10-27）：恰 4 行——校验器／配对测试／本批登记追加（DOCS-REGISTRY）／自覆盖（`gate-exemptions/**` 自我保护）。
 
 ## 依据（为什么这样做）
 
@@ -29,31 +31,36 @@ M4-T1 的验收实证（规格 §2.2）：声明核实 9/9 属实，但**没有*
 ## 生效时点
 
 **未生效**（proposed）。生效条件＝独立复核（另一会话）＋ K3 抽验 ＋ 合并到 `gitea/local-main`；本 note 与文档在合并后才可被引为"在库口径"。
+**P0.5 的由来（闭环）**：独立复核对本批给出 **BLOCK** ⇒ **裁 423**（Gitea #1054 评论 · 2026-10-27）批本补单（受保护路径豁免件 ＋ 主线锚样例 1048）⇒ 本轮即按 BLOCK 项逐条闭环（见「决定」6／7）。
 **P0 明确不接 CI／pre-commit**（规格 §3 非目标）：本批**不新增任何调用点**，"绿"只代表手动跑过。P2 的 CI report-only 属 A 类提案，需另行获准。
 
 ## 边界（零交集）
 
 - 不碰 `electron-renderer/**`、`src/**`、`tests/acceptance/**`（M4 写集，**零改动**）。
 - 不碰 `.gitea/**`、`.github/**`、`scripts/audit/**`、`.dsh/skills/**`、`.claude/skills/**`、任何现行门禁/pre-commit/hook。
-- 写集扩条共**两条**（均创始人 2026-10-27 批，各为最小追加、不改其它条目）：
-  1. `docs/authority/DOCS-REGISTRY.yaml`：仅追加本批 2 条登记（DOC-0306／DOC-0307）——D782 D2 登记门禁要求新增 .md/.yaml 必须登记。
+- 写集扩条共**两条**（均 **L1 批准（Gitea #1054 评论 · 2026-10-27）**，各为最小追加、不改其它条目）：
+  1. `docs/authority/DOCS-REGISTRY.yaml`：仅追加最小登记（P0：DOC-0306／DOC-0307；P0.5：DOC-0308／DOC-0309）——D782 D2 登记门禁要求新增 .md/.yaml 必须登记。
   2. `docs/authority/WIRING-REGISTRY.yaml`：仅追加 1 行条目 `control-tower.acceptanceMatrix`（`status: declared-only` ＋ `consumer: null`）——G1 质量增量闸 R1.1 要求新增能力件登记、R1.2 要求生产调用点；P0 明确不接 CI/pre-commit（规格 §3 非目标）⇒ 无生产消费者，按同型先例（`check-test-obligations.py`／`ledger-sync.sh`／`auto-merge.sh`）记 declared-only。
+- **裁 423（2026-10-27）另批两项**：① 受保护路径豁免件 `gate-exemptions/2026-10-27-1054-gate-exempt.md`（4 行）；② A1 默认样例改主线锚 `docs/synova/acceptance/1048.matrix.yaml`@`1ca0d4dfc`（1053 降为 A1b 回溯演练）。⇒ 写集 **8 → 10 条**（见 `.claude/claims/1054.yaml`）；受保护路径仍逐条有合规豁免行。
 
 ## 未决项（待验证，逐条标明）
 
-1. **独立复核未做**：需另一会话按 dsh-code-standards 8 项＋四约定逐条核（自验只有队内"可提请独立复核"级别，不作通过判决）。
+1. **独立复核**：首轮已做且给出 **BLOCK**（Gitea #1054 评论 · 2026-10-27 ⇒ 裁 423）；本轮 P0.5 即按 BLOCK 项整改，**闭环复验（0 上下文会话）待做**——队内自验只有"可提请独立复核"级别，不作通过判决。
 2. **K3 审计未做**。
 3. **P2 CI report-only**：属 A 类，未提案；需连续两周观察误红率后再议。
-4. **样例 anchor `5553bb95c` 未并入 `local-main`**（在未合并分支 `feat/1053-metric-readings-schema`）：校验器只要求"anchor 在本仓可解析"，不判是否已并入主线；该事实由样例如实记录。
+4. **回溯样例 anchor `5553bb95c` 未并入 `local-main`**（在未合并分支 `feat/m4-1051-closeout` 与 `cto/t1-c4`；`feat/1053-metric-readings-schema` 不含该提交）：校验器只要求"anchor 在本仓可解析"，不判是否已并入主线；该事实由样例如实记录 ⇒ **A1 默认改用主线锚 `1048.matrix.yaml`@`1ca0d4dfc`**，1053 仅作 **A1b 回溯演练（不得作默认）**。
 5. **`--verify` 抓不到实现 bug**：与 plain 共用同一实现（有意），它抓"声明 vs 机械事实"不一致，不抓"校验器算错"。
 6. **`changed_files` 自报不与 git 对账**、**`n/a` 负证据命令只记录不执行**、**URL 类证据不联网**：三条都是已知信任边界，写在 README「Known Limitations」。
 
-## 证据（命令名；原始输出见 PR 正文与 T6 自验消息，此处不抄全量）
+## 证据（命令名；原始输出见 PR 正文与自验消息，此处只留末行／关键行）
 
-- A1 `python3 scripts/control-tower/check-acceptance-matrix.py docs/synova/acceptance/1053.matrix.yaml --repo . --anchor 5553bb95c` → 末行 `MATRIX: PASS 23/23 (mach 11/11, sem 12 attested)`，且点名 `Q-11 partial` / `T-1 partial` / `T-7 partial`。
-- A2 同一命令 `--verify` → 末行 `VERIFY: mach 11/11 consistent`。
-- A3 同一命令 `--json` → 一份 JSON（items 23、summary 六字段、errors 空）。
-- A4 抽样反证 `git show 5553bb95c:src/routes/sentinel.ts | grep -c '@exit'` → `0`（与 T-1 partial 口径一致）。
-- D1 `--anchor deadbeef0` → exit 2 ＋ `degraded: E_ANCHOR_MISMATCH phase=anchor — …` ＋ `SYNO_GATE_DEGRADED_LOG` 恰 1 行 JSON（time/component/code/phase/retryable）。
-- D2 `--repo <不存在的路径>` → exit 2 ＋ 降级日志非空。
-- M1–M5 变异各 exit 1 并点名 `E_MATRIX_ITEM_MISSING` / `E_N/A_NO_EVIDENCE` / `E_EVIDENCE_UNRESOLVED` / `E_ANCHOR_MISMATCH` / `E_COV_UNJUDGED`（详见 `bash tests/control-tower/check-acceptance-matrix.test.sh` 与 T6 自验）。
+- A1（默认，主线锚 1048）`python3 scripts/control-tower/check-acceptance-matrix.py docs/synova/acceptance/1048.matrix.yaml --repo . --anchor 1ca0d4dfc` → exit 0，末行 `MATRIX: PASS 23/23 (mach 11/11, sem 12 attested)`（逐项点名 `Q-11 n/a`／`T-8 pass`）。
+- A1b（回溯演练 1053）同命令换 `docs/synova/acceptance/1053.matrix.yaml` ＋ `--anchor 5553bb95c` → exit 0，末行 `MATRIX: PASS 23/23 (mach 11/11, sem 12 attested)`，且点名 `Q-11 partial` / `T-1 partial` / `T-7 partial`。
+- A2 1048 版同一命令 `--verify` → exit 0，末行 `VERIFY: mach 11/11 consistent`。
+- A3 1048 版同一命令 `--json` → exit 0，单份 JSON：keys `[anchor, errors, issue, items, schema, summary]`、`items` 23、`summary` = `{total:23, mach_total:11, mach_ok:11, sem_total:12, sem_attested:12, pass:True}`、`errors` 空。
+- A4 抽样反证 `git show 5553bb95c:src/routes/sentinel.ts | grep -c '@exit'` → `0`（与 1053 回溯样例的 T-1 partial 口径一致）。
+- D1（1048 矩阵）`--anchor deadbeef0` → exit 2 ＋ stdout `UNJUDGED E_ANCHOR_MISMATCH phase=anchor — --anchor 不可解析（deadbeef0）：rev-parse 非零退出` ＋ 末行 `MATRIX: UNJUDGED E_ANCHOR_MISMATCH`；`SYNO_GATE_DEGRADED_LOG` 恰 1 行 JSON（time/component/code/phase/retryable 五字段）。
+- D2（1048 矩阵）`--repo /nonexistent/synova-1054` → exit 2 ＋ `degraded: E_ANCHOR_MISMATCH phase=repo — 仓不可读` ＋ 降级日志恰 1 行（phase=repo、retryable=true）。
+- 登记门禁 `bash scripts/doc-system/doc-registry-gate.sh` → exit 0：`163 条 DOC id，重号 0 个`／`127 条 status=active，path 失配 0 个`／`检查 4 个文档，0 个未登记`／`✅ 登记门禁通过`。
+- 配对自测 `bash tests/control-tower/check-acceptance-matrix.test.sh` → exit 0，`结果: 37 通过, 0 失败`。
+- M1–M5 变异各 exit 1 并点名 `E_MATRIX_ITEM_MISSING` / `E_N/A_NO_EVIDENCE` / `E_EVIDENCE_UNRESOLVED` / `E_ANCHOR_MISMATCH` / `E_COV_UNJUDGED`（详见上述自测与自验消息）。

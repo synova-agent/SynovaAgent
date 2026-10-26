@@ -1,18 +1,21 @@
-# .claude/claims/1054.yaml — #1054（验收矩阵机制 v1 · P0）写集声明
+# .claude/claims/1054.yaml — #1054（验收矩阵机制 v1 · P0.5）写集声明
 # 先例：.claude/claims/998.yaml / 1053.yaml（只列本 PR 真正改动的文件，不预授权）
 # 说明：`docs/authority/DOCS-REGISTRY.yaml` 与 `docs/authority/WIRING-REGISTRY.yaml` 为
-#       创始人 2026-10-27 批准的**两个最小扩写集**（前者仅追加本批 2 条登记、后者仅追加 1 行
+#       L1 批准（Gitea #1054 评论 · 2026-10-27）的**两个最小扩写集**（前者仅追加本批 2 条登记、后者仅追加 1 行
 #       declared-only；均不改其它条目）——D782 D2 登记门禁与 G1 质量增量闸 R1.1 的既有要求。
 writeset:
   - docs/synova/acceptance/README.md
   - docs/synova/acceptance/1053.matrix.yaml
+  - docs/synova/acceptance/1048.matrix.yaml
   - scripts/control-tower/check-acceptance-matrix.py
   - tests/control-tower/check-acceptance-matrix.test.sh
   - .claude/claims/1054.yaml
   - memory/notes/proposed/2026-10-27-1054-acceptance-matrix.md
   - docs/authority/DOCS-REGISTRY.yaml
   - docs/authority/WIRING-REGISTRY.yaml
+  - gate-exemptions/2026-10-27-1054-gate-exempt.md
 done:
+  - verify: python3 scripts/control-tower/check-acceptance-matrix.py docs/synova/acceptance/1048.matrix.yaml --repo . --anchor 1ca0d4dfc
   - verify: python3 scripts/control-tower/check-acceptance-matrix.py docs/synova/acceptance/1053.matrix.yaml --repo . --anchor 5553bb95c
   - verify: bash tests/control-tower/check-acceptance-matrix.test.sh
-note: "验收矩阵机制 v1 P0（#1054）：旁路机制、不改任何现行门禁/pre-commit/hook、与 M4 写集零交集、P0 明确不接 CI（规格 §3）。"
+note: "验收矩阵机制 v1 P0.5（#1054）：旁路机制、不改任何现行门禁/pre-commit/hook、与 M4 写集零交集、P0 明确不接 CI（规格 §3）；裁 423（Gitea #1054 评论 · 2026-10-27）批受保护路径豁免件与主线锚样例 1048（A1 默认＝1048@1ca0d4dfc，A1b＝1053@5553bb95c 仅回溯演练、不得作默认）。"

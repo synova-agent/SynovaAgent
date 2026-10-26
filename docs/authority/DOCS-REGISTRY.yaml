@@ -1262,3 +1262,17 @@ documents:
     status: active
     owner: P4
     note: "M4-T1 回溯样例（anchor 5553bb95c）：证明校验器点名 T-1/T-7/Q-11 三处真实缺口（#1054 P0）。"
+
+  # ---- P4 2026-10-27：#1054 P0.5 补单（裁 423：主线锚样例＋受保护路径豁免）----
+  - id: DOC-0308
+    type: registry
+    path: docs/synova/acceptance/1048.matrix.yaml
+    status: active
+    owner: P4
+    note: "主线锚样例（anchor 1ca0d4dfc，已并入 local-main）：A1 默认被测对象（#1054 P0.5）。"
+  - id: DOC-0309
+    type: decision
+    path: gate-exemptions/2026-10-27-1054-gate-exempt.md
+    status: active
+    owner: P4
+    note: "裁 423 豁免：验收矩阵校验器＋配对测试＋本批登记追加（#1054 P0.5）。"
