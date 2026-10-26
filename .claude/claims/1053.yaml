@@ -7,6 +7,7 @@ writeset:
   - electron-renderer/src/components/MeasurementTrendSection.tsx
   - electron-renderer/src/components/MeasurementTrendContainer.tsx
   - electron-renderer/src/components/RightPanel.tsx
+  - electron-renderer/AGENTS.md
   - tests/acceptance/mvp1-m4-output-face.test.ts
   - tests/acceptance/m4-output-face.expected.ts
   - tests/acceptance/support/clock.ts
@@ -15,4 +16,4 @@ done:
   - verify: npx vitest run tests/acceptance/mvp1-m3-domain-chain.test.ts
   - verify: npx vitest run tests/acceptance/mvp1-m4-output-face.test.ts tests/acceptance/mvp1-m3-domain-chain.test.ts
   - verify: npx tsc -p electron-renderer/tsconfig.json --noEmit
-note: "M4 出口面收口 T1–T7：readings 增 orgId 作用域与 days 边界；装配层容器单挂载点＋tab 上提；写集例外 ≤15 行（创始人 2026-10-27 批）｜T5 验收件扩展：A6/A7 服务端回归＋A8 零请求＋A13 装配语义＋A14 四态＋Q-10 EXP 单一源；产品文件零改动（仅 tests/acceptance/**）"
+note: "M4 出口面收口 T1–T7：readings 增 orgId 作用域与 days 边界；装配层容器单挂载点＋tab 上提；写集例外 ≤15 行（创始人 2026-10-27 批）｜T5 验收件扩展：A6/A7 服务端回归＋A8 零请求＋A13 装配语义＋A14 四态＋Q-10 EXP 单一源；产品文件零改动（仅 tests/acceptance/**）｜T6 域守则：新增 electron-renderer/AGENTS.md（L1 呈现层守则，产品代码零改动）"
