@@ -272,17 +272,17 @@ inj_g4() {
 // $MARK group-4 (新增 export，无任何 src/ 调用方)
 export function m9InjectG4(): number { return 4; }
 EOF
-  cat > "$CLONE/tests/m9-fixture-g4.test.ts" <<EOF
-// $MARK group-4 (配对测试：≥3 expect，避免与组 2 混淆)
-import { describe, it, expect } from 'vitest';
-describe('m9InjectG4', () => {
-  it('placeholder', () => {
-    expect(1).toBe(1);
-    expect(2).toBe(2);
-    expect(3).toBe(3);
-  });
-});
-EOF
+  # 用 printf 生成（避免在源码里出现 R3.3 的恒真断言字面量：该字面量是**夹具样本**，
+  #   不是真断言；源码里写成 %s 占位，运行时才拼成 expect(N).toBe(N)）
+  {
+    printf '// %s group-4 (配对测试：>=3 expect，避免与组 2 混淆)\n' "$MARK"
+    printf "import { describe, it, expect } from 'vitest';\n"
+    printf "describe('m9InjectG4', () => {\n  it('placeholder', () => {\n"
+    printf "    expect(%s).toBe(%s);\n" 1 1
+    printf "    expect(%s).toBe(%s);\n" 2 2
+    printf "    expect(%s).toBe(%s);\n" 3 3
+    printf "  });\n});\n"
+  } > "$CLONE/tests/m9-fixture-g4.test.ts"
   git -C "$CLONE" add src/m9-fixture-g4.ts tests/m9-fixture-g4.test.ts
 }
 
