@@ -1,4 +1,4 @@
-# .claude/claims/1053.yaml — #1053（M4 出口面收口 · T1）写集声明
+# .claude/claims/1053.yaml — #1053（M4 出口面收口 · T1–T5）写集声明
 # 先例：.claude/claims/1045.yaml（只列本 PR 真正改动的文件，不预授权）
 writeset:
   - .claude/claims/1053.yaml
@@ -6,7 +6,8 @@ writeset:
   - electron-renderer/src/lib/measurement-trends.ts
   - electron-renderer/src/components/MeasurementTrendSection.tsx
   - tests/acceptance/mvp1-m4-output-face.test.ts
+  - tests/acceptance/support/clock.ts
 done:
   - verify: npx vitest run tests/acceptance/mvp1-m4-output-face.test.ts
   - verify: npx vitest run tests/acceptance/mvp1-m3-domain-chain.test.ts
-note: "M4 出口面收口 T1：readings 增 orgId 作用域与 days 边界；写集例外 ≤20 行（创始人 2026-10-27 批）"
+note: "M4 出口面收口 T1–T5：readings 增 orgId 作用域与 days 边界；写集例外 ≤15 行（创始人 2026-10-27 批）"

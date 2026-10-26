@@ -44,6 +44,7 @@ import type { MeasurementTrendsView } from '../../electron-renderer/src/lib/meas
 import { MeasurementTrendSection } from '../../electron-renderer/src/components/MeasurementTrendSection';
 import type { MeasurementTrendState } from '../../electron-renderer/src/components/MeasurementTrendSection';
 import { renderToStaticMarkup } from '../../electron-renderer/src/test-support/render';
+import { nowMs } from './support/clock';
 
 // ── [BOOT] 环境隔离：临时文件库（真落盘路径，非 :memory:）＋ JWT_SECRET；禁碰 data/synova.db ──
 const dbDir = mkdtempSync(join(tmpdir(), 'synova-m4-'));
@@ -57,13 +58,13 @@ if (!readFileSync(join(repoRoot, 'package.json'), 'utf-8').includes('"name"')) {
 }
 
 /** 唯一锚点（防历史行冒充）：org/metric id 带 pid + 时间戳 */
-const ANCHOR = `m4-org-${process.pid}-${Date.now()}`;
+const ANCHOR = `m4-org-${process.pid}-${nowMs()}`;
 const METRIC_UP = `M4-REV-${ANCHOR}`;
 const METRIC_DOWN = `M4-CASH-${ANCHOR}`;
 
 /** SQLite datetime('now') 同构格式（UTC，'YYYY-MM-DD HH:MM:SS'），保证 7 天窗口内且字符串可排序 */
 function sqliteAt(msAgo: number): string {
-  return new Date(Date.now() - msAgo).toISOString().slice(0, 19).replace('T', ' ');
+  return new Date(nowMs() - msAgo).toISOString().slice(0, 19).replace('T', ' ');
 }
 const T_PREV = sqliteAt(2 * 24 * 60 * 60 * 1000); // 2 天前
 const T_LATEST = sqliteAt(60 * 1000);             // 1 分钟前（最新）
@@ -232,6 +233,10 @@ describe('#656 M4 · T1 真调 API（GET /api/sentinel/metrics/readings?view=tre
     expect(serverDegraded.degraded).toBe(true);
     expect(serverDegraded.summary).toEqual([]);
     expect(serverDegraded.errors).toContain('SERVER_DEGRADED');
+
+    // T-7①：orgId 经 encodeURIComponent 进 URL（HTTP 404 降级文案保留编码后的 orgId）
+    const enc = await loadMeasurementTrends(`${badBase}/nope`, 'a b&c/中#1');
+    expect((enc.errors ?? []).join('|')).toContain('&orgId=a%20b%26c%2F%E4%B8%AD%231');
   });
 });
 
@@ -292,6 +297,10 @@ describe('#656 M4 · T2 渲染「测量值＋趋势」（纯组件 + render 桥�
 
     // 一页纸接回入口（稳定选择器；摘掉 ⇒ 本用例必红）
     expect(out).toContain('data-testid="measurement-to-onepager"');
+
+    // T-7②：已知限制行恒在 + 口径版本可见
+    expect(out).toContain('data-testid="measurement-trend-limitations"');
+    expect(out).toContain('cost0-v1');
   });
 
   it('T2 真数据：[BOOT] T1 的真 API 结果经纯组件渲染（摘 fetch/改错 URL ⇒ 本用例与 T1 同红）', () => {
