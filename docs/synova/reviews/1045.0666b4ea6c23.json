@@ -1,0 +1,116 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1045,
+  "patch_fingerprint": "sha256:0666b4ea6c23fefb6e9af4f4ae62663fa1c3d7710833c2cf202403698a15262d",
+  "author": "win-cto-m3-session",
+  "reviewer": "independent-reviewer-fresh-session",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "①-范围与撞车",
+      "cmd": "git diff --name-status gitea/local-main...HEAD; git log --oneline gitea/local-main..HEAD; git merge-base gitea/local-main HEAD; git rev-parse --abbrev-ref HEAD",
+      "result": "pass",
+      "evidence": "A .claude/claims/695.yaml | M tests/acceptance/mvp1-m3-domain-chain.test.ts | 2 files, 135 insertions(+), 26 deletions(-) | 1 commit: 5bf59ad92 test(#695) | merge-base=616fb3f6c374d76c01547e517de78074be4a60bc == PR base ref ⇒ no divergence/no force-push history on branch | branch name feat/m3-win-domain-chain-1026 (铁律34 命名合规) | tree clean (git status --porcelain = 0 lines)"
+    },
+    {
+      "id": "①-写集对账无夹带",
+      "cmd": "python3 scripts/control-tower/merge_writeset_gate.py --base 616fb3f6c374d76c01547e517de78074be4a60bc --head HEAD --issue 695 --repo-root .",
+      "result": "pass",
+      "evidence": "✅ 结论: pass — 提交文件集 ⊆ 声明写集（无夹带） | 身份来源: claim → #695 (.claude/claims/695.yaml) | 变更集: 2 个文件（merge-base 616fb3f6）| 声明写集 2 条（多源并集）| 豁免 1 条（显式）: .claude/claims/695.yaml ← [claim-self]"
+    },
+    {
+      "id": "②-验收件真跑（判据①→④d）",
+      "cmd": "npx vitest run tests/acceptance/mvp1-m3-domain-chain.test.ts",
+      "result": "pass",
+      "evidence": "Test Files 1 passed (1) | Tests 7 passed (7) | [INGEST] status=200 nodeType=outcome/financial created=1 errors=[] warnings=[] (×2 periods) | [INGEST] nodes=2 types=outcome/financial,outcome/financial | [SENTINEL] ok=true degraded=false findings=1 | [METRIC] rows=4 metrics=CASH-FLOW-GROSS-MARGIN,CASH-FLOW-NET-MARGIN,CASH-FLOW-REVENUE-YOY-GROWTH,CASH-FLOW-RUNWAY-MONTHS | [METRIC-VALUES] CASH-FLOW-GROSS-MARGIN=1ratio | CASH-FLOW-NET-MARGIN=0.9ratio | CASH-FLOW-REVENUE-YOY-GROWTH=1ratio | CASH-FLOW-RUNWAY-MONTHS=12months | [TREND] ok=true count=4 | [CYCLE] overflowValue=30 trend=rising degraded=false | [PARAM-④b] recorded=true edgeType=DECISION_CONFIRMED | [PARAM-④c] exports=3/3 marker=@deprecated+#1010 srcCallers=0 | [PARAM-④d] calibrated=0 status=not_implemented | [NO-SEED] rawSeeded=false"
+    },
+    {
+      "id": "②-零SEED机械核验（自跑，不采信PR自带grep）",
+      "cmd": "grep -c 'INSERT INTO graph_nodes' tests/acceptance/mvp1-m3-domain-chain.test.ts; grep -n 'db.prepare' tests/acceptance/mvp1-m3-domain-chain.test.ts; git show 616fb3f6c:tests/acceptance/mvp1-m3-domain-chain.test.ts | grep -n 'INSERT INTO graph_nodes'",
+      "result": "pass",
+      "evidence": "HEAD: count=0 | only 2 db.prepare, both SELECT: :169 'SELECT type, props FROM graph_nodes WHERE graph = ?' (independent readback) and :197 'SELECT metric_id, value, unit, source_id FROM metric_readings' | token INSERT survives only in the guard needle construction :366 ['INSERT','INTO','graph_nodes'].join(' ') and the comment :370 | BASE 616fb3f6c: 2 raw 'INSERT INTO graph_nodes' (fixture :75-78 + ④b node) ⇒ SEED genuinely removed, not renamed"
+    },
+    {
+      "id": "②-铁律逐项（38/48/G3/G4/39）",
+      "cmd": "grep -c 'as any|as never|as unknown as' <changed file>; grep -c 'expect(' <changed file>; grep -c 'expect(true)' <changed file>; bash scripts/check-architecture.sh",
+      "result": "pass",
+      "evidence": "as any / as never / as unknown as = 0（铁律38）| expect( = 63，expect(true) = 0，无纯 toBeDefined 单断言（铁律48/G3）| catch 块 = 0 ⇒ 无静默降级面（铁律11/24）| check-architecture.sh ⇒ '架构检查: 全部通过 ✅'（2 条既有 warning：GraphStore 类型镜像、15 处 queryNodes graph 参数待审）"
+    },
+    {
+      "id": "③-期望值 vs 真哨兵语义",
+      "cmd": "git grep -n 'const netMargin|const grossMargin|total_cost|operating_expense' -- src/sentinel/adapters/cash-flow-sentinel.ts; cat extensions/ontology/field-mappings/erp-standard.json",
+      "result": "pass",
+      "evidence": "sentinel:33 netMargin=(rev−cost−opex)/rev; :34 grossMargin=(rev−cost)/rev; :109 cost=total_cost||cost||costs||成本; :112 operatingExpenses=operating_expenses||operating_expense; :113 cashBalance=cash_balance||cash | erp-standard 14 mappings incl. 营业收入:6→total_revenue, 毛利润:12→gross_margin, 营业费用:13→operating_expense, none for cost ⇒ cost≡0 是映射事实 | 手算 (300−0−30)/300=0.9、(300−0)/300=1、(200−100)/100=1、180/(30/2)=12 与 [METRIC-VALUES] 完全一致"
+    },
+    {
+      "id": "④-判别力（#699⑤改坏必红）独立复现",
+      "cmd": "# 隔离副本：git archive HEAD + node_modules junction（不改被审工作树）；逐处改坏→跑→还原，三次独立：M1 src/sentinel/adapters/cash-flow-sentinel.ts:33 去掉 '- totalOpEx'；M2 src/cycles/overflow-compute.ts:179 'momPrev !== 0' → 'momPrev >= 0'；M3 :282 'String(val)' → 'String(val + 1)'；npx vitest run tests/acceptance/mvp1-m3-domain-chain.test.ts",
+      "result": "pass",
+      "evidence": "改前基线: Tests 7 passed (7) | M1: Tests 2 failed | 5 passed (7), 'AssertionError: expected 1 to be close to 0.9, received difference is 0.09999999999999998' | M2: Tests 1 failed | 6 passed (7), 'AssertionError: expected false to be true // Object.is equality' | M3: Tests 1 failed | 6 passed (7), 'AssertionError: expected 30.3 to be 30 // Object.is equality' | 三处还原后复绿；三次的失败条数与文案均与 PR 表逐字一致 | PR 引用行号核实：cash-flow-sentinel.ts:33（git grep）、overflow-compute.ts:179 'momPrev !== 0'、overflow-compute.ts:282 'return String(val)'"
+    },
+    {
+      "id": "⑤-回归红属存量（非本PR引入）",
+      "cmd": "npx vitest run tests/acceptance; git diff --name-only 616fb3f6c HEAD -- src tests/acceptance; # base 副本: git archive 616fb3f6c + npx vitest run tests/acceptance/mvp1-m9-one-pass.test.ts tests/acceptance/zero-code-industry.test.ts",
+      "result": "pass",
+      "evidence": "HEAD: Test Files 2 failed | 4 passed (6); Tests 4 failed | 44 passed (48) — 恰为 PR 所列 4 条：m9 ⑥ 冻结对照（命中 src/loops/middle-evolution-engine.ts,src/agent/loop-handlers.ts）、m9 §4.4（['1'..'5'] vs ['1'..'6']）、zero-code-industry ×2（:62 expected undefined to be defined / :69 expected 0 to be >= 1）| base 副本复现同样 4 条 assertion | base..HEAD 的 src+tests 差异只有 mvp1-m3-domain-chain.test.ts ⇒ 因果上属存量红"
+    },
+    {
+      "id": "⑥-④b/④c/④d 接口存在性独立核验",
+      "cmd": "git grep -n 'export function calibrateThresholds' -- src/l3/pkb-lifecycle.ts; git grep -n 'goal-lifecycle' -- src/; head -20 src/growth/goal-lifecycle.ts",
+      "result": "pass",
+      "evidence": "calibrateThresholds ⇒ { calibrated: 0, status: 'not_implemented' } + log.info '阈值校准——Phase 2 未实施' | src/ 内 goal-lifecycle 引用 = 0（独立于测试自述的 srcCallers=0）| 文件头 :5 '@deprecated 未接线（#982 明确不接）…接入点见 #1010' | ④b 由测试用真 SqliteGraphStore 写后读回（ok=true, entries=1, who/role/output.ref/output.digest/presetVersion/review.verdict/schema/at 逐字段）＋边界 {queryNodes:()=>[]} ⇒ ok=false 且 errors[0] 含 READ_PRIMITIVE_MISSING（日志可见，不静默空读）"
+    },
+    {
+      "id": "⑦-门禁自洽/禁改路径",
+      "cmd": "git diff --name-only 616fb3f6c HEAD; cat .gitea/protected-files.txt; bash scripts/control-tower/check-gate-protection.sh --changed-base 616fb3f6c",
+      "result": "pass",
+      "evidence": "仅 2 文件，均不在 scripts/**、.gitea/**、.github/**、docs/authority/**、gate-exemptions/** 之下 | protected PATTERNS 22 条，无条覆盖 tests/acceptance/** 或 .claude/claims/** ⇒ 未改任何门禁语义、无需豁免 | gate-protection 在 Windows 返回 degraded E_BAD_BASE，但 git cat-file -e 616fb3f6c:.gitea/protected-files.txt 退出码 0（清单在 base 上确实存在）⇒ 检查器自身路径缺陷，与 PR 所记「exit 2，非业务红」一致"
+    },
+    {
+      "id": "⑧-claim声明可判",
+      "cmd": "python3 scripts/control-tower/claim_store.py --check 695 --root . ; 逐字执行 .claude/claims/695.yaml 的 3 条 verify",
+      "result": "pass",
+      "evidence": "{\"status\": \"ok\", \"issue\": \"695\", \"writeset\": 2, \"done\": 3} | verify#1 'test $(grep -c \"INSERT INTO graph_nodes\" <file>) -eq 0' ⇒ rc=0 | verify#2 'grep -q \"/api/data/upload\" <file>' ⇒ rc=0 | verify#3 'grep -q \"mapping: 'erp-standard'\" <file>' ⇒ rc=0 | writeset 声明的 2 条与实际变更集完全相等"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warn",
+      "where": "tests/acceptance/mvp1-m3-domain-chain.test.ts:110-111 + extensions/ontology/field-mappings/erp-standard.json:12",
+      "what": "期望常量 grossMargin=1 / netMargin=0.9 是在 cost≡0 下按哨兵公式算出的，但同一夹具上传了 毛利润=0.6×revenue（60/120，映射到 prop gross_margin），而哨兵从不读该字段（git grep gross_margin -- src/ 仅命中 node-type-resolver.ts:105；cash-flow-sentinel.ts 命中 0）。⇒ 断言值算术自洽，但把它称作这份数据的「真实语义」只对 cost≡0 成立；毛/净利率实为公式产物，与所供毛利润互相矛盾。不阻断（#695 只要求真链路产出测量值；PR 拒绝篡改 field-mapping 是对的；消费 gross_margin 属产品代码决策，不在本 PR 写集）。建议 P1 择一收口：补 cost 映射，或让哨兵消费 gross_margin。"
+    },
+    {
+      "severity": "warn",
+      "where": "tests/acceptance/mvp1-m3-domain-chain.test.ts:107（EXP_COST=0）对照 src/sentinel/adapters/cash-flow-sentinel.ts:33/:109",
+      "what": "cost 维度已失去判别力：因所有 cost 项恒为 0，把 :33 的 '- totalCost' 删掉、或改坏 :109 的 cost 字段链，测试仍会全绿。PR 的三处变异覆盖 totalOpEx、零分母守卫、公式占位符，均未覆盖 cost。⇒ #699「改坏计算函数 ⇒ 测量值变化被抓到」在 cost 轴上只有形式满足，实际不判。"
+    },
+    {
+      "severity": "warn",
+      "where": "tests/acceptance/mvp1-m3-domain-chain.test.ts:121-127 对照 src/server.ts:399,480,488,502,521",
+      "what": "「真上传入口」= 真 Router + 真 data-ingest-service，但挂在裸 express 上：生产在 :480 jwtAuthMiddleware、:488 rateLimitMiddleware、:502 rbacMiddleware 之后才 :521 app.use(dataRoutes)，且 :399 注入的是 wrapStandardKeyGuard(graphStore)，而测试注入裸 SqliteGraphStore。对 #695①（数据经产品 ingest 入口而非 raw SQL 进入）成立，但该证据不覆盖生产中间件/写守卫路径，不宜外推为「生产端到端已验证」。"
+    },
+    {
+      "severity": "warn",
+      "where": "PR 正文 §七卡对应 / #671 §1 关闭规则",
+      "what": "④b/④c/④d 的断言在 base 616fb3f6c 已逐字存在（git show 616fb3f6c:<test> 各命中 PARAM-④b/④c/④d 3 次）⇒ 七卡证据多数先于本 PR；本 PR 真正新增的是 ① 的真 ingest 夹具、[NO-SEED] 守卫与 ④b 改用 createNode。PR 用 'Refs' 而非 'Closes' 是正确处置：#671 关闭规则要求判据在 main 上真跑过且卡内有命令＋原始输出＋merge sha，未合分支无法提供。"
+    },
+    {
+      "severity": "info",
+      "where": "tests/acceptance/mvp1-m3-domain-chain.test.ts:364-373",
+      "what": "[NO-SEED] 守卫是自指的字面量探针（读自身源文件；动态拼接的 INSERT 可绕过）。它不是证明，只是绊线；但它守护的声称已由我方独立 grep 复核（=0），故不构成对结论的削弱。"
+    },
+    {
+      "severity": "info",
+      "where": "tests/acceptance/mvp1-m3-domain-chain.test.ts:137,218,229",
+      "what": "3 处 fetch 未带 AbortSignal/timeout（pr-review 技能 G4 窗口）。因目标为 127.0.0.1 回环且 vitest 单测超时会兜底，测试文件内不阻断。"
+    },
+    {
+      "severity": "info",
+      "where": "PR 正文 §前置核对",
+      "what": "第②项获佐证（gate-protection 因检查器自身路径缺陷而 degraded，非业务红）。第③（工程纪律15条）/④（skill 同步26）/⑥（64 worktrees）本次未复核——超出 M3 验收范围且属会漂移的宿主状态，如实记为未核。"
+    }
+  ],
+  "issued_at": "2026-10-26T21:00:24+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步；receipt 骨架由 check-merge-conditions.sh --print-receipt-template 生成）"
+}

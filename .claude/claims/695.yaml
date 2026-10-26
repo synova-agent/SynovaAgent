@@ -1,0 +1,8 @@
+writeset:
+  - .claude/claims/695.yaml
+  - tests/acceptance/mvp1-m3-domain-chain.test.ts
+done:
+  - verify: test $(grep -c "INSERT INTO graph_nodes" tests/acceptance/mvp1-m3-domain-chain.test.ts) -eq 0
+  - verify: grep -q "/api/data/upload" tests/acceptance/mvp1-m3-domain-chain.test.ts
+  - verify: grep -q "mapping: 'erp-standard'" tests/acceptance/mvp1-m3-domain-chain.test.ts
+note: "#695 M3 领域链：夹具改真 ingest（POST /api/data/upload · erp-standard ⇒ outcome/financial），零 raw SQL 直插图节点；期望常量按真实语义重算（cost 恒 0 ⇒ net 270/300、gross 1）。覆盖 #695 #696 #697 #699 #728 #729 #730；台账 #1044"
