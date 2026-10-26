@@ -1942,7 +1942,7 @@ fi
 # 接线: CI 另有**具名步 ①e**（同脚本同口径）——本块供本地提交端提前红，不替代 CI。
 if [ "${SYNO_QUALITY_DELTA:-1}" = "0" ]; then
   echo -e "  ${CYAN}ℹ️  质量增量闸: 回滚态（SYNO_QUALITY_DELTA=0）—— 跳过（唯一回滚点）${RESET}"
-elif [ -n "$(git rev-parse -q --verify MERGE_HEAD 2>/dev/null || true)" ] && [ -z "$(git ls-files -u 2>/dev/null)" ]; then
+elif [ -n "$(git rev-parse -q --verify MERGE_HEAD 2>/dev/null || true)" ] && [ -z "$(git ls-files -u 2>/dev/null)" ]; then  # swallow-ok: 非合并态=条件假（不吞错误路径）
   # 干净合并（MERGE_HEAD 在、无冲突残留）⇒ 变更全是另一父带进来的，已在各自 PR 过闸
   # D513 同型（2026-10-26 裁 421）：**合并提交且无自撰文件** ⇒ 本次变更全是另一父带进来的，
   #   已在各自 PR 过闸；判它们 = 把别人的变更当成本次的（D1148 夹具实测假红）。
