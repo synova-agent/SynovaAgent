@@ -49,6 +49,8 @@
  * 铁律 48：每条用例都有真断言（expect ＋ 匹配器，无空壳）；覆盖正常 / 降级 / 反例三路径。
  */
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { spawnSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -62,7 +64,6 @@ import {
 } from '@synova/engine-auth';
 import {
   jwtAuthMiddleware,
-  knowledgeScopeDimensionDisabledRegistrations,
   knowledgeScopeDimensionGate,
   signJwtToken,
 } from '../../src/middleware/auth';
@@ -635,16 +636,23 @@ describe('#731 / 三态降级: 内容坏 ⇒ fail-closed 拒绝型条件集（�
 // ════════════════════════════════════════════════════════════════
 
 /**
- * 开关判据的**顺序无关**前提（自验员会按"单例跑 / 整文件跑"两序对撞）:
- *   · 每个用例自带 `withScopeSwitch(...)` 的 `try/finally` 复位 ⇒ 判据①的"默认环境=严开"
- *     不会被上一个用例的 `off` 污染（否则绿得可疑）。另配 `afterEach` 兜底复位。
- *   · 降级登记取**增量**而非绝对值，且登记与日志 memo 解耦 ⇒ 无论本文件先前跑过多少
- *     `off` 用例，"一次关闭判定 = +1"恒定成立。
- *   · 日志侧的"登记行"由**跨进程** fd 2 原始输出取证（`@synova/logger` 直写 fd 2，
- *     进程内拦不到 —— 见 `tests/security/department-request-path.test.ts:37-48`）。
+ * 开关判据的两个面（**顺序无关**是本组的硬要求，自验员会按"单例跑 / 整文件跑"两序对撞）:
+ *   · **结构面** —— 进程内断言 `knowledgeScopeDimensionGate()` 的返回值（该 export 有**生产**调用点:
+ *     `src/middleware/auth.ts` 的 `getPermissionFilter`）. 每个用例自带 `withScopeSwitch(...)`
+ *     的 `try/finally` 复位 ⇒ 判据①"默认环境=严开"不被上一个用例的 `off` 污染；另配 `afterEach` 兜底。
+ *   · **留痕面** —— **跨进程**捕获 fd 2 原始行（`@synova/logger` 经 `pino.destination({dest:2})`
+ *     直写 fd 2 且 level 在 import 时绑定 ⇒ **进程内拦不到**；既有口径见
+ *     `tests/security/department-request-path.test.ts:37-48`）。
+ *     🔴 为什么必须跨进程而不是"读计数器/读状态"：日志按**每进程一次** memo（memo 只压日志量），
+ *     同进程第 2 次判定不再打行 ⇒ "同进程打 N 条"不可判；fresh 子进程天然绕开 memo ⇒ 结论是
+ *     **确定性的**，单跑/整跑两序一致。实现照既有先例
+ *     `tests/l4/edge-lag-unknown-degraded-1134.test.ts:443`（`spawnSync(process.execPath,
+ *     ['--import','tsx','--eval',code])`）。
  */
 const SCOPE_SWITCH_ENV = 'SYNOVA_KNOWLEDGE_SCOPE_DIM';
 const ORIGINAL_SWITCH_ENV = process.env[SCOPE_SWITCH_ENV];
+/** 子进程状态行的前缀（`spawnSync` 的 stdout 里定位用；与日志行分开两条流） */
+const GATE_PROBE_PREFIX = 'SYNO_731_DIM_PROBE:';
 
 /** 在指定开关取值下执行，退出时**必定**复位（改 `process.env` ⇒ 必须 try/finally） */
 async function withScopeSwitch<T>(value: string | undefined, fn: () => Promise<T> | T): Promise<T> {
@@ -659,6 +667,66 @@ async function withScopeSwitch<T>(value: string | undefined, fn: () => Promise<T
   }
 }
 
+/**
+ * 在**全新子进程**里触发一次开关判定，取回（a）结构面状态行、（b）fd 2 上那条关闭留痕行。
+ *
+ * @input  enabled — `true` = 子进程环境**不带**开关变量（严开）；`false` = 带 `off`
+ * @output `{ state, logLine, stderr }` —— `state` 为 `knowledgeScopeDimensionGate()` 的返回；
+ *         `logLine` = fd 2 中 `code === KNOWLEDGE_SCOPE_DIM_DISABLED` 的那条 JSON（无则 `undefined`）
+ * @exit   子进程启动失败 / 非零退出 / 状态行不可解析 ⇒ **抛**（fail-closed，禁与"通过"混同）
+ * @degraded 子进程异常不吞（抛），避免把"看不见"当成"没问题"
+ */
+function probeGateInFreshProcess(enabled: boolean): {
+  readonly state: Record<string, unknown>;
+  readonly logLine: Record<string, unknown> | undefined;
+  readonly stderr: string;
+} {
+  const authUrl = pathToFileURL(join(process.cwd(), 'src', 'middleware', 'auth.ts')).href;
+  const code = `
+(async () => {
+  const m = await import(${JSON.stringify(authUrl)});
+  const state = m.knowledgeScopeDimensionGate();
+  process.stdout.write(${JSON.stringify(GATE_PROBE_PREFIX)} + JSON.stringify(state) + '\\n');
+})();
+`;
+  const childEnv: NodeJS.ProcessEnv = { ...process.env };
+  if (enabled) delete childEnv[SCOPE_SWITCH_ENV];
+  else childEnv[SCOPE_SWITCH_ENV] = 'off';
+
+  const res = spawnSync(process.execPath, ['--import', 'tsx', '--eval', code], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+    timeout: 90_000,
+    env: childEnv,
+  });
+  if (res.error) throw new Error(`开关取证子进程启动失败（fail-closed）: ${res.error.message}`);
+  const stdout = String(res.stdout);
+  const stderr = String(res.stderr);
+  if (res.status !== 0) {
+    throw new Error(`开关取证子进程非零退出（fail-closed）status=${String(res.status)}\nstdout=${stdout}\nstderr=${stderr}`);
+  }
+  const stateLine = stdout.split(/\r?\n/).find((l) => l.startsWith(GATE_PROBE_PREFIX));
+  if (stateLine === undefined) {
+    throw new Error(`开关取证子进程状态行不可解析（fail-closed）: stdout=${stdout} stderr=${stderr}`);
+  }
+  const parsedState: unknown = JSON.parse(stateLine.slice(GATE_PROBE_PREFIX.length));
+  if (typeof parsedState !== 'object' || parsedState === null) {
+    throw new Error('开关取证子进程状态行不是对象（fail-closed）');
+  }
+  const logLine = stderr
+    .split(/\r?\n/)
+    .map((line) => {
+      try {
+        const obj: unknown = JSON.parse(line);
+        return typeof obj === 'object' && obj !== null ? (obj as Record<string, unknown>) : undefined;
+      } catch {
+        return undefined;
+      }
+    })
+    .find((obj) => obj !== undefined && obj['code'] === 'KNOWLEDGE_SCOPE_DIM_DISABLED');
+  return { state: parsedState as Record<string, unknown>, logLine, stderr };
+}
+
 afterEach(() => {
   // 兜底：即使某用例断言中途抛错，也不把开关值漏给后续用例
   if (ORIGINAL_SWITCH_ENV === undefined) delete process.env[SCOPE_SWITCH_ENV];
@@ -666,15 +734,11 @@ afterEach(() => {
 });
 
 describe('#731 / 裁425-A1: scope 维紧急回滚开关（默认严开；关必留痕，禁静默关）', () => {
-  it('正常路径（默认环境）: 未设开关 ⇒ scope 维照常展开，且**零**关闭登记（不是"常开也报降级"）', async () => {
+  it('正常路径（默认环境）: 未设开关 ⇒ scope 维照常展开，且**零**关闭留痕（不是"常开也报降级"）', async () => {
     await withScopeSwitch(undefined, async () => {
-      const before = knowledgeScopeDimensionDisabledRegistrations();
-      const filter = await captureFilter('finance');
-      const after = knowledgeScopeDimensionDisabledRegistrations();
-
       // 严开 = PR2 默认姿态：真 provider 条件集仍含 {pkb_domain IN 文件派生 scopes}
+      const filter = await captureFilter('finance');
       expect(valuesOf(filter, 'pkb_domain', 'IN')).toEqual([declaredScopes(unitRoot, 'finance')]);
-      expect(after, '严开态不得产生关闭登记（否则降级信号失效）').toBe(before);
 
       const gate = knowledgeScopeDimensionGate();
       expect(gate).toEqual({
@@ -684,14 +748,17 @@ describe('#731 / 裁425-A1: scope 维紧急回滚开关（默认严开；关必�
         phase: 'knowledge-scope-dim',
         retryable: false,
       });
+
+      // 留痕面（跨进程）: 严开态**不得**出现关闭留痕行 —— 否则"降级信号恒真"就没牙了
+      const probe = probeGateInFreshProcess(true);
+      expect(probe.state['enabled']).toBe(true);
+      expect(probe.logLine, `严开态出现了关闭留痕行（降级信号失效）: ${probe.stderr}`).toBeUndefined();
     });
   });
 
-  it('🔴 降级路径（开关=off）: 条件集只剩 sensitivity 维 ＋ degraded:true ＋ code ＋ 登记 +1', async () => {
+  it('🔴 降级路径（开关=off）: 条件集只剩 sensitivity 维 ＋ 跨进程留痕行含 code/phase/retryable/degraded/registrations', async () => {
     await withScopeSwitch('off', async () => {
-      const before = knowledgeScopeDimensionDisabledRegistrations();
       const finance = await captureFilter('finance');
-      const after = knowledgeScopeDimensionDisabledRegistrations();
 
       // (a) 条件面：scope 维**整维消失**（不是只少一条），但条件集**仍非空**（不 fail-open）
       expect(valuesOf(finance, 'pkb_domain', 'IN')).toEqual([]);
@@ -699,16 +766,26 @@ describe('#731 / 裁425-A1: scope 维紧急回滚开关（默认严开；关必�
       expect(finance.conditions.length).toBe(1);
       expect(finance.conditions[0]?.field).toBe('access.sensitivity');   // I-C3 第 0 位不回退
 
-      // (b) 降级面：degraded:true ＋ typed code ＋ 相位 ＋ 可自愈（**禁静默关**）
+      // (b) 结构面：degraded:true ＋ typed code ＋ 相位 ＋ 可自愈（**禁静默关**）
       const gate = knowledgeScopeDimensionGate();
       expect({ enabled: gate.enabled, degraded: gate.degraded }).toEqual({ enabled: false, degraded: true });
       expect(gate.code).toBe('KNOWLEDGE_SCOPE_DIM_DISABLED');
       expect(gate.phase).toBe('knowledge-scope-dim');
       expect(gate.retryable).toBe(true);
-      // 登记项（确定性增量；与日志 memo 解耦 ⇒ 单跑/整跑同结论）
-      expect(after - before, '关闭判定未登记 ⇒ 这就是"静默关"（判据②(b) 的红态）').toBe(1);
 
-      // (c) 行为面：维度真被撤 —— 真引擎下 finance 现在能看到 hr 的语料
+      // (c) 留痕面（跨进程 fd 2 原始行）—— 关闭路径**必须**真留下一行，且字段齐
+      const probe = probeGateInFreshProcess(false);
+      const logLine = probe.logLine;
+      expect(logLine ?? null, `关闭路径**无**留痕行 ⇒ 这就是"静默关"（判据②(b) 的红态）: stderr=${probe.stderr}`).not.toBeNull();
+      expect({ code: logLine?.['code'] }).toEqual({ code: 'KNOWLEDGE_SCOPE_DIM_DISABLED' });
+      expect({ phase: logLine?.['phase'] }).toEqual({ phase: 'knowledge-scope-dim' });
+      expect({ retryable: logLine?.['retryable'] }).toEqual({ retryable: true });
+      expect({ degraded: logLine?.['degraded'] }).toEqual({ degraded: true });
+      // 登记数（生产消费点 = 这条日志本身）：本进程第 1 次关闭判定 ⇒ 至少 1
+      expect(typeof logLine?.['registrations']).toBe('number');
+      expect(Number(logLine?.['registrations'])).toBeGreaterThanOrEqual(1);
+
+      // (d) 行为面：维度真被撤 —— 真引擎下 finance 现在能看到 hr 的语料
       //     （若实现只是"少派生一条条件"而库里另有过滤，这里会红）
       const seeded = seedStore(
         [...declaredScopes(unitRoot, 'finance'), ...declaredScopes(unitRoot, 'hr')],

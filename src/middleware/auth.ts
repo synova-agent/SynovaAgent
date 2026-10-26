@@ -14,7 +14,8 @@
  * 🔴 回滚开关（裁 425 / A1，见下方 `knowledgeScopeDimensionGate`）:
  *   环境变量 **`SYNOVA_KNOWLEDGE_SCOPE_DIM`** —— **缺省/其它值 = 严开**（scope 维照常展开）；
  *   **仅 `off`**（大小写与首尾空白不敏感）= 关闭。关闭必**同时**记 `log.warn`
- *   （`code:KNOWLEDGE_SCOPE_DIM_DISABLED` ＋ `phase` ＋ `retryable` ＋ `degraded:true`）
+ *   （`code:KNOWLEDGE_SCOPE_DIM_DISABLED` ＋ `phase` ＋ `retryable` ＋ `degraded:true`
+ *   ＋ `registrations`=本进程累计关闭判定次数）
  *   并经 `knowledgeScopeDimensionGate()` 对外暴露降级态 —— **禁静默关**。
  */
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
@@ -508,25 +509,18 @@ export interface KnowledgeScopeDimensionGate {
  *
  * 🔴 判定必须每次现读环境：回滚开关的用途是"出事时立刻撤"，若把判定也 memo 成进程级常量，
  *   解除回滚就要重启（与 `d-refresh`「禁进程级常量」同一条纪律）。
- * 🔴 登记项与 memo **解耦**（裁 425 A1 判据②(b) 必须**顺序无关**）：memo 只少打日志，
- *   每次关闭判定都 +1 记进 `disabledJudgements` ⇒ 判据拿到的"登记"是确定性的增量，
- *   不会因为"同一进程里先跑过的用例吃掉了那次 warn"而取不到。
  */
 let disabledWarnEmitted = false;
 
-/** 关闭判定的**登记计数**（每进程从 0 起，**每次**关闭判定 +1；与日志 memo 解耦） */
-let disabledJudgements = 0;
-
 /**
- * 关闭路径的**登记项**（只读观测面）: 本进程以来发生过几次"scope 维被关闭"的判定。
+ * 关闭判定的**登记计数**（每进程从 0 起，**每次**关闭判定 +1；与日志 memo 解耦）。
  *
- * 用途 = 让判据②(b)「关闭必须留下登记」变成**确定性断言**（取增量，不撞日志文本 ——
- * `@synova/logger` 直写 fd 2，进程内拦不到，见 `KnowledgeScopeDimensionGate` 注释）。
- * 日志侧的"登记行"另由**跨进程** fd 2 原始输出取证，两者同源同一判定点。
+ * 消费点 = **生产日志出口**：每次关闭判定都累加，并随那条 `log.warn` 的 `registrations`
+ *   字段发出（见下）⇒ "关了几次"在**运行期留痕**里可对账，不需要为判据单开只读导出。
+ * 🔴 为什么 memo 只压日志而计数照记: 若连计数也 memo，则"到底关过几次"在长跑进程里不可知；
+ *   若连日志也不 memo，则回滚期间**每个知识请求**打一行（日志洪水）。
  */
-export function knowledgeScopeDimensionDisabledRegistrations(): number {
-  return disabledJudgements;
-}
+let disabledJudgements = 0;
 
 /**
  * 读回滚开关 —— **唯一**判定点（provider 展开与否、判据观测都取它）。
@@ -536,9 +530,9 @@ export function knowledgeScopeDimensionDisabledRegistrations(): number {
  *         `enabled:false` ⇒ `degraded:true` ＋ `code:'KNOWLEDGE_SCOPE_DIM_DISABLED'`
  *                           ＋ `phase:'knowledge-scope-dim'` ＋ `retryable:true`
  * @exit   永不抛、永不为 `undefined` —— 它在**每个请求**的权限判定路径上跑（抛 = 全线 500）
- * @degraded 关闭**本身**就是一次降级: **每次**关闭判定都登记（`disabledJudgements` +1），
- *         日志按每进程一次 memo 输出 `log.warn`（含 code/phase/retryable/degraded:true；
- *         **禁静默关**），并原样回灌到本结构。无其它降级路径。
+ * @degraded 关闭**本身**就是一次降级: **每次**关闭判定都累加登记数，日志按每进程一次 memo
+ *         输出 `log.warn`（含 code/phase/retryable/degraded:true/registrations；**禁静默关**），
+ *         并原样回灌到本结构。无其它降级路径。
  *
  * 设计哲学（一句）: **回滚开关只许"多拦"或"少拦并自曝"，不许"少拦还装没事"**。
  */
@@ -554,7 +548,7 @@ export function knowledgeScopeDimensionGate(): KnowledgeScopeDimensionGate {
       retryable: false,
     };
   }
-  // 登记项（确定性；与下面的日志 memo 解耦）—— 判据取增量，顺序无关
+  // 登记项：每次关闭判定 +1（与下面的日志 memo 解耦）—— 随日志的 registrations 字段发出
   disabledJudgements += 1;
   if (!disabledWarnEmitted) {
     disabledWarnEmitted = true;
@@ -565,6 +559,8 @@ export function knowledgeScopeDimensionGate(): KnowledgeScopeDimensionGate {
         retryable: true,
         degraded: true,
         env: KNOWLEDGE_SCOPE_DIM_ENV,
+        // 本进程累计的关闭判定次数（memo 只压日志，不压此计数）⇒ 该计数有**生产**消费点
+        registrations: disabledJudgements,
       },
       '安全判据: 降级 — scope 维回滚开关=off，知识检索只剩敏感度维（degraded:true，未静默）',
     );
