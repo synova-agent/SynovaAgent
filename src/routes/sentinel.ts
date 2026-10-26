@@ -145,8 +145,8 @@ router.get('/metrics/readings', (req: Request, res: Response) => {
       return;
     }
     const orgId = typeof req.query.orgId === 'string' && req.query.orgId !== '' ? req.query.orgId : undefined;
-    if (orgId !== undefined && !/^[A-Za-z0-9][A-Za-z0-9_.-]{1,63}$/.test(orgId)) {
-      res.status(400).json({ ok: false, code: 'INVALID_ORG_ID', error: 'orgId 形态不合法', received: orgId });
+    if (Array.isArray(req.query.orgId) || (orgId !== undefined && !/^[A-Za-z0-9][A-Za-z0-9_.-]{1,63}$/.test(orgId))) {
+      res.status(400).json({ ok: false, code: 'INVALID_ORG_ID', error: 'orgId 形态不合法', received: req.query.orgId });
       return;
     }
     const limit = typeof req.query.limit === 'string' && req.query.limit !== '' ? parseInt(req.query.limit, 10) : undefined;
