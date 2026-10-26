@@ -1,0 +1,10 @@
+writeset:
+  - .claude/claims/1035.yaml
+  - scripts/pre-commit-check.sh
+  - .gitea/workflows/local-gates.yml
+  - gate-exemptions/2026-10-26-cto-1035-gate-retire.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - memory/notes/proposed/2026-10-26-1035-gate-retire.md
+done:
+  - verify: SYNO_DOWN_SELFTEST=5 SYNO_GATE_STRICT_LEGACY=1 bash scripts/pre-commit-check.sh
+note: "#1035 裁 409 收口：5 组降级 + CI④ report-only。"
