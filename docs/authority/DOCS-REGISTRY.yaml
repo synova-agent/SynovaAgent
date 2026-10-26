@@ -1194,3 +1194,11 @@ documents:
     status: active
     owner: CTO
     note: "先修夹具再降级门禁（裁 409 前置）。"
+
+  # ---- CTO 2026-10-26：#1038 组级降级（PR-B）----
+  - id: DOC-0299
+    type: decision
+    path: gate-exemptions/2026-10-26-cto-1038-downgrade2.md
+    status: active
+    owner: CTO
+    note: "裁 409 组级降级 + CI④ report-only；夹具已降级感知（#1037）。"
