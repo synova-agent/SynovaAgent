@@ -40,7 +40,7 @@
 #
 # 计数口径（规格 §4.1 N3：末行 N 必须 = --selfcheck 的 13 个判定点）:
 #   通过 = **14 判定点**（每子例一次；#639-1 J 共享追加；裁 376 新增 K 登记表非纯追加⇒硬重叠）；C2 边界/参数/只读断言单列（`边界:` 行），
-#   两者任一失败都计入「失败」。⇒ 末行恒为 `结果: 13 通过, 0 失败`。
+#   两者任一失败都计入「失败」。⇒ 末行恒为 `结果: 14 通过, 0 失败`（13 判定点 ＋ L 对手集缺失单列·裁 422-R2）。
 #
 # 沙箱: 全部夹具在系统临时目录（mktemp -d ＋ trap EXIT 清理）；夹具仓 git init ＋ 本地 commit。
 #       零网络：API 层经 SYNO_MERGE_COND_FIXTURE 注入（不依赖 Gitea 可达）。
@@ -544,6 +544,19 @@ if build_repo A "$WORK/cli/k5"; then
   boundary "K5 PR 取不到 ⇒ exit 2" 2 "*" "degraded:" "HTTP 500 on /pulls/77"
 else
   fail "[边界] K5 夹具构建失败"
+fi
+
+# L 对手集缺失（prs.tsv）⇒ exit 2 且 ② 禁 ok（D-10/裁 422-R2；SYNO_MERGE_COND_TEST_NO_PRS 测试缝）
+if build_repo A "$WORK/cli/l1"; then
+  OUT="$WORK/cli/l1/out.txt"; ERR="$WORK/cli/l1/err.txt"
+  SYNO_MERGE_COND_TEST_NO_PRS=1 SYNO_MERGE_COND_FIXTURE="$WORK/cli/l1/fixture.json" \
+    SYNO_GATE_DEGRADED_LOG="$WORK/cli/l1/degraded.log" \
+    bash "$TOOL" --pr 100 --repo-root "$WORK/cli/l1/repo" --base local-main > "$OUT" 2> "$ERR"
+  RC=$?
+  boundary "L 对手集缺失 ⇒ exit 2" 2 "*" "degraded:" "E_OPENPRS_EMPTY"
+  assert_not_has "$OUT" "②=ok" "L 对手集缺失禁判 ok（D-10）" && extra "L 禁 ②=ok"
+else
+  fail "[边界] L 夹具构建失败"
 fi
 
 # K6 --json 与 --selfcheck 同给 ⇒ exit 2（互斥，fail-loud）

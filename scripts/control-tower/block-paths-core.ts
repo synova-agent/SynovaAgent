@@ -46,6 +46,20 @@
  */
 
 /** 退出码三态（🔴 具名常量，禁在调用点写裸数字） */
+import { pathToFileURL } from 'node:url';
+
+/**
+ * 真源 import 规约（裁 422-R1，组9 同族）：ESM 动态 import 的 specifier 必须是 URL——
+ * Windows 绝对路径（`d:\\...`）会被解析成协议（"Received protocol 'd:'"）⇒ 先归一反斜杠再 pathToFileURL。
+ * @input  **绝对** OS 路径（CLI 侧已 resolve；Windows 形态在 posix 上也可判——按相对处理，产物仍是合法无反斜杠 URL）
+ * @output file:// URL 字符串（空格等特殊字符已百分号编码；恒无反斜杠）
+ * @exit   纯函数不退出
+ * @degraded 无（不可编码路径由 Node 抛 TypeError，由调用方 loadRegistryView 转 ok=false 点名，不静默）
+ */
+export function sourceImportSpec(p: string): string {
+  return pathToFileURL(p.replace(/\\/g, '/')).href;
+}
+
 export const EXIT_OK = 0;
 export const EXIT_MISMATCH = 1;
 export const EXIT_UNJUDGEABLE = 2;

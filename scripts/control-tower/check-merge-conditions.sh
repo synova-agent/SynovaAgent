@@ -349,6 +349,8 @@ PY
 
 scan_open_prs() { # 分页拉全 open PR（禁 limit 饱和）→ $WORK/pulls.json ＋ $WORK/prs.tsv
   if [ -s "$WORK/prs.tsv" ]; then return 0; fi
+  # 测试缝（D-10 复现 · 裁 422-R2）：模拟「prs.tsv 缺失但流程继续」——仅测试用，生产恒空
+  if [ -n "${SYNO_MERGE_COND_TEST_NO_PRS:-}" ]; then return 0; fi
   local page=1 code n
   : > "$WORK/pulls_parts.txt"
   while [ "$page" -le "$MAX_PAGES" ]; do
@@ -641,6 +643,10 @@ is_pure_append() { # <base> <head> <file> ⇒ 0=纯追加（additions>0 且 dele
 cond2_overlap() { # ② 零写集重叠（实际 diff × 实际 diff；open PR 分页拉全）
   local mb="$1" head="$2"
   scan_open_prs
+  # 🔴 判定输入断言（D-10/裁 422-R2）：对手集缺失/为空 ⇒ 判不了 ⇒ exit 2，禁「比对 0 对 ⇒ ok」
+  if ! [ -s "$WORK/prs.tsv" ]; then
+    die_degraded "E_OPENPRS_EMPTY: ② 对手集缺失/为空（prs.tsv）——判不了，禁 ok(比对 0 对)"
+  fi
   mkdir -p "$WORK/files" "$WORK/mb" "$WORK/head"
   if ! diff_files "$mb" "$head" > "$WORK/files/0.txt"; then
     die_degraded "E_DIFF: git diff 失败（本 PR 文件集 ${mb}..${head}）"

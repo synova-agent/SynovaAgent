@@ -1242,3 +1242,9 @@ documents:
     status: active
     owner: CTO
     note: "check-file-driven 干净 checkout 不再 vacuous。"
+  - id: DOC-0305
+    type: decision
+    path: gate-exemptions/2026-10-26-cto-422-gate-robustness.md
+    status: active
+    owner: CTO
+    note: "裁422-R1/R2 门禁健壮性豁免：Windows 路径归一＋判不了必须 exit 2。"

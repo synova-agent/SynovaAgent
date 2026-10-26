@@ -1,0 +1,13 @@
+- scripts/control-tower/check-gate-protection.sh — 裁422-R1：Windows 路径归一（_git_rel 抽公共 helper＋GP_SELFTEST_REL 自检缝），消除 E_BAD_BASE 假触发 — 裁 422
+- scripts/control-tower/gen-block-paths.ts — 裁422-R1：真源 import 改走 sourceImportSpec（block-paths-core 导出，pathToFileURL），修复 Windows 盘符被当协议 — 裁 422
+- scripts/control-tower/block-paths-core.ts — 裁422-R1：新增纯函数 sourceImportSpec（ESM specifier 归一化，含 JSDoc 契约） — 裁 422
+- scripts/control-tower/check-merge-conditions.sh — 裁422-R2：cond2 判定输入断言（prs.tsv 缺失⇒E_OPENPRS_EMPTY exit 2，禁比对 0 对判 ok）＋SYNO_MERGE_COND_TEST_NO_PRS 测试缝 — 裁 422
+- scripts/control-tower/check-quality-delta.py — 裁422-R2：--coverage-required 声索武装（src 变更∧摘要缺失⇒E_COV_UNARMED exit 2，禁把看不见当没问题） — 裁 422
+- tests/control-tower/check-gate-protection.test.sh — 裁422-R1 配对测试：GP_SELFTEST_REL 自检缝例（变异闭环已验） — 裁 422
+- tests/control-tower/check-merge-conditions.test.sh — 裁422-R2 配对测试：边界 L 例（对手集缺失⇒exit 2 禁 ok） — 裁 422
+- tests/control-tower/check-quality-delta.test.sh — 裁422-R2 配对测试：G5-14 三例（声索⇒2／无声索⇒0 不回归／SYNO_QD_G5=0 回滚优先） — 裁 422
+- tests/control-tower/block-paths-core.test.ts — 裁422-R1 配对测试：sourceImportSpec 两例（posix 百分号编码／Windows 无反斜杠，变异闭环已验） — 裁 422
+- gate-exemptions/2026-10-26-cto-422-gate-robustness.md — 本豁免件自覆盖并声明上列全部路径 — 裁 422
+- docs/authority/DOCS-REGISTRY.yaml — 登记本豁免件 DOC-0305 仅追加一条 — 裁 422
+- .claude/claims/1048.yaml — #1048 claim 声明（裁422-R1 写集与验收） — 裁 422
+- .claude/claims/1049.yaml — #1049 claim 声明（裁422-R2 写集与验收） — 裁 422

@@ -26,6 +26,7 @@
  *   ⇒ 只能 `import`。本文件的 `import` 是**唯一**取数入口。
  */
 import { existsSync } from 'node:fs';
+import { sourceImportSpec } from './block-paths-core.ts';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -79,7 +80,8 @@ export async function loadRegistryView(sourceArg: string): Promise<LoadResult> {
   }
   let mod: Record<string, unknown>;
   try {
-    mod = (await import(sourcePath)) as Record<string, unknown>;
+    // 裁 422-R1：ESM specifier 必须 URL（Windows 绝对路径会被当协议 'd:'——组9 同族）
+    mod = (await import(sourceImportSpec(sourcePath))) as Record<string, unknown>;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return { ok: false, view: null, sourcePath, error: `import 真源失败：${msg}` };
