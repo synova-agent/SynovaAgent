@@ -140,12 +140,12 @@ router.get('/metrics/readings', (req: Request, res: Response) => {
     }
     const daysRaw = typeof req.query.days === 'string' && req.query.days !== '' ? req.query.days : undefined;
     const days = daysRaw === undefined ? undefined : Number(daysRaw);
-    if (days !== undefined && !(Number.isInteger(days) && days >= 1 && days <= 3650)) {
+    if ((req.query.days !== undefined && req.query.days !== '' && typeof req.query.days !== 'string') || (days !== undefined && !(Number.isInteger(days) && days >= 1 && days <= 3650))) {
       res.status(400).json({ ok: false, code: 'INVALID_DAYS', error: 'days 必须是 1..3650 的整数', received: daysRaw });
       return;
     }
     const orgId = typeof req.query.orgId === 'string' && req.query.orgId !== '' ? req.query.orgId : undefined;
-    if (Array.isArray(req.query.orgId) || (orgId !== undefined && !/^[A-Za-z0-9][A-Za-z0-9_.-]{1,63}$/.test(orgId))) {
+    if ((req.query.orgId !== undefined && req.query.orgId !== '' && typeof req.query.orgId !== 'string') || (orgId !== undefined && !/^[A-Za-z0-9][A-Za-z0-9_.-]{1,63}$/.test(orgId))) {
       res.status(400).json({ ok: false, code: 'INVALID_ORG_ID', error: 'orgId 形态不合法', received: req.query.orgId });
       return;
     }
