@@ -807,6 +807,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--update-baseline", action="store_true",
                     help="把当次实测写入 baseline（只升不降；唯一写路径）")
     ap.add_argument("--json", action="store_true", help="stdout 仅输出 JSON")
+    ap.add_argument("--coverage-required", action="store_true",
+                    help="调用方声索：本次应武装 G5（CI ①e 生成失败/摘要缺失时传）；"
+                         "变更集含 src/** 而 G5 未武装 ⇒ E_COV_UNARMED exit 2（裁 422-R2：判不了禁当通过）")
     try:
         args = ap.parse_args(argv)
     except SystemExit:
@@ -898,6 +901,14 @@ def main(argv: Optional[List[str]] = None) -> int:
         elif not g5_src:
             notes.append(f"G5 覆盖率/重复率: 不适用（变更集无 src/**{G5_SRC_EXT}；变更集 {len(changed)} 文件）")
         elif not g5_armed(args):
+            if args.coverage_required:
+                # 裁 422-R2（fail-closed）：调用方已声索应武装（覆盖率生成失败/摘要缺失）而 G5 未武装
+                # ⇒ 判不了 ⇒ exit 2，禁把"看不见"当"没问题"（D-10 同族；致命化同 E_WHITELIST 惯例）
+                degraded("E_COV_UNARMED",
+                         f"变更集含 {len(g5_src)} 个 src/**{G5_SRC_EXT} 且调用方已声索武装（--coverage-required），"
+                         f"但 G5 未武装（覆盖率摘要缺失）——判不了，禁当通过（裁 422-R2）")
+                print("QUALITY-DELTA: ERROR E_COV_UNARMED", file=sys.stdout)
+                return 2
             # 未武装 ≠ 通过：只是本组无判据对象 ⇒ 每次都必须显式说明（L1 追认：禁静默）
             notes.append(f"G5 未武装（未传 --coverage-summary/--coverage-sha/--baseline）：不判覆盖率/重复率"
                          f"（变更集含 {len(g5_src)} 个 src/**{G5_SRC_EXT}；接线后由调用方传参即生效）")

@@ -1,0 +1,12 @@
+writeset:
+  - .claude/claims/1049.yaml
+  - .gitea/workflows/local-gates.yml
+  - scripts/control-tower/check-merge-conditions.sh
+  - scripts/control-tower/check-quality-delta.py
+  - tests/control-tower/check-merge-conditions.test.sh
+  - tests/control-tower/check-quality-delta.test.sh
+done:
+  - verify: grep -q "E_OPENPRS_EMPTY" scripts/control-tower/check-merge-conditions.sh
+  - verify: grep -q "E_COV_UNARMED" scripts/control-tower/check-quality-delta.py
+  - verify: test $(bash tests/control-tower/check-quality-delta.test.sh >/dev/null 2>&1; echo $?) -eq 0
+note: "写集含 local-gates.yml＝摘出提交（revert 本 PR 先前加的 else 分支，让线 #943；终态该文件与 main 零差异）。#1049 裁422-R2（A类已批政策实现）：判不了必须 exit 2——merge-conditions cond2 对手集断言（D-10 fail-open 堵死）＋quality-delta --coverage-required（①e 摘要缺失⇒E_COV_UNARMED）（workflow ①e 接线拆出，随 #943/#840 线落地）。SYNO_QD_G5=0 回滚语义保持"

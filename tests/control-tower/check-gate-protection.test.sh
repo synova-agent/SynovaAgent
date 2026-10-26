@@ -550,5 +550,18 @@ else
 fi
 
 echo ""
+# 裁 422-R1：路径 → git object spec 归一化自检缝（GP_SELFTEST_REL；SYNO_DOWN_SELFTEST 同型）
+#   Windows 反斜杠 ⇒ 正斜杠；改坏（去掉 replace）⇒ win_rel 含反斜杠 ⇒ 本例红
+GP_SELFTEST_REL=1 GP_ROOT=/tmp GP_LIST=/tmp/x bash "$GATE" > "$TMPD/rel.txt" 2>"$TMPD/rel.err"
+rel_rc=$?
+win_rel="$(grep -m1 $'GP-REL\tC:' "$TMPD/rel.txt" | cut -f3)"
+posix_rel="$(grep -m1 $'GP-REL\t/tmp' "$TMPD/rel.txt" | cut -f3)"
+if [ "$rel_rc" -eq 0 ] && [ "$posix_rel" = ".gitea/protected-files.txt" ] \
+   && case "$win_rel" in *'\\'*) false;; *C:/repo/.gitea/protected-files.txt) true;; *) false;; esac; then
+  ok "422-R1 归一化自检缝：posix=[${posix_rel}] win=[${win_rel}]（反斜杠已归一）"
+else
+  no "422-R1 归一化自检缝 — rc=${rel_rc} posix=[${posix_rel}] win=[${win_rel}]（期望无反斜杠且含 C:/repo/.gitea/...）"
+fi
+
 echo "结果: $PASS 通过, $FAIL 失败"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1

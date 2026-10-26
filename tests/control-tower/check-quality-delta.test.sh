@@ -526,6 +526,23 @@ cov_write "$D/cov.json" "$GROOT/src/svc/m.ts" 11.0
 ( cd "$D" && env SYNO_JSCPD_REPORT="$D/jscpd.json" "$PYABS" "$SUT" --root "$GROOT" --staged --coverage-summary cov.json --coverage-sha "$GSHA" >/dev/null 2>&1 ); RC13=$?
 [ "$RC13" -eq 1 ] && ok "G5-13 入册后降到 11.0 ⇒ exit 1（棘轮生效）" || no "G5-13 降向未红 rc=$RC13"
 
+
+# ── G5-14（裁 422-R2）：--coverage-required 声索武装而 G5 未武装（src 变更在）⇒ E_COV_UNARMED exit 2 ──
+D="$G5T/unarmed"; mk_g5_repo "$D"; g5_modify_m "$D"
+( cd "$D" && git add -A )
+GROOT="$( cd "$D" && pwd -P )"; GSHA="$(g5_sha "$D")"
+jscpd_empty "$D/jscpd.json"
+runq_g5 "$D" "SYNO_JSCPD_REPORT=$D/jscpd.json" -- --staged --coverage-required
+assert_rc "$RUN_RC" 2 "G5-14 声索武装+src 变更+无摘要 ⇒ E_COV_UNARMED exit 2（禁把看不见当没问题）"
+printf '%s' "$RUN_OUT" | grep -q 'E_COV_UNARMED' && ok "G5-14 点名 E_COV_UNARMED" || no "G5-14 缺 E_COV_UNARMED: $RUN_OUT"
+# 对照：无 --coverage-required ⇒ 未武装 note、rc 0（既有声索制不回归）
+runq_g5 "$D" "SYNO_JSCPD_REPORT=$D/jscpd.json" -- --staged
+assert_rc "$RUN_RC" 0 "G5-14 对照：无声索 ⇒ 未武装 note + rc 0（不回归）"
+printf '%s' "$RUN_OUT" | grep -q 'G5 未武装' && ok "G5-14 对照打印未武装 note" || no "G5-14 对照缺未武装 note: $RUN_OUT"
+# 对照：SYNO_QD_G5=0 回滚开关优先（即使误传 --coverage-required 也不炸）
+runq_g5 "$D" "SYNO_JSCPD_REPORT=$D/jscpd.json" "SYNO_QD_G5=0" -- --staged --coverage-required
+assert_rc "$RUN_RC" 0 "G5-14 对照：SYNO_QD_G5=0 回滚 ⇒ 整组跳过 rc 0（回滚语义优先）"
+
 echo ""
 echo "结果: $PASS 通过, $FAIL 失败"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1
