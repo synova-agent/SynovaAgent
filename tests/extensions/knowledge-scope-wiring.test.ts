@@ -720,6 +720,8 @@ function probeGateInFreshProcess(enabled: boolean): {
         const obj: unknown = JSON.parse(line);
         return typeof obj === 'object' && obj !== null ? (obj as Record<string, unknown>) : undefined;
       } catch {
+        // swallow-ok: 非 JSON 的 stderr 噪音行按设计跳过（本 helper 的失败面已 fail-closed：
+        //   spawn 失败／非零退出／状态行不可解析 均在上方 throw）；此处不产业务降级
         return undefined;
       }
     })
