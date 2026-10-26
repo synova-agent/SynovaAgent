@@ -650,9 +650,8 @@ DECL_MISS=""
 for g in '声明闸①' '声明闸②' '声明闸③'; do
   printf '%s\n' "$DECL_FAILS" | grep -q "$g" || DECL_MISS="$DECL_MISS $g"
 done
-# 裁 409（2026-10-26）：组6 已**故意降级** ⇒ rc 可能是 0；判别性要求改为「三闸各自点名 ❌」
-if [ -z "$DECL_MISS" ]; then
-  echo "  ✅ D1148 三闸注入: ①②③ 三闸各自点名（rc=${DECL_RC}；组6 按裁 409 降级，rc 允许 0）"
+if [ "$DECL_RC" -eq 1 ] && [ -z "$DECL_MISS" ]; then
+  echo "  ✅ D1148 三闸注入: rc=1 且 ①②③ 三闸各自点名（无 fail-open）"
 else
   echo "  ❌ D1148 三闸注入: rc=$DECL_RC 未点名闸:${DECL_MISS:-<无>} —— 三硬闸存在 fail-open 或未接线"
   printf '%s\n' "$DECL_FAILS" | sed 's/^/     /' | head -10
@@ -708,9 +707,9 @@ git -C "$CLONE" add scripts/d1148-excl-probe.sh
 _run_gate_env "$TMP/out.d1148-excl.log" GITHUB_ACTIONS=true SYNO_CI=1 SYNO_FIXTURE_MODE=1 SYNO_CLAIM_V2=0
 EXCL_RC=$?
 EXCL_FAILS="$(strip_ansi < "$TMP/out.d1148-excl.log" | grep '❌' | sed 's/^[[:space:]]*//' || true)"
-if printf '%s\n' "$EXCL_FAILS" | grep -q '声明闸②' \
+if [ "$EXCL_RC" -eq 1 ] && printf '%s\n' "$EXCL_FAILS" | grep -q '声明闸②' \
    && printf '%s\n' "$EXCL_FAILS" | grep -q 'Q2 排除项'; then
-  echo "  ✅ D1148 闸② 排除项注入: 点名「Q2 排除项」（rc=${EXCL_RC}；组6 降级，rc 允许 0）"
+  echo "  ✅ D1148 闸② 排除项注入: rc=1 且点名「Q2 排除项」"
 else
   echo "  ❌ D1148 闸② 排除项注入: rc=${EXCL_RC}，闸② 未捕获自相矛盾的排除项"
   printf '%s\n' "$EXCL_FAILS" | sed 's/^/     /' | head -8
