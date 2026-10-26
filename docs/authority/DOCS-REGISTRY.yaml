@@ -1218,3 +1218,11 @@ documents:
     status: active
     owner: CTO
     note: "组级降级：❌ 保留、只摘计数；子 shell 禁用（K3 根因）。"
+
+  # ---- CTO 2026-10-26：#1041 CI④ report-only ----
+  - id: DOC-0302
+    type: decision
+    path: gate-exemptions/2026-10-26-cto-1041-ci4.md
+    status: active
+    owner: CTO
+    note: "CI④ 复现器自检 report-only，带回滚开关。"
