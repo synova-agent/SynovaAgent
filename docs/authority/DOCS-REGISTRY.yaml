@@ -1162,3 +1162,11 @@ documents:
     status: active
     owner: CTO
     note: "DeployKey 取证/轮换/泄露应急 SOP + 只读取证脚本。"
+
+  # ---- CTO 2026-10-26：#1034 DeployKey 旁路 SOP 文档登记 ----
+  - id: DOC-0295
+    type: decision
+    path: .github/DEPLOYKEY-SOP.md
+    status: active
+    owner: CTO
+    note: "DeployKey 取证/轮换/泄露应急 SOP（#1032/#1034，裁 421）。"
