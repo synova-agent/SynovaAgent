@@ -1234,3 +1234,11 @@ documents:
     status: active
     owner: CTO
     note: "pre-dispatch PR 查询失败 fail-closed。"
+
+  # ---- CTO 2026-10-26：#1043 #995 修复 ----
+  - id: DOC-0304
+    type: decision
+    path: gate-exemptions/2026-10-26-cto-1043-995.md
+    status: active
+    owner: CTO
+    note: "check-file-driven 干净 checkout 不再 vacuous。"
