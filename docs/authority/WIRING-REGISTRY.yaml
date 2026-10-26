@@ -136,3 +136,11 @@ entries:
     status: declared-only
     defined_at: scripts/control-tower/report-mirror-pushes.sh:15
     notes: "#1034 DeployKey 旁路只读取证工具（运维/审计人工调用）"
+  - capability: control-tower.acceptanceMatrix
+    defined_at: "scripts/control-tower/check-acceptance-matrix.py:1"
+    provider: "scripts/control-tower/check-acceptance-matrix.py:1"
+    consumer: null
+    test: "tests/control-tower/check-acceptance-matrix.test.sh"
+    status: declared-only
+    owner: P4
+    notes: "#1054 验收矩阵机制 P0：P0 明确不接 CI/pre-commit（规格 §3 非目标）⇒ 无生产消费者；矩阵载体＋三态校验器，手动运行。"

@@ -1248,3 +1248,17 @@ documents:
     status: active
     owner: CTO
     note: "裁422-R1/R2 门禁健壮性豁免：Windows 路径归一＋判不了必须 exit 2。"
+
+  # ---- P4 2026-10-27：#1054 验收矩阵机制 v1（P0）----
+  - id: DOC-0306
+    type: governance
+    path: docs/synova/acceptance/README.md
+    status: active
+    owner: P4
+    note: "acceptance-matrix/v1 格式权威：23 行固定槽位＋F1–F12 契约＋边界值＋已知限制（#1054 P0）。"
+  - id: DOC-0307
+    type: registry
+    path: docs/synova/acceptance/1053.matrix.yaml
+    status: active
+    owner: P4
+    note: "M4-T1 回溯样例（anchor 5553bb95c）：证明校验器点名 T-1/T-7/Q-11 三处真实缺口（#1054 P0）。"
