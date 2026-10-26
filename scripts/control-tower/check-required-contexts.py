@@ -549,13 +549,41 @@ def diff_lists(live, baseline):
 
 # ═══ gh api（只读）════════════════════════════════════════════════════════════
 
-def fetch_live_contexts(repo, branch):
-    """`gh api repos/<repo>/branches/<branch>/protection`（GET，只读）→ live contexts 列表。"""
-    gh_bin = os.environ.get(SEAM_GH, "") or "gh"
-    env = dict(os.environ)
-    env["GH_PROMPT_DISABLED"] = "1"          # 未登录时不要交互式提问（否则挂死）
-    env["GH_NO_UPDATE_NOTIFIER"] = "1"
-    cmd = [gh_bin, "api", "repos/%s/branches/%s/protection" % (repo, branch)]
+def _parse_live_payload(data):
+    """把 gh api 的两种形状都解析成 contexts 列表；无法识别 ⇒ None（交回退/降级）。
+
+    · rulesets 形状（`rules/branches/<b>`）：list[{type, parameters{required_status_checks[{context}]}}]
+    · 经典形状（`branches/<b>/protection`）：dict{required_status_checks{contexts[]|checks[]}}
+    """
+    if isinstance(data, list):
+        live = []
+        for rule in data:
+            if not isinstance(rule, dict) or rule.get("type") != "required_status_checks":
+                continue
+            params = rule.get("parameters") or {}
+            for c in params.get("required_status_checks") or []:
+                if isinstance(c, dict) and isinstance(c.get("context"), str) and c["context"]:
+                    live.append(c["context"])
+                elif isinstance(c, str) and c:
+                    live.append(c)
+        return live
+    if isinstance(data, dict):
+        rsc = data.get("required_status_checks")
+        if not isinstance(rsc, dict):
+            return None
+        live = rsc.get("contexts")
+        if not isinstance(live, list):
+            checks = rsc.get("checks")
+            if isinstance(checks, list):
+                live = [c.get("context") for c in checks if isinstance(c, dict)]
+            else:
+                return None
+        return [c for c in live if isinstance(c, str) and c != ""]
+    return None
+
+
+def _gh_api_json(gh_bin, env, path):
+    cmd = [gh_bin, "api", path]
     try:
         proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30, env=env)
     except OSError as exc:
@@ -567,22 +595,38 @@ def fetch_live_contexts(repo, branch):
     if proc.returncode != 0:
         raise Degrade("gh api 失败（rc=%d）: %s——%s" % (proc.returncode, " ".join(cmd), err[:300] or "无 stderr"))
     try:
-        data = json.loads(out)
+        return json.loads(out)
     except ValueError as exc:
         raise Degrade("gh api 输出非 JSON（%s）: %s" % (exc, out[:200]))
-    if not isinstance(data, dict):
-        raise Degrade("gh api 输出根不是对象: %s" % type(data).__name__)
-    rsc = data.get("required_status_checks")
-    if not isinstance(rsc, dict):
-        raise Degrade("branch protection 缺 required_status_checks（API 形状不符或未配置必需检查）——fail-closed")
-    live = rsc.get("contexts")
-    if not isinstance(live, list):
-        checks = rsc.get("checks")
-        if isinstance(checks, list):
-            live = [c.get("context") for c in checks if isinstance(c, dict)]
-        else:
-            raise Degrade("required_status_checks 缺 contexts/checks 字段——API 形状不符，fail-closed")
-    return [c for c in live if isinstance(c, str) and c != ""], data
+
+
+def fetch_live_contexts(repo, branch):
+    """取 live required contexts。
+
+    🔴 裁 421（2026-10-26，K3 诊断报告根因）：**保护已从经典 branch-protection 迁移为 repo rulesets**
+    （`main-protect` id=24259959, active, 8 contexts）。旧实现只读经典端点 ⇒ 永久 404 ⇒ live 对账
+    永久 SKIPPED ⇒ 静态面盯着过期镜像恒红。故：
+      ① 首选 `repos/<repo>/rules/branches/<branch>`（rulesets 聚合端点，读权限宽松）；
+      ② 形状不可识别/端点失败 ⇒ 回退经典 `branches/<branch>/protection`；
+      ③ 两源俱败 ⇒ 既有 Degrade 路径（fail-closed，不判绿）。
+    """
+    gh_bin = os.environ.get(SEAM_GH, "") or "gh"
+    env = dict(os.environ)
+    env["GH_PROMPT_DISABLED"] = "1"          # 未登录时不要交互式提问（否则挂死）
+    env["GH_NO_UPDATE_NOTIFIER"] = "1"
+    reasons = []
+    for path in ("repos/%s/rules/branches/%s" % (repo, branch),
+                 "repos/%s/branches/%s/protection" % (repo, branch)):
+        try:
+            data = _gh_api_json(gh_bin, env, path)
+        except Degrade as exc:
+            reasons.append(str(exc)[:200])
+            continue
+        live = _parse_live_payload(data)
+        if live is not None:
+            return live, data
+        reasons.append("形状不可识别: %s" % path)
+    raise Degrade("两个取数端点均失败/不可解析: %s" % " | ".join(reasons[:2]))
 
 
 # ═══ 主流程 ═════════════════════════════════════════════════════════════════

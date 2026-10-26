@@ -115,7 +115,7 @@ PYEOF
 echo "── ① 正常（真机自检）──"
 runq "$PY" "$C"
 if [ "$RC" -eq 0 ]; then ok "真仓默认模式 → exit 0"; else no "真仓默认模式应 exit 0，实际 $RC: $(echo "$OUT" | tail -2 | tr '\n' '|')"; fi
-N_EXPECTED="$(grep -v '^[[:space:]]*#' "$BASE" | grep -c 'source=branch-protection API' || true)"
+N_EXPECTED="$(grep -v '^[[:space:]]*#' "$BASE" | grep -cE 'source=(branch-protection API|rulesets API)' || true)"
 if [ "${N_EXPECTED:-0}" -ge 5 ]; then
   ok "真基线数据行数 N=${N_EXPECTED}（≥5 下限成立）"
 else
@@ -321,7 +321,7 @@ PYEOF
 
   printf '{"url":"x"}\n' > "$TMPD/live-shape.json"
   runq env SYNO_REQUIRED_CONTEXTS_GH="$STUB" STUB_JSON="$TMPD/live-shape.json" "$PY" "$C" --root "$FIXA" --api-check
-  [ "$RC" -eq 2 ] && grep -q "required_status_checks" "$ERR_FILE" \
+  [ "$RC" -eq 2 ] && grep -qE "required_status_checks|不可解析" "$ERR_FILE" \
     && ok "缺 required_status_checks → exit 2（形状不符 fail-closed）" || no "形状不符应 exit 2，实际 rc=$RC"
 else
   echo "  ⚠️ SKIP: Windows 无 POSIX 可执行 shim — PATH 坏 shim / stub gh 用例跳过（注入缝用例已覆盖降级路径）"
