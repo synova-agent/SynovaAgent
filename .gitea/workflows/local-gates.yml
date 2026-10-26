@@ -266,20 +266,11 @@ jobs:
           # 🔴 **显式判红，不依赖 runner 的 `set -e`**（实测教训：不写 `|| exit` 时，本地直接跑该步正文
           #   得 rc=0 —— harness 的 rc=2 没人接；只有 CI 注入 set -e 才红 ⇒ 本地复现与 CI 不一致
           #   = 又一个"跑的不是同一件事"）。`|| exit $?` 保留原 rc（harness=2）。
-          NODE_BIN=/Users/wane/.nvm/versions/node/v24.19.0/bin  # 裁 409：本步 report-only（SYNO_REPRO_STRICT=1 回严）
-          run3() { PATH="$NODE_BIN:$PATH" bash "$1" || return $?; }
-          if [ "${SYNO_REPRO_STRICT:-0}" = "1" ]; then
-            run3 scripts/control-tower/ci-emptygreen-sim.sh || exit $?
-            run3 tests/control-tower/ci-emptygreen-sim.test.sh || exit $?
-            run3 scripts/control-tower/ci-deps-step-sim.sh || exit $?
-          else
-            r=0
-            run3 scripts/control-tower/ci-emptygreen-sim.sh || r=$?
-            run3 tests/control-tower/ci-emptygreen-sim.test.sh || r=$?
-            run3 scripts/control-tower/ci-deps-step-sim.sh || r=$?
-            [ "$r" -ne 0 ] && echo "::warning::④ 复现器自检未过（report-only，裁 409；SYNO_REPRO_STRICT=1 可回严）rc=$r"
-            exit 0
-          fi
+          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash scripts/control-tower/ci-emptygreen-sim.sh || exit $?
+          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash tests/control-tower/ci-emptygreen-sim.test.sh || exit $?
+          # 依赖步复现器**真跑 npm ci**（本机实测 ~70–90s）⇒ 仅在上面的条件命中时才轮到它
+          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" bash scripts/control-tower/ci-deps-step-sim.sh || exit $?
+      # ①e 置于步序末尾：CI-S<n> 是**位置派生**的 id（#910 盘点表），插在中间会让 CI-S3..S9 全体漂移 ⇒
       # 代价：① 若先红，本步不执行（与其余步同语义，不做 always）。
       - name: ①e 质量增量闸（G1/G3/G4 · 只判变更集 · 不计组号）
         run: |
