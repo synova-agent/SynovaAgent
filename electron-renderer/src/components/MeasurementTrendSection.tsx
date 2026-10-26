@@ -8,11 +8,12 @@
  * 契约（铁律 47）:
  *   @input   view: MeasurementTrendsView | null —— 容器注入的取数结果；state 由容器按
  *            「!ok||degraded ⇒ degraded；ok 且 summary 空 ⇒ empty；否则 ready」派生；
- *            onOpenOnePager?: () => void —— 一页纸入口回调（缺省时不崩，按钮保留可点占位）。
+ *            onOpenOnePager?: () => void —— 一页纸入口回调（缺省不渲染按钮，无死按钮）。
  *   @output  单一区块：标题含字面量「测量值＋趋势」；ready 每指标一条 measurement-trend-item
  *            （metricId＋latestValue＋unit＋方向 data-trend↑/↓/→/未知＋latestAt）；empty 空态；
- *            degraded 降级条＋errors 原文；loading 占位；任何 state 都渲染一页纸入口
- *            data-testid="measurement-to-onepager"（规格 §3.2b：接回既有 report tab，不重建报告链）。
+ *            degraded 降级条＋errors 原文；loading 占位；任何 state 都渲染已知限制行
+ *            data-testid="measurement-trend-limitations"；一页纸入口仅当 onOpenOnePager 存在时渲染
+ *            （无死按钮）（规格 §3.2b：接回既有 report tab，不重建报告链）。
  *   @degraded state='degraded' ⇒ 降级条 + errors 逐条文案，零推测数据、不白屏（铁律 8/11）。
  *   @authority 只被容器（MeasurementTrendContainer）或测试桥渲染；本文件不请求网络、不读全局 store。
  *   @not-here 不做通用 BI/图表/仪表盘；不新增路由或页面；不把测量值写进报告内容。
@@ -22,10 +23,11 @@
  *   · 数值按月/ratio 等 unit 原样展示，不做千分位/位数归一（未知口径不格式化）。
  *   · latestAt 原样输出 ISO 字符串（不本地化，避免测试/显示口径不一致）。
  *   · 变化率以百分数展示（由 changeRatio 推导），previous 不可得时显示「未知」，不伪造 0。
+ *   · 状态类型若新增成员，assertStateExhaustive 在渲染期抛 UNKNOWN_STATE（编译期由 never 兜底）。
  */
 import React from 'react';
 import type { MetricTrendItem, MeasurementTrendsView, TrendDirection } from '../lib/measurement-trends';
-import { deriveTrendDirection } from '../lib/measurement-trends';
+import { deriveTrendDirection, TREND_SEMANTICS_NOTE } from '../lib/measurement-trends';
 
 /** 展示状态（容器按 view 派生；空是合法业务态） */
 export type MeasurementTrendState = 'loading' | 'ready' | 'empty' | 'degraded';
@@ -53,6 +55,14 @@ function formatChangeRatio(changeRatio: number | null): string | null {
   if (changeRatio === null || !Number.isFinite(changeRatio)) return null;
   const percent = (changeRatio * 100).toFixed(1);
   return changeRatio > 0 ? `+${percent}%` : `${percent}%`;
+}
+
+/** 状态穷尽兜底：四态之外（新增成员未同步）⇒ 渲染期显式抛错，禁静默落到某个分支 */
+function assertStateExhaustive(state: MeasurementTrendState): void {
+  switch (state) {
+    case 'loading': case 'ready': case 'empty': case 'degraded': return;
+    default: { const never: never = state; throw new Error(`UNKNOWN_STATE: ${String(never)}`); }
+  }
 }
 
 const TrendItem: React.FC<{ item: MetricTrendItem; index: number }> = ({ item, index }) => {
@@ -85,11 +95,13 @@ const TrendItem: React.FC<{ item: MetricTrendItem; index: number }> = ({ item, i
 /**
  * MeasurementTrendSection — 测量值＋趋势纯展示区块（容器: MeasurementTrendContainer）。
  * @input  — props（见 MeasurementTrendSectionProps）
- * @output — 四态分支结构 + 恒在的一页纸入口（data-testid="measurement-to-onepager"）
+ * @output — 四态分支结构 + 恒在的已知限制行（data-testid="measurement-trend-limitations"）；
+ *           一页纸入口仅当 onOpenOnePager 存在时渲染（data-testid="measurement-to-onepager"）
  * @degraded — 降级条 + errors 原文，零假数据
- * @error  — 不抛（view 缺失/回调缺失均按显式分支渲染）
+ * @error  — 仅当 state 越界（非四态）时 assertStateExhaustive 抛 UNKNOWN_STATE；view/回调缺失按显式分支渲染
  */
 export const MeasurementTrendSection: React.FC<MeasurementTrendSectionProps> = ({ view, state, onOpenOnePager }) => {
+  assertStateExhaustive(state);
   const items = view === null ? [] : view.summary;
   const errors = view?.errors ?? [];
   const showEmpty = state === 'empty' || (state === 'ready' && items.length === 0);
@@ -97,6 +109,7 @@ export const MeasurementTrendSection: React.FC<MeasurementTrendSectionProps> = (
   return (
     <section className="sb-section measurement-trend-section" data-testid="measurement-trend-section">
       <div className="sb-section-title">📈 测量值＋趋势</div>
+      <div data-testid="measurement-trend-limitations">{TREND_SEMANTICS_NOTE}</div>
 
       {state === 'loading' && (
         <div className="ga-block-note" data-testid="measurement-trend-loading">
@@ -133,14 +146,16 @@ export const MeasurementTrendSection: React.FC<MeasurementTrendSectionProps> = (
         </div>
       )}
 
-      <button
-        className="ga-refresh-btn measurement-to-onepager"
-        data-testid="measurement-to-onepager"
-        type="button"
-        onClick={onOpenOnePager}
-      >
-        查看诊断报告（一页纸）
-      </button>
+      {onOpenOnePager ? (
+        <button
+          className="ga-refresh-btn measurement-to-onepager"
+          data-testid="measurement-to-onepager"
+          type="button"
+          onClick={onOpenOnePager}
+        >
+          查看诊断报告（一页纸）
+        </button>
+      ) : null}
     </section>
   );
 };

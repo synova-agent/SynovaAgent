@@ -332,12 +332,12 @@ describe('#656 M4 · T2 渲染「测量值＋趋势」（纯组件 + render 桥�
     expect(out).toContain('data-testid="measurement-to-onepager"');
   });
 
-  it('T2 loading：加载态标记在场；onOpenOnePager 缺失不崩（回调可选）', () => {
+  it('T2 loading：加载态标记在场；无回调不渲按钮（无死按钮）', () => {
     const out = renderSection(null, 'loading');
     console.log(`[T2] loading length=${out.length}`);
     expect(out).toContain('测量值＋趋势');
     expect(out).toContain('data-testid="measurement-trend-loading"');
-    expect(out).toContain('data-testid="measurement-to-onepager"');
+    expect(out).not.toContain('data-testid="measurement-to-onepager"');
     expect(() => renderSection(null, 'loading')).not.toThrow();
     expect(() => renderSection(READY_VIEW, 'ready')).not.toThrow();
   });

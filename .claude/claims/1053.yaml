@@ -4,6 +4,8 @@ writeset:
   - .claude/claims/1053.yaml
   - src/routes/sentinel.ts
   - electron-renderer/src/lib/measurement-trends.ts
+  - electron-renderer/src/components/MeasurementTrendSection.tsx
+  - tests/acceptance/mvp1-m4-output-face.test.ts
 done:
   - verify: npx vitest run tests/acceptance/mvp1-m4-output-face.test.ts
   - verify: npx vitest run tests/acceptance/mvp1-m3-domain-chain.test.ts
