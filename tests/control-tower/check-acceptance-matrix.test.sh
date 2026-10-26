@@ -13,6 +13,10 @@
 #              M4 矩阵 anchor ≠ --anchor（两值皆可解析）⇒ exit 1 ＋ `E_ANCHOR_MISMATCH`
 #              M5 含 src/**.ts 但覆盖率未武装 ⇒ exit 1 ＋ `E_COV_UNJUDGED`
 #   边界 — E1 声明与机械事实矛盾（源文件缺 @exit 却声明 T-1 pass）⇒ exit 1 ＋ `E_MATRIX_SCHEMA`
+#   作用域 — S1 记录面 `.claude/claims`×2 **不**触发 T-8 ⇒ exit 0
+#              ＋ `T-8 scope: skip record-only dir .claude/claims` ＋ `T-8 n/a na_ok dirs=0 bad=0 skipped=1`
+#            S2 代码目录 `scripts/x`×2 触发 T-8（缺域守则）⇒ exit 1
+#              ＋ `T-8 n/a fail dirs=1 bad=1 skipped=0 first=scripts/x/AGENTS.md(missing)`
 #   降级 — D1 --anchor 指向不存在 commit ⇒ exit 2 ＋ `E_ANCHOR_MISMATCH` ＋ 降级日志恰 1 行 JSON
 #              （字段 time/component/code/phase/retryable）
 #          D2 --repo 指向不存在路径 ⇒ exit 2 ＋ 降级日志非空（**绝不 exit 0**）
@@ -250,6 +254,47 @@ run_sut "$FIX" matrix.yaml --repo .
 assert_rc "$RUN_RC" 1 "E1 T-1 声明 pass 但缺 @exit ⇒ exit 1"
 contains "$RUN_OUT" "E_MATRIX_SCHEMA" && ok "E1 点名 E_MATRIX_SCHEMA（矛盾归口）" || no "E1 未点名错误码: $RUN_OUT"
 contains "$RUN_OUT" "@exit" && ok "E1 detail 点名缺的标签 @exit" || no "E1 未点名 @exit: $RUN_OUT"
+
+# ── S1 记录面（.claude/claims ≥2 件）不触发 T-8：跳过 ＋ record-only 提示 ──
+new_fixture s1 green
+( cd "$FIX" \
+  && mkdir -p .claude/claims \
+  && printf 'claim: 1048\n' > .claude/claims/1048.yaml \
+  && printf 'claim: 1049\n' > .claude/claims/1049.yaml \
+  && git add -A \
+  && git commit -q -m claims )
+S1_HEAD="$( cd "$FIX" && git rev-parse HEAD )"
+sed -e "s#^anchor: .*#anchor: $S1_HEAD#" \
+    -e 's#^changed_files: .*#changed_files: [src/a.ts, .claude/claims/1048.yaml, .claude/claims/1049.yaml]#' \
+    "$FIX/matrix.yaml" > "$FIX/s1.yaml"
+run_sut "$FIX" s1.yaml --repo .
+if [ "$RUN_RC" -eq 0 ] \
+   && contains "$RUN_OUT" "T-8 scope: skip record-only dir .claude/claims" \
+   && contains "$RUN_OUT" "T-8 n/a na_ok dirs=0 bad=0 skipped=1"; then
+  ok "S1 记录面 .claude/claims×2 不触发 T-8 ⇒ exit 0 ＋ record-only 提示 ＋ dirs=0 bad=0 skipped=1"
+else
+  no "S1 期望 exit 0 ＋ record-only 提示 ＋ T-8 n/a na_ok dirs=0 bad=0 skipped=1（实际 rc=$RUN_RC）: $RUN_OUT"
+fi
+
+# ── S2 代码目录（scripts/x ≥2 件）触发 T-8：缺域守则 ⇒ fail ──
+new_fixture s2 green
+( cd "$FIX" \
+  && mkdir -p scripts/x \
+  && printf '#!/bin/bash\necho a\n' > scripts/x/a.sh \
+  && printf '#!/bin/bash\necho b\n' > scripts/x/b.sh \
+  && git add -A \
+  && git commit -q -m scripts )
+S2_HEAD="$( cd "$FIX" && git rev-parse HEAD )"
+sed -e "s#^anchor: .*#anchor: $S2_HEAD#" \
+    -e 's#^changed_files: .*#changed_files: [src/a.ts, scripts/x/a.sh, scripts/x/b.sh]#' \
+    "$FIX/matrix.yaml" > "$FIX/s2.yaml"
+run_sut "$FIX" s2.yaml --repo .
+if [ "$RUN_RC" -eq 1 ] \
+   && contains "$RUN_OUT" "T-8 n/a fail dirs=1 bad=1 skipped=0 first=scripts/x/AGENTS.md(missing)"; then
+  ok "S2 代码目录 scripts/x×2 触发 T-8（缺 AGENTS.md）⇒ exit 1 ＋ detail 精确"
+else
+  no "S2 期望 exit 1 ＋ T-8 n/a fail dirs=1 bad=1 skipped=0 first=scripts/x/AGENTS.md(missing)（实际 rc=$RUN_RC）: $RUN_OUT"
+fi
 
 # ── D1 --anchor 指向不存在 commit ⇒ exit 2 ＋ 降级日志恰 1 行 JSON ──
 new_fixture d1 green

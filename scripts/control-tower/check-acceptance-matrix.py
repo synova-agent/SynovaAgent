@@ -11,6 +11,8 @@
 #            --repo 缺省 "."；--anchor 缺省 = 矩阵的 anchor 字段
 #   @output  逐项一行 `<id> <status> <verdict> <detail>`（23 行，顺序固定：Q-1…Q-15、T-1…T-8）；
 #            失败追加 `ISSUE <code> <item|-> <detail>` 行；
+#            stderr 可含 T-8 scope 提示（每个被跳过的候选目录恰一行；**stdout 行数契约不变**）：
+#              `T-8 scope: skip record-only dir <dir>` ｜ `T-8 scope: skip out-of-scope dir <dir>`
 #            末行 ∈ { MATRIX: PASS 23/23 (mach 11/11, sem 12 attested)
 #                   | MATRIX: FAIL <n> issue(s)
 #                   | MATRIX: UNJUDGED <code>            ← exit 2（判不了）
@@ -61,7 +63,9 @@
 #      E_ANCHOR_MISMATCH 靠 phase 区分 —— 10 码闭包的有意取舍，归因靠 detail/phase。
 #   7. **URL 类 evidence 不联网**：只检查"含 anchor 前 7 位 hex"这一字符串条件 ⇒ 不验可达性/
 #      状态码；7 位前缀可被伪造或碰撞（有意：P0 不允许校验器发网络请求）。
-#   8. **T-8 只数小节数**：`^## ` ≥5 是结构计数；AGENTS.md 存在但内容空洞照样绿。
+#   8. **T-8 只对代码目录数小节数**：`^## ` ≥5 是结构计数；AGENTS.md 存在但内容空洞照样绿。
+#      记录面（.claude/**、memory/**、docs/**）与域外目录**跳过**并打印 scope 提示 ⇒
+#      **跳过≠已验证**（该目录有无域守则，本器不判）。
 #   9. **子集 YAML 不支持**多行字符串/块序列/锚点别名/跨行流式/嵌套超两层：超出子集一律
 #      E_MATRIX_SCHEMA（有意 fail-closed，不猜）。
 #   10. **anchor 内容读取依赖本仓对象库**：anchor 指向未 fetch 的远端对象 ⇒ exit 2（判不了），
@@ -116,6 +120,11 @@ EVIDENCE_ALLOWED = {"cmd", "out"}
 SENSITIVE_PATTERNS: Tuple[str, ...] = ("token=", "secret", "apiKey", "Bearer ")
 T1_TAGS: Tuple[str, ...] = ("@input", "@output", "@exit", "@degraded")
 SECTION_PATTERN = re.compile(r"(?m)^## ")
+# ── T-8 作用域（P0.6）：只有代码目录要求域守则；记录面/域外目录跳过并打印 scope 提示 ──
+T8_SCOPE_RE = re.compile(
+    r"^(src|electron-renderer|extensions|scripts|expert|knowledge|theory|tests)/"
+)
+T8_RECORD_ONLY_RE = re.compile(r"^(\.claude|memory|docs)/")
 ANCHOR_HEX = re.compile(r"^[0-9a-fA-F]{7,40}$")
 INT_RE = re.compile(r"^[+-]?\d+$")
 KEY_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
@@ -1163,14 +1172,28 @@ def rule_t7(
 
 
 def rule_t8(declared: str, matrix: Matrix, view: AnchorView) -> ItemResult:
-    """T-8：同一父目录下 ≥2 变更文件 ⇒ 该目录 AGENTS.md 存在且 `^## ` 小节 ≥5。"""
+    """T-8：同一父目录下 ≥2 变更文件 ⇒ **代码目录**的 AGENTS.md 存在且 `^## ` 小节 ≥5。
+
+    作用域（P0.6）：只有父目录命中 `T8_SCOPE_RE` 的候选进判定；命中 `T8_RECORD_ONLY_RE`
+    的记录面与其它域外目录一律跳过 —— 每个恰一行 scope 提示写到 stderr，不改变 stdout
+    行数契约。**跳过 ≠ 已验证**：被跳过目录有无域守则，本器不判。
+    """
     counts: Dict[str, int] = {}
     for path in matrix.changed_files:
         parent = posixpath.dirname(path)
         counts[parent] = counts.get(parent, 0) + 1
     candidates = sorted([parent for parent, count in counts.items() if count >= 2])
-    bad: List[str] = []
+    in_scope: List[str] = []
+    skipped = 0
     for parent in candidates:
+        if T8_SCOPE_RE.match(parent):
+            in_scope.append(parent)
+            continue
+        skipped += 1
+        kind = "record-only" if T8_RECORD_ONLY_RE.match(parent) else "out-of-scope"
+        sys.stderr.write(f"T-8 scope: skip {kind} dir {parent or '.'}\n")
+    bad: List[str] = []
+    for parent in in_scope:
         agents_path = f"{parent}/AGENTS.md" if parent else "AGENTS.md"
         if view.kind(agents_path) != "blob":
             bad.append(f"{agents_path}(missing)")
@@ -1179,10 +1202,10 @@ def rule_t8(declared: str, matrix: Matrix, view: AnchorView) -> ItemResult:
         sections = len(SECTION_PATTERN.findall(content))
         if sections < 5:
             bad.append(f"{agents_path}(sections={sections})")
-    detail = f"dirs={len(candidates)} bad={len(bad)}"
+    detail = f"dirs={len(in_scope)} bad={len(bad)} skipped={skipped}"
     if bad:
         detail += f" first={bad[0]}"
-    if not candidates:
+    if not in_scope:
         return _expect("T-8", declared, "na_ok", detail, ("n/a",))
     if bad:
         return _mk(
@@ -1190,7 +1213,7 @@ def rule_t8(declared: str, matrix: Matrix, view: AnchorView) -> ItemResult:
             declared,
             "fail",
             detail,
-            [f"T-8: 目录的 AGENTS.md 缺失或 `^## ` 小节 <5（首个：{bad[0]}）"],
+            [f"T-8: 代码目录的 AGENTS.md 缺失或 `^## ` 小节 <5（首个：{bad[0]}）"],
         )
     return _expect("T-8", declared, "ok", detail, ("pass",))
 

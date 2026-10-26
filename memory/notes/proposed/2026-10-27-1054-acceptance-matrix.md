@@ -18,8 +18,9 @@ M4-T1 的验收实证（规格 §2.2）：声明核实 9/9 属实，但**没有*
 3. **M4-T1 回溯样例** `docs/synova/acceptance/1053.matrix.yaml`（anchor `5553bb95c`；**A1b 回溯演练，不得作默认**）：证明校验器能点出 T-1 partial（`src/routes/sentinel.ts` 缺 `@exit`）、T-7 partial（无 committed 测试入变更集）、Q-11 partial（#943 ①e 未武装）。
 4. **配对自测** `tests/control-tower/check-acceptance-matrix.test.sh`：绿基线 ＋ M1–M5 改坏必红 ＋ D1/D2 降级 exit 2（mktemp 沙箱、零网络）。
 5. 登记：`.claude/claims/1054.yaml`（writeset **10 条**）＋ 本 note ＋ `docs/authority/DOCS-REGISTRY.yaml` 追加 2 条（本补单：DOC-0308／DOC-0309）＋ `docs/authority/WIRING-REGISTRY.yaml` 追加 1 行（`declared-only`）（两项均 **L1 批准（Gitea #1054 评论 · 2026-10-27）** 的**最小扩写集**：D782 D2 登记门禁要求新增 .md/.yaml 必须登记）。
-6. **主线锚样例** `docs/synova/acceptance/1048.matrix.yaml`（anchor `1ca0d4dfc`，= 已并入 `gitea/local-main` 的提交）：**A1 默认被测对象**。变更集取 **13 件**（原 diff 15 件去掉 `.claude/claims/1048.yaml`／`.claude/claims/1049.yaml` 两件认领台账）：`T-8` 要求在 anchor 下 `.claude/claims/AGENTS.md` 存在（实测不存在）且 `T-8` 为硬判 ⇒ 该两行保留必红；该口径经 **L1 2026-10-27 裁定**，其余 13 件是 `git diff --name-status 9b0b1f935 1ca0d4dfc` 的真实子集。
+6. **主线锚样例** `docs/synova/acceptance/1048.matrix.yaml`（anchor `1ca0d4dfc`，= 已并入 `gitea/local-main` 的提交）：**A1 默认被测对象**。变更集取**真实 15 件**（= `git diff --name-status 9b0b1f935 1ca0d4dfc` 全量，零过滤，`.claude/claims/1048.yaml` 与 `.claude/claims/1049.yaml` 如实入集）。`T-8` 作用域已收窄为**仅代码目录**（父目录匹配 `^(src|electron-renderer|extensions|scripts|expert|knowledge|theory|tests)/`）：`.claude/**`、`memory/**`、`docs/**` 属记录面 ⇒ 跳过并向 stderr 打印 `T-8 scope: skip record-only dir <dir>`；故 `T-8` 判定对象只剩 `scripts/control-tower`（5 件）与 `tests/control-tower`（4 件），两者 `AGENTS.md` 在 anchor 各 5 个 `^## ` 小节（达标）。
 7. **受保护路径豁免件** `gate-exemptions/2026-10-27-1054-gate-exempt.md`（**裁 423**，2026-10-27）：恰 4 行——校验器／配对测试／本批登记追加（DOCS-REGISTRY）／自覆盖（`gate-exemptions/**` 自我保护）。
+8. **P0.6 修订（2026-10-27）**：① `T-8` **作用域收窄**——只对代码目录（`^(src|electron-renderer|extensions|scripts|expert|knowledge|theory|tests)/`）要求 `AGENTS.md` 存在且 `^## ` ≥5；记录面／域外目录一律跳过并向 stderr 打印 `T-8 scope: skip record-only dir <dir>`（记录面）／`T-8 scope: skip out-of-scope dir <dir>`（其它域外），`detail` 增 `skipped=<n>`（`dirs` 只计作用域内）；② `1048.matrix.yaml` 的 `changed_files` **还原真实 15 件**（删掉 8 处 `grep -v -e .claude/claims/` 过滤，claims×2 如实入集）；③ 配对自测 **37 → 39**（新增两例：`.claude/claims` 不触发 `T-8`／`scripts/x` 触发 `T-8`）；④ **不改既有门禁、不接 CI**（P0 非目标不变）。
 
 ## 依据（为什么这样做）
 
@@ -62,5 +63,6 @@ M4-T1 的验收实证（规格 §2.2）：声明核实 9/9 属实，但**没有*
 - D1（1048 矩阵）`--anchor deadbeef0` → exit 2 ＋ stdout `UNJUDGED E_ANCHOR_MISMATCH phase=anchor — --anchor 不可解析（deadbeef0）：rev-parse 非零退出` ＋ 末行 `MATRIX: UNJUDGED E_ANCHOR_MISMATCH`；`SYNO_GATE_DEGRADED_LOG` 恰 1 行 JSON（time/component/code/phase/retryable 五字段）。
 - D2（1048 矩阵）`--repo /nonexistent/synova-1054` → exit 2 ＋ `degraded: E_ANCHOR_MISMATCH phase=repo — 仓不可读` ＋ 降级日志恰 1 行（phase=repo、retryable=true）。
 - 登记门禁 `bash scripts/doc-system/doc-registry-gate.sh` → exit 0：`163 条 DOC id，重号 0 个`／`127 条 status=active，path 失配 0 个`／`检查 4 个文档，0 个未登记`／`✅ 登记门禁通过`。
-- 配对自测 `bash tests/control-tower/check-acceptance-matrix.test.sh` → exit 0，`结果: 37 通过, 0 失败`。
+- 配对自测 `bash tests/control-tower/check-acceptance-matrix.test.sh` → exit 0，`结果: 39 通过, 0 失败`（P0.6 起 37 → 39：新增「`.claude/claims` 不触发 T-8」与「`scripts/x` 触发 T-8」两例）。
+- 受保护路径门禁 `bash scripts/control-tower/check-gate-protection.sh --changed-base 1ca0d4dfc` → exit 0，`结果: 10 通过, 0 失败`（受保护路径变更 4 条逐条「有合规豁免」）。
 - M1–M5 变异各 exit 1 并点名 `E_MATRIX_ITEM_MISSING` / `E_N/A_NO_EVIDENCE` / `E_EVIDENCE_UNRESOLVED` / `E_ANCHOR_MISMATCH` / `E_COV_UNJUDGED`（详见上述自测与自验消息）。
