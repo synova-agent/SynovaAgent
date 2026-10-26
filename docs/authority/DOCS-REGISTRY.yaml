@@ -1186,3 +1186,11 @@ documents:
     status: active
     owner: CTO
     note: "回滚组级降级，恢复 853baaca4 门禁语义。"
+
+  # ---- CTO 2026-10-26：#1037 注入夹具降级感知 ----
+  - id: DOC-0298
+    type: decision
+    path: gate-exemptions/2026-10-26-cto-1037-fixture-aware.md
+    status: active
+    owner: CTO
+    note: "先修夹具再降级门禁（裁 409 前置）。"
