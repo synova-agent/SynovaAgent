@@ -4,10 +4,14 @@
 #    故在既有产品测试 tests/security/permission-grants.test.ts 上破例；已获 L1 明示批准。
 #    （tests/init/preset-loader.test.ts 曾列入但实测**未改动** ⇒ 已按自验意见 B 移除，写集对齐为 8 件。）
 # 🔴 `memory/notes/**` 属交付配套件（memory/notes/AGENTS.md · 裁定 168-C）＋ 铁律 49（非平凡变更须引
-#    四态 Note）⇒ 由门禁触发，不是写集扩张；本卡 note = 2026-10-27-731-knowledge-scope-wiring.md。
+#    四态 Note）⇒ 由门禁触发，不是写集扩张；本卡 note = 2026-10-27-731-knowledge-scope-wiring.md
+#    ＋ 裁 425-A1 回滚开关 note = 2026-10-27-731-knowledge-scope-rollback-switch.md。
+# 🔴 2026-10-27 裁 425-A1 返工批（活1/3）：写集**不扩**，仍只有 auth.ts ＋ knowledge-scope-wiring.test.ts
+#    两件产品件（开关只加在 provider 的"是否展开"判定点，`knowledgeScopeConditions()` 本体逐字不动）。
 writeset:
   - .claude/claims/731.yaml
   - memory/notes/proposed/2026-10-27-731-knowledge-scope-wiring.md
+  - memory/notes/proposed/2026-10-27-731-knowledge-scope-rollback-switch.md
   - packages/engine-auth/src/permission-grants.ts
   - packages/engine-auth/src/index.ts
   - src/init/preset-loader.ts
@@ -20,4 +24,9 @@ done:
   - verify: npx tsc --noEmit
   - verify: node node_modules/.bin/tsx scripts/control-tower/probe-knowledge-scope.ts --base-url http://127.0.0.1:18790 --roles finance,hr --presets-root "$SYNOVA_PRESETS_ROOT"
   - verify: SYNO_CI=1 GITHUB_ACTIONS=true SYNO_DIFF_BASE=gitea/local-main bash scripts/pre-commit-check.sh
-note: "#731：knowledge-scope.yaml 内容 → 权限判定（auth.ts 内联 provider 追加 pkb_domain 维）→ 知识过滤（matchFilter 真执行）。T1 loader 装载期解析+校验；T2 命名空间文件派生（d-perm：hr/sales 自然消失）；T3 条件追加。含 fail-closed 三态（内容坏／角色目录在但 scope 文件缺或空文档 ⇒ IN []；仅"角色目录不存在"才不追加）、declared-only 反例（服务未接线 ⇒ V2+V3 必红）、deny 两段式（结构与语义重叠样本）。已知限制：生产写侧无法表达 scope（pkb_domain 全 NULL）⇒ finance/hr/sales 对现存语料检索为空属预期。"
+  # ── 裁 425-A1（回滚开关）判据：默认严开 / 关闭留痕 / 两反例 ──
+  - verify: npx vitest run tests/extensions/knowledge-scope-wiring.test.ts   # 22 tests（含开关 4 例：正常/降级/边界/解除）
+  - verify: npx vitest run tests/extensions tests/middleware tests/security tests/l4 tests/presets
+  - verify: npx vitest run tests/extensions/knowledge-scope-wiring.test.ts -t "降级路径（开关=off）"   # 单用例单跑＝整跑同结论（登记取增量）
+note: "#731：knowledge-scope.yaml 内容 → 权限判定（auth.ts 内联 provider 追加 pkb_domain 维）→ 知识过滤（matchFilter 真执行）。T1 loader 装载期解析+校验；T2 命名空间文件派生（d-perm：hr/sales 自然消失）；T3 条件追加。含 fail-closed 三态（内容坏／角色目录在但 scope 文件缺或空文档 ⇒ IN []；仅\"角色目录不存在\"才不追加）、declared-only 反例（服务未接线 ⇒ V2+V3 必红）、deny 两段式（结构与语义重叠样本）。已知限制：生产写侧无法表达 scope（pkb_domain 全 NULL）⇒ finance/hr/sales 对现存语料检索为空属预期。裁 425-A1 追加：环境变量 SYNOVA_KNOWLEDGE_SCOPE_DIM（缺省/其它值=严开，仅 off=关）；关闭必记 log.warn（code/phase/retryable/degraded:true）＋ 登记计数（与日志 memo 解耦）；判定每次现读 ⇒ 解除回滚无需重启。"
+

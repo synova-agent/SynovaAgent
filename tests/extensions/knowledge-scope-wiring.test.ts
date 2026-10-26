@@ -48,7 +48,7 @@
  *
  * 铁律 48：每条用例都有真断言（expect ＋ 匹配器，无空壳）；覆盖正常 / 降级 / 反例三路径。
  */
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -60,7 +60,12 @@ import {
   isPermissionId,
   resolveGrants,
 } from '@synova/engine-auth';
-import { jwtAuthMiddleware, signJwtToken } from '../../src/middleware/auth';
+import {
+  jwtAuthMiddleware,
+  knowledgeScopeDimensionDisabledRegistrations,
+  knowledgeScopeDimensionGate,
+  signJwtToken,
+} from '../../src/middleware/auth';
 import { getCurrentFilterClause } from '../../src/services/request-context';
 import { clearPresetCache, loadRolePacks, resolveRoleKnowledgeScope } from '../../src/init/preset-loader';
 import { KnowledgeStore, type FilterClause } from '../../src/l4/knowledge-store';
@@ -622,5 +627,138 @@ describe('#731 / 三态降级: 内容坏 ⇒ fail-closed 拒绝型条件集（�
       const filter = await captureFilter('finance');
       expect(valuesOf(filter, 'pkb_domain', 'IN')).toEqual([[]]);
     });
+  });
+});
+
+// ════════════════════════════════════════════════════════════════
+// 8. 裁 425 / A1 —— scope 维**紧急回滚开关**（默认严开；关必留痕，禁静默关）
+// ════════════════════════════════════════════════════════════════
+
+/**
+ * 开关判据的**顺序无关**前提（自验员会按"单例跑 / 整文件跑"两序对撞）:
+ *   · 每个用例自带 `withScopeSwitch(...)` 的 `try/finally` 复位 ⇒ 判据①的"默认环境=严开"
+ *     不会被上一个用例的 `off` 污染（否则绿得可疑）。另配 `afterEach` 兜底复位。
+ *   · 降级登记取**增量**而非绝对值，且登记与日志 memo 解耦 ⇒ 无论本文件先前跑过多少
+ *     `off` 用例，"一次关闭判定 = +1"恒定成立。
+ *   · 日志侧的"登记行"由**跨进程** fd 2 原始输出取证（`@synova/logger` 直写 fd 2，
+ *     进程内拦不到 —— 见 `tests/security/department-request-path.test.ts:37-48`）。
+ */
+const SCOPE_SWITCH_ENV = 'SYNOVA_KNOWLEDGE_SCOPE_DIM';
+const ORIGINAL_SWITCH_ENV = process.env[SCOPE_SWITCH_ENV];
+
+/** 在指定开关取值下执行，退出时**必定**复位（改 `process.env` ⇒ 必须 try/finally） */
+async function withScopeSwitch<T>(value: string | undefined, fn: () => Promise<T> | T): Promise<T> {
+  const previous = process.env[SCOPE_SWITCH_ENV];
+  if (value === undefined) delete process.env[SCOPE_SWITCH_ENV];
+  else process.env[SCOPE_SWITCH_ENV] = value;
+  try {
+    return await fn();
+  } finally {
+    if (previous === undefined) delete process.env[SCOPE_SWITCH_ENV];
+    else process.env[SCOPE_SWITCH_ENV] = previous;
+  }
+}
+
+afterEach(() => {
+  // 兜底：即使某用例断言中途抛错，也不把开关值漏给后续用例
+  if (ORIGINAL_SWITCH_ENV === undefined) delete process.env[SCOPE_SWITCH_ENV];
+  else process.env[SCOPE_SWITCH_ENV] = ORIGINAL_SWITCH_ENV;
+});
+
+describe('#731 / 裁425-A1: scope 维紧急回滚开关（默认严开；关必留痕，禁静默关）', () => {
+  it('正常路径（默认环境）: 未设开关 ⇒ scope 维照常展开，且**零**关闭登记（不是"常开也报降级"）', async () => {
+    await withScopeSwitch(undefined, async () => {
+      const before = knowledgeScopeDimensionDisabledRegistrations();
+      const filter = await captureFilter('finance');
+      const after = knowledgeScopeDimensionDisabledRegistrations();
+
+      // 严开 = PR2 默认姿态：真 provider 条件集仍含 {pkb_domain IN 文件派生 scopes}
+      expect(valuesOf(filter, 'pkb_domain', 'IN')).toEqual([declaredScopes(unitRoot, 'finance')]);
+      expect(after, '严开态不得产生关闭登记（否则降级信号失效）').toBe(before);
+
+      const gate = knowledgeScopeDimensionGate();
+      expect(gate).toEqual({
+        enabled: true,
+        degraded: false,
+        code: null,
+        phase: 'knowledge-scope-dim',
+        retryable: false,
+      });
+    });
+  });
+
+  it('🔴 降级路径（开关=off）: 条件集只剩 sensitivity 维 ＋ degraded:true ＋ code ＋ 登记 +1', async () => {
+    await withScopeSwitch('off', async () => {
+      const before = knowledgeScopeDimensionDisabledRegistrations();
+      const finance = await captureFilter('finance');
+      const after = knowledgeScopeDimensionDisabledRegistrations();
+
+      // (a) 条件面：scope 维**整维消失**（不是只少一条），但条件集**仍非空**（不 fail-open）
+      expect(valuesOf(finance, 'pkb_domain', 'IN')).toEqual([]);
+      expect(valuesOf(finance, 'pkb_domain', 'NOT_EQ')).toEqual([]);
+      expect(finance.conditions.length).toBe(1);
+      expect(finance.conditions[0]?.field).toBe('access.sensitivity');   // I-C3 第 0 位不回退
+
+      // (b) 降级面：degraded:true ＋ typed code ＋ 相位 ＋ 可自愈（**禁静默关**）
+      const gate = knowledgeScopeDimensionGate();
+      expect({ enabled: gate.enabled, degraded: gate.degraded }).toEqual({ enabled: false, degraded: true });
+      expect(gate.code).toBe('KNOWLEDGE_SCOPE_DIM_DISABLED');
+      expect(gate.phase).toBe('knowledge-scope-dim');
+      expect(gate.retryable).toBe(true);
+      // 登记项（确定性增量；与日志 memo 解耦 ⇒ 单跑/整跑同结论）
+      expect(after - before, '关闭判定未登记 ⇒ 这就是"静默关"（判据②(b) 的红态）').toBe(1);
+
+      // (c) 行为面：维度真被撤 —— 真引擎下 finance 现在能看到 hr 的语料
+      //     （若实现只是"少派生一条条件"而库里另有过滤，这里会红）
+      const seeded = seedStore(
+        [...declaredScopes(unitRoot, 'finance'), ...declaredScopes(unitRoot, 'hr')],
+        'wire:shared-fact',
+      );
+      try {
+        expect(searchIds(seeded, finance as FilterClause).length).toBe(ROLES_UNITS * 2);
+      } finally {
+        seeded.close();
+      }
+    });
+  });
+
+  it('边界: 仅 `off` 关闭（大小写/空白归一）；空串与其它值一律**严开**（禁"设错就放开"）', async () => {
+    const table: ReadonlyArray<{ readonly value: string | undefined; readonly off: boolean }> = [
+      { value: undefined, off: false },
+      { value: '', off: false },
+      { value: '   ', off: false },
+      { value: 'on', off: false },
+      { value: '0', off: false },
+      { value: 'disabled', off: false },
+      { value: 'OFF', off: true },
+      { value: ' Off ', off: true },
+    ];
+    for (const { value, off } of table) {
+      await withScopeSwitch(value, async () => {
+        const gate = knowledgeScopeDimensionGate();
+        const label = JSON.stringify(value ?? null);
+        expect({ label, enabled: gate.enabled }, `开关取值 ${label} 的展开判定`).toEqual({
+          label,
+          enabled: !off,
+        });
+        expect({ label, degraded: gate.degraded }, `开关取值 ${label} 的降级判定`).toEqual({
+          label,
+          degraded: off,
+        });
+        expect({ label, code: gate.code }, `开关取值 ${label} 的 code`).toEqual({
+          label,
+          code: off ? 'KNOWLEDGE_SCOPE_DIM_DISABLED' : null,
+        });
+      });
+    }
+  });
+
+  it('解除回滚无需重启: 同进程内 off ⇒ 恢复默认**即刻**严开（判定每次现读，禁进程级常量）', async () => {
+    const financeScopes = declaredScopes(unitRoot, 'finance');
+    const offFilter = await withScopeSwitch('off', () => captureFilter('finance'));
+    expect(valuesOf(offFilter, 'pkb_domain', 'IN')).toEqual([]);
+
+    const onFilter = await withScopeSwitch(undefined, () => captureFilter('finance'));
+    expect(valuesOf(onFilter, 'pkb_domain', 'IN')).toEqual([financeScopes]);
   });
 });
