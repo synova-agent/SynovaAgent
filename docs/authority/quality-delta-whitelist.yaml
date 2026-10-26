@@ -12,6 +12,10 @@
 schema_version: 1
 
 ratchet:
-  max_entries: 0
+  max_entries: 1
 
-entries: []
+entries:
+  - path: tests/control-tower/precommit-groups-injection.test.sh
+    rule: R3.3
+    reason: 该夹具用 heredoc 故意生成恒真断言作为"组4 配对测试"注入样本，属测试夹具内容而非代码空壳断言
+    ruling: 裁 421
