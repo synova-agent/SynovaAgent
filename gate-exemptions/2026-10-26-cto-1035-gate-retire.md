@@ -1,0 +1,4 @@
+- scripts/pre-commit-check.sh — 组5/6/9/10/13 子 shell 包裹降级 + SYNO_DOWN_SELFTEST 自检缝 + 删无效名字匹配 — 裁 409
+- .gitea/workflows/local-gates.yml — CI ④ 复现器自检改 report-only（SYNO_REPRO_STRICT=1 回滚）— 裁 409
+- docs/authority/DOCS-REGISTRY.yaml — 登记本豁免件 DOC-0296 仅追加一行 — 裁 409
+- gate-exemptions/2026-10-26-cto-1035-gate-retire.md — 本豁免件自覆盖并声明上列全部路径 — 裁 409

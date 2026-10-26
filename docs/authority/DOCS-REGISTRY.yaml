@@ -1170,3 +1170,11 @@ documents:
     status: active
     owner: CTO
     note: "DeployKey 取证/轮换/泄露应急 SOP（#1032/#1034，裁 421）。"
+
+  # ---- CTO 2026-10-26：#1035 裁 409 门禁退役/降级收口豁免件 ----
+  - id: DOC-0296
+    type: decision
+    path: gate-exemptions/2026-10-26-cto-1035-gate-retire.md
+    status: active
+    owner: CTO
+    note: "组5/6/9/10/13 降级 + CI ④ report-only；两态证据见 Note。"
