@@ -57,11 +57,11 @@ STAGED=$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null | grep -v 
 STAGED_ADDED=$(git diff --cached --name-only --diff-filter=A 2>/dev/null | grep -v node_modules || true)
 if [ -z "$STAGED" ]; then
   _FD_BASE="${SYNO_DIFF_BASE:-origin/main}"
-  _FD_CHANGED=$(git diff --name-only --diff-filter=ACMR "${_FD_BASE}...HEAD" 2>/dev/null | grep -v node_modules || true)
+  _FD_CHANGED=$(git diff --name-only --diff-filter=ACMR "${_FD_BASE}...HEAD" 2>/dev/null | grep -v node_modules || true)  # swallow-ok: 无 base ref 时视为空变更集，下一分支显式 SKIP
   if [ -n "$_FD_CHANGED" ]; then
     echo "ℹ️  无暂存区（干净 checkout）⇒ 改用变更集 ${_FD_BASE}...HEAD（$(printf '%s\n' "$_FD_CHANGED" | grep -c .) 个文件）"
     STAGED="$_FD_CHANGED"
-    STAGED_ADDED=$(git diff --name-only --diff-filter=A "${_FD_BASE}...HEAD" 2>/dev/null | grep -v node_modules || true)
+    STAGED_ADDED=$(git diff --name-only --diff-filter=A "${_FD_BASE}...HEAD" 2>/dev/null | grep -v node_modules || true)  # swallow-ok: 同上
   else
     echo "ℹ️  SKIP: 无暂存区且无变更集（${_FD_BASE}...HEAD 为空）—— 显式跳过，不静默判绿（#995）"
     exit 0
