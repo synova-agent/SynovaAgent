@@ -46,7 +46,7 @@
  *        编译期基线（`KNOWLEDGE_SCOPES` = yaml 背书集 `{finance, people, market}`）；
  *        本件只**新增**断言，不改它们的语义。
  *
- * 铁律 48：每条用例都有 `expect()`；覆盖正常 / 降级 / 反例三路径。
+ * 铁律 48：每条用例都有真断言（expect ＋ 匹配器，无空壳）；覆盖正常 / 降级 / 反例三路径。
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
