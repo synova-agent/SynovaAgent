@@ -94,12 +94,22 @@ GROUP_DONE=0
 #   实现：名字含下列子串的检查，即使 SYNO_CI=1 也不计 HARD_FAIL（打 ⚠️ 降级）。
 #   回滚：SYNO_GATE_STRICT_LEGACY=1 ⇒ 恢复原语义（全硬）。
 GROUP_DOWN="${GROUP_DOWN:-0}"
+# 裁 409 收口：组级降级用「硬失败回滚」实现，兼容所有计数路径（hard_check / 直接 HARD_FAIL）
+_DOWN_SAVED=0
+_down_begin() { _DOWN_SAVED=$HARD_FAIL; }
+_down_end() {
+  [ -z "${_DOWN_SAVED:-}" ] && return 0
+  local d=$((HARD_FAIL-_DOWN_SAVED))
+  if [ "$d" -gt 0 ]; then
+    HARD_FAIL=$_DOWN_SAVED
+    echo -e "  ${YELLOW}⚠️  本组 $d 项按裁 409 降级为只报不拦（SYNO_GATE_STRICT_LEGACY=1 可回严）${RESET}"
+  fi
+}
 _downgraded() {
+  # 裁 409 收口（2026-10-26）：**不再按检查名子串匹配**（实测组 6/10/13 的 hard_check 名
+  #   与"组标题"不同 ⇒ 旧实现是 no-op 空转）。降级**只由组级开关 GROUP_DOWN 决定**。
   [ "${SYNO_GATE_STRICT_LEGACY:-0}" = "1" ] && return 1
-  case "$1" in
-    *"Task Brief"*|*"文件驱动架构"*|*"V3 流水线健康度"*|*"技能同步一致性"*) return 0 ;;
-    *) return 1 ;;
-  esac
+  return 1
 }
 hard_check() {
   local name="$1" matches="$2"
@@ -925,7 +935,14 @@ hard_check "接线深度: 新 export 必须被调用(非仅 import)" "${DEEP_FAI
 #   为什么铁律 47 是警告而非阻断: task brief 可能包含历史遗留声明。但警告让问题
 #         始终可见——不可能"没注意到"。
 # ═══════════════════════════════════════════════════════════════════
+(
+  # 裁 409：**整段在子 shell 内执行**（段内计数/exit 不污染父 shell）；
+  #   严格模式由段末按子 shell 退出码回填 HARD_FAIL。
 echo -e "${CYAN}── 组 5: 架构边界 + 桥接文件 ──${RESET}"
+
+# 裁 409 确定性自检缝：强制本段失败（用于证明"降级⇒不红 / 严格⇒仍红"）
+if [ "${SYNO_DOWN_SELFTEST:-}" = "5" ] || [ "${SYNO_DOWN_SELFTEST:-}" = "6" ]; then echo "❌ SELFTEST-组5 注入失败（应被降级为只报）"; exit 1; fi
+GROUP_DOWN=1; _down_begin  # 裁 409：组5 由 CI ② 唯一承担（只报不拦）
 GROUP_DONE=$((GROUP_DONE+1))
 
 # 5a. 跨层引用检测 (原 8)
@@ -1282,7 +1299,13 @@ fi
 #   历史: DiagnosticModule 注册表已删除但引用未清理 (agent-tool-registry.ts:386
 #         listModules() 运行时崩溃)。--no-verify 在 v2.5 被频繁使用 (38 项检查 90s)。
 # ═══════════════════════════════════════════════════════════════════
+  [ "${HARD_FAIL:-0}" -gt 0 ] && exit 1 || exit 0
+) ; _seg_rc=$?
+GROUP_DONE=$((GROUP_DONE+2))
+if [ "${SYNO_GATE_STRICT_LEGACY:-0}" = "1" ] && [ "${_seg_rc:-0}" -ne 0 ]; then HARD_FAIL=$((HARD_FAIL+1)); fi
+if [ "${SYNO_GATE_STRICT_LEGACY:-0}" != "1" ]; then echo -e "${YELLOW}⚠️  本段按裁 409 降级为只报不拦（组5/6；SYNO_GATE_STRICT_LEGACY=1 可回严；SYNO_GATE_STRICT_LEGACY=1 可回严）${RESET}"; fi
 echo -e "${CYAN}── 组 7: 架构合规 ──${RESET}"
+GROUP_DOWN=0  # 上一段降级范围结束
 GROUP_DONE=$((GROUP_DONE+1))
 
 # 7a. DiagnosticModule 禁止 (原 6)
@@ -1470,7 +1493,14 @@ par_collect_quiet file-driven "$PAR_FILE_DRIVEN" || v5_soft "文件驱动架构�
 
 # ═══ 组 9: 契约门禁 (D257) ═══
 GROUP_DOWN=0  # 组 8 降级范围结束
+(
+  # 裁 409：**整段在子 shell 内执行**（段内计数/exit 不污染父 shell）；
+  #   严格模式由段末按子 shell 退出码回填 HARD_FAIL。
 echo -e "${CYAN}── 组 9: 契约门禁 ──${RESET}"
+
+# 裁 409 确定性自检缝：强制本段失败（用于证明"降级⇒不红 / 严格⇒仍红"）
+if [ "${SYNO_DOWN_SELFTEST:-}" = "9" ] || [ "${SYNO_DOWN_SELFTEST:-}" = "10" ]; then echo "❌ SELFTEST-组9 注入失败（应被降级为只报）"; exit 1; fi
+GROUP_DOWN=1; _down_begin  # 裁 409：组9/10 块级 paths 由 CI ①d 承担（只报不拦）
 GROUP_DONE=$((GROUP_DONE+1))
 CONTRACT_DIR="$ROOT/.codex/contracts"
 CONTRACT_FAIL=""
@@ -1623,7 +1653,13 @@ else
 fi
 
 # ═══ 组 12: Task Scope 一致性 — 暂存文件 vs Q2 范围 ═══
+  [ "${HARD_FAIL:-0}" -gt 0 ] && exit 1 || exit 0
+) ; _seg_rc=$?
+GROUP_DONE=$((GROUP_DONE+2))
+if [ "${SYNO_GATE_STRICT_LEGACY:-0}" = "1" ] && [ "${_seg_rc:-0}" -ne 0 ]; then HARD_FAIL=$((HARD_FAIL+1)); fi
+if [ "${SYNO_GATE_STRICT_LEGACY:-0}" != "1" ]; then echo -e "${YELLOW}⚠️  本段按裁 409 降级为只报不拦（组9/10；SYNO_GATE_STRICT_LEGACY=1 可回严；SYNO_GATE_STRICT_LEGACY=1 可回严）${RESET}"; fi
 echo -e "${CYAN}── 组 12: Task Scope 一致性 ──${RESET}"
+GROUP_DOWN=0  # 上一段降级范围结束
 GROUP_DONE=$((GROUP_DONE+1))
 
 TODAY=$(date +%Y-%m-%d)
@@ -1917,7 +1953,14 @@ hard_check "G12d: 生成物单点生成门禁 (D458)" "${GENERATED_VIOLATION:-}"
 # ═══ 组 13: 技能同步一致性 (.synova/skills ↔ .dsh/skills, D370) ═══
 # 背景: DSH 技能发现根 .dsh/skills（rank 100）不读 .synova/skills → 单源复制 + 漂移门禁。
 # fail-closed (D328): 检查脚本 exit 2 = 检查执行失败 → 同样硬阻断, 不与"通过"混同。
+(
+  # 裁 409：**整段在子 shell 内执行**（段内计数/exit 不污染父 shell）；
+  #   严格模式由段末按子 shell 退出码回填 HARD_FAIL。
 echo -e "${CYAN}── 组 13: 技能同步一致性 ──${RESET}"
+
+# 裁 409 确定性自检缝：强制本段失败（用于证明"降级⇒不红 / 严格⇒仍红"）
+if [ "${SYNO_DOWN_SELFTEST:-}" = "13" ]; then hard_check "SELFTEST-组13 注入失败（应被降级为只报）" "injected"; fi
+GROUP_DOWN=1; _down_begin  # 裁 409：组13 技能同步降级（只报不拦）
 GROUP_DONE=$((GROUP_DONE+1))
 SKILL_FILES_STAGED=$(echo "$STAGED_ALL" | grep -E "\.synova/skills/|\.dsh/skills/" || true)
 if [ -n "$SKILL_FILES_STAGED" ]; then
@@ -1967,6 +2010,12 @@ else
   fi
 fi
 
+GROUP_DOWN=0  # 组 13 降级范围结束
+  [ "${HARD_FAIL:-0}" -gt 0 ] && exit 1 || exit 0
+) ; _seg_rc=$?
+GROUP_DONE=$((GROUP_DONE+1))
+if [ "${SYNO_GATE_STRICT_LEGACY:-0}" = "1" ] && [ "${_seg_rc:-0}" -ne 0 ]; then HARD_FAIL=$((HARD_FAIL+1)); fi
+if [ "${SYNO_GATE_STRICT_LEGACY:-0}" != "1" ]; then echo -e "${YELLOW}⚠️  本段按裁 409 降级为只报不拦（组13；SYNO_GATE_STRICT_LEGACY=1 可回严；SYNO_GATE_STRICT_LEGACY=1 可回严）${RESET}"; fi
 # ═══ D782: 文档真相防线 D1/D2（附加检查；不并入 12 组编号——同 D734 接入模式）═══
 # 背景: K3 2026-09-14 权威文档一致性专项审计 §7.2 收割 2/3——D1 check-doc-truth.sh
 #   与 D2 doc-registry-gate.sh 2026-08 建成即零调用（M3「机制建成未接线」第 3 次复发：
