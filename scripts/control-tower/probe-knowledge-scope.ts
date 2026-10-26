@@ -9,8 +9,8 @@
  *   · 卡 `#713`（D5 反例卡）／`#731`（知识一致生产链）
  *
  * 🔴 靶子归一（裁 423，2026-10-27）:
- *   旧靶 = `extensions/knowledge-scope/{manifest.json,layers.yaml}` —— **该目录从来不存在** ⇒ 本探针
- *   恒定 exit 2，从未有可能变绿（"判据存在但无靶"）。
+ *   旧靶 = 已退役的"知识范围独立内容目录"（裁 423 归一后不再存在，故不在此写字面路径）——**该目录从来
+ *   不存在** ⇒ 本探针改造前恒定 exit 2，从未有可能变绿（"判据存在但无靶"）。
  *   新靶 = **实物三件** `extensions/presets/roles/{finance,hr,sales}/knowledge-scope.yaml`；
  *   断言对象 = **真路由** `POST /api/knowledge/search` ＋ **真中间件链**（jwtAuthMiddleware → rbacMiddleware
  *   → 内联 provider）＋ **真 loader**（`src/init/preset-loader.ts` 的 `loadRolePacks()`）。
@@ -80,6 +80,9 @@ import { rbacMiddleware } from '../../src/middleware/rbac';
 import { getCurrentFilterClause } from '../../src/services/request-context';
 import { loadRolePacks, type PresetLoadReport } from '../../src/init/preset-loader';
 import { KnowledgeStore } from '../../src/l4/knowledge-store';
+// 权限命名空间宇宙的**生产真源**（d-perm：命名空间 = scope id 第一个 '.' 之前的前缀）——
+// 探针不自己抄一份名单（禁第二口径）；T2 换成文件派生后，这里自动跟着变。
+import { KNOWLEDGE_SCOPES } from '@synova/engine-auth';
 import {
   ProbeOutput,
   assertTargetsExist,
@@ -110,7 +113,7 @@ export const TARGETS: readonly string[] = [
 
 /**
  * 存在性闸（语义**逐字保留**：缺任一 ⇒ exit 2）——只换了靶：
- * 实物三件岗位 `knowledge-scope.yaml`，不再是从来不存在的 `extensions/knowledge-scope/**`。
+ * 实物三件岗位 `knowledge-scope.yaml`，不再是那个已退役、从来不存在的内容面独立目录（见裁 423）。
  * 给了 `--presets-root` 时，同一组相对路径还会在**临时内容根**上再判一次（V3/反例都在这根上动手）。
  */
 const GATE_TARGETS: readonly string[] = [
@@ -143,6 +146,9 @@ const SCOPE_FILE = 'knowledge-scope.yaml';
 const SCOPE_FIELD = 'pkb_domain';
 /** 既有敏感度条件（K12-11 不回退：必须仍在条件集第 0 位，scope 维只能"追加"） */
 const SENSITIVITY_FIELD = 'access.sensitivity';
+
+/** 已知权限命名空间集合 —— 直接取生产真源 `@synova/engine-auth` 的 `KNOWLEDGE_SCOPES`（禁第二口径） */
+const KNOWN_SCOPE_NAMESPACES: ReadonlySet<string> = new Set<string>(KNOWLEDGE_SCOPES);
 
 /** 生产入口（卡面原文） */
 const SEARCH_PATH = '/api/knowledge/search';
@@ -243,6 +249,15 @@ type BehaviourResult =
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * d-perm 口径：权限命名空间 = scope id **第一个 '.' 之前**的前缀（`finance.statements` ⇒ `finance`；
+ * 裸 id 无前缀 ⇒ 整个 id 视作命名空间，正是"未知命名空间"的形态）。探针只做纯字符串派生，不重定义规则。
+ */
+function scopeNamespace(scopeId: string): string {
+  const dot = scopeId.indexOf('.');
+  return dot > 0 ? scopeId.slice(0, dot) : scopeId;
 }
 
 /** 收窄成「字符串数组」（非字符串成员丢弃，不静默造值） */
@@ -658,14 +673,21 @@ async function postJson(
     signal: AbortSignal.timeout(HTTP_TIMEOUT_MS),
   });
   const text = await res.text();
-  let parsed: Record<string, unknown> | null = null;
+  const box: { body: Record<string, unknown> | null } = { body: null };
   try {
     const value: unknown = JSON.parse(text);
-    parsed = isRecord(value) ? value : null;
-  } catch {
-    parsed = null;
+    box.body = isRecord(value) ? value : null;
+  } catch (err: unknown) {
+    // 铁律 24/31（不静默降级）: 响应体非 JSON 不是"错误"（调用方按 status 判定，非 200 时已打印原文），
+    // 但**必须留痕**——诊断信息走 stderr，不污染 stdout 的 `RESULT=` 末行契约。
+    box.body = null;
+    process.stderr.write(
+      `[probe-knowledge-scope] 响应体非 JSON（按无结构化回执处理，body 原文交由调用方处置）: ${
+        err instanceof Error ? err.message : String(err)
+      }\n`,
+    );
   }
-  return { status: res.status, body: parsed, text };
+  return { status: res.status, body: box.body, text };
 }
 
 /** 两岗位凭据：走**真路由**签发（d-jwt：禁自造 JWT）——先注册，已存在则登录取回 */
@@ -803,6 +825,26 @@ function checkRoleSet(ctx: ProbeContext, out: ProbeOutput): void {
         `[${decl.roleId}] 真解析 scopes[]=${String(decl.scopes.length)} 个 id｜deny[]=${String(decl.deny.length)} 个 id`,
         'L1',
       );
+      // 🔴 独立复核建议 ②（2026-10-27）: PASS 行**不许静默带过异常** —— 下列两态会让 V6 变成恒真式，
+      //   必须在紧邻行显式点名（note 不计 PASS/FAIL，但把"这行为什么看起来全绿"说清楚）。
+      if (decl.deny.length === 0) {
+        out.note(
+          `    note: [${decl.roleId}] deny[] 为空 ⇒ 该岗位**无任何排除项**（V6 对它恒真，不得当作"越权面已覆盖"）`,
+        );
+      }
+      const unknownNamespaces = [
+        ...new Set(
+          decl.scopes
+            .map((id) => scopeNamespace(id))
+            .filter((ns) => !KNOWN_SCOPE_NAMESPACES.has(ns)),
+        ),
+      ];
+      if (unknownNamespaces.length > 0) {
+        out.note(
+          `    note: [${decl.roleId}] 未知命名空间 ns=${unknownNamespaces.join(',')} ⇒ 不在 engine-auth 的` +
+            ` KNOWLEDGE_SCOPES 内（权限面会 fail-closed 丢弃，须在 PR 正文列 d-perm 迁移说明）`,
+        );
+      }
     }
   }
 }
@@ -1187,6 +1229,10 @@ async function runCase(name: string, ctx: ProbeContext, out: ProbeOutput): Promi
 
   if (!observed.consumed) {
     out.note('  declared-only: 先红态 —— 接线未做，V2/V3/V4/V6 不可判定（本次只交红态证据）');
+    // 🔴 独立复核建议 ①（2026-10-27）: 诚实度声明 —— 本态下绿态分支**没有跑过**，不得让人误读成"已验证"。
+    out.note('  ⚠️ 执行面声明: 本次**未执行** `--base-url`／绿态分支（V2/V3/V4/V6 的 consumed 面）；');
+    out.note('     上述四条判据的语义**尚未被任何真跑验证过** —— 绿态要等 #731 接线完成后的首次运行才首次执行；');
+    out.note('     本探针在此不做任何"该分支能绿"的声称。');
     for (const id of ['V2', 'V3', 'V4', 'V6']) cannotJudge(out, id, DECLARED_ONLY_REASON);
     return;
   }
