@@ -4,6 +4,7 @@ writeset:
   - .gitea/workflows/local-gates.yml
   - gate-exemptions/2026-10-26-cto-1035-gate-retire.md
   - docs/authority/DOCS-REGISTRY.yaml
+  - .claude/task-briefs/2026-10-26-1035-gate-retire.md
   - memory/notes/proposed/2026-10-26-1035-gate-retire.md
 done:
   - verify: SYNO_DOWN_SELFTEST=5 SYNO_GATE_STRICT_LEGACY=1 bash scripts/pre-commit-check.sh
