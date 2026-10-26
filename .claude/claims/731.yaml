@@ -1,0 +1,20 @@
+# .claude/claims/731.yaml — #731 生产消费链接线（scopes → 权限判定 → 知识过滤）· 写集声明
+# 批次 P3-M7-前置缺口补齐（#825 重审版）· PR2／7 · 分支 ct/p3m7-pr2
+# 🔴 写集例外（L1 裁定 2026-10-27「裁 B」）：d-perm 命名空间收缩需要迁移两件**既有**测试的夹具，
+#    故在两件产品测试（tests/security/permission-grants.test.ts 等）上破例；已获 L1 明示批准。
+writeset:
+  - .claude/claims/731.yaml
+  - packages/engine-auth/src/permission-grants.ts
+  - packages/engine-auth/src/index.ts
+  - src/init/preset-loader.ts
+  - src/middleware/auth.ts
+  - tests/extensions/knowledge-scope-wiring.test.ts
+  - tests/security/permission-grants.test.ts
+  - tests/init/preset-loader.test.ts
+done:
+  - verify: npx vitest run tests/extensions tests/presets tests/middleware tests/l4
+  - verify: npx vitest run tests/security/permission-grants.test.ts tests/init/preset-loader.test.ts
+  - verify: npx tsc --noEmit
+  - verify: node node_modules/.bin/tsx scripts/control-tower/probe-knowledge-scope.ts --base-url http://127.0.0.1:18790 --roles finance,hr --presets-root "$SYNOVA_PRESETS_ROOT"
+  - verify: SYNO_CI=1 GITHUB_ACTIONS=true SYNO_DIFF_BASE=gitea/local-main bash scripts/pre-commit-check.sh
+note: "#731：knowledge-scope.yaml 内容 → 权限判定（auth.ts 内联 provider 追加 pkb_domain 维）→ 知识过滤（matchFilter 真执行）。T1 loader 装载期解析+校验；T2 命名空间文件派生（d-perm：hr/sales 自然消失）；T3 条件追加。含 fail-closed（内容坏 ⇒ IN []）、declared-only 反例（拔文件 ⇒ 跨岗位隔离消失）、deny 两段式（结构与语义重叠样本）。已知限制：生产写侧无法表达 scope（pkb_domain 全 NULL）⇒ finance/hr/sales 对现存语料检索为空属预期。"

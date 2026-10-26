@@ -20,16 +20,21 @@
  *             可选环境变量 `SYNOVA_PRESETS_ROOT` 覆盖内容根（测试注入缝，同 `SYNOVA_CONTENT_REGISTRY_DISABLE` 惯例）。
  *   @output — `loadRolePacks(): PresetLoadReport` — 角色清单 + 每角色的五件套存在性 + degraded 信号
  *             `listRolePacks(): string[]` — 角色 id 清单（零参，机器可观测）
+ *             `resolveRoleKnowledgeScope(roleId)` — **请求路径**用的知识范围解析（#731 / T1；
+ *               按需读盘 ＋ mtime/size 缓存，见下「二bis」段）
  *             （有参查询不入契约面：无生产消费方即不导出，避免"导出但无人调用"的表面积 —— 铁律 0-2）
  *               故探针不驱动；保留给生产消费方与测试）
- *   @degraded — 内容根缺失 / roles 目录缺失 / 角色目录内文件读不到 ⇒ **不抛**，
- *             返回 `degraded: true` + `errors[]` 逐条点名 + `log.warn`（铁律 11/24/31：不静默降级）。
- *             ⚠️ 区分两类：**ENOENT = 正常默认**（角色目录为空 ⇒ degraded 但非错误），
- *             **读失败/解析失败 = 真错误**（进 `errors[]`）。
+ *   @degraded — 内容根缺失 / roles 目录缺失 / 角色目录内文件读不到 / **knowledge-scope.yaml 内容坏**
+ *             ⇒ **不抛**，返回 `degraded: true` + `errors[]` 逐条点名 + `log.warn/error`（铁律 11/24/31）。
+ *             ⚠️ 区分三类：**ENOENT = 正常默认**（角色目录为空 / 该角色无 scope 文件 ⇒ degraded 但非错误）、
+ *             **读失败/解析失败/形状非法 = 真错误**（进 `errors[]`）、
+ *             **空文档（零内容或仅注释）= 未声明**（不计错；内容级红由 D5 探针 V1 的「scopes[] 为空」兜底 ——
+ *             见 KL-T1-1）。
  */
 import { createLogger } from '@synova/logger';
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
+import { load as parseYaml } from 'js-yaml';
 
 const log = createLogger('init/preset-loader');
 
@@ -46,6 +51,8 @@ export interface RolePack {
   readonly pieces: readonly string[];
   /** 五件套里缺失的文件名（空数组 = 齐备） */
   readonly missing: readonly string[];
+  /** 六件里 `knowledge-scope.yaml` 的**内容**解析结果（#731 / T1；additive，不改既有字段语义） */
+  readonly knowledgeScope: KnowledgeScopeDeclaration;
 }
 
 /** `loadRolePacks()` 的返回 */
@@ -70,7 +77,204 @@ const EXPECTED_PIECES: readonly string[] = [
   'acceptance-criteria.yaml',
 ];
 
-/** 解析内容根（绝对路径） */
+/** 六件里载荷知识范围的这一件（裁 423：唯一载体 = 岗位包实物） */
+const SCOPE_FILE = 'knowledge-scope.yaml';
+/** scope 声明里的字段名（zod 等价手写校验的靶；不引新依赖） */
+const SCOPES_KEY = 'scopes';
+const DENY_KEY = 'deny';
+const COLLECTIONS_KEY = 'collections';
+
+/**
+ * `knowledge-scope.yaml` 的**内容**解析结果（#731 / T1）。
+ *
+ * 🔴 本类型是「装载期把内容读出来」的载体 —— 在此之前 loader 只判"文件存在且非空"
+ *   （:97 起 `isNonEmptyFile`），内容坏成什么样都看不见 ⇒ 六件套的**内容**从未被生产读过。
+ */
+export interface KnowledgeScopeDeclaration {
+  readonly roleId: string;
+  /** 文件是否真的声明了内容（false = 缺件 / 空文档 ⇒ **不是错误**，见 KL-T1-1） */
+  readonly declared: boolean;
+  /** `scopes[].id`（顺序保留；去重由消费方决定） */
+  readonly scopeIds: readonly string[];
+  /** `deny[].id` */
+  readonly denyIds: readonly string[];
+  /** 内容级问题（形状非法 / 解析失败 / 重复 id / scopes 为空）—— 空数组 = 内容可用 */
+  readonly problems: readonly string[];
+  /** `problems.length > 0`（fail-loud 的可观测位：装载期 `errors[]` 与请求路径共用它） */
+  readonly degraded: boolean;
+}
+
+/** 收窄成"对象但不是数组" */
+function isRecordValue(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * 解析 + 校验一份 `knowledge-scope.yaml`（**单点**；装载期与请求路径共用）。
+ *
+ * 边界（dev doc §4.2 边界值清单）:
+ *   缺件 / 空文档（零内容或仅注释）⇒ `declared: false`，**不计错**
+ *     —— KL-T1-1：夹具与内容骨架普遍是"仅注释"形态（`tests/init/preset-loader.test.ts` 的
+ *        `writeRole()` 就写 `# <role>/<piece>`），把它判成错误 = 让装载面与既有判据对撞；
+ *        真正的"文件在但无 scope"由 D5 探针 V1（`scopes[] 为空 ⇒ 业务红`）兜住。
+ *   YAML 语法坏 / 顶层非映射 / `scopes` 缺失或非数组 / 条目缺非空 `id` / `id` 重复 /
+ *    `scopes` 为空 / `collections` 非数组 / `deny` 非数组或条目缺 `id` ⇒ **进 `problems`**（真错误）。
+ *   `roleId` 字段与目录名不一致 ⇒ 也进 `problems`（内容面自陈与物理位置漂移）。
+ *   `deny` 与 `scopes` 同 id **不是**问题（D5 的 V6(ii) 语义样本正是构造这种重叠）。
+ */
+function parseKnowledgeScope(absPath: string, roleId: string): KnowledgeScopeDeclaration {
+  const problems: string[] = [];
+  const empty: KnowledgeScopeDeclaration = {
+    roleId, declared: false, scopeIds: [], denyIds: [], problems, degraded: false,
+  };
+  let raw: string;
+  try {
+    raw = readFileSync(absPath, 'utf8');
+  } catch (err: unknown) {
+    problems.push(`${absPath}: 读取失败 — ${err instanceof Error ? err.message : String(err)}`);
+    return { ...empty, problems, degraded: true };
+  }
+
+  let doc: unknown;
+  try {
+    doc = parseYaml(raw);
+  } catch (err: unknown) {
+    problems.push(`${absPath}: YAML 解析失败 — ${err instanceof Error ? err.message : String(err)}`);
+    return { ...empty, problems, degraded: true };
+  }
+  if (doc === null || doc === undefined) return empty; // 空文档/仅注释 ⇒ 未声明（KL-T1-1）
+  if (!isRecordValue(doc)) {
+    problems.push(`${absPath}: YAML 顶层不是映射（实测 ${Array.isArray(doc) ? 'array' : typeof doc}）`);
+    return { ...empty, problems, degraded: true };
+  }
+
+  const declaredRole = doc['roleId'];
+  if (typeof declaredRole === 'string' && declaredRole.length > 0 && declaredRole !== roleId) {
+    problems.push(`${absPath}: roleId「${declaredRole}」与目录名「${roleId}」不一致`);
+  }
+
+  const rawScopes = doc[SCOPES_KEY];
+  if (rawScopes === undefined || rawScopes === null) {
+    problems.push(`${absPath}: 缺 \`${SCOPES_KEY}\` 字段（文件在但未声明任何知识范围）`);
+    return { ...empty, problems, degraded: true };
+  }
+  if (!Array.isArray(rawScopes)) {
+    problems.push(`${absPath}: \`${SCOPES_KEY}\` 不是数组（实测 ${typeof rawScopes}）`);
+    return { ...empty, problems, degraded: true };
+  }
+
+  const scopeIds: string[] = [];
+  for (const [index, entry] of rawScopes.entries()) {
+    if (!isRecordValue(entry)) {
+      problems.push(`${absPath}: \`${SCOPES_KEY}[${String(index)}]\` 不是映射`);
+      continue;
+    }
+    const id = entry['id'];
+    if (typeof id !== 'string' || id.length === 0) {
+      problems.push(`${absPath}: \`${SCOPES_KEY}[${String(index)}].id\` 缺非空字符串`);
+      continue;
+    }
+    const collections = entry[COLLECTIONS_KEY];
+    if (collections !== undefined && collections !== null && !Array.isArray(collections)) {
+      problems.push(`${absPath}: \`${SCOPES_KEY}[${String(index)}].${COLLECTIONS_KEY}\` 不是数组`);
+    }
+    scopeIds.push(id);
+  }
+  const duplicates = [...new Set(scopeIds.filter((id, i) => scopeIds.indexOf(id) !== i))];
+  if (duplicates.length > 0) {
+    problems.push(`${absPath}: \`${SCOPES_KEY}\` 有重复 id：${duplicates.join(', ')}`);
+  }
+  if (scopeIds.length === 0) {
+    problems.push(`${absPath}: \`${SCOPES_KEY}\` 为空 ⇒ 该岗位知识面为空（fail-closed：不得回落"不过滤"）`);
+  }
+
+  const denyIds: string[] = [];
+  const rawDeny = doc[DENY_KEY];
+  if (rawDeny !== undefined && rawDeny !== null) {
+    if (!Array.isArray(rawDeny)) {
+      problems.push(`${absPath}: \`${DENY_KEY}\` 不是数组（实测 ${typeof rawDeny}）`);
+    } else {
+      for (const [index, entry] of rawDeny.entries()) {
+        if (!isRecordValue(entry)) {
+          problems.push(`${absPath}: \`${DENY_KEY}[${String(index)}]\` 不是映射`);
+          continue;
+        }
+        const id = entry['id'];
+        if (typeof id !== 'string' || id.length === 0) {
+          problems.push(`${absPath}: \`${DENY_KEY}[${String(index)}].id\` 缺非空字符串`);
+          continue;
+        }
+        denyIds.push(id);
+      }
+    }
+  }
+
+  return {
+    roleId,
+    declared: true,
+    scopeIds,
+    denyIds,
+    problems,
+    degraded: problems.length > 0,
+  };
+}
+
+/**
+ * 按需解析某岗位的知识范围（**请求路径**入口；#731 / T1 / d-refresh）。
+ *
+ * @input  `roleId`（验签身份里的角色名）、`options.root`（内容根；缺省走 `SYNOVA_PRESETS_ROOT` 注入缝）
+ * @output {@link KnowledgeScopeDeclaration}
+ * @degraded 读失败/解析失败/形状非法 ⇒ `degraded: true` ＋ `log.error`；文件缺席 ⇒ `declared: false`
+ *           ＋ `log.warn`（I-C4：该岗位不追加 scope 维，但**可观测**）。**本函数从不抛**。
+ *
+ * 🔴 缓存口径（d-refresh）：缓存键 = 绝对路径，值带 `mtimeMs:size` 指纹 —— 同一服务寿命内改内容
+ *   文件（只改 mtime 或只改大小都算）⇒ **下一次调用即重解析**。禁进程级常量：那会让
+ *   "改文件 ⇒ 结果变"这条判据（D5 V3）假绿。
+ */
+const scopeDeclCache = new Map<string, { readonly fingerprint: string; readonly decl: KnowledgeScopeDeclaration }>();
+
+export function resolveRoleKnowledgeScope(
+  roleId: string,
+  options: { root?: string } = {},
+): KnowledgeScopeDeclaration {
+  try {
+    const root = options.root !== undefined && options.root.length > 0 ? options.root : resolvePresetsRoot();
+    const abs = join(root, ROLES_SUBDIR, roleId, SCOPE_FILE);
+    let fingerprint: string;
+    try {
+      const st = statSync(abs);
+      if (!st.isFile()) throw new Error('not a regular file');
+      fingerprint = `${String(st.mtimeMs)}:${String(st.size)}`;
+    } catch {
+      // ENOENT = 该岗位没有知识范围文件（I-C4：不追加条件，但必须可见）
+      log.warn({ roleId, path: abs }, '岗位未声明 knowledge-scope.yaml ⇒ 不追加 scope 维（可观测，非静默）');
+      return { roleId, declared: false, scopeIds: [], denyIds: [], problems: [], degraded: false };
+    }
+    const cached = scopeDeclCache.get(abs);
+    if (cached !== undefined && cached.fingerprint === fingerprint) return cached.decl;
+    const decl = parseKnowledgeScope(abs, roleId);
+    scopeDeclCache.set(abs, { fingerprint, decl });
+    if (decl.degraded) {
+      log.error(
+        { roleId, path: abs, problems: decl.problems, code: 'KNOWLEDGE_SCOPE_INVALID', degraded: true },
+        '知识范围文件内容非法 — 该岗位按 fail-closed 拒绝全部知识（不回落"不过滤"）',
+      );
+    }
+    return decl;
+  } catch (err: unknown) {
+    log.error(
+      { roleId, err, code: 'KNOWLEDGE_SCOPE_RESOLVE_FAILED', degraded: true },
+      '知识范围解析未预期异常 — 该岗位按 fail-closed 拒绝全部知识',
+    );
+    return {
+      roleId, declared: false, scopeIds: [], denyIds: [],
+      problems: [err instanceof Error ? err.message : String(err)],
+      degraded: true,
+    };
+  }
+}
+
+/** 解析内容根（绝对路径）—— `SYNOVA_PRESETS_ROOT` 注入缝（d-v3：服务与探针共用同一临时内容根） */
 function resolvePresetsRoot(cwd: string = process.cwd()): string {
   const override = process.env['SYNOVA_PRESETS_ROOT'];
   if (typeof override === 'string' && override.length > 0) return override;
@@ -102,7 +306,13 @@ function isNonEmptyFile(abs: string): boolean {
   }
 }
 
-/** 读一个角色包（磁盘实测五件套，不读声明） */
+/**
+ * 读一个角色包（磁盘实测五件套，不读声明）。
+ *
+ * #731 / T1：`knowledge-scope.yaml` 从"只判存在且非空"升级为**解析内容 ＋ 校验** ——
+ *   内容坏（语法/形状/空 scopes/重复 id）⇒ 逐条进 `errors[]` ⇒ `degraded: true` ⇒ **可观测**，
+ *   不再"文件在就当作齐备"。文件缺席/空文档 ⇒ 不计内容错（KL-T1-1），缺件另由 `missing` 报。
+ */
 function readRolePack(rolesRoot: string, roleId: string, errors: string[]): RolePack {
   const roleDir = join(rolesRoot, roleId);
   const pieces: string[] = [];
@@ -116,7 +326,25 @@ function readRolePack(rolesRoot: string, roleId: string, errors: string[]): Role
     errors.push(`${roleId}: 缺件 ${missing.join(', ')}`);
     log.warn({ roleId, missing }, '角色包缺件 — degraded');
   }
-  return { roleId, pieces, missing };
+
+  const scopePath = join(roleDir, SCOPE_FILE);
+  const knowledgeScope = pieces.includes(SCOPE_FILE)
+    ? parseKnowledgeScope(scopePath, roleId)
+    : { roleId, declared: false, scopeIds: [], denyIds: [], problems: [], degraded: false };
+  if (knowledgeScope.degraded) {
+    for (const problem of knowledgeScope.problems) errors.push(problem);
+    log.error(
+      { roleId, path: scopePath, problems: knowledgeScope.problems, code: 'KNOWLEDGE_SCOPE_INVALID', degraded: true },
+      '角色包 knowledge-scope.yaml 内容非法 — 装载期已点名（fail-loud）',
+    );
+  } else if (knowledgeScope.declared) {
+    log.info(
+      { roleId, scopes: knowledgeScope.scopeIds.length, deny: knowledgeScope.denyIds.length },
+      '角色包 knowledge-scope.yaml 内容已解析并校验',
+    );
+  }
+
+  return { roleId, pieces, missing, knowledgeScope };
 }
 
 /**
@@ -169,10 +397,13 @@ export function listRolePacks(): string[] {
 /**
  * 状态清理（幂等）。
  *
- * 本 loader **不持有进程级缓存**（每次调用直读磁盘，保持"加文件即生效"的宪章语义）⇒
- * 本函数仅为满足 `content-registry` 的 `loader.cleanup` 契约而存在，
- * 显式声明「无缓存可清」，避免探针按名调用时找不到符号（`probe-role-pack.ts` 会核 `loader.cleanup`）。
+ * `loadRolePacks()` / `listRolePacks()` **不持有进程级缓存**（每次调用直读磁盘，保持"加文件即生效"
+ * 的宪章语义）—— 这条不变。
+ * 🔴 #731 新增：`resolveRoleKnowledgeScope()` 为了请求路径的代价而带了 **mtime/size 指纹缓存**
+ *   （d-refresh：键含 mtime+size，改文件即失效）。本函数现在**确有缓存要清**，故清掉它；
+ *   仍满足 `content-registry` 的 `loader.cleanup` 契约（`probe-role-pack.ts` 会核该符号）。
  */
 export function clearPresetCache(): void {
-  log.info('preset-loader 无常驻缓存（每次直读磁盘）— cleanup 为空操作');
+  scopeDeclCache.clear();
+  log.info('preset-loader 已清 knowledge-scope 解析缓存（loadRolePacks 本身无常驻缓存）');
 }

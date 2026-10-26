@@ -16,6 +16,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { createLogger } from '@synova/logger';
 import type { WorkspaceRole } from './rbac';
 import { permissionsForRole, sensitivityWhitelistFromGrants, itemModelSpeaksForRole, type PermissionId } from '@synova/engine-auth';
+import { resolveRoleKnowledgeScope } from '../init/preset-loader';
 import { runWithContext, resolveContext } from '../services/request-context';
 
 const log = createLogger('auth');
@@ -379,6 +380,71 @@ export function allowedSensitivitiesByGrants(
   const narrowed = defaultLevels.filter((l) => grantedLevels.includes(l));
   // 交集为空 = 项集与档位默认不兼容 ⇒ fail-closed 到最窄，绝不放宽
   return narrowed.length > 0 ? narrowed : [CHUNK_SENSITIVITY_LEVELS[0] as string];
+}
+
+// ════════════════════════════════════════════════════════════════
+// #731 / T3: 知识 **scope 维** —— 内容文件 → 权限判定 → 知识过滤的真接线
+// ════════════════════════════════════════════════════════════════
+
+/**
+ * scope 维条件用的列名 —— **I-C1/I-C2 接口契约**（与 D5 探针 `probe-knowledge-scope.ts`
+ * 的 `SCOPE_FIELD` 同口径；PR1/PR2 两端必须一字不差）。
+ *
+ * 取名依据（不加新列、不改 store）: `knowledge_chunks.pkb_domain` 列已存在
+ * （`src/l4/knowledge-store.ts:72`），且 `matchFilter` 对字段名**直通**
+ * （`:701` `colMap[field] || field`）⇒ 加这一维**无需**改 `knowledge-store.ts`（本卡写集外）。
+ * 值口径 = **完整 scope id**（如 `finance.statements`），不是裸域前缀（同 d-kb）。
+ */
+const SCOPE_FIELD = 'pkb_domain';
+
+/** 与 `src/services/request-context.ts:39` 结构等价的条件下标（禁 `as any` 族，靠结构兼容互喂） */
+interface FilterCondition {
+  readonly field: string;
+  readonly operator: 'IN' | 'EQ' | 'NOT_EQ' | 'CONTAINS';
+  readonly value: unknown;
+}
+
+/**
+ * #731 / T3 —— 由**内容文件**派生的知识 scope 过滤条件（**追加**在 sensitivity 条件之后）。
+ *
+ * 接口契约（队长定，见卡 `task-4`；与 D5 探针侧同口径）:
+ *   - **I-C1** scope ⇒ `{ field:'pkb_domain', operator:'IN', value:<scopes[].id 去重排序> }`
+ *   - **I-C2** deny  ⇒ 每个 `deny[].id` 一条 `{ field:'pkb_domain', operator:'NOT_EQ', value:id }`
+ *     （`matchFilter` 只实现 IN/EQ/NOT_EQ，没有 NOT_IN ⇒ deny 只能逐 id 展开）
+ *   - **I-C3** 本函数**只追加**；`access.sensitivity` 条件由调用点保持在第 0 位（K12-11 不回退）
+ *   - **I-C4** 岗位没有 `knowledge-scope.yaml`（admin / manager / employee / viewer / liaison / ga /
+ *     未知角色）⇒ **不追加**任何 scope/deny 条件，但 `resolveRoleKnowledgeScope` 已 `log.warn`
+ *     （**可观测**，不是静默跳过）⇒ 已知限制 KL-3 声明"这些岗位不受 scope 维约束"
+ *   - **I-C6** 文件在但内容不可用（非法 YAML / 缺 `scopes[]` / 空 `scopes[]` / 重复 id）⇒
+ *     **拒绝型条件集** `{ field:'pkb_domain', operator:'IN', value: [] }` —— `IN` 对空数组恒 false
+ *     ⇒ 每一行都被过滤（与 `src/services/request-context.ts:388` 的 DENY_ALL 同一机制），
+ *     **绝不回落"不过滤"**（那是 fail-open，正是本批要杀的病）
+ *
+ * @input  `role` — 验签身份里的角色（`JwtPayload.role`，**唯一可信来源**；不读任何请求头）
+ * @output 条件数组：`[]`（无 scope 文件）｜`1`（fail-closed 的 `IN []`）｜`1 + N`（IN ＋ N 条 NOT_EQ）
+ * @degraded 内容坏 ⇒ 拒绝型 ＋ `log.error`（日志在 `resolveRoleKnowledgeScope` 内，带
+ *           `KNOWLEDGE_SCOPE_INVALID` ／ `KNOWLEDGE_SCOPE_RESOLVE_FAILED` typed code）。
+ *           **本函数从不抛** —— 它在每个请求的判定路径上跑。
+ *
+ * 设计哲学（一句）: **权限条件只从「验签身份 ＋ 内容文件」派生，且只能收窄** —— 文件在就按它收，
+ *   文件坏就收到底；唯一不允许的是"因为读不到而不收"。
+ */
+function knowledgeScopeConditions(role: string): FilterCondition[] {
+  const decl = resolveRoleKnowledgeScope(role);
+  if (decl.degraded) {
+    // I-C6: fail-closed 到"看不到任何知识"，而不是"看不到限制"
+    return [{ field: SCOPE_FIELD, operator: 'IN', value: [] }];
+  }
+  if (!decl.declared || decl.scopeIds.length === 0) {
+    // I-C4: 该岗位未声明知识范围 ⇒ 不追加（可观测性由 resolveRoleKnowledgeScope 的 log.warn 承担）
+    return [];
+  }
+  const allowed = [...new Set(decl.scopeIds)].slice().sort();
+  const conditions: FilterCondition[] = [{ field: SCOPE_FIELD, operator: 'IN', value: allowed }];
+  for (const denied of new Set(decl.denyIds)) {
+    conditions.push({ field: SCOPE_FIELD, operator: 'NOT_EQ', value: denied });
+  }
+  return conditions;
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -754,6 +820,10 @@ export async function jwtAuthMiddleware(req: Request, res: Response, next: NextF
                 //   `payload.orgId` = 客户槽（同一岗位名、不同客户 ⇒ 权限集合不同）。
                 value: allowedSensitivitiesByGrants(payload.role, ctx.auth.sensitivity, payload.orgId),
               },
+              // 🔴 #731 / T3（I-C1/I-C2/I-C3/I-C4/I-C6）: **追加**知识 scope 维（不替换）。
+              //   ⚠️ 位置是判据的一部分 —— I-C3 要求第 0 位恒为 `access.sensitivity` 条件
+              //   （K12-11 不回退），scope 维只能在它**之后**追加（数组长度只增不减）。
+              ...knowledgeScopeConditions(payload.role),
             ],
           }),
         },
