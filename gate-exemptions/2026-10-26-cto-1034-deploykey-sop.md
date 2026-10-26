@@ -1,3 +1,4 @@
+- tests/control-tower/report-mirror-pushes.test.sh — 取证脚本配对测试（缺 gh/直推/经 PR 三态）— 裁 421
 - .github/DEPLOYKEY-SOP.md — 新增 DeployKey 取证/轮换/泄露应急 SOP — 裁 421
 - scripts/control-tower/report-mirror-pushes.sh — 只读取证脚本（无 PR 即直推）— 裁 421
 - docs/authority/DOCS-REGISTRY.yaml — 登记本豁免件 DOC-0294 仅追加一行 — 裁 421
