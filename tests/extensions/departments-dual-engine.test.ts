@@ -28,12 +28,14 @@
  * 反例：A 若两岗位各持一份副本 ⇒ "同时变"断言必红（判别力自检）；改岗位自有件 finance.yaml
  *       ⇒ **只**财务岗变（同源投影 ≠ 各自副本，防"任何改动都通过"的恒真）。
  *
- * ── 判别力自检 ──
- * · 行 A：两岗位分别指向两份独立副本 ⇒ `assertBothPostsShareFact` 必抛
+ * ── 判别力自检（判的是**判定函数**，不是替身断言对象）──
+ * · 行 A①：两岗位分别指向两份独立副本 ⇒ `assertBothPostsShareFact` 必抛
  *   `JUDGMENT_POST_DID_NOT_MOVE`（若该断言恒真，"同源"就是空谈）。
- * · 行 B：把读取点换成"看不见本次写入"（计数恒 0）⇒ `judgeLearningCountDelta` 必抛
+ * · 行 A②：`judgeSameSourceLine` 喂**两份不同源行** ⇒ 必抛 `JUDGMENT_DIFFERENT_SOURCE`；
+ *   喂同一源行 ⇒ 放行（该分支因此**可达**，不是不可达死分支）。
+ * · 行 B：`judgeLearningCountDelta` 喂"看不见本次写入"（计数恒 0）⇒ 必抛
  *   `JUDGMENT_LEARNING_READ_POINT_BLIND`（= 卡面"计数恒 0 ⇒ 双引擎行必红"的机械形态）。
- * · 外部证据（不进本文件）：真摘掉读点 SQL（改坏 `src/`）⇒ 本文件必红；见 PR 回执原始输出。
+ * · 外部证据（不进本文件绿数）：真摘掉读点 SQL（改坏 `src/`）⇒ 本文件必红；见 PR 回执原始输出。
  *
  * ── 设计哲学一句 ──
  * 只观测"同一件内容文件的改动能否被两个岗位同时看见"与"写进去的东西能否被另一个读点看见"
@@ -44,16 +46,25 @@
  *    （`src/middleware/auth.ts:699` 调 `resolveContext`）；本文件不起服务、不签 JWT，
  *    断言对象是 `resolveContext` 生产函数本体。HTTP 断面判据归
  *    `scripts/control-tower/probe-department-axis.ts`，本文件不重复。
- * 2. 行 A 的变异只落临时内容根（`mkdtemp` ＋ 真 yaml **字节级**拷贝，见 `assertByteIdentical`）：
+ * 2. 🔴 "指向同一源行"的**可对账形态**：`resolveContext` 的输出 `ResolvedDepartment` **不含**源文件
+ *    路径（只有 id/displayName/parent/description）⇒ 若在观测里注入一个常量路径再断言
+ *    "路径相同"，那是**常量比常量**（恒真，零判别力）。故本文件的做法是：
+ *    ① 每岗位解析值逐字等于**它实际驱动文件**的同一 key 行（`sourceLineValue` 真读文件）；
+ *    ② 两岗位的驱动源行逐字相同（`judgeSameSourceLine`，带可达的反例自检）。不做路径断言。
+ * 3. 行 A 的变异只落临时内容根（`mkdtemp` ＋ 真 yaml **字节级**拷贝，见 `assertByteIdentical`）：
  *    `extensions/departments/**` 在本批只读（写集＝本文件）⇒ 仓库 `git status --porcelain` 为空。
  *    内容根经 `rootDir` 注入缝（`request-context.ts:125`；生产不传 ⇒ `process.cwd()`）传入，
  *    与生产走同一 `loadDepartmentRegistry` 代码路径（真读文件、无缓存）。
- * 3. 行 B 的"双引擎"在本卡按 dev doc 卡面指定 file:line 映射为 feedback-collector 的写点/读点；
+ * 4. 行 B 的"双引擎"在本卡按 dev doc 卡面指定 file:line 映射为 feedback-collector 的写点/读点；
  *    通道 B（`packages/evolution` ／agent_memory）的**存储面**不在本卡判据内
  *    （已由 `tests/growth/feedback-channel-unification.test.ts` 覆盖）。本文件只断言
  *    "归一后同一点可写、可被独立读点计数"。
- * 4. 临时库用 better-sqlite3 直连**文件路径**（不是 `sqlite3` CLI）⇒ 不涉及 `file:` URI 前缀坑；
+ * 5. 临时库用 better-sqlite3 直连**文件路径**（不是 `sqlite3` CLI）⇒ 不涉及 `file:` URI 前缀坑；
  *    原始 SQL 交叉核另起独立 `Database` 句柄，不经生产读点。
+ * 6. 🔴 结构锚（**不计入绿数**，仅作出处可追）：写点 = `src/growth/feedback-collector.ts:427-441`
+ *    `INSERT INTO feedback_log (id, enterprise_id, actor_id, …)`；独立读点 = `:470`
+ *    `SELECT * FROM feedback_log WHERE enterprise_id = @enterpriseId`。
+ *    V-02：grep 型不得作验收依据 ⇒ 这两条只写在注释里，**不设断言用例**（原「锚点核对」用例已删）。
  *
  * ── 失效条件（何时可撤）──
  * 出口验收（M9）用更强判据（真 HTTP 断面 ＋ D5 探针）接管本卡后，本文件降级为回归锁；
@@ -169,12 +180,17 @@ function rewriteSourceLine(relPath: string, root: string, key: string, value: st
   writeFileSync(file, text.replace(pattern, `${key}: ${value}`), 'utf8');
 }
 
-/** 单岗位观测：解析结果 ＋ 它在共享部门上的投影 ＋ 投影的源文件相对路径 */
+/**
+ * 单岗位观测：解析结果 ＋ 它在共享部门上的投影。
+ *
+ * 🔴 刻意**不**携带"源文件路径"字段：`resolveContext` 的输出里没有路径
+ *   （`ResolvedDepartment` = {id, displayName, parent, description}）⇒ 若在观测里塞一个常量路径，
+ *   "指向同一源行"就退化成常量比常量（恒真）。改为：值 vs **该岗位实际驱动文件**的同一 key 行可对账。
+ */
 interface SharedObservation {
   readonly post: Post;
   readonly resolved: ResolvedContext;
   readonly shared: ResolvedDepartment | undefined;
-  readonly sharedSourceRelPath: string;
 }
 
 async function observeSharedFact(root: string, post: Post): Promise<SharedObservation> {
@@ -187,21 +203,25 @@ async function observeSharedFact(root: string, post: Post): Promise<SharedObserv
     post,
     resolved,
     shared: resolved.profiles.find(profile => profile.id === SHARED_DEPT),
-    sharedSourceRelPath: SHARED_SOURCE_REL,
   };
 }
 
 /**
  * 行 A 判据本体（可被判"红" ⇒ 判据有判别力，不是恒真）：
- * 指定根解析下，两岗位必须**同一轮**都看到共享件的新值，且都指向同一个源文件。
+ * 指定根解析下，两岗位必须**同一轮**都看到共享件的新值，且该值逐字等于**各自实际驱动的**
+ * 源文件同一 key 行（`departments/<id>.yaml` 的 `displayName:` 行）。
+ *
+ * 🔴 "指向同一源行"的可对账形态 = ①每岗位解析值 == 它**实际驱动文件**的同一 key 行（真读文件）；
+ *   ②两岗位的驱动源行逐字相同（`judgeSameSourceLine`）。不用常量路径比常量路径。
  */
 async function assertBothPostsShareFact(
   rootFor: (post: Post) => string,
   expectedDisplayName: string,
 ): Promise<void> {
-  const seen: Array<{ label: string; displayName: string; sourceRelPath: string }> = [];
+  const seen: Array<{ label: string; sourceLine: string }> = [];
   for (const post of [POST_FINANCE, POST_DELIVERY]) {
-    const observation = await observeSharedFact(rootFor(post), post);
+    const root = rootFor(post);
+    const observation = await observeSharedFact(root, post);
     if (observation.shared === undefined) {
       throw new JudgmentError(
         'JUDGMENT_SHARED_FACT_INVISIBLE',
@@ -214,6 +234,14 @@ async function assertBothPostsShareFact(
         `岗位「${post.label}」解析降级：${observation.resolved.degradedReasons.join(' | ')}`,
       );
     }
+    // 可对账：解析值逐字等于该岗位**实际读取的**源文件同一 key 行（真读文件，无缓存、无常量）
+    const sourceLine = sourceLineValue(SHARED_SOURCE_REL, root, 'displayName');
+    if (observation.shared.displayName !== sourceLine) {
+      throw new JudgmentError(
+        'JUDGMENT_SOURCE_MISMATCH',
+        `岗位「${post.label}」解析值「${observation.shared.displayName}」≠ 其驱动源行「${sourceLine}」（真源不可对账）`,
+      );
+    }
     if (observation.shared.displayName !== expectedDisplayName) {
       throw new JudgmentError(
         'JUDGMENT_POST_DID_NOT_MOVE',
@@ -221,17 +249,24 @@ async function assertBothPostsShareFact(
         + '（只变一侧 ⇒ 两岗位读的不是同一份真源）',
       );
     }
-    seen.push({
-      label: post.label,
-      displayName: observation.shared.displayName,
-      sourceRelPath: observation.sharedSourceRelPath,
-    });
+    seen.push({ label: post.label, sourceLine });
   }
-  const sourcePaths = new Set(seen.map(entry => entry.sourceRelPath));
-  if (sourcePaths.size !== 1 || seen.length !== 2) {
+  judgeSameSourceLine(seen);
+}
+
+/**
+ * 「同一源行」判定（可被判"红"）：两岗位的**驱动源行**必须逐字相同。
+ *
+ * 判别力证据（可达性）：同 describe 内「判定函数判别力自检（辅助）」喂两份不同源行 ⇒ 必抛
+ * `JUDGMENT_DIFFERENT_SOURCE`；喂同一源行 ⇒ 放行。判的是**判定函数**本身，不是替身断言对象。
+ */
+function judgeSameSourceLine(seen: readonly { label: string; sourceLine: string }[]): void {
+  const lines = new Set(seen.map(entry => entry.sourceLine));
+  if (lines.size !== 1 || seen.length !== 2) {
     throw new JudgmentError(
       'JUDGMENT_DIFFERENT_SOURCE',
-      `两岗位指向的源文件不唯一：${seen.map(entry => `${entry.label}=${entry.sourceRelPath}`).join(' / ')}`,
+      `两岗位的驱动源行不唯一（${seen.length} 个岗位 / ${lines.size} 种源行）：`
+      + seen.map(entry => `${entry.label}=「${entry.sourceLine}」`).join(' / '),
     );
   }
 }
@@ -317,14 +352,14 @@ describe('#711 行 A · ②上下文一致（两岗位同一 departments 真源�
     // 判据：两岗位同一轮都跟上（任一岗位没跟上 ⇒ JUDGMENT_POST_DID_NOT_MOVE ⇒ 红）
     await assertBothPostsShareFact(() => root, mutated);
 
-    // "同一源行"：两岗位各自读到的值 == 同一文件、同一 key 行的值
+    // "同一源行"（可对账）：两岗位各自解析到的值 == 同一文件、同一 key 行的值
+    // 🔴 只断言**真读文件**得到的行值，不断言路径（`resolveContext` 输出无路径 ⇒ 路径断言会是常量比常量）
     for (const post of [POST_FINANCE, POST_DELIVERY]) {
       const observation = await observeSharedFact(root, post);
       expect(observation.shared?.displayName).toBe(mutatedSourceValue);
       expect(observation.shared?.description).toBe(
         sourceLineValue(SHARED_SOURCE_REL, root, 'description'),
       );
-      expect(observation.sharedSourceRelPath).toBe(join(DEPARTMENTS_REL, `${SHARED_DEPT}.yaml`));
     }
 
     // 仓库实物零改动（变异只可能落在临时根）
@@ -377,6 +412,25 @@ describe('#711 行 A · ②上下文一致（两岗位同一 departments 真源�
     // 对照：两岗位读**同一根**时同一判据放行（否则上面是"真·永红"而非判别力）
     rewriteSourceLine(SHARED_SOURCE_REL, rootForDelivery, 'displayName', mutated);
     await assertBothPostsShareFact(rootFor, mutated);
+  });
+
+  it('判定函数判别力自检（辅助，非穿生产用例）：两份不同源行 ⇒ JUDGMENT_DIFFERENT_SOURCE 必抛', () => {
+    // 判的是判定函数本体（judgeSameSourceLine）——证明该分支**可达**，不是不可达的死分支
+    expect(() => judgeSameSourceLine([
+      { label: '财务岗', sourceLine: '交付部' },
+      { label: '交付岗', sourceLine: '交付与实施部' },
+    ])).toThrow(/JUDGMENT_DIFFERENT_SOURCE/);
+
+    // 对照：同一源行 ⇒ 放行（否则上面是"真·永红"）
+    expect(() => judgeSameSourceLine([
+      { label: '财务岗', sourceLine: '交付部' },
+      { label: '交付岗', sourceLine: '交付部' },
+    ])).not.toThrow();
+
+    // 边界：岗位数不为 2（判据要求"两岗位")⇒ 同样必抛（不把单侧观测当同源）
+    expect(() => judgeSameSourceLine([{ label: '财务岗', sourceLine: '交付部' }])).toThrow(
+      /JUDGMENT_DIFFERENT_SOURCE/,
+    );
   });
 
   it('降级：真源目录缺失 ⇒ 两岗位**同时** degraded:true ＋ 逐字相同 reason（不是一侧静默空）', async () => {
@@ -528,22 +582,12 @@ describe('#711 行 B · 双引擎分立（诊断产出／学习产出各自读�
     expect(readWithoutEnterprise.degraded).toBe(true);
   });
 
-  it('判别力自检：读取点"看不见本次写入"（计数恒 0）⇒ 计数 +1 判据必红', () => {
+  it('判定函数判别力自检（辅助，非穿生产用例）：读取点"看不见本次写入"（计数恒 0）⇒ 计数 +1 判据必红', () => {
+    // 判的是判定函数本体（judgeLearningCountDelta）——证明"恒 0 ⇒ 红"这个分支可达且真的红
     expect(() => judgeLearningCountDelta(0, 0, '恒 0 读点')).toThrow(
       /JUDGMENT_LEARNING_READ_POINT_BLIND/,
     );
     // 对照：真 +1 时判据放行（否则上面是"真·永红"而非判别力）
     expect(judgeLearningCountDelta(0, 1, '正常读点')).toBe(1);
-  });
-
-  it('锚点核对（辅助，非验收唯一依据）：写点 INSERT ／读点 SELECT 是两条独立生产语句', () => {
-    const source = readFileSync(join(REPO_ROOT, 'src/growth/feedback-collector.ts'), 'utf8');
-    // 写点：feedback_log INSERT（卡面 :428 附近）
-    expect(source).toMatch(/INSERT INTO feedback_log \(id, enterprise_id, actor_id/);
-    // 独立读点：feedback_log SELECT（卡面 :470 附近；不是把写点返回值当读结果）
-    expect(source).toMatch(/SELECT \* FROM feedback_log WHERE enterprise_id = @enterpriseId/);
-    // 两个方法都在生产类上（读写点分立，不是一个函数既写又读）
-    expect(typeof FeedbackCollector.prototype.collectFeedback).toBe('function');
-    expect(typeof FeedbackCollector.prototype.queryFeedback).toBe('function');
   });
 });
