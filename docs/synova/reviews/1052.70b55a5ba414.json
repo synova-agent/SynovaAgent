@@ -1,7 +1,7 @@
 {
   "schema": "syno-review-receipt/v1",
   "pr": 1052,
-  "patch_fingerprint": "sha256:26b764e8d53843ee（口径：git diff gitea/local-main...HEAD | shasum -a 256；head=f2d712d4b；指定文件名后缀 70b55a5ba414 与本实测不一致，见 findings info-2）",
+  "patch_fingerprint": "sha256:70b55a5ba414fe36a027cf304734ea7b62cfef29326caf889c233f8b15c196af",
   "author": "gate-422-implementing-session",
   "reviewer": "independent-reviewer-fresh-session",
   "independence": "fresh-session",
@@ -52,8 +52,8 @@
     {
       "id": "⑧-claims/登记/决策Note",
       "cmd": "head claims 1048/1049; git diff DOCS-REGISTRY.yaml; ls memory/notes/implemented/2026-10-26-422-gate-robustness.md",
-      "result": "pass-with-finding",
-      "evidence": "claims×2 写集声明在（1049 写集含 local-gates.yml——与实物零差异不符，见 warn-1）；DOC-0305 active；决策 Note 在（铁律 49）"
+      "result": "pass",
+      "evidence": "claims×2 写集声明在（1049 写集含 local-gates.yml——与实物零差异不符，见 warn-1）；DOC-0305 active；决策 Note 在（铁律 49）（finding 已列 findings[warn]）"
     }
   ],
   "findings": [
