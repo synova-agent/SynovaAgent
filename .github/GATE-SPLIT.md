@@ -33,3 +33,26 @@
 ## 三、判定口径
 - **"分工已实现"** = 上表两列**无重复项** 且 两平台各跑一次都有记录（Gitea 有 run URL，GitHub 有 run URL）。
 - 当前状态：**重复项已清除（未实测）**，判定 = **未实现（待镜像修复后实测）**。
+
+---
+
+## 四、必需 context 真值（2026-10-26 起，唯一源 = repo ruleset）
+> 由 `gh api repos/<o>/<r>/rules/branches/main` 重放；`scripts/control-tower/required-checks-baseline.txt` 与之一致。
+> **改名/增删必须同 PR 同步三处：ci.yml job `name:` ⇄ ruleset ⇄ baseline**（否则 D971 型永久 blocked）。
+
+| # | context | 产出方 |
+|---|---|---|
+| 1 | Checker Review (maker/checker) | ci.yml |
+| 2 | Control Tower Gate Tests (ubuntu-latest) | ci.yml |
+| 3 | Golden Case F1 Gate | ci.yml |
+| 4 | Integration Contract Check | ci.yml |
+| 5 | Test-Kit Architecture Tests (ubuntu-latest) | ci.yml |
+| 6 | **PR 元信息门禁 (docs/evidence/write-set)** | ci.yml（原名 `TypeScript + Lint + Iron Laws`，名下已无 tsc/iron-laws，改名对齐实际内容） |
+| 7 | Vitest (1/2) | ci.yml |
+| 8 | Vitest (2/2) | ci.yml |
+| 9 | **Gate Integrity (pattern sentinel + injection fixture + ci-reds)** | ci.yml（2026-10-26 入必需集） |
+
+## 五、已知结构性风险（K3 诊断 §4）
+- **P2-⑧ DeployKey 永久旁路**：ruleset `bypass_actors=[{DeployKey, always}]` ⇒ 镜像同步通道即绕过通道；
+  现状**接受**（迁移期必需），但：① 泄露=main 保护失效；② 无告警面。**处置**：见 issue（限制/轮换/告警）。
+- **P1 口径三处**：GATE-SPLIT（本件）／ci.yml job 名／local-gates 步骤名 —— 本节表即三者的对账锚。

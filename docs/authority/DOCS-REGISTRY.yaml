@@ -1146,3 +1146,11 @@ documents:
     status: active
     owner: CTO
     note: "检查器迁 rulesets + baseline 重放 8 条 + ci.yml errexit 安全捕获。"
+
+  # ---- CTO 2026-10-26：#1033 job 改名 + Gate Integrity 入必需集豁免件（裁 421）----
+  - id: DOC-0293
+    type: decision
+    path: gate-exemptions/2026-10-26-cto-1033-rename-and-gate.md
+    status: active
+    owner: CTO
+    note: "job 改名对齐内容；Gate Integrity 入必需集；GATE-SPLIT 真值表。"

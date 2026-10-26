@@ -1,14 +1,13 @@
-# 必需 context 登记（裁 421·2026-10-26 重放）
+# 必需 context 登记（裁 421·2026-10-26 第二次重放：改名 + Gate Integrity 入集）
 # 取数源（唯一）：gh api repos/synova-agent/SynovaAgent/rules/branches/main
-#   ⇒ ruleset main-protect (id=24259959, enforcement=active, updated_at=2026-10-24)
-# 重放命令（改保护规则后必须重跑；禁止手抄）：
-#   gh api repos/<owner>/<repo>/rules/branches/main \
-#     --jq '[.[]|select(.type=="required_status_checks")|.parameters.required_status_checks[].context]'
-Checker Review (maker/checker) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T12:40:00Z | evidence=ruleset 24259959 @ synova-agent/SynovaAgent
-Control Tower Gate Tests (ubuntu-latest) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T12:40:00Z | evidence=ruleset 24259959 @ synova-agent/SynovaAgent
-Golden Case F1 Gate | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T12:40:00Z | evidence=ruleset 24259959 @ synova-agent/SynovaAgent
-Integration Contract Check | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T12:40:00Z | evidence=ruleset 24259959 @ synova-agent/SynovaAgent
-Test-Kit Architecture Tests (ubuntu-latest) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T12:40:00Z | evidence=ruleset 24259959 @ synova-agent/SynovaAgent
-TypeScript + Lint + Iron Laws | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T12:40:00Z | evidence=ruleset 24259959 @ synova-agent/SynovaAgent
-Vitest (1/2) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T12:40:00Z | evidence=ruleset 24259959 @ synova-agent/SynovaAgent
-Vitest (2/2) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T12:40:00Z | evidence=ruleset 24259959 @ synova-agent/SynovaAgent
+#   ⇒ ruleset main-protect (id=24259959, active)；重放命令见下，禁止手抄：
+#   gh api repos/<o>/<r>/rules/branches/main --jq '[.[]|select(.type=="required_status_checks")|.parameters.required_status_checks[].context]'
+Checker Review (maker/checker) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959
+Control Tower Gate Tests (ubuntu-latest) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959
+Golden Case F1 Gate | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959
+Integration Contract Check | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959
+Test-Kit Architecture Tests (ubuntu-latest) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959
+PR 元信息门禁 (docs/evidence/write-set) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959
+Vitest (1/2) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959
+Vitest (2/2) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959
+Gate Integrity (pattern sentinel + injection fixture + ci-reds) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959

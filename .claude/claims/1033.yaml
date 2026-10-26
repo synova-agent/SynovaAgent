@@ -1,0 +1,11 @@
+writeset:
+  - .claude/claims/1033.yaml
+  - .github/workflows/ci.yml
+  - scripts/control-tower/required-checks-baseline.txt
+  - .github/GATE-SPLIT.md
+  - gate-exemptions/2026-10-26-cto-1033-rename-and-gate.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - memory/notes/proposed/2026-10-26-1033-rename-and-gate.md
+done:
+  - verify: python3 scripts/control-tower/check-required-contexts.py --api-check --allow-degraded
+note: "#1033 job 改名 + Gate Integrity 入必需集。"

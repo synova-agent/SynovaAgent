@@ -1,0 +1,5 @@
+- .github/workflows/ci.yml — job 改名 TypeScript+Lint+Iron Laws → PR 元信息门禁（名下已无 tsc/iron-laws，名实对齐）— 裁 421
+- scripts/control-tower/required-checks-baseline.txt — 按 ruleset 24259959 重放为 9 条（含改名与 Gate Integrity 入集）— 裁 421
+- .github/GATE-SPLIT.md — 补必需 context 真值表、三处同步规则、DeployKey 旁路风险 — 裁 421
+- docs/authority/DOCS-REGISTRY.yaml — 登记本豁免件 DOC-0293 仅追加一行 — 裁 421
+- gate-exemptions/2026-10-26-cto-1033-rename-and-gate.md — 本豁免件自覆盖并声明上列全部路径 — 裁 421

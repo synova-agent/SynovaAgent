@@ -47,7 +47,7 @@ jobs:
     # Gate Integrity 2 / Test-Kit(windows) 3 / Architecture 6 / Checker Review 6 /
     # Integration 6 / TypeScript+Iron Laws 7 / Vitest 8 / Control Tower(ubuntu) 14 / (windows) 106（D1109 后**未重取**：口径要 n=12 同分布样本，现 n=1）。
     timeout-minutes: 7
-    name: TypeScript + Lint + Iron Laws
+    name: PR 元信息门禁 (docs/evidence/write-set)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
