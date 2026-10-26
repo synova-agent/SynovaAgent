@@ -129,3 +129,10 @@ entries:
     status: wired
     owner: P1
     notes: "#915 Q-6（裁 365）：可注入时钟；systemClock 为唯一系统时钟入口，生产消费点=federated-pipeline/main-agent 两链"
+  - capability: tool.reportMirrorPushes
+    provider: scripts/control-tower/report-mirror-pushes.sh
+    consumer: null
+    test: tests/control-tower/report-mirror-pushes.test.sh
+    status: declared-only
+    defined_at: scripts/control-tower/report-mirror-pushes.sh:15
+    notes: "#1034 DeployKey 旁路只读取证工具（运维/审计人工调用）"

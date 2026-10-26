@@ -1,0 +1,12 @@
+writeset:
+  - .claude/claims/1034.yaml
+  - .github/DEPLOYKEY-SOP.md
+  - scripts/control-tower/report-mirror-pushes.sh
+  - tests/control-tower/report-mirror-pushes.test.sh
+  - gate-exemptions/2026-10-26-cto-1034-deploykey-sop.md
+  - docs/authority/WIRING-REGISTRY.yaml
+  - docs/authority/DOCS-REGISTRY.yaml
+  - memory/notes/proposed/2026-10-26-1034-deploykey-sop.md
+done:
+  - verify: bash scripts/control-tower/report-mirror-pushes.sh 3
+note: "#1034 DeployKey 旁路：取证 + 轮换 SOP。"
