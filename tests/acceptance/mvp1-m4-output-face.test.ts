@@ -488,6 +488,14 @@ function renderSection(
   return renderToStaticMarkup(MeasurementTrendSection({ view, state, onOpenOnePager }));
 }
 
+/**
+ * 渲染产物中「指标条目」的计数（**经 EXP_TESTID.item 单一源**，文件内不出现裸 testid 字面量）。
+ * 等价于规格的「正则 match + g 标志取条目数」写法——此处以 split 计数实现，testid 同样只取 EXP_TESTID.item。
+ */
+function countItems(markup: string): number {
+  return markup.split(`data-testid="${EXP_TESTID.item}"`).length - 1;
+}
+
 /** ready 夹具：up/down/flat 三分支（值全部来自 EXP_*，不散落魔数） */
 const READY_VIEW: MeasurementTrendsView = {
   ok: true,
@@ -552,7 +560,7 @@ describe('#1053 T5 · T2 渲染「测量值＋趋势」（纯组件 ＋ render �
     console.log(`[T2] ready length=${out.length}`);
     expect(out).toContain(EXP_SECTION_TITLE);
     expect(out).toContain(`data-testid="${EXP_TESTID.section}"`);
-    expect((out.match(/data-testid="measurement-trend-item"/g) ?? []).length).toBe(READY_VIEW.summary.length);
+    expect(countItems(out)).toBe(READY_VIEW.summary.length);
 
     // 指标标识与值/单位透传（EXP 单一源）
     expect(out).toContain(EXP_METRIC.UP);
@@ -585,7 +593,7 @@ describe('#1053 T5 · T2 渲染「测量值＋趋势」（纯组件 ＋ render �
     expect(out).toContain(EXP_METRIC.DOWN);
     expect(out).toContain(String(EXP_SEED.UP.LATEST_VALUE)); // 真库里 up 指标的最新值
     expect(out).toContain(String(EXP_SEED.DOWN.LATEST_VALUE)); // 真库里 down 指标的最新值
-    expect((out.match(/data-testid="measurement-trend-item"/g) ?? []).length).toBeGreaterThanOrEqual(2);
+    expect(countItems(out)).toBeGreaterThanOrEqual(2);
     expect(out).toContain(`data-testid="${EXP_TESTID.onePager}"`);
   });
 
@@ -707,7 +715,7 @@ describe('#1053 T5 · A9 M3 四真值经 Section 渲染', () => {
       expect(block, truth.metricId).toContain(truth.rendered); // 值 ＋ 单位同一条目内
       expect(block, truth.metricId).toContain(`data-trend="${EXP_TREND.UNKNOWN}"`);
     }
-    expect((out.match(/data-testid="measurement-trend-item"/g) ?? []).length).toBe(EXP_M3_TRUTHS.length);
+    expect(countItems(out)).toBe(EXP_M3_TRUTHS.length);
     expect(out).toContain(EXP_SEMANTICS_VERSION);
     expect(out).toContain(`data-testid="${EXP_TESTID.limitations}"`);
   });
