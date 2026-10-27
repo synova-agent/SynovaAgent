@@ -1,0 +1,15 @@
+# .claude/claims/713.yaml — #713 D5 反例卡 · D5 判据件改靶（裁 423 靶子归一）· 写集声明
+writeset:
+  - .claude/claims/713.yaml
+  - scripts/control-tower/probe-knowledge-scope.ts
+  - docs/synova/runbooks/README-probe-knowledge-scope.md
+  - memory/notes/proposed/2026-10-27-713-d5-probe-retarget.md
+  - gate-exemptions/2026-10-27-825-m7-probe.md
+  - docs/authority/DOCS-REGISTRY.yaml
+done:
+  - verify: node node_modules/.bin/tsx scripts/control-tower/probe-knowledge-scope.ts
+  - verify: bash tests/control-tower/probe-contract.test.sh
+  - verify: SYNO_CI=1 GITHUB_ACTIONS=true SYNO_DIFF_BASE=gitea/local-main bash scripts/pre-commit-check.sh
+  - verify: grep -c '@authority' scripts/control-tower/probe-knowledge-scope.ts   # 返修批 活3（#1070）
+  - verify: grep -c 'Known Limitations' docs/synova/runbooks/README-probe-knowledge-scope.md
+note: "#713 D5 判据件改靶：TARGETS/GATE_TARGETS 归一为实物三件 extensions/presets/roles/{finance,hr,sales}/knowledge-scope.yaml（原靶目录从来不存在）；新增 --base-url/--roles/--presets-root；V1–V6 断言对象换真路由 POST /api/knowledge/search＋真中间件链＋真 loader；三态退出码 0/1/2＋信号量==0⇒2＋存在性闸＋判别力自检骨架逐字保留。先红态（接线未动）：裸跑 REAL_EXIT=2 / RESULT=NOT_IMPLEMENTED，原因＝生产链未消费 scopes（declared-only）。Refs #713（不 Closes）。｜ 2026-10-27 返修批·活3（#1070 / CTO 裁 #7605 §1 品味1=a）：头注补 @authority/@exit/@not-here 标签形态＋新增 README-probe-knowledge-scope.md 五节（声明语义零变更，裸跑仍 exit 2）；DOCS-REGISTRY 追加 DOC-0307（D2 机械必需，L1 已授权）。"
