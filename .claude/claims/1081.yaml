@@ -1,0 +1,14 @@
+# 注：守则内命令改用 as +(any|never|unknown +as) 写法（规避自指 grep 命中）
+# .claude/claims/1081.yaml — #1081 域守则补齐（src/scripts/tests 顶层）＋P0.7 note 标题
+writeset:
+  - src/AGENTS.md
+  - scripts/AGENTS.md
+  - tests/AGENTS.md
+  - memory/notes/proposed/2026-10-27-1054-acceptance-matrix.md
+  - .claude/claims/1081.yaml
+  - docs/synova/reviews/1082.108210821082.json
+done:
+  - verify: git cat-file -s HEAD:src/AGENTS.md && git cat-file -s HEAD:scripts/AGENTS.md && git cat-file -s HEAD:tests/AGENTS.md
+  - verify: git grep -c "P0→P0.7" -- memory/notes/proposed/2026-10-27-1054-acceptance-matrix.md
+note: "O-5 前置：src/scripts/tests 顶层无 AGENTS.md，P0 接 CI 后此类批次会 T-8 fail；本卡补齐三份（≤60 行/≤3.5KB，结构照 src/l3/AGENTS.md）。"
+# F3 修正：src/AGENTS.md 的 tui→tui-v2、expert 归仓根（复核员 2a2e138e 点名）
