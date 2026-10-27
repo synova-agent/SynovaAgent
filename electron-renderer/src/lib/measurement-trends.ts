@@ -8,6 +8,7 @@
  * 契约（铁律 47）:
  *   @input   base?: string — API 源。缺省 getApiBase()（Electron serverUrl；浏览器 dev 走 vite proxy
  *            的相对路径 ''）。测试注入真 express/base（禁 mock 冒充真调）。
+ *   @input   orgId?: string | null — 企业作用域；非空 ⇒ 追加 &orgId=<encodeURIComponent>；null/undefined/'' ⇒ 不带
  *   @output  MeasurementTrendsView { ok, degraded, summary: MetricTrendItem[], errors? }
  *            summary 字段语义逐项对齐服务端 MetricTrendSummary
  *            （src/sentinel/metric-readings-reader.ts:59-69；只读复用，不新增 API 字段）。
@@ -15,6 +16,8 @@
  *            ／ 网络异常 ⇒ { ok:false, degraded:true, summary:[], errors:['<CODE>: <原因>'] }，
  *            并 console.warn 留痕；服务端 ok:false ⇒ 原样透传 degraded + errors（summary 置空：
  *            不确定的数据不交给渲染层）。
+ *            400 ⇒ 走 METRIC_TRENDS_HTTP_ERROR，errors 保留 status
+ *   @error   不抛（永不向上抛）：!res.ok／非合法 JSON／形状非法（含 typed error）／网络异常 全部经 degrade() 转 { ok:false, degraded:true, summary:[], errors:[…] }，只 console.warn 留痕
  *   @authority 只读 GET /api/sentinel/metrics/readings?view=trends；调用方仅渲染进程
  *            （MeasurementTrendContainer / 验收件）。不写 metric_readings、不做标定、不引新依赖。
  *   @not-here 不做写侧/参数标定；不重建报告链；不做轮询、缓存、重试（容器只取一次）。
@@ -61,6 +64,11 @@ export interface MeasurementTrendsView {
 
 /** 趋势端点（相对 API 源；view=trends 是本批唯一消费的形态） */
 const TRENDS_PATH = '/api/sentinel/metrics/readings?view=trends';
+
+/** 趋势区口径版本（与上游导出口径对齐；展示层消费同一常量，禁在组件内另写一份字面量） */
+export const TREND_SEMANTICS_VERSION = 'cost0-v1';
+/** 已知限制文案（规格 §5.2 逐字；展示层在任何 state 恒显示在标题下） */
+export const TREND_SEMANTICS_NOTE = '已知限制：本区只显示已落库的真实读数（不补数、不猜数）。当前口径 cost0-v1——上游导出不含营业成本，毛利率/净利率为公式产物，与客户账本可能不一致。';
 
 /**
  * 趋势方向推导。
@@ -207,10 +215,12 @@ function resolveBase(base: string | undefined): string {
 /**
  * 真调 `GET {base}/api/sentinel/metrics/readings?view=trends` 并返回测量值＋趋势视图。
  * @param base - API 源；缺省 getApiBase()（Electron serverUrl / dev proxy）
+ * @param orgId - 企业作用域；非空 ⇒ 追加 &orgId=<encodeURIComponent(orgId)>；null/undefined/'' ⇒ 不带
  * @returns MeasurementTrendsView —— 永不抛：任何失败均为 ok=false + degraded=true + errors
  */
-export async function loadMeasurementTrends(base?: string): Promise<MeasurementTrendsView> {
-  const url = `${resolveBase(base)}${TRENDS_PATH}`;
+export async function loadMeasurementTrends(base?: string, orgId?: string | null): Promise<MeasurementTrendsView> {
+  const scope = typeof orgId === 'string' && orgId !== '' ? `&orgId=${encodeURIComponent(orgId)}` : '';
+  const url = `${resolveBase(base)}${TRENDS_PATH}${scope}`;
 
   let response: Response;
   try {
