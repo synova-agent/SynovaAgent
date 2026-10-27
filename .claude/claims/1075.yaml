@@ -2,7 +2,10 @@
 # 依据：规格 .handbook/派单件/2026-10-28-规格-1075-岗位包v2-schema与生成器对齐.md §2.3（16 项并集）
 #      ＋ 声明载体自身 ＋ `.claude/plan.json`（门禁触发配套件：组 4a「分阶段接线」声明，
 #      phase step=3／wiring deferred／只覆盖 src/init/role-pack-schema.ts —— L1 2026-10-28 裁定）。
-#      → writeset 共 18 行（16 项并集 ∪ claims 自身 ∪ plan.json）。
+#      ＋ 本 PR 的独立复核回执（check-merge-conditions ③ 要求回执在 head 树；
+#      文件名 <PR>.<12hex>.json 在 PR 号产生后预列，回执 JSON 内 patch_fingerprint 为真指纹。
+#      P1-b 的对应回执由 P1-b 分支上的一次 claim 预列提交补入，本文件在该分支被同一 claim 覆盖）。
+#      → 本 PR 提交集 ⊆ writeset（本文件 19 行：16 项并集 ∪ claims 自身 ∪ plan.json ∪ 1085 回执）。
 # 说明：`docs/authority/WIRING-REGISTRY.yaml` 为**纯追加 1 行**（G1 R1.1；不改既有条目，§10-L11）。
 writeset:
   - extensions/presets/schema/role-pack-v2.schema.json
@@ -23,6 +26,7 @@ writeset:
   - tests/routes/onboarding.test.ts
   - .claude/claims/1075.yaml
   - .claude/plan.json
+  - docs/synova/reviews/1085.108510851085.json
 done:
   - verify: node node_modules/.bin/vitest run tests/init/role-pack-schema.test.ts
   - verify: node node_modules/.bin/vitest run tests/init/preset-loader.test.ts
