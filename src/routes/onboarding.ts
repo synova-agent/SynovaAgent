@@ -11,13 +11,27 @@
  *   `probe-onboarding.ts` 的 `checkZeroForm` 按注册路由表核。
  *
  * 契约（铁律 47）:
- *   @input  — `POST /api/onboarding/start`，body `{ documents: string[], roles?: RoleSeed[],
- *             dryRun?: boolean, superAdminConfirmed?: boolean, requestedPermissions?: string[] }`
- *   @output — `{ ok: true, data: OnboardingReport & { gapQuestions: GapQuestionReport } }`（2xx）；
+ *   @input  — `POST /api/onboarding/start`（**pre-auth**，白名单）与
+ *             `POST /api/onboarding/apply`（非 pre-auth，需凭据），body 同形:
+ *             `{ documents: string[], roles?: RoleSeed[], dryRun?: boolean,
+ *                superAdminConfirmed?: boolean, requestedPermissions?: string[],
+ *                documentedPermissions?: string[] }`
+ *   @output — 2xx `{ ok: true, data: OnboardingReport & { gapQuestions?: GapQuestionReport } }`；
+ *             🔴 **409** `{ ok:false, code:'SUPER_ADMIN_CONFIRMATION_REQUIRED', message, data, degraded:true }`
+ *             —— 命中「有落盘意图 ∧ 未超管确认」时**两条入口都拒绝**（裁 425 / C1）；
  *             入参非法 ⇒ 400 `{ok:false,code,message}`；
  *             内部异常 ⇒ 500 `{ok:false,code:'INTERNAL_ERROR',degraded:true}`（铁律 31）
  *   @degraded — 流程内失败已由 `runOnboardingFlow` 收成 `report.degraded` + `errors[]`，
  *             本层**原样透出**（不吞）；写响应失败才走 500 catch。
+ *             拒绝路径（409）必记一条 `log.warn`（code / phase / retryable / degraded:true，禁静默）。
+ *
+ * 🔴 裁 425 / C1（#1061）—— **真落盘点在 `onboarding-flow.ts:130` 的 `generateConfigPack(...)`**
+ *   （`dryRun !== true` 即真写 `extensions/presets/roles/<id>/` 实物 3 件），它在 flow 的 ④ 步；
+ *   而 ⑤ 超管确认（`:151` 的 `confirmed`）与 ⑥ `deploy`（`:170`，**只写状态行**）都在它**之后**
+ *   ⇒ 旧实现"先 `runOnboardingFlow(input)` 再判 `!superAdminConfirmed`"是**失实的 fail-closed**:
+ *   409 发出时文件**已经落盘**。现门控**前移**到调用 flow 之前（`superAdminGateBlocks()`），
+ *   拒绝时把落盘意图降级为 dry-run ⇒ **磁盘零写入是事实**，响应仍带完整 report。
+
  *
  * 🔴 K12-04（#187）接线点: 建档第 ③ 步「追问」的**追问表**由 `buildQuestionTable()` 产出，
  *   随本响应 `data.gapQuestions` 透出（**只加字段，不改既有字段与路由表** ——
@@ -58,6 +72,48 @@ function roleSeeds(value: unknown): RoleSeed[] {
 
 const router = Router();
 
+// ════════════════════════════════════════════════════════════════
+// 裁 425 / C1: 超管确认门（**一处**门控，两条入口共用）
+// ════════════════════════════════════════════════════════════════
+
+/**
+ * 是否必须拒绝本次请求（未超管确认 ∧ 有落盘意图）。
+ *
+ * 为什么必须在**调用 `runOnboardingFlow` 之前**判: 真落盘点是 flow ④ 的
+ *   `generateConfigPack(...)`（`dryRun !== true` 即真写盘），早于 ⑤ 确认与 ⑥ 状态步
+ *   ⇒ 在 flow 返回后判 = 文件已落盘（本卡要杀的正是这个）。
+ *
+ * @input  input — 已收窄的 `OnboardingInput`（`dryRun`/`superAdminConfirmed` 只认 `=== true`）
+ * @output `true` = 拒绝（把落盘意图降级为 dry-run ＋ 回 409）；`false` = 放行
+ * @exit   不抛（纯判定，无 IO）
+ * @degraded 无。拒绝路径的留痕由调用点 `logSuperAdminConfirmationRequired()` 承担。
+ */
+function superAdminGateBlocks(input: OnboardingInput): boolean {
+  // `dryRun !== true` = **有落盘意图**（`dryRun` 缺省即"要写"，与 flow 的判定口径逐字一致）
+  return input.dryRun !== true && input.superAdminConfirmed !== true;
+}
+
+/**
+ * 拒绝路径留痕（铁律 11/32 —— **禁静默**）: code ＋ phase ＋ retryable ＋ degraded:true 四件齐。
+ *
+ * @input  entry — 命中的入口路径（`/api/onboarding/start` ｜ `/api/onboarding/apply`），用于区分两条入口
+ * @output 无（副作用仅一条 `log.warn`）
+ * @exit   不抛（日志失败不改变业务拒绝的语义）
+ * @degraded 本函数**就是**降级上报本身：`degraded:true` ＋ `retryable:true`（补确认后重试即可）
+ */
+function logSuperAdminConfirmationRequired(entry: string): void {
+  log.warn(
+    {
+      code: 'SUPER_ADMIN_CONFIRMATION_REQUIRED',
+      phase: 'onboarding:super-admin-confirmation-gate',
+      retryable: true,
+      degraded: true,
+      entry,
+    },
+    '安全判据: 被拒绝 — 未超管确认且有落盘意图，已挡在 generateConfigPack 之前（磁盘零写入）',
+  );
+}
+
 /**
  * `POST /api/onboarding/start` — 建档入口（**pre-auth**，见 `auth.ts` isWhitelisted 的 K12-03 条目）。
  * 首条 POST = 判据探针实际驱动的端点，故本路由**先注册**。
@@ -65,7 +121,7 @@ const router = Router();
 router.post('/api/onboarding/start', (req: Request, res: Response) => {
   try {
     const body = (req.body ?? {}) as Record<string, unknown>;
-    const input: OnboardingInput = {
+    const requested: OnboardingInput = {
       documents: stringList(body['documents']),
       roles: roleSeeds(body['roles']),
       // 🔴 rootDir 一律取进程 cwd —— **不接受请求体指定路径**（否则 = 任意路径写入面）
@@ -75,10 +131,25 @@ router.post('/api/onboarding/start', (req: Request, res: Response) => {
       requestedPermissions: stringList(body['requestedPermissions']),
       documentedPermissions: stringList(body['documentedPermissions']),
     };
+    // 🔴 裁 425/C1 门控（**在 flow 之前**）: 拒绝时把落盘意图降级为 dry-run
+    //   ⇒ flow ④ `generateConfigPack` 只算 planned、不写盘（磁盘零写入是事实，不是承诺）。
+    const blocked = superAdminGateBlocks(requested);
+    const input: OnboardingInput = blocked ? { ...requested, dryRun: true } : requested;
     const report = runOnboardingFlow(input);
     // 建档第 ③ 步：追问表（本体缺口驱动；建档期图未实例化 ⇒ 空图 ⇒ 全量追问）
     //   自足失败面：本体缺/坏 ⇒ gapQuestions.degraded=true + errors[]（不抛，不拖垮建档主流程）
     const gapQuestions = buildQuestionTable({ observed: { nodes: [], edges: [] }, rootDir: process.cwd() });
+    if (blocked) {
+      logSuperAdminConfirmationRequired('/api/onboarding/start');
+      res.status(409).json({
+        ok: false,
+        code: 'SUPER_ADMIN_CONFIRMATION_REQUIRED',
+        message: '超管确认后方可落盘',
+        data: { ...report, gapQuestions },
+        degraded: true,
+      });
+      return;
+    }
     log.info({ dryRun: input.dryRun === true, degraded: report.degraded }, '建档请求已处理');
     res.json({ ok: true, data: { ...report, gapQuestions } });
   } catch (err: unknown) {
@@ -93,7 +164,7 @@ router.post('/api/onboarding/start', (req: Request, res: Response) => {
 router.post('/api/onboarding/apply', (req: Request, res: Response) => {
   try {
     const body = (req.body ?? {}) as Record<string, unknown>;
-    const input: OnboardingInput = {
+    const requested: OnboardingInput = {
       documents: stringList(body['documents']),
       roles: roleSeeds(body['roles']),
       rootDir: process.cwd(),
@@ -102,10 +173,22 @@ router.post('/api/onboarding/apply', (req: Request, res: Response) => {
       requestedPermissions: stringList(body['requestedPermissions']),
       documentedPermissions: stringList(body['documentedPermissions']),
     };
+    // 🔴 裁 425/C1 门控前移（**改写的失实注释**）: 旧注释声称「流程内部已 skip deploy ⇒ 未确认不落盘」——
+    //   不成立。真落盘点是 flow ④ `generateConfigPack`（`dryRun!==true` 即真写盘），而 ⑤ 确认
+    //   在其后、⑥ `deploy` 只写状态行 ⇒ 在 flow 返回后才判，文件**已经**落盘。
+    //   现在门在 flow 之前：拒绝 = 落盘意图降级为 dry-run（磁盘零写入）＋ 409 ＋ log.warn。
+    const blocked = superAdminGateBlocks(requested);
+    const input: OnboardingInput = blocked ? { ...requested, dryRun: true } : requested;
     const report = runOnboardingFlow(input);
-    if (!input.superAdminConfirmed) {
-      // fail-closed：未确认不落盘（流程内部已 skip deploy；此处给出显式业务码）
-      res.status(409).json({ ok: false, code: 'SUPER_ADMIN_CONFIRMATION_REQUIRED', message: '超管确认后方可部署', data: report });
+    if (blocked) {
+      logSuperAdminConfirmationRequired('/api/onboarding/apply');
+      res.status(409).json({
+        ok: false,
+        code: 'SUPER_ADMIN_CONFIRMATION_REQUIRED',
+        message: '超管确认后方可部署',
+        data: report,
+        degraded: true,
+      });
       return;
     }
     res.json({ ok: true, data: report });
