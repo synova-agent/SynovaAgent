@@ -3,7 +3,7 @@
 > 归属：产品线（各包按 `docs/authority/ASSET-MAP.yaml` 映射）｜ as_of `6c85b1925`
 
 ## 是什么
-五层业务代码：L1 交互（`routes/`、`tui/`、`mcp/`）｜L2 编排（`agent/`、`orchestrator/`）｜L3 洞察（`l3/`、`sentinel/`、`expert-platform/`、`expert/`）｜L4 本体（`l4/`、`evidence/`）｜L5 存储（`store/`、`cron/`）｜以及应用入口 `index.ts`、`server.ts`。
+五层业务代码：L1 交互（`routes/`、`tui-v2/`、`mcp/`）｜L2 编排（`agent/`、`orchestrator/`）｜L3 洞察（`l3/`、`sentinel/`、`expert-platform/`；文件驱动专家在**仓根** `expert/`）｜L4 本体（`l4/`、`evidence/`）｜L5 存储（`store/`、`cron/`）｜以及应用入口 `index.ts`、`server.ts`。
 
 ## 谁改
 各包负责人（见 ASSET-MAP）。跨层改动先由 CTO 裁「改哪层」；**禁止** L1→L3/L4/L5、L2→L4/L5 跨层 import（`check-architecture.sh` 硬阻断）。

@@ -10,3 +10,4 @@ done:
   - verify: git cat-file -s HEAD:src/AGENTS.md && git cat-file -s HEAD:scripts/AGENTS.md && git cat-file -s HEAD:tests/AGENTS.md
   - verify: git grep -c "P0→P0.7" -- memory/notes/proposed/2026-10-27-1054-acceptance-matrix.md
 note: "O-5 前置：src/scripts/tests 顶层无 AGENTS.md，P0 接 CI 后此类批次会 T-8 fail；本卡补齐三份（≤60 行/≤3.5KB，结构照 src/l3/AGENTS.md）。"
+# F3 修正：src/AGENTS.md 的 tui→tui-v2、expert 归仓根（复核员 2a2e138e 点名）
