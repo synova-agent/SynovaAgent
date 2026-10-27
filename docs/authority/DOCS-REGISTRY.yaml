@@ -1248,3 +1248,11 @@ documents:
     status: active
     owner: CTO
     note: "裁422-R1/R2 门禁健壮性豁免：Windows 路径归一＋判不了必须 exit 2。"
+
+  # ---- 创始人 2026-10-27：T8 派单第 6 项（#1051 M4 出口面收口）----
+  - id: DOC-0306
+    type: decision
+    path: gate-exemptions/2026-10-27-t8-1051-pointer.md
+    status: active
+    owner: CTO
+    note: "agents/P1-能跑通/AGENTS.md ⑦ 域守则指针 8→9（补 electron-renderer/AGENTS.md）＋同节口径 12→13 份；创始人 2026-10-27 T8 派单第 6 项授权。"
