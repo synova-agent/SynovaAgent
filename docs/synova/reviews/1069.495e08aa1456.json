@@ -1,0 +1,103 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1069,
+  "author": "win-push",
+  "reviewer": "fresh-session-independent-reviewer-1069-p07b",
+  "tool": "零上下文独立复核（Win / pwsh 7 + Git Bash；git 2.54.0.windows.1；python 3.13.1；独立 worktree D:/tmp/rev-p07b/wt = git worktree --detach 3976e05c8；远端 gitea = MacBook-Pro-2.local:3000；不采信任何回执/K3 报告/CTO 说法的结论，只信现场命令与原始输出）",
+  "independence": "fresh-session",
+  "issued_at": "2026-10-28T01:56:00+08:00",
+  "patch_fingerprint": "sha256:83083dd8e9cd91ae2fcac90a1504b8be2af4bf40d0ec42ecc646d1f9c9b9395d",
+  "base_tip": "f8ca97d920fec9d53b8290e5617b25183cc72eb9",
+  "head": "3976e05c83928ff995ab7fc2290c5a5d1b25b643",
+  "verdict": "PASS",
+  "filename_note": "文件名沿用 claim 覆盖名 1069.495e08aa1456.json（组 12 精确匹配所需），实际指纹见 patch_fingerprint = sha256:83083dd8e9cd…9395d（fp12=83083dd8e9cd）。R1 规范路径本应为 1069.83083dd8e9cd.json；实测 R1 回退分支（check-merge-conditions.sh:470-471）能命中本文件名，且 fp 对 reviews/** 已排除（:428-429）⇒ 本回执提交不会改变指纹。详见 findings 第 3 条。",
+  "checks": [
+    {
+      "id": "1-基线与祖先",
+      "result": "pass",
+      "cmd": "git ls-remote gitea refs/heads/local-main; git merge-base --is-ancestor f8ca97d920fec9d53b8290e5617b25183cc72eb9 3976e05c83928ff995ab7fc2290c5a5d1b25b643; echo $?; git merge-base <tip> <head>; git rev-list --count <tip>..<head>; git ls-remote gitea refs/heads/feat/1054-acceptance-matrix",
+      "evidence": "✅ 远端真值：local-main tip = f8ca97d920fec9d53b8290e5617b25183cc72eb9（与任务书预期 f8ca97d92 一致）。✅ git merge-base --is-ancestor <tip> <head> ⇒ EXITCODE=0（未落入阻断分支）。✅ merge-base(tip,head) = f8ca97d920fec9d53b8290e5617b25183cc72eb9（即 tip 自身）；tip..head 共 12 个提交。✅ 分支真值：gitea refs/heads/feat/1054-acceptance-matrix = 3976e05c83928ff995ab7fc2290c5a5d1b25b643（开跑取一次、收尾再取一次，同一 SHA，评审期间未被推进）。✅ Gitea API /pulls/1069：state=open、merged=false、head.sha=3976e05c8…、base.ref=local-main、base.sha=f8ca97d9…。"
+    },
+    {
+      "id": "2-写集与夹带",
+      "result": "pass",
+      "cmd": "git -c core.quotepath=false diff --name-status f8ca97d920fec9d53b8290e5617b25183cc72eb9...3976e05c83928ff995ab7fc2290c5a5d1b25b643; git diff --numstat <tip>...<head>; git ls-tree -r --name-only <head> -- docs/synova/reviews | grep -E '^docs/synova/reviews/1069\\.'; 逐路径过滤 ^electron-renderer/ ^tests/acceptance/ ^src/ ^scripts/audit/ ^\\.gitea/ ^\\.github/; git diff --check <tip> <head>",
+      "evidence": "✅ 三点 diff 恰 10 件（A 8 / M 2；+2702 −0；与 Gitea API changed_files=10、+2702 −0 逐项一致）：A .claude/claims/1054.yaml、docs/synova/acceptance/1048.matrix.yaml、docs/synova/acceptance/1053.matrix.yaml、docs/synova/acceptance/README.md、gate-exemptions/2026-10-27-1054-gate-exempt.md、memory/notes/proposed/2026-10-27-1054-acceptance-matrix.md、scripts/control-tower/check-acceptance-matrix.py、tests/control-tower/check-acceptance-matrix.test.sh；M docs/authority/DOCS-REGISTRY.yaml、docs/authority/WIRING-REGISTRY.yaml。✅ .claude/claims/1054.yaml 在列（M，+22 −0）。✅ docs/synova/reviews/** 不在列；head 树 reviews 目录 41 件中 1069.* 为 0 件（旧回执已删）。✅ 夹带 0 命中：electron-renderer/ 0、tests/acceptance/ 0、src/ 0、scripts/audit/ 0、.gitea/ 0、.github/ 0（tip..head 全量 diff 亦仅上述 10 件）。✅ git diff --check EXITCODE=0（无空白/冲突残渣）。"
+    },
+    {
+      "id": "3-claim 覆盖（组 12 等价判定）",
+      "result": "pass",
+      "cmd": "python3 scripts/control-tower/claim_store.py --check 1054 --root .; python3 scripts/control-tower/claim_store.py --writeset 1054 --root .; printf '<10 件 + docs/synova/reviews/1069.495e08aa1456.json>' | python3 scripts/control-tower/claim_store.py --coverage --root .; 负控：同集但文件名末位改 1069.495e08aa1457.json; 读 scripts/pre-commit-check.sh:1703-1780",
+      "evidence": "✅ --check ⇒ {\"status\":\"ok\",\"issue\":\"1054\",\"writeset\":11,\"done\":3} exit 0（schema 合法、done 每条含 verify:）。✅ writeset 含精确路径 docs/synova/reviews/1069.495e08aa1456.json（第 11 条，非通配/非前缀）。✅ --coverage（模拟「回执以新增方式提交」的暂存集，11 件）⇒ covered 11/11、uncovered=[]、matched.1054 含该回执路径、broken=[]、degraded=false、exit 0 ⇒ 组 12 判定集为空 ⇒ 走 pre-commit-check.sh:1767-1768「全部暂存文件均被 claim 覆盖（legacy 判定无对象）」。✅ 机制核实（补的是真因）：若该回执未被覆盖，pre-commit-check.sh:1766→1775-1780 会把余量在「无 legacy brief 载体」时直接写成 SCOPE_VIOLATION ⇒ 硬红——即上一版 red 的真实路径。✅ 负控：文件名末位 6→7 ⇒ covered=[]、uncovered=['docs/synova/reviews/1069.495e08aa1457.json'] ⇒ 匹配为精确等值，不是前缀/模糊匹配（杜绝改个名也能过）。"
+    },
+    {
+      "id": "4-产品内容未变（相对 f836deba9）",
+      "result": "pass",
+      "cmd": "git diff --stat f836deba9 3976e05c8; git diff --name-status f836deba9 3976e05c8; 逐件 git rev-parse f836deba9:<path> 与 3976e05c8:<path> 比对 blob; git log --oneline f836deba9..3976e05c8; git log --name-status -- docs/synova/reviews/1069.*",
+      "evidence": "✅ git diff --stat f836deba9 3976e05c8 ⇒ 仅 1 件：.claude/claims/1054.yaml | 1 +（实测严格窄于任务书所述「claim＋回执删除两处」，成因见 findings 第 1 条：旧回执在分支内先加 2b7e1e302、后改 5cd989eb6、再删 3976e05c8，相对 f836deba9 净零）。✅ 9 件产品/文档件 blob 与 f836deba9 逐一相同（逐件 git diff --stat 均空）：DOCS-REGISTRY=48ab0f873db8、WIRING-REGISTRY=63f3f2b4d5c9、1048.matrix=566f65974b72、1053.matrix=9e3cddcadde9、acceptance/README=5ed4a7f08a0e、gate-exempt=1ece43febf92、memory note=094dfa01b7bb、check-acceptance-matrix.py=76d731ec6367、check-acceptance-matrix.test.sh=893dacf3cbc8。✅ 分支内 3 个提交：2b7e1e302（A 回执）→ 5cd989eb6（M 回执）→ 3976e05c8（D 回执 ＋ M claim）⇒ 产品件零改动，仅声明面与回执面变化。"
+    },
+    {
+      "id": "5-A1/A2 矩阵自校验",
+      "result": "pass",
+      "cmd": "cd <worktree>; python3 scripts/control-tower/check-acceptance-matrix.py docs/synova/acceptance/1048.matrix.yaml --repo .; 同命令追加 --verify; python3 scripts/control-tower/check-acceptance-matrix.py docs/synova/acceptance/1053.matrix.yaml --repo . --anchor 5553bb95c",
+      "evidence": "✅ A1（缺省）：exit 0，末行 MATRIX: PASS 23/23 (mach 11/11, sem 12 attested)，逐项 23 行（Q-1…Q-15、T-1…T-8 顺序固定）。✅ A2（--verify）：exit 0，末行 VERIFY: mach 11/11 consistent，11 行逐项 consistent=yes（Q-2/Q-4/Q-6/Q-8/Q-10/Q-11/Q-13/T-1/T-5/T-7/T-8 声明与机械事实一致）。✅ A1b（回溯样例 1053，--anchor 5553bb95c）：exit 0，同为 MATRIX: PASS 23/23。"
+    },
+    {
+      "id": "6-配对自测与两道门禁",
+      "result": "pass",
+      "cmd": "bash tests/control-tower/check-acceptance-matrix.test.sh; bash scripts/control-tower/check-gate-protection.sh --changed-base f8ca97d920fec9d53b8290e5617b25183cc72eb9; bash scripts/doc-system/doc-registry-gate.sh",
+      "evidence": "✅ 配对自测：结果: 41 通过, 0 失败，exit 0（含 G0 绿基线、A2/A3、M1–M5 五条变异、E1、S1–S4 作用域、D1–D2 三态降级日志 5 字段，以及 2 条「把 SUT 改成假绿则 M1 翻绿」的判别力自证）。✅ check-gate-protection：结果: 10 通过, 0 失败，exit 0 —— 清单 22 PATTERNS、pin 一致 ef7c52a4、diff 变更路径 10 条、受保护路径变更 4 条且逐条有合规豁免（DOCS-REGISTRY.yaml / gate-exemptions/2026-10-27-1054-gate-exempt.md / check-acceptance-matrix.py / 其 test.sh）。✅ doc-registry-gate：exit 0 —— 166 条 DOC id，重号 0 个；130 条 status=active，path 失配 0 个；检查 4 个文档，0 个未登记；登记门禁通过。"
+    },
+    {
+      "id": "7-指纹独立复算",
+      "result": "pass",
+      "cmd": "GITEA_TOKEN=<从 git remote get-url gitea 取> SYNO_GITEA_API=http://MacBook-Pro-2.local:3000/api/v1 bash scripts/control-tower/check-merge-conditions.sh --pr 1069 --diff-fingerprint; 独立复算：git diff --no-color -M --full-index --binary f8ca97d920fec9d53b8290e5617b25183cc72eb9 3976e05c83928ff995ab7fc2290c5a5d1b25b643 -- . ':(exclude)docs/synova/reviews/**' | wc -c | sha256",
+      "evidence": "✅ 官方 CLI：exit 0，输出 83083dd8e9cd91ae2fcac90a1504b8be2af4bf40d0ec42ecc646d1f9c9b9395d。✅ 独立手工复算（同口径逐字复现 patch_fingerprint）：diff = 176,309 B、sha256 = 83083dd8e9cd91ae2fcac90a1504b8be2af4bf40d0ec42ecc646d1f9c9b9395d —— 与 CLI 及任务书给定值三方逐字一致（fp12=83083dd8e9cd）。✅ 合并基点 = tip 自身（merge-base=f8ca97d92），④ 串行前置在当前 tip 下成立。"
+    },
+    {
+      "id": "8-自做变异（3 例，判别力）",
+      "result": "pass",
+      "cmd": "① 1048.matrix.yaml 临时副本删除 Q-7 行 ⇒ 跑真 SUT; ② Q-2（status: n/a）去掉 evidence ⇒ 跑真 SUT; ③ 顶层直挂夹具（src/a.ts、src/b.ts、scripts/a.sh、scripts/b.sh，anchor=该提交，changed_files 四项）上跑真 SUT，再把临时副本 check-acceptance-matrix.py 的 T8_SCOPE_RE 尾 (/|$) 改回 / 跑同一夹具",
+      "evidence": "✅ 变异 A（删 Q-7）：exit 1、ISSUE E_MATRIX_ITEM_MISSING - items 缺 1 行：Q-7、MATRIX: FAIL 1 issue(s)。✅ 变异 B（n/a 去 evidence）：exit 1、ISSUE E_N/A_NO_EVIDENCE Q-2、MATRIX: FAIL 1 issue(s)。✅ 变异 C（判别力，正是 K3 finding B-2 的形态）：真 SUT ⇒ T-8 n/a fail dirs=2 bad=2 skipped=0 first=scripts/AGENTS.md(missing)、MATRIX: FAIL 2 issue(s)；把正则尾改回 / 后同一夹具 ⇒ stderr 出现 T-8 scope: skip out-of-scope dir scripts 与 … dir src，且 T-8 n/a na_ok dirs=0 bad=0 skipped=2，FAIL 由 2 降至 1 ⇒ 顶层 src/ 直挂件被「跳过」而失去判定 = 假绿，反证 (/|$) 承重、当前 head 的修法是真修。✅ 全部变异只在 /d/tmp/rev-p07b/mut 临时副本内进行，跑完即删；worktree git status --porcelain 全程为空。"
+    },
+    {
+      "id": "9-回执落盘可行性与指纹稳定性",
+      "result": "pass",
+      "cmd": "读 scripts/control-tower/check-merge-conditions.sh:426-433（patch_fingerprint 定义）/467-477（R1 规范路径＋回退）/478-542（R2–R8）/543-557（R7）; 另在 temp clone --shared（/d/tmp/rev-p07b/sim，跑完删除）用 read-tree/hash-object/update-index/write-tree/commit-tree 造一个「新增回执」提交后复算 fp，并演练 R1 回退选择",
+      "evidence": "✅ 指纹不变性实证：sim 中在 3976e05c8 之上以新增方式加入 docs/synova/reviews/1069.495e08aa1456.json 造出提交 9a4aca8e 后，同一口径复算 fp 仍为 83083dd8e9cd91ae2fcac90a1504b8be2af4bf40d0ec42ecc646d1f9c9b9395d ⇒ 回执提交不会改指纹（因 :428-429 对 docs/synova/reviews/** 排除）。✅ R1：规范路径 docs/synova/reviews/1069.83083dd8e9cd.json 不存在 ⇒ :470-471 回退正则 ^docs/synova/reviews/1069\\.[0-9a-f]{12}\\.json$ 实测命中 docs/synova/reviews/1069.495e08aa1456.json ⇒ 文件名沿用旧名可行。✅ R3（:507）校验内容里的 patch_fingerprint 必须等于当次 fp ⇒ 本回执填 sha256:83083dd8…9395d。✅ R7（:543-557）：回执引入提交必须是分支最后一个提交（其后只允许 docs/synova/reviews/**），否则红。"
+    },
+    {
+      "id": "10-回执提交的旁路影响（登记门禁面）",
+      "result": "pass",
+      "cmd": "读 scripts/doc-system/doc-registry-gate.sh:136（EXCLUDE）/192-196（三源扫描的扩展名过滤）; bash scripts/doc-system/doc-registry-gate.sh",
+      "evidence": "✅ 代码结构事实（读 :192/:193/:196，非实跑推断）：登记门禁三源（untracked / staged-new / base..HEAD 新增）**一律以 grep -E '\\.(md|yaml)$' 过滤** ⇒ `.json` 回执不在扫描集合内 ⇒ 新增回执不会触发「未登记」硬红；EXCLUDE（:136）也不含 docs/synova/reviews/。✅ 本 PR 现态实跑：exit 0、166 条 DOC id 重号 0、检查 4 个文档 0 未登记。⇒ 回执提交只影响 R1/R3/R7 三条（见 check 9 与 findings 第 3 条），不会新增其它门禁面。"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warn",
+      "where": "任务书第 4 项预期 vs 实测口径",
+      "what": "任务书预期 git diff f836deba9 3976e05c8 --stat 为「claim 与回执删除两处」，实测只有 1 件（.claude/claims/1054.yaml | 1 +）。成因可核：旧回执在分支内先新增（2b7e1e302）、后修改（5cd989eb6）、再删除（3976e05c8），相对 f836deba9 净零（git log --name-status -- docs/synova/reviews/1069.* 实测 A→M→D）。实测结果严格窄于预期上限（无任何多余改动）⇒ 不阻断；但请更正口径，避免下一位复核员按「两处」去判而误报。"
+    },
+    {
+      "severity": "warn",
+      "where": "Gitea PR #1069 元数据（title / mergeable）",
+      "what": "API 实测：title 仍为 WIP: feat(#1054): …、mergeable=false、state=open、merged=false。代码面实测无冲突：base tip 是 head 祖先（exit 0）、git diff --check exit 0、10 件 +2702 −0、零冲突标记、逐件 blob 对账干净 ⇒ mergeable=false 与 WIP 前缀同属流程/元数据面：转正式标题并让 Gitea 重算 mergeable 后再合；不作代码阻断。"
+    },
+    {
+      "severity": "info",
+      "where": "回执文件名 vs R1 规范路径（结构性张力）",
+      "what": "R1 规范路径按当次 fp 取名 ⇒ 本应为 docs/synova/reviews/1069.83083dd8e9cd.json；而组 12 的 claim 只精确覆盖 docs/synova/reviews/1069.495e08aa1456.json。两者不能同时满足，本 PR 按任务书取旧名 ⇒ 依赖 R1 回退分支（:470-471，已实测命中）。建议后续把 claim 的 receipt 条目改为可容纳 fp 变化的通配（或令 R1 认可 claim 名），否则每次改码都要再做一次文件名 vs 指纹的妥协。不阻断。"
+    },
+    {
+      "severity": "info",
+      "where": "组 12 的 legacy 回落面（未核项，如实标注）",
+      "what": "pre-commit-check.sh:1775-1780 的硬红分支带前置条件「本提交无 legacy brief 载体」；若同窗口存在 .claude/task-briefs/*.md，未覆盖的余量会回落 legacy 判定（:1781+，含 skip_re docs/）⇒ 可能出现假绿。本复核只验证了「全部被 claim 覆盖」这一条路径（已 11/11 通过）；task-briefs 的窗口状态未核（超出本次任务清单，不臆断）。"
+    },
+    {
+      "severity": "info",
+      "where": "CI 面（只读 API，未重跑远端流水线）",
+      "what": "head 3976e05c8 的 combined status：state=success, total_count=2，两 context（local-gates / gates (push)、local-gates / gates (pull_request)）均 success。本地侧已实跑：配对自测 41/0、gate-protection 10/0、doc-registry 0 重号、A1/A2 = 23-23/11-11。远端 Actions 全量流水线未重跑（只读状态，不推进任何流水线）。"
+    }
+  ]
+}

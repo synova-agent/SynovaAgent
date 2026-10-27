@@ -1,0 +1,35 @@
+# docs/synova/acceptance/1053.matrix.yaml — M4-T1（issue #1053）回溯样例
+# 格式权威 = docs/synova/acceptance/README.md（acceptance-matrix/v1 · F1–F12）
+# 锚 = 5553bb95c（M4-T1 收口点）；变更集 = git diff 9b0b1f935..5553bb95c = 2 件
+# 只读产物 — 不改产品行为、不接 CI（P0）；evidence.cmd 只记录不执行
+schema: acceptance-matrix/v1
+issue: 1053
+batch: M4-T1
+anchor: 5553bb95c
+changed_files: [src/routes/sentinel.ts, .claude/claims/1053.yaml]
+coverage_judged: false
+known_issues: [943]
+items:
+  Q-1: {status: n/a, reason: "无工具 execute 面（本变更仅 GET 路由入参解析）", evidence: {cmd: "git grep -c 'safeParse' 5553bb95c -- src/routes/sentinel.ts"}}
+  Q-2: {status: n/a, reason: "变更集无 UI 渲染产物（2 件均非 renderer）⇒ 脱敏面无渲染对象", evidence: {cmd: "git grep -cE 'token=|secret|apiKey|Bearer ' 5553bb95c -- src/routes/sentinel.ts .claude/claims/1053.yaml"}}
+  Q-3: {status: partial, reason: "400 以字面 code 串返回（INVALID_DAYS／INVALID_ORG_ID）· 未复用单一错误基类", evidence: {cmd: "git diff 9b0b1f935..5553bb95c -- src/routes/sentinel.ts", out: "src/routes/sentinel.ts"}}
+  Q-4: {status: n/a, reason: "改动源文件无 union 穷尽判别点（assertNever 0 命中）", evidence: {cmd: "git grep -c 'assertNever' 5553bb95c -- src/routes/sentinel.ts"}}
+  Q-5: {status: n/a, reason: "本变更无请求取消／组件卸载面（throwIfAborted 0 命中）", evidence: {cmd: "git grep -c 'throwIfAborted' 5553bb95c -- src/routes/sentinel.ts"}}
+  Q-6: {status: n/a, reason: "变更集无测试／组件文件（Date.now 在变更集 0 命中）", evidence: {cmd: "git grep -c 'Date.now()' 5553bb95c -- src/routes/sentinel.ts .claude/claims/1053.yaml"}}
+  Q-7: {status: n/a, reason: "无事件词表判定面（eventCatalog／EVENT_ 0 命中）", evidence: {cmd: "git grep -cE 'eventCatalog|EVENT_' 5553bb95c -- src/routes/sentinel.ts"}}
+  Q-8: {status: n/a, reason: "变更集路径不属版本／契约面（version／contract 等 0 命中）", evidence: {cmd: "git diff --name-only 9b0b1f935..5553bb95c | grep -cE 'version|package.json|contract|schema'"}}
+  Q-9: {status: partial, reason: "新增 days／orgId 400 契约无 committed 契约测试入变更集（T5 承接）", evidence: {cmd: "git diff --name-only 9b0b1f935..5553bb95c", out: "tests/acceptance/mvp1-m4-output-face.test.ts"}}
+  Q-10: {status: n/a, reason: "变更集无新非平凡 UI 模块（expected／snapshot 0 命中）", evidence: {cmd: "git diff --name-only 9b0b1f935..5553bb95c | grep -cE 'expected|snapshot'"}}
+  Q-11: {status: partial, reason: "变更集含 src/**.ts 但 CI 覆盖率 ①e 未武装（#943）⇒ 覆盖率未判", known_issue: 943, evidence: {cmd: "git diff --name-only 9b0b1f935..5553bb95c", out: ".claude/claims/1053.yaml"}}
+  Q-12: {status: n/a, reason: "无并发上限面（p-limit／concurrency 0 命中）", evidence: {cmd: "git grep -cE 'p-limit|concurrency|Concurrency' 5553bb95c -- src/routes/sentinel.ts"}}
+  Q-13: {status: n/a, alias_of: "Q-2", reason: "Q-2 别名 · 同判据（变更集无 UI 渲染产物）", evidence: {cmd: "git grep -cE 'token=|secret|apiKey|Bearer ' 5553bb95c -- src/routes/sentinel.ts .claude/claims/1053.yaml"}}
+  Q-14: {status: deferred, reason: "遥测纪律按 §5bis-C 记暂缓（未纳入 M4 交付面）", known_issue: 918}
+  Q-15: {status: pass, reason: "非字符串形态与 days／orgId 越界显式 400 + code · 不 clamp 不折 7 不静默兜底", evidence: {cmd: "git diff 9b0b1f935..5553bb95c -- src/routes/sentinel.ts", out: "src/routes/sentinel.ts"}}
+  T-1: {status: partial, variance: true, reason: "头部契约四段缺 @exit（@input／@output／@degraded 各 1 命中）· 既有 handler 边界修复的免责变差", evidence: {cmd: "git grep -c '@exit' 5553bb95c -- src/routes/sentinel.ts", out: "src/routes/sentinel.ts"}}
+  T-2: {status: partial, reason: "400 响应体带字面 code（INVALID_DAYS／INVALID_ORG_ID）· 未引入带 code 的 typed error 类", evidence: {cmd: "git diff 9b0b1f935..5553bb95c -- src/routes/sentinel.ts", out: "src/routes/sentinel.ts"}}
+  T-3: {status: pass, reason: "越界／非字符串入参 ⇒ 显式 400 + code · 不静默兜底假数据", evidence: {cmd: "git diff 9b0b1f935..5553bb95c -- src/routes/sentinel.ts", out: "src/routes/sentinel.ts"}}
+  T-4: {status: partial, reason: "路由头未声明 @authority（0 命中）· 品味 4 在 M4-T1 验收时漏判", evidence: {cmd: "git grep -c '@authority' 5553bb95c -- src/routes/sentinel.ts", out: "src/routes/sentinel.ts"}}
+  T-5: {status: n/a, reason: "变更集无 UI／长期文档件（已知限制 0 命中）", evidence: {cmd: "git grep -cE '已知限制|Known Limitations' 5553bb95c -- src/routes/sentinel.ts .claude/claims/1053.yaml"}}
+  T-6: {status: partial, reason: "头注释为路由清单 · 无一句可诵的设计哲学（设计哲学 0 命中）", evidence: {cmd: "git grep -c '设计哲学' 5553bb95c -- src/routes/sentinel.ts", out: "src/routes/sentinel.ts"}}
+  T-7: {status: partial, reason: "无 committed 测试入变更集（T5 承接）· 锚内 claims 的 verify 仅两条既有 vitest", evidence: {cmd: "git diff --name-only 9b0b1f935..5553bb95c", out: ".claude/claims/1053.yaml"}}
+  T-8: {status: n/a, reason: "无同父目录 ≥2 变更件（src/routes 与 .claude/claims 各 1 件）", evidence: {cmd: "git diff --name-only 9b0b1f935..5553bb95c | xargs -n1 dirname | sort | uniq -c"}}

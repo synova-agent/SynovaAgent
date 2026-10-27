@@ -1273,11 +1273,47 @@ documents:
     owner: CTO
     note: "agents/P1-能跑通/AGENTS.md ⑦ 域守则指针 8→9（补 electron-renderer/AGENTS.md）＋同节口径 12→13 份；创始人 2026-10-27 T8 派单第 6 项授权。"
 
-  # ---- P4 2026-10-28：#1072 裁 427 D3 豁免登记 ----
+  # ---- P4 2026-10-27：#1054 验收矩阵机制 v1（P0）----
+  # 本批 0309–0312 与 M4 线 0306–0308 不重号
   - id: DOC-0309
+    type: governance
+    path: docs/synova/acceptance/README.md
+    status: active
+    owner: P4
+    note: "acceptance-matrix/v1 格式权威：23 行固定槽位＋F1–F12 契约＋边界值＋已知限制（#1054 P0）。"
+  - id: DOC-0310
+    type: registry
+    path: docs/synova/acceptance/1053.matrix.yaml
+    status: active
+    owner: P4
+    note: "M4-T1 回溯样例（anchor 5553bb95c）：证明校验器点名 T-1/T-7/Q-11 三处真实缺口（#1054 P0）。"
+
+  # ---- P4 2026-10-27：#1054 P0.5 补单（裁 423：主线锚样例＋受保护路径豁免）----
+  - id: DOC-0311
+    type: registry
+    path: docs/synova/acceptance/1048.matrix.yaml
+    status: active
+    owner: P4
+    note: "主线锚样例（anchor 1ca0d4dfc，已并入 local-main）：A1 默认被测对象（#1054 P0.5）。"
+  - id: DOC-0312
+    type: decision
+    path: gate-exemptions/2026-10-27-1054-gate-exempt.md
+    status: active
+    owner: P4
+    note: "裁 423 豁免：验收矩阵校验器＋配对测试＋本批登记追加（#1054 P0.5）。"
+
+  # ---- P4 2026-10-28：#1071 裁 427 D2+D4 豁免登记（DOC-0313；0308–0312 已被 M4/#1054 占用）----
+  - id: DOC-0313
+    type: decision
+    path: gate-exemptions/2026-10-28-1079-gate-downgrade.md
+    status: active
+    owner: P4
+    note: "#1071（裁 427 D2+D4）：tests/control-tower/precommit-groups-injection.test.sh 与 scripts/pre-commit-check.sh 受保护路径豁免（fixture 语义重写＋删 inert 死码，行为等价）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+
+  # ---- P4 2026-10-28：#1072 裁 427 D3 豁免登记（DOC-0314；0308–0313 已被占用）----
+  - id: DOC-0314
     type: decision
     path: gate-exemptions/2026-10-28-1080-brief-parseable.md
     status: active
     owner: P4
     note: "#1072（裁 427 D3）：scripts/workflow/check-brief-parseable.sh＋两测试件受保护路径豁免（空参 fail-closed；含铺底 #1071 两受保护件）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
-

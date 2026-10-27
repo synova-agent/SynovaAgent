@@ -6,4 +6,4 @@
 - tests/control-tower/precommit-groups-injection.test.sh — 铺底分支 #1071 的受保护夹具（本支 stacked 含其 diff） — 裁 427
 - scripts/pre-commit-check.sh — 铺底分支 #1071 的受保护门禁脚本（本支 stacked 含其 diff） — 裁 427
 - gate-exemptions/2026-10-28-1080-brief-parseable.md — 本豁免文件自身受保护，按 #623 加同 diff 自覆盖行 — 裁 427
-- docs/authority/DOCS-REGISTRY.yaml — D2 登记门禁要求登记本豁免文件（DOC-0309），仅追加一条 — 裁 427
+- docs/authority/DOCS-REGISTRY.yaml — D2 登记门禁要求登记本豁免文件（DOC-0314），仅追加一条 — 裁 427
