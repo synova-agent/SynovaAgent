@@ -37,6 +37,10 @@
  *   随本响应 `data.gapQuestions` 透出（**只加字段，不改既有字段与路由表** ——
  *   本路由不新增任何端点，K12-03 的零表单判据与 `tests/routes/onboarding.test.ts` 不受影响）。
  *   建档阶段企业图**尚未有实例** ⇒ `observed` 取空 ⇒ 全量追问（这是「空图 ⇒ 有序追问表」的生产路径）。
+ * @authority — 由 `src/server.ts` 挂载（`/api/onboarding/*`）；`/start` pre-auth 白名单、`/apply` 须凭据；
+ *   超管确认门 `superAdminGateBlocks()` 在 flow 之前（裁 425-C1）。
+ * @not-here  — 不做建档流程编排（`src/onboarding/onboarding-flow.ts`）；不做配置包生成
+ *   （`config-pack-generator.ts`）；不做权限判定（`jwtAuthMiddleware` 负责）。
  */
 import { Router, type Request, type Response } from 'express';
 import { createLogger } from '@synova/logger';
