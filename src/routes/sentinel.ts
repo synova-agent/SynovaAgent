@@ -127,6 +127,7 @@ const DEFAULT_LEDGER_PRESET_VERSION = 1;
 //   200 { ok: true, count, rows }        — 读回成功（count=0 合法：还没落过行）
 //   200 { ok: false, degraded, errors }  — 表未迁移/查询异常（显式降级，不静默空数组）
 //   503 { ok: false, code }              — db 未注入（装配降级传播）
+//   400 { ok: false, code }              — days/orgId 越界（不 clamp、不折 7、不返回空）；orgId 缺省/空 ⇒ 不过滤（聚合），days 缺省 7 且须为 [1, 3650] 整数
 // 口径：缺省排除轮次级（SENTINEL-*，标定供数口径 CTO 裁 A3）；includeRound=1 显式包含。
 
 router.get('/metrics/readings', (req: Request, res: Response) => {
@@ -137,11 +138,21 @@ router.get('/metrics/readings', (req: Request, res: Response) => {
       res.status(503).json({ ok: false, code: 'METRIC_READINGS_DB_NOT_WIRED', error: 'orchestration.db 未注入' });
       return;
     }
-    const days = typeof req.query.days === 'string' && req.query.days !== '' ? parseInt(req.query.days, 10) : undefined;
+    const daysRaw = typeof req.query.days === 'string' && req.query.days !== '' ? req.query.days : undefined;
+    const days = daysRaw === undefined ? undefined : Number(daysRaw);
+    if ((req.query.days !== undefined && req.query.days !== '' && typeof req.query.days !== 'string') || (days !== undefined && !(Number.isInteger(days) && days >= 1 && days <= 3650))) {
+      res.status(400).json({ ok: false, code: 'INVALID_DAYS', error: 'days 必须是 1..3650 的整数', received: daysRaw });
+      return;
+    }
+    const orgId = typeof req.query.orgId === 'string' && req.query.orgId !== '' ? req.query.orgId : undefined;
+    if ((req.query.orgId !== undefined && req.query.orgId !== '' && typeof req.query.orgId !== 'string') || (orgId !== undefined && !/^[A-Za-z0-9][A-Za-z0-9_.-]{1,63}$/.test(orgId))) {
+      res.status(400).json({ ok: false, code: 'INVALID_ORG_ID', error: 'orgId 形态不合法', received: req.query.orgId });
+      return;
+    }
     const limit = typeof req.query.limit === 'string' && req.query.limit !== '' ? parseInt(req.query.limit, 10) : undefined;
     const metricId = typeof req.query.metricId === 'string' && req.query.metricId !== '' ? req.query.metricId : undefined;
     const includeRound = req.query.includeRound === '1' || req.query.includeRound === 'true';
-    const query = { days: Number.isFinite(days) ? days : undefined, limit: Number.isFinite(limit) ? limit : undefined, metricId, includeRound };
+    const query = { days, orgId, limit: Number.isFinite(limit) ? limit : undefined, metricId, includeRound };
     if (req.query.view === 'trends') {
       const result = getMetricTrends(db, query);
       if (!result.ok) { res.json({ ok: false, degraded: true, count: 0, summary: result.summary, errors: result.errors }); return; }

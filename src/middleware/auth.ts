@@ -10,12 +10,20 @@
  * - whitelist 路径跳过认证（本文件 isWhitelisted() 是唯一白名单源——server.ts 无第二份，
  *   D595 修正此注释：原文"同 server.ts 白名单"已过期失真）
  * - 所有错误路径返回统一 JSON 格式 { ok: false, code, message }
+ *
+ * 🔴 回滚开关（裁 425 / A1，见下方 `knowledgeScopeDimensionGate`）:
+ *   环境变量 **`SYNOVA_KNOWLEDGE_SCOPE_DIM`** —— **缺省/其它值 = 严开**（scope 维照常展开）；
+ *   **仅 `off`**（大小写与首尾空白不敏感）= 关闭。关闭必**同时**记 `log.warn`
+ *   （`code:KNOWLEDGE_SCOPE_DIM_DISABLED` ＋ `phase` ＋ `retryable` ＋ `degraded:true`
+ *   ＋ `registrations`=本进程累计关闭判定次数）
+ *   并经 `knowledgeScopeDimensionGate()` 对外暴露降级态 —— **禁静默关**。
  */
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import type { Request, Response, NextFunction } from 'express';
 import { createLogger } from '@synova/logger';
 import type { WorkspaceRole } from './rbac';
 import { permissionsForRole, sensitivityWhitelistFromGrants, itemModelSpeaksForRole, type PermissionId } from '@synova/engine-auth';
+import { resolveRoleKnowledgeScope } from '../init/preset-loader';
 import { runWithContext, resolveContext } from '../services/request-context';
 
 const log = createLogger('auth');
@@ -382,6 +390,191 @@ export function allowedSensitivitiesByGrants(
 }
 
 // ════════════════════════════════════════════════════════════════
+// #731 / T3: 知识 **scope 维** —— 内容文件 → 权限判定 → 知识过滤的真接线
+// ════════════════════════════════════════════════════════════════
+
+/**
+ * scope 维条件用的列名 —— **I-C1/I-C2 接口契约**（与 D5 探针 `probe-knowledge-scope.ts`
+ * 的 `SCOPE_FIELD` 同口径；PR1/PR2 两端必须一字不差）。
+ *
+ * 取名依据（不加新列、不改 store）: `knowledge_chunks.pkb_domain` 列已存在
+ * （`src/l4/knowledge-store.ts:72`），且 `matchFilter` 对字段名**直通**
+ * （`:701` `colMap[field] || field`）⇒ 加这一维**无需**改 `knowledge-store.ts`（本卡写集外）。
+ * 值口径 = **完整 scope id**（如 `finance.statements`），不是裸域前缀（同 d-kb）。
+ */
+const SCOPE_FIELD = 'pkb_domain';
+
+/** 与 `src/services/request-context.ts:39` 结构等价的条件下标（禁 `as any` 族，靠结构兼容互喂） */
+interface FilterCondition {
+  readonly field: string;
+  readonly operator: 'IN' | 'EQ' | 'NOT_EQ' | 'CONTAINS';
+  readonly value: unknown;
+}
+
+/**
+ * #731 / T3 —— 由**内容文件**派生的知识 scope 过滤条件（**追加**在 sensitivity 条件之后）。
+ *
+ * 接口契约（队长定，见卡 `task-4`；与 D5 探针侧同口径）:
+ *   - **I-C1** scope ⇒ `{ field:'pkb_domain', operator:'IN', value:<scopes[].id 去重排序> }`
+ *   - **I-C2** deny  ⇒ 每个 `deny[].id` 一条 `{ field:'pkb_domain', operator:'NOT_EQ', value:id }`
+ *     （`matchFilter` 只实现 IN/EQ/NOT_EQ，没有 NOT_IN ⇒ deny 只能逐 id 展开）
+ *   - **I-C3** 本函数**只追加**；`access.sensitivity` 条件由调用点保持在第 0 位（K12-11 不回退）
+ *   - **I-C4** **角色目录不存在**（admin / manager / employee / viewer / liaison / ga / 未知角色 ——
+ *     它们不属岗位包管辖）⇒ **不追加**任何 scope/deny 条件，但 `resolveRoleKnowledgeScope` 已
+ *     `log.warn`（**可观测**，不是静默跳过）⇒ 已知限制 KL-3 声明"这些岗位不受 scope 维约束"
+ *   - **I-C6** 内容不可用 ⇒ **拒绝型条件集** `{ field:'pkb_domain', operator:'IN', value: [] }` ——
+ *     `IN` 对空数组恒 false ⇒ 每一行都被过滤（与 `src/services/request-context.ts:388` 的 DENY_ALL
+ *     同一机制），**绝不回落"不过滤"**（那是 fail-open，正是本批要杀的病）。
+ *     🔴 覆盖**三态**：① 内容坏（非法 YAML / 缺 `scopes[]` / 空 `scopes[]` / 重复 id）；
+ *     ② **角色目录存在但 `knowledge-scope.yaml` 缺失/不可读/为空文档**（自验抓到的真 fail-open：
+ *     曾把它当 I-C4 处理 ⇒ 删掉文件即看全库）；③ 解析过程未预期异常。
+ *     ⚠️ 只有 **I-C4（目录不存在）** 才有"不追加"这条路 —— "读不到"永远不许等于"不收"。
+ *
+ * @input  `role` — 验签身份里的角色（`JwtPayload.role`，**唯一可信来源**；不读任何请求头）
+ * @output 条件数组：`[]`（仅 I-C4：角色目录不存在）｜`1`（fail-closed 的 `IN []`）｜`1 + N`（IN ＋ N 条 NOT_EQ）
+ * @degraded 内容坏/缺件 ⇒ 拒绝型 ＋ `log.error`（日志在 `resolveRoleKnowledgeScope` 内，带
+ *           `KNOWLEDGE_SCOPE_INVALID` ／ `KNOWLEDGE_SCOPE_MISSING` ／ `KNOWLEDGE_SCOPE_RESOLVE_FAILED` typed code）。
+ *           **本函数从不抛** —— 它在每个请求的判定路径上跑。
+ *
+ * 设计哲学（一句）: **权限条件只从「验签身份 ＋ 内容文件」派生，且只能收窄** —— 文件在就按它收，
+ *   文件坏就收到底；唯一不允许的是"因为读不到而不收"。
+ */
+function knowledgeScopeConditions(role: string): FilterCondition[] {
+  const decl = resolveRoleKnowledgeScope(role);
+  if (decl.degraded) {
+    // I-C6: fail-closed 到"看不到任何知识"，而不是"看不到限制"。
+    // 🔴 刻意**只**给这一条最小拒绝型：`IN []` 对每一行恒 false，已使 deny 的 NOT_EQ 冗余；
+    //   （内容坏时 deny 列表本身可能就是不可信的，少派生一条条件 = 少一个"看起来生效"的假象。）
+    return [{ field: SCOPE_FIELD, operator: 'IN', value: [] }];
+  }
+  if (!decl.declared || decl.scopeIds.length === 0) {
+    // I-C4（**仅此一路**）: 角色目录不存在 ⇒ 该岗位不属岗位包管辖 ⇒ 不追加 scope 维。
+    // 🔴 可观测性由 resolveRoleKnowledgeScope 的 log.warn 承担；"读不到"的其它形态已在上方
+    //   被折成 degraded ⇒ 走 fail-closed，**不会**落到这里（否则就是 fail-open）。
+    return [];
+  }
+  const allowed = [...new Set(decl.scopeIds)].slice().sort();
+  const conditions: FilterCondition[] = [{ field: SCOPE_FIELD, operator: 'IN', value: allowed }];
+  for (const denied of new Set(decl.denyIds)) {
+    conditions.push({ field: SCOPE_FIELD, operator: 'NOT_EQ', value: denied });
+  }
+  return conditions;
+}
+
+// ════════════════════════════════════════════════════════════════
+// 裁 425 / A1 (#731): scope 维**紧急回滚开关** —— 默认严开，关必留痕
+// ════════════════════════════════════════════════════════════════
+
+/**
+ * 回滚开关的**环境变量名**（唯一取值来源；不读请求/不读数据库 —— 回滚发生在
+ * 「已上线的判定逻辑出错」，此时请求面与内容面都可能已不可信）。
+ *
+ * 取值口径（**逐字**，裁 425 A1）:
+ *   · **缺省**（未设）/ 空串 / 任何**其它值** ⇒ **严开**（scope 维照常展开 = PR2 默认姿态）
+ *   · **仅 `off`**（首尾空白与大小写不敏感）⇒ **关闭**（不展开 scope 维）
+ * 🔴 为什么"缺省即严开": 回滚开关只许**临时撤销**本维，不许变成"忘了设 ⇒ 默认放开"的
+ *   fail-open 路径（与 I-C6「读不到不许等于不收」同一精神）。
+ */
+const KNOWLEDGE_SCOPE_DIM_ENV = 'SYNOVA_KNOWLEDGE_SCOPE_DIM';
+
+/** 关闭时写进日志与观测面的 typed code（日志行与判据观测**同源**，禁两套口径） */
+const KNOWLEDGE_SCOPE_DIM_DISABLED_CODE = 'KNOWLEDGE_SCOPE_DIM_DISABLED';
+
+/** 关闭路径的降级相位（`log.warn` 的 `phase` 字段；错误分类见铁律 32） */
+const KNOWLEDGE_SCOPE_DIM_PHASE = 'knowledge-scope-dim';
+
+/**
+ * scope 维开关的**观测面**（判据读它，不读源码文本、不 mock logger）。
+ *
+ * 为什么需要它（实测边界，见 `tests/security/department-request-path.test.ts:37-48`）:
+ *   `@synova/logger` 经 `pino.destination({dest:2})` **直写 fd 2** 且 level 在 import 时绑定
+ *   ⇒ 进程内**拦不到**日志（三种拦法实测 0 命中）。故"降级被上报"的**可断言面**放在本结构上，
+ *   日志文本的取证走**跨进程**原始输出（fd 2 真实现）。
+ */
+export interface KnowledgeScopeDimensionGate {
+  /** `true` = scope 维照常展开（严开）；`false` = 已回滚（只剩 `access.sensitivity`） */
+  readonly enabled: boolean;
+  /** 关闭 ⇒ 恒 `true`（这次判定是降级判定，不是正常判定）；严开 ⇒ `false` */
+  readonly degraded: boolean;
+  /** 关闭 ⇒ `KNOWLEDGE_SCOPE_DIM_DISABLED`；严开 ⇒ `null` */
+  readonly code: string | null;
+  /** 相位标签（与 `log.warn` 的 `phase` 同值） */
+  readonly phase: string;
+  /** 关闭是否可自愈（解除回滚 = 去掉环境变量 ⇒ `true`；严开态无降级 ⇒ `false`） */
+  readonly retryable: boolean;
+}
+
+/**
+ * 关闭路径的 `log.warn` **每进程记一次**（memo）—— 只压**日志量**，**不压判定、不压登记**。
+ *
+ * 🔴 判定必须每次现读环境：回滚开关的用途是"出事时立刻撤"，若把判定也 memo 成进程级常量，
+ *   解除回滚就要重启（与 `d-refresh`「禁进程级常量」同一条纪律）。
+ */
+let disabledWarnEmitted = false;
+
+/**
+ * 关闭判定的**登记计数**（每进程从 0 起，**每次**关闭判定 +1；与日志 memo 解耦）。
+ *
+ * 消费点 = **生产日志出口**：每次关闭判定都累加，并随那条 `log.warn` 的 `registrations`
+ *   字段发出（见下）⇒ "关了几次"在**运行期留痕**里可对账，不需要为判据单开只读导出。
+ * 🔴 为什么 memo 只压日志而计数照记: 若连计数也 memo，则"到底关过几次"在长跑进程里不可知；
+ *   若连日志也不 memo，则回滚期间**每个知识请求**打一行（日志洪水）。
+ */
+let disabledJudgements = 0;
+
+/**
+ * 读回滚开关 —— **唯一**判定点（provider 展开与否、判据观测都取它）。
+ *
+ * @input  环境变量 `SYNOVA_KNOWLEDGE_SCOPE_DIM`（缺省/其它值 ⇒ 严开；仅 `off` ⇒ 关闭）
+ * @output `enabled:true`  ⇒ `degraded:false` / `code:null` / `retryable:false`
+ *         `enabled:false` ⇒ `degraded:true` ＋ `code:'KNOWLEDGE_SCOPE_DIM_DISABLED'`
+ *                           ＋ `phase:'knowledge-scope-dim'` ＋ `retryable:true`
+ * @exit   永不抛、永不为 `undefined` —— 它在**每个请求**的权限判定路径上跑（抛 = 全线 500）
+ * @degraded 关闭**本身**就是一次降级: **每次**关闭判定都累加登记数，日志按每进程一次 memo
+ *         输出 `log.warn`（含 code/phase/retryable/degraded:true/registrations；**禁静默关**），
+ *         并原样回灌到本结构。无其它降级路径。
+ *
+ * 设计哲学（一句）: **回滚开关只许"多拦"或"少拦并自曝"，不许"少拦还装没事"**。
+ */
+export function knowledgeScopeDimensionGate(): KnowledgeScopeDimensionGate {
+  const raw = process.env[KNOWLEDGE_SCOPE_DIM_ENV];
+  const off = (raw ?? '').trim().toLowerCase() === 'off';
+  if (!off) {
+    return {
+      enabled: true,
+      degraded: false,
+      code: null,
+      phase: KNOWLEDGE_SCOPE_DIM_PHASE,
+      retryable: false,
+    };
+  }
+  // 登记项：每次关闭判定 +1（与下面的日志 memo 解耦）—— 随日志的 registrations 字段发出
+  disabledJudgements += 1;
+  if (!disabledWarnEmitted) {
+    disabledWarnEmitted = true;
+    log.warn(
+      {
+        code: KNOWLEDGE_SCOPE_DIM_DISABLED_CODE,
+        phase: KNOWLEDGE_SCOPE_DIM_PHASE,
+        retryable: true,
+        degraded: true,
+        env: KNOWLEDGE_SCOPE_DIM_ENV,
+        // 本进程累计的关闭判定次数（memo 只压日志，不压此计数）⇒ 该计数有**生产**消费点
+        registrations: disabledJudgements,
+      },
+      '安全判据: 降级 — scope 维回滚开关=off，知识检索只剩敏感度维（degraded:true，未静默）',
+    );
+  }
+  return {
+    enabled: false,
+    degraded: true,
+    code: KNOWLEDGE_SCOPE_DIM_DISABLED_CODE,
+    phase: KNOWLEDGE_SCOPE_DIM_PHASE,
+    retryable: true,
+  };
+}
+
+// ════════════════════════════════════════════════════════════════
 // D… K12-09 (#192 原 RB-01): 多租户隔离 — 跨 orgId 读必须被拒
 // ════════════════════════════════════════════════════════════════
 
@@ -742,20 +935,32 @@ export async function jwtAuthMiddleware(req: Request, res: Response, next: NextF
            * 无条件生效）——空条件不等于"无限制"，而等于"不过滤"（fail-open）。
            * 原实现恒返空条件集 ⇒ 所有知识检索绕过权限判定。
            */
-          getPermissionFilter: async (ctx) => ({
-            conditions: [
-              {
-                field: 'access.sensitivity',
-                operator: 'IN',
-                // 🔴 K12-11 (#194 / RB-03): 敏感度白名单由**项模型**派生
-                //   （`PermissionId[]` → 交集），**不是**纯档位派生。
-                //   改动面严格窄: 档位默认（allowedSensitivities）逐字保留为 L0 出厂值，
-                //   项模型只能收窄。反例（改回纯档位）⇒ 客户包内的 denies 不再生效 ⇒ 判据红。
-                //   `payload.orgId` = 客户槽（同一岗位名、不同客户 ⇒ 权限集合不同）。
-                value: allowedSensitivitiesByGrants(payload.role, ctx.auth.sensitivity, payload.orgId),
-              },
-            ],
-          }),
+          getPermissionFilter: async (ctx) => {
+            // 🔴 裁 425 / A1: 本句是 scope 维**唯一**的"是否展开"判定点。
+            //   开关**只**决定展开与否（`...[]` = 不追加），`knowledgeScopeConditions()` 本体的
+            //   I-C1/I-C2/I-C3/I-C4/I-C6 语义**逐字不动**；关路径已在 gate 内留痕（degraded）。
+            const scopeGate = knowledgeScopeDimensionGate();
+            return {
+              conditions: [
+                {
+                  field: 'access.sensitivity',
+                  operator: 'IN',
+                  // 🔴 K12-11 (#194 / RB-03): 敏感度白名单由**项模型**派生
+                  //   （`PermissionId[]` → 交集），**不是**纯档位派生。
+                  //   改动面严格窄: 档位默认（allowedSensitivities）逐字保留为 L0 出厂值，
+                  //   项模型只能收窄。反例（改回纯档位）⇒ 客户包内的 denies 不再生效 ⇒ 判据红。
+                  //   `payload.orgId` = 客户槽（同一岗位名、不同客户 ⇒ 权限集合不同）。
+                  value: allowedSensitivitiesByGrants(payload.role, ctx.auth.sensitivity, payload.orgId),
+                },
+                // 🔴 #731 / T3（I-C1/I-C2/I-C3/I-C4/I-C6）: **追加**知识 scope 维（不替换）。
+                //   ⚠️ 位置是判据的一部分 —— I-C3 要求第 0 位恒为 `access.sensitivity` 条件
+                //   （K12-11 不回退），scope 维只能在它**之后**追加（数组长度只增不减）。
+                //   ⚠️ 回滚态下数组长度退到 1 —— 仍然**非空**（sensitivity 在）⇒ 不构成
+                //   `knowledge-store.ts:335`「条件集为空 = 完全不过滤」的 fail-open。
+                ...(scopeGate.enabled ? knowledgeScopeConditions(payload.role) : []),
+              ],
+            };
+          },
         },
         // 🔴 K12-10-WIRE: 本行是"请求路径真带部门身份"的唯一接线点。
         //   摘掉它 ⇒ `getCurrentDepartmentIds()` 回到空集 ⇒ 判据必红（已实测，见交付回执 B②）。

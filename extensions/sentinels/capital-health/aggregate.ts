@@ -17,6 +17,22 @@ import { createHash } from 'node:crypto';
  *    tax_rate/wacc）缺失仅影响依赖它的指标（D358 决策 4）。
  * 显式 0 视为合法数据（hasValue 存在性判定，D356 语义保留）；分母 0 → compute 自降级
  * （决策 5: 堵 99/rev-1/0 假值路径）。
+ *
+ * #732 / 裁 425 B1+B2（L1 裁 B″）—— 阈值单源（两处已实测旁路归一）:
+ *  · 解析点在 loader（D577 的**唯一生产解析点**：sentinel-loader 内解析 manifest 基线 + memStore 覆写，
+ *    以 `check(store, teamId, traversal, thresholds)` **第 4 参**注入）；本层**只吃注入结果**，
+ *    不再 import 引擎（内容面不得钻引擎 — K12-13 CC1）。
+ *  · 现金转换周期（ccc）与债务期限结构（短债比）两对阈值**只**取自第 4 参，并以**必传参数**传给两个
+ *    compute；两个 compute 内**零字面阈值**，且保持同步纯函数（禁异步／禁 IO）。
+ *  · 加严: compute 缺 thresholds ⇒ 抛 typed error（带 .code）；第 4 参缺失或 manifest 缺这两键 ⇒
+ *    本层 fail-loud **点名缺键**（`ch-error` finding + log.error），**不调用**那两个 compute
+ *    （零字面回落），且**不向调用方外抛**（保既有 2 参直调契约）。
+ *  · 本层 `DEFAULT_THRESHOLDS` 只服务其余 6 对阈值（本批范围外；**严禁**把 ccc/债务结构两键加进去，
+ *    否则缺键 fail-loud 会被字面默认值架空 —— 正是裁 425 B2 禁的形状）。
+ * 已知限制:
+ *  · 无 Financial 节点 / 入口必填字段组缺失的**早返回路径不判定阈值**（无可判定对象，不构成单源缺口）。
+ *  · 阈值不可用时**只**跳过 ccc / 债务期限结构两个指标，其余 6 个指标照常判定（不做全量中止）。
+ *  · 两 compute 的 `>` 边界语义逐字保留（等于线值不越级）；阈值「档位方向」（warning<critical）不做校验。
  */
 import type { MetricRow, SentinelAggregateResult, SentinelFinding } from '../../../src/sentinel/types';
 import type { GraphStoreReader, GraphTraversal } from '../../../src/l4/graph-traversal';
@@ -39,7 +55,8 @@ interface CapitalThreshold {
   critical: number;
 }
 
-/** manifest 阈值直连单测无注入时的契约默认值（path-dependency 先例） */
+/** manifest 阈值直连单测无注入时的契约默认值（path-dependency 先例）
+ *  🔴 只服务下表这 6 对；**ccc / 债务期限结构两键严禁加入**（裁 425 B2：缺键必须 fail-loud，不被默认值架空） */
 const DEFAULT_THRESHOLDS: Record<string, CapitalThreshold> = {
   roic_wacc_spread: { warning: 0, critical: -0.05 },
   capital_turnover: { warning: 0.8, critical: 0.4 },
@@ -48,6 +65,33 @@ const DEFAULT_THRESHOLDS: Record<string, CapitalThreshold> = {
   asset_turnover: { warning: 0.8, critical: 0.5 },
   receivable_turnover_days: { warning: 60, critical: 90 },
 };
+
+/** 两对"单源阈值"在 manifest 中的键名（#732 裁 425 B1；取值只走阈值解析单点） */
+const CCC_THRESHOLD_KEY = 'cash_conversion_cycle_days';
+const DEBT_STRUCTURE_THRESHOLD_KEY = 'short_term_debt_ratio';
+
+/**
+ * ThresholdKeyMissingError — 第 4 参阈值缺失 / manifest 缺阈值键（#732 / 裁 425 B2 加严）
+ *
+ * 契约：
+ *   @input  missingKeys —— 缺失（或非有限数）的阈值键名清单；**必须逐键点名**（禁笼统失败）
+ *   @output Error 子类，附 .code / .phase / .retryable（铁律 32）
+ *   @exit   由 check() **内层 catch** 转成 `ch-error` finding（description 含键名）＋ log.error；
+ *           **不外抛**（保既有 2 参直调调用方契约），且该两指标不再调用 compute
+ *   @degraded 不降级成默认值、不回落字面 —— 配置错误必须暴露（禁静默取默认）
+ */
+class ThresholdKeyMissingError extends Error {
+  readonly code = 'CAPITAL_HEALTH_THRESHOLD_KEY_MISSING';
+  readonly phase = 'threshold-resolution';
+  readonly retryable = false;
+  readonly missingKeys: string[];
+
+  constructor(missingKeys: string[]) {
+    super(`manifest 阈值缺键: ${missingKeys.join('、')}（裁 425 B2 禁静默取默认）`);
+    this.name = 'ThresholdKeyMissingError';
+    this.missingKeys = [...missingKeys];
+  }
+}
 
 /** 入口必填字段组（D358 snake 化，对齐 erp-standard 契约） */
 const REQUIRED_FIELD_GROUPS: Array<{ name: string; fields: string[] }> = [
@@ -84,7 +128,7 @@ interface NormalizedFinancial {
 export const capitalHealthSentinel = {
   manifest: null as SentinelManifest | null, // 由 loader 注入（D356 P0-1）
 
-  async check(store: GraphStoreReader, teamId: string, traversal?: GraphTraversal): Promise<SentinelFinding[] | SentinelAggregateResult> {
+  async check(store: GraphStoreReader, teamId: string, traversal?: GraphTraversal, thresholds?: Record<string, CapitalThreshold>): Promise<SentinelFinding[] | SentinelAggregateResult> {
     const now = new Date();
     const checkedAt = now.toISOString();
     const findings: SentinelFinding[] = [];
@@ -145,9 +189,37 @@ export const capitalHealthSentinel = {
         wacc: hasValue(n.props.wacc) ? Number(n.props.wacc) : undefined,
       }));
 
-      // manifest 阈值: loader 注入优先，直连单测无注入 → 默认契约值
+      // manifest 阈值: loader 注入优先，直连单测无注入 → 默认契约值（只覆盖 6 对；见 DEFAULT_THRESHOLDS 注）
       const th = (key: string): CapitalThreshold =>
         this.manifest?.thresholds?.[key] ?? DEFAULT_THRESHOLDS[key];
+
+      // ── 阈值单源（#732 / 裁 425 B1 + L1 裁 B″）──
+      // 解析点在 loader（D577 的**唯一生产解析点**：sentinel-loader 内解析阈值 → 第 4 参注入），
+      // check() **只吃注入结果**；内容面不得 import 引擎（K12-13 CC1）。
+      let singleSourceThresholds: Record<string, CapitalThreshold> | null = null;
+      try {
+        if (!thresholds) throw new ThresholdKeyMissingError(['<第 4 参 thresholds 未注入>']);
+        const missingThresholdKeys = [CCC_THRESHOLD_KEY, DEBT_STRUCTURE_THRESHOLD_KEY].filter(k => {
+          const pair = thresholds[k];
+          return !pair || !Number.isFinite(pair.warning) || !Number.isFinite(pair.critical);
+        });
+        if (missingThresholdKeys.length > 0) throw new ThresholdKeyMissingError(missingThresholdKeys);
+        singleSourceThresholds = thresholds;
+      } catch (err: unknown) {
+        // fail-loud 但不外抛（保既有 2 参直调调用方契约）：ch-error finding 点名缺键 + log.error，
+        // 并**跳过** ccc / 债务期限结构两个指标（= 零字面回落，禁静默取默认）。
+        const e = err as { code?: string; message?: string; missingKeys?: string[] };
+        const missKeys = e.missingKeys ?? [];
+        log.error({ teamId, code: e.code, missingKeys: missKeys, degraded: true }, '[capital-health] 阈值不可用 — 跳过现金转换周期 / 债务期限结构判定');
+        findings.push({
+          id: `ch-error`, severity: 'warning',
+          title: `阈值不可用 — 已跳过现金转换周期 / 债务期限结构判定`,
+          description: `${e.message ?? String(err)}`,
+          evidence: missKeys.map(k => `缺失阈值键: ${k}`),
+          suggestion: '检查 extensions/sentinels/capital-health/manifest.json 的 thresholds，或确认 loader 阈值注入（D577）已生效。',
+          detectedAt: checkedAt,
+        });
+      }
 
       // 1. ROIC/WACC spread（capital-efficiency 源; COGS = total_revenue − gross_margin）
       if (financials.some(f => f.gross_margin === undefined)) {
@@ -302,10 +374,14 @@ export const capitalHealthSentinel = {
       // 5. 短债比（short_term_debt 契约外扩展字段 → 缺失仅跳过本指标; 多节点取均值，原算法同）
       if (financials.some(f => f.short_term_debt === undefined)) {
         log.warn({ teamId }, 'short_term_debt 缺失（契约外扩展字段）— 跳过债务期限结构指标（D358 决策 4）');
+      } else if (!singleSourceThresholds) {
+        // 阈值不可用已在上面 fail-loud（ch-error finding）；此处**不调用** compute ⇒ 零字面回落
+        log.warn({ teamId }, '阈值不可用 — 跳过债务期限结构指标（不调用 compute，禁字面回落）');
       } else {
         const shortTermDebt = financials.reduce((s, f) => s + (f.short_term_debt as number), 0) / financials.length;
         const totalDebtAvg = financials.reduce((s, f) => s + f.total_debt, 0) / financials.length;
-        const ds = computeDebtStructure({ short_term_debt: shortTermDebt, total_debt: totalDebtAvg });
+        // 阈值单源：必传（取自 loader 第 4 参注入的解析结果，无字面回退）
+        const ds = computeDebtStructure({ short_term_debt: shortTermDebt, total_debt: totalDebtAvg }, singleSourceThresholds[DEBT_STRUCTURE_THRESHOLD_KEY]);
       if (!ds.degraded) metricsHolder.push({ metricId: 'CAPITAL-HEALTH-DEBT-STRUCTURE', value: Number(ds.shortTermRatio) || 0, unit: 'ratio', sourceId: 'sentinel-capital-health', inputDigest });
         if (!ds.degraded) {
           if (ds.signal === 'critical') {
@@ -402,18 +478,22 @@ export const capitalHealthSentinel = {
 
       // 8. 现金转换周期 CCC（D358 决策 3 新接线: 原 capital-turnover import 本 compute 却
       //    从不调用 = 死代码（铁律 37），本层接线消除。需 inventory（契约）+ accounts_payable
-      //    （扩展）→ 缺失仅跳过本指标。阈值在 compute 内部: >120 critical / >90 warning）
+      //    （扩展）→ 缺失仅跳过本指标。#732: 阈值由 loader 第 4 参注入后**必传**给 compute）
       if (financials.some(f => f.gross_margin === undefined || f.inventory === undefined
         || f.receivables === undefined || f.accounts_payable === undefined)) {
         log.warn({ teamId }, 'CCC 需要 gross_margin/inventory/receivables/accounts_payable — 跳过（D358 决策 4）');
+      } else if (!singleSourceThresholds) {
+        // 阈值不可用已在上面 fail-loud（ch-error finding）；此处**不调用** compute ⇒ 零字面回落
+        log.warn({ teamId }, '阈值不可用 — 跳过现金转换周期指标（不调用 compute，禁字面回落）');
       } else {
+        // 阈值单源：必传（取自 loader 第 4 参注入的解析结果，无字面回退）
         const ccc = computeCashConversionCycle({
           cogs: financials.reduce((s, f) => s + (f.total_revenue - (f.gross_margin as number)), 0),
           inventory: financials.reduce((s, f) => s + (f.inventory as number), 0),
           receivables: financials.reduce((s, f) => s + (f.receivables as number), 0),
           accounts_payable: financials.reduce((s, f) => s + (f.accounts_payable as number), 0),
           total_revenue: financials.reduce((s, f) => s + f.total_revenue, 0),
-        });
+        }, singleSourceThresholds[CCC_THRESHOLD_KEY]);
       if (!ccc.degraded) metricsHolder.push({ metricId: 'CAPITAL-HEALTH-CASH-CONVERSION-CYCLE', value: Number(ccc.cccDays) || 0, unit: 'ratio', sourceId: 'sentinel-capital-health', inputDigest });
         if (!ccc.degraded) {
           if (ccc.signal === 'critical') {

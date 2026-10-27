@@ -1,5 +1,27 @@
 /**
- * components/RightPanel.tsx — 右栏面板 (Phase 3.4)
+ * components/RightPanel.tsx — 右栏面板（L1 呈现层装配面；Phase 3.4 起）
+ *
+ * 设计哲学：一个装配 ＋ 两条承诺 —— 面板只做「状态上提 ＋ 视图分派」（跨视图状态由本文件持有，
+ *   子组件接 props、不自带同名 state）；承诺 ① 未选客户即提示且**零请求**（容器按 activeOrgId 门控）；
+ *   承诺 ② 测量趋势**单挂载点**（只在 body 挂一次 ⇒ 任何 activeOrgId 非空视图可见）。
+ *
+ * 契约（铁律 47）:
+ *   @input   app-store：rightPanelOpen／userRole／activeWorkspaceId／selectedCap／activeOrgId
+ *            （无 props：本组件由 App 直接挂载）
+ *   @output  右栏渲染树 = header ＋ right-panel-content（selectedCap 详情分派 或 各 view 分支）；
+ *            ws_ga 分支 = 4 标签条 ＋ GAWorkspaceTabs(tab) 内容（诊断报告复用既有 DiagnosisReportTab）
+ *   @degraded 各取数子组件自持降级条（apiFetch/loader 均已 log ＋ degraded，铁律 24/31）；
+ *            本文件不空吞异常、不伪造数据、不把失败画成空态
+ *   @authority 右栏唯一装配点：测量趋势容器的**唯一**挂载方（activeOrgId 门控）；
+ *            tab 状态的**唯一**持有方（一页纸回调经 setTab 跨组件边界）
+ *   @not-here 不做诊断/哨兵业务判断；不新增 tab；不重建一页纸（报告链复用既有 DiagnosisReportTab）；
+ *            不改各 Detail 组件的取数逻辑
+ *   @error   不抛出（无显式 throw 路径；异常由各取数子组件的降级路径承载）
+ *
+ * 已知限制:
+ *   · tab 状态上提后不持久化（刷新/重挂载回落 report，与上提前的组件内 state 语义一致）。
+ *   · 渲染桥不执行 hook ⇒ 装配关系由源码断言（T3 wiring）＋ 真机验证，不证像素/交互视觉。
+ *   · ws_ga 之外的视图也显示测量趋势（只按 activeOrgId 门控）；一页纸回调仅在 ws_ga 传入。
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppStore } from '../stores/app-store';
@@ -390,15 +412,16 @@ const DiagnosisReportTab: React.FC = () => {
   );
 };
 
+/** GA 工作区 4 标签联合（tab 状态由 RightPanel 持有，本组件只按 props 渲染内容） */
+type GAWorkspaceTab = 'action' | 'sentinel' | 'pattern' | 'report';
+
 /** GA 工作区 4 标签 — 真实 API 驱动 (Phase 3.4 + D527 诊断报告 tab) */
-const GAWorkspaceTabs: React.FC = () => {
-  const [tab, setTab] = useState<'action' | 'sentinel' | 'pattern' | 'report'>('report');
+const GAWorkspaceTabs: React.FC<{ tab: GAWorkspaceTab }> = ({ tab }) => {
   const [solutions, setSolutions] = useState<SolutionData[]>([]);
   const [showSolution, setShowSolution] = useState(false);
   const [loading, setLoading] = useState(false);
   const [degraded, setDegraded] = useState(false);
   const currentReportId = useAppStore((s) => s.currentReportId);
-  const activeOrgId = useAppStore((s) => s.activeOrgId);
 
   // 加载方案列表
   const loadSolutions = useCallback(async () => {
@@ -456,17 +479,6 @@ const GAWorkspaceTabs: React.FC = () => {
 
   return (
     <>
-      {/* #656 M4: 「测量值＋趋势」区块与一页纸入口（置于 tabs 条之前 ⇒ 任何 tab 下可见） */}
-      <MeasurementTrendContainer onOpenOnePager={() => setTab('report')} />
-
-      <div className="right-panel-tabs">
-        {(['action', 'sentinel', 'pattern', 'report'] as const).map((t) => (
-          <button key={t} className={`right-panel-tab${tab === t ? ' active' : ''}`} onClick={() => setTab(t)}>
-            {t === 'action' ? '行动跟踪' : t === 'sentinel' ? '哨兵数据' : t === 'pattern' ? '落地模式' : '诊断报告'}
-          </button>
-        ))}
-      </div>
-
       {tab === 'report' && <DiagnosisReportTab />}
 
       {tab === 'action' && (
@@ -1032,6 +1044,10 @@ const RightPanel: React.FC = () => {
   const userRole = useAppStore((s) => s.userRole);
   const activeWorkspaceId = useAppStore((s) => s.activeWorkspaceId);
   const selectedCap = useAppStore((s) => s.selectedCap);
+  const activeOrgId = useAppStore((s) => s.activeOrgId);
+  // #1051 T4: tab 状态上提（原在 GAWorkspaceTabs 内自带 state）——一页纸回调需跨越容器/面板边界；
+  // hooks 规则要求在任何早退（if (!open) return null）之前调用，故置于此。
+  const [tab, setTab] = useState<'action' | 'sentinel' | 'pattern' | 'report'>('report');
   if (!open) return null;
 
   const view = resolveView(userRole, activeWorkspaceId);
@@ -1049,9 +1065,29 @@ const RightPanel: React.FC = () => {
           (() => { const Detail = CAP_DETAIL_VIEW[selectedCap]; return <Detail />; })()
         ) : (
           <>
+            {/* #1051 T4: 「测量值＋趋势」**单挂载点**（唯一）—— 只按 activeOrgId 门控：
+                未选客户 ⇒ 不挂载（零请求）；已选客户 ⇒ 任何视图可见。
+                一页纸回调仅在 ws_ga 传入（其余视图不传 ⇒ 无死按钮）。 */}
+            {activeOrgId !== null && (
+              <MeasurementTrendContainer
+                orgId={activeOrgId}
+                onOpenOnePager={view === 'ws_ga' ? () => setTab('report') : undefined}
+              />
+            )}
             {view === 'ga_dashboard' && <GADashboard />}
             {view === 'ga_admin' && <><Section title="📌 目标跟踪"><Empty /><Section title="🚨 关键告警"><Empty /></Section></Section></>}
-            {view === 'ws_ga' && <GAWorkspaceTabs />}
+            {view === 'ws_ga' && (
+              <>
+                <div className="right-panel-tabs">
+                  {(['action', 'sentinel', 'pattern', 'report'] as const).map((t) => (
+                    <button key={t} className={`right-panel-tab${tab === t ? ' active' : ''}`} onClick={() => setTab(t)}>
+                      {t === 'action' ? '行动跟踪' : t === 'sentinel' ? '哨兵数据' : t === 'pattern' ? '落地模式' : '诊断报告'}
+                    </button>
+                  ))}
+                </div>
+                <GAWorkspaceTabs tab={tab} />
+              </>
+            )}
             {view === 'ws_detail' && <><Section title="📌 目标跟踪"><Empty /><Section title="🚨 关键告警"><Empty /></Section></Section></>}
             {view === 'readonly' && <Section title="📌 概览"><Empty /></Section>}
             {(view === 'ws_readonly' || view === 'ws_detail') && <Section title="📌 概览"><Empty /></Section>}

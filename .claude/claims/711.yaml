@@ -1,0 +1,14 @@
+# .claude/claims/711.yaml — #711（P3-M7 批次「#825 重审版」· PR4）写集声明
+#
+# 纪律（同 #1052/#991 先例）：只列本 PR 真正改动的文件，不预授权、不含排除项
+#   （排除项语义由 merge_writeset_gate.py 承担，不在两字段版 claim 内）。
+# 依据：创始人 2026-10-27 批准认领件 —— 每卡可新建 `.claude/claims/<卡号>.yaml`。
+# 边界：本卡只加判据件，不改 src/**（连读点/单一入口的改坏验证均 git checkout 还原）、不改 extensions/**。
+writeset:
+  - .claude/claims/711.yaml
+  - tests/extensions/departments-dual-engine.test.ts
+done:
+  - verify: npx vitest run tests/extensions/departments-dual-engine.test.ts # 10 passed（行 A 6 例 ＋ 行 B 4 例；--reporter=verbose 计数）
+  - verify: npx vitest run tests/extensions tests/presets # 回归 0 失败（numTotalTests／numPassed／numPending 三数进回执）
+  - verify: python3 scripts/control-tower/claim_store.py --check 711 --root . # claim 结构合规（writeset 非空、done 每条带 verify）
+note: "#711 ②上下文一致（两岗位 resolveContext 读同一 departments 真源：改共享件⇒两岗位同一轮同时变、解析值逐字等于各自驱动文件的同一 key 行）＋ 双引擎分立可观测（feedback-collector 写点 :427-441 INSERT／独立读点 :470 queryFeedback 可计数、degraded 可见）。仅新增判据件 1 件。"

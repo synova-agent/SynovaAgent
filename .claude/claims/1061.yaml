@@ -1,0 +1,27 @@
+# .claude/claims/1061.yaml — #1061 建档确认门与写侧对齐（裁 425-C1）· 写集声明
+# 批次 P3-M7-裁425返工批（#825）· 活2／3 · 分支 ct/p3m7-c1-gate（base gitea/local-main）
+# 🔴 写集只有 1 件产品件；`memory/notes/**` 与 `.claude/claims/**` 属交付配套件
+#    （memory/notes/AGENTS.md · 裁定 168-C）＋ 铁律 49（非平凡变更须引四态 Note）⇒ 由门禁触发，不是写集扩张。
+# 🔴 停点已遵守：`src/onboarding/onboarding-flow.ts` 与 `config-pack-generator.ts` 的**同源失实注释**
+#    在写集外（属 #1063）⇒ **未改**，已作为未决项报 L1/CTO。本卡只改注释于 routes/onboarding.ts 内。
+# 🔴 `src/server.ts` 未挂载 routes/onboarding（属 #712/PR5）⇒ 判据穿「真 router ＋ 真 jwtAuthMiddleware」，
+#    不宣称"生产可达"。
+writeset:
+  - .claude/claims/1061.yaml
+  - memory/notes/proposed/2026-10-27-1061-onboarding-confirmation-gate.md
+  - src/routes/onboarding.ts
+done:
+  # ── 定向（提交前）──
+  - verify: npx vitest run tests/routes/onboarding.test.ts
+  - verify: npx vitest run tests/onboarding/onboarding-flow.test.ts
+  - verify: npx tsc --noEmit
+  # ── 磁盘判据（真 router ＋ 真 jwtAuthMiddleware ＋ 真 POST /api/auth/register 签发凭据；临时 cwd）──
+  - verify: POST /api/onboarding/apply 未确认 ⇒ 409 ＋ find <临时根> -type f = 0
+  - verify: POST /api/onboarding/start {dryRun:false} 未确认 ⇒ 409 ＋ find = 0
+  - verify: POST /api/onboarding/start {dryRun:false,superAdminConfirmed:true} ⇒ 200 ＋ 实物 3 件落盘
+  - verify: find /Users/wane/SynovaAgent/data -type f -newermt <会话起点> = 0（主树零写入）
+  # ── 全量（需队长清场后跑；自验员同时在跑）──
+  - verify: npx vitest run tests/extensions tests/middleware tests/security tests/l4 tests/presets tests/routes
+  - verify: bash scripts/pre-commit-check.sh
+  - verify: npm run check:architecture
+note: "#1061 / 裁 425-C1：建档确认门**前移**。缺陷＝旧实现先 runOnboardingFlow 再判 !superAdminConfirmed，而真落盘点是 flow ④ generateConfigPack（dryRun!==true 即写 extensions/presets/roles/<id>/ 实物 3 件），⑤ 确认在其后、⑥ deploy 只写状态行 ⇒ 409 时文件已落盘；第二入口 /start（pre-auth，dryRun 由请求体控制）同样落盘且无 409。处置＝superAdminGateBlocks() 一处门控前移到 flow 之前，拒绝＝落盘意图降级为 dry-run（磁盘零写入是事实）＋ 409 SUPER_ADMIN_CONFIRMATION_REQUIRED ＋ degraded:true ＋ log.warn(code/phase/retryable)。已知限制：server.ts 未挂载本路由（#712/PR5）⇒ 生产入口 404 属预期；拒绝时仍跑一遍 dry-run 以保 report 形状；/start 的鉴权不属本卡。"

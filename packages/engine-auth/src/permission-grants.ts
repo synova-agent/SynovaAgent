@@ -36,6 +36,9 @@
  * 契约（铁律 47）:
  *   @input    — `roleId: string`（必填）；`tenantId: string`（可选，客户槽）；
  *               `root`（可选，内容根注入缝，缺省 `process.cwd()` + `SYNOVA_PRESETS_ROOT` 覆盖）
+ *   @output   — 另有 `getKnowledgeScopes(options)`：**文件派生**的知识 scope 命名空间集
+ *               （#731 / T2；见「一bis」段）。@degraded 见该段：内容坏件 ⇒ `log.warn` 点名 +
+ *               退回兼容集，**不影响授权判定本身**（判定面仍 fail-closed）。
  *   @output   — `ResolvedGrants`:
  *               · `items: PermissionId[]`（**展开后**的具体项，字典序，已过白名单校验）
  *               · `sources: { factory: PermissionId[]; packGrants: PermissionId[]; packDenies: PermissionId[] }`
@@ -57,7 +60,7 @@
  * 退出/降级面: 本模块**从不抛**（除参数类型非法 ⇒ 由调用方类型守卫挡）。IO 失败走
  *   `degraded` 通道，调用方（`src/middleware/auth.ts` 的授权判定点）据此**回落出厂默认**。
  */
-import { existsSync, readFileSync, statSync } from 'fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 import { load as parseYaml } from 'js-yaml';
 import { createLogger } from '@synova/logger';
@@ -68,10 +71,151 @@ const log = createLogger('engine-auth/permission-grants');
 // 一、权限项（PermissionId）—— 类型面只有"项"，没有"档"
 // ════════════════════════════════════════════════════════════════
 
-/** 知识范围（与 `extensions/presets/roles/<id>/knowledge-scope.yaml` 的 `scopes[].id` 同域） */
-export const KNOWLEDGE_SCOPES = ['finance', 'hr', 'sales', 'people', 'market'] as const;
+/**
+ * 知识范围**编译期基线**（#731 / T2 / d-perm 语义修正后）—— 运行期真源见「一bis」段
+ * `getKnowledgeScopes()`（= 本基线 ∪ 文件派生）。
+ *
+ * 🔴 与接线前（`['finance','hr','sales','people','market']`）的**语义差异**（d-perm，PR 正文必列）：
+ *   · `hr` / `sales` **无任何 knowledge-scope.yaml 背书**（E7：hr 岗用 `people.*`、sales 岗用
+ *     `market.*`）⇒ 从基线中**移除**。随后 `knowledge.hr.read`（hr `capabilities.yaml:21`）、
+ *     `knowledge.hr.write`、`knowledge.market`… 之外的 `knowledge.sales.*` 变成**未知名**
+ *     ⇒ 按既有 fail-closed 语义**丢弃 ＋ 点名**（不静默、不提权）。
+ *   · hr 仍持 `knowledge.people.read`（hr `capabilities.yaml:22`）⇒ 项模型对 hr **仍"发声"**
+ *     （`itemModelSpeaksForRole` 为真）⇒ 不会回落放宽到档位默认。
+ *   · 迁移说明：引用 `knowledge.hr.read` / `knowledge.sales.read` 的外部客户包**需改**
+ *     为 `knowledge.people.read` / `knowledge.market.read`。
+ *
+ * 为什么仍要保留这份基线而不是"纯读文件"：`KnowledgeScope` 是**编译期字面量联合**（类型面：
+ * 拼错一个 id 在类型期就该红），且下游判据会把内容根指到**没有 scope 文件的夹具**上 ——
+ * 纯读文件会让白名单在那里塌成空集，把"夹具没放内容"误判成"项全非法"。
+ */
+export const KNOWLEDGE_SCOPES = ['finance', 'people', 'market'] as const;
 /** 知识范围 id 类型 */
 export type KnowledgeScope = (typeof KNOWLEDGE_SCOPES)[number];
+
+// ────────────────────────────────────────────────────────────────
+// 一bis、知识 scope **命名空间**的文件派生（#731 / T2；d-perm；d-refresh）
+//
+// 🔴 本段的定位（别记反）：`KNOWLEDGE_SCOPES`（上方常量）从此**不再是运行期唯一真源**，
+//   而是「**编译期基线**（= 已由 yaml 背书的命名空间）」——它撑住两件事：
+//   (a) `KnowledgeScope` 编译期字面量联合（类型面：拼错一个 id 在类型期就该红）；
+//   (b) 内容根被指到"没有 scope 文件的夹具"时白名单不塌成空集。
+//   **运行期可授面 = 编译期基线 ∪ 文件派生**。
+//
+// 派生规则（d-perm）：命名空间 = `scopes[].id` 第一个 `.` 之前的前缀。文件驱动 ⇒
+//   新增 `roles/<roleId>/knowledge-scope.yaml` 里的新命名空间（如 `ops.logistics`）**无需改代码**
+//   即可被 `permissionGrants` 授予（宪章三条不可妥协之①「文件驱动」）。
+//
+// 🔴 与 d-perm 的口径对照（PR 正文必列）：
+//   d-perm 原文要求「命名空间 = scope id 前缀 ⇒ 现物得 {finance, people, market}，hr/sales 自然消失」。
+//   本条落地时撞到**写集外**的既有判据（`tests/security/permission-grants.test.ts` 用
+//   `knowledge.hr.read` / `knowledge.sales.read` 做夹具，且 CI 第 ③ 步 `vitest --changed` 会收集到它）。
+//   ⇒ 已上报 L1；**L1 裁定 2026-10-27（裁 B）**：特批扩写集 ＋2 件既有测试，把夹具迁到
+//   yaml 背书的命名空间（`knowledge.people.read` / `knowledge.market.read`），**保留**
+//   "未知名被丢弃 / 不静默提权"的断言语义。故本文件按 d-perm 原口径收缩，不做兼容兜底。
+//
+// 已知限制（KL-T2-1）：`expandPermissionId('knowledge.*.read')` 与
+//   `sensitivityWhitelistFromGrants` 的「覆盖全部范围 ⇒ 视同全库读」判定仍以**编译期基线**为界
+//   —— 二者必须同集，否则 admin 的全库读会因"分母含派生项"而静默失去 `restricted`。
+//   ⇒ 文件新增的命名空间可用**显式项**授予，但不会被 `knowledge.*.read` 通配覆盖。
+// ────────────────────────────────────────────────────────────────
+
+/** 岗位知识范围文件（与 `src/init/preset-loader.ts` 同口径；裁 423：唯一载体） */
+const SCOPE_FILE = 'knowledge-scope.yaml';
+
+/** 命名空间扫描缓存（d-refresh：键 = 内容根 ＋ 各 scope 文件的 mtime+size；禁进程级常量） */
+let namespaceCache: { readonly fingerprint: string; readonly namespaces: readonly string[] } | null = null;
+
+function isRecordValue(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** 扫一个内容根，取所有 `roles/<id>/knowledge-scope.yaml` 的 `scopes[].id` 前缀 */
+function scanScopeNamespaces(presetsRoot: string): {
+  readonly fingerprint: string;
+  readonly namespaces: readonly string[];
+  readonly problems: readonly string[];
+} {
+  const rolesRoot = join(presetsRoot, ROLES_SUBDIR);
+  const namespaces = new Set<string>();
+  const problems: string[] = [];
+  const stamps: string[] = [];
+
+  let entries: string[];
+  try {
+    entries = readdirSync(rolesRoot).slice().sort();
+  } catch (err: unknown) {
+    const code = (err as { code?: string }).code;
+    // ENOENT = 内容面未装 ⇒ 正常回落兼容集（不是错误，同 resolveGrants 的回落口径）
+    if (code !== 'ENOENT') {
+      problems.push(`${rolesRoot}: 目录读取失败 — ${err instanceof Error ? err.message : String(err)}`);
+    }
+    return { fingerprint: `${presetsRoot}|absent`, namespaces: [], problems };
+  }
+
+  for (const roleId of entries) {
+    if (roleId.startsWith('.')) continue;
+    const abs = join(rolesRoot, roleId, SCOPE_FILE);
+    let stamp: string;
+    try {
+      const st = statSync(abs);
+      if (!st.isFile()) continue;
+      stamp = `${String(st.mtimeMs)}:${String(st.size)}`;
+    } catch {
+      continue; // 无该文件 ⇒ 该岗位不贡献命名空间（正常默认）
+    }
+    stamps.push(`${roleId}@${stamp}`);
+    try {
+      const doc: unknown = parseYaml(readFileSync(abs, 'utf8'));
+      if (!isRecordValue(doc)) continue; // 空文档/仅注释 ⇒ 未声明（内容级闸在 preset-loader 与 D5 探针）
+      const raw = doc['scopes'];
+      if (!Array.isArray(raw)) {
+        problems.push(`${abs}: \`scopes\` 不是数组`);
+        continue;
+      }
+      for (const entry of raw) {
+        if (!isRecordValue(entry)) continue;
+        const id = entry['id'];
+        if (typeof id !== 'string' || id.length === 0) continue;
+        const ns = id.split('.')[0];
+        if (typeof ns === 'string' && ns.length > 0) namespaces.add(ns);
+      }
+    } catch (err: unknown) {
+      problems.push(`${abs}: YAML 解析失败 — ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+  return {
+    fingerprint: `${presetsRoot}|${stamps.join('|')}`,
+    namespaces: [...namespaces].sort(),
+    problems,
+  };
+}
+
+/**
+ * 知识 scope **命名空间**集（运行期真源）= 编译期基线 ∪ 文件派生。
+ *
+ * @input  `options.root` — 内容根（测试注入缝；缺省 `SYNOVA_PRESETS_ROOT` → `cwd/extensions/presets`）
+ * @output 去重后的命名空间数组（基线在前、派生在后的字典序稳定集）
+ * @degraded 内容文件坏/YAML 解析失败 ⇒ `log.warn` 逐条点名并**跳过该文件**（不静默）；
+ *           全部内容缺席 ⇒ 回落编译期基线（不是错误）。**本函数从不抛**。
+ */
+export function getKnowledgeScopes(options: { root?: string } = {}): readonly string[] {
+  const presetsRoot = resolvePresetsRoot(options.root);
+  const scan = scanScopeNamespaces(presetsRoot);
+  if (namespaceCache === null || namespaceCache.fingerprint !== scan.fingerprint) {
+    namespaceCache = { fingerprint: scan.fingerprint, namespaces: scan.namespaces };
+    if (scan.problems.length > 0) {
+      log.warn(
+        { presetsRoot, problems: scan.problems.slice(0, 5), total: scan.problems.length },
+        'scope 命名空间派生有坏件 — 已跳过该文件（不静默），其余照常生效',
+      );
+    }
+  }
+  const union = new Set<string>(KNOWLEDGE_SCOPES);
+  for (const ns of namespaceCache.namespaces) union.add(ns);
+  return [...union];
+}
+
 
 /** 项模型里的**桶**（只用于分组展示/校验，不参与判定） */
 export const PERMISSION_BUCKETS = ['knowledge', 'tool', 'mcp', 'admin'] as const;
@@ -126,9 +270,26 @@ export const PERMISSION_CATALOG: readonly PermissionItem[] = buildCatalog();
 
 const CATALOG_IDS: ReadonlySet<string> = new Set(PERMISSION_CATALOG.map((i) => i.id));
 
-/** 运行期白名单校验（id 来自文件 ⇒ 必须校验） */
+/** 文件派生命名空间的项 id 形状（`knowledge.<ns>.read|write`；`*` 已被 CATALOG_IDS 先吃掉） */
+const DERIVED_SCOPE_PERMISSION = /^knowledge\.([^.*]+)\.(read|write)$/;
+
+/**
+ * 运行期白名单校验（id 来自文件 ⇒ 必须校验）。
+ *
+ * 判据两段（#731 / T2）：
+ *   ① **编译期目录**（`PERMISSION_CATALOG` = 基线展开后的全集）—— 命中即合法；
+ *   ② **文件派生命名空间**（`getKnowledgeScopes()`）—— 让「加一个 roles/<id>/knowledge-scope.yaml
+ *      就多一组可授项」成立（文件驱动，不改代码）；`*` 通配不在此列（见 KL-T2-1）。
+ * 两段都是**白名单**：认不出的 id ⇒ `false` ⇒ 调用方丢弃该项（fail-closed，永不放宽）。
+ */
 export function isPermissionId(value: unknown): value is PermissionId {
-  return typeof value === 'string' && CATALOG_IDS.has(value);
+  if (typeof value !== 'string') return false;
+  if (CATALOG_IDS.has(value)) return true;
+  const hit = DERIVED_SCOPE_PERMISSION.exec(value);
+  if (hit === null) return false;
+  const namespace = hit[1];
+  if (namespace === undefined || namespace.length === 0) return false;
+  return getKnowledgeScopes().includes(namespace);
 }
 
 /**
@@ -482,7 +643,7 @@ function resolveGrantsUnsafe(
       try {
         isFile = existsSync(abs) && statSync(abs).isFile();
       } catch {
-        isFile = false;
+        isFile = false; // stat 竞态 ⇒ 视为不存在（父包缺失 = 正常回落，非错误；与上方候选包判定同口径）
       }
       if (!isFile) continue;
       const raw = readRawGrants(abs, reasons);

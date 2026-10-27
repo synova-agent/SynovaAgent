@@ -1,7 +1,7 @@
 {
   "$schema": "https://synova.dev/schemas/sentinel-manifest-v1.json",
   "name": "capital-health",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "sentinel",
   "displayName": "资本健康",
   "description": "合并自 capital-efficiency + capital-structure + capital-turnover。诊断资本配置效率(ROIC/WACC)、融资结构(负债权益比)和周转速度(资产周转率)。",
@@ -45,6 +45,14 @@
     "receivable_turnover_days": {
       "warning": 60,
       "critical": 90
+    },
+    "cash_conversion_cycle_days": {
+      "warning": 90,
+      "critical": 120
+    },
+    "short_term_debt_ratio": {
+      "warning": 0.5,
+      "critical": 0.7
     }
   },
   "aggregation": "worst_first",

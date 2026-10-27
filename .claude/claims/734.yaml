@@ -1,0 +1,8 @@
+# .claude/claims/734.yaml — P3-M7 PR7 · #734 反馈一致判据（两岗位同一 ledger 两条＋旁路必红）
+# 派单钉死写集＝1 件（dev doc §2.4）；无既有实现件改动（不改 src/**、src/deploy/bootstrap.ts）
+writeset:
+  - .claude/claims/734.yaml
+  - tests/extensions/decision-ledger-two-roles.test.ts
+done:
+  - verify: npx vitest run tests/extensions/decision-ledger-two-roles.test.ts
+note: "#734 两岗位各一次决策留痕经生产装配链（captureDecision 唯一写入点）真落账，读回经 decision-ledger-readback；旁路写第二账本 ⇒ \\\"回同一处\\\"断言必红。"
