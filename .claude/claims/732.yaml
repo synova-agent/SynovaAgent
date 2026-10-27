@@ -1,0 +1,19 @@
+writeset:
+  - .claude/claims/732.yaml
+  - extensions/sentinels/capital-health/aggregate.ts
+  - extensions/sentinels/capital-health/computes/cash-conversion-cycle.ts
+  - extensions/sentinels/capital-health/computes/debt-structure.ts
+  - extensions/sentinels/capital-health/manifest.json
+  - tests/extensions/threshold-single-source.test.ts
+  - tests/sentinels/capital-health/debt-structure.test.ts
+  - tests/sentinels/capital-health/cash-conversion-cycle.test.ts
+  - tests/sentinels/capital-structure/debt-structure.test.ts
+  - tests/sentinels/capital-turnover/cash-conversion-cycle.test.ts
+done:
+  - verify: test $(grep -c "resolveThresholds" extensions/sentinels/capital-health/aggregate.ts) -eq 0
+  - verify: test $(SYNO_CI=1 bash scripts/check-content-coupling.sh >/dev/null 2>&1; echo $?) -eq 0
+  - verify: grep -q "cash_conversion_cycle_days" extensions/sentinels/capital-health/manifest.json
+  - verify: grep -q "short_term_debt_ratio" extensions/sentinels/capital-health/manifest.json
+  - verify: test $(npx vitest run tests/extensions/threshold-single-source.test.ts >/dev/null 2>&1; echo $?) -eq 0
+  - verify: test $(npx vitest run tests/sentinels/capital-health tests/sentinels/capital-structure tests/sentinels/capital-turnover >/dev/null 2>&1; echo $?) -eq 0
+note: "#732 裁425-B1+B2（L1 裁 B″）：capital-health 的 ccc / 债务期限结构两对阈值由 loader 的唯一生产解析点（manifest+memStore 覆写）解析后以 check 第 4 参注入，aggregate 只吃注入结果、以必传参数下传两 compute（compute 内零字面阈值、保持同步纯函数）——内容面不 import 引擎（K12-13 CC1 exit 0）；加严：compute 缺参 ⇒ typed error（.code=CASH_CONVERSION_CYCLE_THRESHOLDS_MISSING / DEBT_STRUCTURE_THRESHOLDS_MISSING），manifest 缺键 ⇒ 点名缺键 fail-loud。DEFAULT_THRESHOLDS 6 键按裁定原样保留（本卡不动），新键追加在 manifest 尾部（memStore 覆写目标仍为首键 roic_wacc_spread）"
