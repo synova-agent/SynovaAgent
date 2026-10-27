@@ -1,0 +1,13 @@
+# .claude/claims/733.yaml — #733 目标一致（批次 P3-M7-前置缺口补齐 · PR6）
+# 纪律：只列本 PR 真正改动的文件，不预授权。写集 1 件（新建测试）＋ 本声明件。
+# 依据：dev doc §4.1（#733 行）／规格 §4.3；判据＝两岗位 goal 经 src/l4/goal-alignment.ts 生产链真跑。
+writeset:
+  - .claude/claims/733.yaml
+  - tests/extensions/goal-alignment-multi-role.test.ts
+done:
+  - verify: npx vitest run tests/extensions/goal-alignment-multi-role.test.ts # 5 passed（正常 1／降级 3／断边反例 1）
+  - verify: npx vitest run tests/extensions # 回执三数：3 files / 28 passed / 0 failed
+  - verify: npx vitest run tests/l4/goal-alignment.test.ts # 既有 20 passed（不回归）
+  - verify: npx tsc --noEmit # 类型零错 rc=0
+  - verify: python3 scripts/control-tower/claim_store.py --check 733 --root . # claim 结构合规（writeset 非空、done 带 verify）
+note: "#733 目标一致：临时图库（mkdtemp）＋生产写入口 createGoal／图存储原语 createEdge 播种；两岗位（finance/hr，取自内容面 roles 实物）各自 traceGoalToCompany satisfied:true 且 companyGoalId 同一；断 finance 的 goal 边 ⇒ finance 红 / hr 仍绿（岗位分辨力），重建边复绿。只用生产读侧（SqliteGraphStore）断言，不造替身 store。"
