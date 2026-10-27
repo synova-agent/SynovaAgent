@@ -1,0 +1,193 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1053,
+  "author": "win-push",
+  "reviewer": "fresh-session-independent-reviewer-1053-final5",
+  "tool": "零上下文独立复核（Win / pwsh + Git Bash；node v24.16.0 / npm 11.13.0 / modules ABI 137；工作树 D:\\tmp\\rev-final5 = git worktree --detach acf1a4176；node_modules 经 junction 指向主树，better-sqlite3 12.11.1 直跑无重建）",
+  "independence": "fresh-session",
+  "issued_at": "2026-10-27T22:49:00+08:00",
+  "patch_fingerprint": "sha256:3e629b930fe02dba2753eaf176e7f99f962ad17490da53462bd9babd8e37c0da",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "1-基线与祖先",
+      "result": "pass",
+      "cmd": "git ls-remote gitea refs/heads/local-main; git merge-base --is-ancestor 88430802f968fea06fd9721a6d1f1db7cca03c31 acf1a4176; echo $?; git rev-list --parents -n 1 acf1a4176; git log -1 --format='%H %ci %s' 88430802f",
+      "evidence": "✅ 远端真值 tip = 88430802f968fea06fd9721a6d1f1db7cca03c31（开跑取一次、全部跑完 22:46 再取一次，均为同一 tip；未前进）。✅ merge-base --is-ancestor ⇒ ANCESTOR_EXIT=0。✅ head acf1a4176 parents = b9831bc00f7ab7cbeb9a8b908c0f0a81dd0fbcf0（特性线 tip）＋ 88430802f968fea06fd9721a6d1f1db7cca03c31（local-main）⇒ 确认是合入当时 local-main 的 merge 提交，④ 串行前置成立。"
+    },
+    {
+      "id": "2-写集与夹带",
+      "result": "pass",
+      "cmd": "git -c core.quotepath=false diff --name-status 88430802 acf1a4176; 逐路径过滤 ^app/ ^src/sentinel/ ^scripts/control-tower/ ^.gitea/ ^.github/ ^scripts/audit/ ^scripts/; awk 解析 .claude/claims/1053.yaml 的 writeset 与 diff 集合 diff",
+      "evidence": "✅ 恰 15 件（A 6 ／ M 9；+1793 −304）。清单：.claude/claims/1053.yaml／AGENTS.md／agents/P1-能跑通/AGENTS.md／docs/authority/DOCS-REGISTRY.yaml／electron-renderer/AGENTS.md／MeasurementTrendContainer.tsx／MeasurementTrendSection.tsx／RightPanel.tsx／lib/measurement-trends.ts／gate-exemptions/2026-10-27-t8-1051-pointer.md／memory/notes/proposed/2026-10-27-1051-m4-closeout.md／src/routes/sentinel.ts／m4-output-face.expected.ts／mvp1-m4-output-face.test.ts／support/clock.ts。✅ 夹带检查全 0：app/0、src/sentinel/0、scripts/control-tower/0、.gitea/0、.github/0、scripts/audit/0、**scripts/ 整体 0（门禁脚本零改动）**。✅ claim writeset 15 项 vs diff 15 项：`diff /tmp/diffset.txt /tmp/claimset.txt` 无差异 ⇒ SETS_EQUAL=YES（EXTRA=0、MISSING=0）。"
+    },
+    {
+      "id": "3-冲突解与登记",
+      "result": "pass",
+      "cmd": "grep -c '^<<<<<<<' docs/authority/DOCS-REGISTRY.yaml（另 '^=======' / '^>>>>>>>'）; git grep -nE '^(<<<<<<<|>>>>>>>|=======)$' HEAD -- .; git diff --check 88430802 acf1a4176; grep -nE 'DOC-030[0-9]' 两版; bash scripts/doc-system/doc-registry-gate.sh; git diff b9831bc0 acf1a4176 -- docs/authority/DOCS-REGISTRY.yaml gate-exemptions/...",
+      "evidence": "✅ 冲突标记：DOCS-REGISTRY 三种标记各 0（grep exit 1）；HEAD 全树 `git grep` 标记 exit 1（零命中）；`git diff --check` exit 0。✅ 编号正确：base 止于 DOC-0307（第 1261 行），head 新增 **DOC-0308**（第 1269 行，path=gate-exemptions/2026-10-27-t8-1051-pointer.md）；DOC-0306/0307 仍在（main 侧 #825 两条未被吃掉）。✅ id 计数 base 161 → head 162（恰 +1），唯一性检查重号 0。✅ 合并解细节：b9831bc0→acf1a4176 仅两处不同——DOCS-REGISTRY 把本方案目 0306→0308 并保留 main 0306/0307；豁免件第 3 行同步改 DOC-0308。✅ `bash scripts/doc-system/doc-registry-gate.sh` ⇒ exit 0：`162 条 DOC id，重号 0`／`126 条 active，path 失配 0`／`检查 2 个文档，0 个未登记`／`登记门禁通过`。"
+    },
+    {
+      "id": "4-测试与类型",
+      "result": "pass",
+      "cmd": "npx vitest run tests/acceptance/mvp1-m4-output-face.test.ts tests/acceptance/mvp1-m3-domain-chain.test.ts; npx tsc --noEmit; npx tsc -p electron-renderer/tsconfig.json --noEmit",
+      "evidence": "✅ vitest：`✓ mvp1-m3-domain-chain.test.ts (7 tests)` ＋ `✓ mvp1-m4-output-face.test.ts (43 tests)` ⇒ `Test Files 2 passed (2)` / `Tests 50 passed (50)`、0 failed、0 skipped、exit 0（43+7=50 相符）。✅ 根 tsc：ROOT_TSC_EXIT=0、OUTPUT_LINES=0。✅ renderer tsc：RENDERER_TSC_EXIT=0、OUTPUT_LINES=0。环境如实：node v24.16.0（M1 锚 v22.23.2）、npm 11.13.0、ABI 137、better-sqlite3 12.11.1；node_modules 以 junction 指向主树（worktree 不带依赖），首次跑无需 npm install。"
+    },
+    {
+      "id": "5-CI",
+      "result": "pass",
+      "cmd": "curl -H 'Authorization: token <from git remote get-url gitea>' 'http://MacBook-Pro-2.local:3000/api/v1/repos/synova-agent/SynovaAgent/actions/runs?head_sha=acf1a4176…&event=push|pull_request'; …/actions/runs/{id}/jobs; …/commits/acf1a4176…/status",
+      "evidence": "✅ head acf1a4176 两腿：run **2210**(push)、run **2211**(pull_request)，均 `status=completed conclusion=success`。✅ 逐 job 解析：两腿均 `steps_total=14 success=14 failure=0 skipped=0 other=0`。✅ ③ 非 SKIP：step[7]「③ 增量测试（vitest --changed…）」conclusion=success，2210 实跑 9s（14:39:13→14:39:22）、2211 实跑 9s（14:40:26→14:40:35），job log 同刻输出 `Test Files 22 passed (22)`。✅ commit status：`state=success、total_count=2`，两 context（local-gates / gates push 与 pull_request）均 success。"
+    },
+    {
+      "id": "6-自做变异（3 条）并还原",
+      "result": "pass",
+      "cmd": "① 删 measurement-trends.ts 的 `encodeURIComponent(orgId)`；② Section `{onOpenOnePager ? (` → `{true ? (`；③ Container `loadMeasurementTrends(base, orgId)` → `loadMeasurementTrends(base)`；每条后 `npx vitest run <m4 件>`，再 `git checkout -- <file>`",
+      "evidence": "✅ 3/3 全红且精确落在对应判据：①`Tests 1 failed | 42 passed (43)`，红在 T1 反例 `AssertionError: expected 'METRIC_TRENDS_HTTP_ERROR: GET http://…' to contain '&orgId=a%20b%26c%2F%E4%B8%AD%231'`；②`1 failed | 42 passed`，红在 T2 loading/无死按钮 `not to contain 'data-testid=\"measurement-to-onepager\"'`；③`1 failed | 42 passed`，红在 A8-b `to contain 'loadMeasurementTrends(base, orgId)'`。✅ 每次还原后 `git status --porcelain` 为空（RESTORE=0）；全部跑完 `git status --porcelain` 空、HEAD 仍 acf1a4176。"
+    },
+    {
+      "id": "7-A1–A14 逐号与 A4/A5 断言内容",
+      "result": "pass",
+      "cmd": "逐号 grep -oE 'A<n>([^0-9]|$)' tests/acceptance/mvp1-m4-output-face.test.ts; git grep -c 'Date.now()' HEAD -- <m4 件>; 抽读 A4（:463-570）/A5（:572-617）断言行与 expected 手算值",
+      "evidence": "✅ A1–A14 逐号均 ≥1（实测计数 A1=10 A2=7 A3=12 A4=54 A5=46 A6=17 A7=6 A8=12 A9=7 A10=9 A11=7 A12=2 A13=18 A14=14；A12 仅头注 2 处、无独立 it，符合命令级口径）。✅ A12 命令级：`git grep -c \"Date.now()\" HEAD -- <m4 件>` 无输出、exit 1；工作树版同（exit 1）。✅ A4 断言真实：原始 HTTP `status=200/ok=true/count=0/summary=[]/degraded=undefined`（:470-475），并放宽 `days=3650` 同 org 回来 3 组且 id 集合相等（:478-484，防「0=缺数据」假绿）；真 loader `ok=true/degraded=false/summary=[]`（:492-495）；真 view 交 Section ⇒ empty 在场、degraded 不在场、0 条目、无 ↑↓→、无编造 `0 unit`、无窗口外 metricId（:534-552）；deriveState 三分支字面量顺序＋`state={deriveState(view)}` 接线（:555-568）。✅ A5 断言真实：3 指标×3 观测 ⇒ `count=3`、每行 `count=3`、latest/previous/changeRatio 手算逐项 0.5／−0.75／0、latestAt=最新（:581-597）；previous=0 例 ⇒ `previousValue=0` 且 `changeRatio=null`、方向≠flat（:607-615）。非空壳、非恒真（我另有 3 变异全红）。"
+    },
+    {
+      "id": "8-Q-10/Q-6/六段头逐文件",
+      "result": "pass",
+      "cmd": "git grep -n 'm4-output-face.expected' -- src/ electron-renderer/ tests/; git grep -c EXP_TESTID；git grep 'data-testid=\"measurement-'；git grep -n 'Date.now()' -- clock.ts；逐文件 grep -c @input/@output/@error/@degraded/@authority/@not-here（HEAD 与 base 88430802 对比）",
+      "evidence": "✅ Q-10 单一源：expected 模块被产品代码 import = 0（src/ 零命中 exit 1；electron-renderer/ 仅 AGENTS.md:25 散文提及，非 import）；tests/ 内仅 expected 自身＋m4 验收件（:124 `from './m4-output-face.expected'`）。m4 验收件 `EXP_TESTID` 使用 36 处；裸 `data-testid=\"measurement-` 字面量 0（git grep exit 1）。✅ Q-6：m4 验收件 `Date.now()` 0 命中（exit 1）；注入缝 clock.ts 恰 2 行文本＝1 行注释＋1 处真调用（:4），唯一落点。✅ 六段头（§4bis：TS 无 @exit）：measurement-trends.ts、MeasurementTrendSection.tsx、MeasurementTrendContainer.tsx、RightPanel.tsx 均 **6/6**（@input/@output/@error/@degraded/@authority/@not-here 各有实证行：loader:9/11/12/15/20/21/23、Section:9/12/17/18/19/101、Container:10/15/19/21/22/24、RightPanel:9/11/13/15/17/19）；src/routes/sentinel.ts = **3/6**（@input/@output/@degraded 在内层 ticket-transition 注 :57/:61/:63，文件头无标签；缺 @error/@authority/@not-here），**base 88430802 同为 3/6 且本 PR 未改其头注** ⇒ 存量、非本 PR 引入（T-1=partial）。"
+    },
+    {
+      "id": "9-15×8 矩阵（§7.4）",
+      "result": "pass",
+      "cmd": "按规格 §7.4 逐条核：A 工程纪律 15 条（Q-1..Q-15）＋ B DSH 代码品味 8 项（T-1..T-8），逐条 pass/partial/n-a；证据逐条见 matrix",
+      "evidence": "✅ 15 条纪律：pass 9（Q-2/3/4/5/6/8/9/10/15）、partial 1（**Q-11**：CI ①e 步骤 success 但 job log 明写 `::warning::①e 覆盖率生成失败` ＋ `G5 未武装` ⇒ 覆盖率未判；且 vitest.config.ts `coverage.include: ['./src/**/*.ts']` 客观不含 renderer）、n-a 5（Q-1/7/12/13/14）。✅ 8 项品味：pass 7、partial 1（**T-1**：sentinel.ts 3/6，base 同 ⇒ 存量）、n-a 0。✅ 强制 partial 项 Q-11、T-1 均如实 partial。"
+    },
+    {
+      "id": "10-M9 head 与 base 各跑",
+      "result": "pass",
+      "cmd": "D:\\tmp\\rev-final5（head acf1a4176）与 D:\\tmp\\rev-final5-base（base 88430802）各跑 npx vitest run tests/acceptance/mvp1-m9-one-pass.test.ts",
+      "evidence": "✅ **存量红，非本 PR 引入**：base（88430802）= `Tests 2 failed | 5 passed (7)`、exit 1；head（acf1a4176）= `Tests 2 failed | 5 passed (7)`、exit 1。失败项与文案逐条相同：⑥ `AssertionError: src/ 内不得有链外进化调用点（命中：src\\loops\\middle-evolution-engine.ts,src\\agent\\loop-handlers.ts）: expected […(2)] to deeply equal []`；§4.4 `expected [ '1', '2', '3', '4', '5' ] to deeply equal [ '1', '2', '3', '4', '5', '6' ]` ⇒ 本 PR 既未引入也未修复，归 #656 线。"
+    },
+    {
+      "id": "11-门禁面",
+      "result": "pass",
+      "cmd": "读 gate-exemptions/2026-10-27-t8-1051-pointer.md 与 DOCS-REGISTRY 的 DOC-0308 条目; bash scripts/control-tower/check-gate-protection.sh --changed-base 88430802",
+      "evidence": "✅ 豁免件 3 条齐：① agents/P1-能跑通/AGENTS.md（⑦ 指针 8→9、口径 12→13，均实测：该文件 diff 仅这两处）② 本豁免文件自身（gate-exemptions 目录**自覆盖**）③ docs/authority/DOCS-REGISTRY.yaml（登记本豁免件 DOC-0308）；每条带理由与 #1051 指针。✅ DOC-0308 条目在库（1269 行，path 指向该豁免件，owner=CTO）。✅ check-gate-protection：`结果: 9 通过, 0 失败`、GATE_PROTECTION_EXIT=0（清单 22 条 PATTERNS、pin 一致 ef7c52a4、diff 15 条、受保护路径变更 **3 条**且逐条有合规豁免）。"
+    },
+    {
+      "id": "12-补丁指纹现算",
+      "result": "pass",
+      "cmd": "GITEA_TOKEN=<git remote get-url gitea 的凭据> SYNO_GITEA_API=http://MacBook-Pro-2.local:3000/api/v1 bash scripts/control-tower/check-merge-conditions.sh --pr 1053 --diff-fingerprint; 另用同一口径手工复算 git diff --no-color -M --full-index --binary 88430802 acf1a4176 -- . ':(exclude)docs/synova/reviews/**' | sha256sum",
+      "evidence": "✅ 脚本现算（exit 0）= `3e629b930fe02dba2753eaf176e7f99f962ad17490da53462bd9babd8e37c0da`（fp12=**3e629b930fe0**），与任务书给定值**逐字一致**。✅ 独立手工复算同值（166,016 B；三点 `88430802...acf1a4176` 变体亦同值）⇒ 非脚本自证。merge-base(88430802, acf1a4176)=88430802，与 base tip 一致。"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warn",
+      "where": "Gitea PR #1053 元数据（title / mergeable）",
+      "what": "标题仍为 `WIP: [T1/7] fix(#1051): …（M4 出口面收口）`、`mergeable=false`（state=open, merged=false）。**代码面无冲突**：base tip 是 head 的祖先、`git diff --check` 零错、全树零冲突标记、b9831bc0→acf1a4176 仅 DOCS-REGISTRY＋豁免件两处变化（其余 13 件 blob 逐一相同）。⇒ mergeable=false 与 WIP 标记同源，属流程面：L1 转正式标题（并统一 T1–T8 口径）后才能进入合并；不作代码阻断。"
+    },
+    {
+      "severity": "info",
+      "where": "Q-11 / CI ①e（run 2210 job log）/ vitest.config.ts",
+      "what": "Q-11 只能判 partial（如实）：①e 步骤 conclusion=success，但日志明写 `::warning::①e 覆盖率生成失败（见 /tmp/synova-cov.log 尾部）` 且 `G5 未武装（未传 --coverage-summary/--coverage-sha/--baseline）⇒ 不判覆盖率/重复率`；另 `vitest.config.ts` `coverage.include: ['./src/**/*.ts']` 客观不含 electron-renderer ⇒ 本 PR 的 renderer 覆盖率无法由该口径产出。属工具口径限制＋已披露，非造假。"
+    },
+    {
+      "severity": "info",
+      "where": "src/routes/sentinel.ts 头注（3/6）",
+      "what": "六段头缺 @error/@authority/@not-here（现有 3 个标签在内层 ticket-transition 注，文件头无标签）；**base 88430802 同为 3/6、本 PR 未改头注** ⇒ 存量缺口。T-1 据此 partial（不阻断本 PR）；建议另批补齐，否则 T-1 将永久 partial。"
+    },
+    {
+      "severity": "info",
+      "where": "tests/acceptance/mvp1-m9-one-pass.test.ts",
+      "what": "M9 存量红 2/7（⑥ SEG-6 链外进化调用点；§4.4 SEG-4.4 段标记 1..5 vs 1..6），head 与 base 逐条相同 ⇒ 非本 PR 引入；不作本 PR 阻断，M9 仍未绿，归 #656 线跟踪。"
+    },
+    {
+      "severity": "info",
+      "where": "A12 证据形态 / 测试件头口径",
+      "what": "A12 无独立 `it`（命令级 `git grep -c \"Date.now()\"` 无输出 exit 1），符合规格 §7.2；但测试件头 :2 仍写「A1–A14 全覆盖」，与 A12 无 it 的口径差异未在同一处收口（Note「决定 5」已记为 O-1 交 L1）。属已披露口径差异，不作阻断。"
+    },
+    {
+      "severity": "info",
+      "where": "A8 生产侧落点",
+      "what": "A8 的「零请求」由两层证明：expected 的 `shouldLoadTrends` 参照实现＋真值表，以及 Container/RightPanel 的源码断言。生产行为**未做运行时 hook 测试**（render 桥不跑 hook），纯函数化 deferred 已在 expected:23-27、AGENTS.md:25、PR 正文如实标注 ⇒ 已披露，不阻断。"
+    },
+    {
+      "severity": "info",
+      "where": "electron-renderer/src/lib/measurement-trends.ts:221-233",
+      "what": "「永不抛」的极小缝成立：`encodeURIComponent(orgId)` 的 scope 计算在首个 try 之前，孤立代理项 orgId 会抛 URIError；但函数是 async ⇒ 变 rejected promise，被 MeasurementTrendContainer.tsx:81-93 的 `.catch` 收下并转 `UNEXPECTED_LOADER_REJECTION` degraded view ⇒ 端到端「降级不白屏」成立。Note 已知限制 2 已披露，不阻断。"
+    },
+    {
+      "severity": "info",
+      "where": "electron-renderer/AGENTS.md:3",
+      "what": "域守则写 `as_of 8b62b400e`，但该提交（2026-10-27 04:58，T5）时 `electron-renderer/AGENTS.md` **尚不存在**（该文件建于 da392487e（T6）、最后改于 b6ba42e95（T8.1））⇒ as_of 指针不实。文档级小瑕（不影响判据/门禁），建议改为真实 as_of 或改为「本批」。"
+    },
+    {
+      "severity": "info",
+      "where": "复核环境（非 PR 问题）",
+      "what": "node v24.16.0 / npm 11.13.0 / ABI 137（M1 锚 v22.23.2，按任务书如实记录）；worktree 不带依赖 ⇒ 以 junction 指向主树 node_modules（含 electron-renderer/node_modules），better-sqlite3 12.11.1 直跑正常、未重建、未改任何 tracked 文件。"
+    }
+  ],
+  "matrix": {
+    "definition": "规格 §7.4 = A 工程纪律 15 条（Q-1..Q-15）＋ B DSH 代码品味 8 项（T-1..T-8），即任务书所称「15×8」",
+    "discipline_15": [
+      { "id": "Q-1", "result": "n-a", "evidence": "本批无 tool execute 面：15 件 diff 内零 tool/execute/SDK 工具定义，变更集中于 route/loader/展示/容器/装配/验收件/文档" },
+      { "id": "Q-2", "result": "pass", "evidence": "A11 四态输出 × 4 禁渲模式全不命中（test:896-903；模式 EXP_FORBIDDEN_RENDER_PATTERNS：token=/secret/apiKey/Bearer，expected:345-350），50/50 绿" },
+      { "id": "Q-3", "result": "pass", "evidence": "loader 统一 `MeasurementTrendsError.format()` 出 `<CODE>: `（measurement-trends.ts:96/:108-109），EXP_ERROR_SEPARATOR=': '（expected:376）；T1 反例断言 5 个 code 全集覆盖且前缀正确（test:663-679）；服务端 400 两码 INVALID_DAYS/INVALID_ORG_ID" },
+      { "id": "Q-4", "result": "pass", "evidence": "`assertStateExhaustive` switch(state) + `const never: never = state` 兜底（Section:61-65），并在 :104 **被调用**（非死代码）；新增 union 成员 ⇒ tsc 红" },
+      { "id": "Q-5", "result": "pass", "evidence": "Q-5 源码断言用例在（test:1004-1028：cancelled 声明先于 loader、cleanup 置 true ≥2、then/catch 双分支守卫、切片定位非空），本批 50/50 全绿" },
+      { "id": "Q-6", "result": "pass", "evidence": "m4 验收件 `Date.now()` 0 命中（git grep exit 1，HEAD 与工作树同）；clock.ts 恰 1 处真调用（:4）＋1 行注释（:1）＝唯一注入缝" },
+      { "id": "Q-7", "result": "n-a", "evidence": "本批无事件词表面（无事件总线/词表变更）" },
+      { "id": "Q-8", "result": "pass", "evidence": "A9 断言 `expect(out).toContain(EXP_SEMANTICS_VERSION)`（test:935）、A14 四态同断言（:891），EXP_SEMANTICS_VERSION='cost0-v1'（expected:42）＝产品常量 TREND_SEMANTICS_VERSION（loader:69）" },
+      { "id": "Q-9", "result": "pass", "evidence": "A3 days 五格+上界 400（test:431-457）、A7 orgId 四形态 400 原样回显（:384-398）、A6 两 org 不相交（:370-382）、A4/A5 形状保真；loader 五码齐（:38-43）" },
+      { "id": "Q-10", "result": "pass", "evidence": "expected 为唯一期望源：产品代码 import = 0（src/ 零命中；electron-renderer/ 仅散文提及）；36 处 EXP_TESTID、裸 testid 0；A4/A5/T8 新期望全在该文件（EXP_A4/EXP_A5/EXP_DERIVE_STATE/EXP_CANCELLED_GUARD/EXP_EXTRA_SEED_WINDOW/EXP_EMPTY_FORBIDDEN_VALUES）" },
+      { "id": "Q-11", "result": "partial", "evidence": "CI ①e 步骤 success，但 job log `::warning::①e 覆盖率生成失败` ＋ `G5 未武装` ⇒ 覆盖率未判；`vitest.config.ts coverage.include ['./src/**/*.ts']` 不含 renderer ⇒ 该口径客观产不出本 PR 的 renderer 覆盖率（工具口径限制＋已披露）" },
+      { "id": "Q-12", "result": "n-a", "evidence": "无并发面；规格 §7.4 明确 days 上界属「上限即纪律」，不冒充 Q-12" },
+      { "id": "Q-13", "result": "n-a", "evidence": "随 Q-2：本批无凭证/密钥处理面，A11 已兜渲染泄漏" },
+      { "id": "Q-14", "result": "n-a", "evidence": "无遥测面（未新增埋点/指标上报）" },
+      { "id": "Q-15", "result": "pass", "evidence": "我自做 3 变异全部必红（encodeURIComponent→T1 反例、onOpenOnePager→T2 无死按钮、容器 orgId 实参→A8-b）；A8 零请求两层断言（shouldLoadTrends 真值表＋容器源码）全绿" }
+    ],
+    "taste_8": [
+      { "id": "T-1", "result": "partial", "evidence": "六段头（§4bis，TS 无 @exit）：4/5 产品文件 6/6（loader/Section/Container/RightPanel）；src/routes/sentinel.ts = **3/6**（缺 @error/@authority/@not-here，现有 3 标签在内层 helper），base 同为 3/6 ⇒ 存量" },
+      { "id": "T-2", "result": "pass", "evidence": "typed error 带 code：服务端 400 两码（sentinel.ts:144 INVALID_DAYS、:149 INVALID_ORG_ID）＋ loader 五码（:38-43）；无裸中文 throw 直出 HTTP；container 契约外抛错转 UNEXPECTED_LOADER_REJECTION" },
+      { "id": "T-3", "result": "pass", "evidence": "fail loud：days/orgId 越界必 400（不 clamp、不折 7）；未选客户零请求（Container 早退守卫＋RightPanel activeOrgId 门控）；A8 源码断言＋我 3 变异被抓" },
+      { "id": "T-4", "result": "pass", "evidence": "explicit authority：4 个产品文件头写明调用方与「只读 GET」（loader:21-22 / Section:18 / Container:21 / RightPanel:15），超出规格「三处」要求；sentinel 缺项归 T-1" },
+      { "id": "T-5", "result": "pass", "evidence": "A14 四态各断言一次（test:886-893 循环内逐态 expect limitations＋语义版本）＋ 各文件头已知限制 ＋ electron-renderer/AGENTS.md §已知限制 ＋ PR 正文/Note 各 10 条" },
+      { "id": "T-6", "result": "pass", "evidence": "设计哲学一句「一个分离＋两条承诺」在 loader 头 :4-6；electron-renderer/AGENTS.md:5 复述；Section/Container/RightPanel 头注同一句式" },
+      { "id": "T-7", "result": "pass", "evidence": "测试配对 CT-40：A1–A14 全号在（逐号 ≥1）＋ M-1..M-10 定位表；A12 按规格为命令级（无 it，测试件 :6/:48 自述）；我另做 3 变异印证判别力" },
+      { "id": "T-8", "result": "pass", "evidence": "electron-renderer/AGENTS.md **2723 B**（≤3.5KB）、**32 行**（≤60）、7 个标题（是什么/谁改/怎么算完成/红线/已知限制/改本域涉及的包 ≥5 节）；字节 2723、根件 23181、13 份合计 23559、最大 3151、合计 46740 与根件记载逐字一致" }
+    ],
+    "rollup": {
+      "discipline_15": { "pass": 9, "partial": 1, "n-a": 5 },
+      "taste_8": { "pass": 7, "partial": 1, "n-a": 0 },
+      "required_partials_present": { "Q-11": "partial", "T-1": "partial" }
+    },
+    "a1_a14": [
+      { "id": "A1", "evidence": "缺省 7 天窗口：OLD(8 天前) 排除 / UP(2 天前) 在内；放宽 days=3650 后 OLD 回来（test:400-416，真 express）" },
+      { "id": "A2", "evidence": "days=1 ⇒ count=1、previousValue/changeRatio=null（test:417-430）" },
+      { "id": "A3", "evidence": "days 非法五格 0/-5/abc/1e9/3651 ⇒ 400 INVALID_DAYS 不 clamp；3650 ⇒ 200（test:431-457）" },
+      { "id": "A4", "evidence": "空表：ok:true/count:0/summary:[]/degraded=undefined ＋ 宽窗 count=3 id 集合对照 ＋ 真 loader view ＋ 真 view 渲染 empty（无编造值）＋ deriveState 源码映射（test:463-570）" },
+      { "id": "A5", "evidence": "三观测：count=3、每行 count=3、latest/previous/changeRatio 0.5/-0.75/0 手算；previous=0 ⇒ previousValue=0 且 changeRatio=null、方向≠flat（test:572-617）" },
+      { "id": "A6", "evidence": "两 org 隔离：AA 只含 UP、BB 只含 DOWN、交集为空（test:331-383）" },
+      { "id": "A7", "evidence": "orgId 非法四形态（含空格/单字符/数组/qs 对象）⇒ 400 INVALID_ORG_ID，received 原样回显（test:384-398）" },
+      { "id": "A8", "evidence": "零请求：shouldLoadTrends 真值表（null/undefined/'' ⇒ false 且不产生 URL）＋ Container 源码断言（守卫在 loader 调用前、恰 1 次调用、零网络原语、提示态无降级条、orgId 第 2 实参）（test:954-997）" },
+      { "id": "A9", "evidence": "M3 四真值经 Section：4 个 metricId/值/单位全在场、单观测 ⇒ data-trend=unknown（test:910-937）" },
+      { "id": "A10", "evidence": "一页纸四章齐（与 EXP 单一源逐字相等）＋ [src:] 指针 ＋ coverage.missingPointerLines=0 ＋ 解析审计 unresolved=0、报告外可溯源≥1（test:1129-1164）" },
+      { "id": "A11", "evidence": "四态输出均不命中 token=/secret/apiKey/Bearer（test:896-903）" },
+      { "id": "A12", "evidence": "**命令级证据，无独立 it**：`git grep -c \"Date.now()\" HEAD -- <m4 件>` 无输出、exit 1（工作树同）；并有意不复写被搜字符串以免自指失效（文件头 :6/:48 自述）" },
+      { "id": "A13", "evidence": "装配语义源码断言：单挂载点 count=1、门控 activeOrgId !== null、一页纸回调仅 ws_ga 且含 setTab('report') 恰 1 次、tab state 上提在任何早退前、GAWorkspaceTabs 自身无 tab state（test:1054-1104）" },
+      { "id": "A14", "evidence": "四态各自含 limitations 标记＋cost0-v1 口径版本（test:886-893）" }
+    ],
+    "merge_integrity": {
+      "prev_feature_tip": "b9831bc00f7ab7cbeb9a8b908c0f0a81dd0fbcf0",
+      "merge_head": "acf1a4176a416f3d7ad0810724e2b21c3e6146b0",
+      "base_tip": "88430802f968fea06fd9721a6d1f1db7cca03c31",
+      "pr_files_changed_by_merge": ["docs/authority/DOCS-REGISTRY.yaml (0306→0308 并保留 main 0306/0307)", "gate-exemptions/2026-10-27-t8-1051-pointer.md (指针 0306→0308)"],
+      "other_pr_files_identical_to_feature_tip": "13/13 blob 相同",
+      "conflict_markers": 0,
+      "diff_check_exit": 0,
+      "docs_registry_ids": "161 → 162"
+    }
+  }
+}
