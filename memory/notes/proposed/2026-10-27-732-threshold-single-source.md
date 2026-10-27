@@ -88,3 +88,37 @@
 - 判据④（重写）：`grep -c resolveThresholds aggregate.ts` = **0**；aggregate 的 `src/sentinel` 行**全是 `import type`**（值依赖 0）
   ⇒ `SYNO_CI=1 bash scripts/check-content-coupling.sh` = `CONTENT-COUPLING: OK` / exit **0**
 - 类型面（三改件，临时 tsconfig 扩 `extensions/`）：`tsc -p` exit 0；`npm run lint` 无输出；`npm run check:architecture` `架构检查: 全部通过 ✅`
+
+## 九、返修批追加（#1070 收口·活2｜裁 426 (d)(e)｜2026-10-27）
+
+**缺口来自队外复核实测（非本卡自述）**
+- **R-A 假绿#3**：`DEFAULT_THRESHOLDS` 是 manifest 基线值的**第二份拷贝**（休眠第二把尺子）——
+  镜像漂移突变（`debt_equity.warning` 1.5→9.9）下，本文件**改前 22/22 全绿**。
+- **R-B F-3**：4 件直调测试的 `THRESHOLDS` 常量是**第三份拷贝** —— manifest 改值而夹具不同步 = "旧尺子测新行为"。
+
+**加什么（只加断言，不动被测对象/夹具）** —— `tests/extensions/threshold-single-source.test.ts` 新增区 ⑦
+
+| 断言 | 对象 | 判据 |
+|---|---|---|
+| **⑦d** | `DEFAULT_THRESHOLDS` 六键（`roic_wacc_spread`／`capital_turnover`／`debt_equity`／`interest_coverage`／`asset_turnover`／`receivable_turnover_days`） | 键集**恰 6 键（不多不少）** ＋ 逐键 warning/critical **两档都 ≡ `manifest.thresholds`** |
+| **⑦e** | 4 件直调测试夹具 `THRESHOLDS` | 逐键 ≡ `manifest.thresholds[对应键]`（ccc 两件 → `cash_conversion_cycle_days`；债务两件 → `short_term_debt_ratio`） |
+
+**实现约束（为什么只能源文本解析）**：两处常量**均未导出**，且都属"禁改"对象（被测件／被断言夹具）
+⇒ 只读源文本 —— `DEFAULT_THRESHOLDS` 沿用 ⑥:418 的 `split('const DEFAULT_THRESHOLDS')` 先例；
+夹具用 `const THRESHOLDS = { warning: X, critical: Y }` 正则。**未加 export、未改那 4 件行为断言**。
+解析不到 ⇒ **红并点名文件与键**（禁"没找到就当没事"的静默假绿）；失败消息带键名与两侧值。
+
+**实测（本会话原始输出；日志 `/tmp/825/coder-1068/`）**
+
+| 判据 | 命令 | 原始输出关键段 | exit |
+|---|---|---|---|
+| **a** 基线 | `node node_modules/.bin/vitest run tests/extensions/threshold-single-source.test.ts` | `Test Files  1 passed (1)` ／ `Tests  28 passed (28)`（改前 22 ⇒ +6 例） | **0** |
+| **b** 突变1（改坏必红） | 同上（`aggregate.ts` DEFAULT `debt_equity.warning` **1.5→9.9**） | `Tests  1 failed \| 27 passed (28)`；`AssertionError: 镜像漂移 debt_equity.warning: DEFAULT_THRESHOLDS=9.9 ≠ manifest.thresholds=1.5（裁 426 (d): 代码里不许有第二把尺子）` @ `:511` | **1** |
+| **b'** 复原 | `git checkout -- .` → 同命令 | `git status --porcelain` **0 行**；`Tests  28 passed (28)` | **0** |
+| **c** 突变2（改坏必红） | 同命令（`manifest.json` ccc `warning` **90→91**，**不动那 4 件夹具**） | `Tests  5 failed \| 23 passed (28)`；含 ⑦e 两条 `夹具漂移 …/cash-conversion-cycle.test.ts THRESHOLDS.warning=90 ≠ manifest.thresholds['cash_conversion_cycle_days'].warning=91` @ `:535`（两件 ccc 夹具各一条） | **1** |
+| **c'** 复原 | `git checkout -- .` → 同命令 | `git status --porcelain` **0 行**；`Tests  28 passed (28)` | **0** |
+| **d** 收口 | `git status --porcelain` | **0 行**（两处突变均 `git checkout -- .` 复原，无 `git stash`） | **0** |
+| **e** pre-commit | `SYNO_CI=1 GITHUB_ACTIONS=true SYNO_DIFF_BASE=gitea/local-main bash scripts/pre-commit-check.sh` | 末段 `✅ 全部 12 组通过` | **0** |
+
+突变规模（防"顺手改多"）：两处突变各自 `git diff --stat` = `1 file changed, 1 insertion(+), 1 deletion(-)`。
+**禁改对象零残留**：`git diff --name-only gitea/local-main..HEAD` 见 PR #1068 正文（只多出本文件＋本 Note）。
