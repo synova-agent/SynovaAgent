@@ -1,0 +1,238 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Synova 岗位包 v2 manifest 契约（随仓件；#1075 P1-a）",
+  "description": "根对象 = 岗位包 manifest.json 的形状。执行体是 src/init/role-pack-schema.ts 的 zod（本仓无 ajv）；两者键集由 tests/init/role-pack-schema.test.ts 的 drift 用钉死。$defs 只定义五件内容件的最小声明要求（契约，本批不做装载期字段级校验 —— 豁免清单见 FIELD_LEVEL_VALIDATION_EXEMPT_PIECES）。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "name",
+    "version",
+    "type",
+    "displayName",
+    "entryPoint",
+    "roleId",
+    "pieces",
+    "refs"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "../../schema/role-pack-v2.schema.json",
+      "description": "随仓 schema 指针（相对角色包目录）；loader 只校验这个常量。"
+    },
+    "schemaVersion": {
+      "const": 2,
+      "description": "包契约版本。缺省不等于 2；≠2 装载期 fail-loud（ROLE_PACK_SCHEMA_VERSION_UNSUPPORTED）。"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "包名（出厂约定 role-<roleId>）。"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "包自身版本（v2 迁移后为 2.0.0）。"
+    },
+    "type": {
+      "const": "role-preset",
+      "description": "内容类型固定值。"
+    },
+    "displayName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "entryPoint": {
+      "type": "string",
+      "minLength": 1,
+      "description": "本包操作载荷入口（出厂件为 ./context-manifest.yaml）。"
+    },
+    "roleId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,62}$",
+      "description": "岗位 id（= 目录名；SAFE_ROLE_ID，防路径穿越）。"
+    },
+    "pieces": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "manifest.json",
+          "knowledge-scope.yaml",
+          "context-manifest.yaml",
+          "output-template.ref",
+          "capabilities.yaml",
+          "acceptance-criteria.yaml"
+        ]
+      },
+      "description": "本包六件文件名（含 manifest.json 自身）；必须与磁盘文件集双向相等。"
+    },
+    "refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind"],
+        "properties": {
+          "kind": {
+            "enum": ["file", "profile", "scope"]
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "kind=file：相对仓库根的路径（去锚后）。"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "kind=scope：同包 scopes[].id；kind=profile：profile 键（本期白名单仅 business-plan）。"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "required": ["kind"],
+              "properties": { "kind": { "const": "file" } }
+            },
+            "then": { "required": ["path"] }
+          },
+          {
+            "if": {
+              "required": ["kind"],
+              "properties": { "kind": { "enum": ["scope", "profile"] } }
+            },
+            "then": { "required": ["name"] }
+          }
+        ]
+      },
+      "description": "第二份独立声明（真源是磁盘）：由 context-manifest.yaml 的 contexts[].source 按唯一投影规则派生，双向对账。"
+    },
+    "note": {
+      "type": "string",
+      "description": "可选人读说明（schema 允许保留；本批不消费）。"
+    }
+  },
+  "$defs": {
+    "knowledgeScope": {
+      "title": "knowledge-scope.yaml 最小声明（P1-b 生成器契约；本批不装载期校验）",
+      "type": "object",
+      "required": ["roleId", "version", "scopes"],
+      "properties": {
+        "roleId": { "type": "string", "minLength": 1 },
+        "version": { "const": 2 },
+        "scopes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{0,63}$" },
+              "label": { "type": "string" },
+              "collections": { "type": "array", "items": { "type": "string" } },
+              "sensitivity": { "type": "string" }
+            }
+          }
+        },
+        "deny": { "type": "array", "items": { "type": "object", "required": ["id"] } }
+      }
+    },
+    "contextManifest": {
+      "title": "context-manifest.yaml 最小声明（P1-b 生成器契约；本批不装载期校验）",
+      "type": "object",
+      "required": ["roleId", "version", "contexts", "prompt"],
+      "properties": {
+        "roleId": { "type": "string", "minLength": 1 },
+        "version": { "const": 2 },
+        "contexts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "label", "source"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "label": { "type": "string", "minLength": 1 },
+              "source": { "type": "string", "minLength": 1 },
+              "why": { "type": "string" },
+              "required": { "type": "boolean" }
+            }
+          }
+        },
+        "prompt": {
+          "type": "object",
+          "required": ["systemAddendum"],
+          "properties": { "systemAddendum": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "capabilities": {
+      "title": "capabilities.yaml 最小声明（P1-b 生成器契约；本批不装载期校验）",
+      "type": "object",
+      "required": ["roleId", "version", "capabilities"],
+      "properties": {
+        "roleId": { "type": "string", "minLength": 1 },
+        "version": { "const": 2 },
+        "capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "label", "enabled"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "label": { "type": "string", "minLength": 1 },
+              "enabled": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "acceptanceCriteria": {
+      "title": "acceptance-criteria.yaml 最小声明（P1-b 生成器契约；本批不装载期校验）",
+      "type": "object",
+      "required": ["roleId", "version", "criteria"],
+      "properties": {
+        "roleId": { "type": "string", "minLength": 1 },
+        "version": { "const": 2 },
+        "criteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "text"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "text": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "outputTemplate": {
+      "title": "output-template.ref 最小声明（P1-b 生成器契约；本批不装载期校验）",
+      "type": "object",
+      "required": ["templateId", "sections"],
+      "properties": {
+        "templateId": { "type": "string", "minLength": 1 },
+        "sections": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "title", "must"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "title": { "type": "string", "minLength": 1 },
+              "must": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+            }
+          }
+        },
+        "emptyState": { "type": "string" }
+      }
+    }
+  }
+}

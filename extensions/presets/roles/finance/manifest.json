@@ -1,17 +1,24 @@
 {
-  "$schema": "https://synova.dev/schemas/extension-manifest-v1.json",
+  "$schema": "../../schema/role-pack-v2.schema.json",
+  "schemaVersion": 2,
   "name": "role-finance",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "role-preset",
   "displayName": "finance",
   "entryPoint": "./context-manifest.yaml",
   "roleId": "finance",
   "pieces": [
+    "manifest.json",
     "knowledge-scope.yaml",
     "context-manifest.yaml",
     "output-template.ref",
     "capabilities.yaml",
     "acceptance-criteria.yaml"
   ],
-  "note": "角色包的自描述契约。entryPoint 指向本包的操作载荷（上下文清单）而非常规 loader —— 角色包是内容，不是带 loader 的扩展点（见 extensions/presets/manifest.json 的 loaderPending）。"
+  "refs": [
+    { "kind": "file", "path": "extensions/ontology/outcome/financial.json" },
+    { "kind": "scope", "name": "finance.cost" },
+    { "kind": "profile", "name": "business-plan" }
+  ],
+  "note": "角色包的自描述契约（v2）。refs 是由 context-manifest.yaml 的 contexts[].source 按 §2.4 投影规则派生的第二份独立声明；真源是磁盘，三方（refs／source／pieces）相等才装配通过。"
 }

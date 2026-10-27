@@ -34,3 +34,4 @@ entries:
   - { module: src/agent/prompt-assembler.ts,       surface: model,         obligation: expected, asset_glob: "tests/expected/prompt/**",       issue: "#913", expiry: "2027-06-30" }
   - { module: src/agent/report-assembler.ts,       surface: human-visible, obligation: expected, asset_glob: "tests/expected/report/**",       issue: "#913", expiry: "2027-06-30" }
   - { module: src/config/redact.ts,              surface: protocol,      obligation: exempt,   issue: "#955", reason: "Q-2 秘密脱敏helper：行为由 tests/config/redact.test.ts 覆盖，不设 expected 资产", expiry: "2027-06-30" }
+  - { module: src/init/role-pack-schema.ts,       surface: protocol,      obligation: exempt,   issue: "#1075", reason: "岗位包 v2 装载期结构与 refs 校验（纯核＋IO 壳，无用户可见输出）：行为由 tests/init/role-pack-schema.test.ts 28 用例覆盖，不设 tests/expected 资产；生产消费者＝src/init/preset-loader.ts", expiry: "2027-06-30" }

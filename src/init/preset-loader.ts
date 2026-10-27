@@ -2,7 +2,7 @@
  * src/init/preset-loader.ts — 角色预设包（Role Pack）宿主侧 loader
  *
  * 架构位置: **⓪-b（人侧入口）内容载体** —— `extensions/presets/`（宪章 §4.1）。
- *   一个岗位一个目录，五件套声明「这个岗位该给 agent 带什么上下文」。
+ *   一个岗位一个目录，六件（v2：manifest ＋ 五件内容）声明「这个岗位该给 agent 带什么上下文」。
  *   **加一个角色目录 = 加一个岗位，不改宿主代码**（宪章三条不可妥协之①「文件驱动」）。
  *
  * 出处: K12-01 **段二**（#184）—— 段一已落内容面（`extensions/presets/**`，
@@ -18,13 +18,15 @@
  * 契约（铁律 47）:
  *   @input  — 无参数（零参查询；探针只驱动零参导出，见 `probe-role-pack.ts`「观测面」段）。
  *             可选环境变量 `SYNOVA_PRESETS_ROOT` 覆盖内容根（测试注入缝，同 `SYNOVA_CONTENT_REGISTRY_DISABLE` 惯例）。
- *   @output — `loadRolePacks(): PresetLoadReport` — 角色清单 + 每角色的五件套存在性 + degraded 信号
+ *   @output — `loadRolePacks(): PresetLoadReport` — 角色清单 + 每角色的六件存在性 + v2 结构/refs 校验
+ *             （`RolePack.schemaVersion`／`schemaValid`／`validation`，additive）＋ degraded 信号
  *             `listRolePacks(): string[]` — 角色 id 清单（零参，机器可观测）
  *             `resolveRoleKnowledgeScope(roleId)` — **请求路径**用的知识范围解析（#731 / T1；
  *               按需读盘 ＋ mtime/size 缓存，见下「二bis」段）
  *             （有参查询不入契约面：无生产消费方即不导出，避免"导出但无人调用"的表面积 —— 铁律 0-2）
  *               故探针不驱动；保留给生产消费方与测试）
- *   @degraded — 内容根缺失 / roles 目录缺失 / 角色目录内文件读不到 / **knowledge-scope.yaml 内容坏**
+ *   @degraded — 内容根缺失 / roles 目录缺失 / 角色目录内文件读不到 / **knowledge-scope.yaml 内容坏** /
+ *             **v2 结构或 refs 对账不过**（#1075 P1-a）
  *             ⇒ **不抛**，返回 `degraded: true` + `errors[]` 逐条点名 + `log.warn/error`（铁律 11/24/31）。
  *             ⚠️ 区分三类：**ENOENT = 正常默认**（角色目录为空 / 该角色无 scope 文件 ⇒ degraded 但非错误）、
  *             **读失败/解析失败/形状非法 = 真错误**（进 `errors[]`）、
@@ -33,12 +35,18 @@
  * @authority — 由 `src/deploy/content-registry.ts` 的 `type:'presets'` 条目 init/cleanup 调用（boot 与
  *   content-reload 同一入口）；`probe-role-pack.ts` 只驱动零参只读导出；其它模块不得绕过 content-registry 直调。
  * @not-here  — 不做内容面热加载编排（`content-reload.ts`）；不改写磁盘（只读 loader）；不定义权限项
- *   （`permission-grants.ts`）；不读 `manifest.pieces[]`（宿主期望集 `EXPECTED_PIECES` 为准，见 #1063）。
+ *   （`permission-grants.ts`）；不实现 v2 结构与 refs 判定（唯一实现 = `src/init/role-pack-schema.ts`；
+ *   loader 只折 problems 进 `errors[]`）。
  */
 import { createLogger } from '@synova/logger';
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
 import { load as parseYaml } from 'js-yaml';
+import {
+  ROLE_PACK_PIECES,
+  validateRolePackDir,
+  type RolePackValidation,
+} from './role-pack-schema';
 
 const log = createLogger('init/preset-loader');
 
@@ -51,12 +59,18 @@ const ROLES_SUBDIR = 'roles';
 export interface RolePack {
   /** 角色 id（= 目录名，去扩展名前的原名） */
   readonly roleId: string;
-  /** 本包**实际存在且非空**的五件套文件名（按磁盘实测，非声明） */
+  /** 本包**实际存在且非空**的六件文件名（按磁盘实测，非声明） */
   readonly pieces: readonly string[];
-  /** 五件套里缺失的文件名（空数组 = 齐备） */
+  /** 六件里缺失的文件名（空数组 = 齐备） */
   readonly missing: readonly string[];
   /** 六件里 `knowledge-scope.yaml` 的**内容**解析结果（#731 / T1；additive，不改既有字段语义） */
   readonly knowledgeScope: KnowledgeScopeDeclaration;
+  /** 包契约版本（`manifest.schemaVersion`；缺失/不可读 ⇒ null）—— #1075 P1-a additive */
+  readonly schemaVersion: number | null;
+  /** v2 结构 ＋ refs 对账是否通过（缺 `manifest.json` ⇒ false＝未完成校验，原因在 `missing`） */
+  readonly schemaValid: boolean;
+  /** 校验明细（纯数据；`problems` 已逐条折进 `PresetLoadReport.errors`）—— #1075 P1-a additive */
+  readonly validation: RolePackValidation;
 }
 
 /** `loadRolePacks()` 的返回 */
@@ -71,15 +85,11 @@ export interface PresetLoadReport {
   readonly errors: readonly string[];
 }
 
-/** 五件套（与角色包 `manifest.json` 的 `pieces[]` 同源；此处为宿主侧期望集） */
-const EXPECTED_PIECES: readonly string[] = [
-  'manifest.json',
-  'knowledge-scope.yaml',
-  'context-manifest.yaml',
-  'output-template.ref',
-  'capabilities.yaml',
-  'acceptance-criteria.yaml',
-];
+/**
+ * 六件（含 `manifest.json`）：**宿主侧期望集**，`manifest.pieces[]` 的声明对账基准。
+ * 单一出处 = `role-pack-schema.ROLE_PACK_PIECES`（#1075 P1-a：v2 起 manifest 自身也计入；顺序仍是契约的一部分）。
+ */
+export const EXPECTED_PIECES: readonly string[] = ROLE_PACK_PIECES;
 
 /** 六件里载荷知识范围的这一件（裁 423：唯一载体 = 岗位包实物） */
 const SCOPE_FILE = 'knowledge-scope.yaml';
@@ -356,11 +366,15 @@ function isNonEmptyFile(abs: string): boolean {
 }
 
 /**
- * 读一个角色包（磁盘实测五件套，不读声明）。
+ * 读一个角色包（磁盘实测六件 ＋ v2 结构/refs 校验）。
  *
  * #731 / T1：`knowledge-scope.yaml` 从"只判存在且非空"升级为**解析内容 ＋ 校验** ——
  *   内容坏（语法/形状/空 scopes/重复 id）⇒ 逐条进 `errors[]` ⇒ `degraded: true` ⇒ **可观测**，
  *   不再"文件在就当作齐备"。文件缺席/空文档 ⇒ 不计内容错（KL-T1-1），缺件另由 `missing` 报。
+ *
+ * #1075 P1-a：六件存在性判定后接 `validateRolePackDir()`（结构 ＋ `pieces`/`refs`/内容源三方对账）；
+ *   问题逐条折成 `${roleId}: ${code} ${message}` 进 `errors[]`（点名可 grep）＋ `degraded:true`，**不抛**。
+ *   🔴 `manifest.json` 缺件时**跳过** schema 校验（缺件已由 `missing`＋errors 报，不再级联 UNREADABLE）。
  */
 function readRolePack(rolesRoot: string, roleId: string, errors: string[]): RolePack {
   const roleDir = join(rolesRoot, roleId);
@@ -393,7 +407,32 @@ function readRolePack(rolesRoot: string, roleId: string, errors: string[]): Role
     );
   }
 
-  return { roleId, pieces, missing, knowledgeScope };
+  // #1075 P1-a：v2 结构 ＋ refs 三方对账（IO 壳；不抛）。缺 manifest ⇒ 跳过（未校验）
+  let validation: RolePackValidation = { ok: false, schemaVersion: null, problems: [], refsChecked: 0 };
+  if (pieces.includes('manifest.json')) {
+    validation = validateRolePackDir(roleDir);
+    if (!validation.ok) {
+      for (const problem of validation.problems) {
+        errors.push(`${roleId}: ${problem.code} ${problem.message}`);
+      }
+      log.warn(
+        { roleId, problems: validation.problems, degraded: true },
+        '角色包 v2 结构/refs 校验未通过 — 逐条点名（不抛）',
+      );
+    } else {
+      log.info({ roleId, refsChecked: validation.refsChecked }, '角色包 v2 结构与 refs 对账通过');
+    }
+  }
+
+  return {
+    roleId,
+    pieces,
+    missing,
+    knowledgeScope,
+    schemaVersion: validation.schemaVersion,
+    schemaValid: validation.ok,
+    validation,
+  };
 }
 
 /**
