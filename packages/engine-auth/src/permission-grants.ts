@@ -59,6 +59,10 @@
  *
  * 退出/降级面: 本模块**从不抛**（除参数类型非法 ⇒ 由调用方类型守卫挡）。IO 失败走
  *   `degraded` 通道，调用方（`src/middleware/auth.ts` 的授权判定点）据此**回落出厂默认**。
+ * @authority — 引擎包对外 API（`@synova/engine-auth` 导出）；生产消费方＝`src/middleware/auth.ts`
+ *   （权限漏斗）与 `src/services/request-context.ts`；其它包不得直读内部常量。
+ * @not-here  — 不做 HTTP/中间件（`src/middleware/auth.ts`）；不做知识过滤条件展开（`auth.ts knowledgeScopeConditions`）；
+ *   不做租户配置写入（只读客户槽 `tenant/<tenantId>`）。
  */
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';

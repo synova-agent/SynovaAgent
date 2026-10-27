@@ -33,6 +33,10 @@ import { createHash } from 'node:crypto';
  *  · 无 Financial 节点 / 入口必填字段组缺失的**早返回路径不判定阈值**（无可判定对象，不构成单源缺口）。
  *  · 阈值不可用时**只**跳过 ccc / 债务期限结构两个指标，其余 6 个指标照常判定（不做全量中止）。
  *  · 两 compute 的 `>` 边界语义逐字保留（等于线值不越级）；阈值「档位方向」（warning<critical）不做校验。
+ * @authority — 由哨兵运行时（引擎侧装载器装载后）调用 `check()`（唯一生产调用方）。
+ *   本件为**内容面**哨兵件（`extensions/AGENTS.md` 禁 import 引擎——K12-13 CC1）。
+ * @not-here  — 不做采集/IO（只读入口 props）；不做阈值解析（解析点在装载链，本件只消费注入值）；
+ *   不定义 compute 实现（在 `computes/`）。
  */
 import type { MetricRow, SentinelAggregateResult, SentinelFinding } from '../../../src/sentinel/types';
 import type { GraphStoreReader, GraphTraversal } from '../../../src/l4/graph-traversal';
