@@ -120,9 +120,12 @@ EVIDENCE_ALLOWED = {"cmd", "out"}
 SENSITIVE_PATTERNS: Tuple[str, ...] = ("token=", "secret", "apiKey", "Bearer ")
 T1_TAGS: Tuple[str, ...] = ("@input", "@output", "@exit", "@degraded")
 SECTION_PATTERN = re.compile(r"(?m)^## ")
-# ── T-8 作用域（P0.6）：只有代码目录要求域守则；记录面/域外目录跳过并打印 scope 提示 ──
+# ── T-8 作用域（P0.6；F3 修：尾部 `(/|$)`）：只有代码目录要求域守则；记录面/域外目录跳过并打印 scope 提示 ──
+# 🔴 `(/|$)` 不可省：父目录**恰为顶层目录**（`src`/`scripts`/`tests` …，即文件直接挂在顶层目录下）时
+#    旧写法（尾部只有 `/`）匹配不上 ⇒ 被当成 out-of-scope 跳过 ⇒ **假绿**（K3 finding B-2）。
+#    顶层目录本层直挂的变更件同样要求该目录有 AGENTS.md（缺 ⇒ T-8 fail）。
 T8_SCOPE_RE = re.compile(
-    r"^(src|electron-renderer|extensions|scripts|expert|knowledge|theory|tests)/"
+    r"^(src|electron-renderer|extensions|scripts|expert|knowledge|theory|tests)(/|$)"
 )
 T8_RECORD_ONLY_RE = re.compile(r"^(\.claude|memory|docs)/")
 ANCHOR_HEX = re.compile(r"^[0-9a-fA-F]{7,40}$")

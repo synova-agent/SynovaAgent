@@ -17,6 +17,11 @@
 #              ＋ `T-8 scope: skip record-only dir .claude/claims` ＋ `T-8 n/a na_ok dirs=0 bad=0 skipped=1`
 #            S2 代码目录 `scripts/x`×2 触发 T-8（缺域守则）⇒ exit 1
 #              ＋ `T-8 n/a fail dirs=1 bad=1 skipped=0 first=scripts/x/AGENTS.md(missing)`
+#            S3 F3 承重：**顶层目录本层直挂**（父目录 == `src`／`scripts`）×各 2 件 ⇒ exit 1
+#              ＋ `T-8 n/a fail dirs=2 bad=2 skipped=0 first=scripts/AGENTS.md(missing)`
+#              （旧 `^(...)/ ` 写法下这 2 个目录被判 out-of-scope 跳过 ⇒ 假绿；`(/|$)` 修好才红）
+#            S4 记录面 `docs/x`×2 仍 skip ⇒ exit 0 ＋ `T-8 scope: skip record-only dir docs/x`
+#              ＋ `T-8 n/a na_ok dirs=0 bad=0 skipped=1`（证 `(/|$)` 未把记录面拉进判定）
 #   降级 — D1 --anchor 指向不存在 commit ⇒ exit 2 ＋ `E_ANCHOR_MISMATCH` ＋ 降级日志恰 1 行 JSON
 #              （字段 time/component/code/phase/retryable）
 #          D2 --repo 指向不存在路径 ⇒ exit 2 ＋ 降级日志非空（**绝不 exit 0**）
@@ -294,6 +299,55 @@ if [ "$RUN_RC" -eq 1 ] \
   ok "S2 代码目录 scripts/x×2 触发 T-8（缺 AGENTS.md）⇒ exit 1 ＋ detail 精确"
 else
   no "S2 期望 exit 1 ＋ T-8 n/a fail dirs=1 bad=1 skipped=0 first=scripts/x/AGENTS.md(missing)（实际 rc=$RUN_RC）: $RUN_OUT"
+fi
+
+# ── S3 顶层目录本层直挂（父目录恰为顶层 `src`／`scripts`）同样受判 ⇒ T-8 fail ──
+# 🔴 F3 承重点（K3 finding B-2）：`^([...])/` 旧写法匹配不上"父目录 == 顶层目录名"（无尾 `/`）
+#    ⇒ 顶层直挂件被当 out-of-scope **跳过** ⇒ 假绿。`(/|$)` 修好后二者进判定，缺 AGENTS.md ⇒ fail。
+#    sorted() 下 `scripts` < `src`（第 2 字符 c<r）⇒ first=scripts/AGENTS.md(missing)。
+#    src/b.ts 复制自 src/a.ts ⇒ 四段头注释齐（避免 T-1 另生一处矛盾干扰本例判据）。
+new_fixture s3 green
+( cd "$FIX" \
+  && cp src/a.ts src/b.ts \
+  && mkdir -p scripts \
+  && printf '#!/bin/bash\necho a\n' > scripts/a.sh \
+  && printf '#!/bin/bash\necho b\n' > scripts/b.sh \
+  && git add -A \
+  && git commit -q -m toplevel )
+S3_HEAD="$( cd "$FIX" && git rev-parse HEAD )"
+sed -e "s#^anchor: .*#anchor: $S3_HEAD#" \
+    -e 's#^changed_files: .*#changed_files: [src/a.ts, src/b.ts, scripts/a.sh, scripts/b.sh]#' \
+    "$FIX/matrix.yaml" > "$FIX/s3.yaml"
+run_sut "$FIX" s3.yaml --repo .
+if [ "$RUN_RC" -eq 1 ] \
+   && contains "$RUN_OUT" "T-8 n/a fail dirs=2 bad=2 skipped=0 first=scripts/AGENTS.md(missing)"; then
+  ok "S3 顶层 src/scripts 各 2 件触发 T-8（缺顶层 AGENTS.md）⇒ exit 1 ＋ detail 精确"
+else
+  no "S3 期望 exit 1 ＋ T-8 n/a fail dirs=2 bad=2 skipped=0 first=scripts/AGENTS.md(missing)（实际 rc=$RUN_RC）: $RUN_OUT"
+fi
+
+# ── S4 记录面 `docs/x`×2 仍归 skip ⇒ T-8 na_ok（证 `(/|$)` 未把记录面拉进判定）──
+# 注：docs/**.md 命中 is_longlived_doc ⇒ T-5 的机械事实由 na_ok 变 ok，故本夹具把 T-5
+#     声明同步改为 pass（两件都写了「已知限制」节），否则 T-5 矛盾会污染本例的 exit 0 判据。
+new_fixture s4 green
+( cd "$FIX" \
+  && mkdir -p docs/x \
+  && printf '# y1\n\n## 已知限制\n\n夹具占位：仅为 T-5 提供「已知限制」字样。\n' > docs/x/y1.md \
+  && printf '# y2\n\n## 已知限制\n\n夹具占位：同上。\n' > docs/x/y2.md \
+  && git add -A \
+  && git commit -q -m docsx )
+S4_HEAD="$( cd "$FIX" && git rev-parse HEAD )"
+sed -e "s#^anchor: .*#anchor: $S4_HEAD#" \
+    -e 's#^changed_files: .*#changed_files: [src/a.ts, docs/x/y1.md, docs/x/y2.md]#' \
+    -e 's#^  T-5: .*$#  T-5: {status: pass, evidence: {cmd: "git show HEAD:docs/x/y1.md", out: "docs/x/y1.md"}}#' \
+    "$FIX/matrix.yaml" > "$FIX/s4.yaml"
+run_sut "$FIX" s4.yaml --repo .
+if [ "$RUN_RC" -eq 0 ] \
+   && contains "$RUN_OUT" "T-8 scope: skip record-only dir docs/x" \
+   && contains "$RUN_OUT" "T-8 n/a na_ok dirs=0 bad=0 skipped=1"; then
+  ok "S4 记录面 docs/x×2 跳过 ⇒ exit 0 ＋ record-only 提示 ＋ dirs=0 bad=0 skipped=1"
+else
+  no "S4 期望 exit 0 ＋ record-only 提示 ＋ T-8 n/a na_ok dirs=0 bad=0 skipped=1（实际 rc=$RUN_RC）: $RUN_OUT"
 fi
 
 # ── D1 --anchor 指向不存在 commit ⇒ exit 2 ＋ 降级日志恰 1 行 JSON ──

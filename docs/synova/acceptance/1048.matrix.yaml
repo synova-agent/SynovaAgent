@@ -3,9 +3,10 @@
 # 锚 = 1ca0d4dfc（= gitea/local-main tip；git merge-base --is-ancestor 1ca0d4dfc gitea/local-main 实测 rc=0）
 # 变更集来源 = git diff --name-status 9b0b1f935 1ca0d4dfc（15 件真实变更集 = 上述 diff 全量，零过滤：5 脚本 + 4 测试 + 豁免件 + DOCS-REGISTRY + memory note + review 回执 + claims×2）
 # changed_files 与上述 diff 逐条一致（15 件）：claims×2 如实入集，不做任何过滤（P0.6 修订，2026-10-27）
-# T-8 作用域 = 仅代码目录（父目录匹配 ^(src|electron-renderer|extensions|scripts|expert|knowledge|theory|tests)/）；.claude/**、memory/**、docs/** 属记录面
+# T-8 作用域 = 仅代码目录（父目录匹配 ^(src|electron-renderer|extensions|scripts|expert|knowledge|theory|tests)(/|$)）；.claude/**、memory/**、docs/** 属记录面
+#   `/|$` 尾部不可省：**顶层目录本层直挂的变更件同样受判**（如 src/a.ts ⇒ 父目录 `src` 进判定，缺 src/AGENTS.md 即 T-8 fail）
 #   记录面目录不要求 AGENTS.md ⇒ 校验器跳过并向 stderr 打印 `T-8 scope: skip record-only dir <dir>`，计入 detail 的 skipped=
-#   ⇒ T-8 判定对象只剩 scripts/control-tower（5 件）与 tests/control-tower（4 件）两目录
+#   ⇒ 本矩阵 15 件无顶层目录直挂件，故 T-8 判定对象只剩 scripts/control-tower（5 件）与 tests/control-tower（4 件）两目录
 # 只读产物 — 不改产品行为、不接 CI（P0）；evidence.cmd 只记录、不执行（README Known Limitations 3）
 schema: acceptance-matrix/v1
 issue: 1048
@@ -22,7 +23,7 @@ items:
   Q-6: {status: pass, reason: "4 件测试件在 anchor 合计 Date.now() 0 命中；15 件全域亦 0 ⇒ 时间未直取（域函数收 now 口径未被破坏）", evidence: {cmd: "git grep -c 'Date.now()' 1ca0d4dfc -- $(git diff --name-only 9b0b1f935 1ca0d4dfc)", out: "tests/control-tower/block-paths-core.test.ts"}}
   Q-7: {status: n/a, reason: "无产品事件化持久化面（eventCatalog／EVENT_ 0 命中；degraded 日志为本地诊断行，非 append-only＋seq 事件表）", evidence: {cmd: "git grep -cE 'eventCatalog|EVENT_' 1ca0d4dfc -- $(git diff --name-only 9b0b1f935 1ca0d4dfc)"}}
   Q-8: {status: n/a, reason: "变更集路径不属版本/契约面（version／package.json／contract／schema 0 命中）⇒ 无迁移版本门禁对象", evidence: {cmd: "git diff --name-only 9b0b1f935 1ca0d4dfc | grep -ciE 'version|package.json|contract|schema'"}}
-  Q-9: {status: pass, reason: "4 件配对测试与实现同批入变更集（check-gate-protection／check-merge-conditions／check-quality-delta／block-paths-core），复核回执 ② 记 27/14/99/34 通过 0 失败；本矩阵不重跑测试", evidence: {cmd: "git diff --name-status 9b0b1f935 1ca0d4dfc -- tests/control-tower", out: "tests/control-tower/check-quality-delta.test.sh"}}
+  Q-9: {status: pass, reason: "4 件配对测试与实现同批入变更集（check-gate-protection／check-merge-conditions／check-quality-delta／block-paths-core）；本矩阵不重跑测试，测试通过结论属 #1048 批自身复核回执（attested-by-other，非本批机械验证）", evidence: {cmd: "git diff --name-status 9b0b1f935 1ca0d4dfc -- tests/control-tower", out: "tests/control-tower/check-quality-delta.test.sh"}}
   Q-10: {status: n/a, reason: "变更集无 expected／snapshot 配对件（0 命中）⇒ 无快照义务对象", evidence: {cmd: "git diff --name-only 9b0b1f935 1ca0d4dfc | grep -cE 'expected|snapshot'"}}
   Q-11: {status: n/a, reason: "变更集不含 src/**.ts（0 件）⇒ per-file 覆盖率/重复率门禁无判定对象", evidence: {cmd: "git diff --name-only 9b0b1f935 1ca0d4dfc | grep -c '^src/'"}}
   Q-12: {status: n/a, reason: "无资源上限/并发池面（p-limit／concurrency 0 命中）⇒ 无显式拒绝对象", evidence: {cmd: "git grep -cE 'p-limit|concurrency|Concurrency' 1ca0d4dfc -- $(git diff --name-only 9b0b1f935 1ca0d4dfc)"}}
@@ -35,5 +36,5 @@ items:
   T-4: {status: partial, reason: "仅 1/5 改动脚本声明 @authority（check-merge-conditions.sh 1 命中）；check-gate-protection.sh／check-quality-delta.py／block-paths-core.ts／gen-block-paths.ts 均 0 命中", evidence: {cmd: "git grep -c '@authority' 1ca0d4dfc -- $(git diff --name-only 9b0b1f935 1ca0d4dfc)", out: "scripts/control-tower/check-merge-conditions.sh"}}
   T-5: {status: pass, reason: "T-5 域仅 1 件（memory/notes/implemented/2026-10-26-422-gate-robustness.md 命中「已知限制」1 处）；其余 14 件非 UI 且非长期文档件", evidence: {cmd: "git grep -c '已知限制' 1ca0d4dfc -- memory/notes/implemented/2026-10-26-422-gate-robustness.md", out: "memory/notes/implemented/2026-10-26-422-gate-robustness.md"}}
   T-6: {status: partial, reason: "3/5 脚本有「设计哲学（一句）」字样（行数：check-gate-protection.sh 1／check-merge-conditions.sh 2／check-quality-delta.py 1）；block-paths-core.ts 与 gen-block-paths.ts 仅以 @why 起头、该字样 0 命中", evidence: {cmd: "git grep -c '设计哲学' 1ca0d4dfc -- $(git diff --name-only 9b0b1f935 1ca0d4dfc)", out: "scripts/control-tower/check-merge-conditions.sh"}}
-  T-7: {status: pass, reason: "变更集含 4 件 tests/control-tower 测试件（与 4 件实现配对）；复核回执 ② 记四套 27/14/99/34 通过 0 失败", evidence: {cmd: "git diff --name-status 9b0b1f935 1ca0d4dfc -- tests/control-tower", out: "tests/control-tower/block-paths-core.test.ts"}}
+  T-7: {status: pass, reason: "变更集含 4 件 tests/control-tower 测试件（与 4 件实现配对）；本矩阵不重跑测试，测试通过结论属 #1048 批自身复核回执（attested-by-other，非本批机械验证）", evidence: {cmd: "git diff --name-status 9b0b1f935 1ca0d4dfc -- tests/control-tower", out: "tests/control-tower/block-paths-core.test.ts"}}
   T-8: {status: pass, reason: "作用域内候选目录 2 个（scripts/control-tower 5 件／tests/control-tower 4 件），两者 AGENTS.md 在 anchor 各 5 个 ^## 小节（≥5 达标）；.claude/claims 2 件属记录面已跳过（不进判定对象，计 skipped=1）", evidence: {cmd: "git show 1ca0d4dfc:scripts/control-tower/AGENTS.md | grep -c '^## '; git show 1ca0d4dfc:tests/control-tower/AGENTS.md | grep -c '^## '", out: "scripts/control-tower/AGENTS.md"}}
