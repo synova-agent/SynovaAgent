@@ -1,0 +1,101 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1084,
+  "author": "Synova-Win <synova@users.noreply.github.com>",
+  "reviewer": "independent-reviewer-rev1084b（零上下文独立会话，未参与实现；仅采信本机现场命令原始输出与 Gitea API 直读，未以派单者给出的期望值代替实测）",
+  "independence": "fresh-session",
+  "patch_fingerprint": "sha256:08f9530a7f0b7af3327f6620aee2c0a26284eb2ee52eb8d34969d408a911aeeb",
+  "verdict": "PASS",
+  "base_tip": "a4a60cea7c7a60d2269fa1870964ca70596bdb7c",
+  "head": "629c35062273eb77751aeabfa8431235c6440b93",
+  "issued_at": "2026-10-28T03:20:55+08:00",
+  "tool": "pr-review 五步（零上下文独立复核）＋ git 现场复跑 ＋ Gitea API 直读 ＋ 门禁行为本地模拟",
+  "checks": [
+    {
+      "id": "C1",
+      "title": "基线：local-main tip 是 head 祖先（禁陈旧基线）",
+      "cmd": "git ls-remote gitea refs/heads/local-main; git merge-base --is-ancestor a4a60cea7c7a60d2269fa1870964ca70596bdb7c 629c35062; echo $?; git merge-base a4a60cea7c7a60d2269fa1870964ca70596bdb7c 629c35062; GET /repos/synova-agent/SynovaAgent/pulls/1084",
+      "result": "pass",
+      "evidence": "现场 ls-remote = a4a60cea7c7a60d2269fa1870964ca70596bdb7c refs/heads/local-main（与预期 a4a60cea7 一致）；merge-base --is-ancestor EXIT=0；merge-base(tip,head) = a4a60cea7c7a60d2269fa1870964ca70596bdb7c = tip 本身；API /pulls/1084 base.ref=local-main base.sha=a4a60cea7c7a60d2269fa1870964ca70596bdb7c head.sha=629c35062273eb77751aeabfa8431235c6440b93 state=open merged=false mergeable=true。另：分支在 gitea 的 tip 与 head 同为 629c35062273eb77751aeabfa8431235c6440b93（git ls-remote refs/heads/ct/cto-1083-agents-criterion）。"
+    },
+    {
+      "id": "C2",
+      "title": "写集：三点 diff 恰 2 件，错名回执文件已不存在，无夹带",
+      "cmd": "git diff --name-status a4a60cea7c7a60d2269fa1870964ca70596bdb7c...629c35062; git diff --name-only ... | wc -l; git log --oneline base..head; git show --stat --format=%s <each commit>; git -c core.quotepath=false ls-tree -r --name-only 629c35062 -- docs/synova/reviews/ | grep -E '108[34]'",
+      "result": "pass",
+      "evidence": "三点 diff 输出恰两行：A .claude/claims/1083.yaml ／ M src/AGENTS.md；name-only 计数=2；无第三件。逐提交核对（3 个 commit）：15d7470d8 = {.claude/claims/1083.yaml(A), src/AGENTS.md(M)}；26c27998c = {docs/synova/reviews/1083.108310831083.json(A, 101 行)}；629c35062 = {.claude/claims/1083.yaml(+1 行), docs/synova/reviews/1083.108310831083.json(D, -101 行)} ⇒ 错名文件在 PR 内被新增后又删除，净效果为零。head 树中 docs/synova/reviews/ 下 grep '108[34]' 无任何命中（'1083.* 已不存在' 成立；同时 1084.* 亦尚不存在，与本回执待落盘一致）。API changed_files=2 additions=11 deletions=1，与 diff 逐字相符（claim 新增 10 行 + AGENTS.md 1 行 = 11）。"
+    },
+    {
+      "id": "C3",
+      "title": "内容：旧「全树 → 0」判据已删，新「变更集口径 ＋ 全树存量另管」在位",
+      "cmd": "git diff a4a60cea7c7a60d2269fa1870964ca70596bdb7c...629c35062 -- src/AGENTS.md; git grep -nE 'src/\\*\\*/\\*\\.ts' -- src/AGENTS.md",
+      "result": "pass",
+      "evidence": "diff 为单行替换 @@ -11,7 +11,7 @@：删除行 `- \\`git grep -nE \"as +(any|never|unknown +as)\" -- 'src/**/*.ts'\\` → 0`；新增 src/AGENTS.md:14 `- **变更集口径**：本次新增/修改行中 \\`as\\` 强转（any／never／unknown-as）= 0；**全树存量**由门禁组 1「存量独立清理」另管（注释行不计）`。旧判据的路径字面量 'src/**/*.ts' 在 head 版 src/AGENTS.md 全文 0 命中（grep EXIT=1）⇒ 原「全树 grep → 0」表述确已不在。全文仅剩的「→ 0」是 L13 的 vitest `→ 0 failed`，属另一判据，未受影响。"
+    },
+    {
+      "id": "C4",
+      "title": "新表述与 scripts/pre-commit-check.sh 组 1 实际行为一致（变更集＋跳注释行＋存量另管）",
+      "cmd": "git grep -n 'AS_ANY_DIFF' -- scripts/pre-commit-check.sh; git grep -n '只拦本次变更新增' -- scripts/pre-commit-check.sh; git grep -n '存量独立清理' -- scripts/pre-commit-check.sh; 本地模拟：git diff TIP...HEAD -- src/ packages/ ':(exclude)**/*.test.ts' ... | grep '^+' | grep -v '^+++' | grep -E 'as (any|never)\\b|as unknown as' | grep -vE '^\\+[[:space:]]*(//|/\\*|\\*|#)'",
+      "result": "pass",
+      "evidence": "① 变更集口径：scripts/pre-commit-check.sh:711 `AS_ANY_DIFF=\"$(git diff \"$SYNO_DIFF_BASE\"...HEAD -- src/ packages/ ':(exclude)**/*.test.ts' ...)\"`（CI 路径），:713 本地回退 `git diff --cached`——均非全树 grep；② 只取新增行并跳注释行：:717 只保留 '^+'、剔 '^+++'、再 grep -vE '^\\+\\s*(//|/\\*|\\*|#)'；③ 文案同源：:718 `hard_check \"as any / as never / as unknown as 零容忍（新增，铁律 38；存量独立清理）\"`，:703 注释『只拦本次变更新增的 as any（存量独立治理）』——与 AGENTS.md 新写的「变更集口径 ＋ 存量独立清理」逐词对应；④ 本地按同一表达式对本 PR 变更集模拟 ⇒ 命中集 M 为空 ⇒ PASS，与 CI 双 run 的 step#2「① 12 组门禁（唯一的阻断门）」均 success 相印证。"
+    },
+    {
+      "id": "C5",
+      "title": "不再引入自指硬红：src/AGENTS.md 无禁用 as 强转字面量",
+      "cmd": "git grep -nE 'as any|as never|as unknown as' -- src/AGENTS.md; echo EXIT=$?",
+      "result": "pass",
+      "evidence": "输出为空、EXIT=1（无命中）。新行用全角分隔的「any／never／unknown-as」与「\\`as\\` 强转」措辞书写，与门禁权威正则 'as (any|never)\\b|as unknown as' 亦不构成匹配（同正则对变更集模拟为空，见 C4 ④）⇒ 文档自身不会触发组 1 的自指硬红。"
+    },
+    {
+      "id": "C6",
+      "title": "claim：#1083 校验 ok；2 件全覆盖 uncovered=[]；已预列 1084 回执路径",
+      "cmd": "python3 scripts/control-tower/claim_store.py --check 1083; python3 scripts/control-tower/claim_store.py --coverage src/AGENTS.md .claude/claims/1083.yaml; python3 scripts/control-tower/claim_store.py --show 1083; git show 629c35062:.claude/claims/1083.yaml",
+      "result": "pass",
+      "evidence": "--check = {\"status\":\"ok\",\"issue\":\"1083\",\"writeset\":4,\"done\":2} EXIT=0；--coverage = {\"status\":\"ok\",\"claims\":91,\"covered\":[\"src/AGENTS.md\",\".claude/claims/1083.yaml\"],\"uncovered\":[],\"matched\":{...,\"1083\":[\"src/AGENTS.md\",\".claude/claims/1083.yaml\"],...},\"broken\":[],\"degraded\":false,\"reason\":\"91 条 claim（并集）；覆盖 2/2 个暂存文件\"} EXIT=0（覆盖 2/2，uncovered 空）；--show writeset = [src/AGENTS.md, .claude/claims/1083.yaml, docs/synova/reviews/1083.108310831083.json, docs/synova/reviews/1084.108410841084.json] ⇒ **含 docs/synova/reviews/1084.108410841084.json**（claim 文件第 6 行）。注：claim 文件在本 PR 中为新增（A），base tip a4a60cea7 树中不存在该路径（git cat-file -e 返回 128）——派单文字预期为 (M)，与实测不符，见 findings。"
+    },
+    {
+      "id": "C7",
+      "title": "CI：head 的 push／pull_request 双 run 各 14/14 success，skipped 0，failure 0，step#2 门禁 success",
+      "cmd": "GET /repos/synova-agent/SynovaAgent/commits/629c35062273eb77751aeabfa8431235c6440b93/status（轮询至 pending=0）; GET /repos/synova-agent/SynovaAgent/actions/runs/2275/jobs; GET /repos/synova-agent/SynovaAgent/actions/runs/2276/jobs",
+      "result": "pass",
+      "evidence": "首次取证时 combined=pending（push 已 success、pull_request run 2276 'In progress'）——按纪律不取中间态，轮询至终态后才断言：combined=success total_count=2 pending=0。run 2275 (push) job=gates conclusion=success steps=14 success=14 failure=0 skipped=0 other=0；run 2276 (pull_request) job=gates conclusion=success steps=14 success=14 failure=0 skipped=0 other=0。两 run 的 step#2「① 12 组门禁（唯一的阻断门）」均 status=completed / conclusion=success。汇总状态：'local-gates / gates (push)' success（1m10s）、'local-gates / gates (pull_request)' success（1m11s）。"
+    },
+    {
+      "id": "C8",
+      "title": "补丁指纹：脚本输出与独立复算逐字一致，且与派单值一致",
+      "cmd": "GITEA_TOKEN=<由 git remote get-url gitea 解析> SYNO_GITEA_API=http://MacBook-Pro-2.local:3000/api/v1 bash scripts/control-tower/check-merge-conditions.sh --pr 1084 --diff-fingerprint；独立复算按 docs/synova/reviews/README.md:80：mb=$(git merge-base tip head)；git diff --no-color -M --full-index --binary $mb 629c35062 -- . ':(exclude)docs/synova/reviews/**' > f；sha256sum f；wc -c < f",
+      "result": "pass",
+      "evidence": "脚本输出 = 08f9530a7f0b7af3327f6620aee2c0a26284eb2ee52eb8d34969d408a911aeeb（EXIT=0）；独立复算 mb=a4a60cea7c7a60d2269fa1870964ca70596bdb7c，diff_bytes=1555，sha256_full=08f9530a7f0b7af3327f6620aee2c0a26284eb2ee52eb8d34969d408a911aeeb ⇒ 与脚本、与派单声明值三方逐字一致；fp12=08f9530a7f0b；fp 范围内文件恰为 .claude/claims/1083.yaml 与 src/AGENTS.md 两件（排除 docs/synova/reviews/**）。"
+    },
+    {
+      "id": "C9",
+      "title": "落盘名可被 R1 解析，且不与 claim 覆盖判定冲突（R7 前提成立）",
+      "cmd": "读 scripts/control-tower/check-merge-conditions.sh:463-477；echo 'docs/synova/reviews/1084.108410841084.json' | grep -E '^docs/synova/reviews/1084\\.[0-9a-f]{12}\\.json$'；读 scripts/pre-commit-check.sh:1745,1780-1785；git ls-remote gitea refs/pull/1083/head refs/pull/1084/head",
+      "result": "pass",
+      "evidence": "① R1 先查规范路径 rpath='docs/synova/reviews/${pr}.${fp12}.json'（:463），查不到则回退 `ls-tree ... | grep -E \"^docs/synova/reviews/${pr}\\.[0-9a-f]{12}\\.json$\" | tail -n 1`（:470-471）——固定名 1084.108410841084.json 的后缀为 12 位十六进制（'108410841084' 长度实测 12），正则实测 MATCH=yes ⇒ R1 可解析、不报“缺回执”；② 该路径已由 claim 第 6 行预列，组 12 以 claim_store.py --coverage 判暂存文件覆盖面（:1745），未被任何 claim 覆盖且有 claim 载体时判红（:1780-1785）——预列可避免落盘时被组 12 判“未被任何 claim 声明覆盖”；③ 远端仅有 refs/pull/1084/head（=629c35062），refs/pull/1083/head 不存在 ⇒ 合并门只能以 --pr 1084 调用，回执须以 PR 号命名。"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warn",
+      "where": "docs/synova/reviews/README.md:72 vs .claude/claims/1083.yaml:6",
+      "what": "回执落盘名 docs/synova/reviews/1084.108410841084.json 的后缀 108410841084 不是真实 fp12（真实 fp12=08f9530a7f0b），与 README.md:72『路径 = <pr>.<fp 前 12 位 hex>.json』的规范名不一致。实测其可用性依赖 R1 的**回退分支**（check-merge-conditions.sh:467-471 的正则 ^docs/synova/reviews/<pr>\\.[0-9a-f]{12}\\.json$），而非:467 的规范路径精确命中。采用固定名的根因真实且合理：claim 必须在提交前预列回执路径，而 fp 在 claim 写就时不可知（鸡生蛋）；若落盘为规范名 1084.08f9530a7f0b.json，该文件将不被 claim 覆盖，pre-commit 组 12 会按 scripts/pre-commit-check.sh:1780-1785 判『未被任何 claim 声明覆盖』。风险点：回退分支用 `tail -n 1` 取最后一条匹配，若同一 PR 日后同时存在规范名与固定名两份回执，字典序较大的 1084.108410841084.json 会**遮蔽**规范名（'1' > '0'），且两份回执中非规范者可能先被读取。建议（不阻断本 PR）：由 CTO/README 明确追认固定名约定，或在回执落盘后统一改为规范名并同步 claim。"
+    },
+    {
+      "severity": "info",
+      "where": ".claude/claims/1083.yaml:9（note 字段）",
+      "what": "claim note 写『原判据「全树 grep → 0」与存量 113 命中不符』。现场复现：113 仅在 **src-only** 口径下成立（git grep -cE 'as (any|never)\\b|as unknown as' 629c35062 -- src 求和 = 113）；而组 1 的实际 pathspec 是 src ＋ packages（scripts/pre-commit-check.sh:711,713），同正则同排除项合计 = 119。两者都 ≫ 0，故原判据被证伪的结论不受影响；仅提示该数字为 src 单口径，若被当作「组 1 存量数」引用会偏低 6。"
+    },
+    {
+      "severity": "info",
+      "where": ".claude/claims/1083.yaml（新文件）",
+      "what": "派单文字预期该 claim 文件状态为 (M)，实测为 (A)：base tip a4a60cea7c7a60d2269fa1870964ca70596bdb7c 树中不存在 .claude/claims/1083.yaml（git cat-file -e 返回 128）⇒ 本 PR 系新增 claim，A 正确、非缺陷。仅记录派单预期与实测的差异，避免下游按 (M) 复核时误判。"
+    },
+    {
+      "severity": "info",
+      "where": "scripts/control-tower/check-merge-conditions.sh（R9 告警）",
+      "what": "R9 为恒打印的告警级判据：本 PR 三个 commit 的 %ae 均为 synova@users.noreply.github.com（本机单一 git 身份），本回执若由同机身份提交，R9 将输出『warn: 身份未分离（本机 git 身份不可信）』。此为已知环境事实、非本 PR 缺陷，预先记录以免被误读为复核失败。"
+    }
+  ],
+  "filename_note": "按 claim 预列名 1084.108410841084.json 落盘（12 hex），实际 fp 见 patch_fingerprint（sha256:08f9530a7f0b7af3327f6620aee2c0a26284eb2ee52eb8d34969d408a911aeeb，fp12=08f9530a7f0b）。该名与 README.md:72 规范名不一致但可被 R1 正则回退解析（check-merge-conditions.sh:470-471），且因已被 claim 预列而满足组 12 覆盖判定（pre-commit-check.sh:1745,1780-1785）。"
+}
