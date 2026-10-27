@@ -3,13 +3,16 @@
  *
  * 设计哲学一句：**阈值的唯一真源是 manifest（经 loader 的 D577 唯一生产解析点），代码里不许有第二把尺子。**
  *
- * 契约（被本文件钉住的三条）:
+ * 契约（被本文件钉住的四条）:
  *   ① 单源: capital-health 的 CCC / 债务期限结构两对阈值只来自 loader 第 4 参注入的解析结果
  *      （`sentinel-loader` 内 resolveThresholds → `check(store, teamId, traversal, thresholds)`）；
  *      **manifest 改值 ⇒ 判定结果随之改变**（不许用"手传 thresholds"代替这条）。
  *   ② 加严: compute 的 `thresholds` 缺参 ⇒ **typed error（带 code）**，禁字面回落/默认值。
  *   ③ 加严: 第 4 参缺失 / manifest 缺键 ⇒ check() **fail-loud 点名缺键**（`ch-error` finding + log.error）、
  *      **不调用**那两个 compute（零字面回落），且**不外抛**（保既有 2 参直调契约）。
+ *   ④ 防漂移: `DEFAULT_THRESHOLDS`（aggregate 的六键镜像）与 4 件直调测试夹具的 `THRESHOLDS` 常量，
+ *      **逐键两档都等于** `manifest.thresholds`（裁 426 (d)(e)｜R-A 假绿#3 / R-B F-3:
+ *      休眠的第二、第三把尺子不钉死 ⇒ manifest 改值后"旧尺子测新行为"仍全绿）。
  *
  * 取证路径（沿用既有注入缝，不新建机制）:
  *   · `SENTINELS_FIXTURE_DIR`（`sentinel-loader.ts` 的 D751 注入缝）指向 tmp 夹具根；
@@ -24,9 +27,12 @@
  *   `ratio > critical` ⇒ critical｜`> warning` ⇒ warning（**等于线值不越级**）。
  *
  * 已知限制:
- *   · 本文件不断言另外 6 对阈值（roic_wacc_spread 等）的缺键行为 —— 那 6 对仍走 aggregate 自有
- *     `DEFAULT_THRESHOLDS` 回退（队长裁：本批只归一 ccc/debt 两处已实测旁路，全哨兵字面阈值清算另立卡）。
+ *   · 本文件不断言另外 6 对阈值的**缺键 fail-loud 行为**（④ 只断言其**现值**与 manifest 逐键相等）——
+ *     那 6 对仍走 aggregate 自有 `DEFAULT_THRESHOLDS` 回退（队长裁：本批只归一 ccc/debt 两处已实测旁路，
+ *     全哨兵字面阈值清算另立卡）。
  *   · 夹具只放 capital-health 一个哨兵目录（其余哨兵与本卡无关，注册 1 个即可）。
+ *   · ④ 的两处常量**均未导出**且都属"禁改"对象（被测件 / 被断言夹具）⇒ 只能**只读源文本解析**，无法 import；
+ *     若其写法改成跨行或计算式，④ 会**红并点名文件与键**（不会静默放过），届时须同步改本文件的解析器。
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
@@ -426,5 +432,108 @@ describe('#732 ⑥ 结构护栏: 内容面不钻引擎 / compute 保持同步纯
       const hit = code.match(/[<>]=?\s*(?:120|90|0\.7|0\.5)\b/)?.[0] ?? '';
       expect(hit, `${path} 仍含字面阈值比较: "${hit}"`).toBe('');
     }
+  });
+});
+
+// ═══ ⑦ 防漂移: 三份阈值拷贝必须同源（裁 426 (d)(e)｜R-A 假绿#3 ＋ R-B F-3） ═══
+
+/**
+ * 为什么是"只读源文本解析"而不是 import（两条硬约束，缺一不可）:
+ *   · `DEFAULT_THRESHOLDS`（aggregate.ts）与那 4 件直调测试的 `THRESHOLDS` 常量**都未导出**；
+ *   · 两者都是本卡**禁改**对象（被测对象 / 被断言夹具）⇒ 不许为测试加 export、不许改那 4 件的行为断言。
+ * ⇒ 只能只读源文本；解析不到时**必须红并点名**（禁"没找到就当没事"的静默假绿）。
+ *
+ * 判别力（改坏必红，原始输出见 PR #1068 正文 b/c 两处突变）:
+ *   · b: aggregate.ts `DEFAULT_THRESHOLDS.debt_equity.warning` 1.5→9.9 ⇒ ⑦d 红（改前该文件 22/22 全绿＝假绿#3）
+ *   · c: manifest.json 改 ccc 某档、**不动夹具** ⇒ ⑦e 红（夹具＝第三份拷贝，"旧尺子测新行为"）
+ */
+const DEFAULT_THRESHOLD_KEYS = [
+  'roic_wacc_spread',
+  'capital_turnover',
+  'debt_equity',
+  'interest_coverage',
+  'asset_turnover',
+  'receivable_turnover_days',
+];
+
+/** 两档名（具名联合类型，避免"用 `as` 断言换索引"这类类型信任崩溃） */
+const THRESHOLD_TIERS: Array<'warning' | 'critical'> = ['warning', 'critical'];
+
+/** DEFAULT_THRESHOLDS 块内单条形态: `键: { warning: X, critical: Y }` */
+const DEFAULT_ENTRY_RE = /(\w+)\s*:\s*\{\s*warning:\s*(-?\d+(?:\.\d+)?)\s*,\s*critical:\s*(-?\d+(?:\.\d+)?)\s*\}/g;
+
+/** 4 件直调测试的常量形态: `const THRESHOLDS = { warning: X, critical: Y };` */
+const FIXTURE_CONST_RE = /const\s+THRESHOLDS\s*=\s*\{\s*warning:\s*(-?\d+(?:\.\d+)?)\s*,\s*critical:\s*(-?\d+(?:\.\d+)?)\s*\}/;
+
+/** DEFAULT_THRESHOLDS 块源文本（沿用 ⑥ 的 split 定位法: 先去注释，再切到首个 `};`） */
+function defaultThresholdsBlock(): string {
+  const code = codeOnly(readFileSync(REAL_AGGREGATE, 'utf-8'));
+  return code.split('const DEFAULT_THRESHOLDS')[1]?.split('};')[0] ?? '';
+}
+
+/** DEFAULT_THRESHOLDS 块内的键值对（键集即"六键，不多不少"的判定对象） */
+function defaultThresholdPairs(): ThresholdsMap {
+  const out: ThresholdsMap = {};
+  for (const m of defaultThresholdsBlock().matchAll(DEFAULT_ENTRY_RE)) {
+    out[m[1]] = { warning: Number(m[2]), critical: Number(m[3]) };
+  }
+  return out;
+}
+
+/** 单件夹具常量（读不到/解析不到 ⇒ null，由调用点断言点名，禁静默跳过） */
+function fixtureThresholds(relPath: string): ThresholdPair | null {
+  const src = readFileSync(join(process.cwd(), relPath), 'utf-8');
+  const m = src.match(FIXTURE_CONST_RE);
+  return m ? { warning: Number(m[1]), critical: Number(m[2]) } : null;
+}
+
+describe('#732 ⑦d 镜像: DEFAULT_THRESHOLDS 六键 ≡ manifest.thresholds（逐对相等｜裁 426 d）', () => {
+  it('键集恰为 6 键（不多不少；ccc/债务结构两键严禁混入）', () => {
+    const block = defaultThresholdsBlock();
+    expect(block.length, 'aggregate.ts 应可定位 DEFAULT_THRESHOLDS 块（源文本解析）').toBeGreaterThan(0);
+    const keys = Object.keys(defaultThresholdPairs()).sort();
+    expect(keys, `DEFAULT_THRESHOLDS 键集应恰为 6 键；实得 ${keys.length} 键: ${keys.join(',')}`)
+      .toEqual([...DEFAULT_THRESHOLD_KEYS].sort());
+  });
+
+  it('六键逐对相等（warning/critical 两档都比；镜像漂移必红）', () => {
+    const manifest = realManifest();
+    const pairs = defaultThresholdPairs();
+    for (const key of DEFAULT_THRESHOLD_KEYS) {
+      const d = pairs[key];
+      expect(d, `DEFAULT_THRESHOLDS 缺键 ${key}（aggregate.ts 源文本解析不到该键）`).toBeTruthy();
+      const m = manifest.thresholds[key];
+      expect(m, `manifest.thresholds 缺键 ${key}`).toBeTruthy();
+      for (const tier of THRESHOLD_TIERS) {
+        expect(
+          d![tier],
+          `镜像漂移 ${key}.${tier}: DEFAULT_THRESHOLDS=${d![tier]} ≠ manifest.thresholds=${m[tier]}（裁 426 (d): 代码里不许有第二把尺子）`,
+        ).toBe(m[tier]);
+      }
+    }
+  });
+});
+
+describe('#732 ⑦e 夹具: 4 件直调测试 THRESHOLDS ≡ manifest（R-B F-3）', () => {
+  const fixtures = [
+    { path: 'tests/sentinels/capital-health/cash-conversion-cycle.test.ts', key: CCC_KEY },
+    { path: 'tests/sentinels/capital-health/debt-structure.test.ts', key: DEBT_KEY },
+    { path: 'tests/sentinels/capital-structure/debt-structure.test.ts', key: DEBT_KEY },
+    { path: 'tests/sentinels/capital-turnover/cash-conversion-cycle.test.ts', key: CCC_KEY },
+  ];
+
+  fixtures.forEach(({ path, key }) => {
+    it(`${path} 的 THRESHOLDS ≡ manifest.thresholds['${key}']（旧尺子测新行为必红）`, () => {
+      const got = fixtureThresholds(path);
+      expect(got, `${path} 应可定位 \`const THRESHOLDS = { warning: X, critical: Y }\`（只读源文本；本卡禁改该件）`).toBeTruthy();
+      const m = realManifest().thresholds[key];
+      expect(m, `manifest.thresholds 缺键 ${key}`).toBeTruthy();
+      for (const tier of THRESHOLD_TIERS) {
+        expect(
+          got![tier],
+          `夹具漂移 ${path} THRESHOLDS.${tier}=${got![tier]} ≠ manifest.thresholds['${key}'].${tier}=${m[tier]}（R-B F-3: 夹具是第三份拷贝）`,
+        ).toBe(m[tier]);
+      }
+    });
   });
 });
