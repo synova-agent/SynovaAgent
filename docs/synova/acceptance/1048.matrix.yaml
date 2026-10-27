@@ -1,0 +1,40 @@
+# docs/synova/acceptance/1048.matrix.yaml — #1048／#1049（裁 422-R1/R2 门禁健壮性）主线锚样例
+# 格式权威 = docs/synova/acceptance/README.md（acceptance-matrix/v1 · F1–F12）
+# 锚 = 1ca0d4dfc（= gitea/local-main tip；git merge-base --is-ancestor 1ca0d4dfc gitea/local-main 实测 rc=0）
+# 变更集来源 = git diff --name-status 9b0b1f935 1ca0d4dfc（15 件真实变更集 = 上述 diff 全量，零过滤：5 脚本 + 4 测试 + 豁免件 + DOCS-REGISTRY + memory note + review 回执 + claims×2）
+# changed_files 与上述 diff 逐条一致（15 件）：claims×2 如实入集，不做任何过滤（P0.6 修订，2026-10-27）
+# T-8 作用域 = 仅代码目录（父目录匹配 ^(src|electron-renderer|extensions|scripts|expert|knowledge|theory|tests)(/|$)）；.claude/**、memory/**、docs/** 属记录面
+#   `/|$` 尾部不可省：**顶层目录本层直挂的变更件同样受判**（如 src/a.ts ⇒ 父目录 `src` 进判定，缺 src/AGENTS.md 即 T-8 fail）
+#   记录面目录不要求 AGENTS.md ⇒ 校验器跳过并向 stderr 打印 `T-8 scope: skip record-only dir <dir>`，计入 detail 的 skipped=
+#   ⇒ 本矩阵 15 件无顶层目录直挂件，故 T-8 判定对象只剩 scripts/control-tower（5 件）与 tests/control-tower（4 件）两目录
+# 只读产物 — 不改产品行为、不接 CI（P0）；evidence.cmd 只记录、不执行（README Known Limitations 3）
+schema: acceptance-matrix/v1
+issue: 1048
+batch: "裁 422-R1/R2 门禁健壮性"
+anchor: 1ca0d4dfc
+changed_files: [.claude/claims/1048.yaml, .claude/claims/1049.yaml, docs/authority/DOCS-REGISTRY.yaml, docs/synova/reviews/1052.70b55a5ba414.json, gate-exemptions/2026-10-26-cto-422-gate-robustness.md, memory/notes/implemented/2026-10-26-422-gate-robustness.md, scripts/control-tower/block-paths-core.ts, scripts/control-tower/check-gate-protection.sh, scripts/control-tower/check-merge-conditions.sh, scripts/control-tower/check-quality-delta.py, scripts/control-tower/gen-block-paths.ts, tests/control-tower/block-paths-core.test.ts, tests/control-tower/check-gate-protection.test.sh, tests/control-tower/check-merge-conditions.test.sh, tests/control-tower/check-quality-delta.test.sh]
+coverage_judged: false
+items:
+  Q-1: {status: n/a, reason: "变更集无 src/** 件（15 件均控制塔脚本/测试/文档/认领台账）⇒ 无 agent 工具入参运行时 schema 校验面；safeParse 0 命中", evidence: {cmd: "git grep -cE 'safeParse' 1ca0d4dfc -- $(git diff --name-only 9b0b1f935 1ca0d4dfc)"}}
+  Q-2: {status: n/a, reason: "is_ui 0 件（无 tsx/jsx/vue/html/css 扩展名，无 electron-renderer//src/tui//apps/web/ 前缀）⇒ 结构性脱敏面无跨 wire 渲染对象", evidence: {cmd: "git diff --name-only 9b0b1f935 1ca0d4dfc | grep -cE '(tsx|jsx|vue|html|css)$|^(electron-renderer/|src/tui/|apps/web/)"}}
+  Q-3: {status: pass, reason: "错误码成集＋cause 链：check-gate-protection.sh @error 七码闭包、check-quality-delta.py DeltaError（:171）带 code/phase/retryable 且 7 行含 from exc、check-merge-conditions.sh die_degraded E_OPENPRS_EMPTY（:648）；判定靠退出码不解析 message", evidence: {cmd: "git grep -c 'from exc' 1ca0d4dfc -- scripts/control-tower/check-quality-delta.py", out: "scripts/control-tower/check-quality-delta.py"}}
+  Q-4: {status: n/a, reason: "变更集无 src/**.ts（0 件）⇒ 无 union 穷尽判别点；assertNever 0 命中", evidence: {cmd: "git diff --name-only 9b0b1f935 1ca0d4dfc | grep -c '^src/'"}}
+  Q-5: {status: n/a, reason: "无请求取消/组件卸载面（AbortController／throwIfAborted 0 命中；check-quality-delta.py 内 AbortSignal 仅为 R4.3 检测规则字面量，非取消实现）", evidence: {cmd: "git grep -cE 'AbortController|throwIfAborted' 1ca0d4dfc -- $(git diff --name-only 9b0b1f935 1ca0d4dfc)"}}
+  Q-6: {status: pass, reason: "4 件测试件在 anchor 合计 Date.now() 0 命中；15 件全域亦 0 ⇒ 时间未直取（域函数收 now 口径未被破坏）", evidence: {cmd: "git grep -c 'Date.now()' 1ca0d4dfc -- $(git diff --name-only 9b0b1f935 1ca0d4dfc)", out: "tests/control-tower/block-paths-core.test.ts"}}
+  Q-7: {status: n/a, reason: "无产品事件化持久化面（eventCatalog／EVENT_ 0 命中；degraded 日志为本地诊断行，非 append-only＋seq 事件表）", evidence: {cmd: "git grep -cE 'eventCatalog|EVENT_' 1ca0d4dfc -- $(git diff --name-only 9b0b1f935 1ca0d4dfc)"}}
+  Q-8: {status: n/a, reason: "变更集路径不属版本/契约面（version／package.json／contract／schema 0 命中）⇒ 无迁移版本门禁对象", evidence: {cmd: "git diff --name-only 9b0b1f935 1ca0d4dfc | grep -ciE 'version|package.json|contract|schema'"}}
+  Q-9: {status: pass, reason: "4 件配对测试与实现同批入变更集（check-gate-protection／check-merge-conditions／check-quality-delta／block-paths-core）；本矩阵不重跑测试，测试通过结论属 #1048 批自身复核回执（attested-by-other，非本批机械验证）", evidence: {cmd: "git diff --name-status 9b0b1f935 1ca0d4dfc -- tests/control-tower", out: "tests/control-tower/check-quality-delta.test.sh"}}
+  Q-10: {status: n/a, reason: "变更集无 expected／snapshot 配对件（0 命中）⇒ 无快照义务对象", evidence: {cmd: "git diff --name-only 9b0b1f935 1ca0d4dfc | grep -cE 'expected|snapshot'"}}
+  Q-11: {status: n/a, reason: "变更集不含 src/**.ts（0 件）⇒ per-file 覆盖率/重复率门禁无判定对象", evidence: {cmd: "git diff --name-only 9b0b1f935 1ca0d4dfc | grep -c '^src/'"}}
+  Q-12: {status: n/a, reason: "无资源上限/并发池面（p-limit／concurrency 0 命中）⇒ 无显式拒绝对象", evidence: {cmd: "git grep -cE 'p-limit|concurrency|Concurrency' 1ca0d4dfc -- $(git diff --name-only 9b0b1f935 1ca0d4dfc)"}}
+  Q-13: {status: n/a, alias_of: "Q-2", reason: "Q-2 别名·同判据（变更集无 UI 渲染产物 ⇒ 无跨 wire 脱敏对象）", evidence: {cmd: "git diff --name-only 9b0b1f935 1ca0d4dfc | grep -cE '(tsx|jsx|vue|html|css)$|^(electron-renderer/|src/tui/|apps/web/)"}}
+  Q-14: {status: n/a, reason: "无遥测上报面（telemetry／遥测／trackEvent 0 命中）；degraded 日志为本地固定字段 JSON（time/component/code/phase/retryable）不外报 ⇒ 无上报前脱敏对象", evidence: {cmd: "git grep -cE 'telemetry|遥测|trackEvent' 1ca0d4dfc -- $(git diff --name-only 9b0b1f935 1ca0d4dfc)"}}
+  Q-15: {status: pass, reason: "缺能力 fail-loud 全落：prs.tsv 缺失⇒E_OPENPRS_EMPTY exit 2（:648）、src 变更∧覆盖率摘要缺失⇒E_COV_UNARMED exit 2、Windows 反斜杠经 _git_rel 归一后消除 E_BAD_BASE 假触发；不 clamp 不静默兜底", evidence: {cmd: "git grep -n 'E_OPENPRS_EMPTY' 1ca0d4dfc -- scripts/control-tower/check-merge-conditions.sh", out: "scripts/control-tower/check-merge-conditions.sh"}}
+  T-1: {status: n/a, reason: "变更集无 src/**.ts（0 件）⇒ 文件头六段契约无被检对象（@input/@output/@exit/@degraded 四标签无从判）", evidence: {cmd: "git diff --name-only 9b0b1f935 1ca0d4dfc | grep -c '^src/'"}}
+  T-2: {status: pass, reason: "typed error 带 code：DeltaError（class，:171）带 code/phase/retryable；三脚本失败路径均带 E_* 码并入头部 @error 闭包（E_OPENPRS_EMPTY／E_COV_UNARMED／E_LIST_MISSING 等）", evidence: {cmd: "git grep -c 'class DeltaError' 1ca0d4dfc -- scripts/control-tower/check-quality-delta.py", out: "scripts/control-tower/check-quality-delta.py"}}
+  T-3: {status: pass, reason: "fail loud 落到位：check-quality-delta.py 27 行含 degraded 字样（含 E_COV_UNARMED 3 行）＋ exit 2 语义；变异闭环（摘修复⇒红、还原⇒绿）由配对测试与复核回执 ③ 实证", evidence: {cmd: "git grep -c 'E_COV_UNARMED' 1ca0d4dfc -- scripts/control-tower/check-quality-delta.py", out: "scripts/control-tower/check-quality-delta.py"}}
+  T-4: {status: partial, reason: "仅 1/5 改动脚本声明 @authority（check-merge-conditions.sh 1 命中）；check-gate-protection.sh／check-quality-delta.py／block-paths-core.ts／gen-block-paths.ts 均 0 命中", evidence: {cmd: "git grep -c '@authority' 1ca0d4dfc -- $(git diff --name-only 9b0b1f935 1ca0d4dfc)", out: "scripts/control-tower/check-merge-conditions.sh"}}
+  T-5: {status: pass, reason: "T-5 域仅 1 件（memory/notes/implemented/2026-10-26-422-gate-robustness.md 命中「已知限制」1 处）；其余 14 件非 UI 且非长期文档件", evidence: {cmd: "git grep -c '已知限制' 1ca0d4dfc -- memory/notes/implemented/2026-10-26-422-gate-robustness.md", out: "memory/notes/implemented/2026-10-26-422-gate-robustness.md"}}
+  T-6: {status: partial, reason: "3/5 脚本有「设计哲学（一句）」字样（行数：check-gate-protection.sh 1／check-merge-conditions.sh 2／check-quality-delta.py 1）；block-paths-core.ts 与 gen-block-paths.ts 仅以 @why 起头、该字样 0 命中", evidence: {cmd: "git grep -c '设计哲学' 1ca0d4dfc -- $(git diff --name-only 9b0b1f935 1ca0d4dfc)", out: "scripts/control-tower/check-merge-conditions.sh"}}
+  T-7: {status: pass, reason: "变更集含 4 件 tests/control-tower 测试件（与 4 件实现配对）；本矩阵不重跑测试，测试通过结论属 #1048 批自身复核回执（attested-by-other，非本批机械验证）", evidence: {cmd: "git diff --name-status 9b0b1f935 1ca0d4dfc -- tests/control-tower", out: "tests/control-tower/block-paths-core.test.ts"}}
+  T-8: {status: pass, reason: "作用域内候选目录 2 个（scripts/control-tower 5 件／tests/control-tower 4 件），两者 AGENTS.md 在 anchor 各 5 个 ^## 小节（≥5 达标）；.claude/claims 2 件属记录面已跳过（不进判定对象，计 skipped=1）", evidence: {cmd: "git show 1ca0d4dfc:scripts/control-tower/AGENTS.md | grep -c '^## '; git show 1ca0d4dfc:tests/control-tower/AGENTS.md | grep -c '^## '", out: "scripts/control-tower/AGENTS.md"}}
