@@ -1,0 +1,13 @@
+# .claude/claims/1076.yaml — #1076 五件产品件 @authority 头注（裁 427 偏差声明承接）
+writeset:
+  - .claude/claims/1076.yaml
+  - src/middleware/auth.ts
+  - src/init/preset-loader.ts
+  - packages/engine-auth/src/permission-grants.ts
+  - extensions/sentinels/capital-health/aggregate.ts
+  - src/routes/onboarding.ts
+done:
+  - verify: node node_modules/.bin/tsc --noEmit
+  - verify: node node_modules/.bin/vitest run tests/extensions tests/middleware tests/presets tests/sentinels
+  - verify: SYNO_CI=1 GITHUB_ACTIONS=true SYNO_DIFF_BASE=gitea/local-main bash scripts/pre-commit-check.sh
+note: "#1076 品味1补齐（裁 427 偏差声明承接）：五件产品件头注补 @authority/@not-here 两段（仅注释，零逻辑改动）；aggregate 措辞避开 #732 结构护栏字面量（resolveThresholds / src/sentinel）。"

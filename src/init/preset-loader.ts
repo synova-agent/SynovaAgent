@@ -30,6 +30,10 @@
  *             **读失败/解析失败/形状非法 = 真错误**（进 `errors[]`）、
  *             **空文档（零内容或仅注释）= 未声明**（不计错；内容级红由 D5 探针 V1 的「scopes[] 为空」兜底 ——
  *             见 KL-T1-1）。
+ * @authority — 由 `src/deploy/content-registry.ts` 的 `type:'presets'` 条目 init/cleanup 调用（boot 与
+ *   content-reload 同一入口）；`probe-role-pack.ts` 只驱动零参只读导出；其它模块不得绕过 content-registry 直调。
+ * @not-here  — 不做内容面热加载编排（`content-reload.ts`）；不改写磁盘（只读 loader）；不定义权限项
+ *   （`permission-grants.ts`）；不读 `manifest.pieces[]`（宿主期望集 `EXPECTED_PIECES` 为准，见 #1063）。
  */
 import { createLogger } from '@synova/logger';
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
