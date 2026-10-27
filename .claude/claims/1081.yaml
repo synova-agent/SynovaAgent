@@ -1,3 +1,4 @@
+# 注：守则内命令改用 as +(any|never|unknown +as) 写法（规避自指 grep 命中）
 # .claude/claims/1081.yaml — #1081 域守则补齐（src/scripts/tests 顶层）＋P0.7 note 标题
 writeset:
   - src/AGENTS.md
