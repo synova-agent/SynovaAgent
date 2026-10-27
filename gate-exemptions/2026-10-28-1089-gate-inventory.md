@@ -1,0 +1,4 @@
+- scripts/control-tower/check-gate-inventory.sh — #1089 W1 门禁三分类校验器（三态；双向对齐＋required_ci 账实＋P0 棘轮） — #1089
+- tests/control-tower/check-gate-inventory.test.sh — #1089 配对密封测试（22 用例：漂移/幽灵/账实不符/判不了/改坏必红） — #1089
+- gate-exemptions/2026-10-28-1089-gate-inventory.md — #1089 本豁免文件自身，按 #623 需同 diff 自覆盖 — #1089
+- docs/authority/DOCS-REGISTRY.yaml — #1089 D2 登记门禁要求登记本豁免文件（DOC-0316） — #1089

@@ -1317,3 +1317,11 @@ documents:
     status: active
     owner: P4
     note: "#1072（裁 427 D3）：scripts/workflow/check-brief-parseable.sh＋两测试件受保护路径豁免（空参 fail-closed；含铺底 #1071 两受保护件）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+
+  # ---- P4 2026-10-28：#1089 W1 门禁三分类豁免登记（DOC-0316；0315 预留给在飞 PR #1088，禁复用）----
+  - id: DOC-0316
+    type: decision
+    path: gate-exemptions/2026-10-28-1089-gate-inventory.md
+    status: active
+    owner: P4
+    note: "#1089（W1）：scripts/control-tower/check-gate-inventory.sh＋配对密封测试受保护路径豁免（三态校验器：双向对齐/required_ci 账实/P0 棘轮）；含自覆盖行与 DOCS-REGISTRY 自登记行。"

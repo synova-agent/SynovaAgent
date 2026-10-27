@@ -958,3 +958,269 @@ candidates:
       why: "C10 复算孤儿（wired_to=[]）且非守卫（D1175 坐标系校验器目前仅预演模式、默认 exit 0，原文「先出预演报告再谈进 CI」）⇒ 等额退役给 T3（本批只标记，不删）"
       replacement: "T3"
 
+
+# ---- P4 2026-10-28：#1089 W1 三分类登记（纯追加段；不改上方任何登记行）----
+# 口径①：owner 默认=治理线 P4；域专属件归属以 CTO 确认为准（confirmed_by: pending-cto，本批不编造归属）
+# 口径②：required_ci=true ⇔ 在 .gitea/workflows/*.yml ／ scripts/pre-commit-check.sh ／ scripts/pre-push-check.sh 任一被引用（合并/提交/推送一条强制腿）
+# 口径③：review_after 默认 +30d；P0 计数棘轮下限 = SYNO_P0_FLOOR（check-gate-inventory.sh 内，默认 8）
+# 生成：逐件从盘上枚举（禁手写），与 check-gate-inventory.sh 双向对齐判据配套
+classification:
+  - id: CT-check-acceptance-matrix
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-acceptance-matrix.py
+    required_ci: false
+    confirmed_by: pending-cto
+  - id: CT-check-block-paths.sh
+    class: P0
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-block-paths.sh
+    required_ci: true
+    confirmed_by: pending-cto
+  - id: CT-check-block-paths.ts
+    class: P0
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-block-paths.ts
+    required_ci: false
+    confirmed_by: pending-cto
+  - id: CT-check-board-metrics
+    class: P2
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-board-metrics.ts
+    required_ci: false
+    confirmed_by: pending-cto
+  - id: CT-check-board-truth
+    class: P2
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-board-truth.ts
+    required_ci: true
+    confirmed_by: pending-cto
+  - id: CT-check-bypass-log
+    class: P0
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-bypass-log.sh
+    required_ci: true
+    confirmed_by: pending-cto
+  - id: CT-check-canary-drift
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-canary-drift.sh
+    required_ci: false
+    confirmed_by: pending-cto
+  - id: CT-check-ci-stale-red
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-ci-stale-red.sh
+    required_ci: false
+    confirmed_by: pending-cto
+  - id: CT-check-citations
+    class: P2
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-citations.py
+    required_ci: false
+    confirmed_by: pending-cto
+  - id: CT-check-customer-deps
+    class: P0
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-customer-deps.ts
+    required_ci: false
+    confirmed_by: pending-cto
+  - id: CT-check-doc-contract
+    class: P2
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-doc-contract.sh
+    required_ci: true
+    confirmed_by: pending-cto
+  - id: CT-check-dsh-anchor
+    class: P2
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-dsh-anchor.py
+    required_ci: true
+    confirmed_by: pending-cto
+  - id: CT-check-dual-repo-sync
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-dual-repo-sync.sh
+    required_ci: false
+    confirmed_by: pending-cto
+  - id: CT-check-fixture-requires
+    class: P2
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-fixture-requires.sh
+    required_ci: false
+    confirmed_by: pending-cto
+  - id: CT-check-gate-integrity
+    class: P0
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-gate-integrity.sh
+    required_ci: false
+    confirmed_by: pending-cto
+  - id: CT-check-gate-inventory
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-gate-inventory.sh
+    required_ci: false
+    confirmed_by: pending-cto
+  - id: CT-check-gate-protection
+    class: P0
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-gate-protection.sh
+    required_ci: true
+    confirmed_by: pending-cto
+  - id: CT-check-gitlinks
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-gitlinks.sh
+    required_ci: false
+    confirmed_by: pending-cto
+  - id: CT-check-k3-report
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-k3-report.py
+    required_ci: false
+    confirmed_by: pending-cto
+  - id: CT-check-merge-conditions
+    class: P0
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-merge-conditions.sh
+    required_ci: false
+    confirmed_by: pending-cto
+  - id: CT-check-name-allocation
+    class: P2
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-name-allocation.sh
+    required_ci: false
+    confirmed_by: pending-cto
+  - id: CT-check-notes-lifecycle
+    class: P2
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-notes-lifecycle.sh
+    required_ci: true
+    confirmed_by: pending-cto
+  - id: CT-check-ontology-fields
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-ontology-fields.sh
+    required_ci: false
+    confirmed_by: pending-cto
+  - id: CT-check-orphan-worktrees
+    class: P2
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-orphan-worktrees.sh
+    required_ci: false
+    confirmed_by: pending-cto
+  - id: CT-check-ownership
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-ownership.py
+    required_ci: false
+    confirmed_by: pending-cto
+  - id: CT-check-package-selfsufficiency
+    class: P2
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-package-selfsufficiency.py
+    required_ci: false
+    confirmed_by: pending-cto
+  - id: CT-check-pr-budget
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-pr-budget.sh
+    required_ci: true
+    confirmed_by: pending-cto
+  - id: CT-check-preset-bundles
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-preset-bundles.sh
+    required_ci: false
+    confirmed_by: pending-cto
+  - id: CT-check-project-coordinates
+    class: P2
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-project-coordinates.sh
+    required_ci: false
+    confirmed_by: pending-cto
+  - id: CT-check-quality-delta
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-quality-delta.py
+    required_ci: true
+    confirmed_by: pending-cto
+  - id: CT-check-registry-invariants
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-registry-invariants.ts
+    required_ci: true
+    confirmed_by: pending-cto
+  - id: CT-check-required-contexts
+    class: P0
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-required-contexts.py
+    required_ci: false
+    confirmed_by: pending-cto
+  - id: CT-check-sentinel-type-net
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-sentinel-type-net.sh
+    required_ci: false
+    confirmed_by: pending-cto
+  - id: CT-check-test-obligations
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-test-obligations.py
+    required_ci: true
+    confirmed_by: pending-cto
+  - id: CT-check-tool-args-delta
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-tool-args-delta.py
+    required_ci: true
+    confirmed_by: pending-cto
+  - id: CT-verify-claims-table
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/verify-claims-table.sh
+    required_ci: true
+    confirmed_by: pending-cto
+  - id: CT-verify-parallel
+    class: P2
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/verify-parallel.sh
+    required_ci: true
+    confirmed_by: pending-cto
