@@ -1877,10 +1877,20 @@ fi
 #   D1148 两处修正: ① 对象用 BRIEF_RESOLVED（认领本提交的 brief，不被组 12 循环覆盖）；
 #   ② 三态 fail-closed —— 原实现 `|| true` + 只看 ❌ 字样 ⇒ 被检脚本崩溃(rc≥2)时输出无 ❌
 #      → 静默判过（假绿）。改为捕 rc：非 0（含 1=违规、≥2=检查自身失败）一律计入闸②。
+#   #1072 调用点守卫（§7.2-a，创始人 2026-10-27 批）: BRIEF_RESOLVED **天然可为空**
+#      （:1004 直接搬 resolver 结果，无认领即空 ⇒ 不是调用方 bug）:
+#        · 空 ⇒ **不传参**：空参在 check-brief-parseable.sh 里是「调用方 bug」语义（rc=2）
+#          ⇒ 照传会让「无认领 brief 的提交」全线误拦（P0）；
+#        · 空 ⇒ **不回退**：回退（不传参）会解析到「别的 brief」= 判错对象（假绿，E8）。
+#      ⇒ 显式跳过：点名 code BRIEF_UNCLAIMED，且**不计入闸②**（不进 DECL2、不计 HARD_FAIL）。
 if [ "$DECL_MERGE_SKIP" != "1" ]; then   # 合并提交无自撰文件 → 无对象（跳过行见闸① 处）
-  BRIEF_PARSEABLE_OUT=$(bash "$ROOT/scripts/workflow/check-brief-parseable.sh" "${BRIEF_RESOLVED:-}" 2>&1); BP_RC=$?
-  if [ "$BP_RC" -ne 0 ]; then
-    DECL2="${DECL2}$(printf '%s\n' "$BRIEF_PARSEABLE_OUT" | grep -v '^[[:space:]]*$' | head -6)\n"
+  if [ -n "${BRIEF_RESOLVED:-}" ]; then
+    BRIEF_PARSEABLE_OUT=$(bash "$ROOT/scripts/workflow/check-brief-parseable.sh" "$BRIEF_RESOLVED" 2>&1); BP_RC=$?
+    if [ "$BP_RC" -ne 0 ]; then
+      DECL2="${DECL2}$(printf '%s\n' "$BRIEF_PARSEABLE_OUT" | grep -v '^[[:space:]]*$' | head -6)\n"
+    fi
+  else
+    echo -e "  ${YELLOW}⏭ 声明闸② brief 可解析性: 本提交无认领 brief（BRIEF_RESOLVED 为空）→ 该项无对象，跳过（code=BRIEF_UNCLAIMED；不计入闸②）${RESET}"
   fi
 fi
 

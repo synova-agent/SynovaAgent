@@ -1,0 +1,31 @@
+# .claude/claims/1072.yaml — #1072 D1148-D3 check-brief-parseable 空参 fail-closed ＋ 调用点守卫（裁 427-D3）
+# 批次 P4-D1148-裁427落地 · 活 2／3（T2，串行在 T1 #1071 之后）｜ 分支 ct/p4-1148-1072（base = T1 head 8bd33a5ff）
+# 🔴 产品件写集 3 件（第 3 件＝§7.2-a 创始人 2026-10-27 已批的写集 +1）。
+#    `.claude/claims/**` 属**交付配套件**（memory/notes/AGENTS.md · 裁定 168-C）＋ D328「提交声明-认领对账」
+#    门禁触发 ⇒ 不是写集扩张（先例：claims/1071.yaml 与其卡同批交付；claims/1061.yaml + c607584f2）。
+# 🔴 必要性（实测）：本卡分支名 ct/p4-1148-1072 不被 claim_store.parse_issue 解析出 issue
+#    ⇒ claim-first 不触发 ⇒ 若缺本文件，--resolve-path 会命中**陈旧**的 claims/1220.yaml
+#    （其 writeset 恰含本卡这 3 个文件）⇒ 报「疑似并行劫持」硬阻断（T1 同型，先例 116 个提交）。
+# 🔴 停点（未改）：GROUP_DOWN 八行组界（:933/:1294/:1450/:1481/:1483/:1640/:1935/:1988）、
+#    T1 已改过的 pre-commit-check.sh :92-102（删死函数）/ :184（简化）/ :1873-1876 旧注释不得回退；
+#    scripts/audit/**、scripts/control-tower/**、.gitea/**、.github/**、src/** 零改动。
+# 🔴 写集内路径变更（L1 批 A 案，2026-10-27）：测试件 git mv 原名 brief-parseable.test.sh →
+#    check-brief-parseable.test.sh —— CT-40 配对规则（ct-test-gate.sh:18/:45，纯改名映射无别名表）
+#    要求 scripts/workflow/check-brief-parseable.sh ↔ tests/control-tower/check-brief-parseable.test.sh；
+#    同一文件改名（非新建/非重复/非桥接壳），11 组用例原样随行。
+writeset:
+  - gate-exemptions/2026-10-28-1080-brief-parseable.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - .claude/claims/1072.yaml
+  - memory/notes/implemented/2026-10-27-1072-d1148-d3-arg-empty.md
+  - scripts/pre-commit-check.sh
+  - scripts/workflow/check-brief-parseable.sh
+  - tests/control-tower/brief-parseable.test.sh  # rename 前路径（本卡 A 案改名，见 note）
+  - tests/control-tower/check-brief-parseable.test.sh
+done:
+  - verify: bash -n scripts/workflow/check-brief-parseable.sh
+  - verify: bash -n scripts/pre-commit-check.sh
+  - verify: bash tests/control-tower/check-brief-parseable.test.sh
+  - verify: bash -c 'bash scripts/workflow/check-brief-parseable.sh "" ; test $? -eq 2'
+  - verify: bash scripts/pre-commit-check.sh
+note: "#1072 / 裁 427-D3：①check-brief-parseable.sh 新增「显式传空参」分支（$#≥1 ∧ $1 空）⇒ rc=2 ＋ 点名 code BRIEF_ARG_EMPTY ＋ degraded 记录（字段 time/component/code/phase/retryable），放在 PYBIN 探测之前（调用方 bug 不得被环境降级盖住）；未传参保留既有回退、坏路径维持 fail-open 原行为（C12 逐字对照相同）；②pre-commit-check.sh 调用点守卫：BRIEF_RESOLVED 非空才传参，为空时**不回退**（回退会解析到「别的 brief」= 判错对象假绿），改打含 code BRIEF_UNCLAIMED 的显式跳过行且不计入闸②；③测试件追加用例 8/9/10/11（EXIT=0; OUT=$(…) || EXIT=$? 形态），并把用例 7 的存量漂移断言按事实重基（841618108/#645 已给 2026-08-02-D286-GraphStore-unify.md:182 补 #CRITERIA: D）＋补一条「仅缺 #CRITERIA 仍点名且 rc=1」的判别力用例。已知限制：①本树（ct/p4-1148-1072）无 .claude/current-brief、无当日 brief ⇒ 未传参走 fail-open（解析不到任何对象）⇒ C11 第三句「打印解析到谁」只在本树外受控环境（mktemp clone 造 current-brief＋当日 brief）可证，已双轨留证；②本地无 .gitea 承载该测试件（CI 权威侧）。四态 Note 见 memory/notes/implemented/2026-10-27-1072-d1148-d3-arg-empty.md。"
