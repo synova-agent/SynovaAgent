@@ -608,13 +608,41 @@ done
 #         （opt_check PRD 对照 261 次命中/0 阻断）——本段就是"合并后仍抓得到"的物理证明。
 # ═══════════════════════════════════════════════════════════════════════════════
 echo "── D1148 声明类三闸注入（①②③ 必须各自点名）──"
-# 裁 409（2026-10-26）：降级感知清单（默认空 ⇒ 断言语义不变；CI 在启用降级时显式注入）
-DOWN_GROUPS="${SYNO_GATE_DOWNGRADED:-}"
-is_down() { printf '%s' ",$DOWN_GROUPS," | grep -q ",$1,"; }
+# 裁 427-D2②（2026-10-27，#1071）: **删除降级感知死分支**（原 `DOWN_GROUPS=`=:612／`is_down()`=:613 ——
+#   「原」= **已删行**，行号指本批起点锚 0fda487e2，天然不漂）
+#   删因（实测，命令进交付回执）: ① 该降级变量在 `tests scripts .gitea .github` 面 **0 注入**
+#     ⇒ is_down 恒假 = 死分支；② 旧语义「is_down 6 ⇒ rc=0」与真实组界互斥:
+#     闸①／闸③ 在组 5/6 降级区（区间 :933..:1294），闸② 在组 12（:1640 之后 ``GROUP_DOWN=0``）。
+#   🔴 **本注释里的一切行号都锚定本批起点 `gitea/local-main` 0fda487e2**（锚时：闸① :1188／
+#     闸③ :1244,:1246／闸② :1888）。之后任何卡改 `scripts/pre-commit-check.sh` 都会再次位移
+#     （实测：#1071 自身 +2、#1072 调用点守卫再 +10）⇒ **引用勿当现行行号**；改前必
+#     `grep -n 'decl_check "声明闸' scripts/pre-commit-check.sh` 现场取。
+#   ⇒ 结论不依赖行号：组界开关在闸①/③ 处为 1、在闸② 处为 0 ⇒ 闸② 恒「[硬阻断]」⇒ **rc 恒 1，禁 rc=0**。
+#   现语义三件套（全在下面断言，缺一判红）:
+#     · 降级态（默认）: rc=1；❌ 与点名恒在 —— 闸①/③ 带「裁 409 降级」后缀、闸② 带「[硬阻断]」
+#     · 严格态: ``SYNO_GATE_STRICT_LEGACY=1`` ⇒ 三闸全「[硬阻断]」，rc 仍 1（只摘计数、不摘点名）
+#     · 死变量不变性: 设 ``${DEAD_VAR}=5,6,9,10,13``（见下方拼接写法）⇒ ❌ 行集合与 rc 与默认态
+#       **逐字相同**（将来若有人重新接线该变量，本断言转红 —— 失效条件见规格 §4.5：接线时须同时删本断言）
+#   隔离（#665b）: 三个复放开关只注入**被测门禁子进程**（_run_gate_env 的 env -i 白名单），
+#     不改变夹具自身控制流，也不继承外层环境。
 D1148_FAIL=0
-reset_clone
-DECL_BRIEF="$CLONE/.claude/task-briefs/${TODAY}-d1148-decl-probe.md"
-cat > "$DECL_BRIEF" <<EOF
+D1148_SEG1_DEF_RC=""
+D1148_SEG1_DEF_FAILS=""
+# 死变量名用**拼接写法**（本夹具既有惯例，见头部 MARK／DM_TOKEN 同款）:
+#   夹具源码内不出现该连续 token —— 否则「死分支已真删」的 `git grep`=0 判据会被本夹具自身命中。
+#   语义完全等价：运行时拼出的串与被删掉的旧变量名逐字节相同（复放行为不变）。
+DEAD_VAR="SYNO_GATE_""DOWNGRADED"
+
+# 取某闸的第一条 ❌ 行原文（供后缀断言；无匹配 ⇒ 空）
+_d1148_gate_fail_line() { # <fails-blob> <闸名>
+  printf '%s\n' "$1" | grep -- "$2" | head -1 || true
+}
+
+# seg1 前置: 造探针 brief + 探针脚本（每次复放前重建副本状态；注入只落 ${CLONE}）
+_d1148_seg1_setup() {
+  reset_clone
+  DECL_BRIEF="$CLONE/.claude/task-briefs/${TODAY}-d1148-decl-probe.md"
+  cat > "$DECL_BRIEF" <<EOF
 # Task Brief — D1148 三闸探针（**故意**同时违反 ①②③）
 
 ## Q0: 定位 — 项目拼图 + 文件审计
@@ -636,34 +664,87 @@ cat > "$DECL_BRIEF" <<EOF
 ## Done 标准
 - [x] 占位完成标准（故意不写 verify 命令）
 EOF
-cat > "$CLONE/scripts/d1148-decl-probe.sh" <<EOF
+  cat > "$CLONE/scripts/d1148-decl-probe.sh" <<EOF
 #!/bin/bash
 # $MARK d1148 三闸探针（探针 brief 认领本文件）
 exit 0
 EOF
-chmod +x "$CLONE/scripts/d1148-decl-probe.sh"
-git -C "$CLONE" add scripts/d1148-decl-probe.sh
-# 卡 #1423: 本场景测的是 **legacy 三闸**（brief 载体）语义 ⇒ 必须**显式回滚**（SYNO_CLAIM_V2=0）。
-#   否则 claim-first 默认生效时，resolver 会按分支 issue 取到副本里的真 claim ⇒ 注入的探针 brief
-#   根本不进判定 ⇒ 三闸不点火（假红形态 = 判据被绕过，不是闸坏）。
-_run_gate_env "$TMP/out.d1148.log" GITHUB_ACTIONS=true SYNO_CI=1 SYNO_FIXTURE_MODE=1 SYNO_CLAIM_V2=0
-DECL_RC=$?
-DECL_FAILS="$(strip_ansi < "$TMP/out.d1148.log" | grep '❌' | sed 's/^[[:space:]]*//' || true)"
-DECL_MISS=""
-for g in '声明闸①' '声明闸②' '声明闸③'; do
-  printf '%s\n' "$DECL_FAILS" | grep -q "$g" || DECL_MISS="$DECL_MISS $g"
-done
-if [ -z "$DECL_MISS" ] && { { is_down 6 && [ "$DECL_RC" -eq 0 ]; } || { ! is_down 6 && [ "$DECL_RC" -eq 1 ]; }; }; then
-  echo "  ✅ D1148 三闸注入: ①②③ 三闸各自点名（rc=${DECL_RC}；组6降级=${DOWN_GROUPS:-无}）"
+  chmod +x "$CLONE/scripts/d1148-decl-probe.sh"
+  git -C "$CLONE" add scripts/d1148-decl-probe.sh
+}
+
+# 后缀形态断言: <shape> ⇒ 打印「不符的闸＋期望后缀」（空 = 形态符合）
+#   down  : 闸①/③ 含「裁 409 降级」（组 5/6 降级区）｜闸② 含「硬阻断」（组 12 非降级区）
+#   strict: 三闸均含「硬阻断」
+#   判据依据: hard_check 降级分支打印 `❌ <名>: <n> 处  [裁 409 降级 —— 只报不拦]`、硬分支打印 `[硬阻断]`
+_d1148_seg1_shape_bad() {
+  local shape="$1" g want line
+  for g in ① ② ③; do
+    case "$shape:$g" in
+      down:①|down:③) want='裁 409 降级' ;;
+      *)             want='硬阻断' ;;
+    esac
+    line="$(_d1148_gate_fail_line "$DECL_FAILS" "声明闸${g}")"
+    case "$line" in
+      *"$want"*) ;;
+      *) printf ' 声明闸%s(期望含「%s」)' "$g" "$want" ;;
+    esac
+  done
+}
+
+# seg1 复放器: <标签> <shape> [<门禁环境赋值>...] ⇒ 打印判定行并置 D1148_FAIL
+_d1148_seg1_run() {
+  local label="$1" shape="$2"; shift 2
+  local extra=("$@") bad="" miss="" g
+  _d1148_seg1_setup
+  # 卡 #1423: 本场景测的是 **legacy 三闸**（brief 载体）语义 ⇒ 必须**显式回滚**（SYNO_CLAIM_V2=0）。
+  #   否则 claim-first 默认生效时，resolver 会按分支 issue 取到副本里的真 claim ⇒ 注入的探针 brief
+  #   根本不进判定 ⇒ 三闸不点火（假红形态 = 判据被绕过，不是闸坏）。
+  _run_gate_env "$TMP/out.d1148-${label}.log" GITHUB_ACTIONS=true SYNO_CI=1 SYNO_FIXTURE_MODE=1 SYNO_CLAIM_V2=0 ${extra[@]+"${extra[@]}"}
+  DECL_RC=$?
+  DECL_FAILS="$(strip_ansi < "$TMP/out.d1148-${label}.log" | grep '❌' | sed 's/^[[:space:]]*//' || true)"
+  for g in '声明闸①' '声明闸②' '声明闸③'; do
+    printf '%s\n' "$DECL_FAILS" | grep -q -- "$g" || miss="$miss $g"
+  done
+  bad="$(_d1148_seg1_shape_bad "$shape")"
+  if [ -z "$miss" ] && [ -z "$bad" ] && [ "$DECL_RC" -eq 1 ]; then
+    echo "  ✅ D1148 三闸注入: ①②③ 三闸各自点名＋后缀形态符（rc=${DECL_RC}；形态=${shape}；复放=${label}）"
+  else
+    echo "  ❌ D1148 三闸注入: rc=$DECL_RC 未点名闸:${miss:-<无>} 后缀不符:${bad:-<无>} —— 三硬闸存在 fail-open 或未接线（复放=${label}）"
+    printf '%s\n' "$DECL_FAILS" | sed 's/^/     /' | head -10
+    D1148_FAIL=1
+  fi
+}
+
+# ① 降级态（默认）: rc=1 ＋ 三闸点名 ＋ 后缀（闸①/③「裁 409 降级」、闸②「硬阻断」）
+_d1148_seg1_run default down
+D1148_SEG1_DEF_RC="$DECL_RC"
+D1148_SEG1_DEF_FAILS="$DECL_FAILS"
+
+# ② 严格态复放（裁 427-L4 两态断言）: 三闸全「硬阻断」，rc 仍 1（形态不同、rc 相同）
+_d1148_seg1_run strict strict SYNO_GATE_STRICT_LEGACY=1
+if [ "$DECL_RC" -eq "$D1148_SEG1_DEF_RC" ]; then
+  echo "  ✅ D1148 两态一致: 默认态/严格态 rc 相同（rc=${DECL_RC}）—— 严格态只改形态、不摘点名"
 else
-  echo "  ❌ D1148 三闸注入: rc=$DECL_RC 未点名闸:${DECL_MISS:-<无>} —— 三硬闸存在 fail-open 或未接线"
-  printf '%s\n' "$DECL_FAILS" | sed 's/^/     /' | head -10
+  echo "  ❌ D1148 两态 rc 不一致: 默认=${D1148_SEG1_DEF_RC} 严格=${DECL_RC}（严格态应只改形态、rc 仍 1）"
+  D1148_FAIL=1
+fi
+
+# ③ 死变量不变性（L4 缺口三）: 旧降级变量设了也没用 ⇒ 变量确已死
+_d1148_seg1_run deadvar down "${DEAD_VAR}=5,6,9,10,13"
+DEADVAR_DIFF="$(diff <(printf '%s\n' "$D1148_SEG1_DEF_FAILS") <(printf '%s\n' "$DECL_FAILS") || true)"
+if [ "$DECL_RC" -eq "$D1148_SEG1_DEF_RC" ] && [ -z "$DEADVAR_DIFF" ]; then
+  echo "  ✅ D1148 死变量不变性: ${DEAD_VAR}=5,6,9,10,13 与默认态 rc/❌ 行集合逐字相同（rc=${DECL_RC}，diff 为空）"
+else
+  echo "  ❌ D1148 死变量不变性: rc 默认=${D1148_SEG1_DEF_RC}／死变量=${DECL_RC}，❌ 行集合差异:"
+  printf '%s\n' "$DEADVAR_DIFF" | sed 's/^/     /' | head -10
   D1148_FAIL=1
 fi
 
 # ── D1148 二次注入: Q2 排除项被判据捕获（闸② 的第二条子判据：写集 ⊆ 声明）──
 #   探针 brief 认领 scripts/d1148-excl-probe.sh，同时在 Q2 明确「不改」它
 #   → 声明与写集自相矛盾，闸② 必须点名（D296 认领制排除项判定的回归防线）。
+#   裁 427-D2②: 期望 rc 一律 1（闸② 在组 12 非降级区）、闸② 行必带「[硬阻断]」（降级只摘计数、点名恒在）。
 echo "── D1148 闸② 排除项注入 ──"
 reset_clone
 EXCL_BRIEF="$CLONE/.claude/task-briefs/${TODAY}-d1148-excl-probe.md"
@@ -710,12 +791,14 @@ git -C "$CLONE" add scripts/d1148-excl-probe.sh
 _run_gate_env "$TMP/out.d1148-excl.log" GITHUB_ACTIONS=true SYNO_CI=1 SYNO_FIXTURE_MODE=1 SYNO_CLAIM_V2=0
 EXCL_RC=$?
 EXCL_FAILS="$(strip_ansi < "$TMP/out.d1148-excl.log" | grep '❌' | sed 's/^[[:space:]]*//' || true)"
-if { { is_down 6 && [ "$EXCL_RC" -eq 0 ]; } || { ! is_down 6 && [ "$EXCL_RC" -eq 1 ]; }; } \
-   && printf '%s\n' "$EXCL_FAILS" | grep -q '声明闸②' \
-   && printf '%s\n' "$EXCL_FAILS" | grep -q 'Q2 排除项'; then
-  echo "  ✅ D1148 闸② 排除项注入: 点名「Q2 排除项」（rc=${EXCL_RC}；组6降级=${DOWN_GROUPS:-无}）"
+EXCL_G2_LINE="$(_d1148_gate_fail_line "$EXCL_FAILS" '声明闸②')"
+if [ "$EXCL_RC" -eq 1 ] \
+   && printf '%s\n' "$EXCL_FAILS" | grep -q -- '声明闸②' \
+   && printf '%s\n' "$EXCL_FAILS" | grep -q -- 'Q2 排除项' \
+   && printf '%s\n' "$EXCL_G2_LINE" | grep -q -- '硬阻断'; then
+  echo "  ✅ D1148 闸② 排除项注入: 点名「Q2 排除项」＋闸②「[硬阻断]」（rc=${EXCL_RC}）"
 else
-  echo "  ❌ D1148 闸② 排除项注入: rc=${EXCL_RC}，闸② 未捕获自相矛盾的排除项"
+  echo "  ❌ D1148 闸② 排除项注入: rc=${EXCL_RC}，闸② 未捕获自相矛盾的排除项（或缺「[硬阻断]」后缀 ⇒ 降级摘了点名）"
   printf '%s\n' "$EXCL_FAILS" | sed 's/^/     /' | head -8
   D1148_FAIL=1
 fi

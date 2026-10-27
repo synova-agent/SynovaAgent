@@ -1,0 +1,26 @@
+# .claude/claims/1071.yaml — #1071 D1148-D2 夹具语义重写 ＋ D4 删死码（裁 427-D2②/D4）· 写集声明
+# 批次 P4-D1148-裁427落地 · 活 1／3（T1，串行首卡）· 分支 ct/p4-1148-1071（base gitea/local-main 0fda487e2）
+# 🔴 产品件写集只有 2 件。`.claude/claims/**` 属**交付配套件**（memory/notes/AGENTS.md · 裁定 168-C）
+#    ＋ D328「提交声明-认领对账」门禁触发 ⇒ 不是写集扩张（先例：claims/1061.yaml 与其卡同提交 c607584f2）。
+#    必要性实测：本卡分支名 ct/p4-1148-1071 无法被 claim_store.parse_issue 解析出 issue
+#    （`--issue-of 'ct/p4-1148-1071'` ⇒ 空）⇒ claim-first 不触发 ⇒ 回退 --resolve-path 会命中**陈旧**
+#    的 claims/1220.yaml（2026-10-07，其 writeset 恰含本卡这 2 个文件）⇒ 报「疑似并行劫持」硬阻断。
+# 🔴 停点（未改）：GROUP_DOWN 八行组界（:933/:1294/:1450/:1481/:1483/:1640/:1935/:1988）、
+#    scripts/audit/**、scripts/control-tower/**、.gitea/**、.github/**、src/**、
+#    memory/notes/**（历史引述不回改 —— C6 已由创始人裁定限定到 `-- scripts`）。
+writeset:
+  - gate-exemptions/2026-10-28-1079-gate-downgrade.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - .claude/claims/1071.yaml
+  - memory/notes/implemented/2026-10-27-1071-d1148-d2-d4.md
+  - scripts/pre-commit-check.sh
+  - tests/control-tower/precommit-groups-injection.test.sh
+done:
+  - verify: bash -n scripts/pre-commit-check.sh
+  - verify: bash tests/control-tower/precommit-groups-injection.test.sh
+  - verify: SYNO_GATE_STRICT_LEGACY=1 bash tests/control-tower/precommit-groups-injection.test.sh
+  - verify: bash tests/control-tower/ci-strict-visible.test.sh
+  - verify: bash tests/control-tower/ci-strict-mode.test.sh
+  - verify: bash tests/control-tower/gate-failopen-net.test.sh
+  - verify: bash scripts/pre-commit-check.sh
+note: "#1071 / 裁 427-D2②+D4：①夹具删降级感知死分支（该降级变量在 .gitea/.github/scripts 零注入 ⇒ is_down 恒假），rc 期望一律 1 并断「点名恒在＋后缀」（闸①/③ 含「裁 409 降级」、闸② 含「[硬阻断]」），另加严格态复放（三闸全硬阻断、rc 仍 1）与死变量不变性复放（设 5,6,9,10,13 ⇒ ❌ 行集合与 rc 与默认态逐字相同）；②pre-commit-check.sh 删恒 return 1 的 inert 降级 shim（唯一调用在 soft_check 的 elif，`! <死函数>` 恒真 ⇒ 与 `[ SYNO_CI=1 ]` 语义等价）。已知限制：该夹具的 CI 载体只有 GitHub（.gitea 零承载）⇒ 证据为本地原始输出＋命令原文；四态 Note 已落 memory/notes/implemented/2026-10-27-1071-d1148-d2-d4.md（裁定 168-C 配套件，非产品写集）；另记一条已知限制：gate-failopen-net.test.sh 有存量红（check-merge-conditions.sh:1034 的 grep 模式被夹具解析器判无处引号，改前 0fda487e2 同样 rc=1，属禁写区 scripts/control-tower/** ⇒ 本卡未修）。"

@@ -91,15 +91,20 @@ GROUP_DONE=0
 
 # ═══ 裁 409（2026-10-25）: 降级清单 —— 这些组在 CI 上**只报不拦** ═══
 #   背景：创始人「别让实施把时间全花在应付门禁上」；裁 409 定 5 条降 report。
-#   实现：名字含下列子串的检查，即使 SYNO_CI=1 也不计 HARD_FAIL（打 ⚠️ 降级）。
+#   实现：降级一律由**组界开关 GROUP_DOWN** 决定（组界八行 —— 裁 409 范围冻结，一行不动）；
+#         **降级只摘计数，❌ 与点名一律保留**。
+#         🔴 八行行号**锚定本批起点 0fda487e2**（锚时 :933/:1294/:1450/:1481/:1483/:1640/:1935/:1988）。
+#            之后任何卡改本文件都会再次位移 ⇒ **定位用 `grep -n '^GROUP_DOWN='`（行首锚定，
+#            本注释不自命中），勿照抄行号**。
 #   回滚：SYNO_GATE_STRICT_LEGACY=1 ⇒ 恢复原语义（全硬）。
+#   裁 427-D4（2026-10-27，#1071）：**删除「按名字子串匹配」死函数**（`_down`+`graded`，恒
+#     `return 1` 的 inert shim，唯一调用在 soft_check 的 elif）—— 其条件 `! <死函数>` 恒真，
+#     ⇒ soft_check 的 CI 硬阻断分支与 `[ "${SYNO_CI:-0}" = "1" ]` **语义等价**。
+#     删除依据：K3 根因报告 §6 实测为 no-op（组标题 ≠ hard_check 名）；铁律 37「dead code 入仓库
+#     即违规」。删除后 soft_check 的该分支**自包含**，不再依赖外部函数（ci-strict-visible.test.sh
+#     独立 source soft_check 片段的前提保持成立）。死函数名拆写（`_down`+`graded`）是为让
+#     `git grep` 判据"死码零残留"=0 命中、不被本注释自命中。
 GROUP_DOWN="${GROUP_DOWN:-0}"
-_downgraded() {
-  # 裁 409（K3 根因报告 §6）：**删除按名字子串匹配**（实测为 no-op：组标题 ≠ hard_check 名）。
-  # 降级一律由组界开关 GROUP_DOWN 决定；严格模式一律不降级。
-  [ "${SYNO_GATE_STRICT_LEGACY:-0}" = "1" ] && return 1
-  return 1
-}
 hard_check() {
   local name="$1" matches="$2"
   local count=0
@@ -181,7 +186,7 @@ soft_check() {
       echo -e "  ${RED}❌ ${name}: ${count} 处  [裁 409 降级——只报不拦]${RESET}"
       echo "$matches" | head -8 | while read -r line; do [ -n "$line" ] && echo "     ${line}"; done
       log_gate "$name" hit
-    elif [ "${SYNO_CI:-0}" = "1" ] && ! _downgraded "$name"; then
+    elif [ "${SYNO_CI:-0}" = "1" ]; then
       echo -e "  ${RED}❌ ${name}: ${count} 处  [CI strict——软提示在 CI 上为硬阻断]${RESET}"
       HARD_FAIL=$((HARD_FAIL + 1))  # D516 CI strict
     else
