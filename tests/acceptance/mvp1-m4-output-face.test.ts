@@ -991,6 +991,9 @@ describe('#1053 T5 · A8 零请求（未选客户不发请求）', () => {
     // ④ 提示态在场且不出降级条（未选客户不是"降级"）
     expect(src).toContain(EXP_TESTID.selectOrg);
     expect(src).not.toContain(EXP_TESTID.degraded);
+    // ⑤ 容器把 orgId 作为第 2 实参传给 loader（删掉 ⇒ 界面退回跨客户聚合，A6/A13 都不红）
+    expect(src).toContain('loadMeasurementTrends(base, orgId)');
+    expect(src).not.toContain('loadMeasurementTrends(base)');
   });
 });
 

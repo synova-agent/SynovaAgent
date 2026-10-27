@@ -11,7 +11,7 @@
 产品线 P1。验收件在 `tests/acceptance/**`；**产品代码不得 import `tests/acceptance/**`（含 expected 模块）**。
 
 ## 怎么算完成（机器可判）
-- `npx vitest run tests/acceptance/mvp1-m4-output-face.test.ts` → 35 passed（本批基线；后续批次以实测为准）
+- `npx vitest run tests/acceptance/mvp1-m4-output-face.test.ts` → 43 passed（本批基线；后续批次以实测为准）
 - `npx vitest run tests/acceptance/mvp1-m3-domain-chain.test.ts` → 7 passed（本批基线；后续批次以实测为准）
 - `npx tsc -p electron-renderer/tsconfig.json` → exit 0
 - `git grep -c "Date.now()" HEAD -- tests/acceptance/mvp1-m4-output-face.test.ts` → 无输出（exit 1）＝ 零命中（`git grep -c` 不打印 0）；注入缝 `tests/acceptance/support/clock.ts` 代码落点 1 处 ＋ 1 行注释提及（实测 `git grep -c` 计 2 行）
