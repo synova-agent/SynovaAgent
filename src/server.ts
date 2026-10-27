@@ -51,6 +51,7 @@ import expertRoutes from './routes/expert';
 import agentObserverRoutes from './routes/agent-observer';
 import imRoutes from './routes/im';
 import knowledgeRoutes from './routes/knowledge';
+import onboardingRoutes from './routes/onboarding'; // #712 — 建档通道（⓪-b 人侧入口；此前在树但**未挂载** ⇒ 生产不可达）
 import credentialRoutes from './routes/credentials';
 import { llmConfigRoutes } from './routes/llm-config';
 import { onLlmCredentialChanged } from './services/llm-credential-store';
@@ -536,6 +537,7 @@ export async function createServer(): Promise<Server> {
   app.use(agentObserverRoutes);
   app.use(imRoutes);
   app.use(knowledgeRoutes);
+  app.use(onboardingRoutes); // #712 — 建档通道挂载（判据：tests/extensions/onboarding-mount.test.ts，未挂载 ⇒ 404 必红）
   app.use(credentialRoutes);
   app.use(documentRoutes);
   app.use(permissionRoutes);
