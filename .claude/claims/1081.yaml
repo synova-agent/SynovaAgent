@@ -6,6 +6,7 @@ writeset:
   - tests/AGENTS.md
   - memory/notes/proposed/2026-10-27-1054-acceptance-matrix.md
   - .claude/claims/1081.yaml
+  - docs/synova/reviews/1082.108210821082.json
 done:
   - verify: git cat-file -s HEAD:src/AGENTS.md && git cat-file -s HEAD:scripts/AGENTS.md && git cat-file -s HEAD:tests/AGENTS.md
   - verify: git grep -c "P0→P0.7" -- memory/notes/proposed/2026-10-27-1054-acceptance-matrix.md
