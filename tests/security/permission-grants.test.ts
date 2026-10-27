@@ -238,14 +238,14 @@ describe('K12-11 / 模型面 — 权限项（PermissionId）', () => {
 
   it('V6 按项授予: 给自定义角色授**单项** ⇒ 仅该能力生效（不是整档放行）', () => {
     const root = makeFixtureRoot(); cleanupRoots.push(root);
-    writeRolePack(root, 'finance-analyst', ['knowledge.hr.read']);
+    writeRolePack(root, 'finance-analyst', ['knowledge.people.read']);
 
     const items = permissionsForRole('finance-analyst', { root });
-    expect(items).toEqual(['knowledge.hr.read']);
-    expect(hasPermission('knowledge.hr.read', items)).toBe(true);
+    expect(items).toEqual(['knowledge.people.read']);
+    expect(hasPermission('knowledge.people.read', items)).toBe(true);
     expect(hasPermission('knowledge.finance.read', items)).toBe(false);
-    expect(hasPermission('knowledge.sales.read', items)).toBe(false);
-    expect(hasPermission('knowledge.hr.write', items)).toBe(false);
+    expect(hasPermission('knowledge.market.read', items)).toBe(false);
+    expect(hasPermission('knowledge.people.write', items)).toBe(false);
     expect(hasPermission('tool.export.raw', items)).toBe(false);
   });
 
@@ -266,7 +266,7 @@ describe('K12-11 / 模型面 — 权限项（PermissionId）', () => {
     const items = permissionsForRole('manager', { root });
     expect(items).not.toContain('knowledge.finance.read');
     // 其余出厂项仍在 ⇒ 证明是"减项"而不是"整包替换成空"
-    expect(items).toContain('knowledge.hr.read');
+    expect(items).toContain('knowledge.people.read');
     expect(items).toContain('tool.analysis.invoke');
   });
 
@@ -325,9 +325,9 @@ describe('K12-11 / 模型面 — 权限项（PermissionId）', () => {
   it('继承: inherits 指名的父包项并入（目录名推导，无硬编码角色表）', () => {
     const root = makeFixtureRoot(); cleanupRoots.push(root);
     writeRolePack(root, 'base-role', ['knowledge.finance.read']);
-    writeRolePack(root, 'derived-role', ['knowledge.sales.read'], [], { inherits: 'base-role' });
+    writeRolePack(root, 'derived-role', ['knowledge.market.read'], [], { inherits: 'base-role' });
     const items = permissionsForRole('derived-role', { root });
-    expect(items).toEqual(['knowledge.finance.read', 'knowledge.sales.read']);
+    expect(items).toEqual(['knowledge.finance.read', 'knowledge.market.read']);
   });
 
   it('边界: 无「读知识」项 ⇒ 项模型**不说话**（返回 null，交调用方回落）', () => {
@@ -378,8 +378,10 @@ describe('K12-11 / 接线面 — 项模型在授权判定点生效', () => {
 
   it('🔴 判别性 A: 客户包减项 ⇒ admin 白名单真被收窄（改坏回纯档位 ⇒ 本组红）', async () => {
     const root = makeFixtureRoot(); cleanupRoots.push(root);
-    // admin 出厂含 knowledge.*.read（全库）⇒ 客户包减掉 finance + hr 两个范围
-    writeRolePack(root, 'admin', [], ['knowledge.finance.read', 'knowledge.hr.read']);
+    // admin 出厂含 knowledge.*.read（全库）⇒ 客户包减掉 finance + people 两个范围
+    //   （#731/T2 d-perm：命名空间已收缩为 yaml 背书集 {finance, people, market}；
+    //     原夹具用的 `hr` 已变未知名 —— 若留着，这条判别性会退化成"减一个无效项"而假绿。）
+    writeRolePack(root, 'admin', [], ['knowledge.finance.read', 'knowledge.people.read']);
     const restore = useFixtureRootAsPresetsRoot(root);
     try {
       const filter = await runMiddlewareAndCaptureFilter('admin', 'org-single');
@@ -393,9 +395,9 @@ describe('K12-11 / 接线面 — 项模型在授权判定点生效', () => {
 
   it('🔴 判别性 B: 客户包减掉**全部**读项 ⇒ 项面兜底最窄 [normal]（fail-closed，绝不放宽）', async () => {
     const root = makeFixtureRoot(); cleanupRoots.push(root);
+    // #731/T2（d-perm）：命名空间 = yaml 背书集 {finance, people, market} ⇒ 「全部读项」= 这 3 个
     writeRolePack(root, 'admin', [],
-      ['knowledge.finance.read', 'knowledge.hr.read', 'knowledge.sales.read',
-       'knowledge.people.read', 'knowledge.market.read']);
+      ['knowledge.finance.read', 'knowledge.people.read', 'knowledge.market.read']);
     const restore = useFixtureRootAsPresetsRoot(root);
     try {
       const filter = await runMiddlewareAndCaptureFilter('admin', 'org-none-read');
@@ -421,7 +423,7 @@ describe('K12-11 / 接线面 — 项模型在授权判定点生效', () => {
     expect(resolved.sources.packDenies).toContain('knowledge.finance.write');
     expect(resolved.items).not.toContain('knowledge.finance.write');
     // 按项授予的**边界**: 真包只勾了"财务库读"这一项 ⇒ 别库读项**不因岗位而自动获得**
-    expect(resolved.items).not.toContain('knowledge.hr.read');
+    expect(resolved.items).not.toContain('knowledge.people.read');
     expect(resolved.items).not.toContain('knowledge.market.read');
     // 且未勾任何工具项 ⇒ 不整档放行
     expect(resolved.items).not.toContain('tool.export.raw');
@@ -431,7 +433,7 @@ describe('K12-11 / 接线面 — 项模型在授权判定点生效', () => {
   it('V1 项模型在**真请求**上生效: 自定义角色 ⇒ 产出与项模型推导一致（含回落）', async () => {
     const root = makeFixtureRoot(); cleanupRoots.push(root);
     const role = 'k12-11-custom-role';
-    writeRolePack(root, role, ['knowledge.hr.read']);
+    writeRolePack(root, role, ['knowledge.people.read']);
     const restore = useFixtureRootAsPresetsRoot(root);
     try {
       const filter = await runMiddlewareAndCaptureFilter(role);
@@ -481,13 +483,13 @@ describe('K12-11 / 接线面 — 项模型在授权判定点生效', () => {
       // A 只减 finance 读 ⇒ 其余出厂项**逐项保留**（按项，不整档）
       expect(a).toEqual(factory.filter((i) => i !== 'knowledge.finance.read'));
       expect(a).toContain('knowledge.finance.write');      // 同库**写**项不受牵连
-      expect(a).toContain('knowledge.hr.read');
+      expect(a).toContain('knowledge.people.read');
       expect(a).toContain('knowledge.market.read');
       expect(a).toContain('tool.export.raw');
       // B 另减 market 读 + 工具项 ⇒ 与 A 的集合不同（同岗位名、不同客户）
       expect(b).toEqual(factory.filter((i) =>
         i !== 'knowledge.finance.read' && i !== 'knowledge.market.read' && i !== 'tool.export.raw'));
-      expect(b).toContain('knowledge.hr.read');
+      expect(b).toContain('knowledge.people.read');
       expect(b).not.toContain('tool.export.raw');
       expect(a.length - b.length).toBe(2);                 // 差异 = market.read + export.raw
       // 两者都是"出厂默认的子集"（覆盖不是替换 ⇒ 出厂项仍在，只是被减）
@@ -579,7 +581,7 @@ describe.skipIf(!FORCE_MUTATION)('K12-11 / V4 反例（门控·自证伪）: 项
     // 对照组走**真**模块（顶层的原引用，未被 mock 影响），且必须自带夹具
     //   —— 否则会去读真实仓的内容面（并发会话可改）⇒ 判据不自洽（本件已踩过这个坑）
     const root = makeFixtureRoot(); cleanupRoots.push(root);
-    writeRolePack(root, 'admin', [], ['knowledge.finance.read', 'knowledge.hr.read']);
+    writeRolePack(root, 'admin', [], ['knowledge.finance.read', 'knowledge.people.read']);
     const restore = useFixtureRootAsPresetsRoot(root);
     try {
       expect(allowedSensitivitiesByGrants('admin', 'normal', 'org-1'))
