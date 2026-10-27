@@ -1,0 +1,10 @@
+# .claude/claims/1074.yaml — #1074 registrations 计数解耦补钉（K3 假绿#1 升格 · 承接 #1070）
+writeset:
+  - .claude/claims/1074.yaml
+  - src/middleware/auth.ts
+  - tests/extensions/knowledge-scope-wiring.test.ts
+done:
+  - verify: node node_modules/.bin/vitest run tests/extensions/knowledge-scope-wiring.test.ts
+  - verify: node node_modules/.bin/tsc --noEmit
+  - verify: SYNO_CI=1 GITHUB_ACTIONS=true SYNO_DIFF_BASE=gitea/local-main bash scripts/pre-commit-check.sh
+note: "#1074 补钉（K3 终审 §3.1 假绿#1）：KnowledgeScopeDimensionGate 增只读 registrations（两分支均返回进程累计关闭判定数）；测试钉「三次关闭判定逐次 +1」（把计数挪进 memo-if 的突变 ⇒ 必红，已双向验证）；既有 toEqual 形状断言同步 +registrations:0。接口 additive，计数逻辑零改动。"
