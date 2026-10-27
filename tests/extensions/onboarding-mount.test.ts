@@ -37,14 +37,15 @@
  *   ③ 主树 `data/` 零写入只覆盖**本进程路径**（DB 走 `:memory:`）；外部进程写入不在本文件判据面。
  *   ④ 判据文件名按卡面写集冻结为 `*.test.ts`（铁律 33 三档中的集成档名义上该用
  *      `*.integration.test.ts`，此处从卡面，不擅自改名）。
- *   ⑤ 🔴 **已知缺陷 #712-b（实测，写集外，已上报 L1；按 L1 裁示 _不设断言_）**：
- *      `POST /api/onboarding/apply` 在 `superAdminConfirmed=false` 时返回 **409**（响应面 fail-closed），
- *      但**盘上已写入 3 件** —— `src/routes/onboarding.ts:104-108` 先跑 `runOnboardingFlow`
- *      （第 ④ 步已写盘）再判确认；`onboarding-flow.ts:170` 的 `canDeploy` 只让 `deploy` 步记
- *      `skipped`，**不回滚第 ④ 步**。⇒ 任何**持证用户（非超管亦然）**都能写内容面。
- *      🔴 把该缺陷固化成测试期望＝把缺陷写进判据 ⇒ **本文件只断 409 + code**；副作用以
- *      ls 原始输出进 PR 正文「已知限制」＋回执。修复须动 `src/routes/onboarding.ts` /
- *      `src/onboarding/**` = **本卡写集外，禁改**。
+ *   ⑤ 🔴 **#712-b 门序缺陷（#1067 已修；本文件以磁盘零断言钉住门序）**：
+ *      · 修复**前**：`POST /api/onboarding/apply` 在 `superAdminConfirmed=false` 时返回 **409**（响应面
+ *        fail-closed），但**盘上已写入 3 件** —— 先跑 `runOnboardingFlow`（第 ④ 步已写盘）再判确认
+ *        ⇒ 任何**持证用户（非超管亦然）**都能写内容面。
+ *      · 修复**后**（#1067）：确认门**前移**到调用 flow 之前 ⇒ 未确认路径**零落盘**。
+ *      🔴 本文件 ① 在 409 + code 之后补 `expect(walkFiles(root)).toEqual([])`，把**门序**钉死
+ *      （只断响应码时门序回归全套不可见 —— R-A 反向突变实测 6/6 假绿）。
+ *      ⚠️ 该断言**依赖 #1067 在本支**：`ct/p3m7-pr5` **单支**（无 #1067）上**预期红**
+ *      （1 failed / 5 passed 属预期，禁为转绿而弱化断言）；两支合并态才 6/6 绿。
  *
  * 铁律 48: 每格均有真断言（vitest expect 调用，禁空壳）；覆盖 挂载可达 / 凭证后 fail-closed /
  *          非 dryRun 真落盘 / dryRun 反向 / 未鉴权边界 / 主树零写入 / 缺口可观测 七路径。
@@ -110,6 +111,7 @@ async function issueToken(): Promise<string> {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
+      // 唯一性 nonce，不参与断言期望值（Q-6 时间语义不适用）
       email: `mount-probe-${String(Date.now())}@dev.local`,
       password: 'devpass1',
       role: 'finance',
@@ -220,15 +222,17 @@ describe('#712 ① 生产可达：`src/server.ts` 真挂载 onboarding 路由', 
       expect(body.ok).toBe(false);
       expect(body.code).toBe('SUPER_ADMIN_CONFIRMATION_REQUIRED');
 
-      // 🔴 已知缺陷 #712-b（**写集外，已上报 L1；此处不设断言**）：
-      //   `src/routes/onboarding.ts:104-108` 先 `runOnboardingFlow(input)`（其第 ④ 步
-      //   `generateConfigPack` 以 `dryRun:false` **已写盘**），之后才判 `superAdminConfirmed`；
-      //   `onboarding-flow.ts:170` 的 `canDeploy` 只让 `deploy` 步记 `skipped`，**不回滚第 ④ 步写入**。
-      //   ⇒ 409 只是「响应面 fail-closed」，盘上副作用仍发生（任何持证用户、非超管亦然）。
-      //   🔴 L1 裁示：**不得把该缺陷固化成测试期望**（那等于把缺陷写进判据）⇒ 本格只断 409 + code；
-      //   盘上副作用以 ls 原始输出写进 PR 正文「已知限制」＋回执，由 L1 上报。
-      //   （修复须动 `src/routes/onboarding.ts` / `src/onboarding/**` = 本卡写集外，禁改。）
-      void root;
+      // 🔴 磁盘零断言 —— 本格真正的牙齿：409 只是「响应面 fail-closed」，**盘上不得有副作用**。
+      //   该断言**依赖 #1067 的门序修复**（确认门前移到 `runOnboardingFlow` 之前）：
+      //     · 修复前（`src/routes/onboarding.ts` 先跑 flow 再判确认）⇒ 第 ④ 步
+      //       `generateConfigPack` 以 `dryRun:false` **已写盘 3 件** ⇒ 本断言必红
+      //       （原始输出 `expected [ …(3) ] to deeply equal []`）；
+      //     · 修复后 ⇒ 未确认路径**零落盘** ⇒ 本断言绿。
+      //   ⇒ 即：本断言把「门序」钉死。只断 409 + code 时，门序回归在**全套测试里不可见**
+      //      （R-A 反向突变实测 6/6 假绿；本断言即其最小红例）。
+      //   ⚠️ 本断言在**不含 #1067 的单支（`ct/p3m7-pr5`）上预期红** ⇒ 单支 1 failed / 5 passed 属预期；
+      //      两支合并态才 6/6 绿（见 PR #1056 正文 a–d 证据）。
+      expect(walkFiles(root)).toEqual([]);
     });
   }, 60_000);
 });
@@ -371,7 +375,15 @@ describe('#712 ⑤ 边界：请求体指定 rootDir 被忽略（一律 cwd）', 
         const res = await fetch(`${BASE}/api/onboarding/start`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ ...roleSeedBody(), dryRun: false, rootDir: evilRoot }),
+          // ⑤ 判据的目的是 **rootDir 隔离**（请求体路径被忽略），不是确认语义 ⇒
+          //   显式带上 `superAdminConfirmed: true` 才是「合法部署请求」（否则被 #1067 确认门挡成 409，
+          //   本格就会把 C1 缺陷「未确认 ⇒ 写盘」固化成期望 —— 见 R-A 回执 活2 §3）。
+          body: JSON.stringify({
+            ...roleSeedBody(),
+            dryRun: false,
+            superAdminConfirmed: true,
+            rootDir: evilRoot,
+          }),
         });
         expect(res.status).toBe(200);
         // evil 目录零写入

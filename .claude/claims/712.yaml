@@ -4,8 +4,8 @@ writeset:
   - src/server.ts
   - tests/extensions/onboarding-mount.test.ts
 done:
-  - verify: npx vitest run tests/extensions/onboarding-mount.test.ts
+  - verify: node node_modules/.bin/vitest run tests/extensions/onboarding-mount.test.ts
   - verify: npx vitest run tests/extensions tests/presets
   - verify: npx tsc --noEmit
   - verify: npm run check:architecture
-note: "#712: src/server.ts 挂载 routes/onboarding（import＋一行 mount；此前在树未挂载 ⇒ 生产不可达）＋ 穿真 createServer() 的落盘判据（非 dryRun 真落盘／dryRun 零落盘／改坏必红／主树 data 零写入）。两处缺口属写集外并已上报 L1：#712-a 生成器只落 3 件（期望 6 件）｜#712-b apply 未超管确认响应 409 但盘上已写（按 L1 裁示不设为断言）。"
+note: "#712: src/server.ts 挂载 routes/onboarding（import＋一行 mount；此前在树未挂载 ⇒ 生产不可达）＋ 穿真 createServer() 的落盘判据（非 dryRun 真落盘／dryRun 零落盘／改坏必红／主树 data 零写入）。返修批（#825/#1070 活1，R-A 阻断项）：⑤ 用例补 superAdminConfirmed:true（原以「未确认＋dryRun:false ⇒ 200＋落盘」为期望＝把 C1 缺陷固化成判据）＋ ① 409 用例补磁盘零断言 expect(walkFiles(root)).toEqual([])（原只断响应码 ⇒ 门序回归全套不可见，R-A 反向突变实测 6/6 假绿）。两项均依赖 #1067 门序修复 ⇒ 单支预期红、合并态 6/6 绿，证据见 PR #1056 正文 a–d。过程件：memory/notes/proposed/2026-10-27-712-onboarding-mount-repair.md。仍属写集外并已上报 L1：#712-a 生成器只落 3 件（期望 6 件）。"
