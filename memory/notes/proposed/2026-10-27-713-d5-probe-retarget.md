@@ -46,7 +46,7 @@
      `@authority`（谁能跑：裸跑任何人可跑；`--base-url` 行为面需自备服务＋临时库；谁能改：骨架归治理线、
      判据语义归 #713/#731）、`@not-here`（不替生产链接线／不建第二口径／不改门禁语义／除播种外不写库）。
      **代码、断言、退出码语义、`TARGETS`/`GATE_TARGETS`、V5 骨架零改动**（diff 逐行核对）。
-  2. 新增 `docs/synova/coordination/README-probe-knowledge-scope.md`（五节：Summary → Use［When to choose it／
+  2. 新增 `docs/synova/runbooks/README-probe-knowledge-scope.md`（五节：Summary → Use［When to choose it／
      最小可用命令／What success and failure look like］→ Understand the implementation［Design philosophy 一句＋
      Source map］→ Known Limitations［declared-only 先红态／V5 依赖 tsx 可解析／三态 exit 2 语义］）。
   3. `docs/authority/DOCS-REGISTRY.yaml` 追加 **DOC-0307**（`type: architecture`，`status: active`，`owner: P3`）
@@ -59,6 +59,8 @@
   `doc-contract-whitelist` 块）只放行 `docs/**`／`decisions/**`／同址 `**/README.md`（同址需有代码）等，**带后缀的 scripts 下
   README 不在内**（本地 pre-commit 该闸是软提示 ⇒ 本地绿 ≠ CI 绿，与"本地 pre-commit 不含 vitest"同族）。按 L1 裁定改放
   `docs/synova/coordination/README-probe-knowledge-scope.md`（`docs/**` 在白名单内），DOC-0307 的 `path` 同步更正；
-  内容语义不变。判据：`bash scripts/control-tower/check-doc-contract.sh --base gitea/local-main` ⇒ EXIT=0。
+  内容语义不变。**该路径本身仍命中 §3 阻断清单**（`doc-contract-blocked` 明列 `docs/synova/coordination/**`，阻断优先于白名单）⇒
+  按 L1 二次裁定落 `docs/synova/runbooks/`（docs/** 白名单内、不在阻断清单；既有 7 件 runbook 先例）。判据：
+  `bash scripts/control-tower/check-doc-contract.sh --base gitea/local-main` ⇒ EXIT=0。
 - **如实记录**：仓内**没有**头注标签的契约测试（`tests/control-tower/probe-contract.test.sh` 断的是 stdout 末行
   `RESULT=` 与三态退出码，**不 grep 头注标签**）⇒ "删 `@authority` ⇒ 测试必红"**不成立**；本项只能以独立复核为准。

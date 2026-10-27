@@ -1260,7 +1260,7 @@ documents:
   # ---- P3 2026-10-27：#825 收口返修批 · 活3（品味1=a：probe 头注补标签 ＋ README 五节；CTO 裁 #7605 §1）----
   - id: DOC-0307
     type: architecture
-    path: docs/synova/coordination/README-probe-knowledge-scope.md
+    path: docs/synova/runbooks/README-probe-knowledge-scope.md
     status: active
     owner: P3
-    note: "#825 收口返修批·活3（CTO 裁 #7605 §1 品味1=a）：probe-knowledge-scope 的 README 五节骨架（Summary/Use/Understand the implementation〔Design philosophy＋Source map〕/Known Limitations）；type=architecture（同类：DOC-0005/0192/0203/0224 为实现/架构参考件）；D2 登记门禁机械必需（L1 已授权纯 append）。路径按 D1193 契约 §3 白名单校正：scripts/control-tower/README-*.md 不在白名单（CI 硬红），改放 docs/**（L1 2026-10-27 裁）。"
+    note: "#825 收口返修批·活3（CTO 裁 #7605 §1 品味1=a）：probe-knowledge-scope 的 README 五节骨架（Summary/Use/Understand the implementation〔Design philosophy＋Source map〕/Known Limitations）；type=architecture（同类：DOC-0005/0192/0203/0224 为实现/架构参考件）；D2 登记门禁机械必需（L1 已授权纯 append）。路径按 D1193 契约 §3 校正（两次）：① scripts/control-tower/README-*.md 不在白名单（CI 硬红）⇒ ② L1 首选 docs/synova/coordination/ 命中 §3 阻断清单（阻断优先于白名单）⇒ 定 docs/synova/runbooks/（docs/** 白名单内、不在阻断清单；L1 2026-10-27 裁）。"
