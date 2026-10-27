@@ -17,6 +17,8 @@
  *   @output — `OnboardingReport`：{ steps: StepRecord[]（**有序**，每步 name/status/detail）,
  *             configPack?: ConfigPackResult, grantedPermissions: string[]（**默认空 ⇒ fail-closed**）,
  *             auditTrail: string[]（物理留痕）, degraded: boolean, errors: string[] }
+ *             🔴 #1075 P1-b：`configPack.rejected[]`（缺项/坏 source 的岗位，**零写入**）随本 report
+ *             透出（**不被吞**）；留痕行含 `pieces=<n>`（n = 本次 `written.length`）。
  *   @degraded — 文档为空 / 采集失败 / 生成失败 ⇒ **不抛**，该步 `status:'degraded'` +
  *             `log.warn` + `degraded:true` + 进 `errors[]`（铁律 11/24/31）。
  */
@@ -150,7 +152,10 @@ export function runOnboardingFlow(input: OnboardingInput): OnboardingReport {
   const granted = requested.filter((p) => documented.includes(p));
   const confirmed = input.superAdminConfirmed === true;
   if (confirmed) {
-    const line = `SUPER_ADMIN_CONFIRMED documents=${String(docs.length)} roles=${String(roles.length)} granted=${granted.join(',') || '(none)'}`;
+    // #1075 P1-b：留痕行加 `pieces=<n>`（n = 本次真写入件数；dry-run/零写入 ⇒ 0），
+    //   供 P3 审批票据把「确认了一个布尔」升级为「确认了一份产物清单」。
+    const pieces = configPack?.written.length ?? 0;
+    const line = `SUPER_ADMIN_CONFIRMED documents=${String(docs.length)} roles=${String(roles.length)} pieces=${String(pieces)} granted=${granted.join(',') || '(none)'}`;
     const wrote = appendAuditTrail(root, line, errors);
     if (wrote) auditTrail.push(line);
     steps.push({
