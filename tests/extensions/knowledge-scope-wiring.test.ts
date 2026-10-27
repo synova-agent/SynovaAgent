@@ -749,6 +749,8 @@ describe('#731 / 裁425-A1: scope 维紧急回滚开关（默认严开；关必�
         code: null,
         phase: 'knowledge-scope-dim',
         retryable: false,
+        // #1074：只读观测面（本文件首个判定 ⇒ 进程计数 0；每次关闭判定 +1 由补钉用例钉住）
+        registrations: 0,
       });
 
       // 留痕面（跨进程）: 严开态**不得**出现关闭留痕行 —— 否则"降级信号恒真"就没牙了
@@ -839,5 +841,32 @@ describe('#731 / 裁425-A1: scope 维紧急回滚开关（默认严开；关必�
 
     const onFilter = await withScopeSwitch(undefined, () => captureFilter('finance'));
     expect(valuesOf(onFilter, 'pkb_domain', 'IN')).toEqual([financeScopes]);
+  });
+});
+
+// ═══ 补钉 #1074（裁 426 防漂移延伸）：登记计数与日志 memo 解耦 ═══
+describe('#1074 登记计数解耦：每次关闭判定 +1，与日志 memo 无关', () => {
+  it('三次关闭判定的 registrations 严格逐次 +1（挪进 memo-if ⇒ 必红）', async () => {
+    const { knowledgeScopeDimensionGate } = await import('../../src/middleware/auth');
+    const prev = process.env.SYNOVA_KNOWLEDGE_SCOPE_DIM;
+    process.env.SYNOVA_KNOWLEDGE_SCOPE_DIM = 'off';
+    try {
+      const a = knowledgeScopeDimensionGate();
+      const b = knowledgeScopeDimensionGate();
+      const c = knowledgeScopeDimensionGate();
+      expect(a.enabled).toBe(false);
+      expect(a.degraded).toBe(true);
+      // 每次关闭判定 +1（不是"日志首次发出时的一次性快照"）
+      expect(b.registrations).toBe(a.registrations + 1);
+      expect(c.registrations).toBe(b.registrations + 1);
+      // 严开态：不计数（只读当前值）
+      process.env.SYNOVA_KNOWLEDGE_SCOPE_DIM = 'on';
+      const on1 = knowledgeScopeDimensionGate();
+      expect(on1.enabled).toBe(true);
+      expect(on1.registrations).toBe(c.registrations);
+    } finally {
+      if (prev === undefined) delete process.env.SYNOVA_KNOWLEDGE_SCOPE_DIM;
+      else process.env.SYNOVA_KNOWLEDGE_SCOPE_DIM = prev;
+    }
   });
 });

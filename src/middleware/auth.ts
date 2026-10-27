@@ -17,6 +17,10 @@
  *   （`code:KNOWLEDGE_SCOPE_DIM_DISABLED` ＋ `phase` ＋ `retryable` ＋ `degraded:true`
  *   ＋ `registrations`=本进程累计关闭判定次数）
  *   并经 `knowledgeScopeDimensionGate()` 对外暴露降级态 —— **禁静默关**。
+ * @authority — 装配点：`src/server.ts`（全局 `jwtAuthMiddleware`）；`getPermissionFilter` 经
+ *   `src/services/request-context.ts` 的 `runWithContext` 取用（生产唯一漏斗）。外部请求不可直接调用本模块函数。
+ * @not-here  — 不做 RBAC 业务拦截（`rbacMiddleware` 只注入 `req.rbac`，拦截归各路由）；不定义权限项模型
+ *   （在 `packages/engine-auth/src/permission-grants.ts`）；不读 `body/query` 的 `orgId`。
  */
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import type { Request, Response, NextFunction } from 'express';
@@ -502,6 +506,11 @@ export interface KnowledgeScopeDimensionGate {
   readonly phase: string;
   /** 关闭是否可自愈（解除回滚 = 去掉环境变量 ⇒ `true`；严开态无降级 ⇒ `false`） */
   readonly retryable: boolean;
+  /**
+   * 本进程累计关闭判定次数（**只读观测面**；与日志 memo 解耦——每次关闭判定 +1）。
+   * 判据用它钉住「计数不被 memo 压掉」：挪进 memo-if ⇒ 两次调用差值 ≠ 1 ⇒ 测试红（#1074）。
+   */
+  readonly registrations: number;
 }
 
 /**
@@ -546,6 +555,7 @@ export function knowledgeScopeDimensionGate(): KnowledgeScopeDimensionGate {
       code: null,
       phase: KNOWLEDGE_SCOPE_DIM_PHASE,
       retryable: false,
+      registrations: disabledJudgements,
     };
   }
   // 登记项：每次关闭判定 +1（与下面的日志 memo 解耦）—— 随日志的 registrations 字段发出
@@ -571,6 +581,7 @@ export function knowledgeScopeDimensionGate(): KnowledgeScopeDimensionGate {
     code: KNOWLEDGE_SCOPE_DIM_DISABLED_CODE,
     phase: KNOWLEDGE_SCOPE_DIM_PHASE,
     retryable: true,
+    registrations: disabledJudgements,
   };
 }
 
