@@ -144,3 +144,11 @@ entries:
     status: declared-only
     owner: P4
     notes: "#1054 验收矩阵机制 P0：P0 明确不接 CI/pre-commit（规格 §3 非目标）⇒ 无生产消费者；矩阵载体＋三态校验器，手动运行。"
+  - capability: content.rolePackSchema
+    defined_at: "src/init/role-pack-schema.ts:59"
+    provider: "src/init/role-pack-schema.ts:590"
+    consumer: "src/init/preset-loader.ts:413"
+    test: "tests/init/role-pack-schema.test.ts:200"
+    status: wired
+    owner: P1
+    notes: "岗位包 v2 装载期结构＋refs 校验（#1075 批一 P1-a）；消费者＝loader 唯一入口（content-registry boot/reload）；随仓 JSON Schema 是契约、zod 是执行体（drift 测试钉死键集）"

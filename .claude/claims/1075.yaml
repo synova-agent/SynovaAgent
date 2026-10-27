@@ -1,0 +1,31 @@
+# .claude/claims/1075.yaml — #1075 岗位包 v2（批次一 P1）写集声明
+# 依据：规格 .handbook/派单件/2026-10-28-规格-1075-岗位包v2-schema与生成器对齐.md §2.3（16 项并集）
+#      ＋ 声明载体自身 ＋ `.claude/plan.json`（门禁触发配套件：组 4a「分阶段接线」声明，
+#      phase step=3／wiring deferred／只覆盖 src/init/role-pack-schema.ts —— L1 2026-10-28 裁定）。
+#      → writeset 共 18 行（16 项并集 ∪ claims 自身 ∪ plan.json）。
+# 说明：`docs/authority/WIRING-REGISTRY.yaml` 为**纯追加 1 行**（G1 R1.1；不改既有条目，§10-L11）。
+writeset:
+  - extensions/presets/schema/role-pack-v2.schema.json
+  - src/init/role-pack-schema.ts
+  - src/init/preset-loader.ts
+  - extensions/presets/roles/finance/manifest.json
+  - extensions/presets/roles/hr/manifest.json
+  - extensions/presets/roles/sales/manifest.json
+  - tests/init/role-pack-schema.test.ts
+  - tests/init/preset-loader.test.ts
+  - docs/authority/WIRING-REGISTRY.yaml
+  - src/onboarding/config-pack-generator.ts
+  - src/routes/onboarding.ts
+  - src/onboarding/onboarding-flow.ts
+  - tests/onboarding/config-pack-generator.test.ts
+  - tests/extensions/onboarding-mount.test.ts
+  - tests/onboarding/onboarding-flow.test.ts
+  - tests/routes/onboarding.test.ts
+  - .claude/claims/1075.yaml
+  - .claude/plan.json
+done:
+  - verify: node node_modules/.bin/vitest run tests/init/role-pack-schema.test.ts
+  - verify: node node_modules/.bin/vitest run tests/init/preset-loader.test.ts
+  - verify: node node_modules/.bin/vitest run tests/presets/role-pack.test.ts
+  - verify: node node_modules/.bin/tsx scripts/control-tower/probe-role-pack.ts --role finance
+note: "岗位包 v2 校验面（#1075 批一 P1-a）：随仓 schema＋zod 进 loader＋refs 双向对账＋出厂三包迁 v2，判据 J1/J2/J3＋边界值；生成器面 7 件留 P1-b（依赖本 PR merge sha）。plan.json phase3 = 组4a 分阶段接线声明（gate-mandated，只覆盖 src/init/role-pack-schema.ts）。"
