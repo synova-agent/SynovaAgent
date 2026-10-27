@@ -118,11 +118,11 @@ echo "── 7. D317 legacy brief 回归 + 判别力 + PYBIN ──"
 if [ -f "$REPO_DIR/.claude/task-briefs/2026-08-02-D286-GraphStore-unify.md" ]; then
   EXIT=0
   OUT=$(bash "$CHECKER" "$REPO_DIR/.claude/task-briefs/2026-08-02-D286-GraphStore-unify.md" 2>&1) || EXIT=$?
-  # 存量漂移（非被测脚本回归）: 提交 861618108（#645 存量 brief 合规清理）已给该文件 :182
+  # 存量漂移（非被测脚本回归）: 提交 841618108（#645 存量 brief 合规清理）已给该文件 :182
   # 补 `#CRITERIA: D`（补记注释见 :183）⇒ 原断言「必须报 #CRITERIA 缺失」的前提被推翻。
   # 判据改为「按现状不误报」＋下面自造「真缺 criteria」的 brief 继续守住判别力（禁删断言了事）。
   assert_exit 0 "$EXIT" "legacy brief 现状契约齐全 → exit 0"
-  assert_not_contains "$OUT" "#CRITERIA 缺失" "legacy brief 不误报 #CRITERIA 缺失（861618108 已补记 D）"
+  assert_not_contains "$OUT" "#CRITERIA 缺失" "legacy brief 不误报 #CRITERIA 缺失（841618108 已补记 D）"
   assert_not_contains "$OUT" "Q2 不可解析" "legacy brief 不报 Q2 假失败（python 可用时）"
   assert_not_contains "$OUT" "架构层未标注" "legacy brief 不报架构层假失败（D286 有 L4）"
   # 判别力保持（自造 brief：其余字段齐，仅缺 #CRITERIA ⇒ 必须点名该缺失项且 rc=1）
