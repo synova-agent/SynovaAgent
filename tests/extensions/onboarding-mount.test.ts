@@ -25,14 +25,13 @@
  *             缺能力必须 fail-loud，Q-15）。
  *
  * 🔴 已知限制（禁写「暂无」）:
- *   ① **「五件套」与实物不符**（本卡未决项，已上报 L1）：dev doc §2.2／§4.1（#712 行）写
- *      「临时根下 … 五件套真落盘」，实测生产生成器 `src/onboarding/config-pack-generator.ts:76-91`
- *      只落 **3 件**（`knowledge-scope.yaml` / `capabilities.yaml` / `acceptance-criteria.yaml`）；
- *      `src/init/preset-loader.ts:64-71` 的期望集为 **6 件**（`manifest.json` ＋ 五件套），
- *      缺 `manifest.json` / `context-manifest.yaml` / `output-template.ref`。
- *      那 3 件属 `src/onboarding/**`（**本卡写集外，禁改**）⇒ 本文件按**实物**断言，
- *      并把缺口固化为**显式断言**（见「已知限制」describe，用生产 loader 观测 `missing` +
- *      `degraded`），**不静默放宽、不假装五件套齐备**。
+ *   ① **「五件套」缺口已由 #1075 P1-b 关闭（原为未决项）**：曾经生产生成器只落 **3 件**
+ *      （`knowledge-scope.yaml` / `capabilities.yaml` / `acceptance-criteria.yaml`），而
+ *      `src/init/preset-loader.ts` 的期望集为 **6 件**（`manifest.json` ＋ 五件套），
+ *      且 `knowledge-scope.yaml` 的键名是 `knowledgeScope:`（loader 要 `scopes:`）⇒ 即使补件也装不上。
+ *      #1075 P1-b 把生成器改到 6 件并修键名后，本文件按**该文件自述**把原「已知限制」翻转成**真判据**：
+ *      真 HTTP apply ⇒ 6 件落盘 ⇒ 生产 `loadRolePacks()` 对该岗位 `degraded:false`、`missing:[]`
+ *      （见 ④ 与 ② 的磁盘实测）。**这是本批唯一允许的 M7 已知限制翻转**，不改其它任何判据。
  *   ② 落盘根由 `process.cwd()` 决定 ⇒ 本文件内用例**串行**执行（不得并发改 cwd）。
  *   ③ 主树 `data/` 零写入只覆盖**本进程路径**（DB 走 `:memory:`）；外部进程写入不在本文件判据面。
  *   ④ 判据文件名按卡面写集冻结为 `*.test.ts`（铁律 33 三档中的集成档名义上该用
@@ -56,7 +55,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Server } from 'node:http';
 import { createServer } from '../../src/server';
-import { loadRolePacks } from '../../src/init/preset-loader';
+import { EXPECTED_PIECES, loadRolePacks } from '../../src/init/preset-loader';
 
 // ═══ 常量与模块级快照（cwd 在所有 beforeAll 之前仍是仓库根）═══════════
 /** 仓库根（= vitest 工作目录）。后续一切 chdir 都以它恢复。 */
@@ -126,7 +125,13 @@ async function issueToken(): Promise<string> {
   return token;
 }
 
-/** 建档请求体（单角色；scopes/capabilities/acceptance 都非空 ⇒ 落盘内容可核） */
+/**
+ * 建档请求体（单角色；六块齐 —— #1075 P1-b 起生成器要求六块，缺任一即 400/零写入）。
+ *
+ * 🔴 夹具纪律：`contexts[].source` **只许** scope（本包 knowledge-scope 带锚）＋
+ *   `profile.business-plan` 两类。落盘根是 `process.cwd()`（临时根），file 类 ref（如
+ *   `extensions/ontology/…json`）在临时根必悬空 ⇒ 生产 loader 的 `kind=file` 存在性检查会假红。
+ */
 function roleSeedBody(): Record<string, unknown> {
   return {
     documents: ['org-roster.md', 'finance-sop.md'],
@@ -135,7 +140,27 @@ function roleSeedBody(): Record<string, unknown> {
         roleId: ROLE_ID,
         knowledgeScope: ['finance.statements', 'finance.budget'],
         capabilities: ['knowledge.finance.read'],
-        acceptanceCriteria: ['月度关账 <= 5 工作日'],
+        acceptanceCriteria: ['monthly close within 5 business days'],
+        contexts: [
+          {
+            id: 'finance.statements-ref',
+            label: '财务报表口径',
+            source: `${ROLE_REL_DIR}/knowledge-scope.yaml#finance.statements`,
+            required: true,
+          },
+          {
+            id: 'finance.budget-ref',
+            label: '预算口径',
+            source: `${ROLE_REL_DIR}/knowledge-scope.yaml#finance.budget`,
+            required: true,
+          },
+          { id: 'company.bp', label: '公司业务说明', source: 'profile.business-plan' },
+        ],
+        systemAddendum: '你在为岗位 mount-probe 提供支持。\n结论必须标明口径来源；缺数据先追问。',
+        outputTemplate: {
+          templateId: 'mount-probe.standard',
+          sections: [{ id: 'headline', title: '一句话结论', must: ['结论', '报告期'] }],
+        },
       },
     ],
   };
@@ -271,21 +296,30 @@ describe('#712 ② 正常：`apply`（非 dryRun）⇒ 配置包真落盘', () =
       const written = (body.data?.configPack?.written ?? []).slice().sort();
       const landed = walkFiles(root).filter((p) => p.startsWith(ROLE_REL_DIR + '/'));
       expect(landed).toEqual(written);
-      expect(written).toEqual([
-        `${ROLE_REL_DIR}/acceptance-criteria.yaml`,
-        `${ROLE_REL_DIR}/capabilities.yaml`,
-        `${ROLE_REL_DIR}/knowledge-scope.yaml`,
-      ]);
+      // #1075 P1-b：六件（与 loader 期望集同源，禁手抄第二份清单）
+      expect(EXPECTED_PIECES.length).toBe(6);
+      expect(written.length).toBe(EXPECTED_PIECES.length);
+      expect(written).toEqual([...EXPECTED_PIECES].sort().map((piece) => `${ROLE_REL_DIR}/${piece}`));
 
       // ③ 逐文件非空 + 内容可核（knowledge-scope.yaml 必须带真 scope 值，不是空壳）
       for (const rel of landed) {
         expect(statSync(join(root, rel)).size).toBeGreaterThan(0);
       }
       const scopeYaml = readFileSync(join(root, `${ROLE_REL_DIR}/knowledge-scope.yaml`), 'utf8');
+      // #1075 P1-b：载荷键名必须是 loader 期望的 `scopes:`（不是 `knowledgeScope:`）
+      expect(scopeYaml).toMatch(/^scopes:\s*$/m);
+      expect(scopeYaml).not.toContain('knowledgeScope:');
       expect(scopeYaml).toContain('finance.statements');
       expect(scopeYaml).toContain('finance.budget');
       const capsYaml = readFileSync(join(root, `${ROLE_REL_DIR}/capabilities.yaml`), 'utf8');
       expect(capsYaml).toContain('knowledge.finance.read');
+      const contextYaml = readFileSync(join(root, `${ROLE_REL_DIR}/context-manifest.yaml`), 'utf8');
+      expect(contextYaml).toContain('systemAddendum: |');
+      // ④ #1075 P1-b：超管确认留痕必须带本次写入件数（P3 审批票据的对齐字段）
+      const audit = readFileSync(join(root, '.synova', 'onboarding-audit.log'), 'utf8');
+      expect(audit).toContain('SUPER_ADMIN_CONFIRMED');
+      expect(audit).toContain('pieces=6');
+      expect(audit).toContain('granted=');
     });
 
     // ④ 🔴 主树 data/ 零写入（落盘只进临时根）
@@ -307,9 +341,10 @@ describe('#712 ③ 反向：`dryRun=true` ⇒ 一个文件都不落', () => {
       const body = (await res.json()) as {
         data?: { configPack?: { written?: string[]; planned?: string[] }; steps?: { name?: string; status?: string }[] };
       };
-      // 自述：没写、只在计划里
+      // 自述：没写、只在计划里（#1075 P1-b：完整 seed ⇒ planned = 六件）
       expect(body.data?.configPack?.written ?? []).toEqual([]);
-      expect((body.data?.configPack?.planned ?? []).length).toBeGreaterThan(0);
+      expect((body.data?.configPack?.planned ?? []).length).toBe(EXPECTED_PIECES.length);
+      expect((body.data?.configPack?.planned ?? []).length).toBe(6);
       // deploy 步 skipped（dryRun 不部署）
       expect(stepOf(body.data ?? {}, 'deploy')?.status).toBe('skipped');
 
@@ -320,11 +355,11 @@ describe('#712 ③ 反向：`dryRun=true` ⇒ 一个文件都不落', () => {
   }, 60_000);
 });
 
-// ═══ ④ 已知限制（未决项）：五件套缺口必须可观测，不得静默 ═════════════
-describe('#712 ④ 已知限制：落盘件数 3 / 期望 6 的缺口由**生产 loader** 观测（未决项，非通过项）', () => {
-  it('真落盘后用 `loadRolePacks()` 观测：pieces=3、missing=3、degraded=true（fail-loud，不静默）', async () => {
+// ═══ ④ #1075 P1-b：「已知限制 ①」翻转成真判据（真 HTTP ⇒ 6 件 ⇒ 可装载）═════════
+describe('#1075 P1-b ④ 已知限制①翻转：真 HTTP apply ⇒ 6 件落盘 ⇒ 生产 loader degraded:false、missing:[]', () => {
+  it('真 apply 后 loadRolePacks() 对该岗位：pieces=6、missing=[]、degraded=false、declared=true', async () => {
     const token = await issueToken();
-    await withTempRoot(async () => {
+    await withTempRoot(async (root) => {
       const res = await fetch(`${BASE}/api/onboarding/apply`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
@@ -332,36 +367,23 @@ describe('#712 ④ 已知限制：落盘件数 3 / 期望 6 的缺口由**生产
       });
       expect(res.status).toBe(200);
 
-      // 用**生产 loader**（不是测试自写的期望清单）观测五件套齐备度 —— 避免第二个口径
+      // 磁盘实测（不是响应自述）
+      expect(walkFiles(root).filter((p) => p.startsWith(ROLE_REL_DIR + '/')).length).toBe(
+        EXPECTED_PIECES.length,
+      );
+
+      // 用**生产 loader**（不写第二份期望清单）判「装得上」
       const report = loadRolePacks();
       const pack = report.roles.find((r) => r.roleId === ROLE_ID);
       expect(pack).toBeDefined();
-
-      // 生产实际落盘的 3 件
-      expect([...(pack?.pieces ?? [])].sort()).toEqual([
-        'acceptance-criteria.yaml',
-        'capabilities.yaml',
-        'knowledge-scope.yaml',
-      ]);
-      // 🔴 缺口 3 件 —— dev doc 称「五件套真落盘」与实物不符（#712-a，已上报 L1，判据不改）
-      expect([...(pack?.missing ?? [])].sort()).toEqual([
-        'context-manifest.yaml',
-        'manifest.json',
-        'output-template.ref',
-      ]);
-      // 缺口必须**可观测**（degraded + 逐条点名）—— 这是本断言的真正牙齿
-      expect(report.degraded).toBe(true);
-      expect(report.errors.some((e) => e.includes(ROLE_ID) && e.includes('缺件'))).toBe(true);
-
-      // 🔴 显式打印缺口清单（L1 裁示：让缺口可见，不许静默）——期望 6 件的来源是**生产 loader**
-      //   `preset-loader.ts:64-71`（pieces ∪ missing），不是测试自写的第二口径。
-      const expectedPieces = [...(pack?.pieces ?? []), ...(pack?.missing ?? [])].sort();
-      const gap = [...(pack?.missing ?? [])].sort();
-      console.info(
-        `[#712-a 已知限制] 生产生成器实落 ${String((pack?.pieces ?? []).length)} / 期望 ${String(expectedPieces.length)} 件；` +
-          `缺失件清单 = [${gap.join(', ')}]；loader degraded=${String(report.degraded)}`,
-      );
-      expect(expectedPieces).toHaveLength(6);
+      expect(report.degraded).toBe(false);
+      expect(report.errors).toEqual([]);
+      expect(pack?.missing).toEqual([]);
+      expect([...(pack?.pieces ?? [])].sort()).toEqual([...EXPECTED_PIECES].sort());
+      // J4b 的同位断言：内容侧真声明（scope 非空、键名 scopes）
+      expect(pack?.schemaValid).toBe(true);
+      expect(pack?.knowledgeScope.declared).toBe(true);
+      expect([...(pack?.knowledgeScope.scopeIds ?? [])].sort()).toEqual(['finance.budget', 'finance.statements']);
     });
   }, 60_000);
 });
@@ -388,8 +410,10 @@ describe('#712 ⑤ 边界：请求体指定 rootDir 被忽略（一律 cwd）', 
         expect(res.status).toBe(200);
         // evil 目录零写入
         expect(walkFiles(evilRoot)).toEqual([]);
-        // 落盘只进 cwd（临时根）—— 3 件
-        expect(walkFiles(root).filter((p) => p.startsWith(ROLE_REL_DIR + '/'))).toHaveLength(3);
+        // 落盘只进 cwd（临时根）—— 六件（#1075 P1-b；与 loader 期望集同源）
+        expect(walkFiles(root).filter((p) => p.startsWith(ROLE_REL_DIR + '/'))).toHaveLength(
+          EXPECTED_PIECES.length,
+        );
       });
     } finally {
       rmSync(evilRoot, { recursive: true, force: true });
