@@ -1256,3 +1256,11 @@ documents:
     status: active
     owner: P3
     note: "#825 PR1（D5 判据件改靶，#713）：scripts/control-tower/probe-knowledge-scope.ts 受保护路径豁免（裁 424 第 3 条，边界冻结＝三态退出码/存在性闸/判别力自检逐字保留）；含 gate-exemptions 自覆盖行与 DOCS-REGISTRY 自登记行。"
+
+  # ---- P3 2026-10-27：#825 收口返修批 · 活3（品味1=a：probe 头注补标签 ＋ README 五节；CTO 裁 #7605 §1）----
+  - id: DOC-0307
+    type: architecture
+    path: scripts/control-tower/README-probe-knowledge-scope.md
+    status: active
+    owner: P3
+    note: "#825 收口返修批·活3（CTO 裁 #7605 §1 品味1=a）：probe-knowledge-scope 的 README 五节骨架（Summary/Use/Understand the implementation〔Design philosophy＋Source map〕/Known Limitations）；type=architecture（同类：DOC-0005/0192/0203/0224 为实现/架构参考件）；D2 登记门禁机械必需（L1 已授权纯 append）。"

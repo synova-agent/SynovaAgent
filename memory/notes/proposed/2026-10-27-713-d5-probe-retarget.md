@@ -33,3 +33,26 @@
 - **失效条件**：① `role-pack v2`（权限宇宙归一）落地后，本件 d-perm 迁移说明段（命名空间＝scope id 第一个 `.`
   之前的前缀，现物得 `{finance, people, market}`）以 v2 为准；② #731 接线完成且 D5 首跑转绿后，本 Note 由
    proposed 转 implemented（若届时未转 ⇒ 生命周期门禁会列僵尸）。
+
+---
+
+## 返修批补记（2026-10-27 · 活账 #1070 · 活3 / PR #1055 · CTO 裁 #7605 §1「品味1＝选项 a」）
+
+- **起因**：队外复核 R-C2 品味1/8 发现 —— 探针头注只有 `@input/@output/@degraded` 三个标签，**`@exit`／`@authority`
+  ／`@not-here` 标签形态缺**（退出码语义只在散文行「退出码（三态，逐字保留）」）；且 `scripts/control-tower/README*`
+  当时不存在 ⇒ 长期件缺 README 骨架（Summary/Design philosophy/Source map）。CTO 裁 #7605 §1 选 **(a) 真补**（非偏差声明）。
+- **本次改动（纯增量）**：
+  1. `probe-knowledge-scope.ts` **头注**补三段标签 —— `@exit`（0/1/2 标签形态，**语义与既有散文逐字同源**）、
+     `@authority`（谁能跑：裸跑任何人可跑；`--base-url` 行为面需自备服务＋临时库；谁能改：骨架归治理线、
+     判据语义归 #713/#731）、`@not-here`（不替生产链接线／不建第二口径／不改门禁语义／除播种外不写库）。
+     **代码、断言、退出码语义、`TARGETS`/`GATE_TARGETS`、V5 骨架零改动**（diff 逐行核对）。
+  2. 新增 `scripts/control-tower/README-probe-knowledge-scope.md`（五节：Summary → Use［When to choose it／
+     最小可用命令／What success and failure look like］→ Understand the implementation［Design philosophy 一句＋
+     Source map］→ Known Limitations［declared-only 先红态／V5 依赖 tsx 可解析／三态 exit 2 语义］）。
+  3. `docs/authority/DOCS-REGISTRY.yaml` 追加 **DOC-0307**（`type: architecture`，`status: active`，`owner: P3`）
+     —— D2 登记门禁「新增 .md 必须登记」的机械必需，纯 append（L1 已授权，待 L1 追认）。
+- **判据点**：裸跑仍 **`exit 2`**／末行 `RESULT=NOT_IMPLEMENTED`／`COVERAGE: PASS=7 NOT_IMPLEMENTED=4 UNVERIFIED=4`
+  （与改前基线逐字一致 ⇒ 行为等价）；`grep -c '@authority'`／`'@exit'`／`'@not-here'` 各 ≥1；README 五节逐条 grep 命中；
+  `SYNO_CI=1 GITHUB_ACTIONS=true SYNO_DIFF_BASE=gitea/local-main bash scripts/pre-commit-check.sh` 末行 + EXIT。
+- **如实记录**：仓内**没有**头注标签的契约测试（`tests/control-tower/probe-contract.test.sh` 断的是 stdout 末行
+  `RESULT=` 与三态退出码，**不 grep 头注标签**）⇒ "删 `@authority` ⇒ 测试必红"**不成立**；本项只能以独立复核为准。
