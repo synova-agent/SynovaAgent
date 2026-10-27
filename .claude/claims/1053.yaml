@@ -1,6 +1,6 @@
 # .claude/claims/1053.yaml — #1053（M4 出口面收口 · T1–T8）写集声明
 # 先例：.claude/claims/1045.yaml（只列本 PR 真正改动的文件，不预授权）
-# T8 同步：在 T1–T7 的 10 件基础上补 T8 新增 3 件（根 AGENTS.md／agents/P1-能跑通/AGENTS.md／收口 Note）⇒ 15 件
+# T8 同步：在 T1–T7 的 10 件基础上补 T8 新增 5 件（根 AGENTS.md／agents/P1-能跑通/AGENTS.md／收口 Note／T8 豁免指针／DOCS-REGISTRY）＝10＋5 ⇒ 15 件
 writeset:
   - .claude/claims/1053.yaml
   - src/routes/sentinel.ts
