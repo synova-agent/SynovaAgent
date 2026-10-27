@@ -1,0 +1,110 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1086,
+  "author": "squad-1075（#1075 P1-b 实现会话；lead=synova-squad-lead）",
+  "reviewer": "independent-reviewer-1086（零上下文独立会话，未参与实现；只采信本机现场命令原始输出与 Gitea API 直读）",
+  "independence": "fresh-session",
+  "patch_fingerprint": "sha256:ad43eb57bfa533bd344f92abcddc37700d1070e1dd9f3f056570dd975c2d6aee",
+  "verdict": "PASS",
+  "base_tip": "a32efef5b3a4adeba01842fc0ae4f70bd2d4d345",
+  "head": "a4d41eba562b16de9f3e1e37fab75fbf2e08fa7a",
+  "issued_at": "2026-10-28T04:31:43+08:00",
+  "tool": "pr-review 五步（零上下文独立复核）＋ git 现场复跑 ＋ Gitea API 直读",
+  "filename_note": "按 .claude/claims/1075.yaml 预列名 1086.108610861086.json 落盘（后缀 12 字符全在 [0-9a-f] 内，命中 check-merge-conditions.sh R1 回退正则 ^docs/synova/reviews/<pr>\\.[0-9a-f]{12}\\.json$）；规范名应为 1086.ad43eb57bfa5.json（R1 先查规范名、查不到再回退正则），与 #1085 先例同形；本回执由复核会话写入工作树，未由复核者提交（禁 commit），提交后 R1 才可定位。回执提交本身**不改变** patch_fingerprint（check-merge-conditions.sh 的指纹 diff 显式 `:(exclude)docs/synova/reviews/**`），故本回执在『回执提交』之后仍有效；R7 要求回执引入提交之后不得再有 reviews 之外的改动（即回执应为分支最后一个提交）。`head` 字段记的是**被复核代码**的 head，不含回执提交。",
+  "checks": [
+    {
+      "id": "C0",
+      "title": "指纹绑定：现场重跑 diff-fingerprint，与复核请求所给指纹逐字符相等",
+      "cmd": "bash scripts/control-tower/check-merge-conditions.sh --pr 1086 --diff-fingerprint",
+      "result": "pass",
+      "evidence": "原始输出末行 = ad43eb57bfa533bd344f92abcddc37700d1070e1dd9f3f056570dd975c2d6aee（EXIT=0）；与请求绑定值 sha256:ad43eb57bfa533bd344f92abcddc37700d1070e1dd9f3f056570dd975c2d6aee 逐字符相等 ⇒ 本回执只对 head=a4d41eba5 的这份码有效（改码即作废）。"
+    },
+    {
+      "id": "C1",
+      "title": "基线与范围：base 是 head 祖先、diff 恰 8 件（7 产品＋claims）、逐件对 §2.3 项 10-16、禁区 0 命中、P1-a 面零回归",
+      "cmd": "git ls-remote gitea refs/heads/local-main; git merge-base --is-ancestor a32efef5b3a4adeba01842fc0ae4f70bd2d4d345 a4d41eba5; echo EXIT=$?; git diff --name-status a32efef5b3a4adeba01842fc0ae4f70bd2d4d345...a4d41eba5; git diff --stat a32efef5b...a4d41eba5; git diff --name-only a32efef5b...a4d41eba5 > /tmp/rp-1086-files.txt; for p in '^scripts/audit/' '^\\.gitea/workflows/' '^scripts/pre-commit-check\\.sh$' '^src/agent/' '^src/middleware/' '^packages/' '^extensions/onboarding/' '^docs/plans/' '^src/init/' '^extensions/presets/' '^scripts/'; do grep -cE \"$p\" /tmp/rp-1086-files.txt; done",
+      "result": "pass",
+      "evidence": "① ls-remote gitea refs/heads/local-main = a32efef5b3a4adeba01842fc0ae4f70bd2d4d345（远端 tip == PR base ⇒ 基线不陈旧）；② merge-base --is-ancestor EXIT=0（串行前置成立）；③ diff --name-status 恰 8 件，全为 M：.claude/claims/1075.yaml、src/onboarding/config-pack-generator.ts、src/onboarding/onboarding-flow.ts、src/routes/onboarding.ts、tests/extensions/onboarding-mount.test.ts、tests/onboarding/config-pack-generator.test.ts、tests/onboarding/onboarding-flow.test.ts、tests/routes/onboarding.test.ts；diffstat = 8 files changed, 1109 insertions(+), 163 deletions(-)；④ 逐件对规格 §2.3 P1-b：generator=项10、routes/onboarding.ts=项11、onboarding-flow.ts=项12、config-pack-generator.test=项13、onboarding-mount.test=项14、onboarding-flow.test=项15、routes/onboarding.test=项16（7 件全中，无多余产品件），claims=声明载体；⑤ 禁区扫描逐条 0：scripts/audit=0、.gitea/workflows=0、scripts/pre-commit-check.sh=0、src/agent=0、src/middleware=0、packages=0、extensions/onboarding=0、docs/plans=0，且 scripts/ 前缀整体=0（control-tower 只跑未改）；⑥ P1-a 面零回归：src/init=0、extensions/presets=0。"
+    },
+    {
+      "id": "C2",
+      "title": "CI：head 提交状态 state=success 且 pending=0（Gitea API 直读）",
+      "cmd": "TOK=$(tr -d '\\r\\n' < /Users/wane/gitea/.win-push-token); curl -sS -m 20 -H \"Authorization: token $TOK\" http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/commits/a4d41eba562b16de9f3e1e37fab75fbf2e08fa7a/status",
+      "result": "pass",
+      "evidence": "HTTP=200；state=success；total_count=2；n_statuses=2；by state={success:2}；pending=0；逐条：success | local-gates / gates (push)、success | local-gates / gates (pull_request)。（原始响应已存 /tmp/rp-ci-1086.json）"
+    },
+    {
+      "id": "C3",
+      "title": "J4 正常路径：整文件跑 config-pack-generator 测试 18 passed，且『written===EXPECTED_PIECES.length』与『===6』两式并列存在",
+      "cmd": "DEV_MODE=true node node_modules/.bin/vitest run tests/onboarding/config-pack-generator.test.ts; grep -n 'EXPECTED_PIECES\\|=== 6\\|toBe(6)' tests/onboarding/config-pack-generator.test.ts",
+      "result": "pass",
+      "evidence": "原始输出：✓ tests/onboarding/config-pack-generator.test.ts (18 tests) 46ms；Test Files 1 passed (1)；Tests 18 passed (18)；EXIT=0（未用 -t 单跑）。两式并列实证：tests/onboarding/config-pack-generator.test.ts:91 expect(EXPECTED_PIECES.length).toBe(6) / :92 expect(r.written.length).toBe(EXPECTED_PIECES.length) / :93 expect(r.written.length).toBe(6) —— 三条相邻同用例（J4-1），符合 §4-J4『两式并列，防两边一起改双绿』。"
+    },
+    {
+      "id": "C4",
+      "title": "J4b（治双缺陷的关键一条）：自写 tsx 脚本真 generateConfigPack(完整 seed) → 真 loadRolePacks() ⇒ degraded:false、missing:[]、declared:true、scopeIds 非空；生成包 knowledge-scope.yaml 顶层是 scopes: 且无 knowledgeScope:",
+      "cmd": "DEV_MODE=true node node_modules/.bin/tsx /tmp/rp-c4.ts   # 脚本本体：mkdtemp 临时根 → generateConfigPack({roles:[完整六块 seed], rootDir}) → SYNOVA_PRESETS_ROOT=<root>/extensions/presets → loadRolePacks()",
+      "result": "pass",
+      "evidence": "原始输出逐行：GEN written=6 rejected=0 degraded=false；C4-0c 磁盘实测 6 件 = acceptance-criteria.yaml,capabilities.yaml,context-manifest.yaml,knowledge-scope.yaml,manifest.json,output-template.ref；REFS=[{\"kind\":\"file\",\"path\":\"extensions/ontology/outcome/financial.json\"},{\"kind\":\"profile\",\"name\":\"business-plan\"},{\"kind\":\"scope\",\"name\":\"probe.alpha\"}]（三种 kind 同时覆盖）；PACK missing=[] declared=true scopeIds=[\"probe.alpha\",\"probe.beta\"] schemaValid=true；LOADER degraded=false errors=[]；生成件原文摘录 = 'roleId: \"indep-probe-role\"\\nversion: 2\\nscopes:\\n  - id: \"probe.alpha\"\\n  - id: \"probe.beta\"'（/^scopes:\\s*$/m 命中、不含 knowledgeScope:）；C4 RESULT=PASS（17 条子断言全 PASS，EXIT=0）。"
+    },
+    {
+      "id": "C5",
+      "title": "J4 降级／零部分写：缺 systemAddendum ⇒ ROLE_SEED_INCOMPLETE＋missingParams 含 systemAddendum＋written===[]＋目录零文件；contexts.source 坏形态 ⇒ ROLE_SEED_BAD_SOURCE",
+      "cmd": "DEV_MODE=true node node_modules/.bin/tsx /tmp/rp-c5.ts",
+      "result": "pass",
+      "evidence": "缺 systemAddendum：rejected=[{\"roleId\":\"no-addendum\",\"code\":\"ROLE_SEED_INCOMPLETE\",\"missingParams\":[\"systemAddendum\"]}] written=[] degraded=true；角色目录 existsSync=false（目录都未创建）；顶层键集 = [\"written\",\"planned\",\"skipped\",\"rejected\",\"degraded\",\"errors\"] ⇒ 顶层无 code 字段（契约落点唯一在 rejected[]，符合 §4-J4 降级段）。坏 source 三例（'' / '#only-anchor' / 'profile.'）逐例：code=ROLE_SEED_BAD_SOURCE、missingParams=[\"contexts[0].source\"]、written=[] 且目录不存在。混合用例（合法+缺项）：written=6 且全属 good-role、bad-role 零目录 ⇒ 角色级隔离。C5 RESULT=PASS（EXIT=0）。"
+    },
+    {
+      "id": "C6",
+      "title": "J5 真 HTTP：真 createServer() ＋ 真签发 JWT ＋ 临时 cwd ⇒ 6 条场景（apply 落盘/start 缺项预览/apply 缺项 400/dryRun/未确认 409）",
+      "cmd": "DEV_MODE=true node node_modules/.bin/tsx /tmp/rp-c6.ts   # createServer()@PORT=0, SYNOVA_DB_PATH=:memory:, JWT_SECRET 注入；每场景 process.chdir(mkdtemp) + finally 恢复",
+      "result": "pass",
+      "evidence": "① REGISTER status=201 ok=true（真签发凭据）；apply(完整 seed+superAdminConfirmed) status=200 → 磁盘实测 6 件、响应 written 与磁盘逐项一致、逐件 size>0；生产 loader：degraded=false errors=[] missing=[] declared=true scopeIds=[\"scope.alpha\",\"scope.beta\"]；留痕原文 '2026-10-27T20:29:29.813Z | SUPER_ADMIN_CONFIRMED documents=2 roles=1 pieces=6 granted=know.read'（含 pieces=6 与 granted=）。② /start 缺项(dryRun:true) status=200、data.configPack.rejected=[{\"roleId\":\"rp-indep-role\",\"code\":\"ROLE_SEED_INCOMPLETE\",\"missingParams\":[\"systemAddendum\"]}]、data.degraded=true、磁盘零文件。③ /apply 缺项 status=400、body={\"ok\":false,\"error\":{\"code\":\"ROLE_SEED_INCOMPLETE\",\"missingParams\":[\"systemAddendum\"]},\"degraded\":true}、磁盘零写入（含未写 .synova/onboarding-audit.log）。④ dryRun=true status=200、written=[]、planned=6、连 extensions 目录都不出现。⑤ 未确认 status=409 code=SUPER_ADMIN_CONFIRMATION_REQUIRED、磁盘零写入（门序在生成之前）。C6 RESULT=PASS（EXIT=0，24 条子断言全 PASS）。"
+    },
+    {
+      "id": "C7",
+      "title": "J6/J1/J2 回归：5 探针改动前(base 临时树) vs 改动后逐行相同；P1-a 三件测试 61 passed；tsc --noEmit 0；另三个改动测试件 30 passed",
+      "cmd": "git worktree add --detach /tmp/rp-base-wt a32efef5b3a4adeba01842fc0ae4f70bd2d4d345; (cd /tmp/rp-base-wt && DEV_MODE=true node node_modules/.bin/tsx scripts/control-tower/probe-{role-pack.ts --role finance,permission-grants.ts --all,role-config.ts --all,onboarding.ts --all,knowledge-scope.ts --all}); 同法在 head 跑同 5 条；diff 判定行；node node_modules/.bin/vitest run tests/init/role-pack-schema.test.ts tests/init/preset-loader.test.ts tests/presets/role-pack.test.ts; node node_modules/.bin/tsc --noEmit",
+      "result": "pass",
+      "evidence": "探针（改动前 → 改动后，均为本轮现场重跑，非采信 /tmp/rp-baseline.txt）：role-pack PASS=11/exit0 → PASS=11/exit0；permission-grants PASS=20 UN=2/exit0 → PASS=20 UN=2/exit0；role-config FAIL=7/exit1 → FAIL=7/exit1；onboarding PASS=4 NOT_IMPLEMENTED=4 UNVERIFIED=4/exit2 → 同；knowledge-scope PASS=13 NOT_IMPLEMENTED=3 UNVERIFIED=3/exit2 → 同。判定行 diff 计数：role-config/onboarding/knowledge-scope=0 行差异；role-pack/permission-grants 各仅 1 行差异且内容是探针头部 repoRoot 路径（/tmp/rp-base-wt vs /private/tmp/w-rp1），所有 ✅/❌/⚠️ 判定行逐条相同 ⇒ PASS 集不减、FAIL 集不新增、NOT_IMPLEMENTED 集不新增、UNVERIFIED 数不增。与 L2 交付的 /tmp/rp-baseline.txt 亦逐条一致（该文件 repoRoot 同为 /private/tmp/w-rp1，故本轮用 base 临时树复跑取代对其的采信）。P1-a 回归：✓ role-pack-schema.test.ts / preset-loader.test.ts / role-pack.test.ts → Test Files 3 passed (3)，Tests 61 passed (61)，EXIT=0。tsc --noEmit EXIT=0（零输出）。补跑另三个改动测试件：tests/onboarding/onboarding-flow.test.ts (15) + tests/routes/onboarding.test.ts (9) + tests/extensions/onboarding-mount.test.ts (6) = Tests 30 passed (30)，EXIT=0。"
+    },
+    {
+      "id": "C8",
+      "title": "J7 J4-② 改坏必红：把 generator 的 scopes: 改回 knowledgeScope: ⇒ 测试必红，且红的恰为 J4-2a 与 J4b 两条",
+      "cmd": "git worktree add --detach /tmp/rp-c8-wt a4d41eba5; python3 把 src/onboarding/config-pack-generator.ts:289 的 '+ 'scopes:\\n'' 改为 '+ 'knowledgeScope:\\n''; (cd /tmp/rp-c8-wt && DEV_MODE=true node node_modules/.bin/vitest run tests/onboarding/config-pack-generator.test.ts); git worktree remove --force /tmp/rp-c8-wt",
+      "result": "pass",
+      "evidence": "改动 diff 摘要：1 file changed, 1 insertion(+), 1 deletion(-)（仅 :289 的键名常量，无其它改动）。原始红输出：Test Files 1 failed (1)；Tests 2 failed | 16 passed (18)；EXIT=1。红的两条恰为：① 'J4-2a knowledge-scope.yaml 顶层含 scopes: 且 scopes[].id 非空' — AssertionError: expected '# 由建档通道生成（生成器: src/onboarding/config-…' to match /^scopes:\\s*$/m；② 'J4b 生成后真 loadRolePacks() ⇒ degraded:false、missing:[]、declared:true、scopeIds 非空' — AssertionError: expected false to be true（即包内 knowledgeScope.declared 断言）。其余 16 条（含 J4-1 written===6、J4-3/4/5/6 降级与边界）仍绿 ⇒ 红点定位精确、无连带假红。临时 worktree 已删除（git worktree list 无 /tmp/rp-c8-wt）。"
+    },
+    {
+      "id": "C9",
+      "title": "M7 边界与遗留：变更集无『部署一致性已实现』『已交付』、新增行无 D 号；M7 判据件仅『已知限制①』按自述翻转；claim_store --check 1075 ok",
+      "cmd": "git diff a32efef5b...a4d41eba5 > /tmp/rp-1086.diff; grep -c '部署一致性已实现' /tmp/rp-1086.diff; grep -c '已交付' /tmp/rp-1086.diff; grep -E '^\\+' /tmp/rp-1086.diff | grep -cE '\\bD[0-9]{2,4}\\b'; grep -E '^\\+' /tmp/rp-1086.diff | grep -E 'as any|as never|as unknown as'; git diff a32efef5b...a4d41eba5 -- tests/extensions/onboarding-mount.test.ts; python3 scripts/control-tower/claim_store.py --check 1075",
+      "result": "pass",
+      "evidence": "① 全 diff『部署一致性已实现』=0 命中、『已交付』=0 命中（含注释与正文）；② 新增行 D 号 = 0 命中（任务编号只用 Issue 号）；③ 新增行 as-any 家族唯一命中为注释行 '/** 读 JSON 件为普通记录（避免 `as any` 家族：逐键搬运） */'（非强转，铁律 38 计非注释行）；④ tests/extensions/onboarding-mount.test.ts 的 diff 全部可归约为『已知限制①』翻转的必然连带：头部自述重写（3 件→6 件＋键名 knowledgeScope→scopes，并明写『这是本批唯一允许的 M7 已知限制翻转，不改其它任何判据』）、import 加 EXPECTED_PIECES、roleSeedBody 补齐六块 fixture、② 期望 3 件→EXPECTED_PIECES(6) 并加 scopes:/not knowledgeScope/pieces=6 断言、③ planned>0→=6、④ describe 由『已知限制：pieces=3 missing=3 degraded=true』翻转为『真 apply ⇒ 6 件 ⇒ degraded:false missing:[]』、⑤ 3→6 件；未出现任何 M7 达成语，M7 的其它判据（主树 data/ 零写入、evil rootDir 零写入、未确认 409 门序）一字未动；⑤ claim_store --check 1075 → {\"status\":\"ok\",\"issue\":\"1075\",\"writeset\":21,\"done\":6}，EXIT=0。"
+    },
+    {
+      "id": "C10",
+      "title": "claim/覆盖：head 的 8 件变更逐条被 .claude/claims/1075.yaml 的 writeset 覆盖",
+      "cmd": "git show a4d41eba5:.claude/claims/1075.yaml（解析 writeset）与 git diff --name-only a32efef5b...a4d41eba5 逐条比对",
+      "result": "pass",
+      "evidence": "writeset 条目 21、变更集 8 件，逐条 OK（8/8 命中，无 MISS）：.claude/claims/1075.yaml / src/onboarding/config-pack-generator.ts / src/onboarding/onboarding-flow.ts / src/routes/onboarding.ts / tests/extensions/onboarding-mount.test.ts / tests/onboarding/config-pack-generator.test.ts / tests/onboarding/onboarding-flow.test.ts / tests/routes/onboarding.test.ts。done 6 条均带 verify:（含 node node_modules/.bin/vitest run tests/onboarding/config-pack-generator.test.ts 与 DEV_MODE=true node node_modules/.bin/vitest run tests/extensions/onboarding-mount.test.ts），满足 claim_store 唯一认的形态。另核 claims 的『回执预列』提交（a4d41eba5）本身：对该文件的改动仅 = 新增 writeset 1 行 docs/synova/reviews/1086.108610861086.json ＋ done 2 行 verify ＋ 注释/note 文案，无产品件（git diff 该文件共 8 行增 5 行删 3 行，均为上述三类）。"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "info",
+      "summary": "规格 §4.5-C2 的『knowledgeScope（seed）id 长度 >64 ⇒ 拒』在本批两侧均无执行体（65 字符实测生成与装载全绿）",
+      "detail": "现场实测（自写脚本 /tmp/rp-extra.ts）：scope id = 'a'+'b'×64（65 字符）时 generateConfigPack 返回 written=6 / rejected=[]，随后 loadRolePacks() 仍 degraded=false、errors=[]、declared=true ⇒ 既非生成期拒、也非装载期拒。判定面归属：§2.5-A 的『必填集判据』只要求六块≥1/非空（本批生成器实现与之一致）；而 §4.5-C2 表格把该行列作『knowledgeScope（seed）』的边界值，且 §10-L12 又把内容件字段级形状整体后置到 P2。故本项不构成本批 J1–J7 任一条的红，但宜由 L1/CTO 明确『>64 ⇒ 拒』的落点（P2 字段级校验 or 生成期正则），以免 §4.5-C2 成为 declared-only 契约。非阻断。"
+    },
+    {
+      "severity": "info",
+      "summary": "回执文件名用 claims 预列名 1086.108610861086.json，非指纹规范名 1086.ad43eb57bfa5.json；未提交状态下 check-merge-conditions --pr 1086 必报 R1 缺回执（预期）",
+      "detail": "check-merge-conditions.sh 的 R1 先查 docs/synova/reviews/<pr>.<fp12>.json（规范名 = 1086.ad43eb57bfa5.json），查不到才回退到正则 ^docs/synova/reviews/<pr>\\.[0-9a-f]{12}\\.json$ 取最后一个。本回复按 .claude/claims/1075.yaml 已预列的 1086.108610861086.json 落盘（12 字符全在 [0-9a-f] 内 ⇒ 提交后回退分支可命中），与 #1085 先例（1085.108510851085.json）同形。因复核会话不得 commit，回执目前只在工作树 ⇒ 现跑 --pr 1086 会报『R1 缺回执』，属预期，不代表回执缺失；由实现会话提交回执后再跑即可。非阻断。"
+    },
+    {
+      "severity": "info",
+      "summary": "L2 交付的基线快照 /tmp/rp-baseline.txt 的 repoRoot 指向同一 worktree（/private/tmp/w-rp1），单凭该文件无法自证『取自改动前』——本轮已用 base commit 临时树复跑取代对其的采信",
+      "detail": "该文件 2026-10-28 03:33 生成，头部 PROBE_REPO_ROOT=/private/tmp/w-rp1，与受审分支同一 worktree ⇒ 仅凭文件不能排除『改后拍的快照』。本复核未采信该文件作为唯一来源：另在 git worktree add --detach /tmp/rp-base-wt a32efef5b 里重跑同 5 条探针，与 head 结果逐判定行相同（仅头部 repoRoot 路径行不同），且与 /tmp/rp-baseline.txt 的 COVERAGE/RESULT 行完全一致 ⇒ J6 结论成立。建议后续批次的基线快照在文件头显式记录 commit sha 与时间戳，便于独立复核自证。非阻断。"
+    }
+  ]
+}
