@@ -152,3 +152,11 @@ entries:
     status: wired
     owner: P1
     notes: "岗位包 v2 装载期结构＋refs 校验（#1075 批一 P1-a）；消费者＝loader 唯一入口（content-registry boot/reload）；随仓 JSON Schema 是契约、zod 是执行体（drift 测试钉死键集）"
+  - capability: gate.mirrorFreshness
+    defined_at: "scripts/control-tower/check-mirror-freshness.sh:1"
+    provider: "scripts/control-tower/check-mirror-freshness.sh:1"
+    consumer: null
+    test: "tests/control-tower/check-mirror-freshness.test.sh"
+    status: declared-only
+    owner: P4
+    notes: "#1087 W5：只读报告器（三态 0/1/2）。消费侧＝周报，但 weekly-recon.sh 五指标契约固定（本批不改 544 行件）⇒ 无生产消费者，consumer 空是实测不是遗漏；CI 腿按 W5 拓扑约束不入 GitHub，Gitea 侧接线待下批。"
