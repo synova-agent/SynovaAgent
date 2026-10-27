@@ -1,11 +1,21 @@
 /**
- * tests/acceptance/mvp1-m4-output-face.test.ts — #1053（T5）/ 台账 #1051 · M4 出口面验收（A1–A14 全覆盖）
+ * tests/acceptance/mvp1-m4-output-face.test.ts — #1053（T5 · T8）/ 台账 #1051 · M4 出口面验收（A1–A14 全覆盖）
+ *
+ * 覆盖形态（如实 —— 两种证据形态互不冒充）:
+ *   · A1–A11、A13、A14 = **测试用例断言**（本文件 it 逐条对应；A4／A5 于 T8 补齐）；
+ *   · A12 = **命令级证据，无独立用例**：本文件零系统时钟直取（时间只经 tests/acceptance/support/clock.ts
+ *     注入缝），判据为命令级 grep 计数**零命中**（无输出、exit 1）。命令原文见
+ *     `electron-renderer/AGENTS.md`「怎么算完成」节 —— **不在本文件复写**：把被搜字符串写进被测文件，
+ *     该判据就会自指失效（搜到的正是自己的说明文字）。
  *
  * 一条验收件给出 M4 出口面的三层证据（三层各证一段，**互不冒充**）：
  *   ① 服务端回归（真 express ＋ 真文件库 ＋ 真写入）：A6 两 org 隔离 ／ A7 orgId 非法四形态 ／
- *      A1 缺省窗口 ／ A2 days=1 ／ A3 days 五格＋上界（＝ M-7「删 orgId 透传」、M-8「删 days 上界」的必红点）
+ *      A1 缺省窗口 ／ A2 days=1 ／ A3 days 五格＋上界（＝ M-7「删 orgId 透传」、M-8「删 days 上界」的必红点）／
+ *      A4 空表（`ok:true,count:0,summary:[]` ＋ 真 view 渲染空态，不降级）／ A5 三观测（count=3、previous=次新、
+ *      previous=0 ⇒ changeRatio=null）
  *   ② 渲染（真纯展示组件 ＋ render 桥）：A14 四态恒有限制行 ／ A9 M3 四真值 ／ A11 禁渲密钥 ／ 四态互不相等
- *   ③ 装配与取数（源码断言）：A8 零请求两层证据 ／ A13 装配语义 ／ loader 五码降级（Q-3/Q-9）／ A10 一页纸
+ *   ③ 装配与取数（源码断言）：A8 零请求两层证据 ／ A13 装配语义 ／ A10 一页纸 ／ loader 五码降级（Q-3/Q-9）／
+ *      Q-5 容器 cancelled 守卫（卸载后不得再 setView；只做源码断言 —— render 桥不跑 hook）
  *
  * Q-10（#1053 T5）：**断言值一律经 tests/acceptance/m4-output-face.expected.ts 的 EXP_* 引用**；
  * 本文件只在「夹具输入」与「合成本地探针」处写字面量 —— 期望值漂移只能靠改 expected 模块发生（可 diff、可 review）。
@@ -18,23 +28,28 @@
  *   @input   临时 DB（mkdtemp，经 SYNOVA_DB_PATH 指向；禁碰 data/synova.db）＋ 合成本地 express（listen 0）
  *            ＋ base 注入（loadMeasurementTrends(base, orgId)）＋ 纯组件 props（view/state/onOpenOnePager）
  *            ＋ 最小 DiagnosisReport（A10 一页纸）
- *   @output  标签化输出 [BOOT]/[A1]/[A2]/[A3]/[A6]/[A7]/[A8]/[A9]/[A10]/[A11]/[A13]/[T1]/[T2]/[PASS]；
+ *   @output  标签化输出 [BOOT]/[A1]/[A2]/[A3]/[A4]/[A5]/[A6]/[A7]/[A8]/[A9]/[A10]/[A11]/[A13]/[Q-5]/[T1]/[T2]/[PASS]；
  *            真实断言点见各 it 标题（逐条对应 A 判据编号）
  *   @exit    vitest 语义：0=通过 ｜ 任一 expect 红=真红（1）｜ 环境/检查自身失败 ⇒ throw Error('[M4][ENV] …')（=2 语义）
  *   @degraded 测试自身不降级：环境不满足 ⇒ throw，**不 skip**（禁把"看不见"当"没问题"）
- *   @authority 本批唯一改件者＝impl-author（#1053/T5）；本文件只被 vitest 执行，不被产品代码 import
+ *   @authority 改件者＝impl-author（#1053/T5 ＋ T8 补 A4/A5/Q-5）；本文件只被 vitest 执行，不被产品代码 import
  *   @not-here 不改 src/**（只读复用 routes/sentinel.ts ＋ writer/reader）；不改 electron-renderer/**（含 Section/
  *             loader/Container/RightPanel）；不改 expected 模块；不 import 容器/面板（hook 与重依赖）；
  *             不 mock 被测系统（无 vi.mock／mockFetch）；不证像素级/交互视觉/E2E；不覆盖 M3 链路的产出正确性
  *             （那归 tests/acceptance/mvp1-m3-domain-chain.test.ts）
  *
  * 已知限制:
- *   · 🔴 **A8 生产侧落点 deferred ＋ known_issue**：本批写集不含 electron-renderer/src/lib/measurement-trends.ts
- *     与 MeasurementTrendContainer.tsx ⇒ 生产侧不能新增导出、不能改容器。故 A8 由两层组成：
- *     ① expected 模块的 `shouldLoadTrends` **参照实现** ＋ 真值表单测；② 对容器源码的**源码断言**
- *     （守卫在 loader 调用之前 ／ `loadMeasurementTrends(` 恰 1 次 ／ 全文件零网络原语 ／ 提示态无降级条）。
- *     生产纯函数化（lib 导出 ＋ 容器引用）**未落地**，属 deferred，需 L1 批准扩写集。
+ *   · 🔴 **A8 生产侧落点**：生产真落点归 **T2/T4** —— 容器早退守卫（`if (orgId === null || orgId === '')`
+ *     先于 loader 调用 return）＋ RightPanel 的 `activeOrgId !== null` 门控，**都是已在库的生产事实**。
+ *     故 A8 分两层：① expected 模块的 `shouldLoadTrends` **参照实现** ＋ 真值表单测；② 对容器源码的
+ *     **源码断言**（守卫在 loader 调用之前 ／ `loadMeasurementTrends(` 恰 1 次 ／ 全文件零网络原语 ／ 提示态无降级条）。
+ *     **纯函数化**（lib 导出 `shouldLoadTrends` 供容器引用）仍 **deferred**，需 L1 批准扩写集。
  *     🔴 本条不得被改写成「已抽成生产纯函数」。
+ *   · 🔴 **A12 的证据形态是命令级，无独立用例**：本文件零系统时钟直取（时间只经
+ *     tests/acceptance/support/clock.ts 注入缝），判据为命令级 grep 计数**零命中**（无输出、exit 1）；
+ *     命令原文见 `electron-renderer/AGENTS.md`「怎么算完成」节（本文件不复写被搜字符串，否则自指失效）。
+ *     不得把它说成「已有 it 覆盖」，也不得改口称它没有覆盖 —— 它是**命令级证据**，
+ *     与用例断言并列而不互相冒充。
  *   · render 桥只证「渲染树含什么」，不证像素级/交互视觉/E2E；事件处理器不被桥执行 ⇒ 一页纸「点击可传出」
  *     由「入口元素在场」＋ 源码断言（`onClick={onOpenOnePager}`）共同证明。
  *   · app/**（Web UI）本批未动（同源 Web 入口不在本件范围）。
@@ -100,6 +115,12 @@ import {
   EXP_UNKNOWN_RENDERED,
   EXP_DEGRADED_PROBE_ERROR,
   EXP_PROBE,
+  EXP_A4,
+  EXP_A5,
+  EXP_EXTRA_SEED_WINDOW,
+  EXP_EMPTY_FORBIDDEN_VALUES,
+  EXP_DERIVE_STATE,
+  EXP_CANCELLED_GUARD,
 } from './m4-output-face.expected';
 
 // ── [BOOT] 环境隔离：临时文件库（真落盘路径，非 :memory:）＋ JWT_SECRET；禁碰 data/synova.db ──
@@ -124,6 +145,10 @@ function sqliteAt(msAgo: number): string {
 const T_PREV = sqliteAt(EXP_SEED_WINDOW.PREV_MS_AGO); // 2 天前
 const T_LATEST = sqliteAt(EXP_SEED_WINDOW.LATEST_MS_AGO); // 1 分钟前（最新）
 const T_OLD = sqliteAt(EXP_SEED_WINDOW.OLD_MS_AGO); // 8 天前（缺省 7 天窗口外）
+// ── T8 追加（A4/A5）：新 org 专用时刻 —— 上面三个偏移与两 org 种子**一条不动**（夹具隔离）──
+const T_OUT_OF_WINDOW = sqliteAt(EXP_EXTRA_SEED_WINDOW.OUT_OF_WINDOW_MS_AGO); // 8 天前（缺省 7 天窗口外）
+/** [最旧 3 天前, 次新 2 天前, 最新 1 天前] —— 全在缺省 7 天窗口内 */
+const T_SERIES: readonly string[] = EXP_EXTRA_SEED_WINDOW.THREE_OBS_MS_AGO.map((msAgo) => sqliteAt(msAgo));
 
 /** 服务端 trends 响应的结构子集（只声明本件断言用到的字段） */
 interface TrendItemJson {
@@ -162,6 +187,8 @@ let badBase = '';
 let badServer: Server | undefined;
 /** T1 真调结果 → T2「真数据渲染」用例复用（摘 API ⇒ 两个用例同红，反例①） */
 let realView: MeasurementTrendsView | null = null;
+/** T8：A4-a 的真 loader 结果（空表）→ A4-c「真 view 渲染空态」用例复用（摘 loader ⇒ 两处同红） */
+let emptyRealView: MeasurementTrendsView | null = null;
 
 function listen(app: express.Express): Promise<{ server: Server; base: string }> {
   const server = app.listen(0);
@@ -188,7 +215,34 @@ beforeAll(async () => {
     { orgId: EXP_ORG.BB, metricId: EXP_METRIC.DOWN, value: EXP_SEED.DOWN.PREV_VALUE, unit: EXP_SEED.DOWN.UNIT, observedAt: T_PREV },
     { orgId: EXP_ORG.BB, metricId: EXP_METRIC.DOWN, value: EXP_SEED.DOWN.LATEST_VALUE, unit: EXP_SEED.DOWN.UNIT, observedAt: T_LATEST },
   ];
-  for (const row of rows) {
+  // ── T8 追加夹具（A4 空表 ／ A5 三观测）：**只用新 org**，既有两 org 的 5 行一条不动 ──
+  const extraRows: readonly SeedRow[] = [
+    // A4-a：org-cc 三指标各 1 行，全部 8 天前（缺省 7 天窗口之外 ⇒ 缺省 count=0；放宽窗口 count=3）
+    ...EXP_A4.OUT_OF_WINDOW_METRICS.map((metricId): SeedRow => ({
+      orgId: EXP_A4.ORG_OUT_OF_WINDOW,
+      metricId,
+      value: EXP_A4.OUT_OF_WINDOW_VALUE,
+      unit: EXP_A4.OUT_OF_WINDOW_UNIT,
+      observedAt: T_OUT_OF_WINDOW,
+    })),
+    // A5-a：org-dd 3 指标 × 每指标 3 条观测（T_SERIES 从旧到新）
+    ...EXP_A5.METRICS.flatMap((metric): SeedRow[] => metric.series.map((value, index) => ({
+      orgId: EXP_A5.ORG_THREE_OBS,
+      metricId: metric.metricId,
+      value,
+      unit: metric.unit,
+      observedAt: T_SERIES[index],
+    }))),
+    // A5-b：org-gg previous=0 一例（最旧 7 ／ 次新 0 ／ 最新 50）
+    ...EXP_A5.ZERO_CASE.series.map((value, index): SeedRow => ({
+      orgId: EXP_A5.ORG_PREV_ZERO,
+      metricId: EXP_A5.ZERO_CASE.metricId,
+      value,
+      unit: EXP_A5.ZERO_CASE.unit,
+      observedAt: T_SERIES[index],
+    })),
+  ];
+  for (const row of [...rows, ...extraRows]) {
     const wrote = sink({ ...row, sourceType: 'compute', sourceId: 'M4-ACCEPTANCE-1053' });
     if (!wrote.written) throw new Error(`[M4][ENV] 测量值写入失败（${row.metricId}@${row.observedAt}）`);
   }
@@ -219,7 +273,7 @@ beforeAll(async () => {
   badServer = bad.server;
   badBase = bad.base;
 
-  console.log(`[BOOT] db=${DB_PATH} base=${base} badBase=${badBase} orgs=${EXP_ORG.AA}|${EXP_ORG.BB}`);
+  console.log(`[BOOT] db=${DB_PATH} base=${base} badBase=${badBase} orgs=${EXP_ORG.AA}|${EXP_ORG.BB}|${EXP_A4.ORG_OUT_OF_WINDOW}|${EXP_A4.ORG_NEVER_SEEDED}|${EXP_A5.ORG_THREE_OBS}|${EXP_A5.ORG_PREV_ZERO}`);
 });
 
 afterAll(() => {
@@ -271,6 +325,7 @@ async function fetchTrendSummary(query: string): Promise<TrendItemJson[]> {
 // ═════════════════════════════════════════════════════════════════════════════
 // ① 服务端回归：A6 两 org 隔离 ／ A7 orgId 非法 ／ A1 缺省窗口 ／ A2 days=1 ／ A3 days 五格
 //    （M-7「删 orgId 透传」⇒ A6 必红 ／ M-8「删 days 上界」⇒ A3[3651] 必红）
+//    ①b（T8 追加）：A4 空表 ／ A5 三观测 —— M-9「空表当降级／空态编造 0」／ M-10「previous 取最旧」
 // ═════════════════════════════════════════════════════════════════════════════
 
 describe('#1053 T5 · A6 两 org 隔离（真 express ＋ 真文件库）', () => {
@@ -397,6 +452,167 @@ describe(`#1053 T5 · A3 days 越界/非整数五格 ＋ 上界（${EXP_CODE_INV
     expect(res.status, url).toBe(200);
     expect(body.ok).toBe(true);
     expect(summaryOf(body).length).toBeGreaterThan(0);
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// ①b T8 追加：A4 空表（服务端 0 组 ＋ 真 view 渲染空态）／ A5 三观测（count=3、previous=次新）
+//    （M-9「空表当降级／空态编造 0」⇒ A4-c 必红 ／ M-10「previous 取最旧」⇒ A5-a 必红）
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe(`#1053 T8 · A4 空表（[R3-table] ok:true,count:0,summary:[] ＋ UI 空态不降级）`, () => {
+  it(`A4-a 种子全在 ${EXP_DAYS_DEFAULT} 天窗口外（${EXP_A4.ORG_OUT_OF_WINDOW}）⇒ 原始 HTTP ok:true／count=0／summary:[]`, async () => {
+    const url = `${base}${EXP_TRENDS_PATH}&orgId=${encodeURIComponent(EXP_A4.ORG_OUT_OF_WINDOW)}`;
+    const res = await fetch(url);
+    const body = await trendsJson(res);
+    console.log(`[A4] a status=${res.status} ok=${String(body.ok)} count=${String(body.count)} groups=${summaryOf(body).length} degraded=${String(body.degraded)}`);
+
+    expect(res.status, url).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.count).toBe(EXP_A4.DEFAULT_WINDOW_GROUP_COUNT);
+    expect(summaryOf(body)).toEqual([]);
+    // 如实：服务端 ok:true 分支**不带** degraded 字段（degraded=false 是 loader normalizeView 的归一结论）
+    expect(body.degraded).toBeUndefined();
+
+    // 对照（防「假绿」）：零不是数据缺失而是**窗口裁剪** —— 放宽到 days 上界后同 org 的组必须回来
+    const wideRes = await fetch(`${url}&days=${EXP_DAYS_BOUNDARY_VALID}`);
+    const wide = await trendsJson(wideRes);
+    const wideIds = summaryOf(wide).map((item) => item.metricId).sort();
+    console.log(`[A4] a wide-window count=${String(wide.count)} ids=${wideIds.join('|')}`);
+    expect(wideRes.status).toBe(200);
+    expect(wide.count).toBe(EXP_A4.WIDE_WINDOW_GROUP_COUNT);
+    expect(wideIds).toEqual([...EXP_A4.OUT_OF_WINDOW_METRICS].sort());
+  });
+
+  it('A4-a2 同一 org 经真 loader ⇒ ok:true／degraded:false／summary:[]（真 fetch，不 mock）', async () => {
+    const view = await loadMeasurementTrends(base, EXP_A4.ORG_OUT_OF_WINDOW);
+    emptyRealView = view; // 供 A4-c「真 view 渲染空态」（摘 loader ⇒ 两处同红）
+    console.log(`[A4] a2 loader ok=${view.ok} degraded=${view.degraded} summary=${view.summary.length} errors=${(view.errors ?? []).join('|')}`);
+
+    expect(view.ok).toBe(true);
+    expect(view.degraded).toBe(false); // 空表**不是**降级
+    expect(view.summary).toEqual([]);
+    expect(view.errors ?? []).toEqual([]);
+  });
+
+  it(`A4-b 从未种过的 org（${EXP_A4.ORG_NEVER_SEEDED}）⇒ 原始 HTTP 与 loader 同为 0 组（无数据 vs 窗口外的对照）`, async () => {
+    const url = `${base}${EXP_TRENDS_PATH}&orgId=${encodeURIComponent(EXP_A4.ORG_NEVER_SEEDED)}`;
+    const res = await fetch(url);
+    const body = await trendsJson(res);
+    console.log(`[A4] b status=${res.status} ok=${String(body.ok)} count=${String(body.count)}`);
+
+    expect(res.status, url).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.count).toBe(EXP_A4.DEFAULT_WINDOW_GROUP_COUNT);
+    expect(summaryOf(body)).toEqual([]);
+
+    // 从未种过 ⇒ 放宽窗口也仍是 0（与 A4-a 放宽后的 3 组互为对照）
+    const wide = await trendsJson(await fetch(`${url}&days=${EXP_DAYS_BOUNDARY_VALID}`));
+    console.log(`[A4] b wide-window count=${String(wide.count)}`);
+    expect(wide.count).toBe(EXP_A4.DEFAULT_WINDOW_GROUP_COUNT);
+    expect(summaryOf(wide)).toEqual([]);
+
+    const view = await loadMeasurementTrends(base, EXP_A4.ORG_NEVER_SEEDED);
+    console.log(`[A4] b loader ok=${view.ok} degraded=${view.degraded} summary=${view.summary.length}`);
+    expect(view.ok).toBe(true);
+    expect(view.degraded).toBe(false);
+    expect(view.summary).toEqual([]);
+  });
+
+  it('A4-c A4-a 的真 loader view 交 Section 渲染 ⇒ empty 态（空态在场／降级条不在场／零条目／零编造数值）', () => {
+    if (emptyRealView === null) throw new Error('[M4][ENV] A4-a2 的真 loader view 缺席 —— 环境不满足，禁跳过');
+    const view = emptyRealView;
+    // 状态语义**不由本件自造**：A4-d 先证明「ok 且 summary 空 ⇒ empty」是 Container 的生产映射，
+    // 此处才按该结论传 'empty'（容器含 useEffect、render 桥不跑 hook ⇒ 不可 import，见文件头分层理由）。
+    expect(view.ok).toBe(true);
+    expect(view.degraded).toBe(false);
+    expect(view.summary.length).toBe(0);
+
+    const out = renderSection(view, 'empty', () => {});
+    console.log(`[A4] c length=${out.length} empty=${out.includes(EXP_TESTID.empty)} degraded=${out.includes(EXP_TESTID.degraded)} items=${countItems(out)}`);
+
+    expect(out).toContain(EXP_SECTION_TITLE);
+    expect(out).toContain(`data-testid="${EXP_TESTID.empty}"`);
+    expect(out).not.toContain(`data-testid="${EXP_TESTID.degraded}"`); // 空表 ≠ 降级
+    expect(out).not.toContain(`data-testid="${EXP_TESTID.item}"`);
+    expect(countItems(out)).toBe(EXP_A4.DEFAULT_WINDOW_GROUP_COUNT);
+    expect(out).not.toContain('↑');
+    expect(out).not.toContain('↓');
+    expect(out).not.toContain('→');
+    // 零编造数值：空态不得凭空出现「0 ＋ 单位」形态，也不得出现窗口外的指标 id
+    for (const fabricated of EXP_EMPTY_FORBIDDEN_VALUES) {
+      expect(out, `空态出现编造数值「${fabricated}」`).not.toContain(fabricated);
+    }
+    for (const metricId of EXP_A4.OUT_OF_WINDOW_METRICS) {
+      expect(out, metricId).not.toContain(metricId);
+    }
+    // 空态仍是完整出口面：限制行恒在 ＋ 一页纸入口在（与 A14／A13 同口径）
+    expect(out).toContain(`data-testid="${EXP_TESTID.limitations}"`);
+    expect(out).toContain(`data-testid="${EXP_TESTID.onePager}"`);
+    expect(out).toContain(EXP_SEMANTICS_VERSION);
+  });
+
+  it('A4-d Container 源码断言：deriveState 三分支字面量在库且接到 Section（空表 ⇒ empty 是生产映射，不是测试自造）', () => {
+    const src = readSource(EXP_WIRING.containerPath);
+    const loadingAt = src.indexOf(EXP_DERIVE_STATE.loadingBranch);
+    const degradedAt = src.indexOf(EXP_DERIVE_STATE.degradedBranch);
+    const emptyOrReadyAt = src.indexOf(EXP_DERIVE_STATE.emptyOrReadyBranch);
+    console.log(`[A4] d loadingAt=${loadingAt} degradedAt=${degradedAt} emptyOrReadyAt=${emptyOrReadyAt} wired=${src.includes(EXP_DERIVE_STATE.wiredToSection)}`);
+
+    expect(src).toContain(EXP_DERIVE_STATE.declaration);
+    // 三条分支字面量逐条在库，且顺序 = 生产优先级（loading → degraded → empty/ready）
+    expect(loadingAt).toBeGreaterThanOrEqual(0);
+    expect(degradedAt).toBeGreaterThan(loadingAt);
+    expect(emptyOrReadyAt).toBeGreaterThan(degradedAt);
+    // 映射结论真被接到展示组件（不是死代码 —— 接线证据）
+    expect(src).toContain(EXP_DERIVE_STATE.wiredToSection);
+  });
+});
+
+describe('#1053 T8 · A5 三观测（count=3、previous=次新、previous=0 ⇒ changeRatio=null）', () => {
+  it(`A5-a ${EXP_A5.METRICS.length} 指标 × 每指标 ${EXP_A5.COUNT_PER_METRIC} 条观测 ⇒ count=${EXP_A5.SUMMARY_GROUP_COUNT}／每行 count=${EXP_A5.COUNT_PER_METRIC}／latest·previous·changeRatio 手算值`, async () => {
+    const url = `${base}${EXP_TRENDS_PATH}&orgId=${encodeURIComponent(EXP_A5.ORG_THREE_OBS)}`;
+    const res = await fetch(url);
+    const body = await trendsJson(res);
+    const items = summaryOf(body);
+    console.log(`[A5] a status=${res.status} ok=${String(body.ok)} count=${String(body.count)} groups=${items.length}`);
+    console.log(`[A5] a rows=${items.map((item) => `${item.metricId}:count${item.count}/latest${String(item.latestValue)}/prev${String(item.previousValue)}/ratio${String(item.changeRatio)}`).join(' ')}`);
+
+    expect(res.status, url).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.count).toBe(EXP_A5.SUMMARY_GROUP_COUNT); // summary 组数 = 3 组（每行 count=3 与此不同）
+    expect(items.length).toBe(EXP_A5.SUMMARY_GROUP_COUNT);
+    expect(items.map((item) => item.metricId).sort()).toEqual(EXP_A5.METRICS.map((metric) => metric.metricId).sort());
+
+    for (const expected of EXP_A5.METRICS) {
+      const row = findTrend(items, expected.metricId);
+      if (expected.changeRatio === null) throw new Error(`[M4][ENV] 夹具 ${expected.metricId} 的 changeRatio 不应为 null`);
+      expect(row.count, expected.metricId).toBe(EXP_A5.COUNT_PER_METRIC);
+      expect(row.unit, expected.metricId).toBe(expected.unit);
+      expect(row.latestValue, expected.metricId).toBe(expected.latestValue); // 最新，不是次新
+      expect(row.previousValue, expected.metricId).toBe(expected.previousValue); // 次新，不是最旧
+      expect(row.changeRatio, expected.metricId).toBeCloseTo(expected.changeRatio, 9);
+      expect(deriveTrendDirection(row.changeRatio), expected.metricId).toBe(expected.direction);
+      expect(row.latestAt, expected.metricId).toBe(T_SERIES[T_SERIES.length - 1]); // 最新时刻（1 天前）
+    }
+  });
+
+  it(`A5-b previous=0（${EXP_A5.ZERO_CASE.metricId}）⇒ previousValue=0 且 changeRatio=null（不可算 ≠ 持平）`, async () => {
+    const url = `${base}${EXP_TRENDS_PATH}&orgId=${encodeURIComponent(EXP_A5.ORG_PREV_ZERO)}`;
+    const res = await fetch(url);
+    const body = await trendsJson(res);
+    const zero = findTrend(summaryOf(body), EXP_A5.ZERO_CASE.metricId);
+    console.log(`[A5] b count=${String(body.count)} rowCount=${zero.count} latest=${String(zero.latestValue)} prev=${String(zero.previousValue)} ratio=${String(zero.changeRatio)}`);
+
+    expect(res.status, url).toBe(200);
+    expect(body.count).toBe(EXP_A5.ZERO_CASE_SUMMARY_GROUP_COUNT);
+    expect(zero.count).toBe(EXP_A5.ZERO_CASE.COUNT);
+    expect(zero.latestValue).toBe(EXP_A5.ZERO_CASE.latestValue);
+    expect(zero.previousValue).toBe(EXP_A5.ZERO_CASE.previousValue); // 0 是**真实读数**，不是 null
+    expect(zero.changeRatio).toBeNull(); // previous=0 ⇒ 不可算（src/sentinel/metric-readings-reader.ts:148-151）
+    // 展示层因此必须写「未知」：**不得**把「previous=0」画成持平（flat）
+    expect(deriveTrendDirection(zero.changeRatio)).toBe(EXP_A5.ZERO_CASE.direction);
+    expect(deriveTrendDirection(zero.changeRatio)).not.toBe(EXP_TREND.FLAT);
   });
 });
 
@@ -727,7 +943,8 @@ describe('#1053 T5 · A9 M3 四真值经 Section 渲染', () => {
 
 /**
  * A8-a 的参照实现：把「是否发起」与「请求长什么样」连起来，证明 false 分支**不产生 URL**。
- * 🔴 这不是生产实现（生产落点 deferred，见文件头「已知限制」）；生产行为的证据是下面的 A8-b 源码断言。
+ * 🔴 这不是生产实现（生产真落点归 **T2/T4** 的容器早退守卫 ＋ RightPanel 门控；**纯函数化 deferred**，
+ *    见文件头「已知限制」）；生产行为的证据是下面的 A8-b 源码断言。
  */
 function trendUrlFor(orgId: string | null | undefined): string | null {
   if (!shouldLoadTrends(orgId)) return null;
@@ -774,6 +991,36 @@ describe('#1053 T5 · A8 零请求（未选客户不发请求）', () => {
     // ④ 提示态在场且不出降级条（未选客户不是"降级"）
     expect(src).toContain(EXP_TESTID.selectOrg);
     expect(src).not.toContain(EXP_TESTID.degraded);
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// ⑤b Q-5 容器 effect 取消守卫（**只做源码断言** —— render 桥不跑 hook，行为测试必是假绿）
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe('#1053 T8 · Q-5 容器 effect 取消守卫（卸载/重跑后不得再 setView）', () => {
+  it('Q-5：cancelled 声明先于 loader 调用 ＋ cancelled=true ≥2 条 cleanup 路径 ＋ then/catch 双分支守卫', () => {
+    const src = readSource(EXP_WIRING.containerPath);
+    const declaredAt = src.indexOf(EXP_CANCELLED_GUARD.declaration);
+    const loadAt = src.indexOf(EXP_WIRING.loaderCall);
+    const setTrueCount = src.split(EXP_CANCELLED_GUARD.setTrue).length - 1;
+    const thenAt = src.indexOf(EXP_CANCELLED_GUARD.thenMarker);
+    const catchAt = src.indexOf(EXP_CANCELLED_GUARD.catchMarker);
+    console.log(`[Q-5] declaredAt=${declaredAt} loadAt=${loadAt} setTrueCount=${setTrueCount} thenAt=${thenAt} catchAt=${catchAt}`);
+
+    // ① 守卫变量在 loader 调用**之前**声明（否则竞态窗口根本不存在 ⇒ 守卫是摆设）
+    expect(declaredAt).toBeGreaterThanOrEqual(0);
+    expect(loadAt).toBeGreaterThan(declaredAt);
+    // ② 两条 cleanup 路径（未选客户早退 ／ effect 卸载）各置位一次 ⇒ ≥2
+    expect(setTrueCount).toBeGreaterThanOrEqual(EXP_CANCELLED_GUARD.minSetTrueOccurrences);
+    // ③ 成功路径：`.then` 体内卸载后不再 setView（切片自 `.then(` 到 `.catch(`）
+    expect(thenAt).toBeGreaterThan(loadAt);
+    expect(catchAt).toBeGreaterThan(thenAt);
+    expect(src.slice(thenAt, catchAt)).toContain(EXP_CANCELLED_GUARD.thenGuard);
+    // ④ 失败路径：`.catch` 体内同样受守卫（切片自 `.catch(` 到最后一处 cleanup 置位）
+    const lastSetTrueAt = src.lastIndexOf(EXP_CANCELLED_GUARD.setTrue);
+    expect(lastSetTrueAt).toBeGreaterThan(catchAt);
+    expect(src.slice(catchAt, lastSetTrueAt)).toContain(EXP_CANCELLED_GUARD.catchGuard);
   });
 });
 
@@ -944,7 +1191,9 @@ describe('#1053 T5 · 反例可红性自证（M-1…M-8 定位表）', () => {
      *   M-6 删掉限制行                          ⇒ A14（四态各自）＋ T2 四态 ＋ 本用例
      *   M-7 删 orgId 透传（routes/sentinel.ts）  ⇒ A6-1/A6-2/A6-3（隔离断言）※ 由独立自验员在临时树实跑
      *   M-8 删 days 上界（routes/sentinel.ts）   ⇒ A3[3651] ＋ A3 上界对照 ※ 同上
+     *   M-9  空表当降级／空态编造 0（Container.deriveState ／ Section 空态分支）⇒ A4-c ＋ A4-d（源码映射）
+     *   M-10 previous 取最旧（metric-readings-reader 的倒序排序）⇒ A5-a（previousValue／changeRatio 手算值）
      */
-    console.log('[PASS] M4 出口面：服务端回归／渲染四态／装配语义／一页纸／反例可红性 自证完成');
+    console.log('[PASS] M4 出口面：服务端回归（含 A4 空表／A5 三观测）／渲染四态／装配语义／一页纸／反例可红性 自证完成');
   });
 });

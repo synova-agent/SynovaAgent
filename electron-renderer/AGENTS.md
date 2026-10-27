@@ -2,17 +2,19 @@
 
 > 归属：产品线 P1 ｜ as_of `8b62b400e`
 
+> 设计哲学：一个分离 ＋ 两条承诺 —— 取数（`electron-renderer/src/lib/measurement-trends.ts`）与展示（`MeasurementTrendSection`）彻底分离：loader 只管取与降级，组件只管画；承诺 ① **永不抛**（失败一律转 degraded view，异常不外泄到渲染层）② **永不编数**（形状非法即降级，不猜、不补、不用默认值兜底）。
+
 ## 是什么
-右栏「测量值＋趋势」出口面：`src/lib/measurement-trends.ts`（真 fetch loader）｜`MeasurementTrendSection`（纯展示）｜`MeasurementTrendContainer`（取数容器）｜`RightPanel`（唯一装配点）｜`src/test-support/render.ts`（渲染桥）。
+右栏「测量值＋趋势」出口面：`electron-renderer/src/lib/measurement-trends.ts`（真 fetch loader）｜`electron-renderer/src/components/MeasurementTrendSection.tsx`（纯展示）｜`electron-renderer/src/components/MeasurementTrendContainer.tsx`（取数容器）｜`electron-renderer/src/components/RightPanel.tsx`（唯一装配点）｜`electron-renderer/src/test-support/`（渲染桥 `render.ts`）。
 
 ## 谁改
 产品线 P1。验收件在 `tests/acceptance/**`；**产品代码不得 import `tests/acceptance/**`（含 expected 模块）**。
 
 ## 怎么算完成（机器可判）
-- `npx vitest run tests/acceptance/mvp1-m4-output-face.test.ts` → 35 passed
-- `npx vitest run tests/acceptance/mvp1-m3-domain-chain.test.ts` → 7 passed
+- `npx vitest run tests/acceptance/mvp1-m4-output-face.test.ts` → 35 passed（本批基线；后续批次以实测为准）
+- `npx vitest run tests/acceptance/mvp1-m3-domain-chain.test.ts` → 7 passed（本批基线；后续批次以实测为准）
 - `npx tsc -p electron-renderer/tsconfig.json` → exit 0
-- `git grep -c "Date.now()" HEAD -- tests/acceptance/mvp1-m4-output-face.test.ts` → 0；注入缝 `tests/acceptance/support/clock.ts` 代码落点 1 处 ＋ 1 行注释提及（实测 `git grep -c` 计 2 行）
+- `git grep -c "Date.now()" HEAD -- tests/acceptance/mvp1-m4-output-face.test.ts` → 无输出（exit 1）＝ 零命中（`git grep -c` 不打印 0）；注入缝 `tests/acceptance/support/clock.ts` 代码落点 1 处 ＋ 1 行注释提及（实测 `git grep -c` 计 2 行）
 
 ## 红线
 - UI 只呈现不判断（宪章 §4.4/§4.5）；**不得宣称「流式/链路追踪」**（T2-3 归 #867；electron-renderer 内 trace-context import = 0）

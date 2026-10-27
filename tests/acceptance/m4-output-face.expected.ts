@@ -21,8 +21,9 @@
  *
  * 已知限制（DSH 代码标准 C）:
  *   · 本文件**只放期望值，不放被测逻辑**。`shouldLoadTrends` 是**期望口径的参照实现**：
- *     生产侧真正的落点（lib/measurement-trends.ts 导出 ＋ MeasurementTrendContainer 引用）**不在本批写集**，
- *     属 **deferred ＋ known_issue**（需 L1 批准扩写集）。因此本函数**不得**被描述成「已抽成生产纯函数」；
+ *     生产真落点归 **T2/T4**（Container 早退守卫 ＋ RightPanel 的 `activeOrgId !== null` 门控 —— 已在库的生产事实）；
+ *     **纯函数化**（lib/measurement-trends.ts 导出 `shouldLoadTrends` 供 Container 引用）仍 **deferred**（需 L1
+ *     批准扩写集）。因此本函数**不得**被描述成「已抽成生产纯函数」；
  *     生产行为的证据在验收件 `A8-b`（Container 源码断言），不在本文件。
  *   · 不采用**整树快照**（snapshot）：快照随无关 DOM 波动整体变红，且「变红」不指向具体判据，
  *     失败点不可读；本批用**结构化子串 ＋ 计数 ＋ 源码字面量**断言。（详细理由归 T6 的
@@ -56,7 +57,7 @@ export const EXP_TESTID = {
   onePager: 'measurement-to-onepager',
 } as const;
 
-// ═══ ③ 服务端回归（A6/A7/A1/A2/A3）═══
+// ═══ ③ 服务端回归（A6/A7/A1/A2/A3 ＋ T8 追加 A4 空表／A5 三观测）═══
 
 /** 两个企业作用域（服务端 orgId 契约：最短 2 字符，故不能用单字符） */
 export const EXP_ORG = { AA: 'org-aa', BB: 'org-bb' } as const;
@@ -135,6 +136,108 @@ export const EXP_SINGLE_OBSERVATION_COUNT = 1;
 /** 趋势方向（deriveTrendDirection 的四值域；A9 用 UNKNOWN，A6 用 UP/DOWN） */
 export const EXP_TREND = { UP: 'up', DOWN: 'down', FLAT: 'flat', UNKNOWN: 'unknown' } as const;
 
+// ── T8 追加夹具（A4 空表 ／ A5 三观测）：**只用新 org**，不动上面两 org 的种子（否则 A1/A2/A6 会漂）──
+
+/**
+ * A4 夹具（规格 §7.2 `A4/[R3-table]`：空表 ⇒ `ok:true,count:0,summary:[]` 且 UI 空态、**不降级**）:
+ *   · `org-cc`：三指标各 1 行、全部 **8 天前**（缺省 7 天窗口之外）⇒ 缺省窗口 **count=0**；
+ *     放宽到 days 上界后 **count=3** —— 证明「0」是**窗口裁剪**，不是数据缺失（与 A1 的对照手法同源）。
+ *   · `org-ff`：**从未种过**（任何窗口都 0 组）—— 与上一例互为对照（无数据 vs 窗口外）。
+ *   · 服务端 200 原文只有 `ok/count/summary`（**ok:true 分支不带 degraded 字段**）；
+ *     `degraded:false` 是 loader `normalizeView` 归一出来的结论，二者不得混为一谈。
+ */
+export const EXP_A4 = {
+  ORG_OUT_OF_WINDOW: 'org-cc',
+  ORG_NEVER_SEEDED: 'org-ff',
+  /** 窗口外三指标（每指标恰 1 行；id 不含 SENTINEL- 前缀 ⇒ 不被「排除轮次级」口径滤掉） */
+  OUT_OF_WINDOW_METRICS: ['M4-A4-1053-CC-ALPHA', 'M4-A4-1053-CC-BETA', 'M4-A4-1053-CC-GAMMA'],
+  OUT_OF_WINDOW_VALUE: 42,
+  OUT_OF_WINDOW_UNIT: 'ratio',
+  /** 缺省 7 天窗口内的组数（窗口外 ⇒ 0 组） */
+  DEFAULT_WINDOW_GROUP_COUNT: 0,
+  /** 放宽到 days 上界后的组数（数据确实在库里 ⇒ 3 组） */
+  WIDE_WINDOW_GROUP_COUNT: 3,
+} as const;
+
+/**
+ * A4-c 空态**禁渲**的「编造数值」形态（`0` ＋ 单位）—— 空态一条都不许出现。
+ * 理由：空表不是「所有指标取值为 0」；把缺席画成 0 就是编造（铁律 11「不假装」）。
+ */
+export const EXP_EMPTY_FORBIDDEN_VALUES: readonly string[] = [
+  `0 ${EXP_SEED.UP.UNIT}`,
+  `0 ${EXP_SEED.DOWN.UNIT}`,
+];
+
+/** A5 三观测夹具的单指标期望（值**手算**，不从被测函数反推） */
+export interface ExpThreeObsMetric {
+  metricId: string;
+  unit: 'ratio' | 'months';
+  /** 三条观测值，按时间**从旧到新**（[0]=最旧 3 天前 ／ [1]=次新 2 天前 ／ [2]=最新 1 天前） */
+  series: readonly number[];
+  latestValue: number;
+  /** 次新（不是最旧） */
+  previousValue: number;
+  changeRatio: number | null;
+  /** deriveTrendDirection 的期望（手写语义，不由被测函数反推） */
+  direction: 'up' | 'down' | 'flat' | 'unknown';
+}
+
+export interface ExpThreeObsFixture {
+  ORG_THREE_OBS: string;
+  ORG_PREV_ZERO: string;
+  /** 每指标观测条数（= 服务端每行 count） */
+  COUNT_PER_METRIC: number;
+  /** summary 组数 = 3 指标 × 单 entity('*') */
+  SUMMARY_GROUP_COUNT: number;
+  /** previous=0 那支 org 的 summary 组数 */
+  ZERO_CASE_SUMMARY_GROUP_COUNT: number;
+  METRICS: readonly ExpThreeObsMetric[];
+  ZERO_CASE: ExpThreeObsMetric & { COUNT: number };
+}
+
+/**
+ * A5 夹具（规格 §7.2：`3 观测 ⇒ count=3、previous=次新；previous=0 ⇒ changeRatio=null`）:
+ *   · `org-dd`：**3 个指标 × 每个 3 条观测**（3/2/1 天前，全在缺省 7 天窗口内）⇒ summary 3 组、每组 count=3;
+ *       A: [100, 80, 120] ⇒ latest 120 ／ previous 80 ／ (120−80)/|80| = **+0.5**（up）
+ *       B: [ 10, 20,   5] ⇒ latest   5 ／ previous 20 ／ (5−20)/|20|   = **−0.75**（down）
+ *       C: [  4,  3,   3] ⇒ latest   3 ／ previous  3 ／ (3−3)/|3|    = **0**（flat 边界）
+ *   · `org-gg`：`previous=0` 一例 —— [7, 0, 50] ⇒ latest 50 ／ **previousValue=0** ／ **changeRatio=null**
+ *     （源码依据 `src/sentinel/metric-readings-reader.ts:148-151`：`previous.value !== 0 ? … : null`）
+ *     ⇒ 展示层必须写「未知」而**不是**「持平」：0 是真实读数，不是"不可算"的替身。
+ */
+export const EXP_A5: ExpThreeObsFixture = {
+  ORG_THREE_OBS: 'org-dd',
+  ORG_PREV_ZERO: 'org-gg',
+  COUNT_PER_METRIC: 3,
+  SUMMARY_GROUP_COUNT: 3,
+  ZERO_CASE_SUMMARY_GROUP_COUNT: 1,
+  METRICS: [
+    { metricId: 'M4-A5-1053-THREE-OBS-A', unit: 'ratio', series: [100, 80, 120], latestValue: 120, previousValue: 80, changeRatio: 0.5, direction: 'up' },
+    { metricId: 'M4-A5-1053-THREE-OBS-B', unit: 'months', series: [10, 20, 5], latestValue: 5, previousValue: 20, changeRatio: -0.75, direction: 'down' },
+    { metricId: 'M4-A5-1053-THREE-OBS-C', unit: 'ratio', series: [4, 3, 3], latestValue: 3, previousValue: 3, changeRatio: 0, direction: 'flat' },
+  ],
+  ZERO_CASE: {
+    metricId: 'M4-A5-1053-PREV-ZERO',
+    unit: 'ratio',
+    series: [7, 0, 50],
+    latestValue: 50,
+    previousValue: 0,
+    changeRatio: null,
+    direction: 'unknown', // previous=0 ⇒ 不可算 ⇒ 未知（**不是** flat；A5-b 断言）
+    COUNT: 3,
+  },
+};
+
+/**
+ * A4/A5 的时刻偏移（相对 `nowMs()`，毫秒）——**既有 `EXP_SEED_WINDOW` 不动**，新夹具用新键（夹具隔离）。
+ */
+export const EXP_EXTRA_SEED_WINDOW = {
+  /** A4：缺省 7 天窗口之外（8 天前） */
+  OUT_OF_WINDOW_MS_AGO: 8 * 24 * 60 * 60 * 1000,
+  /** A5：三条观测 = 3 天前（最旧）／2 天前（次新）／1 天前（最新），全在 7 天窗口内 */
+  THREE_OBS_MS_AGO: [3 * 24 * 60 * 60 * 1000, 2 * 24 * 60 * 60 * 1000, 1 * 24 * 60 * 60 * 1000],
+} as const;
+
 // ═══ ④ A8 零请求：纯函数 ＋ 装配源码字面量 ═══
 
 /**
@@ -147,8 +250,9 @@ export const EXP_TREND = { UP: 'up', DOWN: 'down', FLAT: 'flat', UNKNOWN: 'unkno
  * 故按契约返回 false，把「非法/缺席」统一收敛为「不请求」这一个安全动作（fail-safe，非 fail-open：
  * 它不会放行任何请求）。
  *
- * 🔴 落点现状（known_issue，**不得写成「已抽成生产纯函数」**）：本函数是**期望口径的参照实现**；
- *    生产侧真正落点（lib 导出 ＋ 容器引用）不在本批写集，属 **deferred**，需 L1 批准扩写集。
+ * 🔴 落点现状（**不得写成「已抽成生产纯函数」**）：本函数是**期望口径的参照实现**；
+ *    生产真落点归 **T2/T4**（容器早退守卫 ＋ RightPanel 门控 = 已在库的生产事实）；
+ *    **纯函数化**（lib 导出 `shouldLoadTrends` 供容器引用）仍 **deferred**，需 L1 批准扩写集。
  *    生产行为的证据 = 验收件 `A8-b` 对 MeasurementTrendContainer.tsx 的源码断言。
  */
 export function shouldLoadTrends(orgId: string | null | undefined): boolean {
@@ -299,4 +403,46 @@ export const EXP_PROBE = {
   HTTP_500_CODE: 'M4_PROBE_500',
   BAD_SHAPE_METRIC_ID: 'M4-BAD-SHAPE',
   SERVER_DEGRADED_PASSTHROUGH: 'SERVER_DEGRADED',
+} as const;
+
+// ═══ ⑪ Container 源码字面量（A4-d 状态映射 ／ Q-5 cancelled 守卫；T8 追加）═══
+
+/**
+ * A4-d：`electron-renderer/src/components/MeasurementTrendContainer.tsx` 的 `deriveState` 三条分支字面量
+ * —— **view → state 语义的唯一来源**。
+ *
+ * 为什么只做源码断言：容器含 `useEffect`，render 桥不执行 hook（文件头「为什么必须分三层」），
+ * 直接 import 容器会把 hook 环境带进验收件。故「ok 且 summary 空 ⇒ empty」只能由**生产源码字面量**证明，
+ * 再由验收件按该结论传 `state`（**不得由测试自造第二套状态语义**）。
+ */
+export const EXP_DERIVE_STATE = {
+  /** 映射函数声明（定位锚） */
+  declaration: 'function deriveState(',
+  /** ① 首渲染（未取回）⇒ loading */
+  loadingBranch: "if (view === null) return 'loading';",
+  /** ② 失败或降级 ⇒ degraded（ok 为真且未降级才可能往下走） */
+  degradedBranch: "if (!view.ok || view.degraded) return 'degraded';",
+  /** ③ 成功但零组 ⇒ empty（**空表是合法业务态，不是降级**）；否则 ready */
+  emptyOrReadyBranch: "return view.summary.length === 0 ? 'empty' : 'ready';",
+  /** 映射结论真被接到展示组件（= 不是死代码：接线证据） */
+  wiredToSection: 'state={deriveState(view)}',
+} as const;
+
+/**
+ * Q-5：容器 effect 的 **cancelled 守卫**（卸载/重跑后不得再 `setView`）——源码字面量。
+ * 只做源码断言，**不写成行为测试**：render 桥不执行 hook，写成「渲染后再断言」必是假绿。
+ */
+export const EXP_CANCELLED_GUARD = {
+  /** 守卫变量声明（必须出现在 loader 调用之前 —— 否则竞态窗口根本不存在） */
+  declaration: 'let cancelled = false',
+  /** cleanup 置位（两条路径：未选客户早退 ／ effect 卸载）⇒ 至少 2 处 */
+  setTrue: 'cancelled = true',
+  minSetTrueOccurrences: 2,
+  /** 成功路径守卫：卸载后不再 setView（不写已卸载组件） */
+  thenGuard: 'if (!cancelled) setView(result)',
+  /** 失败路径守卫 */
+  catchGuard: 'if (!cancelled)',
+  /** 两条分支的定位锚（切片用：自 `.then(` 到 `.catch(`） */
+  thenMarker: '.then(',
+  catchMarker: '.catch(',
 } as const;

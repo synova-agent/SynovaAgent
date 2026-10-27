@@ -1,5 +1,6 @@
-# .claude/claims/1053.yaml — #1053（M4 出口面收口 · T1–T7）写集声明
+# .claude/claims/1053.yaml — #1053（M4 出口面收口 · T1–T8）写集声明
 # 先例：.claude/claims/1045.yaml（只列本 PR 真正改动的文件，不预授权）
+# T8 同步：在 T1–T7 的 10 件基础上补 T8 新增 3 件（根 AGENTS.md／agents/P1-能跑通/AGENTS.md／收口 Note）⇒ 13 件
 writeset:
   - .claude/claims/1053.yaml
   - src/routes/sentinel.ts
@@ -8,6 +9,9 @@ writeset:
   - electron-renderer/src/components/MeasurementTrendContainer.tsx
   - electron-renderer/src/components/RightPanel.tsx
   - electron-renderer/AGENTS.md
+  - AGENTS.md
+  - agents/P1-能跑通/AGENTS.md
+  - memory/notes/proposed/2026-10-27-1051-m4-closeout.md
   - tests/acceptance/mvp1-m4-output-face.test.ts
   - tests/acceptance/m4-output-face.expected.ts
   - tests/acceptance/support/clock.ts
@@ -16,4 +20,6 @@ done:
   - verify: npx vitest run tests/acceptance/mvp1-m3-domain-chain.test.ts
   - verify: npx vitest run tests/acceptance/mvp1-m4-output-face.test.ts tests/acceptance/mvp1-m3-domain-chain.test.ts
   - verify: npx tsc -p electron-renderer/tsconfig.json --noEmit
-note: "M4 出口面收口 T1–T7：readings 增 orgId 作用域与 days 边界；装配层容器单挂载点＋tab 上提；写集例外 ≤15 行（创始人 2026-10-27 批）｜T5 验收件扩展：A6/A7 服务端回归＋A8 零请求＋A13 装配语义＋A14 四态＋Q-10 EXP 单一源；产品文件零改动（仅 tests/acceptance/**）｜T6 域守则：新增 electron-renderer/AGENTS.md（L1 呈现层守则，产品代码零改动）"
+  - verify: npx tsc --noEmit
+  - verify: git grep -c "Date.now()" HEAD -- tests/acceptance/mvp1-m4-output-face.test.ts
+note: "M4 出口面收口 T1–T7：readings 增 orgId 作用域与 days 边界；装配层容器单挂载点＋tab 上提；写集例外 ≤15 行（创始人 2026-10-27 批）｜T5 验收件扩展：A6/A7 服务端回归＋A8 零请求＋A13 装配语义＋A14 四态＋Q-10 EXP 单一源；产品文件零改动（仅 tests/acceptance/**）｜T6 域守则：新增 electron-renderer/AGENTS.md（L1 呈现层守则，产品代码零改动）｜T8 收口：验收件补 A4（空表）/A5（三观测）/Q-5（cancelled 守卫源码断言）＋A8 deferred 理由改正＋头部覆盖如实（A12=命令级证据）；loader 补 @error 不抛 1 行；三份守则按实测改（路径仓根相对／35·7 标本批基线／git grep 无输出 exit 1／13 份字节实测／P1 ⑦ 8→9）；新增收口 Note。T8 新增 8 条用例（35→43），产品行为零改动"

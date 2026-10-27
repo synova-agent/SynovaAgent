@@ -17,6 +17,7 @@
  *            并 console.warn 留痕；服务端 ok:false ⇒ 原样透传 degraded + errors（summary 置空：
  *            不确定的数据不交给渲染层）。
  *            400 ⇒ 走 METRIC_TRENDS_HTTP_ERROR，errors 保留 status
+ *   @error   不抛（永不向上抛）：!res.ok／非合法 JSON／形状非法（含 typed error）／网络异常 全部经 degrade() 转 { ok:false, degraded:true, summary:[], errors:[…] }，只 console.warn 留痕
  *   @authority 只读 GET /api/sentinel/metrics/readings?view=trends；调用方仅渲染进程
  *            （MeasurementTrendContainer / 验收件）。不写 metric_readings、不做标定、不引新依赖。
  *   @not-here 不做写侧/参数标定；不重建报告链；不做轮询、缓存、重试（容器只取一次）。
