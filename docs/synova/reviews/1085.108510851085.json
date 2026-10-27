@@ -1,0 +1,130 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1085,
+  "author": "squad-1075（#1075 P1-a 实现会话；lead=synova-squad-lead）",
+  "reviewer": "independent-reviewer-1085（零上下文独立会话，未参与实现；只采信本机现场命令原始输出与 Gitea API 直读）",
+  "independence": "fresh-session",
+  "patch_fingerprint": "sha256:1d6114b0310004c15f3d6f060d1bff9268d8ef21e4818c956c18577c9dba0db2",
+  "verdict": "PASS",
+  "base_tip": "bb6b0b59deab7046e424a20f7281eedc179760a0",
+  "head": "dfd1df234d546a060dc0814524f67fd5f21518cc",
+  "issued_at": "2026-10-28T04:08:01+08:00",
+  "tool": "pr-review 五步（零上下文独立复核）＋ git 现场复跑 ＋ Gitea API 直读",
+  "filename_note": "按 .claude/claims/1075.yaml:33 预列名 1085.108510851085.json 落盘（后缀 12 字符全在 [0-9a-f] 内，命中 check-merge-conditions.sh 的 R1 回退正则 ^docs/synova/reviews/<pr>\\.[0-9a-f]{12}\\.json$）；真实指纹见 patch_fingerprint（fp12 = 1d6114b03100，与规范名 1085.1d6114b03100.json 不同 —— 同 1084/1082 先例，见 findings[1]）",
+  "checks": [
+    {
+      "id": "C1",
+      "title": "基线与范围：base 是 head 祖先、diff 恰 12 件、禁区 0 命中、WIRING 纯追加",
+      "cmd": "git ls-remote gitea refs/heads/local-main; git merge-base --is-ancestor bb6b0b59deab7046e424a20f7281eedc179760a0 dfd1df234d546a060dc0814524f67fd5f21518cc; echo EXIT=$?; git diff --name-status bb6b0b59d...dfd1df234; git diff --stat bb6b0b59d...dfd1df234; for p in '^scripts/audit/' '^\\.gitea/workflows/' '^scripts/pre-commit-check\\.sh$' '^src/agent/' '^src/middleware/' '^packages/' '^extensions/onboarding/' '^docs/plans/'; do grep -cE \"$p\" /tmp/rp-1085-files.txt; done; git diff bb6b0b59d..dfd1df234 -- docs/authority/WIRING-REGISTRY.yaml | grep -cE '^-[^-]'",
+      "result": "pass",
+      "evidence": "ls-remote gitea refs/heads/local-main = bb6b0b59deab7046e424a20f7281eedc179760a0（远端 tip == PR base，基线非陈旧）；merge-base --is-ancestor EXIT=0；diff --name-status 恰 12 件（A 3 / M 9）：.claude/claims/1075.yaml(A)、.claude/plan.json(M)、docs/authority/WIRING-REGISTRY.yaml(M)、roles/{finance,hr,sales}/manifest.json(各 M)、extensions/presets/schema/role-pack-v2.schema.json(A)、src/init/preset-loader.ts(M)、src/init/role-pack-schema.ts(A)、tests/contract/triviality-manifest.yaml(M)、tests/init/preset-loader.test.ts(M)、tests/init/role-pack-schema.test.ts(A)；diffstat = 12 files changed, 1856 insertions(+), 40 deletions(-)；禁区扫描逐条 0：scripts/audit=0、.gitea/workflows=0、scripts/pre-commit-check.sh=0、src/agent=0、src/middleware=0、packages=0、extensions/onboarding=0、docs/plans=0（scripts/ 前缀整体 = 0，含 control-tower 只跑未改）；WIRING 纯追加：@@ -144,3 +144,11 @@ 新增 8 行、减行计数 = 0。逐件对规格 §2.3：9 件在 P1-a 写集内（项 1-9）＋声明载体 .claude/claims/1075.yaml ＋申报例外 2 件（.claude/plan.json、tests/contract/triviality-manifest.yaml）= 12，无越界件。"
+    },
+    {
+      "id": "C2",
+      "title": "CI：head 提交状态 state=success 且 pending=0（Gitea API 直读）",
+      "cmd": "curl -sS -m 20 -H \"Authorization: token $(tr -d '\\r\\n' < /Users/wane/gitea/.win-push-token)\" http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/commits/dfd1df234d546a060dc0814524f67fd5f21518cc/status",
+      "result": "pass",
+      "evidence": "HTTP=200；state=success；total_count=2；n_statuses=2；pending=0；by state={success:2}；by context=SUCCESS local-gates / gates (push)、SUCCESS local-gates / gates (pull_request)。另与四条件检查器一致：check-merge-conditions.sh --pr 1085 输出 ① CI 全绿 pending=0 ... ok (state=success total_count=2)。"
+    },
+    {
+      "id": "C3",
+      "title": "契约/校验判据实跑（整文件跑，禁 -t）：28 / 17 / 16 全绿",
+      "cmd": "node node_modules/.bin/vitest run tests/init/role-pack-schema.test.ts; node node_modules/.bin/vitest run tests/init/preset-loader.test.ts; node node_modules/.bin/vitest run tests/presets/role-pack.test.ts",
+      "result": "pass",
+      "evidence": "环境自检 node=22.23.2（22.x）、DEV_MODE=true、node_modules/.bin/tsx 可执行。① role-pack-schema.test.ts ⇒ `Test Files 1 passed (1)` / `Tests 28 passed (28)`，EXIT=0（规格 §4-J1 要求 N≥12，实测 28）；② preset-loader.test.ts ⇒ `Tests 17 passed (17)`，EXIT=0（规格期望 17）；③ presets/role-pack.test.ts（回归，只读件）⇒ `Tests 16 passed (16)`，EXIT=0。三态判定 = 0（通过）。"
+    },
+    {
+      "id": "C4",
+      "title": "独立期望值核对：manifest 对规格 §2.5-C 字面数组＋pieces↔readdir＋refs 命中（自写脚本，不调被测投影函数）",
+      "cmd": "python3 /tmp/rp-c4-independent.py  （期望值＝手工照抄规格 §2.5-C；scopes[].id 与 contexts[].source 用自写最小 YAML 抽取器读取，不 import 被测 projectContextSource）",
+      "result": "pass",
+      "evidence": "`C4 RESULT = PASS (fails=0)`，EXIT=0。① refs 逐条（含顺序）=== §2.5-C：finance 3 条 [file extensions/ontology/outcome/financial.json, scope finance.cost, profile business-plan]、hr 4 条 [file .../person.json, file .../team.json, scope people.policy, profile business-plan]、sales 4 条 [file .../client.json, file .../channel.json, scope market.pipeline, profile business-plan]，无 kind+标识 重复项；② pieces 6 === 角色目录 readdir 文件集（finance 6/6、hr 6/6、sales 6/6）；③ 5 条 kind=file ref 在仓库根全部存在（financial.json 875B、person.json 818B、team.json 357B、client.json 435B、channel.json 401B）；④ 3 条 kind=scope 全部命中同包 knowledge-scope.yaml 的 scopes[].id（磁盘实测 finance={finance.statements,finance.cost,finance.capital}、hr={people.organization,people.policy,people.role-catalog}、sales={market.clients,market.pipeline,market.policy}）；⑤ profile 白名单仅 business-plan（§10-L2）；⑥ 另用自写抽取器把 contexts[].source 按 §2.4 手工派生，派生集 === manifest.refs 集（三包全等，内容侧自洽）。"
+    },
+    {
+      "id": "C5",
+      "title": "loader fail-loud 且不抛：真 loadRolePacks()（出厂 3 包＋3 种非法输入）",
+      "cmd": "node node_modules/.bin/tsx /tmp/rp-c5-loader-fail-loud.ts  （cwd=/private/tmp/w-rp1；(a) 不设 SYNOVA_PRESETS_ROOT；(b) mkdtemp 临时根 ＋ SYNOVA_PRESETS_ROOT）",
+      "result": "pass",
+      "evidence": "`C5 RESULT = PASS fails=0`，EXIT=0。环境行 `env: node=22.23.2 cwd=/private/tmp/w-rp1`。(a) 出厂 3 包：root=/private/tmp/w-rp1/extensions/presets、degraded=false、errors=[]、roles=3；每包 missing=[]、schemaValid=true、schemaVersion=2、validation.problems=[]、refsChecked=7/8/8（finance 3+4、hr 4+4、sales 4+4）、knowledgeScope declared=true scopes=3。(b) 三种非法输入（临时根副本）：B1 schemaVersion=3 ⇒ errors 含 ROLE_PACK_SCHEMA_VERSION_UNSUPPORTED 且点名「schemaVersion=3 不受支持（只接受 2，禁向上兼容猜测）」；B2 refs 指向 extensions/ontology/__c5_absent__/nope.json ⇒ ROLE_PACK_REF_MISSING 点名该 path；B3 磁盘多出 notes.md ⇒ ROLE_PACK_PIECES_MISMATCH 点名「磁盘多出: notes.md；声明多出: 无」；三次 loadRolePacks() 均未抛（degraded=true），临时根已 rmSync 删除。"
+    },
+    {
+      "id": "C6",
+      "title": "改坏必红（/tmp 副本）：J1-② schema.required 删 refs ⇒ 只红 drift；J2-② scope id 改名 ⇒ 红 kind=scope 命中",
+      "cmd": "rsync 全量副本到 /tmp/rp-c6-copy（基线先验 28 passed）; python 删 schema.required 里的 refs; node node_modules/.bin/vitest run tests/init/role-pack-schema.test.ts > /tmp/rp-c6-j1.out; sed -i 把 finance/knowledge-scope.yaml 的 `- id: finance.cost` 改为 `- id: finance.cost.x`; node node_modules/.bin/vitest run tests/init/role-pack-schema.test.ts > /tmp/rp-c6-j2.out; rm -rf /tmp/rp-c6-copy",
+      "result": "pass",
+      "evidence": "副本基线先验：`Tests 28 passed (28)` EXIT=0。J1-② 改坏后：`Test Files 1 failed (1)` / `Tests 1 failed | 27 passed (28)`，EXIT=1，唯一红 = 「J1-④ drift：schema.required === zod 必填键集（唯一真源 = zod，schema 是镜像）」，AssertionError: schema.required 应逐字等于 zod 的必填行为: expected [...] to deeply equal [...]（符合规格『只有它红』）；还原后 `diff -q` = IDENTICAL。J2-② 改坏后（refs 与 context-manifest 均不动）：`Tests 3 failed | 25 passed (28)`，EXIT=1，红含 「J2-③ 三包 kind=scope refs 命中同包 scopes[].id（§2.4 scope 优先投影的前提）」AssertionError: finance: scope ref 应命中 scopes[].id: expected [ 'finance.statements', …(2) ] to include 'finance.cost'（另两条连带：J3-正常 degraded 断言、IO 壳 problems===[]，均点名 ROLE_PACK_REF_MISSING refs 悬空 — scope finance.cost）⇒ 判据有辨别力。副本已删（GONE，/tmp/rp-c6* 只剩两份 .out 原始输出）。"
+    },
+    {
+      "id": "C7",
+      "title": "WIRING 行：规格 §9-G1-② heredoc 通过，且 provider/consumer/test 行号指向真实行",
+      "cmd": "python3 - <<'PY' …（规格 §9-G1-② 原文 heredoc，在 /private/tmp/w-rp1 根执行）PY; sed -n '59p' src/init/role-pack-schema.ts; sed -n '578p' src/init/role-pack-schema.ts; sed -n '413p' src/init/preset-loader.ts; sed -n '198p' tests/init/role-pack-schema.test.ts",
+      "result": "pass",
+      "evidence": "heredoc 输出 `WIRING-ROW-OK content.rolePackSchema`，EXIT=0（R4 capability 正则、R3 owner 非空、R6 status=wired、R5 四字段 path:line 且行号在文件行数内全过）。逐行号对真实行：defined_at src/init/role-pack-schema.ts:59 = `export const ROLE_PACK_SCHEMA_VERSION = 2;`；provider :578 = `export function validateRolePackDir(roleDir: string, opts: ValidateRolePackDirOptions = {}): RolePackValidation {`；consumer src/init/preset-loader.ts:413 = `validation = validateRolePackDir(roleDir);`（grep src/ 全树：该符号的**唯一生产调用点**就是此处，另有 :47 import 与 :375 注释）；test tests/init/role-pack-schema.test.ts:198 = `it('J1-① 三包 schemaVersion === 2（禁『缺省当 2』）', () => {`（文件首个用例）。三文件行数 654 / 497 / 615，所有行号在界内。"
+    },
+    {
+      "id": "C8",
+      "title": "claim/覆盖：claim_store 校验 ok，12 件变更逐条 ⊆ writeset",
+      "cmd": "python3 scripts/control-tower/claim_store.py --check 1075; python3 逐件比对 git diff --name-only base...head 与 .claude/claims/1075.yaml 的 writeset",
+      "result": "pass",
+      "evidence": "claim_store ⇒ `{\"status\": \"ok\", \"issue\": \"1075\", \"writeset\": 20, \"done\": 4}`，EXIT=0（done 4 条均带 verify: 载荷）。逐件：12/12 COVERED，未覆盖件 = 无；反向核 §2.3 P1-a 9 件全在 writeset = True、P1-b 7 件全在（为串行 PR-2 预留）= True；writeset 超集 4 件 = .claude/claims/1075.yaml（自身）、.claude/plan.json、tests/contract/triviality-manifest.yaml、docs/synova/reviews/1085.108510851085.json（本回执）—— 与申报的 2 件例外 + 声明载体逐条对应，无隐式扩集。"
+    },
+    {
+      "id": "C9",
+      "title": "红线自查：无「已交付」、无客户形态生效宣称、未碰 scripts/audit/** 与 M7 判据件、写集无越界；D 号命中 1 处 → warn",
+      "cmd": "git diff bb6b0b59d..dfd1df234 | grep '^+' | grep -n '已交付'; grep -coE '\\bD[0-9]{2,4}\\b' 逐 12 件; git diff bb6b0b59d..dfd1df234 | grep -E '^\\+.*(客户形态|重启即生效|桌面端生效|容器生效|bundle 生效)'; grep -E '^scripts/audit/|onboarding-mount' /tmp/rp-1085-files.txt; 白名单反查 12 件",
+      "result": "pass",
+      "evidence": "「已交付」：新增行 0 命中、12 件文件内 0 命中；客户形态生效宣称：新增行 0 命中；scripts/audit/** 与 tests/extensions/onboarding-mount.test.ts：diff 中 0 命中（M7 判据件未触碰，唯一例外翻转件属 P1-b 未在此 PR）；白名单（§2.3 16 项 ∪ 声明载体 ∪ 本回执）反查：白名单外件 = 无（12/12 在界内）；D 号：唯一命中 = .claude/plan.json 新增行「wiring deferred（D588/D333 先例）」，而 base 版该文件已含 D588/D333/D599 同名先例引用 ⇒ 判定为**先例引用而非新 D 号任务编号**（任务编号 = #1075），记 warn（findings[0]）不记 block。另：新增行 as 强转（as any/as never/as unknown as）0、空 catch 0、TODO/FIXME/.skip 0；check-architecture.sh 全部通过 EXIT=0。"
+    },
+    {
+      "id": "C10",
+      "title": "PR 正文声称逐项物理复现（补充项）：tsc／探针／回归三件／铁律 38-48",
+      "cmd": "node node_modules/.bin/tsc --noEmit; node node_modules/.bin/tsx scripts/control-tower/probe-role-pack.ts --role finance; node node_modules/.bin/vitest run tests/onboarding/config-pack-generator.test.ts tests/onboarding/onboarding-flow.test.ts",
+      "result": "pass",
+      "evidence": "tsc --noEmit EXIT=0（复现 PR 正文声称）；probe-role-pack --role finance ⇒ `COVERAGE: PASS=11` / `RESULT=PASS` EXIT=0，与规格 §4-J6 基线（PASS/0/PASS=11）逐项一致 ⇒ loader 改动未劣化该探针；回归：config-pack-generator.test.ts 8 passed ＋ onboarding-flow.test.ts 14 passed = 22 passed EXIT=0（＋role-pack.test.ts 16 = 38，与 PR 正文『回归三件 38 passed』一致）；铁律 48：新测试件 role-pack-schema.test.ts expect( 112 / it( 28、preset-loader.test.ts expect( 67 / it( 17（非空壳）。"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warn",
+      "where": ".claude/plan.json:66（本 PR 新增行）",
+      "what": "新增行出现 D 号「D588/D333 先例」，与规格 §7.2『D 号已退役，只写 Issue 号』的字面口径相抵；判为先例引用（非新任务编号）故不阻断。",
+      "summary": "plan.json 新增行含 D 号（先例引用），与「D 号已退役」字面口径相抵 → 判 warn 不阻断",
+      "detail": "实测：12 件变更中唯一含 D 号的文件是 .claude/plan.json，新增行原文「…组 4a 分阶段接线声明，wiring deferred（D588/D333 先例）」；该文件 base 版（bb6b0b59d）已含 D588 / D333 / D599 三处同类引用（同一行风格），即该文件的历史惯例就是引用既存 D 号作先例。本 PR 的任务编号写的是 #1075（正确），D 号只是先例锚点，未新造 D 号、也未用于任务标识。仓内无任何门禁自动检查 D 号（grep scripts/pre-commit-check.sh 对『D 号/已交付』0 命中），规格本件自身 D 号计数 = 0。处置建议：不阻断合并；若 L1/CTO 要求严格字面，可把该括注改为『既有 step1/step2 先例（见本文件 phases[1]/[2]）』后再合，属可选润色。"
+    },
+    {
+      "severity": "warn",
+      "where": "docs/synova/reviews/1085.108510851085.json 文件名 vs check-merge-conditions.sh:463-471",
+      "what": "回执落盘名后缀 108510851085 不是真实 fp12（真实 fp12 = 1d6114b03100），依赖 R1 的回退正则命中而非规范路径精确命中。",
+      "summary": "回执文件名非规范 fp12 名（108510851085 ≠ 1d6114b03100），依赖 R1 回退正则",
+      "detail": "规范路径 = docs/synova/reviews/<pr>.<fp 前 12 位>.json = 1085.1d6114b03100.json；本回执按 .claude/claims/1075.yaml:33 预列名落盘为 1085.108510851085.json（该预列提交 9f89e4ce6 已在 head 内，若改名则违反组 12『提交 ⊆ 声明』）。可用性依据：check-merge-conditions.sh:467 先查规范路径不存在，再走 :470-471 的 ls-tree 回退正则 ^docs/synova/reviews/<pr>\\.[0-9a-f]{12}\\.json$ —— 后缀 108510851085 全字符 ∈ [0-9a-f]，可命中；同先例 = 1082.108210821082.json / 1084.108410841084.json（1084 回执自身 findings 已登记同一条）。真指纹已写在 patch_fingerprint（R3 用内容比对，不靠文件名），故不阻断。建议：后续批次把回执命名改为真实 fp12，或把预列名机制改成『预列目录 + 提交时按 fp12 改名』。"
+    },
+    {
+      "severity": "warn",
+      "where": "src/init/role-pack-schema.ts:45-46 / :579（repoRoot 缺省 process.cwd()） ← src/init/preset-loader.ts:413（未传 repoRoot）",
+      "what": "kind=file 的存在性基准是 process.cwd()；cwd ≠ 仓库根时三个出厂包全部 schemaValid=false（实测），客户形态装载接通后会成为静默降级陷阱。",
+      "summary": "loader 未传 repoRoot ⇒ kind=file 存在性依赖 process.cwd()；cwd≠仓库根时三包全 degraded（已实证）",
+      "detail": "实测命令：node tsx 脚本把 process.chdir('/tmp') 且 SYNOVA_PRESETS_ROOT=/private/tmp/w-rp1/extensions/presets 后 loadRolePacks() ⇒ degraded=true，errors 5 条 ROLE_PACK_REF_MISSING（financial.json / person.json / team.json / client.json / channel.json『在仓库根 /private/tmp 下不存在』），roles=finance:schemaValid=false hr:schemaValid=false sales:schemaValid=false。当前不构成产品回归：dev 形态 cwd = 仓库根（实测 (a) 全绿），而 bundle/桌面/容器形态今天装载 0-5 个扩展包（§10-L7 / extensions/AGENTS.md 46/5/0/0）⇒ 无新增降级面。该口径是规格 §2.2-D4 的有意选择，并已写进本模块 Known Limitations（:45-46『临时内容根夹具必须显式传 repoRoot…生产 dev 形态 cwd = 仓库根，故 loader 不传』）。处置建议（P4/C4 阶段 2 前必办）：loader 侧改传由模块位置推导的仓库根（如 path.resolve(__dirname, '../..')）或注入显式 repoRoot，否则客户形态一旦能装载内容面，三个出厂岗位会全量 degraded。非本批验收项，不阻断本 PR。"
+    },
+    {
+      "severity": "info",
+      "where": "规格 §2.4『排序：kind 字典序 → 标识字典序』 vs §2.5-C 字面数组顺序",
+      "what": "规格内部两处顺序口径不一致；实现取 J2 权威的 §2.5-C 字面顺序（file, scope, profile），运行时对账按集合比较，故不影响正确性。",
+      "summary": "规格 §2.4 排序口径与 §2.5-C 字面数组顺序不一致（实现按后者，无影响）",
+      "detail": "按 §2.4『kind 字典序』应为 file < profile < scope，即 [file, profile, scope]；而 §2.5-C 字面数组写的是 [file, scope, profile]，三个 manifest 与 J2-① 的 toEqual 断言都按后者。实测运行时无影响：reconcileRefs() 用 uniqueSortedRefs() 生成比较键后做 includes 比对（集合语义，:442-459），与声明顺序无关；且 J2 以 §2.5-C 为权威期望。建议下一版规格把 §2.4 的排序句改为『与 §2.5-C 一致（file → scope → profile）』，或删掉排序承诺改述『顺序不参与对账』，避免后来者按 §2.4 改 manifest 后 J2-① 假红。"
+    },
+    {
+      "severity": "info",
+      "where": "PR #1085 正文（Gitea API 实取）",
+      "what": "正文两处计数与实物不符：写集表称『11 件』（实际 diff 12 件）、claim 行称『writeset 18 行』（实际 20 条）。",
+      "summary": "PR 正文计数漂移（11 件 vs 实际 12；claim 18 行 vs 实际 20）",
+      "detail": "Gitea API /pulls/1085 直读：additions=1856、deletions=40、changed_files=12；正文『## 写集（逐文件，11 件）』表内 9 行覆盖 11 件（例外 2 tests/contract/triviality-manifest.yaml 只写在正文散文里未入表），『.claude/claims/1075.yaml | 新建（writeset 18 行…）』而 claim_store --check 报 writeset=20（16 项并集 ＋ claims 自身 ＋ plan.json ＋ triviality ＋ 本回执）。属先写后补例外导致的描述漂移，不影响代码与门禁；建议合并前把两处数字改成 12 / 20，使 PR 正文与 diff、claim 台账三处同口径。"
+    },
+    {
+      "severity": "info",
+      "where": "src/init/role-pack-schema.ts:423-430（profile 白名单外复用 ROLE_PACK_REF_MISSING）",
+      "what": "『profile 命名空间白名单外』复用了 REF_MISSING 码，规格十码集里无专用白名单码 ⇒ 合规但 grep 归因会与『引用悬空』混在一起。",
+      "summary": "profile 白名单违规复用 ROLE_PACK_REF_MISSING 码（规格码集无专用码，合规但归因含混）",
+      "detail": "§4.5-C1 的十个码里没有『白名单外』专用码，实现选择 REF_MISSING 并在 message 里写明『profile 命名空间白名单外：profile.<name>（本批仅允许 business-plan，§10-L2）』—— 点名充分、可 grep 区分（消息含『白名单外』）。建议 P2 定 profile 词汇表时新增 ROLE_PACK_PROFILE_NOT_WHITELISTED（或并入 P1-b 的 ROLE_SEED_BAD_SOURCE 语义），届时同步 §4.5-C1 与 C3 失效条件。非本批问题。"
+    }
+  ]
+}
