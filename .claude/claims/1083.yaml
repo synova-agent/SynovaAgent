@@ -1,0 +1,10 @@
+# .claude/claims/1083.yaml — #1083 src/AGENTS.md 判据口径校正（全树→变更集）
+writeset:
+  - src/AGENTS.md
+  - .claude/claims/1083.yaml
+  - docs/synova/reviews/1083.108310831083.json
+  - docs/synova/reviews/1084.108410841084.json
+done:
+  - verify: git grep -c "变更集口径" -- src/AGENTS.md
+  - verify: git grep -c "全树" -- src/AGENTS.md
+note: "复核 warn：原判据「全树 grep → 0」与存量 113 命中不符；改为变更集口径＋存量另管（与 pre-commit 组 1 实际行为一致），不改门禁。"

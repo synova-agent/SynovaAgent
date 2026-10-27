@@ -11,7 +11,7 @@
 ## 怎么算完成（机器可判）
 - `npx tsc --noEmit` → exit 0
 - `npx vitest run --changed` → 0 failed（禁 skip 冒充通过）
-- `git grep -nE "as +(any|never|unknown +as)" -- 'src/**/*.ts'` → 0
+- **变更集口径**：本次新增/修改行中 `as` 强转（any／never／unknown-as）= 0；**全树存量**由门禁组 1「存量独立清理」另管（注释行不计）
 - 新增 compute/模块：先写六段契约（`@input/@output/@degraded/@authority/@not-here/@error`）＋配对测试（`tests/**`，含正常/降级/边界）
 
 ## 红线
