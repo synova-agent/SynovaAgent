@@ -65,6 +65,12 @@
       "result": "pass",
       "cmd": "读 scripts/control-tower/check-merge-conditions.sh:426-433（patch_fingerprint 定义）/467-477（R1 规范路径＋回退）/478-542（R2–R8）/543-557（R7）; 另在 temp clone --shared（/d/tmp/rev-p07b/sim，跑完删除）用 read-tree/hash-object/update-index/write-tree/commit-tree 造一个「新增回执」提交后复算 fp，并演练 R1 回退选择",
       "evidence": "✅ 指纹不变性实证：sim 中在 3976e05c8 之上以新增方式加入 docs/synova/reviews/1069.495e08aa1456.json 造出提交 9a4aca8e 后，同一口径复算 fp 仍为 83083dd8e9cd91ae2fcac90a1504b8be2af4bf40d0ec42ecc646d1f9c9b9395d ⇒ 回执提交不会改指纹（因 :428-429 对 docs/synova/reviews/** 排除）。✅ R1：规范路径 docs/synova/reviews/1069.83083dd8e9cd.json 不存在 ⇒ :470-471 回退正则 ^docs/synova/reviews/1069\\.[0-9a-f]{12}\\.json$ 实测命中 docs/synova/reviews/1069.495e08aa1456.json ⇒ 文件名沿用旧名可行。✅ R3（:507）校验内容里的 patch_fingerprint 必须等于当次 fp ⇒ 本回执填 sha256:83083dd8…9395d。✅ R7（:543-557）：回执引入提交必须是分支最后一个提交（其后只允许 docs/synova/reviews/**），否则红。"
+    },
+    {
+      "id": "10-回执提交的旁路影响（登记门禁面）",
+      "result": "pass",
+      "cmd": "读 scripts/doc-system/doc-registry-gate.sh:136（EXCLUDE）/192-196（三源扫描的扩展名过滤）; bash scripts/doc-system/doc-registry-gate.sh",
+      "evidence": "✅ 代码结构事实（读 :192/:193/:196，非实跑推断）：登记门禁三源（untracked / staged-new / base..HEAD 新增）**一律以 grep -E '\\.(md|yaml)$' 过滤** ⇒ `.json` 回执不在扫描集合内 ⇒ 新增回执不会触发「未登记」硬红；EXCLUDE（:136）也不含 docs/synova/reviews/。✅ 本 PR 现态实跑：exit 0、166 条 DOC id 重号 0、检查 4 个文档 0 未登记。⇒ 回执提交只影响 R1/R3/R7 三条（见 check 9 与 findings 第 3 条），不会新增其它门禁面。"
     }
   ],
   "findings": [
