@@ -276,7 +276,7 @@ Q-1 Q-2 Q-3 Q-4 Q-5 Q-6 Q-7 Q-8 Q-9 Q-10 Q-11 Q-12 Q-13 Q-14 Q-15 T-1 T-2 T-3 T-
 - `status` = 矩阵声明值原样。
 - `verdict`：机械项 ∈ {`ok`,`na_ok`,`fail`}；语义项固定 `attested`。
 - `detail`：机械项给**判定依据**（不允许空，不允许只写"ok"）；语义项 = 该项 `reason`（有则原样、换行压成空格），无则字面 `slot`。
-- 机械 detail 的**推荐形状**（便于机器读）：`Q-2`/`Q-13` → `ui_files=<n> hits=<n>`；`Q-4` → `src_files=<n> hits=<n>`；`Q-6` → `files=<n> hits=<n>`；`Q-8` → `vc_files=<n> hits=<n>`；`Q-10` → `files=<n> hits=<n>`；`Q-11` → `src_files=<n> armed=<yes|no>`；`T-1` → `src_files=<n> miss=<n>`；`T-5` → `files=<n> miss=<n>`；`T-7` → `test_files=<n> passed=<yes|no>`；`T-8` → `dirs=<n> bad=<n> skipped=<n>`（`dirs` **只计作用域内**候选目录、`skipped` 计域外被跳过目录；存在 anchor 下不可读文件时追加 `absent=<n>`）。
+- 机械 detail 的**推荐形状**（便于机器读）：`Q-2`/`Q-13` → `ui_files=<n> hits=<n>`；`Q-4` → `src_files=<n> hits=<n>`；`Q-6` → `files=<n> hits=<n>`；`Q-8` → `vc_files=<n> hits=<n>`；`Q-10` → `files=<n> hits=<n>`；`Q-11` → `src_files=<n> armed=<yes|no>`；`T-1` → `src_files=<n> miss=<n>`；`T-5` → `files=<n> miss=<n>`；`T-7` → `test_files=<n> passed=<yes|no>`；`T-8` → `dirs=<n> bad=<n> skipped=<n>`（`dirs` **只计作用域内**候选目录、`skipped` 计域外被跳过目录）。🔴 `absent=<n>` **只在 `Q-2`／`Q-13`（两者共用同一实现）／`Q-4`／`Q-6`／`Q-8`／`T-1`／`T-5` 这六条规则实现**（anchor 下不可读／不存在文件），其余机械项**不落** —— 未实现的项不在此承诺。
 
 **`verdict` 的语义（机械项）＝"该项是否可判为通过"**：`ok` = 机械事实满足该项硬要求**且**声明与事实一致；`na_ok` = 该项无判定对象（事实=无对象/无命中）**且**声明 `n/a`（或 F12 明示的例外）；`fail` = 事实违反硬要求**或**声明与事实矛盾。因此「`T-1` 缺标签但已正确声明 `partial + variance: true + reason`」在机械项上是 **`ok`**（"正确声明的部分通过"）——`fail` 不是对语义质量的判决（语义质量归复核位／K3）。
 
@@ -398,7 +398,7 @@ VERIFY <id> declared=<status> mech=<verdict> consistent=<yes|no>
 
 **T-8（新目录的域守则）**
 
-- 判定域：`changed_files` 的父目录，但**只对代码目录**生效——代码目录判定域 = 父目录匹配 `^(src|electron-renderer|extensions|scripts|expert|knowledge|theory|tests)/`。
+- 判定域：`changed_files` 的父目录，但**只对代码目录**生效——代码目录判定域 = 父目录匹配 `^(src|electron-renderer|extensions|scripts|expert|knowledge|theory|tests)(/|$)`。🔴 尾部 `(/|$)` **不可省**：**顶层目录本层直挂的变更件同样受判**（父目录恰为 `src`／`scripts`／`tests` … 时同样要求该目录有合规 `AGENTS.md`）；旧写法（尾部只有 `/`）会把这类父目录当域外跳过 ⇒ **假绿**。
 - 先收集所有"同一父目录下 `≥2` 个变更文件"的目录作为候选，再把候选分两类：**作用域内**（代码目录）／**域外**（其余，一律跳过）。
   - 作用域内：`<dir>/AGENTS.md` 在 anchor 存在 ∧ 内容 `^## ` 小节数 `≥5`（判据本身不变）。
   - 域外：**不要求** `AGENTS.md`，并计入 detail 的 `skipped=`。其中**记录面**（父目录匹配 `^(\.claude|memory|docs)/`）向 stderr 打印 `T-8 scope: skip record-only dir <dir>`；其它域外打印 `T-8 scope: skip out-of-scope dir <dir>`（每个被跳过的目录恰一行，**stdout 行数与末行契约不变**）。
@@ -449,9 +449,9 @@ VERIFY <id> declared=<status> mech=<verdict> consistent=<yes|no>
 6. **错误码粒度不足**：机械硬违反与声明矛盾同码 `E_MATRIX_SCHEMA`；exit 2 的用法／矩阵 IO／仓／anchor／git 五类统一 `E_ANCHOR_MISMATCH` 靠 `phase` 区分——这是 10 码闭包的有意取舍，归因靠 `detail`／`phase`，不靠码。
 7. **不判质量好坏、不替代 K3**：本件只保证"验收结论**齐全**且**证据可核**"；语义项只输出 `attested`（字段齐全），**pass/fail 归复核位**。
 8. **URL 类 evidence 不联网**：只检查"含 anchor 前 7 位 hex"这一字符串条件 ⇒ 不验可达性／状态码；7 位前缀可被伪造或碰撞（**有意**：P0 不允许校验器发网络请求）。
-9. **T-8 只对代码目录数小节数，域外目录被跳过**：`^## ` ≥5 是结构计数，`AGENTS.md` 存在但内容空洞照样绿；`.claude/**`、`memory/**`、`docs/**` 等记录面与其它域外目录**不进判定域**，只向 stderr 打印 `T-8 scope: skip …` 提示并计入 `skipped=` ⇒ **跳过 ≠ 已验证**。
+9. **T-8 只对代码目录数小节数，域外目录被跳过**：`^## ` ≥5 是结构计数，`AGENTS.md` 存在但内容空洞照样绿；`.claude/**`、`memory/**`、`docs/**` 等记录面与其它域外目录**不进判定域**（**顶层目录本层直挂件仍入作用域**，见 §9 T-8 的 `(/|$)`），只向 stderr 打印 `T-8 scope: skip …` 提示并计入 `skipped=` ⇒ **跳过 ≠ 已验证**。
 10. **子集 YAML 不支持真实 YAML 的多行字符串／块序列／锚点别名**：超出子集一律 `E_MATRIX_SCHEMA`（有意 fail-closed，不猜）；复杂值请改成单行或加双引号。
-11. **本目录的台账登记在本批补齐**：`docs/AGENTS.md` 要求新文件登记 `docs/authority/DOCS-REGISTRY.yaml`；本批经 **L1 批准（Gitea #1054 评论 · 2026-10-27）**的扩写集共 **2 件**（`docs/authority/DOCS-REGISTRY.yaml` ＋ `docs/authority/WIRING-REGISTRY.yaml`），由登记件落 `docs/synova/acceptance/README.md`、`docs/synova/acceptance/1053.matrix.yaml` 与 `docs/synova/acceptance/1048.matrix.yaml` 三条 `status: active` 登记（DOC-0306／DOC-0307／DOC-0308）。登记条目不改变本件任何判据；若两者口径冲突，**以本件为准**。
+11. **本目录的台账登记在本批补齐**：`docs/AGENTS.md` 要求新文件登记 `docs/authority/DOCS-REGISTRY.yaml`；本批经 **L1 批准（Gitea #1054 评论 · 2026-10-27）**的扩写集共 **2 件**（`docs/authority/DOCS-REGISTRY.yaml` ＋ `docs/authority/WIRING-REGISTRY.yaml`），由登记件落 **4 条** `status: active` 登记：`docs/synova/acceptance/README.md` = **DOC-0309**、`docs/synova/acceptance/1053.matrix.yaml` = **DOC-0310**、`docs/synova/acceptance/1048.matrix.yaml` = **DOC-0311**、`gate-exemptions/2026-10-27-1054-gate-exempt.md` = **DOC-0312**。🔴 **本批 DOC-0309–0312 与 M4 线 DOC-0306–0308 不重号**（0306／0307／0308 归 M4 线：`gate-exemptions/2026-10-27-825-m7-probe.md`／`docs/synova/runbooks/README-probe-knowledge-scope.md`／`gate-exemptions/2026-10-27-t8-1051-pointer.md`）；本批 4 条为合基线（`gitea/local-main` @ `0fda487e2`）后顺延重登。登记条目不改变本件任何判据；若两者口径冲突，**以本件为准**。
 12. **回溯样例 anchor `5553bb95c` 不在 `local-main` 祖先上**：含该提交的分支是 `feat/m4-1051-closeout`（及 `cto/t1-c4`），**不是** `feat/1053-metric-readings-schema`（其 tip `b6ce2d44e` 不含该提交）——本器只要求"anchor 在本仓可解析且内容可读"，不判"anchor 是否已并入主线"；该事实由样例／复核位如实记录，不是本件的缺陷。因此 **A1 默认样例改用主线锚 `1048.matrix.yaml`@`1ca0d4dfc`**；`1053.matrix.yaml` 定位为 **A1b 回溯演练（不得作默认）**。
 13. **anchor 内容读取依赖本仓对象库**：若 anchor 指向未 fetch 的远端对象 ⇒ exit 2（判不了），此时**不是**矩阵写错。
 14. **规格内部冲突已在 F3 处裁决，本件按裁决执行**：规格 §5.1 示例写 `n/a` 的 `evidence.out: "0"`，与 §6 边界表（`out` = 仓内路径／含 anchor sha 的 URL，不存在即 `E_EVIDENCE_UNRESOLVED`）**互相冲突**；L1 2026-10-27 裁决取 **§6（判据表）** ⇒ `out` 一旦出现即强校验、`n/a` 只写 `cmd`。**这不是 F1–F12 的改动**（F2 本就写"`out` 不要求"，F3 本就无 status 例外），只是把两处规格的冲突显式记录下来，供 K3 复核时判定该取舍是否成立。
