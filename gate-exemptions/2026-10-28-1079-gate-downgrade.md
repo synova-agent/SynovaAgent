@@ -4,3 +4,5 @@
 - scripts/pre-commit-check.sh — 按裁 427 D4 删 inert `_downgraded()` 并简化 CI-strict 分支（行为等价，零语义变更） — 裁 427
 - gate-exemptions/2026-10-28-1079-gate-downgrade.md — 本豁免文件自身受保护，按 #623 加同 diff 自覆盖行 — 裁 427
 - docs/authority/DOCS-REGISTRY.yaml — D2 登记门禁要求登记本豁免文件（DOC-0310），仅追加一条 — 裁 427
+
+<!-- 登记号：DOC-0310（0308 已被 M4 占用；前次追加因条件判断错误被跳过，已补正） -->

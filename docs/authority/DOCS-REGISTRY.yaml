@@ -1272,3 +1272,10 @@ documents:
     status: active
     owner: CTO
     note: "agents/P1-能跑通/AGENTS.md ⑦ 域守则指针 8→9（补 electron-renderer/AGENTS.md）＋同节口径 12→13 份；创始人 2026-10-27 T8 派单第 6 项授权。"
+  # ---- P4 2026-10-28：#1071 裁 427 D2+D4 豁免登记（DOC-0310；0308 已被 M4 占用）----
+  - id: DOC-0310
+    type: decision
+    path: gate-exemptions/2026-10-28-1079-gate-downgrade.md
+    status: active
+    owner: P4
+    note: "#1071（裁 427 D2+D4）：tests/control-tower/precommit-groups-injection.test.sh 与 scripts/pre-commit-check.sh 受保护路径豁免（fixture 语义重写＋删 inert 死码，行为等价）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
