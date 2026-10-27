@@ -1,0 +1,57 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1079,
+  "patch_fingerprint": "sha256:dc6c57e42b711059bfc87fb60014a16afdf64db11c0feda5b6411f0612f9c98c",
+  "author": "k12-batch5 <k12@local> (P4 L1 session session-67ae63d3)",
+  "reviewer": "p4-receipt-reviewer (fresh-session)",
+  "tool": "dsh independent review",
+  "independence": "fresh-session",
+  "issued_at": "2026-10-28T01:51:52+08:00",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "①-范围与撞车",
+      "cmd": "git -C /Users/wane/SynovaAgent diff --name-only f8ca97d92..40c45294e; git diff --stat f8ca97d92..40c45294e; git ls-remote gitea refs/heads/ct/p4-1148-1071-r2 refs/heads/local-main; curl Gitea API pulls/1079",
+      "result": "pass",
+      "evidence": "4 路径，与 claims/1071 writeset 逐字相等：.claude/claims/1071.yaml｜memory/notes/implemented/2026-10-27-1071-d1148-d2-d4.md｜scripts/pre-commit-check.sh｜tests/control-tower/precommit-groups-injection.test.sh（stat: 4 files changed, 244 insertions(+), 36 deletions(-)）。远端 head=40c45294e、base local-main=f8ca97d92、PR mergeable=true/base=local-main；无 scripts/audit/**、scripts/control-tower/**、.gitea/**、.github/**、src/** 变更。claims 1029/1220 亦含 scripts/pre-commit-check.sh：1029 issue 已 closed、1220 为 2026-10-07 陈旧 claim（Note 已记载其 --resolve-path 命中风险，本卡 claims/1071.yaml 兜底 D328；tip 全门禁 rc=0 证实认领对账通过）。PR 正文『diff 仅注释』表述与实测不符（见 findings F1，非阻断）。"
+    },
+    {
+      "id": "②-夹具复跑",
+      "cmd": "rm -rf /tmp/host1079 && git clone -q /Users/wane/SynovaAgent /tmp/host1079 && git -C /tmp/host1079 checkout -q --detach 40c45294e && git -C /tmp/host1079 branch -f local-main f8ca97d92 && git -C /tmp/host1079 update-ref refs/remotes/origin/local-main f8ca97d92 && ln -s /Users/wane/SynovaAgent/node_modules /tmp/host1079/node_modules && cd /tmp/host1079 && bash tests/control-tower/precommit-groups-injection.test.sh",
+      "result": "pass",
+      "evidence": "aligned clone（HEAD=40c45294e；local-main=origin/local-main=f8ca97d92）: EXIT=0；末行 GATE_INJECTION_SUMMARY: scenarios=5 red_confirmed=4 structural_not_red=0 not_red=0 baseline=ok probe=retired_d1220(rc=n/a) residue_code=0 residue_repo=1 shim=1 decl_gates=0 fixture_mode=OK d1193_regression=OK no_marker_notred=4 clone_status=clean。D1148 段全 ✅：三闸各自点名＋后缀（default/strict/deadvar 三复放）、两态一致 rc=1、死变量不变性 diff 为空、闸② 排除项点名＋[硬阻断]、合并提交 rc=0＋显式跳过。注：直接按任务给的 worktree 方法（/tmp/w-rev-1079，与主仓共享 local-main 引用）跑同一夹具得 EXIT=1（baseline FAIL: D782 D2/D734），根因是 inner clone 的 origin/local-main=陈旧本地分支 ba1b22a8b（rev-list --count local-main..40c45294e = 953），非 PR 内容；见 findings F2。"
+    },
+    {
+      "id": "③-改坏必红",
+      "cmd": "A) host clone 内把 _d1148_seg1_run 的 [ \"$DECL_RC\" -eq 1 ] 改为 -eq 0 ⇒ 跑夹具；B) commit 门禁降级分支 ❌→⚠️（hard_check 第一分支）⇒ 跑夹具；每次后 git checkout/reset --hard 复原并重跑",
+      "result": "pass",
+      "evidence": "A（fixture 期望改回 rc=0）: EXIT=1，三行 ❌ D1148 三闸注入: rc=1 未点名闸:<无> 后缀不符:<无>（default/strict/deadvar），summary decl_gates=1，末行『❌ 注入自测未达期望』。B（门禁降级分支 ❌→⚠️，commit a853108 临时提交后运行）: EXIT=1，原始输出 ❌ D1148 三闸注入: rc=1 未点名闸: 声明闸① 声明闸③ 后缀不符: 声明闸①(期望含「裁 409 降级」) 声明闸③(期望含「裁 409 降级」)（default/deadvar 复放），summary decl_gates=1；复原（git reset --hard 40c45294e）后 EXIT=0、baseline=ok、decl_gates=0。证明『降级态 ❌ 点名恒在＋后缀』断言有判别力。"
+    },
+    {
+      "id": "④-引用与写集",
+      "cmd": "git -C /Users/wane/SynovaAgent cat-file -t 841618108; git cat-file -t 861618108; git diff 1cd6b7c50 2d06a1ce8 --numstat; bash scripts/control-tower/check-merge-conditions.sh --pr 1079 --diff-fingerprint; git show 40c45294e:.claude/claims/1071.yaml",
+      "result": "pass",
+      "evidence": "841618108 = commit（2026-10-20 chore(briefs): #645 存量 brief 合规清理）；861618108 = fatal: Not a valid object name（exit 128，确不存在）。numstat 1cd6b7c50→2d06a1ce8 = 3 文件/4 行（.claude/claims/1072.yaml 1/1、memory/notes/...1072...md 1/1、tests/.../check-brief-parseable.test.sh 2/2），逐行仅 861618108→841618108 引用文本。指纹生成器实测输出 dc6c57e42b711059bfc87fb60014a16afdf64db11c0feda5b6411f0612f9c98c，与回执一致。写集=claims/1071.yaml 的 4 路径（diff 全等）。GROUP_DOWN 组界八行（base :933/:1294/:1450/:1481/:1483/:1640/:1935/:1988）内容与 base 逐字相同，diff 无赋值行变更（仅新增注释提到 ^GROUP_DOWN= 的定位命令）。"
+    },
+    {
+      "id": "⑤-门禁自洽与自述核对",
+      "cmd": "cd /tmp/w-rev-1079 && bash scripts/pre-commit-check.sh; bash -n scripts/pre-commit-check.sh; bash tests/control-tower/ci-strict-visible.test.sh; bash tests/control-tower/ci-strict-mode.test.sh; git grep -n 'SYNO_GATE_DOWNGRADED' 40c45294e -- tests scripts .gitea .github; git grep -n '_downgraded' 40c45294e -- scripts",
+      "result": "pass",
+      "evidence": "Tip 全门禁 rc=0『✅ 全部 12 组通过』；bash -n rc=0；ci-strict-visible 6 通过/0 失败；ci-strict-mode pass=7 fail=0；死变量 git grep 0 命中（rc=1）；_downgraded 名为 0 命中（rc=1）；无 scripts/audit/**、scripts/control-tower/** 变更。Note C2/C3/C4/C5/C8 现场复现一致（三闸点名/两态/死变量/seg2/门禁 12 组＋ci-strict 两件）；C7（旧门禁对照）未重跑，其等价性由 base `_downgraded` 恒 return 1（base :97-102）＋`! _downgraded` 恒真（:184）代码阅读支撑。PR 正文一处措辞不准（F1）。"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "warn",
+      "where": "PR #1079 body 的 scripts/pre-commit-check.sh 条目；对照 base scripts/pre-commit-check.sh:97-102",
+      "what": "正文括号『零行为改动，diff 仅注释』与实测不符：该文件 diff 实际删除 7 行 inert `_downgraded()` 函数并简化 soft_check 的 elif（行为等价，Note D4 已准确记载）。仅 PR 描述文字不准，不影响判据/行为；建议合入前修正正文措辞。"
+    },
+    {
+      "id": "F2",
+      "severity": "warn",
+      "where": "tests/control-tower/precommit-groups-injection.test.sh:190-206（clone 副本）；scripts/doc-system/doc-registry-gate.sh:174 / scripts/control-tower/check-pr-budget.sh:169（base 链）",
+      "what": "夹具绿基线依赖宿主 local-main 与 gitea/local-main 一致：本机主树 local-main 停在 ba1b22a8b（落后 gitea/local-main f8ca97d92 950 提交；local-main..PR head=953 提交），按任务给的 worktree 直接跑会因 inner clone 的 origin/local-main=ba1b22a8b 导致 D782 D2/D734 误红（EXIT=1，baseline=FAIL；gate 打印 base=origin/local-main merge-base=ba1b22a8b，变更含 954 件），非 PR 内容问题；把 local-main 对齐 f8ca97d92 后同夹具 EXIT=0、baseline=ok。建议合入前在标准 clone 复跑；是否让夹具 base 链优先 gitea/local-main 由 L1 另卡决定。"
+    }
+  ]
+}
