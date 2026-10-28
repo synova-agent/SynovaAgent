@@ -134,7 +134,8 @@ entries:
     consumer: null
     test: tests/control-tower/report-mirror-pushes.test.sh
     status: declared-only
-    defined_at: scripts/control-tower/report-mirror-pushes.sh:15
+    owner: CTO
+    defined_at: "scripts/control-tower/report-mirror-pushes.sh:15"
     notes: "#1034 DeployKey 旁路只读取证工具（运维/审计人工调用）"
   - capability: control-tower.acceptanceMatrix
     defined_at: "scripts/control-tower/check-acceptance-matrix.py:1"
@@ -202,3 +203,11 @@ entries:
     status: wired
     owner: P4
     notes: "#1089 W1：三态登记校验器。**已接线**（W0/#1093）：`scripts/pre-commit-check.sh` 的「附: 治理面自检」段以 `hard_check` 调用（本地软提示/CI strict 硬阻断）；接线首日即抓出 `CT-check-gate-inventory` 自身 `required_ci:false` 的账实不符（已改 true）。"
+  - capability: content.rolePackApproval
+    defined_at: "src/init/role-pack-approval.ts:1"
+    provider: "src/init/role-pack-approval.ts:651"
+    consumer: "src/init/preset-loader.ts:456"
+    test: "tests/init/role-pack-approval.test.ts:256"
+    status: wired
+    owner: P2
+    notes: "岗位包审批门（#1075 P2-1）：记录侧审批态判定（approved/pending/unverified）＋出厂代码锚（FACTORY_APPROVALS）；唯一生产消费者＝preset-loader 单读→contentHash→判定；判定侧不 import role-pack-schema（N6 防循环依赖）"

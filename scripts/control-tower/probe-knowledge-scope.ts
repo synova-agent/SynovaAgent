@@ -94,17 +94,20 @@
  */
 
 import { execFileSync, spawnSync } from 'child_process';
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'fs';
+import { createHash } from 'node:crypto';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'fs';
 import type { Server } from 'http';
 import { tmpdir } from 'os';
 import { join, resolve } from 'path';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import Database from 'better-sqlite3';
 import { dump as dumpYaml, load as loadYaml } from 'js-yaml';
+import { loadConfig } from '../../src/config';
 import { jwtAuthMiddleware, signJwtToken } from '../../src/middleware/auth';
 import { rbacMiddleware } from '../../src/middleware/rbac';
 import { getCurrentFilterClause } from '../../src/services/request-context';
 import { loadRolePacks, type PresetLoadReport } from '../../src/init/preset-loader';
+import { validateRolePackDir } from '../../src/init/role-pack-schema';
 import { KnowledgeStore } from '../../src/l4/knowledge-store';
 // 权限命名空间宇宙的**生产真源**（d-perm：命名空间 = scope id 第一个 '.' 之前的前缀）——
 // 探针不自己抄一份名单（禁第二口径）；T2 换成文件派生后，这里自动跟着变。
@@ -1090,6 +1093,89 @@ function checkDenyStructure(ctx: ProbeContext, observed: ScopeObservation, out: 
   }
 }
 
+/** 正则元字符转义（roleId 由 CLI/文件派生；拼进 RegExp 前必须转义，不把外部值当模式） */
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * V6(ii) 夹具的**身份改写**（#1075 P2-1）：把源岗位副本改成**非出厂 roleId**。
+ *
+ * 🔴 为什么必须换牌：审批门对出厂 roleId 只信 `FACTORY_APPROVALS` 代码锚（记录不得覆盖）；
+ *   语义样本要改内容 ⇒ 出厂锚必然不符 ⇒ `unverified` ⇒ 条件集恒空，V6(ii) 不可判。
+ * 只改**身份字段**（`manifest.roleId` ＋ 各件 `roleId:` 行 ＋ `contexts[].source` 的 role 路径），
+ * 不改任何内容语义（scopes/deny 语义仍由原逻辑构造）。
+ */
+function rewriteVariantRoleIdentity(roleDir: string, sourceRoleId: string, variantRoleId: string): void {
+  const manifestPath = join(roleDir, 'manifest.json');
+  const doc: unknown = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+  if (!isRecord(doc)) {
+    throw new ProbeError('DENY_FIXTURE_INVALID', 'V6(ii) 夹具', `${manifestPath}: manifest 顶层不是映射`, true);
+  }
+  doc['roleId'] = variantRoleId;
+  writeFileSync(manifestPath, `${JSON.stringify(doc, null, 2)}\n`, 'utf-8');
+
+  // contexts[].source 里带**完整角色路径**（`roles/<源>/knowledge-scope.yaml#...`）⇒ 同步改名，
+  // 否则会被投影成 file ref（REF_UNDECLARED/ORPHAN）⇒ 校验失败 ⇒ 无 contentHash ⇒ 不判审批（N4）
+  const rolePathPattern = new RegExp(`roles/${escapeRegExp(sourceRoleId)}/`, 'g');
+  const roleIdLinePattern = new RegExp(`^roleId: ${escapeRegExp(sourceRoleId)}$`, 'gm');
+  for (const piece of ['context-manifest.yaml', SCOPE_FILE, 'capabilities.yaml', 'acceptance-criteria.yaml', 'output-template.ref']) {
+    const abs = join(roleDir, piece);
+    const text = readFileSync(abs, 'utf-8');
+    const rewritten = text
+      .replace(rolePathPattern, `roles/${variantRoleId}/`)
+      .replace(roleIdLinePattern, `roleId: ${variantRoleId}`);
+    if (rewritten !== text) writeFileSync(abs, rewritten, 'utf-8');
+  }
+}
+
+/**
+ * V6(ii) 夹具的**匹配审批记录**（#1075 P2-1）：请求路径判审批需要 `contentHash`（生产纯核产出）
+ * 与 D9 自绑定 `approvalId`；记录写在**临时根**的 `.synova/approvals`（不写仓）。
+ *
+ * @returns `{ok:true}`，或 `{ok:false, reason}`（构造失败 ⇒ 调用方 `cannotJudge`，不静默降级）
+ */
+function mintVariantApprovalRecord(
+  tempRoot: string,
+  roleId: string,
+): { readonly ok: true } | { readonly ok: false; readonly reason: string } {
+  const presetsRoot = join(tempRoot, PRESETS_REL);
+  const roleDir = join(presetsRoot, ROLES_SUBDIR, roleId);
+  // contentHash = 生产纯核（六件单读快照；ok:false ⇒ 样本构造失败，problems 逐条带回）
+  const validation = validateRolePackDir(roleDir, { repoRoot: tempRoot });
+  if (!validation.ok || validation.contentHash === undefined) {
+    const problems = validation.problems.map((problem) => `${problem.code}: ${problem.message}`).join('; ');
+    return { ok: false, reason: `语义样本岗位包校验未通过（无 contentHash）：${problems}` };
+  }
+  const contentHash = validation.contentHash;
+  // orgId 与生产 resolver 同源（`config.orgId` = `SYNOVA_ORG_ID || 'default'`；L7：不是安全控制）
+  let orgId: string;
+  try {
+    orgId = loadConfig().orgId;
+  } catch (err: unknown) {
+    return { ok: false, reason: `orgId 读取失败（config）：${err instanceof Error ? err.message : String(err)}` };
+  }
+  const scope = 'content+permissions';
+  const approvedAt = '2026-10-28T00:00:00.000Z';
+  const approverId = 'probe';
+  const approverRole = 'super-admin';
+  // §2.2-D9 自绑定：`apv1:` + sha256(orgId|roleId|contentHash|scope|approvedAt|approverId|approverRole)[0:16]
+  const material = [orgId, roleId, contentHash, scope, approvedAt, approverId, approverRole].join('|');
+  const approvalId = `apv1:${createHash('sha256').update(material, 'utf8').digest('hex').slice(0, 16)}`;
+  const approvalsDir = join(tempRoot, '.synova', 'approvals');
+  mkdirSync(approvalsDir, { recursive: true });
+  writeFileSync(
+    join(approvalsDir, `${roleId}.json`),
+    `${JSON.stringify(
+      { schemaVersion: 1, roleId, orgId, approvalId, contentHash, approverId, approverRole, approvedAt, scope },
+      null,
+      2,
+    )}\n`,
+    'utf-8',
+  );
+  return { ok: true };
+}
+
 /** V6(ii) 语义断言（防恒真）：临时根里造一份 scopes 与 deny **同 id 重叠**的岗位 yaml ⇒ 排除只能来自 deny */
 async function checkDenySemantics(ctx: ProbeContext, out: ProbeOutput): Promise<void> {
   const role = ctx.options.roles[0];
@@ -1104,10 +1190,21 @@ async function checkDenySemantics(ctx: ProbeContext, out: ProbeOutput): Promise<
   }
   const denyId = decl.deny[0];
   if (denyId === undefined) return;
+  /** 语义样本的**非出厂** roleId（#1075 P2-1：出厂 roleId 只信代码锚 ⇒ 改内容必 unverified） */
+  const variantRoleId = 'probe-deny';
   const tempRoot = mkdtempSync(join(tmpdir(), 'probe-ks-deny-'));
   try {
-    cpSync(ctx.presetsRoot, tempRoot, { recursive: true });
-    const file = join(tempRoot, ROLES_SUBDIR, role, SCOPE_FILE);
+    // ① **仓库形状**临时根（#1075 P2-1）：请求路径判审批时 `repoRoot = resolve(<presetsRoot>,'../..')`，
+    //    `refs`（`extensions/ontology/**`）必须在该根下存在，否则 `ROLE_PACK_REF_MISSING` ⇒ N4 不判审批
+    //    ⇒ `unverified` ⇒ 条件集恒空（语义样本不可判）。
+    const tempPresetsRoot = join(tempRoot, PRESETS_REL);
+    cpSync(ctx.presetsRoot, tempPresetsRoot, { recursive: true });
+    cpSync(join(ctx.root, 'extensions', 'ontology'), join(tempRoot, 'extensions', 'ontology'), { recursive: true });
+    // ② 源岗位拷成**非出厂**副本（身份换牌；内容语义不变）
+    const variantRoleDir = join(tempPresetsRoot, ROLES_SUBDIR, variantRoleId);
+    cpSync(join(tempPresetsRoot, ROLES_SUBDIR, role), variantRoleDir, { recursive: true });
+    rewriteVariantRoleIdentity(variantRoleDir, role, variantRoleId);
+    const file = join(variantRoleDir, SCOPE_FILE);
     const doc = loadYaml(readFileSync(file, 'utf-8'));
     if (!isRecord(doc) || !Array.isArray(doc['scopes'])) {
       cannotJudge(out, 'V6', '临时根里该岗位 scope 文件结构异常 ⇒ 语义样本构造失败');
@@ -1123,8 +1220,14 @@ async function checkDenySemantics(ctx: ProbeContext, out: ProbeOutput): Promise<
     } else {
       out.note(`  语义样本: 该岗位 scopes 已含 deny 的 id「${denyId}」（天然重叠）`);
     }
+    // ③ 写**匹配审批记录**（#1075 P2-1：请求路径判审批；hash 用生产纯核、approvalId 按 D9 复算）
+    const minted = mintVariantApprovalRecord(tempRoot, variantRoleId);
+    if (!minted.ok) {
+      cannotJudge(out, 'V6', `临时根里语义样本的审批记录构造失败：${minted.reason}`);
+      return;
+    }
 
-    const captured = await captureConditions(role, tempRoot);
+    const captured = await captureConditions(variantRoleId, tempPresetsRoot);
     if (captured === null) {
       cannotJudge(out, 'V6', '临时内容根上无法观测条件集（结构面环境不足）');
       return;
