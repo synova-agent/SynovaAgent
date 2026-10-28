@@ -1,0 +1,7 @@
+// {{NAME}} 的配对测试 — 由 scripts/dev/new-file.sh 生成（{{DATE}} / {{AUTHOR}}）
+// 覆盖三路径: 正常 / 降级 / 边界（铁律 48）；改坏实现 ⇒ 本文件必红。
+// 占位符由生成器填: {{NAME}}·{{IDENT}}·{{DATE}}·{{AUTHOR}}·{{IMPORT}}（实现件相对导入路径），
+// 以及 CASE_BLOCK 占位块（生成器按 kind 填入三组断言：模板管骨架，kind 专属断言归生成器）。
+import { {{IDENT}} } from '{{IMPORT}}';
+
+{{CASE_BLOCK}}

@@ -17,12 +17,16 @@
  *             contexts?（≥1，每条 source 须是 §2.4 四形态之一）＋ systemAddendum?（去空白后非空）＋
  *             outputTemplate?（sections ≥1）
  *   @output — `ConfigPackResult`：{ written, planned, skipped, rejected, degraded, errors }
- *             `rejected[]` 元素 = { roleId, code, missingParams } —— **机器判据唯一落点**；
+ *             `rejected[]` 元素 = { roleId, code, missingParams, **badParams?** } —— **机器判据唯一落点**；
+ *             `badParams` 是 #1104 的 **additive** 字段：只放**格式非法**的取值（≤5 条，超出 `…(+N)` 截断），
+ *             `missingParams` 只放**缺失**字段名（两者禁混用）；
  *             顶层**不另造** `code` 字段（防两真源；J4 明文）。`dryRun=true` ⇒ 一律不落盘
  *             （`written` 空，`planned` 列将写路径 —— 卡面 V1 判据探针据此判红）。
  *   @degraded — 目录不可写／写失败 ⇒ **不抛**，进 `errors[]` ＋ `log.error` ＋ `degraded:true`
  *             （铁律 11/24/31：不静默降级）。任一角色缺项 ⇒ `ROLE_SEED_INCOMPLETE`；
- *             `contexts.source` 不可投影 ⇒ `ROLE_SEED_BAD_SOURCE` —— 两者都是**该角色零写入**、不抛。
+ *             `contexts.source` 不可投影 ⇒ `ROLE_SEED_BAD_SOURCE`；
+ *             `knowledgeScope[]` 取值格式非法（不符 `^[a-z0-9][a-z0-9.-]{0,63}$`）⇒ `ROLE_SEED_BAD_SCOPE_ID`
+ *             （#1104 / 规格 §4.5-C2；**执行体＝本文件**，规格 §10-L15）—— 三者都是**该角色零写入**、不抛。
  *             roleId 非法（非 `[a-z0-9-]+`）⇒ 跳过并实名进 `skipped`/`errors`（**防路径穿越**）。
  *   @error  — 生成期**不 throw**（契约：调用方按 `rejected[]`／`errors[]` 判定）；拒绝码是 typed 常量
  *             （`RoleSeedRejectionCode`），禁裸字符串回落。
@@ -36,11 +40,14 @@
  * 🔴 已知限制（禁写"暂无"）:
  *   ① `profile.<key>` 只投影不校验白名单 —— 装载期由 `reconcileRefs()` 判（本批仅 `business-plan`，
  *      规格 §10-L2）。
- *   ② contexts 的 scope 引用与 `knowledgeScope` 不一致时**生成期不拒**（规格只给
- *      `ROLE_SEED_INCOMPLETE`／`ROLE_SEED_BAD_SOURCE` 两码）⇒ 该不一致在装载期红（refs 命中检查）；
- *      一致性由 P3 对话追问保证。
+ *   ② contexts 的 scope 引用与 `knowledgeScope` 不一致时**生成期不拒**（生成期错误码只有
+ *      `ROLE_SEED_INCOMPLETE`／`ROLE_SEED_BAD_SOURCE`／`ROLE_SEED_BAD_SCOPE_ID` 三码，无"一致性"码）
+ *      ⇒ 该不一致在装载期红（refs 命中检查）；一致性由 P3 对话追问保证。
+ *      `ROLE_SEED_BAD_SCOPE_ID` 只判 `knowledgeScope[]` **取值本身**的字符集/长度（#1104），不判语义一致性。
  *   ③ slug 归一按 §2.5-B **字面**（lower → 非 `[a-z0-9]` 归一 `-` → 去首尾 `-`）：纯非 ASCII label
  *      （如纯中文）归一为空 ⇒ id 形如 `ac.`／`capability.`。回退策略待 P3 定，本批不发明新规则。
+ *   ④ `badParams` 的**截断**只记条数（`…(+N)`），被截断的原值**既不返回也不落日志** —— 取舍：非法输入
+ *      不得让 400 响应体／日志随条数无界增长（§4.5-C1 上限 5 条）；需要完整原值时由调用方对原始 seed 自行点名。
  */
 import { createLogger } from '@synova/logger';
 import { mkdirSync, writeFileSync } from 'fs';
@@ -63,8 +70,20 @@ const ROLES_SUBDIR = 'roles';
 /** 🔴 角色 id 白名单（防路径穿越：`../` / 绝对路径 / 空段一律不合法） */
 const SAFE_ROLE_ID = /^[a-z0-9][a-z0-9-]{0,62}$/;
 
+/**
+ * 🔴 知识范围 scope id 白名单（规格 §4.5-C2；#1104 —— 此前只写在 JSDoc，无执行体）。
+ * 与 `SAFE_ROLE_ID` 同风格：首字符须字母/数字，其余 `[a-z0-9.-]`，总长 ≤64（`{0,63}` ⇒ 含首字符恰 64 过、65 拒）。
+ */
+const SAFE_SCOPE_ID = /^[a-z0-9][a-z0-9.-]{0,63}$/;
+
+/** `badParams` 逐条上限（规格 §4.5-C1：最多 5 条，超出以 `…(+N)` 截断并计数） */
+const MAX_BAD_PARAMS = 5;
+
 /** 生成期拒绝码（typed；§4.5-C1 —— 禁裸字符串） */
-export type RoleSeedRejectionCode = 'ROLE_SEED_INCOMPLETE' | 'ROLE_SEED_BAD_SOURCE';
+export type RoleSeedRejectionCode =
+  | 'ROLE_SEED_INCOMPLETE'
+  | 'ROLE_SEED_BAD_SOURCE'
+  | 'ROLE_SEED_BAD_SCOPE_ID';
 
 /** 一个上下文来源的采集种子（§2.5-A） */
 export interface RoleContextSeed {
@@ -127,6 +146,12 @@ export interface RejectedRole {
   readonly code: RoleSeedRejectionCode;
   /** 逐字段点名的缺项（INCOMPLETE）或坏 source 的字段路径（BAD_SOURCE），如 `contexts[0].source` */
   readonly missingParams: readonly string[];
+  /**
+   * **格式非法**的取值（`ROLE_SEED_BAD_SCOPE_ID` 时为非法的 scope id 原值；#1104 additive）。
+   * 🔴 语义不混用：本字段只放**取值**，`missingParams` 只放**缺失字段名**。
+   * 最多 5 条，超出以 `…(+N)` 截断并计数（N = 超出条数，如 8 条非法 ⇒ 5 条 ＋ `…(+3)`）。
+   */
+  readonly badParams?: readonly string[];
 }
 
 /** `generateConfigPack()` 返回 */
@@ -174,6 +199,36 @@ export function missingSeedParams(seed: RoleSeed): readonly string[] {
   if (seed.outputTemplate === undefined) missing.push('outputTemplate');
   else if (!hasItems(seed.outputTemplate.sections)) missing.push('outputTemplate.sections');
   return missing;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 一bis、纯核：seed 取值合法性（#1104 / 规格 §4.5-C2「knowledgeScope」行）
+// ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * 列出知识范围里**格式非法**的 scope id **原值**（保序；纯函数、零 IO、不抛）。
+ *
+ * 🔴 判据（§4.5-C2）：每条须匹配 `SAFE_SCOPE_ID`（`^[a-z0-9][a-z0-9.-]{0,63}$`）——
+ *   空/缺 ⇒ 归 `ROLE_SEED_INCOMPLETE`（缺项，走 `missingSeedParams`）；
+ *   **有但字符集不符或长度 >64 ⇒ 本函数点名** ⇒ 生成器拒绝该角色（`ROLE_SEED_BAD_SCOPE_ID`）。
+ *
+ * @param seed - 采集种子
+ * @returns 非法取值的原值数组（空数组 = 全部合法；**不改写、不归一**，便于调用方原样点名脱敏）
+ */
+function invalidScopeIds(seed: RoleSeed): readonly string[] {
+  const scope = seed.knowledgeScope ?? [];
+  return scope.filter((id) => !SAFE_SCOPE_ID.test(id));
+}
+
+/**
+ * `badParams` 截断（§4.5-C1：最多 5 条，超出以 `…(+N)` 截断并计数）。
+ *
+ * @param values - 非法取值（原值，已保序）
+ * @returns ≤5 条原值；超出时末条为 `…(+N)`（N = 超出条数）
+ */
+function summarizeBadParams(values: readonly string[]): readonly string[] {
+  if (values.length <= MAX_BAD_PARAMS) return values;
+  return [...values.slice(0, MAX_BAD_PARAMS), `…(+${String(values.length - MAX_BAD_PARAMS)})`];
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -398,13 +453,41 @@ export function generateConfigPack(input: GenerateConfigPackInput): ConfigPackRe
     }
 
     // ② 缺项 ⇒ 拒绝写（零部分写；不 mkdir）
+    // 🔴 顺序（#1104 / §施工补充 项 5）：**先 INCOMPLETE（缺）再 BAD_SCOPE_ID（有但坏）** ——
+    //    两者同时命中时以 INCOMPLETE 优先（缺字段才是阻断主因），但坏值**不丢**：随 badParams 带出。
     const missing = missingSeedParams(seed);
+    const illegalScopeIds = invalidScopeIds(seed);
+    const badParams = illegalScopeIds.length > 0 ? summarizeBadParams(illegalScopeIds) : undefined;
     if (missing.length > 0) {
-      rejected.push({ roleId: seed.roleId, code: 'ROLE_SEED_INCOMPLETE', missingParams: missing });
+      rejected.push({
+        roleId: seed.roleId,
+        code: 'ROLE_SEED_INCOMPLETE',
+        missingParams: missing,
+        ...(badParams === undefined ? {} : { badParams }),
+      });
       errors.push(`${seed.roleId}: 缺项 ${missing.join(', ')}（ROLE_SEED_INCOMPLETE，该角色零写入）`);
       log.warn(
-        { roleId: seed.roleId, code: 'ROLE_SEED_INCOMPLETE', missingParams: missing, degraded: true },
+        { roleId: seed.roleId, code: 'ROLE_SEED_INCOMPLETE', missingParams: missing, badParams, degraded: true },
         '角色种子缺项 — 拒绝生成（零部分写）',
+      );
+      continue;
+    }
+
+    // ②b 有但坏：knowledgeScope 取值格式非法 ⇒ 拒绝写（零文件、不 mkdir —— #1104）
+    if (badParams !== undefined) {
+      rejected.push({
+        roleId: seed.roleId,
+        code: 'ROLE_SEED_BAD_SCOPE_ID',
+        missingParams: [],
+        badParams,
+      });
+      errors.push(
+        `${seed.roleId}: knowledgeScope 取值非法 ${badParams.join(', ')}` +
+          `（须匹配 ${String(SAFE_SCOPE_ID)}；ROLE_SEED_BAD_SCOPE_ID，该角色零写入）`,
+      );
+      log.warn(
+        { roleId: seed.roleId, code: 'ROLE_SEED_BAD_SCOPE_ID', badParams, degraded: true },
+        '角色种子 scope id 格式非法 — 拒绝生成（零部分写）',
       );
       continue;
     }

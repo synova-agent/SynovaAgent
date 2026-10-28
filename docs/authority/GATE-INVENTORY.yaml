@@ -1224,3 +1224,19 @@ classification:
     entrypoint: scripts/control-tower/verify-parallel.sh
     required_ci: true
     confirmed_by: pending-cto
+
+
+  - id: CT-check-mirror-freshness
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-mirror-freshness.sh
+    required_ci: true
+    confirmed_by: pending-cto
+  - id: CT-check-ci-empty-green
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-ci-empty-green.sh
+    required_ci: true
+    confirmed_by: pending-cto

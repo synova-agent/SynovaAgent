@@ -1,0 +1,30 @@
+# .claude/claims/1096.yaml — #1096 W6 判据自检库（ga_run 三态归一 · 128 不当 0）
+# 批次 W6 · 分支 feat/1096-gate-assert（base gitea/local-main 0569f2d4b）
+# 产品件 9 件：库件 1／配对测试 1／坑清单 1／两登记表追加／豁免件 1／交付配套 3（brief/claim/Note）。
+# `.claude/claims/**`、`.claude/task-briefs/**`、`memory/notes/**` 属交付配套载体（memory/notes/AGENTS.md ·
+#   裁定 168-C；D328「提交声明-认领对账」门禁触发）⇒ 不是写集扩张（同型先例 claims/1071.yaml、claims/1072.yaml）。
+# 受保护路径 4 条（scripts/control-tower/**、tests/control-tower/**、gate-exemptions/**、
+#   docs/authority/DOCS-REGISTRY.yaml）逐条有合规豁免行 → gate-exemptions/2026-10-28-1096-gate-assert.md。
+# 边界（零交集）：不改 `scripts/audit/**`、`scripts/control-tower/probe-*.ts`、`.gitea/**`、
+#   `scripts/pre-commit-check.sh`、`src/**`。
+writeset:
+  - scripts/control-tower/gate-assert.sh
+  - tests/control-tower/gate-assert.test.sh
+  - docs/authority/gate-pitfalls.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - docs/authority/WIRING-REGISTRY.yaml
+  - gate-exemptions/2026-10-28-1096-gate-assert.md
+  - .claude/task-briefs/2026-10-28-1096-gate-assert.md
+  - .claude/claims/1096.yaml
+  - memory/notes/proposed/2026-10-28-1096-gate-assert.md
+done:
+  - verify: bash tests/control-tower/gate-assert.test.sh
+  - verify: bash scripts/control-tower/gate-assert.sh --selfcheck
+  - verify: SYNO_GA_DRY=1 bash scripts/control-tower/gate-assert.sh
+  - verify: bash -n scripts/control-tower/gate-assert.sh
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main --root .
+  - verify: bash scripts/doc-system/doc-registry-gate.sh
+  - verify: grep -q '新增判据须先读本件' docs/authority/gate-pitfalls.md
+  - verify: grep -q 'gate.assertLib' docs/authority/WIRING-REGISTRY.yaml
+  - verify: grep -q 'DOC-0319' docs/authority/DOCS-REGISTRY.yaml
+note: "#1096 W6 判据自检库：scripts/control-tower/gate-assert.sh 提供 ga_run <判据名> -- <命令...>（三态归一：0 透传/1 透传/2 透传；126/127/128/137/其它非白名单码一律归 2 并在 stderr 点名「判据故障: <code>」，绝不归 0），自带 SYNO_GA_DRY=1 零 spawn 归一表自检与 --selfcheck 真 spawn 夹具自检；tests/control-tower/gate-assert.test.sh 13 组用例（含 128≠0 关键判据、命令不存在、|| true 吞错如实记 0、SYNO_GA_SUT 变异注入改坏即红）；docs/authority/gate-pitfalls.md 判据已知坑清单首条＝Windows os.path.relpath 反斜杠 vs 基线正斜杠 ⇒ 存量被算成新增（实测 SYNO_CI=1 content-coupling 新增 473/基线 88 条待下调）。登记 DOCS-REGISTRY DOC-0319/0320＋WIRING gate.assertLib（declared-only，本批不接线）；豁免件 4 行覆盖受保护路径（含自覆盖）。已知限制：库看不见判据内部被 || true 吞掉的错；WIRING-REGISTRY 的 quality-baseline --check-registry 在 base 上即红（YAML 子集解析器遇存量裸标量报 E_YAML ＋ reportMirrorPushes 行缺 owner），属存量非本批引入。"

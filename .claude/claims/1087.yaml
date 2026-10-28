@@ -1,0 +1,14 @@
+writeset:
+  - scripts/pre-commit-check.sh
+  - .claude/claims/1087.yaml
+  - scripts/control-tower/check-mirror-freshness.sh
+  - tests/control-tower/check-mirror-freshness.test.sh
+  - gate-exemptions/2026-10-28-1087-mirror-freshness.md
+  - .claude/task-briefs/2026-10-28-1087-mirror-freshness.md
+  - memory/notes/proposed/2026-10-28-1087-mirror-freshness.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - docs/authority/WIRING-REGISTRY.yaml
+done:
+  - verify: bash tests/control-tower/check-mirror-freshness.test.sh
+  - verify: bash scripts/control-tower/check-mirror-freshness.sh --canonical nope
+note: "#1087 W5 镜象新鲜度检查器（旧树假绿检测）：只读三态 + 16 用例 + 判不了 exit 2。"
