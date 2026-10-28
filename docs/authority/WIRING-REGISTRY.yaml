@@ -214,3 +214,13 @@ entries:
     status: wired
     owner: P4
     notes: "#1089 W1：三态登记校验器。**已接线**（W0/#1093）：`scripts/pre-commit-check.sh` 的「附: 治理面自检」段以 `hard_check` 调用（本地软提示/CI strict 硬阻断）；接线首日即抓出 `CT-check-gate-inventory` 自身 `required_ci:false` 的账实不符（已改 true）。"
+
+  # ---- P4 2026-10-28：#1122 门禁配额制 Step 1 · 总闸最小可跑版（governance.verifyGovernance）----
+  - capability: governance.verifyGovernance
+    defined_at: "scripts/control-tower/verify-governance.sh:1"
+    provider: "scripts/control-tower/verify-governance.sh:1"
+    consumer: null
+    test: "tests/control-tower/verify-governance.test.sh"
+    status: declared-only
+    owner: P4
+    notes: "#1122 Step 1（规格 §4 G2/G6/G10 最小可跑版）：逐项 PASS/FAIL/SKIP ＋ 末行 `GOVERNANCE: x/y PASS`，判不了 exit 2。**本批未接线**（写集不含 scripts/pre-commit-check.sh 与 .gitea/workflows/**）⇒ 只有显式调用才跑；consumer 空是实测不是遗漏。接线后改 wired 并填真实调用点。"

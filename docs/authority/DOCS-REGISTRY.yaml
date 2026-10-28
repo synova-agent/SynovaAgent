@@ -1381,3 +1381,10 @@ documents:
     status: active
     owner: P4
     note: "#1108（W10）：scripts/control-tower/**（新扫描器 check-unicode-confusable.py）＋ tests/control-tower/**（配对测试）＋ scripts/pre-commit-check.sh（治理面自检段接入）＋ .gitea/workflows/**（⑥ step）＋ gate-exemptions/**（自覆盖）＋ docs/authority/DOCS-REGISTRY.yaml（自登记）受保护路径豁免；A/B/C 分档 P0 阻断、D 档仅提醒、只判 diff 新增行；已接线（WIRING=wired）。"
+  # ---- P4 2026-10-28：#1122 门禁配额制 Step 1 总闸最小可跑版豁免登记（DOC-0324，末号 0323 加一）----
+  - id: DOC-0324
+    type: decision
+    path: gate-exemptions/2026-10-28-1122-verify-governance.md
+    status: active
+    owner: P4
+    note: "#1122（Step 1）：scripts/control-tower/verify-governance.sh（G2 遥测 ran 判定 / G6 复用 ga_run 归一 / G10 同形字两态）＋ tests/control-tower/verify-governance.test.sh（配对测试 T0 至 T16）受保护路径豁免；判不了 exit 2、遥测缺失 SKIP 不计 PASS；本批未接线（WIRING=declared-only）；含自覆盖行与 DOCS-REGISTRY 自登记行。"

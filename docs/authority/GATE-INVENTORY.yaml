@@ -1248,3 +1248,12 @@ classification:
     entrypoint: scripts/control-tower/check-unicode-confusable.py
     required_ci: true
     confirmed_by: pending-cto
+  # ---- P4 2026-10-28：#1122 Step 1 总闸最小可跑版（纯追加；class P1 ＝ 质量类汇总判据，未接线故 required_ci: false）----
+  - id: CT-verify-governance
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/verify-governance.sh
+    required_ci: false
+    confirmed_by: pending-cto
+
