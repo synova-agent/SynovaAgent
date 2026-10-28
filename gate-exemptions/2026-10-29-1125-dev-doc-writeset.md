@@ -1,3 +1,4 @@
+# review: #1137
 # gate-exemptions — #1125 写集门禁补删除项语义（D 进变更集）
 
 - scripts/workflow/check-dev-doc-write-set.sh — 三处变更集补 D 并改带状态判（声明删除 ⇔ D 出现；声明修改仍须 A/C/M/R；git 不可用 ⇒ exit 2） — #1125
