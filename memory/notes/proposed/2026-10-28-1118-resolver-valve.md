@@ -23,7 +23,7 @@
 | 解析器 | `scripts/control-tower/resolve-ci-base.sh` | `case` 拆两臂：`main)` 直通 `gitea/main`（无阀）｜`local-main)` 标 `LEGACY_ALIAS=1`；**④b 安全阀**只在别名路径生效：候选 `refs/heads/local-main` ＋ `refs/remotes/*/local-main` 与 canonical 比 SHA —— 相等 ⇒ 放行；候选是祖先 ⇒ `::warning` 容忍（同干陈旧）；**分叉 / 候选领先 ⇒ `die` exit 2** |
 | 头注 | 同上 | `@exit` 补「legacy 别名非同干 ⇒ 2」；顺手修正 #1115 留下的错字（新鲜度断言写成了 local-main 跟踪引用，代码实为 main） |
 | 配对测试 | `tests/control-tower/resolve-ci-base.test.sh` | 修存量 3/4/5（断言与 `update-ref` 物化路径 → `gitea/main`）；补 9 至 14b：同 SHA ⇒ 0｜祖先 ⇒ 0＋「容忍」告警｜分叉 ⇒ 2＋「非同干」｜领先 ⇒ 2｜非别名 `main` 不误伤 ⇒ 0｜**改坏即红两条**（删 `local-main)` 臂 ⇒ 用例 9 红；删阀 `die` ⇒ 用例 11 红） |
-| 豁免/登记 | `gate-exemptions/2026-10-28-1118-resolver-valve.md`、`docs/authority/DOCS-REGISTRY.yaml` | 首行 `# review: #1118`；四条受保护路径（解析器／测试／自覆盖／DOCS-REGISTRY 自登记）；`DOC-0325` |
+| 豁免/登记 | `gate-exemptions/2026-10-28-1118-resolver-valve.md`、`docs/authority/DOCS-REGISTRY.yaml` | 首行 `# review: #1118`；四条受保护路径（解析器／测试／自覆盖／DOCS-REGISTRY 自登记）；`DOC-1118`（R1 口径：id = DOC-<Issue#>） |
 
 ## 为什么容忍「祖先」而拒绝「分叉/领先」
 
