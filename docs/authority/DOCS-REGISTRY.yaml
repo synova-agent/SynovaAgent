@@ -1389,8 +1389,8 @@ documents:
     owner: P4
     note: "#1115（冻结期阶段 1）：7 处无回退链的 local-main 主引用切 main（四条件基线/镜像/触发/canonical）＋豁免自覆盖＋DOCS-REGISTRY 自登记；local-gates.yml 与 pre-commit-check.sh 因与 #943/#801 写集重叠移出，留清理批；SYNO_TRUNK 语义由既有环境变量覆盖，不改判据强度。"
 
-  # ---- P4 2026-10-28：#1112 W6 接线豁免登记（DOC-0325；0323 为最大已用号，先读末号 +1）----
-  - id: DOC-0325
+  # ---- P4 2026-10-28：#1112 W6 接线豁免登记（DOC-1112；0323 为最大已用号，先读末号 +1）----
+  - id: DOC-1112
     type: decision
     path: gate-exemptions/2026-10-28-1112-w6-wiring.md
     status: active
