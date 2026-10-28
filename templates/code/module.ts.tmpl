@@ -1,0 +1,20 @@
+// {{NAME}} — 由 scripts/dev/new-file.sh 生成（{{DATE}} / {{AUTHOR}}）
+//
+// 契约（铁律 47 / D257）:
+//   @input  value: string —— 唯一入参；空白串按非法输入处理（见 @degraded）
+//   @output {{IDENT}}Result —— { value: 去首尾空白后的规范值, degraded: 是否走了降级路径 }
+//   @degraded value 去空白后为空 ⇒ 返回 { value: '', degraded: true }（不抛异常、不返回半截数据）
+//
+// 模板占位符由生成器填: {{NAME}}（kebab 文件名）·{{IDENT}}（PascalCase 标识符）·{{DATE}}·{{AUTHOR}}。
+export interface {{IDENT}}Result {
+  value: string;
+  degraded: boolean;
+}
+
+export function {{IDENT}}(value: string): {{IDENT}}Result {
+  const normalized = value.trim();
+  if (normalized === '') {
+    return { value: '', degraded: true };
+  }
+  return { value: normalized, degraded: false };
+}

@@ -152,3 +152,13 @@ entries:
     status: wired
     owner: P1
     notes: "岗位包 v2 装载期结构＋refs 校验（#1075 批一 P1-a）；消费者＝loader 唯一入口（content-registry boot/reload）；随仓 JSON Schema 是契约、zod 是执行体（drift 测试钉死键集）"
+
+  # ---- P4 2026-10-28：#1101 W7 · L0 脚手架（dev.scaffold；人工调用，无自动消费者）----
+  - capability: dev.scaffold
+    defined_at: "scripts/dev/new-file.sh:1"
+    provider: "scripts/dev/new-file.sh:1"
+    consumer: null
+    test: "tests/control-tower/new-file.test.sh"
+    status: declared-only
+    owner: P4
+    notes: "#1101 W7-L0：人工调用生成器（bash scripts/dev/new-file.sh / npm run new）产出实现件＋配对测试件，无自动消费者；门禁侧的消费面是 scripts/pre-commit-check.sh 的「附: 三段契约兜底」段（判新文件三段契约齐），该段不调用本生成器。"

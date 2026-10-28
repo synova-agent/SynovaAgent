@@ -1317,3 +1317,11 @@ documents:
     status: active
     owner: P4
     note: "#1072（裁 427 D3）：scripts/workflow/check-brief-parseable.sh＋两测试件受保护路径豁免（空参 fail-closed；含铺底 #1071 两受保护件）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+
+  # ---- P4 2026-10-28：#1101 W7 · L0 脚手架豁免登记（DOC-0322，按派单指定号落号）----
+  - id: DOC-0322
+    type: decision
+    path: gate-exemptions/2026-10-28-1101-scaffold.md
+    status: active
+    owner: P4
+    note: "#1101（W7-L0）：scripts/pre-commit-check.sh ＋ tests/control-tower/** ＋ docs/authority/DOCS-REGISTRY.yaml 等受保护路径豁免（生成器＋三模板＋「附: 三段契约兜底」段）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
