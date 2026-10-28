@@ -1075,7 +1075,7 @@ classification:
     owner: P4
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-gate-inventory.sh
-    required_ci: false
+    required_ci: true
     confirmed_by: pending-cto
   - id: CT-check-gate-protection
     class: P0

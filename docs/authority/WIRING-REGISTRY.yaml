@@ -155,8 +155,8 @@ entries:
   - capability: governance.gateInventory
     defined_at: "scripts/control-tower/check-gate-inventory.sh:1"
     provider: "scripts/control-tower/check-gate-inventory.sh:1"
-    consumer: null
+    consumer: "scripts/pre-commit-check.sh:2224"
     test: "tests/control-tower/check-gate-inventory.test.sh"
-    status: declared-only
+    status: wired
     owner: P4
     notes: "#1089 W1：三态登记校验器。消费侧＝CI 腿/提交腿，但接线需改 scripts/pre-commit-check.sh 或 .gitea/workflows（P4 写集外）⇒ 本批无生产消费者，consumer 空是实测不是遗漏；接线另批。"

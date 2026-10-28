@@ -1,4 +1,5 @@
 writeset:
+  - scripts/pre-commit-check.sh
   - .claude/claims/1089.yaml
   - docs/authority/GATE-INVENTORY.yaml
   - docs/authority/DOCS-REGISTRY.yaml
