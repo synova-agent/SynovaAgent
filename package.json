@@ -11,6 +11,7 @@
   "scripts": {
     "postinstall": "patch-package",
     "dev": "scripts\\agent-start.bat",
+    "new": "bash scripts/dev/new-file.sh",
     "mvp": "tsx src/mvp-server.ts",
     "mcp": "tsx src/mcp/index.ts",
     "chat": "tsx src/cli.ts",

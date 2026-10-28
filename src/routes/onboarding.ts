@@ -20,13 +20,18 @@
  *             🔴 **409** `{ ok:false, code:'SUPER_ADMIN_CONFIRMATION_REQUIRED', message, data, degraded:true }`
  *             —— 命中「有落盘意图 ∧ 未超管确认」时**两条入口都拒绝**（裁 425 / C1）；
  *             入参非法 ⇒ 400 `{ok:false,code,message}`；
+ *             🔴 **#1075 P1-b seed 缺项（两端点语义不同，钉死）**：
+ *               · `/start`（预览）⇒ **不 400**：200 ＋ `data.configPack.rejected[]`（`code`／`missingParams`）
+ *                 ＋ `data.degraded:true` —— 预览的职责就是「告诉你缺什么」；
+ *               · `/apply`（真落盘）⇒ **400** `{ok:false, error:{code:'ROLE_SEED_INCOMPLETE', missingParams}, degraded:true}`，
+ *                 **磁盘零写入**（门序在前 ⇒ 先 409 门、后 seed 校验；本层**不调用** flow）。
  *             内部异常 ⇒ 500 `{ok:false,code:'INTERNAL_ERROR',degraded:true}`（铁律 31）
  *   @degraded — 流程内失败已由 `runOnboardingFlow` 收成 `report.degraded` + `errors[]`，
  *             本层**原样透出**（不吞）；写响应失败才走 500 catch。
  *             拒绝路径（409）必记一条 `log.warn`（code / phase / retryable / degraded:true，禁静默）。
  *
  * 🔴 裁 425 / C1（#1061）—— **真落盘点在 `onboarding-flow.ts:130` 的 `generateConfigPack(...)`**
- *   （`dryRun !== true` 即真写 `extensions/presets/roles/<id>/` 实物 3 件），它在 flow 的 ④ 步；
+ *   （`dryRun !== true` 即真写 `extensions/presets/roles/<id>/` 实物 6 件），它在 flow 的 ④ 步；
  *   而 ⑤ 超管确认（`:151` 的 `confirmed`）与 ⑥ `deploy`（`:170`，**只写状态行**）都在它**之后**
  *   ⇒ 旧实现"先 `runOnboardingFlow(input)` 再判 `!superAdminConfirmed`"是**失实的 fail-closed**:
  *   409 发出时文件**已经落盘**。现门控**前移**到调用 flow 之前（`superAdminGateBlocks()`），
@@ -45,7 +50,12 @@
 import { Router, type Request, type Response } from 'express';
 import { createLogger } from '@synova/logger';
 import { runOnboardingFlow, ONBOARDING_STEPS, type OnboardingInput } from '../onboarding/onboarding-flow';
-import type { RoleSeed } from '../onboarding/config-pack-generator';
+import {
+  missingSeedParams,
+  type RoleContextSeed,
+  type RoleOutputSectionSeed,
+  type RoleSeed,
+} from '../onboarding/config-pack-generator';
 import { buildQuestionTable } from '../onboarding/gap-questioner';
 
 const log = createLogger('routes/onboarding');
@@ -56,20 +66,118 @@ function stringList(value: unknown): string[] {
   return value.filter((v): v is string => typeof v === 'string' && v.length > 0);
 }
 
+/** 从 body 取非空字符串（非法/空 ⇒ undefined，由缺项判定点名） */
+function optionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+/** 从 body 取布尔（非 boolean ⇒ undefined，由缺项判定点名） */
+function optionalBoolean(value: unknown): boolean | undefined {
+  return typeof value === 'boolean' ? value : undefined;
+}
+
+/**
+ * 从 body 取上下文清单（形态守卫；逐项要求 `id`/`label`/`source` 非空字符串）。
+ *
+ * 🔴 非法项**丢弃并 log.warn**（不静默）：丢弃后该角色的 `contexts` 可能变空 ⇒ 由缺项判定点名
+ *   `contexts`；**不在此处臆造默认值**（防"缺项被填成空壳"）。
+ */
+function contextSeeds(value: unknown): RoleContextSeed[] {
+  if (!Array.isArray(value)) return [];
+  const out: RoleContextSeed[] = [];
+  for (const raw of value) {
+    if (typeof raw !== 'object' || raw === null) continue;
+    const rec = raw as { id?: unknown; label?: unknown; source?: unknown; why?: unknown; required?: unknown };
+    const id = optionalString(rec.id);
+    const label = optionalString(rec.label);
+    const source = optionalString(rec.source);
+    if (id === undefined || label === undefined || source === undefined) {
+      log.warn({ id, label, source }, 'contexts 条目形态非法 — 丢弃该条（缺项由 rejected[] 点名）');
+      continue;
+    }
+    const why = optionalString(rec.why);
+    const required = optionalBoolean(rec.required);
+    out.push({
+      id,
+      label,
+      source,
+      ...(why !== undefined ? { why } : {}),
+      ...(required !== undefined ? { required } : {}),
+    });
+  }
+  return out;
+}
+
+/**
+ * 从 body 取输出模板（形态守卫；`templateId` 缺失 ⇒ undefined＝整体缺项；
+ * `sections` 内非法/空 `must` 的节被丢弃 ⇒ sections 变空 ⇒ 缺项判定点名 `outputTemplate.sections`）。
+ */
+function outputTemplateSeed(value: unknown): RoleSeed['outputTemplate'] {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const rec = value as { templateId?: unknown; sections?: unknown; emptyState?: unknown };
+  const templateId = optionalString(rec.templateId);
+  if (templateId === undefined) return undefined;
+  const sections: RoleOutputSectionSeed[] = [];
+  if (Array.isArray(rec.sections)) {
+    for (const raw of rec.sections) {
+      if (typeof raw !== 'object' || raw === null) continue;
+      const section = raw as { id?: unknown; title?: unknown; must?: unknown };
+      const id = optionalString(section.id);
+      const title = optionalString(section.title);
+      const must = stringList(section.must);
+      if (id === undefined || title === undefined || must.length === 0) {
+        log.warn({ id, title, mustItems: must.length }, 'outputTemplate.sections 节形态非法 — 丢弃该节');
+        continue;
+      }
+      sections.push({ id, title, must });
+    }
+  }
+  const emptyState = optionalString(rec.emptyState);
+  return { templateId, sections, ...(emptyState !== undefined ? { emptyState } : {}) };
+}
+
 /** 从 body 取角色种子（形态守卫；非法项丢弃并记 log） */
 function roleSeeds(value: unknown): RoleSeed[] {
   if (!Array.isArray(value)) return [];
   const out: RoleSeed[] = [];
   for (const raw of value) {
     if (typeof raw !== 'object' || raw === null) continue;
-    const rec = raw as { roleId?: unknown; knowledgeScope?: unknown; capabilities?: unknown; acceptanceCriteria?: unknown };
+    const rec = raw as {
+      roleId?: unknown;
+      knowledgeScope?: unknown;
+      capabilities?: unknown;
+      acceptanceCriteria?: unknown;
+      contexts?: unknown;
+      systemAddendum?: unknown;
+      outputTemplate?: unknown;
+    };
     if (typeof rec.roleId !== 'string' || rec.roleId.length === 0) continue;
+    const systemAddendum = optionalString(rec.systemAddendum);
+    const outputTemplate = outputTemplateSeed(rec.outputTemplate);
     out.push({
       roleId: rec.roleId,
       knowledgeScope: stringList(rec.knowledgeScope),
       capabilities: stringList(rec.capabilities),
       acceptanceCriteria: stringList(rec.acceptanceCriteria),
+      contexts: contextSeeds(rec.contexts),
+      ...(systemAddendum !== undefined ? { systemAddendum } : {}),
+      ...(outputTemplate !== undefined ? { outputTemplate } : {}),
     });
+  }
+  return out;
+}
+
+/**
+ * 汇总多角色的缺项（去重保序；`/apply` 400 body 的 `missingParams` 来源）。
+ *
+ * 🔴 复用 generator 的 `missingSeedParams()`（**唯一缺项口径**；本文件不自判）。
+ */
+function collectMissingParams(roles: readonly RoleSeed[]): string[] {
+  const out: string[] = [];
+  for (const role of roles) {
+    for (const param of missingSeedParams(role)) {
+      if (!out.includes(param)) out.push(param);
+    }
   }
   return out;
 }
@@ -183,6 +291,24 @@ router.post('/api/onboarding/apply', (req: Request, res: Response) => {
     //   现在门在 flow 之前：拒绝 = 落盘意图降级为 dry-run（磁盘零写入）＋ 409 ＋ log.warn。
     const blocked = superAdminGateBlocks(requested);
     const input: OnboardingInput = blocked ? { ...requested, dryRun: true } : requested;
+    // 🔴 #1075 P1-b（**门序不回退**：先门后 seed 校验）—— 已确认请求若 seed 缺项 ⇒ 400 且
+    //   **不调用 flow**（磁盘零写入：既不写 6 件、也不写 `.synova/onboarding-audit.log`）。
+    //   `missingParams` 复用 generator 的 `missingSeedParams()`（唯一缺项口径）。
+    if (!blocked) {
+      const missing = collectMissingParams(requested.roles ?? []);
+      if (missing.length > 0) {
+        log.warn(
+          { code: 'ROLE_SEED_INCOMPLETE', missingParams: missing, degraded: true, entry: '/api/onboarding/apply' },
+          '建档 apply 被拒 — seed 缺项（磁盘零写入；机器判据读 error.missingParams）',
+        );
+        res.status(400).json({
+          ok: false,
+          error: { code: 'ROLE_SEED_INCOMPLETE', missingParams: missing },
+          degraded: true,
+        });
+        return;
+      }
+    }
     const report = runOnboardingFlow(input);
     if (blocked) {
       logSuperAdminConfirmationRequired('/api/onboarding/apply');

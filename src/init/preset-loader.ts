@@ -40,7 +40,7 @@
  */
 import { createLogger } from '@synova/logger';
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { load as parseYaml } from 'js-yaml';
 import {
   ROLE_PACK_PIECES,
@@ -375,8 +375,19 @@ function isNonEmptyFile(abs: string): boolean {
  * #1075 P1-a：六件存在性判定后接 `validateRolePackDir()`（结构 ＋ `pieces`/`refs`/内容源三方对账）；
  *   问题逐条折成 `${roleId}: ${code} ${message}` 进 `errors[]`（点名可 grep）＋ `degraded:true`，**不抛**。
  *   🔴 `manifest.json` 缺件时**跳过** schema 校验（缺件已由 `missing`＋errors 报，不再级联 UNREADABLE）。
+ *
+ * #1104（规格 §10-L14）：`repoRoot` 由调用方**显式传入** —— 来源＝内容根派生
+ *   （内容根形如 `<root>/extensions/presets`，故 `repoRoot = resolve(root, '../..')`，见 `loadRolePacks()`）。
+ *   🔴 判据：`kind=file` 的 refs 按本参数解析，**不得**回退 `process.cwd()` —— 否则打包/桌面形态
+ *   （cwd≠仓库根）三个出厂包全部 degraded。本函数仍**不抛**：一切问题折进 `errors[]` ＋ `degraded:true`。
+ *
+ * @param rolesRoot - 角色目录的父目录（绝对路径）
+ * @param roleId - 角色 id（= 目录名）
+ * @param errors - 逐条问题累加器（调用方持有；本函数 push，不抛）
+ * @param repoRoot - `kind=file` 引用的解析基准（由内容根派生，禁 cwd）
+ * @returns {@link RolePack}
  */
-function readRolePack(rolesRoot: string, roleId: string, errors: string[]): RolePack {
+function readRolePack(rolesRoot: string, roleId: string, errors: string[], repoRoot: string): RolePack {
   const roleDir = join(rolesRoot, roleId);
   const pieces: string[] = [];
   const missing: string[] = [];
@@ -410,7 +421,7 @@ function readRolePack(rolesRoot: string, roleId: string, errors: string[]): Role
   // #1075 P1-a：v2 结构 ＋ refs 三方对账（IO 壳；不抛）。缺 manifest ⇒ 跳过（未校验）
   let validation: RolePackValidation = { ok: false, schemaVersion: null, problems: [], refsChecked: 0 };
   if (pieces.includes('manifest.json')) {
-    validation = validateRolePackDir(roleDir);
+    validation = validateRolePackDir(roleDir, { repoRoot });
     if (!validation.ok) {
       for (const problem of validation.problems) {
         errors.push(`${roleId}: ${problem.code} ${problem.message}`);
@@ -439,11 +450,16 @@ function readRolePack(rolesRoot: string, roleId: string, errors: string[]): Role
  * 装配角色预设包（boot 入口 / 判据入口）。
  *
  * 🔴 零参（探针只驱动零参导出）—— 内容根由 `process.cwd()` + `SYNOVA_PRESETS_ROOT` 推导。
+ * #1104：`repoRoot` 由**内容根派生**（`<root>/extensions/presets` ⇒ `resolve(root, '../..')`），
+ *   显式传给 `readRolePack()` → `validateRolePackDir()`；`SYNOVA_PRESETS_ROOT` 注入的临时夹具根
+ *   同理派生 —— 故 cwd≠仓库根时装载不再降级。
  */
 export function loadRolePacks(): PresetLoadReport {
   const errors: string[] = [];
   const root = resolvePresetsRoot();
   const rolesRoot = join(root, ROLES_SUBDIR);
+  // #1104：内容根形如 `<repoRoot>/extensions/presets` ⇒ 由它反推仓库根（禁 process.cwd()）
+  const repoRoot = resolve(root, '../..');
 
   if (!existsSync(root)) {
     // ENOENT = 正常默认：内容面未装 ⇒ degraded，不是错误
@@ -467,7 +483,7 @@ export function loadRolePacks(): PresetLoadReport {
   }
   roleIds.sort(); // 稳定顺序（判据可比对）
 
-  const roles = roleIds.map((id) => readRolePack(rolesRoot, id, errors));
+  const roles = roleIds.map((id) => readRolePack(rolesRoot, id, errors, repoRoot));
   const degraded = errors.length > 0 || roleIds.length === 0;
   log.info({ root, roles: roleIds.length, degraded }, '角色预设包已装配');
   return { root, roles, degraded, errors };
