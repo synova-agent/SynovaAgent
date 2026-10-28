@@ -1395,3 +1395,11 @@ documents:
     status: active
     owner: P2
     note: "#1075（P2-1）：scripts/control-tower/probe-knowledge-scope.ts 的 V6(ii) 夹具适配（断言不变，探针回基线）；含 gate-exemptions/** 自覆盖行与 DOCS-REGISTRY 自登记行。0323/#1108、0324/#1115 已占；本号按 A 随卡派生。"
+
+  # ---- #1134 2026-10-29：D331 对账基走 resolver（A 类语义变更）豁免登记（DOC-1134）----
+  - id: DOC-1134
+    type: decision
+    path: gate-exemptions/2026-10-29-1134-d331-resolver-base.md
+    status: active
+    owner: P4
+    note: "#1134（A 类，创始人 2026-10-29 裁定）：pre-push 的 D331 对账基改走 resolve-ci-base.sh（禁 trunk 字面）＋ check-bypass-log.sh 缺失改 fail-closed ＋ 判定体抽 d331-bypass-gate.sh 并可单测；含自覆盖行与 DOCS-REGISTRY 自登记行。"

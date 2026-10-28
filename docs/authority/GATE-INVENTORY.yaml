@@ -1001,12 +1001,13 @@ classification:
     required_ci: true
     confirmed_by: pending-cto
   - id: CT-check-bypass-log
-    class: P0
+    class: P1
     owner: P4
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-bypass-log.sh
     required_ci: true
     confirmed_by: pending-cto
+    note: "evidence=self-written-local-logbook; auditable=no; retired_after=W9-branch-protection; reason=#1134"
   - id: CT-check-canary-drift
     class: P1
     owner: P4
