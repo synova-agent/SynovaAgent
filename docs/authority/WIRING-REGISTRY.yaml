@@ -152,3 +152,11 @@ entries:
     status: wired
     owner: P1
     notes: "岗位包 v2 装载期结构＋refs 校验（#1075 批一 P1-a）；消费者＝loader 唯一入口（content-registry boot/reload）；随仓 JSON Schema 是契约、zod 是执行体（drift 测试钉死键集）"
+  - capability: ci.emptyGreen
+    defined_at: "scripts/control-tower/check-ci-empty-green.sh:1"
+    provider: "scripts/control-tower/check-ci-empty-green.sh:1"
+    consumer: null
+    test: "tests/control-tower/check-ci-empty-green.test.sh"
+    status: declared-only
+    owner: P4
+    notes: "#1095 W4：CI step 级空绿判据（关键 step test_count=0／skipped 无原因 ⇒ 红；正当跳过不计入通过）。唯一消费点＝.gitea/workflows/local-gates.yml 末尾「⑤ CI 空绿 step 级判据」步（第 410 行 name／第 416 行调用）。按 declared-only 如实登记：① G1/R1.2 的「生产调用点」grep 域只含 src/packages/scripts（不含 .gitea/workflows）⇒ CI workflow 调用对判据不可见，登记 wired 会被判无调用点；② 不编造 src/scripts 内的生产消费者（真没有）。"

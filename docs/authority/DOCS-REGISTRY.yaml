@@ -1317,3 +1317,11 @@ documents:
     status: active
     owner: P4
     note: "#1072（裁 427 D3）：scripts/workflow/check-brief-parseable.sh＋两测试件受保护路径豁免（空参 fail-closed；含铺底 #1071 两受保护件）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+
+  # ---- P4 2026-10-28：#1095 W4 CI step 级空绿判据（DOC-0318；0308–0314 已在册，0315–0317 由在飞批次预留）----
+  - id: DOC-0318
+    type: decision
+    path: gate-exemptions/2026-10-28-1095-ci-emptygreen.md
+    status: active
+    owner: P4
+    note: "#1095 W4：CI step 级空绿判据（关键 step test_count=0 或 skipped 无未运行原因 ⇒ 红；正当跳过须写原因且不计入通过）；受保护路径豁免五条（workflow／新判据脚本／配对测试／自覆盖／本行登记），含 docs/authority/DOCS-REGISTRY.yaml 自登记行。"
