@@ -2317,6 +2317,40 @@ if [ -x "$ROOT/scripts/control-tower/check-mirror-freshness.sh" ]; then
   if [ "$_FRC" -ne 0 ]; then echo "  ⚠️ 镜象新鲜度 rc=$_FRC（0=新鲜 1=不新鲜 2=判不了）—— 只报告，不阻断（W5）"; fi
 fi
 
+# ── W10/#1108：Unicode 同形字分级门禁（只判变更集新增行；A/B/C 阻断，D 只提醒）──
+#   判据源＝scripts/control-tower/check-unicode-confusable.py（三态：0 通过/SKIP ｜ 1 A/B/C 命中 ｜ 2 判不了）
+#   范围：CI 侧（SYNO_DIFF_BASE 存在）按 --base 判 base...HEAD；本地 pre-commit 按 --staged 判暂存区
+#         （与 ① 步同一变更集口径，禁两处漂移）。
+#   D 档（全角标点）只 echo 提醒，**不进 hard_check**（规格 §3 W10：注释/文案里的全角属正常，仅观感）。
+#   判不了（exit 2）按**违规**计（hard_check），禁把"看不见"当"没问题"。
+_UNI_S="$ROOT/scripts/control-tower/check-unicode-confusable.py"
+if [ -f "$_UNI_S" ]; then
+  _UNI_PYBIN=""
+  for _c in python3 python py; do  # PYBIN 三级探测（PLATFORM-CHECKLIST #1，禁裸 python3）
+    if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then _UNI_PYBIN="$_c"; break; fi
+  done
+  if [ -z "$_UNI_PYBIN" ]; then
+    hard_check "治理面自检·Unicode 同形字 (W10/#1108)" "判不了：python3 不可用（按 W6 退出码白名单归 2，禁当通过）"
+  else
+    _UNI_RC=0
+    if [ -n "${SYNO_DIFF_BASE:-}" ]; then
+      _UNI_OUT="$("$_UNI_PYBIN" "$_UNI_S" --root "$ROOT" --base "$SYNO_DIFF_BASE" 2>&1)" || _UNI_RC=$?
+    else
+      _UNI_OUT="$("$_UNI_PYBIN" "$_UNI_S" --root "$ROOT" --staged 2>&1)" || _UNI_RC=$?
+    fi
+    case "$_UNI_RC" in
+      0)
+        printf '%s\n' "$_UNI_OUT" | grep -E '⚠️  \[D\]|SKIP' | sed 's/^/  ℹ️  /' || true  # swallow-ok: 无 D 提示/SKIP 行时保持安静（rc=0 由 hard_check 记 miss）
+        hard_check "治理面自检·Unicode 同形字 (W10/#1108)" "" ;;
+      1)
+        hard_check "治理面自检·Unicode 同形字 (W10/#1108)" "$(printf '%s\n' "$_UNI_OUT" | grep -E '❌|UNICODE-CONFUSABLE: VIOLATION' || true)"  # swallow-ok: rc=1 必有 ❌ 行；grep 落空则由 hard_check 判 0 处（不静默放行 rc）
+        ;;
+      *)
+        hard_check "治理面自检·Unicode 同形字 (W10/#1108)" "判不了（exit=${_UNI_RC}，按 W6 退出码白名单归 2，禁当通过）" ;;
+    esac
+  fi
+fi
+
 # ═══════════════════════════════════════════════════════════════════
 # 结果
 # ═══════════════════════════════════════════════════════════════════

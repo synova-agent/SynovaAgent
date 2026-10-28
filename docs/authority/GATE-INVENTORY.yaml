@@ -1240,3 +1240,11 @@ classification:
     entrypoint: scripts/control-tower/check-ci-empty-green.sh
     required_ci: true
     confirmed_by: pending-cto
+  # ---- P4 2026-10-28：#1108 W10 Unicode 同形字分级门禁（纯追加；class P0 ＝ 视觉冒充/编码损坏类）----
+  - id: CT-check-unicode-confusable
+    class: P0
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-unicode-confusable.py
+    required_ci: true
+    confirmed_by: pending-cto

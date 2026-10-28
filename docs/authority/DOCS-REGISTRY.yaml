@@ -1374,8 +1374,15 @@ documents:
     status: active
     owner: P4
     note: "#1100 W3（豁免证据链收窄）：check-gate-protection.sh 加 --require-review（新增豁免件首行须复核件，存量按 base 存在性冻结 legacy）＋README §6＋配对测试 M-1′..M-4′＋验收自证脚本三处夹具首行；含自覆盖行与 DOCS-REGISTRY 自登记行。"
-  # ---- #1075 2026-10-28：P2-1 审批门探针夹具豁免登记（DOC-0323）----
+  # ---- P4 2026-10-28：#1108 W10 · Unicode 同形字分级门禁豁免登记（DOC-0323，按派单指定号落号）----
   - id: DOC-0323
+    type: decision
+    path: gate-exemptions/2026-10-28-1108-unicode-confusable.md
+    status: active
+    owner: P4
+    note: "#1108（W10）：scripts/control-tower/**（新扫描器 check-unicode-confusable.py）＋ tests/control-tower/**（配对测试）＋ scripts/pre-commit-check.sh（治理面自检段接入）＋ .gitea/workflows/**（⑥ step）＋ gate-exemptions/**（自覆盖）＋ docs/authority/DOCS-REGISTRY.yaml（自登记）受保护路径豁免；A/B/C 分档 P0 阻断、D 档仅提醒、只判 diff 新增行；已接线（WIRING=wired）。"
+  # ---- #1075 2026-10-28：P2-1 审批门探针夹具豁免登记（DOC-0324；0323 已被 #1108 占用）----
+  - id: DOC-0324
     type: decision
     path: gate-exemptions/2026-10-28-1075-p2-approval-gate.md
     status: active
