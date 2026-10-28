@@ -1317,3 +1317,12 @@ documents:
     status: active
     owner: P4
     note: "#1072（裁 427 D3）：scripts/workflow/check-brief-parseable.sh＋两测试件受保护路径豁免（空参 fail-closed；含铺底 #1071 两受保护件）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+
+  # ---- P4 2026-10-28：#1094 W2 运行遥测豁免登记（DOC-0317；0308–0314 已被 M4/#1054/#1071/#1072 占用）----
+  - id: DOC-0317
+    type: decision
+    path: gate-exemptions/2026-10-28-1094-gate-telemetry.md
+    status: active
+    owner: P4
+    note: "#1094（W2 运行遥测）：gate-telemetry.sh（新）＋ gate-stats.sh（扩）＋ pre-commit log_gate 埋点＋两测试件受保护路径豁免（duration_ms/hits；未运行与零命中分离，M-8）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+

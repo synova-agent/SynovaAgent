@@ -152,3 +152,11 @@ entries:
     status: wired
     owner: P1
     notes: "岗位包 v2 装载期结构＋refs 校验（#1075 批一 P1-a）；消费者＝loader 唯一入口（content-registry boot/reload）；随仓 JSON Schema 是契约、zod 是执行体（drift 测试钉死键集）"
+  - capability: gate.telemetry
+    defined_at: "scripts/control-tower/gate-telemetry.sh:1"
+    provider: "scripts/control-tower/gate-telemetry.sh:1"
+    consumer: null
+    test: "tests/control-tower/gate-telemetry.test.sh"
+    status: declared-only
+    owner: P4
+    notes: "#1094 W2 运行遥测：gate-hits JSONL 单写入器（--emit，三态 0/1/2，写失败 degraded 不改门禁结论）。消费侧＝pre-commit 的 log_gate 埋点，本批只做 producer；consumer 留空是口径选择（不编造消费者），接线事实以 tests/control-tower/gate-telemetry.test.sh 的 T1 WIRE 断言为准。"

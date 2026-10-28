@@ -1,0 +1,16 @@
+writeset:
+  - scripts/control-tower/gate-telemetry.sh
+  - scripts/control-tower/gate-stats.sh
+  - scripts/pre-commit-check.sh
+  - tests/control-tower/gate-telemetry.test.sh
+  - tests/control-tower/gate-stats.test.sh
+  - gate-exemptions/2026-10-28-1094-gate-telemetry.md
+  - .claude/task-briefs/2026-10-28-1094-gate-telemetry.md
+  - .claude/claims/1094.yaml
+  - memory/notes/proposed/2026-10-28-1094-gate-telemetry.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - docs/authority/WIRING-REGISTRY.yaml
+done:
+  - "verify: bash tests/control-tower/gate-telemetry.test.sh"
+  - "verify: bash tests/control-tower/gate-stats.test.sh"
+note: W2 运行遥测（#1094）：gate-hits.log 扩 duration_ms/hits（gate-telemetry.sh 单点写入，三态 0/1/2，写失败 degraded 不改门禁结论）；gate-stats.sh 出行/中位耗时并区分「未运行」与「零命中」（空日志禁产出退役候选，M-8）；pre-commit log_gate 只改本埋点。日志仍被 .gitignore 忽略、不入库、不新建遥测目录。
