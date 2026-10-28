@@ -17,11 +17,23 @@
  *   J1-②（schema.required 删 refs ⇒ J1-④ 红）｜J2-②（改 knowledge-scope.yaml 的 scope id ⇒ J2-③ 红）。
  *
  * 隔离手法：J3/C2 用 `mkdtempSync` 临时内容根 ＋ `SYNOVA_PRESETS_ROOT` 注入；真实内容面用例**只读**。
+ *
+ * ═══ #1104（P1-c）新增 A／C 两组（本文件既有 28 条**一字不改**）═══
+ *   A · repoRoot 不依赖 cwd（规格 §10-L14）：夹具根 = 临时"仓库形状"
+ *       （`<fixture>/extensions/presets/roles/**` 三包六件 ＋ `<fixture>/extensions/ontology/**` 五个被引用本体件），
+ *       `process.chdir('/tmp')` 后真 `loadRolePacks()` 仍三包全绿。机制 = loader 由内容根派生 repoRoot
+ *       （`resolve(root,'../..')`）。🔴 **红线**：若 repoRoot 回退 `process.cwd()`，cwd=/tmp 下
+ *       **必现 5 条 `ROLE_PACK_REF_MISSING`**（financial／person／team／client／channel）。
+ *   C · 角色目录不可读（规格 §4.5-C1 的 `ROLE_PACK_DIR_UNREADABLE`）：`chmod 0o111`（有 x 无 r
+ *       ⇒ 按名读 `manifest.json` 仍可、`readdir` 必 EACCES）⇒ problems 点名目录 ＋ **不抛** ＋ `log.warn`
+ *       **运行期捕获**（`vi.mock('@synova/logger')`，范式同 `tests/l4/ontology-loader-param-bridge-1031.test.ts:41-49`；
+ *       禁 grep 当验收）。🔴 不用 `chmod 000`：那会在读 manifest 阶段早退成
+ *       `ROLE_PACK_MANIFEST_UNREADABLE`，测不到本码。
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
-import { join, resolve } from 'path';
+import { dirname, join, resolve } from 'path';
 import { load as parseYaml } from 'js-yaml';
 import {
   CONTENT_PIECES,
@@ -35,6 +47,22 @@ import {
   validateRolePackDir,
 } from '../../src/init/role-pack-schema';
 import { EXPECTED_PIECES, loadRolePacks } from '../../src/init/preset-loader';
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 日志运行期捕获（C 用例判据；范式同 tests/l4/ontology-loader-param-bridge-1031.test.ts:41-49）
+// 文件级 mock：既有 28 条用例不读日志 ⇒ 直通空实现不破坏其断言（不改其一字）。
+// ══════════════════════════════════════════════════════════════════════════════
+
+const logCalls = vi.hoisted(() => [] as { level: string; meta?: unknown; msg?: unknown }[]);
+
+vi.mock('@synova/logger', () => {
+  const make = (level: string) => (meta?: unknown, msg?: unknown) => {
+    logCalls.push({ level, meta, msg });
+  };
+  const m = { info: make('info'), warn: make('warn'), error: make('error'), debug: make('debug'), fatal: make('fatal') };
+  return { logger: m, createLogger: () => m };
+});
+
 
 // ══════════════════════════════════════════════════════════════════════════════
 // 夹具与小工具（本文件自足；不引第二套契约实现）
@@ -611,5 +639,157 @@ describe('IO 壳 validateRolePackDir（真仓库根）', () => {
       expect(validation.schemaVersion).toBe(ROLE_PACK_SCHEMA_VERSION);
       expect(validation.refsChecked).toBeGreaterThan(0);
     }
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// A · repoRoot 不依赖 cwd（#1104 / 规格 §10-L14；改坏必红目标）
+// ══════════════════════════════════════════════════════════════════════════════
+
+/** 三包 refs 引用的 5 个本体件（内容不判，只判存在；路径相对仓库根） */
+const ONTOLOGY_REF_PATHS = [
+  'extensions/ontology/outcome/financial.json',
+  'extensions/ontology/resource/person.json',
+  'extensions/ontology/resource/team.json',
+  'extensions/ontology/resource/client.json',
+  'extensions/ontology/resource/channel.json',
+] as const;
+
+/**
+ * 造一个**仓库形状**的临时根：`<fixture>/extensions/presets/roles/<三包六件>` ＋ `<fixture>/extensions/ontology/**`。
+ *
+ * 🔴 逐件**读＋写**（不软链、不写主树）：内容根 = `<fixture>/extensions/presets` ⇒ loader 派生的
+ *   `repoRoot = resolve(root,'../..') = <fixture>`，与被引用的 `extensions/ontology/**` 同构。
+ */
+function buildRepoShapedFixture(): string {
+  const fixture = mkdtempSync(join(tmpdir(), 'role-pack-repo-'));
+  for (const roleId of ROLE_IDS) {
+    const srcDir = join(ROLES_ROOT, roleId);
+    const dstDir = join(fixture, 'extensions', 'presets', 'roles', roleId);
+    mkdirSync(dstDir, { recursive: true });
+    for (const piece of ROLE_PACK_PIECES) {
+      writeFileSync(join(dstDir, piece), readFileSync(join(srcDir, piece), 'utf8'), 'utf8');
+    }
+  }
+  for (const relPath of ONTOLOGY_REF_PATHS) {
+    const abs = join(fixture, relPath);
+    mkdirSync(dirname(abs), { recursive: true });
+    writeFileSync(abs, '{}\n', 'utf8');
+  }
+  return fixture;
+}
+
+describe('A · loader 的 repoRoot 由内容根派生（不依赖 cwd；#1104 / 规格 §10-L14）', () => {
+  it('A-① cwd=/tmp 时夹具根下三包仍全绿（若 repoRoot 回退 cwd ⇒ 必现 5 条 ROLE_PACK_REF_MISSING）', () => {
+    const fixture = buildRepoShapedFixture();
+    const originalCwd = process.cwd();
+    try {
+      process.env['SYNOVA_PRESETS_ROOT'] = join(fixture, 'extensions', 'presets');
+      process.chdir('/tmp'); // 关键：cwd 离开仓库根
+      const cwd = process.cwd();
+
+      // 红线前置：cwd 下确实没有那 5 个被引用件 ⇒ "回退 cwd" 必然判悬空（本条才有判别力）
+      for (const relPath of ONTOLOGY_REF_PATHS) {
+        expect(existsSync(join(cwd, relPath)), `cwd 下不应存在 ${relPath}（否则本用例失去判别力）`).toBe(false);
+      }
+
+      const report = loadOrFail();
+      expect(report.root).toBe(join(fixture, 'extensions', 'presets'));
+      expect(report.roles.map((role) => role.roleId)).toEqual([...ROLE_IDS]);
+      for (const role of report.roles) {
+        expect(role.missing, `${role.roleId}: missing 应为空`).toEqual([]);
+        expect(role.schemaValid, `${role.roleId}: schemaValid 应为 true`).toBe(true);
+        expect(role.validation.problems, `${role.roleId}: problems 应为空`).toEqual([]);
+        expect(role.knowledgeScope.degraded, `${role.roleId}: knowledgeScope.degraded 应为 false`).toBe(false);
+      }
+      expect(report.degraded).toBe(false);
+      expect(report.errors).toEqual([]);
+    } finally {
+      process.chdir(originalCwd); // 必须在 finally 恢复：否则同文件后续用例的 cwd 全漂
+      delete process.env['SYNOVA_PRESETS_ROOT'];
+      rmSync(fixture, { recursive: true, force: true });
+    }
+  });
+
+  it('A-② 同夹具删掉一个本体件 ⇒ ROLE_PACK_REF_MISSING 点名该 path（证明 A-① 的存在性检查是活的）', () => {
+    const fixture = buildRepoShapedFixture();
+    const missingRel = 'extensions/ontology/resource/team.json';
+    rmSync(join(fixture, missingRel));
+    const originalCwd = process.cwd();
+    try {
+      process.env['SYNOVA_PRESETS_ROOT'] = join(fixture, 'extensions', 'presets');
+      process.chdir('/tmp');
+
+      const report = loadOrFail();
+      expect(report.degraded).toBe(true);
+      const text = report.errors.join(' ');
+      expect(text).toContain('ROLE_PACK_REF_MISSING');
+      expect(text).toContain(missingRel);
+      // 逐包归因：只有引用 team.json 的 hr 降级，finance／sales 不受牵连
+      expect(report.errors.length, `应只有 hr 一条错（实际 ${text}）`).toBe(1);
+      expect(report.errors.every((err) => err.startsWith('hr: ')), '错误应点名 hr').toBe(true);
+      expect(report.roles.find((role) => role.roleId === 'hr')?.schemaValid).toBe(false);
+      expect(report.roles.find((role) => role.roleId === 'finance')?.schemaValid).toBe(true);
+      expect(report.roles.find((role) => role.roleId === 'sales')?.schemaValid).toBe(true);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env['SYNOVA_PRESETS_ROOT'];
+      rmSync(fixture, { recursive: true, force: true });
+    }
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// C · 角色目录不可读 ⇒ ROLE_PACK_DIR_UNREADABLE（#1104 / 规格 §4.5-C1；改坏必红目标）
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('C · 角色目录不可读 ⇒ ROLE_PACK_DIR_UNREADABLE（点名＋不抛＋log.warn）', () => {
+  it('C-① chmod 0o111（有 x 无 r）：readdir 必 EACCES ⇒ problems 点名目录、不抛、warn 带 code', () => {
+    const rolesRoot = useTempPresetsRoot();
+    seedPack(rolesRoot, 'finance');
+    const roleDir = join(rolesRoot, 'finance');
+    logCalls.length = 0; // 只观测本用例产生的日志
+    chmodSync(roleDir, 0o111);
+    try {
+      // 🔴 0o111：按名读 manifest.json／context-manifest.yaml 仍可（不会早退成 MANIFEST_UNREADABLE），
+      //    但 readdirSync 必 EACCES ⇒ 必进 listRoleDirFiles 的 catch（这正是本判据的物理机制）
+      expect(() => validateRolePackDir(roleDir, { repoRoot: REPO_ROOT })).not.toThrow();
+      const validation = validateRolePackDir(roleDir, { repoRoot: REPO_ROOT });
+
+      expect(validation.ok).toBe(false);
+      const problem = validation.problems.find((candidate) => candidate.code === 'ROLE_PACK_DIR_UNREADABLE');
+      expect(
+        problem,
+        `problems 应含 ROLE_PACK_DIR_UNREADABLE（实际 ${JSON.stringify(validation.problems.map((p) => p.code))}）`,
+      ).toBeDefined();
+      expect(problem?.message).toContain(roleDir); // 点名目录（不是笼统"读失败"）
+      // 目录本身还在：不可读是 IO 根因，不能被误报成"缺件"
+      expect(validation.problems.map((candidate) => candidate.code)).toContain('ROLE_PACK_PIECES_MISMATCH');
+
+      // 日志必须**运行期捕获**（禁 grep）：warn 的 meta.code 恰为本码且点名 roleDir
+      const warnings = logCalls.filter((call) => call.level === 'warn');
+      expect(warnings.length, `应至少一条 warn（实际 ${JSON.stringify(logCalls)}）`).toBeGreaterThan(0);
+      const codedWarn = warnings.find((call) => isRecord(call.meta) && call.meta['code'] === 'ROLE_PACK_DIR_UNREADABLE');
+      if (codedWarn === undefined || !isRecord(codedWarn.meta)) {
+        throw new Error(`未捕获到 meta.code=ROLE_PACK_DIR_UNREADABLE 的 warn（实际 ${JSON.stringify(logCalls)}）`);
+      }
+      expect(codedWarn.meta['roleDir']).toBe(roleDir);
+    } finally {
+      chmodSync(roleDir, 0o755); // 必须先恢复权限再让 afterEach rmSync 清理
+    }
+  });
+
+  it('C-② 对照：同一夹具权限正常（0o755）⇒ 无 DIR_UNREADABLE、无该码 warn（证明 C-① 不是恒真）', () => {
+    const rolesRoot = useTempPresetsRoot();
+    seedPack(rolesRoot, 'finance');
+    const roleDir = join(rolesRoot, 'finance');
+    logCalls.length = 0;
+
+    const validation = validateRolePackDir(roleDir, { repoRoot: REPO_ROOT });
+    expect(validation.ok).toBe(true);
+    expect(validation.problems.map((candidate) => candidate.code)).not.toContain('ROLE_PACK_DIR_UNREADABLE');
+    expect(
+      logCalls.some((call) => call.level === 'warn' && isRecord(call.meta) && call.meta['code'] === 'ROLE_PACK_DIR_UNREADABLE'),
+    ).toBe(false);
   });
 });

@@ -146,13 +146,46 @@ soft_pass() {
   return 0
 }
 
-# D515 项4: 门禁命中统计 — 每次检查触发追加 JSONL 到 .claude/gate-hits.log
-# 契约(铁律47): @input $1=检查点名 $2=hit|miss; @output 追加 JSONL 行
-# @degraded 写失败静默（统计非门禁，不阻断提交——但 GATE_HITS_LOG 默认在仓库内可写）
+# D515 项4 / D1094（W2 运行遥测）: 门禁命中统计 — 每次检查触发经 gate-telemetry.sh 追加 JSONL
+# 契约(铁律47):
+#   @input  $1=检查点名 $2=hit|miss|warn|degraded
+#   @output 追加 JSONL 行 {time,gate,result,branch,duration_ms,hits}
+#           **唯一写入器 = scripts/control-tower/gate-telemetry.sh**（本函数不再自拼 JSON）
+#   @exit   恒 0（遥测不是门禁：写失败**不改**本次提交结论，也不计 HARD_FAIL/SOFT_COUNT）
+#   @degraded 写失败 ⇒ gate-telemetry.sh 自行 stderr ＋ degraded-events.log ＋ exit 2；
+#             本函数只补一行可见提示（禁静默，铁律 11），并把该 2 与门禁判定解耦
+#   duration_ms 口径 = **距上一检查点间隔**（本进程内；首个检查点无基准 ⇒ 0=未测得）。
+#     为什么不是"本组精确耗时": 检查计算发生在 hard_check/soft_check 被调用**之前**，
+#     本函数内取不到该检查的起点。本批写集限定只改本埋点（不动各检查点调用链），
+#     gate-stats 只把 >0 的样本计入中位耗时，并在表尾明示口径（不把它当精确单组计时）。
+#   hits 口径 = 本次判定是否命中（hit=1 / miss=0；warn/degraded=0）。
+#     精确"命中条数"在 hard_check/soft_check 的局部变量 count 内；本批按写集约束不外传，
+#     故记 1/0 而非编造数字（gate-telemetry 接受任意非负整数，后续批次可传真实条数）。
 log_gate() {
   local g="$1" r="$2"
   [ -z "$g" ] && return 0
-  echo "{\"time\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"gate\": \"${g}\", \"result\": \"${r}\", \"branch\": \"${_GATE_BRANCH}\"}" >> "${GATE_HITS_LOG}" 2>/dev/null || true  # swallow-ok: 统计写失败不阻断提交
+  local _tel="$ROOT/scripts/control-tower/gate-telemetry.sh"
+  local _now_us="${EPOCHREALTIME:-}" _dur=0 _hits=0 _rc=0
+  [ "$r" = "hit" ] && _hits=1
+  if [ -n "$_now_us" ]; then
+    _now_us="${_now_us/./}"
+    if [ -n "${_GATE_LAST_US:-}" ]; then
+      _dur=$(( (_now_us - _GATE_LAST_US) / 1000 ))
+      [ "$_dur" -lt 0 ] && _dur=0
+    fi
+  fi
+  if [ -f "$_tel" ]; then
+    bash "$_tel" --emit "$g" "$r" "$_dur" "$_hits" --log "${GATE_HITS_LOG}" --branch "${_GATE_BRANCH}" || _rc=$?  # swallow-ok: 遥测非门禁；失败已由 gate-telemetry stderr＋degraded-events.log 留痕
+    [ "$_rc" -ne 0 ] && echo "  ⚠️  遥测降级: gate-telemetry rc=${_rc}（不阻断提交；详见 stderr / degraded-events.log）"
+  else
+    [ -z "${_GATE_TEL_WARNED:-}" ] && echo "  ⚠️  遥测降级: 缺 scripts/control-tower/gate-telemetry.sh（本进程不再重复提示；检查判定不受影响）"
+    _GATE_TEL_WARNED=1
+  fi
+  # 基准取**写入之后** ⇒ 下一检查点的 duration_ms 不含遥测自身开销
+  if [ -n "${EPOCHREALTIME:-}" ]; then
+    _GATE_LAST_US="${EPOCHREALTIME/./}"
+  fi
+  return 0
 }
 
 # D515 项3 / V5.0.0: 软提示检查 — 输出格式与 hard_check 一致（报告完整，--check/K3 可见），
