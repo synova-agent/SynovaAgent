@@ -110,7 +110,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #      例外；#610 已退役 bootstrap，陈旧/错误 base 一律 fail-closed（不再有一次性开孔）。
 #   5. **陈旧但含清单的 base ⇒ 可能假红**：diff 会把 base..HEAD 间别人的变更算进来；
 #      本器无远端知识，不判新鲜度（CI 由 ①d 每次刷新，本地开发者自行 `git fetch`）。
-#   6. **push 腿 diff 为空**：push 到 local-main 时 merge-base == HEAD ⇒ 跳过 diff 判定；
+#   6. **push 腿 diff 为空**：push 到 trunk（main）时 merge-base == HEAD ⇒ 跳过 diff 判定；
 #      真正的拦截在 pull_request 腿。**禁读成「push 也拦了」**。
 #   7. **glob 不支持字符类**（`[abc]` 按字面量处理）；只实现 `*`／`**`／`?`（规格所需）。
 #   8. **`X/**/Y` 的 `**/` 可为空目录层**（gobwas 严格语义下可能要求至少一层）⇒ 本器

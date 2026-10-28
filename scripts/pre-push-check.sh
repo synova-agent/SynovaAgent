@@ -538,49 +538,37 @@ if [[ -f "$CHECK_BYPASS" ]]; then
   # D521: 对账基取「**真源 trunk**」——D508 merge-base 语义的前提（trunk 引入提交天然排除）。
   #   分支 ref 为基时，merge trunk 后该侧新提交落入分支范围 → 它们没有也不该有本分支
   #   登记 → 误拦（D521 实证: merge 今日 main 后 8 个 main 提交被索登记）。
-  # 🔴 2026-10-11（K12 第5批 + 创始人授权）：基由 `origin/main` 改为 **`origin/local-main`**。
-  #   实测病灶：`origin/main` = **GitHub 旧 main（停 5a6591c4a）**，而本仓真源 trunk 是
-  #   `local-main`（e52499ddd）⇒ 对账范围被扩到**他人早已合入 trunk** 的提交
-  #   （实测 4 条：fd63e17c / f4e32728 / c0a7b736 / ab13a96c，**全部已是 gitea/local-main 祖先**），
-  #   向本机索要它们的执行记录 —— 那些记录按其来源在**各自会话账本**（D1145 per-session），
-  #   本工位 union 读不到 ⇒ **本仓任何分支（含 main）推送一律被拒**（实测 main 同样 rc=1）
-  #   ⇒ 推送通道整体不可用，非单分支问题。
-  #   与既有口径一致：`.gitea/workflows/local-gates.yml` 第 ③ 步**早已**改用
-  #   `CHANGED_BASE=origin/local-main`（回退 origin/main，理由同上）；本次把同一口径补到 pre-push。
-  # ⚠️ 必须**先刷新** `origin/local-main`：它是 remote-tracking ref，本机实测**会陈旧**
+  # 🔴 2026-10-29（#1117 主树迁 main）：trunk 名单源 = `SYNO_TRUNK_REF`（缺省 `main`）。
+  #   旧口径曾以 `origin/main` → 冻结集成分支的 origin 侧引用作基，两处都被实测证伪：
+  #   `origin/main` = **GitHub 旧 main（停 5a6591c4a）**；origin 侧集成分支引用同样陈旧
   #   （本工位实测停在 68bf57598，真值 e52499ddd ⇒ 直接拿来当基会比改前**更旧**、
   #    范围更大 ⇒ 反而多列 60 个提交）。且本仓以 URL 形式推送（`git push <URL>`）
   #    不更新任何 tracking ref ⇒ 陈旧是常态，不是偶发。
+  #   ⇒ 本批起只认 gitea 侧真源（`gitea/$TRUNK`）＋ 本地 trunk 兜底，不再刷新 origin 侧。
   # ⚠️ 基源优先级（实测定序，逐条有据）：
-  #   ① **本地 `local-main` 分支** —— 本机 trunk 真值（实测 = e52499ddd = 远端一致）。
-  #   ② `origin/local-main` —— **只在刷新真的推进了它**时才用；否则它是陈旧 ref
-  #      （本工位实测停在 68bf57598，比真值落后 1 个提交且**比改前更旧** ⇒ 范围反而更大）。
-  #   ③ `origin/main` —— 旧回退位（GitHub 旧 main 5a6591c4a，已废，仅兜底）。
+  #   ① `gitea/$TRUNK` —— 真源远端跟踪引用（先刷新；注意 fetch 可能**假成功**：
+  #      本仓曾实测 `origin`=GitHub（账号已封）fetch 返回 0 却什么都不推进 ⇒ 不能以 rc
+  #      判定"刷新成功"，必须**比对 ref 前后值**）。
+  #   ② 本地 `$TRUNK` 分支 —— 本机 trunk 兜底（同样**会陈旧**：本工位曾实测停
+  #      ba1b22a8b，gitea 真值 aa085e1f1 ⇒ merge-base 偏旧 ⇒ 对账 range 卷入他线已过闸
+  #      提交 ⇒ 推送被误拦）。
+  #   ③ `origin/$TRUNK` —— GitHub 镜像侧兜底（口径同 ①，可能陈旧）。
   #   ④ `$PUSH_REMOTE/$PUSH_BRANCH` —— 末位兜底。
-  #   ⚠️ 刷新用 `origin` 可能**假成功**：本轮实测 `origin`=GitHub（账号已封），
-  #      fetch 返回 0 却什么都不推进 ⇒ 不能以 rc 判定"刷新成功"，必须**比对 ref 前后值**。
-  _BB_BEFORE="$(git rev-parse origin/local-main 2>/dev/null || true)"
-  git fetch --no-tags origin local-main:refs/remotes/origin/local-main --quiet 2>/dev/null || true
-  _BB_AFTER="$(git rev-parse origin/local-main 2>/dev/null || true)"
-  _BB_FRESH=0
-  [ -n "$_BB_BEFORE" ] && [ -n "$_BB_AFTER" ] && [ "$_BB_BEFORE" != "$_BB_AFTER" ] && _BB_FRESH=1
-  # 🔴 2026-10-12（CTO P0 bug1 同病第四处）: 本地 `local-main` 分支同样**会陈旧**
-  #   （本工位实测停 ba1b22a8b，gitea 真值 aa085e1f1）⇒ merge-base 偏旧 ⇒ 对账 range
-  #   卷入他线已过闸提交 ⇒ 推送被误拦。修法: **gitea/local-main 前置**
-  #   （fetch 刷新 + 比对 ref 前后值防"假成功"），新鲜才用作基；本地 local-main 次之。
-  _GB_BEFORE="$(git rev-parse gitea/local-main 2>/dev/null || true)"
-  git fetch --no-tags gitea local-main:refs/remotes/gitea/local-main --quiet 2>/dev/null || true
-  _GB_AFTER="$(git rev-parse gitea/local-main 2>/dev/null || true)"
+  TRUNK="${SYNO_TRUNK_REF:-main}"
+  _GB_BEFORE="$(git rev-parse "gitea/$TRUNK" 2>/dev/null || true)"
+  git fetch --no-tags gitea "$TRUNK:refs/remotes/gitea/$TRUNK" --quiet 2>/dev/null || true
+  _GB_AFTER="$(git rev-parse "gitea/$TRUNK" 2>/dev/null || true)"
   _GB_FRESH=0
   [ -n "$_GB_BEFORE" ] && [ -n "$_GB_AFTER" ] && [ "$_GB_BEFORE" != "$_GB_AFTER" ] && _GB_FRESH=1
-  if git rev-parse --verify gitea/local-main >/dev/null 2>&1; then
-    BYPASS_BASE="gitea/local-main"
-  elif git rev-parse --verify local-main >/dev/null 2>&1; then
-    BYPASS_BASE="local-main"
-  elif [ "$_BB_FRESH" = "1" ]; then
-    BYPASS_BASE="origin/local-main"
-  elif git rev-parse --verify origin/main >/dev/null 2>&1; then
-    BYPASS_BASE="origin/main"
+  if [ "$_GB_FRESH" = "1" ]; then
+    echo "  ℹ️  bypass 基已刷新: gitea/$TRUNK ${_GB_BEFORE:0:8} → ${_GB_AFTER:0:8}"
+  fi
+  if git rev-parse --verify "gitea/$TRUNK" >/dev/null 2>&1; then
+    BYPASS_BASE="gitea/$TRUNK"
+  elif git rev-parse --verify "$TRUNK" >/dev/null 2>&1; then
+    BYPASS_BASE="$TRUNK"
+  elif git rev-parse --verify "origin/$TRUNK" >/dev/null 2>&1; then
+    BYPASS_BASE="origin/$TRUNK"
   elif [[ -n "$PUSH_REMOTE" && -n "$PUSH_BRANCH" ]] && git rev-parse --verify "$PUSH_REMOTE/$PUSH_BRANCH" >/dev/null 2>&1; then
     BYPASS_BASE="$PUSH_REMOTE/$PUSH_BRANCH"
   fi

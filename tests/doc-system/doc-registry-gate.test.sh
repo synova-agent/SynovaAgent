@@ -154,21 +154,21 @@ OUT_H6=$(DOC_TRUTH_ROOT="$CIF" bash "$SCRIPT" 2>&1); _e6=$?
 t "H6 extensions/ 下 .md 不豁免 → exit 1（豁免边界=不含 .md）" 1 $_e6
 printf '%s\n' "$OUT_H6" | grep -q 'README-scope.md' && { echo "  ✅ H6 .md 仍被点名（豁免未越界）"; PASS=$((PASS+1)); } || { echo "  ❌ H6 .md 未被点名 ⇒ 豁免越界（吞掉了说明文档）"; FAIL=$((FAIL+1)); }
 
-# ═══ H7: D782 D2 —— base 链前置（origin/local-main）回归护栏 ═══
+# ═══ H7: D782 D2 —— base 链前置（真源 gitea/<TRUNK>）回归护栏 ═══
 # 缺口（PR #250 独立复核指出）: 既有夹具只解析得到**自带的 `main` 分支** ⇒ 把 base 链改回
 #   `origin/main` 在夹具里是 **no-op**（22 例仍全绿）⇒ 这半边**零回归护栏**。
-# 本夹具让 `origin/main` 与 `origin/local-main` **指向不同提交**，且未登记件落在**两者之间**
+# 本夹具让 `origin/main`（陈旧镜像位）与 `gitea/main`（真源位）**指向不同提交**，且未登记件落在**两者之间**
 #   （模拟"他线已合并提交里新增的文档" —— 与老 base 把 73+ 他线提交卷进 range 同型机理）:
-#     A ← `main` 头 = refs/remotes/origin/main
+#     A ← `main` 头 = refs/remotes/origin/main（本地 main 亦在 A = 陈旧位）
 #     └─ U  docs/orphan.md（**未登记**）
-#        └─ L  docs/lm-only.md（已登记） = refs/remotes/origin/local-main
+#        └─ L  docs/lm-only.md（已登记） = refs/remotes/gitea/main（真源）
 #           └─ F  docs/feat-new.md（已登记） = HEAD（feature）
 # 两半判据（缺一即无判别力）:
-#   ① base 前置 origin/local-main ⇒ merge-base=L ⇒ range 仅本支新增 ⇒ 检查 1 件、exit 0
-#   ② 去掉 origin/local-main（base 退到 origin/main）⇒ merge-base=A ⇒ range 含 U 的未登记件
+#   ① base 前置 gitea/main ⇒ merge-base=L ⇒ range 仅本支新增 ⇒ 检查 1 件、exit 0
+#   ② 去掉 gitea/main（base 退到本地 main=A）⇒ merge-base=A ⇒ range 含 U 的未登记件
 #      ⇒ exit 1 且点名 docs/orphan.md
 echo ""
-echo "── H7. D782 D2: base 链前置（origin/local-main）回归护栏 ──"
+echo "── H7. D782 D2: base 链前置（真源 gitea/main）回归护栏 ──"
 FORK="$FIX/fork-base"
 mkdir -p "$FORK/docs/authority" "$FORK/docs"
 printf 'documents:\n  - id: DOC-9001\n    type: prd\n    path: docs/keep.md\n    status: active\n' > "$FORK/docs/authority/DOCS-REGISTRY.yaml"
@@ -188,7 +188,7 @@ printf '  - id: DOC-9002\n    type: prd\n    path: docs/lm-only.md\n    status: 
 : > "$FORK/docs/lm-only.md"
 git -C "$FORK" add -A 2>/dev/null # swallow-ok:
 git -C "$FORK" commit -q -m "docs(D998): local-main 自身新增（已登记）" 2>/dev/null # swallow-ok:
-git -C "$FORK" update-ref refs/remotes/origin/local-main "$(git -C "$FORK" rev-parse HEAD)" 2>/dev/null # swallow-ok:
+git -C "$FORK" update-ref refs/remotes/gitea/main "$(git -C "$FORK" rev-parse HEAD)" 2>/dev/null # swallow-ok:
 git -C "$FORK" checkout -q -b feature 2>/dev/null # swallow-ok:
 printf '  - id: DOC-9003\n    type: prd\n    path: docs/feat-new.md\n    status: active\n' >> "$FORK/docs/authority/DOCS-REGISTRY.yaml"
 : > "$FORK/docs/feat-new.md"
@@ -204,26 +204,26 @@ else
   echo "  ❌ H7 前提不成立: untracked=$F7_UT staged-new=$F7_ST ⇒ 判别力被①②污染"; FAIL=$((FAIL+1))
 fi
 
-# 前提守卫 2: origin/main 与 origin/local-main 必须**指向不同提交**（Done ③；相同 ⇒ 与既有 22 例同型 = no-op）
+# 前提守卫 2: origin/main 与 gitea/main 必须**指向不同提交**（Done ③；相同 ⇒ 与既有 22 例同型 = no-op）
 F7_OM=$(git -C "$FORK" rev-parse origin/main 2>/dev/null | tr -d '\n') # swallow-ok:
-F7_OLM=$(git -C "$FORK" rev-parse origin/local-main 2>/dev/null | tr -d '\n') # swallow-ok:
+F7_OLM=$(git -C "$FORK" rev-parse gitea/main 2>/dev/null | tr -d '\n') # swallow-ok:
 if [ -n "$F7_OM" ] && [ -n "$F7_OLM" ] && [ "$F7_OM" != "$F7_OLM" ]; then
-  echo "  ✅ H7 前提: origin/main(${F7_OM:0:8}) ≠ origin/local-main(${F7_OLM:0:8})（夹具可判别 base 链）"; PASS=$((PASS+1))
+  echo "  ✅ H7 前提: origin/main(${F7_OM:0:8}) ≠ gitea/main(${F7_OLM:0:8})（夹具可判别 base 链）"; PASS=$((PASS+1))
 else
-  echo "  ❌ H7 前提不成立: origin/main=${F7_OM:0:8} origin/local-main=${F7_OLM:0:8} ⇒ 夹具无判别力（no-op）"; FAIL=$((FAIL+1))
+  echo "  ❌ H7 前提不成立: origin/main=${F7_OM:0:8} gitea/main=${F7_OLM:0:8} ⇒ 夹具无判别力（no-op）"; FAIL=$((FAIL+1))
 fi
 
-# 前提守卫 3: merge-base(origin/local-main, HEAD) 必须 = origin/local-main 本身（range 收窄的机械条件）
-F7_MBLM=$(git -C "$FORK" merge-base origin/local-main HEAD 2>/dev/null | tr -d '\n') # swallow-ok:
+# 前提守卫 3: merge-base(gitea/main, HEAD) 必须 = gitea/main 本身（range 收窄的机械条件）
+F7_MBLM=$(git -C "$FORK" merge-base gitea/main HEAD 2>/dev/null | tr -d '\n') # swallow-ok:
 if [ -n "$F7_OLM" ] && [ "$F7_MBLM" = "$F7_OLM" ]; then
-  echo "  ✅ H7 前提: merge-base(origin/local-main, HEAD) = origin/local-main ⇒ range 仅本支"; PASS=$((PASS+1))
+  echo "  ✅ H7 前提: merge-base(gitea/main, HEAD) = gitea/main ⇒ range 仅本支"; PASS=$((PASS+1))
 else
-  echo "  ❌ H7 前提不成立: merge-base=${F7_MBLM:0:8} ≠ origin/local-main=${F7_OLM:0:8}"; FAIL=$((FAIL+1))
+  echo "  ❌ H7 前提不成立: merge-base=${F7_MBLM:0:8} ≠ gitea/main=${F7_OLM:0:8}"; FAIL=$((FAIL+1))
 fi
 
-# H7a: base 链已前置 origin/local-main ⇒ 本支新增（已登记）通过，他线未登记件**不进检查面**
+# H7a: base 链已前置 gitea/main ⇒ 本支新增（已登记）通过，他线未登记件**不进检查面**
 OUT_H7=$(DOC_TRUTH_ROOT="$FORK" bash "$SCRIPT" 2>&1); _e7=$?
-t "H7a base 前置 origin/local-main → exit 0（改回 origin/main 必红）" 0 $_e7
+t "H7a base 前置 gitea/main → exit 0（改回 origin/main 必红）" 0 $_e7
 N_H7=$(printf '%s\n' "$OUT_H7" | sed -n 's/.*检查 \([0-9][0-9]*\) 个文档.*/\1/p' | head -1)
 if [ "${N_H7:-}" = "1" ]; then
   echo "  ✅ H7a 检查数 N=1（range 收窄到本支新增，未把他线提交卷进来）"; PASS=$((PASS+1))
@@ -232,24 +232,24 @@ else
 fi
 printf '%s\n' "$OUT_H7" | grep -q 'docs/orphan.md' && { echo "  ❌ H7a 未登记件 docs/orphan.md 进了检查面 ⇒ base 未前置"; FAIL=$((FAIL+1)); } || { echo "  ✅ H7a 未登记件未进检查面（base 前置生效）"; PASS=$((PASS+1)); }
 
-# H7b: 反例自证（改坏即红的内生版）—— 去掉 gitea/local-main / local-main / origin/local-main
-#   ⇒ base 退到 origin/main ⇒ merge-base 回到 A ⇒ range 把他线未登记件卷进来
+# H7b: 反例自证（改坏即红的内生版）—— 去掉 gitea/main 真源引用（本地 main=A 不再被遮蔽）
+#   ⇒ base 退到本地 main（=A）⇒ merge-base 回到 A ⇒ range 把他线未登记件卷进来
 #   ⇒ **必须 exit 1 且点名**（等价于"base 链全未前置"：链上各候选不可解析时行为相同）
-#   （2026-10-12 注: 新基线链含本地分支 local-main，故反例须三个候选一并移除才落到 origin/main）
-git -C "$FORK" update-ref -d refs/remotes/origin/local-main 2>/dev/null # swallow-ok:
+#   （2026-10-29 注: 新基线链为 gitea/$TRUNK → 本地 $TRUNK，故反例移除 gitea 侧真源即落到本地 main=A）
+git -C "$FORK" update-ref -d refs/remotes/gitea/main 2>/dev/null # swallow-ok:
 git -C "$FORK" branch -q -D local-main 2>/dev/null # swallow-ok:
 OUT_H7B=$(DOC_TRUTH_ROOT="$FORK" bash "$SCRIPT" 2>&1); _e7b=$?
-t "H7b base 退到 origin/main → exit 1（改坏即红）" 1 $_e7b
+t "H7b base 退到本地 main=A → exit 1（改坏即红）" 1 $_e7b
 printf '%s\n' "$OUT_H7B" | grep -q 'docs/orphan.md' && { echo "  ✅ H7b 未登记件被点名（夹具确有判别力）"; PASS=$((PASS+1)); } || { echo "  ❌ H7b 未登记件未被点名 ⇒ 夹具无判别力"; FAIL=$((FAIL+1)); }
 
-# H7c（2026-10-12，CTO P0 bug 1 同型实证）: origin/local-main **陈旧**（指回 A，落后两个提交）
-#   且本地分支 local-main 缺失 ⇒ 链上仅剩的 local-main 候选是陈旧引用 ⇒ 退到 origin/main
-#   ⇒ range 卷入 docs/orphan.md ⇒ **必须 exit 1**（改坏即红：陈旧 local-main 引用不得作首选基线）
-git -C "$FORK" update-ref refs/remotes/origin/local-main "$F7_OM" 2>/dev/null # swallow-ok:
+# H7c（2026-10-12，CTO P0 bug 1 同型实证）: gitea/main **陈旧**（指回 A，落后两个提交）
+#   真源引用陈旧 ⇒ 链上取到的就是旧点（不 fetch 不猜，同 bug 1 口径）
+#   ⇒ range 卷入 docs/orphan.md ⇒ **必须 exit 1**（改坏即红：陈旧真源引用不得作基线）
+git -C "$FORK" update-ref refs/remotes/gitea/main "$F7_OM" 2>/dev/null # swallow-ok:
 OUT_H7C=$(DOC_TRUTH_ROOT="$FORK" bash "$SCRIPT" 2>&1); _e7c=$?
-t "H7c origin/local-main 陈旧(指A)且无本地分支 → 必红（bug1 同型，改坏即红）" 1 $_e7c
-# 恢复 origin/local-main 为新鲜值（不泄漏影响后续）
-git -C "$FORK" update-ref refs/remotes/origin/local-main "$F7_OLM" 2>/dev/null # swallow-ok:
+t "H7c gitea/main 陈旧(指A) → 必红（bug1 同型，改坏即红）" 1 $_e7c
+# 恢复 gitea/main 为新鲜值（不泄漏影响后续）
+git -C "$FORK" update-ref refs/remotes/gitea/main "$F7_OLM" 2>/dev/null # swallow-ok:
 
 # H8（2026-10-12，CTO P0 bug 2 判据）: 未在本 PR 里的 untracked 文件 ⇒ **不得阻断**（仅警告）
 : > "$FORK/docs/decoy-untracked.md"
