@@ -375,21 +375,3 @@ jobs:
           echo "①i base = $BASE"
           python3 scripts/control-tower/check-tool-args-delta.py --root . --base "$BASE" || exit $?
 
-
-      # ①k 治理面自检（W0/#1093）：镜象新鲜度 **report-only** —— 只报警不阻断（W5 语义）
-      #   为什么只报告：① 网络不可达 / 镜象对象不可见 ⇒ exit 2（判不了），不应卡住他人合并；
-      #   ② 硬阻断另卡（裁 422-R2 允许报告腿先跑）。
-      - name: ①k 镜象新鲜度（report-only · #1093）
-        run: |
-          cd /Users/wane/.ci-work/SynovaAgent
-          set +e
-          git fetch -q origin +refs/heads/local-main:refs/remotes/origin/local-main
-          bash scripts/control-tower/check-mirror-freshness.sh \
-            --canonical origin/local-main \
-            --mirror-url https://github.com/tangbaobao520/SynovaAgent.git
-          rc=$?
-          set -e
-          if [ "$rc" -ne 0 ]; then
-            echo "::warning::①k 镜象新鲜度 rc=$rc（0=新鲜 1=不新鲜 2=判不了）—— report-only，不阻断"
-          fi
-          exit 0
