@@ -6,7 +6,7 @@
 # 覆盖（规格 §4 J3/J5/J6/J7/J8/J9 ＋ §4.2 R1–R5 判别力两态 ＋ 子命令 C1–C10b）:
 #   1. 头契约（@input/@output/@exit/@degraded ＋ 已知限制）与 L8 例外登记
 #   2. --selfcheck：判别力 1/1/1/1/1 clean=0；反向（T4 规则改回不查 return []）⇒ rc=1
-#   3. --check-registry：真件 REGISTRY-OK rows=21；反例（wired 无 consumer/多余键/坏行号/0 行/YAML 越界）
+#   3. --check-registry：真件 REGISTRY-OK rows=22；反例（wired 无 consumer/多余键/坏行号/0 行/YAML 越界）
 #      ＋ #1126 防回退：真件 reportMirrorPushes 的 defined_at 必须双引号、owner 非空；
 #        改坏两态（去引号 ⇒ rc=2 E_YAML ／ 删 owner ⇒ rc=1 R3）
 #   4. --check-inventory：合成夹具 covered/PAIRING 契约；10 个改坏两态（C1/C3/C4/C5/C6/C7/C9/C9b/C10×2）
@@ -142,7 +142,7 @@ echo ""
 echo "── 3. --check-registry（J5 ＋ 反例）──"
 OUT=$("$PYBIN" "$TOOL" --check-registry "$REGISTRY" 2>&1); RC=$?
 assert_rc 0 "$RC" "--check-registry 真件"
-assert_contains "$OUT" "REGISTRY-OK rows=21" "末行 REGISTRY-OK rows=21"
+assert_contains "$OUT" "REGISTRY-OK rows=22" "末行 REGISTRY-OK rows=22"
 assert_contains "$OUT" "✅ R7" "R7 信号量（rows≥1）"
 
 # #1126 防回退（真件钉死）：tool.reportMirrorPushes 的 defined_at 必须双引号包裹

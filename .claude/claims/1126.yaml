@@ -19,4 +19,4 @@ done:
   - verify: bash tests/control-tower/quality-baseline.test.sh
   - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main --root .
   - verify: grep -c 'DOC-1126' docs/authority/DOCS-REGISTRY.yaml
-note: "#1126：WIRING-REGISTRY 的 tool.reportMirrorPushes 条目两处数据修复——defined_at 加双引号（裸 path:line 含 ':' 被严格子集解析器判非法 ⇒ 整器 rc=2）＋ 补 R3 必填 owner: CTO（依据 DOC-0295 同属 #1034）。防回退并入既有配对测试（真件钉死两断言 ＋ bare-scalar/missing-owner 两条改坏反例），并同步既有实测常量（rows 11→21、真树 orphans 分母 35→40，判据一字不动）。不改校验器判据、不改注册表语义。"
+note: "#1126：WIRING-REGISTRY 的 tool.reportMirrorPushes 条目两处数据修复——defined_at 加双引号（裸 path:line 含 ':' 被严格子集解析器判非法 ⇒ 整器 rc=2）＋ 补 R3 必填 owner: CTO（依据 DOC-0295 同属 #1034）。防回退并入既有配对测试（真件钉死两断言 ＋ bare-scalar/missing-owner 两条改坏反例），并同步既有实测常量（rows 11→22、真树 orphans 分母 35→40，判据一字不动）。不改校验器判据、不改注册表语义。"
