@@ -1374,3 +1374,10 @@ documents:
     status: active
     owner: P4
     note: "#1100 W3（豁免证据链收窄）：check-gate-protection.sh 加 --require-review（新增豁免件首行须复核件，存量按 base 存在性冻结 legacy）＋README §6＋配对测试 M-1′..M-4′＋验收自证脚本三处夹具首行；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+  # ---- #1075 2026-10-28：P2-1 审批门探针夹具豁免登记（DOC-0323）----
+  - id: DOC-0323
+    type: decision
+    path: gate-exemptions/2026-10-28-1075-p2-approval-gate.md
+    status: active
+    owner: P2
+    note: "#1075（P2-1）：scripts/control-tower/probe-knowledge-scope.ts 的 V6(ii) 夹具适配（断言不变，探针回基线）；含 gate-exemptions/** 自覆盖行与 DOCS-REGISTRY 自登记行。"

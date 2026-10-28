@@ -56,6 +56,8 @@ writeset:
   - tests/init/role-pack-approval.test.ts
   - scripts/control-tower/probe-knowledge-scope.ts
   - memory/notes/implemented/2026-10-28-1075-p2-approval-gate-write-set.md
+  - gate-exemptions/2026-10-28-1075-p2-approval-gate.md
+  - docs/authority/DOCS-REGISTRY.yaml
 done:
   - verify: node node_modules/.bin/vitest run tests/init/role-pack-schema.test.ts
   - verify: node node_modules/.bin/vitest run tests/init/preset-loader.test.ts
