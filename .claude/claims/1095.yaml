@@ -1,0 +1,15 @@
+# .claude/claims/1095.yaml — W4：CI step 级空绿判据（test_count / skipped）
+writeset:
+  - .claude/claims/1095.yaml
+  - .claude/task-briefs/2026-10-28-1095-ci-emptygreen.md
+  - .gitea/workflows/local-gates.yml
+  - docs/authority/DOCS-REGISTRY.yaml
+  - docs/authority/WIRING-REGISTRY.yaml
+  - gate-exemptions/2026-10-28-1095-ci-emptygreen.md
+  - memory/notes/proposed/2026-10-28-1095-ci-emptygreen.md
+  - scripts/control-tower/check-ci-empty-green.sh
+  - tests/control-tower/check-ci-empty-green.test.sh
+done:
+  - verify: bash tests/control-tower/check-ci-empty-green.test.sh
+  - verify: bash scripts/control-tower/check-ci-empty-green.sh --selfcheck
+note: "#1095 W4：CI step 级空绿判据（关键 step test_count=0 或 skipped 无原因 ⇒ 红；正当跳过写原因且不计入通过）。"

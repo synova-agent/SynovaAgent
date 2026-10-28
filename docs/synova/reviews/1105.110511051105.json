@@ -1,0 +1,99 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1105,
+  "author": "squad-1104（#1104 P1-c 实现会话；lead=synova-squad-lead）",
+  "reviewer": "独立复核会话（零上下文，未参与实现）",
+  "independence": "fresh-session",
+  "patch_fingerprint": "sha256:1af411e4919f14eea56ee7c193241cf83102b5efa8c96513f5a6922b6cb9c6b2",
+  "verdict": "PASS",
+  "base_tip": "0569f2d4b3a0caf3eb6b82438abcd075d93a5190",
+  "head": "3bd3713fdb25dfc588a4b02b5b957191e068aa36",
+  "issued_at": "2026-10-28T14:51:36+08:00",
+  "tool": "pr-review 五步 ＋ claim-verifier 抽验 ＋ 现场命令复跑",
+  "filename_note": "按 claim 预列名 docs/synova/reviews/1105.110511051105.json 落盘（12 位 [0-9a-f] 占位名，符合 check-merge-conditions.sh R1 回退正则 ^docs/synova/reviews/<pr>\\.[0-9a-f]{12}\\.json$；回执内 patch_fingerprint 为真指纹）。",
+  "checks": [
+    {
+      "id": "C0",
+      "title": "指纹绑定（diff-fingerprint 逐字符等于绑定值）",
+      "cmd": "cd /tmp/w-rp2 && bash scripts/control-tower/check-merge-conditions.sh --pr 1105 --diff-fingerprint",
+      "result": "pass",
+      "evidence": "EXIT=0；stdout 末行=1af411e4919f14eea56ee7c193241cf83102b5efa8c96513f5a6922b6cb9c6b2，与回执绑定值逐字符相等。工作树 HEAD=3bd3713fdb25dfc588a4b02b5b957191e068aa36（分支 ct/1104-p1c），git status --porcelain 0 行。"
+    },
+    {
+      "id": "C1",
+      "title": "基线/范围/写集/禁区扫描",
+      "cmd": "cd /tmp/w-rp2 && git ls-remote gitea refs/heads/local-main ; git rev-parse gitea/local-main ; git merge-base --is-ancestor 0569f2d4b3a0caf3eb6b82438abcd075d93a5190 3bd3713fdb25dfc588a4b02b5b957191e068aa36 ; echo EXIT=$? ; git diff --name-status gitea/local-main...HEAD ; git diff --name-only gitea/local-main...HEAD | 逐条对 9 个禁区模式 grep -c ; git diff gitea/local-main...HEAD -- tests/extensions/knowledge-scope-wiring.test.ts | grep -cE '^[+-].*expect\\('",
+      "result": "pass",
+      "evidence": "git fetch 被本沙箱拒绝（写 /Users/wane/SynovaAgent/.git/worktrees/w-rp2/FETCH_HEAD EPERM，工作区外；无审批通道）⇒ 改用只读权威 ls-remote：remote refs/heads/local-main=0569f2d4b3a0caf3eb6b82438abcd075d93a5190，本地 gitea/local-main 同值；ANCESTOR_EXIT=0。name-status 恰 7 件：M .claude/claims/1075.yaml / M src/init/preset-loader.ts / M src/init/role-pack-schema.ts / M src/onboarding/config-pack-generator.ts / M tests/extensions/knowledge-scope-wiring.test.ts / M tests/init/role-pack-schema.test.ts / M tests/onboarding/config-pack-generator.test.ts（前 5 件=卡冻结写集，第 6 件=L1 批准夹具件，第 7 件=claim）。第 6 件 expect( 增删行数=0（仅 imports/helper/beforeAll 夹具仓库形状化）。禁区 9 模式逐条计数全 0：scripts/audit/、scripts/control-tower/、.gitea/、src/middleware/、packages/、src/routes/onboarding.ts、src/onboarding/onboarding-flow.ts、extensions/、docs/plans/。claim writeset 实测 23 行，7 个改动件逐一命中（各 1 次）。"
+    },
+    {
+      "id": "C2",
+      "title": "CI 状态（head status）",
+      "cmd": "curl -s -H 'Authorization: token <token>' http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/commits/3bd3713fdb25dfc588a4b02b5b957191e068aa36/status",
+      "result": "pass",
+      "evidence": "14:48:39 首次查询 state=pending（push success；pull_request pending）；14:49:41 复查 state=success，total_count=2，pending=0：success local-gates / gates (push) runs/2337/jobs/2406；success local-gates / gates (pull_request) runs/2338/jobs/2407。未替 CI 说绿：首查 pending 如实记录，终查两 status 均 success 且 pending=0。"
+    },
+    {
+      "id": "C3",
+      "title": "判据 A/B/C（整文件跑，禁 -t）",
+      "cmd": "export PATH=\"$(ls -d ~/.nvm/versions/node/v22*/bin | head -1):$PATH\"; export DEV_MODE=true; node node_modules/.bin/vitest run tests/init/role-pack-schema.test.ts tests/init/preset-loader.test.ts tests/onboarding/config-pack-generator.test.ts tests/extensions/knowledge-scope-wiring.test.ts",
+      "result": "pass",
+      "evidence": "环境自检：node v22.23.2、mkdtemp 可写、vitest/tsx 可执行（非三态 2）。精确命令在本沙箱因 node_modules→/Users/wane/SynovaAgent/node_modules 软链、vite 需写 node_modules/.vite-temp 而 EPERM（环境限制，非业务红）；改用同内容 CJS 镜像 config（root=/tmp/w-rp2、同 alias、同 test.env、同 4 文件、无 -t）复跑，得到期望值：Test Files 4 passed (4)；Tests 98 passed (98)；分件 32(role-pack-schema)+17(preset-loader)+26(config-pack-generator)+23(knowledge-scope-wiring)。行为审读：A-① 真 process.chdir('/tmp') 后调零参真 loadRolePacks()，夹具为 <fixture>/extensions/presets/roles/** + <fixture>/extensions/ontology/** 仓库形状，断言 report.root、roles 三包、report.degraded=false、report.errors=[]、每包 missing=[]/schemaValid=true/validation.problems=[]；A-② 删一个本体件证明检查是活的。B-1/2/3 覆盖 65 长/大写 A.B/空格 a b（missingParams=[]、badParams 点名原值、written=[]、角色目录不创建），B-4 a.b 通过，B-5 64 过/65 拒，B-6 8 条非法⇒6 元素且末条 U+2026…(+3)，B-7 缺 contexts+非法 id⇒INCOMPLETE 优先且 badParams 带出。C-① chmod 0o111⇒problems 含 ROLE_PACK_DIR_UNREADABLE、message 含 roleDir、not.toThrow()、vi.mock 运行期捕获 warn(meta.code 同码)；C-② 0o755 对照无该码/无 warn。"
+    },
+    {
+      "id": "C4",
+      "title": "判别力（改坏必红，独立副本自造）",
+      "cmd": "cp -R /tmp/w-rp2 /tmp/rp-ext-mut1；node 改写 src/init/preset-loader.ts：validateRolePackDir(roleDir, { repoRoot })→validateRolePackDir(roleDir)；node node_modules/.bin/vitest run tests/init/role-pack-schema.test.ts；恢复后改写 src/onboarding/config-pack-generator.ts：invalidScopeIds(seed)→[]；跑 generator 测试件；恢复后删 src/init/role-pack-schema.ts 的 log.warn；跑 role-pack-schema 测试件",
+      "result": "pass",
+      "evidence": "A（repoRoot 回退）：VITEST_EXIT=1，红用例 A-①『cwd=/tmp 时夹具根下三包仍全绿…』与 A-②；原始 5 条 ROLE_PACK_REF_MISSING，逐一 financial.json/person.json/team.json/client.json/channel.json。B（删 scope id 校验）：VITEST_EXIT=1，B-1/B-2/B-3/B-5/B-6/B-7/B-8 共 7 条红。C（删 log.warn）：VITEST_EXIT=1，C-① 红，AssertionError『应至少一条 warn（实际 []）: expected 0 to be greater than 0』。副本 /tmp/rp-ext-mut1 已删除。"
+    },
+    {
+      "id": "C5",
+      "title": "回归探针 5 个（逐探针正确调用；rc 紧接命令捕获）",
+      "cmd": "node node_modules/.bin/tsx scripts/control-tower/probe-role-pack.ts --role finance | probe-permission-grants.ts --all | probe-role-config.ts --all | probe-onboarding.ts --all | probe-knowledge-scope.ts --all（各重定向日志后紧接 rc=$?）",
+      "result": "pass",
+      "evidence": "role-pack --role finance => EXIT=0，COVERAGE PASS=11；permission-grants --all => EXIT=0，PASS=20 UNVERIFIED=2；role-config --all => EXIT=1，FAIL=7；onboarding --all => EXIT=2，PASS=4 NOT_IMPLEMENTED=4 UNVERIFIED=4；knowledge-scope --all => EXIT=2，PASS=13 NOT_IMPLEMENTED=3 UNVERIFIED=3。五项与卡/规格给定基线逐项一致（PASS 不减、FAIL/NI/UN 不新增、退出码一致）。探针跑后 git status --porcelain 仍 0 行。"
+    },
+    {
+      "id": "C6",
+      "title": "声明核实（claim-verifier 抽验 ≥8 条）",
+      "cmd": "python 提取 RolePackProblemCode 并与规格 §4.5-C1 的 12 码集合比对；grep 三 src 文件 ROLE_* 字面量；grep '…(+' 与 '\\\\u2026'；grep 'return \\[\\]'；git diff grep '^\\+.*as (any|never|unknown as)'；sha1 对比 base/head 的 reconcileRefs 函数体；grep writeset 成员",
+      "result": "pass",
+      "evidence": "① 错误码：RolePackProblemCode 恰 12 项，集合与规格 12 码完全相等（差集空）；三 src 文件 ROLE_* 字面量差集空 ⇒ 无第三码。② badParams 仅来自 invalidScopeIds（只放非法取值），missingParams 仅来自 missingSeedParams（只放缺失字段名），B-7 验证两者同命时语义不混。③ 截断字面为真 U+2026（代码 '…(+' ；测试断言 '\\u2026(+3)'）。④ listRoleDirFiles catch 仍 return []（第 588 行）且 C-① 证 not.toThrow。⑤ 新增行 as any/as never/as unknown as = 0（全文件仅 1 处注释提到）。⑥ 模块头第 31 行有 test-facing 导出清单（CONTENT_PIECES/FIELD_LEVEL_VALIDATION_EXEMPT_PIECES/validateManifestDoc/reconcileRefs）。⑦ reconcileRefs 函数体 base 与 head 的 sha1 均 69911b9deef587e9dc67401c63ddd33c1b6bc09c ⇒ 行为不变。⑧ 7 个改动件在 claim writeset 各命中 1 次；claim done 含两测试件 verify 行。⑨ 附加：tests/presets/role-pack.test.ts 16 passed 作跨件回归。"
+    },
+    {
+      "id": "C7",
+      "title": "红线（extensions/第三码/J1–J7/M7/客户形态宣称）",
+      "cmd": "git diff --name-only gitea/local-main...HEAD | grep -cE '^extensions/'；错误码集合比对；git diff gitea/local-main...HEAD -- tests | grep -cE '^-.*expect\\('；git diff + PR/issue body grep 'M7|客户形态已生效'",
+      "result": "pass",
+      "evidence": "extensions/** 改动文件=0（内容面零改动）；错误码无第三码（12 码集合等）；测试删除 expect 行=0（未降 J1–J7 门槛、未改判据件）；diff/PR/issue 全文无 M7 表述；PR 正文原话『本 PR 不宣称客户形态生效』，无『客户形态已生效』。"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "suggestion",
+      "summary": "PR 正文红线段写『未新增错误码』，但同文又写追加 ROLE_PACK_DIR_UNREADABLE／ROLE_SEED_BAD_SCOPE_ID（规格 §4.5-C1 已登记为 #1104 新增两码）——物理上无第三码，建议改为『未新增第三码』",
+      "detail": "位置：PR #1105 正文『## 不做什么（红线）』。物理核对：RolePackProblemCode 恰 12 项且与规格 §4.5-C1 的 12 码集合完全相等，三个改动 src 文件的 ROLE_* 字面量差集为空 ⇒ 无规格外第三码；PR 正文前文亦写明『追加 …／…（§4.5-C1 共 12 码，无第三码）』。仅措辞自相矛盾，不影响判据。可复现：curl -s -H 'Authorization: token <token>' .../pulls/1105 | python3 -c 'import json,sys;print(\"未新增错误码\" in json.load(sys.stdin)[\"body\"])' ⇒ True。非阻断。"
+    },
+    {
+      "severity": "suggestion",
+      "summary": "C-① 用 chmod 0o111 制造 readdir EACCES，若将来以 root 运行测试会失去判别力；建议后续补一条注入 readdir 失败的路径",
+      "detail": "位置：tests/init/role-pack-schema.test.ts:747（C-① 用例）。本环境（非 root）实测有效：problems 含 ROLE_PACK_DIR_UNREADABLE、message 点名 roleDir、not.toThrow()、vi.mock 运行期捕获 warn。root 下权限位不阻止读目录 ⇒ 该用例可能恒绿。属测试可移植性建议，当前不阻断。"
+    },
+    {
+      "severity": "info",
+      "summary": "环境注记：本沙箱内 git fetch -q gitea 被拒（写 .git/worktrees/w-rp2/FETCH_HEAD EPERM），改用只读权威 git ls-remote 核基线，结果与本地 ref 完全一致",
+      "detail": "本会话文件沙箱仅允许工作区 /tmp/w-rp2 写入，而 fetch 需写 /Users/wane/SynovaAgent/.git/worktrees/w-rp2（工作区外），且无审批通道可升级。改用 git ls-remote gitea refs/heads/local-main ⇒ 0569f2d4b3a0caf3eb6b82438abcd075d93a5190，与本地 gitea/local-main 同值，merge-base --is-ancestor EXIT=0 ⇒ 基线结论不受影响。非代码问题。"
+    },
+    {
+      "severity": "info",
+      "summary": "环境注记：精确 C3 vitest 命令因 node_modules 软链到工作区外、vite 需写 .vite-temp 而 EPERM；改用同内容 CJS 镜像 config 复跑同 4 文件，结果 98 passed 与期望一致",
+      "detail": "node_modules -> /Users/wane/SynovaAgent/node_modules，vite 的 ESM config 临时文件写 node_modules/.vite-temp 被沙箱拒（EPERM，非业务红）。改用 /tmp/rp-cfg/vitest.config.cjs 镜像原 vitest.config.ts 的 root=/tmp/w-rp2、9 个 alias、test.env、testTimeout，跑同 4 个测试文件且未用 -t ⇒ Test Files 4 passed (4) / Tests 98 passed (98)（分件 32+17+26+23）。C4 改坏实验亦用同一等价 config，结论不受影响。非代码问题。"
+    },
+    {
+      "severity": "info",
+      "summary": "复核后分支头由外部提交 e07873d 推进（仅追加 docs/synova/reviews/1105.110511051105.json）；复跑 --diff-fingerprint 仍为 1af411…；按指示本回执 head 字段保持被审代码头 3bd3713",
+      "detail": "复核结论绑定代码头 3bd3713fdb25…（7 文件，fp 1af411…）。之后 reflog 与远端 refs/heads/ct/1104-p1c 显示 e07873dcd01f…『test(#1075): 队外独立复核回执（PR #1105, fp 1af411e4919f；Refs #1104）』，git show --stat 证实仅新增回执 1 文件（+72）。现场复跑 bash scripts/control-tower/check-merge-conditions.sh --pr 1105 --diff-fingerprint 仍输出 1af411e4919f14eea56ee7c193241cf83102b5efa8c96513f5a6922b6cb9c6b2（patch_fingerprint 显式排除 docs/synova/reviews/**）⇒ R3 绑定不变，属 docs-only 提交、非代码变化。仅提示：回执 head 字段与当前分支头不再逐字相同（保留 3bd3713 系本次『其余字段一字不改』之指示）。非阻断。"
+    }
+  ]
+}

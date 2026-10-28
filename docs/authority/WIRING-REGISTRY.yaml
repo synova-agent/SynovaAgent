@@ -152,3 +152,53 @@ entries:
     status: wired
     owner: P1
     notes: "岗位包 v2 装载期结构＋refs 校验（#1075 批一 P1-a）；消费者＝loader 唯一入口（content-registry boot/reload）；随仓 JSON Schema 是契约、zod 是执行体（drift 测试钉死键集）"
+  - capability: gate.assertLib
+    defined_at: "scripts/control-tower/gate-assert.sh:1"
+    provider: "scripts/control-tower/gate-assert.sh:1"
+    consumer: null
+    test: "tests/control-tower/gate-assert.test.sh"
+    status: declared-only
+    owner: P4
+    notes: "#1096 W6 判据自检库（库件）：ga_run 三态归一＋128/137/126 等非白名单码归判据故障(2)；接线＝后续判据抽样接入，本批不做 ⇒ 无生产消费者。"
+  - capability: gate.telemetry
+    defined_at: "scripts/control-tower/gate-telemetry.sh:1"
+    provider: "scripts/control-tower/gate-telemetry.sh:1"
+    consumer: null
+    test: "tests/control-tower/gate-telemetry.test.sh"
+    status: declared-only
+    owner: P4
+    notes: "#1094 W2 运行遥测：gate-hits JSONL 单写入器（--emit，三态 0/1/2，写失败 degraded 不改门禁结论）。消费侧＝pre-commit 的 log_gate 埋点，本批只做 producer；consumer 留空是口径选择（不编造消费者），接线事实以 tests/control-tower/gate-telemetry.test.sh 的 T1 WIRE 断言为准。"
+  - capability: ci.emptyGreen
+    defined_at: "scripts/control-tower/check-ci-empty-green.sh:1"
+    provider: "scripts/control-tower/check-ci-empty-green.sh:1"
+    consumer: null
+    test: "tests/control-tower/check-ci-empty-green.test.sh"
+    status: declared-only
+    owner: P4
+    notes: "#1095 W4：CI step 级空绿判据（关键 step test_count=0／skipped 无原因 ⇒ 红；正当跳过不计入通过）。唯一消费点＝.gitea/workflows/local-gates.yml 末尾「⑤ CI 空绿 step 级判据」步（第 410 行 name／第 416 行调用）。按 declared-only 如实登记：① G1/R1.2 的「生产调用点」grep 域只含 src/packages/scripts（不含 .gitea/workflows）⇒ CI workflow 调用对判据不可见，登记 wired 会被判无调用点；② 不编造 src/scripts 内的生产消费者（真没有）。"
+
+  # ---- P4 2026-10-28：#1101 W7 · L0 脚手架（dev.scaffold；人工调用，无自动消费者）----
+  - capability: dev.scaffold
+    defined_at: "scripts/dev/new-file.sh:1"
+    provider: "scripts/dev/new-file.sh:1"
+    consumer: null
+    test: "tests/control-tower/new-file.test.sh"
+    status: declared-only
+    owner: P4
+    notes: "#1101 W7-L0：人工调用生成器（bash scripts/dev/new-file.sh / npm run new）产出实现件＋配对测试件，无自动消费者；门禁侧的消费面是 scripts/pre-commit-check.sh 的「附: 三段契约兜底」段（判新文件三段契约齐），该段不调用本生成器。"
+  - capability: gate.mirrorFreshness
+    defined_at: "scripts/control-tower/check-mirror-freshness.sh:1"
+    provider: "scripts/control-tower/check-mirror-freshness.sh:1"
+    consumer: "scripts/pre-commit-check.sh:2233"
+    test: "tests/control-tower/check-mirror-freshness.test.sh"
+    status: wired
+    owner: P4
+    notes: "#1087 W5：只读报告器（三态 0/1/2）。**已接线**（W0/#1093）：`scripts/pre-commit-check.sh` 的「附: 治理面自检」段调用本器，且为**只报告**语义（不生 hard_check、不阻断提交）；CI 侧不入 GitHub（W5 拓扑约束）。consumer 行号见 WIRING。"
+  - capability: governance.gateInventory
+    defined_at: "scripts/control-tower/check-gate-inventory.sh:1"
+    provider: "scripts/control-tower/check-gate-inventory.sh:1"
+    consumer: "scripts/pre-commit-check.sh:2224"
+    test: "tests/control-tower/check-gate-inventory.test.sh"
+    status: wired
+    owner: P4
+    notes: "#1089 W1：三态登记校验器。**已接线**（W0/#1093）：`scripts/pre-commit-check.sh` 的「附: 治理面自检」段以 `hard_check` 调用（本地软提示/CI strict 硬阻断）；接线首日即抓出 `CT-check-gate-inventory` 自身 `required_ci:false` 的账实不符（已改 true）。"

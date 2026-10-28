@@ -1318,6 +1318,55 @@ documents:
     owner: P4
     note: "#1072（裁 427 D3）：scripts/workflow/check-brief-parseable.sh＋两测试件受保护路径豁免（空参 fail-closed；含铺底 #1071 两受保护件）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
 
+  # ---- P4 2026-10-28：#1096 W6 判据自检库豁免登记＋坑清单登记（DOC-0319/0320；0315–0318 已被在飞批次占用）----
+  - id: DOC-0319
+    type: decision
+    path: gate-exemptions/2026-10-28-1096-gate-assert.md
+    status: active
+    owner: P4
+    note: "#1096（W6）：判据自检共享件 gate-assert.sh ＋配对测试受保护路径豁免（含自覆盖行与 DOCS-REGISTRY 自登记行）。"
+  - id: DOC-0320
+    type: registry
+    path: docs/authority/gate-pitfalls.md
+    status: active
+    owner: P4
+    note: "#1096（W6）：判据已知坑清单（首条＝Windows os.path.relpath 反斜杠 vs 基线正斜杠 ⇒ 存量被算成新增）；新增判据须先读本件。"
+  # ---- P4 2026-10-28：#1094 W2 运行遥测豁免登记（DOC-0317；0308–0314 已被 M4/#1054/#1071/#1072 占用）----
+  - id: DOC-0317
+    type: decision
+    path: gate-exemptions/2026-10-28-1094-gate-telemetry.md
+    status: active
+    owner: P4
+    note: "#1094（W2 运行遥测）：gate-telemetry.sh（新）＋ gate-stats.sh（扩）＋ pre-commit log_gate 埋点＋两测试件受保护路径豁免（duration_ms/hits；未运行与零命中分离，M-8）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+
+  # ---- P4 2026-10-28：#1095 W4 CI step 级空绿判据（DOC-0318；0308–0314 已在册，0315–0317 由在飞批次预留）----
+  - id: DOC-0318
+    type: decision
+    path: gate-exemptions/2026-10-28-1095-ci-emptygreen.md
+    status: active
+    owner: P4
+    note: "#1095 W4：CI step 级空绿判据（关键 step test_count=0 或 skipped 无未运行原因 ⇒ 红；正当跳过须写原因且不计入通过）；受保护路径豁免五条（workflow／新判据脚本／配对测试／自覆盖／本行登记），含 docs/authority/DOCS-REGISTRY.yaml 自登记行。"
+  # ---- P4 2026-10-28：#1101 W7 · L0 脚手架豁免登记（DOC-0322，按派单指定号落号）----
+  - id: DOC-0322
+    type: decision
+    path: gate-exemptions/2026-10-28-1101-scaffold.md
+    status: active
+    owner: P4
+    note: "#1101（W7-L0）：scripts/pre-commit-check.sh ＋ tests/control-tower/** ＋ docs/authority/DOCS-REGISTRY.yaml 等受保护路径豁免（生成器＋三模板＋「附: 三段契约兜底」段）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+  # ---- P4 2026-10-28：#1087 W5 镜像新鲜度检查器豁免登记（DOC-0315；0314 已被 #1072 占用）----
+  - id: DOC-0315
+    type: decision
+    path: gate-exemptions/2026-10-28-1087-mirror-freshness.md
+    status: active
+    owner: P4
+    note: "#1087（W5 旧树假绿检测）：scripts/control-tower/check-mirror-freshness.sh＋配对密封测试受保护路径豁免（只读三态判据，判不了 exit 2）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+  # ---- P4 2026-10-28：#1089 W1 门禁三分类豁免登记（DOC-0316；0315 预留给在飞 PR #1088，禁复用）----
+  - id: DOC-0316
+    type: decision
+    path: gate-exemptions/2026-10-28-1089-gate-inventory.md
+    status: active
+    owner: P4
+    note: "#1089（W1）：scripts/control-tower/check-gate-inventory.sh＋配对密封测试受保护路径豁免（三态校验器：双向对齐/required_ci 账实/P0 棘轮）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
   # ---- P4 2026-10-28：#1100 W3 复核件豁免登记（DOC-0321；与在飞 #1088/#1090 预留段 0315–0320 不重号）----
   - id: DOC-0321
     type: decision

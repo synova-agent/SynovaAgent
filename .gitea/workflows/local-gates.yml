@@ -215,8 +215,10 @@ jobs:
             if printf '%s' "$VITEST_OUT" | grep -q "No test files found"; then
               if [ "$N_FILES" -eq 0 ]; then
                 echo "ℹ️  合法跳过：变更集为空（HEAD 即基线/已合并）⇒ 无对象可测（既非通过也非故障）"
+                _EG_SKIP_REASON="变更集为空（HEAD 即基线/已合并，无对象可测）"
               elif [ "$N_CODE" -eq 0 ]; then
                 echo "ℹ️  合法跳过（纯文档）：本次变更 ${N_FILES} 文件全在代码面/测试面之外 ⇒ 无测试可跑"
+                _EG_SKIP_REASON="纯文档变更：${N_FILES} 文件全在代码面/测试面之外"
               elif [ -n "$DELETED_VITEST" ]; then
                 echo "::error::🔴 异常空绿 —— 本次变更**删除了 vitest 测试**却被收集到零测试；这**不是通过**：测试真的丢了。"
                 printf '%s\n' "$DELETED_VITEST" | head -20 | sed 's/^/     - 已删除: /'
@@ -230,11 +232,32 @@ jobs:
               elif [ "$N_VITEST" -eq 0 ]; then
                 echo "ℹ️  合法跳过（不可测面）：本次变更 ${N_CODE} 个代码面文件**均非 vitest 可收集**（如 .test.sh/.yml/.py）"
                 echo "   ⇒ vitest --changed 无对象可跑属**正常**；这些面由各自门禁负责（本步只覆盖 vitest 面）。"
+                _EG_SKIP_REASON="不可测面：${N_CODE} 个代码面文件均非 vitest 可收集（.test.sh/.yml/.py）"
               else
                 echo "::error::🔴 异常空绿 —— 本次变更含 ${N_VITEST} 个 vitest 可收集测试 + ${N_CODE_NONVITEST} 个不可测面文件，但 vitest 一个测试都没跑（No test files found）。这**不是通过**：要么测试丢了，要么 --changed 判据失效。"
                 printf '%s\n' "$CHANGED_FILES" | grep -E '^(src|tests|scripts|packages|extensions|expert|knowledge|theory)/|^\.(gitea|github)/' | head -20 | sed 's/^/     - /'
                 exit 1
               fi
+            fi
+            # ── #1095 W4：本步结果登记（**step 级空绿判据的唯一数据源**）──────────────
+            #   ① `test_count` 写 `$GITHUB_OUTPUT`（无 `Tests` 计数行 ⇒ 0；平台表达式可消费）
+            #   ② 同一条记录追加到 **job 级结果文件**，供末尾「⑤ CI 空绿 step 级判据」判空绿
+            #   ③ 正当跳过必须带「未运行原因」（上面各分支已置 `_EG_SKIP_REASON`）⇒ 汇总步把它标成
+            #      **不计入通过**，而不是"测试通过"；未声明跳过却 test_count=0 ⇒ 汇总步判红
+            #   ⚠️ 写失败**不得**改本步判定（`|| true`）：汇总步会因缺记录判 exit 2，不会假绿。
+            _EG_TC="$(printf '%s\n' "$VITEST_OUT" | sed -nE 's/.*Tests[[:space:]]+.*\(([0-9]+)\).*/\1/p' | tail -1)"
+            [ -n "$_EG_TC" ] || _EG_TC=0
+            _EG_STATUS=ran
+            if [ -n "${_EG_SKIP_REASON:-}" ]; then _EG_STATUS=skipped; fi
+            echo "test_count=${_EG_TC}" >> "${GITHUB_OUTPUT:-/dev/null}"
+            # 🔴 复现器沙箱复跑（④ 步用 `SYNO_EG_STUB_MODE` 注入桩）**不得**写真实结果记录 ——
+            #   否则 ④ 步的 8 个沙箱场景会把本 job 的记录冲掉（戊 场景 test_count=3 会盖住真空绿）。
+            if [ -n "${SYNO_EG_STUB_MODE:-}" ]; then
+              echo "ℹ️  ④ 复现器沙箱复跑（SYNO_EG_STUB_MODE 在场）⇒ 本步结果记录跳过写入（不污染真实判据）"
+            else
+              _EG_RESULTS="${RUNNER_TEMP:-/tmp}/synova-ci-emptygreen-${GITHUB_RUN_ID:-local}.env"
+              mkdir -p "$(dirname "$_EG_RESULTS")" 2>/dev/null || true  # swallow-ok: 目录建不了时下面的写会失败并被同行的 || true 接住（汇总步判 exit 2）
+              { printf 'step=③ 增量测试 status=%s test_count=%s reason=%s\n' "$_EG_STATUS" "$_EG_TC" "${_EG_SKIP_REASON:-}" >> "$_EG_RESULTS"; } 2>/dev/null || true  # swallow-ok: 结果文件写失败不改本步判定（缺记录 ⇒ 汇总步 exit 2，不假绿）
             fi
             exit 0
           fi
@@ -374,4 +397,25 @@ jobs:
           BASE="$(bash scripts/control-tower/resolve-ci-base.sh)" || exit $?
           echo "①i base = $BASE"
           python3 scripts/control-tower/check-tool-args-delta.py --root . --base "$BASE" || exit $?
+      # ── #1095 W4：CI **step 级**空绿判据（test_count / skipped 汇总）──
+      # 位置＝**文件末尾**：#910 盘点表的 CI-S<n> 是**位置派生**的 id，插在中间会让 CI-S3..S12 全体漂移
+      #   ⇒ 只追加、不重编号；代价与 ①e/①i 同：① 若先红，本步不执行（**不做 always()**，语义不变）。
+      # 判据源＝`scripts/control-tower/check-ci-empty-green.sh` 头部（三态：0 通过／1 真红／2 判不了）。
+      #   · 关键 step（③ 增量测试）test_count=0 且未声明为正当跳过 ⇒ 🔴 异常空绿
+      #   · 关键 step 被 skipped 而无「未运行原因」 ⇒ 🔴（禁静默跳过）
+      #   · 正当跳过（变更集未触及可测面）⇒ 写原因、**不计入通过**（不冒充"测试通过"）
+      # 数据源＝③ 步写入的 job 级结果记录（与 ③ 步**同一路径表达式**，禁两处漂移）。
+      # 🔴 三态原样透传（`set +e` 捕获 ＋ `exit $_EG_RC`）：禁 `|| exit 1` 把 2 说成 1，
+      #   也禁"`CMD="$(…)"` 在 runner 注入的 set -e 下当场退出 ⇒ 整步零输出"（本文件 ③ 步 #338 的教训）。
+      - name: ⑤ CI 空绿 step 级判据（test_count / skipped · 只判本 job 记录）
+        run: |
+          cd /Users/wane/.ci-work/SynovaAgent
+          set -uo pipefail
+          EG_RESULTS="${RUNNER_TEMP:-/tmp}/synova-ci-emptygreen-${GITHUB_RUN_ID:-local}.env"
+          set +e
+          _EG_OUT="$(bash scripts/control-tower/check-ci-empty-green.sh --results "$EG_RESULTS" 2>&1)"; _EG_RC=$?
+          set -e
+          printf '%s\n' "$_EG_OUT"
+          { printf '### ⑤ CI 空绿 step 级判据（test_count / skipped）\n\n```\n%s\n```\n\n' "$_EG_OUT" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"; } 2>/dev/null || true  # swallow-ok: step summary 写失败不改判定（stdout 已留证）
+          exit "$_EG_RC"
 
