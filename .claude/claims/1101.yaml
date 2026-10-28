@@ -1,0 +1,24 @@
+# .claude/claims/1101.yaml — W7 · L0 脚手架（模板＋生成器＋三段契约兜底）
+# #CRITERIA: D ｜ 架构层: 治理线（开发脚手架 + pre-commit 附加段，非产品五层）
+# 声明载体 = 本件（writeset + done 两字段制）；Q1/Q2/Q3 的可读说明见
+# .claude/task-briefs/2026-10-28-1101-scaffold.md（同批）。
+writeset:
+  - scripts/dev/new-file.sh
+  - templates/code/component.tsx.tmpl
+  - templates/code/module.ts.tmpl
+  - templates/code/test.tmpl
+  - package.json
+  - scripts/pre-commit-check.sh
+  - tests/control-tower/new-file.test.sh
+  - gate-exemptions/2026-10-28-1101-scaffold.md
+  - .claude/task-briefs/2026-10-28-1101-scaffold.md
+  - .claude/claims/1101.yaml
+  - memory/notes/proposed/2026-10-28-1101-scaffold.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - docs/authority/WIRING-REGISTRY.yaml
+done:
+  - verify: bash tests/control-tower/new-file.test.sh
+  - verify: bash -n scripts/dev/new-file.sh
+  - verify: bash -n scripts/pre-commit-check.sh
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main --root .
+note: "#1101 W7-L0：生成器＋三模板＋pre-commit 附:三段契约兜底（新增 src/**/*.ts(x) 缺 @input/@output/@degraded 即拦；本地软/CI 硬，SYNO_CONTRACT_BACKSTOP=0 为唯一回滚点）。配对测试 tests/control-tower/new-file.test.sh 22 例含改坏即红。"

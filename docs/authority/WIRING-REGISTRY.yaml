@@ -176,3 +176,13 @@ entries:
     status: declared-only
     owner: P4
     notes: "#1095 W4：CI step 级空绿判据（关键 step test_count=0／skipped 无原因 ⇒ 红；正当跳过不计入通过）。唯一消费点＝.gitea/workflows/local-gates.yml 末尾「⑤ CI 空绿 step 级判据」步（第 410 行 name／第 416 行调用）。按 declared-only 如实登记：① G1/R1.2 的「生产调用点」grep 域只含 src/packages/scripts（不含 .gitea/workflows）⇒ CI workflow 调用对判据不可见，登记 wired 会被判无调用点；② 不编造 src/scripts 内的生产消费者（真没有）。"
+
+  # ---- P4 2026-10-28：#1101 W7 · L0 脚手架（dev.scaffold；人工调用，无自动消费者）----
+  - capability: dev.scaffold
+    defined_at: "scripts/dev/new-file.sh:1"
+    provider: "scripts/dev/new-file.sh:1"
+    consumer: null
+    test: "tests/control-tower/new-file.test.sh"
+    status: declared-only
+    owner: P4
+    notes: "#1101 W7-L0：人工调用生成器（bash scripts/dev/new-file.sh / npm run new）产出实现件＋配对测试件，无自动消费者；门禁侧的消费面是 scripts/pre-commit-check.sh 的「附: 三段契约兜底」段（判新文件三段契约齐），该段不调用本生成器。"

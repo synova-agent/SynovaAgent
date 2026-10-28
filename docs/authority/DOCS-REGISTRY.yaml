@@ -1346,3 +1346,10 @@ documents:
     status: active
     owner: P4
     note: "#1095 W4：CI step 级空绿判据（关键 step test_count=0 或 skipped 无未运行原因 ⇒ 红；正当跳过须写原因且不计入通过）；受保护路径豁免五条（workflow／新判据脚本／配对测试／自覆盖／本行登记），含 docs/authority/DOCS-REGISTRY.yaml 自登记行。"
+  # ---- P4 2026-10-28：#1101 W7 · L0 脚手架豁免登记（DOC-0322，按派单指定号落号）----
+  - id: DOC-0322
+    type: decision
+    path: gate-exemptions/2026-10-28-1101-scaffold.md
+    status: active
+    owner: P4
+    note: "#1101（W7-L0）：scripts/pre-commit-check.sh ＋ tests/control-tower/** ＋ docs/authority/DOCS-REGISTRY.yaml 等受保护路径豁免（生成器＋三模板＋「附: 三段契约兜底」段）；含自覆盖行与 DOCS-REGISTRY 自登记行。"

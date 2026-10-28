@@ -2250,6 +2250,54 @@ with open('$ROOT/.codex/checkpoints/cp3-commit-check.json','w') as f:
 " 2>/dev/null || true
 
 # ═══════════════════════════════════════════════════════════════════
+# 附: 三段契约兜底（#1101 / W7-L0）—— 新增 src/**/*.ts(x) 缺 @input/@output/@degraded 任一段 ⇒ 红
+#
+# 判据对象（禁自指）: **本次变更集中新增（git diff --cached --diff-filter=A）的 src/**/*.ts(x)**。
+#   不判全仓存量、不判修改件（M）—— 存量无头注是历史事实，本闸不追溯；它只对**新文件**负责。
+# 取内容: `git show :<path>`（**暂存区内容**，不是工作树）⇒ 判的正是「这次真要提交的东西」。
+# 强度（D515/D516 同一口径）: soft_check —— 本地软提示 / CI（SYNO_CI=1）硬阻断。
+# 空变更集: 不触发（无新增 src 文件 ⇒ 本闸无判据对象，既不打 ❌ 也不判红）。
+# 回滚: SYNO_CONTRACT_BACKSTOP=0（唯一回滚点，判据零改动）。
+# 为什么是兜底而不是主闸: 主闸靠 `scripts/dev/new-file.sh` 生成即合规（新文件头注成本归零，
+#   见 #1101 判据 G7）；本闸兜的是「绕过生成器手写新文件」这条路 —— 它**不**判契约质量。
+# 已知限制（禁读成「已判契约」）:
+#   1. 只判**三段是否存在**；不判语义质量、不判是否落在头注 12 行内（后者是生成器/模板的约束）。
+#   2. 只覆盖 src/**；tests/、scripts/、extensions/ 的新文件不在本闸对象内。
+#   3. 取不到暂存内容（git show 失败）⇒ 按**违规**计（fail-closed：看不见 ≠ 没问题）。
+# 判据顺序纪律: 本块按判据要求插在 `# 结果` 汇总锚点**之前** —— 放到汇总之后等于永不点火。
+# 接线与判别力: tests/control-tower/new-file.test.sh（提取本段真跑；改坏即红）。
+# ═══════════════════════════════════════════════════════════════════
+# ═══ CONTRACT-BACKSTOP-BEGIN（夹具 tests/control-tower/new-file.test.sh 按此标记提取本段）═══
+if [ "${SYNO_CONTRACT_BACKSTOP:-1}" = "0" ]; then
+  echo -e "  ${CYAN}ℹ️  三段契约兜底: 回滚态（SYNO_CONTRACT_BACKSTOP=0）—— 跳过（唯一回滚点）${RESET}"
+else
+  # 变更集：只取**新增**的 src/**/*.ts(x)（.d.ts 是类型声明，不是实现件，排除）
+  _CB_ADDED="$(printf '%s\n' "${GIT_CACHED_ADDED_NAMES:-}" | grep -E '^src/.*\.(ts|tsx)$' | grep -v '\.d\.ts$' || true)"  # swallow-ok: 无匹配时 grep exit 1，空集=无判据对象（见「空变更集」）
+  if [ -z "$_CB_ADDED" ]; then
+    soft_pass "附: 三段契约兜底 (#1101): 变更集无新增 src/**/*.ts(x)（不触发）"
+  else
+    CONTRACT_BACKSTOP_FAIL=""
+    while IFS= read -r _cb_f; do
+      [ -z "$_cb_f" ] && continue
+      _cb_body="$(git show ":${_cb_f}" 2>/dev/null || true)"  # swallow-ok: 取不到内容时下方按 fail-closed 计违规（不静默放行）
+      if [ -z "$_cb_body" ]; then
+        CONTRACT_BACKSTOP_FAIL="${CONTRACT_BACKSTOP_FAIL}${_cb_f}: 暂存内容读取失败（fail-closed，按缺三段计）\n"
+        continue
+      fi
+      _cb_missing=""
+      for _cb_k in input output degraded; do
+        printf '%s\n' "$_cb_body" | grep -q -- "@${_cb_k}" || _cb_missing="${_cb_missing} @${_cb_k}"
+      done
+      if [ -n "$_cb_missing" ]; then
+        CONTRACT_BACKSTOP_FAIL="${CONTRACT_BACKSTOP_FAIL}${_cb_f}: 头注缺${_cb_missing}（合规样例: bash scripts/dev/new-file.sh 的生成件）\n"
+      fi
+    done <<< "$_CB_ADDED"
+    soft_check "附: 三段契约兜底 (#1101) — 新增 src/**/*.ts(x) 缺 @input/@output/@degraded" "${CONTRACT_BACKSTOP_FAIL:-}"
+  fi
+fi
+# ═══ CONTRACT-BACKSTOP-END ═══
+
+# ═══════════════════════════════════════════════════════════════════
 # 结果
 # ═══════════════════════════════════════════════════════════════════
 echo ""

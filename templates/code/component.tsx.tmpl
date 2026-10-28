@@ -1,0 +1,15 @@
+// {{NAME}} — 由 scripts/dev/new-file.sh 生成（{{DATE}} / {{AUTHOR}}）
+//
+// 契约（铁律 47 / D257）:
+//   @input  props: {{NAME}}Props —— 首版零入参（空 interface；要收数据请在此加字段）
+//   @output string —— 渲染文本 "{{NAME}}"；不引入 JSX/React/DOM（任意运行时可直接调用）
+//   @degraded 不适用 —— 纯函数、无 IO/网络/时钟依赖，不存在可失败路径（不声明 = 不会静默降级）
+//
+// 模板占位符由生成器填: {{NAME}}（文件名主干）·{{DATE}}·{{AUTHOR}}；本头注保持 ≤12 行。
+export interface {{NAME}}Props {
+  // 入参字段从空开始：首版组件不接收任何外部数据。
+}
+
+export function {{NAME}}(_props: {{NAME}}Props): string {
+  return '{{NAME}}';
+}
