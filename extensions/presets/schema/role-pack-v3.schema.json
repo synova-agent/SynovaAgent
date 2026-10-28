@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Synova 岗位包 v2 manifest 契约（随仓件；#1075 P1-a）",
+  "title": "Synova 岗位包 v3 manifest 契约（随仓件；#1075 P2-1）",
   "description": "根对象 = 岗位包 manifest.json 的形状。执行体是 src/init/role-pack-schema.ts 的 zod（本仓无 ajv）；两者键集由 tests/init/role-pack-schema.test.ts 的 drift 用钉死。$defs 只定义五件内容件的最小声明要求（契约，本批不做装载期字段级校验 —— 豁免清单见 FIELD_LEVEL_VALIDATION_EXEMPT_PIECES）。",
   "type": "object",
   "additionalProperties": false,
@@ -18,12 +18,12 @@
   ],
   "properties": {
     "$schema": {
-      "const": "../../schema/role-pack-v2.schema.json",
+      "const": "../../schema/role-pack-v3.schema.json",
       "description": "随仓 schema 指针（相对角色包目录）；loader 只校验这个常量。"
     },
     "schemaVersion": {
-      "const": 2,
-      "description": "包契约版本。缺省不等于 2；≠2 装载期 fail-loud（ROLE_PACK_SCHEMA_VERSION_UNSUPPORTED）。"
+      "const": 3,
+      "description": "包契约版本。缺省不等于 3；≠3 装载期 fail-loud（ROLE_PACK_SCHEMA_VERSION_UNSUPPORTED）。"
     },
     "name": {
       "type": "string",
@@ -33,7 +33,7 @@
     "version": {
       "type": "string",
       "pattern": "^\\d+\\.\\d+\\.\\d+$",
-      "description": "包自身版本（v2 迁移后为 2.0.0）。"
+      "description": "包自身版本（出厂件为 2.0.0；独立于契约版本 schemaVersion）。"
     },
     "type": {
       "const": "role-preset",

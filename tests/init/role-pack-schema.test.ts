@@ -1,5 +1,5 @@
 /**
- * tests/init/role-pack-schema.test.ts — 岗位包 v2 校验面判据（#1075 P1-a：J1／J2／J3＋边界）
+ * tests/init/role-pack-schema.test.ts — 岗位包 v3 校验面判据（#1075 P1-a：J1／J2／J3＋边界；P2-1：J1b）
  *
  * 断言对象 = **生产路径**（`src/init/role-pack-schema.ts` 纯核／IO 壳 ＋ 真 `loadRolePacks()`）——
  *   禁 grep 当验收（规格 §4 V-02）；grep 只作辅证。
@@ -11,12 +11,20 @@
  *      kind=file 路径在仓库根存在、kind=scope 命中同包 scopes[].id、pieces(6) === 磁盘文件集。
  *   J3 loader fail-loud 且**不抛**：六种非法输入各一条，每条 `expect(() => loadRolePacks()).not.toThrow()`
  *      ＋ errors **点名**（具体 path／scope id／code；禁只断非空）。
- *   C2 边界值：schemaVersion 0/-1/3、pieces 空/1/7、refs 空（content 无 source 时过）、scope id 长度 64。
+ *   C2 边界值：schemaVersion 0/-1/2/4、pieces 空/1/7、refs 空（content 无 source 时过）、scope id 长度 64。
+ *
+ * 🔴 #1075 P2-1 新增 J1b 组（v3 契约 ＋ 身份绑定 ＋ 内容指纹；本文件既有 32 条**一字不减**）:
+ *   · v3 常量与随仓 schema 的 const 同源（标题/`$schema` const/`schemaVersion` const 2→3）；
+ *   · **manifest 键集不增**（D1：审批在记录侧 ⇒ 无 approval 字段）；
+ *   · **身份换牌**：复制 finance 为 `roles/fake` 但 `manifest.roleId` 仍 `finance` ⇒ `ROLE_PACK_ROLE_ID_MISMATCH`
+ *     （点名两侧；IO 壳与生产 `loadRolePacks()` 两个落点都红）；
+ *   · 三包 `ok:true` 且 `contentHash` 为 64 位小写 hex 且互不相同；`contentHash` **只在 ok:true 时出现**；
+ *   · `computeRolePackContentHash()` 的 **raw-bytes 语义**：重排 JSON 空白 ⇒ hash 变；入参顺序无关；逐件改一字节 ⇒ 变。
  *
  * 🔴 反例（改坏必红）由规格 §4-J7 的独立脚本在临时 worktree 副本里跑，不留在本仓：
  *   J1-②（schema.required 删 refs ⇒ J1-④ 红）｜J2-②（改 knowledge-scope.yaml 的 scope id ⇒ J2-③ 红）。
  *
- * 隔离手法：J3/C2 用 `mkdtempSync` 临时内容根 ＋ `SYNOVA_PRESETS_ROOT` 注入；真实内容面用例**只读**。
+ * 隔离手法：J3/C2/J1b 用 `mkdtempSync` 临时内容根 ＋ `SYNOVA_PRESETS_ROOT` 注入；真实内容面用例**只读**。
  *
  * ═══ #1104（P1-c）新增 A／C 两组（本文件既有 28 条**一字不改**）═══
  *   A · repoRoot 不依赖 cwd（规格 §10-L14）：夹具根 = 临时"仓库形状"
@@ -41,6 +49,7 @@ import {
   ROLE_PACK_PIECES,
   ROLE_PACK_SCHEMA_POINTER,
   ROLE_PACK_SCHEMA_VERSION,
+  computeRolePackContentHash,
   projectContextSource,
   reconcileRefs,
   validateManifestDoc,
@@ -71,7 +80,7 @@ vi.mock('@synova/logger', () => {
 /** 仓库根（vitest 的 cwd = 仓库根）—— 只读真实内容面用 */
 const REPO_ROOT = process.cwd();
 const ROLES_ROOT = join(REPO_ROOT, 'extensions', 'presets', 'roles');
-const SCHEMA_PATH = join(REPO_ROOT, 'extensions', 'presets', 'schema', 'role-pack-v2.schema.json');
+const SCHEMA_PATH = join(REPO_ROOT, 'extensions', 'presets', 'schema', 'role-pack-v3.schema.json');
 /** 出厂三包（写死；从磁盘目录名推导会让"删一个包"变成静默通过） */
 const ROLE_IDS = ['finance', 'hr', 'sales'] as const;
 
@@ -136,7 +145,7 @@ function scopeIdsOf(roleId: string): readonly string[] {
   return scopes.filter(isRecord).map((entry) => String(entry['id']));
 }
 
-/** 最小合法 v2 manifest（J3/C2 夹具的基底） */
+/** 最小合法 v3 manifest（J3/C2 夹具的基底） */
 function baseManifest(roleId: string): Record<string, unknown> {
   return {
     $schema: ROLE_PACK_SCHEMA_POINTER,
@@ -188,7 +197,7 @@ function useTempPresetsRoot(): string {
   return rolesRoot;
 }
 
-/** 在临时内容根里造一个角色包（默认最小合法 v2；可覆盖 manifest／单件内容／省略件） */
+/** 在临时内容根里造一个角色包（默认最小合法 v3；可覆盖 manifest／单件内容／省略件） */
 function seedPack(
   rolesRoot: string,
   roleId: string,
@@ -223,10 +232,10 @@ function loadOrFail(): ReturnType<typeof loadRolePacks> {
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe('J1 随仓契约＋schemaVersion', () => {
-  it('J1-① 三包 schemaVersion === 2（禁"缺省当 2"）', () => {
+  it('J1-① 三包 schemaVersion === 3（禁"缺省当 3"）', () => {
     for (const roleId of ROLE_IDS) {
       const manifest = readManifest(roleId);
-      expect(manifest['schemaVersion'], `${roleId}: schemaVersion 应为 2`).toBe(ROLE_PACK_SCHEMA_VERSION);
+      expect(manifest['schemaVersion'], `${roleId}: schemaVersion 应为 3`).toBe(ROLE_PACK_SCHEMA_VERSION);
       expect(typeof manifest['schemaVersion'], `${roleId}: schemaVersion 必须是数字`).toBe('number');
     }
   });
@@ -234,7 +243,7 @@ describe('J1 随仓契约＋schemaVersion', () => {
   it('J1-② 三包 $schema === 随仓常量（相对包目录）', () => {
     for (const roleId of ROLE_IDS) {
       expect(readManifest(roleId)['$schema'], `${roleId}: $schema 常量`).toBe(ROLE_PACK_SCHEMA_POINTER);
-      expect(ROLE_PACK_SCHEMA_POINTER).toBe('../../schema/role-pack-v2.schema.json');
+      expect(ROLE_PACK_SCHEMA_POINTER).toBe('../../schema/role-pack-v3.schema.json');
     }
   });
 
@@ -326,6 +335,170 @@ describe('J1 随仓契约＋schemaVersion', () => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
+// J1b · v3 契约 / 身份绑定 / 内容指纹（#1075 P2-1；新增 ≥3 用例）
+// ══════════════════════════════════════════════════════════════════════════════
+
+/** 读某角色包六件的**原始字节**（测试侧只读；用于指纹的 raw-bytes 语义断言） */
+function readPieceBytes(roleDir: string): { name: string; bytes: Buffer }[] {
+  return [...ROLE_PACK_PIECES].map((name) => ({ name, bytes: readFileSync(join(roleDir, name)) }));
+}
+
+/** 逐件**二进制**复制真实包到临时 roles 根（身份换牌夹具：目录名换、内容字节不动） */
+function copyPack(rolesRoot: string, srcRoleId: string, dstRoleId: string): void {
+  const srcDir = join(ROLES_ROOT, srcRoleId);
+  const dstDir = join(rolesRoot, dstRoleId);
+  mkdirSync(dstDir, { recursive: true });
+  for (const piece of ROLE_PACK_PIECES) {
+    writeFileSync(join(dstDir, piece), readFileSync(join(srcDir, piece)));
+  }
+}
+
+describe('J1b v3 契约 / roleId 绑定 / 内容指纹（#1075 P2-1）', () => {
+  it('J1b-① v3 常量与随仓 schema 的 const 同源（v2 路径在仓内已消失）', () => {
+    expect(ROLE_PACK_SCHEMA_VERSION).toBe(3);
+    expect(ROLE_PACK_SCHEMA_POINTER).toBe('../../schema/role-pack-v3.schema.json');
+
+    const schema = readSchema();
+    expect(String(schema['title'])).toContain('v3');
+    const properties = schema['properties'];
+    expect(isRecord(properties), 'schema.properties 应是对象').toBe(true);
+    if (!isRecord(properties)) throw new Error('schema.properties 不是对象');
+    const versionProp = properties['schemaVersion'];
+    const pointerProp = properties['$schema'];
+    expect(isRecord(versionProp) ? versionProp['const'] : undefined, 'schema.schemaVersion.const').toBe(
+      ROLE_PACK_SCHEMA_VERSION,
+    );
+    expect(isRecord(pointerProp) ? pointerProp['const'] : undefined, 'schema.$schema.const').toBe(
+      ROLE_PACK_SCHEMA_POINTER,
+    );
+    // v2 路径必须消失（改名而非并存）：仓内 v2 schema 文件不存在
+    expect(existsSync(join(REPO_ROOT, 'extensions', 'presets', 'schema', 'role-pack-v2.schema.json'))).toBe(false);
+  });
+
+  it('J1b-② 三包 manifest 仍恰 11 键（含可选 note）且**无 approval 字段**（D1：审批在记录侧）', () => {
+    const expectedKeys = [
+      '$schema',
+      'displayName',
+      'entryPoint',
+      'name',
+      'note',
+      'pieces',
+      'refs',
+      'roleId',
+      'schemaVersion',
+      'type',
+      'version',
+    ].sort();
+    for (const roleId of ROLE_IDS) {
+      const manifest = readManifest(roleId);
+      expect(Object.keys(manifest).sort(), `${roleId}: 键集不得增删（迁移只改两个版本字段）`).toEqual(expectedKeys);
+      expect(Object.keys(manifest), `${roleId}: 不得携带审批信息（D1）`).not.toContain('approval');
+      expect(Array.isArray(manifest['pieces']) ? manifest['pieces'].length : -1, `${roleId}: pieces 仍 6`).toBe(6);
+    }
+  });
+
+  it('J1b-③ 身份换牌：roles/fake 复制 finance（manifest.roleId 仍 finance）⇒ ROLE_PACK_ROLE_ID_MISMATCH、点名两侧、不抛', () => {
+    const rolesRoot = useTempPresetsRoot();
+    copyPack(rolesRoot, 'finance', 'fake');
+    const fakeDir = join(rolesRoot, 'fake');
+
+    expect(() => validateRolePackDir(fakeDir, { repoRoot: REPO_ROOT }), '不得抛').not.toThrow();
+    const validation = validateRolePackDir(fakeDir, { repoRoot: REPO_ROOT });
+    expect(validation.ok).toBe(false);
+    const mismatch = validation.problems.find((problem) => problem.code === 'ROLE_PACK_ROLE_ID_MISMATCH');
+    if (mismatch === undefined) {
+      throw new Error(`应含 ROLE_PACK_ROLE_ID_MISMATCH（实际 ${JSON.stringify(validation.problems)}）`);
+    }
+    expect(mismatch.message, '必须点名目录名（两侧值之一）').toContain('fake');
+    expect(mismatch.message, '必须点名 manifest 自述值（两侧值之一）').toContain('finance');
+    expect(Object.prototype.hasOwnProperty.call(validation, 'contentHash'), '身份不成立 ⇒ 无指纹').toBe(false);
+
+    // 生产入口也一样红（不是只有直接调 IO 壳才红）
+    const report = loadOrFail();
+    expect(report.degraded).toBe(true);
+    expect(report.errors.join(' ')).toContain('ROLE_PACK_ROLE_ID_MISMATCH');
+    expect(report.roles.find((role) => role.roleId === 'fake')?.schemaValid).toBe(false);
+  });
+
+  it('J1b-④ 三包 ok:true 且 contentHash 为 64 位小写 hex（三包互不相同）', () => {
+    const hashes: string[] = [];
+    for (const roleId of ROLE_IDS) {
+      const validation = validateRolePackDir(join(ROLES_ROOT, roleId), { repoRoot: REPO_ROOT });
+      expect(validation.ok, `${roleId}: 应通过（problems=${JSON.stringify(validation.problems)}）`).toBe(true);
+      const hash = validation.contentHash;
+      expect(typeof hash, `${roleId}: ok:true ⇒ contentHash 必有`).toBe('string');
+      if (typeof hash !== 'string') throw new Error(`${roleId}: 缺 contentHash`);
+      expect(hash, `${roleId}: 64 位小写 hex`).toMatch(/^[0-9a-f]{64}$/);
+      hashes.push(hash);
+    }
+    expect(new Set(hashes).size, '三包内容不同 ⇒ 指纹应互不相同').toBe(ROLE_IDS.length);
+  });
+
+  it('J1b-⑤ contentHash **仅在 ok:true 时出现**（结构失败／refs 失败／缺 manifest 均缺省）', () => {
+    const rolesRoot = useTempPresetsRoot();
+    const hasHash = (absDir: string): boolean => {
+      const validation = validateRolePackDir(absDir, { repoRoot: REPO_ROOT });
+      expect(validation.ok, `${absDir}: 本夹具应判失败（problems=${JSON.stringify(validation.problems)}）`).toBe(false);
+      return Object.prototype.hasOwnProperty.call(validation, 'contentHash');
+    };
+
+    // ① 结构失败（schemaVersion=2：v3 迁移后属旧版本）
+    const badVersion = baseManifest('badver');
+    badVersion['schemaVersion'] = 2;
+    seedPack(rolesRoot, 'badver', { manifest: badVersion });
+    expect(hasHash(join(rolesRoot, 'badver')), '结构失败 ⇒ 缺省').toBe(false);
+
+    // ② refs 失败（磁盘多出未声明件 ⇒ PIECES_MISMATCH）
+    seedPack(rolesRoot, 'extrafile');
+    writeFileSync(join(rolesRoot, 'extrafile', 'notes.md'), '# 未声明\n', 'utf8');
+    expect(hasHash(join(rolesRoot, 'extrafile')), 'refs 失败 ⇒ 缺省').toBe(false);
+
+    // ③ 缺 manifest（早期返回）
+    mkdirSync(join(rolesRoot, 'nomanifest'), { recursive: true });
+    writeFileSync(join(rolesRoot, 'nomanifest', 'knowledge-scope.yaml'), 'roleId: nomanifest\nscopes: []\n', 'utf8');
+    expect(hasHash(join(rolesRoot, 'nomanifest')), '缺 manifest ⇒ 缺省').toBe(false);
+
+    // ④ 对照：同一手法下的合法夹具必须**有**（证明 ①②③ 不是恒缺省）
+    seedPack(rolesRoot, 'goodpack');
+    const good = validateRolePackDir(join(rolesRoot, 'goodpack'), { repoRoot: REPO_ROOT });
+    expect(good.ok, `goodpack 应通过（problems=${JSON.stringify(good.problems)}）`).toBe(true);
+    expect(typeof good.contentHash).toBe('string');
+  });
+
+  it('J1b-⑥ computeRolePackContentHash：raw-bytes 语义（重排 JSON 空白 ⇒ 变；入参顺序无关；逐件改一字节 ⇒ 变）', () => {
+    const financeDir = join(ROLES_ROOT, 'finance');
+    const pieces = readPieceBytes(financeDir);
+    const baseline = computeRolePackContentHash(pieces);
+    expect(baseline).toMatch(/^[0-9a-f]{64}$/);
+    // 与 IO 壳（同一次读）的产出一致（校验与指纹同源）
+    expect(validateRolePackDir(financeDir, { repoRoot: REPO_ROOT }).contentHash, 'IO 壳与纯核应同源').toBe(baseline);
+
+    // ① 入参顺序无关（函数内部按 ROLE_PACK_PIECES 契约顺序重排）
+    expect(computeRolePackContentHash([...pieces].reverse()), '顺序不应影响指纹').toBe(baseline);
+
+    // ② raw bytes（无 canonical 化）：同一 JSON 语义、空白重排 ⇒ 指纹必变
+    const manifestBytes = readFileSync(join(financeDir, 'manifest.json'));
+    const reordered = Buffer.from(`${JSON.stringify(JSON.parse(manifestBytes.toString('utf8')))}\n`, 'utf8');
+    expect(reordered.equals(manifestBytes), '前置：重排后的字节必须与原字节不同（否则本断言无判别力）').toBe(false);
+    const reorderedPieces = pieces.map((piece) =>
+      piece.name === 'manifest.json' ? { name: piece.name, bytes: reordered } : piece,
+    );
+    expect(computeRolePackContentHash(reorderedPieces), '重排 JSON 空白 ⇒ 指纹变（raw bytes 语义）').not.toBe(baseline);
+
+    // ③ 逐件（manifest ＋ 五内容件）改一字节 ⇒ 指纹必变
+    for (const target of ROLE_PACK_PIECES) {
+      const mutated = pieces.map((piece) => {
+        if (piece.name !== target) return piece;
+        const flipped = Buffer.from(piece.bytes);
+        flipped[0] = flipped[0] === 0x2f ? 0x20 : 0x2f; // 首字节换掉（长度不变，语义不变性无关）
+        return { name: piece.name, bytes: flipped };
+      });
+      expect(computeRolePackContentHash(mutated), `${target}: 改一字节 ⇒ 指纹必变`).not.toBe(baseline);
+    }
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
 // J2 · refs 三方双向相等
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -388,7 +561,7 @@ describe('J3 loader fail-loud 且不抛（六种非法输入各一条，errors �
     for (const role of report.roles) {
       expect(role.missing, `${role.roleId}: missing 应为空`).toEqual([]);
       expect(role.schemaValid, `${role.roleId}: schemaValid 应为 true`).toBe(true);
-      expect(role.schemaVersion, `${role.roleId}: schemaVersion 应为 2`).toBe(ROLE_PACK_SCHEMA_VERSION);
+      expect(role.schemaVersion, `${role.roleId}: schemaVersion 应为 3`).toBe(ROLE_PACK_SCHEMA_VERSION);
       expect(role.validation.ok).toBe(true);
       expect(role.validation.refsChecked, `${role.roleId}: refsChecked 应 > 0`).toBeGreaterThan(0);
     }
@@ -498,7 +671,7 @@ describe('J3 loader fail-loud 且不抛（六种非法输入各一条，errors �
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe('C2 边界值', () => {
-  it('C2-① schemaVersion：缺 ⇒ 拒；0／-1／3 ⇒ 拒（UNSUPPORTED，禁向上兼容猜测）', () => {
+  it('C2-① schemaVersion：缺 ⇒ 拒；0／-1／2／4 ⇒ 拒（UNSUPPORTED，禁向上兼容猜测；3 = 当前契约）', () => {
     const ctx = { roleId: 'finance' };
     const missing = baseManifest('finance');
     delete missing['schemaVersion'];
@@ -508,7 +681,8 @@ describe('C2 边界值', () => {
     expect(missingResult.problems.map((p) => p.code)).toContain('ROLE_PACK_SCHEMA_VERSION_UNSUPPORTED');
     expect(missingResult.problems.map((p) => p.message).join(' ')).toContain('缺失');
 
-    for (const badVersion of [0, -1, 3]) {
+    // 3 = 本装载器唯一接受值（v3 迁移后 2 变成"旧版本"，与 0／-1／4 同属不受支持）
+    for (const badVersion of [0, -1, 2, 4]) {
       const doc = baseManifest('finance');
       doc['schemaVersion'] = badVersion;
       const result = validateManifestDoc(doc, ctx);
@@ -517,6 +691,8 @@ describe('C2 边界值', () => {
         'ROLE_PACK_SCHEMA_VERSION_UNSUPPORTED',
       );
     }
+    const current = baseManifest('finance');
+    expect(validateManifestDoc(current, ctx).ok, 'schemaVersion=3 应通过').toBe(true);
   });
 
   it('C2-② pieces：空／1 项／7 项 ⇒ 拒（结构层）；7 项 vs 磁盘 6 ⇒ PIECES_MISMATCH', () => {
