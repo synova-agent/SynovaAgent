@@ -49,7 +49,7 @@ set -uo pipefail
 
 ROOT="${SYNO_SYNC_REPO:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 GITEA_URL="${SYNO_SYNC_GITEA_URL:-gitea}"
-GITEA_REF="${SYNO_SYNC_GITEA_REF:-refs/heads/local-main}"
+GITEA_REF="${SYNO_SYNC_GITEA_REF:-refs/heads/main}"
 GH_API="${SYNO_SYNC_GITHUB_API:-https://api.github.com/repos/synova-agent/SynovaAgent}"
 GH_SHA_INJ="${SYNO_SYNC_GITHUB_SHA:-}"
 OUT="${SYNO_DUAL_REPO_OUT:-$ROOT/.codex/control-tower/tmp/dual-repo-sync.json}"
