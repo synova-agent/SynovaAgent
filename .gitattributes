@@ -31,3 +31,8 @@ scripts/audit/** -text
 # D533: 控制塔脚本存量 CRLF（env_validator/inject-context 无配对测试，CT-40 禁改）
 # 保持字节不变 → 零噪音且不触发 U7/CT-40 测试配对门禁（新增脚本不受影响，走 *.py text eol=lf）
 scripts/control-tower/*.py -text
+
+# #1075 P2-1（N1）: 岗位包六件内容参与 contentHash（raw-bytes 指纹，见 src/init/role-pack-schema.ts）。
+# Windows/autocrlf 检出会把 JSON/YAML 换成 CRLF ⇒ 出厂三包指纹全变（审批门判 unverified）。
+# 故岗位包内容根强制 LF；撤本规则或新增内容根前须同步改指纹定义（规格 §10-L12）。
+extensions/presets/roles/** text eol=lf
