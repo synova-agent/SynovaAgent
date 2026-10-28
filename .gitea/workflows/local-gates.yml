@@ -162,10 +162,10 @@ jobs:
           # CTO 2026-10-11：增量基线改用 local-main（与 D734 check-pr-budget.sh 同口径）——
           #   origin/main = GitHub 旧 main（停 5a6591c4），拿它当基线会把 local-main 全部
           #   diverge 提交的存量红算进本 PR（实测 141 tests failed，与本 PR 改动零相关）。
-          #   优先 origin/local-main（CI 内 origin=本机 Gitea，必存在），不存在时回退 origin/main。
+          #   优先 origin/main（主树；CI 内 origin=本机 Gitea），不存在时回退 origin/local-main（已冻结）。
           #   只改基线，不改测试判据/门禁组数。
-          CHANGED_BASE=origin/local-main
-          git rev-parse --verify -q "$CHANGED_BASE" >/dev/null || CHANGED_BASE=origin/main
+          CHANGED_BASE=origin/main
+          git rev-parse --verify -q "$CHANGED_BASE" >/dev/null || CHANGED_BASE=origin/local-main
           echo "增量基线 = $CHANGED_BASE"
           # 🔴 2026-10-11 创始人裁决②：**区分「纯文档合法空绿」与「有代码改动却空绿 = 异常」**
           #   病根（实测）：vitest --changed 在变更集为空/无测试命中时打印
@@ -278,8 +278,8 @@ jobs:
           #   `bash -e`（与 Gitea 同构）执行 ⇒ 若有人把 ③ 步的 `set +e` 拿掉（= 复现 #338 那个
           #   「set -e 下子命令失败即退 ⇒ 整步零输出」的缺陷），该 harness 会判 HARNESS-BROKEN 并 **exit 2**
           #   ⇒ 本步在 CI 上红。即：**这条链自己抓自己**。
-          CHANGED_BASE=origin/local-main
-          git rev-parse --verify -q "$CHANGED_BASE" >/dev/null || CHANGED_BASE=origin/main
+          CHANGED_BASE=origin/main
+          git rev-parse --verify -q "$CHANGED_BASE" >/dev/null || CHANGED_BASE=origin/local-main
           FILES="$(git diff --name-only "$CHANGED_BASE"...HEAD 2>/dev/null || true)"
           if ! printf '%s\n' "$FILES" | grep -qE '^(\.gitea/workflows/local-gates\.yml|scripts/control-tower/ci-(emptygreen|deps-step)-sim\.sh|tests/control-tower/ci-(emptygreen|deps-step)-sim\.test\.sh)$'; then
             echo "ℹ️  条件跳过（变更集未触碰 工作流/复现器/夹具）—— <1s"
