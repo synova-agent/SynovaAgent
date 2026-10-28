@@ -6,7 +6,9 @@
 # 覆盖（规格 §4 J3/J5/J6/J7/J8/J9 ＋ §4.2 R1–R5 判别力两态 ＋ 子命令 C1–C10b）:
 #   1. 头契约（@input/@output/@exit/@degraded ＋ 已知限制）与 L8 例外登记
 #   2. --selfcheck：判别力 1/1/1/1/1 clean=0；反向（T4 规则改回不查 return []）⇒ rc=1
-#   3. --check-registry：真件 REGISTRY-OK rows=11；反例（wired 无 consumer/多余键/坏行号/0 行/YAML 越界）
+#   3. --check-registry：真件 REGISTRY-OK rows=21；反例（wired 无 consumer/多余键/坏行号/0 行/YAML 越界）
+#      ＋ #1126 防回退：真件 reportMirrorPushes 的 defined_at 必须双引号、owner 非空；
+#        改坏两态（去引号 ⇒ rc=2 E_YAML ／ 删 owner ⇒ rc=1 R3）
 #   4. --check-inventory：合成夹具 covered/PAIRING 契约；10 个改坏两态（C1/C3/C4/C5/C6/C7/C9/C9b/C10×2）
 #      ＋ #975 新增：E 态 gates 段缺失 rc=2；D 跨载体逐字相等（workflow ①i 步名 = 表 CI-S12 label）
 #   5. --orphans-only：夹具 2/4 ＋ 真树格式（rc=0，不判红）
@@ -140,8 +142,16 @@ echo ""
 echo "── 3. --check-registry（J5 ＋ 反例）──"
 OUT=$("$PYBIN" "$TOOL" --check-registry "$REGISTRY" 2>&1); RC=$?
 assert_rc 0 "$RC" "--check-registry 真件"
-assert_contains "$OUT" "REGISTRY-OK rows=11" "末行 REGISTRY-OK rows=11"
+assert_contains "$OUT" "REGISTRY-OK rows=21" "末行 REGISTRY-OK rows=21"
 assert_contains "$OUT" "✅ R7" "R7 信号量（rows≥1）"
+
+# #1126 防回退（真件钉死）：tool.reportMirrorPushes 的 defined_at 必须双引号包裹
+# （裸 path:line 含 ':' ⇒ YAML 子集解析失败 ⇒ --check-registry 整器 rc=2），且 owner 非空（R3 必填；
+# 归属依据 = DOCS-REGISTRY 的 DOC-0295 同属 #1034 ⇒ CTO）
+RM_ENTRY=$(awk '/^  - capability: tool\.reportMirrorPushes$/{f=1} f{print} f&&/^    notes:/{exit}' "$REGISTRY")
+assert_contains "$RM_ENTRY" 'defined_at: "scripts/control-tower/report-mirror-pushes.sh:15"' \
+  "#1126 真件 defined_at 双引号包裹（裸标量即红）"
+assert_contains "$RM_ENTRY" "owner: CTO" "#1126 真件 owner 非空（R3）"
 
 REG_SRC="$REGISTRY"
 reg_mutate() {  # $1 名称 $2 输出文件
@@ -164,18 +174,37 @@ elif name == "bad-capability":
     out = text.replace("capability: content.initContentTypes", 'capability: "-bad"')
 elif name == "extra-entry-key":
     out = text.replace('    notes: "boot', "    stray_key: 1\n    notes: \"boot")
+elif name == "bare-scalar":
+    # #1126：defined_at 去双引号 ⇒ 裸标量含 ':' ⇒ YAML 子集解析失败（整器 rc=2）
+    out = text.replace(
+        '    defined_at: "scripts/control-tower/report-mirror-pushes.sh:15"',
+        "    defined_at: scripts/control-tower/report-mirror-pushes.sh:15")
+elif name == "missing-owner":
+    # #1126：删 owner ⇒ R3 required 字段非空判红（rc=1）
+    out = text.replace(
+        '    status: declared-only\n    owner: CTO\n'
+        '    defined_at: "scripts/control-tower/report-mirror-pushes.sh:15"',
+        '    status: declared-only\n'
+        '    defined_at: "scripts/control-tower/report-mirror-pushes.sh:15"')
 else:
     raise SystemExit("unknown registry mutation: " + name)
 assert out != text, "mutation no-op: " + name
 open(dst, "w", encoding="utf-8", newline="\n").write(out)
 PYEOF
 }
-for m in wired-no-consumer zero-rows extra-top-key flow-map bad-line bad-capability extra-entry-key; do
+for m in wired-no-consumer zero-rows extra-top-key flow-map bad-line bad-capability extra-entry-key \
+         bare-scalar missing-owner; do
   RF="$TMP_DIR/reg-$m.yaml"
   reg_mutate "$m" "$RF"
   OUT=$("$PYBIN" "$TOOL" --check-registry "$RF" 2>&1); RC=$?
   case "$m" in
     zero-rows|flow-map) assert_rc 2 "$RC" "registry 反例 ${m}（信号量/降级 ⇒ 2）" ;;
+    bare-scalar) assert_rc 2 "$RC" "registry 反例 $m（#1126 裸标量 ⇒ YAML 降级 2）"
+                 assert_contains "$OUT" "E_YAML" "#1126 裸标量点名 E_YAML"
+                 assert_contains "$OUT" "裸标量含不支持的字符" "#1126 裸标量点名解析原因" ;;
+    missing-owner) assert_rc 1 "$RC" "registry 反例 $m（#1126 owner 缺失 ⇒ R3）"
+                   assert_contains "$OUT" "❌ R3" "#1126 owner 缺失点名 R3"
+                   assert_contains "$OUT" ".owner" "#1126 owner 缺失点名 .owner" ;;
     wired-no-consumer) assert_rc 1 "$RC" "registry 反例 $m"; assert_contains "$OUT" "entries[0].consumer" "点名 entries[0].consumer" ;;
     extra-top-key) assert_rc 1 "$RC" "registry 反例 $m"; assert_contains "$OUT" "R1" "点名 R1" ;;
     bad-line) assert_rc 1 "$RC" "registry 反例 $m"; assert_contains "$OUT" "entries[0].defined_at" "点名 entries[0].defined_at" ;;
@@ -513,7 +542,8 @@ assert_rc 0 "$RC" "--orphans-only 夹具"
 assert_eq "orphans=2/4" "$(printf '%s\n' "$OUT" | tail -1)" "夹具 orphans=2/4"
 OUT=$("$PYBIN" "$TOOL" --orphans-only 2>&1); RC=$?
 assert_rc 0 "$RC" "--orphans-only 真树（只报告不判红）"
-if printf '%s\n' "$OUT" | tail -1 | grep -qE '^orphans=[0-9]+/35$'; then
+# #1126 期实测常量同步：GATE-INVENTORY 盘点器数 35 → 40（#1087/#1093/#1108 等增件；判据一字不动）
+if printf '%s\n' "$OUT" | tail -1 | grep -qE '^orphans=[0-9]+/40$'; then
   pass "真树末行格式 orphans=<n>/35"
 else
   fail "真树末行格式不符: $(printf '%s\n' "$OUT" | tail -1)"
