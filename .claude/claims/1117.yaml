@@ -31,6 +31,7 @@ writeset:
   - tests/control-tower/doc-contract-ci-acceptance.test.sh
   - tests/control-tower/check-merge-conditions.test.sh
   - tests/doc-system/doc-registry-gate.test.sh
+  - tests/control-tower/tag-bypass-wiring.test.sh
   - gate-exemptions/2026-10-29-1117-trunk-main.md
   - docs/authority/DOCS-REGISTRY.yaml
   - .claude/claims/1117.yaml

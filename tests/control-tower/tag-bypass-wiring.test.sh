@@ -168,6 +168,9 @@ echo "── 5. bypass 对账: base 边界 (fail-closed / 显式错误) ──"
 R5=$(mktemp -d)
 new_repo "$R5" "V9.9.9"
 commit_file "$R5" "f0.md" "base"
+# #1117 夹具口径: 沙箱**不得**存在本地 trunk（缺省 main）——否则 check-bypass-log 的新回退链
+#   `gitea/$TRUNK → $TRUNK → origin/$TRUNK → …` 会解析到本地 trunk ⇒ 本节 fail-closed 断言失效。
+git -C "$R5" branch -m feat-base
 echo "dummy" > "$R5/.claude/bypass.log"  # 日志存在（缺失检查先于 base 检查）
 set +e
 OUT5=$(cd "$R5" && bash "$CHECK_BYPASS" 2>&1)

@@ -21,7 +21,7 @@ export LC_ALL=C.UTF-8 2>/dev/null   # swallow-ok: locale 不可用时回退默�
 # 契约（铁律 47 / P7 守则 §八之三②）:
 #   @input
 #     --pr <N>                  目标 PR（缺省＝按当前分支名反查 open PR，查不到 ⇒ exit 2）
-#     --base <ref>              基线分支（缺省 SYNO_MERGE_BASE | local-main）
+#     --base <ref>              基线分支（缺省 SYNO_MERGE_BASE | ${SYNO_TRUNK_REF:-main}）
 #     --repo-root <path>        仓库根（缺省＝脚本所在目录的上两级）
 #     --json                    stdout 仅 JSON（与 --selfcheck 互斥 ⇒ exit 2）
 #     --offline                 不访问网络（🔴 ① 恒 exit 2 —— 裁 B5：不引本地 CI 缓存）
@@ -85,7 +85,7 @@ DEFAULT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 API="${SYNO_GITEA_API:-http://127.0.0.1:3000/api/v1}"
 REPO="${SYNO_GITEA_REPO:-synova-agent/SynovaAgent}"
-BASE="${SYNO_MERGE_BASE:-main}"
+BASE="${SYNO_MERGE_BASE:-${SYNO_TRUNK_REF:-main}}"
 COMPONENT="check-merge-conditions"
 DEGRADED_LOG="${SYNO_GATE_DEGRADED_LOG:-$DEFAULT_ROOT/.codex/control-tower/logs/degraded-events.log}"
 FIXTURE="${SYNO_MERGE_COND_FIXTURE:-}"
@@ -238,7 +238,7 @@ def dump(obj):
 def pr_obj(p):
     return {"number": p["number"], "state": "open",
             "head": {"sha": p.get("head", ""), "ref": p.get("branch", "")},
-            "base": {"sha": fx.get("tip", ""), "ref": "local-main"},
+            "base": {"sha": fx.get("tip", ""), "ref": "main"},
             "user": {"login": fx.get("author", "")}}
 
 m = re.match(r"^/pulls\?(.*)$", path)
@@ -819,7 +819,7 @@ check-merge-conditions.sh — 四条件一条命令判绿/红（#582 · P7-1）
 
 选项:
   --pr <N>                  目标 PR（缺省＝按当前分支名反查 open PR，查不到 ⇒ exit 2）
-  --base <ref>              基线分支（缺省 SYNO_MERGE_BASE | local-main）
+  --base <ref>              基线分支（缺省 SYNO_MERGE_BASE | ${SYNO_TRUNK_REF:-main}）
   --repo-root <path>        仓库根（缺省＝脚本所在目录的上两级）
   --json                    stdout 仅 JSON（与 --selfcheck 互斥 ⇒ exit 2）
   --offline                 不访问网络（🔴 ① 恒 exit 2 —— 裁 B5：不引本地 CI 缓存）
@@ -1114,8 +1114,8 @@ build_fixture_repo() { # build_fixture_repo <case> <dir> → 重建夹具（规�
   git -C "$R" config user.email "agent@synova.local"
   git -C "$R" config user.name "agent"
   git -C "$R" config commit.gpgsign false
-  if ! git -C "$R" checkout -q -b local-main 2>/dev/null; then return 1; fi   # swallow-ok: 临时仓自建，失败已 return 1
-  # 基线：local-main T1 → T2（T2 = 当前 tip）
+  if ! git -C "$R" checkout -q -b main 2>/dev/null; then return 1; fi   # swallow-ok: 临时仓自建，失败已 return 1
+  # 基线：main T1 → T2（T2 = 当前 tip）
   printf 'base1\n' > "$R/base.ts"
   git -C "$R" add base.ts
   _mkc "$R" "T1" "agent@synova.local" || return 1
@@ -1222,7 +1222,7 @@ build_fixture_repo() { # build_fixture_repo <case> <dir> → 重建夹具（规�
   # E（自检子例）：tip 前移到 T3（A 不含 T3 ⇒ S1 红，落后 1 commit）
   local tip="$T2"
   if [ "$case" = "E" ]; then
-    git -C "$R" checkout -q local-main || return 1
+    git -C "$R" checkout -q main || return 1
     printf 't3\n' > "$R/t3.ts"
     git -C "$R" add t3.ts
     _mkc "$R" "T3" "agent@synova.local" || return 1
@@ -1265,7 +1265,7 @@ run_case() { # run_case <case> <want-exit> <want-last-line> [needle...]
   fi
   SYNO_MERGE_COND_FIXTURE="$dir/fixture.json" \
   SYNO_GATE_DEGRADED_LOG="$dir/degraded.log" \
-    bash "$SELF" --pr 100 --repo-root "$repo" --base local-main > "$out" 2> "$err"
+    bash "$SELF" --pr 100 --repo-root "$repo" --base main > "$out" 2> "$err"
   inner=$?
   last="$(tail -n 1 "$out")"
   machine="$(grep -m1 '^MERGE-COND:' "$out")"
