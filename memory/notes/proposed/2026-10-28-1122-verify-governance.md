@@ -28,7 +28,7 @@
 | 配对测试 | `tests/control-tower/verify-governance.test.sh`（新） | T0 至 T16（53 断言）：自身约束（UTF-8/LF/swallow-ok/PYBIN/无组横幅）／3/3 PASS／遥测缺失 SKIP／空日志／注入 128／0-1-2 透传／**改坏即红（128→0）**／G10 甲态错／G10 乙态错／`--days` 边界／坏行计数／全坏行／三类"判不了 exit 2"／只读＋注入缝边界／WIRING 记账自洽 |
 | 登记 | `docs/authority/WIRING-REGISTRY.yaml` | 能力 `governance.verifyGovernance` = **`declared-only`**（consumer 空）：本批写集不含 pre-commit/.gitea ⇒ 只有显式调用才跑。**不编造消费者** |
 | 登记 | `docs/authority/GATE-INVENTORY.yaml` | **纯追加** `CT-verify-governance`（class **P1**、owner P4、review_after 2026-11-27、`required_ci: false`、confirmed_by: pending-cto）：不登记的话 `check-gate-inventory.sh` 第 ③ 条「盘上件未入册」会立刻红（新脚本落在 `scripts/control-tower/verify-*` 枚举面内） |
-| 登记 | `docs/authority/DOCS-REGISTRY.yaml` | `DOC-0325`（type decision，path=本批豁免文件；merge `gitea/main` 后 #1115 先占 DOC-0324，本件顺延） |
+| 登记 | `docs/authority/DOCS-REGISTRY.yaml` | `DOC-1122`（type decision，path=本批豁免文件）。**id 口径 = `DOC-<Issue#>`（R1 裁定）**，不再用 `DOC-0xxx` 递增号（该口径由 #1123 根治；本件原拟的递增号已作废，不留旧号） |
 | 豁免 | `gate-exemptions/2026-10-28-1122-verify-governance.md`（新） | 首行 `# review: #1122` ＋ 受保护路径四条（总闸／测试／自覆盖／DOCS-REGISTRY 自登记） |
 
 **没做什么（边界）**：不做 G1/G3/G4/G5/G7/G8/G9／不改 gate-assert、gate-telemetry、gate-stats、check-unicode-confusable
