@@ -1,0 +1,177 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1119,
+  "author": "win-push",
+  "reviewer": "dsh-independent-reviewer-1119b",
+  "tool": "DeepSeek Harness / fresh-session zero-context reviewer (Python 3.13 + Git bash on Win)",
+  "independence": "fresh-session",
+  "issued_at": "2026-10-29T01:47:57+08:00",
+  "patch_fingerprint": "sha256:9f057d8554d2aea19b48eeeb50aff5edd4f3c6225651fe091c0a193aa5c88b67",
+  "base_ref": "main",
+  "base_tip": "b8edf9860990a7ef6962aa12a1bae473e753f6d0",
+  "head_ref": "ct/1115-trunk-main",
+  "head": "c01080f6ad4534e9a88274fee452acb5e9ae36bd",
+  "merge_base": "b8edf9860990a7ef6962aa12a1bae473e753f6d0",
+  "diff_files": 11,
+  "diff_size_bytes": 17145,
+  "fp12": "9f057d8554d2",
+  "checks": [
+    {
+      "name": "PR 身份（API 现场核，非转述）",
+      "cmd": "curl -s -H 'Authorization: token <redacted>' http://MacBook-Pro-2.local:3000/api/v1/repos/synova-agent/SynovaAgent/pulls/1119",
+      "evidence": "number=1119 title='chore(#1115): trunk 切 main——工具链 9 处主引用（冻结期阶段 1）' state=open mergeable=true user.login=win-push base.ref=main base.sha=b8edf9860990a7ef6962aa12a1bae473e753f6d0 head.ref=ct/1115-trunk-main head.sha=c01080f6ad4534e9a88274fee452acb5e9ae36bd changed_files=11 additions=75 deletions=25 merge_base=b8edf9860…",
+      "result": "pass"
+    },
+    {
+      "name": "基线祖先关系",
+      "cmd": "cd D:/tmp/rev-1119b && git merge-base --is-ancestor b8edf9860 c01080f6a; echo rc=$?; git merge-base b8edf9860 c01080f6a",
+      "evidence": "rc=0；merge-base=b8edf9860990a7ef6962aa12a1bae473e753f6d0（= PR base.sha）",
+      "result": "pass"
+    },
+    {
+      "name": "变更集恰 11 件（三点 diff），无禁止文件",
+      "cmd": "cd D:/tmp/rev-1119b && git diff --name-status b8edf9860...c01080f6a; git diff --name-only b8edf9860...c01080f6a | grep -cE 'local-gates\\.yml|pre-commit-check\\.sh'",
+      "evidence": "11 行：A .claude/claims/1115.yaml；M .gitea/workflows/{asset-sync,dual-repo-sync}.yml；M docs/authority/DOCS-REGISTRY.yaml；A gate-exemptions/2026-10-28-1115-trunk-main.md；A memory/notes/proposed/2026-10-28-1115-trunk-main.md；M scripts/control-tower/{check-dual-repo-sync,check-merge-conditions,check-mirror-freshness,mirror-sync-push,resolve-ci-base}.sh ⇒ 计数 11；禁止文件（local-gates.yml / pre-commit-check.sh）命中 0",
+      "result": "pass"
+    },
+    {
+      "name": "7 处主引用逐条命中（file:line）",
+      "cmd": "cd D:/tmp/rev-1119b && grep -n 'SYNO_MERGE_BASE:-main' scripts/control-tower/check-merge-conditions.sh; grep -n 'CANONICAL=\"gitea/main\"' scripts/control-tower/check-mirror-freshness.sh; grep -n 'refs/heads/main' scripts/control-tower/mirror-sync-push.sh scripts/control-tower/check-dual-repo-sync.sh; grep -n 'main|local-main)' scripts/control-tower/resolve-ci-base.sh; grep -n 'fetch -q origin main' .gitea/workflows/dual-repo-sync.yml; grep -n 'branches: \\[main\\]' .gitea/workflows/asset-sync.yml",
+      "evidence": "check-merge-conditions.sh:88 BASE=\"${SYNO_MERGE_BASE:-main}\"；check-mirror-freshness.sh:46 CANONICAL=\"gitea/main\"；mirror-sync-push.sh:98 GITEA_REF=${SYNO_PUSH_GITEA_REF:-refs/heads/main}；check-dual-repo-sync.sh:52 GITEA_REF=${SYNO_SYNC_GITEA_REF:-refs/heads/main}；resolve-ci-base.sh:46 'main|local-main) BASE=\"gitea/main\"'（另 43/65/67/71/79/81/85/88 全部 gitea/main）；dual-repo-sync.yml:39 git -C \"$WS\" fetch -q origin main；asset-sync.yml:52 branches: [main]",
+      "result": "pass"
+    },
+    {
+      "name": "resolve-ci-base.sh 内 gitea/local-main 字面 = 0（legacy 仅作名映射）",
+      "cmd": "cd D:/tmp/rev-1119b && grep -c 'gitea/local-main' scripts/control-tower/resolve-ci-base.sh; grep -n 'local-main' scripts/control-tower/resolve-ci-base.sh",
+      "evidence": "grep -c 'gitea/local-main' = 0（grep 无匹配 rc=1）；local-main 仅剩 3 行：:18 注释、:23 注释、:46 映射 case 'main|local-main) BASE=\"gitea/main\"'",
+      "result": "pass"
+    },
+    {
+      "name": "无夹带：五个业务/审计目录 0 变更",
+      "cmd": "cd D:/tmp/rev-1119b && git diff --name-only b8edf9860 c01080f6a | grep -cE '^(src/|electron-renderer/|tests/|scripts/audit/|packages/)'",
+      "evidence": "逐目录计数：^src/ 0、^electron-renderer/ 0、^tests/ 0、^scripts/audit/ 0、^packages/ 0 ⇒ 合计 0",
+      "result": "pass"
+    },
+    {
+      "name": "语法：5 个 .sh bash -n 全 0",
+      "cmd": "for f in scripts/control-tower/{check-merge-conditions,check-mirror-freshness,mirror-sync-push,check-dual-repo-sync,resolve-ci-base}.sh; do bash -n $f; echo \"$f rc=$?\"; done",
+      "evidence": "check-merge-conditions.sh rc=0；check-mirror-freshness.sh rc=0；mirror-sync-push.sh rc=0；check-dual-repo-sync.sh rc=0；resolve-ci-base.sh rc=0（Git bash 2.x，/usr/bin/bash）",
+      "result": "pass"
+    },
+    {
+      "name": "语法：2 个 workflow YAML safe_load",
+      "cmd": "python3 -c \"import yaml; [print(p, yaml.safe_load(open(p, encoding='utf-8')).get(True)) for p in ['.gitea/workflows/dual-repo-sync.yml','.gitea/workflows/asset-sync.yml']]\"",
+      "evidence": "两件均 SAFE_LOAD_OK（PyYAML）；asset-sync.yml on.push.branches=['main']；dual-repo-sync.yml keys=[on(schedule/workflow_dispatch),jobs(sync),name,permissions]",
+      "result": "pass"
+    },
+    {
+      "name": "豁免件与 DOCS 登记（含门禁本体实跑）",
+      "cmd": "cd D:/tmp/rev-1119b && head -1 gate-exemptions/2026-10-28-1115-trunk-main.md; grep -c '^- ' gate-exemptions/2026-10-28-1115-trunk-main.md; grep -n 'DOC-0324' -A3 docs/authority/DOCS-REGISTRY.yaml; bash scripts/control-tower/check-gate-protection.sh --changed-base b8edf9860",
+      "evidence": "首行 '# review: docs/synova/reviews/1119.111911191119.json'；条目 9 条（7 受保护 + 豁免自覆盖 + DOCS 自登记）；DOC-0324 存在且 path=gate-exemptions/2026-10-28-1115-trunk-main.md status=active owner=P4；check-gate-protection 结果 17 通过 / 0 失败 rc=0（受保护路径变更 9 条逐条合规豁免；新增豁免文件带复核件指针）",
+      "result": "pass"
+    },
+    {
+      "name": "claim：#1115 单条校验 + 并集覆盖",
+      "cmd": "cd D:/tmp/rev-1119b && python3 scripts/control-tower/claim_store.py --check 1115; git diff --name-only b8edf9860 c01080f6a | python3 scripts/control-tower/claim_store.py --coverage",
+      "evidence": "--check 1115 ⇒ {\"status\":\"ok\",\"issue\":\"1115\",\"writeset\":13,\"done\":5} rc=0；--coverage ⇒ status=ok covered=11 uncovered=[] '覆盖 11/11 个暂存文件' rc=0；追加历史删除件 docs/synova/reviews/1115.111511151115.json 后 ⇒ 12/12 覆盖 rc=0；claim writeset 含固定回执名 docs/synova/reviews/1119.111911191119.json",
+      "result": "pass"
+    },
+    {
+      "name": "CI：head 两 run 终态 completed/success、failure 0、skipped 0、pending 0",
+      "cmd": "curl -s .../commits/c01080f6a/statuses?limit=100; curl -s .../actions/runs/2403/jobs; curl -s .../actions/runs/2404/jobs",
+      "evidence": "statuses 最新态：local-gates/gates (push)=success 'Successful in 1m23s' @01:36:10；local-gates/gates (pull_request)=success 'Successful in 1m45s' @01:37:55；combined state=success total_count=2；无 failure/error/skipped 状态；runs API：2403(push) status=completed conclusion=success steps 16/16 success；2404(pull_request) status=completed conclusion=success steps 16/16 success ⇒ failure 0、skipped 0、pending 0（首次观测 01:34 为 pending=2，01:37:55 转终态）",
+      "result": "pass"
+    },
+    {
+      "name": "指纹独立复算（自有 sha256，且与脚本输出一致）",
+      "cmd": "cd D:/tmp/rev-1119b && git diff --no-color -M --full-index --binary b8edf9860 c01080f6a --output=D:/tmp/fp-canon.diff -- . ':(exclude)docs/synova/reviews/**'; Get-FileHash D:/tmp/fp-canon.diff -Algorithm SHA256; GITEA_TOKEN=… SYNO_GITEA_API=http://MacBook-Pro-2.local:3000/api/v1 bash scripts/control-tower/check-merge-conditions.sh --pr 1119 --diff-fingerprint",
+      "evidence": "自有计算：bytes=17145 sha256=9f057d8554d2aea19b48eeeb50aff5edd4f3c6225651fe091c0a193aa5c88b67（fp12=9f057d8554d2）；脚本 --diff-fingerprint 输出同值 rc=0（注：PowerShell 5.1 重定向会 UTF-16 重编码，须用 git --output 取原始字节）",
+      "result": "pass"
+    },
+    {
+      "name": "已知非阻断缺陷①：legacy 别名无安全阀（仍存在）",
+      "cmd": "cd D:/tmp/rev-1119b && sed -n '20,95p' scripts/control-tower/resolve-ci-base.sh",
+      "evidence": "resolve-ci-base.sh:45-47 case 'main|local-main) BASE=\"gitea/main\"' 无条件映射（无 warning、无 local-main 与 main 分叉校验）；:83-95 新鲜度断言的 TRACK_REF='refs/remotes/${ONLY_REMOTE}/main'（只比 main 跟踪引用，不比 local-main）⇒ 头注 :23『唯一远端的 local-main 跟踪引用可解析 ⇒ 其 SHA 必须与 canonical 相等』与实现不符，该安全阀未落地",
+      "result": "pass"
+    },
+    {
+      "name": "已知非阻断缺陷②：resolve-ci-base 配对测试未同步（仍存在）",
+      "cmd": "cd D:/tmp/rev-1119b && bash tests/control-tower/resolve-ci-base.test.sh; echo rc=$?; grep -n 'local-main' tests/control-tower/resolve-ci-base.test.sh",
+      "evidence": "实跑 7 通过 / 3 失败 rc=1，失败项即 3（裸 local-main 规范化期望 'gitea/local-main'）、4（物化 refs/remotes/gitea/local-main）、5（CI 新鲜度）；.gitea/workflows/local-gates.yml 仅在 ④ 步跑 tests/control-tower/ci-*-sim.test.sh，未跑本件 ⇒ 不阻断 CI（故列为 non-block，交 #1118）",
+      "result": "pass"
+    },
+    {
+      "name": "回执自检：用门禁自身 R2–R8 校验器 ＋ 6 个反向对照（判别力）",
+      "cmd": "python3 <从 scripts/control-tower/check-merge-conditions.sh:485-541 逐字抽出的 R2-R8 校验体> review-1119.json 1119 9f057d85…",
+      "evidence": "正例：0 条 fail（rc=0）；反向对照全部按规则码命中——错指纹⇒R3；findings 加 block⇒R5；verdict=BLOCK⇒R4；reviewer==author⇒R6；checks 截到 4 条⇒R4；evidence 置空⇒R8 ⇒ 校验器非空转，本回执的 PASS 有效",
+      "result": "pass"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "non-block",
+      "title": "legacy 别名无安全阀（已知缺陷，仍存在）",
+      "file": "scripts/control-tower/resolve-ci-base.sh",
+      "lines": "45-47（映射）、83-95（新鲜度断言）、23（过期头注）",
+      "detail": "调用方传裸 local-main 时被静默映射为 gitea/main，无告警；头注声称的『local-main 跟踪引用 SHA 必须等于 canonical』未实现（TRACK_REF 取的是 <remote>/main）。local-main 与 main 分叉时不会红。",
+      "disposition": "后续 #1118 处理（本 PR 不因此阻断）"
+    },
+    {
+      "id": "F2",
+      "severity": "non-block",
+      "title": "resolve-ci-base 配对测试断言未同步（已知缺陷，仍存在）",
+      "file": "tests/control-tower/resolve-ci-base.test.sh",
+      "lines": "49、55、62（期望 gitea/local-main）",
+      "detail": "实跑 7 通过 / 3 失败 rc=1：被测脚本已输出 gitea/main，测试仍断言 gitea/local-main。该测试未接入 CI（local-gates 只跑 ci-*-sim 两件），故 CI 仍绿。",
+      "disposition": "后续 #1118 处理（本 PR 不因此阻断）"
+    },
+    {
+      "id": "F3",
+      "severity": "non-block",
+      "title": "check-merge-conditions.sh 用法文本未随默认值同步",
+      "file": "scripts/control-tower/check-merge-conditions.sh",
+      "lines": "24、822",
+      "detail": "两处仍写『基线分支（缺省 SYNO_MERGE_BASE | local-main）』，而 :88 默认已是 main。纯注释漂移，无运行影响。",
+      "disposition": "可并入 #1118 清理批"
+    },
+    {
+      "id": "F4",
+      "severity": "non-block",
+      "title": "PR 正文仍描述 9 件版（含已移出的 local-gates.yml / pre-commit-check.sh）",
+      "file": "PR #1119 body (Gitea)",
+      "lines": "-",
+      "detail": "正文表格列 9 行并写『CI 14/14』，与 final diff 的 7 件（11 文件）不一致；正文未随收窄版更新。属审计链可读性问题，不影响代码/门禁判定。",
+      "disposition": "合并前建议补一条正文更正，或合并后在 #1117 说明"
+    },
+    {
+      "id": "F5",
+      "severity": "non-block",
+      "title": "asset-sync.yml 注释句式重复（编辑残留）",
+      "file": ".gitea/workflows/asset-sync.yml",
+      "lines": "45",
+      "detail": "『把 branches: [main] 改掉 ⇒ 本 workflow 不再点火 ⇒ 本 workflow 不再点火』重复半句，纯文字瑕疵。",
+      "disposition": "可并入 #1118 清理批"
+    },
+    {
+      "id": "F6",
+      "severity": "non-block",
+      "title": "claim 写集含最终 diff 中不存在的路径",
+      "file": ".claude/claims/1115.yaml",
+      "lines": "17",
+      "detail": "写集列 docs/synova/reviews/1115.111511151115.json，该件在本 PR 历史中被 24e1e9684 加入、c01080f6a 删除，净变更 0（不在最终 diff）。属写集超集，不造成虚覆盖风险（--coverage 仍 11/11、12/12 通过）。",
+      "disposition": "无需处理"
+    }
+  ],
+  "open_items": [
+    "回执件尚未进入分支：本 JSON 需由作者落到 docs/synova/reviews/1119.111911191119.json 并 commit（R1 要求回执在 head 树；R7 要求该 commit 之后只允许 docs/synova/reviews/** 变更）。",
+    "回执 commit 后 head 变更，CI 需在新 head 再跑一遍并保持 pending=0/全绿。",
+    "四条件中的 ② 写集重叠 与 ④ 串行（队列头）属合并时点判定：本机 Git-bash 下 check-merge-conditions 全量运行在 ② 转 degraded（E_OPENPRS_EMPTY，环境侧取 open PR 分页失败），故我未对 ②④ 下绿/红结论。"
+  ],
+  "verdict": "PASS",
+  "filename_note": "按 claim 预列名 1119.111911191119.json 落盘（12 hex），实际 fp 见 patch_fingerprint",
+  "known_limitations": [
+    "环境：Windows + Git bash（/usr/bin/bash）+ Python 3.13；PowerShell 5.1 文本重定向会 UTF-16 重编码，指纹须用 git --output 取原始字节（已按此复算）。",
+    "skipped 计数取自 Gitea actions/runs/{id}/jobs 的 step conclusion 分组（16/16 success），非人工看 run 页面。"
+  ]
+}
