@@ -194,3 +194,11 @@ entries:
     status: wired
     owner: P4
     notes: "#1087 W5：只读报告器（三态 0/1/2）。**已接线**（W0/#1093）：`scripts/pre-commit-check.sh` 的「附: 治理面自检」段调用本器，且为**只报告**语义（不生 hard_check、不阻断提交）；CI 侧不入 GitHub（W5 拓扑约束）。consumer 行号见 WIRING。"
+  - capability: governance.gateInventory
+    defined_at: "scripts/control-tower/check-gate-inventory.sh:1"
+    provider: "scripts/control-tower/check-gate-inventory.sh:1"
+    consumer: "scripts/pre-commit-check.sh:2224"
+    test: "tests/control-tower/check-gate-inventory.test.sh"
+    status: wired
+    owner: P4
+    notes: "#1089 W1：三态登记校验器。**已接线**（W0/#1093）：`scripts/pre-commit-check.sh` 的「附: 治理面自检」段以 `hard_check` 调用（本地软提示/CI strict 硬阻断）；接线首日即抓出 `CT-check-gate-inventory` 自身 `required_ci:false` 的账实不符（已改 true）。"

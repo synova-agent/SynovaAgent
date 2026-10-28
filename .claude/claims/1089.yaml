@@ -1,0 +1,15 @@
+writeset:
+  - scripts/pre-commit-check.sh
+  - .claude/claims/1089.yaml
+  - docs/authority/GATE-INVENTORY.yaml
+  - docs/authority/DOCS-REGISTRY.yaml
+  - docs/authority/WIRING-REGISTRY.yaml
+  - scripts/control-tower/check-gate-inventory.sh
+  - tests/control-tower/check-gate-inventory.test.sh
+  - gate-exemptions/2026-10-28-1089-gate-inventory.md
+  - .claude/task-briefs/2026-10-28-1089-gate-inventory.md
+  - memory/notes/proposed/2026-10-28-1089-gate-inventory.md
+done:
+  - verify: bash scripts/control-tower/check-gate-inventory.sh --root .
+  - verify: bash tests/control-tower/check-gate-inventory.test.sh
+note: "#1089 W1 门禁三分类：GATE-INVENTORY 纯追加 classification（37 件/P0 8）＋三态校验器＋双向对齐。"
