@@ -4,7 +4,7 @@ writeset:
   - gate-exemptions/2026-10-29-1124-freeze-watch.md
   - docs/authority/DOCS-REGISTRY.yaml
   - .claude/claims/1124.yaml
-  - docs/synova/reviews/1124.112411241124.json
+  - docs/synova/reviews/1127.112711271127.json
 done:
   - verify: grep -c 'FREEZE-BROKEN' .gitea/workflows/trunk-freeze-watch.yml
   - verify: grep -c 'b8edf9860990a7ef6962aa12a1bae473e753f6d0' .gitea/workflows/trunk-freeze-watch.yml
