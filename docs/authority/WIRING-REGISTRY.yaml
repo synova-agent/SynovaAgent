@@ -159,4 +159,4 @@ entries:
     test: "tests/control-tower/check-gate-inventory.test.sh"
     status: wired
     owner: P4
-    notes: "#1089 W1：三态登记校验器。消费侧＝CI 腿/提交腿，但接线需改 scripts/pre-commit-check.sh 或 .gitea/workflows（P4 写集外）⇒ 本批无生产消费者，consumer 空是实测不是遗漏；接线另批。"
+    notes: "#1089 W1：三态登记校验器。**已接线**（W0/#1093）：`scripts/pre-commit-check.sh` 的「附: 治理面自检」段以 `hard_check` 调用（本地软提示/CI strict 硬阻断）；接线首日即抓出 `CT-check-gate-inventory` 自身 `required_ci:false` 的账实不符（已改 true）。"

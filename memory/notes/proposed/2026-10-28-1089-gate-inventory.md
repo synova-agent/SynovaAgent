@@ -30,3 +30,11 @@
 ## 四、生效时点
 
 PR 合入 `local-main` 后生效。校验器尚未接 CI 腿（WIRING 登记 declared-only），故当前只在地面手跑/CI 外可用 —— **不算"已接线"**。
+
+## 五、W0 接线补记（2026-10-28，后续提交）
+
+- **现状→决定**：本卡落地时校验器无生产调用点（WIRING `declared-only`）。W0（#1093）把它接进
+  `scripts/pre-commit-check.sh` 的「附: 治理面自检」段（check-gate-inventory.sh），并把 WIRING 转 `wired`、consumer 指到真实行号。
+- **依据**：规格 W2/W5 都要求"报告/阻断"分工明确；热线不阻断（W5 只报告），登记线阻断（W1 硬）。
+  接线首日即抓出 `CT-check-gate-inventory` 自身 `required_ci:false` 与真实引用不符（账实不符 → 已改 true）。
+- **生效时点**：接线段随本分支合入 `local-main` 生效；回滚＝删除该段（单点）。
