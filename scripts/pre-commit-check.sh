@@ -2312,7 +2312,7 @@ if [ -x "$ROOT/scripts/control-tower/check-gate-inventory.sh" ]; then
   fi
 fi
 if [ -x "$ROOT/scripts/control-tower/check-mirror-freshness.sh" ]; then
-  _FRC=0; _FRESH="$(bash "$ROOT/scripts/control-tower/check-mirror-freshness.sh" --canonical "${SYNO_CANONICAL_REF:-gitea/main}" --mirror-ref origin/main 2>&1)" || _FRC=$?  # swallow-ok: 判不了由脚本自身打印；本处只报告不改判定
+  _FRC=0; _FRESH="$(bash "$ROOT/scripts/control-tower/check-mirror-freshness.sh" --canonical "${SYNO_CANONICAL_REF:-gitea/local-main}" --mirror-ref origin/main 2>&1)" || _FRC=$?  # swallow-ok: 判不了由脚本自身打印；本处只报告不改判定
   printf '%s\n' "$_FRESH" | grep -E '结果:|degraded:' | sed 's/^/  ℹ️  /' || true  # swallow-ok: 无匹配即安静
   if [ "$_FRC" -ne 0 ]; then echo "  ⚠️ 镜象新鲜度 rc=$_FRC（0=新鲜 1=不新鲜 2=判不了）—— 只报告，不阻断（W5）"; fi
 fi

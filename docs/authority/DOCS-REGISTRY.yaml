@@ -1387,4 +1387,4 @@ documents:
     path: gate-exemptions/2026-10-28-1115-trunk-main.md
     status: active
     owner: P4
-    note: "#1115（冻结期阶段 1）：9 处无回退链的 local-main 主引用切 main（四条件基线/镜像/CI base/触发/预提交 canonical）＋豁免自覆盖＋DOCS-REGISTRY 自登记；有候选回退链的 16 处留清理批；SYNO_TRUNK 语义由既有环境变量覆盖，不改判据强度。"
+    note: "#1115（冻结期阶段 1）：7 处无回退链的 local-main 主引用切 main（四条件基线/镜像/触发/canonical）＋豁免自覆盖＋DOCS-REGISTRY 自登记；local-gates.yml 与 pre-commit-check.sh 因与 #943/#801 写集重叠移出，留清理批；SYNO_TRUNK 语义由既有环境变量覆盖，不改判据强度。"
