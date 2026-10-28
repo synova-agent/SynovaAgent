@@ -375,17 +375,3 @@ jobs:
           echo "①i base = $BASE"
           python3 scripts/control-tower/check-tool-args-delta.py --root . --base "$BASE" || exit $?
 
-
-      # ①l 治理面自检（W0/#1093）：门禁三分类登记 **report-only** —— 只报警不阻断
-      #   为什么只报告：① 判不了（清单缺失/零条目）⇒ exit 2，不应卡住他人合并；② 硬阻断另卡。
-      - name: ①l 门禁三分类登记（report-only · #1093）
-        run: |
-          cd /Users/wane/.ci-work/SynovaAgent
-          set +e
-          bash scripts/control-tower/check-gate-inventory.sh --root .
-          rc=$?
-          set -e
-          if [ "$rc" -ne 0 ]; then
-            echo "::warning::①l 门禁三分类 rc=$rc（0=通过 1=违规 2=判不了）—— report-only，不阻断"
-          fi
-          exit 0

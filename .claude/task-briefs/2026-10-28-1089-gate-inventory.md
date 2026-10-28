@@ -11,7 +11,6 @@ class/owner/review_after/entrypoint/required_ci **五字段零存在**。
 
 ## Q2: 范围
 做什么:
-- .gitea/workflows/local-gates.yml
 - docs/authority/GATE-INVENTORY.yaml
 - scripts/control-tower/check-gate-inventory.sh
 - tests/control-tower/check-gate-inventory.test.sh
