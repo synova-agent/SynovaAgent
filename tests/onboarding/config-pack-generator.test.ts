@@ -12,7 +12,16 @@
  *
  * 🔴 夹具纪律（#1075）：`contexts[].source` **只许** scope（本包 knowledge-scope 带锚）＋
  *   `profile.business-plan` 两类 —— 临时根里没有 `extensions/ontology/**`，file ref 必悬空
- *   （loader 的 `repoRoot` 取 `process.cwd()`）⇒ J4b 会假红。
+ *   （#1104 起 loader 的 `repoRoot` 由内容根派生 `resolve(root,'../..')`；该结论**不变**：
+ *   夹具临时根里本就没有 `extensions/ontology/**`）⇒ J4b 会假红。
+ *
+ * ═══ #1104（P1-c）新增 §B 组：`knowledgeScope[]` 取值格式执行体（规格 §4.5-C2）═══
+ *   B-1/2/3 非法形态（65 长／大写／空格）⇒ `ROLE_SEED_BAD_SCOPE_ID`：`missingParams` 恒 `[]`，
+ *     坏值只落 `badParams`，`written=[]` 且角色目录不创建（零部分写）。
+ *   B-4/5 合法值与长度临界（64 过／65 拒）⇒ 不误拒；
+ *   B-6 截断：>5 条非法 ⇒ 前 5 条原值 ＋ 末条恰 `…(+N)`（U+2026 省略号）；
+ *   B-7 优先级：缺 contexts ＋ 非法 id 同时命中 ⇒ `ROLE_SEED_INCOMPLETE` 优先，坏值仍随 `badParams` 带出。
+ *   既有 18 条**一字不改**；本组全部断言真 `generateConfigPack()`（禁 grep 当验收）。
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'fs';
@@ -348,3 +357,112 @@ describe('config-pack-generator — 边界', () => {
     expect(readdirSync(roleDir('finance')).length).toBe(6);
   });
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// §B · seed scope id 执行体（#1104 / 规格 §4.5-C2；改坏必红目标）
+// ══════════════════════════════════════════════════════════════════════════════
+
+/** 取 `rejected[0].badParams`（缺失即抛 —— 契约错不该静默通过；禁 `as` 断言） */
+function rejectedBadParams(result: ReturnType<typeof generateConfigPack>): readonly string[] {
+  const rejected = result.rejected[0];
+  if (rejected === undefined) throw new Error('rejected[0] 缺失：该角色本应被拒');
+  const badParams = rejected.badParams;
+  if (badParams === undefined) throw new Error('rejected[0].badParams 缺失（#1104 additive 字段）');
+  return badParams;
+}
+
+describe('config-pack-generator — §B seed scope id 执行体（#1104）', () => {
+  it('B-1 knowledgeScope 超 64（65 长）⇒ BAD_SCOPE_ID、missingParams=[]、badParams 原值、零写入', () => {
+    const tooLong = 'x'.repeat(65);
+    const r = generateConfigPack({ roles: [completeSeed({ knowledgeScope: [tooLong] })], rootDir: root });
+    expect(r.rejected.length).toBe(1);
+    expect(r.rejected[0]?.code).toBe('ROLE_SEED_BAD_SCOPE_ID');
+    // 🔴 语义不混用：坏值**不进** missingParams（missingParams 只放缺失字段名）
+    expect(r.rejected[0]?.missingParams).toEqual([]);
+    expect(rejectedBadParams(r)).toContain(tooLong);
+    expect(r.written).toEqual([]);
+    expect(r.degraded).toBe(true);
+    expect(r.errors.join(' ')).toContain('ROLE_SEED_BAD_SCOPE_ID');
+    // 零部分写：连角色目录都不创建
+    expect(existsSync(roleDir('finance'))).toBe(false);
+  });
+
+  it('B-2 大写（A.B）⇒ BAD_SCOPE_ID、badParams 含原值（字符集判定，不归一不放过）', () => {
+    const r = generateConfigPack({ roles: [completeSeed({ knowledgeScope: ['A.B'] })], rootDir: root });
+    expect(r.rejected.length).toBe(1);
+    expect(r.rejected[0]?.code).toBe('ROLE_SEED_BAD_SCOPE_ID');
+    expect(r.rejected[0]?.missingParams).toEqual([]);
+    expect(rejectedBadParams(r)).toContain('A.B');
+    expect(r.written).toEqual([]);
+    expect(existsSync(roleDir('finance'))).toBe(false);
+  });
+
+  it('B-3 空格（a b）⇒ BAD_SCOPE_ID、badParams 含原值', () => {
+    const r = generateConfigPack({ roles: [completeSeed({ knowledgeScope: ['a b'] })], rootDir: root });
+    expect(r.rejected[0]?.code).toBe('ROLE_SEED_BAD_SCOPE_ID');
+    expect(r.rejected[0]?.missingParams).toEqual([]);
+    expect(rejectedBadParams(r)).toContain('a b');
+    expect(r.written).toEqual([]);
+    expect(existsSync(roleDir('finance'))).toBe(false);
+  });
+
+  it('B-4 合法 id（a.b）不被误拒 ⇒ rejected=[]、written 6 件且原样落盘', () => {
+    const r = generateConfigPack({ roles: [completeSeed({ knowledgeScope: ['a.b'] })], rootDir: root });
+    expect(r.rejected).toEqual([]);
+    expect(r.errors).toEqual([]);
+    expect(r.degraded).toBe(false);
+    expect(EXPECTED_PIECES.length).toBe(6);
+    expect(r.written.length).toBe(EXPECTED_PIECES.length);
+    expect(r.written.length).toBe(6);
+    expect(readdirSync(roleDir('finance')).sort()).toEqual([...EXPECTED_PIECES].sort());
+    // 合法取值原样写入 scopes[].id（没有归一化改写）
+    expect(readPiece('finance', 'knowledge-scope.yaml')).toContain('- id: "a.b"');
+  });
+
+  it('B-5 长度临界：恰 64 过／65 拒（同一白名单正则的两种状态）', () => {
+    const at64 = 'a'.repeat(64);
+    const ok = generateConfigPack({ roles: [completeSeed({ roleId: 'len-boundary-ok', knowledgeScope: [at64] })], rootDir: root });
+    expect(ok.rejected).toEqual([]);
+    expect(ok.written.length).toBe(6);
+
+    const at65 = 'a'.repeat(65);
+    const bad = generateConfigPack({ roles: [completeSeed({ roleId: 'len-boundary-bad', knowledgeScope: [at65] })], rootDir: root });
+    expect(bad.rejected[0]?.code).toBe('ROLE_SEED_BAD_SCOPE_ID');
+    expect(rejectedBadParams(bad)).toContain(at65);
+    expect(bad.written).toEqual([]);
+    expect(existsSync(roleDir('len-boundary-bad'))).toBe(false);
+  });
+
+  it('B-6 截断：8 条非法 ⇒ 前 5 条原值 ＋ 第 6 条恰为 …(+3)', () => {
+    const illegal = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8'];
+    const r = generateConfigPack({ roles: [completeSeed({ knowledgeScope: illegal })], rootDir: root });
+    expect(r.rejected[0]?.code).toBe('ROLE_SEED_BAD_SCOPE_ID');
+    const badParams = rejectedBadParams(r);
+    expect(badParams.length).toBe(6);
+    expect(badParams.slice(0, 5)).toEqual(['A1', 'A2', 'A3', 'A4', 'A5']);
+    expect(badParams[5]).toBe('…(+3)');
+    // 字面钉死省略号码点（U+2026）：防编辑期被换成三点句号 "." 而判据漂移
+    expect(badParams[5]).toBe('\u2026(+3)');
+    expect(r.written).toEqual([]);
+  });
+
+  it('B-7 优先级：缺 contexts ＋ 非法 scope id ⇒ INCOMPLETE 优先，但坏值随 badParams 带出', () => {
+    const r = generateConfigPack({ roles: [completeSeed({ contexts: [], knowledgeScope: ['A.B'] })], rootDir: root });
+    expect(r.rejected.length).toBe(1); // 只 push 一条：优先级 = 先缺后坏
+    expect(r.rejected[0]?.code).toBe('ROLE_SEED_INCOMPLETE');
+    expect(r.rejected[0]?.missingParams).toContain('contexts');
+    expect(rejectedBadParams(r)).toContain('A.B'); // 坏值不丢
+    expect(r.written).toEqual([]);
+    expect(existsSync(roleDir('finance'))).toBe(false);
+  });
+
+  it('B-8 合法与非法混排（a.b ＋ A.B）⇒ 只要有一条非法即拒，badParams 只含非法原值', () => {
+    const r = generateConfigPack({ roles: [completeSeed({ knowledgeScope: ['a.b', 'A.B'] })], rootDir: root });
+    expect(r.rejected.length).toBe(1);
+    expect(r.rejected[0]?.code).toBe('ROLE_SEED_BAD_SCOPE_ID');
+    expect(rejectedBadParams(r)).toEqual(['A.B']); // 合法 id 不进 badParams
+    expect(r.written).toEqual([]);
+    expect(existsSync(roleDir('finance'))).toBe(false);
+  });
+});
+
