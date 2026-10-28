@@ -21,6 +21,8 @@ class/owner/review_after/entrypoint/required_ci **五字段零存在**。
 - docs/authority/DOCS-REGISTRY.yaml
 - docs/authority/WIRING-REGISTRY.yaml
 
+- scripts/pre-commit-check.sh
+
 不做什么:
 - scripts/control-tower/check-mirror-freshness.sh
 - scripts/pre-commit-check.sh
