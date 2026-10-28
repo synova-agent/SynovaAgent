@@ -1,0 +1,23 @@
+# .claude/claims/1115.yaml — #1115 trunk 切 main：工具链主引用切换（冻结期阶段 1 · 收窄 7 件）
+# 收窄：local-gates.yml 与 pre-commit-check.sh 与 #943/#801 写集重叠，移出本批留清理批。
+writeset:
+  - scripts/control-tower/check-merge-conditions.sh
+  - scripts/control-tower/check-mirror-freshness.sh
+  - scripts/control-tower/mirror-sync-push.sh
+  - scripts/control-tower/check-dual-repo-sync.sh
+  - scripts/control-tower/resolve-ci-base.sh
+  - .gitea/workflows/dual-repo-sync.yml
+  - .gitea/workflows/asset-sync.yml
+  - gate-exemptions/2026-10-28-1115-trunk-main.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - memory/notes/proposed/2026-10-28-1115-trunk-main.md
+  - .claude/claims/1115.yaml
+  - docs/synova/reviews/1115.111511151115.json
+  - docs/synova/reviews/1119.111911191119.json
+done:
+  - verify: grep -c 'SYNO_MERGE_BASE:-main' scripts/control-tower/check-merge-conditions.sh
+  - verify: grep -c 'CANONICAL="gitea/main"' scripts/control-tower/check-mirror-freshness.sh
+  - verify: grep -c 'refs/heads/main' scripts/control-tower/mirror-sync-push.sh
+  - verify: grep -c 'fetch -q origin main' .gitea/workflows/dual-repo-sync.yml
+  - verify: grep -c 'branches: \[main\]' .gitea/workflows/asset-sync.yml
+note: "冻结期阶段 1 收窄版：只切无回退链的 7 处主引用；local-gates.yml 与 pre-commit-check.sh 因与 #943/#801 写集重叠移出，留清理批（local-gates 已有 origin/local-main→origin/main 回退）。不改检查强度/组数。"
