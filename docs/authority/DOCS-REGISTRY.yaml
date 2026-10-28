@@ -1317,3 +1317,11 @@ documents:
     status: active
     owner: P4
     note: "#1072（裁 427 D3）：scripts/workflow/check-brief-parseable.sh＋两测试件受保护路径豁免（空参 fail-closed；含铺底 #1071 两受保护件）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+
+  # ---- P4 2026-10-28：#1100 W3 复核件豁免登记（DOC-0321；与在飞 #1088/#1090 预留段 0315–0320 不重号）----
+  - id: DOC-0321
+    type: decision
+    path: gate-exemptions/2026-10-28-1100-gate-review.md
+    status: active
+    owner: P4
+    note: "#1100 W3（豁免证据链收窄）：check-gate-protection.sh 加 --require-review（新增豁免件首行须复核件，存量按 base 存在性冻结 legacy）＋README §6＋配对测试 M-1′..M-4′＋验收自证脚本三处夹具首行；含自覆盖行与 DOCS-REGISTRY 自登记行。"
