@@ -1395,3 +1395,10 @@ documents:
     status: active
     owner: P2
     note: "#1075（P2-1）：scripts/control-tower/probe-knowledge-scope.ts 的 V6(ii) 夹具适配（断言不变，探针回基线）；含 gate-exemptions/** 自覆盖行与 DOCS-REGISTRY 自登记行。0323/#1108、0324/#1115 已占；本号按 A 随卡派生。"
+  # ---- P4 2026-10-29：#1124 冻结哨兵豁免登记（DOC-0325）----
+  - id: DOC-0325
+    type: decision
+    path: gate-exemptions/2026-10-29-1124-freeze-watch.md
+    status: active
+    owner: P4
+    note: "#1124：新增 .gitea/workflows/trunk-freeze-watch.yml（每日 schedule 比对 local-main 锚点 b8edf9860，不等即红）；无写操作、无 token；含豁免自覆盖与 DOCS-REGISTRY 自登记。"
