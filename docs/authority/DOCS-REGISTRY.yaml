@@ -1353,3 +1353,10 @@ documents:
     status: active
     owner: P4
     note: "#1101（W7-L0）：scripts/pre-commit-check.sh ＋ tests/control-tower/** ＋ docs/authority/DOCS-REGISTRY.yaml 等受保护路径豁免（生成器＋三模板＋「附: 三段契约兜底」段）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+  # ---- P4 2026-10-28：#1087 W5 镜像新鲜度检查器豁免登记（DOC-0315；0314 已被 #1072 占用）----
+  - id: DOC-0315
+    type: decision
+    path: gate-exemptions/2026-10-28-1087-mirror-freshness.md
+    status: active
+    owner: P4
+    note: "#1087（W5 旧树假绿检测）：scripts/control-tower/check-mirror-freshness.sh＋配对密封测试受保护路径豁免（只读三态判据，判不了 exit 2）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
