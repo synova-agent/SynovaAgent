@@ -152,6 +152,14 @@ entries:
     status: wired
     owner: P1
     notes: "岗位包 v2 装载期结构＋refs 校验（#1075 批一 P1-a）；消费者＝loader 唯一入口（content-registry boot/reload）；随仓 JSON Schema 是契约、zod 是执行体（drift 测试钉死键集）"
+  - capability: gate.assertLib
+    defined_at: "scripts/control-tower/gate-assert.sh:1"
+    provider: "scripts/control-tower/gate-assert.sh:1"
+    consumer: null
+    test: "tests/control-tower/gate-assert.test.sh"
+    status: declared-only
+    owner: P4
+    notes: "#1096 W6 判据自检库（库件）：ga_run 三态归一＋128/137/126 等非白名单码归判据故障(2)；接线＝后续判据抽样接入，本批不做 ⇒ 无生产消费者。"
   - capability: gate.telemetry
     defined_at: "scripts/control-tower/gate-telemetry.sh:1"
     provider: "scripts/control-tower/gate-telemetry.sh:1"

@@ -1318,6 +1318,19 @@ documents:
     owner: P4
     note: "#1072（裁 427 D3）：scripts/workflow/check-brief-parseable.sh＋两测试件受保护路径豁免（空参 fail-closed；含铺底 #1071 两受保护件）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
 
+  # ---- P4 2026-10-28：#1096 W6 判据自检库豁免登记＋坑清单登记（DOC-0319/0320；0315–0318 已被在飞批次占用）----
+  - id: DOC-0319
+    type: decision
+    path: gate-exemptions/2026-10-28-1096-gate-assert.md
+    status: active
+    owner: P4
+    note: "#1096（W6）：判据自检共享件 gate-assert.sh ＋配对测试受保护路径豁免（含自覆盖行与 DOCS-REGISTRY 自登记行）。"
+  - id: DOC-0320
+    type: registry
+    path: docs/authority/gate-pitfalls.md
+    status: active
+    owner: P4
+    note: "#1096（W6）：判据已知坑清单（首条＝Windows os.path.relpath 反斜杠 vs 基线正斜杠 ⇒ 存量被算成新增）；新增判据须先读本件。"
   # ---- P4 2026-10-28：#1094 W2 运行遥测豁免登记（DOC-0317；0308–0314 已被 M4/#1054/#1071/#1072 占用）----
   - id: DOC-0317
     type: decision
