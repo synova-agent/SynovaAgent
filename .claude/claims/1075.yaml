@@ -10,6 +10,13 @@
 #      故 obligation=exempt；扩表方式是该台账自身文档写明的「加一行 entry」）。
 #      → 本分支提交集 ⊆ writeset（本文件 21 行：16 项并集 ∪ claims 自身 ∪ plan.json ∪ triage 行归属
 #        ∪ 1085 回执 ∪ 1086 回执；P1-b 分支只多最后一次「回执预列」提交）。
+#      ＋ #1104（= #1075 / P1-c，2026-10-28）追加 2 项（本文件 23 行）：
+#        · `tests/extensions/knowledge-scope-wiring.test.ts` —— 既有测试夹具依赖「repoRoot 回落 cwd」的
+#          旧行为；#1104 改为由内容根派生 ⇒ 该件 1 failed/22 passed。**L1 2026-10-28 现场批准**
+#          写集第 6 件（仅夹具仓库形状化，断言零改动）；不修则 CI 恒红、本批不可合。
+#        · `docs/synova/reviews/1105.110511051105.json` —— PR #1105 的队外独立复核回执
+#          （命名循 1085/1086 先例：预列 12 位 [0-9a-f] 占位名，回执内 patch_fingerprint 为真指纹；
+#          L1 批准的第 7 项＝第 6 件产品文件之外的回执落库）。
 # 说明：`docs/authority/WIRING-REGISTRY.yaml` 为**纯追加 1 行**（G1 R1.1；不改既有条目，§10-L11）。
 writeset:
   - extensions/presets/schema/role-pack-v2.schema.json
@@ -33,6 +40,8 @@ writeset:
   - tests/contract/triviality-manifest.yaml
   - docs/synova/reviews/1085.108510851085.json
   - docs/synova/reviews/1086.108610861086.json
+  - tests/extensions/knowledge-scope-wiring.test.ts
+  - docs/synova/reviews/1105.110511051105.json
 done:
   - verify: node node_modules/.bin/vitest run tests/init/role-pack-schema.test.ts
   - verify: node node_modules/.bin/vitest run tests/init/preset-loader.test.ts
@@ -40,4 +49,5 @@ done:
   - verify: node node_modules/.bin/tsx scripts/control-tower/probe-role-pack.ts --role finance
   - verify: node node_modules/.bin/vitest run tests/onboarding/config-pack-generator.test.ts
   - verify: DEV_MODE=true node node_modules/.bin/vitest run tests/extensions/onboarding-mount.test.ts
-note: "岗位包 v2（#1075 批一）：P1-a 校验面（随仓 schema＋zod 进 loader＋refs 双向对账＋出厂三包迁 v2，J1/J2/J3）＋ P1-b 生成面（生成器 6 件＋scopes: 键名修复＋缺项拒绝写＋真 HTTP J4/J5），两 PR 串行。plan.json phase3 = 组4a 分阶段接线声明（gate-mandated，只覆盖 src/init/role-pack-schema.ts）。"
+  - verify: node node_modules/.bin/vitest run tests/extensions/knowledge-scope-wiring.test.ts
+note: "岗位包 v2（#1075 批一）：P1-a 校验面（随仓 schema＋zod 进 loader＋refs 双向对账＋出厂三包迁 v2，J1/J2/J3）＋ P1-b 生成面（生成器 6 件＋scopes: 键名修复＋缺项拒绝写＋真 HTTP J4/J5），两 PR 串行。plan.json phase3 = 组4a 分阶段接线声明（gate-mandated，只覆盖 src/init/role-pack-schema.ts）。#1104（P1-c，验收新增小修）：repoRoot 由内容根派生（不依赖 cwd）＋ROLE_PACK_DIR_UNREADABLE 补 log（T4）＋seed scope id 执行体（ROLE_SEED_BAD_SCOPE_ID）；连带修 knowledge-scope-wiring 夹具为仓库形状（L1 批准第 6 件，断言零改动）。"

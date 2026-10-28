@@ -19,12 +19,18 @@
  *             `refsChecked` = 本次对账实际比对的引用条数（`manifest.refs` 条目数 ＋ `contentSources` 条目数）；
  *             纯结构校验 `validateManifestDoc()` 恒 0。
  *   @degraded — **不抛**：读失败／JSON 坏／YAML 坏／形状非法一律折成 `problems`（typed code）。
+ *             **`ROLE_PACK_DIR_UNREADABLE`**（#1104 / T4）：角色目录 `readdir` 失败（如 EACCES）也折成
+ *             problem（点名目录＋原因）＋ `log.warn`，仍返回空集合 ⇒ 根因可归因，不再被吞。
  *             调用方（`src/init/preset-loader.ts`）把 problems 逐条折进 `errors[]` ＋ `degraded:true`
  *             ＋ `log.warn/error`（铁律 11/24/31：不静默、不打断 boot）。
  *   @authority — 生产消费者**唯一** = `src/init/preset-loader.ts`（经 `content-registry` 的 boot/reload 入口）；
  *             P1-b 生成器只复用 `projectContextSource()`（禁自创第二套投影）；其它模块不得复制本文件判定。
  *   @not-here  — 不做五件内容件的**字段级**校验（豁免清单 = `FIELD_LEVEL_VALIDATION_EXEMPT_PIECES`，
  *             恰好五件，测试钉死；P2 与各件读者同批落地）；不执行 JSON Schema；不做 IO 缓存；不改写磁盘。
+ *
+ * test-facing 导出（T1 分类要求；#1104 —— 以下四项**测试面消费**，不是"导出无人用"）:
+ *   · `CONTENT_PIECES`／`FIELD_LEVEL_VALIDATION_EXEMPT_PIECES` —— 集合常量，测试钉死字面值（防豁免面悄悄扩大）；
+ *   · `validateManifestDoc`／`reconcileRefs` —— 纯核，按 §4.5-C1 明列为契约面，测试直接驱动以观测 drift 行为。
  *
  * Source map（本文件内）:
  *   | 导出 | 角色 |
@@ -42,14 +48,18 @@
  *     `context-manifest.yaml` 只读 `contexts[].source`（refs 对账所必需的**唯一**字段），其余字段不判。
  *   · **L2**：`kind=profile` 白名单仅 `business-plan`（无 profile 词汇表；P2 定表）。新增 `profile.*` 须与其读者同批。
  *   · **L5**：JSON Schema **不作执行体**（无 ajv）—— 与 zod 的一致性只靠 drift 测试，不靠运行时同判。
- *   · **存在性口径**：`kind=file` 按 `repoRoot`（缺省 `process.cwd()`）解析；临时内容根夹具必须显式传 `repoRoot`，
- *     否则相对仓库根的引用会被判悬空（生产 dev 形态 cwd = 仓库根，故 loader 不传）。
+ *   · **存在性口径**（#1104 / 规格 §10-L14）：`kind=file` 按 `opts.repoRoot` 解析。**生产 loader 已显式传**
+ *     由内容根派生的仓库根（`resolve(root,'../..')`），故 cwd≠仓库根时不再降级；本函数自身只在
+ *     `opts.repoRoot` 缺省时回退 `process.cwd()`（仅供无内容根的裸调用，如测试/诊断）。
  *   · 其余 133 个扩展 manifest 的 `$schema` 同病未治（本文件只认岗位包 manifest）。
  */
+import { createLogger } from '@synova/logger';
 import { existsSync, readdirSync, readFileSync } from 'fs';
 import { basename, join } from 'path';
 import { load as parseYaml } from 'js-yaml';
 import { z } from 'zod';
+
+const log = createLogger('init/role-pack-schema');
 
 // ══════════════════════════════════════════════════════════════════════════════
 // 一、契约常量（六件／五件清单的单一出处）
@@ -104,8 +114,10 @@ export const FIELD_LEVEL_VALIDATION_EXEMPT_PIECES: readonly string[] = [
 // ══════════════════════════════════════════════════════════════════════════════
 
 /**
- * 校验问题码（§4.5-C1 的十个码，逐一）。
- * 前八个属「装载期结构/引用对账」；后两个属「生成期 seed」（P1-b 使用，本文件只定义类型不产出）。
+ * 校验问题码（§4.5-C1 的**十二个**码，逐一；禁自造第三方码）。
+ * 前八个属「装载期结构/引用对账」；`ROLE_PACK_DIR_UNREADABLE` 属「装载期 IO 根因」（#1104）；
+ * 后三个属「生成期 seed」（P1-b 使用，本文件只定义类型不产出 —— 执行体在
+ * `src/onboarding/config-pack-generator.ts`，规格 §10-L15）。
  */
 export type RolePackProblemCode =
   | 'ROLE_PACK_MANIFEST_UNREADABLE'
@@ -116,8 +128,10 @@ export type RolePackProblemCode =
   | 'ROLE_PACK_REF_MISSING'
   | 'ROLE_PACK_REF_UNDECLARED'
   | 'ROLE_PACK_REF_ORPHAN'
+  | 'ROLE_PACK_DIR_UNREADABLE'
   | 'ROLE_SEED_INCOMPLETE'
-  | 'ROLE_SEED_BAD_SOURCE';
+  | 'ROLE_SEED_BAD_SOURCE'
+  | 'ROLE_SEED_BAD_SCOPE_ID';
 
 /** 一条问题（纯数据；`message` 必须点名具体 path／scope id／文件名，供 grep） */
 export interface RolePackProblem {
@@ -472,7 +486,11 @@ export function reconcileRefs(
 
 /** IO 壳选项 */
 export interface ValidateRolePackDirOptions {
-  /** 仓库根（`kind=file` 的相对基准；缺省 `process.cwd()`） */
+  /**
+   * 仓库根（`kind=file` 的相对基准）。
+   * #1104：生产 loader **由内容根派生**（`resolve(root,'../..')`）后显式传入；缺省 `process.cwd()`
+   * 仅兜无内容根的裸调用（测试/诊断），不得作为生产路径依赖（规格 §10-L14）。
+   */
   readonly repoRoot?: string;
 }
 
@@ -547,14 +565,27 @@ function collectScopeIds(roleDir: string, problems: RolePackProblem[]): readonly
   return ids;
 }
 
-/** 列角色目录内的**文件**名（不含子目录） */
-function listRoleDirFiles(roleDir: string): readonly string[] {
+/**
+ * 列角色目录内的**文件**名（不含子目录）。
+ *
+ * #1104 / T4（规格 §10 的 T4：catch 无 log ⇒ 静默降级）：目录不可读（如 EACCES／ENOTDIR）不再被吞 ——
+ *   `log.warn` 带 `code: 'ROLE_PACK_DIR_UNREADABLE'` ＋ `problems` 点名目录与原因，**仍返回空集合（不抛）**。
+ *
+ * @param roleDir - 角色包目录（绝对路径）
+ * @param problems - 逐条问题累加器（调用方持有；本函数 push，不抛）
+ * @returns 文件名数组（不可读 ⇒ `[]`，原因已在 `problems` 与 warn 日志里）
+ */
+function listRoleDirFiles(roleDir: string, problems: RolePackProblem[]): readonly string[] {
   try {
     return readdirSync(roleDir, { withFileTypes: true })
       .filter((entry) => entry.isFile())
       .map((entry) => entry.name);
-  } catch {
-    return []; // 目录不可读 ⇒ 空集合；会在 pieces 对账处点名（不静默：调用方仍见 mismatch）
+  } catch (err: unknown) {
+    const reason = err instanceof Error ? err.message : String(err);
+    // 铁律 11/24/31：根因（EACCES 等）必须可归因，不许静默吞掉
+    log.warn({ roleDir, code: 'ROLE_PACK_DIR_UNREADABLE', err }, '角色目录不可读 — 逐条点名（不抛）');
+    problems.push({ code: 'ROLE_PACK_DIR_UNREADABLE', message: `${roleDir}: 目录不可读 — ${reason}` });
+    return []; // 仍不抛：pieces 对账会连带点名（调用方见 mismatch）
   }
 }
 
@@ -570,7 +601,8 @@ function listRoleDirFiles(roleDir: string): readonly string[] {
  * 🔴 结构校验未通过时**不**做 refs 对账（避免级联噪音）；`refsChecked` 为 0。
  *
  * @param roleDir - 角色包目录（绝对路径；如 `<root>/extensions/presets/roles/finance`）
- * @param opts.repoRoot - `kind=file` 的解析基准（缺省 `process.cwd()`）
+ * @param opts.repoRoot - `kind=file` 的解析基准。**生产 loader 由内容根派生并显式传入**（#1104 / §10-L14）；
+ *   缺省 `process.cwd()` 只兜裸调用（无内容根的测试/诊断），不得作为生产路径依赖。
  * @returns {@link RolePackValidation}
  *
  * @authority 生产消费者唯一 = `src/init/preset-loader.ts` 的 `readRolePack()`（boot/reload 同一入口）。
@@ -621,7 +653,7 @@ export function validateRolePackDir(roleDir: string, opts: ValidateRolePackDirOp
   const scopeIds = collectScopeIds(roleDir, problems);
 
   // 4) 三方对账（纯核）
-  const reconciled = reconcileRefs(doc, listRoleDirFiles(roleDir), contentSources);
+  const reconciled = reconcileRefs(doc, listRoleDirFiles(roleDir, problems), contentSources);
   problems.push(...reconciled.problems);
 
   // 5) 目标存在性（只有 IO 壳能做）
