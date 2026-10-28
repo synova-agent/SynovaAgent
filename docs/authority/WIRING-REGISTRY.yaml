@@ -186,6 +186,18 @@ entries:
     status: declared-only
     owner: P4
     notes: "#1101 W7-L0：人工调用生成器（bash scripts/dev/new-file.sh / npm run new）产出实现件＋配对测试件，无自动消费者；门禁侧的消费面是 scripts/pre-commit-check.sh 的「附: 三段契约兜底」段（判新文件三段契约齐），该段不调用本生成器。"
+
+  # ---- P4 2026-10-28：#1108 W10 · Unicode 同形字分级门禁（gate.unicodeConfusable；已接线）----
+  - capability: gate.unicodeConfusable
+    defined_at: "scripts/control-tower/check-unicode-confusable.py:1"
+    provider: "scripts/control-tower/check-unicode-confusable.py:1"
+    consumer: "scripts/pre-commit-check.sh:2337"
+    test: "tests/control-tower/check-unicode-confusable.test.sh"
+    status: wired
+    owner: P4
+    notes: "#1108 W10：A/B/C 分档 P0 阻断 ＋ D 档仅提醒、只判 diff 新增行（--base base...HEAD ／ --staged）、三态 0/1/2、--json、--list-legacy（存量只报不判）、--selfcheck 六夹具。**已接线（两处）**：① `scripts/pre-commit-check.sh` 的「附: 治理面自检」段 —— A/B/C 走 hard_check（本地软提示/CI strict 硬阻断）、D 档只 echo 提醒；CI 腿按 SYNO_DIFF_BASE 判 base...HEAD，本地按 --staged（第 2337/2339 行两个调用）；② `.gitea/workflows/local-gates.yml` 末尾「⑥ W10 Unicode 同形字分级门禁」step（第 438 行调用）—— 输出 test_count=N（N＝实际判过的新增行数）、`exit \"$_UNI_RC\"` 原样透传三态、A/B/C 在本步阻断。历史：派单时 W1(#1090)/W5(#1088) 前置未合（GATE-INVENTORY 无 classification 段、pre-commit 无治理面自检段）⇒ 先只交付核心；其后三批合入 local-main(6f194d32c)，本 PR merge 后补接线并把本行从 declared-only 改为 wired。"
+
+
   - capability: gate.mirrorFreshness
     defined_at: "scripts/control-tower/check-mirror-freshness.sh:1"
     provider: "scripts/control-tower/check-mirror-freshness.sh:1"
