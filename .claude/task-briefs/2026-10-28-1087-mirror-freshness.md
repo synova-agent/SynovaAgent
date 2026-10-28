@@ -10,6 +10,7 @@
 
 ## Q2: 范围
 做什么:
+- scripts/pre-commit-check.sh
 - scripts/control-tower/check-mirror-freshness.sh
 - tests/control-tower/check-mirror-freshness.test.sh
 - gate-exemptions/2026-10-28-1087-mirror-freshness.md
