@@ -9,6 +9,22 @@
  *
  * Iron law #32: 错误统一通过 try/catch + log 处理，不静默吞。
  * Iron law #31: degraded 信号通过 ProcessResult 传播。
+ *
+ * #1075 P2-2（岗位包 v2 · 人设＋上下文消费）：系统提示词新增**岗位人设层**，位置在 L1 对话层
+ *   之后、相位层之前 ⇒ 顺序契约 `L0 → L1 → 岗位设定 → 当前阶段 → 覆盖度`（判据 J1a）。
+ *   · `EngineConfig.rolePack?` —— 构造期注入已解析的 `RolePackPersona`；缺省/null ⇒ 该层为空串，
+ *     `filter(Boolean)` 后提示词**逐字**等于无包基线（J3：`LEN=1462`／`sha256=976ca69…fd33`）。
+ *   · `setRolePack(persona|null)` —— **每轮刷新**入口（生产唯一调用方 = 路由缓存命中路径）；幂等；
+ *     内部同时把运行期 `engineCtx.messages` 重新对齐到本引擎的消息数组（`fromState()` 恢复后二者会分叉，
+ *     见该方法注释 —— 不对齐则 LLM 调用看不到重建的 system 层）。
+ *   · `serialize()` 仅在**绑定岗位**时写入 `rolePackId`（人设文本**不落库**，每轮从磁盘重解析）；
+ *     无包时**不写该键** —— 保 J3 基线形态（`'rolePackId' in state === false`）。
+ *   · `fromState(…, { rolePack })` —— 显式传 `persona`／`null` 才重建 system 层（`null` = 撤岗，
+ *     必须把快照里的旧人设段刷掉）；不传（`undefined`）⇒ 既有恢复行为逐字不变（兼容旧调用方）。
+ *
+ *   @authority 人设文本真源 = `src/init/role-pack-persona.ts`（本文件只**消费**已解析的 `RolePackPersona`，
+ *              不读磁盘、不判审批、不做限额 —— 判据与 HTTP 码映射分别归 persona 模块与路由）。
+ *   @degraded 岗位层为空（无包／撤岗／`SYNOVA_ROLE_PACK_PERSONA=off`）⇒ 不注入，**不是错误**。
  */
 import type { LLMProvider, LLMMessage, HealthCheckResult } from '../providers/types';
 // D363: 运行时 failover 接线 — chain 包装 + 环境变量派生备用 provider
@@ -48,6 +64,10 @@ import { ContextEngine } from '../orchestrator/context-engine';
 import { ContextCompaction, ContextCompactionError, createProviderSummarizer, wrapProviderWithOverflowRecovery } from './context-compaction';
 // #656 M2: conversation 链 ingest 调用点（复用现成 ingestDocumentText；不改 src/ingest/**）
 import { ingestDocumentText } from '../ingest/knowledge-ingest-bridge';
+// #1075 P2-2: 岗位人设层（规格 D3 —— 独立层，不改 buildContextLayer 的相位语义）。
+// 值导入 `buildRoleLayer` 零 IO 纯核；类型导入 `RolePackPersona` 纯编译期 ⇒ 不引人设解析期依赖
+// （磁盘读取/审批/限额只在路由侧经 `loadRolePackPersona()` 触发）。
+import { buildRoleLayer, type RolePackPersona } from '../init/role-pack-persona';
 
 const log = createLogger('agent/conversation-engine');
 
@@ -114,6 +134,12 @@ export interface EngineConfig {
   federalAdapter?: import('../adapters/federal-adapter').FederalAdapter;
   /** P1 Phase Gate Check: 证据和专家状态跟踪 (供 onPhaseEnter 回调读取) */
   phaseGateTracking?: { evidenceCount: number; expertResults: Array<{ expertType: string; confidence: number; hypothesis: string; degraded?: boolean }> };
+  /**
+   * #1075 P2-2: 岗位人设面（`loadRolePackPersona()` 产出的已解析包）。
+   * 缺省 / `null` ⇒ 不注入岗位层（提示词逐字等于无包基线 —— 判据 J3）；**不传** ⇒ 与修复前行为一致。
+   * 会话内变更走 `setRolePack()`（每轮刷新），不重建引擎。
+   */
+  rolePack?: RolePackPersona | null;
 }
 
 export interface ProcessResult {
@@ -128,6 +154,11 @@ export type EngineState = {
   phase: number;
   messages: LLMMessage[];
   startedAt: string;
+  /**
+   * #1075 P2-2: 会话绑定的岗位 id（**只存归属**，人设文本不落库 —— 每轮从磁盘重解析）。
+   * 仅当引擎持有岗位人设时由 `serialize()` 写入；无包会话**不写该键**（保 J3 基线形态）。
+   */
+  rolePackId?: string;
 }
 
 /** @deprecated 使用 EngineState。保留用于 TUI/CLI 后向兼容。 */
@@ -253,16 +284,31 @@ function buildVolatileLayer(turnCount: number, phase: number, teamId?: string): 
   return `[轮次: ${turnCount}] [阶段: ${phase}/5]${sentinelInfo}`;
 }
 
+/**
+ * Hermes P0-2 三层系统提示组装（稳定层 L0 ＋ 对话层 L1 ＋ [岗位层] ＋ 相位层 ＋ 覆盖度层）。
+ *
+ * #1075 P2-2: 岗位人设层插在 **L1 之后、相位层之前**（顺序契约，判据 J1a）。
+ *   `buildRoleLayer()` 是纯核（零 IO／不抛）；`null`／`undefined` 入参由**本函数**挡在外面
+ *   （该函数签名只收 `RolePackPersona`）—— 无包时数组项为 `''`，经 `filter(Boolean)` 消失
+ *   ⇒ 分隔符不会多出一段（J3 逐字基线的成立前提）。
+ *
+ * @input  phase／turnCount／coverage／dimensionRegistry（既有语义不变）；rolePack——已解析人设面
+ * @output system prompt 字符串（段间固定 `'\n\n---\n\n'`）
+ * @degraded 岗位层为空（无包／撤岗／回滚开关 off）⇒ 该段缺席，不是错误
+ */
 function buildSystemPrompt(
   phase: number, turnCount: number,
   coverage?: Map<string, { status: string; confidence: number; evidenceCount: number }>,
   dimensionRegistry?: { get(id: string): { name: string } | undefined } | null,
+  rolePack?: RolePackPersona | null,
 ): string {
   const context = buildContextLayer(phase);
   const covText = coverage ? buildCoverageContext(coverage, dimensionRegistry) : '';
+  const roleLayer = rolePack ? buildRoleLayer(rolePack) : '';
   return [
     L0_GLOBAL_PROMPT,
     L1_DIALOG_LAYER,
+    roleLayer,
     context,
     covText,
   ].filter(Boolean).join('\n\n---\n\n');
@@ -377,6 +423,12 @@ export class ConversationEngine {
   /** 维度覆盖追踪 (Phase 0) */
   private dimensionCoverage: Map<string, { status: string; confidence: number; evidenceCount: number }> = new Map();
 
+  /**
+   * #1075 P2-2: 当前会话的岗位人设面（`null` = 无岗位/已撤岗）。
+   * 构造期由 `EngineConfig.rolePack` 初始化，之后只经 `setRolePack()` 变更（幂等）。
+   */
+  private rolePack: RolePackPersona | null = null;
+
   // P1-01: 子组件提取
   private toolLoop: ToolLoopExecutor;
   private diagnosisLauncher: DiagnosisLauncher;
@@ -384,6 +436,13 @@ export class ConversationEngine {
   private contextEngine: ContextEngine;
   /** D594: 会话级上下文压缩（threshold/retain + 压缩事件 + 溢出恢复） */
   private readonly compaction: ContextCompaction;
+  /**
+   * 运行期共享上下文（ToolLoopExecutor／DiagnosisLauncher／OntologySyncer 同一实例）。
+   * #1075 P2-2: 保留引用是为了 `setRolePack()` 能把 `engineCtx.messages` 重新对齐到
+   * `this.messages` —— `fromState()` 恢复时会**换掉** `this.messages` 数组，不同步则
+   * LLM 调用仍读旧数组（看不到重建的 system 层，人设注入在恢复会话上失效）。
+   */
+  private readonly engineCtx: EngineContext;
 
   constructor(provider: LLMProvider, config: EngineConfig = {}) {
     // D363: 运行时 failover 接线 — 注入的单 provider 包装为 failover chain。
@@ -411,7 +470,9 @@ export class ConversationEngine {
       orgId: typeof config.orgId === 'string' ? config.orgId : '',
       contextWindowTokens: config.contextWindowTokens ?? DEFAULT_CONTEXT_WINDOW_TOKENS,
     } as Required<EngineConfig>;
-    this.messages = [{ role: 'system', content: buildSystemPrompt(0, 0, this.dimensionCoverage, this.dimensionRegistry) }];
+    // #1075 P2-2: 岗位人设必须在首条 system 组装**之前**就位（否则首轮提示词缺人设）
+    this.rolePack = config.rolePack ?? null;
+    this.messages = [{ role: 'system', content: buildSystemPrompt(0, 0, this.dimensionCoverage, this.dimensionRegistry, this.rolePack) }];
     this.toolRegistry = new ToolRegistry();
 
     // 编排层接线: 接收可选组件
@@ -465,6 +526,8 @@ export class ConversationEngine {
     // D487: 会话事件 store 注入 — launcher 经 ctx.sessionStore 落诊断事件流
     // （铁律 39: 内联类型注入，EngineContext 接口不加 L5 字段）
     (engineCtx as { sessionStore?: SessionStoreLike }).sessionStore = config.sessionStore;
+    // #1075 P2-2: 保留共享上下文引用（`setRolePack()` 需要把 ctx.messages 与本引擎消息数组重新对齐）
+    this.engineCtx = engineCtx;
     this.toolLoop = new ToolLoopExecutor(engineCtx);
     this.diagnosisLauncher = new DiagnosisLauncher(engineCtx, diagnosisEngine);
     this.ontologySyncer = new OntologySyncer(engineCtx);
@@ -530,7 +593,41 @@ export class ConversationEngine {
       this.phase++;
       log.debug({ phase: this.phase }, 'Phase 推进 (无状态机, 降级)');
     }
-    this.messages[0] = { role: 'system', content: buildSystemPrompt(this.phase, this.turnCount, this.dimensionCoverage, this.dimensionRegistry) };
+    this.messages[0] = { role: 'system', content: buildSystemPrompt(this.phase, this.turnCount, this.dimensionCoverage, this.dimensionRegistry, this.rolePack) };
+  }
+
+  /**
+   * #1075 P2-2: 刷新本会话的岗位人设并**就地重建** system 层（每轮可调；幂等）。
+   *
+   * 为什么需要这个方法（规格 §2.2-D8）：路由的会话级引擎缓存命中时不会重建引擎
+   * （`src/routes/conversations.ts` 的 `sessionEngines`），若不提供刷新入口，"撤销岗位后
+   * 仍一直带人设"与"批准后一直不生效"都无法收敛 —— 每轮重解析 + `setRolePack()` 是唯一落点。
+   *
+   * 契约：
+   *   @input  persona — 已解析的岗位人设面；`null` = 撤岗（提示词回到无包基线）
+   *   @output 无返回值。重建用**当前** phase／turnCount／coverage／dimensionRegistry（不重置会话状态）。
+   *   @degraded `messages[0]` 非 `role:'system'` ⇒ `log.warn` 并**跳过重建**（不抛 —— 破坏性更小），
+   *            同时仍更新 `this.rolePack`（下一轮相位重建会带上新人设）。
+   *   @authority 生产唯一调用方 = `src/routes/conversations.ts` 的缓存命中路径；测试直调。
+   */
+  setRolePack(persona: RolePackPersona | null): void {
+    this.rolePack = persona;
+    const head = this.messages[0];
+    if (head === undefined || head.role !== 'system') {
+      log.warn(
+        { sessionId: this.sessionId, roleId: persona?.roleId, degraded: true },
+        'setRolePack: messages[0] 不是 system 层 — 跳过 system 重建（不抛；本轮不刷新人设）',
+      );
+      return;
+    }
+    this.messages[0] = {
+      role: 'system',
+      content: buildSystemPrompt(this.phase, this.turnCount, this.dimensionCoverage, this.dimensionRegistry, this.rolePack),
+    };
+    // 🔴 运行期视图对齐：`fromState()` 会把 `this.messages` 换成新数组，而子组件持有的是构造期
+    //    engineCtx.messages（旧数组）。不同步 ⇒ 后续 LLM 调用读旧数组，重建的 system 层（含人设）
+    //    对模型不可见（J7c 生产恢复路径即此形状）。同数组时本行是幂等 no-op。
+    if (this.engineCtx.messages !== this.messages) this.engineCtx.messages = this.messages;
   }
 
   /** Get message history (shallow copy) */
@@ -857,25 +954,50 @@ export class ConversationEngine {
   /**
    * Serialize current engine state for storage/restore.
    * LLMProvider is NOT serialized — caller must provide provider on restore.
+   *
+   * #1075 P2-2: 仅当本引擎持有岗位人设时写入 `rolePackId`（只存归属，人设文本不落库）。
+   * 无包会话**不写该键** —— `'rolePackId' in state === false` 是 J3/J7a 的基线判据。
+   * @output `EngineState`（`rolePackId` 为可选键，写入与否由是否绑定岗位决定）
    */
   serialize(): EngineState {
-    return {
+    const state: EngineState = {
       orgId: this.orgId,
       phase: this.phase,
       messages: [...this.messages],
       startedAt: new Date().toISOString(),
     };
+    if (this.rolePack !== null) state.rolePackId = this.rolePack.roleId;
+    return state;
   }
 
   /**
    * Restore engine from a previously serialized state.
    * Provider must be supplied (not stored in state).
    * D487: wiring — 恢复会话时可传 sessionManager/sessionStore（诊断事件流续写同一会话）。
+   *
+   * #1075 P2-2: wiring 追加 `rolePack` —— 语义是**三态**，不是布尔：
+   *   · `persona` ⇒ 恢复后重建 system 层，注入人设（J7a/J7c）
+   *   · `null`    ⇒ **也**重建（撤岗：必须把快照 `state.messages[0]` 里的旧人设段刷掉）
+   *   · `undefined`（不传）⇒ 保持既有恢复行为**逐字不变**（旧调用方不受影响）
+   *
+   * @input  provider／state／wiring（可选）
+   * @output 恢复后的引擎实例（phase＋messages 来自 state）
+   * @degraded `rolePack` 传 null 时不注入 —— 显式撤岗，不是错误
+   * @authority 生产调用方 = `src/routes/conversations.ts` 的缓存未命中路径（恢复会话）
    */
   static fromState(
     provider: LLMProvider,
     state: EngineState,
-    wiring?: { sessionManager?: SessionManager; sessionStore?: SessionStoreLike; sessionId?: string },
+    wiring?: {
+      sessionManager?: SessionManager;
+      sessionStore?: SessionStoreLike;
+      sessionId?: string;
+      /**
+       * #1075 P2-2: 恢复时显式传入的人设面（`null` = 撤岗，`undefined` = 不干预）。
+       * 路由恒显式传（persona 或 null），以便"撤销后不再注入"在恢复路径上同样成立。
+       */
+      rolePack?: RolePackPersona | null;
+    },
   ): ConversationEngine {
     const engine = new ConversationEngine(provider, {
       orgId: state.orgId,
@@ -885,6 +1007,8 @@ export class ConversationEngine {
     });
     engine.phase = state.phase;
     engine.messages = [...state.messages];
+    // 删除人设段 / 注入人设都由 setRolePack 统一完成（它还会把 engineCtx.messages 对齐到新数组）。
+    if (wiring?.rolePack !== undefined) engine.setRolePack(wiring.rolePack);
     return engine;
   }
 

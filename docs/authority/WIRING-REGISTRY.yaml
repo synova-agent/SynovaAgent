@@ -222,3 +222,11 @@ entries:
     status: wired
     owner: P2
     notes: "岗位包审批门（#1075 P2-1）：记录侧审批态判定（approved/pending/unverified）＋出厂代码锚（FACTORY_APPROVALS）；唯一生产消费者＝preset-loader 单读→contentHash→判定；判定侧不 import role-pack-schema（N6 防循环依赖）"
+  - capability: content.rolePackPersona
+    defined_at: "src/init/role-pack-persona.ts:1"
+    provider: "src/init/role-pack-persona.ts:442"
+    consumer: "src/routes/conversations.ts:495"
+    test: "tests/init/role-pack-persona.test.ts:372"
+    status: wired
+    owner: P2
+    notes: "岗位包人设＋上下文消费（#1075 P2-2）：approved 包的 prompt.systemAddendum 与 contexts 清单进系统提示词；六件自读→computeRolePackContentHash 与 pack.validation.contentHash 比对→审批门；无包会话提示词逐字不变（J3 基准 976ca690…fd33／LEN=1462）；撤销⇒200＋x-synova-role-pack: degraded＋不注入"
