@@ -2,3 +2,4 @@
 - tests/control-tower/check-mirror-freshness.test.sh — #1087 配对密封测试（16 用例，含改坏必红与 128 不当 0） — #1087
 - gate-exemptions/2026-10-28-1087-mirror-freshness.md — #1087 本豁免文件自身，按 #623 需同 diff 自覆盖 — #1087
 - docs/authority/DOCS-REGISTRY.yaml — #1087 D2 登记门禁要求登记本豁免文件（DOC-0315） — #1087
+- .gitea/workflows/local-gates.yml — #1087 接线：check-mirror-freshness.sh report-only step（W0/#1093） — #1093

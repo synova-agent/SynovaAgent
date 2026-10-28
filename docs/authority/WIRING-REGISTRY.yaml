@@ -155,8 +155,8 @@ entries:
   - capability: gate.mirrorFreshness
     defined_at: "scripts/control-tower/check-mirror-freshness.sh:1"
     provider: "scripts/control-tower/check-mirror-freshness.sh:1"
-    consumer: null
+    consumer: ".gitea/workflows/local-gates.yml:387"
     test: "tests/control-tower/check-mirror-freshness.test.sh"
-    status: declared-only
+    status: wired
     owner: P4
     notes: "#1087 W5：只读报告器（三态 0/1/2）。消费侧＝周报，但 weekly-recon.sh 五指标契约固定（本批不改 544 行件）⇒ 无生产消费者，consumer 空是实测不是遗漏；CI 腿按 W5 拓扑约束不入 GitHub，Gitea 侧接线待下批。"

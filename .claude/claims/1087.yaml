@@ -1,4 +1,5 @@
 writeset:
+  - .gitea/workflows/local-gates.yml
   - .claude/claims/1087.yaml
   - scripts/control-tower/check-mirror-freshness.sh
   - tests/control-tower/check-mirror-freshness.test.sh

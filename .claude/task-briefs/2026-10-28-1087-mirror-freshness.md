@@ -10,6 +10,7 @@
 
 ## Q2: 范围
 做什么:
+- .gitea/workflows/local-gates.yml
 - scripts/control-tower/check-mirror-freshness.sh
 - tests/control-tower/check-mirror-freshness.test.sh
 - gate-exemptions/2026-10-28-1087-mirror-freshness.md
