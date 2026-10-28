@@ -1,0 +1,47 @@
+# .claude/claims/1117.yaml — P4-1117-trunk-main-b2（主树 main 迁移 · 第二批 · 残余批）
+writeset:
+  - .gitea/workflows/local-gates.yml
+  - .gitea/workflows/asset-sync.yml
+  - .gitea/workflows/dual-repo-sync.yml
+  - scripts/control-tower/resolve-ci-base.sh
+  - scripts/pre-push-check.sh
+  - scripts/control-tower/check-bypass-log.sh
+  - scripts/control-tower/check-merge-conditions.sh
+  - scripts/control-tower/check-pr-budget.sh
+  - scripts/control-tower/check-quality-delta.py
+  - scripts/control-tower/check-test-obligations.py
+  - scripts/control-tower/check-tool-args-delta.py
+  - scripts/control-tower/check-mirror-freshness.sh
+  - scripts/control-tower/mirror-sync-push.sh
+  - scripts/control-tower/check-dual-repo-sync.sh
+  - scripts/control-tower/ci-emptygreen-sim.sh
+  - scripts/control-tower/auto-merge.sh
+  - scripts/control-tower/ledger-sync.sh
+  - scripts/control-tower/check-gate-protection.sh
+  - scripts/doc-system/doc-registry-gate.sh
+  - scripts/pre-commit-check.sh
+  - scripts/control-tower/probe-ontology-instances.ts
+  - tests/control-tower/resolve-ci-base.test.sh
+  - tests/control-tower/ci-emptygreen-sim.test.sh
+  - tests/control-tower/mirror-sync-push.test.sh
+  - tests/control-tower/check-dual-repo-sync.test.sh
+  - tests/control-tower/check-test-obligations.test.sh
+  - tests/control-tower/check-tool-args-delta.test.sh
+  - tests/control-tower/founder-truth-acceptance.test.sh
+  - tests/control-tower/doc-contract-ci-acceptance.test.sh
+  - tests/control-tower/check-merge-conditions.test.sh
+  - gate-exemptions/2026-10-29-1117-trunk-main.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - .claude/claims/1117.yaml
+  - memory/notes/proposed/2026-10-29-1117-trunk-main.md
+done:
+  - verify: bash tests/control-tower/resolve-ci-base.test.sh
+  - verify: bash tests/control-tower/ci-emptygreen-sim.test.sh
+  - verify: bash tests/control-tower/mirror-sync-push.test.sh
+  - verify: bash tests/control-tower/check-dual-repo-sync.test.sh
+  - verify: bash tests/control-tower/check-merge-conditions.test.sh
+  - verify: bash tests/control-tower/check-test-obligations.test.sh
+  - verify: bash tests/control-tower/check-tool-args-delta.test.sh
+  - verify: bash tests/control-tower/founder-truth-acceptance.test.sh
+  - verify: bash tests/control-tower/doc-contract-ci-acceptance.test.sh
+note: "#1117 第二批/残余批：检查链路 trunk 名 local-main→main 并收敛 SYNO_TRUNK_REF（缺省 main）；不删远端 local-main、不改 main 保护、不碰 #1110。"
