@@ -15,6 +15,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true  # swallow-ok: 语言环境设不上�
 #   ⑤ 改坏即红：把 A 档判据改成恒假 ⇒ M-11 夹具必须**不再**判红（rc 1→0）
 #   ⑥ 记账一致：WIRING-REGISTRY 的 status 与"是否真接线"必须自洽（declared-only ⇔ 零接线）
 #   ⑦ 自身约束：UTF-8（禁 cp1252）／纯 LF（\r=0）／禁 `$VAR（` 全角边界
+#   ⑧ md 语义：散文不判 A（圆圈序号/排版兼容形不算同形字），围栏代码块内照抓（T19）
 #
 # 沙箱隔离（判据纪律 ⑨-②）: 全部夹具在 `mktemp -d` 下自建 git repo（本地 config、空 hooksPath），
 #   不读真仓、不继承外层 CI 变量、跑前跑后真脚本哈希一致。
@@ -43,6 +44,7 @@ RLO="$(printf '\xe2\x80\xae')"      # U+202E RIGHT-TO-LEFT OVERRIDE（B 档）
 FFFD="$(printf '\xef\xbf\xbd')"     # U+FFFD REPLACEMENT CHARACTER（C 档）
 FW_COMMA="$(printf '\xef\xbc\x8c')" # U+FF0C FULLWIDTH COMMA（D 档）
 FW_LPAREN="$(printf '\xef\xbc\x88')" # U+FF08 FULLWIDTH LEFT PARENTHESIS（D 档）
+CIRCLED_ONE="$(printf '\xe2\x91\xa0')" # U+2460 CIRCLED DIGIT ONE（排版兼容形；禁判 A，否则中文文档全红）
 
 echo "=== check-unicode-confusable 配对测试（#1108 W10）==="
 
@@ -320,6 +322,24 @@ else
 fi
 N_FWB="$({ grep -hv '^[[:space:]]*#' "$S"; grep -hv '^[[:space:]]*#' "$0"; } 2>/dev/null | grep -hE '\$[A-Za-z_][A-Za-z0-9_]*（' | wc -l | tr -d ' ')"  # swallow-ok: 无匹配 ⇒ 0 ⇒ 断言放行
 if [ "${N_FWB:-0}" -eq 0 ]; then ok "T17 代码面无「美元变量名紧接全角括号」边界（D738 教训）"; else no "T17 出现「美元变量名紧接全角括号」边界"; fi
+
+# ── T19 .md 语义：散文不判 A（`①` 序号/散文里的同形字），围栏代码块内照抓 ──
+R19="$(new_fixture mdprose)"; B19="$(head_sha "$R19")"
+printf '# 说明\n\n序号 %s 与散文里的 %s 都不是标识符\n' "$CIRCLED_ONE" "$CYR_A" > "$R19/README.md"
+commit_all "$R19" "md prose"
+run_scan "$R19" --base "$B19"
+if [ "$RC" -eq 0 ]; then ok "T19 md 散文里的圆圈序号与同形字 ⇒ rc=0（散文不是标识符）"; else no "T19 md 散文应 rc=0，实得 ${RC}（误伤）"; fi
+case "$OUT" in *"❌ [A]"*) no "T19 md 散文被判 A（误伤：会把中文文档全判红）" ;; *) ok "T19 md 散文未判 A" ;; esac
+R19B="$(new_fixture mdfence)"; B19B="$(head_sha "$R19B")"
+{
+  printf '# 说明\n\n```ts\n'
+  printf 'const p%sassword = 1;\n' "$CYR_A"
+  printf '```\n'
+} > "$R19B/README.md"
+commit_all "$R19B" "md fence"
+run_scan "$R19B" --base "$B19B"
+if [ "$RC" -eq 1 ]; then ok "T19 md 围栏代码块内的同形字 ⇒ rc=1（照抓）"; else no "T19 md 围栏内应 rc=1，实得 ${RC}"; fi
+case "$OUT" in *"README.md:4"*) ok "T19 命中行号落在围栏内那一行（README.md:4）" ;; *) no "T19 命中行号不对（应在第 4 行）" ;; esac
 
 # ── T18 沙箱隔离：真脚本跑前跑后哈希一致（型 D 防误伤）──────────────────
 H_S_AFTER="$(hash_of "$S")"

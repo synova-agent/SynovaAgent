@@ -419,3 +419,37 @@ jobs:
           { printf '### ⑤ CI 空绿 step 级判据（test_count / skipped）\n\n```\n%s\n```\n\n' "$_EG_OUT" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"; } 2>/dev/null || true  # swallow-ok: step summary 写失败不改判定（stdout 已留证）
           exit "$_EG_RC"
 
+      # ── #1108 W10：Unicode 同形字分级门禁（A/B/C 阻断 · D 仅提醒 · 只判 diff 新增行）──
+      # 位置＝**文件末尾**（CI-S<n> 是位置派生的 id ⇒ 只追加、不重编号）。
+      # 判据源＝`scripts/control-tower/check-unicode-confusable.py` 头部（三态：0 通过/SKIP ｜
+      #   1 A/B/C 命中 ｜ 2 判不了或自身失败）⇒ **在本步阻断**（A/B/C 命中即 job 红）。
+      # 🔴 三态原样透传（`set +e` 捕获 ＋ `exit "$_UNI_RC"`）：禁 `|| exit 1` 把 2 说成 1。
+      # test_count=N（N＝本闸实际判过的**新增行数**）供 W4 空绿口径消费；N=0 ⇒ 声明为正当跳过（不冒充"跑过"）。
+      # 备注（如实）：W4 的 ⑤ 汇总步在本步**之前**执行（位置约束）⇒ 本步的结果记录只对后续批次
+      #   （把本步前移到 ⑤ 之前）生效，不改变本次 job 的 ⑤ 结论；不为本步引入 always()（链语义不变）。
+      - name: ⑥ W10 Unicode 同形字分级门禁（A/B/C 阻断 · D 仅提醒 · 只查 diff）
+        run: |
+          cd /Users/wane/.ci-work/SynovaAgent
+          set -uo pipefail
+          PYBIN="$(command -v python3 2>/dev/null || true)"; [ -n "$PYBIN" ] || { echo "❌ 判不了：python3 不可用（按 W6 退出码白名单归 2，禁当通过）"; exit 2; }
+          BASE="$(bash scripts/control-tower/resolve-ci-base.sh)" || exit $?
+          echo "⑥ base = $BASE"
+          set +e
+          _UNI_OUT="$("$PYBIN" scripts/control-tower/check-unicode-confusable.py --root . --base "$BASE" 2>&1)"; _UNI_RC=$?
+          set -e
+          printf '%s\n' "$_UNI_OUT"
+          _UNI_ADDED="$(printf '%s\n' "$_UNI_OUT" | sed -n 's/.*UNICODE-CONFUSABLE: [A-Z]* files=[0-9]* added=\([0-9][0-9]*\).*/\1/p' | head -1)"
+          _UNI_ADDED="${_UNI_ADDED:-0}"
+          echo "test_count=${_UNI_ADDED}"
+          { printf 'test_count=%s\n' "$_UNI_ADDED" >> "${GITHUB_OUTPUT:-/dev/null}"; } 2>/dev/null || true  # swallow-ok: 输出聚合写失败不改本步判定（stdout 已留证）
+          # W4 空绿记录（与 ③/⑤ **同一路径表达式**，禁两处漂移）：0 新增行 ⇒ 声明为正当跳过
+          if [ "$_UNI_RC" -ne 0 ] || [ "$_UNI_ADDED" -gt 0 ]; then
+            _UNI_STATUS=ran; _UNI_REASON=""
+          else
+            _UNI_STATUS=skipped; _UNI_REASON="变更集无新增行（本闸只判 diff 新增行，不扫全仓）"
+          fi
+          { printf 'step=⑥ W10 Unicode 同形字 status=%s test_count=%s reason=%s\n' "$_UNI_STATUS" "$_UNI_ADDED" "$_UNI_REASON" >> "${RUNNER_TEMP:-/tmp}/synova-ci-emptygreen-${GITHUB_RUN_ID:-local}.env"; } 2>/dev/null || true  # swallow-ok: 结果文件写失败不改判定（⑤ 已在本步之前汇总，见上方备注）
+          { printf '### ⑥ W10 Unicode 同形字分级门禁（A/B/C 阻断 · D 仅提醒）\n\n```\n%s\n```\n\n' "$_UNI_OUT" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"; } 2>/dev/null || true  # swallow-ok: step summary 写失败不改判定（stdout 已留证）
+          exit "$_UNI_RC"
+
+

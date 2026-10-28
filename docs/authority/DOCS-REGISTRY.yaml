@@ -1353,11 +1353,31 @@ documents:
     status: active
     owner: P4
     note: "#1101（W7-L0）：scripts/pre-commit-check.sh ＋ tests/control-tower/** ＋ docs/authority/DOCS-REGISTRY.yaml 等受保护路径豁免（生成器＋三模板＋「附: 三段契约兜底」段）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+  # ---- P4 2026-10-28：#1087 W5 镜像新鲜度检查器豁免登记（DOC-0315；0314 已被 #1072 占用）----
+  - id: DOC-0315
+    type: decision
+    path: gate-exemptions/2026-10-28-1087-mirror-freshness.md
+    status: active
+    owner: P4
+    note: "#1087（W5 旧树假绿检测）：scripts/control-tower/check-mirror-freshness.sh＋配对密封测试受保护路径豁免（只读三态判据，判不了 exit 2）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+  # ---- P4 2026-10-28：#1089 W1 门禁三分类豁免登记（DOC-0316；0315 预留给在飞 PR #1088，禁复用）----
+  - id: DOC-0316
+    type: decision
+    path: gate-exemptions/2026-10-28-1089-gate-inventory.md
+    status: active
+    owner: P4
+    note: "#1089（W1）：scripts/control-tower/check-gate-inventory.sh＋配对密封测试受保护路径豁免（三态校验器：双向对齐/required_ci 账实/P0 棘轮）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+  # ---- P4 2026-10-28：#1100 W3 复核件豁免登记（DOC-0321；与在飞 #1088/#1090 预留段 0315–0320 不重号）----
+  - id: DOC-0321
+    type: decision
+    path: gate-exemptions/2026-10-28-1100-gate-review.md
+    status: active
+    owner: P4
+    note: "#1100 W3（豁免证据链收窄）：check-gate-protection.sh 加 --require-review（新增豁免件首行须复核件，存量按 base 存在性冻结 legacy）＋README §6＋配对测试 M-1′..M-4′＋验收自证脚本三处夹具首行；含自覆盖行与 DOCS-REGISTRY 自登记行。"
   # ---- P4 2026-10-28：#1108 W10 · Unicode 同形字分级门禁豁免登记（DOC-0323，按派单指定号落号）----
   - id: DOC-0323
     type: decision
     path: gate-exemptions/2026-10-28-1108-unicode-confusable.md
     status: active
     owner: P4
-    note: "#1108（W10）：scripts/control-tower/**（新扫描器 check-unicode-confusable.py）＋ tests/control-tower/**（配对测试）＋ gate-exemptions/**（自覆盖）＋ docs/authority/DOCS-REGISTRY.yaml（自登记）受保护路径豁免；A/B/C 分档 P0 阻断、D 档仅提醒、只判 diff 新增行，本批不接线（WIRING=declared-only）。"
-
+    note: "#1108（W10）：scripts/control-tower/**（新扫描器 check-unicode-confusable.py）＋ tests/control-tower/**（配对测试）＋ scripts/pre-commit-check.sh（治理面自检段接入）＋ .gitea/workflows/**（⑥ step）＋ gate-exemptions/**（自覆盖）＋ docs/authority/DOCS-REGISTRY.yaml（自登记）受保护路径豁免；A/B/C 分档 P0 阻断、D 档仅提醒、只判 diff 新增行；已接线（WIRING=wired）。"

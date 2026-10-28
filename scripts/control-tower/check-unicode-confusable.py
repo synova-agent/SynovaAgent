@@ -19,8 +19,10 @@
 #            --selfcheck    内置夹具的判别力自检（六夹具；任一不符 ⇒ exit 2）
 #   判定分档（规格 §3 W10 判定分层；全部只对**新增行**）:
 #     A 档（P0 阻断）  标识符／裸代码位的同形字 —— 骨架（注释与字符串字面量置空后的部分）内
-#                      出现「形似 ASCII 的非 ASCII 字母/数字」：西里尔/希腊同形表 ＋ NFKC 归一
-#                      后仍落在 ASCII 字母数字的全角/兼容形。**中文注释不判 A**（骨架里没有它）。
+#                      出现「形似 ASCII 的非 ASCII 字母/数字」：西里尔/希腊同形表 ＋ **全角/半角
+#                      兼容形（仅 U+FF00–U+FFEF 块）**。**中文注释不判 A**（骨架里没有它）；
+#                      **.md/.markdown 只判围栏代码块内**（散文不是标识符；`①` 当序号是常态）。
+#                      🔴 排版兼容形（`①`→`1`、`Ⅷ`→`VIII`、`ﬁ`→`fi`）**不判 A** —— 那会把中文文档全判红。
 #     B 档（P0 阻断）  任意位置双向控制符 U+202A–U+202E、U+2066–U+2069（经典 Trojan Source 向量）
 #     C 档（P0 阻断）  任意位置 U+FFFD 替换字符 ／ 该行含**无法按 UTF-8 严格解码的字节**（编码损坏证据）
 #     D 档（P2 仅提醒）全角标点 U+FF01–U+FF5E（剔除全角字母数字）⇒ 只列行号/字符，**exit 0**
@@ -48,12 +50,15 @@
 #   1. **A 档靠启发式骨架，不是 AST**：`#` 注释判定要求 `#` 在行首/空白后（`this.#x` 不算注释）；
 #      跨行块注释 `/* */` 与三引号保持状态。模板字符串里 `${...}` 的代码位会被当字符串置空 ⇒
 #      **漏判**（`${pаssword}` 这种形态本器看不见）。
+#      另：`.md/.markdown` 的围栏状态只能从**本次新增行**里推 ⇒ 若围栏开口行不在 diff 内，
+#      块内新增行会被当散文（A 档不判）；B/C 档不受影响（任意位置判）。
 #   2. **只在 diff 新增行**：把危险字符从别处"搬"进来（删除旧行＋新增旧内容）仍会被抓到；
 #      但**存量**同形字不判（M-12 语义：不许一次 PR 卡死 22k 历史）。
-#   3. **同形表是枚举**：西里尔/希腊常见同形 ＋ NFKC 兼容形；亚美尼亚文、切罗基文等未入表 ⇒ 漏判。
-#   4. **NFKC 会把全角字母数字判 A（在代码位）**：这是有意（`ｐassword` 在代码位必是事故），
-#      但它对"字符串里的全角字母"不触发（被骨架置空）⇒ 全角字母/数字**在注释/字符串内完全不报**
-#      （D 档只收全角标点）—— 这是与规格 D 定义一致的边界，不是遗漏。
+#   3. **同形表是枚举**：西里尔/希腊常见同形 ＋ U+FF00–U+FFEF 兼容形；亚美尼亚文、切罗基文等未入表 ⇒ 漏判。
+#   4. **NFKC 只对全角/半角块（U+FF00–U+FFEF）启用**：`ｐassword` 在代码位必是事故（判 A）；
+#      而 `①`(U+2460)→`1`、`Ⅷ`→`VIII`、`ﬁ`→`fi` 这类**排版兼容形不判 A**（中文文档把 `①` 当序号是常态，
+#      实测本仓 601 行文档会命中 ⇒ 那等于把每份中文说明判红）。全角字母/数字在注释/字符串内完全不报
+#      （A 不收非代码位、D 只收标点）—— 这是与规格 D 定义一致的边界，不是遗漏。
 #   5. **"乱码标记"只实现两种**：U+FFFD 替换字符 ＋ 无法严格 UTF-8 解码的字节；`\u00c3\u00a9`
 #      这类"已被错误解码的 mojibake 文本"本器判不了（需要语义/词典，不做）。
 #   6. **不做豁免通道**：A/B/C 若要豁免，走 W3 双人复核 ＋ 日落（P0 永不自动退役，规格 §3 W10 豁免段）；
@@ -396,13 +401,28 @@ def strip_code(line, state):
 
 
 def _nfkc_lookalike(ch):
-    """NFKC 归一后落到 ASCII 字母数字 ⇒ 兼容形同形字（全角字母/数字、半角片假名等）。"""
-    if ch.isascii():
+    """NFKC 归一后落到 ASCII 字母数字 ⇒ 兼容形同形字。
+
+    🔴 只在 **U+FF00–U+FFEF（Halfwidth and Fullwidth Forms）** 内启用 —— 这是真正的
+    "ASCII 的等宽/半宽变体"（全角字母数字、半角片假名等），在代码位出现必是事故。
+    不能对全 Unicode 开 NFKC：`①`(U+2460)→`1`、`Ⅷ`(U+2167)→`VIII`、`ﬁ`(U+FB01)→`fi` 这类
+    **排版兼容形**会被误判成"同形字"，而中文文档把 `①①` 当序号是常态（本仓 601 行文档实测命中）
+    ⇒ 那会把每一份中文说明判红（规格 §3 W10 明令"不扩大为禁止一切非 ASCII"）。
+    """
+    cp = ord(ch)
+    if ch.isascii() or not (0xFF00 <= cp <= 0xFFEF):
         return None
     norm = unicodedata.normalize("NFKC", ch)
     if len(norm) == 1 and norm.isascii() and norm.isalnum():
         return norm
     return None
+
+
+_MARKDOWN_SUFFIXES = (".md", ".markdown")
+
+
+def _is_markdown(path):
+    return path.lower().endswith(_MARKDOWN_SUFFIXES)
 
 
 # ── ⑥ 分档判定 ───────────────────────────────────────────────────────────────
@@ -460,9 +480,22 @@ def classify_line(path, lineno, text, state):
 
     skeleton = strip_code(text, state)
 
+    # .md/.markdown：A 档只判**围栏代码块内**（``` / ~~~）。
+    #   理由：markdown 的散文里没有"标识符/裸代码位"，而中文文档把 `①①`、`：（）` 当序号/标点是常态
+    #   （本仓 601 行文档实测），若按骨架判会把每份中文说明判红 —— 与规格「不扩大为禁止一切非 ASCII」冲突。
+    #   注：只看本次新增行 ⇒ 若围栏开口行不在 diff 内，块内的新增行会被当散文（见「已知限制 1」）。
+    a_scope_ok = True
+    if _is_markdown(path):
+        stripped = text.lstrip()
+        if stripped.startswith("```") or stripped.startswith("~~~"):
+            state["fence"] = not bool(state.get("fence", False))
+            a_scope_ok = False
+        else:
+            a_scope_ok = bool(state.get("fence", False))
+
     # A 档：只看骨架里的非 ASCII 字符；同类字符每行只报一次（阻断力相同，降噪）
     reported = set()
-    for ch in skeleton:
+    for ch in skeleton if a_scope_ok else "":
         if ch.isascii() or ch in reported:
             continue
         look = HOMOGLYPH.get(ch) or _nfkc_lookalike(ch)
@@ -524,7 +557,7 @@ def scan_diff(root, base, staged):
     by_file_state = {}
 
     for path, lineno, text in added:
-        state = by_file_state.setdefault(path, {"mode": None})
+        state = by_file_state.setdefault(path, {"mode": None, "fence": False})
         a_hits, b_hits, c_hits, d_chars = classify_line(path, lineno, text, state)
         findings["A"].extend(a_hits)
         findings["B"].extend(b_hits)

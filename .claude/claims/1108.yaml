@@ -2,11 +2,15 @@
 # #CRITERIA: D ｜ 架构层: 不属五层业务（治理脚本）
 # 声明载体 = 本件（writeset + done 两字段制）；Q1/Q2/Q3 的可读说明见
 # .claude/task-briefs/2026-10-28-1108-unicode-confusable.md（同批）。
-# 接线状态: 未接线（前置 W1/#1090 的 GATE-INVENTORY classification 段、W5/#1088 的 pre-commit
-#   「附: 治理面自检」段在 base=gitea/local-main=3449bafdb 上实测均不存在）⇒ WIRING 填 declared-only。
+# 接线状态: **已接线**（派单首次实测前置缺 ⇒ 先只交付核心；其后 W1/#1090、W5/#1088、W3/#1100 合入
+#   local-main=6f194d32c，merge 后补做接线）⇒ WIRING=wired（consumer=scripts/pre-commit-check.sh:2337，
+#   CI 侧 .gitea/workflows/local-gates.yml ⑥ step）。
 writeset:
   - scripts/control-tower/check-unicode-confusable.py
   - tests/control-tower/check-unicode-confusable.test.sh
+  - scripts/pre-commit-check.sh
+  - .gitea/workflows/local-gates.yml
+  - docs/authority/GATE-INVENTORY.yaml
   - gate-exemptions/2026-10-28-1108-unicode-confusable.md
   - docs/authority/DOCS-REGISTRY.yaml
   - docs/authority/WIRING-REGISTRY.yaml
@@ -16,5 +20,6 @@ writeset:
 done:
   - verify: bash tests/control-tower/check-unicode-confusable.test.sh
   - verify: python3 scripts/control-tower/check-unicode-confusable.py --selfcheck
+  - verify: bash scripts/control-tower/check-gate-inventory.sh --root .
   - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main --root .
-note: "#1108 W10：Unicode 同形字分级门禁（A 标识符同形字／B 双向控制符／C U+FFFD＋非法 UTF-8 字节 ⇒ P0 阻断；D 全角标点仅提醒 exit 0；只判 diff 新增行，存量只列 --list-legacy 不判红；三态 0/1/2，自身故障归 2，--json，--selfcheck 六夹具）。本批只交付核心（脚本＋测试＋声明件），不接线：前置 GATE-INVENTORY classification 段（W1/#1090）与 pre-commit「附: 治理面自检」段（W5/#1088）均缺失。"
+note: "#1108 W10：Unicode 同形字分级门禁（A 标识符同形字／B 双向控制符／C U+FFFD＋非法 UTF-8 字节 ⇒ P0 阻断；D 全角标点仅提醒 exit 0；只判 diff 新增行，存量只列 --list-legacy 不判红；三态 0/1/2，自身故障归 2；--json；--selfcheck 六夹具）。接线两处：pre-commit「附: 治理面自检」段（A/B/C hard_check、D 只 echo）＋ local-gates.yml 末尾 ⑥ step（test_count=N、三态透传、在本步阻断）；GATE-INVENTORY 纯追加 CT-check-unicode-confusable（class P0、required_ci: true）。"

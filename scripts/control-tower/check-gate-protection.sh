@@ -10,17 +10,22 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #
 # 契约（铁律 47 / C1）:
 #   @usage   bash scripts/control-tower/check-gate-protection.sh [--list <path>] [--changed-base <ref>]
-#              [--root <dir>] [--json] [--help]
+#              [--root <dir>] [--require-review=0|1] [--json] [--help]
 #            默认（无 --changed-base）= 清单完整性 ＋ pin
 #            --changed-base <ref>     = 上述 ＋ base→HEAD diff 的受保护路径豁免核验
+#            --require-review=0|1     = 新增豁免文件的复核件检查开关（默认 1；0＝回滚点，
+#                                       见下方「复核件」段）。仅 --changed-base 模式生效。
 #   @input   .gitea/protected-files.txt（或 --list / SYNO_GATE_PROTECTED_LIST 注入）；
-#            diff 模式：git 仓库（HEAD 与 <ref> 的 merge-base）
+#            diff 模式：git 仓库（HEAD 与 <ref> 的 merge-base）；新增/存量判定 =
+#            `git cat-file -e <merge-base>:<path>`（存在 ⇒ legacy）
 #   @output  stdout 逐项 ✅/❌（**含实测数字**）＋ 末行 `结果: N 通过, M 失败`；
+#            diff 模式逐件标注豁免文件归属（legacy＝base 已存在／新增＝须带复核件）；
 #            --json 时 stdout 仅一份**合法 JSON**（人读行抑制，degraded 仍走 stderr）；
 #            降级时 stdout 追加 `DEGRADED: <code> — <原因>`（CI 日志可见，不静默）
-#   @exit    0=通过 ｜ 1=真红（pin 漂移 / 受保护变更无合规豁免 / 豁免不合法）
+#   @exit    0=通过 ｜ 1=真红（pin 漂移 / 受保护变更无合规豁免 / 豁免不合法 /
+#            新增豁免文件缺复核件首行）
 #            2=检查自身失败（清单缺失·不可读·解析为空·坏 base·base 无清单·
-#            git 不可用·参数错）
+#            git 不可用·参数错：含 --require-review 非 0|1）
 #            🔴 三态铁律：2 绝不等于通过（fail-closed）
 #   @degraded stderr 一行 `degraded: <原因>` ＋ 追加一行 JSON 到 SYNO_GATE_DEGRADED_LOG
 #            （字段 time/component/code/phase/retryable；铁律 11/32）＋ exit 2
@@ -28,6 +33,17 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #                   E_BAD_BASE, E_EXEMPT_INVALID}（C1 定集；#623 删作者校验相关 code）
 #            ＋ E_USAGE（参数用法错，C1 未列；按 DSH B1「typed error 必带 code」补齐）
 #            ＋ E_INTERNAL（本器自身异常兜底：宁可 exit 2 也不许把 bug 当"真红"或"绿"）
+#            🔴 复核件缺失**复用 E_EXEMPT_INVALID（phase=review）**，不新增 code
+#               —— C1 错误码集是契约，扩码需 CTO 裁定；语义上它属「豁免证据链不完整」。
+#   @review  复核件（#1100 W3 收窄版；判据 = 证据链指针，非审批签名）:
+#            仅**新增**豁免文件（base 上不存在）要求**首行**为下列任一形态：
+#              `# review: <PR#>`                       例 `# review: #1234`
+#              `# review: docs/synova/reviews/<文件名>.json`
+#            存量件（base 已存在 ⇒ legacy）冻结：**不要求**复核件、不迁移、不加 expiry。
+#            🔴 legacy 判据 = `git cat-file -e <merge-base>:<path>`（存在性），**禁**用
+#               日期/内容启发式；故「改一版旧文件」仍按 legacy 免检（收窄版有意如此）。
+#            缺失 ⇒ exit 1 并**点名文件**（逐件一行）；`--require-review=0` 关闭本检查
+#            （回滚点，逐件打印「未核复核件」以免读成已检）。
 #
 # 注入缝（测试必需；生产有默认值）:
 #   --list <path> / SYNO_GATE_PROTECTED_LIST   清单路径（--list 优先）
@@ -46,6 +62,12 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   裁定号 fullmatch ^(裁\s*[0-9]+|#[0-9]+)$（如 `裁 217`／`#623`）。
 #   不合规行**不生效**，且**该行本身计 failure**（E_EXEMPT_INVALID；即使另一行已覆盖该路径）。
 #   🔴 不再校验提交作者（作者名单已删）：豁免=可审证据链，授权归裁定号（台账）。
+#
+# 复核件（#1100 W3 收窄版；见 @review）:
+#   **新增**豁免文件（`git cat-file -e <merge-base>:<path>` 不存在）⇒ 首行必须为
+#     `# review: <PR#>`  或  `# review: docs/synova/reviews/<文件名>.json`
+#   存量件（base 已存在）= legacy ⇒ 冻结，免复核件检查（不迁移、不加 expiry）。
+#   🔴 判据只认 base 存在性；新增件缺首行 ⇒ exit 1 并点名文件。
 #
 # glob 语义 = Gitea/gobwas glob（**定义在下方 python 引擎，禁 fnmatch**）:
 #   大小写不敏感 ｜ `**` 跨目录 ｜ `*` 不跨 `/` ｜ `?` 单字符（不跨 `/`）
@@ -71,10 +93,11 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   ────────────────  ───────────────────────────────────────────────────────────
 #   ① 头部契约        本段（@input/@output/@exit/@degraded/@error/已知限制）
 #   ② 解释器探测      PYBIN 三级探测（探**可用性**，不只看存在性——D328 P1-1）
-#   ③ 参数与注入缝    --list/--root/--changed-base/--json；清单与日志默认值解析
+#   ③ 参数与注入缝    --list/--root/--changed-base/--require-review/--json；清单与日志默认值解析
 #   ④ 清单解析         PATTERNS 段 / pin 声明（空段 ⇒ 信号量 0 ⇒ exit 2）
 #   ⑤ glob 引擎        手写 glob→regex（** 跨目录、* 不跨 /、? 单字符、IGNORECASE）
 #   ⑥ diff 豁免核验     merge-base / base 清单存在性 / 受保护路径命中 / 豁免三段式加严（不合规行计 failure）
+#                      ／ 豁免件 legacy 归属（base 存在性）／新增件复核件首行（--require-review）
 #   ⑦ 输出             逐项 ✅❌ ＋ `结果: N 通过, M 失败` ｜ --json 合法 JSON
 #   ⑧ 降级              stderr `degraded:` ＋ degraded log JSON ＋ exit 2
 #
@@ -103,6 +126,15 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #      中的作者名单／「创始人作者」引述保持原样（历史引述性质）⇒ **全仓** grep 不为 0 是预期；
 #      本器只保证清单/检查器/两测试/README 四处零命中。
 #  14. **理由字数按 Unicode 字符数**（Python `len()`），中文一字=1；不按字节、不按词。
+#  15. **复核件只核首行形态**：不核 PR# 是否真实存在、也不核 `docs/synova/reviews/*.json`
+#      指向的文件是否已落盘（复核件通常晚于豁免件产生）⇒ 它是**证据指针**，不是签名校验。
+#  16. **legacy 判据 = base 存在性，不是「本次新增」**：base 上已有的豁免文件即使本 diff 内
+#      被改，也**不要求**复核件（#1100 收窄版有意如此：存量 86 份冻结，不迁移、不加 expiry）。
+#      副作用：蓄意者可「先合入空壳豁免件（无复核件），下一 PR 再填内容」绕过本检查
+#      ⇒ 与已知限制 2（pin 只是误改报警器）同性质，真防线仍是独立复核与 K3 审计。
+#  17. **`--require-review=0` 是回滚点**：关闭时新增件不判复核件（仍判三段式），
+#      逐件打印「未核复核件」以免把「没检查」读成「已通过」；非法值 ⇒ E_USAGE（exit 2）。
+#  18. **默认模式（无 --changed-base）不判复核件**：无 diff 就无「新增」语义，只做清单＋pin。
 # ═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
 
@@ -116,6 +148,7 @@ done
 GP_ROOT_ARG=""
 GP_LIST_ARG=""
 GP_BASE_ARG=""
+GP_REVIEW_ARG=""
 GP_JSON=0
 GP_USAGE_ERR=""
 OWN_LIST=0
@@ -131,16 +164,30 @@ while [ $# -gt 0 ]; do
     --root)
       if [ $# -lt 2 ]; then GP_USAGE_ERR="--root 需要参数 <dir>"; break; fi
       GP_ROOT_ARG="$2"; shift 2 ;;
+    --require-review=*)
+      # #1100 W3：复核实开关（默认 1；`=0` 为唯一回滚点）。只收 `=0|1` 形态，
+      # 其它写法（空格分参、非 0/1 值）一律参数错 ⇒ exit 2（判不了 ≠ 通过）。
+      GP_REVIEW_ARG="${1#--require-review=}"; shift ;;
     --json)
       GP_JSON=1; shift ;;
     -h|--help)
-      # 头注释即用法文档（单源：改契约只改头部，不留第二份会漂移的用法文本）
-      sed -n '5,79p' "${BASH_SOURCE[0]}" | sed -e 's/^# \{0,1\}//'
+      # 头注释即用法文档（单源：改契约只改头部，不留第二份会漂移的用法文本）。
+      # 动态取界（原 `sed -n '5,79p'` 写死行号：头部一加行就截掉契约末尾 ⇒ 文档失真）。
+      awk 'NR > 5 { if ($0 ~ /^# ═/) exit; print }' "${BASH_SOURCE[0]}" | sed -e 's/^# \{0,1\}//'
       exit 0 ;;
     *)
       GP_USAGE_ERR="未知参数: $1"; break ;;
   esac
 done
+
+# 复核件开关：未设 ⇒ 1（默认开）。值集只容 0|1 —— 非法值走 E_USAGE（exit 2，禁静默当默认）。
+GP_REQUIRE_REVIEW="${GP_REVIEW_ARG:-1}"
+if [ -z "$GP_USAGE_ERR" ]; then
+  case "$GP_REQUIRE_REVIEW" in
+    0|1) ;;
+    *) GP_USAGE_ERR="--require-review 只接受 0|1（实测: ${GP_REQUIRE_REVIEW}）" ;;
+  esac
+fi
 
 if [ -n "$GP_ROOT_ARG" ]; then
   GP_ROOT="$GP_ROOT_ARG"
@@ -156,7 +203,7 @@ else
   GP_LIST="$GP_ROOT/.gitea/protected-files.txt"
 fi
 GP_DEGRADED_LOG="${SYNO_GATE_DEGRADED_LOG:-$GP_ROOT/.codex/control-tower/logs/degraded-events.log}"
-export GP_ROOT GP_LIST GP_BASE_ARG GP_JSON GP_DEGRADED_LOG
+export GP_ROOT GP_LIST GP_BASE_ARG GP_JSON GP_DEGRADED_LOG GP_REQUIRE_REVIEW
 
 # 降级出口（bash 层：参数错 / 解释器缺失 / 目录不存在 —— 这些还没到 python 就已经判不了）
 _degrade_log() { # $1=code $2=phase $3=原因
@@ -406,6 +453,35 @@ def is_exempt_file(path):
     return os.path.basename(path).lower() != "readme.md"
 
 
+# ── ⑥-b 复核件首行（#1100 W3 收窄版）──────────────────────────────────────────
+# 只对**新增**豁免文件（base 上不存在）生效；存量件 legacy 冻结，免检。
+# 形态两种：`# review: #<PR#>` ｜ `# review: docs/synova/reviews/<文件名>.json`。
+# 🔴 只核首行形态，不核 PR 存在性/指针文件存在性（见已知限制 15）。
+REVIEW_MASK = re.compile(r"^#\s*review:\s*(?:#[0-9]+|docs/synova/reviews/[A-Za-z0-9._-]+\.json)$")
+
+
+def review_evidence(text):
+    """返回首行的复核件指针（合规时原样返回，含注释符；不合规/缺首行 ⇒ None）。
+
+    语义边界：**首行** = `splitlines()[0]`（前置空行也算首行 → 直接判不合规，不放宽）。
+    """
+    lines = text.splitlines()
+    if not lines:
+        return None
+    first = lines[0].rstrip()
+    return first if REVIEW_MASK.match(first) else None
+
+
+def in_base(merge_base, rel, root):
+    """该路径是否存在于 <merge_base> 树内（= legacy 判据，**唯一**依据）。
+
+    用 `git cat-file -e <sha>:<path>` 的存在性，禁日期/内容启发式（#1100 硬要求）：
+    改一版旧豁免文件仍属 legacy（存量冻结），新增文件才需复核件。
+    """
+    rc, _, _ = git(["cat-file", "-e", "%s:%s" % (merge_base, rel)], root)
+    return rc == 0
+
+
 # ── 主流程 ────────────────────────────────────────────────────────────────────
 def _git_rel(list_path, root):
     """list_path → 相对 root 的 git object 路径（恒正斜杠）。
@@ -432,6 +508,9 @@ def main():
         sys.exit(0)
     json_mode = os.environ.get("GP_JSON", "0") == "1"
     degraded_log = os.environ.get("GP_DEGRADED_LOG", "")
+    # #1100 W3：bash 层已把值限死 0|1（非法值在 bash 就 E_USAGE exit 2）；
+    # 此处再取一次只为 JSON 报告可见（未设 ⇒ "1"，与 bash 默认同源）。
+    require_review = os.environ.get("GP_REQUIRE_REVIEW", "1") == "1"
 
     checks = []
     failures = []
@@ -442,6 +521,7 @@ def main():
         "root": root,
         "list_path": list_path,
         "base_ref": base_ref or None,
+        "require_review": require_review,
         "patterns": 0,
         "pin_declared": None,
         "pin_computed": None,
@@ -449,6 +529,8 @@ def main():
         "changed_paths": 0,
         "protected_changes": [],
         "exempt_files": [],
+        "legacy_exempt_files": [],
+        "review_missing": [],
         "checks": checks,
         "failures": failures,
         "degraded": None,
@@ -576,12 +658,28 @@ def main():
             exempt_rels = [path for path in changed if is_exempt_file(path)]
             exempt_info = []
             for rel in exempt_rels:
-                entries = parse_exempt_text(read_exempt_file(root, rel), rel)
-                exempt_info.append({"path": rel, "entries": entries})
+                text = read_exempt_file(root, rel)
+                legacy = in_base(merge_base, rel, root)
+                exempt_info.append({
+                    "path": rel,
+                    "entries": parse_exempt_text(text, rel),
+                    "legacy": legacy,
+                    "review": review_evidence(text),
+                })
             report["exempt_files"] = [
-                {"path": item["path"], "entries": len(item["entries"])}
+                {"path": item["path"], "entries": len(item["entries"]),
+                 "legacy": item["legacy"], "review": item["review"]}
                 for item in exempt_info
             ]
+            report["legacy_exempt_files"] = [i["path"] for i in exempt_info if i["legacy"]]
+            legacy_n = len(report["legacy_exempt_files"])
+            added = [i for i in exempt_info if not i["legacy"]]
+            if exempt_info:
+                ok("豁免文件 %d 件（legacy %d 件＝base 已存在 ⇒ 冻结免复核件／新增 %d 件）"
+                   % (len(exempt_info), legacy_n, len(added)))
+            for info in exempt_info:
+                if info["legacy"]:
+                    ok("豁免件 legacy（base 已存在，免复核件）: %s" % info["path"])
 
             # #623 裁 217：豁免文件内的不合规行**本身计 failure**（证据不完整 ⇒ 1），
             # 即使另一行已覆盖该路径 —— 禁因「已覆盖」把坏行洗掉。
@@ -591,6 +689,23 @@ def main():
                         fail("E_EXEMPT_INVALID", "exempt",
                              "豁免行不合规: %s:%d `%s`（%s）"
                              % (entry["source"], entry["line"], entry["glob"], entry["problem"]))
+
+            # #1100 W3：新增豁免文件的**复核件首行**（收窄版：只判新增；legacy 冻结）。
+            # 缺失 ⇒ exit 1 并点名文件（code 复用 E_EXEMPT_INVALID/phase=review，不扩 C1 码集）。
+            if require_review:
+                for info in added:
+                    if info["review"]:
+                        ok("新增豁免文件带复核件: %s → %s" % (info["path"], info["review"]))
+                    else:
+                        report["review_missing"].append(info["path"])
+                        fail("E_EXEMPT_INVALID", "review",
+                             "新增豁免文件缺复核件首行: %s（首行须 `# review: <PR#>` 或 "
+                             "`# review: docs/synova/reviews/*.json`；存量件按 base 存在性判 legacy 免检）"
+                             % info["path"])
+            else:
+                for info in added:
+                    ok("新增豁免文件未核复核件（--require-review=0 回滚态，禁读成已通过）: %s"
+                       % info["path"])
 
             if not protected:
                 ok("受保护路径变更 0 条（无需豁免）")

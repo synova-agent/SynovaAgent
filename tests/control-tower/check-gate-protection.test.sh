@@ -21,6 +21,11 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #          且改保护路径无豁免 ⇒ exit 1（同一仓内对照，证明 base 有清单才判 diff）｜
 #          改豁免目录内文件（README）⇒ 自身也是受保护变更（DS-2c 自覆盖）
 #   契约 — `--json` 输出合法 JSON（不含作者字段）｜ 零平台 API 调用（DS-8）
+#   复核件（#1100 W3 收窄版）— 新增豁免件缺 `# review:` 首行 ⇒ exit 1 并点名（M-1′）｜
+#          补首行 ⇒ exit 0（M-1′b）｜ 存量 legacy（base 已存在、本 diff 内被改）⇒ 免复核件 exit 0（M-2′）｜
+#          `--require-review=0` 回滚 ⇒ 新增件免复核件 exit 0（M-3′）｜
+#          非法开关值 abc ⇒ exit 2 ＋ E_USAGE（M-4′）｜
+#          既有用例的新造豁免件首行统一带 `# review: #1100`（新判据下的合规形态，断言零改）
 #   接线 — 检查器存在且可执行 ＋ 默认（无参）可跑（WIRE CHECK，铁律 0-2）
 #   注入缝 — SYNO_GATE_PROTECTED_LIST 真实生效（不碰真实仓库清单）
 #
@@ -185,7 +190,7 @@ fi
 (
   cd "$S1" || exit 1
   printf '#!/bin/bash\necho changed-with-exempt\n' > scripts/pre-commit-check.sh
-  printf '# 豁免登记\n\n- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与豁免校验 — 裁 217\n- gate-exemptions/e-compliant.md — 本豁免文件自身在 diff 内的自覆盖行 — 裁 217\n' \
+  printf '# review: #1100\n# 豁免登记\n\n- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与豁免校验 — 裁 217\n- gate-exemptions/e-compliant.md — 本豁免文件自身在 diff 内的自覆盖行 — 裁 217\n' \
     > gate-exemptions/e-compliant.md
   git add -A
   git -c user.email=huangxuesongvip@163.com -c user.name=synova commit -qm "改门禁脚本＋合规豁免（创始人身份提交）"
@@ -203,7 +208,7 @@ fi
 (
   cd "$S1" || exit 1
   printf '#!/bin/bash\necho changed-reasonless\n' > scripts/pre-commit-check.sh
-  printf '# 豁免登记\n\n- scripts/pre-commit-check.sh —  — 裁 217\n' \
+  printf '# review: #1100\n# 豁免登记\n\n- scripts/pre-commit-check.sh —  — 裁 217\n' \
     > gate-exemptions/e-compliant.md
   git add -A
   git -c user.email=huangxuesongvip@163.com -c user.name=synova commit -qm "豁免无理由"
@@ -220,7 +225,7 @@ fi
 (
   cd "$S1" || exit 1
   printf '#!/bin/bash\necho changed-k12-author\n' > scripts/pre-commit-check.sh
-  printf '# 豁免登记\n\n- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与豁免校验 — 裁 217\n- gate-exemptions/e-compliant.md — 本豁免文件自身在 diff 内的自覆盖行 — 裁 217\n' \
+  printf '# review: #1100\n# 豁免登记\n\n- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与豁免校验 — 裁 217\n- gate-exemptions/e-compliant.md — 本豁免文件自身在 diff 内的自覆盖行 — 裁 217\n' \
     > gate-exemptions/e-compliant.md
   git add -A
   git -c user.email=k12@local -c user.name=k12-batch5 commit -qm "豁免由 k12 身份提交（作者校验已删）"
@@ -463,7 +468,7 @@ fi
 S9_PIN2="$(recompute_pin "$S9")"
 (
   cd "$S9" || exit 1
-  printf '# 豁免登记\n\n- .gitea/protected-files.txt — 批次内调整保护路径清单并重算 pin — 裁 217\n- gate-exemptions/e-self.md — 本豁免文件自身在 diff 内的自覆盖行 — 裁 217\n' \
+  printf '# review: #1100\n# 豁免登记\n\n- .gitea/protected-files.txt — 批次内调整保护路径清单并重算 pin — 裁 217\n- gate-exemptions/e-self.md — 本豁免文件自身在 diff 内的自覆盖行 — 裁 217\n' \
     > gate-exemptions/e-self.md
   git add -A && git commit -qm "s9-c3: 清单自改＋合规豁免（含自覆盖）"
 ) || no "沙箱 S9 合规豁免提交失败"
@@ -503,15 +508,18 @@ s10_case() { # $1=标签 $2=期望提示关键字 $3=豁免文件正文
   fi
 }
 
-s10_case "豁免缺理由" "缺理由" '# 豁免登记
+s10_case "豁免缺理由" "缺理由" '# review: #1100
+# 豁免登记
 
 - scripts/pre-commit-check.sh —  — 裁 217
 '
-s10_case "理由 9 字" "理由不足 10 字" '# 豁免登记
+s10_case "理由 9 字" "理由不足 10 字" '# review: #1100
+# 豁免登记
 
 - scripts/pre-commit-check.sh — 一二三四五六七八九 — 裁 217
 '
-s10_case "坏裁定号 abc" "裁定号不合规" '# 豁免登记
+s10_case "坏裁定号 abc" "裁定号不合规" '# review: #1100
+# 豁免登记
 
 - scripts/pre-commit-check.sh — 批次内同步改门禁脚本与豁免校验 — abc
 '
@@ -520,7 +528,7 @@ s10_case "坏裁定号 abc" "裁定号不合规" '# 豁免登记
 (
   cd "$S10" || exit 1
   printf '#!/bin/bash\necho bad-line-with-cover\n' > scripts/pre-commit-check.sh
-  printf '# 豁免登记\n\n- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与豁免校验 — 裁 217\n- gate-exemptions/e-bad.md — 本豁免文件自身在 diff 内的自覆盖行 — 裁 217\n- scripts/legacy-gate.sh — 坏行：裁定号只有前缀没有数字 — 裁\n' \
+  printf '# review: #1100\n# 豁免登记\n\n- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与豁免校验 — 裁 217\n- gate-exemptions/e-bad.md — 本豁免文件自身在 diff 内的自覆盖行 — 裁 217\n- scripts/legacy-gate.sh — 坏行：裁定号只有前缀没有数字 — 裁\n' \
     > gate-exemptions/e-bad.md
   git add -A && git -c user.email=k12@local -c user.name=k12-batch5 commit -qm "s10: 合规覆盖＋坏行"
 ) || no "沙箱 S10 坏行提交失败"
@@ -537,7 +545,7 @@ fi
 (
   cd "$S10" || exit 1
   printf '#!/bin/bash\necho all-good\n' > scripts/pre-commit-check.sh
-  printf '# 豁免登记\n\n- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与豁免校验 — 裁 217\n- gate-exemptions/e-bad.md — 本豁免文件自身在 diff 内的自覆盖行 — 裁 217\n' \
+  printf '# review: #1100\n# 豁免登记\n\n- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与豁免校验 — 裁 217\n- gate-exemptions/e-bad.md — 本豁免文件自身在 diff 内的自覆盖行 — 裁 217\n' \
     > gate-exemptions/e-bad.md
   git add -A && git -c user.email=k12@local -c user.name=k12-batch5 commit -qm "s10: 齐全合规"
 ) || no "沙箱 S10 齐全豁免提交失败"
@@ -549,18 +557,122 @@ else
   no "DS-4: 齐全合规豁免应 exit 0，实际 exit ${RC}（覆盖命中=${T22COVER:-0}）"
 fi
 
+# ── M-1′/M-2′/M-3′/M-4′ #1100 W3：新增豁免件须带复核件（收窄版；legacy 冻结）──────
+# 判据（本器）：仅**新增**豁免文件（`git cat-file -e <base>:<path>` 不存在）要求**首行**
+#   `# review: <PR#>` 或 `# review: docs/synova/reviews/<文件名>.json`；存量 legacy 免检。
+# 判别力：M-1′ 缺首行 ⇒ 1（点名文件）｜M-1′b 补首行 ⇒ 0｜M-2′ legacy 改文件 ⇒ 0（不误伤存量）｜
+#        M-3′ `--require-review=0` ⇒ 0（回滚点）｜M-4′ 非法值 ⇒ 2 ＋ E_USAGE（判不了 ≠ 通过）。
+S11="$TMPD/s11"
+mk_repo "$S11" || no "沙箱 S11 初始化失败"
+(
+  cd "$S11" || exit 1
+  cp "$MANIFEST" .gitea/protected-files.txt
+  printf '#!/bin/bash\necho base\n' > scripts/pre-commit-check.sh
+  # base 已存在的存量豁免件（首行**不是**复核件）：本批按 legacy 冻结，不迁移、不加 expiry
+  printf '# 存量豁免件（legacy 基线；首行非复核件，存量冻结）\n\n- scripts/pre-commit-check.sh — base 已存在的存量豁免件按 legacy 冻结 — #1100\n- gate-exemptions/2026-01-01-legacy.md — 本件自身受保护按 #623 同 diff 自覆盖 — #1100\n' \
+    > gate-exemptions/2026-01-01-legacy.md
+  git add -A && git commit -qm "s11-base: 清单＋受保护脚本＋存量豁免件"
+) || no "沙箱 S11 base 提交失败"
+S11_BASE="$(cd "$S11" && git rev-parse HEAD)"
+
+# M-1′ 新增豁免件缺复核件首行 ⇒ 1 且点名（覆盖仍完整：只多一条复核件 failure）
+(
+  cd "$S11" || exit 1
+  printf '#!/bin/bash\necho c2\n' > scripts/pre-commit-check.sh
+  printf '# 新增豁免登记（缺复核件首行）\n\n- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与豁免校验 — #1100\n- gate-exemptions/e-new-no-review.md — 本豁免文件自身在 diff 内的自覆盖行 — #1100\n' \
+    > gate-exemptions/e-new-no-review.md
+  git add -A && git -c user.email=k12@local -c user.name=k12-batch5 commit -qm "s11-c2: 新增豁免件缺复核件"
+) || no "沙箱 S11 c2 提交失败"
+run_gate "$S11" --changed-base "$S11_BASE"
+M1RC=$RC
+M1NAME=$(printf '%s' "$OUT" | grep -c '缺复核件首行: gate-exemptions/e-new-no-review.md' | tr -d '\n\r' || true)
+if [ "$M1RC" -eq 1 ] && [ "${M1NAME:-0}" -ge 1 ]; then
+  ok "M-1′ 新增豁免件缺复核件 → exit ${M1RC}（点名新件命中=${M1NAME}；判据=base 不存在，非日期/内容）"
+else
+  no "M-1′ 新增豁免件缺复核件应 exit 1 且点名 e-new-no-review.md，实际 exit ${M1RC}（点名=${M1NAME:-0}）"
+fi
+
+# M-1′b 同件补首行 `# review:` ⇒ 0（正反例同沙箱，证明判据读的是首行而非文件名/时间）
+(
+  cd "$S11" || exit 1
+  printf '#!/bin/bash\necho c3\n' > scripts/pre-commit-check.sh
+  printf '# review: #1100\n# 新增豁免登记（补复核件首行）\n\n- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与豁免校验 — #1100\n- gate-exemptions/e-new-no-review.md — 本豁免文件自身在 diff 内的自覆盖行 — #1100\n' \
+    > gate-exemptions/e-new-no-review.md
+  git add -A && git -c user.email=k12@local -c user.name=k12-batch5 commit -qm "s11-c3: 新增豁免件补复核件首行"
+) || no "沙箱 S11 c3 提交失败"
+run_gate "$S11" --changed-base "$S11_BASE"
+M1BRC=$RC
+M1BREV=$(printf '%s' "$OUT" | grep -c '新增豁免文件带复核件: gate-exemptions/e-new-no-review.md' | tr -d '\n\r' || true)
+if [ "$M1BRC" -eq 0 ] && [ "${M1BREV:-0}" -ge 1 ]; then
+  ok "M-1′b 补复核件首行 → exit ${M1BRC}（带复核件命中=${M1BREV}）"
+else
+  no "M-1′b 补首行后应 exit 0，实际 exit ${M1BRC}（带复核件命中=${M1BREV:-0}）"
+fi
+
+# M-2′ 存量 legacy 件在本 diff 内被改（首行仍非复核件）⇒ 0（86 份存量不迁移、不误伤）
+(
+  cd "$S11" || exit 1
+  printf '#!/bin/bash\necho c4\n' > scripts/pre-commit-check.sh
+  printf '# 存量豁免件（legacy 基线；首行非复核件，存量冻结）\n\n- scripts/pre-commit-check.sh — base 已存在的存量豁免件按 legacy 冻结（本行随改同步） — #1100\n- gate-exemptions/2026-01-01-legacy.md — 本件自身受保护按 #623 同 diff 自覆盖 — #1100\n' \
+    > gate-exemptions/2026-01-01-legacy.md
+  git add -A && git -c user.email=k12@local -c user.name=k12-batch5 commit -qm "s11-c4: 改存量豁免件（不要求复核件）"
+) || no "沙箱 S11 c4 提交失败"
+run_gate "$S11" --changed-base "$S11_BASE"
+M2RC=$RC
+M2LEG=$(printf '%s' "$OUT" | grep -c '豁免件 legacy（base 已存在，免复核件）: gate-exemptions/2026-01-01-legacy.md' | tr -d '\n\r' || true)
+if [ "$M2RC" -eq 0 ] && [ "${M2LEG:-0}" -ge 1 ]; then
+  ok "M-2′ 改存量 legacy 豁免件 → exit ${M2RC}（legacy 标注命中=${M2LEG}；不要求复核件）"
+else
+  no "M-2′ 改存量 legacy 件应 exit 0 且标注 legacy，实际 exit ${M2RC}（标注=${M2LEG:-0}）"
+fi
+
+# M-3′ 回滚点：新增件缺复核件 ＋ `--require-review=0` ⇒ 0，且逐件打印「未核复核件」
+(
+  cd "$S11" || exit 1
+  printf '#!/bin/bash\necho c5\n' > scripts/pre-commit-check.sh
+  printf '# 新增豁免登记（缺复核件；回滚态用例）\n\n- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与豁免校验 — #1100\n- gate-exemptions/e-new-no-review.md — 本豁免文件自身在 diff 内的自覆盖行 — #1100\n' \
+    > gate-exemptions/e-new-no-review.md
+  git add -A && git -c user.email=k12@local -c user.name=k12-batch5 commit -qm "s11-c5: 新增件缺复核件（回滚态）"
+) || no "沙箱 S11 c5 提交失败"
+run_gate "$S11" --changed-base "$S11_BASE" --require-review=0
+M3RC=$RC
+M3SKIP=$(printf '%s' "$OUT" | grep -c '未核复核件（--require-review=0' | tr -d '\n\r' || true)
+if [ "$M3RC" -eq 0 ] && [ "${M3SKIP:-0}" -ge 1 ]; then
+  ok "M-3′ --require-review=0 回滚 → exit ${M3RC}（未核复核件标注=${M3SKIP}，禁读成已通过）"
+else
+  no "M-3′ --require-review=0 应 exit 0 且标注未核复核件，实际 exit ${M3RC}（标注=${M3SKIP:-0}）"
+fi
+
+# M-4′ 非法开关值 ⇒ 2 ＋ E_USAGE（判不了不得当通过，也不得静默回落默认）
+run_gate "$S11" --changed-base "$S11_BASE" --require-review=abc
+M4RC=$RC
+M4CODE=$(printf '%s\n%s' "$OUT" "$ERR" | grep -c 'E_USAGE' | tr -d '\n\r' || true)
+if [ "$M4RC" -eq 2 ] && [ "${M4CODE:-0}" -ge 1 ]; then
+  ok "M-4′ --require-review=abc → exit ${M4RC}（E_USAGE 命中=${M4CODE}；非法值不静默当默认）"
+else
+  no "M-4′ 非法开关值应 exit 2＋E_USAGE，实际 exit ${M4RC}（命中=${M4CODE:-0}）"
+fi
+
 echo ""
 # 裁 422-R1：路径 → git object spec 归一化自检缝（GP_SELFTEST_REL；SYNO_DOWN_SELFTEST 同型）
 #   Windows 反斜杠 ⇒ 正斜杠；改坏（去掉 replace）⇒ win_rel 含反斜杠 ⇒ 本例红
+#   平台差异（#1100 本批修）：POSIX 上 `C:\repo\…` 是**字面相对名**，relpath 原样返回 ⇒
+#     期望 `C:/repo/.gitea/protected-files.txt`；Windows ntpath 上它被解析为盘符绝对路径
+#     ⇒ relpath 得相对路径 `.gitea/protected-files.txt`。两形态都**不含反斜杠**，
+#     判别力不降：去 replace ⇒ 任一平台都含 `\` ⇒ 红（变异体证据见 PR 正文）。
 GP_SELFTEST_REL=1 GP_ROOT=/tmp GP_LIST=/tmp/x bash "$GATE" > "$TMPD/rel.txt" 2>"$TMPD/rel.err"
 rel_rc=$?
 win_rel="$(grep -m1 $'GP-REL\tC:' "$TMPD/rel.txt" | cut -f3)"
 posix_rel="$(grep -m1 $'GP-REL\t/tmp' "$TMPD/rel.txt" | cut -f3)"
 if [ "$rel_rc" -eq 0 ] && [ "$posix_rel" = ".gitea/protected-files.txt" ] \
-   && case "$win_rel" in *'\\'*) false;; *C:/repo/.gitea/protected-files.txt) true;; *) false;; esac; then
-  ok "422-R1 归一化自检缝：posix=[${posix_rel}] win=[${win_rel}]（反斜杠已归一）"
+   && case "$win_rel" in
+        *'\\'*) false ;;
+        C:/repo/.gitea/protected-files.txt|.gitea/protected-files.txt) true ;;
+        *) false ;;
+      esac; then
+  ok "422-R1 归一化自检缝：posix=[${posix_rel}] win=[${win_rel}]（反斜杠已归一；两平台形态）"
 else
-  no "422-R1 归一化自检缝 — rc=${rel_rc} posix=[${posix_rel}] win=[${win_rel}]（期望无反斜杠且含 C:/repo/.gitea/...）"
+  no "422-R1 归一化自检缝 — rc=${rel_rc} posix=[${posix_rel}] win=[${win_rel}]（期望无反斜杠且为 C:/repo/.gitea/... 或 .gitea/...）"
 fi
 
 echo "结果: $PASS 通过, $FAIL 失败"
