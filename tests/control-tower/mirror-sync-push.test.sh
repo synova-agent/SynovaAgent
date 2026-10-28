@@ -42,7 +42,7 @@ CI_DEFAULT='echo "1|success|http://x"'   # 默认注入"CI 绿"；CI_CMD 前缀�
 FX=""; WORK=""; GITEA=""; MIRROR=""; SIG=""; ST=""; HIST=""; OUT=""; A1=""; A2=""; RC=""; RC1=""; RC2=""; RC9=""; RC10=""; RC11=""; RC12a=""; RC12b=""; VERDICT=""; O1=""; BASE_N=""
 
 # ── 夹具：work（工作仓）+ gitea.git + mirror.git；产 A1/A2 两提交 ────────────────
-new_fixture() {  # $1=名字；默认 Gitea local-main=A1、GitHub main=A1（一致）
+new_fixture() {  # $1=名字；默认 Gitea main=A1、GitHub main=A1（一致）
   local n="$1"
   FX="$(mktemp -d "$TMPROOT/${n}.XXXXXX")"
   WORK="$FX/work"; GITEA="$FX/gitea.git"; MIRROR="$FX/mirror.git"; SIG="$FX/signals.log"; ST="$FX/status.log"; HIST="$FX/hist.jsonl"; OUT="$FX/out.json"
@@ -52,7 +52,7 @@ new_fixture() {  # $1=名字；默认 Gitea local-main=A1、GitHub main=A1（一
   printf 'a\n' > "$WORK/f"; git -C "$WORK" add f; git -C "$WORK" commit -qm "A1"; A1="$(git -C "$WORK" rev-parse HEAD)"
   printf 'b\n' >> "$WORK/f"; git -C "$WORK" add f; git -C "$WORK" commit -qm "A2"; A2="$(git -C "$WORK" rev-parse HEAD)"
   git -C "$WORK" remote add gitea "$GITEA"; git -C "$WORK" remote add mirror "$MIRROR"
-  git -C "$WORK" push -q gitea "$A1:refs/heads/local-main"
+  git -C "$WORK" push -q gitea "$A1:refs/heads/main"
   git -C "$WORK" push -q mirror "$A1:refs/heads/main"
   : > "$SIG"; : > "$ST"
 }
@@ -134,25 +134,25 @@ assert_case() {  # $1=checker $2=label $3=green|red
 
 # ── 场景构造（正向与变异体共用）────────────────────────────────────────────────
 setup1() { new_fixture "c1"; RC="$(run_sut "$A1")"; VERDICT="$(verdict_of "$OUT")"; }
-setup2() { new_fixture "c2"; git -C "$WORK" push -q gitea "$A2:refs/heads/local-main"
+setup2() { new_fixture "c2"; git -C "$WORK" push -q gitea "$A2:refs/heads/main"
            RC="$(run_sut "$A1")"; VERDICT="$(verdict_of "$OUT")"; }
 setup3() { new_fixture "c3"
            git -C "$WORK" checkout -q -b other "$A1"
            printf 'x\n' > "$WORK/g"; git -C "$WORK" add g; git -C "$WORK" commit -qm "O1"; O1="$(git -C "$WORK" rev-parse HEAD)"
            git -C "$WORK" checkout -q master 2>/dev/null || git -C "$WORK" checkout -q -
            git -C "$WORK" push -q mirror "$O1:refs/heads/main"
-           git -C "$WORK" push -q gitea "$A2:refs/heads/local-main"
+           git -C "$WORK" push -q gitea "$A2:refs/heads/main"
            BASE_N="$(git -C "$WORK" rev-list --count --all)"
            RC="$(run_sut "$O1")"; VERDICT="$(verdict_of "$OUT")"; }
-setup4() { new_fixture "c4"; git -C "$WORK" push -q gitea "$A2:refs/heads/local-main"
+setup4() { new_fixture "c4"; git -C "$WORK" push -q gitea "$A2:refs/heads/main"
            RC="$(run_sut "$A1" SYNO_PUSH_TEST_AFTER_PUSH="git -C $MIRROR update-ref refs/heads/main $A1")"
            VERDICT="$(verdict_of "$OUT")"; }
 setup5() { new_fixture "c5"; RC1="$(run_sut "deadbeef")"; RC2="$(run_sut "$A1")"; }
-setup10() { new_fixture "c10"; git -C "$WORK" push -q gitea "$A2:refs/heads/local-main"
+setup10() { new_fixture "c10"; git -C "$WORK" push -q gitea "$A2:refs/heads/main"
             CI_CMD='echo "9|failure|http://x/run/9|All Checks Passed / Gate Integrity"' \
             RC10="$(run_sut "$A1")"; CI_CMD=""
             VERDICT="$(verdict_of "$OUT")"; }
-setup11() { new_fixture "c11"; git -C "$WORK" push -q gitea "$A2:refs/heads/local-main"
+setup11() { new_fixture "c11"; git -C "$WORK" push -q gitea "$A2:refs/heads/main"
             CI_CMD='echo ""' RC11="$(run_sut "$A1")"; CI_CMD=""; VERDICT="$(verdict_of "$OUT")"; }
 setup12() { new_fixture "c12"
             RC12a="$(run_sut "deadbeef")"; RC12b="$(run_sut "deadbeef")"; }
@@ -216,7 +216,7 @@ echo "  ℹ️  launchd 真跑证据（现场跑）: launchctl print gui/\$(id -
 
 echo "── ⑦ 红线自检：可执行行 0 命中逃生舱／强推／绕过 ──"
 HITS="$(grep -vE '^[[:space:]]*#' "$SUT" | grep -cE 'SYNO_ALLOW_MAIN_PUSH|--force|--no-verify|git[[:space:]]+merge' || true)"
-[ "$HITS" = "0" ] && pass "⑦ 红线命中数 0" || fail "⑦ 红线命中数 $HITS（须 0）"
+[ "$HITS" = "0" ] && pass "⑦ 红线命中数 0" || fail "⑦ 红线命中数 ${HITS}（须 0）"
 
 echo "── ⑧ 判别力自检：非法 sha ⇒ exit 2（禁把「看不见」当「没问题」）──"
 setup8; assert_case c8 "⑧ 读不到合法 sha ⇒ 降级且出信号"

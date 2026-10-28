@@ -30,7 +30,7 @@ export LC_ALL=C.UTF-8 2>/dev/null   # swallow-ok: locale 不可用时回退默�
 #           环境缝（默认值 = 生产值）:
 #             SYNO_PUSH_REPO                目标树（缺省 = 本脚本上两级）
 #             SYNO_PUSH_GITEA_URL           Gitea 远端（缺省 gitea；透传探针）
-#             SYNO_PUSH_GITEA_REF           Gitea 侧 ref（缺省 refs/heads/local-main）
+#             SYNO_PUSH_GITEA_REF           Gitea 侧 ref（缺省 refs/heads/${SYNO_TRUNK_REF:-main}）
 #             SYNO_PUSH_MIRROR_REMOTE       镜像远端名（缺省 mirror；门禁 0-2 认这个名字）
 #             SYNO_PUSH_GITHUB_SHA          注入缝（测试）：直接给定 GitHub main sha
 #             SYNO_PUSH_SSH_CMD             推送用 SSH 命令（缺省 deploy key）
@@ -95,7 +95,7 @@ GATE="$SCRIPT_DIR/../pre-push-check.sh"
 
 REPO="${SYNO_PUSH_REPO:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 GITEA_URL="${SYNO_PUSH_GITEA_URL:-gitea}"
-GITEA_REF="${SYNO_PUSH_GITEA_REF:-refs/heads/main}"
+GITEA_REF="${SYNO_PUSH_GITEA_REF:-refs/heads/${SYNO_TRUNK_REF:-main}}"
 MIRROR="${SYNO_PUSH_MIRROR_REMOTE:-mirror}"
 SSH_CMD="${SYNO_PUSH_SSH_CMD:-ssh -i $HOME/.ssh/synova_gh_deploy -o IdentitiesOnly=yes -o BatchMode=yes}"
 CI_WATCH="${SYNO_PUSH_WATCH_CI:-auto}"
@@ -285,6 +285,7 @@ signal_fail() {  # $1=code $2=verdict $3=reason
   local body payload_json open_no
   body="$(SYNO_SB_TITLE="$ISSUE_TITLE" SYNO_SB_VERDICT="$verdict" SYNO_SB_REASON="$reason" \
     SYNO_SB_ASOF="$AS_OF" SYNO_SB_GITEA="${GITEA_SHA:-}" SYNO_SB_GITHUB="${GH_SHA:-}" \
+    SYNO_SB_TRUNK="${SYNO_TRUNK_REF:-main}" \
     SYNO_SB_LAG="${LAG:-}" SYNO_SB_PUSHED="${PUSHED_SHA:-}" SYNO_SB_RUN="${SYNO_PUSH_RUN_URL:-}" \
     "$PYBIN" - <<'PY'
 import json,os
@@ -294,7 +295,7 @@ md=f"""自动镜像同步失败（由 `mirror-sync-push.sh` 每趟自动开/评�
 - 结论：{e.get('SYNO_SB_VERDICT','')}
 - 原因：{e.get('SYNO_SB_REASON','')}
 - as_of：{e.get('SYNO_SB_ASOF','')}
-- Gitea local-main：{e.get('SYNO_SB_GITEA','') or '<未读到>'}
+- Gitea trunk（{e.get('SYNO_SB_TRUNK','main')}）：{e.get('SYNO_SB_GITEA','') or '<未读到>'}
 - GitHub main：{e.get('SYNO_SB_GITHUB','') or '<未读到>'}
 - 落后提交：{e.get('SYNO_SB_LAG','') or '<未知>'}
 - 已推 sha：{e.get('SYNO_SB_PUSHED','') or '<未推>'}
