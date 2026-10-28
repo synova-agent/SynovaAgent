@@ -41,7 +41,7 @@ d331_gate() {
     echo "  ❌ D331: resolve-ci-base.sh 缺失（fail-closed）: ${resolver:-<未提供>}  [E_NO_RESOLVER]"
     return 1
   fi
-  base="$(bash "$resolver" 2>/dev/null)"
+  base="$(bash "$resolver" 2>/dev/null)"  # swallow-ok: stderr 由下方 rc 判定显式 fail-closed，不吞错误路径
   rc=$?
   if [[ "$rc" -ne 0 || -z "$base" ]]; then
     echo "  ❌ D331: 对账基解析失败（resolver rc=$rc）—— fail-closed，不当作通过  [E_BASE_UNRESOLVED]"
