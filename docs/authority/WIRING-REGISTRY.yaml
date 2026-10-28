@@ -186,3 +186,14 @@ entries:
     status: declared-only
     owner: P4
     notes: "#1101 W7-L0：人工调用生成器（bash scripts/dev/new-file.sh / npm run new）产出实现件＋配对测试件，无自动消费者；门禁侧的消费面是 scripts/pre-commit-check.sh 的「附: 三段契约兜底」段（判新文件三段契约齐），该段不调用本生成器。"
+
+  # ---- P4 2026-10-28：#1108 W10 · Unicode 同形字分级门禁（gate.unicodeConfusable；本批不接线）----
+  - capability: gate.unicodeConfusable
+    defined_at: "scripts/control-tower/check-unicode-confusable.py:1"
+    provider: "scripts/control-tower/check-unicode-confusable.py:1"
+    consumer: null
+    test: "tests/control-tower/check-unicode-confusable.test.sh"
+    status: declared-only
+    owner: P4
+    notes: "#1108 W10：A/B/C 分档 P0 阻断 ＋ D 档仅提醒、只判 diff 新增行（--base base...HEAD ／ --staged）、三态 0/1/2、--json、--list-legacy（存量只报不判）、--selfcheck 六夹具。consumer 空是**实测不是遗漏**：接线前置在 gitea/local-main=3449bafdb 上均不存在 —— ① docs/authority/GATE-INVENTORY.yaml 无 classification 段（W1/#1090）；② scripts/pre-commit-check.sh 无「附: 治理面自检」段（W5/#1088）。按派单规则「有缺 ⇒ 只交付核心 ＋ WIRING 填 declared-only」⇒ 本批不写 pre-commit/CI 接线（不假装已接线），接线待 W1/W5 合入后另开批次；配对测试 T16 机器校验 status 与真接线自洽（declared-only ⇔ 两处零调用）。"
+

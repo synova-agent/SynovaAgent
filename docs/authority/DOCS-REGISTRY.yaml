@@ -1353,3 +1353,11 @@ documents:
     status: active
     owner: P4
     note: "#1101（W7-L0）：scripts/pre-commit-check.sh ＋ tests/control-tower/** ＋ docs/authority/DOCS-REGISTRY.yaml 等受保护路径豁免（生成器＋三模板＋「附: 三段契约兜底」段）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+  # ---- P4 2026-10-28：#1108 W10 · Unicode 同形字分级门禁豁免登记（DOC-0323，按派单指定号落号）----
+  - id: DOC-0323
+    type: decision
+    path: gate-exemptions/2026-10-28-1108-unicode-confusable.md
+    status: active
+    owner: P4
+    note: "#1108（W10）：scripts/control-tower/**（新扫描器 check-unicode-confusable.py）＋ tests/control-tower/**（配对测试）＋ gate-exemptions/**（自覆盖）＋ docs/authority/DOCS-REGISTRY.yaml（自登记）受保护路径豁免；A/B/C 分档 P0 阻断、D 档仅提醒、只判 diff 新增行，本批不接线（WIRING=declared-only）。"
+
