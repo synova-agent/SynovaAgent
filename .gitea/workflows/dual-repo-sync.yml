@@ -28,7 +28,7 @@ jobs:
     runs-on: macos
     timeout-minutes: 15
     steps:
-      - name: 工作区（持久 clone；取 local-main 新鲜树，避免陈旧树误判）
+      - name: 工作区（持久 clone；取 main 新鲜树，避免陈旧树误判）
         run: |
           set -e
           WS=/Users/wane/.ci-work/SynovaAgent-dualrepo
@@ -36,7 +36,7 @@ jobs:
             mkdir -p "$(dirname "$WS")"
             git clone -q http://127.0.0.1:3000/synova-agent/SynovaAgent.git "$WS"
           fi
-          git -C "$WS" fetch -q origin local-main
+          git -C "$WS" fetch -q origin main
           git -C "$WS" checkout -q -f FETCH_HEAD
           git -C "$WS" remote get-url mirror >/dev/null 2>&1 \
             || git -C "$WS" remote add mirror git@github.com:synova-agent/SynovaAgent.git
