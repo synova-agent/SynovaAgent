@@ -1388,3 +1388,11 @@ documents:
     status: active
     owner: P4
     note: "#1115（冻结期阶段 1）：7 处无回退链的 local-main 主引用切 main（四条件基线/镜像/触发/canonical）＋豁免自覆盖＋DOCS-REGISTRY 自登记；local-gates.yml 与 pre-commit-check.sh 因与 #943/#801 写集重叠移出，留清理批；SYNO_TRUNK 语义由既有环境变量覆盖，不改判据强度。"
+
+  # ---- P4 2026-10-29：#1125 写集门禁删除项语义豁免登记（DOC-1125，按派单指定号落号）----
+  - id: DOC-1125
+    type: decision
+    path: gate-exemptions/2026-10-29-1125-dev-doc-writeset.md
+    status: active
+    owner: P4
+    note: "#1125：scripts/workflow/check-dev-doc-write-set.sh（变更集三处补 D ＋ 带状态判：声明删除 ⇔ D、声明修改仍须 A/C/M/R、git 不可用 exit 2）与 tests/control-tower/check-dev-doc-write-set.test.sh（真 git 夹具含改坏即红）受保护路径豁免；含自覆盖行与 DOCS-REGISTRY 自登记行。"
