@@ -95,7 +95,7 @@ GATE="$SCRIPT_DIR/../pre-push-check.sh"
 
 REPO="${SYNO_PUSH_REPO:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 GITEA_URL="${SYNO_PUSH_GITEA_URL:-gitea}"
-GITEA_REF="${SYNO_PUSH_GITEA_REF:-refs/heads/local-main}"
+GITEA_REF="${SYNO_PUSH_GITEA_REF:-refs/heads/main}"
 MIRROR="${SYNO_PUSH_MIRROR_REMOTE:-mirror}"
 SSH_CMD="${SYNO_PUSH_SSH_CMD:-ssh -i $HOME/.ssh/synova_gh_deploy -o IdentitiesOnly=yes -o BatchMode=yes}"
 CI_WATCH="${SYNO_PUSH_WATCH_CI:-auto}"
