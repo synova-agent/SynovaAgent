@@ -159,4 +159,4 @@ entries:
     test: "tests/control-tower/check-mirror-freshness.test.sh"
     status: wired
     owner: P4
-    notes: "#1087 W5：只读报告器（三态 0/1/2）。消费侧＝周报，但 weekly-recon.sh 五指标契约固定（本批不改 544 行件）⇒ 无生产消费者，consumer 空是实测不是遗漏；CI 腿按 W5 拓扑约束不入 GitHub，Gitea 侧接线待下批。"
+    notes: "#1087 W5：只读报告器（三态 0/1/2）。**已接线**（W0/#1093）：`scripts/pre-commit-check.sh` 的「附: 治理面自检」段调用本器，且为**只报告**语义（不生 hard_check、不阻断提交）；CI 侧不入 GitHub（W5 拓扑约束）。consumer 行号见 WIRING。"

@@ -10,6 +10,9 @@
 
 ## Q2: 范围
 做什么:
+- .claude/claims/1087.yaml
+- docs/authority/DOCS-REGISTRY.yaml
+- docs/authority/WIRING-REGISTRY.yaml
 - scripts/pre-commit-check.sh
 - scripts/control-tower/check-mirror-freshness.sh
 - tests/control-tower/check-mirror-freshness.test.sh
