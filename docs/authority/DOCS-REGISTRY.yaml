@@ -1388,3 +1388,10 @@ documents:
     status: active
     owner: P4
     note: "#1115（冻结期阶段 1）：7 处无回退链的 local-main 主引用切 main（四条件基线/镜像/触发/canonical）＋豁免自覆盖＋DOCS-REGISTRY 自登记；local-gates.yml 与 pre-commit-check.sh 因与 #943/#801 写集重叠移出，留清理批；SYNO_TRUNK 语义由既有环境变量覆盖，不改判据强度。"
+  # ---- P4 2026-10-28：#1118（#1115 后续）legacy 别名安全阀豁免登记（DOC-0325）----
+  - id: DOC-0325
+    type: decision
+    path: gate-exemptions/2026-10-28-1118-resolver-valve.md
+    status: active
+    owner: P4
+    note: "#1118（#1115 后续，P0 收口）：resolve-ci-base.sh 拆 main 与 local-main 两臂并加 ④b 一致性阀（相等放行／祖先容忍加告警／分叉或领先 exit 2），配对测试修用例 3/4/5 并补 9 至 14b（含两条改坏即红）；豁免自覆盖＋DOCS-REGISTRY 自登记。canonical 保持 gitea/main，不动 workflow 与 #1115 其它写集。"
