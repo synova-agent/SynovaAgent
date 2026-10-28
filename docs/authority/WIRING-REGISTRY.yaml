@@ -160,3 +160,11 @@ entries:
     status: declared-only
     owner: P4
     notes: "#1096 W6 判据自检库（库件）：ga_run 三态归一＋128/137/126 等非白名单码归判据故障(2)；接线＝后续判据抽样接入，本批不做 ⇒ 无生产消费者。"
+  - capability: gate.telemetry
+    defined_at: "scripts/control-tower/gate-telemetry.sh:1"
+    provider: "scripts/control-tower/gate-telemetry.sh:1"
+    consumer: null
+    test: "tests/control-tower/gate-telemetry.test.sh"
+    status: declared-only
+    owner: P4
+    notes: "#1094 W2 运行遥测：gate-hits JSONL 单写入器（--emit，三态 0/1/2，写失败 degraded 不改门禁结论）。消费侧＝pre-commit 的 log_gate 埋点，本批只做 producer；consumer 留空是口径选择（不编造消费者），接线事实以 tests/control-tower/gate-telemetry.test.sh 的 T1 WIRE 断言为准。"
