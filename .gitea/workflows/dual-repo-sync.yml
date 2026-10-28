@@ -6,10 +6,10 @@
 #   🔴 失败必须出可见信号（判据⑤）：执行器自动开/评 Gitea issue；本件再叠一条 ::error annotation。
 #
 # 🔴 已知真相（2026-10-20 实测，禁把"配了 cron"当"每天在跑"）：
-#   · 本件 `on.schedule` **从不起火**：Gitea 只登记**默认分支**上的 schedule，而本仓默认分支 =
-#     audit/k3-20260904-line1-desktop（本件不在其上）⇒ action_schedule 无本件登记、
-#     全历史 event='schedule' 计数 = 0。要真活须 CTO 裁「默认分支改 local-main」
-#     （副作用：.github 三个 cron 会一起在 Gitea 注册并在其中报错）。
+#   · 本件 `on.schedule`（2026-10-20 实测）**从不起火**：Gitea 只登记**默认分支**上的 schedule，
+#     当时默认分支 = audit/k3-20260904-line1-desktop（本件不在其上）⇒ action_schedule 无本件登记、
+#     全历史 event='schedule' 计数 = 0。迁移后默认分支 = main（2026-10-29 `git ls-remote --symref`
+#     实取）⇒ 登记前提已变，**须重核后再宣称「在跑」**；真跑载体仍是 launchd（见下）。
 #   · ⇒ **每日真跑的载体 = 本机 launchd** `com.synova.mirror-sync`（每日 10:00，
 #     证据：~/Library/Logs/synova-mirror-sync.launchd.log 逐日一条）。
 #   · 本件保留 `workflow_dispatch` **仅供人工复跑**，不是每日驱动。
@@ -18,7 +18,7 @@
 name: dual-repo-sync
 on:
   schedule:
-    - cron: "0 1 * * *"        # 每日 01:00 UTC（北京 09:00）—— 当前不生效，见上
+    - cron: "0 1 * * *"        # 每日 01:00 UTC（北京 09:00）—— 迁移后是否登记须重核，见上
   workflow_dispatch:
 permissions:
   contents: read               # 最小集：推送用 deploy key，不用 token

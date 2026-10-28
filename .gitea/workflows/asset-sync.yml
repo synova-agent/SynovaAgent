@@ -1,12 +1,12 @@
-# asset-sync.yml — 资产看板自动同步（push→local-main：ASSET-AUTO 段 ＋ #769 重建）· 任务 #776
+# asset-sync.yml — 资产看板自动同步（push→main：ASSET-AUTO 段 ＋ #769 重建）· 任务 #776
 #
-# 目的（一句）: 让「资产覆盖」这件事在每次 local-main 前进后自动对账 —— 里程碑 M1–M10 的
+# 目的（一句）: 让「资产覆盖」这件事在每次 main 前进后自动对账 —— 里程碑 M1–M10 的
 #   `<!-- ASSET-AUTO:BEGIN/END -->` 段与 #769 的「待归类」表由机器重写，人只写段外。
 #
 # 触发: `on: push: branches: [main]`（**有意不挂定时触发/cron**）。
-#   🔴 依据（dual-repo-sync.yml 头注实测教训）: Gitea 只登记**默认分支**上的定时任务，而本仓
-#      默认分支 = audit/k3-20260904-line1-desktop ≠ local-main ⇒ 定时键在 local-main 上
-#      **从不登记、从不点火**。配 cron 只会制造「配了=在跑」的假象 ⇒ 本件不配。
+#   🔴 依据（dual-repo-sync.yml 头注实测教训）: Gitea 只登记**默认分支**上的定时任务；迁移后
+#      本仓默认分支 = main（2026-10-29 `git ls-remote --symref` 实取）⇒ 默认分支即 trunk。
+#      本件仍**有意不配** cron：push 腿已是真载体，配 cron 只会制造「配了=在跑」的假象。
 #      真跑载体 = 本 workflow（push 腿）＋ 人工 `workflow_dispatch` 复跑（见下）。
 #      （判据「定时键名零命中」是对静态 grep 的，故本件连注释也不写该英文键名，统一写「定时触发」。）
 #
@@ -42,7 +42,7 @@
 # 改坏确实红（本件的判别力自证路径，复核用）:
 #   ① 删掉任一 M1–M10 描述的 `<!-- ASSET-AUTO:BEGIN -->` ⇒ 脚本 rc=2（`code=NO_MARKER`，判据 8a）
 #      ⇒ job 红；
-#   ② 把 `branches: [main]` 改掉 ⇒ 本 workflow 不再点火 ⇒ 本 workflow 不再点火（**这种「红」看不见**，
+#   ② 把 `branches: [main]` 改掉 ⇒ 本 workflow 不再点火（**这种「红」看不见**，
 #      故用第 ③ 条兜）；③ 本件末尾的「接线自检」step 断言脚本文件存在 ⇒ 脚本被挪走即红。
 #
 # 边界: 不改分支、不碰 scripts/audit/**、不写主树；只推 gitea。

@@ -44,12 +44,13 @@ echo "═══ 抽出的 step 正文 $(printf '%s\n' "$STEP_BODY" | grep -c .) 
 # ── 沙箱：真 git 仓（控变更集）＋ vitest 桩（控空绿）──
 rm -rf "$WS"; mkdir -p "$WS/bin" "$WS/repo" || { echo "harness: 沙箱不可建" >&2; exit 2; }
 REPO="$WS/repo"
-git -C "$REPO" init -q -b local-main
+# #1117：沙箱基线与 ③ 步**同构**（trunk 名 = main；③ 步读 origin/${SYNO_TRUNK_REF:-main}）
+git -C "$REPO" init -q -b main
 git -C "$REPO" -c user.email=a@b -c user.name=h commit -q --allow-empty -m "base"
-git -C "$REPO" branch -M local-main
+git -C "$REPO" branch -M main
 git -C "$REPO" checkout -q -b feat
-# origin/local-main 指向 base（CI 里 origin=本机 Gitea）
-git -C "$REPO" update-ref refs/remotes/origin/local-main refs/heads/local-main
+# origin/main 指向 base（CI 里 origin=本机 Gitea）
+git -C "$REPO" update-ref refs/remotes/origin/main refs/heads/main
 
 # ── vitest 桩：🔴 必须放在 `$REPO/node_modules/.bin/vitest` ──
 #   【第三版 · 2026-10-11 实测定案】前两版的桩**从未被执行过**（幻影可跑性 —— 型 B/C）：
@@ -87,7 +88,7 @@ HARNESS_BROKEN=0
 run_case() {  # $1=tag $2=stub $3=expect(rc) $4=expect_stdout_substr $5=label $6..=files_to_create
   local tag="$1" stub="$2" want_rc="$3" want_out="$4" label="$5"; shift 5
   # 重置到 base，然后按参数造变更
-  git -C "$REPO" checkout -q feat; git -C "$REPO" reset -q --hard local-main
+  git -C "$REPO" checkout -q feat; git -C "$REPO" reset -q --hard main
   # 🔴 harness 自纠：`reset --hard` **清不掉未跟踪文件** ⇒ 上一场景的 tests/ 会污染下一场景
   #   （实测症状：丙 走了"真失败"分支而非"异常空绿"；戊 直接失败）。必须 `clean`。
   #   ⚠️ 只 clean **沙箱仓**（$REPO），绝不碰真仓库 —— 创始人边界禁 `clean` 是指工作仓。
@@ -97,7 +98,8 @@ run_case() {  # $1=tag $2=stub $3=expect(rc) $4=expect_stdout_substr $5=label $6
   for f in "$@"; do mkdir -p "$REPO/$(dirname "$f")"; echo "x" > "$REPO/$f"; made=1; done
   if [ "$made" = "1" ]; then git -C "$REPO" add -A >/dev/null && git -C "$REPO" -c user.email=a@b -c user.name=h commit -q -m "$tag"; fi
   local out rc
-  out="$(cd "$REPO" && SYNO_EG_STUB_MODE="$stub" PATH="$WS/bin:$PATH" bash -e -c "$STEP_RUN" 2>&1)"
+  out="$(cd "$REPO" && env -u SYNO_BASE_REF -u GITHUB_BASE_REF -u SYNO_TRUNK_REF -u SYNO_CI -u GITHUB_ACTIONS \
+    SYNO_EG_STUB_MODE="$stub" PATH="$WS/bin:$PATH" bash -e -c "$STEP_RUN" 2>&1)"
   rc=$?
   printf '──── 场景%s（%s）rc=%s（期望 %s）────\n%s\n' "$tag" "$label" "$rc" "$want_rc" "$out"
   # ── 判别力自检（纪律④：「反例必红」本身要被验）──
@@ -118,7 +120,7 @@ run_case() {  # $1=tag $2=stub $3=expect(rc) $4=expect_stdout_substr $5=label $6
 }
 
 # 甲：变更集为空（HEAD == 基线）⇒ 合法跳过·空
-git -C "$REPO" checkout -q feat; git -C "$REPO" reset -q --hard local-main
+git -C "$REPO" checkout -q feat; git -C "$REPO" reset -q --hard main
 run_case 甲 empty 0 "合法跳过：变更集为空" "变更集空 ⇒ 合法跳过（绿 + 显式标注）"
 
 # 乙：变更集非空但全非代码面（纯文档）⇒ 合法跳过·纯文档
@@ -141,22 +143,23 @@ run_case 己 empty 0 "合法跳过（不可测面）" "非 vitest 可收集的�
   scripts/control-tower/x.test.sh .gitea/workflows/x.yml
 
 # ── 庚（新增）：**删除了 vitest 测试**却空绿 ⇒ 必须红（真丢测试，不许被「不可测面」分支吞掉）──
-# 构造：在 **local-main 分支上**加一个 vitest 测试并提交 ⇒ 再把 feat 重置到该点 ⇒ 删掉它并提交。
+# 构造：在 **main 分支上**加一个 vitest 测试并提交 ⇒ 再把 feat 重置到该点 ⇒ 删掉它并提交。
 #   这样 `$(baseline)...HEAD` 的 diff 会正确含**一条删除**（`--diff-filter=D` 命中）。
 # ⚠️ 变量名与多字节字符之间**必须** `${VAR}` 定界 + 补空格（否则 bash 把字符字节吞进变量名，
 #    实测报 `RC<乱码>: unbound variable` —— 本仓同型已多次复发）。
-git -C "$REPO" checkout -q local-main
+git -C "$REPO" checkout -q main
 mkdir -p "$REPO/tests/doomed"; printf 'export const t=1;\n' > "$REPO/tests/doomed/gone.test.ts"
 git -C "$REPO" add -A >/dev/null && git -C "$REPO" -c user.email=a@b -c user.name=h commit -q -m "seed-test"
-# ⚠️ 必须把 CI 用的那个基线 ref 一并前移：step 读的是 `origin/local-main`
+# ⚠️ 必须把 CI 用的那个基线 ref 一并前移：step 读的是 `origin/main`
 #    （不前移 ⇒ diff 反把 seed 当成"新增"，删除就看不见 —— 实测踩过）
-git -C "$REPO" update-ref refs/remotes/origin/local-main refs/heads/local-main
-git -C "$REPO" checkout -q feat; git -C "$REPO" reset -q --hard local-main; git -C "$REPO" clean -qfdx
+git -C "$REPO" update-ref refs/remotes/origin/main refs/heads/main
+git -C "$REPO" checkout -q feat; git -C "$REPO" reset -q --hard main; git -C "$REPO" clean -qfdx
 install_stub empty
 git -C "$REPO" rm -q tests/doomed/gone.test.ts
 git -C "$REPO" -c user.email=a@b -c user.name=h commit -q -m "delete-test"
-echo "  （构造自检）变更集: $(git -C "$REPO" diff --name-only --diff-filter=D origin/local-main...HEAD | tr '\n' ' ')"
-OUT="$(cd "$REPO" && SYNO_EG_STUB_MODE=empty PATH="$WS/bin:$PATH" bash -e -c "$STEP_RUN" 2>&1)"; RC=$?
+echo "  （构造自检）变更集: $(git -C "$REPO" diff --name-only --diff-filter=D origin/main...HEAD | tr '\n' ' ')"
+OUT="$(cd "$REPO" && env -u SYNO_BASE_REF -u GITHUB_BASE_REF -u SYNO_TRUNK_REF -u SYNO_CI -u GITHUB_ACTIONS \
+  SYNO_EG_STUB_MODE=empty PATH="$WS/bin:$PATH" bash -e -c "$STEP_RUN" 2>&1)"; RC=$?
 printf '──── 场景庚（删除了 vitest 测试 ⇒ 必须红）rc=%s（期望 1）────\n%s\n' "${RC}" "$OUT"
 if printf '%s' "$OUT" | grep -q "SYNO_EG_STUB_RAN"; then
   if [ "${RC}" -eq 1 ] && printf '%s' "$OUT" | grep -q "删除了 vitest 测试"; then
