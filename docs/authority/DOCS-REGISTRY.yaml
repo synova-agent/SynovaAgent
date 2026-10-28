@@ -1381,3 +1381,10 @@ documents:
     status: active
     owner: P4
     note: "#1108（W10）：scripts/control-tower/**（新扫描器 check-unicode-confusable.py）＋ tests/control-tower/**（配对测试）＋ scripts/pre-commit-check.sh（治理面自检段接入）＋ .gitea/workflows/**（⑥ step）＋ gate-exemptions/**（自覆盖）＋ docs/authority/DOCS-REGISTRY.yaml（自登记）受保护路径豁免；A/B/C 分档 P0 阻断、D 档仅提醒、只判 diff 新增行；已接线（WIRING=wired）。"
+  # ---- P4 2026-10-28：#1112 W6 接线豁免登记（DOC-0324；0323 为最大已用号，先读末号 +1）----
+  - id: DOC-0324
+    type: decision
+    path: gate-exemptions/2026-10-28-1112-w6-wiring.md
+    status: active
+    owner: P4
+    note: "#1112（W6 接线）：scripts/control-tower/check-gate-inventory.sh ＋ scripts/control-tower/check-ci-empty-green.sh（判据出口一律经 gate-assert 的 ga_run 归一，126/127/128/137 与白名单外码 ⇒ 2）＋ tests/control-tower/**（两件配对测试补 ⑬⑭⑮）＋ gate-exemptions/**（自覆盖）＋ docs/authority/DOCS-REGISTRY.yaml（自登记）受保护路径豁免；零判据语义改动；WIRING gate.assertLib 由 declared-only 改 wired（consumer=check-gate-inventory.sh:98）。写集内含 WIRING-REGISTRY.yaml（该路径不在 protected-files.txt 保护面，故无需豁免行）。"
