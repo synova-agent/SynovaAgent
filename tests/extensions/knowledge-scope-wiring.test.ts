@@ -51,9 +51,9 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
-import { join } from 'path';
+import { dirname, join } from 'path';
 import type { Request, Response } from 'express';
 import Database from 'better-sqlite3';
 import { dump as dumpYaml, load as loadYaml } from 'js-yaml';
@@ -80,19 +80,46 @@ const REPO_PRESETS = join(process.cwd(), 'extensions', 'presets');
 const QUERY = 'synovawirescope';
 const ROLES_UNITS = 3;
 
+/** 三包 refs 引用的本体件（#1104：repoRoot 由内容根派生 ⇒ 夹具须仓库形状；内容不判，只判存在） */
+const ONTOLOGY_REF_PATHS = [
+  'extensions/ontology/outcome/financial.json',
+  'extensions/ontology/resource/person.json',
+  'extensions/ontology/resource/team.json',
+  'extensions/ontology/resource/client.json',
+  'extensions/ontology/resource/channel.json',
+] as const;
+
 /** 每个临时内容根的清理登记（用例失败也必须清） */
 const cleanupRoots: string[] = [];
 let unitRoot = '';                      // 本文件主用例的内容根（实物拷贝）
 const ORIGINAL_PRESETS_ROOT = process.env['SYNOVA_PRESETS_ROOT'];
+
+/**
+ * 造一个**仓库形状**的临时内容根：`<fixture>/extensions/ontology/**`（refs 存在的实体）
+ * ＋ 返回 `<fixture>/extensions/presets`（= 既有 `unitRoot`／`makeVariantRoot` 的返回语义，
+ * 调用方 `declaredScopes(root, …)`／`resolveGrants(…, { root })`／`join(root,'roles')` 全不用改）。
+ * #1104：loader 由内容根派生 repoRoot（`resolve(root,'../..')`）—— 裸 tmp 根会让 file refs 悬空。
+ */
+function makeRepoShapedPresetsRoot(mutate?: (rolesRoot: string) => void): string {
+  const fixture = mkdtempSync(join(tmpdir(), 'k731-repo-'));
+  cleanupRoots.push(fixture);
+  const presetsRoot = join(fixture, 'extensions', 'presets');
+  cpSync(REPO_PRESETS, presetsRoot, { recursive: true });
+  for (const relPath of ONTOLOGY_REF_PATHS) {
+    const abs = join(fixture, relPath);
+    mkdirSync(dirname(abs), { recursive: true });
+    writeFileSync(abs, '{}\n', 'utf8');
+  }
+  if (mutate !== undefined) mutate(join(presetsRoot, 'roles'));
+  return presetsRoot;
+}
 
 beforeAll(() => {
   process.env.JWT_SECRET = 'k731-knowledge-scope-wiring-secret-0123456789';
   process.env.DEV_MODE = 'false';
   expect(process.env.JWT_SECRET?.length ?? 0).toBeGreaterThanOrEqual(16);
 
-  unitRoot = mkdtempSync(join(tmpdir(), 'k731-presets-'));
-  cleanupRoots.push(unitRoot);
-  cpSync(REPO_PRESETS, unitRoot, { recursive: true });
+  unitRoot = makeRepoShapedPresetsRoot();
   process.env['SYNOVA_PRESETS_ROOT'] = unitRoot;
   clearPresetCache();
 });
@@ -185,11 +212,7 @@ async function withPresetsRoot<T>(root: string, fn: () => Promise<T> | T): Promi
 
 /** 造一个内容根（实物拷贝 + 可选改写）—— 破坏只在临时根上做，仓库零改动 */
 function makeVariantRoot(mutate?: (rolesRoot: string) => void): string {
-  const root = mkdtempSync(join(tmpdir(), 'k731-variant-'));
-  cleanupRoots.push(root);
-  cpSync(REPO_PRESETS, root, { recursive: true });
-  if (mutate !== undefined) mutate(join(root, 'roles'));
-  return root;
+  return makeRepoShapedPresetsRoot(mutate);
 }
 
 /** 改写某岗位 scope 文件的 scopes[]（返回改写后的 id 列表） */
