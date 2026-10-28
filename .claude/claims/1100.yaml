@@ -1,0 +1,24 @@
+# .claude/claims/1100.yaml — #1100 W3 豁免证据链收窄（新件须带复核件 · 存量冻结 legacy）写集声明
+# 依据：W3 批次硬规格（收窄版）；写集 9 条 = 原 8 件 ∪ 验收自证脚本 1 件（L2 2026-10-28 裁决 A 案，
+#      硬条件：仅 fixture 首行、断言零改、PASS==12 计数不动）。
+# 说明：
+#   · `scripts/control-tower/check-gate-protection.sh` 只加 `--require-review` 判据，三态语义不变；
+#   · `gate-exemptions/README.md` 只追加 §6（旧 §6/§7/§8 顺延为 §7/§8/§9）；
+#   · `docs/authority/DOCS-REGISTRY.yaml` 为**纯追加 1 条**（DOC-0321，不改既有条目）；
+#   · 本文件自身 ＋ brief ＋ memory note 为声明/留痕载体，一并入集。
+writeset:
+  - scripts/control-tower/check-gate-protection.sh
+  - gate-exemptions/README.md
+  - tests/control-tower/check-gate-protection.test.sh
+  - tests/control-tower/gate-protection-acceptance.test.sh
+  - gate-exemptions/2026-10-28-1100-gate-review.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - .claude/task-briefs/2026-10-28-1100-gate-review.md
+  - .claude/claims/1100.yaml
+  - memory/notes/proposed/2026-10-28-1100-gate-review.md
+done:
+  - verify: bash tests/control-tower/check-gate-protection.test.sh
+  - verify: bash tests/control-tower/gate-protection-acceptance.test.sh
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/local-main --root .
+  - verify: bash scripts/control-tower/check-gate-protection.sh --require-review=abc; test $? -eq 2
+note: "#1100 W3：新增/改动豁免件（README 除外）首行须 `# review: <PR#>` 或 `docs/synova/reviews/*.json`；legacy 判据=git cat-file -e <base>:<path>（禁日期/内容启发式），存量 86 份冻结不迁移；--require-review=0|1 默认 1（回滚点）。"

@@ -280,7 +280,7 @@ fi
 (
   cd "$S1" || exit 1
   printf '#!/bin/bash\necho changed-with-exempt\n' >scripts/pre-commit-check.sh || exit 1
-  printf '# 豁免登记（沙箱自证）\n\n- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与豁免校验 — 裁 901\n- gate-exemptions/e-compliant.md — 本豁免文件自身在 diff 内的自覆盖行 — 裁 901\n' \
+  printf '# review: #1100\n# 豁免登记（沙箱自证）\n\n- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与豁免校验 — 裁 901\n- gate-exemptions/e-compliant.md — 本豁免文件自身在 diff 内的自覆盖行 — 裁 901\n' \
     >gate-exemptions/e-compliant.md || exit 1
 ) || degrade_exit E_SANDBOX_BROKEN "沙箱 S1 ④ 写文件失败"
 sb_commit "$S1" "c3: 改受保护路径＋合规豁免（创始人身份提交）" "huangxuesongvip@163.com" \
@@ -298,7 +298,7 @@ fi
 (
   cd "$S1" || exit 1
   printf '#!/bin/bash\necho changed-reasonless\n' >scripts/pre-commit-check.sh || exit 1
-  printf '# 豁免登记\n\n- scripts/pre-commit-check.sh —  — 裁 902\n' \
+  printf '# review: #1100\n# 豁免登记\n\n- scripts/pre-commit-check.sh —  — 裁 902\n' \
     >gate-exemptions/e-compliant.md || exit 1
 ) || degrade_exit E_SANDBOX_BROKEN "沙箱 S1 ⑤ 写文件失败"
 sb_commit "$S1" "c4: 豁免缺理由（创始人身份提交）" "huangxuesongvip@163.com" \
@@ -315,7 +315,7 @@ fi
 (
   cd "$S1" || exit 1
   printf '#!/bin/bash\necho changed-k12-author\n' >scripts/pre-commit-check.sh || exit 1
-  printf '# 豁免登记\n\n- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与豁免校验 — 裁 903\n- gate-exemptions/e-compliant.md — 本豁免文件自身在 diff 内的自覆盖行 — 裁 903\n' \
+  printf '# review: #1100\n# 豁免登记\n\n- scripts/pre-commit-check.sh — 批次内同步改门禁脚本与豁免校验 — 裁 903\n- gate-exemptions/e-compliant.md — 本豁免文件自身在 diff 内的自覆盖行 — 裁 903\n' \
     >gate-exemptions/e-compliant.md || exit 1
 ) || degrade_exit E_SANDBOX_BROKEN "沙箱 S1 ⑥ 写文件失败"
 sb_commit "$S1" "c5: 豁免由小队身份提交（k12@local）" "k12@local" \
