@@ -1388,3 +1388,10 @@ documents:
     status: active
     owner: P4
     note: "#1115（冻结期阶段 1）：7 处无回退链的 local-main 主引用切 main（四条件基线/镜像/触发/canonical）＋豁免自覆盖＋DOCS-REGISTRY 自登记；local-gates.yml 与 pre-commit-check.sh 因与 #943/#801 写集重叠移出，留清理批；SYNO_TRUNK 语义由既有环境变量覆盖，不改判据强度。"
+  # ---- P4 2026-10-29：#1117 主树 main 迁移残余批豁免登记（DOC-0325）----
+  - id: DOC-0325
+    type: decision
+    path: gate-exemptions/2026-10-29-1117-trunk-main.md
+    status: active
+    owner: P4
+    note: "#1117（残余批）：trunk 名单源 SYNO_TRUNK_REF（缺省 main），21 件代码＋11 件配对测试切 main，推送端 bypass 基链与控制塔 base 链统一；main 保护段逐字不动，三态/判据强度/门禁组数不变；含 L1 批准扩写集 2 件配对夹具；豁免自覆盖＋DOCS-REGISTRY 自登记。"
