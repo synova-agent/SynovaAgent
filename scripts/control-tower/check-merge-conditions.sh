@@ -85,7 +85,7 @@ DEFAULT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 API="${SYNO_GITEA_API:-http://127.0.0.1:3000/api/v1}"
 REPO="${SYNO_GITEA_REPO:-synova-agent/SynovaAgent}"
-BASE="${SYNO_MERGE_BASE:-local-main}"
+BASE="${SYNO_MERGE_BASE:-main}"
 COMPONENT="check-merge-conditions"
 DEGRADED_LOG="${SYNO_GATE_DEGRADED_LOG:-$DEFAULT_ROOT/.codex/control-tower/logs/degraded-events.log}"
 FIXTURE="${SYNO_MERGE_COND_FIXTURE:-}"

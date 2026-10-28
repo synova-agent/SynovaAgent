@@ -43,7 +43,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 set -uo pipefail
 
 ROOT=""
-CANONICAL="gitea/local-main"
+CANONICAL="gitea/main"
 MIRROR_URL=""
 MIRROR_REF=""
 MIRROR_REF_GIVEN=0
