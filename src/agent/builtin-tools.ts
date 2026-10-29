@@ -148,7 +148,9 @@ export function registerBuiltinTools(
       log.info({ orgId }, 'query_ontology 工具调用');
       try {
         const BASE = `http://localhost:${process.env.PORT || 3000}`;
-        const res = await fetch(`${BASE}/api/ontology/graph/${orgId}`);
+        // #1075 P2-4b-B：出站调用加**真实超时**（质量增量闸 R4.3：本文件进入变更集后必须显式
+        //   声明 AbortSignal.timeout；30s 与 src/llm/timeout.ts 的 HTTP 口径一致，防挂死）
+        const res = await fetch(`${BASE}/api/ontology/graph/${orgId}`, { signal: AbortSignal.timeout(30000) });
         if (res.ok) {
           const data = await res.json() as { nodes?: Array<{ type?: string }>; edges?: unknown[]; nodeCount?: number; edgeCount?: number; orgId?: string };
           const nodeTypes = [...new Set((data.nodes || []).map(n => n.type).filter(Boolean))];
@@ -280,7 +282,9 @@ export function registerBuiltinTools(
       try {
         const orgId = String(params.orgId || getOrgId());
         const BASE = `http://localhost:${process.env.PORT || 3000}`;
-        const res = await fetch(`${BASE}/api/ontology/graph/${orgId}`);
+        // #1075 P2-4b-B：出站调用加**真实超时**（质量增量闸 R4.3：本文件进入变更集后必须显式
+        //   声明 AbortSignal.timeout；30s 与 src/llm/timeout.ts 的 HTTP 口径一致，防挂死）
+        const res = await fetch(`${BASE}/api/ontology/graph/${orgId}`, { signal: AbortSignal.timeout(30000) });
         if (!res.ok) return { documents: [], count: 0, hint: '本体 API 不可达' };
         const data = await res.json() as { nodes?: Array<{ type?: string; props?: Record<string, unknown> }> };
         const docs = (data.nodes || [])
