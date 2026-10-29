@@ -1,0 +1,18 @@
+# claim — #1123 批1 DOC 编号形态（R1）＋ Issue 来源（R2）判据
+
+writeset:
+  - scripts/doc-system/doc-registry-gate.sh
+  - tests/doc-system/doc-registry-gate.test.sh
+  - docs/authority/DOCS-REGISTRY.yaml
+  - gate-exemptions/2026-10-29-1123b1-docid.md
+  - .claude/task-briefs/2026-10-29-1123b1-docid.md
+  - .claude/claims/1123b1.yaml
+  - memory/notes/proposed/2026-10-29-1123b1-docid.md
+
+done:
+  - verify: bash tests/doc-system/doc-registry-gate.test.sh 2>&1 | tail -2
+  - verify: bash scripts/doc-system/doc-registry-gate.sh 2>&1 | grep 编号
+  - verify: git diff --numstat gitea/main -- docs/authority/DOCS-REGISTRY.yaml
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main --root . 2>&1 | tail -1
+
+note: "批1 只做判据与测试：R1 形态 DOC-<Issue#> / DOC-<Issue#>-NN，R2 来源 front-matter 或文件名，两处皆无即红；唯一性正则扩 -NN 后缀但唯一性判据强度不变（#942）；存量 DOC-0xxx 按基线冻结跳过。registry 纯追加一条 DOC-1123-01，删除数 0。"
