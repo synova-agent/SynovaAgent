@@ -35,6 +35,9 @@
  *      又无 `--case` ⇒ exit 2；`--all` **仅主用例**（DS④，不跑 selfcheck）。
  *   R8 可解析性口径：token 能归一为 `a/b/c.ts` 形态（无绝对路径／反斜杠／通配／占位／`..`／空段）。
  *      它**不代表**文件可执行，只代表"这确实是一条确定路径"。
+ *   R9 **§2.2 注解行（v2.4）**：某行首列**显式标注「不入机器写集表」** ⇒ 该行**跳过**（不计 entries、
+ *      不计 unparseable），并单独打一行 `[ANNOTATION-SKIPPED] …` 作为可见证据；**仅加粗无该标注**
+ *      ⇒ 仍判 unparseable（不放宽、fail loud）。附A Q2 块行形态不变。
  *
  * 契约（铁律 47 / 探针统一契约）:
  *   @input
@@ -91,6 +94,11 @@
  *   8. 本批**未接 CI**（#1158 U2）；node22 未复跑（本机 v24.16.0，见 #1158 U1）。
  *   9. `degraded:` 行必须唯一可判 ⇒ 若 `setDefaultEncoding` 不可用，其告警走 **stdout 的 `ⓘ` 行**
  *      （不走 stderr，避免把 `degraded:` 变成第 2 行）。
+ *  10. **§2.2 注解行跳过（v2.4，2026-10-30）**：规格 v2.4 起允许在写集表内加"追认但不入机器写集"的行，
+ *      标记方式是**首列显式写「不入机器写集表」**（例：铁律 49 决策 Note）。本件只认**该显式标注** ⇒
+ *      跳过并打 `[ANNOTATION-SKIPPED]` 证据行；**仅加粗（`**…**`）而没有该标注的行仍判 unparseable**
+ *      —— 这样"人读追认行"与"机器写集表"可区分，同时**不放宽**路径判别力（fail loud）。
+ *      ⚠️ 判据未变：真规格仍必须 `entries=8`／`8/8 EXISTS|可解析`／`unparseable=0`／`RESULT=PASS`。
  *
  * 配对测试（B8 / CT-40）：tests/control-tower/probe-criterion-precheck.test.ts
  */
@@ -123,6 +131,13 @@ export type CriterionCase = (typeof KNOWN_CASES)[number];
 export const NEGATIVE_CONTROL_PATH = 'scripts/control-tower/__criterion-precheck-negative-control__.ts';
 /** 正控路径（真实存在的判据件：探针契约的单一实现）。 */
 export const POSITIVE_CONTROL_PATH = 'scripts/control-tower/probe-ladder.ts';
+
+/**
+ * §2.2 表格**注解行**的显式标注（规格 v2.4，2026-10-30）。
+ * 首列含此串 ⇒ 该行"追认但不入机器写集表"（例：铁律 49 决策 Note）⇒ **跳过**并留证据；
+ * 只有加粗而无此标注 ⇒ 仍判 unparseable（不放宽）。
+ */
+export const ANNOTATION_MARKER = '不入机器写集表';
 
 /** 写集表标题（§2.2）；回退形态：标题含"写集"。 */
 const WRITE_SET_HEADING = /^#{1,6}\s*2\.2(?:\s|$)/;
@@ -252,12 +267,20 @@ export interface UnparseableCandidate {
   readonly reason: string;
 }
 
+/** 显式标注「不入机器写集表」而被跳过的注解行（v2.4；**不计** entries/unparseable，只作可见证据）。 */
+export interface SkippedAnnotation {
+  readonly form: CriterionForm;
+  readonly raw: string;
+}
+
 /** 提取结果（纯数据；无 I/O）。 */
 export interface ExtractionResult {
   /** 合并去重后的判据件条目（保持首次出现顺序）。 */
   readonly entries: readonly CriterionEntry[];
   /** 不可解析候选（逐条点名）。 */
   readonly unparseable: readonly UnparseableCandidate[];
+  /** 显式标注「不入机器写集表」而跳过的注解行（v2.4；输出 `[ANNOTATION-SKIPPED]` 证据行）。 */
+  readonly annotationSkipped: readonly SkippedAnnotation[];
   /** 逐形态的**唯一路径**条数（诊断用；不是判据）。 */
   readonly formCounts: Readonly<Record<CriterionForm, number>>;
 }
@@ -301,11 +324,21 @@ function parseOperation(cell: string): CriterionOperation {
   return 'unknown';
 }
 
-/** 形态 ①：`### 2.2 写集` 的 Markdown 表格（首列＝路径，次列＝操作）。 */
-function extractFromWriteSetTable(lines: readonly string[]): RawCandidate[] {
+/**
+ * 形态 ①：`### 2.2 写集` 的 Markdown 表格（首列＝路径，次列＝操作）。
+ *
+ * v2.4 注解行规则（R9）：
+ *   · 首列含 {@link ANNOTATION_MARKER}（"不入机器写集表"）⇒ **跳过**，只进 `skipped`（证据行）；
+ *   · 首列只有加粗 `**…**` 而无该标注 ⇒ **仍判 unparseable**（不放宽，fail loud）。
+ * @returns `{candidates, skipped}`（candidates 里可能含不可解析项）
+ */
+function extractFromWriteSetTable(
+  lines: readonly string[],
+): { candidates: RawCandidate[]; skipped: SkippedAnnotation[] } {
+  const candidates: RawCandidate[] = [];
+  const skipped: SkippedAnnotation[] = [];
   const section = findSection(lines, WRITE_SET_HEADING) ?? findSection(lines, WRITE_SET_FALLBACK);
-  if (!section) return [];
-  const out: RawCandidate[] = [];
+  if (!section) return { candidates, skipped };
   for (let i = section.start + 1; i < section.end; i++) {
     const row = lines[i].trim();
     if (!row.startsWith('|')) continue;
@@ -316,16 +349,32 @@ function extractFromWriteSetTable(lines: readonly string[]): RawCandidate[] {
       .map((cell) => cell.trim());
     if (cells.length < 2) continue;
     if (cells.every((cell) => TABLE_SEPARATOR.test(cell))) continue;
-    if (/^(文件|路径|path)$/i.test(stripAnnotations(cells[0]))) continue;
-    if (!looksLikePathCandidate(cells[0])) continue;
-    out.push({
+    const firstCell = cells[0];
+    if (/^(文件|路径|path)$/i.test(stripAnnotations(firstCell))) continue;
+    // R9：显式标注「不入机器写集表」⇒ 跳过（不计 entries、不计 unparseable），留可见证据
+    if (firstCell.includes(ANNOTATION_MARKER)) {
+      skipped.push({ form: 'table', raw: firstCell });
+      continue;
+    }
+    // R9 反向：只有加粗、没有显式标注 ⇒ 不放宽：仍判 unparseable（fail loud）
+    if (firstCell.includes('**')) {
+      candidates.push({
+        form: 'table',
+        raw: firstCell,
+        parsed: { ok: false, reason: `首列含加粗标注但无「${ANNOTATION_MARKER}」显式标注（不放宽：不可解析）` },
+        operation: parseOperation(cells[1]),
+      });
+      continue;
+    }
+    if (!looksLikePathCandidate(firstCell)) continue;
+    candidates.push({
       form: 'table',
-      raw: cells[0],
-      parsed: normalizeRepoRelPath(cells[0]),
+      raw: firstCell,
+      parsed: normalizeRepoRelPath(firstCell),
       operation: parseOperation(cells[1]),
     });
   }
-  return out;
+  return { candidates, skipped };
 }
 
 /** 形态 ②：附A `## Q2: … 做什么：` 列表块（只收「做什么」，不收「不做什么」）。 */
@@ -374,7 +423,8 @@ function uniquePathCount(cands: readonly RawCandidate[]): number {
  */
 export function extractCriterionPaths(docText: string): ExtractionResult {
   const lines = splitLines(docText);
-  const tableCandidates = extractFromWriteSetTable(lines);
+  const table = extractFromWriteSetTable(lines);
+  const tableCandidates = table.candidates;
   const q2Candidates = extractFromQ2Block(lines);
 
   const order: string[] = [];
@@ -407,6 +457,7 @@ export function extractCriterionPaths(docText: string): ExtractionResult {
   return {
     entries,
     unparseable,
+    annotationSkipped: table.skipped,
     formCounts: { table: uniquePathCount(tableCandidates), q2: uniquePathCount(q2Candidates) },
   };
 }
@@ -550,6 +601,9 @@ export function usageText(): string {
     '     ⇒ exit 0；任一不成立 ⇒ exit 1',
     '  R6 只做存在性＋可解析性：不跑被测命令、不读被测文件内容、不冒充“跑过了”（DS③）',
     '  R7 参数缺省/未知 ⇒ exit 2（不回落默认场景）；--all 仅主用例',
+    '  R8 可解析性 = 规范仓内 POSIX 相对路径（无绝对路径/反斜杠/通配/占位/..）；不代表可执行',
+    '  R9 §2.2 注解行（v2.4）：首列显式标注「不入机器写集表」⇒ 跳过并打 [ANNOTATION-SKIPPED]',
+    '     （不计 entries/unparseable）；仅加粗无该标注 ⇒ 仍判 unparseable（不放宽）',
     '',
     '输出:',
     '  逐条 `<path> | EXISTS|MISSING | 可解析`（附 forms/op）＋ 末行 RESULT=<PASS|FAIL|ERROR>',
@@ -654,8 +708,14 @@ function runDoc(repoRoot: string, docArg: string): 0 | 1 | 2 {
   out.note(`[DOC] ${absDoc}`);
   out.note(
     `[FORMS] table=${extraction.formCounts.table} q2=${extraction.formCounts.q2} ` +
-      `entries=${extraction.entries.length} unparseable=${extraction.unparseable.length}`,
+      `entries=${extraction.entries.length} unparseable=${extraction.unparseable.length} ` +
+      `annotationSkipped=${extraction.annotationSkipped.length}`,
   );
+
+  // v2.4 注解行：显式标注「不入机器写集表」⇒ 跳过（可见证据，不计 entries/unparseable）
+  for (const skipped of extraction.annotationSkipped) {
+    out.note(`[ANNOTATION-SKIPPED] ${skipped.raw}（显式标注不入机器写集表，不计 entries/unparseable）`);
+  }
 
   for (const bad of extraction.unparseable) {
     out.fail(`${bad.raw} | UNPARSEABLE | 不可解析 | form=${bad.form} | reason=${bad.reason}`);

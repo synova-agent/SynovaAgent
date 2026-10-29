@@ -29,6 +29,7 @@ import {
   inspectCriterion,
   normalizeRepoRelPath,
   usageText,
+  ANNOTATION_MARKER,
 } from '../../scripts/control-tower/probe-criterion-precheck';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -77,6 +78,39 @@ const BOTH_FORMS_DOC = `${TABLE_DOC}\n\n${Q2_DOC}`;
 /** 空 doc（两形态都提取不到 ⇒ 探针必须 degraded/exit 2）。 */
 const EMPTY_DOC = ['# 空文档', '', '既没有 §2.2 写集表，也没有 Q2 做什么块。', ''].join('\n');
 
+/** v2.4 注解行夹具：1 条真实件 ＋ 1 条伪路径 ＋ 1 条显式标注「不入机器写集表」的追认行。 */
+const ANNOTATION_DOC = [
+  '### 2.2 写集（3 个）',
+  '',
+  '| 文件 | 操作 | 说明 |',
+  '|---|---|---|',
+  `| ${POSITIVE_CONTROL_PATH} | 改 | 真实件 |`,
+  `| ${FIXTURE_MISSING} | 新建 | 伪路径（必然缺失） |`,
+  `| **（追认，${ANNOTATION_MARKER}）** memory/notes/proposed/2026-10-30-m6-1158-four-cards.md | 新建 | 追认行 |`,
+  '',
+].join('\n');
+
+/** 仅加粗、**无**「不入机器写集表」显式标注 ⇒ 仍须判 unparseable（不放宽）。 */
+const BOLD_ONLY_DOC = [
+  '### 2.2 写集（2 个）',
+  '',
+  '| 文件 | 操作 | 说明 |',
+  '|---|---|---|',
+  `| ${POSITIVE_CONTROL_PATH} | 改 | 真实件 |`,
+  '| **（追认）** memory/notes/proposed/2026-10-30-m6-1158-four-cards.md | 新建 | 无显式标注 |',
+  '',
+].join('\n');
+
+/** 只有"仅加粗无标注"的行 ⇒ 提取 0 条 ⇒ 必须 degraded/exit 2。 */
+const BOLD_ONLY_EMPTY_DOC = [
+  '### 2.2 写集（1 个）',
+  '',
+  '| 文件 | 操作 | 说明 |',
+  '|---|---|---|',
+  '| **（追认）** memory/notes/proposed/2026-10-30-m6-1158-four-cards.md | 新建 | 无显式标注 |',
+  '',
+].join('\n');
+
 interface ProbeRun {
   readonly status: number | null;
   readonly stdout: string;
@@ -103,13 +137,22 @@ function lastLine(stdout: string): string {
 let fixtureDir = '';
 let bothFormsDoc = '';
 let emptyDoc = '';
+let annotationDoc = '';
+let boldOnlyDoc = '';
+let boldOnlyEmptyDoc = '';
 
 beforeAll(() => {
   fixtureDir = mkdtempSync(join(tmpdir(), 'm6-c4-test-'));
   bothFormsDoc = join(fixtureDir, 'two-forms.md');
   emptyDoc = join(fixtureDir, 'empty.md');
+  annotationDoc = join(fixtureDir, 'annotation.md');
+  boldOnlyDoc = join(fixtureDir, 'bold-only.md');
+  boldOnlyEmptyDoc = join(fixtureDir, 'bold-only-empty.md');
   writeFileSync(bothFormsDoc, BOTH_FORMS_DOC, 'utf8');
   writeFileSync(emptyDoc, EMPTY_DOC, 'utf8');
+  writeFileSync(annotationDoc, ANNOTATION_DOC, 'utf8');
+  writeFileSync(boldOnlyDoc, BOLD_ONLY_DOC, 'utf8');
+  writeFileSync(boldOnlyEmptyDoc, BOLD_ONLY_EMPTY_DOC, 'utf8');
 });
 
 afterAll(() => {
@@ -191,6 +234,24 @@ describe('extractCriterionPaths — 两形态（禁硬编码条数）', () => {
     expect(r.unparseable[0].form).toBe('table');
   });
 
+  it('v2.4 注解行：首列显式标注「不入机器写集表」⇒ 跳过（不计 entries/unparseable），留 annotationSkipped', () => {
+    const r = extractCriterionPaths(ANNOTATION_DOC);
+    expect(r.entries.map((e) => e.path)).toEqual([POSITIVE_CONTROL_PATH, FIXTURE_MISSING]);
+    expect(r.unparseable).toHaveLength(0);
+    expect(r.annotationSkipped).toHaveLength(1);
+    expect(r.annotationSkipped[0].raw).toContain('memory/notes/proposed/2026-10-30-m6-1158-four-cards.md');
+    expect(r.annotationSkipped[0].form).toBe('table');
+    expect(r.formCounts.table).toBe(2);
+  });
+
+  it('v2.4 反向：仅加粗、无「不入机器写集表」标注 ⇒ 仍判 unparseable（不放宽）', () => {
+    const r = extractCriterionPaths(BOLD_ONLY_DOC);
+    expect(r.entries.map((e) => e.path)).toEqual([POSITIVE_CONTROL_PATH]);
+    expect(r.unparseable).toHaveLength(1);
+    expect(r.unparseable[0].reason).toContain('不放宽');
+    expect(r.annotationSkipped).toHaveLength(0);
+  });
+
   it('从**真规格**提取 8 条写集（两形态各 8，条数由 doc 派生而非写死）', () => {
     // 规格未 provision 时（如部分 CI）跳过：此时 C4 本来就 exit 2（见规格 §5）。
     if (!readable(SPEC_DOC)) {
@@ -203,6 +264,14 @@ describe('extractCriterionPaths — 两形态（禁硬编码条数）', () => {
     expect(r.formCounts.q2).toBe(8);
     expect(r.entries).toHaveLength(8);
     expect(r.unparseable).toHaveLength(0);
+    // v2.4（handbook caf418c）起 §2.2 含 1 行「不入机器写集表」追认行 ⇒ 跳过而非 unparseable；
+    // v2.3 无该行 ⇒ annotationSkipped=0。两个版本下 entries 都必须仍是 8（判据不变）。
+    if (text.includes(ANNOTATION_MARKER)) {
+      expect(r.annotationSkipped).toHaveLength(1);
+      expect(r.annotationSkipped[0].raw).toContain('memory/notes/proposed/2026-10-30-m6-1158-four-cards.md');
+    } else {
+      expect(r.annotationSkipped).toHaveLength(0);
+    }
     expect(r.entries.map((e) => e.path)).toContain('scripts/control-tower/probe-criterion-precheck.ts');
     expect(r.entries.map((e) => e.path)).toContain('tests/control-tower/probe-criterion-precheck.test.ts');
   });
@@ -291,6 +360,35 @@ describe('spawn smoke — 真跑探针（三态退出语义）', () => {
     expect(run.stdout).toContain(`${FIXTURE_MISSING} | MISSING | 可解析`);
     expect(run.stdout).toContain('[MISSING] 1/2');
     expect(lastLine(run.stdout)).toBe('RESULT=FAIL');
+  });
+
+  it('--doc <注解行夹具> ⇒ exit 1（伪路径仍 MISSING），注解行被 [ANNOTATION-SKIPPED] 跳过', () => {
+    const run = runProbe(['--doc', annotationDoc]);
+    expect(run.status).toBe(1);
+    expect(run.stdout).toContain('[ANNOTATION-SKIPPED]');
+    expect(run.stdout).toContain(ANNOTATION_MARKER);
+    expect(run.stdout).toContain(`${POSITIVE_CONTROL_PATH} | EXISTS | 可解析`);
+    expect(run.stdout).toContain(`${FIXTURE_MISSING} | MISSING | 可解析`);
+    // 注解行里的追认路径**不得**被判定（跳过 ≠ EXISTS/MISSING）
+    expect(run.stdout).not.toContain('memory/notes/proposed/2026-10-30-m6-1158-four-cards.md | MISSING');
+    expect(run.stdout).toContain('entries=2 unparseable=0 annotationSkipped=1');
+    expect(lastLine(run.stdout)).toBe('RESULT=FAIL');
+  });
+
+  it('--doc <仅加粗无标注夹具> ⇒ exit 1 且该行仍 UNPARSEABLE（不放宽）', () => {
+    const run = runProbe(['--doc', boldOnlyDoc]);
+    expect(run.status).toBe(1);
+    expect(run.stdout).toContain('| UNPARSEABLE | 不可解析');
+    expect(run.stdout).toContain('不放宽');
+    expect(run.stdout).toContain('annotationSkipped=0');
+    expect(lastLine(run.stdout)).toBe('RESULT=FAIL');
+  });
+
+  it('--doc <只含仅加粗无标注行> ⇒ 提取 0 条 ⇒ exit 2（CRITERION_NONE_EXTRACTED）', () => {
+    const run = runProbe(['--doc', boldOnlyEmptyDoc]);
+    expect(run.status).toBe(2);
+    expect(run.stderr).toContain('degraded:');
+    expect(run.stderr).toContain('code=CRITERION_NONE_EXTRACTED');
   });
 
   it('--all --doc <夹具> ⇒ 仅主用例（DS④：不跑 selfcheck）', () => {
