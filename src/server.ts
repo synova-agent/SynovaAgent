@@ -38,8 +38,8 @@ import healthRoutes from './routes/health';
 import healthzRoutes from './routes/healthz';
 import evolutionRoutes from './routes/evolution';
 import gaEvolutionRoutes from './routes/ga-evolution';
-import rolePacksPageRoutes from './routes/role-packs-page'; // #1075 P3 — 说明书页 HTML 壳（**须先于 JWT**）
-import roleApprovalsRoutes from './routes/role-approvals'; // #1075 P3 — 审批读/写 API（**须后于 JWT**）
+import { rolePacksPageRoutes } from './routes/role-packs-page'; // #1075 P3 — 说明书页 HTML 壳（**须先于 JWT**；具名 import 兼作 R1.2 生产调用点）
+import { roleApprovalsRoutes } from './routes/role-approvals'; // #1075 P3 — 审批读/写 API（**须后于 JWT**；具名 import 兼作 R1.2 生产调用点）
 import ontologyRoutes from './routes/ontology';
 import ontologyAdminRoutes from './routes/ontology-admin';
 import diagnosisRoutes from './routes/diagnosis';

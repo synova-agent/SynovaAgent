@@ -788,6 +788,48 @@ describe('J6 审计链＋详情 API', () => {
     expect(chain['valid']).toBe(true);
     expect(loadRolePacks().usable).not.toContain(ROLE);
   });
+
+  it('J6-3 详情审计历史只含本 roleId 的审批事件（不混入他人 roleId／无关 action）', async () => {
+    // 预置三条：① 本 roleId 的审批 ② 另一 roleId 的审批 ③ 同 org 的无关 action
+    AuditService.log({
+      orgId: ORG,
+      actorId: 'admin-p3',
+      actorRole: 'admin',
+      action: AUDIT_APPROVED,
+      targetType: 'role_pack',
+      targetId: ROLE,
+      newValue: JSON.stringify({ contentHash: contentHashOf(ROLE), scope: 'content', approvalId: 'apv1:own' }),
+    });
+    AuditService.log({
+      orgId: ORG,
+      actorId: 'admin-p3',
+      actorRole: 'admin',
+      action: AUDIT_APPROVED,
+      targetType: 'role_pack',
+      targetId: 'other-role',
+      newValue: JSON.stringify({ contentHash: 'f'.repeat(64), scope: 'content', approvalId: 'apv1:other' }),
+    });
+    AuditService.log({
+      orgId: ORG,
+      actorId: 'admin-p3',
+      actorRole: 'admin',
+      action: 'workspace.updated',
+      targetType: 'workspace',
+      targetId: ROLE,
+      newValue: JSON.stringify({ name: 'noise' }),
+    });
+
+    const res = await getJson(`/api/role-packs/${ROLE}`, tokenFor('admin'));
+    expect(res.status).toBe(200);
+    const audit = res.body['audit'] as Array<Record<string, unknown>>;
+    expect(audit).toHaveLength(1);
+    expect(audit[0]?.['action']).toBe(AUDIT_APPROVED);
+    expect(audit[0]?.['targetId']).toBe(ROLE);
+    expect(audit[0]?.['targetType']).toBe('role_pack');
+    const serialized = JSON.stringify(audit);
+    expect(serialized).not.toContain('other-role');
+    expect(serialized).not.toContain('workspace.updated');
+  });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════

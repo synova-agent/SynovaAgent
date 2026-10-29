@@ -638,4 +638,10 @@ router.post('/api/role-packs/:roleId/approval', (req: Request<RoleIdParams>, res
   });
 });
 
-export default router;
+/**
+ * 具名导出（R1.2：`check-quality-delta.py` 的 `exported_names()` 只认具名 export）。
+ * 生产调用点 = `src/server.ts`（JWT 之后注册；页面壳 `role-packs-page.ts` 另在先于 JWT 处挂载）。
+ */
+export const roleApprovalsRoutes = router;
+
+export default roleApprovalsRoutes;
