@@ -156,11 +156,11 @@ entries:
   - capability: gate.assertLib
     defined_at: "scripts/control-tower/gate-assert.sh:1"
     provider: "scripts/control-tower/gate-assert.sh:1"
-    consumer: null
+    consumer: "scripts/control-tower/check-gate-inventory.sh:98"
     test: "tests/control-tower/gate-assert.test.sh"
-    status: declared-only
+    status: wired
     owner: P4
-    notes: "#1096 W6 判据自检库（库件）：ga_run 三态归一＋128/137/126 等非白名单码归判据故障(2)；接线＝后续判据抽样接入，本批不做 ⇒ 无生产消费者。"
+    notes: "#1096 W6 判据自检库 ＋ #1112 W6 接线（本行由 declared-only 改 wired）。**已接线（两个生产消费者）**：① `scripts/control-tower/check-gate-inventory.sh:98` —— 判据子进程经 `ga_run` 归一（本行 consumer 取该主调用点；R5 只容单条 path:line）；② `scripts/control-tower/check-ci-empty-green.sh:259/260/261` —— file／env／selfcheck 三个出口各经 `ga_run` 包装。归一语义＝0/1/2 原样透传，128／137／126／白名单外码一律归 2 并打 `判据故障: <code>`（绝不归 0、也不原样穿透成本器退出码）；两器在归一库缺失时均 exit 2（fail-closed）。改坏即红：把归一里 128 分支改成 0 ⇒ `tests/control-tower/check-gate-inventory.test.sh` ⑮ 与 `tests/control-tower/check-ci-empty-green.test.sh` ⑮ 的 rc=2 断言必红。"
   - capability: gate.telemetry
     defined_at: "scripts/control-tower/gate-telemetry.sh:1"
     provider: "scripts/control-tower/gate-telemetry.sh:1"
@@ -223,3 +223,11 @@ entries:
     status: wired
     owner: P2
     notes: "岗位包审批门（#1075 P2-1）：记录侧审批态判定（approved/pending/unverified）＋出厂代码锚（FACTORY_APPROVALS）；唯一生产消费者＝preset-loader 单读→contentHash→判定；判定侧不 import role-pack-schema（N6 防循环依赖）"
+  - capability: gate.d331Bypass
+    defined_at: "scripts/control-tower/d331-bypass-gate.sh:1"
+    provider: "scripts/control-tower/d331-bypass-gate.sh:1"
+    consumer: "scripts/pre-push-check.sh:545"
+    test: "tests/control-tower/d331-bypass-gate.test.sh"
+    status: wired
+    owner: P4
+    notes: "#1134：D331 L4-2 判定体（对账基走 resolve-ci-base.sh；缺件 fail-closed）。唯一生产消费者＝pre-push 门禁 7；证据源自证不可审 ⇒ P1，退役触发＝W9 分支保护落地。"

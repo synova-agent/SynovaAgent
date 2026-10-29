@@ -1,0 +1,22 @@
+# .claude/claims/1114.yaml — 门禁配额制 Step 0 · run_by 全量建账
+# #CRITERIA: B ｜ 架构层: 不属五层业务（治理脚本）
+# 声明载体 = 本件（writeset + done 两字段制）；Q1/Q2/Q3 的可读说明见
+# .claude/task-briefs/2026-10-28-1114-runby.md（同批）。
+# 接线状态：本批**无新门禁**——判据扩在既有校验器 scripts/control-tower/check-gate-inventory.sh 内，
+#   该器早已在 pre-commit「附: 治理面自检」段与 CI ①d 上跑（不改接线面）。
+writeset:
+  - docs/authority/GATE-INVENTORY.yaml
+  - scripts/control-tower/check-gate-inventory.sh
+  - tests/control-tower/check-gate-inventory.test.sh
+  - docs/authority/DOCS-REGISTRY.yaml
+  - gate-exemptions/2026-10-28-1114-runby.md
+  - .claude/task-briefs/2026-10-28-1114-runby.md
+  - .claude/claims/1114.yaml
+  - memory/notes/proposed/2026-10-28-1114-runby.md
+done:
+  - verify: bash scripts/control-tower/check-gate-inventory.sh --root .
+  - verify: bash tests/control-tower/check-gate-inventory.test.sh
+  - verify: git diff --numstat gitea/main -- docs/authority/GATE-INVENTORY.yaml
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base main --root .
+  - verify: bash scripts/control-tower/check-merge-conditions.sh
+note: "#1114 Step 0（门禁配额制）：GATE-INVENTORY.yaml 纯追加 run_by: 段（116 件＝classification 40 ＋ probe 29 ＋ 根级 check-*.sh 18 ＋ 子域 gate 名件 29）＋ run_by_candidates 段（run_by=无 的 70 件，M-15 可见）。口径 D1：run_by 五值 pre-commit/gitea-ci/github-ci/npm/无，赋值＝四腿源文本（去注释）逐字命中 basename，优先级 pre-commit>gitea-ci>github-ci>npm；quota:true 只给被 pre-commit/CI 真实调用且语义拦错的 check/verify（当前 39 件）；配额上限与超编清单属 Step 2，本批只建账不封顶。check-gate-inventory.sh 扩 ⑥–⑨ 四类判据（覆盖双向/五值/quota 布尔/M-15 两向/现实一致性），配对测试 ①–⑲ 0 失败含 M-15 两态与两处改坏即红。既有登记行零改写（numstat 删除数 0），未建账未删件。"
