@@ -313,3 +313,29 @@ entries:
     status: wired
     owner: P3
     notes: "岗位包审批审计链（#1075 P3）：role_pack.approved/revoked/scope_changed 三 action 只写 contentHash/scope/approvalId（禁六件正文）；唯一通道＝AuditService（路由不 import src/l4/**）；详情 API 返回 getStore().verifyChain(orgId)（src/routes/role-approvals.ts:198）；链只证事件序、不证记录文件（§10-L2）"
+
+  # ---- P3 整改 R1（2026-10-29）：#1159/8714 第 4 项 —— 补 3 个新增能力件的 defined_at（R1.1 归零）----
+  - capability: agent.approvalCardFrame
+    defined_at: "src/agent/approval-card.ts:119"
+    provider: "src/agent/approval-card.ts:119"
+    consumer: "src/routes/conversations.ts:528"
+    test: "tests/agent/approval-card.test.ts:46"
+    status: wired
+    owner: P3
+    notes: "审批会话卡帧构造（#1075 P3）：纯核 buildApprovalCardFrame —— approved ⇒ scope/permissionsPending 真实值；pending/unverified ⇒ 两者为 null（不谎报 false）；contentHash 读不出 ⇒ null。生产唯一消费者＝审批会话分支（src/routes/conversations.ts:528，open→approval_card→end，不建会话/不跑 LLM）；改坏必红＝删卡帧发送 ⇒ J7 红"
+  - capability: api.rolePacksApproval
+    defined_at: "src/routes/role-approvals.ts:355"
+    provider: "src/routes/role-approvals.ts:471"
+    consumer: "src/server.ts:541"
+    test: "tests/routes/role-approvals.test.ts:369"
+    status: wired
+    owner: P3
+    notes: "岗位包审批读/写 API（#1075 P3）：GET /api/role-packs（:355）＋详情（:381）＋POST approve/revoke（:471）；身份 org/角色（admin/manager/ga）守卫、审计只经 AuditService、写判定在 src/init/role-pack-approval-write.ts（本件不复制）；生产挂载在 jwtAuthMiddleware 之后（src/server.ts:541）；改坏必红＝删身份守卫 ⇒ J1 红"
+  - capability: ui.rolePacksGuidePage
+    defined_at: "src/routes/role-packs-page.ts:378"
+    provider: "src/routes/role-packs-page.ts:378"
+    consumer: "src/server.ts:486"
+    test: "tests/routes/role-packs-page.test.ts:79"
+    status: wired
+    owner: P3
+    notes: "岗位说明书页 HTML 壳（#1075 P3）：零数据静态壳＋token-gate（Bearer 唯一来源 sessionStorage['synova.token']，客户端 textContent 渲染）；**必须先于 jwtAuthMiddleware 挂载**（src/server.ts:486 < 487），否则无 token 页面 401；数据面 GET /api/role-packs* 仍在 JWT 之后；改坏必红＝数据内联进 HTML／挂到 auth 之后 ⇒ J8 红"

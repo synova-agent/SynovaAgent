@@ -71,6 +71,10 @@
 #        docs/authority/WIRING-REGISTRY.yaml／本文件）⇒ 本次新增 7 条，逐条见下方 writeset 末尾 7 行。
 #        WIRING 同文件纯追加 2 行（permission.rolePackApprovalWrite／audit.rolePackApprovalChain）；
 #        triviality 追加 4 条 triage（3 个新增 ≥100 逻辑行模块＋approval-card 同批登记使 legacy 回 baseline）。
+#      ＋ #1075 P3 **整改轮 R1**（2026-10-29 · 退单：CTO 评论 #1159/8714）：
+#        CTO 评论 8714 批准扩写集 2 件（tests/agent/approval-card.test.ts／tests/routes/role-packs-page.test.ts）
+#        ⇒ 已补入下方 writeset；同时 docs/authority/WIRING-REGISTRY.yaml 纯追加 3 条
+#        （agent.approvalCardFrame／api.rolePacksApproval／ui.rolePacksGuidePage，使 CI 质量增量闸 R1.1 归零）。
 writeset:
   - extensions/presets/schema/role-pack-v2.schema.json
   - src/init/role-pack-schema.ts
@@ -137,6 +141,8 @@ writeset:
   - src/server.ts
   - tests/init/role-pack-approval-write.test.ts
   - tests/routes/role-approvals.test.ts
+  - tests/agent/approval-card.test.ts
+  - tests/routes/role-packs-page.test.ts
 done:
   - verify: node node_modules/.bin/vitest run tests/init/role-pack-schema.test.ts
   - verify: node node_modules/.bin/vitest run tests/init/preset-loader.test.ts
