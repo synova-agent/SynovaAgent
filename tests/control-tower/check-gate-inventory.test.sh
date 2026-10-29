@@ -9,6 +9,9 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #       ⑤ 在册件不在盘 ⇒ 1（幽灵）⑥ required_ci=true 未接线 ⇒ 1 ⑦ required_ci=false 却被引用 ⇒ 1
 #       ⑧ 清单缺失 ⇒ 2 ⑨ 零条目 ⇒ 2 ⑩ 无 classification 段 ⇒ 2
 #       ⑪ M-9 P0 低于棘轮 ⇒ 1 ⑫ 改坏必红: 把 class 校验改成恒假 ⇒ ③ 用例变绿（证明判别力）
+#       ⑬ 判不了归 2（#1112 W6 接线）: 子进程异常码经 gate-assert 归一 ——
+#          127（命令不存在）／128（🔴 绝不当 0、也不原样穿透）／137（SIGKILL）／126（不可执行）⇒ 均 2
+#       ⑭ 归一库缺失 ⇒ 2（fail-closed，禁当通过）⑮ 改坏必红: 归一里 128→0（/tmp 副本）⇒ ⑬b 断言失效
 #       ⑬ run_by 缺行 ⇒ 1（枚举面未入账）⑭ run_by 非法五值 ⇒ 1
 #       ⑮ M-15 两态：删候选行 ⇒ 1 点名；补回 ⇒ 0（无主件不得静默留存）
 #       ⑯ quota 非布尔 ⇒ 1 ⑰ 盘上新件未入 run_by ⇒ 1
@@ -18,7 +21,9 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 set -uo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 S="$REPO/scripts/control-tower/check-gate-inventory.sh"
+GA="$REPO/scripts/control-tower/gate-assert.sh"
 [ -f "$S" ] || { echo "❌ 被测件不存在: $S"; exit 2; }
+[ -f "$GA" ] || { echo "❌ 归一库不存在: $GA"; exit 2; }
 PASS=0; FAIL=0
 ok(){ echo "  ✅ $1"; PASS=$((PASS+1)); }
 no(){ echo "  ❌ $1"; FAIL=$((FAIL+1)); }
@@ -151,11 +156,50 @@ printf '%s' "$OUT" | grep -q "棘轮下限" && ok "⑪ 点名棘轮" || no "⑪ 
 echo "── ⑫ 改坏必红：class 校验改成恒假 ⇒ ③ 用例变绿（判别力）──"
 MUT="$TMPD/mutant.sh"
 sed 's|if cls not in ("P0", "P1", "P2"):  # @mutate-point: class|if False:  # mutant|' "$S" > "$MUT"
+# 🔴 #1112 接线后被测件依赖同目录 gate-assert.sh（归一入口）⇒ 变异体必须与归一库同目录，
+#   否则判不了（exit 2）会掩盖「class 判据被改坏」这一个变量（本用例只许变一个变量）。
+cp "$GA" "$TMPD/gate-assert.sh"
 grep -q "mutant" "$MUT" && ok "⑫ 变异点已注入" || no "⑫ 变异点未命中"
 OUT="$(SYNO_P0_FLOOR=1 bash "$MUT" --root "$D3" 2>&1)"; RC_MUT=$?
 [ "$RC_MUT" -eq 0 ] && ok "⑫ 变异后 ③ 用例变绿 ⇒ 若有人如此改坏，③ 必红" \
   || no "⑫ 期望变异体 exit 0 实得 $RC_MUT（$OUT）"
 
+echo "── ⑳ 判不了归 2（#1112 W6 接线）：子进程异常码一律经 gate-assert 归一 ──"
+# 注入缝 = PATH 前置**假 python3**（真执行路径，不 mock shell 函数）：假件自己 exec 不存在/退出异常码。
+FAKE="$TMPD/fake"; mkdir -p "$FAKE/missing" "$FAKE/c126" "$FAKE/c128" "$FAKE/c137"
+printf '#!/bin/sh\nexec /__synova_ga_no_such_interpreter__ "$@"\n' > "$FAKE/missing/python3"
+printf '#!/bin/sh\nexit 126\n' > "$FAKE/c126/python3"
+printf '#!/bin/sh\nexit 128\n' > "$FAKE/c128/python3"
+printf '#!/bin/sh\nexit 137\n' > "$FAKE/c137/python3"
+chmod +x "$FAKE/missing/python3" "$FAKE/c126/python3" "$FAKE/c128/python3" "$FAKE/c137/python3"
+run_inject() { # <假bin目录> <夹具root> → OUT/RC（2>&1 合并，便于同时判点名行）
+  OUT="$(PATH="$1:$PATH" SYNO_P0_FLOOR=1 bash "$S" --root "$2" 2>&1)"; RC=$?
+}
+run_inject "$FAKE/missing" "$D1"
+[ "$RC" -eq 2 ] && ok "⑳a 子进程命令不存在（127）⇒ exit 2（判不了）" || no "⑳a 期望 2 实得 $RC（$OUT）"
+printf '%s' "$OUT" | grep -q "判据故障: 127" && ok "⑳a 点名「判据故障: 127」（经 ga_run 归一）" || no "⑳a 未点名 127（$OUT）"
+run_inject "$FAKE/c128" "$D1"
+[ "$RC" -eq 2 ] && ok "⑳b 子进程 128 ⇒ exit 2（🔴 关键：绝不当 0，也不原样穿透 128）" || no "⑳b 期望 2 实得 $RC（$OUT）"
+printf '%s' "$OUT" | grep -q "判据故障: 128" && ok "⑳b 点名「判据故障: 128」" || no "⑳b 未点名 128（$OUT）"
+run_inject "$FAKE/c137" "$D1"
+[ "$RC" -eq 2 ] && ok "⑳c 子进程 137（SIGKILL 语义码）⇒ exit 2" || no "⑳c 期望 2 实得 $RC（$OUT）"
+run_inject "$FAKE/c126" "$D1"
+[ "$RC" -eq 2 ] && ok "⑳d 子进程 126（不可执行/权限）⇒ exit 2" || no "⑳d 期望 2 实得 $RC（$OUT）"
+
+echo "── ㉑ 归一库缺失 ⇒ exit 2（fail-closed，禁当通过）──"
+NOLIB="$TMPD/nolib"; mkdir -p "$NOLIB"; cp "$S" "$NOLIB/check-gate-inventory.sh"
+OUT="$(SYNO_P0_FLOOR=1 bash "$NOLIB/check-gate-inventory.sh" --root "$D1" 2>&1)"; RC=$?
+[ "$RC" -eq 2 ] && ok "㉑ 缺 gate-assert.sh ⇒ exit 2" || no "㉑ 期望 2 实得 $RC（$OUT）"
+printf '%s' "$OUT" | grep -q "判据归一库缺失" && ok "㉑ 点名「判据归一库缺失」" || no "㉑ 未点名（$OUT）"
+
+echo "── ㉒ 改坏必红（纪律③）：归一里 128 分支改成 0（/tmp 副本）⇒ ⑳b 同一断言失效 ──"
+MUTD="$TMPD/mutlib"; mkdir -p "$MUTD"
+cp "$S" "$MUTD/check-gate-inventory.sh"
+sed 's/^    128).*/    128) printf 0 ;;/' "$GA" > "$MUTD/gate-assert.sh"
+grep -q '128) printf 0' "$MUTD/gate-assert.sh" && ok "㉒ 变异点已注入（归一 128 ⇒ 0）" || no "㉒ 变异点未命中 128 分支"
+OUT="$(PATH="$FAKE/c128:$PATH" SYNO_P0_FLOOR=1 bash "$MUTD/check-gate-inventory.sh" --root "$D1" 2>&1)"; RC_M=$?
+[ "$RC_M" -eq 0 ] && ok "㉒ 归一改坏后 128 被当通过（⇒ ⑳b 必红；证明归一入口承重）" \
+  || no "㉒ 期望变异体 exit 0 实得 $RC_M（$OUT）—— ⑳b 对该变异无判别力"
 echo "── ⑬ run_by 缺行（枚举面未入账）⇒ exit 1 ──"
 D13="$TMPD/rb-missing"; mkfix "$D13"
 sed -i '/^  - entrypoint: scripts\/control-tower\/check-a\.sh$/,+2d' "$D13/docs/authority/GATE-INVENTORY.yaml"
@@ -164,9 +208,9 @@ run "$D13"
 printf '%s' "$OUT" | grep -q "run_by 缺行" && ok "⑬ 点名缺行" || no "⑬ 未点名（$OUT）"
 printf '%s' "$OUT" | grep -q "check-a.sh" && ok "⑬ 点名该件" || no "⑬ 未点名该件（$OUT）"
 
-echo "── ⑭ run_by 非法值（pre-push ∉ 五值）⇒ exit 1 ──"
+echo "── ⑭ run_by 非法值（post-commit ∉ 六值）⇒ exit 1 ──"
 D14="$TMPD/rb-illegal"; mkfix "$D14"
-sed -i 's/^    run_by: gitea-ci$/    run_by: pre-push/' "$D14/docs/authority/GATE-INVENTORY.yaml"
+sed -i 's/^    run_by: gitea-ci$/    run_by: post-commit/' "$D14/docs/authority/GATE-INVENTORY.yaml"
 run "$D14"
 [ "$RC" -eq 1 ] && ok "⑭ exit 1" || no "⑭ 期望 1 实得 $RC（$OUT）"
 printf '%s' "$OUT" | grep -q "run_by 非法" && ok "⑭ 点名非法值" || no "⑭ 未点名（$OUT）"

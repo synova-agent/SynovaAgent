@@ -40,6 +40,9 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #           P0 低于棘轮／run_by 非法或缺行／quota 非布尔／`无` 未进候选／run_by 账实不符）
 #           2 = 判不了（清单缺失·不可读·**零条目**·classification 段缺失·python3 不可用）
 #           🔴 三态铁律：2 绝不等于通过（信号量==0 ⇒ exit 2）
+#           🔴 归一入口（#1112 / W6 接线）：判据子进程的原始退出码一律经 `gate-assert.sh` 的 `ga_run`
+#           归一（`ga_normalize_code` 是唯一真源）⇒ 128／137／126／白名单外码**不会原样穿透**成本器
+#           退出码，一律归 2 并打 `判据故障: <code>`；本器自身无第二份「码 → 三态」表。
 #   @degraded stderr `degraded: <CODE> — <原因>` ＋ 追加 JSON 到 SYNO_GATE_DEGRADED_LOG
 #           （time/component/code/phase/retryable；铁律 11/32）
 #   @error  code ∈ {E_USAGE, E_NO_PYTHON, E_INV_MISSING, E_SECTION_MISSING, E_EMPTY, E_INTERNAL}
@@ -105,7 +108,17 @@ PYBIN="$(command -v python3 2>/dev/null)"  # swallow-ok: 缺失由下一行显�
 [ -f "$INV" ] || degraded E_INV_MISSING "清单不存在: $INV"
 [ -r "$INV" ] || degraded E_INV_MISSING "清单不可读: $INV"
 
-OUT="$("$PYBIN" - "$INV" "$ROOT" "$P0_FLOOR" "$JSON" <<'PYEOF'
+# ── 🔴 判不了归 2：归一入口（#1112 / W6 接线）─────────────────────────────────
+# 判据子进程的原始退出码**一律**交给 `ga_run` 归一：0 透传／1 透传／2 透传，
+# 128／137／126／白名单外码 ⇒ 2 并打 `判据故障: <code>`（禁原样穿透成本器退出码）。
+# 归一真源 = 邻件 gate-assert.sh（禁在本器抄第二份 case）；库缺失 ⇒ 判不了 ⇒ 2（fail-closed）。
+LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"  # swallow-ok: 取不到时下一行按「库缺失」degraded exit 2
+GA_LIB="${LIB_DIR:+$LIB_DIR/gate-assert.sh}"
+{ [ -n "$GA_LIB" ] && [ -f "$GA_LIB" ]; } || degraded E_INTERNAL "判据归一库缺失（判不了 ⇒ 2）: ${GA_LIB:-<脚本目录不可解析>}"
+# shellcheck source=scripts/control-tower/gate-assert.sh
+. "$GA_LIB" || degraded E_INTERNAL "判据归一库不可载入（判不了 ⇒ 2）: $GA_LIB"
+
+OUT="$(ga_run "check-gate-inventory" -- "$PYBIN" - "$INV" "$ROOT" "$P0_FLOOR" "$JSON" <<'PYEOF'
 import glob, json, os, re, sys
 inv_path, root, floor_s, json_mode = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4] == "1"
 viol, ok = [], []
@@ -350,11 +363,12 @@ RC=$?
 printf '%s\n' "$OUT"
 if [ "$RC" -eq 2 ]; then
   CODE="$(printf '%s' "$OUT" | grep -oE 'E_[A-Z_]+' | head -1)"
-  echo "degraded: ${CODE:-E_INTERNAL} — 见上（判不了 ≠ 通过）" >&2
+  echo "degraded: ${CODE:-E_INTERNAL} — 见上（判不了 ≠ 通过；经 gate-assert 归一后三态=2，原码点名见 stderr「判据故障」行）" >&2
   if mkdir -p "$(dirname "$DEG_LOG")" 2>/dev/null; then  # swallow-ok: 目录不可建已由上方 stderr 可见
     printf '{"time":"%s","component":"check-gate-inventory","code":"%s","phase":"parse","retryable":true}\n' \
       "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${CODE:-E_INTERNAL}" >> "$DEG_LOG" 2>/dev/null || true  # swallow-ok: 日志失败不改判定
   fi
   exit 2
 fi
+# RC 已由 ga_run 归一到 {0,1,2}（128/137/126/白名单外码不会走到这里）⇒ 原样透传三态
 exit "$RC"
