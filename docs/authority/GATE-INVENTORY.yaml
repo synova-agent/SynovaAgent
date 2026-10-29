@@ -1727,3 +1727,840 @@ run_by_candidates:
     why: "实际运行腿=scripts/hooks/hook-enforce-loop.sh（PostToolUse 钩子），不在本五值枚举内 ⇒ 记 无 待裁"
   - entrypoint: scripts/control-tower/verify-governance.sh
     why: "#1122 总闸最小可跑版：尚未接线（写集不含 pre-commit/CI），显式调用才跑 ⇒ 记 无；接线后改 wired 并补真实腿"
+
+gate_meta:
+  measured_at: 9ec742523
+  class_default: P2  # 非 classification 条目（无 class 声明）的默认级；P0/P1 只来自 classification
+  legacy_sections:
+    - name: meta
+      reason: "历史统计段（schema_version / 计数口径），非门禁登记"
+    - name: gates
+      reason: "历史门禁行级盘点（checkpoint 视角），已由 classification 取代"
+    - name: checkers
+      reason: "历史检查器清单（35 条旧口径），已由 classification(41) 取代"
+    - name: pairing
+      reason: "历史配对声明（旧扫描产物），非登记面"
+    - name: candidates
+      reason: "历史候选（T1/T2/T3），已由 run_by_candidates 取代"
+    - name: run_by_candidates
+      reason: "S0 退役候选（run_by=无 的可见化面），非元数据"
+  rows:
+    - entrypoint: scripts/check-acceptance-ci.sh
+      class: P2
+      run_by: pre-commit
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/check-architecture.sh
+      class: P2
+      run_by: gitea-ci
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/check-as-any.sh
+      class: P2
+      run_by: npm
+      orphan: false
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/check-bridge-files.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/check-brief-vs-code.sh
+      class: P2
+      run_by: github-ci
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/check-content-coupling.sh
+      class: P2
+      run_by: pre-commit
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/check-deprecated-mapping.sh
+      class: P2
+      run_by: pre-commit
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/check-fde-terms.sh
+      class: P2
+      run_by: npm
+      orphan: false
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/check-file-driven.sh
+      class: P2
+      run_by: pre-commit
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/check-hardcoded.sh
+      class: P2
+      run_by: pre-commit
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/check-integrity-startup.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/check-lessons-learned.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/check-plan-integrity.sh
+      class: P2
+      run_by: pre-commit
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/check-q0c-tracking.sh
+      class: P2
+      run_by: pre-commit
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/check-secrets.sh
+      class: P2
+      run_by: pre-commit
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/check-security.sh
+      class: P2
+      run_by: npm
+      orphan: false
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/check-tech-debt.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/check-verifiable-done.sh
+      class: P2
+      run_by: pre-commit
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/ci/check-contract-gaps.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/ci/diagnosis-quality-check.sh
+      class: P2
+      run_by: github-ci
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/ci/golden-case-checker.ts
+      class: P2
+      run_by: github-ci
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/ci/verify-d703.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/ci/verify-doc.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-acceptance-matrix.py
+      class: P1
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-block-paths.sh
+      class: P0
+      run_by: pre-commit
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-block-paths.ts
+      class: P0
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-board-metrics.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-board-truth.ts
+      class: P2
+      run_by: gitea-ci
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-bypass-log.sh
+      class: P1
+      run_by: pre-push
+      orphan: false
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-canary-drift.sh
+      class: P1
+      run_by: github-ci
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-ci-empty-green.sh
+      class: P1
+      run_by: gitea-ci
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-ci-stale-red.sh
+      class: P1
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-citations.py
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-customer-deps.ts
+      class: P0
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-doc-contract.sh
+      class: P2
+      run_by: pre-commit
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-dsh-anchor.py
+      class: P2
+      run_by: pre-commit
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-dual-repo-sync.sh
+      class: P1
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-fixture-requires.sh
+      class: P2
+      run_by: github-ci
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-gate-integrity.sh
+      class: P0
+      run_by: github-ci
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-gate-inventory.sh
+      class: P1
+      run_by: pre-commit
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-gate-protection.sh
+      class: P0
+      run_by: gitea-ci
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-gitlinks.sh
+      class: P1
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-k3-report.py
+      class: P1
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-merge-conditions.sh
+      class: P0
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-mirror-freshness.sh
+      class: P1
+      run_by: pre-commit
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-name-allocation.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-notes-lifecycle.sh
+      class: P2
+      run_by: pre-commit
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-ontology-fields.sh
+      class: P1
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-orphan-worktrees.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-ownership.py
+      class: P1
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-package-selfsufficiency.py
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-pr-budget.sh
+      class: P1
+      run_by: pre-commit
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-preset-bundles.sh
+      class: P1
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-project-coordinates.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-quality-delta.py
+      class: P1
+      run_by: pre-commit
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-registry-invariants.ts
+      class: P1
+      run_by: gitea-ci
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-required-contexts.py
+      class: P0
+      run_by: github-ci
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-sentinel-type-net.sh
+      class: P1
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-test-obligations.py
+      class: P1
+      run_by: gitea-ci
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-tool-args-delta.py
+      class: P1
+      run_by: pre-commit
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-unicode-confusable.py
+      class: P0
+      run_by: pre-commit
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-approval-seam.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-bundle-content.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-compute-registry.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-content-layering.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-content-registry.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-content-reload.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-cycle-edges.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-cycle-valves.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-decision-ledger.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-delivery-hygiene.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-department-axis.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-evolution-writeback.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-exile-compile.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-exile-crosscheck.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-knowledge-scope.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-ladder.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-line-signals.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-notification-registry.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-onboarding.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-ontology-instances.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-ontology-values.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-output-contract.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-packaging.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-permission-grants.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-rbac-multitenant.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-role-config.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-role-pack.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-sentinel.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-skills.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/verify-claims-table.sh
+      class: P1
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/verify-governance.sh
+      class: P1
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/verify-parallel.sh
+      class: P2
+      run_by: pre-push
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/doc-system/check-doc-truth.sh
+      class: P2
+      run_by: pre-commit
+      orphan: false
+      quota: true
+      quota_scope: doc
+      nature: mechanical
+    - entrypoint: scripts/doc-system/doc-registry-gate.sh
+      class: P2
+      run_by: pre-commit
+      orphan: false
+      quota: true
+      quota_scope: doc
+      nature: mechanical
+    - entrypoint: scripts/workflow/check-boundaries-incremental.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/workflow/check-brief-parseable.sh
+      class: P2
+      run_by: pre-commit
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/workflow/check-brief-vs-code.sh
+      class: P2
+      run_by: github-ci
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/workflow/check-dataflow-alignment.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/workflow/check-dev-doc-write-set.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/workflow/check-golden-regression.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/workflow/check-integration.sh
+      class: P2
+      run_by: github-ci
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/workflow/check-self-diagnosis.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/workflow/check-silent-swallow.sh
+      class: P2
+      run_by: pre-commit
+      orphan: false
+      quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/workflow/check-spec.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/workflow/check-test-first.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/workflow/checkpoint-deploy.sh
+      class: P2
+      run_by: npm
+      orphan: false
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/workflow/checkpoint-design.sh
+      class: P2
+      run_by: npm
+      orphan: false
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/workflow/checkpoint-impl.sh
+      class: P2
+      run_by: npm
+      orphan: false
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/workflow/checkpoint-runtime.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/workflow/hook-block-write.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/workflow/hook-check-task-scope.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/workflow/log-no-verify.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/workflow/scope-check.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/workflow/sop-gate.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/workflow/verify-incremental.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/workflow/wire-check.sh
+      class: P2
+      run_by: npm
+      orphan: false
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
