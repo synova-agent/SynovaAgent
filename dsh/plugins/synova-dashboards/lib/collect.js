@@ -252,7 +252,7 @@ function parseMPatterns(text) {
 async function collectHealth(root) {
   const [bypassText, failText, ledgerText, ctoText] = await Promise.all([
     readText(root, ".claude/bypass.log"),
-    readText(root, ".claude/pre-commit-failures.log"),
+    readText(root, ".synova/logs/pre-commit-failures.log").then((t) => t || readText(root, ".claude/pre-commit-failures.log")),
     readText(root, "docs/synova/coordination/AUDIT-FINDINGS-LEDGER.md"),
     readText(root, "docs/synova/CTO-HEALTH.md")
   ]);

@@ -32,7 +32,7 @@ done
 #             环境变量（测试注入缝）:
 #               SYNO_LOG_SNAPSHOT_DIR        快照根（默认 $ROOT/.codex/snapshots/log-archive）
 #               SYNO_LOG_GATE_HITS           默认 $ROOT/.claude/gate-hits.log
-#               SYNO_LOG_PRECOMMIT_FAILURES  默认 $ROOT/.claude/pre-commit-failures.log
+#               SYNO_LOG_PRECOMMIT_FAILURES  默认 $ROOT/.synova/logs/pre-commit-failures.log（legacy .claude/ 只读回落）
 #               SYNO_LOG_DEGRADED            默认 $ROOT/.codex/control-tower/logs/degraded-events.log
 #               SYNO_LOG_DEAD_DEGRADED       默认 $ROOT/.claude/degraded-events.log（死文件检测位）
 #   @output — stdout 每件一行 TSV: name<TAB>state<TAB>bytes<TAB>lines<TAB>snapshot<TSV>note
@@ -70,7 +70,8 @@ done
 
 SNAPSHOT_DIR="${SYNO_LOG_SNAPSHOT_DIR:-$ROOT/.codex/snapshots/log-archive}"
 GATE_HITS="${SYNO_LOG_GATE_HITS:-$ROOT/.claude/gate-hits.log}"
-PRECOMMIT_FAILURES="${SYNO_LOG_PRECOMMIT_FAILURES:-$ROOT/.claude/pre-commit-failures.log}"
+PRECOMMIT_FAILURES="${SYNO_LOG_PRECOMMIT_FAILURES:-$ROOT/.synova/logs/pre-commit-failures.log}"
+_LEGACY_LOG_DIR="$ROOT/.claude"; [ -f "$PRECOMMIT_FAILURES" ] || { _LG="$_LEGACY_LOG_DIR/pre-commit-failures.log"; [ -f "$_LG" ] && { PRECOMMIT_FAILURES="$_LG"; echo "::warning: 使用 legacy 路径 $PRECOMMIT_FAILURES" >&2; }; }
 DEGRADED_LIVE="${SYNO_LOG_DEGRADED:-$ROOT/.codex/control-tower/logs/degraded-events.log}"
 DEGRADED_DEAD="${SYNO_LOG_DEAD_DEGRADED:-$ROOT/.claude/degraded-events.log}"
 

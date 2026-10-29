@@ -91,6 +91,7 @@ API = "https://api.github.com"
 NOISE_PATHS = {
     ".claude/bypass.log",
     ".claude/pre-commit-failures.log",
+    ".synova/logs/pre-commit-failures.log",
     ".claude/reference-map.md",
 }
 

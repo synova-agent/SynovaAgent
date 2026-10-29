@@ -1,0 +1,22 @@
+issue: 1146
+branch: chore/decouple-install-hooks-logs
+base: main
+writeset:
+  - scripts/install-hooks.sh
+  - scripts/hooks/post-commit.sh
+  - scripts/pre-commit-check.sh
+  - scripts/workflow/loop-context.sh
+  - scripts/control-tower/log-snapshot.sh
+  - scripts/control-tower/gen-cto-health.py
+  - scripts/project/pr-queue-scan.py
+  - scripts/check-fde-terms.sh
+  - dsh/plugins/synova-dashboards/lib/collect.js
+  - .gitignore
+  - .claude/task-briefs/2026-10-29-1146-decouple-install-hooks.md
+  - .claude/claims/1146.yaml
+  - memory/notes/proposed/2026-10-29-decouple-install-hooks.md
+  - gate-exemptions/2026-10-29-decouple-install-hooks.md
+done:
+  - verify: "grep -rn 'ROOT/\.claude/\(pre-commit-failures\|gate-soft-warnings\|last-precommit-success\)' scripts/ | wc -l"
+  - verify: "bash scripts/install-hooks.sh"
+note: "门禁运行时日志改工具中立 .synova/logs/；legacy .claude/ 只读回落带 warning；不迁移历史文件、不改判据语义。"

@@ -89,6 +89,8 @@ evidence/
 # 树级守门: scripts/control-tower/check-gitlinks.sh（三态退出）+ 密封测试入 ci.yml。
 .synova-wt-*
 .sessions/
+# 门禁运行时日志（工具中立路径，替代 .claude/）
+.synova/logs/
 # 交付件出件目录（各线交付正文/证据落盘处）—— 运行期产物不进版本控制（判例 M-05；
 # 且避免文档登记门禁（D782/D2）把出件目录里的 .md 判为「未登记文档」）
 .synova-out/
