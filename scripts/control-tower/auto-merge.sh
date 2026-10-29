@@ -4,7 +4,7 @@
 #
 # @input   环境: GITEA_TOKEN（或 ~/gitea/.win-push-token）
 #          文件: .gitea/protected-files.txt（受保护清单）
-#          可选: SYNO_AUTO_MERGE_BASE（check-merge-conditions 的 base，默认 gitea/local-main）
+#          可选: SYNO_AUTO_MERGE_BASE（check-merge-conditions 的 base；缺省由该器按 trunk 解析：SYNO_TRUNK_REF 缺省 main ⇒ gitea/main）
 # @output  每个 open PR 一行判定：`AUTO-MERGE: <pr> 可自动合` / `SKIP <pr>: <原因>`
 # @exit    0 = 正常（含无可合项）；1 = --apply 时有 PR 合并失败；2 = 自身失败（E_TOKEN/E_NET/E_GIT）
 # @degraded 无 token ⇒ `E_TOKEN`；环境不可用 ⇒ `E_ENV`；git 不可用 ⇒ `E_GIT`；网络/API ⇒ `E_NET`；合并被拒 ⇒ `E_MERGE`

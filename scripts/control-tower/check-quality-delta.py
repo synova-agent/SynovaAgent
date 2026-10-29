@@ -10,7 +10,8 @@
 #   @input   git 仓库（--root）＋ 变更集来源（三选一）:
 #              --staged        `git diff --cached`（本地 pre-commit 用）
 #              --base <ref>    `git diff <merge-base(base,HEAD)>...HEAD`（CI 用；默认取 $SYNO_DIFF_BASE）
-#              皆未给 → base 解析链：$SYNO_DIFF_BASE → origin/local-main → local-main → HEAD~1
+#              皆未给 → base 解析链：$SYNO_DIFF_BASE → gitea/$TRUNK → origin/$TRUNK → $TRUNK → HEAD~1
+#                        （TRUNK=$SYNO_TRUNK_REF，缺省 main）
 #            辅助件: docs/authority/WIRING-REGISTRY.yaml（G1）、docs/authority/quality-delta-whitelist.yaml（A3）
 #            G5 专用（#913 PR-3 · 裁 405）:
 #              --coverage-summary <path>  istanbul coverage-summary.json（默认 coverage/coverage-summary.json）
@@ -142,6 +143,8 @@ except (AttributeError, ValueError):
     pass
 
 COMPONENT = "check-quality-delta"
+# trunk 名唯一来源（#1117 §6.1）：改 trunk 名只改本契约，不在各处自造字面
+TRUNK = os.environ.get("SYNO_TRUNK_REF", "").strip() or "main"
 CODE_EXT = (".ts", ".tsx", ".js", ".mjs", ".cjs", ".py", ".sh")
 CODE_ROOTS = ("src/", "packages/", "scripts/", "tests/")  # tests/ 也是"代码"（G3 对象；G1 另有排除）
 # 非代码面（文档/声明/证据）：过滤后为空 ⇒ SKIP（A1）
@@ -188,7 +191,8 @@ def git(root: str, *args: str) -> str:
 
 
 def resolve_base(root: str) -> str:
-    cands = [os.environ.get("SYNO_DIFF_BASE", ""), "origin/local-main", "local-main", "HEAD~1"]
+    cands = [os.environ.get("SYNO_DIFF_BASE", ""), "gitea/" + TRUNK,
+             "origin/" + TRUNK, TRUNK, "HEAD~1"]
     for c in cands:
         c = (c or "").strip()
         if not c:
@@ -197,7 +201,9 @@ def resolve_base(root: str) -> str:
                            capture_output=True, text=True)
         if p.returncode == 0:
             return c
-    raise DeltaError("E_BAD_BASE", "base 解析链全不可解析（$SYNO_DIFF_BASE/origin/local-main/local-main/HEAD~1）")
+    raise DeltaError("E_BAD_BASE",
+                     "base 解析链全不可解析（$SYNO_DIFF_BASE/gitea/%s/origin/%s/%s/HEAD~1）"
+                     % (TRUNK, TRUNK, TRUNK))
 
 
 def change_set(root: str, base: Optional[str], staged: bool) -> Tuple[List[str], List[str], str]:
@@ -794,7 +800,7 @@ def degraded(code: str, msg: str) -> None:
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="质量增量闸（G1/G3/G4/G5 · 只判变更集）")
     ap.add_argument("--root", default=None, help="仓库根（默认 git toplevel）")
-    ap.add_argument("--base", default=None, help="base ref（默认 $SYNO_DIFF_BASE → origin/local-main → local-main → HEAD~1）")
+    ap.add_argument("--base", default=None, help="base ref（默认 $SYNO_DIFF_BASE → gitea/%s → origin/%s → %s → HEAD~1）" % (TRUNK, TRUNK, TRUNK))
     ap.add_argument("--staged", action="store_true", help="用暂存区作为变更集（本地 pre-commit）")
     ap.add_argument("--registry", default=None, help=f"接线登记表（默认 {API_FILES[0]}）")
     ap.add_argument("--whitelist", default=None, help=f"白名单（默认 {DEFAULT_WHITELIST}）")

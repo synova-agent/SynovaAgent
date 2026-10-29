@@ -39,7 +39,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #            默认 = **状态断言**（脚本进 tests/ 后由 sealed 发现制每次 CI 跑 ⇒ 必须永远可判、
 #                   不依赖 git diff、退出 0；⑥/③c/写集漂移 显式 ⏭️ SKIP）
 #            --with-diff [base] = 一次性差分模式（PR 正文证据）。base 省略时按 BASE 链取第一个
-#              可解析者: SYNO_BASE_REF → GITHUB_BASE_REF → gitea/local-main → origin/local-main → HEAD^
+#              可解析者: SYNO_BASE_REF → GITHUB_BASE_REF → gitea/main → origin/main → HEAD^
 #              （git rev-parse --verify -q "$ref^{commit}"）；全不可解析 ⇒ exit 2 ＋ degraded
 # @输入    环境注入缝（生产有默认值；沙箱/测试用）:
 #            SYNO_GATE_BASELINE        隔离台账（默认 scripts/control-tower/gate-integrity-baseline.txt）
@@ -108,7 +108,7 @@ degrade() { # $1=code $2=phase $3=原因
 is_uint() { case "$1" in ''|*[!0-9]*) return 1 ;; *) return 0 ;; esac; }
 
 # BASE 链（dev doc §5 口径：门禁类命令必须给 base，否则会看到"继承态红"）：
-#   SYNO_BASE_REF → GITHUB_BASE_REF → gitea/local-main → origin/local-main → HEAD^
+#   SYNO_BASE_REF → GITHUB_BASE_REF → gitea/main → origin/main → HEAD^
 #   输出第一个可解析 ref（空输出 + rc=1 = 全不可解析）。同一链供 --with-diff 与 ③ sealed 判定复用。
 resolve_base_ref() {
   for _ref in "$@"; do
@@ -149,9 +149,9 @@ if [ "$MODE" = "diff" ]; then
       || degrade "E_BASE_UNRESOLVABLE" "resolve-base" "显式 base 不可解析: $BASE_ARG"
     BASE="$BASE_ARG"
   else
-    BASE="$(resolve_base_ref "${SYNO_BASE_REF:-}" "${GITHUB_BASE_REF:-}" gitea/local-main origin/local-main HEAD^)" \
+    BASE="$(resolve_base_ref "${SYNO_BASE_REF:-}" "${GITHUB_BASE_REF:-}" gitea/main origin/main HEAD^)" \
       || degrade "E_BASE_CHAIN_EMPTY" "resolve-base" \
-        "base 链全不可解析（SYNO_BASE_REF/GITHUB_BASE_REF/gitea-local-main/origin-local-main/HEAD^）"
+        "base 链全不可解析（SYNO_BASE_REF/GITHUB_BASE_REF/gitea-main/origin-main/HEAD^）"
   fi
   echo "── 模式: --with-diff（base=${BASE}）──"
 else
@@ -274,7 +274,7 @@ FT_REL="tests/control-tower/founder-truth.test.sh"
 #   diff 模式直接用已解析 BASE；状态模式按同一链现取（取不到则不注入，交给 sealed 的"未给 base"语义 + rc 判定）。
 SEALED_BASE="${BASE}"
 if [ -z "$SEALED_BASE" ]; then
-  SEALED_BASE="$(resolve_base_ref "${SYNO_BASE_REF:-}" "${GITHUB_BASE_REF:-}" gitea/local-main origin/local-main HEAD^)" || SEALED_BASE=""
+  SEALED_BASE="$(resolve_base_ref "${SYNO_BASE_REF:-}" "${GITHUB_BASE_REF:-}" gitea/main origin/main HEAD^)" || SEALED_BASE=""
 fi
 SYNO_BASE_REF="$SEALED_BASE" bash "$SEALED" --quarantine > "$EVID_DIR/03-sealed-quarantine.out" 2> "$EVID_DIR/03-sealed-quarantine.err"; Q_RC=$?
 SYNO_BASE_REF="$SEALED_BASE" bash "$SEALED" --list > "$EVID_DIR/03-sealed-list.out" 2> "$EVID_DIR/03-sealed-list.err"; L_RC=$?

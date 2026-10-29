@@ -1467,3 +1467,10 @@ documents:
     status: active
     owner: P4
     note: "#1122（Step 1）：scripts/control-tower/verify-governance.sh（G2 遥测 ran 判定 / G6 复用 ga_run 归一 / G10 同形字两态）＋ tests/control-tower/verify-governance.test.sh（配对测试 T0 至 T16）受保护路径豁免；判不了 exit 2、遥测缺失 SKIP 不计 PASS；本批未接线（WIRING=declared-only）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+  # ---- P4 2026-10-29：#1117 主树 main 迁移残余批豁免登记（DOC-1117＝按裁定 A 随 Issue#；0323/#1108、0324/#1115、0325/#1124 已占）----
+  - id: DOC-1117
+    type: decision
+    path: gate-exemptions/2026-10-29-1117-trunk-main.md
+    status: active
+    owner: P4
+    note: "#1117（残余批）：trunk 名单源 SYNO_TRUNK_REF（缺省 main），21 件代码＋11 件配对测试切 main，推送端 bypass 基链与控制塔 base 链统一；main 保护段逐字不动，三态/判据强度/门禁组数不变；含 L1 批准扩写集 2 件配对夹具；豁免自覆盖＋DOCS-REGISTRY 自登记。"

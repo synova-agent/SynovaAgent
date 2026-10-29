@@ -96,14 +96,15 @@ for _c in python3 python py; do  # PYBIN 三级探测（PLATFORM-CHECKLIST #1；
   if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then PYBIN="$_c"; break; fi
 done
 
-# ═══ CTO 2026-10-11 裁定：基线优先取 **local-main**（集成分支）═══
-# 事由：本地 CI 的 origin/main 是 **GitHub 的旧 main**（停在 05a6591c4），
+# ═══ 基线优先取 **trunk（缺省 main，可由 SYNO_TRUNK_REF 覆盖）**（集成分支）═══
+# 事由：本地 CI 的 origin/main 曾是 **GitHub 的旧 main**（停在 05a6591c4），
 #   拿"集成分支账本总额"当"PR 预算"判 ⇒ **必然恒红**（实测 100 件增/改 · 115 件白名单外）
 #   ⇒ 红灯失去信息量（"被绕过的门禁 = 没有门禁"，历史病根）。
-# 正解：D734 是"PR 预算"——对着 **PR 的 base** 判才有意义；本地 CI 的 PR base 就是 **local-main**。
-#   ⇒ 优先 origin/local-main（不存在时回退 origin/main，保持对其他环境的兼容）。
+# 正解：D734 是"PR 预算"——对着 **PR 的 base** 判才有意义；本地 CI 的 PR base 就是 **trunk**。
+#   ⇒ 回退链 gitea/$TRUNK → $TRUNK → origin/$TRUNK → origin/HEAD（TRUNK=${SYNO_TRUNK_REF:-main}）。
 # 覆盖方式：环境变量 SYNO_PR_BUDGET_BASE=<ref>（显式指定基线）。
 BASE="${SYNO_PR_BUDGET_BASE:-}"
+TRUNK="${SYNO_TRUNK_REF:-main}"
 MAX_FILES=12
 MAX_BEHIND=20
 FILES_OVERRIDE=""
@@ -156,21 +157,21 @@ else
     echo "❌ 检查执行失败: 非 git 仓库且未提供 --files/--diff-status（fail-closed）" >&2
     exit 2
   fi
-  # 基线解析链（origin/main 首选；独立 clone / 浅克隆下回退）。全不可解析 → **显式降级跳过**，
+  # 基线解析链（gitea/$TRUNK 首选；独立 clone / 浅克隆下回退）。全不可解析 → **显式降级跳过**，
   # 不 exit 2 —— 沿用 pre-push 门禁 0-1 对「fetch 失败」的既有语义（显式提示 + 不静默跳过），
   # 避免环境性缺 ref 把所有 PR 误打成红（fail-open 但留痕；铁律 11 不静默）。
-  # 🔴 2026-10-12 修基线序（CTO P0 裁定）: `origin/local-main` 是 **GitHub 侧陈旧引用**
+  # 🔴 2026-10-12 修基线序（CTO P0 裁定）: GitHub 侧 `origin/` 的旧集成分支引用是 **陈旧引用**
   #   （实测停于 28ae513dc，落后 gitea 侧 111 提交）⇒ 回退取它 ⇒ 任何 PR 都被算进
   #   "落后 111 提交的全部改动"（实测报「变更含 108 件」，真实只 2 件）。
-  #   修法: 基线链 **gitea/local-main → local-main（本地跟踪分支）前置**；
-  #   origin/local-main 仅作无 gitea remote 环境的回退。
-  #   判据: `git diff --stat gitea/local-main...HEAD | tail -1` = 本 PR 真实改动数。
+  #   修法: 基线链 **gitea/$TRUNK → $TRUNK（本地分支）前置**；
+  #   origin/$TRUNK 仅作无 gitea remote 环境的回退。
+  #   判据: `git diff --stat gitea/$TRUNK...HEAD | tail -1` = 本 PR 真实改动数。
   BASE_RESOLVED=""
-  for _cand in "$BASE" gitea/local-main local-main origin/local-main origin/main main origin/HEAD; do
+  for _cand in "$BASE" "gitea/${TRUNK}" "${TRUNK}" "origin/${TRUNK}" origin/HEAD; do
     if git rev-parse --verify --quiet "$_cand" >/dev/null 2>&1; then BASE_RESOLVED="$_cand"; break; fi
   done
   if [ -z "$BASE_RESOLVED" ]; then
-    echo "  ⚠️  degraded: 基线不可解析（尝试过 $BASE / origin/main / main / origin/HEAD）"
+    echo "  ⚠️  degraded: 基线不可解析（尝试过 ${BASE} / gitea/${TRUNK} / ${TRUNK} / origin/${TRUNK} / origin/HEAD）"
     echo "      → 跳过 PR 预算检查（先 git fetch origin；此处显式留痕，不静默放过）"
     exit 0
   fi

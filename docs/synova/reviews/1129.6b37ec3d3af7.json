@@ -1,0 +1,175 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1129,
+  "patch_fingerprint": "sha256:6b37ec3d3af708a0fcc3a87a52e2a40367b3d87dad5ae65350cf08e3b89ffd50",
+  "author": "synova-squad-lead-P4-1117",
+  "reviewer": "dsh-independent-reviewer-1129",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "R-身份与范围",
+      "cmd": "curl -s -H \"Authorization: token $TOK\" 127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/pulls/1129; git ls-remote gitea refs/heads/ct/1117-trunk-main-2; git diff --name-only 94ed76b2d16b5..HEAD | wc -l",
+      "result": "pass",
+      "evidence": "base.ref=main base.sha=94ed76b2d16b5bd21f3bdab2ff0715561a4447f6 head.ref=ct/1117-trunk-main-2 head.sha=de8e10060149819951e24d799d64cc1eca754f28 (=申报) changed_files=32; ls-remote=de8e10060149819951e24d799d64cc1eca754f28 refs/heads/ct/1117-trunk-main-2; git diff count=32"
+    },
+    {
+      "id": "R-写集对账(36条)",
+      "cmd": "sed -n '259,300p' <dev doc 9f0ca18> 抽 §5.1 首列 | comm -23 <changed> <writeset>; comm -13 ...",
+      "result": "pass",
+      "evidence": "§5.1=36 条(33改+3新建)；实改 32；越界 out_of_scope_count=0；未改 4 件=check-merge-conditions.test.sh/check-test-obligations.test.sh/check-tool-args-delta.test.sh/doc-contract-ci-acceptance.test.sh（§5.1 均为「首跑红才改」）；L1 批准扩写集 2 件在 diff 内(tag-bypass-wiring.test.sh +3 行夹具、doc-registry-gate.test.sh 夹具 ref origin/local-main→gitea/main，断言未动)"
+    },
+    {
+      "id": "红线路径",
+      "cmd": "git diff --name-only 94ed76b2d..HEAD | grep -E '^(scripts/audit/|src/|data/|\\.github/)'",
+      "result": "pass",
+      "evidence": "无命中 rc=1（0 行）⇒ 未碰审计红线/src/data/.github"
+    },
+    {
+      "id": "J1-a",
+      "cmd": "git grep -n \"local-main\" -- '.gitea/**' 'scripts/**' | awk '{l=$0; sub(/^[^:]*:[0-9]+:/,\"\",l); if (l ~ /^[[:space:]]*(#|\\/\\/|\\*|\\/\\*)/) next; print}'",
+      "result": "pass",
+      "evidence": "J1-a PASS rc=0（0 行）。基线复算：b8edf9860=70 行、94ed76b2d=51 行（逐文件 14 件与 §5.1.1 表逐一相同：pre-push 11/ci-emptygreen 9/tool-args 7/merge-cond 5/test-obl 4/quality-delta 3/local-gates 3/doc-registry 2/bypass-log 2/其余 6 件各 1）"
+    },
+    {
+      "id": "J1-b",
+      "cmd": "git grep -n \"local-main\" -- '.gitea/**' 'scripts/**'",
+      "result": "pass",
+      "evidence": "lines=3 → probe-approval-seam.ts:35 / probe-department-axis.ts:32 / probe-ontology-instances.ts:7（均历史 as_of 注释）⇒ J1-b PASS rc=0"
+    },
+    {
+      "id": "J2-正例",
+      "cmd": "夹具(main 前进 1、local-main 冻旧点) + SYNO_CI=1 bash scripts/control-tower/resolve-ci-base.sh; git diff --name-only \"$OUT...HEAD\"",
+      "result": "pass",
+      "evidence": "base=origin/main rc=0；新鲜度断言通过：canonical = 远端跟踪引用（refs/remotes/origin/main）；变更集=only.txt（1 文件）"
+    },
+    {
+      "id": "J2-反例",
+      "cmd": "git diff --name-only \"origin/local-main...HEAD\"",
+      "result": "pass",
+      "evidence": "only.txt + trunk.txt（2 文件）⇒ base 指回冻结分支即全量，任何「只含该 commit」断言必红"
+    },
+    {
+      "id": "J2-变异体",
+      "cmd": "sed 's/SYNO_TRUNK_REF:-main/SYNO_TRUNK_REF:-local-main/' <helper 副本>; SYNO_CI=1 bash 副本; git diff --name-only \"$OUTM...HEAD\"",
+      "result": "pass",
+      "evidence": "mutated_default_lines=1；base=origin/local-main rc=0；变更集 only.txt+trunk.txt=2 文件 ⇒ 正例断言「1 文件」必红（该变异体已固化为 T11b）"
+    },
+    {
+      "id": "J3-静态",
+      "cmd": "git grep -n local-main -- '.gitea/workflows/'; git grep -n 'branches:' -- .gitea/workflows/local-gates.yml; sed -n '1,30p' .gitea/workflows/local-gates.yml",
+      "result": "pass",
+      "evidence": "workflows 内 local-main 命中 0（grep rc=1）；local-gates.yml:12 `branches: [ main ]`（仅 pull_request 腿），`on: push:` 无 branches 过滤；3 个 workflow 的 name:/step name 行逐字相同（17/4/3 行）"
+    },
+    {
+      "id": "J3-CI",
+      "cmd": "curl actions/runs?limit=40; curl actions/runs/2417; actions/runs/2418; curl commits/de8e10060/status",
+      "result": "pass",
+      "evidence": "2418 pull_request sha=de8e10060 status=completed conclusion=success; 2417 push branch=ct/1117-trunk-main-2 sha=de8e10060 success; commit status total_count=2 state=success（local-gates / gates (pull_request)+(push) 均 success）⇒ pending=0"
+    },
+    {
+      "id": "J4",
+      "cmd": "git ls-remote gitea refs/heads/local-main; git ls-remote gitea refs/heads/main",
+      "result": "pass",
+      "evidence": "b8edf9860990a7ef6962aa12a1bae473e753f6d0 refs/heads/local-main（与迁移前同点，未删未改保护）; refs/heads/main=94ed76b2d"
+    },
+    {
+      "id": "合规件四态与登记",
+      "cmd": "cat memory/notes/proposed/2026-10-29-1117-trunk-main.md; head -3 gate-exemptions/2026-10-29-1117-trunk-main.md; grep -c '^  - ' .claude/claims/1117.yaml(分段); git diff 94ed76b2d..HEAD -- docs/authority/DOCS-REGISTRY.yaml",
+      "result": "pass",
+      "evidence": "Note 四节齐（## 现状/## 决定/## 依据/## 生效时点）且引 #1117＋handbook 9f0ca18；claim writeset=36 条、done=9 条、note 非空；exemption 首行「# review: #1129」（==本 PR 号）、31 行、末行 :30 为本文件自覆盖行；DOCS-REGISTRY 追加 DOC-0325（type=decision/path=gate-exemptions/2026-10-29-1117-trunk-main.md/status=active/owner=P4），紧随 DOC-0324，不撞号"
+    },
+    {
+      "id": "PR正文数字逐条复现",
+      "cmd": "对 PR 正文每条数字与 /tmp/review-1129-logs/tests/summary.txt、precommit.log、prepush.log、gate-protection.log、fingerprint.log 原始输出逐项比对",
+      "result": "pass",
+      "evidence": "9 配对+3 guard+追加 2 件共 13 组数字全部逐条命中（21/11/14/19/15/48/98/8、28/21/24、63/27）；founder-truth rc=2 与归因复现；J1-a=0、J1-b=3、J2 正/反/变异体、J3 静态+CI(success)、J4=b8edf9860、pre-commit 12 组 rc=0、pre-push 允许推送、①d 38/0 rc=0、写集 0 漂移 —— 全部与正文一致；正文算术 21 代码+7 测试+claim+Note=30，再+豁免+DOCS-REGISTRY=32 == diff 32"
+    },
+    {
+      "id": "配对测试与 guard",
+      "cmd": "串行 bash tests/control-tower/<x>.test.sh 与 tests/doc-system/doc-registry-gate.test.sh（14 件，日志 /tmp/review-1129-logs/tests/）",
+      "result": "pass",
+      "evidence": "rc=0/0 失败：resolve-ci-base 21、ci-emptygreen-sim 11、mirror-sync-push 19、check-dual-repo-sync 15、check-merge-conditions 14、check-bypass-log 28、push-sync-guard 21、pre-push-mirror 24、check-test-obligations 48、check-tool-args-delta 98、doc-contract 8、tag-bypass 27、doc-registry 63；founder-truth rc=2（degraded：sealed 台账条目指向不存在的 tests/control-tower/brief-parseable.test.sh）"
+    },
+    {
+      "id": "pre-commit-12组",
+      "cmd": "GITHUB_ACTIONS=true SYNO_DIFF_BASE=94ed76b2d16b5 bash scripts/pre-commit-check.sh",
+      "result": "pass",
+      "evidence": "rc=0 「✅ 全部 12 组通过」；组 12 claim 载体：102 条 claim，覆盖 32/32 个变更文件（证明非空跑）；唯一软提示 = D734 PR 预算（32 件>12 上限，V5 软提示，CI 权威）"
+    },
+    {
+      "id": "pre-push自跑",
+      "cmd": "printf 'refs/heads/ct/1117-trunk-main-2 <local> refs/heads/ct/1117-trunk-main-2 <remote>' | bash scripts/pre-push-check.sh gitea <url>",
+      "result": "pass",
+      "evidence": "rc=0 「✅ 全部门禁通过 — 允许推送」；bypass 对账用新链：「无待记录提交（94ed76b2d..HEAD；已排除 gitea/ct/1117-trunk-main-2 祖先）」⇒ SYNO_TRUNK_REF 缺省 main 生效"
+    },
+    {
+      "id": "①d门禁保护",
+      "cmd": "bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main",
+      "result": "pass",
+      "evidence": "「结果: 38 通过, 0 失败」rc=0（逐件 受保护路径有合规豁免，含自覆盖行 gate-exemptions/2026-10-29-1117-trunk-main.md）"
+    },
+    {
+      "id": "写集漂移",
+      "cmd": "SYNO_DEV_DOC=<spec> bash scripts/workflow/check-dev-doc-write-set.sh; 及 SYNO_STAGED_FILES=\"$(git diff --name-only 94ed76b2d..HEAD)\" 同跑",
+      "result": "pass",
+      "evidence": "两次均「声明 36 条 | 漂移 0 条」rc=0（clean 树上反向腿无判据对象，故第二次注入 git 产出的真实 32 件变更集复核；另手工 comm 对账越界 0）"
+    },
+    {
+      "id": "门禁自洽(三态/错误码/UTF-8/判据强度)",
+      "cmd": "grep die()/exit 2 resolve-ci-base.sh; git diff 提取 E_* token base vs head; git diff | grep '^[-+].*(PYTHONIOENCODING|LC_ALL=C.UTF-8)'; git diff | grep '^\\+.*|| *exit 1'",
+      "result": "pass",
+      "evidence": "die(){...; exit 2;} 六处 fail-closed 出口保留、@exit 契约写明 0/2；无新增 error code（E_BAD_BASE/E_INTERNAL 均已在 base 版 5+ 脚本中使用）；未删除任何 UTF-8 头块（tests/resolve-ci-base.test.sh 新增 PYTHONIOENCODING+LC_ALL）；无新增 '|| exit 1' 折叠；scripts/audit/** 0 命中"
+    },
+    {
+      "id": "main保护段逐字不动",
+      "cmd": "git diff -U0 94ed76b2d..HEAD -- scripts/pre-push-check.sh | grep '^@@'; git show 94ed76b2d:scripts/pre-push-check.sh | sed -n '60,180p' vs sed -n '60,180p'; grep -n SYNO_ALLOW_MAIN_PUSH",
+      "result": "pass",
+      "evidence": "全部 hunk 落在 541-583（无 hunk 与 [60,180] 相交）；两版 [60,180] 抽取 diff rc=0（逐字相同）；:167/:178 逃生舱 SYNO_ALLOW_MAIN_PUSH 仍在"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warn",
+      "where": "check-merge-conditions.sh --pr 1129 ②（不是本补丁缺陷，是合并时序前置）",
+      "what": "② 零写集重叠 = no：4 处文件重叠 —— scripts/control-tower/resolve-ci-base.sh 与 tests/control-tower/resolve-ci-base.test.sh 对 PR#1130（open，base=main，head=fix/1118-resolver-valve，正在跑 CI），.gitea/workflows/local-gates.yml 对 #943，scripts/pre-commit-check.sh 对 #801。其中 #1130 是「给 resolve-ci-base 加 legacy 别名阀」，与本 PR「删除 legacy 映射」方向相反，PR 正文未登记该撞车 ⇒ 合并前须由 L1/CTO 定序（后合者 rebase），本回执只对当前 patch 内容负责，不代表 ② 可放行。"
+    },
+    {
+      "severity": "info",
+      "where": "PR 正文 §J2b",
+      "what": "规格 §7 J2b 字面要求「任一 base=main 的 PR 的 pull_request run 变绿（用 #1110 复跑）」并附归因前提；PR 正文改写为「本 PR 的 pull_request run 变绿」。独立核：#1110 head 962460f2b 的 run 2413（pull_request）确为 success、且 base=main，判据实质成立，但该 head 已 merge main（含 #1119），归因不能单归本 PR。"
+    },
+    {
+      "severity": "info",
+      "where": "Gitea API /pulls/1129 与 /pulls/1129/files",
+      "what": "changed_files=32 与 git 一致；但 additions/deletions=604/331 而 git numstat=602/329，差在 2 个文件各 +1/-1（resolve-ci-base.sh 82/55 vs 81/54；resolve-ci-base.test.sh 164/54 vs 163/53）。两端 base.sha/head.sha 完全相同 ⇒ 属 Gitea 侧行计数口径差，不影响写集与内容判定。"
+    },
+    {
+      "severity": "info",
+      "where": "dev doc §7 J1-a 注 / §5.1.1",
+      "what": "§7 仍写「现基线 70 行」而 §5.1.1 与 PR 正文写 51 行：实测两者都对——b8edf9860（#1119 前）=70 行代码级命中，94ed76b2d（#1119 后）=51 行。§7 该注未随 #1119 更新，属 dev doc 内部口径并存（未影响判据，回执两值均实测）。"
+    },
+    {
+      "severity": "info",
+      "where": "tests/control-tower/founder-truth-acceptance.test.sh（写集外）",
+      "what": "rc=2 复现并归因确认：degraded 原因 = sealed-tests --list 报「隔离台账条目指向不存在的文件: tests/control-tower/brief-parseable.test.sh」；台账 scripts/control-tower/gate-integrity-baseline.txt 本 PR 未改且不在 §5.1（全仓亦无该文件）⇒ 环境遗留，rc=2 非 rc=1 业务红。"
+    },
+    {
+      "severity": "info",
+      "where": "scripts/pre-commit-check.sh 组 D734（PR 预算）",
+      "what": "本地跑出 V5 软提示：变更 32 件 > 12 文件上限。该组本地为软提示（CI 权威），且 SPEC §5.3 已就 >12 文件给原子性理由；CI run 2418（SYNO_CI=1 同一脚本）已 success ⇒ 不作为本 PR 新增阻断。"
+    },
+    {
+      "severity": "info",
+      "where": "回执交付形态（本件只落 /tmp，未入树）",
+      "what": "按派单约束复核员不得改产品文件，故回执写到 /tmp/review-1129.6b37ec3d3af7.json 而未提交进 docs/synova/reviews/** ⇒ R1（回执在 head 树）与 R7（回执引入提交须为本分支最后一个提交）本次不适用；落地须由 L2 以同一内容提交 docs/synova/reviews/1129.6b37ec3d3af7.json 且此后不得再改任何文件，否则 R3/R7 必红。"
+    },
+    {
+      "severity": "info",
+      "where": "scripts/workflow/check-dev-doc-write-set.sh 反向对账腿",
+      "what": "该器 ACTUAL 集合取 git diff --cached ⇒ 在已提交的 clean 工作树上直接复跑时反向腿无判据对象（输出 0 漂移属空洞绿）。本次以 SYNO_STAGED_FILES 注入由 git 产出的真实 32 件变更集重跑（声明 36/漂移 0），并以手工 comm 集合对账兜底，结论等价；但「原命令直接复跑」在 post-commit 态不可得，如实登记。"
+    }
+  ],
+  "issued_at": "2026-10-29T03:02:25+08:00",
+  "tool": "pr-review@v1 (fresh-session workflow reviewer)"
+}
