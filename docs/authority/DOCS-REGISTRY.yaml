@@ -1481,3 +1481,11 @@ documents:
     status: active
     owner: P4
     note: "#1147（T2.5）：scripts/control-tower/gen-gate-meta.sh（gate_meta 六字段机械产出，--emit/--check，三态 exit 0/1/2，orphan 且 quota 组合违规，legacy_sections 登记 6 段）＋ check-gate-inventory.sh 加 R10 同源校验 ＋ tests/control-tower/gen-gate-meta.test.sh（12 夹具）受保护路径豁免；GATE-INVENTORY 纯追加 gate_meta 段（117 行，删除数 0）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+
+  # ---- P2 2026-10-30：#1075 P2-4b-B 棘轮基线同 PR 收缩豁免登记（DOC-1161；DOC-1075 已被 P2-1 占用，唯一性判据只认 DOC-<数字>，故按 PR 号取号）----
+  - id: DOC-1161
+    type: decision
+    path: gate-exemptions/2026-10-30-1075-p2-4b-b.md
+    status: active
+    owner: P2
+    note: "#1075（P2-4b-B 角色会话内知识权限）：scripts/control-tower/tool-signal-baseline.txt 受保护路径豁免 —— #915 Q-5 R4（副作用工具必须可取消）迫使 builtin-tools.ts 的 schedule_task/install_skill 补 ctx＋throwIfAborted；R5 双向棘轮要求同 PR 删对应登记行（纯删 2 行，无判定/阈值/退出码变更）；含 gate-exemptions/** 自覆盖行与 DOCS-REGISTRY 自登记行。属门禁强制同 PR 记账件，待 L1 收件闸追认。"
