@@ -4,13 +4,127 @@
  * SynovaAgent 对话中可用的 4 个内置工具。
  * 内置工具集 + agent-tool-registry 注册范式（原 engine-core 工具集已随引擎退役）。
  */
-import type { ToolRegistry } from './tools';
+import type { ToolDefinition, ToolRegistry } from './tools';
 import type { SessionStore } from '../store/session-store';
 import { ACCURACY_TOOLS, ORG_EXPERT_TOOLS, TECH_EXPERT_TOOLS, STRATEGY_EXPERT_TOOLS, FINANCE_EXPERT_TOOLS, ACTION_EXPERT_TOOLS, MARKETING_EXPERT_TOOLS } from '../tools';
 import { createLogger } from '@synova/logger';
 import { registerPandocTools } from '../../vendor/pandoc-skill/synova-tools';
+import type { RoleKnowledgeFilter } from '../init/role-pack-knowledge-filter';
 
 const log = createLogger('agent/builtin-tools');
+
+/**
+ * #1075 P2-4b-B: 构造**角色会话知识检索**系统工具（`search_knowledge`）。
+ *
+ * 为什么是"工厂 + provider"而不是 `register()`（规格 §2.2-D1，CTO A 类裁定）:
+ *   · 系统工具**不属于**岗位包声明面 ⇒ 不注册进 `ToolRegistry.tools`（P2-4a 的
+ *     `allToolNames()`／allowlist 编译语义保持纯净），改由 `setSystemToolProvider()` 注入；
+ *   · 过滤器来自引擎运行期状态（撤销/换岗即时生效）⇒ 通过 `getFilter()` 闭包**每次求值**读取，
+ *     工具对象本身不缓存任何判定结果。
+ *
+ * 契约（铁律 47）:
+ *   @input    `getFilter()` — 返回当前会话的知识过滤面；`null` = 本会话无知识权限面（未绑定岗位/
+ *             已回滚关闭）⇒ 工具返回结构化 `E_KNOWLEDGE_UNAVAILABLE`。工具入参:
+ *             `query`（字符串，去空白后 1–200 字，**必填**）｜`limit`（1–10 的整数，缺省 5）
+ *   @output   `{ results: [{id, text, snippet, domain}], count }`；拒绝型/降级过滤面照常返回
+ *             `results: []`（**不假装有权限**，另带 `degraded:true`）
+ *   @degraded 引擎侧未初始化（`getDatabase()` 抛）／L4 检索抛错 ⇒ 结构化
+ *             `{ error: { name:'KnowledgeSearchError', code:'E_KNOWLEDGE_SEARCH_FAILED', phase:'execute' } }`
+ *             ＋ `log.warn`（不抛，不静默）；filter 缺失 ⇒ `E_KNOWLEDGE_UNAVAILABLE`
+ *   @authority 只读：只做检索，不写知识库、不改权限、不签发身份；过滤面由调用方（引擎）给定
+ *   @not-here  scope/敏感度编译（`src/init/role-pack-knowledge-filter.ts`）、检索与过滤执行
+ *             （`src/l4/knowledge-store.ts`）、工具注册/白名单（`src/agent/tools.ts`）
+ *   @error    永不抛（全部收敛为结构化 error；`phase` 标 validate/execute，铁律 32）
+ *
+ * 已知限制:
+ *   · 仅覆盖 sensitivity ＋ pkb_domain 两维（同过滤器模块）；`pkb_domain = NULL` 的历史 chunk 恒不返回。
+ *   · `limit` 越界按 [1,10] **钳位**（不报错）：LLM 传 0/11 时退化为 1/10，避免一次入参抖动断掉整轮。
+ */
+export function createKnowledgeSearchTool(getFilter: () => RoleKnowledgeFilter | null): ToolDefinition {
+  return {
+    name: 'search_knowledge',
+    description:
+      '在当前岗位的知识权限范围内检索知识库（scope ＋ 敏感度双重过滤；越权内容不可见）。'
+      + 'query: 关键词（1–200 字）；limit: 返回条数（1–10，默认 5）。',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: '检索关键词（1–200 字）' },
+        limit: { type: 'integer', description: '返回条数（1–10，默认 5）' },
+      },
+      required: ['query'],
+    },
+    operationType: 'read',
+    sideEffects: 'none',
+    handler: async (params) => {
+      // ① 权限面：没有过滤面 ⇒ 无知识检索权限（不回落全库）
+      const filter = getFilter();
+      if (filter === null) {
+        return {
+          error: {
+            name: 'KnowledgeSearchError',
+            code: 'E_KNOWLEDGE_UNAVAILABLE',
+            message: '当前会话没有知识检索权限面（未绑定岗位或已关闭角色知识工具）',
+            phase: 'validate',
+          },
+        };
+      }
+
+      // ② 入参：schema 只声明类型（ToolParameter 无区间关键字）⇒ 区间在此 fail-closed
+      const rawQuery = params.query;
+      const query = typeof rawQuery === 'string' ? rawQuery.trim() : '';
+      if (query.length < 1 || query.length > 200) {
+        return {
+          error: {
+            name: 'KnowledgeSearchError',
+            code: 'E_KNOWLEDGE_INVALID_ARGS',
+            message: `query 必须是 1–200 字（实际 ${query.length} 字）`,
+            phase: 'validate',
+          },
+        };
+      }
+      const rawLimit = params.limit;
+      const limit = typeof rawLimit === 'number' && Number.isFinite(rawLimit)
+        ? Math.min(10, Math.max(1, Math.trunc(rawLimit)))
+        : 5;
+
+      // ③ 检索：动态 import L4（`scripts/check-architecture.sh:40-51` 禁 L2→L4 **静态** import；
+      //    本文件在 L2 编排面）。与 `src/agent/synova-agent.ts:199` 同一先例。
+      try {
+        const { KnowledgeStore } = await import('../l4/knowledge-store');
+        const { getDatabase } = await import('../init/engine-context');
+        const store = new KnowledgeStore(getDatabase());
+        const found = store.search(query, { conditions: filter.conditions }, limit);
+        return {
+          results: found.results.map((r) => ({
+            id: r.id,
+            text: r.text,
+            snippet: r.snippet,
+            // 只在**工具边界**把内部字段 `pkbDomain` 映射为对外 `domain`（规格 §2.2-D5）
+            domain: r.pkbDomain ?? null,
+          })),
+          count: found.results.length,
+          // 降级面照常返回（空结果），但显式标记：不把"看不见"说成"没有"
+          ...(filter.degraded ? { degraded: true } : {}),
+        };
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        log.warn(
+          { err: message, degraded: true, code: 'E_KNOWLEDGE_SEARCH_FAILED' },
+          '角色会话知识检索失败 — 结构化返回（不抛）',
+        );
+        return {
+          error: {
+            name: 'KnowledgeSearchError',
+            code: 'E_KNOWLEDGE_SEARCH_FAILED',
+            message: `知识检索不可用: ${message}`,
+            phase: 'execute',
+          },
+        };
+      }
+    },
+  };
+}
 
 export function registerBuiltinTools(
   registry: ToolRegistry,
