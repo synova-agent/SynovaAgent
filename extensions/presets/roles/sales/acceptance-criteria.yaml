@@ -8,6 +8,12 @@ criteria:
   - id: ac.confidence-declared
     text: 预测标注置信口径
     check: output.sections.pipeline 含「口径」
+    machine:
+      kind: textPattern
+      pattern: '口径'
   - id: ac.period-declared
     text: 业绩周期已声明
     check: output.sections.headline.must 含「业绩周期」
+    machine:
+      kind: textPattern
+      pattern: '业绩周期'

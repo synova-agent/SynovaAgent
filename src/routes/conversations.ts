@@ -27,6 +27,8 @@
  *                 400 E_ROLE_PACK_PERSONA_UNREADABLE｜403 E_ROLE_PACK_FORBIDDEN｜
  *                 404 E_ROLE_PACK_NOT_FOUND｜409 E_ROLE_PACK_NOT_APPROVED｜
  *                 409 E_ROLE_PACK_CONTENT_CHANGED｜409 E_ROLE_PACK_IMMUTABLE
+ *               ＋ **#1075 P2-3 岗位输出标准**：每轮 assistant 回复落库后**非阻断**校验（只 `log.warn`
+ *                 ＋ 引擎失败落账）；**不改状态码、不改回复、不新增任何 HTTP 字段**（规格 D4/L3）。
  *   @degraded — db 缺失/非 SQLite → 503 {code:'STORE_UNAVAILABLE', degraded:true}
  *               （fail-closed：会话持久化是本端点的存在理由，静默不落库 = 假绿）；
  *               store 双写失败（lastDegraded）→ 流内 error 帧 {code:'STORE_DEGRADED', degraded:true}
@@ -37,15 +39,22 @@
  *               {code:'INGEST_FAILED', degraded:true}（不阻断对话，铁律 11/31）；
  *               **已绑定岗位复核失败**（撤岗/内容变更/审批失效）⇒ **HTTP 200** ＋ 响应头
  *               `x-synova-role-pack: degraded` ＋ 本轮不注入人设 ＋ `log.warn`（带 roleId 与 code）
- *               —— 不 4xx、不锁死用户（规格 N1/D7）
+ *               —— 不 4xx、不锁死用户（规格 N1/D7）；
+ *               **岗位输出标准**：编译失败（未批准/内容变/限额）⇒ 编译侧单点 `log.warn` 后**本轮不校验**；
+ *               校验失败 ⇒ `log.warn`（`contractId`/`codes`/`fieldPaths`）＋ 引擎落账；回滚开关
+ *               `SYNOVA_ROLE_PACK_OUTPUT=off` ⇒ 跳过 ＋ `log.warn(degraded:true)`（显式降级，非默认）
  *   @authority — `/ingest` 分支仅 **conversation 链**（`POST /api/conversations` 与
  *               `POST /api/conversations/:id/messages`）可触发；普通消息 SSE 语义不变，
  *               本分支**不新增公开 HTTP 字段**（接口变更须 CTO）；
  *               `rolePackId` 是 #1075 P2-2 规格批准的唯一新增入参；人设真源 =
- *               `src/init/role-pack-persona.ts`（本文件只做 HTTP 映射／身份／换岗判定）
+ *               `src/init/role-pack-persona.ts`（本文件只做 HTTP 映射／身份／换岗判定）；
+ *               **岗位输出标准真源** = `src/init/role-pack-output-standard.ts`（编译）＋
+ *               `src/output/contract-validator.ts`（校验/落账）—— 本文件只调用 `auditRolePackOutput()`，
+ *               **不复制**审批门／限额／正则判定
  *   @not-here  — 不做文件上传入口（PDF/DOCX/XLSX 仍走既有 TUI `/upload` → `ingestFile`）；
  *               不建第二套 store；`/ingest` 不调 LLM；不改 `GET /chat` 页面结构；
- *               不做工具白名单/权限消费（P2-3/P2-4）、不解析岗位上下文内容（P4）
+ *               不做工具白名单/权限消费（P2-4）、不判岗输出标准版式/语义（P2-3 只做
+ *               `textPattern`／`noPattern`）、不解析岗位上下文内容（P4）
  *
  * 已知限制（Known Limitations —— 做不到什么，不得改写成"已核过"）:
  *   a. 前缀**不做词边界**：`/ingested ...` 亦命中（资料文本 = 'ed'）；收紧属接口语义变更，
@@ -63,6 +72,13 @@
  *   h. **降级头跨源可能读不到**：若生产 app 挂 `cors()`，装配点 `exposedHeaders` 需含
  *      `x-synova-role-pack` —— 本文件不改 CORS（`src/server.ts` 不在本批写集）。
  *   i. **一会话一岗**：不支持中途换岗/多岗（409 E_ROLE_PACK_IMMUTABLE；规格 §10-L5）。
+ *   j. **岗位输出标准每轮重编译**（#1075 P2-3 / 规格 L8/L4）：每轮 `loadRolePacks()` 全角色扫描 ＋
+ *      六件单读 ＋ 编译，**不缓存**（正确性优先：改文件即生效）；角色多/包大时是固定开销，
+ *      优化须让缓存键含 `contentHash`（另批）。
+ *   k. **输出标准只做 `textPattern`／`noPattern`**（#1075 P2-3 / 规格 L1/L2）：不判版式（`sections`）、
+ *      不判语义/编造；无 `machine` 的 criteria 经 `log.info` 可见但不判 —— **"检查过了"≠"更准"**。
+ *   l. **一次违标两条日志**（#1075 P2-3）：路由接线留痕（`audit:'rolePackOutput'`）＋ 引擎通用留痕
+ *      （"已拒绝 + 落账"，契约引擎既有第二职务）各一条；业务码/字段一致，日志去重属引擎语义变更（另批）。
  *
  * 决策记录（D333，完成报告 §5.4 可核）: phaseComplete 诊断桥走 L1→L2 公开 API
  * DiagnosisLauncher 直连（diagnosis.ts:200-217 同款装配），而非 conv.startDiagnosis——
@@ -101,6 +117,11 @@ import {
   type RolePackPersona,
   type RolePackPersonaCode,
 } from '../init/role-pack-persona';
+// #1075 P2-3: 岗位「可机器判输出标准」编译 ＋ 对象契约校验（**非阻断留痕**；本文件只调用，
+// 不复制判定规则）。`../init/role-pack-output-standard` / `../output/contract-validator`
+// 均不匹配架构门禁的 L3/L4/L5 层模式 ⇒ 不新增 L1 跨层违规（`check-architecture.sh` 棘轮不越界）。
+import { isRolePackOutputEnabled, loadRolePackOutputStandard } from '../init/role-pack-output-standard';
+import { validateContractObject } from '../output/contract-validator';
 
 const log = createLogger('routes/conversations');
 const router = Router();
@@ -146,6 +167,84 @@ function wireDecisionCapture(engine: ConversationEngine, orgId: string): void {
 
 /** message 输入上界（spec §5.2-A；借鉴 dsh-api-gateway 输入边界校验范式） */
 const MESSAGE_MAX = 8000;
+
+/**
+ * #1075 P2-3 — 角色会话每轮 assistant 回复的「岗位输出标准」**非阻断**校验＋留痕。
+ *
+ * 为什么不 inline 在 ⑩ 落库处：本块有 4 个短路分支（开关／编译失败／无 unverifiable／校验失败），
+ * inline 会把持久化时序读成校验时序；抽成单函数后 ⑩ 只剩"落库 → 一句审计"。
+ *
+ * 契约（铁律 47）:
+ *   @input  roleId — 本轮实际生效的岗位 id（`rolePack.roleId`；调用方已判 `rolePack !== null`）
+ *           reply  — 本轮 assistant 回复原文（`result.reply`；**只读**，绝不改写）
+ *           orgId  — 租户（进校验 subject 的 `orgId` 字段；该字段必填，见编译侧 `fields[]`）
+ *   @output 无（`void`）—— 产出方**无权**据校验结论改变产出（同 `validateOutputContract` 哲学）
+ *   @degraded ① `SYNOVA_ROLE_PACK_OUTPUT=off` ⇒ 跳过 ＋ `log.warn(degraded:true)`（**显式降级，非默认**）；
+ *             ② 编译侧失败（不存在／未批准／内容已变／形状限额）⇒ **不再二次 log.warn**
+ *                （`loadRolePackOutputStandard()` 已单点留痕，含 `code`/`reason`/`degraded:true`）；
+ *             ③ `unverifiable` 非空 ⇒ `log.info` 一条（**可见但不判**，禁静默）；
+ *             ④ 校验失败 ⇒ `log.warn({audit:'rolePackOutput', contractId, codes, fieldPaths, errorCount})`
+ *                ＋ 引擎既有失败落账；**不改 HTTP 状态码、不改回复、绝不抛出**（规格 D4/L3：体检不阻断产出）。
+ *                ⚠️ 引擎在 `validateContractObject()` 内另有一条同 `contractId` 的通用留痕
+ *                （"已拒绝 + 落账"）= 既有第二职务；故**一次失败两条日志**（路由接线留痕 ＋ 引擎通用留痕，
+ *                业务码/字段一致）。日志去重属引擎侧语义变更，不在本批（见已知限制 l.）。
+ *   @authority 真源 = `src/init/role-pack-output-standard.ts`（编译）＋ `src/output/contract-validator.ts`
+ *             （校验/落账）。本函数只做**调用与留痕**；禁在本文件复制审批门/限额/正则判定。
+ *   @not-here 不判版式（`sections`）、不做语义/编造判断；不传 `sinkPath`（走引擎既有落点
+ *             `SYNOVA_OUTPUT_CONTRACT_SINK` / 默认 `data/output-contract-failures.jsonl`）。
+ *   🔴 隐私：`reply` **不进日志**（只记错误码/字段路径/计数；台账同样不写正文）。
+ */
+function auditRolePackOutput(roleId: string, reply: string, orgId: string): void {
+  if (!isRolePackOutputEnabled()) {
+    log.warn(
+      { rolePackId: roleId, env: 'SYNOVA_ROLE_PACK_OUTPUT', degraded: true },
+      '岗位输出标准校验被回滚开关关闭 — 本轮跳过（显式降级，非默认）',
+    );
+    return;
+  }
+
+  const loaded = loadRolePackOutputStandard(roleId);
+  if (!loaded.ok) {
+    // 编译侧已有一条 `log.warn`（带 code/reason/degraded）⇒ 此处不重复刷屏（单一留痕点）
+    return;
+  }
+  const standard = loaded.standard;
+
+  if (standard.unverifiable.length > 0) {
+    log.info(
+      {
+        rolePackId: roleId,
+        contractId: standard.contract.meta.id,
+        unverifiable: standard.unverifiable.length,
+        unverifiableIds: standard.unverifiable.map((item) => item.id),
+      },
+      '岗位输出标准：部分 criteria 不可机器判 — 可见但不判（禁静默丢弃）',
+    );
+  }
+
+  const result = validateContractObject(standard.contract, {
+    text: reply,
+    orgId,
+    generatedAt: new Date().toISOString(),
+  });
+  if (result.ok) return;
+
+  log.warn(
+    {
+      // 🔴 接线留痕标识：引擎在 `validateContractObject()` 内也会打一条同 `contractId` 的通用留痕
+      //    （"已拒绝 + 落账"）；本字段把**路由接线留痕**与引擎通用留痕区分开（判据 J3 数这一条）。
+      audit: 'rolePackOutput',
+      contractId: `role:${roleId}`,
+      contractVersion: result.contractVersion,
+      codes: result.errors.map((error) => error.code),
+      fieldPaths: result.errors.map((error) => error.fieldPath),
+      errorCount: result.errors.length,
+      recorded: result.recorded?.recorded === true,
+      degraded: true,
+    },
+    '角色回复未过岗位输出标准 — 非阻断留痕（HTTP 200 照常返回，回复不变）',
+  );
+}
 
 /** 模块级 per-session 忙锁——防双引擎同会话交错写 state_json（409 SESSION_BUSY） */
 const busySessions = new Set<string>();
@@ -625,6 +724,13 @@ async function handleConversationMessage(req: Request, res: Response, pathSessio
     // #1075 P2-2: `conv.serialize()` 在**绑定岗位时**带 `rolePackId`（无包时该键缺省）⇒ 会话归属落库，
     // 人设文本不落库（每轮由流前判定重解析）。本行签名与语义不变。
     store.addMessage(sessionId, 'assistant', result.reply);
+
+    // ⑩-b #1075 P2-3：岗位输出标准**非阻断**校验（仅角色会话；失败只留痕 —— 不改回复、
+    //     不改状态码、绝不抛出）。落库之后跑：持久化时序与 P2-2 逐字不变，校验不参与时序。
+    if (rolePack !== null) {
+      auditRolePackOutput(rolePack.roleId, result.reply, orgId);
+    }
+
     store.updateSession(sessionId, { phase: conv.getPhase() });
     store.saveState(sessionId, conv.serialize());
 

@@ -144,19 +144,19 @@ export const FACTORY_APPROVALS: Readonly<
   >
 > = {
   finance: {
-    contentHash: '9ddbffe2967c0be4a1ddc3d64efbbb35caa12450af46ff78b5ede0abab0cb783',
+    contentHash: 'dd2e6c594f965a7d7694e16a91412459ee650d8addafc494aaa8ab198cb390dc',
     approvedAt: '2026-10-28T00:00:00.000Z',
     approvalId: 'factory:finance:v1',
     scope: 'content+permissions',
   },
   hr: {
-    contentHash: '167aba961881c994c25b44c2751835639b5b47f77b84ec793fd4179ae61bc390',
+    contentHash: '49d934f244c1ca6c5fe533162cc797db9c0ec298e81cb0312efbc6672e17b793',
     approvedAt: '2026-10-28T00:00:00.000Z',
     approvalId: 'factory:hr:v1',
     scope: 'content+permissions',
   },
   sales: {
-    contentHash: '27098076f67a2fbd0b866fd5205eb2485637cfd9e954d2bda7741984bf452839',
+    contentHash: '73123a7ab007fddfa8366dc651dc3699b22f7a83fd68825204471a5e0d267cab',
     approvedAt: '2026-10-28T00:00:00.000Z',
     approvalId: 'factory:sales:v1',
     scope: 'content+permissions',

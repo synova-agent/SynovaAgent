@@ -18,6 +18,10 @@
  *             `persona` = `{roleId, systemAddendum（0..4000，缺省/纯空白归一为 ''）, contexts[]（≤32）}`；
  *             每条形如 `{id(1..64), label(1..80), source(1..200), why(1..200), required:boolean}`。
  *             `buildRoleLayer()` 返回「岗位设定段 ＋ 上下文清单段」，两段皆空 ⇒ `''`（**不是分隔符**）。
+ *             🔴 **#1075 P2-3 additive 导出**：`readPieceBytesOnce(roleDir)`（六件单读快照，IO 壳；
+ *             签名 `(roleDir:string)=>PieceSnapshot` 不变）—— 生产唯一调用方 =
+ *             `src/init/role-pack-output-standard.ts`（同一份快照算指纹 ＋ 解析 criteria/template，
+ *             禁"二读"）。**导出只为禁复制该段**；判定/日志/顺序零改动。
  *   @degraded — **不抛**：读失败／YAML 坏（含重复键）／形状非法／超限一律折成 typed code ＋ 点名 reason
  *             ＋ `log.warn`（`degraded:true`，铁律 11/24/31）。**回滚开关**（`SYNOVA_ROLE_PACK_PERSONA=off`）
  *             在 `buildRoleLayer()` 内生效：返回 `''` ＋ 一条 `log.warn`（`degraded:true`）——放这里而非 loader，
@@ -26,6 +30,8 @@
  *             判定（新绑定的审批门／已绑定会话的每轮复核）。`buildRoleLayer()` 生产唯一调用方 =
  *             `src/agent/conversation-engine.ts` 的 `buildSystemPrompt()`（`setRolePack()` 重建
  *             `messages[0]` 亦经此）。**其它模块不得复制本文件判定**；上下文内容解析归 P4。
+ *             🔴 `readPieceBytesOnce()` 生产唯一调用方 = `src/init/role-pack-output-standard.ts`
+ *             （#1075 P2-3）；**其它模块不得复制该段**（六件单读是封 TOCTOU 的唯一实现）。
  *   @not-here — 不做 rolePackId **形状**校验（`400 E_ROLE_PACK_ID_INVALID` 归路由层）；不做身份/角色白名单
  *             （`403 E_ROLE_PACK_FORBIDDEN` 归路由层）；不做换岗禁（`409 E_ROLE_PACK_IMMUTABLE` 归路由层）；
  *             不改 `RolePack`／审批记录（P2-1 件，红线）；不解析 `source` 指向的内容；不缓存（规格 L4）。
@@ -62,6 +68,7 @@
  *   | `RolePackPersonaCode`／`LoadRolePackPersonaResult` | typed 结果（判别联合；五码） |
  *   | `loadRolePackPersona()` | IO 壳：六件自读 → 指纹自校验 → lstat/64 KiB → 审批门 → 解析限额 |
  *   | `buildRoleLayer()` | 纯核：系统提示词的「岗位设定＋上下文清单」层（回滚开关在此） |
+ *   | `readPieceBytesOnce()` | IO 壳：六件单读快照（逐件 lstat 普通文件 ＋ 一次读；**P2-3 复用**） |
  *
  * 已知限制（Known Limitations；禁写"暂无"）:
  *   · **L1 · 授权只到角色白名单**（规格 L1）：本文件只判"包是否 approved ＋ 内容是否被改"；
@@ -274,8 +281,12 @@ function readLimitedString(
  *
  * @param roleDir - 角色包目录（绝对路径）
  * @returns 快照 或 typed 失败（`E_ROLE_PACK_PERSONA_UNREADABLE`，reason 点名文件＋原因）
+ *
+ * 🔴 **#1075 P2-3：本函数加 `export`（仅加 export，签名/判定/日志/顺序零改动）** ——
+ *   岗位输出标准编译需"同一份六件快照"同时算指纹与解析 criteria/template（封 TOCTOU）；
+ *   在那边复制本段会产生第二套 lstat/读法（两套语义）。§Ø.4 第二项批准即此。
  */
-function readPieceBytesOnce(roleDir: string): PieceSnapshot {
+export function readPieceBytesOnce(roleDir: string): PieceSnapshot {
   const pieces: { readonly name: string; readonly bytes: Buffer }[] = [];
   for (const name of ROLE_PACK_PIECES) {
     const abs = join(roleDir, name);

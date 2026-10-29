@@ -30,6 +30,14 @@
 #        依据：规格 .handbook/派单件/2026-10-28-规格-1075-P2-2-人设与上下文.md §2.4（7 件：3 修改＋4 新建）＋ 登记件自身
 #        （本文件：writeset 追加 7 条 ∪ 既有 union；WIRING-REGISTRY.yaml 同文件纯追加 ⇒ 已在既有 writeset 内、不重复列）。
 #        本批产品/测试件写集零交集（CTO 2026-10-29 收件复核），逐条见下方 writeset 末尾 7 行。
+#      ＋ #1075 P2-3（批四·输出标准消费，2026-10-29，单 PR，锚 main `26f06d664`）
+#        依据：规格 .handbook/派单件/2026-10-29-规格-1075-P2-3-输出标准.md §2.4（3 新建＋9 修改＋2 登记 ＝ 14 条目）
+#        ＋ 登记件自身（本文件：writeset 追加 7 条 ∪ 既有 union；`docs/authority/WIRING-REGISTRY.yaml` 同文件纯追加
+#        ⇒ 已在既有 writeset 内、不重复列）。CTO 2026-10-29 已批两件（本规格即批准书）：
+#        ① 三包 additive `machine` ⇒ 同批重算 `FACTORY_APPROVALS` 三 hash（§Ø.4 第一项）；
+#        ② `src/init/role-pack-persona.ts` 仅把既有私有 `readPieceBytesOnce` 加 `export`（判定零改动，§Ø.4 第二项）。
+#        14 条目中 7 条已被既有行覆盖（conversations.ts／role-pack-persona.ts／role-pack-approval.ts ＋其测试／
+#        triviality-manifest.yaml／WIRING-REGISTRY.yaml／本文件）⇒ 本次新增 7 条，逐条见下方 writeset 末尾 7 行。
 writeset:
   - extensions/presets/schema/role-pack-v2.schema.json
   - src/init/role-pack-schema.ts
@@ -69,6 +77,13 @@ writeset:
   - tests/init/role-pack-persona.test.ts
   - tests/agent/conversation-engine-role.test.ts
   - tests/routes/conversations-role.test.ts
+  - src/init/role-pack-output-standard.ts
+  - src/output/contract-validator.ts
+  - extensions/presets/roles/finance/acceptance-criteria.yaml
+  - extensions/presets/roles/hr/acceptance-criteria.yaml
+  - extensions/presets/roles/sales/acceptance-criteria.yaml
+  - tests/init/role-pack-output-standard.test.ts
+  - tests/routes/conversations-role-output.test.ts
 done:
   - verify: node node_modules/.bin/vitest run tests/init/role-pack-schema.test.ts
   - verify: node node_modules/.bin/vitest run tests/init/preset-loader.test.ts

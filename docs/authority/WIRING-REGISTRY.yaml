@@ -250,3 +250,11 @@ entries:
     status: wired
     owner: P2
     notes: "岗位包人设＋上下文消费（#1075 P2-2）：approved 包的 prompt.systemAddendum 与 contexts 清单进系统提示词；六件自读→computeRolePackContentHash 与 pack.validation.contentHash 比对→审批门；无包会话提示词逐字不变（J3 基准 976ca690…fd33／LEN=1462）；撤销⇒200＋x-synova-role-pack: degraded＋不注入"
+  - capability: content.rolePackOutputStandard
+    defined_at: "src/init/role-pack-output-standard.ts:494"
+    provider: "src/init/role-pack-output-standard.ts:494"
+    consumer: "src/routes/conversations.ts:731"
+    test: "tests/routes/conversations-role-output.test.ts:1"
+    status: wired
+    owner: P2
+    notes: "岗位包输出标准消费（#1075 P2-3）：approved 包的 criteria[].machine 编译成 OutputContract 对象，角色会话每轮 assistant 回复后非阻断校验＋留痕（永不抛出／不改回复）；六件单读快照→computeRolePackContentHash 与 pack.validation.contentHash 比对→审批门→限额；无 machine 的 criteria 进 unverifiable[]（可见不静默）；无岗位会话零副作用"

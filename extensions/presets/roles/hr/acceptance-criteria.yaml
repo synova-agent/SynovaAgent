@@ -5,9 +5,18 @@ criteria:
   - id: ac.deidentified
     text: 涉及个人的结论已去标识化
     check: output 中不出现个人身份证/薪酬明细
+    machine:
+      kind: noPattern
+      pattern: '身份证|薪酬明细'
   - id: ac.period-declared
     text: 编制与绩效数字带周期
     check: output.sections.org-facts 含「周期」
+    machine:
+      kind: textPattern
+      pattern: '周期'
   - id: ac.gap-explicit
     text: 缺件时显式列出缺口
     check: output.sections.gaps 非空且含「影响」
+    machine:
+      kind: textPattern
+      pattern: '缺口'
