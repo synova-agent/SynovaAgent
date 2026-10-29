@@ -65,7 +65,11 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
  
  # 3. pre-commit 故障率检查
  FAILURE_LOG="$ROOT/.synova/logs/pre-commit-failures.log"
- LEGACY_LOG_DIR="$ROOT/.claude"; [ ! -f "$FAILURE_LOG" ] && [ -f "$LEGACY_LOG_DIR/pre-commit-failures.log" ] && { FAILURE_LOG="$LEGACY_LOG_DIR/pre-commit-failures.log"; echo "::warning: 使用 legacy 路径 $FAILURE_LOG" >&2; }
+ LEGACY_LOG_DIR="$ROOT/.claude"
+ if [ ! -f "$FAILURE_LOG" ] && [ -f "$LEGACY_LOG_DIR/pre-commit-failures.log" ]; then
+   FAILURE_LOG="$LEGACY_LOG_DIR/pre-commit-failures.log"
+   echo "::warning: 使用 legacy 路径 $FAILURE_LOG" >&2
+ fi
  if [ -f "$FAILURE_LOG" ]; then
    TODAY=$(date +%Y-%m-%d)
    FAIL_COUNT=$(grep -c "$TODAY" "$FAILURE_LOG" 2>/dev/null | tr -d '\r' || echo 0)

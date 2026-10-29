@@ -71,7 +71,11 @@ done
 SNAPSHOT_DIR="${SYNO_LOG_SNAPSHOT_DIR:-$ROOT/.codex/snapshots/log-archive}"
 GATE_HITS="${SYNO_LOG_GATE_HITS:-$ROOT/.claude/gate-hits.log}"
 PRECOMMIT_FAILURES="${SYNO_LOG_PRECOMMIT_FAILURES:-$ROOT/.synova/logs/pre-commit-failures.log}"
-_LEGACY_LOG_DIR="$ROOT/.claude"; [ -f "$PRECOMMIT_FAILURES" ] || { _LG="$_LEGACY_LOG_DIR/pre-commit-failures.log"; [ -f "$_LG" ] && { PRECOMMIT_FAILURES="$_LG"; echo "::warning: 使用 legacy 路径 $PRECOMMIT_FAILURES" >&2; }; }
+_LEGACY_LOG_DIR="$ROOT/.claude"
+if [ ! -f "$PRECOMMIT_FAILURES" ]; then
+  _LG="$_LEGACY_LOG_DIR/pre-commit-failures.log"
+  if [ -f "$_LG" ]; then PRECOMMIT_FAILURES="$_LG"; echo "::warning: 使用 legacy 路径 $PRECOMMIT_FAILURES" >&2; fi
+fi
 DEGRADED_LIVE="${SYNO_LOG_DEGRADED:-$ROOT/.codex/control-tower/logs/degraded-events.log}"
 DEGRADED_DEAD="${SYNO_LOG_DEAD_DEGRADED:-$ROOT/.claude/degraded-events.log}"
 
