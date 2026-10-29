@@ -357,6 +357,20 @@ function approvalsRootFor(repoRoot: string): string {
 }
 
 /**
+ * 审批记录根 — **导出面**（#1075 P3 / T1；规格 §2.4「仅导出 `resolveApprovalsRoot(contentRoot)`」）。
+ *
+ * 入参 = **内容根**（`loadRolePacks().root`，如 `<仓库>/extensions/presets`）：
+ * `join(resolve(contentRoot, '../..'), '.synova/approvals')` —— 与内部 `approvalsRootFor(repoRoot)` **同值**
+ * （本函数只把「内容根 → 仓库根」这一步收进来；loader 内部调用点已持有 `repoRoot` ⇒ **判定与调用点零改动**）。
+ * 生产调用方 = `src/routes/role-approvals.ts`（写模块入参派生）；测试 = `tests/init/role-pack-approval-write.test.ts`。
+ * 🔴 只读路径派生：不创建目录、不探权限、不读记录（写入侧 `role-pack-approval-write.ts` 负责 mkdir 与原子写）。
+ * 🔴 单一出处：其它模块**不得**另写 `.synova/approvals` 字面量（否则写侧与读侧派生可能漂移）。
+ */
+export function resolveApprovalsRoot(contentRoot: string): string {
+  return approvalsRootFor(resolve(contentRoot, '../..'));
+}
+
+/**
  * 包是否声明了 `capabilities[].tool`（`permissionsPending` 口径；规格 §2.3-C）。
  *
  * 🔴 **解析失败 ⇒ 保守 `true`**（"读不出"不得被当"没有 tools"——那会低估待批权限）；
