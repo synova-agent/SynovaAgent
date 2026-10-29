@@ -64,6 +64,13 @@
 #           无逻辑/阈值变更）；② gate-exemptions/2026-10-30-1075-p2-4b-b.md —— ①d 受保护路径豁免件
 #           （含 gate-exemptions 自覆盖）；③ docs/authority/DOCS-REGISTRY.yaml —— D2 登记门禁要求
 #           追加 DOC-1149 一行（该路径**已在既有 writeset**⇒不重复列）。三者均**待 L1 收件闸追认**。
+#      ＋ #1075 P3（批七·审批 UI · 2026-10-29 · 单 PR · 锚 main `9ec742523`）依据：
+#        规格 .handbook/派单件/2026-10-29-规格-1075-P3-审批UI.md §2.4（9 产品＋3 登记 ＝ 12 条目）
+#        ＋ gate-A 回执（四轮＋spot-check；结论＝可开工，2026-10-29）。12 条目中 5 条已被既有行覆盖
+#        （src/init/preset-loader.ts／src/routes/conversations.ts／tests/contract/triviality-manifest.yaml／
+#        docs/authority/WIRING-REGISTRY.yaml／本文件）⇒ 本次新增 7 条，逐条见下方 writeset 末尾 7 行。
+#        WIRING 同文件纯追加 2 行（permission.rolePackApprovalWrite／audit.rolePackApprovalChain）；
+#        triviality 追加 4 条 triage（3 个新增 ≥100 逻辑行模块＋approval-card 同批登记使 legacy 回 baseline）。
 writeset:
   - extensions/presets/schema/role-pack-v2.schema.json
   - src/init/role-pack-schema.ts
@@ -123,6 +130,13 @@ writeset:
   - src/l4/knowledge-store.ts
   - scripts/control-tower/tool-signal-baseline.txt
   - gate-exemptions/2026-10-30-1075-p2-4b-b.md
+  - src/init/role-pack-approval-write.ts
+  - src/routes/role-approvals.ts
+  - src/agent/approval-card.ts
+  - src/routes/role-packs-page.ts
+  - src/server.ts
+  - tests/init/role-pack-approval-write.test.ts
+  - tests/routes/role-approvals.test.ts
 done:
   - verify: node node_modules/.bin/vitest run tests/init/role-pack-schema.test.ts
   - verify: node node_modules/.bin/vitest run tests/init/preset-loader.test.ts
