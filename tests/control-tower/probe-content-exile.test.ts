@@ -19,20 +19,25 @@
  *    被测对象是真链路，**禁 mock**；重型探针须串行（锁文件负责），本文件不得与 T4/C3 并发。
  */
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, readdirSync, renameSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, describe, expect, it } from 'vitest';
 import { EXIT_BY_VERDICT, ProbeError } from '../../scripts/control-tower/probe-ladder';
 import {
+  DEFAULT_LOCK_WAIT_MS,
   EXILE_VICTIM_ID,
   KNOWN_CASES,
+  LOCK_REL,
   TARGETS,
+  acquireLock,
   countNonEmptyLines,
   dirDigest,
   exileRootFor,
   fileSha256,
   parseChildPayload,
+  parseLockWaitMs,
   setDifference,
   typeCountsFromResults,
 } from '../../scripts/control-tower/probe-content-exile';
@@ -81,7 +86,7 @@ interface ProbeRun {
   readonly stderr: string;
 }
 
-function runProbe(args: readonly string[]): ProbeRun {
+function runProbe(args: readonly string[], extraEnv: Readonly<Record<string, string>> = {}): ProbeRun {
   try {
     const stdout = execFileSync(process.execPath, [TSX_CLI, PROBE, ...args], {
       cwd: REPO_ROOT,
@@ -89,6 +94,7 @@ function runProbe(args: readonly string[]): ProbeRun {
       stdio: ['ignore', 'pipe', 'pipe'],
       maxBuffer: 64 * 1024 * 1024,
       timeout: 240_000,
+      env: { ...process.env, ...extraEnv },
     });
     return { rc: 0, stdout, stderr: '' };
   } catch (err: unknown) {
@@ -129,8 +135,20 @@ function gitExtensionsChanges(): number {
     .filter((l) => l !== '').length;
 }
 
-function probeCode(fn: () => unknown): string {
+/**
+ * 在**持锁**状态下断言全局状态（`extensions/` 计数 / git 状态 / 隔离区残留等）。
+ * 为什么：默认并行时另一文件的探针可能正在移走/新增内容面 ⇒ 不持锁的全局断言会把**中间态**判成假红。
+ */
+async function withRepoLock<T>(fn: () => T | Promise<T>): Promise<T> {
+  const lock = await acquireLock(REPO_ROOT);
   try {
+    return await fn();
+  } finally {
+    lock.release();
+  }
+}
+
+function probeCode(fn: () => unknown): string {  try {
     fn();
     return 'NO_THROW';
   } catch (err: unknown) {
@@ -208,7 +226,7 @@ describe('probe-content-exile · 纯函数面（C2 / #707）', () => {
 describe('probe-content-exile · spawn 级（真链路，禁 mock）', () => {
   it(
     '⑧ 主用例：--case main ⇒ rc 0 ＋ 7 条关键行 ＋ victim 六文件摘要复原 ＋ extensions/ 干净',
-    () => {
+    async () => {
       const before = dirDigest(VICTIM_DIR);
       const run = runProbe(['--case', 'main']);
       expect(run.rc).toBe(0);
@@ -219,20 +237,22 @@ describe('probe-content-exile · spawn 级（真链路，禁 mock）', () => {
       expect(run.stdout).toContain('[OTHERS] baselineIds − childIds = {sentinel-cash-runway}');
       expect(run.stdout).toContain('[IN-PROCESS-RELOAD] registry=46');
       expect(run.stdout).toContain('[RESTORE]');
-      // 恢复必须逐字节一致（6 文件全目录摘要），且 extensions/ 干净
-      const after = dirDigest(VICTIM_DIR);
-      expect(after.files).toBe(before.files);
-      expect(after.sha256).toBe(before.sha256);
-      expect(gitExtensionsChanges()).toBe(0);
-      // 隔离区不得残留 victim（探针 pid ≠ 本测试进程 pid ⇒ 扫描全部 <pid>/ 子目录）
-      expect(exiledVictims()).toEqual([]);
+      // 恢复必须逐字节一致（6 文件全目录摘要），且 extensions/ 干净（持锁断言，防并行中间态假红）
+      await withRepoLock(() => {
+        const after = dirDigest(VICTIM_DIR);
+        expect(after.files).toBe(before.files);
+        expect(after.sha256).toBe(before.sha256);
+        expect(gitExtensionsChanges()).toBe(0);
+        // 隔离区不得残留 victim（探针 pid ≠ 本测试进程 pid ⇒ 扫描全部 <pid>/ 子目录）
+        expect(exiledVictims()).toEqual([]);
+      });
     },
     300_000,
   );
 
   it(
     '⑨ 负控 case：--case no-exile ⇒ rc 1 ＋ [CHILD] 46 ＋ [EXPECTED-RED]（不真移走无 −1）',
-    () => {
+    async () => {
       const before = dirDigest(VICTIM_DIR);
       const run = runProbe(['--case', 'no-exile']);
       expect(run.rc).toBe(1);
@@ -241,31 +261,75 @@ describe('probe-content-exile · spawn 级（真链路，禁 mock）', () => {
       expect(run.stdout).toContain('[CHILD] sentinels=46');
       expect(run.stdout).toContain('[EXPECTED-RED]');
       expect(run.stdout).not.toContain('RESULT=PASS');
-      // 反例不得动内容面
-      expect(dirDigest(VICTIM_DIR).sha256).toBe(before.sha256);
-      expect(gitExtensionsChanges()).toBe(0);
+      // 反例不得动内容面（持锁断言）
+      await withRepoLock(() => {
+        expect(dirDigest(VICTIM_DIR).sha256).toBe(before.sha256);
+        expect(gitExtensionsChanges()).toBe(0);
+      });
     },
     240_000,
   );
 
   it(
-    '⑩ 边界 case：未知 case ⇒ rc 2 ＋ 末行 RESULT=ERROR ＋ stderr degraded:（fail-closed）',
-    () => {
+    '⑩ 边界 case：未知 case ⇒ rc 2（fail-closed）／锁有界等待：活持有超时 LOCK_BUSY exit 2 ＋ 死残留回收一次',
+    async () => {
+      // ── 边界 A：未知 case（参数错误在取锁之前 ⇒ 不动内容面）──
       const run = runProbe(['--case', '__no_such_case__']);
       expect(run.rc).toBe(2);
       expect(lastResult(run.stdout)).toBe('RESULT=ERROR');
       expect(run.stderr).toContain('degraded:');
       expect(run.stdout).toContain('UNKNOWN_CASE');
-      expect(existsSync(join(REPO_ROOT, '.synova-out/m6-1158/.lock'))).toBe(false);
-      expect(gitExtensionsChanges()).toBe(0);
-      expect(existsSync(join(VICTIM_DIR, 'manifest.json'))).toBe(true);
+      await withRepoLock(() => {
+        expect(gitExtensionsChanges()).toBe(0);
+        expect(existsSync(join(VICTIM_DIR, 'manifest.json'))).toBe(true);
+      });
+
+      // ── 边界 B：v2.4 有界等待 —— env 口径（默认 180s / 可调 / 非法 fail loud）──
+      expect(DEFAULT_LOCK_WAIT_MS).toBe(180_000);
+      expect(parseLockWaitMs(undefined)).toBe(180_000);
+      expect(parseLockWaitMs('')).toBe(180_000);
+      expect(parseLockWaitMs('0')).toBe(0);
+      expect(parseLockWaitMs('2500')).toBe(2500);
+      expect(probeCode(() => parseLockWaitMs('abc'))).toBe('LOCK_WAIT_MS_INVALID');
+      expect(probeCode(() => parseLockWaitMs('-1'))).toBe('LOCK_WAIT_MS_INVALID');
+
+      // ── 边界 C：spawn 级「活持有 ＋ 等待上限 0」⇒ 立即超时 LOCK_BUSY ＋ exit 2（degraded）──
+      //    本进程用有界等待取真锁（会等并发探针释放），拿到后让子探针立刻撞锁 ⇒ 断言**超时**语义。
+      const prevEnv = process.env['SYNO_M6_LOCK_WAIT_MS'];
+      process.env['SYNO_M6_LOCK_WAIT_MS'] = '60000';
+      let held: { release(): void } | undefined;
+      try {
+        held = await acquireLock(REPO_ROOT);
+        const blocked = runProbe(['--case', 'no-exile'], { SYNO_M6_LOCK_WAIT_MS: '0' });
+        expect(blocked.rc).toBe(2);
+        expect(lastResult(blocked.stdout)).toBe('RESULT=ERROR');
+        expect(blocked.stderr).toContain('degraded:');
+        expect(blocked.stderr).toContain('超时'); // 有界等待超时（不是 fail-fast 崩溃）
+      } finally {
+        held?.release();
+        if (prevEnv === undefined) delete process.env['SYNO_M6_LOCK_WAIT_MS'];
+        else process.env['SYNO_M6_LOCK_WAIT_MS'] = prevEnv;
+      }
+
+      // ── 边界 D：隔离 temp root —— 死进程残留 ⇒ 回收一次（不无限等）──
+      const tmpRoot = mkdtempSync(join(tmpdir(), 'm6-c2-lock-'));
+      const tmpLock = join(tmpRoot, LOCK_REL);
+      try {
+        mkdirSync(dirname(tmpLock), { recursive: true });
+        writeFileSync(tmpLock, '99999999', 'utf8'); // 不存在的 pid ⇒ 死残留
+        const reclaimed = await acquireLock(tmpRoot);
+        reclaimed.release();
+        expect(existsSync(tmpLock)).toBe(false);
+      } finally {
+        rmSync(tmpRoot, { recursive: true, force: true });
+      }
     },
-    120_000,
+    180_000,
   );
 
   it(
     '⑪ 子协议 stdout 契约（E2）：--child-count ⇒ stdout 非空行数=1 ＋ JSON 可解析 ＋ stderr 静音',
-    () => {
+    async () => {
       const child = runChildDirect();
       expect(child.rc).toBe(0);
       // ① stdout 恰好一行（非空行计数；"只一行 JSON" 的字面契约）
@@ -280,8 +344,10 @@ describe('probe-content-exile · spawn 级（真链路，禁 mock）', () => {
       // ③ 子进程日志静音（LOG_LEVEL=silent，与 C3 同口径）⇒ 合并采集（stdout+stderr）也只有 1 行
       expect(countNonEmptyLines(child.stderr)).toBe(0);
       expect(countNonEmptyLines(child.stdout) + countNonEmptyLines(child.stderr)).toBe(1);
-      // ④ 子协议只读：不得动内容面
-      expect(gitExtensionsChanges()).toBe(0);
+      // ④ 子协议只读：不得动内容面（持锁断言，防并行中间态假红）
+      await withRepoLock(() => {
+        expect(gitExtensionsChanges()).toBe(0);
+      });
     },
     240_000,
   );

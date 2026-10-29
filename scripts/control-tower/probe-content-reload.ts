@@ -18,14 +18,15 @@
  *   @degraded — stderr 一行 `degraded: <原因>` ＋ 追加 JSON 到 `SYNO_GATE_DEGRADED_LOG`
  *               （字段 time/component/code/phase/retryable；D2 约定）＋ exit 2
  *   @authority — 谁能跑：控制塔维护者 / 独立复核者。运行期**真实增删** `extensions/sentinels/**`
- *               ⇒ 必须持 `.synova-out/m6-1158/.lock`（拿不到 ⇒ LOCK_BUSY ＋ exit 2；**并发不安全**）。
+ *               ⇒ 必须持 `.synova-out/m6-1158/.lock`（**v2.4 有界等待**：默认 180s、`SYNO_M6_LOCK_WAIT_MS`
+ *               可调；**超时才** LOCK_BUSY ＋ exit 2 —— 既不全速失败，也不无限等）。
  *   @encoding  — 全文件 UTF-8（D732）；落盘一律显式 `utf8`，不依赖终端代码页。
  *   @判别力    — 自检（D4）：反例 `no-reload` 证明「+1」是 reload 的信号，不是目录存在性的假信号。
  *
  * 结构（File → Role）:
  *   ├ 常量 TARGETS / KNOWN_CASES / BASELINE_SENTINEL_COUNT / EXPECTED_SCORE — ladder 自声明面
  *   ├ readSentinelDirNames / sentinelIdOf / isFiniteScore / resolveCases       — 纯函数（测试直取）
- *   ├ isPidAlive / acquireLock                                                — 并发互斥（stale 回收）
+ *   ├ isPidAlive / parseLockWaitMs / acquireLock                               — 并发互斥（有界等待＋stale 回收）
  *   ├ copyFixture / restoreFixture / fixtureSourceDigest                      — 增删 ＋ 恢复 ＋ 哈希核对
  *   ├ runMainCase / runBadManifestCase / runNoReloadCase                       — 三个 case
  *   └ main                                                                    — CLI 分派 ＋ 三态退出
@@ -44,7 +45,8 @@
  *      必须同步 `BASELINE_SENTINEL_COUNT`，否则本探针报「基线漂移」红（刻意如此：不静默放宽判据）。
  *   ② `content-reload` **不调 unregister**（裁 167-U2）⇒ 清理必须 `unregister` ＋ `clearSentinelCache`
  *      ＋ 再 `reload` 三步；漏任一步计数恒 47（规格 §4 C1 步骤 7）。
- *   ③ 运行期真实增删 `extensions/sentinels/**` ⇒ **并发不安全**。锁 stale 回收靠同机 pid 存活探测
+ *   ③ 运行期真实增删 `extensions/sentinels/**` ⇒ **靠锁串行**（**v2.4 有界等待**：默认 180s、
+ *      `SYNO_M6_LOCK_WAIT_MS` 可调；**超时才** LOCK_BUSY ＋ exit 2）。锁 stale 回收靠同机 pid 存活探测
  *      （跨机/容器不可靠）。进程被强杀留下的 `probe-c1-*` / `probe-bad-*` 目录**不自动删**（防删错），
  *      下一次运行会 `degraded: 夹具残留` ＋ exit 2 **点名**，由人确认后清理。
  *   ④ 测量值只在 `:memory:` 库内断言，**不写生产库**；轮次级（`SENTINEL-FINDINGS-*`）不在本件判据内。
@@ -111,7 +113,13 @@ export const EXPECTED_SCORE = 0.66;
 /** 隔离/证据落点（`.synova-out/` 已 gitignore） */
 const EVIDENCE_DIR_REL = '.synova-out/m6-1158';
 const DATA_DIR_REL = `${EVIDENCE_DIR_REL}/data`;
-const LOCK_REL = `${EVIDENCE_DIR_REL}/.lock`;
+export const LOCK_REL = `${EVIDENCE_DIR_REL}/.lock`;
+/** 锁轮询间隔（规格 v2.4 §7：200ms） */
+const LOCK_POLL_INTERVAL_MS = 200;
+/** 锁有界等待上限默认值（规格 v2.4 §7：180000ms；`SYNO_M6_LOCK_WAIT_MS` 可调） */
+export const DEFAULT_LOCK_WAIT_MS = 180_000;
+/** 等待上限的注入缝（测试可用短值，防拖长） */
+const LOCK_WAIT_ENV = 'SYNO_M6_LOCK_WAIT_MS';
 const DEGRADED_LOG_REL = `${EVIDENCE_DIR_REL}/degraded-events.log`;
 /** 残留哨兵目录前缀（强杀后由人确认清理；本件不自动删未知目录） */
 const FIXTURE_PREFIXES: readonly string[] = ['probe-c1-', 'probe-bad-'];
@@ -226,53 +234,91 @@ export function isPidAlive(pidText: string): boolean {
 }
 
 /**
- * 取锁（`wx` 原子创建）；已被活进程持有 ⇒ LOCK_BUSY；死进程残留 ⇒ 回收一次。
+ * 解析有界等待上限（`SYNO_M6_LOCK_WAIT_MS`）。
+ *
+ * @input  环境变量原值（缺省 ⇒ 默认 180000）
+ * @output 非负整数毫秒
+ * @error  `LOCK_WAIT_MS_INVALID`（非非负整数）—— fail loud，不静默回落默认
+ */
+export function parseLockWaitMs(raw: string | undefined): number {
+  if (raw === undefined || raw.trim() === '') return DEFAULT_LOCK_WAIT_MS;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0) {
+    throw new ProbeError('LOCK_WAIT_MS_INVALID', 'lock', `${LOCK_WAIT_ENV} 须非负整数: ${String(raw)}`);
+  }
+  return n;
+}
+
+/** 有界等待的睡眠原语（探针内唯一实现；不引第三方依赖） */
+async function sleepMs(ms: number): Promise<void> {
+  await new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * 取锁（`wx` 原子创建；**v2.4 有界等待**）。
+ *
+ * 规格 v2.4 §7：`wx` 失败且**活持有** ⇒ 每 200ms 轮询重试，直至 `SYNO_M6_LOCK_WAIT_MS`（默认 180000）超时；
+ *   **死进程残留 ⇒ 回收一次**；**超时** ⇒ `LOCK_BUSY`（调用方 degraded ＋ exit 2）。
+ *   🔴 **不许无限等、不许静默跳过**（既不能 fail-fast 让默认并行恒红，也不能永远挂着）。
  *
  * @input  root 仓库根
  * @output ProbeLock（release 幂等）
- * @error  LOCK_BUSY（活持有 / 回收失败）⇒ 调用方 degraded ＋ exit 2
+ * @error  LOCK_BUSY（等待超时 / 回收失败）/ LOCK_WAIT_MS_INVALID（env 非法）
  */
-export function acquireLock(root: string): ProbeLock {
+export async function acquireLock(root: string): Promise<ProbeLock> {
   const path = join(root, LOCK_REL);
   mkdirSync(dirname(path), { recursive: true });
-  const open = (): void => {
-    const fd = openSync(path, 'wx');
+  const waitMs = parseLockWaitMs(process.env[LOCK_WAIT_ENV]);
+  const deadline = Date.now() + waitMs;
+  let reclaimed = false;
+  let openErr: unknown;
+  const tryOpen = (): boolean => {
     try {
-      writeSync(fd, String(process.pid));
-    } finally {
-      closeSync(fd);
+      const fd = openSync(path, 'wx');
+      try {
+        writeSync(fd, String(process.pid));
+      } finally {
+        closeSync(fd);
+      }
+      return true;
+    } catch (err: unknown) {
+      openErr = err;
+      return false;
     }
   };
-  try {
-    open();
-  } catch (err: unknown) {
+  for (;;) {
+    if (tryOpen()) break;
     let holder = '';
     try {
       holder = readFileSync(path, 'utf8');
     } catch {
       holder = ''; // 读不到持有者 ⇒ 按死锁处理（下面回收一次）
     }
-    if (isPidAlive(holder)) {
+    if (!isPidAlive(holder)) {
+      if (reclaimed) {
+        throw new ProbeError(
+          'LOCK_BUSY',
+          'lock',
+          `死锁不可回收（残留 pid=${holder.trim()}）: ${LOCK_REL}; wx: ${lockIoMessage(openErr)}`,
+        );
+      }
+      try {
+        unlinkSync(path);
+      } catch (e2: unknown) {
+        throw new ProbeError('LOCK_BUSY', 'lock', `锁不可回收: unlink: ${lockIoMessage(e2)}`);
+      }
+      reclaimed = true;
+      continue;
+    }
+    const now = Date.now();
+    if (now >= deadline) {
       throw new ProbeError(
         'LOCK_BUSY',
         'lock',
-        `锁被占用（pid=${holder.trim()}，锁=${LOCK_REL}）—— 并发探针禁止同跑（规格 §7 红线）`,
+        `锁被占用（pid=${holder.trim()}，等待 ${waitMs}ms 超时）—— 并发探针禁止同跑（规格 §7 红线）`,
       );
     }
-    try {
-      unlinkSync(path);
-    } catch (e2: unknown) {
-      throw new ProbeError(
-        'LOCK_BUSY',
-        'lock',
-        `锁不可回收: ${lockIoMessage(err)}; unlink: ${lockIoMessage(e2)}`,
-      );
-    }
-    try {
-      open();
-    } catch (e3: unknown) {
-      throw new ProbeError('LOCK_BUSY', 'lock', `锁回收后仍取不到: ${lockIoMessage(e3)}`);
-    }
+    await sleepMs(Math.min(LOCK_POLL_INTERVAL_MS, Math.max(1, deadline - now)));
   }
   return {
     path,
@@ -837,7 +883,7 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
 
   let lock: ProbeLock;
   try {
-    lock = acquireLock(root);
+    lock = await acquireLock(root);
   } catch (err: unknown) {
     const e = toProbeError(err, 'LOCK_BUSY', 'lock');
     emitDegraded(root, e.code, e.phase, e.message);
