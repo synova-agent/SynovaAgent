@@ -1474,3 +1474,10 @@ documents:
     status: active
     owner: P4
     note: "#1117（残余批）：trunk 名单源 SYNO_TRUNK_REF（缺省 main），21 件代码＋11 件配对测试切 main，推送端 bypass 基链与控制塔 base 链统一；main 保护段逐字不动，三态/判据强度/门禁组数不变；含 L1 批准扩写集 2 件配对夹具；豁免自覆盖＋DOCS-REGISTRY 自登记。"
+  # ---- P4 2026-10-29：#1146 门禁日志解耦豁免登记（DOC-1146；R1 口径）----
+  - id: DOC-1146
+    type: decision
+    path: gate-exemptions/2026-10-29-decouple-install-hooks.md
+    status: active
+    owner: P4
+    note: "#1146（批1 解耦脏点）：门禁运行时日志 .claude/ -> .synova/logs/（pre-commit-failures/gate-soft-warnings/last-precommit-success），install-hooks 写入改新路径并 mkdir；读取方 8 件新路径优先＋legacy 只读回落带 warning（post-commit/pre-commit-check/loop-context/log-snapshot/gen-cto-health/pr-queue-scan/check-fde-terms/dashboards）；不改判据语义、不迁移历史文件；含自覆盖行与 DOCS-REGISTRY 自登记行。"

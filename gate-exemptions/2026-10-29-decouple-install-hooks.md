@@ -1,4 +1,4 @@
-# review: #1146
+# review: #1156
 - scripts/install-hooks.sh — 3 处日志写入改工具中立路径并 mkdir，含头注同步 — #1146
 - scripts/hooks/post-commit.sh — marker 读取改新路径优先、legacy 只读回落带告警 — #1146
 - scripts/pre-commit-check.sh — 失败日志读取改新路径优先、legacy 只读回落带告警 — #1146
