@@ -1292,7 +1292,7 @@ run_by:
     run_by: gitea-ci
     quota: true
   - entrypoint: scripts/control-tower/check-bypass-log.sh
-    run_by: "无"
+    run_by: pre-push
     quota: false
   - entrypoint: scripts/control-tower/check-canary-drift.sh
     run_by: github-ci
@@ -1637,8 +1637,6 @@ run_by_candidates:
   - entrypoint: scripts/control-tower/check-acceptance-matrix.py
   - entrypoint: scripts/control-tower/check-block-paths.ts
   - entrypoint: scripts/control-tower/check-board-metrics.ts
-  - entrypoint: scripts/control-tower/check-bypass-log.sh
-    why: "实际运行腿=scripts/pre-push-check.sh（推送侧对账），不在本五值枚举内 ⇒ 记 无 待裁"
   - entrypoint: scripts/control-tower/check-ci-stale-red.sh
   - entrypoint: scripts/control-tower/check-citations.py
   - entrypoint: scripts/control-tower/check-customer-deps.ts
