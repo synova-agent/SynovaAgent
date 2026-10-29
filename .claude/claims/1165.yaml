@@ -16,9 +16,11 @@ writeset:
   - tests/store/fixtures/seq-writer.ts
   - tests/agent/tool-result-event.test.ts
   - tests/agent/tool-cancel-timeout.test.ts
-  - docs/synova/reviews/1165.116511651165.json
+  - tests/expected/session/session-store.expected.json
+  - tests/store/session-store-expected.test.ts
+  - docs/synova/reviews/1166.116611661166.json
 done:
-  - verify: npx vitest run tests/store/session-tx-atomic.test.ts tests/store/session-seq-concurrency.test.ts tests/store/session-event-log.test.ts tests/store/session-events-limit.test.ts tests/store/session-store.test.ts tests/store/session-projection.test.ts
+  - verify: npx vitest run tests/store/session-store-expected.test.ts tests/store/session-tx-atomic.test.ts tests/store/session-seq-concurrency.test.ts tests/store/session-event-log.test.ts tests/store/session-events-limit.test.ts tests/store/session-store.test.ts tests/store/session-projection.test.ts
   - verify: npx vitest run tests/agent/tool-result-event.test.ts tests/agent/tool-cancel-timeout.test.ts tests/agent/tool-cancel.test.ts tests/agent/tool-loop-executor-resilience.integration.test.ts tests/agent/tool-loop-tool-pairing.integration.test.ts
   - verify: npx vitest run tests/contract/time-injection.test.ts tests/orchestrator/session-manager-eventlog.test.ts tests/agent/diagnosis-session-events.test.ts
   - verify: npx tsc --noEmit
