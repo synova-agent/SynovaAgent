@@ -7,9 +7,16 @@
 
 ## Q2: 范围
 做：
-- `scripts/install-hooks.sh`：3 处写入改 `<ROOT>/.synova/logs/…` 并 `mkdir -p`；头注同步
-- 读取方同步（新路径优先，legacy `.claude/` 只读回落 + `::warning`）：`scripts/hooks/post-commit.sh`、`scripts/pre-commit-check.sh`、`scripts/workflow/loop-context.sh`、`scripts/control-tower/log-snapshot.sh`、`scripts/control-tower/gen-cto-health.py`、`scripts/project/pr-queue-scan.py`（噪声清单）、`scripts/check-fde-terms.sh`（白名单）、`dsh/plugins/synova-dashboards/lib/collect.js`（看板读取）
-- `.gitignore` 增加 `.synova/logs/`
+- scripts/install-hooks.sh：3 处写入改 <ROOT>/.synova/logs/… 并 mkdir -p；头注同步
+- scripts/hooks/post-commit.sh：读取方同步（新路径优先，legacy 只读回落 + ::warning）
+- scripts/pre-commit-check.sh：读取方同步（marker 路径新优先 + legacy 回落）
+- scripts/workflow/loop-context.sh：读取方同步
+- scripts/control-tower/log-snapshot.sh：读取方同步
+- scripts/control-tower/gen-cto-health.py：读取方同步
+- scripts/project/pr-queue-scan.py：噪声清单同步
+- scripts/check-fde-terms.sh：白名单同步
+- dsh/plugins/synova-dashboards/lib/collect.js：看板读取同步
+- .gitignore：增加 .synova/logs/
 不做：
 - 不改任何判据语义；不删 `.claude/bypass.log` 的既有路径（D735 双写不动）
 - 不迁移历史文件（legacy 回落在，不需要搬）
