@@ -36,6 +36,8 @@
  *     以 `GET /api/role-packs/<id>` 的 JSON 为准；超限件由 API 标 `truncated`，页面原样展示标记。
  *   · L-page-2 · 无 CSP/无 SRI：内联脚本要求 `script-src 'unsafe-inline'`；本批不引入 CSP（§1.3 非目标）。
  *   · L-page-3 · 无访问日志：页面不记审计（页面本身无数据；数据访问由 API 侧审计）。
+ *   · L-page-4 · 出站请求 15s 超时（`AbortSignal.timeout(15000)`）：超时/中止 ⇒ 页面显式提示，
+ *     **不自动重试**（重试策略归客户端；本批只保证可取消、不静默挂起）。
  */
 
 import { Router, type Request, type Response } from 'express';
@@ -145,7 +147,9 @@ pre.text{white-space:pre-wrap;word-break:break-word;background:var(--input);bord
   function readToken() {
     try {
       // 🔴 token 唯一来源（规格 J8／§10-L9）：sessionStorage 的 'synova.token'，不读 cookie/URL/localStorage
-      return sessionStorage.getItem('synova.token') || '';
+      // R4.2：显式判空（**不得**写成 || 空串缺省形态 —— 凭据缺省放开禁止，CI 质量门 R4.2 判红）
+      var raw = sessionStorage.getItem('synova.token');
+      return typeof raw === 'string' ? raw : '';
     } catch (err) {
       notice('warn', '浏览器禁用了 sessionStorage，无法读取 token（' + String(err) + '）。请在本页直接粘贴 token 后重试，或检查隐私模式设置。');
       return '';
@@ -175,11 +179,14 @@ pre.text{white-space:pre-wrap;word-break:break-word;background:var(--input);bord
   }
 
   function apiGet(path, token) {
-    return fetch(path, {
+    // R4.3：出站调用必须可取消/有超时 —— 15s 未返回即中断，超时在 load() 的 catch 里显式渲染
+    var options = {
       method: 'GET',
       credentials: 'omit',
+      signal: AbortSignal.timeout(15000),
       headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json' }
-    }).then(function (res) {
+    };
+    return fetch(path, options).then(function (res) {
       return res.text().then(function (raw) {
         var body = null;
         try {
@@ -315,7 +322,10 @@ pre.text{white-space:pre-wrap;word-break:break-word;background:var(--input);bord
       }
     }).catch(function (err) {
       clear(app);
-      notice('err', what + '失败：网络请求出错（' + String(err) + '）。');
+      var name = err && typeof err.name === 'string' ? err.name : '';
+      var timedOut = name === 'TimeoutError' || name === 'AbortError';
+      var reason = timedOut ? '请求超时（15s）或被中止' : '网络请求出错';
+      notice('err', what + '失败：' + reason + '（' + String(err) + '）。');
     });
   }
 
@@ -368,4 +378,10 @@ function sendShell(_req: Request, res: Response): void {
 router.get('/role-packs', sendShell);
 router.get('/role-packs/:roleId', sendShell);
 
-export default router;
+/**
+ * 具名导出（R1.2：`check-quality-delta.py` 的 `exported_names()` 只认具名 export，
+ * 只看 `export default` 时会被判「未识别到导出名 ⇒ 无生产调用点」）。生产调用点 = `src/server.ts`。
+ */
+export const rolePacksPageRoutes = router;
+
+export default rolePacksPageRoutes;
