@@ -1,0 +1,65 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1136,
+  "patch_fingerprint": "sha256:f1d45bbae6fd634d1314f5b30d5ac4e3b67b2d21648685c164ae9fd49eeb1ba0",
+  "author": "squad-d0af89a86 (rebase by CTO)",
+  "reviewer": "k3-audit fresh-session (glm-5.3, Synova-k3独立审计, 2026-10-29 第二轮)",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "R2-A1",
+      "cmd": "GET /api/v1/.../commits/286aed9ed/status",
+      "evidence": "state=success total_count=2 (push+pull_request) pending=0",
+      "result": "pass"
+    },
+    {
+      "id": "R2-A2",
+      "cmd": "vitest run 三测试件（新 head 286aed9ed）",
+      "evidence": "35+14+13=62 passed, 0 failed",
+      "result": "pass"
+    },
+    {
+      "id": "R2-A3",
+      "cmd": "J3 基线（首轮已在 base 树 b8edf9860 独立复现 LEN=1462/SHA256=976ca690…fd33；本轮核对 conversation-engine.ts 与首轮 head 逐字节相同）＋vitest -t J3",
+      "evidence": "J3 3/3 passed；产品文件 git diff 2117c07e5..286aed9ed = SAME，基线结论可承",
+      "result": "pass"
+    },
+    {
+      "id": "R2-B1",
+      "cmd": "vitest run tests/routes/conversations-role.test.ts -t J5-3（真实路由）",
+      "evidence": "无 Bearer＋rolePackId ⇒ 403 fail-closed，1 passed",
+      "result": "pass"
+    },
+    {
+      "id": "R2-B4",
+      "cmd": "vitest run tests/routes/conversations-role.test.ts -t J8-1（真实路由）",
+      "evidence": "撤销 ⇒ 200＋x-synova-role-pack: degraded＋不注入，1 passed",
+      "result": "pass"
+    },
+    {
+      "id": "R2-D1",
+      "cmd": "git diff --name-only a65d3b4fc..286aed9ed（merge-base=main tip）",
+      "evidence": "恰 10 件；9 产品/测试/登记件与首轮 head 逐字节相同，仅 WIRING-REGISTRY.yaml 因合 main 解冲突：保留 #1132 引号+owner 修复与 #1112/#1122/#1134 main 侧条目，追加本批 content.rolePackPersona",
+      "result": "pass"
+    },
+    {
+      "id": "R2-carryover",
+      "cmd": "首轮回执 1136.6fa91488bacb.json（A1-A5/B/C/D/E/F 全项）",
+      "evidence": "其余项引首轮结论：产品文件逐字节未变，仅 WIRING 合并（已单列核验），首轮 A4/A5/B2-B3/C1-C3/D2/E1-E2 结论承继",
+      "result": "pass"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "info",
+      "note": "head 286aed9ed = 合 main(a65d3b4fc) 解 WIRING 冲突：merge-base=main tip ⇒ ④ 串行恢复 ok；与 #1132/#1116 的 WIRING 重叠随对方合入而消解。"
+    },
+    {
+      "severity": "info",
+      "note": "本回执提交后触发新一轮 CI，双绿后 ① 恢复 ok；指纹不受 reviews-only 提交影响（--diff-fingerprint 仍=f1d45bbae6fd…）。"
+    }
+  ],
+  "issued_at": "2026-10-29T19:35:00+08:00",
+  "tool": "k3-independent-audit@v1（委托 2026-10-29-审计委托-1136-P2-2 §0-§6；第二轮 head 286aed9ed 抽样复核）"
+}

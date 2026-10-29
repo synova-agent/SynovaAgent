@@ -1,0 +1,17 @@
+# .claude/claims/1125.yaml — fix: 写集门禁补删除项语义（D 进变更集）
+# #CRITERIA: D ｜ 架构层: 不属五层业务（治理脚本）
+# 声明载体 = 本件（writeset + done 两字段制）；Q1/Q2/Q3 可读说明见同批
+# .claude/task-briefs/2026-10-29-1125-dev-doc-writeset.md
+writeset:
+  - scripts/workflow/check-dev-doc-write-set.sh
+  - tests/control-tower/check-dev-doc-write-set.test.sh
+  - gate-exemptions/2026-10-29-1125-dev-doc-writeset.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - .claude/task-briefs/2026-10-29-1125-dev-doc-writeset.md
+  - .claude/claims/1125.yaml
+  - memory/notes/proposed/2026-10-29-1125-dev-doc-writeset.md
+done:
+  - verify: bash tests/control-tower/check-dev-doc-write-set.test.sh
+  - verify: bash -n scripts/workflow/check-dev-doc-write-set.sh
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main --root .
+note: "#1125：写集门禁变更集补 D 并改为带状态判（声明删除 ⇔ D 出现；声明修改仍须 A/C/M/R）；git 不可用 ⇒ exit 2（三态）。测试 15 例：真 git 夹具 A（声明删除＋git mv ⇒ 0）／去掉 D 的改坏版 ⇒ 1／夹具 B（声明修改＋零变更 ⇒ 1）／git 不可用 ⇒ 2。本卡语义修复无逃生开关（判据本身即修复，回滚＝revert）。"
