@@ -313,9 +313,55 @@ export class ToolRegistry {
   /** E2: Tool Profiles 角色限制 (null = 不限制) */
   private _role: string | null = null;
 
+  /**
+   * #1075 P2-4a: 岗位包工具白名单（**唯一执行门数据源**；`null` = 关闭包模式 = 既有行为）。
+   *
+   * 设计哲学: 白名单只**改数据**，不新增第二套判定分支 —— 复用既有 `_role` 拒绝分支的同一出口
+   *   （结构化 `ToolCallResult.error`），把"谁被授予"从角色档位换成岗位包声明（规格 §2.3-C）。
+   *
+   * 契约（铁律 47）:
+   * @input  经 `setAllowedTools()` 注入：`null` ⇒ 关闭包模式（恢复 profile 行为）；
+   *         `[]` ⇒ 全拒（权限待批/复核失败的 fail-closed）；`string[]` ⇒ 仅放行列出的工具名。
+   * @output `execute()` 命中白名单外 ⇒ `{ error: { name:'ToolPermissionError',
+   *         code:'TOOL_PERMISSION_DENIED', message } }`（handler 零调用）；`listTools()`／
+   *         `toOpenAITools()` 同步过滤（LLM 看不到未授权工具）。
+   * @degraded 拒绝 = 权限判定，不是降级：`log.warn({name, code:'TOOL_PERMISSION_DENIED'})` 留痕一次。
+   * @error  永不抛（与既有 execute 口径一致）。
+   * @not-here 不判 `enabled:false`／审批 scope／已注册性 —— 那是权限编译模块与引擎装配的职责；
+   *           本类只做"名单内放行、名单外拒绝"。
+   */
+  private _allowedTools: readonly string[] | null = null;
+
   /** 设置当前角色 (影响工具可见性和权限) */
   setRole(role: string): void {
     this._role = role;
+  }
+
+  /**
+   * #1075 P2-4a: 设置岗位包工具白名单（`null` = 关闭包模式）。
+   *
+   * @input  names — `readonly string[]`（放行清单；空数组 = 全拒）或 `null`（关闭包模式）
+   * @output 无。**必须**清 `_cachedOpenAITools` —— 否则 `toOpenAITools()` 仍返回旧清单，
+   *         LLM 继续看到未授权工具（规格 §1.2-2 的硬判据）。
+   * @degraded 不适用（纯状态写入，无 IO）
+   * @error  永不抛
+   */
+  setAllowedTools(names: readonly string[] | null): void {
+    this._allowedTools = names === null ? null : [...names];
+    this._cachedOpenAITools = null;
+  }
+
+  /**
+   * #1075 P2-4a: 工具注册原始清单（**不受白名单／角色档位过滤**）。
+   *
+   * 用途：权限编译的 `knownTools` 注入源。🔴 不得用 `listTools()` 代替 —— 后者已被白名单过滤，
+   *   二次解析会把"声明且已注册、但上一轮未被放行"的工具误判为未落地（规格 §2.3-B.5）。
+   * @output 工具名数组（注册顺序；只读快照，调用方可安全持有）
+   * @degraded 不适用
+   * @error  永不抛
+   */
+  allToolNames(): readonly string[] {
+    return [...this.tools.keys()];
   }
 
   /** Bind to ConnectorRegistry for 'connector' mode tools (Slice 4.1) */
@@ -347,6 +393,11 @@ export class ToolRegistry {
       const profile = getProfileForRole(this._role);
       tools = tools.filter(t => profile.allowedTools.includes('*') || profile.allowedTools.includes(t.name));
     }
+    // #1075 P2-4a: 岗位包白名单过滤（在 profile 过滤**之外**再折一层；空名单 ⇒ []）
+    if (this._allowedTools !== null) {
+      const allowed = new Set(this._allowedTools);
+      tools = tools.filter(t => allowed.has(t.name));
+    }
     return tools;
   }
 
@@ -376,6 +427,18 @@ export class ToolRegistry {
   async execute(name: string, params: Record<string, unknown>, opts?: ToolExecOptions): Promise<ToolCallResult> {
     // #915 Q-5: 回滚开关单一谓词（关闭 ⇒ signal 视同未传，回旧行为）
     const signal = isToolAbortEnabled() ? opts?.signal : undefined;
+    // #1075 P2-4a: 岗位包白名单（**先于**既有 _role 分支；`null` = 关闭包模式 = 回旧行为）
+    // 拒绝用结构化 error（既有 ToolCallResult.error 形态，不改类型）；handler 零调用。
+    if (this._allowedTools !== null && !this._allowedTools.includes(name)) {
+      log.warn({ name, code: 'TOOL_PERMISSION_DENIED' }, '岗位工具白名单拒绝 — 未授权工具不进 handler');
+      return {
+        error: {
+          name: 'ToolPermissionError',
+          code: 'TOOL_PERMISSION_DENIED',
+          message: `权限不足: 该岗位未被授予工具 "${name}"（或权限待批）`,
+        },
+      };
+    }
     // E2: Tool Profiles — 检查当前角色是否有权限执行此工具
     if (this._role) {
       const profile = getProfileForRole(this._role);
