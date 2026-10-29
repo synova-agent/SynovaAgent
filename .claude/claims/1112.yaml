@@ -1,0 +1,23 @@
+# .claude/claims/1112.yaml — W6 接线 · gate-assert 接入 inventory/empty-green（判不了归 2）
+# #CRITERIA: D ｜ 架构层: 不属五层业务（治理脚本）
+# 声明载体 = 本件（writeset + done 两字段制）；Q1/Q2/Q3 的可读说明见
+# .claude/task-briefs/2026-10-28-1112-w6-wiring.md（同批）。
+# 接线状态: **本批正是"补接线"**（#1096 交付的库件 gate-assert.sh 此前零生产调用点）
+#   ⇒ WIRING gate.assertLib 由 declared-only 改 wired（consumer=scripts/control-tower/check-gate-inventory.sh:98）。
+writeset:
+  - scripts/control-tower/check-gate-inventory.sh
+  - scripts/control-tower/check-ci-empty-green.sh
+  - tests/control-tower/check-gate-inventory.test.sh
+  - tests/control-tower/check-ci-empty-green.test.sh
+  - docs/authority/WIRING-REGISTRY.yaml
+  - gate-exemptions/2026-10-28-1112-w6-wiring.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - .claude/task-briefs/2026-10-28-1112-w6-wiring.md
+  - .claude/claims/1112.yaml
+  - memory/notes/proposed/2026-10-28-1112-w6-wiring.md
+done:
+  - verify: bash tests/control-tower/check-gate-inventory.test.sh
+  - verify: bash tests/control-tower/check-ci-empty-green.test.sh
+  - verify: bash scripts/control-tower/check-gate-inventory.sh --root .
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base main --root .
+note: "#1112 W6 接线（创始人令：补接线优先于退役）：scripts/control-tower/check-gate-inventory.sh 的判据子进程改经 gate-assert 的 ga_run 归一（0/1/2 透传；126/127/128/137/白名单外码 ⇒ 2 并打「判据故障: <code>」；归一库缺失 ⇒ 2 fail-closed）；check-ci-empty-green.sh 的 file/env/selfcheck 三个出口同样各经 ga_run 归一（判据自身异常如 judge_file 返回 128 ⇒ 2，不原样穿透）。两件配对测试各补 ⑬ 异常码注入（127/128/137/126）、⑭ 归一库缺失、⑮ 归一里 128→0 改坏即红，并修正既有改坏即红用例的夹具（变异体须与归一库同目录，否则「判不了(2)」会掩盖被判据变量）。WIRING gate.assertLib 由 declared-only 改 wired（consumer=scripts/control-tower/check-gate-inventory.sh:98 主调用点；另一消费者 check-ci-empty-green.sh:259/260/261 记在 notes）。零判据语义改动：不碰 A/B/C 判据、不碰 P0 逻辑、不碰 gate-assert.sh 本体、不新增「组 N」。"

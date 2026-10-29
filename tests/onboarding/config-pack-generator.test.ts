@@ -4,8 +4,11 @@
  * #1075 P1-b（生成面）覆盖：
  *   正常：完整 seed ⇒ 6 件（`written.length === EXPECTED_PIECES.length` **且** === 6，两式并列）
  *        ＋ 六件内容断言（`scopes:`／`contexts:`＋`systemAddendum`／`templateId`／`criteria`／
- *          `capabilities`／`schemaVersion:2`＋`pieces`＋`refs`）
- *        ＋ **J4b**：生成后真 `loadRolePacks()` ⇒ `degraded:false`／`missing:[]`／`declared:true`
+ *          `capabilities`／`schemaVersion:3`＋`pieces`＋`refs`）
+ *        ＋ **J4b**：生成后真 `loadRolePacks()`（种子用**非出厂 roleId** `ops`）⇒ 生成件可被装载
+ *          （`degraded:false`／`missing:[]`／`declared:true`／`schemaValid:true`）＋ **P2-1 语义**：
+ *          生成器产出＝**草稿** ⇒ `approval.status='pending'`、`usable` **不含**该角色（D6）、
+ *          pending **不计** degraded（C1）；出厂 roleId 的「锚优先」见 J7（`tests/init/role-pack-approval.test.ts`）
  *   降级：六块逐块缺项 ⇒ `rejected[]`（`ROLE_SEED_INCOMPLETE`，逐字段点名）＋**零部分写**；
  *        `contexts.source` 不可投影 ⇒ `ROLE_SEED_BAD_SOURCE`；roleId 非法 ⇒ `skipped`（不进 rejected）
  *   边界：dry-run 零落盘（planned=6）／缺项 dry-run 零计划／空角色零写入／幂等覆盖写
@@ -155,11 +158,11 @@ describe('config-pack-generator — J4 正常路径（六件）', () => {
     expect(body).toContain('enabled: true');
   });
 
-  it('J4-2f manifest.json 含 schemaVersion:2／pieces(6)／refs（键集恰 10 键）', () => {
+  it('J4-2f manifest.json 含 schemaVersion:3／pieces(6)／refs（键集恰 10 键）', () => {
     generateConfigPack({ roles: [completeSeed()], rootDir: root });
     const manifest = readJsonRecord('finance', 'manifest.json');
-    expect(manifest['$schema']).toBe('../../schema/role-pack-v2.schema.json');
-    expect(manifest['schemaVersion']).toBe(2);
+    expect(manifest['$schema']).toBe('../../schema/role-pack-v3.schema.json');
+    expect(manifest['schemaVersion']).toBe(3);
     expect(manifest['name']).toBe('role-finance');
     expect(manifest['version']).toBe('2.0.0');
     expect(manifest['type']).toBe('role-preset');
@@ -188,20 +191,39 @@ describe('config-pack-generator — J4 正常路径（六件）', () => {
     );
   });
 
-  it('J4b 生成后真 loadRolePacks() ⇒ degraded:false、missing:[]、declared:true、scopeIds 非空', () => {
-    generateConfigPack({ roles: [completeSeed()], rootDir: root });
+  it('J4b 生成后真 loadRolePacks()（非出厂 ops）⇒ degraded:false、missing:[]、declared:true；审批=草稿(pending)、不进 usable', () => {
+    // 🔴 种子必须用**非出厂 roleId**：finance/hr/sales 是出厂锚（§2.2-D4 / J7「出厂只信代码锚」），
+    //    生成器产出 ≠ 出厂内容 ⇒ 必判 unverified(E_FACTORY_ANCHOR_MISMATCH)，与本条"可装载正例"意图冲突。
+    //    出厂锚优先的判据在 tests/init/role-pack-approval.test.ts 的 J7，不在此重复。
+    const seed = completeSeed({
+      roleId: 'ops',
+      contexts: [
+        {
+          id: 'finance.statements-ref',
+          label: '财务报表口径',
+          source: 'extensions/presets/roles/ops/knowledge-scope.yaml#finance.statements',
+          required: true,
+        },
+        { id: 'company.bp', label: '公司业务说明', source: 'profile.business-plan' },
+      ],
+    });
+    generateConfigPack({ roles: [seed], rootDir: root });
     process.env['SYNOVA_PRESETS_ROOT'] = join(root, 'extensions/presets');
     const report = loadRolePacks();
-    const pack = report.roles.find((role) => role.roleId === 'finance');
+    const pack = report.roles.find((role) => role.roleId === 'ops');
     expect(pack).toBeDefined();
     // 🔴 J4-② 红线（键名回退 ⇒ 这一条与 J4-2a 同时红）：内容声明的真判据
     expect(pack?.knowledgeScope.declared).toBe(true);
     expect(pack?.knowledgeScope.scopeIds).toEqual(['finance.statements']);
-    expect(report.degraded).toBe(false);
-    expect(report.errors).toEqual([]);
     expect(pack?.missing).toEqual([]);
     expect(pack?.schemaValid).toBe(true);
     expect(EXPECTED_PIECES.length).toBe(6);
+
+    // P2-1 语义：生成器只产草稿 —— 无审批记录 ⇒ pending（不生效），但不计 degraded、不进 usable
+    expect(pack?.approval.status, '§1.2 / L2：生成器产出无审批记录 ⇒ pending').toBe('pending');
+    expect(report.degraded, 'C1：pending 不计 degraded').toBe(false);
+    expect(report.errors, 'C1：pending 只 log.info，不进 errors').toEqual([]);
+    expect(report.usable, 'D6：usable = approved ∧ validation.ok ⇒ pending 不进可用集').not.toContain('ops');
   });
 });
 

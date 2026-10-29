@@ -1,0 +1,119 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1110,
+  "author": "win-push (L2 小队 P2-1 编码会话)",
+  "reviewer": "dsh-pr-review-1110（DeepSeek Harness Team Lead, fresh 队外会话）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "issued_at": "2026-10-29T03:40:00+08:00",
+  "patch_fingerprint": "sha256:96af28afa9d8c0520bc0a215aa55bf893a70a9466795fe8288182e876dcd8e00",
+  "base_ref": "main",
+  "base_tip": "94ed76b2d16b5bd21f3bdab2ff0715561a4447f6",
+  "head_ref": "ct/1075-p2-approval-gate",
+  "head": "962460f2b7727a709360a7b3f9d9c1ba98885333",
+  "merge_base": "94ed76b2d16b5bd21f3bdab2ff0715561a4447f6",
+  "diff_files": 21,
+  "fp12": "96af28afa9d8",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步）",
+  "checks": [
+    {
+      "id": "身份与指纹",
+      "name": "PR 身份与 fp 绑定（API 现场核）",
+      "cmd": "curl Gitea API pulls/1110; bash scripts/control-tower/check-merge-conditions.sh --pr 1110 --diff-fingerprint",
+      "evidence": "number=1110 state=open base=main@94ed76b2d head=ct/1075-p2-approval-gate@962460f2b changed_files=21 +3112/−216；checker fp=96af28afa9d8 = 委托 fp = 本回执 patch_fingerprint 前 12 hex（全值 96af28afa9d8c052…dcd8e00）",
+      "result": "pass"
+    },
+    {
+      "id": "铁律38",
+      "name": "as any / as never / as unknown as 增量=0",
+      "cmd": "git diff 94ed76b2d..962460f2b | grep -E '^+.*as (any|never)\\b|as unknown as'（跳过注释行）",
+      "evidence": "新增行 0 处。tests/extensions/knowledge-scope-wiring.test.ts L169-171/187 存在 5 处 as unknown as，git blame=59a0ae7bad（merge-base 祖先，存量非本批）；pre-commit 组1 口径（只查 diff ＋ 行）同样 0",
+      "result": "pass"
+    },
+    {
+      "id": "铁律0-2接线",
+      "name": "新 export 接线（WIRE CHECK）",
+      "cmd": "grep -rn 'role-pack-approval' src/ ；grep -n judgeRolePackApproval/readApprovalRecord src/init/preset-loader.ts",
+      "evidence": "src/init/role-pack-approval.ts 唯一生产消费者=src/init/preset-loader.ts:115 import（单读→contentHash→judgeRolePackApproval）；resolveRoleKnowledgeScope 消费链到 src/middleware/auth.ts 既有路径，src/middleware/** 零改动（git diff 验证）",
+      "result": "pass"
+    },
+    {
+      "id": "铁律48",
+      "name": "测试非空壳＋计数对账",
+      "cmd": "node-free node_modules/vitest/vitest.mjs run tests/init/role-pack-approval.test.ts tests/init/role-pack-schema.test.ts tests/init/preset-loader.test.ts tests/onboarding/config-pack-generator.test.ts",
+      "evidence": "approval 39 passed（PR 声称 39 ✓）｜schema 38 passed（声称 38 ✓）｜preset-loader 25（声称 25 ✓）｜generator 26（声称 26 ✓）；全部含 expect() 断言（文件内 expect 计数>0）",
+      "result": "pass"
+    },
+    {
+      "id": "J2/J7锚",
+      "name": "出厂锚指纹独立复现（不信实现函数，独立 python）",
+      "cmd": "python3 verify_anchor.py：sha256( 六件 name+'\\0'+rawBytes 顺序拼接 ) vs FACTORY_APPROVALS",
+      "evidence": "finance=9ddbffe2…cb783 MATCH｜hr=167aba96…bc390 MATCH｜sales=27098076…52839 MATCH（三包全中；J2 raw-bytes 无 canonical 化口径成立）",
+      "result": "pass"
+    },
+    {
+      "id": "探针基线",
+      "name": "probe-knowledge-scope V6(ii) 夹具回到原基线",
+      "cmd": "node-free tsx scripts/control-tower/probe-knowledge-scope.ts；…/probe-approval-seam.ts --case no-answer",
+      "evidence": "COVERAGE: PASS=13 NOT_IMPLEMENTED=3 UNVERIFIED=3 / RESULT=NOT_IMPLEMENTED（=PR 声称基线）；probe-approval-seam no-answer PASS=25（=PR 声称）",
+      "result": "pass"
+    },
+    {
+      "id": "铁律24/31",
+      "name": "异常处理与降级（catch 审计）",
+      "cmd": "grep -n -A3 catch src/init/role-pack-approval.ts src/init/preset-loader.ts",
+      "evidence": "全部 catch 区分 ENOENT（pending 正常默认）与非 ENOENT（E_APPROVAL_INVALID fail-closed）；拒绝路径 log.error 带 code（G2 不静默）；degraded:true 折叠进 PresetLoadReport；probeApprovalsRoot 先 accessSync(R_OK) 防 0o111 fail-open（源码 L400-424 实读）",
+      "result": "pass"
+    },
+    {
+      "id": "铁律39/46",
+      "name": "架构边界＋engine-core 桥接",
+      "cmd": "bash scripts/check-architecture.sh; bash scripts/check-bridge-files.sh",
+      "evidence": "架构检查 全部通过 ✅；bridge 白名单 5 文件全 ✓（src/ 新增 engine-core 引用 0）",
+      "result": "pass"
+    },
+    {
+      "id": "tsc同红",
+      "name": "tsc --noEmit 与基线同红（环境项）",
+      "cmd": "tsc --noEmit @head 与 @merge-base 各跑一次并 diff",
+      "evidence": "两者均恰 5 行错误（@modelcontextprotocol/sdk 缺失，共享 node_modules 环境性）；sorted diff 为空 ⇒ 本批新增类型错误 0",
+      "result": "pass"
+    },
+    {
+      "id": "J9b环境红",
+      "name": "knowledge-scope-wiring sqlite 用例与基线同红（环境项，CI 补位）",
+      "cmd": "vitest run tests/extensions/knowledge-scope-wiring.test.ts @head 与 @base",
+      "evidence": "head 9 failed / base 6 failed，失败 100% 同因＝better_sqlite3.node NODE_MODULE_VERSION 127≠137（本机 Node24 运行时）；非 sqlite 用例 head 85 passed；PR ① CI 绿（local-gates 双 success pending=0，commit 093bac970）补位覆盖",
+      "result": "pass"
+    },
+    {
+      "id": "红线",
+      "name": "scripts/audit 零触碰＋写集外扩 6 项有 CTO 追认",
+      "cmd": "git diff --name-only 94ed76b2d..962460f2b | grep -E 'scripts/audit'; git log PR 评论 8104",
+      "evidence": "scripts/audit 命中 0；写集外 4+2 项（triviality 行/probe 夹具/plan.json phase4/WIRING entries[11]＋.gitattributes/登记）在 PR 描述逐条列出且标注 CTO 2026-10-28 事后追认（评论 8104）；claim .claude/claims/1075.yaml 已同步 16 条 writeset",
+      "result": "pass"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warn",
+      "where": "docs/authority/WIRING-REGISTRY.yaml × PR#1116",
+      "what": "四条件②当前红：check-merge-conditions 判 WIRING-REGISTRY.yaml 与在飞 PR#1116 硬重叠（#1116 侧非纯追加）。属合并时序问题非本批代码缺陷——本批对该文件是文件末尾纯追加 1 条（diff 实证）；需 #1116 先行合并或裁定后再自合，本回执只解锁条件③"
+    },
+    {
+      "severity": "warn",
+      "where": "tests/extensions/knowledge-scope-wiring.test.ts:169-187",
+      "what": "存量 5 处 as unknown as（CT-46 口径下属铁律38家族），非本批引入（blame=base 祖先）；建议后续批清偿，本批不阻断"
+    },
+    {
+      "severity": "info",
+      "where": "本机复核环境",
+      "what": "J9b/J10 sqlite 依赖用例因 Node ABI 无法本机复现（与基线同红同因），以 ① CI 绿（local-gates 双 success pending=0）+ 同红论证补位；tsc 5 行 @modelcontextprotocol/sdk 环境错同样基线同红、增量 0"
+    },
+    {
+      "severity": "info",
+      "where": "分支名 ct/1075-p2-approval-gate",
+      "what": "前缀 ct/ 而非 feat/（铁律34 字面）。仓库近期 ct/* 分支为 CTO 线惯例（#1104/#1115 同款）且 pre-push 未拦，不阻断，仅记录"
+    }
+  ]
+}
