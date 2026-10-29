@@ -57,6 +57,11 @@ import { computeRolePackContentHash, ROLE_PACK_PIECES } from '../../src/init/rol
 const mocks = vi.hoisted(() => ({
   /** fake provider 返回的回复文本（各用例可改） */
   replyText: { value: '（fake）已按口径给出结论。' },
+  /**
+   * 异常路径注入开关（J3-6 用）：true ⇒ 下一轮 `validateContractObject` 抛错。
+   * 默认 false（其余 8 条走真实实现）；`afterEach` 强制复位，防跨用例污染。
+   */
+  throwOnValidate: { value: false },
 }));
 
 /** 日志运行期捕获（G2：失败必 warn；unverifiable 必 info；隐私：正文不得入日志） */
@@ -98,6 +103,22 @@ vi.mock('../../src/providers', async (importOriginal) => {
 vi.mock('../../src/providers/detect', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../src/providers/detect')>();
   return { ...actual, detectProvider: () => 'deepseek' };
+});
+
+// ── mock ③ contract-validator：**只**替换 `validateContractObject`（J3-6 异常注入）──
+// 🔴 `importOriginal` spread 保真其余导出（尤其 `safeRegExp`）：编译侧
+//    `role-pack-output-standard.ts` 用 `safeRegExp` 复核 `machine.pattern`，若一并被替换，
+//    J1/J6 的正则边界会假红。本 mock 只在 `mocks.throwOnValidate.value === true` 时抛错，
+//    默认透传真实实现 ⇒ 其余 8 条用例行为逐字不变。
+vi.mock('../../src/output/contract-validator', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/output/contract-validator')>();
+  return {
+    ...actual,
+    validateContractObject: (...args: Parameters<typeof actual.validateContractObject>) => {
+      if (mocks.throwOnValidate.value) throw new Error('boom:injected');
+      return actual.validateContractObject(...args);
+    },
+  };
 });
 
 // ── mock ② config：定值 ＋ 内存库 ＋ **orgId 定值**（审批判定的租户字段）──
@@ -497,6 +518,8 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.SYNOVA_ROLE_PACK_OUTPUT;
+  // 异常注入开关强制复位（防跨用例污染；J3-6 自身也用 finally 兜一次）
+  mocks.throwOnValidate.value = false;
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -593,6 +616,46 @@ describe('J3 非阻断接线（真实路由 ＋ fake provider）', () => {
 
     expect(sinkRecords()).toHaveLength(2);
     expect(outputStandardWarns()).toHaveLength(2);
+  });
+
+  it('J3-6 校验器抛错 ⇒ HTTP 200／回复逐字不变／warn(degraded) 一条（非阻断机械保证）', async () => {
+    // 注入：本轮 `validateContractObject` 抛错（模拟"两被调方契约不抛"被破坏的异常路径）
+    mocks.throwOnValidate.value = true;
+    try {
+      const res = await postConversation(
+        { message: '异常路径一轮：请按岗位口径回答', rolePackId: ROLE },
+        tokenFor('admin'),
+      );
+
+      // ① 仍是 200 ＋ SSE（异常不升级为可用性问题）
+      expect(res.status).toBe(200);
+      expect(res.headers.get('content-type')).toContain('text/event-stream');
+      const frames = parseSse(await res.text());
+      expect(requireSessionId(frames)).toMatch(/^sess_/);
+      // ② 回复逐字不变：token 帧拼接 === fake provider 的原文
+      const streamed = frames
+        .filter((frame) => frame.data.type === 'token' && typeof frame.data.text === 'string')
+        .map((frame) => String(frame.data.text))
+        .join('');
+      expect(streamed).toBe(mocks.replyText.value);
+
+      // ③ 一条 warn 留痕（audit 标记 ＋ degraded ＋ err），不静默吞错
+      const warns = outputStandardWarns();
+      expect(warns).toHaveLength(1);
+      const meta = warns[0]?.meta ?? {};
+      expect(meta['rolePackId']).toBe(ROLE);
+      expect(meta['degraded']).toBe(true);
+      expect(meta['err']).toBeInstanceOf(Error);
+      expect(String((meta['err'] as Error).message)).toContain('boom:injected');
+      // 隐私：异常留痕同样不带回复正文
+      expect(JSON.stringify(meta)).not.toContain('已按口径给出结论');
+
+      // ④ 异常发生在校验入口 ⇒ 不落账（无"校验结论"，也不该伪造一条）
+      expect(sinkRecords()).toEqual([]);
+      expect(engineValidationWarns()).toEqual([]);
+    } finally {
+      mocks.throwOnValidate.value = false;
+    }
   });
 });
 

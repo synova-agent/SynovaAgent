@@ -42,7 +42,9 @@
  *               —— 不 4xx、不锁死用户（规格 N1/D7）；
  *               **岗位输出标准**：编译失败（未批准/内容变/限额）⇒ 编译侧单点 `log.warn` 后**本轮不校验**；
  *               校验失败 ⇒ `log.warn`（`contractId`/`codes`/`fieldPaths`）＋ 引擎落账；回滚开关
- *               `SYNOVA_ROLE_PACK_OUTPUT=off` ⇒ 跳过 ＋ `log.warn(degraded:true)`（显式降级，非默认）
+ *               `SYNOVA_ROLE_PACK_OUTPUT=off` ⇒ 跳过 ＋ `log.warn(degraded:true)`（显式降级，非默认）；
+ *               **校验器抛错**（异常路径）⇒ 调用点 try/catch 后 `log.warn(audit:'rolePackOutput', degraded:true, err)`
+ *               ＋ 忽略 —— 回复/状态码不变、**不重试、不当作合标**（CTO 条件③ / 已知限制 m.）
  *   @authority — `/ingest` 分支仅 **conversation 链**（`POST /api/conversations` 与
  *               `POST /api/conversations/:id/messages`）可触发；普通消息 SSE 语义不变，
  *               本分支**不新增公开 HTTP 字段**（接口变更须 CTO）；
@@ -79,6 +81,9 @@
  *      不判语义/编造；无 `machine` 的 criteria 经 `log.info` 可见但不判 —— **"检查过了"≠"更准"**。
  *   l. **一次违标两条日志**（#1075 P2-3）：路由接线留痕（`audit:'rolePackOutput'`）＋ 引擎通用留痕
  *      （"已拒绝 + 落账"，契约引擎既有第二职务）各一条；业务码/字段一致，日志去重属引擎语义变更（另批）。
+ *   m. **输出标准校验的异常路径只留痕、不落账**（#1075 P2-3 / CTO 条件③）：调用点包 try/catch，
+ *      抛错 ⇒ `log.warn({audit:'rolePackOutput', rolePackId, degraded:true, err})` 后忽略；
+ *      回复照常返回、HTTP 码不变。**不重试、不降级为"校验通过"**（异常 ≠ 合标）。
  *
  * 决策记录（D333，完成报告 §5.4 可核）: phaseComplete 诊断桥走 L1→L2 公开 API
  * DiagnosisLauncher 直连（diagnosis.ts:200-217 同款装配），而非 conv.startDiagnosis——
@@ -729,9 +734,20 @@ async function handleConversationMessage(req: Request, res: Response, pathSessio
     store.addMessage(sessionId, 'assistant', result.reply);
 
     // ⑩-b #1075 P2-3：岗位输出标准**非阻断**校验（仅角色会话；失败只留痕 —— 不改回复、
-    //     不改状态码、绝不抛出）。落库之后跑：持久化时序与 P2-2 逐字不变，校验不参与时序。
+    //     不改状态码、不抛出到外层）。落库之后跑：持久化时序与 P2-2 逐字不变，校验不参与时序。
+    // 🔴 CTO 条件③（#1142 评论 8580）：两被调方契约"同步不抛"，但"非阻断"承诺在**异常路径**上
+    //     需机械保证 ⇒ **只**包 audit 调用（try 不外扩到上面的 `store.addMessage` 等持久化行；
+    //     持久化失败属另一语义，由 ⑩ 与 `lastDegraded` 负责）。异常 ⇒ warn ＋ `degraded:true` ＋ `err`，
+    //     不静默吞错、不改回复/状态码。
     if (rolePack !== null) {
-      auditRolePackOutput(rolePack.roleId, result.reply, orgId);
+      try {
+        auditRolePackOutput(rolePack.roleId, result.reply, orgId);
+      } catch (err: unknown) {
+        log.warn(
+          { audit: 'rolePackOutput', rolePackId: rolePack.roleId, degraded: true, err },
+          '岗位输出标准校验异常 — 忽略（非阻断）',
+        );
+      }
     }
 
     store.updateSession(sessionId, { phase: conv.getPhase() });

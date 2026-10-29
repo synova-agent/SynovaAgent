@@ -251,9 +251,9 @@ entries:
     owner: P2
     notes: "岗位包人设＋上下文消费（#1075 P2-2）：approved 包的 prompt.systemAddendum 与 contexts 清单进系统提示词；六件自读→computeRolePackContentHash 与 pack.validation.contentHash 比对→审批门；无包会话提示词逐字不变（J3 基准 976ca690…fd33／LEN=1462）；撤销⇒200＋x-synova-role-pack: degraded＋不注入"
   - capability: content.rolePackOutputStandard
-    defined_at: "src/init/role-pack-output-standard.ts:494"
-    provider: "src/init/role-pack-output-standard.ts:494"
-    consumer: "src/routes/conversations.ts:731"
+    defined_at: "src/init/role-pack-output-standard.ts:495"
+    provider: "src/init/role-pack-output-standard.ts:495"
+    consumer: "src/routes/conversations.ts:744"
     test: "tests/routes/conversations-role-output.test.ts:1"
     status: wired
     owner: P2
