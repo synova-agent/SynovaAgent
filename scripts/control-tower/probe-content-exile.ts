@@ -37,6 +37,9 @@
  *   · 父：`node --import tsx <本文件> --child-count` 起**独立 node 进程**（cwd=仓库根）；
  *     子进程内 **不设** `SENTINELS_FIXTURE_DIR`（走真 `extensions/sentinels`）⇒ boot 装配全真。
  *   · 子：`await initContentTypes()` → `listSentinels()` → 一行 JSON。
+ *   · 子进程日志：**`LOG_LEVEL=silent`**（与 C3 同口径）。依据：`@synova/logger` 的 pino 目标本就是
+ *     fd 2（stderr，`packages/logger/src/index.ts:40`）；静音是为了让「stdout 只一行 JSON」在
+ *     **合并采集**（`2>&1`）下同样成立（E2 修复）。父进程日志不受影响。
  *   · `typeCounts` ＝ **已装配内容类型 → 项数**（当前每类 1 项，共 12 类）；`types` ＝ 键数。
  *     🔴 不用 `sentinel` manifest 的 `type` 字段：46 个 manifest 全写 `"type":"sentinel"`（唯一值，区分度为 0），
  *        用它当 types 口径会把「12 类内容面」谎报成「1 类」。
@@ -56,6 +59,9 @@
  *   ⑥ 本件只判「内容项级」可拔性（内容项 loader 即端口），**不是**题 8 的「包级 customerDeps」口径（禁混用）。
  *   ⑦ 恢复的完整性用 **全目录 sha256（6 文件）** 核对，不依赖 mtime；`git status --short extensions/`
  *      由父进程调只读 `git status --porcelain` 复核（git 不可用 ⇒ 显式 UNVERIFIED，不冒充空）。
+ *   ⑧ **子进程日志静音**（`LOG_LEVEL=silent`，E2 修复）：子进程 stdout 只剩**一行 JSON**，pino 输出全部静音
+ *      （不落 stdout）；代价 = 子进程装配日志不可见（父进程 `[CHILD]` 行已给判定所需的全部数字）。
+ *      排查子进程装配时，临时去掉 `runChildCountProcess` 里 `env['LOG_LEVEL'] = 'silent'` 重跑即可。
  */
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -370,7 +376,10 @@ function emitDegraded(root: string, code: string, phase: string, message: string
 // 四、子协议（独立 node 进程）
 // ══════════════════════════════════════════════════════════════════════════════
 
-/** 子进程入口（`--child-count`）：装配真内容面 → 一行 JSON。**不取锁**（父进程已持锁；子只读）。 */
+/** 子进程入口（`--child-count`）：装配真内容面 → 一行 JSON。**不取锁**（父进程已持锁；子只读）。
+ *
+ * 🔴 日志：调用方（`main` 的 child 分支）已把 `LOG_LEVEL` 置 `silent` ⇒ 本函数的 stdout 只有那行 JSON。
+ */
 async function runChildCount(): Promise<0 | 2> {
   try {
     const init = await initContentTypes();
@@ -404,6 +413,9 @@ function runChildCountProcess(root: string): ChildRun {
   const self = fileURLToPath(import.meta.url);
   const env: NodeJS.ProcessEnv = { ...process.env };
   delete env['SENTINELS_FIXTURE_DIR'];
+  // E2 修复：子进程日志静音（`@synova/logger` 的 destination wrapper 在**写时**读该 env ⇒ 子进程内也生效）。
+  // 目的：`--child-count` 的 stdout 只一行 JSON —— 合并采集（2>&1）下同样成立。
+  env['LOG_LEVEL'] = 'silent';
   const res = spawnSync(process.execPath, ['--import', 'tsx', self, CHILD_COUNT_FLAG], {
     cwd: root,
     env,
@@ -714,6 +726,10 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
 
   // 子协议入口：**先于**锁/参数解析（子进程只读，父进程已持锁，子进程再取锁会误判 LOCK_BUSY）
   if (argv.includes(CHILD_COUNT_FLAG)) {
+    // E2 修复：子进程 stdout 必须**只一行 JSON**。`@synova/logger` 的 pino 目标本就是 fd 2（stderr），
+    // 这里再置 `LOG_LEVEL=silent`（destination wrapper **写时**读该 env）⇒ 直接跑 `--child-count`
+    // 时连日志也没有，stdout/合并采集都只剩 JSON 一行。父进程日志不受影响。
+    process.env['LOG_LEVEL'] = 'silent';
     return runChildCount();
   }
 

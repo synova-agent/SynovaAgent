@@ -12,12 +12,13 @@
  *   ⑧ 🔴 spawn 三态-0：`--case main` ⇒ rc 0 ＋ 7 条关键行 ＋ victim 六文件摘要复原 ＋ extensions/ 干净
  *   ⑨ 🔴 spawn 三态-1：`--case no-exile` ⇒ rc 1 ＋ `[CHILD] sentinels=46` ＋ `[EXPECTED-RED]`（负控）
  *   ⑩ 🔴 spawn 三态-2：未知 case ⇒ rc 2 ＋ `RESULT=ERROR` ＋ stderr `degraded:`（fail-closed）
+ *   ⑪ 🔴 子协议 E2 回归：直接跑 `--child-count` ⇒ stdout **非空行数=1**、可 JSON 解析、stderr 静音（合并=1 行）
  *
  * 🔴 安全网（本测试会**真实移动** `extensions/sentinels/cash-runway`）：`afterAll` 扫隔离区，
  *    若发现 victim 停在隔离区而仓库路径缺失 ⇒ 移回并点名（防测试进程被强杀把树留在半拔状态）。
  *    被测对象是真链路，**禁 mock**；重型探针须串行（锁文件负责），本文件不得与 T4/C3 并发。
  */
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, renameSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -103,6 +104,18 @@ function lastResult(stdout: string): string {
     .filter((l) => l.startsWith('RESULT='))
     .pop();
   return hit ?? '';
+}
+
+/** 直接跑**子协议**（不经父进程）—— 用于断言「stdout 只一行 JSON」（E2 回归） */
+function runChildDirect(): { rc: number; stdout: string; stderr: string } {
+  const res = spawnSync(process.execPath, [TSX_CLI, PROBE, '--child-count'], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    timeout: 240_000,
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  return { rc: res.status ?? -1, stdout: res.stdout ?? '', stderr: res.stderr ?? '' };
 }
 
 function gitExtensionsChanges(): number {
@@ -248,5 +261,28 @@ describe('probe-content-exile · spawn 级（真链路，禁 mock）', () => {
       expect(existsSync(join(VICTIM_DIR, 'manifest.json'))).toBe(true);
     },
     120_000,
+  );
+
+  it(
+    '⑪ 子协议 stdout 契约（E2）：--child-count ⇒ stdout 非空行数=1 ＋ JSON 可解析 ＋ stderr 静音',
+    () => {
+      const child = runChildDirect();
+      expect(child.rc).toBe(0);
+      // ① stdout 恰好一行（非空行计数；"只一行 JSON" 的字面契约）
+      expect(countNonEmptyLines(child.stdout)).toBe(1);
+      // ② 该行可被子协议解析器解析，且键/值与装配一致
+      const payload = parseChildPayload(child.stdout);
+      expect(payload.sentinels).toBe(46);
+      expect(payload.ids).toHaveLength(46);
+      expect(Object.keys(payload.typeCounts)).toHaveLength(12);
+      expect(payload.errors).toBe(0);
+      expect(payload.degraded).toBe(false);
+      // ③ 子进程日志静音（LOG_LEVEL=silent，与 C3 同口径）⇒ 合并采集（stdout+stderr）也只有 1 行
+      expect(countNonEmptyLines(child.stderr)).toBe(0);
+      expect(countNonEmptyLines(child.stdout) + countNonEmptyLines(child.stderr)).toBe(1);
+      // ④ 子协议只读：不得动内容面
+      expect(gitExtensionsChanges()).toBe(0);
+    },
+    240_000,
   );
 });
