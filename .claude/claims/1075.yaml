@@ -50,6 +50,14 @@
 #          · 本次实际新增 2 条产品/测试路径（src/routes/knowledge-ask.ts／tests/routes/knowledge-ask.test.ts），
 #            逐条见下方 writeset 末尾 2 行。只读件（src/middleware/auth.ts 只 import／engine-auth／im.ts／
 #            knowledge-store.ts／scripts/**／.gitea/**）不在写集内。
+#      ＋ #1075 P2-4b-B（批八·角色会话内知识权限，2026-10-29，单 PR，锚 main `9ec742523`）
+#        依据：规格 .handbook/派单件/2026-10-29-规格-1075-P2-4b-B-会话知识权限.md §2.4（8 产品＋3 登记 ＝ 11 条目）
+#        ＋ gate-A 回执（三轮＋5 小项，结论可开工）。11 条目中 6 条**已在既有 writeset 内**（union 去重）：
+#        src/agent/tools.ts／src/agent/conversation-engine.ts／tests/agent/tool-permissions-role-pack.test.ts／
+#        docs/authority/WIRING-REGISTRY.yaml／.claude/claims/1075.yaml／tests/contract/triviality-manifest.yaml。
+#        本次实际新增 5 条：3 新建件（role-pack-knowledge-filter.ts ＋ 两测试件）＋ builtin-tools.ts ＋ knowledge-store.ts，
+#        逐条见下方 writeset 末尾 5 行。只读件（auth.ts 只 import／preset-loader／role-pack-*／routes/**／
+#        scripts/**／.gitea/**／packages/engine-auth/**）不在写集内。
 writeset:
   - extensions/presets/schema/role-pack-v2.schema.json
   - src/init/role-pack-schema.ts
@@ -102,6 +110,11 @@ writeset:
   - src/agent/tools.ts
   - src/routes/knowledge-ask.ts
   - tests/routes/knowledge-ask.test.ts
+  - src/init/role-pack-knowledge-filter.ts
+  - tests/init/role-pack-knowledge-filter.test.ts
+  - tests/agent/knowledge-search-tool.test.ts
+  - src/agent/builtin-tools.ts
+  - src/l4/knowledge-store.ts
 done:
   - verify: node node_modules/.bin/vitest run tests/init/role-pack-schema.test.ts
   - verify: node node_modules/.bin/vitest run tests/init/preset-loader.test.ts

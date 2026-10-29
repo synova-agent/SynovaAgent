@@ -277,3 +277,13 @@ entries:
     status: wired
     owner: P2
     notes: "认证主路径 src/middleware/auth.ts:964 亦为该漏斗消费者（registry:44-51 先例）"
+
+  # ---- P2 2026-10-29：#1075 P2-4b-B · 角色会话内知识权限（系统工具 search_knowledge）----
+  - capability: knowledge.roleSessionSearch
+    defined_at: "src/init/role-pack-knowledge-filter.ts:100"
+    provider: "src/init/role-pack-knowledge-filter.ts:100"
+    consumer: "src/agent/conversation-engine.ts:791"
+    test: "tests/init/role-pack-knowledge-filter.test.ts:257"
+    status: wired
+    owner: P2
+    notes: "角色会话知识过滤编译（scope/deny＋认证面同源敏感度 → FilterClause）：条件顺序固定 sensitivity IN(第0)/pkb_domain IN scopes(第1)/逐 deny NOT_EQ；degraded（审批未过/内容坏/未声明）⇒ 拒绝型 pkb_domain IN []（0 行，不回落全库）。消费者＝conversation-engine 的 applyRoleKnowledgeProvider（setSystemToolProvider 注入**系统工具** search_knowledge，不 register ⇒ allToolNames 不变；进 listTools/toOpenAITools）；工具 handler 动态 import L4；撤销/换岗经 refreshRolePackPermissions 即时重建；回滚开关 SYNOVA_ROLE_KNOWLEDGE=off（与 SYNOVA_ROLE_PACK_TOOLS 互不替代）"
