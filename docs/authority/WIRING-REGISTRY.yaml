@@ -258,3 +258,13 @@ entries:
     status: wired
     owner: P2
     notes: "岗位包输出标准消费（#1075 P2-3）：approved 包的 criteria[].machine 编译成 OutputContract 对象，角色会话每轮 assistant 回复后非阻断校验＋留痕（永不抛出／不改回复）；六件单读快照→computeRolePackContentHash 与 pack.validation.contentHash 比对→审批门→限额；无 machine 的 criteria 进 unverifiable[]（可见不静默）；无岗位会话零副作用"
+
+  # ---- P2 2026-10-29：#1075 P2-4b-A · 公共知识入口的 grants 生效（knowledge-ask 认证分支）----
+  - capability: permission.knowledgeGrantsBridge
+    defined_at: "src/middleware/auth.ts:373"
+    provider: "src/middleware/auth.ts:373"
+    consumer: "src/routes/knowledge-ask.ts:137"
+    test: "tests/routes/knowledge-ask.test.ts:154"
+    status: wired
+    owner: P2
+    notes: "认证主路径 src/middleware/auth.ts:964 亦为该漏斗消费者（registry:44-51 先例）"
