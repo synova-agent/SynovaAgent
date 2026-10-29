@@ -122,6 +122,9 @@ import {
 // 均不匹配架构门禁的 L3/L4/L5 层模式 ⇒ 不新增 L1 跨层违规（`check-architecture.sh` 棘轮不越界）。
 import { isRolePackOutputEnabled, loadRolePackOutputStandard } from '../init/role-pack-output-standard';
 import { validateContractObject } from '../output/contract-validator';
+// #1075 P2-3 CI 修复：取当前时刻走**全仓唯一注入点**（`nowIso()` 与 `toISOString()` 逐字节同值；
+// 禁在本文件直取系统时钟 —— `tests/contract/time-injection.test.ts` 的 R1 棘轮按字面计数）。
+import { systemClock } from '../services/clock';
 
 const log = createLogger('routes/conversations');
 const router = Router();
@@ -225,7 +228,7 @@ function auditRolePackOutput(roleId: string, reply: string, orgId: string): void
   const result = validateContractObject(standard.contract, {
     text: reply,
     orgId,
-    generatedAt: new Date().toISOString(),
+    generatedAt: systemClock.nowIso(),
   });
   if (result.ok) return;
 

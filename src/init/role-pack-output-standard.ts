@@ -14,7 +14,7 @@
  *
  * 契约（铁律 47）:
  *   @input  — `loadRolePackOutputStandard(roleId: string, opts?: {now?: string})`（IO 壳；**同步、不抛**）
- *             `opts.now` 只注入 `contract.meta.generatedAt`（缺省 `new Date().toISOString()`；测试可确定性断言）。
+ *             `opts.now` 只注入 `contract.meta.generatedAt`（缺省 `systemClock.nowIso()`；测试可确定性断言）。
  *             `isRolePackOutputEnabled()`（纯核；唯一外部读 = 回滚开关 env）。
  *   @output — `LoadRolePackOutputStandardResult = {ok:true, standard} | {ok:false, code, reason}`
  *             （判别联合；`code` ∈ {@link RolePackOutputStandardCode} 四值，**不自造码**）。
@@ -85,6 +85,7 @@
 import { createLogger } from '@synova/logger';
 import { load as parseYaml } from 'js-yaml';
 import { join } from 'path';
+import { systemClock } from '../services/clock';
 import { loadRolePacks } from './preset-loader';
 import { computeRolePackContentHash } from './role-pack-schema';
 import { readPieceBytesOnce } from './role-pack-persona';
@@ -185,7 +186,7 @@ export type LoadRolePackOutputStandardResult =
 
 /** 编译选项（`now` 只注入 `meta.generatedAt`） */
 export interface RolePackOutputStandardOptions {
-  /** ISO-8601 记录时刻（缺省 `new Date().toISOString()`；测试注入缝） */
+  /** ISO-8601 记录时刻（缺省 `systemClock.nowIso()`；测试注入缝） */
   readonly now?: string;
 }
 
@@ -576,7 +577,9 @@ export function loadRolePackOutputStandard(
     roleDir,
     criteriaBytes,
     templateBytes,
-    now: opts.now ?? new Date().toISOString(),
+    // 缺省取当前时刻走**全仓唯一注入点**（`src/services/clock.ts` 的 `systemClock.nowIso()`：
+    // ISO-8601 UTC，与改造前的 `toISOString()` 语义逐字节等价 —— 禁在本文件直取系统时钟）
+    now: opts.now ?? systemClock.nowIso(),
   });
   if (!compiled.ok) return reject('E_ROLE_PACK_OUTPUT_INVALID', compiled.reason);
 
