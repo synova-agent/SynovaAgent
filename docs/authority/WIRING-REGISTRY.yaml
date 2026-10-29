@@ -277,6 +277,14 @@ entries:
     status: wired
     owner: P2
     notes: "认证主路径 src/middleware/auth.ts:964 亦为该漏斗消费者（registry:44-51 先例）"
+  - capability: gate.metaGenerator
+    defined_at: "scripts/control-tower/gen-gate-meta.sh:1"
+    provider: "scripts/control-tower/gen-gate-meta.sh:1"
+    consumer: "scripts/control-tower/check-gate-inventory.sh:129"
+    test: "tests/control-tower/gen-gate-meta.test.sh"
+    status: wired
+    owner: P4
+    notes: "#1147 T2.5：门禁元数据生成器（gate_meta 六字段机械产出，--emit/--check，三态 0/1/2，孤儿与配额非法组合即违规）。唯一生产消费者＝check-gate-inventory.sh 的 R10 同源校验；生成器缺失或判不了归 2。"
 
   # ---- P2 2026-10-29：#1075 P2-4b-B · 角色会话内知识权限（系统工具 search_knowledge）----
   - capability: knowledge.roleSessionSearch
