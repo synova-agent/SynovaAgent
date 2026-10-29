@@ -9,7 +9,7 @@ name: local-gates
 on:
   push:
   pull_request:
-    branches: [ main, local-main ]
+    branches: [ main ]
   workflow_dispatch:
 jobs:
   gates:
@@ -94,7 +94,7 @@ jobs:
           #   受保护路径，必须有带理由、带裁定号、且由批准人提交的豁免。
           #   检查器契约（三态退出码 0/1/2）见 `scripts/control-tower/check-gate-protection.sh` 头部。
           #
-          # 🔴 BASE 解析链（spec §S1-e）：SYNO_BASE_REF → GITHUB_BASE_REF → gitea/local-main
+          # 🔴 BASE 解析链（#1117 §6.3）：SYNO_BASE_REF → GITHUB_BASE_REF → <唯一远端>/${SYNO_TRUNK_REF:-main}
           #   · 本步块内不写 GitHub 镜像远端的分支名（自证脚本 ⑪ 对本步块做 grep 硬判）；
           #     该镜像已断且落后 351+ commits（实测）⇒ 拿陈旧 base 算 diff 只会得到假红/假绿。
           #   · 仍不可解析时**不猜、不降级**：把 canonical 名交给检查器 ⇒ 它判 exit 2（fail loud）。
@@ -103,7 +103,7 @@ jobs:
           echo "①d base = $BASE"
           #
           # 🔴 语义澄清（spec §7 Known Limitations 5，禁写成「push 也拦了」）：
-          #   push 到 local-main 时 base == HEAD ⇒ diff 为空 ⇒ 本步只做清单完整性 ＋ pin；
+          #   push 到 main 时 base == HEAD ⇒ diff 为空 ⇒ 本步只做清单完整性 ＋ pin；
           #   真正拦截在 pull_request 腿（required status check `local-gates / gates (pull_request)`）。
           #
           # `|| exit $?` 原样保留三态（0 通过 / 1 真红 / 2 检查自身失败）—— 禁把三态折叠成单一退出码。
@@ -159,20 +159,22 @@ jobs:
       - name: ③ 增量测试（vitest --changed；只测改动面，避免全量摩擦）
         run: |
           cd /Users/wane/.ci-work/SynovaAgent
-          # CTO 2026-10-11：增量基线改用 local-main（与 D734 check-pr-budget.sh 同口径）——
-          #   origin/main = GitHub 旧 main（停 5a6591c4），拿它当基线会把 local-main 全部
-          #   diverge 提交的存量红算进本 PR（实测 141 tests failed，与本 PR 改动零相关）。
-          #   优先 origin/local-main（CI 内 origin=本机 Gitea，必存在），不存在时回退 origin/main。
+          # #1117：增量基线 = trunk（主树已改 main；基线名由 SYNO_TRUNK_REF 单源注入，缺省 main）——
+          #   不再取冻结分支名（旧口径把 trunk 历史重算进本 PR，实测 141 tests failed 与本 PR 零相关）。
+          #   CI 内 origin=本机 Gitea ⇒ 直接 origin/<TRUNK>；仍不可解析时**不猜、不降级**，回落
+          #   resolve-ci-base.sh（三态原样透传：它不可解析即 exit 2）。
           #   只改基线，不改测试判据/门禁组数。
-          CHANGED_BASE=origin/local-main
-          git rev-parse --verify -q "$CHANGED_BASE" >/dev/null || CHANGED_BASE=origin/main
+          CHANGED_BASE="origin/${SYNO_TRUNK_REF:-main}"
+          if ! git rev-parse --verify -q "$CHANGED_BASE" >/dev/null 2>&1; then
+            CHANGED_BASE="$(bash scripts/control-tower/resolve-ci-base.sh)" || exit $?
+          fi
           echo "增量基线 = $CHANGED_BASE"
           # 🔴 2026-10-11 创始人裁决②：**区分「纯文档合法空绿」与「有代码改动却空绿 = 异常」**
           #   病根（实测）：vitest --changed 在变更集为空/无测试命中时打印
           #     No test files found, exiting with code 0
           #   ⇒ 本步恒绿。本机日志实测**连续 33 个 job** 全是这一行 ⇒ 该步不提供任何信息。
           #   为什么不能"一律变红"：合并后分支态 HEAD 常已就是基线（实测 3 个 job 的 HEAD
-          #     vs local-main 变更集 = **0 文件**）⇒ 那种情况"无对象可测"是**对的**，变红即噪音。
+          #     vs main 变更集 = **0 文件**）⇒ 那种情况"无对象可测"是**对的**，变红即噪音。
           #   ⇒ 判据必须**分类**：先算变更集，再看它含不含代码面/测试面。
           set -o pipefail
           CHANGED_FILES="$(git diff --name-only "$CHANGED_BASE"...HEAD 2>/dev/null || true)"
@@ -278,8 +280,10 @@ jobs:
           #   `bash -e`（与 Gitea 同构）执行 ⇒ 若有人把 ③ 步的 `set +e` 拿掉（= 复现 #338 那个
           #   「set -e 下子命令失败即退 ⇒ 整步零输出」的缺陷），该 harness 会判 HARNESS-BROKEN 并 **exit 2**
           #   ⇒ 本步在 CI 上红。即：**这条链自己抓自己**。
-          CHANGED_BASE=origin/local-main
-          git rev-parse --verify -q "$CHANGED_BASE" >/dev/null || CHANGED_BASE=origin/main
+          CHANGED_BASE="origin/${SYNO_TRUNK_REF:-main}"
+          if ! git rev-parse --verify -q "$CHANGED_BASE" >/dev/null 2>&1; then
+            CHANGED_BASE="$(bash scripts/control-tower/resolve-ci-base.sh)" || exit $?
+          fi
           FILES="$(git diff --name-only "$CHANGED_BASE"...HEAD 2>/dev/null || true)"
           if ! printf '%s\n' "$FILES" | grep -qE '^(\.gitea/workflows/local-gates\.yml|scripts/control-tower/ci-(emptygreen|deps-step)-sim\.sh|tests/control-tower/ci-(emptygreen|deps-step)-sim\.test\.sh)$'; then
             echo "ℹ️  条件跳过（变更集未触碰 工作流/复现器/夹具）—— <1s"
@@ -356,7 +360,7 @@ jobs:
           NODE_BIN=/Users/wane/.nvm/versions/node/v24.19.0/bin
           # 一进一出（裁 300／#917 拍 1）：**进** ①f ｜ **退** GitHub `architecture` job（同一 PR）。
           # 缺口的准确形状：合并门在本机 Gitea，而「类型检查」此前**只有** GitHub quality 跑，
-          #   GitHub main 落后且红无人看 ⇒ 类型错误可以一路合进 local-main。
+          #   GitHub main 落后且红无人看 ⇒ 类型错误可以一路合进 main。
           # ① 类型：真缺口（本步新增）。三态原样透传（0 通过 / 1 真红 / 2 检查自身失败）。
           PATH="$NODE_BIN:$PATH" npx tsc --noEmit --pretty false || exit $?
           # ② 铁律：`npm run check:iron-laws` 的**同一脚本**（scripts/pre-commit-check.sh）。

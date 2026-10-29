@@ -5,17 +5,17 @@ export LC_ALL=C.UTF-8 2>/dev/null   # swallow-ok: locale 不可用时回退默�
 # ═══════════════════════════════════════════════════════════════════════════════
 # check-dual-repo-sync.sh — 两仓对账探针（任务 #609；P10 双仓与生态面）
 #
-# 【一句话】一条命令判「Gitea local-main 与 GitHub main 是否已对齐」：落后 N 个提交 /
+# 【一句话】一条命令判「Gitea trunk（缺省 main）与 GitHub main 是否已对齐」：落后 N 个提交 /
 #   分叉 / 读不到，三态退出码；结果落固定路径 JSON，供人看、供后续 cron 复读。
 #
 # 【设计哲学】一个分离 ＋ 四条承诺
 #   · 一个分离：**取数面与判定面分离** —— 远端 sha 只从「远端真值」取（`ls-remote` /
-#     GitHub API），**绝不读本地同名分支指针**。K3 P11 已实证：本地 `local-main` 落后时
-#     `git rev-list --count mirror/main..local-main` 会得出 **0（假绿）**。
+#     GitHub API），**绝不读本地同名分支指针**。K3 P11 已实证：本地 trunk 分支落后时
+#     `git rev-list --count mirror/main..main` 会得出 **0（假绿）**。
 #   · 承诺 1「看不见 ≠ 没问题」：任一远端读不到 / sha 不在本地且补取失败 / JSON 写不出
 #     ⇒ **exit 2（degraded）**，绝不判 0，也绝不判 1（铁律 11：显式降级，不静默）。
 #   · 承诺 2「钉 SHA 不钉分支」：判定只用 40 位 sha；分支名仅作取数参数。
-#   · 承诺 3「一个数只在一处」：唯一判据 = `git rev-list --count <gh_main>..<gitea_local_main>`
+#   · 承诺 3「一个数只在一处」：唯一判据 = `git rev-list --count <gh_main>..<gitea_trunk>`
 #     ＋ `merge-base --is-ancestor`（分叉检测）；不引入第二套口径。
 #   · 承诺 4「只读」：不改分支、不 push、不 fetch 覆盖（仅在本地缺 commit 时**补取**该 sha 的 ref）。
 #
@@ -26,7 +26,7 @@ export LC_ALL=C.UTF-8 2>/dev/null   # swallow-ok: locale 不可用时回退默�
 #     环境缝（默认值 = 生产值）:
 #       SYNO_SYNC_REPO         仓库根（缺省 = 本脚本上两级）
 #       SYNO_SYNC_GITEA_URL    Gitea 远端（remote 名 或 URL/路径；缺省 gitea）
-#       SYNO_SYNC_GITEA_REF    Gitea 侧 ref（缺省 refs/heads/local-main）
+#       SYNO_SYNC_GITEA_REF    Gitea 侧 ref（缺省 refs/heads/${SYNO_TRUNK_REF:-main}）
 #       SYNO_SYNC_GITHUB_API   GitHub Repo API 前缀
 #                              （缺省 https://api.github.com/repos/synova-agent/SynovaAgent）
 #       SYNO_SYNC_GITHUB_SHA   注入缝（测试用）：直接给定 GitHub main sha，跳过取数
@@ -34,7 +34,7 @@ export LC_ALL=C.UTF-8 2>/dev/null   # swallow-ok: locale 不可用时回退默�
 #                              （缺省 <repo>/.codex/control-tower/tmp/dual-repo-sync.json）
 #   @output  stdout: 末行 verdict（OK / LAG lag=N / FORK / DEGRADED reason=…）＋ JSON 路径
 #            file:   <OUT>（schema syno-dual-repo-sync/v1；含 as_of/sha/lag/ancestor/verdict/exit）
-#   @exit    0 = 两仓一致（lag=0 且 GitHub main 是 Gitea local-main 的祖先）
+#   @exit    0 = 两仓一致（lag=0 且 GitHub main 是 Gitea trunk 的祖先）
 #            1 = 真红（lag>0 镜像滞后；或分叉：GitHub main 不是祖先）
 #            2 = 检查自身失败（degraded：远端读不到／sha 不在本地／JSON 写不出）
 #   @degraded 写 <OUT> 且 degraded=true + reason；**禁把"读不到"当"差=0"**
@@ -49,7 +49,7 @@ set -uo pipefail
 
 ROOT="${SYNO_SYNC_REPO:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 GITEA_URL="${SYNO_SYNC_GITEA_URL:-gitea}"
-GITEA_REF="${SYNO_SYNC_GITEA_REF:-refs/heads/main}"
+GITEA_REF="${SYNO_SYNC_GITEA_REF:-refs/heads/${SYNO_TRUNK_REF:-main}}"
 GH_API="${SYNO_SYNC_GITHUB_API:-https://api.github.com/repos/synova-agent/SynovaAgent}"
 GH_SHA_INJ="${SYNO_SYNC_GITHUB_SHA:-}"
 OUT="${SYNO_DUAL_REPO_OUT:-$ROOT/.codex/control-tower/tmp/dual-repo-sync.json}"
@@ -61,7 +61,7 @@ for arg in "$@"; do
     --help|-h)
       sed -n '3,60p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0 ;;
-    *) echo "❌ 未知参数: $arg（--help 看用法）" >&2; exit 2 ;;
+    *) echo "❌ 未知参数: ${arg}（--help 看用法）" >&2; exit 2 ;;
   esac
 done
 

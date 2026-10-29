@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════════════════════════════
-# ledger-sync.sh — 把 local-main 的 merge 提交自动同步进 #918 §G（裁 367 一期）
+# ledger-sync.sh — 把 trunk（main）的 merge 提交自动同步进 #918 §G（裁 367 一期）
 #
 # @input   环境: GITEA_TOKEN（或 ~/gitea/.win-push-token）
 #          可选: SYNO_LEDGER_SYNC_STATE（默认 <root>/.claude/ledger-sync.state）
