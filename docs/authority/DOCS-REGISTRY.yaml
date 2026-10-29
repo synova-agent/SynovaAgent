@@ -1439,3 +1439,13 @@ documents:
     status: active
     owner: P4
     note: "#1118（#1115 后续，P0 收口）：resolve-ci-base.sh 拆 main 与 local-main 两臂并加 ④b 一致性阀（相等放行／祖先容忍加告警／分叉或领先 exit 2），配对测试修用例 3/4/5 并补 9 至 14b（含两条改坏即红）；豁免自覆盖＋DOCS-REGISTRY 自登记。canonical 保持 gitea/main，不动 workflow 与 #1115 其它写集。"
+
+
+
+  # ---- P4 2026-10-29：#1125 写集门禁删除项语义豁免登记（DOC-1125，按派单指定号落号）----
+  - id: DOC-1125
+    type: decision
+    path: gate-exemptions/2026-10-29-1125-dev-doc-writeset.md
+    status: active
+    owner: P4
+    note: "#1125：scripts/workflow/check-dev-doc-write-set.sh（变更集三处补 D ＋ 带状态判：声明删除 ⇔ D、声明修改仍须 A/C/M/R、git 不可用 exit 2）与 tests/control-tower/check-dev-doc-write-set.test.sh（真 git 夹具含改坏即红）受保护路径豁免；含自覆盖行与 DOCS-REGISTRY 自登记行。"
