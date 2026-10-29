@@ -61,6 +61,8 @@
 #        CTO 评论 8714 批准扩写集 2 件（tests/agent/approval-card.test.ts／tests/routes/role-packs-page.test.ts）
 #        ⇒ 已补入下方 writeset；同时 docs/authority/WIRING-REGISTRY.yaml 纯追加 3 条
 #        （agent.approvalCardFrame／api.rolePacksApproval／ui.rolePacksGuidePage，使 CI 质量增量闸 R1.1 归零）。
+#        ＋ **第 15 件＝CTO 本次批准（CI ③ 冻结顺序断言随接线同步）**：tests/routes/middleware-order.test.ts
+#        （EXEMPT_REGISTRATIONS 5→6 项＋P4-2 计数 6；断言形态不放宽）⇒ 已补入下方 writeset。
 writeset:
   - extensions/presets/schema/role-pack-v2.schema.json
   - src/init/role-pack-schema.ts
@@ -122,6 +124,7 @@ writeset:
   - tests/routes/role-approvals.test.ts
   - tests/agent/approval-card.test.ts
   - tests/routes/role-packs-page.test.ts
+  - tests/routes/middleware-order.test.ts
 done:
   - verify: node node_modules/.bin/vitest run tests/init/role-pack-schema.test.ts
   - verify: node node_modules/.bin/vitest run tests/init/preset-loader.test.ts
