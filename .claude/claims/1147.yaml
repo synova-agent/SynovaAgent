@@ -1,0 +1,16 @@
+writeset:
+  - scripts/control-tower/gen-gate-meta.sh
+  - scripts/control-tower/check-gate-inventory.sh
+  - tests/control-tower/gen-gate-meta.test.sh
+  - docs/authority/GATE-INVENTORY.yaml
+  - docs/authority/DOCS-REGISTRY.yaml
+  - gate-exemptions/2026-10-30-t25-gate-meta.md
+  - .claude/task-briefs/2026-10-30-1147-t25-gate-meta.md
+  - .claude/claims/1147.yaml
+  - memory/notes/proposed/2026-10-30-1147-t25-gate-meta.md
+done:
+  - verify: bash scripts/control-tower/gen-gate-meta.sh --check
+  - verify: bash tests/control-tower/gen-gate-meta.test.sh
+  - verify: bash scripts/control-tower/check-gate-inventory.sh --root .
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main --root .
+note: "#1147 T2.5：门禁元数据生成器（六字段机械回填 gate_meta 段 117 行）＋ check-gate-inventory R10 同源校验；三态 0/1/2，orphan∧quota 违规，legacy_sections 登记 6 段；双闸（≤30/≤45）留 #1147 剩余部分。"
