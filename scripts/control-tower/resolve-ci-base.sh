@@ -11,16 +11,19 @@
 #             （在仓库任意子目录运行均可，内部 git rev-parse --show-toplevel）
 #   @output — **stdout 仅一行**：解析后的 ref（如 `gitea/main`）；
 #             全部日志/warning/error 走 stderr（stdout 供 `$(...)` 直接取值）
-#   @exit   — 0 = 解析成功；2 = 不可解析 / 刷新失败 / 陈旧 base（fail-closed；禁回退 --staged）
+#   @exit   — 0 = 解析成功；2 = 不可解析 / 刷新失败 / 陈旧 base / **legacy 别名非同干**
+#             （fail-closed；禁回退 --staged）
 #   @side-effect — 仅可能 `git fetch`（写 remote-tracking ref）；不写工作树、不切分支
 #
 # 解析链（规格 §S1-e，禁引入镜像分支字面）:
-#   SYNO_BASE_REF → GITHUB_BASE_REF → gitea/main；裸 `local-main` 规范化为 `gitea/main`
+#   SYNO_BASE_REF → GITHUB_BASE_REF → gitea/main
+#   🔴 legacy 兼容名（#1115 trunk 切换后 / #1118 收口）: 裸 `local-main` ⇒ `gitea/main`，
+#      但**必须过 ④b 安全阀**（与 canonical 同 SHA 才放行；分叉/领先 ⇒ exit 2）
 # 刷新（#610 语义，本件统一）:
 #   单远端 ∧（CI ∨ canonical 不可解析）⇒ fetch `+refs/heads/main:refs/remotes/gitea/main`
 #   多远端（开发机）⇒ 不 fetch、不猜
 # 新鲜度断言（仅 CI）:
-#   canonical 不可解析 ⇒ exit 2；唯一远端的 local-main 跟踪引用可解析 ⇒ 其 SHA 必须与 canonical 相等
+#   canonical 不可解析 ⇒ exit 2；唯一远端的 main 跟踪引用可解析 ⇒ 其 SHA 必须与 canonical 相等
 # ═══════════════════════════════════════════════════════════════════════════════
 export PYTHONIOENCODING=utf-8
 export LC_ALL=C.UTF-8 2>/dev/null || true
@@ -42,9 +45,16 @@ elif [ -n "${GITHUB_BASE_REF:-}" ]; then
 else
   BASE="gitea/main"
 fi
+BASE_RAW="$BASE"
+LEGACY_ALIAS=0
 case "$BASE" in
-  main|local-main) BASE="gitea/main" ;;
+  main) BASE="gitea/main" ;;
+  # 🔴 #1115 trunk 切换后的 legacy 兼容名（#1118 收口）：
+  #   裸 `local-main` 仍映射到 canonical `gitea/main`，但**必须过 ④b 安全阀**——
+  #   否则「指向旧 trunk 的名字」会在两分支已分叉时静默算出错误 diff（判据跑错树 = 假绿）。
+  local-main) BASE="gitea/main"; LEGACY_ALIAS=1 ;;
 esac
+[ "$LEGACY_ALIAS" -eq 0 ] || log "legacy 别名（#1118）：${BASE_RAW} ⇒ gitea/main（同 SHA 才放行，见 ④b）"
 log "base 候选 = $BASE"
 
 # ── ② CI 标记 ─────────────────────────────────────────────────────────────────
@@ -93,6 +103,34 @@ if [ "$BASE" = "gitea/main" ]; then
     else
       log "新鲜度断言：无唯一远端或跟踪引用不可解析 ⇒ 只断言 canonical 可解析（不猜）"
     fi
+  fi
+fi
+
+# ── ④b legacy 别名安全阀（#1118）────────────────────────────────────────────────
+# 只在「本次走了 legacy 别名（local-main ⇒ gitea/main）」时生效——禁止静默别名到不同树。
+# 候选 = 本仓 `refs/heads/local-main` ＋ 所有 `refs/remotes/*/local-main`（CI 单远端 ⇒ 即 origin/local-main）；
+#   · SHA 相等              ⇒ 通过（冻结期常态：local-main 停在 trunk 切换点）
+#   · 候选是 canonical 的祖先 ⇒ 容忍并告警（同一干线上的陈旧引用，不改变 base 语义）
+#   · 其它（分叉 / 候选领先） ⇒ exit 2 fail-closed：此时别名会算出错误 diff
+if [ "$LEGACY_ALIAS" -eq 1 ]; then
+  CANON_SHA="$(git rev-parse --verify -q gitea/main 2>/dev/null || true)"  # swallow-ok: canonical 不可解析时跳过安全阀，由 ⑤ 统一判 exit 2
+  if [ -n "$CANON_SHA" ]; then
+    CANON_SHORT="$(git rev-parse --short "$CANON_SHA")"
+    ALIAS_CANDS="$(git for-each-ref --format='%(refname)' refs/heads/local-main 'refs/remotes/*/local-main' 2>/dev/null || true)"  # swallow-ok: 列不出候选＝无 local-main 引用可比，安全阀退化为无候选（⑤ 仍判可解析性）
+    while IFS= read -r CAND; do
+      [ -n "$CAND" ] || continue
+      CAND_SHA="$(git rev-parse --verify -q "${CAND}^{commit}" 2>/dev/null || true)"  # swallow-ok: 候选不可解析＝该 ref 不存在，跳过（不是错误）
+      [ -n "$CAND_SHA" ] || continue
+      [ "$CAND_SHA" = "$CANON_SHA" ] && continue
+      CAND_SHORT="$(git rev-parse --short "$CAND_SHA")"
+      if git merge-base --is-ancestor "$CAND_SHA" "$CANON_SHA" 2>/dev/null; then  # swallow-ok: 非祖先（含坏对象）一律按非同干 die，fail-closed
+        log "::warning title=resolve-ci-base::legacy 别名 ${CAND}=${CAND_SHORT} 是 canonical 的祖先（同干陈旧）⇒ 容忍；分叉或领先仍 exit 2（#1118）"
+        continue
+      fi
+      die "legacy 别名安全阀（#1118）：${CAND}=${CAND_SHORT} 与 gitea/main=${CANON_SHORT} 非同干（禁静默别名到不同树）"
+    done <<EOF
+${ALIAS_CANDS}
+EOF
   fi
 fi
 
