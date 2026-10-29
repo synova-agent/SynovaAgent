@@ -1,22 +1,15 @@
-# claim — #1141 quality-baseline 测试常量随登记表同步
-# DSH 认领制：声明本任务写集与完成判据（与 brief Q2/Done 标准一致）
-
-issue: 1141
-branch: fix/1141-const-drift
-base: main
-
+# claim — #1141 / #1152 quality-baseline 断言交叉核对
 writeset:
   - tests/control-tower/quality-baseline.test.sh
+  - gate-exemptions/2026-10-30-1141-quality-baseline-constants.md
+  - docs/authority/DOCS-REGISTRY.yaml
   - .claude/task-briefs/2026-10-29-1141-quality-baseline-constants.md
   - .claude/claims/1141.yaml
   - memory/notes/proposed/2026-10-29-1141-quality-baseline-constants.md
 
-done_verify:
-  - cmd: "bash tests/control-tower/quality-baseline.test.sh 2>&1 | tail -1"
-    expect: "TEST-OK pass=163 fail=0"
-  - cmd: "git diff --numstat gitea/main -- scripts/control-tower/quality-baseline.py"
-    expect: "空（判据逻辑零改动）"
-  - cmd: "bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main --root . 2>&1 | tail -1"
-    expect: "0 失败"
+done:
+  - verify: "bash tests/control-tower/quality-baseline.test.sh 2>&1 | tail -1"
+  - verify: "bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main --root . 2>&1 | tail -1"
+  - verify: "git diff --numstat gitea/main -- scripts/control-tower/quality-baseline.py"
 
-note: "常量漂移修正：rows=22→26（并入 #1075/#1120/#1138/#1128 后登记行增长），orphans 分母 40→41；不改判据逻辑；是否接入 CI 由 CTO 裁。"
+note: "断言改为与独立来源交叉核对：rows 对 grep '^  - capability:' 计数、orphans 分母对 classification 条目数；不再写死字面量，判据逻辑零改动。"

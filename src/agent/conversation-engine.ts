@@ -86,6 +86,11 @@ import { buildRoleLayer, type RolePackPersona } from '../init/role-pack-persona'
 // #1075 P2-4a: 岗位包工具权限编译（审批门＋六件快照＋capabilities 解析 → 白名单/禁用/未落地）。
 // 只**消费**已编译结果；磁盘读取/审批/限额归该模块，白名单执行判定归 ToolRegistry。
 import { loadRolePackPermissions } from '../init/role-pack-permissions';
+// #1075 P2-4b-B: 角色会话知识过滤编译器（scope/deny ＋ 认证面同源敏感度 → L4 FilterClause）。
+// 只**消费**已编译过滤面；YAML/scope/审批解析归 preset-loader，检索执行归 L4。
+import { buildRoleKnowledgeFilter, buildRejectedKnowledgeFilter, type RoleKnowledgeFilter } from '../init/role-pack-knowledge-filter';
+// #1075 P2-4b-B: 知识检索**系统工具**（不注册进 ToolRegistry；经 setSystemToolProvider 注入）
+import { createKnowledgeSearchTool } from './builtin-tools';
 
 const log = createLogger('agent/conversation-engine');
 
@@ -460,6 +465,17 @@ export class ConversationEngine {
    */
   private pendingRolePackId: string | null = null;
 
+  /**
+   * #1075 P2-4b-B: 角色会话知识过滤面（**运行期状态**；`null` = 本会话无系统知识工具）。
+   *
+   * 三态（规格 §2.2-D4/D7）:
+   *   · 未绑定岗位（`boundRolePackId === null`）⇒ `null`（无 provider ⇒ 工具不存在，零变化）；
+   *   · 已绑定且人设可用 ⇒ `buildRoleKnowledgeFilter(...)` 的编译结果（ok:false ⇒ 拒绝型）；
+   *   · 已绑定但 persona=null（复核失败/撤岗）⇒ **拒绝型**（`pkb_domain IN []`：工具仍在，0 结果）。
+   * 回滚开关 `SYNOVA_ROLE_KNOWLEDGE=off` ⇒ `null` ＋ provider 卸载（与 `SYNOVA_ROLE_PACK_TOOLS` 互相独立）。
+   */
+  private roleKnowledgeFilter: RoleKnowledgeFilter | null = null;
+
   // P1-01: 子组件提取
   private toolLoop: ToolLoopExecutor;
   private diagnosisLauncher: DiagnosisLauncher;
@@ -686,6 +702,9 @@ export class ConversationEngine {
    * @error  永不抛（`loadRolePackPermissions` 同步不抛；本方法只做状态下发）
    */
   refreshRolePackPermissions(): void {
+    // #1075 P2-4b-B: 系统知识工具 provider 与白名单**独立**（D9）—— 先注入，
+    //   🔴 不得被下面的"注册表空 ⇒ 暂缓编译白名单"早退连带阻断（provider 不看注册表）。
+    this.applyRoleKnowledgeProvider();
     // 注册表空（工具尚未注册）⇒ 不编译白名单：缺 knownTools 会把声明全判"未落地" ⇒ 误全拒。
     if (this.boundRolePackId !== null && this.toolRegistry.allToolNames().length === 0) {
       log.warn(
@@ -709,6 +728,8 @@ export class ConversationEngine {
    */
   private ensurePermissionsApplied(): void {
     if (this.pendingRolePackId === null) return;
+    // #1075 P2-4b-B: 系统知识工具 provider 与白名单独立（D9）—— 与注册表状态无关，先注入。
+    this.applyRoleKnowledgeProvider();
     if (this.toolRegistry.allToolNames().length === 0) {
       log.warn(
         { roleId: this.pendingRolePackId, reason: 'tool-registry-empty', degraded: true },
@@ -718,6 +739,66 @@ export class ConversationEngine {
     }
     this.applyRolePackPermissions();
     this.pendingRolePackId = null;
+  }
+
+  /**
+   * #1075 P2-4b-B: 构建/下发角色会话知识过滤面与**系统工具 provider**（私有；幂等）。
+   *
+   * 与 `applyRolePackPermissions()` **互相独立**（规格 §2.2-D9）:
+   *   · 白名单（`SYNOVA_ROLE_PACK_TOOLS`）只管"岗位声明面内的工具"；
+   *   · 本方法（`SYNOVA_ROLE_KNOWLEDGE`）只管系统知识工具 —— 不读 allowlist，也不被 allowlist 为空阻断
+   *     （D4b：权限待批时系统知识工具仍可用，敏感度由认证面漏斗天然收窄）。
+   *
+   * @input  无（读 `boundRolePackId`／`rolePack`／`orgId`／环境开关）
+   * @output 无；副作用 = `this.roleKnowledgeFilter` ＋ `setSystemToolProvider(...)`（含清 OpenAI 工具缓存）
+   * @degraded 编译失败 ⇒ 拒绝型过滤面（`pkb_domain IN []`，工具可见但 0 结果，不静默）；
+   *           回滚开关 off ⇒ provider 卸载（与白名单开关互不替代）
+   * @error  永不抛（编译器不抛；本方法只做状态下发）
+   */
+  private applyRoleKnowledgeProvider(): void {
+    // D8 回滚开关：只关角色知识工具（白名单不受影响，反之亦然）
+    if (process.env['SYNOVA_ROLE_KNOWLEDGE'] === 'off') {
+      this.roleKnowledgeFilter = null;
+      this.toolRegistry.setSystemToolProvider(null);
+      log.warn(
+        { roleId: this.boundRolePackId, switch: 'SYNOVA_ROLE_KNOWLEDGE=off', degraded: true },
+        '角色会话知识工具已回滚关闭（D8）— 卸载系统工具 provider',
+      );
+      return;
+    }
+
+    // D4: **从未绑定岗位** ⇒ 无系统知识工具（无岗位会话零变化）
+    if (this.boundRolePackId === null) {
+      this.roleKnowledgeFilter = null;
+      this.toolRegistry.setSystemToolProvider(null);
+      return;
+    }
+
+    // D7: 已绑定但本轮人设复核失败/撤岗 ⇒ 拒绝型（工具仍在、0 结果），不回落全库
+    if (this.rolePack === null) {
+      this.roleKnowledgeFilter = buildRejectedKnowledgeFilter('persona-unverified');
+      this.toolRegistry.setSystemToolProvider(() => [createKnowledgeSearchTool(() => this.roleKnowledgeFilter)]);
+      log.warn(
+        { roleId: this.boundRolePackId, reason: 'persona-unverified', degraded: true },
+        '岗位已绑定但人设复核失败 — 角色知识过滤面为拒绝型（工具可见、0 结果，D7）',
+      );
+      return;
+    }
+
+    const roleId = this.rolePack.roleId;
+    const built = buildRoleKnowledgeFilter(roleId, this.orgId);
+    this.roleKnowledgeFilter = built.ok ? built.filter : buildRejectedKnowledgeFilter(`${built.code}: ${built.reason}`);
+    this.toolRegistry.setSystemToolProvider(() => [createKnowledgeSearchTool(() => this.roleKnowledgeFilter)]);
+    log.info(
+      {
+        roleId,
+        orgId: this.orgId,
+        scopes: this.roleKnowledgeFilter.scopes,
+        sensitivity: this.roleKnowledgeFilter.sensitivity,
+        degraded: this.roleKnowledgeFilter.degraded,
+      },
+      '角色会话知识工具已注入（系统工具：不进 allowlist／allToolNames，D1）',
+    );
   }
 
   /**

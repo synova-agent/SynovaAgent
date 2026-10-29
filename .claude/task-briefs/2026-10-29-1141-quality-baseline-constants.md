@@ -1,28 +1,32 @@
-# Task Brief — #1141 quality-baseline 测试常量随登记表同步
+# Task Brief — #1141 / #1152 quality-baseline 断言交叉核对
 
 #CRITERIA: D
 
 ## Q1: 问题
-合并七卡后 `tests/control-tower/quality-baseline.test.sh` 本地 FAIL（pass=161/fail=2）：`REGISTRY-OK rows=22` 与真值不符、`orphans` 分母 `40` 过期。该测试不在 CI 两腿内 ⇒ CI 绿但本地红，属**常量漂移**，非逻辑缺陷。
+`tests/control-tower/quality-baseline.test.sh` 把 `rows=26`、`orphans` 分母 `41` 写成字面量，登记表每次增长就红（已连续两轮漂移）。上一轮"从自身输出动态取值"的补丁属同义反复，被退回。
 
 ## Q2: 范围
 做：
-- `tests/control-tower/quality-baseline.test.sh`（注释行 + 断言行：`rows=22` → 真值 **26**；`orphans` 分母 `40` → **41**）
+- tests/control-tower/quality-baseline.test.sh
+- gate-exemptions/2026-10-30-1141-quality-baseline-constants.md
+- docs/authority/DOCS-REGISTRY.yaml
+- .claude/task-briefs/2026-10-29-1141-quality-baseline-constants.md
+- .claude/claims/1141.yaml
+- memory/notes/proposed/2026-10-29-1141-quality-baseline-constants.md
 不做：
-- 不改 `scripts/control-tower/quality-baseline.py`（判据逻辑零改动）
-- 不改 `docs/authority/WIRING-REGISTRY.yaml`（登记表内容）
-- 不接线 CI（另由 CTO 裁，见 Done 标准备注）
+- 不改 scripts/control-tower/quality-baseline.py
+- 不改 docs/authority/WIRING-REGISTRY.yaml
+- 不改 CI workflow
 
 ## Q3: 验收
-入口：`bash tests/control-tower/quality-baseline.test.sh`
-处理：真件 `--check-registry` 末行 `REGISTRY-OK rows=26`；夹具路径不变
-结果：`TEST-OK pass=163 fail=0`；改坏（把 rows 改回 22）⇒ 断言必红
+入口：bash tests/control-tower/quality-baseline.test.sh
+处理：真件输出条数与独立计数交叉核对（capability 行数、classification 条目数）
+结果：TEST-OK 0 失败；改坏独立计数 ⇒ 断言必红
 
-## 架构层: 不属五层业务（治理/测试常量）
+## 架构层: 不属五层业务（治理/测试断言）
 
 ## Done 标准
-- [x] `bash tests/control-tower/quality-baseline.test.sh` ⇒ `TEST-OK pass=163 fail=0` verify: `bash tests/control-tower/quality-baseline.test.sh 2>&1 | tail -1`
-- [x] 改坏即红：临时把 `rows=26` 改回 `22` ⇒ 断言红 verify: 见 PR 正文前后态
-- [x] 判据逻辑零改动（`git diff --numstat` 只动测试文件） verify: `git diff --numstat gitea/main -- scripts/control-tower/quality-baseline.py`
-- [x] ①d：`check-gate-protection --changed-base gitea/main` 0 失败 verify: 见 PR 正文
-- [ ] （待 CTO 裁）是否把该测试接入 CI 两腿（当前不跑，同类漂移只在本地可见）
+- [x] 测试 0 失败 verify: `bash tests/control-tower/quality-baseline.test.sh 2>&1 | tail -1`
+- [x] 交叉核对承重（改坏独立计数 ⇒ 红） verify: 见 PR 正文前后态
+- [x] 判据逻辑零改动（只动测试与载体） verify: `git diff --numstat gitea/main -- scripts/control-tower/quality-baseline.py`
+- [x] 受保护路径 0 失败 verify: `bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main --root . 2>&1 | tail -1`
