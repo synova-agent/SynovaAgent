@@ -13,6 +13,10 @@
  *   @input    — message: string(1..8000) 必填；sessionId/orgId: string 可选；
  *               **rolePackId（#1075 P2-2，可选）**: string，须匹配 `^[a-z0-9][a-z0-9.-]{0,63}$`；
  *               缺省 ⇒ 无岗位会话（系统提示词逐字不变）；续轮可省略（沿用会话已绑定岗位）。
+ *               **approvalRoleId（#1075 P3，可选）**: string，形状同 rolePackId；命中 ⇒ **审批会话**
+ *               （独立第一分支：SSE open→approval_card→end；**不建会话／不跑 LLM／不落库**）；
+ *               与 `rolePackId` **互斥**（同给 ⇒ 400）；🔴 该分支**必须早于 message 必填校验**
+ *               （message 可缺省；gate-A A2 硬约束）。
  *               store 经 req.app.locals.orchestration.db 获取（D563 动态 import 范式：
  *               值与类型均来自动态 import 通道的推断 + isSqliteDatabase 谓词窄化，
  *               L1 零静态 L5 import——diagnosis.ts:182 同款）；
@@ -27,6 +31,10 @@
  *                 400 E_ROLE_PACK_PERSONA_UNREADABLE｜403 E_ROLE_PACK_FORBIDDEN｜
  *                 404 E_ROLE_PACK_NOT_FOUND｜409 E_ROLE_PACK_NOT_APPROVED｜
  *                 409 E_ROLE_PACK_CONTENT_CHANGED｜409 E_ROLE_PACK_IMMUTABLE
+ *               ＋ **#1075 P3 审批会话**（`approvalRoleId`）：SSE open → approval_card → end
+ *                 （**无 agent_message**）；流前 JSON：401 UNAUTHORIZED｜403 E_ROLE_PACK_FORBIDDEN｜
+ *                 400 E_APPROVAL_SESSION_CONFLICT｜400 E_APPROVAL_ROLE_ID_INVALID｜404 E_ROLE_PACK_NOT_FOUND
+ *                 （全部流前，绝不进 SSE 帧；卡帧形状见 src/agent/approval-card.ts）
  *               ＋ **#1075 P2-3 岗位输出标准**：每轮 assistant 回复落库后**非阻断**校验（只 `log.warn`
  *                 ＋ 引擎失败落账）；**不改状态码、不改回复、不新增任何 HTTP 字段**（规格 D4/L3）。
  *   @degraded — db 缺失/非 SQLite → 503 {code:'STORE_UNAVAILABLE', degraded:true}
@@ -84,6 +92,9 @@
  *   m. **输出标准校验的异常路径只留痕、不落账**（#1075 P2-3 / CTO 条件③）：调用点包 try/catch，
  *      抛错 ⇒ `log.warn({audit:'rolePackOutput', rolePackId, degraded:true, err})` 后忽略；
  *      回复照常返回、HTTP 码不变。**不重试、不降级为"校验通过"**（异常 ≠ 合标）。
+ *   n. **审批会话是无状态只读视图**（#1075 P3 / D1）：不发消息、无历史、不建会话、无 `agent_message`；
+ *      刷新即重发（卡由 `loadRolePacks()` 现算）；按钮动作由客户端带同一 Bearer 调
+ *      `POST /api/role-packs/:id/approval`（卡本身不含动作端点，规格 §10-L3）。
  *
  * 决策记录（D333，完成报告 §5.4 可核）: phaseComplete 诊断桥走 L1→L2 公开 API
  * DiagnosisLauncher 直连（diagnosis.ts:200-217 同款装配），而非 conv.startDiagnosis——
@@ -130,6 +141,11 @@ import { validateContractObject } from '../output/contract-validator';
 // #1075 P2-3 CI 修复：取当前时刻走**全仓唯一注入点**（`nowIso()` 与 `toISOString()` 逐字节同值；
 // 禁在本文件直取系统时钟 —— `tests/contract/time-injection.test.ts` 的 R1 棘轮按字面计数）。
 import { systemClock } from '../services/clock';
+// #1075 P3: 审批会话卡（纯构造）＋ 角色包装载报告（审批态单一真源 = loadRolePacks().approval）。
+// `../init/preset-loader` / `../agent/approval-card` 均不匹配架构门禁的 L3/L4/L5 层模式
+// （只有 `init/engine-context` 被点名）⇒ 不新增 L1 跨层违规（与上方 `../init/role-pack-persona` 同口径）。
+import { loadRolePacks } from '../init/preset-loader';
+import { buildApprovalCardFrame } from '../agent/approval-card';
 
 const log = createLogger('routes/conversations');
 const router = Router();
@@ -304,6 +320,11 @@ type ConversationBody = {
   orgId?: unknown;
   /** #1075 P2-2: 岗位 id（可选；形状与授权在流前判定，见 handler 的【流前 rolePack 判定】块） */
   rolePackId?: unknown;
+  /**
+   * #1075 P3: 审批会话目标岗位（可选）。命中 ⇒ **第一分支**走审批卡，不进 message 校验／不建会话／不落库。
+   * 与 `rolePackId` 互斥（同给 ⇒ 400 `E_APPROVAL_SESSION_CONFLICT`）；形状同 `ROLE_PACK_ID_PATTERN`。
+   */
+  approvalRoleId?: unknown;
 };
 
 /** 引擎快照最小形状守卫——loadState 的 JSON.parse 结果不盲信（铁律 38：类型守卫替代断言） */
@@ -402,10 +423,152 @@ async function buildDiagnosisEngine(): Promise<DiagnosisEngine> {
   return engine;
 }
 
+/**
+ * #1075 P3 · **审批会话分支**（`approvalRoleId`）：一次性只读视图 —— open → approval_card → end。
+ *
+ * 🔴 位置契约（gate-A A2，硬约束）：本函数只在 `handleConversationMessage` 的
+ *   **body 解析之后、message 必填校验之前**被调用；命中即 `return` ⇒ **不进** message 校验／
+ *   不解析 sessionId／不建会话／不落库／不建 provider／不跑 LLM（规格 §2.2-D1）。
+ *
+ * 判定顺序（逐条短路；全部**流前 JSON**，违规不进 SSE）:
+ *   ① 身份：`req.auth` 缺失 ⇒ 401 `UNAUTHORIZED`（白名单路径中间件只在验签通过时注入 req.auth）；
+ *   ② 角色白名单：∉ `admin|manager|ga` ⇒ 403 `E_ROLE_PACK_FORBIDDEN`；
+ *   ③ 互斥：同时给 `rolePackId` ⇒ 400 `E_APPROVAL_SESSION_CONFLICT`（一请求一语义）；
+ *   ④ 形状：`approvalRoleId` 非字符串或不匹配 `ROLE_PACK_ID_PATTERN` ⇒ 400 `E_APPROVAL_ROLE_ID_INVALID`；
+ *   ⑤ 包必须存在：`loadRolePacks().roles[]` 无该 roleId ⇒ 404 `E_ROLE_PACK_NOT_FOUND`；
+ *   ⑥ 发帧：open（`sessionId:null` ＋ `mode:'approval'`，显式声明未建会话）→ `approval_card` → end。
+ *
+ * 🔴 审批态**不在本函数判定**：`status/scope/contentHash/permissionsPending` 全部来自
+ *   `loadRolePacks().approval`（读路径唯一真源）；卡形状由 `src/agent/approval-card.ts` 单一出处构造。
+ * 🔴 已批包同样出卡（status=approved）—— 审批会话是"看板"，不是"只能批一次"的闸。
+ *
+ * @degraded — 不降级：读路径异常已折成 `approval.status='unverified'`（卡上可见）；本函数不吞错
+ *   （`loadRolePacks()` 内部日志已带 code/降级信号）；SSE 建立后不再改状态码（同既有流语义）。
+ * @authority — 仅 `POST /api/conversations` 与 `POST /api/conversations/:id/messages` 的共用 handler 调用
+ *   （两条入口同一边界；`rolePackId` 角色会话路径**零改动**）。
+ */
+async function handleApprovalSession(req: Request, res: Response, body: ConversationBody): Promise<void> {
+  // ① 身份（白名单 `/api/conversations` 由中间件**尝试**验签并注入 req.auth —— 无凭据时 undefined）
+  const auth = (req as Request & { auth?: { role?: unknown } }).auth;
+  const authRole = auth !== undefined && typeof auth.role === 'string' ? auth.role : null;
+  if (authRole === null) {
+    log.warn(
+      { code: 'UNAUTHORIZED', reason: 'no-auth', path: req.path },
+      '审批会话无可验签身份 — 401（流前，未开流）',
+    );
+    res.status(401).json({
+      ok: false,
+      code: 'UNAUTHORIZED',
+      message: '审批会话需要可验签身份（Authorization: Bearer <JWT>）',
+    });
+    return;
+  }
+
+  // ② 角色白名单（与选岗同口径：admin/manager/ga；staff/liaison ⇒ 403）
+  if (!ROLE_PACK_ALLOWED_ROLES.includes(authRole)) {
+    log.warn(
+      { code: 'E_ROLE_PACK_FORBIDDEN', reason: 'role-not-allowed', role: authRole, path: req.path },
+      '审批会话角色不在白名单 — 403（仅 admin/manager/ga）',
+    );
+    res.status(403).json({
+      ok: false,
+      code: 'E_ROLE_PACK_FORBIDDEN',
+      message: `角色 ${authRole} 不允许使用审批会话（仅 admin/manager/ga）`,
+    });
+    return;
+  }
+
+  // ③ 与 rolePackId 互斥（一请求一语义：审批会话不绑岗位）
+  if (body.rolePackId !== undefined) {
+    log.warn(
+      { code: 'E_APPROVAL_SESSION_CONFLICT', approvalRoleId: String(body.approvalRoleId) },
+      'approvalRoleId 与 rolePackId 同给 — 400（互斥，流前）',
+    );
+    res.status(400).json({
+      ok: false,
+      code: 'E_APPROVAL_SESSION_CONFLICT',
+      message: 'approvalRoleId（审批会话）与 rolePackId（角色会话）互斥，不得同时给出',
+    });
+    return;
+  }
+
+  // ④ 形状（复用 ROLE_PACK_ID_PATTERN：1..64 小写字母/数字/`.`/`-`）
+  const rawApprovalRoleId = body.approvalRoleId;
+  if (typeof rawApprovalRoleId !== 'string' || !ROLE_PACK_ID_PATTERN.test(rawApprovalRoleId)) {
+    log.warn(
+      { code: 'E_APPROVAL_ROLE_ID_INVALID', approvalRoleId: String(rawApprovalRoleId) },
+      'approvalRoleId 形状非法 — 400（流前，未开流）',
+    );
+    res.status(400).json({
+      ok: false,
+      code: 'E_APPROVAL_ROLE_ID_INVALID',
+      message: 'approvalRoleId 须匹配 ^[a-z0-9][a-z0-9.-]{0,63}$（小写字母/数字开头，1..64 字符）',
+    });
+    return;
+  }
+  const roleId = rawApprovalRoleId;
+
+  // ⑤ 包必须存在（审批态单一真源：loadRolePacks；本函数不重算审批）
+  const report = loadRolePacks();
+  const pack = report.roles.find((item) => item.roleId === roleId);
+  if (pack === undefined) {
+    log.warn(
+      { code: 'E_ROLE_PACK_NOT_FOUND', roleId, root: report.root },
+      '审批会话目标岗位包不存在 — 404（流前，未开流）',
+    );
+    res.status(404).json({
+      ok: false,
+      code: 'E_ROLE_PACK_NOT_FOUND',
+      message: `岗位包不存在：${roleId}`,
+    });
+    return;
+  }
+
+  // ⑥ 卡帧（§2.3-E；非 approved ⇒ scope/permissionsPending 为 null —— 见 approval-card.ts L1）
+  const cardFrame = buildApprovalCardFrame({
+    roleId,
+    status: pack.approval.status,
+    scope: pack.approval.scope ?? null,
+    contentHash: pack.validation.contentHash ?? null,
+    permissionsPending: pack.approval.permissionsPending ?? null,
+  });
+
+  // ⑦ SSE（此点之后不改状态码；不建会话/不跑 LLM/不落库）
+  const adapter = new WebViewAdapter(res);
+  try {
+    // open 帧：sessionId 恒 null（显式声明"未建会话"），mode 标记来源分支
+    adapter.sendFrame({ type: 'open', sessionId: null, phase: 0, mode: 'approval', roleId });
+    adapter.sendFrame({ ...cardFrame });
+    adapter.sendFrame({ type: 'end' });
+    log.info(
+      {
+        roleId,
+        status: pack.approval.status,
+        scope: pack.approval.scope ?? null,
+        contentHash: pack.validation.contentHash ?? null,
+        sessionCreated: false,
+        llmCalled: false,
+      },
+      '审批会话已发卡 — open→approval_card→end（未建会话/未跑 LLM/未落库）',
+    );
+  } finally {
+    adapter.close();
+  }
+}
+
 /** 两条路由共用的对话 handler（spec §5.2-A：单 handler，入口差异仅在 sessionId 来源） */
 async function handleConversationMessage(req: Request, res: Response, pathSessionId?: string): Promise<void> {
   // ① 输入边界（流前 JSON，违规不进 SSE）
   const body = (req.body ?? {}) as ConversationBody;
+
+  // ①-0 #1075 P3 · 审批会话**第一分支**（gate-A A2：必须早于 message 必填校验）
+  //     判 `!== undefined`（而非只认 string）：非法类型的 approvalRoleId 也要走审批分支拿 400，
+  //     不得退化成"普通消息 + 被忽略的字段"（静默接受畸形输入 = 假绿）。
+  if (body.approvalRoleId !== undefined) {
+    await handleApprovalSession(req, res, body);
+    return;
+  }
+
   const message = body.message;
   if (typeof message !== 'string' || message.length < 1 || message.length > MESSAGE_MAX) {
     res.status(400).json({ ok: false, code: 'VALIDATION_ERROR', message: `message 必填且为 1..${MESSAGE_MAX} 字符` });
