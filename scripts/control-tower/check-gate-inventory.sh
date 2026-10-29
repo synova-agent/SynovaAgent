@@ -118,9 +118,27 @@ GA_LIB="${LIB_DIR:+$LIB_DIR/gate-assert.sh}"
 # shellcheck source=scripts/control-tower/gate-assert.sh
 . "$GA_LIB" || degraded E_INTERNAL "判据归一库不可载入（判不了 ⇒ 2）: $GA_LIB"
 
-OUT="$(ga_run "check-gate-inventory" -- "$PYBIN" - "$INV" "$ROOT" "$P0_FLOOR" "$JSON" <<'PYEOF'
+# ── gate_meta 同源校验（T2.5 / #1147）──────────────────────────────────────
+# 单一真源 = gen-gate-meta.sh：本器不重算 join，只调它的 --check；
+# 生成器缺失 / 自身判不了 ⇒ 判不了（2）；不一致 ⇒ 违规（1，由 python 一并打印）。
+GMFAIL=0
+GMMSG=""
+if grep -qE '^gate_meta:[[:space:]]*$' "$INV"; then
+  GEN_META="${LIB_DIR:+$LIB_DIR/gen-gate-meta.sh}"
+  { [ -n "$GEN_META" ] && [ -f "$GEN_META" ]; } || degraded E_INTERNAL "gate_meta 段存在但生成器缺失（判不了 ⇒ 2）: ${GEN_META:-<目录不可解析>}"
+  GMOUT="$(bash "$GEN_META" --check --root "$ROOT" --inv "$INV" 2>&1)"
+  GMRC=$?
+  case "$GMRC" in
+    0) : ;;
+    1) GMFAIL=1; GMMSG="$(printf '%s' "${GMOUT:-gate_meta 与生成物不一致}" | grep -E '❌' | head -1)" ;;
+    *) degraded E_GATE_META "gate_meta 同源校验判不了（rc=$GMRC；禁当通过）" ;;
+  esac
+fi
+
+OUT="$(ga_run "check-gate-inventory" -- "$PYBIN" - "$INV" "$ROOT" "$P0_FLOOR" "$JSON" "$GMFAIL" "$GMMSG" <<'PYEOF'
 import glob, json, os, re, sys
 inv_path, root, floor_s, json_mode = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4] == "1"
+gm_fail, gm_msg = (sys.argv[5] == "1"), (sys.argv[6] if len(sys.argv) > 6 else "")
 viol, ok = [], []
 
 def v(code, msg):
@@ -334,6 +352,9 @@ for ep in sorted(cand_ep - unowned):
 for r in rb_rows:
     if r.get("run_by", "") == "无" and r.get("quota", "").lower() == "true":
         v("R8", "%s run_by=无 却 quota=true（无主件不得进配额计数）" % r.get("entrypoint", ""))
+
+if gm_fail:
+    v("R10", "gate_meta 与生成物不一致／六字段缺失（同源=gen-gate-meta.sh --check）: %s" % (gm_msg or "<见生成器输出>"))
 
 print("── 门禁三分类登记校验（#1089 / W1）──")
 print("清单: %s" % inv_path)

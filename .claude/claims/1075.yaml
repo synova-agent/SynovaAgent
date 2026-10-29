@@ -42,6 +42,14 @@
 #        规格 .handbook/派单件/2026-10-29-规格-1075-P2-4a-工具与权限.md §2.4（6 产品＋2 登记 ＝ 8 条目）；
 #        8 条目中 4 条已被既有行覆盖（conversation-engine.ts／triviality-manifest.yaml／WIRING-REGISTRY.yaml／本文件）
 #        ⇒ 本次新增 4 条，逐条见下方 writeset 末尾 4 行。
+#      ＋ #1075 P2-4b-A（批六·公共知识入口 grants 生效，2026-10-29，单 PR，锚 main `03ac84a02`）
+#        依据：规格 .handbook/派单件/2026-10-29-规格-1075-P2-4b-A-桥接权限.md §2.4（2 修改＋2 登记 ＝ 4 条目）
+#        ＋ gate-A 回执（五轮，2026-10-29，结论可开工）。本批 4 条目中：
+#          · `docs/authority/WIRING-REGISTRY.yaml`（纯追加 permission.knowledgeGrantsBridge 1 行）与
+#            `.claude/claims/1075.yaml`（本文件）**已在既有 writeset 内** ⇒ union 去重、不重复列；
+#          · 本次实际新增 2 条产品/测试路径（src/routes/knowledge-ask.ts／tests/routes/knowledge-ask.test.ts），
+#            逐条见下方 writeset 末尾 2 行。只读件（src/middleware/auth.ts 只 import／engine-auth／im.ts／
+#            knowledge-store.ts／scripts/**／.gitea/**）不在写集内。
 writeset:
   - extensions/presets/schema/role-pack-v2.schema.json
   - src/init/role-pack-schema.ts
@@ -92,6 +100,8 @@ writeset:
   - tests/init/role-pack-permissions.test.ts
   - tests/agent/tool-permissions-role-pack.test.ts
   - src/agent/tools.ts
+  - src/routes/knowledge-ask.ts
+  - tests/routes/knowledge-ask.test.ts
 done:
   - verify: node node_modules/.bin/vitest run tests/init/role-pack-schema.test.ts
   - verify: node node_modules/.bin/vitest run tests/init/preset-loader.test.ts

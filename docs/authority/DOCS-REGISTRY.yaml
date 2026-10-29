@@ -1474,6 +1474,14 @@ documents:
     status: active
     owner: P4
     note: "#1117（残余批）：trunk 名单源 SYNO_TRUNK_REF（缺省 main），21 件代码＋11 件配对测试切 main，推送端 bypass 基链与控制塔 base 链统一；main 保护段逐字不动，三态/判据强度/门禁组数不变；含 L1 批准扩写集 2 件配对夹具；豁免自覆盖＋DOCS-REGISTRY 自登记。"
+  # ---- P4 2026-10-30：#1147 T2.5 门禁元数据生成器豁免登记（DOC-1147-01；R1 口径 id = DOC-<Issue#>-NN）----
+  - id: DOC-1147-01
+    type: decision
+    path: gate-exemptions/2026-10-30-t25-gate-meta.md
+    status: active
+    owner: P4
+    note: "#1147（T2.5）：scripts/control-tower/gen-gate-meta.sh（gate_meta 六字段机械产出，--emit/--check，三态 exit 0/1/2，orphan 且 quota 组合违规，legacy_sections 登记 6 段）＋ check-gate-inventory.sh 加 R10 同源校验 ＋ tests/control-tower/gen-gate-meta.test.sh（12 夹具）受保护路径豁免；GATE-INVENTORY 纯追加 gate_meta 段（117 行，删除数 0）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+
 
   # ---- P4 2026-10-29：#1123 批1 DOC 编号形态/来源判据豁免登记（R1 口径：一卡多件用 DOC-<Issue#>-NN）----
   - id: DOC-1123-01
