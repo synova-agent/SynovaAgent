@@ -1,0 +1,24 @@
+# trunk-freeze-watch.yml — 冻结哨兵：每日核 local-main 是否仍是冻结锚点 (#1124)
+# 判据：锚点不变 ⇒ success；变了 ⇒ ::error FREEZE-BROKEN + exit 1（Actions 红，可见）
+name: trunk-freeze-watch
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+jobs:
+  watch:
+    runs-on: macos
+    timeout-minutes: 5
+    steps:
+      - name: 校验 local-main 冻结锚点
+        run: |
+          set -euo pipefail
+          EXPECT="b8edf9860990a7ef6962aa12a1bae473e753f6d0"
+          GOT="$(git ls-remote http://127.0.0.1:3000/synova-agent/SynovaAgent.git refs/heads/local-main | awk '{print $1}')"
+          echo "expected=$EXPECT"
+          echo "actual  =$GOT"
+          if [ "$GOT" != "$EXPECT" ]; then
+            echo "::error title=FREEZE-BROKEN::local-main moved: $GOT (expected $EXPECT)"
+            exit 1
+          fi
+          echo "freeze OK: local-main 仍在锚点"
