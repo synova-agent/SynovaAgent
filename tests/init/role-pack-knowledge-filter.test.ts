@@ -31,7 +31,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createHash } from 'node:crypto';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import Database from 'better-sqlite3';
@@ -140,11 +140,8 @@ function defaultScopeYaml(): string {
 
 /** 单件字节（缺件 ⇒ 空 buffer：缺件用例也要能写出审批记录，否则夹具自身先抛 ENOENT） */
 function pieceBytes(name: string): Buffer {
-  try {
-    return readFileSync(join(rolesRoot(), ROLE, name));
-  } catch {
-    return Buffer.alloc(0);
-  }
+  const abs = join(rolesRoot(), ROLE, name);
+  return existsSync(abs) ? readFileSync(abs) : Buffer.alloc(0);
 }
 
 /** 六件内容指纹（生产纯核现算；与 loader 同源） */

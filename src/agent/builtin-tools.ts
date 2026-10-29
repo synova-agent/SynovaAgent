@@ -4,7 +4,7 @@
  * SynovaAgent 对话中可用的 4 个内置工具。
  * 内置工具集 + agent-tool-registry 注册范式（原 engine-core 工具集已随引擎退役）。
  */
-import type { ToolDefinition, ToolRegistry } from './tools';
+import type { ToolDefinition, ToolHandlerContext, ToolRegistry } from './tools';
 import type { SessionStore } from '../store/session-store';
 import { ACCURACY_TOOLS, ORG_EXPERT_TOOLS, TECH_EXPERT_TOOLS, STRATEGY_EXPERT_TOOLS, FINANCE_EXPERT_TOOLS, ACTION_EXPERT_TOOLS, MARKETING_EXPERT_TOOLS } from '../tools';
 import { createLogger } from '@synova/logger';
@@ -321,7 +321,9 @@ export function registerBuiltinTools(
     },
     operationType: 'write',
     sideEffects: 'mutating',
-    handler: async (params) => {
+    handler: async (params, ctx?: ToolHandlerContext) => {
+      // #915 R4（本文件进入变更集后由增量闸强制）：副作用（scheduler.schedule）**前**自校取消信号
+      ctx?.signal?.throwIfAborted();
       try {
         const { getGlobalScheduler } = await import('../cron/scheduler');
         const { getDatabase } = await import('../init/engine-context');
@@ -384,7 +386,9 @@ export function registerBuiltinTools(
     },
     operationType: 'write',
     sideEffects: 'mutating',
-    handler: async (params) => {
+    handler: async (params, ctx?: ToolHandlerContext) => {
+      // #915 R4：副作用（installer.install 写盘）**前**自校取消信号
+      ctx?.signal?.throwIfAborted();
       try {
         const { getSkillInstaller } = await import('../mcp/skill-installer');
         const { getMCPBridge } = await import('../mcp/bridge');
