@@ -267,3 +267,21 @@ entries:
     status: wired
     owner: P2
     notes: "岗位包工具白名单消费（#1075 P2-4a）：审批 scope ＋ capabilities[].tool 编译成 allowlist／disabled／declaredUnavailable；未注册工具**不入白名单**（不越权、不静默丢弃），enabled:false 永远拒（disabled 优先），permissionsPending ⇒ 全拒；engine 在 process 入口惰性重解析（ensurePermissionsApplied／refreshRolePackPermissions），失败 fail-closed 置 []。改坏必红由 tests/agent/tool-permissions-role-pack.test.ts 的 J1 时序A/B、J2 未列即拒（含 listTools/toOpenAITools）、J3 disabled 硬拒、J6 未绑定零变化覆盖。"
+
+  # ---- P2 2026-10-29：#1075 P2-4b-A · 公共知识入口的 grants 生效（knowledge-ask 认证分支）----
+  - capability: permission.knowledgeGrantsBridge
+    defined_at: "src/middleware/auth.ts:373"
+    provider: "src/middleware/auth.ts:373"
+    consumer: "src/routes/knowledge-ask.ts:143"
+    test: "tests/routes/knowledge-ask.test.ts:154"
+    status: wired
+    owner: P2
+    notes: "认证主路径 src/middleware/auth.ts:964 亦为该漏斗消费者（registry:44-51 先例）"
+  - capability: gate.metaGenerator
+    defined_at: "scripts/control-tower/gen-gate-meta.sh:1"
+    provider: "scripts/control-tower/gen-gate-meta.sh:1"
+    consumer: "scripts/control-tower/check-gate-inventory.sh:129"
+    test: "tests/control-tower/gen-gate-meta.test.sh"
+    status: wired
+    owner: P4
+    notes: "#1147 T2.5：门禁元数据生成器（gate_meta 六字段机械产出，--emit/--check，三态 0/1/2，孤儿与配额非法组合即违规）。唯一生产消费者＝check-gate-inventory.sh 的 R10 同源校验；生成器缺失或判不了归 2。"

@@ -1,0 +1,135 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1154,
+  "patch_fingerprint": "sha256:b542d7d24da7ae97506cf8f2a71b255f22dd555c2ac421c531608d8925b44b3b",
+  "author": "squad-1075（P2-4b-A 实施会话；Gitea 推送账号 win-push）",
+  "reviewer": "review-1154（队外独立复核 fresh session，deepseek-flash，零上下文，未参与实现）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "CS-1 变更集恰 4 件",
+      "cmd": "git -C /tmp/w-1154 diff --name-only gitea/main...HEAD（merge-base=7a7a4db2c=main tip ⇒ 两点=三点）",
+      "evidence": "恰 4 件：src/routes/knowledge-ask.ts / tests/routes/knowledge-ask.test.ts / docs/authority/WIRING-REGISTRY.yaml / .claude/claims/1075.yaml；两点与三点 diff 均为 4；分支 5 提交（4 实施＋1 合 main）",
+      "result": "pass"
+    },
+    {
+      "id": "CS-2 只读面零改动",
+      "cmd": "for p in src/middleware src/engine-auth src/routes/im src/l4/knowledge-store extensions/presets scripts .gitea .github; do git diff --name-only gitea/main...HEAD -- $p | wc -l; done",
+      "evidence": "8 个只读面全部 changed=0；产品 diff 新增行无 req.auth 取值（仅注释写禁裸 req.auth）、无 as any／as never／TODO／Mock；全仓 grep knowledge-store 零改",
+      "result": "pass"
+    },
+    {
+      "id": "T-1 测试（必核②）",
+      "cmd": "cd /tmp/w-1154 && DEV_MODE=true node node_modules/.bin/vitest run tests/routes/knowledge-ask.test.ts tests/security/permission-grants.test.ts",
+      "evidence": "Test Files 2 passed (2)｜Tests 34 passed | 4 skipped (38)｜EXIT=0；knowledge-ask 12 条＝既有 5＋新增 7；既有 4 条 handler 用例判据逐字未动（该文件 diff 仅删 1 行 import）",
+      "result": "pass"
+    },
+    {
+      "id": "T-2 类型面（必核②）",
+      "cmd": "cd /tmp/w-1154 && node node_modules/.bin/tsc --noEmit",
+      "evidence": "EXIT=0（无输出）；conditions 用可变 Array（FilterClause.conditions 同型），readonly/ReadonlyArray 未引入 ⇒ 无 tsc 红",
+      "result": "pass"
+    },
+    {
+      "id": "J2 匿名逐字（必核③）",
+      "cmd": "独立探针 P-J2（/tmp/w-1154-mut/tests/routes/zz-reviewer-probe.test.ts，自建夹具不复用作者断言）＋ git show gitea/main:src/routes/knowledge-ask.ts 原句比对",
+      "evidence": "buildKnowledgeAskFilter() ⇒ authApplied:false，conditions 深等于 [{access_level,EQ,public},{access_level,EQ,team}]；与 main 原 search 调用的两条 EQ 逐字相同；既有 4 条无 auth handler 用例全绿，J2-b 断响应 authApplied===false（前置 body!==null 保证真执行）",
+      "result": "pass"
+    },
+    {
+      "id": "J1 auth 收窄（必核④）",
+      "cmd": "探针 P-J1／P-J1c：SYNOVA_PRESETS_ROOT=临时根 roles/admin/capabilities.yaml（grants:[] ＋ denies:[knowledge.finance.read, knowledge.people.read]）",
+      "evidence": "authApplied:true；conditions=[{access_level,IN,[public,team]},{access.sensitivity,IN,[normal,sensitive]}]（restricted 被 denies 减掉）；反例 grants:[] 无 denies ⇒ sensitivity=[normal,sensitive,restricted] 三级；探针 7 条全绿 EXIT=0",
+      "result": "pass"
+    },
+    {
+      "id": "J3/J4 无包回落＋降级不放宽（必核⑤）",
+      "cmd": "探针 P-J3（空临时根 admin/employee）＋ P-J4（同根写坏 YAML permissionGrants: [unclosed）",
+      "evidence": "J3：admin 字面值 [normal,sensitive,restricted]、employee 字面值 [normal]，两者 authApplied:true；J4：resolveGrants('admin',{root}).degraded===true（degradedReasons 非空）且 filter 仍三级（不放宽）；断言均为字面值，非同义反复",
+      "result": "pass"
+    },
+    {
+      "id": "J5-3 回滚开关（必核⑥）",
+      "cmd": "探针 P-J5-3：SYNOVA_GRANTS_BRIDGE=off ⇒ buildKnowledgeAskFilter({role:admin,orgId}) ⇒ 删 env 再调一次",
+      "evidence": "off ⇒ authApplied:false＋两条 EQ 深等于；delete env（免重启）⇒ authApplied:true＋sensitivity [normal,sensitive]；开关唯一读点 knowledge-ask.ts:98（全仓 grep 确认）",
+      "result": "pass"
+    },
+    {
+      "id": "J5 改坏必红抽验 3 条（必核⑦）",
+      "cmd": "在 /tmp/w-1154-mut（git archive 克隆、无 .git、未动真仓）改 src/routes/knowledge-ask.ts 后跑作者测试件 tests/routes/knowledge-ask.test.ts",
+      "evidence": "① auth 分支 IN→EQ：FAIL J1 AssertionError: expected 'EQ' to be 'IN' ＋ FAIL J3 expected 'public' to deeply equal [ 'public', 'team' ]（EXIT=1）② 匿名两条 EQ→一条 IN：FAIL J2 与 J5-3 expected [ { field: 'access_level', …(2) } ] to deeply equal [ …(2) ]（EXIT=1）③ 删回滚开关块：FAIL J5-3 expected true to be false（EXIT=1）；三次还原后 diff -q 与 PR head 文件一致、12 passed EXIT=0",
+      "result": "pass"
+    },
+    {
+      "id": "REG-1 接线登记 7 字段与实物（必核⑧）",
+      "cmd": "python3 scripts/control-tower/quality-baseline.py --check-registry docs/authority/WIRING-REGISTRY.yaml ＋ 逐点 sed -n '<line>p' 实物核对",
+      "evidence": "REGISTRY-OK rows=28，R1–R7 全绿，EXIT=0；7 字段全给（capability/defined_at/provider/consumer/test/status/owner ＋ notes）；defined_at=provider=auth.ts:373=export function allowedSensitivitiesByGrants(；consumer=knowledge-ask.ts:143=const filter = buildKnowledgeAskFilter(ctx ? …)（与 defined_at 异文件）；test=knowledge-ask.test.ts:154=J1 it(...) 单值 path:line；main 27 行→head 28 行纯追加零删除",
+      "result": "pass"
+    },
+    {
+      "id": "REG-2 claims 写集（必核⑧）",
+      "cmd": "git diff gitea/main...HEAD -- .claude/claims/1075.yaml ＋ python 去重统计",
+      "evidence": "纯追加（零删除行）；writeset 49→51 条、0 重复；本批 2 条在列（src/routes/knowledge-ask.ts／tests/routes/knowledge-ask.test.ts），主干侧 P2-4a 4 条（src/agent/tools.ts 等）仍在；WIRING/claims 已在既有 writeset 内不重复列 —— 与规格 §2.4（2 修改＋2 登记＝4 条目）一致",
+      "result": "pass"
+    },
+    {
+      "id": "CI-1 远端 CI 真值（必核⑨）",
+      "cmd": "GET http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/commits/c5030d226/status",
+      "evidence": "state=success total_count=2 statuses=2（local-gates/gates push success 1m42s ＋ pull_request success 1m36s），pending=0；head=c5030d2261832328165c08207fbd422e8d15aa82 与 git ls-remote 一致",
+      "result": "pass"
+    },
+    {
+      "id": "FP-1 补丁指纹（必核⑩）",
+      "cmd": "bash scripts/control-tower/check-merge-conditions.sh --pr 1154 --base main --diff-fingerprint",
+      "evidence": "b542d7d24da7ae97506cf8f2a71b255f22dd555c2ac421c531608d8925b44b3b（fp12=b542d7d24da7）＝ CTO 现场 b542d7d24da7… 一致；指纹定义排除 docs/synova/reviews/** ⇒ 本回执提交不改变指纹",
+      "result": "pass"
+    },
+    {
+      "id": "ROUTE-E2E 真实链路（复核员加做）",
+      "cmd": "探针 P-ROUTE：jwtAuthMiddleware 白名单分支 ＋ 真 router 上的 GET handler，signJwtToken({sub,role:admin,orgId}) 签真票",
+      "evidence": "带 admin 票 ⇒ 中间件注入 req.auth.role=admin、handler 返回 ok 且 authApplied:true；无票 ⇒ req.auth 为 undefined、authApplied:false —— 证明本批不是只在单测里成立（白名单分支 auth.ts:725-757 验签通过才注入）",
+      "result": "pass"
+    },
+    {
+      "id": "SCOPE 语义可执行性（复核员加做）",
+      "cmd": "读 src/l4/knowledge-store.ts:699-724 matchFilter ＋ 全仓 grep store.search 调用点与 org 条件",
+      "evidence": "access.sensitivity→access_sensitivity 列映射存在、IN 运算符被实现（非静默忽略）；认证主路径 getPermissionFilter（auth.ts:948-980）只出 sensitivity＋scope、不含 org 条件 ⇒ 本批 access_level∈{public,team} 比主路径更严，未引入新的跨租户暴露面（org 维缺失属 #1149/B 未做面，规格 §10 L1/L5 已声明）",
+      "result": "pass"
+    },
+    {
+      "id": "GATE 架构边界",
+      "cmd": "bash scripts/check-architecture.sh",
+      "evidence": "架构检查: 全部通过，EXIT=0（import type 按行豁免；运行期不 import l4，better-sqlite3 仍函数内动态 import）",
+      "result": "pass"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "info",
+      "note": "匿名 knowledge-ask 仍恒 0 行（两条 EQ ＋ 严格 AND 的现状；本批逐字保留、未借机放宽）—— 规格 §10 L2 已声明为已知限制，符合 CTO 2026-10-29 裁定。"
+    },
+    {
+      "severity": "warn",
+      "note": "PR #1154 上未搜到「CTO 收件」评论（仅有 1 条 id=8629 win-push 2026-10-29 的串行提示，引 CTO 裁定；对照 PR #1151 有「CTO 收件核验」）。本回执 PASS 只基于规格＋代码＋实测，不含 CTO 收件结论；收件/放行动作在 CTO 侧补。"
+    },
+    {
+      "severity": "warn",
+      "note": "J2-b 沿用该文件既有的 if (!getHandler) return; 早退形态（handler 取不到会静默绿，属潜在假绿点，非本批新增）；本轮已用独立探针 P-ROUTE 在真实 router 栈确证 handler 存在且两态成立 ⇒ 当前不构成假绿，建议后续另卡收口。"
+    },
+    {
+      "severity": "info",
+      "note": "三条既存红与本批无关、本批未使其变差：① tests/routes/knowledge-ask.test.ts:100 (router as any).stack（铁律 38 既存，main 同句在 :14，本批仅位移）② src/routes/knowledge-ask.ts:188 空 catch（铁律 11 既存形态，main:55 逐字相同，本批契约注释已如实标注为既有 catch）③ scripts/check-bridge-files.sh 报 src/deploy/content-registry.ts 部分桥接（本批 diff 不涉该文件）。"
+    },
+    {
+      "severity": "info",
+      "note": "② 共享追加：WIRING-REGISTRY.yaml 与 open PR #981/#970 为纯追加共享（checker 信息行），不计重叠但须串行合；当前 ④ S1/S2 均 ok（分支已含 main tip，就绪集为空）。"
+    },
+    {
+      "severity": "info",
+      "note": "本回执为 reviews-only 提交（唯一新增 docs/synova/reviews/1154.b542d7d24da7.json）⇒ 提交后触发新一轮 CI，① 需新 head 双绿后恢复；补丁指纹不受影响（R7 亦只允许回执提交后变更 reviews/**）。"
+    }
+  ],
+  "issued_at": "2026-10-30T00:44:00+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步）＋ check-merge-conditions.sh --diff-fingerprint / --print-receipt-template（fp 现算）"
+}
