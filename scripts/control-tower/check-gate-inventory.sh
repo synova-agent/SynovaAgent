@@ -3,28 +3,41 @@
 export PYTHONIOENCODING=utf-8
 export LC_ALL=C.UTF-8 2>/dev/null || true
 # ═══════════════════════════════════════════════════════════════════════════════
-# check-gate-inventory.sh — 门禁三分类登记校验（#1089 / W1）
+# check-gate-inventory.sh — 门禁三分类 ＋ run_by 建账校验（#1089 / W1；#1114 / Step 0）
 #
 # 设计哲学（一句）: **每个门禁都必须有一条可判的"账"（谁负责／哪一类／何时复核／
-#                    是否真在强制腿上）；账与盘上件必须双向对齐 —— 少一条 = 漂移，多一条 = 幽灵。**
+#                    是否真在强制腿上／**谁在跑**）；账与盘上件必须双向对齐 ——
+#                    少一条 = 漂移，多一条 = 幽灵，无主件必须可见（M-15）。**
 #
 # 背景（2026-10-28 实测）:
 #   `docs/authority/GATE-INVENTORY.yaml` 已有 952 行（锚 6e5f321 / checkers 32），
 #   但 class/owner/review_after/entrypoint/required_ci **五字段零存在**；且盘上
 #   `scripts/control-tower/{check,verify}-*` 已长到 **36 件**（+4 未入册），
 #   在册的 `check-citations.py` 已不在盘上（幽灵行）。本器把这三件事变成一次三态判定。
+#   #1114 Step 0 追加：`run_by:` 段全量建账（classification 40 ＋ probe 29 ＋ 根级
+#   `scripts/check-*.sh` 18 ＋ 子域 gate 名件），`run_by="无"` 必须进 `run_by_candidates`（M-15）。
 #
 # 契约（铁律 47）:
 #   @usage  bash scripts/control-tower/check-gate-inventory.sh [--inventory <file>]
 #             [--root <dir>] [--json] [--help]
-#   @input  默认 <root>/docs/authority/GATE-INVENTORY.yaml 的 `classification:` 段；
+#   @input  默认 <root>/docs/authority/GATE-INVENTORY.yaml 的 `classification:` 段
+#           ＋ `run_by:` ／ `run_by_candidates:` 段；
 #           盘上件枚举面 = <root>/scripts/control-tower/{check,verify}-*.{sh,py,ts,js}；
+#           run_by 枚举面 = classification 的 entrypoint
+#                            ∪ <root>/scripts/control-tower/probe-*
+#                            ∪ <root>/scripts/check-*.sh
+#                            ∪ <root>/scripts/{ci,workflow,doc-system,golden-scenarios}/**
+#                              中 basename（小写）含 check|verify|gate|hook 者；
 #           required_ci 真值面 = .gitea/workflows/*.yml ＋ scripts/pre-commit-check.sh
 #                                ＋ scripts/pre-push-check.sh
+#           run_by 真值面 = scripts/pre-commit-check.sh ／ .gitea/workflows/*.yml ／
+#                            .github/workflows/*.yml ／ package.json（四腿均**去注释**后判）
 #           环境: SYNO_P0_FLOOR（P0 棘轮下限，默认 8）
 #   @output 逐项 ✅/❌（点名 id 与原因）＋ 末行 `结果: N 通过, M 失败`
+#           ＋ `run_by 覆盖 N/N（枚举面）／ quota:true K 件／ 候选 C 件`（N＝枚举面件数）
 #           ＋ 机器行 `GATE-INVENTORY: OK` | `GATE-INVENTORY: VIOLATION n` | `GATE-INVENTORY: DEGRADED <code>`
-#   @exit   0 = 全部合格 ｜ 1 = 有违规（字段非法／覆盖缺口／幽灵行／required_ci 自相矛盾／P0 低于棘轮）
+#   @exit   0 = 全部合格 ｜ 1 = 有违规（字段非法／覆盖缺口／幽灵行／required_ci 自相矛盾／
+#           P0 低于棘轮／run_by 非法或缺行／quota 非布尔／`无` 未进候选／run_by 账实不符）
 #           2 = 判不了（清单缺失·不可读·**零条目**·classification 段缺失·python3 不可用）
 #           🔴 三态铁律：2 绝不等于通过（信号量==0 ⇒ exit 2）
 #           🔴 归一入口（#1112 / W6 接线）：判据子进程的原始退出码一律经 `gate-assert.sh` 的 `ga_run`
@@ -41,15 +54,25 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   ③ 双向对齐：盘上件全部入册（防漂移）＋ 在册 entrypoint 全部在盘（防幽灵）
 #   ④ required_ci 与真值一致：true ⇔ 三条强制腿里有引用；false ⇔ 一处都没有（防自相矛盾）
 #   ⑤ P0 棘轮：P0 计数 < SYNO_P0_FLOOR ⇒ 红（**降级需裁定号改这行，禁静默下调**）
+#   ⑥ run_by 覆盖双向对齐：枚举面每件一行（少 = 缺账，多 = 幽灵）；entrypoint 不重复
+#   ⑦ 取值校验：run_by ∈ {pre-commit,pre-push,gitea-ci,github-ci,npm,无}；quota ∈ {true,false}
+#      （非法值逐条点名；`yes`/`1`/空 一律红）
+#   ⑧ M-15：run_by="无" ⇒ 必须出现在 run_by_candidates（且反向：候选里的件必须真的是 无）
+#   ⑨ run_by 现实一致性：run_by=<leg> 但该 leg 源文本（去注释）零命中 ⇒ 红（"名义在跑"即红）
 #
 # 授权（explicit authority）: P4/CTO 手跑 ／ CI 腿（只读）。只读：不写任何被检文件；
 #   唯一落盘 = 降级日志（.codex/ 不入库）。
 # 已知限制（Known Limitations）:
-#   1. 只校验 `control-tower` 域的 check/verify 件；`scripts/*.sh`（如 check-secrets）与
-#      pre-commit 13 组不在本器枚举面（另账，防一次吞掉半个仓库）。
+#   1. ①–⑤ 只校验 `control-tower` 域的 check/verify 件；`scripts/check-*.sh`（如 check-secrets）
+#      与 pre-commit 13 组不在 ①–⑤ 的枚举面（另账，防一次吞掉半个仓库）。
+#      #1114 起 ⑥–⑨ 的 run_by 面已覆盖根级与子域件，但那是"谁在跑"的账，**不改 ①–⑤ 面**。
 #   2. P0 棘轮只管**计数**不管 **id**：把 A 件 P0 改成 P1、同时把 B 件 P1 改成 P0 可绕过计数
 #      （id 级降级追踪需 history，本批不做）；故本器只保证"P0 面不会整体缩水"。
 #   3. required_ci 真值只认三处配置文本：动态调用（CI 内部循环派生）会漏判为 false。
+#   4. run_by 只认四条腿的**直接引用**（去注释）：由其他脚本/钩子间接调用的件判 `无` ⇒ 进候选段。
+#      这是**有意的**（账实相符优先于宽松猜测）；Step 3 逐条裁"补接线／并件／真退役"。
+#   5. `github-ci` 只表示"被 .github/workflows 文本引用"，**不代表 GitHub 腿真在点火**
+#      （本器不读平台 ruleset／不查 job 是否 disabled）。
 # ═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
 
@@ -59,7 +82,7 @@ while [ $# -gt 0 ]; do
     --inventory) INV="${2:-}"; shift 2 ;;
     --root)      ROOT="${2:-}"; shift 2 ;;
     --json)      JSON=1; shift ;;
-    -h|--help)   sed -n '2,53p' "$0"; exit 0 ;;
+    -h|--help)   awk 'NR>1 && /^set -uo pipefail/{exit} NR>1' "$0"; exit 0 ;;
     *) echo "未知参数: $1" >&2; exit 2 ;;
   esac
 done
@@ -206,18 +229,131 @@ except ValueError:
 if p0 < floor:
     v("R5", "P0 计数 %d < 棘轮下限 %d（P0 降级需裁定号并显式下调 SYNO_P0_FLOOR）" % (p0, floor))
 
+# ══ run_by 建账（#1114 Step 0：只建账，不改上方判定面）═══════════════════════
+def take_section(name):
+    """抽顶格 key 段（到下一个顶格 key 为止）；不存在 ⇒ None。"""
+    st = next((i for i, ln in enumerate(lines) if re.match(r"^%s:\s*$" % re.escape(name), ln)), None)
+    if st is None:
+        return None
+    rows, cur = [], None
+    for ln in lines[st + 1:]:
+        if re.match(r"^[A-Za-z_][A-Za-z0-9_]*:", ln):
+            break
+        m = re.match(r"^\s+-\s+entrypoint:\s*(.*)$", ln)
+        if m:
+            cur = {"entrypoint": m.group(1).strip().strip('"')}
+            rows.append(cur); continue
+        m = re.match(r"^\s+([A-Za-z_]+):\s*(.*)$", ln)
+        if m and cur is not None:
+            cur[m.group(1)] = m.group(2).strip().strip('"')
+    return rows
+
+RUN_BY_VALS = ("pre-commit", "pre-push", "gitea-ci", "github-ci", "npm", "无")
+SUBDOMAINS = ("ci", "workflow", "doc-system", "golden-scenarios")
+GATE_KW = ("check", "verify", "gate", "hook")
+
+def strip_comments(text):  # 只判代码路径：注释里出现的名字不算"在跑"
+    return "\n".join("" if ln.lstrip().startswith("#") else ln for ln in text.splitlines())
+
+def leg_text(paths):
+    src, miss = [], []
+    for p in paths:
+        try:
+            with open(p, encoding="utf-8", errors="replace") as f:
+                src.append(f.read())
+        except OSError:
+            miss.append(p)
+    return strip_comments("\n".join(src)), miss
+
+LEGS = {
+    "pre-commit": [os.path.join(root, "scripts", "pre-commit-check.sh")],
+    "gitea-ci": sorted(glob.glob(os.path.join(root, ".gitea", "workflows", "*.yml"))),
+    "github-ci": sorted(glob.glob(os.path.join(root, ".github", "workflows", "*.yml"))),
+    "npm": [os.path.join(root, "package.json")],
+}
+LEGTXT = {}
+
+# run_by 枚举面（4 组，逐件从盘上/在册枚举；禁手写）
+enum_face = {ep for ep in seen_ep if ep}
+for p in glob.glob(os.path.join(DISC, "probe-*")):
+    if os.path.isfile(p):
+        enum_face.add("scripts/control-tower/" + os.path.basename(p))
+for p in glob.glob(os.path.join(root, "scripts", "check-*.sh")):
+    if os.path.isfile(p):
+        enum_face.add("scripts/" + os.path.basename(p))
+for d in SUBDOMAINS:
+    for p in glob.glob(os.path.join(root, "scripts", d, "**", "*"), recursive=True):
+        if os.path.isfile(p) and any(k in os.path.basename(p).lower() for k in GATE_KW):
+            enum_face.add(os.path.relpath(p, root).replace("\\", "/"))
+if not enum_face:
+    print("E_EMPTY: run_by 枚举面为空（信号量==0 ⇒ 判不了，禁当通过）"); sys.exit(2)
+
+rb_rows = take_section("run_by")
+if rb_rows is None:
+    v("R6", "清单无 run_by: 段（#1114 Step 0 未建账；禁删段绕过）")
+    rb_rows = []
+cand_rows = take_section("run_by_candidates")
+if cand_rows is None:
+    cand_rows = []
+
+rb_ep, cand_ep, q_true, lerr = set(), set(), 0, []
+for r in rb_rows:
+    ep = r.get("entrypoint", "")
+    if not ep:
+        v("R6", "run_by 段存在缺 entrypoint 的行"); continue
+    if ep in rb_ep:
+        v("R6", "run_by 段 entrypoint 重复: %s" % ep)
+    rb_ep.add(ep)
+    val = r.get("run_by", "")
+    if val not in RUN_BY_VALS:
+        v("R7", "%s run_by 非法: %r（只许 %s）" % (ep, val, "/".join(RUN_BY_VALS)))
+    qv = r.get("quota", "")
+    if qv.lower() not in ("true", "false"):
+        v("R7", "%s quota 非布尔: %r（只许 true/false）" % (ep, qv))
+    elif qv.lower() == "true":
+        q_true += 1
+    if val in LEGS and val not in LEGTXT:
+        LEGTXT[val] = leg_text(LEGS[val])
+        lerr.extend([m for m in LEGTXT[val][1] if m not in lerr])
+    if val in LEGTXT and os.path.basename(ep) not in LEGTXT[val][0]:
+        v("R9", "%s 声明 run_by=%s 但该腿源文本（去注释）零命中（名义在跑）" % (ep, val))
+for r in cand_rows:
+    if r.get("entrypoint", ""):
+        cand_ep.add(r["entrypoint"])
+
+for ep in sorted(enum_face - rb_ep):
+    v("R6", "run_by 缺行（枚举面未入账）: %s" % ep)
+for ep in sorted(rb_ep - enum_face):
+    v("R6", "run_by 幽灵行（不在枚举面）: %s" % ep)
+
+unowned = {r.get("entrypoint", "") for r in rb_rows if r.get("run_by", "") == "无"}
+for ep in sorted(unowned - cand_ep):
+    v("R8", "M-15 违规：run_by=无 但未进 run_by_candidates（无主件不得静默留存）: %s" % ep)
+for ep in sorted(cand_ep - unowned):
+    v("R8", "候选段与 run_by 段不符（该件 run_by 非 无）: %s" % ep)
+for r in rb_rows:
+    if r.get("run_by", "") == "无" and r.get("quota", "").lower() == "true":
+        v("R8", "%s run_by=无 却 quota=true（无主件不得进配额计数）" % r.get("entrypoint", ""))
+
 print("── 门禁三分类登记校验（#1089 / W1）──")
 print("清单: %s" % inv_path)
 print("条目 %d ／ 盘上件 %d ／ P0 %d（下限 %d）" % (len(entries), len(disk), p0, floor))
 if perr:
     print("⚠️  真值面缺失 %d 件（required_ci 判定可能偏严）：%s" % (len(perr), ", ".join(os.path.basename(x) for x in perr)))
+if lerr:
+    print("⚠️  run_by 腿源缺失 %d 件（对应 run_by 判严）：%s" % (len(lerr), ", ".join(os.path.basename(x) for x in lerr)))
+print("run_by 覆盖 %d/%d（枚举面）／ quota:true %d 件／ 候选 %d 件"
+      % (len(rb_ep & enum_face), len(enum_face), q_true, len(cand_ep)))
 for code, msg in viol:
     print("  ❌ [%s] %s" % (code, msg))
 if not viol:
     print("  ✅ 六字段齐全／双向对齐／required_ci 账实一致／P0 棘轮未破")
+    print("  ✅ run_by 覆盖双向对齐／五值合法／quota 布尔／无主件已入候选（M-15）／账实一致")
 print("结果: %d 通过, %d 失败" % (len(entries) - 0 if not viol else 0, len(viol)))
 if json_mode:
     print(json.dumps({"entries": len(entries), "disk": len(disk), "p0": p0,
+                      "run_by_face": len(enum_face), "run_by_covered": len(rb_ep & enum_face),
+                      "quota_true": q_true, "candidates": len(cand_ep),
                       "violations": [{"code": c, "msg": m} for c, m in viol]}, ensure_ascii=False))
 print("GATE-INVENTORY: OK" if not viol else "GATE-INVENTORY: VIOLATION %d" % len(viol))
 sys.exit(0 if not viol else 1)

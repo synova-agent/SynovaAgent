@@ -214,3 +214,19 @@ entries:
     status: wired
     owner: P4
     notes: "#1089 W1：三态登记校验器。**已接线**（W0/#1093）：`scripts/pre-commit-check.sh` 的「附: 治理面自检」段以 `hard_check` 调用（本地软提示/CI strict 硬阻断）；接线首日即抓出 `CT-check-gate-inventory` 自身 `required_ci:false` 的账实不符（已改 true）。"
+  - capability: content.rolePackApproval
+    defined_at: "src/init/role-pack-approval.ts:1"
+    provider: "src/init/role-pack-approval.ts:651"
+    consumer: "src/init/preset-loader.ts:456"
+    test: "tests/init/role-pack-approval.test.ts:256"
+    status: wired
+    owner: P2
+    notes: "岗位包审批门（#1075 P2-1）：记录侧审批态判定（approved/pending/unverified）＋出厂代码锚（FACTORY_APPROVALS）；唯一生产消费者＝preset-loader 单读→contentHash→判定；判定侧不 import role-pack-schema（N6 防循环依赖）"
+  - capability: gate.d331Bypass
+    defined_at: "scripts/control-tower/d331-bypass-gate.sh:1"
+    provider: "scripts/control-tower/d331-bypass-gate.sh:1"
+    consumer: "scripts/pre-push-check.sh:545"
+    test: "tests/control-tower/d331-bypass-gate.test.sh"
+    status: wired
+    owner: P4
+    notes: "#1134：D331 L4-2 判定体（对账基走 resolve-ci-base.sh；缺件 fail-closed）。唯一生产消费者＝pre-push 门禁 7；证据源自证不可审 ⇒ P1，退役触发＝W9 分支保护落地。"

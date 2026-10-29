@@ -1388,6 +1388,41 @@ documents:
     status: active
     owner: P4
     note: "#1115（冻结期阶段 1）：7 处无回退链的 local-main 主引用切 main（四条件基线/镜像/触发/canonical）＋豁免自覆盖＋DOCS-REGISTRY 自登记；local-gates.yml 与 pre-commit-check.sh 因与 #943/#801 写集重叠移出，留清理批；SYNO_TRUNK 语义由既有环境变量覆盖，不改判据强度。"
+  # ---- #1075 2026-10-29：P2-1 审批门探针夹具豁免登记（DOC-1075＝按裁定 A 随 Issue#；0323/#1108、0324/#1115 已占）----
+  - id: DOC-1075
+    type: decision
+    path: gate-exemptions/2026-10-28-1075-p2-approval-gate.md
+    status: active
+    owner: P2
+    note: "#1075（P2-1）：scripts/control-tower/probe-knowledge-scope.ts 的 V6(ii) 夹具适配（断言不变，探针回基线）；含 gate-exemptions/** 自覆盖行与 DOCS-REGISTRY 自登记行。0323/#1108、0324/#1115 已占；本号按 A 随卡派生。"
+  # ---- P4 2026-10-29：#1124 冻结哨兵豁免登记（DOC-0325）----
+  - id: DOC-0325
+    type: decision
+    path: gate-exemptions/2026-10-29-1124-freeze-watch.md
+    status: active
+    owner: P4
+    note: "#1124：新增 .gitea/workflows/trunk-freeze-watch.yml（每日 schedule 比对 local-main 锚点 b8edf9860，不等即红）；无写操作、无 token；含豁免自覆盖与 DOCS-REGISTRY 自登记。"
+
+
+  # ---- P4 2026-10-28：#1114 Step 0 · run_by 全量建账豁免登记（DOC-1114；末号 0323 + 1）----
+  - id: DOC-1114
+    type: decision
+    path: gate-exemptions/2026-10-28-1114-runby.md
+    status: active
+    owner: P4
+    note: "#1114（门禁配额制 Step 0）：docs/authority/GATE-INVENTORY.yaml 纯追加 run_by 段（116 件）＋ run_by_candidates 段（70 件，M-15 可见）；scripts/control-tower/check-gate-inventory.sh 扩 ⑥–⑨ 判据（覆盖双向/五值/quota 布尔/M-15 两向/现实一致性）；tests/control-tower/check-gate-inventory.test.sh 扩 ①–⑲；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+
+  # ---- P4 2026-10-28：#1114 Step 0 · run_by 全量建账豁免登记（DOC-1114；末号 0323 + 1）----
+
+
+  # ---- #1134 2026-10-29：D331 对账基走 resolver（A 类语义变更）豁免登记（DOC-1134）----
+  - id: DOC-1134
+    type: decision
+    path: gate-exemptions/2026-10-29-1134-d331-resolver-base.md
+    status: active
+    owner: P4
+    note: "#1134（A 类，创始人 2026-10-29 裁定）：pre-push 的 D331 对账基改走 resolve-ci-base.sh（禁 trunk 字面）＋ check-bypass-log.sh 缺失改 fail-closed ＋ 判定体抽 d331-bypass-gate.sh 并可单测；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+
 
   # ---- P4 2026-10-28：#1112 W6 接线豁免登记（DOC-1112；0323 为最大已用号，先读末号 +1）----
   - id: DOC-1112

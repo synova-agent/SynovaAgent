@@ -1,0 +1,17 @@
+# .claude/claims/1134-d331.yaml — #1134 D331 对账解卡（A 类）写集声明
+# 说明：#1134 号在 main 上已被 K4 旧卡占用（.claude/claims/1134.yaml），故本卡用后缀区分，不覆盖旧卡。
+writeset:
+  - .claude/claims/1134-d331.yaml
+  - .claude/task-briefs/2026-10-29-1134-d331-resolver-base.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - docs/authority/GATE-INVENTORY.yaml
+  - docs/authority/WIRING-REGISTRY.yaml
+  - gate-exemptions/2026-10-29-1134-d331-resolver-base.md
+  - memory/notes/proposed/2026-10-29-1134-d331-resolver-base.md
+  - scripts/control-tower/d331-bypass-gate.sh
+  - scripts/pre-push-check.sh
+  - tests/control-tower/d331-bypass-gate.test.sh
+done:
+  - verify: bash tests/control-tower/d331-bypass-gate.test.sh
+  - verify: bash scripts/control-tower/check-gate-inventory.sh --root .
+note: "#1134 D331 对账基走 resolver 加 fail-closed 加判定体可单测；四夹具与改坏即红。"
