@@ -25,6 +25,21 @@
  *   @authority 人设文本真源 = `src/init/role-pack-persona.ts`（本文件只**消费**已解析的 `RolePackPersona`，
  *              不读磁盘、不判审批、不做限额 —— 判据与 HTTP 码映射分别归 persona 模块与路由）。
  *   @degraded 岗位层为空（无包／撤岗／`SYNOVA_ROLE_PACK_PERSONA=off`）⇒ 不注入，**不是错误**。
+ *
+ * #1075 P2-4a（工具白名单／权限生效 · 装配面）：本文件负责把"包声明的工具白名单"接到
+ *   真实 `ToolRegistry` 执行门（编译与判定归 `src/init/role-pack-permissions.ts`）。
+ *   · **唯一"是否已绑定"真源 = `boundRolePackId`**（`null` = 从未绑定）；`pendingRolePackId` 只是
+ *     "待应用"标记。三路注入（构造期 `EngineConfig.rolePack`／`fromState(state.rolePackId)`／
+ *     `setRolePack()`）**只记不即时算** —— 工具在路由的 `registerBuiltinTools()` 才注册，
+ *     绑定早于注册（规格 D11）：此时若按空注册表算白名单，会把全部声明误判为未落地 ⇒ 首轮全拒。
+ *   · 应用时机 = `processMessage()`／`processMessageStream()` **入口首行** `ensurePermissionsApplied()`；
+ *     测试/守卫可调公开的 `refreshRolePackPermissions()`（幂等）。
+ *   · `null` 两义（D12）：**从未绑定** ⇒ `setAllowedTools(null)`（恢复既有行为，无岗位会话零变化）；
+ *     **已绑定但本轮人设复核失败/撤岗**（`rolePack === null` 且 `boundRolePackId !== null`）⇒
+ *     `setAllowedTools([])`（fail-closed，不因降级而全放行）。
+ *   · 回滚开关 `SYNOVA_ROLE_PACK_TOOLS=off` ⇒ `setAllowedTools(null)` ＋ warn（D8，显式降级）。
+ *   · @not-here 不判审批 scope／capabilities 内容／限额（归权限编译模块）；不改 `serialize()` 的
+ *     `rolePackId` 写法（L8 已知限制：降级轮落库丢绑定）。
  */
 import type { LLMProvider, LLMMessage, HealthCheckResult } from '../providers/types';
 // D363: 运行时 failover 接线 — chain 包装 + 环境变量派生备用 provider
@@ -68,6 +83,9 @@ import { ingestDocumentText } from '../ingest/knowledge-ingest-bridge';
 // 值导入 `buildRoleLayer` 零 IO 纯核；类型导入 `RolePackPersona` 纯编译期 ⇒ 不引人设解析期依赖
 // （磁盘读取/审批/限额只在路由侧经 `loadRolePackPersona()` 触发）。
 import { buildRoleLayer, type RolePackPersona } from '../init/role-pack-persona';
+// #1075 P2-4a: 岗位包工具权限编译（审批门＋六件快照＋capabilities 解析 → 白名单/禁用/未落地）。
+// 只**消费**已编译结果；磁盘读取/审批/限额归该模块，白名单执行判定归 ToolRegistry。
+import { loadRolePackPermissions } from '../init/role-pack-permissions';
 
 const log = createLogger('agent/conversation-engine');
 
@@ -429,6 +447,19 @@ export class ConversationEngine {
    */
   private rolePack: RolePackPersona | null = null;
 
+  /**
+   * #1075 P2-4a: 本会话**已绑定**的岗位 id —— **唯一"是否已绑定"真源**（`null` = 从未绑定）。
+   * 不依赖外部 state：`fromState()` 先从快照恢复本字段，再交 `setRolePack()` 处理人设三态。
+   * `setRolePack(null)`（复核失败/撤岗）**不清空**本字段 —— D12 靠"已绑定 + persona=null"判 fail-closed。
+   */
+  private boundRolePackId: string | null = null;
+
+  /**
+   * #1075 P2-4a: 待应用白名单的岗位 id（惰性应用标记；`null` = 无待应用）。
+   * 三路注入只置本标记，`ensurePermissionsApplied()`／`refreshRolePackPermissions()` 才真正编译＋下发。
+   */
+  private pendingRolePackId: string | null = null;
+
   // P1-01: 子组件提取
   private toolLoop: ToolLoopExecutor;
   private diagnosisLauncher: DiagnosisLauncher;
@@ -472,6 +503,10 @@ export class ConversationEngine {
     } as Required<EngineConfig>;
     // #1075 P2-2: 岗位人设必须在首条 system 组装**之前**就位（否则首轮提示词缺人设）
     this.rolePack = config.rolePack ?? null;
+    // #1075 P2-4a: 构造期**只记绑定／待应用**，不即时编译白名单（D11：工具在 registerBuiltinTools()
+    // 之后才注册，此刻注册表必为空 —— 按空表算会把声明全判未落地 ⇒ 首轮全拒）。
+    this.boundRolePackId = config.rolePack?.roleId ?? null;
+    this.pendingRolePackId = this.boundRolePackId;
     this.messages = [{ role: 'system', content: buildSystemPrompt(0, 0, this.dimensionCoverage, this.dimensionRegistry, this.rolePack) }];
     this.toolRegistry = new ToolRegistry();
 
@@ -612,6 +647,14 @@ export class ConversationEngine {
    */
   setRolePack(persona: RolePackPersona | null): void {
     this.rolePack = persona;
+    // #1075 P2-4a: 只记绑定／待应用，**不**在此编译白名单（D11：本方法在 registerBuiltinTools() 之前
+    // 被调用 ⇒ 按空注册表算会误判全拒；真正的应用在 process 入口 ensurePermissionsApplied()）。
+    // persona===null 时**保留** boundRolePackId（D12：已绑定 + persona=null ⇒ 下一轮 fail-closed）；
+    // 但"待应用"仍置位（= 已绑定 id），以便下一轮按"复核失败"重新下发（[] 全拒），不沿用旧白名单。
+    if (persona !== null) {
+      this.boundRolePackId = persona.roleId;
+    }
+    this.pendingRolePackId = this.boundRolePackId;
     const head = this.messages[0];
     if (head === undefined || head.role !== 'system') {
       log.warn(
@@ -628,6 +671,134 @@ export class ConversationEngine {
     //    engineCtx.messages（旧数组）。不同步 ⇒ 后续 LLM 调用读旧数组，重建的 system 层（含人设）
     //    对模型不可见（J7c 生产恢复路径即此形状）。同数组时本行是幂等 no-op。
     if (this.engineCtx.messages !== this.messages) this.engineCtx.messages = this.messages;
+  }
+
+  /**
+   * #1075 P2-4a: 强制按**当前** `boundRolePackId` 重编译并下发工具白名单（公开，幂等；测试/守卫入口）。
+   *
+   * 为什么公开（规格 §2.3-D 末条）：`processMessage*` 入口的惰性应用不便在单测里驱动（要跑 LLM），
+   *   `refreshRolePackPermissions()` 提供同一路径的显式触发点，行为与入口完全一致（同一私有实现）。
+   *
+   * @input  无（读 `boundRolePackId`／`rolePack`／环境开关）
+   * @output 无返回值；副作用 = `ToolRegistry.setAllowedTools(...)`（含清 OpenAI 工具缓存）＋留痕日志。
+   * @degraded 注册表仍空（本次无法编译）⇒ **保持 `null`（不误全拒）** ＋ `log.warn`，且 pending 保留待下次；
+   *           失败/撤岗 ⇒ fail-closed `[]`（D12）＋ warn。
+   * @error  永不抛（`loadRolePackPermissions` 同步不抛；本方法只做状态下发）
+   */
+  refreshRolePackPermissions(): void {
+    // 注册表空（工具尚未注册）⇒ 不编译白名单：缺 knownTools 会把声明全判"未落地" ⇒ 误全拒。
+    if (this.boundRolePackId !== null && this.toolRegistry.allToolNames().length === 0) {
+      log.warn(
+        { roleId: this.boundRolePackId, reason: 'tool-registry-empty', degraded: true },
+        '岗位工具白名单暂缓应用 — 注册表仍为空（保持不限制，避免误全拒）',
+      );
+      return;
+    }
+    this.applyRolePackPermissions();
+    this.pendingRolePackId = null;
+  }
+
+  /**
+   * #1075 P2-4a: 惰性应用入口 —— `processMessage()`／`processMessageStream()` **首行**调用。
+   *
+   * @input  无（读 `pendingRolePackId`／`boundRolePackId`）
+   * @output 无；`pendingRolePackId` 非空且注册表已注册 ⇒ 编译＋下发并清 pending。
+   * @degraded 注册表仍空 ⇒ 保持 `null`（不误全拒）＋ warn，**pending 保留**（下次再试）；
+   *           编译失败/撤岗 ⇒ fail-closed `[]`（D12）。
+   * @error  永不抛
+   */
+  private ensurePermissionsApplied(): void {
+    if (this.pendingRolePackId === null) return;
+    if (this.toolRegistry.allToolNames().length === 0) {
+      log.warn(
+        { roleId: this.pendingRolePackId, reason: 'tool-registry-empty', degraded: true },
+        '岗位工具白名单暂缓应用 — 注册表仍为空（保持不限制，避免误全拒；pending 保留）',
+      );
+      return;
+    }
+    this.applyRolePackPermissions();
+    this.pendingRolePackId = null;
+  }
+
+  /**
+   * #1075 P2-4a: 白名单编译＋下发（私有；入参只读字段，无外部状态）。
+   *
+   * 判定顺序（规格 §2.2）：D8 回滚开关 → 未绑定（D12 恢复）→ 已绑定复核失败（D12 fail-closed）→
+   *   编译（`knownTools` **必须**是原始清单 `allToolNames()`，禁 `listTools()` —— 后者被白名单过滤，
+   *   会把"声明且已注册"误判未落地，规格 §2.3-B.5）→ ok 下发 allowlist／失败 fail-closed。
+   *
+   * @input  无
+   * @output 无；副作用 = `setAllowedTools(allowlist | [] | null)` ＋ 留痕
+   * @degraded permissionsPending（D4）⇒ allowlist 已为空（模块保证），本方法另留一条"权限待批" warn；
+   *           disabled／declaredUnavailable 非空 ⇒ 各一条 warn（显式可见，不静默丢弃）。
+   * @error  永不抛
+   */
+  private applyRolePackPermissions(): void {
+    // D8 回滚开关：全局关闭包模式（显式降级，铁律 11/31）
+    if (process.env['SYNOVA_ROLE_PACK_TOOLS'] === 'off') {
+      this.toolRegistry.setAllowedTools(null);
+      log.warn(
+        { roleId: this.boundRolePackId, switch: 'SYNOVA_ROLE_PACK_TOOLS=off', degraded: true },
+        '岗位工具白名单已回滚关闭（D8）— 恢复既有执行门行为',
+      );
+      return;
+    }
+
+    // D12 两义之一：**从未绑定** ⇒ 恢复既有行为（无岗位会话零变化，J6）
+    if (this.boundRolePackId === null) {
+      this.toolRegistry.setAllowedTools(null);
+      return;
+    }
+
+    // D12 两义之二：**已绑定**但本轮人设复核失败／撤岗（persona===null）⇒ fail-closed（不得全放行）
+    if (this.rolePack === null) {
+      this.toolRegistry.setAllowedTools([]);
+      log.warn(
+        { roleId: this.boundRolePackId, reason: 'persona-unverified', degraded: true },
+        '岗位已绑定但人设复核失败 — 工具白名单 fail-closed（全拒，D12）',
+      );
+      return;
+    }
+
+    const result = loadRolePackPermissions(this.boundRolePackId, {
+      knownTools: this.toolRegistry.allToolNames(),
+    });
+    if (!result.ok) {
+      // 审批未过／内容变更／能力非法 ⇒ 不生效（fail-closed），与 P2-2 同级降级：不抛
+      this.toolRegistry.setAllowedTools([]);
+      log.warn(
+        { roleId: this.boundRolePackId, code: result.code, reason: result.reason, degraded: true },
+        '岗位工具权限编译失败 — fail-closed（全拒，D12）',
+      );
+      return;
+    }
+
+    const permissions = result.permissions;
+    this.toolRegistry.setAllowedTools(permissions.allowlist);
+    // D4：权限待批（内容已批、权限未批）⇒ allowlist 已空；另留一条点名，避免"静默全拒"
+    if (permissions.permissionsPending) {
+      log.warn(
+        { roleId: permissions.roleId, scope: permissions.scope, permissionsPending: true, degraded: true },
+        '岗位权限待批 — 工具白名单为空（D4：内容已批，权限未批）',
+      );
+    }
+    // 禁用项：硬拒且点名能力 id（J3）；未落地项：显式可见、不放行（J4 口径，engine 侧同源留痕）
+    if (permissions.disabled.length > 0) {
+      log.warn(
+        { roleId: permissions.roleId, disabled: permissions.disabled, count: permissions.disabled.length },
+        '岗位包禁用能力 — 硬拒（disabled 优先，不静默放行）',
+      );
+    }
+    if (permissions.declaredUnavailable.length > 0) {
+      log.warn(
+        { roleId: permissions.roleId, declaredUnavailable: permissions.declaredUnavailable, degraded: true },
+        '岗位包声明的工具未落地 — 显式可见但不放行（内容批待跟进）',
+      );
+    }
+    log.info(
+      { roleId: permissions.roleId, scope: permissions.scope, allowlist: permissions.allowlist },
+      '岗位工具白名单已应用（只放行声明∩已注册）',
+    );
   }
 
   /** Get message history (shallow copy) */
@@ -703,6 +874,8 @@ export class ConversationEngine {
    * @returns ProcessResult with reply text and phase completion signal
    */
   async processMessage(userInput: string, opts?: { signal?: AbortSignal }): Promise<ProcessResult> {
+    // #1075 P2-4a: 入口首行惰性应用岗位工具白名单（D11：绑定早于工具注册，注册表已就绪才编译）
+    this.ensurePermissionsApplied();
     // #915 Q-5: 入口取消检查（开关关 ⇒ signal 视同未传，回旧行为）
     const signal = isToolAbortEnabled() ? opts?.signal : undefined;
     if (signal?.aborted) {
@@ -874,6 +1047,8 @@ export class ConversationEngine {
     onToken: (token: string) => void,
     opts?: { signal?: AbortSignal },
   ): Promise<ProcessResult> {
+    // #1075 P2-4a: 入口首行惰性应用岗位工具白名单（与 processMessage 同源：D11）
+    this.ensurePermissionsApplied();
     // #915 Q-5: 入口取消检查（开关关 ⇒ signal 视同未传，回旧行为）
     const signal = isToolAbortEnabled() ? opts?.signal : undefined;
     if (signal?.aborted) {
@@ -1007,6 +1182,9 @@ export class ConversationEngine {
     });
     engine.phase = state.phase;
     engine.messages = [...state.messages];
+    // #1075 P2-4a: 先从快照恢复绑定真源（`state.rolePackId` 只在 serialize 时绑定岗位才写入）
+    engine.boundRolePackId = state.rolePackId ?? null;
+    engine.pendingRolePackId = engine.boundRolePackId;
     // 删除人设段 / 注入人设都由 setRolePack 统一完成（它还会把 engineCtx.messages 对齐到新数组）。
     if (wiring?.rolePack !== undefined) engine.setRolePack(wiring.rolePack);
     return engine;

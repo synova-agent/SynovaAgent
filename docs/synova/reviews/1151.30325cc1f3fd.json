@@ -1,0 +1,83 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1151,
+  "patch_fingerprint": "sha256:30325cc1f3fd4624714963349905ffd0353cd8e8e0097c0ed2bf1a37959b8240",
+  "author": "win-push（PR 作者；本机 git 身份不可信，仅作 R6 声明分离用）",
+  "reviewer": "review-1151（零上下文 fresh 队外复核；未参与实现，仅写 docs/synova/reviews/**）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "①-变更集（8 件＋只读面零 diff）",
+      "cmd": "git diff --name-only gitea/main...HEAD; git diff --stat gitea/main...HEAD; 逐路径 git diff --name-only gitea/main...HEAD -- <只读面>",
+      "result": "pass",
+      "evidence": "HEAD=88f974a7641331fedebe91df9674cb5f9bfd26dc（= git ls-remote gitea refs/heads/ct/1075-p2-4a），base main=03ac84a028b3a2d156ea7da256c9b22400a0c73b（= PR base.sha）| 恰 8 件、2432 insertions(+)、4 commits：产品 6 = src/init/role-pack-permissions.ts(新建547) + src/agent/tools.ts(改63) + src/agent/conversation-engine.ts(改178) + tests/init/role-pack-permissions.test.ts(新建718) + tests/agent/tool-permissions-role-pack.test.ts(新建908) + tests/contract/triviality-manifest.yaml(1)；登记 2 = docs/authority/WIRING-REGISTRY.yaml(9) + .claude/claims/1075.yaml(8) | 只读面逐路径 diff 计数全 0：extensions/presets/roles/{finance,hr,sales}/capabilities.yaml、src/agent/tool-profiles.ts、src/tools/tool-registry.ts、src/agent/builtin-tools.ts、src/init/role-pack-{approval,output-standard,persona,schema}.ts、src/routes/、src/middleware/、scripts/、.gitea/ ⇒ 合计 0 | 工作树 git status --porcelain 空"
+    },
+    {
+      "id": "②-测试真跑（35 新＋6 组回归）",
+      "cmd": "npx vitest run tests/agent/tool-permissions-role-pack.test.ts tests/init/role-pack-permissions.test.ts tests/agent/tool-profiles.test.ts tests/routes/conversations-role.test.ts tests/init/role-pack-persona.test.ts tests/init/role-pack-output-standard.test.ts tests/routes/conversations-role-output.test.ts tests/agent/conversation-engine-role.test.ts",
+      "result": "pass",
+      "evidence": "Test Files 8 passed (8) | Tests 142 passed (142) | VITEST_EXIT=0 | 逐件逐字符合预期：role-pack-permissions 20、tool-permissions-role-pack 15（合计新测 35）、tool-profiles 15、conversations-role 13、role-pack-persona 35、role-pack-output-standard 21、conversations-role-output 9、conversation-engine-role 14 | 无 failed/skipped（grep 'failed|skipped' 命中 0；日志中出现的『契约校验失败』为 J 用例预期的降级留痕，非测试失败）| 另跑 tsc --noEmit（npm run lint）TSC_EXIT=0"
+    },
+    {
+      "id": "③-三条裁决（读码＋测试，逐条落行号）",
+      "cmd": "grep -n 'boundRolePackId|pendingRolePackId|ensurePermissionsApplied()' src/agent/conversation-engine.ts; sed -n '503,512p;648,660p;1180,1190p' src/agent/conversation-engine.ts; grep -n 'permissionsPending' src/init/role-pack-permissions.ts",
+      "result": "pass",
+      "evidence": "① 三路注入只记不算：构造期 :508-509（boundRolePackId=config.rolePack?.roleId??null；pending=bound）、setRolePack :655/:657（persona!==null 才改 bound；pending=bound，null 不清空）、fromState :1186-1187（先恢复 state.rolePackId??null 再交 setRolePack）；应用点恰在入口首行 processMessage :878 与 processMessageStream :1051 调 ensurePermissionsApplied()，与规格所称 :878/:1051 逐字一致 ⇒ 三处注入点内均无 setAllowedTools 调用 ② null 两义：applyRolePackPermissions 中 boundRolePackId===null ⇒ setAllowedTools(null)（恢复，:748-750）；bound 非空且 rolePack===null ⇒ setAllowedTools([])（fail-closed，:754-760），由 J6-1／J6-2 两态各一条用例背靠背覆盖 ③ permissionsPending 单源：:495 `pack.approval.permissionsPending === true`（只读 pack.approval，不自行推导）；全模块 grep 'scope===|!==|content+permissions' 命中 0（无旁路推导）；:497 `allowlist = permissionsPending ? [] : classified.allowlist`"
+    },
+    {
+      "id": "④-执行门（拒绝结构化／缓存失效／disabled 优先／真 finance 包）",
+      "cmd": "git diff gitea/main...HEAD -- src/agent/tools.ts; grep -n '_cachedOpenAITools|toOpenAITools|listTools' src/agent/tools.ts; npx vitest run tests/agent/tool-permissions-role-pack.test.ts tests/init/role-pack-permissions.test.ts",
+      "result": "pass",
+      "evidence": "setAllowedTools :349-352 写 _allowedTools 后置 _cachedOpenAITools=null（清缓存）；toOpenAITools :690 由 listTools() 派生 ⇒ 同源过滤，listTools :396-400 在 profile 过滤之外再折一层且空名单返 []；allToolNames() :363-365 返 [...this.tools.keys()] 原始清单（不受过滤）；execute :432-441 白名单判定置于既有 _role 分支之前，拒绝体为结构化 {error:{name:'ToolPermissionError',code:'TOOL_PERMISSION_DENIED',message}} 并在 return 前完成 ⇒ handler 零调用（J2-1 断言 probeDenied.calls === 0，非仅看返回值）；日志恰一条（J2-2 countLogs==1）| disabled 优先：classifyCapabilities :387 `if (disabledTools.has(tool)) continue;`（显式关掉的 tool 即使有 enabled 声明也不放行）| 真 finance 包（只读，不写）：J4-1 断言 result.ok===true（不抛）、roleId=finance、scope=content+permissions、permissionsPending=false、allowlist=[]、declaredUnavailable=['analysis.variance','analysis.cash-runway','analysis.cost-attribution']、disabled=['capability.evolution-write']；独立复核 src/ 下 analysis.* 注册数=0（grep wc -l ⇒ 0）⇒『声明未落地』属实，非假绿"
+    },
+    {
+      "id": "⑤-J7 改坏必红（3 条独立复现；隔离副本，未改被审工作树）",
+      "cmd": "git archive HEAD | tar -x -C /tmp/w-1151-j7（+ node_modules 符号链接）；逐处改坏→npx vitest run→还原：M1 删 src/agent/tools.ts execute() 白名单判定；M2 删 src/agent/conversation-engine.ts 未绑定恢复分支 setAllowedTools(null)；M3 删 src/init/role-pack-permissions.ts declaredUnavailable 计算",
+      "result": "pass",
+      "evidence": "基线（纯净副本）Tests 35 passed (35) | M1 ⇒ Tests 8 failed | 7 passed (15)，EXIT=1，红原文 'AssertionError: expected undefined to be \"TOOL_PERMISSION_DENIED\"'（J1-A1/J1-D1/J2-1/J3-1/J6-2/J5-E1）＋ 'expected +0 to be 1'（J2-2 日志条数掉到 0）⇒ handler 被真调用 | M2 ⇒ Tests 2 failed | 13 passed (15)，EXIT=1，J6-1 'AssertionError: expected [] to include \"list_sessions\"'（无岗位会话被误限）＋ J1-E1 同型 | M3 ⇒ Tests 6 failed | 14 passed (20)，EXIT=1，含 J4-1 真 finance 包 'AssertionError: expected [] to deeply equal [\"analysis.variance\", …(2)]' | 三次逐个文件还原后与 git show HEAD:<f> diff 为空（IDENTICAL），复跑 Tests 35 passed (35) EXIT=0"
+    },
+    {
+      "id": "⑥-登记（WIRING 7 字段／test 单值／triviality／--check-registry）",
+      "cmd": "git diff gitea/main...HEAD -- docs/authority/WIRING-REGISTRY.yaml tests/contract/triviality-manifest.yaml; python3 scripts/control-tower/quality-baseline.py --check-registry docs/authority/WIRING-REGISTRY.yaml",
+      "result": "pass",
+      "evidence": "WIRING 新行 content.rolePackToolPermissions 恰 7 字段（defined_at／provider／consumer／test／status／owner／notes，capability 为行键不计）：defined_at=provider='src/init/role-pack-permissions.ts:412'（实测 :412 正是 export function loadRolePackPermissions）、consumer='src/agent/conversation-engine.ts:763'（实测 :763 = loadRolePackPermissions 调用点）、test 为**单值** 'tests/agent/tool-permissions-role-pack.test.ts:1'、status=wired、owner=P2、notes 含改坏必红覆盖清单 | --check-registry 输出 R1–R7 全 ✅ 且末行 'REGISTRY-OK rows=27'，REGISTRY_EXIT=0（R5 校验 path:line 文件存在且行号在界内 ⇒ test 单值合法）| triviality 新增 src/init/role-pack-permissions.ts 一行，reason 所述生产消费者（conversation-engine 的 ensurePermissionsApplied／refreshRolePackPermissions，调用点 :763）与代码一致、issue '#1075'、expiry 2027-06-30 | claims 1075.yaml writeset 追加 4 条且与新增文件同名，union 去重（本条为 #1075 既有写集，未见越界条目）"
+    },
+    {
+      "id": "⑦-CI（Gitea commit status）",
+      "cmd": "curl -s -H 'Authorization: token <x-access-token>' http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/commits/88f974a76/status",
+      "result": "pass",
+      "evidence": "state=success | total_count=2 | pending=0 | statuses: 'local-gates / gates (pull_request)' success（1m14s）与 'local-gates / gates (push)' success（1m33s）⇒ 全 completed，无中间态（四条数字纪律①）"
+    },
+    {
+      "id": "⑧-补丁指纹（现算，与 CTO 现场值比对）",
+      "cmd": "bash scripts/control-tower/check-merge-conditions.sh --pr 1151 --base main --diff-fingerprint",
+      "result": "pass",
+      "evidence": "sha256:30325cc1f3fd4624714963349905ffd0353cd8e8e0097c0ed2bf1a37959b8240 ⇒ fp12=30325cc1f3fd，与 CTO 现场值 30325cc1f3fd… **逐字相符**（非前缀模糊匹配）| 该定义按 patch_fingerprint() 排除 docs/synova/reviews/** ⇒ 本回执提交后指纹不变，R3 可复现"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warn",
+      "where": "tests/control-tower/quality-baseline.test.sh:9,145 对照 docs/authority/WIRING-REGISTRY.yaml",
+      "what": "该配对测试硬断言 'REGISTRY-OK rows=22'，实测 base main 已 26 行、本 PR 后 27 行 ⇒ 断言在**本 PR 之前**就已过期（非本 PR 引入）。已核 .gitea/workflows/local-gates.yml 与 scripts/pre-commit-check.sh 均不调用该 .sh（CI 走 vitest --changed 与 tests/contract/）⇒ 不构成合并阻断。建议后续批把该断言改为动态取值（如正则提取 rows= 后与真实行数比对），否则任何新增 WIRING 行都会继续扩大偏差。"
+    },
+    {
+      "severity": "info",
+      "where": "PR #1151 issue comments",
+      "what": "GET /repos/.../issues/1151/comments 返回 comment count=0 ⇒ 任务说明要求的『CTO 收件核验』在 PR 上**没有对应评论可核**。本复核未依赖该记录：8 项必核全部由我方独立命令取证（改坏必红亦自跑），故不影响结论。如实记为未核项，供 CTO 侧补齐流程留痕。"
+    },
+    {
+      "severity": "info",
+      "where": "docs/authority/WIRING-REGISTRY.yaml 新行 test 字段",
+      "what": "test 指向 '...test.ts:1'（文件头注释行，非任一用例体）。与既有先例一致（同文件 conversations-role-output.test.ts:1）且通过 R5 校验，故不阻断；但溯源力弱于其余行的具体行号（如 role-pack-approval.test.ts:256）。属可改进项。"
+    },
+    {
+      "severity": "info",
+      "where": "规格 §2.4 表（consumer=src/agent/conversation-engine.ts:613）对照实码 :763",
+      "what": "规格写 consumer 行号 613 为旧值，实际调用点已移至 :763（新增字段/方法后行号位移）。WIRING 与 triviality 两处登记均写 763 且与代码实测一致 ⇒ 登记正确、规格行号滞后，无功能影响。"
+    }
+  ],
+  "issued_at": "2026-10-29T23:50:39+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步；骨架由 check-merge-conditions.sh --print-receipt-template 生成）"
+}
