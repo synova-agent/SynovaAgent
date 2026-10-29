@@ -1482,8 +1482,8 @@ documents:
     owner: P4
     note: "#1147（T2.5）：scripts/control-tower/gen-gate-meta.sh（gate_meta 六字段机械产出，--emit/--check，三态 exit 0/1/2，orphan 且 quota 组合违规，legacy_sections 登记 6 段）＋ check-gate-inventory.sh 加 R10 同源校验 ＋ tests/control-tower/gen-gate-meta.test.sh（12 夹具）受保护路径豁免；GATE-INVENTORY 纯追加 gate_meta 段（117 行，删除数 0）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
 
-  # ---- P2 2026-10-30：#1075 P2-4b-B 棘轮基线同 PR 收缩豁免登记（DOC-1075-01＝按裁定 A 随卡 #1075 的子项序号；DOC-1075 已被 P2-1 占用）----
-  - id: DOC-1075-01
+  # ---- P2 2026-10-30：#1075 P2-4b-B 棘轮基线同 PR 收缩豁免登记（DOC-1149＝随卡 #1149；DOC-1075 已被 P2-1 占用，门禁只认纯数字号，故用 B 卡 Issue 号）----
+  - id: DOC-1149
     type: decision
     path: gate-exemptions/2026-10-30-1075-p2-4b-b.md
     status: active

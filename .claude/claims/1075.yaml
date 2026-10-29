@@ -63,7 +63,7 @@
 #           schedule_task/install_skill 补取消检查 ⇒ R5 双向棘轮要求同 PR 删对应基线行（纯删 2 行、
 #           无逻辑/阈值变更）；② gate-exemptions/2026-10-30-1075-p2-4b-b.md —— ①d 受保护路径豁免件
 #           （含 gate-exemptions 自覆盖）；③ docs/authority/DOCS-REGISTRY.yaml —— D2 登记门禁要求
-#           追加 DOC-1075-01 一行（该路径**已在既有 writeset**⇒不重复列）。三者均**待 L1 收件闸追认**。
+#           追加 DOC-1149 一行（该路径**已在既有 writeset**⇒不重复列）。三者均**待 L1 收件闸追认**。
 writeset:
   - extensions/presets/schema/role-pack-v2.schema.json
   - src/init/role-pack-schema.ts
