@@ -277,3 +277,21 @@ entries:
     status: wired
     owner: P2
     notes: "认证主路径 src/middleware/auth.ts:964 亦为该漏斗消费者（registry:44-51 先例）"
+
+  # ---- P3 2026-10-29：#1075 P3 · 审批写 API 与审计链（页面壳先于 JWT；数据 API 后于 JWT）----
+  - capability: permission.rolePackApprovalWrite
+    defined_at: "src/init/role-pack-approval-write.ts:420"
+    provider: "src/init/role-pack-approval-write.ts:420"
+    consumer: "src/routes/role-approvals.ts:582"
+    test: "tests/routes/role-approvals.test.ts:413"
+    status: wired
+    owner: P3
+    notes: "岗位包审批写入（#1075 P3）：approveRolePack/revokeRolePack（revoke 生产调用点 src/routes/role-approvals.ts:538）＋六件单读指纹＋出厂锁（FACTORY_APPROVALS）＋原子写（tmp 0600→rename；记录 ≤8 KiB）＋typed WriteResult（九码不抛）；同 hash 同 scope 重复批准 ⇒ unchanged（不重写、不新增审计）；改坏必红＝删指纹比对 ⇒ J3-1 红"
+  - capability: audit.rolePackApprovalChain
+    defined_at: "src/services/audit-service.ts:46"
+    provider: "src/services/audit-service.ts:46"
+    consumer: "src/routes/role-approvals.ts:315"
+    test: "tests/routes/role-approvals.test.ts:728"
+    status: wired
+    owner: P3
+    notes: "岗位包审批审计链（#1075 P3）：role_pack.approved/revoked/scope_changed 三 action 只写 contentHash/scope/approvalId（禁六件正文）；唯一通道＝AuditService（路由不 import src/l4/**）；详情 API 返回 getStore().verifyChain(orgId)（src/routes/role-approvals.ts:198）；链只证事件序、不证记录文件（§10-L2）"
