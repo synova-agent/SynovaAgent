@@ -242,3 +242,11 @@ entries:
     status: declared-only
     owner: P4
     notes: "#1122 Step 1（规格 §4 G2/G6/G10 最小可跑版）：逐项 PASS/FAIL/SKIP ＋ 末行 `GOVERNANCE: x/y PASS`，判不了 exit 2。**本批未接线**（写集不含 scripts/pre-commit-check.sh 与 .gitea/workflows/**）⇒ 只有显式调用才跑；consumer 空是实测不是遗漏。接线后改 wired 并填真实调用点。"
+  - capability: content.rolePackPersona
+    defined_at: "src/init/role-pack-persona.ts:1"
+    provider: "src/init/role-pack-persona.ts:442"
+    consumer: "src/routes/conversations.ts:495"
+    test: "tests/init/role-pack-persona.test.ts:372"
+    status: wired
+    owner: P2
+    notes: "岗位包人设＋上下文消费（#1075 P2-2）：approved 包的 prompt.systemAddendum 与 contexts 清单进系统提示词；六件自读→computeRolePackContentHash 与 pack.validation.contentHash 比对→审批门；无包会话提示词逐字不变（J3 基准 976ca690…fd33／LEN=1462）；撤销⇒200＋x-synova-role-pack: degraded＋不注入"

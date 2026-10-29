@@ -11,15 +11,22 @@
  *
  * 契约（铁律 47）:
  *   @input    — message: string(1..8000) 必填；sessionId/orgId: string 可选；
+ *               **rolePackId（#1075 P2-2，可选）**: string，须匹配 `^[a-z0-9][a-z0-9.-]{0,63}$`；
+ *               缺省 ⇒ 无岗位会话（系统提示词逐字不变）；续轮可省略（沿用会话已绑定岗位）。
  *               store 经 req.app.locals.orchestration.db 获取（D563 动态 import 范式：
  *               值与类型均来自动态 import 通道的推断 + isSqliteDatabase 谓词窄化，
  *               L1 零静态 L5 import——diagnosis.ts:182 同款）；
  *               `/ingest` 分支另读 `req.app.locals.graphStore`（Bootstrap 注入，缺席 ⇒ 503）
  *   @output   — SSE 流 open(sessionId 回声) → token×N → agent_message →
  *               [诊断事件 flat 透传 → complete] → end；心跳 ": ping" 15s；
- *               流前 JSON 错误：400/404/409/503
+ *               流前 JSON 错误：400/403/404/409/503
  *               ＋ `/ingest` 分支一律 JSON（非 SSE）：200 成功 / 400 INGEST_EMPTY /
  *               200 INGEST_FAILED / 503 STORE_UNAVAILABLE
+ *               ＋ 岗位面流前码表（#1075 P2-2，规格 §2.3-D；**全部流前 JSON，绝不进 SSE 帧**）：
+ *                 400 E_ROLE_PACK_ID_INVALID｜400 E_ROLE_PACK_PERSONA_INVALID｜
+ *                 400 E_ROLE_PACK_PERSONA_UNREADABLE｜403 E_ROLE_PACK_FORBIDDEN｜
+ *                 404 E_ROLE_PACK_NOT_FOUND｜409 E_ROLE_PACK_NOT_APPROVED｜
+ *                 409 E_ROLE_PACK_CONTENT_CHANGED｜409 E_ROLE_PACK_IMMUTABLE
  *   @degraded — db 缺失/非 SQLite → 503 {code:'STORE_UNAVAILABLE', degraded:true}
  *               （fail-closed：会话持久化是本端点的存在理由，静默不落库 = 假绿）；
  *               store 双写失败（lastDegraded）→ 流内 error 帧 {code:'STORE_DEGRADED', degraded:true}
@@ -27,12 +34,18 @@
  *               （#915 Q-5 断线取消语义见 web-adapter.ts：取消后以已生成前缀＋取消标记
  *               settle，仍完整落库 ③④⑤——中断锚不变量『已见前缀 ⊆ 落库内容』保持）；同会话并发 → 409 SESSION_BUSY；
  *               `/ingest`：图存储缺失 → 503（fail-closed）；摄取失败 → 200
- *               {code:'INGEST_FAILED', degraded:true}（不阻断对话，铁律 11/31）
+ *               {code:'INGEST_FAILED', degraded:true}（不阻断对话，铁律 11/31）；
+ *               **已绑定岗位复核失败**（撤岗/内容变更/审批失效）⇒ **HTTP 200** ＋ 响应头
+ *               `x-synova-role-pack: degraded` ＋ 本轮不注入人设 ＋ `log.warn`（带 roleId 与 code）
+ *               —— 不 4xx、不锁死用户（规格 N1/D7）
  *   @authority — `/ingest` 分支仅 **conversation 链**（`POST /api/conversations` 与
  *               `POST /api/conversations/:id/messages`）可触发；普通消息 SSE 语义不变，
- *               本分支**不新增公开 HTTP 字段**（接口变更须 CTO）
+ *               本分支**不新增公开 HTTP 字段**（接口变更须 CTO）；
+ *               `rolePackId` 是 #1075 P2-2 规格批准的唯一新增入参；人设真源 =
+ *               `src/init/role-pack-persona.ts`（本文件只做 HTTP 映射／身份／换岗判定）
  *   @not-here  — 不做文件上传入口（PDF/DOCX/XLSX 仍走既有 TUI `/upload` → `ingestFile`）；
- *               不建第二套 store；`/ingest` 不调 LLM；不改 `GET /chat` 页面结构
+ *               不建第二套 store；`/ingest` 不调 LLM；不改 `GET /chat` 页面结构；
+ *               不做工具白名单/权限消费（P2-3/P2-4）、不解析岗位上下文内容（P4）
  *
  * 已知限制（Known Limitations —— 做不到什么，不得改写成"已核过"）:
  *   a. 前缀**不做词边界**：`/ingested ...` 亦命中（资料文本 = 'ed'）；收紧属接口语义变更，
@@ -43,6 +56,13 @@
  *   d. 本批只做 **dev/source 形态**；文件类资料入口（PDF/DOCX/XLSX）不在本批。
  *   e. **不新增 anchor 回执字段**：锚点只能从 `GET /api/ontology/graph/:orgId` 的
  *      `Document.props.name` 读回（防客户端依赖未批准的公开字段）。
+ *   f. **岗位授权只到"角色白名单 ＋ 可验签身份"**：`role` 由注册 body 决定
+ *      （`src/routes/auth.ts:68,78`）⇒ 白名单**不构成越权控制**；岗位级授权在 P4（规格 §10-L1）。
+ *   g. **岗位人设文本未做内容安全**：可含指令注入；本批只保证"原文可查／不可绕过审批"
+ *      （规格 §10-L6）。
+ *   h. **降级头跨源可能读不到**：若生产 app 挂 `cors()`，装配点 `exposedHeaders` 需含
+ *      `x-synova-role-pack` —— 本文件不改 CORS（`src/server.ts` 不在本批写集）。
+ *   i. **一会话一岗**：不支持中途换岗/多岗（409 E_ROLE_PACK_IMMUTABLE；规格 §10-L5）。
  *
  * 决策记录（D333，完成报告 §5.4 可核）: phaseComplete 诊断桥走 L1→L2 公开 API
  * DiagnosisLauncher 直连（diagnosis.ts:200-217 同款装配），而非 conv.startDiagnosis——
@@ -73,6 +93,14 @@ import { WebViewAdapter } from '../l1-interaction/web-adapter';
 import type { DecisionCapturePort } from '../deploy/bootstrap';
 // #656 M2: 图存储类型只走 L2 出口（L1 零 l4/ import；ontology.ts:12 同款，铁律 39）
 import type { SqliteGraphStore } from '../agent/graph-store-service';
+// #1075 P2-2: 岗位人设解析（唯一真源；本文件只做 HTTP 映射与身份/换岗判定）。
+// `../init/role-pack-persona` 不匹配架构门禁的 L3/L4/L5 层模式（只有 `init/engine-context` 被点名）
+// ⇒ 不新增 L1 跨层违规（`check-architecture.sh` 棘轮不越界）。
+import {
+  loadRolePackPersona,
+  type RolePackPersona,
+  type RolePackPersonaCode,
+} from '../init/role-pack-persona';
 
 const log = createLogger('routes/conversations');
 const router = Router();
@@ -136,10 +164,39 @@ const busySessions = new Set<string>();
 const sessionEngines = new Map<string, ConversationEngine>();
 const SESSION_ENGINE_CACHE_MAX = 200;
 
+// ═══ #1075 P2-2: 岗位面常量与纯核小工具（流前判定用；无 IO） ═══
+
+/**
+ * `rolePackId` 形状（规格 §4.5-C2 边界表）：小写字母/数字开头，其后小写字母/数字/`.`/`-`，总长 1..64。
+ * 🔴 只允许小写 ⇒ 大写、斜杠、`..`、65 字符、空串一律 400（J4 反例集）。
+ */
+const ROLE_PACK_ID_PATTERN = /^[a-z0-9][a-z0-9.-]{0,63}$/;
+
+/**
+ * 允许选岗的**验签角色**（规格 D5，真实词表子集）。
+ * 真实词表 = `src/middleware/rbac.ts` 的 `admin|manager|liaison|staff|ga`；
+ * 本批只放 admin/manager/ga（staff/liaison ⇒ 403）。岗位级授权属 P4。
+ */
+const ROLE_PACK_ALLOWED_ROLES: readonly string[] = ['admin', 'manager', 'ga'];
+
+/**
+ * 新绑定失败的 HTTP 映射（规格 §2.3-D；`Record<RolePackPersonaCode, number>` ⇒ **穷尽**：
+ * persona 模块若新增错误码，本表编译红 —— 防"新码悄悄落到默认分支"）。
+ */
+const ROLE_PACK_ERROR_HTTP_STATUS: Record<RolePackPersonaCode, number> = {
+  E_ROLE_PACK_NOT_FOUND: 404,
+  E_ROLE_PACK_NOT_APPROVED: 409,
+  E_ROLE_PACK_CONTENT_CHANGED: 409,
+  E_ROLE_PACK_PERSONA_UNREADABLE: 400,
+  E_ROLE_PACK_PERSONA_INVALID: 400,
+};
+
 type ConversationBody = {
   message?: unknown;
   sessionId?: unknown;
   orgId?: unknown;
+  /** #1075 P2-2: 岗位 id（可选；形状与授权在流前判定，见 handler 的【流前 rolePack 判定】块） */
+  rolePackId?: unknown;
 };
 
 /** 引擎快照最小形状守卫——loadState 的 JSON.parse 结果不盲信（铁律 38：类型守卫替代断言） */
@@ -152,6 +209,20 @@ function isEngineStateLike(v: unknown): v is EngineState {
     typeof (v as { startedAt?: unknown }).startedAt === 'string' &&
     Array.isArray((v as { messages?: unknown }).messages)
   );
+}
+
+/**
+ * 从早读的会话快照里取**已绑定岗位 id**（#1075 P2-2）。
+ *
+ * @input  state — `store.loadState()` 的原始返回值（`unknown`；可能 null／JSON 任意形状）
+ * @output 已绑定岗位 id；快照缺失／形状非法／无该键／值非非空字符串 ⇒ `undefined`
+ * @degraded 不抛、不记日志（形状非法的告警由 ⑦ 既有分支统一发出，避免双写噪声）
+ * @authority 唯一调用点 = `handleConversationMessage` 的流前判定块（不另建第二套读取路径）
+ */
+function readBoundRolePackId(state: unknown): string | undefined {
+  if (!isEngineStateLike(state)) return undefined;
+  const bound = state.rolePackId;
+  return typeof bound === 'string' && bound.length > 0 ? bound : undefined;
 }
 
 /**
@@ -319,6 +390,153 @@ async function handleConversationMessage(req: Request, res: Response, pathSessio
     return;
   }
 
+  // ═══ 🔴 流前 rolePack 判定（#1075 P2-2；规格 §2.1 a–f）═══════════════════════════════
+  // 为什么必须**流前**：⑥ 建立 SSE 之后错误只能走流内 error 帧 —— 客户端拿不到 HTTP 状态码，
+  //   授权/换岗/审批拒绝会退化成"流里一个 error 帧"，既不可观测也无法与业务失败区分（规格 B4）。
+  // 位置：③ 之后（会话存在性已确立、store 已可用）、④ 之前（未建会话、未构造 provider、未开流）
+  //   ⇒ 4xx 路径零副作用（不产生孤儿会话、不消耗 LLM 配置调用）。
+  //
+  // 码表（本块是**唯一**产出点；映射见 @output，穷尽性由 ROLE_PACK_ERROR_HTTP_STATUS 保证）：
+  //   400 E_ROLE_PACK_ID_INVALID｜403 E_ROLE_PACK_FORBIDDEN（无验签身份 / 角色不在白名单）
+  //   404 E_ROLE_PACK_NOT_FOUND｜409 E_ROLE_PACK_NOT_APPROVED｜409 E_ROLE_PACK_CONTENT_CHANGED
+  //   400 E_ROLE_PACK_PERSONA_UNREADABLE｜400 E_ROLE_PACK_PERSONA_INVALID｜409 E_ROLE_PACK_IMMUTABLE
+  //   200 ＋ 响应头 `x-synova-role-pack: degraded` = 已绑定会话复核失败（不锁死用户）
+  //
+  // 绑定口径（§2.1-b 与 §2.1-e 的冲突消解，与 J6 判据一致）：
+  //   · 会话**已有快照**（loadState 非 null）：body 给了岗位 ⇒ 必须与已绑定值**逐字相同**，否则 409
+  //     （历史会话无 rolePackId 也按此办 ⇒ 传岗位即 409）；相同 ⇒ 走"已绑定复核"；未给 ⇒ 沿用已绑定。
+  //   · 会话**无快照**（新会话，或会话已建但从未落 state）：body 给了岗位 ⇒ **新绑定** ⇒ 走审批门
+  //     ＋内容自校验（J4），失败按码表 4xx。
+  //   ⇒ 早读的 state 必须带到 ⑦ 复用（**不二次 loadState**：二次读与本次判定之间是 TOCTOU 缝）。
+  //
+  // @authority 岗位人设真源 = `src/init/role-pack-persona.ts`（本块只做 HTTP 映射＋身份/换岗判定；
+  //   不读磁盘、不解析 YAML、不做限额 —— 单一实现，禁在本文件复制判定规则）
+
+  // a) 形状（仅当给了 rolePackId —— 不给时**整块跳过**，无岗位的既有对话一律不受影响）
+  const bodyRolePackId = body.rolePackId;
+  let requestedRolePackId: string | undefined;
+  if (bodyRolePackId !== undefined) {
+    if (typeof bodyRolePackId !== 'string' || !ROLE_PACK_ID_PATTERN.test(bodyRolePackId)) {
+      log.warn(
+        { code: 'E_ROLE_PACK_ID_INVALID', orgId, rolePackId: String(bodyRolePackId) },
+        'rolePackId 形状非法 — 400（流前，未建会话/未开流）',
+      );
+      res.status(400).json({
+        ok: false,
+        code: 'E_ROLE_PACK_ID_INVALID',
+        message: 'rolePackId 须匹配 ^[a-z0-9][a-z0-9.-]{0,63}$（小写字母/数字开头，1..64 字符）',
+      });
+      return;
+    }
+    requestedRolePackId = bodyRolePackId;
+  }
+
+  // b) 早读一次会话快照（仅续轮；必须先于换岗判定与身份判定）
+  const earlyState: unknown = sessionIdInput !== undefined ? store.loadState(sessionIdInput) : null;
+  const boundRolePackId = readBoundRolePackId(earlyState);
+
+  if (earlyState !== null && requestedRolePackId !== undefined && requestedRolePackId !== boundRolePackId) {
+    log.warn(
+      {
+        code: 'E_ROLE_PACK_IMMUTABLE',
+        orgId,
+        sessionId: sessionIdInput,
+        requestedRolePackId,
+        boundRolePackId: boundRolePackId ?? null,
+      },
+      '一会话一岗 — 换岗请求 409（流前；已绑定值不得被覆盖）',
+    );
+    res.status(409).json({
+      ok: false,
+      code: 'E_ROLE_PACK_IMMUTABLE',
+      message: `该会话已绑定岗位 ${boundRolePackId ?? '（无）'}，不允许切换为 ${requestedRolePackId}`,
+    });
+    return;
+  }
+
+  // c) 有效岗位 = body 优先，其次会话已绑定；两者都无 ⇒ null（= 无岗位会话，本块到此为止）
+  const effectiveRolePackId = requestedRolePackId ?? boundRolePackId ?? null;
+  /** 本轮要注入的人设面（null = 不注入／已降级）；⑦ 装配与缓存刷新都用它 */
+  let rolePack: RolePackPersona | null = null;
+
+  if (effectiveRolePackId !== null) {
+    // d) 身份 ＋ 角色白名单（规格 D4/D5：**有效**岗位非空就必须有可验签身份）
+    //    免认证白名单（`src/middleware/auth.ts` 的 `/api/conversations` 前缀）语义是"不要求认证"，
+    //    但白名单分支**会尝试**验签并注入 req.auth（D947/L-20）⇒ 有 Bearer 时这里能读到身份。
+    //    无身份却带岗位 ⇒ 必须显式拒（否则"白名单 = 无身份也能选岗"成越权通道，规格 C3）。
+    const auth = (req as Request & { auth?: { role?: unknown } }).auth;
+    const authRole = auth !== undefined && typeof auth.role === 'string' ? auth.role : null;
+    if (authRole === null) {
+      log.warn(
+        { code: 'E_ROLE_PACK_FORBIDDEN', reason: 'no-auth', orgId, rolePackId: effectiveRolePackId, sessionId: sessionIdInput },
+        '带岗位的请求无可验签身份 — 403（白名单＝不要求认证，≠ 可选岗）',
+      );
+      res.status(403).json({
+        ok: false,
+        code: 'E_ROLE_PACK_FORBIDDEN',
+        message: '岗位选择需要可验签身份（Authorization: Bearer <JWT>）',
+      });
+      return;
+    }
+    if (!ROLE_PACK_ALLOWED_ROLES.includes(authRole)) {
+      log.warn(
+        { code: 'E_ROLE_PACK_FORBIDDEN', reason: 'role-not-allowed', orgId, role: authRole, rolePackId: effectiveRolePackId },
+        '角色不在选岗白名单 — 403（仅 admin/manager/ga）',
+      );
+      res.status(403).json({
+        ok: false,
+        code: 'E_ROLE_PACK_FORBIDDEN',
+        message: `角色 ${authRole} 不允许选择岗位（仅 admin/manager/ga）`,
+      });
+      return;
+    }
+
+    // e) 绑定决策（单一真源：loadRolePackPersona；**每轮重解析** ⇒ 批准/撤销即时生效）
+    const loaded = loadRolePackPersona(effectiveRolePackId);
+    if (loaded.ok) {
+      rolePack = loaded.persona;
+      log.info(
+        {
+          rolePackId: effectiveRolePackId,
+          sessionId: sessionIdInput,
+          contexts: loaded.persona.contexts.length,
+          addendumLength: loaded.persona.systemAddendum.length,
+        },
+        '岗位人设已解析 — 本轮注入系统提示词',
+      );
+    } else if (boundRolePackId !== undefined) {
+      // 已绑定会话复核失败 ⇒ **不锁死用户**（规格 N1/D7）：200 ＋ 降级头 ＋ 不注入 ＋ log.warn
+      res.setHeader('x-synova-role-pack', 'degraded');
+      log.warn(
+        {
+          code: loaded.code,
+          rolePackId: effectiveRolePackId,
+          sessionId: sessionIdInput,
+          degraded: true,
+          reason: loaded.reason,
+        },
+        '已绑定岗位复核失败 — 本轮不注入人设（200 ＋ 降级头，不 4xx）',
+      );
+      rolePack = null;
+    } else {
+      // 新绑定失败 ⇒ 流前 4xx（审批门/内容自校验/包不可读/不存在）
+      const status = ROLE_PACK_ERROR_HTTP_STATUS[loaded.code];
+      log.warn(
+        {
+          code: loaded.code,
+          rolePackId: effectiveRolePackId,
+          orgId,
+          sessionId: sessionIdInput,
+          httpStatus: status,
+          reason: loaded.reason,
+        },
+        `岗位绑定被拒 — ${String(status)}（流前，未建会话/未开流）`,
+      );
+      res.status(status).json({ ok: false, code: loaded.code, message: loaded.reason });
+      return;
+    }
+  }
+
   // ④ LLM 配置（diagnosis.ts:127-133 同款；D575 热生效语义自动继承；未配置 400 指路向导，
   //    先于 createSession——不留孤儿会话）
   let provider: ReturnType<typeof createProvider>;
@@ -358,15 +576,18 @@ async function handleConversationMessage(req: Request, res: Response, pathSessio
     //    禁 im-inbound 的 as never 形态）
     let conv = sessionEngines.get(sessionId);
     if (!conv) {
-      const savedState: unknown = sessionIdInput ? store.loadState(sessionId) : null;
+      // #1075 P2-2: 复用**流前早读**的快照（禁止二次 loadState —— 与判定之间有 TOCTOU 缝；
+      // 新会话 sessionIdInput === undefined ⇒ earlyState 恒 null，行为与修复前一致）
+      const savedState: unknown = earlyState;
       const restored = isEngineStateLike(savedState) ? savedState : null;
       if (savedState !== null && restored === null) {
         log.warn({ sessionId }, '会话快照形状非法 — 忽略快照按新会话继续（不静默，铁律 24）');
       }
       const sessionManager = new SessionManager({}, store);
+      // rolePack 显式传（persona 或 null）：null 也要传 ⇒ 撤岗场景必须把快照里的旧人设段刷掉
       conv = restored
-        ? ConversationEngine.fromState(provider, restored, { sessionManager, sessionStore: store, sessionId })
-        : new ConversationEngine(provider, { sessionId, orgId, sessionManager, sessionStore: store });
+        ? ConversationEngine.fromState(provider, restored, { sessionManager, sessionStore: store, sessionId, rolePack })
+        : new ConversationEngine(provider, { sessionId, orgId, sessionManager, sessionStore: store, rolePack });
       // K12-08(#191) V1/V6: 决策台账接缝装配（新建与 fromState 恢复两条路都要接 ——
       // 缓存未命中才会走到这里，故每个进程内每个会话恰好接一次）。
       wireDecisionCapture(conv, orgId);
@@ -375,6 +596,11 @@ async function handleConversationMessage(req: Request, res: Response, pathSessio
         if (oldest !== undefined) sessionEngines.delete(oldest);
       }
       sessionEngines.set(sessionId, conv);
+    } else if (effectiveRolePackId !== null) {
+      // ⑦-b #1075 P2-2 缓存命中 ⇒ **每轮刷新**人设（规格 D8：批准/撤销即时生效；null = 回无包基线）。
+      // 🔴 无岗位会话（effectiveRolePackId === null）**不触碰**缓存引擎 —— 既有对话的 system 层
+      //    一次都不重建（"无岗位路径逐字不受影响"的最强形式）。
+      conv.setRolePack(rolePack);
     }
     // 能力对齐 CLI（cli.ts:134 先例）
     registerBuiltinTools(conv.getToolRegistry(), store, sessionId, () => conv.getPhase(), () => conv.getOrgId());
@@ -396,6 +622,8 @@ async function handleConversationMessage(req: Request, res: Response, pathSessio
     );
 
     // ⑩ 持久化时序 ③④⑤（断线也执行——完整回复落库，重连不丢）
+    // #1075 P2-2: `conv.serialize()` 在**绑定岗位时**带 `rolePackId`（无包时该键缺省）⇒ 会话归属落库，
+    // 人设文本不落库（每轮由流前判定重解析）。本行签名与语义不变。
     store.addMessage(sessionId, 'assistant', result.reply);
     store.updateSession(sessionId, { phase: conv.getPhase() });
     store.saveState(sessionId, conv.serialize());
