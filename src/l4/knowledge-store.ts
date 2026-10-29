@@ -27,6 +27,11 @@ export interface KnowledgeChunk {
   accessTeamId?: string;
   accessOwnerId?: string;
   accessSensitivity: 'normal' | 'sensitive' | 'restricted';
+  /**
+   * #1075 P2-4b-B: PKB 域标签（`pkb_domain` 列；岗位包 `knowledge-scope.yaml` 的 scope id）。
+   * 🔴 对外映射字段名是 `pkbDomain`（工具边界才改名 `domain`）——**不**在本类型加 `domain` 键。
+   */
+  pkbDomain?: string | null;
   // 元数据
   createdAt: string;
   updatedAt: string;
@@ -148,11 +153,13 @@ export class KnowledgeStore {
     const orgId = chunk.orgId || 'default';
     this.db.prepare(`
       INSERT INTO knowledge_chunks (id, text, source_type, source_id, authority_level, mime_type,
-        access_level, access_team_id, access_owner_id, access_sensitivity, org_id, created_at, updated_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+        access_level, access_team_id, access_owner_id, access_sensitivity, org_id, pkb_domain, created_at, updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `).run(id, chunk.text, chunk.sourceType, chunk.sourceId, chunk.authorityLevel,
       chunk.mimeType || null, chunk.accessLevel, chunk.accessTeamId || null,
-      chunk.accessOwnerId || null, chunk.accessSensitivity, orgId, now, now);
+      chunk.accessOwnerId || null, chunk.accessSensitivity, orgId,
+      // #1075 P2-4b-B: 可选域标签（缺省 NULL ⇒ 角色会话按 fail-closed 不返回，需 update 打标）
+      chunk.pkbDomain ?? null, now, now);
     return id;
   }
 
@@ -213,6 +220,8 @@ export class KnowledgeStore {
       accessTeamId: r.access_team_id as string | undefined,
       accessOwnerId: r.access_owner_id as string | undefined,
       accessSensitivity: r.access_sensitivity as KnowledgeChunk['accessSensitivity'],
+      // #1075 P2-4b-B: PKB 域标签（`pkbDomain`；**不**在此加对外键 `domain` —— 映射在工具边界）
+      pkbDomain: (r.pkb_domain as string | null | undefined) ?? null,
       createdAt: r.created_at as string,
       updatedAt: r.updated_at as string,
       rank: (r.rank as number) || 1,
@@ -275,7 +284,19 @@ export class KnowledgeStore {
     return { total, byDomain, bySourceType };
   }
 
-  /** 更新知识条目 (PKB Slice 1) */
+  /**
+   * 更新知识条目 (PKB Slice 1)。
+   *
+   * #1075 P2-4b-B（写丢修复）: 增写 `pkb_domain` / `pkb_type` / `pkb_source` 三列 ——
+   *   此前 `update({pkb_domain})` 被静默丢弃（三处生产打标 `src/l3/pkb-seed.ts`／
+   *   `src/l3/knowledge-agent.ts`／`src/routes/documents.ts` 全部无效）。
+   *   取 `merged`（= existing ∪ props），缺省 `null`；其余列语义不变。
+   *
+   * @input  id — 知识块 id；props — 部分字段（未给的沿用 existing）
+   * @output 无
+   * @degraded 不适用（纯 SQL；错误照旧抛出，由调用方处理）
+   * @error  条目不存在 ⇒ throw（既有行为，不改）
+   */
   update(id: string, props: Record<string, unknown>): void {
     const now = new Date().toISOString();
     const existing = this.db.prepare('SELECT * FROM knowledge_chunks WHERE id=?').get(id) as Record<string, unknown> | undefined;
@@ -284,14 +305,17 @@ export class KnowledgeStore {
     this.db.prepare(`
       UPDATE knowledge_chunks SET text=?, source_type=?, authority_level=?, mime_type=?,
         access_level=?, access_team_id=?, access_sensitivity=?,
-        pkb_confidence=?, pkb_status=?, pkb_expires_at=?, pkb_version=?, knowledge_level=?, updated_at=?
+        pkb_confidence=?, pkb_status=?, pkb_expires_at=?, pkb_version=?, knowledge_level=?,
+        pkb_domain=?, pkb_type=?, pkb_source=?, updated_at=?
       WHERE id=?
     `).run(
       merged.text, merged.source_type, merged.authority_level, merged.mime_type,
       merged.access_level, merged.access_team_id, merged.access_sensitivity,
       merged.pkb_confidence ?? null, merged.pkb_status ?? 'active',
       merged.pkb_expires_at ?? null, merged.pkb_version ?? null,
-      merged.knowledge_level ?? 2, now, id,
+      merged.knowledge_level ?? 2,
+      merged.pkb_domain ?? null, merged.pkb_type ?? null, merged.pkb_source ?? null,
+      now, id,
     );
   }
 

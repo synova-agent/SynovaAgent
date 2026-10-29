@@ -2,6 +2,4 @@
 # 格式同 tool-args-baseline.txt：<tool_name> | <理由>；修好任一件须同 PR 删对应登记行
 # 依据：规格 2026-10-25-915-Q5 §2/§8（均注册面 side-effect 工具，中途无取消检查；
 #       dispatch 前检查已由注册表层承担 —— 本批不修这 3 件，保持棘轮有意义）
-schedule_task | 存量副作用工具（operationType write/mutating）：仅注册表层 dispatch 前检查，handler 内中途中断不保证
-install_skill | 存量副作用工具（operationType write/mutating）：仅注册表层 dispatch 前检查，handler 内中途中断不保证
 convert_md_to_docx | 存量副作用工具（operationType write，vendor pandoc 面）：仅注册表层 dispatch 前检查，中途中断不保证
