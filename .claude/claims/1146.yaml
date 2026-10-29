@@ -1,0 +1,25 @@
+# claim — #1146 批1 零风险退役（8 项，台账标 retired·观察 30 天）
+issue: 1146
+branch: chore/1146-retire-batch1
+base: main
+
+writeset:
+  - docs/authority/GATE-INVENTORY.yaml
+  - docs/authority/DOCS-REGISTRY.yaml
+  - tests/control-tower/gate-retirement-batch1.test.sh
+  - gate-exemptions/2026-10-29-1146-retire-batch1.md
+  - .claude/task-briefs/2026-10-29-1146-retire-batch1.md
+  - .claude/claims/1146.yaml
+  - memory/notes/proposed/2026-10-29-1146-retire-batch1.md
+
+done_verify:
+  - cmd: "bash tests/control-tower/gate-retirement-batch1.test.sh 2>&1 | tail -1"
+    expect: "结果: 5 通过, 0 失败"
+  - cmd: "bash scripts/control-tower/check-gate-inventory.sh --root . 2>&1 | tail -1"
+    expect: "GATE-INVENTORY: OK"
+  - cmd: "bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main --root . 2>&1 | tail -1"
+    expect: "0 失败"
+  - cmd: "git diff --numstat gitea/main -- . | awk '$2>0{c++} END{print c+0}'"
+    expect: "0"
+
+note: "批1 零风险退役 8 项（B 类 5＋observer 1＋C 类 2）；不删文件、观察期 30 天到期 2026-11-28；replacement=none 均带 evidence。"

@@ -1727,3 +1727,72 @@ run_by_candidates:
     why: "实际运行腿=scripts/hooks/hook-enforce-loop.sh（PostToolUse 钩子），不在本五值枚举内 ⇒ 记 无 待裁"
   - entrypoint: scripts/control-tower/verify-governance.sh
     why: "#1122 总闸最小可跑版：尚未接线（写集不含 pre-commit/CI），显式调用才跑 ⇒ 记 无；接线后改 wired 并补真实腿"
+
+retired:
+#   批1 零风险退役（#1146 · 创始人 2026-10-29 令）；不删文件，观察期 30 天。
+#   replacement: none 的条目必须带 evidence（防「退了不管」）。
+#   判据：tests/control-tower/gate-retirement-batch1.test.sh（R1–R4，改坏即红）。
+  - id: RET-b1-claude-agents
+    path: .claude/agents/
+    batch: 1
+    reason: "Claude Code 客户端专属代理定义，不接 git 钩子与 CI，不构成拦截动作"
+    date: 2026-10-29
+    replacement: none
+    evidence: "不接 git/CI；.claude/settings.json 仓内不存在，PreToolUse 钩子从未生效"
+    observation_until: 2026-11-28
+  - id: RET-b1-claude-task-briefs
+    path: .claude/task-briefs/
+    batch: 1
+    reason: "写代码前的提示词载体，仅供 Claude Code 客户端读取，本身不执行判定"
+    date: 2026-10-29
+    replacement: none
+    evidence: "不接 git/CI；属提示词与流程留痕，删改不影响任何拦截判定"
+    observation_until: 2026-11-28
+  - id: RET-b1-claude-md
+    path: CLAUDE.md
+    batch: 1
+    reason: "Claude Code 专用指令文件，其他编辑器与 DSH 不读取，不构成门禁"
+    date: 2026-10-29
+    replacement: none
+    evidence: "不接 git/CI；仓内无任何脚本读取该文件作为判据"
+    observation_until: 2026-11-28
+  - id: RET-b1-anthropic-workflow
+    path: docs/workflow/ANTHROPIC-WORKFLOW.md
+    batch: 1
+    reason: "工作流说明文档，无执行体，被读取也不产生退出码，不是门禁"
+    date: 2026-10-29
+    replacement: none
+    evidence: "不接 git/CI；纯文档，无调用点也无退出码语义"
+    observation_until: 2026-11-28
+  - id: RET-b1-observer-claude-code-hook
+    path: observer-adapters/claude-code-hook/hook.py
+    batch: 1
+    reason: "观察器适配器，只上报不阻断，随 B 类一并退役，不属判据面"
+    date: 2026-10-29
+    replacement: none
+    evidence: "不接 git/CI；仅观察器上报路径，无 exit 判定与阻断语义"
+    observation_until: 2026-11-28
+  - id: RET-b1-hook-block-write
+    path: scripts/workflow/hook-block-write.sh
+    batch: 1
+    reason: "客户端 PreToolUse 钩子，仓内 settings.json 缺失，实际从未被调用"
+    date: 2026-10-29
+    replacement: none
+    evidence: "不接 git/CI；无配置载体，脚本自身不会被任何腿执行"
+    observation_until: 2026-11-28
+  - id: RET-b1-hook-check-memory
+    path: scripts/workflow/hook-check-memory.sh
+    batch: 1
+    reason: "客户端提示注入钩子，不阻断且无配置载体，不构成门禁"
+    date: 2026-10-29
+    replacement: none
+    evidence: "不接 git/CI；无 settings.json 挂载，无退出码阻断语义"
+    observation_until: 2026-11-28
+  - id: RET-b1-claude-settings-json
+    path: .claude/settings.json
+    batch: 1
+    reason: "文件不存在，仅台账剔除；若有该文件亦属客户端配置不属门禁"
+    date: 2026-10-29
+    replacement: none
+    evidence: "git cat-file 实测该路径不存在；无载体故无任何钩子被挂载"
+    observation_until: 2026-11-28
