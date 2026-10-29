@@ -258,3 +258,12 @@ entries:
     status: wired
     owner: P2
     notes: "岗位包输出标准消费（#1075 P2-3）：approved 包的 criteria[].machine 编译成 OutputContract 对象，角色会话每轮 assistant 回复后非阻断校验＋留痕（永不抛出／不改回复）；六件单读快照→computeRolePackContentHash 与 pack.validation.contentHash 比对→审批门→限额；无 machine 的 criteria 进 unverifiable[]（可见不静默）；无岗位会话零副作用"
+
+  - capability: content.rolePackToolPermissions
+    defined_at: "src/init/role-pack-permissions.ts:412"
+    provider: "src/init/role-pack-permissions.ts:412"
+    consumer: "src/agent/conversation-engine.ts:763"
+    test: "tests/agent/tool-permissions-role-pack.test.ts:1"
+    status: wired
+    owner: P2
+    notes: "岗位包工具白名单消费（#1075 P2-4a）：审批 scope ＋ capabilities[].tool 编译成 allowlist／disabled／declaredUnavailable；未注册工具**不入白名单**（不越权、不静默丢弃），enabled:false 永远拒（disabled 优先），permissionsPending ⇒ 全拒；engine 在 process 入口惰性重解析（ensurePermissionsApplied／refreshRolePackPermissions），失败 fail-closed 置 []。改坏必红由 tests/agent/tool-permissions-role-pack.test.ts 的 J1 时序A/B、J2 未列即拒（含 listTools/toOpenAITools）、J3 disabled 硬拒、J6 未绑定零变化覆盖。"
