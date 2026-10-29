@@ -38,6 +38,8 @@ import healthRoutes from './routes/health';
 import healthzRoutes from './routes/healthz';
 import evolutionRoutes from './routes/evolution';
 import gaEvolutionRoutes from './routes/ga-evolution';
+import rolePacksPageRoutes from './routes/role-packs-page'; // #1075 P3 — 说明书页 HTML 壳（**须先于 JWT**）
+import roleApprovalsRoutes from './routes/role-approvals'; // #1075 P3 — 审批读/写 API（**须后于 JWT**）
 import ontologyRoutes from './routes/ontology';
 import ontologyAdminRoutes from './routes/ontology-admin';
 import diagnosisRoutes from './routes/diagnosis';
@@ -478,6 +480,10 @@ export async function createServer(): Promise<Server> {
   // D590 裁决②: 410 拦截先于 JWT——下线信号对所有客户端显式（含未认证的 ga 页轮询器，
   // 否则未认证客户端看到 401，裁决②的"显式下线 + 轮询止停"对它们不生效）
   app.use(uploadV2GoneRouter);
+  // #1075 P3 / 规格 §2.2-D7（gate-A A2）: 岗位说明书页 = **无数据 HTML 壳**，必须**先于 JWT** 挂载 ——
+  //   否则无 token 客户端拿 401 ⇒ 页面不可达（J8 反例①）。页面零数据；数据面 `GET /api/role-packs*`
+  //   全在 JWT 之后（下方 `roleApprovalsRoutes`）。顺序由 `tests/routes/role-approvals.test.ts` J8 锁定。
+  app.use(rolePacksPageRoutes);
   app.use(jwtAuthMiddleware);
 
   // Phase 0.1: JWT 认证路由
@@ -503,8 +509,9 @@ export async function createServer(): Promise<Server> {
   app.use(rbacMiddleware);
   // ── D947/P4 前移理由与不变量（供 K3 核对）─────────────────────────────
   // ① 前移前 rbac 位于 workspacesApiRoutes 之后 ⇒ 该路由组永远拿不到 req.rbac ⇒ 路由级守卫必然 fail-closed。
-  // ② 前移后本行之前仅剩 5 个路由注册（豁免集，均有既有文档依据）：
+  // ② 前移后本行之前仅剩 6 个路由注册（豁免集，均有既有文档依据）：
   //    setupGuideGoneRouter(D716 410) · llmConfigRoutes(D575 首启向导) · uploadV2GoneRouter(D590② 410) ·
+  //    rolePacksPageRoutes(#1075 P3 无数据 HTML 壳 —— 先于 JWT 是 J8 判据) ·
   //    authRoutes(登录入口) · 内联 GET /api/status/budget。判据 = P4 判别谓词（非 REV-6 字面 awk）。
   // ③ 不变量 I4：rbac 不得早于 jwtAuthMiddleware —— 唯一可信来源是 req.auth（验签后注入）。
   // ④ rbacMiddleware 本体语义不变（仅注入 req.rbac + next()，不做拦截）：/api/knowledge/ask(:372→本行后)、
@@ -531,6 +538,7 @@ export async function createServer(): Promise<Server> {
   app.use(configRoutes); // D600 — config/dump 挂载（逐层 provenance 检查表面）
   app.use(sessionsRoutes);
   app.use(conversationsRoutes); // D590 — 对话 SSE 端点（sessionsRoutes 旁，spec §5.1）
+  app.use(roleApprovalsRoutes); // #1075 P3 — 审批读/写 API（JWT 之后；页面壳另在先于 JWT 处挂载）
   app.use(metricsRoutes);
   app.use(reviewRoutes);
   app.use(expertRoutes);
