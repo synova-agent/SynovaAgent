@@ -35,7 +35,8 @@
  *   |---|---|
  *   | `buildApprovalCardFrame()` | 唯一构造入口（纯函数） |
  *   | `ApprovalCardFrame`／`ApprovalCardInput`／`ApprovalCardStatus`／`ApprovalCardScope`／`ApprovalCardButton` | §2.3-E 契约类型 |
- *   | `APPROVAL_CARD_BUTTONS`／`APPROVAL_CARD_DETAIL_PREFIX` | 协议常量（按钮三件与说明书路径前缀） |
+ *   内部：`APPROVAL_CARD_BUTTONS`（按钮三件，顺序即协议）／`APPROVAL_CARD_DETAIL_PREFIX`（`/role-packs/`）
+ *         —— **模块内常量、不导出**（组 4「新 export 必须被引用」：仅本文件使用时导出 = 未引用）。
  *
  * 已知限制（Known Limitations；禁写"暂无"）:
  *   · **L1 · 非 approved 的 `scope`/`permissionsPending` 为 `null`**：pending/unverified 包尚无"批准粒度"
@@ -95,14 +96,14 @@ export type ApprovalCardFrame = {
   readonly detailPath: string;
 };
 
-/** 说明书页路径前缀（协议常量；与 `src/routes/role-packs-page.ts` 的路由一致）。 */
-export const APPROVAL_CARD_DETAIL_PREFIX = '/role-packs/';
+/** 说明书页路径前缀（**模块内常量**，不导出 —— 仅本文件使用；route 侧有同名路由字面量）。 */
+const APPROVAL_CARD_DETAIL_PREFIX = '/role-packs/';
 
 /**
  * 卡按钮三件（**顺序是协议的一部分**：批准 → 撤销 → 查看说明书）。
  * `detail` 无动作端点（纯导航）；`approve`/`revoke` 由客户端带同一 Bearer 调写 API（§10-L3）。
  */
-export const APPROVAL_CARD_BUTTONS: readonly ApprovalCardButton[] = [
+const APPROVAL_CARD_BUTTONS: readonly ApprovalCardButton[] = [
   { id: 'approve', label: '批准' },
   { id: 'revoke', label: '撤销' },
   { id: 'detail', label: '查看说明书' },
