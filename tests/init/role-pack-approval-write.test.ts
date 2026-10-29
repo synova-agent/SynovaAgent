@@ -37,6 +37,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { createLogger } from '@synova/logger';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { FACTORY_APPROVALS, readApprovalRecord } from '../../src/init/role-pack-approval';
 import {
@@ -55,6 +56,9 @@ import { resolveApprovalsRoot } from '../../src/init/preset-loader';
 // ══════════════════════════════════════════════════════════════════════════════
 
 const logCalls = vi.hoisted(() => [] as { level: string; meta?: unknown; msg?: unknown }[]);
+
+/** 本文件日志（`@synova/logger` 已被下方 `vi.mock` 替换为捕获器 ⇒ 写入 logCalls，供 hasLog 断言）。 */
+const log = createLogger('tests/role-pack-approval-write');
 
 vi.mock('@synova/logger', () => {
   const make = (level: string) => (meta?: unknown, msg?: unknown) => {
@@ -155,7 +159,10 @@ const ACTOR: ApprovalActor = { id: 'user-1', role: 'admin' };
 function defaultExpectedHash(): string {
   try {
     return independentContentHash(roleDirOf(ROLE));
-  } catch {
+  } catch (err: unknown) {
+    // 「ROLE 目录不存在」是部分用例的**正常前提**（404/形状边界）⇒ 回落一个形状合法的错误值。
+    // 🔴 非静默吞错（铁律 24/31）：留 log.warn —— 回落原因在日志与断言诊断里可见，不改变行为。
+    log.warn({ err }, '夹具缺省期望指纹回落为错误值（ROLE 目录不存在，属用例前提）');
     return WRONG_HASH;
   }
 }
