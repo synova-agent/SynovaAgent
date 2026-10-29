@@ -85,6 +85,8 @@ import { createHash } from 'node:crypto';
 import { chmodSync, lstatSync, mkdirSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createLogger } from '@synova/logger';
+// 全仓唯一时钟注入点（tests/contract/time-injection.test.ts R1：新代码禁直取系统时钟）
+import { systemClock } from '../services/clock';
 import { FACTORY_APPROVALS, readApprovalRecord, type ApprovalRecord } from './role-pack-approval';
 import { readPieceBytesOnce } from './role-pack-persona';
 import { computeRolePackContentHash } from './role-pack-schema';
@@ -166,7 +168,7 @@ export type ApproveRolePackInput = {
   readonly orgId: string;
   /** 审批人（路由层从 JWT 取） */
   readonly actor: ApprovalActor;
-  /** 注入时钟（缺省 `new Date()`；只影响 `approvedAt`，Invalid Date ⇒ `E_APPROVAL_IO`） */
+  /** 注入时钟（缺省取 `systemClock`；只影响 `approvedAt`，Invalid Date ⇒ `E_APPROVAL_IO`） */
   readonly now?: Date;
 };
 
@@ -180,7 +182,7 @@ export type RevokeRolePackInput = {
   readonly orgId: string;
   /** 撤销人（路由层从 JWT 取；本文件只用于日志留痕） */
   readonly actor: ApprovalActor;
-  /** 注入时钟（缺省 `new Date()`；**不参与持久化**，撤销不落记录） */
+  /** 注入时钟（缺省取 `systemClock`；**不参与持久化**，撤销不落记录） */
   readonly now?: Date;
 };
 
@@ -281,9 +283,12 @@ function computeSelfBoundApprovalId(parts: {
   return `apv1:${digest.slice(0, 16)}`;
 }
 
-/** `now` → ISO 字符串；Invalid Date ⇒ `undefined`（**不抛** —— `toISOString()` 会 throw RangeError）。 */
+/**
+ * `now` → ISO 字符串；缺省取 `systemClock`（全仓唯一注入点，R1）；
+ * Invalid Date ⇒ `undefined`（**不抛** —— `toISOString()` 会 throw RangeError）。
+ */
 function resolveApprovedAt(now: Date | undefined): string | undefined {
-  const value = now === undefined ? new Date() : now;
+  const value = now === undefined ? new Date(systemClock.now()) : now;
   if (!(value instanceof Date) || Number.isNaN(value.getTime())) return undefined;
   return value.toISOString();
 }
