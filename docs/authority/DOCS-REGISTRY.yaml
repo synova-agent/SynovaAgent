@@ -1449,3 +1449,13 @@ documents:
     status: active
     owner: P4
     note: "#1125：scripts/workflow/check-dev-doc-write-set.sh（变更集三处补 D ＋ 带状态判：声明删除 ⇔ D、声明修改仍须 A/C/M/R、git 不可用 exit 2）与 tests/control-tower/check-dev-doc-write-set.test.sh（真 git 夹具含改坏即红）受保护路径豁免；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+
+
+
+  # ---- P4 2026-10-28：#1126 WIRING-REGISTRY 裸标量修复豁免登记（DOC-1126，按已裁 R1：id=DOC-<Issue#>）----
+  - id: DOC-1126
+    type: decision
+    path: gate-exemptions/2026-10-28-1126-wiring-yaml.md
+    status: active
+    owner: P4
+    note: "#1126（WIRING 登记表恢复可用）：tool.reportMirrorPushes 的 defined_at 加双引号（裸 path:line 含 ':' 被严格子集解析器 fail-closed 判非法 ⇒ 整器 E_YAML rc=2）＋ 补 R3 必填 owner: CTO（依据 DOC-0295 同属 #1034）；防回退并入既有配对测试（真件钉死两断言 ＋ bare-scalar/missing-owner 两条改坏反例）＋ 实测常量同步；受保护路径豁免三条，含自覆盖行与 DOCS-REGISTRY 自登记行。"

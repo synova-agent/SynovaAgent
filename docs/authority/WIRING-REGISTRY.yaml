@@ -134,7 +134,8 @@ entries:
     consumer: null
     test: tests/control-tower/report-mirror-pushes.test.sh
     status: declared-only
-    defined_at: scripts/control-tower/report-mirror-pushes.sh:15
+    owner: CTO
+    defined_at: "scripts/control-tower/report-mirror-pushes.sh:15"
     notes: "#1034 DeployKey 旁路只读取证工具（运维/审计人工调用）"
   - capability: control-tower.acceptanceMatrix
     defined_at: "scripts/control-tower/check-acceptance-matrix.py:1"
