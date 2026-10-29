@@ -263,7 +263,7 @@ entries:
   - capability: permission.knowledgeGrantsBridge
     defined_at: "src/middleware/auth.ts:373"
     provider: "src/middleware/auth.ts:373"
-    consumer: "src/routes/knowledge-ask.ts:137"
+    consumer: "src/routes/knowledge-ask.ts:143"
     test: "tests/routes/knowledge-ask.test.ts:154"
     status: wired
     owner: P2

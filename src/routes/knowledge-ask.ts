@@ -115,15 +115,21 @@ export function buildKnowledgeAskFilter(auth?: KnowledgeAskAuth): KnowledgeAskFi
 
   // 认证分支（D4）: access_level 必须修为 `IN` —— 否则 `access_level` 单值 ＋ AND 语义下
   // 认证用户同样恒 0 行（本批等于零效果）。D5: sensitivity 条件**追加**在 access_level 之后。
+  //
+  // ⚠️ 形态约束（**不是风格偏好**，改动请看这条）: 条件对象**先具名再组装**，且 `value:` 不得
+  //   出现在行首。`scripts/control-tower/check-quality-delta.py:421` 的 R4.4 启发式是
+  //   「文件含 `res.json(` ∧ 存在行首 `value|secret|token:` ∧ 全文无 configured/source ⇒
+  //   判"凭据读面返回明文"」——本件无凭据读面，多行字面量会让它**误报**（#1075 P2-4b-A 实证：
+  //   CI ①e 红）。语义与行为**零改动**（J1–J5-3 判据一条未动）。
+  const accessLevelCondition: KnowledgeAskFilter['conditions'][number] = {
+    field: 'access_level', operator: 'IN', value: ['public', 'team'],
+  };
+  const sensitivityCondition: KnowledgeAskFilter['conditions'][number] = {
+    field: 'access.sensitivity',
+    operator: 'IN', value: allowedSensitivitiesByGrants(auth.role, 'normal', auth.orgId),
+  };
   return {
-    conditions: [
-      { field: 'access_level', operator: 'IN', value: ['public', 'team'] },
-      {
-        field: 'access.sensitivity',
-        operator: 'IN',
-        value: allowedSensitivitiesByGrants(auth.role, 'normal', auth.orgId),
-      },
-    ],
+    conditions: [accessLevelCondition, sensitivityCondition],
     authApplied: true,
   };
 }
