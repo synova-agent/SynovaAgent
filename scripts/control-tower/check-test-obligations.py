@@ -10,7 +10,8 @@
 # 契约（铁律 47）:
 #   @input   git 仓库（--root，默认 `.`）＋ 三件显式权威:
 #              --manifest <path>  非平凡台账（默认 tests/contract/triviality-manifest.yaml）
-#              --base <ref>       变更基准（默认链 $SYNO_TEST_OBLIGATIONS_BASE → gitea/local-main → local-main）
+#              --base <ref>       变更基准（默认链 $SYNO_TEST_OBLIGATIONS_BASE → gitea/$TRUNK → $TRUNK；
+#                                 TRUNK=$SYNO_TRUNK_REF，缺省 main）
 #              --json / --selfcheck / --write-baseline
 #   @output  人读: 汇总行 `modules=<n> legacy=<n> untriaged=<n>` ＋ 逐条 `❌ <rule> <target>: <msg>`
 #              ＋ 末行 `TEST-OBLIGATIONS: PASS|SKIP|VIOLATIONS <n>|ERROR <code>`
@@ -89,6 +90,8 @@ except (AttributeError, ValueError):
     pass
 
 COMPONENT = "check-test-obligations"
+# trunk 名唯一来源（#1117 §6.1）：改 trunk 名只改本契约，不在各处自造字面
+TRUNK = os.environ.get("SYNO_TRUNK_REF", "").strip() or "main"
 DEFAULT_MANIFEST = "tests/contract/triviality-manifest.yaml"
 SCHEMA_VERSION = 1
 SURFACES = ("protocol", "model", "human-visible", "none")
@@ -161,13 +164,13 @@ def git_ok(root: str, *args: str) -> Tuple[int, str, str]:
 
 
 def resolve_base(root: str, explicit: Optional[str]) -> str:
-    """--base 优先；否则链 $SYNO_TEST_OBLIGATIONS_BASE → gitea/local-main → local-main。"""
+    """--base 优先；否则链 $SYNO_TEST_OBLIGATIONS_BASE → gitea/$TRUNK → $TRUNK（TRUNK=$SYNO_TRUNK_REF，缺省 main）。"""
     if explicit:
         cands = [explicit]
         desc = f"显式 --base {explicit}"
     else:
-        cands = [os.environ.get("SYNO_TEST_OBLIGATIONS_BASE", ""), "gitea/local-main", "local-main"]
-        desc = "$SYNO_TEST_OBLIGATIONS_BASE → gitea/local-main → local-main"
+        cands = [os.environ.get("SYNO_TEST_OBLIGATIONS_BASE", ""), "gitea/" + TRUNK, TRUNK]
+        desc = "$SYNO_TEST_OBLIGATIONS_BASE → gitea/%s → %s" % (TRUNK, TRUNK)
     for cand in cands:
         cand = (cand or "").strip()
         if not cand:
@@ -985,7 +988,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="测试义务闸（#913 · Q-10 · 只判变更集 ＋ 清单级棘轮）")
     ap.add_argument("--root", default=".", help="仓库根（默认 .；显式权威）")
     ap.add_argument("--base", default=None,
-                    help="base ref（默认 $SYNO_TEST_OBLIGATIONS_BASE → gitea/local-main → local-main）")
+                    help="base ref（默认 $SYNO_TEST_OBLIGATIONS_BASE → gitea/%s → %s）" % (TRUNK, TRUNK))
     ap.add_argument("--manifest", default=None, help=f"非平凡台账（默认 {DEFAULT_MANIFEST}）")
     ap.add_argument("--json", action="store_true", help="stdout 仅输出一份 JSON")
     ap.add_argument("--selfcheck", action="store_true", help="判别力自检（s1..s9；信号量==0 ⇒ exit 2）")

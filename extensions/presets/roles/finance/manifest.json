@@ -1,6 +1,6 @@
 {
-  "$schema": "../../schema/role-pack-v2.schema.json",
-  "schemaVersion": 2,
+  "$schema": "../../schema/role-pack-v3.schema.json",
+  "schemaVersion": 3,
   "name": "role-finance",
   "version": "2.0.0",
   "type": "role-preset",

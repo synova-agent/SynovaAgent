@@ -462,7 +462,7 @@ async function main(): Promise<number> {
       fail(`${c.file}: Schema 层仍含评估属性 [${leaked.join(', ')}]（本卡口径：已搬到扩展层）`);
     }
   }
-  if (FAILURES.length === 0) ok('Schema 层零评估属性（已回退 local-main 原样）');
+  if (FAILURES.length === 0) ok('Schema 层零评估属性（已回退 trunk 原样）');
 
   // ═══ ② EXTENSION [L1] ═══
   section('② EXTENSION [L1] — 扩展面声明：轴合法 / 无悬空 / 10 属性 × 8 节点全覆盖');

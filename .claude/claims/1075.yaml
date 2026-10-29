@@ -1,7 +1,7 @@
 # .claude/claims/1075.yaml — #1075 岗位包 v2（批次一 P1）写集声明
 # 依据：规格 .handbook/派单件/2026-10-28-规格-1075-岗位包v2-schema与生成器对齐.md §2.3（16 项并集）
 #      ＋ 声明载体自身 ＋ `.claude/plan.json`（门禁触发配套件：组 4a「分阶段接线」声明，
-#      phase step=3／wiring deferred／只覆盖 src/init/role-pack-schema.ts —— L1 2026-10-28 裁定）。
+#      phase step=3／wiring deferred／只覆盖 src/init/role-pack-schema.ts —— CTO 2026-10-28 事后追认（#1110 评论 8104））。
 #      ＋ 本 PR 的独立复核回执（check-merge-conditions ③ 要求回执在 head 树；
 #      文件名 <PR>.<12hex>.json 在 PR 号产生后预列，回执 JSON 内 patch_fingerprint 为真指纹。
 #      P1-b 的对应回执由 P1-b 分支上的一次 claim 预列提交补入，本文件在该分支被同一 claim 覆盖）。
@@ -12,12 +12,32 @@
 #        ∪ 1085 回执 ∪ 1086 回执；P1-b 分支只多最后一次「回执预列」提交）。
 #      ＋ #1104（= #1075 / P1-c，2026-10-28）追加 2 项（本文件 23 行）：
 #        · `tests/extensions/knowledge-scope-wiring.test.ts` —— 既有测试夹具依赖「repoRoot 回落 cwd」的
-#          旧行为；#1104 改为由内容根派生 ⇒ 该件 1 failed/22 passed。**L1 2026-10-28 现场批准**
+#          旧行为；#1104 改为由内容根派生 ⇒ 该件 1 failed/22 passed。**CTO 2026-10-28 事后追认（#1110 评论 8104）**
 #          写集第 6 件（仅夹具仓库形状化，断言零改动）；不修则 CI 恒红、本批不可合。
 #        · `docs/synova/reviews/1105.110511051105.json` —— PR #1105 的队外独立复核回执
 #          （命名循 1085/1086 先例：预列 12 位 [0-9a-f] 占位名，回执内 patch_fingerprint 为真指纹；
-#          L1 批准的第 7 项＝第 6 件产品文件之外的回执落库）。
+#          CTO 2026-10-28 事后追认的第 7 项（#1110 评论 8104）＝第 6 件产品文件之外的回执落库）。
 # 说明：`docs/authority/WIRING-REGISTRY.yaml` 为**纯追加 1 行**（G1 R1.1；不改既有条目，§10-L11）。
+#      ＋ P2-1 追加 1 条（content.rolePackApproval）。
+#      ⚠️ 记录更正（2026-10-29）：`entries[11]`（#1034 / tool.reportMirrorPushes）的预存缺陷（defined_at 裸标量＋缺 owner）
+#        **本批未修**（为保 WIRING 纯追加已回滚）⇒ 该缺陷留 #1034 独立 PR；wiring 校验以行级块校验替代（§10-L11）。
+#      ＋ #1075 P2-1（批二·审批门，2026-10-28）依据：规格 .handbook/派单件/2026-10-28-规格-1075-P2-审批门.md §2.4（14 条产品路径）
+#        ＋ CTO 2026-10-28 事后追认 2 件配套件（#1110 评论 8104）：① tests/contract/triviality-manifest.yaml（CI ①g O2 triage 行）
+#        ② scripts/control-tower/probe-knowledge-scope.ts（V6(ii) 判据仪器夹具适配 P2-1，断言不变）；
+#        上述 16 条中 11 条已由既有行覆盖（union 语义）⇒ 本次新增 5 条（v3 schema／.gitattributes／
+#        role-pack-approval.ts＋其测试／probe-knowledge-scope.ts），最终 16 条逐条见下方 writeset。
+#      ＋ #1075 P2-2（批三·人设与上下文，2026-10-29，单 PR，叠栈于 P2-1 head bca95ccbe，rebase 到 main（P2-1 已合 `ce59c0a3d`）后开 PR）
+#        依据：规格 .handbook/派单件/2026-10-28-规格-1075-P2-2-人设与上下文.md §2.4（7 件：3 修改＋4 新建）＋ 登记件自身
+#        （本文件：writeset 追加 7 条 ∪ 既有 union；WIRING-REGISTRY.yaml 同文件纯追加 ⇒ 已在既有 writeset 内、不重复列）。
+#        本批产品/测试件写集零交集（CTO 2026-10-29 收件复核），逐条见下方 writeset 末尾 7 行。
+#      ＋ #1075 P2-3（批四·输出标准消费，2026-10-29，单 PR，锚 main `26f06d664`）
+#        依据：规格 .handbook/派单件/2026-10-29-规格-1075-P2-3-输出标准.md §2.4（3 新建＋9 修改＋2 登记 ＝ 14 条目）
+#        ＋ 登记件自身（本文件：writeset 追加 7 条 ∪ 既有 union；`docs/authority/WIRING-REGISTRY.yaml` 同文件纯追加
+#        ⇒ 已在既有 writeset 内、不重复列）。CTO 2026-10-29 已批两件（本规格即批准书）：
+#        ① 三包 additive `machine` ⇒ 同批重算 `FACTORY_APPROVALS` 三 hash（§Ø.4 第一项）；
+#        ② `src/init/role-pack-persona.ts` 仅把既有私有 `readPieceBytesOnce` 加 `export`（判定零改动，§Ø.4 第二项）。
+#        14 条目中 7 条已被既有行覆盖（conversations.ts／role-pack-persona.ts／role-pack-approval.ts ＋其测试／
+#        triviality-manifest.yaml／WIRING-REGISTRY.yaml／本文件）⇒ 本次新增 7 条，逐条见下方 writeset 末尾 7 行。
 writeset:
   - extensions/presets/schema/role-pack-v2.schema.json
   - src/init/role-pack-schema.ts
@@ -42,6 +62,28 @@ writeset:
   - docs/synova/reviews/1086.108610861086.json
   - tests/extensions/knowledge-scope-wiring.test.ts
   - docs/synova/reviews/1105.110511051105.json
+  - extensions/presets/schema/role-pack-v3.schema.json
+  - .gitattributes
+  - src/init/role-pack-approval.ts
+  - tests/init/role-pack-approval.test.ts
+  - scripts/control-tower/probe-knowledge-scope.ts
+  - memory/notes/implemented/2026-10-28-1075-p2-approval-gate-write-set.md
+  - gate-exemptions/2026-10-28-1075-p2-approval-gate.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - src/init/role-pack-persona.ts
+  - src/agent/conversation-engine.ts
+  - src/routes/conversations.ts
+  - src/store/session-store.ts
+  - tests/init/role-pack-persona.test.ts
+  - tests/agent/conversation-engine-role.test.ts
+  - tests/routes/conversations-role.test.ts
+  - src/init/role-pack-output-standard.ts
+  - src/output/contract-validator.ts
+  - extensions/presets/roles/finance/acceptance-criteria.yaml
+  - extensions/presets/roles/hr/acceptance-criteria.yaml
+  - extensions/presets/roles/sales/acceptance-criteria.yaml
+  - tests/init/role-pack-output-standard.test.ts
+  - tests/routes/conversations-role-output.test.ts
 done:
   - verify: node node_modules/.bin/vitest run tests/init/role-pack-schema.test.ts
   - verify: node node_modules/.bin/vitest run tests/init/preset-loader.test.ts
@@ -50,4 +92,8 @@ done:
   - verify: node node_modules/.bin/vitest run tests/onboarding/config-pack-generator.test.ts
   - verify: DEV_MODE=true node node_modules/.bin/vitest run tests/extensions/onboarding-mount.test.ts
   - verify: node node_modules/.bin/vitest run tests/extensions/knowledge-scope-wiring.test.ts
-note: "岗位包 v2（#1075 批一）：P1-a 校验面（随仓 schema＋zod 进 loader＋refs 双向对账＋出厂三包迁 v2，J1/J2/J3）＋ P1-b 生成面（生成器 6 件＋scopes: 键名修复＋缺项拒绝写＋真 HTTP J4/J5），两 PR 串行。plan.json phase3 = 组4a 分阶段接线声明（gate-mandated，只覆盖 src/init/role-pack-schema.ts）。#1104（P1-c，验收新增小修）：repoRoot 由内容根派生（不依赖 cwd）＋ROLE_PACK_DIR_UNREADABLE 补 log（T4）＋seed scope id 执行体（ROLE_SEED_BAD_SCOPE_ID）；连带修 knowledge-scope-wiring 夹具为仓库形状（L1 批准第 6 件，断言零改动）。"
+  - verify: node node_modules/.bin/vitest run tests/init/role-pack-persona.test.ts
+  - verify: node node_modules/.bin/vitest run tests/agent/conversation-engine-role.test.ts
+  - verify: node node_modules/.bin/vitest run tests/routes/conversations-role.test.ts
+  - verify: node node_modules/.bin/vitest run tests/routes/conversations.test.ts tests/integration/production-entry-conversation.integration.test.ts
+note: "岗位包 v2（#1075 批一）：P1-a 校验面（随仓 schema＋zod 进 loader＋refs 双向对账＋出厂三包迁 v2，J1/J2/J3）＋ P1-b 生成面（生成器 6 件＋scopes: 键名修复＋缺项拒绝写＋真 HTTP J4/J5），两 PR 串行。plan.json phase3 = 组4a 分阶段接线声明（gate-mandated，只覆盖 src/init/role-pack-schema.ts）。#1104（P1-c，验收新增小修）：repoRoot 由内容根派生（不依赖 cwd）＋ROLE_PACK_DIR_UNREADABLE 补 log（T4）＋seed scope id 执行体（ROLE_SEED_BAD_SCOPE_ID）；连带修 knowledge-scope-wiring 夹具为仓库形状（L1 批准第 6 件，断言零改动）。#1075 P2-1（批二·审批门，2026-10-28）L1 批准 2 件配套件：① tests/contract/triviality-manifest.yaml 的 triage 行（CI ①g O2）② scripts/control-tower/probe-knowledge-scope.ts 的 V6(ii) 夹具适配 P2-1（判据仪器夹具，断言不变）。#1075 P2-2（批三·人设与上下文，2026-10-29，叠栈基线 bca95ccbe）：J1–J12（三测试件 ≥34 用例；本层 7 件为 role-pack-persona 解析器＋引擎/路由/存储 additive 接线）；无包会话提示词逐字不变（J3 基准 976ca690…fd33／LEN=1462）；未审批/撤销一律不注入。"

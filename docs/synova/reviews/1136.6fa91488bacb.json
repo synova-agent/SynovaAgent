@@ -1,0 +1,87 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1136,
+  "patch_fingerprint": "sha256:6fa91488bacbadb1613af1bb18b24e8566a767ec1b70727f56c98bcc0c8c684c",
+  "author": "squad-d0af89a86 (rebase by CTO)",
+  "reviewer": "k3-audit fresh-session (glm-5.3, Synova-k3独立审计, 2026-10-29)",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "A1",
+      "cmd": "GET /api/v1/repos/synova-agent/SynovaAgent/commits/2117c07e5/status",
+      "evidence": "state=success total_count=2 (push+pull_request) pending=0",
+      "result": "pass"
+    },
+    {
+      "id": "A2",
+      "cmd": "vitest run tests/init/role-pack-persona.test.ts tests/agent/conversation-engine-role.test.ts tests/routes/conversations-role.test.ts",
+      "evidence": "35+14+13=62 passed, 0 failed",
+      "result": "pass"
+    },
+    {
+      "id": "A3",
+      "cmd": "base 树 b8edf9860 独立产出 system prompt 哈希（tsx 临时探针，非实现函数）",
+      "evidence": "LEN=1462 SHA256=976ca690d56eeb91ccc24b9d81c1b86b322217cacb4006e9c3f66c95e42dfd33 与 J3 基准一致",
+      "result": "pass"
+    },
+    {
+      "id": "A4",
+      "cmd": "J10 改坏必红：①删除 buildRoleLayer 注入 ②serialize() 去 rolePackId，恢复后复跑",
+      "evidence": "①J1a/J1b 9 failed ②J7a 2 failed；git checkout 恢复后 14/14 复绿",
+      "result": "pass"
+    },
+    {
+      "id": "A5",
+      "cmd": "tsx scripts/control-tower/probe-knowledge-scope.ts --all",
+      "evidence": "COVERAGE: PASS=13 NOT_IMPLEMENTED=3 UNVERIFIED=3, EXIT=2（与基线一致）",
+      "result": "pass"
+    },
+    {
+      "id": "B1-B4",
+      "cmd": "vitest run tests/routes/conversations-role.test.ts（真实路由）",
+      "evidence": "J5-3 无Bearer⇒403；J5-1/J5-2 admin/manager/ga=200、staff/liaison=403；J6-1 换岗⇒409 IMMUTABLE；J8-1 撤销⇒200+x-synova-role-pack:degraded 不注入",
+      "result": "pass"
+    },
+    {
+      "id": "C1-C3",
+      "cmd": "vitest run tests/init/role-pack-persona.test.ts",
+      "evidence": "C1 哨兵串 SENTINEL_BODY_9f3 不进输出(只注入指针)；C2 J12/J9 64KiB 闸+4000/32/80/200 边界不截断；C3 J11 第7件/符号链接⇒E_ROLE_PACK_PERSONA_UNREADABLE",
+      "result": "pass"
+    },
+    {
+      "id": "D1-D2",
+      "cmd": "git diff --name-only ce59c0a3d..HEAD（merge-base=ce59c0a3d）",
+      "evidence": "恰10件且逐条归类与§2-D1一致；无 src/middleware/**、无 P2-1 两件改动（grep CLEAN）",
+      "result": "pass"
+    },
+    {
+      "id": "E1-E2",
+      "cmd": "grep -n 'L1 2026|L1 复核|L1 裁定' .claude/claims/1075.yaml；git log ce59c0a3d..HEAD",
+      "evidence": "L1 grep 空；entries[11] 更正表述与 WIRING-REGISTRY.yaml:137 裸标量+缺owner 实物一致；head 为 CTO 代做 rebase、实现来自 d0af89a86（commit 注明）",
+      "result": "pass"
+    },
+    {
+      "id": "F1-F4",
+      "cmd": "bash scripts/control-tower/check-merge-conditions.sh --pr 1136 --base main",
+      "evidence": "① ok；② 在飞 PR 仅 WIRING-REGISTRY 共享追加(须串行合，记录在案)；③ 本回执落库后 ok；④ S1=main tip 非 head 祖先(委托后 main 前进8 commits，须 rebase 后合，非 PR 内容缺陷)",
+      "result": "pass"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "info",
+      "note": "④ 串行条件当前为 no：委托时点后 gitea/main 前进至 338ccd962，PR head 落后 8 commits，合并前须 rebase；属流程性条件，非交付缺陷。"
+    },
+    {
+      "severity": "info",
+      "note": "② 与 #1132/#1116 在 WIRING-REGISTRY.yaml 存在硬重叠告警（对方非纯追加），须按串行纪律后合并并复核追加块仍完整。"
+    },
+    {
+      "severity": "info",
+      "note": "triviality 台账 +1 行为 CTO 2026-10-29 事后追认（非实施时批准），已核 diff 恰 +1 行且归类正确。"
+    }
+  ],
+  "issued_at": "2026-10-29T10:55:00+08:00",
+  "tool": "k3-independent-audit@v1（委托 2026-10-29-审计委托-1136-P2-2 §0-§6 全流程）"
+}

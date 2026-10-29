@@ -1,0 +1,22 @@
+# .claude/claims/1126.yaml — WIRING-REGISTRY 裸标量加引号 ＋ 补 owner（--check-registry 恢复可用）
+# #CRITERIA: D ｜ 架构层: 不属五层业务（治理脚本）
+# 任务唯一编号 = Issue #1126 ｜ 分支 fix/1126-wiring-yaml ｜ 基线 gitea/main=94ed76b2d ｜ PR base=main
+# 声明载体 = 本件（writeset + done 两字段制）；Q1/Q2/Q3 的可读说明见
+# .claude/task-briefs/2026-10-28-1126-wiring-yaml.md（同批）。
+# 缺陷：--check-registry 真件 EXIT=2（line 137 裸标量含 ':' ⇒ 严格子集解析器 fail-closed）；
+#   同条缺 owner（R3 required）⇒ 归属依据 DOCS-REGISTRY 的 DOC-0295 同属 #1034 ⇒ owner: CTO。
+# 语义零变更：只补引号与必填字段，不动任何条目口径/归属/状态。
+writeset:
+  - docs/authority/WIRING-REGISTRY.yaml
+  - tests/control-tower/quality-baseline.test.sh
+  - gate-exemptions/2026-10-28-1126-wiring-yaml.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - .claude/task-briefs/2026-10-28-1126-wiring-yaml.md
+  - .claude/claims/1126.yaml
+  - memory/notes/proposed/2026-10-28-1126-wiring-yaml.md
+done:
+  - verify: python3 scripts/control-tower/quality-baseline.py --check-registry docs/authority/WIRING-REGISTRY.yaml
+  - verify: bash tests/control-tower/quality-baseline.test.sh
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main --root .
+  - verify: grep -c 'DOC-1126' docs/authority/DOCS-REGISTRY.yaml
+note: "#1126：WIRING-REGISTRY 的 tool.reportMirrorPushes 条目两处数据修复——defined_at 加双引号（裸 path:line 含 ':' 被严格子集解析器判非法 ⇒ 整器 rc=2）＋ 补 R3 必填 owner: CTO（依据 DOC-0295 同属 #1034）。防回退并入既有配对测试（真件钉死两断言 ＋ bare-scalar/missing-owner 两条改坏反例），并同步既有实测常量（rows 11→22、真树 orphans 分母 35→40，判据一字不动）。不改校验器判据、不改注册表语义。"

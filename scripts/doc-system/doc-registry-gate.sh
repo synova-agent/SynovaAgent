@@ -10,8 +10,8 @@
 #               判据: 未在本 PR 里的 untracked 文件不得阻断）
 #            ② staged-new（`git diff --cached --diff-filter=A`）
 #            ③ **base..HEAD 新增**（CT-D2 新增；`git diff --diff-filter=A <merge-base>..HEAD`；
-#               2026-10-12 起 base 链前置 gitea/local-main → local-main，origin/local-main
-#               为陈旧引用不作首选 —— 同 check-pr-budget.sh bug 1）
+#               base 链前置 gitea 侧真源：gitea/$TRUNK → 本地 $TRUNK；origin 侧引用
+#               可能陈旧不作首选 —— 同 check-pr-budget.sh bug 1；$TRUNK=SYNO_TRUNK_REF 缺省 main）
 #          非 git（测试 fixture）→ 全量扫描模式
 #   输出:  每文件 ✅/❌ + 扫描源行 + 汇总（**必打印检查数 N**）；
 #          **唯一性（#942）**：`- id: DOC-<n>` 重号 → 逐条点名 `❌ 重号: DOC-<n>（出现 k 次）`，并 exit 1
@@ -39,9 +39,9 @@
 #     tracked+committed ⇒ ①② **皆空** ⇒ 汇总「检查 0 个文档」⇒ FAIL=0 ⇒ 放行。
 #     即：门禁只在**本地未提交态**有效，在**提交态从未真正行使**（fail-open）。
 #   修法: 增源 ③ = 本分支 base..HEAD **新增**的文档；base 解析链
-#     **origin/local-main → origin/main → main → origin/HEAD**（2026-10-11 改；
-#     `origin/local-main` 前置的理由与本仓 vitest 步同口径 —— 集成分支已是 local-main，
-#     而 `origin/main` 停在 5a6591c4a ⇒ 不前置会把 73+ 个他线已合并提交算进本 PR）。
+#     **gitea/$TRUNK → $TRUNK → origin/$TRUNK → origin/main → main → origin/HEAD**
+#     （2026-10-29 主树迁 main：$TRUNK = `${SYNO_TRUNK_REF:-main}`；gitea 侧为真源，
+#      `origin/main` 停在 5a6591c4a ⇒ 不前置会把 73+ 个他线已合并提交算进本 PR）。
 #     ⚠️ 不做"全仓 tracked 全量登记"：实测全仓 tracked .md/.yaml 过现有排除后仍有
 #     **872 件候选、其中 751 件未登记**（台账仅 39 条、面向权威文档）⇒ 全量口径会
 #     把每个 PR 都判红。故范围严格限定为"**本分支新增**"（与门禁本来的语义一致）。
@@ -155,23 +155,23 @@ check_file() { # $1 = 相对路径；$2 = 可选 "warn"（仅警告不阻断，�
 
 if git -c safe.directory="$ROOT" -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
   # ── CT-D2 源③：base 解析链 + merge-base..HEAD 新增文档 ──
-  # 🔴 2026-10-11 修 base 口径（创始人裁定；同病第三处）:
-  #   集成分支已从 main 改为 **local-main**（`docs/synova/coordination/MULTI-MACHINE-PR-WORKFLOW.md`），
-  #   而 GitHub `origin/main` **停于 5a6591c4a**（且 origin 账号已 suspended）。
-  #   实测（CI 等效仓复现）: base=origin/main 时 merge-base 亦为 5a6591c4a ⇒ 源③ range
-  #   覆盖 `5a6591c4a..HEAD` 的全部 **73+** 提交（**不只本 PR 改动**）⇒ 把他人已合并提交里
-  #   新增的 .md/.yaml 一并索登记 ⇒ 每张 PR 恒红。
-  #   实测（同仓同 HEAD d0775ab14）: 改 base=origin/local-main 后 range 收窄至本支真实改动。
+  # 🔴 2026-10-29 修 base 口径（#1117 主树迁 main；此前两次修订的病灶保留为历史依据）:
+  #   ① 2026-10-11（创始人裁定；同病第三处）: 旧实现以 origin/main 作基，而 GitHub
+  #     `origin/main` **停于 5a6591c4a**（且 origin 账号已 suspended）⇒ 源③ range 覆盖
+  #     `5a6591c4a..HEAD` 的全部 **73+** 提交（**不只本 PR 改动**）⇒ 把他人已合并提交里
+  #     新增的 .md/.yaml 一并索登记 ⇒ 每张 PR 恒红 ⇒ 故 base 必须前置真源。
+  #   ② 2026-10-12（CTO P0 裁定，同 check-pr-budget.sh bug 1）: origin 侧引用同样陈旧
+  #     （实测停于 28ae513dc，落后 gitea 侧 111 提交）⇒ 取它作 base ⇒ 源③ range 覆盖
+  #     他人/历史的已提交文档（实例: 报「未登记: docs/synova/coordination/tools/准度计量口径-v1.md」，
+  #     实为 a4cc8fd5f 已提交件）⇒ 修法 = gitea 侧真源前置，范围严格限定"本次 PR 的 diff"。
+  #   ③ 本批: trunk 名由 `SYNO_TRUNK_REF`（缺省 `main`）单源给出；链 =
+  #     gitea/$TRUNK → 本地 $TRUNK → origin/$TRUNK → origin/main → main → origin/HEAD。
   #   ⚠️ 单改 base **不足以**转绿（内容面 yaml 仍需豁免，见下方 EXCLUDE），两处须同时生效。
-  #   口径对齐: `local-gates.yml` 的 vitest 步早已改用 `CHANGED_BASE=origin/local-main`（同理由）。
-  BASE_REF=""
-  # 🔴 2026-10-12 修基线序（CTO P0 裁定，同 check-pr-budget.sh bug 1）:
-  #   `origin/local-main` 是 GitHub 侧陈旧引用（实测停于 28ae513dc，落后 gitea 侧 111 提交）
-  #   ⇒ 取它作 base ⇒ 源③ range 覆盖他人/历史的已提交文档（实例: 报「未登记:
-  #   docs/synova/coordination/tools/准度计量口径-v1.md」，实为 a4cc8fd5f 已提交件）。
-  #   修法: **gitea/local-main → local-main 前置**；范围严格限定"本次 PR 的 diff"。
+  #   口径对齐: `local-gates.yml` 的 ①d 步由 resolve-ci-base.sh 统一解析（同理由）。
   #   判据: 未在本 PR 里的 untracked 文件不得阻断（untracked 已降为警告，见下）。
-  for _cand in gitea/local-main local-main origin/local-main origin/main main origin/HEAD; do
+  TRUNK="${SYNO_TRUNK_REF:-main}"
+  BASE_REF=""
+  for _cand in "gitea/$TRUNK" "$TRUNK" "origin/$TRUNK" origin/main main origin/HEAD; do
     if git -c safe.directory="$ROOT" -C "$ROOT" rev-parse --verify --quiet "$_cand" >/dev/null 2>&1; then BASE_REF="$_cand"; break; fi
   done
   MERGE_BASE=""
@@ -182,7 +182,7 @@ if git -c safe.directory="$ROOT" -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1;
   elif [ -n "$BASE_REF" ]; then
     echo "  ⚠️ 降级: merge-base($BASE_REF, HEAD) 为空 → 源③（base..HEAD 新增）跳过（显式留痕，不静默）"
   else
-    echo "  ⚠️ 降级: base 全链不可解析（尝试过 gitea/local-main / local-main / origin/local-main / origin/main / main / origin/HEAD）→ 源③（base..HEAD 新增）跳过（显式留痕，不静默；请先 git fetch --all）"
+    echo "  ⚠️ 降级: base 全链不可解析（尝试过 gitea/$TRUNK / $TRUNK / origin/$TRUNK / origin/main / main / origin/HEAD）→ 源③（base..HEAD 新增）跳过（显式留痕，不静默；请先 git fetch --all）"
   fi
   echo "  ℹ️ 扫描源: ① untracked（仅警告，不阻断）② staged-new ③ base..HEAD 新增（base=${BASE_REF:-不可解析} merge-base=${MERGE_BASE:0:8}）"
   # 🔴 2026-10-12（CTO P0 裁定 bug 2）: 源① untracked 降为**仅警告**——

@@ -128,6 +128,14 @@ export interface ConversationState {
   phase: number;
   messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
   startedAt: string;
+  /**
+   * #1075 P2-2（additive，可选）：会话**绑定的岗位 id**（`EngineState.rolePackId` 的落库形态）。
+   *
+   * 口径：只存"岗位归属"，**人设文本不落库** —— 每轮由
+   * `src/init/role-pack-persona.ts` 的 `loadRolePackPersona()` 从磁盘重解析（审批态/内容变更即时生效）。
+   * 无岗位绑定的既有会话：该键**缺省**（不是 `null`）⇒ 读路径逐字不变。
+   */
+  rolePackId?: string;
 }
 
 // ═══ D500: 事件溯源类型 ═══
