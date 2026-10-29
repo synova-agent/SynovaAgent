@@ -1,0 +1,100 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1161,
+  "patch_fingerprint": "sha256:cc0620a26085f66897a9dba4e1d86da45a252a2d5de98a1b697f97ae07f92a37",
+  "author": "win-push（squad-1075 <squad-1075@synova.local> 推送；PR #1161）",
+  "reviewer": "review-1161（DSH 子会话，fresh 零上下文，未参与实现）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "①-变更集形态（14＝11 声明＋3 门禁强制）＋只读面零改",
+      "cmd": "git diff --name-only gitea/main...HEAD | wc -l; git diff --numstat gitea/main...HEAD; git diff --name-only gitea/main...HEAD | grep -E 'src/(middleware|routes)/|preset-loader|knowledge-ask|^scripts/'",
+      "result": "pass",
+      "evidence": "14 件 / 1538 insertions(+), 43 deletions(-)。11 声明件＝.claude/claims/1075.yaml、docs/authority/WIRING-REGISTRY.yaml、src/agent/{builtin-tools,conversation-engine,tools}.ts、src/init/role-pack-knowledge-filter.ts、src/l4/knowledge-store.ts、tests/agent/{knowledge-search-tool,tool-permissions-role-pack}.test.ts、tests/contract/triviality-manifest.yaml、tests/init/role-pack-knowledge-filter.test.ts；3 门禁强制件＝docs/authority/DOCS-REGISTRY.yaml（+8 行＝单条 DOC-1149）、gate-exemptions/2026-10-30-1075-p2-4b-b.md（新文件 6 行）、scripts/control-tower/tool-signal-baseline.txt（numstat 0/2＝纯删 2 行）。只读面 grep 仅命中 scripts/control-tower/tool-signal-baseline.txt（＝3 门禁件之一）；src/middleware/**、src/routes/**、preset-loader、knowledge-ask、src/init/role-pack-{approval,output-standard,permissions,persona,schema}.ts 命中 0。"
+    },
+    {
+      "id": "②-测试/类型/架构三关",
+      "cmd": "npx vitest run tests/init/role-pack-knowledge-filter.test.ts tests/agent/knowledge-search-tool.test.ts tests/agent/tool-permissions-role-pack.test.ts; npx tsc --noEmit; bash scripts/check-architecture.sh",
+      "result": "pass",
+      "evidence": "vitest: Test Files 3 passed (3) | Tests 39 passed (39)（12 filter ＋ 12 search-tool ＋ 15 P2-4a）| tsc --noEmit ⇒ TSC_EXIT=0（无输出）| check-architecture.sh ⇒ ARCH_EXIT=0，末行『架构检查: 全部通过 ✅』（2 条既有 warning：GraphStore 类型镜像、15 处 queryNodes graph 参数待审，皆非本批引入）"
+    },
+    {
+      "id": "③-P2-4a 断言未弱化（改期望≠放宽）",
+      "cmd": "git diff gitea/main...HEAD -- tests/agent/tool-permissions-role-pack.test.ts; python3 计数脚本（新增 expect 行 / 所属 it 块）; git show gitea/main:<file> | grep -c 'not.toContain'; grep -n 'allToolNames()' -A3 src/agent/tools.ts",
+      "result": "pass",
+      "evidence": "改动＝11 条 expect 行、落在 8 个 it() 块（机械计数），全部形如 [PROBE_ALLOWED,'show_diagnosis_progress'].sort() → [PROBE_ALLOWED,'search_knowledge','show_diagnosis_progress'].sort() 与 [] → ['search_knowledge']，即『allowlist ∪ {search_knowledge}』。not.toContain 断言数 base 9 → head 13（只增未减，PROBE_DENIED/list_sessions/analysis.cost-attribution 等拒绝断言原样在）。allToolNames(){return [...this.tools.keys()]} 未改；search_knowledge 只出现于 builtin-tools.ts:45 的工厂（非 register），B-J3-1/B-J6-2 直接断言 allToolNames() 长度为 0 且不含 search_knowledge。"
+    },
+    {
+      "id": "④-B-J1 条件序 ＋ 真 SQLite 只返 scope 内",
+      "cmd": "sed -n '253,345p' tests/init/role-pack-knowledge-filter.test.ts; grep -n 'makeStore' -A3 tests/init/role-pack-knowledge-filter.test.ts",
+      "result": "pass",
+      "evidence": "编译序断言：conditions[0]={field:'access.sensitivity',operator:'IN',value:['normal']}、[1]={field:'pkb_domain',operator:'IN',value:SCOPES}、[2]={field:'pkb_domain',operator:'NOT_EQ',value:DENIES[0]}；B-J1-4 多 scope/多 deny ⇒ 恰 4 条条件且 deny 顺序保留。检索面＝真 better-sqlite3 `new Database(':memory:')` ＋ 真 KnowledgeStore.search（无 mock）：B-J1-2 插 finance.statements / market.pricing / finance.salaries 三块 ⇒ 只返 chunk-a-statements；B-J1-4 返 [a,b]。"
+    },
+    {
+      "id": "⑤-B-J2 敏感度取认证面唯一漏斗（非 whitelist 宽集）",
+      "cmd": "临时 probe 测试件（/tmp/mut-1161/tests/tmp-review-probe.test.ts，跑完即删）: allowedSensitivitiesByGrants('finance','normal', org?) ; sed -n '345,414p' tests/init/role-pack-knowledge-filter.test.ts",
+      "result": "pass",
+      "evidence": "独立 probe 输出：finance/normal/grants(org=undefined 与 org-x 各一次) ⇒ [\"normal\"]；对照 admin/normal ⇒ [\"normal\",\"sensitive\",\"restricted\"] ⇒ 非 admin 档位确被收窄到 [normal]。B-J2-1 双断言（字面 [normal] ＋ 与 allowedSensitivitiesByGrants 同值，非同义反复）；B-J2-3 反例：改用 sensitivityWhitelistFromGrants 的宽集=[normal,sensitive,restricted] ⇒ sensitive 条目立即可见，而实现过滤面下只返 normal ⇒ 漏斗有判别力。"
+    },
+    {
+      "id": "⑥-B-J3 系统工具 search_knowledge 只在角色会话存在",
+      "cmd": "sed -n '273,388p' tests/agent/knowledge-search-tool.test.ts",
+      "result": "pass",
+      "evidence": "B-J3-1 角色会话 listTools/toOpenAITools 含 search_knowledge，allToolNames() 长度 0 且不含（未注册）；B-J3-3 无岗位 execute('search_knowledge') ⇒ error 含『未知工具』且不含 TOOL_PERMISSION_DENIED；B-J3-4 setRolePack(null)（boundRolePackId 保留）⇒ 工具仍可见但 count=0 ＋ degraded=true；B-J3-5 SYNOVA_ROLE_KNOWLEDGE=off ⇒ 从清单卸载，仅 SYNOVA_ROLE_PACK_TOOLS=off ⇒ 工具仍在（两开关互不替代）；B-J3-2 真过滤并断言结果键恰 ['domain','id','snippet','text']（不泄漏 pkbDomain/sensitivity）；B-J3-6 入参越界结构化报错、limit 钳位。"
+    },
+    {
+      "id": "⑦-B-J5 update 持久化 pkb_* ＋ 不新增 domain 键",
+      "cmd": "sed -n '388,437p' tests/agent/knowledge-search-tool.test.ts; git diff gitea/main...HEAD -- src/l4/knowledge-store.ts",
+      "result": "pass",
+      "evidence": "B-J5-1 insert 不带 pkbDomain ⇒ raw SQL 三列 {domain:null,type:null,source:null}；B-J5-2 update({pkb_domain,pkb_type,pkb_source}) ⇒ 三列有值（raw SQL 读回），且 text/access_sensitivity/source_type 未被写坏；B-J5-3 insert 带 pkbDomain ⇒ 列即有值，search 结果 hit.pkbDomain='finance.reports' 且 ('domain' in hit)===false。实现侧 update SQL 已补 pkb_domain/pkb_type/pkb_source 三列与对应绑定参数（此前静默丢弃）。"
+    },
+    {
+      "id": "⑧-改坏必红（2 例，独立副本复现＋还原复绿）",
+      "cmd": "隔离拷贝树 /tmp/mut-1161（tar 排除 node_modules，symlink 复用）；M1 删 src/init/role-pack-knowledge-filter.ts 的 '{ field: pkb_domain, operator: IN, value: scopes }'；M2 删 src/l4/knowledge-store.ts update 的 pkb_domain/pkb_type/pkb_source（SQL＋绑定参数）；各处 npx vitest run",
+      "result": "pass",
+      "evidence": "M1 ⇒ Tests 4 failed | 8 passed (12)：'B-J1-1 … AssertionError: expected [ { …(3) }, …(1) ] to have a length of 3 but got 2'、'B-J1-2 … expected [ 'kc_mvtw5yr9_2c0jsc', …(1) ] to deeply equal [ 'kc_mvtw5yr9_2c0jsc' ]'、'B-J1-4 … length of 4 but got 3'（连带 B-J4-5）。M2 ⇒ Tests 1 failed | 11 passed (12)：'B-J5-2 … AssertionError: expected { domain: null, type: null, …(1) } to deeply equal { domain: 'ops.demo', …(2) }'。还原后 diff -q 两件与 head 逐字一致（RESTORED-OK），三件复跑 ⇒ Test Files 3 passed | Tests 39 passed。"
+    },
+    {
+      "id": "⑨-门禁/BYPASS 面",
+      "cmd": "bash scripts/control-tower/check-gate-protection.sh --changed-base 4a250fc6f2e9; python3 scripts/control-tower/check-test-obligations.py; python3 scripts/control-tower/quality-baseline.py --check-registry docs/authority/WIRING-REGISTRY.yaml; python3 scripts/control-tower/check-tool-args-delta.py --base 4a250fc6f2e9; python3 scripts/control-tower/check-quality-delta.py --base 4a250fc6f2e9; DOCS-REGISTRY id 去重脚本",
+      "result": "pass",
+      "evidence": "gate-protection：11 通过 / 0 失败 —— 受保护路径变更 3 条逐条有合规豁免（docs/authority/DOCS-REGISTRY.yaml、gate-exemptions/**（自覆盖）、scripts/control-tower/tool-signal-baseline.txt），新增豁免件带『# review: #1161』。tool-signal-baseline numstat=0/2（纯删 schedule_task/install_skill 两行，0 新增）。DOCS-REGISTRY：190 id 全唯一、无重号，DOC-1149×1、DOC-1075×1（后者为 P2-1 既有条目，无二次占用）；path 无重复。check-test-obligations ⇒ 'TEST-OBLIGATIONS: PASS changes=14 src_changes=5'。WIRING-REGISTRY ⇒ 'REGISTRY-OK rows=30'（R1–R7 全 ✅，R7 rows=30）。tool-args-delta ⇒ R1–R6 PASS（R5『缺取消检查副作用集合 == 信号基线（1 名）』与纯删 2 行自洽）。quality-delta ⇒ 'QUALITY-DELTA: PASS changes=8 rules=G1,G3,G4'（G5 未武装，见 findings）。"
+    },
+    {
+      "id": "⑩-CI 终态 ＋ 指纹一致",
+      "cmd": "curl -H 'Authorization: token ***' http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/commits/6d84786564fa1425de796f25fac6b2be72a3f44e/status; git ls-remote gitea refs/heads/ct/1075-p2-4b-B refs/heads/main; bash scripts/control-tower/check-merge-conditions.sh --pr 1161 --base main --diff-fingerprint",
+      "result": "pass",
+      "evidence": "CI：state=success total=2 pending=0（local-gates / gates (push) success ＋ local-gates / gates (pull_request) success）—— 终态，无 pending 中间态。refs：head=6d84786564fa1425de796f25fac6b2be72a3f44e、main(base)=4a250fc6f2e9b9a544eca69fb553b48199b2e939。--diff-fingerprint ⇒ cc0620a26085f66897a9dba4e1d86da45a252a2d5de98a1b697f97ae07f92a37，与 CTO 现场 cc0620a26085… 一致（fp12=cc0620a26085）。"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warn",
+      "where": "check-merge-conditions.sh 条件②（非条件③）：.claude/claims/1075.yaml、tests/contract/triviality-manifest.yaml",
+      "what": "本 PR 与 PR#1159 在这 2 个文件上有内容级重叠（OVL_FILE），故条件②=no；18 处属纯追加共享（不计重叠）。这不属条件③（独立复核）范围，但**合并前须串行**：建议 #1159 先合或本 PR 后再 rebase 复核（复核指纹会因 rebase 变化 ⇒ 需重签回执）。"
+    },
+    {
+      "severity": "info",
+      "where": "规格 §2.4 声明写集 vs 实际变更集（.claude/claims/1075.yaml 注记段）",
+      "what": "14 件中 3 件（tool-signal-baseline.txt / gate-exemptions/2026-10-30-1075-p2-4b-b.md / DOCS-REGISTRY.yaml）在规格 §2.4 的 11 条声明写集之外，属『门禁强制同 PR 记账』（R5 双向棘轮／①d 受保护路径豁免／D2 登记）。已在 claims 注记并自述『待 L1 收件闸追认』；数量口径与 gate-protection 判定一致（3 条受保护路径逐条有合规豁免）。建议 L1 收件闸补一句追认记录，避免下一轮把『超出声明』误读为夹带。"
+    },
+    {
+      "severity": "info",
+      "where": "tests/agent/tool-permissions-role-pack.test.ts:781-800（J6 用例）",
+      "what": "用例名仍写『未绑定零变化 — setRolePack(null) 恢复既有行为』，但新期望已是 ['search_knowledge']。语义上按规格 D7（setRolePack(null) 不清 boundRolePackId ⇒ 已绑定但 persona=null ⇒ 工具可见、过滤面拒绝）这是**符合规格**的行为，且同用例内 execute 仍断言 TOOL_PERMISSION_DENIED（allowlist 未松动）。仅命名/注释与期望值间存在张力，建议后续把该用例改名（如『撤销后人设失效』）以免被下次审计误判为断言放宽。不阻断。"
+    },
+    {
+      "severity": "info",
+      "where": "check-quality-delta.py --base 4a250fc6f2e9",
+      "what": "G5（覆盖率/重复率）未武装（未传 --coverage-summary/--coverage-sha/--baseline），本次未判；G1/G3/G4 全 ✅。属门禁常态化缺口而非本 PR 问题，如实记录。"
+    },
+    {
+      "severity": "info",
+      "where": "回执提交身份（R9 面）",
+      "what": "回执提交以 review 会话身份（review-1161 <review-1161@synova.local>）落库，与代码提交身份 squad-1075 <squad-1075@synova.local> 不同 ⇒ R9 不触发。但本机 git 身份整体不可信（同一台机器上任意会话可改写），故『作者冒用 reviewer 名』仍抓不到 —— 与 check-merge-conditions 已知限制 1 一致，非本 PR 缺陷。"
+    }
+  ],
+  "issued_at": "2026-10-30T02:44:50+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步；骨架由 check-merge-conditions.sh --print-receipt-template 生成）"
+}

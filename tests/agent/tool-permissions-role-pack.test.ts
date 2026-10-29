@@ -447,7 +447,10 @@ describe('J1 时序A — 绑定早于工具注册：注册表空不误判、refr
       // ④ 惰性应用：声明∩已注册
       engine.refreshRolePackPermissions();
 
-      expect(listedNames(registry)).toEqual([PROBE_ALLOWED, 'show_diagnosis_progress'].sort());
+      // #1075 P2-4b-B：系统工具 `search_knowledge`（provider 注入，**不进 allowlist**）
+      //   与岗位声明面并列出现在 LLM 可见面 ⇒ 期望 = allowlist ∪ {search_knowledge}（按 name 排序）。
+      //   🔴 allowlist 语义未弱化：未声明/禁用/未注册项仍不得出现（下方 not.toContain 原样保留）。
+      expect(listedNames(registry)).toEqual([PROBE_ALLOWED, 'search_knowledge', 'show_diagnosis_progress'].sort());
       // 真 handler 被调（allowed 工具放行 ⇒ 非"全拒"假绿）
       const progress = await registry.execute('show_diagnosis_progress', {});
       expect(progress.error).toBeUndefined();
@@ -479,7 +482,8 @@ describe('J1 时序A — 绑定早于工具注册：注册表空不误判、refr
       engine.refreshRolePackPermissions();
 
       const listed = listedNames(registry);
-      expect(listed).toEqual([PROBE_ALLOWED, 'show_diagnosis_progress'].sort());
+      // #1075 P2-4b-B：allowlist ∪ {search_knowledge}（系统工具不穿白名单）
+      expect(listed).toEqual([PROBE_ALLOWED, 'search_knowledge', 'show_diagnosis_progress'].sort());
       expect(listed).not.toContain(PROBE_DENIED);
       expect(listed).not.toContain('list_sessions');
       expect(listed).not.toContain('analysis.cost-attribution');
@@ -586,8 +590,10 @@ describe('J1 权限待批 — scope=content ⇒ allowlist=[]（全拒）＋ 日�
       engine.refreshRolePackPermissions();
 
       // allowlist=[] ⇒ LLM 看不见任何工具
-      expect(listedNames(registry)).toEqual([]);
-      expect(openAINames(registry)).toEqual([]);
+      // #1075 P2-4b-B：白名单仍为空（岗位声明面无工具），但**系统知识工具**独立于白名单（D4b）
+      //   ⇒ LLM 可见面只剩它；allowlist 语义未弱化（下面执行拒绝断言原样保留）。
+      expect(listedNames(registry)).toEqual(['search_knowledge']);
+      expect(openAINames(registry)).toEqual(['search_knowledge']);
       const result = await registry.execute('show_diagnosis_progress', {});
       expect(errorCode(result)).toBe('TOOL_PERMISSION_DENIED');
       // D4 留痕：engine 侧"权限待批"warn（permissionsPending 字段可判）
@@ -710,7 +716,8 @@ describe('J3 enabled:false 硬拒 — 同 tool 亦被禁用能力否掉（disabl
       engine.refreshRolePackPermissions();
 
       // disabled 优先：query_ontology 不得进白名单（哪怕它还出现在 enabled 能力里）
-      expect(listedNames(registry)).toEqual(['show_diagnosis_progress']);
+      // #1075 P2-4b-B：disabled 项仍不进 allowlist（语义未弱化）；系统工具并列可见
+      expect(listedNames(registry)).toEqual(['search_knowledge', 'show_diagnosis_progress']);
       const result = await registry.execute('query_ontology', {});
       expect(errorCode(result)).toBe('TOOL_PERMISSION_DENIED');
     } finally {
@@ -786,7 +793,9 @@ describe('J6 未绑定零变化 — setRolePack(null) 恢复既有行为；已�
       engine.setRolePack(null);
       engine.refreshRolePackPermissions();
 
-      expect(listedNames(registry)).toEqual([]);
+      // #1075 P2-4b-B：白名单仍为空（岗位声明面无工具），但**系统知识工具**独立于白名单（D4b）
+      //   ⇒ LLM 可见面只剩它；allowlist 语义未弱化（下面执行拒绝断言原样保留）。
+      expect(listedNames(registry)).toEqual(['search_knowledge']);
       const result = await registry.execute('show_diagnosis_progress', {});
       expect(errorCode(result)).toBe('TOOL_PERMISSION_DENIED');
       expect(
@@ -814,7 +823,10 @@ describe('J5 撤销 — 已绑定岗位删审批记录 ⇒ refresh ⇒ [] fail-c
       registry.register(probeTool(PROBE_ALLOWED).tool);
       engine.refreshRolePackPermissions();
       // 撤销前：放行工具可见（证明下面 [] 不是"从来就没放行"）
-      expect(listedNames(registry)).toEqual([PROBE_ALLOWED, 'show_diagnosis_progress'].sort());
+      // #1075 P2-4b-B：系统工具 `search_knowledge`（provider 注入，**不进 allowlist**）
+      //   与岗位声明面并列出现在 LLM 可见面 ⇒ 期望 = allowlist ∪ {search_knowledge}（按 name 排序）。
+      //   🔴 allowlist 语义未弱化：未声明/禁用/未注册项仍不得出现（下方 not.toContain 原样保留）。
+      expect(listedNames(registry)).toEqual([PROBE_ALLOWED, 'search_knowledge', 'show_diagnosis_progress'].sort());
 
       // 撤销动作 = 删审批记录（<tmp>/.synova/approvals/<ROLE_ID>.json）⇒ 审批门失守
       removeApprovalRecord();
@@ -822,8 +834,10 @@ describe('J5 撤销 — 已绑定岗位删审批记录 ⇒ refresh ⇒ [] fail-c
       engine.refreshRolePackPermissions();
 
       // fail-closed：白名单空（空名单 ⇒ listTools=[]），LLM 面亦为空
-      expect(listedNames(registry)).toEqual([]);
-      expect(openAINames(registry)).toEqual([]);
+      // #1075 P2-4b-B：白名单仍为空（岗位声明面无工具），但**系统知识工具**独立于白名单（D4b）
+      //   ⇒ LLM 可见面只剩它；allowlist 语义未弱化（下面执行拒绝断言原样保留）。
+      expect(listedNames(registry)).toEqual(['search_knowledge']);
+      expect(openAINames(registry)).toEqual(['search_knowledge']);
       const denied = await registry.execute('show_diagnosis_progress', {});
       expect(errorName(denied)).toBe('ToolPermissionError');
       expect(errorCode(denied)).toBe('TOOL_PERMISSION_DENIED');
@@ -851,7 +865,10 @@ describe('D8 回滚 — SYNOVA_ROLE_PACK_TOOLS=off ⇒ 恢复不限制（显式�
       registry.register(probeTool(PROBE_ALLOWED).tool);
       engine.setRolePack(rolePersona());
       engine.refreshRolePackPermissions();
-      expect(listedNames(registry)).toEqual([PROBE_ALLOWED, 'show_diagnosis_progress'].sort());
+      // #1075 P2-4b-B：系统工具 `search_knowledge`（provider 注入，**不进 allowlist**）
+      //   与岗位声明面并列出现在 LLM 可见面 ⇒ 期望 = allowlist ∪ {search_knowledge}（按 name 排序）。
+      //   🔴 allowlist 语义未弱化：未声明/禁用/未注册项仍不得出现（下方 not.toContain 原样保留）。
+      expect(listedNames(registry)).toEqual([PROBE_ALLOWED, 'search_knowledge', 'show_diagnosis_progress'].sort());
 
       process.env['SYNOVA_ROLE_PACK_TOOLS'] = 'off';
       engine.refreshRolePackPermissions();
@@ -889,7 +906,10 @@ describe('J1 恢复路径 — fromState 快照 rolePackId 恢复绑定', () => {
       registerBuiltinTools(registry, boundStore.store, 'p24a-E1', () => 0, () => 'default');
       registry.register(probeTool(PROBE_ALLOWED).tool);
       restored.refreshRolePackPermissions();
-      expect(listedNames(registry)).toEqual([PROBE_ALLOWED, 'show_diagnosis_progress'].sort());
+      // #1075 P2-4b-B：系统工具 `search_knowledge`（provider 注入，**不进 allowlist**）
+      //   与岗位声明面并列出现在 LLM 可见面 ⇒ 期望 = allowlist ∪ {search_knowledge}（按 name 排序）。
+      //   🔴 allowlist 语义未弱化：未声明/禁用/未注册项仍不得出现（下方 not.toContain 原样保留）。
+      expect(listedNames(registry)).toEqual([PROBE_ALLOWED, 'search_knowledge', 'show_diagnosis_progress'].sort());
 
       // 对照：无 rolePackId 的快照（无岗位会话基线形态）⇒ 恢复后不限制
       const plain = newEngine();
