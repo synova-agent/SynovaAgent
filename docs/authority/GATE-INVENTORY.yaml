@@ -1729,7 +1729,7 @@ run_by_candidates:
     why: "#1122 总闸最小可跑版：尚未接线（写集不含 pre-commit/CI），显式调用才跑 ⇒ 记 无；接线后改 wired 并补真实腿"
 
 gate_meta:
-  measured_at: 9ec742523
+  measured_at: fc3ed017e
   class_default: P2  # 非 classification 条目（无 class 声明）的默认级；P0/P1 只来自 classification
   legacy_sections:
     - name: meta
@@ -2564,8 +2564,6 @@ gate_meta:
       quota: false
       quota_scope: non-doc
       nature: mechanical
-
-
 retired:
 #   批1 零风险退役（#1146 · 创始人 2026-10-29 令）；不删文件，观察期 30 天。
 #   replacement: none 的条目必须带 evidence（防「退了不管」）。
