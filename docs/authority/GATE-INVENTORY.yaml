@@ -1249,3 +1249,469 @@ classification:
     entrypoint: scripts/control-tower/check-unicode-confusable.py
     required_ci: true
     confirmed_by: pending-cto
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ---- P4 2026-10-28：#1114 Step 0 —— run_by 全量建账（纯追加段；不改上方任何登记行）----
+#
+# 口径（创始人 2026-10-28 批准的 D1）：
+#   run_by ∈ {pre-commit, gitea-ci, github-ci, npm, 无} ｜ quota ∈ {true, false}
+#   · 赋值 = **逐字引用**四条腿源文本（去注释后）命中该件的 basename，优先级
+#     pre-commit > gitea-ci > github-ci > npm；四腿皆不命中 ⇒ 无。
+#     四腿源文本 = scripts/pre-commit-check.sh ／ .gitea/workflows/*.yml ／
+#     .github/workflows/*.yml ／ package.json 的 scripts 段。
+#   · quota: true 只给「被 pre-commit/CI 真实调用 ∧ 语义为拦错」的 check/verify ⇒ 本批 39 件；
+#     probe 观测件／npm 人工工具件／库件／无主件 = false。配额上限（≤30）与超编清单属 Step 2 判据，
+#     本段**只建账不封顶**（规格 §九：配额只数 quota:true）。
+#   · run_by="无" 的件逐条镜像进下方 run_by_candidates 段 —— M-15：允许存在，但**不得静默留存**。
+#
+# 已知限制（禁读成"已全部在跑"）：
+#   1. 只认四条腿的**直接引用**。由其他脚本/钩子间接调用的件记 无（候选段 why 已逐条点名：
+#      check-bypass-log.sh 实际跑在 scripts/pre-push-check.sh；verify-incremental.sh 实际跑在
+#      scripts/hooks/hook-enforce-loop.sh；hook-block-write.sh 挂在 .claude/settings.json）。
+#   2. run_by: github-ci 只表示"文本里被 .github/workflows 引用"，**不代表 GitHub 腿在点火**
+#      （.gitea/AGENTS.md：CI 权威在本地 Gitea；GitHub 腿去判定权是 Step 4 的事）。
+#   3. 注释里出现的名字不计"在跑"（比规格 §五-5 的「全文零命中 ⇒ 红」更严：本器按去注释文本判）。
+#   4. 本段**只建账**：未建账不得删件，P0 只标记不降级（退役到配额内是 Step 3，需 CTO 裁定号）。
+# 生成：逐件从盘上枚举（禁手写），与 check-gate-inventory.sh 的双向对齐判据配套。
+# ═══════════════════════════════════════════════════════════════════════════════
+run_by:
+#   classification（40 条，逐件一行；与上方 classification 段的 entrypoint 同键）
+  - entrypoint: scripts/control-tower/check-acceptance-matrix.py
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/check-block-paths.sh
+    run_by: pre-commit
+    quota: true
+  - entrypoint: scripts/control-tower/check-block-paths.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/check-board-metrics.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/check-board-truth.ts
+    run_by: gitea-ci
+    quota: true
+  - entrypoint: scripts/control-tower/check-bypass-log.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/check-canary-drift.sh
+    run_by: github-ci
+    quota: true
+  - entrypoint: scripts/control-tower/check-ci-stale-red.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/check-citations.py
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/check-customer-deps.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/check-doc-contract.sh
+    run_by: pre-commit
+    quota: true
+  - entrypoint: scripts/control-tower/check-dsh-anchor.py
+    run_by: pre-commit
+    quota: true
+  - entrypoint: scripts/control-tower/check-dual-repo-sync.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/check-fixture-requires.sh
+    run_by: github-ci
+    quota: true
+  - entrypoint: scripts/control-tower/check-gate-integrity.sh
+    run_by: github-ci
+    quota: true
+  - entrypoint: scripts/control-tower/check-gate-inventory.sh
+    run_by: pre-commit
+    quota: true
+  - entrypoint: scripts/control-tower/check-gate-protection.sh
+    run_by: gitea-ci
+    quota: true
+  - entrypoint: scripts/control-tower/check-gitlinks.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/check-k3-report.py
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/check-merge-conditions.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/check-name-allocation.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/check-notes-lifecycle.sh
+    run_by: pre-commit
+    quota: true
+  - entrypoint: scripts/control-tower/check-ontology-fields.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/check-orphan-worktrees.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/check-ownership.py
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/check-package-selfsufficiency.py
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/check-pr-budget.sh
+    run_by: pre-commit
+    quota: true
+  - entrypoint: scripts/control-tower/check-preset-bundles.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/check-project-coordinates.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/check-quality-delta.py
+    run_by: pre-commit
+    quota: true
+  - entrypoint: scripts/control-tower/check-registry-invariants.ts
+    run_by: gitea-ci
+    quota: true
+  - entrypoint: scripts/control-tower/check-required-contexts.py
+    run_by: github-ci
+    quota: true
+  - entrypoint: scripts/control-tower/check-sentinel-type-net.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/check-test-obligations.py
+    run_by: gitea-ci
+    quota: true
+  - entrypoint: scripts/control-tower/check-tool-args-delta.py
+    run_by: pre-commit
+    quota: true
+  - entrypoint: scripts/control-tower/verify-claims-table.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/verify-parallel.sh
+    run_by: github-ci
+    quota: true
+  - entrypoint: scripts/control-tower/check-mirror-freshness.sh
+    run_by: pre-commit
+    quota: true
+  - entrypoint: scripts/control-tower/check-ci-empty-green.sh
+    run_by: gitea-ci
+    quota: true
+  - entrypoint: scripts/control-tower/check-unicode-confusable.py
+    run_by: pre-commit
+    quota: true
+#   probe 观测件（29 件；只登记不改内容 —— M6 独占写集）
+  - entrypoint: scripts/control-tower/probe-approval-seam.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-bundle-content.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-compute-registry.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-content-layering.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-content-registry.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-content-reload.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-cycle-edges.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-cycle-valves.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-decision-ledger.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-delivery-hygiene.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-department-axis.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-evolution-writeback.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-exile-compile.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-exile-crosscheck.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-knowledge-scope.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-ladder.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-line-signals.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-notification-registry.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-onboarding.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-ontology-instances.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-ontology-values.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-output-contract.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-packaging.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-permission-grants.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-rbac-multitenant.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-role-config.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-role-pack.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-sentinel.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-skills.ts
+    run_by: "无"
+    quota: false
+#   根级 scripts/check-*.sh（18 件；此前完全在册外）
+  - entrypoint: scripts/check-acceptance-ci.sh
+    run_by: pre-commit
+    quota: true
+  - entrypoint: scripts/check-architecture.sh
+    run_by: gitea-ci
+    quota: true
+  - entrypoint: scripts/check-as-any.sh
+    run_by: npm
+    quota: false
+  - entrypoint: scripts/check-bridge-files.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/check-brief-vs-code.sh
+    run_by: github-ci
+    quota: true
+  - entrypoint: scripts/check-content-coupling.sh
+    run_by: pre-commit
+    quota: true
+  - entrypoint: scripts/check-deprecated-mapping.sh
+    run_by: pre-commit
+    quota: true
+  - entrypoint: scripts/check-fde-terms.sh
+    run_by: npm
+    quota: false
+  - entrypoint: scripts/check-file-driven.sh
+    run_by: pre-commit
+    quota: true
+  - entrypoint: scripts/check-hardcoded.sh
+    run_by: pre-commit
+    quota: true
+  - entrypoint: scripts/check-integrity-startup.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/check-lessons-learned.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/check-plan-integrity.sh
+    run_by: pre-commit
+    quota: true
+  - entrypoint: scripts/check-q0c-tracking.sh
+    run_by: pre-commit
+    quota: true
+  - entrypoint: scripts/check-secrets.sh
+    run_by: pre-commit
+    quota: true
+  - entrypoint: scripts/check-security.sh
+    run_by: npm
+    quota: false
+  - entrypoint: scripts/check-tech-debt.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/check-verifiable-done.sh
+    run_by: pre-commit
+    quota: true
+#   子域 gate 名件（scripts/{ci,workflow,doc-system,golden-scenarios}/** 含 check/verify/gate/hook 者）
+  - entrypoint: scripts/ci/check-contract-gaps.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/ci/diagnosis-quality-check.sh
+    run_by: github-ci
+    quota: true
+  - entrypoint: scripts/ci/golden-case-checker.ts
+    run_by: github-ci
+    quota: true
+  - entrypoint: scripts/ci/verify-d703.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/ci/verify-doc.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/doc-system/check-doc-truth.sh
+    run_by: pre-commit
+    quota: true
+  - entrypoint: scripts/doc-system/doc-registry-gate.sh
+    run_by: pre-commit
+    quota: true
+  - entrypoint: scripts/workflow/check-boundaries-incremental.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/workflow/check-brief-parseable.sh
+    run_by: pre-commit
+    quota: true
+  - entrypoint: scripts/workflow/check-brief-vs-code.sh
+    run_by: github-ci
+    quota: true
+  - entrypoint: scripts/workflow/check-dataflow-alignment.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/workflow/check-dev-doc-write-set.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/workflow/check-golden-regression.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/workflow/check-integration.sh
+    run_by: github-ci
+    quota: true
+  - entrypoint: scripts/workflow/check-self-diagnosis.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/workflow/check-silent-swallow.sh
+    run_by: pre-commit
+    quota: true
+  - entrypoint: scripts/workflow/check-spec.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/workflow/check-test-first.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/workflow/checkpoint-deploy.sh
+    run_by: npm
+    quota: false
+  - entrypoint: scripts/workflow/checkpoint-design.sh
+    run_by: npm
+    quota: false
+  - entrypoint: scripts/workflow/checkpoint-impl.sh
+    run_by: npm
+    quota: false
+  - entrypoint: scripts/workflow/checkpoint-runtime.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/workflow/hook-block-write.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/workflow/hook-check-task-scope.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/workflow/log-no-verify.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/workflow/scope-check.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/workflow/sop-gate.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/workflow/verify-incremental.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/workflow/wire-check.sh
+    run_by: npm
+    quota: false
+
+
+# ---- run_by=无 的退役候选清单（M-15：无主件必须在此可见；与上方 run_by 段双向对齐）----
+# 口径：本段 ≡ run_by="无" 的件集合（多一条/少一条由 check-gate-inventory.sh 判红）。
+# 进本段 ≠ 判死：Step 3 逐条裁「补接线 / 并更强件 / 真退役」，本段只把暗处拖到明处。
+run_by_candidates:
+#   classification（40 条，逐件一行；与上方 classification 段的 entrypoint 同键）（20 件）
+  - entrypoint: scripts/control-tower/check-acceptance-matrix.py
+  - entrypoint: scripts/control-tower/check-block-paths.ts
+  - entrypoint: scripts/control-tower/check-board-metrics.ts
+  - entrypoint: scripts/control-tower/check-bypass-log.sh
+    why: "实际运行腿=scripts/pre-push-check.sh（推送侧对账），不在本五值枚举内 ⇒ 记 无 待裁"
+  - entrypoint: scripts/control-tower/check-ci-stale-red.sh
+  - entrypoint: scripts/control-tower/check-citations.py
+  - entrypoint: scripts/control-tower/check-customer-deps.ts
+  - entrypoint: scripts/control-tower/check-dual-repo-sync.sh
+  - entrypoint: scripts/control-tower/check-gitlinks.sh
+  - entrypoint: scripts/control-tower/check-k3-report.py
+  - entrypoint: scripts/control-tower/check-merge-conditions.sh
+  - entrypoint: scripts/control-tower/check-name-allocation.sh
+  - entrypoint: scripts/control-tower/check-ontology-fields.sh
+  - entrypoint: scripts/control-tower/check-orphan-worktrees.sh
+  - entrypoint: scripts/control-tower/check-ownership.py
+  - entrypoint: scripts/control-tower/check-package-selfsufficiency.py
+  - entrypoint: scripts/control-tower/check-preset-bundles.sh
+  - entrypoint: scripts/control-tower/check-project-coordinates.sh
+  - entrypoint: scripts/control-tower/check-sentinel-type-net.sh
+  - entrypoint: scripts/control-tower/verify-claims-table.sh
+    why: "pre-commit 注释明写「K3/CTO 复核时手工跑」，无自动执行点 ⇒ 记 无"
+#   probe 观测件（29 件；只登记不改内容 —— M6 独占写集）（29 件）
+  - entrypoint: scripts/control-tower/probe-approval-seam.ts
+  - entrypoint: scripts/control-tower/probe-bundle-content.ts
+  - entrypoint: scripts/control-tower/probe-compute-registry.ts
+  - entrypoint: scripts/control-tower/probe-content-layering.ts
+  - entrypoint: scripts/control-tower/probe-content-registry.ts
+  - entrypoint: scripts/control-tower/probe-content-reload.ts
+  - entrypoint: scripts/control-tower/probe-cycle-edges.ts
+  - entrypoint: scripts/control-tower/probe-cycle-valves.ts
+  - entrypoint: scripts/control-tower/probe-decision-ledger.ts
+  - entrypoint: scripts/control-tower/probe-delivery-hygiene.sh
+  - entrypoint: scripts/control-tower/probe-department-axis.ts
+  - entrypoint: scripts/control-tower/probe-evolution-writeback.ts
+  - entrypoint: scripts/control-tower/probe-exile-compile.ts
+  - entrypoint: scripts/control-tower/probe-exile-crosscheck.ts
+  - entrypoint: scripts/control-tower/probe-knowledge-scope.ts
+  - entrypoint: scripts/control-tower/probe-ladder.ts
+  - entrypoint: scripts/control-tower/probe-line-signals.ts
+  - entrypoint: scripts/control-tower/probe-notification-registry.ts
+  - entrypoint: scripts/control-tower/probe-onboarding.ts
+  - entrypoint: scripts/control-tower/probe-ontology-instances.ts
+  - entrypoint: scripts/control-tower/probe-ontology-values.ts
+  - entrypoint: scripts/control-tower/probe-output-contract.ts
+  - entrypoint: scripts/control-tower/probe-packaging.sh
+  - entrypoint: scripts/control-tower/probe-permission-grants.ts
+  - entrypoint: scripts/control-tower/probe-rbac-multitenant.ts
+  - entrypoint: scripts/control-tower/probe-role-config.ts
+  - entrypoint: scripts/control-tower/probe-role-pack.ts
+  - entrypoint: scripts/control-tower/probe-sentinel.ts
+  - entrypoint: scripts/control-tower/probe-skills.ts
+#   根级 scripts/check-*.sh（18 件；此前完全在册外）（4 件）
+  - entrypoint: scripts/check-bridge-files.sh
+  - entrypoint: scripts/check-integrity-startup.sh
+  - entrypoint: scripts/check-lessons-learned.sh
+  - entrypoint: scripts/check-tech-debt.sh
+#   子域 gate 名件（scripts/{ci,workflow,doc-system,golden-scenarios}/** 含 check/verify/gate/hook 者）（17 件）
+  - entrypoint: scripts/ci/check-contract-gaps.sh
+  - entrypoint: scripts/ci/verify-d703.sh
+    why: "仅 .github/workflows/ci.yml 注释提及，无执行点 ⇒ 记 无"
+  - entrypoint: scripts/ci/verify-doc.sh
+  - entrypoint: scripts/workflow/check-boundaries-incremental.sh
+  - entrypoint: scripts/workflow/check-dataflow-alignment.sh
+  - entrypoint: scripts/workflow/check-dev-doc-write-set.sh
+    why: "仅 .claude/settings.json 权限白名单提及，无执行点 ⇒ 记 无"
+  - entrypoint: scripts/workflow/check-golden-regression.sh
+  - entrypoint: scripts/workflow/check-self-diagnosis.sh
+  - entrypoint: scripts/workflow/check-spec.sh
+  - entrypoint: scripts/workflow/check-test-first.sh
+  - entrypoint: scripts/workflow/checkpoint-runtime.sh
+  - entrypoint: scripts/workflow/hook-block-write.sh
+    why: "实际运行腿=.claude/settings.json PreToolUse 钩子，不在本五值枚举内 ⇒ 记 无 待裁"
+  - entrypoint: scripts/workflow/hook-check-task-scope.sh
+    why: "四腿零引用（settings.json 亦未挂），疑死件 ⇒ 记 无"
+  - entrypoint: scripts/workflow/log-no-verify.sh
+    why: "仓内零调用点 ⇒ 记 无"
+  - entrypoint: scripts/workflow/scope-check.sh
+  - entrypoint: scripts/workflow/sop-gate.sh
+  - entrypoint: scripts/workflow/verify-incremental.sh
+    why: "实际运行腿=scripts/hooks/hook-enforce-loop.sh（PostToolUse 钩子），不在本五值枚举内 ⇒ 记 无 待裁"
